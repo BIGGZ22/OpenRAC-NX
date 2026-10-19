@@ -15,7 +15,7 @@ extern char *texture_vertices __asm__("D_L09_0015F420") __attribute__((section("
 extern char D_L09_0016D300[];
 extern long D_L09_00161FC0[];
 extern long get_effect_texture(int) __asm__("FUN_001f44b8");
-extern void FUN_L02_0024fca0(void *, void *, void *, void *, void *, int);
+extern void FUN_L02_0024fca0(void *, void *, void *, void *, void *, int, float);
 extern void vu1_add_g_sregister(int, long) __asm__("FUN_00233980");
 
 typedef struct {
@@ -26,7 +26,7 @@ typedef struct {
 } TextureEntry;
 
 /* Queues the GS packet for one texture (tex0 == tex1), or builds the strip between two texture entries and queues it. */
-void FUN_L09_0021e560(int tex0, int tex1) {
+void FUN_L09_0021e560(int tex0, int tex1, float fraction) {
     if (tex0 == tex1) {
         int *packet;
         long *words;
@@ -54,7 +54,7 @@ void FUN_L09_0021e560(int tex0, int tex1) {
         D_L09_00161FC0[0] = 0x0800000000000400L;
         D_L09_00161FC0[1] = 0;
         FUN_L02_0024fca0(&D_L09_00161FC0[2], texture_vertices + (a_first << 4), texture_vertices + (a_second << 4),
-                         texture_vertices + (b_first << 4), texture_vertices + (b_second << 4), 0x1000);
+                         texture_vertices + (b_first << 4), texture_vertices + (b_second << 4), 0x1000, fraction);
         PACKET_CURSOR[0] = 0x10000006;
         PACKET_CURSOR[1] = 0;
         PACKET_CURSOR[2] = 0;
@@ -116,11 +116,11 @@ extern int *D_L09_001611C0;
 extern int D_L09_0015F5CC;
 extern int fast_bsphere_check(char *, float) __asm__("FUN_001fa728");
 extern void FUN_L01_0021fa98(int, int, int, int, int, int);
-extern void FUN_L09_0021e560_u(int, int) __asm__("FUN_L09_0021e560");
+extern void FUN_L09_0021e560_u(int, int, float) __asm__("FUN_L09_0021e560");
 void font_queue_vu_state(void) __asm__("FUN_001f76a0");
 
 extern int *D_L09_001611B8[] __attribute__((section(".sdata")));
-void FUN_L09_0021e8c0(char *list, int count, float unused, long tex0, long tex1) {
+void FUN_L09_0021e8c0(char *list, int count, float fraction, long tex0, long tex1) {
     int i;
     int j;
     int c;
@@ -128,7 +128,7 @@ void FUN_L09_0021e8c0(char *list, int count, float unused, long tex0, long tex1)
     int idx;
     float first_scroll_offset;
     float second_scroll_offset;
-    FUN_L09_0021e560_u(tex0, tex1);
+    FUN_L09_0021e560_u(tex0, tex1, fraction);
     D_L09_001611B8[2][0] = 0x30000009;
     D_L09_001611B8[2][1] = (int)D_L09_0016EAA0;
     D_L09_001611B8[2][2] = 0;
@@ -684,7 +684,7 @@ typedef struct { char pad0[0x140]; float pos[4]; char pad150[0x10]; float f160; 
 char *FUN_L09_002ea528_c(struct Moby *owner, float *vec) __asm__("FUN_L09_002ea528");
 V6_2EC188 D_L09_00208B00 = {{0x4f008fff, 0x4f008fff, 0x4f007fff, 0x4f006fff, 0x2fffffff, 0x2fffffff}};
 V6_2EC188 D_L09_00208B18 = {{0x2f005f7f, 0x2f004f7f, 0x2f003f7f, 0x2f00004f, 0x2f000000, 0x3f000000}};
-extern char *FUN_L09_002efe48_c(void *, void *, void *, float, float) __asm__("FUN_L09_002efe48");
+extern char *FUN_L09_002efe48_c(void *, float, float, void *, float *) __asm__("FUN_L09_002efe48");
 extern f32 fast_add_rotations_c(f32, f32) __asm__("FUN_001fa580");
 extern f32 random_float_between_c2(f32, f32) __asm__("FUN_002132a8");
 extern float D_L09_00173FE8 __attribute__((section(".data")));
@@ -706,7 +706,7 @@ void FUN_L09_002eaea8(Moby *m) {
     float movement_step[4];
     float collision_probe_offset[4];
     float v2[4];
-    float v3[4];
+    float offset_position[4];
     Data_2EC188 *d = (*(Data_2EC188 **)&m->pvars);
     float len;
     float t;
@@ -734,9 +734,9 @@ void FUN_L09_002eaea8(Moby *m) {
             v2[1] = random_float_between_c2(-5.0f, 5.0f);
             v2[2] = random_float_between_c2(-5.0f, 5.0f);
             add_vector_xyz(v2, v2, d->pos);
-            add_vector_xyz(v3, v2, collision_probe_offset);
-            if (FUN_001efa68(v2, v3, 4, (int)m, 0) != 0 && D_L09_00173FE8 > 26.5f) {
-                float v4[4];
+            add_vector_xyz(offset_position, v2, collision_probe_offset);
+            if (FUN_001efa68(v2, offset_position, 4, (int)m, 0) != 0 && D_L09_00173FE8 > 26.5f) {
+                float scaled_movement_step[4];
                 V6_2EC188 A;
                 V6_2EC188 B;
                 float extra;
@@ -744,7 +744,7 @@ void FUN_L09_002eaea8(Moby *m) {
                 int h;
                 extra = 0.0f;
                 if (len < 7.0f) extra = 7.0f - len;
-                scale_vector_xyz_c(v4, movement_step, 0.1f);
+                scale_vector_xyz_c(scaled_movement_step, movement_step, 0.1f);
                 for (i = 7; i >= 0; i--) {
                     float s;
                     float sc;
@@ -766,7 +766,7 @@ void FUN_L09_002eaea8(Moby *m) {
                         int lo = scale_game_frames(25), hi = scale_game_frames(30);
                         b = FUN_L00_00257b90(lo, hi);
                     }
-                    FUN_L00_0026a9f0(d->pos, v4, *pa, *pb, a, b, 0, 0, 400000.0f, sc);
+                    FUN_L00_0026a9f0(d->pos, scaled_movement_step, *pa, *pb, a, b, 0, 0, 400000.0f, sc);
                 }
                 for (i = 9; i >= 0; i--) {
                     FUN_L09_002ea528_c((char *)m, movement_step);
@@ -793,7 +793,7 @@ void FUN_L09_002eaea8(Moby *m) {
                 qcopy(v2, d->pos);
                 v2[2] = 25.0f;
                 for (j = 4; j >= 0; j--) {
-                    FUN_L09_002efe48_c(m, v2, movement_step, d->f50 * 4.0f, d->f50 * 12.0f);
+                    FUN_L09_002efe48_c(m, d->f50 * 4.0f, d->f50 * 12.0f, v2, movement_step);
                 }
                 d->f54 = d->f54 * (frame_scale_macro * -0.100000024f + 1.0f);
                 if (d->f58 <= 0) {
@@ -822,10 +822,10 @@ void FUN_L09_002eaea8(Moby *m) {
                     A = D_L09_00208B00;
                     B = D_L09_00208B18;
                     sc = s * D_0015ED6C - extra * D_0015ED6C;
-                    v3[0] = random_float_between_c2(-3.0f, 3.0f);
-                    v3[1] = random_float_between_c2(-3.0f, 3.0f);
-                    v3[2] = random_float_between_c2(-3.0f, 3.0f);
-                    add_vector_xyz(v3, v3, d->pos);
+                    offset_position[0] = random_float_between_c2(-3.0f, 3.0f);
+                    offset_position[1] = random_float_between_c2(-3.0f, 3.0f);
+                    offset_position[2] = random_float_between_c2(-3.0f, 3.0f);
+                    add_vector_xyz(offset_position, offset_position, d->pos);
                     pa = &A.v[random_integer_below_c2(6)];
                     pb = &B.v[random_integer_below_c2(6)];
                     {
@@ -836,7 +836,7 @@ void FUN_L09_002eaea8(Moby *m) {
                         int lo = scale_game_frames(25), hi = scale_game_frames(30);
                         b = FUN_L00_00257b90(lo, hi);
                     }
-                    FUN_L00_0026a9f0(v3, v2, *pa, *pb, a, b, 0, 0, 1200000.0f, sc);
+                    FUN_L00_0026a9f0(offset_position, v2, *pa, *pb, a, b, 0, 0, 1200000.0f, sc);
                 }
                 for (i = 9; i >= 0; i--) {
                     FUN_L09_002ea528_c((char *)m, movement_step);
@@ -865,7 +865,7 @@ void FUN_L09_002eaea8(Moby *m) {
             qcopy(v2, d->pos);
             v2[2] = 25.0f;
             for (j = 1; j >= 0; j--) {
-                FUN_L09_002efe48_c(m, v2, movement_step, d->f50 * 4.0f, d->f50 * 12.0f);
+                FUN_L09_002efe48_c(m, d->f50 * 4.0f, d->f50 * 12.0f, v2, movement_step);
             }
             if (m->state > scale_game_frames(10)) {
                 mark_moby_for_removal(m);
@@ -889,10 +889,10 @@ void FUN_L09_002eaea8(Moby *m) {
                 A = D_L09_00208B00;
                 B = D_L09_00208B18;
                 sc = s * D_0015ED6C - extra * D_0015ED6C;
-                v3[0] = random_float_between_c2(-1.0f, 1.0f);
-                v3[1] = random_float_between_c2(-1.0f, 1.0f);
-                v3[2] = random_float_between_c2(-1.0f, 1.0f);
-                add_vector_xyz(v3, v3, d->pos);
+                offset_position[0] = random_float_between_c2(-1.0f, 1.0f);
+                offset_position[1] = random_float_between_c2(-1.0f, 1.0f);
+                offset_position[2] = random_float_between_c2(-1.0f, 1.0f);
+                add_vector_xyz(offset_position, offset_position, d->pos);
                 pa = &A.v[random_integer_below_c2(6)];
                 pb = &B.v[random_integer_below_c2(6)];
                 {
@@ -903,7 +903,7 @@ void FUN_L09_002eaea8(Moby *m) {
                     int lo = scale_game_frames(25), hi = scale_game_frames(30);
                     b = FUN_L00_00257b90(lo, hi);
                 }
-                FUN_L00_0026a9f0(v3, v2, *pa, *pb, a, b, 0, 0, 1200000.0f, sc);
+                FUN_L00_0026a9f0(offset_position, v2, *pa, *pb, a, b, 0, 0, 1200000.0f, sc);
             }
             if (m->state >= 3) {
                 mark_moby_for_removal(m);
@@ -960,7 +960,7 @@ void asteroid_update(struct Moby *m) __asm__("FUN_L09_002eb970");
 void asteroid_update(struct Moby *m) {
     Data_2ECC50 *d = (*(Data_2ECC50 **)&m->pvars);
     Path_2ECC50 *path;
-    float v0[4];
+    float displacement_vector[4];
     float endpoint_offset[4];
     float len;
     float dot;
@@ -988,9 +988,9 @@ void asteroid_update(struct Moby *m) {
                 struct Moby *q = func_L09_002EBA58_2ECC50();
                 if (q != 0) {
                     Data_2ECC50 *e = (*(Data_2ECC50 **)&q->pvars);
-                    subtract_vector_xyz(v0, e->target, e);
-                    normalize_vector_xyz_c3(v0, v0, random_float_between_c3(0.0f, vector_length_xyz_c3(v0) - 32.0f));
-                    add_vector_xyz(e, e, v0);
+                    subtract_vector_xyz(displacement_vector, e->target, e);
+                    normalize_vector_xyz_c3(displacement_vector, displacement_vector, random_float_between_c3(0.0f, vector_length_xyz_c3(displacement_vector) - 32.0f));
+                    add_vector_xyz(e, e, displacement_vector);
                 }
             }
             for (i = 0; i < 50; i++) {
@@ -1000,9 +1000,9 @@ void asteroid_update(struct Moby *m) {
                     int n = random_integer_below_c3(ring->n - 2);
                     float t = random_float_between_c3(0.0f, 1.0f);
                     e->node = n;
-                    subtract_vector_xyz(v0, ring->pts[n + 1], ring->pts[n]);
-                    scale_vector_xyz_c2(v0, v0, t);
-                    add_vector_xyz(e->target, v0, ring->pts[n]);
+                    subtract_vector_xyz(displacement_vector, ring->pts[n + 1], ring->pts[n]);
+                    scale_vector_xyz_c2(displacement_vector, displacement_vector, t);
+                    add_vector_xyz(e->target, displacement_vector, ring->pts[n]);
                     qcopy(((f32 *)&q->pos), e->target);
                     add_vector_xyz(((f32 *)&q->pos), ring->pts[0], e);
                     add_vector_xyz(((f32 *)&q->pos), ((f32 *)&q->pos), D_L09_00166F40);
@@ -1041,11 +1041,11 @@ void asteroid_update(struct Moby *m) {
         }
     }
     if (d->node == 0) {
-        subtract_vector_xyz(v0, path->pts[1], path->pts[0]);
-        len = vector_length_xyz_c3(v0);
-        normalize_vector_xyz_c3(v0, v0, 1.0f);
+        subtract_vector_xyz(displacement_vector, path->pts[1], path->pts[0]);
+        len = vector_length_xyz_c3(displacement_vector);
+        normalize_vector_xyz_c3(displacement_vector, displacement_vector, 1.0f);
         subtract_vector_xyz(endpoint_offset, ((f32 *)&m->pos), path->pts[0]);
-        dot = fast_vec_dot(endpoint_offset, v0);
+        dot = fast_vec_dot(endpoint_offset, displacement_vector);
         if (dot < 0.0f) {
             dot = 0.0f;
         }
@@ -1054,11 +1054,11 @@ void asteroid_update(struct Moby *m) {
             m->alpha = 0x80;
         }
     } else if (d->node == path->n - 2) {
-        subtract_vector_xyz(v0, path->pts[path->n - 2], path->pts[path->n - 1]);
-        len = vector_length_xyz_c3(v0);
-        normalize_vector_xyz_c3(v0, v0, 1.0f);
+        subtract_vector_xyz(displacement_vector, path->pts[path->n - 2], path->pts[path->n - 1]);
+        len = vector_length_xyz_c3(displacement_vector);
+        normalize_vector_xyz_c3(displacement_vector, displacement_vector, 1.0f);
         subtract_vector_xyz(endpoint_offset, ((f32 *)&m->pos), path->pts[path->n - 1]);
-        dot = fast_vec_dot(endpoint_offset, v0);
+        dot = fast_vec_dot(endpoint_offset, displacement_vector);
         if (dot < 0.0f) {
             dot = 0.0f;
         }
@@ -1516,7 +1516,7 @@ void FUN_L09_002ef9b0(struct Moby *moby) {
 }
 extern char *create_moby_c(int) __asm__("FUN_0020c4f8");
 
-char *FUN_L09_002efda8(struct Moby *owner, void *position, float angle) {
+char *FUN_L09_002efda8(struct Moby *owner, void *position) {
     u128_ee380 pos;
     void *copy = &pos;
     char *moby;

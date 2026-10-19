@@ -1,3 +1,4 @@
+/* fcheck: unchecked (level/overlay function; fcheck runs boot-executable functions only; OpenRAC tools/fcheck_gate.py, 2026-10-18). */
 /* functional: medium. The near miss nonmatching/l08_batalia/func_L08_002F7318.c (SIZE 4668/4676, same calls in the same order), with its three variable-length arrays (the grid of (ny+1) x (nx+1) points, the u and v rows) taken from the game stack with alloca instead, which hostgen can translate; the space is the same, kept until the function returns rather than until its block ends, which here is the same point. */
 /* NON_MATCHING func_L08_002F7318 -- src/overlays/l08_batalia/vendor_002EAF48.c
  * Best so far: SIZE ours 4668 / retail 4676, checked 2026-10-09.

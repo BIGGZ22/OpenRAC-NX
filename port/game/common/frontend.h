@@ -46,6 +46,10 @@ int ui_quad(const openrac_game_ui_rect& quad);
 // picture's width (openrac_game_hud_side): the player's "HUD: Edges" in a wider picture, else 0.
 int hud_side();
 
+// How many times wider than 4:3 the picture is, at least 1 (openrac_game_picture_wider): what the
+// frame's horizontal tangent is the game's times (render's projection, picture_scale).
+float picture_wider();
+
 // A sky sprite the game drew this frame (openrac_game_sky_sprite).
 void sky_sprite(const std::uint8_t* record, std::uint64_t tex0);
 
@@ -100,6 +104,10 @@ bool store_image(std::uint32_t base, std::uint32_t width_units, std::uint8_t psm
 // FadeToBlack), and reads the input. Counts as a frame (shots, OPENRAC_PRESS). False once the window
 // was closed.
 bool show_picture(const std::uint8_t* rgba, int width, int height, float black);
+
+// Window frames since the player got control in a scripted run (OPENRAC_PRESS's and OPENRAC_WRITE's
+// c entries), -1 before.
+std::int64_t since_control();
 
 // The pad of a port as the game's pad library reads it: buttons active low, then the right and
 // left sticks (x, y each).

@@ -1,3 +1,4 @@
+/* fcheck: SAME on 3 calls (OpenRAC tools/fcheck_gate.py, 2026-10-18). */
 /* DmaToSprSync(void): waits while channel 8's CHCR has STR (0x100) set. */
 void func_0020C230(void)
 {

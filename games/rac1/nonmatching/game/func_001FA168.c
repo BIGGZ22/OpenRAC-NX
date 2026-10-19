@@ -1,3 +1,4 @@
+/* fcheck: unchecked (never called in fcheck's capture run of the title, menu and level 0; OpenRAC tools/fcheck_gate.py, 2026-10-18). */
 /* Writes the 3x4 identity as three quadwords (vf0 is the fixed (0,0,0,1)):
  * rows (1,0,0,0), (0,1,0,0), (0,0,1,0). */
 void func_001FA168(float *m) {

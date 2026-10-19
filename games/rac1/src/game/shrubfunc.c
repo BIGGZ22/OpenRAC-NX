@@ -332,13 +332,13 @@ void DrawShrubs(void) {
     D_0015EF74 = D_0015EF78;
     p += 0x10;
     D_00161000 = p;
-    func_001F2560(D_001604B0, 1);
+    ProfileMarker_Begin(D_001604B0, 1);
     if (D_0018A3D0 != 0) {
         func_00118D80(0);
         ShrubProc();
         write_dma_channel(D_001D9240, 0x3200, 0x40);
     }
-    func_001F2560(D_001604C0, 7);
+    ProfileMarker_Begin(D_001604C0, 7);
     DmaShrubTextures();
-    func_001F2558(D_001604C0, 7);
+    ProfileMarker_End(D_001604C0, 7);
 }

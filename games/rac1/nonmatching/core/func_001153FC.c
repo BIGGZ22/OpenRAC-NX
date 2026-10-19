@@ -1,3 +1,4 @@
+/* fcheck: SAME on 3 calls (OpenRAC tools/fcheck_gate.py, 2026-10-18). */
 /* memset: stores the byte a1 into the n bytes at a0 and returns a0. The
    retail code stores 8 or 32 bytes at a time when the pointer is 16-byte
    aligned; the bytes written are the same. */

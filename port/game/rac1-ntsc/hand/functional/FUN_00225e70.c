@@ -1,6 +1,8 @@
 /* Carried from the PAL decompilation's src/game/pause.c (matched C there) (games/rac1) through the version
  * map (../../README.md): functional C, not matched C. Names and addresses are this version's.
- * The two versions' code differs here: func_00227100 (near) was paired by place; read it against NTSC-U before trusting it. */
+ * The two versions' code differs here: func_00227100 (near) was paired by place. Read against NTSC-U's
+ * assembly (2026-10-18): the finished read takes the request's animation id, as below, not PAL's
+ * streamed-id word at menu_system + 0x14C, which NTSC-U does not have. */
 #include "types.h"
 #include "qcopy.h"
 #include "qzero.h"
@@ -59,9 +61,7 @@ typedef struct {
     u8 idx;
     u8 pending;
     u32 base;
-    u8 padD0[0x7C];
-    s32 streamed;
-} Pv_q_c225e70;
+} Pv_q_c225e70; /* NTSC-U's menu_system (0x148 bytes) up to 0xD0 */
 extern Pv_q_c225e70 D_001D5F70_q[] __asm__("D_001D5BF0");
 extern struct Hdr16_1CE60_c225e70 D_001517D0_q[] __asm__("D_001516D0");
 extern Rec38_q_c225e70 D_001D6410_q[] __asm__("D_001D6080");
@@ -118,12 +118,14 @@ int func_00227100_r(char *moby, char *m1, char *m2, char **o0, char **o1, char *
                     func_0020B618(buf + D_001D5F70_q[0].readOff, buf);
                     D_001D5F70_q[0].readOff = 0;
                     func_00225E20(buf);
-                    D_001D5F70_q[0].loaded[n] = D_001D5F70_q[0].streamed;
-                    if (D_001D6250_q[0].arg[0] == D_001D5F70_q[0].streamed) {
-                        D_001D6250_q[0].unk00 = 2;
-                    }
-                    ((Cls_q_c225e70 *)D_001B3200[0])->anim[D_001D5F70_q[0].streamed] = *slot;
-                    func_002032E0(D_001B3200[0], D_001D5F70_q[0].streamed);
+                    /* NTSC-U (0x225F70..0x225FA0): the buffer takes the queued
+                     * request's animation and the request is ready, unconditionally.
+                     * PAL keeps the streamed id in its own word past this struct's
+                     * end (0x14C); NTSC-U has no such word. */
+                    D_001D5F70_q[0].loaded[n] = (u8)D_001D6250_q[0].arg[0];
+                    D_001D6250_q[0].unk00 = 2;
+                    ((Cls_q_c225e70 *)D_001B3200[0])->anim[D_001D6250_q[0].arg[0]] = *slot;
+                    func_002032E0(D_001B3200[0], D_001D6250_q[0].arg[0]);
                     D_001D5F70_q[0].pending = 0;
                 }
             }
@@ -150,7 +152,6 @@ int func_00227100_r(char *moby, char *m1, char *m2, char **o0, char **o1, char *
                 D_001D5F70_q[0].pending = D_001D5F70_q[0].idx + 1;
                 ld[D_001D5F70_q[0].idx] = 0xFF;
                 D_001D6250_q[0].unk00 = 1;
-                D_001D5F70_q[0].streamed = D_001D6250_q[0].arg[0];
             }
         }
         if (D_00160350 > 0 && (unsigned int)(D_001D6250_q[0].unk00 - 2) < 2) {

@@ -402,7 +402,45 @@ unsigned char *PartType53Spawn(float *pos, int a, int col, int mode, int b, floa
     }
     return r;
 }
-INCLUDE_ASM("asm/overlays", func_L00_00273090);
+static __inline__ void vcopy_273090(float *d, float *s) {
+    d[0] = s[0];
+    d[1] = s[1];
+    d[2] = s[2];
+    *(int *)&d[3] = 0;
+}
+
+// Particle update: ramps the size and alpha over its life, moves by its velocity, applies gravity and kills it when out of range or its timer expires.
+void func_L00_00273090(char *m) {
+    char *v = m + 0x20;
+    float f4;
+    float a[4] __attribute__((aligned(16)));
+    int al;
+    m[8] += v[0xA];
+    if (*(short *)(v + 8) - *(short *)(m + 0xA) < 6) {
+        int c;
+        int c2;
+        f4 = (float)(*(short *)(v + 8) - *(short *)(m + 0xA)) / 5.0f;
+        *(float *)(m + 0xC) = *(float *)(v + 4) + ((*(float *)(m + 0x20) + *(float *)(v + 4)) * 0.5f - *(float *)(v + 4)) * f4;
+        c2 = (unsigned char)v[0xB] >> 1;
+        c = (unsigned char)v[0xB];
+        al = truncate_float_to_s32((float)c + (float)(c2 - c) * f4);
+    } else {
+        f4 = (float)*(short *)(m + 0xA) / IntToFloat(*(short *)(v + 8) - 6);
+        *(float *)(m + 0xC) = *(float *)(m + 0x20) + ((*(float *)(m + 0x20) + *(float *)(v + 4)) * 0.5f - *(float *)(m + 0x20)) * f4;
+        al = truncate_float_to_s32((float)((unsigned char)v[0xB] >> 1) * f4 + 0.0f);
+    }
+    *(int *)(m + 4) = (al << 24) | (*(int *)(m + 4) & 0xFFFFFF);
+    vcopy_273090(a, (float *)(v + 0xC));
+    FastVecAdd(m + 0x10, m + 0x10, a);
+    *(float *)(v + 0x14) -= *(float *)(v + 0x18);
+    if (*(float *)(m + 0x10) < 2.0f || *(float *)(m + 0x10) > 1021.0f ||
+        *(float *)(m + 0x14) < 2.0f || *(float *)(m + 0x14) > 1021.0f ||
+        *(float *)(m + 0x18) < 2.0f || *(float *)(m + 0x18) > 1021.0f) {
+        KillPart(m);
+    } else if (FastDecTimer(m + 0xA)) {
+        KillPart(m);
+    }
+}
 typedef struct { int a[4]; } V54 __attribute__((aligned(16)));
 typedef struct { int i0; float f4; float f8; float fc; void *p10; void *p14; } Q54;
 extern void func_L00_002633D8(int, float *, float *, void *, float, float);

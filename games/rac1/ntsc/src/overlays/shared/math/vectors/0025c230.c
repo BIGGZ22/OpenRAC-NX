@@ -66,12 +66,12 @@ extern void FUN_L00_00269958(void *, void *, int, int, int, int, int, int);
 extern void add_vector_xyz(void *, void *, void *);
 extern void build_spherical_offset(void *, float, float, float) __asm__("FUN_00214db0");
 
-void FUN_L00_0025c398(void *a0, void *base_vector, void *a2) {
+void FUN_L00_0025c398(void *source_object, void *base_vector, void *point_source_mask) {
     V4 buf[20];
     float tmp[4];
     int n, i;
 
-    n = FUN_L00_0025aca0(a0, 20, buf, a2, 14.0f);
+    n = FUN_L00_0025aca0(source_object, 20, buf, point_source_mask, 14.0f);
     if (n == 0) {
         return;
     }
@@ -187,6 +187,10 @@ extern int func_L00_001F2BE8_d6f0(float, void *, int, void *, void *) __asm__("F
 
 int mine_fall(char *moby, char *st) __asm__("FUN_L00_0025c698");
 int mine_fall(char *moby, char *st) {
+    enum {
+        MOTION_FALLING = 1,
+        MOTION_GROUNDED = 2
+    };
     float eye[4];
     float height_probe_position[4];
     float collision_probe_position[4];
@@ -265,7 +269,7 @@ int mine_fall(char *moby, char *st) {
             }
             break;
         }
-        case 1:
+        case MOTION_FALLING:
             t = compute_interpolated_record_value(moby);
             if (*(float *)(st + 0x54) <= t) {
                 *(int *)(moby + 0x58) = 0;
@@ -289,7 +293,7 @@ int mine_fall(char *moby, char *st) {
                 approach_value((float *)(moby + 0x58), rr, frame_scale * 0.1f);
             }
             break;
-        case 2:
+        case MOTION_GROUNDED:
             *(float *)(moby + 0x58) = 1.0f;
             break;
         }

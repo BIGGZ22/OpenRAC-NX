@@ -1,4 +1,4 @@
-/* functional: medium. Blends two RGBA images given as palette indices: out[k] = bytes of (int)(pal[a[k]]*(1-t) + pal[b[k]]*t) per channel (truncated, low byte kept), for 4*(size/4) pixels; the retail code stages the palette ($6, used for both tables) through the scratchpad with DMA and VU0, which this C does with local tables instead (not checked: DMA/scratchpad/D_PCR side effects, VU0 rounding). */
+/* functional: medium. fcheck: unchecked (level/overlay function; fcheck runs boot-executable functions only; OpenRAC tools/fcheck_gate.py, 2026-10-18). Blends two RGBA images given as palette indices: out[k] = bytes of (int)(pal[a[k]]*(1-t) + pal[b[k]]*t) per channel (truncated, low byte kept), for 4*(size/4) pixels; the retail code stages the palette ($6, used for both tables) through the scratchpad with DMA and VU0, which this C does with local tables instead (not checked: DMA/scratchpad/D_PCR side effects, VU0 rounding). */
 void func_L02_00250C78(unsigned char *dst, unsigned char *idx_a, unsigned char *pal, unsigned char *idx_b, unsigned char *unused, int size, float t) {
     float table_a[256][4];
     float table_b[256][4];

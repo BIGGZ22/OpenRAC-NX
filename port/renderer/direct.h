@@ -31,6 +31,7 @@
 
 #include <array>
 #include <cstdint>
+#include <initializer_list>
 #include <span>
 #include <string>
 #include <unordered_map>
@@ -181,6 +182,14 @@ public:
     // context the packets before it set up.
     void set_ui_quads(std::span<const UiQuad> quads) { m_ui_quads = quads; }
     static constexpr std::uint64_t kUiQuadMarker = 0x4E55;
+    // The target the frame is drawn into (RenderTarget): the picture's width as a part of it, and
+    // whether a scissor of the screen's whole width is cut at the target's sides instead
+    // (wide_2d). Says which of the chip's pixel columns a draw in the frame can reach
+    // (covers_no_pixel).
+    void set_picture(float picture_scale_x, bool wide_2d) {
+        m_picture_scale_x = picture_scale_x;
+        m_wide_2d = wide_2d;
+    }
     // Mobys the game drew while rendering to a texture: a marker of the same form, kMobyMarker in
     // the top 16 bits, the mobys' count in bits 32-39 and the first's address in the low 32,
     // becomes a draw of no vertices (DirectDraw::mobys) in the target being drawn.
@@ -241,6 +250,13 @@ private:
     void emit_triangle(
         const GsVertex& a, const GsVertex& b, const GsVertex& c, const GsVertex& colour_from
     );
+    // Whether a primitive whose corners are these covers no pixel of the chip: no pixel's sample
+    // point (its integer coordinates) inside the corners' box, on either axis, within the scissor.
+    // The chip then draws nothing; scaled up, GL would still fill the window pixels between two
+    // samples that the box overlaps (a sprite slid to just past the screen's last column).
+    bool covers_no_pixel(std::initializer_list<const GsVertex*> corners) const;
+    float m_picture_scale_x = 1.0f;
+    bool m_wide_2d = false;
     void emit_sprite(const GsVertex& a, const GsVertex& b);
     void emit_line(const GsVertex& a, const GsVertex& b);
     void emit_point(const GsVertex& a);

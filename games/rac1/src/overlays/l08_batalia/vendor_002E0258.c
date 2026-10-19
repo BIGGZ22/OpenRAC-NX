@@ -675,7 +675,7 @@ void CannonUpdate(Moby *m) {
 extern void func_L08_00231228(int, int);
 
 /* Sets byte +0xBC of the moby to 1 and calls func_L08_00231228(0x32, 1). */
-void func_L08_002E2A10(char *arg) {
+void Moby1283_SetHeroState(char *arg) {
     arg[0xBC] = 1;
     Hero_TryMoveStateL08(0x32, 1);
 }
@@ -1018,7 +1018,7 @@ void LaunchDamagedPart(struct Moby *moby) {
             ((char *)moby)[0x20] = 99;
         }
     }
-    if (state >= 0) func_0022ED80(state, 0, moby);
+    if (state >= 0) Moby_PlaySound(state, 0, moby);
 }
 void func_L08_002E30E8_E3860(struct Moby *moby) __asm__("func_L08_002E30E8");
 extern f32 func_L00_001FF860(f32, f32);
@@ -1111,7 +1111,7 @@ void Moby444Update(struct Moby *moby) {
         return;
     }
     if (!Sound_IsPlaying(moby, vars->sound)) {
-        vars->sound = func_0022ED80(3, 4, moby);
+        vars->sound = Moby_PlaySound(3, 4, moby);
     }
     switch (moby->state) {
     case 0:
@@ -1497,7 +1497,7 @@ void Batalia_BoltThiefUpdate(Moby *m) {
                     if (m->prev_seq != 6) {
                         MobyBlendAnimation(m, 6, 0, scale_ticks(0x14));
                     }
-                    func_L00_002A84B0(d->list[i], (int)m, 0.0f, 0.0f);
+                    Moby_StartTumble(d->list[i], (int)m, 0.0f, 0.0f);
                     d->list[i] = 0;
                 }
                 found = 1;
@@ -1812,7 +1812,7 @@ void TurretBoltUpdate(Moby *m) {
             e->u7C.f = 0.5f;
             if (D_L08_00161D64 + scale_ticks(3) < D_L08_0015F6B0_2E0258) {
                 D_L08_00161D64 = D_L08_0015F6B0_2E0258;
-                func_0022ED80(0, 0x20, m);
+                Moby_PlaySound(0, 0x20, m);
                 e->f64 = 0.0f;
             } else {
                 e->f64 = random_float_between(-30.0f, 30.0f) * k;

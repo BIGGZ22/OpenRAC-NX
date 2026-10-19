@@ -1,3 +1,4 @@
+/* fcheck: unchecked (never called in fcheck's capture run of the title, menu and level 0; OpenRAC tools/fcheck_gate.py, 2026-10-18). */
 /*
  * UpdateParts: walks the particle blocks (64 bytes each) from the base at 0x1601AC through
  * count + 1 blocks, skips a block whose byte 1 is negative, and calls the update routine for the

@@ -297,8 +297,11 @@ extern f32 D_L00_001618C8 __attribute__((sda));
 extern f32 D_L00_001618CC __attribute__((sda));
 extern f32 D_L00_001618D0 __attribute__((sda));
 void crate_drop_bolts(u8 *a) {
+    enum {
+        CRATE_DROP_AUTO_SELECT = 0
+    };
     T_2d0538 tmp;
-    V_2d0538 trajectory_vector, adjusted_position, v40;
+    V_2d0538 trajectory_vector, adjusted_position, scratch_vector;
     s32 n;
     f32 f54, f58;
     s32 cnt, i;
@@ -317,7 +320,7 @@ void crate_drop_bolts(u8 *a) {
         if (*(s32 *)(b + 0xF0)) {
             if (a)
                 *(s16 *)(a + 0x36) = 0x7F80;
-            FUN_L00_00260400_2d0538(a, *(s32 *)(b + 0xF0), a + 0x10, a + 0x40, &adjusted_position, &v40);
+            FUN_L00_00260400_2d0538(a, *(s32 *)(b + 0xF0), a + 0x10, a + 0x40, &adjusted_position, &scratch_vector);
             subtract_vector_xyz(&trajectory_vector, &adjusted_position, a + 0x10);
         }
         if (D_0015ED84 == 0xF && absolute_float(*(f32 *)(a + 0x10) - 166.0f) < 6.0f &&
@@ -366,7 +369,7 @@ void crate_drop_bolts(u8 *a) {
         case 9:
             n = 25;
             break;
-        case 0:
+        case CRATE_DROP_AUTO_SELECT:
         default:
             n = -1;
             break;
@@ -404,8 +407,8 @@ void crate_drop_bolts(u8 *a) {
                 FUN_L00_00261b48(*(s32 *)(b + 0xC0), a + 0x10, &trajectory_vector, &adjusted_position);
                 subtract_vector_xyz(&trajectory_vector, &adjusted_position, p + 0x10);
                 trajectory_vector.f[2] = 0.0f;
-                normalize_vector_xyz(&v40, &trajectory_vector, 0.25f);
-                subtract_vector_xyz(&trajectory_vector, &trajectory_vector, &v40);
+                normalize_vector_xyz(&scratch_vector, &trajectory_vector, 0.25f);
+                subtract_vector_xyz(&trajectory_vector, &trajectory_vector, &scratch_vector);
                 scale_vector_xyz(&trajectory_vector, &trajectory_vector, 1.0f / e);
                 *(f32 *)(q + 0x10) = trajectory_vector.f[0];
                 *(f32 *)(q + 0x14) = trajectory_vector.f[1];
@@ -3346,6 +3349,10 @@ void FUN_L00_002d73e8(P *);
 
 void particle_spawner_smoke_fire_update(P *p) __asm__("FUN_L00_002d6f28");
 void particle_spawner_smoke_fire_update(P *p) {
+    enum {
+        PARTICLE_SPAWNER_INITIALIZE = 0,
+        PARTICLE_SPAWNER_ACTIVE = 1
+    };
     Q *q = p->q;
     u8 *tbl;
     V v, a, b;
@@ -3355,7 +3362,7 @@ void particle_spawner_smoke_fire_update(P *p) {
     E2 *sub;
 
     switch (p->state) {
-    case 0:
+    case PARTICLE_SPAWNER_INITIALIZE:
         p->state = 1;
         p->b30 = 0xFF;
         if (q->idx == -1) {
@@ -3391,7 +3398,7 @@ void particle_spawner_smoke_fire_update(P *p) {
         D_L00_001600EC[q->idx].w = 1.0f;
         q->col = q->c2 << 16 | q->c1 << 8 | q->c0;
         return;
-    case 1:
+    case PARTICLE_SPAWNER_ACTIVE:
         tbl = (u8 *)&D_L00_001600EC[q->idx];
         qcopy(&v, tbl + 0x30);
         v.z += 9.0f;

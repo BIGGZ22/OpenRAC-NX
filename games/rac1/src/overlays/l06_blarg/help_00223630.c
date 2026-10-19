@@ -13,7 +13,7 @@ extern void func_L06_00235E08(int, int);
 extern float func_001F9B88(float);
 
 // Resolves the pending hero action id into input flags, then triggers a state change when its conditions hold.
-void func_L06_00223630(void) {
+void HeroL06_ResetFrameFlags(void) {
     char *g = (D_0013E633 + 0xE1D);
     char *g1;
     char *g2;
@@ -139,7 +139,7 @@ void func_L06_00235E08(s32, s32);
 void func_L00_00211338(void *, s32, f32, f32);
 
 /* Adapted from Lombyte (MIT) for PAL by OpenRAC's tools/port.py: src/overlays/l06/ui_help_00222fb8.c, FUN_L06_00227e78. */
-s32 func_L06_00228510(s32 arg) {
+s32 HeroL06_TryApplyHitKnockback(s32 arg) {
     u8 *m;
     T_8 *tbl;
     u8 *mob;
@@ -247,7 +247,7 @@ extern float D_0015EE64 MACRO_ADDR;
 extern float D_0015EE6C MACRO_ADDR;
 
 // Eases the follow-camera distance/height/tilt toward targets picked from the current mode.
-void func_L06_002289F8(void) {
+void CameraL06_UpdateFollowOffsets(void) {
     char *b = D_0013E633 + 0xE1D;
     char *d;
     char *b2, *b3, *e;
@@ -298,7 +298,7 @@ extern float D_L06_0017C638[];
 extern float D_0015EE6C MACRO_ADDR;
 
 // Resets the screen fade and eases a scale factor toward one of two table targets.
-void func_L06_002291D8(void) {
+void HeroL06_ApplyStickSpeed(void) {
     char *x;
     float cur;
     Hero_SetHeadingFromStick(1.0f, 0);
@@ -392,7 +392,7 @@ typedef struct {
 extern HS D_L06_001746C0;
 
 /* Adapted from Lombyte (MIT) for PAL by OpenRAC's tools/port.py: src/overlays/l06/ui_help_00222fb8.c, FUN_L06_00229650. */
-void func_L06_00229CE8(void) {
+void HeroL06_ResetMotionState(void) {
     Vec4 v0, v10, v20, v30, v40, v50, v60;
     f32 f;
     s32 r;
@@ -989,7 +989,7 @@ void HeroL06_UpdateMovement(void) {
                 ((Hero *)&D_0013F450)->unk6A4->alpha = 0;
                 ((Hero *)&D_0013F450)->unk6A4->flags |= 0x800;
                 func_L00_00251E30(((Hero *)&D_0013F450)->unk6A4);
-                func_0022ED80(0, 0, (int)((Hero *)&D_0013F450)->unk6A4);
+                Moby_PlaySound(0, 0, (int)((Hero *)&D_0013F450)->unk6A4);
             }
         }
         if (((Hero *)&D_0013F450)->unk6A4 != 0) {
@@ -1641,19 +1641,19 @@ void HeroL06_UpdateMovement(void) {
                         vec[4][1] = FastSin(yaw) * 0.8f;
                         vec[4][2] = 0.55f;
                         FastVecAdd(vec[4], vec[4], ((Hero *)&D_0013F450)->motion.pos.f);
-                        func_L00_00217AF0((int)w, coll_sphere_mobys(0.8f, vec[4], 0, w, vec[0]));
+                        Hero_HitMobySparks((int)w, coll_sphere_mobys(0.8f, vec[4], 0, w, vec[0]));
                         yaw = FastAddRots(((Hero *)&D_0013F450)->motion.rot.f[2], -0.87266463f);
                         vec[4][0] = FastCos(yaw) * 0.8f;
                         vec[4][1] = FastSin(yaw) * 0.8f;
                         vec[4][2] = 0.55f;
                         FastVecAdd(vec[4], vec[4], ((Hero *)&D_0013F450)->motion.pos.f);
-                        func_L00_00217AF0((int)w, coll_sphere_mobys(0.8f, vec[4], 0, ((Hero *)&D_0013F450)->moby, vec[0]));
+                        Hero_HitMobySparks((int)w, coll_sphere_mobys(0.8f, vec[4], 0, ((Hero *)&D_0013F450)->moby, vec[0]));
                         yaw = FastAddRots(((Hero *)&D_0013F450)->motion.rot.f[2], 0.87266463f);
                         vec[4][0] = FastCos(yaw) * 0.8f;
                         vec[4][1] = FastSin(yaw) * 0.8f;
                         vec[4][2] = 0.55f;
                         FastVecAdd(vec[4], vec[4], ((Hero *)&D_0013F450)->motion.pos.f);
-                        func_L00_00217AF0((int)w, coll_sphere_mobys(0.8f, vec[4], 0, w, vec[0]));
+                        Hero_HitMobySparks((int)w, coll_sphere_mobys(0.8f, vec[4], 0, w, vec[0]));
                     }
                 }
             }
@@ -1704,7 +1704,7 @@ void HeroL06_UpdateMovement(void) {
                     ((Hero *)&D_0013F450)->unk3BE = 0;
                 }
             }
-            func_L06_002291D8();
+            HeroL06_ApplyStickSpeed();
             if (((Hero *)&D_0013F450)->unk930 > 0.0f) {
 
                 Hero_ComputeMoveOffset(0.7f, 0.0f);
@@ -1881,7 +1881,7 @@ void HeroL06_UpdateMovement(void) {
                         if (tilt < -0.7853982f) {
                             tilt = -0.7853982f;
                         }
-                        func_L00_0020A858(0.03f, 0.2f);
+                        Hero_SetTiltSpringParams(0.03f, 0.2f);
                         if (((Hero *)&D_0013F450)->unk58C != 0) {
                             D_L06_0017AF60[1] = -tilt;
                         } else {
@@ -1893,9 +1893,9 @@ void HeroL06_UpdateMovement(void) {
                     D_L06_0017AF60[0] = func_L00_001FF860(func_001F9CE8(((Hero *)&D_0013F450)->motion.displacement.f), ((Hero *)&D_0013F450)->motion.displacement.f[2]);
                 }
                 if (hasW) {
-                    func_L00_0020A858(D_0015EE64 * 0.017f, D_0015EE64 * 0.3f);
-                    func_L00_0020A858(D_0015EE64 * 0.027f, D_0015EE64 * 0.3f);
-                    func_L00_0020A858(D_0015EE64 * 0.027f, D_0015EE64 * 0.3f);
+                    Hero_SetTiltSpringParams(D_0015EE64 * 0.017f, D_0015EE64 * 0.3f);
+                    Hero_SetTiltSpringParams(D_0015EE64 * 0.027f, D_0015EE64 * 0.3f);
+                    Hero_SetTiltSpringParams(D_0015EE64 * 0.027f, D_0015EE64 * 0.3f);
                     if (((Hero *)&D_0013F450)->unk5D8 != 0) {
                         float a;
 
@@ -2198,7 +2198,7 @@ void HeroL06_UpdateMovement(void) {
                 ((Hero *)&D_0013F450)->state.step = 1;
             }
         }
-        func_L06_002291D8();
+        HeroL06_ApplyStickSpeed();
         if (((Hero *)&D_0013F450)->unk1C4 == 0) {
             HeroL06_UpdateHopMovement();
         }

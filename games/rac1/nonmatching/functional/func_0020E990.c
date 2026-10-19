@@ -1,4 +1,4 @@
-/* functional: high. Nothing differs but the trap: retail executes teq when a block is already free (the byte is unchanged), which traps; this returns there, after the earlier blocks of the run have been cleared, as the trap would stop before the store. The loop is retail's do/while on the count, one byte store per block. */
+/* functional: high. fcheck: unchecked (never called in fcheck's capture run of the title, menu and level 0; OpenRAC tools/fcheck_gate.py, 2026-10-18). Nothing differs but the trap: retail executes teq when a block is already free (the byte is unchanged), which traps; this returns there, after the earlier blocks of the run have been cleared, as the trap would stop before the store. The loop is retail's do/while on the count, one byte store per block. */
 extern unsigned char D_001C7A60[];
 
 void func_0020E990(int block, int count) {

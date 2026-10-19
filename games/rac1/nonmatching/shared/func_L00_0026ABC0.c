@@ -11,6 +11,7 @@
  *   diag/live0.c (diagnostic only): making the normal's address a function-level pointer used after the join chang
  *   What (1) needs, worked out from reorg (fill_slots_from_thread): for the fall-through thread a candidate must n
  *   What I could not find: which pseudo that ends in $s0 was live into the else block in retail's flow information
+ *   fcheck: unchecked (level/overlay function; fcheck runs boot-executable functions only; OpenRAC tools/fcheck_gate.py, 2026-10-18).
  */
 extern s32 func_L00_001EFFF0_70DB0(void *, void *, s32, void *, void *) __asm__("func_L00_001EFFF0");
 extern void func_L00_0025D308(void *, void *, void *, float);

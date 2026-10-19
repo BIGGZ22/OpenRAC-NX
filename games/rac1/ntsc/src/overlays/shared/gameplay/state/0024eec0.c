@@ -245,11 +245,11 @@ typedef struct {
 } A;
 /* Fills a1 from a0's bytes, a2/a3 and a 1/a4 step; calls FUN_L00_0024f190 when a5 is set. */
 void FUN_L00_0024f190_0024f3e0(void *, void *) __asm__("FUN_L00_0024f190");
-void FUN_L00_0024f3e0(A *source, S *destination, s32 a2, s32 a3, s32 step_divisor, s32 update_immediately) {
+void FUN_L00_0024f3e0(A *source, S *destination, s32 target_animation_index, s32 target_frame_index, s32 step_divisor, s32 update_immediately) {
     destination->b22 = source->b53;
     destination->b20 = source->b51;
-    destination->b23 = a2;
-    destination->b21 = a3;
+    destination->b23 = target_animation_index;
+    destination->b21 = target_frame_index;
     destination->f28 = 1.0f;
     destination->f2c = 1.0f / (f32)step_divisor;
     destination->i24 = 0;

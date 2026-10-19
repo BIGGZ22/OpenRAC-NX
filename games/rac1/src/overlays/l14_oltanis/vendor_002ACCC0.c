@@ -151,7 +151,7 @@ void KeyframePlatformUpdate(unsigned char *moby) {
             float f20, t;
             char *q;
             if (!Sound_IsPlaying(moby, *(int *)(data + 0xC4))) {
-                *(int *)(data + 0xC4) = func_0022ED80(0, 4, (int)moby);
+                *(int *)(data + 0xC4) = Moby_PlaySound(0, 4, (int)moby);
             }
             *(float *)(data + 0xA8) += *(float *)(data + 0xAC) * D_0015EE6C;
             if (FastAbsF(*(float *)(data + 0xA8)) > FastAbsF(*(float *)(data + 0xAC))) {
@@ -473,8 +473,8 @@ void Moby8Update(struct Moby *m) {
         if (hit) {
             func_001F9C08(v, d + 0x90, d + 0xD0, 0.5f);
             qcopy(w, d + 0x90);
-            func_001E9768(w, *(float *)(d + 0x214) * 0.8f);
-            func_001E9768(v, *(float *)(d + 0x214) * 0.48f);
+            Profile_Mark(w, *(float *)(d + 0x214) * 0.8f);
+            Profile_Mark(v, *(float *)(d + 0x214) * 0.48f);
             if (coll_sphere_mobys(*(float *)(d + 0x214) * 0.48f, v, 0, 0, 0) ||
                 coll_sphere_mobys(*(float *)(d + 0x214) * 0.9f, w, 0, 0, 0)) {
                 struct Moby *t = D_L14_00174640.target;
@@ -2225,7 +2225,7 @@ void MinibomberUpdate(Moby *moby) {
     }
     if (moby->state > 1 && moby->state != 9) {
         if (Sound_IsPlaying(moby, d->f108) == 0) {
-            d->f108 = func_0022ED80(0, 4, (int)moby);
+            d->f108 = Moby_PlaySound(0, 4, (int)moby);
         }
     }
 }

@@ -1,4 +1,4 @@
-/* functional: high. Copies ripple heights and halos into the scratchpad: 16 x 2 pairs of 16-byte blocks from a1 (stride 0x40) into a0+0x70 (stride 0x60), 4 x 3 blocks from a1+0x400/0x480/0x500 into a0+0x10/0x670/0x6D0, 16 x 3 words from a1+0x440/0x4C0/0x540 into a0+0x6C/0xB0/0xB4 (stride 0x60), then six words from a1+0x580 to a0+0xC/0x50/0x66C/0x6B0/0x6B4/0x710. Same reads, writes and order as the assembly; no return value. */
+/* functional: high. fcheck: unchecked (level/overlay function; fcheck runs boot-executable functions only; OpenRAC tools/fcheck_gate.py, 2026-10-18). Copies ripple heights and halos into the scratchpad: 16 x 2 pairs of 16-byte blocks from a1 (stride 0x40) into a0+0x70 (stride 0x60), 4 x 3 blocks from a1+0x400/0x480/0x500 into a0+0x10/0x670/0x6D0, 16 x 3 words from a1+0x440/0x4C0/0x540 into a0+0x6C/0xB0/0xB4 (stride 0x60), then six words from a1+0x580 to a0+0xC/0x50/0x66C/0x6B0/0x6B4/0x710. Same reads, writes and order as the assembly; no return value. */
 typedef int u128_62BC0 __attribute__((mode(TI)));
 
 void func_L01_00262BC0(char *a0, char *a1)

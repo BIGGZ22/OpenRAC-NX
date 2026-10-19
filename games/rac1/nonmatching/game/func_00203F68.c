@@ -1,3 +1,4 @@
+/* fcheck: SAME on 3 calls (OpenRAC tools/fcheck_gate.py, 2026-10-18). */
 /*
  * tie_ad_gif_convert (written from the assembly). Records the tie ad self in
  * the table D_001E1A00 at the count D_0016104C, stores the count and the ad's

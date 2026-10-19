@@ -668,7 +668,7 @@ typedef struct { char pad[0x2084]; int f; int pad2; int mode; } G;
 extern G D_0013F450 NOT_SDA;
 
 /* tests a state value against a set of cases */
-int func_L00_002DB428(void) {
+int SuckCannon_IsBlockedByHeroMode(void) {
     G *g = &D_0013F450;
     int r = 1;
     switch (g->mode) {
@@ -690,7 +690,7 @@ extern void func_001FA218(void *, void *);
 extern void func_001FA460(void *, void *);
 extern void func_001FA480(void *, void *);
 extern void func_0020EEE8(void *);
-void func_L00_002DB480(char *a, char *b, void *c) {
+void CarriedMoby_AttachMatrix(char *a, char *b, void *c) {
     V t0, t1, t2;
     func_001FA218(&t0, c);
     func_001FA460(&t1, a + 0xC0);
@@ -764,13 +764,13 @@ extern char D_L00_00166D80[];
 extern char D_0013E633[];
 
 /* picks camera yaw/pitch style outputs and a position offset per camera mode */
-void func_L00_002DB700(char *m, float *a, float *b, float *c) {
+void SuckCannon_GetAimOrigin(char *m, float *a, float *b, float *c) {
     float v[3];
     char *g;
     Moby_GetJointWorldPos(m, 0, c);
     g = D_0013E633 + 0xE1D;
     if (*(int *)(g + 0x2084) == 1 || *(int *)(g + 0x2084) == 0x1E) {
-        char *s = D_L00_00166D80;
+        char *s = gCameraLvl;
         v[1] = 0;
         v[0] = 1.2f;
         *a = *(float *)(s + 0x158);
@@ -813,7 +813,7 @@ extern void func_L00_002DB690_DB810(M_da360 *) __asm__("func_L00_002DB690");
 extern void func_L00_002E0690_DB810(M_da360 *) __asm__("func_L00_002E0690");
 
 /* Adapted from Lombyte (MIT) for PAL by OpenRAC's tools/port.py: src/overlays/shared/unclassified_002d7f88.c, FUN_L00_002da360. */
-void func_L00_002DB810(u8 *p, void *q)
+void SuckCannon_ScanTargets(u8 *p, void *q)
 {
     u8 buf[0x10] __attribute__((aligned(16)));
     Vec4f v;
@@ -827,11 +827,11 @@ void func_L00_002DB810(u8 *p, void *q)
     func_L00_002DF410(p, buf);
     for (m = D_L00_001600A4; m != 0; m = m->next) {
         if (m->a6 != 0 && (m->f34 & 0x1000) &&
-            *(void **)*(u8 **)(m->p24 + 0x2c) != (void *)func_001E97C8) {
+            *(void **)*(u8 **)(m->p24 + 0x2c) != (void *)NullMobyUpdate) {
             r = func_L00_002DCD40_DB810(m);
             if (r != 0 && r->h68 < 6) {
                 d = func_001F9D48(p + 0x10, &m->pos);
-                if (d < 15.0f && !func_L00_002DB428() &&
+                if (d < 15.0f && !SuckCannon_IsBlockedByHeroMode() &&
                     ((n = (&D_0013F450_DB810)->i2078), (&D_0013E620)->b9 == 0 ? n < 5 : n < 10)) {
                     if (r->h68 < 3) {
                         thr = 0.043864909559488297f;
@@ -1039,11 +1039,11 @@ void SuckCannonUpdate(M40 *self) {
     int special, i, sound, next_state;
     M40 *stored;
 
-    queue_animation_update(4, 0x753F, (int)delete_callback40, (int)func_L00_00238148,
+    queue_animation_update(4, 0x753F, (int)delete_callback40, (int)HudSuckCannon_Update,
                  (int)Hud_DrawGaugeFrame, (int)&hero40.count, 5);
     data = self->data;
     special = hero40.weapon_mode == 3;
-    if ((u8)self->state != 3 && (u8)self->state != 0) func_L00_002E0490((int)self);
+    if ((u8)self->state != 3 && (u8)self->state != 0) SuckBeam_QueueDraw((int)self);
     UpdateHeroSlots();
     switch ((u8)self->state) {
     case 0:
@@ -1074,9 +1074,9 @@ void SuckCannonUpdate(M40 *self) {
             break;
         }
         if ((input40.held & hero40.fire_mask) && data->cooldown==0 && hero40.locked==0 &&
-            hero40.disabled==0 && scale_ticks(15) < hero40.cooldown && func_L00_002DB428()==0) {
+            hero40.disabled==0 && scale_ticks(15) < hero40.cooldown && SuckCannon_IsBlockedByHeroMode()==0) {
             Hero_StartModuleAnim();
-            data->sound = func_0022ED80(2,4,(int)self);
+            data->sound = Moby_PlaySound(2,4,(int)self);
             data->cooldown = scale_ticks(10);
             stats = (Stats40 *)(D_0014171B + 0x65);
             if (stats->uses < 65535) stats->uses++;
@@ -1088,7 +1088,7 @@ void SuckCannonUpdate(M40 *self) {
         break;
     case 2:
         if (self->anim_flags & 2) MobyBlendAnimation(self,3,0,scale_ticks(5));
-        if (func_L00_002DB428()!=0 || hero40.disabled || hero40.locked) {
+        if (SuckCannon_IsBlockedByHeroMode()!=0 || hero40.disabled || hero40.locked) {
             sound = data->sound;
             if (sound!=-1) {
                 Sound40 *s=(Sound40 *)(D_0013E633+0x1D)+sound;
@@ -1118,7 +1118,7 @@ void SuckCannonUpdate(M40 *self) {
             MobyBlendAnimation(self,3,0,scale_ticks(5));
         func_001F9908_r(&data->cooldown);
         if (!(hero40.sucking || (hero40.count < (order40.gold==0?5:10) &&
-            func_L00_002DB428()==0 && ((input40.held&hero40.fire_mask) || data->cooldown) &&
+            SuckCannon_IsBlockedByHeroMode()==0 && ((input40.held&hero40.fire_mask) || data->cooldown) &&
             !hero40.disabled && !hero40.locked))) {
             Hero_ClearPendingModuleAnim();
             sound=data->sound;
@@ -1127,7 +1127,7 @@ void SuckCannonUpdate(M40 *self) {
                 if(s[1].owner==self && s[1].active) Sound_StopSlot(sound);
             }
             data->sound=-1;
-            func_L00_002E04F8((int)self);
+            SuckBeam_ApplyPulls((int)self);
             hero40.firing=0;
             if(hero40.count>0) {
                 MobyBlendAnimation(self,6,0,scale_ticks(4));
@@ -1143,7 +1143,7 @@ void SuckCannonUpdate(M40 *self) {
             }
         } else {
             if (self->anim_flags&2) MobyBlendAnimation(self,3,0,scale_ticks(2));
-            func_L00_002DB810((u8 *)self,data);
+            SuckCannon_ScanTargets((u8 *)self,data);
         }
         break;
     case 4:
@@ -1158,7 +1158,7 @@ void SuckCannonUpdate(M40 *self) {
             (data->target && ((u8)data->target->state&0x80))) data->target=0;
         if (hero40.camera_mode==1) HeroEnterMoveState(30,1);
         if (hero40.camera_mode==30 && (hero40.moby->flags&1) && !hero40.disabled) {
-            char *camera=D_L00_00166D80;
+            char *camera=gCameraLvl;
             V40 *eye;
             Hit40 *hit;
             work.aim.velocity.q=0;
@@ -1221,7 +1221,7 @@ void SuckCannonUpdate(M40 *self) {
             M40 *best,*m;
             float yaw,pitch,limit;
             work.fire.velocity.q=0;
-            func_001FA480(&work.fire.rotation,D_L00_00166D80);
+            func_001FA480(&work.fire.rotation,gCameraLvl);
             func_001FA4A0(&work.fire.inverse,&work.fire.rotation);
             if(hero40.camera_mode==30 && (hero40.moby->flags&1)) {
                 work.fire.tmp.q=0;
@@ -1233,7 +1233,7 @@ void SuckCannonUpdate(M40 *self) {
                 work.fire.tmp.f.y=0.3f;
                 work.fire.tmp.f.z=1.0f;
                 func_001F9EE8(&work.fire.launch,&work.fire.tmp,&work.fire.inverse);
-                FastVecAdd(&work.fire.launch,&work.fire.launch,D_L00_00166D80+0x140);
+                FastVecAdd(&work.fire.launch,&work.fire.launch,gCameraLvl+0x140);
             } else {
                 work.fire.tmp.q=0;
                 work.fire.tmp.f.x=frame_scale40*0.4462f;
@@ -1297,7 +1297,7 @@ void SuckCannonUpdate(M40 *self) {
                 }
                 if(best) data->target=best;
             }
-            func_L00_002DB480((char *)self,(char *)stored,fire_tuning40);
+            CarriedMoby_AttachMatrix((char *)self,(char *)stored,fire_tuning40);
             if(stored->cls->handlers->fire) stored->cls->handlers->fire(stored,&work.fire.velocity,data->target,data->target_height);
             hero40.count--;
             if(hero40.count>0) {
@@ -1351,7 +1351,7 @@ void func_00213DE0(void *, s32, s32, s32);
 f32 func_001F9D48(void *, void *);
 
 /* Adapted from Lombyte (MIT) for PAL by OpenRAC's tools/port.py: src/overlays/shared/gameplay/entities/002d7f88.c, FUN_L00_002db8f8. */
-s32 func_L00_002DCDA8(u8 *moby, u8 *position, u8 *target) {
+s32 CarriedMoby_StepGrab(u8 *moby, u8 *position, u8 *target) {
     u8 *record = func_L00_002DCD40_DCDA8(moby);
     s16 state;
     if (record == 0)
@@ -1435,11 +1435,11 @@ int PlaceCarriedMoby(unsigned char *m, void *v) {
     if (o == 0) return 0;
     if (m != 0 && m[0x20] != 0xFE && m[0x20] != 0xFD && *(short *)(o + 0x68) != 8) {
         qcopy(m + 0x10, v);
-        func_L00_002DB480(*(char **)(o + 0x60), (char *)m, &D_L00_00161BF0);
+        CarriedMoby_AttachMatrix(*(char **)(o + 0x60), (char *)m, &D_L00_00161BF0);
         func_0020EEE8(m);
         g = *(int *)(D_0013E633 + 0x1EAD);
         if (g != 0 && *(short *)(g + 0xA6) == 0x351) {
-            func_0022ED80(5, 0, g);
+            Moby_PlaySound(5, 0, g);
         }
         SetDeathBits(m, 0, -1);
         *(short *)(o + 0x68) = 4;
@@ -1499,7 +1499,7 @@ int StartCarriedMobyAnim(char *m, float *pos, char *other, float f) {
             FastVecAdd(m + 0x10, m + 0x10, d + 0x10);
         }
         s = *(short *)(d + 0x9C);
-        if (s >= 0) func_0022ED80(s, 0, (int)m);
+        if (s >= 0) Moby_PlaySound(s, 0, (int)m);
         return 2;
     }
     return 0;
@@ -2126,7 +2126,7 @@ typedef struct {
 } Pkt;
 
 // Draws a grid of ten rows by twenty strips, stepping the two scroll angles and coloring each strip from a per-row table.
-void func_L00_002DED98(void) {
+void SuckBeam_DrawMesh(void) {
     Pkt s;
     float vc[4];
     float vd[4];
@@ -2204,7 +2204,7 @@ extern short D_L00_001E6358[];
 extern short D_L00_00161C14;
 extern short D_L00_00161C10;
 // sets two flags and clears a short
-void func_L00_002DF150(void) {
+void SuckBeam_Reset(void) {
     *(int *)&D_L00_00161C10 = 1;
     *(int *)&D_L00_00161C14 = 1;
     D_L00_001E6358[0] = 0;
@@ -2224,7 +2224,7 @@ extern short D_L00_00161C24;
 extern short D_L00_00161C28;
 
 // Builds the camera matrices and resets the camera effect state.
-void func_L00_002DF168(char *a, char *b) {
+void SuckBeam_Build(char *a, char *b) {
     u128_DF168 s[7];
     char *v;
     short *w;
@@ -2283,14 +2283,14 @@ INCLUDE_ASM("asm/overlays", func_L00_002DF410);
 extern void func_L00_002DED98(void);
 extern void func_001F49B0(void (*)(void), int);
 
-void func_L00_002E0490(int arg0) {
+void SuckBeam_QueueDraw(int arg0) {
     int i;
     if (D_L00_001E6358[0] > 0) {
         for (i = 0; i < 10; i++) {
             if (D_L00_001E6358[i] > 0x40) D_L00_001E6358[i] = 0x40;
             D_L00_001E6358[i] = (unsigned short)D_L00_001E6358[i] - 4;
         }
-        AddDrawCallback(func_L00_002DED98, arg0);
+        AddDrawCallback(SuckBeam_DrawMesh, arg0);
     }
 }
 typedef struct { short idx; short pad; float f; int pad2[3]; char *p; } E04;
@@ -2302,7 +2302,7 @@ extern float func_001F9CB8(void *);
 typedef float VQ[4] __attribute__((aligned(16)));
 
 /* pull each active entry's marker toward its target, then update the rest */
-void func_L00_002E04F8(int arg0) {
+void SuckBeam_ApplyPulls(int arg0) {
     VQ a, b, c;
     int i;
     float len;
@@ -2326,7 +2326,7 @@ void func_L00_002E04F8(int arg0) {
             *(short *)(p + 0xA) = 0x46;
         }
     }
-    func_L00_002E0490(arg0);
+    SuckBeam_QueueDraw(arg0);
 }
 extern int func_L00_0025F450(void *);
 extern float func_001F9D10(void *, void *);
@@ -2344,7 +2344,7 @@ void ScatterMobyFromHazards(char *m) {
     if (*(unsigned char *)(m + 0x20) == 0xFD) return;
     if (random_integer_below(10)) return;
     if (*(int *)(m + 0x24) == 0 || *(short *)(*(int *)(m + 0x24) + 0x46) != 0x13) {
-        if (!func_L00_0025F450(m)) return;
+        if (!IsMobyScatterClass(m)) return;
     }
     if (!(FastVecDist(m + 0x10, pos = D_0013E633 + 0xE9D) < 30.0f)) return;
     for (i = 0; i < 10 && D_L00_001E6358[i] >= 8; i++) {
@@ -2353,7 +2353,7 @@ void ScatterMobyFromHazards(char *m) {
         if (FastVecDist(m + 0x10, D_L00_001E6290 + i * 16) < lim) {
             if (m != 0 && *(int *)(m + 0x24) != 0 && *(short *)(*(int *)(m + 0x24) + 0x46) == 0x13) {
                 base = pos - 0x80;
-                func_L00_002A84B0(m, *(int *)(base + 0x2080), 0.0f, 0.0f);
+                Moby_StartTumble(m, *(int *)(base + 0x2080), 0.0f, 0.0f);
             } else {
                 Pickup_TryCollect(m);
             }
@@ -2366,7 +2366,7 @@ int func_L00_0025A2F0(void *, s32, s32, s32);
 void func_L00_00264690(void *, void *, f32, f32);
 
 /* Adapted from Lombyte (MIT) for PAL by OpenRAC's tools/port.py: src/overlays/shared/unclassified_002d7f88.c, FUN_L00_002df3d8. */
-void func_L00_002E0888(u8 *p) {
+void GroupMoby_DrawBillboards(u8 *p) {
     u8 *it[2] __attribute__((aligned(16)));
     f32 s = 1.2f;
     if (D_0015EE84 == 0 || D_0015EE84 == 0x12) {
@@ -2392,7 +2392,7 @@ void func_L00_002E0888_E0958(M09 *) __asm__("func_L00_002E0888");
 void func_001F49B0_E0958(CB09, M09 *) __asm__("func_001F49B0");
 
 /* Adapted from Lombyte (MIT) for PAL by OpenRAC's tools/port.py: src/overlays/shared/unclassified_002d7f88.c, FUN_L00_002df4a8. */
-void func_L00_002E0958(M09 *m) {
+void PulsingColor_QueueDraw(M09 *m) {
     u8 b;
     s32 v;
     S09 *s;
@@ -2434,13 +2434,13 @@ void PulsingColorMobyUpdate(char *m) {
         b = (c >> 16) & 0xFF; g = (c >> 8) & 0xFF; r = c & 0xFF;
         hi = 0x38; if (D_0015EE84_m == 0 || D_0015EE84_m == 0x12) hi = 0x20;
         *(int *)(p + 4) = (hi << 24) | (b << 16) | (g << 8) | r;
-        func_L00_002E0958(m);
+        PulsingColor_QueueDraw(m);
         func_L00_00251328(m, c & 0xFF, (c >> 16) & 0xFF, (unsigned)c >> 24);
         break;
     }
 }
 extern void func_0023B5D0(void *);
-void func_L00_002E0AE8(char *a) {
+void QuadMoby_Update(char *a) {
     if (*(unsigned char *)(a + 0x70) & 2) {
         float o = 1.0f;
         if (0.0f < *(float *)(a + 0x58)) o = 0.0f;

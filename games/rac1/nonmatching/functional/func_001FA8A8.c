@@ -1,4 +1,4 @@
-/* functional: high. Corrected from nonmatching/game/func_001FA8A8.c: its float-to-int step was a plain C conversion, which is undefined out of range; the VU vftoi0 saturates (to 0x7FFFFFFF, or 0x80000000 below), so this does too. Otherwise the same: each byte of a and b is mixed as a*(1-t) + b*t in float, truncated, and packed back low byte first. */
+/* functional: high. fcheck: unchecked (the harness could not link it: ftoi_sat has no retail address; OpenRAC tools/fcheck_gate.py, 2026-10-18). Corrected from nonmatching/game/func_001FA8A8.c: its float-to-int step was a plain C conversion, which is undefined out of range; the VU vftoi0 saturates (to 0x7FFFFFFF, or 0x80000000 below), so this does too. Otherwise the same: each byte of a and b is mixed as a*(1-t) + b*t in float, truncated, and packed back low byte first. */
 static int ftoi_sat(float v)
 {
     if (v >= 2147483648.0f) {

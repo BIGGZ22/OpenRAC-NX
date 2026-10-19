@@ -1,4 +1,4 @@
-/* functional: high. Corrected from nonmatching/shared/func_L00_002C9DC8.c: (1) the position bounds check uses 1021.0 (0x447F4000), not 1023.0, on x, y and z; (2) in state 3 the spiral spawn offset scale is 0.05 (0x3D4CCCCD), not 0.1. */
+/* functional: high. fcheck: unchecked (level/overlay function; fcheck runs boot-executable functions only; OpenRAC tools/fcheck_gate.py, 2026-10-18). Corrected from nonmatching/shared/func_L00_002C9DC8.c: (1) the position bounds check uses 1021.0 (0x447F4000), not 1023.0, on x, y and z; (2) in state 3 the spiral spawn offset scale is 0.05 (0x3D4CCCCD), not 0.1. */
 typedef union { float v[4]; unsigned int q __attribute__((mode(TI))); } Q4_9DC8 __attribute__((aligned(16)));
 extern int func_L00_002C9820(char *, char *, int);
 /* Bomb (class 230) update: steers the bomb's position toward its target and runs its state machine (idle, arm, flight, detonate). Written from the assembly. */

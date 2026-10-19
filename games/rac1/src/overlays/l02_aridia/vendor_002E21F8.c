@@ -130,7 +130,7 @@ void SkidsAgentUpdate(Moby *m) {
         if (gHavePersuader[0xA] != 0) goto del;
         d->f20 = D_L02_00161D80;
         m->state = 1;
-        func_L00_002676E8(m, d);
+        DialogRequest_Init(m, d);
         SetMobyZBand(m);
         d->f178 = (Moby *)CreateMoby(0x38);
         d->f178->draw_dist = 0x40;
@@ -144,7 +144,7 @@ void SkidsAgentUpdate(Moby *m) {
         } else {
             d->fC = 3.7f;
         }
-        if (func_L00_00267290(m, d) != 0) {
+        if (Npc_TryStartDialog(m, d) != 0) {
             PlaceMarkerAheadOfMoby(2.2f, m);
             m->state = 2;
         } else if (gHaveHeliPack[3] == 0 && func_001F9D48(((float *)&m->pos), (char *)&D_0013E633_2E21F8 + 0xE9D) < 3.0f) {
@@ -204,7 +204,7 @@ void SkidsAgentUpdate(Moby *m) {
             if (w->f4A == 0) {
                 func_L00_001FF4B0(w->pos, ((char *)&m->rot_row0), 2.5f);
                 FastVecAdd(w->pos, w->pos, ((float *)&m->pos));
-                w->pos[2] = func_00214358(w->pos, 0, 0.5f);
+                w->pos[2] = ProbeGroundHeight(w->pos, 0, 0.5f);
                 clear_u64_value(w->rot);
                 w->rot[2] = FastAddRots(m->rot.z, 3.14159f);
                 w->f4A = 1;
@@ -346,7 +346,7 @@ void SkidMcMarxAridiaUpdate(char *m)
         *(char **)(d + 0x20) = D_L02_00161D90;
         *(unsigned char *)(m + 0x20) = 1;
         *(unsigned char *)(m + 0x30) = 0xFF;
-        func_L00_002676E8(m, d);
+        DialogRequest_Init(m, d);
         SetMobyZBand(m);
         break;
     case 1:
@@ -356,7 +356,7 @@ void SkidMcMarxAridiaUpdate(char *m)
         } else {
             *(float *)(d + 0xC) = 2.5f;
         }
-        if (func_L00_00267290(m, d)) {
+        if (Npc_TryStartDialog(m, d)) {
             PlaceMarkerAheadOfMoby(2.5f, m);
             *(unsigned char *)(m + 0x20) = 2;
         }
@@ -387,7 +387,7 @@ void SkidMcMarxAridiaUpdate(char *m)
                 func_L00_001FF4B0(w + 0x10, m + 0xC0, 2.5f);
                 FastVecAdd(w + 0x10, w + 0x10, m + 0x10);
                 *(float *)(w + 0x18) += 10.0f;
-                *(float *)(w + 0x18) = func_00214358(w + 0x10, 0, 0.5f);
+                *(float *)(w + 0x18) = ProbeGroundHeight(w + 0x10, 0, 0.5f);
                 clear_u64_value(w + 0x20);
                 *(float *)(w + 0x28) = FastAddRots(*(float *)(m + 0x48), 3.14159f);
                 *(unsigned char *)(w + 0x4A) = 1;
@@ -587,11 +587,11 @@ void DriverLiftUpdate(struct Moby *moby) {
             if (moby->state == 5 || moby->state == 1) {
                 moby->state = 2;
                 MobySetAnimation(driver, 0, 0);
-                *(int *)(data + 0xA4) = func_0022ED80(2, 4, driver);
+                *(int *)(data + 0xA4) = Moby_PlaySound(2, 4, driver);
             } else {
                 moby->state = 4;
                 MobySetAnimation(driver, 2, 0);
-                *(int *)(data + 0xA4) = func_0022ED80(0, 4, driver);
+                *(int *)(data + 0xA4) = Moby_PlaySound(0, 4, driver);
             }
         } else if (D_0013F450.ground_moby != moby) {
             moby->command = 0;
@@ -616,9 +616,9 @@ void DriverLiftUpdate(struct Moby *moby) {
             (func_001F9D48(&moby->pos, &D_0013F450.motion.pos) > 2.0f || moby->pos.z - 1.25f < D_0013F450.motion.pos.f[2])) {
             driver->anim_speed = 1.0f;
             if (moby->state == 2) {
-                *(int *)(data + 0xA4) = func_0022ED80(2, 4, driver);
+                *(int *)(data + 0xA4) = Moby_PlaySound(2, 4, driver);
             } else {
-                *(int *)(data + 0xA4) = func_0022ED80(0, 4, driver);
+                *(int *)(data + 0xA4) = Moby_PlaySound(0, 4, driver);
             }
         }
         if (driver->anim_flags & 2) {
@@ -633,11 +633,11 @@ void DriverLiftUpdate(struct Moby *moby) {
             if (moby->state == 2) {
                 moby->state = 3;
                 MobyBlendAnimation(driver, 1, 0, 0);
-                func_0022ED80(3, 0, driver);
+                Moby_PlaySound(3, 0, driver);
             } else {
                 moby->state = 5;
                 MobyBlendAnimation(driver, 3, 0, 0);
-                func_0022ED80(1, 0, driver);
+                Moby_PlaySound(1, 0, driver);
             }
             moby->command = 1;
         }

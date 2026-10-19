@@ -20,7 +20,8 @@
  *   2026-10-07 mini30 main-only fresh reconstruction (8 runs). Updates challenge statistics while D_0013D255[13B] 
  *   p0 SIZE756/768; p1 load statistic after elapsed call and branch local756; p2 inline angle addresses and pre-lo
  */
-extern unsigned char D_0013D255[];
+/* PAL's D_0013D355[0x13B] (0x13D490) is 0x13D388 in NTSC-U (lbu at 0x254060), not 0x13D390. */
+extern unsigned char D_0013D388[];
 extern unsigned char D_0013E533[] NOT_SDA;
 extern char D_0014161B[] NOT_SDA;
 extern int D_0015EEA4 MACRO_ADDR;
@@ -43,7 +44,7 @@ typedef struct { char pad0[0xF0]; unsigned short attempts, best; unsigned int le
 void FUN_L05_00254058(void) {
     ScoreState_254838_c254058 *g;
     int i;
-    if (D_0013D255[0x13B] == 0) return;
+    if (D_0013D388[0] == 0) return;
     g = (ScoreState_254838_c254058 *)(D_0013E533 + 0xE1D);
     if (g->active != 0) {
         ScoreStats_254838_c254058 *stats = (ScoreStats_254838_c254058 *)(D_0014161B + 0x22D);

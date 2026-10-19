@@ -386,7 +386,7 @@ extern char D_00194220[];
    Passes both to func_001EFE10 (a collision/line test elsewhere in the
    file's neighbours); returns D_00194220's float at +8 on success, else
    0.0f. */
-f32 func_00214358(void *arg0, s32 arg1, f32 arg2) {
+f32 ProbeGroundHeight(void *arg0, s32 arg1, f32 arg2) {
     char sp0[16];
     char sp1[16];
 
@@ -498,7 +498,250 @@ void MobyUpdateShadowRange(char *m) {
 
 LINKER_REMNANT("asm/remnants/text", func_00214770);
 
-INCLUDE_ASM("asm/nonmatchings/text", func_00214778);
+extern short D_001600C8;
+extern unsigned char D_001CC400[];
+extern char D_001CC448[];
+extern unsigned char D_0013E633[];
+extern char D_0013F450[];
+extern int func_00215048(char *);
+extern int func_00215078(char *);
+extern int func_001F9938(void *);
+extern int func_001F98C0(int);
+extern float func_001F9CB8(void *);
+
+typedef struct { float v[4]; } __attribute__((aligned(16))) Q_214778;
+
+int func_00214778(char *a, char *B, char *an, unsigned int btn, int *outA, float *outF, int *outI, int k) {
+    float v[4] __attribute__((aligned(16)));
+    float w[4] __attribute__((aligned(16)));
+    int s21;
+    int a22;
+    int u17;
+    unsigned int c;
+
+    *outA = 0;
+    if (outI != 0)
+        *outI = -1;
+
+    if (B != 0 && *(char **)(B + 0x20) != 0) {
+        int cls = *(short *)(*(char **)(B + 0x20) + 0xA6);
+        if ((cls == 0x131 || cls == 0xA8) && an != 0)
+            *(float *)(B + 0x2C) = ((float *)&D_001600C8)[(unsigned char)an[8]];
+    }
+
+    if (a == 0) {
+        if (an != 0) {
+            *(short *)(an + 0x1C) = 0;
+            *(short *)(an + 0x14) = -1;
+        }
+        *(short *)(an + 0x16) = -1;
+        *outA = 0;
+        return 0;
+    }
+    if (an == 0) {
+        an = (char *)func_00215048(a);
+        if (an == 0) {
+            *outA = 0;
+            return 0;
+        }
+    }
+    if (k == 4)
+        k = (unsigned char)an[8];
+
+    if (B == 0) {
+        if (an != 0) {
+            func_001F9938(an + 0x1C);
+            *(short *)(an + 0x16) = -1;
+        }
+        *outA = 1;
+        if (outF != 0)
+            *outF = 0;
+        return 0xB;
+    }
+
+    if (*(float *)(B + 0x1C) == 5627.9248f) {
+        func_001F9C30(B + 0x10, B + 0x10, *(float *)(D_001CC448 + (unsigned char)B[0x28] * 4 + k * 32));
+        a22 = *(unsigned short *)(B + 0x2A);
+        *(float *)(B + 0x1C) = 5627.9248f;
+        if (a22 == 0x47) {
+            char *h = D_0013F450;
+
+            v[0] = func_001F9F90(func_001FA058(*(float *)(a + 0x10) - *(float *)(h + 0x80),
+                                               *(float *)(a + 0x14) - *(float *)(h + 0x84)));
+            v[1] = func_001F9FA8(func_001FA058(*(float *)(a + 0x10) - *(float *)(h + 0x80),
+                                               *(float *)(a + 0x14) - *(float *)(h + 0x84)));
+            v[2] = 1.0f;
+            func_001F9DC0(v, v, func_001F9CB8(B + 0x10) * 0.7f);
+            func_001F9C30(B + 0x10, B + 0x10, 0.3f);
+            func_001F9BD8(w, B + 0x10, v);
+            *(Q_214778 *)(B + 0x10) = *(Q_214778 *)w;
+            func_001F9E10((float *)(B + 0x10), (float *)(B + 0x10), 1.0f);
+        }
+    } else {
+        if (*(char **)(B + 0x20) == 0) {
+            a22 = 0x47;
+            B[0x28] = 8;
+        } else {
+            a22 = *(short *)(*(char **)(B + 0x20) + 0xA6);
+            B[0x28] = 8;
+        }
+    }
+
+    switch ((unsigned char)B[0x28]) {
+    case 0:
+        if ((unsigned int)(*(unsigned short *)(B + 0x2A) - 1) < 2) {
+            *outA = 2;
+            s21 = 0;
+        } else {
+            *outA = 2;
+            s21 = 1;
+        }
+        break;
+    case 1:
+        if ((unsigned char)B[0x29] < 2) {
+            *outA = 2;
+            s21 = 0xB;
+        } else if ((unsigned char)B[0x29] == 2) {
+            *outA = 2;
+            s21 = 5;
+        } else {
+            *outA = 2;
+            s21 = 9;
+        }
+        break;
+    case 2:
+        if ((unsigned char)B[0x29] < 2) {
+            *outA = 2;
+            s21 = 8;
+        } else {
+            *outA = 2;
+            s21 = 0xD;
+        }
+        break;
+    case 3:
+        c = (unsigned char)B[0x29];
+        if (c < 2) {
+            *outA = 2;
+            s21 = 0xA;
+        } else if (c < 3) {
+            *outA = 2;
+            s21 = 0xF;
+        } else {
+            *outA = 2;
+            s21 = 0x10;
+            *(short *)(an + 0x14) = -1;
+            *(short *)(an + 0x1C) = 0;
+        }
+        break;
+    case 4:
+        *outA = 2;
+        s21 = 0xE;
+        break;
+    case 5:
+        if ((unsigned char)B[0x29] < 2) {
+            *outA = 3;
+            s21 = 4;
+        } else {
+            *outA = 4;
+            s21 = 7;
+        }
+        break;
+    case 7:
+        if ((unsigned char)B[0x29] < 2) {
+            *outA = 2;
+            s21 = 0xC;
+        } else {
+            *outA = 2;
+            s21 = 0x11;
+        }
+        break;
+    default:
+        *outA = 2;
+        s21 = 1;
+        break;
+    }
+
+    if (outI != 0)
+        *outI = a22;
+
+    u17 = D_001CC400[(unsigned char)an[8] + s21 * 4];
+    if (*(short *)(an + 0x14) != a22)
+        *(short *)(an + 0x1C) = 0;
+
+    if (func_001F9938(an + 0x1C) != 0) {
+        switch (s21) {
+        case 0:
+            *(short *)(an + 0x1C) = func_001F98C0(0x25);
+            break;
+        case 1:
+            *(short *)(an + 0x1C) = func_001F98C0(0xF);
+            break;
+        case 4:
+            *(short *)(an + 0x1C) = func_001F98C0(0x3C);
+            break;
+        case 7:
+            if (D_0013E633[0] != 0)
+                *(short *)(an + 0x1C) = func_001F98C0(0x2D);
+            else
+                *(short *)(an + 0x1C) = func_001F98C0(0x3C);
+            break;
+        case 11:
+            *(short *)(an + 0x1C) = func_001F98C0(0x3C);
+            break;
+        default:
+            *(short *)(an + 0x1C) = func_001F98C0(0x1E);
+            break;
+        }
+    } else {
+        switch (s21) {
+        case 0:
+        case 1:
+            if ((btn & 0x10) == 0)
+                u17 = 0xB;
+            if ((btn & 0x20) == 0)
+                *outA = 1;
+            *(float *)(B + 0x2C) = 0.0f;
+            break;
+        case 4:
+            if ((btn & 1) == 0)
+                u17 = 0xB;
+            if ((btn & 2) == 0)
+                *outA = 1;
+            *(float *)(B + 0x2C) = 0.0f;
+            break;
+        case 7:
+            if ((btn & 4) == 0)
+                u17 = 0xB;
+            if ((btn & 8) == 0)
+                *outA = 1;
+            *(float *)(B + 0x2C) = 0.0f;
+            break;
+        case 11:
+            u17 = 0xC;
+            break;
+        default:
+            *(float *)(B + 0x2C) = 0.0f;
+            u17 = 0xD;
+            break;
+        }
+    }
+
+    *(short *)(an + 0x14) = a22;
+    *(short *)(an + 0x16) = a22;
+    if (outF != 0)
+        *outF = *(float *)(B + 0x2C);
+
+    if (s21 == 4) {
+        char *p = (char *)func_00215078(a);
+        if (p != 0)
+            p[0x2E] = 1;
+    } else {
+        char *p = (char *)func_00215078(a);
+        if (p != 0)
+            p[0x2E] = 0;
+    }
+    return u17;
+}
 
 LINKER_REMNANT("asm/remnants/text", func_00214CF8);
 
@@ -714,7 +957,7 @@ extern void func_001FA480(void *, void *);
 
 /* func_001FA460 takes two arguments: arg1 is passed on to it untouched,
    which gives arg1 three references and retail's $s0. */
-void func_00215328(void *arg0, void *arg1) {
+void Matrix_ToQuatCopyBack(void *arg0, void *arg1) {
     char buf[0x40];
     func_001FA460_2(buf, arg1);
     MatrixToQuaternion(arg0, buf);
@@ -1127,7 +1370,7 @@ int force_help_message(int arg0, int arg1) {
     return 3;
 }
 
-int func_00216098(void) {
+int GetUnspentGoldBolts(void) {
     int a = count_nonzero_entries_up_to_40();
     int b = count_nonzero_entries_up_to_10();
     int v = a - b * 4;

@@ -15,14 +15,20 @@
 /*
  * FUN_001f9ad8(out, a, b): out = b x a, from the xyz of the two vectors (VU0
  * vopmula / vopmsub: ACC = b.yzx * a.zxy, then out = ACC - a.yzx * b.zxy).
- * The VU writes only x, y and z of the result; the sqc2 also stores vf3.w,
- * which is whatever the VU0 register held (left as it is here).
+ * The VU computes all three fields before the sqc2 stores them, so out may be a or b
+ * (the level code crosses in place). The sqc2 also stores vf3.w, which the vopmsub does
+ * not write: it is whatever vf3 held. The PAL build's identical instructions (fcheck,
+ * func_001F9CA0) left 0 there on every captured call, and the callers read here use xyz only, so 0.
  */
 void FUN_001f9ad8(float *out, float *a, float *b) {
     float acc0 = b[1] * a[2];
     float acc1 = b[2] * a[0];
     float acc2 = b[0] * a[1];
-    out[0] = acc0 - a[1] * b[2];
-    out[1] = acc1 - a[2] * b[0];
-    out[2] = acc2 - a[0] * b[1];
+    float x = acc0 - a[1] * b[2];
+    float y = acc1 - a[2] * b[0];
+    float z = acc2 - a[0] * b[1];
+    out[0] = x;
+    out[1] = y;
+    out[2] = z;
+    out[3] = 0.0f;
 }

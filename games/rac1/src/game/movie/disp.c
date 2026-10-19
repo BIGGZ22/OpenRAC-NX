@@ -9,7 +9,7 @@
 
 INCLUDE_ASM("asm/nonmatchings/text", func_0023C5E0); /* setImageTag */
 ASM_FUNC("asm/handwritten/text", func_0023C7A8); /* vblankHandler */
-INCLUDE_ASM("asm/nonmatchings/text", func_0023C910); /* handler_endimage */
+ASM_FUNC("asm/handwritten/text", func_0023C910); /* handler_endimage */
 extern volatile int D_001612E0 NOT_SDA;   /* display-active flag, shared with the vblank handler */
 extern volatile int D_001612E4 NOT_SDA;
 extern int func_00122598(int);

@@ -15,7 +15,7 @@ typedef struct StrFile {
 
 /* No recovered name. Stores its two arguments in the object (first argument at offset 4)
  * and returns 1. */
-int func_0023CE18(StrFile *f, int first, int second) {
+int StrFile_Init(StrFile *f, int first, int second) {
     f->first = first;
     f->second = second;
     return 1;

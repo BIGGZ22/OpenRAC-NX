@@ -53,8 +53,8 @@ extern void func_001F2930_E9EC8(void) __asm__("func_001F2588");
 extern void func_001FB448_E9EC8(int, int, int) __asm__("func_001FB280");
 extern void func_002347F0_E9EC8(void *) __asm__("func_002334D8");
 extern void func_002362B0_E9EC8(void *) __asm__("func_00234F98");
-extern void func_0022B8F8_E9EC8(void *, void *) __asm__("func_0022A5E0");
-extern void func_00238688_E9EC8(void *, void *) __asm__("func_00237370");
+extern void func_0022B8F8_E9EC8(void *) __asm__("func_0022A5E0");
+extern void func_00238688_E9EC8(void *) __asm__("func_00237370");
 extern float func_001F9CB8_E9EC8(void *) __asm__("func_001F9AF0");
 extern float func_001F9B90_E9EC8(float, float) __asm__("func_001F99C8");
 extern void func_001F9EC0_E9EC8(void *, void *, void *) __asm__("func_001F9CF8");
@@ -320,7 +320,7 @@ unsigned char *FUN_001e9b10(LevelHeaderE9EC8_c1e9b10 *hdr)
         *spa++ = (unsigned short)i3;
     }
     *spa = 0xFFFF;
-    func_00238688_E9EC8((void *)0x70000000, spa);
+    func_00238688_E9EC8((void *)0x70000000);
 
     tc = (unsigned char *)hdr + hdr->x3C;
     D_001604D0_E9EC8 = *(int *)tc;
@@ -420,7 +420,7 @@ unsigned char *FUN_001e9b10(LevelHeaderE9EC8_c1e9b10 *hdr)
         *spb++ = (unsigned short)i5;
     }
     *spb = 0xFFFF;
-    func_0022B8F8_E9EC8((void *)0x70000000, spb);
+    func_0022B8F8_E9EC8((void *)0x70000000);
 
     for (i6 = 0; i6 < D_001604D0_E9EC8; i6++) {
         unsigned char *cp;

@@ -1,4 +1,4 @@
-/* functional: medium. Returns (distance between a.xyz and b.xyz minus (a.w + b.w)) / 1024, as the VU0 code does (squared sum, sqrt, scale by 2^-10, which is exact); VU0 sqrt and sum rounding and denormal flushing can differ from C float in the last bit. Checked against the assembly: same reads, same arithmetic, same result; only the sqrt is the port's openrac_sqrt (the sum of squares is never negative), so the declaration was added to make it compile. */
+/* functional: medium. fcheck: unchecked (level/overlay function; fcheck runs boot-executable functions only; OpenRAC tools/fcheck_gate.py, 2026-10-18). Returns (distance between a.xyz and b.xyz minus (a.w + b.w)) / 1024, as the VU0 code does (squared sum, sqrt, scale by 2^-10, which is exact); VU0 sqrt and sum rounding and denormal flushing can differ from C float in the last bit. Checked against the assembly: same reads, same arithmetic, same result; only the sqrt is the port's openrac_sqrt (the sum of squares is never negative), so the declaration was added to make it compile. */
 extern float openrac_sqrt(float x);
 
 float func_L00_00251468(float *a, float *b) {

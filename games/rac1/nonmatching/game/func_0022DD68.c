@@ -1,3 +1,4 @@
+/* fcheck: unchecked (the harness could not compile it in place; OpenRAC tools/fcheck_gate.py, 2026-10-18). */
 /* sound_update: once per frame. Flushes the voice commands and reverb, measures the
    listener's velocity from its position history and sets the group volumes. Then for each
    voice it works out the radial velocity, distance volume and occlusion, and starts, updates

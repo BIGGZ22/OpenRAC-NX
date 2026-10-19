@@ -11,6 +11,7 @@
  *   Not in alias form. Declarations to look at when landing: all private (suffix 44); `gravity44` must stay the fi
  *   declaration of D_0015EE70 in the file.
  *   Final check against the destination file as of 2026-10-09 15:30 (others had landed into these files): run 2, B
+ *   fcheck: unchecked (level/overlay function; fcheck runs boot-executable functions only; OpenRAC tools/fcheck_gate.py, 2026-10-18).
  */
 #include "common.h"
 typedef union { float f[4]; struct { float x,y,z,w; } v; unsigned int q __attribute__((mode(TI))); } V44;

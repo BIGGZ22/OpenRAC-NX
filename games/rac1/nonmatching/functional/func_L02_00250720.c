@@ -1,4 +1,4 @@
-/* functional: medium. Tile visibility grid: for each cell of a w x h grid (cell step 7 units, data in P) with a nonzero flag byte, tests the cell centre against the camera distance (d^2 < P[3]) and the 4 corners against two view frusta (matrices at D_L02_00167300+0xC0 / +0x100, camera at +0x140); writes 0 (culled), 1 (inside) or 2 (needs clipping) per cell to the scratchpad 0x70002000. VU0 clip flag and sign bit modelled by hand; cannot be run. */
+/* functional: medium. fcheck: unchecked (level/overlay function; fcheck runs boot-executable functions only; OpenRAC tools/fcheck_gate.py, 2026-10-18). Tile visibility grid: for each cell of a w x h grid (cell step 7 units, data in P) with a nonzero flag byte, tests the cell centre against the camera distance (d^2 < P[3]) and the 4 corners against two view frusta (matrices at D_L02_00167300+0xC0 / +0x100, camera at +0x140); writes 0 (culled), 1 (inside) or 2 (needs clipping) per cell to the scratchpad 0x70002000. VU0 clip flag and sign bit modelled by hand; cannot be run. */
 extern float D_L02_00167300_50720[] __asm__("D_L02_00167300");
 
 void func_L02_00250720(char *p) {

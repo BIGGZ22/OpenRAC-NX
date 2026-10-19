@@ -1,4 +1,4 @@
-/* functional: medium. Writes out = v * (a / |v|) with |v| the length of v's xyz; when that length is zero, out.xyz = 0. out.w = v.w in both cases. The vector unit's reciprocal square root and float rounding are not IEEE, so the last bits may differ from retail. */
+/* functional: medium. fcheck: unchecked (level/overlay function; fcheck runs boot-executable functions only; OpenRAC tools/fcheck_gate.py, 2026-10-18). Writes out = v * (a / |v|) with |v| the length of v's xyz; when that length is zero, out.xyz = 0. out.w = v.w in both cases. The vector unit's reciprocal square root and float rounding are not IEEE, so the last bits may differ from retail. */
 void func_L00_001FF4B0(float *out, float *v, float a) {
     float len2 = v[0] * v[0] + v[1] * v[1] + v[2] * v[2];
     float s;

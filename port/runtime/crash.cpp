@@ -2,7 +2,7 @@
 // Copyright (c) 2026 the OpenRAC contributors
 //
 // The program's fatal faults: an access to game memory that is not mapped (with the game address
-// and the kind of access), an illegal instruction, an arithmetic fault, an abort, and on Windows
+// and the kind of access), an illegal instruction, a trap, an arithmetic fault, an abort, and on Windows
 // the structured exceptions that are these; and a C++ exception nobody caught. Each writes a crash
 // report (common/crash.h) and ends the program with status 3.
 
@@ -173,6 +173,11 @@ void on_fault(int sig, siginfo_t* info, void*) {
         case SIGABRT:
             what = "the program aborted (SIGABRT)";
             break;
+        case SIGTRAP:
+            // A trap instruction: __builtin_trap, a failed check the compiler turned into one, or a
+            // breakpoint left in (brk on arm64, ud2 and int3 on x86-64 raise SIGILL and SIGTRAP).
+            what = "a trap instruction (SIGTRAP)";
+            break;
         default:
             break;
     }
@@ -231,6 +236,7 @@ void install_crash_handler() {
     sigaction(SIGILL, &action, nullptr);
     sigaction(SIGFPE, &action, nullptr);
     sigaction(SIGABRT, &action, nullptr);
+    sigaction(SIGTRAP, &action, nullptr);  // OPENRAC_GUARD replaces it with its single step
 #endif
 }
 

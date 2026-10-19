@@ -858,10 +858,10 @@ void CommandoUpdate(char *m) {
             qcopy(m + 0x40, (void *)((i << 7) + base + 0x70));
             m[0x20] = 2;
         }
-        func_L00_002676E8(m, d + 0x20);
+        DialogRequest_Init(m, d + 0x20);
         break;
     case 1:
-        if (func_L00_00267290(m, d + 0x20) != 0) {
+        if (Npc_TryStartDialog(m, d + 0x20) != 0) {
             int i = *(int *)(d + 0x180);
             int base = (int)D_L08_0016016C;
             qcopy(m + 0x10, (void *)((i << 7) + base + 0x30));
@@ -877,7 +877,7 @@ void CommandoUpdate(char *m) {
                 MobyBlendAnimation(m, a, 0, scale_ticks(20));
             }
         }
-        if (func_L00_00267290(m, d + 0x20) != 0) {
+        if (Npc_TryStartDialog(m, d + 0x20) != 0) {
             m[0x20] = 3;
             PlaceMarkerAheadOfMoby(2.2f, m);
         }
@@ -1020,7 +1020,7 @@ void DeserterUpdate(char *m) {
         *(float *)(d + 0x2C) = 4.0f;
         *(char **)(d + 0x40) = D_L08_00162378;
         m[0x20] = 1;
-        if (*(int *)(d + 0x64) >= 0) func_L00_002676E8(m, d + 0x20);
+        if (*(int *)(d + 0x64) >= 0) DialogRequest_Init(m, d + 0x20);
         break;
     case 1:
         if (func_001F9D48(m + 0x10, D_0013E633 + 0xE9D) < 8.0f) {
@@ -1039,7 +1039,7 @@ void DeserterUpdate(char *m) {
             char *h = D_0013E633 + 0xE1D;
             if (*(int *)(h + 0x2FC) == 0) {
                 if (scale_ticks(30) < *(int *)(h + 0x300) || *(short *)(d + 0x56) != 0) {
-                    func_L00_00267290(m, d + 0x20);
+                    Npc_TryStartDialog(m, d + 0x20);
                     PlaceMarkerAheadOfMoby(2.2f, m);
                 }
             }
@@ -1118,7 +1118,7 @@ void DeserterUpdate(char *m) {
 extern short D_L08_00162390;
 
 /* triggers objects matching the moby's class, with per-segment settings */
-void func_L08_003078B0(char *moby) {
+void Moby1283_AttachCheatManipulators(char *moby) {
     int i;
     if (D_L08_0015F6A8 == 2 && gCheats[0]) {
         if (D_L08_0016D0E0.a == 6 && D_L08_0016D0E0.b >= 0x26C && D_L08_0016D0E0.b < 0x2CC) {
@@ -1172,24 +1172,24 @@ extern char *D_L08_00160058 MACRO_ADDR;
  * at D_0013E633 + 0xE9D. */
 void Moby1283Update(char *m) {
     char *d = *(char **)(m + 0x78);
-    func_L08_003078B0(m);
+    Moby1283_AttachCheatManipulators(m);
     switch (*(unsigned char *)(m + 0x20)) {
     case 0:
         *(unsigned char *)(m + 0x30) = 0xFF;
         if ((D_0014171B_q + 0xAA35)[*(unsigned char *)(m + 0xB0) + (D_0015EE84 << 4)] == 0xFF) goto del;
         *(char **)(d + 0x20) = D_L08_00162398;
         m[0x20] = 1;
-        func_L00_002676E8(m, d);
+        DialogRequest_Init(m, d);
         break;
     case 1: {
         int v;
-        if (func_L00_00267290(m, d) != 0) PlaceMarkerAheadOfMoby(2.7f, m);
+        if (Npc_TryStartDialog(m, d) != 0) PlaceMarkerAheadOfMoby(2.7f, m);
         v = *(short *)(d + 0x36);
         if (v == 2) {
             char *t = D_L08_0016016C + (*(int *)(d + 0x48) << 7);
             PauseMenu_SeedSnapshot(t + 0x30, t + 0x70);
             m[0x20] = v;
-            func_L08_002E2A10(D_L08_00160058 + (*(int *)(d + 0x50) << 8));
+            Moby1283_SetHeroState(D_L08_00160058 + (*(int *)(d + 0x50) << 8));
         }
         if (*(short *)(d + 4) == 3) {
             PlayMovieEntryIfIdle(1);
@@ -1462,7 +1462,7 @@ void Moby1641Update(char *moby) {
         c[1] = random_float_between(*(float *)(data + 0x18) * D_0015EE6C, *(float *)(data + 0x1C) * D_0015EE6C);
         c[2] = random_float_between(*(float *)(data + 0x20) * D_0015EE6C, *(float *)(data + 0x24) * D_0015EE6C);
         c[3] = 0;
-        func_L08_00280BC8(a, c, *(int *)(data + 0x10), *(float *)(data + 0xC));
+        SpawnParticleType4D(a, c, *(int *)(data + 0x10), *(float *)(data + 0xC));
     }
 }
 extern void func_L08_00259040(void *, int, int, void *);
@@ -1645,7 +1645,7 @@ extern void func_L01_00279E10(void *, int);
 extern void func_0020D678(void *);
 
 // Moby state machine: wait, check hit on first probe, then clean up and delete.
-void func_L08_0030D0C0(char *m) {
+void BreakableL08_Update(char *m) {
     int hit = 0;
     char *r = MobyGetHitMessage(m, 0x10000, 0);
     switch (*(unsigned char *)(m + 0x20)) {
@@ -1657,7 +1657,7 @@ void func_L08_0030D0C0(char *m) {
         if (hit) m[0x20] = 2;
         break;
     case 2:
-        func_0022ED80(0, 0, (int)m);
+        Moby_PlaySound(0, 0, (int)m);
         SpawnBreakFxByDistance(m);
         SpawnMobyBurstFx(m, 0x736, 1, 0x737, 1, 1, 2);
         SpawnMobyCopyingPlacement(m, 0x735);

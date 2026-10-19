@@ -1,4 +1,4 @@
-/* functional: medium. Same reads, writes, calls and arguments in the same order as retail (no COP2/VU0 code; the lq/sq pairs are plain 16-byte copies, the jump table is a switch); the two divisions by a record float are guarded so that a zero divisor gives FLT_MAX as on the PS2; differs otherwise only in compiler choices. */
+/* functional: medium. fcheck: unchecked (level/overlay function; fcheck runs boot-executable functions only; OpenRAC tools/fcheck_gate.py, 2026-10-18). Same reads, writes, calls and arguments in the same order as retail (no COP2/VU0 code; the lq/sq pairs are plain 16-byte copies, the jump table is a switch); the two divisions by a record float are guarded so that a zero divisor gives FLT_MAX as on the PS2; differs otherwise only in compiler choices. */
 /* Level 1 (Novalis) per-frame update of a moby that follows a path (a "rail" mover with a state record
  * rec = m[0x78]; its follower state is rec+0x60, "pf": pf[0] = current point, pf[4] direction, pf[5] mode,
  * pf[0x10] the point list (count then 16-byte points), pf[0x14] the path index into D_L01_001B0C30). Called from the

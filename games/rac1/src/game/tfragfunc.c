@@ -429,7 +429,7 @@ void DrawTfrag(void) {
     D_0015EF74 = D_0015EF78;
     p += 0x10;
     D_00161000 = p;
-    func_001F2560(D_00160F70, 1);
+    ProfileMarker_Begin(D_00160F70, 1);
     func_001FA190(m);
     FastVecScale(m[3], D_00187180, -1024.0f);
     m[3][3] = 1.0f;
@@ -440,12 +440,12 @@ void DrawTfrag(void) {
         func_00118D80(0);
         TfragProc();
     }
-    func_001F2560(D_00160F80, 2);
+    ProfileMarker_Begin(D_00160F80, 2);
     DmaTfragTextures();
     if (D_0018A3B0[4] != 0) {
         write_dma_channel(D_001E1600, 0x3000, 0x40);
     }
-    func_001F2558(D_00160F80, 2);
+    ProfileMarker_End(D_00160F80, 2);
 }
 
 /* The last function in the object: retail pads to 16 bytes after it

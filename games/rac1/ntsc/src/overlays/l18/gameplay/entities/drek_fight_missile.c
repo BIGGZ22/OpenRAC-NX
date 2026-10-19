@@ -534,9 +534,9 @@ extern int func_001FA898_r(float) __asm__("FUN_001fa6d0");
 void FUN_L18_002f16f0(struct Moby *moby) {
     VData *d = (VData *)moby->pvars;
     if (d) {
-        float a1 = D_L18_00162290 * frame_time_sq;
-        float a2 = D_L18_00162294 * frame_time_sq;
-        float a3 = D_L18_00162298 * frame_time;
+        float initial_acceleration_step = D_L18_00162290 * frame_time_sq;
+        float initial_braking_step = D_L18_00162294 * frame_time_sq;
+        float initial_maximum_speed = D_L18_00162298 * frame_time;
         float b1 = D_L18_0016229C * frame_time_sq;
         float b2 = D_L18_001622A0 * frame_time_sq;
         float b3 = D_L18_001622A4 * frame_time;
@@ -574,7 +574,7 @@ void FUN_L18_002f16f0(struct Moby *moby) {
             unsigned char *p;
             if (D_L18_00162288 != 0) {
                 if (d->f330 < 1.5f) {
-                    advance_accelerated_scalar(1.5f, a1, a2, a3, &d->f330, &d->f334);
+                    advance_accelerated_scalar(1.5f, initial_acceleration_step, initial_braking_step, initial_maximum_speed, &d->f330, &d->f334);
                 } else {
                     advance_accelerated_scalar(2.0f, b1, b2, b3, &d->f330, &d->f334);
                 }
@@ -1492,7 +1492,7 @@ void drek_final_boss_robot_update(BossMoby *moby) {
     float v0[4];
     float v1[4];
     float v2[4];
-    float v3[4];
+    float second_rotation_angles[4];
     float node_position_and_yaw[4];
     float slow;
     float ang;
@@ -1886,10 +1886,10 @@ void drek_final_boss_robot_update(BossMoby *moby) {
         v1[2] = v1[2] + 7.0f;
         clear_vector(v2);
         v2[2] = 3.1415927f;
-        clear_vector(v3);
-        v3[2] = 3.9269907f;
+        clear_vector(second_rotation_angles);
+        second_rotation_angles[2] = 3.9269907f;
         v2[1] = 0.17453292f;
-        v3[1] = 0.5235988f;
+        second_rotation_angles[1] = 0.5235988f;
         {
             /* In locals: retail does not load them again after the copy. */
             char *recs = D_L18_001600EC;
@@ -1898,7 +1898,7 @@ void drek_final_boss_robot_update(BossMoby *moby) {
             qcopy(node_position_and_yaw, recs + idx * 0x80 + 0x30);
             node_position_and_yaw[3] = *(float *)(recs + idx * 0x80 + 0x78);
         }
-        FUN_L18_002dfaa0((char *)d->f334, v0, v1, v2, v3, node_position_and_yaw, *(int *)&D_L18_00162394,
+        FUN_L18_002dfaa0((char *)d->f334, v0, v1, v2, second_rotation_angles, node_position_and_yaw, *(int *)&D_L18_00162394,
                          *(int *)&D_L18_00162398, 1);
         hero.pending_item[3] = 3;
         moby->f20 = 8;
@@ -3590,10 +3590,13 @@ extern void func_L18_002F9AB8_v(void *) __asm__("FUN_L18_002f8658");
 
 void rocket_tank_update(M1454 *m) __asm__("FUN_L18_002f7c40");
 void rocket_tank_update(M1454 *m) {
+    enum {
+        ROCKET_TANK_INITIALIZE = 0
+    };
     D1454 *d = m->data;
     FUN_L18_002f8050(m);
     switch (m->state) {
-    case 0:
+    case ROCKET_TANK_INITIALIZE:
         attach_manipulator((char *)m, 0, d->buf);
         *(short *)((char *)d + 0x24) = 6;
         *(unsigned char *)((char *)d + 0x28) = 3;

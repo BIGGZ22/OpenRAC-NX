@@ -20,6 +20,7 @@ the README). They are third-party mirrors of commercial software.
 | `bin/ee-ld.exe` | same | links everything at retail addresses |
 | `bin/make.exe` (GNU make 3.77) | same | runs `Makefile.sn` (on native Linux, host `make` is used directly) |
 | `bin/ee-size.exe` | same | prints object sizes at the end of `make` |
+| `ee/bin/as.bin`: GNU as **2.9-ee-991111**, DTL-S13010 build, with its own `ld-2.3.6.so`/`libc-2.3.6.so` | decompme/compilers `ee-gcc2.9-991111-01-dtls13010.tar.gz` → `toolchain/ee-as-dtls13010/` | assembles `00119D88.o` (the `dtls29-real` profile), through `tools/dtls29_as.py` |
 
 The other SN sub-builds in the mirrors, v1.36 (`ee-gcc2953.exe` in
 `sn-prodg-3.01`) and v2.74 (`ee-gcc295.exe` in `sn-prodg-24`), are not
@@ -92,7 +93,7 @@ by instruction scheduling heuristics:
 | Source | Steps |
 |---|---|
 | `src/core/<ADDR>.c` (`core_text`) | v1.14 `-S` → `tools/check_macro_slots.py` → assemble (989snd and wad also `tools/fix_macro_load_delay.py` and `tools/ps2eeas_nops.py`) |
-| `src/core/<ADDR>.c` marked `ee29` in `config/core_text.objects` (the memory card library, the C library's printf, sprintf, stdio and strtol, libmpeg's bitstream reader, ...) | 2.9-ee `-S` (with its own include directory, for `stdarg.h`) → `tools/fix_volatile_slot.py` → `tools/check_macro_slots.py` → assemble; SDK code built with the SDK's own compiler, like libgcc (`EE29_CORE` in `Makefile.sn`). 2.9-ee spills with `sd` and tail-calls a void function ending in a call by itself, but not `return f(...)` |
+| `src/core/<ADDR>.c` marked `ee29` in `config/core_text.objects` (the memory card library, the C library's printf, sprintf, stdio and strtol, libmpeg's bitstream reader, ...) | 2.9-ee `-S` (with its own include directory, for `stdarg.h`) → `tools/fix_volatile_slot.py` (the whole-object `gas210` profile also models based word-load call-slot filling) → `tools/check_macro_slots.py` → assemble; SDK code built with the SDK's own compiler, like libgcc (`EE29_CORE` in `Makefile.sn`). 2.9-ee spills with `sd` and tail-calls a void function ending in a call by itself, but not `return f(...)` |
 | `src/game/**.c` (`text`) | v1.14 `-S` → `tools/fix_jump_tables.py` → `tools/ps2eeas_dli.py` → `tools/check_macro_slots.py` → `tools/fix_orphan_hi.py` → assemble → `tools/ps2eeas_nops.py` → assemble |
 | `src/libgcc/libgcc2.c` | 2.9-ee `-S`, one object per `L_*` module, like `libgcc.a`'s members → assemble; L__main also goes through `tools/strip_dead.py` |
 | `src/libgcc/fp-bit.c` | 2.9-ee `-S`, whole file twice (`dp-bit.o`, `fp-bit.o` with `-DFLOAT`) → assemble → `tools/strip_dead.py` → assemble |
@@ -417,3 +418,41 @@ anything beyond plain C; actually decompiling any function into real
 (non-`INCLUDE_ASM`) C and confirming it individually matches — this
 result proves the *toolchain and disassembly* are sound, not that any
 particular function has been understood/renamed/rewritten yet.
+
+### Original GNU 2.10-ee cross-check
+
+The Linux binary `sn-prodg-24/local/sce/ee/gcc/bin/ee-as` is GNU
+2.10-ee-001003-1. `tools/tests/verify_read_assembler.py` executes it with
+QEMU and local i386 libc, using unmodified compiler output. This verifies
+the `gas210` assembler profile recorded as the fifth column in
+`config/core_text.objects`; the ordinary build remains portable through
+its documented assembler model. See BUILD_FIDELITY.md for the six exact
+function comparisons and the scope of the load-slot rule.
+
+### Original DTL-S13010 assembler (`dtls29-real`)
+
+`00119D88.o` (the C library's printf family) is assembled by the
+DTL-S13010 build of GNU as 2.9-ee-991111, run unmodified through
+`tools/dtls29_as.py`: the float printer's mantissa helper
+(`func_00119EA8`) only comes out exact with this assembler's slot
+filling. The launcher checks the SHA-256 of `as.bin` and both runtime
+libraries, and the version line, before running it.
+
+It comes from the decompme/compilers release archive
+`ee-gcc2.9-991111-01-dtls13010.tar.gz` (SHA-256
+`3ab52a7ea962100f2a7df3e04d3e7a758aad669eb365251682e769b755d9d586`).
+Extract it into `toolchain/` (gitignored, never committed):
+
+```sh
+mkdir -p toolchain/ee-as-dtls13010/lib && cd /tmp
+tar xzf ee-gcc2.9-991111-01-dtls13010.tar.gz ./ee/bin/as.bin ./lib/
+cp ee/bin/as.bin "$OLDPWD/toolchain/ee-as-dtls13010/"
+cp -L lib/ld-2.3.6.so lib/libc-2.3.6.so lib/libc.so.6 "$OLDPWD/toolchain/ee-as-dtls13010/lib/"
+```
+
+It is a 32-bit x86 Linux binary: on an x86-64 Linux host it runs
+directly with its bundled loader; elsewhere, install a QEMU user-mode
+runner at `toolchain/host-runners/qemu/usr/bin/qemu-i386-static` or set
+`EE_DTLS29_AS` to a command that runs the same binary.
+`tools/tests/verify_formatter_assembler.py` assembles the compiler's raw
+output for the object with it and checks every C function against retail.

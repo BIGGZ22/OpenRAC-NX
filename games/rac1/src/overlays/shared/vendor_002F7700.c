@@ -278,9 +278,9 @@ void FlyingBurstUpdate(Moby *moby) {
                 dmg.count = 0;
                 coll_sphere_mobys(1.0f, &(*(Vec_2F7E08 *)&moby->pos), 9, (void *)((Hero *)(D_0013E633 + 0xE1D))->moby, &dmg);
                 if (D_L01_00174358 != 0 && D_L01_00174358->oclass >= 0x2C5 && D_L01_00174358->oclass < 0x2C8) {
-                    func_0022ED80(2, 0, (int)moby);
+                    Moby_PlaySound(2, 0, (int)moby);
                 } else {
-                    func_0022ED80(1, 0, (int)moby);
+                    Moby_PlaySound(1, 0, (int)moby);
                 }
             }
         }
@@ -479,7 +479,7 @@ extern void func_L00_0026DD70(void *, void *, s32, s32, f32, s32);
 
 /* Debris update: falls and spins, bounces off what it hits with a random kick, bursts into 40 sparks once it comes to rest (or its unk10 timer runs out), or fades out over unk28 frames when unk20 is set.
    Adapted from Lombyte (MIT) for PAL by OpenRAC's tools/port.py: src/overlays/shared/gameplay/entities/002f6328.c, FUN_L01_002f8718. */
-void func_L01_002F9AF0(struct Moby *m) {
+void DebrisMobyUpdate(struct Moby *m) {
     DebrisVars_2f8530 *d = (DebrisVars_2f8530 *)m->pvars;
     Vec4 old;
     Vec4 v;
@@ -675,7 +675,7 @@ void CutsceneTriggerUpdate(char *m) {
             } else {
                 CameraScript2(0);
             }
-            func_L01_00240CE8();
+            Hero_SetMoveStateFromMode();
             D_L01_0015F504 = 0;
             m[0x20] = 3;
             m[0xBC] = 0;
@@ -786,10 +786,10 @@ void TalkingNpcUpdate(char *m)
             *(char **)(d + 0x20) = D_L01_00161DD8;
             *(unsigned char *)(m + 0x20) = 7;
         }
-        func_L00_002676E8(m, d);
+        DialogRequest_Init(m, d);
         break;
     case 1:
-        if (func_L00_00267290(m, d)) {
+        if (Npc_TryStartDialog(m, d)) {
             PlaceMarkerAheadOfMoby(2.2f, m);
             *(unsigned char *)(m + 0x20) = 2;
         }
@@ -817,7 +817,7 @@ void TalkingNpcUpdate(char *m)
         DeleteMoby(m);
         return;
     case 4:
-        if (func_L00_00267290(m, d)) {
+        if (Npc_TryStartDialog(m, d)) {
             *(unsigned char *)(m + 0x20) = 5;
             *(unsigned char *)(d + 8) = 0;
         }
@@ -1617,7 +1617,7 @@ void TeleporterPadUpdate(char *moby) {
         if (*(short *)(g + 0x30E) != 0) break;
         ShowStageHelpMessage(moby);
         if (!(*(int *)(D_0013A5E0 + 0x2604) & 0x10)) break;
-        func_0022ED80(0, 0, (int)moby);
+        Moby_PlaySound(0, 0, (int)moby);
         moby[0x20] = 2;
         *(int *)(data + 0x30) = -1;
         *(int *)(data + 0x2C) = 0;
@@ -1636,14 +1636,14 @@ void TeleporterPadUpdate(char *moby) {
                           *(float *)&D_L01_00162018 * D_0015EE70, *(float *)&D_L01_0016201C * D_0015EE70,
                           *(float *)&D_L01_00162020 * D_0015EE6C);
         } else {
-            func_0022ED80(1, 0, (int)moby);
+            Moby_PlaySound(1, 0, (int)moby);
             moby[0x20] = 8;
             *(float *)(data + 0x34) = 0.0f;
         }
         PlaceChildMobys(moby);
         break;
     case 2: {
-        int r = func_L00_002347B8();
+        int r = Level_GetSpecialMode();
         if (*(float *)(data + 0x20) < 1.0f) {
             ApproachWithVelocity((float *)(data + 0x20), (float *)(data + 0x28), 1.0f,
                           *(float *)&D_L01_00162018 * D_0015EE70, *(float *)&D_L01_0016201C * D_0015EE70,
@@ -1684,7 +1684,7 @@ void TeleporterPadUpdate(char *moby) {
             *(float *)(td + 0x2C) = 0.0f;
             *(float *)(td + 0x20) = 1.0f;
             *(float *)(td + 0x24) = 1.0f;
-            func_0022ED80(1, 0, (int)t);
+            Moby_PlaySound(1, 0, (int)t);
             moby[0x20] = 1;
             *(float *)(data + 0x20) = 0.0f;
             *(float *)(data + 0x24) = 0.0f;
@@ -2048,7 +2048,7 @@ extern void func_001F9EE8(void *, void *, void *);
 extern void func_L00_001FD1D8(void *, void *, s32);
 
 /* Adapted from Lombyte (MIT) for PAL by OpenRAC's tools/port.py: src/overlays/shared/gameplay/vendor/0030b618.c, FUN_L01_0030bfa8. */
-void func_L01_0030D380(char *m) {
+void Moby1510_DrawGlow(char *m) {
     struct {
         GlowQuad_bfa8 quad;
         GlowVec_bfa8 src_corner[4];
@@ -2428,7 +2428,7 @@ extern s32 func_L00_00259B08_0EC58(struct Moby *, Vec4 *, f32, f32, s32, s32) __
 extern f32 func_L00_0025F368_0EC58(f32) __asm__("func_L00_0025F368");
 
 /* Adapted from Lombyte (MIT) for PAL by OpenRAC's tools/port.py: src/overlays/shared/gameplay/vendor/0030b618.c, FUN_L01_0030d880. */
-void func_L01_0030EC58(struct Moby *m, struct HoverVars_0EC58 *p) {
+void MouseCritter_StepCommand(struct Moby *m, struct HoverVars_0EC58 *p) {
     Vec4 v;
     f32 d;
     f32 k;
@@ -2768,7 +2768,7 @@ void MouseCritterUpdate(Moby *m) {
                 MobyBlendAnimation(m, 0, 0, scale_ticks(20));
             }
             if (p->slot == -1) {
-                p->slot = func_0022ED80(1, 4, (int)m);
+                p->slot = Moby_PlaySound(1, 4, (int)m);
             }
             m->state = 3;
         }
@@ -2779,13 +2779,13 @@ void MouseCritterUpdate(Moby *m) {
             char *v = VOICE(p->slot);
             if (*(Moby **)(v + 0x88) != m || *(u8 *)(v + 0x74) == 0) {
                 p->slot = -1;
-                p->slot = func_0022ED80(1, 4, (int)m);
+                p->slot = Moby_PlaySound(1, 4, (int)m);
             }
         }
         if (0.6f < func_001F9D48(&m->pos, &p->a30) && p->timer == 0) {
             D_L01_001DEE08.f4 = 0.7f;
             GetHeroFrontOffsetPoint(m, p);
-            func_L01_0030EC58(m, p);
+            MouseCritter_StepCommand(m, p);
             r = p->stuck < 0x15;
             r = r ? 0 : 2;
         } else {
@@ -2817,7 +2817,7 @@ void MouseCritterUpdate(Moby *m) {
             char *v = VOICE(p->slot);
             if (*(Moby **)(v + 0x88) != m || *(u8 *)(v + 0x74) == 0) {
                 p->slot = -1;
-                p->slot = func_0022ED80(1, 4, (int)m);
+                p->slot = Moby_PlaySound(1, 4, (int)m);
             }
         }
         Hero_SetMoveState(0, 1);
@@ -2832,7 +2832,7 @@ void MouseCritterUpdate(Moby *m) {
             char *v = VOICE(p->slot);
             if (*(Moby **)(v + 0x88) != m || *(u8 *)(v + 0x74) == 0) {
                 p->slot = -1;
-                p->slot = func_0022ED80(1, 4, (int)m);
+                p->slot = Moby_PlaySound(1, 4, (int)m);
             }
         }
         if (p->timer == scale_ticks(20) || *(int *)&D_L01_0016212C - 5 < p->k5C) {
@@ -2852,7 +2852,7 @@ void MouseCritterUpdate(Moby *m) {
                 && *(u8 *)(h + 0x20A4) == 0 && *(s16 *)(D_L01_00167300 + 0x86) != 0x14
                 && func_001F9908(&p->k58) == 0 && p->k5C < *(int *)&D_L01_0016212C) {
                 GetHeroFrontOffsetPoint(m, p);
-                func_L01_0030EC58(m, p);
+                MouseCritter_StepCommand(m, p);
             } else {
                 qzero(&p->vel);
                 p->timer = *(int *)&D_L01_00162134;
@@ -2863,7 +2863,7 @@ void MouseCritterUpdate(Moby *m) {
                     }
                 }
                 p->slot = -1;
-                func_0022ED80(2, 0, (int)m);
+                Moby_PlaySound(2, 0, (int)m);
                 m->state = 6;
                 if (p->link != -1) {
                     LNK(p->link)->command = 5;
@@ -3625,7 +3625,7 @@ extern char *func_L00_001EB578(int);
 extern char *D_L01_00167300;
 
 // Stores two floats into the record at 0xE0 of the data of the moby a global points at, or of moby 5.
-void func_L01_00318260(float a, float b) {
+void BoltCrank_SetCameraParams(float a, float b) {
     char *m = D_L01_00167300;
     char *t;
     char *d;

@@ -1,3 +1,4 @@
+/* fcheck: unchecked (level/overlay function; fcheck runs boot-executable functions only; OpenRAC tools/fcheck_gate.py, 2026-10-18). */
 /* Map reveal from the hero position POS (every frame, when the level has a map, block
    D_L00_001842F0 + 0x28): the hero's map pixel (cx, cy) = (int)(u * 512) + 1 from
    func_L00_0024B200 (level + 100 for the alternative map of D_L00_0015FEB8); within the map,

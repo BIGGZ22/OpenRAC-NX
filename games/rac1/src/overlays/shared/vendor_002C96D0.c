@@ -105,7 +105,7 @@ extern s32 func_L00_001F3958_2C9820(void) __asm__("func_L00_001F3958");
 
 /* Predicts where a thrown moby lands: steps the velocity (with gravity) from its start until collision_line_2c8440 hits ground (or a moby other than the hero and the holder), for up to `timer` steps. Stores the landing point and normal in vars and pulls the point 5% toward D_L00_00166DC0_2c8440. mode 0 needs a live hit moby; mode 1 starts from the hero's hand. Returns 1 on a hit.
    Adapted from Lombyte (MIT) for PAL by OpenRAC's tools/port.py: src/overlays/shared/gameplay/entities/002c8440.c, FUN_L00_002c8440. */
-s32 func_L00_002C9820(ThrowVars_2c8440_2C9820 *v, struct Moby *m, s32 mode)
+s32 ThrownObject_TracePathCopy(ThrowVars_2c8440_2C9820 *v, struct Moby *m, s32 mode)
 {
     Vec4 d, e, a, q, w;
     s32 t;
@@ -208,7 +208,7 @@ ret0:
 }
 INCLUDE_ASM("asm/overlays", func_L00_002C9DC8);
 // resets the fields of a record (if non-null) to their defaults
-void func_L00_002CA6B8(char *a) {
+void MobyData_ResetDefaults(char *a) {
     if (a != 0) {
         *(int *)(a + 0x78) = 0;
         *(float *)(a + 0x7C) = 0.05f;
@@ -286,7 +286,7 @@ char *SpawnMoby270(char *src) {
         clear_u64_value(m + 0x40);
         g = (unsigned char *)D_0013E633 + 0xE1D;
         *(float *)(m + 0x48) = func_L00_001FF860(*(float *)(m + 0x10) - *(float *)(g + 0x80), *(float *)(m + 0x14) - *(float *)(g + 0x84));
-        h = func_00214358(p, 0, 0.5f);
+        h = ProbeGroundHeight(p, 0, 0.5f);
         if (*(float *)(m + 0x18) <= h) {
             *(float *)(m + 0x18) = h;
             q = D_L00_00173F40;
@@ -339,7 +339,7 @@ char *SpawnMoby270(char *src) {
             *(unsigned short *)(m + 0x34) |= 0x1020;
             *(char **)(*(char **)(d + 0x14) + 0x70) = &D_L00_00161910;
         }
-        func_L00_002CA6B8(*(char **)(d + 0x14));
+        MobyData_ResetDefaults(*(char **)(d + 0x14));
         D_L00_001DD450[*(int *)&D_L00_00161924] = (int)m;
         *(int *)&D_L00_00161924 = *(int *)&D_L00_00161924 + 1;
         n = ((DD9 *)d)->f74;
@@ -759,7 +759,7 @@ void MorphorayChickenUpdate(Moby *m) {
 }
 extern int func_L00_002DCDA8(void *);
 extern int func_L00_002DCDA8_CC210(void *, void *, void *) __asm__("func_L00_002DCDA8");
-int func_L00_002CC210(char *a, void *p, void *t) {
+int Moby_SetStateFromCheck(char *a, void *p, void *t) {
     int r = func_L00_002DCDA8_CC210(a, p, t);
     if (r == 0) {
         if (*(unsigned char *)(a + 0x20) == 5) a[0x20] = 1;
@@ -772,7 +772,7 @@ extern char *func_L00_002DCD40(char *);
 extern int func_L00_002DD0E0(char *, int, int, float);
 extern void func_0022ED80(int, int, char *);
 
-int func_L00_002CC2B0(char *m, int a, int b, float f) {
+int CarriedMoby_StartAnimState5(char *m, int a, int b, float f) {
     char *h = Moby_GetClassRecord(m);
     int r = StartCarriedMobyAnim(m, a, b, f);
     if (r != 0) {
@@ -781,12 +781,12 @@ int func_L00_002CC2B0(char *m, int a, int b, float f) {
         m[0x20] = 1;
     }
     if (*(short *)(h + 0x68) == 6) {
-        func_0022ED80(1, 0, m);
+        Moby_PlaySound(1, 0, m);
     }
     return r;
 }
 extern int func_L00_002DD2D0(void *);
-int func_L00_002CC360(char *a) {
+int CarriedMoby_ReleaseToState5(char *a) {
     int r = ReleaseCarriedMobySlot(a);
     a[0x20] = 5;
     return r;
@@ -1706,7 +1706,7 @@ unsigned char *SpawnMoby457(int a, V4 *pos, unsigned char *tgt, float f12, float
         *(float *)(v + 0x50) = f;
         *(float *)(v + 0x54) = random_float_between(-t, t);
         func_L00_00251E30(m);
-        func_0022ED80(1, 0, (char *)m);
+        Moby_PlaySound(1, 0, (char *)m);
         *(u128 *)&z = 0;
         z.f[2] = D_0015EE6C * 8.0f;
         p = *(unsigned char **)(D_0013E633 + 0x2E9D);
@@ -2021,7 +2021,7 @@ extern float func_001F9D10(void *, void *);
 
 /* finds the nearest eligible moby to a point, skipping a list of nine */
 /* Exact match: tools/ps2eeas_nops.py keeps the hazard nop after the label the branch lands on. */
-char *func_L00_002CF3D8(char *a, int *excl) {
+char *Moby_FindNearestTarget(char *a, int *excl) {
     char *result = 0;
     char *m;
     float best = 1e9f;
@@ -2483,7 +2483,7 @@ void CrateUpdate(struct Moby *moby) {
             GroupMobyIter_Next(&it, it, 0, 0);
         }
         if (moby->state != 1) {
-            moby->pos.z = func_00214358(&moby->pos, 0, 0.5f);
+            moby->pos.z = ProbeGroundHeight(&moby->pos, 0, 0.5f);
             moby->state = 1;
             pv->rider = 0;
             pv->below = 0;
@@ -2504,7 +2504,7 @@ void CrateUpdate(struct Moby *moby) {
         }
         if (moby->command % scale_ticks(60) == scale_ticks(60) - 3 ||
             moby->command == scale_ticks(13)) {
-            func_0022ED80(1, 0x20, (char *)moby);
+            Moby_PlaySound(1, 0x20, (char *)moby);
         }
         if (moby->command % scale_ticks(60) > scale_ticks(40) ||
             moby->command < scale_ticks(15)) {

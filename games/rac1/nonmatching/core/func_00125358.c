@@ -1,3 +1,4 @@
+/* fcheck: SAME on 3 calls (OpenRAC tools/fcheck_gate.py, 2026-10-18). */
 /* Stores four 16-byte rows at m: the (0,0,0,1) vector in vf4 and its
  * vmr32 rotations (y,z,w,x) in vf5, vf6, vf7. Row 3 (+0x30) is written
  * first, row 0 (+0x00) last. */

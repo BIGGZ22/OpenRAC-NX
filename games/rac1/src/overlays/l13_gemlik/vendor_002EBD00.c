@@ -118,7 +118,7 @@ extern int func_0022ED80(int, int, int);
 extern char D_0013E633[];
 
 // Gemlik state machine: advances the moby's state byte at 0xBC and sets its timers
-void func_L13_002EC038(void *mobyp, void *pp) {
+void QwarkStarfighter_UpdateByMode(void *mobyp, void *pp) {
     char *moby = mobyp;
     char *p = pp;
     float sv[4];
@@ -258,7 +258,7 @@ s308:
     *(int *)(p + 0x100) = scale_ticks(0x258);
     *(int *)(p + 0xF8) = scale_ticks(0x78);
     moby[0x20] = 4;
-    func_0022ED80(5, 0, (int)moby);
+    Moby_PlaySound(5, 0, (int)moby);
     return;
 
 s358:
@@ -638,7 +638,7 @@ void QwarkStarfighterPartUpdate(Moby388 *m) {
         if (*(Moby388 **)(D_0013E633 + 0x240D) != 0 && (*(Moby388 **)(D_0013E633 + 0x240D))->cls_id == 0x45) {
             (*(Moby388 **)(D_0013E633 + 0x240D))->bBC = 0;
         }
-        func_L13_002EC038(m, d);
+        QwarkStarfighter_UpdateByMode(m, d);
         if (Path_ChooseDirectionTowardHero(m, d, d->b13B, 1) & 2) {
             if (d->b13B != D_L13_001D3718[m->bBC]) {
                 d->b13B = D_L13_001D3718[m->bBC];
@@ -662,7 +662,7 @@ void QwarkStarfighterPartUpdate(Moby388 *m) {
         d->hud104 = queue_animation_update(0x11, 0xFFFF, (int)Hud_InitElement, (int)Hud_UpdateCounter,
                                   (int)((char *)func_L06_0024A080 + 0x20), (int)&d->i108,
                                   (d->s24 << 4) | 0xF);
-        func_L13_002EC038(m, d);
+        QwarkStarfighter_UpdateByMode(m, d);
         Moby_GetJointWorldPos(m, 0x13, sp30);
         dist = FastVecDist(d->v80, D_0013E633 + 0xE9D);
         if (d->snd11C != -1) {
@@ -670,7 +670,7 @@ void QwarkStarfighterPartUpdate(Moby388 *m) {
             if (*(Moby388 **)(e + 0x88) == m && *(unsigned char *)(e + 0x74) != 0) goto have11C;
         }
         d->snd11C = -1;
-        d->snd11C = func_0022ED80(4, 4, (int)m);
+        d->snd11C = Moby_PlaySound(4, 4, (int)m);
     have11C:
         if (d->bFF == 0) {
             {
@@ -806,7 +806,7 @@ void QwarkStarfighterPartUpdate(Moby388 *m) {
         }
         if (d->iF8 == 1) {
             LaunchChildMoby(m, d, 8);
-            func_0022ED80(7, 0, (int)m);
+            Moby_PlaySound(7, 0, (int)m);
         }
         func_001F9908(&d->iF8);
         if (Moby_SteerAlongPathFacing(m, d, d->b13B, 0) != 0 ||
@@ -989,7 +989,7 @@ void QwarkStarfighterPartUpdate(Moby388 *m) {
             if (*(Moby388 **)(e + 0x88) == m && *(unsigned char *)(e + 0x74) != 0) goto have118;
         }
         d->snd118 = -1;
-        d->snd118 = func_0022ED80(6, 4, (int)m);
+        d->snd118 = Moby_PlaySound(6, 4, (int)m);
     have118:;
     } else {
         if (d->child110 != 0) {
@@ -1017,7 +1017,7 @@ void QwarkStarfighterPartUpdate(Moby388 *m) {
     }
 
     if (m->state >= 2) {
-        func_L13_002EA160(m, d);
+        QwarkStarfighter_SyncParts(m, d);
         if (m->state != 8 || scale_ticks(0x78) < d->iF8) {
             SpawnJointFlameParticles(m, d);
         }
@@ -1026,7 +1026,7 @@ void QwarkStarfighterPartUpdate(Moby388 *m) {
             if (*(Moby388 **)(e + 0x88) == m && *(unsigned char *)(e + 0x74) != 0) goto have114;
         }
         d->snd114 = -1;
-        d->snd114 = func_0022ED80(0, 4, (int)m);
+        d->snd114 = Moby_PlaySound(0, 4, (int)m);
     have114:
         func_001F9EC0(sp20, D_L13_001606E0, m->mat[0]);
         func_L00_001FF4B0(sp20, sp20, 7.0f);
@@ -1818,7 +1818,7 @@ extern void func_L00_0025F4A8_alt(void *, void *, void *, float, float, int, int
                                   float, float, float, float, int, float, int, int, int, int)
     __asm__("func_L00_0025F4A8");
 
-void func_L13_00307550(char *moby) {
+void Moby1233_SpawnBigBurst(char *moby) {
     char vector[16];
     clear_u64_value(vector);
     func_L00_0025F4A8_alt(moby, vector, moby + 0x10, 2.0f, 1.0f, 12, 4, 18,
@@ -1828,7 +1828,7 @@ extern void func_001F9BC0(void *);
 extern void func_L00_0025F4A8(void *, void *, void *, float, float, int, int, int,
                               float, float, float, int, float, float, int, int, int, int);
 
-void func_L13_003075E0(char *moby) {
+void Moby1233_SpawnSmallBurst(char *moby) {
     char vector[16];
     clear_u64_value(vector);
     func_L00_0025F4A8(moby, vector, moby + 0x10, 0.0f, 0.0f, 5, 1, 5,
@@ -1842,7 +1842,7 @@ extern int func_001FA898_r(float) __asm__("func_001FA898");
 extern void func_L00_00251E30(void *);
 
 // Spawns the class 0x4D6 moby aimed along dir with a pitch and yaw, and sets up its data block.
-char *func_L13_00307660(float speed, float *pos, float *dir, void *arg)
+char *SpawnMoby1238(float speed, float *pos, float *dir, void *arg)
 {
     char *m;
     char *p;
@@ -1886,7 +1886,7 @@ struct L13Ent00178480 {
 extern struct L13Ent00178480 D_L13_00178480[];
 
 // Gemlik moby (class 1238) update: moves along its velocity, hands its hit to a tracked target, sparks on impact
-void func_L13_00307798(struct Moby *moby) {
+void ProjectileL13_Update(struct Moby *moby) {
     char *data = (char *)moby->pvars;
     struct {
         L13Vec_p old_pos;
@@ -1986,7 +1986,7 @@ void func_L13_00307798(struct Moby *moby) {
     {
         struct Moby *target = (*(L13Hit_p *)D_L13_001741C0).moby;
         if (target != 0 && *(short *)((char *)target + 0xA6) == 0)
-            func_0022ED80(0, 0, (int)moby);
+            Moby_PlaySound(0, 0, (int)moby);
     }
 remove:
     DeleteMoby(moby);
@@ -2221,7 +2221,7 @@ void Moby1261Update(char *moby) {
                 *(int *)(data + 0x70) = 0;
                 DrawVendorBurst(moby, data);
                 SpawnPartType52Near(moby);
-                func_0022ED80(0, 0, (int)moby);
+                Moby_PlaySound(0, 0, (int)moby);
                 moby[0x20] = 1;
             } else {
                 *p22 = *p22 - *(float *)(tgt + 0x2C);
@@ -2788,7 +2788,7 @@ void RopeWalkerUpdate(Moby *moby)
     if (vars->start_frame == 0) {
         vars->start_frame = *(int *)(D_0013E633 + 0x2E9D);
     }
-    ground = func_00214358(&moby->pos, 0, 0.5f);
+    ground = ProbeGroundHeight(&moby->pos, 0, 0.5f);
     if (ground != 0.0f) {
         switch (CollType()) {
         case 0:
@@ -2845,7 +2845,7 @@ extern short D_L13_00161F10,D_L13_00161F14;
 /* initializes a sixteen-point curved trail around a moby */
 void InitCurvedTrail(char *m) {
  float v[4]; int i; char *d=*(char **)(m+0x78);
- func_00214358(m+0x10,0,0.5f);
+ ProbeGroundHeight(m+0x10,0,0.5f);
  func_L00_001FF4B0(d+0x200,D_L13_00174200,1.0f);
  Moby_GetJointWorldPos(m,0,d+0x1f0);
  for(i=0;i<16;i++) {
@@ -3081,7 +3081,7 @@ extern void func_L13_0030B918(void);
 extern void func_L13_0030B940(int);
 
 /* Adapted from Lombyte (MIT) for PAL by OpenRAC's tools/port.py: src/overlays/l13/gameplay/vendor/003058a8.c, FUN_L13_00309e88. */
-void func_L13_0030B340(struct Moby *moby) {
+void BobbingLights_Update(struct Moby *moby) {
     Bob_9e88 *b;
     float f;
     int i, j, k, n;
@@ -3301,7 +3301,7 @@ void Lift1270Update(char *moby) {
     case 3: {
         float target;
         if (!Sound_IsPlaying(moby, *(int *)(state + 0x6C))) {
-            *(int *)(state + 0x6C) = func_0022ED80(0, 4, (int)moby);
+            *(int *)(state + 0x6C) = Moby_PlaySound(0, 4, (int)moby);
         }
         if (*(unsigned char *)(moby + 0xBC) != 0) {
             Moby_GetSidePointFacingHero(moby, a, b);

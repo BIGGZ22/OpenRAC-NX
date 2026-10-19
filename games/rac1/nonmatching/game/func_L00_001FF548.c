@@ -1,3 +1,4 @@
+/* fcheck: unchecked (level/overlay function; fcheck runs boot-executable functions only; OpenRAC tools/fcheck_gate.py, 2026-10-18). */
 /* Scales the vector at in (x, y, z; w copied) to length r when its length is at least r and nonzero: stores it at out and returns 1; otherwise stores nothing and returns 0. VU0: vsqrt for the length, vdiv for r / length. */
 extern float sqrtf(float);
 int func_L00_001FF548(float *out, float *in, float r) {

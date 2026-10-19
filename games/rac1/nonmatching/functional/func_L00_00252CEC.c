@@ -1,4 +1,4 @@
-/* functional: high. VU0 vf0 is fixed at (0,0,0,1), so vf1=(1,0,0,0), vf2=(0,1,0,0), vf3=vmr32(vf0)=(0,0,1,0) and the stored vf0=(0,0,0,1) are constants; written to the scratchpad quads at 0x70000000..0x70000030 as float bit patterns. */
+/* functional: high. fcheck: unchecked (level/overlay function; fcheck runs boot-executable functions only; OpenRAC tools/fcheck_gate.py, 2026-10-18). VU0 vf0 is fixed at (0,0,0,1), so vf1=(1,0,0,0), vf2=(0,1,0,0), vf3=vmr32(vf0)=(0,0,1,0) and the stored vf0=(0,0,0,1) are constants; written to the scratchpad quads at 0x70000000..0x70000030 as float bit patterns. */
 void func_L00_00252CEC(void) {
     *(volatile int *)0x70000000 = 0x3F800000;
     *(volatile int *)0x70000004 = 0;

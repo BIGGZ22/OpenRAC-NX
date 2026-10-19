@@ -1,3 +1,4 @@
+/* fcheck: SAME on 3 calls (OpenRAC tools/fcheck_gate.py, 2026-10-18). */
 /* func_001FA540(dst, m, src): four vectors out of four: dst = m * src, with m
    as four columns (VU0: column 0 times x, plus column 1 times y, plus column 2
    times z, plus column 3 times w, accumulated in ACC in that order). The

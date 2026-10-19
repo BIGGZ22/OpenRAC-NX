@@ -18,6 +18,11 @@
 # the Windows 2.9-ee writes branch-likely (_type2id, func_0012AC80).
 # Built with toolchain/ee-gcc-2.9-991111-01 when present (Makefile.sn,
 # tools/try_func.py), else with the Windows 2.9-ee, which cannot match it.
+# A fifth column `gas210` selects GNU 2.10-ee call-slot behavior for the
+# whole object: a volatile word load may fill the following call slot.
+# Checked against the original assembler, not a per-function code patch.
+# `gas210-real` instead runs that assembler binary for the entire object;
+# it is needed for single-instruction 64-bit shift macros in return slots.
 #   build-sn/libgcc/l2_*.o     <- src/libgcc/libgcc2.c
 #   build-sn/libgcc/dp-bit.o, fp-bit.o <- src/libgcc/fp-bit.c
 #   build-sn/libgcc/asm_*.o    <- src/libgcc/nonmatching_*.c
@@ -43,7 +48,7 @@ build-sn/core/001188C8.o 0x001188C8 ee29
 build-sn/core/00118A40.o 0x00118A40 ee29
 build-sn/core/00119328.o 0x00119328 ee29
 build-sn/core/00119868.o 0x00119868 ee29
-build-sn/core/00119D88.o 0x00119D88 ee29
+build-sn/core/00119D88.o 0x00119D88 ee29 - dtls29-real
 build-sn/core/0011CCE0.o 0x0011CCE0 ee29
 build-sn/core/0011D0D0.o 0x0011D0D0 ee29
 build-sn/core/0011D700.o 0x0011D700 ee29
@@ -66,7 +71,7 @@ build-sn/libgcc/asm_001206A4.o
 build-sn/libgcc/fp-bit.o
 build-sn/core/001207B8.o 0x001207B8
 build-sn/core/001208E8.o 0x001208E8 ee29
-build-sn/core/00121750.o 0x00121750 ee29
+build-sn/core/00121750.o 0x00121750 ee29 991111 gas210
 build-sn/core/00121D18.o 0x00121D18 ee29
 build-sn/core/00122140.o 0x00122140 ee29
 build-sn/core/00122200.o 0x00122200 ee29
@@ -79,7 +84,7 @@ build-sn/core/001236F0.o 0x001236F0 ee29
 build-sn/core/00125218.o 0x00125218 ee29
 build-sn/core/001252A0.o 0x001252A0 ee29
 build-sn/core/00125630.o 0x00125630 ee29
-build-sn/core/0012A2F0.o 0x0012A2F0 ee29
+build-sn/core/0012A2F0.o 0x0012A2F0 ee29 - gas210-real
 build-sn/core/0012AC80.o 0x0012AC80 ee29 991111-01
 build-sn/core/0012CC70.o 0x0012CC70 ee29
 build-sn/core/0012CC90.o 0x0012CC90 ee29

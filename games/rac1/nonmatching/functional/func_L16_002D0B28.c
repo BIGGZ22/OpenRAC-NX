@@ -1,4 +1,4 @@
-/* functional: high. Retail's loop over a list of u16 entries (the 0x60 tail at 0x2D0B60 is folded into the loop; it is
+/* functional: high. fcheck: unchecked (level/overlay function; fcheck runs boot-executable functions only; OpenRAC tools/fcheck_gate.py, 2026-10-18). Retail's loop over a list of u16 entries (the 0x60 tail at 0x2D0B60 is folded into the loop; it is
    its own piece in the catalogue). Each entry selects a 256-byte record at base; the function returns 0 on the first
    record whose halfword at +0xA6 is 0x222 and whose byte at +0xBC is set, and 1 at the list terminator (bit 15).
    The arguments a0 and a2 are not read by retail; they are kept so the signature matches the caller. */

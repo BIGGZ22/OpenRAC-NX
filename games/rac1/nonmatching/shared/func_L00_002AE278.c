@@ -9,6 +9,7 @@
  *   only in the else branch. Size 1076 = retail, BYTES 682/1076 (registers). Left: retail re-reads d + 0x60
  *   before the first call and computes e's %hi in both branches, and keeps speed in f20 and the dot product in
  *   f21 (ours swaps them and saves f22). Re-reading d + 0x60 everywhere gives 1092, dropping e gives 1084.
+ *   fcheck: unchecked (level/overlay function; fcheck runs boot-executable functions only; OpenRAC tools/fcheck_gate.py, 2026-10-18).
  */
 #include "hero.h"
 extern Hero hero_2AE278 __asm__("D_0013F450");

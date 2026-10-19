@@ -1,4 +1,4 @@
-/* functional: low. Corrected from nonmatching/game/func_0020E9F0.c: retail builds the mask with a 32-bit sllv, so a count of 32 gives mask 0 (not 0xFFFFFFFF): it returns the first non-full word's base without marking anything. The near miss used a 64-bit shift. Identical for counts 1..16. */
+/* functional: low. fcheck: unchecked (never called in fcheck's capture run of the title, menu and level 0; OpenRAC tools/fcheck_gate.py, 2026-10-18). Corrected from nonmatching/game/func_0020E9F0.c: retail builds the mask with a 32-bit sllv, so a count of 32 gives mask 0 (not 0xFFFFFFFF): it returns the first non-full word's base without marking anything. The near miss used a 64-bit shift. Identical for counts 1..16. */
 extern unsigned char D_001C7A60[];
 
 /* Allocates `count` consecutive 32-byte blocks of the moby grid's list storage (count a power of

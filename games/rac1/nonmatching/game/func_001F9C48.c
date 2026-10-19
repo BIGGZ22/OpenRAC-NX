@@ -1,3 +1,4 @@
+/* fcheck: SAME on 3 calls (OpenRAC tools/fcheck_gate.py, 2026-10-18). */
 /* func_001F9C48(s, dst, a): VU0 vmulx.xyzw: dst = a * s on all four lanes
    (s broadcast from the x lane of the scalar). */
 void func_001F9C48(float s, float *dst, float *a) {

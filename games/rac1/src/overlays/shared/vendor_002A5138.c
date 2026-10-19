@@ -324,12 +324,12 @@ extern float func_001FA850(float, float);
 extern void func_001F9BD8(void *, void *, void *);
 
 // Moves the moby toward a point on the camera's line of sight, or parks it at a fixed distance.
-void func_L00_002A60D8(char *moby) {
+void Moby_FollowCameraSightLine(char *moby) {
     float a[4];
     float b[4];
     float d;
     char *x;
-    char *g = (char *)&D_L00_00166D80;
+    char *g = (char *)&gCameraLvl;
     char *cam = *(char **)(g + 0x180);
 
     if (cam != 0) {
@@ -1038,7 +1038,7 @@ extern void func_001F9CA0(void *, void *, void *);
 extern void func_00215380(void *arg0, void *axis, float angle);
 
 // Starts the moby's tumble: picks default spin rates, builds its basis and launches it.
-int func_L00_002A84B0(void *moby_v, int target_i, float sx, float sy) {
+int Moby_StartTumble(void *moby_v, int target_i, float sx, float sy) {
     char *moby = moby_v;
     char *target = (char *)target_i;
     float v[12];
@@ -1049,7 +1049,7 @@ int func_L00_002A84B0(void *moby_v, int target_i, float sx, float sy) {
     }
     if ((*(int *)&(D_L00_00161474)) + scale_ticks(3) < D_L00_0015F6B0 || D_L00_0015F6B0 < (*(int *)&(D_L00_00161474))) {
         (*(int *)&(D_L00_00161474)) = D_L00_0015F6B0;
-        func_0022ED80(0, 0x20, (int)moby);
+        Moby_PlaySound(0, 0x20, (int)moby);
     } else {
         if (sx == 0.0f) {
             sx = random_float_between(-30.0f, 30.0f) * 0.017453293f;
@@ -1233,7 +1233,7 @@ extern short D_L00_00161484;
 #define FUN_001f9a68_2a7780 func_001F9C30
 #define FUN_001f7d30_2a7780 func_L00_001FD1D8
 
-void func_L00_002A8A20(void *op) {
+void HeroEffect_Draw(void *op) {
     O_2a7780 *o = (O_2a7780 *)op;
     R_2a7780 *r;
     E_2a7780 *e;
@@ -1353,7 +1353,7 @@ void CopyHeroAnimToMoby(char *m) {
 }
 extern void *D_L00_00173F58;
 extern char *func_L00_0025D390(void *);
-int func_L00_002A9030(void) {
+int CollMoby_IsPvarTypeOne(void) {
     int r = 0;
     char *x = 0;
     if (D_L00_00173F58 != 0) x = GetFlaggedPvarWord(D_L00_00173F58);
@@ -1361,7 +1361,7 @@ int func_L00_002A9030(void) {
     return r;
 }
 extern char *func_L00_0025D390(void *);
-int func_L00_002A9080(void) {
+int CollMoby_HasPvarFlag2(void) {
     char *x = GetFlaggedPvarWord(D_L00_00173F58);
     if (x != 0) {
         if (*(unsigned short *)(x + 0x1E) & 2) {
@@ -1464,10 +1464,10 @@ void TriggerNearbyMobyHit(char *a) {
             if (m != 0 && *(char **)(m + 0x24) != 0 && *(short *)(*(char **)(m + 0x24) + 0x46) == 0x13) {
                 if (FastVecDist(m + 0x10, a + 0x10) < 2.7f) {
                     float f = random_float_between(-30.0f, 30.0f);
-                    if (func_L00_002A84B0(m, *(int *)(g + 0x2080), f * 0.017453292f, 0.0f)) return;
+                    if (Moby_StartTumble(m, *(int *)(g + 0x2080), f * 0.017453292f, 0.0f)) return;
                 }
             } else {
-                if (func_L00_0025F450(m) != 0) {
+                if (IsMobyScatterClass(m) != 0) {
                     if (FastVecDist(m + 0x10, a + 0x10) < 2.7f) {
                         if (Pickup_TryCollect(m)) return;
                     }
@@ -1600,7 +1600,7 @@ void WrenchUpdate(Wrench48 *m) {
                 d->aim_hit=player_state; qcopy(d->target,D_L00_00173F60);
             }
         }
-        AddDrawCallback(func_L00_002A8A20,m);
+        AddDrawCallback(HeroEffect_Draw,m);
         anim=m->current_animation;
         if ((unsigned char)anim!=0) {
             if ((unsigned char)anim==14) {
@@ -1675,8 +1675,8 @@ void WrenchUpdate(Wrench48 *m) {
             work.v[2][0]=FastCos(angle)*1.4f; work.v[2][1]=FastSin(angle)*1.4f; work.v[2][2]=0.0f;
             Vec_ScaleByHeadingDiff(work.v[2]); FastVecAdd(work.v[1],work.v[1],work.v[2]);
             if (!sweepp48()->attack_cooldown && func_L00_001EFFF0(work.v[0],work.v[1],2,0,0) && CollType()) {
-                if (!wrench_hit48.moby || func_L00_0025F3C0((char*)wrench_hit48.moby)) {
-                    sweepp48()->attack_cooldown=1; func_0022ED80(2,0,(int)m); SpawnImpactBurst((char*)m);
+                if (!wrench_hit48.moby || IsMobyClass502OrOutsideRange((char*)wrench_hit48.moby)) {
+                    sweepp48()->attack_cooldown=1; Moby_PlaySound(2,0,(int)m); SpawnImpactBurst((char*)m);
                     if (wrench_hit48.moby) {
                         work.v[3][0]=FastCos(yaw); work.v[3][1]=FastSin(yaw); work.v[3][2]=0.0f;
                         PostHitMessage(wrench_hit48.moby,(int)m,0x10000,wrench_hit48.position,work.v[3],1.0f);
@@ -1685,7 +1685,7 @@ void WrenchUpdate(Wrench48 *m) {
             }
         }
         if (wplayer48()->state==20 && Hero_IsTimeInWindow(27.0f)) {
-            func_0022ED80(2,0,(int)m);
+            Moby_PlaySound(2,0,(int)m);
             qcopy(work.v[0],wplayer48()->sweep_end); qcopy(work.v[1],work.v[0]);
             HeroMoveUpAlongNormal(work.v[0],work.v[0],0.7f); HeroMoveUpAlongNormal(work.v[1],work.v[1],-0.9f);
             if (func_L00_001EFFF0(work.v[0],work.v[1],2,0,0)) SpawnImpactBurst((char*)m);
@@ -1698,10 +1698,10 @@ void WrenchUpdate(Wrench48 *m) {
             InitDirectionalHitQuery(work.v[0],m,0x10000,(float)count,work.v[3]); func_L00_001FF500(work.v[0],work.v[0],scale);
             work.query.force=1.0f; work.query.range=5627.925f; work.query.enabled=1; work.query.class_id=m->class_id; work.query.flags=0;
             if (SweepSegmentCheck(wplayer48()->sweep_start,wplayer48()->sweep_end,wplayer48()->previous_start,wplayer48()->previous_end,wplayer48()->moby,&work,5) && wrench_hit48.moby) {
-                if (func_L00_002A9080()) reaction=1;
+                if (CollMoby_HasPvarFlag2()) reaction=1;
                 else if (!wplayer48()->attack_cooldown) {
                     if (!wrench_hit48.moby || !wrench_hit48.moby->model || wrench_hit48.moby->model->kind!=20) {
-                        wplayer48()->attack_cooldown=1; func_0022ED80(func_L00_002A9030(),0,(int)m); SpawnImpactBurst((char*)m);
+                        wplayer48()->attack_cooldown=1; Moby_PlaySound(CollMoby_IsPvarTypeOne(),0,(int)m); SpawnImpactBurst((char*)m);
                     }
                 }
             }
@@ -1712,8 +1712,8 @@ void WrenchUpdate(Wrench48 *m) {
             if (sweepp48()->move_mode==15) radius=0.7f;
             if (sweepp48()->state==20) radius=0.47f;
             if (sphere48(work.v[4],radius,0,sweepp48()->moby,work.v[0]) && (!D_L00_00178000[0] || !D_L00_00178000[0]->model || D_L00_00178000[0]->model->kind!=18)) {
-                if (func_L00_002A9080()) reaction=1;
-                else if (!wplayer48()->attack_cooldown) { wplayer48()->attack_cooldown=1; func_0022ED80(func_L00_002A9030(),0,(int)m); SpawnImpactBurst((char*)m); }
+                if (CollMoby_HasPvarFlag2()) reaction=1;
+                else if (!wplayer48()->attack_cooldown) { wplayer48()->attack_cooldown=1; Moby_PlaySound(CollMoby_IsPvarTypeOne(),0,(int)m); SpawnImpactBurst((char*)m); }
             }
         }
         if (reaction) {
@@ -1734,13 +1734,13 @@ void WrenchUpdate(Wrench48 *m) {
         WPlayer48 *control_player=(WPlayer48*)(control-0x17B0);
         TransformTrailUpdate(control,0);
         m->parent=control_player->moby; control_player->wrench_state=2;
-        if (m->state==10 && control_player->thrown_sound==-1) control_player->thrown_sound=func_0022ED80(14,4,(int)control_player->moby);
+        if (m->state==10 && control_player->thrown_sound==-1) control_player->thrown_sound=Moby_PlaySound(14,4,(int)control_player->moby);
         }
         MobyRotateEuler((char*)m,0.0f,0.0f,D_0015EE6C*24.434608f);
         if (wplayer48()->attack_cooldown && func_001F9908(&d->timer)) wplayer48()->attack_cooldown=0;
         position=m->position;
         if (!wplayer48()->no_ground_adjust) {
-            float ground=func_00214358(position,0,0.5f);
+            float ground=ProbeGroundHeight(position,0,0.5f);
             if (m->position[2]-ground<0.8f) {
                 ground+=0.55f;
                 if (m->position[2]<ground) ApproachValue(&m->position[2],ground,D_0015EE6C*4.0f);
@@ -1768,7 +1768,7 @@ void WrenchUpdate(Wrench48 *m) {
             func_L00_001FF4B0(work.v[1],work.v[1],d->speed); FastVecAdd(position,position,work.v[1]);
             if (length/d->speed<(float)scale_ticks(4) && wplayer48()->selected_weapon!=-1) {
                 int sound;
-                func_L00_00232EC0(2); wplayer48()->weapon_animation=26;
+                Hero_SetAttackTicks(2); wplayer48()->weapon_animation=26;
                 sound=wplayer48()->thrown_sound;
                 if (sound!=-1) { unsigned char *audio=waudio48(sound); if (*(Wrench48**)(audio+0x88)==wplayer48()->moby && audio[0x74]) Sound_StopSlot(sound); }
                 wplayer48()->thrown_sound=-1;
@@ -1785,7 +1785,7 @@ void WrenchUpdate(Wrench48 *m) {
         if (func_L00_001EFFF0(work.v[0],position,2,0,0) && CollType() && (!wrench_hit48.moby || !IsMobyClass500To540((int)wrench_hit48.moby))) collided=wrench_hit48.surface!=0;
         if (collided || d->collision) {
             d->collision=0;
-            if (!wplayer48()->attack_cooldown) { d->timer=scale_ticks(30); wplayer48()->attack_cooldown=1; func_0022ED80(2,0,(int)m); }
+            if (!wplayer48()->attack_cooldown) { d->timer=scale_ticks(30); wplayer48()->attack_cooldown=1; Moby_PlaySound(2,0,(int)m); }
             if (m->state==10) { SpawnImpactBurst((char*)m); d->speed*=0.5f; m->state=11; }
         }
         radius=1.2f; if (m->state==11) radius=-0.37f;
@@ -1800,7 +1800,7 @@ void WrenchUpdate(Wrench48 *m) {
                 if (!hit || hit->hit_count<2 || hit->hit_index!=work.shifted.query.class_id) {
                     work.q[7]=*(WQuad48*)wrench_hit48.moby->position;
                     LerpVec4(work.v[6],work.v[5],work.v[7],0.5f); SpawnSparkPairs(work.v[6],5);
-                    d->timer=scale_ticks(30); wplayer48()->attack_cooldown=1; func_0022ED80(func_L00_002A9030(),0,(int)m);
+                    d->timer=scale_ticks(30); wplayer48()->attack_cooldown=1; Moby_PlaySound(CollMoby_IsPvarTypeOne(),0,(int)m);
                 }
             }
         }
@@ -2193,7 +2193,7 @@ extern int D_L00_0015F6A8 MACRO_ADDR;
 extern float D_L00_00173F80[];
 
 // Traces a projectile path from a0 step by step and resolves where it lands.
-int func_L00_002AB548(char *a0, char *o, int mode) {
+int ProjectilePath_Trace(char *a0, char *o, int mode) {
     float w[4];
     float B[4];
     float C[4];
@@ -2258,7 +2258,7 @@ int func_L00_002AB548(char *a0, char *o, int mode) {
             if (GetFlaggedPvarWord(D_L00_00173F58) == 0) return 0;
         }
         if (mode != 2 || D_L00_00173F58 == 0 || GetFlaggedPvarWord(D_L00_00173F58) == 0) {
-            AddDrawCallback(func_L00_002AAEF0, o);
+            AddDrawCallback(Moby_DrawSpinningQuads, o);
         }
         {
             char *g = (char *)&D_L00_00166EC0;

@@ -1,3 +1,4 @@
+/* fcheck: unchecked (level/overlay function; fcheck runs boot-executable functions only; OpenRAC tools/fcheck_gate.py, 2026-10-18). */
 /* Near miss func_L12_00304038 with the variable-length array replaced by a fixed buffer for the port (hostgen cannot take a VLA). */
 /* NON_MATCHING func_L12_00304038 -- src/overlays/l12_hoven/vendor_002EDAA0.c
  * Best so far: BYTES 4/724 (99.5% of the bytes match), checked 2026-10-09.

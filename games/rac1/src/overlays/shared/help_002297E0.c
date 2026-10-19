@@ -166,7 +166,7 @@ extern int func_L00_00267BA8(int, int, int);
 extern int func_L00_0020DB30(int);
 
 // Tries the crouch-jump style moves in priority order and starts the first whose conditions hold. Adapted from Lombyte (MIT) for PAL: overlays/shared/ui_help_00229010.c, FUN_L00_00229660.
-int func_L00_00229E30(void) {
+int Hero_TryJumpFromPads(void) {
     char *g = (char *)D_0013E633 + 0xE1D;
     int n, t, k;
     int m;

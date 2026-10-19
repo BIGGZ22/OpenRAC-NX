@@ -37,7 +37,9 @@ extern int D_L00_0015FFE4 MACRO_ADDR;
 extern float D_0015ED70 MACRO_ADDR;
 extern float D_0015ED60 MACRO_ADDR;
 extern float func_001F9AF0(void *a);
-extern int func_L00_0025C338(char *);
+/* NTSC-U calls FUN_L00_002603d0 here (jal 0x0C0980F4: returns the moby's word 0x78 -> +8), not
+ * FUN_L00_0025c338 (the level's FUN_002141f8, word 0x78 -> +0) as the carry from PAL had it. */
+extern int func_L00_002603D0(char *);
 extern int func_001F9688(int);
 extern int func_001F9740(int *);
 extern void *func_L00_0026ED28(void *);
@@ -85,7 +87,7 @@ void FUN_L00_002c89e8(char *m) {
         char *P = D_0013E533 + 0xE1D;
         if (*(short *)(*(char **)(s + 0x30) + 0xA6) == 0xE5 && *(short *)(s + 0x3A) == 0 &&
             func_001F9AF0(s) > 0.0f) {
-            if (*(int *)(P + 0x2FC) == 0 || func_L00_0025C338(*(char **)(P + 0x2FC)) == 0) {
+            if (*(int *)(P + 0x2FC) == 0 || func_L00_002603D0(*(char **)(P + 0x2FC)) == 0) {
                 func_L00_002C8440(s, m, 1);
             } else {
                 if (func_L00_002C8440(s, m, 0) == 0) {
@@ -185,7 +187,7 @@ void FUN_L00_002c89e8(char *m) {
         if (func_001F9AF0(s) < D_0015ED60 * f21) {
             goto L344;
         }
-        if (*(int *)(P + 0x2FC) != 0 && func_L00_0025C338(*(char **)(P + 0x2FC)) != 0) {
+        if (*(int *)(P + 0x2FC) != 0 && func_L00_002603D0(*(char **)(P + 0x2FC)) != 0) {
             float a20 = func_001F9AF0(s);
             if (a20 < D_0015ED60 * f21 + func_001F9AF0(D_0013E533 + 0xF1D)) {
                 goto L344;
@@ -203,7 +205,7 @@ void FUN_L00_002c89e8(char *m) {
             }
         }
     L394:
-        if (*(int *)(P + 0x2FC) != 0 && func_L00_0025C338(*(char **)(P + 0x2FC)) != 0) {
+        if (*(int *)(P + 0x2FC) != 0 && func_L00_002603D0(*(char **)(P + 0x2FC)) != 0) {
             func_001F9A10(s, s, P + 0x100);
         }
         func_001F9A10(u, u, s);
@@ -238,7 +240,7 @@ void FUN_L00_002c89e8(char *m) {
                 f0 = func_001F9DE0(((float)*(int *)(s + 0x3C)) * f21 * f22);
                 v1.v[1] = (f1 * f20) * f0;
                 v1.v[2] = f1 * 0.02f;
-                if (*(int *)(P + 0x2FC) != 0 && func_L00_0025C338(*(char **)(P + 0x2FC)) != 0) {
+                if (*(int *)(P + 0x2FC) != 0 && func_L00_002603D0(*(char **)(P + 0x2FC)) != 0) {
                     func_001F9A10(&v1, &v1, P + 0x100);
                 }
                 func_001F9A10(&v0, &v1, u);

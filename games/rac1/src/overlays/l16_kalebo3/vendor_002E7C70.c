@@ -94,7 +94,7 @@ void ChallengeNpcUpdate(L16ChallengeMoby *m) {
     case 0:
         m->opacity = 255;
         m->state = 1;
-        func_L00_002676E8(m, activation);
+        DialogRequest_Init(m, activation);
         *(float *)((char *)d + 0x2C) = 3.7f;
         d->initial_yaw = m->yaw;
         if (*(int *)(D_0013D605 + 0x71F) == 0) m->yaw = FastAddRots(m->yaw, 3.14159265f);
@@ -105,7 +105,7 @@ void ChallengeNpcUpdate(L16ChallengeMoby *m) {
             *(float *)D_L16_0015F718_view = 115.0f;
         else
             *(float *)D_L16_0015F718_view = 100.0f;
-        if (((L16ChallengePlayer *)((char *)&D_0013E633_challenge + 0xE1D))->state != 29 && func_L00_00267290(m, (char *)d + 0x20)) {
+        if (((L16ChallengePlayer *)((char *)&D_0013E633_challenge + 0xE1D))->state != 29 && Npc_TryStartDialog(m, (char *)d + 0x20)) {
             m->yaw = d->initial_yaw;
             PlaceMarkerAheadOfMoby(3.5f, m);
             m->state = 2;
@@ -288,7 +288,7 @@ void Challenge_SetActiveLayout(char *moby) {
         p++;
     }
     *(float *)&D_L16_0015F718 = 74.0f;
-    func_L16_002DF780(76.0f);
+    Challenge_SetLayoutParam(76.0f);
     MusicRequestTrack(2, 6);
 }
 extern void func_L16_002DF780(float);
@@ -309,7 +309,7 @@ void Challenge_SetIdleLayout(char *moby)
         SetGroupMobyFlags(p[0], 1, 1, 0);
         p++;
     }
-    func_L16_002DF780(100.0f);
+    Challenge_SetLayoutParam(100.0f);
     MusicRequestTrack(0, 8);
 }
 extern char D_0013E633[];
@@ -388,7 +388,7 @@ void PathWalkerUpdate(unsigned char *m) {
     path = D_L16_001B0C30[d->path_index];
     if (((*(unsigned short *)(m + 0xA6) ^ 1) & 1) != 0) {
         if (Sound_IsPlaying(m, d->sound) == 0) {
-            d->sound = func_0022ED80(0, 4, (int)m);
+            d->sound = Moby_PlaySound(0, 4, (int)m);
         } else {
             playing = 1;
         }
@@ -732,7 +732,7 @@ void ElevatorPlatformUpdate(L16PlatformMoby *m) {
             CarryRiders((char *)d->basis, motion.v, m->rotation, m->rotation);
             if (motion.v[2] != 0.0f) {
                 if (!Sound_IsPlaying(m, d->particle)) {
-                    d->particle = func_0022ED80(0, 4, (int)m);
+                    d->particle = Moby_PlaySound(0, 4, (int)m);
                 }
             } else if (Sound_IsPlaying(m, d->particle)) {
                 Sound_StopSlot(d->particle);
@@ -858,7 +858,7 @@ extern int func_L00_00258BC8(int, int);
 extern int func_L16_002E2290(void *);
 extern float func_00214358(void *, int, float);
 extern void func_L16_002C57E8(void *, void *);
-void func_L16_002E9DE8(char *moby) {
+void TargetActivator_Update(char *moby) {
     char *g = D_0013E633 + 0xE9D;
     char *data = *(char **)(moby + 0x78);
     char *target;
@@ -883,7 +883,7 @@ void func_L16_002E9DE8(char *moby) {
         }
         break;
     case 2:
-        n = func_L16_002E2290(target);
+        n = TargetMoby_GetPhase(target);
         switch (n) {
         case 0:
             moby[0x20] = 1;
@@ -895,7 +895,7 @@ void func_L16_002E9DE8(char *moby) {
             if (other != 0) {
                 qcopy(pos, target + 0x10);
                 pos[2] += 1.0f;
-                pos[2] = func_00214358(pos, 0, 0.5f);
+                pos[2] = ProbeGroundHeight(pos, 0, 0.5f);
                 SpawnEffectsAroundMoby(other, pos);
             }
         }

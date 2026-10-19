@@ -191,7 +191,7 @@ FUN_00228520	game	FUN_00228520	host	the port's own (rac1/host/render_native.c); 
 FUN_00228598	game	FUN_00228598	host	the port's own (rac1/host/render_native.c); its signature decides the prototype; PAL func_002298B0	void (int, int)
 FUN_00228be8	game	FUN_00228be8	host	the port's own (rac1/host/render_native.c); its signature decides the prototype; PAL func_00229F00	void (void)
 FUN_0022a330	game	FUN_0022a330	host	the port's own (rac1/host/render_native.c); its signature decides the prototype; PAL func_0022B648	int (int)
-FUN_0022a5e0	game	FUN_0022a5e0	host	the port's own (rac1/host/render_native.c); its signature decides the prototype; PAL func_0022B8F8	void (unsigned int, unsigned int)
+FUN_0022a5e0	game	FUN_0022a5e0	host	the port's own (rac1/host/render_native.c); its signature decides the prototype; PAL func_0022B8F8	void (unsigned int)
 FUN_0022b6e8	game	FUN_0022b6e8	host	the port's own (rac1/host/render_native.c); its signature decides the prototype; PAL func_0022CA00	void (unsigned int)
 FUN_0022b928	game	FUN_0022b928	host	the port's own (rac1/host/render_native.c); its signature decides the prototype; PAL func_0022CC40	void (unsigned int)
 FUN_0022bba0	game	FUN_0022bba0	host	the port's own (rac1/host/render_native.c); its signature decides the prototype; PAL func_0022CEB8	void (void)
@@ -201,7 +201,7 @@ FUN_00234d48	game	FUN_00234d48	host	the port's own (rac1/host/render_native.c); 
 FUN_00234f98	game	FUN_00234f98	host	the port's own (rac1/host/render_native.c); its signature decides the prototype; PAL func_002362B0	void (unsigned int)
 FUN_00235be8	game	FUN_00235be8	host	the port's own (rac1/host/render_native.c); its signature decides the prototype; PAL func_00236F00	void (void)
 FUN_002370c0	game	FUN_002370c0	host	the port's own (rac1/host/render_native.c); its signature decides the prototype; PAL func_002383D8	int (int)
-FUN_00237370	game	FUN_00237370	host	the port's own (rac1/host/render_native.c); its signature decides the prototype; PAL func_00238688	void (unsigned int, unsigned int)
+FUN_00237370	game	FUN_00237370	host	the port's own (rac1/host/render_native.c); its signature decides the prototype; PAL func_00238688	void (unsigned int)
 FUN_0020cef8	game	FUN_0020cef8	host	the port's own (rac1/host/render_native.c); its signature decides the prototype; PAL func_0020DD48	void (void)
 FUN_00228a30	game	FUN_00228a30	host	the port's own (rac1/host/render_native.c); its signature decides the prototype; PAL func_00229D48	void (void)
 FUN_00233308	game	FUN_00233308	host	the port's own (rac1/host/render_native.c); its signature decides the prototype; PAL func_00234620	void (void)
@@ -240,7 +240,6 @@ func_L00_002A0D90	game	func_L00_002A0D90	host	a place the catalogue folds into a
 func_L00_002A0EB8	game	func_L00_002A0EB8	host	a place the catalogue folds into another function although its code differs (split_places.tsv, rac1/host/variants.c); PAL func_L00_002A2148	void (void)
 func_L00_0024E01C	game	func_L00_0024E01C	host	a place the catalogue folds into another function although its code differs (split_places.tsv, rac1/host/variants.c); PAL func_L00_0024F054, paired as found	int (void)
 func_L00_00266238	game	func_L00_00266238	host	a place the catalogue folds into another function although its code differs (split_places.tsv, rac1/host/variants.c); PAL func_L00_00267080	void (int, long long)
-func_L00_002959F8	game	func_L00_002959F8	host	a place the catalogue folds into another function although its code differs (split_places.tsv, rac1/host/variants.c); PAL func_L00_00296CD0	void (void)
 func_L02_0020A390	game	func_L02_0020A390	host	a level's draw callback register for list 3, folded into func_001F49B0 by the catalogue (split_places.tsv, rac1/host/callback_lists.c); PAL func_L02_0020A690	void (unsigned int, unsigned int)
 func_L14_0020C760	game	func_L14_0020C760	host	a level's draw callback register for list 4, folded into func_001F49B0 by the catalogue (split_places.tsv, rac1/host/callback_lists.c); PAL func_L14_0020CAE0	void (unsigned int, unsigned int)
 func_L00_002A0DF0	game	func_L00_002A0DF0	host	a place the catalogue folds into another function although its code differs (split_places.tsv, rac1/host/variants.c); PAL func_L00_002A2080	void (void)
@@ -262,6 +261,7 @@ FUN_L00_001f2868	game	FUN_L00_001f2868	host	the port's own (rac1/host/collision.
 FUN_L00_001f3170	game	FUN_L00_001f3170	host	the port's own (rac1/host/collision.c); its signature decides the prototype; PAL func_L00_001F34F0	int (float, unsigned int)
 FUN_00125180	game	FUN_00125180	host	the port's own (rac1/host/vector.c); its signature decides the prototype; PAL func_001252C0, paired as found	void (unsigned int, unsigned int)
 FUN_0020ede8	game	FUN_0020ede8	host	the port's own (rac1/host/anim.c); its signature decides the prototype; PAL func_0020FC38	void (unsigned int, int)
+FUN_0020fa90	game	FUN_0020fa90	host	the port's own (rac1/host/render_native.c); its signature decides the prototype; PAL func_L00_00254218 (the levels' joint pose); the NTSC decomp's catalogue has the executable's copy (PAL func_002108E0, the same instructions) and every level's as this one name	void (unsigned int, short, int)
 func_L00_00251CE8	game	func_L00_00251CE8	host	the port's own (rac1/host/anim.c); its signature decides the prototype; PAL func_L00_00252D20	void (unsigned int, int)
 FUN_L00_0024d8d0	game	WadDecompress (the levels' copy)	host	the NTSC decomp's catalogue lists the levels' copy apart from the executable's FUN_0020b618 (rac1/host/hand.c)	int (int, int)
 FUN_0022f778	space	FlightUpdate	wrap	the flight between planets, each of its frames: marks the flight as playing for the Start skip (rac1/host/boot.c); PAL func_00230A90	void (void)
@@ -274,6 +274,10 @@ func_L08_002DA0D0	game	func_L08_002DA0D0	host	a place the catalogue folds into a
 func_L14_00303350	game	func_L14_00303350	host	a place the catalogue folds into another function although its code differs (split_places.tsv, rac1/host/variants.c); PAL func_L14_003047D8	void (void)
 func_L18_002FAD08	game	func_L18_002FAD08	host	a place the catalogue folds into another function although its code differs (split_places.tsv, rac1/host/variants.c); PAL func_L18_002FC168	void (void)
 FUN_001ff780	hud	func_001FFFB8	wrap	the level HUD's draw: with the player's "HUD: Edges" the elements anchored left or right are drawn out at the sides of a picture wider than the game's (rac1/host/hud.c); PAL func_001FFFB8
+FUN_001f4650	draw	dispatch_callback_list_1	wrap	a draw callback list's run: in a picture wider than the game's, the cull matrix and clip constants the callbacks test against (the liquid grid's seas, lava and sand; the overlay layers' bounding spheres) are opened by as much as the picture is wider for the run, and put back after it (rac1/host/wide_view.c); PAL func_001F4A00
+FUN_001f46c8	draw	dispatch_callback_list_2	wrap	a draw callback list's run: in a picture wider than the game's, the cull matrix and clip constants the callbacks test against (the liquid grid's seas, lava and sand; the overlay layers' bounding spheres) are opened by as much as the picture is wider for the run, and put back after it (rac1/host/wide_view.c); PAL func_001F4A78
+FUN_001f4740	draw	dispatch_callback_list_3	wrap	a draw callback list's run: in a picture wider than the game's, the cull matrix and clip constants the callbacks test against (the liquid grid's seas, lava and sand; the overlay layers' bounding spheres) are opened by as much as the picture is wider for the run, and put back after it (rac1/host/wide_view.c); PAL func_001F4AF0
+FUN_001f4808	draw	dispatch_callback_list_4	wrap	a draw callback list's run: in a picture wider than the game's, the cull matrix and clip constants the callbacks test against (the liquid grid's seas, lava and sand; the overlay layers' bounding spheres) are opened by as much as the picture is wider for the run, and put back after it (rac1/host/wide_view.c); PAL func_001F4BB8
 FUN_001fdd10	text	msg_string	wrap	the text of an id: the port's own ids (its rows on the Video options page) have their strings from the port (rac1/host/options.c); PAL func_001FE540
 _Exit	kernel	Exit	host	system call 0x04 (KExit); PAL func_00118A60
 func_001187C0	kernel	AddDmacHandler2	host	system call 0x12, the handler takes an argument (libmpeg's colour conversion); PAL func_00118AC0
@@ -312,3 +316,13 @@ Rfu116SetSyscallTail	kernel	SetSyscall	host	system call 0x74; PAL func_0011DDD0
 InvokeKernelSyscall005A_RfuTail	kernel	Copy	host	system call 0x5A; PAL func_0011DDE0
 Rfu091Tail	kernel	GetEntryAddress	host	system call 0x5B; PAL func_0011DE28
 __muldi3	libgcc	__muldi3	host	64-bit multiply; PAL func_0011EEC8
+__udivdi3	libgcc	__udivdi3	host	64-bit unsigned divide (src/sdk/library/udivdi3.c, which hostgen.json skips: libgcc's GCC-only assembly); newlib's printf, strtol and malloc call it
+__umoddi3	libgcc	__umoddi3	host	64-bit unsigned remainder (src/sdk/library/umoddi3.c, skipped as above)
+FUN_00217328	pad	Pad_ProcessReport	wrap	the pad's report into its state, each poll: with the player's strafe on, in play on foot, L2 and R2 are kept for the strafe and taken out of the pad's button words, so the game does not look or crouch on them (L1 still looks, R1 still crouches) (rac1/host/strafe.c); PAL func_002181F0	void (unsigned int, unsigned int, int)
+FUN_L00_00211670	hero	Hero_UpdateMotionInput	wrap	the stick into the hero, early in his update: with the player's strafe on and the hero standing in Lock, or in Hold after its swing, he is turned toward the camera first (rac1/host/strafe.c); PAL func_L00_00211D28	void (void)
+FUN_L00_00211e30	hero	Hero_TurnToHeading	wrap	eases the facing toward the move yaw: with the player's strafe on and the hero strafing, toward the camera's yaw, or while Hold's swing lasts the facing latched when L2 or R2 went down (rac1/host/strafe.c); PAL func_L00_002124E8	void (int, float, float, float)
+FUN_L00_002120d8	hero	Hero_SetPlanarVelocity	wrap	the velocity along an angle, the facing for one above pi: while the hero strafes, along the move yaw (rac1/host/strafe.c); PAL func_L00_00212790	void (float)
+FUN_L00_002e6000	camera	follow_camera_apply_overrides	wrap	the follow camera's requests from the hero's state: while the hero strafes, the strafe camera the game asks for in state 0x81 with L2 or R2 held, swung once behind the latched facing for Hold (rac1/host/strafe.c); PAL func_L00_002E74B0	void (unsigned int)
+FUN_L00_00232670	hero	Hero_AdvanceAnimation	wrap	Ratchet's animation advance: while he strafes away from his facing, the walk or the run stepped back first so that it plays backwards (rac1/host/strafe.c); PAL func_L00_00232EF0	void (void)
+FUN_L02_0024f748	draw	func_L02_00250720	wrap	the liquid grid's cull (seas, lava, sand): in a picture wider than the game's, against the cull matrix opened by as much as the picture is wider, put back after it (rac1/host/wide_view.c); PAL func_L02_00250720
+FUN_001fa728	draw	fast_bsphere_check	wrap	the bounding sphere view test: while a draw callback list runs, in a picture wider than the game's, against clip constants opened by as much as the picture is wider, put back after it (rac1/host/wide_view.c); PAL func_L00_00200290

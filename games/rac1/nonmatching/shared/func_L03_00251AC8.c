@@ -6,6 +6,7 @@
  *   Emits two randomized particle rings about the moby axis. Stopped at three-distinct-wording tie: p2 for, p3 whi
  *   Retail retains the position stack address in another saved register and sets first-ring random-angle arguments
  *   Original allocation/scheduling behavior would unblock these differences; initial position uses a plain 128-bit
+ *   fcheck: unchecked (level/overlay function; fcheck runs boot-executable functions only; OpenRAC tools/fcheck_gate.py, 2026-10-18).
  */
 extern float func_L00_00258C80(float,float);
 extern void func_002156E0(void *,void *,void *,float);

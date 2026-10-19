@@ -1,3 +1,4 @@
+/* fcheck: SAME on 3 calls (OpenRAC tools/fcheck_gate.py, 2026-10-18). */
 /* Writes the 4x4 matrix whose first three rows are the transpose of the three vectors at in
    (in[0..3], in[4..7], in[8..11]; their fourth lanes are ignored), with the last row (0, 0, 0, 1).
    Each lane is 0 + the source lane, as the VU0 adds are, and the w lanes of rows 0-2 are 1 - 1. */

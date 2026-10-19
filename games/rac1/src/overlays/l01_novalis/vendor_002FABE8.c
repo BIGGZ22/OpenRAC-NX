@@ -51,7 +51,7 @@ void BreakableRockUpdate(DebrisMoby *m) {
     hit = (DebrisHit *)MobyGetHitMessage(m, 0x10000, 0);
     m->hit_slot = 0xFF;
     if (hit != 0 && hit->force > 0.0f) {
-        func_0022ED80(0, 0x10, (int)m);
+        Moby_PlaySound(0, 0x10, (int)m);
         for (i = 0; i < 200; i++) {
             {
                 DebrisVec vel;
@@ -926,7 +926,7 @@ void HingedBridgeUpdate(char *self) {
             *(int *)(v + 0x74) = -1;
             self[0x20] = 1;
         } else if (!Sound_IsPlaying(self, *(int *)(v + 0x74))) {
-            *(int *)(v + 0x74) = func_0022ED80(0, 4, (int)self);
+            *(int *)(v + 0x74) = Moby_PlaySound(0, 4, (int)self);
         }
         break;
     }
@@ -1181,7 +1181,7 @@ void BreakablePotUpdate(char *m) {
         }
         break;
     case 2:
-        func_0022ED80(0, 0, (int)m);
+        Moby_PlaySound(0, 0, (int)m);
         SpawnBreakFxByDistance(m);
         s = *(float *)(m + 0x2C) / *(float *)(*(char **)(m + 0x24) + 0x24);
         i = 0;
@@ -1293,7 +1293,7 @@ extern float func_001F9F90(float);
 extern float func_001F9FA8(float);
 
 /* Sliding door update: opens when the player is near, closes when far, and offsets the door along its heading by the open amount. Adapted from Lombyte (MIT) for PAL: overlays/l01/unclassified_002f9810.c, FUN_L01_002fed68. */
-void func_L01_00300140(HoverMoby *m) {
+void SlidingDoorUpdate(HoverMoby *m) {
     HoverVars *v;
     V *player;
     V off;
@@ -1311,7 +1311,7 @@ void func_L01_00300140(HoverMoby *m) {
         if (func_001F9D48(v, player) < v->radius && FastAbsF(m->pos.f[2] - player->f[2]) < 2.0f) {
             m->state = 2;
             if (m->oclass == 0x300) {
-                func_0022ED80(0, 0, (int)m);
+                Moby_PlaySound(0, 0, (int)m);
             }
         }
         break;
@@ -1328,7 +1328,7 @@ void func_L01_00300140(HoverMoby *m) {
             && func_001F9D48(v, D_L01_001672C0) > v->radius * k) {
             m->state = 4;
             if (m->oclass == 0x300) {
-                func_0022ED80(0, 0, (int)m);
+                Moby_PlaySound(0, 0, (int)m);
             }
         }
         break;
@@ -1374,7 +1374,7 @@ void Moby778Update(char *m) {
                 n--;
             } while (n != 0);
         }
-        func_0022ED80(0, 0, (int)m);
+        Moby_PlaySound(0, 0, (int)m);
         for (k = 0x95; k >= 0; ) {
             float a, b;
             *(u128b *)v = 0;
@@ -1441,7 +1441,7 @@ void SmokeEmitterUpdate(char *self) {
 
     v = *(int **)(self + 0x78);
     if (Sound_IsPlaying(self, *v) == 0) {
-        *v = func_0022ED80(0, 4, (int)self);
+        *v = Moby_PlaySound(0, 4, (int)self);
     }
     for (i = 0; i < 2; i++) {
         pos.q = 0;
@@ -1505,7 +1505,7 @@ void FallingChunkUpdate(char *m) {
         char *o;
         if (!CollType()) {
             if (*(int *)(d + 0x18) == 0) {
-                func_0022ED80(0, 0, (int)m);
+                Moby_PlaySound(0, 0, (int)m);
             }
             RippleDisturb(D_L01_00161350_s, D_L01_00161358_s, 1, *(float *)(m + 0x10), *(float *)(m + 0x14), 0.5f, -0.35f);
             {
@@ -1876,7 +1876,7 @@ void Moby1510Update(struct Moby *m) {
 
     v = (BlobVars *)m->pvars;
     if (random_integer_below(2)) {
-        AddDrawCallback(func_L01_0030D380, m);
+        AddDrawCallback(Moby1510_DrawGlow, m);
     }
     FastVecAdd(&m->pos, &m->pos, v);
     if (FastAbsF(v->vel.x) > *(float *)&D_L01_001620F0 * D_0015EE60) {
@@ -2131,7 +2131,7 @@ void Moby1813Update(char *moby) {
         }
         break;
     case 2:
-        func_0022ED80(0, 0, (int)moby);
+        Moby_PlaySound(0, 0, (int)moby);
         SpawnBreakFxByDistance(moby);
         SpawnBreakFragment(moby, 0x717, (float *)(moby + 0x10), moby + 0x40, 0, 0, D_L01_0015F660, D_L01_0015F660, 0.0f, D_L01_0015F660);
         SpawnMobyCopyingPlacement(moby, 0x718);

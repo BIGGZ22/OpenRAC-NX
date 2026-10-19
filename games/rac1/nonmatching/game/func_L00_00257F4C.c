@@ -1,3 +1,4 @@
+/* fcheck: unchecked (level/overlay function; fcheck runs boot-executable functions only; OpenRAC tools/fcheck_gate.py, 2026-10-18). */
 /* The point light nearest a position (HeroEnvLighting): the light grid *D_L00_0015FC80 has a word per
    16-unit square (64 per row, x = (int)pos.x >> 4, y = (int)pos.y >> 4, both truncated); a non-zero word
    is the offset of a list {count; light indices} from the grid start. The first listed light (records of

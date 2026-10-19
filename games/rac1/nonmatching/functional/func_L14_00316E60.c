@@ -1,4 +1,4 @@
-/* functional: high. The NTSC decomp's matched C for the same instructions (FUN_L14_003159d8), carried to PAL's
+/* functional: high. fcheck: unchecked (level/overlay function; fcheck runs boot-executable functions only; OpenRAC tools/fcheck_gate.py, 2026-10-18). The NTSC decomp's matched C for the same instructions (FUN_L14_003159d8), carried to PAL's
    names by OpenRAC's tools/port.py. Not a PAL match: PAL's compiler gives our 904 bytes for retail's 880 bytes. */
 typedef u32 u128_16E60 __attribute__((mode(TI), aligned(16)));
 typedef struct {

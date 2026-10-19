@@ -13,6 +13,14 @@
 #define SDATA(symbol) __asm__(#symbol)
 #endif
 /* What the PAL file this was written in declares before it (its unit, and its own file). */
+/* The float helpers had no declaration here, so each call was an implicit int one: a nested
+ * func_001FA580 result counted as an integer argument and func_001FA5C8 got its second float as 0. */
+extern float func_001FA580(float, float);
+extern float func_001FA5C8(float, float);
+extern float func_001F99C0(float);
+extern float func_001F9DC8(float);
+extern float func_001F9DE0(float);
+extern int func_L00_001F0D60(float, void *, int, void *);
 extern void func_001FA030(void *, void *);
 extern void func_L00_002EA9D8(void *);
 extern void func_L00_002EAA30(void *);
@@ -36,7 +44,8 @@ extern float D_0015ED60 MACRO_ADDR;
 extern float D_0015ED64 MACRO_ADDR;
 extern char *D_L13_0016016C_c __asm__("D_L13_001600EC") MACRO_ADDR;
 extern char *D_L13_00167180_c __asm__("D_L13_00167100");
-extern short D_L13_00161438;
+/* gp-0x57D0 in NTSC-U (0x2BA690, 0x2BA6A8): PAL's point is 0x161430 here. */
+extern short D_L13_00161430;
 extern char D_L13_00174140[];
 extern char D_L13_001F4450[];
 extern float D_L13_0016CDF0;
@@ -209,10 +218,10 @@ void FUN_L13_002ba178(void *a0, void *a1) {
         func_001F9A10(diff, (o->i110 << 7) + D_L13_0016016C_c, (o->i110 << 7) + D_L13_0016016C_c + 0x10);
         lenB = func_001F9AF0(diff);
     } else {
-        qcopy(target, &D_L13_00161438);
+        qcopy(target, &D_L13_00161430);
     }
 
-    d = func_001F9B80(m->pos, &D_L13_00161438);
+    d = func_001F9B80(m->pos, &D_L13_00161430);
     o->f38 = func_L13_002BA088(1, 5, d, o->f38, func_L00_001FF8B0(target[0] - m->pos[0], target[1] - m->pos[1]), 50.0f, lenB);
     m->r48 = func_L13_002BA088(1, 5, d, m->r48, func_L00_001FF8B0(target[0] - m->pos[0], target[1] - m->pos[1]), 50.0f, lenB);
     e1 = func_001F99C0(target[2] - m->pos[2]);

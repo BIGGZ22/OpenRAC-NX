@@ -23,11 +23,13 @@ extern void set_identity_matrix(void *) __asm__("FUN_001f9fc8");
 extern void clear_u64_value(void *) __asm__("FUN_001f99f8");
 extern void fun_001fa070(void *, f32 *) __asm__("FUN_001fa070");
 extern void scale_vector(void *, void *, f32) __asm__("FUN_001f9a80");
-extern void sky_draw_shell(s32) __asm__("FUN_0022b690");
 
 void draw_scrolling_sky_shells(void) __asm__("FUN_0022abd8");
 
 void draw_scrolling_sky_shells(void) {
+    enum {
+        SKY_SHELL_TRIPLE_SCALE_LAYER = 1
+    };
     f32 rotation_angles[4];
     f32 shell_scale;
     struct SkyShellSet *shell_set;
@@ -46,7 +48,7 @@ void draw_scrolling_sky_shells(void) {
             shell_scale = 1.0f;
             shell_angle = &shell_set->shells[shell_index]->angle;
             switch (shell_index) {
-            case 1:
+            case SKY_SHELL_TRIPLE_SCALE_LAYER:
                 rotation_angles[1] = 0.02f;
                 *shell_angle += D_00160400 * 0.55f;
                 shell_scale = 3.0f;

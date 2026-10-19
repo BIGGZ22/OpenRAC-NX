@@ -1,4 +1,4 @@
-/* functional: high. setImageTag(buf, addr, w, h): writes the DMA/GIF tag chain for a w/16 x h/16 grid of 16x16 blocks (header qwords, one 0x60-byte entry per block, then the 0x20-byte trailer and end tag) into buf; same words at the same offsets as retail. */
+/* functional: high. fcheck: unchecked (never called in fcheck's capture run of the title, menu and level 0; OpenRAC tools/fcheck_gate.py, 2026-10-18). setImageTag(buf, addr, w, h): writes the DMA/GIF tag chain for a w/16 x h/16 grid of 16x16 blocks (header qwords, one 0x60-byte entry per block, then the 0x20-byte trailer and end tag) into buf; same words at the same offsets as retail. */
 extern int D_0015EF84;
 extern int D_0015EFB8;
 extern char D_00151EF0[];

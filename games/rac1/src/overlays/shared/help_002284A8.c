@@ -9,7 +9,7 @@ extern char D_L12_00179FC0[];
 extern int func_L00_0020DB30(int);
 
 // Returns a value selected by game-state flags, or an entry field of a 0x4C-byte table.
-int func_L12_002284A8(int a) {
+int Hero_GetGadgetAnimId(int a) {
     char *base = D_0013E633 + 0xE1D;
     int i;
     char *p;

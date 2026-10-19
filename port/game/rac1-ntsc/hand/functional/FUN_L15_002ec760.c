@@ -27,7 +27,9 @@ extern int func_001F9740(void *);
 extern void func_L15_00208CA8(void);
 extern void func_00212ED8(void *, int, int);
 extern void func_L00_002607D0(int);
-extern void func_L00_002664B0__NOT_CARRIED(int, int);
+/* PAL's func_L00_002664B0: this catalogue's FUN_L01_0027a248 (level 15's copy at 0x254C50, the
+ * jal at 0x2ECBD8), the same instructions. */
+extern void FUN_L01_0027a248(int, int);
 extern void func_L00_00216F90(void *, void *, int, int);
 extern void func_L00_00298840(int);
 extern void func_L00_00299460(int);
@@ -232,7 +234,7 @@ void FUN_L15_002ec760(char *moby) {
         *(unsigned char *)(d + 0x8) = 1;
         func_L00_002607D0(0x10);
         func_L00_002502A0(*(int *)(d + 0x284));
-        func_L00_002664B0__NOT_CARRIED(0, 5);
+        FUN_L01_0027a248(0, 5);
         if (*(int *)(d + 0x154) != -1) {
             char *b1 = D_L15_001600EC;
             char *b2;

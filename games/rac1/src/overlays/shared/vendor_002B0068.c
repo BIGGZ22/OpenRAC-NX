@@ -139,7 +139,7 @@ void Moby184ShotUpdate(struct Moby *m)
     qcopy(&old, &m->pos);
     FastVecAdd(&m->pos, &m->pos, &v->dir);
     if (v->unk28 == 0 && v->unk24 != 0 && v->hero_dist < d && d < 3.0f) {
-        func_0022ED80(0, 0, m);
+        Moby_PlaySound(0, 0, m);
         v->unk28 = 1;
     }
     if (d < v->hero_dist)

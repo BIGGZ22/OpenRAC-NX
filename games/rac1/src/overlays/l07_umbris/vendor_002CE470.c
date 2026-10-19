@@ -113,7 +113,7 @@ void FollowPathTrackHero(unsigned char *moby) {
             float f20, t;
             char *q;
             if (!Sound_IsPlaying(moby, *(int *)(data + 0xC4))) {
-                *(int *)(data + 0xC4) = func_0022ED80(0, 4, (int)moby);
+                *(int *)(data + 0xC4) = Moby_PlaySound(0, 4, (int)moby);
             }
             F(data, 0xA8) += F(data, 0xAC) * D_0015EE6C;
             if (FastAbsF(F(data, 0xA8)) > FastAbsF(F(data, 0xAC))) {
@@ -265,7 +265,7 @@ void ShuttleBetweenPathEnds(unsigned char *moby) {
             float f20, t;
             char *q;
             if (!Sound_IsPlaying(moby, *(int *)(data + 0xC4))) {
-                *(int *)(data + 0xC4) = func_0022ED80(0, 4, (int)moby);
+                *(int *)(data + 0xC4) = Moby_PlaySound(0, 4, (int)moby);
             }
             *(float *)(data + 0xA8) += *(float *)(data + 0xAC) * D_0015EE6C;
             if (FastAbsF(*(float *)(data + 0xA8)) > FastAbsF(*(float *)(data + 0xAC))) {
@@ -1318,7 +1318,7 @@ void TargetDrivenSliderUpdate(unsigned char *moby) {
                 return;
         }
         if (vars->trigger_sound != -1)
-            func_0022ED80(vars->trigger_sound, 0, (int)moby);
+            Moby_PlaySound(vars->trigger_sound, 0, (int)moby);
         moby[0x20] = 2;
         break;
     case 2:
@@ -1326,14 +1326,14 @@ void TargetDrivenSliderUpdate(unsigned char *moby) {
             (target = (unsigned char *)(D_L07_00160058 + vars->target_index * 0x100)) != 0 &&
             target[0x20] != 0xfe && target[0x20] != 0xfd &&
             target[0x20] == vars->target_state_word) {
-            func_0022ED80(vars->trigger_sound, 0, (int)moby);
+            Moby_PlaySound(vars->trigger_sound, 0, (int)moby);
             moby[0x20] = 4;
             break;
         }
         distance = func_001F9D48((float *)(moby + 0x10), origin);
         if (vars->radius < distance) {
             if (vars->arrival_sound != -1)
-                func_0022ED80(vars->arrival_sound, 0, (int)moby);
+                Moby_PlaySound(vars->arrival_sound, 0, (int)moby);
             if (vars->flag_index != -1)
                 D_L07_001845A8[vars->flag_index] = 1;
             moby[0x20] = 3;
@@ -1355,7 +1355,7 @@ void TargetDrivenSliderUpdate(unsigned char *moby) {
                 if (target[0x20] != vars->target_state_word)
                     return;
                 if (vars->trigger_sound != -1)
-                    func_0022ED80(vars->trigger_sound, 0, (int)moby);
+                    Moby_PlaySound(vars->trigger_sound, 0, (int)moby);
                 moby[0x20] = 4;
             }
         }
@@ -1365,7 +1365,7 @@ void TargetDrivenSliderUpdate(unsigned char *moby) {
             (target = (unsigned char *)(D_L07_00160058 + vars->target_index * 0x100)) == 0 ||
             target[0x20] == 0xfe || target[0x20] == 0xfd ||
             target[0x20] == vars->target_state) {
-            func_0022ED80(vars->trigger_sound, 0, (int)moby);
+            Moby_PlaySound(vars->trigger_sound, 0, (int)moby);
             moby[0x20] = 2;
             return;
         }
@@ -1385,7 +1385,7 @@ void TargetDrivenSliderUpdate(unsigned char *moby) {
             }
             vars->sound_slot = -1;
             if (vars->arrival_sound != -1)
-                func_0022ED80(vars->arrival_sound, 0, (int)moby);
+                Moby_PlaySound(vars->arrival_sound, 0, (int)moby);
             if (vars->flag_index != -1)
                 D_L07_001845A8[vars->flag_index] = 0;
             moby[0x20] = 1;
@@ -1411,7 +1411,7 @@ extern void func_00216270(void);
 void AudioStreamTriggerUpdate(unsigned char *moby) {
     switch (moby[0x20]) {
     case 0:
-        func_L02_002A52B0(D_L07_00208820, 0.66666669f);
+        ScaleTableIntoBuffer128(D_L07_00208820, 0.66666669f);
         moby[0x20] = 1;
         moby[0x30] = 0xFF;
         break;
@@ -1543,7 +1543,7 @@ void LobberEnemyUpdate(char *m) {
 eb20:
     ((unsigned char *)m)[0xA4] = 0xFF;
     StepColorFade(m, d + 0x60);
-    func_L00_00260D30(m, v30, 20.0f);
+    FindNearestTargetMoby(m, v30, 20.0f);
     switch (((unsigned char *)m)[0x20]) {
     case 0: {
             int r1 = scale_ticks(*(int *)(d + 0xB0));
@@ -1554,7 +1554,7 @@ eb20:
             *(int *)(d + 0xB4) = D_L07_0015F6B0 + r1 + r3;
             AttachManipulator(m, 0, d + 0x70);
             *(int *)(d + 0xC0) = 0;
-            func_0022ED80(0, 4, (int)m);
+            Moby_PlaySound(0, 4, (int)m);
             m[0x20] = 1;
             *(int *)(d + 0xC4) = 0;
         break;
@@ -1660,7 +1660,7 @@ unsigned char *ShockwaveSpawn(int a, void *pos, int b, float f0, float f1, float
         *(float *)(h + 0x160) = 0.3f - func_001F9D48(moby + 0x10, g) / 100.0f;
         *(int *)(h + 0x168) = scale_ticks(0x14);
         func_L00_00251E30(moby);
-        func_0022ED80(0, 0, (int)moby);
+        Moby_PlaySound(0, 0, (int)moby);
     }
     return moby;
 }
@@ -1865,7 +1865,7 @@ void LobbedBombUpdate(char *m) {
             if (((unsigned char *)m)[0x31] != 0) {
                 func_L00_0025F4A8_alt(m, d, 0, 2.0f, 1.0f, 0, 3, 5, 0.0f, 0.0f, 1000.0f, 1.2f, 0, 10.0f, 0, 1, -1, 0);
             } else {
-                func_0022ED80(0, 0, (int)m);
+                Moby_PlaySound(0, 0, (int)m);
             }
             DeleteMoby(m);
             return;
@@ -2405,7 +2405,7 @@ void SharkigatorUpdate(unsigned char *moby) {
         }
         goto end;
     }
-    func_L00_00260D30(moby, &tgt, 30.0f);
+    FindNearestTargetMoby(moby, &tgt, 30.0f);
     EnemyTakeHit((char *)moby, data, (float *)(data + 0x20));
     StepColorFade(moby, data + 0x60);
     wander = func_001F9908_30D8E8((int *)(data + 0x134)) != 0;
@@ -2641,8 +2641,8 @@ void SharkigatorUpdate(unsigned char *moby) {
         one = 1.0f;
         FastVecScale(step, step, F(data, 0x14C) < one ? F(data, 0x14C) : one);
         FastVecAdd(mpos, step, start);
-        func_001E9768(old, mpos);
-        func_001E9768(start, mpos);
+        Profile_Mark(old, mpos);
+        Profile_Mark(start, mpos);
         FastVecSub(data + 0xD0, mpos, old);
         if (one <= F(data, 0x14C)) {
             char *g = D_0013E633 + 0xE1D;
@@ -3118,7 +3118,7 @@ void FallingLeafUpdate(char *m) {
             *(float *)(d + 0xA8) = *(float *)(m + 0x40);
             *(float *)(d + 0xAC) = *(float *)(m + 0x44);
             *(short *)(d + 0xA0) = scale_ticks(0x1E);
-            if (*(short *)(d + 0xA2) != -1) func_0022ED80(*(short *)(d + 0xA2), 0, (int)m);
+            if (*(short *)(d + 0xA2) != -1) Moby_PlaySound(*(short *)(d + 0xA2), 0, (int)m);
             m[0x20] = 2;
         }
         break;
@@ -3292,7 +3292,7 @@ int HitEffectEmitterUpdate(void *mp, char *obj, float *vec) {
         if (B[2] > 0.0f) B[2] = 0.0f;
         func_L00_001FF4B0(B, B, D_0015EE6C * 9.0f);
         Moby1049Spawn(A, B, moby);
-        func_0022ED80(0, 0, (int)moby);
+        Moby_PlaySound(0, 0, (int)moby);
         Moby_SetPointLight(10.0f, moby, obj, 0, A, scale_ticks(0x1E), 0x800060FF, 0);
         *(int *)(obj + 0x160) = scale_ticks(9);
         if (++*(int *)(obj + 0x164) >= 0x15) {

@@ -83,7 +83,9 @@ extern H910_c2ad410 D_H910 __asm__("D_L00_00173E40");
 extern M910_c2ad410 *D_L00_00173E58;
 extern float D_0015ED70 MACRO_ADDR;
 extern s32 D_L00_00166DC0[];
-extern unsigned char *func_L00_0025C338(unsigned char *);
+/* NTSC-U calls FUN_L00_002603d0 here (jal 0x0C0980F4: returns the moby's word 0x78 -> +8), not
+ * FUN_L00_0025c338 (the level's FUN_002141f8, word 0x78 -> +0) as the carry from PAL had it. */
+extern unsigned char *func_L00_002603D0(unsigned char *);
 extern void func_001F9A10(void *, void *, void *);
 extern int func_001F9688(int);
 extern void func_001F9A68(void *, void *, float);
@@ -140,7 +142,7 @@ int FUN_L00_002ad410(void *vp, void *m, int mode) {
         qcopy(&velocity, v);
         if (*(int *)(hero + 0x208C) == 0xF)
             func_001F9A10(&velocity, &velocity, hero + 0x100);
-        if (*(int *)(hero + 0x2FC) != 0 && func_L00_0025C338(*(unsigned char **)(hero + 0x2FC)) && mode)
+        if (*(int *)(hero + 0x2FC) != 0 && func_L00_002603D0(*(unsigned char **)(hero + 0x2FC)) && mode)
             func_001F9A10(&velocity, &velocity, hero + 0x100);
         timer = func_001F9688(300);
     } else {
@@ -243,8 +245,8 @@ check_surface:
             break;
         }
     }
-    if (timer && (mode || (D_L00_00173E58 && func_L00_0025C338((unsigned char *)D_L00_00173E58)))) {
-        if (mode != 2 || !D_L00_00173E58 || !func_L00_0025C338((unsigned char *)D_L00_00173E58))
+    if (timer && (mode || (D_L00_00173E58 && func_L00_002603D0((unsigned char *)D_L00_00173E58)))) {
+        if (mode != 2 || !D_L00_00173E58 || !func_L00_002603D0((unsigned char *)D_L00_00173E58))
             func_001F4600((void *)func_L00_002ACBF0, m);
         if (!object_hit && v->last_hit) {
             last = v->last_hit;

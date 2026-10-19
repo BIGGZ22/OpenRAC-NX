@@ -75,7 +75,9 @@ extern void tilt_2FCE00(float, float) __asm__("func_L00_002E84B8");
 extern void roll_2FCE00(int, float, float) __asm__("func_L00_002E84F0");
 extern void blend_2FCE00(int) __asm__("func_L00_002E8568");
 extern void blend_end_2FCE00(void) __asm__("func_L00_002E8648");
-extern void fov_2FCE00(float, float) __asm__("func_L00_002E8590");
+/* US 0x002FC09C and 0x002FC16C call FUN_L00_002e85d8 (level 2 place 0x002F64D8) here; the carried
+ * name was its neighbour 0x002E8590, which fov2_2FCE00 already calls (level 2's 0x002F6490). */
+extern void fov_2FCE00(float, float) __asm__("func_L00_002E85D8");
 extern void fov2_2FCE00(float, float) __asm__("func_L02_002F6490");
 extern void subtract_2FCE00(float *, float *, void *) __asm__("func_001F9A28");
 extern void sound_2FCE00(int) __asm__("func_L02_002F6570");

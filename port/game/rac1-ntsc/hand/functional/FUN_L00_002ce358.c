@@ -6,8 +6,12 @@
  *   func_L00_0025F4A8 -> 0025E450: near
  */
 
+/* The quadword helpers in plain C: hostgen maps only the decompilation's own qcopy, qcopy_nc and
+ * qzero to the runtime's, and wrote these renamed copies' inline assembly as nothing (every
+ * copy through them was lost). Four words in order, as the lq/sq pair moves them. */
 static __inline__ void qcopy_c00_2ce358(void *dst, void *src) {
-    __asm__ __volatile__("lq $2,0x0(%1)\n\tsq $2,0x0(%0)" : : "r"(dst), "r"(src) : "$2", "memory");
+    int *d_ = (int *)dst, *s_ = (int *)src;
+    d_[0] = s_[0]; d_[1] = s_[1]; d_[2] = s_[2]; d_[3] = s_[3];
 }
 typedef union { float v[4]; unsigned int q __attribute__((mode(TI))); } Q4_F808_c00_2ce358 __attribute__((aligned(16)));
 extern void *func_L00_0025A420(void *, int, int);

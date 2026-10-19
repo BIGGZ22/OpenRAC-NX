@@ -524,7 +524,7 @@ extern float fast_sin(float) __asm__("FUN_001f9de0");
 extern float probe_ground_height(float *, int, float) __asm__("FUN_00213508");
 extern void FUN_L00_00274cf8_205f60(float *, int, float) __asm__("FUN_L00_00274cf8");
 
-void FUN_L00_00205f60(int a0, char *joint_index_offset, int a2) {
+void FUN_L00_00205f60(int record_group_index, char *joint_index_offset, int a2) {
     float v[4];
     if (a2) {
         struct Hero *g = &hero;
@@ -532,7 +532,7 @@ void FUN_L00_00205f60(int a0, char *joint_index_offset, int a2) {
         if (((char *)g->items[1].moby)) {
             c = *(s16 *)(((char *)g->items[1].moby) + 0xA6) == 0xAD;
         }
-        FUN_L00_0028de68_205f60(a0, joint_index_offset, c, 0, ((int)g->moby));
+        FUN_L00_0028de68_205f60(record_group_index, joint_index_offset, c, 0, ((int)g->moby));
     }
     if (current_level_index == 12) {
         struct Hero *g = &hero;
@@ -662,6 +662,12 @@ extern s32 FUN_L00_001fef98(void *);
 extern void FUN_L00_0025b868(f32, f32, void *);
 
 void FUN_L00_002062b0(void) {
+    enum {
+        GREEN_GLOW_PALETTE = 1,
+        YELLOW_GLOW_PALETTE = 2,
+        RED_GLOW_PALETTE = 3,
+        BLUE_GLOW_PALETTE = 4
+    };
     char *g;
     char *moby;
     /* The two transform paths reuse the retail 0xA0-byte scratch region. */
@@ -749,10 +755,10 @@ void FUN_L00_002062b0(void) {
                 char *g = (char *)&hero;
                 *(f32 *)(g + 0x1628) = FUN_L00_002000e8(*(f32 *)(g + 0x1628), frame_time_macro * 12.217304f);
                 switch (*(s16 *)(g + 0x22fe)) {
-                case 1: color = 0x2814c814; color2 = 0x1e004b00; break;
-                case 2: color = 0x2814c8c8; color2 = 0x1e004b4b; break;
-                case 3: color = 0x323232fa; color2 = 0x1e000078; break;
-                case 4: color = 0x28f01414; color2 = 0x1e4b0000; break;
+                case GREEN_GLOW_PALETTE: color = 0x2814c814; color2 = 0x1e004b00; break;
+                case YELLOW_GLOW_PALETTE: color = 0x2814c8c8; color2 = 0x1e004b4b; break;
+                case RED_GLOW_PALETTE: color = 0x323232fa; color2 = 0x1e000078; break;
+                case BLUE_GLOW_PALETTE: color = 0x28f01414; color2 = 0x1e4b0000; break;
                 }
             }
             {

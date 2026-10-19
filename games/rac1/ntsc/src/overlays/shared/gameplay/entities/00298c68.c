@@ -43,9 +43,10 @@ void FUN_L02_00298c68(s32 i) {
 
 extern int FUN_L00_002db8f8(void *);
 
+extern int FUN_L00_002db8f8_pt(void *, void *, void *) __asm__("FUN_L00_002db8f8");
 /* Moby state 9 while FUN_L00_002db8f8 reports a hit, back to 1 when it stops. */
-int FUN_L02_002d61c0(char *a) {
-    int r = FUN_L00_002db8f8(a);
+int FUN_L02_002d61c0(char *a, void *pos, void *target) {
+    int r = FUN_L00_002db8f8_pt(a, pos, target);
     if (r == 0) {
         if (*(unsigned char *)(a + 0x20) == 0x9)
             a[0x20] = 1;

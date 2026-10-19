@@ -992,13 +992,111 @@ INCLUDE_ASM("asm/nonmatchings/text", func_00203F68);
 
 INCLUDE_ASM("asm/nonmatchings/text", func_00204340);
 
-INCLUDE_ASM("asm/nonmatchings/text", func_00204918);
+typedef struct { int x0; int x4; float scale; } FontHdr_04918;
+typedef struct {
+    char pad0[0x10];
+    int glyphs;            /* 0x10 */
+    char pad14[8];
+    unsigned short off1C;  /* 0x1C */
+    char pad1E[0xA];
+    unsigned char count;   /* 0x28 */
+    char pad29[0x17];
+} FontRun_04918;
+typedef struct {
+    int x0;
+    char pad4[0xC];
+    int x10;
+    int x14;
+    char pad18[8];
+    int x20;
+    int x24;
+    char pad28[0x28];
+} Glyph_04918;
+typedef struct { long lo; long hi; } GifQ_04918;
+typedef struct { short x0; short x2; unsigned short x4; short x6; short x8; short xA; short xC; short xE; } GlyphSrc_04918;
+extern int D_00160F90 MACRO_ADDR;
+extern float D_00160FA0[3];
+extern char *D_00160F8C MACRO_ADDR;
+extern void func_00234380(void);
+
+void func_00204918(FontHdr_04918 *hdr, char *tbl) {
+    char *base;
+    float scale;
+    int i;
+    int j;
+    int n;
+    int k;
+
+    D_00160F90 = *(int *)((char *)hdr + 4);
+    scale = *(float *)((char *)hdr + 8);
+    D_00160FA0[0] = scale * 6.0f;
+    D_00160FA0[1] = scale * 4.0f;
+    D_00160FA0[2] = scale + scale;
+    func_00234380();
+    base = (char *)hdr + *(int *)hdr;
+    D_00160F8C = base;
+    n = D_00160F90;
+    for (k = 0; k < n; k++) {
+        *(int *)(base + k * 0x40 + 0x10) = (int)base + *(int *)(base + k * 0x40 + 0x10);
+    }
+    for (i = 0; i < D_00160F90; i++) {
+        for (j = 0; j < ((FontRun_04918 *)D_00160F8C)[i].count; j++) {
+            FontRun_04918 *run = (FontRun_04918 *)((i << 6) + (int)D_00160F8C);
+            unsigned long *o = (unsigned long *)((char *)run->glyphs + run->off1C + j * 0x50);
+            int k0 = ((Glyph_04918 *)o)->x0;
+            int k10 = ((Glyph_04918 *)o)->x10;
+            int k14 = ((Glyph_04918 *)o)->x14;
+            int k20 = ((Glyph_04918 *)o)->x20;
+            int k24 = ((Glyph_04918 *)o)->x24;
+            GlyphSrc_04918 *m = (GlyphSrc_04918 *)(tbl + k0 * 16);
+            int t = m->x4 << 16;
+            int a17 = t >> 22;
+            int a19 = t >> 23;
+            long u;
+            int v;
+            int gs;
+            unsigned long tex0, tex1, clamp, mip1;
+
+            if (!(0 < a17)) {
+                a17 = 1;
+            }
+            if (!(0 < a19)) {
+                a19 = 1;
+            }
+            u = func_001F9968(t >> 16);
+            v = func_001F9968(m->x6);
+            gs = D_0015EF8C >> 8;
+            tex0 = (unsigned long)0 | ((unsigned long)a17 << 14) | ((unsigned long)0x13 << 20)
+                  | ((unsigned long)u << 26) | ((unsigned long)v << 30) | ((unsigned long)1 << 34)
+                  | ((unsigned long)0 << 35) | ((unsigned long)(m->xA + gs) << 37)
+                  | ((unsigned long)0 << 51) | ((unsigned long)0 << 55) | ((unsigned long)0 << 56)
+                  | ((unsigned long)4 << 61);
+            t = m->x8 - 1;
+            tex1 = (unsigned long)0 | ((unsigned long)t << 2) | ((unsigned long)1 << 5)
+                  | ((unsigned long)k14 << 6) | ((unsigned long)0 << 9) | ((unsigned long)0 << 19)
+                  | ((unsigned long)(unsigned int)k10 << 32);
+            clamp = (unsigned long)k20 | ((unsigned long)k24 << 2) | ((unsigned long)0 << 4)
+                  | ((unsigned long)0 << 14) | ((unsigned long)k0 << 24) | ((unsigned long)0 << 34);
+            mip1 = (unsigned long)0 | ((unsigned long)a19 << 14) | ((unsigned long)(m->xC + gs) << 20)
+                  | ((unsigned long)1 << 34) | ((unsigned long)(m->xE + gs) << 40)
+                  | ((unsigned long)1 << 54);
+            *o = tex0;
+            o += 2;
+            *o = tex1;
+            o += 2;
+            *o = clamp;
+            o += 2;
+            *o = mip1;
+            ((GifQ_04918 *)o)[1].lo = 0;
+        }
+    }
+}
 
 extern int D_00137C80[];
 extern char D_1FF7FF0[];
 extern int func_002175C8(int, int, int);
 
-int func_00204BE8(void) {
+int Level_StartDataRead(void) {
     int *hdr = D_00137C80;
     int want = ((hdr[0x13F] << 11) + 0x1057) & 0xFFFFF000;
 

@@ -93,18 +93,18 @@ s32 _PES_packet(s32 error_context, struct PES_BS *bs, struct PES_HDR *hdr) {
             _sysbitGet(bs, tbl.v[header_skip_table_index]);
         }
         if (pes_extension_flag == 1) {
-            s32 a1;
+            s32 skip_128_bits_flag;
             s32 pack_header_field_flag;
-            s32 a3;
-            s32 a4;
+            s32 first_16_bit_skip_flag;
+            s32 second_16_bit_skip_flag;
             s32 pes_extension_2_flag;
-            a1 = _sysbitGet(bs, 1);
+            skip_128_bits_flag = _sysbitGet(bs, 1);
             pack_header_field_flag = _sysbitGet(bs, 1);
-            a3 = _sysbitGet(bs, 1);
-            a4 = _sysbitGet(bs, 1);
+            first_16_bit_skip_flag = _sysbitGet(bs, 1);
+            second_16_bit_skip_flag = _sysbitGet(bs, 1);
             _sysbitGet(bs, 3);
             pes_extension_2_flag = _sysbitGet(bs, 1);
-            if (a1 == pes_extension_flag) {
+            if (skip_128_bits_flag == pes_extension_flag) {
                 _sysbitGet(bs, 0x30);
                 _sysbitGet(bs, 0x30);
                 _sysbitGet(bs, 0x20);
@@ -113,10 +113,10 @@ s32 _PES_packet(s32 error_context, struct PES_BS *bs, struct PES_HDR *hdr) {
                 _Error(ctx, D_001539D8);
                 return 0;
             }
-            if (a3 == pes_extension_flag) {
+            if (first_16_bit_skip_flag == pes_extension_flag) {
                 _sysbitGet(bs, 0x10);
             }
-            if (a4 == pes_extension_flag) {
+            if (second_16_bit_skip_flag == pes_extension_flag) {
                 _sysbitGet(bs, 0x10);
             }
             if (pes_extension_2_flag == pes_extension_flag) {

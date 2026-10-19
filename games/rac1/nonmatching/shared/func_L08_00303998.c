@@ -5,6 +5,7 @@
  * What the last attempts found:
  *   Stopped after 5 runs (not EXACT). Best: p3.c (1456 vs 1440 bytes). A shared moby update (levels 08, 09): reads
  *   Left: the float constant loads come out in another order (retail loads D_L08_00162214 after the state-1/2 bran
+ *   fcheck: unchecked (level/overlay function; fcheck runs boot-executable functions only; OpenRAC tools/fcheck_gate.py, 2026-10-18).
  */
 extern char *func_0020D348(int);
 extern void func_L00_00250800(void *, int, void *);

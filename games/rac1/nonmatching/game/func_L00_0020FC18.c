@@ -1,3 +1,4 @@
+/* fcheck: unchecked (level/overlay function; fcheck runs boot-executable functions only; OpenRAC tools/fcheck_gate.py, 2026-10-18). */
 /* HeroItemsAttach: every frame, places Ratchet's attached item mobys on his joints. For each
    item slot i (0..6, records of 0x50 bytes at hero + i * 0x50; only slots 4 and 5 in the
    modes 2 and 6 of D_L00_0015F6A8) and each moby of the slot (+0x1090, and +0x1094 for the

@@ -79,6 +79,18 @@ them, C that does not translate, each with the reason) and `covered.json`
 Its tests: `python3 -m unittest port/tools/versionmap/test_carry_functions.py`
 (they need Clang).
 
+## Checking carried C
+
+`xcheck.py check GAME_DIR --gen GEN` compares each row of a version's
+`hand/hand.tsv` with that version's retail function: the calls and global
+addresses the C reaches (Clang's IR of the file, as hostgen prepares it)
+against those the instructions reach (hostgen's `retail.py` reading the
+executable and the level dumps). It exits 1 on a difference the version's
+`hand/allow.tsv` does not explain; `report` prints the same, `-v` both
+sides of a row. What it compares and how far to trust it:
+[port/game/rac1-ntsc/README.md](../../game/rac1-ntsc/README.md#checking-the-hand-c-against-the-us-code).
+Its tests: `python3 -m unittest port/tools/versionmap/test_xcheck.py` (Clang).
+
 ## The shared host C's tables
 
 rac1's host C is one copy for both discs ([port/game/rac1](../../game/rac1/README.md)),

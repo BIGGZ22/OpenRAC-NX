@@ -1,4 +1,4 @@
-/* functional: high. memcpy: 32-byte and 8-byte moves when dest and src are both 16-byte aligned and n >= 32, then byte moves for the rest; returns dest. Reads and writes are the same bytes in the same order as the assembly; counting is unsigned, so n >= 2^31 is handled too. */
+/* functional: high. fcheck: SAME on 1 call (OpenRAC tools/fcheck_gate.py, 2026-10-18). memcpy: 32-byte and 8-byte moves when dest and src are both 16-byte aligned and n >= 32, then byte moves for the rest; returns dest. Reads and writes are the same bytes in the same order as the assembly; counting is unsigned, so n >= 2^31 is handled too. */
 typedef int u128_15248 __attribute__((mode(TI)));
 
 void *func_00115248(void *dest, const void *src, unsigned int n) {

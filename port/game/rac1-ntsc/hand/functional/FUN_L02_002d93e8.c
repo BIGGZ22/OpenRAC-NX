@@ -198,7 +198,8 @@ void FUN_L02_002d93e8(char *moby) {
             color = (*(int *)&D_L02_00161BC4);
             if (markers[i] != 2) {
                 color = (*(int *)&D_L02_00161BC0);
-                if ((*(int *)0x0013c9e4 & 0x20) == 0) color = (*(int *)&D_L02_00161BBC);
+                /* NTSC-U tests the frame counter here (gp-0x7634 = 0x15F5CC at 0x2DA338), not the word at 0x13C9E4. */
+                if ((D_L02_0015F5CC & 0x20) == 0) color = (*(int *)&D_L02_00161BBC);
             }
             func_L02_002DA3D8(texture, color, angle, phase, (float)(*(int *)&D_L02_00161B58), (float)(*(int *)&D_L02_00161B54));
         }

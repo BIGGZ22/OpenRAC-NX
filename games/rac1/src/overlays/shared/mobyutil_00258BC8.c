@@ -655,7 +655,7 @@ int SolveQuadratic(float *r0, float *r1, float a, float b, float c) {
 extern void func_00214358(void *, int, float);
 
 void func_L00_0025A748(void *arg) {
-    func_00214358(arg, 0x20, 0.5f);
+    ProbeGroundHeight(arg, 0x20, 0.5f);
 }
 // Point-in-polygon test by ray crossing over 16-byte vertices.
 int IsPointInPolygon(float *p, float *v, int n) {
@@ -676,7 +676,7 @@ int IsPointInPolygon(float *p, float *v, int n) {
 }
 LINKER_REMNANT("asm/overlays", func_L00_0025A848);
 /* From Lombyte (MIT), FUN_L00_00259830 (PR #66), adapted to PAL. */
-int func_L00_0025A868(char *a) {
+int Moby_HasLinkedRecord(char *a) {
     char *p = *(char **)(a + 0x94);
     if (p && *(int *)(p + 8)) return 1;
     return 0;
@@ -1693,7 +1693,7 @@ extern f32 func_001F9B88_25e290(f32) __asm__("func_001F9B88");
 extern void func_001F9C30_25e290(void *, void *, f32) __asm__("func_001F9C30");
 extern void func_001F9BD8_25e290(void *, void *, void *) __asm__("func_001F9BD8");
 /* Per-component adjustment of v against src: for each of the three components of v that is negative it recomputes v through the vector helpers. Adapted from Lombyte (MIT) for PAL: overlays/shared/math_rotations_0025d238.c, FUN_L00_0025d238. */
-void func_L00_0025E290(Vec4 *src, Vec4 *v) {
+void Vec4_AdjustNegativeComponents(Vec4 *src, Vec4 *v) {
     Vec4 t0, t1;
     f32 *pv, *p0, *p1;
     Vec4 *a = &t0, *b = &t1;
@@ -2098,7 +2098,7 @@ f32 WrapAngle(f32 a) {
     return x - pi;
 }
 extern int func_L00_0025F410(void *);
-int func_L00_0025F3C0(char *a) {
+int IsMobyClass502OrOutsideRange(char *a) {
     int r;
     if (a == 0) {
         r = 0;
@@ -2124,7 +2124,7 @@ int IsMobyClass500To540(void *moby) {
     return (unsigned int)*(unsigned short *)((char *)moby + 0xA6) - 0x1F4 < 0x29;
 }
 INCLUDE_ASM("asm/overlays", func_L00_0025F420);
-int func_L00_0025F450(void *p) {
+int IsMobyScatterClass(void *p) {
     short v = *(short *)((char *)p + 0xA6);
     if (v == 0xE2 || v == 0xCC || v == 0xDE || v == 0x3EE || v == 0xD6 || v == 0xE1 || v == 0xD5 ||
         v == 0xDF) {
@@ -2587,7 +2587,7 @@ extern char * D_L00_001DD450[];
 extern float func_001F9D48_60D30(void *, void *) __asm__("func_001F9D48");
 
 /* Adapted from Lombyte (MIT) for PAL by OpenRAC's tools/port.py: src/overlays/shared/rendering_view_0025fcb8.c, FUN_L00_0025fcb8. */
-int func_L00_00260D30(char *a, char *o, float best) {
+int FindNearestTargetMoby(char *a, char *o, float best) {
     char *g = D_0013F450;
     char *m;
     char *p;

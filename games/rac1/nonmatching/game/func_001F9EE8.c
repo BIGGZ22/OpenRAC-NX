@@ -1,3 +1,4 @@
+/* fcheck: SAME on 3 calls (OpenRAC tools/fcheck_gate.py, 2026-10-18). */
 /* VU0 4x4 matrix times vector: out = M * v, with M given as four columns of
    four floats (m + 0, +4, +8, +12). Reads the vector and all of M first (so
    out may be v), then sums c0*x + c1*y + c2*z + c3*w in that order. */

@@ -49,9 +49,9 @@ extern s32 light_tfrags() __asm__("func_00234F98");
 extern s32 patch_tie_texture_fields() __asm__("func_00235780");
 extern s32 draw_ties_1() __asm__("func_002358C8");
 extern s32 light_ties() __asm__("func_00237370");
-void transition_default_draw(s32 *arg0) __asm__("FUN_001eb410");
+void transition_default_draw(void) __asm__("FUN_001eb410");
 
-void transition_default_draw(s32 *unused_parameter) {
+void transition_default_draw(void) {
     s32 n;
 
     if (D_0016045C == 0 || D_0016045C->unk4 != 0) {

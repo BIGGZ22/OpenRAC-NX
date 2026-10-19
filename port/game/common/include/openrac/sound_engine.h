@@ -61,6 +61,10 @@ void openrac_stream_set_volume(uint32_t stream, int32_t volume);
 /* Interleaved stereo, 48 kHz: the sounds and the streams. */
 void openrac_sound_render(int16_t* interleaved, size_t frames);
 
+/* Nonzero: a stream's file is read before openrac_stream_play returns, not on a thread of its own,
+ * so it is ready at the same tick on every run (OPENRAC_AUDIO_TICKED, main.cpp). */
+void openrac_stream_read_at_once(int at_once);
+
 #ifdef __cplusplus
 }
 #endif

@@ -15,6 +15,29 @@ static int loaded_level = OPENRAC_OVERLAY_EXE;
 /* Frames left in which the flight between planets counts as playing: set by its update. */
 static int flight_frames;
 
+/* The game mode (D_L00_0015F6A8, level data: relocated from level 0's address to the loaded
+ * level's): 2 a cutscene, 6 the ship's landing or take-off (the level's loop then runs
+ * SpaceFlightUpdate each tick). */
+#define LEVEL_MODE OPENRAC_LDATA(0, RAC1_LADDR(00, 0x0015F6A8u))
+
+/* The ship's sequence playing (D_0013E130's word +0x20, the state SpaceFlightUpdate switches on):
+ * EnterShipMode's argument in a level, 0 the take-off and 8 the landing (Ship_BeginMapFlight);
+ * the flight between planets has its own states (ShipTravelTo's 3, and those after it). */
+#define SHIP_STATE RAC1_ADDR(0x0013E150u)
+#define SHIP_TAKE_OFF 0
+#define SHIP_LANDING 8
+
+static int in_level(void) {
+    return loaded_level >= 0 && loaded_level < LEVELS;
+}
+
+/* Whether a level's landing or take-off plays: the level in game mode 6, the ship in one of those
+ * two states. */
+static int ship_scene(void) {
+    const int state = GREF(int, SHIP_STATE);
+    return in_level() && GREF(int, LEVEL_MODE) == 6 && (state == SHIP_TAKE_OFF || state == SHIP_LANDING);
+}
+
 /* ParseBin: copies the next level's program over the executable's main
  * segment and returns its entry. From then on a code address in that range
  * means the loaded level's function (the overlay the runtime looks in). */
@@ -129,19 +152,34 @@ static int bolts(void) {
     return GREF(int, RAC1_ADDR(0x0015EE98u));
 }
 
-/* An in-game cutscene plays while the game mode (D_L00_0015F6A8, level data: relocated from level
- * 0's address to the loaded level's) is 2. */
+/* An in-game cutscene plays while the game mode is 2. */
 static int in_cutscene(void) {
-    return loaded_level >= 0 && loaded_level < LEVELS && GREF(int, OPENRAC_LDATA(0, RAC1_LADDR(00, 0x0015F6A8u))) == 2;
+    return in_level() && GREF(int, LEVEL_MODE) == 2;
+}
+
+/* What the game's own skip of the scene playing reads, for Start to press too (the window's pad
+ * bits). A cutscene (CutsceneModeUpdate) ends on Start pressed with L1, L2, R1 and R2 held. The
+ * landing and the take-off (SpaceFlightUpdate's states 8 and 0, game mode 6) skip on Triangle,
+ * Circle or Cross pressed (its pressed word & 0x70) once 30 ticks have played and the fade-in is
+ * done: the landing jumps to its end frame and ends there (the ship's flags back, D_0015F6FC set,
+ * game mode 0, control), the take-off jumps to its end. Start alone does nothing there. */
+static int skip_buttons(void) {
+    if (in_cutscene()) {
+        return 0x0F00;
+    }
+    if (ship_scene()) {
+        return 0x4000;
+    }
+    return 0;
 }
 
 /* For a crash report: the game mode word (D_L00_0015F6A8, the level's copy) while a level is
  * loaded, and the hero's position (gHeroPos: RAC1_HERO_POS, where rac1_version.h has it). */
 static int game_mode(uint32_t *mode) {
-    if (loaded_level < 0 || loaded_level >= LEVELS) {
+    if (!in_level()) {
         return 0;
     }
-    *mode = (uint32_t)GREF(int, OPENRAC_LDATA(0, RAC1_LADDR(00, 0x0015F6A8u)));
+    *mode = (uint32_t)GREF(int, LEVEL_MODE);
     return 1;
 }
 
@@ -160,6 +198,22 @@ static int hero_position(float xyz[3]) {
 #endif
 }
 
+/* For OPENRAC_TRACE: the hero (D_0013F450, include/hero.h: the motion's position at +0x80 and
+ * rotation at +0x90, the state id at +0x2084), at this version's address (rac1_version.h). */
+#define HERO RAC1_ADDR(0x0013F450u)
+
+static int hero(float position[3], float rotation[3], int32_t *state) {
+    if (loaded_level < 0 || loaded_level >= LEVELS) {
+        return 0;
+    }
+    for (int i = 0; i < 3; ++i) {
+        position[i] = GREF(float, HERO + 0x80u + 4u * (unsigned)i);
+        rotation[i] = GREF(float, HERO + 0x90u + 4u * (unsigned)i);
+    }
+    *state = GREF(int, HERO + 0x2084u);
+    return 1;
+}
+
 /* The flight's update (func_00230A90), once a frame of the transition's flight loop (space.c). */
 void func_00230A90(void) {
     flight_frames = 2;
@@ -170,10 +224,12 @@ void func_00230A90(void) {
  * Start during the flight between planets: the flight is done. The transition (space.c, after
  * func_0012F4A8) loops on the flight until D_0015F6FC is set (the flight sets it at its end), then
  * waits for the next level's load as it would have. Only while the flight's update runs: the same
- * word starts a new game from the menus.
+ * word starts a new game from the menus. Not in a level's landing or take-off, which the same
+ * update plays: there these writes skipped nothing (the screen went black and the landing played
+ * on), and Start presses Cross instead (skip_buttons), the game's own skip.
  */
 static void skip(void) {
-    if (flight_frames > 0) {
+    if (flight_frames > 0 && !ship_scene()) {
         /* The flight's own end: its playing flag cleared (the loader waits on it before it unloads
          * the old banks: ReRAC's 0x15ee4a, PAL D_0015EF4A, set to 1 before the loop) and done. */
         GREF(short, RAC1_ADDR(0x0015EF4Au)) = 0;
@@ -184,9 +240,10 @@ static void skip(void) {
 __attribute__((constructor)) static void install_direct_start(void) {
     openrac_game_on_frame = direct_start;
     openrac_game_bolts = bolts;
-    openrac_game_in_cutscene = in_cutscene;
+    openrac_game_skip_buttons = skip_buttons;
     openrac_game_skip = skip;
     openrac_game_mode = game_mode;
     openrac_game_hero_position = hero_position;
+    openrac_game_hero = hero;
     openrac_game_front_end = &rac1_front_end;
 }

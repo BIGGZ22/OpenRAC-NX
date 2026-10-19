@@ -3,10 +3,13 @@
 # .rodata replaces (consecutive, in address order). tools/build_sn_data.sh
 # cuts core_rdata around them and rac1.ld.sh puts the object's .rodata in
 # the hole (tools/core_rodata.py). The object's .rodata must be exactly
-# those bytes, and nothing else.
+# those bytes, and nothing else. An optional (SECTION) after the object
+# selects a named jump-table section; other rows use .rodata.
 build-sn/core/00112468.o D_00152430 D_00152438 D_00152440 jtbl_00152450
 build-sn/core/00116FA0.o jtbl_00152680
-build-sn/core/00119D88.o D_00152880 D_00152888 D_00152890 D_00152898 D_001528A0 D_001528A8 jtbl_001528B0
+build-sn/core/00119D88.o D_00152880 D_00152888 D_00152890 D_00152898 D_001528A0 D_001528A8
+build-sn/core/00119D88.o(.rodata.jtbl_001528B0) jtbl_001528B0
+build-sn/core/00119D88.o(.rodata.jtbl_001529E0) jtbl_001529E0
 build-sn/libgcc/l2_divdi3.o D_00152B18
 build-sn/libgcc/l2_moddi3.o D_00152C18
 build-sn/libgcc/l2_udivdi3.o D_00152D18

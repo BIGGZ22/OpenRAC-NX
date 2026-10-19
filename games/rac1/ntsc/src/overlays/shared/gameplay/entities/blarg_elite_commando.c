@@ -125,7 +125,7 @@ extern float random_float_between_alt(float, float) __asm__("FUN_002132a8");
 extern float D_L16_001613E0 __attribute__((sda));
 extern float D_L16_001613E4 __attribute__((sda));
 
-char *FUN_L16_002a0dc0(char *owner, char *vec, void *pos, void *vel, int c, float unused) {
+char *FUN_L16_002a0dc0(char *owner, char *vec, void *pos, void *vel, int c) {
     char *m = (char *)func_0020D348_m(0x32);
     char *d;
     float len, x, t, y;
@@ -547,6 +547,9 @@ extern s32 tick_countdown_32(void *) __asm__("func_001F9740");
 s32 allocate_voice_for_bank_entry(s32 arg1, s32 arg0, s32 arg2) __asm__("FUN_0022db10");
 
 void FUN_L16_002d38b0(struct Moby *m) {
+    enum {
+        HIT_RESPONSE_FATAL = 1
+    };
     L16DamageScratch scratch;
     L16DamageData *d = (L16DamageData *)m->pvars;
     char *hit;
@@ -608,7 +611,7 @@ void FUN_L16_002d38b0(struct Moby *m) {
             d->animation = 0x78;
             break;
         }
-        case 1:
+        case HIT_RESPONSE_FATAL:
         case 2: {
             char *source;
             if (current_level_index == 18 && d->reward_hits) {

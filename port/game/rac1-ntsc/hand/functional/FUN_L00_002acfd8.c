@@ -787,7 +787,9 @@ extern char D_0013A4E0[];
 extern char D_L00_00173E60[];
 extern float D_0015ED70 MACRO_ADDR;
 extern int func_001F9688(int);
-extern unsigned char *func_L00_0025C338(unsigned char *);
+/* NTSC-U calls FUN_L00_002603d0 here (jal 0x0C0980F4: returns the moby's word 0x78 -> +8), not
+ * FUN_L00_0025c338 (the level's FUN_002141f8, word 0x78 -> +0) as the carry from PAL had it. */
+extern unsigned char *func_L00_002603D0(unsigned char *);
 extern void func_001F9A10(void *, void *, void *);
 extern float func_001F9B20(void *);
 extern void func_001F9A28(void *, void *, void *);
@@ -828,7 +830,7 @@ void FUN_L00_002acfd8(char *pos, char *m, char *vel) {
     e = D_0013E05A + 0x4C6;
 
     if (hero_2AE278.state.control_mode == 0xF
-        || (hero_2AE278.ground_moby != 0 && func_L00_0025C338((unsigned char *)hero_2AE278.ground_moby) != 0)) {
+        || (hero_2AE278.ground_moby != 0 && func_L00_002603D0((unsigned char *)hero_2AE278.ground_moby) != 0)) {
         func_001F9A10(d, d, &hero_2AE278.motion.unk100);
     } else {
         p60 = *(char **)(d + 0x60);

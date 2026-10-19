@@ -16,8 +16,12 @@ typedef unsigned short u16_c08_2d42d8;
 typedef unsigned int u32_c08_2d42d8;
 typedef unsigned long u64_c08_2d42d8;
 typedef float f32_c08_2d42d8;
+/* The quadword helpers in plain C: hostgen maps only the decompilation's own qcopy, qcopy_nc and
+ * qzero to the runtime's, and wrote these renamed copies' inline assembly as nothing (every
+ * copy through them was lost). Four words in order, as the lq/sq pair moves them. */
 static __inline__ void qcopy_c08_2d42d8(void *dst, void *src) {
-    __asm__ __volatile__("lq $2,0x0(%1)\n\tsq $2,0x0(%0)" : : "r"(dst), "r"(src) : "$2", "memory");
+    int *d_ = (int *)dst, *s_ = (int *)src;
+    d_[0] = s_[0]; d_[1] = s_[1]; d_[2] = s_[2]; d_[3] = s_[3];
 }
 typedef struct {
     f32_c08_2d42d8 x;
@@ -294,7 +298,7 @@ void FUN_L08_002d42d8(Moby_c08_2d42d8 *moby) {
         if (*(int *)(d + 0xF4) != 2) {
             unsigned char *pers;
             func_L08_002D7010_55E0_c08_2d42d8(moby);
-            pers = (unsigned char *)D_0013D255 + 0x13B;
+            pers = (unsigned char *)D_0013D255 + 0x133; /* 0x13D388 (lui/addiu at 0x2D4A38): PAL's 0x13D490 is 0x108 lower here, not 0x100 */
             if (pers[0x2E] != 0) func_0022DA68(6, 0, moby);
             pers[0x2E] = 1;
             qcopy_c08_2d42d8(&(*(Moby_c08_2d42d8 **)(d + 0x160))->pos, &moby->pos);

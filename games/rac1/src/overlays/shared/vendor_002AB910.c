@@ -192,7 +192,7 @@ extern char *func_L00_002D4CE8(char *a, char *b, int c, char *d);
 extern void func_L00_0025B040(unsigned char *, float);
 
 /* Mine (moby class 74) update: falls and bounces, sticks to what it hits, homes on a nearby target and explodes. */
-void func_L00_002AB910(M910 *m) {
+void MineUpdate(M910 *m) {
     B910 a = D_L00_001E9BB0;
     B910 b = D_L00_001E9C00;
     U910 c;
@@ -225,9 +225,9 @@ void func_L00_002AB910(M910 *m) {
     if (v->owner != 0 && v->owner->state != 0xFE && v->owner->state != 0xFD
         && v->owner->cls == 0xBE && v->h36 == 0 && 0.0f < FastVecLength(v)) {
         if (D_G910.p2FC == 0 || GetFlaggedPvarWord(D_G910.p2FC) == 0) {
-            func_L00_002AB548(v, m, 1);
-        } else if (func_L00_002AB548(v, m, 0) == 0) {
-            func_L00_002AB548(v, m, 2);
+            ProjectilePath_Trace(v, m, 1);
+        } else if (ProjectilePath_Trace(v, m, 0) == 0) {
+            ProjectilePath_Trace(v, m, 2);
         }
     }
     st = m->state;
@@ -339,7 +339,7 @@ void func_L00_002AB910(M910 *m) {
                             m->bBC = 1;
                             if (m->state != 1) {
                                 qcopy(&m->pos, &D_H910.pos);
-                                m->pos.f[2] = func_00214358(&m->pos, 0, 0.5f);
+                                m->pos.f[2] = ProbeGroundHeight(&m->pos, 0, 0.5f);
                             }
                         } else if (D_H910.moby != 0 && D_H910.moby->cls == m->cls) {
                             FastVecSub(&D_H910.nrm, &m->pos, &D_H910.moby->pos);
@@ -391,7 +391,7 @@ void func_L00_002AB910(M910 *m) {
                                 }
                                 func_L00_001FF4B0(t, &D_H910.nrm, 1.0f);
                                 if (0.707f < FastVecDot(t, &up) && ov[2] < 0.0f) {
-                                    float fz = func_00214358(&m->pos, 0, 0.5f);
+                                    float fz = ProbeGroundHeight(&m->pos, 0, 0.5f);
 
                                     if (m->pos.f[2] < fz) {
                                         m->pos.f[2] = fz;
@@ -420,7 +420,7 @@ void func_L00_002AB910(M910 *m) {
                     }
                 }
             } else if (m->state & 4) {
-                float fz = func_00214358(&m->pos, 0, 0.5f);
+                float fz = ProbeGroundHeight(&m->pos, 0, 0.5f);
 
                 if (v->p4C != 0) {
                     if (!(v->p4C != 0 && v->p4C->state != 0xFE && v->p4C->state != 0xFD)) {
@@ -513,7 +513,7 @@ void func_L00_002AB910(M910 *m) {
                             MobyBlendAnimation(m, 2, 0, 10);
                         }
                         if (Sound_IsPlaying(m, v->i68) == 0) {
-                            v->i68 = func_0022ED80(1, 4, (int)m);
+                            v->i68 = Moby_PlaySound(1, 4, (int)m);
                         }
                         sp = v->f40 + D_0015EE70 * 15.0f;
                         lim = D_0015EE6C * 4.0f;
@@ -648,7 +648,7 @@ void func_L00_002AB910(M910 *m) {
                         m->state |= 0x10;
                         best = o;
                         MobyBlendAnimation(m, 1, 0, scale_ticks(3));
-                        func_0022ED80(0, 0, (int)m);
+                        Moby_PlaySound(0, 0, (int)m);
                         v->f40 = 0.0f;
                         v->i58 = scale_ticks(600);
                         v->h52 = 1;
@@ -717,7 +717,7 @@ void func_L00_002AB910(M910 *m) {
 
                         *(Q910 *)t = m->pos.q;
                         t[2] += 3.5f;
-                        wz = func_00214358(t, 0, 0.5f);
+                        wz = ProbeGroundHeight(t, 0, 0.5f);
                         for (i = 0; i < 150; i++) {
                             *(Q910 *)r = 0;
                             r[0] = random_float_between(-1.0f, 1.0f);
@@ -851,12 +851,12 @@ void func_L00_002AB910(M910 *m) {
                 }
                 m->bBC = 0;
                 if (D_E910.b11 != 0) {
-                    func_0022ED80(3, 0, (int)m);
+                    Moby_PlaySound(3, 0, (int)m);
                 } else {
-                    func_0022ED80(2, 0, (int)m);
+                    Moby_PlaySound(2, 0, (int)m);
                 }
-                D_L00_00166D80.f160 = dist < 20.0f ? 0.4f - dist * 0.0175f : 0.050000012f;
-                D_L00_00166D80.i168 = scale_ticks(0x19);
+                gCameraLvl.f160 = dist < 20.0f ? 0.4f - dist * 0.0175f : 0.050000012f;
+                gCameraLvl.i168 = scale_ticks(0x19);
                 FastVecDist(&m->pos, D_G910.pos);
                 if (D_E910.b11 != 0) {
                     Moby639Spawn((char *)&b, (char *)&m->pos, 0, 0);
@@ -1153,7 +1153,7 @@ int HeroBomb_StepFlight(void *vp, void *m, int mode) {
                 qcopy(&v->landing, &D_H910.moby->pos);
                 found = 1;
                 FastVecAdd(&offset, &offset, &v->landing);
-                func_00214358(&offset, 0, 0.5f);
+                ProbeGroundHeight(&offset, 0, 0.5f);
             }
         } else if (D_H910.i1C > 0) {
             qcopy(&v->landing, &D_H910.pos);
@@ -1206,7 +1206,7 @@ int HeroBomb_StepFlight(void *vp, void *m, int mode) {
             object_hit = 1;
             qcopy(&v->landing, &D_H910.moby->pos);
             FastVecAdd(&offset, &offset, &v->landing);
-            func_00214358(&offset, 0, 0.5f);
+            ProbeGroundHeight(&offset, 0, 0.5f);
             break;
         }
 check_surface:
@@ -1647,9 +1647,9 @@ void HeroBombUpdate(M_2aedd0 *m) {
                 if (d->h68 >= scale_ticks(0x14)) {
                     Sound_PlayClassSound(0x16, 0, (int)m, 0);
                 } else if ((unsigned char)D_E910.p0[0xA] != 0) {
-                    func_0022ED80(1, 0, (int)m);
+                    Moby_PlaySound(1, 0, (int)m);
                 } else {
-                    func_0022ED80(0, 0, (int)m);
+                    Moby_PlaySound(0, 0, (int)m);
                 }
                 if (d->h68 != 0) {
                     float gz;
@@ -1665,7 +1665,7 @@ void HeroBombUpdate(M_2aedd0 *m) {
 
                     v.q = m->pos.q;
                     v.f[2] += 3.5f;
-                    gz = func_00214358(&v, 0, 0.5f);
+                    gz = ProbeGroundHeight(&v, 0, 0.5f);
                     wz = func_L00_0025A748(&v);
                     if (gz != wz && gz - wz < 1.2f) {
                         V2AE110 v2;
@@ -1711,8 +1711,8 @@ void HeroBombUpdate(M_2aedd0 *m) {
                         }
                     }
                 }
-                D_L00_00166D80.f160 = dist < 20.0f ? 0.4f - dist * 0.0175f : 0.4f - 20.0f * 0.0175f;
-                D_L00_00166D80.i168 = scale_ticks(0x19);
+                gCameraLvl.f160 = dist < 20.0f ? 0.4f - dist * 0.0175f : 0.4f - 20.0f * 0.0175f;
+                gCameraLvl.i168 = scale_ticks(0x19);
                 FastVecDist(&m->pos, D_G910.pos);
                 Moby639Spawn((char *)&rec, (char *)&m->pos, 0, 0);
                 if (m->state != 2) {
@@ -2521,9 +2521,9 @@ void MissileUpdate(M910 *m) {
         if(!reduced) func_L00_002ADBB0(m,(&m->pos),&blast_velocity,(size+size),scale_ticks(19),255,255,255,32);
         motion.f[0]=0.0f;
         m->bBC=0;
-        D_L00_00166D80.f160=distance<20.0f ? 0.4f-distance*0.0175f : 0.4f-20.0f*0.0175f;
-        D_L00_00166D80.i168=scale_ticks(25);
-        func_0022ED80(0,0,(int)m);
+        gCameraLvl.f160=distance<20.0f ? 0.4f-distance*0.0175f : 0.4f-20.0f*0.0175f;
+        gCameraLvl.i168=scale_ticks(25);
+        Moby_PlaySound(0,0,(int)m);
         if(!reduced) {
             if(D_0013E620.bB) Moby639Spawn((char *)&gold_effect,(char *)(&m->pos),0,0);
             else Moby639Spawn((char *)&effect,(char *)(&m->pos),0,0);
@@ -2547,7 +2547,7 @@ void MissileUpdate(M910 *m) {
         if(impact1688.moby) d->owner=impact1688.moby;
         if(!d->bounce_timer) d->bounce_timer=scale_ticks(90);
         FindMissileTarget((char *)m,(O *)d,(char *)impact1688.moby);
-        func_0022ED80(1,0,(int)m);
+        Moby_PlaySound(1,0,(int)m);
             }
     }
     if(func_001F9908(&d->bounce_timer)) d->bounce_count=0;

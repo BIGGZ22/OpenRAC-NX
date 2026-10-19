@@ -128,7 +128,7 @@ extern void func_001F9BD8(void *, void *, void *);
 extern void func_L00_002607A8(void *a, float x);
 
 // Builds a vector from two global blocks, transforms it, and passes it on with a summed float.
-void func_L16_0020FEC8(void) {
+void HeroL16_IntegrateVelocity(void) {
     char tmp[16];
     char *p = D_0013E633 + 0x158D;
     char *q;
@@ -419,7 +419,7 @@ int HeroL16_ApplyPositionOffset(int a) {
     qcopy(a0, g + 0x80);
     clear_u64_value(v1);
     if ((*(short *)(g + 0x22DA)) != 0) {
-        func_L00_00235040();
+        Hero_ConstrainToPath();
         (*(short *)(g + 0x22DA)) = 0;
     }
     t = (*(int *)(g + 0x208C));

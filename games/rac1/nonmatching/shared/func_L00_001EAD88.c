@@ -10,6 +10,7 @@
  *   amp converted once. BYTES 2/1044: count and sum_count get swapped saved registers. Their address pseudos
  *   (sp+0x10, sp+0x20) tie, and ours always numbers sp+0x10 first. No declaration order, init order, arm order
  *   or acc[3][4] array changes it.
+ *   fcheck: unchecked (level/overlay function; fcheck runs boot-executable functions only; OpenRAC tools/fcheck_gate.py, 2026-10-18).
  */
 #include "common.h"
 extern float func_001FA888(int);

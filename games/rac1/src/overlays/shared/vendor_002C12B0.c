@@ -442,7 +442,7 @@ void Moby192Update(struct Moby *moby) {
     offset.q = 0;
     offset.f[1] = -0.09f;
     offset.f[2] = -0.02f;
-    func_001FA480(basis, D_L00_00166D80);
+    func_001FA480(basis, gCameraLvl);
     func_001FA4A0(matrix, basis);
     if (vars == 0)
         return;
@@ -871,7 +871,7 @@ extern void func_L00_002C44C8_C4E00(void) __asm__("func_L00_002C44C8");
 
 /* Predicts where a thrown moby lands: steps the velocity (with gravity) from its start until collision_line hits ground (or a moby other than the hero and the holder), for up to `timer` steps. Stores the landing point and normal in vars and pulls the point 5% toward D_L00_00166DC0. mode 0 needs a live hit moby; mode 1 starts from the hero's hand. Returns 1 on a hit.
    Adapted from Lombyte (MIT) for PAL by OpenRAC's tools/port.py: src/overlays/shared/gameplay/entities/002bffa8.c, FUN_L00_002c3af8. */
-s32 func_L00_002C4E00(ThrowVars *v, struct Moby *m, s32 mode)
+s32 ThrownObject_TracePath(ThrowVars *v, struct Moby *m, s32 mode)
 {
     Vec4 d, e, a, q, w;
     s32 t;
@@ -1002,14 +1002,14 @@ void Moby_FollowHeroDistance(char *m) {
     if (flag == 0) w = 0.0f;
     Spring(&w, 0.0f, (float *)(d + 0x60), D_0015EE64 * 0.02f, D_0015EE64 * 0.3f, D_0015EE6C * 4.0f);
     if (w == 0.0f && *(float *)(d + 0x60) == 0.0f) {
-        if (FastAbsF(*(float *)(m + 0x18) - func_00214358(m + 0x10, 0, 0.5f)) < 0.02f)
+        if (FastAbsF(*(float *)(m + 0x18) - ProbeGroundHeight(m + 0x10, 0, 0.5f)) < 0.02f)
             *(int *)(d + 0x68) = 0;
     }
     len = FastVecLength(v);
     if (len < *(float *)(d + 0x60)) *(float *)(d + 0x60) = len;
     if (*(float *)(d + 0x60) < len) func_L00_001FF4B0(v, v, *(float *)(d + 0x60));
     MoveMobyWithCollision(m, v, 0.5f, 0.4f, 0.0f, 0);
-    y = func_00214358(m + 0x10, 0, 0.5f);
+    y = ProbeGroundHeight(m + 0x10, 0, 0.5f);
     if (*(float *)(m + 0x18) < y) {
         *(float *)(m + 0x18) = y;
         *(float *)(d + 0x64) = 0.0f;
@@ -1101,9 +1101,9 @@ void ThrownObjectUpdate(char *moby) {
         FastVecLength(vars + 0x10) > 0.0f) {
         ground = (char *)D_0013F450_C48C8.ground_moby;
         if (ground == 0 || GetFlaggedPvarWord(ground) == 0) {
-            func_L00_002C4E00(vars, moby, 1);
-        } else if (func_L00_002C4E00(vars, moby, 0) == 0) {
-            func_L00_002C4E00(vars, moby, 2);
+            ThrownObject_TracePath(vars, moby, 1);
+        } else if (ThrownObject_TracePath(vars, moby, 0) == 0) {
+            ThrownObject_TracePath(vars, moby, 2);
         }
     }
     switch (*(unsigned char *)(moby + 0x20)) {
@@ -1213,7 +1213,7 @@ void ThrownObjectUpdate(char *moby) {
                 }
                 ExplodeOnSelectedCollType(moby);
                 if (func_L00_001FEF78(vars + 0x6F) != 0) {
-                    func_0022ED80(0, 0, moby);
+                    Moby_PlaySound(0, 0, moby);
                     *(unsigned char *)(vars + 0x6F) = (unsigned char)scale_ticks(20);
                 } else {
                     JitterVector(D_0015EE6C, vars + 0x10);
@@ -1257,7 +1257,7 @@ void ThrownObjectUpdate(char *moby) {
                     } else {
                         *(unsigned char *)(vars + 0x6E) = 0;
                     }
-                    func_0022ED80(0, 0, moby);
+                    Moby_PlaySound(0, 0, moby);
                     fx = *(float *)(found + 0x2C);
                     *(unsigned char *)(vars + 7) = 0xFA;
                     *(float *)(vars + 0x48) = *(float *)(vars + 0x48) - fx;
@@ -1296,13 +1296,13 @@ void ThrownObjectUpdate(char *moby) {
             *(float *)(moby + 0x58) = random_float_between(0.7f, 1.05f);
         }
         if (*(unsigned char *)(moby + 0x20) != 4) {
-            len = func_00214358(moby + 0x10, 0, 0.5f);
+            len = ProbeGroundHeight(moby + 0x10, 0, 0.5f);
             if (len == 0.0f) return;
             ExplodeOnSelectedCollType(moby);
             if (len + 0.02f < *(float *)(moby + 0x18)) {
                 *(float *)(vars + 0x18) = *(float *)(vars + 0x18) - D_0015EE70 * 9.8f;
                 FastVecAdd(moby + 0x10, moby + 0x10, vars + 0x10);
-                len = func_00214358(moby + 0x10, 0, 0.5f);
+                len = ProbeGroundHeight(moby + 0x10, 0, 0.5f);
                 if (*(float *)(moby + 0x18) < len) {
                     *(float *)(moby + 0x18) = len;
                     qzero(vars + 0x10);
@@ -1337,7 +1337,7 @@ void ThrownObjectUpdate(char *moby) {
         }
         break;
     case 5:
-        len = func_00214358(moby + 0x10, 0, 0.5f);
+        len = ProbeGroundHeight(moby + 0x10, 0, 0.5f);
         if (len != 0.0f && D_L00_00173F40_C4E00.moby != 0)
             RotateWithMoby(moby, (char *)D_L00_00173F40_C4E00.moby, moby + 0x10, moby + 0x40, moby + 0x10, moby + 0x40);
         if ((*(unsigned char *)(moby + 0x70) & 2) != 0)
@@ -1346,7 +1346,7 @@ void ThrownObjectUpdate(char *moby) {
             *(unsigned char *)(moby + 0x20) = 6;
         break;
     case 6:
-        len = func_00214358(moby + 0x10, 0, 0.5f);
+        len = ProbeGroundHeight(moby + 0x10, 0, 0.5f);
         if (len != 0.0f && D_L00_00173F40_C4E00.moby != 0)
             RotateWithMoby(moby, (char *)D_L00_00173F40_C4E00.moby, moby + 0x10, moby + 0x40, moby + 0x10, moby + 0x40);
         *(float *)(moby + 0x2C) = *(float *)(moby + 0x2C) - *(float *)(moby + 0x2C) * (D_0015EE60 * 0.02f);

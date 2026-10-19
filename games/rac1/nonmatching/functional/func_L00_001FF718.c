@@ -1,4 +1,4 @@
-/* functional: medium. Scales the four floats at v by s, truncates to int, clamps each to -0x8000..0x7FFF and packs them as four 16-bit values (x lowest) into the 64-bit result. VU0 ftoi saturation modelled by clamping in float first; not checked against hardware. */
+/* functional: medium. fcheck: unchecked (level/overlay function; fcheck runs boot-executable functions only; OpenRAC tools/fcheck_gate.py, 2026-10-18). Scales the four floats at v by s, truncates to int, clamps each to -0x8000..0x7FFF and packs them as four 16-bit values (x lowest) into the 64-bit result. VU0 ftoi saturation modelled by clamping in float first; not checked against hardware. */
 long func_L00_001FF718(float *v, float s) {
     float f[4];
     unsigned long r = 0;

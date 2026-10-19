@@ -23,7 +23,28 @@ void Hero_SmoothStickInput(float *out, float *p, float step) {
     if (p[1] < -1.0f) p[1] = -1.0f;
     out[1] = p[1];
 }
-INCLUDE_ASM("asm/overlays", func_L05_0023BA18);
+/* Pose/tilt lookup for an animation id: *out = 0, returns 1 for the ids that apply. */
+int func_L05_0023BA18(int id, float *out) {
+    char *g;
+    *out = 0.0f;
+    g = (char *)D_0013E633 + 0xE1D;
+    if (*(int *)(g + 0x208C) == 0x16 && *(unsigned char *)(g + 0x8CE) != 0
+        && (unsigned int)(*(unsigned char *)(*(char **)(g + 0x2080) + 0x53) - 0x69) < 4)
+        return 1;
+    switch (id) {
+    case 0x37:
+        *out = -0.9599310755729675f;
+        return 1;
+    case 0x1C: case 0x1D: case 0x1F: {
+        char *h = (char *)D_0013E633 + 0xE1D;
+        if (*(float *)(h + 0xAA8) > 25.0f) *out = -1.3089969158172607f;
+        return 1;
+    }
+    case 0x31: case 0x32: case 0x4A: case 0x4B: case 0x50: case 0x60: case 0x6D: case 0x6E:
+        return 1;
+    }
+    return 0;
+}
 INCLUDE_ASM("asm/overlays", func_L05_0023BA64);
 INCLUDE_ASM("asm/overlays", func_L05_0023BAA0);
 extern char D_0013A5E0[];
@@ -343,7 +364,7 @@ void HeroL05_UpdateItemSelection(int i) {
     if (changed) {
         Sel *g = (Sel *)(D_0013E633 + 0xE1D);
         *(int *)((char *)g + i * 0x50 + 0x10B0) = 3;
-        func_L00_0020AB78();
+        Hero_ClearSlotPairs();
         *(int *)((char *)g + 0x1010) = rand_range(scale_ticks(0x32), scale_ticks(0x5A));
         Hero_StartEventTimer(*((int *)(D_0013E633 + 0xE1D + 0x20D4) + i));
         Hero_StartEventAnim(*((int *)(D_0013E633 + 0xE1D + 0x20D4) + i));
@@ -839,7 +860,7 @@ int HeroL05_GadgetInput(void) {
             if (D_0013CA40_p2523C8.held & mask) {
                 if (!GetAmmo(-1)) {
                     if (!Sound_IsPlaying((Moby *)D_0013F450_h2523C8.items[0].moby, pv->fC)) {
-                        pv->fC = func_0022ED80(0, 0, (int)((Moby *)D_0013F450_h2523C8.items[0].moby));
+                        pv->fC = Moby_PlaySound(0, 0, (int)((Moby *)D_0013F450_h2523C8.items[0].moby));
                     }
                 }
             }
@@ -873,7 +894,7 @@ int HeroL05_GadgetInput(void) {
                     break;
                 }
                 if (((Moby *)D_0013F450_h2523C8.items[0].moby) != 0) {
-                    func_0022ED80(0, 0, (int)((Moby *)D_0013F450_h2523C8.items[0].moby));
+                    Moby_PlaySound(0, 0, (int)((Moby *)D_0013F450_h2523C8.items[0].moby));
                 }
             }
         }
@@ -888,7 +909,7 @@ int HeroL05_GadgetInput(void) {
                     if (((Moby *)D_0013F450_h2523C8.items[0].moby) != 0) {
                         func_L05_0024D680_2523C8(0x20, 1);
                         if (((Moby *)D_0013F450_h2523C8.items[0].moby) != 0) {
-                            func_0022ED80(0, 0, (int)((Moby *)D_0013F450_h2523C8.items[0].moby));
+                            Moby_PlaySound(0, 0, (int)((Moby *)D_0013F450_h2523C8.items[0].moby));
                         }
                     }
                 }
@@ -978,7 +999,7 @@ int HeroL05_GadgetInput(void) {
                 stats->hDA = scale_ticks(D_0015EFA4_2523C8) / 600;
             }
             stats->fDC = stats->fDC | (1 << D_0015EE84_2523C8) | 0x80000000;
-            func_0022ED80(0, 0, (int)m);
+            Moby_PlaySound(0, 0, (int)m);
             Moby_GetJointWorldPos(m, 0, v);
             Moby1475Spawn(m, v, best, D_0013F450_h2523C8.motion.rot.f[2], D_0013F450_h2523C8.motion.rot.f[1]);
         }
@@ -1017,7 +1038,7 @@ extern int func_L05_002559A0(void);
 void Hero_IdleUpdate(void) {
     char *g = (char *)D_0013E633 + 0xE1D;
     int pad;
-    *(short *)(g + 0x888) = truncate_float_to_s32(func_L00_00233410(60.0f, *(float *)(g + 0x860), -1.0f));
+    *(short *)(g + 0x888) = truncate_float_to_s32(Hero_PredictLandingTime(60.0f, *(float *)(g + 0x860), -1.0f));
     if (((unsigned char *)g)[0x88D] != 0 && ((pad = *(int *)(D_0013A5E0 + 0x2600)) & 0xF) != 0) {
         g[0x88F] = 0;
         if (pad & 8) g[0x88F] = 1;
@@ -1115,7 +1136,7 @@ void Hero_CheckLinkedPickupGroups(void) {
                         HERO->unk8C4 += **(int **)(first + 0x78);
                         first[0xBC] = scale_ticks(0x3C);
                         if (HERO->unk86C != 0)
-                            func_0022ED80(1, 0, (int)HERO->unk86C);
+                            Moby_PlaySound(1, 0, (int)HERO->unk86C);
                     }
                 }
                 GroupMobyIter_Next((void **)&first, first, 0, 0);
@@ -1150,7 +1171,7 @@ void Hero_CheckLinkedPickupGroups(void) {
                                 HERO->unk8C4 += **(int **)(second + 0x78);
                                 second[0xBC] = scale_ticks(0x3C);
                                 if (HERO->unk86C != 0)
-                                    func_0022ED80(1, 0, (int)HERO->unk86C);
+                                    Moby_PlaySound(1, 0, (int)HERO->unk86C);
                             }
                         }
                     }
@@ -1184,7 +1205,70 @@ void Hero_CheckLinkedPickupGroups(void) {
         }
     }
 }
-INCLUDE_ASM("asm/overlays", func_L05_00254838);
+#define G ((ScoreState_254838 *)(D_0013E633 + 0xE1D))
+extern unsigned char D_0013D355[];
+extern int D_0015EFA4 MACRO_ADDR;
+extern int D_0015EE84 MACRO_ADDR;
+extern float func_001F9878(float);
+typedef struct { float value[5]; } ScoreWeights_254838;
+extern ScoreWeights_254838 D_L05_00216D68;
+typedef struct {
+    char pad0[0x6D0]; float angle[3]; char pad6DC[4];
+    int actions[4]; int actionCount; float multiplier;
+    int elapsed, actionScore; int turns[3]; int maxTurns;
+    int turnScore, total; char pad718[0x190]; int active;
+} ScoreState_254838;
+typedef struct { char pad0[0xF0]; unsigned short attempts, best; unsigned int levels; } ScoreStats_254838;
+
+/* Updates action and rotation scores while the challenge is active. */
+void func_L05_00254838(void) {
+    int i;
+    if (D_0013D355[0x13B] == 0) return;
+    if (((ScoreState_254838 *)(D_0013E633 + 0xE1D))->active != 0) {
+        ScoreStats_254838 *stats = (ScoreStats_254838 *)(D_0014171B + 0x22D);
+        if (stats->attempts < 0xFFFF) stats->attempts++;
+        if (func_001F9850(D_0015EFA4) / 600 > stats->best)
+            stats->best = func_001F9850(D_0015EFA4) / 600;
+        stats->levels = stats->levels | (1 << D_0015EE84) | 0x80000000;
+    }
+    for (i = 0; i < 3; i++) {
+        float *a = &G->angle[i];
+        if (func_001F9B88(*a) > 3.3161256f) {
+            float value = *a;
+            if (value > 0.0f) {
+                *a = value - 6.2831855f;
+                G->turns[i]++;
+            } else {
+                *a = value + 6.2831855f;
+                G->turns[i]++;
+            }
+        }
+    }
+    G->maxTurns = 0;
+    for (i = 0; i < 3; i++) {
+        if (G->maxTurns < G->turns[i]) G->maxTurns = G->turns[i];
+    }
+    {
+        int step = 100;
+        G->turnScore = 0;
+        for (i = 0; i < G->maxTurns; i++) {
+            G->turnScore += step;
+            step += 50;
+        }
+    }
+    G->actionCount = 0;
+    for (i = 0; i < 4; i++) {
+        if (G->actions[i] != 0) G->actionCount++;
+    }
+    {
+        ScoreWeights_254838 weights = D_L05_00216D68;
+        G->multiplier = weights.value[G->actionCount];
+        G->actionScore = func_001FA898((float)((G->elapsed * 100) / (int)(func_001F9878(1.0f) * 60.0f)));
+        G->actionScore += G->actionCount * 25;
+        G->actionScore = func_001FA898((float)G->actionScore * G->multiplier);
+        G->total = G->turnScore + G->actionScore;
+    }
+}
 typedef int u128_254B38 __attribute__((mode(TI)));
 extern char *D_L05_001B0CB0_254B38[] __asm__("D_L05_001B0CB0");
 extern float func_00214358(void *, int, float);
@@ -1242,7 +1326,7 @@ void Hero_FindNearestPathNode(float *out, float *rot) {
     qcopy(out, path + best * 16 + 0x10);
     qcopy(tmp, out);
     tmp[2] += 2.0f;
-    out[2] = func_00214358(tmp, 0, 0.5f);
+    out[2] = ProbeGroundHeight(tmp, 0, 0.5f);
     clear_u64_value(rot);
     {
         float *a = (float *)(path + best * 16);

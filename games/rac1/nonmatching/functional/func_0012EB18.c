@@ -1,4 +1,4 @@
-/* functional: high. The NTSC decomp's matched C for the same instructions (snd_send_current_batch), carried to PAL's
+/* functional: high. fcheck: unchecked (the harness cannot compare it: retail's own assembly in its place gets the same DIFFERS; read against the assembly instruction by instruction instead; OpenRAC tools/fcheck_gate.py, 2026-10-18). The NTSC decomp's matched C for the same instructions (snd_send_current_batch), carried to PAL's
    names by OpenRAC's tools/port.py. Not a PAL match: 8 of 276 bytes differ under PAL's compiler.
    Call-site fix: func_0012E038 reads only its first two arguments (asm: $4, $5), so the third ($6) is dropped from the declaration and the call. */
 extern short D_0015EDC0;

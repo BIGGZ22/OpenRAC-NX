@@ -229,6 +229,72 @@ void draw_groups() {
     CHECK(!gif.draws()[3].state.blend);
 }
 
+// The chip fills a pixel only when its sample point, its integer coordinates, is inside the
+// primitive and the scissor; a primitive between two samples draws nothing. Drawn bigger than the
+// chip's picture, GL would fill the window pixels there: the HUD's air meter slid off the screen's
+// right edge (from 511.5, the game's half-pixel offset) left a line in the last column.
+void no_sample_no_pixel() {
+    TexturePool textures;
+    const std::uint64_t sprite = prim(gs::PrimKind::Sprite, false, false, false);
+    auto vertices = [&](std::initializer_list<GifBuilder::Write> writes, float picture = 1.0f, bool wide = false) {
+        GifInterpreter gif(textures);
+        gif.set_picture(picture, wide);
+        GifBuilder b;
+        b.ad(writes, true);
+        CHECK(gif.gif(b.bytes));
+        return gif.vertices().size();
+    };
+    // Past the last column (511): sample 512 on is out of the scissor.
+    CHECK(vertices({{gs::kPrim, sprite}, {gs::kXyz2, xyz2(511.5, 100, 0)}, {gs::kXyz2, xyz2(553.5, 292, 0)}}) == 0);
+    // Half a pixel further in it covers column 511.
+    CHECK(vertices({{gs::kPrim, sprite}, {gs::kXyz2, xyz2(510.5, 100, 0)}, {gs::kXyz2, xyz2(552.5, 292, 0)}}) == 6);
+    // The same rectangle as a textured strip (the meter's picture), two triangles.
+    const std::uint64_t strip = prim(gs::PrimKind::TriangleStrip, false, false, false);
+    CHECK(vertices({{gs::kPrim, strip},
+                    {gs::kXyz2, xyz2(511.5, 100, 0)},
+                    {gs::kXyz2, xyz2(553.5, 100, 0)},
+                    {gs::kXyz2, xyz2(511.5, 292, 0)},
+                    {gs::kXyz2, xyz2(553.5, 292, 0)}})
+          == 0);
+    CHECK(vertices({{gs::kPrim, strip},
+                    {gs::kXyz2, xyz2(510.5, 100, 0)},
+                    {gs::kXyz2, xyz2(552.5, 100, 0)},
+                    {gs::kXyz2, xyz2(510.5, 292, 0)},
+                    {gs::kXyz2, xyz2(552.5, 292, 0)}})
+          == 6);
+    // Thinner than a pixel between two rows: nothing; one sixteenth over a row: that row.
+    CHECK(vertices({{gs::kPrim, sprite}, {gs::kXyz2, xyz2(10, 100.0625, 0)}, {gs::kXyz2, xyz2(50, 100.9375, 0)}}) == 0);
+    CHECK(vertices({{gs::kPrim, sprite}, {gs::kXyz2, xyz2(10, 100, 0)}, {gs::kXyz2, xyz2(50, 100.0625, 0)}}) == 6);
+    // Nothing of no width; the right edge is out (x0 <= x < x1).
+    CHECK(vertices({{gs::kPrim, sprite}, {gs::kXyz2, xyz2(10, 10, 0)}, {gs::kXyz2, xyz2(10, 50, 0)}}) == 0);
+    // Below the last line (447).
+    CHECK(vertices({{gs::kPrim, sprite}, {gs::kXyz2, xyz2(10, 447.5, 0)}, {gs::kXyz2, xyz2(50, 480, 0)}}) == 0);
+    // Outside a smaller scissor, by its own columns (300..319).
+    CHECK(vertices({{gs::kScissor1, openrac::test::scissor(300, 319, 300, 319)},
+                    {gs::kPrim, sprite},
+                    {gs::kXyz2, xyz2(319.5, 300, 0)},
+                    {gs::kXyz2, xyz2(340, 319, 0)}})
+          == 0);
+    CHECK(vertices({{gs::kScissor1, openrac::test::scissor(300, 319, 300, 319)},
+                    {gs::kPrim, sprite},
+                    {gs::kXyz2, xyz2(318.5, 300, 0)},
+                    {gs::kXyz2, xyz2(340, 319, 0)}})
+          == 6);
+    // A 16:9 target with the HUD at its sides (picture 0.75 of it): the screen is 85 whole pixels
+    // wider on each side (as far as the HUD is moved out), so 596 is its last column there.
+    CHECK(vertices({{gs::kPrim, sprite}, {gs::kXyz2, xyz2(596.5, 100, 0)}, {gs::kXyz2, xyz2(638.5, 292, 0)}}, 0.75f, true)
+          == 0);
+    CHECK(vertices({{gs::kPrim, sprite}, {gs::kXyz2, xyz2(595.5, 100, 0)}, {gs::kXyz2, xyz2(637.5, 292, 0)}}, 0.75f, true)
+          == 6);
+    CHECK(vertices({{gs::kPrim, sprite}, {gs::kXyz2, xyz2(-85.5, 100, 0)}, {gs::kXyz2, xyz2(-84.5, 292, 0)}}, 0.75f, true)
+          == 6);
+    CHECK(vertices({{gs::kPrim, sprite}, {gs::kXyz2, xyz2(-86.5, 100, 0)}, {gs::kXyz2, xyz2(-85.5, 292, 0)}}, 0.75f, true)
+          == 0);
+    // Without the HUD at the sides the picture's own columns are all there is.
+    CHECK(vertices({{gs::kPrim, sprite}, {gs::kXyz2, xyz2(595.5, 100, 0)}, {gs::kXyz2, xyz2(637.5, 292, 0)}}, 0.75f, false)
+          == 0);
+}
+
 void textures_and_vif() {
     TexturePool textures;
     GifInterpreter gif(textures);
@@ -386,6 +452,7 @@ int main() {
     strips_and_kicks();
     packed_and_reglist();
     draw_groups();
+    no_sample_no_pixel();
     textures_and_vif();
     offscreen_then_upload();
     frame_named_without_draw();

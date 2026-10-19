@@ -103,16 +103,16 @@ int func_00116408(void *arg0) {
     return func_00112468(*(int **)(self + 0x54), *(short *)(self + 0xE));
 }
 
-INCLUDE_ASM("asm/nonmatchings/core_text", func_00116428);
+ASM_FUNC("asm/handwritten/core_text", func_00116428);
 
-INCLUDE_ASM("asm/nonmatchings/core_text", func_001165B8);
+ASM_FUNC("asm/handwritten/core_text", func_001165B8);
 
-INCLUDE_ASM("asm/nonmatchings/core_text", func_001166FC);
+ASM_FUNC("asm/handwritten/core_text", func_001166FC);
 
-INCLUDE_ASM("asm/nonmatchings/core_text", func_00116810);
+ASM_FUNC("asm/handwritten/core_text", func_00116810);
 
-INCLUDE_ASM("asm/nonmatchings/core_text", func_00116948);
+ASM_FUNC("asm/handwritten/core_text", func_00116948);
 
-INCLUDE_ASM("asm/nonmatchings/core_text", func_00116B00);
+ASM_FUNC("asm/handwritten/core_text", func_00116B00);
 
 INCLUDE_ASM("asm/nonmatchings/core_text", func_00116CBC);

@@ -1,4 +1,4 @@
-/* functional: medium. Handwritten (ASM_FUNC); the cache-range helper. Retail reads COP0 Status and calls DIntr only when
+/* functional: medium. fcheck: unchecked (never called in fcheck's capture run of the title, menu and level 0; OpenRAC tools/fcheck_gate.py, 2026-10-18). Handwritten (ASM_FUNC); the cache-range helper. Retail reads COP0 Status and calls DIntr only when
    bit 0x10000 was set, then EIntr after the range op under the same test. The host has no COP0, so the test is taken as
    set (both calls always made); DIntr/EIntr are the port's host versions, so that is a no-op there. The two arguments are
    rounded down to 64-byte cache lines before the range op, as retail does. */

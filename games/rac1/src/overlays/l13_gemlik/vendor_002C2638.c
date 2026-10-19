@@ -531,14 +531,14 @@ void BlargSpaceFighterUpdate(char *m) {
                 if (*(int *)(d + 0xF4) != 0) {
                     if (*(int *)(d + 0xF8)) {
                         Moby1233Init(*(char **)(d + 0xF8), pv, (int)q, *(float *)(d + 0xEC));
-                        func_0022ED80(0, 0, (int)m);
+                        Moby_PlaySound(0, 0, (int)m);
                     }
                     *(int *)(d + 0xF8) = Moby1233Spawn(m, 1);
                     *(int *)(d + 0xF4) = 0;
                 } else {
                     if (*(int *)(d + 0xFC)) {
                         Moby1233Init(*(char **)(d + 0xFC), pv, (int)q, *(float *)(d + 0xEC));
-                        func_0022ED80(0, 0, (int)m);
+                        Moby_PlaySound(0, 0, (int)m);
                     }
                     *(int *)(d + 0xFC) = Moby1233Spawn(m, 0);
                     *(int *)(d + 0xF4) = 1;
@@ -880,7 +880,7 @@ extern void func_001F9BF0(void *, void *, void *);
 extern float func_001F9D48(void *, void *);
 
 /* Steers moby m along its path toward the next point (advancing when reached); aims it at the hero when aim. Returns 1 on a wrap. */
-int func_L13_002C4F10(char *m, char *d, int aim) {
+int PathVehicle_AdvanceNode(char *m, char *d, int aim) {
     char *path = D_L13_001B0AB0[*(int *)(d + 0xA0)];
     float a, seg, diff, t;
     int wrapped = 0;
@@ -1059,7 +1059,7 @@ int PathVehicle_ControlSpeed(char *moby, char *vars, int aim) {
         *(float *)(vars + 0xCC) = maximum;
     }
 update_path:
-    result = func_L13_002C4F10(moby, vars, aim);
+    result = PathVehicle_AdvanceNode(moby, vars, aim);
 done:
     return result;
 }
@@ -2661,7 +2661,7 @@ extern char *func_L13_002EE148(char *, int, int);
 extern int D_L13_001D3778[];
 
 /* updates attached children and creates or deletes the selected extra child */
-void func_L13_002EA160(char *m, char *data) {
+void QwarkStarfighter_SyncParts(char *m, char *data) {
     int i, selected;
     char *p;
     for (i = 0; i < 10; i++) {
@@ -3365,6 +3365,6 @@ unsigned char *FireMoby83AtTarget(char *a, char *b) {
     }
     FastVecAdd(v1, v1, b + 0x70);
     r = SpawnMoby83(a, (char *)v0, (char *)v1);
-    if (r) func_0022ED80(3, 0, (int)a);
+    if (r) Moby_PlaySound(3, 0, (int)a);
     return r;
 }

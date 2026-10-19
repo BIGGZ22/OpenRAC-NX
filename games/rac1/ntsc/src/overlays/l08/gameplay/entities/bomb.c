@@ -223,7 +223,7 @@ void FUN_L08_002b82a0(Moby_2B94B0 *m)
 /* Spawns a moby of class 0xF8 at a position and facing derived from a vector. */
 /* Ported from rac1-decomp (src/overlays/l08_batalia/vendor_002B9438.c: func_L08_002D35E8), where it is exact; names translated to the US level program. */
 
-extern char *func_0020D348_m(int);
+extern char *func_0020D348_m(int) __asm__("FUN_0020c4f8");
 extern float fast_arc_tan(float, float) __asm__("FUN_001f9e90");
 extern int scale_game_frames(int) __asm__("FUN_001f96f8");
 extern void FUN_L00_00250df8(void *);
@@ -312,7 +312,7 @@ extern float D_L08_00174660[];
 
 void FUN_L08_002d23f0(char *moby) {
     union Coll_36F8 c;
-    blk16 t70;
+    blk16 table_or_bounce_scratch;
     float normalized_direction[4];
     float random_direction[4];
     char *d;
@@ -344,14 +344,14 @@ void FUN_L08_002d23f0(char *moby) {
             float lo = -1.0f;
             float hi = 1.0f;
             int *q;
-            t70 = D_L08_00161868;
+            table_or_bounce_scratch = D_L08_00161868;
             *(v128_36F8 *)random_direction = 0;
             random_direction[0] = random_float_between_c5(lo, hi);
             random_direction[1] = random_float_between_c5(lo, hi);
             random_direction[2] = random_float_between_c5(lo, hi);
             *(v128_36F8 *)normalized_direction = *(v128_36F8 *)random_direction;
             fast_vec_normalize(normalized_direction, normalized_direction, D_0015ED6C);
-            q = (int *)t70.b + random_integer_below_c3(4);
+            q = (int *)table_or_bounce_scratch.b + random_integer_below_c3(4);
             FUN_L00_00269958_c((moby + 0x10), normalized_direction, *q, 0x4FFF, scale_game_frames_c(0x2D), 0x32, 0x78, 1);
         }
         qcopy(c.r.start, moby + 0x10);
@@ -386,10 +386,10 @@ void FUN_L08_002d23f0(char *moby) {
                     qcopy((moby + 0x10), tbl + 0x20);
                     *(float *)(moby + 0x18) += f20;
                     FUN_L00_001ff660_c((d + 0x10), (d + 0x10), tbl + 0x40);
-                    cross_vectors_xyz(&t70, (d + 0x10), tbl + 0x40);
+                    cross_vectors_xyz(&table_or_bounce_scratch, (d + 0x10), tbl + 0x40);
                     k = D_0015ED6C * 1.5f;
-                    fast_vec_normalize(&t70, &t70, random_float_between_c5(-k, k));
-                    add_vector_xyz((d + 0x10), (d + 0x10), &t70);
+                    fast_vec_normalize(&table_or_bounce_scratch, &table_or_bounce_scratch, random_float_between_c5(-k, k));
+                    add_vector_xyz((d + 0x10), (d + 0x10), &table_or_bounce_scratch);
                     fast_vec_scale_c((d + 0x10), (d + 0x10), 0.4f);
                     *(int *)(d + 0x24) += 1;
                     *(int *)(d + 0x20) = scale_game_frames_c(0xB4);
@@ -1055,7 +1055,7 @@ extern char *func_00219780_2D6C58(void *, void *, void *, int, int, int, int, in
 void FUN_L08_002d5950(char *moby, int joint, int count) {
     char *data = *(char **)(moby + 0x78);
     char joint_transform_buffer[32];
-    float t30[8];
+    float jitter_direction_source[8];
     float joint_pos[4];
     float velocity[4];
     float spread_vector[4];
@@ -1078,7 +1078,7 @@ void FUN_L08_002d5950(char *moby, int joint, int count) {
         qcopy(velocity, data + 0x40);
         qcopy(spread_vector, data + 0x40);
         if (count / 3 < i) {
-            func_L00_001FF4B0_2D6C58(jitter, t30, func_002140F8_2D6C58(D_L08_001618DC, D_L08_001618DC * 1.2f) * D_0015ED6C);
+            func_L00_001FF4B0_2D6C58(jitter, jitter_direction_source, func_002140F8_2D6C58(D_L08_001618DC, D_L08_001618DC * 1.2f) * D_0015ED6C);
             fast_vec_add(velocity, velocity, jitter);
             fast_vec_scale(spread_vector, spread_vector, 0.5f);
             offset = func_001F9F90_2D6C58(random_angle);
@@ -1089,7 +1089,7 @@ void FUN_L08_002d5950(char *moby, int joint, int count) {
             spread_vector[1] = spread_vector[1] + offset;
             spread_vector[2] = D_L08_001618E0 * D_0015ED6C;
         } else {
-            func_L00_001FF4B0_2D6C58(jitter, t30, func_002140F8_2D6C58(0.0f, D_L08_001618DC) * D_0015ED6C);
+            func_L00_001FF4B0_2D6C58(jitter, jitter_direction_source, func_002140F8_2D6C58(0.0f, D_L08_001618DC) * D_0015ED6C);
             fast_vec_add(velocity, velocity, jitter);
             fast_vec_scale(spread_vector, spread_vector, 0.5f);
             offset = func_001F9F90_2D6C58(random_angle);
@@ -1559,6 +1559,13 @@ extern char camera_state_bytes[] __asm__("D_L08_00167480");
 
 void blarg_bombthrower_update(struct Moby *moby) __asm__("FUN_L08_002dabf0");
 void blarg_bombthrower_update(struct Moby *moby) {
+    enum {
+        BOMBTHROWER_STATE_INITIALIZE = 0,
+        BOMBTHROWER_STATE_APPROACH_WAYPOINT = 1,
+        BOMBTHROWER_STATE_THROW_BOMB = 5,
+        BOMBTHROWER_STATE_DAMAGE_KNOCKBACK = 0x5A,
+        BOMBTHROWER_STATE_DYING = 0x63
+    };
     Data_DBF68 *vars = (Data_DBF68 *)moby->pvars;
     Look_DBF68 search;
     float point[4];
@@ -1645,7 +1652,7 @@ void blarg_bombthrower_update(struct Moby *moby) {
     }
     target = search.target;
     switch (moby->state) {
-    case 0:
+    case BOMBTHROWER_STATE_INITIALIZE:
         moby->flags |= 0x1000;
         vars->b29 = 1;
         vars->health = 2.0f;
@@ -1668,7 +1675,7 @@ void blarg_bombthrower_update(struct Moby *moby) {
         moby->state = 1;
         vars->i134 = scale_game_frames_c2(0xF0);
         break;
-    case 1:
+    case BOMBTHROWER_STATE_APPROACH_WAYPOINT:
         FUN_L00_00259028((char *)moby, vars->blkD0, (float *)&vars->waypoint->pos, (char *)vars->v40);
         if (fast_vec_dist(&moby->pos, &vars->waypoint->pos) < 3.0f) {
             if (fast_difference_between_rotations_c3(moby->rot.z,
@@ -1776,7 +1783,7 @@ void blarg_bombthrower_update(struct Moby *moby) {
             }
         }
         break;
-    case 5:
+    case BOMBTHROWER_STATE_THROW_BOMB:
         func_L00_002592B0_x(fast_arc_tan_c2(target->pos.x - moby->pos.x, target->pos.y - moby->pos.y),
                             moby, vars->blk12C, 0.02f, 0.3f, 0.2f);
         if (moby->seq == moby->prev_seq && FUN_0020c9e0(moby) == 19.0f) {
@@ -1827,7 +1834,7 @@ void blarg_bombthrower_update(struct Moby *moby) {
             moby->state = 0x5D;
         }
         break;
-    case 0x5A:
+    case BOMBTHROWER_STATE_DAMAGE_KNOCKBACK:
     case 0x5C:
     case 0x5D:
         if (mine_fall(moby, vars->blk70) & 0x40) {
@@ -1849,7 +1856,7 @@ void blarg_bombthrower_update(struct Moby *moby) {
             return;
         }
         break;
-    case 0x63:
+    case BOMBTHROWER_STATE_DYING:
         if (mine_fall(moby, vars->blk70) & 0x40) {
             moby->anim_speed = 0.0f;
             moby->state = 100;
@@ -1914,6 +1921,9 @@ void FUN_L08_002dc7f0(struct Moby *moby);
  * by how far it moved this frame. */
 void shuttle_update(struct Moby *moby) __asm__("FUN_L08_002dbdb0");
 void shuttle_update(struct Moby *moby) {
+    enum {
+        SHUTTLE_STATE_INITIALIZE = 0
+    };
     LiftVars *vars = (LiftVars *)moby->pvars;
     Vec4 old_pos;
     Vec4 old_rot;
@@ -1934,7 +1944,7 @@ void shuttle_update(struct Moby *moby) {
     vars->spin.f[0] = fast_add_rotations(vars->spin.f[0], frame_time * 1.5707964f);
     FUN_L00_00259f50(vars->spin_state, &vars->spin);
     switch (moby->state) {
-    case 0:
+    case SHUTTLE_STATE_INITIALIZE:
         clear_u64_value(&vars->spin);
         if (vars->path == -1) {
             qcopy(&vars->home_pos, &moby->pos);

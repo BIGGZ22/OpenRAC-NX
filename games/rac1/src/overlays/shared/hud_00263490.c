@@ -15,7 +15,7 @@ extern void func_L00_00236610(void *);
 extern s32 D_L05_0015FBB4 MACRO_ADDR;
 
 /* Adapted from Lombyte (MIT) for PAL by OpenRAC's tools/port.py: src/overlays/shared/ui/text/00262ae8.c, FUN_L05_00262ae8. */
-void func_L05_00263490(HudElemX *e) {
+void HudCounter_Reset(HudElemX *e) {
     s32 i;
     s32 *p;
     e->unk7C = scale_ticks(0xB4) + 0x1E;

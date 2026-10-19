@@ -1,4 +1,4 @@
-/* functional: medium. Written from the assembly (hand-written VU0 particle step, no C existed). Plain float arithmetic for the VU0 ops; the divide by a zero total life (VU gives the largest float) is clamped to FLT_MAX, and float to byte conversion saturates as vftoi0 does. */
+/* functional: medium. fcheck: unchecked (level/overlay function; fcheck runs boot-executable functions only; OpenRAC tools/fcheck_gate.py, 2026-10-18). Written from the assembly (hand-written VU0 particle step, no C existed). Plain float arithmetic for the VU0 ops; the divide by a zero total life (VU gives the largest float) is clamped to FLT_MAX, and float to byte conversion saturates as vftoi0 does. */
 extern void func_L00_002688A8(void *);
 
 static int ftoi0_002689B0(float f)

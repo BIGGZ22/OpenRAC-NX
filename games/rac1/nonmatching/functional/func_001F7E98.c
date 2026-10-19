@@ -1,4 +1,4 @@
-/* functional: high (fcheck SAME on 3 real calls). corrected from nonmatching/functional/func_001F7E98.c (in place): retail's sqc2 stores all four lanes so dst[3] = a[3], which the C never wrote; added that store. Also guarded den == 0 to +/-FLT_MAX (VU0 vdiv saturates, not NaN) so the host never produces NaN. Retail divides on the VU0, so the last bits can differ. */
+/* functional: high (fcheck SAME on 3 real calls). fcheck: SAME on 3 calls (OpenRAC tools/fcheck_gate.py, 2026-10-18). corrected from nonmatching/functional/func_001F7E98.c (in place): retail's sqc2 stores all four lanes so dst[3] = a[3], which the C never wrote; added that store. Also guarded den == 0 to +/-FLT_MAX (VU0 vdiv saturates, not NaN) so the host never produces NaN. Retail divides on the VU0, so the last bits can differ. */
 
 float func_001F7E98(float *dst, float *a, float *b, float *c) {
     float v4x = b[0] - a[0];

@@ -95,6 +95,9 @@ extern s32 FUN_L00_0025ff38(void *, void *, s32, s32, void *, s32, float);
 
 /* Path patroller update: rides its carrier moby until dropped, takes hits (hit and death states), and follows its D_L11_001B0EB0 path toward the hero. */
 void FUN_L11_00315968(struct Moby *moby) {
+    enum {
+        HIT_RESPONSE_DEATH = 1
+    };
     struct L11PatrolVars *d = (struct L11PatrolVars *)moby->pvars;
     Vec4 v;
     s32 out;
@@ -170,7 +173,7 @@ void FUN_L11_00315968(struct Moby *moby) {
                 d->unk117 = 0x78;
                 break;
             }
-            case 1:
+            case HIT_RESPONSE_DEATH:
             case 2: {
                 float yaw;
                 moby->flags &= ~0x1000;
@@ -302,9 +305,10 @@ s32 FUN_L11_00316128(const u8 *moby) {
 
 extern int FUN_L00_002db8f8(void *);
 
+extern int FUN_L00_002db8f8_pt(void *, void *, void *) __asm__("FUN_L00_002db8f8");
 /* Grabbed check: while held, park the moby in state 0x14 (remembering its state) unless it cannot be grabbed; restore the saved state once released. */
-int FUN_L11_00316160(struct Moby *moby) {
-    int r = FUN_L00_002db8f8(moby);
+int FUN_L11_00316160(struct Moby *moby, void *pos, void *target) {
+    int r = FUN_L00_002db8f8_pt(moby, pos, target);
     if (r != 0) {
         if (moby->state == 2 || moby->state == 4 || moby->state == 5 || moby->state == 6 ||
             moby->state == 0xE || moby->state == 0xF || moby->state == 0x10 || moby->state == 0x14) {
@@ -328,8 +332,9 @@ int FUN_L11_00316160(struct Moby *moby) {
 
 extern void *FUN_L00_002dbb20(void *);
 
-void *FUN_L11_00316210(struct Moby *arg) {
-    void *found = FUN_L00_002dbb20(arg);
+extern void *FUN_L00_002dbb20_pt(void *, void *) __asm__("FUN_L00_002dbb20");
+void *FUN_L11_00316210(struct Moby *arg, void *quad) {
+    void *found = FUN_L00_002dbb20_pt(arg, quad);
     if (found != 0) {
         unsigned char state = arg->state;
         if (state != 0x14) {
@@ -367,11 +372,18 @@ struct L11GateVars {
 
 /* Two-door gate: spawns both 0x4DF doors, then once the hero is close lifts, swings and tilts them open. */
 void FUN_L11_00316320(struct Moby *moby) {
+    enum {
+        GATE_INITIALIZE_DOORS = 0,
+        GATE_WAIT_FOR_HERO_TRIGGER = 1,
+        GATE_RAISE_DOORS = 2,
+        GATE_ZERO_DOOR_Y_ROTATION = 3,
+        GATE_TILT_DOORS_APART = 4
+    };
     struct L11GateVars *d = (struct L11GateVars *)moby->pvars;
     float v[4];
 
     switch (moby->state) {
-    case 0: {
+    case GATE_INITIALIZE_DOORS: {
         struct Moby *c;
         struct Moby *r;
         u8 *pv;
@@ -409,7 +421,7 @@ void FUN_L11_00316320(struct Moby *moby) {
         moby->state = 1;
         break;
     }
-    case 1:
+    case GATE_WAIT_FOR_HERO_TRIGGER:
         if (vector_distance(&moby->pos.x, &hero.motion.pos.f[0]) < 12.0f &&
             FUN_00214720(&hero.motion.pos, d->unk10) != 0) {
             d->t = 0.0f;
@@ -417,7 +429,7 @@ void FUN_L11_00316320(struct Moby *moby) {
             FUN_0022da68(0, 4, d->left);
         }
         break;
-    case 2:
+    case GATE_RAISE_DOORS:
         advance_accelerated_scalar(&d->t, &d->speed, 1.0f, frame_time_sq * 8.0f, frame_time_sq * 16.0f,
                                    frame_time * 8.0f);
         fast_vec_normalize(v, &moby->rot_row0, 0.5f);
@@ -432,7 +444,7 @@ void FUN_L11_00316320(struct Moby *moby) {
             moby->state = 3;
         }
         break;
-    case 3: {
+    case GATE_ZERO_DOOR_Y_ROTATION: {
         float a;
         advance_accelerated_scalar(&d->t, &d->speed, 1.0f, frame_time_sq * 10.0f, frame_time_sq * 20.0f,
                                    frame_time * 10.0f);
@@ -447,7 +459,7 @@ void FUN_L11_00316320(struct Moby *moby) {
         }
         break;
     }
-    case 4: {
+    case GATE_TILT_DOORS_APART: {
         float a;
         advance_accelerated_scalar(&d->t, &d->speed, 1.0f, frame_time_sq * 12.0f, frame_time_sq * 24.0f,
                                    frame_time * 12.0f);
@@ -1221,7 +1233,7 @@ void blend_moby_animation_c(MobyAnim *arg0, int arg1, int arg2, int arg3) __asm_
 extern short D_L11_001623D0 __attribute__((sda));
 void blarg_ship_update(struct Moby *moby) __asm__("FUN_L11_00319838");
 void blarg_ship_update(struct Moby *moby) {
-    float s0[4];
+    float scratch_vector[4];
     float target_position[4];
     float hero_position_delta[4];
     float basis_rotation_angles[4];
@@ -1293,8 +1305,8 @@ void blarg_ship_update(struct Moby *moby) {
         }
         break;
     case 3:
-        qcopy(s0, &moby->pos);
-        s0[3] = 3.0f;
+        qcopy(scratch_vector, &moby->pos);
+        scratch_vector[3] = 3.0f;
         if (FUN_001fa728_u((char *)&moby->pos, 512.0f) == -1) {
             if (FUN_001f9b48(&moby->pos, &hero.motion.pos) > 32.0f) {
                 *(int *)(d + 0x84) += 1;
@@ -1329,14 +1341,14 @@ void blarg_ship_update(struct Moby *moby) {
         qcopy(d + 0xB0, &hero.motion.pos);
         add_vector_xyz(&moby->pos, &moby->pos, hero_position_delta);
         f = fast_add_rotations(0.7853982f, (float)*(int *)(d + 0x88) * 1.5707964f);
-        normalize_vector_xyz(s0, m50, fast_sin(f) * 8.0f);
-        add_vector_xyz(target_position, D_L11_001677C0_c, s0);
-        normalize_vector_xyz(s0, m60, fast_cos(f) * 8.0f);
-        add_vector_xyz(target_position, target_position, s0);
-        normalize_vector_xyz(s0, m40, 20.0f);
-        add_vector_xyz(target_position, target_position, s0);
-        subtract_vector_xyz(s0, target_position, &moby->pos);
-        len = vector_length_xyz(s0);
+        normalize_vector_xyz(scratch_vector, m50, fast_sin(f) * 8.0f);
+        add_vector_xyz(target_position, D_L11_001677C0_c, scratch_vector);
+        normalize_vector_xyz(scratch_vector, m60, fast_cos(f) * 8.0f);
+        add_vector_xyz(target_position, target_position, scratch_vector);
+        normalize_vector_xyz(scratch_vector, m40, 20.0f);
+        add_vector_xyz(target_position, target_position, scratch_vector);
+        subtract_vector_xyz(scratch_vector, target_position, &moby->pos);
+        len = vector_length_xyz(scratch_vector);
         if (*(char *)&hero.ship_flags & 2) {
             advance_accelerated_scalar(&c0, (float *)(d + 0x6C), len, frame_time_sq + frame_time_sq,
                                        frame_time_sq * 20.0f, D_0015ED6C_n[1]);
@@ -1347,8 +1359,8 @@ void blarg_ship_update(struct Moby *moby) {
             advance_accelerated_scalar(&c0, (float *)(d + 0x6C), len, frame_time_sq + frame_time_sq,
                                        frame_time_sq * 20.0f, D_0015ED6C_n[1] * 5.0f);
         }
-        FUN_L00_0025f730(s0, *(float *)(d + 0x6C));
-        add_vector_xyz(&moby->pos.x, &moby->pos.x, s0);
+        FUN_L00_0025f730(scratch_vector, *(float *)(d + 0x6C));
+        add_vector_xyz(&moby->pos.x, &moby->pos.x, scratch_vector);
         if (moby->command) {
             if (moby->visible) {
                 *(int *)(d + 0x98) += 1;
@@ -1400,9 +1412,9 @@ void blarg_ship_update(struct Moby *moby) {
         break;
     case 6:
         *(unsigned short *)(D_00141C18) = 0xFFFF;
-        subtract_vector_xyz(s0, &hero.motion.pos, d + 0xB0);
+        subtract_vector_xyz(scratch_vector, &hero.motion.pos, d + 0xB0);
         qcopy(d + 0xB0, &hero.motion.pos);
-        add_vector_xyz(&moby->pos, &moby->pos, s0);
+        add_vector_xyz(&moby->pos, &moby->pos, scratch_vector);
         cart_burst(moby, &moby->pos, -1, 2.0f, 13.0f);
         if (random_integer_below_c2(2)) {
             FUN_L11_0030f5a8(&moby->pos, D_L11_0015F580, 0x4C4);

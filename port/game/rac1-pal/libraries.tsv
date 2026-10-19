@@ -69,6 +69,7 @@ func_00120858	vu	sceGsSyncPath	host
 func_0011DFC8	libgcc	__main	host	the host runs no global constructors for the game: it has none
 func_00120778	libgcc	__extendsfdf2	host	float to double; libgcc is the host compiler's
 func_0011EEC8	libgcc	__muldi3	host	64-bit multiply (src/libgcc, which hostgen does not read)
+func_0011E6D8	libgcc	__fixunsdfdi	host	double to unsigned 64-bit (libgcc's soft-float one, 0 for a negative); the float printer's (func_00119F38) only call. Its parameter is a double, which hostgen's translation from assembly cannot pass
 func_00120F30	cdvd	sceCdSync	host	reads are done at once from the extracted disc image
 func_001211B0	cdvd	sceCdInit	host
 func_00121490	cdvd	sceCdDiskReady	host
@@ -227,7 +228,7 @@ func_00229838	game	func_00229838	host	the port's own (rac1/host/render_native.c)
 func_002298B0	game	func_002298B0	host	the port's own (rac1/host/render_native.c); its signature decides the prototype	void (int, int)
 func_00229F00	game	func_00229F00	host	the port's own (rac1/host/render_native.c); its signature decides the prototype	void (void)
 func_0022B648	game	func_0022B648	host	the port's own (rac1/host/render_native.c); its signature decides the prototype	int (int)
-func_0022B8F8	game	func_0022B8F8	host	the port's own (rac1/host/render_native.c); its signature decides the prototype	void (unsigned int, unsigned int)
+func_0022B8F8	game	func_0022B8F8	host	the port's own (rac1/host/render_native.c); its signature decides the prototype	void (unsigned int)
 func_0022CA00	game	func_0022CA00	host	the port's own (rac1/host/render_native.c); its signature decides the prototype	void (unsigned int)
 func_0022CC40	game	func_0022CC40	host	the port's own (rac1/host/render_native.c); its signature decides the prototype	void (unsigned int)
 func_0022CEB8	game	func_0022CEB8	host	the port's own (rac1/host/render_native.c); its signature decides the prototype	void (void)
@@ -237,7 +238,7 @@ func_00236060	game	func_00236060	host	the port's own (rac1/host/render_native.c)
 func_002362B0	game	func_002362B0	host	the port's own (rac1/host/render_native.c); its signature decides the prototype	void (unsigned int)
 func_00236F00	game	func_00236F00	host	the port's own (rac1/host/render_native.c); its signature decides the prototype	void (void)
 func_002383D8	game	func_002383D8	host	the port's own (rac1/host/render_native.c); its signature decides the prototype	int (int)
-func_00238688	game	func_00238688	host	the port's own (rac1/host/render_native.c); its signature decides the prototype	void (unsigned int, unsigned int)
+func_00238688	game	func_00238688	host	the port's own (rac1/host/render_native.c); its signature decides the prototype	void (unsigned int)
 func_0020DD48	game	func_0020DD48	host	the port's own (rac1/host/render_native.c); its signature decides the prototype	void (void)
 func_00229D48	game	func_00229D48	host	the port's own (rac1/host/render_native.c); its signature decides the prototype	void (void)
 func_00234620	game	func_00234620	host	the port's own (rac1/host/render_native.c); its signature decides the prototype	void (void)
@@ -276,6 +277,10 @@ func_L00_001EB6A8	game	func_L00_001EB6A8	host	the camera steer: retail returns F
 func_L00_0025C710	game	func_L00_0025C710	host	the four-float interpolation: the matched C takes its two vectors as 16-byte records by value, which the PS2 passes by address and its callers pass as pointers; on a host the two do not meet (rac1/host/vector.c)	void (unsigned int, unsigned int, unsigned int, float)
 func_L00_002A8A20	game	func_L00_002A8A20	host	the wrench trail draw callback: its state as host C, its quads left to the renderer (rac1/host/wrench.c); the source file declares it void (void)	void (unsigned int)
 func_001FFFB8	hud	func_001FFFB8	wrap	the level HUD's draw: with the player's "HUD: Edges" the elements anchored left or right are drawn out at the sides of a picture wider than the game's (host/hud.c)
+func_001F4A00	draw	ExecuteDrawCallbacks	wrap	a draw callback list's run: in a picture wider than the game's, the cull matrix and clip constants the callbacks test against (the liquid grid's seas, lava and sand; the overlay layers' bounding spheres) are opened by as much as the picture is wider for the run, and put back after it (rac1/host/wide_view.c)
+func_001F4BB8	draw	ExecuteDrawCallbacks2	wrap	a draw callback list's run: in a picture wider than the game's, the cull matrix and clip constants the callbacks test against (the liquid grid's seas, lava and sand; the overlay layers' bounding spheres) are opened by as much as the picture is wider for the run, and put back after it (rac1/host/wide_view.c)
+func_001F4A78	draw	ExecuteDrawCallbacks3	wrap	a draw callback list's run: in a picture wider than the game's, the cull matrix and clip constants the callbacks test against (the liquid grid's seas, lava and sand; the overlay layers' bounding spheres) are opened by as much as the picture is wider for the run, and put back after it (rac1/host/wide_view.c)
+func_001F4AF0	draw	ExecuteDrawCallbacks4	wrap	a draw callback list's run: in a picture wider than the game's, the cull matrix and clip constants the callbacks test against (the liquid grid's seas, lava and sand; the overlay layers' bounding spheres) are opened by as much as the picture is wider for the run, and put back after it (rac1/host/wide_view.c)
 func_L00_002D8898	game	func_L00_002D8898	host	an effect draw callback whose state only feeds its own quads: a no-op for now (rac1/host/fx.c); the source file declares it void (void)	void (unsigned int)
 func_L00_0025D3C0	game	func_L00_0025D3C0	host	a place the catalogue folds into another function although its code differs (split_places.tsv, rac1/host/variants.c)	int (unsigned int)
 func_L00_00261448	game	func_L00_00261448	host	a place the catalogue folds into another function although its code differs (split_places.tsv, rac1/host/variants.c)	int (unsigned int)
@@ -317,3 +322,11 @@ func_L07_0030E800	game	func_L07_0030E800	host	a place the catalogue folds into a
 func_L08_002DB448	game	func_L08_002DB448	host	a place the catalogue folds into another function although its code differs (split_places.tsv, rac1/host/variants.c)	void (void)
 func_L14_003047D8	game	func_L14_003047D8	host	a place the catalogue folds into another function although its code differs (split_places.tsv, rac1/host/variants.c)	void (void)
 func_L18_002FC168	game	func_L18_002FC168	host	a place the catalogue folds into another function although its code differs (split_places.tsv, rac1/host/variants.c)	void (void)
+func_002181F0	pad	Pad_ProcessReport	wrap	the pad's report into its state, each poll: with the player's strafe on, in play on foot, L2 and R2 are kept for the strafe and taken out of the pad's button words, so the game does not look or crouch on them (L1 still looks, R1 still crouches) (rac1/host/strafe.c)	void (unsigned int, unsigned int, int)
+func_L00_00211D28	hero	Hero_UpdateMotionInput	wrap	the stick into the hero, early in his update: with the player's strafe on and the hero standing in Lock, or in Hold after its swing, he is turned toward the camera first (rac1/host/strafe.c)	void (void)
+func_L00_002124E8	hero	Hero_TurnToHeading	wrap	eases the facing toward the move yaw: with the player's strafe on and the hero strafing, toward the camera's yaw, or while Hold's swing lasts the facing latched when L2 or R2 went down (rac1/host/strafe.c)	void (int, float, float, float)
+func_L00_00212790	hero	Hero_SetPlanarVelocity	wrap	the velocity along an angle, the facing for one above pi: while the hero strafes, along the move yaw (rac1/host/strafe.c)	void (float)
+func_L00_002E74B0	camera	func_L00_002E74B0	wrap	the follow camera's requests from the hero's state: while the hero strafes, the strafe camera the game asks for in state 0x81 with L2 or R2 held, swung once behind the latched facing for Hold (rac1/host/strafe.c)	void (unsigned int)
+func_L00_00232EF0	hero	Hero_AdvanceAnimation	wrap	Ratchet's animation advance: while he strafes away from his facing, the walk or the run stepped back first so that it plays backwards (rac1/host/strafe.c)	void (void)
+func_L02_00250720	draw	func_L02_00250720	wrap	the liquid grid's cull (seas, lava, sand): in a picture wider than the game's, against the cull matrix opened by as much as the picture is wider, put back after it (rac1/host/wide_view.c)
+func_L00_00200290	draw	FastBSphereCheck	wrap	the bounding sphere view test: while a draw callback list runs, in a picture wider than the game's, against clip constants opened by as much as the picture is wider, put back after it (rac1/host/wide_view.c)

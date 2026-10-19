@@ -367,7 +367,7 @@ void DrawLightFlare(char *arg0) {
     FastVecScale(b, arg0, 1.0f / 1024.0f);
     z = *(float *)(arg0 + 0x18) + 0.1f;
     if (D_0015F6E8 == 6) {
-        z = func_00214358(arg0 + 0x10, 0, 0.5f) + 0.1f;
+        z = ProbeGroundHeight(arg0 + 0x10, 0, 0.5f) + 0.1f;
     }
     for (i = 0; i < 4; i++) {
         float *v;
@@ -600,7 +600,7 @@ void DrawSpaceFlightFrame(void) {
     }
     UpdateViewContext();
     BuildViewMatrices();
-    func_0022C5A0();
+    DrawSkyShells();
     D_0018CE00.projection_scale = saved_projection_scale;
     UpdateViewContext();
     BuildViewMatrices();
@@ -640,11 +640,11 @@ void DrawSpaceFlightFrame(void) {
                             func_001F4868_305A0(3), rotation_angle);
     }
     DoGifPaging();
-    if (D_0015F53C > 0.0f) {
-        if (D_0015F53C > 1.0f) {
-            D_0015F53C = 1.0f;
+    if (gFade > 0.0f) {
+        if (gFade > 1.0f) {
+            gFade = 1.0f;
         }
-        emit_rgba_draw_packet(0, 0, 0, func_001FA898_305A0(D_0015F53C * 128.0f));
+        emit_rgba_draw_packet(0, 0, 0, func_001FA898_305A0(gFade * 128.0f));
     }
     VU1_syncChain(0x10);
     PatchMobyGifs();
@@ -2434,7 +2434,7 @@ void DoSpaceTransition(void) {
         }
         FadeToBlack(func_001F98C0(6));
         D_0015EE84_m = D_0015F6E4;
-        func_00204BE8();
+        Level_StartDataRead();
         func_00120F30_i(0);
         D_001517D0_b.fB = 0;
         DMAC_VIF1_Disable();
@@ -2517,7 +2517,7 @@ void DoSpaceTransition(void) {
             VU1_syncChain(1);
             func_00122598_i(0);
             D_0015F538++;
-            func_00228110();
+            SpaceTransition_Tick();
             if (!done) {
                 done = LevelArchiveLoadStep();
             }
@@ -2528,7 +2528,7 @@ void DoSpaceTransition(void) {
                 func_00122598_i(0);
                 MemCard_UpdateState();
                 Menu_RunStateHandler();
-                func_00228110();
+                SpaceTransition_Tick();
             } while (LevelArchiveLoadStep() == 0);
         }
         while (D_0013D390_b.fDC != 2 || D_0013D390_b.fE4 >= 0) {
@@ -2536,7 +2536,7 @@ void DoSpaceTransition(void) {
             func_00122598_i(0);
             MemCard_UpdateState();
             Menu_RunStateHandler();
-            func_00228110();
+            SpaceTransition_Tick();
         }
     }
     func_00120F30_i(0);

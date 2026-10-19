@@ -24,6 +24,7 @@ layer and the renderer.
 | `hostgen.json` | what the game is and how to read its decompilation (below) |
 | `libraries.tsv` | every library entry point the game calls that the port answers itself: symbol, library, name, port (`host`, `game`, `wrap`, `todo`), notes, optional signature. A `host` row binds the address to the shared replacement of that name ([common/libraries.tsv](common/libraries.tsv)) |
 | `host/*.c` | only if the game needs C of its own: `wrap` functions, its overlay hook. A game's versions share theirs (`"host_shared"`: rac1's in [rac1/host](rac1/README.md)), each with a table of its names and addresses |
+| `no_c.tsv` | every function hostgen has no C for, or wrote C for from its assembly, and whether the port needs C for it (below) |
 
 `hostgen.json`:
 
@@ -40,7 +41,59 @@ layer and the renderer.
 | `groups` | parts of the tree that are separate programs over the same addresses (rac3's menu, `src/frontbin`, overlay 100) |
 | `overlay_hook` | true if `host/` provides `openrac_game_loaded_overlay` (which level's program is loaded) |
 | `hand`, `drafts` | C for functions the decompilation has as assembly: the port's own (`hand/hand.tsv`), and the decompilation's own drafts (`drafts.tsv`) ([hostgen](../tools/hostgen/README.md#a-games-configuration)) |
+| `asm` | C from the assembly the game's setup wrote, for the functions with no C: its directories in the decompilation, `$gp`, whether it is on, and the retail program to read the same instructions from where the files are not (`"retail"`; a player's build reads its disc image) ([hostgen](../tools/hostgen/README.md#functions-with-no-c-c-from-their-assembly)) |
 | `roots` | where hostgen's frontier report starts |
+
+## The functions with no C
+
+Each rac1 version's `no_c.tsv` lists every function hostgen has no C for, or
+wrote C for from its assembly, and says whether the port needs C for it,
+with the evidence: [no_c.py](../tools/hostgen/no_c.py) reads every call,
+jump, branch, address formed in code and data word that refers to it in the
+retail executable and in all 19 level programs, and hostgen's own call
+graph. Class `a` needs no C, `b` is replaced by the host on purpose, `c`
+needs C. As of 2026-10-18:
+
+| | rac1-pal | rac1-ntsc |
+|---|---:|---:|
+| **a** needs no C | 475 | 1,432 |
+| ... linker remnant (the decompilation's lists, `asm/remnants`) | 236 | |
+| ... a piece of a function with C (only its branches and jumps reach it) | 143 | |
+| ... padding (the linker's 0xCDCDCDCD fill) | 36 | |
+| ... nothing refers to it in any program | 41 | 2 |
+| ... another spelling of a function with C (calls go there) | 19 | 1,369 |
+| ... declared, defined nowhere, called by nothing | | 61 |
+| **b** replaced by the host on purpose | 27 | 3 |
+| ... only host-replaced functions call it (a library's syscall wrapper, the WAD decompressor's helpers, VU0 animation code) | 12 | 1 |
+| ... a piece of a host-replaced function | 11 | |
+| ... the host's own (`fabsf`, `sqrtf`, `memcpy` as the host compiler's; the executable's crt0) | 4 | 2 |
+| **c** needs C | 7 | 7 |
+| ... of them with C now | 7 (translated from the retail program) | 7 (translated) |
+
+Besides the table: libgcc's `__fixunsdfdi` (rac1-pal's `func_0011E6D8`, the
+float printer's) and `__udivdi3` and `__umoddi3` (rac1-ntsc, newlib's
+printf, strtol and malloc) are host rows of `libraries.tsv` now
+([common/lib/libc.c](common/lib/libc.c)), so they are no longer stubs.
+
+Every class `c` function has C: what hostgen translates from the retail
+program, which a player's build reads from the disc image
+([hostgen](../tools/hostgen/README.md#the-retail-program-where-the-assembly-is-not)).
+rac1-pal's are the moby class callbacks `func_L00_00203ED8` and
+`func_L00_0020DCB4` (data tables of every level), `func_L05_0023BAA0` (a
+table of levels 5 and 16), `func_L00_002569F8` (called by the moby update
+code), the MPEG colour conversion's `func_00127318` (code spimdisasm wrote as
+data), the VU0 vector scale entry `func_00125328` and `func_00120C58`;
+rac1-ntsc's are newlib's float conversion `func_00118338` (doubles in
+general registers), the VU0 scale entry `func_001251E8`, the MPEG routines
+`func_001271D8` and `func_0012C4C8`, the DMA completion handlers
+`func_0012A2D8` and `func_0012A5D8` (handed to AddDmacHandler2), and newlib's
+`malloc_extend_top`. None of the 509 and 1,442 was called in the regression
+routes of all 19 levels on master (docs/port/REGRESSION.md, `reach`).
+
+Rows whose evidence begins "by hand:" are judgements no_c.py keeps when it
+runs again (two in rac1-pal: a padding word whose address + 4 is a handler
+with C, and a hand-written piece whose address only looks like a level 3
+data word).
 
 ## Moving a game on
 

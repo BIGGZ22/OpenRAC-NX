@@ -23,6 +23,7 @@
     "src"
   ],
   "defines": ["LOMBYTE_QZERO_H"],
+  "aliases": ["config/us/port_aliases.h"],
   "symbols": [
     "config/us/symbol_addrs.txt",
     "config/us/port_symbols.txt"
@@ -65,7 +66,11 @@
     "func_001E9438",
     "func_001E9440",
     "func_001E9458",
-    "func_001E9460"
+    "func_001E9460",
+    "func_001E9468",
+    "func_001E9470",
+    "func_001E9478",
+    "func_001E9480"
   ],
   "host_functions": [
     "FUN_001f7580",
@@ -137,6 +142,7 @@
     "FUN_L00_001f3170",
     "FUN_00125180",
     "FUN_0020ede8",
+    "FUN_0020fa90",
     "func_L00_00251CE8"
   ],
   "hand": "hand/hand.tsv",
@@ -144,5 +150,12 @@
     "guard": "NON_MATCHING",
     "units": "drafts.tsv"
   },
-  "split_places": "split_places.tsv"
+  "split_places": "split_places.tsv",
+  "asm": {
+    "enabled": true,
+    "dirs": ["config/us/overlays/asm", "config/us/expected/asm", "config/us/asm",
+             "build/baseline/config/us/expected/asm", "build/baseline/config/us/asm"],
+    "retail": {"exe": "config/us/SCUS_971.99", "dump": "config/us/overlays"},
+    "gp": "0x00166C00"
+  }
 }

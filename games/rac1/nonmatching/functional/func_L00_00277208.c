@@ -1,3 +1,4 @@
+/* fcheck: unchecked (level/overlay function; fcheck runs boot-executable functions only; OpenRAC tools/fcheck_gate.py, 2026-10-18). */
 /* func_L00_00277208 -- src/overlays/shared/pause_00277208.c (functional C for the port, not a match)
  * Page-menu first tick: picks the menu's first page from the entry state (or from a page queued at
  * 0xF0/0xF4), resets the menu camera rows, saves and overrides the projection scale (0.63), syncs the

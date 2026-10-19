@@ -111,9 +111,10 @@ void FUN_L04_002923b8(struct Moby *moby, LegRig *rig) {
 }
 /* Ported from rac1-decomp (src/overlays/l04_eudora/vuchain_00293490.c: func_L04_00293990), where it is exact; names translated to the US level program. */
 
-extern int walker_gait_mask(int *a, char *b) __asm__("FUN_L00_002a13f0");
+extern int walker_gait_mask(int *a, float t) __asm__("FUN_L00_002a13f0");
 
-int FUN_L04_002927d0(char *moby, char *rig) {
+/* The phase t (the caller's $f12) goes through untouched to the gait mask. */
+int FUN_L04_002927d0(char *moby, char *rig, float t) {
     int **p = (int **)(rig + 0x70);
     int *found = 0;
     int i;
@@ -124,7 +125,7 @@ int FUN_L04_002927d0(char *moby, char *rig) {
     }
     if (found == 0)
         return (unsigned char)rig[0xB6];
-    return walker_gait_mask(found, rig);
+    return walker_gait_mask(found, t);
 }
 /* Ported from rac1-decomp src/overlays/l04_eudora/vuchain_00293490.c (func_L04_002939E8) */
 

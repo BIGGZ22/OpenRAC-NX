@@ -6,6 +6,7 @@
  *   - Does: weighted random pick of min(n, (int)(scale*sum+0.5)) entries from a 0x20-byte table (mask bits, type =
  *   - Best so far p5.c: 1896 bytes vs 1936 (10 instructions short). Differences: retail re-materialises `lui 0x700
  *   - Wall to decide: retail's type > 4 path adds a[k] that was never assigned (`b BFB4` with `lwc1 $f0,0($20)` in
+ *   fcheck: unchecked (level/overlay function; fcheck runs boot-executable functions only; OpenRAC tools/fcheck_gate.py, 2026-10-18).
  */
 extern void func_001F9C30(void *, void *, float);
 extern void func_001F9C48(void *, void *, float);

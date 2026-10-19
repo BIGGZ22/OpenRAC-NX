@@ -11,14 +11,20 @@
  */
 
 typedef int s32_c07_314150;
+/* The quadword helpers in plain C: hostgen maps only the decompilation's own qcopy, qcopy_nc and
+ * qzero to the runtime's, and wrote these renamed copies' inline assembly as nothing (every
+ * copy through them was lost). Four words in order, as the lq/sq pair moves them. */
 static __inline__ void qcopy_c07_314150(void *dst, void *src) {
-    __asm__ __volatile__("lq $2,0x0(%1)\n\tsq $2,0x0(%0)" : : "r"(dst), "r"(src) : "$2", "memory");
+    int *d_ = (int *)dst, *s_ = (int *)src;
+    d_[0] = s_[0]; d_[1] = s_[1]; d_[2] = s_[2]; d_[3] = s_[3];
 }
 static __inline__ void qcopy_nc_c07_314150(void *dst, void *src) {
-    __asm__ __volatile__("lq $2,0x0(%1)\n\tsq $2,0x0(%0)" : : "r"(dst), "r"(src) : "$2");
+    int *d_ = (int *)dst, *s_ = (int *)src;
+    d_[0] = s_[0]; d_[1] = s_[1]; d_[2] = s_[2]; d_[3] = s_[3];
 }
 static __inline__ void qzero_c07_314150(void *p) {
-    __asm__ __volatile__("sq $0,0x0(%0)" : : "r"(p));
+    int *d_ = (int *)p;
+    d_[0] = 0; d_[1] = 0; d_[2] = 0; d_[3] = 0;
 }
 extern void func_00210850(void *, int, int *, void *);
 
@@ -72,7 +78,7 @@ extern int func_00214720(void *, int);
 extern float func_001F9B48(void *, void *);
 extern void func_L00_0025A120(void *);
 extern void func_L07_00313420(void *, void *, void *);
-extern void func_L00_0025FCB8(void *, void *, float);
+extern int func_L07_002886D8(void *, void *, float);
 extern int func_L00_001FEFC8(void *);
 extern int func_001F9770(void *);
 extern float func_001F99C0(float);
@@ -197,7 +203,7 @@ void FUN_L07_00314150(unsigned char *m) {
     t20 = (float *)(d + 0x20);
     func_L07_00313420(m, d, t20);
     see = 0;
-    func_L00_0025FCB8(m, &tgt, 30.0f);
+    func_L07_002886D8(m, &tgt, 30.0f); /* US 0x00314274: level 7's own copy, not level 0's 0x0025FCB8 */
     dist = func_001F9B80(&tgt, m + 0x10);
     ang = func_L00_001FF8B0(tgt.pos.f[0] - *(float *)(m + 0x10), tgt.pos.f[1] - *(float *)(m + 0x14));
     hdist = func_001F9B80(m + 0x10, D_0013F350 + 0x80);

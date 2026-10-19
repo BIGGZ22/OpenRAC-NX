@@ -1,3 +1,4 @@
+/* fcheck: SAME on 3 calls (OpenRAC tools/fcheck_gate.py, 2026-10-18). */
 /* newlib memcmp: compares n bytes at a and b and returns the difference of the
    first two bytes that differ, or 0. When both pointers are 16-byte aligned and
    at least 16 bytes remain, whole 16-byte blocks are skipped while they are

@@ -227,7 +227,7 @@ extern void func_L17_002F1F58(char *);
 extern int D_L17_0015F6B0 MACRO_ADDR;
 
 // Pulses a moby's colour from a random phase and queues its draw callback.
-void func_L17_002F1D20(unsigned char *moby) {
+void Moby1382_UpdatePulse(unsigned char *moby) {
     char *data;
     int n;
     int alpha;
@@ -625,7 +625,7 @@ void Moby1448Update(unsigned char *m) {
         break;
     case 1:
         if (m[0x53] == 2 && (m[0x70] & 2) && v->sfx == 0) {
-            func_0022ED80(1, 0, (int)m);
+            Moby_PlaySound(1, 0, (int)m);
             v->sfx = 0;
         }
         pl = D_0013E633 + 0xE1D;
@@ -663,7 +663,7 @@ void Moby1448Update(unsigned char *m) {
             v->go = 0;
             Hud_ClosePopupIfActive(10);
             m[0x20] = 2;
-            func_0022ED80(2, 0, (int)m);
+            Moby_PlaySound(2, 0, (int)m);
             if (m[0x53] != 0) {
                 MobyBlendAnimation(m, 0, 0, 0);
             }
@@ -729,7 +729,7 @@ void Moby1448Update(unsigned char *m) {
         if (m[0x53] != 2) {
             MobyBlendAnimation(m, 2, 0, scale_ticks(30));
         }
-        func_0022ED80(0, 0, (int)m);
+        Moby_PlaySound(0, 0, (int)m);
         v->sfx = 1;
         break;
     }
@@ -1082,7 +1082,7 @@ extern struct {
 extern void func_L00_00264870();
 
 // Update moby: on first tick set state 1 and 0xFF at 0x30; later dispatch through a table.
-void func_L17_002F49B8(unsigned char *m) {
+void Moby750SparkTriggerUpdate(unsigned char *m) {
     switch (m[0x20]) {
     case 0:
         m[0x30] = 0xFF;
@@ -1365,7 +1365,7 @@ void Moby1843Update(unsigned char *moby) {
             *(int *)(d + 0x64) = (*(int *)(d + 0x64) + **(int **)(D_L17_001B10B0 + *(int *)(d + 0x60) * 4) - 1) % **(int **)(D_L17_001B10B0 + *(int *)(d + 0x60) * 4);
         }
         FastAddRots(*(float *)(d + 0x70), *(float *)(d + 0x74));
-        func_L11_0031B8A8(moby);
+        PathOrbitMobyUpdate(moby);
         if (moby[0x20] == 2) {
             SpawnExplosionFx(moby, moby + 0x10, -1, 2.0f, 13.0f);
             if (random_integer_below(2)) {
@@ -1373,7 +1373,7 @@ void Moby1843Update(unsigned char *moby) {
             } else {
                 SpawnMobyAt((char *)(moby + 0x10), 0xE4);
             }
-            func_0022ED80(1, 0, (int)moby);
+            Moby_PlaySound(1, 0, (int)moby);
             moby[0x20] = 3;
             *(int *)(moby + 0x94) = 0;
             *(unsigned short *)(moby + 0x34) |= 1;
@@ -1459,7 +1459,7 @@ void Moby1843Update(unsigned char *moby) {
             ang = -func_L00_001FF860(func_001F9CE8(s70), s70[2]);
             SteerAngleWithVelocity(pitch, (float *)(d + 0x90), ang, D_0015EE70 * 12.566371f, D_0015EE70 * 12.566371f, D_0015EE6C * 12.566371f);
             if (D_L17_0015F6B0 % 10 == 0) {
-                func_0022ED80(2, 0, (int)moby);
+                Moby_PlaySound(2, 0, (int)moby);
                 ApproachValue((float *)(d + 0x94), 0.0f, 0.25f);
                 func_L00_001FF4B0(sB0, s20, *(float *)(d + 0x94));
                 FastVecAdd(sB0, sB0, tgt);
@@ -1496,7 +1496,7 @@ void Moby1843Update(unsigned char *moby) {
         } else {
             SpawnMobyAt((char *)(moby + 0x10), 0xE4);
         }
-        func_0022ED80(1, 0, (int)moby);
+        Moby_PlaySound(1, 0, (int)moby);
         moby[0x20] = 4;
         *(int *)(moby + 0x94) = 0;
         *(unsigned short *)(moby + 0x34) |= 1;
@@ -1566,7 +1566,7 @@ void Moby1873Update(unsigned char *m) {
         if (flag) m[0x20] = 2;
         break;
     case 2:
-        func_0022ED80(0, 0, (int)m);
+        Moby_PlaySound(0, 0, (int)m);
         SetDeathBits(m, 0, -1);
         SpawnBreakFxByDistance(m);
         SpawnMobyBurstFx(m, 0x753, 1, 0x753, 1, 11, 2);
@@ -1594,7 +1594,7 @@ void Moby1876Update(unsigned char *m) {
         if (flag) m[0x20] = 2;
         break;
     case 2:
-        func_0022ED80(0, 0, (int)m);
+        Moby_PlaySound(0, 0, (int)m);
         SetDeathBits(m, 0, -1);
         SpawnBreakFxByDistance(m);
         SpawnBreakFragment((char *)m, 0x753, (float *)(m + 0x10), m + 0x40, 0, 0, D_L17_0015F660, D_L17_0015F660, 0.0f, D_L17_0015F660);

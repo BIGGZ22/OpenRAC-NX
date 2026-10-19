@@ -47,7 +47,7 @@ extern unsigned char D_0014171B[] NOT_SDA;
 #define D_0014C190 ((char *)D_0014171B + 0xAB75)
 
 /* Moby update for a sliding door/platform. */
-void func_L15_0029C1D0(struct Moby *m)
+void Moby67Update(struct Moby *m)
 {
     MovingVars_ZZ *d = (MovingVars_ZZ *)m->pvars;
     Vec4 offset;
@@ -92,7 +92,7 @@ check_lock:
     case 2:
         if (((VoiceSlot_ZZ *)(D_0013E550 + d->sound * 0x70))->owner != m ||
             ((VoiceSlot_ZZ *)(D_0013E550 + d->sound * 0x70))->active == 0)
-            d->sound = func_0022ED80(0, 4, (int)m);
+            d->sound = Moby_PlaySound(0, 4, (int)m);
         if (d->duration < (d->travel = d->travel + (d->duration / 0.6f) * D_0015EE6C)) {
             slot = d->sound;
             if (slot != -1) {
@@ -127,7 +127,7 @@ check_lock:
     case 4:
         if (((VoiceSlot_ZZ *)(D_0013E550 + d->sound * 0x70))->owner != m ||
             ((VoiceSlot_ZZ *)(D_0013E550 + d->sound * 0x70))->active == 0)
-            d->sound = func_0022ED80(0, 4, (int)m);
+            d->sound = Moby_PlaySound(0, 4, (int)m);
         if ((d->travel = d->travel - (d->duration / 0.6f) * D_0015EE6C) < 0.0f) {
             slot = d->sound;
             if (slot != -1 && ((VoiceSlot_ZZ *)(D_0013E550 + slot * 0x70))->owner == m &&
@@ -420,7 +420,7 @@ void ClipVolumeDoorUpdate(struct Moby *moby) {
         moby->rot.z = vars->closed_yaw;
         if (open) {
             moby->state = 2;
-            vars->sound = func_0022ED80(0, 0, (int)moby);
+            vars->sound = Moby_PlaySound(0, 0, (int)moby);
         }
         break;
     case 2:
@@ -439,7 +439,7 @@ void ClipVolumeDoorUpdate(struct Moby *moby) {
     case 3:
         if (close) {
             moby->state = 4;
-            vars->sound = func_0022ED80(0, 0, (int)moby);
+            vars->sound = Moby_PlaySound(0, 0, (int)moby);
         }
         break;
     case 4:
@@ -965,7 +965,7 @@ void ConstructionArmUpdate(char *moby) {
         break;
     }
     case 6:
-        func_0022ED80(0, 0, (int)moby);
+        Moby_PlaySound(0, 0, (int)moby);
         SpawnExplosionFx(moby, moby + 0x10, -1, 1.5f, 13.0f);
         SpawnBreakFxByDistance(moby);
         SpawnBreakFragment(moby, 0x74B, moby + 0x10, moby + 0x40, 0, 0, 0.0f, D_L15_0015F660, D_L15_0015F660, D_L15_0015F660);
@@ -1525,7 +1525,7 @@ void UltramechUpdate(UMoby *m) {
         dist /= path->pt[0].f[3];
         frac = dist;
         if (seg >= path->n - 1) {
-            float z = func_00214358(&m->pos, 0, 0.5f);
+            float z = ProbeGroundHeight(&m->pos, 0, 0.5f);
             if (m->pos.f[2] < z) m->pos.f[2] = z;
             m->state = 4;
             d->timer = scale_ticks(0xF);
@@ -1558,7 +1558,7 @@ void UltramechUpdate(UMoby *m) {
             float z;
             qcopy(&v10, &m->pos);
             v10.f[2] += 1.0f;
-            z = func_00214358(&v10, 0, 0.5f);
+            z = ProbeGroundHeight(&v10, 0, 0.5f);
             if (m->pos.f[2] - z < d->vel.f[2] * func_001F9878(26.0f) + *(float *)&D_L15_00161BA0 * D_0015EE70 * 0.5f * func_001F9878(26.0f) * func_001F9878(26.0f) && m->anim != 5) {
                 MobyBlendAnimation(m, 5, 0, scale_ticks(6));
             }
@@ -1712,7 +1712,7 @@ void UltramechUpdate(UMoby *m) {
                 coll_sphere_mobys(&v60, 9, m, &v10, 2.5f);
                 func_L00_001EFFF0(&v50, &v60, 0, m, &v10);
                 SweepSegmentCheck(&v50, &v60, &v50, &d->v1A0, m, &v10, 5);
-                func_001E9768(&v50, &v60);
+                Profile_Mark(&v50, &v60);
                 qcopy(&d->v1A0, &v60);
             }
         }
@@ -1730,7 +1730,7 @@ void UltramechUpdate(UMoby *m) {
                 d->timer = 0;
                 d->side = (d->side + 1) & 1;
                 qcopy(&v10, (Vec4 *)D_L15_001B0DB0[((UPaths *)((char *)d + 0x180))->idx[d->side]] + d->point + 1);
-                v10.f[2] = func_00214358(&v10, 0, 0.5f);
+                v10.f[2] = ProbeGroundHeight(&v10, 0, 0.5f);
                 if (m->anim != 3) MobyBlendAnimation(m, 3, 0, scale_ticks(0x14));
                 FastVecSub(&d->vel, &v10, &m->pos);
                 func_L00_001FF500(&d->vel, &d->vel, *(float *)&D_L15_00161B9C * D_0015EE6C);
@@ -1764,7 +1764,7 @@ void UltramechUpdate(UMoby *m) {
     }
     if (moving) {
         if (Sound_IsPlaying(m, d->snd)) goto spawn;
-        d->snd = func_0022ED80(7, 4, (int)m);
+        d->snd = Moby_PlaySound(7, 4, (int)m);
     } else {
         idx = d->snd;
         if (idx != -1) {
@@ -1799,7 +1799,7 @@ spawn:
         float z;
         d->fE8 += D_0015EE70 * 30.0f;
         m->pos.f[2] -= d->fE8 - 2.0f;
-        z = func_00214358(&m->pos, 0, 0.5f);
+        z = ProbeGroundHeight(&m->pos, 0, 0.5f);
         m->pos.f[2] -= 2.0f;
         if (m->pos.f[2] < z) {
             m->pos.f[2] = z;
@@ -2319,7 +2319,7 @@ extern float D_L15_001621E8 SDATA(D_L15_001621E8);
 extern float D_L15_001621EC SDATA(D_L15_001621EC);
 
 /* Builds and draws the animated ring of lights around a moby: 68 vertices and colours, then two passes of 68 texture coordinates. */
-void func_L15_002EC4F8(char *moby) {
+void RingWave_DrawA(char *moby) {
     unsigned int i = 0;
     unsigned int off = 0;
     RingVars *data = *(RingVars **)(moby + 0x78);
@@ -2665,7 +2665,7 @@ void CodebotSlotUpdate(char *moby) {
         *(float *)(vA + 4) = FastSin(FastAddRots(*(float *)(moby + 0x48), -1.5707964f)) * 3.0f;
         *(int *)(vA + 8) = 0;
         func_L00_001FF240(vC, vA, moby + 0x10);
-        *(float *)(vA + 8) = func_00214358(vA, 0, 0.5f);
+        *(float *)(vA + 8) = ProbeGroundHeight(vA, 0, 0.5f);
         clear_u64_value(vB);
         *(float *)(vB + 8) = FastAddRots(*(float *)(moby + 0x48), 1.5707964f);
         Hero_ResetToPosition(vA, vB, 0x72, 0);

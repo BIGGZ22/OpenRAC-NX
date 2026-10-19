@@ -1,3 +1,4 @@
+/* fcheck: unchecked (never called in fcheck's capture run of the title, menu and level 0; OpenRAC tools/fcheck_gate.py, 2026-10-18). */
 /* Quaternion product out = A * B, with A = (A.xyz, A.w) and B = (B.xyz, B.w):
    xyz = A.w*B.xyz + B.w*A.xyz + A x B, w = A.w*B.w - dot(A.xyz, B.xyz). */
 void func_001FA588(void *out, void *a, void *b)

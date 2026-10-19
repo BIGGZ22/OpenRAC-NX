@@ -1,0 +1,518 @@
+# Ratchet & Clank (PAL): every function hostgen has no C for, or wrote C for from its assembly, and
+# whether the port needs C for it. Written by port/tools/hostgen/no_c.py (its docstring says
+# how); rows whose evidence starts with "by hand:" are kept as they are. class: a needs no C,
+# b replaced by the host on purpose, c needs C. c: the C it has now.
+name	class	kind	c	reachable	evidence
+D_0023B578	a	other spelling	none	address formed by func_00219E90 [C] (the executable)	the same function as func_0023B578, which has C: calls to this name go there
+fabsf	b	host	none	nothing: no C calls it, and it has no address	the C library's own name: hostgen writes calls to it as the host compiler's (lower.py)
+func_00112464	a	padding	none	nothing: no call, jump, branch or address of it	its first word is the linker's 0xCDCDCDCD fill (the executable)
+func_001138A4	a	padding	none	nothing: no call, jump, branch or address of it	its first word is the linker's 0xCDCDCDCD fill (the executable)
+func_001138B4	a	padding	none	nothing: no call, jump, branch or address of it	its first word is the linker's 0xCDCDCDCD fill (the executable)
+func_00113A6C	a	padding	none	nothing: no call, jump, branch or address of it	its first word is the linker's 0xCDCDCDCD fill (the executable)
+func_00113AD8	a	linker remnant	none	nothing: no call, jump, branch or address of it	the decompilation's linker remnants list (what the linker left of a stripped function)
+func_00113B6C	a	padding	none	nothing: no call, jump, branch or address of it	its first word is the linker's 0xCDCDCDCD fill (the executable)
+func_00113FFC	a	padding	none	nothing: no call, jump, branch or address of it	its first word is the linker's 0xCDCDCDCD fill (the executable)
+func_0011405C	a	padding	none	nothing: no call, jump, branch or address of it	its first word is the linker's 0xCDCDCDCD fill (the executable)
+func_001144CC	a	padding	none	nothing: no call, jump, branch or address of it	its first word is the linker's 0xCDCDCDCD fill (the executable)
+func_001144D0	a	linker remnant	translated	nothing: no call, jump, branch or address of it	the decompilation's linker remnants list (what the linker left of a stripped function)
+func_001144E8	a	linker remnant	translated	nothing: no call, jump, branch or address of it	the decompilation's linker remnants list (what the linker left of a stripped function)
+func_00114514	a	padding	none	nothing: no call, jump, branch or address of it	its first word is the linker's 0xCDCDCDCD fill (the executable)
+func_001154BC	a	padding	none	nothing: no call, jump, branch or address of it	its first word is the linker's 0xCDCDCDCD fill (the executable)
+func_00115EE0	a	linker remnant	translated	nothing: no call, jump, branch or address of it	the decompilation's linker remnants list (what the linker left of a stripped function)
+func_00116068	a	linker remnant	none	nothing: no call, jump, branch or address of it	the decompilation's linker remnants list (what the linker left of a stripped function)
+func_00116070	a	linker remnant	translated	nothing: no call, jump, branch or address of it	the decompilation's linker remnants list (what the linker left of a stripped function)
+func_00116244	a	padding	none	nothing: no call, jump, branch or address of it	its first word is the linker's 0xCDCDCDCD fill (the executable)
+func_00116CBC	a	padding	none	nothing: no call, jump, branch or address of it	its first word is the linker's 0xCDCDCDCD fill (the executable)
+func_00116D2C	a	padding	none	nothing: no call, jump, branch or address of it	its first word is the linker's 0xCDCDCDCD fill (the executable)
+func_00116F9C	a	padding	none	nothing: no call, jump, branch or address of it	its first word is the linker's 0xCDCDCDCD fill (the executable)
+func_001188C0	a	linker remnant	none	nothing: no call, jump, branch or address of it	the decompilation's linker remnants list (what the linker left of a stripped function)
+func_00118A34	a	padding	none	nothing: no call, jump, branch or address of it	its first word is the linker's 0xCDCDCDCD fill (the executable)
+func_00118A40	a	unreachable	none	nothing: no call, jump, branch or address of it	no call, jump, branch, address or data word refers to it in any program (the executable); a system call at 00118A44
+func_00118A70	a	unreachable	none	nothing: no call, jump, branch or address of it	no call, jump, branch, address or data word refers to it in any program (the executable); a system call at 00118A74
+func_00118A80	a	unreachable	none	nothing: no call, jump, branch or address of it	no call, jump, branch, address or data word refers to it in any program (the executable); a system call at 00118A84
+func_00118B30	a	unreachable	none	nothing: no call, jump, branch or address of it	no call, jump, branch, address or data word refers to it in any program (the executable); a system call at 00118B34
+func_00118B40	a	unreachable	none	nothing: no call, jump, branch or address of it	no call, jump, branch, address or data word refers to it in any program (the executable); a system call at 00118B44
+func_00118B90	a	unreachable	none	nothing: no call, jump, branch or address of it	no call, jump, branch, address or data word refers to it in any program (the executable); a system call at 00118B94
+func_00118BB0	a	unreachable	none	nothing: no call, jump, branch or address of it	no call, jump, branch, address or data word refers to it in any program (the executable); a system call at 00118BB4
+func_00118BD0	a	unreachable	none	nothing: no call, jump, branch or address of it	no call, jump, branch, address or data word refers to it in any program (the executable); a system call at 00118BD4
+func_00118C30	a	unreachable	none	nothing: no call, jump, branch or address of it	no call, jump, branch, address or data word refers to it in any program (the executable); a system call at 00118C34
+func_00118C50	a	unreachable	none	nothing: no call, jump, branch or address of it	no call, jump, branch, address or data word refers to it in any program (the executable); a system call at 00118C54
+func_00118CD0	a	unreachable	none	nothing: no call, jump, branch or address of it	no call, jump, branch, address or data word refers to it in any program (the executable); a system call at 00118CD4
+func_00118D00	a	unreachable	none	nothing: no call, jump, branch or address of it	no call, jump, branch, address or data word refers to it in any program (the executable); a system call at 00118D04
+func_00118D10	a	unreachable	none	nothing: no call, jump, branch or address of it	no call, jump, branch, address or data word refers to it in any program (the executable); a system call at 00118D14
+func_00118D20	a	unreachable	none	nothing: no call, jump, branch or address of it	no call, jump, branch, address or data word refers to it in any program (the executable); a system call at 00118D24
+func_00118D30	a	unreachable	none	nothing: no call, jump, branch or address of it	no call, jump, branch, address or data word refers to it in any program (the executable); a system call at 00118D34
+func_00118D40	a	unreachable	none	nothing: no call, jump, branch or address of it	no call, jump, branch, address or data word refers to it in any program (the executable); a system call at 00118D44
+func_00118D50	a	unreachable	none	nothing: no call, jump, branch or address of it	no call, jump, branch, address or data word refers to it in any program (the executable); a system call at 00118D54
+func_00118D70	a	unreachable	none	nothing: no call, jump, branch or address of it	no call, jump, branch, address or data word refers to it in any program (the executable); a system call at 00118D74
+func_00118D90	a	unreachable	none	nothing: no call, jump, branch or address of it	no call, jump, branch, address or data word refers to it in any program (the executable); a system call at 00118D94
+func_00118DB0	a	unreachable	none	nothing: no call, jump, branch or address of it	no call, jump, branch, address or data word refers to it in any program (the executable); a system call at 00118DB4
+func_00118DD0	b	behind host	none	called by func_00122AD8 [host] (the executable)	only functions the port replaces reach it: func_00122AD8; a system call at 00118DD4
+func_00118DF0	a	unreachable	none	nothing: no call, jump, branch or address of it	no call, jump, branch, address or data word refers to it in any program (the executable); a system call at 00118DF4
+func_00118E80	a	unreachable	none	nothing: no call, jump, branch or address of it	no call, jump, branch, address or data word refers to it in any program (the executable); a system call at 00118E84
+func_00119308	a	linker remnant	none	nothing: no call, jump, branch or address of it	the decompilation's linker remnants list (what the linker left of a stripped function)
+func_00119710	a	linker remnant	translated	nothing: no call, jump, branch or address of it	the decompilation's linker remnants list (what the linker left of a stripped function)
+func_00119760	a	linker remnant	translated	nothing: no call, jump, branch or address of it	the decompilation's linker remnants list (what the linker left of a stripped function)
+func_00119830	a	linker remnant	translated	nothing: no call, jump, branch or address of it	the decompilation's linker remnants list (what the linker left of a stripped function)
+func_00119864	a	padding	none	nothing: no call, jump, branch or address of it	its first word is the linker's 0xCDCDCDCD fill (the executable)
+func_00119D84	a	padding	none	nothing: no call, jump, branch or address of it	its first word is the linker's 0xCDCDCDCD fill (the executable)
+func_0011A770	a	linker remnant	none	nothing: no call, jump, branch or address of it	the decompilation's linker remnants list (what the linker left of a stripped function)
+func_0011AE1C	a	unreachable	translated	nothing: no call, jump, branch or address of it	no call, jump, branch, address or data word refers to it in any program (the executable)
+func_0011B6F8	a	linker remnant	translated	nothing: no call, jump, branch or address of it	the decompilation's linker remnants list (what the linker left of a stripped function)
+func_0011CAE0	a	linker remnant	translated	nothing: no call, jump, branch or address of it	the decompilation's linker remnants list (what the linker left of a stripped function)
+func_0011CCD0	a	linker remnant	none	nothing: no call, jump, branch or address of it	the decompilation's linker remnants list (what the linker left of a stripped function)
+func_0011D098	a	linker remnant	none	nothing: no call, jump, branch or address of it	the decompilation's linker remnants list (what the linker left of a stripped function)
+func_0011D358	a	linker remnant	none	nothing: no call, jump, branch or address of it	the decompilation's linker remnants list (what the linker left of a stripped function)
+func_0011D6D4	a	padding	none	nothing: no call, jump, branch or address of it	its first word is the linker's 0xCDCDCDCD fill (the executable)
+func_0011D700	a	unreachable	none	nothing: no call, jump, branch or address of it	no call, jump, branch, address or data word refers to it in any program (the executable); COP0 (mfc0) at 0011D7B8
+func_0011DA90	a	linker remnant	translated	nothing: no call, jump, branch or address of it	the decompilation's linker remnants list (what the linker left of a stripped function)
+func_0011DBE4	a	padding	none	nothing: no call, jump, branch or address of it	its first word is the linker's 0xCDCDCDCD fill (the executable)
+func_0011DD64	a	padding	none	nothing: no call, jump, branch or address of it	its first word is the linker's 0xCDCDCDCD fill (the executable)
+func_0011DDC8	a	linker remnant	none	nothing: no call, jump, branch or address of it	the decompilation's linker remnants list (what the linker left of a stripped function)
+func_0011DF0C	a	padding	none	nothing: no call, jump, branch or address of it	its first word is the linker's 0xCDCDCDCD fill (the executable)
+func_001206B0	b	behind host	translated	called by func_00120778 [host] (the executable)	only functions the port replaces reach it: func_00120778
+func_001208E4	a	padding	none	C calls it: func_00120910	by hand: its one word is the linker's 0xCDCDCDCD fill; func_00120910 (the CD library's delay) forms func_001208E4 + 4 for SetAlarm, which is func_001208E8, the alarm handler, with C (src/core/001208E8.c), not this word
+func_00120A78	a	linker remnant	translated	nothing: no call, jump, branch or address of it	the decompilation's linker remnants list (what the linker left of a stripped function)
+func_00120C58	c	needs C	translated	C calls it: func_00120CA0	translated from its assembly
+func_00120D18	a	linker remnant	translated	nothing: no call, jump, branch or address of it	the decompilation's linker remnants list (what the linker left of a stripped function)
+func_0012174C	a	padding	none	nothing: no call, jump, branch or address of it	its first word is the linker's 0xCDCDCDCD fill (the executable)
+func_00121D14	a	padding	none	nothing: no call, jump, branch or address of it	its first word is the linker's 0xCDCDCDCD fill (the executable)
+func_00121DB8	b	behind host	none	called by func_00121DC8 [host] (the executable)	only functions the port replaces reach it: func_00121DC8; a system call at 00121DBC
+func_0012213C	a	padding	none	nothing: no call, jump, branch or address of it	its first word is the linker's 0xCDCDCDCD fill (the executable)
+func_001221FC	a	padding	none	nothing: no call, jump, branch or address of it	its first word is the linker's 0xCDCDCDCD fill (the executable)
+func_001224AC	a	padding	none	nothing: no call, jump, branch or address of it	its first word is the linker's 0xCDCDCDCD fill (the executable)
+func_0012262C	a	padding	none	nothing: no call, jump, branch or address of it	its first word is the linker's 0xCDCDCDCD fill (the executable)
+func_00122814	a	padding	none	nothing: no call, jump, branch or address of it	its first word is the linker's 0xCDCDCDCD fill (the executable)
+func_00122AD4	a	padding	none	nothing: no call, jump, branch or address of it	its first word is the linker's 0xCDCDCDCD fill (the executable)
+func_00123164	a	padding	none	nothing: no call, jump, branch or address of it	its first word is the linker's 0xCDCDCDCD fill (the executable)
+func_00123278	a	linker remnant	translated	nothing: no call, jump, branch or address of it	the decompilation's linker remnants list (what the linker left of a stripped function)
+func_001235C0	a	linker remnant	none	nothing: no call, jump, branch or address of it	the decompilation's linker remnants list (what the linker left of a stripped function)
+func_00123630	a	linker remnant	translated	nothing: no call, jump, branch or address of it	the decompilation's linker remnants list (what the linker left of a stripped function)
+func_001236E8	a	linker remnant	none	nothing: no call, jump, branch or address of it	the decompilation's linker remnants list (what the linker left of a stripped function)
+func_001238A8	a	linker remnant	translated	nothing: no call, jump, branch or address of it	the decompilation's linker remnants list (what the linker left of a stripped function)
+func_001241E8	a	linker remnant	translated	nothing: no call, jump, branch or address of it	the decompilation's linker remnants list (what the linker left of a stripped function)
+func_00124338	a	linker remnant	translated	nothing: no call, jump, branch or address of it	the decompilation's linker remnants list (what the linker left of a stripped function)
+func_00124A68	a	linker remnant	translated	nothing: no call, jump, branch or address of it	the decompilation's linker remnants list (what the linker left of a stripped function)
+func_00124D10	a	linker remnant	translated	nothing: no call, jump, branch or address of it	the decompilation's linker remnants list (what the linker left of a stripped function)
+func_00125210	a	linker remnant	none	nothing: no call, jump, branch or address of it	the decompilation's linker remnants list (what the linker left of a stripped function)
+func_00125298	a	linker remnant	none	nothing: no call, jump, branch or address of it	the decompilation's linker remnants list (what the linker left of a stripped function)
+func_00125328	c	needs C	translated	C calls it: func_L00_0025BCF8	translated from its assembly
+func_00125340	a	linker remnant	translated	nothing: no call, jump, branch or address of it	the decompilation's linker remnants list (what the linker left of a stripped function)
+func_00125380	b	behind host	translated	called by func_001253F8 [host] (the executable), func_001254A0 [host] (the executable), func_00125548 [host] (the executable)	only functions the port replaces reach it: func_001253F8, func_001254A0, func_00125548
+func_001255F0	a	linker remnant	none	nothing: no call, jump, branch or address of it	the decompilation's linker remnants list (what the linker left of a stripped function)
+func_00127318	c	needs C	translated	jumped to by func_001263A8 [C] (the executable); C calls it: func_001263A8	translated from its assembly
+func_0012A2EC	a	padding	none	nothing: no call, jump, branch or address of it	its first word is the linker's 0xCDCDCDCD fill (the executable)
+func_0012AC7C	a	padding	none	nothing: no call, jump, branch or address of it	its first word is the linker's 0xCDCDCDCD fill (the executable)
+func_0012AD08	a	linker remnant	translated	nothing: no call, jump, branch or address of it	the decompilation's linker remnants list (what the linker left of a stripped function)
+func_0012BB28	a	linker remnant	translated	nothing: no call, jump, branch or address of it	the decompilation's linker remnants list (what the linker left of a stripped function)
+func_0012BB78	a	linker remnant	none	nothing: no call, jump, branch or address of it	the decompilation's linker remnants list (what the linker left of a stripped function)
+func_0012BCF0	a	linker remnant	none	nothing: no call, jump, branch or address of it	the decompilation's linker remnants list (what the linker left of a stripped function)
+func_0012CC6C	a	padding	none	nothing: no call, jump, branch or address of it	its first word is the linker's 0xCDCDCDCD fill (the executable)
+func_0012CC8C	a	padding	none	nothing: no call, jump, branch or address of it	its first word is the linker's 0xCDCDCDCD fill (the executable)
+func_0012D3E0	a	linker remnant	none	nothing: no call, jump, branch or address of it	the decompilation's linker remnants list (what the linker left of a stripped function)
+func_0012D440	a	linker remnant	translated	nothing: no call, jump, branch or address of it	the decompilation's linker remnants list (what the linker left of a stripped function)
+func_0012D868	b	host	none	nothing: no call, jump, branch or address of it	the executable's entry (crt0): the port's own start calls the game's main (func_0012DB18) itself
+func_0012DA30	b	behind host	none	address formed by func_0012D868 [host] (the executable)	only functions the port replaces reach it: func_0012D868; a system call at 0012DA34
+func_0012DFA0	a	linker remnant	translated	nothing: no call, jump, branch or address of it	the decompilation's linker remnants list (what the linker left of a stripped function)
+func_0012E058	a	linker remnant	translated	nothing: no call, jump, branch or address of it	the decompilation's linker remnants list (what the linker left of a stripped function)
+func_0012E1B8	a	linker remnant	translated	nothing: no call, jump, branch or address of it	the decompilation's linker remnants list (what the linker left of a stripped function)
+func_0012E2D8	a	linker remnant	translated	nothing: no call, jump, branch or address of it	the decompilation's linker remnants list (what the linker left of a stripped function)
+func_0012E3B0	a	linker remnant	translated	nothing: no call, jump, branch or address of it	the decompilation's linker remnants list (what the linker left of a stripped function)
+func_0012E438	a	linker remnant	translated	nothing: no call, jump, branch or address of it	the decompilation's linker remnants list (what the linker left of a stripped function)
+func_0012E490	a	linker remnant	translated	nothing: no call, jump, branch or address of it	the decompilation's linker remnants list (what the linker left of a stripped function)
+func_0012E4D8	a	linker remnant	translated	nothing: no call, jump, branch or address of it	the decompilation's linker remnants list (what the linker left of a stripped function)
+func_0012E5B8	a	linker remnant	translated	nothing: no call, jump, branch or address of it	the decompilation's linker remnants list (what the linker left of a stripped function)
+func_0012E648	a	linker remnant	translated	nothing: no call, jump, branch or address of it	the decompilation's linker remnants list (what the linker left of a stripped function)
+func_0012ED40	a	linker remnant	translated	nothing: no call, jump, branch or address of it	the decompilation's linker remnants list (what the linker left of a stripped function)
+func_0012F098	a	linker remnant	translated	nothing: no call, jump, branch or address of it	the decompilation's linker remnants list (what the linker left of a stripped function)
+func_0012F160	a	linker remnant	translated	nothing: no call, jump, branch or address of it	the decompilation's linker remnants list (what the linker left of a stripped function)
+func_0012F210	a	linker remnant	translated	nothing: no call, jump, branch or address of it	the decompilation's linker remnants list (what the linker left of a stripped function)
+func_0012F280	a	linker remnant	translated	nothing: no call, jump, branch or address of it	the decompilation's linker remnants list (what the linker left of a stripped function)
+func_001E9080	a	linker remnant	translated	nothing: no call, jump, branch or address of it	the decompilation's linker remnants list (what the linker left of a stripped function)
+func_001E94A0	a	linker remnant	translated	nothing: no call, jump, branch or address of it	the decompilation's linker remnants list (what the linker left of a stripped function)
+func_001E94C8	a	linker remnant	translated	nothing: no call, jump, branch or address of it	the decompilation's linker remnants list (what the linker left of a stripped function)
+func_001E9728	a	linker remnant	translated	nothing: no call, jump, branch or address of it	the decompilation's linker remnants list (what the linker left of a stripped function)
+func_001EC030	a	linker remnant	translated	nothing: no call, jump, branch or address of it	the decompilation's linker remnants list (what the linker left of a stripped function)
+func_001EC108	a	linker remnant	translated	nothing: no call, jump, branch or address of it	the decompilation's linker remnants list (what the linker left of a stripped function)
+func_001EC208	a	linker remnant	translated	nothing: no call, jump, branch or address of it	the decompilation's linker remnants list (what the linker left of a stripped function)
+func_001EDFD8	a	linker remnant	translated	nothing: no call, jump, branch or address of it	the decompilation's linker remnants list (what the linker left of a stripped function)
+func_001EE6D0	a	linker remnant	none	nothing: no call, jump, branch or address of it	the decompilation's linker remnants list (what the linker left of a stripped function)
+func_001EE850	a	linker remnant	translated	nothing: no call, jump, branch or address of it	the decompilation's linker remnants list (what the linker left of a stripped function)
+func_001EE9E8	a	linker remnant	none	nothing: no call, jump, branch or address of it	the decompilation's linker remnants list (what the linker left of a stripped function)
+func_001EE9F8	b	behind host	none	called by func_00212578 [host] (the executable)	only functions the port replaces reach it: func_00212578; a VU0 microprogram (vcallms) at 001EED24
+func_001F0F70	a	linker remnant	translated	nothing: no call, jump, branch or address of it	the decompilation's linker remnants list (what the linker left of a stripped function)
+func_001F0FF0	a	linker remnant	translated	nothing: no call, jump, branch or address of it	the decompilation's linker remnants list (what the linker left of a stripped function)
+func_001F1088	a	linker remnant	translated	nothing: no call, jump, branch or address of it	the decompilation's linker remnants list (what the linker left of a stripped function)
+func_001F10A0	a	linker remnant	translated	nothing: no call, jump, branch or address of it	the decompilation's linker remnants list (what the linker left of a stripped function)
+func_001F2410	a	linker remnant	translated	nothing: no call, jump, branch or address of it	the decompilation's linker remnants list (what the linker left of a stripped function)
+func_001F2550	a	linker remnant	none	nothing: no call, jump, branch or address of it	the decompilation's linker remnants list (what the linker left of a stripped function)
+func_001F4628	a	linker remnant	translated	nothing: no call, jump, branch or address of it	the decompilation's linker remnants list (what the linker left of a stripped function)
+func_001F57F8	a	linker remnant	none	nothing: no call, jump, branch or address of it	the decompilation's linker remnants list (what the linker left of a stripped function)
+func_001F62C0	a	linker remnant	none	nothing: no call, jump, branch or address of it	the decompilation's linker remnants list (what the linker left of a stripped function)
+func_001F69E8	a	linker remnant	translated	nothing: no call, jump, branch or address of it	the decompilation's linker remnants list (what the linker left of a stripped function)
+func_001F6CE0	a	linker remnant	translated	nothing: no call, jump, branch or address of it	the decompilation's linker remnants list (what the linker left of a stripped function)
+func_001F7640	a	linker remnant	translated	nothing: no call, jump, branch or address of it	the decompilation's linker remnants list (what the linker left of a stripped function)
+func_001F7C50	a	linker remnant	translated	nothing: no call, jump, branch or address of it	the decompilation's linker remnants list (what the linker left of a stripped function)
+func_001F9810	a	linker remnant	translated	nothing: no call, jump, branch or address of it	the decompilation's linker remnants list (what the linker left of a stripped function)
+func_001F9B48	a	linker remnant	none	nothing: no call, jump, branch or address of it	the decompilation's linker remnants list (what the linker left of a stripped function)
+func_001FAB20	a	linker remnant	translated	nothing: no call, jump, branch or address of it	the decompilation's linker remnants list (what the linker left of a stripped function)
+func_001FBC78	a	linker remnant	none	nothing: no call, jump, branch or address of it	the decompilation's linker remnants list (what the linker left of a stripped function)
+func_001FE4C0	a	linker remnant	translated	nothing: no call, jump, branch or address of it	the decompilation's linker remnants list (what the linker left of a stripped function)
+func_001FE580	a	linker remnant	none	nothing: no call, jump, branch or address of it	the decompilation's linker remnants list (what the linker left of a stripped function)
+func_001FF660	a	linker remnant	translated	nothing: no call, jump, branch or address of it	the decompilation's linker remnants list (what the linker left of a stripped function)
+func_001FF950	a	linker remnant	none	nothing: no call, jump, branch or address of it	the decompilation's linker remnants list (what the linker left of a stripped function)
+func_001FFD98	a	linker remnant	translated	nothing: no call, jump, branch or address of it	the decompilation's linker remnants list (what the linker left of a stripped function)
+func_001FFE18	a	linker remnant	translated	nothing: no call, jump, branch or address of it	the decompilation's linker remnants list (what the linker left of a stripped function)
+func_001FFF08	a	linker remnant	translated	nothing: no call, jump, branch or address of it	the decompilation's linker remnants list (what the linker left of a stripped function)
+func_00200190	a	linker remnant	translated	nothing: no call, jump, branch or address of it	the decompilation's linker remnants list (what the linker left of a stripped function)
+func_002008B0	a	linker remnant	translated	nothing: no call, jump, branch or address of it	the decompilation's linker remnants list (what the linker left of a stripped function)
+func_00201948	a	linker remnant	translated	nothing: no call, jump, branch or address of it	the decompilation's linker remnants list (what the linker left of a stripped function)
+func_00201AE0	a	linker remnant	translated	nothing: no call, jump, branch or address of it	the decompilation's linker remnants list (what the linker left of a stripped function)
+func_00202258	a	linker remnant	translated	nothing: no call, jump, branch or address of it	the decompilation's linker remnants list (what the linker left of a stripped function)
+func_00202EF8	a	linker remnant	translated	nothing: no call, jump, branch or address of it	the decompilation's linker remnants list (what the linker left of a stripped function)
+func_00205218	a	linker remnant	translated	nothing: no call, jump, branch or address of it	the decompilation's linker remnants list (what the linker left of a stripped function)
+func_00208858	a	linker remnant	none	nothing: no call, jump, branch or address of it	the decompilation's linker remnants list (what the linker left of a stripped function)
+func_00208D30	a	linker remnant	none	nothing: no call, jump, branch or address of it	the decompilation's linker remnants list (what the linker left of a stripped function)
+func_0020C738	b	behind host	none	called by func_0020C468 [host] (the executable, every level)	only functions the port replaces reach it: func_0020C468; it reads $3, $14 at 0020C738 before writing it: an input outside the argument registers
+func_0020C758	b	behind host	none	called by func_0020C468 [host] (the executable)	only functions the port replaces reach it: func_0020C468; it reads $3 at 0020C758 before writing it: an input outside the argument registers
+func_0020D828	a	linker remnant	translated	nothing: no call, jump, branch or address of it	the decompilation's linker remnants list (what the linker left of a stripped function)
+func_0020D928	a	linker remnant	translated	nothing: no call, jump, branch or address of it	the decompilation's linker remnants list (what the linker left of a stripped function)
+func_0020DC38	a	linker remnant	translated	nothing: no call, jump, branch or address of it	the decompilation's linker remnants list (what the linker left of a stripped function)
+func_0020E330	a	linker remnant	translated	nothing: no call, jump, branch or address of it	the decompilation's linker remnants list (what the linker left of a stripped function)
+func_0020E838	a	piece	none	jumped to by func_0020E6B8 [C] (the executable, every level)	only the branches and jumps of func_0020E6B8 [C] reach it: part of that function's code; it reads $15 at 0020E838 before writing it: an input outside the argument registers
+func_0020EF30	b	behind host	translated	called by func_00212578 [host] (the executable)	only functions the port replaces reach it: func_00212578
+func_002108E0	b	behind host	none	called by func_001EFE10 [host] (the executable), func_00228A58 [host] (the executable)	only functions the port replaces reach it: func_001EFE10, func_00228A58; it reads $24 at 002108E8 before writing it: an input outside the argument registers
+func_00213BAC	a	linker remnant	translated	nothing: no call, jump, branch or address of it	the decompilation's linker remnants list (what the linker left of a stripped function)
+func_00213C70	a	linker remnant	translated	nothing: no call, jump, branch or address of it	the decompilation's linker remnants list (what the linker left of a stripped function)
+func_00213D10	a	linker remnant	translated	nothing: no call, jump, branch or address of it	the decompilation's linker remnants list (what the linker left of a stripped function)
+func_00214080	a	linker remnant	none	nothing: no call, jump, branch or address of it	the decompilation's linker remnants list (what the linker left of a stripped function)
+func_002140F0	a	linker remnant	translated	nothing: no call, jump, branch or address of it	the decompilation's linker remnants list (what the linker left of a stripped function)
+func_002142B8	a	linker remnant	translated	nothing: no call, jump, branch or address of it	the decompilation's linker remnants list (what the linker left of a stripped function)
+func_002143D0	a	linker remnant	translated	nothing: no call, jump, branch or address of it	the decompilation's linker remnants list (what the linker left of a stripped function)
+func_00214538	a	linker remnant	none	nothing: no call, jump, branch or address of it	the decompilation's linker remnants list (what the linker left of a stripped function)
+func_00214770	a	linker remnant	translated	nothing: no call, jump, branch or address of it	the decompilation's linker remnants list (what the linker left of a stripped function)
+func_00214CF8	a	linker remnant	translated	nothing: no call, jump, branch or address of it	the decompilation's linker remnants list (what the linker left of a stripped function)
+func_00214D80	a	linker remnant	translated	nothing: no call, jump, branch or address of it	the decompilation's linker remnants list (what the linker left of a stripped function)
+func_00214F50	a	linker remnant	translated	nothing: no call, jump, branch or address of it	the decompilation's linker remnants list (what the linker left of a stripped function)
+func_00215038	a	linker remnant	translated	nothing: no call, jump, branch or address of it	the decompilation's linker remnants list (what the linker left of a stripped function)
+func_002150A8	a	linker remnant	translated	nothing: no call, jump, branch or address of it	the decompilation's linker remnants list (what the linker left of a stripped function)
+func_00215378	a	linker remnant	translated	nothing: no call, jump, branch or address of it	the decompilation's linker remnants list (what the linker left of a stripped function)
+func_00215518	a	linker remnant	translated	nothing: no call, jump, branch or address of it	the decompilation's linker remnants list (what the linker left of a stripped function)
+func_00215648	a	linker remnant	translated	nothing: no call, jump, branch or address of it	the decompilation's linker remnants list (what the linker left of a stripped function)
+func_00215788	a	linker remnant	translated	nothing: no call, jump, branch or address of it	the decompilation's linker remnants list (what the linker left of a stripped function)
+func_002158E0	a	linker remnant	translated	nothing: no call, jump, branch or address of it	the decompilation's linker remnants list (what the linker left of a stripped function)
+func_00215BA8	a	linker remnant	translated	nothing: no call, jump, branch or address of it	the decompilation's linker remnants list (what the linker left of a stripped function)
+func_00215CA0	a	linker remnant	translated	nothing: no call, jump, branch or address of it	the decompilation's linker remnants list (what the linker left of a stripped function)
+func_00215F20	a	linker remnant	translated	nothing: no call, jump, branch or address of it	the decompilation's linker remnants list (what the linker left of a stripped function)
+func_00217AD0	a	linker remnant	translated	nothing: no call, jump, branch or address of it	the decompilation's linker remnants list (what the linker left of a stripped function)
+func_00217ED8	a	linker remnant	translated	nothing: no call, jump, branch or address of it	the decompilation's linker remnants list (what the linker left of a stripped function)
+func_00218A78	a	linker remnant	none	branched to by func_L00_0024E798 [C] (every level)	the decompilation's linker remnants list (what the linker left of a stripped function)
+func_00219704	b	piece	translated	branched to by func_00218B10 [host] (the executable, every level)	only the branches and jumps of func_00218B10 [host] reach it: part of that function's code
+func_00219778	a	linker remnant	translated	nothing: no call, jump, branch or address of it	the decompilation's linker remnants list (what the linker left of a stripped function)
+func_00219958	a	linker remnant	translated	nothing: no call, jump, branch or address of it	the decompilation's linker remnants list (what the linker left of a stripped function)
+func_00219E48	a	linker remnant	translated	nothing: no call, jump, branch or address of it	the decompilation's linker remnants list (what the linker left of a stripped function)
+func_00226808	a	linker remnant	translated	nothing: no call, jump, branch or address of it	the decompilation's linker remnants list (what the linker left of a stripped function)
+func_002282B8	a	linker remnant	translated	nothing: no call, jump, branch or address of it	the decompilation's linker remnants list (what the linker left of a stripped function)
+func_0022BEB0	a	linker remnant	translated	nothing: no call, jump, branch or address of it	the decompilation's linker remnants list (what the linker left of a stripped function)
+func_0022C9A0	a	linker remnant	translated	nothing: no call, jump, branch or address of it	the decompilation's linker remnants list (what the linker left of a stripped function)
+func_0022D1DC	b	piece	none	branched to by func_0022CEB8 [host] (the executable, levels 0,2,5,6,7,13,15,17)	only the branches and jumps of func_0022CEB8 [host] reach it: part of that function's code; it reads $13 at 0022D254 before writing it: an input outside the argument registers
+func_0022D6B4	b	piece	none	jumped to by func_0022D520 [host] (the executable, every level)	only the branches and jumps of func_0022D520 [host] reach it: part of that function's code; it reads $1 at 0022D6BC before writing it: an input outside the argument registers
+func_0022EF50	a	linker remnant	translated	nothing: no call, jump, branch or address of it	the decompilation's linker remnants list (what the linker left of a stripped function)
+func_0022F120	a	linker remnant	translated	nothing: no call, jump, branch or address of it	the decompilation's linker remnants list (what the linker left of a stripped function)
+func_0022F498	a	linker remnant	translated	nothing: no call, jump, branch or address of it	the decompilation's linker remnants list (what the linker left of a stripped function)
+func_00234B98	a	linker remnant	none	nothing: no call, jump, branch or address of it	the decompilation's linker remnants list (what the linker left of a stripped function)
+func_00234C48	a	linker remnant	none	nothing: no call, jump, branch or address of it	the decompilation's linker remnants list (what the linker left of a stripped function)
+func_00234D50	a	linker remnant	none	nothing: no call, jump, branch or address of it	the decompilation's linker remnants list (what the linker left of a stripped function)
+func_00234E78	a	linker remnant	translated	nothing: no call, jump, branch or address of it	the decompilation's linker remnants list (what the linker left of a stripped function)
+func_00234FA0	a	linker remnant	none	nothing: no call, jump, branch or address of it	the decompilation's linker remnants list (what the linker left of a stripped function)
+func_00235008	a	linker remnant	translated	nothing: no call, jump, branch or address of it	the decompilation's linker remnants list (what the linker left of a stripped function)
+func_00239180	a	linker remnant	translated	nothing: no call, jump, branch or address of it	the decompilation's linker remnants list (what the linker left of a stripped function)
+func_00239610	a	linker remnant	translated	nothing: no call, jump, branch or address of it	the decompilation's linker remnants list (what the linker left of a stripped function)
+func_0023A5D8	a	linker remnant	translated	nothing: no call, jump, branch or address of it	the decompilation's linker remnants list (what the linker left of a stripped function)
+func_0023B008	a	linker remnant	translated	nothing: no call, jump, branch or address of it	the decompilation's linker remnants list (what the linker left of a stripped function)
+func_0023B1E8	a	linker remnant	translated	nothing: no call, jump, branch or address of it	the decompilation's linker remnants list (what the linker left of a stripped function)
+func_0023B510	a	linker remnant	translated	nothing: no call, jump, branch or address of it	the decompilation's linker remnants list (what the linker left of a stripped function)
+func_0023C080	a	linker remnant	translated	nothing: no call, jump, branch or address of it	the decompilation's linker remnants list (what the linker left of a stripped function)
+func_0023DF98	a	linker remnant	translated	nothing: no call, jump, branch or address of it	the decompilation's linker remnants list (what the linker left of a stripped function)
+func_0023E0D0	a	linker remnant	translated	nothing: no call, jump, branch or address of it	the decompilation's linker remnants list (what the linker left of a stripped function)
+func_L00_001EADE8	a	unreachable	none	nothing: no call, jump, branch or address of it	no call, jump, branch, address or data word refers to it in any program (every level); it reads $2 at 001EADE8 before writing it: an input outside the argument registers
+func_L00_001EADEC	a	unreachable	none	nothing: no call, jump, branch or address of it	no call, jump, branch, address or data word refers to it in any program (every level); it reads $2 at 001EADF4 before writing it: an input outside the argument registers
+func_L00_001EB0A0	a	unreachable	none	nothing: no call, jump, branch or address of it	no call, jump, branch, address or data word refers to it in any program (every level); it reads $3 at 001EB0A0 before writing it: an input outside the argument registers
+func_L00_001EB0A4	a	unreachable	none	nothing: no call, jump, branch or address of it	no call, jump, branch, address or data word refers to it in any program (every level); it reads $2 at 001EB0A4 before writing it: an input outside the argument registers
+func_L00_001EB194	a	unreachable	translated	nothing: no call, jump, branch or address of it	no call, jump, branch, address or data word refers to it in any program (every level)
+func_L00_001EB1A4	a	piece	translated	nothing: no call, jump, branch or address of it	config/overlays/joined.tsv: a piece of the function before it
+func_L00_001EB438	a	unreachable	translated	nothing: no call, jump, branch or address of it	no call, jump, branch, address or data word refers to it in any program (every level)
+func_L00_001EB564	a	piece	translated	nothing: no call, jump, branch or address of it	config/overlays/joined.tsv: a piece of the function before it
+func_L00_001EB598	a	piece	none	branched to by func_L00_001EB578 [C] (every level)	only the branches and jumps of func_L00_001EB578 [C] reach it: part of that function's code; it reads $3 at 001EB598 before writing it: an input outside the argument registers
+func_L00_001EB5A8	a	unreachable	translated	nothing: no call, jump, branch or address of it	no call, jump, branch, address or data word refers to it in any program (every level)
+func_L00_001EB5B0	a	linker remnant	translated	nothing: no call, jump, branch or address of it	the decompilation's linker remnants list (what the linker left of a stripped function)
+func_L00_001ED380	a	piece	translated	branched to by func_L00_001ED2C0 [C] (every level)	only the branches and jumps of func_L00_001ED2C0 [C] reach it: part of that function's code
+func_L00_001ED3D4	a	piece	none	branched to by func_L00_001ED380 [translated] (every level)	only the branches and jumps of func_L00_001ED380 [translated] reach it: part of that function's code; it reads $2 at 001ED3D4 before writing it: an input outside the argument registers
+func_L00_001ED460	a	unreachable	none	nothing: no call, jump, branch or address of it	no call, jump, branch, address or data word refers to it in any program (every level); it reads $2 at 001ED460 before writing it: an input outside the argument registers
+func_L00_001ED464	a	unreachable	none	nothing: no call, jump, branch or address of it	no call, jump, branch, address or data word refers to it in any program (every level); it reads $3 at 001ED464 before writing it: an input outside the argument registers
+func_L00_001EDBF8	a	linker remnant	none	nothing: no call, jump, branch or address of it	the decompilation's linker remnants list (what the linker left of a stripped function)
+func_L00_001EEBD8	b	behind host	none	called by func_00212578 [host] (every level)	only functions the port replaces reach it: func_00212578; a VU0 microprogram (vcallms) at 001EEF04
+func_L00_001EF944	b	piece	none	branched to by func_L00_001EEBD8 [no C] (every level)	only the branches and jumps of func_L00_001EEBD8 [host] reach it: part of that function's code; a VU0 microprogram (vcallms) at 001EEF04
+func_L00_001F07A8	a	unreachable	none	nothing: no call, jump, branch or address of it	no call, jump, branch, address or data word refers to it in any program (every level); it reads $2 at 001F07A8 before writing it: an input outside the argument registers
+func_L00_001F07AC	a	piece	none	nothing: no call, jump, branch or address of it	config/overlays/joined.tsv: a piece of the function before it
+func_L00_001F080C	a	unreachable	none	nothing: no call, jump, branch or address of it	no call, jump, branch, address or data word refers to it in any program (every level); it reads $1 at 001F080C before writing it: an input outside the argument registers
+func_L00_001F10B0	a	piece	translated	branched to by func_L00_001F080C [no C] (every level)	config/overlays/joined.tsv: a piece of the function before it
+func_L00_001F34B0	a	piece	translated	branched to by func_L00_001F2BE8 [host] (every level)	config/overlays/joined.tsv: a piece of the function before it
+func_L00_001F3DF0	a	linker remnant	translated	nothing: no call, jump, branch or address of it	the decompilation's linker remnants list (what the linker left of a stripped function)
+func_L00_001F7110	a	other spelling	none	called by func_L00_002465F8 [C] (level 0)	the same function as func_001E9768, which has C: calls to this name go there
+func_L00_001F7118	a	other spelling	none	called by func_001F3D78 [C] (level 0), func_L00_002465F8 [C] (level 0), func_0020DEB0 [C] (level 0) and 8 more	the same function as func_001E9768, which has C: calls to this name go there
+func_L00_001F7120	a	other spelling	none	called by func_001F3D78 [C] (level 0), func_L00_002465F8 [C] (level 0), func_0020E0C8 [C] (level 0) and 6 more	the same function as func_001E9768, which has C: calls to this name go there
+func_L00_001F767C	a	piece	none	branched to by func_L00_001F75F8 [C] (every level)	only the branches and jumps of func_L00_001F75F8 [C] reach it: part of that function's code; it reads $2 at 001F767C before writing it: an input outside the argument registers
+func_L00_001FD428	b	piece	none	branched to by func_L00_001FD1D8 [host] (every level)	only the branches and jumps of func_L00_001FD1D8 [host] reach it: part of that function's code; VU0 clipping (vclipw) at 001FD448
+func_L00_001FD6A8	b	piece	translated	branched to by func_L00_001FD428 [no C] (every level)	only the branches and jumps of func_L00_001FD1D8 [host] reach it: part of that function's code
+func_L00_001FEE20	a	linker remnant	translated	nothing: no call, jump, branch or address of it	the decompilation's linker remnants list (what the linker left of a stripped function)
+func_L00_001FEFE0	a	unreachable	translated	nothing: no call, jump, branch or address of it	no call, jump, branch, address or data word refers to it in any program (every level)
+func_L00_001FF4F0	a	piece	translated	branched to by func_L00_001FF4B0 [C] (every level)	config/overlays/joined.tsv: a piece of the function before it
+func_L00_001FF538	a	piece	translated	branched to by func_L00_001FF500 [C] (every level)	config/overlays/joined.tsv: a piece of the function before it
+func_L00_001FFB78	a	piece	none	jumped to by func_L00_001FFA40 [C] (every level)	only the branches and jumps of func_L00_001FFA40 [C] reach it: part of that function's code; it reads $f11 at 001FFB78 before writing it: an input outside the argument registers
+func_L00_0020079C	a	unreachable	none	nothing: no call, jump, branch or address of it	no call, jump, branch, address or data word refers to it in any program (every level); it reads $3 at 002007A0 before writing it: an input outside the argument registers
+func_L00_002007A0	a	unreachable	none	nothing: no call, jump, branch or address of it	no call, jump, branch, address or data word refers to it in any program (every level); it reads $3 at 002007A0 before writing it: an input outside the argument registers
+func_L00_00203ED8	c	needs C	translated	address held in data at data 001E7F04 (every level)	translated from its assembly
+func_L00_00205158	a	piece	translated	branched to by func_L00_00205110 [C] (every level)	only the branches and jumps of func_L00_00205110 [C] reach it: part of that function's code
+func_L00_00205754	a	piece	none	branched to by func_L00_00205728 [C] (every level)	only the branches and jumps of func_L00_00205728 [C] reach it: part of that function's code; it reads $2 at 00205754 before writing it: an input outside the argument registers
+func_L00_00205768	a	piece	none	branched to by func_L00_00205754 [no C] (every level)	only the branches and jumps of func_L00_00205728 [C] reach it: part of that function's code; it reads $2 at 00205768 before writing it: an input outside the argument registers
+func_L00_00205778	a	piece	none	branched to by func_L00_00205768 [no C] (every level)	only the branches and jumps of func_L00_00205728 [C] reach it: part of that function's code; it reads $3 at 0020577C before writing it: an input outside the argument registers
+func_L00_0020DCB4	c	needs C	translated	address held in data at data 001E7FC0 (levels 0,1,2,3,4,6,7,8,9,10,11,12,13,14,15,17,18)	translated from its assembly
+func_L00_00217680	a	piece	none	branched to by func_L00_00217648 [C] (levels 0,1,3,4,5,7,8,9,10,11,12,13,15,16,17,18)	config/overlays/joined.tsv: a piece of the function before it
+func_L00_00232A30	a	piece	none	branched to by func_L00_00232A3C [no C] (every level)	only the branches and jumps of func_L00_00232A18 [C] reach it: part of that function's code; it reads $3 at 00232A38 before writing it: an input outside the argument registers
+func_L00_00232A3C	a	piece	none	branched to by func_L00_00232A18 [C] (every level)	only the branches and jumps of func_L00_00232A18 [C] reach it: part of that function's code; it reads $3 at 00232A40 before writing it: an input outside the argument registers
+func_L00_00234674	a	piece	none	branched to by func_L00_00234638 [C] (every level)	only the branches and jumps of func_L00_00234638 [C] reach it: part of that function's code; it reads $2 at 00234678 before writing it: an input outside the argument registers
+func_L00_002366DC	a	piece	translated	branched to by func_L00_00236610 [C] (every level)	config/overlays/joined.tsv: a piece of the function before it
+func_L00_00238128	a	other spelling	none	C calls it: func_L00_002DBC40	the same function as func_L00_00237B70, which has C: calls to this name go there
+func_L00_0023AB88	a	linker remnant	translated	nothing: no call, jump, branch or address of it	the decompilation's linker remnants list (what the linker left of a stripped function)
+func_L00_0023B430	a	linker remnant	translated	nothing: no call, jump, branch or address of it	the decompilation's linker remnants list (what the linker left of a stripped function)
+func_L00_0023D838	a	linker remnant	translated	nothing: no call, jump, branch or address of it	the decompilation's linker remnants list (what the linker left of a stripped function)
+func_L00_00240D80	a	piece	none	branched to by func_L00_00240CE0 [C] (every level)	only the branches and jumps of func_L00_00240CE0 [C] reach it: part of that function's code; it reads $12 at 00240D80 before writing it: an input outside the argument registers
+func_L00_00240DE0	a	piece	translated	branched to by func_L00_00240D80 [no C] (every level)	only the branches and jumps of func_L00_00240CE0 [C] reach it: part of that function's code
+func_L00_002474C4	a	piece	translated	branched to by func_L00_00247478 [C] (every level)	config/overlays/joined.tsv: a piece of the function before it
+func_L00_00247650	a	piece	none	branched to by func_L00_00247620 [C] (every level)	config/overlays/joined.tsv: a piece of the function before it
+func_L00_002477D0	a	piece	none	branched to by func_L00_002477A0 [C] (every level)	config/overlays/joined.tsv: a piece of the function before it
+func_L00_00249F40	a	piece	translated	branched to by func_L00_00249EE0 [C] (every level)	config/overlays/joined.tsv: a piece of the function before it
+func_L00_0024A12C	a	piece	none	branched to by func_L00_0024A110 [C] (every level)	config/overlays/joined.tsv: a piece of the function before it
+func_L00_0024A1E4	a	piece	translated	branched to by func_L00_0024A198 [C] (every level)	config/overlays/joined.tsv: a piece of the function before it
+func_L00_0024A25C	a	piece	translated	branched to by func_L00_0024A210 [C] (every level)	config/overlays/joined.tsv: a piece of the function before it
+func_L00_0024A4DC	a	piece	translated	branched to by func_L00_0024A490 [C] (every level)	config/overlays/joined.tsv: a piece of the function before it
+func_L00_0024B2A4	a	piece	none	branched to by func_L00_0024B200 [C] (every level)	config/overlays/joined.tsv: a piece of the function before it
+func_L00_0024B788	a	piece	translated	branched to by func_L00_0024B750 [C] (every level)	only the branches and jumps of func_L00_0024B750 [C] reach it: part of that function's code
+func_L00_0024B7AC	a	piece	translated	branched to by func_L00_0024B788 [translated] (every level)	only the branches and jumps of func_L00_0024B788 [translated] reach it: part of that function's code
+func_L00_0024B8F0	a	piece	none	branched to by func_L00_0024B8B0 [C] (every level)	only the branches and jumps of func_L00_0024B8B0 [C] reach it: part of that function's code; it reads $2, $3 at 0024B8F0 before writing it: an input outside the argument registers
+func_L00_0024B908	a	piece	none	branched to by func_L00_0024B8F0 [no C] (every level)	only the branches and jumps of func_L00_0024B8B0 [C] reach it: part of that function's code; it reads $2, $3 at 0024B908 before writing it: an input outside the argument registers
+func_L00_0024B940	a	piece	none	branched to by func_L00_0024B920 [C] (every level)	config/overlays/joined.tsv: a piece of the function before it
+func_L00_0024B980	a	piece	none	branched to by func_L00_0024B960 [C] (every level)	only the branches and jumps of func_L00_0024B960 [C] reach it: part of that function's code; it reads $3 at 0024B980 before writing it: an input outside the argument registers
+func_L00_0024B9A8	a	piece	translated	branched to by func_L00_0024B980 [no C] (every level)	only the branches and jumps of func_L00_0024B960 [C] reach it: part of that function's code
+func_L00_0024B9B4	a	piece	none	branched to by func_L00_0024B980 [no C] (every level)	only the branches and jumps of func_L00_0024B960 [C] reach it: part of that function's code; it reads $3 at 0024B9B4 before writing it: an input outside the argument registers
+func_L00_0024BA60	a	piece	none	branched to by func_L00_0024BA10 [C] (every level), func_L00_0024BF30 [C] (every level)	config/overlays/joined.tsv: a piece of the function before it
+func_L00_0024BA8C	a	piece	none	branched to by func_L00_0024BA70 [C] (every level)	config/overlays/joined.tsv: a piece of the function before it
+func_L00_0024BB5C	a	piece	translated	branched to by func_L00_0024BAE8 [C] (every level)	only the branches and jumps of func_L00_0024BAE8 [C] reach it: part of that function's code
+func_L00_0024BB90	a	piece	none	branched to by func_L00_0024BB5C [translated] (every level)	only the branches and jumps of func_L00_0024BB5C [translated] reach it: part of that function's code; it reads $2 at 0024BB94 before writing it: an input outside the argument registers
+func_L00_0024BB98	a	piece	none	branched to by func_L00_0024BB5C [translated] (every level)	only the branches and jumps of func_L00_0024BB5C [translated] reach it: part of that function's code; it reads $2 at 0024BB98 before writing it: an input outside the argument registers
+func_L00_0024BBCC	a	piece	none	branched to by func_L00_0024BA70 [C] (every level)	only the branches and jumps of func_L00_0024BA70 [C] reach it: part of that function's code; it reads $2 at 0024BBCC before writing it: an input outside the argument registers
+func_L00_0024BC04	a	piece	none	branched to by func_L00_0024BBE8 [C] (every level)	only the branches and jumps of func_L00_0024BBE8 [C] reach it: part of that function's code; it reads $3 at 0024BC04 before writing it: an input outside the argument registers
+func_L00_0024BC38	a	piece	none	branched to by func_L00_0024BC04 [no C] (every level)	only the branches and jumps of func_L00_0024BBE8 [C] reach it: part of that function's code; it reads $3 at 0024BC38 before writing it: an input outside the argument registers
+func_L00_0024BCF0	a	piece	none	branched to by func_L00_0024BCA0 [C] (every level)	config/overlays/joined.tsv: a piece of the function before it
+func_L00_0024BD84	a	piece	none	branched to by func_L00_0024BD18 [C] (every level)	only the branches and jumps of func_L00_0024BD18 [C] reach it: part of that function's code; it reads $3 at 0024BD84 before writing it: an input outside the argument registers
+func_L00_0024BDB8	a	piece	none	branched to by func_L00_0024BD84 [no C] (every level)	only the branches and jumps of func_L00_0024BD18 [C] reach it: part of that function's code; it reads $2 at 0024BDB8 before writing it: an input outside the argument registers
+func_L00_0024BFB8	a	piece	none	branched to by func_L00_0024B960 [C] (every level)	only the branches and jumps of func_L00_0024B960 [C] reach it: part of that function's code; it reads $3 at 0024BFB8 before writing it: an input outside the argument registers
+func_L00_0024BFFC	a	piece	none	branched to by func_L00_0024BBE8 [C] (every level)	only the branches and jumps of func_L00_0024BBE8 [C] reach it: part of that function's code; it reads $3 at 0024BFFC before writing it: an input outside the argument registers
+func_L00_0024EF28	a	piece	none	branched to by func_L00_0024EEF0 [C] (every level)	config/overlays/joined.tsv: a piece of the function before it
+func_L00_0024F198	a	piece	none	branched to by func_L00_0024F170 [C] (every level)	config/overlays/joined.tsv: a piece of the function before it
+func_L00_0024FEF8	a	linker remnant	translated	nothing: no call, jump, branch or address of it	the decompilation's linker remnants list (what the linker left of a stripped function)
+func_L00_00250700	a	piece	none	branched to by func_L00_002506D0 [C] (every level)	config/overlays/joined.tsv: a piece of the function before it
+func_L00_002513C8	a	piece	none	branched to by func_L00_00251388 [C] (every level)	config/overlays/joined.tsv: a piece of the function before it
+func_L00_00251438	a	piece	none	branched to by func_L00_002513F8 [C] (every level)	config/overlays/joined.tsv: a piece of the function before it
+func_L00_00251570	a	piece	none	branched to by func_L00_002514B8 [C] (every level)	only the branches and jumps of func_L00_002514B8 [C] reach it: part of that function's code; it reads $f1, $f3 at 00251570 before writing it: an input outside the argument registers
+func_L00_00251628	a	piece	none	address held in data at data 00173AF4 (level 3); branched to by func_L00_00251570 [no C] (every level)	by hand: part of func_L00_002514B8's hand-written code (its functional C covers it), reached only by func_L00_00251570's bne at 0x251598, itself part of it; the level 3 data word at 0x173AF4 that equals its address there is two halfword fields of a 16-byte record in a table of them, not a pointer
+func_L00_002516C8	a	piece	none	branched to by func_L00_002514B8 [C] (every level), func_L00_00251570 [no C] (every level), func_L00_00251628 [no C] (every level)	only the branches and jumps of func_L00_002514B8 [C] reach it: part of that function's code; it reads $15, $24 at 002516CC before writing it: an input outside the argument registers
+func_L00_00251D18	a	piece	none	branched to by func_L00_00251B58 [C] (every level)	config/overlays/joined.tsv: a piece of the function before it
+func_L00_00251F38	a	piece	none	branched to by func_L00_00251E30 [C] (every level)	config/overlays/joined.tsv: a piece of the function before it
+func_L00_00252018	b	behind host	translated	called by func_00212578 [host] (every level)	only functions the port replaces reach it: func_00212578
+func_L00_002535C8	b	piece	none	branched to by func_L00_00252D20 [host] (every level)	only the branches and jumps of func_L00_00252D20 [host] reach it: part of that function's code; COP0 branch at 002535B0
+func_L00_00254130	a	piece	none	branched to by func_L00_002539C8 [C] (every level)	config/overlays/joined.tsv: a piece of the function before it
+func_L00_00254A70	b	piece	translated	branched to by func_L00_00254218 [host] (every level)	only the branches and jumps of func_L00_00254218 [host] reach it: part of that function's code
+func_L00_002569F8	c	needs C	translated	called by func_0020E180 [C] (every level), func_0020E2B0 [C] (every level)	translated from its assembly
+func_L00_00257848	a	piece	translated	branched to by func_L00_002569F8 [translated] (every level)	only the branches and jumps of func_L00_002569F8 [translated] reach it: part of that function's code
+func_L00_00257EBC	a	piece	none	branched to by func_L00_00257E18 [C] (every level)	config/overlays/joined.tsv: a piece of the function before it
+func_L00_00257FB4	a	piece	translated	branched to by func_L00_00257F4C [C] (every level)	only the branches and jumps of func_L00_00257F4C [C] reach it: part of that function's code
+func_L00_0025804C	a	piece	translated	branched to by func_L00_00257FB4 [translated] (every level)	only the branches and jumps of func_L00_00257FB4 [translated] reach it: part of that function's code
+func_L00_00259418	a	linker remnant	translated	nothing: no call, jump, branch or address of it	the decompilation's linker remnants list (what the linker left of a stripped function)
+func_L00_0025A1D8	a	linker remnant	translated	nothing: no call, jump, branch or address of it	the decompilation's linker remnants list (what the linker left of a stripped function)
+func_L00_0025A344	a	piece	none	branched to by func_L00_0025A2F0 [C] (every level)	only the branches and jumps of func_L00_0025A2F0 [C] reach it: part of that function's code; it reads $2 at 0025A344 before writing it: an input outside the argument registers
+func_L00_0025A43C	a	piece	none	branched to by func_L00_0025A344 [no C] (every level)	only the branches and jumps of func_L00_0025A2F0 [C] reach it: part of that function's code; it reads $2 at 0025A43C before writing it: an input outside the argument registers
+func_L00_0025A458	a	linker remnant	translated	nothing: no call, jump, branch or address of it	the decompilation's linker remnants list (what the linker left of a stripped function)
+func_L00_0025A848	a	linker remnant	translated	nothing: no call, jump, branch or address of it	the decompilation's linker remnants list (what the linker left of a stripped function)
+func_L00_0025B168	a	linker remnant	none	nothing: no call, jump, branch or address of it	the decompilation's linker remnants list (what the linker left of a stripped function)
+func_L00_0025B4AC	a	piece	none	branched to by func_L00_0025B478 [C] (every level)	only the branches and jumps of func_L00_0025B478 [C] reach it: part of that function's code; it reads $2 at 0025B4AC before writing it: an input outside the argument registers
+func_L00_0025C488	a	linker remnant	translated	nothing: no call, jump, branch or address of it	the decompilation's linker remnants list (what the linker left of a stripped function)
+func_L00_0025D3A0	a	piece	none	branched to by func_L00_0025D390 [C] (every level)	config/overlays/joined.tsv: a piece of the function before it
+func_L00_0025D3D0	b	piece	none	branched to by func_L00_0025D3C0 [host] (every level)	only the branches and jumps of func_L00_0025D3C0 [host] reach it: part of that function's code; it reads $2 at 0025D3D0 before writing it: an input outside the argument registers
+func_L00_0025E828	a	piece	translated	branched to by func_L00_0025E7F8 [C] (levels 0,1,3,4,5,6,7,8,9,10,12,13,14,15,16,17,18)	config/overlays/joined.tsv: a piece of the function before it
+func_L00_0025F360	a	linker remnant	translated	nothing: no call, jump, branch or address of it	the decompilation's linker remnants list (what the linker left of a stripped function)
+func_L00_0025F420	a	piece	none	branched to by func_L00_0025F410 [C] (every level)	config/overlays/joined.tsv: a piece of the function before it
+func_L00_002608D0	a	piece	none	branched to by func_L00_00260878 [C] (every level)	config/overlays/joined.tsv: a piece of the function before it
+func_L00_0026093C	a	piece	translated	branched to by func_L00_002608F0 [C] (every level)	config/overlays/joined.tsv: a piece of the function before it
+func_L00_00261458	b	piece	none	branched to by func_L00_00261448 [host] (every level)	only the branches and jumps of func_L00_00261448 [host] reach it: part of that function's code; it reads $2 at 00261458 before writing it: an input outside the argument registers
+func_L00_00262450	a	piece	none	branched to by func_L00_002623D0 [C] (every level)	config/overlays/joined.tsv: a piece of the function before it
+func_L00_00262DE8	a	linker remnant	translated	nothing: no call, jump, branch or address of it	the decompilation's linker remnants list (what the linker left of a stripped function)
+func_L00_00263938	a	linker remnant	translated	nothing: no call, jump, branch or address of it	the decompilation's linker remnants list (what the linker left of a stripped function)
+func_L00_00264130	a	linker remnant	translated	nothing: no call, jump, branch or address of it	the decompilation's linker remnants list (what the linker left of a stripped function)
+func_L00_00264860	a	linker remnant	translated	nothing: no call, jump, branch or address of it	the decompilation's linker remnants list (what the linker left of a stripped function)
+func_L00_00264BD8	a	linker remnant	translated	nothing: no call, jump, branch or address of it	the decompilation's linker remnants list (what the linker left of a stripped function)
+func_L00_002664F4	a	piece	none	branched to by func_L00_002664B0 [C] (every level)	config/overlays/joined.tsv: a piece of the function before it
+func_L00_00267618__openrac_decl_164	a	other spelling	none	called by func_L00_00267290 [C] (levels 0,1,2,3,4,5,6,8,11,12,13,14,15,16), func_L00_002676A0 [C] (levels 0,1,3,4,5,6,7,8,10,11,12,13,14,15,16,17), func_L00_002676E8 [C] (levels 0,1,2,3,4,5,6,8,11,12,13,14,15,16) and 1 more	the same function as func_L00_00267618, which has C: calls to this name go there
+func_L00_0026763C	a	piece	none	branched to by func_L00_00267618 [C] (levels 0,1,2,3,4,5,6,7,8,10,11,12,13,14,15,16,17)	config/overlays/joined.tsv: a piece of the function before it
+func_L00_00267C34	a	piece	translated	branched to by func_L00_00267BA8 [C] (every level)	config/overlays/joined.tsv: a piece of the function before it
+func_L00_00267D08	a	piece	translated	nothing: no call, jump, branch or address of it	config/overlays/joined.tsv: a piece of the function before it
+func_L00_00268738	a	other spelling	none	called by func_L00_002465F8 [C] (level 0), func_00233308 [C] (level 0), func_0023B740 [C] (level 0)	the same function as func_00218908, which has C: calls to this name go there
+func_L00_0026B2B8	a	other spelling	none	C calls it: func_L00_002697A0	the same function as func_L00_0026AB10, which has C: calls to this name go there
+func_L00_0026D268	a	other spelling	none	C calls it: func_L00_002697A0	the same function as func_001E9768, which has C: calls to this name go there
+func_L00_00274750	a	other spelling	none	C calls it: func_L00_002697A0	the same function as func_L00_0026FEE8, which has C: calls to this name go there
+func_L00_00276EB0	a	linker remnant	translated	nothing: no call, jump, branch or address of it	the decompilation's linker remnants list (what the linker left of a stripped function)
+func_L00_002788C8	a	linker remnant	none	nothing: no call, jump, branch or address of it	the decompilation's linker remnants list (what the linker left of a stripped function)
+func_L00_00278904	a	piece	none	branched to by func_L00_002788E0 [C] (every level)	only the branches and jumps of func_L00_002788E0 [C] reach it: part of that function's code; it reads $3 at 00278904 before writing it: an input outside the argument registers
+func_L00_00278930	a	piece	none	branched to by func_L00_00278904 [no C] (every level)	only the branches and jumps of func_L00_002788E0 [C] reach it: part of that function's code; it reads $3 at 00278930 before writing it: an input outside the argument registers
+func_L00_0027A3AC	a	piece	translated	branched to by func_L00_0027A398 [C] (every level)	config/overlays/joined.tsv: a piece of the function before it
+func_L00_0027D454	a	piece	none	branched to by func_L00_0027D3D8 [C] (every level)	only the branches and jumps of func_L00_0027D3D8 [C] reach it: part of that function's code; it reads $2 at 0027D454 before writing it: an input outside the argument registers
+func_L00_0027D464	a	piece	none	branched to by func_L00_0027D3D8 [C] (every level), func_L00_0027D454 [no C] (every level)	only the branches and jumps of func_L00_0027D3D8 [C] reach it: part of that function's code; it reads $3 at 0027D464 before writing it: an input outside the argument registers
+func_L00_00284E5C	a	piece	none	branched to by func_L00_00284E20 [C] (every level)	config/overlays/joined.tsv: a piece of the function before it
+func_L00_00284EA0	a	piece	translated	branched to by func_L00_00284E70 [C] (every level), func_L00_00284EB8 [C] (every level)	config/overlays/joined.tsv: a piece of the function before it
+func_L00_002864CC	a	piece	none	nothing: no call, jump, branch or address of it	config/overlays/joined.tsv: a piece of the function before it
+func_L00_0028DA28	a	piece	translated	branched to by func_L00_0028D958 [host] (every level)	config/overlays/joined.tsv: a piece of the function before it
+func_L00_0028EC28	a	piece	translated	branched to by func_L00_0028EBF0 [C] (every level)	config/overlays/joined.tsv: a piece of the function before it
+func_L00_0028F208	a	linker remnant	translated	nothing: no call, jump, branch or address of it	the decompilation's linker remnants list (what the linker left of a stripped function)
+func_L00_0028F410	a	piece	translated	branched to by func_L00_0028F3E0 [C] (every level)	config/overlays/joined.tsv: a piece of the function before it
+func_L00_00296620	a	piece	none	branched to by func_L00_002963D8 [host] (every level)	config/overlays/joined.tsv: a piece of the function before it
+func_L00_002A2668	a	linker remnant	none	nothing: no call, jump, branch or address of it	the decompilation's linker remnants list (what the linker left of a stripped function)
+func_L00_002A4F50	a	linker remnant	translated	nothing: no call, jump, branch or address of it	the decompilation's linker remnants list (what the linker left of a stripped function)
+func_L00_002A5138	a	linker remnant	translated	nothing: no call, jump, branch or address of it	the decompilation's linker remnants list (what the linker left of a stripped function)
+func_L00_002A5AC0	a	linker remnant	translated	nothing: no call, jump, branch or address of it	the decompilation's linker remnants list (what the linker left of a stripped function)
+func_L00_002AAC48	a	linker remnant	none	nothing: no call, jump, branch or address of it	the decompilation's linker remnants list (what the linker left of a stripped function)
+func_L00_002AAD28	a	linker remnant	translated	nothing: no call, jump, branch or address of it	the decompilation's linker remnants list (what the linker left of a stripped function)
+func_L00_002B5990	a	linker remnant	translated	nothing: no call, jump, branch or address of it	the decompilation's linker remnants list (what the linker left of a stripped function)
+func_L00_002B9AA8	a	piece	translated	branched to by func_L00_002B9A90 [C] (every level)	config/overlays/joined.tsv: a piece of the function before it
+func_L00_002C6F40	a	linker remnant	none	nothing: no call, jump, branch or address of it	the decompilation's linker remnants list (what the linker left of a stripped function)
+func_L00_002CABB8	a	linker remnant	translated	nothing: no call, jump, branch or address of it	the decompilation's linker remnants list (what the linker left of a stripped function)
+func_L00_002D4348	a	piece	none	branched to by func_L00_002D42D8 [C] (every level)	config/overlays/joined.tsv: a piece of the function before it
+func_L00_002E9854	a	piece	none	branched to by func_L00_002E9838 [C] (every level)	only the branches and jumps of func_L00_002E9838 [C] reach it: part of that function's code; it reads $3 at 002E9854 before writing it: an input outside the argument registers
+func_L00_002E988C	a	piece	none	branched to by func_L00_002E9870 [C] (every level)	only the branches and jumps of func_L00_002E9870 [C] reach it: part of that function's code; it reads $3 at 002E988C before writing it: an input outside the argument registers
+func_L00_002E98A8	a	piece	none	branched to by func_L00_002E988C [no C] (every level)	config/overlays/joined.tsv: a piece of the function before it
+func_L00_002E98B8	a	piece	none	branched to by func_L00_002E98A8 [no C] (every level)	only the branches and jumps of func_L00_002E9870 [C] reach it: part of that function's code; it reads $2 at 002E98C4 before writing it: an input outside the argument registers
+func_L00_002EBF38	a	linker remnant	translated	nothing: no call, jump, branch or address of it	the decompilation's linker remnants list (what the linker left of a stripped function)
+func_L00_002EC208	a	linker remnant	none	nothing: no call, jump, branch or address of it	the decompilation's linker remnants list (what the linker left of a stripped function)
+func_L00_002EDB58	a	unreachable	none	nothing: no call, jump, branch or address of it	no call, jump, branch, address or data word refers to it in any program (levels 0,1,8); it reads $3 at 002EDB58 before writing it: an input outside the argument registers
+func_L00_002EFCE4	a	piece	none	branched to by func_L00_002EFC90 [C] (every level)	only the branches and jumps of func_L00_002EFC90 [C] reach it: part of that function's code; it reads $2 at 002EFCE4 before writing it: an input outside the argument registers
+func_L00_002EFCFC	a	piece	none	branched to by func_L00_002EFC90 [C] (every level)	only the branches and jumps of func_L00_002EFC90 [C] reach it: part of that function's code; it reads $2 at 002EFD04 before writing it: an input outside the argument registers
+func_L01_00262BB0	b	piece	translated	branched to by func_0020C468 [host] (levels 1,2,3,5,7,8,9,11,12,13,14)	only the branches and jumps of func_0020C468 [host] reach it: part of that function's code
+func_L01_002649C8	a	linker remnant	translated	nothing: no call, jump, branch or address of it	the decompilation's linker remnants list (what the linker left of a stripped function)
+func_L01_0026EFA8	a	linker remnant	translated	nothing: no call, jump, branch or address of it	the decompilation's linker remnants list (what the linker left of a stripped function)
+func_L01_0026EFDC	a	piece	none	branched to by func_L01_0026EFB8 [C] (levels 1,6,9,11,12,13,14,15,16)	config/overlays/joined.tsv: a piece of the function before it
+func_L01_0026FFC0	a	linker remnant	none	nothing: no call, jump, branch or address of it	the decompilation's linker remnants list (what the linker left of a stripped function)
+func_L01_00277CA0	a	linker remnant	translated	nothing: no call, jump, branch or address of it	the decompilation's linker remnants list (what the linker left of a stripped function)
+func_L01_00278FE0	a	piece	none	branched to by func_L01_00278FA8 [C] (levels 1,3,7,9,10,12,13,14)	config/overlays/joined.tsv: a piece of the function before it
+func_L01_00279AC0	a	linker remnant	translated	nothing: no call, jump, branch or address of it	the decompilation's linker remnants list (what the linker left of a stripped function)
+func_L01_0028C1D0	a	linker remnant	translated	nothing: no call, jump, branch or address of it	the decompilation's linker remnants list (what the linker left of a stripped function)
+func_L01_0028C548	a	linker remnant	translated	nothing: no call, jump, branch or address of it	the decompilation's linker remnants list (what the linker left of a stripped function)
+func_L01_0028C5B8	a	piece	none	branched to by func_L01_0028C578 [C] (levels 1,3,4,14)	only the branches and jumps of func_L01_0028C578 [C] reach it: part of that function's code; it reads $2 at 0028C5B8 before writing it: an input outside the argument registers
+func_L01_0028C5D0	a	piece	none	branched to by func_L01_0028C5B8 [no C] (levels 1,3,4,14)	only the branches and jumps of func_L01_0028C578 [C] reach it: part of that function's code; it reads $3 at 0028C5D0 before writing it: an input outside the argument registers
+func_L01_0028C618	a	piece	none	branched to by func_L01_0028C5F0 [C] (levels 1,3,4,14)	only the branches and jumps of func_L01_0028C5F0 [C] reach it: part of that function's code; it reads $2 at 0028C618 before writing it: an input outside the argument registers
+func_L01_0028C628	a	piece	none	branched to by func_L01_0028C618 [no C] (levels 1,3,4,14)	only the branches and jumps of func_L01_0028C5F0 [C] reach it: part of that function's code; it reads $3 at 0028C628 before writing it: an input outside the argument registers
+func_L01_002A0190	a	linker remnant	translated	nothing: no call, jump, branch or address of it	the decompilation's linker remnants list (what the linker left of a stripped function)
+func_L01_002A0D78	a	linker remnant	none	nothing: no call, jump, branch or address of it	the decompilation's linker remnants list (what the linker left of a stripped function)
+func_L01_002BABE8	a	linker remnant	translated	nothing: no call, jump, branch or address of it	the decompilation's linker remnants list (what the linker left of a stripped function)
+func_L01_002C05B8	a	linker remnant	none	nothing: no call, jump, branch or address of it	the decompilation's linker remnants list (what the linker left of a stripped function)
+func_L02_0021A2E0	a	linker remnant	translated	nothing: no call, jump, branch or address of it	the decompilation's linker remnants list (what the linker left of a stripped function)
+func_L02_0023A0E8	a	linker remnant	translated	nothing: no call, jump, branch or address of it	the decompilation's linker remnants list (what the linker left of a stripped function)
+func_L02_0025D778	a	linker remnant	translated	nothing: no call, jump, branch or address of it	the decompilation's linker remnants list (what the linker left of a stripped function)
+func_L02_002612C0	a	linker remnant	translated	nothing: no call, jump, branch or address of it	the decompilation's linker remnants list (what the linker left of a stripped function)
+func_L02_00264950	a	linker remnant	translated	nothing: no call, jump, branch or address of it	the decompilation's linker remnants list (what the linker left of a stripped function)
+func_L02_002A5218	a	linker remnant	translated	nothing: no call, jump, branch or address of it	the decompilation's linker remnants list (what the linker left of a stripped function)
+func_L02_002DE6FC	a	piece	none	branched to by func_L02_002DE6E0 [C] (level 2)	only the branches and jumps of func_L02_002DE6E0 [C] reach it: part of that function's code; it reads $3 at 002DE70C before writing it: an input outside the argument registers
+func_L02_002DE798	a	piece	none	branched to by func_L02_002DE6FC [no C] (level 2)	only the branches and jumps of func_L02_002DE6E0 [C] reach it: part of that function's code; it reads $2 at 002DE798 before writing it: an input outside the argument registers
+func_L02_002F78C8	a	other spelling	none	called by func_L00_002E74B0 [C] (level 2), func_L00_002EDE38 [C] (level 2), func_L02_002FCE00 [C] (level 2)	the same function as func_L00_002E9A40, which has C: calls to this name go there
+func_L02_002F9E40	a	linker remnant	translated	nothing: no call, jump, branch or address of it	the decompilation's linker remnants list (what the linker left of a stripped function)
+func_L03_00249488	a	linker remnant	translated	nothing: no call, jump, branch or address of it	the decompilation's linker remnants list (what the linker left of a stripped function)
+func_L03_0024FA90	a	linker remnant	translated	nothing: no call, jump, branch or address of it	the decompilation's linker remnants list (what the linker left of a stripped function)
+func_L03_002653D8	a	linker remnant	translated	nothing: no call, jump, branch or address of it	the decompilation's linker remnants list (what the linker left of a stripped function)
+func_L03_00292B18	a	linker remnant	translated	nothing: no call, jump, branch or address of it	the decompilation's linker remnants list (what the linker left of a stripped function)
+func_L03_002C8000	a	linker remnant	translated	nothing: no call, jump, branch or address of it	the decompilation's linker remnants list (what the linker left of a stripped function)
+func_L03_002DDE28	a	piece	none	branched to by func_L03_002DDDF8 [C] (level 3)	only the branches and jumps of func_L03_002DDDF8 [C] reach it: part of that function's code; it reads $2, $3 at 002DDE28 before writing it: an input outside the argument registers
+func_L03_002DDE38	a	piece	none	branched to by func_L03_002DDDF8 [C] (level 3)	only the branches and jumps of func_L03_002DDDF8 [C] reach it: part of that function's code; it reads $2 at 002DDE40 before writing it: an input outside the argument registers
+func_L03_002DDE9C	a	piece	translated	branched to by func_L03_002DDDF8 [C] (level 3)	only the branches and jumps of func_L03_002DDDF8 [C] reach it: part of that function's code
+func_L03_002DDED8	a	piece	none	branched to by func_L03_002DDE28 [no C] (level 3)	only the branches and jumps of func_L03_002DDDF8 [C] reach it: part of that function's code; it reads $f0 at 002DDEE4 before writing it: an input outside the argument registers
+func_L04_0024D534	a	piece	translated	branched to by func_L04_0024D4A8 [C] (level 4)	config/overlays/joined.tsv: a piece of the function before it
+func_L04_0024D8A8	a	linker remnant	translated	nothing: no call, jump, branch or address of it	the decompilation's linker remnants list (what the linker left of a stripped function)
+func_L04_002561B0	a	linker remnant	translated	nothing: no call, jump, branch or address of it	the decompilation's linker remnants list (what the linker left of a stripped function)
+func_L04_0027D6D0	a	linker remnant	translated	nothing: no call, jump, branch or address of it	the decompilation's linker remnants list (what the linker left of a stripped function)
+func_L04_0027FF38	a	linker remnant	translated	nothing: no call, jump, branch or address of it	the decompilation's linker remnants list (what the linker left of a stripped function)
+func_L04_002E2B90	a	piece	translated	branched to by func_L04_002E2B48 [C] (level 4)	only the branches and jumps of func_L04_002E2B48 [C] reach it: part of that function's code
+func_L04_002E2BA4	a	piece	translated	branched to by func_L04_002E2B48 [C] (level 4)	only the branches and jumps of func_L04_002E2B48 [C] reach it: part of that function's code
+func_L05_0023BA64	a	piece	none	branched to by func_L05_0023BA18 [C] (levels 5,16)	only the branches and jumps of func_L05_0023BA18 [C] reach it: part of that function's code; it reads $3 at 0023BA64 before writing it: an input outside the argument registers
+func_L05_0023BAA0	c	needs C	translated	address held in data at data 002166A0 (levels 5,16)	translated from its assembly
+func_L05_0028AADC	a	piece	translated	branched to by func_L05_0028AA68 [C] (levels 5,8)	config/overlays/joined.tsv: a piece of the function before it
+func_L05_002A1098	a	linker remnant	translated	nothing: no call, jump, branch or address of it	the decompilation's linker remnants list (what the linker left of a stripped function)
+func_L05_002A1170	a	linker remnant	translated	nothing: no call, jump, branch or address of it	the decompilation's linker remnants list (what the linker left of a stripped function)
+func_L05_002B4AC0	a	linker remnant	translated	nothing: no call, jump, branch or address of it	the decompilation's linker remnants list (what the linker left of a stripped function)
+func_L05_002CF2C0	a	linker remnant	translated	nothing: no call, jump, branch or address of it	the decompilation's linker remnants list (what the linker left of a stripped function)
+func_L05_002D5398	a	linker remnant	none	nothing: no call, jump, branch or address of it	the decompilation's linker remnants list (what the linker left of a stripped function)
+func_L05_002D54C0	a	linker remnant	translated	nothing: no call, jump, branch or address of it	the decompilation's linker remnants list (what the linker left of a stripped function)
+func_L05_002F63DC	a	piece	translated	branched to by func_L05_002F62E8 [C] (levels 5,7,9,10,12,13,14,15,17)	only the branches and jumps of func_L05_002F62E8 [C] reach it: part of that function's code
+func_L05_002F63FC	a	piece	none	branched to by func_L05_002F62E8 [C] (levels 5,7,9,10,12,13,14,15,17)	only the branches and jumps of func_L05_002F62E8 [C] reach it: part of that function's code; it reads $2 at 002F63FC before writing it: an input outside the argument registers
+func_L05_0031AB00	a	piece	translated	branched to by func_L05_0031AAA8 [host] (level 5), func_L14_002F2778 [C] (level 14), func_L16_002E6048 [host] (level 16)	config/overlays/joined.tsv: a piece of the function before it
+func_L05_0031B15C	a	piece	none	branched to by func_L05_0031B138 [C] (level 5)	config/overlays/joined.tsv: a piece of the function before it
+func_L05_0032AA48	a	piece	none	branched to by func_L05_0032A9D0 [C] (levels 5,16)	config/overlays/joined.tsv: a piece of the function before it
+func_L06_00216EE4	a	padding	none	nothing: no call, jump, branch or address of it	its first word is the linker's 0xCDCDCDCD fill (levels 6,8,11,14)
+func_L06_00298F68	a	linker remnant	translated	nothing: no call, jump, branch or address of it	the decompilation's linker remnants list (what the linker left of a stripped function)
+func_L06_002EB258	a	linker remnant	none	nothing: no call, jump, branch or address of it	the decompilation's linker remnants list (what the linker left of a stripped function)
+func_L06_002EB2F8	a	piece	translated	branched to by func_L06_002EB348 [translated] (level 6)	only the branches and jumps of func_L06_002EB348 [translated] reach it: part of that function's code
+func_L06_002EB348	a	piece	translated	branched to by func_L06_002EB2F8 [translated] (level 6)	only the branches and jumps of func_L06_002EB2F8 [translated] reach it: part of that function's code
+func_L06_002FC938	a	other spelling	none	called by func_L06_002FBDF0 [C] (level 6)	the same function as func_L06_002FC578, which has C: calls to this name go there
+func_L06_002FCCA0	a	other spelling	none	called by func_L06_002FAE58 [C] (level 6)	the same function as func_L06_002FC8E0, which has C: calls to this name go there
+func_L06_002FCCF8	a	other spelling	none	called by func_L06_002FBDF0 [C] (level 6)	the same function as func_L06_002FC578, which has C: calls to this name go there
+func_L06_002FCE58	a	other spelling	none	called by func_L06_002FAE58 [C] (level 6)	the same function as func_L06_002FCA98, which has C: calls to this name go there
+func_L06_002FD060	a	other spelling	none	called by func_L06_002FAE58 [C] (level 6)	the same function as func_L06_002FC8E0, which has C: calls to this name go there
+func_L06_003019E0	a	other spelling	none	C calls it: func_L06_003010E0	the same function as func_L06_00301848, which has C: calls to this name go there
+func_L06_00301DB0	a	other spelling	none	C calls it: func_L06_003010E0	the same function as func_L06_00301B78, which has C: calls to this name go there
+func_L07_002B3050	a	linker remnant	translated	nothing: no call, jump, branch or address of it	the decompilation's linker remnants list (what the linker left of a stripped function)
+func_L08_00211A68	a	piece	none	branched to by func_L08_00211A38 [C] (levels 8,12,14,15,17)	config/overlays/joined.tsv: a piece of the function before it
+func_L08_002949A0	a	linker remnant	translated	nothing: no call, jump, branch or address of it	the decompilation's linker remnants list (what the linker left of a stripped function)
+func_L08_002DB438	a	unreachable	translated	nothing: no call, jump, branch or address of it	no call, jump, branch, address or data word refers to it in any program (level 8)
+func_L08_002DF750	a	linker remnant	translated	nothing: no call, jump, branch or address of it	the decompilation's linker remnants list (what the linker left of a stripped function)
+func_L09_0021E3E8	a	linker remnant	translated	nothing: no call, jump, branch or address of it	the decompilation's linker remnants list (what the linker left of a stripped function)
+func_L09_00295BF0	a	linker remnant	translated	nothing: no call, jump, branch or address of it	the decompilation's linker remnants list (what the linker left of a stripped function)
+func_L09_002A9018	a	linker remnant	translated	nothing: no call, jump, branch or address of it	the decompilation's linker remnants list (what the linker left of a stripped function)
+func_L10_0027D038	a	linker remnant	translated	nothing: no call, jump, branch or address of it	the decompilation's linker remnants list (what the linker left of a stripped function)
+func_L10_002C0378	a	piece	none	branched to by func_L03_002DDDF8 [C] (level 10)	only the branches and jumps of func_L03_002DDDF8 [C] reach it: part of that function's code; it reads $2, $3 at 002C0378 before writing it: an input outside the argument registers
+func_L10_002C0388	a	piece	none	branched to by func_L03_002DDDF8 [C] (level 10)	only the branches and jumps of func_L03_002DDDF8 [C] reach it: part of that function's code; it reads $2 at 002C0390 before writing it: an input outside the argument registers
+func_L10_002C03EC	a	piece	translated	branched to by func_L03_002DDDF8 [C] (level 10)	only the branches and jumps of func_L03_002DDDF8 [C] reach it: part of that function's code
+func_L10_002C04C4	a	piece	none	branched to by func_L10_002C0378 [no C] (level 10)	config/overlays/joined.tsv: a piece of the function before it
+func_L10_002CF310	a	linker remnant	none	nothing: no call, jump, branch or address of it	the decompilation's linker remnants list (what the linker left of a stripped function)
+func_L10_002D8F08	a	piece	none	branched to by func_L10_002D8ED8 [C] (level 10)	only the branches and jumps of func_L10_002D8ED8 [C] reach it: part of that function's code; it reads $f2 at 002D8F18 before writing it: an input outside the argument registers
+func_L11_002C99E0	a	linker remnant	translated	nothing: no call, jump, branch or address of it	the decompilation's linker remnants list (what the linker left of a stripped function)
+func_L11_00317518	a	piece	none	branched to by func_L11_00317500 [C] (level 11)	config/overlays/joined.tsv: a piece of the function before it
+func_L14_002B02B0	a	piece	none	branched to by func_L14_002B0288 [C] (level 14)	config/overlays/joined.tsv: a piece of the function before it
+func_L14_002B4B84	a	piece	translated	branched to by func_L14_002B4B70 [C] (levels 14,15)	config/overlays/joined.tsv: a piece of the function before it
+func_L14_002B4C2C	a	piece	translated	branched to by func_L14_002B4BF0 [C] (levels 14,15)	config/overlays/joined.tsv: a piece of the function before it
+func_L14_002B58E4	a	piece	translated	branched to by func_L14_002B58C0 [C] (level 14)	config/overlays/joined.tsv: a piece of the function before it
+func_L14_002E0040	a	other spelling	none	address formed by func_L14_002DFA70 [C] (level 14)	the same function as func_L01_0030D380, which has C: calls to this name go there
+func_L14_003076A4	a	piece	none	branched to by func_L14_00307660 [C] (level 14)	only the branches and jumps of func_L14_00307660 [C] reach it: part of that function's code; it reads $2 at 003076AC before writing it: an input outside the argument registers
+func_L14_003162A0	a	linker remnant	none	nothing: no call, jump, branch or address of it	the decompilation's linker remnants list (what the linker left of a stripped function)
+func_L14_00317C4C	a	piece	translated	nothing: no call, jump, branch or address of it	config/overlays/joined.tsv: a piece of the function before it
+func_L15_00266900	a	linker remnant	translated	nothing: no call, jump, branch or address of it	the decompilation's linker remnants list (what the linker left of a stripped function)
+func_L15_0027A1F0	a	linker remnant	translated	nothing: no call, jump, branch or address of it	the decompilation's linker remnants list (what the linker left of a stripped function)
+func_L15_0029B210	a	piece	translated	branched to by func_L15_0029B1D8 [C] (levels 15,17)	config/overlays/joined.tsv: a piece of the function before it
+func_L15_002ED3C4	a	piece	translated	branched to by func_L15_002ED3A0 [C] (level 15)	config/overlays/joined.tsv: a piece of the function before it
+func_L15_002F8D9C	a	piece	none	branched to by func_L15_002F8D30 [C] (level 15)	config/overlays/joined.tsv: a piece of the function before it
+func_L16_002D0B60	a	piece	none	branched to by func_L16_002D0B28 [C] (level 16)	only the branches and jumps of func_L16_002D0B28 [C] reach it: part of that function's code; it reads $2 at 002D0B60 before writing it: an input outside the argument registers
+func_L16_002E22DC	a	piece	translated	branched to by func_L16_002E2290 [C] (level 16)	config/overlays/joined.tsv: a piece of the function before it
+func_L16_002E7160	a	unreachable	translated	nothing: no call, jump, branch or address of it	no call, jump, branch, address or data word refers to it in any program (levels 16,18)
+func_L17_002E4BA0	a	linker remnant	translated	nothing: no call, jump, branch or address of it	the decompilation's linker remnants list (what the linker left of a stripped function)
+func_L17_002F4208	a	linker remnant	none	nothing: no call, jump, branch or address of it	the decompilation's linker remnants list (what the linker left of a stripped function)
+func_L17_002F6AF0	a	linker remnant	translated	nothing: no call, jump, branch or address of it	the decompilation's linker remnants list (what the linker left of a stripped function)
+func_L18_002D9460	a	piece	none	branched to by func_L18_002D9440 [C] (level 18)	config/overlays/joined.tsv: a piece of the function before it
+func_L18_002F1444	a	piece	translated	branched to by func_L18_002F1420 [C] (level 18)	config/overlays/joined.tsv: a piece of the function before it
+memcpy	b	host	none	nothing: no C calls it, and it has no address	the C library's own name: hostgen writes calls to it as the host compiler's (lower.py)
+sqrtf	b	host	none	nothing: no C calls it, and it has no address	the C library's own name: hostgen writes calls to it as the host compiler's (lower.py)

@@ -28,6 +28,8 @@ namespace {
 using namespace openrac;
 
 std::mutex g_lock;
+// openrac_stream_read_at_once: streams read on the caller's thread.
+bool g_read_at_once = false;
 
 // A place on the disc image, which is larger than 2 GB: fseek takes a long, 32 bits on Windows,
 // where a sector past the first million (the music) would wrap.
@@ -397,8 +399,16 @@ uint32_t openrac_stream_play(
         stream->parts.push_back({track, (flags & 4) != 0});
         stream->handles.push_back(handle);
     }
-    std::thread(read_track, sector, track).detach();
+    if (g_read_at_once) {
+        read_track(sector, track);
+    } else {
+        std::thread(read_track, sector, track).detach();
+    }
     return handle;
+}
+
+void openrac_stream_read_at_once(int at_once) {
+    g_read_at_once = at_once != 0;
 }
 
 int openrac_stream_live(uint32_t stream) {

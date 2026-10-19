@@ -93,7 +93,9 @@ __asm__(".section .text\n\tnop\n");
 
 LINKER_REMNANT("asm/remnants/text", func_001F1088);
 
-INCLUDE_ASM("asm/nonmatchings/text", func_001F10A0);
+LINKER_REMNANT("asm/remnants/text", func_001F10A0);
+
+INCLUDE_ASM("asm/nonmatchings/text", func_001F10C8);
 
 LINKER_REMNANT("asm/remnants/text", func_001F2410);
 
@@ -147,11 +149,11 @@ void projectWorldPoint(Vec3f *a0, float *a1) {
 LINKER_REMNANT("asm/remnants/text", func_001F2550);
 
 /* Empty stub (returns immediately). */
-void func_001F2558(void) {
+void ProfileMarker_End(void) {
 }
 
 /* Empty stub (returns immediately). */
-void func_001F2560(void) {
+void ProfileMarker_Begin(void) {
 }
 
 extern int D_0015F6FC_m __asm__("D_0015F6FC") MACRO_ADDR;
@@ -293,14 +295,14 @@ extern int D_001601BC MACRO_ADDR;
 extern int D_0015F598 MACRO_ADDR;
 extern void func_001F3140(void);
 
-/* UpdateFog(int): copies the fog preset (the fixed D_001611C4 when
+/* UpdateFog(void): copies the fog preset (the fixed D_001611C4 when
    D_001873D4 is set, else the current D_0015F584) into the draw context
    at D_0018CE00+0x218, sets the mode word D_001601BC (0x40000 or
    0x1F4000), runs UpdateViewContext (func_001F3140) and clears
    D_0015F598. The presets and the two words it writes are MACRO_ADDR:
    retail reads each field with the one-register macro, and the mode
    word's store fits the branch delay slot ($gp-relative there). */
-void UpdateFog(int arg0) {
+void UpdateFog(void) {
     if (D_001873D4 != 0) {
         D_0018CE00[0x8C] = D_001611C4.r;
         D_0018CE00[0x8D] = D_001611C4.g;
@@ -830,7 +832,134 @@ void SetScreenSize(int w, int h, float a2, float a3, float a4, float a5, float a
     UpdateViewContext();
 }
 
-INCLUDE_ASM("asm/nonmatchings/text", func_001F3890); /* SetPalMode(int) */
+typedef struct {
+    char disp_and_contexts[0x150];
+    s16 display_width;
+    s16 display_height;
+    s16 psm;
+    s16 fbp0;
+    s16 storage_width;
+    s16 storage_height;
+} FsAaBuf;
+
+typedef struct {
+    int width;
+    int height;
+    int half_width;
+    int half_height;
+    int left;
+    int top;
+    int right;
+    int bottom;
+} ScreenExtent;
+
+typedef struct {
+    u64 pad0[2];
+    u64 frame1;
+    u64 pad18;
+    u64 frame2;
+    u64 pad28;
+    u64 zbuf1;
+    u64 pad38;
+    u64 zbuf2;
+    u64 pad48;
+    u64 xyoffset1;
+    u64 pad58;
+    u64 xyoffset2;
+    u64 pad68;
+    u64 scissor1;
+    u64 pad78;
+    u64 scissor2;
+} GsDrawEnvRegs;
+
+typedef struct {
+    char b[0x60];
+} GsLoadImage;
+
+extern FsAaBuf fs_aa_buffer_3890 __asm__("D_00151880");
+extern ScreenExtent screen_extent_3890 __asm__("D_0013E600");
+extern GsDrawEnvRegs draw_env_3890 __asm__("D_0013D010");
+extern u64 depth_reg_3890 __asm__("D_0013D200");
+extern u64 masked_depth_reg_3890 __asm__("D_0013D270");
+extern unsigned char clear_buf_3890[] __asm__("D_001942C0");
+extern int D_0015EF74 MACRO_ADDR;
+extern int D_0015EF80 MACRO_ADDR;
+extern int D_0015EF84 MACRO_ADDR;
+extern int D_0015EF88 MACRO_ADDR;
+extern int D_0015EF8C MACRO_ADDR;
+extern void func_00118D80(int);
+extern int func_00120858(int, int);
+extern void func_001FAB40(int, int, int, int, int, int);
+extern void func_001FB498(void);
+extern void func_001FB530(void);
+extern void func_001FB470(void);
+extern int func_00122630(GsLoadImage *, s16, s16, s16, s16, s16, s16, s16);
+extern int func_00122958(GsLoadImage *, unsigned char *);
+
+/* Adapted from Lombyte (MIT): src/video/display/set_pal_mode.c, set_pal_mode. */
+void func_001F3890(void) {
+    GsLoadImage image;
+    int n;
+    int i;
+    u64 zbuf;
+    u64 frame;
+    u64 scissor;
+    s16 w;
+
+    func_00118D80(0);
+    if (D_0015EE80 != 0) {
+        D_0015EF84 = 0x100000;
+        D_0015EF88 = 0x1E0000;
+        D_0015EF80 = 0;
+        D_0015EF8C = 0x2C0000;
+        func_001FAB40(0x200, 0x1C0, 0x200, 0x200, 4, 0);
+    } else {
+        D_0015EF84 = 0xE0000;
+        D_0015EF88 = 0x1B0000;
+        D_0015EF80 = 0;
+        D_0015EF8C = 0x280000;
+        func_001FAB40(0x200, 0x1A0, 0x200, 0x1C0, 0, 0);
+    }
+    w = fs_aa_buffer_3890.display_width;
+    screen_extent_3890.width = w;
+    screen_extent_3890.half_width = w >> 1;
+    screen_extent_3890.half_height = (screen_extent_3890.height = fs_aa_buffer_3890.display_height) >> 1;
+    screen_extent_3890.left = (0x800 - screen_extent_3890.half_width) << 4;
+    screen_extent_3890.top = (0x800 - screen_extent_3890.half_height) << 4;
+    screen_extent_3890.right = (screen_extent_3890.half_width + 0x800) << 4;
+    screen_extent_3890.bottom = (screen_extent_3890.half_height + 0x800) << 4;
+    func_00118D80(0);
+    func_00120858(0, 0);
+    frame = (D_0015EF84 >> 13) | ((u64)(screen_extent_3890.width >> 6) << 16);
+    D_0015EF74 = D_0015EF8C;
+    draw_env_3890.frame1 = frame;
+    D_0015EF78 = D_0015EF8C;
+    zbuf = (D_0015EF88 >> 13) | 0x1000000;
+    draw_env_3890.frame2 = frame;
+    draw_env_3890.xyoffset1 = screen_extent_3890.left | ((u64)screen_extent_3890.top << 32);
+    draw_env_3890.zbuf1 = zbuf;
+    draw_env_3890.zbuf2 = zbuf;
+    draw_env_3890.xyoffset2 = screen_extent_3890.left | ((u64)screen_extent_3890.top << 32);
+    scissor = ((u64)(screen_extent_3890.width - 1) << 16) | ((u64)(screen_extent_3890.height - 1) << 48);
+    depth_reg_3890 = zbuf;
+    draw_env_3890.scissor1 = scissor;
+    draw_env_3890.scissor2 = scissor;
+    masked_depth_reg_3890 = zbuf | ((u64)0x8000 << 17);
+    func_00118D80(0);
+    func_001FB498();
+    func_001FB530();
+    func_00118D80(0);
+    func_00120858(0, 0);
+    func_001FB470();
+    func_001F99B0(clear_buf_3890, 0, 0x1000);
+    n = (fs_aa_buffer_3890.storage_width * fs_aa_buffer_3890.storage_height) >> 10;
+    for (i = 0; i < n; i++) {
+        func_00122630(&image, i << 4, 1, 0, 0, 0, 32, 32);
+        func_00118D80(0);
+        func_00122958(&image, clear_buf_3890);
+        func_00120858(0, 0);
+    }
+}
 
 /*
  * ResetDrawGlobals. Seventeen zero stores in a row, in three addressing
@@ -1117,7 +1246,7 @@ void DrawDebugProfiler(void) {
     func_001F2560_a(D_0015F4F0, 0xF);
     Dma_AppendRefDirect3();
     if (D_0015F534_f & 0x10000) {
-        func_00238D88();
+        DebugProfiler_Hook();
     }
     if ((D_0015F534_f & 0x80) && D_0018A3B0[0x40 / 4] != 0) {
         HudDraw();
@@ -1136,11 +1265,11 @@ void DrawDebugProfiler(void) {
             if (D_001873D4 != 0) {
                 emit_rgba_draw_packet(D_001611C0_F3D78[0], D_001611C1_F3D78[0], D_001611C2_F3D78[0], D_001611C3_F3D78[0]);
             }
-            if (D_0015F53C > 0.0f) {
-                if (D_0015F53C > 1.0f) {
-                    D_0015F53C = 1.0f;
+            if (gFade > 0.0f) {
+                if (gFade > 1.0f) {
+                    gFade = 1.0f;
                 }
-                emit_rgba_draw_packet(0, 0, 0, func_001FA898_r(D_0015F53C * 128.0f));
+                emit_rgba_draw_packet(0, 0, 0, func_001FA898_r(gFade * 128.0f));
             }
             if (D_0015F540 > 0.0f) {
                 if (D_0015F540 > 1.0f) {
@@ -1564,14 +1693,14 @@ extern int *D_00161000 MACRO_ADDR;
 extern int D_0015F538 MACRO_ADDR;
 extern char D_0013CED0[];
 
-/* FadeToBlack(frames, color): `frames` VU1 chains, each drawing a
+/* FadeToBlack(frames): `frames` VU1 chains, each drawing a
    full-screen quad (D_0013CED0's GS packet) with its alpha ramped down
-   from 0x80 by (n << 7) / (n + 1) of the count still to go; `color` is
-   not read. Each chain is bracketed by func_00234AC8/func_00122598 and a
+   from 0x80 by (n << 7) / (n + 1) of the count still to go. It takes no
+   colour: retail writes $a1 before it reads it. Each chain is bracketed by func_00234AC8/func_00122598 and a
    D_0015F538 bump. func_00122598 (sceGsSyncV) returns int: declared that
    way, the bump's temporary moves to $v1 as in retail. D_0015F538 is
    MACRO_ADDR so each bump reloads it in one register. */
-void FadeToBlack(int frames, unsigned int color) {
+void FadeToBlack(int frames) {
     int n;
     int q;
 
@@ -2241,7 +2370,7 @@ void DrawOutlinedRect(int a0, int a1, int a2, int a3, int a4) {
 /* gp-relative: declared as a 2-byte type purely so -G2 places it in the
    small-data area (placement is decided by DECLARED size), then accessed
    as the 4-byte word it really is. gp base 0x166D00 - 0x7764 = 0x15F59C. */
-extern short D_0015F59C;
+extern int D_0015F59C MACRO_ADDR;
 
 /* Sets the word flag at D_0015F59C to 1. */
 void Font_EnableColorCodes(void) {
@@ -2425,10 +2554,10 @@ extern s32 D_0015F5A0 MACRO_ADDR;
 extern s32 D_0018CBF8[];
 extern f32 func_001FA888(s32);
 extern void func_001F5BB8_F69F0(f32, f32, f32, f32, s32, s32, s32, s32, u64, s64) __asm__("func_001F5BB8");
-void func_001F69F0(u64 color, u8 *s, s32 n, s64 tex, struct Glyph *g, f32 x, f32 y, f32 scale);
+void func_001F69F0(u64 color, u8 *s, f32 x, s32 n, s64 tex, struct Glyph *g, f32 y, f32 scale);
 
 /* Adapted from Lombyte (MIT) for PAL by OpenRAC's tools/port.py: src/audio/music/process_bgm_display_text_event.c, process_bgm_display_text_event. */
-void Font_DrawString(u64 color, u8 *str, s32 n, s64 tex, struct Glyph *g, f32 x, f32 y, f32 scale) {
+void Font_DrawString(u64 color, u8 *str, f32 x, s32 n, s64 tex, struct Glyph *g, f32 y, f32 scale) {
     u8 *s;
     s32 i;
     f32 size;
@@ -2549,7 +2678,138 @@ int FontPrintCenterLarge(int a, int b, int c, int d, int e) {
     return p;
 }
 
-INCLUDE_ASM("asm/nonmatchings/text", func_001F7070); /* FontPrintWindow */
+extern void func_00234D58(int, int, int, int);
+struct FontWindow {
+    short y_min, y_max, x_min, x_max, x_anchor, y_start;
+    short out_w, out_h, line_h;
+    unsigned short flags;
+    short x_sub, y_sub;
+};
+
+/* FontPrintWindow */
+void func_001F7070(void *win_p, long a1, void *text_p, int len, long a4, unsigned char *glyphs)
+{
+    struct FontWindow *win = (struct FontWindow *)win_p;
+    unsigned char *text = (unsigned char *)text_p;
+    short start[32];
+    short endi[32];
+    short colr_arr[32];
+    int W, Wsave, line, i, brk, width, colr, n0, last, balanced;
+    int k, y, flags, adv, c;
+
+    func_00234D58(win->x_min, win->x_max - 1, win->y_min, win->y_max - 1);
+    D_0015F5A0 = 1;
+    if ((win->flags ^ 1) & 1) {
+        W = win->x_max - win->x_anchor;
+    } else {
+        int l = win->x_anchor;
+        int a = win->x_max - l;
+        W = l - win->x_min;
+        if (a < W)
+            W = a;
+        W = W * 2;
+    }
+    Wsave = W;
+    colr = 0;
+    balanced = 0;
+    n0 = 0;
+    last = 0;
+
+    for (;;) {
+        line = 0;
+        i = 0;
+        if (len != 0 && text[0] != 0) {
+            for (;;) {
+                start[line] = i;
+                colr_arr[line] = colr;
+                width = 0;
+                brk = i;
+                {
+                    while (width < W) {
+                        if (text[i] == 0x20 || text[i] < 0x10)
+                            brk = i;
+                        if (*(int *)&D_0015F59C != 0 && (unsigned char)(text[i] - 8) < 8)
+                            colr = text[i] - 8;
+                        if (text[i] < 2)
+                            break;
+                        adv = ((signed char *)glyphs)[text[i] * 4 + 3];
+                        i++;
+                        if (adv != 0)
+                            width += adv;
+                    }
+                }
+                endi[line] = brk;
+                if ((short)brk == start[line])
+                    endi[line] = i;
+                i = endi[line];
+                if (text[i] == 0x20 || text[i] < 0x10)
+                    endi[line] = endi[line] - 1;
+                line++;
+                if (text[i] == 0) {
+                    last = width;
+                    break;
+                }
+                i++;
+                if (i == len || text[i] == 0)
+                    break;
+            }
+        }
+        if (balanced || line < 2)
+            break;
+        if (n0 == 0)
+            n0 = line;
+        if (n0 < line) {
+            W = Wsave;
+            balanced = 1;
+            continue;
+        }
+        if (last < W / 3) {
+            W -= 16;
+            continue;
+        }
+        break;
+    }
+
+    {
+        struct FontWindow *dw = win;
+        int cnt, w;
+        dw->out_w = 0;
+        y = dw->y_start;
+        dw->out_h = line * dw->line_h;
+        if (dw->flags & 2)
+            y -= (line * dw->line_h) >> 1;
+        for (k = 0; k < line; k++, y += dw->line_h) {
+            if (y + dw->line_h < dw->y_min)
+                continue;
+            if (dw->y_max < y)
+                continue;
+            cnt = endi[k] - start[k] + 1;
+            w = func_001F65B0(text + start[k], cnt, glyphs);
+            if (dw->out_w < w)
+                dw->out_w = w;
+            if (dw->flags & 4)
+                continue;
+            D_0018CBF8[0] = a1;
+            if (dw->flags & 8) {
+                float fx;
+                if (dw->flags & 1)
+                    fx = (dw->x_anchor - (w >> 1)) + dw->x_sub * 0.0625f;
+                else
+                    fx = dw->x_anchor + dw->x_sub * 0.0625f;
+                func_001F69F0(D_0018CBF8[colr_arr[k]], text + start[k], fx, cnt, a4, (struct Glyph *)glyphs,
+                              y + dw->y_sub * 0.0625f, 1.0f);
+            } else if (dw->flags & 1) {
+                func_001F6668((void *)(dw->x_anchor - (w >> 1)), (void *)y, (void *)D_0018CBF8[colr_arr[k]],
+                              text + start[k], (void *)cnt, a4, glyphs);
+            } else {
+                func_001F6668((void *)(int)dw->x_anchor, (void *)y, (void *)D_0018CBF8[colr_arr[k]],
+                              text + start[k], (void *)cnt, a4, glyphs);
+            }
+        }
+    }
+    D_0015F5A0 = 0;
+    func_00234D58(0, D_0013E600[0] - 1, 0, D_0013E600[1] - 1);
+}
 
 extern int func_001F4868(int);
 

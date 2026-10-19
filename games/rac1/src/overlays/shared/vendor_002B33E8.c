@@ -363,7 +363,7 @@ void Moby163Update(char *m) {
             int w = *(int *)(g + 0x2084);
             if (w != 0x72 && w != 0x65 && w != 0x32) {
                 int x;
-                g2 = D_L00_00166D80;
+                g2 = gCameraLvl;
                 x = *(int *)(g2 + 0x180);
                 if (x == 0 || *(short *)(x + 0x86) != 5) {
                     if (*(int *)(g + 0x300) != 0) {
@@ -406,7 +406,7 @@ void Moby163Update(char *m) {
                                     p[0] = scale_ticks(0x3C);
                                 }
                             } else if ((*(int *)(pad + 0x1A4) & *(int *)(g + 0x10A0)) != 0) {
-                                func_0022ED80(0, 0, (int)m);
+                                Moby_PlaySound(0, 0, (int)m);
                             }
                         }
                     }
@@ -648,7 +648,7 @@ extern u8 *func_L00_0026DEA0(V4 *, f32, f32, f32, f32, s32, V4 *, u32);
 extern short D_L00_0015F6B0_B4F40b SDATA(D_L00_0015F6B0);
 
 /* Adapted from Lombyte (MIT) for PAL by OpenRAC's tools/port.py: src/overlays/shared/unclassified_002b2100.c, FUN_L00_002b3c50. */
-void func_L00_002B4F40(X *x) {
+void Moby_SpawnTrailParticles(X *x) {
     V4 l0;
     V4 a;
     V4 d;
@@ -868,7 +868,7 @@ extern int func_L00_001EFFF0(void *, void *, int, int, int);
 extern unsigned char *func_L00_0025D390(void *);
 
 // Finds the best-aimed target moby in the global list for a given yaw and pitch, refining them. Adapted from Lombyte (MIT) for PAL: overlays/shared/unclassified_002b2100.c, FUN_L00_002b46a8.
-unsigned char *func_L00_002B5998(int ign, Vec4 *from, float *yaw, float *pitch) {
+unsigned char *Aim_RefineTarget(int ign, Vec4 *from, float *yaw, float *pitch) {
     Vec4 src;
     Vec4 tp;
     Vec4 w;
@@ -1391,7 +1391,7 @@ void Moby_EndGadgetControl(int a, int *b) {
     b[5] = 0;
     HeroEnterMoveState(0, 1);
     Moby_RestoreGlobalsState(a, 1);
-    func_L00_00204190();
+    Moby_ClearGadgetControl();
     DeleteMoby(a);
     D_L00_00167114 = 0;
 }
@@ -1406,7 +1406,7 @@ typedef unsigned int u128_t __attribute__((mode(TI), aligned(16)));
 typedef struct { u128_t r[4]; } M_t;
 
 // Steers the held object's pose: eases a field toward 0.45, spins it, and rebuilds its matrix and position from the parent. Adapted from Lombyte (MIT) for PAL: overlays/shared/unclassified_002b2100.c, FUN_L00_002b5ba0.
-void func_L00_002B6E90(unsigned char *m, unsigned char *o) {
+void HeldObject_UpdatePose(unsigned char *m, unsigned char *o) {
     M_t a, b, c;
     Vec4 k, r;
     unsigned char *e = *(unsigned char **)(o + 0x20);
@@ -1949,7 +1949,7 @@ void Moby175Update(Moby *m)
             r1 = truncate_float_to_s32(((Cfg *)m->pclass)->tab[i].x * 10.0f);
             r2 = truncate_float_to_s32(((Cfg *)m->pclass)->tab[i].y * 10.0f);
             if (!(o->idx < ((Cfg *)m->pclass)->count && r1 == 0x1E && r2 == r1)) o->idx = 0;
-            func_L00_002B7EC0(m, o->radius);
+            Moby175_HitNearbyTargets(m, o->radius);
             o->retry = 0;
             goto end;
         }
@@ -1975,7 +1975,7 @@ void Moby175Update(Moby *m)
     o->anim = -1;
     goto end;
 L7340:
-    if (!((*(s32 *)&D_L00_0015F6B0_B8208b) & 3)) func_L00_002B7EC0(m, o->radius);
+    if (!((*(s32 *)&D_L00_0015F6B0_B8208b) & 3)) Moby175_HitNearbyTargets(m, o->radius);
 end:
     if ((s32)(D_0013F450_2B8208.w10B4 ^ 3) != 0) Moby175SlotsUpdate(m);
 }
@@ -2190,7 +2190,7 @@ extern float func_001F9878(float);
 extern char *func_00219780(void *, void *, void *, int, int, int, int, int, int);
 
 // Updates the effect moby's 15 slots: spawns and releases spark particles around live children.
-void func_L00_002B9730(char *m) {
+void EffectSlots_SparkUpdate(char *m) {
     float vec[4];
     char buf[0x30];
     char qv[16];

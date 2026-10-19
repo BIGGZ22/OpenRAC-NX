@@ -1,4 +1,4 @@
-/* functional: medium. Run-length encodes a 0x40000-bit bitmap (bits, LSB first) into out[0..size): the (skip,count) byte pairs in rle say which bit ranges to read; runs of equal bits are written as a byte count (split with a 0 byte after a full run of 0x7F, then 0xFF); returns -1 (func_L00_001F3980) if out fills up, else the length written; the first byte is turned into (b << 1) + 1. */
+/* functional: medium. fcheck: unchecked (level/overlay function; fcheck runs boot-executable functions only; OpenRAC tools/fcheck_gate.py, 2026-10-18). Run-length encodes a 0x40000-bit bitmap (bits, LSB first) into out[0..size): the (skip,count) byte pairs in rle say which bit ranges to read; runs of equal bits are written as a byte count (split with a 0 byte after a full run of 0x7F, then 0xFF); returns -1 (func_L00_001F3980) if out fills up, else the length written; the first byte is turned into (b << 1) + 1. */
 extern int func_L00_001F3980(void);
 int func_L00_002003C8(unsigned char *out, int size, unsigned char *rle, unsigned char *bits) {
     unsigned char *end = out + size;

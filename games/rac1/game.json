@@ -42,9 +42,9 @@
           "tools/extract",
           "docs/GDSCRIPT_CONVENTIONS.md"
         ],
-        "commit": "2e43062c55091dc0ffbfbceb4b814e3025ea0ba4",
-        "date": "2026-10-18",
-        "imported": "2026-10-18"
+        "commit": "a6b285da1beb0e3b0825bff132584ab2e786a41f",
+        "date": "2026-10-19",
+        "imported": "2026-10-19"
       },
       "build": {
         "host": "macOS or Linux through Docker (linux/386 image with Wine); SN ProDG toolchain you supply",
@@ -176,9 +176,9 @@
         "checkout": "~/Projects/rac1-decomp-ntsc",
         "license": "MIT (GPL-2.0 and newlib parts)",
         "exclude": [],
-        "commit": "7ba4ca0dd205adc400c2a2853520ae8a58894d14",
-        "date": "2026-10-18",
-        "imported": "2026-10-18"
+        "commit": "60233883ec9563440a5029f8882b42741d0846e4",
+        "date": "2026-10-19",
+        "imported": "2026-10-19"
       },
       "build": {
         "host": "Linux or WSL; macOS through ./setup.sh --docker; toolchains downloaded and built by setup.sh",

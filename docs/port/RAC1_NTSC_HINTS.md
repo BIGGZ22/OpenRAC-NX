@@ -99,17 +99,28 @@ Levels are numbered as the discs number them. The ones named here: 0 Veldin,
 - **Symptom.** In a picture wider than 4:3 tiles of a lake, lava or sand sea
   are missing near the left and right edges.
 - **Cause.** Each of these surfaces has a per-level draw callback, and it
-  decides which tiles to draw with the game's own clip test, which knows only
-  the 4:3 picture; nothing in the port widens that test.
+  decides which tiles to draw with the game's own view tests, which know only
+  the 4:3 picture; nothing in the port widened them. The liquid grid
+  (Aridia, Kerwan, Rilgar, Umbris, Batalia, Gaspar, Oltanis) culls its 7 x 7
+  cell blocks against the camera block's cull matrix (+0x100, built by
+  `FUN_001f2260`, update_camera_view_matrices); Novalis's lava layers and other
+  callbacks test bounding spheres (`FUN_001fa728`, fast_bsphere_check) against
+  the clip constants `FUN_001f2d98` (update_view_context) copies to
+  `D_0018CFC0`. The liquid grid's callback sets its fog first, which builds the
+  matrices again, so the values have to be opened at the test itself.
 - **Where.** The callbacks are level code (`FUN_L<level>_...`) registered
-  into the game's draw callback lists
-  (`port/game/rac1-ntsc/host/callback_lists.c` has the registration
-  routines the levels carry). The matrix is the one `FUN_001f2d98` (US 0x1F7980, update_view_context)
-  writes.
-- **Port today.** Open. PAL's port draws the 3D itself from the extracted
-  level and does not use these callbacks for the world, so check whether the
-  NTSC window's levels hit this at all once the NTSC levels exist
-  (README item 2).
+  into the game's draw callback lists (`port/game/rac1/host/callback_lists.c`
+  has the registration routines the levels carry); the grid's cull is
+  `FUN_L02_0024f748` (PAL `func_L02_00250720`) in every liquid level.
+- **Port today.** Fixed for both discs in
+  [rac1/host/wide_view.c](../../port/game/rac1/host/wide_view.c): in a picture
+  wider than 4:3 the grid's cull runs against the cull matrix opened by as much
+  as the picture is wider, and the sphere test against opened clip constants
+  while a draw callback list runs (outside the lists it also serves the game's
+  logic, which keeps the 4:3 view). At 4:3 nothing changes. Still 4:3: the
+  callbacks' tests that compare a projected point with the screen's pixels.
+  Gaspar's lava backdrop (`FUN_L09_002ef750`) was not reached on the harness
+  route.
 
 ### 1.5 Kerwan: bullets frozen in the air, cables not caught (level 3)
 
@@ -498,3 +509,104 @@ In this order, because each blocks something that otherwise works:
 6. **Wide-picture visibility (3.3, 1.2, 1.4).** Not urgent until the NTSC
    levels exist (README item 2), but the port's choice to draw everything
    changes what the game's logic sees, and that is better decided early.
+
+## 7. Where PAL and US part on the regression routes, and why
+
+Measured 2026-10-18 with [port/tools/regress](REGRESSION.md) (PAL against US,
+every level, the standard route). Each level's moby instances are the same in
+both versions' data (`placements.json`: same count, same classes on every
+level), so a moby count that differs is about spawns, not data. The
+differences left once the port bugs below were fixed have three causes (the
+first is partly settled); the
+harness is told about them per level in `routes.json` (`versions`), so a
+PAL-US `compare` shows only what is new. All are compared again with
+`compare --strict`.
+
+- **The random numbers part early in some levels.** The US runs reach a
+  level's program 58 frames later than PAL's (93 on Eudora, Gemlik Base and
+  Kalebo III, which start with the landing); from the level's first frame on
+  the two count the same frames (both play the 758-frame arrival), and both
+  reseed `rand` with 1234 when the level loads (`load_level_gameplay`, the
+  `jal FUN_001160c8` at US 0x241A34), then with 12345 on the sky's first frame
+  (below). A difference in how many numbers one frame draws parts every random
+  choice after it: a bolt more or less, a spawn at another tick.
+  - *The sky's star records at game address 0 (fixed 2026-10-18).*
+    `update_sky_effects` (US `FUN_0022ae70`, PAL `func_0022C188`) keeps 256
+    star records of 0x20 bytes at the pointer `relocate_sky_definition` makes
+    of the sky header's word at 0x1C. On 11 of the 19 levels (Novalis, Kerwan,
+    Eudora, Batalia, Gaspar, Orxon, Pokitaru, Hoven, Oltanis, Kalebo III,
+    Veldin's return; the same in both versions, measured by what the sky
+    writes at address 0) that word is 0, and so is the record count at 0x08:
+    on its first frame the routine sets the count to 256, reseeds `rand` with
+    12345 and fills all 256 records from address 0 on (the first 246 with the
+    random-colour byte set, which costs a `rand` call each frame), and every
+    frame after reads back what it wrote. On the console that is the EE
+    kernel's low memory; what the kernel had there never reaches the game,
+    which writes all of it before it reads any (the port's guest memory there
+    is otherwise untouched). In US's runs record 0 read 0x20000000 from the
+    level's first frame: a DMA tag that the port's own host C wrote through a
+    null pointer. `func_L00_00296CD0` (rac1/host/variants.c), standing in for
+    the level programs' copies of DmaTieTextures, spliced the shrub list
+    (`D_001604F0`) instead of the tie list, still 0 on the level's first frame
+    in US; the carried `split_places.tsv` row even sent the US catalogue's own
+    `dma_tie_textures` places there. The variant is now DmaTieTextures itself
+    (PAL), and US's row is gone (its catalogue names those places right).
+    Eudora (class 1516's wood chips), Gaspar (the asteroid shower and its dust,
+    classes 263-266 and 417: PAL 984 live mobys at control, US 893 before) and
+    Orxon now play the same in both versions, and Pokitaru up to c=591, where
+    the hero's state parts (55 against 7; it did before this, not looked
+    into); Hoven's hero no longer parts at c=604.
+  - *Still to find.* Kerwan: on the level's first frame `allocate_voice_slot`
+    (US `FUN_0022d7f0`, from `FUN_0022da68`) draws a pitch bend for four new
+    sounds in PAL's run and for one in US's (sound definitions or the voice
+    volume check differ). Rilgar: on the level's 60th frame a sharkigator's
+    update (`FUN_L05_002d1688`) draws a number in US's run and not in PAL's.
+    Veldin: on the level's 20th frame level 0's code at US 0x20A9E8 (called
+    from 0x2070D0) draws numbers in PAL's run and not in US's. Each ends in a
+    bolt more or less (Veldin c=603, Kerwan c=143, Rilgar c=454); Umbris's
+    bombs and Batalia's rockets are the scene timing below. Counted with a
+    debugger breakpoint on `rand` and its callers per frame, the sky update
+    marking the frames. These are left out (`versions`) until found.
+- **The scene before control ends two ticks apart.** On the levels whose
+  arrival is followed by a scene the route skips (Novalis, Umbris, Batalia,
+  Hoven, Gemlik Base, Oltanis), the route's Start presses fall on window
+  frames (every 30th), so they land at another tick of the level in each
+  version, and control comes two ticks earlier or later relative to the
+  level's mobys. The hero is compared from control, the mobys have run two
+  ticks more or less: on Hoven a class 238 enemy then reaches a spot two
+  ticks apart, one dies dropping four bolts in PAL at c=284 and not in US (it
+  also bumped Ratchet differently at c=604 while the sky's records differed,
+  above). A harness
+  effect; presses counted from the level's first frame would remove it.
+- **The death fall's tumble.** Falling off the world (hero state 0x77)
+  starts a tumble whose two spin speeds `randf_sym` (`FUN_L00_00257c48`)
+  draws with a random sign (bit 0 of `rand`): Gemlik Base c=498, Oltanis
+  c=644, Quartu c=659, Kalebo III c=470 tumble the other way round in each
+  version, and Ratchet lands back on the same spot. The C and the assembly
+  agree; only the random state differs (above: on these levels it still parts
+  for a cause not yet looked for).
+- **Boarding Pokitaru's fighter (a difference of the discs).** On PAL,
+  Triangle by the fighter (`func_L11_003146E0`) puts Ratchet in state 50 at
+  once; on US (`FUN_L11_00313290`) the press only starts the fade (the
+  fighter's state 2, retail 0x3137F4), and state 50 comes when it ends
+  (0x313854), 16 ticks later. The wide route `11-jet-fighter` leaves `hs` and
+  `mb` out from c=100.
+
+Port bugs these comparisons found and fixed (OPENRAC_PATCHES.md has each US
+edit): Eudora's walker gait read time 0 (`FUN_L04_002927d0`); the Oltanis,
+Kalebo III and Batalia hero updates were stubs (an assembler label with an
+offset); spawns through PAL's name for `create_moby`, `func_0020D348_m`, went
+nowhere; `draw_mobys` read the moby list through literal addresses, so the
+moby renderer marked no moby drawn and out-of-view mobys kept updating
+(Kerwan's 33 rail movers ran off their paths); the levels' joint pose had no
+host C on this disc; Quartu's helicopter update was a stub and its 28 Blarg
+commanders never existed; Gaspar's asteroid passed its dust spawn the radii
+and vectors crossed. On the wide routes (2026-10-18): Gaspar read the pad
+twice a tick (an ambient-sound moby queued the level's copy of the pad
+update as its draw callback: `FUN_L07_002f8058`), so a press's first-frame
+edge was lost (`09-turret`'s jump, `09-long`'s Bomb Glove); the Snagglebeast's
+shockwaves started at (0, 0, 1) (carried files' renamed quadword helpers were
+translated as nothing); Gemlik's fighter steered toward a home point 8 bytes
+off (`FUN_L13_002ba178`, `13-qwark`); Oltanis queued Hoven's callback
+(`FUN_L14_00307a80`); the Suck Cannon's HUD gauge took another folded
+wrapper's address (hostgen).

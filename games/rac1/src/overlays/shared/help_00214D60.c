@@ -221,7 +221,7 @@ void Hero_SetTiltJoints(void) {
     vec.q = 0;
     v[2] = -1.0f;
     func_001F9EE8(v, v, (char *)state + 0x40);
-    func_L00_0020A858(D_0015EE64 * 0.013f, D_0015EE64 * 0.3f);
+    Hero_SetTiltSpringParams(D_0015EE64 * 0.013f, D_0015EE64 * 0.3f);
     limit = 0.43633232f;
     if (state->state.current == 0x3f) limit = 0.29670596f;
     else if (state->state.current == 0x70) limit = 0.08726646f;
@@ -285,7 +285,7 @@ void Hero_SetLeanJoints(void) {
     f32 x;
 
     if (D_0013F450_15A90.state.current == 0x02) {
-        func_L00_0020A858(0.04f, 0.2f);
+        Hero_SetTiltSpringParams(0.04f, 0.2f);
         func_L00_0020A858_15A90b(0.04f, 0.2f);
         func_L00_0020A858_15A90c(0.04f, 0.2f);
         func_L00_0020A858_15A90d(0.02f, 0.2f);
@@ -326,7 +326,7 @@ void Hero_SetLeanJoints(void) {
             (D_L00_0017A780_15A90.f[(0xB68) / 4]) = nw * 0.3f;
         }
     } else if (D_0013F450_15A90.state.current == 0x08 || D_0013F450_15A90.state.current == 0x81) {
-        func_L00_0020A858(0.008f, 0.08f);
+        Hero_SetTiltSpringParams(0.008f, 0.08f);
         func_L00_0020A858_15A90b(0.015f, 0.08f);
         func_L00_0020A858_15A90c(0.015f, 0.08f);
         func_L00_0020A858_15A90d(0.008f, 0.1f);
@@ -371,7 +371,7 @@ void Hero_SetLeanJoints(void) {
         (D_L00_0017A780_15A90.f[(0xAB8) / 4]) = -b * 0.3f;
         (D_L00_0017A780_15A90.f[(0xB68) / 4]) = -b * 0.3f;
     } else if (D_0013F450_15A90.state.control_mode == 2 || D_0013F450_15A90.state.control_mode == 4) {
-        func_L00_0020A858(0.04f, 0.2f);
+        Hero_SetTiltSpringParams(0.04f, 0.2f);
         func_L00_0020A858_15A90b(0.04f, 0.2f);
         func_L00_0020A858_15A90c(0.04f, 0.2f);
         func_L00_0020A858_15A90d(0.02f, 0.2f);
@@ -768,7 +768,7 @@ extern void func_L00_002129D0(s32);
 extern f32 func_001F9B88(f32);
 
 /* Adapted from Lombyte (MIT) for PAL by OpenRAC's tools/port.py: src/overlays/shared/ui_help_00214658.c, FUN_L00_002167d0. */
-void func_L00_00216F58(void) {
+void Hero_ApplyStickVelocity(void) {
     G_167d0 *m;
     H *q;
     V4 *r;
@@ -897,10 +897,10 @@ int Hero_PlayActiveSound(int a, int b) {
         c = *(int *)(p + 0xA88);
         if (c != 0) {
             qcopy((char *)c + 0x10, p + 0x80);
-            return func_0022ED80(a, b, c);
+            return Moby_PlaySound(a, b, c);
         }
     } else {
-        return func_0022ED80(a, b, *(int *)(p + 0x2080));
+        return Moby_PlaySound(a, b, *(int *)(p + 0x2080));
     }
     return -1;
 }
@@ -911,7 +911,7 @@ extern G D_0013F450 NOT_SDA;
 void Hero_StartSlotSound(int idx, int a, int b) {
     G *g = &D_0013F450;
     if (g->a[idx] == -1) {
-        g->a[idx] = func_0022ED80(b, 4, a);
+        g->a[idx] = Moby_PlaySound(b, 4, a);
     }
     g->b[idx] = a;
 }
@@ -1084,12 +1084,12 @@ extern void func_L00_002A90C0(void *, int);
 extern int *D_L00_00178000[];
 
 /* Initialise the pool once, then for each of the first n entries of type 5 or 9 halve and apply its position. */
-void func_L00_00217AF0(int a, int n) {
+void Hero_HitMobySparks(int a, int n) {
     if (n != 0) {
         char *d = D_0013E633 + 0xE1D;
         int i;
         if (*(int *)(d + 0xA64) == 0) {
-            func_0022ED80(1, 0, a);
+            Moby_PlaySound(1, 0, a);
             *(int *)(d + 0xA64) = 1;
         }
         for (i = 0; i < n; i++) {
@@ -1205,8 +1205,8 @@ void LaunchGadgetMoby(void) {
             }
         }
         if (!has_target) {
-            D_0013F450_15A90.aim_yaw = D_L00_00166D80[0x158 / 4];
-            D_0013F450_15A90.aim_pitch = FastAddRots(-D_L00_00166D80[0x154 / 4], 0.12217305f);
+            D_0013F450_15A90.aim_yaw = gCameraLvl[0x158 / 4];
+            D_0013F450_15A90.aim_pitch = FastAddRots(-gCameraLvl[0x154 / 4], 0.12217305f);
         }
     }
     item = D_0013F450_15A90.items[0].moby;
@@ -1231,9 +1231,9 @@ void LaunchGadgetMoby(void) {
     clear_u64_value(dir);
     func_001FA1F8(mat, dir);
     if (aimed) {
-        dir[0] = D_L00_00166D80[0x150 / 4];
-        dir[1] = D_L00_00166D80[0x154 / 4];
-        dir[2] = D_L00_00166D80[0x158 / 4];
+        dir[0] = gCameraLvl[0x150 / 4];
+        dir[1] = gCameraLvl[0x154 / 4];
+        dir[2] = gCameraLvl[0x158 / 4];
         func_001FA1F8(cam_mat, dir);
         func_001FA4F0(mat, cam_mat, mat);
     } else {

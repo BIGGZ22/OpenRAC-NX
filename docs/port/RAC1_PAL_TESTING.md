@@ -8,6 +8,10 @@ way. It complements [RAC1_PAL_BUGFIX_GUIDE.md](RAC1_PAL_BUGFIX_GUIDE.md)
 and the traps met on the way. Everything here runs the port's own
 development switches; nothing in it emulates the console.
 
+To check a change across every level of both versions at once (hidden
+windows, a trace per tick, compared with another build or a baseline), use
+the regression runs: [REGRESSION.md](REGRESSION.md).
+
 ## 1. Before a run
 
 - **Build** from the repository root: `python3 tools/build_port.py rac1-pal`
@@ -72,6 +76,11 @@ builds; watch the game mode to be sure (section 5).
 
 Start (mask `8`) skips the scenes and the flight while "Skip cutscenes" is
 on (the default), so `OPENRAC_PRESS=...,600:8:5` gets to a planet quickly.
+In a cutscene Start also presses the four shoulders, and in the landing and
+the take-off (game mode 6) Cross: the game's own skips, so Start does what
+they do (the landing skips once 30 ticks have played, then control follows
+about 40 frames later). The settings file in your profile can turn it off;
+`--settings` naming a file that does not exist gives the defaults.
 
 ## 4. Moving Ratchet and the camera
 
@@ -135,8 +144,11 @@ in ReRAC's `docs/plan/class_census.md` and the planet pages.
   address every frame. Collapse a long log with
   `grep watch run.log | cut -d' ' -f4- | uniq -c`.
 - **The game mode** `0x15F6A8` (raw, watchable): 0 play, 1 movie, 2 in-game
-  scene, 3 pause menu, 5 vendor, 6 level loading and the flight's end. It is
-  level data: host C reads it as `OPENRAC_LDATA(0, 0x0015F6A8u)`.
+  scene, 3 pause menu, 5 vendor, 6 level loading, the landing, the take-off
+  and the flight's end. It is level data: host C reads it as
+  `OPENRAC_LDATA(0, 0x0015F6A8u)`, and `OPENRAC_DEBUG` logs the level's copy
+  as `level mode` (-1 outside a level). The ship's sequence state is
+  `0x13E150` (0 take-off, 8 landing, other values the flight).
 - **Level data moves.** Each level program relocates its data from
   0x15F000 up; a raw watch of an address there reads the executable's copy,
   not the level's (they agree on level 0). Host and hand C read it through
@@ -200,7 +212,9 @@ re-reads every player's levels before Play.
 1. Reproduce first, with the numbers or pictures that show the bug.
 2. Change one thing; rebuild (hostgen too when tables changed).
 3. Run the same script: the bug gone, and a second level or case where
-   the same code runs unchanged.
+   the same code runs unchanged. Then `regress.py check` against a baseline
+   of the build before ([REGRESSION.md](REGRESSION.md)): every other level
+   still plays the same.
 4. Compare a setting or switch on and off when the fix is one.
 5. `ctest --preset release` in `port/` (64 tests), the editor's and tools'
    unit tests when those changed, `yarn verify` for the launcher.

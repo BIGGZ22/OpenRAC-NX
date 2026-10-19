@@ -1,3 +1,4 @@
+/* fcheck: SAME on 3 calls (OpenRAC tools/fcheck_gate.py, 2026-10-18). */
 /* matrix_mul_vec3: out = m * v for a 4x3 matrix m given by its three columns
    (floats 0..3, 4..7, 8..11), v = (x, y, z, w). xyz get m*v; w gets the
    m-row-w dot v plus v.w (the vf0 = (0,0,0,1) term of the vector unit). */

@@ -1913,6 +1913,7 @@ void drawer(const Shown& shown) {
         if (drawer_switch("Skip cutscenes", settings::get().skip_cutscenes)) {
             change_setting(options_menu::kSkipCutscenes, 1);
         }
+        setting_row(options_menu::kStrafe);
         card_end();
 
         ImGui::Dummy(ImVec2(0.0f, dp(16.0f)));

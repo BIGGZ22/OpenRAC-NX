@@ -356,7 +356,7 @@ void PathLiftUpdate(struct Moby *m) {
         FastVecAdd(&rider->pos, &base, &off);
     }
     if (d->sound == -1 || (Sound_IsPlaying(m, d->sound) == 0 && d->sound == -1))
-        d->sound = func_0022ED80(0, 4, m);
+        d->sound = Moby_PlaySound(0, 4, m);
     d->angle = FastAddRots(d->angle, 0.17453292f);
     func_L00_001FFED8(d->wobble, 0, d->angle);
     FastVecSub(&delta, &m->pos, &old);
@@ -553,7 +553,7 @@ typedef struct {
 } Spk_k_EC7E8;
 
 /* Adapted from Lombyte (MIT) for PAL by OpenRAC's tools/port.py: src/overlays/l14/gameplay/entities/002df080.c, FUN_L14_002eb388. */
-void func_L14_002EC7E8(struct Moby *m, int i, void *dir) {
+void Sparks_InitParticle(struct Moby *m, int i, void *dir) {
     Spk_k_EC7E8 *d = (Spk_k_EC7E8 *)m->pvars;
     float fwd[4];
     float side[4];
@@ -625,7 +625,7 @@ extern struct L14SparkTarget D_L14_00167480;
 void func_L14_002ECC70_EC9C8(struct Moby *m) __asm__("func_L14_002ECC70");
 
 /* Adapted from Lombyte (MIT) for PAL by OpenRAC's tools/port.py: src/overlays/l14/gameplay/entities/002df080.c, FUN_L14_002eb568. */
-void func_L14_002EC9C8(struct Moby *m) {
+void Sparks_Update(struct Moby *m) {
     Spk_k_EC9C8 *d = (Spk_k_EC9C8 *)m->pvars;
     float dir[4];
     float clip[4];
@@ -716,7 +716,7 @@ extern void func_001F9EE8(void *, void *, void *);
 extern void func_L00_001FD1D8_ECC70(void *, int, int) __asm__("func_L00_001FD1D8");
 
 /* Adapted from Lombyte (MIT) for PAL by OpenRAC's tools/port.py: src/overlays/l14/gameplay/entities/002df080.c, FUN_L14_002eb810. */
-void func_L14_002ECC70(struct Moby *m) {
+void Sparks_Draw(struct Moby *m) {
     Spk_k *d = (Spk_k *)m->pvars;
     Pk_m pk;
     float mat[4][4];
@@ -808,7 +808,7 @@ extern float func_001F9FA8(float);
 
 /* Mine update: drifts along its looped path while spinning and pulsing; blows up on a hit.
    Adapted from Lombyte (MIT) for PAL by OpenRAC's tools/port.py: src/overlays/l14/gameplay/entities/002df080.c, FUN_L14_002ec810. */
-void func_L14_002EDC70(struct Moby *m) {
+void MineL14_Update(struct Moby *m) {
     L14MineVars *d = (L14MineVars *)m->pvars;
     float v[4];
     Vec4 vel;
@@ -859,7 +859,7 @@ void func_L14_002EDC70(struct Moby *m) {
         ComputeHitResponse(m, hit, d->health, 0, &count, 0, 0, 4);
         if ((count >= 2 && hit != 0 && hit->moby->oclass != 0x283) || D_0013F450.coll_hit_moby == (u8 *)m) {
             clear_u64_value(&vel);
-            func_0022ED80(0, 0, m);
+            Moby_PlaySound(0, 0, m);
             if (D_0013F450.coll_hit_moby == (u8 *)m)
                 func_L00_0025F4A8(m, &vel, &m->pos, 3.0f, 1.0f, 10, 20, 60, 3.0f, 5.0f, 9.0f, 1.0f, -1, 15.0f, 1, 1, -1, 0);
             else
@@ -1013,7 +1013,7 @@ void SweepingBoltUpdate(struct Moby *m) {
                                  rand_range(scale_ticks(10), scale_ticks(15)), 30000.0f);
             }
         }
-        func_0022ED80(0, 0, m);
+        Moby_PlaySound(0, 0, m);
         DeleteMoby(m);
         return;
     }
@@ -1260,7 +1260,7 @@ void LightningArcUpdate(char *moby) {
         } else {
             D_L14_00161DB0[0] = 0;
         }
-        AddDrawCallback(func_L14_002EF078, (struct Moby *)moby);
+        AddDrawCallback(FadingQuads_Draw, (struct Moby *)moby);
     }
 }
 typedef int u128_2EF078 __attribute__((mode(TI)));
@@ -1296,7 +1296,7 @@ extern float D_L14_00161D54 SDATA(D_L14_00161D54);
 extern float D_L14_00161D58 SDATA(D_L14_00161D58);
 
 // Draws the lightning bolt between two points as a chain of textured quad pairs, with three side branches.
-void func_L14_002EF078(void) {
+void FadingQuads_Draw(void) {
     Q_2EF078 q[2];
     V_2EF078 m[4];
     V_2EF078 sz[2];
@@ -1761,7 +1761,7 @@ void Moby685Update(char *moby) {
 extern char * D_L14_001B0F30[];
 
 /* Adapted from Lombyte (MIT) for PAL by OpenRAC's tools/port.py: src/overlays/l14/gameplay/entities/002df080.c, FUN_L14_002eef60. */
-void func_L14_002F03E8(struct Moby *m) {
+void Moby685_InitPathLengths(struct Moby *m) {
     char *d = (char *)m->pvars;
     int *path;
     int *e;
@@ -1973,7 +1973,7 @@ extern int func_001FA898_r(float) __asm__("func_001FA898");
 extern int func_001FA8A8(int, int, float);
 
 // pulses the moby's tint while the player is near, else fades it to a dim colour
-void func_L14_002F0B78(char *moby) {
+void Moby685_UpdateGlowTint(char *moby) {
     char *data = *(char **)(moby + 0x78);
     char *x = D_0013E633 + 0xE1D;
     if (FastAbsF(*(float *)(moby + 0x10) - *(float *)(x + 0x80)) > 40.0f ||
@@ -2064,7 +2064,7 @@ void TaxiUpdate(Moby *moby) {
     int flags = 0;
     qcopy(v00, (*(float (*)[4])&moby->pos));
     qcopy(v10, (*(float (*)[4])&moby->rot));
-    func_L00_002676A0(moby, (moby->flags ^ 1) & 1);
+    LevelTable_SetSlotValue(moby, (moby->flags ^ 1) & 1);
     switch (moby->state) {
     case 0:
         d->hB0 = -1;
@@ -2079,7 +2079,7 @@ void TaxiUpdate(Moby *moby) {
             v70[3] = 0;
             func_001F9EE8(v70, v70, v30);
             if (FastAbsF(v70[1]) < 1.2f) {
-                func_L14_002F25C8((char *)moby);
+                Taxi_SelectPath((char *)moby);
                 Vendor_ShowHelpMessage((char *)moby);
                 if ((*(int *)(D_0013A5E0_2F19C0 + 0x2604) & button) && D_L14_0015F674 == 4) {
                     Moby *m;
@@ -2110,7 +2110,7 @@ void TaxiUpdate(Moby *moby) {
                     } else {
                         d->cur = 1;
                     }
-                    func_L14_002F25C8((char *)moby);
+                    Taxi_SelectPath((char *)moby);
                     moby->state = 3;
                 }
             }
@@ -2125,7 +2125,7 @@ void TaxiUpdate(Moby *moby) {
                     qcopy_nc(d->rot, D_L14_001601AC_2F19C0[d->station[d->cur]].dir);
                 } else {
                     d->cur = 0;
-                    func_L14_002F25C8((char *)moby);
+                    Taxi_SelectPath((char *)moby);
                     moby->state = 3;
                 }
             }
@@ -2140,7 +2140,7 @@ void TaxiUpdate(Moby *moby) {
                     qcopy_nc(d->rot, D_L14_001601AC_2F19C0[d->station[d->cur]].dir);
                 } else {
                     d->cur = 2;
-                    func_L14_002F25C8((char *)moby);
+                    Taxi_SelectPath((char *)moby);
                     moby->state = 3;
                 }
             }
@@ -2150,7 +2150,7 @@ void TaxiUpdate(Moby *moby) {
     case 3: {
         Hero *g = (Hero *)(D_0013E633 + 0xE1D);
         if (g->ground_moby == moby && g->air_frames.s == 0) {
-            func_L00_002E9900(7.0f, 0.002f, 0);
+            Cam_SetDistanceGoal(7.0f, 0.002f, 0);
         }
         func_00214D88_2F19C0(1.0f, D_0015EE70, D_0015EE70, D_0015EE6C * 0.5f, &d->t, &d->v);
         qcopy_nc(v30, D_L14_001601AC_2F19C0[d->station[d->cur]].pos);
@@ -2186,7 +2186,7 @@ void TaxiUpdate(Moby *moby) {
     case 4: {
         Hero *g = (Hero *)(D_0013E633 + 0xE1D);
         if (g->ground_moby == moby && g->air_frames.s == 0) {
-            func_L00_002E9900(7.0f, 0.003f, 0);
+            Cam_SetDistanceGoal(7.0f, 0.003f, 0);
         }
         if (AdvanceMobyPath((char *)moby)) {
             d->t = 0.0f;
@@ -2208,7 +2208,7 @@ void TaxiUpdate(Moby *moby) {
             d->t = 0.0f;
             d->v = 0.0f;
             moby->state = 1;
-            func_L05_0031AA20((char *)moby);
+            Taxi_SetTargetFromSpawn((char *)moby);
         }
         g = (Hero *)(D_0013E633 + 0xE1D);
         if (g->ground_moby == moby && g->air_frames.s == 0) {
@@ -2223,7 +2223,7 @@ void TaxiUpdate(Moby *moby) {
                     qcopy(d->rot2, d->rot);
                     SnapToPathPoint((char *)moby);
                     d->cur = d->dst;
-                    func_L14_002F25C8((char *)moby);
+                    Taxi_SelectPath((char *)moby);
                     moby->state = 7;
                     qcopy(d->pos, d->pos2);
                     qcopy(d->rot, d->rot2);
@@ -2318,7 +2318,7 @@ void SnapToPathPoint(char *m) {
 }
 
 // Picks a target by phase, then sets velocity scale from its distance.
-void func_L14_002F25C8(char *moby)
+void Taxi_SelectPath(char *moby)
 {
     char *data = *(char **)(moby + 0x78);
     int *t;
@@ -2461,7 +2461,7 @@ void Moby851Update(char *m) {
             return;
         }
         *(char **)(d + 0x20) = D_L14_00161FF0;
-        func_L00_002676E8(m, d);
+        DialogRequest_Init(m, d);
         d[8] = 1;
         m[0x20] = 1;
         break;
@@ -2479,7 +2479,7 @@ void Moby851Update(char *m) {
         } else {
             *(float *)(d + 0xC) = 1.7f;
         }
-        if (func_L00_00267290(m, d) != 0) {
+        if (Npc_TryStartDialog(m, d) != 0) {
             PlaceMarkerAheadOfMoby(3.0f, m);
             m[0x20] = 2;
         }
@@ -2711,7 +2711,7 @@ extern L14Puff_2FD870 *func_L00_0026DEA0_2FD870(void *, f32, f32, f32, int, void
 
 /* Engine exhaust: two smoke puffs and three fading rings on each side of the moby.
    Adapted from Lombyte (MIT) for PAL by OpenRAC's tools/port.py: src/overlays/l14/gameplay/entities/002df080.c, FUN_L14_002fc3e8. */
-void func_L14_002FD870(struct Moby *m) {
+void ThrusterPuffs_Spawn(struct Moby *m) {
     Vec4 step;
     Vec4 pos;
     Vec4 base;
@@ -2827,7 +2827,7 @@ extern short D_L14_00162024;
 extern short D_L14_00162028;
 
 // Steers a moby toward a target position and updates its velocity/rotation springs.
-void func_L14_002FDE28(char *m) {
+void Moby_SpringAlongPath(char *m) {
     char *d = *(char **)(m + 0x78);
     float v[3];
     float t[3];
@@ -3230,7 +3230,7 @@ extern void func_0020D678(void *);
 extern void func_001F9BF0(void *, void *, void *);
 
 /* Flies the moby along its path, banking and pitching toward the next point; returns 1 once it is removed at the end. */
-int func_L14_002FEDA0(char *m) {
+int OltanisJet_FollowPath(char *m) {
     char *d = *(char **)(m + 0x78);
     float v[4];
     float w[4];

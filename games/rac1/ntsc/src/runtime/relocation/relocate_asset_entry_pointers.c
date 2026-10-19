@@ -1,8 +1,8 @@
 #include "types.h"
 
-void relocate_asset_entry_pointers(u8 *a0, s32 idx, s32 on) __asm__("FUN_002032e0");
+void relocate_asset_entry_pointers(u8 *a0, s32 idx) __asm__("FUN_002032e0");
 
-void relocate_asset_entry_pointers(u8 *table_container, s32 idx, s32 on) {
+void relocate_asset_entry_pointers(u8 *table_container, s32 idx) {
     u8 *base = table_container;
     u8 *p;
     u32 v;

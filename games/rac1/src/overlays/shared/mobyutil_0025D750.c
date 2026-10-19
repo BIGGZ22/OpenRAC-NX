@@ -13,7 +13,7 @@ LINKER_REMNANT("asm/overlays", func_L02_0025D778);
 LINKER_REMNANT("asm/overlays", func_L02_002612C0);
 LINKER_REMNANT("asm/overlays", func_L02_00264950);
 // Clears seven words at moby+0x00..0x18 (walking down) and a halfword at 0x1C.
-void func_L02_00265E58(char *moby) {
+void EffectSlots_Clear(char *moby) {
     int *p = (int *)(moby + 0x18);
     int i;
     for (i = 6; i >= 0; i--, p--) {
@@ -47,7 +47,7 @@ extern void func_L00_0026E438(void *, void *, int);
 typedef struct { char *p[7]; short timer; } Slots_265E88;
 
 /* Adapted from Lombyte (MIT) for PAL by OpenRAC's tools/port.py: src/overlays/shared/gameplay/entities/00264e40.c, FUN_L02_00264e70. */
-void func_L02_00265E88(char *slots, float *position, float *direction, float distance) {
+void EffectSlots_Fire(char *slots, float *position, float *direction, float distance) {
     float origin[4] __attribute__((aligned(16)));
     float end[4] __attribute__((aligned(16)));
     float adjusted[4] __attribute__((aligned(16)));
@@ -116,7 +116,7 @@ void func_L02_00265E88(char *slots, float *position, float *direction, float dis
 extern int func_L00_001F2BE8(float, void *, int, int, int);
 
 // Retires up to seven slot entries whose effect finished, spawning a burst for live ones.
-void func_L02_002661E8(char **slots, int a, int b) {
+void EffectSlots_Retire(char **slots, int a, int b) {
     int i;
     for (i = 6; i >= 0; i--, slots++) {
         char *m = *slots;

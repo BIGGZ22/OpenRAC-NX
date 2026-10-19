@@ -1,4 +1,4 @@
-/* functional: medium. Handwritten MMI translated to plain arithmetic: 8-wide vertical half-pel average into dst with signed round-up; pass/block flag register kept as in retail (second block test is flag bit 15 and (p[3] & 0xFFFF)). */
+/* functional: medium. fcheck: unchecked (never called in fcheck's capture run of the title, menu and level 0; OpenRAC tools/fcheck_gate.py, 2026-10-18). Handwritten MMI translated to plain arithmetic: 8-wide vertical half-pel average into dst with signed round-up; pass/block flag register kept as in retail (second block test is flag bit 15 and (p[3] & 0xFFFF)). */
 static void rot8_func_00126DF0(const u8 *a, const u8 *b, int k, u8 *rot) {
     u8 buf[16];
     int i;

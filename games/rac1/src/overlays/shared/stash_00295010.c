@@ -27,6 +27,6 @@ int GetStashSlotSize(unsigned int slot) {
     return D_L00_001C1668[slot].qwc;
 }
 // Returns the constant -3.
-int func_L00_002951C8(void) {
+int GetStashSlotSize_Tail(void) {
     return -3;
 }

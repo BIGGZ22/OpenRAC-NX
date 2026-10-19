@@ -44,7 +44,7 @@ void Moby1033Update(char *m) {
     }
     case 2:
         if (func_001F9908((int *)(d + 0xB0))) {
-            func_0022ED80(0, 0, (int)m);
+            Moby_PlaySound(0, 0, (int)m);
             m[0x20] = 3;
         }
         break;
@@ -61,7 +61,7 @@ void Moby1033Update(char *m) {
     }
     case 4:
         if (func_001F9908((int *)(d + 0xB0))) {
-            func_0022ED80(0, 0, (int)m);
+            Moby_PlaySound(0, 0, (int)m);
             m[0x20] = 1;
         }
         break;
@@ -116,7 +116,7 @@ void BobbingPlatformUpdate(char *m) {
         *(float *)(m + 0x18) += *(float *)(d + 0xA4);
         if (Hero_IsOnMoby(m) == 0) m[0x20] = 3;
         if (*(int *)(d + 0xBC) <= 0) {
-            func_0022ED80(0, 0, (int)m);
+            Moby_PlaySound(0, 0, (int)m);
             *(int *)(d + 0xBC) = rand_range(0x28, 0x3C);
         }
         break;
@@ -847,7 +847,7 @@ void Moby859Update(struct Moby *moby) {
 
     qcopy(old, &moby->pos);
     FastVecAdd(&moby->pos, &moby->pos, data);
-    func_L00_00260D30(20.0f, moby, found);
+    FindNearestTargetMoby(20.0f, moby, found);
     switch (*(short *)(data + 0x12)) {
     case 0:
         break;
@@ -961,7 +961,7 @@ extern float func_00214358(void *, int, float);
 extern float func_001F9CB8(void *a);
 
 // Orxon moby step: pulls the moby toward its target and returns a state code 0..3 (func_L10_002D9530).
-int func_L10_002D9530(char *m, char *c, float *a2) {
+int SwirlMoby_RayCollide(char *m, char *c, float *a2) {
     float v0[4] __attribute__((aligned(16)));
     float v10[4] __attribute__((aligned(16)));
     float v20[4] __attribute__((aligned(16)));
@@ -1005,7 +1005,7 @@ int func_L10_002D9530(char *m, char *c, float *a2) {
     *(float *)(m + 0x40) = RotateTowardAngle(*(float *)(m + 0x40), -t, k);
     u = func_L00_001FF860(v40[2], v40[0]);
     *(float *)(m + 0x44) = RotateTowardAngle(*(float *)(m + 0x44), u, k);
-    func_0022ED80(1, 0, (int)m);
+    Moby_PlaySound(1, 0, (int)m);
             return 1;
         }
         if (*(int *)(g + 0x1C) > 0) {
@@ -1016,7 +1016,7 @@ int func_L10_002D9530(char *m, char *c, float *a2) {
             FastVecScale(c, c, 0.5f);
             func_L00_001FF4B0(v20, g + 0x40, one);
             if (0.707f < FastVecDot(v20, v10)) {
-                r = func_00214358(m + 0x10, 0, 0.5f);
+                r = ProbeGroundHeight(m + 0x10, 0, 0.5f);
                 if (*(float *)(m + 0x18) < r) *(float *)(m + 0x18) = r;
                 if (*(float *)(c + 0x8) < 0.0f) *(float *)(c + 0x8) = *(float *)(c + 0x8) * -0.4f;
                 if (FastVecLength(c) < D_0015EE6C_x) {
@@ -1039,7 +1039,7 @@ int func_L10_002D9530(char *m, char *c, float *a2) {
     *(float *)(m + 0x40) = RotateTowardAngle(*(float *)(m + 0x40), -t, k);
     u = func_L00_001FF860(v40[2], v40[0]);
     *(float *)(m + 0x44) = RotateTowardAngle(*(float *)(m + 0x44), u, k);
-    func_0022ED80(1, 0, (int)m);
+    Moby_PlaySound(1, 0, (int)m);
             return 2;
         }
       }
@@ -1245,7 +1245,7 @@ void TimedShooterUpdate(char *moby) {
         BuildSphericalOffset(a, random_float_between(*(float *)&D_L10_00161C84, *(float *)&D_L10_00161C88) * D_0015EE6C, q, r);
         FastVecAdd(b, moby + 0x10, a);
         SpawnSwirlMoby(moby, b, a);
-        func_0022ED80(0, 0, (int)moby);
+        Moby_PlaySound(0, 0, (int)moby);
         *(int *)data = scale_ticks(rand_range(*(int *)&D_L10_00161C70, *(int *)&D_L10_00161C74));
     }
 }
@@ -1459,7 +1459,7 @@ void Moby1031Update(char *m) {
             contact = D_L10_00174340;
             count = n;
             do {
-                float z = func_00214358(*list + 0x10, 0, 0.5f);
+                float z = ProbeGroundHeight(*list + 0x10, 0, 0.5f);
                 if (*(char **)(contact + 0x18) == m) {
                     if (FastAbsF(z - *(float *)(*list + 0x18)) < 0.1f) {
                         if (*(short *)(*list + 0xA6) != 0x3EF) active = 1;
@@ -1488,8 +1488,8 @@ void Moby1031Update(char *m) {
     if ((unsigned char)link[0x20] >= 1 && (unsigned char)link[0x20] <= 2) {
         link[0x20] = 3;
         if (*(int *)(d + 0x10) == 0) {
-            func_0022ED80(0, 0, (int)link);
-            func_0022ED80(0, 0, (int)m);
+            Moby_PlaySound(0, 0, (int)link);
+            Moby_PlaySound(0, 0, (int)m);
             *(int *)(d + 0x10) = scale_ticks(0x1E);
         }
     }
@@ -1499,8 +1499,8 @@ inactive:
     if ((unsigned char)link[0x20] == 4) {
         link[0x20] = 1;
         if (*(int *)(d + 0x10) == 0) {
-            func_0022ED80(1, 0, (int)link);
-            func_0022ED80(0, 0, (int)m);
+            Moby_PlaySound(1, 0, (int)link);
+            Moby_PlaySound(0, 0, (int)m);
             *(int *)(d + 0x10) = scale_ticks(0x1E);
         }
     }
@@ -1633,7 +1633,7 @@ void SoundPropUpdate(struct Moby *moby) {
         if (FastVecDist(&moby->pos, &D_L10_001672C0) < 80.0f && 0.0f <= (float)FastBSphereCheck(position1, 80.0f))
             AddDrawCallback((void *)RibbonTrailDraw, moby);
         if (Sound_IsPlaying(moby, *(int *)(data + 0x30)) == 0)
-            *(int *)(data + 0x30) = func_0022ED80(0, 4, (int)moby);
+            *(int *)(data + 0x30) = Moby_PlaySound(0, 4, (int)moby);
         break;
     }
     case 2: {
@@ -2275,7 +2275,7 @@ void PathEnemyL10Update(struct Moby *moby) {
     else data->f180 = data->f178;
 
     if (data->f174 == 2) {
-        r19 = func_L00_00260D30(data->f180, moby, data->fC0);
+        r19 = FindNearestTargetMoby(data->f180, moby, data->fC0);
         if (r19 != 2) {
             Anim_2E0FF8 *bp = &((Anim_2E0FF8 *)D_L10_0016016C)[data->f194];
             FastVecSub(v, D_0013E633 + 0xE9D, bp->f30);
@@ -2288,7 +2288,7 @@ void PathEnemyL10Update(struct Moby *moby) {
     } else if (moby->state != 1 && data->f17C >= 0) {
         r19 = FindNearestEligibleMoby(data->f180, moby, data->fC0, 0, 0, ((Path_2E0FF8 **)D_L10_001B0C30)[data->f17C]->pts, ((Path_2E0FF8 **)D_L10_001B0C30)[data->f17C]->count);
     } else {
-        r19 = func_L00_00260D30(data->f180, moby, data->fC0);
+        r19 = FindNearestTargetMoby(data->f180, moby, data->fC0);
     }
     if (r19 != 2) {
         if (data->f180 < func_001F9D48(data->f130, data->fC0)) data->f104 = 2;

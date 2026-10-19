@@ -1,6 +1,9 @@
 /* Carried from the PAL decompilation's nonmatching/functional/func_L05_00266D10.c (games/rac1) through the version
  * map (../../README.md): functional C, not matched C. Names and addresses are this version's.
- * The two versions' code differs here: func_L05_00266D10 (near) was paired by place; read it against NTSC-U before trusting it. */
+ * The two versions' code differs here: func_L05_00266D10 (near) was paired by place. Read against NTSC-U's
+ * assembly (2026-10-18): the text ids are 0x523F and 0x5240 (PAL's 0x5244, 0x5245), the middle counter
+ * prints one of four format strings by its value (PAL looks up a text id), the last line's format is
+ * D_L05_0015FA08, and the icon test reads the byte at 0x13D388. */
 #include "types.h"
 #include "qcopy.h"
 #include "qzero.h"
@@ -18,7 +21,7 @@
 extern int D_0015EE80_66D10 __asm__("D_0015ED80") __attribute__((section(".sdata")));
 extern int D_0015EE84_66D10 __asm__("D_0015ED84") __attribute__((section(".sdata")));
 extern char D_0013E15A_66D10[] __asm__("D_0013E05A");
-extern char D_0013D355_66D10[] __asm__("D_0013D255");
+extern unsigned char D_0013D388_66320 __asm__("D_0013D388");
 extern char D_0013F450_66D10[] __asm__("D_0013E533");
 extern int D_L05_0015FA5C_66D10 __asm__("D_L05_0015F984") __attribute__((section(".sdata")));
 extern int D_L05_0015FA60_66D10 __asm__("D_L05_0015F988") __attribute__((section(".sdata")));
@@ -35,8 +38,11 @@ extern int D_L05_0015FA9C_66D10 __asm__("D_L05_0015F9C4") __attribute__((section
 extern int D_L05_0015FAA0_66D10 __asm__("D_L05_0015F9C8") __attribute__((section(".sdata")));
 extern char D_L05_0015FAB0_66D10[] __asm__("D_L05_0015F9D8");
 extern char D_L05_0015FAB8_66D10[] __asm__("D_L05_0015F9E0");
-extern char D_L05_0015F9B8_66D10[] __asm__("D_L05_0015F8D8");
-extern char D_L05_0015FAC0_66D10[] __asm__("D_L05_0015F9E8");
+extern char D_L05_0015F9E8_66320[] __asm__("D_L05_0015F9E8");
+extern char D_L05_0015F9F0_66320[] __asm__("D_L05_0015F9F0");
+extern char D_L05_0015F9F8_66320[] __asm__("D_L05_0015F9F8");
+extern char D_L05_0015FA00_66320[] __asm__("D_L05_0015FA00");
+extern char D_L05_0015FA08_66320[] __asm__("D_L05_0015FA08");
 extern char D_L05_0015F940_66D10[] __asm__("D_L05_0015F860");
 extern void func_00201960_66D10(int, int, int, int, int) __asm__("func_00201128");
 extern char *func_001FE540_66D10(int) __asm__("func_001FDD10");
@@ -64,7 +70,7 @@ int FUN_L05_00266320(char *e) {
     y1 = y + 1;
     func_00201960_66D10(D_L05_0015FA5C_66D10, x, D_L05_0015FA64_66D10, D_L05_0015FA68_66D10, D_L05_0015FA6C_66D10);
     tx = D_L05_0015FA78_66D10;
-    t = func_001FE540_66D10(0x5244);
+    t = func_001FE540_66D10(0x523F);
     func_00116248_66D10(buf, D_L05_0015FAB0_66D10, t);
     func_L00_001FB7F8_66D10(tx - 1, y1, 0x80000000, buf, -1);
     func_L00_001FB7F8_66D10(tx, y, D_L05_0015FA70_66D10, buf, -1);
@@ -79,19 +85,22 @@ int FUN_L05_00266320(char *e) {
     func_L00_001FB7F8_66D10(tx, y, D_L05_0015FA74_66D10, buf, -1);
     {
         int n = *(int *)(hd + 0x8C0);
-        int base;
         tx = D_L05_0015FA88_66D10;
-        n = n - 1;
-        if (!(n < 5)) n = 4;
-        t = func_001FE540_66D10(n + 0x5229);
-        func_00116248_66D10(buf, D_L05_0015F9B8_66D10, t);
+        if (n == 1)
+            func_00116248_66D10(buf, D_L05_0015F9E8_66320, 1);
+        else if (n == 2)
+            func_00116248_66D10(buf, D_L05_0015F9F0_66320, 2);
+        else if (n == 3)
+            func_00116248_66D10(buf, D_L05_0015F9F8_66320, 3);
+        else
+            func_00116248_66D10(buf, D_L05_0015FA00_66320, n);
     }
     w = func_001F6600_66D10(buf, -1);
     tx = tx - w;
     func_L00_001FB7F8_66D10(tx + 1, y1, 0x80000000, buf, -1);
     func_L00_001FB7F8_66D10(tx, y, D_L05_0015FA74_66D10, buf, -1);
-    t = func_001FE540_66D10(0x5245);
-    func_00116248_66D10(buf, D_L05_0015FAC0_66D10, t);
+    t = func_001FE540_66D10(0x5240);
+    func_00116248_66D10(buf, D_L05_0015FA08_66320, t);
     w = func_001F6600_66D10(buf, -1);
     tx = tx - w;
     func_L00_001FB7F8_66D10(tx + 1, y1, 0x80000000, buf, -1);
@@ -99,7 +108,7 @@ int FUN_L05_00266320(char *e) {
     if (D_0015EE84_66D10 != 0x10)
         return *(int *)(e + 0x58);
     func_00116248_66D10(buf + 0x40, D_L05_0015F940_66D10, *(unsigned char *)(hd + 0x8CE));
-    if (*(unsigned char *)(D_0013D355_66D10 + 0x13B) == 0) {
+    if (D_0013D388_66320 == 0) {
         px = *(int *)(e + 0x50);
         py = D_0015EE80_66D10 ? 0xA : 0x12;
     } else {

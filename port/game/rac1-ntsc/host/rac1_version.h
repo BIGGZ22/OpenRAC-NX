@@ -29,7 +29,9 @@
 #define RAC1_OMIT_func_L12_002C08A0 1 /* FUN_L12_002bf6d0 */
 #define RAC1_OMIT_func_L13_0030AD88 1 /* FUN_L13_003098d0 */
 #define RAC1_OMIT_func_L00_00261448 1 /* FUN_L00_002603d0 */
-#define RAC1_OMIT_func_L00_00254218 1 /* the joint pose; not mapped for this disc yet */
+/* DmaTieTextures' level copies: the NTSC decomp's catalogue lists them under dma_tie_textures
+ * (FUN_00235640) itself, whose C they are; games/rac1's folds them into DmaShrubTextures. */
+#define RAC1_OMIT_func_L00_00296CD0 1
 /* Entries the version map cannot pair, checked by hand. */
 /* sceVu0Normalize, an entry inside the VU0 library object, which the map does not cut out. */
 #define func_001252C0 game_FUN_00125180
@@ -57,6 +59,14 @@
 #define func_001F4630 game_FUN_001f4280
 #define func_001F4630__game game_FUN_001f4280__game
 #define func_001F4868 game_FUN_001f44b8
+#define func_001F4A00 game_FUN_001f4650
+#define func_001F4A00__game game_FUN_001f4650__game
+#define func_001F4A78 game_FUN_001f46c8
+#define func_001F4A78__game game_FUN_001f46c8__game
+#define func_001F4AF0 game_FUN_001f4740
+#define func_001F4AF0__game game_FUN_001f4740__game
+#define func_001F4BB8 game_FUN_001f4808
+#define func_001F4BB8__game game_FUN_001f4808__game
 #define func_001F5800 game_FUN_001f5450
 #define func_001F5800__game game_FUN_001f5450__game
 #define func_001F6668 game_FUN_001f62b0
@@ -113,6 +123,8 @@
 #define func_00212578 game_FUN_00211728
 #define func_00212658 game_FUN_00211808
 #define func_002167C0 game_FUN_00215970
+#define func_002181F0 game_FUN_00217328
+#define func_002181F0__game game_FUN_00217328__game
 #define func_00218B10 game_FUN_00217c18
 #define func_00228A58 game_FUN_00227740
 #define func_00228D20 game_FUN_00227a08
@@ -139,7 +151,6 @@
 #define func_00230A90__game game_FUN_0022f778__game
 #define func_00234620 game_FUN_00233308
 #define func_002347F0 game_FUN_002334d8
-#define func_00234E80 game_FUN_00233b68
 #define func_00235118 func_00233E00
 #define func_002352C8 game_FUN_00233fb0
 #define func_00235EF0 game_FUN_00234bd8
@@ -159,23 +170,41 @@
 #define func_L00_001F34F0 game_FUN_L00_001f3170
 #define func_L00_001FD1D8 func_L00_001FD228
 #define func_L00_001FE688 func_L00_001FE6D8
+#define func_L00_00200290 game_FUN_001fa728
+#define func_L00_00200290__game game_FUN_001fa728__game
 #define func_L00_00201300 func_L00_00201350
+#define func_L00_00211D28 game_FUN_L00_00211670
+#define func_L00_00211D28__game game_FUN_L00_00211670__game
+#define func_L00_002124E8 game_FUN_L00_00211e30
+#define func_L00_002124E8__game game_FUN_L00_00211e30__game
+#define func_L00_00212790 game_FUN_L00_002120d8
+#define func_L00_00212790__game game_FUN_L00_002120d8__game
+#define func_L00_00232EF0 game_FUN_L00_00232670
+#define func_L00_00232EF0__game game_FUN_L00_00232670__game
 #define func_L00_0024F054 func_L00_0024E01C
 #define func_L00_00252D20 func_L00_00251CE8
+#define func_L00_00254218 game_FUN_0020fa90
 #define func_L00_0025D3C0 func_L00_0025C368
 #define func_L00_00267080 func_L00_00266238
 #define func_L00_002864E0 game_FUN_L00_00285208
 #define func_L00_00286598 func_L00_002852C0
 #define func_L00_0028D958 func_L00_0028C680
 #define func_L00_002963D8 func_L00_00295100
-#define func_L00_00296CD0 func_L00_002959F8
 #define func_L00_002A2020 func_L00_002A0D90
 #define func_L00_002A2080 func_L00_002A0DF0
 #define func_L00_002A20E0 func_L00_002A0E50
 #define func_L00_002A2148 func_L00_002A0EB8
 #define func_L00_002A8A20 game_FUN_L00_002a7780
 #define func_L00_002D8898 game_FUN_L00_002d73e8
+#define func_L00_002E74B0 game_FUN_L00_002e6000
+#define func_L00_002E74B0__game game_FUN_L00_002e6000__game
+#define func_L00_002E9A18 game_FUN_L00_002e8568
+#define func_L00_002E9A40 game_FUN_L00_002e8590
+#define func_L00_002E9AF8 game_FUN_L00_002e8648
+#define func_L00_002E9DC8 game_FUN_L00_002e8918
 #define func_L02_0020A690 func_L02_0020A390
+#define func_L02_00250720 game_FUN_L02_0024f748
+#define func_L02_00250720__game game_FUN_L02_0024f748__game
 #define func_L03_00292AC0 game_FUN_L03_00291918
 #define func_L03_002DDD58 func_L03_002DC990
 #define func_L07_002F9418 func_L07_002F8038
@@ -193,6 +222,7 @@
 #define RAC1_ADDR_0x0013CA40u 0x0013C940u
 #define RAC1_ADDR_0x0013D010u 0x0013CF10u
 #define RAC1_ADDR_0x0013D5C8u 0x0013D4C0u
+#define RAC1_ADDR_0x0013E150u 0x0013E050u
 #define RAC1_ADDR_0x0013E15Au 0x0013E05Au
 #define RAC1_ADDR_0x0013E604u 0x0013E504u
 #define RAC1_ADDR_0x0013E610u 0x0013E510u
@@ -205,11 +235,12 @@
 #define RAC1_ADDR_0x0015EDA8u 0x0015ECA8u
 #define RAC1_ADDR_0x0015EDB0u 0x0015ECB0u
 #define RAC1_ADDR_0x0015EDC0u 0x0015ECC0u
+#define RAC1_ADDR_0x0015EE64u 0x0015ED64u
+#define RAC1_ADDR_0x0015EE6Cu 0x0015ED6Cu
 #define RAC1_ADDR_0x0015EE80u 0x0015ED80u
 #define RAC1_ADDR_0x0015EE84u 0x0015ED84u
 #define RAC1_ADDR_0x0015EE98u 0x0015ED98u
 #define RAC1_ADDR_0x0015EF4Au 0x0015EE4Au
-#define RAC1_ADDR_0x0015EF74u 0x0015EE74u
 #define RAC1_ADDR_0x0015F000u 0x0015EF00u
 #define RAC1_ADDR_0x0015F558u 0x0015F458u
 #define RAC1_ADDR_0x0015F56Cu 0x0015F46Cu
@@ -221,16 +252,14 @@
 #define RAC1_ADDR_0x00160020u 0x0015FF20u
 #define RAC1_ADDR_0x0016044Cu 0x0016034Cu
 #define RAC1_ADDR_0x001604CCu 0x001603CCu
-#define RAC1_ADDR_0x001604F0u 0x001603F0u
-#define RAC1_ADDR_0x001604F8u 0x001603F8u
 #define RAC1_ADDR_0x0016055Cu 0x0016045Cu
 #define RAC1_ADDR_0x00160FE0u 0x00160EE0u
 #define RAC1_ADDR_0x00161000u 0x00160F00u
 #define RAC1_ADDR_0x00166D00u 0x00166C00u
+#define RAC1_ADDR_0x00187040u 0x00186F40u
 #define RAC1_ADDR_0x00187180u 0x00187080u
 #define RAC1_ADDR_0x00187390u 0x00187290u
 #define RAC1_ADDR_0x00187394u 0x00187294u
-#define RAC1_ADDR_0x0018A3B0u 0x0018A2B0u
 #define RAC1_ADDR_0x0018A3D0u 0x0018A2D0u
 #define RAC1_ADDR_0x0018CE00u 0x0018CD00u
 #define RAC1_ADDR_0x0018D140u 0x0018D040u
@@ -265,6 +294,7 @@
 #define RAC1_ADDR_0x001DF3D0u 0x001DF050u
 #define RAC1_ADDR_0x001DF770u 0x001DF3F0u
 #define RAC1_ADDR_0x001E8F80u 0x001E8C00u
+#define RAC1_ADDR_L00_0x0015F040u 0x0015EF40u
 #define RAC1_ADDR_L00_0x0015F6A8u 0x0015F5C4u
 #define RAC1_ADDR_L00_0x0015F6B0u 0x0015F5CCu
 #define RAC1_ADDR_L00_0x0015F6F8u 0x0015F618u
@@ -272,6 +302,7 @@
 #define RAC1_ADDR_L00_0x0016022Cu 0x0016016Cu
 #define RAC1_ADDR_L00_0x00160234u 0x00160174u
 #define RAC1_ADDR_L00_0x00161488u 0x001613C0u
+#define RAC1_ADDR_L00_0x00166ED8u 0x00166DD8u
 #define RAC1_ADDR_L00_0x00173F40u 0x00173E40u
 #define RAC1_ADDR_L00_0x00178000u 0x00177F00u
 #define RAC1_ADDR_L00_0x00178200u 0x00178100u

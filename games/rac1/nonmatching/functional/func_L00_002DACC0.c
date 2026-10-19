@@ -1,3 +1,4 @@
+/* fcheck: unchecked (level/overlay function; fcheck runs boot-executable functions only; OpenRAC tools/fcheck_gate.py, 2026-10-18). */
 typedef struct { float x, y, z, w; } Vq2 __attribute__((aligned(16)));
 extern int func_001F4868_2DACC0(int) __asm__("func_001F4868");
 extern void func_00234C98_2DACC0(int, long) __asm__("func_00234C98");

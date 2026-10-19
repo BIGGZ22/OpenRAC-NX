@@ -151,6 +151,7 @@ text/func_0023B1E8
 text/func_00226808
 core_text/func_00120C58
 text/func_001F1088
+text/func_001F10A0
 text/func_001F9810
 text/func_00214770
 text/func_0022BEB0

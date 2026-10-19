@@ -83,6 +83,8 @@ class FnReport:
     passthrough: int = 0         # arguments passed through from the caller's registers
     zero_args: list = field(default_factory=list)  # calls short of arguments the caller had none for
     hw: int = 0                  # accesses to hardware register addresses
+    # Literal addresses cast to pointers (`*(s32 *)0x1610A8`) and what each became: "0x... -> C".
+    literals: list = field(default_factory=list)
     calls: set = field(default_factory=set)  # functions it calls or takes the address of
     # Direct calls whose call site disagrees with the callee's definition (arity, kinds, result):
     # "callee: what differs", for port/tools/hostgen/priority.py.
@@ -128,6 +130,31 @@ def _strip_parens(n: dict) -> dict:
     return n
 
 
+def _in(address: int, rng) -> bool:
+    return bool(rng) and rng[0] <= address < rng[1]
+
+
+def _constant(n: dict) -> int | None:
+    """The value of an integer constant expression of literals (`0x1610A8`, `(u32)0x160F00 + 8`), or
+    None."""
+    n = _strip_parens(n)
+    k = n.get("kind")
+    if k == "IntegerLiteral":
+        try:
+            return int(n["value"], 0)
+        except ValueError:
+            return None
+    if k == "ConstantExpr" or (k in ("ImplicitCastExpr", "CStyleCastExpr")
+                               and n.get("castKind") in ("IntegralCast", "NoOp")):
+        return _constant(_inner(n)[0])
+    if k == "BinaryOperator" and n.get("opcode") in ("+", "-", "|"):
+        a, b = (_constant(c) for c in _inner(n)[:2])
+        if a is None or b is None:
+            return None
+        return a + b if n["opcode"] == "+" else a - b if n["opcode"] == "-" else a | b
+    return None
+
+
 def hexaddr(a: int) -> str:
     return f"0x{a:08X}u"
 
@@ -145,6 +172,8 @@ class Unit:
         self.fn: _Fn | None = None
         self.local_names: dict[str, str] = {}
         self.emitted_tags: set[str] = set()  # the unnamed records written so far
+        self.enum_consts: dict[str, str | None] = {}  # enumerators written so far -> value text
+        self.const_names: dict[str, str] = {}  # a function's enumerators renamed apart from another's
         # Type names that are also a function's name (a names.h macro used as a
         # typedef name): renamed in this unit, since the port declares the function.
         self.type_renames: dict[str, str] = {}
@@ -465,7 +494,17 @@ class Unit:
             if c.get("kind") != "EnumConstantDecl":
                 continue
             value = next((x.get("value") for x in _inner(c) if "value" in x), None)
-            items.append(f"    {c['name']}" + (f" = {value}" if value is not None else "") + ",")
+            name = c["name"]
+            if name in self.enum_consts:
+                # Hoisted from several functions (each declared `enum { X = 7 };` locally): one
+                # file-scope constant when they agree, the function's own name when they differ.
+                if self.enum_consts[name] == value and value is not None:
+                    continue
+                if self.fn is not None:
+                    self.const_names[name] = f"{cname(self.fn.name)}__{name}"
+                    name = self.const_names[name]
+            self.enum_consts.setdefault(name, value)
+            items.append(f"    {name}" + (f" = {value}" if value is not None else "") + ",")
         if not items:
             return [f"enum {tag};"] if tag else []
         return [f"enum{(' ' + tag) if tag else ''} {{", *items, "};"]
@@ -574,10 +613,12 @@ class Unit:
             ret = "" if self.cls(sig_t.ret) == "void" else (
                 " return 0;" if ret_canon else f" {{ {self.host(sig_t.ret)} zero_; memset(&zero_, 0, sizeof zero_); return zero_; }}")
             out = (f"/* Not translated: {e} */\n{proto} {{\n    {unused}\n"
-                   f"    openrac_guest_missing(\"{sym}\");\n   {ret}\n}}\n")
+                   f"    static openrac_reach_site site_ = {{\"{sym}\", \"untranslated\", 0, 0, 0}};\n"
+                   f"    openrac_guest_reach(&site_);\n   {ret}\n}}\n")
         self.report.functions.append(report)
         self.fn = None
         self.local_names = {}
+        self.const_names = {}
         return proto, out
 
     def _local_types(self, body: dict) -> list[dict]:
@@ -1113,6 +1154,8 @@ class Unit:
         tc = self.cls(t)
         v = self.rv(child)
         if tc == "ptr":
+            if kind == "IntegralToPointer" and (lit := self._literal_pointer(child, t)) is not None:
+                return lit
             if kind in ("BitCast", "IntegralToPointer"):
                 return f"(gaddr)({v})" if kind == "IntegralToPointer" else v
             raise Unsupported(f"cast {kind} to a pointer")
@@ -1143,47 +1186,87 @@ class Unit:
             return f"(({self.host(ctype.strip_quals(t))})({v}))"
         raise Unsupported(f"cast {kind}")
 
+    def _literal_pointer(self, child: dict, t) -> str | None:
+        """A constant address made a pointer (`*(s32 *)0x1610A8`, `((S *)0x160F08)->f`): lowered as
+        the global a name at that address would be (global_address), so in a range the levels move
+        it is the loaded level's, not the executable's copy under it. A function pointer is code:
+        OPENRAC_CODE in an executable function, OPENRAC_LCODE in one several levels carry. None
+        when it is not a constant, or nothing relocates it (the plain address is right)."""
+        address = _constant(child)
+        if address is None or self.fn is None or not getattr(self.program, "relocate", None):
+            return None
+        address &= 0xFFFFFFFF
+        r = self.resolve(t)
+        pointee = self.resolve(ctype.strip_quals(r.to)) if isinstance(r, ctype.Ptr) else None
+        if isinstance(pointee, ctype.Func):
+            if self._relocated(address):
+                text = f"OPENRAC_CODE({hexaddr(address)})"
+            elif (level := self._shared_level()) is not None and _in(address, self.program.relocate):
+                text = f"OPENRAC_LCODE({level}, {hexaddr(address)})"
+            else:
+                text = None
+        else:
+            text = self.global_address(address, self._exe_code_at(address))
+            if text == hexaddr(address):
+                text = None
+        if self.fn.report is not None and (text is not None or _in(address, self.program.relocate)):
+            # In the range but kept: a function of one level, written with that level's addresses.
+            self.fn.report.literals.append(f"{address:#08x} -> {text or 'kept'}")
+        return text
+
+    def _exe_code_at(self, address: int) -> bool:
+        """An executable function starts at `address` (its code read as data through a literal)."""
+        if self.fn is None or LEVEL_NAME.match(self.fn.name):
+            return False
+        places = getattr(self.program, "by_place", {})
+        return (-1, address) in places
+
     def function_value(self, n: dict) -> str:
         """The code address of a function designator, as a gaddr."""
         n = _strip_parens(n)
         if n.get("kind") == "DeclRefExpr" and (n["referencedDecl"].get("kind") == "FunctionDecl"
                                                or self._code_variable(n)):
             sym = self._callee_symbol(n)
-            if self.fn is not None:
-                self.fn.report.calls.add(sym)
-            places = self.program.code_places(sym)
-            if not places:
-                raise Unsupported(f"the address of {sym}, which has none")
-            if getattr(self.program, "relocate", None) and self.fn is not None                     and not LEVEL_NAME.match(self.fn.name) and places[0][0] < 0:
-                return f"OPENRAC_CODE({hexaddr(places[0][1])})"
-            # A place split off as a variant of its own (split_places.tsv) is still where this name
-            # sits in that level: the address the level's own instruction forms.
-            places = places + [p for p in getattr(self.program, "splits", {}).get(sym, []) if p not in places]
-            level = self._shared_level()
-            copy = self._copy_places()
-            if copy is not None and places[0][0] >= 0:
-                # One C for copies at several places: the address this copy forms (guest.h).
-                home, canon, size = copy
-                own = next((a for o, a in places if o == home), places[0][1])
-                self.fn.uses_self = True
-                return f"openrac_code_in_copy({home}, {hexaddr(canon)}, {size}u, openrac_self_, {hexaddr(own)})"
-            if level is not None and (places[0][0] >= 0 or any(o == level for o, _ in places)):
-                # An executable function the levels' programs also carry (its catalogue places)
-                # counts as theirs here: the copy in the level loaded, as the level's own
-                # instruction forms it, not the executable's address under the level program.
-                own = next((a for o, a in places if o == level), places[0][1])
-                return f"OPENRAC_LCODE({level}, {hexaddr(own)})"
-            # A function of one level only: the place of the other in that level (its program is
-            # loaded whenever this runs), not the first level's.
-            levels = {o for o, _ in self.program.code_places(self.fn.name)} if self.fn is not None else set()
-            if len(levels) == 1 and min(levels) >= 0:
-                here = next((a for o, a in places if o == min(levels)), None)
-                if here is not None:
-                    return hexaddr(here)
-            return hexaddr(places[0][1])
+            return self.code_address(self._folded_place_name(n, sym))
         if n.get("kind") == "UnaryOperator" and n["opcode"] == "*":
             return self.rv(_inner(n)[0])
         raise Unsupported(f"function designator {n.get('kind')}")
+
+    def code_address(self, sym: str) -> str:
+        """The code address of the function sym as the function being translated forms it, as a
+        gaddr: the copy in the program loaded. The assembly's translation (asmc.py) asks here too."""
+        if self.fn is not None:
+            self.fn.report.calls.add(sym)
+        places = self.program.code_places(sym)
+        if not places:
+            raise Unsupported(f"the address of {sym}, which has none")
+        if getattr(self.program, "relocate", None) and self.fn is not None                     and not LEVEL_NAME.match(self.fn.name) and places[0][0] < 0:
+            return f"OPENRAC_CODE({hexaddr(places[0][1])})"
+        # A place split off as a variant of its own (split_places.tsv) is still where this name
+        # sits in that level: the address the level's own instruction forms.
+        places = places + [p for p in getattr(self.program, "splits", {}).get(sym, []) if p not in places]
+        level = self._shared_level()
+        copy = self._copy_places()
+        if copy is not None and places[0][0] >= 0:
+            # One C for copies at several places: the address this copy forms (guest.h).
+            home, canon, size = copy
+            own = next((a for o, a in places if o == home), places[0][1])
+            self.fn.uses_self = True
+            return f"openrac_code_in_copy({home}, {hexaddr(canon)}, {size}u, openrac_self_, {hexaddr(own)})"
+        if level is not None and (places[0][0] >= 0 or any(o == level for o, _ in places)):
+            # An executable function the levels' programs also carry (its catalogue places)
+            # counts as theirs here: the copy in the level loaded, as the level's own
+            # instruction forms it, not the executable's address under the level program.
+            own = next((a for o, a in places if o == level), places[0][1])
+            return f"OPENRAC_LCODE({level}, {hexaddr(own)})"
+        # A function of one level only: the place of the other in that level (its program is
+        # loaded whenever this runs), not the first level's.
+        levels = {o for o, _ in self.program.code_places(self.fn.name)} if self.fn is not None else set()
+        if len(levels) == 1 and min(levels) >= 0:
+            here = next((a for o, a in places if o == min(levels)), None)
+            if here is not None:
+                return hexaddr(here)
+        return hexaddr(places[0][1])
 
     def _code_variable(self, n: dict) -> bool:
         """A variable that names code: `extern char f[] __asm__("func_L06_00300AB0")`, the way matched
@@ -1197,6 +1280,23 @@ class Unit:
             return False
         sym = self.program.canonical(symbol_of(d))
         return sym in self.program.functions and bool(self.program.code_places(sym))
+
+    def _folded_place_name(self, ref: dict, sym: str) -> str:
+        """For the address of a function: the name as written when it is one place of a function
+        the catalogue folded several places of one program into (func_L00_00238128, the second
+        of func_L00_00237B70's five level 0 wrappers), so the address is that place's and not
+        the folded function's first (each wrapper calls another function)."""
+        d = self.decls.get(ref["referencedDecl"]["id"])
+        raw = symbol_of(d) if d is not None else ref["referencedDecl"].get("name", "")
+        raw = self.program.aliases.get((self.unit, raw), raw)
+        if raw == sym or raw in self.program.places:
+            return sym
+        named = self.program.code_places(raw)
+        if len(named) != 1:
+            return sym
+        overlay = named[0][0]
+        folded = [p for p in self.program.code_places(sym) if p[0] == overlay]
+        return raw if len(folded) > 1 and named[0] in folded else sym
 
     def _callee_symbol(self, ref: dict) -> str:
         d = self.decls.get(ref["referencedDecl"]["id"])
@@ -1220,7 +1320,7 @@ class Unit:
         ref = n["referencedDecl"]
         kind = ref.get("kind")
         if kind == "EnumConstantDecl":
-            return ref["name"]
+            return self.const_names.get(ref["name"], ref["name"])
         if kind == "FunctionDecl":
             return self.function_value(n)
         return self.lv(n).text
@@ -1407,9 +1507,18 @@ class Unit:
         address = self.program.data_address(sym)
         if address is None:
             raise Unsupported(f"global {sym} has no known address")
-        addr = hexaddr(address)
         named_level = self.program.data_level(sym) if hasattr(self.program, "data_level") else None
-        if self._relocated(address) and self._code_symbol(sym) is not None:
+        addr = self.global_address(address, self._code_symbol(sym) is not None, named_level)
+        return LV(self.gref(t, addr), addr)
+
+    def global_address(self, address: int, code: bool = False, named_level: int | None = None) -> str:
+        """The address of a global at `address` as the running program finds it: in a range the
+        levels move (hostgen.json "relocate"), the loaded level's (guest.h). `code`: the address is
+        an executable function's code read as data; `named_level`: the level its name gives
+        (D_L00_...). A global's name and a literal address of it (`*(s32 *)0x1610A8`) take the
+        same path."""
+        addr = hexaddr(address)
+        if self._relocated(address) and code:
             # A function's code declared as data: where that code is in the program loaded.
             addr = f"OPENRAC_CODE({addr})"
         elif self._relocated(address) and named_level is not None:
@@ -1440,7 +1549,7 @@ class Unit:
                 addr = f"openrac_data_in_copy({home}, {hexaddr(canon)}, {size}u, openrac_self_, {addr})"
             elif level is not None and low <= address < high:
                 addr = f"OPENRAC_LDATA({level}, {addr})"
-        return LV(self.gref(t, addr), addr)
+        return addr
 
     def _variant_call(self, sym: str) -> tuple[int, int, int, int] | None:
         """For a call from a level function placed in several levels to a level function missing
@@ -1931,6 +2040,7 @@ class Unit:
         floats = [a for a, c in zip(args, classes) if c == "f"]
         out = []
         ni = nf = 0
+        counted = False
         for p, pc in zip(sig.params, pcls):
             if pc == "f":
                 src, k, regs = floats, nf, self.fn.float_params
@@ -1955,8 +2065,17 @@ class Unit:
             else:
                 # Nothing of the caller's own in that register either: on the console it held
                 # whatever the caller last put there, which C does not say (hostgen's report).
-                self.fn.report.zero_args.append(f"{sym} argument {len(out) + 1}")
-                out.append(self._cast_to("0", p))
+                detail = f"{sym} argument {len(out) + 1}"
+                self.fn.report.zero_args.append(detail)
+                if not counted:
+                    # Counted once a call, in a site of the call's own (guest.h, openrac_reach_site):
+                    # the run's OPENRAC_REACH file says which of these the game reached.
+                    counted = True
+                    out.append(self._cast_to(
+                        f"({{ static openrac_reach_site site_ = {{\"{self.fn.name}\", \"zero-args\", "
+                        f"\"{detail}\", 0, 0}}; openrac_guest_reach(&site_); 0; }})", p))
+                else:
+                    out.append(self._cast_to("0", p))
         if sig.variadic:
             extra = {id(a) for a in ints[ni:] + floats[nf:]}
             out += [self.rv(a) for a in args if id(a) in extra]

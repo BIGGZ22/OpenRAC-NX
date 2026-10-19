@@ -45,7 +45,14 @@ extern int D_L00_00161834_2BF958 __asm__("D_L00_00161764");
 
 void FUN_L00_002be650(void *o) {
     Q_2BF958_c2be650 quad;
-    V_2BF958_c2be650 scaled, axis, negativeUp, vertex0, vertex1;
+    /* The matrix FUN_001f9d20 reads, four rows in a row as the US frame keeps them (sp+0x90..0xC0):
+     * the slot's direction, the axis, the negated up vector and the slot's position. Separate locals
+     * left the position out of the matrix (nothing said they sit together). */
+    V_2BF958_c2be650 frame[4], vertex1;
+#define scaled frame[0]
+#define axis frame[1]
+#define negativeUp frame[2]
+#define vertex0 frame[3]
     int color;
     int i, j, c;
 
@@ -86,4 +93,8 @@ void FUN_L00_002be650(void *o) {
             func_L00_001FD228(&quad, 0, 0);
         }
     }
+#undef scaled
+#undef axis
+#undef negativeUp
+#undef vertex0
 }

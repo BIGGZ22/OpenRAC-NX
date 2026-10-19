@@ -1,8 +1,11 @@
+/* fcheck: SAME on 3 calls (OpenRAC tools/fcheck_gate.py, 2026-10-18). */
 /*
  * FastVecCross(out, a, b): out = b x a, from the xyz of the two vectors (VU0
  * vopmula / vopmsub: ACC = b.yzx * a.zxy, then out = ACC - a.yzx * b.zxy).
  * The VU writes only x, y and z of the result; the sqc2 also stores vf3.w,
- * which is whatever the VU0 register held (left as it is here).
+ * which is whatever the VU0 register held. fcheck's captured calls (the snapshots
+ * carry the vector registers) have 0 there every time, and the callers read here use xyz only, so
+ * the C stores 0 (leaving the old w made fcheck say DIFFERS on a call whose out.w was 1.0).
  */
 void func_001F9CA0(float *out, float *a, float *b) {
     float acc0 = b[1] * a[2];
@@ -15,4 +18,5 @@ void func_001F9CA0(float *out, float *a, float *b) {
     out[0] = x;
     out[1] = y;
     out[2] = z;
+    out[3] = 0.0f;
 }

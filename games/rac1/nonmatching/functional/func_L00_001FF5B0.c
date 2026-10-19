@@ -1,4 +1,4 @@
-/* functional: high. Clamps the xy length of the vector at src to maxlen and writes the result to dst (z and w copied unchanged). Returns 1 when it scaled, 0 when the length is zero or already below maxlen (dst untouched, as the retail 0 path). Retail is VU0: vsqrt of x*x + y*y, then vdiv maxlen / len and a scale of xy. Host: the quotient is clamped to +-FLT_MAX where VU0 saturates instead of giving inf; the squared length is never negative, so sqrt never sees a NaN. */
+/* functional: high. fcheck: unchecked (level/overlay function; fcheck runs boot-executable functions only; OpenRAC tools/fcheck_gate.py, 2026-10-18). Clamps the xy length of the vector at src to maxlen and writes the result to dst (z and w copied unchanged). Returns 1 when it scaled, 0 when the length is zero or already below maxlen (dst untouched, as the retail 0 path). Retail is VU0: vsqrt of x*x + y*y, then vdiv maxlen / len and a scale of xy. Host: the quotient is clamped to +-FLT_MAX where VU0 saturates instead of giving inf; the squared length is never negative, so sqrt never sees a NaN. */
 #define PS2_MAX_F 0x1.fffffep127f
 
 int func_L00_001FF5B0(float maxlen, float *dst, float *src)

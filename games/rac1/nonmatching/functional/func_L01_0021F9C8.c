@@ -1,4 +1,4 @@
-/* functional: medium. Builds two DMA packets at the packet cursor D_L01_00161240 from templates (D_L01_001C4720, D_L01_00160F40/60/80): n entries of 8-byte (c), 4-byte (b), 12-byte (a) data in the first, n 8-byte entries (d) in the second, patches qword counts, then appends a DMA call tag; not run against real calls. */
+/* functional: medium. fcheck: unchecked (level/overlay function; fcheck runs boot-executable functions only; OpenRAC tools/fcheck_gate.py, 2026-10-18). Builds two DMA packets at the packet cursor D_L01_00161240 from templates (D_L01_001C4720, D_L01_00160F40/60/80): n entries of 8-byte (c), 4-byte (b), 12-byte (a) data in the first, n 8-byte entries (d) in the second, patches qword counts, then appends a DMA call tag; not run against real calls. */
 extern u32 *D_L01_00161240_9C8 __asm__("D_L01_00161240") MACRO_ADDR;
 extern u32 D_L01_001C4720_9C8[] __asm__("D_L01_001C4720");
 extern u32 D_L01_00160F40_9C8[] __asm__("D_L01_00160F40");

@@ -731,7 +731,7 @@ extern void func_L05_0031A718(void *);
 extern char * D_L05_001601AC MACRO_ADDR;
 
 /* Adapted from Lombyte (MIT) for PAL by OpenRAC's tools/port.py: src/overlays/shared/unclassified_002b3840.c, FUN_L05_00319510. */
-void func_L05_0031AA20(void *moby_v)
+void Taxi_SetTargetFromSpawn(void *moby_v)
 {
     char *moby = moby_v;
     char *data = *(char **)(moby + 0x78);
@@ -934,7 +934,7 @@ void func_L05_0031E468(char *m);
 
 /* Mine update: sets its glow, fades it out with camera distance and blows up into debris, smoke and sparks when something touches it.
    Adapted from Lombyte (MIT) for PAL by OpenRAC's tools/port.py: src/overlays/shared/gameplay/vendor/0031abe0.c, FUN_L05_0031c8e0. */
-void func_L05_0031DDF0(struct Moby *moby) {
+void MineMobyUpdate(struct Moby *moby) {
     struct MineVars_c8e0 *vars = (struct MineVars_c8e0 *)moby->pvars;
     Vec4 tip;
     Vec4 vel;
@@ -990,7 +990,7 @@ void func_L05_0031DDF0(struct Moby *moby) {
             return;
         }
     }
-    func_0022ED80(0, 0, moby);
+    Moby_PlaySound(0, 0, moby);
     Moby1514Spawn((unsigned char *)moby);
     debris = SpawnBreakFragment(D_0015EE70 * 12.0f, moby, 0x5ED, &moby->pos, &moby->rot, scale_ticks(0x5A), 0,
                                D_L05_0015F660, D_L05_0015F660, D_L05_0015F660);
@@ -1706,6 +1706,6 @@ void CopyCameraPreset(char *out)
     qcopy(out, src);
     qcopy(out + 0x10, src + 0x10);
     qcopy(out + 0x20, src + 0x20);
-    func_00215328(out + 0x40, out);
+    Matrix_ToQuatCopyBack(out + 0x40, out);
     ResetCameraFromPreset(out);
 }

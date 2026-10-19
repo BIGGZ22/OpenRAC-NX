@@ -1,4 +1,4 @@
-/* functional: medium. For n records of 0x20 bytes at rec (xyz centre and radius as four floats), flags[i] = 1 when the sphere passes two cone tests against the matrices at D_L00_0016CDC0 (M, s = M[15]) and D_L00_001BDB70 (V); else 0. Computes c = M*V*(s*p), r' = s*r, visible when neither M[16]*c.z - (|c.x| - M[24]*r') nor M[17]*c.z - (|c.y| - M[25]*r') has its sign bit set (so -0.0 is not visible), in retail's order. A do-while over n, as retail. Medium: VU0 rounding. */
+/* functional: medium. fcheck: unchecked (level/overlay function; fcheck runs boot-executable functions only; OpenRAC tools/fcheck_gate.py, 2026-10-18). For n records of 0x20 bytes at rec (xyz centre and radius as four floats), flags[i] = 1 when the sphere passes two cone tests against the matrices at D_L00_0016CDC0 (M, s = M[15]) and D_L00_001BDB70 (V); else 0. Computes c = M*V*(s*p), r' = s*r, visible when neither M[16]*c.z - (|c.x| - M[24]*r') nor M[17]*c.z - (|c.y| - M[25]*r') has its sign bit set (so -0.0 is not visible), in retail's order. A do-while over n, as retail. Medium: VU0 rounding. */
 extern char D_L00_0016CDC0[];
 extern char D_L00_001BDB70[];
 

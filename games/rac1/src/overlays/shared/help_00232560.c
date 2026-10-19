@@ -155,7 +155,7 @@ int HeroPickRandomSequence(int id, int *key, int *arg) {
     SeqEntry *e;
 
     count = 0;
-    want = func_L00_002056D0(id);
+    want = Hero_ResolveAnimId(id);
     if (Hero_GetSlotModuleId(3) == 2) {
         tbl = D_L00_0017BCF0;
     } else if (Hero_GetSlotModuleId(3) == 3) {
@@ -432,7 +432,7 @@ void HeroClearQueuedSequence(void) {
     *(int *)(b + 0xAB8) = 0;
 }
 /* Stores ID at D_0013F450 + 0xAB8, or func_001F9850(5) when ID is -1. */
-void func_L00_00232EC0(int id) {
+void Hero_SetAttackTicks(int id) {
     if (id == -1) {
         id = scale_ticks(5);
     }
@@ -464,7 +464,7 @@ extern f32 func_L00_002342F8_33410(void *) __asm__("func_L00_002342F8");
 extern s32 func_L00_0025A5D8(f32 *, f32 *, f32, f32, f32);
 
 /* Adapted from Lombyte (MIT) for PAL by OpenRAC's tools/port.py: src/overlays/shared/ui_help_00231d08.c, FUN_L00_00232b90. */
-f32 func_L00_00233410(f32 a, f32 b, f32 c) {
+f32 Hero_PredictLandingTime(f32 a, f32 b, f32 c) {
     f32 t[4];
     Vec4 v;
     Vec4 t1;
@@ -479,7 +479,7 @@ f32 func_L00_00233410(f32 a, f32 b, f32 c) {
             t[2] -= ((a * a + a) * 0.5f) * b;
             FastVecAdd(t, t, &(&D_0013F450_33410)->v80);
             v.q = (&D_0013F450_33410)->v80.q;
-            func_L00_0025E290(&v, t);
+            Vec4_AdjustNegativeComponents(&v, t);
             qcopy(&v, &(&D_0013F450_33410)->v80);
             if (func_L00_001EFFF0(&v, t, 0x24, 0, 0) != 0) {
                 if (func_L00_002345B0_33410((f32 *)D_L00_00173F80) <= 0.87266463f) {
@@ -503,7 +503,7 @@ f32 func_L00_00233410(f32 a, f32 b, f32 c) {
         FastVecAdd(t, &t1, t);
         FastVecAdd(t, &(&D_0013F450_33410)->v80, t);
         v2.q = (&D_0013F450_33410)->v80.q;
-        func_L00_0025E290(&v2, t);
+        Vec4_AdjustNegativeComponents(&v2, t);
         if (func_L00_001EFFF0(&(&D_0013F450_33410)->v80, t, 0x24, 0, 0) != 0) {
             f32 nb;
             nb = b * -0.5f;
@@ -528,7 +528,7 @@ f32 func_L00_00233410(f32 a, f32 b, f32 c) {
         FastVecAdd(t, &t1, t);
         FastVecAdd(t, &(&D_0013F450_33410)->v80, t);
         v2.q = (&D_0013F450_33410)->v80.q;
-        func_L00_0025E290(&v2, t);
+        Vec4_AdjustNegativeComponents(&v2, t);
         if (func_L00_001EFFF0(&(&D_0013F450_33410)->v80, t, 0x24, 0, 0) != 0) {
             f32 nb;
             nb = b * -0.5f;
@@ -681,7 +681,7 @@ void HeroClearMainObjectFlags(void) {
     }
 }
 /* Stores two floats, an index and a byte, and sets the bits of a byte mask in a flag halfword. */
-void func_L00_00233B08(float a, float b, short c, unsigned char d, unsigned char e, unsigned char f) {
+void Hero_SetBlendParams(float a, float b, short c, unsigned char d, unsigned char e, unsigned char f) {
     char *base = D_0013E633 + 0xE1D;
 
     *(int *)(base + 0x12A8) = c;
@@ -748,7 +748,7 @@ extern unsigned char D_0013D5E4 NOT_SDA;
    short at +0x30E is below func_001F9850(4); otherwise the short at
    +0x308. One `||` condition: retail sends every true test to a single
    `r = 1` block after the call. */
-int func_L00_00233CC0(void) {
+int Hero_GetMagnetStickState(void) {
     char *base = D_0013F450;
     int state = *(int *)(base + 0x2084);
     int r = *(short *)(base + 0x308);
@@ -1128,7 +1128,7 @@ void HeroSetTargetAndEnterMove(float *pos, int arg, float t) {
 }
 extern int D_001414D4;
 /* 1 when the word at 0x1414D4 is 101 or 102, 2 when it is 103, else 0 */
-int func_L00_002347B8(void) {
+int Level_GetSpecialMode(void) {
     switch (D_001414D4) {
     case 101:
     case 102:
@@ -1381,7 +1381,7 @@ extern int func_L00_002630A8(int, void *, void *, float);
 /* Calls func_L00_002630A8 with the id at D_0013F450 + 0x22DA, the vector
    at +0x80 (as both pointers) and the float at +0x234; when it returns
    nonzero, sets the short at +0x1F6 to 4. */
-void func_L00_00235040(void) {
+void Hero_ConstrainToPath(void) {
     char *base = D_0013F450;
 
     if (PushPointOutsidePathAxis(*(short *)(base + 0x22DA), base + 0x80, base + 0x80, *(float *)(base + 0x234)) != 0) {
@@ -1576,7 +1576,7 @@ extern float func_001F9B88(float);
    (func_00214358). If that is within 0.3 of the position's z, records
    the old position as the target (func_L00_00234768, with the float at
    +0x98) and moves the position onto the probe. */
-void func_L00_002356D0(void) {
+void Hero_TryLedgeSnap(void) {
     char *base = D_0013F450;
     float v[4] __attribute__((aligned(16)));
     float h;
@@ -1584,7 +1584,7 @@ void func_L00_002356D0(void) {
     FastVecScale(v, base, -0.75f);
     FastVecAdd(v, v, base + 0x80);
     v[2] += 0.5f;
-    h = func_00214358(v, 0, 0.5f);
+    h = ProbeGroundHeight(v, 0, 0.5f);
     v[2] = h;
     if (FastAbsF(*(float *)(base + 0x88) - h) > 0.3f) {
         return;

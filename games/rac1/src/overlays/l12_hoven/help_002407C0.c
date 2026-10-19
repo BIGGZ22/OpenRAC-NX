@@ -129,9 +129,9 @@ int HeroL12_SetMoveState(int a, int b) {
         *(int *)(p + 0x208C) = 0;
         *(int *)(p + 0x2284) = 0;
         *(int *)(p + 0x1010) = rand_range(scale_ticks(0x32), scale_ticks(0x64));
-        func_L00_0020AB78();
+        Hero_ClearSlotPairs();
         if (*(unsigned char *)(p + 0x20A4) != 0) {
-            func_L01_00240CE8();
+            Hero_SetMoveStateFromMode();
             return 1;
         }
         qcopy(p + 0x150, p + 0x110);
@@ -151,10 +151,10 @@ int HeroL12_SetMoveState(int a, int b) {
             *(int *)(q + 0xFF8) = 0x68;
         }
         if (b) {
-            if (func_L12_002284A8(0) == 0x54) {
-                HeroStartAnim(func_L12_002284A8(0), 0, (float)scale_ticks(0x12));
+            if (Hero_GetGadgetAnimId(0) == 0x54) {
+                HeroStartAnim(Hero_GetGadgetAnimId(0), 0, (float)scale_ticks(0x12));
             } else {
-                HeroStartAnim(func_L12_002284A8(0), 0, -1.0f);
+                HeroStartAnim(Hero_GetGadgetAnimId(0), 0, -1.0f);
             }
         }
         break;
@@ -166,17 +166,17 @@ int HeroL12_SetMoveState(int a, int b) {
         clear_u64_value(p + 0x150);
         *(int *)(p + 0xFF8) = 0x68;
         if (b) {
-            if (func_L12_002284A8(0) == 0x54) {
-                HeroStartAnim(func_L12_002284A8(0), 0, (float)scale_ticks(0x12));
+            if (Hero_GetGadgetAnimId(0) == 0x54) {
+                HeroStartAnim(Hero_GetGadgetAnimId(0), 0, (float)scale_ticks(0x12));
             } else {
-                HeroStartAnim(func_L12_002284A8(0), 0, -1.0f);
+                HeroStartAnim(Hero_GetGadgetAnimId(0), 0, -1.0f);
             }
         }
         break;
     }
     case 0x41: {
         int t = scale_ticks(9);
-        HeroStartAnim(func_L12_002284A8(0), 0, (float)t);
+        HeroStartAnim(Hero_GetGadgetAnimId(0), 0, (float)t);
         {
             char *p = D_0013E633 + 0xE1D;
             if (*(void **)(p + 0x1614) != 0) {
@@ -448,7 +448,7 @@ int HeroL12_SetMoveState(int a, int b) {
         *(int *)(p + 0x2284) = 4;
         *(int *)&D_L12_0015F768 = scale_ticks(0x3C);
         if (*(unsigned char *)(p + 0x20AA) == 0) {
-            t = func_L12_002284A8(1);
+            t = Hero_GetGadgetAnimId(1);
             if (*(unsigned char *)(*(char **)(p + 0x2080) + 0x53) != t && b) {
                 HeroStartAnim(t, 0, (float)scale_ticks(0x12));
             }
@@ -460,7 +460,7 @@ int HeroL12_SetMoveState(int a, int b) {
         *(int *)(p + 0x208C) = 8;
         *(int *)(p + 0x2284) = 0;
         qcopy(p + 0x150, p + 0x100);
-        HeroStartAnim(func_L12_002284A8(0), 0, (float)scale_ticks(0xA));
+        HeroStartAnim(Hero_GetGadgetAnimId(0), 0, (float)scale_ticks(0xA));
         *(int *)(p + 0x1D0) = scale_ticks(7);
         break;
     }
@@ -469,7 +469,7 @@ int HeroL12_SetMoveState(int a, int b) {
         *(int *)(p + 0x208C) = 8;
         *(int *)(p + 0x2284) = 0;
         qcopy(p + 0x150, p + 0x100);
-        HeroStartAnim(func_L12_002284A8(0), 0, (float)scale_ticks(5));
+        HeroStartAnim(Hero_GetGadgetAnimId(0), 0, (float)scale_ticks(5));
         *(int *)(p + 0x1D0) = scale_ticks(7);
         break;
     }
@@ -595,9 +595,9 @@ int HeroL12_SetMoveState(int a, int b) {
             return 0;
         }
         if (HeroStartPendingAction()) return 0;
-        if (func_L12_002284A8(0) == 0x54) {
+        if (Hero_GetGadgetAnimId(0) == 0x54) {
             if (HeroL12_SetMoveState(0, 0)) {
-                HeroStartAnim(func_L12_002284A8(0), 0, (float)scale_ticks(0x12));
+                HeroStartAnim(Hero_GetGadgetAnimId(0), 0, (float)scale_ticks(0x12));
             }
             return 0;
         }
@@ -605,7 +605,7 @@ int HeroL12_SetMoveState(int a, int b) {
             char *q = D_0013E633 + 0xE1D;
             float d = *(float *)(q + 0xAA8);
             int id = 6;
-            if (func_L00_002056D0(*(unsigned char *)(moby + 0x52)) == 4 && 3.0f < d && d < 16.0f) id = 5;
+            if (Hero_ResolveAnimId(*(unsigned char *)(moby + 0x52)) == 4 && 3.0f < d && d < 16.0f) id = 5;
             HeroStartAnim(id, 4, (float)scale_ticks(9));
         }
         break;
@@ -620,7 +620,7 @@ int HeroL12_SetMoveState(int a, int b) {
         if (b) {
             int id = 6;
             float d = *(float *)(p + 0xAA8);
-            if (func_L00_002056D0(*(unsigned char *)(moby + 0x52)) == 4 && 3.0f < d && d < 16.0f) id = 5;
+            if (Hero_ResolveAnimId(*(unsigned char *)(moby + 0x52)) == 4 && 3.0f < d && d < 16.0f) id = 5;
             HeroStartAnim(id, 4, (float)scale_ticks(9));
         }
         break;
@@ -642,7 +642,7 @@ int HeroL12_SetMoveState(int a, int b) {
             ClampVectorLength(q + 0x150, D_0015EE6C * 7.0f);
             if (D_0015EE6C * 3.5f < *(float *)(q + 0x168)) Hero_PlayActiveSound(0xC, 0);
             if (b) {
-                if (*(unsigned char *)(*(char **)(q + 0x2080) + 0x52) == func_L12_002284A8(0)) {
+                if (*(unsigned char *)(*(char **)(q + 0x2080) + 0x52) == Hero_GetGadgetAnimId(0)) {
                     HeroStartAnim(0xD, 2, (float)scale_ticks(9));
                 } else {
                     HeroStartAnim(0xD, 2, (float)scale_ticks(0xE));
@@ -1197,7 +1197,7 @@ int HeroL12_SetMoveState(int a, int b) {
                 } else if (s == 9) {
                     int id = 8;
                     int n = truncate_float_to_s32(*(float *)(q + 0xAA8));
-                    if (func_L00_002056D0(*(unsigned char *)(moby + 0x52)) == 4) id = D_L12_0017C2D8[n];
+                    if (Hero_ResolveAnimId(*(unsigned char *)(moby + 0x52)) == 4) id = D_L12_0017C2D8[n];
                     HeroStartAnim(id, 0, (float)scale_ticks(5));
                 } else if (s == 0xA) {
                     HeroStartAnim(0x12, 0, (float)scale_ticks(5));
@@ -1570,15 +1570,15 @@ int HeroL12_SetMoveState(int a, int b) {
         *(int *)(p + 0x208C) = 9;
         *(unsigned char *)(p + 0x20AC) = 1;
         *(int *)(p + 0x2284) = 0;
-        HeroStartAnim(func_L12_002284A8(0), 0, (float)scale_ticks(0xA));
+        HeroStartAnim(Hero_GetGadgetAnimId(0), 0, (float)scale_ticks(0xA));
         break;
     }
     case 0x1E: {
         char *p = D_0013E633 + 0xE1D;
         *(int *)(p + 0x2284) = 0x51;
         *(int *)(p + 0x208C) = 0;
-        if (func_L00_002056D0(*(unsigned char *)(*(char **)(p + 0x2080) + 0x53)) != func_L12_002284A8(1)) {
-            HeroStartAnim(func_L12_002284A8(1), 0, (float)scale_ticks(5));
+        if (Hero_ResolveAnimId(*(unsigned char *)(*(char **)(p + 0x2080) + 0x53)) != Hero_GetGadgetAnimId(1)) {
+            HeroStartAnim(Hero_GetGadgetAnimId(1), 0, (float)scale_ticks(5));
         }
         break;
     }
@@ -1586,7 +1586,7 @@ int HeroL12_SetMoveState(int a, int b) {
         char *p = D_0013E633 + 0xE1D;
         *(int *)(p + 0x208C) = 9;
         *(int *)(p + 0x2284) = 0;
-        HeroStartAnim(func_L12_002284A8(0), 0, (float)scale_ticks(0xA));
+        HeroStartAnim(Hero_GetGadgetAnimId(0), 0, (float)scale_ticks(0xA));
         break;
     }
     case 0x72: {
@@ -1595,14 +1595,14 @@ int HeroL12_SetMoveState(int a, int b) {
         *(unsigned char *)(p + 0x20AC) = 1;
         *(int *)(p + 0x2284) = 0;
         Hero_ClearPendingModuleAnim();
-        HeroStartAnim(func_L12_002284A8(0), 0, (float)scale_ticks(0xA));
+        HeroStartAnim(Hero_GetGadgetAnimId(0), 0, (float)scale_ticks(0xA));
         break;
     }
     case 0x27: {
         char *p = D_0013E633 + 0xE1D;
         *(int *)(p + 0x208C) = 8;
         *(int *)(p + 0x2284) = 0;
-        HeroStartAnim(func_L12_002284A8(0), 0, (float)scale_ticks(0xA));
+        HeroStartAnim(Hero_GetGadgetAnimId(0), 0, (float)scale_ticks(0xA));
         break;
     }
     case 0x32: {
@@ -1612,7 +1612,7 @@ int HeroL12_SetMoveState(int a, int b) {
         *(unsigned char *)(p + 0x20A7) = 1;
         *(unsigned char *)(p + 0x20AD) = 1;
         *(unsigned char *)(p + 0x20AC) = 1;
-        if (b) HeroStartAnim(func_L12_002284A8(0), 0, -1.0f);
+        if (b) HeroStartAnim(Hero_GetGadgetAnimId(0), 0, -1.0f);
         break;
     }
     case 0x78: {
@@ -1631,7 +1631,7 @@ int HeroL12_SetMoveState(int a, int b) {
         *(int *)(p + 0x208C) = 0x18;
         *(unsigned char *)(p + 0x20AC) = 1;
         Hero_ClearPendingModuleAnim();
-        if (b) HeroStartAnim(func_L12_002284A8(0), 0, -1.0f);
+        if (b) HeroStartAnim(Hero_GetGadgetAnimId(0), 0, -1.0f);
         break;
     }
     }

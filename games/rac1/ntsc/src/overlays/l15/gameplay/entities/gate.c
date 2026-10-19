@@ -863,6 +863,11 @@ extern void FUN_0025c2f0(float, void *, void *, int, int, int, int) __asm__("FUN
 void construction_arm_update(struct Moby *moby) __asm__("FUN_L15_002c2938");
 void construction_arm_update(struct Moby *moby)
 {
+    enum {
+        CONSTRUCTION_ARM_INITIALIZE = 0,
+        CONSTRUCTION_ARM_TURN_TO_TARGET_YAW = 2,
+        CONSTRUCTION_ARM_DESTROY = 6
+    };
     UpdateVars_2938 *d = (UpdateVars_2938 *)moby->pvars;
     int hit = 0;
     char *slot;
@@ -885,7 +890,7 @@ void construction_arm_update(struct Moby *moby)
         FUN_00251fd0(frame_scale_sq * 0.03f, frame_scale_sq * 0.3f, moby, d, 0);
     }
     switch (moby->state) {
-    case 0:
+    case CONSTRUCTION_ARM_INITIALIZE:
         d->timer = truncate_float_to_s32(random_float_between(
             FUN_L15_001f8648(D_L15_00161A00 * 60.0f), FUN_L15_001f8648(D_L15_00161A04 * 60.0f)));
         *(int *)&d->yaw_velocity = d->side = *(int *)&d->yaw = 0;
@@ -916,7 +921,7 @@ void construction_arm_update(struct Moby *moby)
             }
         }
         break;
-    case 2:
+    case CONSTRUCTION_ARM_TURN_TO_TARGET_YAW:
         d->side = FUN_L00_00257b90(0, 1);
         if (fast_difference_between_rotations(d->yaw, d->target_yaw) < 0.008726646f) {
             animation = d->side;
@@ -975,7 +980,7 @@ void construction_arm_update(struct Moby *moby)
             moby->state = 1;
         }
         break;
-    case 6:
+    case CONSTRUCTION_ARM_DESTROY:
         allocate_voice_for_target_entry(0, 0, (int)moby);
         cart_burst(1.5f, 13.0f, moby, &moby->pos, -1);
         FUN_L01_002787a0(moby);
@@ -1207,7 +1212,7 @@ extern float D_L15_00161A08 __attribute__((sda));
 extern float D_L15_00161A0C __attribute__((sda));
 extern struct Moby *D_001413D0_5630 __asm__("D_001413D0") __attribute__((section(".data")));
 extern char D_L15_001BABD0_5630[] __asm__("D_L15_001BABD0");
-extern struct Moby *FUN_L12_00308670(void);
+extern struct Moby *FUN_L12_00308670(struct Moby *);
 extern void FUN_L12_00308708(struct Moby *, struct Moby *);
 extern void FUN_L15_002c6900(struct Moby *);
 extern void FUN_L02_00261c80(float, void *, void *);
@@ -1229,7 +1234,7 @@ extern void FUN_L00_00250df8(void *);
 extern int FUN_L03_002d5208(float, void *, void *, void *, int);
 extern void FUN_L00_0025e450_5630(void *, void *, void *, float, float, int, int, int, float, float, float, int, float, float, int, int, int, int) __asm__("FUN_L00_0025e450");
 extern void FUN_L00_001fff28(float, void *, int);
-extern void FUN_L15_002c52b8_goal(void *, void *, void *) __asm__("FUN_L15_002c52b8");
+extern float FUN_L15_002c52b8_goal(struct Moby *, float *, Goal_52b8) __asm__("FUN_L15_002c52b8");
 extern float absolute_float(float) __asm__("FUN_001f99c0");
 extern void transform_vector_by_basis(void *, void *, void *) __asm__("FUN_001f9d20");
 
@@ -1256,7 +1261,7 @@ void helicopter_update(struct Moby *moby)
 
     origin.q = *(u128 *)&moby->pos;
     if (*(struct Moby **)(vars + 0x160) == 0)
-        *(struct Moby **)(vars + 0x160) = FUN_L12_00308670();
+        *(struct Moby **)(vars + 0x160) = FUN_L12_00308670(moby);
     if (moby->state != 0 && moby->state != 0x40 && *(int *)(vars + 0x1a4) != 0 && D_001413F4[0] != 2) {
         moby->collision = 0;
         moby->flags = (moby->flags | 0x41) & 0xefff;
@@ -1483,7 +1488,7 @@ wait:
     case 5:
         moby_point_position(moby, 0, &point);
         if (goal.kind != 2) {
-            FUN_L15_002c52b8_goal(moby, &delta, &goal);
+            FUN_L15_002c52b8_goal(moby, (float *)&delta, *(Goal_52b8 *)&goal);
             first.q = *(u128 *)&target->pos;
             FUN_L15_002c4f88(moby, &delta, &first);
             if (fast_dec_timer_s16(vars + 0x168) && *(int *)(vars + 0x164) == 0) {
@@ -1934,7 +1939,7 @@ void ultramech_unlimited_update(UMoby *m) __asm__("FUN_L15_002cf3a8");
 void ultramech_unlimited_update(UMoby *m) {
     UVec v10;
     UVec v20;
-    UVec v30;
+    UVec vector_arithmetic_result;
     UVec hit_direction;
     UVec attack_start;
     UVec attack_end;
@@ -2151,7 +2156,7 @@ void ultramech_unlimited_update(UMoby *m) {
                 func_L10_002CD578_v(&v20, 3.0f, &v10, (int)m, (int)tgt,
                                     scale_game_frames(D_L15_00161B1C));
                 normalize_vector_xyz(&v20, &v20, 3.0f);
-                FUN_L00_001ff290(&v30, &v10, &v20);
+                FUN_L00_001ff290(&vector_arithmetic_result, &v10, &v20);
                 FUN_L03_00250ae8(m, &v10, 0);
                 d->shots++;
             } else if ((float)d->shots >= 6.0f && (m->animFlags & 2)) {
@@ -2249,10 +2254,10 @@ void ultramech_unlimited_update(UMoby *m) {
         FUN_L00_00258278((char *)m, &d->turnVel, ang, frame_time_sq * 1.0471976f,
                          frame_time_sq * 3.1415927f, frame_time * 3.1415927f);
         qcopy(&v10, &m->pos);
-        subtract_vector_xyz(&v30, &v20, &m->pos);
-        v20.q = v30.q;
+        subtract_vector_xyz(&vector_arithmetic_result, &v20, &m->pos);
+        v20.q = vector_arithmetic_result.q;
         normalize_vector_xyz(&v20, &v20, frame_time * 6.5f);
-        FUN_L00_001ff290(&v30, &v20, &m->pos);
+        FUN_L00_001ff290(&vector_arithmetic_result, &v20, &m->pos);
         if (!FUN_L00_00258490(m, &v10, &v20, 1, 2.25f, 1.75f, 0.5f, 0.5235988f) ||
             point_in_path_xy(&v10, D_L15_001B0AB0[d->side]->pt, D_L15_001B0AB0[d->side]->n)) {
             qcopy(&m->pos, &v10);
@@ -2446,6 +2451,9 @@ extern void FUN_0024f7e0(float, void *, void *, int, int, void *, int) __asm__("
 extern float FUN_001f8bc8(void *, void *) __asm__("FUN_001f9b48");
 
 void FUN_L15_002d0fa8(void *arg) {
+    enum {
+        HIT_REACTION_DEATH = 1
+    };
     UMoby *m = arg;
     UData *d = m->data;
     char *slot = 0;
@@ -2535,7 +2543,7 @@ void FUN_L15_002d0fa8(void *arg) {
                 m->state = 9;
                 *(unsigned char *)((char *)d + 0x67) = 0x78;
                 break;
-            case 1:
+            case HIT_REACTION_DEATH:
             case 2:
                 origin.q = 0;
                 m->flags &= 0xEFFF;

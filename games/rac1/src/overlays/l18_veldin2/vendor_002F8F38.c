@@ -222,7 +222,7 @@ void Moby1454Update(M1454 *m) {
             v[1] = FastSin(d->f110) * (FastCos(d->f118) * s);
             v[2] = 0;
             v[2] = -FastSin(d->f118) * s;
-            func_0022ED80(0, 0, (int)m);
+            Moby_PlaySound(0, 0, (int)m);
             func_L03_00251AC8(m, w, 0);
             if (func_001F9D48((char *)m + 0x10, D_0013E633 + 0xE9D) > 10.0f) {
                 Moby41Spawn((char *)m, w, v, 0);
@@ -295,7 +295,7 @@ void Moby1454TakeHit(void *mv) {
         RerollEffectCounter(m, (short *)(d + 0x60));
     }
     m[0xA4] = 0xFF;
-    if (func_L00_00260D30(m, d + 0x70, 30.0f) != 2) {
+    if (FindNearestTargetMoby(m, d + 0x70, 30.0f) != 2) {
         float *pa = (float *)(m + 0x10);
         char *pl = D_0013E633 + 0xE9D;
         if (func_001F9D48(pa, pl) < 10.0f) {

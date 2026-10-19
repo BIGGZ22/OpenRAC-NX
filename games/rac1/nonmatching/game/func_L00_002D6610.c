@@ -1,3 +1,4 @@
+/* fcheck: unchecked (level/overlay function; fcheck runs boot-executable functions only; OpenRAC tools/fcheck_gate.py, 2026-10-18). */
 /* Veldin level code: per-frame step of a moby's state 0x20 (retail func_L00_002D6610, 0x364 bytes).
  * Runs a sub-state machine on a[0x20] (3, 5, 8, 10, 12); when a[0x20] is 12 or the sweep finds
  * nothing it only stores 0xFF into a[0xA4]. Globals at gp-0x52xx are read as floats. */

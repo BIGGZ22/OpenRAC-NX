@@ -1,3 +1,4 @@
+/* fcheck: unchecked (never called in fcheck's capture run of the title, menu and level 0; OpenRAC tools/fcheck_gate.py, 2026-10-18). */
 /* euler_to_matrix: rotation rows from Euler angles in[0..2] (x, y, z), out = 4 rows of 4
    floats. Retail loads in into vf1 and runs VU0 microprogram 28259 at 0xD18 (vcallms 0x1A3),
    then stores vf20..vf23. That program (ReRAC rc-formats moby_light.rs rotation_rows and

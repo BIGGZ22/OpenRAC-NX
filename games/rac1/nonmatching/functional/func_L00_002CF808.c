@@ -1,4 +1,4 @@
-/* functional: high. Corrected from nonmatching/shared/func_L00_002CF808.c: the pitch target (f22 in state 2, m+0x44 in state 3) is the float result of func_L00_001FF860 negated; the near miss truncated it to int first, which drops the fraction. */
+/* functional: high. fcheck: unchecked (level/overlay function; fcheck runs boot-executable functions only; OpenRAC tools/fcheck_gate.py, 2026-10-18). Corrected from nonmatching/shared/func_L00_002CF808.c: the pitch target (f22 in state 2, m+0x44 in state 3) is the float result of func_L00_001FF860 negated; the near miss truncated it to int first, which drops the fraction. */
 typedef union { float v[4]; unsigned int q __attribute__((mode(TI))); } Q4_F808 __attribute__((aligned(16)));
 extern void *func_L00_0025B478(void *, int, int);
 extern char D_0013E633[];

@@ -14,6 +14,7 @@
 #include "common/log.h"
 #include "openrac/game_host.h"
 #include "openrac/guest.h"
+#include "pause_options.h"
 #include "platform/window.h"
 #include "renderer/framebuffer.h"
 #include "renderer/texture_pool.h"
@@ -26,7 +27,7 @@ namespace {
 constexpr const char* kLabels[kRows] = {
     "Display mode", "Monitor",   "Resolution", "Picture",       "HUD",           "Render scale", "Anti-aliasing",
     "Texture filter", "VSync",   "Frame rate", "Frame cap",     "Frame counter", "Mute in background",
-    "Skip cutscenes",
+    "Skip cutscenes", "Strafe (experimental)",
 };
 
 // The value after `current` in a list (before it, for by = -1), around the ends; the first when
@@ -105,6 +106,8 @@ std::string value_of(int row) {
             return s.mute_unfocused ? "On" : "Off";
         case kSkipCutscenes:
             return s.skip_cutscenes ? "Start" : "Off";
+        case kStrafe:
+            return settings::name(s.strafe);
         default:
             return {};
     }
@@ -208,6 +211,9 @@ void step_value(int row, int by) {
             break;
         case kSkipCutscenes:
             s.skip_cutscenes = !s.skip_cutscenes;
+            break;
+        case kStrafe:
+            s.strafe = stepped_enum(s.strafe, by);
             break;
         default:
             break;
@@ -416,7 +422,9 @@ std::uint32_t text(int id) {
  * each with its value as all three names and its int at 1: Right makes it 2 and Left 0 (whether the
  * widget wraps or stops), which steps the setting, and the int goes back to 1. "Video" goes into a
  * copy of the Options list's items after Sound, put in the list each time the game gives it its own,
- * as on the title's Options page. Made again for each level program (each has its own menu data). */
+ * as on the title's Options page, and the hint box's texts and the picture box's entries get one for
+ * Video too (both are read by the list's index). Made again for each level program (each has its own
+ * menu data). */
 namespace pause_page {
 
 constexpr std::int16_t kSoundText = 20258;   // the Options items' "Sound" and "Camera"
@@ -431,6 +439,7 @@ struct Made {
     gaddr items_for = 0;  // the game's Options items these were made from
     gaddr items = 0, page = 0, list = 0, rows = 0, values = 0;
     gaddr hints_for = 0, hints = 0;  // the Options hint box's texts by item, with Video's
+    gaddr pictures_for = 0, pictures = 0;  // the Options picture stream's entries by item, with Video's
     int top = 0;
 };
 Made m;
@@ -566,14 +575,41 @@ void hints(gaddr options_page, gaddr game_items) {
     GREF(std::uint32_t, screen + 0x34) = m.hints;
 }
 
+// The picture box's entries with an empty one at Video's place, in place of the game's while ours
+// is shown: the stream reads entries[selected] of the list (pause_options.h, options_stream).
+void pictures(gaddr options_page, gaddr list, gaddr game_items) {
+    gaddr camera = 0, sound = 0;
+    const int count = count_items(game_items, &camera, &sound);
+    const gaddr screen = pause_options::options_stream([](gaddr at) { return GREF(std::uint32_t, at); }, options_page,
+                                                       list, count);
+    if (screen == 0) {
+        return;
+    }
+    const gaddr entries = GREF(std::uint32_t, screen + pause_options::kStreamEntries);
+    if (m.pictures_for != entries) {
+        const gaddr after = sound != 0 ? sound : camera - page::kItemBytes;
+        const int before = static_cast<int>((after - game_items) / page::kItemBytes) + 1;
+        m.pictures_for = entries;
+        m.pictures = openrac_guest_static(pause_options::kStreamEntryBytes * static_cast<gaddr>(count + 1));
+        pause_options::entries_with_video(static_cast<const std::uint32_t*>(G(entries)), count, before,
+                                          static_cast<std::uint32_t*>(G(m.pictures)));
+    }
+    GREF(std::uint32_t, screen + pause_options::kStreamEntries) = m.pictures;
+}
+
 bool update(gaddr page_menu, gaddr pad) {
     const gaddr shown = GREF(std::uint32_t, page_menu + 4);
     if (shown == 0) {
         return false;
     }
-    // The Options page: its list's items are the game's with Camera in them.
-    const gaddr list = GREF(std::uint32_t, shown + 0x40);
-    if (list != 0 && shown != m.page) {
+    if (shown != m.page || m.page == 0) {
+        // The Options page (pause_options.h): its list's items are the game's with Camera in them.
+        // Another page's focus may be no list at all: the item grids keep floats where a list keeps
+        // its items.
+        const gaddr list = pause_options::options_list([](gaddr at) { return GREF(std::uint32_t, at); }, shown);
+        if (list == 0) {
+            return false;
+        }
         const gaddr items = GREF(std::uint32_t, list + 0x34);
         gaddr camera = 0, sound = 0;
         if (items != 0 && items != m.items && count_items(items, &camera, &sound) > 0 && camera != 0) {
@@ -582,13 +618,12 @@ bool update(gaddr page_menu, gaddr pad) {
                 m.hints_for = 0;
             }
             hints(shown, items);
+            pictures(shown, list, items);
             GREF(std::uint32_t, list + 0x34) = m.items;
         }
         return false;
     }
-    if (shown != m.page || m.page == 0) {
-        return false;
-    }
+    // The port's Video page.
     page::build();
     bool changed = false;
     for (int i = 0; i < kShownHere; ++i) {

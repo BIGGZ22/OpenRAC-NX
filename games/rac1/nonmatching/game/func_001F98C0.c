@@ -1,3 +1,4 @@
+/* fcheck: SAME on 3 calls (OpenRAC tools/fcheck_gate.py, 2026-10-18). */
 extern float D_0015EE68 MACRO_ADDR;
 
 /* func_001F98C0(x): returns (int)(0.5f + (float)x * D_0015EE68), truncated

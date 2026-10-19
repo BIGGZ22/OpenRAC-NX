@@ -35,6 +35,10 @@ float absolute_float(float input) __asm__("func_001F99C0");
 extern int func_001FA898_r(float) __asm__("FUN_001fa6d0");
 
 void FUN_L00_002a4890(void) {
+    enum {
+        AMBIENCE_WAIT_AND_SELECT_TARGET = 0,
+        AMBIENCE_INTERPOLATE_TO_TARGET = 1
+    };
     struct Amb *s = &D_L00_001CB7C0;
     float a, b, c, d, e;
     switch (s->hC) {
@@ -42,7 +46,7 @@ void FUN_L00_002a4890(void) {
         break;
     case 2:
         switch (s->hE) {
-        case 0:
+        case AMBIENCE_WAIT_AND_SELECT_TARGET:
             if (fast_dec_timer_s16(&s->h1E)) {
                 a = convert_integer_to_float(s->h1C) * random_float_between_alt(0.5f, 1.5f);
                 c = fast_add_rotations(s->f0, random_float_between_alt(-1.0471976f, 1.0471976f));
@@ -53,7 +57,7 @@ void FUN_L00_002a4890(void) {
                 s->hE = 1;
             }
             break;
-        case 1:
+        case AMBIENCE_INTERPOLATE_TO_TARGET:
             if (fast_dec_timer_s16(&s->h1E)) {
                 s->h1E = func_001FA898_r(convert_integer_to_float(s->h1C) *
                                          random_float_between_alt(2.0f, 3.0f));
@@ -793,6 +797,13 @@ extern void FUN_L00_002a7210_c(Bolt *, void *, f32, f32) __asm__("FUN_L00_002a72
 
 void bolt_update(Bolt *obj) __asm__("FUN_L00_002a5dd8");
 void bolt_update(Bolt *obj) {
+    enum {
+        BOLT_INITIALIZE = 0,
+        BOLT_FALLING = 1,
+        BOLT_SETTLING = 2,
+        BOLT_IDLE = 3,
+        BOLT_MOVE_TO_HERO = 4
+    };
     BoltVars *v = obj->vars;
     Vec4 a;
     Vec4 b;
@@ -822,7 +833,7 @@ void bolt_update(Bolt *obj) {
         obj->flags &= 0xFFFE;
     }
     switch (obj->state) {
-    case 0:
+    case BOLT_INITIALIZE:
         obj->state = 3;
         obj->unk73 = 0x14;
         obj->flags |= 0x100;
@@ -870,7 +881,7 @@ void bolt_update(Bolt *obj) {
             break;
         }
         break;
-    case 1:
+    case BOLT_FALLING:
         v->vel.f[2] -= frame_time_sq * 10.8f;
         fast_vec_add(&obj->pos, &obj->pos, &v->vel);
         quaternion_to_rotation_basis(&v->spin, &c);
@@ -928,7 +939,7 @@ void bolt_update(Bolt *obj) {
         matrix_to_euler(&obj->rot, &b);
         FUN_L00_00259f50(&v->spin, &b);
         return;
-    case 2:
+    case BOLT_SETTLING:
         FUN_L00_002a6de8_c(obj, &b, 0);
         k = 0.25f;
         b.f[2] += k;
@@ -947,7 +958,7 @@ void bolt_update(Bolt *obj) {
         obj->state = 3;
         v->hop_frames = v->hop_left = FUN_001fa6d0(multiply_global_factor_ed64(FUN_002132a8(10.0f, 20.0f)));
         return;
-    case 3:
+    case BOLT_IDLE:
         dist = vector_distance(&obj->pos, &hero.motion.pos);
         if (dist < hero.reach_distance && FUN_001f99c0(obj->pos.f[2] - hero.motion.pos.f[2]) < hero.reach_height) {
             FUN_L00_002a7210_c(obj, hero.moby, 0.0f, 0.0f);
@@ -984,7 +995,7 @@ void bolt_update(Bolt *obj) {
             v->hop_left--;
         }
         return;
-    case 4:
+    case BOLT_MOVE_TO_HERO:
         flag = 0;
         if (v->unk60->oclass == 0) {
             fast_vec_sub(&a, &obj->pos, &hero.ground_point);
@@ -1333,6 +1344,12 @@ extern void FUN_L00_001ff500(void *, void *, float);
  */
 struct Moby *FUN_L00_002a7438(struct Moby *src, void *pos, void *vel, int flags, int value, int counted)
 {
+    enum {
+        BOLT_VALUE_ONE = 1,
+        BOLT_VALUE_FIVE = 5,
+        BOLT_VALUE_TWENTY = 20,
+        BOLT_VALUE_FIFTY = 50
+    };
     f32 dir[4] __attribute__((aligned(16)));
     f32 tmp[4] __attribute__((aligned(16)));
     struct Moby *m;
@@ -1345,19 +1362,19 @@ struct Moby *FUN_L00_002a7438(struct Moby *src, void *pos, void *vel, int flags,
 
     switch (value) {
     default:
-    case 1:
+    case BOLT_VALUE_ONE:
         m = (struct Moby *)create_moby(0xD);
         scale = 0.65f;
         break;
-    case 5:
+    case BOLT_VALUE_FIVE:
         m = (struct Moby *)create_moby(0xE);
         scale = 0.7f;
         break;
-    case 20:
+    case BOLT_VALUE_TWENTY:
         m = (struct Moby *)create_moby(0xF);
         scale = 0.75f;
         break;
-    case 50:
+    case BOLT_VALUE_FIFTY:
         m = (struct Moby *)create_moby(0x10);
         scale = 0.6f;
         break;
@@ -2237,7 +2254,7 @@ void *FUN_L00_002a99b0(int unused, void *pos, int c, float scale, float a, float
 
 /* Ported from rac1-decomp (src/overlays/shared/vendor_002A5138.c: func_L00_002AAD40), where it is exact; names translated to the US level program. */
 
-extern char *func_0020D348_m_q(int) __asm__("func_0020D348_m");
+extern char *func_0020D348_m_q(int) __asm__("FUN_0020c4f8");
 extern int D_L00_0015F320;
 extern int D_L00_0015F330;
 extern int FUN_L00_0023e5e0_q(float *pos, float radius, float intensity,
@@ -2588,7 +2605,7 @@ extern void FUN_L00_002a9c50_c(void) __asm__("FUN_L00_002a9c50");
 extern void enqueue_callback_list_1_alt(void (*)(void), void *) __asm__("FUN_001f4600");
 extern void scale_vector_xyz_c(void *, void *, float) __asm__("FUN_001f9a68");
 
-int FUN_L00_002aa2a8(char *a0, char *o, int mode) {
+int FUN_L00_002aa2a8(char *trajectory_state, char *o, int mode) {
     float w[4];
     float B[4];
     float C[4];
@@ -2606,20 +2623,20 @@ int FUN_L00_002aa2a8(char *a0, char *o, int mode) {
         *(int *)&w[2] = 0;
         add_vector_xyz(w, w, base + 0x80);
         w[2] = w[2] + 0.49082f;
-        qcopy(B, a0);
+        qcopy(B, trajectory_state);
         if (*(int *)(base + 0x2FC) != 0 && FUN_L00_002603d0_u((void *)*(int *)(base + 0x2FC)) != 0 && mode != 0) {
             add_vector_xyz(B, B, base + 0x100);
         }
         x = scale_game_frames_alt(0x78);
     } else {
-        tmp = *(char **)(*(char **)(a0 + 0x30) + 0x78);
+        tmp = *(char **)(*(char **)(trajectory_state + 0x30) + 0x78);
         qcopy(w, o + 0x10);
-        qcopy(B, a0);
+        qcopy(B, trajectory_state);
         {
-            short xs = *(short *)(a0 + 0x34);
+            short xs = *(short *)(trajectory_state + 0x34);
             int c50 = *(int *)(tmp + 0x50);
             x = xs;
-            if (c50 != 0) *(short *)(a0 + 0x36) = 1;
+            if (c50 != 0) *(short *)(trajectory_state + 0x36) = 1;
         }
     }
     {
@@ -2629,7 +2646,7 @@ int FUN_L00_002aa2a8(char *a0, char *o, int mode) {
         box[2] = w[2];
         if (FUN_001efa68(box, w, 0x10, (int)b2, 0) != 0) {
             if (collision_hit_material() != 0 && D_L00_00173E40_u[7] > 0) {
-                qcopy(a0 + 0x10, (char *)D_L00_00173E40_u + 0x20);
+                qcopy(trajectory_state + 0x10, (char *)D_L00_00173E40_u + 0x20);
             }
         }
     }
@@ -2643,7 +2660,7 @@ int FUN_L00_002aa2a8(char *a0, char *o, int mode) {
         if (FUN_001efa68(C, w, 0x12, (int)o, 0) == 0) continue;
         if (collision_hit_material() == 0 && 0.0f < B[2]) continue;
         if (D_L00_00173E40_u[7] > 0) {
-            qcopy(a0 + 0x10, (char *)D_L00_00173E40_u + 0x20);
+            qcopy(trajectory_state + 0x10, (char *)D_L00_00173E40_u + 0x20);
             break;
         }
     }
@@ -2657,8 +2674,8 @@ int FUN_L00_002aa2a8(char *a0, char *o, int mode) {
         }
         {
             char *g = (char *)&D_L00_00166DC0;
-            char *hit_position = a0 + 0x10;
-            *(u128 *)(a0 + 0x20) = *(u128 *)D_L00_00173E80;
+            char *hit_position = trajectory_state + 0x10;
+            *(u128 *)(trajectory_state + 0x20) = *(u128 *)D_L00_00173E80;
             subtract_vector_xyz(C, hit_position, g);
             scale_vector_xyz_c(C, C, 0.95f);
             add_vector_xyz(hit_position, C, g);

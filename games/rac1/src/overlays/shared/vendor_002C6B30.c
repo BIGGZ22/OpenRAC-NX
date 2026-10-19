@@ -1148,7 +1148,7 @@ extern char D_L09_00209570_BB28[] __asm__("D_L09_00209570");
 extern s32 D_L09_0015F6B0_BB28 __asm__("D_L09_0015F6B0") MACRO_ADDR;
 
 /* Adapted from Lombyte (MIT) for PAL: src/overlays/shared/gameplay/vendor/00307ba8.c, FUN_L09_0030a778. */
-struct Moby *func_L09_0030BB28(struct Moby *owner, Vec4 *pos)
+struct Moby *Moby_SpawnChildFromOwner(struct Moby *owner, Vec4 *pos)
 {
     struct Moby *m;
     struct Moby *other;
@@ -1572,7 +1572,7 @@ static inline void bubble_bounce(struct Moby *moby, BubbleVars *vars) {
         vars->vel.f[2] *= random_float_between(0.9f, 1.1f);
     }
     if (vars->sound_delay == 0) {
-        func_0022ED80(0, 0, moby);
+        Moby_PlaySound(0, 0, moby);
         vars->sound_delay = 12;
     }
 }
@@ -1638,10 +1638,10 @@ void Moby1886Update(struct Moby *moby) {
         moby->rot.y += D_0015EE60 * 0.02f;
         break;
     case 1:
-        moby->pos.z = func_00214358(&moby->pos, 0, 0.5f) + 0.2f;
+        moby->pos.z = ProbeGroundHeight(&moby->pos, 0, 0.5f) + 0.2f;
         moby->pos.w = 0.0f;
         step.q = ((Vec4 *)&moby->pos)->q;
-        vars->held = func_L09_0030BB28(vars->owner, &step);
+        vars->held = Moby_SpawnChildFromOwner(vars->owner, &step);
         moby->state = 2;
         break;
     case 2:

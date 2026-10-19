@@ -62,6 +62,8 @@ std::map<int, Table> g_overlays;
 // folded into one name (their bytes are the same but for the address they call), each place a
 // different function. A call through one of their addresses goes where its code calls.
 std::unordered_map<openrac_host_fn, int> g_ambiguous;
+// Each game function's thunk (openrac_guest_call_regs), by its host function.
+std::unordered_map<openrac_host_fn, openrac_regs_thunk> g_thunks;
 int g_overlay = OPENRAC_OVERLAY_EXE;
 thread_local gaddr g_unknown_target = 0;
 
@@ -132,6 +134,28 @@ void unknown_function() {
 std::mutex g_missing_lock;
 std::map<std::string, unsigned long> g_missing;
 bool g_stop_on_missing = false;
+// The sites hostgen's C counts in (guest.h, openrac_reach_site), each once called; a stub's by
+// name too, since its calls are on the site from the second on (g_missing has the first).
+openrac_reach_site* g_reached = nullptr;
+std::map<std::string, const openrac_reach_site*> g_stub_sites;
+
+// A function's calls without C: openrac_guest_missing's count, and its stub's site's after the
+// first (which openrac_guest_missing counted).
+unsigned long missing_count(const std::string& name, unsigned long direct) {
+    const auto it = g_stub_sites.find(name);
+    return it == g_stub_sites.end() ? direct : direct - 1 + it->second->calls;
+}
+
+void json_string(std::FILE* f, const char* s) {
+    std::fputc('"', f);
+    for (; s != nullptr && *s != 0; ++s) {
+        if (*s == '"' || *s == '\\') {
+            std::fputc('\\', f);
+        }
+        std::fputc(static_cast<unsigned char>(*s) < 0x20 ? ' ' : *s, f);
+    }
+    std::fputc('"', f);
+}
 
 }  // namespace
 
@@ -195,6 +219,35 @@ void openrac_guest_register(int overlay, const openrac_fn_entry* entries, size_t
             );
         }
     }
+}
+
+void openrac_guest_register_thunks(const openrac_thunk_entry* entries, size_t count) {
+    for (size_t i = 0; i < count; i++) {
+        g_thunks.emplace(entries[i].fn, entries[i].thunk);
+    }
+}
+
+uint64_t openrac_guest_call_regs(gaddr address, const uint64_t* ints, const float* floats, float* result,
+                                 int float_result) {
+    const openrac_host_fn fn = openrac_guest_function(address);
+    *result = 0.0f;
+    if (auto it = g_thunks.find(fn); it != g_thunks.end()) {
+        return it->second(ints, floats, result);
+    }
+    // The port's own function (a library replacement, a stub): by the cast, as on System V.
+    using F8 = float;
+    using U8 = uint64_t;
+    if (float_result) {
+        *result = reinterpret_cast<float (*)(U8, U8, U8, U8, U8, U8, U8, U8, F8, F8, F8, F8, F8, F8, F8, F8)>(fn)(
+            ints[0], ints[1], ints[2], ints[3], ints[4], ints[5], ints[6], ints[7], floats[0], floats[1], floats[2],
+            floats[3], floats[4], floats[5], floats[6], floats[7]
+        );
+        return 0;
+    }
+    return reinterpret_cast<U8 (*)(U8, U8, U8, U8, U8, U8, U8, U8, F8, F8, F8, F8, F8, F8, F8, F8)>(fn)(
+        ints[0], ints[1], ints[2], ints[3], ints[4], ints[5], ints[6], ints[7], floats[0], floats[1], floats[2],
+        floats[3], floats[4], floats[5], floats[6], floats[7]
+    );
 }
 
 void openrac_guest_set_overlay(int overlay) {
@@ -356,7 +409,7 @@ unsigned long openrac_guest_missing_calls(unsigned* functions) {
     std::scoped_lock hold(g_missing_lock);
     unsigned long calls = 0;
     for (const auto& [name, count] : g_missing) {
-        calls += count;
+        calls += missing_count(name, count);
     }
     if (functions != nullptr) {
         *functions = static_cast<unsigned>(g_missing.size());
@@ -372,9 +425,63 @@ const char* openrac_guest_missing_at(unsigned index, unsigned long* calls) {
     auto it = g_missing.begin();
     std::advance(it, index);
     if (calls != nullptr) {
-        *calls = it->second;
+        *calls = missing_count(it->first, it->second);
     }
     return it->first.c_str();  // a map's keys do not move
+}
+
+void openrac_guest_reach_first(openrac_reach_site* site) {
+    const bool stub = site->kind != nullptr && std::strcmp(site->kind, "zero-args") != 0;
+    {
+        std::scoped_lock hold(g_missing_lock);
+        site->next = g_reached;
+        g_reached = site;
+        if (stub) {
+            g_stub_sites.emplace(site->name, site);
+        }
+    }
+    if (stub) {
+        openrac_guest_missing(site->name);  // logged, counted once, the stop on missing
+    }
+}
+
+int openrac_guest_write_reach(const char* path, const char* game, long frames) {
+    // Written beside and moved in place: a run stopped half way through leaves the last whole one.
+    const std::string part = std::string(path) + ".part";
+    std::FILE* f = std::fopen(part.c_str(), "w");
+    if (f == nullptr) {
+        return 0;
+    }
+    std::scoped_lock hold(g_missing_lock);
+    std::fputs("{\"game\": ", f);
+    json_string(f, game);
+    std::fprintf(f, ", \"frames\": %ld, \"sites\": [", frames);
+    bool first = true;
+    for (const openrac_reach_site* s = g_reached; s != nullptr; s = s->next) {
+        std::fputs(first ? "\n  {\"name\": " : ",\n  {\"name\": ", f);
+        first = false;
+        json_string(f, s->name);
+        std::fputs(", \"kind\": ", f);
+        json_string(f, s->kind);
+        if (s->detail != nullptr) {
+            std::fputs(", \"detail\": ", f);
+            json_string(f, s->detail);
+        }
+        std::fprintf(f, ", \"calls\": %lu}", s->calls);
+    }
+    // Hand C's own calls to openrac_guest_missing, with no site of hostgen's.
+    for (const auto& [name, count] : g_missing) {
+        if (g_stub_sites.count(name) != 0) {
+            continue;
+        }
+        std::fputs(first ? "\n  {\"name\": " : ",\n  {\"name\": ", f);
+        first = false;
+        json_string(f, name.c_str());
+        std::fprintf(f, ", \"kind\": \"missing\", \"calls\": %lu}", count);
+    }
+    std::fputs("\n]}\n", f);
+    const bool ok = std::fclose(f) == 0;
+    return ok && std::rename(part.c_str(), path) == 0 ? 1 : 0;
 }
 
 void openrac_guest_stop_on_missing(int stop) {
@@ -434,7 +541,10 @@ void openrac_guest_report_missing(void) {
     if (g_missing.empty()) {
         return;
     }
-    std::vector<std::pair<std::string, unsigned long>> calls(g_missing.begin(), g_missing.end());
+    std::vector<std::pair<std::string, unsigned long>> calls;
+    for (const auto& [name, count] : g_missing) {
+        calls.emplace_back(name, missing_count(name, count));
+    }
     std::sort(calls.begin(), calls.end(), [](const auto& a, const auto& b) {
         return a.second > b.second;
     });
@@ -505,7 +615,23 @@ void pair_code(WordReader reference, int program, gaddr exe, gaddr level, std::u
     std::map<std::uint32_t, Registers> at_target;
     std::uint32_t pending_from = 0, pending_target = 0;
     bool pending = false;
+    // A call leaves only the callee-saved registers, but its delay slot runs before it: the
+    // compiler often forms an argument's address there (jal f; addiu $a1, $a1, %lo(x)), so the
+    // registers are forgotten after the slot, not at the jal.
+    const auto forget_call = [&known] {
+        for (int r = 1; r < 32; ++r) {
+            if (!((r >= 16 && r <= 23) || r == 28 || r == 29 || r == 30)) {
+                known[r] = false;
+            }
+        }
+    };
+    std::uint32_t call_slot = 0;
+    bool call = false;
     for (std::uint32_t i = 0; i + 4 <= size; i += 4) {
+        if (call && i == call_slot + 4) {
+            forget_call();
+            call = false;
+        }
         if (pending && i == pending_from + 8) {
             Registers& r = at_target[pending_target];
             std::memcpy(r.ve, ve, sizeof(ve));
@@ -572,12 +698,13 @@ void pair_code(WordReader reference, int program, gaddr exe, gaddr level, std::u
             known[rd] = known[rs];
         } else if (op == 0x00 || op == 0x1C) {
             known[rd] = false;
-        } else if (op == 0x03) {  // jal
-            for (int r = 1; r < 32; ++r) {
-                if (!((r >= 16 && r <= 23) || r == 28 || r == 29 || r == 30)) {
-                    known[r] = false;
-                }
+            if (op == 0x00 && funct == 0x09) {  // jalr: as jal
+                call = true;
+                call_slot = i + 4;
             }
+        } else if (op == 0x03) {  // jal: the registers are forgotten after its delay slot
+            call = true;
+            call_slot = i + 4;
         } else if (add) {
             known[rt] = have;
             if (have) {

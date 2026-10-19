@@ -251,9 +251,13 @@ extern void mine_blast_mobys(void *, void *, void *, int, int, int, int, int, fl
 
 void poison_vessel_update(Moby_2E9358 *moby) __asm__("FUN_L15_002e7f68");
 void poison_vessel_update(Moby_2E9358 *moby) {
+    enum {
+        POISON_VESSEL_FREE_FLIGHT = 0,
+        POISON_VESSEL_FOLLOW_TARGET = 1
+    };
     Vec_2E9358 previous_position;
     Vec_2E9358 s30;
-    Vec_2E9358 s40;
+    Vec_2E9358 temporary_vector;
     Data_2E9358 *data = moby->data;
     char *p20 = 0;
     unsigned char state;
@@ -275,9 +279,9 @@ void poison_vessel_update(Moby_2E9358 *moby) {
 
     state = moby->state;
     switch (state) {
-    case 0:
+    case POISON_VESSEL_FREE_FLIGHT:
         data->f8 = data->f8 - D_L15_00161FBC * frame_time_sq;
-        func_L00_001FF240_2E9358(&s40, &moby->pos, data);
+        func_L00_001FF240_2E9358(&temporary_vector, &moby->pos, data);
         if (collision_line(&previous_position, &moby->pos, 0x10, moby, 0)) {
             if (((Tb_2E9358 *)D_L15_001744C0_2E9358)->f18 != 0 && FUN_L00_002603d0(((Tb_2E9358 *)D_L15_001744C0_2E9358)->f18) != 0) {
                 data->target = (Moby_2E9358 *)((Tb_2E9358 *)D_L15_001744C0_2E9358)->f18;
@@ -292,7 +296,7 @@ void poison_vessel_update(Moby_2E9358 *moby) {
             }
         }
         break;
-    case 1:
+    case POISON_VESSEL_FOLLOW_TARGET:
         probe_ground_height(&moby->pos, 0, 0.5f);
         if (data->target != 0) {
             Moby_2E9358 *t = data->target;
@@ -304,8 +308,8 @@ void poison_vessel_update(Moby_2E9358 *moby) {
                 p20 = FUN_L00_002603d0(D_L15_001744D8_2E9358);
                 if (p20 != 0) {
                     func_L00_00261478_2E9358(moby, data->target, &moby->pos, &moby->v40, &moby->pos, &moby->v40);
-                    subtract_vector_xyz(&s40, &moby->pos, &previous_position);
-                    *(OvlQuad *)data = s40.q;
+                    subtract_vector_xyz(&temporary_vector, &moby->pos, &previous_position);
+                    *(OvlQuad *)data = temporary_vector.q;
                 }
             }
         }
@@ -321,8 +325,8 @@ void poison_vessel_update(Moby_2E9358 *moby) {
         func_L00_0025F4A8_2E9358(moby, data, 0, 0.0f, 0.0f, 3, 3, 5, 2.0f, 1.0f, 4.0f, 1.0f, -1, 7.0f, 0, 1, -1, 0);
         trooper_play_sound(0, 0, moby, 0x79);
         ret = probe_world_sphere(&moby->pos, 0x10, moby, 0, 2.0f);
-        s40.q = moby->pos;
-        mine_blast_mobys(moby, &s40, D_L15_00178500, ret, 0, 0x830001, 2, 1, 1.0f, 1.0f, 1.0f);
+        temporary_vector.q = moby->pos;
+        mine_blast_mobys(moby, &temporary_vector, D_L15_00178500, ret, 0, 0x830001, 2, 1, 1.0f, 1.0f, 1.0f);
         mark_moby_for_removal(moby);
     }
 }
@@ -961,6 +965,11 @@ extern float scale_time(float) __asm__("FUN_L15_001f8648");
 
 void codebot_slot_update(struct Moby *moby) __asm__("FUN_L15_002ec030");
 void codebot_slot_update(struct Moby *moby) {
+    enum {
+        CODEBOT_SLOT_INITIALIZE = 0,
+        CODEBOT_SLOT_WAIT_FOR_PROXIMITY = 1,
+        CODEBOT_SLOT_ANIMATE_EFFECT = 3
+    };
     int *data = (int *)moby->pvars;
     float vec[4] __attribute__((aligned(16)));
     float tmp[4] __attribute__((aligned(16)));
@@ -976,7 +985,7 @@ void codebot_slot_update(struct Moby *moby) {
         *(OvlQuad *)(data + 4) = *(OvlQuad *)((char *)D_L15_0015FFD8 + data[3] * 0x100 + 0x10);
     }
     switch (moby->state) {
-    case 0: {
+    case CODEBOT_SLOT_INITIALIZE: {
         int save_index;
         int i;
         save_index = ((int)((unsigned int)moby->save_id << 16)) >> 16;
@@ -993,7 +1002,7 @@ void codebot_slot_update(struct Moby *moby) {
         }
         break;
     }
-    case 1:
+    case CODEBOT_SLOT_WAIT_FOR_PROXIMITY:
         if (alternate_item_available[2] != 0 && vector_distance(D_0013F3D0, &moby->pos) < 3.0f && *((unsigned char *)D_0013F3D0 + 0x2024) == 0) {
             FUN_L15_002f78b8(data[0]);
             moby->state = 2;
@@ -1023,7 +1032,7 @@ void codebot_slot_update(struct Moby *moby) {
             moby->state = 3;
         }
         break;
-    case 3:
+    case CODEBOT_SLOT_ANIMATE_EFFECT:
         if (data[1] != 0) {
             *(float *)&data[2] = fast_add_rotations(*(float *)&data[2], (360.0f / scale_time(360.0f)) * 0.017453292f);
             angle = fast_cos(*(float *)&data[2]) + 1.0f;

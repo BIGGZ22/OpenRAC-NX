@@ -462,7 +462,7 @@ int UpdateMapZoomAndPan(void) {
     int *xs;
     int *ys;
 
-    func_00209040();
+    DebugEnter_Nop();
     pad = D_0013CA40;
     if (*(int *)(pad + 0x1A4) & 0x500) {
         return 1;

@@ -1128,7 +1128,11 @@ extern CollisionHit HH __asm__("D_L01_001742C0") __attribute__((section(".data")
 #define HF(o) (*(f32 *)(D_L01_001742C0 + (o)))
 
 void FUN_L01_00232dc0(void) {
-    V collision_ray_end, ground_ray_start, v20, side_ray_start, v40, v50, normalized_side_hit_normal;
+    enum {
+        GRAVITY_WORLD_DOWN = 0,
+        GRAVITY_OPPOSITE_GROUND_NORMAL = 1
+    };
+    V collision_ray_end, ground_ray_start, v20, side_ray_start, v40, side_hit_angles, normalized_side_hit_normal;
     f32 f;
     s32 r;
     s32 i;
@@ -1236,10 +1240,10 @@ tail:
 d1:
     FUN_001f99f8_c((u8 *)&hero.gravity_dir);
     switch (hero.unk20B3) {
-    case 0:
+    case GRAVITY_WORLD_DOWN:
         hero.gravity_dir.f[2] = -1.0f;
         break;
-    case 1:
+    case GRAVITY_OPPOSITE_GROUND_NORMAL:
         qcopy((u8 *)&hero.gravity_dir, (u8 *)&hero.unk270);
         FUN_001f9a68_c((u8 *)&hero.gravity_dir, (u8 *)&hero.gravity_dir, -1.0f);
         break;
@@ -1284,12 +1288,12 @@ d1:
                 hero.unk2C0.f[i] = 0.0f;
             }
             FUN_00125180_c(&normalized_side_hit_normal, (u8 *)&HH.normal_x);
-            FUN_L00_00216078(&normalized_side_hit_normal, &v50);
-            if (-0.78539819f < v50.f[1] && v50.f[1] < 0.78539819f) {
-                hero.unk2C8.f[i] = v50.f[1];
+            FUN_L00_00216078(&normalized_side_hit_normal, &side_hit_angles);
+            if (-0.78539819f < side_hit_angles.f[1] && side_hit_angles.f[1] < 0.78539819f) {
+                hero.unk2C8.f[i] = side_hit_angles.f[1];
             }
-            if (-0.78539819f < v50.f[0] && v50.f[0] < 0.78539819f) {
-                hero.unk2D0.f[i] = v50.f[0];
+            if (-0.78539819f < side_hit_angles.f[0] && side_hit_angles.f[0] < 0.78539819f) {
+                hero.unk2D0.f[i] = side_hit_angles.f[0];
             }
         } else {
             hero.unk2C0.i[i] = 0;

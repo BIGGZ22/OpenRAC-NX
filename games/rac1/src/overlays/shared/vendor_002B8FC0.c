@@ -216,13 +216,13 @@ void ShipPickupUpdate(char *moby) {
 collect_ammo:
             D_0013F450.ship_ammo += 5;
             if (((char *)D_0013F450.ship_moby) != 0 && *(unsigned char *)(((char *)D_0013F450.ship_moby) + 0x20) != 0xfe &&
-                *(unsigned char *)(((char *)D_0013F450.ship_moby) + 0x20) != 0xfd) func_0022ED80(4, 0, D_0013F450.ship_moby);
+                *(unsigned char *)(((char *)D_0013F450.ship_moby) + 0x20) != 0xfd) Moby_PlaySound(4, 0, D_0013F450.ship_moby);
             if (D_0013F450.ship_ammo_max < D_0013F450.ship_ammo) D_0013F450.ship_ammo = D_0013F450.ship_ammo_max;
             goto collected;
 collect_health:
             D_0013F450.ship_hp += 10.0f;
             if (((char *)D_0013F450.ship_moby) != 0 && *(unsigned char *)(((char *)D_0013F450.ship_moby) + 0x20) != 0xfe &&
-                *(unsigned char *)(((char *)D_0013F450.ship_moby) + 0x20) != 0xfd) func_0022ED80(5, 0, D_0013F450.ship_moby);
+                *(unsigned char *)(((char *)D_0013F450.ship_moby) + 0x20) != 0xfd) Moby_PlaySound(5, 0, D_0013F450.ship_moby);
             if (D_0013F450.ship_hp_max < D_0013F450.ship_hp) D_0013F450.ship_hp = D_0013F450.ship_hp_max;
 collected:
             moby[0x20] = 5;

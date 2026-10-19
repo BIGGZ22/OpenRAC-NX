@@ -1,3 +1,4 @@
+/* fcheck: unchecked (never called in fcheck's capture run of the title, menu and level 0; OpenRAC tools/fcheck_gate.py, 2026-10-18). */
 /* The camera-environment region a point is in (effects.c's caller reads D_0019AEC0[*index]): walks the
    region spheres D_0019ACC0 (xyz centre, w = radius squared), entries 0..D_0015FC04 inclusive (the
    hand-written loop tests the entry at the count too), for the first whose (dx*dx + dy*dy) - w is

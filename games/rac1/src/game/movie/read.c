@@ -31,7 +31,32 @@ int videoCallback(void *unused, char *entry, char *buffer) {
     videoDecEndPut(D_0016130C + 0xD9048, copied);
     return copied > 0;
 }
-INCLUDE_ASM("asm/nonmatchings/text", func_0023CAF8); /* pcmCallback(sceMpeg *, sceMpegCbDataStr *, void *) */
+extern void audioDecBeginPut(void *, char **, int *, char **, int *);
+extern void audioDecEndPut(void *, int);
+
+/* Skips the entry's 4-byte prefix, wraps the source at the ring size (+0x50008),
+ * copies into the decoder's two free spans and reports whether anything was copied. */
+int func_0023CAF8(void *unused, char *entry, char *buffer) {
+    char *dst0, *dst1;
+    int len0, len1;
+    char *src;
+    char *ring;
+    int first, rest;
+    int total;
+    int copied;
+
+    total = *(int *)(entry + 0xC) - 4;
+    src = *(char **)(entry + 8) + 4;
+    if (src >= buffer + *(int *)(buffer + 0x50008)) src -= *(int *)(buffer + 0x50008);
+    first = buffer + *(int *)(buffer + 0x50008) - src;
+    if (total < first) first = total;
+    ring = buffer;
+    rest = total - first;
+    audioDecBeginPut(D_0016130C + 0xD9100, &dst0, &len0, &dst1, &len1);
+    copied = cpy2area(dst0, len0, dst1, len1, src, first, ring, rest);
+    audioDecEndPut(D_0016130C + 0xD9100, copied);
+    return copied > 0;
+}
 extern void *func_00115248(void *dest, const void *src, int n);
 
 /* cpy2area(unsigned char *, int, unsigned char *, int, unsigned char *, int, unsigned char *, int) */

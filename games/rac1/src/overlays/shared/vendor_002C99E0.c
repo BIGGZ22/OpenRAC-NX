@@ -198,7 +198,7 @@ void func_L11_00309DA0(struct Moby *moby) {
             }
             moby->rot.y = FastAddRots(moby->rot.y, pitch_off);
             BuildSphericalOffset(vars, speed, moby->rot.z, -moby->rot.y);
-            func_001E9768(&moby->pos, &vars->target->pos);
+            Profile_Mark(&moby->pos, &vars->target->pos);
         } else {
             vars->target = 0;
         }
@@ -977,7 +977,7 @@ extern u128_ad0 D_L11_00160970;
 extern int D_0013E600[];
 
 /* Adapted from Lombyte (MIT) for PAL by OpenRAC's tools/port.py: src/overlays/shared/gameplay/vendor/0030e690.c, FUN_L11_00310ad0. */
-void func_L11_00311F98(short *pts, int n, float x0, float y0, unsigned int col, unsigned long prim, float scale) {
+void Hud_DrawPointList(short *pts, int n, float x0, float y0, unsigned int col, unsigned long prim, float scale) {
     int q = (n + 1) / 2 + 3;
     unsigned long *o;
     int x, y;
@@ -1131,7 +1131,7 @@ extern void func_L11_003121C0(float, float, float, float, float, int, int, long,
 extern float func_001FA748(float, float);
 
 /* Draws four quads with the angle advanced by a quarter turn each time. */
-void func_L11_00312510(unsigned char a, unsigned char b, unsigned char c, unsigned char d, float x, float y, float s, float ang) {
+void Hud_DrawFourRotatedQuads(unsigned char a, unsigned char b, unsigned char c, unsigned char d, float x, float y, float s, float ang) {
     int h;
     float w;
     h = GetEffectTex(0x42);
@@ -1219,7 +1219,101 @@ void SpawnParticleTrails(void *m, char *t) {
         }
     }
 }
-INCLUDE_ASM("asm/overlays", func_L11_0031A738);
+extern unsigned char D_0015EEB0[] MACRO_ADDR;
+extern short D_L11_00162480;
+extern float D_L11_001F1750[][2];
+extern void func_001153FC(void *, int, int);
+
+typedef struct {
+    float v[4][4];
+    int col[4];
+    float uv[4][2];
+    long pk[4];
+} Quad_31A738;
+
+void func_L11_0031A738(char *m) {
+    Quad_31A738 q[16];
+    float off[2][4];
+    short *p, *np;
+    int i, j, k, h, s, cont, nk, nh, c1, c2, vis, jj, n;
+    float base, a;
+    long skip;
+    char *o, *pv;
+
+    if (*(unsigned char *)(m + 0x21) == 0xFF) {
+        return;
+    }
+    if (D_0015EEB0[2] != 0) {
+        *(float *)&D_L11_00162480 = 16.0f;
+    } else {
+        *(float *)&D_L11_00162480 = 5.0f;
+    }
+
+    for (i = 0; i < 16; i++) {
+        long r = func_001F4868(0x13);
+        Quad_31A738 *e = &q[i];
+        e->pk[1] = r;
+        e->pk[2] = 0xFF9000000260L;
+        e->pk[0] = 0;
+        e->pk[3] = 0x8000000048L;
+        base = func_001FA888((D_L11_0015F6B0 + 3) & 3) / (*(float *)&D_L11_00162480 * 4.0f);
+        for (j = 0; j < 4; j++) {
+            jj = (j >> 1) - 1;
+            q[i].uv[j][0] = D_L11_001F1750[j][0];
+            q[i].uv[j][1] = D_L11_001F1750[j][1];
+            a = func_001FA888(i - jj) / *(float *)&D_L11_00162480 + base;
+            if (1.0f < a) {
+                a = 1.0f;
+            } else if (a < 0.0f) {
+                a = 0.0f;
+            }
+            q[i].col[j] = func_001FA8A8(0x8C28AA28, 0x144646, a);
+        }
+    }
+
+    func_001153FC(off, 0, 0x20);
+    off[0][2] = 0.25f;
+    off[1][2] = -0.25f;
+
+    p = D_L11_001AC540[*(unsigned char *)(m + 0x21)];
+    do {
+        np = p + 1;
+        skip = 1;
+        o = (char *)(((*p & 0x7FFF) << 8) + (int)D_L11_00160058);
+        c1 = *(short *)(o + 0xA6);
+        c2 = *(short *)(m + 0xA6);
+        vis = *(unsigned char *)(o + 0x31);
+        if ((c1 ^ c2) == 0) {
+            skip = 0;
+        }
+        if (vis == 0) {
+            skip = 1;
+        }
+        if (!skip) {
+            pv = *(char **)(o + 0x78);
+            k = 0;
+            if (*(int *)(pv + 0x2C0) > 0) {
+                do {
+                    nk = k + 1;
+                    s = (*(int *)(pv + 0x2C4) - k + 15) % 16;
+                    h = 0;
+                    do {
+                        nh = h + 1;
+                        for (n = 0; n < 4; n++) {
+                            int x = (s + (n >> 1)) % 16;
+                            func_001F9BD8(q[k].v[n], pv + 0xC0 + h * 0x100 + x * 16, off[n & 1]);
+                        }
+                        func_L00_001FD1D8(&q[k], 0, 0);
+                        h = nh;
+                    } while (h < 2);
+                    k = nk;
+                } while (k < *(int *)(pv + 0x2C0));
+            }
+        }
+        cont = *p >= 0;
+        p = np;
+    } while (cont);
+}
 typedef int u128_31AAE0 __attribute__((mode(TI)));
 extern void func_001F9BD8(void *, void *, void *);
 extern void f49(void *, void *) __asm__("func_001F49B0");
@@ -1369,7 +1463,7 @@ extern void func_001F9BF0_0031B8A8(void *, void *, void *) __asm__("func_001F9BF
 extern float D_0015EE70_0031B8A8 __asm__("D_0015EE70") MACRO_ADDR;
 
 /* Path follower: turns the moby to the blend of the headings of its current and next path segments, and eases its position toward the blended path point offset sideways around the path. */
-void func_L11_0031B8A8(Moby *moby) {
+void PathOrbitMobyUpdate(Moby *moby) {
     float mtx[4][4];
     float A[4];
     float B[4];

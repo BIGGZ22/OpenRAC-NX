@@ -164,7 +164,7 @@ void func_001F9BC0(void *);
 void func_L00_00211338(void *, s32, f32, f32);
 
 /* Adapted from Lombyte (MIT) for PAL by OpenRAC's tools/port.py: src/overlays/l15/ui_help_002044c8.c, FUN_L15_00208e10. */
-s32 func_L15_00209448(s32 arg) {
+s32 HeroL15_TryTakeHit(s32 arg) {
     u8 *m;
     T_210ce8 *tbl;
     u8 *mob;
@@ -869,9 +869,9 @@ void Hero_UpdateStatePhysicsL15(void) {
             HeroL15_SlideAlongWall(0);
             lean = D_0013F450.unk8EC * FastCos(ang) * -7.0f;
             SpringAngle(&D_0013F450.motion.rot.f[0], lean, &D_0013F450.unk8E4, 0, 0.007f, 0.17f, D_0015EE6C * 1.2217305f);
-            func_L00_0020A858(0.009f, 0.22f);
-            func_L00_0020A858(0.04f, 0.2f);
-            func_L00_0020A858(0.02f, 0.2f);
+            Hero_SetTiltSpringParams(0.009f, 0.22f);
+            Hero_SetTiltSpringParams(0.04f, 0.2f);
+            Hero_SetTiltSpringParams(0.02f, 0.2f);
             D_L15_0017AD00[1].f60[1] = roll * 47.0f;
             D_L15_0017AD00[1].f60[2] = lean * 1.5f;
             D_L15_0017AD00[1].f60[0] = lean * 1.4f;
@@ -1642,19 +1642,19 @@ void Hero_UpdateStatePhysicsL15(void) {
                         vec[4][1] = FastSin(yaw) * 0.8f;
                         vec[4][2] = 0.55f;
                         FastVecAdd(vec[4], vec[4], D_0013F450.motion.pos.f);
-                        func_L00_00217AF0((int)w, coll_sphere_mobys(0.8f, vec[4], 0, w, vec[0]));
+                        Hero_HitMobySparks((int)w, coll_sphere_mobys(0.8f, vec[4], 0, w, vec[0]));
                         yaw = FastAddRots(D_0013F450.motion.rot.f[2], -0.87266463f);
                         vec[4][0] = FastCos(yaw) * 0.8f;
                         vec[4][1] = FastSin(yaw) * 0.8f;
                         vec[4][2] = 0.55f;
                         FastVecAdd(vec[4], vec[4], D_0013F450.motion.pos.f);
-                        func_L00_00217AF0((int)w, coll_sphere_mobys(0.8f, vec[4], 0, D_0013F450.moby, vec[0]));
+                        Hero_HitMobySparks((int)w, coll_sphere_mobys(0.8f, vec[4], 0, D_0013F450.moby, vec[0]));
                         yaw = FastAddRots(D_0013F450.motion.rot.f[2], 0.87266463f);
                         vec[4][0] = FastCos(yaw) * 0.8f;
                         vec[4][1] = FastSin(yaw) * 0.8f;
                         vec[4][2] = 0.55f;
                         FastVecAdd(vec[4], vec[4], D_0013F450.motion.pos.f);
-                        func_L00_00217AF0((int)w, coll_sphere_mobys(0.8f, vec[4], 0, w, vec[0]));
+                        Hero_HitMobySparks((int)w, coll_sphere_mobys(0.8f, vec[4], 0, w, vec[0]));
                     }
                 }
             }
@@ -1840,9 +1840,9 @@ void Hero_UpdateStatePhysicsL15(void) {
             if (D_0013F450.state_timer > scale_ticks(0x64)) {
                 SpringAngle(&D_0013F450.motion.rot.f[1], -D_0013F450.unk9D4, &D_0013F450.unk9E8, 0, D_0015EE64 * 0.035f, D_0015EE64 * 0.3f, D_0015EE6C * 1.9198622f);
             }
-            func_L00_0020A858(0.009f, 0.22f);
-            func_L00_0020A858(0.04f, 0.2f);
-            func_L00_0020A858(0.02f, 0.2f);
+            Hero_SetTiltSpringParams(0.009f, 0.22f);
+            Hero_SetTiltSpringParams(0.04f, 0.2f);
+            Hero_SetTiltSpringParams(0.02f, 0.2f);
             D_L15_0017AD00[1].f60[2] = lean * 2.1f;
             D_L15_0017AD00[1].f60[0] = lean * 3.5f;
         }

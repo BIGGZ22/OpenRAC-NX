@@ -1,4 +1,4 @@
-/* functional: medium. The NTSC decomp's pending C for the same instructions (a draft it has not matched
+/* functional: medium. fcheck: unchecked (never called in fcheck's capture run of the title, menu and level 0; OpenRAC tools/fcheck_gate.py, 2026-10-18). The NTSC decomp's pending C for the same instructions (a draft it has not matched
    yet), carried to PAL's names by OpenRAC's tools/port.py. Never compared with retail's bytes here. */
 typedef u32 u128_38F98 __attribute__((mode(TI), aligned(16)));
 extern u8 D_00187180[];

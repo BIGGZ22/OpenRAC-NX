@@ -134,9 +134,9 @@ extern char D_001E8690[];
  * reload for constant addresses" codegen category to explain it; that
  * category was never real.
  */
-INCLUDE_ASM("asm/nonmatchings/text", func_0020C210);
+ASM_FUNC("asm/handwritten/text", func_0020C210);
 
-INCLUDE_ASM("asm/nonmatchings/text", func_0020C230);
+ASM_FUNC("asm/handwritten/text", func_0020C230);
 
 ASM_FUNC("asm/handwritten/text", func_0020C268);
 

@@ -167,7 +167,7 @@ void Moby257Update(unsigned char *moby) {
         }
         if (*(short *)(data + 0x16) == 0 && func_001F9D48(moby + 0x10, D_0013E633 + 0xE9D) < 7.0f) {
             *(short *)(data + 0x16) = 1;
-            func_0022ED80(1, 0, moby);
+            Moby_PlaySound(1, 0, moby);
         }
         break;
     case 3:
@@ -387,7 +387,7 @@ void Moby470Update(unsigned char *m) {
         float h;
         InitRandomDataBlock((char *)m);
         *(float *)(m + 0x2C) = *(float *)(m + 0x2C) * 0.9f;
-        f = func_00214358(m + 0x10, 0, 0.5f);
+        f = ProbeGroundHeight(m + 0x10, 0, 0.5f);
         h = FastAbsF(f - *(float *)(m + 0x18));
         if (h < 1.0f) {
             *(float *)(m + 0x18) = f + 0.9f;
@@ -506,7 +506,7 @@ void Moby471Update(unsigned char *m) {
         if (*(float *)(d + 0x6C) != target) {
             ApproachValue((float *)(d + 0x6C), target, D_0015EE70 * 12.0f);
             func_L00_001FF4B0(vec, m + 0xC0, *(float *)(d + 0x6C));
-            func_L16_002CB000(m[0x21], vec);
+            Moby471_CarryGroupRiders(m[0x21], vec);
         }
         if (is_point_inside_clip_volume(D_0013E633 + 0xE9D, *(int *)(d + 0x68))) m[0x20] = one;
         AddDrawCallback(DrawRibbonStrips, m);
@@ -516,13 +516,13 @@ void Moby471Update(unsigned char *m) {
         if (*(float *)(d + 0x6C) != target) {
             ApproachValue((float *)(d + 0x6C), target, D_0015EE70 * 12.0f);
             func_L00_001FF4B0(vec, m + 0xC0, *(float *)(d + 0x6C));
-            func_L16_002CB000(m[0x21], vec);
+            Moby471_CarryGroupRiders(m[0x21], vec);
         }
         if (is_point_inside_clip_volume(D_0013E633 + 0xE9D, *(int *)(d + 0x64))) m[0x20] = 2;
         AddDrawCallback(DrawRibbonStrips, m);
         break;
     }
-    if (m[0x20]) func_L16_002CAE18(m);
+    if (m[0x20]) Moby471_AttachToNearest(m);
 }
 extern char D_L16_00167240[];
 extern int *D_L16_001ABFC0[];
@@ -531,7 +531,7 @@ extern void func_L00_001FF4B0(void *, void *, float);
 extern void func_001F9BD8(void *, void *, void *);
 extern int func_0022ED80_cae18(int, int, void *) __asm__("func_0022ED80");
 
-void func_L16_002CAE18(unsigned char *m) {
+void Moby471_AttachToNearest(unsigned char *m) {
     short *p = (short *)D_L16_001ABFC0[m[0x21]];
     char *d = *(char **)(m + 0x78);
     char *nearest = 0;
@@ -574,7 +574,7 @@ extern short *D_L16_001ABFC0_2CB000[] __asm__("D_L16_001ABFC0");
 extern void func_L00_002617B0(char *a, void *b, void *c, void *d);
 
 // For each moby in a list with type 0x1D7, calls a helper with its data and position.
-void func_L16_002CB000(int index, void *arg) {
+void Moby471_CarryGroupRiders(int index, void *arg) {
     short *p = D_L16_001ABFC0_2CB000[index];
     if (p) {
         do {
@@ -762,7 +762,7 @@ void TestDummyUpdate(unsigned char *m) {
             break;
         case 2:
             d->child = func_0020D348_m(0x36C);
-            func_L02_00265E58(d->slots);
+            EffectSlots_Clear(d->slots);
             break;
         }
         if (d->child) {
@@ -819,7 +819,7 @@ void TestDummyUpdate(unsigned char *m) {
         if (IsFrameWithinWindow(m, 15.0f) && d->child) {
             float speed = D_L16_00161A8C * D_0015EE6C;
             float gravity = D_0015EE70 * 10.0f;
-            v0.f[2] = func_00214358(v0.f, 0, 0.5f);
+            v0.f[2] = ProbeGroundHeight(v0.f, 0, 0.5f);
             Moby_GetJointWorldPos(d->child, 0, v1.f);
             FastVecSub(v2.f, v0.f, v1.f);
             v2.f[2] = 0.0f;
@@ -929,14 +929,14 @@ void TestDummyUpdate(unsigned char *m) {
                 v0.f[0] - *(float *)(m + 16),
                 v0.f[1] - *(float *)(m + 20)));
             v1.f[2] = 0.0f;
-            func_L02_00265E88(slots, v0.f, v1.f, D_L16_00161A94);
+            EffectSlots_Fire(slots, v0.f, v1.f, D_L16_00161A94);
             v1.f[3] = 5627.925f;
             v1.f[2] = 1.0f;
             InitDirectionalHitQuery(&fx, m, 0x10001, 1.0f, v1.f);
             fx.kind = 5;
             fx.enabled = 1;
             fx.cls = *(unsigned short *)(m + 0xA6);
-            func_L02_002661E8((char **)slots, (int)m, (int)&fx);
+            EffectSlots_Retire((char **)slots, (int)m, (int)&fx);
         }
         if (m[0x70] & 2) {
             d->node = (d->node + 1) & 1;
@@ -1339,7 +1339,7 @@ void Moby552Update(char *moby) {
             }
             break;
         case 1:
-            if (func_L16_002D0B00(moby) != 0) {
+            if (Moby552_AllGroupIdle(moby) != 0) {
                 data[2] = state;
                 AddDrawCallback(DrawLinkedRibbonPairs, moby);
                 if (Sound_IsPlaying(moby, data[3]) == 0) {
@@ -1394,7 +1394,7 @@ int FindHeightPeerMoby(char *arg) {
     }
 }
 // Returns 0 if any moby in the list at m[0x21] has type 0x222 and a nonzero byte at 0xBC, else 1.
-int func_L16_002D0B00(void *mv) {
+int Moby552_AllGroupIdle(void *mv) {
     unsigned char *m = mv;
     unsigned short *p = (unsigned short *)D_L16_001ABFC0[m[0x21]];
     if (p == 0) return 1;
@@ -1570,7 +1570,7 @@ extern void func_001FA4A0(void *, void *);
 extern void func_001F9EE8(void *, void *, void *);
 
 // Checks the nearby list entries of two classes against the moby and adds a timed delay when one is close.
-void func_L16_002D0FC8(char *moby) {
+void HoverboardRacer_CheckBoostGates(char *moby) {
     char *data = *(char **)(moby + 0x78);
     char *g = D_0013E633 + 0xE1D;
     float v[4];
@@ -1635,7 +1635,7 @@ void func_L16_002D0FC8(char *moby) {
 }
 
 // Advance the vector-table index until its entry is 2.0 and copy that vector out.
-void func_L16_002D1310(char *moby) {
+void HoverboardRacer_SkipToMarker(char *moby) {
     char *data = *(char **)(moby + 0x78);
     if (*(float *)(data + 0x2C8) <= 0.0f) {
         int idx = *(short *)(data + 0x2F4);
@@ -1873,8 +1873,8 @@ void HoverboardRacerUpdate(unsigned char *m) {
         }
         m[0xA4] = 255;
         ChooseSteerNode((char *)m);
-        func_L16_002D0FC8((char *)m);
-        func_L16_002D1310((char *)m);
+        HoverboardRacer_CheckBoostGates((char *)m);
+        HoverboardRacer_SkipToMarker((char *)m);
         if (*(int *)(d + 0x2E4) != 0) {
             (*(int *)(d + 0x2E4))++;
             if (*(int *)(d + 0x2E4) < scale_ticks(17)) {
@@ -1926,7 +1926,7 @@ void HoverboardRacerUpdate(unsigned char *m) {
                 }
             }
         }
-        z = func_00214358(d + 0x260, 0, 0.5f);
+        z = ProbeGroundHeight(d + 0x260, 0, 0.5f);
         gap = *(float *)(d + 0x268) - z;
         if (gap > 0.0f || *(float *)(d + 0x2C8) > 0.0f) {
             *(float *)(d + 0x2C8) -= D_0015EE70 * 21.0f;
@@ -2114,7 +2114,7 @@ void Moby650Update(char *moby) {
             if (r == 2) {
                 if (func_001F9B70(*(int *)&D_L16_00161B48 - D_L16_0015F6B0) >= 4) {
                     *(int *)&D_L16_00161B48 = D_L16_0015F6B0;
-                    func_0022ED80(1, 0, moby);
+                    Moby_PlaySound(1, 0, moby);
                 }
             }
             f = *(float *)data;
@@ -2202,7 +2202,7 @@ void Moby654Update(char *m) {
         }
         break;
     case 3:
-        func_L16_002D7628(m,position,rotation);
+        Moby654_ComputePose(m,position,rotation);
         CameraScript_SetPosition(position);CameraScript_SetLookAt(rotation);
         if(d->camera>=0) *(unsigned short*)(D_0014171B+0xF)=*(unsigned short*)&d->camera;
         if(MobyGroup_CountNotInState(d->path,-1)) break;
@@ -2214,7 +2214,7 @@ void Moby654Update(char *m) {
         ((L16ObjectiveEntry*)(D_0013D355+0x13B+d->objective))->complete=1;
         helper=ActivateLinkedMobysNearest(d->helper,0);
 notify:
-        if(helper) func_0022ED80(1,0,helper);
+        if(helper) Moby_PlaySound(1,0,helper);
         break;
     case 4:break;
     case 5:
@@ -2228,7 +2228,7 @@ notify:
         if(!MobyGroup_CountNotInState(d->path,-1)) {
             *(unsigned char *)(m+0x20)=4;
             helper=ActivateLinkedMobysNearest(d->helper,0);
-            if(helper) func_0022ED80(1,0,helper);
+            if(helper) Moby_PlaySound(1,0,helper);
             ((L16ObjectiveEntry*)(D_0013D355+0x13B+d->objective))->complete=1;
         }
         break;
@@ -2241,7 +2241,7 @@ extern void func_001F9EC0(void *, void *, void *);
 extern void func_001F9C08(void *, void *, void *, float);
 
 /* Computes a moby's direction vectors from its table entry. */
-void func_L16_002D7628(char *moby, void *out1, float *out2) {
+void Moby654_ComputePose(char *moby, void *out1, float *out2) {
     char *data = *(char **)(moby + 0x78);
     float v[4];
     char *entry = D_L16_001601AC_m + (*(int *)data << 7);
@@ -2273,7 +2273,7 @@ void Moby800Update(char *moby) {
         if (flag) moby[0x20] = 2;
         break;
     case 2:
-        func_0022ED80(0, 0, moby);
+        Moby_PlaySound(0, 0, moby);
         SetDeathBits(moby, 0, -1);
         SpawnBreakFxByDistance(moby);
         SpawnMobyBurstFx(moby, 0x74E, 1, 0x74E, 1, 0xB, 2);
@@ -2284,7 +2284,7 @@ void Moby800Update(char *moby) {
 extern short D_L16_00161D34;
 
 // Store float to global (gp-relative)
-void func_L16_002DF780(float f) {
+void Challenge_SetLayoutParam(float f) {
     *(float *)&D_L16_00161D34 = f;
 }
 extern void func_0022ED80(int, int, void *);
@@ -2292,13 +2292,13 @@ extern void func_0022ED80(int, int, void *);
 void Moby_ActivateFromState1(unsigned char *moby) {
     int state = 1;
     if (moby[0x20] == state) {
-        func_0022ED80(0, 0, moby);
+        Moby_PlaySound(0, 0, moby);
         state = 7;
         moby[0x20] = state;
     }
 }
 // Returns 0 if not in state 7/8, 2 if state 8 with data float > 0.2, else 1.
-int func_L16_002E2290(char *m) {
+int TargetMoby_GetPhase(char *m) {
     unsigned char s = m[0x20];
     m = *(char **)(m + 0x78);
     if (s == 7 || s == 8) {
@@ -2399,7 +2399,7 @@ void WatcherUpdate(L16WatchMoby *m) {
     activation = &d->activation;
     switch (m->state) {
     case 0:
-        func_L00_002676E8(m, activation);
+        DialogRequest_Init(m, activation);
         m->state = 1;
         d->activation.radius = 20.0f;
         m->opacity = 0xFF;
@@ -2408,7 +2408,7 @@ void WatcherUpdate(L16WatchMoby *m) {
         L16WatchPlayer *player = (L16WatchPlayer *)((char *)&D_0013E633_watch + 0xE1D);
         if (player->disabled == 0 && player->mode != 15 && player->mode != 22) {
             if (is_point_inside_clip_volume((char *)player + 0x80, d->activation_region) &&
-                func_L00_00267290(m, activation)) m->state = 2;
+                Npc_TryStartDialog(m, activation)) m->state = 2;
         }
         break;
     }
@@ -2679,7 +2679,7 @@ void CratePlatformUpdate(L16CrateMoby *m) {
     case 4:
         if (d->mode == 0)
             AttachLinkedMobyToTransform(m);
-        if (func_L16_002E5408((char *)m)) {
+        if (CratePlatform_FollowPath((char *)m)) {
             m->state = 3;
             MobyBlendAnimation(m, 3, 0, 5);
         }
@@ -2718,7 +2718,7 @@ void CratePlatformUpdate(L16CrateMoby *m) {
         break;
     }
     case 5:
-        if (func_L16_002E5408((char *)m)) {
+        if (CratePlatform_FollowPath((char *)m)) {
             char *path;
 
             m->state = 2;
@@ -2754,7 +2754,7 @@ extern char *D_L16_001B0C30_path54[] __asm__("D_L16_001B0C30");
 extern short D_L16_00161E50, D_L16_00161E54, D_L16_00161E58;
 
 // Steers the moby toward a path point and turns it to face its velocity, returning the path result.
-int func_L16_002E5408(char *moby) {
+int CratePlatform_FollowPath(char *moby) {
     float pos[4];
     float delta[4];
     char *data = *(char **)(moby + 0x78);
@@ -2800,7 +2800,7 @@ extern char D_0013F450[];
 extern char D_0013A5E0[];
 
 /* Update the moving pickup, interpolate its path transitions, and manage its sound handle. */
-void func_L16_002E5848(char *moby) {
+void PathPickup_Update(char *moby) {
     char *d = *(char **)(moby + 0x78);
     float v00[4], v10[4], v20[4], v30[4], v40[4], v50[4], v60[4], v70[4];
     char *g;
@@ -2814,7 +2814,7 @@ void func_L16_002E5848(char *moby) {
     int s;
     qcopy(v00, moby + 0x10);
     qcopy(v10, moby + 0x40);
-    func_L00_002676A0(moby, (*(unsigned short *)(moby + 0x34) ^ 1) & 1);
+    LevelTable_SetSlotValue(moby, (*(unsigned short *)(moby + 0x34) ^ 1) & 1);
     switch (*(unsigned char *)(moby + 0x20)) {
     case 0:
         *(short *)(d + 0xAA) = -1;
@@ -2903,7 +2903,7 @@ void func_L16_002E5848(char *moby) {
         g2 = D_0013F450;
         *(short *)(g2 + 0x1F2) = 2;
         *(short *)(g2 + 0x1F4) = 2;
-        func_L16_002E6398(moby);
+        PathPickup_TransformPath(moby);
         if (Sound_IsPlaying(moby, *(short *)(d + 0xAA)) == 0) {
             *(short *)(d + 0xAA) = func_0022ED80_i(0, 4, moby);
         }
@@ -3061,7 +3061,7 @@ extern char *D_L16_001B0C30[];
 extern void func_001F9EC0(void *, void *, void *);
 extern char D_L16_001D99B0[];
 extern void func_001F9BD8(void *, void *, void *);
-void func_L16_002E6398(char *a) {
+void PathPickup_TransformPath(char *a) {
     char *data = *(char **)(a + 0x78);
     int idx = *(int *)(data + 0xA0);
     if (idx != -1) {

@@ -169,7 +169,7 @@ void Moby1563Update(Moby *moby) {
                 float f = IntToFloat(D_L18_0016D2E0_9D48.timer - scale_ticks(*(int *)&D_L18_0016254C));
                 f = f / IntToFloat(scale_ticks(*(int *)&D_L18_00162550 - *(int *)&D_L18_0016254C));
                 D_L18_001625B4 = func_001FA898_r(f * 255.0f);
-                AddDrawCallback(func_L18_002FB080, D_L18_001625B8);
+                AddDrawCallback(Moby1563_DrawQuad, D_L18_001625B8);
             }
             if (D_L18_0016D2E0_9D48.timer >= scale_ticks(*(int *)&D_L18_00162554) && D_L18_0016D2E0_9D48.timer < scale_ticks(*(int *)&D_L18_00162558)) {
                 float f = IntToFloat(D_L18_0016D2E0_9D48.timer - scale_ticks(*(int *)&D_L18_00162554));
@@ -212,7 +212,7 @@ void Moby1563Update(Moby *moby) {
                 float f = IntToFloat(D_L18_0016D2E0_9D48.timer - *(int *)&D_L18_0016254C);
                 f = f / IntToFloat(*(int *)&D_L18_00162550 - *(int *)&D_L18_0016254C);
                 D_L18_001625B4 = func_001FA898_r(f * 255.0f);
-                AddDrawCallback(func_L18_002FB080, D_L18_001625B8);
+                AddDrawCallback(Moby1563_DrawQuad, D_L18_001625B8);
             }
             if (D_L18_0016D2E0_9D48.timer >= scale_ticks(*(int *)&D_L18_00162554) && D_L18_0016D2E0_9D48.timer < scale_ticks(*(int *)&D_L18_00162558)) {
                 float f = IntToFloat(D_L18_0016D2E0_9D48.timer - *(int *)&D_L18_00162554);
@@ -471,7 +471,7 @@ extern void func_001F9EE8(void *, void *, void *);
 extern void func_L00_001FD1D8(void *, void *, int);
 
 /* Adapted from Lombyte (MIT) for PAL by OpenRAC's tools/port.py: src/overlays/l18/gameplay/vendor/002f88e8.c, FUN_L18_002f9c20. */
-void func_L18_002FB080(struct Moby *m) {
+void Moby1563_DrawQuad(struct Moby *m) {
     Pk_9c20 pk;
     float mat[4][4];
     float up[4];
@@ -545,7 +545,7 @@ extern short D_L18_001625AC;
 extern float D_L18_001DFE90[4][4];
 
 /* Adapted from Lombyte (MIT) for PAL by OpenRAC's tools/port.py: src/overlays/l18/gameplay/vendor/002f88e8.c, FUN_L18_002f9eb8. */
-void func_L18_002FB318(struct Moby *m) {
+void Moby1563_DrawQuadAlt(struct Moby *m) {
     Pk_9c20_FB318 pk;
     float mat[4][4];
     float up[4];
@@ -896,7 +896,7 @@ void Moby1906Update(unsigned char *m) {
         FastVecAdd(s0, s0, e + 0x1D0);
         qcopy(tmp, s0);
         ((float *)tmp)[2] += 1.0f;
-        r = func_00214358(tmp, 0, 0.5f);
+        r = ProbeGroundHeight(tmp, 0, 0.5f);
         if (*(float *)(m + 0x18) < r) {
             *(float *)(m + 0x18) = r;
             m[0x20] = 2;
@@ -1332,6 +1332,7 @@ void Moby1906JointGlowDraw(unsigned char *moby) {
     }
 }
 extern int func_L00_002DCDA8_pos(void *, void *, void *) __asm__("func_L00_002DCDA8");
+/* Runs func_L00_002DCDA8 on the moby and switches state 7 accordingly; returns its result. */
 int Moby1906HitCheck(char *a, void *pos, void *target) {
     int r = func_L00_002DCDA8_pos(a, pos, target);
     if (r == 0) {

@@ -11,13 +11,13 @@ extern void func_L02_00250A58(char *);
 extern void func_L02_002A58C0(char *);
 extern char D_L03_001CB180[];
 
-void func_L03_00292AC0(char *moby)
+void Moby_DrawVu1AndBackdrop(char *moby)
 {
     DrawMobyVu1Packet(moby);
     func_L02_002100E8(D_L03_001CB180, 0x70002800, 0xF8);
     func_L02_00250720(moby);
     func_L02_00250A58(moby);
-    func_L02_002A58C0(moby);
+    Backdrop_QueueGsPacket(moby);
 }
 LINKER_REMNANT("asm/overlays", func_L03_00292B18);
 extern float D_0015EE6C MACRO_ADDR;
@@ -445,7 +445,7 @@ void ChildSpawnerUpdate(Moby *moby) {
                 v40.z = 0.0f;
                 func_L00_001FF548(&v40, &v40, d->f90);
                 FastVecAdd(&v50, &v30, &v40);
-                h = func_00214358(&v50, 0, 0.5f);
+                h = ProbeGroundHeight(&v50, 0, 0.5f);
                 if (h != 0.0f) {
                     v50.z = h;
                 }
@@ -465,7 +465,7 @@ void ChildSpawnerUpdate(Moby *moby) {
                 }
                 func_L00_001FF548(&v40, &v40, d->f90);
                 FastVecAdd(&v50, &v30, &v40);
-                h = func_00214358(&v50, 0, 0.5f);
+                h = ProbeGroundHeight(&v50, 0, 0.5f);
                 if (h != 0.0f) {
                     v50.z = h;
                 }
@@ -679,7 +679,7 @@ void Moby545Update(char *moby)
                     *(float *)(d + 0x8) *= f0;
                 }
                 if (*(int *)(d + 0x20) == 0) {
-                    func_0022ED80(0, 0, (int)moby);
+                    Moby_PlaySound(0, 0, (int)moby);
                     *(int *)(d + 0x20) = 0xC;
                 }
             }
@@ -709,7 +709,7 @@ void Moby545Update(char *moby)
                     *(float *)(d + 0x8) *= f0;
                 }
                 if (*(int *)(d + 0x20) == 0) {
-                    func_0022ED80(0, 0, (int)moby);
+                    Moby_PlaySound(0, 0, (int)moby);
                     *(int *)(d + 0x20) = 0xC;
                 }
             }
@@ -737,7 +737,7 @@ void Moby545Update(char *moby)
     break;
     }
     case 1: {
-        f0 = func_00214358(pos, 0, 0.5f);
+        f0 = ProbeGroundHeight(pos, 0, 0.5f);
         *(int *)(moby + 0x1C) = 0;
         *(float *)(moby + 0x18) = f0 + 0.2f;
         *(VecQuad *)t = *(VecQuad *)(moby + 0x10);
@@ -1171,7 +1171,7 @@ extern float func_001F9B88(float);
 extern int func_0022ED80(int, int, int);
 
 /* Moby update: advance a timer from a collision query, switch state, aim head angles. */
-void func_L03_002CF600(char *m) {
+void Moby_UpdateHitHealth(char *m) {
     int st;
     float fv;
     int res;
@@ -1207,7 +1207,7 @@ void func_L03_002CF600(char *m) {
                 *(short *)(d + 0x206) = scale_ticks(0x3C);
                 *(unsigned char *)(m + 0xBC) = *(unsigned char *)(m + 0x20);
                 *(unsigned char *)(m + 0x20) = 4;
-                func_0022ED80(1, 0, (int)m);
+                Moby_PlaySound(1, 0, (int)m);
             }
         }
     }
@@ -1233,7 +1233,7 @@ void Moby817Update(unsigned char *m) {
         if (flag) m[0x20] = 2;
         break;
     case 2:
-        func_0022ED80(0, 0, (int)m);
+        Moby_PlaySound(0, 0, (int)m);
         z = 0.0f;
         p = D_L03_0015F660;
         pos = m + 0x10;
@@ -1322,7 +1322,7 @@ void Moby848Update(Moby *moby) {
     float lim;
     float dist;
 
-    func_L00_00260D30(moby, &tgt, 20.0f);
+    FindNearestTargetMoby(moby, &tgt, 20.0f);
     if (d->target->oclass == 0x277) {
         snd = (int *)(((char *)d->target->pvars) + 0x250);
     } else if (d->target->oclass == 0xE9) {
@@ -1363,7 +1363,7 @@ void Moby848Update(Moby *moby) {
             int h = *snd;
             if (d->target->pos.z - tgt.pos.z < dist) {
                 if (Sound_IsPlaying(d->target, h) == 0) {
-                    *snd = func_0022ED80(0, 4, (int)d->target);
+                    *snd = Moby_PlaySound(0, 4, (int)d->target);
                 }
             } else {
                 if (h != -1) {
@@ -1498,7 +1498,7 @@ extern unsigned char D_L03_0017C5C0[];
 extern short D_L03_00161C44;
 
 /* Re-arms the matching entry of the level's moby list in mode 2 (func_L05_003188A8 with argument 1). */
-void func_L03_002DC848(char *a) {
+void AttachCheatManipulatorToMatchingL03(char *a) {
     if (D_L03_0015F6A8 == 2 && gCheats[0] != 0) {
         int i;
         for (i = 0; i < D_L03_0016C9E0.n; i++) {
@@ -1519,7 +1519,7 @@ typedef u32 u128 __attribute__((mode(TI), aligned(16)));
 extern struct Hero D_0013F450;
 
 /* Adapted from Lombyte (MIT) for PAL by OpenRAC's tools/port.py: src/overlays/shared/gameplay/entities/00291918.c, FUN_L03_002dc310. */
-void func_L03_002DD6D8(char *m) {
+void Moby_DeleteSelf(char *m) {
     float v[12]; /* unused; sets the frame size */
     FastVecDist(m + 0x10, D_0013F450.motion.pos.f);
     FastDiffRots(func_L00_001FF860(D_0013F450.motion.pos.f[0] - *(float *)(m + 0x10),
@@ -1580,7 +1580,7 @@ void QwarkWatchUpdate(char *m)
     case 1:
         if (*(int *)(d + 0x120) != -1 &&
             func_00215570_E9C38b((char *)&D_0013E633 + 0xE9D, *(int *)(d + 0x120))) {
-            func_L00_002676A0(m, 1);
+            LevelTable_SetSlotValue(m, 1);
             *(unsigned char *)(m + 0x20) = 2;
         }
         break;

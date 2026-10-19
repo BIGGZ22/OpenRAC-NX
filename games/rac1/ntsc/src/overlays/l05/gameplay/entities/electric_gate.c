@@ -1952,6 +1952,10 @@ extern L16WatchPlayer D_0013E633_watch __asm__("D_0013E533");
 
 void shady_salesman_update(WM *m) __asm__("FUN_L05_003180a0");
 void shady_salesman_update(WM *m) {
+    enum {
+        SHADY_SALESMAN_INITIALIZE = 0,
+        SHADY_SALESMAN_UPDATE_DIALOGUE = 1
+    };
     L16WatchScratch scratch;
     WD *d = m->data;
     float rate;
@@ -1965,7 +1969,7 @@ void shady_salesman_update(WM *m) {
         }
     }
     switch (m->state) {
-    case 0:
+    case SHADY_SALESMAN_INITIALIZE:
         if (D_0013D4FF) {
             mark_moby_for_removal(m);
             return;
@@ -1976,7 +1980,7 @@ void shady_salesman_update(WM *m) {
         m->state = 1;
         initialize_npc_dialogue(m, d);
         break;
-    case 1:
+    case SHADY_SALESMAN_UPDATE_DIALOGUE:
         if (update_npc_dialogue(m, d))
             begin_dialogue_camera_transition(m, 2.0f);
         if ((unsigned)(d->sub - 3) < 2) {
@@ -2170,8 +2174,14 @@ extern void func_00215CA8_f5848(float, int *, int, void *, float *, int) __asm__
 
 void taxi_update(struct Moby *moby) __asm__("FUN_L05_00318c78");
 void taxi_update(struct Moby *moby) {
+    enum {
+        TAXI_INITIALIZE = 0,
+        TAXI_WAIT_FOR_PICKUP = 1,
+        TAXI_BLEND_TO_PATH_START = 3,
+        TAXI_BLEND_TO_DESTINATION = 5
+    };
     char *d = (char *)moby->pvars;
-    float old_position[4], old_rotation[4], position_delta[4], v30[4], v40[4], v50[4], v60[4], v70[4];
+    float old_position[4], old_rotation[4], position_delta[4], v30[4], interpolation_end_position[4], interpolation_start_angles[4], interpolation_end_angles[4], hero_offset[4];
     struct Hero *g;
     struct Hero *g2;
     float z;
@@ -2185,18 +2195,18 @@ void taxi_update(struct Moby *moby) {
     qcopy(old_rotation, &moby->rot);
     FUN_L00_00266858(moby, (moby->flags ^ 1) & 1);
     switch (moby->state) {
-    case 0:
+    case TAXI_INITIALIZE:
         *(short *)(d + 0xB2) = *(short *)(d + 0xB0) = -1;
         FUN_L05_00319208(moby);
         break;
-    case 1:
+    case TAXI_WAIT_FOR_PICKUP:
         g = &hero;
         if (((char *)g->ground_moby) == moby && g->air_frames.s == 0) {
             transpose_rotation_matrix(v30, &moby->rot_row0);
-            subtract_vector_xyz(v70, &g->motion.pos, &moby->pos);
-            v70[3] = 0;
-            FUN_001f9d20(v70, v70, v30);
-            if (absolute_float(v70[1]) < 1.2f && v70[0] < 1.0f && v70[0] > -0.75f) {
+            subtract_vector_xyz(hero_offset, &g->motion.pos, &moby->pos);
+            hero_offset[3] = 0;
+            FUN_001f9d20(hero_offset, hero_offset, v30);
+            if (absolute_float(hero_offset[1]) < 1.2f && hero_offset[0] < 1.0f && hero_offset[0] > -0.75f) {
                 FUN_L05_003193a8_u(moby);
                 FUN_L05_00319690(moby);
                 if (*(int *)(D_0013CAE4) & 0x10) {
@@ -2212,21 +2222,21 @@ void taxi_update(struct Moby *moby) {
             }
         }
         break;
-    case 3:
+    case TAXI_BLEND_TO_PATH_START:
         advance_accelerated_scalar_c(1.0f, frame_time_sq, frame_time_sq, frame_time * 0.5f,
                                      (float *)(d + 0xC0), (float *)(d + 0xC4));
         qa = v30;
         s = *(int *)(d + 0x80 - (-(*(short *)(d + 0xB4) * 4)));
         tab = D_L05_001600EC_p;
         qcopy(qa, tab[s].position);
-        qcopy(v50, tab[s].direction);
+        qcopy(interpolation_start_angles, tab[s].direction);
         z = 0.0f;
-        func_00215CA8_f5848(z, *(int **)(d + 0xAC), 0, v40, v60, 0);
-        lerp_vector(d + 0x60, v30, v40, *(float *)(d + 0xC0));
+        func_00215CA8_f5848(z, *(int **)(d + 0xAC), 0, interpolation_end_position, interpolation_end_angles, 0);
+        lerp_vector(d + 0x60, v30, interpolation_end_position, *(float *)(d + 0xC0));
         *(float *)(d + 0x74) = fast_add_rotations(
-            fast_subtract_rotations(v60[1], v50[1]) * *(float *)(d + 0xC0), v50[1]);
+            fast_subtract_rotations(interpolation_end_angles[1], interpolation_start_angles[1]) * *(float *)(d + 0xC0), interpolation_start_angles[1]);
         *(float *)(d + 0x78) = fast_add_rotations(
-            fast_subtract_rotations(v60[2], v50[2]) * *(float *)(d + 0xC0), v50[2]);
+            fast_subtract_rotations(interpolation_end_angles[2], interpolation_start_angles[2]) * *(float *)(d + 0xC0), interpolation_start_angles[2]);
         if (1.0f <= *(float *)(d + 0xC0)) {
             *(float *)(d + 0xC0) = z;
             *(float *)(d + 0xC4) = z;
@@ -2240,20 +2250,20 @@ void taxi_update(struct Moby *moby) {
             moby->state = 5;
         }
         break;
-    case 5:
+    case TAXI_BLEND_TO_DESTINATION:
         advance_accelerated_scalar_c(1.0f, frame_time_sq, frame_time_sq, frame_time * 0.5f,
                                      (float *)(d + 0xC0), (float *)(d + 0xC4));
-        qa = v40;
+        qa = interpolation_end_position;
         s = *(int *)(d + 0x80 - (-(*(short *)(d + 0xB6) * 4)));
         tab = D_L05_001600EC_p;
         qcopy(qa, tab[s].position);
-        qcopy(v60, tab[s].direction);
-        sample_camera_path(*(int **)(d + 0xAC), 0, v30, v50, 0, (float)**(int **)(d + 0xAC));
-        lerp_vector(d + 0x60, v30, v40, *(float *)(d + 0xC0));
+        qcopy(interpolation_end_angles, tab[s].direction);
+        sample_camera_path(*(int **)(d + 0xAC), 0, v30, interpolation_start_angles, 0, (float)**(int **)(d + 0xAC));
+        lerp_vector(d + 0x60, v30, interpolation_end_position, *(float *)(d + 0xC0));
         *(float *)(d + 0x74) = fast_add_rotations(
-            fast_subtract_rotations(v60[1], v50[1]) * *(float *)(d + 0xC0), v50[1]);
+            fast_subtract_rotations(interpolation_end_angles[1], interpolation_start_angles[1]) * *(float *)(d + 0xC0), interpolation_start_angles[1]);
         *(float *)(d + 0x78) = fast_add_rotations(
-            fast_subtract_rotations(v60[2], v50[2]) * *(float *)(d + 0xC0), v50[2]);
+            fast_subtract_rotations(interpolation_end_angles[2], interpolation_start_angles[2]) * *(float *)(d + 0xC0), interpolation_start_angles[2]);
         if (1.0f <= *(float *)(d + 0xC0)) {
             *(int *)(d + 0xC0) = 0;
             *(int *)(d + 0xC4) = 0;

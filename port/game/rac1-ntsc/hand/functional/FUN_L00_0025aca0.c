@@ -33,7 +33,9 @@ extern float func_001F9DE0(float);
 extern float func_001F9988(float);
 extern void func_001F9CF8(void *, void *, void *);
 extern void func_L00_001FF378(void *, void *, float);
-extern void func_00125328__NOT_CARRIED(void *, void *, float);
+/* PAL's func_00125328, the vector scale entry 0x28 into the VU0 routine at 0x125300: here
+ * 0x1251C0 + 0x28 (the four jal 0x1251E8 at 0x25AEF4, 0x25AF14, 0x25B2B0, 0x25B2D8). */
+extern void func_001251E8(void *, void *, float);
 extern void func_L00_002531E0(void *, int, int);
 
 typedef struct Ent25BCF8_c25aca0 {
@@ -147,8 +149,8 @@ int FUN_L00_0025aca0(void *obj_, int n, void *out_, void *mask_, float s) {
                 *wp = f2 + f0;
                 break;
             case 4:
-                func_00125328__NOT_CARRIED(tA, (char *)0x70000000 + e->u.h[0] * 16, obj->scale * c);
-                func_00125328__NOT_CARRIED(tB, (char *)0x70000000 + e->u.h[1] * 16, obj->scale * c);
+                func_001251E8(tA, (char *)0x70000000 + e->u.h[0] * 16, obj->scale * c);
+                func_001251E8(tB, (char *)0x70000000 + e->u.h[1] * 16, obj->scale * c);
                 func_001F9A28(tC, tA, tB);
                 len = func_001F9AF0(tC);
                 f2 = e->fc * obj->scale;
@@ -255,8 +257,8 @@ int FUN_L00_0025aca0(void *obj_, int n, void *out_, void *mask_, float s) {
             func_001F9A10((char *)out + j * 16, tA, tB);
             break;
         case 4:
-            func_00125328__NOT_CARRIED(tA, (char *)0x70000000 + e->u.h[0] * 16, obj->scale);
-            func_00125328__NOT_CARRIED(tB, (char *)0x70000000 + e->u.h[1] * 16, obj->scale);
+            func_001251E8(tA, (char *)0x70000000 + e->u.h[0] * 16, obj->scale);
+            func_001251E8(tB, (char *)0x70000000 + e->u.h[1] * 16, obj->scale);
             func_001F9A28(tC, tB, tA);
             r = func_002132A8(0.0f, 1.0f);
             func_001F9A68(tC, tC, r);

@@ -11,6 +11,7 @@
  *   test the value's own pseudo (lbu $a1) (q2, c10i..m) or do not fold (~*p: nor+andi, c10f/g/h/o).
  *   4. case 3: 0x18 constant and D_L00_001C43B0 address swapped ($a0/$a1) (local alloc order).
  *   5. second func_00116248 call of case 5: arg setup order (t0/t1/a0 before a1/a2 in ours).
+ *   fcheck: unchecked (level/overlay function; fcheck runs boot-executable functions only; OpenRAC tools/fcheck_gate.py, 2026-10-18).
  */
 #include "common.h"
 

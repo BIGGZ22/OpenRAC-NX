@@ -1,4 +1,4 @@
-/* functional: medium. Handwritten MMI translated to plain arithmetic: 16-wide average of two sources into the existing dst contents ((dst + src + 1) >> 1). Byte rotation modelled explicitly. */
+/* functional: medium. fcheck: unchecked (never called in fcheck's capture run of the title, menu and level 0; OpenRAC tools/fcheck_gate.py, 2026-10-18). Handwritten MMI translated to plain arithmetic: 16-wide average of two sources into the existing dst contents ((dst + src + 1) >> 1). Byte rotation modelled explicitly. */
 static void rot8_func_00126BC0(const u8 *a, const u8 *b, int k, u8 *rot) {
     u8 buf[16];
     int i;

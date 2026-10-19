@@ -29,6 +29,7 @@ enum Row {
     kShowFps,
     kMuteUnfocused,
     kSkipCutscenes,
+    kStrafe,
     kRows
 };
 

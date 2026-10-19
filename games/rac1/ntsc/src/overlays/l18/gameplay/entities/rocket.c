@@ -20,8 +20,9 @@
 
 extern int FUN_L00_002dbb20(struct Moby *);
 
-int FUN_L18_002d6190(struct Moby *moby) {
-    int active = FUN_L00_002dbb20(moby);
+extern int FUN_L00_002dbb20_pt(void *, void *) __asm__("FUN_L00_002dbb20");
+int FUN_L18_002d6190(struct Moby *moby, void *quad) {
+    int active = FUN_L00_002dbb20_pt(moby, quad);
     if (active != 0) {
         moby->state = 4;
     } else if (moby->state == 4) {
@@ -469,7 +470,7 @@ void FUN_L18_002d5768(struct Moby *m);
 
 void FUN_L18_002d5050(struct Moby *moby) {
     L18D *d = (L18D *)moby->pvars;
-    float v0[4];
+    float target_movement_step[4];
     float movement_step[4];
     float rotation_angles[4];
     float previous_position[4];
@@ -487,20 +488,20 @@ void FUN_L18_002d5050(struct Moby *moby) {
         if (1.0f < s) {
             s = 1.0f;
         }
-        fast_vec_sub(v0, (char *)d + 0x10, &moby->pos);
-        fast_vec_scale(v0, v0, 1.0f / convert_integer_to_float(d->end - d->c));
+        fast_vec_sub(target_movement_step, (char *)d + 0x10, &moby->pos);
+        fast_vec_scale(target_movement_step, target_movement_step, 1.0f / convert_integer_to_float(d->end - d->c));
         clear_u64_value(rotation_angles);
-        rotation_angles[2] = fast_arc_tan(v0[0], v0[1]);
+        rotation_angles[2] = fast_arc_tan(target_movement_step[0], target_movement_step[1]);
         euler_rotation_basis(target_heading_basis, rotation_angles);
         transpose_rotation_matrix(aA0, target_heading_basis);
         clear_u64_value(rotation_angles);
         rotation_angles[2] = d->f24;
         rotation_angles[1] = d->f28;
         euler_rotation_basis(configured_rotation_basis, rotation_angles);
-        transform_vector_by_basis(v0, v0, aA0);
-        transform_vector_by_basis(v0, v0, configured_rotation_basis);
-        transform_vector_by_basis(v0, v0, target_heading_basis);
-        lerp_vector(movement_step, d, v0, s);
+        transform_vector_by_basis(target_movement_step, target_movement_step, aA0);
+        transform_vector_by_basis(target_movement_step, target_movement_step, configured_rotation_basis);
+        transform_vector_by_basis(target_movement_step, target_movement_step, target_heading_basis);
+        lerp_vector(movement_step, d, target_movement_step, s);
         FUN_L18_002d5488(moby, movement_step);
         fast_vec_add(&moby->pos, &moby->pos, movement_step);
         moby->rot.z = fast_arc_tan(movement_step[0], movement_step[1]);
@@ -586,14 +587,14 @@ extern void transform_vector_by_basis(void *, void *, void *);
 
 void FUN_L18_002d5488(void *mobyp, void *vec) {
     char *moby = mobyp;
-    float a0[4];
+    float effect_vector[4];
     float effect_spawn_position[4];
     QU world_effect_direction;
     unsigned char *p;
-    FUN_L00_00257d78(a0, frame_time * 0.1f, frame_time * 0.2f);
+    FUN_L00_00257d78(effect_vector, frame_time * 0.1f, frame_time * 0.2f);
     scale_vector_xyz(effect_spawn_position, vec, random_float_between(0.0f, 1.0f));
     add_vector_xyz(effect_spawn_position, effect_spawn_position, moby + 0x10);
-    p = FUN_L00_002712b8(effect_spawn_position, a0, scale_game_frames(0x14), 0x7F, 0x606060, 3, 40000.0f, 1000.0f,
+    p = FUN_L00_002712b8(effect_spawn_position, effect_vector, scale_game_frames(0x14), 0x7F, 0x606060, 3, 40000.0f, 1000.0f,
                          1.0f, -0.0002f, 0.0f);
     if (p != 0) {
         p[2] = *(unsigned char *)D_L18_001B2DDC_c;
@@ -938,9 +939,10 @@ void FUN_L18_002d5f20(unsigned char *m) {
 
 extern int FUN_L00_002db8f8(void *);
 
-int FUN_L18_002d6108(struct Moby *m) {
+extern int FUN_L00_002db8f8_pt(void *, void *, void *) __asm__("FUN_L00_002db8f8");
+int FUN_L18_002d6108(struct Moby *m, void *pos, void *target) {
     char *d = (char *)m->pvars;
-    int r = FUN_L00_002db8f8(m);
+    int r = FUN_L00_002db8f8_pt(m, pos, target);
     if (r != 0) {
         unsigned char s = m->state;
         if ((unsigned)(s - 3) < 2) {
@@ -1712,6 +1714,11 @@ extern void mark_moby_for_removal_p(void *) __asm__("FUN_0020c828");
 extern void scale_vector_xyz(void *, void *, float);
 
 void FUN_L18_002db460(struct Moby *moby) {
+    enum {
+        STATE_BALLISTIC_FLIGHT = 0,
+        STATE_GROUND_IMPACT_DELAY = 1,
+        STATE_REMOVE = 3
+    };
     float v[4];
     float a[4];
     float c[4];
@@ -1725,7 +1732,7 @@ void FUN_L18_002db460(struct Moby *moby) {
         return;
     }
     switch (moby->state) {
-    case 0: {
+    case STATE_BALLISTIC_FLIGHT: {
         float *cc;
         i = 0;
         for (; i < D_L18_00161C40; i++) {
@@ -1781,7 +1788,7 @@ void FUN_L18_002db460(struct Moby *moby) {
         }
         break;
     }
-    case 1:
+    case STATE_GROUND_IMPACT_DELAY:
         d[12] = fast_add_rotations(d[12], frame_time * 18.849556f);
         moby->glow_color = FUN_001fa6e0(*(int *)&D_L18_00161BFC, D_L18_00161C00,
                                              (fast_sin(d[12]) + 1.0f) * 0.5f);
@@ -1802,7 +1809,7 @@ void FUN_L18_002db460(struct Moby *moby) {
             moby->state = 3;
         }
         break;
-    case 3:
+    case STATE_REMOVE:
         mark_moby_for_removal_p(moby);
         break;
     }
@@ -2284,15 +2291,15 @@ void FUN_L18_002df608(struct Moby *moby) {
 extern float D_0015EE70 __asm__("D_0015ED70");
 extern s32 scale_game_frames(s32) __asm__("FUN_001f96f8");
 
-void FUN_L18_002dfaa0(struct Moby *moby, void *v0, void *v1, void *v2, void *v3, void *v4, int invulnerability_duration_frames, int transition_delay_frames,
+void FUN_L18_002dfaa0(struct Moby *moby, void *transition_start_position, void *transition_target_position, void *transition_start_rotation, void *transition_target_rotation, void *v4, int invulnerability_duration_frames, int transition_delay_frames,
                       int a8) {
     char *data = (char *)moby->pvars;
     *(int *)(data + 0x60) = 0;
     *(int *)(data + 0x64) = 0;
-    qcopy(data, v0);
-    qcopy(data + 0x10, v1);
-    qcopy(data + 0x20, v2);
-    qcopy(data + 0x30, v3);
+    qcopy(data, transition_start_position);
+    qcopy(data + 0x10, transition_target_position);
+    qcopy(data + 0x20, transition_start_rotation);
+    qcopy(data + 0x30, transition_target_rotation);
     qcopy(data + 0x40, v4);
     moby->state = 2;
     *(float *)(data + 0x68) = D_0015EE70 * 0.333f;
@@ -2349,8 +2356,8 @@ void FUN_L18_002e9768(struct Moby *moby) {
     switch (state) {
     case 0: {
         if (moby->mission != 0xff) {
-            int unkB0 = moby->mission + current_level_index * 16;
-            if (((unsigned char *)((int *)visited52))[unkB0] == 0xff) goto remove;
+            int mission_table_index = moby->mission + current_level_index * 16;
+            if (((unsigned char *)((int *)visited52))[mission_table_index] == 0xff) goto remove;
         }
         moby->state = 1;
         if (*(int *)data != 0) *(int *)(*(int *)data) = 3;

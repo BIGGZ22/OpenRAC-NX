@@ -385,8 +385,8 @@ extern char D_0013E633[];
 
 /* places the camera-follow vector from the angle and offsets, then copies it into the object */
 void Hero_PlaceOnOrbit(void) {
-    char *g = D_L00_00166D80;
-    char *c = D_L00_0016C158;
+    char *g = gCameraLvl;
+    char *c = gDebugFreeCamLvl;
     char *b;
     float t = FastAddRots(*(float *)(g + 0x158), *(float *)(c + 0x88));
     char *m;
@@ -718,7 +718,7 @@ void DebugMenuRender(void) {
 }
 extern char D_L00_00169D80[];
 // Moves a word to its neighbour slot and clears two fields.
-void func_L00_001F70F0(void) {
+void Frame_RollCounter(void) {
     char *p = D_L00_00169D80;
     int t = *(int *)(p + 0x364);
     *(int *)(p + 0x364) = 0;
@@ -733,7 +733,7 @@ void func_L00_001F70F0(void) {
    (func_001E97C8, 8 bytes) are one C function (config/overlays/joined.tsv). */
 extern char *D_L00_0015F6E0 MACRO_ADDR;
 
-int func_L00_001F75F8(int x, int y, int z) {
+int OcclGrid_Lookup(int x, int y, int z) {
     char *grid = D_L00_0015F6E0;
     char *base = grid + *(int *)grid;
     unsigned short *l = (unsigned short *)(grid + 4);
@@ -774,7 +774,7 @@ extern int D_0015F40C_F8750 SDATA(D_L00_0015F40C);
 extern int D_0015F420_F8750 SDATA(D_L00_0015F420);
 extern int D_0015F430_F8750 SDATA(D_L00_0015F430);
 
-void func_L00_001F8750(void) {
+void Level_ResetGameplayGlobals(void) {
     D_L00_0015F524 = 0;
     D_L00_0015F52C = 0;
     D_L00_0015F530 = 0;
@@ -843,11 +843,11 @@ void FadeOverlayRender(void) {
 
     if (D_L00_0015F6BC == 0) {
         UploadToGs(D_L00_0015F700[2]);
-        if (0.0f < D_L00_0015F4FC) {
-            if (1.0f < D_L00_0015F4FC) {
-                D_L00_0015F4FC = 1.0f;
+        if (0.0f < gFadeLvl) {
+            if (1.0f < gFadeLvl) {
+                gFadeLvl = 1.0f;
             }
-            emit_rgba_draw_packet(0, 0, 0, truncate_float_to_s32(D_L00_0015F4FC * 128.0f));
+            emit_rgba_draw_packet(0, 0, 0, truncate_float_to_s32(gFadeLvl * 128.0f));
         }
         ResetGsRegisters();
         ((int (*)(int))SetupGifPaging)(0);
@@ -869,7 +869,7 @@ extern void func_00234AC8(int);
 extern int func_00122598(int);
 extern void func_002348E8(void);
 extern void func_L00_002A21A8(void *, int, int);
-void func_L00_001F9D40(void *a) {
+void FrameSnapshot_Grab(void *a) {
     VU1_syncChain(1);
     func_00122598(0);
     D_L00_0015F4F8 = D_L00_0015F4F8 + 1;
@@ -919,4 +919,78 @@ void DrawShadowedLabel(int x, int y, int mode, unsigned char *p, float scale, fl
     func_001F68E8_c(l, y - 8, d, p, -1);
     Font_EnableColorCodes();
 }
-INCLUDE_ASM("asm/overlays", func_L00_001FCC50);
+typedef void (*LabelFn)(int, int, int, float, float, unsigned char *);
+extern unsigned char *func_001FE540(int);
+
+/* Draws a line-wrapped text entry with fade-in/out at its scroll edges (newline codes become " - " or start a new row). */
+void func_L00_001FCC50(void *rv, int t) {
+    char *r = rv;
+    int x8 = *(short *)(r + 8);
+    int end = x8 + *(short *)(r + 0xA);
+    float f21, f20;
+    unsigned char *p;
+    char buf[256];
+    char *d;
+    int y;
+    int k;
+
+    if (t < x8) return;
+    if (end < t) return;
+    f21 = 1.0f;
+    if (t < x8 + 0x10) f21 = (float)(t - x8) * 0.0625f;
+    if (end - 8 < t) f21 = (float)(end - t) * 0.125f;
+    f20 = 1.0f;
+    if (t < x8 + 0x20) {
+        k = t - 0x10;
+        f20 = (float)(k - x8) * 0.0625f;
+        if (f20 < 0.0f) f20 = 0.0f;
+    }
+    if (end - 0x10 < t) {
+        k = t + 8;
+        f20 = (float)(end - k) * 0.125f;
+        if (f20 < 0.0f) f20 = 0.0f;
+    }
+    p = func_001FE540(*(int *)r);
+    if (*(short *)(r + 0xE) == 1) {
+        d = buf;
+    again:
+        while (*p != 0) {
+            if (*p == 1) {
+                *d++ = 0x20;
+                *d++ = 0x2D;
+                *d++ = 0x20;
+                while (*p == 1) p++;
+                if (*p != 0) goto again;
+                d -= 3;
+            } else {
+                *d++ = *p++;
+            }
+        }
+        {
+            int x = *(short *)(r + 4);
+            int yy = *(short *)(r + 6);
+            int m = *(short *)(r + 0xC);
+            *d = 0;
+            ((LabelFn)DrawShadowedLabel)(x, yy, m, f21, f20, (unsigned char *)buf);
+        }
+    } else {
+        d = buf;
+        y = *(short *)(r + 6);
+        while (*p != 0) {
+            if (*p == 1) {
+                *d = 0;
+                ((LabelFn)DrawShadowedLabel)(*(short *)(r + 4), y, *(short *)(r + 0xC), f21, f20, (unsigned char *)buf);
+                y += 0x1A;
+                d = buf;
+                while (*p == 1) p++;
+                if (*p == 0) break;
+            } else {
+                *d++ = *p++;
+            }
+        }
+        if (d > buf) {
+            *d = 0;
+            ((LabelFn)DrawShadowedLabel)(*(short *)(r + 4), y, *(short *)(r + 0xC), f21, f20, (unsigned char *)buf);
+        }
+    }
+}

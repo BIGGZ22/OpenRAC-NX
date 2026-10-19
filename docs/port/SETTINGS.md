@@ -32,7 +32,7 @@ needs the game started again.
 | Monitor | `monitor` | `0`, `1`, `2`, ... | The display borderless and fullscreen cover, and the one the window opens on: `0` is wherever the window is, `1` the first display SDL lists (the primary one) |
 | Resolution | `resolution` | `desktop`, `WIDTHxHEIGHT` | The display's mode in `fullscreen`. The page offers the modes the chosen display lists; a size it does not have becomes the closest it has |
 | (the window) | `window_size` | `WIDTHxHEIGHT` | The window's size when last sized, kept for the next start. Absent: 1280 x 960, or as wide as `aspect` makes it |
-| Picture | `aspect` | `4:3`, `16:10`, `16:9`, `21:9`, `32:9`, `window`, `custom` | The picture's shape. A wider one keeps the game's vertical field of view and shows more of the world to the sides. `window`: whatever the window's shape is (never narrower than 4:3). `custom`: `aspect_custom` |
+| Picture | `aspect` | `4:3`, `16:10`, `16:9`, `21:9`, `32:9`, `window`, `custom` | The picture's shape. A wider one keeps the game's vertical field of view and shows more of the world to the sides; the seas, lava and sand the game's draw callbacks send are culled against the wider view too ([rac1/host/wide_view.c](../../port/game/rac1/host/wide_view.c)). `window`: whatever the window's shape is (never narrower than 4:3). `custom`: `aspect_custom` |
 | | `aspect_custom` | `16:9`, any `X:Y` | The shape `aspect = custom` uses, `64:27` for one; a shape narrower than 4:3 is held to 4:3 |
 | HUD | `hud` | `centre`, `edges` | In a picture wider than 4:3: the HUD where the game put it, in the 4:3 middle, or the elements the game anchors to the left or right of the screen (the weapon, the bolts, the side meters) out at the picture's sides. Menus and text stay in the middle either way |
 | Render scale | `render_scale` | `100`, `50`, `75`, `125`, `150`, `200` (a file may hold 25 to 400) | The frame's resolution as a percentage of the picture's pixels in the window. Over 100 is supersampling; under it is for a slow graphics card. The frame is never larger than 8192 pixels a side |
@@ -44,6 +44,7 @@ needs the game started again.
 | Frame counter (F2) | `show_fps` | `0`, `1` | Frames shown a second and what drawing one costs, in the picture's corner |
 | (Alt) | `menu_bar` | `1`, `0` | The menus along the window's top on Windows and Linux (macOS has them in its own menu bar) |
 | Mute in background | `mute_unfocused` | `0`, `1` | Silence while another window has the keyboard |
+| Strafe (experimental) | `strafe` | `off`, `hold`, `lock` | How Ratchet strafes on foot (section 7): the game's own turning; **Hold L2-R2**, while L2 or R2 is held the camera swings behind him once, then he faces the camera's way (the right stick turning it) and the stick moves him sideways and back; **Lock with weapons**, with a forward-firing weapon in hand he always faces the camera's way, the right stick turning it, and Hold otherwise. An old file's `lock_strafe = 1` is `lock` |
 | (F9, F10) | `volume` | `100`, `0` to `100` | How loud everything the port plays is |
 | (the launcher's Detailed logs) | `verbose_log` | `0`, `1` | The detailed log, as `OPENRAC_LOG=verbose` ([DEBUGGING.md](DEBUGGING.md#logs-and-traces)). Written only when on |
 
@@ -322,3 +323,113 @@ follows ReRAC's idea and says so in
 | The game's 50 Hz / 60 Hz mode | `video-mode` follows the frame rate | none (NTSC only) | removed (section 3) | **now** |
 | Graphics card: prefer the discrete one | Windows exports | no | Windows exports, Linux variables | **now** |
 | Graphics card: refuse a software rasteriser | no (the strings are logged) | no | yes | **now** |
+
+## 7. Strafe (Ratchet & Clank)
+
+**What the player gets.** `strafe` has three values, the row **Strafe (experimental)** on
+the Video page:
+
+| Value | Key | Controls on foot |
+|---|---|---|
+| Off | `off` | The game's own: Ratchet turns toward the stick and runs where he faces. L1 or L2 looks in first person, R1 or R2 crouches |
+| Hold L2-R2 | `hold` | Hold **L2 or R2**: the camera swings round once behind the way Ratchet faces. From then on he faces the camera's way: the **right stick** turns the camera and him with it, and the left stick moves him sideways, back and forward without turning him toward it (jumps too); going back, the walk or the run plays backwards. Nothing pulls the camera back to where he faced at the press. Let go: the game's turning again, the camera left where it is. **L1** looks, **R1** crouches (and crouch-jumps) |
+| Lock with weapons | `lock` | With a forward-firing weapon ready in hand (the Suck Cannon, the Bomb Glove, the Devastator, the Blaster, the Pyrocitor, the Tesla Claw, the Morph-o-Ray, the R.Y.N.O.), Ratchet always faces the camera's way: the **right stick** turns the camera and him with it, standing or running, and the left stick strafes. The camera does not swing round to follow where he goes. With anything else in hand (the wrench, the Swingshot, the gadgets, and the weapons that do not fire ahead: the Visibomb, the Taunter, the Mine Glove, the Walloper, the Glove of Doom, the Drone Device, the Decoy Glove), Hold L2-R2. L1 and R1 as in Hold |
+
+A file from before this setting with `lock_strafe = 1` loads as `lock`
+(`lock_strafe = 0` as `off`); the next save writes `strafe`. Off is the
+default, and with it the routines below are the game's own.
+
+**Where the two come from.** The later games: Going Commando added a strafe
+on a held shoulder button (L2 or R2 with the left stick: he walks sideways
+while facing forward, without turning), and Up Your Arsenal a control
+option, Lock Strafe, that keeps the strafe on and plays like a third-person
+shooter, beside its Third Person and First Person modes. Sources: the
+Ratchet & Clank Wiki's Going Commando controls
+(ratchetandclank.fandom.com/wiki/Going_Commando_controls: "Left analog stick
++ L2", walk sideways facing forward), a review of the HD collection on
+Super Phillip Central (2015: the strafe on R2 on the PlayStation 2 and 3),
+the wiki's walkthrough of Up Your Arsenal's first mission
+(ratchetandclank.fandom.com/wiki/Save_Veldin!: the three modes, Lock Strafe
+the developers' choice) and GameSpot's review of Up Your Arsenal (a
+"strafe-locked, third-person mode" that controls like a shooter). Going
+Commando's own strafe takes either L2 or R2; so does the port's.
+
+**The crosshair.** RAC1 has no crosshair in the third-person view: the
+Blaster's reticle is drawn only in first person (L1), and the Devastator
+marks what it has locked on. Both stay as the game has them; Lock adds
+none.
+
+**How the game turns the stick into a heading**, each tick in three steps:
+the stick handler (`Hero_SetHeadingFromStick`) sets the hero's move yaw
+(`+0x180`) to the stick's angle plus the camera's yaw (`D_L00_00166ED8`);
+the state code eases his facing toward the move yaw (`Hero_TurnToHeading`);
+and the run builds his velocity along his facing (`Hero_SetPlanarVelocity`
+given an angle above pi). He turns first, then runs where he faces. The game
+has a strafe of its own in one state: in state 0x81 with L2 or R2 held, the
+state puts the camera's yaw in the move yaw around its turn, and the follow
+camera's per-tick requests (`func_L00_002E74B0`) switch to a strafe camera
+that slides along with him on a stiff lateral spring.
+
+**L2 and R2.** On foot the game gives the shoulder buttons in pairs: L1 or
+L2 enters first-person look from standing (`held & 5`), R1 or R2 crouches,
+crouch-jumps and slides out of a run (`held & 0xA`); nothing else on foot
+tests L2 or R2 alone but state 0x81. With the setting on, in play (game mode
+0) on foot (`vehicle_mode` 0) and outside state 0x81, the port takes L2 and
+R2 out of the pad's state at each report (`Pad_ProcessReport`), as the
+game's own input locks (`PadState.mode`) take buttons out for a poll, and
+keeps them for the strafe. So L1 still looks and R1 still crouches, and L2
+and R2 strafe. Scenes, menus, vendors, vehicles and state 0x81 keep them.
+
+**The strafe**, in [strafe.c](../../port/game/rac1/host/strafe.c), in the
+run (states 2 and 0x73), the jump (7) and standing (0), on level ground:
+`Hero_TurnToHeading` eases the facing toward the camera's yaw, and while
+Hold's swing lasts toward the facing latched when L2 or R2 went down;
+`Hero_SetPlanarVelocity` builds the velocity along the move yaw, as the
+game's own run start from a standstill does; the follow camera asks for the
+game's strafe camera, which slides along with him and does not turn. Hold's
+swing turns the camera behind the latched facing through the game's own
+request to look along a heading (`func_L00_002E9DC8`, what the level's
+camera volumes use: a turn standing in for the right stick's, which the
+stick overrides). It is asked for only from the press until the camera is
+within 0.05 rad of that facing, the right stick is pushed 0.3 or more
+sideways (the game's own test for the stick moved) or 120 ticks have gone
+by; after that nothing turns the camera toward the old facing, so the right
+stick's turn stays, and Hold plays as Lock does. Both turn him standing
+too, early in his update (`Hero_UpdateMotionInput`), at the rates state
+0x81 uses (Hold once its swing is done).
+
+**The backpedal.** RAC1 has no animation for walking sideways or back. In
+the run the walk (sequence 3) or the run (4) loops: the walk/run routine
+(`func_L00_002293E8`) sets its speed (hero `+0xA90`) from his ground speed,
+and Ratchet's own animation advance (`func_L00_00232EF0`) moves it on by that
+speed times the key's rate (`+0xA94`). That advance only goes forward (a
+negative speed would leave the blend below 0 without ever stepping a key
+back; the moby's own `+0x58`, which plays other mobys backwards, is not what
+moves Ratchet). So while he strafes with the move yaw more than 110 degrees
+from his facing (until it is back under 100), strafe.c steps the walk or the
+run back itself, by what the advance would add, and leaves the blend that
+much lower, so the advance ends where the step back did and does the rest
+(sounds, the items that follow his speed, the distance moved) as the game
+does. The cycle plays backwards at the speed the game chose. Only a sequence
+looping on itself is stepped (keys A and B in it, no blend from another
+sequence, no sub-range or restart pending); the blend into the run from a
+standstill plays as the game has it. Everything else is the game's code. Each version's addresses come from its table
+([port/game/rac1](../../port/game/rac1/README.md)); the decision is in
+[strafe.h](../../port/game/rac1/host/strafe.h) and tested by `hero_strafe`
+(ctest). `OPENRAC_STRAFE_TRACE=1` logs a line each pad report: the mode, what
+the strafe does, the hero's state, item, buttons, whether Hold is latched and
+still swinging, the latched yaw, the right stick sideways, his facing, move
+yaw, the camera's yaw, his position, whether he backpedals, and his
+animation (sequences A/B, keys A-B, blend, speed).
+
+**Not done.** Sideways he still runs with the run's animation, facing
+ahead: no turn of the hips toward where he goes. The engine's joint
+modifiers (`AttachManipulator`, the blink and the NPCs' head turns) would
+carry one, but they act on the joints a class lists for them, so the hip
+would first have to be found among Ratchet's, and turning it turns the
+spine and everything above with it, which a second, opposite modifier on
+the spine would have to undo, about axes that depend on each joint's own
+frame. A level's camera (a wall, a camera volume) can still turn
+the camera while L2 or R2 is held, and once the swing is done he turns with
+it.
+

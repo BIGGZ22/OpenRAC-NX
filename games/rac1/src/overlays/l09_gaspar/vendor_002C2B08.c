@@ -176,7 +176,7 @@ void DrawBackdropShapes(void *data_ptr, void *list_ptr, int count) {
         }
         i++;
     } while (i < count);
-    func_L02_002A58C0(data);
+    Backdrop_QueueGsPacket(data);
 }
 typedef int uq __attribute__((mode(TI)));
 extern char *func_0020D348(int);
@@ -418,7 +418,7 @@ void AirshipPartUpdate(Moby *moby) {
         SetDeathBits(moby, 0x200, -1);
         SpawnExplosionFx(moby, ((f32 *)&moby->pos), -1, 4.0f, 13.0f);
         if (moby->oclass == 0x4A0) {
-            func_0022ED80(2, 0, (int)moby);
+            Moby_PlaySound(2, 0, (int)moby);
         }
         Moby_GetJointWorldPos(moby, 0, vec);
         FastVecSub(d->vel, ((f32 *)&moby->pos), vec);
@@ -481,7 +481,7 @@ void AirshipPartUpdate(Moby *moby) {
             FastVecScale(d->vel, d->vel, 0.45f);
             d->f20 *= 0.9f;
             d->f24 *= 0.9f;
-            func_0022ED80(0, 0, (int)moby);
+            Moby_PlaySound(0, 0, (int)moby);
             moby->state = 5;
         }
         break;
@@ -573,7 +573,7 @@ char *SpawnFallingDebrisRing(void) {
         *(float *)(moby + 0x2C) *= random_float_between(0.5f, 1.0f);
         *(float *)(d + 0x40) = random_float_between(-0.015707964f, 0.015707964f);
         *(float *)(d + 0x44) = random_float_between(-0.015707964f, 0.015707964f);
-        v[2] = func_00214358(v, 0, 0.5f);
+        v[2] = ProbeGroundHeight(v, 0, 0.5f);
         if (v[2] < 25.0f) v[2] = 25.0f;
         qcopy(d + 0x20, v);
         ((unsigned char *)moby)[0x30] = 0xFF;
@@ -1398,7 +1398,7 @@ void DrawScrollingBackdrop(void) {
     float a = (float)t / 20.0f;
     float b = (float)n;
     DrawScrollingStrips(D_L09_001F3340, a - b, 0x6C, (n & 15) + 0x2C, ((n + 1) & 15) + 0x2C);
-    func_L03_00292AC0(D_L09_001FCA00);
+    Moby_DrawVu1AndBackdrop(D_L09_001FCA00);
     DrawBackdropShapes(D_L09_001FCA00, D_L09_001F6680, 10);
 }
 typedef int u128_2F0BB8 __attribute__((mode(TI)));
@@ -1793,7 +1793,7 @@ extern float func_001FA888(int);
 extern void func_L00_002617B0(char *, void *, void *, void *);
 
 // Moves an elevator along its path once its collectable flag is set, easing between nodes. Adapted from Lombyte (MIT) for PAL: src/overlays/l09/gameplay_vendor_003033a0.c, FUN_L09_003033a0.
-void func_L09_00304750(unsigned char *moby) {
+void PathPlatformL09_Update(unsigned char *moby) {
     char *data = *(char **)(moby + 0x78);
     char *hero;
     char *path;
@@ -1867,7 +1867,7 @@ void func_L09_00304750(unsigned char *moby) {
                 if (*(int *)(data + 0xC8) == 0 && Hero_IsOnMoby(moby)) {
                     HeroEnterMoveState(0x72, 1);
                 }
-                func_0022ED80(1, 0, (int)moby);
+                Moby_PlaySound(1, 0, (int)moby);
                 moby[0xBC] = 2;
                 (*(float *)((data) + (0xAC))) = 1.0f / func_001F9878((*(float *)((data) + (0xB0))) * 60.0f);
                 *(short *)(data + 0xB8) = 0;
@@ -1898,7 +1898,7 @@ void func_L09_00304750(unsigned char *moby) {
             float f20, t;
             char *q;
             if (!Sound_IsPlaying(moby, *(int *)(data + 0xC4))) {
-                *(int *)(data + 0xC4) = func_0022ED80(0, 4, (int)moby);
+                *(int *)(data + 0xC4) = Moby_PlaySound(0, 4, (int)moby);
             }
             (*(float *)((data) + (0xA8))) += (*(float *)((data) + (0xAC))) * D_0015EE6C;
             if (FastAbsF((*(float *)((data) + (0xA8)))) > FastAbsF((*(float *)((data) + (0xAC))))) {
@@ -1917,7 +1917,7 @@ void func_L09_00304750(unsigned char *moby) {
                     moby[0xBC] = 1;
                     (*(float *)((data) + (0xA4))) = 0.0f;
                 }
-                func_0022ED80(2, 0, (int)moby);
+                Moby_PlaySound(2, 0, (int)moby);
                 *(int *)(data + 0xA8) = 0;
                 *(short *)(data + 0xBA) = scale_ticks(15);
                 r = *(int *)(data + 0xC4);
@@ -2542,7 +2542,7 @@ void MountableTurretUpdate(struct Moby *moby) {
             if (vars->beam == -1) {
                 vars->beam_frames = 0;
                 vars->beam = UpdatePointLight(&tmp, 0.4f, 0.0f, 4.0f, 4.0f, 4.0f);
-                func_0022ED80(1, 0, moby);
+                Moby_PlaySound(1, 0, moby);
             } else {
                 beam = &D_L09_001804C0[vars->beam];
                 beam->pos[0] = tmp.f[0];
@@ -2566,7 +2566,7 @@ void MountableTurretUpdate(struct Moby *moby) {
                 moby->pos.z = vars->rest_z;
             }
             if ((*(struct Moby **)(D_0013E633 + 0x1119)) != moby && vars->beam != -1) {
-                func_0022ED80(2, 0, moby);
+                Moby_PlaySound(2, 0, moby);
                 FreePointLight(vars->beam);
                 vars->beam = -1;
             }
@@ -2611,7 +2611,7 @@ void MountableTurretUpdate(struct Moby *moby) {
                     BuildSphericalOffset(&shot, D_0015EE6C * 60.0f, FastAddRots(1.5707964f, moby->rot.z), vars->pitch);
                     Moby_GetJointWorldPos(moby, 1, &muzzle);
                     SpawnEnemyShot(moby, &muzzle, &shot, scale_ticks(90));
-                    func_0022ED80(0, 0, moby);
+                    Moby_PlaySound(0, 0, moby);
                     D_L09_00166E80.unk160 = 0.03f;
                     D_L09_00166E80.unk168 = scale_ticks(10);
                     D_L09_00166E80.unk170 = 0.03f;
@@ -2638,7 +2638,7 @@ void MountableTurretUpdate(struct Moby *moby) {
                     BuildSphericalOffset(&shot, D_0015EE6C * 60.0f, FastAddRots(1.5707964f, moby->rot.z), vars->pitch);
                     Moby_GetJointWorldPos(moby, 2, &muzzle);
                     SpawnEnemyShot(moby, &muzzle, &shot, scale_ticks(90));
-                    func_0022ED80(0, 0, moby);
+                    Moby_PlaySound(0, 0, moby);
                     D_L09_00166E80.unk160 = 0.03f;
                     D_L09_00166E80.unk168 = scale_ticks(10);
                     D_L09_00166E80.unk170 = 0.03f;

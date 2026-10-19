@@ -80,7 +80,7 @@ int GetFootPhaseMask(struct WalkAnim *anim, float v) {
     return r;
 }
 extern void func_L00_001FFED8(void *, int, float);
-void func_L00_002A27C8(char *a) {
+void WalkCycle_ResetFeet(char *a) {
     int i;
     for (i = 0; i < 2; i++) {
         char *p = a + i * 0xB0;
@@ -211,7 +211,7 @@ void WalkCycleStep(WalkMoby *m, WalkData *d, int flags, float speed, float ang, 
                 WalkAnim *a = d->anim[7];
                 int f = MobyAnimFindFrame(m->pClass->seqs[a->id], (float)a->i14);
                 MobyBlendAnimation(m, a->id, f, 10);
-                func_L00_002A27C8((char *)d);
+                WalkCycle_ResetFeet((char *)d);
             }
             d->bB7 = 0xD;
             d->bB6 = GetFootPhaseMask(d->anim[7], (float)d->anim[7]->i14);
@@ -223,7 +223,7 @@ void WalkCycleStep(WalkMoby *m, WalkData *d, int flags, float speed, float ang, 
                     WalkAnim *a = d->anim[0];
                     int f = MobyAnimFindFrame(m->pClass->seqs[a->id], (float)a->i14);
                     MobyBlendAnimation(m, a->id, f, 10);
-                    func_L00_002A27C8((char *)d);
+                    WalkCycle_ResetFeet((char *)d);
                 }
                 d->bB7 = 1;
                 d->bB6 = GetFootPhaseMask(d->anim[0], (float)d->anim[0]->i14);
@@ -248,7 +248,7 @@ void WalkCycleStep(WalkMoby *m, WalkData *d, int flags, float speed, float ang, 
         int idx = D_L00_001CAA60[d->bB7];
         if (m->f58 < 0.25f && FastDiffRots(m->f48, ang) < 0.09239978f && speed < D_0015EE6C * 0.19f) {
             MobyBlendAnimation(m, d->bB0, 0, 10);
-            func_L00_002A27C8((char *)d);
+            WalkCycle_ResetFeet((char *)d);
             d->bB7 = 0;
         } else if (m->b52 == d->anim[idx]->id) {
             float t = (d->anim[7]->f08 + d->anim[0]->f08) * 0.375f;
@@ -270,7 +270,7 @@ void WalkCycleStep(WalkMoby *m, WalkData *d, int flags, float speed, float ang, 
                     WalkAnim *a = d->anim[7];
                     int f = MobyAnimFindFrame(m->pClass->seqs[a->id], ft);
                     MobyBlendAnimation(m, a->id, f, bl);
-                    func_L00_002A27C8((char *)d);
+                    WalkCycle_ResetFeet((char *)d);
                 }
                 d->bB7 = 0xD;
             } else if (flags & 5) {
@@ -283,7 +283,7 @@ void WalkCycleStep(WalkMoby *m, WalkData *d, int flags, float speed, float ang, 
                         WalkAnim *a = d->anim[11];
                         int f = MobyAnimFindFrame(m->pClass->seqs[a->id], (float)fr);
                         MobyBlendAnimation(m, a->id, f, bl);
-                        func_L00_002A27C8((char *)d);
+                        WalkCycle_ResetFeet((char *)d);
                         d->bB7 = 0xF;
                     } else {
                         int bl = truncate_float_to_s32(d->anim[9]->f3C * 0.25f / (speed / d->anim[9]->f08));
@@ -291,7 +291,7 @@ void WalkCycleStep(WalkMoby *m, WalkData *d, int flags, float speed, float ang, 
                         WalkAnim *a = d->anim[9];
                         int f = MobyAnimFindFrame(m->pClass->seqs[a->id], (float)fr);
                         MobyBlendAnimation(m, a->id, f, bl);
-                        func_L00_002A27C8((char *)d);
+                        WalkCycle_ResetFeet((char *)d);
                         d->bB7 = 0xE;
                     }
                 } else {
@@ -304,7 +304,7 @@ void WalkCycleStep(WalkMoby *m, WalkData *d, int flags, float speed, float ang, 
                     } else {
                         FastVecAdd(vec, vec, d->m30);
                     }
-                    h = func_00214358(vec, 0, 0.5f);
+                    h = ProbeGroundHeight(vec, 0, 0.5f);
                     d->fE4 = h;
                     switch (d->bB7) {
                     case 1:
@@ -315,7 +315,7 @@ void WalkCycleStep(WalkMoby *m, WalkData *d, int flags, float speed, float ang, 
                                 WalkAnim *a = d->anim[2];
                                 int f = MobyAnimFindFrame(m->pClass->seqs[a->id], (float)fr);
                                 MobyBlendAnimation(m, a->id, f, bl);
-                                func_L00_002A27C8((char *)d);
+                                WalkCycle_ResetFeet((char *)d);
                                 d->bB7 = 3;
                             } else {
                                 int bl = truncate_float_to_s32(d->anim[1]->f3C * 0.25f / (speed / d->anim[1]->f08));
@@ -323,7 +323,7 @@ void WalkCycleStep(WalkMoby *m, WalkData *d, int flags, float speed, float ang, 
                                 WalkAnim *a = d->anim[1];
                                 int f = MobyAnimFindFrame(m->pClass->seqs[a->id], (float)fr);
                                 MobyBlendAnimation(m, a->id, f, bl);
-                                func_L00_002A27C8((char *)d);
+                                WalkCycle_ResetFeet((char *)d);
                                 d->bB7 = 2;
                             }
                         } else if ((h - vec[2]) + d->anim[idx]->f04 * 0.5f * FastSin(d->fB8) < -d->fE0 * 0.75f) {
@@ -334,7 +334,7 @@ void WalkCycleStep(WalkMoby *m, WalkData *d, int flags, float speed, float ang, 
                                 WalkAnim *a = d->anim[5];
                                 int f = MobyAnimFindFrame(m->pClass->seqs[a->id], (float)fr);
                                 MobyBlendAnimation(m, a->id, f, bl);
-                                func_L00_002A27C8((char *)d);
+                                WalkCycle_ResetFeet((char *)d);
                                 d->bB7 = 8;
                             } else {
                                 int bl = truncate_float_to_s32(d->anim[4]->f3C * 0.25f / (speed / d->anim[4]->f08));
@@ -342,7 +342,7 @@ void WalkCycleStep(WalkMoby *m, WalkData *d, int flags, float speed, float ang, 
                                 WalkAnim *a = d->anim[4];
                                 int f = MobyAnimFindFrame(m->pClass->seqs[a->id], (float)fr);
                                 MobyBlendAnimation(m, a->id, f, bl);
-                                func_L00_002A27C8((char *)d);
+                                WalkCycle_ResetFeet((char *)d);
                                 d->bB7 = 7;
                             }
                         }
@@ -359,7 +359,7 @@ void WalkCycleStep(WalkMoby *m, WalkData *d, int flags, float speed, float ang, 
                             a = d->anim[5];
                             f = MobyAnimFindFrame(m->pClass->seqs[a->id], (float)fr);
                             MobyBlendAnimation(m, a->id, f, bl);
-                            func_L00_002A27C8((char *)d);
+                            WalkCycle_ResetFeet((char *)d);
                             d->bB7 = 8;
                         } else if ((h - vec[2]) + d->anim[idx]->f04 * 0.5f * FastSin(d->fB8) < d->fE0 * 0.75f) {
                             d->bB7 = 5;
@@ -369,7 +369,7 @@ void WalkCycleStep(WalkMoby *m, WalkData *d, int flags, float speed, float ang, 
                             WalkAnim *a = d->anim[3];
                             int f = MobyAnimFindFrame(m->pClass->seqs[a->id], (float)fr);
                             MobyBlendAnimation(m, a->id, f, bl);
-                            func_L00_002A27C8((char *)d);
+                            WalkCycle_ResetFeet((char *)d);
                             d->bB7 = 4;
                         }
                         break;
@@ -385,7 +385,7 @@ void WalkCycleStep(WalkMoby *m, WalkData *d, int flags, float speed, float ang, 
                             a = d->anim[4];
                             f = MobyAnimFindFrame(m->pClass->seqs[a->id], (float)fr);
                             MobyBlendAnimation(m, a->id, f, bl);
-                            func_L00_002A27C8((char *)d);
+                            WalkCycle_ResetFeet((char *)d);
                             d->bB7 = 7;
                         } else if ((h - vec[2]) + d->anim[idx]->f04 * 0.5f * FastSin(d->fB8) < d->fE0 * 0.75f) {
                             d->bB7 = 6;
@@ -395,7 +395,7 @@ void WalkCycleStep(WalkMoby *m, WalkData *d, int flags, float speed, float ang, 
                             WalkAnim *a = d->anim[3];
                             int f = MobyAnimFindFrame(m->pClass->seqs[a->id], (float)fr);
                             MobyBlendAnimation(m, a->id, f, bl);
-                            func_L00_002A27C8((char *)d);
+                            WalkCycle_ResetFeet((char *)d);
                             d->bB7 = 4;
                         }
                         break;
@@ -408,7 +408,7 @@ void WalkCycleStep(WalkMoby *m, WalkData *d, int flags, float speed, float ang, 
                                 WalkAnim *a = d->anim[5];
                                 int f = MobyAnimFindFrame(m->pClass->seqs[a->id], (float)fr);
                                 MobyBlendAnimation(m, a->id, f, bl);
-                                func_L00_002A27C8((char *)d);
+                                WalkCycle_ResetFeet((char *)d);
                                 d->bB7 = 8;
                             } else {
                                 int bl = truncate_float_to_s32(d->anim[4]->f3C * 0.25f / (speed / d->anim[4]->f08));
@@ -416,7 +416,7 @@ void WalkCycleStep(WalkMoby *m, WalkData *d, int flags, float speed, float ang, 
                                 WalkAnim *a = d->anim[4];
                                 int f = MobyAnimFindFrame(m->pClass->seqs[a->id], (float)fr);
                                 MobyBlendAnimation(m, a->id, f, bl);
-                                func_L00_002A27C8((char *)d);
+                                WalkCycle_ResetFeet((char *)d);
                                 d->bB7 = 7;
                             }
                         } else if ((h - vec[2]) + d->anim[idx]->f04 * 0.5f * FastSin(d->fB8) < d->fE0 * 0.75f) {
@@ -426,7 +426,7 @@ void WalkCycleStep(WalkMoby *m, WalkData *d, int flags, float speed, float ang, 
                                 WalkAnim *a = d->anim[1];
                                 int f = MobyAnimFindFrame(m->pClass->seqs[a->id], (float)fr);
                                 MobyBlendAnimation(m, a->id, f, bl);
-                                func_L00_002A27C8((char *)d);
+                                WalkCycle_ResetFeet((char *)d);
                                 d->bB7 = 5;
                             } else {
                                 int bl = truncate_float_to_s32(d->anim[2]->f3C * 0.25f / (speed / d->anim[2]->f08));
@@ -434,7 +434,7 @@ void WalkCycleStep(WalkMoby *m, WalkData *d, int flags, float speed, float ang, 
                                 WalkAnim *a = d->anim[2];
                                 int f = MobyAnimFindFrame(m->pClass->seqs[a->id], (float)fr);
                                 MobyBlendAnimation(m, a->id, f, bl);
-                                func_L00_002A27C8((char *)d);
+                                WalkCycle_ResetFeet((char *)d);
                                 d->bB7 = 6;
                             }
                         }
@@ -451,7 +451,7 @@ void WalkCycleStep(WalkMoby *m, WalkData *d, int flags, float speed, float ang, 
                             a = d->anim[4];
                             f = MobyAnimFindFrame(m->pClass->seqs[a->id], (float)fr);
                             MobyBlendAnimation(m, a->id, f, bl);
-                            func_L00_002A27C8((char *)d);
+                            WalkCycle_ResetFeet((char *)d);
                             d->bB7 = 7;
                         } else if ((h - vec[2]) + d->anim[idx]->f04 * 0.5f * FastSin(d->fB8) > d->fE0 * 0.75f) {
                             d->bB7 = 2;
@@ -461,7 +461,7 @@ void WalkCycleStep(WalkMoby *m, WalkData *d, int flags, float speed, float ang, 
                             WalkAnim *a = d->anim[0];
                             int f = MobyAnimFindFrame(m->pClass->seqs[a->id], (float)fr);
                             MobyBlendAnimation(m, a->id, f, bl);
-                            func_L00_002A27C8((char *)d);
+                            WalkCycle_ResetFeet((char *)d);
                             d->bB7 = 1;
                         }
                         break;
@@ -477,7 +477,7 @@ void WalkCycleStep(WalkMoby *m, WalkData *d, int flags, float speed, float ang, 
                             a = d->anim[5];
                             f = MobyAnimFindFrame(m->pClass->seqs[a->id], (float)fr);
                             MobyBlendAnimation(m, a->id, f, bl);
-                            func_L00_002A27C8((char *)d);
+                            WalkCycle_ResetFeet((char *)d);
                             d->bB7 = 8;
                         } else if ((h - vec[2]) + d->anim[idx]->f04 * 0.5f * FastSin(d->fB8) > d->fE0 * 0.75f) {
                             d->bB7 = 3;
@@ -487,7 +487,7 @@ void WalkCycleStep(WalkMoby *m, WalkData *d, int flags, float speed, float ang, 
                             WalkAnim *a = d->anim[0];
                             int f = MobyAnimFindFrame(m->pClass->seqs[a->id], (float)fr);
                             MobyBlendAnimation(m, a->id, f, bl);
-                            func_L00_002A27C8((char *)d);
+                            WalkCycle_ResetFeet((char *)d);
                             d->bB7 = 1;
                         }
                         break;
@@ -498,7 +498,7 @@ void WalkCycleStep(WalkMoby *m, WalkData *d, int flags, float speed, float ang, 
                             WalkAnim *a = d->anim[2];
                             int f = MobyAnimFindFrame(m->pClass->seqs[a->id], (float)fr);
                             MobyBlendAnimation(m, a->id, f, bl);
-                            func_L00_002A27C8((char *)d);
+                            WalkCycle_ResetFeet((char *)d);
                             d->bB7 = 3;
                         } else if ((h - vec[2]) + d->anim[idx]->f04 * 0.5f * FastSin(d->fB8) > -d->fE0 * 0.75f) {
                             d->bB7 = 10;
@@ -508,7 +508,7 @@ void WalkCycleStep(WalkMoby *m, WalkData *d, int flags, float speed, float ang, 
                             WalkAnim *a = d->anim[6];
                             int f = MobyAnimFindFrame(m->pClass->seqs[a->id], (float)fr);
                             MobyBlendAnimation(m, a->id, f, bl);
-                            func_L00_002A27C8((char *)d);
+                            WalkCycle_ResetFeet((char *)d);
                             d->bB7 = 9;
                         }
                         break;
@@ -519,7 +519,7 @@ void WalkCycleStep(WalkMoby *m, WalkData *d, int flags, float speed, float ang, 
                             WalkAnim *a = d->anim[1];
                             int f = MobyAnimFindFrame(m->pClass->seqs[a->id], (float)fr);
                             MobyBlendAnimation(m, a->id, f, bl);
-                            func_L00_002A27C8((char *)d);
+                            WalkCycle_ResetFeet((char *)d);
                             d->bB7 = 2;
                         } else if ((h - vec[2]) + d->anim[idx]->f04 * 0.5f * FastSin(d->fB8) > -d->fE0 * 0.75f) {
                             d->bB7 = 11;
@@ -529,7 +529,7 @@ void WalkCycleStep(WalkMoby *m, WalkData *d, int flags, float speed, float ang, 
                             WalkAnim *a = d->anim[6];
                             int f = MobyAnimFindFrame(m->pClass->seqs[a->id], (float)fr);
                             MobyBlendAnimation(m, a->id, f, bl);
-                            func_L00_002A27C8((char *)d);
+                            WalkCycle_ResetFeet((char *)d);
                             d->bB7 = 9;
                         }
                         break;
@@ -541,7 +541,7 @@ void WalkCycleStep(WalkMoby *m, WalkData *d, int flags, float speed, float ang, 
                                 WalkAnim *a = d->anim[2];
                                 int f = MobyAnimFindFrame(m->pClass->seqs[a->id], (float)fr);
                                 MobyBlendAnimation(m, a->id, f, bl);
-                                func_L00_002A27C8((char *)d);
+                                WalkCycle_ResetFeet((char *)d);
                                 d->bB7 = 3;
                             } else {
                                 int bl = truncate_float_to_s32(d->anim[1]->f3C * 0.25f / (speed / d->anim[1]->f08));
@@ -549,7 +549,7 @@ void WalkCycleStep(WalkMoby *m, WalkData *d, int flags, float speed, float ang, 
                                 WalkAnim *a = d->anim[1];
                                 int f = MobyAnimFindFrame(m->pClass->seqs[a->id], (float)fr);
                                 MobyBlendAnimation(m, a->id, f, bl);
-                                func_L00_002A27C8((char *)d);
+                                WalkCycle_ResetFeet((char *)d);
                                 d->bB7 = 2;
                             }
                         } else if ((h - vec[2]) + d->anim[idx]->f04 * 0.5f * FastSin(d->fB8) > -d->fE0 * 0.75f) {
@@ -559,7 +559,7 @@ void WalkCycleStep(WalkMoby *m, WalkData *d, int flags, float speed, float ang, 
                                 WalkAnim *a = d->anim[4];
                                 int f = MobyAnimFindFrame(m->pClass->seqs[a->id], (float)fr);
                                 MobyBlendAnimation(m, a->id, f, bl);
-                                func_L00_002A27C8((char *)d);
+                                WalkCycle_ResetFeet((char *)d);
                                 d->bB7 = 10;
                             } else {
                                 int bl = truncate_float_to_s32(d->anim[5]->f3C * 0.25f / (speed / d->anim[5]->f08));
@@ -567,7 +567,7 @@ void WalkCycleStep(WalkMoby *m, WalkData *d, int flags, float speed, float ang, 
                                 WalkAnim *a = d->anim[5];
                                 int f = MobyAnimFindFrame(m->pClass->seqs[a->id], (float)fr);
                                 MobyBlendAnimation(m, a->id, f, bl);
-                                func_L00_002A27C8((char *)d);
+                                WalkCycle_ResetFeet((char *)d);
                                 d->bB7 = 11;
                             }
                         }
@@ -579,7 +579,7 @@ void WalkCycleStep(WalkMoby *m, WalkData *d, int flags, float speed, float ang, 
                             WalkAnim *a = d->anim[1];
                             int f = MobyAnimFindFrame(m->pClass->seqs[a->id], (float)fr);
                             MobyBlendAnimation(m, a->id, f, bl);
-                            func_L00_002A27C8((char *)d);
+                            WalkCycle_ResetFeet((char *)d);
                             d->bB7 = 2;
                         } else if ((h - vec[2]) + d->anim[idx]->f04 * 0.5f * FastSin(d->fB8) < -d->fE0 * 0.75f) {
                             d->bB7 = 7;
@@ -589,7 +589,7 @@ void WalkCycleStep(WalkMoby *m, WalkData *d, int flags, float speed, float ang, 
                             WalkAnim *a = d->anim[0];
                             int f = MobyAnimFindFrame(m->pClass->seqs[a->id], (float)fr);
                             MobyBlendAnimation(m, a->id, f, bl);
-                            func_L00_002A27C8((char *)d);
+                            WalkCycle_ResetFeet((char *)d);
                             d->bB7 = 1;
                         }
                         break;
@@ -600,7 +600,7 @@ void WalkCycleStep(WalkMoby *m, WalkData *d, int flags, float speed, float ang, 
                             WalkAnim *a = d->anim[2];
                             int f = MobyAnimFindFrame(m->pClass->seqs[a->id], (float)fr);
                             MobyBlendAnimation(m, a->id, f, bl);
-                            func_L00_002A27C8((char *)d);
+                            WalkCycle_ResetFeet((char *)d);
                             d->bB7 = 3;
                         } else if ((h - vec[2]) + d->anim[idx]->f04 * 0.5f * FastSin(d->fB8) < -d->fE0 * 0.75f) {
                             d->bB7 = 8;
@@ -610,7 +610,7 @@ void WalkCycleStep(WalkMoby *m, WalkData *d, int flags, float speed, float ang, 
                             WalkAnim *a = d->anim[0];
                             int f = MobyAnimFindFrame(m->pClass->seqs[a->id], (float)fr);
                             MobyBlendAnimation(m, a->id, f, bl);
-                            func_L00_002A27C8((char *)d);
+                            WalkCycle_ResetFeet((char *)d);
                             d->bB7 = 1;
                         }
                         break;
@@ -635,7 +635,7 @@ void WalkCycleStep(WalkMoby *m, WalkData *d, int flags, float speed, float ang, 
                     float ft = (float)fr;
                     int f = MobyAnimFindFrame(m->pClass->seqs[a->id], ft);
                     MobyBlendAnimation(m, a->id, f, 10);
-                    func_L00_002A27C8((char *)d);
+                    WalkCycle_ResetFeet((char *)d);
                 }
                 d->bB7 = 1;
             } else if (flags & 5) {
@@ -648,7 +648,7 @@ void WalkCycleStep(WalkMoby *m, WalkData *d, int flags, float speed, float ang, 
                         WalkAnim *a = d->anim[11];
                         int f = MobyAnimFindFrame(m->pClass->seqs[a->id], (float)fr);
                         MobyBlendAnimation(m, a->id, f, bl);
-                        func_L00_002A27C8((char *)d);
+                        WalkCycle_ResetFeet((char *)d);
                         d->bB7 = 0xF;
                     } else {
                         int bl = truncate_float_to_s32(d->anim[9]->f3C * 0.25f / (speed / d->anim[9]->f08));
@@ -656,7 +656,7 @@ void WalkCycleStep(WalkMoby *m, WalkData *d, int flags, float speed, float ang, 
                         WalkAnim *a = d->anim[9];
                         int f = MobyAnimFindFrame(m->pClass->seqs[a->id], (float)fr);
                         MobyBlendAnimation(m, a->id, f, bl);
-                        func_L00_002A27C8((char *)d);
+                        WalkCycle_ResetFeet((char *)d);
                         d->bB7 = 0xE;
                     }
                 } else {
@@ -669,7 +669,7 @@ void WalkCycleStep(WalkMoby *m, WalkData *d, int flags, float speed, float ang, 
                         FastVecAdd(vec, vec, d->m30);
                     }
                     vec[2] += 1.0f;
-                    d->fE4 = func_00214358(vec, 0, 0.5f);
+                    d->fE4 = ProbeGroundHeight(vec, 0, 0.5f);
                 }
             }
         }
@@ -680,7 +680,7 @@ void WalkCycleStep(WalkMoby *m, WalkData *d, int flags, float speed, float ang, 
     }
     case 12:
         MobyBlendAnimation(m, d->bB0, 0, 10);
-        func_L00_002A27C8((char *)d);
+        WalkCycle_ResetFeet((char *)d);
         d->bB7 = 0;
         break;
     case 15:
@@ -693,7 +693,7 @@ void WalkCycleStep(WalkMoby *m, WalkData *d, int flags, float speed, float ang, 
         }
         if (MobyGetFrameValue(m) >= d->anim[11]->f0C + d->anim[11]->f10 - m->f58) {
             MobyBlendAnimation(m, d->bB3, 0, 10);
-            func_L00_002A27C8((char *)d);
+            WalkCycle_ResetFeet((char *)d);
             d->bB7 = 0x10;
         } else if ((d->uEE & 4) && d->fD8 < 0.0f) {
             float t = SolveTimeOfFlight((char *)m, (char *)d);
@@ -708,7 +708,7 @@ void WalkCycleStep(WalkMoby *m, WalkData *d, int flags, float speed, float ang, 
                 a = d->anim[12];
                 f = MobyAnimFindFrame(m->pClass->seqs[a->id], 0.0f);
                 MobyBlendAnimation(m, a->id, f, bl);
-                func_L00_002A27C8((char *)d);
+                WalkCycle_ResetFeet((char *)d);
                 d->bB7 = 0x12;
             }
         }
@@ -723,7 +723,7 @@ void WalkCycleStep(WalkMoby *m, WalkData *d, int flags, float speed, float ang, 
         }
         if (MobyGetFrameValue(m) >= d->anim[9]->f0C + d->anim[9]->f10 - m->f58) {
             MobyBlendAnimation(m, d->bB3, 0, 10);
-            func_L00_002A27C8((char *)d);
+            WalkCycle_ResetFeet((char *)d);
             d->bB7 = 0x10;
         } else if ((d->uEE & 4) && d->fD8 < 0.0f) {
             float t = SolveTimeOfFlight((char *)m, (char *)d);
@@ -738,7 +738,7 @@ void WalkCycleStep(WalkMoby *m, WalkData *d, int flags, float speed, float ang, 
                 a = d->anim[10];
                 f = MobyAnimFindFrame(m->pClass->seqs[a->id], 0.0f);
                 MobyBlendAnimation(m, a->id, f, bl);
-                func_L00_002A27C8((char *)d);
+                WalkCycle_ResetFeet((char *)d);
                 d->bB7 = 0x11;
             }
         }
@@ -752,7 +752,7 @@ void WalkCycleStep(WalkMoby *m, WalkData *d, int flags, float speed, float ang, 
                 WalkAnim *a = d->anim[12];
                 int f = MobyAnimFindFrame(m->pClass->seqs[a->id], 0.0f);
                 MobyBlendAnimation(m, a->id, f, bl);
-                func_L00_002A27C8((char *)d);
+                WalkCycle_ResetFeet((char *)d);
                 d->bB7 = 0x12;
             }
         }
@@ -818,7 +818,7 @@ void WalkCycleStep(WalkMoby *m, WalkData *d, int flags, float speed, float ang, 
             WalkAnim *a = d->anim[7];
             int f = MobyAnimFindFrame(m->pClass->seqs[a->id], (float)fr);
             MobyBlendAnimation(m, a->id, f, bl);
-            func_L00_002A27C8((char *)d);
+            WalkCycle_ResetFeet((char *)d);
             d->fD8 = 0.0f;
             d->bB7 = 0xD;
             d->bB6 = 1;
@@ -828,7 +828,7 @@ void WalkCycleStep(WalkMoby *m, WalkData *d, int flags, float speed, float ang, 
             vec[2] = 0.0f;
             FastVecAdd(vec, vec, d->m10);
             vec[2] += 1.0f;
-            d->fE4 = func_00214358(vec, 0, 0.5f);
+            d->fE4 = ProbeGroundHeight(vec, 0, 0.5f);
         }
         break;
     case 19:
@@ -838,7 +838,7 @@ void WalkCycleStep(WalkMoby *m, WalkData *d, int flags, float speed, float ang, 
             WalkAnim *a = d->anim[7];
             int f = MobyAnimFindFrame(m->pClass->seqs[a->id], (float)fr);
             MobyBlendAnimation(m, a->id, f, bl);
-            func_L00_002A27C8((char *)d);
+            WalkCycle_ResetFeet((char *)d);
             d->fD8 = 0.0f;
             d->bB7 = 0xD;
             d->bB6 = 1;
@@ -848,7 +848,7 @@ void WalkCycleStep(WalkMoby *m, WalkData *d, int flags, float speed, float ang, 
             vec[2] = 0.0f;
             FastVecAdd(vec, vec, d->m10);
             vec[2] += 1.0f;
-            d->fE4 = func_00214358(vec, 0, 0.5f);
+            d->fE4 = ProbeGroundHeight(vec, 0, 0.5f);
         }
         break;
     }

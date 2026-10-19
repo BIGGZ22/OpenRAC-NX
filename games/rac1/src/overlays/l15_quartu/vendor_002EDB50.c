@@ -90,7 +90,7 @@ void UltramechScientistUpdate(char *moby) {
         *(unsigned char *)(moby + 0x20) = 1;
         *(unsigned char *)(moby + 0x30) = 0xFF;
         *(float *)(d + 0xC) = 20.0f;
-        func_L00_002676E8(moby, d);
+        DialogRequest_Init(moby, d);
         if (((unsigned char *)(D_0014171B + 0xAA35))[*(int *)(d + 0x280) + (D_0015EE84 << 4)] != 0xFF) {
             break;
         }
@@ -135,7 +135,7 @@ void UltramechScientistUpdate(char *moby) {
         if ((unsigned int)v >= 2 && v != 9) {
             break;
         }
-        if (func_L00_00267290(moby, d) == 0) {
+        if (Npc_TryStartDialog(moby, d) == 0) {
             break;
         }
         SetLevelTriggerDone(*(int *)(d + 0x280));
@@ -615,7 +615,7 @@ extern float D_L15_0016227C SDATA(D_L15_0016227C);
 extern float D_L15_00162280 SDATA(D_L15_00162280);
 
 /* Builds and draws the animated ring of lights around a moby: 46 scaled vertices and colours, then two passes of 46 texture coordinates. */
-void func_L15_002EF030(char *moby) {
+void RingWave_DrawB(char *moby) {
     RingVars_2EF030 *data = *(RingVars_2EF030 **)(moby + 0x78);
     unsigned int i;
     unsigned int n;

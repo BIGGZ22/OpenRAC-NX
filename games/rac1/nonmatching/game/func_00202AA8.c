@@ -1,3 +1,4 @@
+/* fcheck: unchecked (the harness could not compile it in place; OpenRAC tools/fcheck_gate.py, 2026-10-18). */
 /*
  * UploadMipTexture: sends a texture (a header, then its palette and mip levels) to the GS at the
  * texture allocation cursor and writes its TEX0, MIPTBP1/TEX1 and MIPTBP1 values to regs[0..2].

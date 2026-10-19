@@ -1,3 +1,4 @@
+/* fcheck: unchecked (level/overlay function; fcheck runs boot-executable functions only; OpenRAC tools/fcheck_gate.py, 2026-10-18). */
 extern float D_L00_001C27A0[] NOT_SDA;
 extern float D_L00_001C27C0[] NOT_SDA;
 

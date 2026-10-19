@@ -1,6 +1,9 @@
 /* Carried from the PAL decompilation's src/overlays/shared/hud_00263490.c (matched C there) (games/rac1) through the version
  * map (../../README.md): functional C, not matched C. Names and addresses are this version's.
- * The two versions' code differs here: func_L05_002638F8 (near) was paired by place; read it against NTSC-U before trusting it. */
+ * The two versions' code differs here: func_L05_002638F8 (near) was paired by place. Read against NTSC-U's
+ * assembly (2026-10-18): the text ids are PAL's less 5 (0x517E, 0x531A), the count line has no word after its number,
+ * the goal lines' formats are D_L05_0015F8E0 and D_L05_0015F8E8, the single-goal line without the
+ * degree word. */
 #include "types.h"
 #include "qcopy.h"
 #include "qzero.h"
@@ -37,8 +40,8 @@ extern void func_001FFC30(int, int, int, int, int, int);
 extern float func_001F9DE0(float);
 extern char D_L05_0015F860[];
 extern char D_L05_0015F8D0[];
-extern char D_L05_0015F8D8[];
 extern char D_L05_0015F8E0[];
+extern char D_L05_0015F8E8[];
 extern char D_L05_00216C50[];
 extern int D_L05_0017E918[];
 extern int D_L05_0015FAE8 MACRO_ADDR;
@@ -93,8 +96,7 @@ int FUN_L05_00262f50(char *a) {
         if (u[2] == 1 || u[2] == 2) {
             func_001F6FD8_x(*(int *)&D_L05_0015F8B4 + 1, *(int *)&D_L05_0015F8B8 + 1, h, (int)buf, -1);
             func_001F6FD8_x(*(int *)&D_L05_0015F8B4, *(int *)&D_L05_0015F8B8, acc, (int)buf, -1);
-            func_00116248_002670A0(buf, D_L05_0015F8D0, D_L05_0015FAD8,
-                                   func_001FE540_002670A0(D_L05_0015FAD8 == 1 ? 0x517C : 0x517D));
+            func_00116248_002670A0(buf, D_L05_0015F8D0, D_L05_0015FAD8);
             func_001F6FD8_x(*(int *)&D_L05_0015F8BC + 1, *(int *)&D_L05_0015F8C0 + 1, h, (int)buf, -1);
             func_001F6FD8_x(*(int *)&D_L05_0015F8BC, *(int *)&D_L05_0015F8C0, acc, (int)buf, -1);
         } else if (u[2] == 3) {
@@ -130,7 +132,7 @@ int FUN_L05_00262f50(char *a) {
                 D_L05_0015FB00 = D_L05_0015FB00 / cnt;
                 func_00116248_002670A0(buf, D_L05_0015F860, D_L05_0015FB00);
                 func_00201200(*(int *)&D_L05_0015F8C4, *(int *)&D_L05_0015F8C8 - 0x18, acc, (int)buf);
-                func_00116248_002670A0(buf, D_L05_0015F8D8, func_001FE540_002670A0(idx + 0x5092));
+                func_00116248_002670A0(buf, D_L05_0015F8E0, func_001FE540_002670A0(idx + 0x5092));
                 func_00201200(*(int *)&D_L05_0015F8C4, *(int *)&D_L05_0015F8C8, acc, (int)buf);
             } else if (D_L05_0015FAD8 > 0) {
                 int n = 0;
@@ -145,15 +147,14 @@ int FUN_L05_00262f50(char *a) {
                     D_L05_0015FB00 = D_L05_0015FAD4 * 10;
                     func_00116248_002670A0(buf, D_L05_0015F860, D_L05_0015FB00);
                     func_00201200(*(int *)&D_L05_0015F8C4, *(int *)&D_L05_0015F8C8 - 0x18, acc, (int)buf);
-                    func_00116248_002670A0(buf, D_L05_0015F8E0, func_001FE540_002670A0(out[0] + 0x5183), D_L05_0015FAD4,
-                                           func_001FE540_002670A0(D_L05_0015FAD4 == 0x168 ? 0x50A7 : 0x50A8));
+                    func_00116248_002670A0(buf, D_L05_0015F8E8, func_001FE540_002670A0(out[0] + 0x517E), D_L05_0015FAD4);
                     func_00201200(*(int *)&D_L05_0015F8C4, *(int *)&D_L05_0015F8C8, acc, (int)buf);
                 } else {
                     D_L05_0015FB00 = D_L05_0015FAD4 * 20;
                     func_00116248_002670A0(buf, D_L05_0015F860, D_L05_0015FB00);
                     func_00201200(*(int *)&D_L05_0015F8C4, *(int *)&D_L05_0015F8C8 - 0x18, acc, (int)buf);
-                    func_00116248_002670A0(buf, D_L05_00216C50, func_001FE540_002670A0(out[0] + 0x5183),
-                                           func_001FE540_002670A0(out[1] + 0x5183), D_L05_0015FAD4);
+                    func_00116248_002670A0(buf, D_L05_00216C50, func_001FE540_002670A0(out[0] + 0x517E),
+                                           func_001FE540_002670A0(out[1] + 0x517E), D_L05_0015FAD4);
                     func_00201200(*(int *)&D_L05_0015F8C4, *(int *)&D_L05_0015F8C8, acc, (int)buf);
                 }
             }
@@ -177,7 +178,7 @@ int FUN_L05_00262f50(char *a) {
         f0 = func_001FA6C0(D_L05_0015F5CC % r3) / (float)r3;
         f0 = func_001F9DE0(f0 * 6.283180236816406f - 3.141590118408203f);
         r3 = func_001FA6E0(*(int *)&D_L05_0015F8AC, *(int *)&D_L05_0015F8B0, f0 * 0.5f + 0.5f);
-        func_00116248_002670A0(buf, func_001FE540_002670A0(0x531F));
+        func_00116248_002670A0(buf, func_001FE540_002670A0(0x531A));
         func_00201200(*(int *)&D_L05_0015F8A4 + 1, *(int *)&D_L05_0015F8A8 + 1, 0x80000000, (int)buf);
         func_00201200(*(int *)&D_L05_0015F8A4, *(int *)&D_L05_0015F8A8, r3, (int)buf);
     }

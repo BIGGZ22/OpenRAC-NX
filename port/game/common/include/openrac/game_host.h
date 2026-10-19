@@ -80,15 +80,21 @@ extern void (*openrac_game_on_frame)(unsigned frame);
  * the launcher's Discord presence. */
 extern int (*openrac_game_bolts)(void);
 
-/* Whether an in-game cutscene is playing, when a game installs it (rac1/pal: boot.c, the game mode
- * 2): the window lets Start skip it (settings skip_cutscenes). */
-extern int (*openrac_game_in_cutscene)(void);
+/* The buttons a pressed Start also presses while Skip cutscenes is on (settings skip_cutscenes), when
+ * a game installs it: what the game's own skip of the scene playing now takes, as the window's pad
+ * bits (0x4000 Cross, 0x0F00 the four shoulders), or 0 while nothing skippable plays (rac1: boot.c,
+ * the shoulders in a cutscene, Cross in the ship's landing and take-off). */
+extern int (*openrac_game_skip_buttons)(void);
 
 /* For crash reports (port/common/crash.h), sampled once a frame, when a game installs them (rac1:
  * boot.c): the game's mode word, and where the hero is. Each returns 0 when it has no answer now
  * (no level loaded). */
 extern int (*openrac_game_mode)(uint32_t* mode);
 extern int (*openrac_game_hero_position)(float xyz[3]);
+
+/* For OPENRAC_TRACE (frontend.cpp), when a game installs it (rac1: boot.c): the hero's position,
+ * rotation (game axes; z the yaw) and state id. 0 when there is none now (no level loaded). */
+extern int (*openrac_game_hero)(float position[3], float rotation[3], int32_t* state);
 
 /* A trap the game raised on purpose, or another reason the game cannot go on: writes a crash
  * report (<data>/crashes) and ends the program. */
@@ -241,6 +247,16 @@ int openrac_game_ui_quad(const openrac_game_ui_rect* quad);
  * a side of the screen are moved out past that side: the width a wider picture gained there when
  * the player's HUD setting is "Edges", else 0. */
 int openrac_game_hud_side(void);
+
+/* How many times wider than the game's 4:3 the picture is (the player's aspect setting): its
+ * horizontal tangent is the game's times this. 1 for a 4:3 picture, and without a window. */
+float openrac_game_picture_wider(void);
+
+/* How the player strafes on foot (settings strafe; rac1: host/strafe.c): 0 the game's own turning,
+ * 1 hold L2 or R2: the camera swings behind him once, then he faces the camera's way, 2 that and,
+ * with a forward-firing weapon in hand, always facing the camera's way. 0 without a window (no
+ * settings). */
+int openrac_game_strafe_mode(void);
 
 /* A live particle the game's particle renderer would draw (rac1: PartProc): its 0x40-byte record
  * (+0x01 bits 0-1 the render kind: 0 camera-facing sprite, 1 flat quad, 2 line, 3 ribbon; +0x03

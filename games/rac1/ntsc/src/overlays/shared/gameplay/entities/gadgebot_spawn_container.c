@@ -1103,10 +1103,11 @@ extern int FUN_L00_002db8f8(void *);
 extern int scale_game_frames(int) __asm__("FUN_001f96f8");
 void blend_moby_animation_u(MobyAnim *arg0, int arg1, int arg2, int arg3) __asm__("FUN_00212f90");
 
+extern int FUN_L00_002db8f8_pt(void *, void *, void *) __asm__("FUN_L00_002db8f8");
 /* Grabbed check: while FUN_L00_002db8f8 holds the moby, park it in state 0x10 (remembering the state it came from)
    unless it is in a state that cannot be grabbed; once released, drop it back to state 8. */
-int FUN_L06_002ea5e0(struct Moby *moby) {
-    int r = FUN_L00_002db8f8(moby);
+int FUN_L06_002ea5e0(struct Moby *moby, void *pos, void *target) {
+    int r = FUN_L00_002db8f8_pt(moby, pos, target);
     if (r != 0) {
         if (moby->state == 8 || moby->state == 9 || moby->state == 0xC || moby->state == 0xD || moby->state == 0x10) {
             if (moby->state != 0x10) {
@@ -1128,8 +1129,9 @@ int FUN_L06_002ea5e0(struct Moby *moby) {
 
 extern int FUN_L00_002dbb20(void *);
 
-int FUN_L06_002ea6a8(unsigned char *moby) {
-    int r = FUN_L00_002dbb20(moby);
+extern int FUN_L00_002dbb20_pt(void *, void *) __asm__("FUN_L00_002dbb20");
+int FUN_L06_002ea6a8(unsigned char *moby, void *quad) {
+    int r = FUN_L00_002dbb20_pt(moby, quad);
     if (r != 0) {
         if (moby[0x20] != 0x10) {
             moby[0xBC] = moby[0x20];
@@ -1389,7 +1391,7 @@ extern void subtract_vector_xyz(void *, void *, void *);
 void gadgebot_update(GbMoby *moby) __asm__("FUN_L06_002f0040");
 void gadgebot_update(GbMoby *moby) {
     float out[4];
-    float v10[4];
+    float raised_position_snapshot[4];
     float save0[4];
     float save1[4];
     float v40[4];
@@ -1975,8 +1977,8 @@ void gadgebot_update(GbMoby *moby) {
         float saved_control_f10;
         float saved_control_f24;
 
-        qcopy(v10, moby->pos);
-        v10[2] += D_L06_00161CE0 + 0.02f;
+        qcopy(raised_position_snapshot, moby->pos);
+        raised_position_snapshot[2] += D_L06_00161CE0 + 0.02f;
         qcopy(v40, moby->pos);
         saved_control_f10 = d->ctl.unk10;
         saved_control_f24 = d->ctl.unk24;
@@ -2417,6 +2419,9 @@ extern float fast_normalize_angle(f32) __asm__("FUN_001fa610");
 extern Moby *D_L06_0015FFD8;
 
 int FUN_L06_002f2c28(char *ctx, char *ow, char *moby, int flag, int *out) {
+    enum {
+        MOBY_CLASS_RELOCATION_TRIGGER_WITH_SOUND = 0x515
+    };
     float candidate_position[4];
     float vB[4];
     float vA[4];
@@ -2437,7 +2442,7 @@ int FUN_L06_002f2c28(char *ctx, char *ow, char *moby, int flag, int *out) {
     switch (*(short *)(moby + 0xA6)) {
     case 0x15F:
     case 0x3B1:
-    case 0x515:
+    case MOBY_CLASS_RELOCATION_TRIGGER_WITH_SOUND:
         if (!(vector_distance_xy_alt(ctx + 0x10, candidate_position) < 1.0f)) return 0;
         st = *(char **)(moby + 0x78);
         if (*(int *)st < 0) return 0;
@@ -2822,6 +2827,9 @@ extern Moby *create_moby(int) __asm__("FUN_0020c4f8");
 extern int func_0022ED80_2F6330(int, int, void *) __asm__("FUN_0022da68");
 
 void FUN_L06_002f4f00(Moby *m) {
+    enum {
+        SPAWN_CHILD_MOBYS = 0
+    };
     Vars_2F6330 *d = (Vars_2F6330 *)(*(void **)&m->pvars);
     float tmp[4];
     int i;
@@ -2830,7 +2838,7 @@ void FUN_L06_002f4f00(Moby *m) {
     int flag;
 
     switch (m->state) {
-    case 0:
+    case SPAWN_CHILD_MOBYS:
         d->unk10 = (*(float (*)[4])&m->rot)[0];
         qcopy(d->pos, (*(float (*)[4])&m->pos));
         m->state = 2;

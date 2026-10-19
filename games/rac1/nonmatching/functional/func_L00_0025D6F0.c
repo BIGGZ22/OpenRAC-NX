@@ -1,3 +1,4 @@
+/* fcheck: unchecked (level/overlay function; fcheck runs boot-executable functions only; OpenRAC tools/fcheck_gate.py, 2026-10-18). */
 /* SPDX-License-Identifier: GPL-3.0-or-later */
 /* Native PAL knocked-back flight of a moby, func_L00_0025D6F0 (0x858 bytes), which the
  * decompilation still has as assembly: a creature that was hit flies off, bounces and

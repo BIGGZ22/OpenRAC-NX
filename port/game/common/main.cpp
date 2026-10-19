@@ -89,10 +89,11 @@ int openrac_game_no_card = 0;
 int openrac_game_start_level = -1;
 void (*openrac_game_on_frame)(unsigned frame) = nullptr;
 int (*openrac_game_bolts)(void) = nullptr;
-int (*openrac_game_in_cutscene)(void) = nullptr;
+int (*openrac_game_skip_buttons)(void) = nullptr;
 void (*openrac_game_skip)(void) = nullptr;
 int (*openrac_game_mode)(uint32_t* mode) = nullptr;
 int (*openrac_game_hero_position)(float xyz[3]) = nullptr;
+int (*openrac_game_hero)(float position[3], float rotation[3], int32_t* state) = nullptr;
 const openrac_front_end* openrac_game_front_end = nullptr;
 }
 
@@ -347,7 +348,38 @@ void crash_test() {
     }
 }
 
+// OPENRAC_REACH=FILE: the functions without C (and the zero-filled calls) this run reached, with
+// their calls (guest.h, openrac_reach_site; port/tools/regress reach). Written at exit and every
+// 600 frames, so a run that crashes still leaves most of it.
+void write_reach() {
+    static const char* path = std::getenv("OPENRAC_REACH");
+    if (path != nullptr && *path != 0 && openrac_guest_write_reach(path, openrac_game.id, g_frame) == 0) {
+        log::warn("OPENRAC_REACH: cannot write {}", path);
+    }
+}
+
+// OPENRAC_AUDIO_TICKED=1: no sound device. The game's sounds advance by one tick's samples each
+// tick (rendered and dropped), and streams are read when they start, so every answer the game
+// gets back from the sound engine (a voice's state, a stream's position) lands on the same tick, however
+// fast the machine runs it: port/tools/regress's runs repeat. A device pulls at the real clock's
+// rate, which an uncapped run outpaces by a varying amount.
+bool audio_ticked() {
+    static const bool on = std::getenv("OPENRAC_AUDIO_TICKED") != nullptr;
+    return on;
+}
+
+void audio_tick() {
+#ifdef OPENRAC_FRONTEND
+    if (!audio_ticked() || !g_window) {
+        return;
+    }
+    static std::vector<std::int16_t> samples(static_cast<std::size_t>(platform::kAudioRate / tick_rate()) * 2);
+    openrac_sound_render(samples.data(), samples.size() / 2);
+#endif
+}
+
 void finish() {
+    write_reach();
     openrac_guest_report_missing();
     log::info("{} frames", g_frame);
 }
@@ -401,7 +433,7 @@ void open_sound(bool report = true) {
 // Once a frame: a device that stalled is opened again, and one that could not be opened is tried
 // again every few seconds (a phone's audio can be busy with a call or another app at the start).
 void watch_sound() {
-    if (!g_window) {
+    if (!g_window || audio_ticked()) {
         return;
     }
     if (!g_sound) {
@@ -459,16 +491,24 @@ void openrac_game_draw(unsigned layers) {
 // OPENRAC_WRITE=FRAME:ADDRESS:VALUE[:FRAMES],...: a 32-bit word written into the game's memory at
 // each vertical blank from FRAME for FRAMES blanks (default 1), hexadecimal address and value; the
 // old interpreter's --write, for getting somewhere directly (0x15EE84, the level being played, set
-// around a new game's transition loads that level).
+// around a new game's transition loads that level). cFRAME counts the window's frames from control
+// instead, as OPENRAC_PRESS's c entries do (port/tools/regress: the same moment in every version).
 static void apply_writes() {
     static const char* script = std::getenv("OPENRAC_WRITE");
     if (script == nullptr) {
         return;
     }
+    std::int64_t since = -1;
+#ifdef OPENRAC_FRONTEND
+    since = g_window ? frontend::since_control() : -1;
+#endif
     for (const char* at = script; at && *at;) {
         unsigned long frame = 0, address = 0, value = 0, length = 1;
-        if (std::sscanf(at, "%lu:%lx:%lx:%lu", &frame, &address, &value, &length) >= 3
-            && g_frame >= frame && g_frame < frame + length) {
+        const bool from_control = *at == 'c';
+        const std::int64_t now = from_control ? since : static_cast<std::int64_t>(g_frame);
+        if (std::sscanf(at + (from_control ? 1 : 0), "%lu:%lx:%lx:%lu", &frame, &address, &value, &length) >= 3
+            && now >= 0 && now >= static_cast<std::int64_t>(frame)
+            && now < static_cast<std::int64_t>(frame + length)) {
             const std::uint32_t word = static_cast<std::uint32_t>(value);
             std::memcpy(G(static_cast<gaddr>(address)), &word, 4);
         }
@@ -525,6 +565,7 @@ int openrac_game_vsync(void) {
     }
 #endif
     g_frame++;
+    audio_tick();
     sample_state();
     crash_test();
     // The level being played, once per change: the launcher reads this line for Discord's presence.
@@ -549,6 +590,9 @@ int openrac_game_vsync(void) {
     }
     if (openrac_game_on_frame != nullptr) {
         openrac_game_on_frame(static_cast<unsigned>(g_frame));
+    }
+    if (g_frame % 600 == 0) {
+        write_reach();
     }
     if (g_options.frames >= 0 && g_frame >= g_options.frames) {
         std::exit(0);  // finish() runs at exit
@@ -913,6 +957,23 @@ int openrac_game_hud_side(void) {
     return 0;
 }
 
+float openrac_game_picture_wider(void) {
+#ifdef OPENRAC_FRONTEND
+    if (g_window) {
+        return frontend::picture_wider();
+    }
+#endif
+    return 1.0f;
+}
+
+int openrac_game_strafe_mode(void) {
+#ifdef OPENRAC_FRONTEND
+    return static_cast<int>(settings::get().strafe);
+#else
+    return 0;
+#endif
+}
+
 int openrac_game_ui_quad(const openrac_game_ui_rect* quad) {
 #ifdef OPENRAC_FRONTEND
     if (g_window) {
@@ -1251,8 +1312,15 @@ int main(int argc, char** argv) {
         if (g_options.debug_overlay) {
             frontend::debug_overlay::request();
         }
-        open_sound();
-        std::atexit(close_sound);
+        // The game's sounds (openrac/sound_engine.h), rendered on the output's thread; with
+        // OPENRAC_AUDIO_TICKED, by the game's ticks instead (audio_tick).
+        if (audio_ticked()) {
+            openrac_stream_read_at_once(1);
+            log::info("OPENRAC_AUDIO_TICKED: no sound device; the sounds advance with the game's ticks");
+        } else {
+            open_sound();
+            std::atexit(close_sound);
+        }
     }
 #endif
 

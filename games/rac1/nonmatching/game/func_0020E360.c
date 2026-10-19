@@ -1,3 +1,4 @@
+/* fcheck: unchecked (never called in fcheck's capture run of the title, menu and level 0; OpenRAC tools/fcheck_gate.py, 2026-10-18). */
 /* Blends two 4-float entries of the table D_0019BEC0 (64-byte blocks, vector
    at +0x10 of each block). The 64-bit word at a0+0x38 holds three indices
    and a weight: b0 = bits 0..7 selects the first block, b1 = bits 8..15 the

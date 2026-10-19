@@ -1,4 +1,4 @@
-/* functional: medium. Handwritten MMI (MPEG motion compensation) translated to plain halfword arithmetic: 8-wide half-pel horizontal average of two sources into dst, two column passes of two row blocks. Register-level details (qfsrv byte rotation, zero fill) are modelled byte by byte; the addi overflow trap cannot occur. */
+/* functional: medium. fcheck: unchecked (never called in fcheck's capture run of the title, menu and level 0; OpenRAC tools/fcheck_gate.py, 2026-10-18). Handwritten MMI (MPEG motion compensation) translated to plain halfword arithmetic: 8-wide half-pel horizontal average of two sources into dst, two column passes of two row blocks. Register-level details (qfsrv byte rotation, zero fill) are modelled byte by byte; the addi overflow trap cannot occur. */
 static void rot8_func_00126910(const u8 *a, const u8 *b, int k, u8 *rot) {
     u8 buf[16];
     int i;

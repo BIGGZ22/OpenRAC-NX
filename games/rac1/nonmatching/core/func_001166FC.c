@@ -1,3 +1,4 @@
+/* fcheck: SAME on 3 calls (OpenRAC tools/fcheck_gate.py, 2026-10-18). */
 /* strcpy: copies src to dst including the terminating NUL and returns dst.
    The aligned fast paths in the assembly copy only whole 8- or 16-byte blocks
    that hold no NUL; everything else goes byte by byte, so nothing past the NUL

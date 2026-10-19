@@ -1,3 +1,4 @@
+/* fcheck: unchecked (level/overlay function; fcheck runs boot-executable functions only; OpenRAC tools/fcheck_gate.py, 2026-10-18). */
 extern char D_L00_001ABB60[];
 
 /* Clears n bits of the bitmap at D_L00_001ABB60, from bit idx upward, one bit

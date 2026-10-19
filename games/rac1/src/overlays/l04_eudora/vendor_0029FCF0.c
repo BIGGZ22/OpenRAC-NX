@@ -512,7 +512,7 @@ void BigAxebotUpdate(M_B7B0 *moby) {
             moby->f7F = 0x15;
         }
     }
-    func_L00_00260D30((char *)moby, (float *)&tg, flag ? data->f43C * 2.0f : data->f43C);
+    FindNearestTargetMoby((char *)moby, (float *)&tg, flag ? data->f43C * 2.0f : data->f43C);
     tgt = tg.f40;
     rot = moby->rot[2];
     dist = func_001F9D48(moby->pos, (float *)&tg);
@@ -584,7 +584,7 @@ void BigAxebotUpdate(M_B7B0 *moby) {
                 case 3:
                 case 6:
                 case 8:
-                    func_0022ED80(0xB, 0, (char *)moby);
+                    Moby_PlaySound(0xB, 0, (char *)moby);
                     if (data->f448 <= 0) {
                         data->f408 = -0.5235988f;
                     }
@@ -602,7 +602,7 @@ void BigAxebotUpdate(M_B7B0 *moby) {
                     data->f406 = scale_ticks(0xF0);
                     break;
                 case 7:
-                    func_0022ED80(0xB, 0, (char *)moby);
+                    Moby_PlaySound(0xB, 0, (char *)moby);
                     if (data->f448 <= 0) {
                         data->f408 = -0.5235988f;
                     }
@@ -622,7 +622,7 @@ void BigAxebotUpdate(M_B7B0 *moby) {
                     break;
                 case 4:
                 case 5:
-                    func_0022ED80(0xB, 0, (char *)moby);
+                    Moby_PlaySound(0xB, 0, (char *)moby);
                     BlendAnimationWithLinked((char *)moby, (void *)6, (void *)2, (void *)scale_ticks(4));
                     data->f402 = scale_ticks(0x28);
                     moby->state = 1;
@@ -698,7 +698,7 @@ void BigAxebotUpdate(M_B7B0 *moby) {
         break;
     case 1: {
         if (moby->f53 == 6 && data->f402 == scale_ticks(0x25)) {
-            func_0022ED80(2, 0, (char *)moby);
+            Moby_PlaySound(2, 0, (char *)moby);
         }
         if ((moby->f70 & 2) && (flag ? data->f43C * 2.0f < dist : data->f43C < dist)) {
             int arr[6];
@@ -718,7 +718,7 @@ void BigAxebotUpdate(M_B7B0 *moby) {
             data->f43A = 1;
         } else {
             if (moby->f52 == 0xD && func_L00_001FEF78(&data->f407) != 0) {
-                func_0022ED80(0xA, 0, (char *)moby);
+                Moby_PlaySound(0xA, 0, (char *)moby);
                 data->f407 = scale_ticks(0xB4);
             }
             if (data->f402 == 0) {
@@ -963,7 +963,7 @@ void BigAxebotUpdate(M_B7B0 *moby) {
     data->f420 += D_0015EE70 * 29.8f;
     moby->pos[2] -= data->f420 - 2.0f;
     {
-        float g = func_00214358(moby->pos, 0, 0.5f);
+        float g = ProbeGroundHeight(moby->pos, 0, 0.5f);
 
         moby->pos[2] -= 2.0f;
         if (moby->pos[2] < g) {
@@ -1011,7 +1011,7 @@ void BigAxebotUpdate(M_B7B0 *moby) {
         float p[4];
 
         Moby_GetJointWorldPos(moby, 0xB, p);
-        data->f424 = func_L04_002D48B8(moby, p);
+        data->f424 = SpawnMoby570(moby, p);
     }
 }
 struct Manip_2C2F00;
@@ -1161,7 +1161,7 @@ void SilenceAndBurst(char *moby)
     Moby_GetJointWorldPos(moby, 5, pos);
     func_L00_0025F4A8_alt(moby, vec, pos, 0.0f, 0.0f, 10, 3, 4,
                           2.0f, 1.0f, 100000.0f, 1.0f, -1, 15.0f, 1, 1, r, 0);
-    func_0022ED80(1, 0, moby);
+    Moby_PlaySound(1, 0, moby);
 }
 extern void func_L00_00260D30(char *, float *, float);
 extern char *D_L04_00160064 MACRO_ADDR;
@@ -1183,7 +1183,7 @@ int IsMobySpotClear(char *moby) {
     } else {
         s = *(float *)(data + 0x140);
     }
-    func_L00_00260D30(moby, vec, s);
+    FindNearestTargetMoby(moby, vec, s);
     d0 = func_001F9D48((float *)(moby + 0x10), vec);
     for (o = D_L04_00160064; o != 0; o = *(char **)(o + 0x28)) {
         if (o != moby && *(short *)(o + 0xA6) == 0x154) {
@@ -1475,7 +1475,7 @@ void CircularSawUpdate(M_35F0 *moby) {
             moby->f7F = 0x15;
         }
     }
-    func_L00_00260D30((char *)moby, (float *)&tg, flag ? data->f140 * 2.0f : data->f140);
+    FindNearestTargetMoby((char *)moby, (float *)&tg, flag ? data->f140 * 2.0f : data->f140);
     tgt = tg.f40;
     hd = MobyGetFrameValue(moby);
     dist = func_001F9D48(moby->pos, (float *)&tg);
@@ -1954,7 +1954,7 @@ void CircularSawUpdate(M_35F0 *moby) {
     data->f78 += D_0015EE70 * 9.8f;
     moby->pos[2] -= data->f78 - 2.0f;
     {
-        float g = func_00214358(moby->pos, 0, 0.5f);
+        float g = ProbeGroundHeight(moby->pos, 0, 0.5f);
         moby->pos[2] -= 2.0f;
         if (moby->pos[2] < g) {
             moby->pos[2] = g;
@@ -1987,7 +1987,7 @@ void CircularSawUpdate(M_35F0 *moby) {
 extern char *func_L00_002DCD40(char *);
 extern int func_L00_002DD0E0(char *, int, int, float);
 extern int func_0022ED80(int, int, char *);
-int func_L04_002C5450(char *m, int a, int b, float f) {
+int MobyL04_UpdateGrabState(char *m, int a, int b, float f) {
     char *h = Moby_GetClassRecord(m);
     int r = StartCarriedMobyAnim(m, a, b, f);
     if (r != 0) {
@@ -1996,7 +1996,7 @@ int func_L04_002C5450(char *m, int a, int b, float f) {
         m[0x20] = 1;
     }
     if (*(short *)(h + 0x68) == 6) {
-        func_0022ED80(1, 0, m);
+        Moby_PlaySound(1, 0, m);
     }
     return r;
 }
@@ -2203,7 +2203,7 @@ void BlargTrooperUpdate(char *moby) {
     } else {
         s = *(float *)(data + 0xDC);
     }
-    func_L00_00260D30(moby, st.tgt, s);
+    FindNearestTargetMoby(moby, st.tgt, s);
     target = *(char **)&st.tgt[16];
     dist = func_001F9D48(pos, st.tgt);
     dmg = 0.0f;
@@ -2566,7 +2566,7 @@ void BlargTrooperUpdate(char *moby) {
                 float p = func_L00_001FF860(func_001F9CE8(st.w.p.v80), st.w.p.v80[2]);
                 BuildSphericalOffset(st.w.p.v80, D_0015EE6C * 10.0f, a, p);
             }
-            func_0022ED80(7, 0, moby);
+            Moby_PlaySound(7, 0, moby);
             SpawnShotMoby(moby, st.w.p.v70, st.w.p.v80, truncate_float_to_s32(14.0f / (D_0015EE6C * 10.0f)));
             func_L00_001FEF78(data + 0xFD);
         } else if ((*(unsigned char *)(moby + 0x70) & 2) && *(short *)(data + 0xF2) == 0 && *(unsigned char *)(data + 0xFD) == 0) {
@@ -2686,7 +2686,7 @@ void BlargTrooperUpdate(char *moby) {
     *(float *)(data + 0xD0) = *(float *)(data + 0xD0) + D_0015EE70 * 9.8f;
     *(float *)(moby + 0x18) = *(float *)(moby + 0x18) - (*(float *)(data + 0xD0) - 2.0f);
     {
-        float g = func_00214358(pos, 0, 0.5f);
+        float g = ProbeGroundHeight(pos, 0, 0.5f);
         *(float *)(moby + 0x18) = *(float *)(moby + 0x18) - 2.0f;
         if (*(float *)(moby + 0x18) < g) {
             *(float *)(moby + 0x18) = g;

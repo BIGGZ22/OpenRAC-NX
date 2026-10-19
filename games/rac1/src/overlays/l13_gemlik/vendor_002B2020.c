@@ -181,7 +181,7 @@ extern float D_0015EE70_4B90 __asm__("D_0015EE70") MACRO_ADDR;
 extern float D_L13_00167140[];
 
 /* Updates the lift: rises/lowers between two heights, blends the camera and pulses its colour by state. */
-void func_L13_002B4B90(unsigned char *moby) {
+void LiftL13_UpdateAlt(unsigned char *moby) {
     char *state = (*(char **)((char *)(moby) + (0x78)));
     float delta[4];
     float rot[4];
@@ -224,7 +224,7 @@ void func_L13_002B4B90(unsigned char *moby) {
     case 3: {
         float target;
         if (!Sound_IsPlaying(moby, (*(int *)((char *)(state) + (0x6C))))) {
-            (*(int *)((char *)(state) + (0x6C))) = func_0022ED80(0, 4, (int)moby);
+            (*(int *)((char *)(state) + (0x6C))) = Moby_PlaySound(0, 4, (int)moby);
         }
         if ((*(unsigned char *)((char *)(moby) + (0xBC))) != 0) {
             ComputeFlankPosition(moby, a, b);
@@ -528,17 +528,17 @@ void SpawnAimedProjectile(char *moby)
         v2[1] = FastSin(ang) * (*(float *)&D_L13_00161410 * D_0015EE6C);
         v2[2] = 0;
         FastVecAdd(v, v, v2);
-        func_L13_00307660(*(float *)(data + 0x68), v, v2, moby);
+        SpawnMoby1238(*(float *)(data + 0x68), v, v2, moby);
     }
 }
 extern int func_L00_00260D30(void *, void *, float);
 
-void func_L13_002B5A88(unsigned char *moby) {
+void Moby_PickTargetByState(unsigned char *moby) {
     char *data = *(char **)(moby + 0x78);
     float distance;
     if (moby[0x20] == 3) distance = 22.0f;
     else distance = 20.0f;
-    func_L00_00260D30(moby, data, distance);
+    FindNearestTargetMoby(moby, data, distance);
     if (*(int *)(data + 0x40) == 0) {
         *(int *)(data + 0x40) = *(int *)(D_0013E633 + 0x2E9D);
     }
@@ -585,7 +585,7 @@ extern int func_001F9850(int);
 extern void func_L00_0025E590(void *, void *);
 
 // Per-frame update of a moby's timed state: checks its target, counts down and switches state.
-void func_L13_002B5C08(char *m, char *p) {
+void GemLockTurret_HandleHit(char *m, char *p) {
     float *tm = (float *)(p + 0x20);
     char *q;
     int k;
@@ -687,7 +687,7 @@ void GemLockTurretUpdate(unsigned char *moby) {
                 *(float *)(moby + 0x58) = random_float_between(0.8f, 1.2f);
             }
         }
-        func_L13_002B5C08(moby, d);
+        GemLockTurret_HandleHit(moby, d);
         break;
     case 2:
         if (moby[0x70] & 2) {
@@ -731,7 +731,7 @@ extern float func_00214358(void *,int,float);
 extern short D_0015EE70;
 /* adjusts moby height toward the sampled ground height */
 void FallTowardGround(char *m,char *d) {
- float ground=func_00214358(m+0x10,0,0.5f);
+ float ground=ProbeGroundHeight(m+0x10,0,0.5f);
  float z=*(float *)(m+0x18);
  if(ground<z+0.3f) {
  float v=*(float *)(d+0x128)-*(float *)&D_0015EE70*9.8f;
@@ -958,7 +958,7 @@ void RobosquawkerUpdate(RsMoby *m) {
     }
     m->w94 = *(int *)(m->w24 + 0x10);
     m->h34 &= 0xFFBE;
-    func_L00_00260D30(m, &tgt, v->f1FC + 4.0f);
+    FindNearestTargetMoby(m, &tgt, v->f1FC + 4.0f);
     tm = tgt.moby;
     if (tm == 0 || (v->h214 == 0 && v->w22C != -1 && is_point_inside_clip_volume(&tgt, v->w22C) == 0)) {
         tgt.moby = 0;
@@ -1075,7 +1075,7 @@ void RobosquawkerUpdate(RsMoby *m) {
 
         ToggleParticleProcess((unsigned char *)m, (char *)v);
         FastVecSub(&va, &tgt, &m->pos);
-        d = func_00214358(&m->pos, 0x120, 0.5f);
+        d = ProbeGroundHeight(&m->pos, 0x120, 0.5f);
         if (d > 1.0f
             && func_001F9CE8(&va) < v->f1FC + 4.0f
             && FastAbsF(m->pos.f[2] - tgt.pos.f[2]) < 10.0f
@@ -1125,7 +1125,7 @@ void RobosquawkerUpdate(RsMoby *m) {
                 vb.f[2] = 0.0f;
                 vb.f[2] = random_float_between(5.0f, 7.0f);
                 FastVecAdd(&v->v1E0, &vb, &v->v1D0);
-                if (func_00214358(&v->v1E0, 0x120, 0.5f) > 1.0f) {
+                if (ProbeGroundHeight(&v->v1E0, 0x120, 0.5f) > 1.0f) {
                     break;
                 }
             }
@@ -1196,7 +1196,7 @@ void RobosquawkerUpdate(RsMoby *m) {
                 vb.f[2] = 0.0f;
                 vb.f[2] = random_float_between(5.0f, 7.0f);
                 FastVecAdd(&v->v1E0, &vb, &v->v1D0);
-                if (func_00214358(&v->v1E0, 0x120, 0.5f) > 1.0f) {
+                if (ProbeGroundHeight(&v->v1E0, 0x120, 0.5f) > 1.0f) {
                     break;
                 }
             }
@@ -1217,7 +1217,7 @@ void RobosquawkerUpdate(RsMoby *m) {
             }
             qcopy(&v->v1E0, path + v->w224 * 16 + 16);
             v->v1E0.f[2] = v->v1E0.f[2] + random_float_between(-0.2f, 0.2f);
-            g = func_00214358(&m->pos, 0x120, 0.5f);
+            g = ProbeGroundHeight(&m->pos, 0x120, 0.5f);
             if (g > 1.0f
                 && func_001F9CE8(&vb) < v->f1FC + 4.0f
                 && FastAbsF(m->pos.f[2] - tgt.pos.f[2]) < 10.0f
@@ -1250,7 +1250,7 @@ void RobosquawkerUpdate(RsMoby *m) {
     case 0x11: {
         float g;
 
-        g = func_00214358(&m->pos, 0x120, 0.5f);
+        g = ProbeGroundHeight(&m->pos, 0x120, 0.5f);
         ApproachValue(&v->v40.f[2], -(D_0015EE6C * 8.0f), D_0015EE6C_v[1] * 10.8f);
         MoveMobyWithCollision(m, &v->v40, 0.6f, 0.5f, 0.0f, 0);
         if (m->b53 != 2
@@ -1276,7 +1276,7 @@ void RobosquawkerUpdate(RsMoby *m) {
     case 0x10: {
         float g;
 
-        g = func_00214358(&m->pos, 0x120, 0.5f);
+        g = ProbeGroundHeight(&m->pos, 0x120, 0.5f);
         if (m->pos.f[2] - g < 3.0f) {
             ApproachValue(&v->v40.f[2], D_0015EE6C * 8.0f, D_0015EE6C_v[1] * 10.8f);
         } else {
@@ -1509,7 +1509,7 @@ void RobosquawkerUpdate(RsMoby *m) {
                 MobyBlendAnimation(m, 5, 0, scale_ticks(3));
             }
         }
-        g = func_00214358(&m->pos, 0x120, 0.5f);
+        g = ProbeGroundHeight(&m->pos, 0x120, 0.5f);
         v->f198 -= D_0015EE6C_v[1] * 9.8f;
         m->pos.f[2] += v->f198;
         if (m->pos.f[2] < g) {
@@ -1701,7 +1701,7 @@ void RobosquawkerUpdate(RsMoby *m) {
             }
         }
         qcopy(&m->pos, &vb);
-        g = func_00214358(&m->pos, 0x120, 0.5f);
+        g = ProbeGroundHeight(&m->pos, 0x120, 0.5f);
         v->f198 -= D_0015EE6C_v[1] * 9.8f;
         m->pos.f[2] += v->f198;
         if (m->pos.f[2] < g) {
@@ -2190,9 +2190,9 @@ void DrawGemlikTurretHud(char *moby) {
     for (i = 0; i < n; i++) {
         g = D_0013E633 + 0xE1D;
         if (i < g[0x15F6]) {
-            func_L11_00311F98(x, y, 0.5f, D_L13_001CBEE0, 0x19, 0xFFFFF3, 0x50008F00);
+            Hud_DrawPointList(x, y, 0.5f, D_L13_001CBEE0, 0x19, 0xFFFFF3, 0x50008F00);
         } else {
-            func_L11_00311F98(x, y, 0.5f, D_L13_001CBEE0, 0x19, 0xFFFFF3, 0x20004F00);
+            Hud_DrawPointList(x, y, 0.5f, D_L13_001CBEE0, 0x19, 0xFFFFF3, 0x20004F00);
         }
         n = g[0x15F7];
         if (i == n >> 1) {
@@ -2249,7 +2249,7 @@ void FireHomingMissileOnPress(char *moby, char *obj, float p2, float p3) {
     BuildSphericalOffset(a, D_0015EE6C * 400.0f, p2, p3);
     FastVecAdd(a, a, obj);
     if (func_001F9908_i(obj + 0x80) && (*(int *)(D_0013A5E0 + 0x2610) & 0x84)) {
-        func_0022ED80(3, 0, (int)moby);
+        Moby_PlaySound(3, 0, (int)moby);
         func_L00_001FF4B0(c, a, 2.2f);
         Moby_GetJointWorldPos(moby, 3 + (obj[0x61] & 1), b);
         FastVecAdd(b, b, c);
@@ -2281,7 +2281,7 @@ void FireGunWhileHeld(char *moby, char *obj) {
             s = D_0015EE6C * 100.0f;
             h = scale_ticks(300);
             if (SpawnRocket295(moby, a, s, *(int *)(obj + 0xEC), pos, h) != 0) {
-                func_0022ED80(2, 0, (int)moby);
+                Moby_PlaySound(2, 0, (int)moby);
                 u[0x15F6]--;
                 *(int *)(obj + 0x84) = scale_ticks(30);
             }
@@ -2388,7 +2388,7 @@ void PlayerFighterFlight(void *a0, void *a1) {
                     }
                 }
                 o->i10C = -1;
-                o->i10C = func_0022ED80(1, 4, (int)m);
+                o->i10C = Moby_PlaySound(1, 4, (int)m);
             } else if (*(int *)(pad + 0x1B8) & 0x40) {
                 idx = o->i10C;
                 if (idx != -1) {
@@ -2769,7 +2769,7 @@ void JetFighterUpdateL13(Jet47 *m) {
             if (d->group_b>0) SetGroupMobyFlags(d->group_b,1,1,1);
             SetMobyFlagsByClassList(D_L13_001CC068,0,0,-1); SetMobyFlagsByClassList(&D_L13_001614D0,0,-1,-1); SetStateOfMobysByClass(0x102,0);
             m->position[2]+=3.0f; m->scale=m->model->scale*0.25f; ((JetPlayer47*)(D_0013E633+0xE1D))->in_craft=1;
-            if (d->engine_sound==-1) d->engine_sound=func_0022ED80(0,4,(int)m);
+            if (d->engine_sound==-1) d->engine_sound=Moby_PlaySound(0,4,(int)m);
             D_L13_0015F6E8=2; PlayerFighterFlight(m,d); HelpPopup_RequestDismiss(); MusicRequestTrack(2,4); m->state=4;
         }
         break;
@@ -2778,7 +2778,7 @@ void JetFighterUpdateL13(Jet47 *m) {
         if (d->blend!=0.0f) { ApproachValue(&d->blend,0.0f,D_0015EE6C*4.0f); D_L13_0015F4FC=d->blend; }
         force_help_message(6,0); D_L13_0015F6E8=2;
         audio=D_0013E633+0x1D+d->engine_sound*0x70;
-        if (*(Jet47**)(audio+0x88)!=m || !audio[0x74]) { d->engine_sound=-1; d->engine_sound=func_0022ED80(0,4,(int)m); }
+        if (*(Jet47**)(audio+0x88)!=m || !audio[0x74]) { d->engine_sound=-1; d->engine_sound=Moby_PlaySound(0,4,(int)m); }
         PlayerFighterFlight(m,d);
         if (((JetPlayer47*)(D_0013E633+0xE1D))->pad160F&1) m->state=5;
         if (d->energy<=0) { d->wait_timer=scale_ticks(1200); m->state=8; }

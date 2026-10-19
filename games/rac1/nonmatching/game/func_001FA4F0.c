@@ -1,3 +1,4 @@
+/* fcheck: unchecked (never called in fcheck's capture run of the title, menu and level 0; OpenRAC tools/fcheck_gate.py, 2026-10-18). */
 /* out (3 columns of 4 floats) = A * B, where A is the 4x3 block at src (its three
    columns are vf4..vf6) and B the block at b (three columns vf1..vf3). Each lane:
    out[j][i] = (A0[i]*B[j][0] + A1[i]*B[j][1]) + A2[i]*B[j][2], as the VU0 does it. */

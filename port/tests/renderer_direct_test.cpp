@@ -253,6 +253,46 @@ int main() {
     renderer.render(input, {frame.id(), kWidth, kHeight});
     CHECK(frame.read_rgba() == px.rgba);
 
+    // Four times the chip's picture: a sprite from half a pixel past the screen's last column (the
+    // HUD's air meter slid away) covers no pixel of the chip and leaves none in the window; one
+    // from half a pixel before it fills the last game column (from half a game pixel before it, as
+    // the whole 2D layer sits on the window: DirectRenderer, convert).
+    {
+        constexpr int kScale = 4;
+        FrameBuffer big;
+        CHECK(big.create(kWidth * kScale, kHeight * kScale, error));
+        GifBuilder p;
+        p.ad(
+            {{gs::kTest1,
+              openrac::test::test_reg(
+                  false, gs::AlphaTest::Always, 0, gs::AlphaFail::Keep, gs::DepthTest::Always
+              )},
+             {gs::kScissor1, openrac::test::scissor(0, 511, 0, 447)},
+             {gs::kPrim, prim(gs::PrimKind::Sprite, false, false, false)},
+             {gs::kRgbaq, rgbaq(0xFF, 0, 0, 0x80)},
+             {gs::kXyz2, xyz2(511.5, 100, 0)},
+             {gs::kXyz2, xyz2(553.5, 200, 0)},
+             {gs::kRgbaq, rgbaq(0, 0xFF, 0, 0x80)},
+             {gs::kXyz2, xyz2(510.5, 300, 0)},
+             {gs::kXyz2, xyz2(552.5, 400, 0)}},
+            true
+        );
+        FrameInput scaled;
+        scaled.packets[static_cast<std::size_t>(Bucket::Hud)] = p.bytes;
+        renderer.render(scaled, {big.id(), kWidth * kScale, kHeight * kScale});
+        const std::vector<std::uint8_t> rgba = big.read_rgba();
+        auto at = [&](int x, int y) {
+            const auto i = static_cast<std::size_t>((y * kWidth * kScale + x) * 4);
+            return static_cast<std::uint32_t>(rgba[i] | (rgba[i + 1] << 8) | (rgba[i + 2] << 16));
+        };
+        for (int x = kWidth * kScale - 4; x < kWidth * kScale; ++x) {
+            CHECK(close(at(x, 150 * kScale), 0, 0, 0, x, 150 * kScale));
+            CHECK(close(at(x, 350 * kScale), 0, 0xFF, 0, x, 350 * kScale));
+        }
+        CHECK(close(at(kWidth * kScale - 7, 350 * kScale), 0, 0, 0, kWidth * kScale - 7, 350 * kScale));
+        big.release();
+    }
+
     frame.release();
     renderer.release();
     return openrac::test::result();

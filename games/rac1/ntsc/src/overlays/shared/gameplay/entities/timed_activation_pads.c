@@ -15,7 +15,7 @@
 
 extern char D_L07_001D3400[];
 extern void FUN_L02_002a4058(void *, int, float);
-extern void l07_moby_draw_callback(void) __asm__("FUN_L07_0030d420");
+extern void l07_moby_draw_callback(void) __asm__("FUN_L07_002f8038");
 void enqueue_callback_list_1(s32 arg0, s32 arg1) __asm__("FUN_001f4600");
 
 void FUN_L07_002f8058(unsigned char *moby) {
@@ -66,6 +66,10 @@ extern int func_001F9938_30D370(void *) __asm__("FUN_001f9770");
 void timed_activation_pads_update(unsigned char *moby) __asm__("FUN_L07_0030bf90");
 void timed_activation_pads_update(unsigned char *moby)
 {
+    enum {
+        PAD_FLASH_APPLY_GREEN = 0,
+        PAD_FLASH_APPLY_WHITE = 1
+    };
     char *d;
     char *p;
     float o[4];
@@ -185,11 +189,11 @@ void timed_activation_pads_update(unsigned char *moby)
         if (func_001F9938_30D370(d + 0xC)) {
             *(short *)(d + 0xC) = func_001F9850_30D370(0x14);
             switch (*(short *)(d + 0xE)) {
-            case 0:
+            case PAD_FLASH_APPLY_GREEN:
                 glow_n(moby, 0, 0xFF, 0);
                 *(short *)(d + 0xE) = 1;
                 break;
-            case 1:
+            case PAD_FLASH_APPLY_WHITE:
                 glow_n(moby, 0xFF, 0xFF, 0xFF);
                 *(short *)(d + 0xE) = 0;
                 break;

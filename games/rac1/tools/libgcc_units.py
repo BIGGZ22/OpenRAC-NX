@@ -92,6 +92,36 @@ def ee29_01_sources() -> set[str]:
     return out
 
 
+def gas210_sources() -> set[str]:
+    """Whole SDK source objects with verified GNU 2.10-ee call-slot behavior."""
+    out = set()
+    for line in (ROOT / "config/core_text.objects").read_text().splitlines():
+        parts = line.split()
+        if len(parts) > 4 and not line.startswith("#") and parts[4] == "gas210":
+            out.add(source_of(parts[0]))
+    return out
+
+
+def gas210_real_sources() -> set[str]:
+    """SDK objects assembled by the original GNU 2.10-ee binary itself."""
+    out = set()
+    for line in (ROOT / "config/core_text.objects").read_text().splitlines():
+        parts = line.split()
+        if len(parts) > 4 and not line.startswith("#") and parts[4] == "gas210-real":
+            out.add(source_of(parts[0]))
+    return out
+
+
+def dtls29_sources() -> set[str]:
+    """SDK objects using the original DTL-S13010 assembler binary."""
+    out = set()
+    for line in (ROOT / "config/core_text.objects").read_text().splitlines():
+        parts = line.split()
+        if len(parts) > 4 and not line.startswith("#") and parts[4] == "dtls29-real":
+            out.add(source_of(parts[0]))
+    return out
+
+
 def source_of(obj: str) -> str:
     """The source file an object in the list is built from."""
     name = obj.rsplit("/", 1)[1][:-2]

@@ -1,4 +1,4 @@
-/* functional: high. The NTSC decomp's matched C for the same instructions (snd_start_sound_system), carried to PAL's
+/* functional: high. fcheck: unchecked (every captured state was skipped, nothing compared; OpenRAC tools/fcheck_gate.py, 2026-10-18). The NTSC decomp's matched C for the same instructions (snd_start_sound_system), carried to PAL's
    names by OpenRAC's tools/port.py. Not a PAL match: PAL's compiler gives our 616 bytes for retail's 600 bytes. */
 struct StartSoundWork {
     volatile s32 read_active;

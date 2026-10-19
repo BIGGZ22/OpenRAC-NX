@@ -100,7 +100,7 @@ extern int func_L00_0025A2F0(int *, int, int, int);
 extern void func_L00_00264690(void *, int, float, float);
 
 // For each moby of the same type in a list, run a 3-iteration loop over its sub-entries.
-void func_L05_002D8190(unsigned char *moby) {
+void GlowOrbs_DrawCallback(unsigned char *moby) {
     unsigned char *it;
     int i;
     char *data;
@@ -127,7 +127,7 @@ extern void func_001F49B0(void (*)(void), void *);
 extern int D_L05_0015F6B0 MACRO_ADDR;
 
 // Updates a moby's pulsing colour and its draw hook.
-void func_L05_002D8268(char *moby) {
+void GlowOrbs_Update(char *moby) {
     if ((unsigned char)moby[0x21] != 0xFF && ((unsigned char *)moby)[0x31] != 0) {
         char *data = *(char **)(moby + 0x78);
         char *p = data + 0x330;
@@ -149,7 +149,7 @@ void func_L05_002D8268(char *moby) {
             int *q = *(int **)(data + 0x364);
             if (v != *q) {
                 *q = v;
-                AddDrawCallback(func_L05_002D8190, moby);
+                AddDrawCallback(GlowOrbs_DrawCallback, moby);
             }
         }
     }
@@ -550,7 +550,7 @@ void MobyDestroyWithDebris(unsigned char *m) {
         *(int *)(m + 0x94) = 0;
         *(unsigned short *)(m + 0x34) |= 1;
         SpawnExplosionDebris(m, b);
-        func_0022ED80(0, 0, (int)m);
+        Moby_PlaySound(0, 0, (int)m);
         o = *(char **)(r + 0x20);
         if (o != 0 && *(short *)(o + 0xA6) == 0) {
             int v = scale_ticks(0x3C);
@@ -1568,7 +1568,7 @@ void ExtermitankUpdate(unsigned char *m) {
     float v30[4];
     float v40[4];
 
-    func_L05_003065D0((char *)m);
+    Extermitank_ProcessHit((char *)m);
     RepelSlotMobysFromHero((char *)m);
     if (*(unsigned char *)(d + 0x2E) == 2) {
         if (*(char **)(d + 0x184) != 0) DeleteMoby(*(char **)(d + 0x184));
@@ -1836,7 +1836,7 @@ extern short D_L05_00161BB0;
 extern short D_L05_00161BB4;
 
 /* Adapted from Lombyte (MIT) for PAL by OpenRAC's tools/port.py: src/overlays/l05/gameplay/entities/002d1688.c, FUN_L05_00305178. */
-void func_L05_003065D0(char *moby) {
+void Extermitank_ProcessHit(char *moby) {
     char *data = *(char **)(moby + 0x78);
     char *first;
     char *second;
@@ -2430,7 +2430,7 @@ void SkidMcMarxUpdate(Moby *moby) {
                     }
                 }
             }
-            ground = func_00214358(d->pos, 0, 0.5f);
+            ground = ProbeGroundHeight(d->pos, 0, 0.5f);
             diff = d->pos[2] - ground;
             if (diff > 0.0f || d->f24C > 0.0f) {
                 d->f24C -= D_0015EE70 * 21.0f;
@@ -2540,7 +2540,7 @@ void func_L05_0030D230(unsigned char *moby) {
         break;
     case 1:
         if (func_001F9908((int *)(data + 0x78))) {
-            func_0022ED80(0, 0, (int)moby);
+            Moby_PlaySound(0, 0, (int)moby);
             *(int *)(data + 0x78) = func_001FA898_r(func_001F9878(random_float_between((float)*(int *)&D_L05_00161DA4, (float)*(int *)&D_L05_00161DA8)));
         }
         p = (char *)moby + 0x10;

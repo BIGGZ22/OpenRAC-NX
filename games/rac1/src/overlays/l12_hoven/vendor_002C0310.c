@@ -245,7 +245,7 @@ extern int func_L00_002DCDA8(void *);
 extern void func_L01_0026F040(int, int);
 
 extern int func_L00_002DCDA8_pos(void *, void *, void *) __asm__("func_L00_002DCDA8");
-int func_L12_002E29C8(unsigned char *moby, void *pos, void *target) {
+int GroupMoby_UpdateActiveState(unsigned char *moby, void *pos, void *target) {
     int active;
     if (moby[0x20] == 9 || moby[0x20] == 11 || moby[0x20] == 13) return 0;
     active = func_L00_002DCDA8_pos(moby, pos, target);
@@ -259,7 +259,7 @@ int func_L12_002E29C8(unsigned char *moby, void *pos, void *target) {
 }
 extern int func_L00_002DCFD0(void *);
 extern int func_L00_002DCFD0_pos(void *, void *) __asm__("func_L00_002DCFD0");
-int func_L12_002E2A68(char *a, void *pos) {
+int CarriedMoby_PlaceAndSetState(char *a, void *pos) {
     int r = func_L00_002DCFD0_pos(a, pos);
     if (r == 0) {
         if (*(unsigned char *)(a + 0x20) == 8) a[0x20] = 1;
@@ -276,7 +276,7 @@ typedef struct {
 extern int func_L00_002DD2D0(Level12VendorStateMoby *);
 
 /* Move the vendor moby to state eight unless it is in state nine or eleven. */
-int func_L12_002E2B08(Level12VendorStateMoby *moby) {
+int CarriedMoby_ReleaseAndSetState(Level12VendorStateMoby *moby) {
     int result = ReleaseCarriedMobySlot(moby);
     if (moby->state == 9 || moby->state == 11) {
         return 0;
@@ -1412,11 +1412,11 @@ void MinerUpdate(Moby *m) {
             return;
         }
         m->state = 1;
-        func_L00_002676E8(m, d->activation);
+        DialogRequest_Init(m, d->activation);
         SetMobyZBand(m);
         break;
     case 1:
-        if (((Flags_2E7FC8 *)((char *)&D_0013D355_2E7FC8 + 0x13B))->f1 == 0 && func_L00_00267290(m, d->activation)) {
+        if (((Flags_2E7FC8 *)((char *)&D_0013D355_2E7FC8 + 0x13B))->f1 == 0 && Npc_TryStartDialog(m, d->activation)) {
             PlaceMarkerAheadOfMoby(2.5f, m);
             m->anim_speed = 0.0f;
             m->state = 2;
@@ -1529,7 +1529,7 @@ void Moby293Update(unsigned char *moby) {
 extern void func_L00_00260460(void *, void *, int, float, float);
 
 /* Forward the vendor parameters with fixed range and scale values. */
-void func_L12_002E8610(void *a, void *b) {
+void Moby294_SpawnExplosion(void *a, void *b) {
     SpawnExplosionFxSwapped(a, b, -1, 1.0f, 10.0f);
 }
 /* functional: high. Same reads, writes, calls and arguments as retail; the jump table is a switch, the shared exits are gotos, quad copies are four-float copies, and the two DeleteMoby calls pass the pointer that retail leaves in $a0. No COP2/VU0 instructions in this function. */
@@ -1649,7 +1649,7 @@ void Moby294Update(char *moby) {
     }
 
     ((void (*)(void *))HovenEnemyCommonUpdate)(moby);
-    ((int (*)(void *, void *, float))func_L00_00260D30)(moby, buf, M_F(data, 0x230));
+    ((int (*)(void *, void *, float))FindNearestTargetMoby)(moby, buf, M_F(data, 0x230));
     hero = M_P(buf, 0x40);
     if (hero == 0) {
         char *B2 = ((char *)D_0013E633) + 0xE1D;
@@ -1711,7 +1711,7 @@ void Moby294Update(char *moby) {
             }
         }
         M_F(data, 0x244) = M_F(data, 0x244) * 0.0174532924f;
-        M_F(moby, 0x18) = ((float (*)(void *, int, float))func_00214358)(moby + 0x10, 0, 0.5f);
+        M_F(moby, 0x18) = ((float (*)(void *, int, float))ProbeGroundHeight)(moby + 0x10, 0, 0.5f);
         if (M_U8(data, 0x268) != 0) {
             M_U16(moby, 0x34) = M_U16(moby, 0x34) | 0x41;
             {
@@ -1883,7 +1883,7 @@ void Moby294Update(char *moby) {
                 g = ((float (*)(void *))func_001F9CE8)(v60);
                 g = ((float (*)(float, float))func_L00_001FF860)(g, v60[2]);
                 ((void (*)(void *, float, float, float))BuildSphericalOffset)(v60, (*(float *)&D_0015EE6C) * 15.0f, f21, g);
-                ((int (*)(int, int, void *))func_0022ED80)(0, 0, moby);
+                ((int (*)(int, int, void *))Moby_PlaySound)(0, 0, moby);
                 n = truncate_float_to_s32(18.0f / ((*(float *)&D_0015EE6C) * 15.0f));
                 SpawnShotMoby(moby, v50, v60, n);
             }
@@ -1956,7 +1956,7 @@ void Moby294Update(char *moby) {
         r = StepMobyPhysics(moby, data + 0x70);
         if (r & 0x60) {
             SetDeathBits(moby, 0, -1);
-            ((void (*)(void *, void *))func_L12_002E8610)(moby, moby + 0x10);
+            ((void (*)(void *, void *))Moby294_SpawnExplosion)(moby, moby + 0x10);
             goto finish;
         }
         if (M_F(moby, 0x18) < 2.0f) {
@@ -2180,7 +2180,7 @@ extern void func_00214D28(void *, float, float);
 
 /* Initialize two vendor vectors using the global scale. */
 void HovenEnemyFollowGround(char *moby) {
-    float value = func_00214358(moby + 0x10, 0, 0.5f);
+    float value = ProbeGroundHeight(moby + 0x10, 0, 0.5f);
     ApproachValue(moby + 0x18, value, 27.0f * D_0015EE70);
 }
 extern f32 D_0015EE70 MACRO_ADDR;
@@ -2314,7 +2314,7 @@ void Moby326Update(char *moby) {
     if (D_L12_0015F6A8 == 2) {
         return;
     }
-    func_L00_00260D30(moby, buf, 70.0f);
+    FindNearestTargetMoby(moby, buf, 70.0f);
     {
         char *obj = M_P(data, 0xAC);
         if (obj != 0 && M_S8(obj, 0x20) >= 0) {
@@ -2341,7 +2341,7 @@ void Moby326Update(char *moby) {
 
     if ((unsigned)(M_U8(moby, 0x20) - 2) < 4) {
         if (M_I(data, 0xB0) == -1) {
-            M_I(data, 0xB0) = ((Fn_ED80)func_0022ED80)(3, 4, moby);
+            M_I(data, 0xB0) = ((Fn_ED80)Moby_PlaySound)(3, 4, moby);
         }
     } else {
         int r = M_I(data, 0xB0);
@@ -2553,7 +2553,7 @@ void Moby326Update(char *moby) {
                 f = func_L00_001FF860(v80[0], v80[1]);
                 t = scale_ticks(0x82);
                 SpawnHovenShot(v80, v70, moby, t, f, D_0015EE6C * 15.0f, 0.0f);
-                func_0022ED80(0, 0, (int)moby);
+                Moby_PlaySound(0, 0, (int)moby);
                 func_L00_001FF4B0(v80, v80, 0.5f);
                 FastVecAdd(v70, v70, v80);
                 for (i = 24; i >= 0; i--) {
@@ -2770,7 +2770,7 @@ int FollowPath(struct Moby *m, int idx) {
         ((M_af68 *)m)->rz = SpringTurn((float *)(d + 0x88), ((M_af68 *)m)->rz, a, 0.004f, 0.3f, D_0015EE6C * 0.7853982f);
         ApproachValue(d + 0x94, D_0015EE6C * 10.0f, D_0015EE70 * 7.0f);
     } else {
-        func_L00_00260D30(m, v, 48.0f);
+        FindNearestTargetMoby(m, v, 48.0f);
         a = func_L00_001FF860(v[0] - m->pos.x, v[1] - m->pos.y);
         ((M_af68 *)m)->rz = SpringTurn((float *)(d + 0x88), ((M_af68 *)m)->rz, a, 0.004f, 0.3f, D_0015EE6C * 0.7853982f);
         ApproachValue(d + 0x94, 0.0f, D_0015EE70 * 9.0f);
@@ -2816,7 +2816,7 @@ void Moby326TakeDamage(char *m) {
         t = *(float *)(d + 0x20) - fv;
         *(float *)(d + 0x20) = t;
         if (res == 1 || t <= 0.0f) {
-            func_0022ED80(2, 0, (int)m);
+            Moby_PlaySound(2, 0, (int)m);
             *(unsigned char *)(m + 0x20) = 6;
         } else if (res != 0xB) {
             *(unsigned char *)(d + 0x67) = 0xB4;
@@ -2838,7 +2838,7 @@ void Moby326TakeDamage(char *m) {
                 *(short *)(d + 0x8E) = scale_ticks(0x3C);
                 *(unsigned char *)(m + 0xBC) = *(unsigned char *)(m + 0x20);
                 *(unsigned char *)(m + 0x20) = 5;
-                func_0022ED80(1, 0, (int)m);
+                Moby_PlaySound(1, 0, (int)m);
             }
         }
     }
@@ -2871,7 +2871,7 @@ extern int D_L12_0015F6A8_2EC8F0 __asm__("D_L12_0015F6A8") MACRO_ADDR;
 /* Edwina update on level 12: picks her animation, runs the conversation states, keeps her two helper mobys and turns her body and head toward the hero. */
 void EdwinaUpdate(char *m) {
     char *d = *(char **)(m + 0x78);
-    func_L03_002DC848(m);
+    AttachCheatManipulatorToMatchingL03(m);
     {
         char *v = (char *)D_0013D605_2EC8F0 + 0xB3;
         if (*(int *)(v + 0x46C) == 0) {
@@ -2883,13 +2883,13 @@ void EdwinaUpdate(char *m) {
     switch (*(unsigned char *)(m + 0x20)) {
     case 0:
         m[0x20] = 1;
-        func_L00_002676E8(m, d + 0x20);
+        DialogRequest_Init(m, d + 0x20);
         *(float *)(d + 0x2C) = 1.7f;
         SetMobyZBand(m);
         if (gHaveHeliPack[2] != 0) *(short *)(d + 0x56) = -1;
         break;
     case 1:
-        if (gHaveHeliPack[2] == 0 && func_L00_00267290(m, d + 0x20) != 0) {
+        if (gHaveHeliPack[2] == 0 && Npc_TryStartDialog(m, d + 0x20) != 0) {
             PlaceMarkerAheadOfMoby(2.52f, m);
             *(float *)(m + 0x58) = 0.0f;
             m[0x20] = 2;
@@ -3044,7 +3044,7 @@ extern short D_0015EF04;
 extern short D_L12_00161A34;
 
 // Spawns the effect for a moby and updates its state flags from the effect timer.
-void func_L12_002ED028(char *m, int flag) {
+void Moby336_HandleHit(char *m, int flag) {
     char *d = *(char **)(m + 0x78);
     float a[4];
     float b[4];
@@ -3102,7 +3102,7 @@ void Moby336Update(char *m) {
     float E[4];
     if (d != 0) {
         int r = func_L01_00276680_i(m, IntToFloat(*(short *)(m + 0x32)));
-        func_L12_002ED028(m, r == -1);
+        Moby336_HandleHit(m, r == -1);
         switch ((unsigned char)m[0x20]) {
         case 0:
             if (*(int *)(d + 0x74) != -1) {

@@ -65,8 +65,8 @@ void HeroL03_FrameUpdate(void) {
     }
     Hero_TickReleaseTimers();
     Hero_CheckMovementThresholds();
-    func_L00_0020A990();
-    func_L00_0020ABB8();
+    Hero_UpdateObstacleLean();
+    Hero_UpdateBodyTilt();
     HeroScanTargets();
     RerollMotionParams();
     ClampAimLeanAngles();
@@ -82,8 +82,8 @@ void HeroL03_FrameUpdate(void) {
     HelpHintsPeriodicCheck();
     HudBoltAlertShow();
     FireGadgetStateHooks();
-    func_L00_00207418();
-    func_001E9768(*(void **)(g + 0x2080));
+    Cheats_PollCodes();
+    Profile_Mark(*(void **)(g + 0x2080));
     if (*(int *)(g + 0x208C) != 0x16 && *(int *)(g + 0x2084) != 0x32) {
         func_L00_00248EF8(g + 0x80);
     }

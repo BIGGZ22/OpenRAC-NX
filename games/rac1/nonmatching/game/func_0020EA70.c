@@ -1,3 +1,4 @@
+/* fcheck: SAME on 1 call (OpenRAC tools/fcheck_gate.py, 2026-10-18). */
 /*
  * UpdateMobyGrids(moby, rect): moves a moby in the moby grid from the cells of its current rectangle
  * (moby + 0xA0: bytes x0, y0, x1, y1; negative = in no cell) to those of `rect` (MobyBuildMatrix's new

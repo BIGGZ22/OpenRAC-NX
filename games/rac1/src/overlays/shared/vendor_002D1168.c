@@ -559,7 +559,123 @@ void ThrownChainUpdate(char *a) {
         }
     } while (n != 0);
 }
-INCLUDE_ASM("asm/overlays", func_L00_002D2E60);
+typedef int u128 __attribute__((mode(TI)));
+typedef struct {
+    u128 points[4];
+    u32 colors[4];
+    struct { f32 u, v; } uv[4];
+    u64 texture[4];
+} __attribute__((aligned(16))) Quad_2d19b0;
+typedef struct {
+    f32 x, y, z, w;
+} __attribute__((aligned(16))) Vec_2d19b0;
+extern short D_L00_001619AC;
+extern short D_L00_001619B0;
+extern short D_L00_001619B4;
+extern short D_L00_001619B8;
+extern short D_L00_001619BC;
+extern short D_L00_001619C0;
+extern short D_L00_001619C4;
+#define G_DC (*(s32 *)&D_L00_001619AC)
+#define G_E0 (*(s32 *)&D_L00_001619B0)
+#define G_E4 (*(s32 *)&D_L00_001619B4)
+#define G_E8 (*(s32 *)&D_L00_001619B8)
+#define G_EC (*(s32 *)&D_L00_001619BC)
+#define G_F0 (*(s32 *)&D_L00_001619C0)
+#define G_F4 (*(s32 *)&D_L00_001619C4)
+extern f32 D_L00_00166D80[];
+extern char D_L00_00166EC0[];
+extern Vec_2d19b0 D_L00_001DEB00[];
+extern s16 D_L00_001DF160[][4][3];
+extern Vec_2d19b0 D_L00_001DFCF0[];
+extern Vec_2d19b0 D_L00_001E07F0[];
+extern f32 D_L00_001E0E50[][2];
+extern f32 D_L00_001E1180[][2];
+extern u64 func_001F4868(s32);
+extern f32 func_001F9B88(f32);
+extern s32 func_001F9850(s32);
+extern s32 func_001F9908(s32 *);
+extern f32 func_001FA888(s32);
+extern void func_001F9EE8(Vec4f *, Vec4f *, void *);
+#define XFORM(a, b, c) func_001F9EE8((Vec4f *)(a), (Vec4f *)(b), (c))
+extern void func_L00_001FF4B0(void *, void *, f32);
+extern f32 func_001F9C78(void *, void *);
+extern void func_001F9C30(void *, void *, f32);
+extern f32 func_001F9B50(f32);
+extern void func_L00_001FD1D8(void *, s32, s32);
+
+void func_L00_002D2E60(u8 *m) {
+    Quad_2d19b0 quad;
+    Vec_2d19b0 a, c, b;
+    u8 *vars = *(u8 **)(m + 0x78);
+    s32 i, j, index, active = 0;
+    f32 blend, len, x, y;
+
+    quad.texture[1] = func_001F4868(G_F0);
+    quad.texture[2] = 0xff9000000260ULL;
+    quad.texture[3] = (u64)(s64)G_DC | ((u64)(s64)G_E0 << 2) |
+                      ((u64)(s64)G_E4 << 4) | ((u64)(s64)G_E8 << 6) |
+                      ((u64)(s64)G_EC << 32);
+    quad.texture[0] = 0;
+    quad.colors[0] = quad.colors[1] = quad.colors[2] = quad.colors[3] = G_F4;
+    if (func_001F9B88(D_L00_00166D80[80] - *(f32 *)(m + 0x10)) < 16.0f &&
+        func_001F9B88(D_L00_00166D80[81] - *(f32 *)(m + 0x14)) < 16.0f)
+        active = 1;
+    if (active || m[0x20] == 1) {
+        m[0xbc] = 1;
+        func_001F9908((s32 *)(vars + 0x40));
+        blend = func_001FA888(*(s32 *)(vars + 0x40));
+        blend /= func_001FA888(func_001F9850(0x3c));
+        for (i = 0; i < 0x66; i++) {
+            XFORM(&D_L00_001E07F0[i], &D_L00_001DEB00[i], vars);
+            func_001F9BF0(&b, &D_L00_001E07F0[i], D_L00_00166EC0);
+            func_L00_001FF4B0(&b, &b, 1.0f);
+            XFORM(&a, &D_L00_001DFCF0[i], vars);
+            func_L00_001FF4B0(&a, &a, 0.1f);
+            len = func_001F9C78(&a, &b);
+            func_001F9C30(&c, &a, len + len);
+            func_001F9BF0(&c, &b, &c);
+            func_L00_001FF4B0(&c, &c, 1.0f);
+            c.z += 1.0f;
+            len = func_001F9B50(c.z + c.z);
+            len += len;
+            if (m[0x20] == 1 || *(s32 *)(vars + 0x40) == 0) {
+                D_L00_001E0E50[i][0] = c.x / len + 0.5f;
+                D_L00_001E0E50[i][1] = c.y / len + 0.5f;
+            } else {
+                x = c.x / len + 0.5f;
+                y = c.y / len;
+                D_L00_001E0E50[i][0] = x + (D_L00_001E1180[i][0] - x) * blend;
+                x = y + 0.5f;
+                D_L00_001E0E50[i][1] = x + (D_L00_001E1180[i][1] - x) * blend;
+            }
+        }
+        if (m[0x20] == 1)
+            m[0x20] = 2;
+    } else {
+        if (m[0xbc] == 1) {
+            m[0xbc] = 0;
+            for (i = 0; i < 0x66; i++) {
+                D_L00_001E1180[i][0] = D_L00_001E0E50[i][0];
+                D_L00_001E1180[i][1] = D_L00_001E0E50[i][1];
+                XFORM(&D_L00_001E07F0[i], &D_L00_001DEB00[i], vars);
+            }
+        } else {
+            for (i = 0; i < 0x66; i++)
+                XFORM(&D_L00_001E07F0[i], &D_L00_001DEB00[i], vars);
+        }
+        *(s32 *)(vars + 0x40) = func_001F9850(0x3c);
+    }
+    for (i = 0; i < 0x4a; i++) {
+        for (j = 0; j < 4; j++) {
+            index = D_L00_001DF160[i][j][0];
+            qcopy(&quad.points[j], &D_L00_001E07F0[index]);
+            quad.uv[j].u = D_L00_001E0E50[index][0];
+            quad.uv[j].v = D_L00_001E0E50[index][1];
+        }
+        func_L00_001FD1D8(&quad, 0, 0);
+    }
+}
 typedef struct M2d1e80 { u8 p0[0x20]; u8 state; u8 p21[0x10]; u8 vis; u8 p32[2]; u16 flags; u8 p36[0x42]; s32 *vars; u8 p7c[0x40]; u8 bc; } M2d1e80;
 extern s32 D_L00_0015F6A8_2d3330 __asm__("D_L00_0015F6A8") MACRO_ADDR;
 extern s32 D_L00_0016C990_2d3330[] __asm__("D_L00_0016C990");
@@ -612,7 +728,7 @@ extern int func_L00_001EFFF0_2D3608(void *, void *, int, int, int) __asm__("func
 extern void func_L00_002C8680_2D3608(float *pos, float *tgt, float *output, float speed, float unused, float range) __asm__("func_L00_002C8680");
 
 /* Same camera step as func_L00_002C88A8, writing the following vector in the target data. */
-void func_L00_002D3608(int collision_arg, Moby *carrier, float *position)
+void DecoyGlove_AimThrow(int collision_arg, Moby *carrier, float *position)
 {
     Vec_2D3608 anchor;
     Mat3_2D3608 rotation;
@@ -776,7 +892,7 @@ L3D10:
     moby[0x20] = 3;
 L3D34:
     *(u128_D3B20 *)&loc = *(u128_D3B20 *)(d + 0x40);
-    func_L00_002D3608((int)moby, (void *)d, (float *)&loc);
+    DecoyGlove_AimThrow((int)moby, (void *)d, (float *)&loc);
 
     switch (moby[0x20]) {
     case 0:
@@ -797,7 +913,7 @@ L3D34:
             ThrownObject_BounceOffHero((float *)(d + 0x40), *(char **)(d + 0x50), *(char **)(*(char **)(d + 0x50) + 0x78) + 0x10);
             *(int *)(d + 0x50) = 0;
         } else {
-            func_0022ED80(0, 0, (int)moby);
+            Moby_PlaySound(0, 0, (int)moby);
         }
         moby[0x20] = 4;
         *(int *)(d + 0x54) = scale_ticks(0x14);
@@ -1898,7 +2014,7 @@ void HornyToadUpdate(Moby *moby) {
         break;
     case 12:
         if (StepMobyPhysics(moby, data->f70) & 0x140) {
-            func_0022ED80(7, 0, (int)moby);
+            Moby_PlaySound(7, 0, (int)moby);
             SpawnExplosionFxSwapped(moby, (*(Vec_5AC0 *)&moby->pos), -1, 0.75f, 10.0f);
             func_0020D678_5AC0(moby);
             return;
@@ -1906,7 +2022,7 @@ void HornyToadUpdate(Moby *moby) {
         break;
     }
     if (moby->state != 11 && moby->state != 12 && moby->state != 9) {
-        func_00214D28_5AC0(func_00214358((*(Vec_5AC0 *)&moby->pos), 0, 0.5f), D_0015EE6C * 7.0f, &(*(Vec_5AC0 *)&moby->pos)[2]);
+        func_00214D28_5AC0(ProbeGroundHeight((*(Vec_5AC0 *)&moby->pos), 0, 0.5f), D_0015EE6C * 7.0f, &(*(Vec_5AC0 *)&moby->pos)[2]);
         if (moby->state != 4) {
             func_L00_00262DF0_5AC0(data->f1E0, 0.25f, (*(Vec_5AC0 *)&moby->pos), (*(Vec_5AC0 *)&moby->pos));
         }
@@ -1965,7 +2081,8 @@ float WalkTowardPoint(unsigned char *m, float *t, float vel) {
     return 37.0f;
 }
 extern int func_L00_002DCDA8(void *, void *, void *);
-int func_L00_002D6B90(char *a, void *p, void *t) {
+/* Runs the func_L00_002DCDA8 check and switches the moby to or from state 9; returns its result. */
+int CarriedMoby_UpdateState9(char *a, void *p, void *t) {
     int r = func_L00_002DCDA8(a, p, t);
     if (r == 0) {
         if (*(unsigned char *)(a + 0x20) == 9) a[0x20] = 5;
@@ -1975,7 +2092,7 @@ int func_L00_002D6B90(char *a, void *p, void *t) {
     return r;
 }
 /* Runs func_L00_002DD2D0 and forces the moby into state 9; returns its result. */
-int func_L00_002D6C80(char *a) {
+int CarriedMoby_ReleaseToState9(char *a) {
     int r = ReleaseCarriedMobySlot(a);
     a[0x20] = 9;
     return r;
@@ -2341,7 +2458,7 @@ void InfobotUpdate(struct Moby *moby)
         moby->rot.x = ((f32 (*)(f32, f32, f32, f32, f32, f32 *))SpringTurn)(moby->rot.x, 0.0f, D_0015EE70 * 1.0471976f, D_0015EE70 * 2.0943952f, D_0015EE6C * 1.5707964f, &infobot->spin[0]);
         if (FastVecDist(&((Camera *)D_0013F450)->target, &moby->pos) < 8.0f) {
             moby->state = 4;
-            func_L00_002676A0(moby, 1);
+            LevelTable_SetSlotValue(moby, 1);
         }
         break;
     case 4:

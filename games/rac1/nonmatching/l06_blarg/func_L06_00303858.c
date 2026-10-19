@@ -6,6 +6,7 @@
  *   func_L06_00303858: picks an id from the moby's data block by mode (0/1/2; mode 1 does a round-robin over a 3-s
  *   Best is p3.c (BYTES 88/348, same size; data as a struct with int a[6], b[6] gives retail's base-first addu in 
  *   Would need a source shape making n*4 and data+0x68 loop-invariant locals only in case 1 without the allocator 
+ *   fcheck: unchecked (level/overlay function; fcheck runs boot-executable functions only; OpenRAC tools/fcheck_gate.py, 2026-10-18).
  */
 extern int D_0015EE88 MACRO_ADDR;
 extern char D_0014171B[];

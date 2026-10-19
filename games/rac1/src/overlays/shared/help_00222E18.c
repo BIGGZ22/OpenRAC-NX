@@ -58,7 +58,7 @@ void func_L00_00217570(s32, s32);
 void func_L00_00211338(void *, s32, f32, f32);
 
 /* Adapted from Lombyte (MIT) for PAL by OpenRAC's tools/port.py: src/overlays/shared/ui_help_00222800.c, FUN_L08_00222800. */
-s32 func_L08_00222E18(s32 arg) {
+s32 HeroL08_TryTakeHit(s32 arg) {
     u8 *m;
     T_8 *tbl;
     u8 *mob;

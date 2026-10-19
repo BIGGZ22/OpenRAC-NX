@@ -643,7 +643,7 @@ void SentrybotUpdate(unsigned char *moby) {
     case 21: {
         int r = StepMobyPhysics(moby, data + 0x70);
         if (r & 0x40) {
-            func_00214358(moby + 0x10, 0, 0.5f);
+            ProbeGroundHeight(moby + 0x10, 0, 0.5f);
             if (CollType() == -1 && *(float *)(data + 0x168) - 5.0f < *(float *)(moby + 0x18)) {
                 if (((Hero98BB8 *)(D_0013E633 + 0xE1D))->f2084 == 0x65) {
                     moby[0x20] = 0xC;
@@ -671,7 +671,7 @@ void SentrybotUpdate(unsigned char *moby) {
                 Moby_MarkKilled(D_L15_00160058_m + (*(int *)(data + 0x150) << 8));
                 *(int *)(data + 0x150) = -1;
             }
-            func_0022ED80(0xD, 0, (int)moby);
+            Moby_PlaySound(0xD, 0, (int)moby);
             SpawnExplosionFx(moby, moby + 0x10, -1, 0.5f, 13.0f);
             SetDeathBits(moby, 0, -1);
             DeleteMoby(moby);
@@ -692,7 +692,7 @@ void SentrybotUpdate(unsigned char *moby) {
                 Moby_MarkKilled(D_L15_00160058_m + (*(int *)(data + 0x150) << 8));
                 *(int *)(data + 0x150) = -1;
             }
-            func_0022ED80(0xD, 0, (int)moby);
+            Moby_PlaySound(0xD, 0, (int)moby);
             SpawnExplosionFx(moby, moby + 0x10, -1, 0.5f, 13.0f);
             SetDeathBits(moby, 0, -1);
             DeleteMoby(moby);
@@ -898,7 +898,27 @@ int Moby_FindVisible27BTarget(char *m) {
     }
     return best;
 }
-INCLUDE_ASM("asm/overlays", func_L15_0029B1D8);
+// Returns 0 when a listed class-0x2C moby that is alive and visible has a lower 0x13C rank than this moby's own.
+int func_L15_0029B1D8(void *mm) {
+    char *m = mm;
+    unsigned short *p;
+    if (((unsigned char *)m)[0x21] == 0xFF) return 1;
+    p = (unsigned short *)D_L15_001AC140[((unsigned char *)m)[0x21]];
+    m = *(char **)(m + 0x78);
+    if (p == 0) return 1;
+    do {
+        char *o = (char *)(((*p & 0x7FFF) << 8) + D_L15_00160058_m);
+        if (*(short *)(o + 0xA6) == 0x2C && o != 0
+            && ((unsigned char *)o)[0x20] != 0xFE && ((unsigned char *)o)[0x20] != 0xFD
+            && ((unsigned char *)o)[0xBC] == 0) {
+            char *d = *(char **)(o + 0x78);
+            if (*(int *)(d + 0x144) == 0 && *(int *)(d + 0x124) != -1
+                && *(int *)(d + 0x13C) >= *(int *)(m + 0x13C))
+                return 0;
+        }
+    } while (*(short *)p++ >= 0);
+    return 1;
+}
 INCLUDE_ASM("asm/overlays", func_L15_0029B210);
 typedef struct { char pad0[0x156]; short timer; char pad158[3]; char active; } SpawnResetData_29B2B0;
 extern void func_L15_0029B428(char *, char *);
@@ -1747,7 +1767,7 @@ void func_L15_0029E8A0(M_29E8A0 *m) {
                 char *cam2 = D_L15_00167300;
                 *(int *)(cam2 + 0x168) = sh;
             }
-            func_0022ED80(0, 0, (int)m);
+            Moby_PlaySound(0, 0, (int)m);
             Moby639Spawn(&tbl, m->pos, 0, 0);
             MobyList_Remove(m, D_L15_001B1070);
             DeleteMoby(m);
@@ -2348,36 +2368,31 @@ void Moby78Update(unsigned char *moby) {
         break;
     }
 }
+typedef int Q_2A4318 __attribute__((mode(TI)));
 typedef struct {
-    float v[4][4];
+    Q_2A4318 corner[4];
     int col[4];
     float uv[4][2];
-    long r70;
-    long texture; /* get_effect_texture */
-    unsigned long r80;
-    unsigned long alpha; /* GS ALPHA register value (0x8000000044) */
-} EffectQuad;
-extern long func_001F4868_A4318(int) __asm__("func_001F4868");
-extern void func_001FA460(void *, void *);
-extern int func_001FA8A8_A4318(float, int, int) __asm__("func_001FA8A8");
-extern float func_001F9F90(float);
+    long unk70, tex, unk80, unk88;
+} Quad_2A4318;
+extern short D_L15_00161558;
+extern short D_L15_00161560;
+extern short D_L15_00161568;
+extern short D_L15_00161570;
 extern int D_L15_0015F4F8 MACRO_ADDR;
 extern int D_L15_001CE4B0[];
 extern float D_L15_001CE4D0[][2];
 extern int D_L15_001CE510[][2];
 extern float D_L15_001CE550[][2];
-extern float D_L15_001CE570[4][4];
-extern float D_L15_001CE5B0[4][4];
-extern short D_L15_00161558;
-extern short D_L15_00161560;
-extern short D_L15_00161568;
-extern short D_L15_00161570;
+extern Q_2A4318 D_L15_001CE570[];
+extern Q_2A4318 D_L15_001CE5B0[];
+extern void func_001FA460(void *, void *);
+extern float func_001F9F90(float);
 
-/* Adapted from Lombyte (MIT) for PAL by OpenRAC's tools/port.py: src/overlays/shared/gameplay/entities/sentrybot.c, FUN_L15_002a3138. */
-int func_L15_002A4318(unsigned char *moby) {
-    EffectQuad first, second;
-    float transform[12];
-    float position[4];
+void func_L15_002A4318(unsigned char *moby) {
+    Quad_2A4318 first, second;
+    float transform[12] __attribute__((aligned(16)));
+    float position[4] __attribute__((aligned(16)));
     int *data = *(int **)(moby + 0x78);
     int pass, corner, axis, component;
     float *transformPointer;
@@ -2385,17 +2400,17 @@ int func_L15_002A4318(unsigned char *moby) {
     int nextPass;
     int passOffset;
     float *secondUv2, *secondUv3;
-    float (*secondVertices)[4];
+    Q_2A4318 *secondVertices;
     float (*firstUv)[2];
 
-    func_001FA460(transform, moby + 0xc0);
+    func_001FA460(transform, moby + 0xC0);
     qcopy(position, moby + 0x10);
     position[3] = 1.0f;
-    first.texture = func_001F4868_A4318(0x2c);
-    first.r80 = 0xff9000000260ULL;
-    first.r70 = 0;
-    second.texture = func_001F4868_A4318(0x2c);
-    secondVertices = second.v;
+    first.tex = ((long (*)(int))func_001F4868)(0x2C);
+    first.unk80 = 0xFF9000000260L;
+    first.unk70 = 0;
+    second.tex = ((long (*)(int))func_001F4868)(0x2C);
+    secondVertices = second.corner;
     firstUv = first.uv;
     secondUv0 = second.uv[0];
     firstUv1 = first.uv[1];
@@ -2403,31 +2418,22 @@ int func_L15_002A4318(unsigned char *moby) {
     secondUv2 = second.uv[2];
     firstUv3 = first.uv[3];
     secondUv3 = second.uv[3];
-    second.r70 = 0;
-    second.r80 = 0xff9000000260ULL;
+    second.unk70 = 0;
+    second.unk80 = 0xFF9000000260L;
     second.col[3] = 0;
     second.col[1] = 0;
     for (corner = 0; corner < 4; corner++) {
-        qcopy(first.v[corner], D_L15_001CE5B0[corner]);
-        qcopy(secondVertices[corner], D_L15_001CE570[corner]);
+        qcopy(&first.corner[corner], &D_L15_001CE5B0[corner]);
+        qcopy(&secondVertices[corner], &D_L15_001CE570[corner]);
     }
     for (pass = 0; pass < 6; pass = nextPass) {
         int parity = pass & 1;
-        first.alpha =
-            (unsigned long)(((int *)&D_L15_00161558))[parity] |
-            ((unsigned long)(((int *)&D_L15_00161560))[parity] << 2) |
-            ((unsigned long)(((int *)&D_L15_00161568))[parity] << 4) |
-            ((unsigned long)(((int *)&D_L15_00161570))[parity] << 6) |
-            0x8000000000ULL;
-        second.alpha =
-            (unsigned long)(((int *)&D_L15_00161558))[parity] |
-            ((unsigned long)(((int *)&D_L15_00161560))[parity] << 2) |
-            ((unsigned long)(((int *)&D_L15_00161568))[parity] << 4) |
-            ((unsigned long)(((int *)&D_L15_00161570))[parity] << 6) |
-            0x8000000000ULL;
+        first.unk88 = (long)*(int *)(&D_L15_00161558 + parity * 2) | (long)*(int *)(&D_L15_00161560 + parity * 2) << 2 |
+                (long)*(int *)(&D_L15_00161568 + parity * 2) << 4 | (long)*(int *)(&D_L15_00161570 + parity * 2) << 6 | 0x8000000000L;
+        second.unk88 = (long)*(int *)(&D_L15_00161558 + parity * 2) | (long)*(int *)(&D_L15_00161560 + parity * 2) << 2 |
+                (long)*(int *)(&D_L15_00161568 + parity * 2) << 4 | (long)*(int *)(&D_L15_00161570 + parity * 2) << 6 | 0x8000000000L;
         if (data[5] != 0) {
-            second.col[2] = func_001FA8A8_A4318((float)data[5] / 60.0f,
-                                                   D_L15_001CE4B0[pass], 0);
+            second.col[2] = func_001FA8A8(D_L15_001CE4B0[pass], 0, (float)data[5] / 60.0f);
             second.col[0] = second.col[2];
             first.col[3] = second.col[2];
             first.col[2] = second.col[2];
@@ -2456,18 +2462,17 @@ int func_L15_002A4318(unsigned char *moby) {
                 float step;
                 float radians;
                 axis--;
-                limit = truncate_float_to_s32(*frequency * 360.0f);
-                angle = IntToFloat(D_L15_0015F4F8 % limit)
-                    / *frequency - 180.0f;
+                limit = func_001FA898(*frequency * 360.0f);
+                angle = func_001FA888(D_L15_0015F4F8 % limit) / *frequency - 180.0f;
                 frequency++;
                 value = *(int *)((char *)D_L15_001CE510 + waveform);
                 waveform += 4;
                 radians = 0.017453292f;
                 step = 0.125f;
                 if (value != 0) {
-                    angle = FastCos(angle * radians);
+                    angle = func_001F9F90(angle * radians);
                 } else {
-                    angle = FastSin(angle * radians);
+                    angle = func_001F9FA8(angle * radians);
                 }
                 delta = angle * step;
                 *uv++ = *(float *)((char *)D_L15_001CE550 + base) + delta;
@@ -2485,14 +2490,11 @@ int func_L15_002A4318(unsigned char *moby) {
         func_L00_001FD1D8(&first, transformPointer, 0);
         func_L00_001FD1D8(secondVertices, transformPointer, 0);
         for (corner = 0; corner < 4; corner++) {
-            first.v[corner][0] += 0.1f;
-            secondVertices[corner][0] += 0.1f;
+            ((float *)&first.corner[corner])[0] += 0.1f;
+            ((float *)&secondVertices[corner])[0] += 0.1f;
         }
     }
 }
-struct Manip;
-struct GifEntry;
-struct AnimSeq;
 extern short D_0015EE84;
 typedef struct {
     u8 pad[0x454];
@@ -3545,7 +3547,7 @@ void MovingMobyUpdate(struct Moby *moby) {
         if (((struct Moby *)(D_L15_00160058 + vars->trigger * 0x100))->state != 4)
             return;
         if (reversed)
-            func_0022ED80(0, 0, (int)moby);
+            Moby_PlaySound(0, 0, (int)moby);
         moby->state = 2;
         break;
     case 2:
@@ -3581,14 +3583,14 @@ void MovingMobyUpdate(struct Moby *moby) {
         if (!is_point_inside_clip_volume(&D_0013F450.motion.pos, vars->start_volume))
             return;
         if (reversed)
-            func_0022ED80(0, 0, (int)moby);
+            Moby_PlaySound(0, 0, (int)moby);
         moby->state = 2;
         break;
     case 5:
         if (is_point_inside_clip_volume(&D_0013F450.motion.pos, vars->stop_volume))
             return;
         if (reversed)
-            func_0022ED80(0, 0, (int)moby);
+            Moby_PlaySound(0, 0, (int)moby);
         moby->state = 6;
         break;
     case 6:
@@ -3879,7 +3881,7 @@ void LoopingFx_Update(void *arg) {
     if (*(float *)&D_L15_00161B44 != 0.0f) {
         *(int *)&D_L15_00161B48 = 1;
         if (Sound_IsPlaying(*(void **)&D_L15_00161B50, *(int *)&D_L15_00161B4C) == 0) {
-            *(int *)&D_L15_00161B4C = func_0022ED80(5, 0x11, (int)arg);
+            *(int *)&D_L15_00161B4C = Moby_PlaySound(5, 0x11, (int)arg);
             *(void **)&D_L15_00161B50 = arg;
         }
         AddDrawCallback(LoopingFx_Draw, arg);
@@ -3925,7 +3927,7 @@ int Hero_IsNearGround(void) {
     if ((unsigned)(*(int *)(p + 0x2084) - 0x18) < 2) {
         *(u128 *)vec = *(u128 *)(p + 0x80);
         vec[2] = vec[2] + 2.0f;
-        h = func_00214358(vec, 0, 0.5f);
+        h = ProbeGroundHeight(vec, 0, 0.5f);
         if (CollType() != 0) return 0;
         if (*(float *)(p + 0x88) <= h) return 1;
     }

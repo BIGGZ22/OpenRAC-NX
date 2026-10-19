@@ -164,20 +164,20 @@ int FUN_L05_00307470(int arg) {
 extern int FUN_L05_00307470(int);
 extern void blend_moby_animation(void *, int, int, int) __asm__("FUN_00212f90");
 
-void FUN_L05_00307480(char *moby, int animation_index, int a2, int a3) {
+void FUN_L05_00307480(char *moby, int animation_index, int frame_index, int blend_frames) {
     char *data;
     char *child;
     float ratio;
     float f;
     float max;
     int idx;
-    blend_moby_animation(moby, animation_index, a2, a3);
+    blend_moby_animation(moby, animation_index, frame_index, blend_frames);
     data = *(char **)(moby + 0x78);
     child = *(char **)(data + 0x268);
     if (child != 0) {
         ratio = *(float *)(child + 0x5C) / *(float *)(moby + 0x5C);
         idx = FUN_L05_00307470(animation_index);
-        f = (float)a2 * ratio;
+        f = (float)frame_index * ratio;
         max = (float)*(unsigned char *)(*(char **)(*(char **)(*(char **)(data + 0x268) + 0x24) -
                                                    (-(idx * 4)) + 0x48) +
                                         0x10);
@@ -185,7 +185,7 @@ void FUN_L05_00307480(char *moby, int animation_index, int a2, int a3) {
             f = max;
         else if (f < 0.0f)
             f = 0.0f;
-        blend_moby_animation(*(char **)(data + 0x268), idx, (int)f, a3);
+        blend_moby_animation(*(char **)(data + 0x268), idx, (int)f, blend_frames);
     }
 }
 
@@ -1605,8 +1605,8 @@ extern char D_0013F420[];
 extern s32 D_001413D0_lui[] __asm__("D_001413D0") __attribute__((section(".data")));
 
 void FUN_L05_00303390(Moby *m) {
-    Vec_3047E8 v0;
-    Vec_3047E8 v10;
+    Vec_3047E8 working_vector;
+    Vec_3047E8 hit_test_endpoint;
     int cnt;
     float dmg;
     float ang;
@@ -1621,20 +1621,20 @@ void FUN_L05_00303390(Moby *m) {
     dmg = 0.0f;
     r = func_L00_0025B478_3047E8(m, 0x330000, 0);
     if (r != 0) {
-        qcopy(v0, ((float *)&m->pos));
-        v0[2] = v0[2] + 0.5f;
+        qcopy(working_vector, ((float *)&m->pos));
+        working_vector[2] = working_vector[2] + 0.5f;
         if (r->who != 0) {
             if (r->who->oclass == 0x47) {
-                qcopy(v10, D_0013F420);
+                qcopy(hit_test_endpoint, D_0013F420);
             } else if ((*(struct Moby **)&r->who->pclass != 0 && *(short *)((u8 *)((struct Moby *)r->who->pclass) + 0x46) == 5) || r->who->oclass == 0xBA) {
-                qcopy(v10, v0);
+                qcopy(hit_test_endpoint, working_vector);
             } else {
-                qcopy(v10, ((float *)&r->who->pos));
+                qcopy(hit_test_endpoint, ((float *)&r->who->pos));
             }
         } else {
-            qcopy(v10, r->at);
+            qcopy(hit_test_endpoint, r->at);
         }
-        if (func_001F9D10_3047E8(v0, v10) < 24.0f && collision_line(v0, v10, 2, m, 0) != 0) {
+        if (func_001F9D10_3047E8(working_vector, hit_test_endpoint) < 24.0f && collision_line(working_vector, hit_test_endpoint, 2, m, 0) != 0) {
             r = 0;
         }
     }
@@ -1669,8 +1669,8 @@ void FUN_L05_00303390(Moby *m) {
             d->f8C = D_L05_00161A8C * D_0015ED6C;
             d->fC4 = 10.0f;
             ang = angle_atan2(m->pos.x - r->who->pos.x, m->pos.y - r->who->pos.y);
-            *(u128_3047E8 *)v0 = r->dir;
-            trooper_knockback_arc(v0, &ang, &d->f88, &d->f8C);
+            *(u128_3047E8 *)working_vector = r->dir;
+            trooper_knockback_arc(working_vector, &ang, &d->f88, &d->f8C);
             trooper_start_knockback(m, d->f70, ang, 5, 1, 0);
             m->state = 11;
             d->b67 = 0x78;
@@ -1684,8 +1684,8 @@ void FUN_L05_00303390(Moby *m) {
             d->fC0 = 5.5f;
             d->fC4 = 11.0f;
             ang2 = angle_atan2(m->pos.x - r->who->pos.x, m->pos.y - r->who->pos.y);
-            *(u128_3047E8 *)v0 = r->dir;
-            trooper_knockback_arc(v0, &ang2, &d->f88, &d->f8C);
+            *(u128_3047E8 *)working_vector = r->dir;
+            trooper_knockback_arc(working_vector, &ang2, &d->f88, &d->f8C);
             trooper_start_knockback(m, d->f70, ang2, 6, 1, 0);
             m->state = 14;
             d->b67 = 0xF0;
@@ -1733,9 +1733,9 @@ void FUN_L05_00303390(Moby *m) {
     if (k < 10) {
     if (k >= 4 && d->target == (*(Moby * *)D_001413D0_lui)) {
         float yaw, pitch;
-        func_001F9BF0_3047E8(v0, ((float *)&d->target->pos), ((float *)&m->pos));
-        yaw = func_001FA790_3047E8(angle_atan2(v0[0], v0[1]), m->rot.z);
-        pitch = -angle_atan2(func_001F9CE8_3047E8(v0), v0[2]);
+        func_001F9BF0_3047E8(working_vector, ((float *)&d->target->pos), ((float *)&m->pos));
+        yaw = func_001FA790_3047E8(angle_atan2(working_vector[0], working_vector[1]), m->rot.z);
+        pitch = -angle_atan2(func_001F9CE8_3047E8(working_vector), working_vector[2]);
         if (m->flags & 0x8000) {
             yaw = -yaw;
         }
@@ -2038,10 +2038,16 @@ typedef char *(*Spawn_305778)(void *, void *, void *, int, int, long, long, long
 
 void extermitank_update(unsigned char *m) __asm__("FUN_L05_00304320");
 void extermitank_update(unsigned char *m) {
+    enum {
+        EXTERMITANK_INITIALIZE = 0,
+        EXTERMITANK_FOLLOW_PATH = 1,
+        EXTERMITANK_FIRE_PARTICLES = 2,
+        EXTERMITANK_REMOVE = 3
+    };
     char *d = *(char **)(m + 0x78);
     float origin_position[4];
-    float v20[4];
-    float v30[4];
+    float particle_vector_a[4];
+    float particle_vector_b[4];
     float working_position[4];
 
     FUN_L05_00305178_c((char *)m);
@@ -2059,7 +2065,7 @@ void extermitank_update(unsigned char *m) {
         }
     }
     switch (m[0x20]) {
-    case 0: {
+    case EXTERMITANK_INITIALIZE: {
         char *c;
         char *g;
         if (*(char **)(d + 0x184) == 0) {
@@ -2127,7 +2133,7 @@ void extermitank_update(unsigned char *m) {
         d[0x5A] = truncate_float_to_s32_c5(D_L05_00161B7C * 8.0f);
         break;
     }
-    case 1: {
+    case EXTERMITANK_FOLLOW_PATH: {
         char *pp = d + 0xC0;
         char *path = *(char **)(pp + 0x10);
         int n = *(int *)path;
@@ -2176,7 +2182,7 @@ void extermitank_update(unsigned char *m) {
         FUN_L00_001fff28(d + 0x100, 2, fast_subtract_rotations(*(float *)(d + 0x194), *(float *)(m + 0x48)));
         break;
     }
-    case 2: {
+    case EXTERMITANK_FIRE_PARTICLES: {
         char *pp = d + 0xC0;
         char *path = *(char **)(pp + 0x10);
         int n = *(int *)path;
@@ -2199,8 +2205,8 @@ void extermitank_update(unsigned char *m) {
             }
             *(int *)pp = idx;
         }
-        v20[3] = D_L05_00161B30;
-        v30[3] = D_L05_00161B34;
+        particle_vector_a[3] = D_L05_00161B30;
+        particle_vector_b[3] = D_L05_00161B34;
         FUN_L00_0024f7c8(m, 2, origin_position);
         for (i = 0; i < 2; i++) {
             int a, b, e;
@@ -2210,19 +2216,19 @@ void extermitank_update(unsigned char *m) {
             working_position[0] += random_float_between_c4(-0.065f, 0.065f);
             working_position[1] += random_float_between_c4(-0.065f, 0.065f);
             working_position[2] += random_float_between_c4(-0.065f, 0.065f);
-            v20[0] = fast_cos_c5(*(float *)(d + 0x194)) * (D_L05_00161B20 * D_0015ED6C_gp);
-            v20[1] = fast_sin_c7(*(float *)(d + 0x194)) * (D_L05_00161B20 * D_0015ED6C_gp);
-            v20[2] = 0.0f;
-            v20[2] = random_float_between_c4(D_L05_00161B24 * D_0015ED6C_gp * 0.9f, D_L05_00161B24 * D_0015ED6C_gp * 1.1f);
+            particle_vector_a[0] = fast_cos_c5(*(float *)(d + 0x194)) * (D_L05_00161B20 * D_0015ED6C_gp);
+            particle_vector_a[1] = fast_sin_c7(*(float *)(d + 0x194)) * (D_L05_00161B20 * D_0015ED6C_gp);
+            particle_vector_a[2] = 0.0f;
+            particle_vector_a[2] = random_float_between_c4(D_L05_00161B24 * D_0015ED6C_gp * 0.9f, D_L05_00161B24 * D_0015ED6C_gp * 1.1f);
             ang = random_float_between_c4(-D_L05_00161B38, D_L05_00161B38) * 0.017453292f;
-            v30[0] = fast_cos_c5(fast_add_rotations_c5(*(float *)(d + 0x194), ang)) * (D_L05_00161B28 * D_0015ED6C_gp);
-            v30[1] = fast_sin_c7(fast_add_rotations_c5(*(float *)(d + 0x194), ang)) * (D_L05_00161B28 * D_0015ED6C_gp);
-            v30[2] = 0.0f;
-            v30[2] = random_float_between_c4(D_L05_00161B2C * D_0015ED6C_gp * 0.9f, D_L05_00161B2C * D_0015ED6C_gp * 1.1f);
+            particle_vector_b[0] = fast_cos_c5(fast_add_rotations_c5(*(float *)(d + 0x194), ang)) * (D_L05_00161B28 * D_0015ED6C_gp);
+            particle_vector_b[1] = fast_sin_c7(fast_add_rotations_c5(*(float *)(d + 0x194), ang)) * (D_L05_00161B28 * D_0015ED6C_gp);
+            particle_vector_b[2] = 0.0f;
+            particle_vector_b[2] = random_float_between_c4(D_L05_00161B2C * D_0015ED6C_gp * 0.9f, D_L05_00161B2C * D_0015ED6C_gp * 1.1f);
             a = truncate_float_to_s32_c5(scale_time(random_float_between_c4(D_L05_00161B14, D_L05_00161B14 + D_L05_00161B14)));
             b = truncate_float_to_s32_c5(scale_time(random_float_between_c4(D_L05_00161B18, D_L05_00161B18 * 1.2f)));
             e = truncate_float_to_s32_c5(scale_time(random_float_between_c4(D_L05_00161B1C, D_L05_00161B1C * 1.2f)));
-            r = ((Spawn_305778)spawn_spark_c2)(working_position, v20, v30, D_L05_00161B0C, D_L05_00161B10, a, b, e, -1);
+            r = ((Spawn_305778)spawn_spark_c2)(working_position, particle_vector_a, particle_vector_b, D_L05_00161B0C, D_L05_00161B10, a, b, e, -1);
             if ((frame_number_gp & 7) == 0 && r != 0 && i == 0) {
                 int j;
                 for (j = 0; j < 8; j++) {
@@ -2235,8 +2241,8 @@ void extermitank_update(unsigned char *m) {
                 }
             }
         }
-        v20[3] = D_L05_00161B60;
-        v30[3] = D_L05_00161B64;
+        particle_vector_a[3] = D_L05_00161B60;
+        particle_vector_b[3] = D_L05_00161B64;
         for (k = 1; k >= 0; k--) {
             int a, b, e;
             float ang;
@@ -2245,19 +2251,19 @@ void extermitank_update(unsigned char *m) {
             working_position[1] += random_float_between_c4(-0.2f, 0.2f);
             working_position[2] += random_float_between_c4(-0.2f, 0.2f);
             ang = random_float_between_c4(-D_L05_00161B6C, D_L05_00161B6C) * 0.017453292f;
-            v20[0] = fast_cos_c5(fast_add_rotations_c5(*(float *)(d + 0x194), ang)) * (D_L05_00161B50 * D_0015ED6C_gp);
-            v20[1] = fast_sin_c7(fast_add_rotations_c5(*(float *)(d + 0x194), ang)) * (D_L05_00161B50 * D_0015ED6C_gp);
-            v20[2] = 0.0f;
-            v20[2] = random_float_between_c4(D_L05_00161B54 * D_0015ED6C_gp * 0.7f, D_L05_00161B54 * D_0015ED6C_gp * 1.5f);
+            particle_vector_a[0] = fast_cos_c5(fast_add_rotations_c5(*(float *)(d + 0x194), ang)) * (D_L05_00161B50 * D_0015ED6C_gp);
+            particle_vector_a[1] = fast_sin_c7(fast_add_rotations_c5(*(float *)(d + 0x194), ang)) * (D_L05_00161B50 * D_0015ED6C_gp);
+            particle_vector_a[2] = 0.0f;
+            particle_vector_a[2] = random_float_between_c4(D_L05_00161B54 * D_0015ED6C_gp * 0.7f, D_L05_00161B54 * D_0015ED6C_gp * 1.5f);
             ang = random_float_between_c4(-D_L05_00161B68, D_L05_00161B68) * 0.017453292f;
-            v30[0] = fast_cos_c5(fast_add_rotations_c5(*(float *)(d + 0x194), ang)) * (D_L05_00161B58 * D_0015ED6C_gp);
-            v30[1] = fast_sin_c7(fast_add_rotations_c5(*(float *)(d + 0x194), ang)) * (D_L05_00161B58 * D_0015ED6C_gp);
-            v30[2] = 0.0f;
-            v30[2] = random_float_between_c4(D_L05_00161B5C * D_0015ED6C_gp * 0.7f, D_L05_00161B5C * D_0015ED6C_gp * 1.5f);
+            particle_vector_b[0] = fast_cos_c5(fast_add_rotations_c5(*(float *)(d + 0x194), ang)) * (D_L05_00161B58 * D_0015ED6C_gp);
+            particle_vector_b[1] = fast_sin_c7(fast_add_rotations_c5(*(float *)(d + 0x194), ang)) * (D_L05_00161B58 * D_0015ED6C_gp);
+            particle_vector_b[2] = 0.0f;
+            particle_vector_b[2] = random_float_between_c4(D_L05_00161B5C * D_0015ED6C_gp * 0.7f, D_L05_00161B5C * D_0015ED6C_gp * 1.5f);
             a = truncate_float_to_s32_c5(scale_time(random_float_between_c4(D_L05_00161B44, D_L05_00161B44 + D_L05_00161B44)));
             b = truncate_float_to_s32_c5(scale_time(random_float_between_c4(D_L05_00161B48, D_L05_00161B48 * 1.2f)));
             e = truncate_float_to_s32_c5(scale_time(random_float_between_c4(D_L05_00161B4C, D_L05_00161B4C * 1.2f)));
-            ((Spawn_305778)spawn_spark_c2)(working_position, v20, v30, D_L05_00161B3C, D_L05_00161B40, a, b, e, -1);
+            ((Spawn_305778)spawn_spark_c2)(working_position, particle_vector_a, particle_vector_b, D_L05_00161B3C, D_L05_00161B40, a, b, e, -1);
         }
         qcopy(working_position, m + 0x10);
         working_position[2] = working_position[2] + 3.0f;
@@ -2281,7 +2287,7 @@ void extermitank_update(unsigned char *m) {
         FUN_L00_001fff28(d + 0x100, 2, fast_subtract_rotations(*(float *)(d + 0x194), *(float *)(m + 0x48)));
         break;
     }
-    case 3:
+    case EXTERMITANK_REMOVE:
         if (*(char **)(d + 0x184) != 0) mark_moby_for_removal_c3(*(char **)(d + 0x184));
         if (*(char **)(d + 0x188) != 0) mark_moby_for_removal_c3(*(char **)(d + 0x188));
         mark_moby_for_removal_c3(m);

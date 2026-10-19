@@ -1,4 +1,4 @@
-/* functional: high. Corrected from nonmatching/game/func_001FBE80.c: in kind 6 the title string id is 0x5230 only when word 0x1C is 2; for 0 and 1 it is 0x522F (the near miss gave 0x5230 for all three). */
+/* functional: high. fcheck: unchecked (the harness could not compile it in place; OpenRAC tools/fcheck_gate.py, 2026-10-18). Corrected from nonmatching/game/func_001FBE80.c: in kind 6 the title string id is 0x5230 only when word 0x1C is 2; for 0 and 1 it is 0x522F (the near miss gave 0x5230 for all three). */
 /* Freeze screen draw (mode 4): the dialog for the record at D_00193400. Word 0
    is the kind; each kind lays out its gauge and its lines of text. Text is
    staged in the scratchpad at 0x70000000 as lines split by bytes 0 and 1. */
