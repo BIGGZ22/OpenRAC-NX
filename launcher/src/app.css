@@ -652,6 +652,17 @@ details.more[open] > :not(summary) {
   border: 2px solid var(--ink);
 }
 
+/* A touch screen scrolls by dragging, and Android's own apps show no bars: these styled bars,
+   which the WebView draws all the time, read there as stray strips at a panel's edge. */
+html[data-platform="android"] ::-webkit-scrollbar {
+  width: 0;
+  height: 0;
+}
+
+html[data-platform="android"] * {
+  scrollbar-width: none;
+}
+
 /* Android's WebView flickers under a blurred backdrop (main.ts): the panels stay translucent. */
 html[data-platform="android"] * {
   backdrop-filter: none !important;

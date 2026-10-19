@@ -538,16 +538,10 @@
     border-right: 1px solid var(--line);
     box-shadow: none;
     color: var(--text);
-    /* It scrolls only up and down, without a bar: a tab one pixel wider than the rail inside its
-       border made a sideways scroll bar along its foot. A WebView older than Chromium 121 knows
-       no scrollbar-width, only the ::-webkit-scrollbar below. */
+    /* It scrolls only up and down (no bar on Android: app.css): a tab one pixel wider than the
+       rail inside its border made a sideways scroll bar along its foot. */
     overflow-x: hidden;
     overflow-y: auto;
-    scrollbar-width: none;
-  }
-
-  :global(html[data-platform="android"]) .site-header::-webkit-scrollbar {
-    display: none;
   }
 
   /* The wrench on the bar's orange, as the app's icon has it. */
