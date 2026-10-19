@@ -87,7 +87,15 @@ int image_index(const fs::path& requested, LevelData& level) {
         log::warn("texture {}: {}", key, stbi_failure_reason());
         ++level.missing_images;
     }
+    bool translucent = false;
+    for (std::size_t i = 3; i < image.pixels.size(); i += 4) {
+        if (image.pixels[i] < 250) {
+            translucent = true;
+            break;
+        }
+    }
     level.images.push_back(std::move(image));
+    level.translucent_images.push_back(translucent);
     return pixels != nullptr ? static_cast<int>(level.images.size() - 1) : -1;
 }
 
@@ -106,18 +114,19 @@ int material_index(const cgltf_material* source, const fs::path& base, LevelData
             }
         }
     }
-    // A moby texture with texels below full alpha is drawn by the GS as the cutout materials are
-    // (TEST 0x5360b: texels at 0x80 written with depth, the others blended, colour only), whatever
-    // the export's alpha mode says: Kalebo III's glass sheets (class 800, alpha 0x32..0x53) came
-    // out as solid teal walls when drawn opaque.
-    if (!m.cutout && !m.metal && m.image >= 0 && base.filename() == "mobys") {
-        const auto& pixels = level.images[static_cast<std::size_t>(m.image)].pixels;
-        for (std::size_t i = 3; i < pixels.size(); i += 4) {
-            if (pixels[i] < 250) {
-                m.cutout = true;
-                break;
-            }
-        }
+    // A texture with texels below full alpha is drawn by the GS as the cutout materials are (the
+    // static layers' and mobys' alpha test, GEQUAL 0x80 for the static layers and TEST 0x5360b for
+    // mobys: texels at 0x80 written with depth, the others blended, colour only), whatever the
+    // export's alpha mode says: the export marks a texture MASK only when it has fully clear texels
+    // (editor/formats.py, Texture.cutout), so a sheet of glass, part-clear all over, came out
+    // opaque. Kalebo III's glass sheets (moby class 800, alpha 0x32..0x53) were solid teal walls,
+    // Novalis's windows by the plumber (a tie, glass at alpha 0x1F in an opaque frame) solid
+    // blue-grey panes; part-clear terrain, tie and shrub textures of other levels (Veldin's,
+    // alpha 0x3A all over) drew solid as well. The sky and the collision overlay are BLEND
+    // materials and keep their own passes.
+    if (!m.cutout && !m.metal && !m.blend && m.image >= 0
+        && static_cast<std::size_t>(m.image) < level.translucent_images.size()) {
+        m.cutout = level.translucent_images[static_cast<std::size_t>(m.image)];
     }
     for (std::size_t i = 0; i < level.materials.size(); ++i) {
         const Material& o = level.materials[i];

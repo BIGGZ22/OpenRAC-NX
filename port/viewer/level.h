@@ -120,6 +120,9 @@ struct LevelData {
     std::vector<Material> materials;
     std::vector<renderer::Rgba8Image> images;
     std::vector<std::string> image_paths;
+    // Parallel to images: whether some texel is below full alpha (under the chip's 0x80), which
+    // the GS blends however the export's alpha mode reads (material_index).
+    std::vector<bool> translucent_images;
     std::array<std::vector<Instance>, kLayerCount> instances;
     // Moby classes: model and whether it is the stand-in box, for placing live mobys.
     std::map<int, std::pair<std::uint32_t, bool>> moby_classes;

@@ -268,6 +268,29 @@ void overrides(const fs::path& dir) {
     fs::remove_all(mods.parent_path());
 }
 
+// A tie texture part-clear all over with no fully clear texel (Novalis's windows: glass at alpha
+// 0x1F in an opaque frame), which the export leaves OPAQUE, takes the cutout passes as the GS draws
+// it (blended); the opaque terrain's material does not.
+void translucent_texels(const fs::path& dir) {
+    const fs::path glass = dir.parent_path() / (dir.filename().string() + "_glass");
+    write_level(glass);
+    const std::uint8_t pane[] = {30, 30, 220, 255, 30, 30, 220, 62, 30, 30, 220, 62, 30, 30, 220, 62};
+    stbi_write_png((glass / "textures" / "tie_0001.png").string().c_str(), 2, 2, 4, pane, 8);
+
+    viewer::LevelData level;
+    std::string error;
+    CHECK(viewer::load_level(glass, level, error));
+    CHECK(level.translucent_images.size() == level.images.size());
+    const auto material_of = [&](viewer::Layer layer) {
+        const auto& instance = level.instances[static_cast<std::size_t>(layer)][0];
+        const int m = level.models[instance.model].primitives[0].material;
+        return level.materials[static_cast<std::size_t>(m)];
+    };
+    CHECK(!material_of(viewer::Layer::Terrain).cutout);
+    CHECK(material_of(viewer::Layer::Ties).cutout);
+    fs::remove_all(glass);
+}
+
 }  // namespace
 
 int main(int argc, char** argv) {
@@ -278,6 +301,7 @@ int main(int argc, char** argv) {
     viewer::LevelData level;
     loader(dir, level);
     overrides(dir);
+    translucent_texels(dir);
     if (openrac::test::failures() != 0) {
         return openrac::test::result();
     }
