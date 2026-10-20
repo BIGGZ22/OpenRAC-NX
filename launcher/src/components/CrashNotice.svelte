@@ -8,7 +8,6 @@
   import { app, dismissStopped, guard, toast } from "$lib/app.svelte";
   import { DISCORD_URL, ISSUES_URL } from "$lib/links";
   import { place, stopText, type StopNotice } from "$lib/reports";
-  import { untrack } from "svelte";
 
   let { notice, title }: { notice: StopNotice; title: string } = $props();
 
@@ -22,8 +21,10 @@
   let copied = $state(false);
   let saving = $state(false);
   let savedTo = $state<string | null>(null);
-  /** Stopped moments ago: announced as it arrives, not each time the page is opened again. */
-  const fresh = untrack(() => Date.now() - notice.at < 10_000);
+  /** Stopped moments ago: announced as it arrives, not each time the page is opened again. It
+   *  is worked out again when another stop replaces this one, so that a second crash is
+   *  announced as well. */
+  const fresh = $derived(Date.now() - notice.at < 10_000);
   const when = $derived(new Date(notice.at).toLocaleString([], { dateStyle: "medium", timeStyle: "short" }));
 
   async function copy() {
