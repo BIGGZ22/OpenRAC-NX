@@ -67,7 +67,7 @@ SKIP = {"nop", "sync", "pref", "cache", "vnop", "vwaitq", "ssnop", "ei", "di"}
 UNSUPPORTED = {
     "syscall": "a system call", "mfc0": "COP0 (mfc0)", "mtc0": "COP0 (mtc0)", "eret": "COP0 (eret)",
     "cop0": "COP0", "vcallms": "a VU0 microprogram (vcallms)",
-    "vcallmsr": "a VU0 microprogram (vcallmsr)", "vclipw": "VU0 clipping (vclipw)",
+    "vcallmsr": "a VU0 microprogram (vcallmsr)",
     "bc0f": "COP0 branch", "bc0t": "COP0 branch", "bc0fl": "COP0 branch", "bc0tl": "COP0 branch",
     "bc2f": "VU0 branch", "bc2t": "VU0 branch", "bc2fl": "VU0 branch", "bc2tl": "VU0 branch",
 }
@@ -178,6 +178,11 @@ class Translator:
         self.inline_calls: set[int] = set()
         self.returns: set[int] = set()
         self.reach, self.delay_only, self.jtables = self._flow()
+        # VU0's MAC and STATUS flags are kept only by a function that reads them (CFC2 $vi16 or
+        # $vi17, after its own macro operations: the collision code's tests); elsewhere they would
+        # cost every vector operation a few more for nothing.
+        self.vu_flags = any((i := self.at(a)) is not None and i.op == "cfc2" and i.rd in (16, 17)
+                            for a in self.reach)
         self._check_inputs()
 
     _inline_cache: dict = {}
@@ -1100,6 +1105,10 @@ class Translator:
             if n in (20, 21, 22):
                 reg = {20: "r", 21: "i", 22: "q"}[n]
                 return self.W(ins.rt, S32(f"openrac_ee_bits({V}{reg})"))
+            if n in (16, 17, 18):
+                # STATUS, MAC, the clip flag (ee_ops.h): MAC and STATUS as this function's own
+                # vector operations left them (self.vu_flags).
+                return self.W(ins.rt, f"(openrac_u64){V}{ {16: 'status', 17: 'mac', 18: 'clip'}[n] }")
             raise AsmUnsupported(f"cfc2 of VU0 control register {n}")
         if op == "ctc2":
             n = ins.rd
@@ -1110,15 +1119,48 @@ class Translator:
             if n in (20, 21, 22):
                 reg = {20: "r", 21: "i", 22: "q"}[n]
                 return [f"{V}{reg} = openrac_ee_f({self.R(ins.rt)});"]
+            if n == 16:
+                return [f"{V}status = ({V}status & 0x3Fu) | ((openrac_u32){self.R(ins.rt)} & 0xFC0u);"]  # the sticky bits
+            if n == 17:
+                return []  # MAC is read only
+            if n == 18:
+                return [f"{V}clip = (openrac_u32){self.R(ins.rt)} & 0xFFFFFFu;"]
             if n in (27, 28, 31):
                 return []  # resets and microprogram starts: no microprograms run here
             raise AsmUnsupported(f"ctc2 to VU0 control register {n}")
         if op in ("vwaitq", "vnop"):
             return []
+        vi = lambda n: "0" if n & 15 == 0 else f"{V}vi[{n & 15}]"
+        if op in ("vlqi", "vlqd", "vsqi", "vsqd", "vilwr", "viswr"):
+            # Macro-mode loads and stores reach VU0's data memory (ee_ops.h), a quadword per vi.
+            # vlq*: ft from (fs); vsq*: fs to (ft); vilwr / viswr: vi ft from / to (fs). The
+            # increment comes after, the decrement before; both 16-bit, and vi0 stays 0.
+            ptr = fs if op in ("vlqi", "vlqd", "vilwr", "viswr") else ft
+            step = lambda d: [] if ptr & 15 == 0 else [f"{V}vi[{ptr & 15}] = ({V}vi[{ptr & 15}] {d} 1u) & 0xFFFFu;"]
+            lines = step("-") if op in ("vlqd", "vsqd") else []
+            lines.append(f"t_ = openrac_vu0_addr({vi(ptr)});")
+            for c in comps:
+                if op in ("vlqi", "vlqd") and ft != 0:
+                    lines.append(f"{vf(ft, c)} = openrac_ee_lwc1(t_ + {4 * c}u);")
+                elif op in ("vsqi", "vsqd"):
+                    lines.append(f"openrac_ee_swc1(t_ + {4 * c}u, {vf(fs, c)});")
+                elif op == "vilwr" and ft & 15 != 0:
+                    lines.append(f"{V}vi[{ft & 15}] = (openrac_u32)openrac_ee_lwu(t_ + {4 * c}u) & 0xFFFFu;")
+                elif op == "viswr":
+                    lines.append(f"openrac_ee_sw(t_ + {4 * c}u, {vi(ft)} & 0xFFFFu);")
+            if op.endswith("i"):
+                lines += step("+")
+            return lines
+        if op == "vclipw":
+            return [f"openrac_vu0_clip({V[:-2]}, {vf(fs, 0)}, {vf(fs, 1)}, {vf(fs, 2)}, {vf(ft, 3)});"]
 
-        def store(dst, values: dict[int, str]) -> list[str]:
+        def store(dst, values: dict[int, str], flags: bool = False) -> list[str]:
             # Every operand read before any field is written: dst may be an operand.
             lines = [f"v_[{c}] = {values[c]};" for c in values]
+            if flags and self.vu_flags:
+                # An FMAC operation: MAC from the fields it wrote (the others' flags are clear).
+                lines.append("m_ = " + " | ".join(f"openrac_vu0_mac(v_[{c}], {c})" for c in values) + ";")
+                lines.append(f"openrac_vu0_set_mac({V[:-2]}, m_);")
             for c in values:
                 if dst == "acc":
                     lines.append(f"{V}acc[{c}] = v_[{c}];")
@@ -1146,7 +1188,7 @@ class Translator:
                     vals[c] = f"{acc(c)} + {a} * {b}"
                 elif kind == "msub":
                     vals[c] = f"{acc(c)} - {a} * {b}"
-            return store(dst, vals)
+            return store(dst, vals, flags=kind not in ("max", "mini"))
         if op in ("vopmula", "vopmsub"):
             rot_s, rot_t = [1, 2, 0], [2, 0, 1]
             vals = {}
@@ -1155,7 +1197,7 @@ class Translator:
                     continue
                 prod = f"{vf(fs, rot_s[c])} * {vf(ft, rot_t[c])}"
                 vals[c] = prod if op == "vopmula" else f"{acc(c)} - {prod}"
-            return store("acc" if op == "vopmula" else fd, vals)
+            return store("acc" if op == "vopmula" else fd, vals, flags=True)
         if op in ("vmove", "vabs", "vmr32"):
             vals = {}
             for c in comps:
@@ -1176,12 +1218,15 @@ class Translator:
                 else:
                     vals[c] = f"openrac_ee_itof(openrac_ee_bits({vf(fs, c)}), {frac})"
             return store(ft, vals)
-        if op == "vdiv":
-            return [f"{V}q = openrac_ee_fdiv({vf(fs, bc)}, {vf(ft, ins.ftf)});"]
-        if op == "vsqrt":
-            return [f"{V}q = openrac_ee_sqrt({vf(ft, ins.ftf)});"]
-        if op == "vrsqrt":
-            return [f"{V}q = openrac_ee_rsqrt({vf(fs, bc)}, {vf(ft, ins.ftf)});"]
+        if op in ("vdiv", "vsqrt", "vrsqrt"):
+            s, t = ("0.0f" if op == "vsqrt" else vf(fs, bc)), vf(ft, ins.ftf)
+            flags = ([f"openrac_vu0_set_div({V[:-2]}, {('vdiv', 'vsqrt', 'vrsqrt').index(op)}, {s}, {t});"]
+                     if self.vu_flags else [])
+            if op == "vdiv":
+                return flags + [f"{V}q = openrac_ee_fdiv({s}, {t});"]
+            if op == "vsqrt":
+                return flags + [f"{V}q = openrac_ee_sqrt({t});"]
+            return flags + [f"{V}q = openrac_ee_rsqrt({s}, {t});"]
         if op == "vmtir":
             return [] if ft & 15 == 0 else [f"{V}vi[{ft & 15}] = openrac_ee_bits({vf(fs, bc)}) & 0xFFFFu;"]
         if op == "vmfir":
@@ -1542,13 +1587,15 @@ def _vu0_sync() -> str:
     save.append(asm_.format(f"{_vu0_word('q_to_vf1')}\\n\\t{_vu0_word('sqc2', 1)}", "&p_->scratch[0]"))
     save.append("p_->q = p_->scratch[0];")
     save.append(asm_.format(_vu0_word("lqc2", 1), "&p_->vf[1][0]"))
-    for n in list(range(1, 16)) + [21]:
+    flags = {16: "p_->status", 17: "p_->mac", 18: "p_->clip"}
+    for n in list(range(1, 19)) + [21]:
         save.append(f'__asm__ __volatile__("{_vu0_word("cfc2", n, rt=8)}\\n\\tmove %0, $8" : "=r"(v_) : : "$8");')
-        save.append(f"p_->vi[{n}] = v_ & 0xFFFFu;" if n < 16 else "p_->i = openrac_ee_f(v_);")
+        save.append(f"p_->vi[{n}] = v_ & 0xFFFFu;" if n < 16 else f"{flags[n]} = v_;" if n in flags
+                    else "p_->i = openrac_ee_f(v_);")
     save.append("p_->vi[0] = 0;")
     load = ["openrac_vu0_state *p_ = OPENRAC_VU0;", "openrac_u32 v_;"]
-    for n in list(range(1, 16)) + [21]:
-        load.append(f"v_ = {f'p_->vi[{n}]' if n < 16 else 'openrac_ee_bits(p_->i)'};")
+    for n in list(range(1, 16)) + [16, 18, 21]:  # MAC is read only; of STATUS, the sticky bits
+        load.append(f"v_ = {f'p_->vi[{n}]' if n < 16 else flags[n] if n in flags else 'openrac_ee_bits(p_->i)'};")
         load.append(f'__asm__ __volatile__("move $8, %0\\n\\t{_vu0_word("ctc2", n, rt=8)}" : : "r"(v_) : "$8");')
     load.append("p_->scratch[0] = p_->q;")
     load.append(asm_.format(f"{_vu0_word('lqc2', 1)}\\n\\t{_vu0_word('vf1_to_q')}\\n\\t{_vu0_word('waitq')}",

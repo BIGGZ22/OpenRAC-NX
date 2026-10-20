@@ -705,7 +705,95 @@ typedef struct openrac_vu0_state {
     openrac_u32 vi[16];
     openrac_f32 q, i, r, p;
     openrac_f32 scratch[4]; /* room for moving a register in the console's form (asmc.py), 16-aligned */
+    /* The flags (CFC2 $vi16, $vi17, $vi18), kept by the functions that read them (asmc.py). */
+    openrac_u32 status, mac, clip;
 } openrac_vu0_state;
+
+/* VU0's data memory, as the EE sees it, and where a macro-mode load or store through vi reaches:
+ * a quadword index into its 4 KB (VLQI, VSQI, VLQD, VSQD, VILWR, VISWR), never main RAM. */
+#define OPENRAC_VU0_DATA 0x11004000u
+OPENRAC_EE_INLINE openrac_u32 openrac_vu0_addr(openrac_u32 vi) {
+    return OPENRAC_VU0_DATA + ((vi & 0xFFu) << 4);
+}
+
+/* The MAC flag bits of one FMAC result in field c (x 0 ... w 3; x is the top bit of each group of
+ * four): zero (a zero or denormal exponent, which the VU reads as zero), sign, and overflow (an
+ * exponent of 255, the host's infinity or NaN where the VU would have saturated). Underflow is
+ * not seen: the host has flushed such a result to zero already. */
+OPENRAC_EE_INLINE openrac_u32 openrac_vu0_mac(openrac_f32 v, int c) {
+    openrac_u32 b = openrac_ee_bits(v), at = 3u - (openrac_u32)c, m = 0;
+    if ((b & 0x7F800000u) == 0) {
+        m |= 1u << at;
+    }
+    if ((b & 0x80000000u) != 0) {
+        m |= 0x10u << at;
+    }
+    if ((b & 0x7F800000u) == 0x7F800000u) {
+        m |= 0x1000u << at;
+    }
+    return m;
+}
+/* After an FMAC operation: MAC as computed, and STATUS's zero, sign, underflow and overflow
+ * (bits 0-3) set when any field has it, and kept in their sticky bits (6-9). */
+OPENRAC_EE_INLINE void openrac_vu0_set_mac(openrac_vu0_state *vu, openrac_u32 mac) {
+    openrac_u32 s = 0;
+    if ((mac & 0x000Fu) != 0) {
+        s |= 1u;
+    }
+    if ((mac & 0x00F0u) != 0) {
+        s |= 2u;
+    }
+    if ((mac & 0x0F00u) != 0) {
+        s |= 4u;
+    }
+    if ((mac & 0xF000u) != 0) {
+        s |= 8u;
+    }
+    vu->mac = mac;
+    vu->status = (vu->status & ~0xFu) | s | (s << 6);
+}
+/* After VDIV (kind 0), VSQRT (1) or VRSQRT (2) of s by t: STATUS's invalid (0/0, the root of a
+ * negative number) and divide-by-zero bits (4, 5), and their sticky bits (10, 11). */
+OPENRAC_EE_INLINE void openrac_vu0_set_div(openrac_vu0_state *vu, int kind, openrac_f32 s, openrac_f32 t) {
+    int s_zero = (openrac_ee_bits(s) & 0x7F800000u) == 0;
+    int t_zero = (openrac_ee_bits(t) & 0x7F800000u) == 0;
+    int t_negative = !t_zero && (openrac_ee_bits(t) & 0x80000000u) != 0;
+    openrac_u32 flags = 0;
+    if (kind == 1) {
+        flags = t_negative ? 0x10u : 0;
+    } else if (t_zero) {
+        flags = s_zero ? 0x10u : 0x20u;
+    } else if (kind == 2 && t_negative) {
+        flags = 0x10u;
+    }
+    vu->status = (vu->status & ~0x30u) | flags | (flags << 6);
+}
+/* VCLIPw.xyz: the clip flag moves up six bits (it keeps the last four judgements) and takes x, y
+ * and z against +|w| and -|w|: bit 0 x > +|w|, bit 1 x < -|w|, then y, then z. */
+OPENRAC_EE_INLINE void openrac_vu0_clip(openrac_vu0_state *vu, openrac_f32 x, openrac_f32 y, openrac_f32 z,
+                                        openrac_f32 w) {
+    openrac_f32 a = openrac_ee_f(openrac_ee_bits(w) & 0x7FFFFFFFu);
+    openrac_u32 b = 0;
+    if (x > a) {
+        b |= 1u;
+    }
+    if (x < -a) {
+        b |= 2u;
+    }
+    if (y > a) {
+        b |= 4u;
+    }
+    if (y < -a) {
+        b |= 8u;
+    }
+    if (z > a) {
+        b |= 0x10u;
+    }
+    if (z < -a) {
+        b |= 0x20u;
+    }
+    vu->clip = ((vu->clip << 6) | b) & 0xFFFFFFu;
+}
 
 /* Float to fixed point with `frac` fraction bits, as vftoi: truncated, saturated. A float with
  * exponent 255 is a large number to the VU (a NaN to the host) and saturates by its sign: the

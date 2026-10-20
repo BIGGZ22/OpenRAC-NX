@@ -1885,6 +1885,87 @@ class FromAssembly(unittest.TestCase):
         self.assertEqual([int(x) for x in out], [2147483647, -2147483648, 0, 0,
                                                  2147483647, -2147483648, 2147483647, -1])
 
+    def test_vu0_macro_memory_and_vf0(self):
+        # VSQI/VLQD/VILWR/VISWR reach VU0's data memory at (vi & 0xFF) * 16, not main RAM; the
+        # increments and decrements are vi's (item 8); vf0 stays (0, 0, 0, 1) (item 4).
+        out = self.run_asm("""
+            extern float D_00300000[24];
+            INCLUDE_ASM("asm", func_00100000);
+            extern void func_00100000(float *v);
+            int test_main(void) {
+                int i;
+                for (i = 0; i < 4; i++) D_00300000[i] = (float)(i + 1);
+                func_00100000(D_00300000);
+                for (i = 4; i < 12; i++) test_print_float(D_00300000[i]);
+                test_print(((int *)D_00300000)[12]);
+                test_print(((int *)D_00300000)[13]);
+                for (i = 16; i < 20; i++) test_print_float(D_00300000[i]);
+                test_print_float(((float *)0x11004020)[0]);
+                test_print(((int *)0x11004020)[2]);
+                return 0;
+            }
+        """, {"func_00100000": (0x00100000, """
+                addiu $8, $0, 0x102    # vi1 = 2 (only its low eight bits address a quadword)
+                ctc2 $8, $vi1
+                lqc2 $vf1, 0($4)
+                vsqi.xyzw $vf1, $vi1   # to quadword 2; vi1 = 3
+                vsqi.xyzw $vf0, $vi1   # (0, 0, 0, 1) to 3; vi1 = 4
+                vlqd.xyzw $vf2, $vi1   # vi1 = 3: (0, 0, 0, 1)
+                vlqd.xy $vf3, $vi1     # vi1 = 2: x and y of (1, 2, 3, 4)
+                sqc2 $vf2, 16($4)
+                sqc2 $vf3, 32($4)
+                addiu $9, $0, 0x1234
+                ctc2 $9, $vi2
+                viswr.z $vi2, $vi1     # the word z of quadword 2
+                vilwr.z $vi3, $vi1
+                vlqi.xyzw $vf0, $vi1   # vf0 is not written; vi1 = 3
+                cfc2 $2, $vi3
+                sw $2, 48($4)
+                cfc2 $3, $vi1
+                sw $3, 52($4)
+                qmtc2 $8, $vf0         # nor here
+                jr $31
+                sqc2 $vf0, 64($4)
+            """)}, symbols={})
+        self.assertEqual(out, ["0.000", "0.000", "0.000", "1.000", "1.000", "2.000", "0.000", "0.000",
+                               "4660", "259", "0.000", "0.000", "0.000", "1.000", "1.000", "4660"])
+
+    def test_vu0_flags_and_clipping(self):
+        # MAC and STATUS after a macro subtraction, read with CFC2 as the collision code does; the
+        # clip flag of two VCLIPw; the invalid flag of 0 / 0 (item 9).
+        out = self.run_asm("""
+            extern float D_00300000[12];
+            extern int D_00300100[4];
+            INCLUDE_ASM("asm", func_00100000);
+            extern void func_00100000(float *v, int *w);
+            int test_main(void) {
+                static const float v[12] = {1, -2, 0, 5,  1, 1, 0, 4,  10, -10, 3, 2};
+                int i;
+                for (i = 0; i < 12; i++) D_00300000[i] = v[i];
+                func_00100000(D_00300000, D_00300100);
+                for (i = 0; i < 4; i++) test_print(D_00300100[i]);
+                return 0;
+            }
+        """, {"func_00100000": (0x00100000, """
+                lqc2 $vf1, 0($4)
+                lqc2 $vf2, 16($4)
+                lqc2 $vf4, 32($4)
+                vsub.xyz $vf3, $vf1, $vf2   # (0, -3, 0): x and z zero, y negative
+                cfc2 $2, $vi17
+                sw $2, 0($5)
+                cfc2 $3, $vi16
+                sw $3, 4($5)
+                vclipw.xyz $vf4, $vf2       # (10, -10, 3) against 4: +x, -y
+                vclipw.xyz $vf1, $vf2       # inside
+                cfc2 $6, $vi18
+                sw $6, 8($5)
+                raw 0x4A0003BC              # vdiv Q, $vf0x, $vf0x: 0 / 0
+                cfc2 $7, $vi16
+                jr $31
+                sw $7, 12($5)
+            """)}, symbols={})
+        self.assertEqual([int(x) for x in out], [0x4A, 0xC3, 9 << 6, 0xC3 | 0x10 | 0x400])
+
     def test_declared_nowhere_gets_its_parameters_from_its_registers(self):
         # Called only through its code address; the C calls it as (int, int).
         out = self.run_asm("""
