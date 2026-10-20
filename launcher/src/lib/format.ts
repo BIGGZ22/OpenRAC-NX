@@ -22,7 +22,13 @@ export function size(bytes: number): string {
     value /= 1000;
     unit++;
   }
-  const text = unit === 0 ? String(value) : value.toFixed(value < 10 ? 1 : 0).replace(".", ",");
+  // Rounded before the unit is chosen: 999 999 bytes is 1000 KB, which is a megabyte.
+  value = unit === 0 ? Math.round(value) : Math.round(value * 10) / 10;
+  if (value >= 1000 && unit < units.length - 1) {
+    value /= 1000;
+    unit++;
+  }
+  const text = unit === 0 ? grouped(value) : value.toFixed(value < 10 ? 1 : 0).replace(".", ",");
   return `${text} ${units[unit] ?? ""}`;
 }
 
