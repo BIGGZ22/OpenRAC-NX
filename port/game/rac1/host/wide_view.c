@@ -30,16 +30,25 @@
  *
  * The liquid grid's cull only ever decides what is drawn, wherever it is called from. The sphere
  * test also serves the game's own logic (an explosion shakes the camera only when it is in view),
- * so it is opened only while a draw callback list runs: everything outside the lists, the game's
- * logic among it, sees the 4:3 view. At 4:3 nothing changes.
+ * so it is opened only while a draw callback list runs, and in the updates whose test only decides
+ * what they draw: everything else, the game's logic among it, sees the 4:3 view. At 4:3 nothing
+ * changes.
+ *
+ * Those updates: the nanotech cluster's (class 806, the orb on a nanotech crate, NanotechBallUpdate,
+ * func_L00_002D9EA0). Each tick it tests its centre with the sphere test (radius in the sphere's w,
+ * draw distance 64) and, only when in view, registers its draw callback (func_L00_002DACC0, the
+ * sphere, halo and glass sheen) and spawns its eight glints. Tested against the 4:3 tangent, a crate
+ * between the 4:3 edge and the picture's lost its orb, although the crate itself is drawn and
+ * "drawn" (moby_view.h). Its state changes (homing in on the hero, the pickup) do not depend on
+ * the test.
  *
  * Not opened: the callbacks' tests that project a point to the screen and compare it with the
  * screen's pixels. The rest of the world is the port's own: it draws every terrain part, tie and
  * shrub and every live moby from the extracted level, whatever the game culled.
  */
 #include "rac1.h"
+#include "wide_view.h"
 
-#include <math.h>
 #include <stdint.h>
 #include <string.h>
 
@@ -100,8 +109,8 @@ static void open_matrix(opened* o, float wider) {
 /* The clip constants' horizontal tangent, times `wider`, and its secants. */
 static void open_clip(opened* o, float wider) {
     const gaddr view = OPENRAC_DATA(VIEW);
-    const float tan_x = get(view + CLIP_TAN_X) * wider;
-    const float sec_x = sqrtf(1.0f + tan_x * tan_x);
+    float tan_x, sec_x;
+    wide_clip(get(view + CLIP_TAN_X), wider, &tan_x, &sec_x);
     o->count = 0;
     put(o, view + CLIP_TAN_X, tan_x);
     put(o, view + CLIP_SEC_X, sec_x);
@@ -124,6 +133,11 @@ static int still_open(const opened* o) {
 static int g_lists;
 static float g_wider = 1.0f;
 static opened g_list_matrix, g_list_clip;
+
+/* How many updates whose sphere test only decides what they draw are running, and how much wider
+ * the picture is while they do. */
+static int g_effects;
+static float g_effect_wider = 1.0f;
 
 static void run_list(void (*run)(void)) {
     if (g_lists > 0) {
@@ -182,12 +196,23 @@ void func_L02_00250720(gaddr grid) {
 
 /* FastBSphereCheck: 1 in view, 0 in view but across the guard band's edge, -1 culled. */
 int func_L00_00200290(gaddr sphere, float far) {
-    if (g_lists == 0 || still_open(&g_list_clip)) {
+    const float wider = wide_sphere_wider(g_lists, g_wider, g_effects, g_effect_wider);
+    if (!(wider > 1.0f) || (g_lists > 0 && still_open(&g_list_clip))) {
         return func_L00_00200290__game(sphere, far);
     }
     opened o;
-    open_clip(&o, g_wider);
+    open_clip(&o, wider);
     const int result = func_L00_00200290__game(sphere, far);
     close_view(&o);
     return result;
+}
+
+/* NanotechBallUpdate: the nanotech cluster (the orb on a nanotech crate) draws only while its
+ * sphere test finds it in view; it is run against the picture's sides. */
+void func_L00_002D9EA0(gaddr moby) {
+    if (g_effects++ == 0) {
+        g_effect_wider = openrac_game_picture_wider();
+    }
+    func_L00_002D9EA0__game(moby);
+    g_effects--;
 }

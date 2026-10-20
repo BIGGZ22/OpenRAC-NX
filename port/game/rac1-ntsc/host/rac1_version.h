@@ -202,6 +202,8 @@
 #define func_L00_002A2148 func_L00_002A0EB8
 #define func_L00_002A8A20 game_FUN_L00_002a7780
 #define func_L00_002D8898 game_FUN_L00_002d73e8
+#define func_L00_002D9EA0 game_FUN_L00_002d89f0
+#define func_L00_002D9EA0__game game_FUN_L00_002d89f0__game
 #define func_L00_002E74B0 game_FUN_L00_002e6000
 #define func_L00_002E74B0__game game_FUN_L00_002e6000__game
 #define func_L00_002E9A18 game_FUN_L00_002e8568
