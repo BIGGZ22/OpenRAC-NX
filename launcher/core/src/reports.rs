@@ -641,10 +641,15 @@ pub fn write_zip(out: &Path, files: &[(String, Vec<u8>)]) -> Result<(), String> 
     u32le(&mut zip, central_offset);
     u16le(&mut zip, 0);
     let tmp = out.with_extension("zip.tmp");
-    std::fs::File::create(&tmp)
-        .and_then(|mut f| f.write_all(&zip))
-        .map_err(|e| format!("cannot write {}: {e}", out.display()))?;
-    std::fs::rename(&tmp, out).map_err(|e| format!("cannot write {}: {e}", out.display()))
+    if let Err(e) = std::fs::File::create(&tmp).and_then(|mut f| f.write_all(&zip)) {
+        let _ = std::fs::remove_file(&tmp);
+        return Err(format!("cannot write {}: {e}", out.display()));
+    }
+    if let Err(e) = std::fs::rename(&tmp, out) {
+        let _ = std::fs::remove_file(&tmp);
+        return Err(format!("cannot write {}: {e}", out.display()));
+    }
+    Ok(())
 }
 
 #[cfg(test)]

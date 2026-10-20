@@ -118,8 +118,15 @@ pub fn save(path: &Path, config: &Config) -> Result<(), String> {
     }
     let text = serde_json::to_string_pretty(config).map_err(|e| e.to_string())?;
     let tmp = path.with_extension("json.tmp");
-    std::fs::write(&tmp, text).map_err(|e| format!("cannot write {}: {e}", tmp.display()))?;
-    std::fs::rename(&tmp, path).map_err(|e| format!("cannot write {}: {e}", path.display()))
+    if let Err(e) = std::fs::write(&tmp, text) {
+        let _ = std::fs::remove_file(&tmp);
+        return Err(format!("cannot write {}: {e}", tmp.display()));
+    }
+    if let Err(e) = std::fs::rename(&tmp, path) {
+        let _ = std::fs::remove_file(&tmp);
+        return Err(format!("cannot write {}: {e}", path.display()));
+    }
+    Ok(())
 }
 
 #[cfg(test)]
