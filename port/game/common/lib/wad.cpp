@@ -24,9 +24,12 @@ extern "C" uint32_t openrac_lib_wad_decompress(const uint8_t* src, uint8_t* dst,
     try {
         const ByteView stream(src, disc::wad_compressed_size(header));
         const std::vector<u8> out = disc::wad_decompress(stream);
-        const std::size_t size = out.size() < capacity ? out.size() : capacity;
-        std::memcpy(dst, out.data(), size);
-        return static_cast<uint32_t>(size);
+        if (out.size() > capacity) {
+            openrac::log::warn("a WAD output needs {} bytes but its buffer holds {}", out.size(), capacity);
+            return 0;
+        }
+        std::memcpy(dst, out.data(), out.size());
+        return static_cast<uint32_t>(out.size());
     } catch (const AssetError& error) {
         openrac::log::warn("a WAD stream the game decompresses is malformed: {}", error.what());
         return 0;

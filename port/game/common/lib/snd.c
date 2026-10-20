@@ -106,7 +106,9 @@ int openrac_lib_snd_InitVAGStreamingEx(int a, int b, int c, int d) {
     (void)b;
     (void)c;
     (void)d;
-    return 0;
+    /* Native streams allocate their buffers when played. Report readiness
+     * so the game installs its stream-safe CD completion callback. */
+    return 1;
 } /* snd_InitVAGStreamingEx */
 
 void openrac_lib_snd_StopAllStreams(void) {

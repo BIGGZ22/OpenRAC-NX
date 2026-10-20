@@ -260,6 +260,13 @@ unsigned int openrac_lib_sceSifSetDma(gaddr transfers, int count) { /* sceSifSet
 #define RPC_CLIENTS 16
 static gaddr rpc_client[RPC_CLIENTS];
 static unsigned int rpc_server[RPC_CLIENTS];
+static unsigned int sif_bind_calls;
+static unsigned int sif_rpc_calls;
+
+static int trace_sif(void) {
+    const char* value = getenv("OPENRAC_TRACE_SIF");
+    return value != NULL && value[0] != '\0';
+}
 
 static unsigned int server_of(gaddr client) {
     int i;
@@ -280,6 +287,10 @@ void openrac_lib_sceSifInitRpc(int mode) {
 int openrac_lib_sceSifBindRpc(gaddr client, unsigned int number, int mode) { /* sceSifBindRpc */
     int i;
     uint32_t one = 1;
+    if (trace_sif() && sif_bind_calls++ < 32) {
+        fprintf(stderr, "SIF bind client=%08x server=%08x mode=%d\n", client, number, mode);
+        fflush(stderr);
+    }
     (void)mode;
     for (i = 0; i < RPC_CLIENTS; i++) {
         if (rpc_client[i] == 0 || rpc_client[i] == client) {
@@ -303,8 +314,29 @@ int openrac_lib_sceSifCallRpc(
     gaddr end,
     gaddr end_param
 ) { /* sceSifCallRpc */
+    const unsigned int server = server_of(client);
     (void)mode;
     (void)ssize;
+    if (trace_sif() && sif_rpc_calls++ < 32) {
+        uint32_t client_word_14, client_word_18, client_word_1c, client_server;
+        char caller[160];
+        memcpy(&client_word_14, G(client + 0x14u), 4);
+        memcpy(&client_word_18, G(client + 0x18u), 4);
+        memcpy(&client_word_1c, G(client + 0x1cu), 4);
+        memcpy(&client_server, G(client + 0x24u), 4);
+        openrac_host_caller(1, caller, sizeof caller);
+        fprintf(stderr,
+                "SIF call caller=%s client=%08x server=%08x fields=%08x/%08x/%08x server_ptr=%08x fn=%d mode=%d send=%08x/%d recv=%08x/%d end=%08x param=%08x\n",
+                caller, client, server, client_word_14, client_word_18, client_word_1c,
+                client_server, number, mode, send, ssize, receive, rsize, end, end_param);
+        fflush(stderr);
+    }
+    /* An unbound client has no IOP server to receive this request. Reporting
+     * success without completing an async call leaves the game's wait loop
+     * spinning forever on its untouched receive buffer. */
+    if (server == 0) {
+        return -1;
+    }
     /* The stash: function 2 says where it is in the IOP's memory and how long;
      * function 1 copies from the address sent into the receive buffer. */
     if (server_of(client) == 0x11) {
@@ -656,4 +688,15 @@ int openrac_lib_Deci2Call(int function, gaddr args) { /* Deci2Call */
         return 0;
     }
     return -1;
+}
+
+
+/* Guest RAM and its aliases share native storage; no separate PS2 data cache. */
+void openrac_lib_SyncDCache(gaddr start, gaddr end) {
+    (void)start;
+    (void)end;
+}
+
+void openrac_lib_InvalidDCache(gaddr start, gaddr end) {
+    openrac_lib_SyncDCache(start, end);
 }

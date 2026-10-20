@@ -89,7 +89,7 @@ class Retail:
         """The code of program `home` itself (a level's own text, not the executable's under it)."""
         return [p for p in (self.exe if home < 0 else self.levels.get(home, [])) if p.code]
 
-    def called(self) -> set[tuple[int, int]]:
+    def called(self, *, include_jumps: bool = True) -> set[tuple[int, int]]:
         """(program, address) every jal and j of each program's own code goes to, and every code
         address it forms with a lui and an addiu or ori (a callback it hands on)."""
         out = set()
@@ -102,7 +102,7 @@ class Retail:
                 for k, w in enumerate(struct.unpack_from(f"<{n}I", p.data)):
                     op = w >> 26
                     t = None
-                    if op in (2, 3):
+                    if op == 3 or (op == 2 and include_jumps):
                         t = ((p.base + 4 * k) & 0xF0000000) | ((w & 0x3FFFFFF) << 2)
                     elif op == 0x0F:
                         hi[(w >> 16) & 31] = ((w & 0xFFFF) << 16, k)

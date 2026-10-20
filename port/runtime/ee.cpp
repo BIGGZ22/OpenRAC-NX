@@ -6,6 +6,7 @@
 
 #include "openrac/ee.h"
 
+#include <cstdlib>
 #include <mutex>
 #include <set>
 #include <string>
@@ -29,6 +30,10 @@ bool first(const char* function, uint32_t at) {
 }  // namespace
 
 extern "C" void openrac_ee_break(const char* function, uint32_t address) {
+    const char* strict = std::getenv("OPENRAC_STRICT");
+    if (strict != nullptr && strict[0] == '1') {
+        openrac::log::fatalf("{} reached the trap at {:08X}", function, address);
+    }
     if (first(function, address)) {
         warn("{} reached the trap at {:08X} (translated from its assembly); going on", function, address);
     }

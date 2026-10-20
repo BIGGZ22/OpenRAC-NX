@@ -2676,13 +2676,15 @@ bool frame(std::span<const std::uint8_t> ram, std::uint32_t chain, std::uint32_t
         log::info("frame {}: the 2D path's draws", k.frame);
     }
     // The 2D path: the frame's direct GIF data, drawn by the direct renderer.
-    (void)chain;
+    // RAC1 keeps two alternating list buffers and the sent list is one tick behind; Deadlocked
+    // submits the title's list through VIF1 DMA without that RAC1 buffer-index convention.
+    const std::uint32_t shown = g->game == "rac4-ntsc" ? chain : viewer::shown_chain(ram, a);
     std::vector<renderer::EffectVertex> strip_vertices;
     std::vector<renderer::EffectStrip> strips;
     std::size_t before_world = SIZE_MAX;
     std::size_t first_offscreen = SIZE_MAX;
     std::size_t world_marker = SIZE_MAX;
-    std::vector<std::uint8_t> packets = direct_packets(ram, viewer::shown_chain(ram, a), &strip_vertices, &strips,
+    std::vector<std::uint8_t> packets = direct_packets(ram, shown, &strip_vertices, &strips,
                                                        &g->effect_uploads, &before_world, &first_offscreen,
                                                        &world_marker);
     // The markers in a list index the quads of the tick that built it, and the list shown is the

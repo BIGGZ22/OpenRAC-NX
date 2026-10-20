@@ -228,10 +228,9 @@ class Translator:
         sig = self._signature(f)
         if re.search(r"\b" + re.escape(cname(f.symbol)) + r"\b", self.host_text):
             return  # the port's own C calls it by the signature it has
-        if not f.sig.prototyped and self._compatible(sig, f.sig):
-            # Declared `int f()`: callers keep calling it so; the definition with its integer
-            # parameters is compatible with that declaration.
-            return
+        # An old-style declaration has no argument information. Keep the
+        # assembly's inferred parameters so lower._match_args can forward
+        # incoming registers omitted from the decompilation's call expression.
         f.sig = sig
 
     def _compatible(self, sig: Signature, unprototyped: Signature) -> bool:
@@ -366,6 +365,10 @@ class Translator:
 
     def _signature(self, f: Function) -> Signature:
         sig = f.sig
+        # Verified register-sized results (for example TEX0 descriptors) must
+        # survive both the translated return and the call that consumes it.
+        if f.symbol in getattr(self.program, "returns_64", ()) and canon(sig.ret, self.program.typedefs) in INT_TYPES:
+            sig = Signature(ctype.Base("long long"), sig.params, sig.variadic, sig.prototyped)
         if sig.variadic:
             return sig
         if sig.prototyped or sig.params:
@@ -393,6 +396,7 @@ class Translator:
         written_g, written_f = set(), set()
         read_g, read_f = set(), set()
         stop = None
+        forwarded = None
         for a in sorted(x for x in self.reach if x >= self.entry_addr):
             if stop is not None and a > stop:
                 break
@@ -408,6 +412,22 @@ class Translator:
             written_f |= wf
             if ins.op in ("jal", "jalr", "jr") and stop is None:
                 stop = a + 4   # its delay slot runs first
+                if ins.op == "jal":
+                    sym = self._callee(ins.target, None)
+                    forwarded = self.program.functions.get(sym) if sym else None
+        # Passing an incoming register unchanged is a use, too. Account for
+        # delay-slot writes before testing which arguments the caller needs.
+        if forwarded is not None and forwarded.sig.prototyped:
+            ni = nf = 0
+            for param in forwarded.sig.params:
+                if canon(param, self.program.typedefs) == "float":
+                    if nf < len(FARG_REGS) and FARG_REGS[nf] not in written_f:
+                        read_f.add(FARG_REGS[nf])
+                    nf += 1
+                else:
+                    if ni < len(ARG_REGS) and ARG_REGS[ni] not in written_g:
+                        read_g.add(ARG_REGS[ni])
+                    ni += 1
         sets_v0 = sets_f0 = False
         for a in self.reach:
             _, wg, _, wf = rw(self.at(a))
@@ -623,6 +643,11 @@ class Translator:
             callee = f"GFN({fn_type}, {self._code_literal(target)})"
         else:
             callee = cname(sym)
+        if not f.sig.prototyped:
+            # The same generated unit may already contain this function's
+            # definition with fewer integer parameters. Keep the original
+            # unprototyped call contract even in that case (extra EE args).
+            callee = f"(({fn_type}){callee})"
         return self._invoke(f"{callee}({', '.join(args)})", ret)
 
     def _code_literal(self, target: int) -> str:
@@ -1320,12 +1345,30 @@ def run(program: Program, cfg: dict, source: Path, host_text: str = "") -> tuple
     # programs are given: everything the assembly files do not have, or all of it without them.
     source_of = retail_source(a, program, base)
     if source_of is not None:
+        if a.get("discover_entries"):
+            # JAL and addresses formed for callbacks identify entries missed
+            # by catalogue heuristics. Plain J targets include internal
+            # labels, so they must not become independent functions here.
+            for home, address in sorted(source_of.called(include_jumps=False)):
+                if home < 0 and address % 4 == 0 and (home, address) not in program.by_place:
+                    name = f"func_{address:08X}"
+                    program.functions.setdefault(name, Function(name,
+                        Signature(ctype.Base("int"), (), False, False), asm=True))
+            program.index_places()
         index.code = retail.CombinedCode(index.code, retail.RetailCode(source_of, retail.starts_of(program),
                                                                        source_of.low))
         index.called |= source_of.called()
         stage.retail = source_of.label
     elif not index.blocks:
         return stage, {}
+    # Apply after entry discovery: a verified prototype can name an entry
+    # missing from the catalogue. Register use alone cannot distinguish a
+    # packed 64-bit descriptor from an integer.
+    for sym, text in a.get("signatures", {}).items():
+        f = program.functions.get(sym)
+        if f is None or f.unit is not None or sym in program.host:
+            raise ValueError(f"assembly signature for {sym}: expected an assembly-only function")
+        f.sig = Signature.of(ctype.parse(text))
     # A stub whose place has C under another spelling (func_0020C828 for FUN_0020c828) is that C
     # already: calls to it go there (Program.canonical).
     stubs = [f for f in program.stubs() if f.symbol not in program.host and program.canonical(f.symbol) == f.symbol]
@@ -1338,12 +1381,18 @@ def run(program: Program, cfg: dict, source: Path, host_text: str = "") -> tuple
             found[f.symbol] = hit
     # The signatures first (a function declared nowhere gets the one its registers say), then
     # the places, so calls between translated functions find each other.
-    for sym, hit in found.items():
-        f = program.functions[sym]
-        try:
-            tr.prepare_signature(f, hit)
-        except (AsmUnsupported, Unsupported):
-            pass
+    while True:
+        changed = False
+        for sym, hit in found.items():
+            f = program.functions[sym]
+            before = f.sig
+            try:
+                tr.prepare_signature(f, hit)
+            except (AsmUnsupported, Unsupported):
+                pass
+            changed |= f.sig != before
+        if not changed:
+            break
     for sym in found:
         program.functions[sym].unit = "<asm>"
     program.index_places()

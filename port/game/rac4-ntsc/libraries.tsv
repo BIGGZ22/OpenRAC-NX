@@ -1,3 +1,5 @@
+# Additional hostgen roots: 34 memory-card state callbacks in the NTSC data table 0x003D8038..0x003D80BF; executable targets and entry code independently checked.
+# Module lifecycle roots: 14 unique callbacks in 24 descriptors at 0x003D7EB8 (16-byte records).
 # The libraries Ratchet: Deadlocked (NTSC-U) calls, by entry point, and what the port does with
 # each: the same columns and port values as port/game/rac1-pal/libraries.tsv.
 # Seeded from the decompilation's config/libc.tsv: every function there whose name is one of the
@@ -8,3 +10,150 @@
 func_0011A2DC	libc	memcmp	host	config/libc.tsv
 func_0011A8A0	libc	strcmp	host	config/libc.tsv
 func_0011AE00	libc	strncmp	host	config/libc.tsv
+func_00131968	vu	sceGsResetPath	host	retail resets VIF/GIF paths and sends setup packets; no asynchronous GPU paths in the native port
+func_00131A08	vu	sceGsSyncPath	host	retail polls DMA/VIF path status; host submissions are synchronous
+func_0012D420	kernel	DIntr	host	retail reads COP0 Status.EIE and disables interrupts; native guest callbacks run at defined points
+func_0012D470	kernel	EIntr	host	retail reads COP0 Status.EIE and enables interrupts
+func_00127600	kernel	DisableIntc	host	retail interrupt-safe wrapper around syscall 0x15
+func_00127668	kernel	EnableIntc	host	retail interrupt-safe wrapper around syscall 0x14; verified call target 0x001268E0
+func_001276D0	kernel	DisableDmac	host	retail interrupt-safe wrapper around syscall 0x17
+func_00127738	kernel	EnableDmac	host	retail interrupt-safe wrapper around syscall 0x16; verified call target 0x00126900
+func_001385A0	graph	sceGsSetDefDispEnv	host	libgraph.a strict relocation-field comparison; display environment output
+func_00138918	graph	sceGsPutDispEnv	host	NTSC function entry writes the five display-environment registers to GS privileged memory
+func_00138C88	graph	sceGsPutDrawEnv	host	NTSC function entry submits the drawing environment on GIF DMA channel 2
+func_00138D70	graph	sceGsSyncV	host	libgraph.a strict relocation-field comparison; native frame timing
+func_00139130	graph	sceGsExecLoadImage	host	libgraph.a strict relocation-field comparison; upload pixels through native renderer
+func_00139940	graph	sceGsSyncVCallback	host	libgraph.a strict relocation-field comparison
+func_00139AE0	dma	sceDmaReset	host	libdma.a strict relocation-field comparison
+func_00139DA0	dma	rac4DmaSendNative	host	NTSC DMA hand-off; completes the VIF0/VIF1 title-frame pair synchronously	int (unsigned int, unsigned int)
+func_00129D90	sif	sceSifInitRpc	host	libkernl.a strict relocation-field comparison
+func_0012A538	sif	sceSifBindRpc	host	bypasses the PS2 SIF bind queue; binds immediately in the native IOP service
+func_0012A718	sif	sceSifCallRpc	host	synchronous native IOP service for the retail RPC client
+func_0012A918	sif	sceSifCheckStatRpc	host	libkernl.a strict relocation-field comparison
+func_0012C1B8	sif	sceSifInitIopHeap	host	libkernl.a strict relocation-field comparison
+func_0012C240	sif	sceSifAllocIopHeap	host	libkernl.a strict relocation-field comparison
+func_0012CBC0	sif	sceSifLoadModuleBuffer	host	libkernl.a/eeloadfile.o strict relocation-field comparison, 28 bytes; native service module boundary
+func_0012CE00	sif	sceSifRebootIop	host	libkernl.a strict relocation-field comparison
+func_0012CDB0	sif	sceSifSyncIop	host	checks IOP reboot-complete flag 0x40000; the native port has no IOP	int (void)
+func_001555C0	scf	sceScfGetLanguage	host	libscf.a strict relocation-field comparison
+func_00155A98	scf	sceScfGetLocalTimefromRTC	host	libscf.a strict relocation-field comparison
+func_001376B0	cdvd	sceCdInit	host	debugger found bind loop for CDVD RPC server 0x80000592; one mode argument; native disc service
+func_00137DD0	cdvd	sceCdRead	host	libcdvd.a strict relocation-field comparison
+func_00137FB0	cdvd	sceCdGetError	host	libcdvd.a strict relocation-field comparison
+func_00138048	cdvd	sceCdBreak	host	libcdvd.a strict relocation-field comparison
+func_00137998	cdvd	sceCdDiskReady	host	retail CDVD disk-ready RPC routine, one mode argument
+func_00137BB0	cdvd	sceCdDiskReady	host	retail NEW DiskReady Call diagnostic and RPC server 0x8000059C; synchronous native disc readiness
+func_00126BA0	kernel	CreateSema	host	retail syscall 0x40; ps2tek EE kernel table
+func_00126BB0	kernel	DeleteSema	host	retail syscall 0x41
+func_00126BC0	kernel	SignalSema	host	retail syscall 0x42
+func_00126BD0	kernel	SignalSema	host	retail interrupt variant -0x43
+func_00126BE0	kernel	WaitSema	host	retail syscall 0x44
+func_00126BF0	kernel	PollSema	host	retail syscall 0x45
+func_00126C00	kernel	PollSema	host	retail interrupt variant -0x46
+func_00126E20	kernel	FlushCache	host	retail syscall 0x64; coherent host memory
+func_001267A0	kernel	SetGsCrt	host	retail simple syscall wrapper 0x2; ps2tek/kernel.c
+func_001267C0	kernel	Exit	host	retail simple syscall wrapper 0x4; ps2tek/kernel.c
+func_00126880	kernel	AddIntcHandler	host	retail simple syscall wrapper 0x10; ps2tek/kernel.c
+func_00126890	kernel	AddIntcHandler	host	retail simple syscall wrapper 0x10; ps2tek/kernel.c
+func_001268A0	kernel	RemoveIntcHandler	host	retail simple syscall wrapper 0x11; ps2tek/kernel.c
+func_001268B0	kernel	AddDmacHandler2	host	retail simple syscall wrapper 0x12; ps2tek/kernel.c
+func_001268C0	kernel	AddDmacHandler2	host	retail simple syscall wrapper 0x12; ps2tek/kernel.c
+func_001268D0	kernel	RemoveDmacHandler	host	retail simple syscall wrapper 0x13; ps2tek/kernel.c
+func_001268E0	kernel	EnableIntc	host	retail simple syscall wrapper 0x14; ps2tek/kernel.c
+func_001268F0	kernel	DisableIntc	host	retail simple syscall wrapper 0x15; ps2tek/kernel.c
+func_00126900	kernel	EnableDmac	host	retail simple syscall wrapper 0x16; ps2tek/kernel.c
+func_00126910	kernel	DisableDmac	host	retail simple syscall wrapper 0x17; ps2tek/kernel.c
+func_001269A0	kernel	CreateThread	host	retail simple syscall wrapper 0x20; ps2tek/kernel.c
+func_001269B0	kernel	DeleteThread	host	retail simple syscall wrapper 0x21; ps2tek/kernel.c
+func_001269C0	kernel	StartThread	host	retail simple syscall wrapper 0x22; ps2tek/kernel.c
+func_001269F0	kernel	TerminateThread	host	retail simple syscall wrapper 0x25; ps2tek/kernel.c
+func_00126A00	kernel	TerminateThread	host	retail simple syscall wrapper 0x26; ps2tek/kernel.c
+func_00126A30	kernel	ChangeThreadPriority	host	retail simple syscall wrapper 0x29; ps2tek/kernel.c
+func_00126A40	kernel	ChangeThreadPriority	host	retail simple syscall wrapper 0x2a; ps2tek/kernel.c
+func_00126A50	kernel	RotateThreadReadyQueue	host	retail simple syscall wrapper 0x2b; ps2tek/kernel.c
+func_00126A60	kernel	RotateThreadReadyQueue	host	retail simple syscall wrapper 0x2c; ps2tek/kernel.c
+func_00126A90	kernel	GetThreadId	host	retail simple syscall wrapper 0x2f; ps2tek/kernel.c
+func_00126AA0	kernel	ReferThreadStatus	host	retail simple syscall wrapper 0x30; ps2tek/kernel.c
+func_00126AB0	kernel	ReferThreadStatus	host	retail simple syscall wrapper 0x31; ps2tek/kernel.c
+func_00126AC0	kernel	SleepThread	host	retail simple syscall wrapper 0x32; ps2tek/kernel.c
+func_00126AD0	kernel	WakeupThread	host	retail simple syscall wrapper 0x33; ps2tek/kernel.c
+func_00126AE0	kernel	WakeupThread	host	retail simple syscall wrapper 0x34; ps2tek/kernel.c
+func_00126B10	kernel	SuspendThread	host	retail simple syscall wrapper 0x37; ps2tek/kernel.c
+func_00126B20	kernel	SuspendThread	host	retail simple syscall wrapper 0x38; ps2tek/kernel.c
+func_00126C40	kernel	SetOsdConfigParam	host	retail simple syscall wrapper 0x4a; ps2tek/kernel.c
+func_00126C50	kernel	GetOsdConfigParam	host	retail simple syscall wrapper 0x4b; ps2tek/kernel.c
+func_00126EB0	kernel	GetOsdConfigParam2	host	retail simple syscall wrapper 0x6f; ps2tek/kernel.c
+func_00126F10	kernel	SetVSyncFlag	host	retail simple syscall wrapper 0x73; ps2tek/kernel.c
+func_00126F80	kernel	sceSifSetDChain	host	retail simple syscall wrapper 0x78; ps2tek/kernel.c
+func_00126F90	kernel	sceSifSetDChain	host	retail simple syscall wrapper 0x78; ps2tek/kernel.c
+func_00126FA0	kernel	sceSifSetReg	host	retail simple syscall wrapper 0x79; ps2tek/kernel.c
+func_00126FB0	kernel	sceSifGetReg	host	retail simple syscall wrapper 0x7a; ps2tek/kernel.c
+func_00126FD0	kernel	Deci2Call	host	retail simple syscall wrapper 0x7c; ps2tek/kernel.c
+func_00127000	kernel	GetMemorySize	host	retail simple syscall wrapper 0x7f; ps2tek/kernel.c
+func_00127010	kernel	_InitTLB	host	retail simple syscall wrapper 0x82; ps2tek/kernel.c
+func_00126D00	kernel	_SetTLBEntry	host	retail simple syscall wrapper 0x56; ps2tek/kernel.c
+func_00126D40	kernel	Copy	host	retail simple syscall wrapper 0x5a; ps2tek/kernel.c
+func_00126D50	kernel	GetEntryAddress	host	retail simple syscall wrapper 0x5b; ps2tek/kernel.c
+func_00126DF0	kernel	EnableCache	host	retail simple syscall wrapper 0x61; ps2tek/kernel.c
+func_00126E50	kernel	FlushCache	host	retail simple syscall wrapper 0x68; ps2tek/kernel.c
+func_00126E70	kernel	sceSifStopDma	host	retail simple syscall wrapper 0x6b; ps2tek/kernel.c
+func_00126EE0	kernel	GsPutIMR	host	retail simple syscall wrapper 0x71; ps2tek/kernel.c
+func_00126EF0	kernel	GsPutIMR	host	retail simple syscall wrapper 0x71; ps2tek/kernel.c
+func_00126F20	kernel	SetSyscall	host	retail simple syscall wrapper 0x74; ps2tek/kernel.c
+func_00126F40	kernel	sceSifDmaStat	host	retail simple syscall wrapper 0x76; ps2tek/kernel.c
+func_00126F50	kernel	sceSifDmaStat	host	retail simple syscall wrapper 0x76; ps2tek/kernel.c
+func_00126F60	kernel	sceSifSetDma	host	retail simple syscall wrapper 0x77; ps2tek/kernel.c
+func_00126F70	kernel	sceSifSetDma	host	retail simple syscall wrapper 0x77; ps2tek/kernel.c
+func_0012CF18	kernel	Copy	host	retail simple syscall wrapper 0x5a; ps2tek/kernel.c
+func_0012CF60	kernel	GetEntryAddress	host	retail simple syscall wrapper 0x5b; ps2tek/kernel.c
+func_0012CF70	kernel	SetSyscall	host	retail simple syscall wrapper 0x74; ps2tek/kernel.c
+func_0012D048	kernel	_SetTLBEntry	host	retail simple syscall wrapper 0x56; ps2tek/kernel.c
+func_0012D568	kernel	FindAddress	host	retail simple syscall wrapper 0x83; ps2tek/kernel.c
+func_0012D680	kernel	SetSyscall	host	retail simple syscall wrapper 0x74; ps2tek/kernel.c
+func_0012D6E8	kernel	SetSyscall	host	retail simple syscall wrapper 0x74; ps2tek/kernel.c
+func_0012D6F8	kernel	Copy	host	retail simple syscall wrapper 0x5a; ps2tek/kernel.c
+func_0012D740	kernel	GetEntryAddress	host	retail simple syscall wrapper 0x5b; ps2tek/kernel.c
+func_0012D868	kernel	Copy	host	retail simple syscall wrapper 0x5a; ps2tek/kernel.c
+func_0012D8A8	kernel	SetSyscall	host	retail simple syscall wrapper 0x74; ps2tek/kernel.c
+func_0012DA50	kernel	SetSyscall	host	retail simple syscall wrapper 0x74; ps2tek/kernel.c
+func_0012DA60	kernel	Copy	host	retail simple syscall wrapper 0x5a; ps2tek/kernel.c
+func_0012DAA8	kernel	GetEntryAddress	host	retail simple syscall wrapper 0x5b; ps2tek/kernel.c
+func_004E7450	dma	rac4Vif0SendChain	host	VIF0 DMA chain submission; native DMA handoff preserves chain cache	int (int)
+func_001381B8	cdvd	sceCdMmode	host	one media argument, S-command 0x22; replace media selection instead of shared command initializer
+func_00139EC8	mc	sceMcInit	host	no-argument card initialization; sceMc_sema_regs diagnostic and RPC 0x80000400
+func_0013A8C0	mc	sceMcGetInfo	host	retail RPC command 1; port/slot and three optional type/free/format outputs; native card query
+func_0013A7A0	mc	sceMcSync	host	retail pending-command/semaphore query with command and result outputs; native card completion
+func_00453928	vu	rac4FastCos	host	VU0 entry 0xC78 adds pi/2 before shared sine polynomial	float (float)
+func_00453940	vu	rac4FastSin	host	VU0 entry 0xC88; coefficients read from retail patch	float (float)
+func_00127438	kernel	SyncDCache	host	interrupt-safe cache range wrapper; aligns endpoints and calls cache-op routine 0x00127390
+func_00469C40	wad	rac4WadDecompress	host	retail WAD header, scratchpad DMA and decoded-size return; shared native asset decoder	int (int, int)
+func_00127568	kernel	InvalidDCache	host	interrupt-safe range invalidation; endpoints aligned to 64 and cache-op 0x16 in 0x001274C0
+func_00159130	989snd	snd_InitVAGStreamingEx	host	four streaming setup parameters; IOP command 0x2A and one-time streaming state, native streaming service
+func_001574E8	boot	rac4NativeEntry	host	native equivalent of retail startup initialization without PS2 thread syscalls	int (void)
+func_00158C60	989snd	rac4SndCommandNoWait	host	process supported sound commands natively; fail unsupported IOP requests synchronously	int (int, int, int, int)
+func_00158A30	989snd	rac4SndCommandSync	host	command 0 starts the native sound service; supported commands return their value, unsupported requests return zero without an IOP wait	int (int, int, int)
+func_00157F98	989snd	snd_FlushSoundCommands	host	flushes queued sound callbacks; native flush also delivers deferred disc completion
+func_001593C8	989snd	snd_StreamSafeCdRead	host	sector/count/destination read wrapper; PS2 transfer mode handled by native disc service
+func_00159488	989snd	snd_StreamSafeCdSync	host	stream-safe read completion query; native reads complete synchronously
+func_00159570	989snd	snd_StreamSafeCdGetError	host	streaming flag selects cached error or sceCdGetError
+func_001595B8	989snd	snd_StreamSafeCdCallback	host	installs stream-safe read callback or forwards to sceCdCallback
+func_00126B80	kernel	rac4EndOfHeap	host	retain explicit NTSC startup heap limit, 0x01F38000 + 0xC6500	void *(void)
+func_00127298	libc	rac4Sbrk	host	libkernl.a/glue.o binary identification; preserves retail break and errno	void *(int)
+func_00127168	fileio	sceWrite	host	libkernl.a/glue.o relocation-field sequence comparison, 124 bytes; console output to native log
+func_0013B1D0	pad	rac4PadInit	host	old libpad startup; native controller ports	int (int)
+func_0013B460	pad	rac4PadEnd	host	close native controller ports	int (void)
+func_0013B628	pad	rac4PadPortOpen	host	libpad.a strict relocation-field identification; host port/slot binding	int (int, int, int)
+func_0013B810	pad	rac4PadPortClose	host	libpad.a strict relocation-field identification	int (int, int)
+func_0013BA20	pad	rac4PadRead	host	retail copies a padman snapshot packet; status/id prefix and shared native pad payload	int (int, int, int)
+func_0013BA98	pad	rac4PadGetState	host	retail state field at snapshot +112; native stable/disconnected state	int (int, int)
+func_0013BBD0	pad	rac4PadGetReqState	host	retail request-state field at snapshot +113; synchronous native configuration	int (int, int)
+func_0013BC30	pad	rac4PadInfoAct	host	retail actuator capability query; no native motors advertised	int (int, int, int, int)
+func_0013BD50	pad	rac4PadInfoMode	host	retail current-id, extended-id, mode-index and mode-table queries	int (int, int, int, int)
+func_0013BE88	pad	rac4PadSetMainMode	host	libpad.a strict relocation-field identification; digital/analog mode	int (int, int, int, int)
+func_0013BF40	pad	rac4PadSetActDirect	host	retail actuator command; native motors unavailable	int (int, int, int)
+func_0013C008	pad	rac4PadSetActAlign	host	libpad.a strict relocation-field identification; native motors unavailable	int (int, int, int)
+func_0013C0E0	pad	rac4PadSetButtonInfo	host	libpad.a strict relocation-field identification; pressure mode	int (int, int, int)
+func_0013C190	pad	rac4PadInfoPressMode	host	retail pressure capability query; native analog pad supports pressures	int (int, int)
+func_0013C210	pad	rac4PadEnterPressMode	host	libpad.a strict relocation-field identification; enable pressure bytes	int (int, int)
+func_0013C280	pad	rac4PadGetModVersion	host	libpad.a strict relocation-field identification; native API version	int (void)
+func_004EEEB0	mpeg	rac4PlayMovie	host	retail sector/byte-count entry, EE allocator, audio channel and display mode; native movie player and development skip option	int (int, int, int, int, int)

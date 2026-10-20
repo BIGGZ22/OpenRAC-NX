@@ -81,6 +81,13 @@ def program(words: dict[int, list[int]]) -> retail.Retail:
 
 
 class Pairs(unittest.TestCase):
+    def test_entry_discovery_excludes_plain_jump_labels(self):
+        r = program({0x100000: [0x0C040040, 0, 0x08040080, 0],
+                     0x100100: [0x03E00008, 0], 0x100200: [0x03E00008, 0]})
+        self.assertIn((-1, 0x100100), r.called(include_jumps=False))
+        self.assertNotIn((-1, 0x100200), r.called(include_jumps=False))
+        self.assertIn((-1, 0x100200), r.called())
+
     def code(self, r: retail.Retail, starts: dict[int, str]) -> retail.RetailCode:
         return retail.RetailCode(r, {-1: starts}, r.low)
 
