@@ -86,6 +86,7 @@ class Program:
     symbols: dict[str, int] = field(default_factory=dict)  # other named globals -> address
     typedefs: dict[str, set] = field(default_factory=dict)  # name -> desugared type strings
     host: set = field(default_factory=set)  # functions the port writes by hand (port/game/<game>/)
+    from_assembly: set = field(default_factory=set)  # C left out for C from the instructions (hostgen.json "from_assembly")
     wrap: set = field(default_factory=set)  # translated as <name>__game, called by a host <name>
     aliases: dict = field(default_factory=dict)  # (unit, name) -> symbol, from labels Clang refused
     by_place: dict = field(default_factory=dict)  # (overlay, address) -> the symbol defined there

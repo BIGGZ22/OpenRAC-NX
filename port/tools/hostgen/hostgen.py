@@ -756,6 +756,16 @@ def main(argv: list[str] | None = None) -> int:
             problems += [f"{rel}: {p}" for p in probs]
             if part is not None:
                 problems += merge(program, part)
+    # C a game translates from the function's instructions instead (hostgen.json "from_assembly"):
+    # matching C whose declaration leaves out what its callers pass in registers it forwards (a
+    # wrapper that hands its second and third arguments on without naming them). Its definition
+    # is left out and the function is a stub, which the assembly stage then writes, reading those
+    # registers as parameters.
+    program.from_assembly = set(cfg.get("from_assembly", []))
+    for sym in sorted(program.from_assembly):
+        f = program.functions.get(sym)
+        if f is not None and f.unit is not None and not f.static:
+            program.functions[sym] = Function(sym, f.sig, None, asm=True, declared=f.declared)
     for table in cfg.get("catalogues", []):
         read_catalogue(source / table, program)
     # A verified indirect entry can be absent even from the catalogue.

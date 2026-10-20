@@ -401,6 +401,8 @@ class Unit:
             return False
         if sym in self.program.host and decl.get("storageClass") != "static":
             return False
+        if sym in self.program.from_assembly and decl.get("storageClass") != "static":
+            return False
         if decl.get("storageClass") != "static":
             first = self.program.functions.get(sym)
             if first is not None and first.unit is not None and first.unit != self.unit:
