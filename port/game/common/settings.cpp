@@ -12,6 +12,7 @@
 #include <system_error>
 
 #include "common/log.h"
+#include "fixes.h"
 
 namespace openrac::settings {
 
@@ -135,6 +136,17 @@ std::string frame_rate_value(const Settings& s) {
     return "display";
 }
 
+// The game fixes switched off, for the summary: ", as the console: fix_a, fix_b", or nothing.
+std::string fixes_off() {
+    std::string off;
+    for (int i = 0; i < fixes::count(); ++i) {
+        if (!fixes::on(i)) {
+            off += (off.empty() ? ", as the console: " : ", ") + std::string(fixes::fix(i).key);
+        }
+    }
+    return off;
+}
+
 float gain_now() {
     return g_muted ? 0.0f : static_cast<float>(g_settings.volume) / 100.0f;
 }
@@ -148,6 +160,7 @@ Settings& get() {
 void load(const std::filesystem::path& file) {
     g_file = file;
     g_settings = Settings{};
+    fixes::reset();
     Settings& s = g_settings;
     std::ifstream in(file);
     // A file from before `vsync` was a key of its own: a frame waited for the display only at the
@@ -222,6 +235,13 @@ void load(const std::filesystem::path& file) {
             known = parse_int(value, 0, 100, s.volume);
         } else if (key == "verbose_log") {
             known = parse_bool(value, s.verbose_log);
+        } else if (const int fix = fixes::find(key.c_str()); fix >= 0) {
+            // A game fix (fixes.h): on is the port's, off the console's behaviour.
+            bool on = true;
+            known = parse_bool(value, on);
+            if (known) {
+                fixes::set(fix, on);
+            }
         }
         if (!known) {
             log::warn("{}: {} = {} is not a value the port knows; the default is used", file.string(), key, value);
@@ -243,12 +263,12 @@ std::string summary() {
                                    ? std::format("{}x{}", s.window_width, s.window_height)
                                    : std::string("default size");
     return std::format("{} ({}, display {}), picture {}, {}% scale, {} sample(s), anisotropy {}, frames {}, vsync {}, "
-                       "volume {}{}{}",
+                       "volume {}{}{}{}",
                        kDisplayMode[static_cast<int>(s.display_mode)], window, s.monitor,
                        kAspect[static_cast<int>(s.aspect)], s.render_scale, s.msaa, s.anisotropy, frame_rate_value(s),
                        kVSync[static_cast<int>(s.vsync)], s.volume,
                        s.strafe == Strafe::Off ? std::string() : std::format(", strafe {}", kStrafe[static_cast<int>(s.strafe)]),
-                       s.verbose_log ? ", detailed log" : "");
+                       s.verbose_log ? ", detailed log" : "", fixes_off());
 }
 
 void save() {
@@ -295,6 +315,12 @@ void save() {
         << "volume = " << s.volume << "\n";
     if (s.verbose_log) {
         out << "verbose_log = 1\n";
+    }
+    if (fixes::count() > 0) {
+        out << "# Game fixes: 1 the port's, 0 the console's behaviour (Options, Game fixes)\n";
+        for (int i = 0; i < fixes::count(); ++i) {
+            out << fixes::fix(i).key << " = " << (fixes::on(i) ? 1 : 0) << "\n";
+        }
     }
     out.close();
     std::error_code moved;

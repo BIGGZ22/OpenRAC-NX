@@ -87,6 +87,18 @@ target_include_directories(pause_options_test PRIVATE .)
 openrac_warnings(pause_options_test)
 add_test(NAME pause_options COMMAND pause_options_test)
 
+# The game fixes (game/common/fixes.h): rac1's list of differences, checked as the configure reads it
+# (cmake/Differences.cmake), and its fixes through the settings file. Needs no game.
+include(Differences)
+openrac_write_fixes(rac1 pal "${CMAKE_BINARY_DIR}/generated/openrac_fixes_test_rac1_pal.cpp")
+add_executable(game_fixes_test tests/game_fixes_test.cpp game/common/fixes.cpp game/common/settings.cpp
+                               "${CMAKE_BINARY_DIR}/generated/openrac_fixes_test_rac1_pal.cpp")
+target_include_directories(game_fixes_test PRIVATE . game/common game/common/include runtime/include)
+target_compile_definitions(game_fixes_test PRIVATE "OPENRAC_RAC1_HOST=\"${PROJECT_SOURCE_DIR}/game/rac1/host\"")
+target_link_libraries(game_fixes_test PRIVATE openrac_common)
+openrac_warnings(game_fixes_test)
+add_test(NAME game_fixes COMMAND game_fixes_test)
+
 # ---- runtime: game memory, the guest contract, the executable loader ----
 add_library(openrac_runtime STATIC
   runtime/crash.cpp

@@ -1,0 +1,90 @@
+{
+  "about": "What the port of Ratchet & Clank does differently from the PS2 game. Read by the port's build (port/cmake/Differences.cmake: the Game fixes settings) and the launcher (launcher/core/src/differences.rs: a game's Differences from the original). docs/port/SETTINGS.md section 8 says how to add an entry.",
+  "game": "rac1",
+  "differences": [
+    {
+      "id": "wide-moby-effects",
+      "kind": "fix",
+      "name": "Wide-screen effects",
+      "discs": ["pal", "ntsc"],
+      "original": "The game marks a moby drawn only when it is inside its 4:3 picture, and many mobys make their glows, sparkles and particles only while drawn.",
+      "port": "In a picture wider than 4:3 the port draws the world out to the picture's sides, so mobys there count as drawn too and keep their effects. Off: the console's 4:3 test, and crates, bolts and other mobys near the sides of a wide picture lose their effects.",
+      "setting": { "key": "fix_wide_moby_effects", "default": true },
+      "refs": ["commit 018d8387", "port/game/rac1/host/moby_view.h", "port/game/rac1/host/render_native.c"]
+    },
+    {
+      "id": "wide-nanotech-orbs",
+      "kind": "fix",
+      "name": "Wide-screen crate orbs",
+      "discs": ["pal", "ntsc"],
+      "original": "The glowing orb on a nanotech crate is a moby of its own, which draws itself only while its centre is inside the game's 4:3 view.",
+      "port": "The orb's view test sees the wider picture, so nanotech crates at the sides of a wide picture keep their orb. Off: the orbs go out between the 4:3 edge and the picture's.",
+      "setting": { "key": "fix_wide_nanotech_orbs", "default": true },
+      "refs": ["commit 96f08e81", "port/game/rac1/host/wide_view.c"]
+    },
+    {
+      "id": "wide-liquids",
+      "kind": "fix",
+      "name": "Wide-screen seas, lava",
+      "discs": ["pal", "ntsc"],
+      "original": "Seas, lava and the sand sea (and the other layers the level's draw callbacks send) are culled against the game's 4:3 view.",
+      "port": "Those callbacks cull against the wider picture, so their tiles reach its sides. Off: the console's 4:3 culling, and tiles near the sides of a wide picture are missing.",
+      "setting": { "key": "fix_wide_liquids", "default": true },
+      "refs": ["commit 203ec63e", "port/game/rac1/host/wide_view.c"]
+    },
+    {
+      "id": "full-moby-pool-scene",
+      "kind": "guard",
+      "name": "Cutscenes with a full moby pool",
+      "discs": ["pal", "ntsc"],
+      "original": "When a cutscene starts while the level's 255 moby slots are full (on Gaspar the falling rocks' lava sparks can fill them as the Pilot's Helmet's scene starts), the scene's actor cannot be made and the game reads through the missing moby. On a PS2 that read lands in readable memory and the game most likely carries on unnoticed.",
+      "port": "On a PC the same read crashes the game, so the port skips that actor: the scene plays without it, and the log says \"scene actor skipped\". A bigger pool, the proper fix, is being looked into.",
+      "refs": ["docs/port/KNOWN_ISSUES.md"]
+    },
+    {
+      "id": "pal-60-hz",
+      "kind": "port",
+      "name": "60 Hz on the PAL disc",
+      "discs": ["pal"],
+      "original": "The PAL game runs at 50 Hz, with a 60 Hz mode in its Video options for televisions that show it; the mode also sets the game's time base.",
+      "port": "The port keeps the PAL game in its own 60 Hz mode, as choosing 60 Hz in its menu would, and leaves the row out: a PC display has no 50 Hz television mode, and every disc runs on the same time base.",
+      "refs": ["commit 14e72695", "port/game/common/main.cpp", "port/game/common/options_menu.cpp"]
+    },
+    {
+      "id": "frames-between-ticks",
+      "kind": "port",
+      "name": "Frames between ticks",
+      "discs": ["pal", "ntsc"],
+      "original": "One picture a game tick.",
+      "port": "The game still ticks at its own rate, but the port also draws frames between ticks, with the camera, the mobys and their poses moved from one tick to the next, at the display's rate or the Frame rate setting's. Frame rate Original draws one a tick.",
+      "refs": ["docs/port/SETTINGS.md (2. The tick and the frames)", "port/game/common/settings.h"]
+    },
+    {
+      "id": "wide-picture",
+      "kind": "port",
+      "name": "Wider pictures",
+      "discs": ["pal", "ntsc"],
+      "original": "A 4:3 picture.",
+      "port": "The Picture setting makes it wider (16:10, 16:9, 21:9 and others): the vertical field of view stays the game's and more of the world shows at the sides. 4:3 by default.",
+      "refs": ["commit b946660f", "docs/port/SETTINGS.md (1. The settings)"]
+    },
+    {
+      "id": "background-play",
+      "kind": "port",
+      "name": "Plays in the background",
+      "discs": ["pal", "ntsc"],
+      "original": "A console game has the screen and the controller to itself.",
+      "port": "The game keeps running, and a controller keeps playing it, while another window has the focus; on Windows a full-screen game stays up instead of minimising. The keyboard counts only while the game's window has the focus, and Mute in background silences it.",
+      "refs": ["commit 36442855", "port/platform/window.cpp"]
+    },
+    {
+      "id": "start-skips-scenes",
+      "kind": "port",
+      "name": "Start skips cutscenes",
+      "discs": ["pal", "ntsc"],
+      "original": "Start alone skips a scene only on Veldin once it is beaten, or in a replay; elsewhere Start needs L1, L2, R1 and R2 held with it.",
+      "port": "With the Skip cutscenes setting on (the default), Start alone skips an in-game scene: the port holds the four shoulder buttons for it, so the game's own skip ends the scene.",
+      "refs": ["commit 0f17ce2e", "port/game/common/frontend.cpp"]
+    }
+  ]
+}

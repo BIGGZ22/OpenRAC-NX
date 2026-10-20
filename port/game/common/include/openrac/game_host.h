@@ -280,6 +280,18 @@ float openrac_game_picture_wider(void);
  * settings). */
 int openrac_game_strafe_mode(void);
 
+/* A game fix's flag, by its setting key (port/game/<game>/differences.json, kind "fix";
+ * game/common/fixes.h): nonzero while the port's fix is on, 0 for the console's behaviour. The
+ * pointer stays good for the program's life and follows the player's setting, so the code a fix
+ * changes asks once and reads it from then on:
+ *
+ *     static const unsigned char* fix;
+ *     if (!fix) fix = openrac_game_fix("fix_wide_liquids");
+ *     if (*fix) ...
+ *
+ * A key this disc's list does not have reads as always on (and is logged). */
+const unsigned char* openrac_game_fix(const char* key);
+
 /* A live particle the game's particle renderer would draw (rac1: PartProc): its 0x40-byte record
  * (+0x01 bits 0-1 the render kind: 0 camera-facing sprite, 1 flat quad, 2 line, 3 ribbon; +0x03
  * ALPHA_1's low byte; +0x04 RGBA; +0x08 rotation, 256 steps a turn; +0x09 near (low nibble, 1/4

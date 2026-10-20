@@ -16,6 +16,7 @@
 
 find_package(Python3 COMPONENTS Interpreter REQUIRED)
 include(MacApp)
+include(Differences)
 
 # hostgen uses every core itself: one game's translation at a time (Ninja).
 set_property(GLOBAL APPEND PROPERTY JOB_POOLS openrac_hostgen=1)
@@ -241,8 +242,16 @@ function(openrac_add_game config)
     add_executable(openrac-${id} "${OPENRAC_GAME_DIR}/common/main.cpp")
     set(targets openrac-${id})
   endif()
+  # The game fixes of this disc (cmake/Differences.cmake), which the game's host C reads through
+  # openrac_game_fix: in every program, with a window or without.
+  string(JSON game GET "${json}" game)
+  string(REGEX REPLACE "^${game}-" "" version "${id}")
+  set(fixes_cpp "${CMAKE_BINARY_DIR}/generated/openrac_fixes_${target_id}.cpp")
+  openrac_write_fixes("${game}" "${version}" "${fixes_cpp}")
   foreach(target IN LISTS targets)
     target_link_libraries(${target} PRIVATE openrac_${target_id}_game openrac_runtime)
+    target_sources(${target} PRIVATE "${OPENRAC_GAME_DIR}/common/fixes.cpp" "${fixes_cpp}")
+    target_include_directories(${target} PRIVATE "${OPENRAC_GAME_DIR}/common")
     if(MINGW)
       target_link_libraries(${target} PRIVATE winmm)
     endif()
@@ -267,8 +276,6 @@ function(openrac_add_game config)
       # The game's name as players see it, in the window's title and on macOS its bundle's name
       # (cmake/MacApp.cmake): the title in its catalogue entry (games/<game>/game.json) and the
       # version's video standard, "Ratchet & Clank (PAL)", "Ratchet & Clank (NTSC)".
-      string(JSON game GET "${json}" game)
-      string(REGEX REPLACE "^${game}-" "" version "${id}")
       cmake_path(SET catalogue NORMALIZE "${OPENRAC_REPO_DIR}/games/${game}/game.json")
       file(READ "${catalogue}" catalogue_json)
       string(JSON title GET "${catalogue_json}" title)
