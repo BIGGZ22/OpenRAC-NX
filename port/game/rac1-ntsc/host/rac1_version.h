@@ -65,6 +65,19 @@
 #define func_0020E3D0 game_FUN_0020d580
 #define func_0020ED48 game_FUN_0020def8
 #define RAC1_ADDR_0x00160024u 0x0015FF24u
+/* A scene's actors (scene_actors.c): PAL's UpdateWorldObjectAnimation func_00204FC0 is FUN_00204790
+ * here (the NTSC decomp's src/world/animation/update_world_object_animation.c), CreateMoby
+ * func_0020D348 is FUN_0020c4f8 and FlushCache keeps its name; the version map pairs each as `same`
+ * and the data below as `exact`. The US routine takes no parameter, and keeps the model record's
+ * word at +8 at +0x48 of the transfer state (PAL +0x46). */
+#define func_00204FC0 game_FUN_00204790
+#define func_0020D348 game_FUN_0020c4f8
+#define func_00118D80 game_FlushCache
+#define RAC1_TYPE_func_00204FC0_params void
+#define RAC1_TRANSFER_PAD08 0x48
+#define RAC1_ADDR_0x0018CC20u 0x0018CB20u
+#define RAC1_ADDR_0x00160588u 0x00160488u
+#define RAC1_ADDR_0x0013E130u 0x0013E030u
 
 /* ---- generated below ---- */
 

@@ -28,5 +28,11 @@
 #define RAC1_TYPE_func_001FE540_result gaddr
 /* The sprite's TEX0 (func_00200CA0). */
 #define RAC1_TYPE_func_00200CA0_tex0 long long
+/* UpdateWorldObjectAnimation's parameter (scene_actors.c): the chunk's slot, which it does not read. */
+#define RAC1_TYPE_func_00204FC0_params gaddr chunk __attribute__((unused))
+
+/* Where UpdateWorldObjectAnimation keeps the model record's word at +8 in the transfer state
+ * D_0018CC20 (scene_actors.c). */
+#define RAC1_TRANSFER_PAD08 0x46
 
 #endif /* OPENRAC_RAC1_VERSION_H */

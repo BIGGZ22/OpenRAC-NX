@@ -498,6 +498,10 @@ void openrac_game_crash(const char* reason) {
     std::_Exit(3);
 }
 
+void openrac_game_warn(const char* message) {
+    log::warn("{}", message);
+}
+
 void openrac_game_draw(unsigned layers) {
     g_draws |= layers;
     g_reports_draws = true;

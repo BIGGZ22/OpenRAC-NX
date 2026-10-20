@@ -218,6 +218,14 @@ target_compile_options(effect_quad_test PRIVATE -fno-strict-aliasing -ffp-contra
 openrac_warnings(effect_quad_test)
 add_test(NAME effect_quad COMMAND effect_quad_test)
 
+# The shared rac1 host C's scene actors, with PAL's table and a stand-in for its prototypes.
+add_executable(scene_actors_test tests/scene_actors_test.c)
+target_include_directories(scene_actors_test PRIVATE tests/rac1_host game/common/include runtime/include
+                                                     game/rac1-pal/host)
+target_compile_options(scene_actors_test PRIVATE -fno-strict-aliasing -fwrapv)
+openrac_warnings(scene_actors_test)
+add_test(NAME scene_actors COMMAND scene_actors_test)
+
 add_executable(resource_bank_test tests/resource_bank_test.c)
 target_compile_options(resource_bank_test PRIVATE -fno-strict-aliasing)
 openrac_warnings(resource_bank_test)

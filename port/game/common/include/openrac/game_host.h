@@ -119,6 +119,11 @@ _Noreturn
 #endif
 void openrac_game_crash(const char* reason);
 
+/* A warning from the game's host C, as one line of the port's log (and so of the session's file a
+ * player sends): something the port did instead of what the console would have (a crash the
+ * console shares, skipped). */
+void openrac_game_warn(const char* message);
+
 /* Called while Start is held with skip_cutscenes on, when a game installs it: skips what the game
  * lets the port skip besides its own cutscenes (rac1/pal: the flight between planets, boot.c). */
 extern void (*openrac_game_skip)(void);
