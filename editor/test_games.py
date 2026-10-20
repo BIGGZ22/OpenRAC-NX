@@ -7,10 +7,12 @@ lay them out (games.py says where); no disc data.
 import json
 from pathlib import Path
 import struct
+import tempfile
 import unittest
 
 import games
 from games import RAC1, RAC2, RAC3, RAC4
+from godot import problem_summary, write_project
 from level import unswizzle
 from moby_anim import bind_pose
 from mobys import moby_instances
@@ -182,6 +184,24 @@ class ReaderTests(unittest.TestCase):
             self.assertEqual(mine.parent, theirs.parent)
             for a, b in zip(mine.translation + mine.rotation, theirs.translation + theirs.rotation):
                 self.assertAlmostEqual(a, b, 5)
+
+
+class WriterTests(unittest.TestCase):
+    def test_problems_are_summed_up_per_class(self):
+        lines = ["tie class 9: not extracted (bad)", "tie instance 3: left out with its class 9",
+                 "tie instance 4: left out with its class 9", "moby class 2: animations left out (x)"]
+        self.assertEqual(problem_summary(lines), ["tie class 9: not extracted (bad)",
+                                                  "moby class 2: animations left out (x)",
+                                                  "tie class 9: 2 instance(s) left out with it"])
+
+    def test_a_later_game_s_project_says_so(self):
+        with tempfile.TemporaryDirectory() as temp:
+            write_project(Path(temp) / "one", [30], "NTSC-U", "rac2")
+            write_project(Path(temp) / "all", [1, 2], "NTSC-U", "rac4")
+            self.assertIn('config/name="Ratchet & Clank: Going Commando: Insomniac Museum (NTSC-U, early access)"',
+                          (Path(temp) / "one/project.godot").read_text())
+            self.assertIn('config/name="Ratchet: Deadlocked levels (NTSC-U, early access)"',
+                          (Path(temp) / "all/project.godot").read_text())
 
 
 if __name__ == "__main__":

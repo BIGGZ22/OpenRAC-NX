@@ -103,15 +103,15 @@ class WriterTests(unittest.TestCase):
             {"index": 1, "class_id": 99, "fields": {"spawn_id": 2, "group": -1, "pvar_index": -1, "colour": [0, 0, 0]},
              "rotation": (0.0, 0.0, 0.0), "scale": 1.0, "matrix": translated(0, 0, 0)}]
         empty_collision = SimpleNamespace(cells=0, faces=0, triangles=[], surfaces=dict, hero_groups=0)
-        with mock.patch.object(port, "sky", lambda block: synthetic_sky()), \
+        with mock.patch.object(port, "sky", lambda block, *_: synthetic_sky()), \
                 mock.patch.object(port, "PANORAMA", (16, 8)), \
-                mock.patch.object(port, "terrain", lambda block, lod, lights=None: [square("terrain_000", ("terrain", 0), 2.0)]), \
+                mock.patch.object(port, "terrain", lambda block, lod, lights=None, problems=None: [square("terrain_000", ("terrain", 0), 2.0)]), \
                 mock.patch.object(port, "tie_classes", lambda level: ties), \
-                mock.patch.object(port, "tie_instances", lambda gameplay, classes: tie_placements), \
+                mock.patch.object(port, "tie_instances", lambda gameplay, classes, *_: tie_placements), \
                 mock.patch.object(port, "shrub_classes", lambda level: shrubs), \
-                mock.patch.object(port, "shrub_instances", lambda gameplay, classes: shrub_placements), \
+                mock.patch.object(port, "shrub_instances", lambda gameplay, classes, *_: shrub_placements), \
                 mock.patch.object(port, "moby_classes", lambda level: mobys), \
-                mock.patch.object(port, "moby_instances", lambda gameplay: moby_placements), \
+                mock.patch.object(port, "moby_instances", lambda gameplay, *_: moby_placements), \
                 mock.patch.object(godot, "decode", lambda block: empty_collision):
             return PortLevelWriter(out, synthetic_level()).write(0)
 

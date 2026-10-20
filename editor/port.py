@@ -24,12 +24,14 @@ as the game does. Nothing here is ever committed (docs/policy/SOURCING.md).
 """
 
 import json
+import math
 import struct
 from pathlib import Path
 
 from formats import png, unpack
+import games
 from gltf import Gltf
-from godot import PANORAMA, STORED_W, LevelWriter
+from godot import PANORAMA, STORED_W, LevelWriter, problem_summary
 from level import Level
 from lighting import light_bank, light_shrub_instance, light_tie_instance
 from mesh import Mesh
@@ -80,6 +82,12 @@ def sky_glb(data: Sky, texture_uri) -> bytes:
     return gltf.glb()
 
 
+def finite(fields: dict) -> dict:
+    """A moby's fields as JSON can hold them: a float that is not finite (Going Commando stores
+    infinity for some rooted distances) becomes the string "inf", "-inf" or "nan"."""
+    return {k: (str(v) if isinstance(v, float) and not math.isfinite(v) else v) for k, v in fields.items()}
+
+
 def placement(p: dict) -> dict:
     """A tie or shrub placement: class and matrix first, then the stored
     fields; matrix_w only where the game stores something other than 0.01."""
@@ -109,17 +117,21 @@ class PortLevelWriter(LevelWriter):
         self.sky = None
 
     def write(self, lod: int) -> dict:
-        level = self.level
+        level, fmt = self.level, self.fmt
         self.dir.mkdir(parents=True)
+        problems = level.problems if fmt.lenient else None
         sky_offset, = unpack("<I", level.index, 0x10)
-        self.write_environment(sky(level.block(sky_offset)) if sky_offset else None)
-        lights = (light_bank(level.gameplay), self.normals) if self.normals is not None else None
+        self.write_environment(sky(level.block(sky_offset), fmt) if sky_offset else None)
+        # The game's lighting at level load needs the executable's normal table, which only
+        # Ratchet & Clank's is known for (disc.Version.normal_table): the later games' levels go
+        # out unlit, their vertex colours left to the renderer's defaults.
+        lights = (light_bank(level.gameplay), self.normals) if self.normals is not None and fmt.lighting else None
         # The terrain block (usually at the core's start, offset 0); the flight world has none.
         tfrags, = unpack("<I", level.index, 0x08)
         has_terrain = not getattr(level, "no_terrain", False)
-        self.write_terrain(terrain(level.block(tfrags), lod, lights) if has_terrain else [], lod)
+        self.write_terrain(terrain(level.block(tfrags), lod, lights, problems) if has_terrain else [], lod)
         ties = tie_classes(level)
-        tie_placements = tie_instances(level.gameplay, ties)
+        tie_placements = tie_instances(level.instances, ties, fmt, problems)
         if lights is not None:
             # Each instance's 64 colours as LightTies leaves them at level load, RGBA bytes
             # packed little-endian (0x80 = 1.0); a vertex takes the one of its light slot.
@@ -130,7 +142,7 @@ class PortLevelWriter(LevelWriter):
                 p["colours"] = [r | g << 8 | b << 16 | a << 24 for r, g, b, a in lit]
         self.write_objects("tie", ties, tie_placements)
         shrubs = shrub_classes(level)
-        shrub_placements = shrub_instances(level.gameplay, shrubs)
+        shrub_placements = shrub_instances(level.instances, shrubs, fmt, problems)
         if lights is not None:
             # Each instance's 24 colours as LightShrubs leaves them at level load, one per
             # class normal; a vertex takes the one of its normal (_LIGHT_SLOT).
@@ -141,7 +153,7 @@ class PortLevelWriter(LevelWriter):
                 p["colours"] = [r | g << 8 | b << 16 | a << 24 for r, g, b, a in lit]
         self.write_objects("shrub", shrubs, shrub_placements)
         # The level's own classes, and the ones the loader adds (the ships, spaceships.py).
-        self.write_mobys(moby_instances(level.gameplay),
+        self.write_mobys(moby_instances(level.gameplay, fmt),
                          {**getattr(level, "extra_moby_classes", {}), **moby_classes(level)})
         collision, = unpack("<I", level.index, 0x14)
         if collision:  # the title world has none
@@ -156,7 +168,7 @@ class PortLevelWriter(LevelWriter):
     def write_mobys(self, placements: list[dict], classes: dict[int, MobyClass | None]) -> None:
         """One GLB per class with a mesh, and the class table: mesh (or null
         for a class the viewer draws as a box), class scale and name."""
-        names = moby_class_names()
+        names = moby_class_names() if self.fmt.class_names else {}
         placed = {p["class_id"] for p in placements}
         models = {}
         for class_id in sorted(set(classes) | placed):
@@ -171,7 +183,7 @@ class PortLevelWriter(LevelWriter):
             self.classes["moby"][str(class_id)] = entry
         self.placements["mobys"] = [
             {"index": p["index"], "class": p["class_id"], "matrix": p["matrix"], "rotation": list(p["rotation"]),
-             "scale": p["scale"], "colour": p["fields"].get("colour"), "fields": p["fields"]}
+             "scale": p["scale"], "colour": p["fields"].get("colour"), "fields": finite(p["fields"])}
             for p in placements]
         animated = [m.skeleton for m in models.values() if m.skeleton is not None]
         self.stats["mobys"] = {"classes": len(set(classes) | placed), "instances": len(placements),
@@ -204,14 +216,19 @@ class PortLevelWriter(LevelWriter):
         bounds = ([min(p[i] for p in corners) for i in range(3)],
                   [max(p[i] for p in corners) for i in range(3)]) if corners else ([0, 0, 0], [0, 0, 0])
         self.stats["bounds"] = [list(bounds[0]), list(bounds[1])]
-        manifest = {"format": FORMAT, "game": "rac1", "version": self.level.version, "level": self.level.id,
+        if self.fmt.lenient:
+            self.stats["problems"] = problem_summary(self.level.problems)
+        manifest = {"format": FORMAT, "game": self.fmt.game, "version": self.level.version, "level": self.level.id,
                     "axes": "game units, Z up; matrices column-major",
                     "terrain": "terrain.glb" if (self.dir / "terrain.glb").exists() else None,
                     "collision": "collision.glb" if (self.dir / "collision.glb").exists() else None,
                     "sky": self.sky, "classes": self.classes, "placements": "placements.json",
                     "textures": sorted(f"textures/{name}.png" for name in self.textures),
                     "bounds": self.stats["bounds"], "stats": self.stats}
-        if self.normals is not None:
+        if self.fmt.lenient:
+            # Early access: what the editor and the overrides packs can use, and what not yet.
+            manifest["early_access"] = {"playable": False, "packable": False, "lit": False}
+        if self.normals is not None and self.fmt.lighting:
             # The 16 directional light sets the level loader copies from the gameplay file
             # (colour A with its back factor in w, direction A, colour B, direction B): what
             # the game lights its mobys with.

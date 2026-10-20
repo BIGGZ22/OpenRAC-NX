@@ -15,6 +15,11 @@ Each level is a scene, levels/level_NN/level_NN.tscn:
 
 Placements are node transforms in game units; fields the game stores
 per instance are node metadata (rc1_*), so a packer can write them back.
+
+Going Commando's, Up Your Arsenal's and Deadlocked's levels (wads.py) are written the same way,
+with the same rc1_* metadata names, plus rc1_game on the level node. Their scenes are for looking
+and making texture and model packs: the level packer reads Ratchet & Clank's only, which the
+level node says (rc1_packable, and its description in the Scene dock).
 """
 
 import colorsys
@@ -26,6 +31,7 @@ from pathlib import Path
 
 from collision import collision_mesh, decode
 from formats import png, unpack
+import games
 from gltf import Gltf
 from level import Level
 from mesh import Mesh
@@ -147,18 +153,31 @@ class LevelWriter:
         self.textures = {}
         self.scene = Scene()
         self.corners = []
+        self.fmt = games.of(level)
         self.stats = {"schema": 1, "level": level.id,
                       "overlay": {"entry_point": level.overlay["entry_point"],
                                   "sections": [{k: s[k] for k in ("address", "bytes", "type")}
                                                for s in level.overlay["sections"]]},
                       "mesh_instances": 0, "meshes": 0, "triangles": 0}
+        if self.fmt.game != "rac1":  # Ratchet & Clank's level.json stays as it was
+            self.stats["game"] = self.fmt.game
 
     def material(self, gltf: Gltf, key, depth: int) -> int:
         # The metal packets' maps are named metal_chrome / metal_glass: the port's renderer draws
         # those faces as the game's shine pass (sphere-mapped, blended over the moby).
         name = ("moby_untextured" if key == UNTEXTURED else "metal_chrome" if key == METAL_CHROME
                 else "metal_glass" if key == METAL_GLASS else f"{key[0]}_{key[1]:04}")
-        texture = self.textures[name] = GREY if key == UNTEXTURED else self.level.texture(*key)
+        if key == UNTEXTURED:
+            texture = GREY
+        elif not self.fmt.lenient or key in self.level.textures:
+            texture = self.level.texture(*key)
+        else:
+            # A later game's face whose texture the level does not hold (a chrome map Going
+            # Commando keeps elsewhere, for one): grey, as the game's untextured faces, and noted.
+            texture = GREY
+            if f"texture {name}: not in the level, drawn grey" not in self.level.problems:
+                self.level.problems.append(f"texture {name}: not in the level, drawn grey")
+        self.textures[name] = texture
         return gltf.material(name, f"{'../' * depth}textures/{name}.png", cutout=texture.cutout)
 
     def glb(self, path: str, meshes: list[Mesh], depth: int) -> str:
@@ -227,20 +246,32 @@ class LevelWriter:
         self.stats["triangles"] += mesh.triangles
 
     def write(self, lod: int) -> dict:
-        level = self.level
+        level, fmt = self.level, self.fmt
         self.dir.mkdir(parents=True)
         script = self.scene.resource("Script", "res://rc1/level.gd", "level")
-        self.scene.node(f"Level_{level.id:02}", kind="Node3D", script=script, metadata__rc1_level=level.id)
+        if fmt.packable:
+            self.scene.node(f"Level_{level.id:02}", kind="Node3D", script=script, metadata__rc1_level=level.id)
+        else:
+            # A later game's level: shown and exported, not packed back yet (pack.py).
+            self.scene.node(f"Level_{level.id:02}", kind="Node3D", script=script, metadata__rc1_level=level.id,
+                            metadata__rc1_game=fmt.game, metadata__rc1_packable=False,
+                            editor_description=f"{fmt.title}, level {level.id} (early access).\n"
+                            "Static scenery, mobys and textures to look at and to make texture and model "
+                            "packs from. Edits here are not packed back into the game yet: the level "
+                            "packer reads Ratchet & Clank's levels only.")
+        problems = level.problems if fmt.lenient else None
         sky_offset, = unpack("<I", level.index, 0x10)
-        self.write_environment(sky(level.block(sky_offset)) if sky_offset else None)
+        self.write_environment(sky(level.block(sky_offset), fmt) if sky_offset else None)
         self.scene.node("Game", ".", "Node3D", transform=transform(GAME_TO_GODOT))
-        self.write_terrain(terrain(level.block(unpack("<I", level.index, 0x08)[0]), lod), lod)
+        self.write_terrain(terrain(level.block(unpack("<I", level.index, 0x08)[0]), lod, problems=problems), lod)
         ties = tie_classes(level)
-        self.write_objects("tie", ties, tie_instances(level.gameplay, ties))
+        self.write_objects("tie", ties, tie_instances(level.instances, ties, fmt, problems))
         shrubs = shrub_classes(level)
-        self.write_objects("shrub", shrubs, shrub_instances(level.gameplay, shrubs))
-        self.write_mobys(moby_instances(level.gameplay), moby_classes(level))
-        self.write_collision(level.block(unpack("<I", level.index, 0x14)[0]))
+        self.write_objects("shrub", shrubs, shrub_instances(level.instances, shrubs, fmt, problems))
+        self.write_mobys(moby_instances(level.gameplay, fmt), moby_classes(level))
+        collision, = unpack("<I", level.index, 0x14)
+        if collision:  # Deadlocked's multiplayer menu has none
+            self.write_collision(level.block(collision))
         return self.finish()
 
     def write_collision(self, block: bytes) -> None:
@@ -305,8 +336,10 @@ class LevelWriter:
         rotation_order XYZ makes the Inspector show the game's own Euler
         angles (R = Rz * Ry * Rx); the transform itself is exact either way.
         """
-        names = moby_class_names()
-        logic = moby_logic(self.level.id)
+        # The class names and update functions are Ratchet & Clank's (moby_classes.tsv, games/rac1):
+        # another game's class numbers mean other classes.
+        names = moby_class_names() if self.fmt.class_names else {}
+        logic = moby_logic(self.level.id) if self.fmt.class_names else {}
         placed = {p["class_id"] for p in placements}
         scenes, models = {}, {}
         for class_id in sorted(set(classes) | placed):
@@ -367,10 +400,26 @@ class LevelWriter:
             (self.dir / "textures" / f"{name}.png").write_bytes(texture.png())
         self.stats["textures"] = len(self.textures)
         self.stats["bounds"] = [[min(p[i] for p in self.corners) for i in range(3)],
-                                [max(p[i] for p in self.corners) for i in range(3)]]
+                                [max(p[i] for p in self.corners) for i in range(3)]] if self.corners else [[0, 0, 0], [0, 0, 0]]
+        if self.fmt.lenient:
+            self.stats["problems"] = problem_summary(self.level.problems)
         (self.dir / f"{self.name}.tscn").write_text(self.scene.text())
         (self.dir / "level.json").write_text(json.dumps(self.stats, indent=2) + "\n")
         return self.stats
+
+
+def problem_summary(problems: list[str]) -> list[str]:
+    """What a later game's level left out, one line per class or fragment: the instances of a
+    class that was not extracted are counted on its line, not listed one by one."""
+    lines, counts = [], {}
+    for line in problems:
+        if " instance " in line and "left out with its class" in line:
+            key = (line.split(" instance ")[0], line.rsplit(" ", 1)[1])
+            counts[key] = counts.get(key, 0) + 1
+        else:
+            lines.append(line)
+    lines += [f"{family} class {class_id}: {count} instance(s) left out with it" for (family, class_id), count in sorted(counts.items())]
+    return lines
 
 
 def write_marker(path: Path, class_id: int, label: str, model: tuple[str, float, float] | None = None,
@@ -416,12 +465,18 @@ def write_marker(path: Path, class_id: int, label: str, model: tuple[str, float,
     path.write_text(scene.text())
 
 
-def write_project(project: Path, levels: list[int], region: str = "PAL") -> None:
+def write_project(project: Path, levels: list[int], region: str = "PAL", game: str = "rac1") -> None:
     """project.godot and the rc1 scripts; the main scene is the first level. A project of one
-    level is named after it, and the disc's region (disc.Version.region)."""
+    level is named after it, and the disc's region (disc.Version.region); GAME names the game
+    (games.FORMATS) for the others'."""
     project.mkdir(parents=True, exist_ok=True)
     main = f"res://levels/level_{levels[0]:02}/level_{levels[0]:02}.tscn"
-    name = (f"Ratchet & Clank: {LEVEL_NAMES[levels[0]]} ({region})" if len(levels) == 1
-            else f"Ratchet & Clank levels ({region})")
+    if game == "rac1":
+        name = (f"Ratchet & Clank: {LEVEL_NAMES[levels[0]]} ({region})" if len(levels) == 1
+                else f"Ratchet & Clank levels ({region})")
+    else:
+        fmt = games.FORMATS[game]
+        name = (f"{fmt.title}: {fmt.level_name(levels[0])} ({region}, early access)" if len(levels) == 1
+                else f"{fmt.title} levels ({region}, early access)")
     (project / "project.godot").write_text(PROJECT.format(main=main, name=name))
     shutil.copytree(SCRIPTS, project / "rc1")

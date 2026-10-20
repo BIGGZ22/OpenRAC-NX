@@ -1,6 +1,8 @@
 #!/usr/bin/env python3
 """Extract Ratchet & Clank levels from your own disc: PAL (SCES_509.16 v2.00) or NTSC-U
-(SCUS_971.99 v1.00), told apart by the executable on it (disc.VERSIONS).
+(SCUS_971.99 v1.00), told apart by the executable on it (disc.VERSIONS). Going Commando
+(SCUS_972.68), Up Your Arsenal (SCUS_973.53) and Deadlocked (SCUS_974.65), NTSC-U, are read
+too, in early access (wads.VERSIONS): survey, godot, port and raw work for them, pack does not yet.
 
   extract.py survey ISO                       disc layout and references, as JSON
   extract.py godot ISO OUT [--level N ...]    a Godot 4 project of editable levels
@@ -30,9 +32,11 @@ from formats import FormatError
 from godot import LevelWriter, write_project
 from spaceships import add_spaceships
 from level import load_flight, load_level, load_title
+from level import load_wad_level
 from lighting import normal_table
 from pack import pack
 from port import PortLevelWriter
+import wads
 
 ROOT = Path(__file__).resolve().parents[1]
 
@@ -113,7 +117,8 @@ def worker_pool(jobs: int) -> Executor:
 
 
 # What SubprocessPool may run: the level exports below.
-WORKER_FUNCTIONS = ("export_level", "export_port_level", "export_port_title", "export_port_flight")
+WORKER_FUNCTIONS = ("export_level", "export_port_level", "export_port_title", "export_port_flight",
+                    "export_wad_level", "export_port_wad_level")
 # A phone's memory, not its cores, limits how many levels are written at once.
 SUBPROCESS_JOBS = 4
 
@@ -164,18 +169,42 @@ def export_level(iso: Path, info: dict, out: Path, lod: int) -> dict:
         return LevelWriter(out, load_level(disc, info)).write(lod)
 
 
+def open_later(iso: Path) -> tuple[Disc, wads.WadDisc]:
+    disc = Disc(iso)
+    return disc, wads.WadDisc(disc, wads.identify(disc))
+
+
+def export_wad_level(iso: Path, number: int, out: Path, lod: int) -> dict:
+    """One Going Commando, Up Your Arsenal or Deadlocked level of a Godot project; runs in its
+    own process."""
+    disc, source = open_later(iso)
+    with disc:
+        return LevelWriter(out, load_wad_level(source, source.level(number))).write(lod)
+
+
+def export_port_wad_level(iso: Path, number: int, out: Path, lod: int) -> dict:
+    """One later game's level in the port's layout (for the overrides packs and the viewer)."""
+    disc, source = open_later(iso)
+    with disc:
+        return PortLevelWriter(out, load_wad_level(source, source.level(number))).write(lod)
+
+
 def godot(iso: Path, survey: dict, levels: list[int], lod: int, jobs: int, out: Path, split: bool = False,
-          region: str = "PAL") -> None:
+          region: str = "PAL", game: str = "rac1") -> None:
     """Levels are independent, so they are written in parallel. SPLIT: a project per level,
-    OUT/level_NN, each with only its own level to import and open."""
+    OUT/level_NN, each with only its own level to import and open. GAME: the disc's game; a later
+    game's levels are read by number (wads.WadDisc.level), Ratchet & Clank's by survey."""
     where = {i: out / f"level_{i:02}" if split else out for i in levels}
     if split:
         for i in levels:
-            write_project(where[i], [i], region)
+            write_project(where[i], [i], region, game)
     else:
-        write_project(out, levels, region)
+        write_project(out, levels, region, game)
     with worker_pool(min(jobs, len(levels))) as pool:
-        running = [pool.submit(export_level, iso, survey["levels"][i], where[i], lod) for i in levels]
+        if game == "rac1":
+            running = [pool.submit(export_level, iso, survey["levels"][i], where[i], lod) for i in levels]
+        else:
+            running = [pool.submit(export_wad_level, iso, i, where[i], lod) for i in levels]
         try:
             for done in as_completed(running):
                 stats = done.result()
@@ -211,13 +240,17 @@ def export_port_flight(iso: Path, survey: dict, out: Path, lod: int) -> dict:
         return PortLevelWriter(out, load_flight(disc, survey), normals(disc)).write(lod)
 
 
-def port(iso: Path, survey: dict, levels: list[int], lod: int, jobs: int, out: Path) -> None:
-    """OUT/level_NN/ per level (port.py), written in parallel like godot()."""
+def port(iso: Path, survey: dict, levels: list[int], lod: int, jobs: int, out: Path, game: str = "rac1") -> None:
+    """OUT/level_NN/ per level (port.py), written in parallel like godot(). A later game's levels
+    have no title world or flight to add."""
     out.mkdir(parents=True, exist_ok=True)
     with worker_pool(min(jobs, len(levels))) as pool:
-        running = [pool.submit(export_port_level, iso, survey["levels"][i], out, lod) for i in levels]
-        running.append(pool.submit(export_port_title, iso, survey, out, lod))
-        running.append(pool.submit(export_port_flight, iso, survey, out, lod))
+        if game == "rac1":
+            running = [pool.submit(export_port_level, iso, survey["levels"][i], out, lod) for i in levels]
+            running.append(pool.submit(export_port_title, iso, survey, out, lod))
+            running.append(pool.submit(export_port_flight, iso, survey, out, lod))
+        else:
+            running = [pool.submit(export_port_wad_level, iso, i, out, lod) for i in levels]
         try:
             for done in as_completed(running):
                 stats = done.result()
@@ -226,6 +259,51 @@ def port(iso: Path, survey: dict, levels: list[int], lod: int, jobs: int, out: P
         except BaseException:
             pool.shutdown(cancel_futures=True)
             raise
+
+
+def raw_later(source: wads.WadDisc, level_id: int, out: Path) -> None:
+    """raw() for a later game's level: its sections as stored and decoded."""
+    level = load_wad_level(source, source.level(level_id))
+    files = {"level_header.bin": level.header, "core_index.bin": level.index, "core_data.bin": level.core,
+             "gameplay.bin": level.gameplay}
+    if level.art is not None:
+        files["art_instances.bin"] = level.art
+    files.update({f"stored/{name}.bin": data for name, data in level.stored.items()})
+    manifest = {"schema": 1, "game": source.version.game, "level": level_id, "overlay": level.overlay, "files": []}
+    for name, data in files.items():
+        (out / name).parent.mkdir(parents=True, exist_ok=True)
+        (out / name).write_bytes(data)
+        manifest["files"].append({"path": name, "bytes": len(data), "sha256": hashlib.sha256(data).hexdigest()})
+    (out / "manifest.json").write_text(json.dumps(manifest, indent=2) + "\n")
+
+
+def later_main(args, parser, disc: Disc, version: wads.Version) -> None:
+    """The commands for Going Commando's, Up Your Arsenal's and Deadlocked's discs."""
+    source = wads.WadDisc(disc, version)
+    survey = source.survey()
+    numbers = [level["id"] for level in survey["levels"] if "ranges" in level]
+    if args.command == "survey":
+        json.dump(survey, sys.stdout, indent=2)
+        print()
+        return
+    if args.command == "pack":
+        raise FormatError(f"packing levels back is Ratchet & Clank's only for now; {version.game}'s levels "
+                          "can be extracted, opened in Godot and used for texture and model packs")
+    wanted = sorted(set(args.level or numbers))
+    unknown = [n for n in wanted if n not in numbers]
+    if unknown:
+        raise FormatError(f"{version.game} has no level {unknown[0]}; its levels are {', '.join(map(str, numbers))}")
+    if args.command == "godot":
+        dest = publish(args.out, lambda out: godot(args.iso, survey, wanted, args.terrain_lod, max(1, args.jobs), out,
+                                                   args.split, version.region, version.game), args.anywhere)
+        print(f"Godot project{'s, one per level' if args.split else ''}: {dest}")
+    elif args.command == "port":
+        dest = publish(args.out, lambda out: port(args.iso, survey, wanted, args.terrain_lod, max(1, args.jobs), out,
+                                                  version.game), args.anywhere, args.replace)
+        print(f"Levels in the port's layout (early access, not playable yet): {dest}")
+    else:
+        dest = publish(args.out, lambda out: raw_later(source, args.level[0], out))
+        print(f"Level {args.level[0]} sections: {dest}")
 
 
 def raw(disc: Disc, survey: dict, level_id: int, out: Path) -> None:
@@ -248,7 +326,7 @@ def main() -> None:
     export = commands.add_parser("godot")
     export.add_argument("iso", type=Path)
     export.add_argument("out", type=Path)
-    export.add_argument("--level", type=int, action="append", choices=range(LEVEL_COUNT),
+    export.add_argument("--level", type=int, action="append",
                         help="a level to export (repeatable; default: all)")
     export.add_argument("--jobs", type=int, default=os.cpu_count() or 1,
                         help="levels to export at once (default: one per CPU)")
@@ -261,7 +339,7 @@ def main() -> None:
     native = commands.add_parser("port")
     native.add_argument("iso", type=Path)
     native.add_argument("out", type=Path)
-    native.add_argument("--level", type=int, action="append", choices=range(LEVEL_COUNT),
+    native.add_argument("--level", type=int, action="append",
                         help="a level to export (repeatable; default: all)")
     native.add_argument("--jobs", type=int, default=os.cpu_count() or 1,
                         help="levels to export at once (default: one per CPU)")
@@ -281,10 +359,17 @@ def main() -> None:
     dump = commands.add_parser("raw")
     dump.add_argument("iso", type=Path)
     dump.add_argument("out", type=Path)
-    dump.add_argument("--level", type=int, required=True, choices=range(LEVEL_COUNT))
+    dump.add_argument("--level", type=int, required=True, action="append")
     args = parser.parse_args()
     try:
         with Disc(args.iso) as disc:
+            later = wads.identify(disc)
+            if later is not None:
+                later_main(args, parser, disc, later)
+                return
+            # Ratchet & Clank: its 19 levels, numbered 0 to 18.
+            if getattr(args, "level", None) and any(n not in range(LEVEL_COUNT) for n in args.level):
+                raise FormatError(f"Ratchet & Clank's levels are 0 to {LEVEL_COUNT - 1}")
             survey = disc.survey()
             if args.command == "survey":
                 json.dump(survey, sys.stdout, indent=2)
@@ -319,12 +404,16 @@ def main() -> None:
                 if not (args.project / "project.godot").is_file() and not list(args.project.glob("level_*/project.godot")):
                     raise FormatError(f"{args.project} is not the editor's Godot project or its folder of "
                                       "per-level projects (run `godot` first)")
+                for stats in [*args.project.glob("levels/*/level.json"), *args.project.glob("level_*/levels/*/level.json")]:
+                    game = json.loads(stats.read_text()).get("game", "rac1")
+                    if game != "rac1":
+                        raise FormatError(f"{args.project} holds {game}'s levels, which are not packed back yet")
                 levels, mobys = pack(disc, survey, args.project, dest)
                 print((dest / "changes.txt").read_text(), end="")
                 print(f"Packed {levels} level(s), {mobys} moby edit(s): {dest}")
             else:
-                dest = publish(args.out, lambda out: raw(disc, survey, args.level, out))
-                print(f"Level {args.level} sections: {dest}")
+                dest = publish(args.out, lambda out: raw(disc, survey, args.level[0], out))
+                print(f"Level {args.level[0]} sections: {dest}")
     except (OSError, FormatError, struct.error) as exc:
         parser.exit(1, f"extract: {exc}\n")
 
