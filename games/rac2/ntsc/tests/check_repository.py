@@ -118,6 +118,8 @@ def check_hygiene(errors: list) -> None:
         path = ROOT / f
         if not path.exists():        # deleted in the working tree, not yet committed
             continue
+        if f.startswith("scratch/") or any(part.startswith("_scratch") for part in Path(f).parts):
+            errors.append(f"{f}: temporary experiments stay local; retain named C attempts in nonmatching/")
         if f.endswith((".gz", ".cfrag", ".iso", ".elf", ".bin", ".o")):
             errors.append(f"{f}: no {Path(f).suffix} files in the repository (generated or game data)")
         if f.startswith(FORBIDDEN_DIRS):

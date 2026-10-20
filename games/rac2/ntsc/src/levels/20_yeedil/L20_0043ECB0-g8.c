@@ -4,7 +4,7 @@ typedef int TI128 __attribute__((mode(TI)));
 
 extern int D_L20_001B1FD8 __attribute__((sda));
 
-extern int D_L20_001B20B0 __attribute__((sda));
+extern float D_L20_001B20B0 __attribute__((sda));
 
 extern float D_L20_001B2110 __attribute__((sda));
 
@@ -88,4 +88,44 @@ extern void func_L20_00443B60(char *, char *, char *, float *);
 
 extern void func_L20_0044B100(char *, char *, char *, char *, int, float, int);
 
-/* func_L20_00444088 is defined in L20_0043ECB0.c (this unit has no $gp access for it). */
+/* func_L20_00444088 is defined in L20_00444088-g8.c (it needs its own flags). */
+
+extern float D_L20_001B1FD0 __attribute__((sda));
+
+extern float D_L20_001B1FD4;
+
+extern int D_L20_001B1FC0 __attribute__((sda));
+
+extern int D_L20_001B1FC4 __attribute__((nosda));
+
+extern int D_001B1FC4 __attribute__((nosda));
+
+extern int D_L20_001B1FC8 __attribute__((nosda));
+
+extern int D_L20_001B1FCC __attribute__((nosda));
+
+extern char D_L20_001A8F20[];
+
+extern float func_002A7878(float, float);
+
+extern int func_002A7820(int, int);
+
+extern void func_002BDBC0(char *, char *, int, int, int, float);
+
+void func_L20_0043F460(char *arg0) {
+    char *s0 = arg0;
+    float f20;
+    int r;
+    int v[2];
+
+    f20 = func_002A7878(D_L20_001B1FD0, D_L20_001B1FD4) * 210000.0f;
+    r = func_002A7820(0x14, 0x50);
+    if (*(short *)(s0 + 0xAA) == 0xB5A) {
+        v[0] = D_L20_001B1FC0;
+        v[1] = D_001B1FC4;
+    } else {
+        v[0] = D_L20_001B1FC8;
+        v[1] = D_L20_001B1FCC;
+    }
+    func_002BDBC0(s0 + 0x10, D_L20_001A8F20, D_L20_001B1FC0, D_L20_001B1FC4, r, f20);
+}

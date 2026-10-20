@@ -68,7 +68,7 @@ INCLUDE_ASM("asm/levels", func_L10_0042B500);
 
 INCLUDE_ASM("asm/levels", func_L10_0042BCA0);
 
-INCLUDE_ASM("asm/levels", func_L10_0042BE20);
+/* func_L10_0042BE20 is defined in L10_00424028-g8.c (this unit has no $gp access for it). */
 
 INCLUDE_ASM("asm/levels", func_L10_0042BEE0);
 

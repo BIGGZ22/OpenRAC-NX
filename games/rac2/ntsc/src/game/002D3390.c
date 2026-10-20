@@ -19,9 +19,9 @@ void func_0027C540(long);
 
 void func_0027C660(void);
 
-/* 
+/*
  * Function: func_002D2EE0
- * 
+ *
  * Disassembly summary:
  * - Saves return address on stack
  * - Calls func_0027C540(0) (with zero argument)
@@ -68,7 +68,46 @@ int func_002D33C0(void)
     return 0;
 }
 
-INCLUDE_ASM("asm/game", func_002D3400);
+typedef struct {
+    char reserved00[0x1C0];
+    int message;
+    int flags;
+} MenuGameState;
+
+typedef struct {
+    char reserved00[0x14];
+    char *source;
+    int value;
+    char reserved1c[0x118];
+    int fallback;
+} CallbackState;
+
+extern MenuGameState D_00138180;
+extern CallbackState D_001F2840;
+extern void func_0029C5D0(int);
+
+int func_002D3400(void)
+{
+    int flags = D_00138180.flags;
+    int result = 0;
+    if (flags & 0x10) {
+        int value = *(int *)(D_001F2840.source + 0xE0);
+        if (value != 0)
+            D_001F2840.value = value;
+        else if (D_001F2840.fallback == 0) {
+            value = -1;
+            goto return_value;
+        }
+        value = 0;
+return_value:
+        return value;
+    }
+    if (flags & 0x900)
+        result = 1;
+    else
+        func_0029C5D0(D_00138180.message);
+    return result;
+}
 
 extern void func_0029C5A0(void);
 
@@ -131,9 +170,8 @@ int func_002D4E10(void)
     return 0;
 }
 
-INCLUDE_ASM("asm/game", func_002D4E48);
+/* func_002D4E48 is in the -G8 sibling. */
 
-INCLUDE_ASM("asm/game", func_002D4FF0);
 
 extern int D_0025BA80;
 
@@ -144,7 +182,6 @@ int func_002D5038(void) {
 
 INCLUDE_ASM("asm/game", func_002D5048);
 
-INCLUDE_ASM("asm/game", func_002D50F0);
 
 extern char *D_001A8CFC[] __attribute__((sda));
 extern void *func_00341558(void *);
@@ -155,7 +192,7 @@ int func_002D5290(char *object) {
     return 0;
 }
 
-INCLUDE_ASM("asm/game", func_002D52D8);
+/* func_002D52D8 is in the -G8 sibling. */
 
 INCLUDE_ASM("asm/game", func_002D53F0);
 

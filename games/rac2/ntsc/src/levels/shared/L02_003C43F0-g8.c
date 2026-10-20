@@ -11,6 +11,18 @@ extern float D_L02_001B17E0 __attribute__((sda));
 
 extern float D_L02_001B17EC __attribute__((sda));
 
+extern char *D_L02_001B1190[1] __attribute__((sda));
+
+extern float func_00283CE0(int);
+
+extern int func_00283CF0(float);
+
+extern int func_L02_003F9B70(int);
+
+extern int func_00288D58(void);
+
+extern unsigned char D_001395B8[0x100];
+
 /* Runs the kind's placement helper with the kind's own angles. */
 void func_L02_00402440(char *a0) {
     if (*(unsigned char *)(a0 + 0x20) == 3)
@@ -29,22 +41,52 @@ INCLUDE_ASM("asm/levels", func_L02_003D28E0);
    this compiler drops them (172 bytes against 188). */
 INCLUDE_ASM("asm/levels", func_L02_004013C0);
 
-extern char *D_L02_001B1190[1] __attribute__((sda));
+/* The kind's table gives a count; the kind's own helper gives the kind's id. */
 
-extern float func_00283CE0(int);
+/* The byte table the count is read from, at its address in the boot's resident memory. */
 
-extern int func_00283CF0(float);
+/* Scales the kind's own angle at +0xC down by 0.3 once per count the kind's byte table
+   gives, keeps it inside the kind's own range, scales it by ten when the global flag is
+   set, and hands it to the angle setter. */
+int func_L02_003FCDF8(int a0) {
+    float f20;
+    int i = 0;
 
-extern char *func_L02_003F9B70(int);
+    f20 = func_00283CE0(*(int *)(D_L02_001B1190[a0] + 0xC));
+    while (i < D_001395B8[func_L02_003F9B70(a0)]) {
+        f20 *= 0.3f;
+        i++;
+    }
+    {
+        float f0 = (float)*(int *)(D_L02_001B1190[a0] + 0xC);
 
-extern float func_00288D58(void);
-
-/* Near miss (best attempt in work/wave9-20261013/w01/drafts/func_L02_003FCDF8.c): the
-   `$gp` base is reached with a one-element array declaration under -G8 (268 bytes against
-   272, one instruction short) — retail keeps a second copy of the base (`daddu $s4,$s0`)
-   and materialises the 0x1395B8 counter base once (`lui $s3,0x14`) across the loop, where
-   this compiler re-uses the base register and rematerialises inside the loop. */
-INCLUDE_ASM("asm/levels", func_L02_003FCDF8);
+        if (f0 < f20)
+            f20 = f0;
+        else if (f20 < 500.0f)
+            f20 = 500.0f;
+    }
+    if (func_00288D58() != 0)
+        f20 *= 10.0f;
+    return func_00283CF0(f20);
+}
 
 /* Near miss: same body with the other entry parameter (draft beside this one). */
-INCLUDE_ASM("asm/levels", func_L02_003FCF08);
+int func_L02_003FCF08(int a0) {
+    float f20;
+    int i = 0;
+
+    f20 = func_00283CE0(*(int *)(D_L02_001B1190[a0] + 0x10));
+    while (i < D_001395B8[func_L02_003F9B70(a0)]) {
+        f20 *= 0.33333f;
+        i++;
+    }
+    {
+        float f0 = (float)*(int *)(D_L02_001B1190[a0] + 0x10);
+
+        if (f0 < f20)
+            f20 = f0;
+        else if (f20 < 5.0f)
+            f20 = 5.0f;
+    }
+    return func_00283CF0(f20) << 5;
+}

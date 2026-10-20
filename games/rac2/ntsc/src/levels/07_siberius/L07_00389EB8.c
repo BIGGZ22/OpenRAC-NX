@@ -152,7 +152,7 @@ extern float func_002E5460(int);
 extern void func_003109C8(char *, int, int);
 
 /* Store the mode value and the inverse of the launch factor. */
-INCLUDE_ASM("asm/levels", func_L07_003EF1E0);
+/* func_L07_003EF1E0 is matched in L07_003EF1E0.c (built with -g). */
 
 INCLUDE_ASM("asm/levels", func_L07_003F3E80);
 

@@ -67,7 +67,7 @@ int *func_0011F6C0(int *p, int *end, int val) {
     return p;
 }
 
-INCLUDE_ASM("asm/core", func_0011F700);
+ASM_FUNC("asm/core", func_0011F700);
 
 INCLUDE_ASM("asm/core", func_0011F710);
 
@@ -105,4 +105,4 @@ void func_0011F718(void) {
     r1_D_00130408 = a;
 }
 
-INCLUDE_ASM("asm/core", func_0011F818);
+ASM_FUNC("asm/core", func_0011F818);

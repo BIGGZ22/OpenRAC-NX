@@ -59,7 +59,7 @@ INCLUDE_ASM("asm/levels", func_L05_00420360);
 
 INCLUDE_ASM("asm/levels", func_L05_00420788);
 
-INCLUDE_ASM("asm/levels", func_L05_004209D8);
+/* func_L05_004209D8 lives in the -g8 sibling: its reset flag is reached through $gp. */
 
 INCLUDE_ASM("asm/levels", func_L05_00420A88);
 

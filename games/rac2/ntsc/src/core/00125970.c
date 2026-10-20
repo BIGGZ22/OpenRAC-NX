@@ -39,7 +39,7 @@ int func_00125970(void) {
     return 0x1315670 < r1_func_00112380(&buf[n - 9]);
 }
 
-INCLUDE_ASM("asm/core", func_00125A10);
+ASM_FUNC("asm/core", func_00125A10);
 
 INCLUDE_ASM("asm/core", func_00125A20);
 

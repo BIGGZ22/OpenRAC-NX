@@ -18,7 +18,7 @@ void func_00338808(void)
 {
 }
 
-INCLUDE_ASM("asm/game", func_00338810);
+/* func_00338810 needs $gp-relative data: it lives in the -g8 sibling file. */
 
 void func_00338A58(void)
 {

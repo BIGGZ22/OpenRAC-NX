@@ -273,5 +273,60 @@ class Todo(unittest.TestCase):
             self.assertEqual(lo, hi + 1)
 
 
+class MobyDispatchMetadata(unittest.TestCase):
+    """Keep attributed class labels separate from the legacy dispatch-name fields."""
+
+    def test_schema_and_sourced_moby_labels(self):
+        import csv
+        import re
+
+        with (ROOT / "docs/moby-dispatch.tsv").open(encoding="utf-8", newline="") as stream:
+            reader = csv.DictReader(stream, delimiter="\t")
+            self.assertEqual(reader.fieldnames, [
+                "table", "level", "id", "role", "address", "aux", "proposed_name", "source",
+                "class_label", "class_label_source", "class_label_basis",
+            ])
+            labels = {}
+            for row in reader:
+                with self.subTest(table=row["table"], level=row["level"], id=row["id"]):
+                    self.assertNotIn(None, row, "unexpected extra columns")
+                    self.assertNotIn(None, row.values(), "missing columns")
+                    label, source = row["class_label"], row["class_label_source"]
+                    self.assertEqual(bool(label), bool(source))
+                    basis = row["class_label_basis"]
+                    self.assertEqual(bool(label), bool(basis))
+                    if label:
+                        self.assertEqual(row["table"], "moby")
+                        urls = source.split("; ")
+                        self.assertEqual(len(urls), len(set(urls)), "duplicate provenance")
+                        paths = {
+                            "chaoticgd/wrench": {
+                                "data/underlay/gc_moby_classes.asset", "data/underlay/level_design.asset",
+                                "data/overlay/src/game_gc/update/moby4018_therm_water.h",
+                            },
+                            "RatchetModding/Replanetizer": {"LibReplanetizer/ModelLists/MobyModelsRC2.txt"},
+                            "evilwb/APRac2": {"data/Items.py"},
+                        }
+                        repositories = set()
+                        for url in urls:
+                            match = re.fullmatch(
+                                r"https://github\.com/([^/]+/[^/]+)/blob/[0-9a-f]{40}/"
+                                r"([^#]+)#L([1-9][0-9]*)(?:-L([1-9][0-9]*))?", url,
+                            )
+                            self.assertIsNotNone(match, url)
+                            repository, path, start, end = match.groups()
+                            self.assertIn(path, paths.get(repository, set()))
+                            self.assertGreaterEqual(int(end or start), int(start))
+                            repositories.add(repository)
+                        self.assertIn(basis, {"ps2-source", "ps3-source-only"})
+                        if basis == "ps3-source-only":
+                            self.assertEqual(repositories, {"RatchetModding/Replanetizer"})
+                        else:
+                            self.assertTrue(repositories & {"chaoticgd/wrench", "evilwb/APRac2"},
+                                            "label marked PS2 without a PS2 source")
+                        previous = labels.setdefault(row["id"], (label, source, basis))
+                        self.assertEqual(previous, (label, source, basis), "conflicting class label")
+
+
 if __name__ == "__main__":
     unittest.main()

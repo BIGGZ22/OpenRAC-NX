@@ -3,6 +3,36 @@
 
 typedef int TI128 __attribute__((mode(TI)));
 
+extern char *D_L05_001B2614 __attribute__((sda));
+
+extern int D_L05_00221D10[];
+
+extern char *func_002ED688(char *object);
+
+extern void func_L05_0037AEC0(char *object, int flag);
+
+extern float func_002A7878(float a, float b);
+
+extern float func_002A7940(void);
+
+extern void func_002AF000(char *dst, float a, float b, float c);
+
+extern void func_00282CC0(char *dst, char *src, char *src2);
+
+extern int func_332AB8(int kind);
+
+extern void func_L00_002E6EF8(void *, void *);
+
+extern int ref_L05_00424780_00;
+
+extern void func_0029F338(char *);
+
+extern int func_00282978(char *);
+
+extern int ref_L05_00424C88_00;
+
+extern void ref_L05_00424C88_01(void *, void *);
+
 INCLUDE_ASM("asm/levels", func_L05_003D33E8);
 
 INCLUDE_ASM("asm/levels", func_L05_003FE430);
@@ -32,7 +62,31 @@ void func_L05_00416630(char *p)
 
 INCLUDE_ASM("asm/levels", func_L05_004170C8);
 
-INCLUDE_ASM("asm/levels", func_L05_00417448);
+/* Spawns the object's effect: marks the object, takes one record of the shared
+   128-byte table by the global index and gives it a random position. */
+void func_L05_00417448(char *object)
+{
+    char *sub = *(char **)(object + 0x68);
+    char *table;
+    float a, b, c;
+
+    *(unsigned char *)(object + 0x20) = 1;
+    *(unsigned short *)(object + 0x34) = *(unsigned short *)(object + 0x34) | 0x100;
+    *(int *)(func_002ED688(object) + 0x148) = 1;
+    func_L05_0037AEC0(object, 1);
+    table = D_L05_001B2614 + D_L05_00221D10[0] * 128;
+    *(int *)(sub + 0x1C8) = 0x78;
+    *(int *)(sub + 0x1C0) = -1;
+    *(int *)(sub + 0x1C4) = -1;
+    *(float *)(sub + 0x180) = 1.0f;
+    a = func_002A7878(0.0f, *(float *)table);
+    b = func_002A7940();
+    c = func_002A7940();
+    func_002AF000(object + 0x10, a, b, c);
+    func_00282CC0(object + 0x10, table + 0x30, object + 0x10);
+    *(int *)(sub + 0x1B8) = 0;
+    *(float *)(object + 0x2C) = 0.02f;
+}
 
 INCLUDE_ASM("asm/levels", func_L05_00417550);
 
@@ -40,7 +94,7 @@ INCLUDE_ASM("asm/levels", func_L05_00417D48);
 
 INCLUDE_ASM("asm/levels", func_L05_00418288);
 
-INCLUDE_ASM("asm/levels", func_L05_00418440);
+/* func_L05_00418440 is matched in L05_00418440.c (built with -mno-split-addresses). */
 
 INCLUDE_ASM("asm/levels", func_L05_00418508);
 
@@ -67,13 +121,9 @@ void func_L05_0041A218(void)
 
 INCLUDE_ASM("asm/levels", func_L05_0041A228);
 
-
-
 INCLUDE_ASM("asm/levels", func_L05_0041C118);
 
 INCLUDE_ASM("asm/levels", func_L05_0041C1F0);
-
-extern int func_332AB8(int kind);
 
 void func_L05_0041C410(char *object)
 {
@@ -151,10 +201,6 @@ INCLUDE_ASM("asm/levels", func_L05_00421860);
 
 INCLUDE_ASM("asm/levels", func_L05_00421908);
 
-extern void func_L00_002E6EF8(void *, void *);
-
-extern int ref_L05_00424780_00;
-
 void func_L05_00424780(char *object)
 {
     char *state = *(char **)(object + 0x68);
@@ -182,14 +228,6 @@ void func_L05_00424980(char *object, int value)
 
 INCLUDE_ASM("asm/levels", func_L05_00424990);
 
-extern void func_0029F338(char *);
-
-extern int func_00282978(char *);
-
-extern int ref_L05_00424C88_00;
-
-extern void ref_L05_00424C88_01(void *, void *);
-
 void func_L05_00424C88(char *object)
 {
     char *state = *(char **)(object + 0x68);
@@ -208,7 +246,7 @@ INCLUDE_ASM("asm/levels", func_L05_00425058);
 
 /* func_L05_00425FE0 is defined in L05_003D33E8-g8.c (this unit has no $gp access for it). */
 
-INCLUDE_ASM("asm/levels", func_L05_004260B8);
+/* func_L05_004260B8 is defined in L05_003D33E8-g8.c (it reaches D_L05_001B14FC through $gp). */
 
 void func_L05_00426270(char *object)
 {

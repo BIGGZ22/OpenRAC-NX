@@ -145,7 +145,31 @@ void func_0029F390(u8 *param_1)
     *(int *)(param_1 + 92) = *(int *)(*(int *)(*(volatile int *)(param_1 + 36) + (param_1[67] << 2) + 72) + (param_1[65] << 2) + 28);
 }
 
-INCLUDE_ASM("asm/game", func_0029F450);
+extern u8 D_00188660[];
+extern void func_002E59F8(int);
+extern int func_002E5CF8(int, int, char *);
+
+void func_0029F450(void *object)
+{
+    u8 *s = (u8 *)object;
+
+    if (s[0x6D] != 0xFF) {
+        u8 *e = D_00188660 + s[0x6D] * 0x70;
+
+        if (*(int *)(e + 0x88) != (int)s) {
+            s[0x6D] = 0xFF;
+        } else if (*(short *)(e + 0x7E) != s[0x6C] ||
+                   (*(unsigned short *)(s + 0x34) & 0x40) != 0 ||
+                   (*(unsigned short *)(s + 0x7C) & 0x8000) != 0) {
+            func_002E59F8(s[0x6D]);
+            s[0x6D] = 0xFF;
+        }
+    } else if (s[0x6C] != 0xFF &&
+               (*(unsigned short *)(s + 0x34) & 0x40) == 0 &&
+               (*(unsigned short *)(s + 0x7C) & 0x8000) == 0) {
+        s[0x6D] = (u8)func_002E5CF8(s[0x6C], 4, (char *)s);
+    }
+}
 
 INCLUDE_ASM("asm/game", func_0029F528);
 

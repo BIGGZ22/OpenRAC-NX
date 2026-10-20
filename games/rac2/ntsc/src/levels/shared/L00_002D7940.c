@@ -57,11 +57,41 @@ void func_L00_002D7940(s32 *object) {
     object[0]=0; object[1]=0; object[2]=0; object[3]=0; object[4]=0;
 }
 
-INCLUDE_ASM("asm/levels", func_L00_002D7958);
+extern float func_00283B98(float, float);
 
-INCLUDE_ASM("asm/levels", func_L00_002D7D58);
+/* blends the first component of the source through the helper, then copies the four
+   remaining components straight across */
+void func_L00_002D7958(f32 *dst, f32 *src, f32 x) {
+ dst[0]=func_00283B98(src[0],x);
+ dst[1]=src[1];
+ dst[2]=src[2];
+ dst[3]=src[3];
+ dst[4]=src[4];
+}
 
-INCLUDE_ASM("asm/levels", func_L00_002D8208);
+
+typedef void (*L00_Dispatch)(void *);
+
+typedef struct {
+    L00_Dispatch entries[5];
+} L00_DispatchRecord;
+
+/* The shared class table: a 0x14-byte record per type index, its entries at +0x8. */
+extern L00_DispatchRecord D_002A3A00[];
+
+/* Calls the object's class entry 2 for the type index in its +0x8C halfword. */
+void func_L00_002D7D58(char *object) {
+    L00_Dispatch callback = D_002A3A00[*(short *)(object + 0x8C)].entries[2];
+    if (callback != 0)
+        callback(object);
+}
+
+/* Calls the object's class entry 4 for the type index in its +0x8C halfword. */
+void func_L00_002D8208(char *object) {
+    L00_Dispatch callback = D_002A3A00[*(short *)(object + 0x8C)].entries[4];
+    if (callback != 0)
+        callback(object);
+}
 
 typedef struct {
     int key;
@@ -152,7 +182,10 @@ void func_L00_002DC4C0(Obj_F4778f810 *obj)
 
 INCLUDE_ASM("asm/levels", func_L00_002E0200);
 
+/* func_L00_002E2048 (packed status field) is a near miss:
+   nonmatching/levels/func_L00_002E2048.c */
 INCLUDE_ASM("asm/levels", func_L00_002E2048);
+
 
 INCLUDE_ASM("asm/levels", func_L00_002E2958);
 
@@ -164,9 +197,46 @@ INCLUDE_ASM("asm/levels", func_L00_002E3340);
 
 INCLUDE_ASM("asm/levels", func_L00_002E3520);
 
-INCLUDE_ASM("asm/levels", func_L00_002E36F8);
+#ifndef RAC2_T_REC_2E36F8
+#define RAC2_T_REC_2E36F8
+typedef struct {
+    s32 value;         /* +0x00 */
+    s32 key;           /* +0x04 */
+    char pad08[8];
+} Rec_2e36f8;
+#endif
 
-INCLUDE_ASM("asm/levels", func_L00_002E3898);
+extern s32 ref_L00_001BC200_00[];
+
+/* Linear search of the level's record list (sixteen-byte stride): the block's fourth word
+ * holds the list pointer and its fifth the count; the record's second word is the key, and a
+ * match returns its first word. Zero when the count is not positive or nothing matches. */
+s32 func_L00_002E36F8(s32 key)
+{
+    Rec_2e36f8 *entry;
+    s32 count = ref_L00_001BC200_00[4];
+    s32 i;
+
+    if (count > 0) {
+        i = 0;
+        entry = (Rec_2e36f8 *)ref_L00_001BC200_00[3];
+        do {
+            if (entry->key == key)
+                return entry->value;
+            entry++;
+            i++;
+        } while (i < count);
+    }
+    return 0;
+}
+
+extern void func_2EDD48(void *);
+extern char ref_L00_001BC228_00[];
+
+/* Thin forwarder: hands one global to the shared handler. */
+void func_L00_002E3898(void) {
+    func_2EDD48(ref_L00_001BC228_00);
+}
 
 /* evaluates (b-a)*(t*t)+a*t and converts the measured float result to a signed word */
 s32 func_L00_002E3A68(f32 a,f32 b,f32 t) {

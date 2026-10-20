@@ -180,29 +180,32 @@ void func_00131A98(unsigned char *clock) {
 
 ASM_FUNC("asm/core", func_00131AE8);
 
-INCLUDE_ASM("asm/core", func_00131CA8);
+/* The exit thunk of symbol_addrs: eight bytes that jump to exit with $4
+   forced to 0 in the delay slot, so the status the caller passes is discarded
+   and the program always exits with 0. The call is a tail call, and the
+   compiler puts the argument in the jump's delay slot. */
+extern void func_0011FA20(int);
+
+void func_00131CA8(void) {
+    func_0011FA20(0);
+}
 
 INCLUDE_ASM("asm/core", func_00131CB0);
-
-INCLUDE_ASM("asm/core", func_00131CB8);
 
 INCLUDE_ASM("asm/core", func_00131D98);
 
 INCLUDE_ASM("asm/core", func_00132028);
 
+INCLUDE_ASM("asm/core", func_001326D8);
+
 INCLUDE_ASM("asm/core", func_00132210);
 
-INCLUDE_ASM("asm/core", func_00132220);
-
-INCLUDE_ASM("asm/core", func_001322B8);
 
 INCLUDE_ASM("asm/core", func_00132318);
 
 INCLUDE_ASM("asm/core", func_00132498);
 
 INCLUDE_ASM("asm/core", func_001325E0);
-
-INCLUDE_ASM("asm/core", func_001326D8);
 
 INCLUDE_ASM("asm/core", func_00132818);
 
@@ -284,7 +287,6 @@ INCLUDE_ASM("asm/core", func_00132C48);
 
 INCLUDE_ASM("asm/core", func_00132DF0);
 
-INCLUDE_ASM("asm/core", func_001330D0);
 
 INCLUDE_ASM("asm/core", func_00133108);
 
@@ -293,10 +295,6 @@ INCLUDE_ASM("asm/core", func_00133108);
 void func_00133220(void) {
     *(int *)&r1_D_0015EDC4 = 1;
 }
-
-INCLUDE_ASM("asm/core", func_00133230);
-
-INCLUDE_ASM("asm/core", func_00133250);
 
 INCLUDE_ASM("asm/core", func_00133300);
 

@@ -76,9 +76,8 @@ INCLUDE_ASM("asm/game", func_002E7BC0);
 
 INCLUDE_ASM("asm/game", func_002E7BC8);
 
-INCLUDE_ASM("asm/game", func_002E80B0);
 
-INCLUDE_ASM("asm/game", func_002E8190);
+/* func_002E8190 is matched in 002E7018-g8.c (-G8 small data). */
 
 extern void func_002FC560(unsigned int, unsigned long long);
 extern void func_0027E018(int, char *, int, int, int, int, int, int, unsigned long long, unsigned long long);

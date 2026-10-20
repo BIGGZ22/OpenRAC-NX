@@ -17,8 +17,6 @@ INCLUDE_ASM("asm/levels", func_L04_00404068);
 
 INCLUDE_ASM("asm/levels", func_L04_00404100);
 
-INCLUDE_ASM("asm/levels", func_L04_004044B8);
-
 INCLUDE_ASM("asm/levels", func_L04_004045E0);
 
 INCLUDE_ASM("asm/levels", func_L04_00407078);
@@ -150,7 +148,86 @@ void func_L04_0040CDD0(unsigned char *a0)
     }
 }
 
-INCLUDE_ASM("asm/levels", func_L04_0040CE30);
+extern void func_0029FCC0(void *, int, void *);
+
+extern void func_00282D30(void *, void *, float);
+
+extern void func_00282CC0(void *, void *, void *);
+
+extern float func_00283CE0(int);
+
+/* The five floats come first and the two ints last: the floats then go to
+   f12-f16 and the ints to a1 and a2, and the int argument is set up after
+   the float ones, as the retail code has it. */
+extern void func_L00_003F8280(void *, float, float, float, float, float, int, int);
+
+/* The emitter table the object points at: the slot id at 0x644, then the
+   four rows of four heights from 0x660 on. */
+typedef struct {
+    char pad_000[0x644];
+    int slot;
+    char pad_648[0x18];
+    float row660[4];
+    float row670[4];
+    float row680[4];
+    float row690[4];
+} L04_0040CE30_OBJ;
+
+/* Walks the four rows of the emitter table: every row's height is lowered by
+   the shared floor, the three threshold vectors are nudged by the row's share
+   and handed to the particle scheduler, and a row that sinks too far is lifted
+   back to the floor. */
+void func_L04_0040CE30(char *a0)
+{
+    L04_0040CE30_OBJ *s2 = *(L04_0040CE30_OBJ **)(a0 + 0x68);
+    float vec3[4];
+    float vec4[4];
+    float vec2[4];
+    float tmp[4];
+    char *dir = a0 + 0xC0;
+    int i;
+
+    for (i = 0; i < 4; i++) {
+        float f22;
+        float f21;
+        float f20;
+
+        func_0029FCC0(a0, 2, vec2);
+        func_0029FCC0(a0, 3, vec3);
+        func_0029FCC0(a0, 4, vec4);
+
+        s2->row670[i] = s2->row670[i] - s2->row660[i];
+        func_00282D30(tmp, dir, s2->row670[i]);
+        func_00282CC0(vec3, vec3, tmp);
+
+        f22 = func_00283CE0(i) * 0.25f;
+        f21 = f22 * 0.1f;
+        vec3[2] = vec3[2] + f21;
+        f20 = f22 * -0.025f + 0.05f;
+        func_L00_003F8280(vec3, f20, 0.0f, 0.0f, 0.0f, 0.0025f, s2->slot, 1);
+        if (s2->row670[i] < -0.2f) {
+            s2->row670[i] = -0.05f;
+        }
+
+        s2->row680[i] = s2->row680[i] - s2->row660[i];
+        func_00282D30(tmp, dir, s2->row680[i]);
+        func_00282CC0(vec2, vec2, tmp);
+        vec2[2] = vec2[2] + f21;
+        func_L00_003F8280(vec2, f20, 0.0f, 0.0f, 0.0f, 0.0025f, s2->slot, 1);
+        if (s2->row680[i] < -0.2f) {
+            s2->row680[i] = -0.05f;
+        }
+
+        s2->row690[i] = s2->row690[i] - s2->row660[i];
+        func_00282D30(tmp, dir, s2->row690[i]);
+        func_00282CC0(vec4, vec4, tmp);
+        vec4[2] = vec4[2] + f21;
+        func_L00_003F8280(vec4, f22 * -0.050000004f + 0.075f, 0.0f, 0.0f, 0.0f, 0.0025f, s2->slot, 1);
+        if (s2->row690[i] < -0.19f) {
+            s2->row690[i] = -0.05f;
+        }
+    }
+}
 
 INCLUDE_ASM("asm/levels", func_L04_0040D148);
 
@@ -158,7 +235,85 @@ INCLUDE_ASM("asm/levels", func_L04_0040DCA8);
 
 INCLUDE_ASM("asm/levels", func_L04_0040DF90);
 
-INCLUDE_ASM("asm/levels", func_L04_0040E248);
+extern BatchA_A04_u8 D_00188660[];
+
+extern void func_002E59F8(int handle);
+
+/* Releases the callback records this moby still holds: every handle slot that is set
+   names a record of the callback table, and the one that belongs to this moby is
+   handed to the release helper. Each slot is cleared afterwards. */
+void func_L04_0040E248(int a0, BatchA_A04_u8 *a1)
+{
+    int id = a0;
+    BatchA_A04_u8 *p = a1;
+    int v;
+    BatchA_A04_u8 *rec;
+
+    v = *(int *)(p + 0x748);
+    if (v != -1) {
+        rec = D_00188660 + v * 0x70;
+        if (*(int *)(rec + 0x88) == id && rec[0x74] != 0) {
+            func_002E59F8(v);
+        }
+    }
+    *(int *)(p + 0x748) = -1;
+
+    v = *(int *)(p + 0x74C);
+    if (v != -1) {
+        rec = D_00188660 + v * 0x70;
+        if (*(int *)(rec + 0x88) == id && rec[0x74] != 0) {
+            func_002E59F8(v);
+        }
+    }
+    *(int *)(p + 0x74C) = -1;
+
+    v = *(int *)(p + 0x714);
+    if (v != -1) {
+        rec = D_00188660 + v * 0x70;
+        if (*(int *)(rec + 0x88) == id && rec[0x74] != 0) {
+            func_002E59F8(v);
+        }
+    }
+    *(int *)(p + 0x714) = -1;
+
+    v = *(int *)(p + 0x3BC);
+    if (v != -1) {
+        rec = D_00188660 + v * 0x70;
+        if (*(int *)(rec + 0x88) == id && rec[0x74] != 0) {
+            func_002E59F8(v);
+        }
+    }
+    *(int *)(p + 0x3BC) = -1;
+
+    v = *(int *)(p + 0x328);
+    if (v != -1) {
+        rec = D_00188660 + v * 0x70;
+        if (*(int *)(rec + 0x88) == id && rec[0x74] != 0) {
+            func_002E59F8(v);
+        }
+    }
+    *(int *)(p + 0x328) = -1;
+
+    v = *(int *)(p + 0x330);
+    if (v != -1) {
+        rec = D_00188660 + v * 0x70;
+        if (*(int *)(rec + 0x88) == id && rec[0x74] != 0) {
+            func_002E59F8(v);
+        }
+    }
+    *(int *)(p + 0x330) = -1;
+
+    v = *(int *)(p + 0x334);
+    if (v != -1) {
+        rec = D_00188660 + v * 0x70;
+        if (*(int *)(rec + 0x88) == id && rec[0x74] != 0) {
+            func_002E59F8(v);
+        }
+    }
+    *(int *)(p + 0x32C) = 0;
+    *(int *)(p + 0x334) = -1;
+    *(int *)(p + 0x324) = 0;
+}
 
 INCLUDE_ASM("asm/levels", func_L04_0040E460);
 

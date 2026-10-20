@@ -118,8 +118,6 @@ int func_L14_003DE2D8(char *arg0) {
     return count;
 }
 
-INCLUDE_ASM("asm/levels", func_L14_003DE310);
-
 INCLUDE_ASM("asm/levels", func_L14_003DE360);
 
 void func_L14_003DE488(char *arg0) {
@@ -205,6 +203,8 @@ void func_L14_003E1DD0(char *arg0) {
         break;
     }
 }
+
+INCLUDE_ASM("asm/levels", func_L14_003DE310);
 
 INCLUDE_ASM("asm/levels", func_L14_003E1E78);
 
@@ -294,8 +294,68 @@ void func_L14_003E51B0(char *arg0) {
 
 INCLUDE_ASM("asm/levels", func_L14_003E5218);
 
-INCLUDE_ASM("asm/levels", func_L14_003F0D50);
+extern void func_L00_002E54E0(float);
+extern int func_002B38B8(char *);
+extern void func_L00_002E6EF8(void (*f)(char *), char *arg);
+extern float func_002A7878(float, float);
+extern void func_L14_003F0E68(char *);
 
-INCLUDE_ASM("asm/levels", func_L14_003F0E98);
+void func_L14_003F0D50(char *arg0) {
+    char *s2 = arg0;
+    char *s1 = *(char **)(arg0 + 0x68);
+
+    if (*(unsigned char *)(arg0 + 0x20) == 0) {
+        *(int *)(s1 + 0x10) = 1;
+        func_L00_002E54E0(2048.0f);
+        *(unsigned char *)(arg0 + 0x20) = 1;
+    }
+    *(float *)(s1 + 0x0) = *(float *)(s1 + 0x0) + *(float *)(s1 + 0x4);
+    *(float *)(s1 + 0x8) = *(float *)(s1 + 0x8) + *(float *)(s1 + 0xC);
+    if (*(float *)(s1 + 0x0) >= 8.0f) {
+        *(float *)(s1 + 0x0) = *(float *)(s1 + 0x0) - 8.0f;
+    }
+    if (*(float *)(s1 + 0x8) >= 8.0f) {
+        *(float *)(s1 + 0x8) = *(float *)(s1 + 0x8) - 8.0f;
+    }
+    if (func_002B38B8(s2) != 0) {
+        *(int *)(s1 + 0x10) = 0;
+    }
+    if (*(int *)(s1 + 0x10) != 0) {
+        func_L00_002E6EF8(func_L14_003F0E68, s2);
+    }
+    *(float *)(s1 + 0x4) = func_002A7878(0.003f, 0.005f);
+    *(float *)(s1 + 0xC) = func_002A7878(0.001f, 0.0025f);
+}
+
+/* Resets the record: the four axis pairs, the flags and the packed word. */
+void func_L14_003F0E98(char *a0)
+{
+    *(long long *)(a0 + 0x70) = 0LL;
+    *(int *)(a0 + 0x50) = 0;
+    *(int *)(a0 + 0x54) = 0;
+    *(float *)(a0 + 0x58) = 1.0f;
+    *(int *)(a0 + 0x5C) = 0;
+    *(int *)(a0 + 0x60) = 0;
+    *(float *)(a0 + 0x64) = 1.0f;
+    *(float *)(a0 + 0x68) = 1.0f;
+    *(float *)(a0 + 0x6C) = 1.0f;
+    *(float *)(a0 + 0x8) = -4.0f;
+    *(float *)(a0 + 0x18) = 4.0f;
+    *(float *)(a0 + 0x4) = -2.0f;
+    *(float *)(a0 + 0x24) = 2.0f;
+    *(int *)(a0 + 0x0) = 0;
+    *(int *)(a0 + 0x10) = 0;
+    *(int *)(a0 + 0x20) = 0;
+    *(int *)(a0 + 0x30) = 0;
+    *(float *)(a0 + 0xC) = 1.0f;
+    *(float *)(a0 + 0x1C) = 1.0f;
+    *(float *)(a0 + 0x2C) = 1.0f;
+    *(long long *)(a0 + 0x80) = 280993940374112LL;
+    *(float *)(a0 + 0x28) = -4.0f;
+    *(float *)(a0 + 0x38) = 4.0f;
+    *(float *)(a0 + 0x14) = -2.0f;
+    *(float *)(a0 + 0x34) = 2.0f;
+    *(float *)(a0 + 0x3C) = 1.0f;
+}
 
 INCLUDE_ASM("asm/levels", func_L14_003F0F38);

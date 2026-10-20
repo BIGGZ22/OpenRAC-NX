@@ -24,10 +24,48 @@ extern int func_34C4C8(void);
 extern void *func_33E6B0(void *a0, s32 a1, s32 a2);
 extern void func_40A090(int a0, u8 *a1, u8 *a2, u8 *a3, u8 *a4, u8 *a5);
 
+extern void func_0029F338(void *a0);
+extern int func_002B38B8(u8 *a0);
+extern void func_002A0430(u32 a0);
+extern s32 func_00288AA0(u8 *a0, s32 a1);
+extern s32 func_00288BE8(void *a0);
+extern void func_002F5CC8(void);
+extern float func_002AA3A8(float *a0, float *a1, float f12, float f13, float f14, float f15);
+extern void func_002E5CF8(s32 a0, s32 a1, char *a2);
+
+extern u8 D_0019B2E8[];
+extern int D_001A79F0 __attribute__((sda));
+extern int D_L04_001B24DC __attribute__((sda));
+extern u8 D_L04_001BF880[];
+
 INCLUDE_ASM("asm/levels", func_L04_00422D40);
 INCLUDE_ASM("asm/levels", func_L04_00422DA8);
 INCLUDE_ASM("asm/levels", func_L04_00423258);
-INCLUDE_ASM("asm/levels", func_L04_0042BF58);
+/* Counts the object's state up, easing its timer down while it is over the
+   limit, and hands the level's recorder the object's channel when it runs out. */
+void func_L04_0042BF58(u8 *a0) {
+    u32 *s1 = *(u32 **)(a0 + 0x68);
+
+    if (a0[0x20] == 0)
+        a0[0x20] = 1;
+    if (a0[0x20] == 2) {
+        f32 f1 = *(f32 *)(a0 + 0x18);
+        if (f1 >= 30.0f)
+            *(f32 *)(a0 + 0x18) = f1 - 0.28333336114883423f;
+        if (*(f32 *)(a0 + 0x18) < 30.0f)
+            a0[0x20] = 4;
+    }
+    if (a0[0x20] == 3) {
+        func_002AA3A8((f32 *)(a0 + 0x18), (f32 *)s1, 55.0f,
+                      0.008333333767950535f, 0.013888888992369175f,
+                      0.45000001788139343f);
+        if (55.0f <= *(f32 *)(a0 + 0x18)) {
+            func_002E5CF8(0, 0, (char *)a0);
+            s1[1] = 0;
+            a0[0x20] = 1;
+        }
+    }
+}
 INCLUDE_ASM("asm/levels", func_L04_00434BB0);
 INCLUDE_ASM("asm/levels", func_L04_004389C0);
 INCLUDE_ASM("asm/levels", func_L04_00438B50);
@@ -64,17 +102,30 @@ extern u8 D_L04_001B347C[] __attribute__((sda));
 extern u8 D_L04_001B3480[] __attribute__((sda));
 extern u8 D_L04_001B3484[] __attribute__((sda));
 extern u8 D_L04_001B3488[] __attribute__((sda));
-extern u8 D_L04_0026D370[] __attribute__((sda));
-extern u8 D_L04_0026D3E0[] __attribute__((sda));
-extern u8 D_L04_0026D490[] __attribute__((sda));
-extern u8 D_L04_0026D4F0[] __attribute__((sda));
-extern u8 D_L04_002CA3E0[] __attribute__((sda));
-extern u8 D_L04_002CA438[] __attribute__((sda));
+extern u8 D_L04_0026D370[];
+extern u8 D_L04_0026D3E0[];
+extern u8 D_L04_0026D490[];
+extern u8 D_L04_0026D4F0[];
+extern u8 D_L04_002CA3E0[];
+extern u8 D_L04_002CA438[];
 
-INCLUDE_ASM("asm/levels", func_L04_0043ABE0);
+extern void func_L04_0040A090(int, void *, void *, void *, void *, void *);
+
+void func_L04_0043ABE0(void) {
+    func_L04_0040A090(7, D_L04_001B12B0, D_L04_0026D370, D_L04_001B3300, D_L04_001B33B8, D_L04_001B3470);
+    func_L04_0040A090(3, D_L04_001B12E8, D_L04_001B3280, D_L04_001B3320, D_L04_001B33D8, D_L04_001B3474);
+    {
+        u8 *data = D_L04_002CA3E0;
+        func_L04_0040A090(11, data, D_L04_0026D3E0, D_L04_001B3330, D_L04_001B33E8, D_L04_001B3478);
+    }
+    func_L04_0040A090(6, D_L04_001B1300, D_L04_0026D490, D_L04_001B3360, D_L04_001B3418, D_L04_001B347C);
+    func_L04_0040A090(9, D_L04_002CA438, D_L04_0026D4F0, D_L04_001B3378, D_L04_001B3430, D_L04_001B3480);
+    func_L04_0040A090(3, D_L04_001B1330, D_L04_001B32B0, D_L04_001B33A0, D_L04_001B3458, D_L04_001B3484);
+    func_L04_0040A090(2, D_L04_001B1348, D_L04_001B32E0, D_L04_001B33B0, D_L04_001B3468, D_L04_001B3488);
+}
+
 
 INCLUDE_ASM("asm/levels", func_L04_0043AD48);
-INCLUDE_ASM("asm/levels", func_L04_00441100);
 
 void func_L04_00441178(u8 *a0) {
     if (a0[0x20] != 0)
@@ -145,5 +196,26 @@ void func_L04_00451018(char *a0) {
     func_345328(a0, s0, 4, 0.03f, 0.3f);
     func_348708(a0, s0, 4, 1, 2.5f);
 }
-INCLUDE_ASM("asm/levels", func_L04_00455520);
+/* Starts the object's encounter state and, once it is running, hands the level's
+   camera table the object's slot and asks the frame helpers to update it. */
+void func_L04_00455520(u8 *a0) {
+    u32 *a1 = *(u32 **)(a0 + 0x68);
+
+    if (a0[0x20] == 0) {
+        if (D_0019B2E8[a0[0xB0] + D_001A79F0 * 16] & 0x80) {
+            func_0029F338(a0);
+            return;
+        }
+        a0[0x20] = 1;
+    }
+    if (a0[0x20] == 1) {
+        if (func_002B38B8((u8 *)(D_L04_001B24DC + (*a1 << 8)))) {
+            func_002A0430(a0[0xB0]);
+            func_00288AA0(D_L04_001BF880, 0x38);
+            func_00288BE8(D_L04_001BF880);
+            func_002F5CC8();
+            func_0029F338(a0);
+        }
+    }
+}
 INCLUDE_ASM("asm/levels", func_L04_00456628);

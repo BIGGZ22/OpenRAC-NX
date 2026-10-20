@@ -97,7 +97,108 @@ void func_L00_0037E898(void)
 {
 }
 
-INCLUDE_ASM("asm/levels", func_L00_0037F7E8);
+/* Level object-update walk: one pass over the object list the game exposes at
+ * D_L00_001B1EA8, with a per-class dispatch. */
+typedef unsigned char L00_0037F7E8_u8;
+typedef unsigned short L00_0037F7E8_u16;
+typedef unsigned int L00_0037F7E8_u32;
+
+extern void func_00284E18(int, int, int);
+
+extern int func_002B49E0(int, int, int, int, int);
+
+/* The empty method this call reaches sits in a different copy in each level
+ * (the catalogue splits the identical bodies), so the callee takes a ref_ name:
+ * its value is read from the retail bytes at every place. */
+extern unsigned int ref_L00_0036F480_00(void);
+
+extern void func_002F5220(void);
+
+extern void func_002E4AC8();
+
+extern L00_0037F7E8_u8 *func_002A08A0(void);
+
+extern L00_0037F7E8_u8 *D_L00_001B1EA8 __attribute__((sda));
+
+extern void func_002A05A8(char *);
+
+extern void func_002A0F48(void *);
+
+extern void func_L00_002A6DD0(void);
+
+extern void func_00272368(void);
+
+extern void func_002FF450(void);
+
+extern void func_002B9390(void);
+
+extern void func_002F52B8(void);
+
+extern L00_0037F7E8_u32 D_001A7424 __attribute__((sda));
+
+/* Measured partial layout; original type and game roles are unknown. */
+typedef struct L00_0037F7E8_Object {
+    L00_0037F7E8_u8 pad00[0x20];
+    signed char field20;
+    L00_0037F7E8_u8 pad21[7];
+    struct L00_0037F7E8_Object *next;
+    L00_0037F7E8_u8 pad2C[8];
+    L00_0037F7E8_u16 field34;
+    L00_0037F7E8_u8 pad36[0x2e];
+    void (*field64)(struct L00_0037F7E8_Object *);
+    L00_0037F7E8_u8 pad68[0x42];
+    short fieldAA;
+} L00_0037F7E8_Object;
+
+/* The level's own data: each place resolves its own value from the retail
+ * bytes. The two adjacent flags stay one array so both sites keep the retail's
+ * in-place absolute load, which the sda attribute selects. */
+extern int ref_L00_001A8F00_00 __attribute__((sda));
+
+extern L00_0037F7E8_u8 ref_L00_001B267C_00[] __attribute__((sda));
+
+void func_L00_0037F7E8(void)
+{
+    L00_0037F7E8_u8 *head;
+    L00_0037F7E8_Object *object;
+    short id;
+
+    func_00284E18(0, 0, 0);
+    if (ref_L00_001A8F00_00 == 0 && (D_001A7424 & 1)) {
+        if (func_002B49E0(4, 1, 1, 0, 0) == 0)
+            return;
+    }
+    if (ref_L00_0036F480_00() != 0)
+        return;
+    func_002F5220();
+    func_002E4AC8();
+    D_L00_001B1EA8 = head = func_002A08A0();
+    object = (L00_0037F7E8_Object *)head;
+    if (object != 0) {
+        while (object != 0) {
+            if (object->field20 >= 0) {
+                id = object->fieldAA;
+                if (id == 0xDC1) {
+                    object->field64(object);
+                    if ((object->field34 & 4) == 0)
+                        func_002A0F48(object);
+                } else if (id == 0xCB2 || id == 0xB02 || id == 0x259
+                           || id == 0xA5C || id == 0x1192) {
+                    func_002A05A8((char *)object);
+                    func_002A0F48(object);
+                }
+            }
+            object = object->next;
+        }
+    }
+    if (ref_L00_001B267C_00[0])
+        func_L00_002A6DD0();
+    if (ref_L00_001B267C_00[1])
+        func_00272368();
+    func_002FF450();
+    func_002B9390();
+    func_002F52B8();
+}
 
 INCLUDE_ASM("asm/levels", func_L00_0037FA90);
 
@@ -195,7 +296,7 @@ INCLUDE_ASM("asm/levels", func_L00_00384248);
 
 INCLUDE_ASM("asm/levels", func_L00_00384678);
 
-INCLUDE_ASM("asm/levels", func_L00_00384C20);
+/* func_L00_00384C20 is matched in L00_00384C20.c (built with -fno-strength-reduce). */
 
 INCLUDE_ASM("asm/levels", func_L00_00384CA8);
 
@@ -521,7 +622,96 @@ INCLUDE_ASM("asm/levels", func_L00_0038B888);
 
 INCLUDE_ASM("asm/levels", func_L00_0038BA80);
 
-INCLUDE_ASM("asm/levels", func_L00_0038BD00);
+extern unsigned char D_001A7B2A __attribute__((sda));
+
+/* Measured partial layouts; the original types and game roles are unknown. */
+typedef struct L00_0038BD00_Kind {
+    unsigned char pad00[0x46];
+    short type;
+} L00_0038BD00_Kind;
+
+typedef struct L00_0038BD00_Node {
+    unsigned char pad00[0x20];
+    unsigned char mode;
+    unsigned char pad21[3];
+    L00_0038BD00_Kind *kind;
+    struct L00_0038BD00_Node *next;
+} L00_0038BD00_Node;
+
+typedef struct {
+    unsigned char pad[0x2290];
+    int value;
+} D_00189E20_Struct;
+
+extern D_00189E20_Struct D_00189E20;
+
+extern float func_00282E48(char *object, char *other);
+
+extern int func_003022A0(char *object, int value, float first, float second);
+
+extern int func_L00_0031F2B0(char *object);
+
+extern int func_L00_003D1B50(char *value);
+
+/* Walk the level's node list from D_L00_001B1EA8: each node's own measure is
+ * compared with the limit (2.7, or 10.0 when D_001A7B2A is set); a node of kind
+ * 0x13 is then handed to func_003022A0, any other node to its own handler. A mode
+ * of 0xFE or 0xFD, or a null next pointer, ends the walk. */
+void func_L00_0038BD00(char *object)
+{
+    L00_0038BD00_Node *s0;
+    float limit;
+    float step;
+    float value;
+    int mode;
+    int result;
+    L00_0038BD00_Kind *kind;
+
+    limit = 2.7f;
+    if (D_001A7B2A != 0)
+        limit = 10.0f;
+    s0 = (L00_0038BD00_Node *)D_L00_001B1EA8;
+    if (s0 == 0)
+        return;
+    step = 0.01745329424738884f;
+    while (1) {
+        mode = s0->mode;
+        if (mode == 0xFE)
+            return;
+        if (mode == 0xFD)
+            return;
+        if (s0 != 0 && (kind = s0->kind) != 0 && kind->type == 0x13) {
+            value = func_00282E48((char *)s0 + 0x10, object + 0x10);
+            if (value < limit) {
+                value = func_002A7878_1(-30.0f, 30.0f);
+                result = func_003022A0((char *)s0, D_00189E20.value, value * step, 0.0f);
+            } else {
+                s0 = s0->next;
+                goto next;
+            }
+        } else {
+            if (func_L00_0031F2B0((char *)s0) == 0) {
+                s0 = s0->next;
+                goto next;
+            }
+            value = func_00282E48((char *)s0 + 0x10, object + 0x10);
+            if (value < limit) {
+                result = func_L00_003D1B50((char *)s0);
+            } else {
+                s0 = s0->next;
+                goto next;
+            }
+        }
+        if (result != 0)
+            return;
+        s0 = s0->next;
+next:
+        /* The walk's end test: the goto above reaches it with the next pointer
+         * already loaded, which is the shape retail's code has. */
+        if (s0 == 0)
+            return;
+    }
+}
 
 extern float D_00189EB8;
 

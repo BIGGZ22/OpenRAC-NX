@@ -28,7 +28,15 @@
  * What is left is GCC's branch-sense and static-likelihood choice, which tracks
  * the exact block layout rather than the C. Not yet tried: making the s8 test the
  * loop's own `continue` condition, or spelling the float test as `!(x > 0.0f)`.
- */
+ *
+ * Wave 9 (p1) re-measured it: 80 bytes, 19 of 20 words identical, and the two words
+ * left are the branch-likely form of BOTH inner tests (the retail has plain `bltz`
+ * and `bc1f`; this cc1 emits `bltzl` and `bc1tl` and so copies the clear store into
+ * each annulled delay slot, where the retail has one store).  Tried here: the `||`
+ * form, the if/else-if form, the inverted test (>= 0), and a goto to a shared clear
+ * block - all four reach the same two words.  One thing this wave measured: the
+ * record pointer has to be a `char *`, not a `u32 *`, or the flag load comes out
+ * `lb $v0,0x80($v1)` instead of `lb $v0,0x20($v1)`. */
 void func_L14_003DE310(char *a0) {
     u32 *p = (u32 *)(*(u32 *)(a0 + 0x68) + 0xE0);
     s32 n = 3;

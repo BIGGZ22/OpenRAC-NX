@@ -6,7 +6,7 @@ typedef unsigned short u16;
 
 typedef int s32;
 
-INCLUDE_ASM("asm/levels", func_L23_0041E418);
+/* func_L23_0041E418 is defined in L23_0041E418-g8.c (this unit has no $gp access for it). */
 
 INCLUDE_ASM("asm/levels", func_L23_0041E538);
 
@@ -24,11 +24,9 @@ INCLUDE_ASM("asm/levels", func_L23_00422E08);
 
 INCLUDE_ASM("asm/levels", func_L23_00423378);
 
-INCLUDE_ASM("asm/levels", func_L23_00423380);
+/* func_L23_00423380 is defined in L23_0041E418-g8.c (this unit has no $gp access for it). */
 
-INCLUDE_ASM("asm/levels", func_L23_004234C0);
-
-INCLUDE_ASM("asm/levels", func_L23_00423588);
+/* func_L23_004234C0 is defined in L23_0041E418-g8.c (this unit has no $gp access for it). */
 
 INCLUDE_ASM("asm/levels", func_L23_004236B8);
 
@@ -38,11 +36,58 @@ INCLUDE_ASM("asm/levels", func_L23_004256F0);
 
 INCLUDE_ASM("asm/levels", func_L23_00425848);
 
-INCLUDE_ASM("asm/levels", func_L23_004259E0);
-
 INCLUDE_ASM("asm/levels", func_L23_00425AF8);
 
-INCLUDE_ASM("asm/levels", func_L23_004260F0);
+typedef int TI16 __attribute__((mode(TI)));
+
+typedef short s16;
+
+extern void func_00282CF0(float *, float *, float *);
+
+extern void func_00282DD8(float *, float *, float *);
+
+extern void func_00282F20(float *, float *, float);
+
+extern int func_002A7820(int, int);
+
+extern float func_00283C28(float);
+
+extern float func_00283198(float);
+
+extern void func_00282D30(float *, float *, float);
+
+extern void func_00282CC0(float *, float *, float *);
+
+extern float D_L23_001BA640[];
+
+/* builds two vectors from the sources, rotates one by the measured angle and writes the result */
+void func_L23_004260F0(u8 *obj, float *dst, TI16 *src1, TI16 *src2, float scale) {
+    TI16 loc[6];
+    TI16 va;
+    TI16 vb;
+    u8 *o68;
+    s16 x;
+    s32 t;
+    float f;
+    float h;
+
+    va = *src2;
+    vb = *src1;
+    loc[1] = va;
+    loc[0] = vb;
+    o68 = *(u8 **)(obj + 0x68);
+    func_00282CF0((float *)&loc[2], (float *)&loc[0], (float *)&loc[1]);
+    func_00282CF0((float *)&loc[3], (float *)&loc[0], D_L23_001BA640);
+    func_00282DD8((float *)&loc[4], (float *)&loc[3], (float *)&loc[2]);
+    func_00282F20((float *)&loc[4], (float *)&loc[4], 1.0f);
+    x = *(s16 *)(o68 + 0xC);
+    t = func_002A7820(-x, x);
+    t = (((s32)*(u16 *)(obj + 0x96) << *(s16 *)(o68 + 0xE)) + t) % 360 - 180;
+    f = func_00283C28((float)t * 0.017453294f);
+    h = func_00283198(f) * scale;
+    func_00282D30((float *)&loc[5], (float *)&loc[4], h);
+    func_00282CC0(dst, (float *)&loc[0], (float *)&loc[5]);
+}
 
 INCLUDE_ASM("asm/levels", func_L23_00426248);
 
@@ -50,7 +95,7 @@ INCLUDE_ASM("asm/levels", func_L23_004265D0);
 
 INCLUDE_ASM("asm/levels", func_L23_004277B0);
 
-INCLUDE_ASM("asm/levels", func_L23_004277E8);
+/* func_L23_004277E8 is matched in L23_0041E418-g8.c */
 
 
 /* increments the 16-bit counter at object + 0x96 while it stays below 0xFFFF */
@@ -120,4 +165,4 @@ void func_L23_0043F930(s32 arg0) {
     func_L00_00428CE0(arg0);
 }
 
-INCLUDE_ASM("asm/levels", func_L23_004402D8);
+/* func_L23_004402D8 is matched in L23_004402D8-g8.c (built with -g). */

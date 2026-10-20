@@ -61,7 +61,53 @@ INCLUDE_ASM("asm/levels", func_L00_003FC228);
 
 INCLUDE_ASM("asm/levels", func_L00_003FC468);
 
-INCLUDE_ASM("asm/levels", func_L00_003FC820);
+extern char D_L00_001B8DC0[];
+
+extern void func_00282CF0(char *, char *, char *);
+extern float func_00283248(float, float);
+extern float func_002A7878(float, float);
+extern float func_002A78D8(float, float);
+extern int func_00283CF0(float);
+extern float func_00283B98(float, float);
+extern void func_002AF000(float *, float, float, float);
+extern void func_002C16C0(float *, float *, int, int, unsigned int, int,
+                          float, float, float, float, float);
+
+/* Fifteen times over: take the angle of the constant vector at D_L00_001B8DC0 and the point,
+   build a direction from a random step and a random magnitude, jitter the point by a random
+   small amount on each axis and hand the result to the spawn helper with 210000.0f, 500.0f,
+   1.0f, 0.0f and 0.0f; the original game role is unknown. */
+void func_L00_003FC820(float *pos)
+{
+    float v[4];
+    float dir[4];
+    float out[4];
+    float ang;
+    float angle;
+    float scale;
+    float mag;
+    float speed;
+    int id;
+    int i;
+
+    func_00282CF0((char *)v, D_L00_001B8DC0, (char *)pos);
+    ang = func_00283248(v[0], v[1]);
+
+    for (i = 14; i >= 0; i--) {
+        scale = func_002A7878(0.5f, 1.0f);
+        id = func_00283CF0(func_002A78D8(1.0f, 2.0f));
+        func_002A7878(0.05f, 0.2f);
+        speed = 210000.0f;
+        mag = func_002A7878(0.0f, 1.396263599395752f);
+        angle = func_00283B98(ang, func_002A78D8(0.0f, 1.396263599395752f));
+        func_002AF000(dir, scale * 0.01666666753590107f, angle, mag);
+        out[0] = pos[0] + func_002A78D8(0.0f, 0.1f);
+        out[1] = pos[1] + func_002A78D8(0.0f, 0.1f);
+        out[2] = pos[2] + func_002A78D8(0.0f, 0.1f);
+        func_002C16C0(out, dir, 30, 127, 0x007F7F7F, id,
+                      func_002A7878(0.05f, 0.2f) * speed, 500.0f, 1.0f, 0.0f, 0.0f);
+    }
+}
 
 INCLUDE_ASM("asm/levels", func_L00_003FCA40);
 
@@ -103,7 +149,53 @@ int func_L00_003FE2D0(int a0, int a1, int a2)
     return r;
 }
 
-INCLUDE_ASM("asm/levels", func_L00_003FE310);
+extern float func_002A7878(float, float);
+extern int func_002A7820(int, int);
+extern void func_002A7A00(char *, float, float);
+extern char *func_002BDCE8(float, float, float, float, char *, int, char *,
+                     unsigned int, int);
+extern void func_00282F20(void *, void *, float);
+extern void func_00312B70(void *, void *, void *, void *);
+extern char ref_L00_003FE310_00[];
+
+/* Twenty rounds that spawn a particle at the second argument: each round draws a radius
+   (70000..150000) and a byte (10..127), builds a three-float direction on the stack and
+   fills the new record's short and byte fields; the level's own data address is then
+   handed to the vector routine with the third argument and a scale of 1.5, and to the
+   level-object starter with the second argument. */
+void func_L00_003FE310(void *a0, void *a1, void *a2)
+{
+    char local[16];
+    float f;
+    int i;
+    unsigned int v;
+    unsigned int w;
+    unsigned int x;
+    char *r;
+
+    for (i = 19; i >= 0; i--) {
+        func_002A77E0_3(2);
+        func_002A77E0_3(2);
+        f = func_002A7878(70000.0f, 150000.0f);
+        v = func_002A7820(10, 127);
+        w = (v << 8) | 0x7f000000U;
+        x = (v << 16) | w;
+        v = x | v;
+        func_002A7A00(local, 1.6666668670950457453728e-05f,
+                6.6666672937572002410889e-03f);
+        r = func_002BDCE8(0.3f, 1.0f, 1.01f, f, a1, 0, local, v, 1);
+        if (r != 0) {
+            char *q = r + 32;
+
+            *(short *)(r + 10) = 120;
+            *(int *)(q + 4) = 2;
+            *(char *)(q + 10) = 127;
+            *(char *)(q + 11) = *(unsigned char *)(r + 10);
+        }
+    }
+    func_00282F20(ref_L00_003FE310_00, a2, 1.5f);
+    func_00312B70(ref_L00_003FE310_00, a1, 0, 0);
+}
 
 /* When the context flag at offset 0x24 is nonzero, pass scale 1.0, the context, its vector at offset 0x10 and mode zero to the bound helper; original game role is unknown. */
 void func_L00_003FE490(Rac2Native_9cdc323a4d0c2fbd_AnalysisOwner *owner)

@@ -2,10 +2,10 @@
 
 extern char D_00189EA0[];
 extern char D_00233A60[];
-extern char D_00235560[];
+extern char D_L30_00235560[];
 
 extern void func_00115484(char *, int, int);
-extern int func_002ACBC8(char *);
+extern int func_002ACBC8(char *, int);
 extern void func_002A7470(char *, int, int, int);
 extern void func_L00_0042A500(int);
 extern char D_001A63A8[];
@@ -61,7 +61,28 @@ float func_L30_00382EF0(float a0, float a1, float a2) {
     return a0 * (1.0f - a2) + a1 * a2;
 }
 
-INCLUDE_ASM("asm/levels", func_L30_00382F10);
+typedef struct {
+    float x;
+    float y;
+} L30Pair2f;
+
+/* Clears the 0x1B00-byte block and lays a 24-by-24 grid of two-float cells over the table at
+   0x235560: every cell's first float comes from its row index and its second from its column,
+   both on a one-sixth step starting at -2. */
+void func_L30_00382F10(void) {
+    int i;
+    int j;
+
+    func_00115484(D_00233A60, 0, 0x1B00);
+    for (i = 0; i < 24; i++) {
+        L30Pair2f *row = (L30Pair2f *)(D_L30_00235560 + i * 0xC0);
+
+        for (j = 0; j < 24; j++) {
+            row[j].x = i * (1.0f / 6.0f) + -2.0f;
+            row[j].y = j * (1.0f / 6.0f) + -2.0f;
+        }
+    }
+}
 
 INCLUDE_ASM("asm/levels", func_L30_00382FB8);
 
@@ -105,7 +126,23 @@ void func_L30_003842E0(char *a0) {
 
 INCLUDE_ASM("asm/levels", func_L30_003844C8);
 
-INCLUDE_ASM("asm/levels", func_L30_00384768);
+/* Walks the context's 27-word handle table and adopts the first live one the shared probe
+   accepts, stamping its index at +0x144 and the handle at +0x140; -1 when none is live. */
+int func_L30_00384768(char *a0) {
+    char *q = *(char **)(a0 + 0x68);
+    int i;
+
+    for (i = 0; i < 27; i++) {
+        int h = *(int *)(q + i * 4);
+
+        if (h != -1 && func_002ACBC8(D_00189EA0, h) != 0) {
+            *(int *)(q + 0x140) = *(int *)(q + i * 4);
+            *(int *)(q + 0x144) = i;
+            return *(int *)(q + i * 4);
+        }
+    }
+    return -1;
+}
 
 void func_L30_003847F8(char *a0) {
     char *st = *(char **)(a0 + 0x68);
@@ -140,7 +177,7 @@ int func_L30_00384980(char *a0) {
     return 0;
 }
 
-INCLUDE_ASM("asm/levels", func_L30_00386300);
+/* func_L30_00386300 lives in the -g8 sibling: it reaches its globals through $gp. */
 
 INCLUDE_ASM("asm/levels", func_L30_0038E7E0);
 

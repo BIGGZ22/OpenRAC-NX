@@ -128,7 +128,33 @@ void func_002AA800 (float *p, int a1, float fx, float fl)
   func_002AA738 (fx, a1, v);
 }
 
-INCLUDE_ASM("asm/game", func_002AA898);
+extern void func_002AA198(float *, float, float, float, float);
+extern float func_00282C48(float);
+
+float func_002AA898(float *position, float *velocity, int direction,
+                   float target, float acceleration, float damping, float limit)
+{
+    float distance;
+    float residual;
+    if (direction == 2) {
+        if ((target > 0.0f && *position < 0.0f) ||
+            (target < 0.0f && *position > 0.0f)) {
+            direction = 1;
+            if (target < 0.0f) direction = -1;
+        } else direction = 0;
+    }
+    distance = func_002AA738(target, direction, *position);
+    func_002AA198(velocity, distance, acceleration, damping, limit);
+    distance = func_00283B98_14(*position, *velocity);
+    *position = distance;
+    residual = func_002AA738(target, direction, distance);
+    if (func_00282C48(residual) < limit * 0.01f) {
+        *position = target;
+        *velocity = 0.0f;
+        return *velocity;
+    }
+    return residual;
+}
 
 INCLUDE_ASM("asm/game", func_002AAA00);
 
@@ -238,7 +264,40 @@ s32 func_002AB220(u8 *a0) {
  return 0;
 }
 
-INCLUDE_ASM("asm/game", func_002AB250);
+extern int func_002A99A0(void *, int, void *, void *, float);
+extern float func_002A7940(void);
+extern int func_002A7820(int, int);
+extern void func_002AF000(float *, float, float, float);
+extern void func_002BAE50(void *, void *, unsigned int, int, int, int, int, int);
+
+void func_002AB250(void *owner, char *offset, void *filter)
+{
+    char vectors[320];
+    float position[4];
+    char *cursor;
+    float *point;
+    int count;
+    int result;
+    int first;
+    float angle;
+    result = func_002A99A0(owner, 20, vectors, filter, 14.0f);
+    if (result == 0)
+        return;
+    if (result > 0) {
+        point = position;
+        cursor = vectors;
+        count = result;
+        do {
+            angle = func_002A7940();
+            func_002AF000(point, 0.030000001192092896f, angle, func_002A7940());
+            F904cc63b_FUN_00282CC0((V4_F904cc63b *)point, (V4_F904cc63b *)point, offset);
+            position[2] += 0.015000000596046448f;
+            first = func_002A7820(20, 35);
+            func_002BAE50(cursor, point, 0x7000A0FFu, 255, first, 30, func_002A7820(40, 60), 1);
+            cursor += 16;
+        } while (--count != 0);
+    }
+}
 
 INCLUDE_ASM("asm/game", func_002AB378);
 
@@ -435,7 +494,27 @@ int func_002ACBC8(void *point, int index)
 
 INCLUDE_ASM("asm/game", func_002ACCA0);
 
-INCLUDE_ASM("asm/game", func_002ACCA8);
+extern char *D_001B1C54 __attribute__((sda));
+
+/* Transforms a point by the record of its index and returns whether the result lies inside the unit sphere. */
+int func_002ACCA8(void *point, int index)
+{
+    float local[4];
+    float transformed[4];
+    char *record;
+
+    if (index < 0) {
+        return 0;
+    } else {
+        record = D_001B1C54 + (index << 7);
+        func_00282CF0(local, point, record + 0x30);
+        local[3] = 0.0f;
+        func_00283098((char *)transformed, (char *)local, record + 0x40);
+        if (func_00282DF0(transformed) < 1.0f)
+            return 1;
+    }
+    return 0;
+}
 
 INCLUDE_ASM("asm/game", func_002ACD30);
 

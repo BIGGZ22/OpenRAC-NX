@@ -93,8 +93,6 @@ INCLUDE_ASM("asm/levels", func_L01_003E9E40);
 
 INCLUDE_ASM("asm/levels", func_L01_003EE5F8);
 
-INCLUDE_ASM("asm/levels", func_L01_003EE6F0);
-
 extern int func_002A9640(char *, int, int);
 
 extern void func_002A8598(int, int);
@@ -189,3 +187,5 @@ void func_L01_004480C8(void *a0)
 {
     func_002A6CF0(&ref_L01_004480C8_00, a0);
 }
+
+INCLUDE_ASM("asm/levels", func_L01_00417090);

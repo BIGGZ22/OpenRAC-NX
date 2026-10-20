@@ -184,7 +184,25 @@ void func_002B0910(int a0, int a1, int a2, int a3)
 
 INCLUDE_ASM("asm/game", func_002B0968);
 
-INCLUDE_ASM("asm/game", func_002B0990);
+extern u8 D_001A7A47 __attribute__((sda));
+extern void func_002AEC48(void *a0, void *a1, int a2, float f12, float f13);
+
+/* Stores the third argument (or 1.0f) in the object's float at 0x70, and, when the fifth argument
+   is set and that float differs from the one at 0x20, calls func_002AEC48 with the object's two
+   first arguments, the fourth argument and the pair 0.03f, 0.3f. */
+void func_002B0990(void *a0, float *a1, float f12, int a2, int a3)
+{
+    if (D_001A7A47 != 0) {
+        a1[28] = f12;
+    } else {
+        a1[28] = 1.0f;
+    }
+    if (a3 != 0) {
+        if (a1[28] != a1[8]) {
+            func_002AEC48(a0, a1, a2, 0.03f, 0.3f);
+        }
+    }
+}
 
 INCLUDE_ASM("asm/game", func_002B0A08);
 
@@ -269,9 +287,55 @@ int func_002B0DB8(void)
     return count;
 }
 
-INCLUDE_ASM("asm/game", func_002B0E28);
+extern u8 D_00139568[];
+extern u8 D_00239BA0[];
 
-INCLUDE_ASM("asm/game", func_002B0E90);
+/* Counts the entries of a 56-byte table whose scaled entry in a second table is at least 2, and
+   clamps the count to 0..20. */
+int func_002B0E28(void)
+{
+    int count = 0;
+    int i;
+
+    for (i = 0; i < 56; i++) {
+        u8 v = D_00139568[i];
+        u8 *p = D_00239BA0 + v * 224;
+        int x = p[4];
+
+        if (x >= 2) {
+            count++;
+        }
+    }
+    if (count < 0) {
+        count = 0;
+    }
+    if (count > 20) {
+        count = 20;
+    }
+    return count;
+}
+
+extern u8 D_001A7A60[] __attribute__((sda));
+
+/* Counts the non-zero bytes of a 32-byte table, and clamps the count to 0..30. */
+int func_002B0E90(void)
+{
+    int count = 0;
+    int i;
+
+    for (i = 0; i < 32; i++) {
+        if (D_001A7A60[i] != 0) {
+            count++;
+        }
+    }
+    if (count < 0) {
+        count = 0;
+    }
+    if (count > 30) {
+        count = 30;
+    }
+    return count;
+}
 
 INCLUDE_ASM("asm/game", func_002B0ED8);
 

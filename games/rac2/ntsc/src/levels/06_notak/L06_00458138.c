@@ -3,24 +3,54 @@
 extern char *D_L06_001B9890[];
 
 extern char *func_00270280(int);
+
 extern float func_002A8A20(char *);
+
 extern int func_00273B70(char *);
+
 extern void func_002A7750(char *, int, int);
+
 extern void func_0029F338(char *);
+
 extern int func_002A8600(char **, int, int, int);
+
 extern int func_002A86E8(char **, char *, int, int);
+
 extern void func_002A7470(char *, int, int, int);
+
 extern void func_002AA548(char *, char *, float, float, float, float);
+
 extern int func_L04_0033CB08(char *, char *, int, int, float, float);
+
 extern void func_00282D30(char *, char *, float);
+
 extern float func_00282E20(char *);
+
 extern float func_00283C80(float, float);
+
 extern float func_00283180(float);
+
 extern float func_00283198(float);
+
 extern int func_002A9640(char *, int, int);
+
 extern void func_L06_00457C00(char *, int, void *, int, float, float, float, float);
+
 extern void func_002E5CF8(int, int, char *);
+
 extern void func_L00_00326110(char *, int, float);
+
+extern float D_L06_001B234C __attribute__((sda));
+
+extern float D_001B2350 __attribute__((sda));
+
+extern int func_0035CBA0(char *, int, int);
+
+extern void func_L06_0045BE30(char *, int, float, float, float, float);
+
+extern int func_003A0948(int, int, char *);
+
+extern void func_00350388(char *);
 
 INCLUDE_ASM("asm/levels", func_L06_00458138);
 
@@ -141,18 +171,6 @@ int func_L06_0045A500(char *a0, int a1, int a2)
 }
 
 INCLUDE_ASM("asm/levels", func_L06_0045A5B0);
-
-extern float D_L06_001B234C __attribute__((sda));
-
-extern float D_001B2350 __attribute__((sda));
-
-extern int func_0035CBA0(char *, int, int);
-
-extern void func_L06_0045BE30(char *, int, float, float, float, float);
-
-extern int func_003A0948(int, int, char *);
-
-extern void func_00350388(char *);
 
 void func_L06_0045BD38(char *a0)
 {

@@ -4,6 +4,8 @@ typedef int s32;
 
 typedef unsigned char u8;
 
+typedef short s16;
+
 typedef unsigned int u32;
 
 extern int func_00342BC0(unsigned char *owner);
@@ -62,7 +64,36 @@ s32 func_00342BC0(u8 *a0) {
 
 INCLUDE_ASM("asm/game", func_00342BE8);
 
-INCLUDE_ASM("asm/game", func_00342F70);
+/* The table of ids the engine accepts, at the boot's resident data. */
+extern u8 D_001A7AF8[] __attribute__((sda));
+
+extern void func_00342978(void *owner, int flags);
+
+/* Collects the ids of the list's entries the engine's table accepts into the
+   owner's array at 0x28, then hands the owner to the walker with half the count. */
+void func_00342F70(char *owner, char *list)
+{
+    s16 id;
+    int i;
+
+    *(s32 *)(owner + 0x10) = 0;
+    for (i = 0; i < 25 && *(s16 *)(list + i * 10 + 6) >= 0; i++) {
+        u8 *table = D_001A7AF8;
+        s32 *ids = (s32 *)(owner + 0x28);
+
+        id = *(s16 *)(list + i * 10 + 6);
+        if (table[id] == 0) {
+            continue;
+        }
+        if (*(s32 *)(owner + 0x10) < 25) {
+            s32 *dst = ids + *(s32 *)(owner + 0x10);
+            *dst = id;
+            *(s32 *)(owner + 0x10) += 1;
+        }
+    }
+    *(s32 *)(owner + 0x14) = *(s32 *)(owner + 0x10) / 2;
+    func_00342978(owner, 0);
+}
 
 INCLUDE_ASM("asm/game", func_00343020);
 

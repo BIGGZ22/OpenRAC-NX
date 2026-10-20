@@ -38,7 +38,72 @@ INCLUDE_ASM("asm/game", func_0028DF70);
 
 INCLUDE_ASM("asm/game", func_0028DF80);
 
-INCLUDE_ASM("asm/game", func_0028E138);
+/* The map's thirteen records, 0x90 bytes each: +0x04 flags, +0x14 handler,
+   +0x68 busy, +0x6C position, +0x7C timer. */
+extern char D_00255330[];
+
+/* The retail loads this one through a lui/lw pair of its own. */
+extern int D_001B1874 __attribute__((sda));
+
+extern void func_0028B4D8(char *);
+
+extern void func_0028E2A8(void);
+
+/* Walks the records, caps their timers, moves their positions on, and lets a
+   record run its own handler. */
+int func_0028E138(int arg)
+{
+    char *rec;
+    char *end;
+    int count = 0;
+
+    func_0028E2A8();
+    rec = (char *)D_00255330;
+    end = (char *)D_00255330 + 0x750;
+    do {
+        int v;
+
+        if ((*(int *)(rec + 4) & 0x10) || D_001B1874) {
+            v = *(int *)(rec + 0x7C);
+            if (v < 10) {
+                *(int *)(rec + 0x7C) = 10;
+            }
+            v = *(int *)(rec + 0x7C);
+        } else {
+            v = *(int *)(rec + 0x7C);
+        }
+
+        if (v > 0) {
+            v = v - 1;
+            *(int *)(rec + 0x7C) = v;
+            if (v > 0) {
+                count++;
+                if (*(int *)(rec + 0x6C) < 30) {
+                    *(int *)(rec + 0x6C) = *(int *)(rec + 0x6C) + 1;
+                }
+            } else if (*(int *)(rec + 0x6C) >= -5) {
+                *(int *)(rec + 0x6C) = *(int *)(rec + 0x6C) - 1;
+            }
+        } else if (*(int *)(rec + 0x6C) >= -5) {
+            *(int *)(rec + 0x6C) = *(int *)(rec + 0x6C) - 1;
+        }
+
+        if (*(int *)(rec + 0x68) != 0) {
+            if (*(int *)(rec + 0x6C) == -6) {
+                func_0028B4D8(rec);
+            }
+        }
+
+        if (arg != 0) {
+            void (*handler)(char *) = *(void (**)(char *))(rec + 0x14);
+            if (handler) {
+                handler(rec);
+            }
+        }
+        rec += 0x90;
+    } while ((int)rec < (int)end);
+    return count;
+}
 
 typedef struct { char reserved00[0x1248]; int selected; char reserved124C[0x1068]; unsigned char blocked; } MapSelection;
 typedef struct { char reserved00[0x88]; unsigned short valid; char reserved8A[0x56]; } MapRecord;

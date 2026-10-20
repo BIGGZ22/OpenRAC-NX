@@ -1,6 +1,14 @@
 #include "include_asm.h"
 
-/* Measured partial layouts; original type and game roles are unknown. */
+#define RAC2_T_VEC16_FC936841D
+
+typedef struct {
+    char pad_000[0x140];
+    float x_140;
+    float y_144;
+    float z_148;
+} L00AimVector;
+
 typedef struct Rac2Native_9cdc323a4d0c2fbd_AnalysisOwner {
     unsigned char prefix_00[0x68];
     void *context_68;
@@ -13,6 +21,21 @@ typedef struct Rac2Native_9cdc323a4d0c2fbd_AnalysisConditionalContext {
     unsigned int active_24;
 } Rac2Native_9cdc323a4d0c2fbd_AnalysisConditionalContext;
 
+typedef struct {
+    float x;
+    float y;
+    float z;
+    float w;
+} Vec16_Fc936841d;
+
+typedef struct Rac2Native_9cdc323a4d0c2fbd_ClearedRecord {
+    unsigned char prefix_00[0x48];
+    unsigned int field_48;
+    unsigned char suffix_4C[4];
+} Rac2Native_9cdc323a4d0c2fbd_ClearedRecord;
+
+extern L00AimVector D_L00_001B8C80;
+
 extern void func_002FDBD8_3(float scale, Rac2Native_9cdc323a4d0c2fbd_AnalysisConditionalContext *context,
                                     float *vector, int mode);
 
@@ -22,24 +45,22 @@ extern void func_00282CF0_9(char *local, char *first, char *second);
 
 extern void func_00282CC0_15(char *target, char *first, char *local);
 
+extern Rac2Native_9cdc323a4d0c2fbd_ClearedRecord D_L00_00241500[];
+
+extern float func_00282E80(void *dst, void *src);
+
+extern void func_002A7470(void *object, int kind, int value, int extra);
+
+extern int func_002E5CF8(int index, int value, void *object);
+
+extern char D_00189EA0[];
+
+/* Measured partial layouts; original type and game roles are unknown. */
+
 #ifndef RAC2_T_VEC16_FC936841D
-#define RAC2_T_VEC16_FC936841D
-typedef struct {
-    float x;
-    float y;
-    float z;
-    float w;
-} Vec16_Fc936841d;
 #endif
 
 /* Measured partial layout; original type and game role are unknown. */
-typedef struct Rac2Native_9cdc323a4d0c2fbd_ClearedRecord {
-    unsigned char prefix_00[0x48];
-    unsigned int field_48;
-    unsigned char suffix_4C[4];
-} Rac2Native_9cdc323a4d0c2fbd_ClearedRecord;
-
-extern Rac2Native_9cdc323a4d0c2fbd_ClearedRecord D_L00_00241500[];
 
 INCLUDE_ASM("asm/levels", func_L00_003C6298);
 
@@ -150,7 +171,32 @@ void func_L00_003CD158(void)
 {
 }
 
-INCLUDE_ASM("asm/levels", func_L00_003CEC50);
+void func_L00_003CEC50(char *object)
+{
+    char *s0 = object;
+
+    if (*(unsigned char *)(s0 + 0x20) == 0) {
+        if (func_00282E80(s0 + 0x10, D_00189EA0) < 6.0f) {
+            *(unsigned char *)(s0 + 0x20) = 1;
+            *(unsigned int *)(s0 + 0x78) = 0x24C102;
+            if (*(unsigned char *)(s0 + 0x43) != 1) {
+                func_002A7470(s0, 1, 0, 0);
+            }
+            func_002E5CF8(0, 0, s0);
+            *(unsigned int *)(s0 + 0x98) = 0;
+        }
+    }
+    if (*(unsigned char *)(s0 + 0x20) == 1) {
+        if (*(unsigned char *)(s0 + 0x60) & 2) {
+            *(unsigned char *)(s0 + 0x20) = 2;
+            *(unsigned int *)(s0 + 0x78) = 0x224C1;
+            if (*(unsigned char *)(s0 + 0x43) != 2) {
+                func_002A7470(s0, 2, 0, 0);
+            }
+            func_002E5CF8(1, 0, s0);
+        }
+    }
+}
 
 INCLUDE_ASM("asm/levels", func_L00_003CED50);
 

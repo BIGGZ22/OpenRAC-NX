@@ -1,0 +1,15 @@
+/* Alternative source form for func_L00_002E2048.
+   Retained from 2E2048_b.c, entry func_L00_002E2048; declarations preserved.
+   Naming/extraction only: this form has not been recompiled or validated
+   by the cleanup. See the primary near-miss file for the recorded blocker;
+   do not apply another form's verdict to this one. Recheck its file-level
+   flags with tools/check.py, then tools/build.py before promotion. */
+typedef int s32;
+extern unsigned char D_001BF200[];
+
+s32 func_L00_002E2048(void) {
+ unsigned char *b=D_001BF200;
+ s32 v=*(s32 *)(b+0x1C);
+ if(v<0) return -1;
+ return (v&0x60)/0x20;
+}

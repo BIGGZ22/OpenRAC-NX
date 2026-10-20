@@ -22,3 +22,22 @@ void func_00298780(void)
         D_001A7420_5 = 15;
     }
 }
+
+extern int D_001A7424 __attribute__((sda));
+extern int D_001A7424_1[] __attribute__((sda));
+
+void func_002987C0(void)
+{
+    if (D_001393E0_1.mode_15c == 2 && D_001393E0_1.selected_164 < 0) {
+        if (*(int *)((char *)&D_001393E0_1 + 0x16C) != 0) {
+            D_001A7420_5 = 18;
+            D_001A7424 = D_001A7424_1[0] | 0x40;
+        } else {
+            D_001393E0_1.selected_164 = 7;
+            *(int *)((char *)&D_001393E0_1 + 0x148) = 0;
+            *(short *)((char *)&D_001393E0_1 + 0x18) = 0;
+            D_001393E0_1.value_168 = 0;
+            D_001A7420_5 = 22;
+        }
+    }
+}

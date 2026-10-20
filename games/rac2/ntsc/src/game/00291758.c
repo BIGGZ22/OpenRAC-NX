@@ -169,7 +169,7 @@ void func_002934B8(u8 *a0, u8 *a1) {
 
 INCLUDE_ASM("asm/game", func_002934F8);
 
-INCLUDE_ASM("asm/game", func_00293890);
+/* func_00293890 is in 00291758-g8.c. */
 
 INCLUDE_ASM("asm/game", func_002939B8);
 
@@ -200,8 +200,6 @@ int func_00293CA8(int index)
     }
     return 1;
 }
-
-INCLUDE_ASM("asm/game", func_00293D30);
 
 INCLUDE_ASM("asm/game", func_00293F98);
 

@@ -1,24 +1,25 @@
 #include "include_asm.h"
 
-extern void F7242f0a4_FUN_00282D30(char *out, void *source, float value);
+#define RAC2_T_OBJ_F7B2F1854
 
-extern void F7242f0a4_FUN_00334730(char *buffer, int mode);
+typedef struct {
+    unsigned char pad[0x1FB0];
+    float limit_x;
+    float limit_y;
+} Glob_199E20;
 
-extern void F7242f0a4_FUN_00334710(int value, char *buffer);
+typedef struct {
+    unsigned char pad[0x50];
+    float f50;
+    float f54;
+} Obj_32FDD0;
 
-extern void F7242f0a4_FUN_00282CC0(char *first, char *second, char *third);
-
-extern float F7242f0a4_FUN_00282DB0(void *owner, char *buffer);
-
-extern int F7242f0a4_D_001B53A0[];
+typedef int TI128 __attribute__((mode(TI)));
 
 typedef float f32;
 
 typedef int s32;
 
-extern s32 func_00283D38(s32, s32, f32);
-
-/* Measured partial layouts; original type and game roles are unknown. */
 typedef struct Rac2Native_81be3b52930eb806_FallbackInterleavedFloat4Layout {
     unsigned char unknown_00[8];
     float first_0;
@@ -33,13 +34,6 @@ typedef struct Rac2Native_81be3b52930eb806_FallbackInterleavedFloat4Layout {
 
 typedef unsigned char u8;
 
-/* func_0034CA68: owner ABI/declaration review retained. */
-extern int func_00335E20(unsigned char *field);
-
-extern void func_00336ED0(int a, int b);
-
-#ifndef RAC2_T_OBJ_F7B2F1854
-#define RAC2_T_OBJ_F7B2F1854
 typedef struct Obj_F7b2f1854 {
     int *f0;
     int *f4;
@@ -54,7 +48,37 @@ typedef struct Obj_F7b2f1854 {
     int f40;
     int f44;
 } Obj_F7b2f1854;
-#endif
+
+typedef unsigned int u32;
+
+typedef struct {
+    char reserved[0x30];
+    void *table;
+} Constructor_3361A8;
+
+extern Glob_199E20 D_00189E20;
+
+extern float D_001B284C __attribute__((sda));
+
+extern float D_00189EA0[];
+
+extern void F7242f0a4_FUN_00282D30(char *out, void *source, float value);
+
+extern void F7242f0a4_FUN_00334730(char *buffer, int mode);
+
+extern void F7242f0a4_FUN_00334710(int value, char *buffer);
+
+extern void F7242f0a4_FUN_00282CC0(char *first, char *second, char *third);
+
+extern float F7242f0a4_FUN_00282DB0(void *owner, char *buffer);
+
+extern int F7242f0a4_D_001B53A0[];
+
+extern s32 func_00283D38(s32, s32, f32);
+
+extern int func_00335E20(unsigned char *field);
+
+extern void func_00336ED0(int a, int b);
 
 extern int *F7b2f1854_FUN_00336E40(int n);
 
@@ -68,13 +92,76 @@ extern void *F36efd143_FUN_00336E40(char *a);
 
 extern void *F36efd143_FUN_00336DA8(int size, void *b);
 
-typedef unsigned int u32;
-
 extern void F081de6c9_FUN_00335FC8(char *s, int a1, char *a2);
 
 extern int F081de6c9_FUN_00336E40(int x);
 
 extern int *F081de6c9_FUN_00336DA8(int n, int x);
+
+extern int D_001B2860[] __attribute__((sda));
+
+extern char D_001B0A88[];
+
+extern void func_0026FEB8(void *);
+
+extern unsigned short *D_001EE5A0[];
+
+extern char *D_001B1B5C __attribute__((sda));
+
+extern void func_002FDBD8(void *, void *, int, float);
+
+extern char D_001B5200[];
+
+extern void func_002704D0(void);
+
+extern void func_00283410(void *, void *);
+
+extern void func_00283678(void *, void *);
+
+extern void func_00282F20(void *, void *, float);
+
+extern void func_00282CC0(void *, void *, void *);
+
+extern void func_002704D0(void);
+
+extern char D_001AD9C8[] __attribute__((sda));
+
+extern void func_00336DA0(void *);
+
+extern void func_00115E38(char *, int, char *);
+
+extern char D_001AD8B0[];
+
+extern char D_001AD8C8[];
+
+extern char D_001AD9A8[] __attribute__((sda));
+
+extern void func_00335870(void *, int);
+
+extern int D_001B23A0 __attribute__((sda));
+
+extern char D_001ADA78[] __attribute__((sda));
+
+extern char D_001ADA78[] __attribute__((sda));
+
+extern void func_00336DA0(void *);
+
+extern void *func_00335FB0(void *);
+
+extern char D_001ADA58[] __attribute__((sda));
+
+extern int func_00336D50(int, int);
+
+extern char D_001AD9F8[] __attribute__((sda));
+
+extern char D_001ADA38[] __attribute__((sda));
+
+/* Measured partial layouts; original type and game roles are unknown. */
+
+/* func_0034CA68: owner ABI/declaration review retained. */
+
+#ifndef RAC2_T_OBJ_F7B2F1854
+#endif
 
 INCLUDE_ASM("asm/game", func_0032EB28);
 
@@ -86,9 +173,8 @@ INCLUDE_ASM("asm/game", func_0032F598);
 
 INCLUDE_ASM("asm/game", func_0032FDC0);
 
-INCLUDE_ASM("asm/game", func_0032FDD0);
 
-INCLUDE_ASM("asm/game", func_0032FEA8);
+/* func_0032FEA8 uses small data in 0032EB28-g8.c. */
 
 INCLUDE_ASM("asm/game", func_0032FFD8);
 
@@ -98,7 +184,7 @@ INCLUDE_ASM("asm/game", func_003304D8);
 
 INCLUDE_ASM("asm/game", func_003309A0);
 
-INCLUDE_ASM("asm/game", func_00330BC0);
+/* func_00330BC0 uses small data in 0032EB28-g8.c. */
 
 INCLUDE_ASM("asm/game", func_00330CA0);
 
@@ -114,17 +200,10 @@ INCLUDE_ASM("asm/game", func_00331580);
 
 INCLUDE_ASM("asm/game", func_00331718);
 
-
-
 INCLUDE_ASM("asm/game", func_00331800);
 
 INCLUDE_ASM("asm/game", func_003320E8);
 
-INCLUDE_ASM("asm/game", func_003320F0);
-
-extern int D_001B2860[] __attribute__((sda));
-extern char D_001B0A88[];
-extern void func_0026FEB8(void *);
 
 void func_003323F0(int a0) {
     int i;
@@ -152,9 +231,6 @@ INCLUDE_ASM("asm/game", func_003334B0);
 
 INCLUDE_ASM("asm/game", func_00333AF8);
 
-extern unsigned short *D_001EE5A0[];
-extern char *D_001B1B5C __attribute__((sda));
-
 void func_00334050(int index, int value)
 {
     unsigned short *list = D_001EE5A0[index];
@@ -168,8 +244,6 @@ void func_00334050(int index, int value)
         } while (key >= 0);
     }
 }
-
-extern void func_002FDBD8(void *, void *, int, float);
 
 void func_003340A8(char *object)
 {
@@ -187,7 +261,8 @@ INCLUDE_ASM("asm/game", func_00334160);
 
 INCLUDE_ASM("asm/game", func_00334550);
 
-INCLUDE_ASM("asm/game", func_00334710);
+/* func_00334710 is matched in 00334710-rc2.c. */
+
 
 INCLUDE_ASM("asm/game", func_00334728);
 
@@ -225,13 +300,39 @@ INCLUDE_ASM("asm/game", func_00335420);
 
 INCLUDE_ASM("asm/game", func_00335438);
 
-INCLUDE_ASM("asm/game", func_003355A8);
+void func_003355A8(int mode)
+{
+    struct { float scaled[4]; float negative[4]; float matrix[16]; } work;
+    char *state = D_001B5200;
+    char *camera = *(char **)(state + 0x190);
+    func_002704D0();
+    if (mode == 0) {
+        char *position = camera + 0x30;
+        func_00283410(work.matrix, D_00189EA0 + 4);
+        func_00283678(camera, work.matrix);
+        func_00282F20(work.negative, work.matrix, -1.0f);
+        func_00282F20(work.scaled, work.matrix + 8, 1.2f);
+        func_00282CC0(position, D_00189EA0, work.scaled);
+        func_00282CC0(position, position, work.negative);
+        *(short *)(*(char **)(state + 0x190) + 0x8A) = 1;
+    } else if (mode == 2) {
+        state[0x293] = 0;
+        *(short *)(camera + 0x7E) = 2;
+        *(float *)(state + 0x2B4) = 0.018f;
+        *(float *)(state + 0x2A8) = 0.018f;
+    } else if (mode == 1) {
+        *(short *)(camera + 0x7E) = 3;
+    } else if (mode == 4) {
+        state[0x293] = 0;
+        *(short *)(camera + 0x7E) = 5;
+        *(float *)(state + 0x2B4) = 0.018f;
+        *(float *)(state + 0x2A8) = 0.018f;
+    }
+}
 
 INCLUDE_ASM("asm/game", func_003356E8);
 
 INCLUDE_ASM("asm/game", func_00335798);
-
-extern void func_002704D0(void);
 
 void func_00335840(void) {
     func_002704D0();
@@ -239,18 +340,11 @@ void func_00335840(void) {
 
 INCLUDE_ASM("asm/game", func_00335860);
 
-extern char D_001AD9C8[] __attribute__((sda));
-extern void func_00336DA0(void *);
-
 void func_00335870(void *object, int flags) {
     *(void **)((char *)object + 4) = D_001AD9C8;
     if (flags & 1)
         func_00336DA0(object);
 }
-
-extern void func_00115E38(char *, int, char *);
-extern char D_001AD8B0[];
-extern char D_001AD8C8[];
 
 void func_003358A0(void *unused, char *out, float factor) {
     if (out == 0)
@@ -264,8 +358,6 @@ void func_003358A0(void *unused, char *out, float factor) {
 INCLUDE_ASM("asm/game", func_00335918);
 
 INCLUDE_ASM("asm/game", func_00335960);
-
-extern char D_001AD9A8[] __attribute__((sda));
 
 void *func_00335AC8(void *object) {
     *(void **)object = D_001AD9A8;
@@ -316,15 +408,11 @@ void func_00335CC0(float factor,
 
 INCLUDE_ASM("asm/game", func_00335D30);
 
-extern void func_00335870(void *, int);
-
 void func_00335D60(void *object, int flags) {
     func_00335870(object, flags);
 }
 
 INCLUDE_ASM("asm/game", func_00335DC0);
-
-extern int D_001B23A0 __attribute__((sda));
 
 int func_00335E08(void) {
     return D_001B23A0;
@@ -385,8 +473,6 @@ void func_00335F88(u8 *a0,f32 f0,f32 f1,f32 f2,f32 f3) {
  (*(f32 **)(a0+4))[0]=f0;(*(f32 **)(a0+4))[1]=f1;
  (*(f32 **)(a0+4))[2]=f2;(*(f32 **)(a0+4))[3]=f3;
 }
-
-extern char D_001ADA78[] __attribute__((sda));
 
 void *func_00335FB0(void *object) {
     *(void **)((char *)object + 0x30) = D_001ADA78;
@@ -450,9 +536,6 @@ void func_00335FC8(Obj_F7b2f1854 *o, int a1, int count)
 
 INCLUDE_ASM("asm/game", func_003360F0);
 
-extern char D_001ADA78[] __attribute__((sda));
-extern void func_00336DA0(void *);
-
 void func_003360F8(char *object, int flags)
 {
     *(char **)(object + 0x30) = D_001ADA78;
@@ -469,14 +552,6 @@ void func_003360F8(char *object, int flags)
     if (flags & 1)
         func_00336DA0(object);
 }
-
-extern void *func_00335FB0(void *);
-extern char D_001ADA58[] __attribute__((sda));
-
-typedef struct {
-    char reserved[0x30];
-    void *table;
-} Constructor_3361A8;
 
 Constructor_3361A8 *func_003361A8(Constructor_3361A8 *object) {
     func_00335FB0(object);
@@ -518,17 +593,11 @@ INCLUDE_ASM("asm/game", func_00336308);
 /* Measured target: byte-identical across all 27 levels. */
 s32 func_00336318(u8 *a0) { return *(s32 *)(a0 + 0x38); }
 
-
-
-extern int func_00336D50(int, int);
-
 void func_00336390(char *object, int a1, int a2) {
     *(int *)(object + 0x40) = func_00336D50(a1, a2);
 }
 
 void func_003363C0(u8 *a0, f32 a1) { f32 *p = *(f32 **)(a0 + 0x38); *p = a1; }
-
-extern char D_001AD9F8[] __attribute__((sda));
 
 Constructor_3361A8 *func_003363D0(Constructor_3361A8 *object) {
     func_00335FB0(object);
@@ -570,8 +639,6 @@ void func_00336508(u8 *a0, s32 a1, s32 a2) {
 }
 
 INCLUDE_ASM("asm/game", func_00336548);
-
-extern char D_001ADA38[] __attribute__((sda));
 
 Constructor_3361A8 *func_003366D0(Constructor_3361A8 *object) {
     func_00335FB0(object);

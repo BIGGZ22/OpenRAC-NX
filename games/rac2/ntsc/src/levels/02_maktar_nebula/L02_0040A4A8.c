@@ -36,6 +36,18 @@ extern void func_31E3C0(void *, int, int, int);
 extern void func_316220(void *);
 extern void func_366830(int);
 extern void func_3FC1B0(int, int);
+extern void func_0032C700(void *, int, int, int, int, int, int, int, float, float,
+                          int, int, int, int);
+extern void func_002E5DA0(int, int, void *, int);
+extern void func_002A7A00(void *, float, float);
+extern void func_00282CC0(void *, void *, void *);
+extern void func_002B0A68(void *, int, void *, float, float, float, float, int);
+extern void func_002A7470(void *, int, int, int);
+extern void func_002A05A8(void *);
+extern int func_002E59F8(int);
+extern int func_L02_003FC1B0(void *, int);
+extern int func_L02_003FC0D0(void *, int);
+extern int func_002B3BA8(void *, u32, float, float, int, int);
 
 typedef int TI128 __attribute__((mode(TI)));
 
@@ -93,7 +105,28 @@ void func_L02_0040B868(u8 *a0, int a1) {
     }
 }
 
-INCLUDE_ASM("asm/levels", func_L02_0040B980);
+/* arms the actor: its two effect tracks, then the shared state resets */
+void func_L02_0040B980(u8 *a0) {
+    u8 *s1 = *(u8 **)(a0 + 0x68);
+    float buf[3];
+
+    *(u16 *)(s1 + 0x2E2) = 0;
+    *(u32 *)(s1 + 0x2D4) = 0;
+    if (a0[0x31]) {
+        func_0032C700(a0 + 0x10, 0, 5, 5, 0x19, 0x14, 0xA, 1, 0.5f, 0.0f,
+                      1, 0, 0, 0);
+        func_002E5DA0(0, 0, a0, 0xC3E);
+        func_002A7A00(buf, 0.083333335816860199f, 0.11666667461395264f);
+        func_00282CC0(buf, buf, s1 + 0xD0);
+        func_002B0A68(a0, 0xFF, buf, 3.0f, 6.0f, 3.0f, 6.0f, 0xFF);
+    }
+    func_002A7470(a0, 0, 0, 3);
+    func_002A05A8(a0);
+    func_002A7750(a0, 1, 0);
+    *(u8 *)(a0 + 0x31) = 0;
+    *(u32 *)(a0 + 0x98) = 0;
+    *(u16 *)(a0 + 0x34) = (*(u16 *)(a0 + 0x34) & 0xEFFF) | 0x47;
+}
 
 /* sweeps the two effect tracks of the actor relative to a head position */
 INCLUDE_ASM("asm/levels", func_L02_0040BAB8);
@@ -131,7 +164,37 @@ void func_L02_0040CEE8(u8 *a0) {
         *(u16 *)(a0 + 0x96) = *(u16 *)(a0 + 0x96) + 1;
 }
 
-INCLUDE_ASM("asm/levels", func_L02_0040CF68);
+/* Updates the actor's halfword at +0x1B8: below kind 4 it only clears it and the word at +0x184;
+   while it is 1, or when the flag at +0x31 is set and func_L02_003FC0D0 agrees, it keeps it at 1
+   and calls func_002B3BA8 on the slot at +0x1B0; otherwise it clears it and, for kinds 8 and 0xB,
+   picks one of two states by the word at +0x180. */
+void func_L02_0040CF68(u8 *a0) {
+    u8 *s1 = *(u8 **)(a0 + 0x68);
+
+    if (a0[0x20] < 4) {
+        *(u16 *)(s1 + 0x1B8) = 0;
+        *(s32 *)(s1 + 0x184) = 0;
+    } else {
+        if (*(s16 *)(s1 + 0x1B8) == 1) {
+            *(s16 *)(s1 + 0x1B6) = func_002B3BA8(a0, *(u32 *)(s1 + 0x1B0), 100.0f, 100.0f, 0, 0);
+            *(s32 *)(s1 + 0x184) = *(s32 *)(s1 + 0x160);
+        } else {
+            if (a0[0x31] != 0 && func_L02_003FC0D0(*(void **)(a0 + 0xB8), *(s16 *)(a0 + 0xAA)) != 0) {
+                *(u16 *)(s1 + 0x1B8) = 1;
+                *(s16 *)(s1 + 0x1B6) = func_002B3BA8(a0, *(u32 *)(s1 + 0x1B0), 100.0f, 100.0f, 0, 0);
+                *(s32 *)(s1 + 0x184) = *(s32 *)(s1 + 0x160);
+            } else {
+                *(u16 *)(s1 + 0x1B8) = 0;
+                if (a0[0x20] == 0xB || a0[0x20] == 8) {
+                    if (*(s32 *)(s1 + 0x180) != -1)
+                        func_002A7750(a0, 7, 3);
+                    else
+                        func_002A7750(a0, 5, 2);
+                }
+            }
+        }
+    }
+}
 
 /* resets the actor's aim: three records and the two shared limits */
 void func_L02_0040D080(u8 *a0, int a1) {
@@ -158,6 +221,9 @@ void func_L02_0040D080(u8 *a0, int a1) {
         *(u16 *)(s0 + 0x52) = 1;
     }
 }
+
+/* re-arms the actor: checks the slot it holds, then the shared state resets */
+extern void func_L02_0040D180(u8 *a0);
 
 INCLUDE_ASM("asm/levels", func_L02_0040D180);
 

@@ -22,6 +22,8 @@ carries `fold_zero_ti_store.py` (`rac2_fold_zero_ti_store`, referenced from
 inside the recipe that introduced the inversion.
 
 `ascending_save_order.py` must still run first: this transformer rewrites the
+region that one has already produced, in either of its two forms (ascending
+by default, the released descending walk under `-mastra-quad-saves`).
 region that one has already produced. The two block bodies are order
 symmetric -- each initialises the shared base when it runs first and reuses an
 already established base when it runs second -- so the selector alone decides
@@ -37,7 +39,8 @@ a = s.index("  /* Save GP registers if needed.  */")
 b = s.index("  /* Save floating point registers if needed.  */", a)
 c = s.index("\n}\n\f", b)
 gp, fp = s[a:b], s[b:c]
-assert "for (regno = GP_REG_FIRST; regno <= GP_REG_LAST; regno++)" in gp
+assert ("for (regno = GP_REG_FIRST; regno <= GP_REG_LAST; regno++)" in gp
+        or "for (regno = mips_astra_quad_saves ? GP_REG_LAST : GP_REG_FIRST;" in gp)
 assert "regno -= fp_inc)" in fp
 assert MARKER not in s
 fp = fp.replace("already set up for gp registers above", "reuse an already established save-area base")

@@ -57,4 +57,30 @@ void func_00343798(char *self, int arg)
 
 INCLUDE_ASM("asm/game", func_003438E0);
 
-INCLUDE_ASM("asm/game", func_003438E8);
+extern void func_00336320(void *a0);
+extern void func_00336A78(void *a0);
+extern void func_00342BE8(void *a0);
+extern int func_00342BC0(void *a0);
+extern int func_00288FB8(int);
+extern void func_00336A38(void *a0, int a1);
+extern unsigned char D_00139568[];
+extern char D_00239BA0[];
+
+void func_003438E8(char *self)
+{
+    int r;
+    char *rec;
+
+    if (*(int *)(self + 0x290) != 0) {
+        func_00336320(self);
+        func_00336320(self + 0x4C);
+        func_00336320(self + 0x98);
+        func_00336A78(self + 0x1B0);
+        func_00342BE8(self + 0x298);
+        r = func_00342BC0(self + 0x298);
+        rec = D_00239BA0 + D_00139568[r] * 224;
+        func_00336A38(self + 0x1F8, func_00288FB8(*(int *)(rec + 8)));
+        func_00336A78(self + 0x1F8);
+        func_00336A78(self + 0x240);
+    }
+}

@@ -233,7 +233,6 @@ void *func_00346670(char *p)
     return p;
 }
 
-INCLUDE_ASM("asm/game", func_00346710);
 
 INCLUDE_ASM("asm/game", func_00346C60);
 
@@ -566,8 +565,6 @@ void func_00349AE0(u8 *a0,s32 a1) {
 /* Measured target: byte-identical across all 27 levels. */
 void func_00349B18(u8 *a0, f32 a1) { *(f32 *)(a0 + 0x18) = a1; }
 
-INCLUDE_ASM("asm/game", func_00349B20);
-
 extern void func_003361A8(char *);
 extern void func_003363D0(char *);
 extern char *func_00335AC8(char *);
@@ -644,7 +641,6 @@ void func_0034B000(char *p, int a1)
 
 INCLUDE_ASM("asm/game", func_0034B068);
 
-INCLUDE_ASM("asm/game", func_0034B070);
 
 INCLUDE_ASM("asm/game", func_0034B2C8);
 

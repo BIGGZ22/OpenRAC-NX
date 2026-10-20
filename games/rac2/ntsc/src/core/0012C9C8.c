@@ -40,7 +40,6 @@ int func_0012CA48(void *arg0) {
     return 0;
 }
 
-INCLUDE_ASM("asm/core", func_0012CAB0);
 
 extern int r1_func_00128A58_0012CBC0(void *, int);
 

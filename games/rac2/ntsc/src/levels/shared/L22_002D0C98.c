@@ -30,7 +30,31 @@ INCLUDE_ASM("asm/levels", func_L22_002D0C98);
 /* VU0 macro-op helper (lqc2/sdc2 + a COP2 op): hand-written assembly. */
 INCLUDE_ASM("asm/levels", func_L22_002F3B38);
 
-INCLUDE_ASM("asm/levels", func_L22_00328220);
+/* Early-outs when the third float argument is positive; otherwise bends the first angle
+   through one helper, feeds the second angle and the angle at the fourth pointer through
+   the two placement calls, scales it by the first float argument and stores it back. */
+void func_L22_00328220(u8 *a0, u8 *a1, u8 *a2, u8 *a3, f32 f12, f32 f13, f32 f14)
+{
+    u8 *s0 = a0;
+    u8 *s1 = a1;
+    u8 *s2 = a3;
+    u8 *s3 = a2;
+    TI128 buf;
+    f32 keep;
+    f32 q;
+
+    if (f14 > 0.0f)
+        return;
+    keep = f12;
+    *(f32 *)(s1 + 0) = func_2F4A88(*(f32 *)(s1 + 0));
+    func_2F3AF0(&buf, s2, *(f32 *)(s3 + 0));
+    s0 += 0x10;
+    func_2F3AB0(s0, s0, &buf);
+    q = func_2F4088(*(f32 *)(s1 + 0)) * keep;
+    *(f32 *)(s3 + 0) = q;
+    func_2F3AF0(&buf, s2, q);
+    func_2F3A80(s0, s0, &buf);
+}
 
 INCLUDE_ASM("asm/levels", func_L22_0032F228);
 

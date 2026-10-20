@@ -49,6 +49,16 @@ extern void func_002833F0_2(void *, void *);
 
 extern void func_002E5DA0(int, int, void *, int);
 
+extern void func_0029FCC0(char *, int, void *);
+
+extern int func_801234F0(float);
+
+extern void func_0026FEB8(void *, int, int, int, int);
+
+extern void func_L00_002D40A0(void *, int, float);
+
+extern char D_L02_001AFE38[];
+
 extern void func_002A6C58(void *, int, int);
 
 extern void func_00288CB0(int, int);
@@ -80,6 +90,21 @@ extern struct S_001A63A8 D_001A63A8;
 extern int D_L02_001A8FF0 __attribute__((sda));
 
 extern void func_002B60B0(void *, float, float, float, float);
+
+extern long long func_0027C878(char *);
+
+extern float func_00282E80(void *, void *);
+
+extern void func_00283410(float *, float *);
+
+extern void func_00280B90(char *, float *, int);
+
+/* The packet reset, which the levels place in two copies: the one this function calls
+   differs from level to level. */
+extern void ref_L02_003FFC48_00(char *);
+
+/* The vector scaler, in two copies as well. */
+extern void ref_L02_003FFC48_01(char *, float);
 
 struct S_001A63A8 {
     char pad0[0x6C];
@@ -114,6 +139,16 @@ struct Outer {
     char pad[104];
     struct G *g;
 };
+
+/* The aim vector the L02 aiming helpers read, at 0x001BA3C0. */
+typedef struct {
+    char pad_000[0x140];
+    float x_140;
+    float y_144;
+    float z_148;
+} L02AimVector;
+
+extern L02AimVector D_L02_001BA3C0;
 
 typedef int BatchA_A17_s32;
 
@@ -154,9 +189,23 @@ INCLUDE_ASM("asm/levels", func_L02_003C49A0);
 
 INCLUDE_ASM("asm/levels", func_L02_003C4C80);
 
-/* Reads three angles through a helper, converts them, and hands them to the placement call
-   together with the object's own angle. */
-INCLUDE_ASM("asm/levels", func_L02_003C4E18);
+/* Reads three angles through a helper, bends the object's own angle at +0xF8 into the same
+   range, converts all four and hands them to the four-argument report, then applies the
+   same bend to the local angles. */
+void func_L02_003C4E18(char *a0)
+{
+    char *s0 = a0;
+    float v[4];
+    float f20;
+
+    func_0029FCC0(a0, 1, v);
+    /* retail holds 0x40490FD0 here; this spelling is what the rebuilt assembler reads to
+       those bits */
+    f20 = func_00283B98_12(*(float *)(s0 + 0xF8), 3.14159f);
+    func_0026FEB8(D_L02_001AFE38, func_801234F0(v[0]), func_801234F0(v[1]),
+                  func_801234F0(v[2]), func_801234F0(f20));
+    func_L00_002D40A0(v, 0, f20);
+}
 
 INCLUDE_ASM("asm/levels", func_L02_003C4ED8);
 
@@ -190,7 +239,29 @@ INCLUDE_ASM("asm/levels", func_L02_003CD4A8);
 
 INCLUDE_ASM("asm/levels", func_L02_003CD758);
 
-INCLUDE_ASM("asm/levels", func_L02_003CD8C0);
+extern int D_L02_001B35B8 __attribute__((sda));
+
+/* Sets every entity of the object's group to state 1 with a 0xB4 timer. */
+void func_L02_003CD8C0(unsigned char *arg0) {
+    unsigned short *q;
+    char *e;
+
+    if (arg0[0x21] == 0xFF)
+        return;
+    q = (unsigned short *)D_L02_001FC060[arg0[0x21]];
+    while (arg0[0x21] != 0xFF && arg0[0x21] <= D_L02_001B35B8 && q != 0 &&
+           ((q != 0 && (short)q[-1] >= 0) || q == (unsigned short *)D_L02_001FC060[arg0[0x21]])) {
+        char *o;
+
+        e = D_L02_001B359C + ((*q & 0x7FFF) << 8);
+        if (e == 0)
+            break;
+        o = *(char **)(e + 0x68);
+        *(unsigned short *)(o + 0x382) = 1;
+        *(unsigned short *)(o + 0x386) = 0xB4;
+        q++;
+    }
+}
 
 INCLUDE_ASM("asm/levels", func_L02_003CD970);
 
@@ -229,6 +300,11 @@ void func_L02_003CE908(char *a0) {
 /* Near miss (see work/wave7-20261013/w04/drafts): the loop, both branch-likely tests and the
    duplicated `lh` delay-slot loads are retail's; two register copies are missing because this
    compiler gives the kind byte the other register. 116 bytes against 124. */
+/* Near miss (see work/wave7-20261013/w04/drafts): the loop, both branch-likely tests and the
+   duplicated `lh` delay-slot loads are retail's; two register copies are missing because this
+   compiler gives the kind byte the other register. 116 bytes against 124.
+   wave5-09: same wall from a -G8 unit (needs the .extern for the one-instruction $gp load);
+   candidate 128 bytes, the same two register copies plus a `nop` the retail loop does not have. */
 INCLUDE_ASM("asm/levels", func_L02_003CE9A8);
 
 INCLUDE_ASM("asm/levels", func_L02_003CEA28);
@@ -384,14 +460,17 @@ void func_L02_003D78A8(char *a0) {
     func_002A7750(a0, 3, -1);
 }
 
-/* Near miss (see work/wave7-20261013/w04/drafts): retail sequence and store order reproduced,
-   same register-permutation wall as func_L02_003DBEC8. 152 bytes against 148. */
-INCLUDE_ASM("asm/levels", func_L02_003D7B88);
-
-/* Near miss (see work/wave7-20261013/w04/drafts): the whole body compiles to the retail
-   instruction sequence; only the register permutation differs (the parameter copy and p land in
-   a2/a3 the other way round). 124 bytes against 120. */
+/* Near miss (see work/wave7-20261013/w04/drafts and nonmatching/levels/func_L02_003DBEC8.c):
+   body, store order, table lookup and the lq/sq copy all in the retail sequence; the parameter
+   copy and the context land in $t0/$t1 here against retail's $a2/$a3 (a dead second parameter
+   does not move them), and with the context load written first this cc1 fills the bnez delay
+   slot with it and sinks the epilogue's `ld $ra` instead, so 108 bytes against 120. */
 INCLUDE_ASM("asm/levels", func_L02_003DBEC8);
+
+/* Near miss: nonmatching/levels/func_L02_003D7B88.c - body, store order and both lookups
+   reproduced; the parameter copy lands in $t2 and this cc1 sinks the epilogue's `ld $ra`
+   into the bnez delay slot where retail loads the context (140 bytes against 148). */
+INCLUDE_ASM("asm/levels", func_L02_003D7B88);
 
 void func_L02_003DED08(void) {
     func_L00_0037E5F0(10000.0f);
@@ -429,7 +508,44 @@ void func_L02_003FF698(void *a0) {
         func_002A7750(a0, 2, -1);
 }
 
-INCLUDE_ASM("asm/levels", func_L02_003FFC48);
+/* Aims a 144-byte packet at the level's aim vector: the quaternion comes from the source
+   point, the matrix's last row from the same point, and the packet is dispatched. */
+void func_L02_003FFC48(char *pos, int a1, int a2, char *a3, int t0, float f12, float f13)
+{
+    char pkt[144];
+    float m[16];
+    float quat[4];
+    long long r;
+
+    ref_L02_003FFC48_00(pkt);
+    r = func_0027C878(a3);
+
+    *(long long *)(pkt + 136) = ((long long)t0 << 2) | 0x8000000040LL;
+    *(long long *)(pkt + 128) = 280993940374112LL;
+    *(int *)(pkt + 76) = a1 + (a2 << 24);
+    *(int *)(pkt + 72) = a1 + (a2 << 24);
+    *(int *)(pkt + 68) = a1 + (a2 << 24);
+    *(int *)(pkt + 64) = a1 + (a2 << 24);
+    *(long long *)(pkt + 112) = 0LL;
+    *(long long *)(pkt + 120) = r;
+
+    quat[3] = 0.0f;
+    quat[2] = func_00283248(D_L02_001BA3C0.x_140 - *(float *)(pos + 0),
+                            D_L02_001BA3C0.y_144 - *(float *)(pos + 4));
+    quat[1] = -func_00283248(func_00282E80(pos, (void *)&D_L02_001BA3C0.x_140),
+                             D_L02_001BA3C0.z_148 - *(float *)(pos + 8));
+    quat[0] = f13;
+
+    func_00283410(m, quat);
+
+    m[12] = *(float *)(pos + 0);
+    m[13] = *(float *)(pos + 4);
+    m[14] = *(float *)(pos + 8);
+    m[15] = 1.0f;
+
+    ref_L02_003FFC48_01(pkt, f12);
+    func_00280B90(pkt, m, 0);
+}
 
 /* Below 6000 in the low half-word, while the high one reads three. */
 void func_L02_004006D8(void) {
@@ -444,7 +560,37 @@ int func_L02_00400B00(unsigned char *a0) {
 
 INCLUDE_ASM("asm/levels", func_L02_00400D08);
 
-INCLUDE_ASM("asm/levels", func_L02_004012A0);
+/* The pointer and the five helpers this calls sit at their own addresses in every level
+   that has the function, so all six are reached under names that carry no address. */
+extern char ref_L02_004012A0_00[] __attribute__((nosda));
+
+extern void ref_L02_004012A0_01(void *, int, int, int, int, int, int, int, int, int, int,
+                                int, float, float);
+extern void ref_L02_004012A0_02(float *, const float *, const float *);
+extern void ref_L02_004012A0_03(void *, void *, float);
+extern void ref_L02_004012A0_04(void *, void *, int, int, int, int, float, float, float);
+extern void ref_L02_004012A0_05(void *, void *, void *, float);
+
+/* The kind at +0xAA decides the work: the second kind reports itself and leaves, every
+   other kind turns the object's own basis, scales it and hands it on. */
+void func_L02_004012A0(char *a0) {
+    char *s1 = a0;
+    char *s2 = *(char **)(a0 + 0x68);
+    float v[4];
+    short kind = *(short *)(a0 + 0xAA);
+
+    switch (kind) {
+    case 0xB1B:
+        break;
+    case 0xB5A:
+        ref_L02_004012A0_01(a0 + 0x10, 0, 0, 0, 0, 20, 45, 1, 1, 0, 0, 0, 0.3f, 20.0f);
+        return;
+    }
+    ref_L02_004012A0_02(v, (const float *)ref_L02_004012A0_00, a0 + 0x10);
+    ref_L02_004012A0_03(v, v, 1.0f);
+    ref_L02_004012A0_04(a0, a0 + 0x10, 0x10001, 0, 1, 0, 0.25f, *(float *)(s2 + 0x6C), 1.0f);
+    ref_L02_004012A0_05(a0, a0 + 0x10, v, 0.0f);
+}
 
 /* func_L02_004013C0 lives in the -g8 sibling: it reads a $gp-relative scalar. */
 

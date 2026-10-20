@@ -32,11 +32,27 @@ void func_00321E28(char *object)
     func_00321F60(object);
 }
 
-INCLUDE_ASM("asm/game", func_00321E80);
+extern void func_002AB8C0(char *, char *);
+extern int func_00282978(void *);
+extern void func_002AEC48(void *, void *, int, float, float);
+extern void func_002B0990(char *, char *, int, int, float);
 
-INCLUDE_ASM("asm/game", func_00321F60);
+void func_00321E80(char *object)
+{
+    char *data = *(char **)(object + 0x68);
+    char *first;
+    func_002AB8C0(object, data + 0x50);
+    first = data + 0x3D0;
+    func_00282978(data + 0x270);
+    func_00282978(data + 0x272);
+    func_002AEC48(object, first, 5, 0.03f, 0.3f);
+    func_002AEC48(object, data + 0x450, 6, 0.03f, 0.3f);
+    if (*(unsigned short *)(object + 0x96) < 65535)
+        (*(unsigned short *)(object + 0x96))++;
+    func_002B0990(object, first, 5, 1, 2.5f);
+}
 
-INCLUDE_ASM("asm/game", func_00321FE0);
+/* func_00321FE0 is in the -G8 sibling. */
 
 void func_003220A8(char *p)
 {
@@ -72,15 +88,34 @@ INCLUDE_ASM("asm/game", func_00322138);
 
 INCLUDE_ASM("asm/game", func_00322340);
 
-INCLUDE_ASM("asm/game", func_003225C0);
 
 INCLUDE_ASM("asm/game", func_00322680);
 
 INCLUDE_ASM("asm/game", func_00322690);
 
-INCLUDE_ASM("asm/game", func_00322A30);
 
-INCLUDE_ASM("asm/game", func_00322C10);
+extern int func_00273B70(char *);
+extern void func_002A7750(unsigned char *, unsigned char, int);
+void func_00322C10(char *object)
+{
+    char *data = *(char **)(object + 0x68);
+    *(float *)(data + 4) -= 1.0f / 120.0f;
+    switch (*(unsigned char *)(object + 0x20)) {
+    case 0:
+        if (func_00273B70(object)) {
+            func_002A7750((unsigned char *)object, 1, -1);
+            *(unsigned short *)(object + 0x34) |= 0x2800;
+        }
+        break;
+    case 1:
+        func_00273B70(object);
+        if (*(unsigned char *)(object + 0x23) < 2)
+            func_0029F338(object);
+        else
+            *(unsigned char *)(object + 0x23) -= 2;
+        break;
+    }
+}
 
 INCLUDE_ASM("asm/game", func_00322CC0);
 
@@ -104,7 +139,7 @@ void func_003250F8(char *object)
 
 INCLUDE_ASM("asm/game", func_00325158);
 
-INCLUDE_ASM("asm/game", func_00325320);
+/* func_00325320 is in the -G8 sibling. */
 
 void func_003253A0(char *p)
 {
@@ -148,7 +183,32 @@ INCLUDE_ASM("asm/game", func_00325A88);
 
 /* func_00325B28 is in the -G8 sibling. */
 
-INCLUDE_ASM("asm/game", func_00325B70);
+extern char *func_0029EFD0(int);
+extern void func_002B37E8(void *, void *);
+extern void func_002AF1D0(void *, void *, int, int);
+extern void func_002A0F48(void *);
+
+void func_00325B70(char *self, char **children, int first, int second)
+{
+    int i;
+    for (i = 0; i < 2; i++, children++) {
+        *children = func_0029EFD0(0xAA2);
+        if (*children != 0) {
+            func_002B37E8(*children, self);
+            *(float *)(*children + 0x2C) *= 0.75f;
+            {
+                char *child = *children;
+                if (i != 0)
+                    child[0xBC] = second;
+                else
+                    child[0xBC] = first;
+            }
+            *(unsigned short *)(*children + 0x32) = *(unsigned short *)(self + 0x32);
+            func_002AF1D0(self, *children, *(unsigned char *)(*children + 0xBC), 0);
+            func_002A0F48(*children);
+        }
+    }
+}
 
 INCLUDE_ASM("asm/game", func_00325C50);
 

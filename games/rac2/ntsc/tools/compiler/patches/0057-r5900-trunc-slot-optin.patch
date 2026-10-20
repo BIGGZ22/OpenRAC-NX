@@ -1,0 +1,57 @@
+diff --git a/gcc/config/mips/mips.c b/gcc/config/mips/mips.c
+--- a/gcc/config/mips/mips.c
++++ b/gcc/config/mips/mips.c
+@@ -252,6 +252,8 @@
+ /* ASTRA 0049: run the Cygnus sibcall pass's CFG cleanup without a
+    CALL_PLACEHOLDER (the pre-0049 behavior) per unit.  */
+ char *mips_astra_cygnus_cfg;
++/* Opt-in: expose the two halves of truncdisi2 to delay-slot scheduling.  */
++char *mips_astra_split_trunc_slot;
+ char *mips_cpu_string;		/* for -mcpu=<xxx> */
+ char *mips_isa_string;		/* for -mips{1,2,3,4} */
+ char *mips_abi_string;		/* for -mabi={32,n32,64,eabi} */
+diff --git a/gcc/config/mips/mips.h b/gcc/config/mips/mips.h
+--- a/gcc/config/mips/mips.h
++++ b/gcc/config/mips/mips.h
+@@ -608,6 +608,7 @@
+ extern char *mips_astra_sibcall;
+ /* ASTRA 0049: opt back into the Cygnus sibcall pass's CFG cleanup.  */
+ extern char *mips_astra_cygnus_cfg;
++extern char *mips_astra_split_trunc_slot;
+ 
+ #define TARGET_OPTIONS							\
+ {									\
+@@ -630,7 +631,8 @@
+   { "explicit-type-size", &mips_explicit_type_size_string },		\
+   { "astra-r5900-extern-buffer", &mips_astra_r5900_extern_buffer },		\
+   { "astra-keep-frame-order", &mips_astra_keep_frame_order },		\
+-  { "astra-annul-dead-slots", &mips_astra_annul_dead_slots }		\
++  { "astra-annul-dead-slots", &mips_astra_annul_dead_slots },		\
++  { "astra-split-trunc-slot", &mips_astra_split_trunc_slot }		\
+ }
+ 
+ /* This is meant to be redefined in the host dependent files.  */
+diff --git a/gcc/config/mips/mips.md b/gcc/config/mips/mips.md
+--- a/gcc/config/mips/mips.md
++++ b/gcc/config/mips/mips.md
+@@ -4095,6 +4095,20 @@
+    (set (attr "length")	(if_then_else (eq (symbol_ref "mips16") (const_int 0))
+ 				      (const_int 2)
+ 				      (const_int 4)))])
++
++;; The stock truncdisi2 prints two machine words from one RTL insn.  On
++;; selected R5900 units, split it after reload so dbr_schedule can put the
++;; final sign-extension in the return delay slot.  The default stays intact.
++(define_split
++  [(set (match_operand:SI 0 "register_operand" "")
++        (truncate:SI (match_operand:DI 1 "se_register_operand" "")))]
++  "TARGET_64BIT && TARGET_MIPS5900
++   && mips_astra_split_trunc_slot && reload_completed
++   && GET_CODE (operands[0]) == REG
++   && GET_CODE (operands[1]) == REG"
++  [(set (match_dup 2) (ashift:DI (match_dup 1) (const_int 32)))
++   (set (match_dup 2) (ashiftrt:DI (match_dup 2) (const_int 32)))]
++  "operands[2] = gen_rtx (REG, DImode, REGNO (operands[0]));")
+ 
+ (define_insn "truncdihi2"
+   [(set (match_operand:HI 0 "register_operand" "=d")

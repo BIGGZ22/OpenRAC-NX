@@ -81,3 +81,28 @@ void func_L03_004197C8(u8 *a0, u8 *a1) {
     func_00282F20(a1, a0 + 0xC0, D_L03_001B1A90);
     func_00282CC0(a1, a1, a0 + 0x10);
 }
+
+extern f32 D_L03_001B1FC4 __attribute__((sda));
+
+extern f32 func_00283B98(f32, f32);
+
+extern void func_0029F338(u8 *);
+
+/* Ages one entity: scales the rate the owner record holds by the shared $gp factor, drops
+   the entity's own 1/240 timer, blends two matrix columns and then the three angles, and
+   releases the entity when its 0xBC countdown runs out. */
+void func_L03_0042B930(u8 *a0) {
+    u8 *q = *(u8 **)(a0 + 0x68);
+    u8 *r = *(u8 **)(a0 + 0x24);
+
+    *(f32 *)(a0 + 0x2C) = *(f32 *)(r + 0x24) * D_L03_001B1FC4;
+    *(f32 *)(q + 0x8) = *(f32 *)(q + 0x8) - 0.0041666669f;
+    func_00282CC0(a0 + 0x10, a0 + 0x10, q);
+    func_00282CC0(a0 + 0xF0, a0 + 0xF0, q + 0x10);
+    *(f32 *)(a0 + 0xF0) = func_00283B98(*(f32 *)(a0 + 0xF0), *(f32 *)(q + 0x10));
+    *(f32 *)(a0 + 0xF4) = func_00283B98(*(f32 *)(a0 + 0xF4), *(f32 *)(q + 0x14));
+    *(f32 *)(a0 + 0xF8) = func_00283B98(*(f32 *)(a0 + 0xF8), *(f32 *)(q + 0x18));
+    a0[0xBC] = a0[0xBC] - 1;
+    if (a0[0xBC] == 0)
+        func_0029F338(a0);
+}

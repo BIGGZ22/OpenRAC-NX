@@ -245,7 +245,42 @@ INCLUDE_ASM("asm/game", func_00295F60);
 
 INCLUDE_ASM("asm/game", func_00297218);
 
-INCLUDE_ASM("asm/game", func_00297400);
+extern void func_00297550(u8 *, s32, u8 *, short *);
+
+/* packs a mask of the non-zero nibbles of every 32-nibble group of the
+   4-bit-per-pixel bitmap that func_00297550 leaves at 0x70000000 */
+void func_00297400(u8 *out, u8 *base, short *offsets)
+{
+    int i;
+    int group;
+    int bit;
+    int r;
+    int t;
+    u32 *dst;
+    u8 *src = (u8 *)0x70000000;
+
+    for (i = 0; i < 0x100; i++) {
+        func_00297550((u8 *)0x70000000, i, base, offsets);
+        r = i % 16;
+        t = (i / 16) << 9;
+        dst = (u32 *)(out + ((r + t) << 2));
+        for (group = 0; group < 0x20; group++) {
+            u32 mask = 0;
+            for (bit = 0; bit < 0x20; bit++) {
+                u8 pixel = src[group * 16 + (bit >> 1)];
+                u8 value = (bit & 1) ? (pixel >> 4) : (pixel & 0xF);
+                if (value != 0)
+                    mask |= 1 << bit;
+                if ((bit & 0x1F) == 0x1F) {
+                    *dst = mask;
+                    dst++;
+                    mask = 0;
+                }
+            }
+            dst += 15;
+        }
+    }
+}
 
 void func_00297550(u8 *out,s32 index,u8 *base,short *offsets) {
     s32 pending=0;
@@ -327,7 +362,6 @@ void func_002979D8(char *dst, unsigned char *src)
 
 INCLUDE_ASM("asm/game", func_00297BA8);
 
-INCLUDE_ASM("asm/game", func_00297BB0);
 
 /* localized row40 textID10 firstpercent selector b formats signedmappedword80 with original decimalformatter; other selector formats original error string, preserve prefix/tail */
 void func_00297E00(int index, unsigned char *output)
@@ -359,9 +393,6 @@ void func_00297E00(int index, unsigned char *output)
     *output = 0;
 }
 
-INCLUDE_ASM("asm/game", func_00297F98);
-
-INCLUDE_ASM("asm/game", func_00297FE8);
 
 INCLUDE_ASM("asm/game", func_002980C8);
 
@@ -370,8 +401,6 @@ INCLUDE_ASM("asm/game", func_002980D0);
 void func_00298170(void)
 {
 }
-
-INCLUDE_ASM("asm/game", func_00298178);
 
 typedef struct {
     char reserved00[0x10];
@@ -384,6 +413,35 @@ typedef struct {
 } SharedState;
 extern SharedState D_001393E0;
 extern int D_001A7420[] __attribute__((sda));
+
+extern unsigned int D_001A7424[] __attribute__((sda));
+extern int D_001B1A3C __attribute__((sda));
+extern int D_001B1A38 __attribute__((sda));
+extern void (*D_002560D0[])(void);
+void func_00298178(void)
+{
+    int old;
+    int flags;
+    char *state = (char *)&D_001393E0;
+    if (*(int *)(state + 0x16c) != 0 ||
+        *(int *)(state + 0x10) != 0 || *(int *)(state + 0x24) > 0)
+        D_001B1A3C = 1;
+    flags = *(int *)D_001A7424;
+    old = D_001A7420[0];
+    if (flags & 0x80) {
+        D_001A7420[0] = 21;
+        *(int *)D_001A7424 = (flags & ~0x80) | 0x40;
+    }
+    flags = *(int *)D_001A7424;
+    if (flags & 0x100) {
+        D_001A7420[0] = 20;
+        *(int *)D_001A7424 = (flags & ~0x100) | 0x40;
+    }
+    D_002560D0[D_001A7420[0]]();
+    D_001B1A38++;
+    if (D_001A7420[0] != old)
+        D_001B1A38 = 0;
+}
 
 void func_00298278(void) {
     D_001A7420[0] = 3;

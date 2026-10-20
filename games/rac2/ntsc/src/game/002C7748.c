@@ -83,9 +83,9 @@ void func_0027C540(long);
 
 void func_0027C660(void);
 
-/* 
+/*
  * Function: func_002D2EE0
- * 
+ *
  * Disassembly summary:
  * - Saves return address on stack
  * - Calls func_0027C540(0) (with zero argument)
@@ -107,8 +107,6 @@ extern void func_0027C540(long arg0);
 extern void func_0027C540(long param_1);
 
 INCLUDE_ASM("asm/game", func_002C7748);
-
-INCLUDE_ASM("asm/game", func_002C7888);
 
 INCLUDE_ASM("asm/game", func_002C7970);
 
@@ -169,8 +167,6 @@ void func_002C7D58(char *self)
 INCLUDE_ASM("asm/game", func_002C7E28);
 
 INCLUDE_ASM("asm/game", func_002C7F78);
-
-INCLUDE_ASM("asm/game", func_002C8268);
 
 INCLUDE_ASM("asm/game", func_002C8348);
 
@@ -348,7 +344,7 @@ int func_002C9C20(void)
         *p-- = value;
 }
 
-INCLUDE_ASM("asm/game", func_002C9C60);
+/* func_002C9C60 is matched in 002C9C60.c (built with -g). */
 
 INCLUDE_ASM("asm/game", func_002C9C90);
 
@@ -427,6 +423,7 @@ int func_002CB7D0(int mode)
     }
     return result;
 }
+
 
 INCLUDE_ASM("asm/game", func_002CB820);
 
@@ -509,7 +506,65 @@ INCLUDE_ASM("asm/game", func_002CC6B0);
 
 INCLUDE_ASM("asm/game", func_002CCF68);
 
-INCLUDE_ASM("asm/game", func_002CD0E8);
+extern int D_00138344;
+
+extern int func_0029C168(int);
+
+extern unsigned int func_0026F7C8(void);
+
+extern unsigned int func_0026F7D0(void);
+
+extern unsigned int func_0026F7D8(void);
+
+extern unsigned int func_0026F7E0(void);
+
+extern unsigned int func_0026F7E8(void);
+
+extern unsigned int func_0026F7F0(void);
+
+extern int func_002CB7D0(int);
+
+extern int func_002CB820(int);
+
+extern int func_002CB8A0(int);
+
+extern int func_002CB950(int);
+
+extern void func_002E5E58(int, unsigned int, void *);
+
+int func_002CD0E8(void)
+{
+    unsigned int flags = D_00138344;
+    int res = 0;
+
+    if (flags & 0x910) {
+        res = 1;
+    } else if (flags & 0x40) {
+        res = func_0029C168(flags);
+        if (func_0026F7C8() && func_0026F7D0()) {
+            res = func_002CB950(res);
+        } else if (func_0026F7E0()) {
+            res = func_002CB820(res);
+        } else if (func_0026F7D8()) {
+            res = func_002CBA58(res);
+        } else if (func_0026F7F0() == 0x31) {
+            res = func_002CB7D0(res);
+        } else if (func_0026F7E8()) {
+            res = func_002CB7D0(res);
+        } else if (func_0026F7F0() == 0x1C) {
+            res = func_002CB7D0(res);
+        } else {
+            res = func_002CB8A0(res);
+        }
+    } else {
+        func_0029C168(flags);
+    }
+
+    if (res) {
+        func_002E5E58(0x12, 0, 0);
+    }
+    return res;
+}
 
 int func_002CD220(void)
 {
@@ -523,4 +578,63 @@ INCLUDE_ASM("asm/game", func_002CD250);
 
 INCLUDE_ASM("asm/game", func_002CD3C0);
 
-INCLUDE_ASM("asm/game", func_002CD4E0);
+typedef struct {
+    char reserved00[0x44];
+    int state;
+    char reserved48[0x8];
+    int handle;
+    int last;
+    int current;
+} MenuObject_2CD4E0;
+
+typedef struct {
+    char reserved00[0x10];
+    int flags;
+} ToggleState_2CD4E0;
+
+extern int D_00138344;
+extern short D_001A63AC;
+extern MenuObject_2CD4E0 D_00259C78;
+extern ToggleState_2CD4E0 *D_00259C44;
+extern int func_0029C248(int first, void *second);
+extern int func_00336EF0(void);
+
+int func_002CD4E0(void)
+{
+    int local[4];
+    int first = func_00336EF0();
+    int result = 0;
+    int flags = D_00138344;
+
+    if (flags & 0x10) {
+        int value = *(int *)(((CallbackState_2CC490 *)D_001F2840)->source + 0xE0);
+        if (value != 0)
+            ((CallbackState_2CC490 *)D_001F2840)->value = value;
+        else if (((CallbackState_2CC490 *)D_001F2840)->fallback == 0) {
+            value = -1;
+            goto return_value;
+        }
+        value = 0;
+return_value:
+        return value;
+    }
+
+    if (flags & 0x900) {
+        result = 1;
+    } else {
+        func_0029C248(flags, local);
+    }
+
+    if (D_001A8CFC[0] != 0) {
+        int second = func_00336EF0();
+        if (first == second && D_001A63AC == 0 &&
+            ((D_00259C78.handle == second && D_00259C78.state == 2) ||
+             (D_00259C78.last == second && D_00259C78.state == 4))) {
+            D_00259C44->flags &= -5;
+        } else {
+            D_00259C44->flags |= 4;
+        }
+        D_00259C78.current = second;
+    }
+    return result;
+}

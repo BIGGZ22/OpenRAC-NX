@@ -30,7 +30,6 @@ extern void func_002B0990(u8 *arg0, void *arg1, f32 arg2, s32 arg3, s32 arg4);
 
 /* Arms the object's two state records through two callbacks and the class setup, then, when
    the twin record is clear, starts the 0x2A0 animation. */
-INCLUDE_ASM("asm/levels", func_L11_003F2C28);
 
 /* Retires the object and copies two measured state bytes into its state block. */
 void func_L11_003F2D38(u8 *arg0) {

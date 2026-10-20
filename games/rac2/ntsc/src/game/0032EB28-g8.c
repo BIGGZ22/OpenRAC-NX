@@ -49,3 +49,71 @@ void func_00330E48(char *owner)
     if (*(int *)(data + 0x78))
         func_002FDBD8(data + 0x30, data + 0x40, 0, 0.2f);
 }
+
+extern int D_001B1688;
+extern char *D_001B1B68;
+extern float ref_L00_00330BC0_00 __attribute__((sda));
+extern float func_00282E48(void *, void *);
+extern void func_00302440(void *, void *);
+
+void func_00330BC0(char *object)
+{
+    char *cursor;
+    if (D_001B1688 & 1) {
+        cursor = D_001B1B68;
+        while (cursor) {
+            int kind = *(unsigned char *)(cursor + 0x20);
+            if (kind == 0xfe) return;
+            if (kind == 0xfd) return;
+            if (cursor && *(char **)(cursor + 0x24) &&
+                *(short *)(*(char **)(cursor + 0x24) + 0x46) == 0x13) {
+                if (func_00282E48(cursor + 0x10, object + 0x10) < ref_L00_00330BC0_00)
+                    func_00302440(cursor, object);
+            }
+            cursor = *(char **)(cursor + 0x28);
+        }
+    }
+}
+
+extern float D_001B284C;
+/* The retail reaches 0x1B284C twice: through lui/lwc1 (D_001B284C) and through
+   $gp+0x385C (ref_L00_0032FEA8_00).  The compiler picks one form per symbol. */
+extern float ref_L00_0032FEA8_00 __attribute__((sda));
+extern int D_001B2850;
+extern float D_001B2854;
+extern float D_001B09A0 __attribute__((sda));
+extern float func_00282C48(float);
+extern void func_00282F20(void *, void *, float);
+extern void func_00282CC0(void *, void *, void *);
+extern void func_0032FFD8(void *);
+extern void func_00330150(void *);
+extern void func_003304D8(void *);
+
+void func_0032FEA8(char *object)
+{
+    char *data = *(char **)(object + 0x68);
+    float value;
+    int flag;
+    char buffer[16];
+
+    if (D_001B284C != 0.0f && D_001B2850 != 0) {
+        value = *(float *)(data + 0x58) + D_001B284C * (1.0f / 120.0f);
+        *(float *)(data + 0x58) = value;
+        if (func_00282C48(value) > D_001B09A0 * (1.0f / 60.0f))
+            *(float *)(data + 0x58) = D_001B09A0 * ref_L00_0032FEA8_00 * (1.0f / 60.0f);
+    } else {
+        *(float *)(data + 0x58) = *(float *)(data + 0x58) * 0.85f;
+    }
+
+    flag = D_001B2850;
+    value = *(float *)(data + 0x58) * 25.0f;
+    *(float *)(object + 0x48) = value;
+    if (flag == 0)
+        *(float *)(object + 0x48) = value + (D_001B2854 + D_001B2854);
+
+    func_00282F20(buffer, object + 0xC0, *(float *)(data + 0x58));
+    func_00282CC0(object + 0x10, object + 0x10, buffer);
+    func_0032FFD8(object);
+    func_00330150(object);
+    func_003304D8(object);
+}

@@ -235,4 +235,20 @@ INCLUDE_ASM("asm/game", func_003380B0);
 
 INCLUDE_ASM("asm/game", func_003384C0);
 
-INCLUDE_ASM("asm/game", func_00338718);
+extern char *func_00288FB8(int);
+
+extern int func_00115DA8(char *, char *, ...);
+
+/* Writes the localised text `text_id` (with `value` as its only argument) into the
+   buffer at +0x1E14 of the object, then initialises the sub-object at +0x1D6C with a
+   count that defaults to 120 when the caller passes -1. The two pointers are defined
+   in this order on purpose: it is what puts the buffer in $s1 and the count in $s2. */
+void func_00338718(char *object, int text_id, int value, int count)
+{
+    char *sub = object + 0x1D6C;
+    int limit = (count == -1) ? 120 : count;
+    char *buffer = object + 0x1E14;
+
+    func_00115DA8(buffer, func_00288FB8(text_id), value);
+    func_00337E30(sub, 1, limit, 255.0f, 135.0f);
+}

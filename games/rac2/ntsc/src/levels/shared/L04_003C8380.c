@@ -54,7 +54,29 @@ void func_L04_003EDF80(unsigned char *a0, unsigned char *a1) {
     func_002AB8C0(a0, a1 + 0x50);
 }
 
-INCLUDE_ASM("asm/levels", func_L04_003EDFF0);
+/* Stamps byte 0x81 from the per-record lookup, then walks the twenty slots: a slot whose
+   object is live (not in either harness state) without the 0xB66 mark raises the count,
+   every other slot is remembered in the returned index (-1 when all twenty pass). */
+int func_L04_003EDFF0(unsigned char *a0, char *a1)
+{
+    char *s0 = a1;
+    int i;
+    int last = -1;
+
+    *(unsigned char *)(s0 + 0x81) = func_002A8508(*(void **)(s0 + 0x84), -1);
+    for (i = 0; i < 20; i++) {
+        char *e = *(char **)(s0 + 0xA0 + i * 4);
+
+        if (e != 0 && *(short *)(e + 0xAA) == 0xB66
+            && *(unsigned char *)(e + 0x20) != 0xFE
+            && *(unsigned char *)(e + 0x20) != 0xFD) {
+            *(unsigned char *)(s0 + 0x81) = *(unsigned char *)(s0 + 0x81) + 1;
+        } else {
+            last = i;
+        }
+    }
+    return last;
+}
 
 INCLUDE_ASM("asm/levels", func_L04_003EE090);
 

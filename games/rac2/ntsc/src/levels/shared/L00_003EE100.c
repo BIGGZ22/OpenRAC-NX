@@ -317,7 +317,78 @@ void func_L00_003F0AA8(char *p, float scale)
     func_00282D30_2(p + 48, p + 48, scale);
 }
 
-INCLUDE_ASM("asm/levels", func_L00_003F0B10);
+extern void ref_L00_003F0B10_00(char *pkt);
+
+extern void ref_L00_003F0B10_01(char *, float);
+
+extern long long func_0027C878(char *p);
+
+extern float func_00283248(float x, float y);
+
+extern float func_00282E80(char *p, float *v);
+
+extern void func_00283410(float *matrix, float *quat);
+
+extern void func_00282CF0(char *off, char *v, char *pos);
+
+extern void func_00282F20(char *dst, char *src, float angle);
+
+extern void func_00280B90(char *pkt, float *matrix, int mode);
+
+/* The vector the aim helpers read, at 0x001B8C80; per level at its own copy. */
+#ifndef RAC2_T_AIMVEC_F0B10
+#define RAC2_T_AIMVEC_F0B10
+typedef struct {
+    char pad_000[0x140];
+    float x_140;
+    float y_144;
+    float z_148;
+} Aimvec_F0b10;
+#endif
+
+extern Aimvec_F0b10 D_L00_001B8C80;
+
+/* Builds a 144-byte packet, aims a quaternion at the shared 0x001B8C80 vector from pos through three float helpers, derives an offset basis by a fourth, writes the last matrix row from pos plus that offset, then dispatches the packet. */
+void func_L00_003F0B10(char *pos, int a1, int a2, char *a3, int t0,
+                       float fA, float fB, float fC)
+{
+    char pkt[144];
+    float m[16];
+    float quat[4];
+    float off[4];
+    long long r;
+
+    ref_L00_003F0B10_00(pkt);
+    r = func_0027C878(a3);
+
+    *(long long *)(pkt + 136) = ((long long)t0 << 2) | 0x8000000040LL;
+    *(long long *)(pkt + 128) = 280993940374112LL;
+    *(int *)(pkt + 76) = a1 + (a2 << 24);
+    *(int *)(pkt + 72) = a1 + (a2 << 24);
+    *(int *)(pkt + 68) = a1 + (a2 << 24);
+    *(int *)(pkt + 64) = a1 + (a2 << 24);
+    *(long long *)(pkt + 112) = 0LL;
+    *(long long *)(pkt + 120) = r;
+
+    quat[3] = 0.0f;
+    quat[2] = func_00283248(D_L00_001B8C80.x_140 - *(float *)(pos + 0),
+                            D_L00_001B8C80.y_144 - *(float *)(pos + 4));
+    quat[1] = -func_00283248(func_00282E80(pos, &D_L00_001B8C80.x_140),
+                             D_L00_001B8C80.z_148 - *(float *)(pos + 8));
+    quat[0] = fB;
+
+    func_00283410(m, quat);
+    func_00282CF0(off, &D_L00_001B8C80.x_140, pos);
+    func_00282F20(off, off, fC);
+
+    m[12] = *(float *)(pos + 0) + off[0];
+    m[13] = *(float *)(pos + 4) + off[1];
+    m[14] = *(float *)(pos + 8) + off[2];
+    m[15] = 1.0f;
+
+    ref_L00_003F0B10_01(pkt, fA);
+    func_00280B90(pkt, m, 0);
+}
 
 INCLUDE_ASM("asm/levels", func_L00_003F0CC8);
 
@@ -370,7 +441,53 @@ void func_L00_003F1E50(char *p, float scale)
     func_00282D30_2(p + 48, p + 48, scale);
 }
 
-INCLUDE_ASM("asm/levels", func_L00_003F1EB8);
+extern Aimvec_F0b10 D_L00_001B8C80;
+
+extern void ref_L00_003F1EB8_00(char *pkt);
+
+extern void ref_L00_003F1EB8_01(char *, float);
+
+/* Builds a 144-byte packet, aims a quaternion at the shared 0x001B8C80 vector from pos through three float helpers, derives an offset basis by a fourth, writes the last matrix row from pos plus that offset, then dispatches the packet. */
+void func_L00_003F1EB8(char *pos, int a1, int a2, char *a3, int t0,
+                       float fA, float fB, float fC)
+{
+    char pkt[144];
+    float m[16];
+    float quat[4];
+    float off[4];
+    long long r;
+
+    ref_L00_003F1EB8_00(pkt);
+    r = func_0027C878(a3);
+
+    *(long long *)(pkt + 136) = ((long long)t0 << 2) | 0x8000000040LL;
+    *(long long *)(pkt + 128) = 280993940374112LL;
+    *(int *)(pkt + 76) = a1 + (a2 << 24);
+    *(int *)(pkt + 72) = a1 + (a2 << 24);
+    *(int *)(pkt + 68) = a1 + (a2 << 24);
+    *(int *)(pkt + 64) = a1 + (a2 << 24);
+    *(long long *)(pkt + 112) = 0LL;
+    *(long long *)(pkt + 120) = r;
+
+    quat[3] = 0.0f;
+    quat[2] = func_00283248(D_L00_001B8C80.x_140 - *(float *)(pos + 0),
+                            D_L00_001B8C80.y_144 - *(float *)(pos + 4));
+    quat[1] = -func_00283248(func_00282E80(pos, &D_L00_001B8C80.x_140),
+                             D_L00_001B8C80.z_148 - *(float *)(pos + 8));
+    quat[0] = fB;
+
+    func_00283410(m, quat);
+    func_00282CF0(off, &D_L00_001B8C80.x_140, pos);
+    func_00282F20(off, off, fC);
+
+    m[12] = *(float *)(pos + 0) + off[0];
+    m[13] = *(float *)(pos + 4) + off[1];
+    m[14] = *(float *)(pos + 8) + off[2];
+    m[15] = 1.0f;
+
+    ref_L00_003F1EB8_01(pkt, fA);
+    func_00280B90(pkt, m, 0);
+}
 
 INCLUDE_ASM("asm/levels", func_L00_003F26C8);
 
@@ -383,7 +500,119 @@ void func_L00_003F28A0(Vec16_Fc936841d *object, int index)
     func_00282CC0_15((char *)&object[index - 1], (char *)&object[index - 2], local);
 }
 
-INCLUDE_ASM("asm/levels", func_L00_003F3160);
+extern void func_0029F338(char *);
+extern int func_002ACBC8(void *, int);
+extern float func_00283198(float);
+extern int func_00283D38(int, int, float);
+extern void func_L00_0036EF68(char *, int, int, int);
+
+/* The binder both state paths hand the handler to: func_L00_002E6EF8 in eleven of the twelve
+   programs, but level 09 calls its sibling variant (func_L08_002F2D10, another task array), so
+   the call carries a name without an address. */
+extern void ref_L00_003F3160_00(void *, void *);
+
+extern void func_L00_003F3518(char *);
+
+extern int D_L00_001A9018 __attribute__((sda));
+
+extern unsigned short **D_L00_001A9014 __attribute__((sda));
+
+extern unsigned char *D_L00_001B2514 __attribute__((sda));
+
+/* A three-state object whose record (the pointer at +0x68) carries a group index at +0, two
+   RGB triples and two RGBA quadruples as separate bytes, a packed colour at +0x10 and a few
+   angle and flag words. State 0 arms it: an index outside the group table releases the object;
+   otherwise the two angles are turned into radians, the byte triples are packed into the words
+   at +0x14, +0x18, +0x30 and +0x34, and the object is handed to the binder with
+   func_L00_003F3518 as its handler (state 2), or parked in state 1 when the word at +0x1C is set.
+   State 1 steps the angle at +0xC and eases the colour at +0x10 towards one of the two packed
+   colours; when it changed, its three bytes go to every entity of the group's id list. State 2
+   re-binds the handler. The two stores of the byte at +0x30 sit in the arms of the select: the
+   record's word at +0x68 either supplies its low byte or the object gets 0xFF. */
+void func_L00_003F3160(char *obj)
+{
+    unsigned char *st = *(unsigned char **)(obj + 0x68);
+    int group;
+    int prev;
+    int stamp;
+    int word_a, word_b;
+    int target;
+    float angle;
+    unsigned short *q;
+    unsigned char *e;
+    int r, g, b;
+
+    switch (*(unsigned char *)(obj + 0x20)) {
+    case 0:
+        group = *(int *)st;
+        if (group >= D_L00_001A9018 || D_L00_001A9014[group] == 0 || group == -1) {
+            func_0029F338(obj);
+            return;
+        }
+        *(float *)(st + 8) = *(float *)(st + 8) * 0.017453294f;
+        *(float *)(st + 4) = *(float *)(st + 4) * 0.00029088825f;
+        *(int *)(st + 0x14) = st[0x22] << 16 | st[0x21] << 8 | st[0x20];
+        *(int *)(st + 0x18) = st[0x25] << 16 | st[0x24] << 8 | st[0x23];
+        if (*(int *)(st + 0x68) != 0) {
+            stamp = st[0x68];
+            obj[0x30] = stamp;
+        } else {
+            stamp = 0xFF;
+            obj[0x30] = stamp;
+        }
+        if (*(int *)(st + 0x1C) != 0) {
+            obj[0x20] = 1;
+            return;
+        }
+        word_a = st[0x29] << 24 | st[0x28] << 16;
+        word_a |= st[0x27] << 8;
+        word_a |= st[0x26];
+        *(int *)(st + 0x30) = word_a;
+        word_b = st[0x2D] << 24 | st[0x2C] << 16;
+        word_b |= st[0x2B] << 8;
+        word_b |= st[0x2A];
+        *(int *)(st + 0x34) = word_b;
+        if (*(float *)(st + 0x40) == 0.0f && *(float *)(st + 0x44) == 0.0f &&
+            *(float *)(st + 0x48) == 0.0f)
+            *(int *)(st + 0x6C) = 1;
+        ref_L00_003F3160_00((void *)func_L00_003F3518, obj);
+        obj[0x20] = 2;
+        return;
+    case 1:
+        if (*(int *)(st + 0x64) != -1) {
+            if (func_002ACBC8(&D_L00_001B8C80.x_140, *(int *)(st + 0x64)) == 0)
+                return;
+        }
+        angle = func_00283B98(*(float *)(st + 0xC), *(float *)(st + 4));
+        prev = *(int *)(st + 0x10);
+        *(float *)(st + 0xC) = angle;
+        if (*(float *)(st + 8) != 0.0f) {
+            target = *(int *)(st + 0x14);
+            if (angle > *(float *)(st + 8))
+                target = *(int *)(st + 0x18);
+            *(int *)(st + 0x10) = func_00283D38(prev, target, 0.1f);
+        } else {
+            *(int *)(st + 0x10) = func_00283D38(*(int *)(st + 0x14), *(int *)(st + 0x18),
+                                                func_00283198(angle) * 0.5f + 0.5f);
+        }
+        if (*(int *)(st + 0x10) == prev)
+            return;
+        q = D_L00_001A9014[*(int *)st];
+        r = *(int *)(st + 0x10) & 0xFF;
+        g = (*(int *)(st + 0x10) >> 8) & 0xFF;
+        b = (*(int *)(st + 0x10) >> 16) & 0xFF;
+        for (; q != 0 && ((short)q[-1] >= 0 || q == D_L00_001A9014[*(int *)st]) &&
+               (e = D_L00_001B2514 + ((*q & 0x7FFF) << 5)) != 0;
+             q++)
+            func_L00_0036EF68((char *)e, r, g, b);
+        return;
+    case 2:
+        if (*(int *)(st + 0x64) == -1 ||
+            func_002ACBC8(&D_L00_001B8C80.x_140, *(int *)(st + 0x64)) != 0)
+            ref_L00_003F3160_00((void *)func_L00_003F3518, obj);
+        return;
+    }
+}
 
 INCLUDE_ASM("asm/levels", func_L00_003F34D8);
 
@@ -474,7 +703,29 @@ void func_L00_003F5658(void)
 {
 }
 
-INCLUDE_ASM("asm/levels", func_L00_003F5660);
+extern int func_L00_003F59F0(char *);
+extern int func_L00_003F6168(char *);
+extern int func_L00_003F6A58(int *);
+extern void func_L00_003F56F0(char *);
+extern void ref_L00_003F5660_00(void (*handler)(char *), char *object);
+
+/* Runs the three per-frame passes; when any of them reports work the record is handed to the
+   binder with the shared follow-up pass as its handler, otherwise a record in state 2 is
+   advanced by the shared state call. */
+void func_L00_003F5660(char *a0)
+{
+    int a = func_L00_003F59F0(a0);
+    int b = func_L00_003F6168(a0);
+    int c = func_L00_003F6A58((int *)a0);
+
+    if (a == 0 && b == 0 && c == 0) {
+        if (*(unsigned char *)(a0 + 0x20) == 2) {
+            func_0029F338_1(a0);
+        }
+    } else {
+        ref_L00_003F5660_00(func_L00_003F56F0, a0);
+    }
+}
 
 /* Reads the short at +26 of the object held at +104, calls a callee with (3076, that short), then calls one callee with this when the result is zero or three callees with this when it is non-zero. */
 void func_L00_003F56F0(char *p)
@@ -491,8 +742,6 @@ void func_L00_003F56F0(char *p)
 INCLUDE_ASM("asm/levels", func_L00_003F5750);
 
 INCLUDE_ASM("asm/levels", func_L00_003F5870);
-
-INCLUDE_ASM("asm/levels", func_L00_003F59F0);
 
 INCLUDE_ASM("asm/levels", func_L00_003F5B10);
 

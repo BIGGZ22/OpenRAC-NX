@@ -20,6 +20,13 @@ extern void func_2E3470(void *a, void *b, void *c);
 
 extern void func_32EF38(void *buf, s32 a1, s32 a2, s32 a3, f32 x, f32 y);
 
+extern void func_00115484(void *buf, s32 value, s32 count);
+
+extern s32 func_00277F48(void *pos, s32 flag, void *obj, s32 arg, f32 radius);
+
+/* The level's table of the records the spawner looks through. */
+extern u32 D_L01_001C3980[];
+
 INCLUDE_ASM("asm/levels", func_L01_003DA740);
 
 INCLUDE_ASM("asm/levels", func_L01_003DAB98);
@@ -37,7 +44,31 @@ INCLUDE_ASM("asm/levels", func_L01_003DC078);
 
 /* func_L01_003DC838 is defined in L01_003DA740-g8.c (this unit has no $gp access for it). */
 
-INCLUDE_ASM("asm/levels", func_L01_003DC8B8);
+/* Marks the records of type 0xA26 the object finds and collects them in a1. */
+void func_L01_003DC8B8(u8 *a0, void *a1, void *a2) {
+    s32 i;
+    s32 n;
+    u32 **out = a1;
+    s32 *count = a2;
+
+    func_00115484(out, 0, 4);
+    *count = 0;
+    n = func_00277F48(a0 + 0x10, 1, a0, 0, 3.0f);
+    if (n <= 0)
+        return;
+    for (i = 0; i < n; i++) {
+        if (D_L01_001C3980[i] == 0)
+            continue;
+        if (*(s16 *)(D_L01_001C3980[i] + 0xAA) != 0xA26)
+            continue;
+        *(s32 *)(D_L01_001C3980[i] + 0x9C) = 1;
+        *(u8 *)(D_L01_001C3980[i] + 0xBC) = 1;
+        out[*count] = D_L01_001C3980[i];
+        *count = *count + 1;
+        if (*count >= 16)
+            return;
+    }
+}
 
 void func_L01_003DC9A8(void **a0, s32 *a1) {
     s32 i;

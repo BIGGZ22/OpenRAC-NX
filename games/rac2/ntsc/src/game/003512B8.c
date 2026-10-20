@@ -35,9 +35,83 @@ void func_003512B8(u8 *a0) {
     func_0011AC40(*(s32 *)(a0 + 0x40));
 }
 
-INCLUDE_ASM("asm/game", func_00351310);
+typedef struct { unsigned long long first, second; int offset, count; } Transfer_3518F0;
 
-INCLUDE_ASM("asm/game", func_00351468);
+extern int func_00351310(void *, Transfer_3518F0 *);
+
+/* a % b as a helper: once inlined, its zero-divisor check is tested against $0 */
+static inline int ring_mod(int a, int b) { return a % b; }
+
+/* func_00351310 : walks the transfer ring, trimming one message out of the slots */
+int func_00351310(void *owner, Transfer_3518F0 *message)
+{
+    char *self = (char *)owner;
+    Transfer_3518F0 *slot;
+    int index = (*(int *)(self + 0x5C) - *(int *)(self + 0x58) + *(int *)(self + 0x54)) %
+                *(int *)(self + 0x54);
+    int unit = *(int *)(self + 0x8) << 11;
+    int go = 1;
+
+    if (*(int *)(self + 0x58) > 0) {
+        while (go && (slot = *(Transfer_3518F0 **)(self + 0x50) + index)->count != 0 &&
+                     message->count != 0) {
+            if (ring_mod(slot->offset + unit - message->offset, unit) < message->count) {
+                int take = message->offset + message->count - slot->offset;
+                if (slot->count < take) {
+                    take = slot->count;
+                }
+                slot->offset = (slot->offset + take) % unit;
+                slot->count = slot->count - take;
+                if (slot->count == 0) {
+                    if ((long long)slot->first >= 0) {
+                        slot->first = -1;
+                        slot->second = -1;
+                        slot->offset = 0;
+                        slot->count = 0;
+                    }
+                    *(int *)(self + 0x58) = (*(int *)(self + 0x58) - 1 < 0) ?
+                                             0 : *(int *)(self + 0x58) - 1;
+                }
+            } else {
+                go = 0;
+            }
+            index = (index + 1) % *(int *)(self + 0x54);
+        }
+    }
+
+    return 0;
+}
+
+int func_00351468(void *owner, Transfer_3518F0 *message, int unused)
+{
+    char *self = owner;
+    int result = 0;
+    func_0011AC60(*(int *)(self + 0x40));
+    if (*(int *)(self + 0x58) < *(int *)(self + 0x54)) {
+        func_00351310(self, message);
+        if ((long long)message->first >= 0 || (long long)message->second >= 0) {
+            (*(Transfer_3518F0 **)(self + 0x50))[*(int *)(self + 0x5C)].first = message->first;
+            (*(Transfer_3518F0 **)(self + 0x50))[*(int *)(self + 0x5C)].second = message->second;
+            {
+                int offset = message->offset;
+                (*(Transfer_3518F0 **)(self + 0x50))[*(int *)(self + 0x5C)].offset = offset;
+            }
+            {
+                int count = message->count;
+                (*(Transfer_3518F0 **)(self + 0x50))[*(int *)(self + 0x5C)].count = count;
+            }
+            {
+                int next = *(int *)(self + 0x5C) + 1;
+                int capacity = *(int *)(self + 0x54);
+                *(int *)(self + 0x58) += 1;
+                *(int *)(self + 0x5C) = next % capacity;
+            }
+        }
+        result = 1;
+    }
+    func_0011AC40(*(int *)(self + 0x40));
+    return result;
+}
 
 INCLUDE_ASM("asm/game", func_00351578);
 
@@ -57,10 +131,11 @@ void func_00351848(unsigned char *owner, int *first_address, int *first_count,
                  second_address, second_count);
 }
 
-extern void func_00350B70(void *);
+extern void func_00350B70(u8 *, s32);
 
-void func_00351868(char *object) {
-    func_00350B70(object + 0x48);
+/* Forwards the byte count to the object's transfer buffer. */
+void func_00351868(char *object, s32 count) {
+    func_00350B70((u8 *)object + 0x48, count);
 }
 
 /* Measured target: byte-identical across all 27 levels. */
@@ -82,7 +157,6 @@ s32 func_003518D8(u8 *a0) { return *(s32 *)(a0 + 0xa8); }
 
 s32 func_003518E0(u8 *a0, s32 a1) { s32 vieux = *(s32 *)(a0 + 0xa8); *(s32 *)(a0 + 0xa8) = a1; return vieux; }
 
-typedef struct { unsigned long long first, second; int offset, count; } Transfer_3518F0;
 extern char *D_001B23CC[] __attribute__((sda));
 extern int func_00351468(void *, Transfer_3518F0 *, int);
 
@@ -103,7 +177,44 @@ int func_00351938(unsigned char *owner)
 
 INCLUDE_ASM("asm/game", func_00351958);
 
-INCLUDE_ASM("asm/game", func_00351960);
+/* func_00351960 : builds a 16-byte packet (a 4-byte header copied from D_001AE860 and a
+   12-byte body), asks the object for the two memory ranges it holds, and moves them into
+   the packet.  The two addresses are turned into 32-bit engine addresses. */
+typedef struct { char tag[4]; } Header_351960;
+
+typedef struct { Header_351960 header; char body[12]; } Packet_351960;
+
+extern Header_351960 D_001AE860;
+
+extern s32 func_00350460(u32 first_address, s32 first_count, u32 second_address,
+                         s32 second_count, u32 packet, s32 header_size, s32 unused1,
+                         s32 unused2);
+
+/* These wrappers have different targets in the level programs. */
+extern void ref_L00_00351960_00(u8 *, s32 *, s32 *, s32 *, s32 *);
+extern void ref_L00_00351960_01(char *, s32);
+
+s32 func_00351960(u8 *a0)
+{
+    Packet_351960 packet;
+    s32 first_address, first_count, second_address, second_count;
+    s32 result;
+
+    packet.header = D_001AE860;
+    ref_L00_00351960_00(a0, &first_address, &first_count, &second_address, &second_count);
+    if (first_count + second_count < 4) {
+        return 0;
+    }
+    result = func_00350460((first_address & 0x0FFFFFFF) | 0x20000000, first_count,
+                            (second_address & 0x0FFFFFFF) | 0x20000000, second_count,
+                            (u32)&packet, 4, 0, 0);
+    ref_L00_00351960_01(D_001B23CC[0] + 0xD9048, result);
+    func_003512B8(a0 + 0x48);
+    if (*(s32 *)(a0 + 0xA8) == 0) {
+        *(s32 *)(a0 + 0xA8) = 2;
+    }
+    return 1;
+}
 
 extern int func_0012F9B8(void *);
 

@@ -37,9 +37,9 @@
         "checkout": "~/Projects/rac2-decomp",
         "license": "GPL-3.0",
         "exclude": [],
-        "commit": "86dbd85236960285e5824b9cc05cde933dfc2bd2",
-        "date": "2026-10-15",
-        "imported": "2026-10-15"
+        "commit": "8bc9d785bfec96fbc41c608ce625427912813ca5",
+        "date": "2026-10-20",
+        "imported": "2026-10-20"
       },
       "build": {
         "host": "macOS, Linux or Windows through Docker (linux/386 image with Wine and the build tools); SN ProDG 2.0's assembler and linker you supply",

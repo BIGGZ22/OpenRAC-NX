@@ -84,12 +84,10 @@ s32 func_0027F1B8(u8 *text, s32 length) {
     return func_0027F128(text, length, D_00264290);
 }
 
-INCLUDE_ASM("asm/game", func_0027F1D8);
+extern int func_0027F1D8(u8 *, int, u8 *, float);
 
-extern int func_0027F1D8(u8 *, int, u8 *);
-
-int func_0027F288(u8 *text, int length) {
-    return func_0027F1D8(text, length, D_00263B50);
+int func_0027F288(u8 *text, int length, float scale) {
+    return func_0027F1D8(text, length, D_00263B50, scale);
 }
 
 INCLUDE_ASM("asm/game", func_0027F2A8);
@@ -205,7 +203,37 @@ INCLUDE_ASM("asm/game", func_00281A08);
 
 INCLUDE_ASM("asm/game", func_00281DE0);
 
-INCLUDE_ASM("asm/game", func_00281DE8);
+/* The draw packet's texture state and its flags.
+
+   D_00239B10 is a table of 20-byte entries. The first four words of an entry
+   hold two bits of flags apiece, packed into the low half of the packet's
+   64-bit flag word; the packet's own type goes in the top half. */
+typedef struct { int f0, f1, f2, f3, f4; } QuadEntry;
+
+extern QuadEntry D_00239B10[];
+
+typedef struct {
+    u8 pad[0x70];
+    long f70;   /* cleared here */
+    long f78;   /* the font */
+    long f80;   /* the texture state, 0xFF9000000260 */
+    long f88;   /* the flags */
+} QuadPacket;
+
+void func_00281DE8(QuadPacket *q, int a1, int a2, int a3) {
+    QuadEntry *e;
+    long flags;
+    q->f78 = func_0027C878(a1);
+    q->f80 = ((long)0xFF90 << 32) | 0x260;
+    q->f70 = 0;
+    e = &D_00239B10[a2];
+    flags = (long)e->f0;
+    flags |= (long)e->f1 << 2;
+    flags |= (long)e->f2 << 4;
+    flags |= (long)e->f3 << 6;
+    flags |= (long)a3 << 32;
+    q->f88 = flags;
+}
 
 INCLUDE_ASM("asm/game", func_00281E88);
 
@@ -446,7 +474,11 @@ INCLUDE_ASM("asm/game", func_00284088);
 
 INCLUDE_ASM("asm/game", func_00284268);
 
-INCLUDE_ASM("asm/game", func_00284E18);
+extern long long D_001A6D78;
+
+void func_00284E18(s32 a0, s32 a1, s32 a2) {
+    D_001A6D78 = a0 | ((long long)a1 << 8) | ((long long)a2 << 16) | 0x80000000ULL;
+}
 
 void func_00284E40(void) {
     func_00125A20(*(u8 **)0x001a742c,D_001A6480.c,D_001A6480.a,D_001A6480.b,D_001A6480.d,D_001A6480.e);

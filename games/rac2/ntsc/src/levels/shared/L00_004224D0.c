@@ -121,7 +121,7 @@ int func_L00_00424940(int a0)
     return 0;
 }
 
-INCLUDE_ASM("asm/levels", func_L00_00424978);
+/* func_L00_00424978 is matched in L00_00424978.c (built with -mno-split-addresses). */
 
 void func_L00_00424A08(int a0, float a, float b)
 {

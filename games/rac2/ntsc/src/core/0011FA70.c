@@ -35,7 +35,7 @@ int func_0011FA70(int *dst, int *src, unsigned int nbytes) {
     return 0;
 }
 
-INCLUDE_ASM("asm/core", func_0011FAA8);
+ASM_FUNC("asm/core", func_0011FAA8);
 
 /* rac1-decomp src/core/0011DDD0.c: func_0011DE38 */
 /*
@@ -77,7 +77,22 @@ void func_0011FAB8(void) {
 
 INCLUDE_ASM("asm/core", func_0011FB8C);
 
-INCLUDE_ASM("asm/core", func_0011FC48);
+/* The object's last row. The real body of the func_0011FB8C row starts at
+   0x11FB98 (see nonmatching/core/func_0011FB8C.c): a teardown that walks the
+   callback table at D_001A7000. This row is the one-shot guard in front of
+   it - D_001417EC is set first, then the teardown is entered with a sibling
+   `j`. Both bodies are void, and the `addiu $v0,$zero,1` left in the bnez
+   delay slot is the store's constant, not a return value. */
+extern int D_001417EC;
+
+extern void func_0011FB98(void);
+
+void func_0011FC48(void) {
+    if (D_001417EC == 0) {
+        D_001417EC = 1;
+        func_0011FB98();
+    }
+}
 
 INCLUDE_ASM("asm/core", func_0011FC68);
 

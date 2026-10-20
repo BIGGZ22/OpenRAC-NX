@@ -496,11 +496,7 @@ unsigned char *func_00123578(unsigned char *input, int *output) {
     return input;
 }
 
-INCLUDE_ASM("asm/core", func_001235C8);
-
 INCLUDE_ASM("asm/core", func_001236C8);
-
-INCLUDE_ASM("asm/core", func_00123930);
 
 typedef struct {
     int **records;
@@ -531,20 +527,61 @@ void func_00123978(int *record, RecordOutput *output, unsigned int *minimum, uns
     *maximum = high;
 }
 
-INCLUDE_ASM("asm/core", func_00123A00);
 
 INCLUDE_ASM("asm/core", func_00123B40);
 
-INCLUDE_ASM("asm/core", func_00123C28);
+/* libgcc.a frame.o: extract_cie_info, verbatim from the gcc/frame.c of
+   gnu-ee-binutils-gcc-1.1 - the same public source the qualified compiler is
+   built from. The CIE is reached back through f->CIE_delta, and the unaligned
+   pointer read is read_pointer's packed union, which is why retail shows an
+   lwl/lwr pair rather than a plain lw. */
+
+typedef struct {
+    unsigned int length;
+    int CIE_delta;
+    void *pc_begin;
+    unsigned int pc_range;
+} fde;
+
+struct dwarf_cie {
+    unsigned int length;
+    int CIE_id;
+    unsigned char version;
+    char augmentation[1];
+};
+
+struct cie_info {
+    char *augmentation;
+    void *eh_ptr;
+    int code_align;
+    int data_align;
+    unsigned int ra_regno;
+};
+
+union unaligned {
+    void *p;
+    unsigned int b4 __attribute__ ((mode (SI)));
+} __attribute__ ((packed));
+
+static __inline__ void *read_pointer(void *p) {
+    union unaligned *up = p;
+    return up->p;
+}
+
+static __inline__ struct dwarf_cie *get_cie(fde *f) {
+    return (struct dwarf_cie *)((void *)&f->CIE_delta - f->CIE_delta);
+}
+
+extern int func_00115544(const char *, const char *);
+extern unsigned int func_001157AC(const char *);
+
 
 INCLUDE_ASM("asm/core", func_00123D30);
 
 INCLUDE_ASM("asm/core", func_001240C8);
 
-INCLUDE_ASM("asm/core", func_001242A0);
+ASM_FUNC("asm/core", func_00124414);
 
-INCLUDE_ASM("asm/core", func_00124414);
-
-INCLUDE_ASM("asm/core", func_001244B8);
+ASM_FUNC("asm/core", func_001244B8);
 
 ASM_FUNC("asm/core", func_00124540);

@@ -21,15 +21,20 @@ the boot does not also have. A function many levels share is one function, howev
 places it has. A function is C when its C links into a program that comes out equal to the
 retail one ([`progress/report.json`](progress/report.json), `tools/progress.py`).
 
+The report also gives the boot executable's data (383,391 bytes of initialised data, for the
+Data bar on [ByteMatch](https://bytematch.dev)). None of it is matched yet: the build places C
+functions' code and discards their objects' data, so all of it still comes from retail's dumps.
+The levels' data is not measured.
+
 <!-- progress -->
 | | Functions | Code |
 | --- | ---: | ---: |
-| Boot executable | 1,470 of 3,390 | 170,200 of 1,049,464 bytes |
-| Levels | 1,471 of 5,710 | 147,888 of 4,484,136 bytes |
-| **Total** | 2,941 of 9,100 | 318,088 of 5,533,600 bytes (5.75%) |
+| Boot executable | 1,900 of 3,390 | 255,008 of 1,049,464 bytes |
+| Levels | 1,861 of 5,710 | 240,312 of 4,484,136 bytes |
+| **Total** | 3,761 of 9,100 | 495,320 of 5,533,600 bytes (8.95%) |
 
-The 27 levels hold 106,337 function placements; C covers 38,445 of them.
-84 of the matched functions are the original's own assembly (`ASM_FUNC`), kept as assembly.
+The 27 levels hold 106,337 function placements; C covers 46,925 of them.
+251 of the matched functions are the original's own assembly (`ASM_FUNC`), kept as assembly.
 <!-- /progress -->
 
 

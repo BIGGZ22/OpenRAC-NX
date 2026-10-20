@@ -31,3 +31,40 @@ extern void func_4493F8(char *a0, s32 a1);
 extern void func_449970(char *a0, s32 a1, s32 a2);
 extern void func_448DF8(char *a0);
 extern void func_449878(char *a0);
+
+/* The id-list walk of the 0x7FFF family (worker 02's matched skeleton): the entry's
+   two-byte ids are addresses divided by 256 into the resident object bank, and bit 15
+   of the last id ends the walk.  Returns 1 only from the third live 0xD98 object. */
+extern u8 *D_L11_001FC420[];
+extern u8 *D_L11_001B359C __attribute__((sda));
+
+s32 func_L11_00448D28(u8 *a0)
+{
+    u8 *base;
+    u8 *p;
+    u16 *q;
+    u8 *e;
+    s32 n;
+
+    if (a0[0x21] == 0xFF)
+        return 0;
+    p = D_L11_001FC420[a0[0x21]];
+    if (p == 0)
+        return 0;
+    q = (u16 *)p;
+    base = D_L11_001B359C;
+    n = 0;
+    for (;;) {
+        e = base + (*q & 0x7FFF) * 256;
+        if (e != 0 && e[0x20] != 0xFE && e[0x20] != 0xFD && *(s16 *)(e + 0xAA) == 0xD98
+            && e[0x95] == 6 && *(s16 *)(*(char **)(e + 0x68) + 0x366) == 1) {
+            n++;
+            if (n >= 3)
+                return 1;
+        }
+        if ((s16)*q < 0)
+            break;
+        q++;
+    }
+    return 0;
+}

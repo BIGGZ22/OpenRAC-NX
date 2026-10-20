@@ -15,7 +15,6 @@ INCLUDE_ASM("asm/levels", func_L14_003DE908);
 
 /* func_L14_003F0E68 is built with -G8: see L14_003DE908-g8.c. */
 
-INCLUDE_ASM("asm/levels", func_L14_003F0E68);
 INCLUDE_ASM("asm/levels", func_L14_00423CD0);
 
 INCLUDE_ASM("asm/levels", func_L14_004272D8);

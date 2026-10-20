@@ -135,7 +135,23 @@ void func_L00_002D3638(float *p, int flag, float scale, float value, float heigh
         func_00282CC0_2(p, p, D_00189E20_6 + 128);
 }
 
-INCLUDE_ASM("asm/levels", func_L00_002D36E0);
+extern void func_2EE0D0(void *dst);
+
+extern void func_2EE5D8(void *p, void *q, char *data);
+
+extern void func_2EE108(void *p, void *q, char *data);
+
+/* Runs the record setup on the three-float destination, fills it from the three float arguments, then binds it to the resident root and, when the flag argument is non-zero, to that root plus 128. */
+void func_L00_002D36E0(float *p, int flag, float x, float y, float z)
+{
+    func_2EE0D0(p);
+    p[0] = x;
+    p[1] = y;
+    p[2] = z;
+    func_2EE5D8(p, p, D_00189E20_6);
+    if (flag != 0)
+        func_2EE108(p, p, D_00189E20_6 + 128);
+}
 
 /* calls the measured float callee with the negated input */
 void func_L00_002D3778(Rac2Native_5fc519c90e0e763a_f32 value) {

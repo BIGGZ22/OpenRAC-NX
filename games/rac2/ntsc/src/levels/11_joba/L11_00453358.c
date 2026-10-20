@@ -52,6 +52,42 @@ extern int D_L11_001B30C8;
 extern void func_L11_00458DF0(char *a0, void *a1, void *a2, int a3, int t0, float f12,
                               float f13);
 
+/* The vector the aim helpers read, at 0x001BA780 in joba. */
+typedef struct {
+    char pad_000[0x140];
+    float x_140;
+    float y_144;
+    float z_148;
+} L11AimVector;
+
+extern L11AimVector D_L11_001BA780;
+
+extern void func_L11_0045FFB0(char *pkt);
+
+extern long long func_0027C878(char *p);
+
+extern float func_00282E80(char *p, float *v);
+
+extern void func_00283410(float *matrix, float *quat);
+
+extern void func_00282CF0(float *out, float *a, float *b);
+
+extern void func_00282F20(float *dst, float *src, float scale);
+
+extern void func_00280B90(char *pkt, float *matrix, int mode);
+extern void func_002E59F8(int index);
+
+extern void func_002E5DA0(int index, int value, char *object, int kind);
+
+extern void func_0032C700(char *, int, int, int, int, int, int, int, float, float, int,
+                         int, int, int);
+
+extern void func_00282C88(void *);
+
+extern void func_L11_003973F8(char *, int, float, float);
+
+extern char D_00188660[];
+
 INCLUDE_ASM("asm/levels", func_L11_00453358);
 
 INCLUDE_ASM("asm/levels", func_L11_00454508);
@@ -78,9 +114,78 @@ void func_L11_00454AE0(char *p)
 INCLUDE_ASM("asm/levels", func_L11_00454B60);
 
 
-INCLUDE_ASM("asm/levels", func_L11_00454C78);
+/* Aims the object's stage, re-arms its effect and stores the new heading. */
+void func_L11_00454C78(char *p, int a1, int a2)
+{
+    char *q = *(char **)(p + 0x68);
+    char *definition;
+    unsigned short flags;
+    int cache;
+    float f;
 
-INCLUDE_ASM("asm/levels", func_L11_00454DD8);
+    f = (float)*(short *)(q + 0x24);
+    *(short *)(q + 0x1FC) = a2;
+    *(short *)(q + 0x1EC) = 0;
+    *(unsigned char *)(q + 0x2E) = 1;
+    *(float *)(q + 0x20) = f;
+    if (*(unsigned char *)(p + 0x43) != 0)
+        func_002A7470(p, 0, 0, 10);
+    flags = *(unsigned short *)(p + 0x34);
+    *(unsigned char *)(p + 0x7F) = 0;
+    *(unsigned short *)(p + 0x34) = (flags | 0x1000) & 0xFFB9;
+    definition = *(char **)(p + 0x24);
+    cache = *(int *)(definition + 0x10);
+    *(int *)(p + 0x98) = cache;
+    if (*(short *)(q + 0x1FC) != 0) {
+        func_002A7750(p, 7, 3);
+        *(unsigned short *)(p + 0x34) |= 0x100;
+        func_L11_003973F8(p, 0, 2.0f, 2.0f);
+    } else {
+        func_002A7750(p, 3, 1);
+        *(unsigned char *)(p + 0x31) = 1;
+        *(unsigned short *)(p + 0x34) &= 0xFEFE;
+    }
+    func_00282C88(q + 0x1B0);
+    f = func_002A7878(20.0f, 30.0f) * 0.017453294f;
+    *(short *)(q + 0x1EE) = a1;
+    *(float *)(q + 0x1CC) = f;
+    if (*(short *)(q + 0x50) != 0) {
+        *(short *)(q + 0x50) = 0;
+        func_002A0488(p, *(int *)(q + 0x1F0), *(int *)(q + 0x1F4), *(int *)(q + 0x1F8));
+        *(short *)(q + 0x52) = 1;
+    }
+}
+
+/* Releases the object's slot in the shared table and drops it to the idle flag block. */
+void func_L11_00454DD8(char *p)
+{
+    char *q = *(char **)(p + 0x68);
+    int i = *(int *)(q + 0x1DC);
+    char *entry;
+
+    if (i != -1) {
+        entry = D_00188660 + i * 0x70;
+        if (*(char **)(entry + 0x88) == p && *(unsigned char *)(entry + 0x74) != 0)
+            func_002E59F8(i);
+    }
+    *(int *)(q + 0x1DC) = -1;
+    if (*(short *)(q + 0x1EC) == 1) {
+        *(short *)(q + 0x1EC) = 0;
+        func_L11_00441978(*(char **)(p + 0xB8), *(short *)(p + 0xAA));
+    }
+    if (*(unsigned char *)(p + 0x31) != 0) {
+        func_0032C700(p + 0x10, 0, 10, 30, 0, 10, 45, 1, 0.3f, 0.0f, 0, 0, 0, 0);
+        func_002E5DA0(0, 0, p, 0xDF7);
+    }
+    func_002A7470(p, 0, 0, 3);
+    func_002A05A8(p);
+    func_002A7750(p, 1, 0);
+    *(unsigned short *)(p + 0x34) = (*(unsigned short *)(p + 0x34) & 0xEFFF) | 0x47;
+    *(int *)(p + 0x98) = 0;
+    *(unsigned char *)(p + 0x31) = 0;
+    *(short *)(q + 0x1EC) = 0;
+    *(int *)(q + 0x1C4) = 0;
+}
 
 INCLUDE_ASM("asm/levels", func_L11_00454F18);
 
@@ -131,7 +236,74 @@ INCLUDE_ASM("asm/levels", func_L11_00456C20);
 
 INCLUDE_ASM("asm/levels", func_L11_00456EA0);
 
-INCLUDE_ASM("asm/levels", func_L11_00457600);
+extern void func_L04_0040A090(int, void *, void *, void *, void *, void *);
+extern char D_L11_001B1E50[] __attribute__((sda));
+extern char D_L11_001B1E70[] __attribute__((sda));
+extern char D_L11_001B1E80[] __attribute__((sda));
+extern char D_L11_001B1EA0[] __attribute__((sda));
+extern char D_L11_001B1EB0[] __attribute__((sda));
+extern char D_L11_001B1EE0[] __attribute__((sda));
+extern char D_L11_001B1F20[] __attribute__((sda));
+extern char D_L11_001B1F30[] __attribute__((sda));
+extern char D_L11_001B1F50[] __attribute__((sda));
+extern char D_L11_001B1F70[] __attribute__((sda));
+extern char D_L11_001B43F0[] __attribute__((sda));
+extern char D_L11_001B4430[] __attribute__((sda));
+extern char D_L11_001B4450[] __attribute__((sda));
+extern char D_L11_001B4490[] __attribute__((sda));
+extern char D_L11_001B44B0[] __attribute__((sda));
+extern char D_L11_001B44D0[] __attribute__((sda));
+extern char D_L11_001B4510[] __attribute__((sda));
+extern char D_L11_001B4550[] __attribute__((sda));
+extern char D_L11_001B4570[] __attribute__((sda));
+extern char D_L11_001B4580[] __attribute__((sda));
+extern char D_L11_001B4588[] __attribute__((sda));
+extern char D_L11_001B4598[] __attribute__((sda));
+extern char D_L11_001B45A0[] __attribute__((sda));
+extern char D_L11_001B45B8[] __attribute__((sda));
+extern char D_L11_001B45D8[] __attribute__((sda));
+extern char D_L11_001B45E0[] __attribute__((sda));
+extern char D_L11_001B45F0[] __attribute__((sda));
+extern char D_L11_001B4600[] __attribute__((sda));
+extern char D_L11_001B4608[] __attribute__((sda));
+extern char D_L11_001B4618[] __attribute__((sda));
+extern char D_L11_001B4620[] __attribute__((sda));
+extern char D_L11_001B4630[] __attribute__((sda));
+extern char D_L11_001B4638[] __attribute__((sda));
+extern char D_L11_001B4650[] __attribute__((sda));
+extern char D_L11_001B4670[] __attribute__((sda));
+extern char D_L11_001B4678[] __attribute__((sda));
+extern char D_L11_001B4688[] __attribute__((sda));
+extern char D_L11_001B4698[] __attribute__((sda));
+extern char D_L11_001B46A0[] __attribute__((sda));
+extern char D_L11_001B46A4[] __attribute__((sda));
+extern char D_L11_001B46A8[] __attribute__((sda));
+extern char D_L11_001B46AC[] __attribute__((sda));
+extern char D_L11_001B46B0[] __attribute__((sda));
+extern char D_L11_001B46B4[] __attribute__((sda));
+extern char D_L11_001B46B8[] __attribute__((sda));
+extern char D_L11_001B46BC[] __attribute__((sda));
+extern char D_L11_001B46C0[] __attribute__((sda));
+extern char D_L11_001B46C4[] __attribute__((sda));
+extern char D_L11_002626B0[];
+extern char D_L11_00262710[];
+
+void func_L11_00457600(void) {
+    func_L04_0040A090(4, D_L11_001B1E50, D_L11_001B43F0, D_L11_001B4570, D_L11_001B4608, D_L11_001B46A0);
+    func_L04_0040A090(2, D_L11_001B1E70, D_L11_001B4430, D_L11_001B4580, D_L11_001B4618, D_L11_001B46A4);
+    func_L04_0040A090(4, D_L11_001B1E80, D_L11_001B4450, D_L11_001B4588, D_L11_001B4620, D_L11_001B46A8);
+    {
+        char *data = D_L11_001B4490;
+        func_L04_0040A090(2, D_L11_001B1EA0, data, D_L11_001B4598, D_L11_001B4630, D_L11_001B46AC);
+    }
+    func_L04_0040A090(6, D_L11_001B1EB0, D_L11_002626B0, D_L11_001B45A0, D_L11_001B4638, D_L11_001B46B0);
+    func_L04_0040A090(8, D_L11_001B1EE0, D_L11_00262710, D_L11_001B45B8, D_L11_001B4650, D_L11_001B46B4);
+    func_L04_0040A090(2, D_L11_001B1F20, D_L11_001B44B0, D_L11_001B45D8, D_L11_001B4670, D_L11_001B46B8);
+    func_L04_0040A090(4, D_L11_001B1F30, D_L11_001B44D0, D_L11_001B45E0, D_L11_001B4678, D_L11_001B46BC);
+    func_L04_0040A090(4, D_L11_001B1F50, D_L11_001B4510, D_L11_001B45F0, D_L11_001B4688, D_L11_001B46C0);
+    func_L04_0040A090(2, D_L11_001B1F70, D_L11_001B4550, D_L11_001B4600, D_L11_001B4698, D_L11_001B46C4);
+}
+
 
 INCLUDE_ASM("asm/levels", func_L11_004577F8);
 
@@ -231,6 +403,48 @@ void func_L11_00460038(char *p, float scale)
     func_00282D30_2(p + 48, p + 48, scale);
 }
 
-INCLUDE_ASM("asm/levels", func_L11_004600A0);
+/* Builds a 144-byte packet, aims a quaternion at the level's vector from pos through three
+   float helpers, derives an offset basis by a fourth, writes the last matrix row from pos
+   plus that offset, then dispatches the packet. */
+void func_L11_004600A0(char *pos, int a1, int a2, char *a3, int t0,
+                       float fA, float fB, float fC)
+{
+    char pkt[144];
+    float m[16];
+    float quat[4];
+    float off[4];
+    long long r;
+
+    func_L11_0045FFB0(pkt);
+    r = func_0027C878(a3);
+
+    *(long long *)(pkt + 136) = ((long long)t0 << 2) | 0x8000000040LL;
+    *(long long *)(pkt + 128) = 280993940374112LL;
+    *(int *)(pkt + 76) = a1 + (a2 << 24);
+    *(int *)(pkt + 72) = a1 + (a2 << 24);
+    *(int *)(pkt + 68) = a1 + (a2 << 24);
+    *(int *)(pkt + 64) = a1 + (a2 << 24);
+    *(long long *)(pkt + 112) = 0LL;
+    *(long long *)(pkt + 120) = r;
+
+    quat[3] = 0.0f;
+    quat[2] = func_00283248(D_L11_001BA780.x_140 - *(float *)(pos + 0),
+                           D_L11_001BA780.y_144 - *(float *)(pos + 4));
+    quat[1] = -func_00283248(func_00282E80(pos, &D_L11_001BA780.x_140),
+                             D_L11_001BA780.z_148 - *(float *)(pos + 8));
+    quat[0] = fB;
+
+    func_00283410(m, quat);
+    func_00282CF0(off, &D_L11_001BA780.x_140, pos);
+    func_00282F20(off, off, fC);
+
+    m[12] = *(float *)(pos + 0) + off[0];
+    m[13] = *(float *)(pos + 4) + off[1];
+    m[14] = *(float *)(pos + 8) + off[2];
+    m[15] = 1.0f;
+
+    func_L11_00460038(pkt, fA);
+    func_00280B90(pkt, m, 0);
+}
 
 INCLUDE_ASM("asm/levels", func_L11_00461308);

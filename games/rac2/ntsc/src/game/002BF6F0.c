@@ -226,17 +226,36 @@ void func_002C1840(char *self)
 
 INCLUDE_ASM("asm/game", func_002C19D8);
 
-INCLUDE_ASM("asm/game", func_002C1B38);
+/* func_002C1B38 is in the -G8 sibling. */
 
-INCLUDE_ASM("asm/game", func_002C1C88);
+extern float func_00282C48(float);
+
+void func_002C1C88(char *self)
+{
+    char *motion = self + 0x20;
+    func_00282CC0_17(self + 0x10, self + 0x10, motion);
+    *(float *)(self + 0x0C) += 5880.0f;
+    *(float *)(motion + 0x14) *= 0.98f;
+    *(float *)(motion + 0x10) += *(float *)(motion + 0x14);
+    *(unsigned char *)(self + 8) = func_00283CF0_6(*(float *)(motion + 0x10));
+    if (*(float **)(motion + 0x18)) {
+        if (func_00282C48(*(float *)(self + 0x18) - **(float **)(motion + 0x18)) < 0.2f)
+            *(float *)(self + 0x18) = **(float **)(motion + 0x18) + 0.02f;
+    }
+    if (--*(short *)(self + 0xA) == 0) {
+        *(int *)(self + 4) -= 0x01000000;
+        *(short *)(self + 0xA) = 1;
+    }
+    if ((*(unsigned int *)(self + 4) & 0xFF000000) == 0)
+        func_002B9180(self);
+}
 
 INCLUDE_ASM("asm/game", func_002C1DB0);
 
 INCLUDE_ASM("asm/game", func_002C1E50);
 
-INCLUDE_ASM("asm/game", func_002C1EF0);
 
-INCLUDE_ASM("asm/game", func_002C1FC0);
+/* func_002C1FC0 is defined in 002BF6F0-g8.c. */
 
 void func_002C2080(unsigned char *p)
 {
@@ -404,7 +423,7 @@ tail:
 
 INCLUDE_ASM("asm/game", func_002C38A0);
 
-INCLUDE_ASM("asm/game", func_002C38E0);
+/* func_002C38E0 is in the -G8 sibling. */
 
 INCLUDE_ASM("asm/game", func_002C3B08);
 
@@ -544,7 +563,44 @@ void func_002C6748(char *obj)
     *(float *)(obj + 12) += *(float *)(s1 + 16);
 }
 
-INCLUDE_ASM("asm/game", func_002C6868);
+typedef struct {
+    int *colors;
+    short *sizes;
+    short *times;
+    short last_index;
+    short reserved0E;
+    short lifetime;
+    short reserved12;
+    float scale;
+} ParticleKeyframes;
+extern int func_002A9568(int, int, float);
+
+void func_002C6868(char *self)
+{
+    char *motion = self + 0x20;
+    ParticleKeyframes *control = *(ParticleKeyframes **)(motion + 0x10);
+    short elapsed;
+    float duration, factor;
+    func_00282D30_12(motion, motion, (control->scale - 1.0f) + 1.0f);
+    func_00282CC0_17(self + 0x10, self + 0x10, motion);
+    *(unsigned char *)(self + 8) += *(unsigned char *)(motion + 0x18);
+    elapsed = control->lifetime - *(short *)(self + 0xA);
+    if (control->times[*(short *)(motion + 0x14) + 1] < elapsed &&
+        *(short *)(motion + 0x14) < control->last_index)
+        ++*(short *)(motion + 0x14);
+    duration = func_00283CE0_2(control->times[*(short *)(motion + 0x14) + 1] -
+        control->times[*(short *)(motion + 0x14)]);
+    factor = (float)(elapsed -
+        control->times[*(short *)(motion + 0x14)]) / duration;
+    *(int *)(self + 4) = func_002A9568(
+        control->colors[*(short *)(motion + 0x14)],
+        control->colors[*(short *)(motion + 0x14) + 1], factor);
+    *(float *)(self + 0xC) =
+        ((float)control->sizes[*(short *)(motion + 0x14)] +
+         factor * (float)(control->sizes[*(short *)(motion + 0x14) + 1] - control->sizes[*(short *)(motion + 0x14)])) * 1000.0f;
+    if (func_00282978((short *)(self + 0xA)))
+        func_002B9180(self);
+}
 
 INCLUDE_ASM("asm/game", func_002C6A08);
 

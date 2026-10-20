@@ -189,7 +189,43 @@ void func_L18_00432960(u8 *a0) {
     func_002B60B0(a0, 0.1388889f, 0.18333334f, 0.027925272f, 0.8377582f);
 }
 
-INCLUDE_ASM("asm/levels", func_L18_004329B0);
+extern u8 D_00190000[];
+extern void func_002E59F8(s32 arg0);
+extern void func_002E5CF8(s32 arg0, s32 arg1, u8 *arg2);
+extern void func_0029F338(void *arg0);
+extern void func_0032C700(void *arg0, s32 arg1, s32 arg2, s32 arg3, s32 arg4, s32 arg5,
+                           s32 arg6, s32 arg7, float arg8, float arg9, s32 arg10, s32 arg11,
+                           s32 arg12, s32 arg13);
+
+void func_L18_004329B0(u8 *a0) {
+    u8 *s0;
+    s32 a1;
+    s0 = *(u8 **)(a0 + 0x68);
+    a1 = *(s32 *)(s0 + 0x7F0);
+    if (a1 != -1) {
+        u8 *p = D_00190000 - 0x79A0 + a1 * 0x70;
+        if (*(u32 *)(p + 0x88) != (u32)a0) goto end;
+        if (p[0x74] == 0) goto end;
+        func_002E59F8(a1);
+    }
+end:
+    *(s32 *)(s0 + 0x7F0) = -1;
+    func_0032C700(a0 + 0x10, 1, 0x19, 0x14, 0x14, 0x14, 0x2D, 1, 1.0f, 20.0f, 1, 1, 0, 0);
+    func_002E5CF8(6, 0, a0);
+    if (*(u32 *)(s0 + 0x7C0)) {
+        func_0029F338(*(void **)(s0 + 0x7C0));
+        *(u32 *)(s0 + 0x7C0) = 0;
+    }
+    if (*(u32 *)(s0 + 0x7C4)) {
+        func_0029F338(*(void **)(s0 + 0x7C4));
+        *(u32 *)(s0 + 0x7C4) = 0;
+    }
+    if (*(u32 *)(s0 + 0x7C8)) {
+        func_0029F338(*(void **)(s0 + 0x7C8));
+        *(u32 *)(s0 + 0x7C8) = 0;
+    }
+    func_0029F338(a0);
+}
 
 void func_L18_00432AD0(u8 *a0) {
     u8 *s0;
@@ -200,7 +236,50 @@ void func_L18_00432AD0(u8 *a0) {
     *(u16 *)(s0 + 0x7FA) = 0;
 }
 
-INCLUDE_ASM("asm/levels", func_L18_00432B30);
+void func_L18_00432B30(u8 *object, int reason) {
+    u8 *state;
+
+    if (object[0x20] == 2)
+        return;
+    state = *(u8 **)(object + 0x68);
+    *(int *)(state + 0x7EC) = reason;
+    *(u16 *)(object + 0x34) = (*(u16 *)(object + 0x34) & 0xFFBE) | 0x1000;
+    *(int *)(object + 0x98) = *(int *)(*(u8 **)(object + 0x24) + 0x10);
+    *(u16 *)(object + 0x34) &= 0xFFFD;
+    *(float *)(state + 0x7E8) = 0.5f;
+    *(float *)(object + 0x2C) = *(float *)(*(u8 **)(object + 0x24) + 0x24) * 0.5f;
+    if ((*(u8 **)(state + 0x7C0))) {
+        *(u16 *)((*(u8 **)(state + 0x7C0)) + 0x34) &= 0xFFBE;
+        *(u16 *)((*(u8 **)(state + 0x7C0)) + 0x34) |= 0x1000;
+        *(int *)((*(u8 **)(state + 0x7C0)) + 0x98) = *(int *)(*(u8 **)((*(u8 **)(state + 0x7C0)) + 0x24) + 0x10);
+        *(int *)((*(u8 **)(state + 0x7C0)) + 0x98) = 0;
+        *(u16 *)((*(u8 **)(state + 0x7C0)) + 0x34) &= 0xFFFD;
+        *(float *)((*(u8 **)(state + 0x7C0)) + 0x2C) = *(float *)(*(u8 **)((*(u8 **)(state + 0x7C0)) + 0x24) + 0x24) *
+                                 *(float *)(state + 0x7E8);
+    }
+    if ((*(u8 **)(state + 0x7C4))) {
+        *(u16 *)((*(u8 **)(state + 0x7C4)) + 0x34) &= 0xFFBE;
+        *(u16 *)((*(u8 **)(state + 0x7C4)) + 0x34) |= 0x1000;
+        *(int *)((*(u8 **)(state + 0x7C4)) + 0x98) = *(int *)(*(u8 **)((*(u8 **)(state + 0x7C4)) + 0x24) + 0x10);
+        *(int *)((*(u8 **)(state + 0x7C4)) + 0x98) = 0;
+        *(u16 *)((*(u8 **)(state + 0x7C4)) + 0x34) &= 0xFFFD;
+        *(float *)((*(u8 **)(state + 0x7C4)) + 0x2C) = *(float *)(*(u8 **)((*(u8 **)(state + 0x7C4)) + 0x24) + 0x24) *
+                                 *(float *)(state + 0x7E8);
+    }
+    if ((*(u8 **)(state + 0x7C8))) {
+        *(u16 *)((*(u8 **)(state + 0x7C8)) + 0x34) &= 0xFFBE;
+        *(u16 *)((*(u8 **)(state + 0x7C8)) + 0x34) |= 0x1000;
+        *(int *)((*(u8 **)(state + 0x7C8)) + 0x98) = *(int *)(*(u8 **)((*(u8 **)(state + 0x7C8)) + 0x24) + 0x10);
+        *(int *)((*(u8 **)(state + 0x7C8)) + 0x98) = 0;
+        *(u16 *)((*(u8 **)(state + 0x7C8)) + 0x34) &= 0xFFFD;
+        *(float *)((*(u8 **)(state + 0x7C8)) + 0x2C) = *(float *)(*(u8 **)((*(u8 **)(state + 0x7C8)) + 0x24) + 0x24) *
+                                 *(float *)(state + 0x7E8);
+    }
+    func_002A7750(object, 2, 1);
+    *(u16 *)(object + 0x34) &= 0xEFFF;
+    *(short *)(state + 0x7FA) = 0;
+}
+
 
 void func_L18_00432D08(u8 *a0) {
     u8 *s0;

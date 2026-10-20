@@ -47,7 +47,6 @@ INCLUDE_ASM("asm/core", func_0012E378);
 
 ASM_FUNC("asm/core", func_0012E538);
 
-INCLUDE_ASM("asm/core", func_0012E608);
 
 /* rac1-decomp src/core/0012A2F0.c: func_0012AA70 */
 /* _sysbitInit: points the bit stream at arg0 at the arg3-byte ring buffer
@@ -67,4 +66,4 @@ void func_0012E890(void *arg0, int arg1, int arg2, int arg3) {
     r1_func_0012AAC8(arg0, 0);
 }
 
-INCLUDE_ASM("asm/core", func_0012E8C8);
+INCLUDE_ASM("asm/core", func_0012E608);

@@ -15,4 +15,3 @@ extern int D_001A7420_5;
 extern void func_00298780(void);
 
 
-INCLUDE_ASM("asm/game", func_002987C0);

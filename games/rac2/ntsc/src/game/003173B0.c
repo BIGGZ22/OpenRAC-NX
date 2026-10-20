@@ -38,6 +38,77 @@ typedef struct {
 } Vec16_Fc936841d;
 #endif
 
+/* The four 16-byte blocks the record carries and scales. */
+#ifndef RAC2_T_BLOCK_0031A340
+#define RAC2_T_BLOCK_0031A340
+typedef struct {
+    float q[4];
+} Block_0031a340;
+#endif
+
+/* The 240-byte record func_0031A340 builds: a scaled matrix, a colour, the
+   looked-up handle, the fixed fields and the two computed vectors. */
+#ifndef RAC2_T_LOC_0031A340
+#define RAC2_T_LOC_0031A340
+typedef struct {
+    Block_0031a340 b0;
+    Block_0031a340 b1;
+    Block_0031a340 b2;
+    Block_0031a340 b3;
+    int k0;
+    int k1;
+    int k2;
+    int k3;
+    int z80;
+    int z84;
+    int z88;
+    float f92;
+    float f96;
+    int z100;
+    float f104;
+    float f108;
+    long long v112;
+    long long v120;
+    long long v128;
+    long long v136;
+    float m00;
+    float m01;
+    float m02;
+    float m03;
+    float m10;
+    float m11;
+    float m12;
+    float m13;
+    float m20;
+    float m21;
+    float m22;
+    float m23;
+    float v192;
+    float v196;
+    float v200;
+    float v204;
+    float v208;
+    float f212;
+    float f216;
+    float v220;
+    float e0;
+    float e1;
+    float e2;
+    float e3;
+} Loc_0031a340;
+#endif
+
+/* The state block whose +0x140 holds the position the record is built around. */
+#ifndef RAC2_T_STATE_001B5200
+#define RAC2_T_STATE_001B5200
+typedef struct {
+    char pad_000[0x140];
+    float pos[3];
+} State_001b5200;
+#endif
+
+extern State_001b5200 D_001B5200;
+
 INCLUDE_ASM("asm/game", func_003173B0);
 
 INCLUDE_ASM("asm/game", func_00317D78);
@@ -66,8 +137,6 @@ void func_00318200(char *object)
         (*(unsigned short *)(object + 0x96))++;
 }
 
-INCLUDE_ASM("asm/game", func_003182C0);
-
 INCLUDE_ASM("asm/game", func_00318340);
 
 INCLUDE_ASM("asm/game", func_00319780);
@@ -89,8 +158,6 @@ void func_00319EC0(char *object)
     func_002B0990(object, data + 0x380, 5, 1, 2.0f);
 }
 
-INCLUDE_ASM("asm/game", func_00319F38);
-
 extern void func_0031A158(char *);
 extern void func_0031A340(char *, char *, float, int, int, int);
 
@@ -109,11 +176,61 @@ INCLUDE_ASM("asm/game", func_0031A098);
 
 INCLUDE_ASM("asm/game", func_0031A158);
 
-INCLUDE_ASM("asm/game", func_0031A340);
+extern void func_0031A098(void *record);
+extern long long func_0027C878_1(int id);
+extern float func_00283248(float x, float y);
+extern float func_00282E80(void *a, void *b);
+extern float func_002A7940(void);
+extern void func_00283410(void *dst, void *src);
+extern void func_00282CF0(void *dst, void *a, void *b);
+extern void func_00282F20(void *dst, void *src, float scale);
+extern void func_00282D30(void *dst, void *src, float scale);
+extern void func_00280B90(void *dst, void *src, int flag);
 
-INCLUDE_ASM("asm/game", func_0031A580);
+/* Builds the 240-byte record around a position: the looked-up handle, the colour
+   of the object, the position the object sits at and the scaled matrix it keeps.
+   The first argument is not read. */
+void func_0031A340(char *unused, char *p1, float scale, int col0, int col1, int col2)
+{
+    Loc_0031a340 local;
+    float x;
 
-INCLUDE_ASM("asm/game", func_0031A628);
+    func_0031A098(&local);
+    local.v120 = func_0027C878_1(11);
+    local.k3 = col0 + col1;
+    local.k2 = col0 + col1;
+    local.k1 = col0 + col1;
+    local.k0 = col0 + col1;
+    local.v136 = 0x0000008000000048LL;
+    local.v220 = 0.0f;
+    local.f216 = func_00283248(D_001B5200.pos[0] - *(float *)p1,
+                                D_001B5200.pos[1] - *(float *)(p1 + 4));
+    x = func_00283248(func_00282E80(p1, &D_001B5200.pos),
+                      D_001B5200.pos[2] - *(float *)(p1 + 8));
+    local.f212 = -x;
+    local.v208 = func_002A7940();
+    func_00283410(&local.m00, &local.v208);
+    func_00282CF0(&local.e0, &D_001B5200.pos, p1);
+    func_00282F20(&local.e0, &local.e0, 0.5f);
+    local.v192 = *(float *)p1 + local.e0;
+    local.v196 = *(float *)(p1 + 4) + local.e1;
+    local.v200 = *(float *)(p1 + 8) + local.e2;
+    local.v204 = 1.0f;
+    func_00282D30(&local.b0, &local.b0, scale);
+    func_00282D30(&local.b1, &local.b1, scale);
+    func_00282D30(&local.b2, &local.b2, scale);
+    func_00282D30(&local.b3, &local.b3, scale);
+    func_00280B90(&local, &local.m00, 0);
+    local.k3 = col0 + col2;
+    local.k2 = col0 + col2;
+    local.k1 = col0 + col2;
+    local.k0 = col0 + col2;
+    func_00282D30(&local.b0, &local.b0, 0.5f);
+    func_00282D30(&local.b1, &local.b1, 0.5f);
+    func_00282D30(&local.b2, &local.b2, 0.5f);
+    func_00282D30(&local.b3, &local.b3, 0.5f);
+    func_00280B90(&local, &local.m00, 0);
+}
 
 int func_0031A708(unsigned char *object) {
     return object[0x21] != 255;
@@ -167,9 +284,28 @@ INCLUDE_ASM("asm/game", func_0031BCC8);
 
 INCLUDE_ASM("asm/game", func_0031C498);
 
-INCLUDE_ASM("asm/game", func_0031C720);
+extern void func_0031C970(char *);
+extern void func_0031CB78(char *, char *, int, int, int, float);
+extern void func_0031CDF8(char *, char *, float, int, int);
 
-INCLUDE_ASM("asm/game", func_0031C7A0);
+/* Refresh the auxiliary state for modes 4, 5, 10 or flag 2, then issue
+   three calls with the embedded vectors and three with the referenced vectors. */
+void func_0031C7A0(char *self)
+{
+    char *data = *(char **)(self + 0x68);
+    unsigned char mode = self[0x20];
+
+    if (mode == 4 || mode == 5 || (unsigned char)self[0x95] == 2 || mode == 10)
+        func_0031C970(self);
+
+    func_0031CB78(self, data + 0x370, 0x41DE, 0x10000000, 0x20000000, 0.125f);
+    func_0031CB78(self, data + 0x380, 0x00800000, 0x10000000, 0x30000000, 0.125f);
+    func_0031CB78(self, data + 0x390, 0x00800000, 0x10000000, 0x30000000, 0.125f);
+
+    func_0031CDF8(self, *(char **)(data + 0x270) + 0x10, 0.075f, 0x204080, 0x204080);
+    func_0031CDF8(self, *(char **)(data + 0x274) + 0x10, 0.075f, 0x204080, 0x204080);
+    func_0031CDF8(self, *(char **)(data + 0x278) + 0x10, 0.075f, 0x204080, 0x204080);
+}
 
 void func_0031C8E0(char *p)
 {
@@ -224,8 +360,6 @@ INCLUDE_ASM("asm/game", func_0031DC10);
 INCLUDE_ASM("asm/game", func_0031DC18);
 
 INCLUDE_ASM("asm/game", func_0031DEE8);
-
-INCLUDE_ASM("asm/game", func_0031E2A0);
 
 INCLUDE_ASM("asm/game", func_0031E3A8);
 
@@ -318,7 +452,54 @@ void func_0031E960(char *p)
     F5a19df7a_FUN_002FC560(0x47, 0x5360bUL);
 }
 
-INCLUDE_ASM("asm/game", func_0031EB00);
+extern float D_FLT_001B5200[];
+extern int func_0027C878(int);
+extern float func_00283248(float, float);
+extern float func_00282E80(void *, void *);
+extern void func_00283410(void *, void *);
+extern void func_00280B90(void *, void *, int);
+
+void func_0031EB00(char *position, int color, float scale, char *resource, float alpha, int mode, int flag)
+{
+    unsigned char work[0xE0];
+    unsigned int rgba;
+    unsigned long long mode_bits;
+    float first_angle;
+    float second_angle;
+    float distance;
+
+    func_0031E750((char *)work);
+    *(long long *)(work + 0x78) = func_0027C878(mode);
+
+    mode_bits = ((unsigned long long)flag << 2) | 0x0000008000000040ULL;
+    *(long long *)(work + 0x88) = mode_bits;
+    *(long long *)(work + 0x80) = 0x0000FF9000000260ULL;
+
+    rgba = (unsigned int)color + ((unsigned int)resource << 24);
+    *(int *)(work + 0x4C) = rgba;
+    *(int *)(work + 0x48) = rgba;
+    *(int *)(work + 0x44) = rgba;
+    *(int *)(work + 0x40) = rgba;
+    *(long long *)(work + 0x70) = 0;
+
+    *(int *)(work + 0xDC) = 0;
+    first_angle = func_00283248(D_FLT_001B5200[0x140 / 4] - *(float *)(position + 0),
+                                D_FLT_001B5200[0x144 / 4] - *(float *)(position + 4));
+    *(float *)(work + 0xD8) = first_angle;
+
+    distance = func_00282E80(position, &D_FLT_001B5200[0x140 / 4]);
+    second_angle = func_00283248(distance, D_FLT_001B5200[0x148 / 4] - *(float *)(position + 8));
+    *(float *)(work + 0xD0) = alpha;
+    *(float *)(work + 0xD4) = -second_angle;
+
+    func_00283410(work + 0x90, work + 0xD0);
+    *(float *)(work + 0xC0) = *(float *)(position + 0);
+    *(float *)(work + 0xC4) = *(float *)(position + 4);
+    *(float *)(work + 0xC8) = *(float *)(position + 8);
+    *(float *)(work + 0xCC) = 1.0f;
+    func_0031E8F8((char *)work, scale);
+    func_00280B90(work, work + 0x90, 0);
+}
 
 INCLUDE_ASM("asm/game", func_0031EC68);
 

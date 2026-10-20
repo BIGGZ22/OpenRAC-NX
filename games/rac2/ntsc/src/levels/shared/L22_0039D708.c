@@ -75,7 +75,12 @@ int func_L22_003A2D58(char *a0, int a1, int a2) {
     return n;
 }
 
-INCLUDE_ASM("asm/levels", func_L22_003A2DF8);
+/* Returns bit BIT of VALUE's raw pattern. */
+int func_L22_003A2DF8(int bit, float value) {
+    F32Bits bits;
+    bits.f = value;
+    return (bits.u >> bit) & 1;
+}
 
 void func_L22_003A2E10(char *a0, unsigned short a1) {
     char *p = *(char **)(a0 + 0x68);

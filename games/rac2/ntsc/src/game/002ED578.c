@@ -57,7 +57,6 @@ unsigned int func_002ED870(void)
 
 INCLUDE_ASM("asm/game", func_002ED880);
 
-INCLUDE_ASM("asm/game", func_002ED8A0);
 
 INCLUDE_ASM("asm/game", func_002ED8F0);
 

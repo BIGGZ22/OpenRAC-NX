@@ -1,24 +1,79 @@
 #include "include_asm.h"
 
 typedef signed char s8;
+
 typedef unsigned char u8;
+
 typedef signed short s16;
+
 typedef unsigned short u16;
+
 typedef signed int s32;
+
 typedef unsigned int u32;
+
 typedef float f32;
 
-/* A pointer table of level-12 data, reached absolutely (out of the $gp window). */
+typedef struct {
+    char pad0[0x110];
+    s32 f110;             /* 0x110 */
+    char pad114[0x10c];
+    u32 f220;             /* 0x220 */
+} Tab698;
+
+typedef struct {
+    char pad0[0x20];
+    u8 f20;               /* 0x20 */
+    char pad21[0x0f];
+    u8 f30;               /* 0x30 */
+    u16 f32;              /* 0x32 */
+    char pad34[0xc4];
+    f32 fF8;              /* 0xF8 */
+} Obj390;
+
+typedef struct {
+    char pad00[0x20];
+    u8 f20;                 /* 0x20 */
+    char pad21[0x31 - 0x21];
+    u8 f31;                 /* 0x31 */
+    char pad32[0x34 - 0x32];
+    u16 f34;                /* 0x34 */
+    char pad36[0xAA - 0x36];
+    s16 fAA;                /* 0xAA */
+} Sub114B;
+
+typedef struct {
+    char pad00[0x2F0];
+    Sub114B *f2F0[2];       /* 0x2F0 */
+    Sub114B *f2F8;          /* 0x2F8 */
+} Moby49B8;
+
+typedef struct {
+    char pad00[0x31];
+    u8 f31;                 /* 0x31 */
+    char pad32[0x68 - 0x32];
+    Moby49B8 *f68;          /* 0x68 */
+} Ent49B8;
+
 extern s32 *D_L12_001FEAC0[];
 
 extern f32 func_002F2950(f32, f32);
 
 extern void func_002A0F48(void *);
+
 extern void func_00282F20(f32 *, void *, f32);
 
-INCLUDE_ASM("asm/levels", func_L12_0041BDF8);
 
 extern void func_L12_0041BED8(u8 *);
+
+extern void func_326F10(void *, void *, s32, s32);
+
+extern void func_L09_003F7788(void *, void *);
+
+/* A pointer table of level-12 data, reached absolutely (out of the $gp window). */
+
+/* func_L12_0041BDF8 is matched in L12_0041BDF8-rc2.c. */
+
 
 /* Returns 1 as soon as one of the two bound sub-objects carries a live state word. */
 s32 func_L12_0041BE60(u8 *a0)
@@ -46,13 +101,6 @@ s32 func_L12_0041BE60(u8 *a0)
 
 /* --- func_L12_0041A698 (52 B) ------------------------------------------------------ */
 
-typedef struct {
-    char pad0[0x110];
-    s32 f110;             /* 0x110 */
-    char pad114[0x10c];
-    u32 f220;             /* 0x220 */
-} Tab698;
-
 s32 func_L12_0041A698(u8 *self)
 {
     Tab698 *n = *(Tab698 **)(self + 0x68);
@@ -61,16 +109,6 @@ s32 func_L12_0041A698(u8 *self)
 }
 
 /* --- func_L12_00416390 (88 B) ------------------------------------------------------ */
-
-typedef struct {
-    char pad0[0x20];
-    u8 f20;               /* 0x20 */
-    char pad21[0x0f];
-    u8 f30;               /* 0x30 */
-    u16 f32;              /* 0x32 */
-    char pad34[0xc4];
-    f32 fF8;              /* 0xF8 */
-} Obj390;
 
 f32 func_L12_00416390(Obj390 *self)
 {
@@ -107,34 +145,7 @@ void func_L12_0041BDA8(u8 *a0)
 
 /* ---------------------------------------------------------------------------------- */
 
-extern void func_326F10(void *, void *, s32, s32);
-
-extern void func_L09_003F7788(void *, void *);
-
 /* the two bound sub-objects of the moby this driver walks */
-typedef struct {
-    char pad00[0x20];
-    u8 f20;                 /* 0x20 */
-    char pad21[0x31 - 0x21];
-    u8 f31;                 /* 0x31 */
-    char pad32[0x34 - 0x32];
-    u16 f34;                /* 0x34 */
-    char pad36[0xAA - 0x36];
-    s16 fAA;                /* 0xAA */
-} Sub114B;
-
-typedef struct {
-    char pad00[0x2F0];
-    Sub114B *f2F0[2];       /* 0x2F0 */
-    Sub114B *f2F8;          /* 0x2F8 */
-} Moby49B8;
-
-typedef struct {
-    char pad00[0x31];
-    u8 f31;                 /* 0x31 */
-    char pad32[0x68 - 0x32];
-    Moby49B8 *f68;          /* 0x68 */
-} Ent49B8;
 
 /* Walks the moby's two sub-objects, re-arms each one's parent link and releases it. */
 void func_L12_004149B8(Ent49B8 *a0)

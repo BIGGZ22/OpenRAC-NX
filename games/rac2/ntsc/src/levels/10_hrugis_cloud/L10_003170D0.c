@@ -41,6 +41,11 @@ extern void func_L10_00418588(u8 *arg0);
 extern void func_L10_004189D8(u8 *arg0);
 extern void func_L10_00418AD8(u8 *arg0);
 extern void func_L10_00418BA0(u8 *arg0);
+extern int func_L00_00367720(void);
+extern void func_L00_003FC100(void);
+extern void func_L05_00379E60(s32 a0, s32 a1, s32 a2, s32 a3);
+extern s32 func_L05_0037B538(u8 *arg0, s32 a1, s32 a2, s32 a3);
+extern s32 func_002E5DA0(s32 index, s32 value, u8 *object, s32 kind);
 extern void func_00308AF8(u8 *a0);
 extern void func_0037DFB8(u8 *a0);
 extern void func_0037D7A0(u8 *a0, s32 a1, f32 f12);
@@ -52,6 +57,7 @@ extern u8 *D_001B251C;
 extern u8 D_L10_00265BA0[];
 extern u8 D_L10_00188660[];
 extern u8 D_L10_00221CD0[];
+extern u8 D_00188660[];
 extern s32 D_001B0F44 __attribute__((sda));
 extern s32 D_001B0F48 __attribute__((sda));
 
@@ -180,7 +186,34 @@ INCLUDE_ASM("asm/levels", func_L10_00417F30);
 
 INCLUDE_ASM("asm/levels", func_L10_00418088);
 
-INCLUDE_ASM("asm/levels", func_L10_00418400);
+/* Update step of the cloud object: the state byte at +0x20 picks the step (0 re-arms the
+   object and queues its effect, 1 spawns it), and the object's own record in the shared
+   table D_00188660 is then looked up before its effect of kind 0xF8D is created. */
+void func_L10_00418400(u8 *arg0) {
+    u8 *s0 = arg0;
+    u8 *s1 = *(u8 **)(s0 + 0x68);
+    u8 state = s0[0x20];
+    u8 *p;
+
+    switch (state) {
+    case 0:
+        s0[0x30] = 0xFF;
+        if (func_L00_00367720() == 0)
+            return;
+        func_L10_004184F0(s0);
+        if (*(s32 *)(s1 + 0x264) != 0)
+            func_L05_00379E60(s0, (s32)func_L00_003FC100, 0, 0);
+        break;
+    case 1:
+        func_L05_0037B538(s0, 0, 1, 1);
+        func_L10_00418588(s0);
+        break;
+    }
+    p = D_00188660 + *(s32 *)(s1 + 0x268) * 0x70;
+    if (*(u8 **)(p + 0x88) == s0 && p[0x74] != 0)
+        return;
+    *(s32 *)(s1 + 0x268) = func_002E5DA0(0, 6, s0, 0xF8D);
+}
 
 INCLUDE_ASM("asm/levels", func_L10_004184F0);
 

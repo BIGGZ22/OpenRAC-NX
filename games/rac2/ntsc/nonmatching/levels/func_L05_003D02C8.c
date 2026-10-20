@@ -1,5 +1,6 @@
 /* func_L05_003D02C8 (88 o) - best attempt, not a match.
    near miss: 84 of 88 bytes. The retail loads D_L05_001B251C with lui+lw INSIDE the loop; cc1 loop-invariant-motion hoists the lui (%hi of the symbol) into a2 and the loop loses one instruction, so the 8-byte loop-alignment nop before the loop label does not appear.
+   A `volatile` global keeps the lw inside the loop (and the branch offset then matches) but the lui is still hoisted; the wall is the address, not the value.
    Verified with: python3 tools/check.py func_L05_003D02C8 --diff
 */
 

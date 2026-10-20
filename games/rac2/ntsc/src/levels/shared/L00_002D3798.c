@@ -407,7 +407,22 @@ int func_L00_002D4040(int a0)
     return D_L00_00139688[idx];
 }
 
-INCLUDE_ASM("asm/levels", func_L00_002D40A0);
+extern void func_L00_002C42E0(int, int);
+
+void func_L00_002D40A0(V4_F6a70b950 *v, int mode, float t)
+{
+    char *addr = (char *)&D_00189E20_11 + 0x18A0;
+    int x;
+
+    *(V4_F6a70b950 *)addr = *v;
+    /* rebase the copy destination (base + 0x18A0) back to the record base */
+    addr -= 0x18A0;
+    x = *(int *)(addr + 0x2294);
+    *(int *)(addr + 0x18B0) = mode;
+    *(float *)(addr + 0x18AC) = t;
+    if ((unsigned)(x - 98) >= 3)
+        func_L00_002C42E0(98, 2);
+}
 
 extern int D_0018C0B4;
 
@@ -485,7 +500,39 @@ void func_L00_002D4A38(void)
 
 INCLUDE_ASM("asm/levels", func_L00_002D4C28);
 
-INCLUDE_ASM("asm/levels", func_L00_002D4D98);
+extern char D_00189E20_4D98[];
+extern char *func_0029EFD0(int);
+extern void func_L00_002AA178(char *);
+extern void func_L00_002B0968(char *);
+
+/* One-shot spawn: arms the state word, and when the slot is free asks the allocator for a
+   0x50A object, writes its flags, the packed constant at +0x38 and the level's tag, then runs
+   the two level entry points on the argument. */
+void func_L00_002D4D98(char *arg0) {
+    char *base = D_00189E20_4D98;
+    char *node;
+
+    *(int *)(base + 0x12E8) = 0x2F;
+    if (*(int *)(base + 0x12C0) == 0) {
+        node = func_0029EFD0(0x50A);
+        if (node != 0) {
+            *(unsigned short *)(node + 0x32) = 0x20;
+            *(unsigned short *)(node + 0x34) =
+                *(unsigned short *)(node + 0x34) | 2;
+            *(unsigned char *)(node + 0x31) = 1;
+            *(unsigned long *)(node + 0x38) = 0x20202000000000UL;
+            *(int *)(node + 0x64) = 0;
+            if (*(unsigned char *)(*(int *)(node + 0x24) + 6) != 0)
+                *(unsigned char *)(node + 0x63) = 0x10;
+            *(unsigned short *)(node + 0x34) =
+                *(unsigned short *)(node + 0x34) | 0x800;
+            *(int *)(base + 0x12C0) = (int)node;
+            *(int *)(base + 0x12E4) = 2;
+        }
+    }
+    func_L00_002AA178(arg0);
+    func_L00_002B0968(arg0);
+}
 
 INCLUDE_ASM("asm/levels", func_L00_002D4E58);
 
@@ -497,7 +544,29 @@ INCLUDE_ASM("asm/levels", func_L00_002D5158);
 
 INCLUDE_ASM("asm/levels", func_L00_002D5940);
 
-INCLUDE_ASM("asm/levels", func_L00_002D5E30);
+extern short D_L00_00262260[];
+
+extern int D_001A7A0C __attribute__((sda));
+
+/* Walks the halfword pairs of the table at D_L00_00262260 (a negative first half ends it, and
+   so do 77 pairs): the first half of each pair is added to a running sum while the sum stays
+   within D_001A7A0C / 32, and each pair that passes adds its second half to *a2 and stores the
+   sum to *a0. *a1 gets the final sum. The retail unit returns int without setting it: $v0 is
+   live at the exit, which keeps the load of D_001A7A0C out of the exit branch's delay slot
+   (a void function gives that slot to the load, as a $gp access). */
+int func_L00_002D5E30(int *a0, int *a1, int *a2) {
+    int sum = 0;
+    int i = 0;
+    short *second = &D_L00_00262260[1];
+    short *first = second - 1;
+
+    for (; i < 77 && *first >= 0 && (sum += *first) <= (D_001A7A0C >> 5);
+         i++, second += 2, first += 2) {
+        *a2 += *second;
+        *a0 = sum;
+    }
+    *a1 = sum;
+}
 
 INCLUDE_ASM("asm/levels", func_L00_002D5EB8);
 

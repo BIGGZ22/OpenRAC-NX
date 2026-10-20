@@ -6,7 +6,34 @@ INCLUDE_ASM("asm/levels", func_L11_0046D660);
 
 INCLUDE_ASM("asm/levels", func_L11_0046F8F0);
 
-INCLUDE_ASM("asm/levels", func_L11_004701A0);
+extern void func_00281EB8(void *a0, int a1, unsigned int a2, int a3, float f12, float f13,
+                          float f14);
+
+extern float func_002A7940(void);
+
+extern int func_00283CF0(float f12);
+
+/* Emits two coloured passes over each 16-byte entry. */
+void func_L11_004701A0(char *a0) {
+    char *s4 = *(char **)(a0 + 0x68);
+    float w = 0.2f;
+    float f20;
+    unsigned int c1, c2;
+    int i;
+    float t;
+
+    c1 = 0x106060;
+    c2 = 0x808080;
+    c1 |= func_00283CF0(*(float *)(s4 + 0x18) * 63.0f) << 24;
+    c2 |= func_00283CF0(*(float *)(s4 + 0x18) * 128.0f) << 24;
+    for (i = 0; i < *(int *)(s4 + 0x10); i++) {
+        t = func_002A7940();
+        func_00281EB8(s4 + 0x20 + i * 0x10, 0x31, c1, 1, 0.2f, 0.08f, t);
+        f20 = w * 0.4f;
+        t = func_002A7940();
+        func_00281EB8(s4 + 0x20 + i * 0x10, 0x31, c2, 1, f20, 0.08f, t);
+    }
+}
 
 INCLUDE_ASM("asm/levels", func_L11_004702F0);
 

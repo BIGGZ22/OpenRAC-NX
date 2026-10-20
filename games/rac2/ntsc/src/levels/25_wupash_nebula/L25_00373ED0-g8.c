@@ -18,6 +18,14 @@ extern void func_L05_0037CEE0(void *, void *, f32);
 
 INCLUDE_ASM("asm/levels", func_L05_0037D608);
 
+/* Offers every live entry to the handler that takes one pointer through the loop. */
+void func_L25_003752D8(u8 *a0) {
+    s32 i;
+    for (i = 0; i < D_L25_001AC4D8; i++) {
+        func_L05_0037B280(D_L25_00225910[i], a0);
+    }
+}
+
 /* Offers every live entry to the handler that carries one float through the loop. */
 void func_L25_00376FE0(u8 *a0, f32 f12) {
     s32 i;
@@ -26,4 +34,12 @@ void func_L25_00376FE0(u8 *a0, f32 f12) {
     }
 }
 
-INCLUDE_ASM("asm/levels", func_L25_00377608);
+extern void func_L05_0037D608(void *, void *, f32);
+
+/* Offers every live entry to the handler that carries one float through the loop. */
+void func_L25_00377608(u8 *a0, f32 f12) {
+    s32 i;
+    for (i = 0; i < D_L25_001AC4D8; i++) {
+        func_L05_0037D608(D_L25_00225910[i], a0, f12);
+    }
+}

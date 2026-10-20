@@ -143,13 +143,59 @@ void func_L00_002B94D8(float a0)
 
 INCLUDE_ASM("asm/levels", func_L00_002B9598);
 
-INCLUDE_ASM("asm/levels", func_L00_002B9B38);
+/* The resident block the slot table lives in, and the two vector helpers. */
+extern char D_00189E20_2[];
 
-INCLUDE_ASM("asm/levels", func_L00_002B9B88);
+extern char D_00189E60[];
+
+extern void func_2EE5D8(void *a0, void *a1, void *a2);
+
+extern float func_2EE7A8(float a, float b);
+
+extern void func_31DCF0(void *a0, float f12, float f13);
+
+/* Reads two floats of the resident block through a helper, folds them with a second helper,
+   and passes the result with the second argument to the third. */
+void func_L00_002B9B38(void *a0, void *a1)
+{
+    float v[2];
+
+    func_2EE5D8(v, a0, D_00189E60);
+    func_31DCF0(a1, func_2EE7A8(v[0], v[1]), 0.0f);
+}
+
+/* The resident id this forwards, and the helper it calls. */
+extern int D_0018C0B0;
+
+extern void func_35F3A8(void *a0, void *a1, int a2);
+
+/* Forwards both of its arguments and the resident id to the helper. */
+void func_L00_002B9B88(void *a0, void *a1)
+{
+    func_35F3A8(a0, a1, D_0018C0B0);
+}
 
 INCLUDE_ASM("asm/levels", func_L00_002B9BB0);
 
-INCLUDE_ASM("asm/levels", func_L00_002B9C58);
+/* Claims the first free slot of the eight 8-byte entries at resident +0x23EC: a slot whose
+   leading short is clear takes the three arguments, a pending marker and its two extra
+   fields, and the search stops at the first one taken. */
+void func_L00_002B9C58(int a0, int a1, int a2)
+{
+    char *base = D_00189E20_2;
+    short *slot = (short *)(base + 0x23EC);
+    int i;
+
+    for (i = 0; i < 8; i++, slot += 4) {
+        if (slot[0] != 0)
+            continue;
+        slot[0] = 1;
+        slot[3] = a2;
+        slot[2] = a1;
+        slot[1] = a0;
+        return;
+    }
+}
 
 INCLUDE_ASM("asm/levels", func_L00_002B9CA8);
 

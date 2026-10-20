@@ -119,7 +119,30 @@ int func_002D6E78(void)
 
 INCLUDE_ASM("asm/game", func_002D6F38);
 
-INCLUDE_ASM("asm/game", func_002D75E8);
+extern void func_0029D830(int *);
+extern int func_0029DB28(unsigned int, unsigned int, unsigned int, int);
+extern int D_001C51D0;
+typedef struct { char pad[0x34]; int f34; int f38; int f3C; } Base2D75E8;
+extern Base2D75E8 D_0025A6E0;
+extern int D_0025A620[];
+
+int func_002D75E8(int *arg0)
+{
+    func_0029D830(arg0);
+    *(int *)((char *)arg0 + 0xA0) = func_0029DB28(0x70000000, 0, 0x70000100, 1);
+    {
+        char *base = (char *)arg0 + 0x30;
+        int index = D_001C51D0;
+
+        if (*(int *)(base + (index << 2)) != -1) {
+            D_0025A6E0.f3C = -0x240;
+            D_0025A6E0.f34 = *(int *)(0x70000000 + 4 * *(int *)(base + (index << 2)));
+            *(int *)D_0025A620 = *(int *)(0x70000100 + 4 * *(int *)(base + (index << 2)));
+        }
+    }
+    *(int *)((char *)arg0 + 0xA4) = 0;
+    return 0;
+}
 
 INCLUDE_ASM("asm/game", func_002D7698);
 
@@ -182,7 +205,29 @@ INCLUDE_ASM("asm/game", func_002D84B0);
 
 INCLUDE_ASM("asm/game", func_002D89D8);
 
-INCLUDE_ASM("asm/game", func_002D8EC0);
+extern char *D_001A8CFC[] __attribute__((sda));
+extern unsigned char D_00139568[];
+extern int D_00139868[];
+extern unsigned char D_00239BA0[];
+typedef struct { unsigned char reserved[0x6C]; int handle; } WidgetClass2D8EC0;
+extern void *func_0034E5B8(void *);
+extern void func_00335E68(unsigned char *, int);
+extern void func_00336B98(char *, int);
+extern void func_00336B90(unsigned char *, int);
+extern void func_0034E220(char *, int, int, int, int);
+void func_002D8EC0(char *source, short *row, int first, int second, int x, int y)
+{
+    int index = second * *(int *)(source + 0x44) + first;
+    unsigned char *widget = (unsigned char *)func_0034E5B8(D_001A8CFC[0] + 0x36F28) + index * 0x48;
+    func_00335E68(widget, 0);
+    if (((WidgetClass2D8EC0 *)(D_00139568[row[3]] * 0xE0 + (unsigned int)D_00239BA0))->handle != 0) {
+        func_00335E68(widget, 1);
+        func_00336B98((char *)widget, D_00139868[row[3]] >> 5);
+        func_00336B90(widget, ((WidgetClass2D8EC0 *)(D_00139568[row[3]] * 0xE0 + (unsigned int)D_00239BA0))->handle);
+    }
+    func_0034E220(D_001A8CFC[0] + 0x36F28, index, x, y, 0x80);
+}
+
 
 INCLUDE_ASM("asm/game", func_002D9008);
 
@@ -269,7 +314,66 @@ INCLUDE_ASM("asm/game", func_002D99E8);
 
 INCLUDE_ASM("asm/game", func_002D9DA0);
 
-INCLUDE_ASM("asm/game", func_002DA118);
+/* The screen position the object is drawn at, and the 64-bit packet its draw call carries. */
+typedef struct {
+    char pad[0x160];
+    short x;
+    short y;
+} ScreenPos_2DA118;
+
+extern ScreenPos_2DA118 D_001A6480;
+extern unsigned long long D_001C5208;
+
+typedef struct {
+    char pad[0x34];
+    int flags;
+    int width;
+    int height;
+    char pad2[4];
+    int state;
+    char pad3[0x10];
+    int count;
+    int value;
+} Object_2DA118;
+
+extern void func_0027E018(int, char *, int, int, int, int, int, int, unsigned long long, unsigned long long);
+
+/* Draws the object at the screen position in D_001A6480, sized by the object's own width
+   and height. The draw's colour is a grey 0x808080 whose top byte comes from the object's
+   counter: with the 0x40000 flag set it is the counter itself, scaled and clamped, and
+   without it the colour is plain 0x80808080. Returns 0 when the object draws nothing. */
+int func_002DA118(Object_2DA118 *object)
+{
+    int state = object->state;
+    int shade;
+    unsigned long long color;
+
+    if (state < 2) {
+        return 0;
+    }
+    if (object->count < 0) {
+        return 0;
+    }
+    if ((object->flags & 0x40000) != 0) {
+        if (state == 2) {
+            shade = object->value << 5;
+            if (shade > 0x80) {
+                shade = 0x80;
+            }
+        } else {
+            shade = (4 - object->value) << 5;
+            if (shade < 0) {
+                shade = 0;
+            }
+        }
+        color = (shade << 24) | 0x808080;
+        func_0027E018(0, 0, D_001A6480.x, D_001A6480.y, 0, 0, object->width, object->height, color, D_001C5208);
+    } else {
+        color = 0x80808080ULL;
+        func_0027E018(0, 0, D_001A6480.x, D_001A6480.y, 0, 0, object->width, object->height, color, D_001C5208);
+    }
+    return 0x10;
+}
 
 /* Re-initialises a state block: clears field 68, builds two sub-records from the flag word at field 52 masked with 0x200, substitutes a default record for any that came back zero, then clears field 92, sets fields 84 and 80 to -1 and returns 0. */
 s32 func_002DA238 (s32 self)
@@ -401,9 +505,104 @@ int func_002DBE80(char *arg0) {
     return 0;
 }
 
-INCLUDE_ASM("asm/game", func_002DBEC0);
+extern int D_00138180[];
+extern int D_001F2974;
+extern void func_002DF190(int, int);
 
-INCLUDE_ASM("asm/game", func_002DBF98);
+int func_002DBEC0(char *object)
+{
+    int flags;
+    {
+        int *state = D_00138180;
+        if (!(state[0x1C4 / 4] & 0x900))
+            goto proceed;
+        if (D_001F2974 == 0)
+            return 1;
+    }
+proceed:
+    {
+        int *state = D_00138180;
+        flags = state[0x1C4 / 4];
+    }
+    if (flags & 0x10) {
+        char *root = (char *)&D_001F2840;
+        int value = *(int *)(*(char **)(root + 0x14) + 0xE0);
+        int status;
+        if (value != 0) {
+            *(int *)(root + 0x18) = value;
+        } else {
+            switch (*(int *)(root + 0x134)) {
+            case 0:
+                status = -1;
+                goto finish;
+            default:
+                break;
+            }
+        }
+        status = 0;
+finish:
+        return status;
+    }
+    {
+        int old = *(int *)(object + 0x40);
+        if (flags & 0x40)
+            *(int *)(object + 0x40) = (old + 1) % 30;
+        else if (flags & 0x20)
+            *(int *)(object + 0x40) = (old + 29) % 30;
+        if (*(int *)(object + 0x40) != old)
+            func_002DF190(1, 17);
+    }
+    return 0;
+}
+
+
+extern int D_00138180[];
+extern int D_001F2974;
+extern void func_002DF190(int, int);
+
+int func_002DBF98(char *object)
+{
+    int flags;
+    {
+        int *state = D_00138180;
+        if (!(state[0x1C4 / 4] & 0x900))
+            goto proceed;
+        if (D_001F2974 == 0)
+            return 1;
+    }
+proceed:
+    {
+        int *state = D_00138180;
+        flags = state[0x1C4 / 4];
+    }
+    if (flags & 0x10) {
+        char *root = (char *)&D_001F2840;
+        int value = *(int *)(*(char **)(root + 0x14) + 0xE0);
+        int status;
+        if (value != 0) {
+            *(int *)(root + 0x18) = value;
+        } else {
+            switch (*(int *)(root + 0x134)) {
+            case 0:
+                status = -1;
+                goto finish;
+            default:
+                break;
+            }
+        }
+        status = 0;
+finish:
+        return status;
+    }
+    if (flags & 0x2040) {
+        *(int *)(object + 0x54) = (*(int *)(object + 0x54) + 1) % 12;
+        func_002DF190(1, 17);
+    } else if (flags & 0x8020) {
+        *(int *)(object + 0x54) = (*(int *)(object + 0x54) + 11) % 12;
+        func_002DF190(1, 17);
+    }
+    return 0;
+}
 
 /* Two-branch draw set-up: copies a 2-byte record from one of two tables into a 16-byte local, then issues a draw call with five float arguments (scale, per-instance angle, two constants, colour value) plus a 64-bit attribute word, a geometry handle, a fifth integer argument -1 and a local buffer. */
 int func_002DC090(char *s0)
@@ -427,7 +626,6 @@ int func_002DC090(char *s0)
     return 2;
 }
 
-INCLUDE_ASM("asm/game", func_002DC228);
 
 INCLUDE_ASM("asm/game", func_002DC3C8);
 

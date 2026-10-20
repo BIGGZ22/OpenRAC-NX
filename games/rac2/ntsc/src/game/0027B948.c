@@ -136,9 +136,7 @@ void func_0027C520(void)
 
 INCLUDE_ASM("asm/game", func_0027C540);
 
-INCLUDE_ASM("asm/game", func_0027C660);
 
-INCLUDE_ASM("asm/game", func_0027C768);
 
 INCLUDE_ASM("asm/game", func_0027C878);
 
@@ -236,15 +234,50 @@ INCLUDE_ASM("asm/game", func_0027D160);
 
 INCLUDE_ASM("asm/game", func_0027D330);
 
-INCLUDE_ASM("asm/game", func_0027D4B8);
+extern int D_L00_001BCAF4;
+
+extern unsigned char D_001A7BB1 __attribute__((sda));
+
+extern float func_00283180(float);
+
+extern int func_00283D38(float, int, int);
+
+extern unsigned char *func_00288FB8(int);
+
+extern int func_0027FB40(int, int, long, unsigned char *, int);
+
+void func_0027D4B8(void)
+{
+    int y;
+    long style;
+    unsigned char *text;
+    float f;
+    int v;
+
+    y = 0x148;
+    if (D_001A7BB1) {
+        y = 0x17C;
+    }
+    v = D_L00_001BCAF4;
+    f = (float)(v % 100) * 0.02f - 1.0f;
+    if (f < -1.0f) {
+        f = -1.0f;
+    }
+    if (1.0f < f) {
+        f = 1.0f;
+    }
+    f = func_00283180(f * 3.14159274f);
+    f = f + 1.0f;
+    style = func_00283D38(f * 0.5f, 0x7FE0E0E0, 0x5FF0C070);
+    text = func_00288FB8(0x2F20);
+    func_0027FB40(0x5A, y, style, text, -1);
+}
 
 INCLUDE_ASM("asm/game", func_0027D5C0);
 
 INCLUDE_ASM("asm/game", func_0027D900);
 
 INCLUDE_ASM("asm/game", func_0027DB68);
-
-INCLUDE_ASM("asm/game", func_0027DCE8);
 
 INCLUDE_ASM("asm/game", func_0027DDC0);
 
@@ -285,9 +318,37 @@ void func_0027EAE8(int i0, int i1, int i2, int i3, int tag, void *x)
     Ff67aa9df_FUN_0027EA28(v, x);
 }
 
-INCLUDE_ASM("asm/game", func_0027EB88);
+extern void func_0027DE50(int a, int b, int c, int d, unsigned long e);
 
-INCLUDE_ASM("asm/game", func_0027ECC8);
+void func_0027EB88(int x, int y, int z, int w, int hi, int lo)
+{
+    int c = (hi << 24) | lo;
+
+    func_0027DE50(x, y, z, w, c);
+    func_0027DE50(x + 1, y - 1, z - 2, z, c);
+    func_0027DE50(x + 2, y - 2, z - 3, z - 2, c);
+    func_0027DE50(x + 4, y - 4, z - 4, z - 3, c);
+    func_0027DE50(x + 1, y - 1, w, w + 2, c);
+    func_0027DE50(x + 2, y - 2, w + 2, w + 3, c);
+    func_0027DE50(x + 4, y - 4, w + 3, w + 4, c);
+}
+
+extern void func_0027DE50(int a, int b, int c, int d, unsigned long e);
+
+void func_0027ECC8(int x, int y, int z, int w, int v)
+{
+    int c = (v & 0xFF000000) | 4;
+
+    func_0027DE50(x, y, z, w, c);
+    func_0027DE50(x - 1, x + 1, z + 3, w + 5, v);
+    func_0027DE50(x - 3, x - 5, z - 1, w - 3, v);
+    func_0027DE50(x - 5, y - 3, z - 1, z + 1, v);
+    func_0027DE50(x + 3, y + 1, z - 3, z - 5, v);
+    func_0027DE50(y - 1, y + 1, z - 3, w - 3, v);
+    func_0027DE50(y + 3, y + 5, z + 3, w + 1, v);
+    func_0027DE50(x + 3, y + 3, w - 1, w + 1, v);
+    func_0027DE50(x + 1, y - 3, w + 3, w + 5, v);
+}
 
 INCLUDE_ASM("asm/game", func_0027EE50);
 

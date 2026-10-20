@@ -141,8 +141,6 @@ int func_00128578(int port) {
 
 INCLUDE_ASM("asm/core", func_001286C0);
 
-INCLUDE_ASM("asm/core", func_001286C8);
-
 /* rac1-decomp src/core/001236F0.c: func_00124A70 */
 /* RPC 0x8000091A round trip on r1_D_0015B180 (the buffer is both request
    and reply), copying the reply's bytes to arg3. `r` is assigned in both

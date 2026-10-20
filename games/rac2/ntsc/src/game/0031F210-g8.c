@@ -72,3 +72,59 @@ void func_00325B28(char *object)
         *(int *)(data + 0x2B4), *(int *)(data + 0x2B0),
         count, state, *(float *)(data + 0x2B8));
 }
+
+extern volatile int D_001AFFF0 __attribute__((sda));
+extern volatile int D_001AFFF4 __attribute__((sda));
+extern void func_00322138(char *);
+extern void func_00322340(char *, char *, float, int, int, int);
+void func_00321FE0(char *object)
+{
+    char *data = *(char **)(object + 0x68);
+    unsigned int state = *(unsigned char *)(object + 0x20);
+    if (state == 4 || state == 5 || *(unsigned char *)(object + 0x95) == 2 || state == 10)
+        func_00322138(object);
+    func_00322340(object, data + 0x3A0, 0.125f, D_001AFFF0, 0x20000000, 0x20000000);
+    func_00322340(object, data + 0x3B0, 0.15f, D_001AFFF4, 0x30000000, 0x20000000);
+    func_00322340(object, data + 0x3C0, 0.15f, D_001AFFF4, 0x10000000, 0x30000000);
+}
+
+extern unsigned short *D_001EE5A0[];
+extern char *D_001B1B5C __attribute__((sda));
+
+/* Walks the moby group list of the object's group id and raises the flag at data + 0x276
+   on every peer of class 0xB0A whose class byte is not negative. */
+void func_00321F60(char *self)
+{
+    if (*(unsigned char *)(self + 0x21) != 0xFF) {
+        unsigned short *list = D_001EE5A0[*(unsigned char *)(self + 0x21)];
+        if (list != 0) {
+            char *base = D_001B1B5C;
+            unsigned short *entry = list;
+            int key;
+            do {
+                char *object = (char *)((unsigned int)base + ((*entry & 0x7FFF) << 8));
+                if (object[0x20] >= 0 && *(short *)(object + 0xAA) == 0xB0A)
+                    *(short *)(*(char **)(object + 0x68) + 0x276) = 1;
+                key = *(short *)entry++;
+            } while (key >= 0);
+        }
+    }
+}
+
+void func_00325320(char *self)
+{
+    if (*(unsigned char *)(self + 0x21) != 0xFF) {
+        unsigned short *list = D_001EE5A0[*(unsigned char *)(self + 0x21)];
+        if (list != 0) {
+            char *base = D_001B1B5C;
+            unsigned short *entry = list;
+            int key;
+            do {
+                char *object = (char *)((unsigned int)base + ((*entry & 0x7FFF) << 8));
+                if (object[0x20] >= 0 && *(short *)(object + 0xAA) == 0xB0B)
+                    *(short *)(*(char **)(object + 0x68) + 0x276) = 1;
+                key = *(short *)entry++;
+            } while (key >= 0);
+        }
+    }
+}

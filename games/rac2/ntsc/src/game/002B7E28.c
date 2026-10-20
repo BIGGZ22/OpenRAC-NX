@@ -323,7 +323,18 @@ INCLUDE_ASM("asm/game", func_002BA6A0);
 
 INCLUDE_ASM("asm/game", func_002BA8A0);
 
-INCLUDE_ASM("asm/game", func_002BA978);
+extern unsigned char *D_001F2544;
+
+void func_002BA978(char *self)
+{
+    int alpha = *(short *)(self + 0xA) * *(int *)(self + 0x20) / 27;
+    *(unsigned int *)(self + 4) = (*(unsigned int *)(self + 4) & 0xFFFFFFu) | (alpha << 24);
+    if (func_00282978_4(self + 0xA)) {
+        func_002B9180_8(self);
+    } else {
+        self[2] = D_001F2544[(27 - *(short *)(self + 0xA)) / 3];
+    }
+}
 
 INCLUDE_ASM("asm/game", func_002BAA28);
 
@@ -378,9 +389,33 @@ void func_002BB798(char *a0)
 
 INCLUDE_ASM("asm/game", func_002BB838);
 
-INCLUDE_ASM("asm/game", func_002BB928);
+extern int func_00283D38(int, int, float);
+extern unsigned char *D_001F2560;
 
-INCLUDE_ASM("asm/game", func_002BBA38);
+/* blends a sub-object into a position, adds a float field, stores an interpolated value in the
+   word at +4 and scales the frame count into a byte table at +2 */
+void func_002BB928(char *a0)
+{
+    char *s0 = a0;
+    char *s1 = a0 + 32;
+    unsigned int r;
+    float f;
+
+    Fe617c30b_FUN_00282CC0(s0 + 16, s0 + 16, s1);
+    if (Fe617c30b_FUN_00282978(s0 + 10) != 0) {
+        Fe617c30b_FUN_002B9180(s0);
+        return;
+    }
+    *(float *)(s0 + 12) = *(float *)(s0 + 12) + *(float *)(s1 + 0x1C);
+    f = Fe617c30b_FUN_00283CE0(*(int *)(s1 + 0x18));
+    r = func_00283D38(*(int *)(s1 + 0x14), *(int *)(s1 + 0x10),
+                      (float)*(short *)(s0 + 0xA) / f);
+    *(int *)(s0 + 4) = r;
+    if (*(short *)(s0 + 0xA) < 6) {
+        *(int *)(s0 + 4) = (r & 0xFFFFFF) | (((int)(*(short *)(s0 + 0xA) * (r >> 24))) / 6 << 24);
+    }
+    *(unsigned char *)(s0 + 2) = D_001F2560[((*(int *)(s1 + 0x18) - *(short *)(s0 + 0xA)) * 10) / *(int *)(s1 + 0x18)];
+}
 
 /* decays a float field by 0.04 with a saturating early-out that consults a helper and returns; otherwise adds 12000 to a second field, nudges a third by 0.0484 while it stays below 0.225, merges two 255-scaled byte lanes into a header word, hands a sub-object to two helpers and decrements a byte counter */
 void func_002BBB70(char *p)

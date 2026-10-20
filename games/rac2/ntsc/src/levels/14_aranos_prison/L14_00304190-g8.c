@@ -1,18 +1,66 @@
 #include "include_asm.h"
 
-/* This unit is built with -G8: these two bodies reach a global through $gp. */
-
 extern int D_001A79F0;
+
 extern int D_001A72E0;
+
 extern int D_L14_001B23D0 __attribute__((sda));
+
 extern int D_L14_001B259C __attribute__((sda));
+
 extern char D_L14_00284690[];
 
 extern void func_367708();
+
 extern void func_3674A0();
+
 extern void func_367778();
+
 extern void func_385CB8(unsigned int reg, unsigned long value);
+
 extern void func_L14_00304190();
+
+extern void func_2F5CC0(void *dst, void *src, float s);
+
+extern void func_2F5C38(void *dst, void *src, void *src2);
+
+extern void func_420B10();
+
+extern void func_321F58();
+
+extern void func_3DFA10();
+
+extern int func_002B38B8();
+
+extern int func_3322A0();
+
+extern void func_369AD0();
+
+extern void func_2F5C10();
+
+extern void func_2F5C38(void *dst, void *src, void *src2);
+
+extern void func_2F5D68(void *dst, void *src, void *mtx);
+
+extern void func_2F5F18(void *dst, void *src, float s);
+
+extern float func_2F6C80(float a, float b);
+
+extern float func_2F5B78(float a);
+
+extern void func_317D90();
+
+extern void func_2EE5F0();
+
+extern void func_L14_003DFA60();
+
+extern float D_L14_001B0388 __attribute__((sda));
+
+extern float D_L14_001B038C __attribute__((sda));
+
+extern float D_L14_001B0390 __attribute__((sda));
+
+/* This unit is built with -G8: these two bodies reach a global through $gp. */
 
 void func_L14_00304280(void) {
     func_367708();
@@ -28,10 +76,6 @@ void func_L14_00304280(void) {
 }
 
 INCLUDE_ASM("asm/levels", func_L14_003E5030);
-
-extern void func_2F5CC0(void *dst, void *src, float s);
-extern void func_2F5C38(void *dst, void *src, void *src2);
-extern void func_420B10();
 
 void func_L14_003DF100(char *arg0, int arg1) {
     float a[4];
@@ -53,25 +97,6 @@ void func_L14_003DF100(char *arg0, int arg1) {
     func_420B10(*(int *)(v + 0x64), b, p, 0);
 }
 
-extern void func_321F58();
-extern void func_3DFA10();
-extern int func_332310();
-extern int func_3322A0();
-extern void func_369AD0();
-extern void func_2F5C10();
-extern void func_2F5C38(void *dst, void *src, void *src2);
-extern void func_2F5D68(void *dst, void *src, void *mtx);
-extern void func_2F5F18(void *dst, void *src, float s);
-extern float func_2F6C80(float a, float b);
-extern float func_2F5B78(float a);
-extern void func_317D90();
-extern void func_2EE5F0();
-extern void func_L14_003DFA60();
-
-extern float D_L14_001B0388 __attribute__((sda));
-extern float D_L14_001B038C __attribute__((sda));
-extern float D_L14_001B0390 __attribute__((sda));
-
 void func_L14_003DF7F8(char *arg0) {
     char *v = *(char **)(arg0 + 0x68);
 
@@ -83,7 +108,7 @@ void func_L14_003DF7F8(char *arg0) {
         }
         break;
     case 1:
-        if (func_332310(arg0) != 0) {
+        if (func_002B38B8(arg0) != 0) {
             if (*(int *)(v + 0x0) != -1) {
                 func_3DFA10(arg0, 1);
             }

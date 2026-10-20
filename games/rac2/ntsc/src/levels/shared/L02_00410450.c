@@ -69,7 +69,21 @@ void func_L02_004224C8(u8 *a0) {
 
 /* func_L02_00422538 is defined in L02_00410450-g8.c (this unit has no $gp access for it). */
 
-INCLUDE_ASM("asm/levels", func_L02_00422638);
+extern void func_L02_00422720(u8 *);
+extern void func_L02_00422BB8(u8 *);
+extern void func_L02_00422D68(u8 *);
+
+/* One setup pass, then the five body passes of the resident effect. */
+void func_L02_00422638(u8 *a0) {
+    int i;
+
+    func_L02_00422720(a0);
+    i = 4;
+    func_L02_00422BB8(a0);
+    do {
+        func_L02_00422D68(a0);
+    } while (--i >= 0);
+}
 
 INCLUDE_ASM("asm/levels", func_L02_00422720);
 

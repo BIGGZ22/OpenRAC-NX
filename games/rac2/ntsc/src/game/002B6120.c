@@ -141,7 +141,27 @@ int func_002B6228(void *kind, void *raw_data, int count, int value)
 
 INCLUDE_ASM("asm/game", func_002B62F8);
 
-INCLUDE_ASM("asm/game", func_002B6318);
+extern float *D_001F1700[];
+extern int func_002A8AF0(float *, float *, int);
+extern int func_002C9218(int, float *, float *, float);
+
+int func_002B6318(unsigned char *object)
+{
+    char *state = func_002B5D28(object);
+    float output[4];
+    float *position;
+    float *polygon;
+    if (state == 0 || *(int *)(state + 0x3C) == -1)
+        return 0;
+    polygon = D_001F1700[*(int *)(state + 0x3C)];
+    position = (float *)(object + 0x10);
+    if (func_002A8AF0(position, polygon + 4, *(int *)polygon)) {
+        if (!func_002C9218(*(int *)(state + 0x3C), position, output, *(float *)state))
+            return 1;
+    }
+    *(unsigned int *)(state + 0x9C) |= 1;
+    return 0;
+}
 
 INCLUDE_ASM("asm/game", func_002B63C0);
 
@@ -333,7 +353,6 @@ int func_002B7C80(char *p, int x, int y)
     return v;
 }
 
-INCLUDE_ASM("asm/game", func_002B7CE0);
 
 void func_002B7D88(s32 a0) {
     if (a0 == 1) {

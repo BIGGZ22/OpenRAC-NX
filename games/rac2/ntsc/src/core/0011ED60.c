@@ -170,7 +170,7 @@ int func_0011EED8(char *img) {
 
 INCLUDE_ASM("asm/core", func_0011EFE8);
 
-INCLUDE_ASM("asm/core", func_0011EFF0);
+ASM_FUNC("asm/core", func_0011EFF0);
 
 /* rac1-decomp src/core/0011D0D0.c: func_0011D370 */
 /*
@@ -190,9 +190,9 @@ int func_0011F000(int *dst, int *src, unsigned int nbytes) {
     return 0;
 }
 
-INCLUDE_ASM("asm/core", func_0011F038);
+ASM_FUNC("asm/core", func_0011F038);
 
-INCLUDE_ASM("asm/core", func_0011F048);
+ASM_FUNC("asm/core", func_0011F048);
 
 /* rac1-decomp src/core/0011D0D0.c: func_0011D3C8 */
 /* r1_func_0011D3B8 returns nothing: declared int, its result register
@@ -223,7 +223,7 @@ int func_0011F058(void) {
     return r;
 }
 
-INCLUDE_ASM("asm/core", func_0011F120);
+ASM_FUNC("asm/core", func_0011F120);
 
 /* rac1-decomp src/core/0011D0D0.c: func_0011D4A0 */
 /* Set up the TLB for the machine's memory size: the 32 MB layout

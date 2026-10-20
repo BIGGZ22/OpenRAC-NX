@@ -44,7 +44,52 @@ INCLUDE_ASM("asm/levels", func_L11_00436768);
 /* Re-arms the measured stage guard, then clears it. */
 INCLUDE_ASM("asm/levels", func_L11_00436850);
 
-INCLUDE_ASM("asm/levels", func_L11_00436910);
+extern void func_002B60B0(char *, float, float, float, float);
+extern void func_002A7470(void *, int, int, int);
+extern void func_002A7750(void *, int, int);
+extern void func_002A05A8(char *);
+extern void func_002A0488(char *, int, int, int);
+extern void func_L11_003973F8(char *, int, float, float);
+
+void func_L11_00436910(char *object, int mode, int active) {
+    char *state = *(char **)(object + 0x68);
+    unsigned short flags;
+    char *definition;
+    int cache;
+
+    *(short *)(state + 0x282) = 0;
+    *(short *)(state + 0x88) = 0;
+    *(float *)(state + 0x20) = *(short *)(state + 0x24);
+    *(short *)(state + 0x286) = active;
+    func_002B60B0(object, 0.004444444552063942f, 0.13333334028720856f,
+                  0.006981317885220051f, 0.20943954586982727f);
+    flags = *(unsigned short *)(object + 0x34);
+    definition = *(char **)(object + 0x24);
+    cache = *(int *)(definition + 0x10);
+    *(unsigned short *)(object + 0x34) = (flags | 0x1000) & 0xFFB9;
+    *(int *)(object + 0x98) = cache;
+    *(unsigned char *)(object + 0x7F) = 0;
+    if (*(short *)(state + 0x286) != 0) {
+        func_002A7750(object, 7, 3);
+        *(unsigned short *)(object + 0x34) |= 0x100;
+        func_002A7470(object, 1, 0, 0);
+        func_002A05A8(object);
+        func_L11_003973F8(object, 0, 2.0f, 2.0f);
+    } else {
+        func_002A7750(object, 3, 0);
+        *(unsigned char *)(object + 0x31) = 1;
+        *(unsigned short *)(object + 0x34) &= 0xFEFE;
+    }
+    *(unsigned char *)(state + 0x2E) = 1;
+    *(short *)(state + 0x284) = mode;
+    *(unsigned char *)(state + 0x6A) = 0;
+    if (*(short *)(state + 0x50) != 0) {
+        *(short *)(state + 0x50) = 0;
+        func_002A0488(object, *(unsigned char *)(state + 0x54),
+                      *(unsigned char *)(state + 0x55), *(unsigned char *)(state + 0x56));
+        *(short *)(state + 0x52) = 1;
+    }
+}
 
 extern void func_L11_00441978(unsigned char *object, int class_id);
 
@@ -269,7 +314,58 @@ int func_L11_00439D60(char *p)
 
 INCLUDE_ASM("asm/levels", func_L11_00439DD0);
 
-INCLUDE_ASM("asm/levels", func_L11_0043A3F8);
+extern int func_00283CF0(float);
+extern void func_L11_0043AB28(char *);
+extern void func_002B0ED8(char *, char *, int);
+extern int func_002B3BA8(char *, int, int, int, float, float);
+extern float func_00282E48(void *, void *);
+extern void func_002A93B0(char *);
+extern char D_L11_001BA8C0[];
+
+void func_L11_0043A3F8(char *object) {
+    char *state = *(char **)(object + 0x68);
+
+    if (*(unsigned char *)(object + 0x20) == 0) {
+        *(unsigned char *)(state + 0x48) = func_00283CF0(15.0f);
+        *(unsigned char *)(state + 0x4A) = func_00283CF0(12.0f);
+        *(float *)(state + 0x1A0) = 1.0f;
+        *(unsigned char *)(state + 0x180) = 6;
+        *(int *)(state + 0x1B8) = 2;
+        *(float *)(state + 0x1AC) = 0.15f;
+        *(float *)(state + 0x80) = 1.0f;
+        *(float *)(state + 0x84) = 0.4f;
+        *(float *)(state + 0x88) = 0.3f;
+        *(float *)(state + 0x8C) = 0.3f;
+        *(float *)(state + 0x90) = 1.5707964897155762f;
+        *(float *)(state + 0xB0) = 0.523598849773407f;
+        *(float *)(state + 0xB4) = 2.0f;
+        *(float *)(state + 0xAC) = 0.0027777778450399637f;
+        *(int *)(state + 0x1A4) = 0;
+        func_002B60B0(object, 0.2777777910232544f, 0.3333333432674408f,
+                      0.0017453294713050127f, 0.05235988646745682f);
+        if (*(short *)(state + 0x24) == 0) {
+            *(short *)(state + 0x24) = 10;
+            *(float *)(state + 0x20) = 10;
+        }
+        if (*(unsigned char *)(object + 0x43) != 1)
+            func_002A7470(object, 1, 0, 0);
+        func_002A7750(object, 1, -1);
+        func_L11_0043AB28(object);
+    }
+    if (*(unsigned char *)(object + 0x20) >= 4)
+        func_002B0ED8(object, state + 0x170, 0);
+    if (*(unsigned char *)(object + 0x20) >= 3 &&
+        *(unsigned char *)(state + 0x2E) == 2)
+        func_L11_0043AB28(object);
+    *(int *)(state + 0x2D8) = func_002B3BA8(object, *(int *)(state + 0x2E8),
+                                         0, 0, 255.0f, 255.0f);
+    if (*(unsigned char *)(object + 0x31) != 0) {
+        if (func_00282E48(object + 0x10, D_L11_001BA8C0) < 48.0f) {
+            func_002A93B0(object);
+            *(unsigned char *)(object + 0x6F) = 45;
+        }
+    }
+}
 
 extern void func_32E480(char *p, char *q, int a, float b, float c, float d, int e, int f, int g);
 
@@ -293,9 +389,49 @@ int func_L11_0043A800(char *p)
 
 INCLUDE_ASM("asm/levels", func_L11_0043A810);
 
-INCLUDE_ASM("asm/levels", func_L11_0043A9D8);
+extern void func_002A7A00(float *out, float a, float b);
+extern float func_002A7878(float a, float b);
+extern void func_002B0A68(char *self, int mask, float *arg2, unsigned char arg3,
+                           float f0, float f1, float f2, float f3);
+extern int func_002E5CF8(int index, int a1, char *a2);
+extern void func_0029F9F0(char *list, char *node);
 
-INCLUDE_ASM("asm/levels", func_L11_0043AB28);
+/* Spawns the object's random effect while its flag byte is set, then retires the state. */
+void func_L11_0043AB28(char *obj)
+{
+    char *state;
+    unsigned short flags;
+    float v[3];
+
+    if (*(unsigned char *)(obj + 0x20) == 0)
+        return;
+
+    if (*(unsigned char *)(obj + 0x31) != 0) {
+        float s = 1.0f / 6.0f;
+
+        func_002A7A00(v, s, 1.0f / 3.0f);
+        v[2] = func_002A7878(1.0f / 12.0f, s);
+        func_002B0A68(obj, 3, v, 0xFF, 3.0f, 6.0f, 3.0f, 6.0f);
+        func_002E5CF8(1, 0, obj);
+        func_0032C700(obj + 0x10, 1, 0x19, 0xA, 0xA, 5, 0, 1, 1.0f, 20.0f, 0, 0, 0, 0);
+        func_002E5DA0(0, 0, obj, 0xDF7);
+    }
+
+    func_002A7750(obj, 1, 0);
+    func_002A7470(obj, 0, 0, 3);
+    func_002A05A8(obj);
+
+    state = *(char **)(obj + 0x68);
+    flags = *(unsigned short *)(obj + 0x34);
+    *(unsigned char *)(obj + 0x31) = 0;
+    *(int *)(obj + 0x98) = 0;
+    *(unsigned short *)(obj + 0x34) = (flags & 0xEFFF) | 0x47;
+
+    if (*(unsigned char *)(state + 0x221))
+        func_0029F9F0(obj, state + 0x220);
+    if (*(unsigned char *)(state + 0x261))
+        func_0029F9F0(obj, state + 0x260);
+}
 
 INCLUDE_ASM("asm/levels", func_L11_0043ACB0);
 

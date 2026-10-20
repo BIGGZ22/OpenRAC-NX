@@ -1,5 +1,15 @@
 #include "common.h"
 
+extern void func_002B60B0(char *, float, float, float, float);
+extern void func_002A7470(char *, int, int, int);
+extern void func_002A7750(char *, int, int);
+extern void func_002A05A8(char *);
+extern void func_002A0488(char *, int, int, int);
+extern int func_002B3380(char *, char *, char *);
+extern void func_L11_003973F8(char *, int, float, float);
+
+extern void func_002A04B8(char *, int *, int *, int *);
+
 extern void func_00282D30_2(char *dst, char *src, float scale);
 
 extern void func_32C9E0();
@@ -84,11 +94,48 @@ s32 func_L11_00448CE0(char *a0)
     return r;
 }
 
-INCLUDE_ASM("asm/levels", func_L11_00448D28);
-
 INCLUDE_ASM("asm/levels", func_L11_00448DF8);
 
-INCLUDE_ASM("asm/levels", func_L11_00449098);
+extern float func_0029F530(char *);
+extern void func_0029FCC0(char *, int, void *);
+extern void func_L00_0031BDC0(void *, void *, void *, void *);
+extern void func_00282CF0(void *, void *, void *);
+extern float func_00282DF0(void *);
+extern int func_002A8C28(char *, void *, int, float, float, float, int, int, int);
+extern int func_002E5CF8(int, int, char *);
+
+void func_L11_00449098(char *object)
+{
+    float start[4], end[4], closest[4], remaining[4], span[4];
+    char *state;
+    float time, fraction;
+
+    time = func_0029F530(object);
+    state = *(char **)(object + 0x68);
+    if (19.0f <= time && time <= 31.0f) {
+        func_0029FCC0(object, 0, start);
+        func_0029FCC0(object, 1, end);
+        func_L00_0031BDC0(closest, start, end,
+                         *(char **)(state + 0x350) + 0x10);
+        func_00282CF0(remaining, closest, end);
+        func_00282CF0(span, start, end);
+        fraction = func_00282DF0(remaining);
+        fraction /= func_00282DF0(span);
+        if (fraction < 0.0f)
+            fraction = 0.0f;
+        if (fraction > 1.0f)
+            fraction = 1.0f;
+        if (func_002A8C28(object, closest, 0x10001,
+                         fraction * 0.35f + 0.15f,
+                         (float)*(unsigned char *)(state + 0x34), 1.0f, 0, 1, 0)
+            && *(short *)(state + 0x368) == 0) {
+            func_002E5CF8(5, 0, object);
+            *(short *)(state + 0x368) = 1;
+        }
+        func_002A8C28(object, end, 0x10001, 0.5f,
+                      (float)*(unsigned char *)(state + 0x34), 1.0f, 0, 1, 0);
+    }
+}
 
 void func_L11_004492A0(char *a0)
 {
@@ -109,7 +156,52 @@ void func_L11_004492A0(char *a0)
 
 INCLUDE_ASM("asm/levels", func_L11_00449330);
 
-INCLUDE_ASM("asm/levels", func_L11_004496A0);
+void func_L11_004496A0(char *object, int mode, int active) {
+    char *state = *(char **)(object + 0x68);
+    int colors[3];
+    int green, blue;
+
+    *(short *)(state + 0x88) = 0;
+    *(short *)(state + 0x366) = 0;
+    *(float *)(state + 0x20) = *(short *)(state + 0x24);
+    *(short *)(state + 0x36E) = active;
+    func_002B60B0(object, 0.0055555556900799274f, 0.10333333909511566f,
+                  0.0034906589426100254f, 0.41887909173965454f);
+    *(u8 *)(state + 0x6A) = 0;
+    *(u8 *)(state + 0x2E) = 1;
+    *(u8 *)(object + 0x7F) = 0;
+    *(u16 *)(object + 0x34) = (*(u16 *)(object + 0x34) | 0x1000) & 0xFFB9;
+    *(int *)(object + 0x98) = *(int *)(*(char **)(object + 0x24) + 0x10);
+    if (*(short *)(state + 0x36E) != 0) {
+        func_002A7750(object, 4, 2);
+        *(u16 *)(object + 0x34) |= 0x100;
+        func_002A7470(object, 0, 0, 0);
+        func_002A05A8(object);
+        func_L11_003973F8(object, 0, 2.0f, 2.0f);
+    } else {
+        if (*(u8 *)(object + 0x43) != 0)
+            func_002A7470(object, 0, 0, 10);
+        func_002A7750(object, 3, 1);
+        *(u8 *)(object + 0x31) = 1;
+        *(u16 *)(object + 0x34) &= 0xFEFE;
+    }
+    func_L11_004492A0(object);
+    *(short *)(state + 0x36C) = mode;
+    *(int *)(state + 0x200) = 0;
+    func_002B3380(object, state + 0x1F0, state + 0x20);
+    if (*(short *)(state + 0x50) != 0) {
+        *(short *)(state + 0x50) = 0;
+        func_002A0488(object, *(u8 *)(state + 0x54), *(u8 *)(state + 0x55),
+                      *(u8 *)(state + 0x56));
+        *(short *)(state + 0x52) = 1;
+    }
+    if (*(char **)(state + 0x354) != 0) {
+        func_002A04B8(object, &colors[0], &colors[1], &colors[2]);
+        green = colors[1];
+        blue = colors[2];
+        func_002A0488(*(char **)(state + 0x354), colors[0], green, blue);
+    }
+}
 
 void func_L11_00449878(char *a0)
 {
@@ -176,9 +268,98 @@ INCLUDE_ASM("asm/levels", func_L11_0044C220);
 INCLUDE_ASM("asm/levels", func_L11_0044C268);
 /*W23E*/
 
-INCLUDE_ASM("asm/levels", func_L11_0044C328);
 
-INCLUDE_ASM("asm/levels", func_L11_0044C4F0);
+void func_L11_0044C328(char *object, int mode, int active) {
+    char *state = *(char **)(object + 0x68);
+    char **slot;
+    char *collision, *health;
+    int i;
+
+    *(short *)(state + 0x4CA) = 0;
+    *(short *)(state + 0x88) = 0;
+    *(u8 *)(state + 0x2E) = 1;
+    *(float *)(state + 0x20) = *(short *)(state + 0x24);
+    *(short *)(state + 0x4D2) = active;
+    func_002B60B0(object, 0.004444444552063942f, 0.13333334028720856f,
+                  0.0011635529808700085f, 0.10471977293491364f);
+    *(u8 *)(object + 0x7F) = 0;
+    *(u16 *)(object + 0x34) = (*(u16 *)(object + 0x34) | 0x1000) & 0xFFB9;
+    *(int *)(object + 0x98) = *(int *)(*(char **)(object + 0x24) + 0x10);
+    if (*(short *)(state + 0x4D2) != 0) {
+        func_002A7750(object, 4, 2);
+        *(u16 *)(object + 0x34) |= 0x100;
+        func_002A7470(object, 2, 0, 0);
+        func_002A05A8(object);
+        func_L11_003973F8(object, 0, 2.0f, 2.0f);
+    } else {
+        func_002A7750(object, 3, 0);
+        *(u8 *)(object + 0x31) = 1;
+        *(u16 *)(object + 0x34) &= 0xFEFE;
+    }
+    *(u8 *)(state + 0x6A) = 0;
+    collision = state + 0x1F0;
+    health = state + 0x20;
+    for (i = 0; i < 2; i++) {
+        slot = (char **)(state + 0x4A0 + i * 4);
+        if (*slot != 0) {
+            *(u16 *)(*slot + 0x34) &= 0xFFFE;
+            *(u8 *)(*slot + 0x31) = 1;
+            *(int *)(*slot + 0x98) = *(int *)(*(char **)(*slot + 0x24) + 0x10);
+        }
+    }
+    *(short *)(state + 0x4D0) = mode;
+    *(int *)(state + 0x200) = 0;
+    func_002B3380(object, collision, health);
+    if (*(short *)(state + 0x50) != 0) {
+        *(short *)(state + 0x50) = 0;
+        func_002A0488(object, *(u8 *)(state + 0x54), *(u8 *)(state + 0x55),
+                      *(u8 *)(state + 0x56));
+        *(short *)(state + 0x52) = 1;
+    }
+}
+
+extern void func_L11_00441978(int, int);
+extern void func_0032C700(char *, int, int, int, int, int, int, int,
+                         float, float, int, int, int, int);
+extern void func_002E5DA0(int, int, char *, int);
+extern void func_002A7A00(void *, float, float);
+extern void func_00282CC0(void *, void *, void *);
+extern void func_002B0A68(char *, int, void *, float, float, float, float, int);
+
+void func_L11_0044C4F0(char *object) {
+    char *state = *(char **)(object + 0x68);
+    float direction[4];
+    char **slot;
+    int i;
+
+    if (*(short *)(state + 0x4CA) == 1)
+        func_L11_00441978(*(int *)(object + 0xB8), 0xDCF);
+    *(short *)(state + 0x4CA) = 0;
+    *(int *)(state + 0x490) = 0;
+    if (*(u8 *)(object + 0x31) != 0) {
+        func_0032C700(object + 0x10, 0, 0x1E, 5, 5, 5, 0x2D, 1,
+                     0.5f, 0.0f, 1, 0, 0, 0);
+        func_002E5DA0(0, 0, object, 0xDF7);
+        func_002A7A00(direction, 0.033333335071802139f, 0.083333335816860199f);
+        func_00282CC0(direction, direction, state + 0xD0);
+        func_002B0A68(object, 0x7F0, direction, 3.0f, 6.0f, 3.0f, 6.0f, 0xFF);
+    }
+    slot = (char **)(state + 0x4A0);
+    for (i = 1; i >= 0; i--) {
+        if (*slot != 0) {
+            *(u16 *)(*slot + 0x34) |= 1;
+            *(u8 *)(*slot + 0x31) = 0;
+            *(int *)(*slot + 0x98) = 0;
+        }
+        slot++;
+    }
+    func_002A7470(object, 0, 0, 3);
+    func_002A05A8(object);
+    func_002A7750(object, 1, 0);
+    *(u8 *)(object + 0x31) = 0;
+    *(int *)(object + 0x98) = 0;
+    *(u16 *)(object + 0x34) = (*(u16 *)(object + 0x34) & 0xEFFF) | 0x47;
+}
 
 INCLUDE_ASM("asm/levels", func_L11_0044C688);
 
@@ -231,9 +412,66 @@ void func_L11_004528A0(char *a0)
     }
 }
 
-INCLUDE_ASM("asm/levels", func_L11_00452C58);
+void func_L11_00452C58(char *object, int mode, int active) {
+    char *state = *(char **)(object + 0x68);
 
-INCLUDE_ASM("asm/levels", func_L11_00452DF8);
+    *(u8 *)(state + 0x2E) = 1;
+    *(short *)(state + 0x88) = 0;
+    *(short *)(state + 0x2D2) = 1;
+    *(float *)(state + 0x20) = *(short *)(state + 0x24);
+    *(short *)(state + 0x2D8) = active;
+    func_002B60B0(object, 0.004444444552063942f, 0.13333334028720856f,
+                  0.0011635529808700085f, 0.10471977293491364f);
+    if (*(u8 *)(object + 0x43) != 2)
+        func_002A7470(object, 2, 0, 0);
+    *(u8 *)(object + 0x7F) = 0;
+    *(u16 *)(object + 0x34) = (*(u16 *)(object + 0x34) | 0x1000) & 0xFFB9;
+    *(int *)(object + 0x98) = *(int *)(*(char **)(object + 0x24) + 0x10);
+    if (*(short *)(state + 0x2D8) != 0) {
+        func_002A7750(object, 4, 2);
+        *(u16 *)(object + 0x34) |= 0x100;
+        func_002A7470(object, 2, 0, 0);
+        func_002A05A8(object);
+        func_L11_003973F8(object, 0, 2.0f, 2.0f);
+    } else {
+        func_002A7750(object, 3, 0);
+        *(u8 *)(object + 0x31) = 1;
+        *(u16 *)(object + 0x34) &= 0xFEFE;
+    }
+    *(short *)(state + 0x2D4) = mode;
+    *(u8 *)(state + 0x6A) = 0;
+    *(int *)(state + 0x200) = 0;
+    func_002B3380(object, state + 0x1F0, state + 0x20);
+    if (*(short *)(state + 0x50) != 0) {
+        *(short *)(state + 0x50) = 0;
+        func_002A0488(object, *(u8 *)(state + 0x54), *(u8 *)(state + 0x55),
+                      *(u8 *)(state + 0x56));
+        *(short *)(state + 0x52) = 1;
+    }
+}
+
+void func_L11_00452DF8(char *object) {
+    char *state = *(char **)(object + 0x68);
+    float direction[4];
+
+    *(short *)(state + 0x2D2) = 0;
+    *(int *)(state + 0x2C4) = 0;
+    if (*(u8 *)(object + 0x31) != 0) {
+        func_0032C700(object + 0x10, 0, 5, 5, 25, 20, 10, 1,
+                     0.5f, 0.0f, 1, 0, 0, 0);
+        func_002E5DA0(0, 0, object, 0xDF7);
+        func_002A7A00(direction, 0.083333335816860199f, 0.11666667461395264f);
+        func_00282CC0(direction, direction, state + 0xD0);
+        func_002B0A68(object, 0xFF0, direction, 3.0f, 6.0f, 3.0f, 6.0f, 0xFF);
+    }
+    func_002A7470(object, 0, 0, 3);
+    func_002A05A8(object);
+    func_002A7750(object, 1, 0);
+    *(u8 *)(object + 0x31) = 0;
+    *(int *)(object + 0x98) = 0;
+    *(u16 *)(object + 0x34) = (*(u16 *)(object + 0x34) & 0xEFFF) | 0x47;
+}
+
 
 INCLUDE_ASM("asm/levels", func_L11_00452F30);
 

@@ -81,7 +81,7 @@ extern void func_L11_00439950(u8 *);
 
 INCLUDE_ASM("asm/levels", func_L11_00440868);
 
-INCLUDE_ASM("asm/levels", func_L11_00440970);
+/* func_L11_00440970 lives in the sibling small-data unit (L11_0043E1A0-g8.c). */
 
 INCLUDE_ASM("asm/levels", func_L11_00440B28);
 
@@ -266,8 +266,6 @@ INCLUDE_ASM("asm/levels", func_L11_00442170);
 INCLUDE_ASM("asm/levels", func_L11_004423F8);
 
 INCLUDE_ASM("asm/levels", func_L11_004425C8);
-
-INCLUDE_ASM("asm/levels", func_L11_00442710);
 
 INCLUDE_ASM("asm/levels", func_L11_004427B8);
 

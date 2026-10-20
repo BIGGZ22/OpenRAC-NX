@@ -119,15 +119,11 @@ INCLUDE_ASM("asm/levels", func_L02_003EA4E0);
 
 INCLUDE_ASM("asm/levels", func_L02_003EAA68);
 
-INCLUDE_ASM("asm/levels", func_L02_003EAD38);
-
 INCLUDE_ASM("asm/levels", func_L02_003EAE10);
 
-INCLUDE_ASM("asm/levels", func_L02_003EAFC8);
+/* func_L02_003EB098 is defined in L02_003DB310-g8.c (it reads D_L02_001B35B8 through $gp). */
 
-INCLUDE_ASM("asm/levels", func_L02_003EB098);
-
-INCLUDE_ASM("asm/levels", func_L02_003EB138);
+/* func_L02_003EB138 is defined in L02_003DB310-g8.c (it reads D_L02_001B35B8 through $gp). */
 
 INCLUDE_ASM("asm/levels", func_L02_003EB258);
 
@@ -141,7 +137,31 @@ INCLUDE_ASM("asm/levels", func_L02_003EEC58);
 
 INCLUDE_ASM("asm/levels", func_L02_003EEDD0);
 
-INCLUDE_ASM("asm/levels", func_L02_003EEFB8);
+typedef int TI128 __attribute__((mode(TI)));
+extern char *D_L02_001FF1C0[];
+extern char D_00189EA0[];
+extern int func_L02_00348420(void *, char *);
+
+/* True when D_00189EA0 is within the radius at +0x2C of the actor's position (+0x20) and also
+   of one of the 16-byte points of the actor's table entry (taking every +0x40 of them); the
+   point is then copied to a local vector that goes to func_L02_00348420 with the entry. */
+int func_L02_003EEFB8(char *arg0) {
+    char *state = *(char **)(arg0 + 0x68);
+    char *entry = D_L02_001FF1C0[*(int *)state];
+    TI128 buf;
+    int i;
+
+    if (*(float *)(state + 0x2C) < func_00282E48(D_00189EA0, state + 0x20))
+        return 0;
+    for (i = 0; i < *(int *)entry; i += *(int *)(state + 0x40)) {
+        if (func_00282E48(D_00189EA0, entry + (i * 16 + 0x10)) < *(float *)(state + 0x2C)) {
+            buf = *(TI128 *)D_00189EA0;
+            *(int *)(state + 0x30) = func_L02_00348420(&buf, entry);
+            return 1;
+        }
+    }
+    return 0;
+}
 
 INCLUDE_ASM("asm/levels", func_L02_003F0798);
 
@@ -166,9 +186,80 @@ INCLUDE_ASM("asm/levels", func_L02_003F1608);
 
 /* func_L02_003F16A8 is defined in L02_003DB310-g8.c (this unit has no $gp access for it). */
 
-INCLUDE_ASM("asm/levels", func_L02_003F16F0);
+extern int func_L02_003FC0D0(int, short);
 
-INCLUDE_ASM("asm/levels", func_L02_003F17B0);
+extern int func_002B3BA8(char *, int, float, float, int, int);
+
+void func_L02_003F16F0(char *arg0) {
+    char *state = *(char **)(arg0 + 0x68);
+
+    if (*(unsigned char *)(arg0 + 0x20) < 4) {
+        *(int *)(state + 0x4B0) = 0;
+        goto done;
+    }
+
+    if (*(short *)(state + 0x4EA) == 1) {
+        *(short *)(state + 0x4E8) =
+            func_002B3BA8(arg0, *(int *)(state + 0x4E4), 100.0f, 100.0f, 0, 0);
+        *(int *)(state + 0x4B0) = *(int *)(state + 0x210);
+    } else {
+        if (func_L02_003FC0D0(*(int *)(arg0 + 0xB8), *(short *)(arg0 + 0xAA)) == 0)
+            goto done;
+        *(short *)(state + 0x4EA) = 1;
+        *(short *)(state + 0x4E8) =
+            func_002B3BA8(arg0, *(int *)(state + 0x4E4), 100.0f, 100.0f, 0, 0);
+        *(int *)(state + 0x4B0) = *(int *)(state + 0x210);
+    }
+    return;
+
+done:
+    *(short *)(state + 0x4EA) = 0;
+}
+
+extern void *func_002B60B0(u8 *, float, float, float, float);
+
+extern void func_002A0488(void *, u8, u8, u8);
+
+/* Sets the actor up: re-registers its sub-objects and arms its effects. */
+void func_L02_003F17B0(char *arg0, int arg1) {
+    char *state = *(char **)(arg0 + 0x68);
+    int i;
+
+    *(float *)(state + 0x20) = (float)*(short *)(state + 0x24);
+    *(u16 *)(state + 0x98) = 0;
+    func_002B60B0((u8 *)arg0, 0.004444444552063942f, 0.13333334028720856f,
+                  0.0011635529808700085f, 0.10471977293491364f);
+    func_002A7750(arg0, 3, 0);
+    *(int *)(arg0 + 0x98) = *(int *)(*(char **)(arg0 + 0x24) + 0x10);
+    *(u8 *)(state + 0x7A) = 0;
+    *(u8 *)(arg0 + 0x31) = 1;
+    *(u8 *)(arg0 + 0x7F) = 0;
+    *(u16 *)(arg0 + 0x34) = (*(u16 *)(arg0 + 0x34) | 0x1000) & 0xFFB8;
+    {
+        char **slot = (char **)(state + 0x4C0);
+
+        for (i = 1; i >= 0; i--) {
+            if (*slot != 0) {
+                *(u16 *)(*slot + 0x34) &= 0xFFFE;
+                *(u8 *)(*slot + 0x31) = 1;
+                *(int *)(*slot + 0x98) = *(int *)(*(int *)(*slot + 0x24) + 0x10);
+            }
+            slot++;
+        }
+    }
+    {
+        short flag = *(short *)(state + 0x60);
+
+        *(u16 *)(state + 0x4F0) = arg1;
+        *(u16 *)(state + 0x4EA) = 0;
+        if (flag != 0) {
+            *(short *)(state + 0x60) = 0;
+            func_002A0488(arg0, *(u8 *)(state + 0x64), *(u8 *)(state + 0x65),
+                          *(u8 *)(state + 0x66));
+            *(short *)(state + 0x62) = 1;
+        }
+    }
+}
 
 extern void func_31E3C0(char *, int, int, int);
 
@@ -240,4 +331,27 @@ INCLUDE_ASM("asm/levels", func_L02_003F1BA8);
 
 INCLUDE_ASM("asm/levels", func_L02_003F52B0);
 
-INCLUDE_ASM("asm/levels", func_L02_003F5390);
+extern char *D_L02_001B3AF8 __attribute__((sda));
+extern char *D_L02_001B3AFC __attribute__((sda));
+extern u8 D_L02_00220730;
+
+/* Appends to the actor's list of 16-bit indices (at +0x40, count at +0x80, at most 0x20) the
+   index of every 0x20-byte record of the table whose byte at +0x1A equals the current key. */
+void func_L02_003F5390(char *arg0) {
+    char *state = *(char **)(arg0 + 0x68);
+    s16 *tbl = (s16 *)(state + 0x40);
+    u8 key = D_L02_00220730;
+    char *end = D_L02_001B3AFC;
+    int i = 0;
+    char *p;
+
+    for (p = D_L02_001B3AF8; p < end; p += 0x20, i++) {
+        if (*(u8 *)(p + 0x1A) == key) {
+            s16 *q = tbl + *(int *)(state + 0x80);
+
+            *q = i;
+            if (++*(int *)(state + 0x80) >= 0x20)
+                break;
+        }
+    }
+}

@@ -238,42 +238,85 @@ AI agents acting on behalf of a contributor must verify that their contributor h
 comment before beginning or assigning matching work. If no comment exists, create one before
 continuing.
 
-### Scope-first coordination
+### Describe only your own reservations
 
-Coordination should use **scopes whenever possible**.
+List only your own current reservations in your comment. Do not copy other contributors' claims,
+add lists of scopes you promise not to touch, or state that another contributor still reserves a
+scope. Those copies become stale when its owner finishes or releases the work.
 
-A scope may be:
+Before choosing work, check the other contributors' current comments for overlap. Each
+contributor's own comment is the reference for that contributor's active reservations; another
+person's comment does not reserve work on their behalf. Update your own comment when you finish,
+release or replace your scope.
 
-- one level;
-- one shared source unit;
-- one source directory;
-- one source file;
-- a related group of source files.
+### Scope selection and reservation limit
+
+Reserve a manageable amount of work that you intend to attempt next. Prefer small,
+clearly defined scopes rather than entire directories.
+
+Each contributor may reserve a maximum of **500 unfinished functions at one time**,
+counted across all their active scopes, branches, worktrees and AI agents combined.
+This is a per-contributor limit, not a per-agent or per-comment limit.
+
+Count each distinct catalogue function once, regardless of how many program placements
+it has. Functions already implemented on current `origin/master` do not count toward
+the limit.
+
+A scope may be a source file, a related group of files, a level, or an explicit list
+of functions, provided its total does not exceed the contributor's remaining allowance.
+If a directory or file contains too many unfinished functions, reserve a smaller
+sub-scope or list the specific functions being reserved.
+
+Do not reserve additional functions indirectly through broad directory claims,
+multiple comments, alternate branches or additional AI agents.
+
+### Bringing existing reservations within the limit
+
+Contributors currently reserving more than 500 unfinished functions must update their
+existing coordination comment to retain no more than 500 and explicitly release the
+remainder. This requirement applies to existing reservations as well as new ones.
+
+Until an oversized reservation is narrowed, other contributors must request
+coordination rather than assume which functions have been released. The contributor
+holding the oversized reservation must identify the retained scope clearly; a
+maintainer should resolve any dispute or lack of response.
+
+### Updating a reservation
+
+Contributors may request additional functions at any time, provided the resulting
+active reservation never exceeds 500 unfinished functions.
+
+Before adding or replacing reserved functions:
+
+1. Fetch `origin/master` and check which functions remain unfinished.
+2. Read the current comments in issue #152 and check for overlapping reservations.
+3. Release enough existing functions if necessary to remain within the limit.
+4. Update your one persistent coordination comment with the retained, released and
+   newly reserved scopes.
+5. Re-check for overlap before starting work.
+
+A function remains reserved until its implementation reaches `origin/master` or the
+contributor explicitly releases it. Local matches, local commits and open pull
+requests still count toward the limit while the function remains unfinished upstream.
 
 ### Active scopes are exclusive
 
-Before starting matching work, read the current comments in issue #152.
+Do not work inside another contributor's active scope without their explicit
+agreement. Directory and file claims include their unfinished functions, subject
+to the 500-function limit.
 
-Do not work inside another contributor's active scope unless they explicitly agree. A directory
-claim includes the files and functions beneath it.
+An individual-function reservation does not reserve the surrounding source file.
+Coordinate edits when contributors work on different functions in the same file.
 
-Before claiming a new scope, fetch `origin/master`, check issue #152, update your existing comment,
-then re-check for overlap before starting.
+AI agents must verify their contributor's current scope and combined reservation
+count before beginning or assigning matching work. Agents must not expand a
+reservation beyond 500 functions or modify another contributor's comment.
 
-Claims remain active until the work reaches `master` or the contributor explicitly abandons them.
+Contributors with oversized reservations must narrow them before starting or assigning further matching attempts. 
+They may finish attempts already in progress, but must not start new ones until their reservation complies with the limit.
 
-Prefer level, directory, file, or related-file scopes; use individual functions only when necessary.
-
-These rules apply to all matching work, including AI/automated matching and matches carried from
-another OpenRAC decompilation.
-
-For example:
-
-owner: Thorpen
-updated: 2026-10-13T04:10:00+11:00
-
-scope:
-  - src/levels/07_siberius/
+These rules apply to all matching work, including AI-assisted work and matches
+carried from another OpenRAC decompilation.
 
 ## If something seems to need a new mechanism
 

@@ -30,15 +30,47 @@ extern s32 D_L12_001B2E9C_2;
 
 extern u16 *D_L12_001FB960[];
 
+extern s32 D_001A79F0 __attribute__((sda));
+
+extern s32 func_002A8600(u8 **out, s32 kind, s32 arg2, s32 arg3);
+
+extern s32 func_002A86E8(u8 **out, u32 value, s32 arg2, s32 arg3);
+
+extern void func_L00_00325AE8(void *arg0, s32 arg1, f32 arg2, f32 arg3);
+
 INCLUDE_ASM("asm/levels", func_L12_00398E50);
 
 INCLUDE_ASM("asm/levels", func_L12_003A0F00);
 
-INCLUDE_ASM("asm/levels", func_L12_003A6E18);
-
 INCLUDE_ASM("asm/levels", func_L12_003A6EF8);
 
 INCLUDE_ASM("asm/levels", func_L12_003A6F48);
+
+/* Scales the tracked object's field by the level's own rate, for every match. */
+void func_L12_003A6E18(u8 *object) {
+    s32 mode = D_001A79F0;
+    f32 scale = 1.2f;
+    u8 *out;
+
+    if (mode == 0 || mode == 0x12) {
+        scale = 1.0f;
+    }
+    func_002A8600(&out, object[0x21], 0, 0);
+    while (out != 0) {
+        u8 *cur = out;
+
+        if (cur[0x31] != 0) {
+            u32 *f68 = *(u32 **)(cur + 0x68);
+
+            if (*(s16 *)(cur + 0xAA) == *(s16 *)(object + 0xAA)) {
+                f32 ratio = *(f32 *)(object + 0x2C) / *(f32 *)(*(u32 *)(object + 0x24) + 0x24);
+
+                func_L00_00325AE8(cur + 0x10, f68[1], scale * ratio, 0.5f);
+            }
+        }
+        func_002A86E8(&out, (u32)out, 0, 0);
+    }
+}
 
 INCLUDE_ASM("asm/levels", func_L12_003B5240);
 
@@ -95,7 +127,7 @@ INCLUDE_ASM("asm/levels", func_L12_00402B48);
 
 INCLUDE_ASM("asm/levels", func_L12_00402DF8);
 
-INCLUDE_ASM("asm/levels", func_L12_00404778);
+/* func_L12_00404778 is defined in L12_00398E50-g8.c (it reads a pointer through $gp). */
 
 
 INCLUDE_ASM("asm/levels", func_L12_00412548);

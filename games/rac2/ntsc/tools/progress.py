@@ -74,6 +74,23 @@ def measures(fns: list[dict]) -> dict:
             "complete_code": str(complete), "complete_code_percent": pct(complete, total)}
 
 
+CODE_SECTIONS = {".vutext", "core.text", ".text"}
+
+
+def data_measures() -> dict:
+    """The boot executable's data, for the top-level measures and the executable category: every
+    loaded section of initialised data (core.data, core.rdata, the literal pools, .data, the lvl
+    vtables, legal.data and mc1.data; .bss has no bytes to compare). None of it is matched yet:
+    tools/build.py places C functions' code only and discards their objects' data, so all of it
+    still comes from retail's dumps. The levels' data is not measured."""
+    import elf
+    image = elf.read(levels.BOOT)
+    total = sum(s["size"] for s in image["sections"]
+                if s["type"] == 1 and s["address"] and s["name"] not in CODE_SECTIONS)
+    return {"total_data": str(total), "matched_data": "0", "matched_data_percent": 0.0,
+            "complete_data": "0", "complete_data_percent": 0.0}
+
+
 def check() -> None:
     report = json.loads(REPORT.read_text())
     matched = {f["name"] for u in report["units"] for f in u["functions"] if f["fuzzy_match_percent"] == 100.0}
@@ -156,12 +173,14 @@ def main() -> None:
     wanted = [("executable", "Boot executable"), ("level_code", "Level code"), ("game", "Boot game code"),
               ("common", "Shared level code"), ("levels", "Level-specific code")]
     wanted += [(f"level_{n:02d}", title(n)) for n in sorted(levels.NAMES)]
+    data = data_measures()
     cats = []
     for cid, cname in wanted:
         rows = [r for u in units if cid in u["_category"] for r in u["_rows"]]
-        cats.append({"id": cid, "name": cname, "measures": measures(rows)})
+        cats.append({"id": cid, "name": cname, "measures": measures(rows) | (data if cid == "executable" else {})})
     total = measures(allrows)
     total.update({"total_units": len(units), "complete_units": sum(u["measures"]["complete_units"] for u in units)})
+    total.update(data)
     for u in units:
         del u["_rows"], u["_category"]
     report = {"version": 2, "measures": total, "categories": cats, "units": units}

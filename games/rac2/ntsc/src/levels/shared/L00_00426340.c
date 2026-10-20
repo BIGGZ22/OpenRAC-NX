@@ -88,7 +88,8 @@ extern char D_L00_001ADD78[] SDA_OBJ;
 extern char D_L00_001ADD58[] SDA_OBJ;
 
 typedef struct Rac2Native_6af85cabb56d3b41_SmallConditional52Global {
-    unsigned char unknown_00[0x2294];
+    unsigned char unknown_00[0x2290];
+    char *ptr_2290;
     int mode_2294;
     unsigned char unknown_2298[0x208];
     int identity_24a0;
@@ -201,9 +202,77 @@ void func_L00_00427078(void)
     }
 }
 
-INCLUDE_ASM("asm/levels", func_L00_004270C0);
+extern float func_00282DB0(char *a0, char *a1);
 
-INCLUDE_ASM("asm/levels", func_L00_00427290);
+extern void func_00282D30(char *a0, char *a1, float f);
+
+extern void func_00282CF0(char *a0, char *a1, char *a2);
+
+extern float func_00282DF0(char *a0);
+
+extern float func_002831B0(float f);
+
+/* Restores the owner's half-turn state: it measures the two world vectors of the table
+   entry, compares the angle they make with a fixed threshold, and writes the owner's
+   half-word at +0x7E and the entry's flag half-word at +0x290. The block at the end
+   resets the entry's two small floats and the owner's state; the two tests jump to it,
+   and it needs its own copy of the entry's address. */
+void func_L00_004270C0(char *owner)
+{
+    char tmp[16];
+    char v1[16];
+    char v2[16];
+    char *base;
+    char *b;
+    float f1;
+    float f2;
+    float f20;
+    float r;
+    float s;
+
+    if (D_00189E20_20.identity_24a0 == 0x51) {
+        return;
+    }
+    if (D_00189E20_20.identity_24a0 == 4) {
+        return;
+    }
+    base = D_L00_001B8C80_1;
+    if (*(short *)(base + 0x290) == 0) {
+        *(char *)(base + 0x293) = 0;
+        *(short *)(owner + 0x7E) = 2;
+        *(float *)(base + 0x2B4) = 0.018f;
+        *(float *)(base + 0x2A8) = 0.018f;
+        return;
+    }
+    f1 = func_00282DB0(base + 0x1D0, owner);
+    func_00282D30(tmp, base + 0x1D0, f1);
+    func_00282CF0(v1, owner, tmp);
+    f2 = func_00282DB0(base + 0x1D0, D_00189E20_20.ptr_2290 + 0xC0);
+    func_00282D30(tmp, base + 0x1D0, f2);
+    func_00282CF0(v2, D_00189E20_20.ptr_2290 + 0xC0, tmp);
+    f20 = func_00282DF0(v2);
+    if (f20 == 0.0f) {
+        goto small;
+    }
+    f20 = f20 * func_00282DF0(v1);
+    if (f20 == 0.0f) {
+        goto small;
+    }
+    r = func_00282DB0(v2, v1);
+    s = func_002831B0(r / f20);
+    if (1.3962636f <= 1.5707964f - s) {
+        *(short *)(base + 0x290) = 0;
+        *(short *)(owner + 0x7E) = 4;
+        return;
+    }
+small:
+    b = D_L00_001B8C80_1;
+
+    *(char *)(b + 0x293) = 0;
+    *(short *)(owner + 0x7E) = 2;
+    *(float *)(b + 0x2B4) = 0.018f;
+    *(float *)(b + 0x2A8) = 0.018f;
+}
 
 INCLUDE_ASM("asm/levels", func_L00_00427620);
 
@@ -249,6 +318,14 @@ void func_L00_00427B40(char *object)
     func_00283678(object, (char *)local);
 }
 
+extern void func_L00_002D7958_1(float *, void *, float);
+
+/* 128-bit copies reach lq/sq only through TImode. */
+typedef int TQ_00427BE8 __attribute__((mode(TI)));
+
+/* func_L00_00427BE8: five spellings give the same 128-byte object, retail is 144 -
+   both quadword destinations stay folded on $s0 here where retail holds each in a
+   register. Deposited in nonmatching/levels/func_L00_00427BE8.c. */
 INCLUDE_ASM("asm/levels", func_L00_00427BE8);
 
 /* resets a sub-object reached through field +112 of its argument: two int zeros through a pointer 176 bytes in, twelve float constants (0.3/0.04/0.07/1.0/0.99) and three int zeros over offsets 40..172, then four calls (sub-object, +80, +144, the argument) and a 16-bit zero at +126 */

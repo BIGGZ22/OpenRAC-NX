@@ -45,7 +45,7 @@ ASM_FUNC("asm/core", func_0011B3D0);
 
 INCLUDE_ASM("asm/core", func_0011B450);
 
-INCLUDE_ASM("asm/core", func_0011B458);
+ASM_FUNC("asm/core", func_0011B458);
 
 ASM_FUNC("asm/core", func_0011B500);
 

@@ -16,7 +16,15 @@ INCLUDE_ASM("asm/levels", func_L18_00428048);
 extern void func_L00_003B9310(void *);
 
 extern u8 D_L18_002571A0[];
-INCLUDE_ASM("asm/levels", func_L18_00428100);
+extern void func_3DB8F8(void *, void *);
+extern char ref_L18_002571A0_00[];
+
+/* Only the tagged object starts the sequence; the answer is always false. */
+s32 func_L18_00428100(char *a0) {
+    if (*(s16 *)(a0 + 0xAA) == 0xEE1)
+        func_3DB8F8(a0, ref_L18_002571A0_00);
+    return 0;
+}
 INCLUDE_ASM("asm/levels", func_L18_00428138);
 
 INCLUDE_ASM("asm/levels", func_L18_00428338);

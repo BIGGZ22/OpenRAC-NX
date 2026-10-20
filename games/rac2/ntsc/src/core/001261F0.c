@@ -49,7 +49,7 @@ int func_001261F0(void) {
     return csr;
 }
 
-INCLUDE_ASM("asm/core", func_00126284);
+ASM_FUNC("asm/core", func_00126284);
 
 INCLUDE_ASM("asm/core", func_0012646C);
 

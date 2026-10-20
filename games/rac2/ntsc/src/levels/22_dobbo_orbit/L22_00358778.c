@@ -52,6 +52,7 @@ INCLUDE_ASM("asm/levels", func_L22_003CCA50);
 
 INCLUDE_ASM("asm/levels", func_L22_003D0840);
 
+/* func_L22_003E87B8 is a near miss: nonmatching/levels/func_L22_003E87B8.c */
 INCLUDE_ASM("asm/levels", func_L22_003E87B8);
 
 void func_L22_003E8830(s32 a0) {
@@ -110,7 +111,7 @@ void func_L22_0040DC40(s32 a0, s32 a1, s32 a2, f32 f12) {
     func_3300E8(a0, buf);
 }
 
-INCLUDE_ASM("asm/levels", func_L22_0040DD20);
+/* The existing implementation is in L22_0040DD20-rc2.c. */
 
 INCLUDE_ASM("asm/levels", func_L22_0040DE00);
 

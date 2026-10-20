@@ -130,7 +130,22 @@ void func_L08_00328B80(s32 a0, s32 a1, s32 a2, s32 a3) {
     func_L08_00328AE0(D_L08_001B29DC + (a0 << 8), a1, a2, a3);
 }
 
-INCLUDE_ASM("asm/levels", func_L08_00328BB0);
+/* Runs func_L08_00328B80 on every object named by entry a0 of the 0x1FB660 table: a u16
+   list whose low 15 bits select the object and whose high bit ends the walk. The list
+   pointer is read under two names (the guard keeps the fresh load, the walk needs a
+   callee-saved register across the call). */
+extern u32 D_L08_001FB660[];
+
+void func_L08_00328BB0(s32 a0, s32 a1, s32 a2, s32 a3) {
+    u16 *q = (u16 *)D_L08_001FB660[a0];
+
+    if (q != 0) {
+        u16 *p = q;
+        do {
+            func_L08_00328B80(p[0] & 0x7FFF, a1, a2, a3);
+        } while (*(s16 *)p++ >= 0);
+    }
+}
 
 extern f32 func_00283248(f32, f32);
 extern f32 func_00282E20(void *);
@@ -217,7 +232,8 @@ INCLUDE_ASM("asm/levels", func_L08_003C6AB0);
 
 INCLUDE_ASM("asm/levels", func_L08_003CC4B8);
 
-INCLUDE_ASM("asm/levels", func_L08_003CD488);
+/* func_L08_003CD488 lives in the -g8 sibling file (it reads the level's scalars
+   through $gp). */
 
 extern u8 *D_0018C0B0;
 extern void func_002A0F48();

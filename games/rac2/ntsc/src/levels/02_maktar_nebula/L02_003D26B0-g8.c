@@ -52,4 +52,3 @@ int func_L02_003D4D68(char *arg0) {
     *(short *)(state + 0x32E) = 0;
     return 1;
 }
-

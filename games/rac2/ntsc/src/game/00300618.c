@@ -1,5 +1,9 @@
 #include "include_asm.h"
 
+#define RAC2_T_V4_F213135AA
+#define RAC2_T_WORKER_F9E2CD219
+#define RAC2_T_OWNER_F9E2CD219
+
 typedef int s32;
 
 typedef unsigned char u8;
@@ -8,7 +12,6 @@ typedef unsigned int u32;
 
 typedef float f32;
 
-/* Relocates serialized header offsets and compacts each row in its original storage. */
 typedef unsigned long long NativeCompactU64;
 
 typedef union {
@@ -34,16 +37,59 @@ typedef struct {
     u32 field20;
 } NativeCompactHeader;
 
+typedef struct { float x, y, z, w; } V4_F213135aa;
+
+typedef struct {
+    unsigned char pad00[76];
+    short field4C;
+    unsigned char pad4E[2];
+    int field50;
+    float field54;
+    float field58;
+} Worker_F9e2cd219;
+
+typedef struct {
+    unsigned char pad00[104];
+    Worker_F9e2cd219 *child;
+} Owner_F9e2cd219;
+
+typedef struct {
+    float x;
+    float y;
+    float z;
+    int w;
+} MotionVector;
+
+typedef struct {
+    unsigned char pad00[0x70];
+    void *motion;
+    float field74;
+    float field78;
+    float field7C;
+} MotionChild;
+
+typedef struct {
+    unsigned char pad00[0x10];
+    float field10;
+    float field14;
+    float field18;
+    unsigned char pad1C[8];
+    void *field24;
+    unsigned char pad28[0x40];
+    void *field68;
+} MotionState;
+
+typedef struct {
+    unsigned char pad00[0x24];
+    void *owner;
+    unsigned char pad28[8];
+} MotionEntry;
+
 extern s32 func_00282A18(s32 value);
 
 extern void func_00283388 (float *local);
 
 extern void func_00300AA8 (char *object, float a, float b, int flags, float d, float *local);
-
-#ifndef RAC2_T_V4_F213135AA
-#define RAC2_T_V4_F213135AA
-typedef struct { float x, y, z, w; } V4_F213135aa;
-#endif
 
 extern float F213135aa_FUN_002A7878(float a, float b);
 
@@ -67,26 +113,6 @@ extern float F6eb4f363_FUN_002A7878(float low, float high);
 
 extern void F6eb4f363_FUN_002BF728(char *object, char *local, float amount, float base);
 
-#ifndef RAC2_T_WORKER_F9E2CD219
-#define RAC2_T_WORKER_F9E2CD219
-typedef struct {
-    unsigned char pad00[76];
-    short field4C;
-    unsigned char pad4E[2];
-    int field50;
-    float field54;
-    float field58;
-} Worker_F9e2cd219;
-#endif
-
-#ifndef RAC2_T_OWNER_F9E2CD219
-#define RAC2_T_OWNER_F9E2CD219
-typedef struct {
-    unsigned char pad00[104];
-    Worker_F9e2cd219 *child;
-} Owner_F9e2cd219;
-#endif
-
 extern float F9e2cd219_FUN_002A7798(float value);
 
 extern void F9e2cd219_FUN_002ACF68(void *out, void *in, void *tmp, int mode, float value);
@@ -94,6 +120,59 @@ extern void F9e2cd219_FUN_002ACF68(void *out, void *in, void *tmp, int mode, flo
 extern void F9e2cd219_FUN_00305310(void *owner, void *out);
 
 extern void F9e2cd219_FUN_00307AD0(void *owner, void *out);
+
+    extern void func_0029FCC0(void *, int, void *);
+
+    extern int func_00277258(void *, int, void *, float);
+
+    extern int D_001BAF9C;
+
+extern void func_00282CF0(void *out, void *a, void *b);
+
+extern void func_00282CC0(void *out, void *a, void *b);
+
+extern char D_00227DA0[];
+
+extern void func_00300330(void *);
+
+extern char ref_00305798_00[];
+
+extern void ref_00305798_01(void *out, void *in, float scale);
+
+extern void ref_00305798_02(void *out, void *a, void *b);
+
+extern void ref_00305798_03(void *owner, void *entry, void *out);
+
+extern int func_00282948(void *);
+
+extern void func_00305C10(void *);
+
+extern void func_00305798(void *);
+
+extern void func_0029FCC0(void *, int, void *);
+
+extern int func_00277258(void *, int, void *, float);
+
+extern int D_001BAF9C;
+
+extern char D_00228610[];
+
+extern void func_00300330(void *);
+
+extern int func_00282948(void *p);
+
+extern void func_00307FC0(void *p);
+
+/* Relocates serialized header offsets and compacts each row in its original storage. */
+
+#ifndef RAC2_T_V4_F213135AA
+#endif
+
+#ifndef RAC2_T_WORKER_F9E2CD219
+#endif
+
+#ifndef RAC2_T_OWNER_F9E2CD219
+#endif
 
 /* relocates serialized offsets and compacts16-byte rows in their original storage using captured sourcewords */
 NativeCompactHeader *func_00300618(NativeCompactHeader *header) {
@@ -127,8 +206,6 @@ NativeCompactHeader *func_00300618(NativeCompactHeader *header) {
 }
 
 INCLUDE_ASM("asm/game", func_00300748);
-
-
 
 /* scales a float argument by a field of the object into a stack buffer, then calls a second routine with the object, its flags, the buffer and three float arguments */
 void func_00300968 (char *object, int flags, float a, float b, float c, float d)
@@ -250,16 +327,37 @@ void func_00304B68(char *object)
 }
 
 void func_00304C18(void *object) {
-    extern void func_0029FCC0(void *, int, void *);
-    extern int func_00277258(void *, int, void *, float);
-    extern int D_001BAF9C;
     char local[16];
     func_0029FCC0(object, 0, local);
     if (func_00277258(local, 2, object, 0.2f) && D_001BAF9C > 0)
         *((unsigned char *)object + 0x20) = 8;
 }
 
-INCLUDE_ASM("asm/game", func_00304C78);
+/* Takes the position of the owner's child, and lets the child's motion take it over
+   once the motion is of the right kind and is not busy. */
+void func_00304C78(void *object)
+{
+    MotionVector local;
+    float tmp[4];
+    MotionChild *child;
+    MotionState *motion;
+
+    local.w = 0;
+    child = *(MotionChild **)((char *)object + 0x68);
+    local.x = child->field74;
+    local.y = child->field78;
+    local.z = child->field7C;
+    func_00282CF0(tmp, (char *)child->motion + 0x10, &local);
+    func_00282CC0((char *)object + 0x10, tmp, (char *)object + 0x10);
+    motion = child->motion;
+    child->field74 = motion->field10;
+    child->field78 = motion->field14;
+    child->field7C = motion->field18;
+    if (*(short *)((char *)motion->field24 + 0x46) == 0x12) {
+        if (*(u8 *)((char *)motion->field68 + 0x14) == 0)
+            *(u8 *)((char *)object + 0x20) = 7;
+    }
+}
 
 INCLUDE_ASM("asm/game", func_00304D38);
 
@@ -292,9 +390,6 @@ INCLUDE_ASM("asm/game", func_00305310);
 
 INCLUDE_ASM("asm/game", func_00305408);
 
-extern char D_00227DA0[];
-extern void func_00300330(void *);
-
 void func_00305418(void) {
     func_00300330(D_00227DA0);
 }
@@ -303,7 +398,25 @@ INCLUDE_ASM("asm/game", func_00305438);
 
 INCLUDE_ASM("asm/game", func_003054E8);
 
-INCLUDE_ASM("asm/game", func_00305798);
+/* The table of hundred objects and the three helpers it uses sit at another
+   address in every program, so they have no address of their own. */
+
+/* Walks the table of objects and lets every entry the owner owns move it. */
+void func_00305798(void *owner)
+{
+    s32 i;
+    char *base = ref_00305798_00;
+    float local[4];
+
+    for (i = 0; i < 100; i++) {
+        MotionEntry *entry = (MotionEntry *)(base + i * 0x30);
+        if (entry->owner == owner) {
+            ref_00305798_01(local, base + i * 0x30 + 0x10, 2.1f);
+            ref_00305798_02(local, entry, local);
+            ref_00305798_03(owner, entry, local);
+        }
+    }
+}
 
 void func_00305838(char *p)
 {
@@ -335,9 +448,6 @@ void func_00305838(char *p)
     *(float *)(p + 60) = 1.0f;
 }
 
-extern int func_00282948(void *);
-extern void func_00305C10(void *);
-extern void func_00305798(void *);
 void func_003058C8(void *owner)
 {
     void *p = *(void **)((char *)owner + 0x68);
@@ -373,9 +483,6 @@ void func_00307330(char *object)
     F6eb4f363_FUN_002BF728(object + 16, local, F6eb4f363_FUN_002A7878(0.05f, 0.1f) * 210000.0f, base);
 }
 
-extern void func_0029FCC0(void *, int, void *);
-extern int func_00277258(void *, int, void *, float);
-extern int D_001BAF9C;
 void func_003073E0(void *owner)
 {
     char local[16];
@@ -384,7 +491,30 @@ void func_003073E0(void *owner)
         *((unsigned char *)owner + 0x20) = 8;
 }
 
-INCLUDE_ASM("asm/game", func_00307440);
+/* The same as func_00304C78: the retail holds the two copies byte for byte the same. */
+void func_00307440(void *object)
+{
+    MotionVector local;
+    float tmp[4];
+    MotionChild *child;
+    MotionState *motion;
+
+    local.w = 0;
+    child = *(MotionChild **)((char *)object + 0x68);
+    local.x = child->field74;
+    local.y = child->field78;
+    local.z = child->field7C;
+    func_00282CF0(tmp, (char *)child->motion + 0x10, &local);
+    func_00282CC0((char *)object + 0x10, tmp, (char *)object + 0x10);
+    motion = child->motion;
+    child->field74 = motion->field10;
+    child->field78 = motion->field14;
+    child->field7C = motion->field18;
+    if (*(short *)((char *)motion->field24 + 0x46) == 0x12) {
+        if (*(u8 *)((char *)motion->field68 + 0x14) == 0)
+            *(u8 *)((char *)object + 0x20) = 7;
+    }
+}
 
 INCLUDE_ASM("asm/game", func_00307500);
 
@@ -415,15 +545,9 @@ void func_003079E8(Owner_F9e2cd219 *self)
 
 INCLUDE_ASM("asm/game", func_00307AD0);
 
-extern char D_00228610[];
-extern void func_00300330(void *);
-
 void func_00307BD0(void) {
     func_00300330(D_00228610);
 }
-
-extern int func_00282948(void *p);
-extern void func_00307FC0(void *p);
 
 void func_00307BF0(void *owner) { void *p = *(void **)((char *)owner + 0x68); if (func_00282948((char *)p + 0x44) != 0) return; func_00307FC0(owner); }
 

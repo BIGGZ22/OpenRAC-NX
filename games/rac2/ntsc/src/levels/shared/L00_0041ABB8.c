@@ -12,11 +12,32 @@ extern float func_00283248(float x, float y);
 
 extern float func_00282E20(void *vec);
 
+extern float func_00282E80(void *a, void *b);
+
+extern void func_00282CF0(void *dst, void *a, void *b);
+
+extern void func_00282F20(void *dst, void *src, float scale);
+
 extern void func_00283410(void *dst, void *src);
 
 extern void func_00282D30(void *dst, void *src, float scale);
 
 extern void func_00280B90(void *dst, void *src, int flag);
+
+extern float func_002A7940(void);
+
+#ifndef RAC2_T_OBJ_0014C80
+#define RAC2_T_OBJ_0014C80
+/* the resident object at D_0014C80; only its vector at +0x140 is read here */
+typedef struct {
+    char pad[0x140];
+    float f140;
+    float f144;
+    float f148;
+} OBJ_0014C80;
+#endif
+
+extern OBJ_0014C80 D_0014C80;
 
 #ifndef RAC2_T_BLOCK_F043C77A5
 #define RAC2_T_BLOCK_F043C77A5
@@ -109,7 +130,50 @@ void func_L00_0041AF60(char *p)
 
 INCLUDE_ASM("asm/levels", func_L00_0041AFD0);
 
-INCLUDE_ASM("asm/levels", func_L00_0041AFD8);
+/* fills a local record with the level's fixed fields, measures two angles against the
+   resident vector at D_0014C80, adds a quarter of the cross product of that vector with
+   the position, and hands the record to the level's matrix builder */
+void func_L00_0041AFD8(void *unused, float *a, int k, float f)
+{
+    LOC_F043c77a5 local;
+    float v[3];
+    float x;
+
+    func_L00_0041AEF8_1(&local);
+    local.z80 = 0;
+    local.f92 = 1.0f;
+    local.f96 = 1.0f;
+    local.f104 = 1.0f;
+    local.f108 = 1.0f;
+    local.z84 = 0;
+    local.z88 = 0;
+    local.z100 = 0;
+    local.v120 = func_0027C878(44);
+    local.v128 = 0x0000FF9000000260LL;
+    local.v136 = 0x0000008000000048LL;
+    local.k3 = k;
+    local.k2 = k;
+    local.k1 = k;
+    local.k0 = k;
+    local.v112 = 0;
+    local.v220 = 0.0f;
+    local.f216 = func_00283248(D_0014C80.f140 - a[0], D_0014C80.f144 - a[1]);
+    x = func_00282E80(a, &D_0014C80.f140);
+    local.f212 = -func_00283248(x, D_0014C80.f148 - a[2]);
+    local.v208 = func_002A7940();
+    func_00283410(&local.m00, &local.v208);
+    func_00282CF0(v, &D_0014C80.f140, a);
+    func_00282F20(v, v, 0.25f);
+    local.v192 = a[0] + v[0];
+    local.v196 = a[1] + v[1];
+    local.v200 = a[2] + v[2];
+    local.v204 = 1.0f;
+    func_00282D30(&local.b0, &local.b0, f);
+    func_00282D30(&local.b1, &local.b1, f);
+    func_00282D30(&local.b2, &local.b2, f);
+    func_00282D30(&local.b3, &local.b3, f);
+    func_00280B90(&local, &local.m00, 0);
+}
 
 INCLUDE_ASM("asm/levels", func_L00_0041B1B8);
 
@@ -232,8 +296,6 @@ void func_L00_004219D8(char *a0, float *a1, float *a2,
 }
 
 INCLUDE_ASM("asm/levels", func_L00_00421A98);
-
-INCLUDE_ASM("asm/levels", func_L00_00421B50);
 
 INCLUDE_ASM("asm/levels", func_L00_00421C50);
 

@@ -123,9 +123,25 @@ u32 func_L00_002D68E8(void) {
 
 INCLUDE_ASM("asm/levels", func_L00_002D68F8);
 
-INCLUDE_ASM("asm/levels", func_L00_002D6900);
+extern struct Rac2Native_5f824a0e369ccf7b_src_record *D_L00_0025E120[];
 
-INCLUDE_ASM("asm/levels", func_L00_002D6940);
+int func_L00_002D6998(struct Rac2Native_5f824a0e369ccf7b_src_record *src);
+
+/* Copies the record the INDEX selects, or reports -1 when INDEX is past the 0x62-entry table. */
+int func_L00_002D6900(unsigned int index)
+{
+    if (index < 0x62)
+        return func_L00_002D6998(D_L00_0025E120[index]);
+    return -1;
+}
+
+/* Clears the first byte of the eight 16-byte slots, walking from the last one down. */
+void func_L00_002D6940(void)
+{
+    s32 i;
+    for (i = 7; i >= 0; --i)
+        D_L00_001B8C00[i].field0 = 0;
+}
 
 /* tests the byte at the indexed 16-byte table entry */
 s32 func_L00_002D6978(s32 index) {

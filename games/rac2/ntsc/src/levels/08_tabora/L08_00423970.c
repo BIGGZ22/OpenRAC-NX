@@ -17,12 +17,33 @@ extern void func_328A38(s32 a, s32 b);
 
 INCLUDE_ASM("asm/levels", func_L08_00423970);
 
-INCLUDE_ASM("asm/levels", func_L08_00424ED0);
+/* Walks the 0x68 context's two counters: one stamps the record's byte 0x20D and the other
+   gives the modulus the first is folded by, or zero when it is not positive. */
+void func_L08_00424ED0(char *a0) {
+    char *q;
+    s32 d;
+    if (*(u8 *)(a0 + 0x21) == 0xFF) {
+        return;
+    }
+    q = *(char **)(a0 + 0x68);
+    if (*(u8 *)(q + 0x20D) == *(s32 *)(*(char **)(q + 0x1F8))) {
+        *(s32 *)(*(char **)(q + 0x1F8)) = *(u8 *)(q + 0x20D) + 1;
+    }
+    d = *(s32 *)(*(char **)(q + 0x1FC));
+    if (d > 0) {
+        *(s32 *)(*(char **)(q + 0x1F8)) = *(s32 *)(*(char **)(q + 0x1F8)) % d;
+    } else {
+        *(s32 *)(*(char **)(q + 0x1F8)) = 0;
+    }
+}
 
 INCLUDE_ASM("asm/levels", func_L08_00424F40);
 
 INCLUDE_ASM("asm/levels", func_L08_00424FF8);
 
+/* Not C: the success arm is the single word 0x4600A028 (COP1 fmt=S funct=0x28,
+   fd=$f0 fs=$f0 ft=$f20). See nonmatching/levels/func_L08_00425328.c - this cc1 has no
+   max.s pattern, so the ternary and the if-assignment both come out eight bytes larger. */
 INCLUDE_ASM("asm/levels", func_L08_00425328);
 
 INCLUDE_ASM("asm/levels", func_L08_00425398);
@@ -42,6 +63,8 @@ void func_L08_00425448(char *a0) {
     *(u8 *)(a0 + 0xBC) = 1;
 }
 
+/* Near miss: nonmatching/levels/func_L08_004254D0.c - the table load and the shift land in
+   $v0/$v1 the other way round from retail, and `a0 = 0` is not sunk into the beqz slot. */
 INCLUDE_ASM("asm/levels", func_L08_004254D0);
 
 s32 func_L08_00425518(s32 a0) {
@@ -90,7 +113,39 @@ void func_L08_00425EB0(char *a0) {
     }
 }
 
-INCLUDE_ASM("asm/levels", func_L08_00425F28);
+extern void func_L08_00425398(char *);
+extern int func_002B0ED8(char *, char *, int);
+extern void func_00282CF0(void *, void *, void *);
+extern void func_00282F20(void *, void *, float);
+extern char D_00189EA0[];
+
+/* The record's whole per-frame pass: the sibling step, the aim vector copied out of the
+   sub-object, the shared sprite pass, then the dispatch the shared tag call returns. */
+void func_L08_00425F28(char *a0) {
+    char *q = *(char **)(a0 + 0x68);
+    int r;
+
+    func_L08_00425398(a0);
+    *(f32 *)(a0 + 0x2C) = *(f32 *)(*(char **)(a0 + 0x24) + 0x24);
+    func_L08_00425EB0(a0);
+    r = func_002B0ED8(a0, q + 0x50, 0);
+    if (r == 0) {
+        return;
+    }
+    if (r == 1) {
+        float v[4];
+
+        func_00282CF0(v, a0 + 0x10, D_00189EA0);
+        func_00282F20(q + 0x1A0, v, 0.16666667f);
+    } else {
+        if (r == 4) {
+            *(unsigned char *)(q + 0xC6) = 0;
+            *(s32 *)(q + 0xCC) = -1;
+        }
+        func_L08_00424ED0(a0);
+    }
+    func_L08_00425448(a0);
+}
 
 INCLUDE_ASM("asm/levels", func_L08_00425FE8);
 
@@ -104,6 +159,14 @@ INCLUDE_ASM("asm/levels", func_L08_00429238);
 
 INCLUDE_ASM("asm/levels", func_L08_00429350);
 
+extern s32 D_L08_001B39A0[];
+extern s32 D_L08_001B39E0[];
+extern s32 D_L08_001B39F0[];
+extern s32 D_L08_001B3A30[];
+extern void func_00291450(s32 a0);
+
+/* Near miss: nonmatching/levels/func_L08_00429408.c - the address materialisation order
+   in the prologue differs (0x1B39E0 / 0x1B39A0 / 0x1B3A30 are grouped differently). */
 INCLUDE_ASM("asm/levels", func_L08_00429408);
 
 INCLUDE_ASM("asm/levels", func_L08_004294A0);

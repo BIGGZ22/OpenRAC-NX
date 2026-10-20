@@ -97,9 +97,67 @@ INCLUDE_ASM("asm/game", func_00340638);
 
 INCLUDE_ASM("asm/game", func_003407F8);
 
-INCLUDE_ASM("asm/game", func_003409C8);
 
-INCLUDE_ASM("asm/game", func_00340B70);
+/* a menu's table entry: ten bytes, the value a signed short at offset six */
+typedef struct {
+    char reserved00[6];
+    short value;
+    char reserved08[2];
+} MenuEntry;
+
+/* a menu's state: the selected entry's column and page, a flag and the entry's value */
+typedef struct {
+    char reserved00[0x814];
+    int column;
+    int page;
+    int flag;
+    int value;
+} MenuState;
+
+/* the table, in the memory a program replaces from 0x1A7C80 on: every program has
+   its own copy of it at that address */
+extern MenuEntry D_001FCE0[];
+extern int func_002E5E58(int, unsigned int, void *);
+extern void func_003407F8(MenuState *, MenuEntry *, int);
+
+/* Moves the selection of a menu's table: the buttons 0x1000 and 0x4000 move the page,
+   0x8000 and 0x2000 the column and 0x40 asks for the entry's value, which is then kept
+   in the state. The page moves compare against a variable, so that the compiler keeps
+   the -1 in a register, as the retail code does. */
+void func_00340B70(MenuState *state, unsigned int buttons)
+{
+    if (buttons & 0x1000) {
+        int v = state->page - 1;
+        int lower = -1;
+        v = (v > lower) ? v : 1;
+        state->page = state->column ? v : 0;
+        func_002E5E58(3, 0, 0);
+    } else if (buttons & 0x4000) {
+        int v = state->page + 1;
+        v = (v > 1) ? 0 : v;
+        state->page = state->column ? v : 0;
+        func_002E5E58(3, 0, 0);
+    } else if (buttons & 0x8000) {
+        state->column = state->column - 1;
+        func_002E5E58(3, 0, 0);
+        if (state->column < 0 || (state->column == 0 && state->page == 1)) {
+            state->column = 3;
+            state->page += 4;
+            state->flag = 0;
+        }
+    } else if (buttons & 0x2000) {
+        state->column = state->column + 1;
+        func_002E5E58(3, 0, 0);
+        if (state->column >= 3) {
+            state->column = 0;
+            state->page += 4;
+            state->flag = 0;
+        }
+    } else if (buttons & 0x40) {
+        func_003407F8(state, D_001FCE0, 3);
+    }
+    state->value = D_001FCE0[state->column + 3 * state->page].value;
+}
 
 extern void *func_003361A8(void *);
 extern char *func_00336968(char *);
@@ -135,7 +193,6 @@ u8 *func_003411C0(u8 *a0) {
     return a0;
 }
 
-INCLUDE_ASM("asm/game", func_00341220);
 
 /* stores three consecutive words; byte-identical across all 27 levels. */
 void func_00341540(u8 *a0, s32 a1, s32 a2, s32 a3) { *(s32 *)(a0 + 0x2F0) = a1; *(s32 *)(a0 + 0x2F4) = a2; *(s32 *)(a0 + 0x2F8) = a3; }
@@ -143,9 +200,7 @@ void func_00341540(u8 *a0, s32 a1, s32 a2, s32 a3) { *(s32 *)(a0 + 0x2F0) = a1; 
 /* Measured target: byte-identical across all 27 levels. */
 void func_00341550(u8 *a0, s32 a1) { *(s32 *)(a0 + 0x220) = a1; }
 
-INCLUDE_ASM("asm/game", func_00341558);
 
-INCLUDE_ASM("asm/game", func_003415B8);
 
 INCLUDE_ASM("asm/game", func_00341610);
 

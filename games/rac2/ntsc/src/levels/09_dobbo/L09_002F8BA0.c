@@ -141,7 +141,17 @@ INCLUDE_ASM("asm/levels", func_L09_003E3288);
 /* Arms the sub-object: the halfword 10 at 0x24, the angle 10.0f, the word
    at 0xA4 copied to 0x8C, the byte 3, the scale 1.0f and the live byte 0x2F,
    then the resident four-argument starter on the record. */
-INCLUDE_ASM("asm/levels", func_L09_003F02D0);
+void func_L09_003F02D0(unsigned char *a0) {
+    unsigned char *state = *(unsigned char **)(a0 + 0x68);
+
+    *(float *)(state + 0x20) = 10.0f;
+    *(short *)(state + 0x24) = 10;
+    *(unsigned char *)(state + 0x28) = 3;
+    *(float *)(state + 0x30) = 1.0f;
+    *(unsigned char *)(state + 0x2F) = 1;
+    *(int *)(state + 0x8C) = *(int *)(state + 0xA4);
+    func_002A7750_3(a0, 0, 1);
+}
 
 
 /* Advances the object's saturation counter while it is below 0xFFFF and runs

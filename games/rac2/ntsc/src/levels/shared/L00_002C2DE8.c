@@ -58,6 +58,18 @@ extern char D_00189E20_29[];
 
 extern void func_0029F338_5(int);
 
+extern char D_00189E20[];
+
+extern float func_00282DF0(char *arg0);
+
+extern float func_00282E80(char *arg0, char *arg1);
+
+extern float func_00283248(float arg0, float arg1);
+
+extern float func_00283180(float arg0);
+
+extern float func_00283198(float arg0);
+
 struct S {
     char pad[52];
     unsigned short flags;
@@ -67,7 +79,59 @@ INCLUDE_ASM("asm/levels", func_L00_002C2DE8);
 
 INCLUDE_ASM("asm/levels", func_L00_002C30B0);
 
-INCLUDE_ASM("asm/levels", func_L00_002C3838);
+/* Walks the resident player block: when the player is moving, has a short range and a
+ * small health, the state word selects a new sub-state. The sub-state then drives a turn
+ * towards a target point, which writes a velocity and a speed into the block.
+ * The base is taken from the symbol again after the nested tests, and the sub-state store
+ * goes through a second name for the block: the retail bytes keep the block's address in
+ * $s1 and rebuild it (addiu $s0,$s1,-0x61E0) on every path that reaches the merge point,
+ * and they build it a second time for the store, so both spellings are kept here. */
+void func_L00_002C3838(void)
+{
+    char *p = D_00189E20;
+    f32 v;
+    f32 dist, range, ang;
+
+    if (*(u8 *)(p + 0x287) != 0) {
+        if (0.0f < *(f32 *)(p + 0x31C)) {
+            if (*(f32 *)(p + 0x170) < 0.050000004f) {
+                dist = func_00282DF0(p + 0xF0);
+                if (dist < 0.050000004f) {
+                    if (*(f32 *)(p + 0x24B8) < 0.2f) {
+                        int state = *(int *)(p + 0x229C);
+
+                        if (state == 0 || state == 2 || state == 4 || state == 10
+                            || state == 1) {
+                            char *q = D_00189E20;
+
+                            *(short *)(q + 0x20A) = 5;
+                        }
+                    }
+                }
+            }
+        }
+    }
+    p = D_00189E20;
+    if (*(short *)(p + 0x20A) != 0) {
+        dist = func_00282E80(p + 0x80, p + 0x240);
+        range = *(f32 *)(p + 0x264) * 0.9f;
+        if (dist < range) {
+            f32 dx = *(f32 *)(p + 0x80) - *(f32 *)(p + 0x240);
+            f32 dy = *(f32 *)(p + 0x84) - *(f32 *)(p + 0x244);
+
+            ang = func_00283248(dx, dy);
+            if (dist < *(f32 *)(p + 0x264) * 0.05f)
+                ang = *(f32 *)(p + 0x98);
+            v = dist - range;
+            func_002AA3A8(&v, (f32 *)(p + 0x274), 0.0f, 0.03f, 0.3f, 0.046666667f);
+            *(f32 *)(p + 0x100) = func_00283180(ang) * *(f32 *)(p + 0x274);
+            *(f32 *)(p + 0x104) = func_00283198(ang) * *(f32 *)(p + 0x274);
+            *(f32 *)(p + 0x108) = 0.0f;
+        }
+    } else {
+        *(int *)(p + 0x274) = 0;
+    }
+}
 
 INCLUDE_ASM("asm/levels", func_L00_002C3A40);
 
@@ -114,9 +178,50 @@ INCLUDE_ASM("asm/levels", func_L00_002C40C0);
 
 INCLUDE_ASM("asm/levels", func_L00_002C42E0);
 
-INCLUDE_ASM("asm/levels", func_L00_002C8BA8);
+extern unsigned char D_0018C0D4[];
 
-INCLUDE_ASM("asm/levels", func_L00_002C8C00);
+extern void func_L00_002C42E0(int a0, int a1);
+
+/* Picks the variant of the shared loader the current game state selects. */
+void func_L00_002C8BA8(int a0)
+{
+    int a1 = (a0 != 0) ? 2 : 1;
+
+    switch (D_0018C0D4[0]) {
+    case 0:
+        func_L00_002C42E0(0, a1);
+        break;
+    case 1:
+        func_L00_002C42E0(0x3F, a1);
+        break;
+    }
+}
+
+extern void func_L00_002AF7D0(void);
+
+/* Gates the level transition on the shared block: the state word must be 0, 2 or 3, the byte at
+ * +0x22B8 non-zero, the counter at +0x1D8 below 6 and the timer at +0x24B8 below 0.7. */
+int func_L00_002C8C00(void)
+{
+    char *p = D_00189E20_4;
+    int state = *(int *)(p + 0x2294);
+
+    if (state != 2 && state != 3 && state != 0)
+        return 0;
+    if (*(unsigned char *)(p + 0x22B8) == 0)
+        return 0;
+    if (*(int *)(p + 0x1D8) >= 6)
+        return 0;
+    if (*(float *)(p + 0x24B8) < 0.7f) {
+        if (*(unsigned char *)(p + 0x22BB) != 0)
+            return 0;
+        func_L00_002AF7D0();
+        *(int *)(p + 0xEA4) = 2;
+        func_L00_002C42E0(0x22, 1);
+        return 1;
+    }
+    return 0;
+}
 
 INCLUDE_ASM("asm/levels", func_L00_002C8CB0);
 
@@ -174,7 +279,47 @@ void func_L00_002C9228(void)
 
 INCLUDE_ASM("asm/levels", func_L00_002C9448);
 
-INCLUDE_ASM("asm/levels", func_L00_002C9FC8);
+extern int func_L00_0032EF10(int, int, int *);
+
+extern int func_L00_002C3A40(void);
+
+extern int func_L00_0032EFB0(int, int, int, int);
+
+extern int D_00138320[];
+
+/* Looks the object up in the shared table and stops when the lookup fails; otherwise the state
+ * machine's offset advances the object and a second lookup asks for a transition when it
+ * succeeds.  A set state word, a timer past 0.9 and a state other than the idle one ask for the
+ * same transition, and a zero second argument asks for it with another code. */
+int func_L00_002C9FC8(int arg0, int arg1)
+{
+    int index;
+    int r;
+    char *p;
+
+    if (func_L00_0032EF10(0x40, arg0, &index) == 0)
+        return 0;
+    r = func_L00_002C3A40();
+    if ((D_00138320[0] & 8) && r > 0) {
+        if (func_L00_0032EFB0(0x40, 0x1F000, arg0 + r, r) != 0) {
+            func_L00_002C42E0(0xB, 1);
+            return 1;
+        }
+    }
+    p = D_00189E20_4;
+    if (*(short *)(p + 0x1454) != 0) {
+        if (0.9f < *(float *)(p + 0x24B8)) {
+            if (func_L00_002C3A78() != 2) {
+                func_L00_002C42E0(0xB, 1);
+                return 1;
+            }
+        }
+    }
+    if (arg1 != 0)
+        return 0;
+    func_L00_002C42E0(7, 1);
+    return 1;
+}
 
 INCLUDE_ASM("asm/levels", func_L00_002CA0B0);
 

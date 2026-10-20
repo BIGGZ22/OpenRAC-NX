@@ -1,14 +1,5 @@
 #include "include_asm.h"
 
-extern void func_002A3F10(char *p, int one, int *w, char *out);
-
-extern void func_00282D30_3(char *a, char *out, float f);
-
-extern void func_00282CC0_4(char *a, char *b, char *c);
-
-extern void func_00283098_2(char *a, char *b, char *c);
-
-/* Measured partial layouts; original type and game roles are unknown. */
 typedef struct Rac2Native_9cdc323a4d0c2fbd_AnalysisOwner {
     unsigned char prefix_00[0x68];
     void *context_68;
@@ -21,8 +12,42 @@ typedef struct Rac2Native_9cdc323a4d0c2fbd_AnalysisConditionalContext {
     unsigned int active_24;
 } Rac2Native_9cdc323a4d0c2fbd_AnalysisConditionalContext;
 
+extern int D_L00_001B0798[] __attribute__((sda));
+
+extern void func_002A3F10(char *p, int one, int *w, char *out);
+
+extern void func_00282D30_3(char *a, char *out, float f);
+
+extern void func_00282CC0_4(char *a, char *b, char *c);
+
+extern void func_00283098_2(char *a, char *b, char *c);
+
 extern void func_002FDBD8_4(float scale, Rac2Native_9cdc323a4d0c2fbd_AnalysisConditionalContext *context,
                                     float *vector, int mode);
+
+extern int func_002ACBC8(void *, int);
+
+extern int func_L00_002E3B38(int);
+
+extern void func_0026FEB8(void *, int, int);
+
+extern unsigned char D_00189EA0[];
+
+extern unsigned char D_0019B2E8[];
+
+extern int D_001A79F0 __attribute__((sda));
+
+extern int D_001A7A10 __attribute__((sda));
+
+extern int D_001A7A14 __attribute__((sda));
+
+extern int D_L00_001C5480[][3];
+
+extern int D_L00_001C5540[][3];
+
+extern char D_L00_001B0700[];
+
+/* Measured partial layouts; original type and game roles are unknown. */
 
 /* scales a float field by 1/1024, passes a caller word and two 16/48-byte scratch buffers to a four-argument helper, then forwards the second buffer with the scaled float to one helper and two sub-objects of the same parameter to three more helpers */
 void func_L00_003EA0E0(char *p, int v, char *a, char *b)
@@ -46,8 +71,6 @@ INCLUDE_ASM("asm/levels", func_L00_003EA188);
 INCLUDE_ASM("asm/levels", func_L00_003EA408);
 
 INCLUDE_ASM("asm/levels", func_L00_003EA540);
-
-INCLUDE_ASM("asm/levels", func_L00_003EA7D0);
 
 /* shared native body of family 5a97ab89858c */
 void func_L00_003EA860(char *p)
@@ -85,7 +108,35 @@ void func_L00_003EAC88(Rac2Native_9cdc323a4d0c2fbd_AnalysisOwner *owner)
     }
 }
 
-INCLUDE_ASM("asm/levels", func_L00_003EAEF8);
+void func_L00_003EAEF8(char *object) {
+    int *state = *(int **)(object + 0x68);
+    int result, index, shift;
+    unsigned char *entry;
+
+    if (!func_002ACBC8(D_00189EA0, state[1]))
+        return;
+    D_00189EA0[0x2246] = *(unsigned char *)(object + 0xB0);
+    if (state[2])
+        return;
+    if ((D_0019B2E8[*(unsigned char *)(object + 0xB0) + D_001A79F0 * 16] >>
+         (*(unsigned char *)(object + 0xB1) * 2)) & 3)
+        return;
+    state[2] = 1;
+    result = func_L00_002E3B38(*(unsigned char *)(object + 0xB0));
+    index = (*(unsigned char *)(object + 0xB0) & 15) + D_001A79F0 * 16;
+    shift = (*(unsigned char *)(object + 0xB1) & 3) * 2;
+    entry = D_0019B2E8 + index;
+    if (!((*entry >> shift) & 3)) {
+        *entry = (*entry & ~(3 << shift)) | (result << shift);
+        D_001A7A10 += D_L00_001C5480[*(unsigned char *)(object + 0xB0) & 15]
+                                   [*(unsigned char *)(object + 0xB1) & 3];
+        D_001A7A14 += D_L00_001C5540[*(unsigned char *)(object + 0xB0) & 15]
+                                   [*(unsigned char *)(object + 0xB1) & 3];
+    }
+    func_0026FEB8(D_L00_001B0700,
+        D_L00_001C5480[*(unsigned char *)(object + 0xB0)][*(unsigned char *)(object + 0xB1)],
+        D_L00_001C5540[*(unsigned char *)(object + 0xB0)][*(unsigned char *)(object + 0xB1)]);
+}
 
 INCLUDE_ASM("asm/levels", func_L00_003EB0C0);
 
@@ -105,7 +156,13 @@ INCLUDE_ASM("asm/levels", func_L00_003EC078);
 
 INCLUDE_ASM("asm/levels", func_L00_003EC140);
 
-INCLUDE_ASM("asm/levels", func_L00_003ECB00);
+void func_L00_003ECB00(void)
+{
+    int i;
+
+    for (i = 3; i >= 0; i--)
+        D_L00_001B0798[i] = 0;
+}
 
 INCLUDE_ASM("asm/levels", func_L00_003ECB38);
 

@@ -20,7 +20,7 @@ INCLUDE_ASM("asm/levels", func_L23_003BDA20);
 
 INCLUDE_ASM("asm/levels", func_L23_003BEA00);
 
-INCLUDE_ASM("asm/levels", func_L23_003BF9B0);
+/* func_L23_003BF9B0 is defined in L23_003BF9B0-g8.c ($gp, and -g for its division padding). */
 
 extern void func_2F7DD0(char *);
 
@@ -69,7 +69,7 @@ void func_L23_003C0028(char *arg0) {
     }
 }
 
-INCLUDE_ASM("asm/levels", func_L23_003C00D0);
+/* func_L23_003C00D0 is matched in L23_003C00D0.c (built with -g). */
 
 INCLUDE_ASM("asm/levels", func_L23_003C01F8);
 
@@ -122,7 +122,7 @@ int func_L23_003C0E98(int arg0, int index, char *arg) {
     return n;
 }
 
-void func_L23_003C0F48(char *arg0, short arg1) {
+void func_L23_003C0F48(char *arg0, int arg1) {
     char *p = *(char **)(arg0 + 0x68);
     short n = *(short *)(p + 0x2BE);
     unsigned short old = *(unsigned short *)(p + 0x2B4);
@@ -136,7 +136,152 @@ void func_L23_003C0F48(char *arg0, short arg1) {
     *(short *)(p + 0x2B4) = arg1;
 }
 
-INCLUDE_ASM("asm/levels", func_L23_003C0F88);
+extern const int D_L23_001B1688 __attribute__((sda));
+
+extern int *D_L23_001B36A8 __attribute__((sda));
+
+extern int *D_L23_001FF300[];
+
+extern char D_L23_002595C8[];
+
+extern char D_00189EA0[];
+
+extern int func_L23_003C0DF8(int arg0, unsigned long long v, int *arg2, int arg3);
+
+extern int func_L23_003C0E98(int arg0, int index, char *arg);
+
+extern void func_L23_003C0F48(char *arg0, int arg1);
+
+extern int func_002A77E0(int);
+
+extern int func_L23_00419CE0(long long);
+
+extern float func_00282E48(void *, void *);
+
+extern void func_00282CF0(void *, void *, void *);
+
+extern float func_00282DB0(void *, void *);
+
+void func_L23_003C0F88(char *arg0, unsigned long long mask, int mode, int check)
+{
+    char *state = *(char **)(arg0 + 0x68);
+    int count = D_L23_001B1688;
+    int ids[count];
+    int n;
+    int id;
+    float va[4];
+    float vb[4];
+
+    n = func_L23_003C0DF8((int)arg0, mask, ids, check);
+    if (n == 0) {
+        int d = *(short *)(state + 0x2B2);
+
+        *(short *)(state + 0x2B2) = -d;
+        return;
+    }
+    if (mode == 0) {
+        int res;
+
+        id = ids[func_002A77E0(n)];
+        res = func_L23_003C0E98((int)arg0, id, (char *)(int)*(short *)(state + 0x2B4));
+        *(short *)(state + 0x2B2) = res == 0 ? 1 : -1;
+        *(short *)(state + 0x2B6) = res;
+        func_L23_003C0F48(arg0, id);
+        return;
+    } else {
+        char *pos[count];
+        int res[count];
+        long long *bits[count];
+        int i;
+        int best;
+
+        for (i = 0; i < n; i++) {
+            int *q;
+
+            id = ids[i];
+            res[i] = func_L23_003C0E98((int)arg0, id, (char *)(int)*(short *)(state + 0x2B4));
+            q = D_L23_001FF300[D_L23_001B36A8[id]];
+            if (res[i] == 0) {
+                pos[i] = (char *)(q + *q * 4);
+                bits[i] = (long long *)(D_L23_002595C8 + 8 + (D_L23_001B36A8[id] << 4));
+            } else {
+                pos[i] = (char *)(q + 4);
+                bits[i] = (long long *)(D_L23_002595C8 + (D_L23_001B36A8[id] << 4));
+            }
+        }
+        best = 0;
+        switch (mode) {
+        case 1: {
+            float bestDist = 30000.0f;
+            int j;
+
+            for (j = 0; j < n; j++) {
+                int blocked = 0;
+                float d;
+
+                if (check)
+                    blocked = func_L23_00419CE0(*bits[j]);
+                d = func_00282E48(pos[j], *(void **)(state + 0x320));
+                if ((d < bestDist && !blocked) || n == 1) {
+                    best = j;
+                    bestDist = d;
+                }
+            }
+            break;
+        }
+        case 3: {
+            float bestDot = -30000.0f;
+            int j;
+
+            for (j = 0; j < n; j++) {
+                int blocked = 0;
+                float d;
+
+                if (check)
+                    blocked = func_L23_00419CE0(*bits[j]);
+                func_00282CF0(va, D_00189EA0, arg0 + 0x10);
+                func_00282CF0(vb, pos[j], arg0 + 0x10);
+                d = func_00282DB0(va, vb);
+                if ((bestDot < d && !blocked) || n == 1) {
+                    best = j;
+                    bestDot = d;
+                }
+            }
+            break;
+        }
+        case 2:
+        default: {
+            float bestDot = 30000.0f;
+            int j;
+
+            for (j = 0; j < n; j++) {
+                int blocked = 0;
+                float d;
+
+                if (check)
+                    blocked = func_L23_00419CE0(*bits[j]);
+                func_00282CF0(va, D_00189EA0, arg0 + 0x10);
+                func_00282CF0(vb, pos[j], arg0 + 0x10);
+                d = func_00282DB0(va, vb);
+                if ((d < bestDot && !blocked) || n == 1) {
+                    best = j;
+                    bestDot = d;
+                }
+            }
+            break;
+        }
+        }
+        if (res[best] == 0) {
+            id = ids[best];
+            *(short *)(state + 0x2B2) = 1;
+        } else {
+            id = ids[best];
+            *(short *)(state + 0x2B2) = -1;
+        }
+        *(short *)(state + 0x2B6) = res[best];
+        func_L23_003C0F48(arg0, id);
+    }
+}
 
 INCLUDE_ASM("asm/levels", func_L23_003C1420);
 
@@ -188,4 +333,4 @@ void func_L23_00416090(char *arg0) {
         *(unsigned short *)(arg0 + 0x96) += 1;
 }
 
-INCLUDE_ASM("asm/levels", func_L23_004160B0);
+/* func_L23_004160B0 is matched in L23_004160B0-g8.c (built with -g). */

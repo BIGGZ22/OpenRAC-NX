@@ -56,7 +56,14 @@ INCLUDE_ASM("asm/levels", func_L26_003DB818);
 
 INCLUDE_ASM("asm/levels", func_L26_003DBE18);
 
+extern int func_00282978(short *);
+extern void func_00325DA0(void *, void *);
+extern float func_00283B98(float, float);
+extern void func_00325C50(float, void *, void *, int, void *);
+extern char D_L26_001A8F20[];
+
 INCLUDE_ASM("asm/levels", func_L26_003DC048);
+
 
 /* func_L26_003DC128 lives in the -g8 sibling file (it reaches a global through $gp). */
 

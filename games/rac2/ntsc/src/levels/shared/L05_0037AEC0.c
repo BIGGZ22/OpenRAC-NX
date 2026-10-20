@@ -51,14 +51,19 @@ void func_L05_0037AEC0(char *object, int flag)
         func_L05_0037AE40(object);
 }
 
-INCLUDE_ASM("asm/levels", func_L05_0037AFD0);
+/* The spawned sub-object's stored pointer, or zero. */
+int func_L05_0037AFD0(char *object, int flag)
+{
+    char *s = func_002ED688(object, flag);
 
+    if (s == 0)
+        return 0;
+    return *(int *)(s + 0x110);
+}
 
 INCLUDE_ASM("asm/levels", func_L05_0037B108);
 
-INCLUDE_ASM("asm/levels", func_L05_0037B210);
-
-INCLUDE_ASM("asm/levels", func_L05_0037B280);
+/* func_L05_0037B210 is defined in L05_0037AEC0-g8.c (this unit has no $gp access for it). */
 
 INCLUDE_ASM("asm/levels", func_L05_0037B3A0);
 

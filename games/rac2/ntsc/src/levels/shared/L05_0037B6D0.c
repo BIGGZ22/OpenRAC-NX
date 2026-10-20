@@ -78,11 +78,33 @@ void func_L05_0037B6D0(char *obj)
     }
 }
 
-INCLUDE_ASM("asm/levels", func_L05_0037B888);
 
 INCLUDE_ASM("asm/levels", func_L05_0037B948);
 
-INCLUDE_ASM("asm/levels", func_L05_0037BB28);
+extern void func_3065F8(int);
+
+struct S_L05_0037BB28 {
+    char pad0[0x10];
+    int f10;
+    int f14;
+    int f18;
+    int f1C;
+    int f20;
+};
+
+void func_L05_0037BB28(char *object)
+{
+    struct S_L05_0037BB28 *p = (struct S_L05_0037BB28 *)func_379CA0(object);
+
+    if (p == 0)
+        return;
+    func_3065F8((int)p);
+    p->f20 = -1;
+    p->f1C = -1;
+    p->f14 = 0;
+    p->f18 = -1;
+    p->f10 = 0;
+}
 
 INCLUDE_ASM("asm/levels", func_L05_0037BB78);
 
@@ -142,7 +164,6 @@ void func_L05_0037CDD8(char *obj, int value)
         *(int *)((char *)p + 0x114) = value;
 }
 
-INCLUDE_ASM("asm/levels", func_L05_0037CE08);
 
 int func_L05_0037CEB8(char *obj)
 {
@@ -156,7 +177,29 @@ int func_L05_0037CEB8(char *obj)
 INCLUDE_ASM("asm/levels", func_L05_0037CEE0);
 
 
-INCLUDE_ASM("asm/levels", func_L05_0037D6E8);
+struct S_L05_002A1800 {
+    char pad0[0xC];
+    int f0C;
+    int f10;
+    int f14;
+    char pad1[0x10];
+};
+
+extern struct S_L05_002A1800 D_L05_002A1800[];
+
+extern int func_002ED8A0(int);
+
+void func_L05_0037D6E8(void)
+{
+    int i;
+
+    for (i = 0; i < 15; i++)
+        D_L05_002A1800[i].f14 = D_L05_002A1800[i].f0C;
+    D_L05_002A1800[7].f14 = D_L05_002A1800[7].f0C;
+    D_L05_002A1800[13].f14 = D_L05_002A1800[13].f0C;
+    i = func_002ED8A0(6);
+    D_L05_002A1800[i].f14 = D_L05_002A1800[i].f10;
+}
 
 INCLUDE_ASM("asm/levels", func_L05_0037D768);
 
@@ -186,7 +229,34 @@ INCLUDE_ASM("asm/levels", func_L05_003CD1A8);
 
 INCLUDE_ASM("asm/levels", func_L05_003CD280);
 
-INCLUDE_ASM("asm/levels", func_L05_003CD4C0);
+void func_L05_003CD4C0(char *object)
+{
+    char *state = *(char **)(object + 0x68);
+    float *f = (float *)state;
+    int *w;
+    int i;
+    int j;
+    int v;
+
+    for (i = 3; i >= 0; i--)
+        *f++ = (float)func_332AB8(0xFF);
+    *(float *)(state + 0x10) = -1.0f;
+    *(float *)(state + 0x14) = -2.25f;
+    *(float *)(state + 0x18) = 1.25f;
+    *(float *)(state + 0x1C) = 2.5f;
+    j = 3;
+    w = (int *)(state + 0x2C);
+    v = 0xFF;
+    for (; j >= 0; j--) {
+        *w = v;
+        w = (int *)((char *)w - 4);
+        v -= 0x40;
+    }
+    *(float *)(state + 0x30) = 2.8f;
+    *(float *)(state + 0x34) = 3.5f;
+    *(float *)(state + 0x3C) = 2.8f;
+    *(float *)(state + 0x38) = 3.5f;
+}
 
 INCLUDE_ASM("asm/levels", func_L05_003CD598);
 
@@ -195,8 +265,6 @@ INCLUDE_ASM("asm/levels", func_L05_003CEFA0);
 INCLUDE_ASM("asm/levels", func_L05_003CF040);
 
 INCLUDE_ASM("asm/levels", func_L05_003CF350);
-
-INCLUDE_ASM("asm/levels", func_L05_003CF9C8);
 
 INCLUDE_ASM("asm/levels", func_L05_003CFAB8);
 
@@ -219,8 +287,6 @@ INCLUDE_ASM("asm/levels", func_L05_003D02C8);
 
 INCLUDE_ASM("asm/levels", func_L05_003D0320);
 
-INCLUDE_ASM("asm/levels", func_L05_003D0420);
-
 INCLUDE_ASM("asm/levels", func_L05_003D0538);
 
 INCLUDE_ASM("asm/levels", func_L05_003D0728);
@@ -239,7 +305,38 @@ INCLUDE_ASM("asm/levels", func_L05_003D0960);
 
 INCLUDE_ASM("asm/levels", func_L05_003D0B20);
 
-INCLUDE_ASM("asm/levels", func_L05_003D1058);
+extern void func_002AFFD8(char *a0, char *a1, int a2);
+
+extern float *func_002AB1F0(char *a0);
+
+extern void func_00282D30(void *a0, void *a1, float a2);
+
+extern void func_00282CC0(void *a0, void *a1, void *a2);
+
+extern void func_L05_003D1148(char *a0, char *a1, void *a2, char *a3, void *a4,
+                              float a5, float a6, float a7);
+
+/* Builds the pair of vectors the timer wants: the object's own matrix, scaled by the value the
+ * looked-up sub-object holds, and that scaled matrix combined with the sub-object's table. */
+void func_L05_003D1058(char *a0, char *a1, char *a2, char *a3, float f0, float f1, float f2)
+{
+    float v0[4];
+    float v1[4];
+    float v2[4];
+    float *p;
+
+    if (a2 == 0)
+        return;
+    if (*(unsigned char *)(a2 + 0x20) == 0xFE)
+        return;
+    if (*(unsigned char *)(a2 + 0x20) == 0xFD)
+        return;
+    func_002AFFD8(a0, (char *)v0, 1);
+    p = func_002AB1F0(a2);
+    func_00282D30(v1, v0, *(float *)((char *)p + 0x10));
+    func_00282CC0(v2, (float *)(a2 + 0x10), v1);
+    func_L05_003D1148(a0, a1, v2, a3, v0, f0, f1, f2);
+}
 
 INCLUDE_ASM("asm/levels", func_L05_003D1148);
 

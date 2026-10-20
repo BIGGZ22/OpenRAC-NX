@@ -79,7 +79,51 @@ INCLUDE_ASM("asm/levels", func_L04_0030EDE0);
 
 INCLUDE_ASM("asm/levels", func_L04_0030FA30);
 
-INCLUDE_ASM("asm/levels", func_L04_0031D630);
+typedef struct {
+    u8 pad00[0x34];
+    u16 flags;
+    u8 pad36[0x68 - 0x36];
+    u32 p68;
+    u8 pad6C[0xAA - 0x6C];
+    s16 type;
+} MobStruct;
+
+typedef struct {
+    u8 pad00[0x44];
+    s16 count;
+    u8 pad46[0x18C - 0x46];
+    u32 mobs[1];          /* the array the count field bounds */
+} MobListStruct;
+
+/* the list of mobs: level 04 has it at 0x001BD380, every level at its own address */
+extern MobListStruct ref_L04_0031D630_00;
+
+/* shared callee, named by its catalogue row (04:0031D3C8) */
+extern void func_L00_002FC980(void);
+extern void func_002E64A0(void *mob);
+extern void func_L00_00326048(void *mob, void *p, s32 a2, s32 a3, f32 alpha);
+
+/* Walks the list of mobs: the ones of type 0xE29 get the 0x800 flag, the ones of type
+   0xD54 are handed to func_002E64A0, and the ones of type 0xFA0 with a 0x68 pointer
+   get that pointer's block (from +0xC) to func_L00_00326048. */
+void func_L04_0031D630(void) {
+    s32 i;
+
+    func_L00_002FC980();
+    for (i = 0; i < ref_L04_0031D630_00.count; i++) {
+        MobStruct *mob = (MobStruct *)ref_L04_0031D630_00.mobs[i];
+
+        if (mob != 0 && mob->type == 0xE29) {
+            mob->flags |= 0x800;
+        }
+        if (mob->type == 0xD54) {
+            func_002E64A0(mob);
+        }
+        if (mob != 0 && mob->type == 0xFA0 && mob->p68 != 0) {
+            func_L00_00326048(mob, (void *)((u8 *)mob->p68 + 0xC), 0x80AAAAD2, 0x80396464, 0.0610865355f);
+        }
+    }
+}
 
 INCLUDE_ASM("asm/levels", func_L04_0032F1D8);
 
@@ -175,7 +219,7 @@ INCLUDE_ASM("asm/levels", func_L04_0039FA08);
 
 INCLUDE_ASM("asm/levels", func_L04_0039FC28);
 
-INCLUDE_ASM("asm/levels", func_L04_0039FEA8);
+/* func_L04_0039FEA8 is matched in L04_0039FEA8.c (built with -g). */
 
 INCLUDE_ASM("asm/levels", func_L04_0039FEF0);
 
@@ -260,7 +304,6 @@ INCLUDE_ASM("asm/levels", func_L04_003A15C0);
 
 INCLUDE_ASM("asm/levels", func_L04_003A1868);
 
-INCLUDE_ASM("asm/levels", func_L04_003A19E8);
 
 void func_L04_003A1A48(u8 *dst, u16 *src, s32 count) {
     if (count <= 0)
@@ -314,7 +357,52 @@ INCLUDE_ASM("asm/levels", func_L04_003C4050);
 
 INCLUDE_ASM("asm/levels", func_L04_003C4858);
 
-INCLUDE_ASM("asm/levels", func_L04_003C49C0);
+/* A sixteen-byte record per spawn slot: three floats the level fills in. */
+typedef struct {
+    f32 x;
+    f32 y;
+    f32 z;
+    f32 w;
+} L04SpawnRecord;
+
+extern L04SpawnRecord D_L04_0023BDD0[];
+extern f32 D_L04_0023CA50[];
+extern f32 D_L04_0023CD70[];
+extern f32 D_L04_0023D220[];
+extern f32 D_L04_0023D540[];
+extern u8 D_L04_0023D158[];
+extern u16 D_L04_0023D860[];
+extern u16 D_L04_0023D9F0[];
+extern u16 D_L04_0023DB80[];
+extern s32 D_L04_001B2E70;
+extern u16 D_L04_001B2E74;
+
+extern f32 func_002A78D8(f32 a0, f32 a1);
+extern f32 func_002A7878(f32 a0, f32 a1);
+
+extern void func_L04_003C4858(void *a0, s32 a1);
+
+void func_L04_003C49C0(void *a0, u32 a1) {
+    f32 *obj = *(f32 **)((u8 *)a0 + 0x68);
+    L04SpawnRecord *rec;
+    f32 v;
+
+    v = func_002A78D8(0.0f, 1.0f);
+    rec = &D_L04_0023BDD0[a1];
+    rec->x = v;
+    rec->y = func_002A78D8(0.0f, 1.0f);
+    rec->z = func_002A78D8(0.0f, 1.0f);
+    {
+        f32 v44 = obj[0x11];
+        f32 v4c = obj[0x13];
+
+        D_L04_0023CA50[a1] = func_002A7878(v44, v44 + 2.0f);
+        D_L04_0023CD70[a1] = func_002A7878(v4c, v4c + 4.0f);
+    }
+    D_L04_0023D220[a1] = 0.0f;
+    D_L04_0023D540[a1] = func_002A7878(0.003f, 0.005f);
+    D_L04_0023D158[a1] = 1;
+}
 
 INCLUDE_ASM("asm/levels", func_L04_003C6FE8);
 

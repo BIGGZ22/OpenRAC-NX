@@ -180,8 +180,6 @@ char *func_L00_00433038(char *object)
 
 INCLUDE_ASM("asm/levels", func_L00_00433068);
 
-INCLUDE_ASM("asm/levels", func_L00_00433070);
-
 /* makes two float-binding calls, then toggles one of two global flag bytes selected by an object field and returns bit 6 of the flag word */
 int func_L00_00433198(char *a0, int a1)
 {

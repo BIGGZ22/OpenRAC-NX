@@ -53,8 +53,6 @@ char *func_L00_004336B0(char *object)
 
 INCLUDE_ASM("asm/levels", func_L00_004336E0);
 
-INCLUDE_ASM("asm/levels", func_L00_004336E8);
-
 /* Calls two helpers on object-plus-8 using the pointer at plus-684; when flag bit 6 is set and the plus-680 word is zero, calls a third helper and normalizes the measured byte cell to 0 or 1; returns flag bit 6. */
 int func_L00_00433810(char *object, int flags)
 {
@@ -81,8 +79,6 @@ char *func_L00_004338A8(char *object)
 }
 
 INCLUDE_ASM("asm/levels", func_L00_004338D8);
-
-INCLUDE_ASM("asm/levels", func_L00_004338E0);
 
 /* Calls two helpers on object-plus-8 using the pointer at plus-684; when flag bit 6 is set and the plus-680 word is zero, calls a third helper and normalizes the measured byte cell to 0 or 1; returns flag bit 6. */
 int func_L00_00433A08(char *object, int flags)
@@ -112,7 +108,15 @@ void* func_L00_00433AA0(void* param_1)
 
 INCLUDE_ASM("asm/levels", func_L00_00433AD8);
 
-INCLUDE_ASM("asm/levels", func_L00_00433DB0);
+extern void func_430480(void *);
+extern void func_42C290(void *);
+
+/* Visits both sub-objects, then hands back the same pointer. */
+char *func_L00_00433DB0(char *a0) {
+    func_430480(a0 + 0x8);
+    func_42C290(a0 + 0x2B0);
+    return a0;
+}
 
 INCLUDE_ASM("asm/levels", func_L00_00433DE8);
 
@@ -301,11 +305,16 @@ unsigned long func_L00_00443EF8(unsigned long param_1)
   return param_1;
 }
 
-INCLUDE_ASM("asm/levels", func_L00_00444D18);
+/* The fixed resident address func_L00_004450C0 forwards. */
+extern char D_L00_001AEB60[];
 
-INCLUDE_ASM("asm/levels", func_L00_004450C0);
+extern void func_2A48F0(void *a0, void *a1);
 
-INCLUDE_ASM("asm/levels", func_L00_004450E8);
+/* Passes a fixed resident address, and the argument, on to the callee. */
+void func_L00_004450C0(void *arg)
+{
+    func_2A48F0(D_L00_001AEB60, arg);
+}
 
 INCLUDE_ASM("asm/levels", func_L00_004451F8);
 
@@ -343,10 +352,6 @@ int func_L00_00447278(char *p)
 }
 
 INCLUDE_ASM("asm/levels", func_L00_00447298);
-
-INCLUDE_ASM("asm/levels", func_L00_00447678);
-
-INCLUDE_ASM("asm/levels", func_L00_004476A8);
 
 void func_L00_00447780(void)
 {

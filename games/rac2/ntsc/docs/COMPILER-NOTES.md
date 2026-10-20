@@ -1090,6 +1090,121 @@ full `tools/build.py all`). These are source-shape habits of cc1 that decide the
   linker's padding between two functions (`addiu $sp,$sp,N; nop` chains with no `jr $ra`); ten
   were found in `0032EB28.c` alone. That is a `tools/levels.py` fix, not C.
 
+## Opt-in `truncdisi2` return-slot split (15 October 2026)
+
+`func_0012E8C8` is a 28-byte libmpeg helper. Its C computes a 64-bit right
+shift and returns the low signed word. The unmodified compiler emits the
+correct `dsll32` and `dsra32`, but treats them as one `truncdisi2` RTL
+instruction: it places both before `jr $ra` and emits a `nop` in the return
+slot (32 bytes). Retail has `dsll32; jr $ra; dsra32` (28 bytes).
+
+Patch `0057` makes the two shifts separate RTL instructions **after reload and
+before the second and delay-slot schedulers**, only with
+`-mastra-split-trunc-slot`. The option is per file in `config/cflags.txt` and
+currently belongs only to `src/core/0012E8C8.c`; other translation units keep
+the qualified compiler path. The source is split into its own file so the
+option cannot change another function from the surrounding SDK unit. The
+patch changes compiler source, never generated assembly.
+
+The unmodified compiler produced 32 bytes; the patched compiler still
+produced those 32 bytes with the option off. With the option on, it produced
+the retail 28 bytes and `tools/check.py func_0012E8C8 --diff` reported 1 of 1
+places match. The full build then reported `OK` for all 28 programs, so the
+default-off patch did not change any earlier match in that corpus.
+
+## Opt-in quadword register saves (15 October 2026)
+
+The qualified profile saves a callee-saved register in an 8-byte slot (`sd`/`ld`). Two units of
+`src/core` are saved in 16-byte slots instead: `sq $ra,0($sp)` and `lq $ra,0($sp)`, and `sq $fp`
+beside it. They are `src/core/001163B0.c` and `src/core/00115200.c`, 30 functions and 18 800
+bytes between them, all of them markers until now.
+
+The gap is one instruction class, and it was measured, not inferred. `func_00119BC8` (48 bytes)
+compiles under the unmodified SDK profile (`sdk -O2 -G2 -ffunction-sections`) to the retail body
+instruction for instruction; the only difference is at `+0x8` and `+0x1C`, where that compiler
+emits `sd $ra`/`ld $ra` against retail's `sq`/`lq`. The same C under the game compiler's default
+profile produces the same sequence with the same single difference, so no source shape reaches
+it: the slot width is a compiler property.
+
+Patch `0058` re-establishes, only with `-mastra-quad-saves`, the widening that the released
+source applies to register 0 and that the ASTRA stack applies to every GPR. The default stays
+the qualified 8-byte path: with the option off the rebuilt `cc1` produces the same output as
+before, and `tools/build.py all` still reports 28 programs `OK`.
+
+The option is per file in `config/cflags.txt`, and each opted-in function is moved to a file of
+its own (`src/core/00119BC8.c`, `src/core/00115228.c`, `src/core/00115E68.c`) so the option
+cannot change another function of the unit it came from. The three were the measured witnesses:
+`tools/check.py <func> --diff` reports 1 of 1 places match for each.
+
+**Save order, gated on the same option.** The qualified profile emits the GPR save block in
+ascending register order (`s0, s1, ..., ra`), which is what the 8-byte-slot families show. These
+two units are the opposite: retail stores `ra` first and walks down
+(`sq $ra,0x20($sp); sq $fp,0x10($sp)`), which is the released loop's own direction.
+`ascending_save_order.py` therefore keeps the released descending walk for units compiled with
+`-mastra-quad-saves`, and `reorder_save_blocks.py` accepts either form; the default path stays
+byte-identical to the qualified one. Measured on `func_00115F28` (80 bytes) and
+`func_00115C90` (92 bytes): with the ascending order their prologue and epilogue were permuted
+(`sq $s0` before `sq $s1`, restores in the other order); with the gate both match at 1 of 1
+places, and `func_00115C90` additionally needs its failure value compared as the unsigned
+`0xFFFFFFFF` for the retail `lui`/`ori` pair.
+
+Do not reach for this option for a single stubborn body: it re-widens every GPR slot, so it fits
+a unit whose retail saves are quadword throughout, and it was not needed by any function outside
+these two units.
+
+## The game compiler's own headers, and where a varargs list really is (15 October 2026)
+
+`build.sh` now installs `gcc/ginclude/*.h` into the compiler's output directory, as the SDK
+recipe already did; before that, a unit compiled with the game compiler could not include
+`<stdarg.h>` (`stdarg.h: No such file or directory`), which is why the varargs units of the two
+quadword files were out of reach.
+
+The header alone does not reproduce retail's list, though: on this target `<stdarg.h>`'s
+`va_start` expands to `__builtin_next_arg(last)` — the **stack** arguments — while the retail
+varargs shims pass the compiler's **register save area**, `sp + 0x50` in a 0x80 frame with two
+named arguments and `sp + 0x58` in a 0x90 frame with one. The bodies reach it the way the
+matched varargs function in `src/core/0011E0D8.c` already does, with
+`(char *)__builtin_next_arg(last) - <0x30 or 0x38>`; `func_00115CF0`, `func_00115D48` and
+`func_00115DA8` are the measured witnesses. The offset is the register save area's size above
+the named arguments: 8 minus the named count, times 8 bytes.
+
+## Habits measured by the agent waves (15 October 2026)
+
+Six source profiles now appear in `config/cflags.txt`, not two. The prologue is the tell, and a
+wrong frame or a wrong save pair means the profile is wrong before the C is: `-O2 -G0` (default,
+`sd` in 8-byte slots), `sdk -O2 -G2` (SDK units: `sd` in 16-byte slots), `sdk -O2 -g2 -gstabs`
+(the MPEG decoder units, same signature), `-O2 -G2 … -mastra-quad-saves` (`sq` in 16-byte slots,
+the libc region 0x1163B0-0x1178xx and the other quadword units), and two `-O0`-class units.
+
+- **A dropped argument onto the frame and a `b` to the epilogue means `-O0`**, not a varargs
+  helper: `func_001175F0` is `atoi`'s shim and only `-O0 -G2 -ffunction-sections
+  -mastra-quad-saves` reproduces it. Do not reach for `__builtin_next_arg` there.
+- **`-mno-split-addresses` is the only lever found for retail's `lui $r,%hi ; ld $r,%lo($r)`**
+  (and the `$at` store form); `func_001339B0` only matches with it.
+- **`$gp` is a property of the unit, not of the compile**: a `-g8.c` sibling gets `-G8` from its
+  name (no `config/cflags.txt` line needed), the symbol carries `__attribute__((sda))`, and the
+  *game* compiler must be the one compiling it - the SDK compiler with `-G8` does not use `$gp` at
+  all. `gp = 0x001AEFF0`. The declaration also needs a **size** at most the `-G8` threshold: an
+  incomplete type (`extern int *tbl[];`) never takes the gp-relative form and comes out absolute -
+  measured on `func_00132DF0` (2026-10-15); with `extern int *tbl[2] __attribute__((sda));` the
+  same access is `addiu $x,$gp,-0x7B50`. The earlier "the attribute alone does not suffice" note
+  on `func_001330D0` is this effect.
+- **A helper upstream declares `static __inline__` must stay `static __inline__`**; without the
+  keyword the callee is a real call and the body shrinks (`func_00123C28`: 252 bytes against 260).
+- **Unsigned spellings are load-bearing**: `-1u` gives the retail `lui`/`ori` pair where `-1` gives
+  a single `addiu`, and a failure value compared as `0xFFFFFFFFu` is what `func_00115C90` needs.
+- **`mult rd,rs,rt` on the R5900 hides from the reader**: it is opcode 0x00 funct 0x18 *and* opcode
+  0x1C funct 0x18 (MULT1), and rabbitizer prints `.word # INVALID` for both, dropping the
+  destination. Three waves mistook live products for dead instructions.
+- **Two walls the source cannot move**, both measured repeatedly: this cc1 **CSEs symbol addresses**
+  (`sym`, `sym+const`) into callee-saved registers and keeps them across calls where retail
+  re-materialises a fresh `lui`/`addiu` (`func_00119AC0`, `func_00132C48`, `func_00130428`), and
+  the order of the two save registers sometimes rotates (`func_0011DE08`, `func_001286C8`). Both
+  are compiler-side levers, not source shapes.
+- **A body can pass `tools/check.py` and still not land**: `func_00118CC8` (a 35-entry jump table)
+  fails with `needs .rodata at its place` and `func_00123C28` with `needs .sdata at its place`.
+  Both are in `nonmatching/` with their C. Only `tools/build.py` decides.
+
 ## Quadword copy source shapes
 
 For func_L08_003D3D80 and func_L08_003D82F0, the current game profile folds
@@ -1099,3 +1214,313 @@ TI/float unions emitted ld/sd pairs; memcpy variants emitted unaligned word
 copies. Neither candidate matched. The retail shape resembles the qcopy
 helpers in include/common.h, but those helpers use inline assembly and cannot
 be used as a matching route under AGENTS.md.
+
+## Habits measured by the sixth wave (16 October 2026, levels)
+
+Twelve workers on `src/levels/`, two rounds each (26 matches, ~140 measured near misses).
+The boot-era habits above still hold; these are the ones the level units added.
+
+- **The `$gp` recipe, settled for level units**: `extern <type> D_LNN_XXXXXXXX __attribute__((sda));`
+  in the `<unit>-g8.c` sibling (the name gives `-G8`; the declaration needs a size at most the
+  threshold). `sda` alone reaches the bare GPREL16 form for loads *and* stores there. The asm-name
+  spelling `extern int X __asm__("X_alias") __attribute__((section(".sdata")));` — the asm name
+  **before** the attribute; the reverse order is a parse error — reproduces the bare reference in a
+  `-G0` probe, but three independent measurements on level units found it changes nothing for
+  loads: when a load comes out `lui $at` + absolute, the cause is the unit's `-G0` profile or the
+  assembler unfolding that use, not the declaration. An address that must stay absolute is
+  `__attribute__((nosda))`, and one absolute plus one `$gp` access to the *same* symbol can need
+  the double-name pattern already recorded above.
+- **Try the `-g8` sibling before abandoning**: the same body moved into `<unit>-g8.c` turned
+  `func_L00_003206B8` from 184 bytes with one wrong word (`-G0`) into 27 of 27 places match.
+  A `-g8.c` sibling usually holds only `INCLUDE_ASM` rows: put the typedefs (`u8`, `s16`, `f32`)
+  **before** the externs, or adding the body at the end of the file leaves the externs above the
+  typedefs and cc1 prints misleading `parse error before ')'` on the casts.
+- **Two names for the same pointer are the missing `daddu`**: when retail copies a just-loaded
+  value into a callee-saved register (the guard keeps the fresh load, the walk needs the value
+  across a call), write the guard and the walk with **two C variables** —
+  `u16 *q = table[a0]; if (q) { u16 *p = q; do { ... } while (*p++ >= 0); }` — which is what
+  turned `func_L08_00328BB0` from three words off into an exact match. One variable leaves the
+  copy out.
+- **`mode(TI)` reaches `lq`/`sq`**: `typedef int TI16 __attribute__((mode(TI)));` compiles a
+  16-byte copy as `lq`/`sq` where a plain struct assignment gives `ldl`/`ldr`/`sdl`/`sdr`. The
+  "MMI, not C" class is therefore narrower than it looks — re-test those rows with a TI typedef
+  before depositing them. The `0x7000_xxxx` family (the real MMI words) stays out of reach.
+  What still blocks the TI copies is that this cc1 folds a **constant destination offset** into
+  the `sq` where retail materialises the pointer first (five spellings measured on three bodies,
+  ~30 places).
+- **Emission-order habits** (each measured, each worth one try before giving up): the order of
+  assignments decides the registers (`==` operand order decides which side lands in `$v0`);
+  `+ -2.0f` is an ADD where `- 2.0f` compiles to `sub.s`; positive `&&` guards match where the
+  negated chain does not; two identical adjacent stores are written in the **reverse** of retail's
+  order; `&rec->champ` keeps the displacement in a register where `rec->champ` folds it.
+- **Float constants can be one ulp off the natural spelling**: `1.0471977f` (`0x3F860A93`, one
+  above π/3) and `0.78539824f` (`0x3F490FDC`, one above π/4) are what retail holds; take the bits
+  from the disassembly, not from the arithmetic.
+- **Address constants**: an absolute whose lower half has bit 15 set needs a SYMBOL spelling to
+  come out `lui hi+1 ; addiu -lo`, while one with bit 15 clear needs the plain **literal** (a
+  symbol adds a `lui`).
+- **`ref_LNN_XXXXXXXX_kk` is not only for data**: a shared function whose call target is, in some
+  programs only, a neighbouring local function needs the `ref_` name there (23 of 27 places
+  without it, 27 of 27 with).
+- **Walls confirmed once more, one spelling each**: the annulled branch slots (`beql`/`bnel` with
+  the load or the shifted value inside), the interleaving of prologue address pairs, and the block
+  order of two symmetrical handlers (both source orders compile to the same word — the choice is
+  the compiler's).
+- **`max.s` (COP1 funct 0x28) is not emittable from C**: `func_L08_00425328` and
+  `func_L08_00425398` are one instruction from retail with the op spelled in the disassembly;
+  ternary and conditional-assignment forms measured both emit `c.olt.s` + `bc1f`/`mov.s`
+  sequences instead. A compiler-side candidate like the quad-save patches.
+- **Method, before writing C**: grep the unit tree for an already-matched sibling carrying the
+  recipe in a comment (it has landed several matches at first compile), and read the first four
+  words of an uncertain row — a `.word 0x78/0x7A/0x7C/0x7E` opening is an `lq`/`sq` pair, and a
+  row opening on `addiu $sp,$sp,+N ; nop` is catalogue padding with the real body after the gap.
+- **A Docker-free ruler exists**: the game's 32-bit `cc1`/`cpp`/`as` run directly under WSL with
+  their work in `/tmp` (the 32-bit tools cannot stat drvfs files), and the verdict comes from
+  `tools/build.py`'s own `Placement.derive` — the exact code path of `tools/check.py`. Useful when
+  the container is unavailable; the container build stays the authority.
+
+## Habits measured by the seventh wave (16 October 2026, levels)
+
+Another twelve-worker wave on `src/levels/` (22 matches). The habits above still hold; these are
+the additions, including two corrections.
+
+- **The reconstructed assembler under-rounds some decimal float spellings by one ulp**:
+  `3.141571044921875f` encodes `0x40490F80` where retail holds `0x40490FD0`, `5627.906982421875f`
+  encodes `0x45AFDF42` against `0x45AFDF66`, and `1.5707964f` gives `0x3FC90FDB` against retail's
+  `0x3FC90FDC`. The correct spelling exists but is not always the nearest decimal (`3.14159f` and
+  `1.5707965f` both encode retail's bits). Read the constant's `lui`/`ori` out of the object and
+  compare it with the disassembly before treating a float constant as a wall; two matches turned
+  on this alone.
+- **`-mno-split-addresses`, in a `-g8` sibling, is the way to retail's bare `lwc1 $f,off($gp)`**:
+  measured three times (`func_L00_003959C0` 216 -> 200 bytes, its exact size; `func_L05_00397F48`
+  252 -> 232; `func_L01_00416A50` 252 -> 232). It does **not** move integer `$gp` loads, and it can
+  permute the prologue's save order - check both.
+- **Store order is an arbitrary permutation of the source order**: brute-forcing the statement
+  order of identical stores (all variants in one ruler run) is the cheapest lever of the wave;
+  `func_L10_0042BE20` matched on the first try that way.
+- **The walk families**: `for (;;) { e = base + ((*q & 0x7FFF) << 8); ...; if ((s16)*q < 0)
+  break; q++; }` matches (`L01_003CAFE0-g8.c`, `L04_00422A00-g8.c`), but the counter's
+  initialisation belongs **after** the guards - `int n = 0;` at the top costs 8 bytes - and the
+  call target of a shared walk is a neighbouring local function in some programs, which takes a
+  `ref_LNN_XXXXXXXX_kk` name.
+- **Two bodies passed `tools/check.py` and the build refused to place them** - worth remembering
+  because `check.py` sees neither: a call to a *local* function compiled into the same object
+  requires that function's section to be placed at the expected address in every program
+  (`func_L00_0036FA68`: its callee is a neighbouring local in six of the programs), and a
+  `D_LNN_XXXXXXXX` name is checked against its implied value in every program
+  (`func_L22_003B9358`: "needs two values" where the four words sit at other addresses). Both
+  take `ref_` names and then resolve from the retail bytes per program.
+- **`check.py`'s failure line is an address oracle**: `D_L13_XXXXXXXX would be at 0xYYYYYYYY`
+  gives the real address of a `$gp` or absolute global outright.
+- **Five-second screening pays**: `showlvl.py <name> | grep -c '\.word'` classifies a row as the
+  MMI family (`0x7000_xxxx`, not C) in seconds; the `0x78/0x7A/0x7C/0x7E` pairs are `lq`/`sq`, and
+  `mode(TI)` reaches them. Six of ten rows screened this way were MMI.
+- **Walls confirmed, do not spend on them**: `max.s`/`min.s`, the two load-delay `nop`s before a
+  `div.s`, the division padding after a label, the `slti`/`bnez`/two-store clamp, and the prologue
+  interleaving (grouped saves against saves interleaved with the first load) - each measured
+  repeatedly, with no source shape moving them.
+
+## Habits measured on the game units (20 October 2026)
+
+Fifteen workers on 66 `src/game/` functions, most of them placed in all 28 programs. The habits
+above still hold; these are the additions.
+
+- **`mfc1` is interlocked on the R5900.** In the boot's `.text`, 88 `mfc1` are directly followed
+  by an instruction that reads their target register, in 47 functions (`func_0028D1E8` has 13).
+  The only `mfc1` with a `nop` before such a reader is in a hand-written VU0 routine
+  (`func_00283248`, which loads with `ldc2`). gas gave every `mfc1` the MIPS I coprocessor-load
+  delay (its `cop_interlocks` names the 4300 and the 5400, not the R5900), so none of those
+  functions could match from C. `transformers/r5900_mfc1_interlock.py` now exempts `mfc1` on the
+  R5900 from that delay in `append_insn`. It covers `mfc1` only: `cfc2`, the other move measured,
+  keeps the `nop` in retail (4 of 6 readers), and `mips_emit_delays`, which pads at a label, is
+  unchanged. Measured on 20 October: of the 661 files in `src/`, 660 compile to the same object
+  with the old and the new assembler, and the last (`src/game/002B5EF8.c`, built with `-g`)
+  differs only in `.mdebug`; `func_002ED4B8` and `func_00290680` match at their 28 places with
+  it.
+- **The temporary in the destination register**: retail's `lui $r,%hi(X)` / `lw $r,%lo(X)($r)`
+  is a bare-symbol load the assembler expanded. In a `-G0` unit, `extern T X
+  __attribute__((sda));` gives it (and stores through `$at`): `func_00343260`. In a `-G8` unit the
+  same declaration is a `$gp` access, so a function that needs both forms of one symbol takes two
+  names: `func_0027B858`, `func_002987C0`.
+- **`-mno-split-addresses` when a store and a load of one byte each have their own `lui`**:
+  `func_0033C2D8` is 156 bytes in its `-G0` unit, where both share one `lui`, and exact with the
+  option, alone in `src/game/0033C2D8.c`; its neighbour `func_0033C378` does not match with it.
+- **A unit marked `sdk` can be game code**: `src/game/00287E98.c` was `sdk`; its two new functions
+  match only under the game compiler (the SDK one gives 144 and 168 bytes), and the two setters
+  already in it match under both.
+- **Return types decide registers**: declaring callees that return a value as returning it
+  (`memset` `func_00115484`, `strncpy` `func_00115AC0`, `sprintf` `func_00115DA8`,
+  `func_002DF1F8`) fixed several register choices and argument orders at once (`func_00339F28`,
+  `func_00343A30`): a call that sets `$v0` pushes the next value into `$v1`. A 64-bit colour
+  argument needs `unsigned long` in the callee's prototype, or the argument order changes
+  (`func_0033ED88`, `func_00344938`).
+- **Seeing the passes**: this cc1 takes `-fsched-verbose-N` (a dash; `=N` is refused), which with
+  `-dS`/`-dR` prints both schedulers' priorities and cycles; `-dL` shows the loop optimizer's
+  decisions, which is how the loop-invariant threshold behind `func_0033B910` was measured.
+- **Debug line labels pad divisions**: `-g` (or `-gstabs`) puts a line label before each source
+  line, and the assembler pads a `div.s` within two slots of a label with `nop`s.
+  `func_002B5EF8` matches only with `-g`, in a unit of its own (`src/game/002B5EF8.c`), and only
+  with the division on a line of its own. With `-g` the 1,197 functions of the non-SDK `src/game`
+  and `src/core` units still match at the boot place.
+- **One extra flag per file**: every `nonmatching/` file that compiles alone (1,087) was compiled
+  again with one extra flag. These then matched at every place (`tools/check.py` level, not
+  built); each would need a unit of its own with that flag:
+  - `-g`: `func_002C9C60`, `func_L04_0039FEA8`, `func_L05_00443C18`, `func_L07_003EF1E0`,
+    `func_L00_0031B9F8`.
+  - `-mno-split-addresses`: `func_002A0380`, `func_L00_003252C8`, `func_L00_0037E640`,
+    `func_L00_00380058`, `func_L00_00403C30`, `func_L00_00424978`, `func_L00_0042A500`,
+    `func_L00_00444D18`, `func_L00_004450E8`, `func_L02_003CB090`, `func_L05_00418440`,
+    `func_L05_00442720`, `func_L06_003660F0`, `func_L17_003C71B0`, `func_L18_003F50D8`.
+  - `-fno-schedule-insns`: `func_0012FB48`, `func_0029B658`, `func_L00_002A53B8`,
+    `func_L05_0030C930`.
+  - `-fno-schedule-insns2`: `func_002A0380`, `func_L22_0040DD20`.
+  - `-fno-gcse`: `func_L00_003032F0`.
+  - `-fno-strength-reduce`: `func_L00_00384C20`.
+- **The constant-offset wall is a cost tie in cse**: `find_best_addr` gives a register and a
+  register plus a small constant the same cost, and the tie goes to the sum. That is why
+  `obj + 16` folds into an `lq` where retail keeps the pointer, and it does the same to a plain
+  `lw` (`func_002B5E48`). Quadword copies through a held pointer reproduce retail exactly when
+  written as inline asm, which `src/` does not allow; they read like the original's copy macros.
+- **Loop layouts**: a search loop whose found-block ends in `break` rather than `return` gets
+  retail's `b test; increment; test; body` layout (`func_002EE6E0`), and indexing a table as
+  `D_00214F90[39 + i]` keeps retail's address arithmetic where a walking pointer does not. A
+  counter set after the guard, in `while (1) { ...; i++; offset += 80; if (i >= 512) break; }`,
+  counts up as retail does where a `for` counts down (`func_002ED368`).
+
+## Habits measured on the yeedil level (20 October 2026)
+
+A wave of seventeen workers over `src/levels/20_yeedil/` (level 20, 120 open functions) added
+two matches and pinned three walls. The level's own assembly listing is at
+`build/20_yeedil/asm/5B0B0.s`; the word field in it is **byte-swapped** (it prints the four file
+bytes as a big-endian number, so the retail's `2D28A003` is the instruction
+`daddu $a1,$sp,$zero`), which is a trap for any differ that compares words.
+
+- **The 128-bit copy wall, in full.** The address of a TI access is
+  `(mem:TI (plus:SI (reg) (const_int off)) 0)`. Two passes fold the constant into the
+  `lq`/`sq`: the reload pass accepts `plus(reg, const_int)` for TImode while the offset is in
+  `[-32768, 32752]` (`GO_IF_LEGITIMATE_ADDRESS`), and the CSE replaces the register with the
+  plus because `mips_address_cost` gives register-plus-small-constant the cost 1, the same as a
+  plain register, so the tie goes to the plus. The reload would have materialised the pseudo -
+  the retail's `addiu` - but the CSE removes it first. **The one escape: an offset outside
+  `[-32768, 32752]` is not a legal TImode displacement, so the reload materialises the address**
+  (`*(TI128 *)(arg0 + 32753)` gives `addu $4,$4,32753 ; sq $5,0($4)`, the retail's shape with the
+  wrong immediate). A second escape reaches the retail's zero-displacement `sq` at the price of a
+  stack round trip: a **volatile pointer object** (`TI128 *volatile d = ...; *d = ...;`) gives
+  `sw ; lq ; lw ; sq $v0,0($reg)`. A pointer loaded from memory, or carried by a loop and
+  incremented at the end of the body, keeps the zero displacement too
+  (`func_L08_004356A0`, `func_002E5FE0`).
+- **The retail's shape is systematic**: it materialises a 128-bit address when the address is
+  used more than once, and folds it into the instruction when it is used once. In level 20,
+  1,349 of 6,840 `lq`/`sq` are folded and 5,491 go through a register.
+- **The 128-bit zero store**: the retail writes `por $v0,$zero,$zero ; sq $v0,0x20($sp)`, and the
+  chain's `rac2_fold_zero_ti_store` gives `sq $zero` whenever the zero register is dead after
+  the store - which it is, because the following `lq` rewrites the register. The `por` survives
+  only when the zero feeds **two or more** stores. 3,865 retail places have a `por` feeding
+  exactly one `sq`.
+- **The branch-likely recipe**: the retail's loop often ends in **two separate tests** that jump
+  back into the body (`bgezl`/`beql`). Spelling them as two `if (...) goto body;` instead of one
+  `&&` chain is what makes this cc1 emit the branch-LIKELY form; with the `&&` spelling it emits
+  a plain `bgez`/`beq` and the body is two instructions off. The condition is that the check
+  block ends in an unconditional jump to the body.
+- **The level's own jump table IS reachable from C.** A table the *compiler* generates cannot be
+  placed (a C `switch` puts it in the object's `.rdata`, which `tools/build.py` discards - the
+  wall that keeps `func_00118CC8` and `func_00123C28` in `nonmatching/`). But a table that is
+  **already in the level's data** can be named: `extern void *D_L20_002B27E0[149];` plus
+  `goto *D_L20_002B27E0[sel];` gives the retail's ten dispatch instructions exactly, and the
+  build resolves the name from the retail's `lui %hi`/`addiu %lo` pair. A `static void *volatile`
+  array of `&&label`s keeps the case bodies alive at no cost (it lands in the discarded `.data`).
+- **The split 64-bit "la"**: the retail keeps the address of a global twice - `$s0` = the 32-bit
+  address and `$s5` = the 64-bit `%hi` (`daddu $s5,$v1,$zero`) - and every field access then costs
+  two instructions (`addiu $v1,$s5,%lo(D)` ; `lh $v0,0x1454($v1)`). No spelling measured
+  reproduces it: a pointer cast to `unsigned long long`, a 64-bit pointer, an `unsigned long long`
+  local, a pointer kept across a call, a volatile pointer, `-mno-split-addresses`, `-mabi=64`,
+  `-mips3` and `-mcpu=r5900` all give `lui; addiu; dsll; dsrl` or the `la` pseudo. Written as
+  direct symbol references, cc1 anchors the symbol in `$fp` instead - the retail never does.
+- **Two per-file flags carry real matches**, each in a unit of its own because the flag changes
+  the other bodies of a shared unit: `-fno-schedule-insns` fixes a swapped argument-set-up pair
+  (`func_L20_00444088`, in `L20_00444088-g8.c`) and `-mno-split-addresses` gives retail's
+  base == dest absolute load (`func_L20_0043F460`, in `L20_0043ECB0-g8.c`). The second costs the
+  separated address pseudo, so a body that needs both cannot be matched with one flag set.
+- **A delay slot runs before its call**, so a store in a delay slot writes the *previous* call's
+  result. And the retail's integer branch-likelys execute the delay slot when the branch is
+  **taken**, while `bc1tl` annuls it when taken.
+- **`sltu` in cc1's output is `sltiu` in the object**: gas expands `sltu` with an immediate into
+  `sltiu` (`gas/config/tc-mips.c`). Compare objects, not `.s` text.
+
+### The yeedil level, second wave (21 October 2026)
+
+A second wave of workers over the same level settled the two walls the first wave could
+only describe, and found the source spellings for two game-wide idioms.
+
+- **The 128-bit copy wall is a cost tie in the CSE, and the tie is the whole of it.** The
+  front end builds the address of a TI access as the pointer's **pseudo**; the CSE's
+  `find_best_addr` (gcc/cse.c) then substitutes the class member `plus(reg, const_int)`
+  because `ADDRESS_COST` is 1 for a register and `mips_address_cost` (gcc/config/mips/mips.c)
+  is also 1 for a register plus a small constant - the tie is broken on the rtx cost, which
+  favours the plus. The reload then finds `plus(reg, const)` legitimate for TImode while the
+  offset is in `[-32768, 32752]` (`GO_IF_LEGITIMATE_ADDRESS`) and prints the offset as the
+  displacement. **The retail's shape (`addiu` plus a zero-displacement `lq`/`sq`) is exactly
+  what the reload produces when the address is still the pseudo; only the tie takes it
+  away.** A tie that went to the register would give the retail's bytes for every 16-byte
+  copy in the game - 5,491 of level 20's 6,840 go through a register. What survives the
+  CSE, all measured: a **symbol base** (`plus(symbol, const)` costs 3), a pointer carried by
+  a loop and incremented at the end of the body, a pointer given **different values in two
+  branches** (unknown at the join), a **volatile pointer object** (which materialises the
+  address at the price of a stack store and a reload), and an **offset outside
+  `[-32768, 32752]`** (which the reload materialises, with the wrong immediate).
+- **The zero guard is `x & ~x`.** The retail materialises `$t0 = 0` and still tests it
+  (`daddu $t0,$zero,$zero` ; `bnez $t0`), and no spelling of a zero-valued local survives:
+  `0`, `x - x`, `x ^ x`, `x & 0`, and every type and every `volatile`. The front end does
+  **not** fold `x & ~x` - `fold()` in fold-const.c has no case for `BIT_AND` with a
+  non-constant operand, and only `combine` folds it, and `combine` runs **after** `gcse`
+  (toplev.c: cse, gcse, loop, cse2, flow, combine_instructions). `gcse`'s `cprop` is what
+  would otherwise propagate the constant 0 into the loop and delete the branch. The test
+  has to be in **another block** than the assignment - in the same block the plain CSE folds
+  it again. This idiom occurs in `func_L20_0039E0A0`, `func_L20_0039DBC8`,
+  `func_L20_00440398` and `func_L20_0044AC38`.
+- **The split address is the compiler's own, not a wall.** A global's address used through
+  **one** C name is materialised once (`lui %hi` + `addiu %lo`); the **same** global's
+  address used through a **second** C name is materialised in the split form - the `%hi`
+  half lives in a callee-saved register (the compiler copies it with `daddu $sN,$vN,$zero`,
+  which is gas's `move`) and the `%lo` half is added again at every use
+  (`addiu $vN,$sN,%lo(SYM)`), the field offset riding along as the 16-bit displacement.
+  The matched `src/levels/shared/L00_002C2DE8.c` is the witness. This is gcc 2.x's
+  `mips_check_split` / the `movsi` expand (config/mips/mips.md).
+- **The 128-bit zero store needs a second use.** The retail writes `por $v0,$zero,$zero`
+  before the `sq`; `movti_internal` prints a constant-zero source as `sq $zero` and a
+  register source as `por rd,$zero,rs` + `sq`, and this cc1 only puts a TImode constant in
+  a register when the constant has **two or more** uses. The chain's
+  `rac2_fold_zero_ti_store` is a second gate, and it has a distance condition: it folds
+  only when the store is the register's last use **and** the materialisation is within
+  **twelve instructions** above it in the same block - a call, a jump or a label between
+  them stops the scan.
+- **The level's own jump tables are reachable from C.** A table the *compiler* generates
+  cannot be placed (a C `switch` puts it in the object's `.rdata`, which
+  `tools/build.py` discards - the wall that keeps `func_00118CC8` and `func_00123C28` in
+  `nonmatching/`). But a table that is **already in the level's data** can be named and
+  used with a computed goto, and the build resolves the name from the retail's `lui %hi` /
+  `addiu %lo` pair. **The name matters**: the level's data blob and its
+  `config/undefined_syms_auto.txt` carry `jtbl_002B27E0`, `jtbl_002B5980`,
+  `jtbl_002B5960`, `jtbl_002B4CA0` and `jtbl_002B5340` under those names, and a `D_L20_`
+  spelling does not resolve. The declaration needs a size, and the case bodies are kept
+  alive by a `static void * volatile` array of `&&label`s (no code; it lands in the
+  discarded `.data`).
+- **A load in a delay slot can only be the `$gp` form.** Outside a delay slot, `l.s $f,SYM`
+  expands (macro mode) to `lui $at,%hi(SYM)` + `lwc1 %lo(SYM)($at)`; inside one (nomacro
+  mode) the same instruction expands to the one-instruction `lwc1 %lo(SYM)($gp)`.
+- **`nosda` is not a no-op in a `-G8` unit.** It makes cc1 materialise the address in a
+  register of its own (`lui $v0,%hi(S)` + `lw $v1,%lo(S)($v0)`) where the retail has the
+  one-register form (`lui $v1,%hi(S)` + `lw $v1,%lo(S)($v1)`), and it makes the compiler
+  hoist the global's *address* into a callee-saved register. In a `-G8` file the plain
+  declaration is often the absolute form the retail wants.
+- **The R5900's `c.lt.s` has a different bit pattern from the general MIPS one**
+  (opcodes/mips-opc.c), so `c.lt.s` assembles as the word the general MIPS calls
+  `c.olt.s` - the two are the SAME instruction here, and a differ that compares the
+  mnemonic will report a difference that is not one. Compare the words.
+- **The compiler is C89**: a declaration after a statement is a parse error, so a block's
+  locals have to be declared at the top of that block.
+- **`-mastra-keep-frame-order`** (game compiler flag, patch 0021) keeps the
+  frame-related instructions in emission order; it is the flag that moves the prologue
+  saves of a body into the retail's order.
+- **gas turns the compiler's `addu rd,rs,imm` into the retail's `addiu`**, and `move rd,rs`
+  into `daddu rd,rs,$zero` - a candidate differing only in those is not a difference.

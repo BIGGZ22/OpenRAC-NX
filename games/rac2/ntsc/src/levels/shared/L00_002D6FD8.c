@@ -36,7 +36,25 @@ void func_L00_002D6FD8(void)
 
 INCLUDE_ASM("asm/levels", func_L00_002D7060);
 
-INCLUDE_ASM("asm/levels", func_L00_002D7068);
+/* Clears one byte of each of the 32 64-byte records that end at the level pool root plus
+   0x7DD, walking down one record at a time; the stored -1 is the function's return value. */
+extern unsigned char D_L00_001BB9F0[];
+extern int D_L00_001B1884;
+
+int func_L00_002D7068(void)
+{
+    unsigned char *p = D_L00_001BB9F0;
+    int i;
+    int r = -1;
+
+    p += 0x7DD;
+    for (i = 31; i >= 0; i--) {
+        *p = 0;
+        p -= 64;
+    }
+    D_L00_001B1884 = r;
+    return r;
+}
 
 /* Partial 64-byte pool record, measured from the retail loads and stores. */
 typedef struct {

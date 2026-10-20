@@ -9,6 +9,18 @@ int func_L05_003251A0(void) {
     return value;
 }
 
+extern int D_L05_001A9D48[1] __attribute__((sda));
+
+/* Replaces the shared step with its table entry, leaving a negative step alone. */
+int func_L05_00324DB8(void)
+{
+    int step = func_L05_003251A0();
+
+    if (step >= 0)
+        step = D_L05_001A9D48[step];
+    return step;
+}
+
 extern int D_L05_001A9CD0;
 
 void func_L05_003263F8(int value) {

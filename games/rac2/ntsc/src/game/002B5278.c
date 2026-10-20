@@ -36,7 +36,7 @@ INCLUDE_ASM("asm/game", func_002B5D38);
 
 INCLUDE_ASM("asm/game", func_002B5E48);
 
-INCLUDE_ASM("asm/game", func_002B5EF8);
+/* func_002B5EF8 is matched in 002B5EF8.c (built with -g). */
 
 INCLUDE_ASM("asm/game", func_002B60A8);
 

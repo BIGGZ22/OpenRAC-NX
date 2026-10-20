@@ -70,12 +70,14 @@ void func_L03_003C7A88(char *a0)
     *(s32 *)(a0 + 0x9C) = 1;
 }
 
+/* func_L03_003C7AA0 is a near miss: nonmatching/levels/func_L03_003C7AA0.c */
 INCLUDE_ASM("asm/levels", func_L03_003C7AA0);
 
 INCLUDE_ASM("asm/levels", func_L03_003C7AC0);
 
 INCLUDE_ASM("asm/levels", func_L03_003C7E20);
 
+/* func_L03_003C85F8 is a near miss: nonmatching/levels/func_L03_003C85F8.c */
 INCLUDE_ASM("asm/levels", func_L03_003C85F8);
 
 INCLUDE_ASM("asm/levels", func_L03_003C8660);
@@ -200,8 +202,6 @@ void func_L03_003D1FB0(char *a0)
 INCLUDE_ASM("asm/levels", func_L03_003D2018);
 
 INCLUDE_ASM("asm/levels", func_L03_003D20F8);
-
-INCLUDE_ASM("asm/levels", func_L03_003D21F8);
 
 INCLUDE_ASM("asm/levels", func_L03_003D22C8);
 

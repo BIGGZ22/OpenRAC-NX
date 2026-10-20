@@ -23,9 +23,9 @@ void func_0027C540(long);
 
 void func_0027C660(void);
 
-/* 
+/*
  * Function: func_002D2EE0
- * 
+ *
  * Disassembly summary:
  * - Saves return address on stack
  * - Calls func_0027C540(0) (with zero argument)
@@ -62,7 +62,43 @@ int func_002CD658(void) {
     return 0;
 }
 
-INCLUDE_ASM("asm/game", func_002CD660);
+typedef struct {
+    char reserved00[0x14];
+    char *source;
+    int value;
+    char reserved1c[0x118];
+    int fallback;
+} CallbackState;
+extern CallbackState D_001F2840;
+extern int D_00138344;
+
+extern void func_0028BD68(void);
+extern int func_0029CBE0(int);
+
+int func_002CD660(void) {
+    int result = 0;
+    int flags = D_00138344;
+    if (flags & 0x10) {
+        int value;
+        func_0028BD68();
+        value = *(int *)(D_001F2840.source + 0xE0);
+        if (value != 0)
+            D_001F2840.value = value;
+        else if (D_001F2840.fallback == 0) {
+            result = -1;
+            goto done;
+        }
+        result = 0;
+done:
+        ;
+    } else if (flags & 0x900) {
+        func_0028BD68();
+        result = 1;
+    } else {
+        func_0029CBE0(flags);
+    }
+    return result;
+}
 
 extern void func_0029CC20(void);
 

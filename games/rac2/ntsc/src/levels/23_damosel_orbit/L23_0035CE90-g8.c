@@ -24,18 +24,6 @@ void func_L23_003C1AE8(char *arg0) {
                                             D_L23_001AFAA0 * 0.000290888245f);
 }
 
-extern int D_L23_001B36B0;
-
-extern float D_L23_001AFA34 __attribute__((sda));
-
-extern char D_00189EA0[];
-
-extern void func_2F8190(char *out, char *in, char *base);
-
-extern void func_2F8440(char *out, char *in, float scale);
-
-extern float func_2F8268(char *out, char *in);
-
 void func_L23_00415FC8(char *arg0) {
     char *state = *(char **)(arg0 + 0x68);
     unsigned char kind = *(unsigned char *)(arg0 + 0x20);
@@ -61,4 +49,33 @@ void func_L23_00415FC8(char *arg0) {
     func_L23_004160B0(arg0);
 }
 
-INCLUDE_ASM("asm/levels", func_L23_003C19E0);
+extern int D_L23_001B36B0;
+
+extern float D_L23_001AFAB4 __attribute__((sda));
+
+extern char D_00189EA0[];
+
+extern void func_00282CF0(char *out, char *a, char *b);
+
+extern void func_00282F20(char *out, char *in, float length);
+
+extern float func_00282DB0(char *a, char *b);
+
+/* in state 8, with the flag at 0x001B36B0 clear, the object drawn and the half-word at +0x324 of
+   its state set: compares the normalised offset from D_00189EA0 with the vector at +0xC0 of the
+   object D_00189EA0 holds at +0x2210, and within the threshold hands back the float at +0x27C */
+int func_L23_003C19E0(char *arg0, float *arg1) {
+    char *state = *(char **)(arg0 + 0x68);
+    char dir[16];
+
+    if (*(unsigned char *)(arg0 + 0x20) == 8 && D_L23_001B36B0 == 0 &&
+        *(unsigned char *)(arg0 + 0x31) != 0 && *(short *)(state + 0x324) != 0) {
+        func_00282CF0(dir, arg0 + 0x10, D_00189EA0);
+        func_00282F20(dir, dir, 1.0f);
+        if (func_00282DB0(dir, (char *)(*(int *)(D_00189EA0 + 0x2210) + 0xC0)) <= D_L23_001AFAB4) {
+            *arg1 = *(float *)(*(char **)(arg0 + 0x68) + 0x27C);
+            return 1;
+        }
+    }
+    return 0;
+}

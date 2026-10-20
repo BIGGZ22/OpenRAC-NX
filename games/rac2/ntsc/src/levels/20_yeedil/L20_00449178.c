@@ -18,9 +18,9 @@ extern void func_0029F338(char *object);
 
 INCLUDE_ASM("asm/levels", func_L20_00449178);
 
-INCLUDE_ASM("asm/levels", func_L20_00449338);
+/* func_L20_00449338 is defined in L20_00449178-g8.c (it reaches data through $gp). */
 
-INCLUDE_ASM("asm/levels", func_L20_00449850);
+/* func_L20_00449850 is defined in L20_00449850-g8.c (it reaches data through $gp). */
 
 /* func_L20_004499E8 is defined in L20_00449178-g8.c (this unit has no $gp access for it). */
 
@@ -56,13 +56,15 @@ void func_L20_0044A108(char *arg0, char *arg1) {
 
 INCLUDE_ASM("asm/levels", func_L20_0044A1C8);
 
-INCLUDE_ASM("asm/levels", func_L20_0044A658);
+/* func_L20_0044A658 is defined in L20_00449178-g8.c (it reaches data through $gp). */
 
 /* func_L20_0044A838 is defined in L20_00449178-g8.c (this unit has no $gp access for it). */
 
-INCLUDE_ASM("asm/levels", func_L20_0044A8F0);
+/* func_L20_0044A8F0 is defined in L20_00449178-g8.c (it reaches data through $gp). */
 
 /* func_L20_0044AA88 is defined in L20_00449178-g8.c (this unit has no $gp access for it). */
+
+/* func_L20_0044AB68 is a near miss: nonmatching/levels/func_L20_0044AB68.c */
 
 INCLUDE_ASM("asm/levels", func_L20_0044AB68);
 
@@ -70,4 +72,4 @@ INCLUDE_ASM("asm/levels", func_L20_0044AC38);
 
 INCLUDE_ASM("asm/levels", func_L20_0044AE58);
 
-INCLUDE_ASM("asm/levels", func_L20_0044B100);
+/* func_L20_0044B100 is defined in L20_00449178-g8.c (this unit has no $gp access for it). */

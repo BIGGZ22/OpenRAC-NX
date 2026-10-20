@@ -228,7 +228,7 @@ def compile_c(source: Path) -> Path:
                   f"-I'{source.parent}' x.c -o x.s; '{COMPILER}/as' -o x.o x.s; cp x.o '{out}'.$$; mv '{out}'.$$ '{out}'; rm -rf $t")
     else:
         script = (f"set -e; t=$(mktemp -d); cd $t; cp '{source}' x.c; "
-                  f"'{COMPILER}/cpp' -I'{ROOT}/include' -I'{source.parent}' x.c > x.i; "
+                  f"'{COMPILER}/cpp' -I'{COMPILER}/include' -I'{ROOT}/include' -I'{source.parent}' x.c > x.i; "
                   f"'{COMPILER}/cc1' -quiet {flags} x.i -o x.s; '{COMPILER}/as' -o x.o x.s; "
                   f"cp x.o '{out}'.$$; mv '{out}'.$$ '{out}'; rm -rf $t")
     result = subprocess.run([*runner, "bash", "-c", script], capture_output=True, text=True)

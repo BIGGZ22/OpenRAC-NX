@@ -145,13 +145,13 @@ INCLUDE_ASM("asm/core", func_00128F48);
 
 INCLUDE_ASM("asm/core", func_00128FD0);
 
-INCLUDE_ASM("asm/core", func_001290BC);
+ASM_FUNC("asm/core", func_001290BC);
 
-INCLUDE_ASM("asm/core", func_00129120);
+ASM_FUNC("asm/core", func_00129120);
 
-INCLUDE_ASM("asm/core", func_00129160);
+ASM_FUNC("asm/core", func_00129160);
 
-INCLUDE_ASM("asm/core", func_001291A0);
+ASM_FUNC("asm/core", func_001291A0);
 
 ASM_FUNC("asm/core", func_00129218);
 

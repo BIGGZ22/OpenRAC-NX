@@ -130,7 +130,42 @@ void func_002989B0(void)
     ref_L00_00309BA8_02 = 1;
 }
 
-INCLUDE_ASM("asm/game", func_00298A20);
+extern int D_001393E0[];
+extern int D_001A8BB0[] __attribute__((sda));
+extern int ref_L00_00309C18_00 __attribute__((sda));
+extern int func_002B49E0(int, int, unsigned int, unsigned int, unsigned char *);
+extern void func_00288D70(void);
+void func_00298A20(void)
+{
+    int nextmode;
+    int *state = D_001393E0;
+    if (state[0x15C / 4] == 2 && state[0x164 / 4] < 0) {
+        int mode = state[0x16C / 4];
+        if (mode != 0 || state[0x10 / 4] != 0) {
+            state[0x17C / 4] = 0;
+            if (mode != 0) {
+                D_001A7420[0] = 21;
+                D_001A7424[0] = 0x40;
+                if (D_001A8BB0[0] == 0) {
+                    func_002B49E0(4, 1, 1, 0, 0);
+                    mode = ref_L00_00309C18_00;
+                } else {
+                    func_002B49E0(4, 2, 1, 0, 0);
+                    mode = D_001A8BB0[0];
+                }
+                if (mode == 6) func_00288D70();
+            } else {
+                *(volatile int *)D_001A7424 = (*(int *)D_001A7424 & ~0x40) | 1;
+            }
+            nextmode = 2;
+        } else {
+            nextmode = 1;
+            state[0x17C / 4] = nextmode;
+        }
+        D_001A7420[0] = nextmode;
+    }
+}
+
 
 void func_00298B28(void)
 {
@@ -156,7 +191,34 @@ void func_00298B70(void)
     }
 }
 
-INCLUDE_ASM("asm/game", func_00298BB8);
+extern unsigned char D_001A7930[];
+extern unsigned char D_001A7948[];
+extern unsigned char D_001A7960[];
+extern unsigned char D_001A7980[];
+extern unsigned char D_001A79A0[];
+extern unsigned char D_001A79D0[];
+extern void func_00115AC0(void *, int, int);
+void func_00298BB8(unsigned char *source)
+{
+    int i;
+    int value = source[0x12];
+    if (value == 0x45)
+        D_001A7930[2] = value;
+    else if (value == 0x50)
+        D_001A7930[2] = 0x49;
+    for (i = 3; i < 7; i++)
+        D_001A7930[i] = source[i + 0xd];
+    for (i = 8; i < 11; i++)
+        D_001A7930[i] = source[i + 0xd];
+    for (i = 11; i < 13; i++)
+        D_001A7930[i] = source[i + 0xe];
+    func_00115AC0(D_001A7948, (int)D_001A7930, 13);
+    func_00115AC0(D_001A7960, (int)D_001A7930, 13);
+    func_00115AC0(D_001A7980, (int)D_001A7930, 13);
+    func_00115AC0(D_001A79A0, (int)D_001A7930, 13);
+    func_00115AC0(D_001A79A0 + 0x14, (int)D_001A7930, 13);
+    func_00115AC0(D_001A79D0, (int)D_001A7930, 13);
+}
 
 INCLUDE_ASM("asm/game", func_00298D10);
 
@@ -188,8 +250,6 @@ void func_00298D28(int *a0)
     }
     func_0029B628();
 }
-
-INCLUDE_ASM("asm/game", func_00298E08);
 
 INCLUDE_ASM("asm/game", func_00298F00);
 

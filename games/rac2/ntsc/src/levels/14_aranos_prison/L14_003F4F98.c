@@ -12,8 +12,6 @@ extern void func_00282D30_6(void *out, void *in, float scale);
 
 INCLUDE_ASM("asm/levels", func_L14_003F4F98);
 
-INCLUDE_ASM("asm/levels", func_L14_00409B20);
-
 /* Read the word at offset 0x 18 through the pointer stored at owner offset 0x 68. */
 unsigned int func_L14_004137F8(unsigned int param_1)
 {
@@ -53,7 +51,7 @@ INCLUDE_ASM("asm/levels", func_L14_004221D8);
 
 INCLUDE_ASM("asm/levels", func_L14_00422498);
 
-INCLUDE_ASM("asm/levels", func_L14_004228C0);
+/* func_L14_004228C0 is defined in L14_003F4F98-g8.c. */
 
 INCLUDE_ASM("asm/levels", func_L14_004229A0);
 
@@ -76,8 +74,6 @@ void func_L14_00422FA0(char *a0)
 }
 
 INCLUDE_ASM("asm/levels", func_L14_00423000);
-
-INCLUDE_ASM("asm/levels", func_L14_00423240);
 
 INCLUDE_ASM("asm/levels", func_L14_00423358);
 

@@ -6,7 +6,8 @@
 # Run it on 32-bit-capable x86-64 Linux (gcc -m32), e.g. in the rac2-linux container
 # (docs/BUILDING.md). It downloads the two inputs to build/downloads/ and checks them,
 # applies the patches in tools/compiler/patches/ (Lombyte's sce-991111b stack, MIT, with its
-# retired 0034 and its earlier 0020) and the transformers in tools/compiler/transformers/,
+# retired 0034 and its earlier 0020), the opt-in 0057 and 0058 extensions and the
+# transformers in tools/compiler/transformers/,
 # refuses to build unless the five patched sources hash as listed below, and builds.
 #
 # The binaries' hashes depend on the build host; the sources' do not. A compiler from these
@@ -34,10 +35,11 @@ rm -rf "$W/src" && tar xzf "$DL/gnu-ee-binutils-gcc-1.1.tar.gz" -C "$W" && mv "$
 cd "$W/src"
 export GIT_CEILING_DIRECTORIES=$W
 for p in 0000 0001 0015 0016 0019 0020 0021 0022 0025 0026 0027 0028 0029 0030 0031 0032 0033 0034 \
-         0036 0037 0044 0045 0046 0047 0048 0049 0050 0051 0052 0053 0054 0055 0056; do
+         0036 0037 0044 0045 0046 0047 0048 0049 0050 0051 0052 0053 0054 0055 0056 0057; do
   git apply --whitespace=nowarn "$HERE"/patches/$p-*.patch
 done
 patch -R -p1 -s < "$HERE"/patches/0001-r5900-quad-saves.patch   # the retail saves in 8-byte slots
+git apply --whitespace=nowarn "$HERE"/patches/0058-*.patch       # the opt-in -mastra-quad-saves switch
 T=$HERE/transformers
 python3 $T/neutralise_timode_anchor.py gcc/config/mips/mips.c
 python3 $T/enable_loop_padding.py gcc/config/mips/mips.h
@@ -53,12 +55,13 @@ python3 $T/disable_frame_order_default.py gcc/config/mips/mips.c
 python3 $T/pad_div_erratum_nops.py gas/config/tc-mips.c
 python3 $T/neutralise_div_dslot.py gcc
 python3 $T/pad_div_erratum_branch.py gas/config/tc-mips.c >/dev/null
+python3 $T/r5900_mfc1_interlock.py gas/config/tc-mips.c
 sha256sum --check --quiet <<'SUMS'
-4a6a1ae14448e504eef4f58450973ebcd6c3ba45fdf204961642f0b97138fb8a  gcc/config/mips/mips.c
-87d59c06d047cf7252349cb02aebc266f8b4dcecd537c827e6ec3966a10bbfc3  gcc/config/mips/mips.h
-9720897dc353fd246c6f94d5882c3beb16c81fa9e42438ee8d184c8a78a581ad  gcc/config/mips/mips.md
+8e6d97e725c1af7533d8b474e9b7a12fde95b0363eb4db99040c9e2596daba3a  gcc/config/mips/mips.c
+d43a3f2274e1ca640c1f877b9aa2a82b2e337298d7d0ebf7e5498fe91b3523f4  gcc/config/mips/mips.h
+9f6894ef4dfaa19708b4fd68203a1424e36b680741969b8b3531c92c0a628e40  gcc/config/mips/mips.md
 38d52727addc0b0b299700835788808cf23fe59c863a961cdd6f28170faaf3cc  gcc/toplev.c
-b22dfff81e41d3d378b1f35a231d2c11b60700967d6faf70b820f6300caf81d6  gas/config/tc-mips.c
+35a06b9ab08420b29503c6bb97d954ddb3d65571326f6f54ba3f315ad6aac029  gas/config/tc-mips.c
 SUMS
 
 # bison 1.28: the 1999 grammars need its skeleton.
@@ -85,4 +88,8 @@ export CC="gcc -m32" CFLAGS="$F"
   make -j$J all-gas
 } > "$W/build.log" 2>&1 || { tail -30 "$W/build.log"; exit 1; }
 cp gcc/cc1 gcc/cpp "$OUT/" && cp gas/as-new "$OUT/as"
+# the compiler's own headers (stdarg.h and the va-*.h it includes), as the
+# SDK recipe installs them: an authored unit that includes <stdarg.h>
+# (a varargs body) needs them on the preprocessor's path.
+mkdir -p "$OUT/include" && cp "$W/src/gcc/ginclude/"*.h "$OUT/include/"
 echo "compiler in $OUT"

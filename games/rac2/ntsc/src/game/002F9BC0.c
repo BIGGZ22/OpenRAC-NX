@@ -43,7 +43,6 @@ INCLUDE_ASM("asm/game", func_002FA880);
 
 INCLUDE_ASM("asm/game", func_002FAD30);
 
-INCLUDE_ASM("asm/game", func_002FAD68);
 
 extern volatile int D_001A7A20[] __attribute__((sda));
 extern void func_002FAD68(int);

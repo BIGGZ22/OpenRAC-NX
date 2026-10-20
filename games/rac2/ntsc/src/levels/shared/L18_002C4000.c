@@ -20,7 +20,7 @@ extern BatchA_A18_u8 D_0018C0D4;
 
 INCLUDE_ASM("asm/levels", func_L18_002C4000);
 
-INCLUDE_ASM("asm/levels", func_L18_002C41F0);
+/* func_L18_002C41F0 is defined in L18_002C4000-g8.c (this unit has $gp access for it). */
 
 INCLUDE_ASM("asm/levels", func_L18_002CFD68);
 
@@ -112,7 +112,7 @@ float func_L18_0035D5A8(BatchA_A18_s32 a0, BatchA_A18_s32 a1, BatchA_A18_s32 a2,
 
 INCLUDE_ASM("asm/levels", func_L18_0035D5F8);
 
-INCLUDE_ASM("asm/levels", func_L18_003F50D8);
+/* func_L18_003F50D8 is matched in L18_003F50D8.c (built with -mno-split-addresses). */
 
 INCLUDE_ASM("asm/levels", func_L18_003F5198);
 
@@ -122,7 +122,40 @@ INCLUDE_ASM("asm/levels", func_L18_003F5650);
 
 INCLUDE_ASM("asm/levels", func_L18_003F6CA8);
 
-INCLUDE_ASM("asm/levels", func_L18_003F7198);
+extern float func_00282E48(char *, void *);
+extern void func_002A93B0(void *);
+extern void func_L18_003F74B8(void *a0, void *a1);
+extern void func_002B0990(char *a0, char *a1, BatchA_A18_s32 a2, BatchA_A18_s32 a3, float f12);
+extern char D_L18_001B97C0[];
+
+/* Advances the object's step counter, refreshes the emitter and asks the particle
+   system for the new position; the distance test only runs when the flag is set. */
+void func_L18_003F7198(void *a0) {
+    BatchA_A18_u8 *s0 = (BatchA_A18_u8 *)a0;
+    void *s1;
+    unsigned short v1;
+
+    v1 = *(unsigned short *)((char *)s0 + 0x96);
+    if (v1 <= 0xFFFE) {
+        s1 = *(void **)((char *)s0 + 0x68);
+        *(unsigned short *)((char *)s0 + 0x96) = v1 + 1;
+    } else {
+        s1 = *(void **)((char *)s0 + 0x68);
+    }
+    *(unsigned short *)((char *)s1 + 0x290) = 0;
+    if (s0[0x31] != 0) {
+        if (func_00282E48((char *)s0 + 0x10, D_L18_001B97C0) < 24.0f) {
+            func_002A93B0(s0);
+            s0[0x6F] = 0x16;
+        }
+    }
+    if (*(float *)((char *)s0 + 0x10) < 5.0f || *(float *)((char *)s0 + 0x10) > 1018.0f ||
+        *(float *)((char *)s0 + 0x14) < 5.0f || *(float *)((char *)s0 + 0x14) > 1018.0f ||
+        *(float *)((char *)s0 + 0x18) < 5.0f || *(float *)((char *)s0 + 0x18) > 1018.0f) {
+        func_L18_003F74B8(s0, 0);
+    }
+    func_002B0990((char *)s0, (char *)s1 + 0x2B0, 2, 1, 1.8f);
+}
 
 extern float func_00283248(float a, float b);
 
@@ -147,10 +180,48 @@ BatchA_A18_s32 func_L18_003F7358(BatchA_A18_u8 *a0, BatchA_A18_u8 *a1) {
     return r;
 }
 
-INCLUDE_ASM("asm/levels", func_L18_003F73B8);
+/* func_L18_003F73B8 */
+extern float func_00282E80(char *, void *);
+extern float func_00283248(float, float);
+extern float func_00283C80(float, float);
+
+/* The 1.5707964 spelling is load-bearing: this assembler under-rounds by an ulp
+   (1.5707964f, 1.57079637f and even 1.5707963705062866f all encode 0x3FC90FDB,
+   retail holds 0x3FC90FDC).  Measured by sweeping spellings, COMPILER-NOTES. */
+int func_L18_003F73B8(char *a0, float *a1)
+{
+    char *s1 = a0;
+    float *s0 = a1;
+    int r = 0;
+
+    if (*(unsigned char *)(s1 + 0x31) != 0) {
+        if (func_00282E80(s1 + 0x10, a1) < 3.2f) {
+            if (func_00283C80(*(float *)(s1 + 0xF8),
+                             func_00283248(s0[0] - *(float *)(s1 + 0x10),
+                                           s0[1] - *(float *)(s1 + 0x14))) < 1.5707965f)
+                r = 1;
+        }
+    }
+    return r;
+}
 
 
-INCLUDE_ASM("asm/levels", func_L18_003F7470);
+extern BatchA_A18_s32 func_002A77E0(BatchA_A18_s32 a0);
+
+extern BatchA_A18_s32 func_L18_003F75E8(BatchA_A18_s32 a0, BatchA_A18_u8 *a1);
+
+/* runs the 0x1E gate and, when it clears, the record query into a local buffer;
+   answers whether the query found anything */
+BatchA_A18_s32 func_L18_003F7470(BatchA_A18_u8 *a0) {
+    BatchA_A18_u8 buf[16];
+    BatchA_A18_s32 p;
+
+    if (func_002A77E0(0x1E) == 0) {
+        p = *(BatchA_A18_s32 *)(a0 + 0x68);
+        return func_L18_003F75E8(*(BatchA_A18_s32 *)((char *)p + 0x25C), buf) != 0;
+    }
+    return 0;
+}
 
 INCLUDE_ASM("asm/levels", func_L18_003F74B8);
 
@@ -168,11 +239,84 @@ void func_L18_003F7590(BatchA_A18_u8 *a0) {
         (unsigned short)(*(unsigned short *)(a0 + 0x34) & 0xEFFF);
 }
 
-INCLUDE_ASM("asm/levels", func_L18_003F75E8);
+/* The group id lists, the entity bank base and the resident group count. The two scalars are
+   `sda` arrays of unknown size: cc1 emits the one-instruction load, which the assembler
+   expands absolute (`lui`/`lw`) as retail has it in this -G0 unit. */
+extern unsigned short *D_L18_001FB320[];
+extern char *D_L18_001B281C[] __attribute__((sda));
+extern int D_L18_001B2838[] __attribute__((sda));
+
+/* Counts the entities of kind 0xB69 in state 1 that the group's id list names, stores the count
+   through a1 and returns the last of them (0 when there is none). Retail compares the state with
+   0xFE and 0xFD before testing it for 1. */
+BatchA_A18_s32 func_L18_003F75E8(BatchA_A18_s32 a0, BatchA_A18_u8 *a1) {
+    unsigned short *q;
+    unsigned char *e;
+    unsigned char *r;
+    BatchA_A18_s32 *cnt = (BatchA_A18_s32 *)a1;
+
+    *cnt = 0;
+    if (a0 == -1)
+        return 0;
+    r = 0;
+    for (q = D_L18_001FB320[a0];
+         (a0 & 0xFF) != 0xFF && a0 <= D_L18_001B2838[0] && q != 0 &&
+         ((short)q[-1] >= 0 || q == D_L18_001FB320[a0]);
+         q++) {
+        e = (unsigned char *)(D_L18_001B281C[0] + ((*q & 0x7FFF) << 8));
+        if (e == 0)
+            break;
+        if (*(short *)(e + 0xAA) == 0xB69 && e[0x20] != 0xFE && e[0x20] != 0xFD && e[0x20] == 1) {
+            (*cnt)++;
+            r = e;
+        }
+    }
+    return (BatchA_A18_s32)r;
+}
 
 INCLUDE_ASM("asm/levels", func_L18_003F76F0);
 
-INCLUDE_ASM("asm/levels", func_L18_003F7818);
+extern void func_00282F20(void *a0, void *a1, float f12);
+extern void func_00282CC0(void *a0, void *a1, void *a2);
+
+/* the object's state flags and aim angle are set, then the target is handed
+   over to the object's controller */
+void func_L18_003F7818(BatchA_A18_u8 *s2, BatchA_A18_u8 *s3, BatchA_A18_s32 s7) {
+    float local[4];
+    BatchA_A18_u8 *s4;
+    BatchA_A18_s32 *p;
+    BatchA_A18_s32 v1;
+    BatchA_A18_u8 state;
+
+    s4 = *(BatchA_A18_u8 **)(s2 + 0x68);
+    state = s2[0x20];
+    if (state == 1) {
+        p = *(BatchA_A18_s32 **)(s2 + 0x24);
+        *(unsigned short *)(s2 + 0x34) =
+            (unsigned short)((*(unsigned short *)(s2 + 0x34) & 0xFFBE) | 0x1000);
+        v1 = p[4];
+        *(unsigned short *)(s2 + 0x34) =
+            (unsigned short)(*(unsigned short *)(s2 + 0x34) & 0xFFFD);
+        *(BatchA_A18_s32 *)(s2 + 0x98) = v1;
+        s4[0x2E] = state;
+        s2[0x7F] = 0;
+        *(float *)(s4 + 0x20) = (float)*(short *)(s4 + 0x24);
+        func_00282F20(local, s3 + 0xC0, -0.5f);
+        func_00282CC0(s2 + 0x10, s3 + 0x10, local);
+        if (s7 != 0) {
+            func_00282F20(local, s3 + 0xD0, 0.5f);
+        } else {
+            func_00282F20(local, s3 + 0xD0, -0.5f);
+        }
+        func_00282CC0(s2 + 0x10, s3 + 0x10, local);
+        *(float *)(s2 + 0xF8) =
+            func_00283248(*(float *)(s3 + 0x10) - *(float *)(s2 + 0x10),
+                          *(float *)(s3 + 0x14) - *(float *)(s2 + 0x14));
+    }
+    *(BatchA_A18_s32 *)(s4 + 0x258) = (BatchA_A18_s32)s3;
+    func_002A7750(s2, 0xB, 2);
+    func_L18_003F8E30((BatchA_A18_u8 *)*(BatchA_A18_s32 *)(s4 + 0x258));
+}
 
 INCLUDE_ASM("asm/levels", func_L18_003F7988);
 
@@ -200,9 +344,47 @@ void func_L18_003F7A88(BatchA_A18_u8 *a0) {
     }
 }
 
-INCLUDE_ASM("asm/levels", func_L18_003F7AB8);
+/* func_L18_003F7AB8 is defined in L18_002C4000-g8.c (this unit has $gp access for it). */
 
-INCLUDE_ASM("asm/levels", func_L18_003F8D28);
+extern void func_L18_003FB5E8(void *a0, void *a1);
+extern void func_00282F20(void *a0, void *a1, float f12);
+extern void func_00282CC0(void *a0, void *a1, void *a2);
+extern float func_002A89A8(void *a0, BatchA_A18_s32 a1, float f12);
+extern void func_002833F0(char *a, char *b);
+
+/* Moves the object's state word, refreshes the two transform matrices through the
+   shared helpers and writes the measured distance back into the object. */
+void func_L18_003F8D28(void *a0, void *a1, void *a2) {
+    char scratch[16];
+    char mat[16];
+    unsigned short v1;
+    void *p;
+    void *s4;
+    void *v;
+    float f;
+
+    v1 = *(unsigned short *)((char *)a0 + 0x34);
+    p = *(void **)((char *)a0 + 0x24);
+    v1 = (unsigned short)((v1 & 0xFFBE) | 0x1000);
+    *(unsigned short *)((char *)a0 + 0x34) = v1;
+    v = *(void **)((char *)p + 0x10);
+    *(void **)((char *)a0 + 0x98) = v;
+    func_002A7750((BatchA_A18_u8 *)a0, 5, 2);
+    s4 = *(void **)((char *)a0 + 0x68);
+    *(void **)((char *)s4 + 0x74C) = a2;
+    if (a1 != 0) {
+        func_L18_003FB5E8(a1, mat);
+        func_00282F20(scratch, (char *)a1 + 0xD0, -0.3f);
+        func_00282CC0((char *)a0 + 0x10, mat, scratch);
+        *(float *)((char *)a0 + 0x18) = func_002A89A8((char *)a0 + 0x10, 0, 0.5f);
+        f = func_00283248(*(float *)mat - *(float *)((char *)a0 + 0x10),
+                           *(float *)(mat + 4) - *(float *)((char *)a0 + 0x14));
+        *(float *)((char *)a0 + 0xF8) = f;
+        func_002833F0((char *)a0 + 0xC0, (char *)a0 + 0xF0);
+        *(void **)((char *)s4 + 0x750) = a1;
+        *(BatchA_A18_u8 *)((char *)a0 + 0x7F) = 0;
+    }
+}
 
 /* A18-void-store-16 freshly exact-verified under family reservation */
 void func_L18_003F8E30(BatchA_A18_u8 *s) {
@@ -249,7 +431,46 @@ INCLUDE_ASM("asm/levels", func_L18_003F9E50);
 
 INCLUDE_ASM("asm/levels", func_L18_003F9EF0);
 
-INCLUDE_ASM("asm/levels", func_L18_003F9FB0);
+extern void func_L18_003FC9B8(unsigned char *a0);
+extern void func_L18_003F7988(unsigned char *a0);
+
+/* Slot i of the object's eight group ids (the words at +0x60). Retail rebuilds the slot address
+   at every test of the walk, which is what an inline helper expanded in place does. */
+static __inline__ int L18_GroupId(unsigned char *p, int i) {
+    int off = i << 2;
+    int *ids = (int *)(p + 0x60);
+    return *(int *)((char *)ids + off);
+}
+
+/* Walks the id list of each of the object's eight groups and, for every entity in it, calls the
+   handler of its kind (0xD5C, 0x11CC, 0xD9B, 0x11CF or 0xB69), clears the entity's word at +0x98
+   and sets bits 0 and 1 of its flags at +0x34; then stores -1 at +0x88 of the object. */
+void func_L18_003F9FB0(unsigned char *a0) {
+    unsigned char *p = *(unsigned char **)(a0 + 0x68);
+    unsigned short *q;
+    unsigned char *e;
+    int i;
+
+    for (i = 0; i < 8; i++) {
+        for (q = D_L18_001FB320[L18_GroupId(p, i)];
+             (L18_GroupId(p, i) & 0xFF) != 0xFF && L18_GroupId(p, i) <= D_L18_001B2838[0] &&
+             q != 0 && ((short)q[-1] >= 0 || q == D_L18_001FB320[L18_GroupId(p, i)]);
+             q++) {
+            e = (unsigned char *)(D_L18_001B281C[0] + ((*q & 0x7FFF) << 8));
+            if (e == 0)
+                break;
+            if (*(short *)(e + 0xAA) == 0xD5C || *(short *)(e + 0xAA) == 0x11CC ||
+                *(short *)(e + 0xAA) == 0xD9B || *(short *)(e + 0xAA) == 0x11CF) {
+                func_L18_003FC9B8(e);
+            } else if (*(short *)(e + 0xAA) == 0xB69) {
+                func_L18_003F7988(e);
+            }
+            *(int *)(e + 0x98) = 0;
+            *(unsigned short *)(e + 0x34) |= 3;
+        }
+    }
+    *(int *)(p + 0x88) = -1;
+}
 
 INCLUDE_ASM("asm/levels", func_L18_003FA180);
 
@@ -428,4 +649,6 @@ INCLUDE_ASM("asm/levels", func_L18_004273F0);
 
 INCLUDE_ASM("asm/levels", func_L18_00427688);
 
+/* func_L18_00427B48: 144 bytes against retail's 148; the chain pointer and the
+   stored 1 take each other's register. Deposited in nonmatching/levels/. */
 INCLUDE_ASM("asm/levels", func_L18_00427B48);

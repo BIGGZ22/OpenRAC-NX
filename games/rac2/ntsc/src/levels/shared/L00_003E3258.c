@@ -1,5 +1,33 @@
 #include "include_asm.h"
 
+#define RAC2_T_VEC16_FC936841D
+
+typedef struct {
+    char pad_000[0x140];
+    float x_140;
+    float y_144;
+    float z_148;
+} L00AimVector;
+
+typedef struct {
+    float x;
+    float y;
+    float z;
+    float w;
+} Vec16_Fc936841d;
+
+typedef struct {
+    void *object;
+    int index;
+    int unused0;
+    float scale;
+    int unused1[4];
+} Entry_24efc0;
+
+extern char *D_L00_001B2B54 __attribute__((sda));
+
+extern L00AimVector D_L00_001B8C80;
+
 extern void func_002833F0_1(char *a, char *b);
 
 extern float func_00283198_1(float value);
@@ -24,16 +52,6 @@ extern void func_00282CF0_9(char *local, char *first, char *second);
 
 extern void func_00282CC0_15(char *target, char *first, char *local);
 
-#ifndef RAC2_T_VEC16_FC936841D
-#define RAC2_T_VEC16_FC936841D
-typedef struct {
-    float x;
-    float y;
-    float z;
-    float w;
-} Vec16_Fc936841d;
-#endif
-
 extern int func_002A7820_2(int, int);
 
 extern float func_002A7878_5(float, float);
@@ -41,6 +59,53 @@ extern float func_002A7878_5(float, float);
 extern float func_002A7940_2(void);
 
 extern void func_00281EB8(char *, int, int, int, float, float, float);
+
+extern void ref_L00_003E4948_00(void);
+
+extern int D_L00_001B05DC_2 __attribute__((sda));
+
+extern int D_L00_001B2B50_1 __attribute__((sda));
+
+extern int D_L00_001B05DC_1 __attribute__((sda));
+
+extern int func_002B4038(short id, int mode);
+
+extern int func_00283DB8(Vec16_Fc936841d *v, float scale);
+
+extern void func_0029F338(char *object);
+
+extern void func_L00_003E5710(char *object);
+
+extern void func_L00_003E5978(char *object);
+
+extern void func_L00_003E55B0(char *object);
+
+extern void func_L00_003E5BD8(char *object);
+
+extern void func_L00_003E6030(char *object);
+
+extern void func_L00_003E6710(char *object);
+
+extern int func_00282948(void *p);
+
+extern int func_001163B0(void);
+
+extern void func_L00_003E6778(char *rec, int a, float b, float c, int d);
+
+extern void func_L00_003E6C10(char *rec);
+
+extern void func_L00_003E6F48(char *object);
+
+extern int func_00283CF0(float value);
+
+extern int func_00283D38(char *object, int index, float scale);
+
+extern void func_002A0488(int handle, int a, int b, int c);
+
+extern Entry_24efc0 D_L00_0024EFC0[];
+
+#ifndef RAC2_T_VEC16_FC936841D
+#endif
 
 INCLUDE_ASM("asm/levels", func_L00_003E3258);
 
@@ -86,8 +151,6 @@ INCLUDE_ASM("asm/levels", func_L00_003E3A18);
 
 INCLUDE_ASM("asm/levels", func_L00_003E4508);
 
-extern void ref_L00_003E4948_00(void);
-
 void func_L00_003E4948(void)
 {
     ref_L00_003E4948_00();
@@ -101,16 +164,10 @@ INCLUDE_ASM("asm/levels", func_L00_003E4BF0);
 
 INCLUDE_ASM("asm/levels", func_L00_003E51C0);
 
-extern int D_L00_001B05DC_2 __attribute__((sda));
-
 void func_L00_003E5328(void)
 {
     D_L00_001B05DC_2 = 0;
 }
-
-extern int D_L00_001B2B50_1 __attribute__((sda));
-
-extern int D_L00_001B05DC_1 __attribute__((sda));
 
 /* clears two words of the shared state block; the second store reaches through
    $gp because it lands in the return delay slot */
@@ -120,32 +177,11 @@ void func_L00_003E5330(void)
     D_L00_001B05DC_1 = 0;
 }
 
-
 INCLUDE_ASM("asm/levels", func_L00_003E5340);
-
 
 #include "common.h"
 
-extern int func_002B4038(short id, int mode);
-
-extern int func_00283DB8(Vec16_Fc936841d *v, float scale);
-
-extern void func_0029F338(char *object);
-
-extern void func_L00_003E5710(char *object);
-
-extern void func_L00_003E5978(char *object);
-
-extern void func_L00_003E55B0(char *object);
-
-extern void func_L00_003E5BD8(char *object);
-
-extern void func_L00_003E6030(char *object);
-
-extern void func_L00_003E6710(char *object);
-
 INCLUDE_ASM("asm/levels", func_L00_003E5650);
-
 
 INCLUDE_ASM("asm/levels", func_L00_003E5710);
 
@@ -157,9 +193,36 @@ INCLUDE_ASM("asm/levels", func_L00_003E6030);
 
 INCLUDE_ASM("asm/levels", func_L00_003E64F8);
 
-INCLUDE_ASM("asm/levels", func_L00_003E6628);
+/* Walks the shared table of 0x50-byte records and, for the one owned by OBJECT, either
+   releases the owner when the record is busy, or (half of the time) runs the effect helper
+   twice with a zero amount; the record is then closed. The amount is converted from an int
+   so that the compiler keeps it in a saved register across the calls, as the retail code
+   does. */
+void func_L00_003E6628(char *object)
+{
+    char *rec;
+    int zero = 0;
+    float amount = (float)zero;
+    int offset = 0;
+    int i = 0;
 
-extern void func_L00_003E6F48(char *object);
+    do {
+        i--;
+        rec = (char *)(offset + (int)D_L00_001B2B50_1);
+        if (*(int *)(rec + 0x30) == (int)object) {
+            if (func_00282948(rec + 0x34) != 0) {
+                if (*(int *)(rec + 0x38) == 0) {
+                    *(int *)(rec + 0x30) = 0;
+                }
+            } else if ((func_001163B0() & 1) == 0) {
+                func_L00_003E6778(rec, 0, amount, amount, 0);
+                func_L00_003E6778(rec, 0, amount, amount, 0);
+            }
+            func_L00_003E6C10(rec);
+        }
+        offset += 0x50;
+    } while (i >= 0);
+}
 
 void func_L00_003E6710(char *object)
 {
@@ -238,22 +301,6 @@ INCLUDE_ASM("asm/levels", func_L00_003E7C88);
 
 INCLUDE_ASM("asm/levels", func_L00_003E7E40);
 
-typedef struct {
-    void *object;
-    int index;
-    int unused0;
-    float scale;
-    int unused1[4];
-} Entry_24efc0;
-
-extern int func_00283CF0(float value);
-
-extern int func_00283D38(char *object, int index, float scale);
-
-extern void func_002A0488(int handle, int a, int b, int c);
-
-extern Entry_24efc0 D_L00_0024EFC0[];
-
 void func_L00_003E80A8(int index, char *object)
 {
     int r;
@@ -267,7 +314,6 @@ void func_L00_003E80A8(int index, char *object)
     func_002A0488((int)D_L00_0024EFC0[index].object, r & 0xFF, (r >> 8) & 0xFF,
                   high);
 }
-
 
 INCLUDE_ASM("asm/levels", func_L00_003E8180);
 

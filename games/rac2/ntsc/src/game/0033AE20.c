@@ -123,11 +123,11 @@ char *func_0033B0B8(char *object)
 
 INCLUDE_ASM("asm/game", func_0033B160);
 
-INCLUDE_ASM("asm/game", func_0033B170);
+/* func_0033B170 is matched in 0033AE20-g8.c (-G8 small data). */
 
 INCLUDE_ASM("asm/game", func_0033B538);
 
-INCLUDE_ASM("asm/game", func_0033B540);
+/* func_0033B540 is matched in 0033AE20-g8.c (-G8 small data). */
 
 INCLUDE_ASM("asm/game", func_0033B910);
 

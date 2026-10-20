@@ -105,7 +105,6 @@ void func_00288EA0(void)
 
 INCLUDE_ASM("asm/game", func_00288F48);
 
-INCLUDE_ASM("asm/game", func_00288FB8);
 
 INCLUDE_ASM("asm/game", func_00289018);
 
@@ -254,7 +253,6 @@ int func_0028B5D0(int key)
     return 0;
 }
 
-INCLUDE_ASM("asm/game", func_0028B650);
 
 INCLUDE_ASM("asm/game", func_0028B6C0);
 
@@ -336,5 +334,3 @@ void func_0028BCA0(int arg) {
 INCLUDE_ASM("asm/game", func_0028BCD0);
 
 INCLUDE_ASM("asm/game", func_0028BCE8);
-
-INCLUDE_ASM("asm/game", func_0028BD68);

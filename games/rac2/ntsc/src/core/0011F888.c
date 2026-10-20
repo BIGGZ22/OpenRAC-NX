@@ -25,7 +25,7 @@ int func_0011F888(int *dst, int *src, unsigned int nbytes) {
     return 0;
 }
 
-INCLUDE_ASM("asm/core", func_0011F8C0);
+ASM_FUNC("asm/core", func_0011F8C0);
 
 /* rac1-decomp src/core/0011DBE8.c: func_0011DC50 */
 /* Reads a word through r1_func_00118CF0, rewrites its 13..15 bit field to 1,

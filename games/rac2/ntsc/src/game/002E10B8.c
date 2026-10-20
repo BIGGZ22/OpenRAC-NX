@@ -170,11 +170,40 @@ void func_002E37B0(void)
         *(long long *)((char *)resident->table + index * 16) = 0;
 }
 
-INCLUDE_ASM("asm/game", func_002E3820);
 
 INCLUDE_ASM("asm/game", func_002E3938);
 
-INCLUDE_ASM("asm/game", func_002E3940);
+typedef struct {
+    int field0;
+    int field4;
+} Entry3940;
+
+typedef struct {
+    char pad0[6];
+    short count;
+    char pad1[24];
+    Entry3940 *entries[1];
+} Table3940;
+
+extern Table3940 *D_001B20C0 __attribute__((sda));
+
+extern void func_002E3BD8(void *);
+
+extern void func_002E3998(void *);
+
+void func_002E3940(int index)
+{
+    Table3940 *table = D_001B20C0;
+
+    if (index < table->count) {
+        Entry3940 *entry = table->entries[index];
+
+        if (entry->field4 != 0)
+            func_002E3BD8(entry);
+        else
+            func_002E3998(entry);
+    }
+}
 
 INCLUDE_ASM("asm/game", func_002E3998);
 
@@ -203,9 +232,7 @@ void func_002E4478(void *object)
     }
 }
 
-INCLUDE_ASM("asm/game", func_002E4528);
 
-INCLUDE_ASM("asm/game", func_002E45C8);
 
 float func_002E46C0(char *self, char *p)
 {
@@ -215,7 +242,45 @@ float func_002E46C0(char *self, char *p)
     return F391de845_FUN_002E45C8(q, v, q[0], q[1]);
 }
 
-INCLUDE_ASM("asm/game", func_002E4708);
+extern float D_L00_001B8DC0[];
+
+extern void func_00282CF0(void *dst, void *src, void *arg);
+extern float func_00283248(float a, float b);
+extern float func_00283B98(float a, float b);
+extern float func_00282E20(void *p);
+extern float func_00283BE0(float a, float b);
+extern int func_00283CF0(float a);
+
+void func_002E4708(void *self, void *other)
+{
+    struct AngleState { char reserved[0x40]; float angle; };
+    struct AngleState *state = (struct AngleState *)self;
+    float buf[4];
+    float w;
+    float r;
+
+    func_00282CF0(buf, other, D_L00_001B8DC0);
+    w = -func_00283248(buf[0], buf[1]);
+    w = func_00283B98(w, D_L00_001B8DC0[6]);
+    if (w < 0.0f)
+        w += 6.283185307179586f;
+    if (func_00282E20(buf) < 2.0f) {
+        if (state->angle >= 0.0f) {
+            r = func_00283BE0(w, state->angle);
+            if (r > 0.2f) {
+                w = func_00283B98(state->angle, 0.2f);
+            } else if (r < -0.2f) {
+                w = func_00283BE0(state->angle, 0.2f);
+            }
+            state->angle = w;
+        } else {
+            state->angle = w;
+        }
+    } else {
+        state->angle = -1.0f;
+    }
+    func_00283CF0(w * 57.2957763671875f);
+}
 
 void func_002E4860(void)
 {
@@ -353,7 +418,28 @@ int func_002E5DA0(int index, int value, char *object, int kind)
     return result;
 }
 
-INCLUDE_ASM("asm/game", func_002E5E58);
+extern u8 *D_001B16AC __attribute__((sda));
+
+extern int D_001A8BBC __attribute__((sda));
+
+int func_002E5E58(int index, int value, void *object)
+{
+    u8 *table = D_001B16AC;
+    int result;
+    u8 *row;
+
+    if (table == 0)
+        return -1;
+    if (index >= D_001A8BBC)
+        return -1;
+    result = func_002E5AD0((char *)table + index * 32, value, (char *)object, 0, 0x400);
+    if (result >= 0) {
+        row = D_00188660 + result * 0x70;
+        *(int *)(row + 0x88) = object;
+        *(short *)(row + 0x7E) = index;
+    }
+    return result;
+}
 
 INCLUDE_ASM("asm/game", func_002E5EF0);
 

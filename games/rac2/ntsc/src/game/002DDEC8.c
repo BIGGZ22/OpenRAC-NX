@@ -14,7 +14,75 @@ INCLUDE_ASM("asm/game", func_002DDEC8);
 
 INCLUDE_ASM("asm/game", func_002DE0D0);
 
-INCLUDE_ASM("asm/game", func_002DE3A0);
+/* The chunk table: a key and its flags, one pair per chunk. */
+typedef struct {
+    u32 key;
+    u32 flags;
+} Chunk;
+
+extern int D_001B1F50[] __attribute__((sda));
+extern s32 D_001F2840[];
+
+/* Fills the chunk table at D_001B1F50 with (key, flags) pairs: the keys step
+   by 0x11800 for the small chunks and by 0x4F000 for the large ones, and the
+   flags say which. With a parameter it lays out four groups of chunks, without
+   one only the first; the rest of the table is cleared. The retail function
+   returns nothing, so it is void here (002D5E98.c declares it int and drops
+   the result). */
+void func_002DE3A0(s32 param)
+{
+    s32 *state = D_001F2840;
+    u32 key1 = state[0x118 / 4];
+    u32 key2 = state[0x11C / 4];
+    s32 n1, n2, n3, n4;
+    s32 idx, lim;
+
+    if (!param) {
+        n1 = 1;
+        n2 = 0;
+        n3 = 0;
+        n4 = 0;
+    } else {
+        n1 = 2;
+        n2 = 1;
+        n3 = 2;
+        n4 = 1;
+    }
+    idx = 0;
+    lim = n1;
+    while (idx < lim) {
+        ((Chunk *)D_001B1F50)[idx].key = key1;
+        ((Chunk *)D_001B1F50)[idx].flags = 0;
+        key1 += 0x11800;
+        idx++;
+    }
+    lim += n2;
+    while (idx < lim) {
+        ((Chunk *)D_001B1F50)[idx].key = key2;
+        ((Chunk *)D_001B1F50)[idx].flags = 0;
+        key2 += 0x11800;
+        idx++;
+    }
+    lim += n3;
+    while (idx < lim) {
+        ((Chunk *)D_001B1F50)[idx].key = key1;
+        ((Chunk *)D_001B1F50)[idx].flags = 1;
+        key1 += 0x4F000;
+        idx++;
+    }
+    lim += n4;
+    while (idx < lim) {
+        ((Chunk *)D_001B1F50)[idx].key = key2;
+        ((Chunk *)D_001B1F50)[idx].flags = 1;
+        key2 += 0x4F000;
+        idx++;
+    }
+    while (idx < 5) {
+        ((Chunk *)D_001B1F50)[idx].flags = 0;
+        ((Chunk *)D_001B1F50)[idx].key = 0;
+        idx++;
+    }
+}
 
 INCLUDE_ASM("asm/game", func_002DE550);
 

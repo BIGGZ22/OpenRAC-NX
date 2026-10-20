@@ -1,10 +1,9 @@
 #include "include_asm.h"
 
+typedef struct { int id; int value; } MappingEntry;
+
 typedef struct { int v[12]; } Blob;
 
-extern Blob D_L00_001A8E60;
-
-/* Find a mapped record by its unsigned halfword class and return its opaque word. */
 typedef struct {
     unsigned int marker;
     unsigned char reserved04[0x38];
@@ -12,20 +11,27 @@ typedef struct {
     unsigned char reserved3E[0xa2];
 } MappedClassEntry;
 
-extern unsigned char D_00139568[];
-
-extern MappedClassEntry D_L00_00262570[];
-
 typedef int s32;
 
 typedef unsigned char u8;
 
-/* func_002889B8 : clears three fields, initializes a block, then sets two flags */
+typedef unsigned int u32;
+
+extern MappingEntry D_002403C0[];
+
+extern Blob D_L00_001A8E60;
+
+extern unsigned char D_00139568[];
+
+extern MappedClassEntry D_L00_00262570[];
+
 extern s32 func_00115484(u8 *, s32, s32);
 
 extern void func_002889B8(unsigned char *);
 
-typedef unsigned int u32;
+/* Find a mapped record by its unsigned halfword class and return its opaque word. */
+
+/* func_002889B8 : clears three fields, initializes a block, then sets two flags */
 
 /* 48-byte `ldl/ldr` → `sdl/sdr` stack copy of an absolute global, then a */
 int func_002880E0(int x)
@@ -39,7 +45,6 @@ int func_002880E0(int x)
     return 0;
 }
 
-INCLUDE_ASM("asm/game", func_00288188);
 
 INCLUDE_ASM("asm/game", func_00288208);
 
@@ -63,7 +68,12 @@ INCLUDE_ASM("asm/game", func_00288508);
 
 INCLUDE_ASM("asm/game", func_002886C8);
 
-INCLUDE_ASM("asm/game", func_00288768);
+int func_00288768(int value) {
+    int i;
+    for (i = 0; D_002403C0[i].id != -2; i++)
+        if (value == D_002403C0[i].id) return 1;
+    return 0;
+}
 
 INCLUDE_ASM("asm/game", func_002887B0);
 

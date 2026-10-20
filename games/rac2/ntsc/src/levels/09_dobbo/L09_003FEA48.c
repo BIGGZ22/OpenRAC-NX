@@ -1,20 +1,43 @@
 #include "common.h"
 
 extern void func_L08_00328BB0();
+
 extern void func_L01_00321178();
+
 extern void func_002B4FF0(f32 a);
+
 extern char *D_L09_001B285C __attribute__((sda));
+
 extern char *D_L09_001FFFB560[];
+
 extern void func_2EA110(char *p);
+
 extern void func_31F500(char *a0, char *a1, s32 a2, f32 f12, f32 f13);
+
 extern void func_322578(char *a0, char *a1, s32 a2, s32 a3, f32 f12);
+
 extern void func_L09_004081F0(char *a0, s32 a1, char *a2, s32 a3);
+
 extern void func_L09_00408138(char *a0, char *a1, s32 a2, s32 a3, s32 a4);
+
 extern s32 func_325E78(char *a0, s32 a1);
+
 extern void func_318450(char *a0, s32 a1, s32 a2, s32 a3, s32 a4, s32 a5,
                         f32 f12, f32 f13, f32 f14);
+
 extern char D_L09_00189EA0[];
+
 extern void func_L09_00406BA0(s32 a0, u8 a1);
+
+extern char D_L09_001B9C30[];
+
+extern f32 func_2EA578(char *a0, char *a1);
+
+extern f32 func_2EA3E0(f32 x);
+
+extern void func_2EACD0(char *a0, char *a1);
+
+extern void func_L09_00408058(char *a0, s32 a1, s32 a2, s32 a3);
 
 /* Level 09 helpers. */
 void func_L09_00403080(char *a0) {
@@ -134,7 +157,7 @@ void func_L09_00404F90(char *a0, s32 a1, s32 a2) {
     }
 }
 
-INCLUDE_ASM("asm/levels", func_L09_003FEA48);
+/* func_L09_003FEA48 is defined in L09_003FEA48-g8.c (this unit has no $gp access for it). */
 
 INCLUDE_ASM("asm/levels", func_L09_003FEAE8);
 
@@ -145,11 +168,6 @@ INCLUDE_ASM("asm/levels", func_L09_003FEF00);
 INCLUDE_ASM("asm/levels", func_L09_00402D50);
 
 INCLUDE_ASM("asm/levels", func_L09_00403100);
-
-extern char D_L09_001B9C30[];
-extern f32 func_2EA578(char *a0, char *a1);
-extern f32 func_2EA3E0(f32 x);
-extern void func_2EACD0(char *a0, char *a1);
 
 void func_L09_0040B008(char *a0) {
     char *s1 = a0;
@@ -173,13 +191,13 @@ void func_L09_0040B008(char *a0) {
 INCLUDE_ASM("asm/levels", func_L09_00403270);
 
 INCLUDE_ASM("asm/levels", func_L09_00403398);
+/* func_L09_00403700: 160 bytes against retail's 152, the guard comes out as `bnel`.
+   Deposited in nonmatching/levels/func_L09_00403700.c. */
 INCLUDE_ASM("asm/levels", func_L09_00403700);
 
 INCLUDE_ASM("asm/levels", func_L09_00403798);
 
 INCLUDE_ASM("asm/levels", func_L09_00404C50);
-
-INCLUDE_ASM("asm/levels", func_L09_00404E58);
 
 INCLUDE_ASM("asm/levels", func_L09_004050E0);
 
@@ -188,6 +206,8 @@ INCLUDE_ASM("asm/levels", func_L09_004052F8);
 INCLUDE_ASM("asm/levels", func_L09_00405490);
 
 INCLUDE_ASM("asm/levels", func_L09_00405610);
+/* func_L09_00406BF8: 112 bytes against retail's 108, one saved register too many.
+   Deposited in nonmatching/levels/func_L09_00406BF8.c. */
 INCLUDE_ASM("asm/levels", func_L09_00406BF8);
 
 void func_L09_00406C90(char *a0) {
@@ -200,15 +220,12 @@ void func_L09_00406C90(char *a0) {
     *(s32 *)(a1 + 0x5C) = -1;
 }
 
-
 INCLUDE_ASM("asm/levels", func_L09_00406CC0);
 
 INCLUDE_ASM("asm/levels", func_L09_00406E78);
 
 INCLUDE_ASM("asm/levels", func_L09_00406FC8);
 INCLUDE_ASM("asm/levels", func_L09_00408058);
-
-extern void func_L09_00408058(char *a0, s32 a1, s32 a2, s32 a3);
 
 /* Sets an entity's colour key, or hands an off-kind entity to the shared body. */
 void func_L09_00408138(char *a0, char *a1, s32 a2, s32 a3, s32 a4)
@@ -250,7 +267,23 @@ void func_L09_00408138(char *a0, char *a1, s32 a2, s32 a3, s32 a4)
     }
     func_L09_00408058(a1, a2, a3, a4);
 }
-INCLUDE_ASM("asm/levels", func_L09_004081F0);
+/* Hands the record's colour key to every entry the index names, negating the
+   three offsets when the caller asks for it. */
+void func_L09_004081F0(char *a0, s32 a1, char *a2, s32 a3) {
+    char *v1 = a2;
+    char *p = D_L09_001B285C + (a1 << 8);
+
+    if (p == 0) {
+        return;
+    }
+    if (a3 != 0) {
+        func_L09_00408138(a0, p, *(s8 *)(v1 + 0xBC), *(s8 *)(v1 + 0xBD),
+                          *(s8 *)(v1 + 0xBF));
+    } else {
+        func_L09_00408138(a0, p, -*(s8 *)(v1 + 0xBC), -*(s8 *)(v1 + 0xBD),
+                          -*(s8 *)(v1 + 0xBF));
+    }
+}
 
 INCLUDE_ASM("asm/levels", func_L09_004082D0);
 

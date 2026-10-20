@@ -66,10 +66,18 @@ extern float D_L18_001B1524 __attribute__((sda));
 extern int D_L18_001B1528 __attribute__((sda));
 extern float D_L18_001B152C __attribute__((sda));
 
-extern char D_L18_001B1480[] __attribute__((sda));
-extern char D_L18_001B1490[] __attribute__((nosda));
+extern char D_L18_001B1480[1] __attribute__((sda));
+extern char D_L18_001B1490[] __attribute__((sda));
 
-INCLUDE_ASM("asm/levels", func_L18_0042FAA8);
+/* Runs the effect twice: once against the shared table at 0x1B1480 and once
+   against the level's own copy at 0x1B1490. */
+void func_L18_0042FAA8(u8 *a0)
+{
+    u8 *s0 = a0;
+
+    func_L18_0042FAE0(a0, D_L18_001B1480);
+    func_L18_0042FAE0(s0, D_L18_001B1490);
+}
 
 INCLUDE_ASM("asm/levels", func_L18_00433088);
 

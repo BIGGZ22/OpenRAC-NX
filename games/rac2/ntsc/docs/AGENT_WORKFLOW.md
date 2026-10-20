@@ -38,6 +38,36 @@ Much of the easy work needs no model at all. Before a wave, check whether a func
 byte-identical to one already matched in rac1-decomp (docs/RAC1-TO-RAC2.md) or to another
 function already matched here; those are carried over, not rewritten.
 
+### Where the body may already exist
+
+Before writing C, look for the body in these places. Each was measured by a worker wave, and
+between them they account for most of what those waves matched: the work is transcription, not
+reconstruction.
+
+- **`symbol_addrs/usa-v2/symbol_addrs.txt`, by address, before anything else**:
+  `grep -in "= 0x0011d620;" symbol_addrs/usa-v2/symbol_addrs.txt`. The file names the function
+  (`sqrt`, `memcpy`, `__sjthrow`, `VfprintfInteger`) and usually carries its provenance - the
+  verbatim source when there is one (`libc.a w_sqrt.o's sqrt`, `newlib's hand-written
+  libc/machine/r5900/memset.S`) - plus the split defects around it. In the 15 October waves every
+  named function was a transcription; the unnamed ones cost an order of magnitude more.
+- **The SDK's own newlib is in this repository's build tree**:
+  `build/sdk-compiler-build/source/ee/newlib/` - `libc/stdlib/mallocr.c`, `libc/stdio/` for the
+  printf family, and `libc/machine/r5900/*.S` for the string routines (which is also why those
+  stay assembly here). It is generated, not committed; run the SDK compiler build first.
+- **The GCC sources the compiler is rebuilt from**: `gcc/frame.c`, `gcc/libgcc2.c` and
+  `gcc/fp-bit.c` inside `gnu-ee-binutils-gcc-1.1.tar.gz`. Two habits decide those bodies: a helper
+  upstream declares `static __inline__` must stay `static __inline__` (without the keyword the
+  callee is not inlined and the body comes out a fraction of its size), and the predicates have to
+  keep their `== CLASS_INFINITY` spelling, not an equivalent constant.
+- **`config/datamine/ntsc-u-sdk-matches.tsv` and `config/datamine/ntsc-u-rac1-matches.tsv`** name
+  functions outright, object by object. Read them before `symbol_addrs`.
+- **rac1-decomp and Lombyte carry the same engine's C.** The address delta is **per object, not
+  global**: +0x3E20 for the libmpeg families, +0x45F0 for 989snd, +0x4280 for libcdvd, +0x21E0 and
+  +0x2D8 in two other units. The reliable anchor is the
+  `/* rac1-decomp src/core/xxxx.c: func_YYYY */` comment already sitting in each `src/core` file -
+  it gives its own unit's delta, and where several of them line up they recalibrate a whole unit.
+  Lombyte's data addresses are RAC2 + 0x17F00, and rac1-decomp's are Lombyte + 0x100.
+
 ## Escalation
 
 1. A Haiku worker gets a handful of small functions. For each it either matches (`tools/check.py`

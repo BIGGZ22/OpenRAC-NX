@@ -396,8 +396,6 @@ long long func_L00_00346D20(void)
     return 0LL;
 }
 
-INCLUDE_ASM("asm/levels", func_L00_00346DB0);
-
 int func_L00_00347A28(void) {
     return 0;
 }
@@ -494,6 +492,54 @@ return_value:
         result = 1;
     else
         func_L00_0030D788(flags);
+    return result;
+}
+
+/* Guarded callback updates: with the pending-input bit set, refresh the value from its source
+   and report it (or the fallback's -1); with a busy bit set report 1; otherwise run the setup
+   call and service the pending request. Three copies differ only in their callees. */
+
+extern int D_00138180[];
+extern int func_L00_0030D5C8(int);
+extern int func_L00_0030D9F8(int);
+extern int func_L00_0030DB48(int);
+extern int func_003415B8(int);
+extern int func_0033E310(int);
+extern int func_003423B0(int);
+extern void func_002D5E98(int);
+
+int func_L00_00346DB0(void)
+{
+    int result = 0;
+    int *state = D_00138180;
+    int flags = state[0x1C4 / 4];
+
+    if (flags & 0x10) {
+        int value = *(int *)(D_L00_001FEC40.source + 0xE0);
+
+        if (value != 0)
+            D_L00_001FEC40.value = value;
+        else if (D_L00_001FEC40.fallback == 0) {
+            value = -1;
+            goto return_value;
+        }
+        value = 0;
+return_value:
+        return value;
+    }
+    if (flags & 0x900)
+        result = 1;
+    else {
+        func_L00_0030D5C8(flags);
+        if ((state[0x1C4 / 4] & 0x40) && D_L00_001A904C_3) {
+            char *entry = (char *)func_003415B8(D_L00_001A904C_3 + 0x3BE08);
+            struct { short unused; unsigned short id; int value; } request;
+
+            request.id = *(unsigned short *)(entry + 8);
+            request.value = *(int *)(entry + 12);
+            func_002D5E98((int)&request);
+        }
+    }
     return result;
 }
 
@@ -701,7 +747,41 @@ long func_L00_0034C6F0(void)
   return 0;
 }
 
-INCLUDE_ASM("asm/levels", func_L00_0034C720);
+/* The same guarded callback update with its own setup call and pending-request reader. */
+int func_L00_0034C720(void)
+{
+    int result = 0;
+    int *state = D_00138180;
+    int flags = state[0x1C4 / 4];
+
+    if (flags & 0x10) {
+        int value = *(int *)(D_L00_001FEC40.source + 0xE0);
+
+        if (value != 0)
+            D_L00_001FEC40.value = value;
+        else if (D_L00_001FEC40.fallback == 0) {
+            value = -1;
+            goto return_value;
+        }
+        value = 0;
+return_value:
+        return value;
+    }
+    if (flags & 0x900)
+        result = 1;
+    else {
+        func_L00_0030D9F8(flags);
+        if ((state[0x1C4 / 4] & 0x40) && D_L00_001A904C_3) {
+            char *entry = (char *)func_0033E310(D_L00_001A904C_3 + 0x3EDB8);
+            struct { short unused; unsigned short id; int value; } request;
+
+            request.id = *(unsigned short *)(entry + 8);
+            request.value = *(int *)(entry + 12);
+            func_002D5E98((int)&request);
+        }
+    }
+    return result;
+}
 
 /* Run the three measured setup calls with an explicit long zero, then return the defined integer zero. */
 /* Candidate function: FUN_002d3390 */
@@ -768,7 +848,41 @@ int func_L00_0034EB78(void)
     return 0;
 }
 
-INCLUDE_ASM("asm/levels", func_L00_0034EC00);
+/* The same guarded callback update with its own setup call and pending-request reader. */
+int func_L00_0034EC00(void)
+{
+    int result = 0;
+    int *state = D_00138180;
+    int flags = state[0x1C4 / 4];
+
+    if (flags & 0x10) {
+        int value = *(int *)(D_L00_001FEC40.source + 0xE0);
+
+        if (value != 0)
+            D_L00_001FEC40.value = value;
+        else if (D_L00_001FEC40.fallback == 0) {
+            value = -1;
+            goto return_value;
+        }
+        value = 0;
+return_value:
+        return value;
+    }
+    if (flags & 0x900)
+        result = 1;
+    else {
+        func_L00_0030DB48(flags);
+        if ((state[0x1C4 / 4] & 0x40) && D_L00_001A904C_3) {
+            char *entry = (char *)func_003423B0(D_L00_001A904C_3 + 0x3E1D8);
+            struct { short unused; unsigned short id; int value; } request;
+
+            request.id = *(unsigned short *)(entry + 8);
+            request.value = *(int *)(entry + 12);
+            func_002D5E98((int)&request);
+        }
+    }
+    return result;
+}
 
 extern void func_L00_0030DB88(void);
 

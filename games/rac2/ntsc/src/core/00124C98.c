@@ -39,8 +39,85 @@ extern char r1_D_00152FB0[];
 extern char r1_D_00152FD8[];
 
 extern char r1_D_00132590[];
-extern int func_00124C98(int arg0);
-INCLUDE_ASM("asm/core", func_00124C98);
+
+extern int r1_D_001363AC;
+
+extern int r1_func_00124780(void);
+
+extern int r1_func_0011AC70(int);
+
+extern void r1_func_0011C820();
+
+extern int r1_D_00136390;
+
+extern int r1_D_00136398;
+
+extern void r1_func_0011AB20(int, void *);
+
+extern int r1_D_00141850;
+
+extern char r1_D_00141858[];
+
+extern int r1_func_00124C28(int);
+
+extern void r1_func_0011AC40(int);
+
+extern void r1_func_0011CF78(int);
+
+extern int r1_D_001363C8;
+
+extern int r1_func_0011D450(void *, unsigned int, int);
+
+extern char r1_D_0013B228[];
+
+extern char r1_D_0013B250[];
+
+extern char r1_D_00137DC8[];
+
+/* rac1-decomp src/core/001208E8.c: func_00121040 */
+/* _sceCd_ncmd_prechk (libcdvd.a cdvd000.o): take the command semaphore,
+   record the command, bind the 0x80000593 server once and retry until it
+   answers. The two wait loops are written out separately, as retail keeps
+   both copies. */
+int func_00124C98(int arg0) {
+    int i;
+    volatile int *sem = &r1_D_001363AC;
+
+    r1_func_00124780();
+    if (*sem != r1_func_0011AC70(*sem)) {
+        if (r1_D_00136390 > 0) {
+            r1_func_0011C820(r1_D_0013B228, arg0, r1_D_00136398);
+        }
+        return 0;
+    }
+    r1_D_00136398 = arg0;
+    r1_func_0011AB20(r1_D_00141850, r1_D_00141858);
+    if (r1_func_00124C28(1) != 0) {
+        r1_func_0011AC40(*sem);
+        return 0;
+    }
+    r1_func_0011CF78(0);
+    if (r1_D_001363C8 >= 0) {
+        return 1;
+    }
+    while (1) {
+        if (r1_func_0011D450(r1_D_00137DC8, 0x80000593, 0) < 0) {
+            if (r1_D_00136390 > 0) {
+                r1_func_0011C820(r1_D_0013B250);
+            }
+            for (i = 0x100000; i != -1; i--)
+                ;
+        } else {
+            if (((SifRpcClientData *)r1_D_00137DC8)->serve != 0) {
+                break;
+            }
+            for (i = 0x100000; i != -1; i--)
+                ;
+        }
+    }
+    r1_D_001363C8 = 0;
+    return 1;
+}
 
 
 INCLUDE_ASM("asm/core", func_00124E08);

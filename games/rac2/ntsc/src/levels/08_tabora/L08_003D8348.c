@@ -139,7 +139,48 @@ INCLUDE_ASM("asm/levels", func_L08_003D8AB0);
 
 INCLUDE_ASM("asm/levels", func_L08_003D8CA8);
 
-INCLUDE_ASM("asm/levels", func_L08_003D9038);
+extern void func_002B60B0(u8 *, float, float, float, float);
+extern int func_00282948(void *);
+extern float func_002A7878(float, float);
+extern float func_00282E80(void *, void *);
+extern int func_002B4FF0(u8 *, void *, float);
+extern float func_00282DF0(void *);
+extern float func_00282C48(float);
+
+int func_L08_003D9038(u8 *object, float accel, float unused1, float damping,
+                     float speed, float unused4, float turn, float friction) {
+    u8 *state = *(u8 **)(object + 0x68);
+    int result;
+    float amount;
+
+    func_002B60B0(object, speed * 0.00027777778450399637f,
+                  turn * 0.01666666753590107f,
+                  accel * 4.848137450608192e-06f,
+                  damping * 0.0002908882452175021f);
+    *(float *)(state + 0x154) = friction;
+    if (func_00282948(state + 0x474) != 0) {
+        *(float *)(state + 0x46C) = -*(float *)(state + 0x46C);
+        *(float *)(state + 0x470) = *(float *)(state + 0x46C) * 0.01745329424738884f;
+        *(int *)(state + 0x474) = func_002A7878(30.0f, 90.0f);
+    }
+    if (*(int *)(state + 0x48C) != 0 ||
+        (object[0x20] == 8 && object[0x95] != 0) ||
+        func_00282E80(object + 0x10, state + 0x3F0) < 5.0f)
+        *(float *)(state + 0x470) = 0;
+    result = func_002B4FF0(object, state + 0x3F0, *(float *)(state + 0x470));
+    amount = func_00282DF0(state + 0x1C0);
+    amount += func_00282C48(*(float *)(state + 0x1D4));
+    if (result & 15) {
+        func_00282948(state + 0x448);
+        amount = func_00282C48(*(float *)(state + 0x1D4)) + 0.010000000707805157f;
+    }
+    *(float *)(object + 0x48) = amount * 29.999998092651367f;
+    if (*(float *)(object + 0x48) > 1.5f)
+        *(float *)(object + 0x48) = 1.5f;
+    else if (*(float *)(object + 0x48) < 0.0f)
+        *(float *)(object + 0x48) = 0;
+    return result;
+}
 
 /* the countdown runs while the entry is flagged, then the timer field saturates */
 void func_L08_003D9208(Ent *a0)
@@ -181,6 +222,13 @@ INCLUDE_ASM("asm/levels", func_L08_003F76C0);
 
 INCLUDE_ASM("asm/levels", func_L08_003F77C0);
 
+extern u32 D_L08_001B9E04;
+
+/* 128-bit copies reach lq/sq only through TImode. */
+typedef int TQ_003F79E0 __attribute__((mode(TI)));
+
+/* func_L08_003F79E0: 124 bytes against retail's 104; the four bound constants take
+   different FPRs and the frame grows. Deposited in nonmatching/levels/. */
 INCLUDE_ASM("asm/levels", func_L08_003F79E0);
 
 INCLUDE_ASM("asm/levels", func_L08_003F7A48);
@@ -195,7 +243,35 @@ INCLUDE_ASM("asm/levels", func_L08_0041D808);
 
 INCLUDE_ASM("asm/levels", func_L08_00422190);
 
-INCLUDE_ASM("asm/levels", func_L08_00422428);
+extern f32 func_002A7940(void);
+extern s32 func_002A7820(s32, s32);
+extern f32 func_00283180(f32);
+extern f32 func_00283198(f32);
+extern void func_00282CC0(void *, void *, void *);
+extern void func_L01_0032EF38(void *, int, int, float, float, int);
+
+/* five rounds: each picks a direction, two spreads and a life time */
+void func_L08_00422428(Ent *a0)
+{
+    Moby *s3 = a0->f68;
+    f32 position[4];
+    f32 angle, radius, first, second;
+    int life, i;
+
+    for (i = 4; i >= 0; i--) {
+        angle = func_002A7940();
+        radius = func_002A7878(0.0f, 0.8f);
+        first = func_002A7878(0.0f, 1.5f);
+        second = func_002A7878(1.5f, 5.7f);
+        life = func_002A7820(100, 180);
+        position[0] = func_00283180(angle) * radius;
+        position[1] = func_00283198(angle) * radius;
+        position[2] = 0.0f;
+        func_00282CC0(position, position, (char *)a0 + 0x10);
+        position[2] = s3->f1B0 + 0.025f;
+        func_L01_0032EF38(position, 0x38002028, 0x2020, first, second, life);
+    }
+}
 
 INCLUDE_ASM("asm/levels", func_L08_00422578);
 

@@ -123,7 +123,71 @@ void func_00274208(Obj_F4778f810 *obj)
 
 INCLUDE_ASM("asm/game", func_002742E8);
 
-INCLUDE_ASM("asm/game", func_00274500);
+/* Hit-index descriptor: a vector at 0x20 (its w is the scale), the point array at 0x30,
+   the collision data at 0x54, the point count at 0x58, three used indices at 0x59 and
+   the used count at 0x5C. */
+typedef struct {
+    u8 pad000[0x20];
+    f32 vec020[4];
+    f32 (*points030)[4];
+    u8 pad034[0x20];
+    char *p054;
+    u8 count058;
+    u8 indices059[3];
+    u8 count05C;
+} HitIndex_00274500;
+
+extern int func_00278CE0(float *a, float *b, int c, int d);
+
+extern int func_00277258(float *out, int mode, float scale, char *data);
+
+extern float D_001BAFA0[];
+
+int func_00274500(Obj_F4778f810 *obj)
+{
+    float tmp0[4];
+    float tmp1[4];
+    float tmp2[4];
+    float tmp3[4];
+    float *v;
+    HitIndex_00274500 *p = (HitIndex_00274500 *)obj->p068;
+    int i;
+    int j;
+    int used;
+    int hit;
+    float scale;
+
+    func_00283098(tmp0, p->vec020, (float *)((char *)obj + 0xC0));
+    F4778f810_FUN_00282CC0((char *)tmp0, (char *)tmp0, (char *)obj + 0x10);
+    hit = func_00277258(tmp0, 0x62, p->vec020[3], p->p054);
+    if (hit != 0) {
+        for (i = 0; i < p->count058; i++) {
+            used = 0;
+            for (j = 0; j < p->count05C; j++) {
+                if (p->indices059[j] == i) {
+                    used = 1;
+                    break;
+                }
+            }
+            if (used)
+                continue;
+            func_00283098(tmp1, p->points030[i], (float *)((char *)obj + 0xC0));
+            F4778f810_FUN_00282CC0((char *)tmp1, (char *)tmp1, (char *)obj + 0x10);
+            if (func_00278CE0(tmp0, tmp1, hit, 0) != 0) {
+                v = D_001BAFA0;
+                F4778f810_FUN_00282CF0((char *)tmp2, (char *)tmp1, (char *)v);
+                func_00282F20_16(v + 8, v + 8, 1.0f);
+                scale = func_00282DB0_3(tmp2, v + 8);
+                func_00282F20_16(tmp3, v + 8, -scale);
+                F4778f810_FUN_00282CC0((char *)obj + 0x10, (char *)obj + 0x10, (char *)tmp3);
+                return i;
+            }
+        }
+        return -1;
+    }
+    p->count05C = 0;
+    return -1;
+}
 
 /* Collision-hit nudge subject: geometry plane at 0x20, scale 0x2C, data pointer 0x54. */
 typedef struct {
@@ -133,8 +197,6 @@ typedef struct {
     u8 pad030[0x24];
     char *p054;
 } HitNudge_002746C8;
-
-extern int func_00277258(float *out, int mode, float scale, char *data);
 
 extern float D_001BAFB0[];
 

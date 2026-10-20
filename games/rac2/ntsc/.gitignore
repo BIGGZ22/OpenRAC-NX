@@ -8,6 +8,9 @@ asm/
 asm_pp/
 build/
 work/
+# Private experiment harnesses and generated screening output.
+/scratch/
+**/_scratch*/
 backups/
 __pycache__/
 *.py[cod]
@@ -40,3 +43,7 @@ toolchain/sn-prodg-2.0/
 toolchain/local/
 
 .DS_Store
+
+# The worktree symlinks into the main checkout (a worker tool, never tracked).
+/baserom
+/toolchain/toolchain

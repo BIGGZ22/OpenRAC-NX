@@ -38,9 +38,19 @@ void func_L00_0042B6C8(char *a0)
     func_L00_0042B408(a0);
 }
 
-extern int D_L00_001B15DC __attribute__((sda));
+/* The global this one writes sits at a different address from level to level, and it is
+ * not the one func_L00_004272A0 reads in every level, so it takes a name of its own. */
+extern int ref_L00_00427290_00 __attribute__((sda));
+
+void func_L00_00427290(void)
+{
+    ref_L00_00427290_00 = 1;
+}
+
 
 extern int D_L00_001B2700 __attribute__((sda));
+
+extern int D_L00_001B15DC __attribute__((sda));
 
 int func_L00_004272A0(void)
 {

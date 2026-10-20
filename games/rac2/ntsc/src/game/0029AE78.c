@@ -104,9 +104,8 @@ INCLUDE_ASM("asm/game", func_0029B168);
 
 INCLUDE_ASM("asm/game", func_0029B3E0);
 
-INCLUDE_ASM("asm/game", func_0029B628);
 
-INCLUDE_ASM("asm/game", func_0029B658);
+/* The existing implementation is in 0029B658-rc2.c. */
 
 extern char *D_001A8CFC[] __attribute__((sda));
 extern void func_0034CE28(void *, int);
@@ -175,7 +174,5 @@ void func_0029B888(int a0, int a1, int a2, int a3, int a4, int a5, int a6, int a
 }
 
 INCLUDE_ASM("asm/game", func_0029B910);
-
-INCLUDE_ASM("asm/game", func_0029BA58);
 
 INCLUDE_ASM("asm/game", func_0029BB30);

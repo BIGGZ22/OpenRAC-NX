@@ -1,0 +1,42 @@
+/* func_L00_0039D598 - 3004 bytes, 27 place(s), level 00_aranos_tutorial,
+   retail at 0x0039d598. Screened with tools/w10_screen.py: 48 call(s)
+   [func_00283CE0@0039D644, func_00283CE0@0039D654, func_00283CE0@0039D664,
+   func_00282948@0039D700, func_00291450@0039D71C, func_0029F338@0039D728,
+   func_00283DB8@0039D754, func_002A7878@0039D7D0, func_002A7878@0039D7E0,
+   func_002A7878@0039D7F0, func_002A7878@0039D818, func_00282D30@0039D828,
+   func_00283098@0039D878, func_00282CC0@0039D888, func_00282978@0039D8AC,
+   func_002829A8@0039D9D4, func_002A7878@0039DA08, func_00282978@0039DA20,
+   func_00283CE0@0039DAC4, func_00283CE0@0039DAD0, func_00283CE0@0039DB24,
+   func_00283CE0@0039DB30, func_002829A8@0039DB90, func_00283CF0@0039DBDC,
+   func_00283CF0@0039DC00, func_002A7878@0039DC18, func_00282978@0039DC30,
+   func_00283CE0@0039DCD4, func_00283CE0@0039DCE0, func_00283CE0@0039DD34,
+   func_00283CE0@0039DD40, func_002829A8@0039DDA0, func_00283CF0@0039DDEC,
+   func_00283CF0@0039DE10, func_002A7878@0039DE28, func_00282978@0039DE40,
+   func_00283CE0@0039DEE4, func_00283CE0@0039DEF0, func_00283CE0@0039DF44,
+   func_00283CE0@0039DF50, func_002829A8@0039DFB0, func_00283CF0@0039DFFC,
+   func_00283CF0@0039E020, func_002A7878@0039E038, func_00283CE0@0039E068,
+   func_L00_002FCF18@0039E090, func_00283CE0@0039E0EC,
+   func_00291450@0039E118]; data addresses materialised [0x3c230000,
+   0x1b0000, 0x800000, 0x100000, 0x200000, 0x400000, 0xffff0000, 0x80000,
+   0xffff0000, 0x10000, 0x3c230000, 0x3c230000, 0x3c230000, 0xffff0000,
+   0x20000, 0x3c230000, 0x3c230000, 0x3c230000, 0xffff0000, 0x40000,
+   0x3c230000, 0x3c230000, 0x3c230000, 0x1c0000, 0x3f4c0000, 0x3c230000,
+   0x3f4c0000, 0x3c230000]; float constants [0x437f0000, 0x3f800000]; $gp-
+   relative small data: no   saves: -; callee-saved registers saved [-];
+   words plain C cannot emit [LQ/SQ 78620000@0x0064, LQ/SQ 7C820000@0x0068,
+   LQ/SQ 78620000@0x01a0, LQ/SQ 7FA20000@0x01a4, LQ/SQ 78820000@0x01e4,
+   LQ/SQ 7C620000@0x01e8, LQ/SQ 78620000@0x01fc, LQ/SQ 7C820000@0x0200,
+   LQ/SQ 7A420000@0x02ac, LQ/SQ 7C620000@0x02b0, LQ/SQ 7A820000@0x0300,
+   LQ/SQ 7EA20000@0x0304, COP1 46800020@0x04b0, COP1 46806320@0x0640, COP1
+   4680A520@0x0658, COP1 46806320@0x0664, COP1 46806B60@0x0678, COP1
+   46800020@0x06c0, COP1 46806320@0x0850, COP1 4680A520@0x0868, COP1
+   46806320@0x0874, COP1 46806B60@0x0888, COP1 46800020@0x08d0, COP1
+   46806320@0x0a60, COP1 4680A520@0x0a78, COP1 46806320@0x0a84, COP1
+   46806B60@0x0a98, LQ/SQ 7AA20000@0x0b18, LQ/SQ 7C620000@0x0b1c]. Head:
+   addiu $sp, $sp, -0x80 ; sd $s1, 0x38($sp) ; sd $s0, 0x30($sp) ; daddu
+   $s1, $a0, $zero ; sd $s2, 0x40($sp) ; sd $s3, 0x48($sp). Not matched in
+   this wave: the 128-bit copy needs an `lq`/`sq` pair; plain C reaches it
+   only through a `mode(TI)` local, and this cc1 folds the destination
+   offset into the `sq` where retail materialises the pointer first. What
+   would unblock it: the exact source expression tree, so this cc1 picks the
+   same registers in the same order. */

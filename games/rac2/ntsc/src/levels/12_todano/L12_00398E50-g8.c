@@ -104,6 +104,8 @@ void func_L12_00413F68(u8 *object) {
 
 extern u8 *D_L12_001B090C __attribute__((sda));
 
+extern u8 *D_L12_001B1360 __attribute__((sda));
+
 /* Whether the tracked object is in a state that still counts as open. */
 s32 func_L12_003DE4B0(void) {
     u8 *object = D_L12_001B090C;
@@ -115,6 +117,24 @@ s32 func_L12_003DE4B0(void) {
         if (*(u8 *)(object + 0x20) == 6 || *(s8 *)(object + 0x20) < 0
             || *(u8 *)(object + 0x20) == 8)
             result = 0;
+    }
+    return result;
+}
+
+/* The same test, with one more state in the closed set. */
+s32 func_L12_00404778(void) {
+    u8 *object = D_L12_001B1360;
+    s32 result = 1;
+
+    if (object == 0) {
+        result = 0;
+    } else {
+        if (*(u8 *)(object + 0x20) == 6) {
+            result = 0;
+        } else if (*(u8 *)(object + 0x20) == 5 || *(u8 *)(object + 0x20) == 8
+                 || *(s8 *)(object + 0x20) < 0) {
+            result = 0;
+        }
     }
     return result;
 }

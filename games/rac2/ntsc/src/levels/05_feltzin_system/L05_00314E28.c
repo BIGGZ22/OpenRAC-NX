@@ -267,7 +267,6 @@ char *func_L05_00416D68(char *a0, int a1)
 INCLUDE_ASM("asm/levels", func_L05_00416E08);
 
 /* Builds the sub-record's three planes and blends them onto the object's transform. */
-INCLUDE_ASM("asm/levels", func_L05_00416EC0);
 
 /* Blends the sub-record into the object's transform once three guards clear. */
 void func_L05_00416F80(char *object, char *arg1)

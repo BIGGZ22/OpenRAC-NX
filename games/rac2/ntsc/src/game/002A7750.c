@@ -418,11 +418,36 @@ INCLUDE_ASM("asm/game", func_002A8E20);
 
 INCLUDE_ASM("asm/game", func_002A8F70);
 
-INCLUDE_ASM("asm/game", func_002A90C8);
 
 INCLUDE_ASM("asm/game", func_002A90F0);
 
-INCLUDE_ASM("asm/game", func_002A90F8);
+extern int D_001B22D8 __attribute__((sda));
+extern int D_001B22DC __attribute__((sda));
+typedef struct { float x, y, height, radius; } HeightPlane;
+extern HeightPlane D_001B22E0 __attribute__((sda));
+extern int func_002FD828(float *, float, float, float);
+extern float func_00282C48(float);
+extern float func_00282E80(void *, void *);
+extern void func_00282C98(void *);
+
+float func_002A90F8(float *position, void *direction)
+{
+    float result;
+    if (D_001B22D8 != 0) {
+        result = position[2];
+        if (func_002FD828(&result, position[0], position[1], position[2]) != 0)
+            return result;
+    }
+    if (D_001B22DC != 0 && func_00282C48(position[2] - D_001B22E0.height) < 0.5f &&
+        func_00282E80(position, &D_001B22E0) < D_001B22E0.radius) {
+        if (direction != 0)
+            func_00282C98(direction);
+        return D_001B22E0.height;
+    }
+    if (direction != 0)
+        func_00282C98(direction);
+    return position[2];
+}
 
 extern void func_002837D0(void *, void *, void *);
 extern void func_00283898(void *, int, float);
@@ -456,7 +481,6 @@ int func_002A9568(int first, int second, float amount) {
 
 
 
-INCLUDE_ASM("asm/game", func_002A9640);
 
 INCLUDE_ASM("asm/game", func_002A9698);
 
