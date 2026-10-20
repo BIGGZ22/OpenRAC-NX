@@ -1567,6 +1567,8 @@ Moby tour (teleport beside up to 3 live mobys of each class, wrench twice, 130 t
   as func_L01_0023D688 through `openrac_call_in_copy(1, ...)`, which needs that level's place.
 - 14 Oltanis (class 1416): func_L05_0031AA20's copy calls a function at 0x31AAA8 that differs
   from func_L05_0031AAA8 there; the catalogue has no level 14 place for either.
+  Fixed since: that function is level 14's own FindGroupMobyByTag (func_L14_002F2778), which
+  split_places.tsv adds to the places of the folded call.
 Only believed correct, not exercised: everything the tour did not reach; progression (infobots,
 gates, bosses) was not played at all.
 

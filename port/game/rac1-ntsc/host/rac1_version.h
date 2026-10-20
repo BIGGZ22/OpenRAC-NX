@@ -29,6 +29,9 @@
 #define RAC1_OMIT_func_L12_002C08A0 1 /* FUN_L12_002bf6d0 */
 #define RAC1_OMIT_func_L13_0030AD88 1 /* FUN_L13_003098d0 */
 #define RAC1_OMIT_func_L00_00261448 1 /* FUN_L00_002603d0 */
+/* PlayMovieEntryIfIdle's second copy in levels 2, 8 and 16 (variants.c): PAL's own, not mapped for
+ * this disc yet. */
+#define RAC1_OMIT_func_L02_00299F28 1
 /* Entries the version map cannot pair, checked by hand. */
 /* sceVu0Normalize, an entry inside the VU0 library object, which the map does not cut out. */
 #define func_001252C0 game_FUN_00125180

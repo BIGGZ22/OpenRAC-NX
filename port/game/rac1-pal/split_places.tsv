@@ -131,3 +131,13 @@ func_L00_0024BBE8	func_00209A18	00:0024BFE0,01:0025FF70,02:0024DAD0,03:0023A220,
 # State 12 (L00 0x24BBB0, folded into state 9's CardMenu_AdvanceOnSaveByte) is CardMenu_State12WaitFlag2: flag 2
 # gives state 13; the folded C tested flags 2|4 for state 10.
 func_L00_0024BA70	func_002095E8	00:0024BBB0,01:0025FB40,02:0024D6A0,03:00239DF0,04:0023E520,05:00274B70,06:0025A840,07:002732B8,08:00255718,09:0026ABA0,10:0023E5A8,11:00270ED0,12:00263D20,13:00256DB0,14:00253740,15:0023B140,16:002471F0,17:00246320,18:0024DE28
+# Taxi_SetTargetFromSpawn (func_L05_0031AA20, levels 5 and 14) finds its spawn moby with FindMobyByDataId
+# (func_L05_0031AAA8, folded with level 16's copy above). Level 14's copy calls its own lookup there,
+# FindGroupMobyByTag (func_L14_002F2778, matched C), which is no place of that name: the folded call
+# found no place in level 14 and went to 0x31AAA8, the middle of another function there.
+func_L05_0031AAA8	func_L14_002F2778	14:002F2778
+# PlayMovieEntryIfIdle (func_L00_0029A7D0) has a second copy in levels 2, 8 and 16 that reads another
+# table of D_00137C80 (pairs at +0x19F8/+0x1A10, not +0x1808/+0x18A0), below the relocated range, so
+# no relocation tells them apart. host/variants.c. Each level's callers (Skid's agent, moby class 1283,
+# the challenge NPC) call the second copy, the folded call's place by their own jal.
+func_L00_0029A7D0	func_L02_00299F28	02:00299F28,08:002A2B18,16:00293658
