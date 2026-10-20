@@ -1164,7 +1164,22 @@ gaddr openrac_relocate_code(gaddr address) {
     std::scoped_lock hold(g_relocate_lock);
     const LevelMap& map = level_map(overlay);
     auto it = map.code.find(address);
-    return it == map.code.end() ? address : it->second;
+    if (it != map.code.end()) {
+        return it->second;
+    }
+    // A function whose copy in the level's program the catalogue has as one of the level's own (its
+    // code differs: rac1's music callbacks, func_00217970 that music_StartTrackBody hands the sound
+    // library is func_L00_00267130 in level 0's program): what the level's copy of the code forms where
+    // the executable's forms this address (an exact pair of their operands), when a function is there.
+    auto d = std::lower_bound(map.data.begin(), map.data.end(), std::make_pair(address, INT32_MIN));
+    if (d != map.data.end() && d->first == address) {
+        const gaddr there = address + static_cast<gaddr>(d->second);
+        auto level = g_overlays.find(overlay);
+        if (level != g_overlays.end() && level->second.count(there) != 0) {
+            return there;
+        }
+    }
+    return address;
 }
 
 void openrac_guest_set_level_programs(void (*load)(int level)) {
