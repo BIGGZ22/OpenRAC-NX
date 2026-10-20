@@ -671,7 +671,22 @@ void use_level(int number) {
                  / "placements.json";
     }
     debug_overlay::notice({});
-    if (!viewer::load_level(dir, g->level, error, edited)) {
+    // Only Ratchet & Clank's levels are extracted for the port so far. The other games (Going
+    // Commando, Up Your Arsenal, Deadlocked at their menus) have no scenery to read: their whole
+    // picture is the 2D path, both its parts, and nothing is missing to tell the player about.
+    const bool has_levels = g->game == "rac1-pal" || g->game == "rac1-ntsc";
+    if (!has_levels && !viewer::load_level(dir, g->level, error, edited)) {
+        log::info("level {}: no scenery for this game yet ({}); the 2D path is drawn alone", wanted, error);
+        auto hud = std::make_unique<renderer::DirectRenderer>("hud", renderer::Bucket::Hud, renderer::DirectConfig{},
+                                                              renderer::DirectRenderer::Input::Vif);
+        g->renderer->add(std::make_unique<renderer::DirectBackground>(*hud), error);
+        g->renderer->add(std::move(hud), error);
+        if (fresh) {
+            g->renderer->init(error);
+        }
+        return;
+    }
+    if (has_levels && !viewer::load_level(dir, g->level, error, edited)) {
         log::warn("level {}: {} (extract it with editor/extract.py port)", wanted, error);
         // Said in the picture: the game goes on, its HUD over a black world, and a player takes
         // that for the game being broken.
