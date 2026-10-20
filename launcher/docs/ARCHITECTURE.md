@@ -73,6 +73,10 @@ gets focus, and when settings change.
   is a job's turn, `run_action` starts it and returns its id; output arrives
   as `job-output` events and the end as `job-exit`. Events that arrive before
   `run_action` has returned are kept until the id is known.
+- A job's end is acted on once, wherever its event landed: the queue keeps
+  the jobs that ended (`takeEnded`) and the app takes them, so an end that
+  came before the start call returned is acted on just like one that came
+  after it.
 - `run_action` checks the action again against the checkout as it is now; a
   job whose needs went missing in the meantime fails with the reason.
 
@@ -88,9 +92,11 @@ library reports each game's set-up state (`GameView.install`), read from
 `job-exit`. An exit status other than 0, or none (a signal), is not a failed
 task: `gameStopped` in `lib/app.svelte.ts` asks `latest_crash` for the report
 the port wrote since the job started and sets `app.stopped`, which the game's
-page shows as `components/CrashNotice.svelte`; `components/ReportsBlock.svelte`
-lists the game's logs and reports under its saves, and `app.crashes` (counted
-after every refresh and every game's end) marks the game in the list after a recent crash.
+page shows as `components/CrashNotice.svelte`. A game that ended **without**
+such a report was closed, not crashed: the notice says so, in plain words,
+and asks for nothing. `components/ReportsBlock.svelte` lists the game's logs
+and reports under its saves, and `app.crashes` (counted after every refresh
+and every game's end) marks the game in the list after a recent crash.
 Every command run and every exit is written to `launcher.log`
 (`core/src/launcher_log.rs`), which goes in the report's .zip.
 
