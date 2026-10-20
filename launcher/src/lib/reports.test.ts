@@ -55,6 +55,18 @@ describe("reports", () => {
     expect(text).toContain("exit code 1");
     expect(text).toContain("[error] no window: x");
   });
+
+  it("does not call a closed game a crash", () => {
+    // No crash report: the game was closed, which is not a fault and nothing to report.
+    const text = stopText(
+      { game: "rac1", versionKey: "rac1/pal", code: null, at: 0, crash: null, lines: [] },
+      "Ratchet & Clank",
+      "0.8.4",
+    );
+    expect(text).not.toContain("unexpectedly");
+    expect(text).toContain("it was closed");
+    expect(text).toContain("without a crash report");
+  });
 });
 
 describe("unseenRecent", () => {

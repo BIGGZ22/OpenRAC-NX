@@ -51,7 +51,9 @@
     }
     if (job.state === "succeeded") return did(job);
     if (job.state === "cancelled") return "Stopped before it finished.";
-    if (isGame(job)) return "The game stopped unexpectedly. Its page has a report you can send us.";
+    // The game ended by itself: it may have crashed, or it may have been closed. Its page says
+    // which, so this does not claim a crash.
+    if (isGame(job)) return "The game stopped. Its page has what happened.";
     return "It did not finish. Copy what it printed and send it to us on GitHub or Discord.";
   }
 

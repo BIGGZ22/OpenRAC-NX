@@ -323,9 +323,11 @@ async function gameStopped(job: Job) {
   // No install folder: the notice still says it stopped.
   const crash = await api.latestCrash(game, since).catch(() => null);
   app.stopped = { game, versionKey, code: job.code, at: job.endedAt ?? Date.now(), crash, lines: lastLines(job.lines) };
-  // On another page, the player is told where to look.
+  // On another page, the player is told where to look. A crash is worth a message to us; a game
+  // that was closed is not.
   if (app.page !== "game" || currentVersion()?.game !== game) {
-    toast("The game stopped unexpectedly. Its page has a report you can send us.", "error");
+    if (crash) toast("The game crashed. Its page has a report you can send us.", "error");
+    else toast("The game was closed. Its page has what happened.", "info");
   }
 }
 
