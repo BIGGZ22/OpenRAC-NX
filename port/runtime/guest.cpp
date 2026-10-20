@@ -1134,6 +1134,13 @@ gaddr openrac_relocate_data(gaddr address) {
     if (overlay == OPENRAC_OVERLAY_EXE) {
         return address;
     }
+    // $gp's value is the same in every program: C that names it means the register (rac1: D_00166D00
+    // as a thread's gpReg, initAll's movie decoder thread), not the executable's datum that starts
+    // there (gp+0, which a level's program keeps elsewhere: func_00218A78's `sw $24, 0($gp)` is
+    // `sw $24, -0x5A80($gp)` in level 0's). The pairs have both, and the datum's came first.
+    if (address == g_relocate_gp && address != 0) {
+        return address;
+    }
     std::scoped_lock hold(g_relocate_lock);
     const LevelMap& map = level_map(overlay);
     // A global's own address is what the code names (offsets are added after): exact pairs first;
