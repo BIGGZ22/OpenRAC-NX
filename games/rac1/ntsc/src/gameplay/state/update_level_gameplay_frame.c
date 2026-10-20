@@ -1,12 +1,5 @@
 #include "types.h"
-#include "asm.h"
 #include "rnc/globals.h"
-
-#ifndef NON_MATCHING
-INCLUDE_ASM("config/us/expected/asm/assembly/textbin/gameplay/state/update_level_gameplay_frame/FUN_0022eaa8.s", FUN_0022eaa8);
-#else
-#include "rnc/globals.h"
-#include "types.h"
 #include "eetypes.h"
 #include "sda.h"
 #include "qcopy.h"
@@ -117,10 +110,10 @@ typedef struct {
 
 #include "rnc/gameplay/state/level_state.h"
 extern LevelRenderState level_render_state __asm__("D_0013E030");
-extern u8 voice_volume_records[] __asm__("D_0013E5C0");
+extern u8 voice_volume_records_macro[] __asm__("D_0013E5C0") MACRO_ADDR;
 extern s32 sound_bank_handle __asm__("D_0015ED5C");
 extern s16 D_0015EE48 __attribute__((sda));
-#define D_0015EE4A (*(s16 *)0x0015EE4A)
+extern s16 D_0015EE48_macro __asm__("D_0015EE48") MACRO_ADDR;
 extern f32 sequence_macro __asm__("D_0015F43C") MACRO_ADDR;
 extern s32 space_load_in_progress __asm__("D_0015F618") MACRO_ADDR;
 extern f32 D_00160404 MACRO_ADDR;
@@ -130,17 +123,17 @@ extern s32 D_001604F0 __attribute__((sda));
 extern s32 D_00160500 __attribute__((sda));
 extern s32 current_vu_chain __asm__("D_00160F0C");
 extern LevelGameplayState render_sequence __asm__("D_0018CB20");
-extern LevelGameplayState D_0018CB20_b[] __asm__("D_0018CB20");
-extern LevelGameplayState D_0018CB20_c[] __asm__("D_0018CB20");
+/* Fakematch: a second name for render_sequence keeps the fade loop's own lui/addiu. */
+extern LevelGameplayState render_sequence_lui __asm__("D_0018CB20");
 extern LevelRenderObject *D_0018CC98[];
 extern LevelProjectionState view_context __asm__("D_0018CD00");
 extern LevelRenderArchive D_001940C0;
-extern ColorPair D_001D9A30[];
+extern ColorPair warp_trail_colors[] __asm__("D_001D9A30");
 extern u128 D_001D9AE0[];
 extern f32 D_001D9B30[];
 extern f32 cam_mode_min_fov[] __asm__("D_001D9B48");
 
-extern void fill_transfer_words(void *, s32, s32) __asm__("func_001F97E8");
+extern void fill_transfer_words(void *, s32, s32) __asm__("FUN_001f97e8");
 extern void read_global_table_entry(void) __asm__("ReadGlobalTableEntry");
 extern void snd_flush_sound_commands(void) __asm__("func_0012DC80");
 extern void snd_play_sound_vol_pan_pmpb(s32, s32, s32, s32, s32, s32, s32,
@@ -165,36 +158,27 @@ extern s32 rand(void);
 void update_level_gameplay_frame(void) __asm__("FUN_0022eaa8");
 
 void update_level_gameplay_frame(void) {
-    union {
-        Vector4 position;
-        volatile s32 sound_bank;
-    } first_position;
+    Vector4 first_position;
     Vector4 second_position;
     Matrix4x4 first_transform;
     Matrix4x4 second_transform;
-    LevelGameplayState *gameplay_state;
-    LevelRenderState *render_state;
     u16 transform_count;
     LevelRenderObject *object;
     LevelRenderObject *expired_object;
     s32 mode_advance;
-    s32 sound_bank;
     RenderModel *model;
     RenderArchiveTable *archive_table;
     u8 *archive_data;
-    s32 *scene_offset;
     RenderArchiveEntry *archive_entry;
-    s32 object_index;
     s32 expired_object_index;
     s32 prepared_frame_index;
     s32 payload_offset;
     u8 *frame_offsets;
     s32 *current_frame_pointer;
     s32 *next_frame_pointer;
-    f32 unused_fraction;
     s32 subframe;
-    s32 unused_index;
     s32 color_index;
+    s32 fill_index;
     s32 history_slot;
     s32 next_frame_payload;
     s32 current_frame_payload;
@@ -204,6 +188,7 @@ void update_level_gameplay_frame(void) {
     s32 next_frame;
     f32 blend;
     f32 scale;
+    s32 object_index;
 
     noop_callback_i();
     sequence_macro -= 0.25f;
@@ -215,11 +200,7 @@ void update_level_gameplay_frame(void) {
     if (render_sequence.time == 1 && current_level_index != 0 &&
         (current_level_index != 1 || level_available[3] != 0)) {
         read_global_table_entry();
-        /* The bank scratch is dead before scale_vector overwrites the position. */
-        first_position.sound_bank = sound_bank_handle;
-        sound_bank = first_position.sound_bank;
-        mode_advance = level_render_state.mode;
-        snd_play_sound_vol_pan_pmpb(sound_bank, mode_advance, 0x400, 0, 0, 0, 0, voice_volume_records);
+        snd_play_sound_vol_pan_pmpb(sound_bank_handle, level_render_state.mode, 0x400, 0, 0, 0, 0, voice_volume_records_macro);
         snd_reset_state_and_flush_commands();
         snd_flush_sound_commands();
     }
@@ -253,20 +234,18 @@ void update_level_gameplay_frame(void) {
             render_sequence.source_end = D_001940C0.source_end_offset + current_vu_chain;
             archive_table = D_001940C0.archive_table;
             archive_data = (u8 *)archive_table + archive_table->data_offset;
-            scene_offset = &archive_table->scene_offsets[0];
-            scene_offset += level_render_state.mode;
-            archive_entry = (RenderArchiveEntry *)(archive_data + *scene_offset);
+            archive_entry = (RenderArchiveEntry *)(archive_data + archive_table->scene_offsets[level_render_state.mode]);
             for (prepared_frame_index = 0;
                  prepared_frame_index < 0x46 && archive_entry->available != 0;
                  prepared_frame_index++, archive_entry++) {
-                payload_offset = 0x800;
+                payload_offset = archive_entry->offset + 0x800;
                 render_sequence.prepared_frames[prepared_frame_index] =
-                    (s32)(*scene_offset + archive_data) + (archive_entry->offset + payload_offset);
+                    (s32)(archive_data + archive_table->scene_offsets[level_render_state.mode]) + payload_offset;
             }
             parse_space_scene_chunk(0);
         } else {
-            if (D_0015EE4A != 0) {
-                D_0015EE4A = 0;
+            if ((&D_0015EE48_macro)[1] != 0) {
+                (&D_0015EE48_macro)[1] = 0;
             }
             space_load_in_progress = 1;
             return;
@@ -305,6 +284,7 @@ void update_level_gameplay_frame(void) {
             animation_positions = object->animation_positions;
             scale_vector(&first_position, animation_positions + current_frame * 16, 1.0f - blend);
             scale_vector(&second_position, animation_positions + next_frame * 16, object->blend);
+            /* Fakematch: the u16 copy gives the second 2 its own register. */
             transform_count = 2;
             add_vectors(object->position, &first_position, &second_position);
             object->selected_a = 2;
@@ -314,9 +294,9 @@ void update_level_gameplay_frame(void) {
             update_moby_animation_state(object);
             fast_mem_copy(object->frame_data_a + 0x10, (void *)current_frame_payload, 0x20);
             fast_mem_copy(object->frame_data_b + 0x10, (void *)next_frame_payload, 0x20);
-            *(volatile u8 *)&object->opacity = 0xFF;
-            *(volatile u8 *)&object->cached_selector = 0xFF;
+            object->opacity = 0xFF;
             object->selected_index = 0x1FF;
+            object->cached_selector = 0xFF;
             refresh_moby_spatial_bounds(object);
             object->selected_a = object->model->count - 1;
             object->selected_b = object->model->count - 1;
@@ -341,14 +321,15 @@ void update_level_gameplay_frame(void) {
                         object->model->base_scale *
                         ((f32)(render_sequence.end - render_sequence.time) * 0.017857144f);
                     for (color_index = 0; color_index < 3; color_index++) {
-                        D_001D9A30[color_index].w0 =
-                            (D_001D9A30[color_index].w0 & 0xFFFFFF) |
-                            ((D_0018CB20_b[0].end - D_0018CB20_c[0].time) << 24);
+                        /* Fakematch: render_sequence_lui, see its declaration. */
+                        warp_trail_colors[color_index].w0 =
+                            (warp_trail_colors[color_index].w0 & 0xFFFFFF) |
+                            ((render_sequence_lui.end - render_sequence.time) << 24);
                     }
                 } else {
-                    for (color_index = 0; color_index < 3; color_index++) {
-                        D_001D9A30[color_index].w0 =
-                            (D_001D9A30[color_index].w0 & 0xFFFFFF) | 0x38000000;
+                    for (fill_index = 0; fill_index < 3; fill_index++) {
+                        warp_trail_colors[fill_index].w0 =
+                            (warp_trail_colors[fill_index].w0 & 0xFFFFFF) | 0x38000000;
                     }
                 }
             }
@@ -358,5 +339,3 @@ void update_level_gameplay_frame(void) {
 }
 
 extern __typeof__(update_level_gameplay_frame) func_0022EAA8 __attribute__((alias("FUN_0022eaa8")));
-
-#endif /* NON_MATCHING */

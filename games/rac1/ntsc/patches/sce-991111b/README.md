@@ -9,7 +9,7 @@ and the stack through `0055` builds `66c253915a6fa851…`, the full stack throug
 `0056` `fc69951c0ec883e1…`, on the Linux cloud host (see the build notes below). That last stack still held
 `0034`, which is retired. The current stack (through `0056`, without `0034`)
 builds `c2b8e013b797f4ff…` there and gives the same objects (full-ELF gate
-PASS); with `0057` it builds `5241bdbb904a71a8…`, with `0058` `acd9a6aa2ac7a6ad…`. Check a rebuilt compiler by
+PASS); with `0057` it builds `5241bdbb904a71a8…`, with `0058` `acd9a6aa2ac7a6ad…`, with `0060` `67b4239227f5bdba…`, with `0062` `1dc6124edb443133…`. Check a rebuilt compiler by
 its output.
 
 - Archive: `gnu-ee-binutils-gcc-1.1.tar.gz`, 16,510,927 bytes
@@ -42,7 +42,8 @@ Apply with `git apply` at the root of the extracted archive, in this order:
 2. `0001`, `0015`, `0016`, `0019`, `0020`, `0021`, `0022`, `0025`, `0026`,
    `0027`, `0028`, `0029`, `0030`, `0031`, `0032`, `0033`, `0037`
 3. `0036`, `0044`, `0045`, `0046`, `0047`, `0048`, `0049`,
-   `0050`, `0051`, `0052`, `0053`, `0054`, `0055`, `0056`, `0057`, `0058`
+   `0050`, `0051`, `0052`, `0053`, `0054`, `0055`, `0056`, `0057`, `0058`,
+   `0060`, `0061`, `0062`
 
 Configure for `--target=mips64r5900-sf-elf --host=i686-linux-gnu
 --build=i686-linux-gnu --disable-nls --enable-languages=c --without-headers`
@@ -54,6 +55,15 @@ through `0048` it is `4dfa3cf0f0fa8d31…`).
 published and `0034` is retired (no unit selected its option once the units
 it served declared their gp-relative externals `__attribute__((sda))`, see
 `0056`); their records below are kept for the stack history.
+
+## SDK assembler
+
+`sdk-as` assembles the SDK units (`configure.py`, rule `sdk-compiler`). It is
+the archive's GNU `as` with only `0000` and `0059` applied, none of the game's
+assembler patches, built with the same configure line (`make all-gas`).
+`scripts/build-game-compiler.py` builds it next to the game compiler. On the
+SDK units the unpatched `as` gives the same objects as the SDK compiler's own
+`ee/bin/as`.
 
 Patches marked *production dependency* are in that stack but turned no
 fixture exact on their own; they are published so the production compiler is
@@ -77,6 +87,53 @@ differs. `make` does not track header dependencies: after changing
 
 ## Published patches
 
+- `0062-reload-reg-unavailable.patch` SHA-256: `9bddaf0912802fba0a322dcfaace0ec3626da4a11b9f5c698b60cebab7a7c2c0`
+  - role: default. gcc 2.95.3's `reload1.c` change (Bernd Schmidt,
+    2000-01-12, superseding the 1999-11-04 `reload_reg_free_for_value_p`
+    fix): registers outside the insn's spill set go into a separate
+    `reload_reg_unavailable` set, so reload neither inherits nor picks
+    them as reload registers. No built game-compiler, exception or SN
+    overlay unit compiled on this cc1 changes
+  - fixtures: `ui/menus/update_preview_animation_and_attachments` (the
+    rotation copy reloads its address into `$5` again)
+- `0061-copy-rtx-if-shared-virtual-mems.patch` SHA-256: `4f21bbdd604aa90367775c96d39aea13c14fe21217e4e1f2fc24ee7d9470d928`
+  - role: default. gcc 2.95.3's `emit-rtl.c` change (Jeff Law,
+    1999-08-30): `copy_rtx_if_shared` no longer shares a MEM whose address
+    is a virtual stack or incoming-argument register. A shared stack
+    parameter MEM made its REG_EQUIV note pointer-equal to the load, and
+    combine moved the load across the stores in between. Of every built
+    unit only `audio/streaming/snd_play_vag_stream_by_loc_ex_cb` changes:
+    its plain C now matches and its fakematch is gone
+  - fixtures: `rendering/append_power_of_two_textured_screen_sprite`,
+    `audio/streaming/snd_play_vag_stream_by_loc_ex_cb`
+
+- `0060-alias-static-chain-not-a-base.patch` SHA-256: `0bf0ab1423c33e674c7cc34b0286750e75777d42f52d540be9e53957bb7d3789`
+  - role: default. gcc 2.95.3's `alias.c` change (Richard Henderson,
+    2000-08-22): `init_alias_analysis` no longer marks the static chain
+    register (`$2`) and the incoming struct value register as known bases.
+    With the mark, the first set of `$2` after reload cleared the base, so
+    sched2 took every access through `$2` as a possible alias of the stack
+    saves and scheduled the prologue saves later than retail. Retail's SN
+    compiler is 2.95.3-based; SN's cc1 2.95.2 lacks the change and misses
+    both fixtures the same way. No built game-compiler unit, exception unit
+    or SN overlay unit compiled on this cc1 changes
+  - fixtures: `rendering/view/configure_graphics_projection`,
+    `FUN_L00_00268900`
+
+- `0059-gas-sdk-delay-slots.patch` SHA-256: `9ddacc9317ee7b26dd3b41b9462e7476d1714b36efa29cc13a55aa945ffe4be5`
+  - role: SDK assembler only (gas). Fills an empty jump or branch delay slot
+    the way retail's SDK assembler did: cc1 leaves a jump in reorder mode
+    after a volatile access or a two-line sign extension, and retail moved
+    the instruction before it into the slot. The archive's `as` never does:
+    its `sync` test read `prev_pinfo && INSN_SYNC`, true for every
+    instruction. An `mflo`/`mfhi` (the R5900's HI/LO interlocks no longer
+    count here) and an instruction of a macro expansion stay out of the slot,
+    as in retail. The SDK units build without `-g`, whose line labels would
+    stop the fill
+  - fixtures: `kputchar`, `ftoi`, `sceCdRead`, `_setDefaultQM`,
+    `_csc_storeRefImage`, `SignExtendPackedValue` (filled slots), `_calloc_r`
+    (`mflo`), `_dtoa_r` (`li.d`); every SDK unit gives the same object as the
+    `padless-asm.py slots` step it replaces; full-ELF gate PASS
 - `0058-reorg-trap-if-sets-volatile.patch` SHA-256: `1171f8e37de070d8ff418ea9812b8c1f27313eeb19fcbb49fd8b6aef45590346`
   - role: default. `mark_set_resources` had no `TRAP_IF` case, so reorg's
     backward scan walked past a divide-by-zero trap and took an insn at a
