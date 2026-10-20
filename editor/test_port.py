@@ -119,7 +119,7 @@ class WriterTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as temp:
             stats = self.export(Path(temp))
             level = Path(temp) / "level_03"
-            files = sorted(str(p.relative_to(level)) for p in level.rglob("*") if p.is_file())
+            files = sorted(p.relative_to(level).as_posix() for p in level.rglob("*") if p.is_file())
             self.assertEqual(files, ["manifest.json", "mobys/moby_7.glb", "placements.json", "shrubs/shrub_6.glb",
                                      "sky.glb", "sky.png", "terrain.glb", "textures/moby_0004.png",
                                      "textures/shrub_0002.png", "textures/sky_0000.png",
