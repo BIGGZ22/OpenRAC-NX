@@ -50,12 +50,12 @@
   .toggle {
     padding: 2px 8px;
     margin-left: -8px;
-    font-size: 12px;
+    font-size: 0.75rem;
     color: var(--dim);
   }
 
   .toggle .mono {
-    font-size: 11px;
+    font-size: 0.75rem;
   }
 
   .box {
@@ -77,7 +77,7 @@
     padding: 3px 0;
     overflow-x: auto;
     font-family: var(--font-mono);
-    font-size: 12px;
+    font-size: 0.75rem;
     line-height: 1.6;
     color: var(--body);
   }

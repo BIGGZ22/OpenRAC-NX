@@ -95,7 +95,7 @@
     <ol class="steps">
       <li class="wide">
         <div class="text">
-          <h4>Export</h4>
+          <h3>Export</h3>
           <p class="muted">
             {#if busy === "export"}
               Writing the files…
@@ -125,7 +125,7 @@
       </li>
       <li>
         <div class="text">
-          <h4>Import your edits</h4>
+          <h3>Import your edits</h3>
           <p class="muted" class:failed={said?.failed}>
             {#if busy === "import"}
               Checking what you changed…
@@ -159,8 +159,15 @@
   }
 
   .intro {
-    font-size: 14px;
+    font-size: 0.875rem;
     padding-bottom: 6px;
+  }
+
+  .steps h3 {
+    font-family: var(--font-sans);
+    font-size: 0.9375rem;
+    font-weight: 600;
+    color: var(--text);
   }
 
   .failed {

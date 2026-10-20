@@ -150,15 +150,62 @@ function keepAliveInBackground() {
 // ---- toasts ---------------------------------------------------------------------------
 
 let toastId = 0;
+/** The time an information toast has left, paused while the pointer or the focus is on the toasts. */
+// Not state: nothing is drawn from it.
+// eslint-disable-next-line svelte/prefer-svelte-reactivity
+const toastTimers = new Map<number, { left: number; since: number; handle: ReturnType<typeof setTimeout> | null }>();
+let toastsHeld = false;
+
+function expire(id: number) {
+  const t = toastTimers.get(id);
+  if (t?.handle) clearTimeout(t.handle);
+  toastTimers.delete(id);
+  app.toasts = app.toasts.filter((t) => t.id !== id);
+}
+
+/** Says something for a moment; an error stays until it is dismissed, as it may need reading twice. */
 export function toast(text: string, kind: "info" | "error" = "info") {
   const id = ++toastId;
   app.toasts.push({ id, text, kind });
-  setTimeout(
-    () => {
-      app.toasts = app.toasts.filter((t) => t.id !== id);
-    },
-    kind === "error" ? 8000 : 4000,
-  );
+  // No more than four errors at once: the oldest gives way.
+  const errors = app.toasts.filter((t) => t.kind === "error");
+  if (errors.length > 4 && errors[0]) expire(errors[0].id);
+  if (kind === "info") {
+    toastTimers.set(id, {
+      left: 4000,
+      since: Date.now(),
+      handle: toastsHeld
+        ? null
+        : setTimeout(() => {
+            expire(id);
+          }, 4000),
+    });
+  }
+}
+
+/** Puts a toast away. */
+export function dismissToast(id: number) {
+  expire(id);
+}
+
+/** While the pointer or the focus is on the toasts, they wait to be read. */
+export function holdToasts(held: boolean) {
+  toastsHeld = held;
+  for (const [id, t] of toastTimers) {
+    if (held && t.handle) {
+      clearTimeout(t.handle);
+      t.handle = null;
+      t.left -= Date.now() - t.since;
+    } else if (!held && !t.handle) {
+      t.since = Date.now();
+      t.handle = setTimeout(
+        () => {
+          expire(id);
+        },
+        Math.max(t.left, 1500),
+      );
+    }
+  }
 }
 
 /** Runs `work`; a failure becomes an error toast and `undefined`. */
@@ -187,6 +234,16 @@ export async function start() {
       // The game stopping on its own is not a failed task: the Play page says what happened.
       if (job?.state === "failed" && played) void gameStopped(job);
       else if (job?.state === "failed") toast(`${job.title} failed`, "error");
+      // Played to the end since: the notice folds to a line (CrashNotice), the report still a click away.
+      if (
+        job?.state === "succeeded" &&
+        played &&
+        job.scope.kind === "version" &&
+        app.stopped &&
+        job.scope.key.startsWith(`${app.stopped.game}/`)
+      ) {
+        app.stopped = { ...app.stopped, playedSince: true };
+      }
       if (job) settle(job.key, job.state === "succeeded");
       void refresh();
       updateDiscordPresence();

@@ -72,7 +72,12 @@
 
     {#if !jobs.list.length}
       <section class="panel empty">
-        <p class="muted">Nothing has run yet. When the launcher sets a game up or builds it, what it did shows here.</p>
+        <Icon name="terminal" size={22} />
+        <div class="grow">
+          <h2>Nothing has run yet</h2>
+          <p>When the launcher sets a game up, builds it or starts it, what it did shows here.</p>
+        </div>
+        <button onclick={() => (app.page = "library")}><Icon name="library" size={16} />Your games</button>
       </section>
     {/if}
 
@@ -139,9 +144,32 @@
 {/if}
 
 <style>
+  .empty {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    color: var(--soft);
+  }
+
+  .empty h2 {
+    margin-bottom: 2px;
+    font-size: 1rem;
+  }
+
+  .empty p {
+    color: var(--body);
+    font-size: 0.875rem;
+  }
+
+  @media (max-width: 600px) {
+    .empty {
+      flex-wrap: wrap;
+    }
+  }
+
   .cut {
     margin: 6px 0 0;
-    font-size: 12px;
+    font-size: 0.75rem;
   }
 
   .page {
@@ -224,12 +252,12 @@
 
   .line {
     margin: 0;
-    font-size: 13px;
+    font-size: 0.8125rem;
     color: var(--soft);
   }
 
   .time {
-    font-size: 13px;
+    font-size: 0.8125rem;
     font-variant-numeric: tabular-nums;
     white-space: nowrap;
   }
@@ -265,7 +293,7 @@
 
   summary {
     cursor: pointer;
-    font-size: 13px;
+    font-size: 0.8125rem;
     font-weight: 600;
     color: var(--lav);
   }
@@ -275,7 +303,7 @@
   }
 
   .tools .mono {
-    font-size: 12px;
+    font-size: 0.75rem;
   }
 
   pre {
@@ -287,7 +315,7 @@
     border-radius: var(--radius-sm);
     padding: 10px 12px;
     font-family: var(--font-mono);
-    font-size: 12px;
+    font-size: 0.75rem;
     line-height: 1.5;
     color: var(--body);
     white-space: pre-wrap;

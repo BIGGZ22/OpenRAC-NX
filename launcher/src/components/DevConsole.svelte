@@ -162,7 +162,7 @@
   }
 
   .filters button {
-    font-size: 12px;
+    font-size: 0.75rem;
     padding: 3px 10px;
     background: transparent;
     border-color: var(--line);
@@ -176,7 +176,7 @@
   }
 
   .n {
-    font-size: 11px;
+    font-size: 0.75rem;
     color: var(--dim);
   }
 
@@ -199,7 +199,7 @@
   }
 
   .small {
-    font-size: 12px;
+    font-size: 0.75rem;
   }
 
   .time {
@@ -230,7 +230,7 @@
     border-radius: var(--radius-sm);
     padding: 12px 14px;
     font-family: var(--font-mono);
-    font-size: 12.5px;
+    font-size: 0.7812rem;
     line-height: 1.5;
     color: var(--text);
     white-space: pre-wrap;

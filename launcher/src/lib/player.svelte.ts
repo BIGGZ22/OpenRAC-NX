@@ -286,7 +286,7 @@ export function playerState(game: GameView, v: VersionView): PlayerState {
       kind: "build",
       label: "Build and play",
       icon: "build",
-      hint: "Compiles the game for this computer, gets its levels from your disc, then starts it. A few minutes the first time.",
+      hint: "Makes the game for this computer from OpenRAC's code (nothing is downloaded), reads its levels from your disc, then starts it. A few minutes, the first time only.",
       primary: true,
       status: "Needs building",
       tone: "warn",

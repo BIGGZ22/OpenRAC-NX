@@ -25,22 +25,6 @@ export function gameThumb(game: string): string | null {
   return GAME_THUMB[game] ?? null;
 }
 
-// Each game's clip: a few seconds of play, an animated WebP made with scripts/media.py from a
-// recording of your own game (docs/STYLE.md says how big, and what to record). It plays over the
-// picture while the pointer is on the game's band; a clip that is not there is never asked for again.
-export const GAME_CLIP: Record<string, string> = {
-  rac1: "/img/rac1-clip.webp",
-  rac2: "/img/gc-clip.webp",
-  rac3: "/img/uya-clip.webp",
-  rac4: "/img/deadlocked-clip.webp",
-  rac5: "/img/size-matters-clip.webp",
-};
-
-/** A game's clip, or null. */
-export function gameClip(game: string): string | null {
-  return GAME_CLIP[game] ?? null;
-}
-
 /** A game's picture, or null for a game without one (its tile then shows its colours). */
 export function gameArt(game: string): string | null {
   return GAME_ART[game] ?? null;

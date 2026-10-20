@@ -154,7 +154,7 @@
     align-items: center;
     gap: 6px;
     margin: 6px 0 0;
-    font-size: 12.5px;
+    font-size: 0.7812rem;
     color: var(--err);
   }
 
@@ -207,7 +207,7 @@
   h2 {
     font-family: var(--title-font);
     font-weight: var(--title-weight);
-    font-size: 22px;
+    font-size: 1.375rem;
     line-height: 1.2;
     color: #fff;
     text-wrap: balance;
@@ -218,14 +218,14 @@
     align-items: center;
     gap: 8px;
     margin-top: 6px;
-    font-size: 14px;
+    font-size: 0.875rem;
     font-weight: 500;
     color: var(--soft);
   }
 
   .matched {
     margin-top: 2px;
-    font-size: 13px;
+    font-size: 0.8125rem;
     color: var(--soft);
     font-variant-numeric: tabular-nums;
   }
@@ -247,7 +247,7 @@
 
   .act {
     flex: none;
-    font-size: 15px;
+    font-size: 0.9375rem;
     padding: 10px 22px;
     background: rgb(0 0 0 / 0.5);
     border-color: rgb(255 255 255 / 0.25);

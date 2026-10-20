@@ -35,10 +35,11 @@
             name={e.icon}
             size={20}
           />{/if}
-        {#if e.mark}<span class="mark" aria-label="It crashed recently"></span>{/if}
+        {#if e.mark}<span class="mark" aria-hidden="true"></span>{/if}
       </span>
       <span class="text">
         <span class="name">{onAndroid ? shortTitle(e.name) : e.name}</span>
+        {#if e.mark}<span class="sr-only">, crashed recently</span>{/if}
         {#if e.state}
           <span class={`state ${e.state.tone}`}>
             {#if e.state.busy}<span class="spinner"></span>{:else}<span class="dot"></span>{/if}{e.state.text}
@@ -62,7 +63,7 @@
 
   .group {
     padding: 14px 8px 6px;
-    font: 600 11px/1 var(--font-head);
+    font: 600 0.75rem/1 var(--font-head);
     letter-spacing: 0.14em;
     text-transform: uppercase;
     color: var(--dim);
@@ -181,7 +182,7 @@
   }
 
   .name {
-    font-size: 13.5px;
+    font-size: 0.8438rem;
     font-weight: 600;
     line-height: 1.3;
     color: var(--text);
@@ -191,7 +192,7 @@
     display: flex;
     align-items: center;
     gap: 6px;
-    font-size: 12px;
+    font-size: 0.75rem;
     color: var(--dim);
   }
 
@@ -295,7 +296,7 @@
 
   :global(html[data-platform="android"]) .name {
     overflow: hidden;
-    font-size: 11px;
+    font-size: 0.75rem;
     line-height: 1.2;
     white-space: nowrap;
     text-overflow: ellipsis;

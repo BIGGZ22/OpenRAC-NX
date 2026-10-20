@@ -46,14 +46,14 @@
 
   .what {
     padding: 0 8px 0 10px;
-    font-size: 12px;
+    font-size: 0.75rem;
     color: var(--tx2);
   }
 
   button {
     border: 0;
     background: none;
-    font-size: 13px;
+    font-size: 0.8125rem;
     color: var(--tx2);
     padding: 5px 14px;
     border-radius: 999px;

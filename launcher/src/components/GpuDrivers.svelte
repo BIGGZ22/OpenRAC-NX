@@ -176,12 +176,12 @@
 
   .drivers h3 {
     margin: 0;
-    font-size: 14px;
+    font-size: 0.875rem;
   }
 
   .device,
   .note {
-    font-size: 13px;
+    font-size: 0.8125rem;
   }
 
   .link {
@@ -189,6 +189,6 @@
     background: none;
     padding: 0;
     color: var(--amber);
-    font-size: 13px;
+    font-size: 0.8125rem;
   }
 </style>

@@ -124,7 +124,7 @@
 
 <section class="panel packs" class:dropping aria-label="Your mods">
   <div class="row head">
-    <h3 class="grow">Your mods</h3>
+    <h2 class="grow">Your mods</h2>
     <button class="small" disabled={!adder?.runnable || adding} onclick={() => void addZip()}
       >{#if adding}<span class="spinner"></span>{:else}<Icon name="library" size={14} />{/if}Add a .zip…</button
     >
@@ -162,16 +162,17 @@
             <button
               class="icon"
               aria-label={`Move ${pack.name} up`}
-              title="Earlier: packs below it win"
+              title="Move up: the packs under it replace what it changes"
               disabled={i === 0}
-              onclick={() => void change(api.overridesMove(v.game, pack.id, true))}>▲</button
+              onclick={() => void change(api.overridesMove(v.game, pack.id, true))}><Icon name="up" size={14} /></button
             >
             <button
               class="icon"
               aria-label={`Move ${pack.name} down`}
-              title="Later: it wins over the packs above"
+              title="Move down: it replaces what the packs above it change"
               disabled={i === packs.length - 1}
-              onclick={() => void change(api.overridesMove(v.game, pack.id, false))}>▼</button
+              onclick={() => void change(api.overridesMove(v.game, pack.id, false))}
+              ><Icon name="down" size={14} /></button
             >
             <button
               class="icon remove"
@@ -186,7 +187,8 @@
       {/each}
     </ul>
     <p class="dim small-text note">
-      A pack lower in the list wins where two replace the same thing. Play with mods uses the packs that are on.
+      When two packs change the same thing, the one lower in the list is the one you see. Play with mods uses the packs
+      that are switched on.
       {#if inTauri}<span class="after">Drop a .zip or folder here to add it.</span>{/if}
     </p>
   {/if}
@@ -212,9 +214,8 @@
     border-style: dashed;
   }
 
-  h3 {
-    font-size: 16px;
-    color: var(--gold);
+  h2 {
+    font-size: 1rem;
   }
 
   ul {
@@ -250,7 +251,7 @@
   }
 
   .name {
-    font-size: 14px;
+    font-size: 0.875rem;
     font-weight: 600;
   }
 
@@ -264,7 +265,7 @@
   }
 
   .small-text {
-    font-size: 13px;
+    font-size: 0.8125rem;
   }
 
   .chip {
@@ -277,7 +278,7 @@
     border-radius: 7px;
     border: 1px solid var(--line-strong);
     background: var(--panel-hi);
-    font-size: 11.5px;
+    font-size: 0.75rem;
     color: var(--soft);
   }
 
@@ -289,7 +290,7 @@
 
   .icon {
     padding: 4px 9px;
-    font-size: 12px;
+    font-size: 0.75rem;
   }
 
   .remove {
@@ -301,12 +302,12 @@
   }
 
   .empty {
-    font-size: 14px;
+    font-size: 0.875rem;
     padding: 4px 0;
   }
 
   .said {
-    font-size: 13px;
+    font-size: 0.8125rem;
     color: var(--ok);
   }
 

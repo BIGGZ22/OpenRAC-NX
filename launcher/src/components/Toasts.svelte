@@ -1,15 +1,60 @@
 <script lang="ts">
-  import { app } from "$lib/app.svelte";
+  // What the launcher says for a moment, at the window's corner. Information goes after a few
+  // seconds and waits while the pointer or the focus is on it; an error stays until it is
+  // dismissed, and is read out at once (an assertive region), not after what is being read.
+  import { app, dismissToast, holdToasts } from "$lib/app.svelte";
   import Icon from "./Icon.svelte";
+
+  const infos = $derived(app.toasts.filter((t) => t.kind !== "error"));
+  const errors = $derived(app.toasts.filter((t) => t.kind === "error"));
 </script>
 
-<div class="toasts" role="status" aria-live="polite">
-  {#each app.toasts as t (t.id)}
-    <div class="toast rise" class:error={t.kind === "error"}>
-      <Icon name={t.kind === "error" ? "warn" : "info"} size={16} />
-      <span>{t.text}</span>
-    </div>
-  {/each}
+<div
+  class="toasts"
+  role="presentation"
+  onpointerenter={() => {
+    holdToasts(true);
+  }}
+  onpointerleave={() => {
+    holdToasts(false);
+  }}
+  onfocusin={() => {
+    holdToasts(true);
+  }}
+  onfocusout={() => {
+    holdToasts(false);
+  }}
+>
+  <div class="list" role="alert">
+    {#each errors as t (t.id)}
+      <div class="toast rise error">
+        <Icon name="warn" size={16} />
+        <span class="grow">{t.text}</span>
+        <button
+          class="ghost small"
+          onclick={() => {
+            dismissToast(t.id);
+          }}
+          aria-label="Dismiss"><Icon name="x" size={14} /></button
+        >
+      </div>
+    {/each}
+  </div>
+  <div class="list" role="status" aria-live="polite">
+    {#each infos as t (t.id)}
+      <div class="toast rise">
+        <Icon name="info" size={16} />
+        <span class="grow">{t.text}</span>
+        <button
+          class="ghost small"
+          onclick={() => {
+            dismissToast(t.id);
+          }}
+          aria-label="Dismiss"><Icon name="x" size={14} /></button
+        >
+      </div>
+    {/each}
+  </div>
 </div>
 
 <style>
@@ -24,17 +69,44 @@
     max-width: 420px;
   }
 
+  /* Not display: contents, which takes a live region out of what a screen reader hears. */
+  .list {
+    display: flex;
+    flex-direction: column;
+    align-items: inherit;
+    gap: 8px;
+  }
+
   .toast {
     display: flex;
     gap: 10px;
     align-items: flex-start;
     background: var(--panel-hi);
     border: 1px solid var(--line-strong);
-    border-left: 3px solid var(--amber);
     border-radius: var(--radius-sm);
-    padding: 10px 14px;
-    font-size: 14px;
+    padding: 10px 8px 10px 14px;
+    font-size: 0.875rem;
     box-shadow: var(--shadow-sm);
+  }
+
+  .toast > :global(svg) {
+    flex: none;
+    margin-top: 2px;
+    color: var(--amber);
+  }
+
+  .toast.error {
+    border-color: color-mix(in srgb, var(--err) 60%, transparent);
+  }
+
+  .toast.error > :global(svg) {
+    color: var(--err);
+  }
+
+  .toast button {
+    flex: none;
+    margin: -4px 0;
+    padding: 4px 6px;
   }
 
   /* Android: centred over the bottom of the page, as its snackbars are. */
@@ -49,16 +121,7 @@
 
   :global(html[data-platform="android"]) .toast {
     max-width: 560px;
-    border-left-width: 1px;
     border-radius: 12px;
-  }
-
-  .toast.error {
-    border-left-color: var(--err);
-  }
-
-  .toast :global(svg) {
-    flex: none;
-    margin-top: 2px;
+    pointer-events: auto;
   }
 </style>

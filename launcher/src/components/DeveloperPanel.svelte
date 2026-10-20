@@ -232,14 +232,14 @@
     border: 1px solid var(--line-strong);
     border-radius: 7px;
     padding: 1px 8px;
-    font-size: 12px;
+    font-size: 0.75rem;
     color: var(--soft);
     white-space: nowrap;
   }
 
   .percent {
     font-family: var(--font-head);
-    font-size: 28px;
+    font-size: 1.75rem;
     font-weight: 700;
     line-height: 1;
     font-variant-numeric: tabular-nums;
@@ -249,7 +249,7 @@
 
   .count {
     margin: 8px 0 0;
-    font-size: 13px;
+    font-size: 0.8125rem;
     color: var(--dim);
     font-variant-numeric: tabular-nums;
   }
@@ -265,7 +265,7 @@
   h3 {
     margin: 0;
     font-family: var(--font-head);
-    font-size: 12px;
+    font-size: 0.75rem;
     font-weight: 600;
     letter-spacing: 0.14em;
     text-transform: uppercase;
@@ -274,7 +274,7 @@
 
   .blurb {
     margin: 2px 0 8px;
-    font-size: 13px;
+    font-size: 0.8125rem;
     color: var(--soft);
   }
 
@@ -310,7 +310,7 @@
     grid-template-columns: 100px minmax(0, 1fr) auto;
     gap: 7px 14px;
     margin: 10px 0 0;
-    font-size: 13px;
+    font-size: 0.8125rem;
   }
 
   .files dd {
@@ -320,7 +320,7 @@
 
   .mark {
     white-space: nowrap;
-    font-size: 12.5px;
+    font-size: 0.7812rem;
   }
 
   dt {
@@ -332,7 +332,7 @@
     grid-template-columns: 110px minmax(0, 1fr);
     gap: 6px 16px;
     margin: 12px 0 14px;
-    font-size: 14px;
+    font-size: 0.875rem;
   }
 
   .about dd {

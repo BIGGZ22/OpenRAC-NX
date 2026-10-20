@@ -43,7 +43,7 @@
 <style>
   .where {
     margin: 4px 0 12px;
-    font-size: 14px;
+    font-size: 0.875rem;
     color: var(--soft);
     overflow-wrap: anywhere;
   }
@@ -68,6 +68,6 @@
     margin-top: 12px;
     cursor: pointer;
     color: var(--lav);
-    font-size: 14px;
+    font-size: 0.875rem;
   }
 </style>

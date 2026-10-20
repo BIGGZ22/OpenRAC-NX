@@ -2,6 +2,7 @@
   import Header from "$components/Header.svelte";
   import Toasts from "$components/Toasts.svelte";
   import UpdateModal from "$components/UpdateModal.svelte";
+  import { onAndroid } from "$lib/api";
   import { app, openDevelop, refresh, start, updateDiscordPresence, type Page } from "$lib/app.svelte";
   import Game from "./pages/Game.svelte";
   import Library from "./pages/Library.svelte";
@@ -85,7 +86,8 @@
   </div>
 {:else}
   <div class="shell">
-    {#if app.config.setupComplete}<Header />{/if}
+    <!-- The first run has the bar with only the name (Android's rail is only its tabs). -->
+    {#if app.config.setupComplete}<Header />{:else if !onAndroid}<Header setup />{/if}
     <main bind:this={view}>
       {#if !app.config.setupComplete}<Settings setup />
       {:else if app.page === "game"}<Game />

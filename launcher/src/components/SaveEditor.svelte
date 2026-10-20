@@ -11,6 +11,7 @@
   import { api, type SaveBackupInfo, type SaveChange, type SaveFields, type SaveView } from "$lib/api";
   import { app, toast } from "$lib/app.svelte";
   import { portal } from "$lib/portal";
+  import { tablist } from "$lib/tabs";
   import { fold } from "$lib/motion";
   import {
     changed,
@@ -296,17 +297,22 @@
         {/if}
       </div>
       {#if advancedOn && view}
-        <div class="tabs" role="tablist" aria-label="What to edit">
+        <div class="tabs" role="tablist" aria-label="What to edit" use:tablist>
           {#each [["player", "Player"], ["advanced", "Advanced"]] as [id, label] (id)}
+            {@const locked = busy || (dirty && mode !== id)}
+            <!-- aria-disabled, not disabled: a tab that waits is still found, and says why. -->
             <button
               role="tab"
               class="tab"
+              id={`save-tab-${id}`}
+              aria-controls="save-editor-body"
               class:on={mode === id}
               aria-selected={mode === id}
-              disabled={busy || (dirty && mode !== id)}
+              tabindex={mode === id ? 0 : -1}
+              aria-disabled={locked}
               title={dirty && mode !== id ? "Save or cancel your changes first" : undefined}
               onclick={() => {
-                mode = id as "player" | "advanced";
+                if (!locked) mode = id as "player" | "advanced";
               }}>{label}</button
             >
           {/each}
@@ -317,7 +323,14 @@
       </button>
     </div>
 
-    <div class="body" bind:this={bodyEl} onscroll={spy}>
+    <div
+      class="body"
+      id="save-editor-body"
+      role={advancedOn && view ? "tabpanel" : undefined}
+      aria-labelledby={advancedOn && view ? `save-tab-${mode}` : undefined}
+      bind:this={bodyEl}
+      onscroll={spy}
+    >
       {#if loadError}
         <p class="problem"><Icon name="warn" size={16} />{loadError}</p>
       {:else if !view || !fields}
@@ -828,7 +841,7 @@
 
   .sub {
     margin: 4px 0 0;
-    font-size: 13px;
+    font-size: 0.8125rem;
     color: var(--soft);
   }
 
@@ -841,7 +854,7 @@
 
   .foot .row {
     gap: 8px;
-    font-size: 13px;
+    font-size: 0.8125rem;
   }
 
   /* Changed: an amber dot where the change is, on its section's link and before the count. */
@@ -923,7 +936,7 @@
     align-items: flex-start;
     gap: 8px;
     margin: 0;
-    font-size: 13px;
+    font-size: 0.8125rem;
     color: var(--amber);
   }
 
@@ -1006,7 +1019,7 @@
     gap: 10px;
     margin-bottom: 10px;
     padding: 10px 12px;
-    font-size: 13px;
+    font-size: 0.8125rem;
     color: var(--text);
     background: var(--panel-hi);
     border: 1px solid color-mix(in srgb, var(--amber) 45%, transparent);
@@ -1032,7 +1045,7 @@
 
   .count {
     font-family: var(--font-sans);
-    font-size: 13px;
+    font-size: 0.8125rem;
     font-weight: 500;
     color: var(--soft);
   }
@@ -1070,7 +1083,7 @@
   }
 
   .tab {
-    font-size: 13px;
+    font-size: 0.8125rem;
     padding: 4px 14px;
     background: transparent;
     border-color: var(--line);
@@ -1085,7 +1098,7 @@
 
   select {
     font: inherit;
-    font-size: 14px;
+    font-size: 0.875rem;
     background: var(--ink-deep);
     color: var(--text);
     border: 1px solid var(--line-strong);
@@ -1095,7 +1108,7 @@
   }
 
   .hint {
-    font-size: 12px;
+    font-size: 0.75rem;
     color: var(--dim);
   }
 
@@ -1106,7 +1119,7 @@
 
   input[type="number"] {
     font: inherit;
-    font-size: 14px;
+    font-size: 0.875rem;
     font-variant-numeric: tabular-nums;
     width: 130px;
     background: var(--ink-deep);
@@ -1127,7 +1140,7 @@
   }
 
   .err-text {
-    font-size: 13px;
+    font-size: 0.8125rem;
     color: var(--err);
   }
 
@@ -1143,7 +1156,7 @@
     display: inline-flex;
     align-items: center;
     gap: 7px;
-    font-size: 13px;
+    font-size: 0.8125rem;
     border: 1px solid var(--line-strong);
     border-radius: 999px;
     padding: 5px 12px;
@@ -1202,7 +1215,7 @@
     display: inline-flex;
     align-items: center;
     gap: 8px;
-    font-size: 13px;
+    font-size: 0.8125rem;
   }
 
   .ammo input {
@@ -1215,7 +1228,7 @@
 
   .no-ammo,
   .story {
-    font-size: 13px;
+    font-size: 0.8125rem;
   }
 
   .chips {
@@ -1226,7 +1239,7 @@
 
   .note {
     margin: 8px 0 0;
-    font-size: 12px;
+    font-size: 0.75rem;
     color: var(--dim);
   }
 
@@ -1241,7 +1254,7 @@
   }
 
   .planet .dim {
-    font-size: 12px;
+    font-size: 0.75rem;
   }
 
   .bolts {
@@ -1273,7 +1286,7 @@
 
   .skill {
     width: auto;
-    font-size: 12px;
+    font-size: 0.75rem;
     font-variant-numeric: tabular-nums;
   }
 
@@ -1307,7 +1320,7 @@
     align-items: flex-start;
     gap: 8px;
     margin: 0;
-    font-size: 13px;
+    font-size: 0.8125rem;
     color: var(--err);
   }
 </style>

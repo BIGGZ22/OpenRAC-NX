@@ -17,6 +17,8 @@ export interface StopNotice {
   crash: ReportEntry | null;
   /** The game's last lines of output, for the Details when there is no report. */
   lines: string[];
+  /** The game was played again since, and ended well: the notice is a line now. */
+  playedSince?: boolean;
 }
 
 /** The ids of the actions that start the game itself. */
@@ -51,7 +53,8 @@ export function headline(e: ReportEntry): string {
 /** "Today at 20:08", "Yesterday at 18:00", "14 October at 10:00" (the player's own language). */
 export function when(seconds: number, now = Date.now(), locale?: string): string {
   const d = new Date(seconds * 1000);
-  const time = d.toLocaleTimeString(locale, { hour: "2-digit", minute: "2-digit" });
+  // "5:01 p.m.", not "05:01 p.m.": the hour as the player writes it.
+  const time = d.toLocaleTimeString(locale, { hour: "numeric", minute: "2-digit" });
   const day = (x: Date) => new Date(x.getFullYear(), x.getMonth(), x.getDate()).getTime();
   const days = Math.round((day(new Date(now)) - day(d)) / 86400000);
   if (days === 0) return `Today at ${time}`;

@@ -10,3 +10,23 @@ export function portal(node: HTMLElement): { destroy: () => void } {
     },
   };
 }
+
+/**
+ * A modal dialog's overlay: moved under <body> like `portal`, the page behind made inert (so Tab
+ * stays in the dialog and a screen reader reads only it), focus on the dialog, and focus back
+ * where it was when it closes.
+ */
+export function modal(node: HTMLElement): { destroy: () => void } {
+  const back = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+  document.body.appendChild(node);
+  const page = document.getElementById("app");
+  page?.setAttribute("inert", "");
+  node.querySelector<HTMLElement>('[role="dialog"]')?.focus();
+  return {
+    destroy() {
+      node.remove();
+      page?.removeAttribute("inert");
+      back?.focus();
+    },
+  };
+}

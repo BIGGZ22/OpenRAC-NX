@@ -120,7 +120,7 @@
       <p class="head">
         <Icon name="warn" size={16} />
         <strong>{headline(e)}</strong>
-        <span class="when">· {when(e.time)}</span>
+        <span class="when">{when(e.time)}</span>
       </p>
       <p class="say">
         Your saves are kept. To help us fix it, send us the report in a
@@ -299,7 +299,7 @@
 
   .badge {
     font-family: var(--font-sans);
-    font-size: 12px;
+    font-size: 0.75rem;
     font-weight: 600;
     letter-spacing: 0;
     padding: 3px 10px;
@@ -309,15 +309,14 @@
     background: color-mix(in srgb, var(--err) 10%, transparent);
   }
 
-  /* The last crash: open, in the crash colour, with its two ways to send the report. */
+  /* The last crash: first in Help, its mark in the crash colour, with its two ways to send the
+     report; a rule under it, not a box in the panel's box. */
   .latest {
     display: flex;
     flex-direction: column;
     gap: 8px;
-    padding: 12px 14px;
-    border-radius: 12px;
-    border: 1px solid color-mix(in srgb, var(--err) 45%, transparent);
-    background: color-mix(in srgb, var(--err) 7%, var(--panel));
+    padding: 2px 0 14px;
+    border-bottom: 1px solid var(--line);
   }
 
   .latest .head {
@@ -335,7 +334,7 @@
 
   .say {
     margin: 0;
-    font-size: 13px;
+    font-size: 0.8125rem;
     color: var(--body);
   }
 
@@ -349,7 +348,7 @@
     cursor: pointer;
     color: var(--lav);
     font-weight: 600;
-    font-size: 14px;
+    font-size: 0.875rem;
     padding: 2px 0;
   }
 
@@ -383,7 +382,7 @@
   .intro,
   .empty {
     margin: 0;
-    font-size: 14px;
+    font-size: 0.875rem;
     line-height: 1.5;
     max-width: 72ch;
   }
@@ -445,12 +444,12 @@
 
   .when {
     color: var(--soft);
-    font-size: 13px;
+    font-size: 0.8125rem;
   }
 
   .file {
     flex-basis: 100%;
-    font-size: 12px;
+    font-size: 0.75rem;
     overflow-wrap: anywhere;
   }
 
@@ -496,7 +495,7 @@
   .ask p {
     margin: 0;
     flex: 1 1 260px;
-    font-size: 14px;
+    font-size: 0.875rem;
     color: var(--text);
   }
 
@@ -510,7 +509,7 @@
   }
 
   .live {
-    font-size: 13px;
+    font-size: 0.8125rem;
     color: var(--ok);
   }
 
@@ -524,7 +523,7 @@
     align-items: flex-start;
     padding-top: 12px;
     border-top: 1px solid var(--line);
-    font-size: 14px;
+    font-size: 0.875rem;
     cursor: pointer;
   }
 
@@ -540,6 +539,6 @@
 
   .option small {
     color: var(--soft);
-    font-size: 13px;
+    font-size: 0.8125rem;
   }
 </style>

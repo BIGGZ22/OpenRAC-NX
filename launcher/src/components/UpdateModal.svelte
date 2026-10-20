@@ -6,6 +6,7 @@
   import { app } from "$lib/app.svelte";
   import { api, onAndroid } from "$lib/api";
   import { size } from "$lib/format";
+  import { modal } from "$lib/portal";
   import { installUpdate } from "$lib/updates";
   import Icon from "./Icon.svelte";
 
@@ -60,9 +61,9 @@
 
 {#if app.showUpdateModal && app.update}
   {@const update = app.update}
-  <div class="overlay" role="presentation">
+  <div class="overlay" role="presentation" use:modal>
     <button class="backdrop" onclick={close} tabindex="-1" aria-label="Close"></button>
-    <div class="modal rise" role="dialog" aria-modal="true" aria-labelledby="update-title">
+    <div class="modal rise" role="dialog" aria-modal="true" aria-labelledby="update-title" tabindex="-1">
       <div class="header">
         <div class="title-row">
           <Icon name="refresh" size={20} />
@@ -85,7 +86,7 @@
 
         {#if update.body}
           <div class="notes-box">
-            <h4>What's new</h4>
+            <h3>What's new</h3>
             <pre class="notes">{update.body}</pre>
           </div>
         {/if}
@@ -209,7 +210,7 @@
 
   .title-row h2 {
     margin: 0;
-    font-size: 18px;
+    font-size: 1.125rem;
     font-family: var(--font-head);
     font-weight: 600;
     color: var(--text);
@@ -219,7 +220,7 @@
     background: transparent;
     border: none;
     color: var(--dim);
-    font-size: 18px;
+    font-size: 1.125rem;
     cursor: pointer;
     padding: 4px 8px;
     border-radius: 4px;
@@ -250,7 +251,7 @@
 
   .version-banner .tag {
     font-family: var(--font-mono);
-    font-size: 14px;
+    font-size: 0.875rem;
     font-weight: 600;
     color: var(--amber);
     background: color-mix(in srgb, var(--amber) 12%, transparent);
@@ -260,13 +261,13 @@
   }
 
   .version-banner .date {
-    font-size: 13px;
+    font-size: 0.8125rem;
     color: var(--dim);
   }
 
   .version-banner .from {
     font-family: var(--font-mono);
-    font-size: 14px;
+    font-size: 0.875rem;
     color: var(--soft);
   }
 
@@ -276,7 +277,7 @@
 
   .kept {
     margin: 0;
-    font-size: 13px;
+    font-size: 0.8125rem;
     color: var(--soft);
   }
 
@@ -290,12 +291,15 @@
     gap: 6px;
   }
 
-  .notes-box h4 {
+  .notes-box h3 {
     margin: 0;
-    font-size: 13px;
-    text-transform: uppercase;
-    letter-spacing: 0.05em;
-    color: var(--soft);
+    font-size: 0.875rem;
+    font-weight: 600;
+    color: var(--text);
+  }
+
+  .modal:focus {
+    outline: none;
   }
 
   .notes {
@@ -305,7 +309,7 @@
     border: 1px solid var(--line);
     border-radius: var(--radius-sm);
     font-family: var(--font-sans);
-    font-size: 13px;
+    font-size: 0.8125rem;
     line-height: 1.5;
     color: var(--body);
     white-space: pre-wrap;
@@ -355,7 +359,7 @@
   .status-row {
     display: flex;
     justify-content: space-between;
-    font-size: 13px;
+    font-size: 0.8125rem;
     color: var(--soft);
   }
 
@@ -374,7 +378,7 @@
     border: 1px solid var(--err);
     border-radius: var(--radius-sm);
     color: var(--err);
-    font-size: 13px;
+    font-size: 0.8125rem;
   }
 
   .actions {
@@ -393,7 +397,7 @@
     color: var(--soft);
     padding: 8px 18px;
     border-radius: var(--radius-sm);
-    font-size: 14px;
+    font-size: 0.875rem;
     cursor: pointer;
     transition:
       background 0.15s,
@@ -410,7 +414,7 @@
     border: none;
     color: var(--bar-ink-deep);
     font-weight: 600;
-    font-size: 14px;
+    font-size: 0.875rem;
     padding: 8px 20px;
     border-radius: var(--radius-sm);
     cursor: pointer;
@@ -429,7 +433,7 @@
   }
 
   .installing-hint {
-    font-size: 13px;
+    font-size: 0.8125rem;
     color: var(--dim);
     margin-right: auto;
   }

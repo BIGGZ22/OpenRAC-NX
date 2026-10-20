@@ -9,6 +9,9 @@
   import { untrack } from "svelte";
   import Icon, { type IconName } from "./Icon.svelte";
 
+  /** The first run: the bar with the name only, nothing to go to yet. */
+  let { setup = false }: { setup?: boolean } = $props();
+
   // A player has three places to be: the games, modding and the settings. What the launcher
   // ran (Activity) opens from the running job here and from a game's menu. With
   // developer tools on, Develop is a tab of its own: the checkout, each version and the jobs.
@@ -56,51 +59,65 @@
 </script>
 
 <header class="site-header">
-  <button
-    class="brand"
-    onclick={() => (app.page = "library")}
-    aria-label="OpenRAC: your games"
-    title={app.info?.version ? `OpenRAC Launcher ${app.info.version}` : undefined}
-  >
-    <img src="/wrench.webp" alt="" width="40" height="40" />
-    <span>Open<b>RAC</b></span>
-    <!-- The launcher's version beside its name, on every page (also in the tooltip, for a narrow
-         window that hides the tag). -->
-    <small
-      >Launcher{#if app.info?.version}<span class="ver">{app.info.version}</span>{/if}</small
-    >
-  </button>
-
-  <nav bind:this={nav}>
-    <span
-      class="slider"
-      class:shown={slider.shown}
-      class:moving={slider.moving}
-      style={`transform: translateX(${slider.left}px); width: ${slider.width}px`}
-      aria-hidden="true"
-    ></span>
-    {#each tabs as tab (tab.page)}
-      {@const on = current === tab.page}
-      <button
-        class="tab"
-        class:on
-        data-page={tab.page}
-        aria-current={on ? "page" : undefined}
-        onclick={() => (app.page = tab.page)}
+  <!-- The first run: the name, not yet a way back to the games. -->
+  {#if setup}
+    <div class="brand" title={app.info?.version ? `OpenRAC Launcher ${app.info.version}` : undefined}>
+      <img src="/wrench.webp" alt="" width="40" height="40" />
+      <span>Open<b>RAC</b></span>
+      <small
+        >Launcher{#if app.info?.version}<span class="ver">{app.info.version}</span>{/if}</small
       >
-        {#if onAndroid}
-          <span class="icon">
-            <Icon name={tab.icon} size={22} />
-            {#if tab.page === "settings" && app.update}<span class="badge" aria-label="An update is out"></span>{/if}
-          </span>
-        {/if}
-        <span class="label">{tab.label}</span>
-        {#if tab.page === "develop" && pending > 0}<span class="count">{pending}</span>{/if}
-      </button>
-    {/each}
-  </nav>
+    </div>
+  {:else}
+    <button
+      class="brand"
+      onclick={() => (app.page = "library")}
+      aria-label="OpenRAC: your games"
+      title={app.info?.version ? `OpenRAC Launcher ${app.info.version}` : undefined}
+    >
+      <img src="/wrench.webp" alt="" width="40" height="40" />
+      <span>Open<b>RAC</b></span>
+      <!-- The launcher's version beside its name, on every page (also in the tooltip, for a narrow
+           window that hides the tag). -->
+      <small
+        >Launcher{#if app.info?.version}<span class="ver">{app.info.version}</span>{/if}</small
+      >
+    </button>
+  {/if}
 
-  {#if running}
+  {#if !setup}
+    <nav bind:this={nav}>
+      <span
+        class="slider"
+        class:shown={slider.shown}
+        class:moving={slider.moving}
+        style={`transform: translateX(${slider.left}px); width: ${slider.width}px`}
+        aria-hidden="true"
+      ></span>
+      {#each tabs as tab (tab.page)}
+        {@const on = current === tab.page}
+        <button
+          class="tab"
+          class:on
+          data-page={tab.page}
+          aria-current={on ? "page" : undefined}
+          onclick={() => (app.page = tab.page)}
+        >
+          {#if onAndroid}
+            <span class="icon">
+              <Icon name={tab.icon} size={22} />
+              {#if tab.page === "settings" && app.update}<span class="badge" aria-hidden="true"></span>{/if}
+            </span>
+          {/if}
+          <span class="label">{tab.label}</span>
+          {#if onAndroid && tab.page === "settings" && app.update}<span class="sr-only">, an update is out</span>{/if}
+          {#if tab.page === "develop" && pending > 0}<span class="count">{pending}</span>{/if}
+        </button>
+      {/each}
+    </nav>
+  {/if}
+
+  {#if running && !setup}
     <button
       class="job"
       title={`${running.title}: show its output`}
@@ -162,7 +179,7 @@
     padding: 0 18px;
     background: linear-gradient(to bottom, var(--bar-top), var(--bar-bottom));
     border-bottom: 1px solid rgb(0 0 0 / 0.3);
-    color: #000;
+    color: var(--bar-name);
     box-shadow:
       inset 0 1px 0 rgb(255 255 255 / 0.35),
       0 4px 24px rgb(0 0 0 / 0.45);
@@ -175,15 +192,23 @@
     padding: 0;
   }
 
+  /* Amber on the orange bar would not show: the ring is the bar's ink there (not on Android's
+     dark rail, which keeps the amber). */
+  :global(html:not([data-platform="android"])) .site-header button:focus-visible,
+  :global(html[data-input="pad"]:not([data-platform="android"])) .site-header button:focus {
+    outline: 2px solid var(--bar-ink-deep);
+    outline-offset: 2px;
+  }
+
   .brand {
     display: inline-flex;
     align-items: center;
     flex-shrink: 0;
     gap: 8px;
     font-family: var(--font-brand);
-    font-size: 26px;
+    font-size: 1.625rem;
     font-weight: 400;
-    color: #000;
+    color: var(--bar-name);
   }
 
   .brand b {
@@ -218,9 +243,9 @@
 
   .brand small {
     font-family: var(--font-head);
-    font-size: 10px;
+    font-size: 0.75rem;
     font-weight: 700;
-    letter-spacing: 0.22em;
+    letter-spacing: 0.12em;
     text-transform: uppercase;
     color: var(--bar-ink);
     border: 1px solid rgb(0 0 0 / 0.3);
@@ -270,7 +295,7 @@
     position: relative;
     border-radius: 999px;
     padding: 7px 15px;
-    font-size: 15px;
+    font-size: 0.9375rem;
     font-weight: 500;
     color: var(--bar-ink);
     transition: color var(--medium) var(--ease);
@@ -292,7 +317,7 @@
     border-radius: 10px;
     background: var(--bar-ink-deep);
     color: var(--amber);
-    font-size: 12px;
+    font-size: 0.75rem;
     display: inline-grid;
     place-items: center;
     padding: 0 6px;
@@ -306,7 +331,7 @@
   .job {
     gap: 8px;
     max-width: 280px;
-    font-size: 13px;
+    font-size: 0.8125rem;
     font-weight: 600;
     color: var(--bar-ink-deep);
     background: rgb(0 0 0 / 0.1);
@@ -325,7 +350,7 @@
   }
 
   .preview {
-    font-size: 12px;
+    font-size: 0.75rem;
     font-weight: 700;
     color: var(--bar-ink);
     border: 1px dashed rgb(0 0 0 / 0.4);
@@ -337,7 +362,7 @@
     display: inline-flex;
     align-items: center;
     gap: 6px;
-    font-size: 14px;
+    font-size: 0.875rem;
     font-weight: 600;
     color: var(--bar-ink);
     padding: 7px 10px;
@@ -353,9 +378,9 @@
     display: inline-flex;
     align-items: center;
     gap: 8px;
-    font-size: 14px;
+    font-size: 0.875rem;
     font-weight: 700;
-    background: #fff;
+    background: var(--bar-button);
     color: var(--bar-ink-deep);
     border: 1px solid rgb(0 0 0 / 0.12);
     border-radius: 999px;
@@ -377,7 +402,7 @@
   .discord:hover {
     transform: translateY(-1px);
     background: var(--bar-ink-deep);
-    color: #fff;
+    color: var(--bar-button);
     box-shadow: 0 6px 16px rgb(0 0 0 / 0.28);
   }
 
@@ -396,7 +421,7 @@
     display: inline-flex;
     align-items: center;
     gap: 8px;
-    font-size: 13px;
+    font-size: 0.8125rem;
     font-weight: 700;
     background: var(--bar-ink-deep);
     color: var(--gold);
@@ -588,7 +613,7 @@
     width: var(--nav-left);
     padding: 0;
     border-radius: 0;
-    font-size: 12px;
+    font-size: 0.75rem;
     font-weight: 600;
     color: var(--soft);
   }
@@ -646,7 +671,7 @@
     width: 8px;
     height: 8px;
     border-radius: 50%;
-    background: #00d26a;
+    background: var(--ok);
     box-shadow: 0 0 0 2px var(--ink-deep);
   }
 
@@ -656,7 +681,7 @@
     left: 44px;
     min-width: 18px;
     height: 18px;
-    font-size: 11px;
+    font-size: 0.75rem;
     background: var(--amber);
     color: var(--bar-ink-deep);
   }

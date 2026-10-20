@@ -31,8 +31,8 @@
   import { choiceFor, programOf } from "$lib/discChoice";
   import { pct } from "$lib/format";
   import { SITE_URL } from "$lib/links";
-  import { gameArt, gameClip, hideMissing } from "$lib/media";
-  import { enter, reduced } from "$lib/motion";
+  import { gameArt, hideMissing } from "$lib/media";
+  import { enter } from "$lib/motion";
   import { fly } from "svelte/transition";
   import { place, when } from "$lib/reports";
   import { isBuilt, playerAct, playerState, playerVersion } from "$lib/player.svelte";
@@ -61,33 +61,6 @@
   // Each game's still picture, under its band and behind the page.
   const art = $derived(v ? gameArt(v.game) : null);
 
-  // The game's clip plays over its picture while the pointer is on the band or focus is in it, and
-  // stops (it is taken away, so it decodes nothing) when they leave. Never with reduced motion.
-  /** Games whose clip is not there: not asked for again. */
-  let noClip = $state<Record<string, boolean>>({});
-  const clip = $derived(v && !reduced && !noClip[v.game] ? gameClip(v.game) : null);
-  let hero = $state<HTMLElement | null>(null);
-  let clipOn = $state(false);
-  $effect(() => {
-    const el = hero;
-    clipOn = false;
-    if (!el || !clip) return;
-    const on = () => (clipOn = true);
-    const off = () => (clipOn = false);
-    const blur = (e: FocusEvent) => {
-      if (!(e.relatedTarget instanceof Node && el.contains(e.relatedTarget))) clipOn = false;
-    };
-    el.addEventListener("pointerenter", on);
-    el.addEventListener("pointerleave", off);
-    el.addEventListener("focusin", on);
-    el.addEventListener("focusout", blur);
-    return () => {
-      el.removeEventListener("pointerenter", on);
-      el.removeEventListener("pointerleave", off);
-      el.removeEventListener("focusin", on);
-      el.removeEventListener("focusout", blur);
-    };
-  });
   /** The game has a PC port to play (or to build and play); without one, the page says how far it is. */
   const portReady = $derived(!!action("play") && action("play")?.state !== "planned");
 
@@ -205,7 +178,7 @@
           </div>
         {/if}
 
-        <FolderPrompt />
+        <FolderPrompt primary={false} />
         {#if app.library?.actionsError}
           <div class="panel notice">
             <Icon name="warn" />
@@ -227,25 +200,10 @@
           <CrashNotice notice={app.stopped} title={v.title} />
         {/if}
 
-        <section class="hero" aria-label={v.title} in:fly={enter()} bind:this={hero}>
-          {#if art ?? clip}
+        <section class="hero" aria-label={v.title} in:fly={enter()}>
+          {#if art}
             <div class="hero-backdrop" aria-hidden="true">
-              {#if art}
-                <img src={art} alt="" class="hero-bg" decoding="async" fetchpriority="high" onerror={hideMissing} />
-              {/if}
-              {#if clipOn && clip}
-                {@const id = v.game}
-                <img
-                  src={clip}
-                  alt=""
-                  class="hero-clip"
-                  decoding="async"
-                  onload={(e) => {
-                    e.currentTarget.classList.add("shown");
-                  }}
-                  onerror={() => (noClip[id] = true)}
-                />
-              {/if}
+              <img src={art} alt="" class="hero-bg" decoding="async" fetchpriority="high" onerror={hideMissing} />
               <div class="hero-overlay"></div>
             </div>
           {/if}
@@ -347,7 +305,7 @@
     margin: 0;
     padding: 0;
     list-style: none;
-    font-size: 13px;
+    font-size: 0.8125rem;
     color: var(--tx2);
   }
 
@@ -456,21 +414,7 @@
     }
   }
 
-  /* The clip fades in over the picture once its first frame is there. */
-  .hero-clip {
-    position: absolute;
-    inset: 0;
-    width: 100%;
-    height: 100%;
-    object-fit: cover;
-    opacity: 0;
-    transition: opacity 0.35s ease-out;
-  }
-
-  .hero-clip:global(.shown) {
-    opacity: 0.55;
-  }
-
+  /* The picture behind the page fades in. */
   .page-ambient-bg img {
     animation: ambient 0.8s ease-out both;
   }
@@ -513,7 +457,7 @@
   .title small {
     display: block;
     margin-top: 6px;
-    font-size: 13px;
+    font-size: 0.8125rem;
     letter-spacing: 0.04em;
     color: var(--tx2);
   }
@@ -535,7 +479,7 @@
 
   .big {
     white-space: nowrap;
-    font-size: 22px;
+    font-size: 1.375rem;
     font-weight: 700;
     padding: 16px 46px;
     border-radius: 999px;
@@ -583,12 +527,12 @@
     align-items: center;
     gap: 4px 8px;
     margin: 0;
-    font-size: 13px;
+    font-size: 0.8125rem;
     color: var(--err);
   }
 
   .stopped .link {
-    font-size: 13px;
+    font-size: 0.8125rem;
   }
 
   /* A game without a port yet: what is happening, how far it is, and where to follow it. */
@@ -609,13 +553,13 @@
     display: flex;
     align-items: baseline;
     gap: 12px;
-    font-size: 14px;
+    font-size: 0.875rem;
     color: var(--soft);
   }
 
   .coming .progress strong {
     font-family: var(--font-head);
-    font-size: 18px;
+    font-size: 1.125rem;
     color: var(--gold);
     font-variant-numeric: tabular-nums;
   }
@@ -639,7 +583,7 @@
   }
 
   .chip {
-    font-size: 11.5px;
+    font-size: 0.75rem;
     color: var(--soft);
     background: var(--panel-hi);
     border: 1px solid var(--line-strong);
@@ -671,7 +615,7 @@
   }
 
   .line {
-    font-size: 14px;
+    font-size: 0.875rem;
     color: var(--tx2);
     text-align: center;
     max-width: 640px;

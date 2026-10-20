@@ -89,7 +89,7 @@
   .phase {
     flex: 1 1 auto;
     min-width: 0;
-    font-size: 14px;
+    font-size: 0.875rem;
     font-weight: 600;
     color: var(--text);
     overflow: hidden;
@@ -99,7 +99,7 @@
 
   .pct {
     flex: none;
-    font-size: 13px;
+    font-size: 0.8125rem;
     font-variant-numeric: tabular-nums;
     color: var(--soft);
   }
@@ -158,7 +158,7 @@
     border-radius: 10px;
     background: var(--ink-deep);
     color: var(--body);
-    font-size: 12px;
+    font-size: 0.75rem;
     line-height: 1.45;
     white-space: pre-wrap;
     overflow-wrap: anywhere;

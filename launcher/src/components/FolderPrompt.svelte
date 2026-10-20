@@ -6,6 +6,9 @@
   import { chooseGamesFolder } from "$lib/player.svelte";
   import Icon from "./Icon.svelte";
 
+  /** On a game's page its Play band holds the one main button, so the folder's is a plain one. */
+  let { primary = true }: { primary?: boolean } = $props();
+
   const lib = $derived(app.library);
   const nothingYet = $derived(!!lib && !lib.games.some((g) => g.install?.extracted));
   const askFolder = $derived(nothingYet && !app.config?.discsDir);
@@ -42,7 +45,7 @@
         </p>
       {/if}
     </div>
-    <button class="primary" disabled={looking} onclick={() => void choose()}>
+    <button class:primary disabled={looking} onclick={() => void choose()}>
       {#if looking}<span class="spinner"></span>{/if}{onAndroid
         ? "Choose disc image"
         : askFolder
@@ -68,7 +71,7 @@
 
   .folder p {
     margin: 0;
-    font-size: 14px;
+    font-size: 0.875rem;
     overflow-wrap: anywhere;
   }
 

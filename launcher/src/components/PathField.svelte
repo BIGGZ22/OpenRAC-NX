@@ -97,7 +97,7 @@
     display: inline-flex;
     align-items: center;
     gap: 5px;
-    font-size: 12px;
+    font-size: 0.75rem;
     font-weight: 600;
     color: var(--ok);
   }
@@ -120,7 +120,7 @@
 
   .hint,
   .message {
-    font-size: 13px;
+    font-size: 0.8125rem;
   }
 
   .err {
@@ -132,7 +132,7 @@
     flex-wrap: wrap;
     align-items: center;
     gap: 4px;
-    font-size: 13px;
+    font-size: 0.8125rem;
     color: var(--dim);
   }
 

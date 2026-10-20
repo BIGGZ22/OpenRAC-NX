@@ -104,7 +104,7 @@
   }
 
   .name {
-    font-size: 14px;
+    font-size: 0.875rem;
     font-weight: 600;
     color: var(--text);
   }
@@ -116,7 +116,7 @@
   }
 
   .desc {
-    font-size: 12.5px;
+    font-size: 0.7812rem;
     color: var(--dim);
   }
 
@@ -144,7 +144,7 @@
     align-items: flex-start;
     gap: 6px;
     padding: 2px 0 4px;
-    font-size: 13px;
+    font-size: 0.8125rem;
     color: var(--dim);
   }
 

@@ -2,7 +2,7 @@
   // Three groups: where things are (folders), the programs the launcher uses,
   // and how the launcher itself behaves. Edits stay local until saved; the bar
   // that saves them stays in view at the bottom of the window. With `setup`,
-  // the first-run screen: the folders and programs, filled from detection.
+  // the first-run screen: one question (the games folder), and what was found by itself, folded.
   import GpuDrivers from "$components/GpuDrivers.svelte";
   import PathField from "$components/PathField.svelte";
   import {
@@ -16,7 +16,7 @@
     type UpdateChannel,
   } from "$lib/api";
   import { app, lookForUpdate, saveConfig } from "$lib/app.svelte";
-  import { DISCORD_URL, REPO_URL, SITE_URL } from "$lib/links";
+  import { DISCORD_URL, PYTHON_URL, REPO_URL, SITE_URL } from "$lib/links";
 
   let { setup = false }: { setup?: boolean } = $props();
 
@@ -61,7 +61,7 @@
 
   /** The OpenRAC folder is the first thing on the first run; after it, a player sees it only while
    *  it is missing (an installed launcher carries its own copy), and a contributor in Developer. */
-  const rootHere = $derived(setup || (!app.info?.standalone && !draft.root));
+  const rootHere = $derived(!app.info?.standalone && !draft.root);
   /** Android has no folders to choose (its picker copies discs into the app): no panel when it
    *  would be empty. */
   const showFolders = $derived(rootHere || !onAndroid || draft.developer);
@@ -91,11 +91,29 @@
     }
   }
 
+  /** First run (shown only when the OpenRAC folder or Python was not found: firstRun in
+   *  app.svelte.ts): what was not found is asked for beside the games folder, and stays there once
+   *  chosen, so the field does not move away under the pointer. */
+  let askRoot = $state(false);
+  let askPython = $state(false);
+  /** First run: what "Found for you" holds, in a line, so it can stay folded. */
+  const foundSummary = $derived.by(() => {
+    if (!found) return "Looking…";
+    const names = [
+      !askRoot && draft.root && "OpenRAC",
+      !app.info?.standalone && !askPython && draft.python && "Python",
+      !app.info?.standalone && draft.godot && "Godot",
+    ].filter(Boolean);
+    return names.length ? `${names.join(", ")}. Change them here if they are wrong.` : "Nothing yet.";
+  });
+
   $effect(() => {
     void api.detect().then((d) => {
       found = d;
       // First run: take what was found for anything not set yet.
       if (setup) {
+        askRoot = !draft.root && !d.roots.length;
+        askPython = !app.info?.standalone && !draft.python && !d.pythons.length;
         draft.root ??= d.roots[0]?.path ?? null;
         draft.python ??= d.pythons[0]?.path ?? null;
         draft.godot ??= d.godots[0]?.path ?? null;
@@ -144,26 +162,29 @@
       <img src="/wrench.webp" alt="" width="72" height="72" />
       <div>
         <h1>Welcome to OpenRAC</h1>
-        <p class="muted">
-          Play the Ratchet &amp; Clank games natively, with your own discs. Choose your OpenRAC folder to start.
-        </p>
+        <p class="muted">Play the Ratchet &amp; Clank games natively, with your own discs.</p>
       </div>
     </section>
-  {:else}
-    <h1>Settings</h1>
-  {/if}
 
-  {#if showFolders}
+    <!-- One question; what the launcher found by itself waits under "Found for you". -->
     <section class="panel">
-      <h2>Your games</h2>
-      {#if rootHere}
+      {#if !onAndroid}
+        <h2>Where are your PS2 disc images?</h2>
+        <PathField
+          label="Games folder"
+          hint="The folder with your disc images (.iso). You can also choose it later, on the Games page."
+          folder
+          bind:value={draft.discsDir}
+          check={gamesFolder}
+        />
+      {/if}
+      {#if askRoot}
         <PathField
           label="OpenRAC folder"
-          hint="Your copy of OpenRAC: the folder with games/ and tools/ in it."
+          hint="Your copy of OpenRAC: the folder with games/ and tools/ in it. It was not found by itself."
           folder
           bind:value={draft.root}
           candidates={found?.roots}
-          detail={draft.developer}
           check={root}
         />
         {#if !draft.root}
@@ -173,33 +194,128 @@
           </p>
         {/if}
       {/if}
-      <!-- Android's picker gives no folders: the app keeps its own (src-tauri/src/android.rs). -->
-      {#if !onAndroid || draft.developer}
+      {#if askPython}
         <PathField
-          label="Games folder"
-          hint="The folder with your PlayStation 2 disc images (.iso). OpenRAC finds its games in it."
-          folder
-          bind:value={draft.discsDir}
-          detail={draft.developer}
-          check={gamesFolder}
+          label="Python"
+          hint="Python 3.10 or newer: OpenRAC's tools run with it. It was not found by itself."
+          bind:value={draft.python}
+          check={tool("python")}
         />
-        <PathField
-          label="Install folder"
-          hint="Where your games are set up from your discs. A few GB per game."
-          folder
-          bind:value={draft.installDir}
-          detail={draft.developer}
-          check={installFolder}
-        />
+        {#if !draft.python}
+          <p class="dim note">
+            No Python yet? <button class="link" onclick={() => void api.openUrl(PYTHON_URL)}>Get Python</button>, then
+            choose it here.
+          </p>
+        {/if}
       {/if}
     </section>
-  {/if}
 
-  {#if onAndroid && !setup}
-    <GpuDrivers />
-  {/if}
+    <section class="panel">
+      <details class="more">
+        <summary>
+          <h2>Found for you</h2>
+          <span class="dim note">{foundSummary}</span>
+        </summary>
+        {#if !askRoot}
+          <PathField
+            label="OpenRAC folder"
+            hint="Your copy of OpenRAC: the folder with games/ and tools/ in it."
+            folder
+            bind:value={draft.root}
+            candidates={found?.roots}
+            check={root}
+          />
+        {/if}
+        {#if !onAndroid}
+          <PathField
+            label="Install folder"
+            hint="Where your games are set up from your discs. A few GB per game."
+            folder
+            bind:value={draft.installDir}
+            check={installFolder}
+          />
+        {/if}
+        {#if !app.info?.standalone}
+          {#if !askPython}
+            <PathField
+              label="Python"
+              hint="Python 3.10 or newer: OpenRAC's tools run with it."
+              bind:value={draft.python}
+              candidates={found?.pythons}
+              check={tool("python")}
+            />
+          {/if}
+          <PathField
+            label="Godot"
+            hint="Godot 4.7 or newer, for the level editor (Mods). Optional."
+            bind:value={draft.godot}
+            candidates={found?.godots}
+            check={tool("godot")}
+          />
+        {/if}
+      </details>
+    </section>
 
-  {#if !setup}
+    <div class="row end start">
+      {#if !draft.root && found}
+        <p class="dim note" id="start-why">Choose your OpenRAC folder to start.</p>
+      {/if}
+      <button
+        class="primary"
+        disabled={saving || !draft.root}
+        aria-describedby={!draft.root && found ? "start-why" : undefined}
+        onclick={() => void save(true)}>{saving ? "Starting…" : "Start"}</button
+      >
+    </div>
+  {:else}
+    <h1>Settings</h1>
+
+    {#if showFolders}
+      <section class="panel">
+        <h2>Your games</h2>
+        {#if rootHere}
+          <PathField
+            label="OpenRAC folder"
+            hint="Your copy of OpenRAC: the folder with games/ and tools/ in it."
+            folder
+            bind:value={draft.root}
+            candidates={found?.roots}
+            detail={draft.developer}
+            check={root}
+          />
+          {#if !draft.root}
+            <p class="dim note">
+              No copy yet? <button class="link" onclick={() => void api.openUrl(REPO_URL)}>Get OpenRAC</button>, then
+              choose its folder here.
+            </p>
+          {/if}
+        {/if}
+        <!-- Android's picker gives no folders: the app keeps its own (src-tauri/src/android.rs). -->
+        {#if !onAndroid || draft.developer}
+          <PathField
+            label="Games folder"
+            hint="The folder with your PlayStation 2 disc images (.iso). OpenRAC finds its games in it."
+            folder
+            bind:value={draft.discsDir}
+            detail={draft.developer}
+            check={gamesFolder}
+          />
+          <PathField
+            label="Install folder"
+            hint="Where your games are set up from your discs. A few GB per game."
+            folder
+            bind:value={draft.installDir}
+            detail={draft.developer}
+            check={installFolder}
+          />
+        {/if}
+      </section>
+    {/if}
+
+    {#if onAndroid}
+      <GpuDrivers />
+    {/if}
+
     <section class="panel">
       <h2>General</h2>
       <label class="setting">
@@ -273,34 +389,32 @@
         <p class="dim note">This development build stays until the next release replaces it.</p>
       {/if}
     </section>
-  {/if}
 
-  {#if !app.info?.standalone}
-    <section class="panel">
-      <h2>Programs</h2>
-      <PathField
-        label="Godot"
-        hint="Godot 4.7 or newer, for the level editor (Mods). Optional."
-        bind:value={draft.godot}
-        candidates={found?.godots}
-        detail={draft.developer}
-        check={tool("godot")}
-      />
-      <!-- A player is asked for Python only when none was found; contributors find it in Developer. -->
-      {#if setup || (!draft.developer && !app.config?.python)}
+    {#if !app.info?.standalone}
+      <section class="panel">
+        <h2>Programs</h2>
         <PathField
-          label="Python"
-          hint="Python 3.10 or newer: OpenRAC's tools run with it."
-          bind:value={draft.python}
-          candidates={found?.pythons}
+          label="Godot"
+          hint="Godot 4.7 or newer, for the level editor (Mods). Optional."
+          bind:value={draft.godot}
+          candidates={found?.godots}
           detail={draft.developer}
-          check={tool("python")}
+          check={tool("godot")}
         />
-      {/if}
-    </section>
-  {/if}
+        <!-- A player is asked for Python only when none was found; contributors find it in Developer. -->
+        {#if !draft.developer && !app.config?.python}
+          <PathField
+            label="Python"
+            hint="Python 3.10 or newer: OpenRAC's tools run with it."
+            bind:value={draft.python}
+            candidates={found?.pythons}
+            detail={draft.developer}
+            check={tool("python")}
+          />
+        {/if}
+      </section>
+    {/if}
 
-  {#if !setup}
     <section class="panel">
       <details class="more" bind:open={advancedOpen}>
         <summary><h2>Advanced</h2></summary>
@@ -414,13 +528,7 @@
         {/if}
       </details>
     </section>
-  {/if}
 
-  {#if setup}
-    <div class="row end">
-      <button class="primary" disabled={saving || !draft.root} onclick={() => void save(true)}>Start</button>
-    </div>
-  {:else}
     <p class="dim about">
       OpenRAC Launcher {app.info?.version ?? ""}
       <!-- The header's links, which Android's navigation has no room for. -->
@@ -462,7 +570,7 @@
   }
 
   .welcome h1 {
-    font-size: 28px;
+    font-size: 1.75rem;
     margin-bottom: 6px;
   }
 
@@ -476,7 +584,7 @@
   }
 
   .note {
-    font-size: 13px;
+    font-size: 0.8125rem;
   }
 
   /* "Check now", what it found and where it looks, under the update settings. */
@@ -502,7 +610,7 @@
     grid-template-columns: max-content minmax(0, 1fr);
     gap: 4px 14px;
     margin: 12px 0 4px;
-    font-size: 13px;
+    font-size: 0.8125rem;
   }
 
   .facts dt {
@@ -531,7 +639,7 @@
   }
 
   .field label {
-    font-size: 13px;
+    font-size: 0.8125rem;
     font-weight: 600;
   }
 
@@ -544,15 +652,30 @@
     background: none;
     padding: 0;
     color: var(--amber);
-    font-size: 13px;
+    font-size: 0.8125rem;
   }
 
   .end {
     justify-content: flex-end;
   }
 
+  /* First run: why Start waits, beside it. */
+  .start {
+    align-items: center;
+    gap: 14px;
+  }
+
+  .start p {
+    margin: 0;
+  }
+
+  /* First run: what was found, in a line beside its heading. */
+  details.more > summary .note {
+    min-width: 0;
+  }
+
   .about {
-    font-size: 12px;
+    font-size: 0.75rem;
   }
 
   /* Stays in view while there is something to save. */
@@ -572,7 +695,7 @@
     border: 1px solid var(--line-strong);
     border-radius: 999px;
     box-shadow: var(--shadow);
-    font-size: 14px;
+    font-size: 0.875rem;
     animation: bar-in var(--medium) var(--ease) both;
   }
 

@@ -20,6 +20,7 @@
   import { playerVersion } from "$lib/player.svelte";
   import type { Job } from "$lib/queue";
   import { enter } from "$lib/motion";
+  import { tablist } from "$lib/tabs";
   import { themeStyle } from "$lib/themes";
   import { fade, fly } from "svelte/transition";
 
@@ -186,7 +187,7 @@
 
           <section class="panel play">
             <div class="grow">
-              <h3>Play with your mods</h3>
+              <h2>Play with your mods</h2>
               <p class="muted">
                 {#if !play}
                   Playing is not available on this computer yet.
@@ -214,17 +215,23 @@
 
           <section class="panel make">
             <div class="row head">
-              <h3 class="grow">Make your own</h3>
-              <div class="tabs" role="tablist" aria-label="Make your own">
+              <h2 class="grow">Make your own</h2>
+              <div class="tabs" role="tablist" aria-label="Make your own" use:tablist>
                 <button
                   role="tab"
+                  id="make-tab-levels"
+                  aria-controls="make-panel"
                   aria-selected={tab === "levels"}
+                  tabindex={tab === "levels" ? 0 : -1}
                   class:on={tab === "levels"}
                   onclick={() => (tab = "levels")}>Levels</button
                 >
                 <button
                   role="tab"
+                  id="make-tab-assets"
+                  aria-controls="make-panel"
                   aria-selected={tab === "assets"}
+                  tabindex={tab === "assets" ? 0 : -1}
                   class:on={tab === "assets"}
                   onclick={() => (tab = "assets")}>Models and textures</button
                 >
@@ -232,12 +239,17 @@
             </div>
 
             {#key tab}
-              <div in:fade={{ duration: enter().duration ?? 0 }}>
+              <div
+                id="make-panel"
+                role="tabpanel"
+                aria-labelledby={`make-tab-${tab}`}
+                in:fade={{ duration: enter().duration ?? 0 }}
+              >
                 {#if tab === "levels"}
                   <ol class="steps">
                     <li>
                       <div class="text">
-                        <h4>Edit the levels</h4>
+                        <h3>Edit the levels</h3>
                         <p class="muted">
                           {#if noDisc}
                             Set the game up from your disc first; the editor reads the levels from it.
@@ -288,7 +300,7 @@
                     </li>
                     <li>
                       <div class="text">
-                        <h4>Pack your edits</h4>
+                        <h3>Pack your edits</h3>
                         <p class="muted" class:failed={result?.failed}>
                           {#if packing}
                             {packing.lines.at(-1)?.line ?? "Reading your levels…"}
@@ -387,10 +399,10 @@
     gap: 10px 18px;
   }
 
-  .play h3,
-  .steps h4 {
+  .play h2,
+  .steps h3 {
     font-family: var(--font-sans);
-    font-size: 15px;
+    font-size: 0.9375rem;
     font-weight: 600;
     color: var(--text);
   }
@@ -398,7 +410,7 @@
   .play p,
   .steps p {
     margin: 2px 0 0;
-    font-size: 14px;
+    font-size: 0.875rem;
   }
 
   .play > button {
@@ -413,6 +425,11 @@
     display: flex;
     flex-direction: column;
     gap: 12px;
+  }
+
+  /* The size of its neighbour's, Your mods (PacksPanel). */
+  .make h2 {
+    font-size: 1rem;
   }
 
   .head {
@@ -433,7 +450,7 @@
     border: 0;
     background: none;
     padding: 5px 14px;
-    font-size: 13px;
+    font-size: 0.8125rem;
     font-weight: 500;
     color: var(--soft);
   }
@@ -472,7 +489,7 @@
     place-items: center;
     border-radius: 50%;
     border: 1px solid var(--line-strong);
-    font-size: 13px;
+    font-size: 0.8125rem;
     font-weight: 600;
     color: var(--soft);
   }
@@ -495,7 +512,7 @@
 
   select {
     font: inherit;
-    font-size: 14px;
+    font-size: 0.875rem;
     color: var(--text);
     background: var(--ink-deep);
     border: 1px solid var(--line-strong);
@@ -533,7 +550,7 @@
     gap: 10px;
     padding-top: 14px;
     border-top: 1px solid var(--line);
-    font-size: 13px;
+    font-size: 0.8125rem;
   }
 
   .sdk p {

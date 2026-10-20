@@ -42,6 +42,8 @@ describe("reports", () => {
     expect(when(new Date(2026, 9, 16, 18, 0).getTime() / 1000, now, "en-GB")).toBe("Yesterday at 18:00");
     expect(when(new Date(2026, 9, 14, 10, 0).getTime() / 1000, now, "en-GB")).toBe("14 October at 10:00");
     expect(when(new Date(2025, 9, 14, 10, 0).getTime() / 1000, now, "en-GB")).toBe("14 October 2025 at 10:00");
+    // No leading zero on the hour.
+    expect(when(new Date(2026, 9, 17, 17, 1).getTime() / 1000, now, "en-CA")).toBe("Today at 5:01 p.m.");
   });
 
   it("copies the last lines when there is no report", () => {

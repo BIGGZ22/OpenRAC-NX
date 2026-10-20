@@ -204,9 +204,10 @@
             <ul class="list">
               {#each status.backups as backup (backup.name)}
                 <li>
-                  <span class="grow clip">
-                    <strong>{backupLabel(backup)}</strong>
-                    <span class="dim">· {when(backup.createdMillis / 1000)}</span>
+                  <!-- The date under the name, so a long name does not hide it on a narrow screen. -->
+                  <span class="grow named">
+                    <strong class="clip">{backupLabel(backup)}</strong>
+                    <span class="dim clip">{when(backup.createdMillis / 1000)}</span>
                   </span>
                   {#if developer}
                     <span class="chip mono" title={backup.name}>{size(backup.totalSize)}</span>
@@ -261,7 +262,7 @@
   }
 
   .slot {
-    font-size: 13px;
+    font-size: 0.8125rem;
     color: var(--dim);
   }
 
@@ -281,20 +282,20 @@
   }
 
   .when {
-    font-size: 13px;
+    font-size: 0.8125rem;
     color: var(--soft);
     white-space: nowrap;
   }
 
   .empty {
     margin: 0;
-    font-size: 13px;
+    font-size: 0.8125rem;
     color: var(--dim);
   }
 
   /* A contributor's detail: a small mono chip, never glued to a player's words. */
   .chip {
-    font-size: 11.5px;
+    font-size: 0.75rem;
     color: var(--soft);
     background: var(--panel-hi);
     border: 1px solid var(--line-strong);
@@ -357,17 +358,38 @@
     font-weight: 600;
   }
 
+  .named {
+    display: flex;
+    flex-direction: column;
+    line-height: 1.35;
+  }
+
+  .named .dim {
+    font-size: 0.8125rem;
+  }
+
   .restore {
     color: var(--amber);
   }
 
   .small-text {
-    font-size: 13px;
+    font-size: 0.8125rem;
   }
 
   @media (max-width: 640px) {
     .slots li {
       grid-template-columns: 48px minmax(0, 1fr) auto;
+      row-gap: 6px;
+    }
+
+    /* The date on a line of its own under the planet, Edit at its end. */
+    .slots .when {
+      grid-column: 2;
+    }
+
+    .slots li > :last-child {
+      grid-column: 3;
+      justify-self: end;
     }
   }
 </style>

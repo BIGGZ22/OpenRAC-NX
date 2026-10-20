@@ -12,7 +12,9 @@
   // A button that opens a short list of secondary actions, below it and aligned
   // to its right edge (above it when there is no room below). The list is a
   // popover, in the browser's top layer, so no box it sits in can cut it off.
-  // Closes on a choice, a click elsewhere, Escape, or when the page moves.
+  // Closes on a choice, a click elsewhere, Escape, or when the page moves. From the keyboard, as
+  // a menu is: its first item takes the focus, the arrows, Home and End move in it, and Escape or
+  // Tab goes back to the button.
   import Icon, { type IconName } from "./Icon.svelte";
 
   let { items, label = "More actions" }: { items: MenuItem[]; label?: string } = $props();
@@ -20,6 +22,7 @@
   let open = $state(false);
   let root = $state<HTMLElement | null>(null);
   let list = $state<HTMLElement | null>(null);
+  let trigger = $state<HTMLElement | null>(null);
 
   /** Puts the list by the button, inside the window. */
   function place() {
@@ -37,6 +40,7 @@
     if (!list) return;
     list.showPopover();
     place();
+    list.querySelector<HTMLElement>('[role="menuitem"]')?.focus();
   });
   const plain = $derived(items.filter((i) => !i.danger));
   const danger = $derived(items.filter((i) => i.danger));
@@ -47,7 +51,11 @@
       if (root && !root.contains(e.target as Node)) open = false;
     };
     const key = (e: KeyboardEvent) => {
-      if (e.key === "Escape") open = false;
+      if (e.key === "Escape" || e.key === "Tab") {
+        if (e.key === "Escape") e.preventDefault();
+        open = false;
+        trigger?.focus();
+      }
     };
     const moved = () => (open = false);
     window.addEventListener("mousedown", outside);
@@ -63,8 +71,29 @@
     };
   });
 
+  /** Up, Down, Home and End in the list, round from one end to the other. */
+  function move(e: KeyboardEvent) {
+    const all = [...(list?.querySelectorAll<HTMLElement>('[role="menuitem"]') ?? [])];
+    const at = all.indexOf(document.activeElement as HTMLElement);
+    const to =
+      e.key === "ArrowDown"
+        ? (at + 1) % all.length
+        : e.key === "ArrowUp"
+          ? (at - 1 + all.length) % all.length
+          : e.key === "Home"
+            ? 0
+            : e.key === "End"
+              ? all.length - 1
+              : null;
+    if (to === null) return;
+    e.preventDefault();
+    all[to]?.focus();
+  }
+
   function choose(item: MenuItem) {
     open = false;
+    // The list goes away with the focus in it: back to its button, before the item moves it on.
+    trigger?.focus();
     item.run();
   }
 </script>
@@ -72,6 +101,7 @@
 <div class="menu" bind:this={root}>
   <button
     class="trigger"
+    bind:this={trigger}
     aria-label={label}
     title={label}
     aria-haspopup="menu"
@@ -79,10 +109,11 @@
     onclick={() => (open = !open)}><Icon name="more" size={20} /></button
   >
   {#if open}
-    <div class="list" role="menu" popover="manual" bind:this={list}>
+    <div class="list" role="menu" popover="manual" tabindex="-1" bind:this={list} onkeydown={move}>
       {#each plain as item (item.label)}
         <button
           role="menuitem"
+          tabindex="-1"
           onclick={() => {
             choose(item);
           }}><Icon name={item.icon} size={16} />{item.label}</button
@@ -92,6 +123,7 @@
       {#each danger as item (item.label)}
         <button
           role="menuitem"
+          tabindex="-1"
           class="danger"
           onclick={() => {
             choose(item);

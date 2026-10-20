@@ -502,7 +502,7 @@
 
   .warn-line {
     margin: 14px 0 0;
-    font-size: 13px;
+    font-size: 0.8125rem;
     color: var(--amber);
   }
 
@@ -518,7 +518,7 @@
   summary {
     cursor: pointer;
     font-family: var(--font-head);
-    font-size: 14px;
+    font-size: 0.875rem;
     color: var(--gold);
     padding: 4px 0;
   }
@@ -526,7 +526,7 @@
   details.planet summary,
   details.chunk summary {
     font-family: var(--font-sans);
-    font-size: 13px;
+    font-size: 0.8125rem;
     color: var(--text);
   }
 
@@ -538,7 +538,7 @@
 
   h4 {
     margin: 12px 0 6px;
-    font-size: 13px;
+    font-size: 0.8125rem;
     color: var(--lav);
   }
 
@@ -553,7 +553,7 @@
     display: flex;
     flex-direction: column;
     gap: 4px;
-    font-size: 12px;
+    font-size: 0.75rem;
     color: var(--soft);
   }
 
@@ -566,21 +566,21 @@
   .row.tight {
     gap: 8px;
     align-items: center;
-    font-size: 13px;
+    font-size: 0.8125rem;
   }
 
   .tiny {
     display: inline-flex;
     gap: 5px;
     align-items: center;
-    font-size: 12px;
+    font-size: 0.75rem;
   }
 
   input[type="number"],
   select,
   textarea {
     font: inherit;
-    font-size: 13px;
+    font-size: 0.8125rem;
     background: var(--ink-deep);
     color: var(--text);
     border: 1px solid var(--line-strong);
@@ -593,7 +593,7 @@
   textarea {
     width: 100%;
     font-family: var(--font-mono);
-    font-size: 12px;
+    font-size: 0.75rem;
     resize: vertical;
   }
 
@@ -608,7 +608,7 @@
   table {
     width: 100%;
     border-collapse: collapse;
-    font-size: 13px;
+    font-size: 0.8125rem;
   }
 
   th {
@@ -642,7 +642,7 @@
     padding: 0;
     height: 26px;
     justify-content: center;
-    font-size: 11px;
+    font-size: 0.75rem;
     font-variant-numeric: tabular-nums;
     color: var(--dim);
   }
@@ -664,7 +664,7 @@
 
   .note {
     margin: 6px 0 0;
-    font-size: 12px;
+    font-size: 0.75rem;
     color: var(--dim);
   }
 
@@ -673,7 +673,7 @@
   }
 
   .tag {
-    font-size: 11px;
+    font-size: 0.75rem;
     border: 1px solid var(--ok);
     color: var(--ok);
     border-radius: 999px;
@@ -687,7 +687,7 @@
 
   .err-text {
     margin: 4px 0 0;
-    font-size: 12px;
+    font-size: 0.75rem;
     color: var(--err);
   }
 </style>

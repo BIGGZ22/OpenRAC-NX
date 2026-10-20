@@ -44,7 +44,8 @@ export const THEMES: Record<string, Theme> = {
     box: "rgba(98,66,27,.8)",
     border: "#a0742e",
     text: "#ebbe67",
-    text2: "#c99a45",
+    // Lighter than the site's #c99a45: the year under the title reads at 4.5:1 on the box.
+    text2: "#d4a752",
     from: "#25514f",
     to: "#0d1f24",
     font: "head",
