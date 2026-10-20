@@ -24,6 +24,25 @@ void func_001252C0(gaddr out, gaddr v) {
     memcpy(G(out), r, sizeof r);
 }
 
+/* sceVu0ScaleVector (func_00125328, an entry inside the library object at 0x125300): out = v * s,
+ * all four components (lqc2, vmulx.xyzw by the scale, sqc2). The decompilation matches it as VU0
+ * instructions in an asm statement, which a PC cannot run. */
+void func_00125328(gaddr out, gaddr v, float s) {
+    float in[4];
+    memcpy(in, G(v), sizeof in);
+    const float r[4] = {in[0] * s, in[1] * s, in[2] * s, in[3] * s};
+    memcpy(G(out), r, sizeof r);
+}
+
+/* sceVu0UnitMatrix (func_00125358): the identity matrix, its rows (1,0,0,0) .. (0,0,0,1). Matched
+ * as VU0 instructions in an asm statement too; without this the title world's matrices were never
+ * set and it drew nothing. */
+void func_00125358(gaddr m) {
+    const float unit[16] = {1.0f, 0.0f, 0.0f, 0.0f, 0.0f, 1.0f, 0.0f, 0.0f,
+                            0.0f, 0.0f, 1.0f, 0.0f, 0.0f, 0.0f, 0.0f, 1.0f};
+    memcpy(G(m), unit, sizeof unit);
+}
+
 #if !RAC1_OMIT(func_L00_002EDB68)
 /* Level 0's code address 0x2EDB68: the last two instructions of func_L00_002EDB58 (`jr $31` with
  * v0 = 0 in the delay slot), which the game keeps as a callback that does nothing and returns 0. */

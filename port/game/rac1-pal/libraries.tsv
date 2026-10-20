@@ -112,7 +112,7 @@ func_00124D18	pad2	scePad2Read	host
 func_00124DF0	pad2	scePad2GetButtonProfile	host
 func_00124EE0	pad2	scePad2GetState	host
 func_00125218	vib	sceVibGetProfile	host
-func_00125358	vu0	(UnitMatrix or InterVector)	todo	which one it is decides its host version
+func_00125358	vu0	sceVu0UnitMatrix	host	port/game/rac1/host/vector.c
 func_001253F8	vu0	sceVu0RotMatrixZ	host
 func_001254A0	vu0	sceVu0RotMatrixX	host
 func_00125548	vu0	sceVu0RotMatrixY	host
