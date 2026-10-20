@@ -41,7 +41,7 @@
   const groups = $derived(groupDifferences(data?.entries ?? []));
 
   async function setFix(entry: DifferenceView, on: boolean) {
-    if (!data) return;
+    if (!data || playing) return; // the running game would save over it
     saving = entry.id;
     try {
       data = await api.setGameFix(data.game, data.version, entry.id, on);
@@ -67,7 +67,8 @@
         <p class="about">{group.about}</p>
         {#if group.kind === "fix" && playing}
           <p class="about warn">
-            The game is running: a change here counts from its next start. In the game, use Options.
+            The game is running, so these are locked here: the game would save over a change made now. Change them in
+            the game under Options, Game fixes, or here once it has closed.
           </p>
         {/if}
         <ul>
@@ -90,7 +91,7 @@
                     role="switch"
                     aria-label={`${entry.name}: on is the port's fix, off plays as the original`}
                     checked={entry.on ?? true}
-                    disabled={saving === entry.id}
+                    disabled={playing || saving === entry.id}
                     onchange={(ev) => void setFix(entry, ev.currentTarget.checked)}
                   />
                 {:else if entry.kind === "guard"}
