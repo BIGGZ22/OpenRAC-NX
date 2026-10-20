@@ -107,7 +107,15 @@ function(openrac_add_game config)
   file(GLOB_RECURSE inputs CONFIGURE_DEPENDS
     "${game_source}/src/*.c" "${game_source}/src/*.h" "${game_source}/include/*.h"
     "${game_source}/candidates/*.c" "${game_source}/nonmatching/*.tsv" "${game_source}/nonmatching/*.c")
-  # The decompilation's own tables that hostgen.json names ("places", "symbols").
+  # The decompilation's own tables that hostgen.json names.
+  string(JSON catalogue_count ERROR_VARIABLE no_catalogues LENGTH "${json}" catalogues)
+  if(NOT no_catalogues AND catalogue_count GREATER 0)
+    math(EXPR last "${catalogue_count} - 1")
+    foreach(i RANGE ${last})
+      string(JSON catalogue GET "${json}" catalogues ${i})
+      list(APPEND inputs "${game_source}/${catalogue}")
+    endforeach()
+  endif()
   string(JSON places ERROR_VARIABLE no_places GET "${json}" places)
   if(NOT no_places AND EXISTS "${game_source}/${places}")
     list(APPEND inputs "${game_source}/${places}")
@@ -235,6 +243,9 @@ function(openrac_add_game config)
   endif()
   foreach(target IN LISTS targets)
     target_link_libraries(${target} PRIVATE openrac_${target_id}_game openrac_runtime)
+    if(MINGW)
+      target_link_libraries(${target} PRIVATE winmm)
+    endif()
     # The window: the renderer draws what the game holds in memory (game/common/frontend.h).
     if(TARGET openrac_viewer_lib AND TARGET openrac_platform)
       target_sources(${target} PRIVATE "${OPENRAC_GAME_DIR}/common/frontend.cpp"

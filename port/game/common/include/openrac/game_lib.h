@@ -43,6 +43,8 @@ int openrac_lib_SignalSema(int);
 int openrac_lib_WaitSema(int);
 int openrac_lib_EnableCache(int);
 void openrac_lib_FlushCache(int);
+void openrac_lib_SyncDCache(gaddr, gaddr);
+void openrac_lib_InvalidDCache(gaddr, gaddr);
 int openrac_lib_sceSifDmaStat(unsigned int);
 unsigned int openrac_lib_sceSifSetDma(gaddr, int);
 void openrac_lib_SetGsCrt(int interlace, int mode, int field);

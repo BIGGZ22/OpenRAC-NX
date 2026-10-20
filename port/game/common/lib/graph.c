@@ -181,12 +181,46 @@ int openrac_lib_sceDmaReset(int mode) {
     return 0;
 }
 
-/* sceDmaSend(channel, chain): the hand-off to the renderer. The chain is
- * read as data; the channel's completion handlers run as if it had been
- * sent. */
+/* sceDmaSend(channel, chain): replace the SDK's MMIO programming with a
+ * synchronous renderer hand-off and then deliver the channel's completion
+ * interrupt through the game's registered handler. */
 void openrac_lib_sceDmaSend(gaddr channel, gaddr tag) {
+    /* libdma translates the 0x7... segment to its cached 0x8... alias before
+     * writing TADR. Preserve that address convention for DMA chains. */
+    if ((tag >> 28) == 7u) {
+        tag = (tag & 0x0FFFFFFFu) | 0x80000000u;
+    }
+
+    uint32_t tadr;
+    memcpy(&tadr, G(channel + 0x30u), sizeof tadr);
+    if (tadr != 0xFFFFFFFFu) {
+        memcpy(G(channel + 0x30u), &tag, sizeof tag);
+    }
+    const uint32_t qwc = 0;
+    memcpy(G(channel + 0x20u), &qwc, sizeof qwc);
+
+    uint32_t chcr;
+    memcpy(&chcr, G(channel), sizeof chcr);
+    chcr = (chcr & ~0xCu) | 0x105u;
+    memcpy(G(channel), &chcr, sizeof chcr);
+
     openrac_game_dma_send(channel, tag);
+
+    /* The renderer has consumed the chain synchronously. Clear the start
+     * bit before notifying the game so polling and completion callbacks both
+     * observe an idle channel. Keep any fields changed during the hand-off. */
+    memcpy(&chcr, G(channel), sizeof chcr);
+    chcr &= ~0x100u;
+
     /* The DMAC channel number from its register block: 0x10008000 is VIF0
      * (0), 0x10009000 VIF1 (1), 0x1000A000 GIF (2), and so on. */
-    openrac_game_run_dmac_handlers((int)((channel >> 12) & 0xF) - 8);
+    const int channel_id = (int)((channel >> 12) & 0xF) - 8;
+    if (channel == 0x10009000u) {
+        /* VIF1 sends complete synchronously in the native renderer. Present
+         * the completion bits that the console DMAC would set before raising
+         * channel 1's interrupt; the game's own handler clears its wait flag. */
+        chcr = (chcr & ~0x03FF0000u) | 0x02010000u;
+    }
+    memcpy(G(channel), &chcr, sizeof chcr);
+    openrac_game_run_dmac_handlers(channel_id);
 }

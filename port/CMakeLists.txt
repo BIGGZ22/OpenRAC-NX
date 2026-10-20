@@ -97,12 +97,26 @@ add_library(openrac_runtime STATIC
 )
 target_include_directories(openrac_runtime PUBLIC runtime/include)
 target_link_libraries(openrac_runtime PUBLIC openrac_common)
+if(MINGW)
+  target_link_libraries(openrac_common PUBLIC dbghelp advapi32)
+endif()
 openrac_warnings(openrac_runtime)
 
 add_executable(runtime_test tests/runtime_test.cpp tests/guest_c.c)
 target_link_libraries(runtime_test PRIVATE openrac_runtime)
 openrac_warnings(runtime_test)
 add_test(NAME runtime COMMAND runtime_test)
+
+add_executable(rac4_io_test tests/rac4_io_test.c
+  game/rac4-ntsc/host/pad.c game/rac4-ntsc/host/sound.c game/common/lib/pad.c)
+target_include_directories(rac4_io_test PRIVATE runtime/include game/common/include)
+openrac_warnings(rac4_io_test)
+add_test(NAME rac4_io COMMAND rac4_io_test)
+
+add_executable(graph_dma_test tests/graph_dma_test.c)
+target_include_directories(graph_dma_test PRIVATE runtime/include game/common/include)
+openrac_warnings(graph_dma_test)
+add_test(NAME graph_dma COMMAND graph_dma_test)
 
 # ---- assets, media, audio, the extractor: no window ----
 add_executable(crate_init_test tests/crate_init_test.c)

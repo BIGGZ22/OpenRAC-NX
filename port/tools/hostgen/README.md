@@ -17,6 +17,16 @@ changed: hostgen reads prepared copies under `--out/prep`.
 
 ## What it does
 
+For a decompilation that lists unfinished executable functions only in a
+TSV rather than `INCLUDE_ASM` declarations, `catalogues` in `hostgen.json`
+names source-relative tables with `name`, `address`, `size` columns. Known C
+signatures take precedence. Roots absent from the C are also seeded as
+declarations; retail-backed translation infers their argument registers.
+`asm.discover_entries: true` additionally discovers aligned JAL targets and
+formed callback addresses from the local retail executable. Plain jump
+labels are excluded. These are candidate entries, not new matching claims;
+the generated frontier report and runtime checks still decide what is missing.
+
 Game memory is a 4 GB reservation whose offsets are the console's addresses
 ([guest.h](../../runtime/include/openrac/guest.h)), the model OpenGOAL uses
 for Jak's pointers. hostgen writes the C against it:
@@ -162,6 +172,18 @@ The C keeps the EE's registers as locals ([ee.h](../../runtime/include/openrac/e
 | a `double` (a parameter, an argument, a result) | software on the EE: its 64 bits in one general register, in the integer registers' order; the host's `double` (`openrac_ee_d`, `openrac_ee_dbits`) |
 | `ei`, `di` | nothing: the port takes no interrupts (its handlers run at set points) |
 | `break`, `teq` and the other traps | `openrac_ee_break`: logged, and the function goes on |
+
+For an assembly function whose verified result occupies all 64 bits of `$v0`,
+list its name in `returns_64`. Its translated signature and its callers then
+preserve the full register value; this is needed for packed texture descriptors
+whose upper bits hold palette and format fields. Unmarked integer results keep
+their declared width. The same setting also preserves wide values in lowered C.
+
+For verified argument types that register-use inference cannot establish,
+`asm.signatures` maps a function name to a C function type, for example
+`"func_00100000": "int (unsigned long long, float)"`. This applies after
+retail entry discovery and only to functions without a C or host definition.
+Both direct calls and the register thunks then use that prototype.
 
 What it cannot write keeps the stub, and the report lists the function and
 why: system calls, COP0 (but `ei`, `di`), VU0 microprograms (`vcallms`) and

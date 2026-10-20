@@ -41,7 +41,7 @@ import clangast  # noqa: E402
 import ctype  # noqa: E402
 import prep  # noqa: E402
 from lower import Unit, UnitReport  # noqa: E402
-from program import Function, Program, Signature, canon, cname, index_unit, prototype, inherit_results, merge, read_places, read_split_places, read_symbols  # noqa: E402
+from program import Function, Program, Signature, canon, cname, index_unit, prototype, inherit_results, merge, read_places, read_split_places, read_symbols, read_catalogue  # noqa: E402
 
 HERE = Path(__file__).resolve().parent
 PROGRAM_FILES = ["stubs.c", "functions.c", "libraries.c", "game_info.c", "game_protos.h"]
@@ -748,6 +748,13 @@ def main(argv: list[str] | None = None) -> int:
             problems += [f"{rel}: {p}" for p in probs]
             if part is not None:
                 problems += merge(program, part)
+    for table in cfg.get("catalogues", []):
+        read_catalogue(source / table, program)
+    # A verified indirect entry can be absent even from the catalogue.
+    # Keeping roots as declarations lets retail-backed translation find it.
+    for sym in cfg.get("roots", []):
+        program.functions.setdefault(sym, Function(
+            sym, Signature(ctype.Base("int"), (), False, False), asm=True))
     for sym, text in host_sigs.items():
         if text:
             # The port's own version decides the signature its callers are matched to.

@@ -525,6 +525,28 @@ def canon(t: ctype.Type, typedefs: dict | None = None, depth: int = 0) -> str | 
 _SPLAT_SYMBOL = re.compile(r"^\s*([A-Za-z_][\w.$]*)\s*=\s*(0x[0-9A-Fa-f]+)\s*;")
 
 
+def read_catalogue(path: Path, program: Program) -> int:
+    """Seed functions absent from C using a name/address/size TSV.
+
+    Retain signatures learned from C. Let asmc infer registers for entries
+    declared nowhere. Catalogue sizes are not reliable function boundaries.
+    """
+    count = 0
+    for line in path.read_text().splitlines():
+        if not line.strip() or line.startswith('#'):
+            continue
+        cols = line.split('\t')
+        if len(cols) < 3:
+            raise ValueError(f'{path}: expected name, address and size')
+        name, address = cols[0], int(cols[1], 0)
+        if name not in program.functions:
+            program.functions[name] = Function(
+                name, Signature(ctype.Base('int'), (), False, False), asm=True)
+            count += 1
+        program.symbols.setdefault(name, address)
+    return count
+
+
 def read_symbols(path: Path, program: Program) -> int:
     """Named symbols and their addresses from a splat symbol file
     (`name = 0x00123456; // comment`)."""
