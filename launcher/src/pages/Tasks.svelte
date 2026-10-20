@@ -4,7 +4,7 @@
   // to copy and send us when something failed. With developer tools on this is Develop's console.
   import DevConsole from "$components/DevConsole.svelte";
   import Icon from "$components/Icon.svelte";
-  import { app, cancel, clearFinished, clock, jobs } from "$lib/app.svelte";
+  import { app, cancel, clearFinished, clock, jobs, toast } from "$lib/app.svelte";
   import { elapsed } from "$lib/format";
   import { isGame, phaseLabel, readProgress } from "$lib/progress";
   import type { Job } from "$lib/queue";
@@ -58,7 +58,11 @@
   }
 
   async function copy(job: Job) {
-    await navigator.clipboard.writeText([`$ ${job.command}`, ...job.lines.map((l) => l.line)].join("\n"));
+    try {
+      await navigator.clipboard.writeText([`$ ${job.command}`, ...job.lines.map((l) => l.line)].join("\n"));
+    } catch {
+      toast("The output could not be copied: the browser would not give it to the clipboard.", "error");
+    }
   }
 </script>
 
