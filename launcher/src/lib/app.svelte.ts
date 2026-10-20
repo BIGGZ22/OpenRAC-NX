@@ -36,6 +36,9 @@ interface AppState {
   library: Library | null;
   /** Why the library could not be read (no checkout set, a broken game.json). */
   libraryError: string | null;
+  /** Why the launcher could not start (a command that failed at start-up); the start-up
+   *  screen says it, and offers to try again. */
+  startError: string | null;
   /** The games found in the player's games folder (api.scanDiscs). */
   discs: FoundDisc[];
   /** Developers only: the games whose disc can be switched (core/src/disc_choice.rs). */
@@ -67,6 +70,7 @@ export const app = $state<AppState>({
   config: null,
   library: null,
   libraryError: null,
+  startError: null,
   discs: [],
   discChoices: [],
   page: "library",
@@ -220,27 +224,48 @@ export async function guard<T>(work: Promise<T>): Promise<T | undefined> {
 
 // ---- loading ----------------------------------------------------------------------------
 
+/** Whether the launcher is already listening for its job's events: the start-up can fail and
+ *  be tried again, and the events must not be handled twice. */
+let listening = false;
+/** The clock's timer, so that a second start leaves only one running. */
+let clockTimer: ReturnType<typeof setInterval> | undefined;
+
 export async function start() {
-  setInterval(() => (clock.now = Date.now()), 1000);
-  await onJobEvent((event) => {
-    queue.apply(event);
-    // A job that ended: the exit event, whether it came before the start call
-    // returned (the queue kept it until the id was known) or after it.
-    const ended = queue.takeEnded();
-    if (ended) handleExit(ended);
-  });
-  if (onAndroid) {
-    keepAliveInBackground();
-    void readGame();
-    // Back in front (from the game, or from Home): is the game still running?
-    document.addEventListener("visibilitychange", () => {
-      if (document.visibilityState === "visible") void readGame();
-    });
+  app.startError = null;
+  try {
+    if (!listening) {
+      await onJobEvent((event) => {
+        queue.apply(event);
+        // A job that ended: the exit event, whether it came before the start call
+        // returned (the queue kept it until the id was known) or after it.
+        const ended = queue.takeEnded();
+        if (ended) handleExit(ended);
+      });
+      listening = true;
+      // The time, once a second: what a running job's elapsed time is counted against.
+      if (clockTimer) clearInterval(clockTimer);
+      clockTimer = setInterval(() => (clock.now = Date.now()), 1000);
+      if (onAndroid) {
+        keepAliveInBackground();
+        void readGame();
+        // Back in front (from the game, or from Home): is the game still running?
+        document.addEventListener("visibilitychange", () => {
+          if (document.visibilityState === "visible") void readGame();
+        });
+      }
+    }
+    app.info = await api.appInfo();
+    app.config = await firstRun(await api.getConfig());
+  } catch (e) {
+    // The launcher could not read what it needs to start: it says so, and the player may
+    // try again. Without this the window waits for a spinner that never goes away.
+    app.startError = errorText(e);
+    return;
   }
   if (onAndroid) await prepareTools();
-  app.info = await api.appInfo();
-  app.config = await firstRun(await api.getConfig());
-  if (app.config.lastVersion) app.version = app.config.lastVersion;
+  // The version the launcher showed last; a version named in the address (the browser
+  // preview's ?version=) is kept.
+  if (!app.version && app.config.lastVersion) app.version = app.config.lastVersion;
   await refresh();
   void syncProgressWeb();
   void adoptGodot();
