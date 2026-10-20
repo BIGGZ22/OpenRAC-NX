@@ -758,9 +758,12 @@ void MorphorayChickenUpdate(Moby *m) {
     }
 }
 extern int func_L00_002DCDA8(void *);
-extern int func_L00_002DCDA8_CC210(void *, void *, void *) __asm__("func_L00_002DCDA8");
-int Moby_SetStateFromCheck(char *a, void *p, void *t) {
-    int r = func_L00_002DCDA8_CC210(a, p, t);
+extern int func_L00_002DCDA8_CC210(void *, void *, void *, float) __asm__("func_L00_002DCDA8");
+/* One of a class's Suck Cannon hooks (grab, place or fire), which the catalogue folds: each copy
+   calls its own one, the fire with (moby, velocity, target, height), so the arguments go on as
+   they came (retail touches none of a1, a2 and $f12 before its call). */
+int Moby_SetStateFromCheck(char *a, void *p, void *t, float h) {
+    int r = func_L00_002DCDA8_CC210(a, p, t, h);
     if (r == 0) {
         if (*(unsigned char *)(a + 0x20) == 5) a[0x20] = 1;
     } else {

@@ -2310,9 +2310,13 @@ float WalkTowardPoint(unsigned char *m, float *t, float vel) {
     return 37.0f;
 }
 extern int func_L00_002DCDA8(void *, void *, void *);
+extern int func_L00_002DCDA8_h(void *, void *, void *, float) __asm__("func_L00_002DCDA8");
 /* Runs the func_L00_002DCDA8 check and switches the moby to or from state 9; returns its result. */
-int CarriedMoby_UpdateState9(char *a, void *p, void *t) {
-    int r = func_L00_002DCDA8(a, p, t);
+/* One of a class's Suck Cannon hooks (grab, place or fire), which the catalogue folds: each copy
+   calls its own one, the fire with (moby, velocity, target, height), so the arguments go on as
+   they came (retail touches none of a1, a2 and $f12 before its call). */
+int CarriedMoby_UpdateState9(char *a, void *p, void *t, float h) {
+    int r = func_L00_002DCDA8_h(a, p, t, h);
     if (r == 0) {
         if (*(unsigned char *)(a + 0x20) == 9) a[0x20] = 5;
     } else {

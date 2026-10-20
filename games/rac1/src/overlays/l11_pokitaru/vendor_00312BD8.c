@@ -2132,9 +2132,12 @@ int Moby_ParkIfGrabbed(struct Moby *moby, void *position, void *target) {
 }
 extern void *func_L00_002DCFD0(void *);
 
-extern void *func_L00_002DCFD0_pos(void *, void *) __asm__("func_L00_002DCFD0");
-void *Moby_ParkStateOnFind(unsigned char *arg, void *pos) {
-    void *found = func_L00_002DCFD0_pos(arg, pos);
+extern void *func_L00_002DCFD0_pos(void *, void *, void *, float) __asm__("func_L00_002DCFD0");
+/* One of a class's Suck Cannon hooks (grab, place or fire), which the catalogue folds: each copy
+   calls its own one, the fire with (moby, velocity, target, height), so the arguments go on as
+   they came (retail touches none of a1, a2 and $f12 before its call). */
+void *Moby_ParkStateOnFind(unsigned char *arg, void *pos, void *t, float h) {
+    void *found = func_L00_002DCFD0_pos(arg, pos, t, h);
     if (found != 0) {
         unsigned char state = arg[0x20];
         if (state != 0x14) {

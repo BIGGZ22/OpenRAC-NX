@@ -276,10 +276,13 @@ void func_L02_002CCD18(char *moby) {
         *(unsigned short *)(moby + 0x34) |= 0x40;
     }
 }
-extern int func_L00_002DCDA8_pt(void *, void *, void *) __asm__("func_L00_002DCDA8");
+extern int func_L00_002DCDA8_pt(void *, void *, void *, float) __asm__("func_L00_002DCDA8");
 /* Calls func_L00_002DCDA8(a) and sets state 9 from its result; returns the result. */
-int Moby_UpdateState9FromCheck(char *a, void *pos, void *target) {
-    int r = func_L00_002DCDA8_pt(a, pos, target);
+/* One of a class's Suck Cannon hooks (grab, place or fire), which the catalogue folds: each copy
+   calls its own one, the fire with (moby, velocity, target, height), so the arguments go on as
+   they came (retail touches none of a1, a2 and $f12 before its call). */
+int Moby_UpdateState9FromCheck(char *a, void *pos, void *target, float h) {
+    int r = func_L00_002DCDA8_pt(a, pos, target, h);
     if (r == 0) {
         if (*(unsigned char *)(a + 0x20) == 9) a[0x20] = 1;
     } else {

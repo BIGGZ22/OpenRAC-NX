@@ -1331,10 +1331,13 @@ void Moby1906JointGlowDraw(unsigned char *moby) {
         }
     }
 }
-extern int func_L00_002DCDA8_pos(void *, void *, void *) __asm__("func_L00_002DCDA8");
+extern int func_L00_002DCDA8_pos(void *, void *, void *, float) __asm__("func_L00_002DCDA8");
 /* Runs func_L00_002DCDA8 on the moby and switches state 7 accordingly; returns its result. */
-int Moby1906HitCheck(char *a, void *pos, void *target) {
-    int r = func_L00_002DCDA8_pos(a, pos, target);
+/* One of a class's Suck Cannon hooks (grab, place or fire), which the catalogue folds: each copy
+   calls its own one, the fire with (moby, velocity, target, height), so the arguments go on as
+   they came (retail touches none of a1, a2 and $f12 before its call). */
+int Moby1906HitCheck(char *a, void *pos, void *target, float h) {
+    int r = func_L00_002DCDA8_pos(a, pos, target, h);
     if (r == 0) {
         if (*(unsigned char *)(a + 0x20) == 7) a[0x20] = 2;
     } else {

@@ -626,9 +626,13 @@ typedef struct {
    straight through. */
 extern int func_L00_002DCFD0(Level18VendorMoby *, void *);
 
+extern int func_L00_002DCFD0_h(Level18VendorMoby *, void *, void *, float) __asm__("func_L00_002DCFD0");
 /* Switch to state four while active, then restore the saved state. */
-int Moby_HoldStateWhileActive(Level18VendorMoby *moby, void *arg) {
-    int active = PlaceCarriedMoby(moby, arg);
+/* One of a class's Suck Cannon hooks (grab, place or fire), which the catalogue folds: each copy
+   calls its own one, the fire with (moby, velocity, target, height), so the arguments go on as
+   they came (retail touches none of a1, a2 and $f12 before its call). */
+int Moby_HoldStateWhileActive(Level18VendorMoby *moby, void *arg, void *t, float h) {
+    int active = func_L00_002DCFD0_h(moby, arg, t, h);
     if (active != 0) {
         moby->state = 4;
     } else if (moby->state == 4) {

@@ -1113,9 +1113,12 @@ extern int func_001F9850(int);
 extern void func_00213DE0(void *, int, int, int);
 
 // Switches moby state between 0x10 and 8 depending on a check result.
-extern int func_L00_002DCFD0_EBAD8(void *, void *) __asm__("func_L00_002DCFD0");
-int CarriedMoby_PlaceState16(unsigned char *moby, void *v) {
-    int r = func_L00_002DCFD0_EBAD8(moby, v);
+extern int func_L00_002DCFD0_EBAD8(void *, void *, void *, float) __asm__("func_L00_002DCFD0");
+/* One of a class's Suck Cannon hooks (grab, place or fire), which the catalogue folds: each copy
+   calls its own one, the fire with (moby, velocity, target, height), so the arguments go on as
+   they came (retail touches none of a1, a2 and $f12 before its call). */
+int CarriedMoby_PlaceState16(unsigned char *moby, void *v, void *t, float h) {
+    int r = func_L00_002DCFD0_EBAD8(moby, v, t, h);
     if (r != 0) {
         if (moby[0x20] != 0x10) {
             moby[0xBC] = moby[0x20];

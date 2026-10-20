@@ -2694,9 +2694,12 @@ int Moby_EnterGrabbedState(unsigned char *moby, void *pos, void *target)
     }
     return value;
 }
-extern int func_L00_002DCFD0_pt(void *, void *) __asm__("func_L00_002DCFD0");
-int Moby_HoldStateIfFound(char *a, void *v) {
-    int r = func_L00_002DCFD0_pt(a, v);
+extern int func_L00_002DCFD0_pt(void *, void *, void *, float) __asm__("func_L00_002DCFD0");
+/* One of a class's Suck Cannon hooks (grab, place or fire), which the catalogue folds: each copy
+   calls its own one, the fire with (moby, velocity, target, height), so the arguments go on as
+   they came (retail touches none of a1, a2 and $f12 before its call). */
+int Moby_HoldStateIfFound(char *a, void *v, void *t, float h) {
+    int r = func_L00_002DCFD0_pt(a, v, t, h);
     if (r == 0) {
         if (*(unsigned char *)(a + 0x20) == 14) a[0x20] = 1;
     } else {
@@ -2735,8 +2738,12 @@ s32 ClaimExpiredTimerSlot(s32 *values, s32 count, s32 offset) {
     return index;
 }
 extern int func_L00_002DCDA8_pt(void *, void *, void *) __asm__("func_L00_002DCDA8");
-int Moby_HoldStateIfGrabbed(char *a, void *pos, void *target) {
-    int r = func_L00_002DCDA8_pt(a, pos, target);
+extern int func_L00_002DCDA8_h(void *, void *, void *, float) __asm__("func_L00_002DCDA8");
+/* One of a class's Suck Cannon hooks (grab, place or fire), which the catalogue folds: each copy
+   calls its own one, the fire with (moby, velocity, target, height), so the arguments go on as
+   they came (retail touches none of a1, a2 and $f12 before its call). */
+int Moby_HoldStateIfGrabbed(char *a, void *pos, void *target, float h) {
+    int r = func_L00_002DCDA8_h(a, pos, target, h);
     if (r == 0) {
         if (*(unsigned char *)(a + 0x20) == 7) a[0x20] = 1;
     } else {

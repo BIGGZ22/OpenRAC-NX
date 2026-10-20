@@ -258,9 +258,12 @@ int GroupMoby_UpdateActiveState(unsigned char *moby, void *pos, void *target) {
     return active;
 }
 extern int func_L00_002DCFD0(void *);
-extern int func_L00_002DCFD0_pos(void *, void *) __asm__("func_L00_002DCFD0");
-int CarriedMoby_PlaceAndSetState(char *a, void *pos) {
-    int r = func_L00_002DCFD0_pos(a, pos);
+extern int func_L00_002DCFD0_pos(void *, void *, void *, float) __asm__("func_L00_002DCFD0");
+/* One of a class's Suck Cannon hooks (grab, place or fire), which the catalogue folds: each copy
+   calls its own one, the fire with (moby, velocity, target, height), so the arguments go on as
+   they came (retail touches none of a1, a2 and $f12 before its call). */
+int CarriedMoby_PlaceAndSetState(char *a, void *pos, void *t, float h) {
+    int r = func_L00_002DCFD0_pos(a, pos, t, h);
     if (r == 0) {
         if (*(unsigned char *)(a + 0x20) == 8) a[0x20] = 1;
     } else {

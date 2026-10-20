@@ -154,9 +154,12 @@ extern int func_L00_002DCDA8(void *);
 extern int func_001F9850(int);
 extern void func_00213DE0(void *, int, int, int);
 
-extern int func_L00_002DCDA8_pos(void *, void *, void *) __asm__("func_L00_002DCDA8");
-int EnemyStunUpdate(unsigned char *moby, void *pos, void *target) {
-    int result = func_L00_002DCDA8_pos(moby, pos, target);
+extern int func_L00_002DCDA8_pos(void *, void *, void *, float) __asm__("func_L00_002DCDA8");
+/* One of a class's Suck Cannon hooks (grab, place or fire), which the catalogue folds: each copy
+   calls its own one, the fire with (moby, velocity, target, height), so the arguments go on as
+   they came (retail touches none of a1, a2 and $f12 before its call). */
+int EnemyStunUpdate(unsigned char *moby, void *pos, void *target, float h) {
+    int result = func_L00_002DCDA8_pos(moby, pos, target, h);
     if (result) {
         moby[0x20] = 12;
     } else if (moby[0x20] == 12) {
