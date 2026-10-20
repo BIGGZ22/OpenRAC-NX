@@ -11,8 +11,12 @@ extern int FUN_L00_002dbb20(void *);
 
 extern int FUN_L00_002dbb20_pt(void *, void *) __asm__("FUN_L00_002dbb20");
 /* Moby state 0xE while FUN_L00_002dbb20 reports a hit, back to 1 when it stops. */
-int FUN_L01_002efaf8(char *a, void *quad) {
-    int r = FUN_L00_002dbb20_pt(a, quad);
+extern int FUN_L00_002dbb20_h(void *, void *, void *, float) __asm__("FUN_L00_002dbb20");
+/* One of a class's Suck Cannon hooks (grab, place or fire), which the catalogue folds: each copy
+   calls its own one, the fire with (moby, velocity, target, height), so the arguments go on as
+   they came (retail touches none of a1, a2 and $f12 before its call). */
+int FUN_L01_002efaf8(char *a, void *quad, void *target, float h) {
+    int r = FUN_L00_002dbb20_h(a, quad, target, h);
     if (r == 0) {
         if (*(unsigned char *)(a + 0x20) == 0xe)
             a[0x20] = 1;
@@ -51,8 +55,12 @@ extern int FUN_L00_002db8f8(void *);
 
 extern int FUN_L00_002db8f8_pt(void *, void *, void *) __asm__("FUN_L00_002db8f8");
 /* Moby state 7 while FUN_L00_002db8f8 reports a hit, back to 1 when it stops. */
-int FUN_L01_002f1c78(char *a, void *pos, void *target) {
-    int r = FUN_L00_002db8f8_pt(a, pos, target);
+extern int FUN_L00_002db8f8_h(void *, void *, void *, float) __asm__("FUN_L00_002db8f8");
+/* One of a class's Suck Cannon hooks (grab, place or fire), which the catalogue folds: each copy
+   calls its own one, the fire with (moby, velocity, target, height), so the arguments go on as
+   they came (retail touches none of a1, a2 and $f12 before its call). */
+int FUN_L01_002f1c78(char *a, void *pos, void *target, float h) {
+    int r = FUN_L00_002db8f8_h(a, pos, target, h);
     if (r == 0) {
         if (*(unsigned char *)(a + 0x20) == 0x7)
             a[0x20] = 1;

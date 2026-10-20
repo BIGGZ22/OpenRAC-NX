@@ -2965,8 +2965,12 @@ extern int FUN_L00_002db8f8(void *);
 void blend_moby_animation_u(MobyAnim *arg0, int arg1, int arg2, int arg3) __asm__("FUN_00212f90");
 
 extern int FUN_L00_002db8f8_pt(void *, void *, void *) __asm__("FUN_L00_002db8f8");
-int FUN_L17_002efea8(struct Moby *moby, void *pos, void *target) {
-    int result = FUN_L00_002db8f8_pt(moby, pos, target);
+extern int FUN_L00_002db8f8_h(void *, void *, void *, float) __asm__("FUN_L00_002db8f8");
+/* One of a class's Suck Cannon hooks (grab, place or fire), which the catalogue folds: each copy
+   calls its own one, the fire with (moby, velocity, target, height), so the arguments go on as
+   they came (retail touches none of a1, a2 and $f12 before its call). */
+int FUN_L17_002efea8(struct Moby *moby, void *pos, void *target, float h) {
+    int result = FUN_L00_002db8f8_h(moby, pos, target, h);
     if (result) {
         moby->state = 12;
     } else if (moby->state == 12) {

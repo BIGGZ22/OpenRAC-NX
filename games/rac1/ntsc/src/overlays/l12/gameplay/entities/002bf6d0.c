@@ -38,8 +38,12 @@ extern int FUN_L00_002dbb20(void *);
 
 extern int FUN_L00_002dbb20_pt(void *, void *) __asm__("FUN_L00_002dbb20");
 /* Moby state 8 while FUN_L00_002dbb20 reports a hit, back to 1 when it stops. */
-int FUN_L12_002e1758(struct Moby *a, void *quad) {
-    int r = FUN_L00_002dbb20_pt(a, quad);
+extern int FUN_L00_002dbb20_h(void *, void *, void *, float) __asm__("FUN_L00_002dbb20");
+/* One of a class's Suck Cannon hooks (grab, place or fire), which the catalogue folds: each copy
+   calls its own one, the fire with (moby, velocity, target, height), so the arguments go on as
+   they came (retail touches none of a1, a2 and $f12 before its call). */
+int FUN_L12_002e1758(struct Moby *a, void *quad, void *target, float h) {
+    int r = FUN_L00_002dbb20_h(a, quad, target, h);
     if (r == 0) {
         if (a->state == 0x8)
             a->state = 1;

@@ -340,8 +340,12 @@ int FUN_L11_00316160(struct Moby *moby, void *pos, void *target) {
 extern void *FUN_L00_002dbb20(void *);
 
 extern void *FUN_L00_002dbb20_pt(void *, void *) __asm__("FUN_L00_002dbb20");
-void *FUN_L11_00316210(struct Moby *arg, void *quad) {
-    void *found = FUN_L00_002dbb20_pt(arg, quad);
+extern void *FUN_L00_002dbb20_h(void *, void *, void *, float) __asm__("FUN_L00_002dbb20");
+/* One of a class's Suck Cannon hooks (grab, place or fire), which the catalogue folds: each copy
+   calls its own one, the fire with (moby, velocity, target, height), so the arguments go on as
+   they came (retail touches none of a1, a2 and $f12 before its call). */
+void *FUN_L11_00316210(struct Moby *arg, void *quad, void *target, float h) {
+    void *found = FUN_L00_002dbb20_h(arg, quad, target, h);
     if (found != 0) {
         unsigned char state = arg->state;
         if (state != 0x14) {

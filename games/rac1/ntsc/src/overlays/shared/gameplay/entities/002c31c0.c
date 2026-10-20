@@ -122,8 +122,12 @@ extern int FUN_L00_002db8f8(void *);
 
 extern int FUN_L00_002db8f8_pt(void *, void *, void *) __asm__("FUN_L00_002db8f8");
 /* Moby state 9 while FUN_L00_002db8f8 reports a hit, back to 5 when it stops. */
-int FUN_L00_002d56e0(char *a, void *pos, void *target) {
-    int r = FUN_L00_002db8f8_pt(a, pos, target);
+extern int FUN_L00_002db8f8_h(void *, void *, void *, float) __asm__("FUN_L00_002db8f8");
+/* One of a class's Suck Cannon hooks (grab, place or fire), which the catalogue folds: each copy
+   calls its own one, the fire with (moby, velocity, target, height), so the arguments go on as
+   they came (retail touches none of a1, a2 and $f12 before its call). */
+int FUN_L00_002d56e0(char *a, void *pos, void *target, float h) {
+    int r = FUN_L00_002db8f8_h(a, pos, target, h);
     if (r == 0) {
         if (*(unsigned char *)(a + 0x20) == 0x9)
             a[0x20] = 0x5;
