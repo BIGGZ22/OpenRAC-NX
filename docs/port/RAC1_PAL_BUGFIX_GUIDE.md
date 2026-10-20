@@ -252,6 +252,9 @@ function it becomes a stub and `report.md` says why.
 
 ## 7. Open at the time of writing
 
+Understood but only guarded, with their proper fixes still to do:
+[KNOWN_ISSUES.md](KNOWN_ISSUES.md) (the full moby pool on Gaspar, for one).
+
 Reported by the player and not confirmed fixed:
 
 - **The wrench against the hand.** "The hero moves slower than the
