@@ -467,12 +467,14 @@ async function adoptGodot() {
   }
 }
 
-export async function saveConfig(config: Config) {
+/** Saves the settings. False when the write failed: the page then keeps what was typed
+ *  and says so, instead of going back to the settings that were saved. */
+export async function saveConfig(config: Config): Promise<boolean> {
   const saved = await guard(api.saveConfig(config));
-  if (saved) {
-    app.config = saved;
-    await refresh();
-  }
+  if (!saved) return false;
+  app.config = saved;
+  await refresh();
+  return true;
 }
 
 // ---- navigation ---------------------------------------------------------------------------

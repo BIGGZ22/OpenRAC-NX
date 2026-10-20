@@ -138,12 +138,18 @@
     let customId: string | null = draft.discordClientId?.trim() ?? null;
     if (customId === "") customId = null;
     const before = app.info ? updateChannelOf(app.info, app.config) : null;
-    await saveConfig({
+    const written = await saveConfig({
       ...saved(),
       ...edited(draft),
       discordClientId: customId,
       setupComplete: (app.config?.setupComplete ?? false) || finish,
     });
+    if (!written) {
+      // The settings were not written (the toast says why): what was typed stays, and the
+      // first run does not leave for a page with nothing in it.
+      saving = false;
+      return;
+    }
     draft = saved();
     // Another channel: what was found on the last one is not what this one offers.
     if (app.info && before !== updateChannelOf(app.info, app.config)) {
