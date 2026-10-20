@@ -35,6 +35,10 @@
 /* Entries the version map cannot pair, checked by hand. */
 /* sceVu0Normalize, an entry inside the VU0 library object, which the map does not cut out. */
 #define func_001252C0 game_FUN_00125180
+/* sceVu0ScaleVector and sceVu0UnitMatrix: the US game has C for the matrix (sceVu0UnitMatrix) and
+ * translates the scale (0x1251E8) from its assembly, so rac1/host's versions are PAL's only. */
+#define RAC1_OMIT_func_00125328 1
+#define RAC1_OMIT_func_00125358 1
 
 /* The items the US game's Options list is given (Language, Sound: its enter puts them there each
  * time); PAL's list, 0x1D4810 here (Language, Video, Sound), is still in the data, unused. */
