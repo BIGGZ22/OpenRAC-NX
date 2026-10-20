@@ -18,43 +18,42 @@ import struct
 from pathlib import Path
 
 from formats import FormatError, unpack
+import games
 
 CLASS_NAMES = Path(__file__).parent / "moby_classes.tsv"
-POINTER = 0x44
-SIZE = 0x78
-RECORD = struct.Struct("<7if4i3f3f2if4i3i2i")
-FIELDS = ("size", "unknown_4", "spawn_flags", "spawn_id", "unknown_10", "unknown_14", "class_id", "scale",
-          "draw_distance", "update_distance", "unused_28", "unused_2c", "x", "y", "z", "rx", "ry", "rz",
-          "group", "is_rooted", "rooted_distance", "unknown_54", "pvar_index", "occlusion", "mode_bits",
-          "r", "g", "b", "light", "unknown_74")
-assert RECORD.size == SIZE and len(FIELDS) == len(RECORD.unpack(bytes(SIZE)))
-
+# Ratchet & Clank's record (games.RAC1_MOBY), which the level packer (gameplay.py, pack.py) writes.
+POINTER = games.RAC1.mobys
+SIZE = games.RAC1_MOBY.size
+RECORD = struct.Struct(games.RAC1_MOBY.layout)
+FIELDS = games.RAC1_MOBY.fields
 # The value most instances store (measured on all 19 PAL levels). Only a
 # different value becomes node metadata; a packer writes these back for
 # the rest. The last four never vary on the disc.
-USUAL = {"unknown_4": -1, "spawn_flags": 0, "unknown_10": 0, "unknown_14": 0, "draw_distance": 64,
-         "update_distance": 64, "is_rooted": 0, "rooted_distance": 0.0, "occlusion": 1, "mode_bits": 32,
-         "light": 0, "unknown_74": -1, "unused_28": 32, "unused_2c": 64, "unknown_54": 1}
+USUAL = games.RAC1_MOBY.usual
 ALWAYS = ("spawn_id", "group", "pvar_index")
 
 
-def moby_instances(gameplay: bytes) -> list[dict]:
+def moby_instances(gameplay: bytes, fmt: games.Format = games.RAC1) -> list[dict]:
     """Each instance: index, class_id, matrix (column-major 4x4), the
-    Euler angles and scale it came from, and its other fields."""
-    start, = unpack("<I", gameplay, POINTER)
+    Euler angles and scale it came from, and its other fields. The record is the game's
+    (fmt.moby: 0x78 bytes in Ratchet & Clank, 0x88 in Going Commando and Up Your Arsenal, 0x70
+    in Deadlocked), its table at the gameplay header word fmt.mobys."""
+    layout = fmt.moby
+    record_format, size = struct.Struct(layout.layout), layout.size
+    start, = unpack("<I", gameplay, fmt.mobys)
     if start == 0:
         return []
     count, = unpack("<i", gameplay, start)
-    if count < 0 or start + 0x10 + count * SIZE > len(gameplay):
+    if count < 0 or start + 0x10 + count * size > len(gameplay):
         raise FormatError(f"moby instance table at {start:#x} does not fit ({count} records)")
     out = []
     for i in range(count):
-        record = dict(zip(FIELDS, RECORD.unpack_from(gameplay, start + 0x10 + i * SIZE)))
-        if record["size"] != SIZE:
-            raise FormatError(f"moby instance {i}: size {record['size']:#x}, expected {SIZE:#x}")
+        record = dict(zip(layout.fields, record_format.unpack_from(gameplay, start + 0x10 + i * size)))
+        if record["size"] != size:
+            raise FormatError(f"moby instance {i}: size {record['size']:#x}, expected {size:#x}")
         fields = {k: record[k] for k in ALWAYS}
         fields["colour"] = [record["r"], record["g"], record["b"]]
-        fields.update({k: record[k] for k, usual in USUAL.items() if record[k] != usual})
+        fields.update({k: record[k] for k, usual in layout.usual.items() if record[k] != usual})
         out.append({"index": i, "class_id": record["class_id"], "fields": fields,
                     "rotation": (record["rx"], record["ry"], record["rz"]), "scale": record["scale"],
                     "matrix": matrix((record["x"], record["y"], record["z"]),

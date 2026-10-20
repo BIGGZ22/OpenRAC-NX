@@ -253,9 +253,10 @@ def fragment(data: bytes, table_offset: int, header: bytes, lod: int, name: str,
     return mesh
 
 
-def terrain(data: bytes, lod: int = 0, lights=None) -> list[Mesh]:
+def terrain(data: bytes, lod: int = 0, lights=None, problems: list | None = None) -> list[Mesh]:
     """Every fragment of a tfrag block at one static LOD, as Terrain_NNN meshes (lit when
-    `lights` is given, as fragment() says)."""
+    `lights` is given, as fragment() says). PROBLEMS (a later game's level.problems): a fragment
+    that does not decode is left out and noted there instead of stopping the level."""
     if lod not in (0, 2):
         raise FormatError("terrain LOD must be 0 or 2")
     table_offset, count = unpack("<II", data)
@@ -266,5 +267,7 @@ def terrain(data: bytes, lod: int = 0, lights=None) -> list[Mesh]:
             header = table[i * FRAGMENT_SIZE:(i + 1) * FRAGMENT_SIZE]
             meshes.append(fragment(data, table_offset, header, lod, f"Terrain_{i:03}", lights))
         except FormatError as exc:
-            raise FormatError(f"terrain fragment {i}: {exc}") from exc
+            if problems is None:
+                raise FormatError(f"terrain fragment {i}: {exc}") from exc
+            problems.append(f"terrain fragment {i}: not extracted ({exc})")
     return meshes

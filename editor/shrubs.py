@@ -7,6 +7,7 @@ import math
 import struct
 
 from formats import FormatError, span, unpack
+import games
 from mesh import Mesh
 from terrain import STCYCL, STMOD, program
 from ties import placement
@@ -127,7 +128,10 @@ def shrub_classes(level) -> dict[int, Mesh]:
         try:
             result[class_id] = shrub_mesh(level.block(start), entry[16:32], f"shrub_{class_id}")
         except FormatError as exc:
-            raise FormatError(f"shrub class {class_id}: {exc}") from exc
+            if not games.of(level).lenient:
+                raise FormatError(f"shrub class {class_id}: {exc}") from exc
+            # A later game's class that does not decode is left out, and its instances with it.
+            level.problems.append(f"shrub class {class_id}: not extracted ({exc})")
     return result
 
 
@@ -142,9 +146,12 @@ def shrub_class_normals(level) -> dict[int, list[tuple[int, int, int]]]:
     return result
 
 
-def shrub_instances(gameplay: bytes, classes) -> list[dict]:
-    """PAL shrub instances: gameplay +0x3c points to a count, then 0x70-byte records."""
-    start, = unpack("<I", gameplay, 0x3c)
+def shrub_instances(gameplay: bytes, classes, fmt: games.Format = games.RAC1,
+                    problems: list | None = None) -> list[dict]:
+    """Shrub instances: the gameplay header word fmt.shrubs (Ratchet & Clank's +0x3c) points to a
+    count, then 0x70-byte records, the same in all four games. Deadlocked's are in its art
+    instances file (level.Level.instances). PROBLEMS: as ties.tie_instances."""
+    start, = unpack("<I", gameplay, fmt.shrubs)
     if not start:
         return []
     count, = unpack("<I", gameplay, start)
@@ -154,7 +161,10 @@ def shrub_instances(gameplay: bytes, classes) -> list[dict]:
         record = table[i * 0x70:(i + 1) * 0x70]
         class_id, draw_distance = unpack("<if", record)
         if class_id not in classes:
-            raise FormatError(f"shrub instance {i}: unknown class {class_id}")
+            if problems is None:
+                raise FormatError(f"shrub instance {i}: unknown class {class_id}")
+            problems.append(f"shrub instance {i}: left out with its class {class_id}")
+            continue
         if not math.isfinite(draw_distance):
             raise FormatError(f"shrub instance {i}: invalid draw distance")
         matrix, stored_w = placement(record, "shrub instance")

@@ -6,6 +6,7 @@ import tempfile
 import unittest
 
 from formats import FormatError
+import games
 from gltf import Gltf
 from godot import write_marker
 from mesh import Mesh
@@ -35,19 +36,25 @@ def record(skin, position, normal=UP):
     return bytes(skin) + bytes(normal) + struct.pack("<3h", *position)
 
 
-def table(transfers, counts, copies, records, ids):
+def table(transfers, counts, copies, records, ids, compact=False):
     """A RAC1 vertex table: header, transfers, duplicates, vertices, one
-    epilogue record carrying the IDs and the RGBA multipliers."""
+    epilogue record carrying the IDs and the RGBA multipliers. COMPACT: the
+    later games' (games.Format.compact_vertex_table): a header of eight u16
+    and no multipliers after the epilogue."""
     total = sum(counts) + len(copies)
+    size = 0x10 if compact else 0x20
     body = bytes(t for pair in transfers for t in pair)
-    at = 0x20 + len(body)
+    at = size + len(body)
     at += 2 if at % 4 else 0
     at += 4 if at % 8 else 0
-    body += bytes(at - 0x20 - len(body)) + struct.pack(f"<{len(copies)}H", *copies)
-    body += bytes(-(0x20 + len(body)) % 16)
-    vertices = 0x20 + len(body)
+    body += bytes(at - size - len(body)) + struct.pack(f"<{len(copies)}H", *copies)
+    body += bytes(-(size + len(body)) % 16)
+    vertices = size + len(body)
     epilogue = bytes(4) + struct.pack("<6H", *(ids + [0] * (6 - len(ids))))
     multipliers = vertices + (len(records) + 1) * 16
+    if compact:
+        return struct.pack("<8H", len(transfers), *counts, len(copies), total, vertices, 0) + body + \
+            b"".join(records) + epilogue, total
     data = struct.pack("<8I", len(transfers), *counts, len(copies), total, vertices, multipliers)
     data += body + b"".join(records) + epilogue + bytes([0x80] * (total * 4)) + bytes(-total * 4 % 16)
     return data, total
@@ -58,7 +65,7 @@ def entry(list_offset, list_data, table_offset, table_data, total):
                        (total * 6 + 15) // 16, (total + 3) // 4, total)
 
 
-def fixture(texture=1):
+def fixture(texture=1, compact=False):
     """Two packets. The first switches to texture slot 1 and draws three
     triangles, the last through a duplicate vertex; the second inherits the
     texture, blends joints with matrix slots left by the first and copies
@@ -70,14 +77,14 @@ def fixture(texture=1):
     single = (0, 0, 0, 0xf4, 0, 0, 0, 0)  # Joint 0 from VU0 address 0, nothing stored.
     table0, total0 = table([(0, 0)], (0, 0, 4), [11 << 7],
                            [record(single, p) for p in ((0, 0, 0), (1024, 0, 0), (0, 1024, 0), (1024, 1024, 0))],
-                           [10, 11, 12, 13])
+                           [10, 11, 12, 13], compact)
     list1 = vif([(0, 0), (4096, 0), (0, 4096), (4096, 4096)], bytes((0xfe, 0, 0, 0)), [0x81, 0x82, 3, 4, 1, 1, 1, 0])
     two = (0, 5 << 1, 4, 8, 64, 192, 12, 16)      # Keep joint 5 at 12; blend 4 and 8 into 16.
     three = (0, 12, 0, 4, 100, 100, 56, 0xf4)     # Blend 0, 4 and 12.
     reuse = (0, 3 << 1, 16, 0xf4, 0, 0, 0, 0)     # Load the blend at 16.
     table1, total1 = table([(2, 4), (3, 8)], (1, 1, 1), [13 << 7],
                            [record(two, (2048, 0, 0)), record(three, (3072, 0, 0)), record(reuse, (2048, 1024, 0))],
-                           [20, 21, 22])
+                           [20, 21, 22], compact)
     data = bytearray(0x400)
     struct.pack_into("<i4B4B", data, 0, 0x50, 2, 0, 0, 2, 6, 6, 0xff, 0xff)
     struct.pack_into("<f", data, 0x24, 2.0)
@@ -87,6 +94,8 @@ def fixture(texture=1):
     data[0x100:0x100 + len(table0)] = table0
     data[0x200:0x200 + len(list1)] = list1
     data[0x280:0x280 + len(table1)] = table1
+    if compact:
+        data[0xb] = 0  # Going Commando reads its compact tables only when this byte is clear.
     return data
 
 
@@ -142,6 +151,34 @@ class MobyClassTests(unittest.TestCase):
         data[0x08] = 5  # Joint 5 is past a joint count of 5.
         with self.assertRaisesRegex(FormatError, "joint"):
             moby_class(data, REMAP, "moby")
+
+
+class LaterGameTests(unittest.TestCase):
+    def test_compact_vertex_tables_read_as_the_first_game_s(self):
+        rac1 = moby_class(fixture(), REMAP, "moby")
+        for fmt in (games.RAC2, games.RAC3, games.RAC4):
+            with self.subTest(fmt.game):
+                later = moby_class(fixture(compact=True), REMAP, "moby", fmt=fmt)
+                self.assertEqual((later.mesh.positions, later.mesh.faces, later.skins),
+                                 (rac1.mesh.positions, rac1.mesh.faces, rac1.skins))
+                self.assertIsNone(later.mesh.colours)  # No colour multipliers to read.
+        # Going Commando: a class whose byte 0xb is set keeps the first game's tables.
+        data = fixture()
+        data[0xb] = 1
+        self.assertEqual(moby_class(data, REMAP, "moby", fmt=games.RAC2).mesh.positions, rac1.mesh.positions)
+        with self.assertRaises(FormatError):
+            moby_class(fixture(), REMAP, "moby", fmt=games.RAC3)
+
+    def test_an_empty_texture_slot_is_drawn_untextured(self):
+        with self.assertRaises(FormatError):
+            moby_class(fixture(texture=2), REMAP, "moby")
+        moby = moby_class(fixture(texture=2, compact=True), REMAP, "moby", fmt=games.RAC3)
+        self.assertEqual(set(moby.mesh.faces), {UNTEXTURED})
+
+    def test_without_joints(self):
+        moby = moby_class(fixture(compact=True), REMAP, "moby", fmt=games.RAC2, joints=False)
+        self.assertIsNone(moby.skeleton)
+        self.assertIsNone(moby.mesh.skins)
 
 
 class MobySceneTests(unittest.TestCase):

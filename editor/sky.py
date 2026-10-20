@@ -12,6 +12,7 @@ import math
 import struct
 
 from formats import FormatError, Texture, span, unpack
+import games
 from mesh import Mesh
 
 
@@ -22,12 +23,17 @@ class Sky:
     shells: list[Mesh]                 # Drawn in order, each blended over the last.
 
 
-def sky(data: bytes) -> Sky:
+def sky(data: bytes, fmt: games.Format = games.RAC1) -> Sky:
     """Shells of 0x20-byte clusters; each cluster points to vertices, UVs and faces.
 
     Vertices are (x, y, z, alpha) signed shorts with alpha 0x80 opaque, then
     either (s, t) fixed point or, on untextured shells (flag bit 0), RGBA
     bytes. Faces are three indices and a texture (0xff: untextured).
+
+    Up Your Arsenal and Deadlocked keep a shell's cluster count and flags as two s16 (then the
+    shell's rotation and angular velocity, not read), the first two games as two s32 (Wrench's
+    UyaDlSkyShellHeader and RacGcSkyShellHeader); Deadlocked's sky textures are swizzled
+    (level.unswizzle, the other way round from its level textures, as Wrench reads them).
     """
     shell_count, = unpack("<h", data, 6)
     texture_count, = unpack("<h", data, 0xc)
@@ -37,12 +43,15 @@ def sky(data: bytes) -> Sky:
     textures = []
     for i in range(texture_count):
         palette, pixels, width, height = unpack("<4I", data, defs + i * 16)
-        textures.append(Texture(width, height, span(data, texture_data + pixels, width * height),
-                                span(data, texture_data + palette, 1024)))
+        indices = span(data, texture_data + pixels, width * height)
+        if fmt.swizzled_textures:
+            from level import unswizzle  # here: level imports this module's neighbours
+            indices = unswizzle(indices, width, inverse=True)
+        textures.append(Texture(width, height, indices, span(data, texture_data + palette, 1024)))
     result = Sky(tuple(span(data, 0, 3)), textures, [])
     for shell_id in range(shell_count):
         offset, = unpack("<I", data, 0x20 + shell_id * 4)
-        clusters, flags = unpack("<II", data, offset)
+        clusters, flags = unpack("<hh" if fmt.sky_short_shells else "<II", data, offset)
         if clusters > 0x10000:
             raise FormatError("invalid sky cluster count")
         mesh = Mesh(f"Sky_{shell_id}", colours=[])
