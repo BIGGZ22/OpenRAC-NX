@@ -428,8 +428,12 @@ void close_sound() {
     finish();
     stats::close_dump();
     close_sound();
+    openrac_sound_stop_readers();
     std::_Exit(0);
 #else
+    // The threads reading a track are stopped first, while the globals they use are still
+    // there: a reader that is still working when the program exits is a crash at quit.
+    openrac_sound_stop_readers();
     std::exit(0);
 #endif
 }
@@ -1294,6 +1298,10 @@ int main(int argc, char** argv) {
 
     runtime::Memory::create();
     runtime::install_crash_handler();
+    // The threads reading a track are stopped before the program exits, whichever way it ends
+    // (a window closed, a run of so many frames, an error): a reader that is still working
+    // when the globals it uses go is a crash at quit.
+    std::atexit(openrac_sound_stop_readers);
 
     std::vector<std::uint8_t> file;
     runtime::ElfImage image;

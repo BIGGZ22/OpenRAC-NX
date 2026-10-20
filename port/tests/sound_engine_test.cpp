@@ -105,6 +105,19 @@ int main() {
     CHECK(openrac_stream_remaining_ms(broken) == kWholeMs);
     openrac_stream_stop(0);
 
+    // The program is leaving: the readers are stopped and waited for, and no track is read
+    // after that (a reader that is still working when the program exits is a crash at quit).
+    openrac_stream_read_at_once(0);
+    const std::uint32_t late = openrac_stream_play(4, 0x400, 1, 0, 0x20);
+    CHECK(late != 0);
+    openrac_sound_stop_readers();
+    // Stopping again is harmless, and the track is not read after the stop.
+    openrac_sound_stop_readers();
+    const std::uint32_t after = openrac_stream_play(4, 0x400, 1, 0, 0x20);
+    CHECK(after != 0);
+    CHECK(!openrac_stream_buffered(after));
+    openrac_stream_stop(0);
+
     std::error_code ignored;
     std::filesystem::remove(path, ignored);
     return openrac::test::result();

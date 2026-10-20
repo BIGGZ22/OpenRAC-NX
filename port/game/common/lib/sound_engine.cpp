@@ -30,6 +30,12 @@ using namespace openrac;
 std::mutex g_lock;
 // openrac_stream_read_at_once: streams read on the caller's thread.
 bool g_read_at_once = false;
+// The threads reading a track, and the flag that tells them the program is leaving. A track of
+// minutes is read on a thread of its own, and the player may close the window while one is
+// reading: the program then waits for them (openrac_sound_stop_readers), so that the globals
+// this file has are not taken away under a thread that is using them.
+std::vector<std::thread> g_readers;
+bool g_stopping = false;
 
 // A place on the disc image, which is larger than 2 GB: fseek takes a long, 32 bits on Windows,
 // where a sector past the first million (the music) would wrap.
@@ -120,6 +126,14 @@ bool read_vag_header(std::FILE* disc, std::uint32_t sector, std::uint32_t& size,
 }
 
 void read_track(std::uint32_t sector, std::shared_ptr<Track> track) {
+    // The program is leaving: nothing to read for.
+    {
+        std::lock_guard lock(g_lock);
+        if (g_stopping) {
+            track->failed = true;
+            return;
+        }
+    }
     std::vector<std::int16_t> samples;
     std::uint32_t rate = 0;
     if (std::FILE* disc =
@@ -434,9 +448,31 @@ uint32_t openrac_stream_play(
     if (g_read_at_once) {
         read_track(sector, track);
     } else {
-        std::thread(read_track, sector, track).detach();
+        std::lock_guard lock(g_lock);
+        if (g_stopping) {
+            // The program is leaving: the track is not read, and no thread is left behind.
+            track->failed = true;
+            return handle;
+        }
+        g_readers.emplace_back(read_track, sector, track);
     }
     return handle;
+}
+
+// Stops the threads reading a track and waits for them: the program calls this before it
+// exits, so that nothing they use is taken away while they are still working (a reader that
+// locks g_lock after the static destructors have run is a crash at quit).
+void openrac_sound_stop_readers() {
+    std::vector<std::thread> readers;
+    {
+        std::lock_guard lock(g_lock);
+        g_stopping = true;
+        readers.swap(g_readers);
+    }
+    // Outside the lock: a reader that is waiting for it must be able to take it and end.
+    for (auto& reader : readers) {
+        if (reader.joinable()) reader.join();
+    }
 }
 
 void openrac_stream_read_at_once(int at_once) {
