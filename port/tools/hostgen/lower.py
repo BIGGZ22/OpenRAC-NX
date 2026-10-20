@@ -1743,6 +1743,17 @@ class Unit:
                     family[parent] = family_k + 1
                 places = self._folded_places(sym)
                 copy = self._small_folded()
+                if copy is None and not places:
+                    # A larger level function the catalogue placed twice in one program: its copies
+                    # are the same instructions, and may call different functions all the same.
+                    # rac1's func_L02_002D75F8 (76 bytes) is both of the circular saw's (class 340)
+                    # Suck Cannon hooks on Eudora: the one at 0x2C53B0 calls the grab, the one at
+                    # 0x2C5400 places the moby in the cannon. Called as the C names it, the second
+                    # ran the grab with garbage for its position and owner, and the saw's next
+                    # update read the cannon's joints through that owner.
+                    copies = self._copies_in_one_program()
+                    if copies is not None and any(o == copies[0] for o, _ in self.program.code_places(sym)):
+                        copy = copies
                 callee_places = self.program.code_places(sym) if copy is not None and not places else []
                 hook = self._level_hook(sym) if not places and not callee_places else None
                 if hook is not None:
@@ -1758,7 +1769,7 @@ class Unit:
                     fp = f"openrac_hook_in_copy({hexaddr(exe_fn)}, {size}u, {home}, {hexaddr(home_fn)}, {hexaddr(stub)}, {k}u)"
                     named = None  # each level fills the hook with its own function: the call site's type
                 elif not places and callee_places:
-                    # Inside a small function the catalogue folded (copies that differ in what they
+                    # Inside a function the catalogue folded (copies that differ in what they
                     # call): the function this copy's own call at that place calls (guest.h).
                     home, canon, size = copy
                     own = next((a for o, a in callee_places if o == home), callee_places[0][1])

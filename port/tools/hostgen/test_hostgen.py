@@ -1212,6 +1212,28 @@ class Places(unittest.TestCase):
             self.assertIn("0x082F9418u", text)
             self.assertIn("0x0828E068u", text)
 
+    def test_a_larger_function_placed_twice_in_a_level_calls_its_copys_own_callee(self):
+        # rac1's func_L02_002D75F8 (76 bytes) is two of Eudora's circular saw hooks: 04:002C53B0
+        # calls the grab (func_L00_002DCDA8 there), 04:002C5400 the placing. Each copy's call goes
+        # where that copy's own jal goes, as in a folded wrapper of 64 bytes or less; a callee the
+        # function's own level does not have stays a direct call.
+        with tempfile.TemporaryDirectory() as tmp:
+            out = self.generate(Path(tmp),
+                "extern int func_L00_002DCDA8(void *, void *, void *);\n"
+                "extern int func_00300000(void *);\n"
+                "int func_L02_002D75F8(char *a, void *p, void *t) {\n"
+                "    int r = func_L00_002DCDA8(a, p, t);\n"
+                "    if (r == 0) { if (a[0x20] == 9) a[0x20] = 1; } else a[0x20] = 9;\n"
+                "    return r + func_00300000(a);\n"
+                "}\n",
+                "func_L00_002DCDA8\tshared\t400\tfg\t3\t00:002DCDA8,02:002E7EC8,04:002DF068\n"
+                "func_L02_002D75F8\tshared\t76\tfw\t2\t02:002D75F8,02:002D76C8,04:002C53B0,04:002C5400\n",
+                {"relocate": [0x15F000, 0x500000]})
+            text = (out / "a.c").read_text()
+            self.assertIn("openrac_call_in_copy(2, 0x002D75F8u, 76u, openrac_self_, 0x002E7EC8u)", text)
+            self.assertIn("openrac_guest_entry((openrac_host_fn)func_L02_002D75F8)", text)
+            self.assertIn("func_00300000((gaddr)(a))", text)
+
     def test_a_call_to_another_levels_function_follows_the_definition(self):
         # rac1/ntsc's Rilgar creature (FUN_L05_002d1688) declared level 0's vector scale as
         # (float, void *, void *) and called it through its level 0 address with that type: right
