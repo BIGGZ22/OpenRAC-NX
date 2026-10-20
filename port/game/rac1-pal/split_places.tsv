@@ -117,3 +117,17 @@ func_L00_0028F3E0	func_0022F0A8	00:0028F3E0,01:002A2DC8,02:0028EAA0,03:0027BC40,
 # the right C ran; a call through the place's address ran the other curve. Checked in all 19 programs.
 func_00216290	func_00216450	00:00265BD0,01:0027A6D8,02:002671D8,03:00253CA0,04:00258370,05:0028FAD8,06:00274938,07:0028E248,08:0026FA68,09:002849A0,10:00258D10,11:0028AEC0,12:0027E1D8,13:002714E8,14:0026D4E8,15:002550F8,16:00260F28,17:0025F9D8,18:00267F90
 func_00216620	func_002166F0	00:00265E70,01:0027A978,02:00267478,03:00253F40,04:00258610,05:0028FD78,06:00274BD8,07:0028E4E8,08:0026FD08,09:00284C40,10:00258FB0,11:0028B160,12:0027E478,13:00271788,14:0026D788,15:00255398,16:002611C8,17:0025FC78,18:00268230
+# The memory-card menu's steps: Menu_RunStateHandler (func_00209070) calls the step of the state word D_0015EFB0
+# from its program's table (the executable's D_001A0538, level 0's at 0x184638). In every level's program three
+# steps start with the words of another and the catalogue folds them into it (the rest of each is a fragment of
+# its own, func_L00_0024BFB8, func_L00_0024BFFC, func_L00_0024BBCC), so the port ran the other step's C there.
+# Each of those places is the executable's step for the same state word for word (no relocated address in it),
+# checked in all 19 programs. State 23 (L00 0x24BF98, folded into state 6's func_L00_0024B960): with flag 0x20
+# retail goes to state 5; the folded C stayed in 23 while D_L00_0015F688 was set and took down flag 8 for state 7.
+func_L00_0024B960	func_002099D0	00:0024BF98,01:0025FF28,02:0024DA88,03:0023A1D8,04:0023E908,05:00274F58,06:0025AC28,07:002736A0,08:00255B00,09:0026AF88,10:0023E990,11:002712B8,12:00264108,13:00257198,14:00253B28,15:0023B528,16:002475D8,17:00246708,18:0024E210
+# State 24 (L00 0x24BFE0, folded into state 13's CardMenu_AdvanceOnFlags) is CardMenu_State24WaitFlag20: with flag
+# 0x20 retail goes to state 12; the folded C stayed in 24 while D_L00_0015F688 was set and took down flag 0x10 for 14.
+func_L00_0024BBE8	func_00209A18	00:0024BFE0,01:0025FF70,02:0024DAD0,03:0023A220,04:0023E950,05:00274FA0,06:0025AC70,07:002736E8,08:00255B48,09:0026AFD0,10:0023E9D8,11:00271300,12:00264150,13:002571E0,14:00253B70,15:0023B570,16:00247620,17:00246750,18:0024E258
+# State 12 (L00 0x24BBB0, folded into state 9's CardMenu_AdvanceOnSaveByte) is CardMenu_State12WaitFlag2: flag 2
+# gives state 13; the folded C tested flags 2|4 for state 10.
+func_L00_0024BA70	func_002095E8	00:0024BBB0,01:0025FB40,02:0024D6A0,03:00239DF0,04:0023E520,05:00274B70,06:0025A840,07:002732B8,08:00255718,09:0026ABA0,10:0023E5A8,11:00270ED0,12:00263D20,13:00256DB0,14:00253740,15:0023B140,16:002471F0,17:00246320,18:0024DE28
