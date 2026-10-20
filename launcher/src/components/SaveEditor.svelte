@@ -589,8 +589,8 @@
             </div>
           </div>
           <ul class="rows planets">
-            {#each view.planets as p, i (p.id)}
-              {@const s = fields.planets[i]}
+            {#each view.planets as p (p.id)}
+              {@const s = fields.planets.find((x) => x.id === p.id)}
               {#if s}
                 <li>
                   <span class="planet">
