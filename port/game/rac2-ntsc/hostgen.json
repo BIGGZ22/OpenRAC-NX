@@ -62,7 +62,18 @@
     "func_00115DA8",
     "func_0011C7E8",
     "func_0011C820",
-    "func_0034EF58"
+    "func_0034EF58",
+    "func_0027F538",
+    "func_0027F5B8",
+    "func_0027F980",
+    "func_0027FA10",
+    "func_0027FAA8",
+    "func_0027FB40",
+    "func_0027FBD8",
+    "func_00280190",
+    "func_00280200",
+    "func_00280270",
+    "func_00336A78"
   ],
   "from_assembly": [
     "func_00272550",
@@ -93,6 +104,15 @@
     "gp": "0x001AEFF0",
     "retail": {
       "exe": "baserom/SCUS_972.68"
+    },
+    "signatures": {
+      "func_0027E1A0": "int (int, int, int, int, int, unsigned long long, float, float, float, float)",
+      "func_0027F2A8": "void (int, int, int, int, int, unsigned long long, int)",
+      "func_0027FC70": "void (int, int, int, int, unsigned long long, int)",
+      "func_0027F640": "void (float, float, float, int, int, int, unsigned long long, int)"
     }
-  }
+  },
+  "returns_64": [
+    "func_0027C878"
+  ]
 }

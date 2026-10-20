@@ -3,7 +3,7 @@
 `openrac-rac2-ntsc` boots Ratchet & Clank: Going Commando (SCUS-97268) from
 its decompilation to the front end's main menu: the splash and the memory
 card check, the intro movies (skipped with `--skip-movies`) and the menu's
-three buttons, drawn by the direct renderer. What is not there yet is
+three buttons with their labels, drawn by the direct renderer. What is not there yet is
 listed at the end. Nothing of a level runs.
 
 ## Building and running
@@ -44,6 +44,7 @@ What the translation reads from the decompilation (`hostgen.json`):
 
 | File | Replaces |
 |---|---|
+| `font.c` | the font prints (`0x0027F538` and nine siblings) and the GUI text element's draw (`0x00336A78`), passing the font's TEX0 from `0x0027C878` whole, as rac1's port does for FontPrintWindow (`rac1/host/hand.c`) |
 | `entry.c` | crt0 (`0x00131AE8`): `_InitSys`, `FlushCache(0)`, `main(argc, argv)` with the block at `0x00146B40`, without the thread and heap system calls; `_InitSys`'s scan of kernel memory (`0x0011F718`) and its Deci2 console thread (`0x0011B800`) |
 | `dma.c` | `sceDmaSend` (`0x00127220`), leaving CHCR as after an end tag so the game's VIF1 handler (`0x002FCE18`) retires the whole frame wait mask (`0x001AD520`); `KickVif0Chain` (`0x002FC070`) |
 | `io.c` | `sceOpen` (`0x0011E0D8`), declared variadic |
@@ -59,21 +60,20 @@ each loads into `$v1`, and the SDK functions whose instructions (relocations
 masked) are those of rac1-pal's or rac4's bound ones. Several of the latter
 start four bytes after their catalogue place, at the linker's fill word.
 
+## The texture word (TEX0)
+
+`0x0027C878` (rac1's GetEffectTex) returns a texture's whole TEX0 from its
+cache at `0x001B9740`: TBP0, width and format in the low word, CBP and the
+palette's load control in the high one. It is in `returns_64`, the glyph
+and quad builders that take it (`0x0027E1A0` DrawTexturedQuad2d, `0x0027F2A8`,
+`0x0027FC70`, `0x0027F640`) have 64-bit `asm.signatures` (DrawTexturedQuad2d
+keeps it with an `sd` in a call's delay slot, which the register inference
+does not see as an input), and the C that held it in an `int` is replaced by
+`host/font.c`. This is rac1's pattern (`returns_64` on func_001F4868 and its
+FontPrintWindow wrappers).
+
 ## Not there yet
 
-- The menu's text: the buttons are drawn, their labels come out as dark
-  boxes. The glyph quads are drawn with TEX0 0, while the font (256x128,
-  8-bit indexed) is uploaded to block 0x2C04 with its palette at 0x2C00 and
-  the TEX0 written next to it has TBP0 and CBP 0. The font's TEX0 comes from
-  0x0027C878, which builds all 64 bits; its C callers keep it in an `int`
-  (`int font = func_0027C878(1)` in 0x0027F538 and its siblings, `r` in the
-  GUI text element's draw, 0x00336A78) before the glyph builders 0x0027F2A8,
-  0x0027FC70 and 0x0027F640 take it, as rac1's FontPrintWindow and
-  Deadlocked's glyph builders did. Translating those callers from assembly
-  (`from_assembly`) with `returns_64` on 0x0027C878 and 64-bit
-  `asm.signatures` for the builders was tried: the dark boxes went, but no
-  glyph was drawn instead, so it is not in; the TBP0 of 0 is the next thing
-  to follow.
 - Sound: only play and parameter commands reach the native engine; the
   banks, the master volume and the streams are dropped with a warning.
 - `rom0:ROMVER` cannot be opened (the game logs it and goes on).
