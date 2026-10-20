@@ -1145,7 +1145,7 @@ extern short D_L02_00161B40;
 extern short D_L02_00161B44;
 extern short D_L02_00161B48;
 int func_001F4868(int);
-void func_L02_0020BF88_DC2C0(Q_2dae88 *, int *, int *, int, int) __asm__("func_L02_0020BF88");
+void func_L02_0020BF88_DC2C0(Q_2dae88 *, int *, int *, u64, int) __asm__("func_L02_0020BF88");
 
 /* Adapted from Lombyte (MIT) for PAL by OpenRAC's tools/port.py: src/overlays/shared/gameplay/entities/002a4038.c, FUN_L02_002dae88. */
 void RingMarker_DrawQuads(void) {
@@ -1161,7 +1161,9 @@ void RingMarker_DrawQuads(void) {
         b[3] = (*(int *)&D_L02_00161B48);
         c[0] = c[1] = c[2] = c[3] = (*(int *)&D_L02_00161C24);
         q = *p++;
-        func_L02_0020BF88_DC2C0(&q, b, c, GetEffectTex((*(int *)&D_L02_00161BAC) + 0x28), 1);
+        /* The TEX0 is 64 bits (its palette, height and colour mode in the upper half): read and
+           passed whole, as RingMarkersDraw reads it, not through GetEffectTex's int declaration. */
+        func_L02_0020BF88_DC2C0(&q, b, c, ((u64 (*)(int))GetEffectTex)((*(int *)&D_L02_00161BAC) + 0x28), 1);
     }
 }
 extern int func_001F9850(int);
