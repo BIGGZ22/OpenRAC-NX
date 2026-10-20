@@ -13,40 +13,40 @@ typedef struct {
 extern Ent09 D_L00_00167150_u[] __asm__("D_L00_00167150");
 /* Finds the 0xA0-byte entry in D_L00_00167150 whose short at 0x86 equals id; 0 when none. */
 s32 FUN_L00_001eb1f8(s32 id) {
-    s32 p;
-    s32 e;
+    s32 camera_record_address;
+    s32 camera_table_end_address;
     s16 v;
-    p = (s32)&D_L00_00167150_u[0];
-    e = p + 0x1E00;
+    camera_record_address = (s32)&D_L00_00167150_u[0];
+    camera_table_end_address = camera_record_address + 0x1E00;
     for (;;) {
-        v = *(s16 *)(p + 0x86);
+        v = *(s16 *)(camera_record_address + 0x86);
         if (v != id) {
-            p += 0xA0;
-            if (p < e)
+            camera_record_address += 0xA0;
+            if (camera_record_address < camera_table_end_address)
                 continue;
             return 0;
         }
-        return p;
+        return camera_record_address;
     }
 }
 float FUN_001fa5c8_001eb328(float, float) __asm__("FUN_001fa5c8");
 float FUN_001f99c0_001eb328(float) __asm__("FUN_001f99c0");
 float FUN_001fa580_001eb328(float, float) __asm__("FUN_001fa580");
 float rope_spring_turn(float *p, float a, float b, float c, float d, float lim) __asm__("FUN_L00_001eb328");
-float rope_spring_turn(float *p, float a, float b, float c, float d, float lim) {
+float rope_spring_turn(float *spring_state, float a, float b, float response_gain, float damping_factor, float lim) {
     float t = FUN_001fa5c8_001eb328(b, a);
-    *p = *p + (c * t - d * *p);
+    *spring_state = *spring_state + (response_gain * t - damping_factor * *spring_state);
     if (lim != 0.0f) {
-        if (*p > lim)
-            *p = lim;
-        else if (*p < -lim)
-            *p = -lim;
+        if (*spring_state > lim)
+            *spring_state = lim;
+        else if (*spring_state < -lim)
+            *spring_state = -lim;
     }
-    if (*p > FUN_001f99c0_001eb328(t))
-        *p = FUN_001f99c0_001eb328(t);
-    else if (*p < -FUN_001f99c0_001eb328(t))
-        *p = -FUN_001f99c0_001eb328(t);
-    return FUN_001fa580_001eb328(a, *p);
+    if (*spring_state > FUN_001f99c0_001eb328(t))
+        *spring_state = FUN_001f99c0_001eb328(t);
+    else if (*spring_state < -FUN_001f99c0_001eb328(t))
+        *spring_state = -FUN_001f99c0_001eb328(t);
+    return FUN_001fa580_001eb328(a, *spring_state);
 }
 typedef struct {
     char pad[0x7D];
@@ -70,10 +70,10 @@ typedef struct {
 extern E5 D_L00_001EA880[];
 /* Index of id in the table that ends with -1 (the end index when it is missing). */
 s32 FUN_L00_001ed230(s32 id) {
-    s32 n = 0;
-    while (D_L00_001EA880[n].id != -1 && D_L00_001EA880[n].id != id)
-        n++;
-    return n;
+    s32 table_index = 0;
+    while (D_L00_001EA880[table_index].id != -1 && D_L00_001EA880[table_index].id != id)
+        table_index++;
+    return table_index;
 }
 #define NOT_SDA
 
@@ -108,7 +108,7 @@ void init_camera_system(void) __asm__("FUN_L00_001ed280");
 void init_camera_system(void) {
     char *g = (char *)&D_L00_00166C80_c;
     float *s, *d, *t, *u;
-    char *a;
+    char *current_camera_record;
     if (*(char **)(g + 0x180) != 0) {
         *(short *)(*(char **)(g + 0x180) + 0x8E) = 0;
         *(*(char **)(g + 0x180) + 0x7D) = 0;
@@ -121,10 +121,10 @@ void init_camera_system(void) {
     update_camera_tracking_state();
     camera_run_setup_to_new_cam(*(char **)(g + 0x180));
     backup_current_cam();
-    a = *(char **)(g + 0x180);
+    current_camera_record = *(char **)(g + 0x180);
     s = (float *)(g + 0x140);
-    qcopy(s, a + 0x30);
-    d = (float *)(a + 0x64);
+    qcopy(s, current_camera_record + 0x30);
+    d = (float *)(current_camera_record + 0x64);
     d[0] = s[0];
     d[1] = s[1];
     d[2] = s[2];
@@ -184,7 +184,7 @@ void setup_level_cameras(void) {
     char *g = (char *)&D_L00_00166C80;
     char *g1;
     char *q;
-    char *p1;
+    char *normalized_hero_vector;
     struct Hero *base;
     int i;
     int k;
@@ -200,12 +200,12 @@ void setup_level_cameras(void) {
     g1 = (char *)&D_L00_00166C80;
     base = &hero;
     q = g1 + 0x190;
-    p1 = g1 + 0x1B0;
+    normalized_hero_vector = g1 + 0x1B0;
     *(int *)(g1 + 0x184) = 0;
     *(short *)(g1 + 0x270) = 0;
-    normalize_vector_xyz(p1, (char *)(((int)base->moby) + 0xE0), 1.0f);
-    qcopy(g1 + 0x1C0, p1);
-    qcopy(g1 + 0x1D0, p1);
+    normalize_vector_xyz(normalized_hero_vector, (char *)(((int)base->moby) + 0xE0), 1.0f);
+    qcopy(g1 + 0x1C0, normalized_hero_vector);
+    qcopy(g1 + 0x1D0, normalized_hero_vector);
     clear_vector(g1 + 0x1E0);
     qcopy(g1 + 0x1F0, &base->motion.pos);
     {
@@ -228,13 +228,13 @@ void setup_level_cameras(void) {
     i = 0;
     if (D_L00_0015EF54 > 0) {
         do {
-            char *e;
+            char *level_camera_entry;
             char *r;
             Elem *el;
-            int h;
-            e = (char *)(i * 32);
-            e = D_L00_0015EF50 + (int)e;
-            r = *(char **)(e + 0x1C);
+            int camera_id;
+            level_camera_entry = (char *)(i * 32);
+            level_camera_entry = D_L00_0015EF50 + (int)level_camera_entry;
+            r = *(char **)(level_camera_entry + 0x1C);
             el = &D_L00_00167150[i];
             el->s84 = i;
             *(Elem **)(r + 4) = el;
@@ -248,10 +248,10 @@ void setup_level_cameras(void) {
             el->f78 = -1.0f;
             el->c7C = r[0x1C];
             el->i74 = (unsigned char)r[0x1F];
-            h = *(unsigned short *)(e + 0xC);
+            camera_id = *(unsigned short *)(level_camera_entry + 0xC);
             D_L00_00169890[i] = 1;
-            el->s86 = h;
-            el->s8C = FUN_L00_001ed230((short)h);
+            el->s86 = camera_id;
+            el->s8C = FUN_L00_001ed230((short)camera_id);
             i++;
         } while (i < D_L00_0015EF54);
     }
@@ -275,12 +275,12 @@ extern float fast_cos(float) __asm__("FUN_001f9dc8");
 extern float fast_sin(float) __asm__("FUN_001f9de0");
 extern void add_vector_xyz(void *, void *, void *) __asm__("FUN_001f9a10");
 
-void FUN_L00_001ed580(float *o, float *v, void *m) {
-    o[0] = v[2] * fast_cos(v[1]) * fast_cos(v[0]);
-    o[1] = v[2] * fast_cos(v[1]) * fast_sin(v[0]);
-    o[2] = v[2] * fast_sin(v[1]);
-    *(int *)(o + 3) = 0;
-    add_vector_xyz(o, o, m);
+void FUN_L00_001ed580(float *output_position, float *v, void *origin_position) {
+    output_position[0] = v[2] * fast_cos(v[1]) * fast_cos(v[0]);
+    output_position[1] = v[2] * fast_cos(v[1]) * fast_sin(v[0]);
+    output_position[2] = v[2] * fast_sin(v[1]);
+    *(int *)(output_position + 3) = 0;
+    add_vector_xyz(output_position, output_position, origin_position);
 }
 #define NOT_SDA
 
@@ -298,15 +298,15 @@ extern void fast_subtract_rotations(float, float) __asm__("FUN_001fa5c8");
 
 /* Fills a from subtract_vector_xyz(b, c): two fast_arc_tan angles and its length. b and c stay in
    a1 and a2 for the subtraction (every caller passes them). */
-int FUN_L00_001ed630(float *a, float *b, float *c) {
+int FUN_L00_001ed630(float *angles_and_distance, float *b, float *c) {
     W v;
-    float t;
+    float xy_angle;
     subtract_vector_xyz(v, b, c);
-    a[1] = fast_arc_tan(vector_length_xy(v), v[2]);
-    t = fast_arc_tan(v[0], v[1]);
-    fast_subtract_rotations(t, a[0]);
-    a[0] = t;
-    a[2] = fast_vec_length(v);
+    angles_and_distance[1] = fast_arc_tan(vector_length_xy(v), v[2]);
+    xy_angle = fast_arc_tan(v[0], v[1]);
+    fast_subtract_rotations(xy_angle, angles_and_distance[0]);
+    angles_and_distance[0] = xy_angle;
+    angles_and_distance[2] = fast_vec_length(v);
     return 0;
 }
 #include "qcopy.h"
@@ -332,11 +332,11 @@ extern int f0d60_1ed6a8(void *, int, int, float) __asm__("FUN_L00_001f0d60");
 extern int D_L00_0016C06C __attribute__((section(".data")));
 extern int D_L00_0015EF5C_gp __asm__("D_L00_0015EF5C") __attribute__((sda));
 void FUN_L00_001ed6a8(OvlQuad *pos, float r) {
-    OvlQuad d[1];
+    OvlQuad step_delta[1];
     float v[4] __attribute__((aligned(16)));
     char *o = D_166C80_1ed6a8.o;
     float *src = (float *)(o + 0x64);
-    int n, i, j;
+    int step_count, i, j;
 
     v[0] = src[0];
     v[1] = src[1];
@@ -349,18 +349,18 @@ void FUN_L00_001ed6a8(OvlQuad *pos, float r) {
         *(short *)(o + 0x8A) = 0;
         return;
     }
-    f9a28_1ed6a8(d, pos, v);
-    n = fa6d0_1ed6a8(f9af0_1ed6a8(d) / (r * 0.9f)) + 1;
-    ff378_1ed6a8(d, d, fa6c0_1ed6a8(n));
+    f9a28_1ed6a8(step_delta, pos, v);
+    step_count = fa6d0_1ed6a8(f9af0_1ed6a8(step_delta) / (r * 0.9f)) + 1;
+    ff378_1ed6a8(step_delta, step_delta, fa6c0_1ed6a8(step_count));
     qcopy(pos, v);
-    for (i = 0; i < n; i++) {
-        f9a10_1ed6a8(pos, pos, d);
+    for (i = 0; i < step_count; i++) {
+        f9a10_1ed6a8(pos, pos, step_delta);
         for (j = 0; j < 6 && f0d60_1ed6a8(pos, D_L00_0015EF5C_gp, ((int)hero.moby), r); j++) {
             qcopy(pos, &D_173E70_1ed6a8);
             {
-                char *t = D_166C80_1ed6a8.o;
-                if (*(unsigned char *)(t + 0x89) == 0) {
-                    *(unsigned char *)(t + 0x89) = 1;
+                char *current_camera_record = D_166C80_1ed6a8.o;
+                if (*(unsigned char *)(current_camera_record + 0x89) == 0) {
+                    *(unsigned char *)(current_camera_record + 0x89) = 1;
                 }
             }
         }

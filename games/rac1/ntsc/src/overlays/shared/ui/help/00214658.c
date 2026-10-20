@@ -196,7 +196,7 @@ float fast_arc_tan(float, float) __asm__("FUN_001f9e90");
 void FUN_L00_00214ed8(float a, float b, float c) {
     struct Hero *g = &hero;
     float r;
-    char *p;
+    char *heading_target;
     if (g->unkA58 != 0)
         return;
     r = g->motion.rot.f[2];
@@ -206,10 +206,10 @@ void FUN_L00_00214ed8(float a, float b, float c) {
         g->unkA58 = 1;
         g->unkA54 = 0;
     }
-    p = FUN_L00_0020d8f8(a, r, b, c);
-    if (p != 0 && (g->unkA54 == 0 || g->unkA58 != 0)) {
-        g->unkA5C = fast_arc_tan(*(float *)(p + 0x10) - g->motion.pos.f[0], *(float *)(p + 0x14) - g->motion.pos.f[1]);
-        g->unkA54 = p;
+    heading_target = FUN_L00_0020d8f8(a, r, b, c);
+    if (heading_target != 0 && (g->unkA54 == 0 || g->unkA58 != 0)) {
+        g->unkA5C = fast_arc_tan(*(float *)(heading_target + 0x10) - g->motion.pos.f[0], *(float *)(heading_target + 0x14) - g->motion.pos.f[1]);
+        g->unkA54 = heading_target;
     } else {
         hero.unkA5C = r;
     }
@@ -285,7 +285,7 @@ extern f32 FUN_001f99c0_215b68(f32) __asm__("FUN_001f99c0");
 #define X D_L00_0017A680_215b68
 
 void FUN_L00_00215b68(void) {
-    f32 t, r, n, v, c, u, a, b, d;
+    f32 t, r, n, v, clamp_bound, u, a, b, d;
     s32 st;
 
     if (hero.state.current == 0x44) {
@@ -330,13 +330,13 @@ void FUN_L00_00215b68(void) {
             X.f1198 = -0.7f;
         d = FUN_001f99c0_215b68(t) * 0.2f;
         X.f1194 = d;
-        c = 0.2f;
-        if (c < d)
+        clamp_bound = 0.2f;
+        if (clamp_bound < d)
             goto st94;
-        c = -0.2f;
-        if (d < c) {
+        clamp_bound = -0.2f;
+        if (d < clamp_bound) {
         st94:
-            X.f1194 = c;
+            X.f1194 = clamp_bound;
         }
         X.f1190 = FUN_001f99c0_215b68(t) * 0.16f;
         return;
@@ -376,33 +376,33 @@ extern f32 absolute_float(f32) __asm__("FUN_001f99c0");
    +-1.4); needs the moby in item slot 3. */
 void FUN_L00_00215ef8(void)
 {
-    struct Hero *h = &hero;
+    struct Hero *hero_state = &hero;
     f32 scale;
-    f32 a;
+    f32 clamped_lean_input;
     f32 lean;
     f32 sway;
 
-    if (h->items[3].moby2 == 0)
+    if (hero_state->items[3].moby2 == 0)
         return;
     if (BYTE_0015EDB3 != 0)
         D_L00_0017B38C[0] = D_0015EE18;
-    scale = 1024.0f / h->items[3].moby2->scale;
-    if (h->state.current == 2) {
-        a = h->motion.unk188;
+    scale = 1024.0f / hero_state->items[3].moby2->scale;
+    if (hero_state->state.current == 2) {
+        clamped_lean_input = hero_state->motion.unk188;
         lean_state.fD04 = 0.02f;
         lean_state.fD08 = 0.35f;
-        if (a > 1.4f)
-            a = 1.4f;
-        else if (a < -1.4f)
-            a = -1.4f;
-        lean = -a * 1.2f;
+        if (clamped_lean_input > 1.4f)
+            clamped_lean_input = 1.4f;
+        else if (clamped_lean_input < -1.4f)
+            clamped_lean_input = -1.4f;
+        lean = -clamped_lean_input * 1.2f;
         if (lean > 1.3089969f)
             lean = 1.3089969f;
         else if (lean < -1.3089969f)
             lean = -1.3089969f;
         lean_state.fCC8 = lean;
         sway = 0.1f;
-        sway = absolute_float(a) * sway + sway;
+        sway = absolute_float(clamped_lean_input) * sway + sway;
         if (sway > 0.07f)
             sway = 0.07f;
         lean_state.fCF8 = sway * scale;
@@ -419,16 +419,16 @@ void transform_vector(void *, void *, void *) __asm__("FUN_001f9d20");
 float square_root(float) __asm__("FUN_001f9988");
 float fast_arc_tan(float, float) __asm__("FUN_001f9e90");
 void FUN_L00_00216078(Vec4 *v, float *out) {
-    Vec4 m0[4];
-    Vec4 m1[4];
-    Vec4 t;
-    Vec4 *tp = &t;
+    Vec4 rotation_matrix[4];
+    Vec4 transposed_rotation_matrix[4];
+    Vec4 transformed_vector;
+    Vec4 *tp = &transformed_vector;
     qcopy(tp, v);
-    euler_rotation_matrix(m0, D_001413D0 + 0x40);
-    transpose_rotation_matrix(m1, m0);
-    transform_vector(tp, tp, m1);
-    out[0] = fast_arc_tan(square_root(t.f[0] * t.f[0] + t.f[2] * t.f[2]), t.f[1]);
-    out[1] = -fast_arc_tan(t.f[2], t.f[0]);
+    euler_rotation_matrix(rotation_matrix, D_001413D0 + 0x40);
+    transpose_rotation_matrix(transposed_rotation_matrix, rotation_matrix);
+    transform_vector(tp, tp, transposed_rotation_matrix);
+    out[0] = fast_arc_tan(square_root(transformed_vector.f[0] * transformed_vector.f[0] + transformed_vector.f[2] * transformed_vector.f[2]), transformed_vector.f[1]);
+    out[1] = -fast_arc_tan(transformed_vector.f[2], transformed_vector.f[0]);
 }
 typedef struct {
     float f[4];
@@ -448,66 +448,66 @@ void mmul_216130(void *, void *, void *) __asm__("FUN_001fa378");
 void xform_216130(void *, void *, void *) __asm__("FUN_001f9d20");
 float smooth_216130(float *, void *, float, float, float, float, int) __asm__("FUN_L00_0025bc98");
 void set_216130(void *, void *) __asm__("FUN_00214598");
-void FUN_L00_00216130(V_216130 *v, M_216130 *m, void *p, float a, float b, float c) {
+void FUN_L00_00216130(V_216130 *v, M_216130 *working_matrix, void *rotation_output, float a, float b, float c) {
     M_216130 m0;
     M_216130 m1;
     V_216130 r;
     V_216130 x;
-    float t;
+    float smoothed_pitch;
     float d, pitch, yaw, roll;
-    t = 0.0f;
+    smoothed_pitch = 0.0f;
     {
-        QM_216130 *d = (QM_216130 *)m, *s = (QM_216130 *)&hero;
-        d->q[0] = s->q[0];
-        d->q[1] = s->q[1];
-        d->q[2] = s->q[2];
-        d->q[3] = s->q[3];
+        QM_216130 *d = (QM_216130 *)working_matrix, *hero_matrix_source = (QM_216130 *)&hero;
+        d->q[0] = hero_matrix_source->q[0];
+        d->q[1] = hero_matrix_source->q[1];
+        d->q[2] = hero_matrix_source->q[2];
+        d->q[3] = hero_matrix_source->q[3];
     }
-    d = dot_vectors_xyz(v, &m->r[2]);
+    d = dot_vectors_xyz(v, &working_matrix->r[2]);
     pitch = atan2_216130(d, seg_sqrt(1.0f - d * d));
-    cross_vectors_xyz(&x, v, &m->r[2]);
+    cross_vectors_xyz(&x, v, &working_matrix->r[2]);
     if (x.f[2] < 0.99f) {
         roll = atan2_216130(x.f[0], x.f[1]);
         r.f[0] = 0.0f;
         r.f[1] = 0.0f;
         r.f[2] = -roll;
         fun_001fa070(&m1, &r);
-        mmul_216130(m, &m1, m);
+        mmul_216130(working_matrix, &m1, working_matrix);
         xform_216130(&x, &x, &m1);
         yaw = atan2_216130(x.f[2], x.f[0]);
         r.f[0] = 0.0f;
         r.f[2] = 0.0f;
         r.f[1] = -yaw;
         fun_001fa070(&m0, &r);
-        mmul_216130(m, &m0, m);
+        mmul_216130(working_matrix, &m0, working_matrix);
         xform_216130(&x, &x, &m0);
     } else {
         roll = 0.0f;
         yaw = roll;
     }
-    if (p) {
+    if (rotation_output) {
         r.f[2] = pitch;
         r.f[0] = 0.0f;
     } else {
-        smooth_216130(&t, (&hero.motion.unkA0.f[1]), pitch, a, b, c, 0);
+        smooth_216130(&smoothed_pitch, (&hero.motion.unkA0.f[1]), pitch, a, b, c, 0);
         r.f[0] = 0.0f;
-        r.f[2] = t;
+        r.f[2] = smoothed_pitch;
     }
     r.f[1] = 0.0f;
     fun_001fa070(&m1, &r);
-    mmul_216130(m, &m1, m);
+    mmul_216130(working_matrix, &m1, working_matrix);
     r.f[1] = yaw;
     r.f[2] = 0.0f;
     fun_001fa070(&m0, &r);
-    mmul_216130(m, &m0, m);
+    mmul_216130(working_matrix, &m0, working_matrix);
     r.f[2] = roll;
     r.f[1] = 0.0f;
     fun_001fa070(&m1, &r);
-    mmul_216130(m, &m1, m);
-    if (p)
-        set_216130(m, p);
+    mmul_216130(working_matrix, &m1, working_matrix);
+    if (rotation_output)
+        set_216130(working_matrix, rotation_output);
     else
-        set_216130(m, (&hero.motion.rot));
+        set_216130(working_matrix, (&hero.motion.rot));
 }
 typedef union {
     OvlQuad q;
@@ -540,36 +540,36 @@ extern void FUN_L00_00216130_2163f0(void *, void *, float, float, float,
 #define P D_0013F350_2163f0
 
 void FUN_L00_002163f0(void) {
-    V_2163f0 m[4];
-    V_2163f0 a;
+    V_2163f0 working_matrix[4];
+    V_2163f0 reference_vector;
     V_2163f0 b;
-    V_2163f0 c;
+    V_2163f0 transformed_position_offset;
     float s;
 
-    a.q = 0;
+    reference_vector.q = 0;
     b.q = 0;
-    c.q = 0;
-    a.f[2] = 1.0f;
+    transformed_position_offset.q = 0;
+    reference_vector.f[2] = 1.0f;
     b.f[2] = 0.8f;
-    c.f[2] = 0.8f;
+    transformed_position_offset.f[2] = 0.8f;
     s = frame_scale_sq * 0.3f;
     FUN_001f9d20_2163f0(&b, &b, &P);
-    a.q = P.v270.q;
+    reference_vector.q = P.v270.q;
     if (P.b20B3 == 2) {
-        FUN_001f9a68_2163f0(&a, &P.v290, -1.0f);
+        FUN_001f9a68_2163f0(&reference_vector, &P.v290, -1.0f);
     }
     if (P.b20B3 == 1) {
         if (P.s30E < FUN_001f96f8_2163f0(10) || P.f2DC < 1.0f) {
-            a.q = P.v270.q;
+            reference_vector.q = P.v270.q;
         }
     }
     if (P.s30E != 0 && P.s1F8 != 0) {
         s = frame_scale_sq * 0.001f;
     }
-    FUN_L00_00216130_2163f0(&a, m, s, s, 0.0f, 0);
+    FUN_L00_00216130_2163f0(&reference_vector, working_matrix, s, s, 0.0f, 0);
     if (P.b20B3 == 1 && P.s30E != 0) {
-        FUN_001f9d20_2163f0(&c, &c, m);
-        subtract_vector_xyz(&P.v80, &P.v80, &c);
+        FUN_001f9d20_2163f0(&transformed_position_offset, &transformed_position_offset, working_matrix);
+        subtract_vector_xyz(&P.v80, &P.v80, &transformed_position_offset);
         FUN_001f9a10_2163f0(&P.v80, &P.v80, &b);
     }
 }
@@ -585,12 +585,12 @@ void FUN_L00_002165b8(void) {
     };
     struct Hero *g = &hero;
     float v[2];
-    int m, st, k;
-    m = g->unk20B3;
+    int effective_tilt_mode, st, k;
+    effective_tilt_mode = g->unk20B3;
     if (g->unk1F8) {
-        m = 1;
+        effective_tilt_mode = 1;
     }
-    switch (m) {
+    switch (effective_tilt_mode) {
     case HERO_TILT_RETURN_TO_ZERO:
         st = g->state.current;
         if ((u32)(st - 0x25) < 2) {
@@ -623,15 +623,15 @@ void add_vector_xyz(void *, void *, void *) __asm__("FUN_001f9a10");
 void clear_u64_value(void *) __asm__("FUN_001f99f8");
 void FUN_L00_00216710(float x) {
     char *g = (&hero.motion.unk150);
-    float d = gravity_length_xy(g);
-    if (0.001f < d) {
+    float planar_length = gravity_length_xy(g);
+    if (0.001f < planar_length) {
         float z = 0.0f;
-        float s;
+        float reduced_planar_length;
         gravity_set_z(g, g, z);
-        s = d - x;
-        if (s < z)
-            s = z;
-        FUN_L00_00233ba0(g, g, s);
+        reduced_planar_length = planar_length - x;
+        if (reduced_planar_length < z)
+            reduced_planar_length = z;
+        FUN_L00_00233ba0(g, g, reduced_planar_length);
         add_vector_xyz(g - 0x70, g - 0x70, g);
     } else
         clear_u64_value(g);
@@ -666,7 +666,7 @@ void FUN_L00_002167d0(void) {
     struct Hero *q;
     Vec4 *r;
     V4 target_velocity, target_velocity_before_impulse, saved_move_impulse, xy_velocity_scratch, slope_velocity_delta;
-    f32 f20, f21, f22, a, b, c, d, e, h, k;
+    f32 f20, f21, f22, impulse_step_factor, b, base_impulse_step, frame_duration, e, target_speed_y, k;
 
     FUN_L00_002118c8_c(0, 1.0f);
     f20 = 0.2f;
@@ -681,15 +681,15 @@ void FUN_L00_002167d0(void) {
     }
     f20 = 5.9f;
     target_velocity.f[0] = fast_cos(hero.motion.move_yaw) * hero.target_speed * (frame_time * f20);
-    h = fast_sin(hero.motion.move_yaw) * hero.target_speed;
+    target_speed_y = fast_sin(hero.motion.move_yaw) * hero.target_speed;
     target_velocity.f[2] = 0.0f;
-    d = frame_time;
-    f20 = d * f20;
-    target_velocity.f[1] = h * f20;
+    frame_duration = frame_time;
+    f20 = frame_duration * f20;
+    target_velocity.f[1] = target_speed_y * f20;
     qcopy(&target_velocity_before_impulse, &target_velocity);
     f21 = target_velocity.f[2];
     if (f21 < hero.unk930) {
-        FUN_L00_002132b8(0.7f, d * f21);
+        FUN_L00_002132b8(0.7f, frame_duration * f21);
         qcopy(&saved_move_impulse, &hero.move_impulse);
         FUN_001f9a10_c(&target_velocity, &target_velocity, &hero.move_impulse);
         FUN_001f99f8_c(&hero.move_impulse);
@@ -726,12 +726,12 @@ void FUN_L00_002167d0(void) {
             f20 = f20 / e;
         }
         b = vector_length_xy(&saved_move_impulse);
-        a = (b - f20) / b;
-        c = frame_time_sq * 3.0f;
-        b = c * a;
+        impulse_step_factor = (b - f20) / b;
+        base_impulse_step = frame_time_sq * 3.0f;
+        b = base_impulse_step * impulse_step_factor;
         if (hero.unk229C < 0.3f) {
-            if (b < c) {
-                b = c;
+            if (b < base_impulse_step) {
+                b = base_impulse_step;
             }
         }
         if (f21 < b) {
@@ -792,17 +792,17 @@ extern int allocate_voice_for_target_entry(int, int, int) __asm__("FUN_0022da68"
 
 /* In mode 3 allocates a voice for the object at D_0013F350+0xA88, else for the one at +0x2080. */
 int FUN_L00_00216de8(int a, int b);
-int FUN_L00_00216de8(int a, int b) {
-    char *p = D_0013E533 + 0xE1D;
-    int c;
-    if (*(unsigned char *)(p + 0x20A4) == 3) {
-        c = *(int *)(p + 0xA88);
-        if (c != 0) {
-            qcopy((char *)c + 0x10, p + 0x80);
-            return allocate_voice_for_target_entry(a, b, c);
+int FUN_L00_00216de8(int entry_index, int b) {
+    char *hero_base = D_0013E533 + 0xE1D;
+    int voice_target;
+    if (*(unsigned char *)(hero_base + 0x20A4) == 3) {
+        voice_target = *(int *)(hero_base + 0xA88);
+        if (voice_target != 0) {
+            qcopy((char *)voice_target + 0x10, hero_base + 0x80);
+            return allocate_voice_for_target_entry(entry_index, b, voice_target);
         }
     } else {
-        return allocate_voice_for_target_entry(a, b, *(int *)(p + 0x2080));
+        return allocate_voice_for_target_entry(entry_index, b, *(int *)(hero_base + 0x2080));
     }
     return -1;
 }
@@ -837,21 +837,21 @@ void FUN_L00_00216ec0_00216ec0(s32, s32, s32) __asm__("FUN_L00_00216ec0");
 
 void FUN_L00_00216ec0_00216ec0(s32 a, s32 b, s32 c) {
     struct Hero *base;
-    s16 *p;
-    s32 n = 0;
+    s16 *current_slot;
+    s32 slots_examined = 0;
     base = &hero;
-    p = (s16 *)(&base->unk21D8[0]);
+    current_slot = (s16 *)(&base->unk21D8[0]);
     do {
-        n = n + 1;
-        if (p[0] == 0) {
-            p[0] = 1;
-            p[3] = c;
-            p[2] = b;
-            p[1] = a;
+        slots_examined = slots_examined + 1;
+        if (current_slot[0] == 0) {
+            current_slot[0] = 1;
+            current_slot[3] = c;
+            current_slot[2] = b;
+            current_slot[1] = a;
             return;
         }
-        p = p + 4;
-    } while (n < 8);
+        current_slot = current_slot + 4;
+    } while (slots_examined < 8);
 }
 /* Ticks eight timer slots and, for each that has run out, clears a field and calls the release helper. */
 /* Ported from rac1-decomp (src/overlays/shared/help_00214D60.c: func_L00_00217698), where it is exact; names translated to the US level program. */
@@ -861,12 +861,12 @@ extern int FUN_L00_00216de8();
 
 /* For each of eight timers that fast_dec_timer reports as 2, clears a field and calls 00216de8. */
 void FUN_L00_00216f10(void) {
-    char *p = (char *)&hero.unk21D8[0][2];
+    char *slot_timer_base = (char *)&hero.unk21D8[0][2];
     short *q = (short *)(&hero.unk21D8[0][3]);
     int i;
 
     for (i = 0; i < 8; i++) {
-        if (fast_dec_timer_s16(p + i * 8) == 2) {
+        if (fast_dec_timer_s16(slot_timer_base + i * 8) == 2) {
             q[i * 4 - 3] = 0;
             FUN_L00_00216de8(q[i * 4 - 2], q[i * 4]);
         }
@@ -893,29 +893,29 @@ void FUN_L00_002500b8_00216f90(int) __asm__("FUN_L00_002500b8");
 extern char D_0013F3D0[] __attribute__((section(".data")));
 void FUN_L00_00216f90(Vec4_00216f90 *pos, Vec4_00216f90 *rot, int mode, int flag);
 void FUN_L00_00216f90(Vec4_00216f90 *pos, Vec4_00216f90 *rot, int mode, int flag) {
-    char *q = D_0013F3D0;
+    char *position_destination = D_0013F3D0;
     char *g;
     char *r;
-    qcopy(q, pos);
-    g = q - 0x80;
+    qcopy(position_destination, pos);
+    g = position_destination - 0x80;
     qcopy(*(char **)(g + 0x2080) + 0x10, pos);
-    r = q + 0x10;
+    r = position_destination + 0x10;
     qcopy(r, rot);
     rotation_matrix(g, r);
     FUN_001fa030_00216f90(*(char **)(g + 0x2080) + 0xC0, r);
     FUN_L00_002118b0_00216f90();
-    FUN_L00_00262840_00216f90(q + 0x15F0);
+    FUN_L00_00262840_00216f90(position_destination + 0x15F0);
     *(short *)(g + 0x30E) = 1;
     *(int *)(g + 0x364) &= ~1;
     *(int *)(g + 0x364) &= ~2;
     *(int *)(g + 0x360) = 0;
-    FUN_001f99f8_00216f90(q + 0x70);
-    FUN_001f99f8_00216f90(q + 0x60);
-    FUN_001f99f8_00216f90(q + 0x80);
-    FUN_001f99f8_00216f90(q + 0x90);
-    FUN_001f99f8_00216f90(q + 0xA0);
-    FUN_001f99f8_00216f90(q + 0xD0);
-    FUN_001f99f8_00216f90(q + 0x20);
+    FUN_001f99f8_00216f90(position_destination + 0x70);
+    FUN_001f99f8_00216f90(position_destination + 0x60);
+    FUN_001f99f8_00216f90(position_destination + 0x80);
+    FUN_001f99f8_00216f90(position_destination + 0x90);
+    FUN_001f99f8_00216f90(position_destination + 0xA0);
+    FUN_001f99f8_00216f90(position_destination + 0xD0);
+    FUN_001f99f8_00216f90(position_destination + 0x20);
     *(int *)(g + 0x184) = 0;
     *(unsigned char *)(g + 0x22CA) = 0;
     FUN_00217020_00216f90();
@@ -955,7 +955,7 @@ void FUN_L00_00217118(float a, float b) {
     unsigned char *G;
     unsigned char *Q;
     float k, r;
-    unsigned char *e;
+    unsigned char *collision_hit_data;
     if (gravity_length_xy(P) == 0.0f)
         return;
     G = P - 0xE0;
@@ -986,8 +986,8 @@ void FUN_L00_00217118(float a, float b) {
     FUN_L00_00233810_217118(u, u, k);
     r = 1.0f;
     if (FUN_L00_001efc70_217118(t, u, 4, *(void **)(P + 0x2080), 0)) {
-        e = coll_hit;
-        if (*(int *)(e + 0x1C) > 0 && FUN_L00_00233d30_217118(e + 0x40) <= 0.87266463f)
+        collision_hit_data = coll_hit;
+        if (*(int *)(collision_hit_data + 0x1C) > 0 && FUN_L00_00233d30_217118(collision_hit_data + 0x40) <= 0.87266463f)
             r = 0.0f;
     }
     if (r != 0.0f)
@@ -1000,18 +1000,18 @@ extern int *D_L00_00177F00[];
 extern void FUN_L00_002336e8(float *dst, float *src, float h);
 extern void FUN_L00_002a7e20(void *, int);
 
-void FUN_L00_00217368(int a, int n) {
-    if (n != 0) {
+void FUN_L00_00217368(int a, int entry_count) {
+    if (entry_count != 0) {
         char *d = D_0013E533 + 0xE1D;
         int i;
         if (*(int *)(d + 0xA64) == 0) {
             allocate_voice_for_target_entry(1, 0, a);
             *(int *)(d + 0xA64) = 1;
         }
-        for (i = 0; i < n; i++) {
+        for (i = 0; i < entry_count; i++) {
             int *m = D_L00_00177F00[i];
-            int t = (m && (m = (int *)m[9])) ? *(short *)((char *)m + 0x46) : 0;
-            if (t == 5 || t == 9) {
+            int entry_type = (m && (m = (int *)m[9])) ? *(short *)((char *)m + 0x46) : 0;
+            if (entry_type == 5 || entry_type == 9) {
                 float v[4] __attribute__((aligned(16)));
                 qcopy(v, (char *)D_L00_00177F00[i] + 0x10);
                 FUN_L00_002336e8(v, v, 0.5f);
@@ -1038,22 +1038,22 @@ extern void FUN_L00_00269958(void *, void *, int, int, int, int, int,
 void FUN_L00_00217450(void) {
     V_217450 pos[1];
     V_217450 out;
-    int t;
+    int scaled_frame_count;
     int i;
-    char *q;
+    char *position_source;
     char *g;
     int a, b;
     float s, ang, e, r;
 
-    t = FUN_001f96f8_217450(0x28);
-    q = D_0013F3D0;
-    g = q - 0x80;
+    scaled_frame_count = FUN_001f96f8_217450(0x28);
+    position_source = D_0013F3D0;
+    g = position_source - 0x80;
     i = 9;
     do {
         a = truncate_float_to_s32(random_float_between(4200.0f, 7350.0f) / 1000.0f);
         b = truncate_float_to_s32(random_float_between(21000.0f, 31500.002f) / 1000.0f);
         s = random_float_between(frame_time * 0.15f, frame_time * 0.7f);
-        qcopy(pos, q);
+        qcopy(pos, position_source);
         if (current_level_index != 6) {
             pos[0].f[2] = *(float *)(g + 0x2F4);
         }
@@ -1064,7 +1064,7 @@ void FUN_L00_00217450(void) {
         FUN_00214db0_217450(&out, s, ang, e);
         pos[0].f[0] += FUN_001f9dc8_217450(ang) * r;
         pos[0].f[1] += FUN_001f9de0_217450(ang) * r;
-        FUN_L00_00269958(pos, &out, 0x7000C0F0, 0x70F0, t, a, b, 1);
+        FUN_L00_00269958(pos, &out, 0x7000C0F0, 0x70F0, scaled_frame_count, a, b, 1);
     } while (i >= 0);
     if (!ang) {
     }

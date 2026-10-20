@@ -146,43 +146,43 @@ extern void draw_geometry_quad(void *, void *, int);
 
 void FUN_L12_002ecac0(struct Moby *moby) {
     char *data = (char *)moby->pvars;
-    Quad q;
-    float m[12];
+    Quad quad;
+    float rotation_matrix[12];
     float pos[4];
     float a, b;
     int i, col;
-    copy_matrix_rotation(m, &moby->rot_row0);
+    copy_matrix_rotation(rotation_matrix, &moby->rot_row0);
     qcopy(pos, &moby->pos);
     pos[2] = pos[2] + *(float *)(data + 8);
     pos[3] = 1.0f;
-    q.g[1] = get_effect_texture(0x10);
-    q.g[0] = 0;
-    q.g[2] = 0xFF9000000260UL;
-    q.g[3] = (long)D_L12_00161A0C | ((long)D_L12_00161A10 << 2) |
+    quad.g[1] = get_effect_texture(0x10);
+    quad.g[0] = 0;
+    quad.g[2] = 0xFF9000000260UL;
+    quad.g[3] = (long)D_L12_00161A0C | ((long)D_L12_00161A10 << 2) |
              ((long)D_L12_00161A14 << 4) | ((long)D_L12_00161A18 << 6) |
              (0x8000L << 24);
     col = fast_tween_color(D_L12_00161A1C, D_L12_00161A20,
                        (fast_sin(*(float *)data) + 1.0f) * 0.5f);
     for (i = 0; i < 4; i++) {
-        q.uv[i * 2] = 0.5f;
-        *(&q.uv[i * 2] + 1) = 0.5f;
-        q.c[i] = col;
-        qcopy(&q.v[i * 4], D_L12_001F5B20 + i * 16);
+        quad.uv[i * 2] = 0.5f;
+        *(&quad.uv[i * 2] + 1) = 0.5f;
+        quad.c[i] = col;
+        qcopy(&quad.v[i * 4], D_L12_001F5B20 + i * 16);
     }
     for (a = -0.4f; a < 0.36f; a += 0.1f) {
         b = a + 0.1f;
-        q.v[9] = a;
-        q.v[1] = a;
-        q.v[13] = b;
-        q.v[5] = b;
+        quad.v[9] = a;
+        quad.v[1] = a;
+        quad.v[13] = b;
+        quad.v[5] = b;
         if (moby->command & 1) {
-            q.v[2] = -fast_cos(a * *(float *)&D_L12_00161A24) + 2.0f;
-            q.v[6] = -fast_cos(b * *(float *)&D_L12_00161A24) + 2.0f;
+            quad.v[2] = -fast_cos(a * *(float *)&D_L12_00161A24) + 2.0f;
+            quad.v[6] = -fast_cos(b * *(float *)&D_L12_00161A24) + 2.0f;
         } else {
-            q.v[2] = fast_cos(a * *(float *)&D_L12_00161A24);
-            q.v[6] = fast_cos(b * *(float *)&D_L12_00161A24);
+            quad.v[2] = fast_cos(a * *(float *)&D_L12_00161A24);
+            quad.v[6] = fast_cos(b * *(float *)&D_L12_00161A24);
         }
-        draw_geometry_quad(&q, m, 0);
+        draw_geometry_quad(&quad, rotation_matrix, 0);
     }
 }
 #define NOT_SDA
@@ -359,9 +359,9 @@ extern void queue_dialogue_message(int, int) __asm__("FUN_L00_00263d40");
 extern void allocate_voice_for_bank_entry_alt(int, int, int) __asm__("FUN_0022db10");
 extern unsigned char D_0013D50F_e[] __asm__("D_0013D408");
 
-void FUN_L12_002ed280(struct Moby *m) {
-    int *d = (int *)m->pvars;
-    if (FUN_L01_0026e008(d[3], -1) == 0) {
+void FUN_L12_002ed280(struct Moby *moby) {
+    int *moby_vars = (int *)moby->pvars;
+    if (FUN_L01_0026e008(moby_vars[3], -1) == 0) {
         unsigned char *s = D_0013D50F_e;
         if (s[0x14] == 0) {
             s[0x14] = 1;
@@ -380,7 +380,7 @@ void FUN_L12_002ed280(struct Moby *m) {
                 *(unsigned short *)(h + 0x36A) = scale_game_frames_c(D_0015EEA4) / 600;
             }
             *(unsigned int *)(h + 0x36C) = *(unsigned int *)(h + 0x36C) | (1 << current_level_index) | 0x80000000;
-            if (is_point_inside_clip_volume(&q->motion.pos, d[0])) {
+            if (is_point_inside_clip_volume(&q->motion.pos, moby_vars[0])) {
                 help_request(0x2EE3, 0x6D);
             }
         }
@@ -392,15 +392,15 @@ void FUN_L12_002ed280(struct Moby *m) {
                 && scale_game_frames_c(D_0015EEA4) - *(unsigned short *)(h + 0x372) * 600 > scale_game_frames_c(72000))) {
             struct Hero *q = &hero;
             if (q->state.current == 0x81) {
-                d[1]++;
+                moby_vars[1]++;
                 if ((pad_held[0] & 3) && 0.3f < q->unk229C) {
-                    d[2]++;
+                    moby_vars[2]++;
                 } else {
-                    d[2] = 0;
+                    moby_vars[2] = 0;
                 }
-                if (scale_game_frames_c(0x28) < d[2]) {
+                if (scale_game_frames_c(0x28) < moby_vars[2]) {
                     char *g = D_00141968_h;
-                    d[1] = 0;
+                    moby_vars[1] = 0;
                     if (*(unsigned short *)(g + 0x370) <= 0xFFFE) {
                         *(unsigned short *)(g + 0x370) = *(unsigned short *)(g + 0x370) + 1;
                     }
@@ -413,7 +413,7 @@ void FUN_L12_002ed280(struct Moby *m) {
                     int a = scale_game_frames_c(0x1C20);
                     int b = scale_game_frames_c(0x708);
                     char *k = D_00141968_h;
-                    if (*(unsigned short *)(k + 0x370) * a + b < d[1]) {
+                    if (*(unsigned short *)(k + 0x370) * a + b < moby_vars[1]) {
                         help_request(0x2EE4, 0x6E);
                     }
                 }

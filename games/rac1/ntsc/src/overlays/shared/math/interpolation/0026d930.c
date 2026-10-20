@@ -9,19 +9,19 @@
 /* Ported from rac1-decomp (src/overlays/shared/mobyutil_0026E8E0.c: func_L01_0026E8E0), where it is exact; names translated to the US level program. */
 
 void FUN_L01_0026d930(char *p);
-void FUN_L01_0026d930(char *p) {
-    *(int *)(p + 0x0) = 0x280;
-    *(float *)(p + 0x4) = 1.0f;
-    *(float *)(p + 0x8) = 0.5f;
-    *(float *)(p + 0xC) = 0.5f;
-    *(int *)(p + 0x14) = 0;
-    *(int *)(p + 0x10) = 0;
-    *(int *)(p + 0x18) = 0;
-    *(float *)(p + 0x24) = 2.7f;
-    *(float *)(p + 0x20) = 0.3f;
-    *(float *)(p + 0x1C) = 0.3f;
-    *(float *)(p + 0x28) = 1.57f;
-    *(float *)(p + 0x2C) = 0.1f;
+void FUN_L01_0026d930(char *destination) {
+    *(int *)(destination + 0x0) = 0x280;
+    *(float *)(destination + 0x4) = 1.0f;
+    *(float *)(destination + 0x8) = 0.5f;
+    *(float *)(destination + 0xC) = 0.5f;
+    *(int *)(destination + 0x14) = 0;
+    *(int *)(destination + 0x10) = 0;
+    *(int *)(destination + 0x18) = 0;
+    *(float *)(destination + 0x24) = 2.7f;
+    *(float *)(destination + 0x20) = 0.3f;
+    *(float *)(destination + 0x1C) = 0.3f;
+    *(float *)(destination + 0x28) = 1.57f;
+    *(float *)(destination + 0x2C) = 0.1f;
 }
 
 #include "sda.h"
@@ -37,21 +37,21 @@ extern O_26e008 *D_L01_0015FFD8_26e008 __asm__("D_L01_0015FFD8");
 
 int FUN_L01_0026e008(int i, int st);
 int FUN_L01_0026e008(int i, int st) {
-    unsigned short *p;
-    int n = 0;
-    O_26e008 *o;
+    unsigned short *moby_index_entry;
+    int qualifying_moby_count = 0;
+    O_26e008 *moby;
 
     if (D_L01_001ABCC0_26e008[i] == 0) {
         return 0;
     }
-    p = D_L01_001ABCC0_26e008[i];
+    moby_index_entry = D_L01_001ABCC0_26e008[i];
     do {
-        o = (O_26e008 *)(((*p & 0x7FFF) << 8) + (int)D_L01_0015FFD8_26e008);
-        if (o->state >= 0 && (st == -1 || (unsigned char)o->state != st)) {
-            n++;
+        moby = (O_26e008 *)(((*moby_index_entry & 0x7FFF) << 8) + (int)D_L01_0015FFD8_26e008);
+        if (moby->state >= 0 && (st == -1 || (unsigned char)moby->state != st)) {
+            qualifying_moby_count++;
         }
-    } while ((short)*p++ >= 0);
-    return n;
+    } while ((short)*moby_index_entry++ >= 0);
+    return qualifying_moby_count;
 }
 
 /* Ported from rac1-decomp (src/overlays/shared/mobyutil_0026E8E0.c: func_L01_0026F040), where it is exact; names translated to the US level program. */
@@ -61,13 +61,13 @@ extern unsigned short *D_L01_001ABCC0[];
 
 void FUN_L01_0026e090(int i, int v);
 void FUN_L01_0026e090(int i, int v) {
-    unsigned short *t = D_L01_001ABCC0[i];
-    unsigned short *p;
-    if (t != 0) {
-        p = t;
+    unsigned short *moby_index_list = D_L01_001ABCC0[i];
+    unsigned short *moby_index_entry;
+    if (moby_index_list != 0) {
+        moby_index_entry = moby_index_list;
         do {
-            D_L01_0015FFD8[(*p & 0x7FFF) * 256 + 0xBC] = v;
-        } while (*(short *)p++ >= 0);
+            D_L01_0015FFD8[(*moby_index_entry & 0x7FFF) * 256 + 0xBC] = v;
+        } while (*(short *)moby_index_entry++ >= 0);
     }
 }
 extern char *D_L01_0015FFD8_e0e0 __asm__("D_L01_0015FFD8");
@@ -78,17 +78,17 @@ extern char *D_L01_0015FFD8_e0e0 __asm__("D_L01_0015FFD8");
  * through an alias (same symbol, .sdata) beside its neighbour's declaration. */
 void FUN_L01_0026e0e0(int list, int state);
 void FUN_L01_0026e0e0(int list, int state) {
-    unsigned short *p;
-    unsigned short *q = (unsigned short *)D_L01_001ABCC0[list];
+    unsigned short *moby_index_entry;
+    unsigned short *moby_index_list = (unsigned short *)D_L01_001ABCC0[list];
 
-    if (q != 0) {
-        p = q;
+    if (moby_index_list != 0) {
+        moby_index_entry = moby_index_list;
         do {
-            char *m = (char *)(((*p & 0x7FFF) << 8) + (int)D_L01_0015FFD8_e0e0);
+            char *moby = (char *)(((*moby_index_entry & 0x7FFF) << 8) + (int)D_L01_0015FFD8_e0e0);
 
-            if (m[0x20] >= 0) {
-                m[0x20] = state;
+            if (moby[0x20] >= 0) {
+                moby[0x20] = state;
             }
-        } while (*(short *)p++ >= 0);
+        } while (*(short *)moby_index_entry++ >= 0);
     }
 }

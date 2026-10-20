@@ -11,16 +11,16 @@ extern unsigned char D_0013E529[];
 void FUN_L00_00235ea0(char *);
 int scale_game_frames(int) __asm__("FUN_001f96f8");
 /* Sets p+8 to 10 or 5 by D_0013E529, then sets or caps the 0x7C timer by the hero mode. */
-void FUN_L00_002377b8(char *p) {
-    FUN_L00_00235ea0(p);
+void FUN_L00_002377b8(char *hud_element) {
+    FUN_L00_00235ea0(hud_element);
     if (D_0013E529[0] != 0)
-        *(int *)(p + 8) = 10;
+        *(int *)(hud_element + 8) = 10;
     else
-        *(int *)(p + 8) = 5;
+        *(int *)(hud_element + 8) = 5;
     if (hero.items[0].item_id == 9 && hero.vehicle_mode == 0) {
-        *(int *)(p + 0x7C) = scale_game_frames(0x78) + 30;
-    } else if (*(int *)(p + 0x7C) > 30) {
-        *(int *)(p + 0x7C) = 30;
+        *(int *)(hud_element + 0x7C) = scale_game_frames(0x78) + 30;
+    } else if (*(int *)(hud_element + 0x7C) > 30) {
+        *(int *)(hud_element + 0x7C) = 30;
     }
 }
 /* Draws a HUD gauge frame. */
@@ -139,29 +139,29 @@ extern D00237ae8 D_L00_0017DAC0[];
 extern E00237ae8 item_defs[] __asm__("D_L00_00179AC0");
 extern s32 pause_iop_sprite_lists[] __asm__("D_00141EA0");
 s32 scale_game_frames(s32) __asm__("FUN_001f96f8");
-void FUN_L00_00237ae8(O00237ae8 *o) {
+void FUN_L00_00237ae8(O00237ae8 *hud_element) {
     s32 i;
-    D00237ae8 *d;
-    s32 *s;
+    D00237ae8 *slot_entry;
+    s32 *item_id_cursor;
     E00237ae8 *tab;
     D_L00_0015FA90 = 8;
     D_L00_0015FAC0 = &D_L00_0015F738;
-    o->x48 = 0;
-    o->x4a = 0;
-    o->x58 = D_L00_0015F718_gp;
-    o->x5c = D_L00_0015F71C_gp;
-    o->x74 = -2;
-    o->x78 = scale_game_frames(0x1E);
-    o->x70 = 0;
+    hud_element->x48 = 0;
+    hud_element->x4a = 0;
+    hud_element->x58 = D_L00_0015F718_gp;
+    hud_element->x5c = D_L00_0015F71C_gp;
+    hud_element->x74 = -2;
+    hud_element->x78 = scale_game_frames(0x1E);
+    hud_element->x70 = 0;
     D_L00_0015F72C = 0;
-    d = D_L00_0017DAC0;
+    slot_entry = D_L00_0017DAC0;
     tab = item_defs;
-    s = pause_iop_sprite_lists;
+    item_id_cursor = pause_iop_sprite_lists;
     for (i = 7; i >= 0; i--) {
-        d->x18 = *s;
-        d->x0 = tab[*s].x38;
-        s++;
-        d++;
+        slot_entry->x18 = *item_id_cursor;
+        slot_entry->x0 = tab[*item_id_cursor].x38;
+        item_id_cursor++;
+        slot_entry++;
     }
 }
 typedef struct {
@@ -235,13 +235,13 @@ extern float fast_normalize_angle(float) __asm__("FUN_001fa610");
 
 extern struct Hero hero_lui __asm__("D_0013F350") __attribute__((section(".data")));
 /* Picks slot w74 from the stick angle (or steps it with the 0x1000-0x8000 pad bits), counts hold frames in b71/b70, records the slot's entry when released, and closes when b70 runs out. */
-void FUN_L00_00237ba0(Obj *p) {
-    float x, y, mag, ang, a, f, r;
-    int old, n, s, k, id;
-    u8 *c = &p->b70;
+void FUN_L00_00237ba0(Obj *hud_element) {
+    float x, y, mag, ang, a, slot_position, r;
+    int old, slot_step, stick_slot_index, k, id;
+    u8 *counters = &hud_element->b70;
 
-    p->w7C = scale_game_frames(0xB4);
-    p->w6C = 0x18;
+    hud_element->w7C = scale_game_frames(0xB4);
+    hud_element->w6C = 0x18;
     if (fast_dec_timer_s16(D_00141622)) D_0013C940.w1CC = 2;
     x = D_0013C940.unk148;
     y = D_0013C940.unk14C;
@@ -251,31 +251,31 @@ void FUN_L00_00237ba0(Obj *p) {
         y /= mag;
     }
     ang = fast_arc_tan(x, y);
-    if ((p->w78 >> 24) == 0) {
-        if ((D_0013C940.w1C4 & 0xF000) || mag < 0.5f || --p->w78 == -1) {
-            p->w74 = -1;
-            p->w78 = 0x10000FF;
+    if ((hud_element->w78 >> 24) == 0) {
+        if ((D_0013C940.w1C4 & 0xF000) || mag < 0.5f || --hud_element->w78 == -1) {
+            hud_element->w74 = -1;
+            hud_element->w78 = 0x10000FF;
         }
     }
-    n = 0;
-    old = p->w74;
-    if ((p->w78 >> 24) == 1 && (D_0013C940.w1C0 & 0x10)) {
+    slot_step = 0;
+    old = hud_element->w74;
+    if ((hud_element->w78 >> 24) == 1 && (D_0013C940.w1C0 & 0x10)) {
         if (mag > 0.9f) {
             a = ang + 3.1415927f + 3.1415927f + 1.5707964f + 3.1415927f / (float)D_L00_0015FA90;
-            f = a * ((float)D_L00_0015FA90 / 6.2831855f);
+            slot_position = a * ((float)D_L00_0015FA90 / 6.2831855f);
             r = (float)old * 6.2831855f / convert_integer_to_float(D_L00_0015FA90) - 3.1415927f;
             if (old == -1 || fast_difference_between_rotations(r, fast_subtract_rotations(ang, 1.5707964f)) > 0.58904862f) {
-                s = (int)f % D_L00_0015FA90;
-                if (((s ^ 1) & 1)) {
-                    float fr = f - (float)FUN_001fa6d0(f);
-                    if (fr > 1.0f - D_L00_0015F788) s++;
-                    else if (fr < D_L00_0015F788) s--;
-                    s = (s + D_L00_0015FA90) % D_L00_0015FA90;
+                stick_slot_index = (int)slot_position % D_L00_0015FA90;
+                if (((stick_slot_index ^ 1) & 1)) {
+                    float fr = slot_position - (float)FUN_001fa6d0(slot_position);
+                    if (fr > 1.0f - D_L00_0015F788) stick_slot_index++;
+                    else if (fr < D_L00_0015F788) stick_slot_index--;
+                    stick_slot_index = (stick_slot_index + D_L00_0015FA90) % D_L00_0015FA90;
                 }
-                p->w74 = s;
-                n = -1;
-                D_L00_0015F784 = fast_normalize_angle(a - ((float)s * 0.7853982f + 0.39269909f));
-                if (D_L00_0015F784 > 0.0f) n = 1;
+                hud_element->w74 = stick_slot_index;
+                slot_step = -1;
+                D_L00_0015F784 = fast_normalize_angle(a - ((float)stick_slot_index * 0.7853982f + 0.39269909f));
+                if (D_L00_0015F784 > 0.0f) slot_step = 1;
             }
         } else if (D_0013C940.w1D8 == 0 && (D_0013C940.w1C4 & 0xF000)) {
             int w;
@@ -284,21 +284,21 @@ void FUN_L00_00237ba0(Obj *p) {
             if (D_0013C940.w1C4 & 0x4000) { int t; if (w == -1) t = D_L00_0017DC24; else t = D_L00_0015FAC0_c[D_L00_0015F72C][w].unk14; w = t; }
             if (D_0013C940.w1C4 & 0x8000) { int t; if (w == -1) t = D_L00_0017DC18; else t = D_L00_0015FAC0_c[D_L00_0015F72C][w].unk8; w = t; }
             if (D_0013C940.w1C4 & 0x2000) { int t; if (w == -1) t = D_L00_0017DC1C; else t = D_L00_0015FAC0_c[D_L00_0015F72C][w].unkC; w = t; }
-            p->w74 = w;
+            hud_element->w74 = w;
         }
         {
             Ent *t = D_L00_0015FAC0_c[D_L00_0015F72C];
-            int cur = p->w74;
-            if (t[cur].unk0 == 0 && n != 0) {
-                k = (cur + n) % D_L00_0015FA90;
-                if (t[k].unk0 != 0) p->w74 = k;
+            int cur = hud_element->w74;
+            if (t[cur].unk0 == 0 && slot_step != 0) {
+                k = (cur + slot_step) % D_L00_0015FA90;
+                if (t[k].unk0 != 0) hud_element->w74 = k;
             }
         }
     }
-    if (p->w74 != old) c[1] = 0;
-    else if (c[1] < D_L00_0015F780_gp) c[1]++;
+    if (hud_element->w74 != old) counters[1] = 0;
+    else if (counters[1] < D_L00_0015F780_gp) counters[1]++;
     if (!(D_0013C940.w1C0 & 0x10)) {
-        int sel = p->w74;
+        int sel = hud_element->w74;
         if (sel >= 0 && (id = D_L00_0015FAC0_c[D_L00_0015F72C][sel].unk18) != 0) {
             VendorItemInfo *rr;
             int ri = id;
@@ -313,17 +313,17 @@ void FUN_L00_00237ba0(Obj *p) {
             rr = &D_L00_001C40B0[ri];
             if (rr->h8 && rr->hE < weapon_ammo_counts[id]) weapon_ammo_counts[id] = rr->hE;
         }
-        if (c[0]) c[0]--;
-    } else if (c[0] < D_L00_0015F780_gp) c[0]++;
-    if (c[0] == 0) {
+        if (counters[0]) counters[0]--;
+    } else if (counters[0] < D_L00_0015F780_gp) counters[0]++;
+    if (counters[0] == 0) {
         {
-            int a = p->w78;
-            int b = p->w74;
+            int a = hud_element->w78;
+            int b = hud_element->w74;
             D_L00_0015FA9C = b;
             D_L00_0015FA98 = a;
         }
-        remove_hud_item(p->w64);
-        p->w6C = -6;
+        remove_hud_item(hud_element->w64);
+        hud_element->w6C = -6;
         D_L00_0015FA94 = D_L00_0015F3F8;
     }
 }
@@ -527,28 +527,28 @@ extern int D_L00_0015F71C_gp __asm__("D_L00_0015F71C") __attribute__((sda));
 extern int D_L00_0015F72C __attribute__((sda));
 extern int D_L00_0015F740 __attribute__((sda));
 int scale_game_frames(int) __asm__("FUN_001f96f8");
-void FUN_L00_00238b18(char *p) {
-    int a, b;
+void FUN_L00_00238b18(char *hud_element) {
+    int element_width, b;
     D_L00_0015FA90 = 4;
     D_L00_0015FAC0 = &D_L00_0015F740;
-    a = D_L00_0015F718_gp;
+    element_width = D_L00_0015F718_gp;
     b = D_L00_0015F71C_gp;
-    *(short *)(p + 0x48) = 0;
-    *(short *)(p + 0x4A) = 0;
-    *(int *)(p + 0x58) = a;
-    *(int *)(p + 0x5C) = b;
-    *(int *)(p + 0x74) = -2;
-    *(int *)(p + 0x78) = scale_game_frames(30);
+    *(short *)(hud_element + 0x48) = 0;
+    *(short *)(hud_element + 0x4A) = 0;
+    *(int *)(hud_element + 0x58) = element_width;
+    *(int *)(hud_element + 0x5C) = b;
+    *(int *)(hud_element + 0x74) = -2;
+    *(int *)(hud_element + 0x78) = scale_game_frames(30);
     D_L00_0015F72C = 0;
 }
 
-void FUN_L00_00238b80(Obj *o) {
+void FUN_L00_00238b80(Obj *hud_element) {
     float x, y, len, ang;
-    int old, cur, n, t;
-    u8 *c = &o->b70;
+    int old, cur, slot_count, next_slot_index;
+    u8 *counters = &hud_element->b70;
 
-    o->w7C = scale_game_frames(0xB4);
-    o->w6C = 0x18;
+    hud_element->w7C = scale_game_frames(0xB4);
+    hud_element->w6C = 0x18;
     D_0013C940.w1CC = 2;
     x = D_0013C940.unk148;
     y = D_0013C940.unk14C;
@@ -558,77 +558,77 @@ void FUN_L00_00238b80(Obj *o) {
         y /= len;
     }
     ang = fast_arc_tan(x, y);
-    if ((o->w78 >> 24) == 0 && D_L00_0017E504 != 0) {
-        if ((D_0013C940.w1C4 & 0xF000) || len < 0.5f || --o->w78 == -1) {
-            o->w74 = -1;
-            o->w78 = 0x10000FF;
+    if ((hud_element->w78 >> 24) == 0 && D_L00_0017E504 != 0) {
+        if ((D_0013C940.w1C4 & 0xF000) || len < 0.5f || --hud_element->w78 == -1) {
+            hud_element->w74 = -1;
+            hud_element->w78 = 0x10000FF;
         }
     }
-    old = o->w74;
-    if (*((s8 *)o + 0x7B) == 1) {
+    old = hud_element->w74;
+    if (*((s8 *)hud_element + 0x7B) == 1) {
         if (0.9f < len) {
-            n = D_L00_0015FA90;
-            o->w74 = (int)((ang + 3.1415927f + 3.1415927f + 1.5707964f + 3.1415927f / (float)n) *
-                           ((float)n / 6.2831855f)) %
-                     n;
+            slot_count = D_L00_0015FA90;
+            hud_element->w74 = (int)((ang + 3.1415927f + 3.1415927f + 1.5707964f + 3.1415927f / (float)slot_count) *
+                           ((float)slot_count / 6.2831855f)) %
+                     slot_count;
         }
         if (D_0013C940.w1C4 & 0xF000) {
-            cur = o->w74;
+            cur = hud_element->w74;
             if (D_0013C940.w1C4 & 0x1000) {
                 if (cur == -1)
-                    t = D_L00_0017DC40;
+                    next_slot_index = D_L00_0017DC40;
                 else
-                    t = D_L00_0015FAC0_c[D_L00_0015F72C][cur].unk10;
-                cur = t;
+                    next_slot_index = D_L00_0015FAC0_c[D_L00_0015F72C][cur].unk10;
+                cur = next_slot_index;
             }
             if (D_0013C940.w1C4 & 0x4000) {
                 if (cur == -1)
-                    t = D_L00_0017DC44;
+                    next_slot_index = D_L00_0017DC44;
                 else
-                    t = D_L00_0015FAC0_c[D_L00_0015F72C][cur].unk14;
-                cur = t;
+                    next_slot_index = D_L00_0015FAC0_c[D_L00_0015F72C][cur].unk14;
+                cur = next_slot_index;
             }
             if (D_0013C940.w1C4 & 0x8000) {
                 if (cur == -1)
-                    t = D_L00_0017DC38;
+                    next_slot_index = D_L00_0017DC38;
                 else
-                    t = D_L00_0015FAC0_c[D_L00_0015F72C][cur].unk8;
-                cur = t;
+                    next_slot_index = D_L00_0015FAC0_c[D_L00_0015F72C][cur].unk8;
+                cur = next_slot_index;
             }
             if (D_0013C940.w1C4 & 0x2000) {
                 if (cur == -1)
-                    t = D_L00_0017DC3C;
+                    next_slot_index = D_L00_0017DC3C;
                 else
-                    t = D_L00_0015FAC0_c[D_L00_0015F72C][cur].unkC;
-                cur = t;
+                    next_slot_index = D_L00_0015FAC0_c[D_L00_0015F72C][cur].unkC;
+                cur = next_slot_index;
             }
-            o->w74 = cur;
+            hud_element->w74 = cur;
         }
     }
-    if (o->w74 != old) {
-        c[1] = 0;
-    } else if (c[1] < D_L00_0015F780_gp) {
-        c[1]++;
+    if (hud_element->w74 != old) {
+        counters[1] = 0;
+    } else if (counters[1] < D_L00_0015F780_gp) {
+        counters[1]++;
     }
     if (!(D_0013C940.w1C0 & 0x10)) {
-        if (o->w74 == -1)
+        if (hud_element->w74 == -1)
             D_00141610[0] = 0;
         else
-            D_00141610[0] = D_L00_0015FAC0_c[D_L00_0015F72C][o->w74].unk18;
-        if (c[0] != 0)
-            c[0]--;
-    } else if (c[0] < D_L00_0015F780_gp) {
-        c[0]++;
+            D_00141610[0] = D_L00_0015FAC0_c[D_L00_0015F72C][hud_element->w74].unk18;
+        if (counters[0] != 0)
+            counters[0]--;
+    } else if (counters[0] < D_L00_0015F780_gp) {
+        counters[0]++;
     }
-    if (c[0] == 0) {
+    if (counters[0] == 0) {
         {
-            int a = o->w78;
-            int b = o->w74;
+            int a = hud_element->w78;
+            int b = hud_element->w74;
             D_L00_0015FA9C = b;
             D_L00_0015FA98 = a;
         }
-        remove_hud_item(o->w64);
-        o->w6C = -6;
+        remove_hud_item(hud_element->w64);
+        hud_element->w6C = -6;
         D_L00_0015FA94 = D_L00_0015F3F8;
     }
 }
@@ -808,15 +808,15 @@ extern Q2395b0 D_L00_0015FAB0;
 int scale_game_frames(int) __asm__("FUN_001f96f8");
 void FUN_L00_00235c80();
 /* Sets 0x7C, 0x58/0x5C = 64, 0x48 = 32, calls 00235c80 and links D_L00_0015FAB0. */
-void FUN_L00_002395b0(char *p) {
+void FUN_L00_002395b0(char *hud_element) {
     int r = scale_game_frames(0xB4);
-    *(int *)(p + 0x7C) = r + 30;
-    *(int *)(p + 0x58) = 64;
-    *(int *)(p + 0x5C) = 64;
-    *(short *)(p + 0x48) = 32;
-    *(short *)(p + 0x4A) = 0;
-    FUN_L00_00235c80(p);
-    *(Q2395b0 **)(p + 0x80) = &D_L00_0015FAB0;
+    *(int *)(hud_element + 0x7C) = r + 30;
+    *(int *)(hud_element + 0x58) = 64;
+    *(int *)(hud_element + 0x5C) = 64;
+    *(short *)(hud_element + 0x48) = 32;
+    *(short *)(hud_element + 0x4A) = 0;
+    FUN_L00_00235c80(hud_element);
+    *(Q2395b0 **)(hud_element + 0x80) = &D_L00_0015FAB0;
     D_L00_0015FAB0.d = 1;
     D_L00_0015FAB0.a = 0;
     D_L00_0015FAB0.b = 0;
@@ -839,34 +839,34 @@ typedef struct {
 extern int FUN_L00_0023aaa8(char *);
 extern s32 D_L00_0015F7F0_gp __asm__("D_L00_0015F7F0") __attribute__((sda));
 
-void FUN_L00_00239630(HudElem *e) {
-    unsigned char *c = e->cnt;
-    HudCounter *h;
+void FUN_L00_00239630(HudElem *hud_element) {
+    unsigned char *visibility_counters = hud_element->cnt;
+    HudCounter *animation_counters;
     HudCounter *g;
     int t;
     int max;
 
-    if (e->unk0C != 0) {
-        t = *e->unk0C;
-        e->unk78 = t > -1 ? t : 0;
-        h = e->unk80;
-        h->unk0 = (h->unk0 + 1) % 60;
-        h->unk2 += h->unk4;
-        h->unk4 += h->unk6;
-        if (h->unk4 > 60) {
-            h->unk4 = 60;
-        } else if (h->unk4 < -60) {
-            h->unk4 = -60;
+    if (hud_element->unk0C != 0) {
+        t = *hud_element->unk0C;
+        hud_element->unk78 = t > -1 ? t : 0;
+        animation_counters = hud_element->unk80;
+        animation_counters->unk0 = (animation_counters->unk0 + 1) % 60;
+        animation_counters->unk2 += animation_counters->unk4;
+        animation_counters->unk4 += animation_counters->unk6;
+        if (animation_counters->unk4 > 60) {
+            animation_counters->unk4 = 60;
+        } else if (animation_counters->unk4 < -60) {
+            animation_counters->unk4 = -60;
         }
-        if (h->unk2 >= 0x800) {
-            if (h->unk4 > 0) {
-                h->unk6 = -1;
+        if (animation_counters->unk2 >= 0x800) {
+            if (animation_counters->unk4 > 0) {
+                animation_counters->unk6 = -1;
             }
         }
-        if (h->unk2 >= 0x1000) {
-            h->unk2 = 0xFFF;
+        if (animation_counters->unk2 >= 0x1000) {
+            animation_counters->unk2 = 0xFFF;
         }
-        g = h;
+        g = animation_counters;
         if (g->unk2 < 0x7FF) {
             if (g->unk4 < 0) {
                 g->unk6 = 1;
@@ -875,31 +875,31 @@ void FUN_L00_00239630(HudElem *e) {
         if (g->unk2 < 0) {
             g->unk2 = 0;
         }
-        if (e->unk78 > e->unk08) {
-            e->unk78 = e->unk08;
+        if (hud_element->unk78 > hud_element->unk08) {
+            hud_element->unk78 = hud_element->unk08;
         }
     }
-    if (e->unk74 != e->unk78 || e->unk74 == 1) {
-        e->unk7C = scale_game_frames(0x78);
-        e->unk74 = e->unk78;
+    if (hud_element->unk74 != hud_element->unk78 || hud_element->unk74 == 1) {
+        hud_element->unk7C = scale_game_frames(0x78);
+        hud_element->unk74 = hud_element->unk78;
     }
-    if (e->unk7C >= scale_game_frames(5)) {
-        if (*(int *)&D_L00_0015F7F0_gp > c[0]) {
-            c[0]++;
-        } else if (c[1] < *(int *)&D_L00_0015F7F0_gp) {
-            c[1]++;
+    if (hud_element->unk7C >= scale_game_frames(5)) {
+        if (*(int *)&D_L00_0015F7F0_gp > visibility_counters[0]) {
+            visibility_counters[0]++;
+        } else if (visibility_counters[1] < *(int *)&D_L00_0015F7F0_gp) {
+            visibility_counters[1]++;
         }
     } else {
-        e->unk6C = 1;
-        if (c[1] != 0) {
-            c[1]--;
-        } else if (c[0] != 0) {
-            c[0]--;
+        hud_element->unk6C = 1;
+        if (visibility_counters[1] != 0) {
+            visibility_counters[1]--;
+        } else if (visibility_counters[0] != 0) {
+            visibility_counters[0]--;
         } else {
-            e->unk6C = -6;
+            hud_element->unk6C = -6;
         }
     }
-    FUN_L00_0023aaa8((char *)e + 0x40);
+    FUN_L00_0023aaa8((char *)hud_element + 0x40);
 }
 typedef struct {
     s16 x;
@@ -936,7 +936,7 @@ extern s32 D_L00_0015F7F8[1] __attribute__((sda));
 extern Pt D_L00_0017E478[];
 extern Pt D_L00_0017E460[];
 
-s32 FUN_L00_00239810(Hud *m) {
+s32 FUN_L00_00239810(Hud *hud_element) {
     s32 x;
     s32 y;
     s32 cnt;
@@ -948,7 +948,7 @@ s32 FUN_L00_00239810(Hud *m) {
     s32 sel;
     Pt *tab;
     s32 mode;
-    s32 a;
+    s32 first_panel_half_width;
     s32 b;
     s32 x0;
     s32 yy;
@@ -957,34 +957,34 @@ s32 FUN_L00_00239810(Hud *m) {
     s32 i;
     s32 r;
     Pt *e;
-    u8 *q;
+    u8 *visibility_counters;
 
     if (hero.vehicle_mode == 2)
         goto out;
     if (hero.state.current == 0x32)
         goto out;
-    x = m->x;
+    x = hud_element->x;
     if (pal_mode != 0)
         y = D_L00_0015F808 + 10;
     else
         y = D_L00_0015F808 + 0x12;
-    cnt = m->cnt;
-    q = m->ab;
-    if (q[0] == 0)
+    cnt = hud_element->cnt;
+    visibility_counters = hud_element->ab;
+    if (visibility_counters[0] == 0)
         goto out;
-    ratio_x = convert_integer_to_float(q[0]) / convert_integer_to_float(D_L00_0015F7F0_gp);
+    ratio_x = convert_integer_to_float(visibility_counters[0]) / convert_integer_to_float(D_L00_0015F7F0_gp);
     if (1.0f < ratio_x)
         ratio_x = 1.0f;
     else if (ratio_x < 0.0f)
         ratio_x = 0.0f;
-    ratio_y = convert_integer_to_float(q[1]) / convert_integer_to_float(D_L00_0015F7F0_gp);
+    ratio_y = convert_integer_to_float(visibility_counters[1]) / convert_integer_to_float(D_L00_0015F7F0_gp);
     if (1.0f < ratio_y)
         ratio_y = 1.0f;
     else if (ratio_y < 0.0f)
         ratio_y = 0.0f;
     alpha = truncate_float_to_s32(ratio_y * 128.0f);
     w = truncate_float_to_s32((f32)D_L00_0015F820 * ratio_x);
-    p = m->p;
+    p = hud_element->p;
     sel = p[0] >> 1;
     mode = hero_max_health;
     if (cnt == 0)
@@ -993,23 +993,23 @@ s32 FUN_L00_00239810(Hud *m) {
         mode = hero.health.unk22AC;
     if (mode == 8) {
         tab = D_L00_0017E478;
-        a = truncate_float_to_s32(ratio_x * 48.0f);
+        first_panel_half_width = truncate_float_to_s32(ratio_x * 48.0f);
         b = truncate_float_to_s32(ratio_x * 48.0f);
     } else if (mode == 5) {
         tab = D_L00_0017E460;
-        a = truncate_float_to_s32(ratio_x * 32.0f);
+        first_panel_half_width = truncate_float_to_s32(ratio_x * 32.0f);
         b = truncate_float_to_s32(ratio_x * 16.0f);
     } else {
         b = 0;
         tab = (Pt *)D_L00_0015F7F8;
-        a = truncate_float_to_s32(ratio_x * 48.0f);
+        first_panel_half_width = truncate_float_to_s32(ratio_x * 48.0f);
     }
     yy = y + D_L00_0015F810;
     h1 = FUN_001ff960_c(0x7580, 1);
     h2 = FUN_001ff960_c(0x7580, 0);
-    draw_hud_sprite_flipped(h1, x + a, yy, D_L00_0015F81C, D_L00_0015F81C, w);
-    FUN_001ffc30_c(h2, x - a, yy, a * 2, D_L00_0015F81C, w);
-    FUN_001ffc30_c(h1, x - a - D_L00_0015F81C, yy, D_L00_0015F81C, D_L00_0015F81C, w);
+    draw_hud_sprite_flipped(h1, x + first_panel_half_width, yy, D_L00_0015F81C, D_L00_0015F81C, w);
+    FUN_001ffc30_c(h2, x - first_panel_half_width, yy, first_panel_half_width * 2, D_L00_0015F81C, w);
+    FUN_001ffc30_c(h1, x - first_panel_half_width - D_L00_0015F81C, yy, D_L00_0015F81C, D_L00_0015F81C, w);
     if (b != 0) {
         yy += D_L00_0015F80C;
         draw_hud_sprite_flipped(h1, x + b, yy, D_L00_0015F81C, D_L00_0015F81C, w);
@@ -1019,10 +1019,10 @@ s32 FUN_L00_00239810(Hud *m) {
     }
     for (i = 0; i < mode; i++) {
         r = FUN_001ff960_c(0x7536, sel);
-        FUN_L00_0023b120_c(m, r, x + tab[i].x, y + tab[i].y, 1, alpha);
+        FUN_L00_0023b120_c(hud_element, r, x + tab[i].x, y + tab[i].y, 1, alpha);
         if (sel != 0x1E) {
             r = FUN_001ff960_c(0x7536, 0x1E);
-            FUN_L00_0023b120_c(m, r, x + tab[i].x, y + tab[i].y, 1, alpha);
+            FUN_L00_0023b120_c(hud_element, r, x + tab[i].x, y + tab[i].y, 1, alpha);
             r = FUN_001ff960_c(0x7536, 0x1F);
             FUN_001ffc30_c(r, x + tab[i].x + 0xE, y + tab[i].y - 0x11, 0x22, 0x22,
                            truncate_float_to_s32((f32)(p[1] >> 4) * ratio_y));
@@ -1033,7 +1033,7 @@ s32 FUN_L00_00239810(Hud *m) {
         }
     }
 out:
-    return m->ret;
+    return hud_element->ret;
 }
 #define NOT_SDA
 
@@ -1048,9 +1048,9 @@ extern HudCounter D_L00_0015FAB8;
 extern void FUN_L00_0023a760(HudElem *);
 
 /* Runs FUN_L00_0023a760 on e, points its unk80 at D_L00_0015FAB8 and clears that entry. */
-void FUN_L00_00239cc8(HudElem *e) {
-    FUN_L00_0023a760(e);
-    e->unk80 = &D_L00_0015FAB8;
+void FUN_L00_00239cc8(HudElem *hud_element) {
+    FUN_L00_0023a760(hud_element);
+    hud_element->unk80 = &D_L00_0015FAB8;
     D_L00_0015FAB8.unk0 = 0;
 }
 typedef struct T00239d00 {
@@ -1067,30 +1067,30 @@ typedef struct T00239d00 {
 extern s32 bolt_panel_open_steps_gp __asm__("D_L00_0015F824") __attribute__((sda));
 extern s32 bolt_text_fade_steps_gp __asm__("D_L00_0015F828") __attribute__((sda));
 extern s32 FUN_001f96f8_c(s32) __asm__("FUN_001f96f8");
-void FUN_L00_00239d00(T00239d00 *o) {
-    u8 *p = &o->a;
-    s32 n = 60;
-    s32 f;
-    f = current_bolt_count;
-    *(volatile s16 *)o->ctr = (*o->ctr + 1) % n;
-    if (o->frame != f) {
-        o->frame = f;
-        o->thr = FUN_001f96f8_c(90);
+void FUN_L00_00239d00(T00239d00 *hud_element) {
+    u8 *visibility_counters = &hud_element->a;
+    s32 icon_cycle_period = 60;
+    s32 bolt_count_snapshot;
+    bolt_count_snapshot = current_bolt_count;
+    *(volatile s16 *)hud_element->ctr = (*hud_element->ctr + 1) % icon_cycle_period;
+    if (hud_element->frame != bolt_count_snapshot) {
+        hud_element->frame = bolt_count_snapshot;
+        hud_element->thr = FUN_001f96f8_c(90);
     }
-    if (FUN_001f96f8_c(5) <= o->thr) {
-        if (o->a < bolt_panel_open_steps_gp) {
-            o->a++;
-        } else if (p[1] < bolt_text_fade_steps_gp) {
-            p[1]++;
+    if (FUN_001f96f8_c(5) <= hud_element->thr) {
+        if (hud_element->a < bolt_panel_open_steps_gp) {
+            hud_element->a++;
+        } else if (visibility_counters[1] < bolt_text_fade_steps_gp) {
+            visibility_counters[1]++;
         }
     } else {
-        o->state = 1;
-        if (p[1] != 0) {
-            p[1]--;
-        } else if (o->a != 0) {
-            o->a--;
+        hud_element->state = 1;
+        if (visibility_counters[1] != 0) {
+            visibility_counters[1]--;
+        } else if (hud_element->a != 0) {
+            hud_element->a--;
         } else {
-            o->state = -6;
+            hud_element->state = -6;
         }
     }
 }
@@ -1131,7 +1131,7 @@ extern s32 D_L00_0015F844 __attribute__((sda));
 extern s32 D_L00_0015F848 __attribute__((sda));
 extern char D_L00_0015F858[] __attribute__((section(".data")));
 extern char D_L00_0015F860[] __attribute__((section(".data")));
-int FUN_L00_00239df8(HudElem *m)
+int FUN_L00_00239df8(HudElem *hud_element)
 {
     char buf[16];
     s16 *frame;
@@ -1139,20 +1139,20 @@ int FUN_L00_00239df8(HudElem *m)
     int apostrophe;
     int off;
     int panel_x, cap_x, icon_x;
-    int y, x, digits, alpha, n, slide, color, shadow, sx, sy, i, dx, dy;
+    int y, x, digits, alpha, bolt_count_quotient, slide, color, shadow, sx, sy, i, dx, dy;
     f32 open, text;
 
-    frame = m->unk80;
+    frame = hud_element->unk80;
     /* the byte offset kept in a local is load-bearing (retail tests m + off) */
     off = 0x70;
-    if (camera_secondary_mode == 50 || ((u8 *)m)[off] == 0)
-        return m->w;
+    if (camera_secondary_mode == 50 || ((u8 *)hud_element)[off] == 0)
+        return hud_element->w;
 
-    fade = m->cnt;
+    fade = hud_element->cnt;
     y = pal_mode_reload[0] ? 10 : 18;
-    x = m->unk50;
+    x = hud_element->unk50;
 
-    open = convert_integer_to_float(m->cnt[0]) / convert_integer_to_float(bolt_panel_open_steps_gp);
+    open = convert_integer_to_float(hud_element->cnt[0]) / convert_integer_to_float(bolt_panel_open_steps_gp);
     if (1.0f < open)
         open = 1.0f;
     else if (open < 0.0f)
@@ -1168,7 +1168,7 @@ int FUN_L00_00239df8(HudElem *m)
     cap_x = x - 0xC;
     icon_x = x - 0x20;
     alpha = truncate_float_to_s32((f32)truncate_float_to_s32(open * 128.0f) * 0.7f);
-    for (n = current_bolt_count; n >= 10; n /= 10)
+    for (bolt_count_quotient = current_bolt_count; bolt_count_quotient >= 10; bolt_count_quotient /= 10)
         digits++;
     apostrophe = 0;
 
@@ -1178,7 +1178,7 @@ int FUN_L00_00239df8(HudElem *m)
     panel_x -= slide;
     draw_hud_sprite(get_icon_frame(0x7580, 0), panel_x, y, slide + 0x10, 32, alpha);
     draw_hud_sprite(get_icon_frame(0x7580, 1), panel_x - 0x20, y, 32, 32, alpha);
-    draw_hud_icon(m, get_icon_frame(0x754F, *frame >> 1), icon_x, y, 0, 0x80);
+    draw_hud_icon(hud_element, get_icon_frame(0x754F, *frame >> 1), icon_x, y, 0, 0x80);
 
     /* the count, shadow first */
     color = fast_tween_color(bolt_text_color_clear, bolt_text_color_opaque, text);
@@ -1199,32 +1199,32 @@ int FUN_L00_00239df8(HudElem *m)
         font_print_right(sx - digit_width * i + 2, sy + 2, shadow, buf, -1);
         font_print_right(sx - digit_width * i, sy, color, buf, -1);
     }
-    return m->w;
+    return hud_element->w;
 }
 #include "sda.h"
 extern s32 D_00141398 NOT_SDA;
 extern s32 D_L00_0015F7F0_gp __asm__("D_L00_0015F7F0") __attribute__((sda));
 s32 scale_game_frames(s32) __asm__("FUN_001f96f8");
-void FUN_L00_0023a218(u8 *m) {
-    u8 *q = m + 0x70;
+void FUN_L00_0023a218(u8 *hud_element) {
+    u8 *visibility_counters = hud_element + 0x70;
     if (D_00141398) {
         s32 r = scale_game_frames(10);
         s32 lim = D_L00_0015F7F0_gp;
-        *(s32 *)(m + 0x7C) = r;
-        if (m[0x70] < lim) {
-            m[0x70]++;
-        } else if (q[1] < lim) {
-            q[1]++;
+        *(s32 *)(hud_element + 0x7C) = r;
+        if (hud_element[0x70] < lim) {
+            hud_element[0x70]++;
+        } else if (visibility_counters[1] < lim) {
+            visibility_counters[1]++;
         }
     } else {
-        *(s32 *)(m + 0x7C) = 0;
-        *(s32 *)(m + 0x6C) = 1;
-        if (q[1]) {
-            q[1]--;
-        } else if (m[0x70]) {
-            m[0x70]--;
+        *(s32 *)(hud_element + 0x7C) = 0;
+        *(s32 *)(hud_element + 0x6C) = 1;
+        if (visibility_counters[1]) {
+            visibility_counters[1]--;
+        } else if (hud_element[0x70]) {
+            hud_element[0x70]--;
         } else {
-            *(s32 *)(m + 0x6C) = -6;
+            *(s32 *)(hud_element + 0x6C) = -6;
         }
     }
 }
@@ -1244,9 +1244,9 @@ extern f32 fast_sin(f32) __asm__("FUN_001f9de0");
 extern void FUN_L00_001fb470(s32, s32, s32, char *, s32);
 
 /* Draws the short counter panel, its spinning icon, and a pulsing label. */
-s32 FUN_L00_0023a2d0(Hud *m) {
+s32 FUN_L00_0023a2d0(Hud *hud_element) {
     char buf[16];
-    u8 *q;
+    u8 *visibility_counters;
     s32 x, y, panel_right, panel_left, slide, alpha, text_alpha;
     s32 color, shadow, period, text_x, text_y;
     f32 open, text, pulse, scaled_text;
@@ -1258,21 +1258,21 @@ s32 FUN_L00_0023a2d0(Hud *m) {
         if (pal_mode_reload[0] == 0)
             y = alternate_y;
     }
-    x = m->x;
+    x = hud_element->x;
     if (hero.vehicle_mode == 2)
-        return m->ret;
+        return hud_element->ret;
     if (hero.state.current == 50)
-        return m->ret;
-    q = m->ab;
-    if (q[0] == 0)
-        return m->ret;
+        return hud_element->ret;
+    visibility_counters = hud_element->ab;
+    if (visibility_counters[0] == 0)
+        return hud_element->ret;
 
-    open = convert_integer_to_float(q[0]) / convert_integer_to_float(D_L00_0015F7F0_gp);
+    open = convert_integer_to_float(visibility_counters[0]) / convert_integer_to_float(D_L00_0015F7F0_gp);
     if (1.0f < open)
         open = 1.0f;
     else if (open < 0.0f)
         open = 0.0f;
-    text = convert_integer_to_float(q[1]) / convert_integer_to_float(D_L00_0015F7F0_gp);
+    text = convert_integer_to_float(visibility_counters[1]) / convert_integer_to_float(D_L00_0015F7F0_gp);
     if (1.0f < text)
         text = 1.0f;
     else if (text < 0.0f)
@@ -1286,7 +1286,7 @@ s32 FUN_L00_0023a2d0(Hud *m) {
     panel_left = panel_right - slide;
     draw_hud_sprite(get_icon_frame(0x7580, 0), panel_left, y, slide + 16, 32, alpha);
     draw_hud_sprite(get_icon_frame(0x7580, 1), panel_left - 32, y, 32, 32, alpha);
-    draw_hud_icon(m, get_icon_frame(0x754f, D_L00_0015F5CC % 60 >> 1), x - 32, y, 0, text_alpha);
+    draw_hud_icon(hud_element, get_icon_frame(0x754f, D_L00_0015F5CC % 60 >> 1), x - 32, y, 0, text_alpha);
 
     sprintf_alt(buf, D_L00_0015F918);
     text_x = x + D_L00_0015F904;
@@ -1302,7 +1302,7 @@ s32 FUN_L00_0023a2d0(Hud *m) {
     FUN_L00_001fb470(text_x + 1, text_y + 1, shadow, buf, -1);
     FUN_L00_001fb470(text_x, text_y, color, buf, -1);
 out:
-    return m->ret;
+    return hud_element->ret;
 }
 extern short D_00140986 __attribute__((section(".data")));
 int hud_screen_position(char *, int *, int *) __asm__("FUN_L00_00235a70");
@@ -1312,15 +1312,15 @@ void FUN_L00_0023b6c0(int, int, int, int, int, int);
 void draw_hud_sprite(int, int, int, int, int, int) __asm__("FUN_001ffc30");
 int FUN_L00_0023a640(char *rec) {
     int x, y;
-    int n;
+    int sprite_width;
     x = *(int *)(rec + 0x50);
     y = *(int *)(rec + 0x54);
     *(int *)(rec + 0x58) = 0x100;
     *(int *)(rec + 0x5C) = 0x40;
     hud_screen_position(rec, &x, &y);
     FUN_L00_00235ad8(rec, &x, &y, *(int *)(rec + 0x6C), 0);
-    n = *(int *)(rec + 0x74) * 0xDD / *(int *)(rec + 0x8) + 0x1B;
-    FUN_L00_0023b6c0(get_icon_frame(0x7558, 1), x, y, n, 0x40, 0x80);
+    sprite_width = *(int *)(rec + 0x74) * 0xDD / *(int *)(rec + 0x8) + 0x1B;
+    FUN_L00_0023b6c0(get_icon_frame(0x7558, 1), x, y, sprite_width, 0x40, 0x80);
     draw_hud_sprite(get_icon_frame(0x7558, 0), x, y, 0x100, 0x40, 0x80);
     draw_hud_sprite(get_icon_frame(0x7558, 2), x, y, 0x20, 0x20,
                     D_00140986 ? 0x80 : 0);
@@ -1334,11 +1334,11 @@ extern int scale_game_frames(int) __asm__("FUN_001f96f8");
 extern void FUN_L00_00235c80(HudElem *);
 
 /* Sets unk7C to scale_game_frames(0x78) + 0x1E and w/h to 0x20, calls FUN_L00_00235c80. */
-void FUN_L00_0023a760(HudElem *e) {
-    e->unk7C = scale_game_frames(0x78) + 0x1E;
-    e->w = 0x20;
-    e->h = 0x20;
-    FUN_L00_00235c80(e);
+void FUN_L00_0023a760(HudElem *hud_element) {
+    hud_element->unk7C = scale_game_frames(0x78) + 0x1E;
+    hud_element->w = 0x20;
+    hud_element->h = 0x20;
+    FUN_L00_00235c80(hud_element);
 }
 
 s32 D_L01_0017E0A0[1] __attribute__((section(".data"))) = {0};

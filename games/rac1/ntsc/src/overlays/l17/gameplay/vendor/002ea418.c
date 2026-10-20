@@ -10,18 +10,18 @@ extern void FUN_L11_00310cf8(float, float, float, float, float, int, int, int, i
 
 /* Draws four quads a quarter turn apart; same routine as FUN_L11_00311048 with this level's texture. */
 void FUN_L17_002ea418(unsigned char a, unsigned char b, unsigned char c, unsigned char d, float x,
-                      float y, float s, float ang) {
-    int h;
+                      float y, float scale, float ang) {
+    int texture_handle;
     float w;
-    h = get_effect_texture(0x2E);
-    w = s * 20.0f;
-    FUN_L11_00310cf8(x, y, w, w, ang, 0x3F, 0x3F, h, 0xFFFFF3, a, b, c, d);
+    texture_handle = get_effect_texture(0x2E);
+    w = scale * 20.0f;
+    FUN_L11_00310cf8(x, y, w, w, ang, 0x3F, 0x3F, texture_handle, 0xFFFFF3, a, b, c, d);
     ang = fast_add_rotations(ang, 1.5707964f);
-    FUN_L11_00310cf8(x, y, w, w, ang, 0x3F, 0x3F, h, 0xFFFFF3, a, b, c, d);
+    FUN_L11_00310cf8(x, y, w, w, ang, 0x3F, 0x3F, texture_handle, 0xFFFFF3, a, b, c, d);
     ang = fast_add_rotations(ang, 1.5707964f);
-    FUN_L11_00310cf8(x, y, w, w, ang, 0x3F, 0x3F, h, 0xFFFFF3, a, b, c, d);
+    FUN_L11_00310cf8(x, y, w, w, ang, 0x3F, 0x3F, texture_handle, 0xFFFFF3, a, b, c, d);
     ang = fast_add_rotations(ang, 1.5707964f);
-    FUN_L11_00310cf8(x, y, w, w, ang, 0x3F, 0x3F, h, 0xFFFFF3, a, b, c, d);
+    FUN_L11_00310cf8(x, y, w, w, ang, 0x3F, 0x3F, texture_handle, 0xFFFFF3, a, b, c, d);
 }
 
 #include "eetypes.h"
@@ -30,9 +30,9 @@ void FUN_L17_002ea418(unsigned char a, unsigned char b, unsigned char c, unsigne
 
 extern int FUN_L00_002dbe20(void *);
 
-int FUN_L17_002f0040(struct Moby *a) {
-    int r = FUN_L00_002dbe20(a);
-    a->state = 0xc;
+int FUN_L17_002f0040(struct Moby *moby) {
+    int r = FUN_L00_002dbe20(moby);
+    moby->state = 0xc;
     return r;
 }
 extern void FUN_L17_002f0448(struct Moby *m);
@@ -43,10 +43,10 @@ extern void FUN_L00_00263618(void *, int, float, float);
 
 void FUN_L17_002f0448(struct Moby *m) {
     int v = (m->glow_color & 0xFFFFFF) | 0x30000000;
-    char *p = (char *)m->pvars + 0x200;
+    char *effect_position = (char *)m->pvars + 0x200;
     int i;
     for (i = 2; i >= 0; i--) {
-        FUN_L00_00263618(p, v, 0.2f, 0.08f);
-        p += 0x10;
+        FUN_L00_00263618(effect_position, v, 0.2f, 0.08f);
+        effect_position += 0x10;
     }
 }

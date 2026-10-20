@@ -100,9 +100,12 @@ void level_draw_dialog_text(void) {
     };
     enum {
         FREEZE_DIALOG_TIMER_GATED_CENTERED_BUTTON = 2,
+        FREEZE_DIALOG_CONDITIONAL_PAIRED_BUTTONS = 3,
         FREEZE_DIALOG_FORMATTED_BODY_CENTERED_BUTTON = 5,
         FREEZE_DIALOG_FLAG_GATED_PAIRED_BUTTONS = 12,
+        FREEZE_DIALOG_UNCONDITIONAL_PAIRED_BUTTONS = 13,
         FREEZE_DIALOG_CONDITIONAL_FORMATTED_BODY = 19,
+        FREEZE_DIALOG_PLAIN_BODY_PAIRED_BUTTONS = 23,
         FREEZE_DIALOG_FORMATTED_BODY_PAIRED_BUTTONS = 24
     };
     char buf[0x200];
@@ -111,7 +114,7 @@ void level_draw_dialog_text(void) {
     setup_gif_paging(0);
     switch (D_L00_00173040.state) {
     case MESSAGE_BOX_SPLIT_TEXT_SPRITE_DIALOG: {
-        u8 *p;
+        u8 *text_cursor;
         s32 color;
         s32 tint;
         s32 y;
@@ -127,24 +130,24 @@ void level_draw_dialog_text(void) {
         box = D_L00_001E7A50;
         color = fast_tween_color(D_L00_0015F4B0, D_L00_0015F4B4, alpha);
         strncpy(SCRATCHPAD, get_help_message_text(0x4E2B), 0x400);
-        p = SCRATCHPAD;
-        while (*p >= 2) {
-            p++;
+        text_cursor = SCRATCHPAD;
+        while (*text_cursor >= 2) {
+            text_cursor++;
         }
-        if (*p == 1) {
+        if (*text_cursor == 1) {
             do {
-                *p++ = 0;
-            } while (*p == 1);
+                *text_cursor++ = 0;
+            } while (*text_cursor == 1);
         }
         font_print_window(&box, color, SCRATCHPAD, -1, get_effect_texture(1), D_L00_001C3150);
         pivot = 272.0f;
         box.flags |= 4;
         y = box.anchor_y;
         y += box.rendered_height;
-        font_print_window(&box, color, p, -1, get_effect_texture(1), D_L00_001C3150);
+        font_print_window(&box, color, text_cursor, -1, get_effect_texture(1), D_L00_001C3150);
         box.flags ^= 4;
         box.anchor_y = 0x136 - box.rendered_height;
-        font_print_window(&box, color, p, -1, get_effect_texture(1), D_L00_001C3150);
+        font_print_window(&box, color, text_cursor, -1, get_effect_texture(1), D_L00_001C3150);
         tint = fast_tween_color(0x20FFFF, 0x8020FFFF,
                             1.0f - (f32)D_L00_00173040.unk24 / (f32)scale_game_frames(30));
         font_print_center(0x100, 0x140, tint, get_help_message_text(0x524A), -1);
@@ -184,7 +187,7 @@ void level_draw_dialog_text(void) {
                 text = get_help_message_text(0x4FA7);
                 break;
             }
-        case 13:
+        case FREEZE_DIALOG_UNCONDITIONAL_PAIRED_BUTTONS:
             left = 0x524F;
             right = 0x524B;
             text = get_help_message_text(0x4FAD);
@@ -244,12 +247,12 @@ void level_draw_dialog_text(void) {
             sprintf(buf, D_L00_0015F510, get_help_message_text(0x4FAE), 1, 1, get_help_message_text(0x4FAA));
             text = buf;
             break;
-        case 23:
+        case FREEZE_DIALOG_PLAIN_BODY_PAIRED_BUTTONS:
             left = 0x524E;
             right = 0x524B;
             text = get_help_message_text(0x4FB1);
             break;
-        case 3:
+        case FREEZE_DIALOG_CONDITIONAL_PAIRED_BUTTONS:
         case 4:
             if (D_L00_0015F5A8 != 0 && (mode_freeze_flags & 2)) {
                 left = 0x524E;
@@ -341,7 +344,7 @@ void level_draw_dialog_text(void) {
         s32 sec;
         s32 hund;
         f32 scale;
-        f32 f;
+        f32 color_blend_factor;
 
         pulse = fast_tween_color(D_L00_0015F4E4, D_L00_0015F4E8,
                              fast_sin((f32)(D_L00_0015F3F8 % D_L00_0015F4E0) / convert_integer_to_float(D_L00_0015F4E0) * 6.28318f - 3.14159f) *
@@ -357,15 +360,15 @@ void level_draw_dialog_text(void) {
         c2 = D_L00_0015F4F4;
         c3 = D_L00_0015F4FC;
         if (D_L00_00173040.unk24 != 0) {
-            f = (f32)D_L00_00173040.unk24 * 0.125f;
-            if (f > 1.0f) {
-                f = 1.0f;
-            } else if (f < 0.0f) {
-                f = 0.0f;
+            color_blend_factor = (f32)D_L00_00173040.unk24 * 0.125f;
+            if (color_blend_factor > 1.0f) {
+                color_blend_factor = 1.0f;
+            } else if (color_blend_factor < 0.0f) {
+                color_blend_factor = 0.0f;
             }
-            c1 = fast_tween_color(D_L00_0015F4EC, D_L00_0015F4F0, f);
-            c2 = fast_tween_color(D_L00_0015F4F4, D_L00_0015F4F8, f);
-            c3 = fast_tween_color(D_L00_0015F4FC, D_L00_0015F500, f);
+            c1 = fast_tween_color(D_L00_0015F4EC, D_L00_0015F4F0, color_blend_factor);
+            c2 = fast_tween_color(D_L00_0015F4F4, D_L00_0015F4F8, color_blend_factor);
+            c3 = fast_tween_color(D_L00_0015F4FC, D_L00_0015F500, color_blend_factor);
         }
         if (hero.unk89A < 3) {
             draw_outlined_rect(D_L00_0015F4BC - truncate_float_to_s32((f32)D_L00_0015F4C4 * scale),

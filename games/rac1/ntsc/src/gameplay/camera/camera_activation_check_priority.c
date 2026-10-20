@@ -31,19 +31,23 @@ int camera_activation_check_priority(void *cur, void *other) __asm__("FUN_001ec2
 int camera_activation_check_priority(void *cur, void *other) {
     enum {
         CAMERA_ACTIVATION_BY_PRIORITY = 0,
-        CAMERA_COMPARE_ACCEPT = 1,
+        CAMERA_ACTIVATION_HANDOFF_GATED_PRIORITY = 1,
+        CAMERA_ACTIVATION_REQUIRE_HANDOFF_PRIORITY = 2,
         CAMERA_ACTIVATION_IN_CLIP_VOLUME = 4,
         CAMERA_ACTIVATION_MATCH_LISTENER_GROUP = 7
     };
-    char *c = (char *)cur;
-    char *o = (char *)other;
-    unsigned char *state = (unsigned char *)(c + 0x74);
+    enum {
+        CAMERA_COMPARE_ACCEPT = 1
+    };
+    char *candidate_camera_bytes = (char *)cur;
+    char *current_camera_bytes = (char *)other;
+    unsigned char *state = (unsigned char *)(candidate_camera_bytes + 0x74);
 
-    if (*(unsigned char *)(c + 0x7C) == 0) {
+    if (*(unsigned char *)(candidate_camera_bytes + 0x7C) == 0) {
         return 0;
     }
     {
-        int (*fn)(void *, void *) = D_001E8C00[*(short *)(c + 0x8C)].fn_04;
+        int (*fn)(void *, void *) = D_001E8C00[*(short *)(candidate_camera_bytes + 0x8C)].fn_04;
         if (fn != 0) {
             switch (fn(cur, other)) {
             case -1:
@@ -54,49 +58,49 @@ int camera_activation_check_priority(void *cur, void *other) {
         }
     }
     switch (*(int *)state) {
-    case 1:
-    case 2:
+    case CAMERA_ACTIVATION_HANDOFF_GATED_PRIORITY:
+    case CAMERA_ACTIVATION_REQUIRE_HANDOFF_PRIORITY:
         if (state[9] == 0) {
             return 0;
         }
         /* fallthrough */
     case CAMERA_ACTIVATION_BY_PRIORITY:
-        if (o == 0) {
+        if (current_camera_bytes == 0) {
             return 1;
         }
-        if (*(short *)(o + 0x7E) != 0) {
+        if (*(short *)(current_camera_bytes + 0x7E) != 0) {
             return 1;
         }
-        if (state[8] > *(unsigned char *)(o + 0x7C)) {
+        if (state[8] > *(unsigned char *)(current_camera_bytes + 0x7C)) {
             return 1;
         }
         break;
     case CAMERA_ACTIVATION_IN_CLIP_VOLUME: {
-        char *p = (char *)D_0015EF90[*(short *)(c + 0x84)].unk1C;
+        char *camera_descriptor_bytes = (char *)D_0015EF90[*(short *)(candidate_camera_bytes + 0x84)].unk1C;
 
-        if (o != 0 && *(short *)(o + 0x7E) == 0 && !(state[8] > *(unsigned char *)(o + 0x7C))) {
+        if (current_camera_bytes != 0 && *(short *)(current_camera_bytes + 0x7E) == 0 && !(state[8] > *(unsigned char *)(current_camera_bytes + 0x7C))) {
             return 0;
         }
-        if (is_point_inside_clip_volume(D_0013F3D0, *(int *)(p + 0xC))) {
+        if (is_point_inside_clip_volume(D_0013F3D0, *(int *)(camera_descriptor_bytes + 0xC))) {
             return 1;
         }
         break;
     }
     case CAMERA_ACTIVATION_MATCH_LISTENER_GROUP: {
         struct Hero *base = &hero;
-        short e = *(short *)(c + 0x86);
+        short e = *(short *)(candidate_camera_bytes + 0x86);
 
         if (e != base->unk2284) {
             return 0;
         }
-        if (*(short *)(o + 0x7E) == 0 && !(state[8] > *(unsigned char *)(o + 0x7C))) {
+        if (*(short *)(current_camera_bytes + 0x7E) == 0 && !(state[8] > *(unsigned char *)(current_camera_bytes + 0x7C))) {
             return 0;
         }
         if (e != 3) {
             return 1;
         }
         {
-            CamRec20 *rec = &D_0015EF90[*(short *)(c + 0x84)];
+            CamRec20 *rec = &D_0015EF90[*(short *)(candidate_camera_bytes + 0x84)];
             int g = *(int *)((char *)rec->unk1C + 0x24);
 
             if (g < 0 ||

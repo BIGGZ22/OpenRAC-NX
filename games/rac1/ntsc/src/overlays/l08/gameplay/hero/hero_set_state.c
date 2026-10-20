@@ -89,7 +89,13 @@ extern char D_L08_0017C720[];
 int hero_set_state(int a, int b) {
     enum {
         ENTER_IDLE = 0,
+        HERO_STATE_DOUBLE_JUMP = 0xE,
         ENTER_ATTACK_COMBO = 0x13,
+        HERO_STATE_GRIND_JUMP = 0x29,
+        HERO_STATE_GRIND_ATTACK = 0x2B,
+        HERO_STATE_APPROACH_TARGET_POSE = 0x65,
+        HERO_STATE_AT_TARGET_POSE = 0x67,
+        ENTER_DROWN = 0x6A,
         ENTER_SLIP = 0x79
     };
     int old2088;
@@ -174,7 +180,7 @@ int hero_set_state(int a, int b) {
         }
         break;
     }
-    case 0x67: {
+    case HERO_STATE_AT_TARGET_POSE: {
         struct Hero *p = &hero;
         p->state.control_mode = 0;
         p->unk2284 = 0;
@@ -406,7 +412,7 @@ int hero_set_state(int a, int b) {
             set_hero_animation(0x65, 0, (float)scale_game_frames(0x11));
         break;
     }
-    case 0x6A: {
+    case ENTER_DROWN: {
         struct Hero *p = &hero;
         p->state.control_mode = 0x14;
         p->unk20A7 = 1;
@@ -581,7 +587,7 @@ int hero_set_state(int a, int b) {
         }
         break;
     }
-    case 0x65: {
+    case HERO_STATE_APPROACH_TARGET_POSE: {
         struct Hero *p = &hero;
         p->state.control_mode = 1;
         p->unk2284 = 0;
@@ -978,7 +984,7 @@ int hero_set_state(int a, int b) {
         }
         break;
     }
-    case 8: {
+    case HERO_STATE_LAND: {
         struct Hero *p = &hero;
         int animation_timing_selector = -2;
         p->state.control_mode = 5;
@@ -994,18 +1000,18 @@ int hero_set_state(int a, int b) {
         break;
     }
     case HERO_STATE_JUMP:
-    case 9:
-    case 0xA:
-    case 0xB:
+    case HERO_STATE_RUN_JUMP:
+    case HERO_STATE_PACK_JUMP:
+    case HERO_STATE_HIGH_JUMP:
     case 0xC:
     case 0xD:
-    case 0xE:
+    case HERO_STATE_DOUBLE_JUMP:
     case 0xF:
-    case 0x10:
+    case HERO_STATE_PACK_LONG_JUMP:
     case 0x11:
     case 0x12:
     case 0x1C:
-    case 0x29:
+    case HERO_STATE_GRIND_JUMP:
     case 0x2A:
     case 0x3C:
     case 0x49:
@@ -1597,7 +1603,7 @@ int hero_set_state(int a, int b) {
         }
         break;
     }
-    case 0x2B: {
+    case HERO_STATE_GRIND_ATTACK: {
         struct Hero *p = &hero;
         p->state.control_mode = 0xF;
         p->unkA64 = 0;

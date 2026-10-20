@@ -146,8 +146,11 @@ void FUN_L15_0021d040(void) {
         HERO_STATE_LEDGE_SHIMMY_YAW_MINUS_90 = 27,
         HERO_STATE_LEDGE_JUMP = 28,
         HERO_STATE_APPROACH_TARGET_POSE = 101,
+        HERO_STATE_TARGET_POSE_ANIMATION_WAIT = 102,
         HERO_STATE_AT_TARGET_POSE = 103,
-        HERO_STATE_FALL_TO_RESPAWN = 119
+        HERO_STATE_WAIT_FOR_JUMP_OR_RESPAWN = 104,
+        HERO_STATE_FALL_TO_RESPAWN = 119,
+        HERO_STATE_WAIT_FOR_RESPAWN_HEIGHT_OR_TIMEOUT = 123
     };
     unsigned char *moby;
     int prevSub;
@@ -893,7 +896,7 @@ void FUN_L15_0021d040(void) {
                     }
                     FUN_L00_00228c18();
                     break;
-                case 102:
+                case HERO_STATE_TARGET_POSE_ANIMATION_WAIT:
                     if (hero.unkA98 & 2) {
                         hero_set_state(0x65, 1);
                     }
@@ -906,7 +909,7 @@ void FUN_L15_0021d040(void) {
                         hero_set_state(0x65, 1);
                     }
                     break;
-                case 104:
+                case HERO_STATE_WAIT_FOR_JUMP_OR_RESPAWN:
                     if (hero.unk1660 < 2) {
                         if (scale_game_frames(0xF) + hero.unk1660 * scale_game_frames(0x19) <
                             hero.state_timer) {
@@ -921,7 +924,7 @@ void FUN_L15_0021d040(void) {
                         return;
                     }
                     break;
-                case 123:
+                case HERO_STATE_WAIT_FOR_RESPAWN_HEIGHT_OR_TIMEOUT:
                     if (hero.unk2F4 - 1.2f > hero.motion.pos.f[2] ||
                         hero.state_timer > scale_game_frames(0x96)) {
                         hero_respawn();
@@ -936,8 +939,8 @@ void FUN_L15_0021d040(void) {
                         break;
                     }
                     if (hero.unk2220 != -1) {
-                        Row13E650 *e = (Row13E650 *)(D_0013E550 + hero.unk2220 * 0x70);
-                        if (e->f88 == ((unsigned char *)hero.moby) && e->f74 != 0) {
+                        Row13E650 *voice_slot_entry = (Row13E650 *)(D_0013E550 + hero.unk2220 * 0x70);
+                        if (voice_slot_entry->f88 == ((unsigned char *)hero.moby) && voice_slot_entry->f74 != 0) {
                             release_voice_slot(hero.unk2220);
                         }
                     }

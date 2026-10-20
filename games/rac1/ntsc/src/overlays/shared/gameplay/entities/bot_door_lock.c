@@ -324,13 +324,13 @@ void FUN_L06_00309860(char *self) {
         MOBY_STATE_SPAWN_AND_REMOVE = 2
     };
     int flag = 0;
-    char *o = find_moby_hit(self, 0x10000, 0);
+    char *hit_moby = find_moby_hit(self, 0x10000, 0);
     switch (((unsigned char *)self)[0x20]) {
     case MOBY_STATE_INITIALIZE:
         self[0x20] = 1;
         break;
     case MOBY_STATE_WAIT_FOR_HIT:
-        if (o != 0 && *(float *)(o + 0x2C) > 0.0f) {
+        if (hit_moby != 0 && *(float *)(hit_moby + 0x2C) > 0.0f) {
             flag = 1;
         }
         if (flag) {
@@ -338,7 +338,7 @@ void FUN_L06_00309860(char *self) {
         }
         break;
     case MOBY_STATE_SPAWN_AND_REMOVE: {
-        char *m;
+        char *spawned_moby;
         FUN_0022da68_c(0, 0, (int)self);
         FUN_L01_002787a0(self);
         FUN_L00_00263fd8(self, 0x679, self + 0x10, self + 0x40, 0, 0, 0.0f, D_L06_0015F580,
@@ -347,14 +347,14 @@ void FUN_L06_00309860(char *self) {
                          D_L06_0015F580, D_L06_0015F580);
         FUN_L00_00263fd8(self, 0x67b, self + 0x10, self + 0x40, 0, 0, 0.0f, D_L06_0015F580,
                          D_L06_0015F580, D_L06_0015F580);
-        m = mk_a(0x678);
-        if (m != 0) {
-            m[0x31] = 1;
-            *(short *)(m + 0x32) = 0xFF;
-            qcopy(m + 0x10, self + 0x10);
-            qcopy(m + 0x40, self + 0x40);
-            *(long *)(m + 0x38) = *(long *)(self + 0x38);
-            upd_a(m);
+        spawned_moby = mk_a(0x678);
+        if (spawned_moby != 0) {
+            spawned_moby[0x31] = 1;
+            *(short *)(spawned_moby + 0x32) = 0xFF;
+            qcopy(spawned_moby + 0x10, self + 0x10);
+            qcopy(spawned_moby + 0x40, self + 0x40);
+            *(long *)(spawned_moby + 0x38) = *(long *)(self + 0x38);
+            upd_a(spawned_moby);
         }
         mark_moby_for_removal_c(self);
         break;
@@ -368,21 +368,21 @@ void FUN_L06_0030bfa8(char *moby);
 void enqueue_callback_list_1(s32 arg0, s32 arg1) __asm__("FUN_001f4600");
 void mark_moby_for_removal(struct Obj *obj) __asm__("FUN_0020c828");
 
-void FUN_L06_0030be60(char *m) {
+void FUN_L06_0030be60(char *moby) {
     enum {
         SPRITE_EFFECT_STATE_REMOVE = 0,
         SPRITE_EFFECT_STATE_ANIMATE = 1
     };
-    float *d = *(float **)(m + 0x78);
-    switch ((unsigned char)m[0x20]) {
+    float *effect_data = *(float **)(moby + 0x78);
+    switch ((unsigned char)moby[0x20]) {
     case SPRITE_EFFECT_STATE_REMOVE:
-        mark_moby_for_removal(m);
+        mark_moby_for_removal(moby);
         break;
     case SPRITE_EFFECT_STATE_ANIMATE:
-        enqueue_callback_list_1(FUN_L06_0030bfa8, m);
-        d[0] = d[0] + d[1];
-        if (2.0f < d[0]) {
-            mark_moby_for_removal(m);
+        enqueue_callback_list_1(FUN_L06_0030bfa8, moby);
+        effect_data[0] = effect_data[0] + effect_data[1];
+        if (2.0f < effect_data[0]) {
+            mark_moby_for_removal(moby);
         }
         break;
     }
@@ -394,19 +394,19 @@ extern float convert_integer_to_float(int) __asm__("FUN_001fa6c0");
 void FUN_L06_0030bef8(char *src, int duration_updates, int start_color, int end_color) {
     OvlQuad v;
     char *vp = (char *)&v;
-    unsigned char *m;
+    unsigned char *effect_moby;
     v = *(OvlQuad *)src;
-    m = (unsigned char *)mk_b(0x76A);
-    if (m) {
-        char *e = *(char **)(m + 0x78);
-        float f;
-        qcopy(m + 0x10, vp);
-        f = convert_integer_to_float(duration_updates);
-        *(int *)(e + 0xC) = end_color;
-        *(int *)(e + 0x8) = start_color;
-        *(float *)(e + 0x4) = 2.0f / f;
-        m[0x30] = 0xFF;
-        m[0x20] = 1;
+    effect_moby = (unsigned char *)mk_b(0x76A);
+    if (effect_moby) {
+        char *effect_data = *(char **)(effect_moby + 0x78);
+        float duration_as_float;
+        qcopy(effect_moby + 0x10, vp);
+        duration_as_float = convert_integer_to_float(duration_updates);
+        *(int *)(effect_data + 0xC) = end_color;
+        *(int *)(effect_data + 0x8) = start_color;
+        *(float *)(effect_data + 0x4) = 2.0f / duration_as_float;
+        effect_moby[0x30] = 0xFF;
+        effect_moby[0x20] = 1;
     }
 }
 extern void vu1_add_g_sregister(s32, s64) __asm__("FUN_00233980");
@@ -425,7 +425,7 @@ extern s32 D_L06_00162428 __attribute__((sda));
 
 /* Draws a screen-space sprite at the moby, grown and faded in by the first data float. */
 void FUN_L06_0030bfa8(char *moby) {
-    float *d = *(float **)(moby + 0x78);
+    float *effect_data = *(float **)(moby + 0x78);
     OvlVec4 pos;
     s64 corners[4];
     u32 colors[4];
@@ -441,9 +441,9 @@ void FUN_L06_0030bfa8(char *moby) {
     float screen_offset;
 
     qcopy(&pos, moby + 0x10);
-    size = d[0];
+    size = effect_data[0];
     if (1.0f < size) size = 1.0f;
-    fade = d[0] - 1.0f;
+    fade = effect_data[0] - 1.0f;
     if (1.0f < fade) fade = 1.0f;
     else if (fade < 0.0f) fade = 0.0f;
     vu1_add_g_sregister(0x47, 0x5380B);
@@ -458,7 +458,7 @@ void FUN_L06_0030bfa8(char *moby) {
     uvs[1] = D_L06_00162420;
     uvs[2] = D_L06_00162424;
     uvs[3] = D_L06_00162428;
-    color = fast_tween_color(fade, *(s32 *)&d[2], *(s32 *)&d[3]);
+    color = fast_tween_color(fade, *(s32 *)&effect_data[2], *(s32 *)&effect_data[3]);
     colors[3] = color;
     colors[2] = color;
     colors[1] = color;

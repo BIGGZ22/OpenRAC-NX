@@ -132,13 +132,16 @@ extern int func_001F9908_r(int *) __asm__("FUN_001f9740");
 
 void FUN_L14_00235600(void) {
     enum {
+        HERO_STATE_LEDGE_HANG_ENTRY = 24,
         HERO_STATE_LEDGE_HANG = 25,
         HERO_STATE_LEDGE_SHIMMY_POSITIVE_YAW = 26,
         HERO_STATE_LEDGE_SHIMMY_NEGATIVE_YAW = 27,
         HERO_STATE_LEDGE_JUMP = 28,
         HERO_STATE_GRIND_JUMP = 41,
         HERO_STATE_GRIND_RAIL_TRANSFER = 42,
-        HERO_STATE_GRIND_ATTACK = 43
+        HERO_STATE_GRIND_ATTACK = 43,
+        HERO_STATE_GRIND_OBSTACLE_RECOVERY = 66,
+        HERO_STATE_DEATH_FALL = 119
     };
     unsigned char *moby;
     int prevSub;
@@ -1047,7 +1050,7 @@ void FUN_L14_00235600(void) {
                 case HERO_STATE_GRIND_JUMP:
                 case HERO_STATE_GRIND_RAIL_TRANSFER:
                 case HERO_STATE_GRIND_ATTACK:
-                case 66:
+                case HERO_STATE_GRIND_OBSTACLE_RECOVERY:
                     if (hero.state.current == 0x42) {
                         hero.unk5BE = 0;
                     } else {
@@ -1349,7 +1352,7 @@ void FUN_L14_00235600(void) {
                         }
                     }
                     break;
-                case 24:
+                case HERO_STATE_LEDGE_HANG_ENTRY:
                     if (13.5f < hero.anim_frame) {
                         hero_set_state(0x19, 0);
                     }
@@ -1570,7 +1573,7 @@ void FUN_L14_00235600(void) {
                         hero_set_state(HERO_STATE_GRIND, 1);
                     }
                     break;
-                case 119:
+                case HERO_STATE_DEATH_FALL:
                     if ((current_level_index == 3 && 5.0f > hero.motion.pos.f[2]) ||
                         (current_level_index == 6 && 50.0f > hero.motion.pos.f[2]) ||
                         (current_level_index == 0x10 && (77.0f > hero.motion.pos.f[2] ||

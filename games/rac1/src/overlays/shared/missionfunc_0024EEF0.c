@@ -57,7 +57,18 @@ int CollectMissionNodes(int *out, int *mask, int *nums, int arg3) {
     return count;
 }
 INCLUDE_ASM("asm/overlays", func_L00_0024EF28);
-INCLUDE_ASM("asm/overlays", func_L00_0024F048);
+extern int D_0013D9B4 NOT_SDA;
+extern unsigned char D_0013D490[];
+
+/* Mission condition: D_0013D9B4 set, along with gSpecialItems[0x20] (Zoomerator/raritanium) and [0x21]. Joined with func_0020CC88. */
+int func_L00_0024F048(void) {
+    if (D_0013D9B4 != 0) {
+        if (D_0013D490[0x20] != 0 && D_0013D490[0x21] != 0) {
+            return 1;
+        }
+    }
+    return 0;
+}
 typedef struct {
     f32 x;
     f32 y;

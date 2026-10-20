@@ -123,6 +123,9 @@ extern int func_001F9908_r(int *) __asm__("FUN_001f9740");
 void FUN_L11_00253a18(void) {
     enum {
         HERO_STATE_ITEM_BUTTON_RELEASE_WAIT = 23,
+        HERO_STATE_ANIMATION_RECOVERY_WITH_JUMP_CANCEL = 35,
+        HERO_STATE_ITEM_ANIMATION_BUTTON_HOLD_CHECK = 46,
+        HERO_STATE_ANIMATION_WAIT_TO_IDLE = 58,
         HERO_STATE_CIRCLE_RELEASE_WAIT = 89,
         HERO_STATE_APPROACH_TARGET_POSE = 101,
         HERO_STATE_TARGET_POSE_ANIMATION_WAIT = 102,
@@ -601,7 +604,7 @@ void FUN_L11_00253a18(void) {
                         hero_set_state(HERO_STATE_IDLE, 1);
                     }
                     break;
-                case 58:
+                case HERO_STATE_ANIMATION_WAIT_TO_IDLE:
                     if (hero.unkA98 & 2) {
                         hero_set_state(HERO_STATE_IDLE, 1);
                     }
@@ -672,7 +675,7 @@ void FUN_L11_00253a18(void) {
                     }
                     hero_set_state(HERO_STATE_IDLE, 1);
                     break;
-                case 46: {
+                case HERO_STATE_ITEM_ANIMATION_BUTTON_HOLD_CHECK: {
                     int mask = hero.items[0].button_mask;
                     if (hero.moby->seq == 0x2E && hero.anim_frame > 28.0f) {
                         if (controller_state.held & mask) {
@@ -1928,7 +1931,7 @@ void FUN_L11_00253a18(void) {
                         hero_set_state(HERO_STATE_IDLE, 0);
                     }
                     break;
-                case 35:
+                case HERO_STATE_ANIMATION_RECOVERY_WITH_JUMP_CANCEL:
                     if (19.0f < hero.anim_frame &&
                         pad_pressed_within(0x40, scale_game_frames(0xB), 0)) {
                         if (controller_state.held & 0xA) {

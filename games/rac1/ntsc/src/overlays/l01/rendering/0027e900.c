@@ -40,47 +40,47 @@ extern u8 *D_L01_001B2500[];
 
 void FUN_L01_0027e900(s32 id, u128 *pos, s32 life, u8 kind, u8 tex, u8 mode, f32 x, f32 y, f32 z,
                       f32 w, f32 a, f32 r, f32 g, f32 b, f32 size) {
-    Spark *p;
-    SparkBody *s;
+    Spark *spark;
+    SparkBody *spark_body;
     u128 v = *pos;
     u128 *pv = &v;
 
     if (id == 0) {
         return;
     }
-    p = create_part(6);
-    if (p == 0) {
+    spark = create_part(6);
+    if (spark == 0) {
         return;
     }
-    s = &p->body;
-    qcopy(&p->pos, pv);
+    spark_body = &spark->body;
+    qcopy(&spark->pos, pv);
     if (mode == 0xFF) {
-        p->b9 = (kind >> 5) * 16 + truncate_float_to_s32(4.0f);
+        spark->b9 = (kind >> 5) * 16 + truncate_float_to_s32(4.0f);
         if (kind & 1) {
-            p->b3 = 0x48;
+            spark->b3 = 0x48;
         } else {
-            p->b3 = 0x44;
+            spark->b3 = 0x44;
         }
     } else {
-        p->b9 = kind;
-        p->b3 = mode;
+        spark->b9 = kind;
+        spark->b3 = mode;
     }
-    p->b1 = 0;
-    p->b2 = *D_L01_001B2500[tex];
-    s->x = x;
-    s->y = y;
-    s->z = z;
-    s->f14 = a;
-    s->r = truncate_float_to_s32(r * 65535.0f);
-    s->g = truncate_float_to_s32(g * 65535.0f);
-    s->b = truncate_float_to_s32(b * 65535.0f);
-    s->f10 = size;
-    s->id = id;
-    p->fC = w;
-    p->b8 = a * 255.0f;
-    p->hA = scale_game_frames(life);
-    s->b1B = 0;
-    p->w4 = FUN_L00_0025bfe0(r, g, b, size);
+    spark->b1 = 0;
+    spark->b2 = *D_L01_001B2500[tex];
+    spark_body->x = x;
+    spark_body->y = y;
+    spark_body->z = z;
+    spark_body->f14 = a;
+    spark_body->r = truncate_float_to_s32(r * 65535.0f);
+    spark_body->g = truncate_float_to_s32(g * 65535.0f);
+    spark_body->b = truncate_float_to_s32(b * 65535.0f);
+    spark_body->f10 = size;
+    spark_body->id = id;
+    spark->fC = w;
+    spark->b8 = a * 255.0f;
+    spark->hA = scale_game_frames(life);
+    spark_body->b1B = 0;
+    spark->w4 = FUN_L00_0025bfe0(r, g, b, size);
 }
 #include "eetypes.h"
 #include "qcopy.h"
@@ -109,22 +109,22 @@ extern s32 truncate_float_to_s32(f32) __asm__("FUN_001fa6d0");
 extern u8 *D_L01_001B25E0[];
 
 Particle *pool_bubble(u128 *pos, u128 *vel, f32 f) __asm__("FUN_L01_00287b00");
-Particle *pool_bubble(u128 *pos, u128 *vel, f32 f) {
+Particle *pool_bubble(u128 *pos, u128 *vel, f32 scale) {
     Particle *p;
-    s32 c;
+    s32 gray_channel;
     u32 col;
 
     p = create_part(0x38);
     if (p != 0) {
         qcopy(&p->pos, pos);
-        c = random_integer_below(0x10) * 2 + 0x60;
-        col = (c << 8) | 0x40000000;
-        p->color = (c << 16) | col | c;
+        gray_channel = random_integer_below(0x10) * 2 + 0x60;
+        col = (gray_channel << 8) | 0x40000000;
+        p->color = (gray_channel << 16) | col | gray_channel;
         p->alpha = truncate_float_to_s32(4.0f) + 0x20;
         p->kind = 0x48;
         p->active = 0;
         p->tex = *D_L01_001B25E0[0];
-        p->scale = f;
+        p->scale = scale;
         qcopy(&p->m.pos, vel);
         p->spin = random_integer_below(0x100);
     }
@@ -138,26 +138,26 @@ f32 random_float_between(f32, f32) __asm__("FUN_002132a8");
 
 Particle *pool_bubbles(u128 *pos, u128 *dir, f32 scale, f32 speed) __asm__("FUN_L01_00287c80");
 Particle *pool_bubbles(u128 *pos, u128 *dir, f32 scale, f32 speed) {
-    Particle *p;
+    Particle *particle;
     PartMotion *m;
     f32 r;
 
-    p = create_part(0x39);
-    if (p != NULL) {
-        qcopy(&p->pos, pos);
-        m = &p->m;
-        p->color = (random_integer_below(0x10) << 25) | 0x808080;
-        p->alpha = truncate_float_to_s32(12.0f) + 0x20;
-        p->kind = 0x48;
-        p->active = 1;
-        p->tex = *D_L01_001B25E4[0];
-        p->life = 0x80;
-        p->scale = scale * 210000.0f;
+    particle = create_part(0x39);
+    if (particle != NULL) {
+        qcopy(&particle->pos, pos);
+        m = &particle->m;
+        particle->color = (random_integer_below(0x10) << 25) | 0x808080;
+        particle->alpha = truncate_float_to_s32(12.0f) + 0x20;
+        particle->kind = 0x48;
+        particle->active = 1;
+        particle->tex = *D_L01_001B25E4[0];
+        particle->life = 0x80;
+        particle->scale = scale * 210000.0f;
         qcopy(&m->pos, dir);
         r = random_float_between(0.0f, 256.0f);
         m->size = r;
-        p->spin = truncate_float_to_s32(r);
+        particle->spin = truncate_float_to_s32(r);
         m->speed = speed;
     }
-    return p;
+    return particle;
 }

@@ -130,9 +130,12 @@ extern int func_001F9908_r(int *) __asm__("FUN_001f9740");
 int r1_repeat_timer __asm__("D_L01_0015F678") = 0;
 void FUN_L01_00242930(void) {
     enum {
+        HERO_STATE_ITEM_BUTTON_HOLD = 23,
+        HERO_STATE_LATERAL_MOVE_HOLD_ANIMATION_WAIT = 24,
         HERO_STATE_LATERAL_MOVE_HOLD = 25,
         HERO_STATE_LATERAL_MOVE_POSITIVE_YAW = 26,
         HERO_STATE_LATERAL_MOVE_NEGATIVE_YAW = 27,
+        HERO_STATE_ITEM_BUTTON_HOLD_ANIMATION_WAIT = 46,
         HERO_STATE_TARGET_POSE_APPROACH = 101,
         HERO_STATE_TARGET_POSE_ANIMATION_WAIT = 102,
         HERO_STATE_TARGET_POSE_HOLD = 103,
@@ -648,7 +651,7 @@ void FUN_L01_00242930(void) {
                         }
                     }
                     break;
-                case 23:
+                case HERO_STATE_ITEM_BUTTON_HOLD:
                     if (controller_state.held & hero.items[0].button_mask) {
                         break;
                     }
@@ -670,7 +673,7 @@ void FUN_L01_00242930(void) {
                     }
                     hero_set_state(HERO_STATE_IDLE, 1);
                     break;
-                case 46: {
+                case HERO_STATE_ITEM_BUTTON_HOLD_ANIMATION_WAIT: {
                     int mask = hero.items[0].button_mask;
                     if (((unsigned char *)hero.moby)[0x52] == 0x2E && hero.anim_frame > 28.0f) {
                         if (controller_state.held & mask) {
@@ -907,8 +910,8 @@ void FUN_L01_00242930(void) {
                         break;
                     }
                     if (hero.unk2220 != -1) {
-                        Row13E650 *e = (Row13E650 *)(D_0013E550 + hero.unk2220 * 0x70);
-                        if (e->f88 == ((unsigned char *)hero.moby) && e->f74 != 0) {
+                        Row13E650 *voice_slot_entry = (Row13E650 *)(D_0013E550 + hero.unk2220 * 0x70);
+                        if (voice_slot_entry->f88 == ((unsigned char *)hero.moby) && voice_slot_entry->f74 != 0) {
                             release_voice_slot(hero.unk2220);
                         }
                     }
@@ -1023,7 +1026,7 @@ void FUN_L01_00242930(void) {
                         hero_set_state(HERO_STATE_IDLE, 1);
                     }
                     break;
-                case 24:
+                case HERO_STATE_LATERAL_MOVE_HOLD_ANIMATION_WAIT:
                     if (13.5f < hero.anim_frame) {
                         hero_set_state(0x19, 0);
                     }

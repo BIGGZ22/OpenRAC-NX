@@ -27,31 +27,31 @@ void FUN_L00_00234fd0(int mode) {
     int off = D_L00_001B9CF0.unk104;
     void *h = (void *)D_L00_001B9CF0.unk10;
     {
-        int n1;
-        if ((n1 = g->t->sz[1])) {
+        int slot_1_size;
+        if ((slot_1_size = g->t->sz[1])) {
             FUN_00232f20_234fd0(h, g->t->p[1], 0, D_L00_0017E510 / 16, 0);
             FUN_L00_0024d8d0_234fd0(h, off);
             FUN_001fefc0_234fd0(0, off);
-            off += n1;
+            off += slot_1_size;
         }
     }
     {
-        int n3;
-        if ((n3 = g->t->sz[3])) {
+        int slot_3_size;
+        if ((slot_3_size = g->t->sz[3])) {
             FUN_00232f20_234fd0(h, g->t->p[3], 0, D_L00_0017E518 / 16, 0);
             FUN_L00_0024d8d0_234fd0(h, off);
             FUN_001fefc0_234fd0(2, off);
-            off += n3;
+            off += slot_3_size;
         }
     }
     if (mode == 0 || mode == 2) {
         {
-            int n4;
-            if ((n4 = g->t->sz[4])) {
+            int slot_4_size;
+            if ((slot_4_size = g->t->sz[4])) {
                 FUN_00232f20_234fd0(h, g->t->p[4], 0, D_L00_0017E51C / 16, 0);
                 FUN_L00_0024d8d0_234fd0(h, off);
                 FUN_001fefc0_234fd0(3, off);
-                off += n4;
+                off += slot_4_size;
             }
         }
     }
@@ -84,33 +84,33 @@ typedef struct {
 } G_235310;
 extern G_235310 D_L00_0017E4D8 __attribute__((section(".data")));
 
-void FUN_L00_00235310(int n) {
-    int d = D_L00_0017E4D8.t->c[n];
+void FUN_L00_00235310(int group_index) {
+    int subtraction_amount = D_L00_0017E4D8.t->c[group_index];
     int i, j, s, end;
-    if (n == 0) {
+    if (group_index == 0) {
         for (j = 0; j < D_L00_0017E4D8.t->b[0]; j++) {
             D_L00_0017E4D8.a[j].s = 0;
         }
     }
-    if (n)
-        s = D_L00_0017E4D8.t->a[n - 1];
+    if (group_index)
+        s = D_L00_0017E4D8.t->a[group_index - 1];
     else
         s = 0;
-    end = D_L00_0017E4D8.t->a[n];
+    end = D_L00_0017E4D8.t->a[group_index];
     for (i = s; i < end; i++) {
-        D_L00_0017E4D8.b[i].v -= d;
+        D_L00_0017E4D8.b[i].v -= subtraction_amount;
         D_L00_0017E4D8.b[i].v |= 0x80000000;
     }
-    if (n)
-        s = D_L00_0017E4D8.t->b[n - 1];
+    if (group_index)
+        s = D_L00_0017E4D8.t->b[group_index - 1];
     else
         s = 0;
-    end = D_L00_0017E4D8.t->b[n];
+    end = D_L00_0017E4D8.t->b[group_index];
     for (i = s; i < end; i++) {
-        D_L00_0017E4D8.a[i].v -= d;
+        D_L00_0017E4D8.a[i].v -= subtraction_amount;
         D_L00_0017E4D8.a[i].v |= 0x80000000;
     }
-    D_L00_0017E4D8.t->c[n] = 0;
+    D_L00_0017E4D8.t->c[group_index] = 0;
 }
 extern volatile int D_L00_0015FA70;
 extern volatile int D_L00_0015FA74;

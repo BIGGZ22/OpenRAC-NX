@@ -16,22 +16,22 @@ extern void multiply_matrix(void *, void *, void *) __asm__("FUN_001fa378");
 extern void matrix_to_euler(void *, void *) __asm__("FUN_00214598");
 extern void FUN_L00_00250df8(void *);
 
-void FUN_L12_0027b370(char *parent, char *list, int n) {
-    float m0[16];
-    float m1[16];
-    float m2[4];
+void FUN_L12_0027b370(char *parent, char *list, int entry_count) {
+    float parent_rotation_matrix[16];
+    float composed_rotation_matrix[16];
+    float rotated_offset[4];
     char *p;
     int i;
-    euler_rotation_matrix(m0, (float *)(parent + 0x40));
-    for (i = 0; i < n; i++) {
+    euler_rotation_matrix(parent_rotation_matrix, (float *)(parent + 0x40));
+    for (i = 0; i < entry_count; i++) {
         int idx = *(int *)(list + i * 0x30 + 0x20);
         if (idx != -1) {
             p = D_L12_0015FFD8_p + idx * 256;
-            euler_rotation_matrix(m1, (float *)(list + i * 0x30 + 0x10));
-            multiply_matrix(m1, m0, m1);
-            matrix_to_euler(m1, p + 0x40);
-            transform_vector(m2, list + i * 0x30, m0);
-            add_vector_xyz(p + 0x10, parent + 0x10, m2);
+            euler_rotation_matrix(composed_rotation_matrix, (float *)(list + i * 0x30 + 0x10));
+            multiply_matrix(composed_rotation_matrix, parent_rotation_matrix, composed_rotation_matrix);
+            matrix_to_euler(composed_rotation_matrix, p + 0x40);
+            transform_vector(rotated_offset, list + i * 0x30, parent_rotation_matrix);
+            add_vector_xyz(p + 0x10, parent + 0x10, rotated_offset);
             FUN_L00_00250df8(p);
         }
     }
@@ -51,23 +51,23 @@ extern void matrix_to_euler(void *, void *) __asm__("FUN_00214598");
 extern void subtract_vector_xyz(void *, void *, void *);
 extern void vu_euler_rotation_basis(void *, void *);
 
-void FUN_L12_0027b268(char *moby, char *arr, int n) {
-    float m0[12];
-    float m1[16];
-    float m2[16];
+void FUN_L12_0027b268(char *moby, char *arr, int entry_count) {
+    float moby_rotation_basis[12];
+    float inverse_moby_rotation_matrix[16];
+    float relative_rotation_matrix[16];
     int i;
-    vu_euler_rotation_basis(m0, moby + 0x40);
-    transpose_rotation_matrix(m1, m0);
-    for (i = 0; i < n; i++) {
-        char *p = arr + i * 0x30;
-        int idx = *(int *)(p + 0x20);
+    vu_euler_rotation_basis(moby_rotation_basis, moby + 0x40);
+    transpose_rotation_matrix(inverse_moby_rotation_matrix, moby_rotation_basis);
+    for (i = 0; i < entry_count; i++) {
+        char *entry = arr + i * 0x30;
+        int idx = *(int *)(entry + 0x20);
         if (idx != -1) {
-            char *o = D_L12_0015FFD8_p + (idx << 8);
-            subtract_vector_xyz(p, o + 0x10, moby + 0x10);
-            transform_vector(p, p, m1);
-            euler_rotation_matrix(m2, o + 0x40);
-            multiply_matrix(m2, m1, m2);
-            matrix_to_euler(m2, p + 0x10);
+            char *linked_moby = D_L12_0015FFD8_p + (idx << 8);
+            subtract_vector_xyz(entry, linked_moby + 0x10, moby + 0x10);
+            transform_vector(entry, entry, inverse_moby_rotation_matrix);
+            euler_rotation_matrix(relative_rotation_matrix, linked_moby + 0x40);
+            multiply_matrix(relative_rotation_matrix, inverse_moby_rotation_matrix, relative_rotation_matrix);
+            matrix_to_euler(relative_rotation_matrix, entry + 0x10);
         }
     }
 }

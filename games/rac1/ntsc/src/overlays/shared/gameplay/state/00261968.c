@@ -368,13 +368,13 @@ extern void matrix_to_euler(void *, void *) __asm__("FUN_00214598");
 /* Multiplies the 001fa050 matrices of (x, y, z) and of a+0x40, stored back by matrix_to_euler. */
 void FUN_L00_00262480(char *a, float x, float y, float z) {
     float in[3];
-    float t[16], u[16];
+    float input_rotation_matrix[16], u[16];
     in[0] = x;
     in[1] = y;
     in[2] = z;
-    euler_rotation_matrix(t, in);
+    euler_rotation_matrix(input_rotation_matrix, in);
     euler_rotation_matrix(u, a + 0x40);
-    multiply_matrix(u, u, t);
+    multiply_matrix(u, u, input_rotation_matrix);
     matrix_to_euler(u, a + 0x40);
 }
 #define NOT_SDA
@@ -384,9 +384,9 @@ void FUN_L00_00262480(char *a, float x, float y, float z) {
 /* Ported from rac1-decomp (src/overlays/shared/mobyutil_00261B00.c: func_L00_00263578), where it is exact; names translated to the US level program. */
 
 /* Unless the flag at b+0x13C is set: sets it, stores a at 0x134, clears 0x130..0x138. */
-void FUN_L00_00262500(int a, char *b) {
+void FUN_L00_00262500(int source_moby, char *b) {
     if (*(int *)(b + 0x13C) == 0) {
-        *(int *)(b + 0x134) = a;
+        *(int *)(b + 0x134) = source_moby;
         *(int *)(b + 0x13C) = 1;
         *(short *)(b + 0x132) = 0;
         *(int *)(b + 0x138) = 0;
@@ -420,28 +420,28 @@ typedef struct {
     s32 x138;
 } O00262528;
 E00262528 *create_moby(s32) __asm__("FUN_0020c4f8");
-void FUN_L00_00262528(O00262528 *o, s32 a, s32 b) {
-    E00262528 *e;
-    if (o->x138 == 4)
+void FUN_L00_00262528(O00262528 *history_state, s32 a, s32 b) {
+    E00262528 *spawned_moby;
+    if (history_state->x138 == 4)
         return;
     if (b >= 9)
         return;
-    e = create_moby(o->x134->xa6);
-    if (e == 0)
+    spawned_moby = create_moby(history_state->x134->xa6);
+    if (spawned_moby == 0)
         return;
-    e->x32 = o->x134->x32;
-    e->x38 = o->x134->x38;
-    e->x31 = 1;
-    e->x34 = 0x80A;
-    e->x30 = 0;
-    e->x94 = 0;
-    if (e->xa6 == 0)
-        e->x72 = 0;
-    e->x23 = a;
-    o->x110[o->x138] = b;
-    o->x100[o->x138] = a;
-    o->x120[o->x138] = e;
-    o->x138++;
+    spawned_moby->x32 = history_state->x134->x32;
+    spawned_moby->x38 = history_state->x134->x38;
+    spawned_moby->x31 = 1;
+    spawned_moby->x34 = 0x80A;
+    spawned_moby->x30 = 0;
+    spawned_moby->x94 = 0;
+    if (spawned_moby->xa6 == 0)
+        spawned_moby->x72 = 0;
+    spawned_moby->x23 = a;
+    history_state->x110[history_state->x138] = b;
+    history_state->x100[history_state->x138] = a;
+    history_state->x120[history_state->x138] = spawned_moby;
+    history_state->x138++;
 }
 #include "qcopy.h"
 #include "rnc/overlay/quad.h"
@@ -460,44 +460,44 @@ void FUN_L00_00262840_262608(S_262608 *) __asm__("FUN_L00_00262840");
 void FUN_0020c880_262608(void *) __asm__("FUN_0020c880");
 void FUN_L00_00250df8_262608(void *) __asm__("FUN_L00_00250df8");
 
-void FUN_L00_00262608(S_262608 *s, int dec) {
+void FUN_L00_00262608(S_262608 *history_state, int dec) {
     unsigned char *src;
-    unsigned char *o;
-    int h, i, k, done;
+    unsigned char *destination;
+    int history_write_index, i, k, done;
     unsigned char **pp;
-    if (!s->active)
+    if (!history_state->active)
         return;
-    src = s->src;
+    src = history_state->src;
     if (!src || src[0x20] == 0xFE || src[0x20] == 0xFD) {
-        FUN_L00_00262840_262608(s);
+        FUN_L00_00262840_262608(history_state);
         return;
     }
-    h = s->head;
-    qcopy(&s->a[h], src + 0x10);
-    qcopy(&s->b[h], src + 0x40);
-    s->head = (h + 1) % 8;
-    if (++s->count > 8)
-        s->count = 8;
-    for (i = 0; i < s->n; i++) {
-        int t;
-        if (s->count >= (t = s->w[i])) {
-            o = (unsigned char *)*(int *)((char *)&s->w[i] + 0x10);
-            k = (s->head - t + 8) % 8;
-            o[0x52] = s->src[0x52];
-            o[0x53] = s->src[0x53];
-            o[0x50] = s->src[0x50];
-            o[0x51] = s->src[0x51];
-            *(float *)(o + 0x54) = *(float *)(s->src + 0x54);
-            FUN_0020c880_262608(o);
-            qcopy(o + 0x10, &s->a[k]);
-            qcopy(o + 0x40, &s->b[k]);
-            FUN_L00_00250df8_262608(o);
+    history_write_index = history_state->head;
+    qcopy(&history_state->a[history_write_index], src + 0x10);
+    qcopy(&history_state->b[history_write_index], src + 0x40);
+    history_state->head = (history_write_index + 1) % 8;
+    if (++history_state->count > 8)
+        history_state->count = 8;
+    for (i = 0; i < history_state->n; i++) {
+        int sample_delay;
+        if (history_state->count >= (sample_delay = history_state->w[i])) {
+            destination = (unsigned char *)*(int *)((char *)&history_state->w[i] + 0x10);
+            k = (history_state->head - sample_delay + 8) % 8;
+            destination[0x52] = history_state->src[0x52];
+            destination[0x53] = history_state->src[0x53];
+            destination[0x50] = history_state->src[0x50];
+            destination[0x51] = history_state->src[0x51];
+            *(float *)(destination + 0x54) = *(float *)(history_state->src + 0x54);
+            FUN_0020c880_262608(destination);
+            qcopy(destination + 0x10, &history_state->a[k]);
+            qcopy(destination + 0x40, &history_state->b[k]);
+            FUN_L00_00250df8_262608(destination);
         }
     }
     if (dec) {
         done = 1;
-        for (i = 0; i < s->n; i++) {
-            unsigned char *q = (unsigned char *)*(int *)((char *)&s->w[i] + 0x10);
+        for (i = 0; i < history_state->n; i++) {
+            unsigned char *q = (unsigned char *)*(int *)((char *)&history_state->w[i] + 0x10);
             if (q) {
                 int v = q[0x23];
                 int a = v;
@@ -510,7 +510,7 @@ void FUN_L00_00262608(S_262608 *s, int dec) {
             }
         }
         if (done)
-            FUN_L00_00262840_262608(s);
+            FUN_L00_00262840_262608(history_state);
     }
 }
 #define NOT_SDA
@@ -522,17 +522,17 @@ void FUN_L00_00262608(S_262608 *s, int dec) {
 void mark_moby_for_removal(struct Obj *obj) __asm__("FUN_0020c828");
 
 /* When o+0x13C is set, marks each nonzero moby of the 0x120 list for removal; clears the flag. */
-void FUN_L00_00262840(char *o) {
+void FUN_L00_00262840(char *history_state) {
     int i;
-    if (*(int *)(o + 0x13C) != 0) {
-        for (i = 0; i < *(int *)(o + 0x138); i++) {
-            int *p = (int *)(o + 0x120) + i;
-            if (*p != 0) {
-                mark_moby_for_removal(*p);
-                *p = 0;
+    if (*(int *)(history_state + 0x13C) != 0) {
+        for (i = 0; i < *(int *)(history_state + 0x138); i++) {
+            int *moby_slot = (int *)(history_state + 0x120) + i;
+            if (*moby_slot != 0) {
+                mark_moby_for_removal(*moby_slot);
+                *moby_slot = 0;
             }
         }
-        *(int *)(o + 0x13C) = 0;
+        *(int *)(history_state + 0x13C) = 0;
     }
 }
 void FUN_0020cb88_2628d8(void *, void *) __asm__("FUN_0020cb88");
@@ -544,38 +544,38 @@ void FUN_L00_00259f50_2628d8(void *, void *) __asm__("FUN_L00_00259f50");
 void FUN_001f99f8_2628d8(void *) __asm__("FUN_001f99f8");
 
 void update_joint_animation(void *m, unsigned char *p, int c, float fa, float fb) __asm__("FUN_L00_002628d8");
-void update_joint_animation(void *m, unsigned char *p, int c, float fa, float fb) {
-    unsigned char *o = *(unsigned char **)(p + 0x78);
-    float f;
-    if (!o) {
-        *(void **)(p + 0x78) = m;
-    } else if (o != m) {
-        if (p[1] && o[0x20] < 0x7F)
-            FUN_0020cb88_2628d8(o, p);
-        p[1] = 0;
-        *(void **)(p + 0x78) = m;
+void update_joint_animation(void *moby, unsigned char *joint_animation_state, int c, float fa, float fb) {
+    unsigned char *previous_moby = *(unsigned char **)(joint_animation_state + 0x78);
+    float uniform_scale;
+    if (!previous_moby) {
+        *(void **)(joint_animation_state + 0x78) = moby;
+    } else if (previous_moby != moby) {
+        if (joint_animation_state[1] && previous_moby[0x20] < 0x7F)
+            FUN_0020cb88_2628d8(previous_moby, joint_animation_state);
+        joint_animation_state[1] = 0;
+        *(void **)(joint_animation_state + 0x78) = moby;
     }
-    if (*(float *)(p + 0x60) == 0.0f && *(float *)(p + 0x64) == 0.0f &&
-        *(float *)(p + 0x68) == 0.0f && *(float *)(p + 0x70) == 1.0f &&
-        FUN_001f99c0_2628d8(*(float *)(p + 0x40)) < 0.005f &&
-        FUN_001f99c0_2628d8(*(float *)(p + 0x44)) < 0.005f &&
-        FUN_001f99c0_2628d8(*(float *)(p + 0x48)) < 0.005f) {
-        if (p[1])
-            FUN_0020cb88_2628d8(m, p);
+    if (*(float *)(joint_animation_state + 0x60) == 0.0f && *(float *)(joint_animation_state + 0x64) == 0.0f &&
+        *(float *)(joint_animation_state + 0x68) == 0.0f && *(float *)(joint_animation_state + 0x70) == 1.0f &&
+        FUN_001f99c0_2628d8(*(float *)(joint_animation_state + 0x40)) < 0.005f &&
+        FUN_001f99c0_2628d8(*(float *)(joint_animation_state + 0x44)) < 0.005f &&
+        FUN_001f99c0_2628d8(*(float *)(joint_animation_state + 0x48)) < 0.005f) {
+        if (joint_animation_state[1])
+            FUN_0020cb88_2628d8(moby, joint_animation_state);
         return;
     }
-    FUN_L00_0025bc98_2628d8(p + 0x40, p + 0x50, *(float *)(p + 0x60), fa, fb, 0.0f, 0);
-    FUN_L00_0025bc98_2628d8(p + 0x44, p + 0x54, *(float *)(p + 0x64), fa, fb, 0.0f, 0);
-    FUN_L00_0025bc98_2628d8(p + 0x48, p + 0x58, *(float *)(p + 0x68), fa, fb, 0.0f, 0);
-    if (!p[1])
-        FUN_0020cb10_2628d8(m, c, p);
-    FUN_L00_00259f50_2628d8(p + 0x10, p + 0x40);
-    f = *(float *)(p + 0x70);
-    *(float *)(p + 0x20) = f;
-    *(float *)(p + 0x24) = f;
-    *(float *)(p + 0x28) = f;
-    FUN_001f99f8_2628d8(p + 0x60);
-    *(float *)(p + 0x70) = 1.0f;
+    FUN_L00_0025bc98_2628d8(joint_animation_state + 0x40, joint_animation_state + 0x50, *(float *)(joint_animation_state + 0x60), fa, fb, 0.0f, 0);
+    FUN_L00_0025bc98_2628d8(joint_animation_state + 0x44, joint_animation_state + 0x54, *(float *)(joint_animation_state + 0x64), fa, fb, 0.0f, 0);
+    FUN_L00_0025bc98_2628d8(joint_animation_state + 0x48, joint_animation_state + 0x58, *(float *)(joint_animation_state + 0x68), fa, fb, 0.0f, 0);
+    if (!joint_animation_state[1])
+        FUN_0020cb10_2628d8(moby, c, joint_animation_state);
+    FUN_L00_00259f50_2628d8(joint_animation_state + 0x10, joint_animation_state + 0x40);
+    uniform_scale = *(float *)(joint_animation_state + 0x70);
+    *(float *)(joint_animation_state + 0x20) = uniform_scale;
+    *(float *)(joint_animation_state + 0x24) = uniform_scale;
+    *(float *)(joint_animation_state + 0x28) = uniform_scale;
+    FUN_001f99f8_2628d8(joint_animation_state + 0x60);
+    *(float *)(joint_animation_state + 0x70) = 1.0f;
 }
 #define NOT_SDA
 
@@ -587,22 +587,22 @@ extern float fast_sin(float) __asm__("FUN_001f9de0");
 extern float fast_add_rotations(float, float) __asm__("FUN_001fa580");
 
 /* Advances angle *p by y and swaps the old x*sin offset in a+0x18 for the new one. */
-void FUN_L00_00262b00(float x, float y, char *a, float *p, float *q) {
-    float t;
-    *p = fast_add_rotations(*p, y);
-    *(float *)(a + 0x18) -= *q;
-    t = fast_sin(*p) * x;
-    *q = t;
-    *(float *)(a + 0x18) += t;
+void FUN_L00_00262b00(float x, float y, char *moby, float *phase_angle, float *previous_sine_offset) {
+    float sine_offset;
+    *phase_angle = fast_add_rotations(*phase_angle, y);
+    *(float *)(moby + 0x18) -= *previous_sine_offset;
+    sine_offset = fast_sin(*phase_angle) * x;
+    *previous_sine_offset = sine_offset;
+    *(float *)(moby + 0x18) += sine_offset;
 }
 /* Ported from rac1-decomp (src/overlays/shared/mobyutil_00261B00.c: func_L00_00263BF8), where it is exact; names translated to the US level program. */
 
 extern float fast_cos(float) __asm__("FUN_001f9dc8");
 
 /* Sets o[16] and o[17] from r and the sines/cosines of the two angles, then advances the angles by l1 and l2. */
-void FUN_L00_00262b80(float *o, float *a, float *b, float r, float l1, float l2) {
-    o[0x10] = r * fast_sin(*a) * fast_sin(*b);
-    o[0x11] = r * fast_sin(*a) * fast_cos(*b);
-    *a = fast_add_rotations(*a, l1);
+void FUN_L00_00262b80(float *moby, float *first_phase_angle, float *b, float r, float l1, float l2) {
+    moby[0x10] = r * fast_sin(*first_phase_angle) * fast_sin(*b);
+    moby[0x11] = r * fast_sin(*first_phase_angle) * fast_cos(*b);
+    *first_phase_angle = fast_add_rotations(*first_phase_angle, l1);
     *b = fast_add_rotations(*b, l2);
 }

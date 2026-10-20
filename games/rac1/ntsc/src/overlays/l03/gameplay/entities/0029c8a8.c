@@ -20,26 +20,26 @@ extern void scale_vector_xyz_q(void *out, void *a, f32 s) __asm__("FUN_001f9a68"
 
 void FUN_L03_0029c8a8(struct Moby *moby, float *out) {
     float v[4];
-    float a[4];
-    float c[4];
-    float d[4];
+    float transformed_x_axis[4];
+    float first_offset[4];
+    float second_offset[4];
     float b[4];
-    float m[16];
+    float rotation_matrix[16];
     char *data;
     *(OvlQuad *)v = 0;
     v[0] = 1.0f;
     data = (char *)moby->pvars;
     if (*(float *)(data + 0x140) != 0.0f || *(float *)(data + 0x144) != 0.0f) {
-        FUN_001fa050_q(m, (float *)&moby->rot);
-        FUN_001f9d20_q(a, v, m);
-        *(OvlQuad *)b = *(OvlQuad *)a;
+        FUN_001fa050_q(rotation_matrix, (float *)&moby->rot);
+        FUN_001f9d20_q(transformed_x_axis, v, rotation_matrix);
+        *(OvlQuad *)b = *(OvlQuad *)transformed_x_axis;
         b[2] = b[2] - 1.0f;
-        cross_vectors_xyz_q(c, a, b);
-        cross_vectors_xyz_q(d, a, c);
-        scale_vector_xyz_q(c, c, *(float *)(data + 0x140));
-        scale_vector_xyz_q(d, d, *(float *)(data + 0x144));
-        add_vector_xyz_q(out, out, c);
-        add_vector_xyz_q(out, out, d);
+        cross_vectors_xyz_q(first_offset, transformed_x_axis, b);
+        cross_vectors_xyz_q(second_offset, transformed_x_axis, first_offset);
+        scale_vector_xyz_q(first_offset, first_offset, *(float *)(data + 0x140));
+        scale_vector_xyz_q(second_offset, second_offset, *(float *)(data + 0x144));
+        add_vector_xyz_q(out, out, first_offset);
+        add_vector_xyz_q(out, out, second_offset);
     }
 }
 
@@ -61,11 +61,11 @@ extern float D_L03_00161BE8 __attribute__((sda));
 extern void FUN_L00_00262b00(float, float, char *, float *, float *);
 extern void FUN_L00_00262b80(char *, char *, char *, float, float, float);
 
-void FUN_L03_002dd0f0(struct Moby *m) {
-    char *d = (char *)m->pvars;
-    FUN_L00_00262b00(D_L03_00161BD8, D_L03_00161BDC * DEG_TO_RAD * frame_time, m,
-                     (float *)(d + 0xac), (float *)(d + 0xa8));
-    FUN_L00_00262b80(m, d + 0xb0, d + 0xb4, D_L03_00161BE0,
+void FUN_L03_002dd0f0(struct Moby *moby) {
+    char *moby_pvars = (char *)moby->pvars;
+    FUN_L00_00262b00(D_L03_00161BD8, D_L03_00161BDC * DEG_TO_RAD * frame_time, moby,
+                     (float *)(moby_pvars + 0xac), (float *)(moby_pvars + 0xa8));
+    FUN_L00_00262b80(moby, moby_pvars + 0xb0, moby_pvars + 0xb4, D_L03_00161BE0,
                      D_L03_00161BE4 * DEG_TO_RAD * frame_time,
                      D_L03_00161BE8 * DEG_TO_RAD * frame_time);
 }

@@ -26,17 +26,17 @@ extern u16 D_00141850[];
 extern u16 D_00141968[];
 extern u8 *D_L00_0015FFD8 __attribute__((sda));
 
-void FUN_L00_002e0988(HelpMoby *m) {
+void FUN_L00_002e0988(HelpMoby *moby) {
     s32 *vars;
-    s32 *p;
+    s32 *target_index_ptr;
     s32 i;
-    HelpTarget *t;
+    HelpTarget *target_moby;
     struct Hero *g;
 
-    vars = m->vars;
-    if (m->state == 0) {
-        m->state = 1;
-        m->alpha = 0xFF;
+    vars = moby->vars;
+    if (moby->state == 0) {
+        moby->state = 1;
+        moby->alpha = 0xFF;
     }
     if (D_00141968[0x18 / 2] == 0) {
         help_request(3, 3);
@@ -63,11 +63,11 @@ void FUN_L00_002e0988(HelpMoby *m) {
     }
     if (D_00141968[0x8 / 2] == 0 && D_00141968[0x10 / 2] == 0) {
         g = &hero;
-        p = vars + 5;
+        target_index_ptr = vars + 5;
         for (i = 0; i < 4; i++) {
-            if (*p != -1) {
-                t = (HelpTarget *)(D_L00_0015FFD8 + (*p << 8));
-                if (t == 0 || t->state == 0xFE || t->state == 0xFD) {
+            if (*target_index_ptr != -1) {
+                target_moby = (HelpTarget *)(D_L00_0015FFD8 + (*target_index_ptr << 8));
+                if (target_moby == 0 || target_moby->state == 0xFE || target_moby->state == 0xFD) {
                     if (g->health.hp < 4) {
                         help_request(1, 1);
                     } else {
@@ -75,7 +75,7 @@ void FUN_L00_002e0988(HelpMoby *m) {
                     }
                 }
             }
-            p++;
+            target_index_ptr++;
         }
     }
 }
@@ -481,12 +481,12 @@ extern f32 D_L00_00161BD8 __attribute__((sda));
 extern f32 D_L00_00161BDC __attribute__((sda));
 extern f32 D_L00_00161BE0 __attribute__((sda));
 
-void FUN_L00_002e1678(ElectroidMoby *m) {
+void FUN_L00_002e1678(ElectroidMoby *moby) {
     ElectroidVars *vars;
     void *anim;
     ElectroidHit *coll;
-    Path *a;
-    ElectroidMoby *t;
+    Path *path;
+    ElectroidMoby *candidate_target;
     ElectroidVec v;
     struct Hero *g;
     s32 hit;
@@ -495,8 +495,8 @@ void FUN_L00_002e1678(ElectroidMoby *m) {
     f32 unused;
     f32 range;
 
-    vars = m->vars;
-    if (m->state == 0) {
+    vars = moby->vars;
+    if (moby->state == 0) {
         return;
     }
     if (vars->unk38 != 0) {
@@ -506,9 +506,9 @@ void FUN_L00_002e1678(ElectroidMoby *m) {
     fast_dec_timer_s16(&vars->unk1DA);
     anim = vars->unk60;
     dmg = 0.0f;
-    coll = find_moby_hit(m, 0x330000, 0);
-    hit_reaction(m, coll, &vars->health, 0, &hit, &dmg, 0, 4);
-    if (hit != 1 && m->state != 8 && dmg != 0.0f) {
+    coll = find_moby_hit(moby, 0x330000, 0);
+    hit_reaction(moby, coll, &vars->health, 0, &hit, &dmg, 0, 4);
+    if (hit != 1 && moby->state != 8 && dmg != 0.0f) {
         vars->health -= dmg;
         vars->unk90 = 0x200;
         vars->unk80 = D_L00_00161BD4 * frame_time_sq;
@@ -521,43 +521,43 @@ void FUN_L00_002e1678(ElectroidMoby *m) {
         vars->unk98 = 0.5f;
         if (vars->health <= 0.0f) {
             vars->unk94 = 0x29;
-            m->flags &= ~0x1000;
+            moby->flags &= ~0x1000;
             v.q = coll->pos.q;
             trooper_knockback_arc(&v, &angle, &vars->unk88, &vars->unk8C);
-            trooper_start_knockback(m, vars->unk70, 0xB, 1, 0, angle);
+            trooper_start_knockback(moby, vars->unk70, 0xB, 1, 0, angle);
             vars->unkC0 = 7.0f;
             vars->unkC4 = 16.0f;
-            m->state = 8;
-            m->unk94 = 0;
+            moby->state = 8;
+            moby->unk94 = 0;
             vars->unk67 = 0x78;
-            trooper_anim_update(m, anim);
-            FUN_L00_00257470(m, 0, -1);
+            trooper_anim_update(moby, anim);
+            FUN_L00_00257470(moby, 0, -1);
         } else {
             vars->unk88 = D_L00_00161BDC * frame_time * 0.35f;
             vars->unk8C = D_L00_00161BE0 * frame_time * 0.5f;
             v.q = coll->pos.q;
             trooper_knockback_arc(&v, &unused, &vars->unk88, &vars->unk8C);
-            trooper_start_knockback(m, vars->unk70, 8, 1, 0, fast_arc_tan(coll->pos.f[0], coll->pos.f[1]));
+            trooper_start_knockback(moby, vars->unk70, 8, 1, 0, fast_arc_tan(coll->pos.f[0], coll->pos.f[1]));
             vars->unkC4 = vars->unkC0 = -1.0f;
-            m->state = 7;
+            moby->state = 7;
             vars->unk67 = 0xFA;
             vars->unk26 = scale_game_frames(0x3C);
-            trooper_anim_update(m, anim);
+            trooper_anim_update(moby, anim);
         }
-        FUN_L00_002e2040(m);
+        FUN_L00_002e2040(moby);
     }
-    m->unkA4 = 0xFF;
-    trooper_anim_finish(m, anim);
-    if (m->state == 1) {
-        a = D_L00_001B04B0[vars->unk1B4];
-        FUN_L00_0025ff38(m, &vars->targetPos, 0, 0, a->pts, a->count, 64.0f);
-    } else if (m->state != 5) {
+    moby->unkA4 = 0xFF;
+    trooper_anim_finish(moby, anim);
+    if (moby->state == 1) {
+        path = D_L00_001B04B0[vars->unk1B4];
+        FUN_L00_0025ff38(moby, &vars->targetPos, 0, 0, path->pts, path->count, 64.0f);
+    } else if (moby->state != 5) {
         range = D_L00_00161BD0;
         if (vars->unk1DA != 0) {
             range = 37.0f;
         }
-        if (FUN_L00_0025fcb8(m, range, &vars->targetPos) != 2 &&
-            range < vector_distance(&m->pos, &vars->targetPos)) {
+        if (FUN_L00_0025fcb8(moby, range, &vars->targetPos) != 2 &&
+            range < vector_distance(&moby->pos, &vars->targetPos)) {
             vars->unk114 = 2;
         }
     }
@@ -567,14 +567,14 @@ void FUN_L00_002e1678(ElectroidMoby *m) {
         qcopy(&vars->targetPos, &g->motion.pos);
     }
     if (vars->unk1BC >= 0) {
-        t = (ElectroidMoby *)(D_L00_0015FFD8 + (vars->unk1BC << 8));
-        if (t == 0 || t->state == 0xFE || t->state == 0xFD) {
+        candidate_target = (ElectroidMoby *)(D_L00_0015FFD8 + (vars->unk1BC << 8));
+        if (candidate_target == 0 || candidate_target->state == 0xFE || candidate_target->state == 0xFD) {
             vars->unk1BC = -1;
         } else {
-            range = vector_distance(&m->pos, &t->pos);
-            if (range < vector_distance(&m->pos, &vars->target->pos)) {
-                vars->target = t;
-                qcopy(&vars->targetPos, &t->pos);
+            range = vector_distance(&moby->pos, &candidate_target->pos);
+            if (range < vector_distance(&moby->pos, &vars->target->pos)) {
+                vars->target = candidate_target;
+                qcopy(&vars->targetPos, &candidate_target->pos);
                 vars->unk114 = 1;
             }
         }
@@ -614,41 +614,41 @@ extern f32 convert_integer_to_float(s32) __asm__("FUN_001fa6c0");
 extern void FUN_L00_002e1c78();
 void enqueue_callback_list_1(s32 arg0, s32 arg1) __asm__("FUN_001f4600");
 
-void FUN_L00_002e1aa8(SparkMoby *m) {
+void FUN_L00_002e1aa8(SparkMoby *moby) {
     SparkVars *vars;
-    SparkPart *p;
-    SparkTail *t;
+    SparkPart *particle;
+    SparkTail *particle_tail;
     f32 *pos;
     f32 vel[4];
     s32 i;
     s32 life;
 
-    vars = m->vars;
+    vars = moby->vars;
     pos = vars->pos;
-    moby_point_position(m, 1, pos);
+    moby_point_position(moby, 1, pos);
     vars->pos[2] -= 0.333f;
     random_spherical_offset(vel, 0.005f, 0.03f);
-    p = FUN_L00_00274948(pos, vel, 0x7F, m);
-    if (p != 0) {
-        p->unkC = random_float_between(6000.0f, 32000.0f);
+    particle = FUN_L00_00274948(pos, vel, 0x7F, moby);
+    if (particle != 0) {
+        particle->unkC = random_float_between(6000.0f, 32000.0f);
     }
     for (i = 0; i < 3; i++) {
-        p = FUN_L00_00274948(vars->pos, D_L00_0015F580, 0x7F, m);
-        if (p != 0) {
-            t = &p->tail;
+        particle = FUN_L00_00274948(vars->pos, D_L00_0015F580, 0x7F, moby);
+        if (particle != 0) {
+            particle_tail = &particle->tail;
             if (i == 2 && random_integer_below(8) == 0) {
-                p->unkC = 180000.0f;
+                particle->unkC = 180000.0f;
             } else {
-                p->unkC = random_float_between(80000.0f, 120000.0f);
+                particle->unkC = random_float_between(80000.0f, 120000.0f);
             }
             life = scale_game_frames_s32(2);
-            p->life = life;
-            t->unk10 = 1.0f / convert_integer_to_float((s16)life);
-            t->color = 0x7F7F7F;
-            t->unk16 = 3;
+            particle->life = life;
+            particle_tail->unk10 = 1.0f / convert_integer_to_float((s16)life);
+            particle_tail->color = 0x7F7F7F;
+            particle_tail->unk16 = 3;
         }
     }
-    enqueue_callback_list_1((s32)FUN_L00_002e1c78, (s32)m);
+    enqueue_callback_list_1((s32)FUN_L00_002e1c78, (s32)moby);
 }
 typedef union {
     u128 q;
@@ -690,7 +690,7 @@ extern void fast_draw_quad_real(void *, void *, s32) __asm__("FUN_001f7d30");
 extern void fast_vec_cross(void *, void *, void *) __asm__("FUN_001f9ad8");
 extern s64 get_effect_texture(s32) __asm__("FUN_001f44b8");
 
-void FUN_L00_002e1c78(GlowMoby *m) {
+void FUN_L00_002e1c78(GlowMoby *moby) {
     GlowQuad quad;
     GlowVec mat[4];
     GlowVec *src;
@@ -698,7 +698,7 @@ void FUN_L00_002e1c78(GlowMoby *m) {
     s32 i;
     f32 one;
 
-    qcopy(&mat[3], &m->vars->pos);
+    qcopy(&mat[3], &moby->vars->pos);
     one = 1.0f;
     mat[3].f[3] = one;
     subtract_vector_xyz(&mat[0], &glow_origin, &mat[3]);
@@ -743,40 +743,40 @@ extern void FUN_L00_002e2250(s32, s32);
 extern void FUN_L00_002e2af0();
 void enqueue_callback_list_1(s32 arg0, s32 arg1) __asm__("FUN_001f4600");
 
-void FUN_L00_002e1df0(SlotMoby *m) {
+void FUN_L00_002e1df0(SlotMoby *slot_controller) {
     enum {
         SLOT_CONTROLLER_STATE_INITIALIZE = 0,
         SLOT_CONTROLLER_STATE_PROCESS_SLOTS = 1
     };
     s32 i;
     s32 j;
-    s32 n;
+    s32 dispatched_slot_count;
     s32 st;
 
-    switch (m->state) {
+    switch (slot_controller->state) {
     case SLOT_CONTROLLER_STATE_INITIALIZE:
         for (j = 0; j < 3; j++) {
             D_L00_00161BF8[j] = 0;
             D_L00_00161C88[j] = 0;
         }
-        m->state = 1;
-        m->alpha = 0xFF;
+        slot_controller->state = 1;
+        slot_controller->alpha = 0xFF;
         break;
     case SLOT_CONTROLLER_STATE_PROCESS_SLOTS:
-        n = 0;
+        dispatched_slot_count = 0;
         for (i = 0; i < 3; i++) {
             st = D_L00_00161BF8[i];
             if (st == 1) {
             } else if (st == 4) {
                 FUN_L00_002e20f8(i);
             } else if (st != 0) {
-                n++;
+                dispatched_slot_count++;
                 FUN_L00_002e2250(D_L00_00161C88[i], i);
                 D_L00_00161BF8[i] = 4;
             }
         }
-        if (n != 0) {
-            enqueue_callback_list_1((s32)FUN_L00_002e2af0, (s32)m);
+        if (dispatched_slot_count != 0) {
+            enqueue_callback_list_1((s32)FUN_L00_002e2af0, (s32)slot_controller);
         }
         break;
     }

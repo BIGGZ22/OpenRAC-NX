@@ -42,9 +42,13 @@ void FUN_L00_0023d968(void) {
         LEVEL_WITH_TWO_ROTATING_SKY_SHELLS = 3,
         LEVEL_WITH_FAST_AND_SLOW_ROTATING_SKY_SHELLS = 4,
         LEVEL_WITH_MODULO_50000_SKY_SHELL_ROTATION = 5,
+        LEVEL_WITH_SKY_PARTICLES_AND_MODULO_50000_SHELL_ROTATION = 7,
+        LEVEL_WITH_MODULO_40000_SKY_SHELL_ROTATION = 8,
+        LEVEL_WITH_MODULO_25000_SKY_SHELL_ROTATION = 9,
         LEVEL_WITH_THREE_SKY_SHELLS_AND_PARTICLES = 13,
         LEVEL_WITH_MODULO_50000_AND_100000_SKY_SHELL_ROTATIONS = 14,
         LEVEL_WITH_TWO_SKY_SHELLS_AND_PARTICLES = 15,
+        LEVEL_WITH_MODULO_40000_AND_60000_SKY_SHELL_ROTATIONS = 18,
         LEVEL_WITH_MODULO_10000_SKY_SHELL_ROTATIONS = 19
     };
     setup_sky_gif_paging();
@@ -70,13 +74,13 @@ void FUN_L00_0023d968(void) {
     case 6:
         FUN_L00_00289cb8();
         break;
-    case 7:
+    case LEVEL_WITH_SKY_PARTICLES_AND_MODULO_50000_SHELL_ROTATION:
         FUN_L00_0028a208();
         break;
-    case 8:
+    case LEVEL_WITH_MODULO_40000_SKY_SHELL_ROTATION:
         FUN_L00_0028a2f0();
         break;
-    case 9:
+    case LEVEL_WITH_MODULO_25000_SKY_SHELL_ROTATION:
         FUN_L00_0028a3a8();
         break;
     case 10:
@@ -103,7 +107,7 @@ void FUN_L00_0023d968(void) {
     case 17:
         FUN_L00_0028ac88();
         break;
-    case 18:
+    case LEVEL_WITH_MODULO_40000_AND_60000_SKY_SHELL_ROTATIONS:
         FUN_L00_0028b080();
         break;
     case LEVEL_WITH_MODULO_10000_SKY_SHELL_ROTATIONS:
@@ -168,7 +172,7 @@ void FUN_L00_0023e268(void) {
     s32 j;
     s32 k;
     s32 n;
-    f32 a;
+    f32 azimuth_angle;
     f32 b;
     s32 r;
     VeldinVec buf;
@@ -197,10 +201,10 @@ void FUN_L00_0023e268(void) {
             for (n = 0; n < 4; n++) {
                 clear_u64_value(&v);
                 moby_point_position(src, n % 2, &buf);
-                a = veldin_random_angle();
+                azimuth_angle = veldin_random_angle();
                 b = veldin_random_angle();
                 build_spherical_offset(
-                    v.f, veldin_random_range(frame_time * 0.7f, frame_time * 2.2f), a, b);
+                    v.f, veldin_random_range(frame_time * 0.7f, frame_time * 2.2f), azimuth_angle, b);
                 r = scale_game_frames(0xC);
                 FUN_L00_0026ced0(&buf, &v, 0x80808080, 0x808080,
                                  random_int_between(r, scale_game_frames(0x23)), 147000.0f);
@@ -287,7 +291,7 @@ extern void initialize_global_state_entry(s32) __asm__("FUN_0022e188");
 s32 is_point_inside_clip_volume(s32 arg0, s32 arg1) __asm__("FUN_00214720");
 
 void clank_cutscene_trigger_update(DoorMoby *m) __asm__("FUN_L00_002d9dc8");
-void clank_cutscene_trigger_update(DoorMoby *m) {
+void clank_cutscene_trigger_update(DoorMoby *moby) {
     enum {
         CLANK_TRIGGER_INITIALIZE_DIALOGUE = 0,
         CLANK_TRIGGER_POLL_DIALOGUE = 1,
@@ -295,18 +299,18 @@ void clank_cutscene_trigger_update(DoorMoby *m) {
     };
     DoorVars *vars;
 
-    vars = m->vars;
+    vars = moby->vars;
     if (D_L00_0015F5C4 == 2) {
-        m->unk31 = 0;
-        m->flags |= 1;
+        moby->unk31 = 0;
+        moby->flags |= 1;
     } else {
-        m->unk31 = 1;
-        m->flags &= ~1;
+        moby->unk31 = 1;
+        moby->flags &= ~1;
     }
-    switch (m->state) {
+    switch (moby->state) {
     case CLANK_TRIGGER_INITIALIZE_DIALOGUE:
         D_00141628[0] = 1;
-        initialize_npc_dialogue(m, vars->unk20);
+        initialize_npc_dialogue(moby, vars->unk20);
         if (D_0013D388[8] != 0) {
             vars->unk56 = 1;
             vars->unk2C = 3.0f;
@@ -315,8 +319,8 @@ void clank_cutscene_trigger_update(DoorMoby *m) {
             vars->unk2C = 255.0f;
         }
         D_0013D388[8] = 1;
-        m->alpha = 0xFF;
-        m->state = 1;
+        moby->alpha = 0xFF;
+        moby->state = 1;
         break;
     case CLANK_TRIGGER_POLL_DIALOGUE:
         if (vars->unk56 != 0) {
@@ -326,8 +330,8 @@ void clank_cutscene_trigger_update(DoorMoby *m) {
                 vars->unk2C = 3.0f;
             }
         }
-        if (update_npc_dialogue(m, vars->unk20) != 0) {
-            m->state = 2;
+        if (update_npc_dialogue(moby, vars->unk20) != 0) {
+            moby->state = 2;
             vars->unk2C = 3.0f;
         }
         if (vars->unk24 >= 4 && D_L00_0015F5C4 != 6) {
@@ -336,7 +340,7 @@ void clank_cutscene_trigger_update(DoorMoby *m) {
         break;
     case CLANK_TRIGGER_WAIT_TO_REPOLL_DIALOGUE:
         if (D_L00_0015F5C4 != 2) {
-            m->state = 1;
+            moby->state = 1;
         }
         break;
     }

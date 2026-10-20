@@ -14,13 +14,13 @@ extern void transform_vector(void *, void *, void *) __asm__("FUN_001f9d20");
 extern void transpose_rotation_matrix(void *, void *) __asm__("FUN_001fa2d8");
 
 /* Returns component d of c - a transformed by the matrix transpose_rotation_matrix builds from b. */
-float FUN_L00_0025c230(void *a, void *b, void *c, int d) {
+float FUN_L00_0025c230(void *subtrahend_vector, void *b, void *minuend_vector, int component_index) {
     float delta[4], transformed_delta[4], transposed_rotation_matrix[16];
     float *w = transformed_delta;
-    subtract_vector_xyz(delta, c, a);
+    subtract_vector_xyz(delta, minuend_vector, subtrahend_vector);
     transpose_rotation_matrix(transposed_rotation_matrix, b);
     transform_vector(w, delta, transposed_rotation_matrix);
-    return w[d];
+    return w[component_index];
 }
 #define NOT_SDA
 
@@ -39,11 +39,11 @@ extern void fast_vec_normalize(void *, void *, float) __asm__("FUN_001f9bf8");
 
 /* Sets a to b plus c (normalised) scaled by s times the dot of c and b. */
 void FUN_L00_0025c2b0(void *a, void *b, void *c, float s);
-void FUN_L00_0025c2b0(void *a, void *b, void *c, float s) {
+void FUN_L00_0025c2b0(void *destination_vector, void *b, void *direction_vector, float projection_scale) {
     Vq scaled_vector, normalized_vector;
-    fast_vec_normalize(&normalized_vector, c, 1.0f);
-    fast_vec_scale(&scaled_vector, &normalized_vector, fast_vec_dot(&normalized_vector, b) * s);
-    subtract_vector_xyz(a, b, &scaled_vector);
+    fast_vec_normalize(&normalized_vector, direction_vector, 1.0f);
+    fast_vec_scale(&scaled_vector, &normalized_vector, fast_vec_dot(&normalized_vector, b) * projection_scale);
+    subtract_vector_xyz(destination_vector, b, &scaled_vector);
 }
 
 #define NOT_SDA
@@ -68,30 +68,30 @@ extern void build_spherical_offset(void *, float, float, float) __asm__("FUN_002
 
 void FUN_L00_0025c398(void *source_object, void *base_vector, void *point_source_mask) {
     V4 buf[20];
-    float tmp[4];
-    int n, i;
+    float randomized_vector[4];
+    int point_count, i;
 
-    n = FUN_L00_0025aca0(source_object, 20, buf, point_source_mask, 14.0f);
-    if (n == 0) {
+    point_count = FUN_L00_0025aca0(source_object, 20, buf, point_source_mask, 14.0f);
+    if (point_count == 0) {
         return;
     }
-    for (i = 0; i < n; i++) {
+    for (i = 0; i < point_count; i++) {
         float y = random_angle_radians();
         float z = random_angle_radians();
         unsigned char *flag = D_0013E520;
-        int a, b;
+        int randomized_frame_count, b;
 
-        build_spherical_offset(tmp, frame_time * 1.8f, y, z);
-        add_vector_xyz(tmp, tmp, base_vector);
-        tmp[2] += frame_time * 0.9f;
+        build_spherical_offset(randomized_vector, frame_time * 1.8f, y, z);
+        add_vector_xyz(randomized_vector, randomized_vector, base_vector);
+        randomized_vector[2] += frame_time * 0.9f;
         if (flag[0x10]) {
-            a = scale_game_frames(random_int_between(20, 35));
+            randomized_frame_count = scale_game_frames(random_int_between(20, 35));
             b = random_int_between(40, 60);
-            FUN_L00_00269958(&buf[i], tmp, 0x7000FFA0, 0xFF00, a, 30, b, 1);
+            FUN_L00_00269958(&buf[i], randomized_vector, 0x7000FFA0, 0xFF00, randomized_frame_count, 30, b, 1);
         } else {
-            a = scale_game_frames(random_int_between(20, 35));
+            randomized_frame_count = scale_game_frames(random_int_between(20, 35));
             b = random_int_between(40, 60);
-            FUN_L00_00269958(&buf[i], tmp, 0x7000A0FF, 0xFF, a, 30, b, 1);
+            FUN_L00_00269958(&buf[i], randomized_vector, 0x7000A0FF, 0xFF, randomized_frame_count, 30, b, 1);
         }
     }
 }
@@ -122,26 +122,26 @@ float *FUN_002141f8_0025c558(void *) __asm__("FUN_002141f8");
 void FUN_002130d8_0025c558(void *, int, int, int, int) __asm__("FUN_002130d8");
 void FUN_00212f90_0025c558(void *, int, int, int) __asm__("FUN_00212f90");
 void trooper_start_knockback(u8 *a, B_25c558 *b, int c, int d, int e, float f) __asm__("FUN_L00_0025c558");
-void trooper_start_knockback(u8 *a, B_25c558 *b, int c, int d, int e, float f) {
+void trooper_start_knockback(u8 *moby, B_25c558 *b, int c, int d, int e, float knockback_angle) {
     float *r;
-    b->f0 = FUN_001f9dc8_0025c558(f) * b->f18;
-    b->f4 = FUN_001f9de0_0025c558(f) * b->f18;
+    b->f0 = FUN_001f9dc8_0025c558(knockback_angle) * b->f18;
+    b->f4 = FUN_001f9de0_0025c558(knockback_angle) * b->f18;
     b->f8 = b->f1C;
     b->fC = 1.0f;
-    b->f40 = FUN_001fa580_0025c558(f, 3.1415927f);
+    b->f40 = FUN_001fa580_0025c558(knockback_angle, 3.1415927f);
     b->w44 = 0;
     b->h2C = FUN_001f96f8_0025c558(300);
     b->h3E = 0;
     b->b3C = 1;
-    r = FUN_002141f8_0025c558(a);
+    r = FUN_002141f8_0025c558(moby);
     if (r && *r == 0.0f) {
         b->w24 |= 0x20;
-        *(int *)(a + 0x94) = 0;
+        *(int *)(moby + 0x94) = 0;
     }
     if (b->w24 & 2)
-        FUN_002130d8_0025c558(a, c, e, d, 1);
+        FUN_002130d8_0025c558(moby, c, e, d, 1);
     else
-        FUN_00212f90_0025c558(a, c, e, d);
+        FUN_00212f90_0025c558(moby, c, e, d);
 }
 #include "rnc/math/vector.h"
 
@@ -205,7 +205,7 @@ int mine_fall(char *moby, char *st) {
     int flags = 0;
 
     float sc, f21, f20, f12, t, r, rr, one;
-    int n, i;
+    int result_count, i;
 
     *(float *)(st + 0x8) = *(float *)(st + 0x8) - *(float *)(st + 0x10);
     if (*(unsigned char *)(st + 0x2E) == 1) {
@@ -275,10 +275,10 @@ int mine_fall(char *moby, char *st) {
             if (*(float *)(st + 0x54) <= t) {
                 *(int *)(moby + 0x58) = 0;
             } else {
-                float h = *(float *)(st + 0x10) * -0.5f;
+                float negative_half_gravity_step = *(float *)(st + 0x10) * -0.5f;
                 f20 = 60.0f;
-                n = FUN_L00_002595a0(&f64, &f68, h, *(float *)(st + 0x8) - h, *(float *)(moby + 0x18) - f21);
-                if (n > 0 && 0.0f < f64 && f64 < f20) {
+                result_count = FUN_L00_002595a0(&f64, &f68, negative_half_gravity_step, *(float *)(st + 0x8) - negative_half_gravity_step, *(float *)(moby + 0x18) - f21);
+                if (result_count > 0 && 0.0f < f64 && f64 < f20) {
                     f20 = f64;
                 }
                 if (f20 < 0.0001f) {
@@ -314,10 +314,10 @@ int mine_fall(char *moby, char *st) {
     qcopy(collision_probe_position, (moby + 0x10));
     collision_probe_position[2] = collision_probe_position[2] + *(float *)(st + 0x28);
     add_vector_xyz_c(predicted_query_position, collision_probe_position, st);
-    n = func_L00_001F2BE8_d6f0(convert_integer_to_float(*(int *)(st + 0x20)) * 0.0010742187732830644f, predicted_query_position, 16, moby, 0);
-    if (i < n) {
+    result_count = func_L00_001F2BE8_d6f0(convert_integer_to_float(*(int *)(st + 0x20)) * 0.0010742187732830644f, predicted_query_position, 16, moby, 0);
+    if (i < result_count) {
         int **pp = D_L00_00177F00;
-        int k = n;
+        int k = result_count;
         do {
             if (FUN_L00_0025e3b8(*pp) == 0) {
                 if (*(int *)(st + 0x24) & 0x20) {
@@ -346,14 +346,14 @@ int mine_fall(char *moby, char *st) {
         *(float *)(moby + 0x18) = *(float *)(moby + 0x18) - *(float *)(st + 0x28);
         fast_vec_normalize_c(surface_normal, (char *)g + 0x10, one);
         if (0.7070000171661377f <= surface_normal[2]) {
-            float e = fast_vec_dot_c(st, surface_normal);
-            if (e < 0.0f) {
+            float motion_normal_dot = fast_vec_dot_c(st, surface_normal);
+            if (motion_normal_dot < 0.0f) {
                 q = (char *)g - 0x30;
                 if (*(int *)(q + 0x18) == 0 || *(int *)(q + 0x1C) > 0) {
                     flags |= 1;
                     *(short *)(st + 0x3E) = 2;
                 }
-                fast_vec_normalize_c(normal_response_vector, surface_normal, e);
+                fast_vec_normalize_c(normal_response_vector, surface_normal, motion_normal_dot);
                 subtract_vector_xyz(st, st, normal_response_vector);
                 if (*(short *)(st + 0x3E) == 2) {
                     f6c = fast_vec_length(st);
@@ -362,10 +362,10 @@ int mine_fall(char *moby, char *st) {
                 }
             }
         } else {
-            float d = fast_vec_dot_c(st, surface_normal);
-            if (d < 0.0f) {
-                d = d * -(*(float *)(st + 0x30) + one);
-                fast_vec_normalize_c(normal_response_vector, surface_normal, d);
+            float normal_response_scale = fast_vec_dot_c(st, surface_normal);
+            if (normal_response_scale < 0.0f) {
+                normal_response_scale = normal_response_scale * -(*(float *)(st + 0x30) + one);
+                fast_vec_normalize_c(normal_response_vector, surface_normal, normal_response_scale);
                 add_vector_xyz_c(st, st, normal_response_vector);
             }
         }

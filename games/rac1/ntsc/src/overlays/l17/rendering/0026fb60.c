@@ -20,29 +20,29 @@ unsigned char *FUN_L17_0026fb60(struct Moby *parent, void *pos, float *vec) {
     int r = func_002140B0_6fb60(5);
     unsigned char a = func_001F9850_6fb60(r + 2);
     unsigned char b = func_002140B0_6fb60(0xFF);
-    unsigned char *p = func_00218928_6fb60(0x4F);
-    if (p != 0) {
-        char *d = (char *)p + 0x20;
-        qcopy(p + 0x10, pos);
-        *(float *)(d + 0x10) = vec[0];
-        *(float *)(d + 0x14) = vec[1];
-        *(float *)(d + 0x18) = vec[2];
+    unsigned char *record = func_00218928_6fb60(0x4F);
+    if (record != 0) {
+        char *record_data = (char *)record + 0x20;
+        qcopy(record + 0x10, pos);
+        *(float *)(record_data + 0x10) = vec[0];
+        *(float *)(record_data + 0x14) = vec[1];
+        *(float *)(record_data + 0x18) = vec[2];
         if (parent != 0) {
-            func_001F9BF0_6fb60(d, p + 0x10, &parent->pos);
-            *(short *)(p + 0xA) = a;
+            func_001F9BF0_6fb60(record_data, record + 0x10, &parent->pos);
+            *(short *)(record + 0xA) = a;
         } else {
-            *(short *)(p + 0xA) = a << 2;
+            *(short *)(record + 0xA) = a << 2;
         }
-        *(char **)(d + 0x1C) = parent;
-        *(int *)(p + 4) = 0x604040FF;
-        p[9] = func_001FA898_r_6fb60(1.0f) + 0x20;
-        p[3] = 0x48;
-        *(float *)(p + 0xC) = 42000.0f;
-        p[8] = b;
-        p[1] = 0;
-        p[2] = *D_L17_001B2A54;
+        *(char **)(record_data + 0x1C) = parent;
+        *(int *)(record + 4) = 0x604040FF;
+        record[9] = func_001FA898_r_6fb60(1.0f) + 0x20;
+        record[3] = 0x48;
+        *(float *)(record + 0xC) = 42000.0f;
+        record[8] = b;
+        record[1] = 0;
+        record[2] = *D_L17_001B2A54;
     }
-    return p;
+    return record;
 }
 #define NOT_SDA
 
@@ -58,48 +58,48 @@ extern unsigned char *FUN_L00_002678b8_q(int) __asm__("FUN_L00_002678b8");
 extern int func_001FA898_r_q(float) __asm__("FUN_001fa6d0");
 
 unsigned char *FUN_L17_0026fdd0(char *pos, int mode, int step) {
-    unsigned char *p;
-    int n;
+    unsigned char *record;
+    int remaining_steps;
     if (mode)
-        n = 5 - step;
+        remaining_steps = 5 - step;
     else
-        n = 0xF - step;
-    if (n >= 0) {
-        p = FUN_L00_002678b8_q(0x50);
-        if (p != 0) {
-            qcopy(p + 0x10, pos);
-            p[9] = func_001FA898_r_q(1.0f) + 0x70;
-            *(int *)(p + 0x20) = mode;
+        remaining_steps = 0xF - step;
+    if (remaining_steps >= 0) {
+        record = FUN_L00_002678b8_q(0x50);
+        if (record != 0) {
+            qcopy(record + 0x10, pos);
+            record[9] = func_001FA898_r_q(1.0f) + 0x70;
+            *(int *)(record + 0x20) = mode;
             if (mode == 0) {
                 int d = 0xF - step;
-                *(int *)(p + 4) = 0x60FF3020;
-                p[3] = 0x48;
-                *(float *)(p + 0xC) = 630000.0f;
-                *(short *)(p + 0xA) = d;
+                *(int *)(record + 4) = 0x60FF3020;
+                record[3] = 0x48;
+                *(float *)(record + 0xC) = 630000.0f;
+                *(short *)(record + 0xA) = d;
                 if (step != 0) {
                     float a = convert_integer_to_float_q((short)d - 1);
-                    *(int *)(p + 4) =
-                        FUN_001fa6e0_q(0x603F1008, *(int *)(p + 4),
-                                       a / convert_integer_to_float_q(*(short *)(p + 0xA)));
+                    *(int *)(record + 4) =
+                        FUN_001fa6e0_q(0x603F1008, *(int *)(record + 4),
+                                       a / convert_integer_to_float_q(*(short *)(record + 0xA)));
                 }
             } else {
                 int d = 5 - step;
-                *(int *)(p + 4) = 0x80D0A080;
-                p[3] = 0x44;
-                *(float *)(p + 0xC) = 420000.0f;
-                *(short *)(p + 0xA) = d;
+                *(int *)(record + 4) = 0x80D0A080;
+                record[3] = 0x44;
+                *(float *)(record + 0xC) = 420000.0f;
+                *(short *)(record + 0xA) = d;
                 if (step != 0) {
                     float a = convert_integer_to_float_q((short)d - 1);
-                    *(int *)(p + 4) =
-                        FUN_001fa6e0_q(0x30FFFFFF, *(int *)(p + 4),
-                                       a / convert_integer_to_float_q(*(short *)(p + 0xA)));
+                    *(int *)(record + 4) =
+                        FUN_001fa6e0_q(0x30FFFFFF, *(int *)(record + 4),
+                                       a / convert_integer_to_float_q(*(short *)(record + 0xA)));
                 }
             }
-            p[1] = 0;
-            p[8] = random_integer_below_q(0xFF);
-            p[2] = *D_L17_001B2A54;
+            record[1] = 0;
+            record[8] = random_integer_below_q(0xFF);
+            record[2] = *D_L17_001B2A54;
         }
-        return p;
+        return record;
     }
     return 0;
 }

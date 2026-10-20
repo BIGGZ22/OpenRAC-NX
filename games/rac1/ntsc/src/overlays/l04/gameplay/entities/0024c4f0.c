@@ -6,13 +6,13 @@ typedef struct {
     float x, y, z, w;
 } V_24c4f0;
 
-int FUN_L04_0024c4f0(float *p, float *poly, int n) {
+int FUN_L04_0024c4f0(float *query_point, float *poly, int vertex_count) {
     V_24c4f0 *v = (V_24c4f0 *)poly;
     int i;
 
-    for (i = 0; i < n; i++) {
-        if ((v[(i + 1) % n].x - v[i].x) * (p[1] - v[i].y) -
-                (v[(i + 1) % n].y - v[i].y) * (p[0] - v[i].x) >
+    for (i = 0; i < vertex_count; i++) {
+        if ((v[(i + 1) % vertex_count].x - v[i].x) * (query_point[1] - v[i].y) -
+                (v[(i + 1) % vertex_count].y - v[i].y) * (query_point[0] - v[i].x) >
             0.0f) {
             return i + 1;
         }
@@ -34,34 +34,34 @@ extern void scale_vector_xyz(void *out, void *a, f32 s) __asm__("FUN_001f9a68");
 extern void subtract_vector_xyz(void *out, void *a, void *b) __asm__("FUN_001f9a28");
 float absolute_float(float input) __asm__("func_001F99C0");
 
-float FUN_L04_0024c660(float *dst, float *a, float *b, float *c) {
-    float d0[4];
+float FUN_L04_0024c660(float *dst, float *segment_start, float *b, float *query_point) {
+    float segment_direction[4];
     float d1[4];
-    float d2[4];
+    float query_to_start_offset[4];
     float d3[4];
     float det, t, r;
 
-    subtract_vector_xyz(d0, b, a);
-    subtract_vector_xyz(d2, a, c);
-    d3[0] = d0[1];
-    d3[1] = -d0[0];
-    add_vector_xyz(d3, c, d3);
-    subtract_vector_xyz(d1, c, d3);
-    det = d0[1] * d1[0] - d0[0] * d1[1];
+    subtract_vector_xyz(segment_direction, b, segment_start);
+    subtract_vector_xyz(query_to_start_offset, segment_start, query_point);
+    d3[0] = segment_direction[1];
+    d3[1] = -segment_direction[0];
+    add_vector_xyz(d3, query_point, d3);
+    subtract_vector_xyz(d1, query_point, d3);
+    det = segment_direction[1] * d1[0] - segment_direction[0] * d1[1];
     if (absolute_float(det) < 0.0001f) {
-        qcopy(dst, a);
+        qcopy(dst, segment_start);
         return 0.0f;
     }
     det = 1.0f / det;
-    t = d1[1] * d2[0] - d1[0] * d2[1];
+    t = d1[1] * query_to_start_offset[0] - d1[0] * query_to_start_offset[1];
     t = t * det;
     r = t;
     if (r < 0.0f)
         r = 0.0f;
     if (1.0f < r)
         r = 1.0f;
-    scale_vector_xyz(dst, d0, r);
-    add_vector_xyz(dst, dst, a);
+    scale_vector_xyz(dst, segment_direction, r);
+    add_vector_xyz(dst, dst, segment_start);
     return t;
 }
 #define NOT_SDA
@@ -78,21 +78,21 @@ extern int FUN_L04_0024c4f0(float *, float *, int);
 extern void fast_vec_sub(void *, void *, void *) __asm__("FUN_001f9a28");
 extern void FUN_L04_0024c660_u(float *, float *, float *, float *) __asm__("FUN_L04_0024c660");
 
-int FUN_L04_0024c7d8(float *out, float *p, float *poly, int n) {
-    float tmp[4];
+int FUN_L04_0024c7d8(float *out, float *query_point, float *poly, int vertex_count) {
+    float edge_closest_point[4];
     float diff[4];
     float best;
     int i;
-    int r = FUN_L04_0024c4f0(p, poly, n) != 0;
+    int r = FUN_L04_0024c4f0(query_point, poly, vertex_count) != 0;
     best = 0;
-    for (i = 0; i < n; i++) {
-        float d;
-        FUN_L04_0024c660_u(tmp, poly + i * 4, poly + ((i + 1) % n) * 4, p);
-        fast_vec_sub(diff, p, tmp);
-        d = fast_vec_length(diff);
-        if (i == 0 || d < best) {
-            best = d;
-            qcopy(out, tmp);
+    for (i = 0; i < vertex_count; i++) {
+        float distance_to_edge;
+        FUN_L04_0024c660_u(edge_closest_point, poly + i * 4, poly + ((i + 1) % vertex_count) * 4, query_point);
+        fast_vec_sub(diff, query_point, edge_closest_point);
+        distance_to_edge = fast_vec_length(diff);
+        if (i == 0 || distance_to_edge < best) {
+            best = distance_to_edge;
+            qcopy(out, edge_closest_point);
         }
     }
     return r;

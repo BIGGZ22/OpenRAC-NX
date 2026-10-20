@@ -21,11 +21,11 @@ extern void copy_memory_aligned(int, void *, unsigned short) __asm__("FUN_001f98
 
 extern s32 D_0014C190_257218[][64] __asm__("D_0014C190");
 void jet_reset_camera(OvlQuad *a, OvlQuad *b) __asm__("FUN_L00_00284e50");
-void jet_reset_camera(OvlQuad *a, OvlQuad *b) {
+void jet_reset_camera(OvlQuad *saved_position, OvlQuad *b) {
     unsigned char *src;
     int i;
-    char *s;
-    struct Hero *p;
+    char *saved_state;
+    struct Hero *hero_state;
     char *q;
     char *g;
     int lvl;
@@ -44,30 +44,30 @@ void jet_reset_camera(OvlQuad *a, OvlQuad *b) {
         D_0014C190_257218[lvl][i >> 5] |= 1 << (i & 0x1F);
         D_L00_001BA4D0[i >> 5] |= 1 << (i & 0x1F);
     }
-    s = D_L00_001BB230;
+    saved_state = D_L00_001BB230;
     *(int *)D_L00_001BB230 = 1;
-    qcopy(s + 0x10, a);
-    qcopy(s + 0x20, b);
-    p = &hero;
+    qcopy(saved_state + 0x10, saved_position);
+    qcopy(saved_state + 0x20, b);
+    hero_state = &hero;
     q = D_001516D0;
     g = D_0013E550;
     {
-        char *o = ((char *)p->moby);
-        *(int *)(s + 0x30) = *(int *)(o + 0x38);
-        *(int *)(s + 0x34) = *(int *)(o + 0x3C);
-        *(int *)(s + 0x38) = *(int *)(o + 0x80);
-        *(int *)(s + 0x44) = p->vehicle_mode;
-        *(char **)(s + 0x48) = o;
-        *(int *)(s + 0x4C) = p->unk22CC;
-        *(int *)(s + 0x3C) = *(int *)(g + 0x64);
-        *(char *)(s + 0x40) = *(unsigned char *)(g + 0x68);
-        *(char *)(s + 0x41) = *(unsigned char *)(g + 0x69);
-        *(char *)(s + 0x42) = *(unsigned char *)(g + 0x6A);
+        char *hero_moby = ((char *)hero_state->moby);
+        *(int *)(saved_state + 0x30) = *(int *)(hero_moby + 0x38);
+        *(int *)(saved_state + 0x34) = *(int *)(hero_moby + 0x3C);
+        *(int *)(saved_state + 0x38) = *(int *)(hero_moby + 0x80);
+        *(int *)(saved_state + 0x44) = hero_state->vehicle_mode;
+        *(char **)(saved_state + 0x48) = hero_moby;
+        *(int *)(saved_state + 0x4C) = hero_state->unk22CC;
+        *(int *)(saved_state + 0x3C) = *(int *)(g + 0x64);
+        *(char *)(saved_state + 0x40) = *(unsigned char *)(g + 0x68);
+        *(char *)(saved_state + 0x41) = *(unsigned char *)(g + 0x69);
+        *(char *)(saved_state + 0x42) = *(unsigned char *)(g + 0x6A);
         c = *(signed char *)(q + 0x22);
         if (c != -1) {
-            *(int *)(s + 0xC54) = c;
+            *(int *)(saved_state + 0xC54) = c;
         } else {
-            *(int *)(s + 0xC54) = *(short *)(q + 0x38);
+            *(int *)(saved_state + 0xC54) = *(short *)(q + 0x38);
         }
     }
 }
@@ -91,8 +91,8 @@ void FUN_L00_00285008(void) {
     char *s = D_L00_001BB230;
     int i;
     short id;
-    u8 *m;
-    struct Hero *p;
+    u8 *record_cursor;
+    struct Hero *hero_state;
 
     if (*(int *)s == 0) {
         fill_transfer_words(D_L00_001BA5D0, 0, 0xC60);
@@ -128,18 +128,18 @@ void FUN_L00_00285008(void) {
         }
 
         for (i = 0; ; i++) {
-            m = D_L00_0015FFD8 + i * 0x100;
-            if (m >= D_L00_0015FFDC)
+            record_cursor = D_L00_0015FFD8 + i * 0x100;
+            if (record_cursor >= D_L00_0015FFDC)
                 break;
-            if (*(short *)(m + 0xA6) == id) {
+            if (*(short *)(record_cursor + 0xA6) == id) {
                 char *s = D_L00_001BB230;
-                FUN_L00_00210a08(*(int *)(s + 0x44), *(int *)(s + 0x4C), m);
+                FUN_L00_00210a08(*(int *)(s + 0x44), *(int *)(s + 0x4C), record_cursor);
                 break;
             }
         }
     }
-    p = &hero;
-    FUN_L00_00250df8(p->moby);
+    hero_state = &hero;
+    FUN_L00_00250df8(hero_state->moby);
     euler_rotation_basis((char *)hero.moby + 0xC0, &hero.motion.rot);
     init_camera_system();
     FUN_L00_002852c0();
@@ -148,10 +148,10 @@ extern u8 *D_L00_0015FFD8;
 extern u8 *D_L00_0015FFDC;
 /* Finds the moby (0x100 bytes each) whose short at 0xB2 equals id; 0 when none. */
 u8 *FUN_L00_002851c0(s32 a, s32 id) {
-    u8 *p;
-    for (p = D_L00_0015FFD8; p != D_L00_0015FFDC; p += 0x100) {
-        if (*(s16 *)(p + 0xB2) == id)
-            return p;
+    u8 *record_cursor;
+    for (record_cursor = D_L00_0015FFD8; record_cursor != D_L00_0015FFDC; record_cursor += 0x100) {
+        if (*(s16 *)(record_cursor + 0xB2) == id)
+            return record_cursor;
     }
     return 0;
 }
@@ -173,19 +173,19 @@ typedef struct {
 extern int FUN_L00_002851c0_u(int, int) __asm__("FUN_L00_002851c0");
 extern void copy_memory_aligned(int, void *, unsigned short) __asm__("FUN_001f9838");
 
-void FUN_L00_00285208(int *h) {
+void FUN_L00_00285208(int *entry_block) {
     int i;
 
-    for (i = 0; i < *h; i++) {
-        int m = FUN_L00_002851c0_u(((Ent *)(h + 1))[i].b, ((Ent *)(h + 1))[i].a);
-        if (m != 0) {
+    for (i = 0; i < *entry_block; i++) {
+        int moby_address = FUN_L00_002851c0_u(((Ent *)(entry_block + 1))[i].b, ((Ent *)(entry_block + 1))[i].a);
+        if (moby_address != 0) {
             int dst;
-            if (((Ent *)(h + 1))[i].kind == 1) {
-                dst = ((Ent *)(h + 1))[i].off + m;
+            if (((Ent *)(entry_block + 1))[i].kind == 1) {
+                dst = ((Ent *)(entry_block + 1))[i].off + moby_address;
             } else {
-                dst = ((Ent *)(h + 1))[i].off + *(int *)(m + 0x78);
+                dst = ((Ent *)(entry_block + 1))[i].off + *(int *)(moby_address + 0x78);
             }
-            copy_memory_aligned(dst, &((Ent *)(h + 1))[i].pad, ((Ent *)(h + 1))[i].len);
+            copy_memory_aligned(dst, &((Ent *)(entry_block + 1))[i].pad, ((Ent *)(entry_block + 1))[i].len);
         }
     }
 }

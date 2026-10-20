@@ -145,11 +145,15 @@ extern int func_001F9908_r(int *) __asm__("FUN_001f9740");
 int r1_repeat_timer __asm__("D_L08_0015F678") = 0;
 void FUN_L08_002370d8(void) {
     enum {
+        HERO_STATE_LEDGE_HANG = 25,
+        HERO_STATE_LEDGE_SHIMMY_POSITIVE_YAW_OFFSET = 26,
+        HERO_STATE_LEDGE_SHIMMY_NEGATIVE_YAW_OFFSET = 27,
         HERO_STATE_GRIND_JUMP = 41,
         HERO_STATE_GRIND_RAIL_TRANSFER = 42,
         HERO_STATE_GRIND_ATTACK = 43,
         HERO_STATE_GRIND_COLLISION_RECOVERY = 66,
         HERO_STATE_APPROACH_TARGET = 101,
+        HERO_STATE_VEHICLE_TARGET_ARRIVAL = 102,
         HERO_STATE_TARGET_ARRIVAL = 103,
         HERO_STATE_WATER_DEATH = 106,
         HERO_STATE_FATAL_FALL = 119
@@ -921,7 +925,7 @@ void FUN_L08_002370d8(void) {
                     }
                     FUN_L00_00228c18();
                     break;
-                case 102:
+                case HERO_STATE_VEHICLE_TARGET_ARRIVAL:
                     if (hero.unkA98 & 2) {
                         hero_set_state(0x65, 1);
                     }
@@ -989,8 +993,8 @@ void FUN_L08_002370d8(void) {
                         break;
                     }
                     if (hero.unk2220 != -1) {
-                        Row13E650 *e = (Row13E650 *)(D_0013E550 + hero.unk2220 * 0x70);
-                        if (e->f88 == ((unsigned char *)hero.moby) && e->f74 != 0) {
+                        Row13E650 *voice_slot_entry = (Row13E650 *)(D_0013E550 + hero.unk2220 * 0x70);
+                        if (voice_slot_entry->f88 == ((unsigned char *)hero.moby) && voice_slot_entry->f74 != 0) {
                             release_voice_slot(hero.unk2220);
                         }
                     }
@@ -1493,7 +1497,7 @@ void FUN_L08_002370d8(void) {
                         hero_set_state(0x19, 0);
                     }
                     break;
-                case 25:
+                case HERO_STATE_LEDGE_HANG:
                     if ((hero.unkA98 & 2) && ((unsigned char *)hero.moby)[0x53] == 0x20) {
                         set_hero_animation(0x21, 0, scale_game_frames(6));
                     }
@@ -1546,8 +1550,8 @@ void FUN_L08_002370d8(void) {
                         }
                     }
                     break;
-                case 26:
-                case 27: {
+                case HERO_STATE_LEDGE_SHIMMY_POSITIVE_YAW_OFFSET:
+                case HERO_STATE_LEDGE_SHIMMY_NEGATIVE_YAW_OFFSET: {
                     float ang;
 
                     qcopy(v0, hero.motion.pos.f);

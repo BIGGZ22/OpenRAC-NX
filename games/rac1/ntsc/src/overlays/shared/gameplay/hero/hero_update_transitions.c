@@ -160,11 +160,14 @@ extern int func_001F9908_r(int *) __asm__("FUN_001f9740");
 void hero_update_transitions(void) __asm__("FUN_L00_00229b70");
 void hero_update_transitions(void) {
     enum {
+        HERO_STATE_DOUBLE_JUMP = 14,
+        HERO_STATE_LEDGE_HANG = 25,
         HERO_STATE_GRIND_JUMP = 41,
         HERO_STATE_GRIND_RAIL_TRANSFER = 42,
         HERO_STATE_GRIND_ATTACK = 43,
         HERO_STATE_GRIND_OBSTACLE_HOP = 66,
         HERO_STATE_APPROACH_TARGET_POSE = 101,
+        HERO_STATE_AT_TARGET_POSE = 103,
         HERO_STATE_DROWNING = 106
     };
     unsigned char *moby;
@@ -1025,7 +1028,7 @@ void hero_update_transitions(void) {
                         hero_set_state(0x65, 1);
                     }
                     break;
-                case 103:
+                case HERO_STATE_AT_TARGET_POSE:
                     if ((hero.unkA98 & 2) || hero.unk1650 != 0) {
                         hero_set_state(HERO_STATE_IDLE, 1);
                     }
@@ -1124,8 +1127,8 @@ void hero_update_transitions(void) {
                         break;
                     }
                     if (hero.unk2220 != -1) {
-                        Row13E650 *e = (Row13E650 *)(D_0013E550 + hero.unk2220 * 0x70);
-                        if (e->f88 == ((unsigned char *)hero.moby) && e->f74 != 0) {
+                        Row13E650 *voice_slot_record = (Row13E650 *)(D_0013E550 + hero.unk2220 * 0x70);
+                        if (voice_slot_record->f88 == ((unsigned char *)hero.moby) && voice_slot_record->f74 != 0) {
                             release_voice_slot(hero.unk2220);
                         }
                     }
@@ -1643,7 +1646,7 @@ void hero_update_transitions(void) {
                         hero_set_state(0x19, 0);
                     }
                     break;
-                case 25:
+                case HERO_STATE_LEDGE_HANG:
                     if ((hero.unkA98 & 2) && ((unsigned char *)hero.moby)[0x53] == 0x20) {
                         set_hero_animation(0x21, 0, scale_game_frames(6));
                     }
@@ -2008,7 +2011,7 @@ void hero_update_transitions(void) {
                 case HERO_STATE_HIGH_JUMP:
                 case 12:
                 case 13:
-                case 14:
+                case HERO_STATE_DOUBLE_JUMP:
                 case 15:
                 case HERO_STATE_PACK_LONG_JUMP:
                 case 17:

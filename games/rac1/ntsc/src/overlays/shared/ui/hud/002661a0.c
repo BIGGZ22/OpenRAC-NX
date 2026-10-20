@@ -14,12 +14,12 @@
 
 extern int scale_game_frames(int) __asm__("FUN_001f96f8");
 
-void FUN_L05_002661a0(HudElem *e) {
-    e->unk7C = scale_game_frames(0xB4) + 0x1E;
-    e->w = 0x80;
-    e->unk48 = 0;
-    e->h = 0x80;
-    e->unk4A = 0;
+void FUN_L05_002661a0(HudElem *hud_element) {
+    hud_element->unk7C = scale_game_frames(0xB4) + 0x1E;
+    hud_element->w = 0x80;
+    hud_element->unk48 = 0;
+    hud_element->h = 0x80;
+    hud_element->unk4A = 0;
 }
 /* Ported from rac1-decomp (src/overlays/shared/hud_00263490.c: func_L05_00266BD8), where it is exact; names translated to the US level program. */
 
@@ -68,7 +68,7 @@ extern int measure_text_width_regular(char *, int) __asm__("FUN_L05_00229d48");
 extern int get_icon_frame(int, int) __asm__("FUN_001ff960");
 extern void draw_hud_sprite(int, int, int, int, int, int) __asm__("FUN_001ffc30");
 
-int FUN_L05_00266320(HudElem *e) {
+int FUN_L05_00266320(HudElem *hud_element) {
     /* The retail GP is 0x166C00; this renderer uses the preceding
        data words, rather than the timer renderer's shared globals. */
     extern int D_L05_0015F984 __attribute__((sda));
@@ -88,7 +88,7 @@ int FUN_L05_00266320(HudElem *e) {
     char small_buf[16];
     int x, y, count;
 
-    if (e->unk6C <= 0) {
+    if (hud_element->unk6C <= 0) {
         return 0;
     }
     {
@@ -132,7 +132,7 @@ int FUN_L05_00266320(HudElem *e) {
         sprintf(small_buf, D_L05_0015F860, hero.unk8CE);
         /* Fakematch: the dead early copy of the default row gives retail's register order. */
         y2 = D_0015ED80 ? 10 : 18;
-        x2 = e->unk50;
+        x2 = hud_element->unk50;
         if (D_0013D388[0] == 0) {
             y2 = D_0015ED80 ? 10 : 18;
         } else {
@@ -148,17 +148,17 @@ int FUN_L05_00266320(HudElem *e) {
             FUN_L00_001fb470(x2 + 0x28, y2 + 7, 0x80202080, small_buf, -1);
         }
     }
-    return e->w;
+    return hud_element->w;
 }
 
-int FUN_L05_00266710(HudElem *e) {
+int FUN_L05_00266710(HudElem *hud_element) {
     char buf[64];
     int y0, y1, y2;
     int frames, per_min, per_sec;
     int min, sec, hund;
     int x;
 
-    if (e->unk6C <= 0) {
+    if (hud_element->unk6C <= 0) {
         return 0;
     }
     /* written as -(row) + height: the plain `height - row` form folds the +10/+18 into the subtraction */
@@ -197,5 +197,5 @@ int FUN_L05_00266710(HudElem *e) {
     sprintf(buf, D_L05_0015FA70, min, sec, hund);
     FUN_L00_001fb470(x + 1, y2 + 1, 0x80000000, buf, -1);
     FUN_L00_001fb470(x, y2, D_L05_0015FA2C, buf, -1);
-    return e->w;
+    return hud_element->w;
 }

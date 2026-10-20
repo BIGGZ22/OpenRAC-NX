@@ -15,10 +15,10 @@ extern int D_L08_001F84E8[];
 extern void FUN_L00_001fde98(int, int, int, void *, int);
 extern void FUN_L08_00258090(void *, int, int, void *);
 
-void FUN_L08_00308db8(int a) {
+void FUN_L08_00308db8(int pair_index) {
     int i;
     for (i = 0; i < 0x8; i++) {
-        FUN_L08_00258090(D_L08_001F8560, D_L08_001F84E8[i], D_L08_001F4C60[i], &D_L08_001F8548[a]);
+        FUN_L08_00258090(D_L08_001F8560, D_L08_001F84E8[i], D_L08_001F4C60[i], &D_L08_001F8548[pair_index]);
         FUN_L00_001fde98(D_L08_001F4C60[i], D_L08_001F84C8[i], D_L08_001F8528[i], D_L08_001F8560,
                          1);
     }
@@ -26,10 +26,10 @@ void FUN_L08_00308db8(int a) {
 extern Pair D_L08_001623F8[] __attribute__((section(".sdata")));
 extern int D_L08_001F4C18[];
 extern int D_L08_001F4C00[];
-void FUN_L08_00308e90(int a) {
+void FUN_L08_00308e90(int pair_index) {
     int i;
     for (i = 0; i < 0x6; i++) {
-        FUN_L08_00258090(D_L08_001F8560, D_L08_001F4C18[i], D_L08_001F01C8[i], &D_L08_001623F8[a]);
+        FUN_L08_00258090(D_L08_001F8560, D_L08_001F4C18[i], D_L08_001F01C8[i], &D_L08_001623F8[pair_index]);
         FUN_L00_001fde98(D_L08_001F01C8[i], D_L08_001F4C00[i], D_L08_001F4C48[i], D_L08_001F8560,
                          1);
     }
@@ -83,30 +83,30 @@ extern void FUN_L01_002787a0(void *);
 extern void FUN_L01_00278e20(void *, int);
 void mark_moby_for_removal(struct Obj *obj) __asm__("FUN_0020c828");
 
-void FUN_L08_0030bc00(struct Moby *m) {
+void FUN_L08_0030bc00(struct Moby *moby) {
     enum {
         MOBY_STATE_INITIALIZE = 0,
         MOBY_STATE_WAIT_FOR_HIT = 1,
         MOBY_STATE_REMOVE = 2
     };
     int hit = 0;
-    char *r = find_moby_hit(m, 0x10000, 0);
-    switch (m->state) {
+    char *r = find_moby_hit(moby, 0x10000, 0);
+    switch (moby->state) {
     case MOBY_STATE_INITIALIZE:
-        m->state = 1;
+        moby->state = 1;
         break;
     case MOBY_STATE_WAIT_FOR_HIT:
         if (r != 0 && *(float *)(r + 0x2C) > 0.0f)
             hit = 1;
         if (hit)
-            m->state = 2;
+            moby->state = 2;
         break;
     case MOBY_STATE_REMOVE:
-        allocate_voice_for_target_entry(0, 0, (int)m);
-        FUN_L01_002787a0(m);
-        FUN_L00_00263e30(m, 0x736, 1, 0x737, 1, 0x1, 2);
-        FUN_L01_00278e20(m, 0x735);
-        mark_moby_for_removal(m);
+        allocate_voice_for_target_entry(0, 0, (int)moby);
+        FUN_L01_002787a0(moby);
+        FUN_L00_00263e30(moby, 0x736, 1, 0x737, 1, 0x1, 2);
+        FUN_L01_00278e20(moby, 0x735);
+        mark_moby_for_removal(moby);
         break;
     }
 }

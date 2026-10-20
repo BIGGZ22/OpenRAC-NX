@@ -36,12 +36,12 @@ extern int FUN_L00_00266d60_u(int, int, int *) __asm__("FUN_L00_00266d60");
 extern s32 SubtractIntegerWithClamp(s32);
 
 /* True when both lookups succeed and the clamped difference of their values is below d. */
-int FUN_L00_00266e00(int a, int b, int c, int d) {
+int FUN_L00_00266e00(int first_button_mask, int b, int lookback_frames, int press_difference_limit) {
     int v[2];
     int r = 0;
-    if (FUN_L00_00266d60_u(a, c, &v[0])) {
-        if (FUN_L00_00266d60_u(b, c, &v[1])) {
-            r = SubtractIntegerWithClamp(v[0] - v[1]) < d;
+    if (FUN_L00_00266d60_u(first_button_mask, lookback_frames, &v[0])) {
+        if (FUN_L00_00266d60_u(b, lookback_frames, &v[1])) {
+            r = SubtractIntegerWithClamp(v[0] - v[1]) < press_difference_limit;
         }
     }
     return r;
@@ -55,9 +55,9 @@ typedef struct {
 } Hist_266e80;
 extern Hist_266e80 D_0013C940;
 /* The value n entries back in the 30-entry history ring (n is capped at the count). */
-f32 FUN_L00_00266e80(s32 n) {
+f32 FUN_L00_00266e80(s32 history_offset) {
     s32 m;
-    if (D_0013C940.count < n)
-        n = D_0013C940.count;
-    return D_0013C940.v[(D_0013C940.head - n + 30) % 30];
+    if (D_0013C940.count < history_offset)
+        history_offset = D_0013C940.count;
+    return D_0013C940.v[(D_0013C940.head - history_offset + 30) % 30];
 }

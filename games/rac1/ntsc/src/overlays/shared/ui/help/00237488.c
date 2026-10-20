@@ -16,23 +16,23 @@
 extern f32 approach_value(f32 *, f32, f32) __asm__("FUN_00213ed8");
 #include "rnc/data_labels.h"
 
-void FUN_L05_00237488(float *out, float *p, float step) {
+void FUN_L05_00237488(float *out, float *smoothed_values, float step) {
     char *g = (char *)((unsigned char *)&D_0013E533) + 0xE1D;
     float v[2];
     v[0] = -*(float *)(g + 0x1D20);
     v[1] = *(float *)(g + 0x1D24);
-    approach_value(p + 2, v[0], step);
-    if (p[2] > 1.0f)
-        p[2] = 1.0f;
-    if (p[2] < -1.0f)
-        p[2] = -1.0f;
-    out[0] = p[2];
-    approach_value(p + 1, v[1], step);
-    if (p[1] > 1.0f)
-        p[1] = 1.0f;
-    if (p[1] < -1.0f)
-        p[1] = -1.0f;
-    out[1] = p[1];
+    approach_value(smoothed_values + 2, v[0], step);
+    if (smoothed_values[2] > 1.0f)
+        smoothed_values[2] = 1.0f;
+    if (smoothed_values[2] < -1.0f)
+        smoothed_values[2] = -1.0f;
+    out[0] = smoothed_values[2];
+    approach_value(smoothed_values + 1, v[1], step);
+    if (smoothed_values[1] > 1.0f)
+        smoothed_values[1] = 1.0f;
+    if (smoothed_values[1] < -1.0f)
+        smoothed_values[1] = -1.0f;
+    out[1] = smoothed_values[1];
 }
 
 #include "sda.h"
@@ -565,9 +565,9 @@ int FUN_L05_002515d0(void) {
         }
         hero_get_collision_ray_endpoints(ray_start, ray_end, 0, scale, 1.3f);
         if (func_L00_001EFFF0(ray_start, ray_end, 2, *(int *)&u->moby, 0) != 0) {
-            int s = collision_hit_material();
-            u->ground_type = s;
-            if ((short)s == 0) {
+            int hit_material = collision_hit_material();
+            u->ground_type = hit_material;
+            if ((short)hit_material == 0) {
                 ray_start[2] = D_L05_00174268 - 0.01f;
                 if (func_L00_001EFFF0(ray_start, ray_end, 2, *(int *)&u->moby, 0) == 0) {
                     hero_set_state(0x34, 1);
@@ -648,6 +648,7 @@ extern int D_0015ED84_gp __asm__("D_0015ED84") __attribute__((section(".sdata"))
 int FUN_L05_00251be8(void) {
     enum {
         ITEM_WRENCH = 8,
+        ITEM_BUFFERED_SOUND_DEVICE = 10,
         ITEM_TARGET_INTERACTION_DEVICE = 12,
         ITEM_HELD_SOUND_DEVICE = 15,
         ITEM_STATE_CHANGING_SOUND_DEVICE = 18,
@@ -870,7 +871,7 @@ int FUN_L05_00251be8(void) {
             }
         }
         break;
-    case 10:
+    case ITEM_BUFFERED_SOUND_DEVICE:
     case 17:
     case 20:
     case 24:
@@ -1082,15 +1083,15 @@ void FUN_L05_00253850(void) {
             k->unkA9C == 0 &&
             k->unkAB0 < ((unsigned char *)((char *)k->moby))[0x51] &&
             ((unsigned char *)((char *)k->moby))[0x51] < k->unkAB4) {
-            int t = k->unk888;
-            if (t > scale_game_frames(0x1E)) {
+            int animation_transition_frames = k->unk888;
+            if (animation_transition_frames > scale_game_frames(0x1E)) {
                 int x = FUN_L05_002551b8_c();
                 set_hero_animation(x, 9, (float)scale_game_frames(0x11));
             } else {
-                t = k->unk888;
-                if (t < scale_game_frames(0xA))
-                    t = scale_game_frames(0xA);
-                set_hero_animation(FUN_L05_002551b8_c(), 0xD, (float)t);
+                animation_transition_frames = k->unk888;
+                if (animation_transition_frames < scale_game_frames(0xA))
+                    animation_transition_frames = scale_game_frames(0xA);
+                set_hero_animation(FUN_L05_002551b8_c(), 0xD, (float)animation_transition_frames);
             }
         }
     }
@@ -1332,32 +1333,32 @@ void FUN_L05_00254358(float *out, float *rot) {
     distance = 9999999.0f;
     best = 0;
     for (i = 0; i < *(int *)path; i += 2) {
-            char *h = (char *)((char *)((char *)&hero));
-            char *p = path + i * 16;
+            char *hero_bytes = (char *)((char *)((char *)&hero));
+            char *candidate_path_record = path + i * 16;
             float limit = 4.0f;
-            float angle = fast_arc_tan_c(*(float *)(p + 0x10) - *(float *)(h + 0x80), *(float *)(p + 0x14) - *(float *)(h + 0x84));
+            float angle = fast_arc_tan_c(*(float *)(candidate_path_record + 0x10) - *(float *)(hero_bytes + 0x80), *(float *)(candidate_path_record + 0x14) - *(float *)(hero_bytes + 0x84));
             int n2 = *(int *)path + 2;
             int next = (i + n2) % *(int *)path;
-            char *q = path + next * 16;
-            if (fast_difference_between_rotations(angle, fast_arc_tan_c(*(float *)(q + 0x10) - *(float *)(p + 0x10), *(float *)(q + 0x14) - *(float *)(p + 0x14))) > 1.5707964f) {
-                float d;
-                if (D_0015ED84_gp == 0x10 && *(char **)(h + 0x8B4) != 0) {
-                    char *verts = *(char **)(h + 0x8B4);
-                    char *first_height_sample_point = verts + *(short *)(h + 0x8C8) * 16;
-                    char *second_height_sample_point = verts + *(short *)(h + 0x898) * 16;
+            char *lookahead_path_record = path + next * 16;
+            if (fast_difference_between_rotations(angle, fast_arc_tan_c(*(float *)(lookahead_path_record + 0x10) - *(float *)(candidate_path_record + 0x10), *(float *)(lookahead_path_record + 0x14) - *(float *)(candidate_path_record + 0x14))) > 1.5707964f) {
+                float candidate_distance_xy;
+                if (D_0015ED84_gp == 0x10 && *(char **)(hero_bytes + 0x8B4) != 0) {
+                    char *verts = *(char **)(hero_bytes + 0x8B4);
+                    char *first_height_sample_point = verts + *(short *)(hero_bytes + 0x8C8) * 16;
+                    char *second_height_sample_point = verts + *(short *)(hero_bytes + 0x898) * 16;
                     float z1 = *(float *)(first_height_sample_point + 0x18);
                     float z2 = *(float *)(second_height_sample_point + 0x18);
                     if (z1 < z2) {
-                        if (absolute_float_c(z2 - *(float *)(p + 0x18)) > limit)
+                        if (absolute_float_c(z2 - *(float *)(candidate_path_record + 0x18)) > limit)
                             goto next_point;
                     } else {
-                        if (absolute_float_c(z1 - *(float *)(p + 0x18)) > limit)
+                        if (absolute_float_c(z1 - *(float *)(candidate_path_record + 0x18)) > limit)
                             goto next_point;
                     }
                 }
-                d = vector_distance_xy_alt(((char *)&D_0013F3D0), path + i * 16 + 0x10);
-                if (d < distance) {
-                    distance = d;
+                candidate_distance_xy = vector_distance_xy_alt(((char *)&D_0013F3D0), path + i * 16 + 0x10);
+                if (candidate_distance_xy < distance) {
+                    distance = candidate_distance_xy;
                     best = i;
                 }
             }
@@ -1369,9 +1370,9 @@ void FUN_L05_00254358(float *out, float *rot) {
     out[2] = probe_ground_height(tmp, 0, 0.5f);
     clear_u64_value(rot);
     {
-        float *a = (float *)(path + best * 16);
+        float *selected_path_record = (float *)(path + best * 16);
         float *b = (float *)(path + (best + 1) * 16);
-        rot[2] = fast_arc_tan_c(b[4] - a[4], b[5] - a[5]);
+        rot[2] = fast_arc_tan_c(b[4] - selected_path_record[4], b[5] - selected_path_record[5]);
     }
 }
 extern int D_0015ED84_lui __asm__("D_0015ED84") __attribute__((section(".sdata")));
@@ -1662,9 +1663,9 @@ int FUN_L05_002551b8(void) {
     return r;
 }
 int FUN_L05_002551d0(void) {
-    struct Hero *p = &hero;
-    int f = p->unk8CE;
-    if (p->unk884 == 0) {
+    struct Hero *hero_ptr = &hero;
+    int f = hero_ptr->unk8CE;
+    if (hero_ptr->unk884 == 0) {
         int r = 0x7D;
         if (f == 0)
             r = 0x52;

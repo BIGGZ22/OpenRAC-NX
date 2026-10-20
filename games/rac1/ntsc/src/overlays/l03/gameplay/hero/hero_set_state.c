@@ -88,7 +88,10 @@ extern char D_L03_0017C020[];
 extern char D_L03_0017C060[];
 int hero_set_state(int a, int b) {
     enum {
-        HERO_STATE_DROWN = 0x6A
+        HERO_STATE_WATER_SURFACE_ENTRY = 0x37,
+        HERO_STATE_VEHICLE_IDLE = 0x53,
+        HERO_STATE_DROWN = 0x6A,
+        HERO_STATE_PATH_MOTION_ENTRY = 0x74
     };
     int old2088;
     char *moby;
@@ -293,7 +296,7 @@ int hero_set_state(int a, int b) {
             set_hero_animation(0x3C, 0, (float)t);
         break;
     }
-    case 0x37: {
+    case HERO_STATE_WATER_SURFACE_ENTRY: {
         struct Hero *p = &hero;
         p->state.control_mode = 0x12;
         p->unk20A7 = 1;
@@ -799,7 +802,7 @@ int hero_set_state(int a, int b) {
             set_hero_animation(0x2A, 0, (float)scale_game_frames(6));
         break;
     }
-    case 0x74: {
+    case HERO_STATE_PATH_MOTION_ENTRY: {
         struct Hero *p = &hero;
         float vec[4];
         float pos[4];
@@ -1528,7 +1531,7 @@ int hero_set_state(int a, int b) {
         }
         break;
     }
-    case 0x53: {
+    case HERO_STATE_VEHICLE_IDLE: {
         struct Hero *p = &hero;
         p->state.control_mode = 0;
         p->unk2284 = 0;

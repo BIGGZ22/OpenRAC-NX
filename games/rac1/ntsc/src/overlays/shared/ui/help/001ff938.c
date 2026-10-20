@@ -184,16 +184,16 @@ extern void add_vector_xyz(void *, void *, void *) __asm__("FUN_001f9a10");
 void FUN_L15_002007d8(void) {
     struct Hero *base = &hero;
     if (base->state.current == 0x6B && base->unk8BC == 0) {
-        char *m;
+        char *position_target;
         float v[4];
         float w[16];
         FUN_L00_00262b00(1.1f, frame_time * 5.2359877f, ((char *)base->moby),
                          (float *)(&base->unk6A8), (float *)(&base->unk6AC));
-        m = ((char *)base->unk86C);
-        if (m != 0) {
+        position_target = ((char *)base->unk86C);
+        if (position_target != 0) {
             char *cam;
             cam = ((char *)base->moby);
-            qcopy(m + 0x10, cam + 0x10);
+            qcopy(position_target + 0x10, cam + 0x10);
             *(u128 *)v = 0;
             v[2] = 0.21f;
             transform_vector_by_basis(v, v, cam + 0xC0);
@@ -220,8 +220,8 @@ void FUN_L15_00208ca8(void) {
     unsigned char *base = ((unsigned char *)&D_0013E533) + 0xE1D;
     unsigned char *b;
     int p;
-    void *q;
-    char *m;
+    void *moby_to_remove;
+    char *restored_hero_moby;
     if (base[0x20A4] == 2) {
         int v = *(short *)(base + 0x1634);
         if (v != -1) {
@@ -236,17 +236,17 @@ void FUN_L15_00208ca8(void) {
     if (p != 0) {
         *(unsigned short *)(p + 0x34) &= 0xFFF9;
     }
-    q = *(void **)(b + 0xA8C);
+    moby_to_remove = *(void **)(b + 0xA8C);
     *(int *)(b + 0xA84) = 0;
-    if (q != 0) {
-        mark_moby_for_removal(q);
+    if (moby_to_remove != 0) {
+        mark_moby_for_removal(moby_to_remove);
         *(int *)(b + 0xA8C) = 0;
     }
     FUN_L00_00206c08();
-    m = *(char **)(b + 0xA88);
-    *(char **)(b + 0x2080) = m;
-    qcopy(m + 0x10, b + 0x80);
-    *(int *)(m + 0x98) = 0;
+    restored_hero_moby = *(char **)(b + 0xA88);
+    *(char **)(b + 0x2080) = restored_hero_moby;
+    qcopy(restored_hero_moby + 0x10, b + 0x80);
+    *(int *)(restored_hero_moby + 0x98) = 0;
     *(float *)(b + 0xA94) = 1.0f;
     FUN_L00_00232628();
     if (*(int *)(b + 0x2084) != 100 || (D_L15_0015F5C4 != 2 && D_L15_0015F5C4 != 6)) {
@@ -345,10 +345,10 @@ extern void FUN_00125180_20a328(void *, void *) __asm__("FUN_00125180");
 extern s32 D_L15_0017445C __attribute__((section(".data")));
 extern char D_0013F3D0[] __attribute__((section(".data")));
 void FUN_L15_0020a328(int force) {
-    V_20a328 a, d1, b, d2;
+    V_20a328 offset_position, d1, b, d2;
     char *src;
     P_20a328 *g;
-    f32 off, k, c, ang, t;
+    f32 off, k, secondary_offset_scale, ang, negative_xy_dot_product;
     int r;
 
     if (P.h308 != 0)
@@ -365,18 +365,18 @@ void FUN_L15_0020a328(int force) {
         k = 5.0f;
     }
     src = D_0013F3D0;
-    qcopy(&a, src);
-    a.f[2] += off;
+    qcopy(&offset_position, src);
+    offset_position.f[2] += off;
     qcopy(&b, src);
     b.f[2] += off * 0.3f;
     if (force || FUN_001f9b20_20a328(src + 0x60) < 0.01f) {
         g = (P_20a328 *)(src - 0x80);
-        c = 1.4f;
+        secondary_offset_scale = 1.4f;
         d1.f[0] = FUN_001f9dc8_20a328(g->f98) * k;
         d1.f[1] = FUN_001f9de0_20a328(g->f98) * k;
         *(s32 *)&d1.f[2] = 0;
-        d2.f[0] = FUN_001f9dc8_20a328(g->f98) * k * c;
-        d2.f[1] = FUN_001f9de0_20a328(g->f98) * k * c;
+        d2.f[0] = FUN_001f9dc8_20a328(g->f98) * k * secondary_offset_scale;
+        d2.f[1] = FUN_001f9de0_20a328(g->f98) * k * secondary_offset_scale;
         *(s32 *)&d2.f[2] = 0;
     } else {
         qcopy(&d1, src + 0x60);
@@ -385,21 +385,21 @@ void FUN_L15_0020a328(int force) {
         qcopy(&d2, &d1);
         FUN_001f9a68_20a328(&d2, &d2, 1.4f);
     }
-    FUN_001f9a10_20a328(&d1, &d1, &a);
+    FUN_001f9a10_20a328(&d1, &d1, &offset_position);
     FUN_001f9a10_20a328(&d2, &d2, &b);
     r = -1;
     if (FUN_001efa68_20a328(&b, &d2, 4, P.p2080, 0) && D_L15_0017445C > 0)
         r = FUN_001f0b58_20a328();
     ang = 0.0f;
-    if (FUN_001efa68_20a328(&a, &d1, 4, P.p2080, 0) && X.i1C > 0)
+    if (FUN_001efa68_20a328(&offset_position, &d1, 4, P.p2080, 0) && X.i1C > 0)
         ang = FUN_001f9e90_20a328(X.v40.f[2], FUN_001f9b20_20a328(&X.v40));
     if (0.8726646304130554f <= ang || r == 8 || r == 12) {
         P.i240 = X.i18;
         *(s32 *)&X.v40.f[2] = 0;
         FUN_00125180_20a328(&X.v40, &X.v40);
-        t = -P.vE0.f[0] * X.v40.f[0] - P.vE0.f[1] * X.v40.f[1];
-        if (0.0f < t) {
-            FUN_001f9a68_20a328(&X.v40, &X.v40, t);
+        negative_xy_dot_product = -P.vE0.f[0] * X.v40.f[0] - P.vE0.f[1] * X.v40.f[1];
+        if (0.0f < negative_xy_dot_product) {
+            FUN_001f9a68_20a328(&X.v40, &X.v40, negative_xy_dot_product);
             FUN_001f9a10_20a328(&P.vE0, &P.vE0, &X.v40);
         }
     }
@@ -444,7 +444,7 @@ void FUN_L15_00215e58(void) {
     struct Moby *m;
     s32 i;
     s32 n;
-    s32 n8;
+    s32 sample_count;
 
     if (hero.unk20AD == 0) {
         FUN_L00_002165b8_215e58();
@@ -526,17 +526,17 @@ void FUN_L15_00215e58(void) {
     if (hero.air_frames.s != 0 && FUN_L00_00233a78_215e58(&hero.motion.velocity) < 0.0f) {
         if (hero.unk21B4 != 0x20) goto skip;
         FUN_001f99f8_215e58(&sum);
-        n8 = 8;
-        for (i = 0; i < n8; i++) {
+        sample_count = 8;
+        for (i = 0; i < sample_count; i++) {
             n = hero.unk21B0 - i;
             {
-                s32 a = (n + 0x1F) % 32;
+                s32 wrapped_sample_index = (n + 0x1F) % 32;
                 s32 b = (n + 0x1E) % 32;
-                FUN_001f9a28_215e58(&d, &hero.unk1B00[a], &hero.unk1B00[b]);
+                FUN_001f9a28_215e58(&d, &hero.unk1B00[wrapped_sample_index], &hero.unk1B00[b]);
             }
             FUN_001f9a10_215e58(&sum, &sum, &d);
         }
-        FUN_001f9a68_215e58(&sum, &sum, 1.0f / (f32)n8);
+        FUN_001f9a68_215e58(&sum, &sum, 1.0f / (f32)sample_count);
         if (FUN_001f9af0_215e58(&sum) < frame_time) {
             hero.unk1E2++;
             goto skip;

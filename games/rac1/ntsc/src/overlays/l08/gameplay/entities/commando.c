@@ -220,36 +220,36 @@ extern char *D_L08_0015FFD8_g __asm__("D_L08_0015FFD8");
 extern int FUN_0022da68_c(int, int, char *) __asm__("FUN_0022da68");
 extern void FUN_00213ed8_c(char *, float, float) __asm__("FUN_00213ed8");
 
-void FUN_L08_002ea398(char *m)
+void FUN_L08_002ea398(char *moby)
 {
     enum {
         POSITION_BASELINE_INITIALIZE = 0,
         POSITION_FOLLOW_DRIVER = 1,
         POSITION_APPROACH_TARGET = 2
     };
-    char *d = *(char **)(m + 0x78);
-    char *o;
+    char *position_vars = *(char **)(moby + 0x78);
+    char *driver_moby;
     int i;
-    switch (*(u8 *)(m + 0x20)) {
+    switch (*(u8 *)(moby + 0x20)) {
     case POSITION_BASELINE_INITIALIZE:
-        *(float *)(d + 4) = *(float *)(m + 0x18);
-        *(u8 *)(m + 0x20) = 1;
+        *(float *)(position_vars + 4) = *(float *)(moby + 0x18);
+        *(u8 *)(moby + 0x20) = 1;
         break;
     case POSITION_FOLLOW_DRIVER:
-        i = *(int *)(d + 8);
+        i = *(int *)(position_vars + 8);
         if (i < 0) break;
-        o = (char *)((i << 8) + (int)D_L08_0015FFD8_g);
-        if (*(short *)(o + 0xA6) == 0x267 || *(short *)(o + 0xA6) == 0x23F) {
-            if (*(u8 *)(o + 0x20) != 4) break;
+        driver_moby = (char *)((i << 8) + (int)D_L08_0015FFD8_g);
+        if (*(short *)(driver_moby + 0xA6) == 0x267 || *(short *)(driver_moby + 0xA6) == 0x23F) {
+            if (*(u8 *)(driver_moby + 0x20) != 4) break;
             menu_item_enabled_41 = 1;
-            FUN_0022da68_c(0, 0, m);
-            *(u8 *)(m + 0x20) = 2;
+            FUN_0022da68_c(0, 0, moby);
+            *(u8 *)(moby + 0x20) = 2;
         } else {
-            FUN_00213ed8_c(m + 0x18, (*(float *)d - *(float *)(d + 4)) * **(float **)(o + 0x78) + *(float *)(d + 4), frame_time * 10.0f);
+            FUN_00213ed8_c(moby + 0x18, (*(float *)position_vars - *(float *)(position_vars + 4)) * **(float **)(driver_moby + 0x78) + *(float *)(position_vars + 4), frame_time * 10.0f);
         }
         break;
     case POSITION_APPROACH_TARGET:
-        FUN_00213ed8_c(m + 0x18, *(float *)d, frame_time * 10.0f);
+        FUN_00213ed8_c(moby + 0x18, *(float *)position_vars, frame_time * 10.0f);
         break;
     }
 }
@@ -419,7 +419,7 @@ void FUN_L08_002f1548(struct Moby *moby) {
     int i;
     float v[4];
     float w[4];
-    float d;
+    float distance;
 
     switch (moby->state) {
     case DRAW_ELEMENTS_INITIALIZE:
@@ -456,16 +456,16 @@ void FUN_L08_002f1548(struct Moby *moby) {
             w[2] = D_L08_00161DC8;
             w[3] = 1.0f;
             subtract_vector_xyz(w, D_L08_001675C0, w);
-            d = vector_length_xyz(w);
-            if (d <= 84.0f) {
+            distance = vector_length_xyz(w);
+            if (distance <= 84.0f) {
                 FUN_L08_002f12a0(0);
                 FUN_L08_002f1158(D_L08_001E8350, 0.52f, 0.62f, 0.06f, (void *)&D_L08_00161E28);
                 FUN_L08_002f12a0(2);
-                if (d < 20.0f) {
+                if (distance < 20.0f) {
                     *(unsigned char *)&D_L08_00161E08 = 0xFF;
-                } else if (d < 84.0f) {
+                } else if (distance < 84.0f) {
                     *(char *)&D_L08_00161E08 =
-                        func_001FA898_r((1.0f - (d - 20.0f) * 0.015625f) * 255.0f);
+                        func_001FA898_r((1.0f - (distance - 20.0f) * 0.015625f) * 255.0f);
                 } else {
                     *(char *)&D_L08_00161E08 = 0;
                 }
@@ -604,16 +604,16 @@ extern s32 truncate_float_to_s32_u(f32) __asm__("FUN_001fa6d0");
 extern int func_001FA898_r(float) __asm__("FUN_001fa6d0");
 
 float FUN_L08_002f5d98(float x, char *arg) {
-    float f = x * 8.0f;
-    int i = func_001FA898_r(f);
-    float fr = f - convert_integer_to_float(i);
-    char *t;
+    float sample_position = x * 8.0f;
+    int i = func_001FA898_r(sample_position);
+    float fr = sample_position - convert_integer_to_float(i);
+    char *samples_base;
     int j;
     i = i % 8;
     j = i + 1;
     j = j % 8;
-    t = arg + 0x90;
-    return *(float *)(t - (-(i * 4))) * (1.0f - fr) + *(float *)(t - (-(j * 4))) * fr;
+    samples_base = arg + 0x90;
+    return *(float *)(samples_base - (-(i * 4))) * (1.0f - fr) + *(float *)(samples_base - (-(j * 4))) * fr;
 }
 #ifndef NON_MATCHING
 INCLUDE_ASM("config/us/overlays/asm/FUN_L08_002f5e58.s", FUN_L08_002f5e58);
@@ -996,8 +996,8 @@ void FUN_L08_002f5e58(struct Moby *m) {
 }
 #endif
 
-void FUN_L08_002f70a0(struct Moby *m) {
-    FlickerLightVars *d;
+void FUN_L08_002f70a0(struct Moby *moby) {
+    FlickerLightVars *light_vars;
     Vec4 pos;
     f32 view, dist, fade;
     s32 hidden;
@@ -1005,76 +1005,76 @@ void FUN_L08_002f70a0(struct Moby *m) {
     Vec4f *at;
     int i;
 
-    if (m == NULL)
+    if (moby == NULL)
         return;
-    d = (FlickerLightVars *)m->pvars;
-    if (d == NULL)
+    light_vars = (FlickerLightVars *)moby->pvars;
+    if (light_vars == NULL)
         return;
     hidden = 0;
-    at = &m->pos;
-    if (m->state == 0) {
-        d->light = -1;
-        d->unkF8 = d->unkF3;
-        qcopy(&d->light_pos, at);
-        if (d->period_a == 0.0f) {
+    at = &moby->pos;
+    if (moby->state == 0) {
+        light_vars->light = -1;
+        light_vars->unkF8 = light_vars->unkF3;
+        qcopy(&light_vars->light_pos, at);
+        if (light_vars->period_a == 0.0f) {
             DebugPrint(D_L08_001FC220);
-            d->period_a = 1.0f;
-        } else if (8.0f < d->period_b) {
-            DebugPrint(D_L08_001FC250, d->period_b);
+            light_vars->period_a = 1.0f;
+        } else if (8.0f < light_vars->period_b) {
+            DebugPrint(D_L08_001FC250, light_vars->period_b);
         }
-        if (d->period_b == 0.0f) {
+        if (light_vars->period_b == 0.0f) {
             DebugPrint(D_L08_001FC2A0);
-            d->period_b = 1.0f;
-        } else if (8.0f < d->period_a) {
-            DebugPrint(D_L08_001FC2D0, d->period_a);
+            light_vars->period_b = 1.0f;
+        } else if (8.0f < light_vars->period_a) {
+            DebugPrint(D_L08_001FC2D0, light_vars->period_a);
         }
         for (i = 0; i < 8; i++) {
-            d->levels_a[i] = random_float_between(d->jitter, 1.0f);
-            d->levels_b[i] = random_float_between(d->jitter, 1.0f);
+            light_vars->levels_a[i] = random_float_between(light_vars->jitter, 1.0f);
+            light_vars->levels_b[i] = random_float_between(light_vars->jitter, 1.0f);
         }
-        m->state = 1;
+        moby->state = 1;
     }
-    m->scale = m->pclass->scale * (d->size_x > d->size_y ? d->size_x : d->size_y) * 0.25f;
-    view = convert_integer_to_float(m->draw_dist);
+    moby->scale = moby->pclass->scale * (light_vars->size_x > light_vars->size_y ? light_vars->size_x : light_vars->size_y) * 0.25f;
+    view = convert_integer_to_float(moby->draw_dist);
     dist = FUN_001f9b48(at, D_L08_001675C0);
-    fade = view - d->fade_range;
+    fade = view - light_vars->fade_range;
     if (fade < 0.0f)
         fade = 0.0f;
     if (view < dist) {
-        d->intensity = 0.0f;
+        light_vars->intensity = 0.0f;
         hidden = 1;
     } else {
         if (fade < dist) {
             dist -= fade;
-            dist /= d->fade_range;
+            dist /= light_vars->fade_range;
             fade = 1.0f - dist;
         } else
             fade = 1.0f;
-        d->intensity = fade;
+        light_vars->intensity = fade;
     }
     pos.q = *(u128 *)at;
-    pos.f[3] = convert_integer_to_float(d->radius);
-    if ((m->visible != 0 || fast_bsphere_check((char *)&pos, 255.0f) != -1) && !hidden) {
-        enqueue_callback_list_1(FUN_L08_002f5e58, m);
-        if (d->flags & 4) {
-            if (d->light == -1) {
-                d->light = FUN_L00_0023e738(d->light_pos.f, (f32)d->radius,
-                                            convert_integer_to_float(d->falloff) / 100.0f,
-                                            d->intensity * convert_integer_to_float(d->red) / 100.0f,
-                                            d->intensity * convert_integer_to_float(d->green) / 100.0f,
-                                            d->intensity * convert_integer_to_float(d->blue) / 100.0f);
+    pos.f[3] = convert_integer_to_float(light_vars->radius);
+    if ((moby->visible != 0 || fast_bsphere_check((char *)&pos, 255.0f) != -1) && !hidden) {
+        enqueue_callback_list_1(FUN_L08_002f5e58, moby);
+        if (light_vars->flags & 4) {
+            if (light_vars->light == -1) {
+                light_vars->light = FUN_L00_0023e738(light_vars->light_pos.f, (f32)light_vars->radius,
+                                            convert_integer_to_float(light_vars->falloff) / 100.0f,
+                                            light_vars->intensity * convert_integer_to_float(light_vars->red) / 100.0f,
+                                            light_vars->intensity * convert_integer_to_float(light_vars->green) / 100.0f,
+                                            light_vars->intensity * convert_integer_to_float(light_vars->blue) / 100.0f);
             } else {
-                l = &D_L08_00180AC0[d->light];
-                l->red = d->intensity * convert_integer_to_float(d->red) / 100.0f;
-                l->green = d->intensity * convert_integer_to_float(d->green) / 100.0f;
-                l->blue = d->intensity * convert_integer_to_float(d->blue) / 100.0f;
+                l = &D_L08_00180AC0[light_vars->light];
+                l->red = light_vars->intensity * convert_integer_to_float(light_vars->red) / 100.0f;
+                l->green = light_vars->intensity * convert_integer_to_float(light_vars->green) / 100.0f;
+                l->blue = light_vars->intensity * convert_integer_to_float(light_vars->blue) / 100.0f;
             }
         }
-    } else if (d->light != -1) {
-        FUN_L00_0023e838(d->light);
-        d->light = -1;
+    } else if (light_vars->light != -1) {
+        FUN_L00_0023e838(light_vars->light);
+        light_vars->light = -1;
     }
-    d->flags |= 2;
+    light_vars->flags |= 2;
 }
 
 extern int D_L08_0015F5C4;
@@ -1185,7 +1185,7 @@ extern void build_spherical_offset(void *, float, float, float) __asm__("FUN_002
 
 /* Watcher update, same routine as batalia_deserter_update with two more states and the joint pose copy. */
 void commando_update(WM *m) __asm__("FUN_L08_00302ce8");
-void commando_update(WM *m) {
+void commando_update(WM *moby) {
     enum {
         COMMANDO_INITIALIZE = 0,
         COMMANDO_DIALOGUE_BEFORE_REPOSITION = 1,
@@ -1193,121 +1193,121 @@ void commando_update(WM *m) {
         COMMANDO_POST_DIALOGUE = 3
     };
     L16WatchScratch scratch;
-    WD8 *d = (WD8 *)m->data;
+    WD8 *commando_vars = (WD8 *)moby->data;
     float rate;
     float head_rate;
     int tracking;
-    FUN_L08_00305138_c(m);
-    if (m->opacity) {
-        if (FUN_001f9b48(m->position, D_L08_001675C0_c) < (float)D_L08_001621D8) {
-            FUN_L00_0025a120(m);
-            m->b7F = (D_L08_001621D8 * 13) >> 4;
+    FUN_L08_00305138_c(moby);
+    if (moby->opacity) {
+        if (FUN_001f9b48(moby->position, D_L08_001675C0_c) < (float)D_L08_001621D8) {
+            FUN_L00_0025a120(moby);
+            moby->b7F = (D_L08_001621D8 * 13) >> 4;
         }
     }
-    switch (m->state) {
+    switch (moby->state) {
     case COMMANDO_INITIALIZE:
-        ((unsigned char *)m)[0x30] = 0xFF;
-        if (m->animation != 1)
-            blend_moby_animation(m, 1, 0, scale_game_frames(10));
-        if (D_0013DD4A && visited52[((unsigned char *)m)[0xB0] + current_level_index * 16] == 0xFF) {
-            mark_moby_for_removal(m);
+        ((unsigned char *)moby)[0x30] = 0xFF;
+        if (moby->animation != 1)
+            blend_moby_animation(moby, 1, 0, scale_game_frames(10));
+        if (D_0013DD4A && visited52[((unsigned char *)moby)[0xB0] + current_level_index * 16] == 0xFF) {
+            mark_moby_for_removal(moby);
             return;
         }
-        d->f2C = 3.0f;
-        d->p40 = D_L08_001621E0;
+        commando_vars->f2C = 3.0f;
+        commando_vars->p40 = D_L08_001621E0;
         if (!D_0013D3B4) {
-            m->state = 1;
+            moby->state = 1;
         } else {
             char *b = D_L08_001600EC;
-            int j = d->joint;
-            qcopy(m->position, b + j * 0x80 + 0x30);
-            qcopy((char *)m + 0x40, b + j * 0x80 + 0x70);
-            m->state = 2;
+            int j = commando_vars->joint;
+            qcopy(moby->position, b + j * 0x80 + 0x30);
+            qcopy((char *)moby + 0x40, b + j * 0x80 + 0x70);
+            moby->state = 2;
         }
-        initialize_npc_dialogue(m, (char *)d + 0x20);
+        initialize_npc_dialogue(moby, (char *)commando_vars + 0x20);
         break;
     case COMMANDO_DIALOGUE_BEFORE_REPOSITION:
-        if (update_npc_dialogue(m, (char *)d + 0x20)) {
+        if (update_npc_dialogue(moby, (char *)commando_vars + 0x20)) {
             char *b = D_L08_001600EC;
-            int j = d->joint;
-            qcopy(m->position, b + j * 0x80 + 0x30);
-            qcopy((char *)m + 0x40, b + j * 0x80 + 0x70);
-            m->state = 2;
+            int j = commando_vars->joint;
+            qcopy(moby->position, b + j * 0x80 + 0x30);
+            qcopy((char *)moby + 0x40, b + j * 0x80 + 0x70);
+            moby->state = 2;
             D_0013D3B4 = 1;
         }
         break;
     case COMMANDO_DIALOGUE_AFTER_REPOSITION:
-        if (m->flags70 & 2) {
-            if (m->animation != random_integer_below(2) + 1)
-                blend_moby_animation(m, random_integer_below(2) + 1, 0, scale_game_frames(20));
+        if (moby->flags70 & 2) {
+            if (moby->animation != random_integer_below(2) + 1)
+                blend_moby_animation(moby, random_integer_below(2) + 1, 0, scale_game_frames(20));
         }
-        if (update_npc_dialogue(m, (char *)d + 0x20)) {
-            m->state = 3;
-            begin_dialogue_camera_transition(m, 2.2f);
+        if (update_npc_dialogue(moby, (char *)commando_vars + 0x20)) {
+            moby->state = 3;
+            begin_dialogue_camera_transition(moby, 2.2f);
         }
         break;
     case COMMANDO_POST_DIALOGUE:
         if (D_L08_0015F5C4 != 2) {
-            d->b28 = 1;
-            if (d->h24 == 3) {
+            commando_vars->b28 = 1;
+            if (commando_vars->h24 == 3) {
                 unlock_planet(10);
                 FUN_L00_00262d38(10);
-                jet_clear_persistent(((unsigned char *)m)[0xB0]);
+                jet_clear_persistent(((unsigned char *)moby)[0xB0]);
                 jet_reset_camera((char *)&D_0013E633_watch + 0xE9D, (char *)&D_0013E633_watch + 0xEAD);
                 memcard_save_data(0, -1);
-                mark_moby_for_removal(m);
+                mark_moby_for_removal(moby);
                 return;
             }
-            m->state = 2;
+            moby->state = 2;
         }
         break;
     }
     rate = 0.02f;
     head_rate = 0.3f;
     tracking = 0;
-    if (m->animation == 1) {
+    if (moby->animation == 1) {
         char *player = (char *)&D_0013E633_watch + 0xE9D;
         tracking = 1;
-        if (vector_distance(m->position, player) < 8.0f &&
+        if (vector_distance(moby->position, player) < 8.0f &&
             FUN_001f9e90_cf(
-                m->yaw,
+                moby->yaw,
                 FUN_001fa688_cf(((L16WatchPlayer *)((char *)&D_0013E633_watch + 0xE1D))->aim[0] -
-                                    m->position[0],
+                                    moby->position[0],
                                 ((L16WatchPlayer *)((char *)&D_0013E633_watch + 0xE1D))->aim[1] -
-                                    m->position[1])) < 1.5707964f) {
+                                    moby->position[1])) < 1.5707964f) {
             if (vector_length_xyz_c(player + 0x80) > 0.01f)
-                d->moving_timer = scale_game_frames_c(120);
+                commando_vars->moving_timer = scale_game_frames_c(120);
             else
-                tick_countdown_32(&d->moving_timer);
-        } else if (d->moving_timer) {
-            d->moving_timer = 0;
-            qcopy(d->target, (char *)&D_0013E633_watch + 0xEED);
+                tick_countdown_32(&commando_vars->moving_timer);
+        } else if (commando_vars->moving_timer) {
+            commando_vars->moving_timer = 0;
+            qcopy(commando_vars->target, (char *)&D_0013E633_watch + 0xEED);
         }
-        if (tick_countdown_32(&d->target_timer)) {
+        if (tick_countdown_32(&commando_vars->target_timer)) {
             float heading;
-            d->target_timer =
+            commando_vars->target_timer =
                 random_float_between_cf(multiply_global_factor_ed64(truncate_float_to_s32_cf(180.0f, 300.0f)));
             heading =
-                fast_add_rotations(m->yaw, truncate_float_to_s32_cf(-90.0f, 90.0f) * DEG_TO_RAD);
-            build_spherical_offset(d->target, 6.0f, heading,
+                fast_add_rotations(moby->yaw, truncate_float_to_s32_cf(-90.0f, 90.0f) * DEG_TO_RAD);
+            build_spherical_offset(commando_vars->target, 6.0f, heading,
                                    truncate_float_to_s32_cf(0.0f, 30.0f) * DEG_TO_RAD);
-            add_vector_xyz(d->target, d->target, m->position);
+            add_vector_xyz(commando_vars->target, commando_vars->target, moby->position);
         }
-        if (d->moving_timer) {
+        if (commando_vars->moving_timer) {
             qcopy(scratch.target, (char *)&D_0013E633_watch + 0xEED);
             rate = 0.04f;
             head_rate = 0.3f;
         } else {
-            qcopy(scratch.target, d->target);
+            qcopy(scratch.target, commando_vars->target);
         }
     }
     if (tracking) {
         float yaw;
         float pitch;
-        qcopy(scratch.eye, m->position);
+        qcopy(scratch.eye, moby->position);
         scratch.eye[2] += 1.0f;
         subtract_vector_xyz_c(scratch.delta, scratch.target, scratch.eye);
-        yaw = fast_subtract_rotations(FUN_001fa688_cf(scratch.delta[0], scratch.delta[1]), m->yaw);
+        yaw = fast_subtract_rotations(FUN_001fa688_cf(scratch.delta[0], scratch.delta[1]), moby->yaw);
         pitch = -FUN_001fa688_cf(vector_length_xy(scratch.delta), scratch.delta[2]);
         if (yaw > 1.5707964f)
             yaw = 1.5707964f;
@@ -1317,12 +1317,12 @@ void commando_update(WM *m) {
             pitch = 0.5235988f;
         else if (pitch < -0.5235988f)
             pitch = -0.5235988f;
-        d->pitch = pitch;
-        d->yaw = yaw * 0.6f;
-        d->head_yaw = yaw * 0.4f;
+        commando_vars->pitch = pitch;
+        commando_vars->yaw = yaw * 0.6f;
+        commando_vars->head_yaw = yaw * 0.4f;
     }
     if (big_head_cheat_enabled)
-        d->height = 2.75f;
-    update_joint_animation(rate * frame_scale_sq, head_rate * frame_scale_sq, m, d->body, 0);
-    update_joint_animation(rate * frame_scale_sq, head_rate * frame_scale_sq, m, d->head, 1);
+        commando_vars->height = 2.75f;
+    update_joint_animation(rate * frame_scale_sq, head_rate * frame_scale_sq, moby, commando_vars->body, 0);
+    update_joint_animation(rate * frame_scale_sq, head_rate * frame_scale_sq, moby, commando_vars->head, 1);
 }

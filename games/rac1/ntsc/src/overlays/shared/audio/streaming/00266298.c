@@ -82,14 +82,14 @@ extern s32 scale_game_frames(s32) __asm__("FUN_001f96f8");
 s32 update_npc_dialogue(struct Moby *moby, struct SceneTrigger *trigger) __asm__("FUN_L00_00266448");
 s32 update_npc_dialogue(struct Moby *moby, struct SceneTrigger *trigger)
 {
-    struct Hero *h = &hero;
+    struct Hero *hero_ptr = &hero;
     struct SceneEntry *entry;
     s32 index;
     s32 handle;
 
-    if (h->state.current == 0x1D)
+    if (hero_ptr->state.current == 0x1D)
         return 0;
-    if (h->health.hp == 0)
+    if (hero_ptr->health.hp == 0)
         return 0;
     if (trigger->initialised == 0)
         FUN_L00_002668a0_c(moby, trigger);
@@ -101,7 +101,7 @@ s32 update_npc_dialogue(struct Moby *moby, struct SceneTrigger *trigger)
         return 0;
     if (trigger->any_direction == 0xFF)
         return 0;
-    if (fast_vec_dist(&moby->pos, &h->motion.pos) > trigger->radius + trigger->radius)
+    if (fast_vec_dist(&moby->pos, &hero_ptr->motion.pos) > trigger->radius + trigger->radius)
         return 0;
 
     fun_00216c48(moby, trigger, 0);
@@ -109,13 +109,13 @@ s32 update_npc_dialogue(struct Moby *moby, struct SceneTrigger *trigger)
     if (trigger->any_direction == 0) {
         /* the moby must face the hero ... */
         if (fast_difference_between_rotations(
-                atan2_f(h->motion.pos.f[0] - moby->pos.x, h->motion.pos.f[1] - moby->pos.y),
+                atan2_f(hero_ptr->motion.pos.f[0] - moby->pos.x, hero_ptr->motion.pos.f[1] - moby->pos.y),
                 moby->rot.z) > trigger->radius)
             return 0;
         /* ... and the hero the moby, within 1.57 (about 90 degrees) */
         if (fast_difference_between_rotations(
-                atan2_f(moby->pos.x - h->motion.pos.f[0], moby->pos.y - h->motion.pos.f[1]),
-                h->motion.rot.f[2]) > 1.57f)
+                atan2_f(moby->pos.x - hero_ptr->motion.pos.f[0], moby->pos.y - hero_ptr->motion.pos.f[1]),
+                hero_ptr->motion.rot.f[2]) > 1.57f)
             return 0;
     }
 
@@ -174,18 +174,18 @@ extern s32 D_0015ED84[];
 extern s32 D_L00_001791B8[] __attribute__((section(".data")));
 extern s32 D_L00_001C44B8[] __attribute__((section(".data")));
 s32 get_dialogue_entry(void *p) __asm__("FUN_L00_002667d0");
-s32 get_dialogue_entry(void *p) {
-    s32 n = D_0015ED84[0];
+s32 get_dialogue_entry(void *moby) {
+    s32 range_index = D_0015ED84[0];
     s32 lo;
     s32 hi;
     s32 i;
-    if ((u32)n >= 0x13) {
+    if ((u32)range_index >= 0x13) {
         return 0;
     }
-    lo = D_L00_001C44B8[n];
-    hi = D_L00_001C44B8[n + 1];
+    lo = D_L00_001C44B8[range_index];
+    hi = D_L00_001C44B8[range_index + 1];
     for (i = lo; i < hi; i++) {
-        if ((void *)D_L00_001791B8[i] == p) {
+        if ((void *)D_L00_001791B8[i] == moby) {
             return i;
         }
     }
@@ -197,8 +197,8 @@ typedef struct {
 extern E00266858 D_0013D5B0[];
 s32 FUN_L00_002667d0_u(s32, s32) __asm__("FUN_L00_002667d0");
 /* Stores b in the entry get_dialogue_entry finds, if it finds one. */
-void FUN_L00_00266858(s32 a, s32 b) {
-    s32 i = FUN_L00_002667d0_u(a, b);
+void FUN_L00_00266858(s32 moby_address, s32 b) {
+    s32 i = FUN_L00_002667d0_u(moby_address, b);
     if (i != -1)
         D_0013D5B0[i].d = b;
 }
@@ -232,14 +232,14 @@ extern P002668a0 *D_L00_001B1678[];
 extern s32 D_L00_0015F5CC;
 extern s32 FUN_L00_002667d0_c(void *) __asm__("FUN_L00_002667d0");
 s32 initialize_npc_dialogue(void *p, u8 *out_p) __asm__("FUN_L00_002668a0");
-s32 initialize_npc_dialogue(void *p, u8 *out_p) {
+s32 initialize_npc_dialogue(void *moby, u8 *out_p) {
     Out002668a0 *out;
     s32 i;
     unsigned long long k;
-    P002668a0 *q;
+    P002668a0 *dialogue_entries;
 
     out = (Out002668a0 *)out_p;
-    i = FUN_L00_002667d0_c(p);
+    i = FUN_L00_002667d0_c(moby);
     if (i == -1) {
         return -1;
     }
@@ -250,10 +250,10 @@ s32 initialize_npc_dialogue(void *p, u8 *out_p) {
     out->f38 = D_L00_0015F5CC;
     out->f04 = -1;
     out->f36 = 0;
-    q = D_L00_001B1678[i];
-    out->f3C = (u32)q;
-    if (D_0013D5B0_c[i].d != 0 && q->f08 == 0) {
-        out->f36 = q->f06;
+    dialogue_entries = D_L00_001B1678[i];
+    out->f3C = (u32)dialogue_entries;
+    if (D_0013D5B0_c[i].d != 0 && dialogue_entries->f08 == 0) {
+        out->f36 = dialogue_entries->f06;
     }
     out->f08 = ((u8 *)out->f3C)[out->f36 * 0x1C + (k = 0x10)] & 1;
     return i;

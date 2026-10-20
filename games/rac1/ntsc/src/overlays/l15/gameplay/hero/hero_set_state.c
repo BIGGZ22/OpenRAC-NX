@@ -83,6 +83,11 @@ extern int hero_set_state(int, int) __asm__("FUN_L15_00216c38");
 extern char D_L15_0017C520[];
 extern char D_L15_0017C560[];
 int hero_set_state(int a, int b) {
+    enum {
+        HERO_STATE_VEHICLE_MODE_3_IDLE = 0x53,
+        HERO_STATE_VEHICLE_MODE_2_IDLE = 0x5A,
+        HERO_STATE_DROWNING = 0x6A
+    };
     int old2088;
     char *moby;
     int old20A7;
@@ -179,7 +184,7 @@ int hero_set_state(int a, int b) {
         }
         break;
     }
-    case 0x41: {
+    case HERO_STATE_FIDGET_ALT: {
         int t = scale_game_frames(9);
         set_hero_animation(FUN_L06_0021d0a0(0), 0, (float)t);
         {
@@ -369,7 +374,7 @@ int hero_set_state(int a, int b) {
             set_hero_animation(0x65, 0, (float)scale_game_frames(0x11));
         break;
     }
-    case 0x6A: {
+    case HERO_STATE_DROWNING: {
         struct Hero *p = &hero;
         p->state.control_mode = 0x14;
         p->unk20A7 = 1;
@@ -422,7 +427,7 @@ int hero_set_state(int a, int b) {
             set_hero_animation(0x80, 0, (float)scale_game_frames(0xA));
         break;
     }
-    case 1: {
+    case HERO_STATE_LOOK: {
         struct Hero *p = &hero;
         int t;
         p->state.control_mode = 0;
@@ -1473,7 +1478,7 @@ int hero_set_state(int a, int b) {
         }
         break;
     }
-    case 0x7A: {
+    case HERO_STATE_WALL_BONK: {
         struct Hero *p = &hero;
         p->state.control_mode = 0xA;
         p->unk2284 = 0;
@@ -1545,7 +1550,7 @@ int hero_set_state(int a, int b) {
             set_hero_animation(0x71, 0, (float)scale_game_frames(8));
         break;
     }
-    case 0x5A: {
+    case HERO_STATE_VEHICLE_MODE_2_IDLE: {
         struct Hero *p = &hero;
         p->state.control_mode = 0;
         p->unk2284 = 0;
@@ -1640,7 +1645,7 @@ int hero_set_state(int a, int b) {
         }
         break;
     }
-    case 0x53: {
+    case HERO_STATE_VEHICLE_MODE_3_IDLE: {
         struct Hero *p = &hero;
         p->state.control_mode = 0;
         p->unk2284 = 0;

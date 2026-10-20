@@ -79,35 +79,35 @@ extern float D_L00_0017E3A0[];
 extern float D_L00_0017E400[];
 extern s32 truncate_float_to_s32(f32) __asm__("FUN_001fa6d0");
 
-void FUN_L00_00235ad8(HudElem *e, int *x, int *y, int t, int d) {
+void FUN_L00_00235ad8(HudElem *hud_element, int *x, int *y, int slide_index, int slide_step) {
     int dx = 0;
     int dy = 0;
-    float s;
+    float slide_scale;
 
-    if (e->unk7C != 0) {
-        t -= d;
+    if (hud_element->unk7C != 0) {
+        slide_index -= slide_step;
     } else {
-        t += d;
+        slide_index += slide_step;
     }
-    if (t < 0) {
-        t = 0;
+    if (slide_index < 0) {
+        slide_index = 0;
     }
-    if (t > 23) {
-        t = 23;
+    if (slide_index > 23) {
+        slide_index = 23;
     }
-    if (e->unk7C != 0) {
-        s = D_L00_0017E3A0[t];
+    if (hud_element->unk7C != 0) {
+        slide_scale = D_L00_0017E3A0[slide_index];
     } else {
-        s = D_L00_0017E400[t];
+        slide_scale = D_L00_0017E400[slide_index];
     }
-    if (e->flags & 1) {
-        dy = -truncate_float_to_s32(s * (convert_integer_to_float(e->h) + 52.0f) + 0.5f);
-    } else if (e->flags & 2) {
-        dy = truncate_float_to_s32(s * (convert_integer_to_float(e->h) + 52.0f) + 0.5f);
-    } else if (e->flags & 4) {
-        dx = -truncate_float_to_s32(s * (convert_integer_to_float(e->w) + 20.0f) + 0.5f);
-    } else if (e->flags & 8) {
-        dx = truncate_float_to_s32(s * (convert_integer_to_float(e->w) + 20.0f) + 0.5f);
+    if (hud_element->flags & 1) {
+        dy = -truncate_float_to_s32(slide_scale * (convert_integer_to_float(hud_element->h) + 52.0f) + 0.5f);
+    } else if (hud_element->flags & 2) {
+        dy = truncate_float_to_s32(slide_scale * (convert_integer_to_float(hud_element->h) + 52.0f) + 0.5f);
+    } else if (hud_element->flags & 4) {
+        dx = -truncate_float_to_s32(slide_scale * (convert_integer_to_float(hud_element->w) + 20.0f) + 0.5f);
+    } else if (hud_element->flags & 8) {
+        dx = truncate_float_to_s32(slide_scale * (convert_integer_to_float(hud_element->w) + 20.0f) + 0.5f);
     }
     *x += dx;
     *y += dy;
@@ -117,35 +117,35 @@ void FUN_L00_00235ad8(HudElem *e, int *x, int *y, int t, int d) {
 /* updates numeric HUD values and dimensions from digit count */
 /* Ported from rac1-decomp (src/overlays/shared/hud_00235960.c: func_L00_00236610), where it is exact; names translated to the US level program. */
 
-void FUN_L00_00235c80(HudElem *e) {
-    int *value = e->unk0C;
+void FUN_L00_00235c80(HudElem *hud_element) {
+    int *value = hud_element->unk0C;
     int digits;
     int v, flags, width;
     if (value && !((int)value & 3)) {
-        e->unk78 = *value;
-        if (e->unk08 < e->unk78)
-            e->unk78 = e->unk08;
-        e->unk74 = e->unk78;
+        hud_element->unk78 = *value;
+        if (hud_element->unk08 < hud_element->unk78)
+            hud_element->unk78 = hud_element->unk08;
+        hud_element->unk74 = hud_element->unk78;
     } else {
-        e->unk78 = 99999;
-        e->unk74 = 99999;
+        hud_element->unk78 = 99999;
+        hud_element->unk74 = 99999;
     }
-    v = e->unk08;
+    v = hud_element->unk08;
     digits = 0;
-    flags = e->flags;
-    width = e->h;
+    flags = hud_element->flags;
+    width = hud_element->h;
     while (v >= 10) {
         v /= 10;
         digits++;
     }
     if (!(flags & 3) && (flags & 12)) {
-        e->h = width + (digits + 1) * 12;
-        if (e->w < 14)
-            e->w = 14;
+        hud_element->h = width + (digits + 1) * 12;
+        if (hud_element->w < 14)
+            hud_element->w = 14;
     } else {
         if (width < 12)
-            e->h = 12;
-        e->w += (digits + 1) * 14;
+            hud_element->h = 12;
+        hud_element->w += (digits + 1) * 14;
     }
 }
 /* Resets a HUD element: a timer of 30 + func_001F9850(180) (+0x7C),
@@ -156,23 +156,23 @@ extern int scale_game_frames(int) __asm__("FUN_001f96f8");
 extern void FUN_L00_00235c80(HudElem *);
 
 /* Sets unk7C to scale_game_frames(0xB4) + 0x1E, clears 0x48/0x4A, calls FUN_L00_00235c80. */
-void FUN_L00_00235d80(HudElem *e) {
-    e->unk7C = scale_game_frames(0xB4) + 0x1E;
-    e->unk48 = 0;
-    e->unk4A = 0;
-    FUN_L00_00235c80(e);
+void FUN_L00_00235d80(HudElem *hud_element) {
+    hud_element->unk7C = scale_game_frames(0xB4) + 0x1E;
+    hud_element->unk48 = 0;
+    hud_element->unk4A = 0;
+    FUN_L00_00235c80(hud_element);
 }
 /* func_L00_00236710 for a 32 x 32 element. */
 /* Ported from rac1-decomp (src/overlays/shared/hud_00235960.c: func_L00_00236750), where it is exact; names translated to the US level program. */
 
 /* Sets unk7C to scale_game_frames(0xB4) + 0x1E, clears 0x48/0x4A, w/h 0x20, calls 00235c80. */
-void FUN_L00_00235dc0(HudElem *e) {
-    e->unk7C = scale_game_frames(0xB4) + 0x1E;
-    e->unk48 = 0;
-    e->unk4A = 0;
-    e->w = 0x20;
-    e->h = 0x20;
-    FUN_L00_00235c80(e);
+void FUN_L00_00235dc0(HudElem *hud_element) {
+    hud_element->unk7C = scale_game_frames(0xB4) + 0x1E;
+    hud_element->unk48 = 0;
+    hud_element->unk4A = 0;
+    hud_element->w = 0x20;
+    hud_element->h = 0x20;
+    FUN_L00_00235c80(hud_element);
 }
 typedef struct {
     u8 pad[0x64];
@@ -187,15 +187,15 @@ s32 hud_keep_visible(s32 key, s32 val) __asm__("FUN_L00_00235e18");
 s32 hud_keep_visible(s32 key, s32 val) {
     s32 i;
     s32 r;
-    T_235e18 *e;
+    T_235e18 *hud_element;
     r = 1;
     for (i = 0; i < 13; i++) {
         if (D_L00_0017DC50_235e18[i].key == key)
             break;
     }
     if (i < 13 && D_L00_0017DC50_235e18[i].f68 == 0) {
-        e = D_L00_0017DC50_235e18 + i;
-        e->v = (val < e->v) ? e->v : val;
+        hud_element = D_L00_0017DC50_235e18 + i;
+        hud_element->v = (val < hud_element->v) ? hud_element->v : val;
         return 0;
     }
     return 1;
@@ -274,29 +274,29 @@ void FUN_L00_00235ea0(e) HudElem *e;
 
 extern void FUN_L00_0023aaa8(void *);
 
-void FUN_L00_00236128(HudElem *e) {
-    unsigned char *c = e->cnt;
+void FUN_L00_00236128(HudElem *hud_element) {
+    unsigned char *c = hud_element->cnt;
     int v;
     int cap;
 
-    if (e->unk0C != 0) {
-        v = *e->unk0C;
-        cap = e->unk08;
+    if (hud_element->unk0C != 0) {
+        v = *hud_element->unk0C;
+        cap = hud_element->unk08;
         if (v < 0) {
             v = 0;
         }
-        e->unk78 = v;
+        hud_element->unk78 = v;
         if (cap < v) {
-            e->unk78 = cap;
+            hud_element->unk78 = cap;
         }
     }
-    if (e->unk74 != e->unk78) {
-        e->unk7C = scale_game_frames(0xB4);
-        if (e->unk6C >= 0x18) {
-            e->unk74 = e->unk78;
+    if (hud_element->unk74 != hud_element->unk78) {
+        hud_element->unk7C = scale_game_frames(0xB4);
+        if (hud_element->unk6C >= 0x18) {
+            hud_element->unk74 = hud_element->unk78;
         }
     }
-    if (e->unk7C >= scale_game_frames(5)) {
+    if (hud_element->unk7C >= scale_game_frames(5)) {
         if (c[0] < scale_game_frames(8)) {
             c[0]++;
         } else if (c[1] < scale_game_frames(8)) {
@@ -304,7 +304,7 @@ void FUN_L00_00236128(HudElem *e) {
         }
     } else {
         if (c[1] != 0 || c[0] != 0) {
-            e->unk6C = 1;
+            hud_element->unk6C = 1;
         }
         if (c[1] != 0) {
             c[1]--;
@@ -312,7 +312,7 @@ void FUN_L00_00236128(HudElem *e) {
             c[0]--;
         }
     }
-    FUN_L00_0023aaa8((char *)e + 0x40);
+    FUN_L00_0023aaa8((char *)hud_element + 0x40);
 }
 extern float star_init_limit0_gp __asm__("D_L00_0015F750") __attribute__((sda));
 extern float star_init_limit1_gp __asm__("D_L00_0015F754") __attribute__((sda));
@@ -562,29 +562,29 @@ extern void fast_vec_sub(void *, void *, void *) __asm__("FUN_001f9a28");
 extern void clear_u64_value(void *) __asm__("func_001F99F8");
 extern void draw_hud_sprite_subpixel(s32, s32, s32, s32, s32, s32) __asm__("func_00200080");
 
-int FUN_L00_00236e50(HudElem *e) {
+int FUN_L00_00236e50(HudElem *hud_element) {
     float origin[4], direction[4], first_step[4], second_step[4], third_step[4], star_position[4];
     int x, y;
     float offset;
     s32 image;
     int star_width, i;
 
-    x = e->unk50;
-    y = e->unk54;
-    e->w = D_L00_0015F760;
-    e->h = D_L00_0015F764;
-    hud_screen_position(e, &x, &y);
-    FUN_L00_00235ad8(e, &x, &y, e->unk6C, 0);
-    image = get_icon_frame(*(int *)e, 0);
-    FUN_L00_0023bac0(image, x + e->unk48, y + e->unk4A, D_L00_0015F760, D_L00_0015F764, 0x80);
+    x = hud_element->unk50;
+    y = hud_element->unk54;
+    hud_element->w = D_L00_0015F760;
+    hud_element->h = D_L00_0015F764;
+    hud_screen_position(hud_element, &x, &y);
+    FUN_L00_00235ad8(hud_element, &x, &y, hud_element->unk6C, 0);
+    image = get_icon_frame(*(int *)hud_element, 0);
+    FUN_L00_0023bac0(image, x + hud_element->unk48, y + hud_element->unk4A, D_L00_0015F760, D_L00_0015F764, 0x80);
     {
         float center_x, center_y, half_w, half_h;
         half_w = (D_L00_0015F760 * D_L00_0015F768 * 0.5f) / 17.0f;
         half_h = -(D_L00_0015F764 * D_L00_0015F76C * 0.5f) / 116.0f;
         origin[2] = 1.0f;
         origin[3] = 1.0f;
-        center_x = D_L00_0015F760 * D_L00_0015F768 * 0.5f + (x + e->unk48);
-        center_y = D_L00_0015F764 * D_L00_0015F76C * 0.5f + (y + e->unk4A);
+        center_x = D_L00_0015F760 * D_L00_0015F768 * 0.5f + (x + hud_element->unk48);
+        center_y = D_L00_0015F764 * D_L00_0015F76C * 0.5f + (y + hud_element->unk4A);
         direction[0] = (center_x + (1.0f - D_L00_0015F768) * 0.5f * D_L00_0015F760) * 16.0f;
         direction[1] = (center_y + (1.0f - D_L00_0015F76C) * 0.5f * D_L00_0015F764) * 16.0f;
         direction[2] = 0.0f;
@@ -592,9 +592,9 @@ int FUN_L00_00236e50(HudElem *e) {
         origin[0] = half_w * 16.0f;
         origin[1] = half_h * 16.0f;
     }
-    offset = (10000 - e->unk74) / 10000.0f;
+    offset = (10000 - hud_element->unk74) / 10000.0f;
     offset = 116.0f - (offset + offset) * 116.0f;
-    image = get_icon_frame(*(int *)e, 1);
+    image = get_icon_frame(*(int *)hud_element, 1);
     clear_u64_value(first_step);
     clear_u64_value(second_step);
     clear_u64_value(third_step);
@@ -613,7 +613,7 @@ int FUN_L00_00236e50(HudElem *e) {
         fast_vec_add(star_position, star_position, direction);
         draw_hud_sprite_subpixel(image, (int)star_position[0], (int)star_position[1], star_width, star_width, 0x80);
     }
-    return e->w;
+    return hud_element->w;
 }
 void FUN_L00_00235ea0();
 /* Calls FUN_L00_00235ea0. */
@@ -643,14 +643,14 @@ extern char *get_help_message_text(s32) __asm__("FUN_001fdd10");
 extern s32 sprintf(char *, const char *, ...) __asm__("FUN_00116248");
 extern void draw_framed_text(s32, s32, s32, char *) __asm__("FUN_00201200");
 
-int FUN_L00_00237200(HudElem *e) {
+int FUN_L00_00237200(HudElem *hud_element) {
     int y, i;
     int alpha, color, level;
     float fade;
     Vec4 points[2];
     Vec4 point;
     char text[64];
-    u8 *opacity = e->cnt;
+    u8 *opacity = hud_element->cnt;
     int text_y;
     int text_color;
     int never = 0;
@@ -746,5 +746,5 @@ int FUN_L00_00237200(HudElem *e) {
         }
     }
     /* Fakematch: the never-taken text_color use keeps the then-branch color copy in its own register. */
-    return e->w + (text_color & never);
+    return hud_element->w + (text_color & never);
 }

@@ -45,13 +45,13 @@ void mushroom_update(char *self) {
         MUSHROOM_SPAWN_AND_REMOVE = 2
     };
     int flag = 0;
-    char *o = find_moby_hit(self, 0x10000, 0);
+    char *hit_moby = find_moby_hit(self, 0x10000, 0);
     switch (((unsigned char *)self)[0x20]) {
     case MUSHROOM_INITIALIZE:
         self[0x20] = 1;
         break;
     case MUSHROOM_WAIT_FOR_HIT:
-        if (o != 0 && *(float *)(o + 0x2C) > 0.0f) {
+        if (hit_moby != 0 && *(float *)(hit_moby + 0x2C) > 0.0f) {
             flag = 1;
         }
         if (flag) {
@@ -59,7 +59,7 @@ void mushroom_update(char *self) {
         }
         break;
     case MUSHROOM_SPAWN_AND_REMOVE: {
-        char *m;
+        char *spawned_moby;
         FUN_0022da68_c(0, 0, (int)self);
         FUN_L01_002787a0(self);
         FUN_L00_00263fd8(self, 0x674, self + 0x10, self + 0x40, 0, 0, 0.0f, D_L07_0015F580,
@@ -68,14 +68,14 @@ void mushroom_update(char *self) {
                          D_L07_0015F580, D_L07_0015F580);
         FUN_L00_00263fd8(self, 0x676, self + 0x10, self + 0x40, 0, 0, 0.0f, D_L07_0015F580,
                          D_L07_0015F580, D_L07_0015F580);
-        m = mk_a(0x673);
-        if (m != 0) {
-            m[0x31] = 1;
-            *(short *)(m + 0x32) = 0xFF;
-            qcopy(m + 0x10, self + 0x10);
-            qcopy(m + 0x40, self + 0x40);
-            *(long *)(m + 0x38) = *(long *)(self + 0x38);
-            upd_a(m);
+        spawned_moby = mk_a(0x673);
+        if (spawned_moby != 0) {
+            spawned_moby[0x31] = 1;
+            *(short *)(spawned_moby + 0x32) = 0xFF;
+            qcopy(spawned_moby + 0x10, self + 0x10);
+            qcopy(spawned_moby + 0x40, self + 0x40);
+            *(long *)(spawned_moby + 0x38) = *(long *)(self + 0x38);
+            upd_a(spawned_moby);
         }
         mark_moby_for_removal_c(self);
         break;
@@ -94,13 +94,13 @@ void robot_head_update(char *self) {
         ROBOT_HEAD_SPAWN_AND_REMOVE = 2
     };
     int flag = 0;
-    char *o = find_moby_hit(self, 0x10000, 0);
+    char *hit_moby = find_moby_hit(self, 0x10000, 0);
     switch (((unsigned char *)self)[0x20]) {
     case ROBOT_HEAD_INITIALIZE:
         self[0x20] = 1;
         break;
     case ROBOT_HEAD_WAIT_FOR_HIT:
-        if (o != 0 && *(float *)(o + 0x2C) > 0.0f) {
+        if (hit_moby != 0 && *(float *)(hit_moby + 0x2C) > 0.0f) {
             flag = 1;
         }
         if (flag) {
@@ -108,7 +108,7 @@ void robot_head_update(char *self) {
         }
         break;
     case ROBOT_HEAD_SPAWN_AND_REMOVE: {
-        char *m;
+        char *spawned_moby;
         FUN_0022da68_c(0, 0, (int)self);
         FUN_L01_002787a0(self);
         FUN_L00_00263fd8(self, 0x68e, self + 0x10, self + 0x40, 0, 0, 0.0f, D_L07_0015F580,
@@ -117,14 +117,14 @@ void robot_head_update(char *self) {
                          D_L07_0015F580, D_L07_0015F580);
         FUN_L00_00263fd8(self, 0x690, self + 0x10, self + 0x40, 0, 0, 0.0f, D_L07_0015F580,
                          D_L07_0015F580, D_L07_0015F580);
-        m = mk_a(0x68d);
-        if (m != 0) {
-            m[0x31] = 1;
-            *(short *)(m + 0x32) = 0xFF;
-            qcopy(m + 0x10, self + 0x10);
-            qcopy(m + 0x40, self + 0x40);
-            *(long *)(m + 0x38) = *(long *)(self + 0x38);
-            upd_a(m);
+        spawned_moby = mk_a(0x68d);
+        if (spawned_moby != 0) {
+            spawned_moby[0x31] = 1;
+            *(short *)(spawned_moby + 0x32) = 0xFF;
+            qcopy(spawned_moby + 0x10, self + 0x10);
+            qcopy(spawned_moby + 0x40, self + 0x40);
+            *(long *)(spawned_moby + 0x38) = *(long *)(self + 0x38);
+            upd_a(spawned_moby);
         }
         mark_moby_for_removal_c_c(self);
         break;
@@ -137,7 +137,7 @@ extern int allocate_voice_for_target_entry(int, int, int) __asm__("FUN_0022da68"
 void mark_moby_for_removal_c_c2(struct Obj *obj) __asm__("FUN_0020c828");
 
 void seashell_update(unsigned char *m) __asm__("FUN_L07_0031f780");
-void seashell_update(unsigned char *m) {
+void seashell_update(unsigned char *seashell_moby) {
     enum {
         SEASHELL_INITIALIZE = 0,
         SEASHELL_WAIT_FOR_HIT = 1,
@@ -146,10 +146,10 @@ void seashell_update(unsigned char *m) {
     int flag = 0;
     float z;
     char *p, *pos, *vel;
-    char *x = find_moby_hit(m, 0x10000, 0);
-    switch (m[0x20]) {
+    char *x = find_moby_hit(seashell_moby, 0x10000, 0);
+    switch (seashell_moby[0x20]) {
     case SEASHELL_INITIALIZE:
-        m[0x20] = 1;
+        seashell_moby[0x20] = 1;
         break;
     case SEASHELL_WAIT_FOR_HIT:
         if (x != 0) {
@@ -157,19 +157,19 @@ void seashell_update(unsigned char *m) {
                 flag = 1;
         }
         if (flag)
-            m[0x20] = 2;
+            seashell_moby[0x20] = 2;
         break;
     case SEASHELL_SPAWN_AND_REMOVE:
-        allocate_voice_for_target_entry(0, 0, (int)m);
+        allocate_voice_for_target_entry(0, 0, (int)seashell_moby);
         z = 0.0f;
         p = D_L07_0015F580;
-        pos = m + 0x10;
-        FUN_L01_002787a0(m);
-        vel = m + 0x40;
-        FUN_L00_00263fd8(m, 0x698, pos, vel, 0, 0, z, p, p, p);
-        FUN_L00_00263fd8(m, 0x699, pos, vel, 0, 0, z, p, p, p);
-        FUN_L00_00263fd8(m, 0x69a, pos, vel, 0, 0, z, p, p, p);
-        mark_moby_for_removal_c_c2(m);
+        pos = seashell_moby + 0x10;
+        FUN_L01_002787a0(seashell_moby);
+        vel = seashell_moby + 0x40;
+        FUN_L00_00263fd8(seashell_moby, 0x698, pos, vel, 0, 0, z, p, p, p);
+        FUN_L00_00263fd8(seashell_moby, 0x699, pos, vel, 0, 0, z, p, p, p);
+        FUN_L00_00263fd8(seashell_moby, 0x69a, pos, vel, 0, 0, z, p, p, p);
+        mark_moby_for_removal_c_c2(seashell_moby);
         break;
     }
 }

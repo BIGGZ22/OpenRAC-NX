@@ -147,7 +147,68 @@ int func_L00_0024A5C0(int a, float b, float c, float x) {
 }
 /* Joined to func_L00_0024A5C0. */
 INCLUDE_ASM("asm/overlays", func_L00_0024A60C);
-INCLUDE_ASM("asm/overlays", func_L00_0024A798);
+typedef unsigned int MenuCacheQuad __attribute__((mode(TI), aligned(16)));
+typedef struct {
+    int key;
+    int stamp;
+    unsigned char *dst;
+    int pad;
+} CacheEnt;
+typedef struct {
+    unsigned char *src;
+    short *offs;
+    int pad0[8];
+    int active;
+    int pad1;
+    CacheEnt e[8];
+} Cache;
+extern void func_00207090(unsigned char *dst, int row, unsigned char *src, short *offs);
+extern Cache D_L00_001842F0;
+extern int D_L00_0015F4F8 MACRO_ADDR;
+int func_L00_0024A798(int key) {
+    int i;
+    int victim;
+    int miss;
+    int *entry;
+    int *times;
+    MenuCacheQuad *base;
+    MenuCacheQuad *other;
+    MenuCacheQuad temp;
+
+    if (!D_L00_001842F0.active) {
+        return 0;
+    }
+    miss = 0;
+    victim = 0;
+    i = 0;
+    if (D_L00_001842F0.e[0].key != key) {
+        times = &D_L00_001842F0.e[0].stamp;
+        entry = &D_L00_001842F0.e[0].key;
+        do { do {
+            if (entry[1] < times[victim * 4]) {
+                victim = i;
+            }
+            ++i;
+            entry += 4;
+        } while (i < 8 && *entry != key); } while (0);
+    }
+    if (i == 8) {
+        func_00207090(D_L00_001842F0.e[victim].dst, key, D_L00_001842F0.src, D_L00_001842F0.offs);
+        D_L00_001842F0.e[victim].key = key;
+        i = victim;
+        miss = 1;
+    }
+    if (i != 0) {
+        base = (MenuCacheQuad *)&D_L00_001842F0.e[0];
+        other = base + i;
+        temp = *other;
+        miss++; miss--;
+        *other = *base;
+        *base = temp;
+    }
+    D_L00_001842F0.e[0].stamp = D_L00_0015F4F8;
+    return miss;
+}
 extern int D_0015EE84_m __asm__("D_0015EE84") MACRO_ADDR;
 extern int D_L00_001C47B8[];
 extern int D_L00_001792B8[];

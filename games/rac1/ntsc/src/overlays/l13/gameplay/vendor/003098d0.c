@@ -48,7 +48,7 @@ void FUN_L13_003098d0(struct Moby *moby) {
     char *data = (char *)moby->pvars;
     QuadPacket pk[2];
     f32 mat[4][4];
-    f32 tmp[4];
+    f32 corner_inset_offset[4];
     s32 i;
     s32 j;
     s32 off;
@@ -83,9 +83,9 @@ void FUN_L13_003098d0(struct Moby *moby) {
             /* The colour call in both arms: retail merges the two calls and
                leaves the address add in each arm. */
             if (j & 1) {
-                vector_subtract(tmp, v, data + 0x1F0);
-                normalize_vector_xyz(tmp, tmp, 0.5f);
-                vector_subtract(v, v, tmp);
+                vector_subtract(corner_inset_offset, v, data + 0x1F0);
+                normalize_vector_xyz(corner_inset_offset, corner_inset_offset, 0.5f);
+                vector_subtract(v, v, corner_inset_offset);
                 v[2] -= 0.125f;
                 pk[0].col[j] = fast_tween_color(*(f32 *)(data + off + 0x21C), D_L13_00161EA8,
                                                 D_L13_00161EAC);
@@ -141,17 +141,17 @@ extern int func_001FA898_r(float) __asm__("FUN_001fa6d0");
 
 void FUN_L13_00309bc8(struct Moby *moby) {
     char *data = (char *)moby->pvars;
-    int i, n;
-    for (i = 0; i < 15; i = n) {
+    int i, next_point_index;
+    for (i = 0; i < 15; i = next_point_index) {
         float f21, f22;
         int frame_count, second_frame_count, third_frame_count;
         int spawn_position[4];
         float v[4], w[4];
-        char *p;
+        char *source_point_position;
         int off = i * 16;
-        n = i + 1;
+        next_point_index = i + 1;
         if (*(float *)(data + off + 0x21c) < 0.99f &&
-            *(float *)(data - (-(n * 16)) + 0x21c) < 0.99f) {
+            *(float *)(data - (-(next_point_index * 16)) + 0x21c) < 0.99f) {
             continue;
         }
         if (*(float *)&D_L13_00161EE8 < random_float_between_alt(0.0f, 1.0f)) {
@@ -181,8 +181,8 @@ void FUN_L13_00309bc8(struct Moby *moby) {
         v[3] = *(float *)&D_L13_00161EB8;
         scale_vector_xyz(w, w, 1.0f / (float)third_frame_count);
         w[3] = *(float *)&D_L13_00161EBC;
-        p = data + (off + 0x210);
-        lerp_vector(spawn_position, p, p, random_float_between_alt(0.0f, 1.0f));
+        source_point_position = data + (off + 0x210);
+        lerp_vector(spawn_position, source_point_position, source_point_position, random_float_between_alt(0.0f, 1.0f));
         spawn_spark(spawn_position, v, w, D_L13_00161EB0, D_L13_00161EB4, frame_count, second_frame_count, third_frame_count,
                      D_L13_00161EEC);
     }

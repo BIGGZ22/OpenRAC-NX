@@ -95,8 +95,8 @@ void FUN_L11_0023c7a0(void) {
         struct Hero *h = &hero;
         if (h->selector_13) {
             if (h->state.current != 0x7F) {
-                float e = absolute_float(h->water_surface_z - (h->motion.pos.f[2] + 0.25f));
-                if (e < 1.0f) {
+                float absolute_water_surface_z_difference = absolute_float(h->water_surface_z - (h->motion.pos.f[2] + 0.25f));
+                if (absolute_water_surface_z_difference < 1.0f) {
                     if (h->water_surface_z - h->motion.pos.f[2] > 0.0f) {
                         if (h->motion.displacement.f[2] < 0.0f) {
                             FUN_L00_0020b930();
@@ -400,6 +400,11 @@ extern f32 set_planar_vel(f32) __asm__("FUN_L00_002120d8");
 extern s32 FUN_L00_00211870(f32);
 
 void FUN_L11_00246b70(void) {
+    enum {
+        HERO_STATE_CONSTRAIN_TO_TARGET_RADIUS = 0x26,
+        HERO_STATE_MOVE_TO_TARGET_POSITION = 0x65,
+        HERO_STATE_BRAKE_AT_TARGET_POSITION = 0x66
+    };
     struct MobyView *moby = MV(hero.moby);
     s32 sub = hero.state.step;
     s32 anim = moby->b53;
@@ -409,7 +414,7 @@ void FUN_L11_00246b70(void) {
     Vec4 vector_and_hit_descriptor_scratch;
     Vec4 motion_vector_scratch;
     Vec4 m40[4];
-    Vec4 m80[4];
+    Vec4 transposed_yaw_rotation_matrix[4];
     Vec4 vC0;
     Vec4 vD0;
 
@@ -1050,7 +1055,7 @@ void FUN_L11_00246b70(void) {
         }
         break;
     }
-    case 0x26: {
+    case HERO_STATE_CONSTRAIN_TO_TARGET_RADIUS: {
         approach_value(&hero.unk97C, hero.unk980, frame_time * 10.0f);
         qcopy(&hero.motion.velocity, &hero.motion.displacement);
         fast_vec_scale(&hero.motion.velocity, &hero.motion.velocity, 0.9f);
@@ -1089,8 +1094,8 @@ void FUN_L11_00246b70(void) {
         clear_u64_value(&vector_and_hit_descriptor_scratch);
         vector_and_hit_descriptor_scratch.f[2] = hero.motion.rot.f[2];
         euler_rotation_matrix(m40, &vector_and_hit_descriptor_scratch);
-        transpose_rotation_matrix(m80, m40);
-        transform_vector(&vector_and_hit_descriptor_head_scratch, &vector_and_hit_descriptor_head_scratch, m80);
+        transpose_rotation_matrix(transposed_yaw_rotation_matrix, m40);
+        transform_vector(&vector_and_hit_descriptor_head_scratch, &vector_and_hit_descriptor_head_scratch, transposed_yaw_rotation_matrix);
         v10.f[0] = -fast_arc_tan(square_root(vector_and_hit_descriptor_head_scratch.f[0] * vector_and_hit_descriptor_head_scratch.f[0] + vector_and_hit_descriptor_head_scratch.f[2] * vector_and_hit_descriptor_head_scratch.f[2]), vector_and_hit_descriptor_head_scratch.f[1]);
         v10.f[1] = fast_arc_tan(vector_and_hit_descriptor_head_scratch.f[2], vector_and_hit_descriptor_head_scratch.f[0]);
         FUN_L00_0025bc98(&hero.motion.rot.f[1], v10.f[1], &hero.motion.unkA0.f[1], 0, frame_scale_sq * 0.04f, frame_scale_sq * 0.2f,
@@ -1592,14 +1597,14 @@ void FUN_L11_00246b70(void) {
         }
         FUN_L01_00232290();
         if (hero.unk930 > 0.0f) {
-            Vec4 *p = &hero.move_impulse;
+            Vec4 *move_impulse_ptr = &hero.move_impulse;
             FUN_L00_002132b8(0.7f, 0.0f);
             vector_and_hit_descriptor_head_scratch.q = hero.move_impulse.q;
             hero.target_speed += forward_component(&vector_and_hit_descriptor_head_scratch);
             if (hero.target_speed < frame_time * 0.7f) {
                 hero.target_speed = frame_time * 0.7f;
             }
-            clear_u64_value(p);
+            clear_u64_value(move_impulse_ptr);
         }
         k = 1.0f;
         if (hero.state.step == 1 && hero.unk3BE == 0) {
@@ -2004,7 +2009,7 @@ void FUN_L11_00246b70(void) {
         FUN_L00_002334d0(&hero.motion.velocity, &hero.motion.velocity, 0.004f);
         break;
     }
-    case 0x65: {
+    case HERO_STATE_MOVE_TO_TARGET_POSITION: {
         f32 l;
         f32 k;
         subtract_vector_xyz(&vector_and_hit_descriptor_head_scratch, &hero.unk1640, &hero.motion.pos);
@@ -2058,7 +2063,7 @@ void FUN_L11_00246b70(void) {
         }
         break;
     }
-    case 0x66:
+    case HERO_STATE_BRAKE_AT_TARGET_POSITION:
         subtract_vector_xyz(&vector_and_hit_descriptor_head_scratch, &hero.unk1640, &hero.motion.pos);
         if (fast_vec_dot(&vector_and_hit_descriptor_head_scratch, &hero.motion.unk150) < 0.0f) {
             clear_u64_value(&hero.motion.unk150);

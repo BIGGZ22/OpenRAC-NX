@@ -286,47 +286,47 @@ typedef struct {
 
 extern float D_L16_00161D78_gp __asm__("D_L16_00161D78") __attribute__((sda));
 /* Update interaction ownership, damage responses and pursuit tracking. */
-void FUN_L16_002e2b60(struct Moby *m) {
+void FUN_L16_002e2b60(struct Moby *transport_moby) {
     L16Hit_e hit;
-    char *d = (char *)m->pvars;
+    char *transport_data = (char *)transport_moby->pvars;
     float zero;
     char *record;
     int response;
 
-    m->scale = m->pclass->scale * D_L16_00161D78_gp;
-    if ((unsigned int)(m->state - 2) < 4) {
-        if (!voice_is_playing(m, *(int *)(d + 0x190)))
-            *(int *)(d + 0x190) = FUN_0022da68_i(0, 4, m);
-    } else if (voice_is_playing(m, *(int *)(d + 0x190))) {
-        int slot = *(int *)(d + 0x190);
+    transport_moby->scale = transport_moby->pclass->scale * D_L16_00161D78_gp;
+    if ((unsigned int)(transport_moby->state - 2) < 4) {
+        if (!voice_is_playing(transport_moby, *(int *)(transport_data + 0x190)))
+            *(int *)(transport_data + 0x190) = FUN_0022da68_i(0, 4, transport_moby);
+    } else if (voice_is_playing(transport_moby, *(int *)(transport_data + 0x190))) {
+        int slot = *(int *)(transport_data + 0x190);
         if (slot != -1) {
-            L16Slot_e *s = (L16Slot_e *)(D_0013E550 + slot * 0x70);
-            if (s->owner == m && s->active != 0)
+            L16Slot_e *voice_slot = (L16Slot_e *)(D_0013E550 + slot * 0x70);
+            if (voice_slot->owner == transport_moby && voice_slot->active != 0)
                 release_voice_slot(slot);
         }
-        *(int *)(d + 0x190) = -1;
+        *(int *)(transport_data + 0x190) = -1;
     }
     hit.amount = zero = 0.0f;
-    record = find_moby_hit(m, 0x330000, 0);
-    response = hit_reaction(m, record, d + 0x20, 0, &hit.status, &hit.amount, 0, 4);
-    if (hit.status != 1 && m->state != 8) {
-        *(float *)(d + 0x20) -= hit.amount;
-        if (*(float *)(d + 0x20) <= zero || (hero.vehicle_mode == 2 && hit.amount >= 2.0f))
+    record = find_moby_hit(transport_moby, 0x330000, 0);
+    response = hit_reaction(transport_moby, record, transport_data + 0x20, 0, &hit.status, &hit.amount, 0, 4);
+    if (hit.status != 1 && transport_moby->state != 8) {
+        *(float *)(transport_data + 0x20) -= hit.amount;
+        if (*(float *)(transport_data + 0x20) <= zero || (hero.vehicle_mode == 2 && hit.amount >= 2.0f))
             response = 1;
         if (response > 0) {
             if (response >= 3) {
                 if (response < 9) {
-                    FUN_0022da68_i(3, 0, m);
-                    *(unsigned char *)(d + 0x67) = 120;
-                    *(float *)(d + 0x188) =
+                    FUN_0022da68_i(3, 0, transport_moby);
+                    *(unsigned char *)(transport_data + 0x67) = 120;
+                    *(float *)(transport_data + 0x188) =
                         randf_sym(30.0f, 50.0f) * DEG_TO_RAD * frame_time;
                 }
             } else {
-                FUN_0022da68_i(3, 0, m);
+                FUN_0022da68_i(3, 0, transport_moby);
                 if (hero.vehicle_mode != 2)
-                    FUN_0022da68_i(2, 0, m);
+                    FUN_0022da68_i(2, 0, transport_moby);
                 {
-                    int *child = (int *)(d + 0xC0), count = 3;
+                    int *child = (int *)(transport_data + 0xC0), count = 3;
                     do {
                         char *pool = D_L16_0015FFD8_sda;
                         if (*child >= 0)
@@ -334,24 +334,24 @@ void FUN_L16_002e2b60(struct Moby *m) {
                         child++;
                     } while (--count >= 0);
                 }
-                m->state = 8;
-                *(int *)(d + 0x160) = scale_game_frames(90);
-                *(unsigned char *)(d + 0x67) = 120;
+                transport_moby->state = 8;
+                *(int *)(transport_data + 0x160) = scale_game_frames(90);
+                *(unsigned char *)(transport_data + 0x67) = 120;
             }
         }
-        trooper_anim_update(m, d + 0x60);
+        trooper_anim_update(transport_moby, transport_data + 0x60);
     }
-    m->hit_slot = 255;
-    trooper_anim_finish(m, d + 0x60);
-    if (*(int *)(d + 0xD0) != -1 && D_001413DC[0] != 22) {
-        char *path = D_L16_001B0930[*(int *)(d + 0xD0)];
-        FUN_L00_0025ff38(128.0f, m, d + 0x70, 0, 0, path + 0x10, *(int *)path);
+    transport_moby->hit_slot = 255;
+    trooper_anim_finish(transport_moby, transport_data + 0x60);
+    if (*(int *)(transport_data + 0xD0) != -1 && D_001413DC[0] != 22) {
+        char *path = D_L16_001B0930[*(int *)(transport_data + 0xD0)];
+        FUN_L00_0025ff38(128.0f, transport_moby, transport_data + 0x70, 0, 0, path + 0x10, *(int *)path);
     } else
-        *(int *)(d + 0xB4) = 2;
-    if (*(int *)(d + 0xB0) == 0) {
+        *(int *)(transport_data + 0xB4) = 2;
+    if (*(int *)(transport_data + 0xB0) == 0) {
         struct Hero *player = &hero;
-        *(int *)(d + 0xB0) = ((int)player->moby);
-        qcopy(d + 0x70, &player->motion.pos);
+        *(int *)(transport_data + 0xB0) = ((int)player->moby);
+        qcopy(transport_data + 0x70, &player->motion.pos);
     }
 }
 #define NOT_SDA
@@ -371,25 +371,25 @@ extern float func_00214D88_path42_q(float, float, float, float, float *,
                                     float *) __asm__("FUN_00213f38");
 
 extern float D_L16_00161D84 __attribute__((sda));
-int FUN_L16_002e2e88(char *m, char *path) {
-    char *d = *(char **)(m + 0x78);
-    float progress = (float)*(int *)(d + 0x168) + *(float *)(d + 0x16C) +
-                     *(float *)(d + 0x170) / *(float *)(d + 0x174);
+int FUN_L16_002e2e88(char *transport_moby, char *path) {
+    char *transport_data = *(char **)(transport_moby + 0x78);
+    float progress = (float)*(int *)(transport_data + 0x168) + *(float *)(transport_data + 0x16C) +
+                     *(float *)(transport_data + 0x170) / *(float *)(transport_data + 0x174);
     int index = truncate_float_to_s32(progress);
     float speed;
     float distance, rate;
     char *position;
-    *(int *)(d + 0x168) = index;
-    *(float *)(d + 0x16C) = progress - (float)index;
+    *(int *)(transport_data + 0x168) = index;
+    *(float *)(transport_data + 0x16C) = progress - (float)index;
     if (index < *(int *)path - 1) {
-        position = m + 0x10;
-        func_00215CA8_path42_q(progress, path, 0, position, m + 0x40, 0);
-        *(float *)(d + 0x194) = *(float *)(m + 0x18);
+        position = transport_moby + 0x10;
+        func_00215CA8_path42_q(progress, path, 0, position, transport_moby + 0x40, 0);
+        *(float *)(transport_data + 0x194) = *(float *)(transport_moby + 0x18);
         speed = 0.0f;
         distance = func_001F9D10_path42_q(position, path + (*(int *)path << 4));
         rate = D_L16_00161D84 * *(float *)&D_0015ED70_u;
         func_00214D88_path42_q(distance, rate, rate, *(float *)&D_L16_00161D80_q * frame_time,
-                               &speed, (float *)(d + 0x170));
+                               &speed, (float *)(transport_data + 0x170));
         return 0;
     }
     return 1;
@@ -409,17 +409,17 @@ typedef struct {
 void FUN_L16_002e2fa0(void *arg) {
     Path2fa0 *path = arg;
     int i;
-    int n;
+    int point_count;
     for (i = 0; i < path->count - 1; i++) {
-        PathPoint2fa0 *p = path->pts;
-        path->pts[i].heading = fast_arc_tan(path->pts[i + 1].x - path->pts[i].x, p[i + 1].y - path->pts[i].y);
+        PathPoint2fa0 *points = path->pts;
+        path->pts[i].heading = fast_arc_tan(path->pts[i + 1].x - path->pts[i].x, points[i + 1].y - path->pts[i].y);
     }
-    n = path->count;
-    if (n >= 2)
+    point_count = path->count;
+    if (point_count >= 2)
     {
-        Path2fa0 *a = (Path2fa0 *)((char *)path + (n - 2) * 16);
-        Path2fa0 *b = (Path2fa0 *)((char *)path + (n - 1) * 16);
-        b->pts[0].heading = a->pts[0].heading;
+        Path2fa0 *heading_source = (Path2fa0 *)((char *)path + (point_count - 2) * 16);
+        Path2fa0 *b = (Path2fa0 *)((char *)path + (point_count - 1) * 16);
+        b->pts[0].heading = heading_source->pts[0].heading;
     }
 }
 #define NOT_SDA
@@ -432,11 +432,11 @@ extern void update_joint_animation(char *, char *, int, float, float) __asm__("F
 
 void FUN_L16_002e3050(char *moby) {
     float ticks = frame_scale_sq;
-    float a = ticks * 0.03f;
+    float joint_animation_smoothing_factor = ticks * 0.03f;
     float b = ticks * 0.3f;
     char *data = *(char **)(moby + 0x78);
     *(float *)(data + 0x144) = *(float *)(data + 0x17C);
-    update_joint_animation(moby, data + 0xE0, 2, a, b);
+    update_joint_animation(moby, data + 0xE0, 2, joint_animation_smoothing_factor, b);
 }
 /* Updates a moby effect and advances it when its linked object is ready. */
 /* Ported from rac1-decomp (src/overlays/shared/vendor_002A1B58.c: func_L16_002E6B70), where it is exact; names translated to the US level program. */
@@ -452,48 +452,48 @@ extern short D_L16_00161E00 __attribute__((sda));
 extern short D_L16_00161E04 __attribute__((sda));
 extern short D_L16_00161E08 __attribute__((sda));
 void grindrail_barrier_update(struct Moby *m) __asm__("FUN_L16_002e5708");
-void grindrail_barrier_update(struct Moby *m) {
+void grindrail_barrier_update(struct Moby *barrier_moby) {
     enum {
         GRINDRAIL_BARRIER_STATE_INITIALIZE = 0,
         GRINDRAIL_BARRIER_STATE_COLLISION_ENABLED = 1,
         GRINDRAIL_BARRIER_STATE_COLLISION_DISABLED = 2
     };
-    char *d = (char *)m->pvars;
+    char *barrier_data = (char *)barrier_moby->pvars;
     float cycle;
     int i;
-    float *p;
-    switch (m->state) {
+    float *cardinal_angles;
+    switch (barrier_moby->state) {
     case GRINDRAIL_BARRIER_STATE_INITIALIZE:
-        m->state = 1;
-        m->update_dist = 0xFF;
+        barrier_moby->state = 1;
+        barrier_moby->update_dist = 0xFF;
         break;
     case GRINDRAIL_BARRIER_STATE_COLLISION_ENABLED:
-        cycle = *(float *)(d + 0xC) + *(float *)&D_L16_00161E04 * frame_time;
-        *(float *)(d + 0xC) = cycle;
+        cycle = *(float *)(barrier_data + 0xC) + *(float *)&D_L16_00161E04 * frame_time;
+        *(float *)(barrier_data + 0xC) = cycle;
         if (cycle > 1.0f)
-            *(float *)(d + 0xC) = cycle - 1.0f;
-        if (voice_is_playing(m, *(int *)(d + 0x24)) == 0) {
-            *(int *)(d + 0x24) = func_0022ED80_6B70(0, 4, m);
+            *(float *)(barrier_data + 0xC) = cycle - 1.0f;
+        if (voice_is_playing(barrier_moby, *(int *)(barrier_data + 0x24)) == 0) {
+            *(int *)(barrier_data + 0x24) = func_0022ED80_6B70(0, 4, barrier_moby);
         }
-        *(float *)(d + 8) = fast_add_rotations(*(float *)(d + 8), *(float *)&D_L16_00161E00 *
+        *(float *)(barrier_data + 8) = fast_add_rotations(*(float *)(barrier_data + 8), *(float *)&D_L16_00161E00 *
                                                                       DEG_TO_RAD * frame_time);
-        p = (float *)(d + 0x10);
+        cardinal_angles = (float *)(barrier_data + 0x10);
         for (i = 0; i < 4; i++) {
-            p[i] = fast_add_rotations(p[i],
+            cardinal_angles[i] = fast_add_rotations(cardinal_angles[i],
                                       ((float *)&D_L16_00161E08)[i] * DEG_TO_RAD * frame_time);
         }
-        if (m->visible)
-            enqueue_callback_list_1_alt(FUN_L16_002e58d8_u, m);
-        if (*(int *)(d + 0x20) != -1 && FUN_L16_002e5cd0(*(int *)(d + 0x20))) {
-            m->collision = 0;
-            m->state = 2;
-            FUN_L16_002e5d30_c(*(int *)(d + 0x20));
+        if (barrier_moby->visible)
+            enqueue_callback_list_1_alt(FUN_L16_002e58d8_u, barrier_moby);
+        if (*(int *)(barrier_data + 0x20) != -1 && FUN_L16_002e5cd0(*(int *)(barrier_data + 0x20))) {
+            barrier_moby->collision = 0;
+            barrier_moby->state = 2;
+            FUN_L16_002e5d30_c(*(int *)(barrier_data + 0x20));
         }
         break;
     case GRINDRAIL_BARRIER_STATE_COLLISION_DISABLED:
-        if (!FUN_L16_002e5cd0(*(int *)(d + 0x20))) {
-            m->state = 1;
-            m->collision = m->pclass->collision;
+        if (!FUN_L16_002e5cd0(*(int *)(barrier_data + 0x20))) {
+            barrier_moby->state = 1;
+            barrier_moby->collision = barrier_moby->pclass->collision;
         }
         break;
     }
@@ -536,18 +536,18 @@ extern void draw_geometry_quad(void *, int, int) __asm__("func_001F7D30");
 extern void scale_vector_xyz(void *, void *, float) __asm__("FUN_001f9a68");
 extern void vu_euler_rotation_basis(void *, void *) __asm__("func_001FA030");
 
-void FUN_L16_002e58d8(char *m) {
+void FUN_L16_002e58d8(char *barrier_moby) {
     RingQuad quad;
     float transform[4][4], rotation[4];
-    RingData *data = *(RingData **)(m + 0x78);
-    float scale = *(float *)(m + 0x2C) / *(float *)(*(char **)(m + 0x24) + 0x24);
+    RingData *data = *(RingData **)(barrier_moby + 0x78);
+    float scale = *(float *)(barrier_moby + 0x2C) / *(float *)(*(char **)(barrier_moby + 0x24) + 0x24);
     float *u, *v;
     float *angles;
     int *color_base;
     float phase, angle_step, phase_step;
     int i;
-    qcopy(rotation, m + 0x40);
-    qcopy(transform[3], m + 0x10);
+    qcopy(rotation, barrier_moby + 0x40);
+    qcopy(transform[3], barrier_moby + 0x10);
     quad.texture = get_effect_texture(*(int *)&D_L16_00161E38);
     u = &quad.uv[0][0];
     v = &quad.uv[0][1];
@@ -618,15 +618,15 @@ typedef struct {
 } M_5cd0;
 
 int FUN_L16_002e5cd0(int idx) {
-    unsigned short *p = (unsigned short *)D_L16_001ABCC0_5cd0[idx];
-    if (p == 0) {
+    unsigned short *moby_index_entry = (unsigned short *)D_L16_001ABCC0_5cd0[idx];
+    if (moby_index_entry == 0) {
         return 0;
     }
     do {
-        if (((M_5cd0 *)D_L16_0015FFD8_sda)[*p & 0x7FFF].act == 0) {
+        if (((M_5cd0 *)D_L16_0015FFD8_sda)[*moby_index_entry & 0x7FFF].act == 0) {
             return 0;
         }
-    } while ((short)*p++ >= 0);
+    } while ((short)*moby_index_entry++ >= 0);
     return 1;
 }
 /* picks the nearest moby in a list (skipping class 0x5A3) and acts on it */

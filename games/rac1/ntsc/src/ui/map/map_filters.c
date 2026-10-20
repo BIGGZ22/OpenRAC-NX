@@ -48,11 +48,11 @@ int map_filter_l02_0(void) {
 int map_filter_l01_3(void *arg0, int arg1, float unused1, float unused2, float arg3) __asm__("func_002069D0");
 
 int map_filter_l01_3(void *unused_input, int reveal_test_selector, float unused1, float unused2, float reveal_test_value) {
-    struct Hero *s = &hero;
-    int b = s->state.control_mode == 16;
-    int a = s->state.control_mode == 17 || s->state.control_mode == 18 || s->base_condition == 1;
+    struct Hero *hero_ptr = &hero;
+    int b = hero_ptr->state.control_mode == 16;
+    int hero_state_blocks_low_range_reveal = hero_ptr->state.control_mode == 17 || hero_ptr->state.control_mode == 18 || hero_ptr->base_condition == 1;
 
-    if (reveal_test_selector < 0xC8 && reveal_test_value >= 39.5f && reveal_test_value <= 42.5f && !a) {
+    if (reveal_test_selector < 0xC8 && reveal_test_value >= 39.5f && reveal_test_value <= 42.5f && !hero_state_blocks_low_range_reveal) {
         return 1;
     }
     if (reveal_test_selector >= 0xC8 && reveal_test_value >= 87.0f && !b) {
@@ -88,8 +88,8 @@ int map_filter_l01_5(int arg0, float unused1, float unused2, float arg1) __asm__
 
 int map_filter_l01_5(int reveal_test_selector, float unused1, float unused2, float reveal_test_value) {
     if (reveal_test_selector < 0x100) {
-        struct Hero *s = &hero;
-        return s->state.control_mode == 17 || s->state.control_mode == 18 || s->base_condition == 1;
+        struct Hero *hero_ptr = &hero;
+        return hero_ptr->state.control_mode == 17 || hero_ptr->state.control_mode == 18 || hero_ptr->base_condition == 1;
     }
     return (reveal_test_value >= 95.0f) ? 1 : 0;
 }
@@ -200,14 +200,14 @@ s32 region_enabled NOT_SDA = 0;
 s32 map_filter_l07_1(s32 px, s32 py, f32 unused1, f32 unused2, f32 arg3) __asm__("func_00206E18");
 
 s32 map_filter_l07_1(s32 px, s32 py, f32 unused1, f32 unused2, f32 reveal_test_value) {
-    struct Hero *s = &hero;
-    s32 a = s->state.control_mode == 17 || s->state.control_mode == 18 || s->base_condition == 1;
+    struct Hero *hero_ptr = &hero;
+    s32 hero_state_allows_polygon_reveal = hero_ptr->state.control_mode == 17 || hero_ptr->state.control_mode == 18 || hero_ptr->base_condition == 1;
 
     if (point_is_clockwise(px, py, 0x93, 0x168, 0x182, 0x168) != 0 && py >= 0x135 &&
         D_001A03A8[0] != 0 && reveal_test_value >= 47.7f) {
         return 1;
     }
-    if (!a) {
+    if (!hero_state_allows_polygon_reveal) {
         return 0;
     }
     if (point_is_clockwise(px, py, 0xC5, 0x9A, 0x13C, 0xE1) != 0 &&
@@ -259,10 +259,10 @@ s32 map_filter_l07_3(s32 px, s32 py, f32 unused1, f32 unused2, f32 arg3) __asm__
 
 s32 map_filter_l07_3(s32 px, s32 py, f32 unused1, f32 unused2, f32 reveal_test_value) {
     if (py < 0xBB) {
-        struct Hero *s = &hero;
-        s32 a = s->state.control_mode == 17 || s->state.control_mode == 18 || s->base_condition == 1;
+        struct Hero *hero_ptr = &hero;
+        s32 hero_state_blocks_low_y_reveal = hero_ptr->state.control_mode == 17 || hero_ptr->state.control_mode == 18 || hero_ptr->base_condition == 1;
 
-        if (!a && D_001A03BC[0] != 0) {
+        if (!hero_state_blocks_low_y_reveal && D_001A03BC[0] != 0) {
             return 1;
         }
         return 0;
@@ -581,11 +581,11 @@ int map_filter_l11_2(int reveal_test_selector, float unused1, float unused2, flo
 int map_filter_l11_3(int arg0, float unused1, float unused2, float arg1) __asm__("func_00207880");
 
 int map_filter_l11_3(int reveal_test_selector, float unused1, float unused2, float reveal_test_value) {
-    struct Hero *s = &hero;
-    int a = s->state.control_mode == 17 || s->state.control_mode == 18 || s->base_condition == 1;
+    struct Hero *hero_ptr = &hero;
+    int hero_state_allows_reveal = hero_ptr->state.control_mode == 17 || hero_ptr->state.control_mode == 18 || hero_ptr->base_condition == 1;
 
     if (reveal_test_selector < 0x15F) {
-        return (reveal_test_value >= 200.0f) ? a : 0;
+        return (reveal_test_value >= 200.0f) ? hero_state_allows_reveal : 0;
     }
     return reveal_test_value >= 233.0f && reveal_test_value <= 235.0f && D_0013D3E2[0] != 0;
 }
@@ -644,18 +644,18 @@ extern f32 vector_distance_xy(Vec4 *, Vec4 *) __asm__("func_001F9B80");
 s32 map_filter_l15_0(s32 x, s32 y) __asm__("func_00207A18");
 
 s32 map_filter_l15_0(s32 x, s32 y) {
-    Vec4 a;
+    Vec4 point_position;
     Vec4 b;
     s32 near;
 
     if (D_001A03A8[0] == 0) {
-        a.q = 0;
+        point_position.q = 0;
         b.q = 0;
-        a.f[0] = x;
-        a.f[1] = y;
+        point_position.f[0] = x;
+        point_position.f[1] = y;
         b.f[0] = 161.5f;
         b.f[1] = 249.0f;
-        near = vector_distance_xy(&a, &b) <= 35.0f;
+        near = vector_distance_xy(&point_position, &b) <= 35.0f;
     } else {
         near = 1;
     }

@@ -9441,7 +9441,51 @@ int MenuMobys_Draw(void *arg0) {
 void NullMobyUpdate_Helper(void) {
 }
 
-INCLUDE_ASM("asm/nonmatchings/text", func_00226D50);
+extern int D_001D6448[];
+
+void func_00226D50(int a0) {
+    char *g = D_001D5F70;
+    int v7 = *(int *)(g + 0x108);
+    int v8 = *(int *)(g + 0x10C);
+    int f2, t10;
+    int i, end;
+
+    if (a0 == 0) {
+        a0 = 1;
+        f2 = 0;
+        t10 = 0;
+    } else {
+        a0 = 2;
+        f2 = 1;
+        t10 = 2;
+    }
+    end = a0;
+    for (i = 0; i < end; i++) {
+        D_001D6448[2 * i] = v7;
+        D_001D6448[2 * i + 1] = 0;
+        v7 += 0x11800;
+    }
+    end += f2;
+    for (; i < end; i++) {
+        D_001D6448[2 * i] = v8;
+        D_001D6448[2 * i + 1] = 0;
+        v8 += 0x11800;
+    }
+    end += t10;
+    for (; i < end; i++) {
+        D_001D6448[2 * i] = v7;
+        D_001D6448[2 * i + 1] = 1;
+        v7 += 0x4F000;
+    }
+    for (; i < end; i++) {
+        D_001D6448[2 * i] = 0;
+        D_001D6448[2 * i + 1] = 0;
+    }
+    for (; i < 5; i++) {
+        D_001D6448[2 * i + 1] = 0;
+        D_001D6448[2 * i] = 0;
+    }
+}
 
 
 extern int func_00227018(int handle);

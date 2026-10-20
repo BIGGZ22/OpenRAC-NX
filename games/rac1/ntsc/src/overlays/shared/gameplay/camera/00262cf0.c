@@ -5,10 +5,10 @@
 void build_spherical_offset(void *, f32, f32, f32) __asm__("FUN_00214db0");
 void add_vector_xyz(void *, void *, void *) __asm__("FUN_001f9a10");
 void FUN_L00_00262cf0(void *a, void *b, f32 scale, f32 yaw, f32 pitch);
-void FUN_L00_00262cf0(void *a, void *b, f32 scale, f32 yaw, f32 pitch) {
+void FUN_L00_00262cf0(void *destination, void *b, f32 scale, f32 yaw, f32 pitch) {
     char buf[16];
     build_spherical_offset(buf, scale, yaw, pitch);
-    add_vector_xyz(a, buf, b);
+    add_vector_xyz(destination, buf, b);
 }
 typedef struct {
     s32 v[19];
@@ -17,10 +17,10 @@ extern T D_L00_001E9060;
 s32 scale_game_frames(s32) __asm__("FUN_001f96f8");
 void queue_dialogue_message(s32, s32) __asm__("FUN_L00_00263d40");
 void FUN_L00_00262d38(s32 i) {
-    T t = D_L00_001E9060;
+    T dialogue_message_ids = D_L00_001E9060;
     if (i < 0)
         i = 0;
     if (i > 18)
         i = 18;
-    queue_dialogue_message(t.v[i], scale_game_frames(0x49C));
+    queue_dialogue_message(dialogue_message_ids.v[i], scale_game_frames(0x49C));
 }

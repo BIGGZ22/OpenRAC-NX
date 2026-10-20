@@ -45,17 +45,17 @@ typedef struct {
 
 extern char *D_L16_0015FFD8_gp __asm__("D_L16_0015FFD8") __attribute__((sda));
 char *FUN_L16_002e4be0(struct Moby *arg, int id) {
-    unsigned short *p = D_L16_001ABCC0_4be0[arg->group];
+    unsigned short *moby_index_entry = D_L16_001ABCC0_4be0[arg->group];
     char *pool;
     int idx;
-    if (p != 0) {
+    if (moby_index_entry != 0) {
         pool = D_L16_0015FFD8_gp;
         do {
-            idx = *p & 0x7FFF;
+            idx = *moby_index_entry & 0x7FFF;
             if (*(short *)(((M_4be0 *)pool)[idx].data + 0xAC) == id) {
                 goto found;
             }
-        } while ((short)*p++ >= 0);
+        } while ((short)*moby_index_entry++ >= 0);
     }
     return 0;
 found:
@@ -67,15 +67,15 @@ extern float advance_accelerated_scalar(float, float, float, float, float *,
                                         float *) __asm__("FUN_00213f38");
 extern void sample_camera_path(int *, int, void *, float *, int, float) __asm__("FUN_00214e58");
 
-int FUN_L16_002e4c40(struct Moby *m) {
-    char *d = (char *)m->pvars;
+int FUN_L16_002e4c40(struct Moby *moby) {
+    char *moby_data = (char *)moby->pvars;
     int *path;
-    advance_accelerated_scalar(1.0f, *(float *)(d + 0xC8), *(float *)(d + 0xC8),
-                               *(float *)(d + 0xc4), (float *)(d + 0xb0), (float *)(d + 0xb4));
-    path = *(int **)(d + 0xa4);
-    sample_camera_path(path, 0, d + 0x60, (float *)(d + 0x70), 0,
-                       *(float *)(d + 0xb0) * (float)(*path - 1));
-    return *(float *)(d + 0xb0) >= 1.0f;
+    advance_accelerated_scalar(1.0f, *(float *)(moby_data + 0xC8), *(float *)(moby_data + 0xC8),
+                               *(float *)(moby_data + 0xc4), (float *)(moby_data + 0xb0), (float *)(moby_data + 0xb4));
+    path = *(int **)(moby_data + 0xa4);
+    sample_camera_path(path, 0, moby_data + 0x60, (float *)(moby_data + 0x70), 0,
+                       *(float *)(moby_data + 0xb0) * (float)(*path - 1));
+    return *(float *)(moby_data + 0xb0) >= 1.0f;
 }
 #include "qcopy.h"
 #include "sda.h"
@@ -111,24 +111,24 @@ extern float fast_sin(float) __asm__("FUN_001f9de0");
 extern float fast_add_rotations(float, float) __asm__("FUN_001fa580");
 
 void FUN_L16_002e4d88(struct Moby *moby) {
-    char *d = (char *)moby->pvars;
-    float s, t, w;
-    qcopy(&moby->pos, d + 0x60);
-    qcopy(&moby->rot, d + 0x70);
-    s = fast_add_rotations(*(float *)(d + 0xb8), frame_time * 2.0943951f);
-    *(float *)(d + 0xb8) = s;
-    t = fast_sin(s);
+    char *moby_data = (char *)moby->pvars;
+    float wobble_phase, t, w;
+    qcopy(&moby->pos, moby_data + 0x60);
+    qcopy(&moby->rot, moby_data + 0x70);
+    wobble_phase = fast_add_rotations(*(float *)(moby_data + 0xb8), frame_time * 2.0943951f);
+    *(float *)(moby_data + 0xb8) = wobble_phase;
+    t = fast_sin(wobble_phase);
     w = frame_time * 1.6929693f;
     moby->pos.z += t * 0.25f;
-    s = fast_add_rotations(*(float *)(d + 0xbc), w);
-    *(float *)(d + 0xbc) = s;
-    t = fast_add_rotations(moby->rot.y, fast_sin(s) * 0.08726646f);
+    wobble_phase = fast_add_rotations(*(float *)(moby_data + 0xbc), w);
+    *(float *)(moby_data + 0xbc) = wobble_phase;
+    t = fast_add_rotations(moby->rot.y, fast_sin(wobble_phase) * 0.08726646f);
     w = frame_time * 0.9250245f;
     moby->rot.y = t;
-    s = fast_add_rotations(*(float *)(d + 0xc0), w);
-    *(float *)(d + 0xc0) = s;
+    wobble_phase = fast_add_rotations(*(float *)(moby_data + 0xc0), w);
+    *(float *)(moby_data + 0xc0) = wobble_phase;
     moby->rot.x =
-        fast_add_rotations(moby->rot.x, fast_sin(s) * 0.08726646f);
+        fast_add_rotations(moby->rot.x, fast_sin(wobble_phase) * 0.08726646f);
     if (moby->rot.x > 0.17453292f)
         moby->rot.x = 0.17453292f;
     else if (moby->rot.x < -0.17453292f)
@@ -144,17 +144,17 @@ extern char D_L16_001D96E0[];
 extern void add_vector_xyz(void *, void *, void *) __asm__("FUN_001f9a10");
 extern void transform_vector_by_basis(void *, void *, void *) __asm__("FUN_001f9cf8");
 
-void FUN_L16_002e4f30(struct Moby *a) {
-    char *data = (char *)a->pvars;
+void FUN_L16_002e4f30(struct Moby *moby) {
+    char *data = (char *)moby->pvars;
     int idx = *(int *)(data + 0xa0);
     if (idx != -1) {
-        char *p = D_L16_001B0930[idx];
-        if (*(int *)p == 7) {
+        char *table_entry = D_L16_001B0930[idx];
+        if (*(int *)table_entry == 7) {
             int i;
             struct Hero *g;
             for (i = 0; i < 7; i++) {
-                transform_vector_by_basis(p + 0x10 + i * 16, D_L16_001D96E0 + i * 16, &a->rot_row0);
-                add_vector_xyz(p + 0x10 + i * 16, p + 0x10 + i * 16, &a->pos);
+                transform_vector_by_basis(table_entry + 0x10 + i * 16, D_L16_001D96E0 + i * 16, &moby->rot_row0);
+                add_vector_xyz(table_entry + 0x10 + i * 16, table_entry + 0x10 + i * 16, &moby->pos);
             }
             g = &hero;
             *(unsigned short *)&g->unk22DA = *(unsigned short *)(data + 0xa0);
@@ -181,7 +181,7 @@ extern void FUN_L16_002e8b98_i(int, int, int, int, char *) __asm__("FUN_L16_002e
 extern void vu1_add_g_sregister_l16(int, long) __asm__("FUN_00233980");
 
 void FUN_L16_002e97a0(void) {
-    int *a = (int *)&D_L16_00161F90;
+    int *element_counts = (int *)&D_L16_00161F90;
     int *b = (int *)&D_L16_00161F98;
     int *c = (int *)D_L16_00161FA0;
     int *d = (int *)D_L16_00161FA8;
@@ -195,8 +195,8 @@ void FUN_L16_002e97a0(void) {
     font_queue_vu_state();
     for (i = 0; i < 0x2; i++) {
         if (fast_bsphere_check(D_L16_001DF2B0[i], 512.0f) != -1) {
-            FUN_L16_002e8b98_i(a[i], d[i], b[i], c[i], D_L16_001DF2D0);
-            FUN_L00_001fde98(a[i], b[i], e[i], D_L16_001DF2D0, 1);
+            FUN_L16_002e8b98_i(element_counts[i], d[i], b[i], c[i], D_L16_001DF2D0);
+            FUN_L00_001fde98(element_counts[i], b[i], e[i], D_L16_001DF2D0, 1);
         }
     }
 }

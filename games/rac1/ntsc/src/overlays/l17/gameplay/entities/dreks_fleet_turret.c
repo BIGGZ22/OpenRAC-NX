@@ -22,30 +22,30 @@ extern void trooper_anim_update(void *m, short *p) __asm__("FUN_L00_0025d458");
 extern void trooper_anim_finish(void *, void *) __asm__("FUN_L00_0025d538");
 
 void FUN_L17_002cbc10(char *m) {
-    char *d;
-    char *e;
+    char *turret_vars;
+    char *hit_animation_state;
     char *r;
     int st;
     float fv;
     int s;
-    d = *(char **)(m + 0x78);
+    turret_vars = *(char **)(m + 0x78);
     if (*(unsigned char *)(m + 0x20) != 0) {
         fv = 0.0f;
         r = find_moby_hit(m, 0x330000, 0);
         if (r != 0) {
             if (*(int *)(r + 0x20) != 0) {
-                int h = *(short *)(*(char **)(r + 0x20) + 0xA6);
-                if (h != 0x3F1) {
-                    if (h != 0x127)
+                int hit_moby_class_id = *(short *)(*(char **)(r + 0x20) + 0xA6);
+                if (hit_moby_class_id != 0x3F1) {
+                    if (hit_moby_class_id != 0x127)
                         r = 0;
                 }
             }
         }
-        e = d + 0x60;
-        hit_reaction(m, r, d + 0x20, 0, &st, &fv, 0, 4);
+        hit_animation_state = turret_vars + 0x60;
+        hit_reaction(m, r, turret_vars + 0x20, 0, &st, &fv, 0, 4);
         if (st != 1 && *(unsigned char *)(m + 0x20) != 4) {
-            float t = *(float *)(d + 0x20) - fv;
-            *(float *)(d + 0x20) = t;
+            float t = *(float *)(turret_vars + 0x20) - fv;
+            *(float *)(turret_vars + 0x20) = t;
             s = 0xB;
             if (t <= 0.0f)
                 s = 1;
@@ -53,11 +53,11 @@ void FUN_L17_002cbc10(char *m) {
                 *(unsigned char *)(m + 0x20) = 4;
                 *(short *)(m + 0x34) &= 0xEFFF;
             }
-            *(unsigned char *)(d + 0x67) = 0xF0;
-            trooper_anim_update(m, (short *)e);
+            *(unsigned char *)(turret_vars + 0x67) = 0xF0;
+            trooper_anim_update(m, (short *)hit_animation_state);
         }
         *(unsigned char *)(m + 0xA4) = 0xFF;
-        trooper_anim_finish(m, e);
+        trooper_anim_finish(m, hit_animation_state);
     }
 }
 
@@ -111,7 +111,7 @@ void FUN_L17_002a8da0(struct Moby *m) {
     float axis_aligned_hero_offset[4];
     float e50[4];
     float hit_descriptor_and_vector_scratch[12];
-    char *d;
+    char *beam_vars;
     char *e;
     int flag;
     int i;
@@ -122,28 +122,28 @@ void FUN_L17_002a8da0(struct Moby *m) {
     if (m->state == 3)
         return;
     flag = 0;
-    d = (char *)m->pvars;
+    beam_vars = (char *)m->pvars;
     switch (m->state) {
     case BEAM_INITIALIZE:
-        *(float *)(d + 0x58) = animation_start(m->class_slot, 0);
-        *(float *)(d + 0x5C) =
-            (animation_end(m->class_slot, 0) - *(float *)(d + 0x58)) / 6.2831855f;
-        k = *(int *)(d + 0x44);
+        *(float *)(beam_vars + 0x58) = animation_start(m->class_slot, 0);
+        *(float *)(beam_vars + 0x5C) =
+            (animation_end(m->class_slot, 0) - *(float *)(beam_vars + 0x58)) / 6.2831855f;
+        k = *(int *)(beam_vars + 0x44);
         if (k != -1) {
-            qcopy(d, &m->pos);
-            *(float *)(d + 0x54) = *(float *)(d + 0x48) * frame_time /
-                                   FUN_001f9b48(d, D_L17_001600EC + (k << 7) + 0x30);
+            qcopy(beam_vars, &m->pos);
+            *(float *)(beam_vars + 0x54) = *(float *)(beam_vars + 0x48) * frame_time /
+                                   FUN_001f9b48(beam_vars, D_L17_001600EC + (k << 7) + 0x30);
             m->state = 2;
-        } else if ((j = *(int *)(d + 0x68)) != -1) {
-            qcopy(d, &m->pos);
-            *(float *)(d + 0x54) = *(float *)(d + 0x48) * frame_time /
-                                   FUN_001f9b48(d, D_L17_0015FFD0[2] + (j << 8) + 0x10);
+        } else if ((j = *(int *)(beam_vars + 0x68)) != -1) {
+            qcopy(beam_vars, &m->pos);
+            *(float *)(beam_vars + 0x54) = *(float *)(beam_vars + 0x48) * frame_time /
+                                   FUN_001f9b48(beam_vars, D_L17_0015FFD0[2] + (j << 8) + 0x10);
             m->state = 2;
         } else {
             m->state = 1;
         }
-        *(int *)(d + 0x60) = 0;
-        *(float *)(d + 0x4C) = 0.1f;
+        *(int *)(beam_vars + 0x60) = 0;
+        *(float *)(beam_vars + 0x4C) = 0.1f;
         *(OvlQuad *)a = 0;
         a[0] = 13.0f;
         transform_vector_by_basis(a, a, &m->rot_row0);
@@ -153,32 +153,32 @@ void FUN_L17_002a8da0(struct Moby *m) {
             *(OvlQuad *)c = *(OvlQuad *)D_L17_00174760;
         }
         subtract_vector_xyz(b, c, &m->pos);
-        *(OvlQuad *)(d + 0x30) = *(OvlQuad *)b;
+        *(OvlQuad *)(beam_vars + 0x30) = *(OvlQuad *)b;
         break;
     case BEAM_UPDATE_STATIONARY:
-        if (*(int *)(d + 0x40) == -1 ||
-            is_point_inside_clip_volume(&hero.motion.pos, *(int *)(d + 0x40))) {
+        if (*(int *)(beam_vars + 0x40) == -1 ||
+            is_point_inside_clip_volume(&hero.motion.pos, *(int *)(beam_vars + 0x40))) {
             flag = 1;
         }
         break;
     case BEAM_UPDATE_OSCILLATING:
-        *(float *)(d + 0x50) += *(float *)(d + 0x54);
-        if (*(float *)(d + 0x50) > 1.0f) {
-            *(float *)(d + 0x50) = 1.0f;
-            *(float *)(d + 0x54) = -*(float *)(d + 0x54);
-        } else if (*(float *)(d + 0x50) < 0.0f) {
-            *(float *)(d + 0x50) = 0.0f;
-            *(float *)(d + 0x54) = -*(float *)(d + 0x54);
+        *(float *)(beam_vars + 0x50) += *(float *)(beam_vars + 0x54);
+        if (*(float *)(beam_vars + 0x50) > 1.0f) {
+            *(float *)(beam_vars + 0x50) = 1.0f;
+            *(float *)(beam_vars + 0x54) = -*(float *)(beam_vars + 0x54);
+        } else if (*(float *)(beam_vars + 0x50) < 0.0f) {
+            *(float *)(beam_vars + 0x50) = 0.0f;
+            *(float *)(beam_vars + 0x54) = -*(float *)(beam_vars + 0x54);
         }
-        if (*(int *)(d + 0x68) != -1) {
-            lerp_vector(&m->pos, d, ((char *(*)[64])D_L17_0015FFD8)[*(int *)(d + 0x68)][0x1E],
-                         *(float *)(d + 0x50));
+        if (*(int *)(beam_vars + 0x68) != -1) {
+            lerp_vector(&m->pos, beam_vars, ((char *(*)[64])D_L17_0015FFD8)[*(int *)(beam_vars + 0x68)][0x1E],
+                         *(float *)(beam_vars + 0x50));
         } else {
-            lerp_vector(&m->pos, d, D_L17_001600EC + (*(int *)(d + 0x44) << 7) + 0x30,
-                         *(float *)(d + 0x50));
+            lerp_vector(&m->pos, beam_vars, D_L17_001600EC + (*(int *)(beam_vars + 0x44) << 7) + 0x30,
+                         *(float *)(beam_vars + 0x50));
         }
-        if (*(int *)(d + 0x40) == -1 ||
-            is_point_inside_clip_volume(&hero.motion.pos, *(int *)(d + 0x40))) {
+        if (*(int *)(beam_vars + 0x40) == -1 ||
+            is_point_inside_clip_volume(&hero.motion.pos, *(int *)(beam_vars + 0x40))) {
             *(OvlQuad *)a = 0;
             a[0] = 13.0f;
             transform_vector_by_basis(a, a, &m->rot_row0);
@@ -189,69 +189,69 @@ void FUN_L17_002a8da0(struct Moby *m) {
             }
             flag = 1;
             subtract_vector_xyz(b, c, &m->pos);
-            *(OvlQuad *)(d + 0x30) = *(OvlQuad *)b;
+            *(OvlQuad *)(beam_vars + 0x30) = *(OvlQuad *)b;
         }
         break;
     }
     *(OvlQuad *)a = 0;
     a[0] = 12.0f;
     transform_vector_by_basis(a, a, &m->rot_row0);
-    add_vector_xyz(b, &m->pos, d + 0x30);
+    add_vector_xyz(b, &m->pos, beam_vars + 0x30);
     *(OvlQuad *)c = *(OvlQuad *)b;
-    if (*(int *)(d + 0x60) != 0) {
-        normalize_vector_xyz(d + 0x20, a, -(*(float *)&D_L17_00161498 - 0.2f));
-        normalize_vector_xyz(*(char **)(d + 0x60) + 0x10, a, -*(float *)&D_L17_00161498);
-        add_vector_xyz(b, d + 0x20, c);
-        e = *(char **)(d + 0x60);
-        *(OvlQuad *)(d + 0x20) = *(OvlQuad *)b;
+    if (*(int *)(beam_vars + 0x60) != 0) {
+        normalize_vector_xyz(beam_vars + 0x20, a, -(*(float *)&D_L17_00161498 - 0.2f));
+        normalize_vector_xyz(*(char **)(beam_vars + 0x60) + 0x10, a, -*(float *)&D_L17_00161498);
+        add_vector_xyz(b, beam_vars + 0x20, c);
+        e = *(char **)(beam_vars + 0x60);
+        *(OvlQuad *)(beam_vars + 0x20) = *(OvlQuad *)b;
         add_vector_xyz(b, e + 0x10, c);
         *(OvlQuad *)(e + 0x10) = *(OvlQuad *)b;
     } else {
-        *(OvlQuad *)(d + 0x20) = *(OvlQuad *)c;
+        *(OvlQuad *)(beam_vars + 0x20) = *(OvlQuad *)c;
     }
     if (flag) {
-        *(float *)(d + 0x4C) =
+        *(float *)(beam_vars + 0x4C) =
             fast_cos(fast_add_rotations(
-                3.1415927f, (compute_interpolated_record_value(m) - *(float *)(d + 0x58)) /
-                                *(float *)(d + 0x5C))) *
+                3.1415927f, (compute_interpolated_record_value(m) - *(float *)(beam_vars + 0x58)) /
+                                *(float *)(beam_vars + 0x5C))) *
                 0.02f +
             0.09f;
-        normalize_vector_xyz(d + 0x10, a, 0.2f);
-        subtract_vector_xyz(e50, &m->pos, d + 0x10);
-        *(OvlQuad *)(d + 0x10) = *(OvlQuad *)e50;
-        len = vector_length_xyz(d + 0x30);
-        lerp_vector(b, d + 0x10, d + 0x20, 0.5f);
+        normalize_vector_xyz(beam_vars + 0x10, a, 0.2f);
+        subtract_vector_xyz(e50, &m->pos, beam_vars + 0x10);
+        *(OvlQuad *)(beam_vars + 0x10) = *(OvlQuad *)e50;
+        len = vector_length_xyz(beam_vars + 0x30);
+        lerp_vector(b, beam_vars + 0x10, beam_vars + 0x20, 0.5f);
         b[3] = len * 0.5f;
         if (fast_bsphere_check((char *)b, 32.0f) != -1) {
             subtract_vector_xyz(hero_offset, &hero.motion.pos, &m->pos);
             normalize_vector_xyz(axis_aligned_hero_offset, &m->rot_row0, dot_vectors_xyz(&m->rot_row0, hero_offset));
             subtract_vector_xyz(hero_offset, hero_offset, axis_aligned_hero_offset);
             func_L00_0025A8C0_alt((char *)hit_descriptor_and_vector_scratch, (int)m, 0x10001, 1.0f, hero_offset);
-            collision_line(&m->pos, d + 0x20, 9, m, hit_descriptor_and_vector_scratch);
-            len = vector_length_xyz(d + 0x30);
-            *(OvlQuad *)e50 = *(OvlQuad *)(d + 0x10);
+            collision_line(&m->pos, beam_vars + 0x20, 9, m, hit_descriptor_and_vector_scratch);
+            len = vector_length_xyz(beam_vars + 0x30);
+            *(OvlQuad *)e50 = *(OvlQuad *)(beam_vars + 0x10);
             for (i = 0; i < 7; i++) {
-                scale_vector_xyz(c, d + 0x30, random_float_between(0.0f, 0.9f));
+                scale_vector_xyz(c, beam_vars + 0x30, random_float_between(0.0f, 0.9f));
                 FUN_L00_001ff290(hit_descriptor_and_vector_scratch, c, e50);
-                normalize_vector_xyz(a, d + 0x30,
+                normalize_vector_xyz(a, beam_vars + 0x30,
                                      random_float_between(frame_time * 10.0f, len / 20.0f));
                 FUN_L17_0026fb60(m, c, a);
             }
             len = -len;
-            *(OvlQuad *)e50 = *(OvlQuad *)(d + 0x20);
+            *(OvlQuad *)e50 = *(OvlQuad *)(beam_vars + 0x20);
             for (i = 0; i < 8; i++) {
-                scale_vector_xyz(c, d + 0x30, random_float_between(0.0f, 0.9f));
+                scale_vector_xyz(c, beam_vars + 0x30, random_float_between(0.0f, 0.9f));
                 subtract_vector_xyz(hit_descriptor_and_vector_scratch, e50, c);
                 *(OvlQuad *)c = *(OvlQuad *)hit_descriptor_and_vector_scratch;
-                normalize_vector_xyz(a, d + 0x30,
+                normalize_vector_xyz(a, beam_vars + 0x30,
                                      random_float_between(frame_time * 10.0f, len / 20.0f));
                 FUN_L17_0026fb60(m, c, a);
             }
-            normalize_vector_xyz(a, d + 0x30, -random_float_between(frame_time * 0.5f, frame_time));
+            normalize_vector_xyz(a, beam_vars + 0x30, -random_float_between(frame_time * 0.5f, frame_time));
             a[0] += random_float_between(-0.01f, 0.01f);
             a[1] += random_float_between(-0.01f, 0.01f);
             a[2] += random_float_between(-0.01f, 0.01f);
-            FUN_L17_0026fb60(0, d + 0x20, a);
+            FUN_L17_0026fb60(0, beam_vars + 0x20, a);
         }
         enqueue_callback_list_1(FUN_L17_002a95b8, m);
     }
@@ -283,20 +283,20 @@ extern struct {
     float a, b;
 } D_L17_001E6620_a95b8[4] __asm__("D_L17_001E6320");
 void FUN_L17_002a95b8(struct Moby *moby) {
-    char *d = (char *)moby->pvars;
+    char *moby_vars = (char *)moby->pvars;
     S_a95b8 s;
     char m1[16];
     char m2[16];
     char m3[16];
     char m0[16];
     int i;
-    func_001F9BF0_a95b8(m3, d + 0x10, d + 0x20);
-    func_001F9BF0_a95b8(m1, d + 0x10, D_L17_001676C0);
-    func_001F9BF0_a95b8(m2, d + 0x20, D_L17_001676C0);
+    func_001F9BF0_a95b8(m3, moby_vars + 0x10, moby_vars + 0x20);
+    func_001F9BF0_a95b8(m1, moby_vars + 0x10, D_L17_001676C0);
+    func_001F9BF0_a95b8(m2, moby_vars + 0x20, D_L17_001676C0);
     func_001F9CA0_a95b8(m1, m1, m3);
-    func_L00_001FF4B0_a95b8(m1, m1, *(float *)(d + 0x4C));
+    func_L00_001FF4B0_a95b8(m1, m1, *(float *)(moby_vars + 0x4C));
     func_001F9CA0_a95b8(m2, m2, m3);
-    func_L00_001FF4B0_a95b8(m2, m2, *(float *)(d + 0x4C));
+    func_L00_001FF4B0_a95b8(m2, m2, *(float *)(moby_vars + 0x4C));
     s.z78 = func_001F4868_a95b8(0xE);
     s.q80 = 0xFF9000000260L;
     s.q88 = 0x8000000048L;
@@ -309,13 +309,13 @@ void FUN_L17_002a95b8(struct Moby *moby) {
         s.f[i].a = D_L17_001E6620_a95b8[i].a;
         s.f[i].b = D_L17_001E6620_a95b8[i].b;
     }
-    func_001F9BF0_a95b8(m0, d + 0x10, m1);
+    func_001F9BF0_a95b8(m0, moby_vars + 0x10, m1);
     *(OvlQuad *)(s.pad + 0) = *(OvlQuad *)m0;
-    func_001F9BD8_a95b8(m0, d + 0x10, m1);
+    func_001F9BD8_a95b8(m0, moby_vars + 0x10, m1);
     *(OvlQuad *)(s.pad + 0x10) = *(OvlQuad *)m0;
-    func_001F9BF0_a95b8(m0, d + 0x20, m2);
+    func_001F9BF0_a95b8(m0, moby_vars + 0x20, m2);
     *(OvlQuad *)(s.pad + 0x20) = *(OvlQuad *)m0;
-    func_001F9BD8_a95b8(m0, d + 0x20, m2);
+    func_001F9BD8_a95b8(m0, moby_vars + 0x20, m2);
     *(OvlQuad *)(s.pad + 0x30) = *(OvlQuad *)m0;
     func_L00_001FD1D8_a95b8(&s, 0, 0);
 }
@@ -561,46 +561,46 @@ extern char *D_L17_0015FFD8_m __asm__("D_L17_0015FFD8") __attribute__((section("
 
 /* Spreads the class-0x733 mobies of this moby's group evenly along its path. */
 void FUN_L17_002cbd38(char *m) {
-    char *d;
+    char *turret_vars;
     char *path;
     char *mobys;
-    char *o;
+    char *matched_moby;
     char *od;
-    short *s;
+    short *group_entry;
     int i;
-    short n;
+    short class_733_moby_count;
     short k;
     short step;
 
-    d = *(char **)(m + 0x78);
-    n = 0;
+    turret_vars = *(char **)(m + 0x78);
+    class_733_moby_count = 0;
     k = 0;
-    i = *(short *)(d + 0x80);
+    i = *(short *)(turret_vars + 0x80);
     if (i == -1)
         return;
-    s = D_L17_001AC140[i];
-    if (s == 0)
+    group_entry = D_L17_001AC140[i];
+    if (group_entry == 0)
         return;
     do {
-        if (*(short *)(((*s & 0x7FFF) << 8) + 0xA6 + D_L17_0015FFD8) == 0x733)
-            n++;
-    } while (*s++ >= 0);
-    path = ((char **)D_L17_001B0DB0)[*(int *)(d + 0x84)];
-    step = *(int *)path / n;
-    s = D_L17_001AC140[i];
+        if (*(short *)(((*group_entry & 0x7FFF) << 8) + 0xA6 + D_L17_0015FFD8) == 0x733)
+            class_733_moby_count++;
+    } while (*group_entry++ >= 0);
+    path = ((char **)D_L17_001B0DB0)[*(int *)(turret_vars + 0x84)];
+    step = *(int *)path / class_733_moby_count;
+    group_entry = D_L17_001AC140[i];
     mobys = D_L17_0015FFD8_m;
     do {
-        i = (*s & 0x7FFF) << 8;
+        i = (*group_entry & 0x7FFF) << 8;
         if (*(short *)(i + 0xA6 + mobys) == 0x733) {
-            o = i + mobys;
-            od = *(char **)(o + 0x78);
-            qcopy(o + 0x10, path + 0x10 + k * 0x10);
-            *(int *)(od + 0x60) = *(int *)(d + 0x84);
+            matched_moby = i + mobys;
+            od = *(char **)(matched_moby + 0x78);
+            qcopy(matched_moby + 0x10, path + 0x10 + k * 0x10);
+            *(int *)(od + 0x60) = *(int *)(turret_vars + 0x84);
             *(int *)(od + 0x64) = k;
             *(int *)(od + 0x68) = 0;
             k += step;
         }
-    } while (*s++ >= 0);
+    } while (*group_entry++ >= 0);
 }
 
 #define NOT_SDA
@@ -664,7 +664,7 @@ extern void transform_vector_by_basis(void *, void *, void *);
 extern void vu_euler_rotation_basis(void *, void *);
 extern int func_001FA898_r(float) __asm__("FUN_001fa6d0");
 
-void FUN_L17_002d77f0(char *m) {
+void FUN_L17_002d77f0(char *moby) {
     enum {
         RING_INITIALIZE = 0,
         RING_ROTATE_AND_DRAW = 1
@@ -681,36 +681,36 @@ void FUN_L17_002d77f0(char *m) {
     OvlQuad sp100[1];
     int j;
     int k;
-    float *d;
+    float *ring_vars;
     float len;
     float g;
     float f21;
     float f20;
-    int c;
+    int particle_lifetime;
     char *w;
 
-    d = *(float **)(m + 0x78);
+    ring_vars = *(float **)(moby + 0x78);
     if (FUN_L00_0020d568() != 0) {
-        switch (*(unsigned char *)(m + 0x20)) {
+        switch (*(unsigned char *)(moby + 0x20)) {
         case RING_INITIALIZE:
-            *(unsigned char *)(m + 0x30) = 0xFF;
-            *(unsigned char *)(m + 0x20) = 1;
-            d[1] = d[0] * *(float *)&D_L17_00161B78 * DEG_TO_RAD * frame_time;
+            *(unsigned char *)(moby + 0x30) = 0xFF;
+            *(unsigned char *)(moby + 0x20) = 1;
+            ring_vars[1] = ring_vars[0] * *(float *)&D_L17_00161B78 * DEG_TO_RAD * frame_time;
             break;
         case RING_ROTATE_AND_DRAW:
-            *(float *)(m + 0x40) = fast_add_rotations(*(float *)(m + 0x40), d[1]);
-            enqueue_callback_list_1(FUN_L17_002d7cf0, m);
+            *(float *)(moby + 0x40) = fast_add_rotations(*(float *)(moby + 0x40), ring_vars[1]);
+            enqueue_callback_list_1(FUN_L17_002d7cf0, moby);
             break;
         }
-        subtract_vector_xyz(sp0, &hero.motion.pos, (m + 0x10));
-        if (dot_vectors_xyz(sp0, (m + 0xC0)) > 0.0f) {
-            normalize_vector_xyz(sp10, (m + 0xC0), 1.0f);
+        subtract_vector_xyz(sp0, &hero.motion.pos, (moby + 0x10));
+        if (dot_vectors_xyz(sp0, (moby + 0xC0)) > 0.0f) {
+            normalize_vector_xyz(sp10, (moby + 0xC0), 1.0f);
         } else {
-            normalize_vector_xyz(sp10, (m + 0xC0), -1.0f);
+            normalize_vector_xyz(sp10, (moby + 0xC0), -1.0f);
         }
         {
             int i;
-            blk.p10 = m;
+            blk.p10 = moby;
             blk.v14 = 0x10001;
             blk.i20 = 1;
             blk.c18 = 1;
@@ -718,8 +718,8 @@ void FUN_L17_002d77f0(char *m) {
             blk.f8 = 1.0f;
             blk.fC = 5627.9248046875f;
             blk.c19 = 1;
-            blk.h1A = *(unsigned short *)(m + 0xA6);
-            vu_euler_rotation_basis(mat1, m + 0x40);
+            blk.h1A = *(unsigned short *)(moby + 0xA6);
+            vu_euler_rotation_basis(mat1, moby + 0x40);
             normalize_vector_triplet(mat1);
             copy_matrix_rotation(mat2, mat1);
             i = 0;
@@ -737,33 +737,33 @@ void FUN_L17_002d77f0(char *m) {
                                                wrap_angle(convert_integer_to_float(i) * 2.0943952f)),
                             f21));
                     transform_vector(spC0, spC0, mat2);
-                    FUN_L00_001ff290(spD0, spC0, (m + 0x10));
-                    if (FUN_001f9b48((m + 0x10), &hero.motion.pos) < 30.0f) {
-                        collision_line((m + 0x10), spC0, 9, m, &blk);
+                    FUN_L00_001ff290(spD0, spC0, (moby + 0x10));
+                    if (FUN_001f9b48((moby + 0x10), &hero.motion.pos) < 30.0f) {
+                        collision_line((moby + 0x10), spC0, 9, moby, &blk);
                     }
-                    spD0[0] = *(OvlQuad *)(m + 0x10);
+                    spD0[0] = *(OvlQuad *)(moby + 0x10);
                     *(float *)((char *)spD0 + 0xC) = *(float *)&D_L17_00161B84;
                     if (fast_bsphere_check((char *)spD0, 20.0f) != -1 && (j == 0 || j == 4)) {
                         spF0[0] = 0;
                         *(float *)((char *)spF0 + 8) = 12.0f;
-                        transform_vector_by_basis(spF0, spF0, (m + 0xC0));
+                        transform_vector_by_basis(spF0, spF0, (moby + 0xC0));
                         {
                             for (k = 0; k < *(int *)&D_L17_00161B88; k++) {
                                 f20 = -1.0f;
                                 if (rand() & 1)
                                     f20 = 1.0f;
-                                c = func_001FA898_r(multiply_global_factor_ed64(random_float_between(
+                                particle_lifetime = func_001FA898_r(multiply_global_factor_ed64(random_float_between(
                                     *(float *)&D_L17_00161B90 * 0.5f, *(float *)&D_L17_00161B90)));
-                                if (c <= 0)
-                                    c = 1;
-                                subtract_vector_xyz(sp100, spC0, (m + 0x10));
+                                if (particle_lifetime <= 0)
+                                    particle_lifetime = 1;
+                                subtract_vector_xyz(sp100, spC0, (moby + 0x10));
                                 spF0[0] = sp100[0];
                                 scale_vector_xyz(spF0, spF0, f20);
                                 len = vector_length_xyz(spF0);
                                 if (f20 < 0.0f)
                                     spE0[0] = spC0[0];
                                 else
-                                    spE0[0] = *(OvlQuad *)(m + 0x10);
+                                    spE0[0] = *(OvlQuad *)(moby + 0x10);
                                 scale_vector_xyz(spF0, spF0, random_float_between(0.0f, 0.9f));
                                 w = (char *)sp100;
                                 FUN_L00_001ff290(w, spE0, spF0);
@@ -771,9 +771,9 @@ void FUN_L17_002d77f0(char *m) {
                                 f20 *= 10.0f;
                                 normalize_vector_xyz(
                                     spF0, spF0,
-                                    random_float_between(f20, len / convert_integer_to_float(c * 4)));
+                                    random_float_between(f20, len / convert_integer_to_float(particle_lifetime * 4)));
                                 FUN_L00_002730e0((float *)spE0, (char *)spF0,
-                                                 *(int *)&D_L17_00161B94, c & 0xFF,
+                                                 *(int *)&D_L17_00161B94, particle_lifetime & 0xFF,
                                                  random_integer_below(0xFF) & 0xFF, 0,
                                                  *(float *)&D_L17_00161B8C);
                             }
@@ -829,7 +829,7 @@ extern void draw_geometry_quad(void *, void *, int);
 extern void wrap_angle_alt(void *, float, float, float) __asm__("FUN_00214db0");
 
 void FUN_L17_002d7cf0(struct Moby *moby) {
-    RingPrim q;
+    RingPrim quad_primitive;
     float mat[16];
     float scroll;
     int pass;
@@ -842,16 +842,16 @@ void FUN_L17_002d7cf0(struct Moby *moby) {
     euler_rotation_matrix(mat, &moby->rot.x);
     *(OvlQuad *)&mat[12] = *(OvlQuad *)&moby->pos;
     mat[15] = 1.0f;
-    q.tex = get_effect_texture(0x28);
-    q.q80 = 0xFF9000000260L;
-    q.alpha = (long)D_L17_00161B98 | ((long)D_L17_00161B9C << 2) | ((long)D_L17_00161BA0 << 4) |
+    quad_primitive.tex = get_effect_texture(0x28);
+    quad_primitive.q80 = 0xFF9000000260L;
+    quad_primitive.alpha = (long)D_L17_00161B98 | ((long)D_L17_00161B9C << 2) | ((long)D_L17_00161BA0 << 4) |
               ((long)D_L17_00161BA4 << 6) | 0x8000000000L;
-    q.z70 = 0;
+    quad_primitive.z70 = 0;
     for (pass = 0; pass < 2; pass++) {
         for (k = 0; k < 4; k++) {
             RingStep step = D_L17_00161BC0;
 
-            q.uv[k].y = D_L17_001D3F70[k].y + scroll * step.v[pass];
+            quad_primitive.uv[k].y = D_L17_001D3F70[k].y + scroll * step.v[pass];
         }
         for (i = 0; i < 3; i++) {
             for (j = 0; j < 4; j++) {
@@ -861,23 +861,23 @@ void FUN_L17_002d7cf0(struct Moby *moby) {
                 float *vj;
                 float radius;
 
-                q.uv[j].x = D_L17_001D3F70[j].x + scroll * step.v[pass];
+                quad_primitive.uv[j].x = D_L17_001D3F70[j].x + scroll * step.v[pass];
                 radius = 0.0f;
                 if (j != 0) {
                     radius = *(float *)&D_L17_00161B84;
                 }
-                vj = q.v[j];
+                vj = quad_primitive.v[j];
                 wrap_angle_alt(vj, radius, 1.5707964f,
                                build_spherical_offset_alt(*(float *)&D_L17_00161B7C * DEG_TO_RAD +
                                                           convert_integer_to_float(i) * 2.0943952f +
                                                           spread[j]));
                 vj[3] = 1.0f;
             }
-            q.rgba[3] = D_L17_00161BB8;
-            q.rgba[2] = D_L17_00161BB8;
-            q.rgba[1] = D_L17_00161BB8;
-            q.rgba[0] = D_L17_00161BB8;
-            draw_geometry_quad(&q, mat, 0);
+            quad_primitive.rgba[3] = D_L17_00161BB8;
+            quad_primitive.rgba[2] = D_L17_00161BB8;
+            quad_primitive.rgba[1] = D_L17_00161BB8;
+            quad_primitive.rgba[0] = D_L17_00161BB8;
+            draw_geometry_quad(&quad_primitive, mat, 0);
         }
     }
 }
@@ -919,8 +919,8 @@ void FUN_L17_002dc3f8(struct Moby *m) {
     float w[12];
     float pos[4];
     float q[4];
-    float d[4];
-    float t[4];
+    float scaled_particle_vector[4];
+    float random_direction[4];
     int out;
     char *data = (char *)m->pvars;
     char *r;
@@ -960,14 +960,14 @@ void FUN_L17_002dc3f8(struct Moby *m) {
                 m->pos.z = m->pos.z - 1.0f;
                 i = 0x95;
                 do {
-                    *(OvlQuad *)t = 0;
-                    t[0] = random_float_between_alt(-1.0f, 1.0f);
-                    t[1] = random_float_between_alt(-1.0f, 1.0f);
-                    t[2] = random_float_between_alt(-0.5f, 2.0f);
-                    *(OvlQuad *)d = *(OvlQuad *)t;
+                    *(OvlQuad *)random_direction = 0;
+                    random_direction[0] = random_float_between_alt(-1.0f, 1.0f);
+                    random_direction[1] = random_float_between_alt(-1.0f, 1.0f);
+                    random_direction[2] = random_float_between_alt(-0.5f, 2.0f);
+                    *(OvlQuad *)scaled_particle_vector = *(OvlQuad *)random_direction;
                     normalize_vector_xyz(
-                        d, d, random_float_between_alt(frame_time * 4.0f, frame_time * 8.0f));
-                    FUN_L00_0026f080(&m->pos, d, random_float_between_alt(0.05f, 0.1f) * 210000.0f,
+                        scaled_particle_vector, scaled_particle_vector, random_float_between_alt(frame_time * 4.0f, frame_time * 8.0f));
+                    FUN_L00_0026f080(&m->pos, scaled_particle_vector, random_float_between_alt(0.05f, 0.1f) * 210000.0f,
                                      yy);
                 } while (--i >= 0);
                 mark_moby_for_removal_u(m);

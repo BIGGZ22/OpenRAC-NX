@@ -13,7 +13,7 @@
 extern float fast_add_rotations(float, float) __asm__("FUN_001fa580");
 extern float fast_subtract_rotations(float, float) __asm__("FUN_001fa5c8");
 
-float FUN_L13_002ba088(int flag, int n, float x, float b, float c, float lo, float hi) {
+float FUN_L13_002ba088(int flag, int n, float x, float b, float end_value, float lo, float hi) {
     float t;
     float u;
     float r = 0.0f;
@@ -31,9 +31,9 @@ float FUN_L13_002ba088(int flag, int n, float x, float b, float c, float lo, flo
         }
         u = 1.0f - t;
         if (flag != 0) {
-            r = fast_add_rotations(b, fast_subtract_rotations(c, b) * t);
+            r = fast_add_rotations(b, fast_subtract_rotations(end_value, b) * t);
         } else {
-            r = b * u + c * t;
+            r = b * u + end_value * t;
         }
     } else {
         r = b;
@@ -75,20 +75,20 @@ extern void scale_7d50(void *, void *, float) __asm__("FUN_001f9a68");
 extern int D_L13_001611C0;
 extern u128_7d50 D_L13_001608E0;
 extern u128_7d50 D_L13_001608F0;
-void FUN_L13_002b7d50(short *pts, int n, float x0, float y0, unsigned int col, unsigned long long prim, float scale, float ang) {
+void FUN_L13_002b7d50(short *pts, int point_count, float x0, float y0, unsigned int col, unsigned long long prim, float scale, float ang) {
     float mat[4][4];
     float rot[4];
     float w[4];
     float v[4];
-    int q = (n + 1) / 2 + 3;
+    int payload_qword_count = (point_count + 1) / 2 + 3;
     char *t;
-    unsigned long long *o;
+    unsigned long long *vertex_output;
     int x, y;
     int i;
-    *(int *)(D_L13_001611C0 + 0) = q | 0x10000000;
+    *(int *)(D_L13_001611C0 + 0) = payload_qword_count | 0x10000000;
     *(int *)(D_L13_001611C0 + 4) = 0;
     *(int *)(D_L13_001611C0 + 8) = 0;
-    *(int *)(D_L13_001611C0 + 12) = q | 0x50000000;
+    *(int *)(D_L13_001611C0 + 12) = payload_qword_count | 0x50000000;
     {
         char *packet_header = (char *)D_L13_001611C0;
         D_L13_001611C0 = (int)(packet_header + 0x10);
@@ -105,14 +105,14 @@ void FUN_L13_002b7d50(short *pts, int n, float x0, float y0, unsigned int col, u
         char *saved_packet_cursor = (char *)D_L13_001611C0;
         D_L13_001611C0 = (int)(saved_packet_cursor + 0x10);
         qcopy((void *)D_L13_001611C0, &D_L13_001608F0);
-        *(short *)(saved_packet_cursor + 0x10) = n - 0x8000;
+        *(short *)(saved_packet_cursor + 0x10) = point_count - 0x8000;
     }
     *(u128_7d50 *)rot = 0;
     rot[2] = ang;
     D_L13_001611C0 += 0x10;
-    o = (unsigned long long *)D_L13_001611C0;
+    vertex_output = (unsigned long long *)D_L13_001611C0;
     rotmat_7d50(mat, rot);
-    for (i = 0; i < n; i++) {
+    for (i = 0; i < point_count; i++) {
         *(u128_7d50 *)v = 0;
         v[0] = itof_7d50(pts[i * 2]);
         v[1] = itof_7d50(pts[i * 2 + 1]);
@@ -123,9 +123,9 @@ void FUN_L13_002b7d50(short *pts, int n, float x0, float y0, unsigned int col, u
         w[1] += y0;
         x = ftoi_7d50(w[0] * 16.0f);
         y = ftoi_7d50(w[1] * 16.0f);
-        o[i] = (unsigned long long)(x + D_0013E500_7d50[4] - 8) | ((unsigned long long)(y + D_0013E500_7d50[5] - 8) << 16) | ((unsigned long long)col << 32);
+        vertex_output[i] = (unsigned long long)(x + D_0013E500_7d50[4] - 8) | ((unsigned long long)(y + D_0013E500_7d50[5] - 8) << 16) | ((unsigned long long)col << 32);
     }
-    D_L13_001611C0 += ((n + 1) / 2) * 16;
+    D_L13_001611C0 += ((point_count + 1) / 2) * 16;
 }
 #include "rnc/gameplay/hero.h"
 #include "rnc/gameplay/entities/moby.h"
@@ -310,11 +310,11 @@ unsigned char *FUN_L13_002e6a58(char *src, char *pos, char *target, char *vec, i
         qcopy(moby + 0x10, pos);
         qcopy(moby + 0x40, vec);
         if (target != 0) {
-            char *e;
+            char *target_flag_data;
             *(int *)(data + 0x3C) = *(short *)(target + 0xA6);
-            e = suck_get_aim_height(target);
-            if (e != 0) {
-                *(unsigned short *)(e + 0x1E) |= 0x80;
+            target_flag_data = suck_get_aim_height(target);
+            if (target_flag_data != 0) {
+                *(unsigned short *)(target_flag_data + 0x1E) |= 0x80;
             }
         }
         *(int *)(data + 0x28) = arg;
@@ -414,75 +414,75 @@ extern Tex_2E8040 D_L13_001B2680_2E8040 __asm__("D_L13_001B2380");
 extern V4_2E8040 D_L13_001741E0_2E8040 __asm__("D_L13_00174160");
 
 void FUN_L13_002e6c08(Moby *m);
-void FUN_L13_002e6c08(Moby *m) {
-    Rocket_2E8040 *d = *(void **)&m->pvars;
+void FUN_L13_002e6c08(Moby *rocket) {
+    Rocket_2E8040 *rocket_data = *(void **)&rocket->pvars;
     V4_2E8040 old;
     V4_2E8040 hitpos;
     V4_2E8040 tmp;
     V4_2E8040 vel;
     V4_2E8040 dir;
-    unsigned char *p;
+    unsigned char *spawned_effect;
     float t;
 
-    qcopy(&old, &*(V4_2E8040 *)&m->pos);
-    m->scale += (((Cls_2E8040 *)m->pclass)->scale - m->scale) * 0.1f;
+    qcopy(&old, &*(V4_2E8040 *)&rocket->pos);
+    rocket->scale += (((Cls_2E8040 *)rocket->pclass)->scale - rocket->scale) * 0.1f;
     *(Q_2E8040 *)&dir = 0;
     dir.x = func_002140F8_2E8040(-1.0f, 1.0f);
     dir.y = func_002140F8_2E8040(-1.0f, 1.0f);
     dir.z = func_002140F8_2E8040(-1.0f, 1.0f);
     *(Q_2E8040 *)&vel = *(Q_2E8040 *)&dir;
     func_L00_001FF4B0_2E8040(&vel, &vel, func_002140F8_2E8040(0.1f, 0.2f) * D_0015ED6C);
-    func_L00_001FF4B0_2E8040(&tmp, d, -func_002140F8_2E8040(D_0015ED6C * 0.1f, D_0015ED6C));
+    func_L00_001FF4B0_2E8040(&tmp, rocket_data, -func_002140F8_2E8040(D_0015ED6C * 0.1f, D_0015ED6C));
     func_001F9BD8_2E8040(&vel, &vel, &tmp);
-    p = spawn_particle(&*(V4_2E8040 *)&m->pos, (float *)&vel, func_001F9850_2E8040(6), 0x7F, 0xB0B0B0, 3, 40000.0f, 1000.0f, 1.0f, -0.0004f, 0.0f);
-    if (p != 0) {
-        p[3] = 0x48;
+    spawned_effect = spawn_particle(&*(V4_2E8040 *)&rocket->pos, (float *)&vel, func_001F9850_2E8040(6), 0x7F, 0xB0B0B0, 3, 40000.0f, 1000.0f, 1.0f, -0.0004f, 0.0f);
+    if (spawned_effect != 0) {
+        spawned_effect[3] = 0x48;
     }
     for (t = 0.0f; t < 1.0f; t += 0.33333334f) {
-        func_L00_001FF4B0_2E8040(&tmp, d, func_002140F8_2E8040(t, t + 0.33333334f) * d->speed);
-        func_001F9BD8_2E8040(&tmp, &tmp, &*(V4_2E8040 *)&m->pos);
-        p = spawn_particle(&tmp, (float *)&vel, func_001F9850_2E8040(0x3C), 0x7F, 0x606060, 3, 40000.0f, 1000.0f, 1.0f, -0.0002f, 0.0f);
-        if (p != 0) {
+        func_L00_001FF4B0_2E8040(&tmp, rocket_data, func_002140F8_2E8040(t, t + 0.33333334f) * rocket_data->speed);
+        func_001F9BD8_2E8040(&tmp, &tmp, &*(V4_2E8040 *)&rocket->pos);
+        spawned_effect = spawn_particle(&tmp, (float *)&vel, func_001F9850_2E8040(0x3C), 0x7F, 0x606060, 3, 40000.0f, 1000.0f, 1.0f, -0.0002f, 0.0f);
+        if (spawned_effect != 0) {
             Tex_2E8040 *tex = &D_L13_001B2680_2E8040;
-            p[2] = *tex->p5C;
-            p[3] = 0x48;
+            spawned_effect[2] = *tex->p5C;
+            spawned_effect[3] = 0x48;
         }
         *(Q_2E8040 *)&dir = 0;
         dir.z = 0.02f;
-        func_001F9EC0_2E8040(&dir, &dir, &*(V4_2E8040 *)&m->rot_row0);
-        func_002156E0_2E8040(&dir, &dir, &*(V4_2E8040 *)&m->rot_row0, func_00214158_2E8040());
-        p = spawn_burst(&tmp, &dir, 0x4F007FFF, 0x1FFFFFFF, func_001F9850_2E8040(5), 1, 20000.0f);
-        if (p != 0) {
-            p[3] = 0x48;
+        func_001F9EC0_2E8040(&dir, &dir, &*(V4_2E8040 *)&rocket->rot_row0);
+        func_002156E0_2E8040(&dir, &dir, &*(V4_2E8040 *)&rocket->rot_row0, func_00214158_2E8040());
+        spawned_effect = spawn_burst(&tmp, &dir, 0x4F007FFF, 0x1FFFFFFF, func_001F9850_2E8040(5), 1, 20000.0f);
+        if (spawned_effect != 0) {
+            spawned_effect[3] = 0x48;
         }
     }
-    if (d->target != 0 && !(d->target->flags & 0x1000) && (d->target->flags & 1) && *(int *)&d->target->collision == 0) {
-        d->target = 0;
+    if (rocket_data->target != 0 && !(rocket_data->target->flags & 0x1000) && (rocket_data->target->flags & 1) && *(int *)&rocket_data->target->collision == 0) {
+        rocket_data->target = 0;
     }
-    if (d->target != 0 && d->target->oclass == d->target_uid && d->target->state != 0xFE && d->target->state != 0xFD
-        && func_001F9D10_2E8040(&d->tpos, &*(V4_2E8040 *)&d->target->pos) < 3.0f) {
-        m->rot.z = angle_atan2(d->target->pos.x - m->pos.x, d->target->pos.y - m->pos.y);
-        m->rot.y = -angle_atan2(vector_distance(&*(V4_2E8040 *)&m->pos, &*(V4_2E8040 *)&d->target->pos), d->target->pos.z - m->pos.z);
-        qcopy(&d->tpos, &*(V4_2E8040 *)&d->target->pos);
+    if (rocket_data->target != 0 && rocket_data->target->oclass == rocket_data->target_uid && rocket_data->target->state != 0xFE && rocket_data->target->state != 0xFD
+        && func_001F9D10_2E8040(&rocket_data->tpos, &*(V4_2E8040 *)&rocket_data->target->pos) < 3.0f) {
+        rocket->rot.z = angle_atan2(rocket_data->target->pos.x - rocket->pos.x, rocket_data->target->pos.y - rocket->pos.y);
+        rocket->rot.y = -angle_atan2(vector_distance(&*(V4_2E8040 *)&rocket->pos, &*(V4_2E8040 *)&rocket_data->target->pos), rocket_data->target->pos.z - rocket->pos.z);
+        qcopy(&rocket_data->tpos, &*(V4_2E8040 *)&rocket_data->target->pos);
     } else {
-        approach_angle(&m->rot.z, m->rot.z, &d->yawv, frame_time_sq * 251.32741f, frame_time_sq * 251.32741f, D_0015ED6C * 2513.2742f);
-        approach_angle(&m->rot.y, m->rot.y, &d->pitchv, frame_time_sq * 251.32741f, frame_time_sq * 251.32741f, D_0015ED6C * 2513.2742f);
-        d->target = 0;
+        approach_angle(&rocket->rot.z, rocket->rot.z, &rocket_data->yawv, frame_time_sq * 251.32741f, frame_time_sq * 251.32741f, D_0015ED6C * 2513.2742f);
+        approach_angle(&rocket->rot.y, rocket->rot.y, &rocket_data->pitchv, frame_time_sq * 251.32741f, frame_time_sq * 251.32741f, D_0015ED6C * 2513.2742f);
+        rocket_data->target = 0;
     }
-    func_00215C00_2E8040(d, d->speed, m->rot.z, -m->rot.y);
-    func_001F9BD8_2E8040(&*(V4_2E8040 *)&m->pos, &*(V4_2E8040 *)&m->pos, d);
-    if (m->pos.x < 2.0f || m->pos.x > 1021.0f || m->pos.y < 2.0f || m->pos.y > 1021.0f || m->pos.z < 2.0f || m->pos.z > 1021.0f) {
-        func_0020D678_2E8040(m);
+    func_00215C00_2E8040(rocket_data, rocket_data->speed, rocket->rot.z, -rocket->rot.y);
+    func_001F9BD8_2E8040(&*(V4_2E8040 *)&rocket->pos, &*(V4_2E8040 *)&rocket->pos, rocket_data);
+    if (rocket->pos.x < 2.0f || rocket->pos.x > 1021.0f || rocket->pos.y < 2.0f || rocket->pos.y > 1021.0f || rocket->pos.z < 2.0f || rocket->pos.z > 1021.0f) {
+        func_0020D678_2E8040(rocket);
         return;
     }
-    moby_point_position(m, 1, &hitpos);
-    if (collision_line(&old, &hitpos, 0, d->owner, 0) != 0) {
+    moby_point_position(rocket, 1, &hitpos);
+    if (collision_line(&old, &hitpos, 0, rocket_data->owner, 0) != 0) {
         qcopy(&tmp, &D_L13_001741E0_2E8040);
-        spawn_explosion(m, d, &tmp, 2.0f, 10.0f, 10, 3, 0x10, 4.0f, 2.0f, 9.0f, 1.0f, 0, 20.0f, 0, 1, -1, 0);
-        func_0020D678_2E8040(m);
+        spawn_explosion(rocket, rocket_data, &tmp, 2.0f, 10.0f, 10, 3, 0x10, 4.0f, 2.0f, 9.0f, 1.0f, 0, 20.0f, 0, 1, -1, 0);
+        func_0020D678_2E8040(rocket);
         return;
     }
-    if (fast_dec_timer(&d->timer) != 0) {
-        func_0020D678_2E8040(m);
+    if (fast_dec_timer(&rocket_data->timer) != 0) {
+        func_0020D678_2E8040(rocket);
     }
 }

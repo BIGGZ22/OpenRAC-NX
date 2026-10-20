@@ -333,7 +333,7 @@ void FUN_L05_00244a70(void) {
     case 0x1D:
     case 0x1E:
     case 0x1F:
-    case 0x3D:
+    case HERO_STATE_DYING:
     case 0x70:
     case 0x71:
     case 0x72:
@@ -454,7 +454,7 @@ void FUN_L05_00244a70(void) {
             FUN_L00_00217450();
         }
         break;
-    case 0x7F:
+    case HERO_STATE_SINK:
         if ((struct MobyView *)hero.unk6A4 == NULL) {
             struct MobyView *m = create_moby(0x52A);
             s32 h40 = 0x40;
@@ -1761,14 +1761,14 @@ void FUN_L05_00244a70(void) {
         }
         FUN_L01_00232290();
         if (hero.unk930 > 0.0f) {
-            Vec4 *p = &hero.move_impulse;
+            Vec4 *move_impulse = &hero.move_impulse;
             FUN_L00_002132b8(0.7f, 0.0f);
             v0.q = hero.move_impulse.q;
             hero.target_speed += forward_component(&v0);
             if (hero.target_speed < frame_time * 0.7f) {
                 hero.target_speed = frame_time * 0.7f;
             }
-            clear_u64_value(p);
+            clear_u64_value(move_impulse);
         }
         k = 1.0f;
         if (hero.state.step == 1 && hero.unk3BE == 0) {
@@ -2601,7 +2601,7 @@ void FUN_L05_00244a70(void) {
             FUN_L00_002334d0(&hero.motion.velocity, &hero.motion.velocity, frame_time_sq * 54.0f);
         }
         break;
-    case 0x40:
+    case HERO_STATE_FIDGET:
     case 0x67:
         clear_u64_value(&hero.motion.velocity);
         break;

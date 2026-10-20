@@ -20,29 +20,29 @@ extern short D_L08_00160200 __attribute__((sda));
 extern short D_L08_00160204 __attribute__((sda));
 extern short D_L08_00160208 __attribute__((sda));
 extern unsigned char *D_L08_001B291C __attribute__((section(".data")));
-unsigned char *FUN_L08_00279f00(char *a) {
+unsigned char *FUN_L08_00279f00(char *source_moby) {
     float v[4];
-    unsigned char *m = FUN_L00_002678b8(0x27);
-    char *p;
-    char *q;
-    if (m != 0) {
-        p = a + 0x10;
-        q = (char *)m + 0x20;
-        subtract_vector_xyz(v, p, D_L08_001675C0);
+    unsigned char *effect = FUN_L00_002678b8(0x27);
+    char *source_position;
+    char *effect_data;
+    if (effect != 0) {
+        source_position = source_moby + 0x10;
+        effect_data = (char *)effect + 0x20;
+        subtract_vector_xyz(v, source_position, D_L08_001675C0);
         normalize_vector_xyz(v, v, *(float *)&D_L08_00160208);
-        add_vector_xyz(m + 0x10, p, v);
-        *(int *)(m + 4) = *(int *)&D_L08_00160204;
-        m[9] = func_001FA898_r(4.0f) + 0x40;
-        m[3] = 0x48;
-        m[1] = 0;
-        m[2] = *D_L08_001B291C;
-        *(float *)(m + 0xC) = *(float *)&D_L08_00160200;
-        *(short *)(m + 0xA) = scale_game_frames(0x1E);
-        *(float *)(m + 0x20) = 255.0f;
-        *(char **)(q + 4) = a;
-        *(int *)(q + 8) = 0;
+        add_vector_xyz(effect + 0x10, source_position, v);
+        *(int *)(effect + 4) = *(int *)&D_L08_00160204;
+        effect[9] = func_001FA898_r(4.0f) + 0x40;
+        effect[3] = 0x48;
+        effect[1] = 0;
+        effect[2] = *D_L08_001B291C;
+        *(float *)(effect + 0xC) = *(float *)&D_L08_00160200;
+        *(short *)(effect + 0xA) = scale_game_frames(0x1E);
+        *(float *)(effect + 0x20) = 255.0f;
+        *(char **)(effect_data + 4) = source_moby;
+        *(int *)(effect_data + 8) = 0;
     }
-    return m;
+    return effect;
 }
 
 #define NOT_SDA
@@ -63,28 +63,28 @@ extern int func_001FA898_r(float) __asm__("FUN_001fa6d0");
 
 unsigned char *FUN_L08_0027b450(int owner, void *pos, void *vec, short ticks, unsigned char r,
                                 unsigned char g, unsigned char b, unsigned char a, float size) {
-    unsigned char *m = FUN_L00_002678b8(0x2B);
-    unsigned char *q;
-    if (m != 0) {
-        q = m + 0x20;
-        qcopy(m + 0x10, pos);
-        qcopy(q, vec);
-        q[0x14] = r;
-        q[0x15] = g;
-        q[0x16] = b;
-        q[0x17] = a;
-        *(int *)(m + 4) = (b << 16) | (g << 8) | r;
-        m[9] = func_001FA898_r(4.0f) + 0x40;
-        m[3] = 0x48;
-        m[1] = 0;
-        m[8] = rand();
-        m[2] = *D_L08_001B292C;
-        *(float *)(m + 0xC) = size;
-        *(short *)(m + 0xA) = 0;
-        *(short *)(q + 0x18) = scale_game_frames(ticks);
-        *(int *)(q + 0x10) = owner;
+    unsigned char *effect = FUN_L00_002678b8(0x2B);
+    unsigned char *effect_data;
+    if (effect != 0) {
+        effect_data = effect + 0x20;
+        qcopy(effect + 0x10, pos);
+        qcopy(effect_data, vec);
+        effect_data[0x14] = r;
+        effect_data[0x15] = g;
+        effect_data[0x16] = b;
+        effect_data[0x17] = a;
+        *(int *)(effect + 4) = (b << 16) | (g << 8) | r;
+        effect[9] = func_001FA898_r(4.0f) + 0x40;
+        effect[3] = 0x48;
+        effect[1] = 0;
+        effect[8] = rand();
+        effect[2] = *D_L08_001B292C;
+        *(float *)(effect + 0xC) = size;
+        *(short *)(effect + 0xA) = 0;
+        *(short *)(effect_data + 0x18) = scale_game_frames(ticks);
+        *(int *)(effect_data + 0x10) = owner;
     }
-    return m;
+    return effect;
 }
 #include "eetypes.h"
 extern unsigned char *p27fe00_alloc(int) __asm__("FUN_L00_002678b8");
@@ -93,21 +93,21 @@ extern f32 convert_integer_to_float(s32) __asm__("func_001FA6C0");
 extern unsigned char *D_L08_001B29B4 __attribute__((section(".data")));
 
 void FUN_L08_0027fe00(u128 *pos, u128 *dir, int life, float scale) {
-    unsigned char *p;
-    unsigned char *m;
-    p = p27fe00_alloc(0x4D);
-    if (p != 0) {
-        qcopy(p + 0x10, pos);
-        m = p + 0x20;
-        *(int *)(p + 4) = 0x50504040;
-        p[9] = p27fe00_trunc(2.0f) + 0x40;
-        p[3] = 0x48;
-        p[1] = 0;
-        p[2] = *D_L08_001B29B4;
-        p[8] = 0xA0;
-        *(float *)(p + 0xC) = scale * 210000.0f;
-        *(short *)(p + 0xA) = scale_game_frames(life);
-        *(u128 *)m = *dir;
-        *(float *)(m + 0xC) = convert_integer_to_float(*(short *)(p + 0xA));
+    unsigned char *effect;
+    unsigned char *effect_data;
+    effect = p27fe00_alloc(0x4D);
+    if (effect != 0) {
+        qcopy(effect + 0x10, pos);
+        effect_data = effect + 0x20;
+        *(int *)(effect + 4) = 0x50504040;
+        effect[9] = p27fe00_trunc(2.0f) + 0x40;
+        effect[3] = 0x48;
+        effect[1] = 0;
+        effect[2] = *D_L08_001B29B4;
+        effect[8] = 0xA0;
+        *(float *)(effect + 0xC) = scale * 210000.0f;
+        *(short *)(effect + 0xA) = scale_game_frames(life);
+        *(u128 *)effect_data = *dir;
+        *(float *)(effect_data + 0xC) = convert_integer_to_float(*(short *)(effect + 0xA));
     }
 }

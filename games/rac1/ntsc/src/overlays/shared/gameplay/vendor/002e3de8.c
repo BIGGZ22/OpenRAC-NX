@@ -27,13 +27,13 @@ extern short D_L10_00161E70 __attribute__((sda));
 void FUN_L10_002e3de8(char *moby) {
     float v[3];
     int g, h;
-    float a = random_angle_radians();
+    float offset_angle_radians = random_angle_radians();
     float b = random_float_between_alt(0.0f, *(float *)&D_L10_00161E70);
     float c = random_float_between_alt(0.0f, *(float *)&D_L10_00161E60);
     float d = random_float_between_alt(*(float *)&D_L10_00161E60, *(float *)&D_L10_00161E64);
     int e = random_int_between(*(int *)&D_L10_00161E68, *(int *)&D_L10_00161E6C);
-    v[0] = fast_cos(a) * b;
-    v[1] = fast_sin(a) * b;
+    v[0] = fast_cos(offset_angle_radians) * b;
+    v[1] = fast_sin(offset_angle_radians) * b;
     v[2] = 0.0f;
     fast_vec_add(v, v, (float *)(moby + 0x10));
     v[2] = v[2] + 0.025f;
@@ -60,7 +60,7 @@ extern void FUN_L10_002e91b8(unsigned char *m);
 extern void enqueue_callback_list_1(void (*)(void), void *) __asm__("FUN_001f4600");
 extern void subtract_vector_xyz(void *, void *, void *);
 
-void FUN_L10_002e9028(unsigned char *m) {
+void FUN_L10_002e9028(unsigned char *moby) {
     enum {
         MOBY_UPDATE_INITIALIZE = 0,
         MOBY_UPDATE_ACTIVE = 1
@@ -68,18 +68,18 @@ void FUN_L10_002e9028(unsigned char *m) {
     float v[4] __attribute__((aligned(16)));
     float mtx[16] __attribute__((aligned(16)));
     char *player;
-    unsigned int s = m[0x20];
-    switch (s) {
+    unsigned int update_state = moby[0x20];
+    switch (update_state) {
     case MOBY_UPDATE_INITIALIZE:
-        m[0x20] = 1;
-        *(unsigned short *)(m + 0x34) |= 1;
-        m[0x31] = 0;
+        moby[0x20] = 1;
+        *(unsigned short *)(moby + 0x34) |= 1;
+        moby[0x31] = 0;
         break;
     case MOBY_UPDATE_ACTIVE:
         player = (&hero.motion.pos);
-        if (FUN_001f9b48(m + 0x10, player) < 8.0f) {
-            subtract_vector_xyz(v, player + 0x50, m + 0x10);
-            transpose_rotation_matrix(mtx, m + 0xC0);
+        if (FUN_001f9b48(moby + 0x10, player) < 8.0f) {
+            subtract_vector_xyz(v, player + 0x50, moby + 0x10);
+            transpose_rotation_matrix(mtx, moby + 0xC0);
             transform_vector(v, v, mtx);
             if (-5.0f < v[0] && v[0] < 5.0f && 0.0f < v[2] && v[2] < 8.0f) {
                 if (v[1] < 0.5f) {
@@ -91,7 +91,7 @@ void FUN_L10_002e9028(unsigned char *m) {
                 hero.unk22CB = 0;
             }
         }
-        enqueue_callback_list_1(FUN_L10_002e91b8, m);
+        enqueue_callback_list_1(FUN_L10_002e91b8, moby);
         break;
     }
 }
@@ -132,7 +132,7 @@ extern void fast_draw_quad_real(void *, void *, int);
     ((unsigned long)(a) | ((unsigned long)(b) << 2) | ((unsigned long)(k) << 4) | \
      ((unsigned long)(d) << 6) | ((unsigned long)(fix) << 32))
 
-void FUN_L10_002e91b8(unsigned char *m) {
+void FUN_L10_002e91b8(unsigned char *moby) {
     TrailQuad first, second;
     float transform[12] __attribute__((aligned(16)));
     float position[4] __attribute__((aligned(16)));
@@ -142,9 +142,9 @@ void FUN_L10_002e91b8(unsigned char *m) {
     QuadCorner *first_src, *second_src;
     TrailQuad *second_quad;
 
-    scale = *(float **)(m + 0x78);
-    copy_matrix_rotation(transform, m + 0xC0);
-    qcopy(position, m + 0x10);
+    scale = *(float **)(moby + 0x78);
+    copy_matrix_rotation(transform, moby + 0xC0);
+    qcopy(position, moby + 0x10);
     position[3] = 1.0f;
     first.tex = get_effect_texture(0x2C);
     first.unk80 = 0xFF9000000260L;
@@ -209,13 +209,13 @@ void FUN_L10_002e91b8(unsigned char *m) {
         fast_draw_quad_real(&first, transform, 0);
         fast_draw_quad_real(second_quad, transform, 0);
         {
-            float *q = (float *)second_quad;
-            float *p = (float *)&first;
+            float *second_corner_cursor = (float *)second_quad;
+            float *first_corner_cursor = (float *)&first;
             for (i = 0; i < 4; i++) {
-                p[1] += 0.1f;
-                q[1] += 0.1f;
-                p += 4;
-                q += 4;
+                first_corner_cursor[1] += 0.1f;
+                second_corner_cursor[1] += 0.1f;
+                first_corner_cursor += 4;
+                second_corner_cursor += 4;
             }
         }
     }
@@ -223,10 +223,10 @@ void FUN_L10_002e91b8(unsigned char *m) {
 extern char *D_L10_0015EF50;
 
 void FUN_L10_002f5a50(int i) {
-    unsigned char *q;
-    q = *(unsigned char **)(D_L10_0015EF50 + i * 0x20 + 0x1C);
-    q[0x38] = 1;
-    q[0x39] = 0;
+    unsigned char *descriptor_record;
+    descriptor_record = *(unsigned char **)(D_L10_0015EF50 + i * 0x20 + 0x1C);
+    descriptor_record[0x38] = 1;
+    descriptor_record[0x39] = 0;
 }
 extern char *D_L10_0015EF50;
 extern char *D_L10_001B0930_5a78[] __asm__("D_L10_001B0930");
@@ -565,27 +565,27 @@ void FUN_L10_002f5f18(struct UpdateCam *cam) {
 extern char *D_L10_0015EF50;
 extern int FUN_L10_002f5a78_u(char *, char *) __asm__("FUN_L10_002f5a78");
 
-int FUN_L10_002f65f8(char *a, char *b) {
-    unsigned char *d = *(unsigned char **)(D_L10_0015EF50 + *(short *)(a + 0x84) * 32 + 0x1C);
+int FUN_L10_002f65f8(char *descriptor_owner, char *b) {
+    unsigned char *descriptor_record = *(unsigned char **)(D_L10_0015EF50 + *(short *)(descriptor_owner + 0x84) * 32 + 0x1C);
     int x;
     int y;
-    if (d[0x39] != 0) {
+    if (descriptor_record[0x39] != 0) {
         return -1;
     }
-    if (d[0x38] != 0 && *(short *)(b + 0x86) != 0x13) {
+    if (descriptor_record[0x38] != 0 && *(short *)(b + 0x86) != 0x13) {
         return 1;
     }
-    if (b != 0 && *(short *)(b + 0x7E) == 0 && (unsigned char)b[0x7C] >= (unsigned char)a[0x7C]) {
+    if (b != 0 && *(short *)(b + 0x7E) == 0 && (unsigned char)b[0x7C] >= (unsigned char)descriptor_owner[0x7C]) {
         return 0;
     }
-    if (FUN_L10_002f5a78_u(a, b) == 0) {
+    if (FUN_L10_002f5a78_u(descriptor_owner, b) == 0) {
         return 0;
     }
-    x = *(int *)(d + 0x48);
+    x = *(int *)(descriptor_record + 0x48);
     if (x >= 0 && hero.state.control_mode != x) {
         return 0;
     }
-    y = *(int *)(d + 0x44);
+    y = *(int *)(descriptor_record + 0x44);
     if (y >= 0 && hero.state.current != y) {
         return 0;
     }

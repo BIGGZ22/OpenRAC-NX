@@ -21,23 +21,23 @@ extern int func_001FA898_r(float) __asm__("FUN_001fa6d0");
 
 extern unsigned char *D_L01_001B250C __attribute__((section(".data")));
 void FUN_L01_0027f660(char *pos, char *vel) {
-    unsigned char *p = FUN_L00_002678b8(10);
-    if (p != 0) {
-        char *q = (char *)p + 0x20;
-        qcopy(p + 0x10, pos);
-        *(int *)(p + 4) = FUN_L00_0025bfe0(0.425f, 0.425f, 0.225f, 1.0f);
-        p[9] = func_001FA898_r(8.0f) - 0x60;
-        p[1] = 0;
-        p[3] = 0x48;
-        *(float *)(p + 0xC) = random_float_between_alt(60900.0f, 90300.0f);
-        p[8] = 0;
-        p[2] = *D_L01_001B250C;
-        *(float *)(q + 0x10) = 0.425f;
-        *(float *)(q + 0x14) = 0.425f;
-        *(float *)(q + 0x18) = 0.225f;
-        *(float *)(q + 0x1C) = 1.0f;
-        *(short *)(p + 0xA) = scale_game_frames(0x57);
-        qcopy(q, vel);
+    unsigned char *particle = FUN_L00_002678b8(10);
+    if (particle != 0) {
+        char *particle_data = (char *)particle + 0x20;
+        qcopy(particle + 0x10, pos);
+        *(int *)(particle + 4) = FUN_L00_0025bfe0(0.425f, 0.425f, 0.225f, 1.0f);
+        particle[9] = func_001FA898_r(8.0f) - 0x60;
+        particle[1] = 0;
+        particle[3] = 0x48;
+        *(float *)(particle + 0xC) = random_float_between_alt(60900.0f, 90300.0f);
+        particle[8] = 0;
+        particle[2] = *D_L01_001B250C;
+        *(float *)(particle_data + 0x10) = 0.425f;
+        *(float *)(particle_data + 0x14) = 0.425f;
+        *(float *)(particle_data + 0x18) = 0.225f;
+        *(float *)(particle_data + 0x1C) = 1.0f;
+        *(short *)(particle + 0xA) = scale_game_frames(0x57);
+        qcopy(particle_data, vel);
     }
 }
 #ifndef NOT_SDA
@@ -53,35 +53,35 @@ extern int func_002140B0_80970(int) __asm__("FUN_00213260");
 extern int func_001F9850_80970(int) __asm__("FUN_001f96f8");
 extern unsigned char *D_L01_001B2538 __attribute__((section(".data")));
 char *FUN_L01_00280970(int a, char *b) {
-    char *p = func_00218928_80970(0xE);
+    char *particle = func_00218928_80970(0xE);
     int r;
-    int *q;
-    if (p) {
-        qcopy(p + 0x10, b + 0x10);
-        *(float *)(p + 0x10) += func_L00_00258C80_80970(0.0f, 0.03f);
-        *(float *)(p + 0x14) += func_L00_00258C80_80970(0.0f, 0.03f);
-        *(float *)(p + 0x18) += func_L00_00258C80_80970(0.0f, 0.03f);
-        *(int *)(p + 4) = -1;
+    int *particle_data;
+    if (particle) {
+        qcopy(particle + 0x10, b + 0x10);
+        *(float *)(particle + 0x10) += func_L00_00258C80_80970(0.0f, 0.03f);
+        *(float *)(particle + 0x14) += func_L00_00258C80_80970(0.0f, 0.03f);
+        *(float *)(particle + 0x18) += func_L00_00258C80_80970(0.0f, 0.03f);
+        *(int *)(particle + 4) = -1;
         r = func_001FA898_r_80970(4.0f);
-        p[9] = r - 0x60;
-        p[1] = 0;
-        p[3] = 0x48;
-        *(float *)(p + 0xC) = 29400.0f;
-        p[8] = func_002140B0_80970(0xFF);
-        p[2] = *D_L01_001B2538;
-        *(short *)(p + 0xA) = func_001F9850_80970(6);
-        q = (int *)(p + 0x20);
-        q[2] = (int)b;
-        q[1] = 1;
+        particle[9] = r - 0x60;
+        particle[1] = 0;
+        particle[3] = 0x48;
+        *(float *)(particle + 0xC) = 29400.0f;
+        particle[8] = func_002140B0_80970(0xFF);
+        particle[2] = *D_L01_001B2538;
+        *(short *)(particle + 0xA) = func_001F9850_80970(6);
+        particle_data = (int *)(particle + 0x20);
+        particle_data[2] = (int)b;
+        particle_data[1] = 1;
         if (a == 0) {
-            q[0] = 0;
+            particle_data[0] = 0;
         } else if (func_002140B0_80970(2)) {
-            q[0] = a;
+            particle_data[0] = a;
         } else {
-            q[0] = -a;
+            particle_data[0] = -a;
         }
     }
-    return p;
+    return particle;
 }
 
 extern char *D_L01_001B25A4[];
@@ -91,7 +91,7 @@ extern int trunc_285768(float) __asm__("FUN_001fa6d0");
 /* Allocates a type 0x29 particle and fills it from the arguments; kind 0xFF
  * derives the frame from flags and picks one of two blend modes. */
 char *draw_number(float scale, void *pos, int a, int idx, int b, unsigned char flags, short h, unsigned char kind) __asm__("FUN_L01_00285768");
-char *draw_number(float scale, void *pos, int a, int idx, int b, unsigned char flags, short h, unsigned char kind) {
+char *draw_number(float scale, void *pos, int source_moby, int idx, int b, unsigned char flags, short h, unsigned char kind) {
     char *r = alloc_285768(0x29);
     if (r != 0) {
         int *tail = (int *)(r + 0x20);
@@ -114,7 +114,7 @@ char *draw_number(float scale, void *pos, int a, int idx, int b, unsigned char f
         *(short *)(r + 0xA) = h;
         ((unsigned char *)r)[8] = 0xA0;
         /* taking the address changes register allocation to match */
-        *tail = *&a;
+        *tail = *&source_moby;
     }
     return r;
 }
@@ -128,11 +128,11 @@ extern int func_001FA898_87158(float) __asm__("FUN_001fa6d0");
 extern int func_002140B0_87158(int) __asm__("FUN_00213260");
 extern float func_001FA888_87158(int) __asm__("FUN_001fa6c0");
 extern unsigned char *D_L01_001B25D0 __attribute__((section(".data")));
-unsigned char *FUN_L01_00287158(void *a, int b, int c, int d, float f, float g) {
+unsigned char *FUN_L01_00287158(void *spawn_position, int b, int c, int d, float f, float g) {
     unsigned char *r = func_00218928_87158(0x34);
     if (r != 0) {
         char *v = (char *)r + 0x20;
-        qcopy(r + 0x10, a);
+        qcopy(r + 0x10, spawn_position);
         *(float *)(r + 0x18) += 0.05f;
         *(int *)(r + 4) = b;
         r[3] = 0x44;
@@ -164,61 +164,61 @@ extern void subtract_vector_xyz_c(void *, void *, void *) __asm__("FUN_001f9a28"
 extern void transform_vector(void *, void *, void *) __asm__("func_001F9D20");
 extern unsigned char D_L01_001B2928_b[] __asm__("D_L01_001B2628");
 
-unsigned char *FUN_L01_0028a7a8(char *m, char *pos, float *vel, char *cfg, int flag) {
+unsigned char *FUN_L01_0028a7a8(char *source_moby, char *pos, float *vel, char *cfg, int flag) {
     float v[4];
     float mat[16];
-    unsigned char *p = FUN_L00_002678b8(74);
-    if (p) {
-        char *q;
-        p[9] = func_001FA898_r(4.0f) - 0x60;
+    unsigned char *particle = FUN_L00_002678b8(74);
+    if (particle) {
+        char *particle_data;
+        particle[9] = func_001FA898_r(4.0f) - 0x60;
         if (flag)
-            p[3] = 0x48;
+            particle[3] = 0x48;
         else
-            p[3] = 0x44;
-        p[1] = 0;
-        q = (char *)p + 0x20;
-        p[2] = **(unsigned char **)D_L01_001B2928_b;
-        p[8] = rand();
-        *(int *)(p + 0xc) = 0;
-        qcopy(p + 0x10, pos);
-        *(float *)q = vel[0];
-        *(float *)(q + 4) = vel[1];
-        *(float *)(q + 8) = vel[2];
-        subtract_vector_xyz_c(v, pos, m + 0x10);
+            particle[3] = 0x44;
+        particle[1] = 0;
+        particle_data = (char *)particle + 0x20;
+        particle[2] = **(unsigned char **)D_L01_001B2928_b;
+        particle[8] = rand();
+        *(int *)(particle + 0xc) = 0;
+        qcopy(particle + 0x10, pos);
+        *(float *)particle_data = vel[0];
+        *(float *)(particle_data + 4) = vel[1];
+        *(float *)(particle_data + 8) = vel[2];
+        subtract_vector_xyz_c(v, pos, source_moby + 0x10);
         qzero(mat);
         qzero(mat + 4);
         qzero(mat + 8);
         qzero(mat + 12);
-        transpose_rotation_matrix(mat, m + 0xc0);
+        transpose_rotation_matrix(mat, source_moby + 0xc0);
         transform_vector(v, v, mat);
-        *(float *)(q + 0x10) = v[0];
-        *(float *)(q + 0x14) = v[1];
-        *(float *)(q + 0x18) = v[2];
-        *(char **)(q + 0xc) = m;
-        *(char **)(q + 0x1c) = cfg;
-        *(short *)(p + 0xa) = *(unsigned short *)(cfg + 0xc);
-        *(int *)(p + 4) = *(int *)cfg;
+        *(float *)(particle_data + 0x10) = v[0];
+        *(float *)(particle_data + 0x14) = v[1];
+        *(float *)(particle_data + 0x18) = v[2];
+        *(char **)(particle_data + 0xc) = source_moby;
+        *(char **)(particle_data + 0x1c) = cfg;
+        *(short *)(particle + 0xa) = *(unsigned short *)(cfg + 0xc);
+        *(int *)(particle + 4) = *(int *)cfg;
     }
-    return p;
+    return particle;
 }
 /* Ported from rac1-decomp (src/overlays/shared/partupd_00280428.c: func_L01_0028C1D8), where it is exact; names translated to the US level program. */
 
 extern float fast_vec_dist(void *, void *) __asm__("FUN_001f9b48");
 
-void FUN_L01_0028b410(char *p) {
+void FUN_L01_0028b410(char *path_descriptor) {
     int i;
     int off;
-    char *q;
-    p[5] = 0;
-    *(int *)(p + 8) = 0;
-    *(char **)(p + 0x10) = paths[*(int *)(p + 0x14)];
-    for (i = 0; i < **(int **)(p + 0x10); i++) {
-        q = *(char **)(p + 0x10);
+    char *path_data;
+    path_descriptor[5] = 0;
+    *(int *)(path_descriptor + 8) = 0;
+    *(char **)(path_descriptor + 0x10) = paths[*(int *)(path_descriptor + 0x14)];
+    for (i = 0; i < **(int **)(path_descriptor + 0x10); i++) {
+        path_data = *(char **)(path_descriptor + 0x10);
         off = i << 4;
-        *(float *)(*(char **)(p + 0x10) + off + 0x1C) =
-            fast_vec_dist(q + (off + 0x10), q + ((((i + 1) % *(int *)q) << 4) + 0x10));
-        *(float *)(*(char **)(p + 0x10) + off + 0x18) += 0.5f;
-        *(float *)(*(char **)(p + 0x10) + off + 0x18) -= 0.5f;
+        *(float *)(*(char **)(path_descriptor + 0x10) + off + 0x1C) =
+            fast_vec_dist(path_data + (off + 0x10), path_data + ((((i + 1) % *(int *)path_data) << 4) + 0x10));
+        *(float *)(*(char **)(path_descriptor + 0x10) + off + 0x18) += 0.5f;
+        *(float *)(*(char **)(path_descriptor + 0x10) + off + 0x18) -= 0.5f;
     }
 }
 /* Returns the index of the entry whose distance to arg0 is closest to a target value. */
@@ -239,9 +239,9 @@ int FUN_L01_0028b510(void *reference_point, List *point_list, float target) {
     int i;
     float bestDiff = 1e11f;
     for (i = 0; i < point_list->count; i++) {
-        float d = fast_vec_dist(point_list->e[i], reference_point);
-        if (absolute_float(d - target) < bestDiff) {
-            bestDiff = d;
+        float point_distance = fast_vec_dist(point_list->e[i], reference_point);
+        if (absolute_float(point_distance - target) < bestDiff) {
+            bestDiff = point_distance;
             best = i;
         }
     }
@@ -311,31 +311,31 @@ typedef struct {
     int *f10;
 } T_28b828;
 
-int FUN_L01_0028b828(T_28b828 *a, int b) {
-    int n;
-    n = (a->f4 < 0) ? 0 : (*a->f10 - 1);
+int FUN_L01_0028b828(T_28b828 *path, int b) {
+    int last_index;
+    last_index = (path->f4 < 0) ? 0 : (*path->f10 - 1);
     if (b < 0) {
-        return n + b;
+        return last_index + b;
     }
-    if (n < b) {
-        return b % (n + 1);
+    if (last_index < b) {
+        return b % (last_index + 1);
     }
     return b;
 }
 /* 0x0028b878, 76 bytes.
  * Ported from rac1-decomp, where it is exact; names translated to
  * the US level program (data still reached through the MACRO_ADDR form). */
-int FUN_L01_0028b878(char *p) {
+int FUN_L01_0028b878(char *path_descriptor) {
     int max = 0;
     int next;
-    if (p[4] >= 0) {
-        max = **(int **)(p + 0x10) - 1;
+    if (path_descriptor[4] >= 0) {
+        max = **(int **)(path_descriptor + 0x10) - 1;
     }
-    next = *(int *)p + 1;
+    next = *(int *)path_descriptor + 1;
     if (max < next) {
         next %= max + 1;
     }
-    *(int *)p = next;
+    *(int *)path_descriptor = next;
     return next;
 }
 
@@ -352,35 +352,35 @@ extern void subtract_vector_xyz(void *out, void *a, void *b) __asm__("FUN_001f9a
 extern void *func_001153FC_c(void *, int, unsigned int) __asm__("FUN_001153fc");
 
 void FUN_L01_0028b8c8(void *out, int *l, int idx, float a, float b) {
-    void *p[3];
+    void *neighboring_points[3];
     float weighted_incoming_delta[4];
     float weighted_outgoing_delta[4];
     float blended_delta[4];
-    float d1, d2, m, len;
+    float incoming_segment_distance, outgoing_segment_distance, delta_length_limit, len;
     float wa, wb;
-    func_001153FC_c(p, 0, 12);
-    p[0] = FUN_L01_0028b7b0(l, *l + idx - 1);
-    p[1] = FUN_L01_0028b7b0(l, *l + idx);
-    p[2] = FUN_L01_0028b7b0(l, *l + idx + 1);
+    func_001153FC_c(neighboring_points, 0, 12);
+    neighboring_points[0] = FUN_L01_0028b7b0(l, *l + idx - 1);
+    neighboring_points[1] = FUN_L01_0028b7b0(l, *l + idx);
+    neighboring_points[2] = FUN_L01_0028b7b0(l, *l + idx + 1);
     {
         wb = (1.0f - a) * (b + 1.0f) * 0.5f;
         wa = (1.0f - a) * (1.0f - b) * 0.5f;
     }
-    d1 = fast_vec_dist(p[0], p[1]);
-    d2 = fast_vec_dist(p[1], p[2]);
-    if (d1 < d2)
-        m = d1;
+    incoming_segment_distance = fast_vec_dist(neighboring_points[0], neighboring_points[1]);
+    outgoing_segment_distance = fast_vec_dist(neighboring_points[1], neighboring_points[2]);
+    if (incoming_segment_distance < outgoing_segment_distance)
+        delta_length_limit = incoming_segment_distance;
     else
-        m = d2;
-    subtract_vector_xyz(weighted_incoming_delta, p[1], p[0]);
+        delta_length_limit = outgoing_segment_distance;
+    subtract_vector_xyz(weighted_incoming_delta, neighboring_points[1], neighboring_points[0]);
     scale_vector_xyz(weighted_incoming_delta, weighted_incoming_delta, wb);
-    subtract_vector_xyz(weighted_outgoing_delta, p[2], p[1]);
+    subtract_vector_xyz(weighted_outgoing_delta, neighboring_points[2], neighboring_points[1]);
     scale_vector_xyz(weighted_outgoing_delta, weighted_outgoing_delta, wa);
     add_vector_xyz(blended_delta, weighted_incoming_delta, weighted_outgoing_delta);
-    m = m * 1.1f;
+    delta_length_limit = delta_length_limit * 1.1f;
     len = vector_length_xyz(blended_delta);
-    if (m < len) {
-        normalize_vector_xyz(out, blended_delta, m);
+    if (delta_length_limit < len) {
+        normalize_vector_xyz(out, blended_delta, delta_length_limit);
     } else {
         *(OvlQuad *)out = *(OvlQuad *)blended_delta;
     }
@@ -390,22 +390,22 @@ void FUN_L01_0028b8c8(void *out, int *l, int idx, float a, float b) {
 extern void fast_vec_add(void *, void *, void *) __asm__("FUN_001f9a10");
 extern void fast_vec_scale(void *, void *, float) __asm__("FUN_001f9a68");
 
-void FUN_L01_0028ba80(float t, void *out, void *p1, void *p2, void *p3, void *p4) {
-    char tmp[16];
+void FUN_L01_0028ba80(float t, void *out, void *start_point, void *end_point, void *start_tangent, void *end_tangent) {
+    char weighted_vector[16];
     float t_squared = t * t;
     float t_cubed = t_squared * t;
     float b = t_squared * 3.0f;
-    float a = t_cubed + t_cubed;
-    float c = t_squared + t_squared;
-    fast_vec_scale(out, p1, a - b + 1.0f);
-    fast_vec_scale(tmp, p3, t_cubed - c + t);
-    fast_vec_add(out, out, tmp);
-    fast_vec_scale(tmp, p4, t_cubed - t_squared);
-    fast_vec_add(out, out, tmp);
-    fast_vec_scale(tmp, p2, b - a);
-    fast_vec_add(out, out, tmp);
+    float twice_t_cubed = t_cubed + t_cubed;
+    float twice_t_squared = t_squared + t_squared;
+    fast_vec_scale(out, start_point, twice_t_cubed - b + 1.0f);
+    fast_vec_scale(weighted_vector, start_tangent, t_cubed - twice_t_squared + t);
+    fast_vec_add(out, out, weighted_vector);
+    fast_vec_scale(weighted_vector, end_tangent, t_cubed - t_squared);
+    fast_vec_add(out, out, weighted_vector);
+    fast_vec_scale(weighted_vector, end_point, b - twice_t_cubed);
+    fast_vec_add(out, out, weighted_vector);
 }
-float FUN_L01_0028bb90(float a, float b, T_28b828 *path, int particles, void *moby) {
+float FUN_L01_0028bb90(float tangent_tension, float b, T_28b828 *path, int particles, void *moby) {
     OvlVec4 previousTangent;
     OvlVec4 nextTangent;
     OvlVec4 currentNode;
@@ -424,7 +424,7 @@ float FUN_L01_0028bb90(float a, float b, T_28b828 *path, int particles, void *mo
     }
     /* The SN ABI assigns float arguments independently of the integer arguments.
      * Keep the retail argument setup order without changing the shared helper. */
-    ((void (*)(void *, int *, float, float, int))FUN_L01_0028b8c8)(&nextTangent, (int *)path, a, b, 0);
+    ((void (*)(void *, int *, float, float, int))FUN_L01_0028b8c8)(&nextTangent, (int *)path, tangent_tension, b, 0);
 
     index = 0;
     while (index < count) {
@@ -442,7 +442,7 @@ float FUN_L01_0028bb90(float a, float b, T_28b828 *path, int particles, void *mo
         segmentLength = 0.0f;
         nextNode.q = *(OvlQuad *)((char *)path->f10 + nextIndex * 16 + 0x10);
         *(int *)path = index;
-        ((void (*)(void *, int *, float, float, int))FUN_L01_0028b8c8)(&nextTangent, (int *)path, a, b, 1);
+        ((void (*)(void *, int *, float, float, int))FUN_L01_0028b8c8)(&nextTangent, (int *)path, tangent_tension, b, 1);
         previousPoint.q = currentNode.q;
         step = t;
         do {

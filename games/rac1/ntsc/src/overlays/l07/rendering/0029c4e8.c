@@ -20,22 +20,22 @@ extern int func_001FA898_r(float) __asm__("FUN_001fa6d0");
 
 extern unsigned char *D_L07_001B2164 __attribute__((section(".data")));
 void FUN_L07_0029c4e8(void *pos, void *pos2) {
-    unsigned char *p = create_part(0x41);
-    if (p) {
-        float *f = (float *)(p + 0x20);
-        qcopy(p + 0x10, pos);
-        *(int *)(p + 4) = FUN_L00_0025bfe0(1.0f, 1.0f, 1.0f, 0.6f);
-        p[9] = func_001FA898_r(4.0f) + 0x40;
-        p[1] = 0;
-        p[3] = 0x48;
-        *(float *)(p + 0xC) = random_float_between_alt(20000.0f, 120000.0f);
-        p[8] = 0;
-        p[2] = *D_L07_001B2164;
+    unsigned char *particle = create_part(0x41);
+    if (particle) {
+        float *f = (float *)(particle + 0x20);
+        qcopy(particle + 0x10, pos);
+        *(int *)(particle + 4) = FUN_L00_0025bfe0(1.0f, 1.0f, 1.0f, 0.6f);
+        particle[9] = func_001FA898_r(4.0f) + 0x40;
+        particle[1] = 0;
+        particle[3] = 0x48;
+        *(float *)(particle + 0xC) = random_float_between_alt(20000.0f, 120000.0f);
+        particle[8] = 0;
+        particle[2] = *D_L07_001B2164;
         f[4] = 1.0f;
         f[5] = 1.0f;
         f[6] = 1.0f;
         f[7] = 0.6f;
-        *(short *)(p + 0xA) = scale_game_frames(0x50);
+        *(short *)(particle + 0xA) = scale_game_frames(0x50);
         qcopy(f, pos2);
     }
 }
@@ -54,17 +54,17 @@ extern f32 seg_fabs(f32) __asm__("FUN_001f99c0");
    the one closer to ref when both hits are equally good. Writes it to out and returns its distance
    from the surface (0 when within 1% of the radius). */
 f32 FUN_L07_0029e6d8(Vec4f *out, Vec4f *ref, Vec4f *center, Vec4f *a, Vec4f *b, f32 radius) {
-    Vec4f w, dir, p, p1, p2;
+    Vec4f w, dir, line_projection_point, lower_segment_point, upper_segment_point;
     f32 t, lower_segment_t, upper_segment_t, h, dd, dist, e1, e2, eps;
-    Vec4f *q;
+    Vec4f *upper_segment_point_ptr;
 
     seg_vec_sub(&w, a, center);
     seg_vec_sub(&dir, b, a);
     dd = seg_dot(&dir, &dir);
     t = -seg_dot(&w, &dir) / dd;
-    seg_vec_scale(&p, &dir, t);
-    seg_vec_add(&p, &p, a);
-    dist = seg_dist(&p, center);
+    seg_vec_scale(&line_projection_point, &dir, t);
+    seg_vec_add(&line_projection_point, &line_projection_point, a);
+    dist = seg_dist(&line_projection_point, center);
     if (dist < radius) {
         h = seg_sqrt(radius * radius - dist * dist);
         h /= seg_len(&dir);
@@ -78,23 +78,23 @@ f32 FUN_L07_0029e6d8(Vec4f *out, Vec4f *ref, Vec4f *center, Vec4f *a, Vec4f *b, 
             upper_segment_t = 0.0f;
         else if (1.0f < upper_segment_t)
             upper_segment_t = 1.0f;
-        seg_vec_scale(&p1, &dir, lower_segment_t);
-        seg_vec_add(&p1, &p1, a);
-        e1 = seg_fabs(seg_dist(&p1, center) - radius);
+        seg_vec_scale(&lower_segment_point, &dir, lower_segment_t);
+        seg_vec_add(&lower_segment_point, &lower_segment_point, a);
+        e1 = seg_fabs(seg_dist(&lower_segment_point, center) - radius);
         eps = radius * 0.01f;
         if (e1 < eps)
             e1 = 0.0f;
-        q = &p2;
-        seg_vec_scale(q, &dir, upper_segment_t);
-        seg_vec_add(q, q, a);
-        e2 = seg_fabs(seg_dist(q, center) - radius);
+        upper_segment_point_ptr = &upper_segment_point;
+        seg_vec_scale(upper_segment_point_ptr, &dir, upper_segment_t);
+        seg_vec_add(upper_segment_point_ptr, upper_segment_point_ptr, a);
+        e2 = seg_fabs(seg_dist(upper_segment_point_ptr, center) - radius);
         if (e2 < eps)
             e2 = 0.0f;
-        if (e1 < e2 || (e1 == e2 && seg_dist(&p1, ref) < seg_dist(q, ref))) {
-            qcopy(out, &p1);
+        if (e1 < e2 || (e1 == e2 && seg_dist(&lower_segment_point, ref) < seg_dist(upper_segment_point_ptr, ref))) {
+            qcopy(out, &lower_segment_point);
             dist = e1;
         } else {
-            qcopy(out, q);
+            qcopy(out, upper_segment_point_ptr);
             dist = e2;
         }
     } else {
@@ -105,7 +105,7 @@ f32 FUN_L07_0029e6d8(Vec4f *out, Vec4f *ref, Vec4f *center, Vec4f *a, Vec4f *b, 
         qcopy(out, b);
         dist = seg_fabs(seg_dist(out, center) - radius);
     } else {
-        qcopy(out, &p);
+        qcopy(out, &line_projection_point);
     }
     if (dist < radius * 0.01f)
         dist = 0.0f;

@@ -46,4 +46,76 @@ void SetSpringParams(float *p, float a, float b)
     p[6] = (a + a) / x;
     p[5] = (a + a) / (x * x);
 }
-INCLUDE_ASM("asm/overlays", func_L03_00251AC8);
+extern float func_L00_00258C80(float, float);
+extern void func_002156E0(void *, void *, void *, float);
+extern float func_002140F8(float, float);
+extern int func_L00_00258BC8(int, int);
+extern int func_002140B0(int);
+extern int func_001F9850(int);
+extern void func_L00_001FF240(void *, void *, void *);
+extern unsigned char *func_L00_00272158(void *, void *, int, int, int, int, float, float, float, float, float);
+extern int func_001FA898(float);
+extern void func_L00_0026DA50(void *, void *, int, int, int, int, float);
+typedef int U128 __attribute__((mode(TI)));
+static inline int game_frames(int n)
+{
+    return func_001F9850(n);
+}
+static inline int rand_ticks(int lo, int hi)
+{
+    int a = game_frames(lo);
+    int b = game_frames(hi);
+    return func_L00_00258BC8(a, b);
+}
+static inline float rand_jitter(float spread)
+{
+    float r = func_L00_00258C80(0.0f, spread);
+    return r;
+}
+static inline float rand_speed(void)
+{
+    float s = func_002140F8(0.05f, 0.1f);
+    return s;
+}
+static inline int rand_spin(void)
+{
+    int s = func_L00_00258BC8(0, 3);
+    return s;
+}
+static inline int coin_flip(void)
+{
+    int r = func_002140B0(2);
+    return r;
+}
+/* Emits two rings of randomly varied particles around the moby's axis. */
+void func_L03_00251AC8(char *moby, float *position, void *extra)
+{
+    float pos[4], vec[4], tmp[4];
+    float *p = pos;
+    int i, j;
+    *(U128 *)pos = *(U128 *)position;
+    for (i = 0; i < func_001FA898(24.0f); i++) {
+        float angle;
+        int sign, life;
+        angle = rand_jitter(0.1308997f);
+        func_002156E0(vec, moby + 0xE0, moby + 0xC0, (float)i * 0.2617994f + angle);
+        func_L00_001FF4B0(vec, vec, rand_speed());
+        sign = rand_spin();
+        if (coin_flip())
+            sign = -sign;
+        life = rand_ticks(30, 90);
+        if (extra)
+            func_L00_001FF240(tmp, vec, extra);
+        func_L00_00272158(p, vec, life, 30, 0xFFFFFF, sign, 60000.0f, 3000.0f, 0.85f, -0.001f, 0.85f);
+    }
+    for (j = 0; j < func_001FA898(6.0f); j++) {
+        int n;
+        float angle = func_002140F8(0.0f, 0.7853982f);
+        func_002156E0(vec, moby + 0xE0, moby + 0xC0, (float)j * 1.0471976f + angle);
+        func_L00_001FF4B0(vec, vec, rand_speed());
+        n = rand_ticks(20, 60);
+        if (extra)
+            func_L00_001FF240(tmp, vec, extra);
+        func_L00_0026DA50(p, vec, 0x4F007FFF, 0x1FFFFFFF, n, 1, 10000.0f);
+    }
+}

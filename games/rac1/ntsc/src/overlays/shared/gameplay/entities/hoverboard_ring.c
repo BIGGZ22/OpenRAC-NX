@@ -39,9 +39,9 @@ void hoverboard_ring_update(char *moby) {
         if (fast_bsphere_check((char *)v, 128.0f) != -1) {
             if (hero.state.control_mode == 0x16) {
                 for (i = 0; i < 3; i++) {
-                    float a = random_angle_radians();
+                    float first_random_angle = random_angle_radians();
                     float b = random_angle_radians();
-                    FUN_L00_002743a8(a, b, (int)moby, D_L05_0015F580, scale_game_frames(0x28), 1,
+                    FUN_L00_002743a8(first_random_angle, b, (int)moby, D_L05_0015F580, scale_game_frames(0x28), 1,
                                      0x7F, 0);
                 }
             }
@@ -252,7 +252,7 @@ void FUN_L05_0031cf58(char *m) {
     Pk_31e468 pk;
     float up[4];
     float M[4][4];
-    float t[4];
+    float sprite_offset[4];
     float w[4];
     u32 col;
     int j;
@@ -271,8 +271,8 @@ void FUN_L05_0031cf58(char *m) {
     pk.uv[5] = 0.0f;
     pk.uv[6] = 1.0f;
     pk.uv[7] = 1.0f;
-    scale_vector_xyz(t, m + 0xE0, *(float *)&D_L05_00161FC8_gp);
-    add_vector_xyz(M[3], m + 0x10, t);
+    scale_vector_xyz(sprite_offset, m + 0xE0, *(float *)&D_L05_00161FC8_gp);
+    add_vector_xyz(M[3], m + 0x10, sprite_offset);
     subtract_vector_xyz(M[0], D_L05_001671C0_lui, M[3]);
     normalize_vector_xyz(M[0], M[0], 1.0f);
     cross_vectors_xyz(M[1], M[0], up);
@@ -298,19 +298,19 @@ extern char *FUN_0020c4f8_d160(int) __asm__("FUN_0020c4f8");
 extern void FUN_L00_00250df8_d160(void *) __asm__("FUN_L00_00250df8");
 
 char *FUN_L05_0031d160(unsigned char *source_moby) {
-    unsigned char *m = (unsigned char *)FUN_0020c4f8_d160(0x5EA);
-    if (m != 0) {
-        m[0x30] = source_moby[0x30];
-        *(unsigned short *)(m + 0x32) = *(unsigned short *)(source_moby + 0x32);
-        m[0x31] = 1;
-        *(float *)(m + 0x40) = *(float *)(source_moby + 0x40);
-        *(float *)(m + 0x44) = *(float *)(source_moby + 0x44);
-        *(float *)(m + 0x48) = *(float *)(source_moby + 0x48);
-        *(long *)(m + 0x38) = *(long *)(source_moby + 0x38);
-        qcopy(m + 0x10, source_moby + 0x10);
-        FUN_L00_00250df8_d160(m);
+    unsigned char *destination_moby = (unsigned char *)FUN_0020c4f8_d160(0x5EA);
+    if (destination_moby != 0) {
+        destination_moby[0x30] = source_moby[0x30];
+        *(unsigned short *)(destination_moby + 0x32) = *(unsigned short *)(source_moby + 0x32);
+        destination_moby[0x31] = 1;
+        *(float *)(destination_moby + 0x40) = *(float *)(source_moby + 0x40);
+        *(float *)(destination_moby + 0x44) = *(float *)(source_moby + 0x44);
+        *(float *)(destination_moby + 0x48) = *(float *)(source_moby + 0x48);
+        *(long *)(destination_moby + 0x38) = *(long *)(source_moby + 0x38);
+        qcopy(destination_moby + 0x10, source_moby + 0x10);
+        FUN_L00_00250df8_d160(destination_moby);
     }
-    return (char *)m;
+    return (char *)destination_moby;
 }
 /* Sets up a moby's vector from the level table and clamps its height for the current state. */
 /* Ported from rac1-decomp (src/overlays/shared/vendor_002CF2C0.c: func_L05_0032A868), where it is exact; names translated to the US level program. */
@@ -323,13 +323,13 @@ extern void normalize_vector_xyz(void *out, void *a, f32 len) __asm__("FUN_001f9
 
 void FUN_L05_00329358(char *moby) {
     float v[4];
-    char *d = *(char **)(moby + 0x70);
-    float *p = (float *)(d + 0x80);
+    char *orbit = *(char **)(moby + 0x70);
+    float *focus_position = (float *)(orbit + 0x80);
     *(OvlQuad *)v = 0;
     v[2] = 0.7f;
     transform_vector(v, v, &hero);
-    add_vector_xyz(p, &hero.motion.pos, v);
-    qcopy(d + 0x1D0, p);
+    add_vector_xyz(focus_position, &hero.motion.pos, v);
+    qcopy(orbit + 0x1D0, focus_position);
     if (current_level_index == 5) {
         float w[4];
         *(OvlQuad *)w = 0;
@@ -337,43 +337,43 @@ void FUN_L05_00329358(char *moby) {
         w[1] = 447.82f;
         w[2] = 63.37f;
         w[3] = 1.0f;
-        if (vector_distance(w, p) < 48.0f) {
-            if (p[2] < 62.4f) {
-                p[2] = 62.4f;
+        if (vector_distance(w, focus_position) < 48.0f) {
+            if (focus_position[2] < 62.4f) {
+                focus_position[2] = 62.4f;
             }
         } else {
-            if (p[2] < 67.2f) {
-                p[2] = 67.2f;
+            if (focus_position[2] < 67.2f) {
+                focus_position[2] = 67.2f;
             }
         }
     } else if (current_level_index == 0x10) {
-        if (p[2] < 77.5f) {
-            p[2] = 77.5f;
+        if (focus_position[2] < 77.5f) {
+            focus_position[2] = 77.5f;
         }
     }
-    normalize_vector_xyz(p + 8, &hero.gravity_dir, -1.0f);
+    normalize_vector_xyz(focus_position + 8, &hero.gravity_dir, -1.0f);
 }
 extern char *D_L05_00167200 __attribute__((section(".data")));
-void FUN_L05_003294c0(float a, float b, float c, float d, float e, float f, float g, float h) {
-    char *o = D_L05_00167200;
-    char *p = *(char **)(o + 0x70);
+void FUN_L05_003294c0(float spring_distance, float b, float focus_distance, float d, float e, float f, float g, float h) {
+    char *camera = D_L05_00167200;
+    char *orbit = *(char **)(camera + 0x70);
 
-    *(float *)(p + 0x184) = a;
-    *(float *)(p + 0x188) = b;
-    *(float *)(p + 0x180) = c;
-    *(float *)(p + 0x190) = d;
-    *(float *)(p + 0x194) = e;
-    *(float *)(p + 0x18C) = f;
-    p = *(char **)(o + 0x70);
+    *(float *)(orbit + 0x184) = spring_distance;
+    *(float *)(orbit + 0x188) = b;
+    *(float *)(orbit + 0x180) = focus_distance;
+    *(float *)(orbit + 0x190) = d;
+    *(float *)(orbit + 0x194) = e;
+    *(float *)(orbit + 0x18C) = f;
+    orbit = *(char **)(camera + 0x70);
     if (g < 0.0f) {
-        *(float *)(p + 0x10) = 0.01f;
+        *(float *)(orbit + 0x10) = 0.01f;
     } else {
-        *(float *)(p + 0x10) = g;
+        *(float *)(orbit + 0x10) = g;
     }
     if (h < 0.0f) {
-        *(float *)(p + 0x14) = 0.2f;
+        *(float *)(orbit + 0x14) = 0.2f;
     } else {
-        *(float *)(p + 0x14) = h;
+        *(float *)(orbit + 0x14) = h;
     }
 }
 /* Places the camera moby relative to the hero's target and builds its look-at basis. */
@@ -381,38 +381,38 @@ void FUN_L05_003294c0(float a, float b, float c, float d, float e, float f, floa
 
 extern void FUN_L05_00329358_c(void *) __asm__("FUN_L05_00329358");
 
-void FUN_L05_00329540(char *m) {
-    char *d = *(char **)(m + 0x70);
-    char *at = m + 0x30;
-    char *up = m + 0x10;
-    char *side = m + 0x20;
+void FUN_L05_00329540(char *camera) {
+    char *orbit = *(char **)(camera + 0x70);
+    char *at = camera + 0x30;
+    char *up = camera + 0x10;
+    char *side = camera + 0x20;
     struct Hero *g;
-    char *a;
+    char *focus;
     char *b;
     float target_height_offset[4];
     float look_direction[4];
     float look_target[4];
     float camera_offset[4];
     float gravity_up[4];
-    FUN_L05_00329358_c(m);
+    FUN_L05_00329358_c(camera);
     g = &hero;
-    a = d + 0x80;
-    b = d + 0xE0;
+    focus = orbit + 0x80;
+    b = orbit + 0xE0;
     normalize_vector_xyz(camera_offset, ((char *)g->moby) + 0xC0, 1.0f);
-    normalize_vector_xyz(camera_offset, camera_offset, *(float *)(d + 0xE0));
-    subtract_vector_xyz(at, a, camera_offset);
+    normalize_vector_xyz(camera_offset, camera_offset, *(float *)(orbit + 0xE0));
+    subtract_vector_xyz(at, focus, camera_offset);
     normalize_vector_xyz(gravity_up, &g->gravity_dir, -1.0f);
     normalize_vector_xyz(camera_offset, gravity_up, *(float *)(b + 0x10));
     add_vector_xyz(at, at, camera_offset);
-    normalize_vector_xyz(target_height_offset, gravity_up, *(float *)(a + 0x4C));
-    add_vector_xyz(look_target, target_height_offset, a);
+    normalize_vector_xyz(target_height_offset, gravity_up, *(float *)(focus + 0x4C));
+    add_vector_xyz(look_target, target_height_offset, focus);
     subtract_vector_xyz(look_direction, look_target, at);
-    normalize_vector_xyz(m, look_direction, 1.0f);
-    cross_vectors_xyz(up, m, gravity_up);
-    cross_vectors_xyz(side, up, m);
+    normalize_vector_xyz(camera, look_direction, 1.0f);
+    cross_vectors_xyz(up, camera, gravity_up);
+    cross_vectors_xyz(side, up, camera);
     normalize_vector_xyz(up, up, 1.0f);
     normalize_vector_xyz(side, side, 1.0f);
-    qcopy(m + 0x40, m);
+    qcopy(camera + 0x40, camera);
 }
 #include "qcopy.h"
 #include "rnc/gameplay/entities/moby.h"
@@ -528,35 +528,35 @@ extern void clear_u64_value(void *) __asm__("FUN_001f99f8");
 /* Resets the camera from its preset (row cam->preset of D_L05_0015EF50): distances,
    angle limits and damping, cleared velocities, then places it. */
 void FUN_L05_003296e0(Camera *cam) {
-    CameraPreset *s = D_L05_0015EF50[cam->preset].preset;
-    CameraOrbit *d;
+    CameraPreset *preset = D_L05_0015EF50[cam->preset].preset;
+    CameraOrbit *orbit_state;
     CameraFocus *focus;
     CameraSpring *spring;
     CameraOrbit *orbit;
     CameraTrack *track;
     CameraView *view;
 
-    s->unk48 = 0;
-    d = cam->orbit;
-    d->spring_dist = s->spring_dist;
-    d->spring_height = s->spring_height;
-    d->dist = s->dist;
-    d->unk190 = s->unk34;
-    d->unk194 = s->unk38;
-    d->unk18C = s->unk3C;
-    clear_u64_value(&d->unk1B0);
-    clear_u64_value(&d->unk1C0);
+    preset->unk48 = 0;
+    orbit_state = cam->orbit;
+    orbit_state->spring_dist = preset->spring_dist;
+    orbit_state->spring_height = preset->spring_height;
+    orbit_state->dist = preset->dist;
+    orbit_state->unk190 = preset->unk34;
+    orbit_state->unk194 = preset->unk38;
+    orbit_state->unk18C = preset->unk3C;
+    clear_u64_value(&orbit_state->unk1B0);
+    clear_u64_value(&orbit_state->unk1C0);
     focus = &cam->orbit->focus;
     focus->state = 5;
     focus->unk44 = D_001413D0[0];
-    focus->dist = d->dist;
+    focus->dist = orbit_state->dist;
     focus->max_angle = 0.209439516f;
     focus->unk58 = 0.00174532924f;
     focus->unk5C = -0.0043633231f;
     spring = &cam->orbit->spring;
-    spring->dist = d->spring_dist;
+    spring->dist = orbit_state->spring_dist;
     spring->unk4 = 0.5f;
-    spring->height = d->spring_height;
+    spring->height = orbit_state->spring_height;
     orbit = cam->orbit;
     orbit->unk10 = 0.01f;
     orbit->unk14 = 0.2f;
@@ -567,9 +567,9 @@ void FUN_L05_003296e0(Camera *cam) {
     clear_u64_value(track);
     clear_u64_value(&track->accel);
     track->unk40 = 0;
-    track->unk10 = s->unk0;
-    track->unk34 = s->unk20;
-    track->unk38 = s->unk24;
+    track->unk10 = preset->unk0;
+    track->unk34 = preset->unk20;
+    track->unk38 = preset->unk24;
     track->unk3C = 0;
     view = &cam->orbit->view;
     view->unk20 = 0.8f;
@@ -578,8 +578,8 @@ void FUN_L05_003296e0(Camera *cam) {
     view->unk28 = 0;
     view->unk2C = 0;
     clear_u64_value(view);
-    FUN_L05_003294c0(s->spring_dist, s->spring_height, s->dist, s->unk34,
-                     s->unk38, s->unk3C, s->unk40, s->unk44);
+    FUN_L05_003294c0(preset->spring_dist, preset->spring_height, preset->dist, preset->unk34,
+                     preset->unk38, preset->unk3C, preset->unk40, preset->unk44);
     FUN_L05_00329540((char *)cam);
     cam->unk7E = 0;
 }
@@ -606,9 +606,9 @@ void FUN_L05_003298d8(Camera *cam) {
     Vec4 flat;
     Vec4 unit;
     Vec4 rot;
-    CameraOrbit *o = cam->orbit;
-    CameraFocus *focus = &o->focus;
-    f32 *spring = o->goal;
+    CameraOrbit *orbit = cam->orbit;
+    CameraFocus *focus = &orbit->focus;
+    f32 *spring = orbit->goal;
     f32 dot;
     f32 len;
     f32 ang;
@@ -616,8 +616,8 @@ void FUN_L05_003298d8(Camera *cam) {
     f32 tilt;
 
     normalize_vector_xyz(&up, &hero.gravity_dir, -1.0f);
-    if (o->mode == 0 && hero.unk88E != 0) {
-        o->mode = 1;
+    if (orbit->mode == 0 && hero.unk88E != 0) {
+        orbit->mode = 1;
         cross_vectors_xyz(&side, &hero.moby->rot_row2, &up);
         normalize_vector_xyz(&side, &side, 1.0f);
         cross_vectors_xyz(&fwd, &up, &side);
@@ -651,7 +651,7 @@ void FUN_L05_003298d8(Camera *cam) {
         }
         cam->pitch = pitch;
         cam->dist = vector_length_xyz(&rel);
-        qcopy(&o->focus.side, &fwd);
+        qcopy(&orbit->focus.side, &fwd);
         spring[0] = 3.1415927f;
         spring[1] = -1.5358897f;
         spring[2] = 5.0f;
@@ -665,7 +665,7 @@ void FUN_L05_003298d8(Camera *cam) {
         spring[8] = 0.005f;
         spring[11] = 0.2f;
     }
-    if (o->mode == 1) {
+    if (orbit->mode == 1) {
         normalize_vector_xyz(&side, &focus->side, cam->dist);
         rotate_about_axis(&side, &side, &up, cam->yaw);
         cross_vectors_xyz(&fwd, &side, &up);
@@ -676,8 +676,8 @@ void FUN_L05_003298d8(Camera *cam) {
         cam->pitch = rope_spring_turn(&spring[4], cam->pitch, spring[1], spring[7], spring[10], 0.0f);
         cam->dist = FUN_001ebd78(&spring[5], cam->dist, spring[2], spring[8], spring[11], 0.0f);
         if (hero.unk88E == 0) {
-            o->mode = 0;
-            scale_vector_xyz(o, o, -1.0f);
+            orbit->mode = 0;
+            scale_vector_xyz(orbit, orbit, -1.0f);
         }
     }
 }

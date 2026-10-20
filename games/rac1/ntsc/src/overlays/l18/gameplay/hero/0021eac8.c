@@ -313,7 +313,7 @@ void FUN_L18_0021eac8(void) {
     Vec4 v20;
     Vec4 v30;
     Vec4 m40[4];
-    Vec4 m80[4];
+    Vec4 inverse_yaw_rotation_matrix[4];
     Vec4 vC0;
     Vec4 vD0;
 
@@ -954,8 +954,8 @@ void FUN_L18_0021eac8(void) {
         clear_u64_value(&v20);
         v20.f[2] = hero.motion.rot.f[2];
         euler_rotation_matrix(m40, &v20);
-        transpose_rotation_matrix(m80, m40);
-        transform_vector(&v0, &v0, m80);
+        transpose_rotation_matrix(inverse_yaw_rotation_matrix, m40);
+        transform_vector(&v0, &v0, inverse_yaw_rotation_matrix);
         v10.f[0] = -fast_arc_tan(square_root(v0.f[0] * v0.f[0] + v0.f[2] * v0.f[2]), v0.f[1]);
         v10.f[1] = fast_arc_tan(v0.f[2], v0.f[0]);
         FUN_L00_0025bc98(&hero.motion.rot.f[1], v10.f[1], &hero.motion.unkA0.f[1], 0, frame_scale_sq * 0.04f, frame_scale_sq * 0.2f,
@@ -1176,7 +1176,7 @@ void FUN_L18_0021eac8(void) {
         }
         break;
     }
-    case 0x15: {
+    case HERO_STATE_CROUCH_SWING: {
         s32 jumping;
         hero.target_speed = 0.0f;
         if (hero.unkA9C != 0 || hero.anim_frame < D_L18_0017C628[hero.attack_record].f18) {
@@ -1497,14 +1497,14 @@ void FUN_L18_0021eac8(void) {
         }
         FUN_L00_00211be8();
         if (hero.unk930 > 0.0f) {
-            Vec4 *p = &hero.move_impulse;
+            Vec4 *move_impulse_ptr = &hero.move_impulse;
             FUN_L00_002132b8(0.7f, 0.0f);
             v0.q = hero.move_impulse.q;
             hero.target_speed += forward_component(&v0);
             if (hero.target_speed < frame_time * 0.7f) {
                 hero.target_speed = frame_time * 0.7f;
             }
-            clear_u64_value(p);
+            clear_u64_value(move_impulse_ptr);
         }
         k = 1.0f;
         if (hero.state.step == 1 && hero.unk3BE == 0) {
@@ -2250,7 +2250,7 @@ void FUN_L18_0021eac8(void) {
         FUN_L00_0020b5b8();
         break;
     }
-    case 0x16: {
+    case HERO_STATE_HURT: {
         f32 l = vector_length_xy(&hero.motion.velocity);
         f32 d = frame_time_sq * 4.0f;
         if (hero.air_frames.s == 0 && scale_game_frames(10) < hero.state_timer) {
@@ -2417,15 +2417,15 @@ void FUN_L18_0021eac8(void) {
             }
         }
         switch (hero.attack_record) {
-        case 0:
-        case 1:
+        case ATTACK_RECORD_POINT_3_STRIKE:
+        case ATTACK_RECORD_POINT_4_STRIKE:
             if (hero.unkA9C == 0 && hero.anim_frame >= 7.0f && hero.anim_frame < 15.0f) {
                 hero.target_speed = frame_time * 21.0f;
             }
             speed_step(frame_time_sq * 180.0f, frame_time_sq * 140.0f);
             set_planar_vel(99999.0f);
             break;
-        case 2:
+        case ATTACK_RECORD_POINTS_3_AND_4_STRIKE:
             if (hero.unkA9C == 0 && hero.anim_frame >= 11.0f && hero.anim_frame < 20.0f) {
                 hero.target_speed = frame_time * 30.0f;
             }

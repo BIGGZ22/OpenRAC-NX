@@ -8,14 +8,14 @@
 
 /* 1 when m is the hero's current moby of interest: unk4F8 in control mode 3
    or state 0x1C, otherwise unk2FC while unk30E is clear. */
-s32 FUN_L01_00277fb8(struct Moby *m) {
-    struct Hero *h = &hero;
+s32 FUN_L01_00277fb8(struct Moby *candidate_moby) {
+    struct Hero *hero_ptr = &hero;
 
-    if (h->state.control_mode == 3 || h->state.current == 0x1C) {
-        if ((struct Moby *)h->unk4F8 == m) {
+    if (hero_ptr->state.control_mode == 3 || hero_ptr->state.current == 0x1C) {
+        if ((struct Moby *)hero_ptr->unk4F8 == candidate_moby) {
             return 1;
         }
-    } else if (h->air_frames.s == 0 && h->ground_moby == m) {
+    } else if (hero_ptr->air_frames.s == 0 && hero_ptr->ground_moby == candidate_moby) {
         return 1;
     }
     return 0;
@@ -78,18 +78,18 @@ extern char *func_0020D348_m(int);
 extern void FUN_L00_00250df8(void *);
 
 void FUN_L01_00278e20(struct Moby *src, int oClass) {
-    char *m = func_0020D348_m(oClass);
-    if (m != 0) {
-        *(short *)(m + 0x32) = 0xFF;
-        m[0x31] = 1;
-        *(float *)(m + 0x2C) = *(float *)(m + 0x2C) *
+    char *destination_moby = func_0020D348_m(oClass);
+    if (destination_moby != 0) {
+        *(short *)(destination_moby + 0x32) = 0xFF;
+        destination_moby[0x31] = 1;
+        *(float *)(destination_moby + 0x2C) = *(float *)(destination_moby + 0x2C) *
                                (src->scale / src->pclass->scale);
-        qcopy(m + 0x10, &src->pos);
-        qcopy(m + 0x40, &src->rot);
-        *(long *)(m + 0x38) = src->spawn_frame;
-        m[0x30] = 0;
-        *(short *)(m + 0x34) = 0;
-        FUN_L00_00250df8(m);
+        qcopy(destination_moby + 0x10, &src->pos);
+        qcopy(destination_moby + 0x40, &src->rot);
+        *(long *)(destination_moby + 0x38) = src->spawn_frame;
+        destination_moby[0x30] = 0;
+        *(short *)(destination_moby + 0x34) = 0;
+        FUN_L00_00250df8(destination_moby);
     }
 }
 

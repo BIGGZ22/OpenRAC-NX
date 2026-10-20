@@ -374,7 +374,112 @@ void func_L05_00266BD8(char *moby)
         *(int *)(moby + 0x6C) = -6;
     }
 }
-INCLUDE_ASM("asm/overlays", func_L05_00266D10);
+extern int D_0015EE80 MACRO_ADDR;
+extern int D_0015EE84 MACRO_ADDR;
+extern int D_0013E600[];
+extern char D_0013D355[];
+extern short D_L05_0015FA5C;
+extern short D_L05_0015FA60;
+extern short D_L05_0015FA64;
+extern short D_L05_0015FA68;
+extern short D_L05_0015FA6C;
+extern short D_L05_0015FA70;
+extern short D_L05_0015FA74;
+extern short D_L05_0015FA78;
+extern short D_L05_0015FA7C;
+extern short D_L05_0015FA88;
+extern short D_L05_0015FA98;
+extern short D_L05_0015FA9C;
+extern short D_L05_0015FAA0;
+extern char D_L05_0015FAB0[];
+extern char D_L05_0015FAB8[];
+extern char D_L05_0015FAC0[];
+extern void func_00201960(int, int, int, int, int);
+extern char *func_001FE540(int);
+extern int func_00116248(char *, char *, ...);
+extern void func_L00_001FB7F8(int, int, long, char *, int);
+extern int func_001F6600(char *, int);
+
+static inline int hud_sub_66D10(int d, int pal, short *p) {
+    int o;
+    if (pal) {
+        o = *(int *)&(*p) + 0xA;
+        return d - o;
+    }
+    o = *(int *)&(*p) + 0x12;
+    return d - o;
+}
+
+static inline int hud_py_66D10(int pal) {
+    return pal ? 0xA : 0x12;
+}
+
+int func_L05_00266D10(char *e) {
+    char buf[0x50] __attribute__((aligned(16)));
+    int x, y, y1, tx, px, py, w;
+    int pal;
+    char *hd;
+    char *t, *f, *h2;
+
+    if (*(int *)(e + 0x6C) <= 0)
+        return 0;
+    pal = D_0015EE80;
+    x = hud_sub_66D10(D_0013E600[1], pal, &D_L05_0015FA60);
+    y = hud_sub_66D10(D_0013E600[1], pal, &D_L05_0015FA7C);
+    hd = D_0013E633 + 0xE1D;
+    y1 = y + 1;
+    func_00201960(*(int *)&(D_L05_0015FA5C), x, *(int *)&(D_L05_0015FA64), *(int *)&(D_L05_0015FA68), *(int *)&(D_L05_0015FA6C));
+    tx = *(int *)&(D_L05_0015FA78);
+    func_00116248(buf, D_L05_0015FAB0, func_001FE540(0x5244));
+    func_L00_001FB7F8(tx - 1, y1, 0x80000000L, buf, -1);
+    func_L00_001FB7F8(tx, y, *(int *)&(D_L05_0015FA70), buf, -1);
+    w = func_001F6600(buf, -1);
+    tx = tx + w;
+    {
+        int n = *(short *)(hd + 0x89A) + 1;
+        if (!(n < 4)) n = 3;
+        func_00116248(buf, D_L05_0015FAB8, n);
+    }
+    func_L00_001FB7F8(tx - 1, y + 2, 0x80000000L, buf, -1);
+    func_L00_001FB7F8(tx, y, *(int *)&(D_L05_0015FA74), buf, -1);
+    {
+        int n = *(int *)(hd + 0x8C0);
+        tx = *(int *)&(D_L05_0015FA88);
+        n = n - 1;
+        if (!(n < 5)) n = 4;
+        func_00116248(buf, D_L05_0015F9B8, func_001FE540(n + 0x5229));
+    }
+    w = func_001F6600(buf, -1);
+    tx = tx - w;
+    func_L00_001FB7F8(tx + 1, y1, 0x80000000L, buf, -1);
+    func_L00_001FB7F8(tx, y, *(int *)&(D_L05_0015FA74), buf, -1);
+    func_00116248(buf, D_L05_0015FAC0, func_001FE540(0x5245));
+    w = func_001F6600(buf, -1);
+    tx = tx - w;
+    func_L00_001FB7F8(tx + 1, y1, 0x80000000L, buf, -1);
+    func_L00_001FB7F8(tx, y, *(int *)&(D_L05_0015FA70), buf, -1);
+    if (D_0015EE84 != 0x10)
+        return *(int *)(e + 0x58);
+    func_00116248(buf + 0x40, D_L05_0015F940, *(unsigned char *)(hd + 0x8CE));
+    py = D_0015EE80 ? 0xA : 0x12;
+    px = *(int *)(e + 0x50);
+    if (*(unsigned char *)(D_0013D355 + 0x13B) == 0) {
+        py = D_0015EE80 ? 0xA : 0x12;
+    } else {
+        px = *(int *)&(D_L05_0015FA98);
+        py = *(int *)&(D_L05_0015FA9C);
+    }
+    func_00201960(px - 0x18, py, *(int *)&(D_L05_0015FAA0), 0x20, 0x60);
+    w = func_00200198(0x7558, 2);
+    func_00200468(w, px, py, 0x20, 0x20, 0x80);
+    func_L00_001FB7F8(px + 0x29, py + 8, 0x80000000L, buf + 0x40, -1);
+    h2 = D_0013E633 + 0xE1D;
+    if (*(unsigned char *)(h2 + 0x8CE) != 0)
+        func_L00_001FB7F8(px + 0x28, py + 7, 0x80E08060L, buf + 0x40, -1);
+    else
+        func_L00_001FB7F8(px + 0x28, py + 7, 0x80202080L, buf + 0x40, -1);
+    return *(int *)(e + 0x58);
+}
 typedef struct {
     char pad0[0x58];
     int w;

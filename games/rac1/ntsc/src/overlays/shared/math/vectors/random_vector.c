@@ -9,10 +9,10 @@ float fast_sin(float) __asm__("FUN_001f9de0");
 void random_vector(float *out, float lo, float hi) __asm__("FUN_L00_00257d78");
 void random_vector(float *out, float lo, float hi) {
     float r = random_float_between(out, lo, hi);
-    float a = random_angle_radians();
+    float azimuth_angle = random_angle_radians();
     float b = random_angle_radians();
-    out[0] = fast_cos(a) * fast_sin(b) * r;
-    out[1] = fast_sin(a) * fast_sin(b) * r;
+    out[0] = fast_cos(azimuth_angle) * fast_sin(b) * r;
+    out[1] = fast_sin(azimuth_angle) * fast_sin(b) * r;
     out[2] = fast_cos(b) * r;
 }
 #define NOT_SDA
@@ -24,9 +24,9 @@ void random_vector(float *out, float lo, float hi) {
 /* Cubic interpolation through four points a..d at t. */
 float cubic_hermite_scalar(float a, float b, float c, float d, float t) __asm__("FUN_L00_00257e20");
 float cubic_hermite_scalar(float a, float b, float c, float d, float t) {
-    float p = (d - c) - (a - b);
-    float q = (a - b) - p;
+    float cubic_coefficient = (d - c) - (a - b);
+    float quadratic_coefficient = (a - b) - cubic_coefficient;
     float t_squared = t * t;
     float t_cubed = t_squared * t;
-    return p * t_cubed + q * t_squared + (c - a) * t + b;
+    return cubic_coefficient * t_cubed + quadratic_coefficient * t_squared + (c - a) * t + b;
 }

@@ -177,13 +177,13 @@ extern s32 D_L00_0015F5CC_c __asm__("D_L00_0015F5CC");
 void set_identity_matrix(void *) __asm__("FUN_001f9fc8");
 void FUN_L00_001ffa90(void *, void *);
 void FUN_L00_0028a2f0(void) {
-    V0028a2f0 t;
+    V0028a2f0 shell_rotation;
     *(s16 *)(D_L00_0016051C_c2 + 4) = 0;
     set_identity_matrix(D_L00_001BD7E0);
     sky_draw_shell(0);
-    qzero(&t);
-    t.f[2] = (f32)(D_L00_0015F5CC_c % 40000) * 0.00015707963029854f - 3.1415927f;
-    FUN_L00_001ffa90(D_L00_001BD7E0, &t);
+    qzero(&shell_rotation);
+    shell_rotation.f[2] = (f32)(D_L00_0015F5CC_c % 40000) * 0.00015707963029854f - 3.1415927f;
+    FUN_L00_001ffa90(D_L00_001BD7E0, &shell_rotation);
     sky_draw_shell(1);
     set_identity_matrix(D_L00_001BD7E0);
     sky_draw_shell(2);
@@ -390,39 +390,39 @@ void FUN_L00_0028b1a0(void) {
     };
     float v[4] __attribute__((aligned(16)));
     int i = 0;
-    float *p;
+    float *shell_rotation_phase;
     unsigned char *M;
     float k;
     D_L00_0016051C_28b1a0->h4 = 0;
     FUN_001f9fc8_28b1a0(D_L00_001BD7E0_28b1a0);
     FUN_001f99f8_28b1a0(v);
     for (; i < D_L00_0016051C_28b1a0->h6; i++) {
-        p = (float *)(D_L00_0016051C_28b1a0->e[i] + 8);
+        shell_rotation_phase = (float *)(D_L00_0016051C_28b1a0->e[i] + 8);
         k = 1.0f;
         switch (i) {
         case SKY_SHELL_TRIPLE_SCALE:
             v[1] = 0.02f;
             k = 3.0f;
-            *p += D_L00_001604C0 * 0.55f;
+            *shell_rotation_phase += D_L00_001604C0 * 0.55f;
             break;
         case SKY_SHELL_TWO_AND_A_HALF_SCALE:
             v[1] = -0.02f;
             k = 2.5f;
-            *p += D_L00_001604C0 * 0.6f;
+            *shell_rotation_phase += D_L00_001604C0 * 0.6f;
             break;
         case SKY_SHELL_DOUBLE_SCALE:
             v[1] = 0.01f;
             k = 2.0f;
-            *p += D_L00_001604C0 * 0.7f;
+            *shell_rotation_phase += D_L00_001604C0 * 0.7f;
             break;
         case SKY_SHELL_ONE_AND_A_HALF_SCALE:
             v[1] = -0.01f;
             k = 1.5f;
-            *p += D_L00_001604C0 * 0.75f;
+            *shell_rotation_phase += D_L00_001604C0 * 0.75f;
             break;
         case SKY_SHELL_ONE_AND_A_QUARTER_SCALE:
             k = 1.25f;
-            *p += D_L00_001604C0 * 0.8f;
+            *shell_rotation_phase += D_L00_001604C0 * 0.8f;
             break;
         default:
             FUN_001f9fc8_28b1a0(D_L00_001BD7E0_28b1a0);
@@ -430,7 +430,7 @@ void FUN_L00_0028b1a0(void) {
         }
         if (i > 0) {
             M = D_L00_001BD7E0_28b1a0;
-            v[2] = (float)((int)(*p + i * 2000.0f) % 10000) * 0.00062831853f - 3.1415927f;
+            v[2] = (float)((int)(*shell_rotation_phase + i * 2000.0f) % 10000) * 0.00062831853f - 3.1415927f;
             FUN_001fa070_28b1a0(M, v);
             FUN_001f9a80_28b1a0(M, M, k);
             FUN_001f9a80_28b1a0(M + 0x10, M + 0x10, k);

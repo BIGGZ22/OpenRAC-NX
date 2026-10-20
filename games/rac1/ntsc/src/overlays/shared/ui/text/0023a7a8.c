@@ -29,20 +29,20 @@ extern short D_L00_0015F934 __attribute__((sda));
 extern short D_L00_0015F938 __attribute__((sda));
 extern short D_L00_0015F93C __attribute__((sda));
 extern short D_L00_0015F940 __attribute__((sda));
-int FUN_L00_0023a7a8(char *m) {
+int FUN_L00_0023a7a8(char *hud_element) {
     char buf[16];
-    char *q = m + 0x70;
+    char *q = hud_element + 0x70;
     int x4;
     int y = 0x12;
-    int x, a, alpha, w, text_color, tex, c1, wd, displayed_numerator;
+    int x, frame_alpha, alpha, w, text_color, tex, c1, wd, displayed_numerator;
     float f21, f20;
     if (pal_mode)
         y = 0xA;
-    x = *(int *)(m + 0x50);
-    if (*(unsigned char *)(m + 0x70) == 0)
-        return *(int *)(m + 0x58);
+    x = *(int *)(hud_element + 0x50);
+    if (*(unsigned char *)(hud_element + 0x70) == 0)
+        return *(int *)(hud_element + 0x58);
     {
-        f20 = convert_integer_to_float(*(unsigned char *)(m + 0x70));
+        f20 = convert_integer_to_float(*(unsigned char *)(hud_element + 0x70));
         f21 = f20 / convert_integer_to_float(*(int *)&D_L00_0015F91C_gp);
         if (f21 > 1.0f)
             f21 = 1.0f;
@@ -55,23 +55,23 @@ int FUN_L00_0023a7a8(char *m) {
         else if (f20 < 0.0f)
             f20 = 0.0f;
         alpha = truncate_float_to_s32(f21 * 128.0f);
-        a = truncate_float_to_s32((float)alpha * 0.7f);
-        if (*(int *)(m + 8) < 100)
+        frame_alpha = truncate_float_to_s32((float)alpha * 0.7f);
+        if (*(int *)(hud_element + 8) < 100)
             w = *(int *)&D_L00_0015F924;
         else
             w = *(int *)&D_L00_0015F928;
         x4 = x + 4;
         wd = x + truncate_float_to_s32((float)w * f21);
         draw_hud_sprite(find_valid_animation_frame_index_alt(0x7580, 1), x - 0x1C, y, 0x20, 0x20,
-                        a);
-        draw_hud_sprite(find_valid_animation_frame_index_alt(0x7580, 0), x4, y, wd, 0x20, a);
+                        frame_alpha);
+        draw_hud_sprite(find_valid_animation_frame_index_alt(0x7580, 0), x4, y, wd, 0x20, frame_alpha);
         draw_hud_sprite_flipped(find_valid_animation_frame_index_alt(0x7580, 1), x4 + wd, y, 0x20,
-                                0x20, a);
-        tex = find_valid_animation_frame_index_alt(*(int *)m, 3);
-        *(int *)(m + 0x44) = tex;
-        hud_frame(m, tex, x, y, 0, alpha);
-        displayed_numerator = *(int *)(m + 0x74);
-        sprintf_alt(buf, D_L00_0015F7C8, displayed_numerator, *(int *)(m + 8));
+                                0x20, frame_alpha);
+        tex = find_valid_animation_frame_index_alt(*(int *)hud_element, 3);
+        *(int *)(hud_element + 0x44) = tex;
+        hud_frame(hud_element, tex, x, y, 0, alpha);
+        displayed_numerator = *(int *)(hud_element + 0x74);
+        sprintf_alt(buf, D_L00_0015F7C8, displayed_numerator, *(int *)(hud_element + 8));
         if (displayed_numerator != 0)
             text_color = fast_tween_color(*(int *)&D_L00_0015F92C, *(int *)&D_L00_0015F930, f20);
         else
@@ -84,7 +84,7 @@ int FUN_L00_0023a7a8(char *m) {
         font_print_right(x + *(int *)&D_L00_0015F93C + w, y + *(int *)&D_L00_0015F940, text_color, buf,
                          -1);
     }
-    return *(int *)(m + 0x58);
+    return *(int *)(hud_element + 0x58);
 }
 typedef struct {
     unsigned short id;
@@ -105,58 +105,58 @@ extern int D_L00_0015F5CC_23aaa8 __asm__("D_L00_0015F5CC");
 int FUN_001f96f8_23aaa8(int) __asm__("FUN_001f96f8");
 int FUN_00213260_23aaa8(int) __asm__("FUN_00213260");
 extern T_23aaa8 *D_L00_0017E4F4 __attribute__((section(".data")));
-int FUN_L00_0023aaa8(O_23aaa8 *o) {
+int FUN_L00_0023aaa8(O_23aaa8 *hud_frame_state) {
     enum {
         HUD_FRAME_MODE_STATIC = 0,
         HUD_FRAME_MODE_LOOP = 1,
         HUD_FRAME_MODE_PING_PONG = 2,
         HUD_FRAME_MODE_PING_PONG_RESTART = 3
     };
-    T_23aaa8 *t = &D_L00_0017E4F4[o->id];
+    T_23aaa8 *frame_sequence = &D_L00_0017E4F4[hud_frame_state->id];
     int r;
     int k, a;
     r = 0;
-    if (t->id != 0xFFFF) {
-        switch (o->mode) {
+    if (frame_sequence->id != 0xFFFF) {
+        switch (hud_frame_state->mode) {
         case HUD_FRAME_MODE_STATIC:
-            r = t->base;
+            r = frame_sequence->base;
             break;
         case HUD_FRAME_MODE_LOOP:
-            r = t->base + ((D_L00_0015F5CC_23aaa8 - o->start) / t->rate) % t->n;
+            r = frame_sequence->base + ((D_L00_0015F5CC_23aaa8 - hud_frame_state->start) / frame_sequence->rate) % frame_sequence->n;
             break;
         case HUD_FRAME_MODE_PING_PONG:
-            r = (D_L00_0015F5CC_23aaa8 - o->start) / t->rate;
-            k = t->n * 2;
+            r = (D_L00_0015F5CC_23aaa8 - hud_frame_state->start) / frame_sequence->rate;
+            k = frame_sequence->n * 2;
             r = r % (k - 2);
-            if (r >= t->n) {
+            if (r >= frame_sequence->n) {
                 int b = r + 2;
                 r = k - b;
             }
-            r += t->base;
+            r += frame_sequence->base;
             break;
         case HUD_FRAME_MODE_PING_PONG_RESTART:
-            if (o->start < D_L00_0015F5CC_23aaa8) {
-                int m;
-                r = (D_L00_0015F5CC_23aaa8 - o->start) / t->rate;
-                m = t->n * 2;
-                if (r < m - 2) {
-                    if (r >= t->n) {
+            if (hud_frame_state->start < D_L00_0015F5CC_23aaa8) {
+                int doubled_frame_count;
+                r = (D_L00_0015F5CC_23aaa8 - hud_frame_state->start) / frame_sequence->rate;
+                doubled_frame_count = frame_sequence->n * 2;
+                if (r < doubled_frame_count - 2) {
+                    if (r >= frame_sequence->n) {
                         int b = r + 2;
-                        r = m - b;
+                        r = doubled_frame_count - b;
                     }
-                    r += t->base;
+                    r += frame_sequence->base;
                 } else {
-                    r = t->base;
+                    r = frame_sequence->base;
                     a = FUN_001f96f8_23aaa8(0xA);
-                    o->start = t->n * 2 + a + FUN_00213260_23aaa8(FUN_001f96f8_23aaa8(0x1E));
+                    hud_frame_state->start = frame_sequence->n * 2 + a + FUN_00213260_23aaa8(FUN_001f96f8_23aaa8(0x1E));
                 }
             } else {
-                r = o->frame;
+                r = hud_frame_state->frame;
             }
             break;
         }
     }
-    o->frame = r;
+    hud_frame_state->frame = r;
     return r;
 }
 typedef struct E_23ac78 {
@@ -182,35 +182,35 @@ extern void apply_pending_animation(void *) __asm__("FUN_001ff418");
 
 int scale_game_frames(int) __asm__("FUN_001f96f8");
 int FUN_L00_0023ac78(int call) {
-    int n = 0;
-    E_23ac78 *e;
+    int positive_timer_count = 0;
+    E_23ac78 *hud_element;
     H_23ac78 *h;
     FUN_L00_0023adb8();
-    e = hud_elements;
+    hud_element = hud_elements;
     h = &D_L00_0017E4D8;
     do {
-        if ((e->flags & 0x10) || h->b != 0) {
-            if (e->t < scale_game_frames(10)) {
-                e->t = scale_game_frames(10);
+        if ((hud_element->flags & 0x10) || h->b != 0) {
+            if (hud_element->t < scale_game_frames(10)) {
+                hud_element->t = scale_game_frames(10);
             }
         }
-        if (e->t > 0 && --e->t > 0) {
-            n++;
-            if (e->lvl < 30)
-                e->lvl++;
+        if (hud_element->t > 0 && --hud_element->t > 0) {
+            positive_timer_count++;
+            if (hud_element->lvl < 30)
+                hud_element->lvl++;
         } else {
-            if (e->lvl >= -5)
-                e->lvl--;
+            if (hud_element->lvl >= -5)
+                hud_element->lvl--;
         }
-        if (e->on && e->lvl == -6) {
-            apply_pending_animation(e);
+        if (hud_element->on && hud_element->lvl == -6) {
+            apply_pending_animation(hud_element);
         }
-        if (call && e->cb) {
-            e->cb(e);
+        if (call && hud_element->cb) {
+            hud_element->cb(hud_element);
         }
-        e++;
-    } while ((int)e < (int)(hud_elements + 13));
-    return n;
+        hud_element++;
+    } while ((int)hud_element < (int)(hud_elements + 13));
+    return positive_timer_count;
 }
 extern int D_L00_0015F968_gp __asm__("D_L00_0015F968") __attribute__((sda));
 extern int D_L00_0015F96C;
@@ -228,20 +228,20 @@ extern void FUN_L00_0023a640_23adb8(void) __asm__("FUN_L00_0023a640");
 
 void FUN_L00_0023adb8(void) {
     struct Hero *g;
-    int n, mode, k;
+    int weapon_item_id, mode, k;
     if (D_L00_0015F968_gp != 0) {
         return;
     }
     g = &hero;
-    n = g->items[0].item_id;
+    weapon_item_id = g->items[0].item_id;
     mode = g->vehicle_mode;
-    n = (&D_L00_001C40B0[0] + n)->h8 ? n : 0;
-    n = mode ? 0 : n;
-    if (n != 0) {
-        D_L00_0015F96C = n;
+    weapon_item_id = (&D_L00_001C40B0[0] + weapon_item_id)->h8 ? weapon_item_id : 0;
+    weapon_item_id = mode ? 0 : weapon_item_id;
+    if (weapon_item_id != 0) {
+        D_L00_0015F96C = weapon_item_id;
         *(volatile int *)&D_L00_0015F970 = FUN_001ff308_23adb8(
-            0x10, n + 60000, FUN_L00_0023a760_23adb8, FUN_L00_0023cdb8_23adb8,
-            FUN_L00_0023a7a8_23adb8, &weapon_ammo_counts[n], D_L00_001C40B0[n].hE);
+            0x10, weapon_item_id + 60000, FUN_L00_0023a760_23adb8, FUN_L00_0023cdb8_23adb8,
+            FUN_L00_0023a7a8_23adb8, &weapon_ammo_counts[weapon_item_id], D_L00_001C40B0[weapon_item_id].hE);
     } else if (k = -1, mode == 2) {
         if (D_L00_0015F970 != k) {
             FUN_001ff570_23adb8(D_L00_0015F970, 0);

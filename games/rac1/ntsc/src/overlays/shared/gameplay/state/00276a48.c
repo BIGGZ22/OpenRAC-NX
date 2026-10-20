@@ -7,22 +7,22 @@ extern int D_L01_001B0930[];
  * Ported from rac1-decomp, where it is exact; names translated to
  * the US level program (data still reached through the MACRO_ADDR form). */
 // Expands a bit mask through a table of per-bit masks until it meets another mask.
-int FUN_L01_00276c40(int idx, int a, int mask) {
-    char *p = D_L01_001B0930[idx];
+int FUN_L01_00276c40(int idx, int from_mask, int mask) {
+    char *path_data = D_L01_001B0930[idx];
     int i;
     int j;
-    int m;
+    int expanded_mask;
     for (i = 0; i < 32; i++) {
-        if (a & mask) {
-            return a & mask;
+        if (from_mask & mask) {
+            return from_mask & mask;
         }
-        m = mask;
+        expanded_mask = mask;
         for (j = 0; j < 32; j++) {
             if ((mask >> j) & 1) {
-                m |= *(int *)(p + 0x1C + j * 16);
+                expanded_mask |= *(int *)(path_data + 0x1C + j * 16);
             }
         }
-        mask = m;
+        mask = expanded_mask;
     }
     return 0;
 }
@@ -46,7 +46,7 @@ extern s32 FUN_L00_00261968_276a48(s32, OvlVec4 *, OvlVec4 *) __asm__("FUN_L00_0
 
 /* Bit i set for each point i of the path that none of the n segments in ids
    reaches from pos (with a sideways margin of radius when it is nonzero). */
-s32 FUN_L01_00276a48(s32 *ids, s32 n, f32 radius, s32 path_index, OvlVec4 *pos) {
+s32 FUN_L01_00276a48(s32 *ids, s32 id_count, f32 radius, s32 path_index, OvlVec4 *pos) {
     Path_276a48 *path = D_L01_001B0930_276a48[path_index];
     OvlVec4 side;
     OvlVec4 left;
@@ -59,7 +59,7 @@ s32 FUN_L01_00276a48(s32 *ids, s32 n, f32 radius, s32 path_index, OvlVec4 *pos) 
 
     for (i = 0; i < path->count; i++) {
         hit = 0;
-        for (j = 0; j < n; j++) {
+        for (j = 0; j < id_count; j++) {
             if (radius != 0.0f) {
                 up.q = 0;
                 up.f[2] = 1.0f;
@@ -90,7 +90,7 @@ extern f32 vec_distance_276fe8(OvlVec4 *, OvlVec4 *) __asm__("FUN_001f9b80");
 
 s32 follow_path(s32 *ids, s32 n, s32 path_index, f32 radius,
                        OvlVec4 *pos, OvlVec4 *target, OvlVec4 *out) __asm__("FUN_L01_00276fe8");
-s32 follow_path(s32 *ids, s32 n, s32 path_index, f32 radius,
+s32 follow_path(s32 *ids, s32 id_count, s32 path_index, f32 radius,
                        OvlVec4 *pos, OvlVec4 *target, OvlVec4 *out) {
     OvlVec4 side;
     OvlVec4 left;
@@ -105,7 +105,7 @@ s32 follow_path(s32 *ids, s32 n, s32 path_index, f32 radius,
     f32 x;
     s32 from_mask, to_mask;
 
-    for (j = 0; j < n; j++) {
+    for (j = 0; j < id_count; j++) {
         if (radius != 0.0f) {
             vec_sub_276a48(&side, pos, target);
             vec_normalize_276a48(&side, &side, radius);
@@ -127,8 +127,8 @@ s32 follow_path(s32 *ids, s32 n, s32 path_index, f32 radius,
     }
     if (hit) {
         path = D_L01_001B0930_276a48[path_index];
-        from_mask = FUN_L01_00276a48(ids, n, radius, path_index, pos);
-        to_mask = FUN_L01_00276a48(ids, n, radius, path_index, target);
+        from_mask = FUN_L01_00276a48(ids, id_count, radius, path_index, pos);
+        to_mask = FUN_L01_00276a48(ids, id_count, radius, path_index, target);
         mask = FUN_L01_00276c40(path_index, from_mask, to_mask);
         if (mask != 0) {
             nearest = 10000.0f;

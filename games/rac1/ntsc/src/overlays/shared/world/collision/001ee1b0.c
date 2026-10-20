@@ -19,35 +19,35 @@ extern char D_L00_001E78B0[];
 extern s32 FUN_L00_001ee318_c(V *, s32 *, f32) __asm__("FUN_L00_001ee318");
 
 s32 *FUN_L00_001ee1b0(OvlQuad *v, f32 rad) {
-    V t;
-    V d;
+    V query_point;
+    V volume_delta;
     V *tp;
     s32 i, j, k;
-    char *p;
-    char *e;
+    char *cell_volume_list;
+    char *volume_record;
     f32 f;
 
-    tp = &t;
-    t.q = *v;
-    i = truncate_float_to_s32(t.f[0] * 0.0625f);
-    j = truncate_float_to_s32(t.f[1] * 0.0625f);
+    tp = &query_point;
+    query_point.q = *v;
+    i = truncate_float_to_s32(query_point.f[0] * 0.0625f);
+    j = truncate_float_to_s32(query_point.f[1] * 0.0625f);
     if (i < 0 || j < 0 || i > 0x40 || j > 0x40) {
         debug_print(D_L00_001E78B0);
         return 0;
     }
-    p = (char *)D_L00_0015EF80[j * 64 + i];
-    if (p == 0) {
+    cell_volume_list = (char *)D_L00_0015EF80[j * 64 + i];
+    if (cell_volume_list == 0) {
         return 0;
     }
-    p += (s32)D_L00_0015EF80;
-    for (k = 0; k < *(s32 *)p; k++) {
-        e = p + 0x10 + k * 0x30;
-        subtract_vector_xyz(&d, e, tp);
-        f = *(f32 *)(e + 0xC);
-        d.f[3] = 1.0f;
-        if (vector_length_xy(&d) < f + rad) {
-            if (FUN_L00_001ee318_c(tp, (s32 *)e, rad) != 0) {
-                return (s32 *)e;
+    cell_volume_list += (s32)D_L00_0015EF80;
+    for (k = 0; k < *(s32 *)cell_volume_list; k++) {
+        volume_record = cell_volume_list + 0x10 + k * 0x30;
+        subtract_vector_xyz(&volume_delta, volume_record, tp);
+        f = *(f32 *)(volume_record + 0xC);
+        volume_delta.f[3] = 1.0f;
+        if (vector_length_xy(&volume_delta) < f + rad) {
+            if (FUN_L00_001ee318_c(tp, (s32 *)volume_record, rad) != 0) {
+                return (s32 *)volume_record;
             }
         }
     }
@@ -75,22 +75,22 @@ int FUN_L00_001ee318(V_1ee318 *pt, int *vol, float rad) {
         VOLUME_TYPE_CYLINDER = 6,
         VOLUME_TYPE_CYLINDER_WITH_ENDPOINT_SPHERES = 7
     };
-    V_1ee318 p;
+    V_1ee318 query_point;
     V_1ee318 c;
-    V_1ee318 d;
+    V_1ee318 volume_delta;
     V_1ee318 l;
     int r;
 
-    p.q = pt->q;
-    pt = &p;
+    query_point.q = pt->q;
+    pt = &query_point;
     switch (vol[4]) {
     case VOLUME_TYPE_BOX: {
         unsigned char *e;
         e = D_L00_001600EC_1ee318;
         e += vol[5] << 7;
-        FUN_001f9a28_1ee318(&d, pt, e + 0x30);
-        d.i[3] = 0;
-        FUN_001f9cf8_1ee318(&l, &d, e + 0x40);
+        FUN_001f9a28_1ee318(&volume_delta, pt, e + 0x30);
+        volume_delta.i[3] = 0;
+        FUN_001f9cf8_1ee318(&l, &volume_delta, e + 0x40);
         return -1.0f <= l.f[0] && l.f[0] <= 1.0f && -1.0f <= l.f[1] && l.f[1] <= 1.0f &&
                -1.0f <= l.f[2] && l.f[2] <= 1.0f;
     }
@@ -99,9 +99,9 @@ int FUN_L00_001ee318(V_1ee318 *pt, int *vol, float rad) {
         e = D_L00_001600FC_1ee318;
         e += vol[5] << 7;
         r = 0;
-        FUN_001f9a28_1ee318(&d, pt, e + 0x30);
-        d.i[3] = 0;
-        FUN_001f9cf8_1ee318(&l, &d, e + 0x40);
+        FUN_001f9a28_1ee318(&volume_delta, pt, e + 0x30);
+        volume_delta.i[3] = 0;
+        FUN_001f9cf8_1ee318(&l, &volume_delta, e + 0x40);
         if (FUN_001f9b20_1ee318(&l) < 1.0f && -1.0f <= l.f[2] && l.f[2] <= 1.0f) {
             r = 1;
         }
@@ -112,16 +112,16 @@ int FUN_L00_001ee318(V_1ee318 *pt, int *vol, float rad) {
         e = D_L00_001600F4_1ee318;
         e += vol[5] << 7;
         {
-            float s = FUN_001f9af0_1ee318(e) + rad;
-            return FUN_001f9b48_1ee318(pt, e + 0x30) < s;
+            float expanded_radius = FUN_001f9af0_1ee318(e) + rad;
+            return FUN_001f9b48_1ee318(pt, e + 0x30) < expanded_radius;
         }
     }
     case VOLUME_TYPE_CYLINDER_WITH_ENDPOINT_SPHERES: {
         unsigned char *e;
         e = D_L00_001600E4 + vol[5] * 0x90;
-        FUN_001f9a28_1ee318(&d, pt, e + 0x30);
-        d.i[3] = 0;
-        FUN_001f9cf8_1ee318(&l, &d, e + 0x40);
+        FUN_001f9a28_1ee318(&volume_delta, pt, e + 0x30);
+        volume_delta.i[3] = 0;
+        FUN_001f9cf8_1ee318(&l, &volume_delta, e + 0x40);
         if (FUN_001f9b20_1ee318(&l) < 1.0f && -1.0f <= l.f[2] && l.f[2] <= 1.0f) {
             return 1;
         }

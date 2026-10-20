@@ -137,6 +137,9 @@ void FUN_L03_0021c668(void) {
         HERO_STATE_LEDGE_HANG = 25,
         HERO_STATE_LEDGE_SHIMMY_POSITIVE_YAW_OFFSET = 26,
         HERO_STATE_LEDGE_SHIMMY_NEGATIVE_YAW_OFFSET = 27,
+        HERO_STATE_JUMP_FROM_LEDGE = 28,
+        HERO_STATE_TARGET_POSE_APPROACH = 101,
+        HERO_STATE_TARGET_POSE_REACHED = 103,
         HERO_STATE_WATER_DEATH = 106,
         HERO_STATE_LOW_ALTITUDE_RESPAWN = 119
     };
@@ -872,7 +875,7 @@ void FUN_L03_0021c668(void) {
                         }
                     }
                     break;
-                case 101:
+                case HERO_STATE_TARGET_POSE_APPROACH:
                     if (vector_distance(hero.motion.pos.f, hero.unk1640.f) < 0.2f) {
                         if (frame_time * 2.7f > hero.motion.speed_xy) {
                             if (fast_difference_between_rotations(
@@ -893,7 +896,7 @@ void FUN_L03_0021c668(void) {
                         hero_set_state(0x65, 1);
                     }
                     break;
-                case 103:
+                case HERO_STATE_TARGET_POSE_REACHED:
                     if ((hero.unkA98 & 2) || hero.unk1650 != 0) {
                         hero_set_state(HERO_STATE_IDLE, 1);
                     }
@@ -909,8 +912,8 @@ void FUN_L03_0021c668(void) {
                         break;
                     }
                     if (hero.unk2220 != -1) {
-                        Row13E650 *e = (Row13E650 *)(D_0013E550 + hero.unk2220 * 0x70);
-                        if (e->f88 == ((unsigned char *)hero.moby) && e->f74 != 0) {
+                        Row13E650 *voice_slot_entry = (Row13E650 *)(D_0013E550 + hero.unk2220 * 0x70);
+                        if (voice_slot_entry->f88 == ((unsigned char *)hero.moby) && voice_slot_entry->f74 != 0) {
                             release_voice_slot(hero.unk2220);
                         }
                     }
@@ -1483,7 +1486,7 @@ void FUN_L03_0021c668(void) {
                 case HERO_STATE_PACK_LONG_JUMP:
                 case 17:
                 case 18:
-                case 28:
+                case HERO_STATE_JUMP_FROM_LEDGE:
                 case 60:
                 case 105:
                     if (hero.unk4AE != 0) {

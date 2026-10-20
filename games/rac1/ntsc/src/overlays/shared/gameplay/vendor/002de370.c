@@ -23,18 +23,18 @@ extern int func_001FA898_r(float) __asm__("FUN_001fa6d0");
 
 void FUN_L03_002de370(char *moby) {
     float v[4];
-    char *d = *(char **)(moby + 0x78);
-    *(float *)(d + 8) = *(float *)(d + 8) - frame_time_sq * 9.8f;
-    FUN_L00_001ff290(v, moby + 0x10, d);
-    *(float *)(moby + 0x40) = fast_add_rotations(*(float *)(moby + 0x40), *(float *)(d + 0x10));
-    *(float *)(moby + 0x44) = fast_add_rotations(*(float *)(moby + 0x44), *(float *)(d + 0x14));
-    *(float *)(moby + 0x48) = fast_add_rotations(*(float *)(moby + 0x48), *(float *)(d + 0x18));
+    char *moby_data = *(char **)(moby + 0x78);
+    *(float *)(moby_data + 8) = *(float *)(moby_data + 8) - frame_time_sq * 9.8f;
+    FUN_L00_001ff290(v, moby + 0x10, moby_data);
+    *(float *)(moby + 0x40) = fast_add_rotations(*(float *)(moby + 0x40), *(float *)(moby_data + 0x10));
+    *(float *)(moby + 0x44) = fast_add_rotations(*(float *)(moby + 0x44), *(float *)(moby_data + 0x14));
+    *(float *)(moby + 0x48) = fast_add_rotations(*(float *)(moby + 0x48), *(float *)(moby_data + 0x18));
     {
-        float a = convert_integer_to_float(*(int *)(d + 0x24));
-        float b = convert_integer_to_float(*(int *)(d + 0x20));
-        moby[0x23] = func_001FA898_r(a * 255.0f / b);
+        float remaining_timer_value = convert_integer_to_float(*(int *)(moby_data + 0x24));
+        float b = convert_integer_to_float(*(int *)(moby_data + 0x20));
+        moby[0x23] = func_001FA898_r(remaining_timer_value * 255.0f / b);
     }
-    if (fast_dec_timer((int *)(d + 0x24)) != 0) {
+    if (fast_dec_timer((int *)(moby_data + 0x24)) != 0) {
         mark_moby_for_removal(moby);
     }
 }
@@ -53,25 +53,25 @@ extern void euler_rotation_matrix(float *, float *) __asm__("FUN_001fa050");
 void FUN_L03_002e8628(char *cam) {
     float v[4] __attribute__((aligned(16)));
     float mat[16] __attribute__((aligned(16)));
-    CamSub *a = &(*(CamInfo **)(cam + 0x70))->sub;
-    CamInfo *d;
+    CamSub *camera_subrecord = &(*(CamInfo **)(cam + 0x70))->sub;
+    CamInfo *camera_info;
     char *ent;
     int idx;
-    char *p;
-    a->x4C = 1.5f;
-    a->x40 = 0;
+    char *entry_subrecord;
+    camera_subrecord->x4C = 1.5f;
+    camera_subrecord->x40 = 0;
     (*(CamInfo **)(cam + 0x70))->x80 = 0;
-    d = *(CamInfo **)(cam + 0x70);
-    d->f4 = 0.02f;
-    d->f8 = 0.1f;
-    d->fC = 0;
+    camera_info = *(CamInfo **)(cam + 0x70);
+    camera_info->f4 = 0.02f;
+    camera_info->f8 = 0.1f;
+    camera_info->fC = 0;
     idx = *(short *)(cam + 0x84);
     ent = (char *)D_L03_0015EF50 + (idx << 5);
-    p = *(char **)(ent + 0x1C);
+    entry_subrecord = *(char **)(ent + 0x1C);
     if (idx < 0) {
         RaiseKernelTrap();
     } else {
-        a->x4C = *(float *)(p + 0x18);
+        camera_subrecord->x4C = *(float *)(entry_subrecord + 0x18);
     }
     qcopy(cam + 0x30, ent);
     qcopy(v, ent + 0x10);
@@ -104,16 +104,16 @@ void FUN_L03_002e8730(char *m) {
     char *data = *(char **)(m + 0x70);
     float *height = (float *)(data + 0x10);
     char *result;
-    float angle, t;
+    float angle, rotation_scale;
     qcopy(position, hero.motion.pos.f);
     position[2] += height[19];
     result = m + 0x40;
     subtract_vector_xyz(direction, position, m + 0x30);
     normalize_vector_xyz(direction, direction, 1.0f);
     angle = approximate_arcsine(dot_vectors_xyz(direction, m));
-    t = rope_spring_turn(data, 0.0f, 1.57079637f - angle, *(float *)(data + 4),
+    rotation_scale = rope_spring_turn(data, 0.0f, 1.57079637f - angle, *(float *)(data + 4),
                          *(float *)(data + 8), *(float *)(data + 12));
-    FUN_L03_0024e6f8(t, (float *)m, (float *)result, direction, 1);
+    FUN_L03_0024e6f8(rotation_scale, (float *)m, (float *)result, direction, 1);
     normalize_vector_xyz(result, m, 1.0f);
     qcopy(m, result);
     cross_vectors_xyz(m + 0x10, m, D_L03_00166F30);
@@ -126,7 +126,7 @@ extern int is_point_inside_clip_volume_alt(void *arg0, int arg1) __asm__("FUN_00
 int FUN_L03_002e8870(char *candidate_object, char *comparison_object) {
     char *entry = (char *)(D_L03_0015EF50 + (*(short *)(candidate_object + 0x84) << 5));
     char *sub = *(char **)(entry + 0x1C);
-    char *q;
+    char *global_state_base;
     int five;
     if (*(int *)(candidate_object + 0x74) != 4)
         return 0;
@@ -136,12 +136,12 @@ int FUN_L03_002e8870(char *candidate_object, char *comparison_object) {
     if (is_point_inside_clip_volume_alt(D_0013E533 + 0xE9D, *(int *)(sub + 0xC)) != 0) {
         if (is_point_inside_clip_volume_alt(D_L03_00166EC0, *(int *)(sub + 0xC)) != 0)
             return 1;
-        q = D_L03_00166EC0 - 0x140;
-        five = *(int *)(q + 0x180);
-        *(unsigned char *)(q + 0x273) = 0;
+        global_state_base = D_L03_00166EC0 - 0x140;
+        five = *(int *)(global_state_base + 0x180);
+        *(unsigned char *)(global_state_base + 0x273) = 0;
         *(short *)(five + 0x7E) = 2;
-        *(float *)(q + 0x294) = 0.018f;
-        *(float *)(q + 0x288) = 0.018f;
+        *(float *)(global_state_base + 0x294) = 0.018f;
+        *(float *)(global_state_base + 0x288) = 0.018f;
         return 1;
     }
     return 0;

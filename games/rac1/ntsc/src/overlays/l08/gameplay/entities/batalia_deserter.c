@@ -43,9 +43,9 @@ void FUN_L08_00305138(struct Moby *moby) {
             D_L08_0015F5A0 = -0.3f;
         }
         for (i = 0; i < D_L08_0016D060.n; i++) {
-            char *o = D_L08_0016D060.objs[i];
-            if (*(short *)(o + 0xA6) == moby->oclass && D_L08_0017CC40[1] == 0) {
-                attach_manipulator(o, 0, D_L08_0017CC40);
+            char *candidate_moby = D_L08_0016D060.objs[i];
+            if (*(short *)(candidate_moby + 0xA6) == moby->oclass && D_L08_0017CC40[1] == 0) {
+                attach_manipulator(candidate_moby, 0, D_L08_0017CC40);
                 *(float *)(D_L08_0017CC40 + 0x20) = 2.75f;
                 *(float *)(D_L08_0017CC40 + 0x24) = 2.75f;
                 *(float *)(D_L08_0017CC40 + 0x28) = 2.75f;
@@ -165,57 +165,57 @@ extern struct {
 
 /* Watcher moby update: wakes when the hero is near, then turns its head toward the hero or a random target. */
 void batalia_deserter_update(WM *m) __asm__("FUN_L08_00305270");
-void batalia_deserter_update(WM *m) {
+void batalia_deserter_update(WM *moby) {
     enum {
         DESERTER_INITIALIZE = 0,
         DESERTER_WAIT_FOR_PLAYER = 1,
         DESERTER_UPDATE_DIALOGUE = 2
     };
     L16WatchScratch scratch;
-    WD8 *d = (WD8 *)m->data;
+    WD8 *deserter_data = (WD8 *)moby->data;
     float rate;
     float head_rate;
     int tracking;
-    FUN_L08_00305138_c(m);
-    if (m->opacity) {
-        if (FUN_001f9b48(m->position, D_L08_001675C0_c) < 30.0f) {
-            FUN_L00_0025a120(m);
-            m->b7F = 0x18;
+    FUN_L08_00305138_c(moby);
+    if (moby->opacity) {
+        if (FUN_001f9b48(moby->position, D_L08_001675C0_c) < 30.0f) {
+            FUN_L00_0025a120(moby);
+            moby->b7F = 0x18;
         }
     }
-    switch (m->state) {
+    switch (moby->state) {
     case DESERTER_INITIALIZE:
-        if (m->animation != 1)
-            blend_moby_animation(m, 1, 0, scale_game_frames(20));
-        if (D_0013DD49 && visited52[((unsigned char *)m)[0xB0] + current_level_index * 16] == 0xFF) {
-            mark_moby_for_removal(m);
+        if (moby->animation != 1)
+            blend_moby_animation(moby, 1, 0, scale_game_frames(20));
+        if (D_0013DD49 && visited52[((unsigned char *)moby)[0xB0] + current_level_index * 16] == 0xFF) {
+            mark_moby_for_removal(moby);
             return;
         }
-        d->f2C = 4.0f;
-        d->p40 = (void *)D_L08_001622E8;
-        m->state = 1;
-        if (d->i64 >= 0)
-            initialize_npc_dialogue(m, (char *)d + 0x20);
+        deserter_data->f2C = 4.0f;
+        deserter_data->p40 = (void *)D_L08_001622E8;
+        moby->state = 1;
+        if (deserter_data->i64 >= 0)
+            initialize_npc_dialogue(moby, (char *)deserter_data + 0x20);
         break;
     case DESERTER_WAIT_FOR_PLAYER:
-        if (vector_distance(m->position, (char *)&D_0013E633_watch + 0xE9D) < 8.0f) {
-            jet_clear_persistent(((unsigned char *)m)[0xB0]);
-            m->state = 2;
+        if (vector_distance(moby->position, (char *)&D_0013E633_watch + 0xE9D) < 8.0f) {
+            jet_clear_persistent(((unsigned char *)moby)[0xB0]);
+            moby->state = 2;
         }
         break;
     case DESERTER_UPDATE_DIALOGUE:
-        if (m->flags70 & 2) {
-            if (m->animation != random_integer_below(2) + 1)
-                blend_moby_animation(m, random_integer_below(2) + 1, 0, scale_game_frames(20));
+        if (moby->flags70 & 2) {
+            if (moby->animation != random_integer_below(2) + 1)
+                blend_moby_animation(moby, random_integer_below(2) + 1, 0, scale_game_frames(20));
         }
-        if (D_0013F350_g.f2FC == 0 && (scale_game_frames(30) < D_0013F350_g.f300 || d->h56 != 0)) {
-            update_npc_dialogue(m, (char *)d + 0x20);
-            begin_dialogue_camera_transition(m, 2.2f);
+        if (D_0013F350_g.f2FC == 0 && (scale_game_frames(30) < D_0013F350_g.f300 || deserter_data->h56 != 0)) {
+            update_npc_dialogue(moby, (char *)deserter_data + 0x20);
+            begin_dialogue_camera_transition(moby, 2.2f);
         }
-        if (d->h24 == 4) {
+        if (deserter_data->h24 == 4) {
             unlock_planet(9);
             memcard_save_data(0, -1);
-            mark_moby_for_removal(m);
+            mark_moby_for_removal(moby);
             return;
         }
         break;
@@ -223,49 +223,49 @@ void batalia_deserter_update(WM *m) {
     rate = 0.02f;
     head_rate = 0.3f;
     tracking = 0;
-    if (m->animation == 1) {
+    if (moby->animation == 1) {
         char *player = (char *)&D_0013E633_watch + 0xE9D;
         tracking = 1;
-        if (vector_distance(m->position, player) < 8.0f &&
+        if (vector_distance(moby->position, player) < 8.0f &&
             FUN_001f9e90_cf(
-                m->yaw,
+                moby->yaw,
                 FUN_001fa688_cf(((L16WatchPlayer *)((char *)&D_0013E633_watch + 0xE1D))->aim[0] -
-                                    m->position[0],
+                                    moby->position[0],
                                 ((L16WatchPlayer *)((char *)&D_0013E633_watch + 0xE1D))->aim[1] -
-                                    m->position[1])) < 1.5707964f) {
+                                    moby->position[1])) < 1.5707964f) {
             if (vector_length_xyz_c(player + 0x80) > 0.01f)
-                d->moving_timer = scale_game_frames_c(120);
+                deserter_data->moving_timer = scale_game_frames_c(120);
             else
-                tick_countdown_32(&d->moving_timer);
-        } else if (d->moving_timer) {
-            d->moving_timer = 0;
-            qcopy(d->target, (char *)&D_0013E633_watch + 0xEED);
+                tick_countdown_32(&deserter_data->moving_timer);
+        } else if (deserter_data->moving_timer) {
+            deserter_data->moving_timer = 0;
+            qcopy(deserter_data->target, (char *)&D_0013E633_watch + 0xEED);
         }
-        if (tick_countdown_32(&d->target_timer)) {
+        if (tick_countdown_32(&deserter_data->target_timer)) {
             float heading;
-            d->target_timer =
+            deserter_data->target_timer =
                 random_float_between_cf(multiply_global_factor_ed64(truncate_float_to_s32_cf(180.0f, 300.0f)));
             heading =
-                fast_add_rotations(m->yaw, truncate_float_to_s32_cf(-90.0f, 90.0f) * DEG_TO_RAD);
-            build_spherical_offset(d->target, 6.0f, heading,
+                fast_add_rotations(moby->yaw, truncate_float_to_s32_cf(-90.0f, 90.0f) * DEG_TO_RAD);
+            build_spherical_offset(deserter_data->target, 6.0f, heading,
                                    truncate_float_to_s32_cf(0.0f, 30.0f) * DEG_TO_RAD);
-            add_vector_xyz(d->target, d->target, m->position);
+            add_vector_xyz(deserter_data->target, deserter_data->target, moby->position);
         }
-        if (d->moving_timer) {
+        if (deserter_data->moving_timer) {
             qcopy(scratch.target, (char *)&D_0013E633_watch + 0xEED);
             rate = 0.04f;
             head_rate = 0.3f;
         } else {
-            qcopy(scratch.target, d->target);
+            qcopy(scratch.target, deserter_data->target);
         }
     }
     if (tracking) {
         float yaw;
         float pitch;
-        qcopy(scratch.eye, m->position);
+        qcopy(scratch.eye, moby->position);
         scratch.eye[2] += 1.0f;
         subtract_vector_xyz_c(scratch.delta, scratch.target, scratch.eye);
-        yaw = fast_subtract_rotations(FUN_001fa688_cf(scratch.delta[0], scratch.delta[1]), m->yaw);
+        yaw = fast_subtract_rotations(FUN_001fa688_cf(scratch.delta[0], scratch.delta[1]), moby->yaw);
         pitch = -FUN_001fa688_cf(vector_length_xy(scratch.delta), scratch.delta[2]);
         if (yaw > 1.5707964f)
             yaw = 1.5707964f;
@@ -275,13 +275,13 @@ void batalia_deserter_update(WM *m) {
             pitch = 0.5235988f;
         else if (pitch < -0.5235988f)
             pitch = -0.5235988f;
-        d->pitch = pitch;
-        d->head_yaw = d->yaw = yaw * 0.5f;
+        deserter_data->pitch = pitch;
+        deserter_data->head_yaw = deserter_data->yaw = yaw * 0.5f;
     }
     if (D_0015EDB0_b)
-        d->height = 2.75f;
-    update_joint_animation(rate * frame_scale_sq, head_rate * frame_scale_sq, m, d->body, 0);
-    update_joint_animation(rate * frame_scale_sq, head_rate * frame_scale_sq, m, d->head, 1);
+        deserter_data->height = 2.75f;
+    update_joint_animation(rate * frame_scale_sq, head_rate * frame_scale_sq, moby, deserter_data->body, 0);
+    update_joint_animation(rate * frame_scale_sq, head_rate * frame_scale_sq, moby, deserter_data->head, 1);
 }
 #include "sda.h"
 
@@ -322,15 +322,15 @@ void FUN_L08_003063f0(struct Moby *moby) {
             D_L08_0015F5A0 = -0.1f;
         }
         for (i = 0; i < D_L08_0016D060_d.n; i++) {
-            char *o = D_L08_0016D060_d.objs[i];
-            if (*(short *)(o + 0xA6) == moby->oclass || *(short *)(o + 0xA6) == 0x306) {
+            char *candidate_moby = D_L08_0016D060_d.objs[i];
+            if (*(short *)(candidate_moby + 0xA6) == moby->oclass || *(short *)(candidate_moby + 0xA6) == 0x306) {
                 if (D_L08_0017CC40_d[1] == 0) {
-                    float f;
-                    attach_manipulator(o, 0, D_L08_0017CC40_d);
-                    f = *(float *)&D_L08_00162300;
-                    *(float *)(D_L08_0017CC40_d + 0x20) = f;
-                    *(float *)(D_L08_0017CC40_d + 0x24) = f;
-                    *(float *)(D_L08_0017CC40_d + 0x28) = f;
+                    float replicated_value;
+                    attach_manipulator(candidate_moby, 0, D_L08_0017CC40_d);
+                    replicated_value = *(float *)&D_L08_00162300;
+                    *(float *)(D_L08_0017CC40_d + 0x20) = replicated_value;
+                    *(float *)(D_L08_0017CC40_d + 0x24) = replicated_value;
+                    *(float *)(D_L08_0017CC40_d + 0x28) = replicated_value;
                 }
             }
         }
@@ -417,7 +417,7 @@ extern void FUN_L00_00260860(int, int);
 
 /* Watcher moby update with a scripted reveal, then turns its head toward the hero or a random target. */
 void the_plumber_batalia_update(L14WatchMoby *m) __asm__("FUN_L08_003065d8");
-void the_plumber_batalia_update(L14WatchMoby *m) {
+void the_plumber_batalia_update(L14WatchMoby *moby) {
     enum {
         PLUMBER_INITIALIZE = 0,
         PLUMBER_UPDATE_DIALOGUE = 1,
@@ -425,93 +425,93 @@ void the_plumber_batalia_update(L14WatchMoby *m) {
         PLUMBER_SAVE_AND_REMOVE = 5
     };
     L14WatchScratch scratch;
-    L14WatchData *d = (L14WatchData *)m->data;
+    L14WatchData *watch_data = (L14WatchData *)moby->data;
     float rate;
     float head_rate;
     int tracking;
-    FUN_L08_003063f0_c(m);
-    switch (m->state) {
+    FUN_L08_003063f0_c(moby);
+    switch (moby->state) {
     case PLUMBER_INITIALIZE:
-        m->opacity = 0xFF;
-        if (visited52[m->bB0 + current_level_index * 16] == 0xFF) {
-            mark_moby_for_removal(m);
+        moby->opacity = 0xFF;
+        if (visited52[moby->bB0 + current_level_index * 16] == 0xFF) {
+            mark_moby_for_removal(moby);
             return;
         }
-        d->p20 = (void *)D_L08_00162308;
-        m->state = 1;
-        FUN_L00_002668a0_c(m, d);
+        watch_data->p20 = (void *)D_L08_00162308;
+        moby->state = 1;
+        FUN_L00_002668a0_c(moby, watch_data);
         break;
     case PLUMBER_UPDATE_DIALOGUE:
-        if (update_npc_dialogue(m, d))
-            begin_dialogue_camera_transition(m, 2.7f);
-        if (d->h36 == 2) {
-            char *t = D_L08_001600EC + d->i48 * 128;
-            jet_reset_camera(t + 0x30, t + 0x70);
-            m->state = 2;
-            FUN_L08_002e1698(D_L08_0015FFD8 + d->i50 * 256);
+        if (update_npc_dialogue(moby, watch_data))
+            begin_dialogue_camera_transition(moby, 2.7f);
+        if (watch_data->h36 == 2) {
+            char *camera_record = D_L08_001600EC + watch_data->i48 * 128;
+            jet_reset_camera(camera_record + 0x30, camera_record + 0x70);
+            moby->state = 2;
+            FUN_L08_002e1698(D_L08_0015FFD8 + watch_data->i50 * 256);
         }
-        if (d->sub == 3) {
+        if (watch_data->sub == 3) {
             FUN_L08_002a1880(1);
-            m->state = 5;
+            moby->state = 5;
         }
-        if (d->sub == 4) {
+        if (watch_data->sub == 4) {
             hero_respawn();
-            d->sub = -1;
+            watch_data->sub = -1;
         }
         break;
     case PLUMBER_SCRIPTED_HANDOFF:
         break;
     case PLUMBER_SAVE_AND_REMOVE:
-        jet_clear_persistent(m->bB0);
+        jet_clear_persistent(moby->bB0);
         FUN_L00_00260860(0x1B, 1);
         memcard_save_data(0, -1);
-        mark_moby_for_removal(m);
+        mark_moby_for_removal(moby);
         return;
     }
     rate = 0.02f;
     head_rate = 0.3f;
     tracking = 0;
-    if (m->animation == 0) {
+    if (moby->animation == 0) {
         char *g = (char *)&hero.motion.pos;
         L14Player *q;
         tracking = 1;
-        if (FUN_001f9b80_c(m->position, g) < 8.0f &&
+        if (FUN_001f9b80_c(moby->position, g) < 8.0f &&
             (q = (L14Player *)(g - 0x80),
              fast_difference_between_rotations(
-                 m->yaw, fast_arc_tan(q->aim[0] - m->position[0], q->aim[1] - m->position[1]))) <
+                 moby->yaw, fast_arc_tan(q->aim[0] - moby->position[0], q->aim[1] - moby->position[1]))) <
                 1.5707964f) {
             if (fast_vec_length(g + 0x80) > 0.01f)
-                d->moving_timer = scale_game_frames(120);
+                watch_data->moving_timer = scale_game_frames(120);
             else
-                FUN_001f9740_c(&d->moving_timer);
-        } else if (d->moving_timer) {
-            d->moving_timer = 0;
-            qcopy(d->target, hero.motion.unkD0.f);
+                FUN_001f9740_c(&watch_data->moving_timer);
+        } else if (watch_data->moving_timer) {
+            watch_data->moving_timer = 0;
+            qcopy(watch_data->target, hero.motion.unkD0.f);
         }
-        if (FUN_001f9740_c(&d->target_timer)) {
+        if (FUN_001f9740_c(&watch_data->target_timer)) {
             float heading;
-            d->target_timer = FUN_001fa6d0(multiply_global_factor_ed64(random_float_between(180.0f, 300.0f)));
+            watch_data->target_timer = FUN_001fa6d0(multiply_global_factor_ed64(random_float_between(180.0f, 300.0f)));
             heading =
-                fast_add_rotations(m->yaw, random_float_between(-90.0f, 90.0f) * DEG_TO_RAD);
-            build_spherical_offset(d->target, 6.0f, heading,
+                fast_add_rotations(moby->yaw, random_float_between(-90.0f, 90.0f) * DEG_TO_RAD);
+            build_spherical_offset(watch_data->target, 6.0f, heading,
                                    random_float_between(0.0f, 30.0f) * DEG_TO_RAD);
-            fast_vec_add(d->target, d->target, m->position);
+            fast_vec_add(watch_data->target, watch_data->target, moby->position);
         }
-        if (d->moving_timer) {
+        if (watch_data->moving_timer) {
             qcopy(scratch.target, hero.motion.unkD0.f);
             rate = 0.03f;
             head_rate = 0.3f;
         } else {
-            qcopy(scratch.target, d->target);
+            qcopy(scratch.target, watch_data->target);
         }
     }
     if (tracking) {
         float yaw;
         float pitch;
-        qcopy(scratch.eye, m->position);
+        qcopy(scratch.eye, moby->position);
         scratch.eye[2] += 1.0f;
         fast_vec_sub(scratch.delta, scratch.target, scratch.eye);
-        yaw = fast_subtract_rotations(fast_arc_tan(scratch.delta[0], scratch.delta[1]), m->yaw);
+        yaw = fast_subtract_rotations(fast_arc_tan(scratch.delta[0], scratch.delta[1]), moby->yaw);
         pitch = -fast_arc_tan(vector_length_xy(scratch.delta), scratch.delta[2]);
         if (yaw > 1.5707964f)
             yaw = 1.5707964f;
@@ -521,14 +521,14 @@ void the_plumber_batalia_update(L14WatchMoby *m) {
             pitch = 0.5235988f;
         else if (pitch < -0.5235988f)
             pitch = -0.5235988f;
-        d->pitch = pitch;
-        d->yaw = yaw * 0.7f;
-        d->head_yaw = yaw * 0.3f;
+        watch_data->pitch = pitch;
+        watch_data->yaw = yaw * 0.7f;
+        watch_data->head_yaw = yaw * 0.3f;
     }
     if (D_0015EDB0_b)
-        d->height = 2.75f;
-    update_joint_animation(rate * frame_scale_sq, head_rate * frame_scale_sq, m, d->body, 0);
-    update_joint_animation(rate * frame_scale_sq, head_rate * frame_scale_sq, m, d->head, 1);
+        watch_data->height = 2.75f;
+    update_joint_animation(rate * frame_scale_sq, head_rate * frame_scale_sq, moby, watch_data->body, 0);
+    update_joint_animation(rate * frame_scale_sq, head_rate * frame_scale_sq, moby, watch_data->head, 1);
 }
 extern void hero_respawn(void) __asm__("FUN_L00_00211250");
 
@@ -707,8 +707,8 @@ void FUN_L08_003084d8(struct Moby *moby) {
         break;
     case MOBY_ACTIVE:
         if (D_L08_0015F5C4 == 2) {
-            int t = D_L08_0016D060_c.a;
-            if ((t >= 1 && t <= 2) || t == 4 || t == 5) {
+            int object_selector = D_L08_0016D060_c.a;
+            if ((object_selector >= 1 && object_selector <= 2) || object_selector == 4 || object_selector == 5) {
                 if (D_L08_0016D060_c.a != 1 || scale_game_frames(0x8CE) < D_L08_0016D060_c.b) {
                     k = 0;
                     if (D_L08_0016D060_c.a == 1 || D_L08_0016D060_c.a == 4)
@@ -736,25 +736,25 @@ extern void FUN_L08_0027fe00(float *, float *, int, float);
 
 void FUN_L08_00308c90(struct Moby *moby) {
     char *data = (char *)moby->pvars;
-    float a[4];
+    float effect_position[4];
     float b[12];
-    float c[4];
+    float effect_direction[4];
     int i;
     for (i = 0; i < *(int *)(data + 0x14); i++) {
-        a[0] = -1.0f;
-        a[1] = random_float_between_alt(-*(float *)(data + 4), *(float *)(data + 4));
-        a[2] = 0;
-        a[3] = 1.0f;
+        effect_position[0] = -1.0f;
+        effect_position[1] = random_float_between_alt(-*(float *)(data + 4), *(float *)(data + 4));
+        effect_position[2] = 0;
+        effect_position[3] = 1.0f;
         euler_rotation_basis(b, &moby->rot);
-        transform_vector_by_basis(a, a, b);
-        fast_vec_add(a, a, &moby->pos);
-        c[0] = 0;
-        c[1] = random_float_between_alt(*(float *)(data + 0x18) * frame_time,
+        transform_vector_by_basis(effect_position, effect_position, b);
+        fast_vec_add(effect_position, effect_position, &moby->pos);
+        effect_direction[0] = 0;
+        effect_direction[1] = random_float_between_alt(*(float *)(data + 0x18) * frame_time,
                                         *(float *)(data + 0x1C) * frame_time);
-        c[2] = random_float_between_alt(*(float *)(data + 0x20) * frame_time,
+        effect_direction[2] = random_float_between_alt(*(float *)(data + 0x20) * frame_time,
                                         *(float *)(data + 0x24) * frame_time);
-        c[3] = 0;
-        FUN_L08_0027fe00(a, c, *(int *)(data + 0x10), *(float *)(data + 0xC));
+        effect_direction[3] = 0;
+        FUN_L08_0027fe00(effect_position, effect_direction, *(int *)(data + 0x10), *(float *)(data + 0xC));
     }
 }
 #define NOT_SDA
@@ -781,14 +781,14 @@ float *D_L08_001623D0[2] = {D_L08_001EF7D0, D_L08_001EF978};
 float *D_L08_001623D8[2] = {D_L08_001EFB20, D_L08_001EFC40};
 void FUN_L08_00308f68(int x) {
     int i;
-    int *a = D_L08_001623C8;
+    int *element_counts = D_L08_001623C8;
     float **b = D_L08_001623D8;
     float **c = D_L08_001623D0;
     int **e = D_L08_001623E8;
 
     for (i = 0; i < 2; i++) {
-        FUN_L08_00258090(D_L08_001F8560, b[i], a[i], &D_L08_00162408[x]);
-        FUN_L00_001fde98(a[i], c[i], e[i], D_L08_001F8560, 1);
+        FUN_L08_00258090(D_L08_001F8560, b[i], element_counts[i], &D_L08_00162408[x]);
+        FUN_L00_001fde98(element_counts[i], c[i], e[i], D_L08_001F8560, 1);
     }
 }
 /* Ported from rac1-decomp (src/overlays/l08_batalia/vendor_002EAF48.c: func_L08_0030AC70), where it is exact; names translated to the US level program. */
@@ -831,7 +831,7 @@ void FUN_L08_003097b0(struct Moby *moby) {
     int i;
     float v[4];
     float w[4];
-    float d;
+    float distance;
 
     switch (moby->state) {
     case MOBY_INITIALIZE:
@@ -868,16 +868,16 @@ void FUN_L08_003097b0(struct Moby *moby) {
             w[2] = D_L08_00162388;
             w[3] = 1.0f;
             subtract_vector_xyz(w, D_L08_001675C0, w);
-            d = vector_length_xyz(w);
-            if (d <= 84.0f) {
+            distance = vector_length_xyz(w);
+            if (distance <= 84.0f) {
                 FUN_L08_002f12a0(0);
                 FUN_L08_002f1158(D_L08_001F8550, 0.52f, 0.62f, 0.06f, &D_L08_001623F0_e[8]);
                 FUN_L08_002f12a0(2);
-                if (d < 20.0f) {
+                if (distance < 20.0f) {
                     *(unsigned char *)&D_L08_001623F0 = 0xFF;
-                } else if (d < 84.0f) {
+                } else if (distance < 84.0f) {
                     *(char *)&D_L08_001623F0 =
-                        func_001FA898_r((1.0f - (d - 20.0f) * 0.015625f) * 255.0f);
+                        func_001FA898_r((1.0f - (distance - 20.0f) * 0.015625f) * 255.0f);
                 } else {
                     *(char *)&D_L08_001623F0 = 0;
                 }

@@ -14,7 +14,7 @@ extern void FUN_L10_002ea7b0_c(void *,short *) __asm__("FUN_L10_002ea7b0");
 void FUN_L10_002eaa08_c(void *pos, short *timer, short *burst, float height) __asm__("FUN_L10_002eaa08");
 extern void func_L10_002EBDC8_a01(float,void *,short *,short *) __asm__("FUN_L10_002eaa08");
 
-void FUN_L10_002ea1f0(char *m) {
+void FUN_L10_002ea1f0(char *moby) {
     enum {
         EFFECT_STATE_INITIALIZE = 0,
         EFFECT_STATE_EMIT_BURST_PARTICLES = 1,
@@ -26,48 +26,48 @@ void FUN_L10_002ea1f0(char *m) {
         EFFECT_MODE_CACHE_GROUND_HEIGHT = 1,
         EFFECT_MODE_TIMED_PARTICLES = 2
     };
- char *d=*(char **)(m+0x78);
- switch((unsigned char)m[0x20]) {
+ char *effect_pvars=*(char **)(moby+0x78);
+ switch((unsigned char)moby[0x20]) {
  case EFFECT_STATE_INITIALIZE:
-  switch(*(int *)d) {
-  case EFFECT_MODE_BURST_PARTICLES:m[0x20]=1;break;
+  switch(*(int *)effect_pvars) {
+  case EFFECT_MODE_BURST_PARTICLES:moby[0x20]=1;break;
   case EFFECT_MODE_CACHE_GROUND_HEIGHT:
-   if(*(int *)(d+4)!=-1) {
-    char *tab=D_L10_001B0930[*(int *)(d+4)];
+   if(*(int *)(effect_pvars+4)!=-1) {
+    char *tab=D_L10_001B0930[*(int *)(effect_pvars+4)];
     char *pos=tab+0x10;
-    int n=*(int *)tab;
-    if(n>32)n=32;
-    if(n>0) {int count=n;float *height=(float *)(tab+0x1C);
+    int point_count=*(int *)tab;
+    if(point_count>32)point_count=32;
+    if(point_count>0) {int count=point_count;float *height=(float *)(tab+0x1C);
     do {*height=probe_ground_height(pos,0,0.5f);pos+=0x10;height+=4;}while(--count);}
-   }else *(float *)(d+0x88)=probe_ground_height(m+0x10,0,0.5f);
-   m[0x20]=2;break;
-  case EFFECT_MODE_TIMED_PARTICLES:m[0x20]=3;break;
+   }else *(float *)(effect_pvars+0x88)=probe_ground_height(moby+0x10,0,0.5f);
+   moby[0x20]=2;break;
+  case EFFECT_MODE_TIMED_PARTICLES:moby[0x20]=3;break;
   }
   break;
  case EFFECT_STATE_EMIT_BURST_PARTICLES:
-  if(*(int *)(d+4)==-1)FUN_L10_002ea4e8_c(m+0x10,(short *)(d+8),(short *)(d+0x48));
+  if(*(int *)(effect_pvars+4)==-1)FUN_L10_002ea4e8_c(moby+0x10,(short *)(effect_pvars+8),(short *)(effect_pvars+0x48));
   else {
-   char *tab=D_L10_001B0930[*(int *)(d+4)];int n=*(int *)tab;
-   if(n>32)n=32;
-   if(n>0) {short *burst=(short *)(d+0x48);short *timer=(short *)(d+8);char *pos=tab+0x10;int count=n;
+   char *tab=D_L10_001B0930[*(int *)(effect_pvars+4)];int point_count=*(int *)tab;
+   if(point_count>32)point_count=32;
+   if(point_count>0) {short *burst=(short *)(effect_pvars+0x48);short *timer=(short *)(effect_pvars+8);char *pos=tab+0x10;int count=point_count;
    do {FUN_L10_002ea4e8_c(pos,timer,burst);timer++;++burst;--count;pos+=0x10;}while(count);}
   }
   break;
  case EFFECT_STATE_UPDATE_WITH_GROUND_HEIGHT:
-  if(*(int *)(d+4)==-1)func_L10_002EBDC8_a01(*(float *)(d+0x88),m+0x10,(short *)(d+8),(short *)(d+0x48));
+  if(*(int *)(effect_pvars+4)==-1)func_L10_002EBDC8_a01(*(float *)(effect_pvars+0x88),moby+0x10,(short *)(effect_pvars+8),(short *)(effect_pvars+0x48));
   else {
-   char *tab=D_L10_001B0930[*(int *)(d+4)];int n=*(int *)tab;
-   if(n>32)n=32;
-   if(n>0) {float *height=(float *)(tab+0x1C);short *burst=(short *)(d+0x48);short *timer=(short *)(d+8);char *pos=tab+0x10;int count=n;
+   char *tab=D_L10_001B0930[*(int *)(effect_pvars+4)];int point_count=*(int *)tab;
+   if(point_count>32)point_count=32;
+   if(point_count>0) {float *height=(float *)(tab+0x1C);short *burst=(short *)(effect_pvars+0x48);short *timer=(short *)(effect_pvars+8);char *pos=tab+0x10;int count=point_count;
    do {func_L10_002EBDC8_a01(*height,pos,timer,burst);height+=4;++burst;++timer;--count;pos+=0x10;}while(count);}
   }
   break;
  case EFFECT_STATE_EMIT_TIMED_PARTICLES:
-  if(*(int *)(d+4)==-1)FUN_L10_002ea7b0_c(m+0x10,(short *)(d+8));
+  if(*(int *)(effect_pvars+4)==-1)FUN_L10_002ea7b0_c(moby+0x10,(short *)(effect_pvars+8));
   else {
-   char *tab=D_L10_001B0930[*(int *)(d+4)];int n=*(int *)tab;
-   if(n>32)n=32;
-   if(n>0) {short *timer=(short *)(d+8);char *pos=tab+0x10;int count=n;
+   char *tab=D_L10_001B0930[*(int *)(effect_pvars+4)];int point_count=*(int *)tab;
+   if(point_count>32)point_count=32;
+   if(point_count>0) {short *timer=(short *)(effect_pvars+8);char *pos=tab+0x10;int count=point_count;
    do {FUN_L10_002ea7b0_c(pos,timer);++timer;--count;pos+=0x10;}while(count);}
   }
   break;
@@ -107,11 +107,11 @@ extern void clear_u64_value(void *) __asm__("FUN_001f99f8");
 extern int func_001FA898_r(float) __asm__("FUN_001fa6d0");
 
 void FUN_L10_002ea4e8(void *pos, short *timer, short *burst) {
-    float p[4];
+    float visibility_sphere[4];
     float vel[4];
     float acc[4];
-    float s;
-    int a, b, c, c1;
+    float frame_count_scale;
+    int frame_count, b, third_frame_count, c1;
     if (*burst < 0) {
         if (++*burst != 0)
             return;
@@ -124,9 +124,9 @@ void FUN_L10_002ea4e8(void *pos, short *timer, short *burst) {
     }
     if (32.0f < fast_vec_dist(D_L10_00167240, pos))
         return;
-    qcopy(p, pos);
-    p[3] = 2.0f;
-    if (fast_bsphere_check((char *)p, 32.0f) == -1 && random_integer_below(3) != 0)
+    qcopy(visibility_sphere, pos);
+    visibility_sphere[3] = 2.0f;
+    if (fast_bsphere_check((char *)visibility_sphere, 32.0f) == -1 && random_integer_below(3) != 0)
         return;
     if (!fast_dec_timer_s16(timer))
         return;
@@ -136,14 +136,14 @@ void FUN_L10_002ea4e8(void *pos, short *timer, short *burst) {
     acc[2] += D_L10_00161F6C * frame_time;
     vel[3] = random_float_between(D_L10_00161F74, D_L10_00161F78);
     acc[3] = random_float_between(D_L10_00161F7C, D_L10_00161F80);
-    s = random_float_between(1.0f - D_L10_00161F90, D_L10_00161F90 + 1.0f);
-    a = func_001FA898_r((float)D_L10_00161F84 * s);
-    b = func_001FA898_r((float)D_L10_00161F88 * s);
-    c = func_001FA898_r((float)D_L10_00161F8C * s);
+    frame_count_scale = random_float_between(1.0f - D_L10_00161F90, D_L10_00161F90 + 1.0f);
+    frame_count = func_001FA898_r((float)D_L10_00161F84 * frame_count_scale);
+    b = func_001FA898_r((float)D_L10_00161F88 * frame_count_scale);
+    third_frame_count = func_001FA898_r((float)D_L10_00161F8C * frame_count_scale);
     c1 = fast_tween_color(D_L10_00161F94, D_L10_00161F98, random_float_between(0.0f, 1.0f));
     spawn_spark(pos, vel, acc, c1,
-                 fast_tween_color(D_L10_00161F9C, D_L10_00161FA0, random_float_between(0.0f, 1.0f)), a,
-                 b, c, -1);
+                 fast_tween_color(D_L10_00161F9C, D_L10_00161FA0, random_float_between(0.0f, 1.0f)), frame_count,
+                 b, third_frame_count, -1);
     *timer = func_001FA898_r(random_float_between((float)D_L10_00161FA4, (float)D_L10_00161FA8));
 }
 
@@ -186,17 +186,17 @@ extern void clear_u64_value(void *);
 extern int func_001FA898_r(float) __asm__("FUN_001fa6d0");
 
 void FUN_L10_002ea7b0(void *pos, short *timer) {
-    float p[4];
+    float visibility_sphere[4];
     float vel[4];
     float acc[4];
-    float s;
-    int a, b, c, c1;
+    float frame_count_scale;
+    int frame_count, b, third_frame_count, c1;
     if (32.0f < fast_vec_dist(D_L10_00167240, pos))
         return;
-    qcopy(p, pos);
-    p[2] += 6.0f;
-    p[3] = 5.0f;
-    if (fast_bsphere_check((char *)p, 32.0f) == -1 && random_integer_below(3) != 0)
+    qcopy(visibility_sphere, pos);
+    visibility_sphere[2] += 6.0f;
+    visibility_sphere[3] = 5.0f;
+    if (fast_bsphere_check((char *)visibility_sphere, 32.0f) == -1 && random_integer_below(3) != 0)
         return;
     if (!fast_dec_timer_s16(timer))
         return;
@@ -206,14 +206,14 @@ void FUN_L10_002ea7b0(void *pos, short *timer) {
     acc[2] += D_L10_00161FC0 * frame_time;
     vel[3] = random_float_between(D_L10_00161FC8, D_L10_00161FCC);
     acc[3] = random_float_between(D_L10_00161FD0, D_L10_00161FD4);
-    s = random_float_between(1.0f - D_L10_00161FE4, D_L10_00161FE4 + 1.0f);
-    a = func_001FA898_r((float)D_L10_00161FD8 * s);
-    b = func_001FA898_r((float)D_L10_00161FDC * s);
-    c = func_001FA898_r((float)D_L10_00161FE0 * s);
+    frame_count_scale = random_float_between(1.0f - D_L10_00161FE4, D_L10_00161FE4 + 1.0f);
+    frame_count = func_001FA898_r((float)D_L10_00161FD8 * frame_count_scale);
+    b = func_001FA898_r((float)D_L10_00161FDC * frame_count_scale);
+    third_frame_count = func_001FA898_r((float)D_L10_00161FE0 * frame_count_scale);
     c1 = fast_tween_color(D_L10_00161FE8, D_L10_00161FEC, random_float_between(0.0f, 1.0f));
     spawn_spark(pos, vel, acc, c1,
-                 fast_tween_color(D_L10_00161FF0, D_L10_00161FF4, random_float_between(0.0f, 1.0f)), a,
-                 b, c, -1);
+                 fast_tween_color(D_L10_00161FF0, D_L10_00161FF4, random_float_between(0.0f, 1.0f)), frame_count,
+                 b, third_frame_count, -1);
     *timer = func_001FA898_r(random_float_between((float)D_L10_00161FF8, (float)D_L10_00161FFC));
 }
 
@@ -255,11 +255,11 @@ extern void random_vector(float *, float, float) __asm__("FUN_L00_00257d78");
 extern int func_001FA898_r(float) __asm__("FUN_001fa6d0");
 
 void FUN_L10_002eaa08(void *pos, short *timer, short *burst, float height) {
-    float p[4];
+    float visibility_sphere[4];
     float vel[4];
     float acc[4];
-    float s;
-    int a, b, c, c1;
+    float frame_count_scale;
+    int frame_count, b, second_frame_count, c1;
     if (*burst >= 0) {
         if (fast_dec_timer_s16(burst)) {
             *burst = -func_001FA898_r(random_float_between((float)*(int *)&D_L10_00162044, (float)*(int *)&D_L10_00162048));
@@ -269,22 +269,22 @@ void FUN_L10_002eaa08(void *pos, short *timer, short *burst, float height) {
         if (++*burst != 0) return;
         *burst = func_001FA898_r(random_float_between((float)*(int *)&D_L10_0016203C, (float)*(int *)&D_L10_00162040));
     }
-    qcopy(p, pos);
-    p[3] = 3.0f;
-    p[2] -= 4.0f;
-    if (fast_bsphere_check((char *)p, 32.0f) == -1) return;
+    qcopy(visibility_sphere, pos);
+    visibility_sphere[3] = 3.0f;
+    visibility_sphere[2] -= 4.0f;
+    if (fast_bsphere_check((char *)visibility_sphere, 32.0f) == -1) return;
     if (!fast_dec_timer_s16(timer)) return;
-    s = random_float_between(1.0f - *(float *)&D_L10_00162020, *(float *)&D_L10_00162020 + 1.0f);
-    a = func_001FA898_r((float)*(int *)&D_L10_00162018 * s);
-    b = func_001FA898_r((float)*(int *)&D_L10_0016201C * s);
-    c = func_001FA898_r(square_root((height + height) / (*(float *)&D_L10_00162000 * frame_time_sq)) * *(float *)&D_L10_00162050 * s);
+    frame_count_scale = random_float_between(1.0f - *(float *)&D_L10_00162020, *(float *)&D_L10_00162020 + 1.0f);
+    frame_count = func_001FA898_r((float)*(int *)&D_L10_00162018 * frame_count_scale);
+    b = func_001FA898_r((float)*(int *)&D_L10_0016201C * frame_count_scale);
+    second_frame_count = func_001FA898_r(square_root((height + height) / (*(float *)&D_L10_00162000 * frame_time_sq)) * *(float *)&D_L10_00162050 * frame_count_scale);
     clear_u64_value(vel);
     random_vector(acc, 0.0f, *(float *)&D_L10_00162004 * frame_time);
-    acc[2] -= *(float *)&D_L10_00162000 * frame_time_sq * (float)c;
+    acc[2] -= *(float *)&D_L10_00162000 * frame_time_sq * (float)second_frame_count;
     vel[3] = random_float_between(*(float *)&D_L10_00162008, *(float *)&D_L10_0016200C);
     acc[3] = random_float_between(*(float *)&D_L10_00162010, *(float *)&D_L10_00162014);
     c1 = fast_tween_color(D_L10_00162024, D_L10_00162028, random_float_between(0.0f, 1.0f));
-    spawn_spark(pos, vel, acc, c1, fast_tween_color(D_L10_0016202C, D_L10_00162030, random_float_between(0.0f, 1.0f)), a, c, b, D_L10_0016204C);
+    spawn_spark(pos, vel, acc, c1, fast_tween_color(D_L10_0016202C, D_L10_00162030, random_float_between(0.0f, 1.0f)), frame_count, second_frame_count, b, D_L10_0016204C);
     *timer = func_001FA898_r(random_float_between((float)*(int *)&D_L10_00162034, (float)*(int *)&D_L10_00162038));
 }
 #define NOT_SDA
@@ -304,15 +304,15 @@ struct L10Data {
 extern struct L10Data D_L10_0016CCE0;
 extern void cutscene_set_camera_target(int) __asm__("FUN_L00_002637f8");
 
-void FUN_L10_002eacd8(struct Moby *m) {
+void FUN_L10_002eacd8(struct Moby *moby) {
     enum {
         LEVEL_MODE_STATE_INITIALIZE = 0,
         LEVEL_MODE_STATE_DISPATCH = 1
     };
-    switch (m->state) {
+    switch (moby->state) {
     case LEVEL_MODE_STATE_INITIALIZE:
-        m->update_dist = 0xFF;
-        m->state = 1;
+        moby->update_dist = 0xFF;
+        moby->state = 1;
         break;
     case LEVEL_MODE_STATE_DISPATCH:
         if (D_L10_0015F5C4_vendor == 2) {
@@ -342,29 +342,29 @@ extern void FUN_L00_00263e30(void *, int, int, int, int, int, int);
 extern void FUN_L01_002787a0(void *);
 void mark_moby_for_removal(struct Moby *moby) __asm__("FUN_0020c828");
 
-void FUN_L10_002eb6f0(struct Moby *m) {
+void FUN_L10_002eb6f0(struct Moby *moby) {
     enum {
         HIT_RESPONSE_STATE_INITIALIZE = 0,
         HIT_RESPONSE_STATE_WAIT_FOR_HIT = 1,
         HIT_RESPONSE_STATE_RESPOND_AND_REMOVE = 2
     };
     int hit = 0;
-    char *r = find_moby_hit(m, 0x10000, 0);
-    switch (m->state) {
+    char *r = find_moby_hit(moby, 0x10000, 0);
+    switch (moby->state) {
     case HIT_RESPONSE_STATE_INITIALIZE:
-        m->state = 1;
+        moby->state = 1;
         break;
     case HIT_RESPONSE_STATE_WAIT_FOR_HIT:
         if (r != 0 && *(float *)(r + 0x2C) > 0.0f)
             hit = 1;
         if (hit)
-            m->state = 2;
+            moby->state = 2;
         break;
     case HIT_RESPONSE_STATE_RESPOND_AND_REMOVE:
-        allocate_voice_for_target_entry(0, 0, (int)m);
-        FUN_L01_002787a0(m);
-        FUN_L00_00263e30(m, 0x742, 1, 0x742, 1, 11, 2);
-        mark_moby_for_removal(m);
+        allocate_voice_for_target_entry(0, 0, (int)moby);
+        FUN_L01_002787a0(moby);
+        FUN_L00_00263e30(moby, 0x742, 1, 0x742, 1, 11, 2);
+        mark_moby_for_removal(moby);
         break;
     }
 }
@@ -380,14 +380,14 @@ void FUN_L10_002eb7e0(struct Moby *moby) {
         HIT_RESPONSE_STATE_RESPOND_AND_REMOVE = 2
     };
     int ok = 0;
-    char *p = find_moby_hit(moby, 0x10000, 0);
+    char *hit_result = find_moby_hit(moby, 0x10000, 0);
     switch (moby->state) {
     case HIT_RESPONSE_STATE_INITIALIZE:
         moby->state = 1;
         break;
     case HIT_RESPONSE_STATE_WAIT_FOR_HIT:
-        if (p != 0) {
-            if (0.0f < *(float *)(p + 0x2C))
+        if (hit_result != 0) {
+            if (0.0f < *(float *)(hit_result + 0x2C))
                 ok = 1;
         }
         if (ok != 0)

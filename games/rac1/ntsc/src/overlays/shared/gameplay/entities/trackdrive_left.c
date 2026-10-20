@@ -13,21 +13,21 @@ extern s32 D_L02_001612AC;
 extern float D_L02_001CB500[];
 void FUN_L02_002a4058(char *arg, int val, float scale) {
     int i;
-    float *p;
-    float *q;
+    float *destination;
+    float *source;
     float *base;
     arg[0x3F] = val;
     *(s32 *)(D_L02_001CB9C0 + 0x0) = D_L02_001612A0;
     *(s32 *)(D_L02_001CB9C0 + 0x4) = D_L02_001612A4;
     *(s32 *)(D_L02_001CB9C0 + 0x8) = D_L02_001612A8;
     *(s32 *)(D_L02_001CB9C0 + 0xC) = D_L02_001612AC;
-    p = (float *)(D_L02_001CB9C0 + 0x10);
+    destination = (float *)(D_L02_001CB9C0 + 0x10);
     base = D_L02_001CB500;
-    q = base + 4;
+    source = base + 4;
     for (i = 0xF7; i >= 0; i--) {
-        *p = *q * scale;
-        p++;
-        q++;
+        *destination = *source * scale;
+        destination++;
+        source++;
     }
 }
 #define NOT_SDA
@@ -271,7 +271,7 @@ extern void aa_blur_pass_00233b68(void) __asm__("FUN_00233b68");
 void FUN_L02_002a46e0(void) {
     char *b;
     long *g;
-    int *q;
+    int *packet_base;
     vu1_add_vif_code(0x13000000);
     b = D_L02_0016D040;
     *(float *)(b + 0x218) = D_L02_001612F8;
@@ -284,15 +284,15 @@ void FUN_L02_002a46e0(void) {
     (*(int *volatile *)&D_L02_001611C0)[1] = 0;
     (*(int *volatile *)&D_L02_001611C0)[2] = 0x11000000;
     (*(int *volatile *)&D_L02_001611C0)[3] = 0x50000002;
-    q = *(int *volatile *)&D_L02_001611C0;
-    D_L02_001611C0 = q + 4;
-    g = (long *)(q + 4);
+    packet_base = *(int *volatile *)&D_L02_001611C0;
+    D_L02_001611C0 = packet_base + 4;
+    g = (long *)(packet_base + 4);
     g[0] = 0x1000000000008001L;
     g[1] = 0xE;
     g[2] = (long)*(int *)(b + 0x230) | ((long)*(int *)(b + 0x234) << 8) |
            ((long)*(int *)(b + 0x238) << 16);
     g[3] = 0x3D;
-    D_L02_001611C0 = q + 12;
+    D_L02_001611C0 = packet_base + 12;
     aa_blur_pass_00233b68();
 }
 /* Ported from rac1-decomp (src/overlays/shared/vendor_002A5218.c: func_L02_002CCD18), where it is exact; names translated to the US level program. */
@@ -683,7 +683,7 @@ void FUN_L02_002d92f0(char *moby) {
     char *g;
     float f;
     float lim;
-    struct Hero *p;
+    struct Hero *hero_ptr;
     func_L00_00250800_d92f0(moby, 0, v);
     g = (char *)&hero.motion.pos;
     fast_vec_sub(v, v, g);
@@ -697,8 +697,8 @@ void FUN_L02_002d92f0(char *moby) {
     } else if (f < -lim) {
         f = -lim;
     }
-    p = &hero;
-    p->motion.rot.f[2] = func_001FA748_d92f0(f, p->motion.rot.f[2]);
+    hero_ptr = &hero;
+    hero_ptr->motion.rot.f[2] = func_001FA748_d92f0(f, hero_ptr->motion.rot.f[2]);
 }
 
 /* Draws an elliptical arc from start_angle to end_angle (radii radius_x, radius_y, around the screen centre) as five sprite
@@ -782,7 +782,7 @@ extern void FUN_L02_0020bc88(void *, void *, void *, s64, s32);
 extern void clear_vector(void *);
 extern int func_001FA898_r(float) __asm__("FUN_001fa6d0");
 
-void FUN_L02_002da6c0(int p0, int p1, int sel, float a, float s) {
+void FUN_L02_002da6c0(int p0, int p1, int sel, float angle, float radial_distance) {
     enum {
         ARROW_STYLE_NEWLY_REACHED = 0,
         ARROW_STYLE_OCCUPIED = 1,
@@ -821,8 +821,8 @@ void FUN_L02_002da6c0(int p0, int p1, int sel, float a, float s) {
     col[2] = D_L02_00161B9C;
     col[1] = D_L02_00161B9C;
     col[0] = D_L02_00161B9C;
-    y = func_001FA898_r(fast_sin(a) * s * 16.0f);
-    x = func_001FA898_r(fast_cos(a) * s * 16.0f);
+    y = func_001FA898_r(fast_sin(angle) * radial_distance * 16.0f);
+    x = func_001FA898_r(fast_cos(angle) * radial_distance * 16.0f);
     v = (long)y + 0xFFFFF080000000L;
     v -= x << 16;
     v += 0x8000;
@@ -831,7 +831,7 @@ void FUN_L02_002da6c0(int p0, int p1, int sel, float a, float s) {
     xy[1] = v;
     xy[0] = v;
     clear_vector(ang);
-    ang[2] = -a;
+    ang[2] = -angle;
     euler_rotation_matrix(M, ang);
     multiply_matrix(M, M, D_L02_001D33B0);
     xy[0] += func_001FA898_r(M[0][0] * 16.0f) << 16;
@@ -879,10 +879,10 @@ typedef unsigned long long u64_t;
         (dst) += (u64_t)q_;                                                                        \
     }
 
-void FUN_L02_002da938(void *unused, f32 a, f32 b, f32 c, s32 d) {
-    u64_t m[4];
+void FUN_L02_002da938(void *unused, f32 angle, f32 b, f32 end_distance, s32 color) {
+    u64_t packed_vertices[4];
     s32 vertex_colors[4];
-    s32 p4[4];
+    s32 vertex_uvs[4];
     s32 t;
     s32 off;
     s32 tex;
@@ -891,94 +891,94 @@ void FUN_L02_002da938(void *unused, f32 a, f32 b, f32 c, s32 d) {
 
     t = truncate_float_to_s32((f32)D_L02_0015F5CC * D_L02_00161B60);
     off = (t % 512) << 16;
-    vertex_colors[3] = d;
-    vertex_colors[2] = d;
-    vertex_colors[1] = d;
-    vertex_colors[0] = d;
-    p4[0] = (s32)(D_L02_00161AEC + off);
-    p4[1] = (s32)(D_L02_00161AF0 + off);
-    p4[2] = (s32)(D_L02_00161AF4 + off);
-    p4[3] = (s32)(D_L02_00161AF8 + off);
+    vertex_colors[3] = color;
+    vertex_colors[2] = color;
+    vertex_colors[1] = color;
+    vertex_colors[0] = color;
+    vertex_uvs[0] = (s32)(D_L02_00161AEC + off);
+    vertex_uvs[1] = (s32)(D_L02_00161AF0 + off);
+    vertex_uvs[2] = (s32)(D_L02_00161AF4 + off);
+    vertex_uvs[3] = (s32)(D_L02_00161AF8 + off);
 
-    f25 = fast_sin(a) * b;
-    f24 = fast_cos(a) * b;
-    f28 = fast_sin(a) * c;
-    f27 = fast_cos(a) * c;
-    trig_value = fast_cos(a);
+    f25 = fast_sin(angle) * b;
+    f24 = fast_cos(angle) * b;
+    f28 = fast_sin(angle) * end_distance;
+    f27 = fast_cos(angle) * end_distance;
+    trig_value = fast_cos(angle);
     f29 = f25 + trig_value * 2.0f;
-    trig_value = fast_cos(a);
+    trig_value = fast_cos(angle);
     f25 = f25 - trig_value * 2.0f;
-    trig_value = fast_sin(a);
+    trig_value = fast_sin(angle);
     f26 = f24 - trig_value * 2.0f;
-    trig_value = fast_sin(a);
+    trig_value = fast_sin(angle);
     f24 = f24 + trig_value * 2.0f;
-    trig_value = fast_cos(a);
+    trig_value = fast_cos(angle);
     f31 = f28 + trig_value * 2.0f;
-    trig_value = fast_cos(a);
+    trig_value = fast_cos(angle);
     f28 = f28 - trig_value * 2.0f;
-    trig_value = fast_sin(a);
+    trig_value = fast_sin(angle);
     f30 = f27 - trig_value * 2.0f;
-    trig_value = fast_sin(a);
+    trig_value = fast_sin(angle);
     f27 = f27 + trig_value * 2.0f;
 
-    m[3] = 0xFFFFF000000000ULL;
-    m[2] = 0xFFFFF000000000ULL;
-    m[1] = 0xFFFFF000000000ULL;
-    m[0] = 0xFFFFF000000000ULL;
+    packed_vertices[3] = 0xFFFFF000000000ULL;
+    packed_vertices[2] = 0xFFFFF000000000ULL;
+    packed_vertices[1] = 0xFFFFF000000000ULL;
+    packed_vertices[0] = 0xFFFFF000000000ULL;
 
-    NEG20(m[0], truncate_float_to_s32(f26));
-    LO4(m[0], truncate_float_to_s32(f29));
-    NEG20(m[1], truncate_float_to_s32(f24));
-    LO4(m[1], truncate_float_to_s32(f25));
-    NEG20(m[2], truncate_float_to_s32(f30));
-    LO4(m[2], truncate_float_to_s32(f31));
-    NEG20(m[3], truncate_float_to_s32(f27));
-    LO4(m[3], truncate_float_to_s32(f28));
+    NEG20(packed_vertices[0], truncate_float_to_s32(f26));
+    LO4(packed_vertices[0], truncate_float_to_s32(f29));
+    NEG20(packed_vertices[1], truncate_float_to_s32(f24));
+    LO4(packed_vertices[1], truncate_float_to_s32(f25));
+    NEG20(packed_vertices[2], truncate_float_to_s32(f30));
+    LO4(packed_vertices[2], truncate_float_to_s32(f31));
+    NEG20(packed_vertices[3], truncate_float_to_s32(f27));
+    LO4(packed_vertices[3], truncate_float_to_s32(f28));
 
     tex = FUN_001f44b8(D_L02_00161B64);
-    FUN_L02_0020bc88_u(m, p4, vertex_colors, tex, 0);
+    FUN_L02_0020bc88_u(packed_vertices, vertex_uvs, vertex_colors, tex, 0);
 
-    p4[0] = (s32)D_L02_00161AFC;
-    p4[1] = (s32)D_L02_00161B00;
-    p4[2] = (s32)D_L02_00161B04;
-    p4[3] = (s32)D_L02_00161B08;
+    vertex_uvs[0] = (s32)D_L02_00161AFC;
+    vertex_uvs[1] = (s32)D_L02_00161B00;
+    vertex_uvs[2] = (s32)D_L02_00161B04;
+    vertex_uvs[3] = (s32)D_L02_00161B08;
 
-    f25 = fast_sin(a) * b;
-    f24 = fast_cos(a) * b;
-    f28 = fast_sin(a) * c;
-    f27 = fast_cos(a) * c;
-    trig_value = fast_cos(a);
+    f25 = fast_sin(angle) * b;
+    f24 = fast_cos(angle) * b;
+    f28 = fast_sin(angle) * end_distance;
+    f27 = fast_cos(angle) * end_distance;
+    trig_value = fast_cos(angle);
     f29 = f25 + trig_value * 5.0f;
-    trig_value = fast_cos(a);
+    trig_value = fast_cos(angle);
     f25 = f25 - trig_value * 5.0f;
-    trig_value = fast_sin(a);
+    trig_value = fast_sin(angle);
     f26 = f24 - trig_value * 5.0f;
-    trig_value = fast_sin(a);
+    trig_value = fast_sin(angle);
     f24 = f24 + trig_value * 5.0f;
-    trig_value = fast_cos(a);
+    trig_value = fast_cos(angle);
     f31 = f28 + trig_value * 5.0f;
-    trig_value = fast_cos(a);
+    trig_value = fast_cos(angle);
     f28 = f28 - trig_value * 5.0f;
-    trig_value = fast_sin(a);
+    trig_value = fast_sin(angle);
     f30 = f27 - trig_value * 5.0f;
-    trig_value = fast_sin(a);
+    trig_value = fast_sin(angle);
     f27 = f27 + trig_value * 5.0f;
 
-    m[3] = 0xFFFFF000000000ULL;
-    m[2] = 0xFFFFF000000000ULL;
-    m[1] = 0xFFFFF000000000ULL;
-    m[0] = 0xFFFFF000000000ULL;
+    packed_vertices[3] = 0xFFFFF000000000ULL;
+    packed_vertices[2] = 0xFFFFF000000000ULL;
+    packed_vertices[1] = 0xFFFFF000000000ULL;
+    packed_vertices[0] = 0xFFFFF000000000ULL;
 
-    NEG20(m[0], truncate_float_to_s32(f26));
-    LO4(m[0], truncate_float_to_s32(f29));
-    NEG20(m[1], truncate_float_to_s32(f24));
-    LO4(m[1], truncate_float_to_s32(f25));
-    NEG20(m[2], truncate_float_to_s32(f30));
-    LO4(m[2], truncate_float_to_s32(f31));
-    NEG20(m[3], truncate_float_to_s32(f27));
-    LO4(m[3], truncate_float_to_s32(f28));
+    NEG20(packed_vertices[0], truncate_float_to_s32(f26));
+    LO4(packed_vertices[0], truncate_float_to_s32(f29));
+    NEG20(packed_vertices[1], truncate_float_to_s32(f24));
+    LO4(packed_vertices[1], truncate_float_to_s32(f25));
+    NEG20(packed_vertices[2], truncate_float_to_s32(f30));
+    LO4(packed_vertices[2], truncate_float_to_s32(f31));
+    NEG20(packed_vertices[3], truncate_float_to_s32(f27));
+    LO4(packed_vertices[3], truncate_float_to_s32(f28));
 
-    FUN_L02_0020bc88_u(m, p4, vertex_colors, tex, 0);
+    FUN_L02_0020bc88_u(packed_vertices, vertex_uvs, vertex_colors, tex, 0);
 }
 
 typedef struct { long a, b, c, d; } Q_2dae88;
@@ -992,19 +992,19 @@ extern int D_L02_00161AB0 __attribute__((sda));
 extern int D_L02_00161AB4 __attribute__((sda));
 extern int D_L02_00161AB8 __attribute__((sda));
 void FUN_L02_002dae88(void) {
-    Q_2dae88 q;
-    int c[4];
+    Q_2dae88 packed_vertices;
+    int vertex_colors[4];
     int b[4];
-    Q_2dae88 *p = D_L02_001D3310;
+    Q_2dae88 *vertex_quad_cursor = D_L02_001D3310;
     int i;
     for (i = 3; i >= 0; i--) {
         b[0] = D_L02_00161AAC;
         b[1] = D_L02_00161AB0;
         b[2] = D_L02_00161AB4;
         b[3] = D_L02_00161AB8;
-        c[0] = c[1] = c[2] = c[3] = D_L02_00161B94;
-        q = *p++;
-        f20bc88_2dae88(&q, b, c, tex_2dae88(D_L02_00161B1C_gp + 0x28), 1);
+        vertex_colors[0] = vertex_colors[1] = vertex_colors[2] = vertex_colors[3] = D_L02_00161B94;
+        packed_vertices = *vertex_quad_cursor++;
+        f20bc88_2dae88(&packed_vertices, b, vertex_colors, tex_2dae88(D_L02_00161B1C_gp + 0x28), 1);
     }
 }
 
@@ -1138,50 +1138,50 @@ extern float func_L00_0025CE58_f(float *, float, float *, float, float,
                                  float) __asm__("FUN_L00_0025be00");
 
 void swingshot_versatarget_update(char *m) __asm__("FUN_L02_002e0450");
-void swingshot_versatarget_update(char *m) {
+void swingshot_versatarget_update(char *moby) {
     enum {
         VERSATARGET_STATE_INITIALIZE = 0,
         VERSATARGET_STATE_ACTIVE = 1,
         VERSATARGET_STATE_INACTIVE = 2
     };
-    char *d = *(char **)(m + 0x78);
+    char *moby_data = *(char **)(moby + 0x78);
     float v[4];
     float w[4];
-    char *o;
-    switch (((unsigned char *)m)[0x20]) {
+    char *linked_moby;
+    switch (((unsigned char *)moby)[0x20]) {
     case VERSATARGET_STATE_INITIALIZE:
-        if (*(int *)(d + 0x30) != -1 ||
-            (*(int *)(d + 0x3C) != -1 &&
-             (o = (char *)(D_L02_0015FFD8 + (*(int *)(d + 0x3C) << 8))) != 0 &&
-             ((unsigned char *)o)[0x20] != 0xFE && ((unsigned char *)o)[0x20] != 0xFD)) {
-            ((unsigned char *)m)[0x30] = 0xFF;
-            m[0x20] = 2;
-            *(unsigned short *)(m + 0x34) |= 0x41;
+        if (*(int *)(moby_data + 0x30) != -1 ||
+            (*(int *)(moby_data + 0x3C) != -1 &&
+             (linked_moby = (char *)(D_L02_0015FFD8 + (*(int *)(moby_data + 0x3C) << 8))) != 0 &&
+             ((unsigned char *)linked_moby)[0x20] != 0xFE && ((unsigned char *)linked_moby)[0x20] != 0xFD)) {
+            ((unsigned char *)moby)[0x30] = 0xFF;
+            moby[0x20] = 2;
+            *(unsigned short *)(moby + 0x34) |= 0x41;
         } else {
-            set_moby_color(m, 0xC0, 0xC0, 0xC0);
-            func_L02_002FBB10_c(m);
-            m[0x20] = 1;
+            set_moby_color(moby, 0xC0, 0xC0, 0xC0);
+            func_L02_002FBB10_c(moby);
+            moby[0x20] = 1;
         }
         break;
     case VERSATARGET_STATE_ACTIVE:
-        if (*(short *)(m + 0xA6) == 0x323) {
+        if (*(short *)(moby + 0xA6) == 0x323) {
             struct Hero *g = &hero;
-            float *rz = (float *)(m + 0x48);
-            float yaw = fast_arc_tan(g->motion.pos.f[0] - *(float *)(m + 0x10),
-                                     g->motion.pos.f[1] - *(float *)(m + 0x14));
-            func_L00_0025CE58_f(rz, yaw, (float *)(d + 0x38), frame_time_sq * 6.2831855f,
+            float *rz = (float *)(moby + 0x48);
+            float yaw = fast_arc_tan(g->motion.pos.f[0] - *(float *)(moby + 0x10),
+                                     g->motion.pos.f[1] - *(float *)(moby + 0x14));
+            func_L00_0025CE58_f(rz, yaw, (float *)(moby_data + 0x38), frame_time_sq * 6.2831855f,
                                 frame_time_sq * 6.2831855f, frame_time * 12.566371f);
             if (D_L02_0015F5CC & 1) {
-                if (((unsigned char *)m)[0x31] != 0) {
-                    float s = 1.0f;
-                    int a;
+                if (((unsigned char *)moby)[0x31] != 0) {
+                    float direction_sign = 1.0f;
+                    int particle_lifetime;
                     if (D_L02_0015F5CC & 4)
-                        s = -1.0f;
-                    normalize_vector_xyz(v, m + 0xD0, s * D_L02_00161CBC);
+                        direction_sign = -1.0f;
+                    normalize_vector_xyz(v, moby + 0xD0, direction_sign * D_L02_00161CBC);
                     normalize_vector_xyz(w, v, -2.0f / multiply_global_factor_ed64(D_L02_00161CB0));
-                    add_vector_xyz(v, v, m + 0x10);
-                    a = truncate_float_to_s32(multiply_global_factor_ed64(D_L02_00161CB0)) & 0xFF;
-                    FUN_L00_002730e0(v, w, D_L02_00161CB4, a,
+                    add_vector_xyz(v, v, moby + 0x10);
+                    particle_lifetime = truncate_float_to_s32(multiply_global_factor_ed64(D_L02_00161CB0)) & 0xFF;
+                    FUN_L00_002730e0(v, w, D_L02_00161CB4, particle_lifetime,
                                      random_integer_below(0xFF) & 0xFF, 0,
                                      D_L02_00161CB8);
                 }
@@ -1190,17 +1190,17 @@ void swingshot_versatarget_update(char *m) {
         {
             struct Hero *g2 = &hero;
             if (g2->state.current != 0x2C)
-                func_L02_002FBC00_c(m);
+                func_L02_002FBC00_c(moby);
         }
         break;
     case VERSATARGET_STATE_INACTIVE:
-        if (D_0014C050_a[*(int *)(d + 0x30) + (current_level_index << 4)] != 0 ||
-            (*(int *)(d + 0x3C) != -1 &&
-             ((o = (char *)(D_L02_0015FFD8 + (*(int *)(d + 0x3C) << 8))) == 0 ||
-              ((unsigned char *)o)[0x20] == 0xFE || ((unsigned char *)o)[0x20] == 0xFD))) {
-            *(unsigned short *)(m + 0x34) &= 0xFFBE;
-            *(int *)(d + 0x30) = -1;
-            m[0x20] = 0;
+        if (D_0014C050_a[*(int *)(moby_data + 0x30) + (current_level_index << 4)] != 0 ||
+            (*(int *)(moby_data + 0x3C) != -1 &&
+             ((linked_moby = (char *)(D_L02_0015FFD8 + (*(int *)(moby_data + 0x3C) << 8))) == 0 ||
+              ((unsigned char *)linked_moby)[0x20] == 0xFE || ((unsigned char *)linked_moby)[0x20] == 0xFD))) {
+            *(unsigned short *)(moby + 0x34) &= 0xFFBE;
+            *(int *)(moby_data + 0x30) = -1;
+            moby[0x20] = 0;
         }
         break;
     }
@@ -1225,14 +1225,14 @@ void FUN_L02_002e0cd8(char *moby) {
     int i;
     if (level_game_mode == 2 && big_head_cheat_enabled != 0) {
         for (i = 0; i < talk_camera.count; i++) {
-            char *e = talk_camera.mobys[i];
-            if (*(short *)(e + 0xA6) == *(short *)(moby + 0xA6)) {
-                unsigned char *s = D_L02_0017CA40;
-                if (s[1] == 0) {
-                    attach_manipulator(e, 0, s);
-                    *(float *)(s + 0x20) = 2.75f;
-                    *(float *)(s + 0x24) = 2.75f;
-                    *(float *)(s + 0x28) = 2.75f;
+            char *candidate_moby = talk_camera.mobys[i];
+            if (*(short *)(candidate_moby + 0xA6) == *(short *)(moby + 0xA6)) {
+                unsigned char *manipulator = D_L02_0017CA40;
+                if (manipulator[1] == 0) {
+                    attach_manipulator(candidate_moby, 0, manipulator);
+                    *(float *)(manipulator + 0x20) = 2.75f;
+                    *(float *)(manipulator + 0x24) = 2.75f;
+                    *(float *)(manipulator + 0x28) = 2.75f;
                 }
             }
         }
@@ -1390,25 +1390,25 @@ extern int scale_game_frames(int) __asm__("FUN_001f96f8");
 s32 random_integer_below(s32 arg0) __asm__("FUN_00213260");
 
 void FUN_L02_002ea7d0(char *moby) {
-    float *d = *(float **)(moby + 0x78);
-    int *q;
+    float *moby_data = *(float **)(moby + 0x78);
+    int *sprite_timers;
     int i;
 
     for (i = 0; i < 4; i++) {
-        d[i] = (float)random_integer_below(0xFF);
+        moby_data[i] = (float)random_integer_below(0xFF);
     }
-    d[4] = -1.0f;
-    d[5] = -2.25f;
-    d[6] = 1.25f;
-    d[7] = 2.5f;
-    q = (int *)(d + 8);
+    moby_data[4] = -1.0f;
+    moby_data[5] = -2.25f;
+    moby_data[6] = 1.25f;
+    moby_data[7] = 2.5f;
+    sprite_timers = (int *)(moby_data + 8);
     for (i = 0; i < 4; i++) {
-        q[i] = scale_game_frames(0x3F + i * 0x40);
+        sprite_timers[i] = scale_game_frames(0x3F + i * 0x40);
     }
-    d[12] = 2.5f;
-    d[13] = 3.0f;
-    d[15] = 2.5f;
-    d[14] = 3.0f;
+    moby_data[12] = 2.5f;
+    moby_data[13] = 3.0f;
+    moby_data[15] = 2.5f;
+    moby_data[14] = 3.0f;
 }
 #include "sda.h"
 typedef struct {
@@ -1429,35 +1429,35 @@ extern unsigned char *func_L00_00273E08_ea8b0(void *, int, unsigned char, int, i
                                               float) __asm__("FUN_L00_00272f68");
 extern int func_001FA898_2ebce8_ea8b0(float) __asm__("FUN_001fa6d0");
 extern char D_L02_00167440_ea8b0[] __asm__("D_L02_001673C0");
-void FUN_L02_002ea8b0(char *m) {
-    L02SpriteData_ea8b0 *p = *(L02SpriteData_ea8b0 **)(m + 0x78);
+void FUN_L02_002ea8b0(char *moby) {
+    L02SpriteData_ea8b0 *sprite_data = *(L02SpriteData_ea8b0 **)(moby + 0x78);
     float d[4] __attribute__((aligned(16)));
     float e[4] __attribute__((aligned(16)));
     int i, col;
     float f;
 
-    *(float *)(m + 0x18) += 0.5f;
-    func_001F9BF0_ea8b0(d, D_L02_00167440_ea8b0, m + 0x10);
+    *(float *)(moby + 0x18) += 0.5f;
+    func_001F9BF0_ea8b0(d, D_L02_00167440_ea8b0, moby + 0x10);
     fast_vec_normalize(d, d, -0.3f);
     fast_vec_normalize(e, d, 0.1f);
-    func_001F9BD8_ea8b0(d, d, m + 0x10);
-    *(float *)(m + 0x18) -= 0.5f;
+    func_001F9BD8_ea8b0(d, d, moby + 0x10);
+    *(float *)(moby + 0x18) -= 0.5f;
     for (i = 0; i < 4; i++) {
-        float h = p->a[i] + p->b[i];
-        p->a[i] = h;
+        float h = sprite_data->a[i] + sprite_data->b[i];
+        sprite_data->a[i] = h;
         if (255.0f <= h) {
-            p->a[i] = h - 255.0f;
+            sprite_data->a[i] = h - 255.0f;
         } else if (h <= 0.0f) {
-            p->a[i] = h + 255.0f;
+            sprite_data->a[i] = h + 255.0f;
         }
-        if (func_001F9908_ea8b0(&p->c[i])) {
-            p->c[i] = func_001F9850_ea8b0(0xFF);
+        if (func_001F9908_ea8b0(&sprite_data->c[i])) {
+            sprite_data->c[i] = func_001F9850_ea8b0(0xFF);
         }
-        f = convert_integer_to_float(func_001F9850_ea8b0(0xFF) - p->c[i]);
+        f = convert_integer_to_float(func_001F9850_ea8b0(0xFF) - sprite_data->c[i]);
         f = f / (float)func_001F9850_ea8b0(0xFF);
         col = func_001FA8A8_2ebce8_ea8b0(0x4040FFFF, 0x1040FFFF, func_001F9B88_ea8b0(0.5f - f));
-        func_L00_00273E08_ea8b0(d, col, func_001FA898_2ebce8_ea8b0(p->a[i]) & 0xFF, 0x35, 1, 2, 0,
-                                p->d[i]);
+        func_L00_00273E08_ea8b0(d, col, func_001FA898_2ebce8_ea8b0(sprite_data->a[i]) & 0xFF, 0x35, 1, 2, 0,
+                                sprite_data->d[i]);
         func_001F9BD8_ea8b0(d, d, e);
     }
 }

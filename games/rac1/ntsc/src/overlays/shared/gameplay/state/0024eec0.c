@@ -24,16 +24,16 @@ void subtract_vector_xyz(Vec4 *, void *, void *) __asm__("FUN_001f9a28");
 void transform_vector(Vec4 *, Vec4 *, Mtx *) __asm__("FUN_001f9d20");
 void fast_vec_scale(Vec4 *, Vec4 *, float) __asm__("FUN_001f9a68");
 void FUN_L00_0024eed8(char *p, int idx, void *v, float a, float b);
-void FUN_L00_0024eed8(char *p, int idx, void *v, float a, float b) {
-    Mtx m;
-    Vec4 t;
-    Ent32 *e = &(*(Tbl **)(p + 0x94))->e[idx];
-    float k = 1024.0f / *(float *)(p + 0x2C);
-    transpose_rotation_matrix(&m, p + 0xC0);
-    subtract_vector_xyz(&t, v, p + 0x10);
-    transform_vector(&t, &t, &m);
-    fast_vec_scale(&t, &t, k);
-    qcopy(&e->v, &t);
+void FUN_L00_0024eed8(char *moby, int idx, void *v, float a, float b) {
+    Mtx transposed_rotation;
+    Vec4 local_offset;
+    Ent32 *e = &(*(Tbl **)(moby + 0x94))->e[idx];
+    float k = 1024.0f / *(float *)(moby + 0x2C);
+    transpose_rotation_matrix(&transposed_rotation, moby + 0xC0);
+    subtract_vector_xyz(&local_offset, v, moby + 0x10);
+    transform_vector(&local_offset, &local_offset, &transposed_rotation);
+    fast_vec_scale(&local_offset, &local_offset, k);
+    qcopy(&e->v, &local_offset);
     e->b = b * k;
     e->v.w = a * k;
 }
@@ -47,19 +47,19 @@ void FUN_L00_0024eed8(char *p, int idx, void *v, float a, float b) {
 void FUN_L00_0024efb0(unsigned char *a, int dx, int dy);
 void FUN_L00_0024efb0(unsigned char *a, int dx, int dy) {
     int i;
-    int n = a[4] + a[5];
-    int *t = *(int **)a;
-    for (i = 0; i < n; i++, t += 4) {
-        unsigned short *e = *(unsigned short **)t;
-        int c = ((unsigned char *)e)[2];
+    int entry_count = a[4] + a[5];
+    int *entry_cursor = *(int **)a;
+    for (i = 0; i < entry_count; i++, entry_cursor += 4) {
+        unsigned short *point_pair_cursor = *(unsigned short **)entry_cursor;
+        int point_pair_count = ((unsigned char *)point_pair_cursor)[2];
         int cnt;
-        e += 2;
-        if (c != 0) {
-            cnt = c;
+        point_pair_cursor += 2;
+        if (point_pair_count != 0) {
+            cnt = point_pair_count;
             do {
-                e[0] = e[0] + dx;
-                e[1] = e[1] + dy;
-                e += 2;
+                point_pair_cursor[0] = point_pair_cursor[0] + dx;
+                point_pair_cursor[1] = point_pair_cursor[1] + dy;
+                point_pair_cursor += 2;
                 cnt--;
             } while (cnt != 0);
         }
@@ -107,24 +107,24 @@ SlotBuffer slot_buffers_l16[6] __asm__("D_L16_001871C0") = {{0}};
 SlotBuffer slot_buffers_l17[6] __asm__("D_L17_00187640") = {{0}};
 SlotBuffer slot_buffers_l18[6] __asm__("D_L18_00187740") = {{0}};
 
-Slot *FUN_L00_0024f028(char *o, int id) {
+Slot *FUN_L00_0024f028(char *owner, int id) {
     int i = 0;
-    Slot *s;
+    Slot *selected_slot;
     unsigned char *r;
     for (i = 0; i < 6 && D_L00_0018EB40[i].used != 0; i++) {
     }
-    s = &D_L00_0018EB40[i];
-    s->used = 1;
-    s->id = id;
+    selected_slot = &D_L00_0018EB40[i];
+    selected_slot->used = 1;
+    selected_slot->id = id;
     id = (short)id;
-    s->p10 = slot_buffers[i];
-    s->p14 = *(int *)(o + 0x24);
-    r = *(unsigned char **)(*(char **)(*(char **)(o + 0x24) + 0x1C) + id * 4 + 4);
-    s->s2 = r[2];
-    s->p0C = r + (r[0] + 4);
-    s->p1C = *(void **)(o + 0x60);
-    *(Slot **)(o + 0x60) = s;
-    return s;
+    selected_slot->p10 = slot_buffers[i];
+    selected_slot->p14 = *(int *)(owner + 0x24);
+    r = *(unsigned char **)(*(char **)(*(char **)(owner + 0x24) + 0x1C) + id * 4 + 4);
+    selected_slot->s2 = r[2];
+    selected_slot->p0C = r + (r[0] + 4);
+    selected_slot->p1C = *(void **)(owner + 0x60);
+    *(Slot **)(owner + 0x60) = selected_slot;
+    return selected_slot;
 }
 /* FUN_L00_0024f0e8: unlinks *slot from its owner's singly linked list
  * (head at owner+0x60, link at node+0x1C), frees the 0x40-byte node and
@@ -142,18 +142,18 @@ typedef struct {
 extern void memset_words(void *, s32, s32) __asm__("FUN_001f97e8");
 
 void FUN_L00_0024f0e8(ListOwner_24f0e8 *owner, ListNode_24f0e8 **slot) {
-    ListNode_24f0e8 *p;
+    ListNode_24f0e8 *list_cursor;
 
     if (*slot == 0)
         return;
     if (owner->head == *slot) {
         owner->head = (*slot)->next;
     } else {
-        p = owner->head;
-        while (p->next != 0 && p->next != *slot)
-            p = p->next;
-        if (p->next == *slot)
-            p->next = (*slot)->next;
+        list_cursor = owner->head;
+        while (list_cursor->next != 0 && list_cursor->next != *slot)
+            list_cursor = list_cursor->next;
+        if (list_cursor->next == *slot)
+            list_cursor->next = (*slot)->next;
     }
     memset_words(*slot, 0, 0x40);
     *slot = 0;
@@ -293,9 +293,9 @@ void FUN_L00_0024f440_c(char *obj, int i, int j, Packet_24f440 *out) {
     char *u = *(char **)(obj + 0x14);
     int nb = (unsigned char)t[8];
     int na = (unsigned char)u[8];
-    Frame_24f440 *s;
+    Frame_24f440 *selected_frame;
     unsigned short a;
-    int n;
+    int trailing_byte_count;
     int k;
     unsigned char *ix;
     u64_24f440 *src;
@@ -305,34 +305,34 @@ void FUN_L00_0024f440_c(char *obj, int i, int j, Packet_24f440 *out) {
         char **tt = (char **)(t + 0x48);
         char *r = tt[i];
         Frame_24f440 **ss = (Frame_24f440 **)(r + 0x1C);
-        s = ss[j];
+        selected_frame = ss[j];
     }
     section(out, ((na + 3) * 8) & 0xFF0);
-    k = na + s->hA;
-    k += s->hE;
+    k = na + selected_frame->hA;
+    k += selected_frame->hE;
     out->h8 = na * 8;
     {
-        void *from = &((u64_24f440 *)s)[nb + 2];
+        void *from = &((u64_24f440 *)selected_frame)[nb + 2];
 
         out->h6 = (k + 1) >> 1;
-        a = s->hA;
+        a = selected_frame->hA;
         out->hA = a;
         out->hC = (a + na) * 8;
-        out->hE = s->hE;
-        n = s->qwc * 16 - nb * 8;
-        if (n != 0)
-            FUN_001f9838_24f440(&((u64_24f440 *)out)[na + 2], from, n);
+        out->hE = selected_frame->hE;
+        trailing_byte_count = selected_frame->qwc * 16 - nb * 8;
+        if (trailing_byte_count != 0)
+            FUN_001f9838_24f440(&((u64_24f440 *)out)[na + 2], from, trailing_byte_count);
     }
     ix = (unsigned char *)(*(char **)(*(char **)(obj + 0x18) + 0x1C) + 4);
-    src = s->q;
+    src = selected_frame->q;
     if (nb != 0) {
-        int c = nb;
+        int remaining_scatter_count = nb;
         do {
-            c--;
+            remaining_scatter_count--;
             ((u64_24f440 *)out)[*ix + 2] = *src;
             ix++;
             src++;
-        } while (c != 0);
+        } while (remaining_scatter_count != 0);
     }
     q = (u64_24f440 *)((char *)out + out->h6 * 16);
     if (*q == 0)

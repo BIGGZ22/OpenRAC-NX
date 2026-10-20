@@ -2516,7 +2516,72 @@ void Amoeboid_HitAndSearch(char *m) {
     *(int *)(m + 0x90) = FastTweenColor((FastSin(ang) + 1.0f) * 0.5f,
                                            *(int *)&D_L01_00161A28, *(int *)&D_L01_00161A2C);
 }
-INCLUDE_ASM("asm/overlays", func_L01_002F0728);
+extern short *lists_2F0728[] __asm__("D_L01_001ABFC0");
+extern Moby *entities_2F0728 SDATA(D_L01_00160058);
+extern void func_L00_00251E30_2F0728(void *) __asm__("func_L00_00251E30");
+
+/* Elevator partner spawn: picks the class that pairs with this moby's
+   (0x23C -> 0x361, 0x361 -> 0x362), walks its group's entity list
+   (D_L01_001ABFC0[group], u16 indices with bit 15 marking the last entry)
+   for a live (state 12) moby of that class, copies this moby's update
+   distance, draw distance, spawn frame, flags, position, rotation and two
+   pvar floats onto it, refreshes it through func_L00_00251E30 and returns
+   it; 0 when the group has no list or no match. The entity table is read
+   after the null-list test and both misses share one `return 0`, which is
+   retail's register assignment and block order. */
+char *func_L01_002F0728(void *arg) {
+    Moby *self = arg;
+    short *list;
+    Moby *entities;
+    int entry;
+    int type = -1;
+    if (self->oclass == 0x23C) {
+        type = 0x361;
+    } else if (self->oclass == 0x361) {
+        type = 0x362;
+    }
+    list = *(short **)(lists_2F0728 + self->group);
+    if (list != 0) {
+        entities = entities_2F0728;
+        goto scan;
+    }
+none:
+    return 0;
+    do {
+        Moby *other;
+        int index;
+advance:
+        if ((short)entry < 0) goto none;
+        list++;
+scan:
+        index = *(unsigned short *)list;
+        entry = index;
+        index &= 0x7FFF;
+        other = &entities[index];
+        if (other->state != 12 || other->oclass != type) goto advance;
+        {
+            u8 *other_data = *(u8 * volatile *)&other->pvars;
+            u8 unk30 = ((volatile Moby *)self)->update_dist;
+            u8 *self_data = self->pvars;
+            other->update_dist = unk30;
+            *(u16 *)&other->draw_dist = *(u16 *)&self->draw_dist;
+            {
+                u64 spawn_frame = self->spawn_frame;
+                other->visible = 1;
+                other->spawn_frame = spawn_frame;
+            }
+            other->collision = other->pclass->collision;
+            other->flags = self->flags;
+            qcopy(&other->pos, &self->pos);
+            qcopy(&other->rot, &self->rot);
+            *(float *)(other_data + 0x20) = *(float *)(self_data + 0x20);
+            *(float *)(other_data + 0x224) = *(float *)(self_data + 0x224);
+            func_L00_00251E30_2F0728(other);
+            return (char *)other;
+        }
+    } while (1);
+    return 0;
+}
 extern unsigned short *D_L01_001ABFC0[];
 extern int D_L01_00160058_m __asm__("D_L01_00160058") MACRO_ADDR;
 

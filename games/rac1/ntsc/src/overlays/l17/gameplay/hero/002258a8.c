@@ -149,6 +149,10 @@ extern int func_001F9908_r(int *) __asm__("FUN_001f9740");
 
 void FUN_L17_002258a8(void) {
     enum {
+        HERO_STATE_LEDGE_HANG_ENTRY = 24,
+        HERO_STATE_LEDGE_HANG = 25,
+        HERO_STATE_LEDGE_SHIMMY_POSITIVE_YAW = 26,
+        HERO_STATE_LEDGE_SHIMMY_NEGATIVE_YAW = 27,
         HERO_STATE_GRIND_JUMP = 41,
         HERO_STATE_GRIND_RAIL_TRANSFER = 42,
         HERO_STATE_GRIND_ATTACK = 43,
@@ -1114,8 +1118,8 @@ void FUN_L17_002258a8(void) {
                         break;
                     }
                     if (hero.unk2220 != -1) {
-                        Row13E650 *e = (Row13E650 *)(D_0013E550 + hero.unk2220 * 0x70);
-                        if (e->f88 == ((unsigned char *)hero.moby) && e->f74 != 0) {
+                        Row13E650 *voice_slot_record = (Row13E650 *)(D_0013E550 + hero.unk2220 * 0x70);
+                        if (voice_slot_record->f88 == ((unsigned char *)hero.moby) && voice_slot_record->f74 != 0) {
                             release_voice_slot(hero.unk2220);
                         }
                     }
@@ -1628,12 +1632,12 @@ void FUN_L17_002258a8(void) {
                         hero.unk1E4 = scale_game_frames(8);
                     }
                     break;
-                case 24:
+                case HERO_STATE_LEDGE_HANG_ENTRY:
                     if (13.5f < hero.anim_frame) {
                         hero_set_state(0x19, 0);
                     }
                     break;
-                case 25:
+                case HERO_STATE_LEDGE_HANG:
                     if ((hero.unkA98 & 2) && ((unsigned char *)hero.moby)[0x53] == 0x20) {
                         set_hero_animation(0x21, 0, scale_game_frames(6));
                     }
@@ -1686,8 +1690,8 @@ void FUN_L17_002258a8(void) {
                         }
                     }
                     break;
-                case 26:
-                case 27: {
+                case HERO_STATE_LEDGE_SHIMMY_POSITIVE_YAW:
+                case HERO_STATE_LEDGE_SHIMMY_NEGATIVE_YAW: {
                     float ang;
 
                     qcopy(v0, hero.motion.pos.f);

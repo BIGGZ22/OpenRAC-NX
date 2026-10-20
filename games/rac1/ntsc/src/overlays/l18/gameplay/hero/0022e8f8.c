@@ -154,7 +154,11 @@ extern int func_001F9908_r(int *) __asm__("FUN_001f9740");
 
 void FUN_L18_0022e8f8(void) {
     enum {
+        HERO_STATE_LEDGE_HANG_ENTRY = 24,
         HERO_STATE_LEDGE_HANG = 25,
+        HERO_STATE_LEDGE_SHIMMY_CCW = 26,
+        HERO_STATE_LEDGE_SHIMMY_CW = 27,
+        HERO_STATE_LEDGE_JUMP = 28,
         HERO_STATE_GRIND_JUMP = 41,
         HERO_STATE_GRIND_RAIL_TRANSFER = 42,
         HERO_STATE_GRIND_ATTACK = 43,
@@ -1028,8 +1032,8 @@ void FUN_L18_0022e8f8(void) {
                         break;
                     }
                     if (hero.unk2220 != -1) {
-                        Row13E650 *e = (Row13E650 *)(D_0013E550 + hero.unk2220 * 0x70);
-                        if (e->f88 == ((unsigned char *)hero.moby) && e->f74 != 0) {
+                        Row13E650 *voice_slot_entry = (Row13E650 *)(D_0013E550 + hero.unk2220 * 0x70);
+                        if (voice_slot_entry->f88 == ((unsigned char *)hero.moby) && voice_slot_entry->f74 != 0) {
                             release_voice_slot(hero.unk2220);
                         }
                     }
@@ -1527,7 +1531,7 @@ void FUN_L18_0022e8f8(void) {
                         }
                     }
                     break;
-                case 24:
+                case HERO_STATE_LEDGE_HANG_ENTRY:
                     if (13.5f < hero.anim_frame) {
                         hero_set_state(0x19, 0);
                     }
@@ -1585,8 +1589,8 @@ void FUN_L18_0022e8f8(void) {
                         }
                     }
                     break;
-                case 26:
-                case 27: {
+                case HERO_STATE_LEDGE_SHIMMY_CCW:
+                case HERO_STATE_LEDGE_SHIMMY_CW: {
                     float ang;
 
                     qcopy(v0, hero.motion.pos.f);
@@ -1897,7 +1901,7 @@ void FUN_L18_0022e8f8(void) {
                 case HERO_STATE_PACK_LONG_JUMP:
                 case 17:
                 case 18:
-                case 28:
+                case HERO_STATE_LEDGE_JUMP:
                 case 60:
                 case 105:
                     if (hero.unk4AE != 0) {

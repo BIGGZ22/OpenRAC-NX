@@ -20,20 +20,20 @@ extern void fast_vec_sub(void *, void *, void *) __asm__("FUN_001f9a28");
 extern void fast_vec_normalize(void *, void *, float) __asm__("FUN_001f9bf8");
 void build_spherical_offset(f32 *out, f32 scale, f32 a, f32 b) __asm__("FUN_00214db0");
 
-int FUN_L08_002e0228(struct Moby *m) {
-    float a[4];
+int FUN_L08_002e0228(struct Moby *moby) {
+    float facing_direction[4];
     float b[4];
-    int *p = (int *)((char *)m->pvars + 0x60);
+    int *linked_targets = (int *)((char *)moby->pvars + 0x60);
     int i;
     for (i = 0; i < 8; i++) {
-        if (p[i] != 0) {
-            float d;
-            build_spherical_offset(a, 1.0f, m->rot.z, -m->rot.y);
-            fast_vec_sub(b, (char *)p[i] + 0x10, D_L08_001675C0);
+        if (linked_targets[i] != 0) {
+            float direction_dot;
+            build_spherical_offset(facing_direction, 1.0f, moby->rot.z, -moby->rot.y);
+            fast_vec_sub(b, (char *)linked_targets[i] + 0x10, D_L08_001675C0);
             fast_vec_normalize(b, b, 1.0f);
-            d = fast_vec_dot(b, a);
-            if (fast_cos(0.06981317f) < d)
-                return p[i];
+            direction_dot = fast_vec_dot(b, facing_direction);
+            if (fast_cos(0.06981317f) < direction_dot)
+                return linked_targets[i];
         }
     }
     return 0;
@@ -61,21 +61,21 @@ extern void moby_point_position(void *, int, void *) __asm__("FUN_L00_0024f7c8")
 extern void FUN_L00_00250df8(void *);
 
 void *FUN_L08_002e1c98(struct Moby *parent, int oClass, int joint, int pjoint) {
-    unsigned char *m = func_0020D348_m(oClass);
+    unsigned char *child_moby = func_0020D348_m(oClass);
     float child_joint_position[4], parent_joint_position[4];
-    if (m != 0) {
-        m[0x30] = 0xFF;
-        *(short *)(m + 0x32) = 0xFF;
-        m[0x31] = 1;
-        *(unsigned short *)(m + 0x34) |= 0x4000;
-        *(long *)(m + 0x38) = *(long *)(*(char **)(D_0013E533 + 0x2E9D) + 0x38);
-        qcopy(m + 0x40, &parent->rot);
-        moby_point_position(m, joint, child_joint_position);
+    if (child_moby != 0) {
+        child_moby[0x30] = 0xFF;
+        *(short *)(child_moby + 0x32) = 0xFF;
+        child_moby[0x31] = 1;
+        *(unsigned short *)(child_moby + 0x34) |= 0x4000;
+        *(long *)(child_moby + 0x38) = *(long *)(*(char **)(D_0013E533 + 0x2E9D) + 0x38);
+        qcopy(child_moby + 0x40, &parent->rot);
+        moby_point_position(child_moby, joint, child_joint_position);
         moby_point_position(parent, pjoint, parent_joint_position);
-        fast_vec_sub(m + 0x10, parent_joint_position, child_joint_position);
-        FUN_L00_00250df8(m);
+        fast_vec_sub(child_moby + 0x10, parent_joint_position, child_joint_position);
+        FUN_L00_00250df8(child_moby);
     }
-    return m;
+    return child_moby;
 }
 /* builds a basis from a direction vector and writes the orientation into the moby */
 /* Ported from rac1-decomp (src/overlays/l08_batalia/vendor_002E0258.c: func_L08_002E6130), where it is exact; names translated to the US level program. */
@@ -85,26 +85,26 @@ extern void euler_rotation_matrix(float *, float *) __asm__("FUN_001fa050");
 extern void matrix_to_euler(void *, void *) __asm__("FUN_00214598");
 extern void fast_vec_cross(void *, void *, void *) __asm__("FUN_001f9ad8");
 
-void FUN_L08_002e4db8(struct Moby *a, float *v) {
-    float m[16];
-    float n[16];
+void FUN_L08_002e4db8(struct Moby *moby, float *v) {
+    float direction_basis_matrix[16];
+    float reconstructed_rotation_matrix[16];
     float r[4];
-    float s[4];
-    char *d = (char *)a->pvars;
+    float second_basis_vector[4];
+    char *pvars_cursor = (char *)moby->pvars;
     r[1] = v[2];
     r[2] = v[0];
     r[0] = -v[1];
     fast_vec_cross(r, v, r);
-    fast_vec_cross(s, r, v);
-    qcopy(m, r);
-    qcopy(m + 4, s);
-    qcopy(m + 8, v);
-    clear_u64_value(m + 12);
-    d += 0x10;
-    m[15] = 1.0f;
-    matrix_to_euler(m, d);
-    euler_rotation_matrix(n, (float *)d);
-    n[15] = 42.0f;
+    fast_vec_cross(second_basis_vector, r, v);
+    qcopy(direction_basis_matrix, r);
+    qcopy(direction_basis_matrix + 4, second_basis_vector);
+    qcopy(direction_basis_matrix + 8, v);
+    clear_u64_value(direction_basis_matrix + 12);
+    pvars_cursor += 0x10;
+    direction_basis_matrix[15] = 1.0f;
+    matrix_to_euler(direction_basis_matrix, pvars_cursor);
+    euler_rotation_matrix(reconstructed_rotation_matrix, (float *)pvars_cursor);
+    reconstructed_rotation_matrix[15] = 42.0f;
 }
 /* spawns the child mobys this object owns and fills its part table */
 /* Ported from rac1-decomp (src/overlays/l08_batalia/vendor_002E0258.c: func_L08_002E9B60), where it is exact; names translated to the US level program. */
@@ -113,9 +113,9 @@ extern int FUN_L08_002e1c98_c() __asm__("FUN_L08_002e1c98");
 
 void FUN_L08_002e8788(char *moby) {
     char *data = *(char **)(moby + 0x78);
-    char *e = data + 0xBC;
+    char *anchor_joint_cursor = data + 0xBC;
     int i = 0;
-    char *c;
+    char *child_moby;
     char *c2;
     char *c3;
     *(char **)(data + 0x60) = moby;
@@ -126,12 +126,12 @@ void FUN_L08_002e8788(char *moby) {
     *(char **)(data + 0x94) = moby;
     *(int *)(data + 0x98) = 1;
     *(int *)(data + 0x9C) = 0;
-    c = FUN_L08_002e1c98_c(moby, 0x1BD, 0, 2);
-    *(char **)(data + 0x70) = c;
+    child_moby = FUN_L08_002e1c98_c(moby, 0x1BD, 0, 2);
+    *(char **)(data + 0x70) = child_moby;
     *(int *)(data + 0x7C) = 2;
     *(char **)(data + 0x74) = moby;
     *(int *)(data + 0x78) = 0;
-    *(float *)(c + 0x2C) = *(float *)(*(char **)(c + 0x24) + 0x24) * 0.75f;
+    *(float *)(child_moby + 0x2C) = *(float *)(*(char **)(child_moby + 0x24) + 0x24) * 0.75f;
     c2 = FUN_L08_002e1c98_c(moby, 0x1BA, 1, 1);
     *(char **)(data + 0x80) = c2;
     *(char **)(data + 0x84) = moby;
@@ -145,11 +145,11 @@ void FUN_L08_002e8788(char *moby) {
     do {
         int j = i + 2;
         i++;
-        *(char **)(e - 0xC) = FUN_L08_002e1c98_c(*(char **)(data + 0x90), 0x1BB, 0, j);
-        *(char **)(e - 8) = *(char **)(data + 0x90);
-        *(int *)(e - 4) = 0;
-        *(int *)e = j;
-        e += 0x10;
+        *(char **)(anchor_joint_cursor - 0xC) = FUN_L08_002e1c98_c(*(char **)(data + 0x90), 0x1BB, 0, j);
+        *(char **)(anchor_joint_cursor - 8) = *(char **)(data + 0x90);
+        *(int *)(anchor_joint_cursor - 4) = 0;
+        *(int *)anchor_joint_cursor = j;
+        anchor_joint_cursor += 0x10;
     } while (i < 8);
 }
 /* Re-aims the twelve child mobys of a parent, adjusts the parent's spin, then runs the children's follow-up. */
@@ -163,18 +163,18 @@ extern void moby_point_position(void *, int, void *) __asm__("FUN_L00_0024f7c8")
 extern void FUN_L00_00250df8(void *);
 
 extern float D_L08_00161D28 __attribute__((sda));
-void FUN_L08_002e8ba0(struct Moby *a) {
-    char *data = (char *)a->pvars;
+void FUN_L08_002e8ba0(struct Moby *parent_moby) {
+    char *data = (char *)parent_moby->pvars;
     float part_joint_position[4], anchor_joint_position[4], joint_alignment_offset[4];
     char *base = data + 0x60;
     int i;
     for (i = 0; i < 12; i++) {
-        int *e = (int *)(base + 0x1C + i * 16);
-        char *m = (char *)e[-3];
+        int *anchor_joint_cursor = (int *)(base + 0x1C + i * 16);
+        char *m = (char *)anchor_joint_cursor[-3];
         if (m != 0) {
-            *(float *)(m + 0x48) = a->rot.z;
-            moby_point_position(m, e[-1], part_joint_position);
-            moby_point_position((void *)e[-2], e[0], anchor_joint_position);
+            *(float *)(m + 0x48) = parent_moby->rot.z;
+            moby_point_position(m, anchor_joint_cursor[-1], part_joint_position);
+            moby_point_position((void *)anchor_joint_cursor[-2], anchor_joint_cursor[0], anchor_joint_position);
             fast_vec_sub(joint_alignment_offset, anchor_joint_position, part_joint_position);
             fast_vec_add(m + 0x10, m + 0x10, joint_alignment_offset);
         }
@@ -202,15 +202,15 @@ void FUN_L08_002e9a18(struct Moby *arg) {
     float anchor_joint_position[4];
     float joint_alignment_offset[4];
     int i;
-    char *p;
+    char *part_entry_cursor;
     char *parts = data + 0x60;
     for (i = 0; i < 16; i++) {
-        char *e = parts + 0x1C + i * 16;
-        char *part = *(char **)(e - 0xC);
+        char *anchor_joint_cursor = parts + 0x1C + i * 16;
+        char *part = *(char **)(anchor_joint_cursor - 0xC);
         if (part != 0) {
             *(float *)(part + 0x48) = arg->rot.z;
-            moby_point_position(part, *(int *)(e - 4), part_joint_position);
-            moby_point_position(*(void **)(e - 8), *(int *)e, anchor_joint_position);
+            moby_point_position(part, *(int *)(anchor_joint_cursor - 4), part_joint_position);
+            moby_point_position(*(void **)(anchor_joint_cursor - 8), *(int *)anchor_joint_cursor, anchor_joint_position);
             fast_vec_sub(joint_alignment_offset, anchor_joint_position, part_joint_position);
             fast_vec_add(part + 0x10, part + 0x10, joint_alignment_offset);
         }
@@ -220,17 +220,17 @@ void FUN_L08_002e9a18(struct Moby *arg) {
             fast_add_rotations(*(float *)(*(char **)(data + 0x90) + 0x40),
                                D_L08_00161D38 * DEG_TO_RAD * D_0015ED6C);
     }
-    p = parts + 0x10;
+    part_entry_cursor = parts + 0x10;
     for (i = 0; i < 16; i++) {
-        char *o = *(char **)p;
-        if (o != 0) {
-            FUN_L00_00250df8(o);
-            o = *(char **)p;
-            if (*(unsigned short *)(o + 0x34) & 0x8000) {
-                fast_vec_scale(o + 0xD0, o + 0xD0, -1.0f);
+        char *updated_part = *(char **)part_entry_cursor;
+        if (updated_part != 0) {
+            FUN_L00_00250df8(updated_part);
+            updated_part = *(char **)part_entry_cursor;
+            if (*(unsigned short *)(updated_part + 0x34) & 0x8000) {
+                fast_vec_scale(updated_part + 0xD0, updated_part + 0xD0, -1.0f);
             }
         }
-        p += 16;
+        part_entry_cursor += 16;
     }
 }
 
@@ -1085,33 +1085,33 @@ void FUN_L00_0026a9f0(void *pos, void *dir, int col, int d, int n, int b1A, int 
 extern void func_L00_0026B890_2E2A38(void *, void *, int, int, int, int, int, int, float, float) __asm__("FUN_L00_0026a9f0");
 extern char *func_00219780_2E2A38(void *, void *, void *, int, int, int, int, int, int) __asm__("FUN_00218888");
 
-void FUN_L08_002e16c0(Moby_2E2A38 *m) {
+void FUN_L08_002e16c0(Moby_2E2A38 *debris_moby) {
     enum {
         FALLING_DEBRIS_INITIALIZE = 1,
         FALLING_DEBRIS_BEFORE_BURST = 2,
         FALLING_DEBRIS_AFTER_BURST = 3
     };
-    Data_2E2A38 *d = m->data;
+    Data_2E2A38 *debris_data = debris_moby->data;
     float particle_primary_vector[4];
     Pair_2E2A38 tab;
     float particle_secondary_vector[4];
     float particle_spawn_position[4];
     int i;
 
-    switch (m->state) {
+    switch (debris_moby->state) {
     case FALLING_DEBRIS_INITIALIZE:
-        d->spin_x = random_float_between_c2(-(D_0015ED6C_gp * 1.5707964f), D_0015ED6C_gp * 1.5707964f);
-        d->spin_y = random_float_between_c2(-(D_0015ED6C_gp * 1.5707964f), D_0015ED6C_gp * 1.5707964f);
-        d->life = (int)random_float_between_c2((float)scale_game_frames_alt(0x5A), (float)scale_game_frames_alt(0x96));
-        m->state = 2;
+        debris_data->spin_x = random_float_between_c2(-(D_0015ED6C_gp * 1.5707964f), D_0015ED6C_gp * 1.5707964f);
+        debris_data->spin_y = random_float_between_c2(-(D_0015ED6C_gp * 1.5707964f), D_0015ED6C_gp * 1.5707964f);
+        debris_data->life = (int)random_float_between_c2((float)scale_game_frames_alt(0x5A), (float)scale_game_frames_alt(0x96));
+        debris_moby->state = 2;
     case FALLING_DEBRIS_BEFORE_BURST:
-        d->vel[2] -= D_0015ED70 * 10.8f * 0.5f;
-        add_vector_xyz(m->pos, m->pos, d);
-        m->rot[0] = fast_add_rotations_c(m->rot[0], d->spin_x);
-        m->rot[1] = fast_add_rotations_c(m->rot[1], d->spin_y);
-        if (m->pos[0] < 8.0f || m->pos[1] < 8.0f || m->pos[0] > 500.0f || m->pos[1] > 500.0f ||
-            m->pos[2] > 500.0f) {
-            mark_moby_for_removal_c(m);
+        debris_data->vel[2] -= D_0015ED70 * 10.8f * 0.5f;
+        add_vector_xyz(debris_moby->pos, debris_moby->pos, debris_data);
+        debris_moby->rot[0] = fast_add_rotations_c(debris_moby->rot[0], debris_data->spin_x);
+        debris_moby->rot[1] = fast_add_rotations_c(debris_moby->rot[1], debris_data->spin_y);
+        if (debris_moby->pos[0] < 8.0f || debris_moby->pos[1] < 8.0f || debris_moby->pos[0] > 500.0f || debris_moby->pos[1] > 500.0f ||
+            debris_moby->pos[2] > 500.0f) {
+            mark_moby_for_removal_c(debris_moby);
             return;
         }
         if (random_integer_below_c(3) == 0) {
@@ -1129,16 +1129,16 @@ void FUN_L08_002e16c0(Moby_2E2A38 *m) {
                 int lo = scale_game_frames_alt(25);
                 b = FUN_L00_00257b90(lo, scale_game_frames_alt(30));
             }
-            func_L00_0026B890_2E2A38(m->pos, particle_primary_vector, 0x2F3F3F7F, *q, a, b, 0, 0, 400000.0f,
+            func_L00_0026B890_2E2A38(debris_moby->pos, particle_primary_vector, 0x2F3F3F7F, *q, a, b, 0, 0, 400000.0f,
                                      random_float_between_c2(8.0f, 16.0f) * D_0015ED6C_gp);
         }
-        if (m->pos[2] < 15.2f) {
+        if (debris_moby->pos[2] < 15.2f) {
             for (i = 0; i < D_L08_00161C00; i++) {
                 float ang = random_angle_radians_c();
                 int c1;
                 int c2;
                 int c3;
-                qcopy(particle_spawn_position, m->pos);
+                qcopy(particle_spawn_position, debris_moby->pos);
                 particle_spawn_position[0] += random_float_between_c2(-3.0f, 3.0f);
                 particle_spawn_position[1] += random_float_between_c2(-3.0f, 3.0f);
                 particle_primary_vector[2] = D_L08_00161C0C * D_0015ED6C_gp;
@@ -1154,17 +1154,17 @@ void FUN_L08_002e16c0(Moby_2E2A38 *m) {
                 c3 = truncate_float_to_s32_c2(FUN_001f96b0_c(random_float_between_c2((float)D_L08_00161C24, (float)(D_L08_00161C24 * 2))));
                 func_00219780_2E2A38(particle_spawn_position, particle_primary_vector, particle_secondary_vector, D_L08_00161C04, D_L08_00161C08, c1, c2, c3, -1);
             }
-            m->state = 3;
+            debris_moby->state = 3;
         }
         break;
     case FALLING_DEBRIS_AFTER_BURST:
-        d->vel[2] -= D_0015ED70 * 10.8f * 0.5f;
-        add_vector_xyz(m->pos, m->pos, d);
-        m->rot[0] = fast_add_rotations_c(m->rot[0], d->spin_x);
-        m->rot[1] = fast_add_rotations_c(m->rot[1], d->spin_y);
-        if (m->pos[0] < 8.0f || m->pos[1] < 8.0f || m->pos[2] < 8.0f || m->pos[0] > 500.0f ||
-            m->pos[1] > 500.0f) {
-            mark_moby_for_removal_c(m);
+        debris_data->vel[2] -= D_0015ED70 * 10.8f * 0.5f;
+        add_vector_xyz(debris_moby->pos, debris_moby->pos, debris_data);
+        debris_moby->rot[0] = fast_add_rotations_c(debris_moby->rot[0], debris_data->spin_x);
+        debris_moby->rot[1] = fast_add_rotations_c(debris_moby->rot[1], debris_data->spin_y);
+        if (debris_moby->pos[0] < 8.0f || debris_moby->pos[1] < 8.0f || debris_moby->pos[2] < 8.0f || debris_moby->pos[0] > 500.0f ||
+            debris_moby->pos[1] > 500.0f) {
+            mark_moby_for_removal_c(debris_moby);
         }
         break;
     }
@@ -1188,7 +1188,7 @@ typedef struct {
 
 void FUN_L08_002e1d70(struct Moby *moby) {
     TargetBoardVars *vars = (TargetBoardVars *)moby->pvars;
-    struct Moby *m;
+    struct Moby *child_moby;
     s32 i;
     s32 pjoint;
 
@@ -1205,9 +1205,9 @@ void FUN_L08_002e1d70(struct Moby *moby) {
     vars->slots[1].anchor = moby;
     vars->slots[1].joint = 0;
     vars->slots[1].pjoint = pjoint;
-    m = FUN_L08_002e1c98((char *)moby, 0x1C2, 0, 4);
-    vars->slots[2].moby = m;
-    m->flags |= 0x8000;
+    child_moby = FUN_L08_002e1c98((char *)moby, 0x1C2, 0, 4);
+    vars->slots[2].moby = child_moby;
+    child_moby->flags |= 0x8000;
     vars->slots[2].anchor = moby;
     vars->slots[2].joint = 0;
     vars->slots[2].pjoint = 4;
@@ -1272,22 +1272,22 @@ typedef struct {
 
 /* Keeps the 33 linked parts glued to their anchors' joints and facing the moby, spins three of them (the middle
    one backwards), turns link 3 towards the hero, then updates every part. */
-void FUN_L08_002e2078(struct Moby *m) {
-    LinkedPartsVars *v = (LinkedPartsVars *)m->pvars;
+void FUN_L08_002e2078(struct Moby *moby) {
+    LinkedPartsVars *v = (LinkedPartsVars *)moby->pvars;
     PartLink *links = v->links;
-    float a[4];
+    float part_joint_position[4];
     float b[4];
-    float d[4];
+    float joint_alignment_offset[4];
     int i;
 
     for (i = 1; i < 34; i++) {
         struct Moby *part = v->links[i].part;
         if (part != 0) {
-            part->rot.z = m->rot.z;
-            moby_point_position(part, v->links[i].part_joint, a);
+            part->rot.z = moby->rot.z;
+            moby_point_position(part, v->links[i].part_joint, part_joint_position);
             moby_point_position(v->links[i].anchor, v->links[i].anchor_joint, b);
-            fast_vec_sub(d, b, a);
-            fast_vec_add(&part->pos, &part->pos, d);
+            fast_vec_sub(joint_alignment_offset, b, part_joint_position);
+            fast_vec_add(&part->pos, &part->pos, joint_alignment_offset);
         }
     }
     if (v->links[7].part != 0) {
@@ -1322,15 +1322,15 @@ extern void subtract_vector_xyz(void *, void *, void *) __asm__("FUN_001f9a28");
 void FUN_L08_002e2250(struct Moby *moby) {
     char *data = *(char **)((char *)moby + 0x78);
     char *entries = data + 0x60;
-    char *p = entries;
+    char *part_entry_cursor = entries;
     int i;
     int score = 0;
     int state = -1;
     int chosen = 0;
     char *base;
-    for (i = 0; i < 34; i++, p += 16) {
-        char *m = *(char **)p;
-        if (m != 0 && FUN_L00_0025a420(m, 0x10000, 0) != 0) {
+    for (i = 0; i < 34; i++, part_entry_cursor += 16) {
+        char *part_moby = *(char **)part_entry_cursor;
+        if (part_moby != 0 && FUN_L00_0025a420(part_moby, 0x10000, 0) != 0) {
             if (i < 7) {
                 if (score <= 0) { score = 1; state = 1; }
             } else if (i < 10) {
@@ -1338,7 +1338,7 @@ void FUN_L08_002e2250(struct Moby *moby) {
             } else {
                 if (score < 4) { score += 4; chosen = i; state = 2; }
             }
-            (*(unsigned char **)p)[0xA4] = 0xFF;
+            (*(unsigned char **)part_entry_cursor)[0xA4] = 0xFF;
         }
     }
     *(short *)(data + 0x28C) += score;
@@ -2538,7 +2538,7 @@ void FUN_L08_002e4e90(struct Moby *moby, float *out, float *rot) {
     float v[4];
     char *data = (char *)moby->pvars;
     float sx, sy, sz;
-    float t;
+    float basis_tilt_radians;
     switch (moby->oclass) {
     case MOBY_CLASS_FIVE_BOLT_PICKUP:
         sx = D_L08_00161C68 * D_L08_00161CB8;
@@ -2560,9 +2560,9 @@ void FUN_L08_002e4e90(struct Moby *moby, float *out, float *rot) {
     normalize_vector_xyz(u, b, -fast_sin(*(float *)(data + 0x60)));
     normalize_vector_xyz(v, b + 4, fast_cos(*(float *)(data + 0x60)));
     add_vector_xyz(dir, u, v);
-    t = sx * DEG_TO_RAD;
-    normalize_vector_xyz(u, dir, fast_cos(t));
-    normalize_vector_xyz(v, b + 8, fast_sin(t));
+    basis_tilt_radians = sx * DEG_TO_RAD;
+    normalize_vector_xyz(u, dir, fast_cos(basis_tilt_radians));
+    normalize_vector_xyz(v, b + 8, fast_sin(basis_tilt_radians));
     add_vector_xyz(up, u, v);
     normalize_vector_xyz(u, b, -fast_cos(*(float *)(data + 0x60)));
     normalize_vector_xyz(v, b + 4, -fast_sin(*(float *)(data + 0x60)));
@@ -2687,54 +2687,54 @@ extern s32 truncate_float_to_s32_c(f32) __asm__("func_001FA6D0");
 extern void *find_moby_hit(void *, int, int) __asm__("FUN_L00_0025a420");
 extern void func_0022ED80_2E9CB0(int, int, int) __asm__("FUN_0022da68");
 
-void FUN_L08_002e88d8(char *m) {
-    char *data = *(char **)(m + 0x78);
+void FUN_L08_002e88d8(char *parent_moby) {
+    char *data = *(char **)(parent_moby + 0x78);
     char *base = data + 0x60;
-    char **p = (char **)base;
+    char **part_entry_cursor = (char **)base;
     char **sq;
-    int n = 0;
+    int weighted_hit_score = 0;
     int idx = 0;
     int r = -1;
     int i;
-    for (i = 0; i < 13; i++, p += 4) {
-        if (*p != 0) {
-            if (find_moby_hit(*p, 0x10000, 0) != 0) {
+    for (i = 0; i < 13; i++, part_entry_cursor += 4) {
+        if (*part_entry_cursor != 0) {
+            if (find_moby_hit(*part_entry_cursor, 0x10000, 0) != 0) {
                 if (i < 3) {
-                    if (n <= 0) { n = 1; r = 1; }
+                    if (weighted_hit_score <= 0) { weighted_hit_score = 1; r = 1; }
                 } else if (i < 5) {
-                    if (n < 2) { n = 2; r = 1; }
+                    if (weighted_hit_score < 2) { weighted_hit_score = 2; r = 1; }
                 } else {
-                    if (n < 4) { n += 4; idx = i; r = 2; }
+                    if (weighted_hit_score < 4) { weighted_hit_score += 4; idx = i; r = 2; }
                 }
-                ((unsigned char *)*p)[0xA4] = 0xFF;
+                ((unsigned char *)*part_entry_cursor)[0xA4] = 0xFF;
             }
         }
     }
-    *(unsigned short *)(data + 0x13C) += n;
+    *(unsigned short *)(data + 0x13C) += weighted_hit_score;
     if (*(short *)(data + 0x13C) >= 8) {
         *(short *)(data + 0x13C) = *(short *)(data + 0x13C) % 8;
         if (idx != 0) {
             int o1 = idx * 16;
-            char **q = (char **)(base + o1);
-            char *t = *q;
+            char **selected_part_entry = (char **)(base + o1);
+            char *selected_part_moby = *selected_part_entry;
             char *d2;
-            d2 = *(char **)(t + 0x78);
-            cart_burst(m, t + 0x10, -1, 2.0f, 13.0f);
-            subtract_vector_xyz(d2, *q + 0x10, *(char **)(o1 + data + 0x64) + 0x10);
+            d2 = *(char **)(selected_part_moby + 0x78);
+            cart_burst(parent_moby, selected_part_moby + 0x10, -1, 2.0f, 13.0f);
+            subtract_vector_xyz(d2, *selected_part_entry + 0x10, *(char **)(o1 + data + 0x64) + 0x10);
             normalize_vector_xyz(d2, d2, D_0015ED6C * 10.0f);
-            (*q)[0x20] = 1;
-            *q = 0;
+            (*selected_part_entry)[0x20] = 1;
+            *selected_part_entry = 0;
             return;
         } else {
-            int s = truncate_float_to_s32_c(random_float_between_c(0.0f, 23.0f));
+            int random_search_start = truncate_float_to_s32_c(random_float_between_c(0.0f, 23.0f));
                         char *b2 = base;
             for (i = 0; i < 8; i++) {
-                int k = (i + s) % 8 + 5;
+                int k = (i + random_search_start) % 8 + 5;
                 int off = k * 16;
                 base = b2 + off; sq = (char **)base;
                 if (*sq != 0) {
                     char *d2 = *(char **)(*sq + 0x78);
-                    cart_burst(m, *sq + 0x10, -1, 2.0f, 13.0f);
+                    cart_burst(parent_moby, *sq + 0x10, -1, 2.0f, 13.0f);
                     subtract_vector_xyz(d2, *sq + 0x10, *(char **)(data + off + 0x64) + 0x10);
                     normalize_vector_xyz(d2, d2, D_0015ED6C * 10.0f);
                     (*sq)[0x20] = 1;
@@ -2742,10 +2742,10 @@ void FUN_L08_002e88d8(char *m) {
                     return;
                 }
             }
-            m[0x20] = 0x63;
+            parent_moby[0x20] = 0x63;
         }
     }
-    if (r >= 0) func_0022ED80_2E9CB0(r, 0, (int)m);
+    if (r >= 0) func_0022ED80_2E9CB0(r, 0, (int)parent_moby);
 }
 /* Flying gunship: cruises one path and fires at its target, or circles a second path and fires at random. */
 
@@ -2967,9 +2967,9 @@ void *FUN_L08_002e1c98_c2(char *parent, int oClass, int joint,
 
 void FUN_L08_002e9558(char *moby) {
     char *data = *(char **)(moby + 0x78);
-    char *e = data + 0xFC;
+    char *anchor_joint_cursor = data + 0xFC;
     int i = 0;
-    char *c;
+    char *child_moby;
     char *c2;
     char *c6;
     char *c8;
@@ -2981,12 +2981,12 @@ void FUN_L08_002e9558(char *moby) {
     *(char **)(data + 0x94) = moby;
     *(int *)(data + 0x98) = 0;
     *(int *)(data + 0x9C) = 0;
-    c = FUN_L08_002e1c98_c2(moby, 0x1BD, 0, 2);
-    *(char **)(data + 0x70) = c;
+    child_moby = FUN_L08_002e1c98_c2(moby, 0x1BD, 0, 2);
+    *(char **)(data + 0x70) = child_moby;
     *(int *)(data + 0x7C) = 2;
     *(char **)(data + 0x74) = moby;
     *(int *)(data + 0x78) = 0;
-    *(float *)(c + 0x2C) = *(float *)(*(char **)(c + 0x24) + 0x24) * 0.75f;
+    *(float *)(child_moby + 0x2C) = *(float *)(*(char **)(child_moby + 0x24) + 0x24) * 0.75f;
     c2 = FUN_L08_002e1c98_c2(*(char **)(data + 0x90), 0x1BA, 1, 1);
     *(char **)(data + 0x80) = c2;
     *(char **)(data + 0x84) = *(char **)(data + 0x90);
@@ -3019,11 +3019,11 @@ void FUN_L08_002e9558(char *moby) {
     do {
         int j = i + 2;
         i++;
-        *(char **)(e - 0xC) = FUN_L08_002e1c98_c2(*(char **)(data + 0x90), 0x1BB, 0, j);
-        *(char **)(e - 8) = *(char **)(data + 0x90);
-        *(int *)(e - 4) = 0;
-        *(int *)e = j;
-        e += 0x10;
+        *(char **)(anchor_joint_cursor - 0xC) = FUN_L08_002e1c98_c2(*(char **)(data + 0x90), 0x1BB, 0, j);
+        *(char **)(anchor_joint_cursor - 8) = *(char **)(data + 0x90);
+        *(int *)(anchor_joint_cursor - 4) = 0;
+        *(int *)anchor_joint_cursor = j;
+        anchor_joint_cursor += 0x10;
     } while (i < 8);
 }
 extern void cart_burst(void *, void *, s32, f32, f32) __asm__("FUN_L00_0025f090");

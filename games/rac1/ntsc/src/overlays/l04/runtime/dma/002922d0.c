@@ -17,15 +17,15 @@ extern int coll_line_fix(void *, void *, int, int, int) __asm__("FUN_001efa68");
 
 extern float D_L04_00173FE8 __attribute__((section(".data")));
 float FUN_L04_002922d0(float *pos) {
-    float a[4];
+    float clamped_probe_point[4];
     float b[4];
-    qcopy(a, pos);
-    a[2] = a[2] - 2.5f;
-    if (a[2] < 0.1f)
-        a[2] = 0.1f;
+    qcopy(clamped_probe_point, pos);
+    clamped_probe_point[2] = clamped_probe_point[2] - 2.5f;
+    if (clamped_probe_point[2] < 0.1f)
+        clamped_probe_point[2] = 0.1f;
     qcopy(b, pos);
     b[2] = b[2] + 0.75f;
-    if (coll_line_fix(b, a, 2, 0, 0) != 0)
+    if (coll_line_fix(b, clamped_probe_point, 2, 0, 0) != 0)
         return D_L04_00173FE8;
     return 0.0f;
 }
@@ -115,13 +115,13 @@ extern int walker_gait_mask(int *a, float t) __asm__("FUN_L00_002a13f0");
 
 /* The phase t (the caller's $f12) goes through untouched to the gait mask. */
 int FUN_L04_002927d0(char *moby, char *rig, float t) {
-    int **p = (int **)(rig + 0x70);
+    int **record_cursor = (int **)(rig + 0x70);
     int *found = 0;
     int i;
     for (i = 12; i >= 0; i--) {
-        int *e = *p++;
-        if (*e == (int)(unsigned char)moby[0x52])
-            found = e;
+        int *candidate_record = *record_cursor++;
+        if (*candidate_record == (int)(unsigned char)moby[0x52])
+            found = candidate_record;
     }
     if (found == 0)
         return (unsigned char)rig[0xB6];
@@ -178,7 +178,7 @@ extern float vector_length_xy(void *) __asm__("FUN_001f9b20");
 extern float angle_atan2(float, float) __asm__("FUN_001f9e90");
 extern char D_L04_00174040_2939E8[] __asm__("D_L04_00173FC0");
 
-int FUN_L04_00292828(StMoby_2939E8 *m, Steer_2939E8 *a)
+int FUN_L04_00292828(StMoby_2939E8 *moby, Steer_2939E8 *steer_state)
 {
     float push[4];
     float dir[4];
@@ -187,40 +187,40 @@ int FUN_L04_00292828(StMoby_2939E8 *m, Steer_2939E8 *a)
     int bit = 1;
     int j;
     float dz;
-    float n;
-    float h;
+    float height_correction_divisor;
+    float ground_height;
     float sum;
     float t;
 
     dz = 0.0f;
-    n = dz;
-    if (a->flags & 4) {
-        h = probe_ground_height(&m->pos, 0, 0.5f);
-        if (m->pos.z < h - 0.05f) {
-            dz = m->pos.z - h;
+    height_correction_divisor = dz;
+    if (steer_state->flags & 4) {
+        ground_height = probe_ground_height(&moby->pos, 0, 0.5f);
+        if (moby->pos.z < ground_height - 0.05f) {
+            dz = moby->pos.z - ground_height;
         } else {
-            if (a->vel < dz && m->pos.z < h + 0.1f - a->vel) {
-                dz = h - m->pos.z;
+            if (steer_state->vel < dz && moby->pos.z < ground_height + 0.1f - steer_state->vel) {
+                dz = ground_height - moby->pos.z;
             } else {
                 dz = -1.0f;
             }
         }
-        a->tilt = 0.0f;
+        steer_state->tilt = 0.0f;
     } else {
         func_001F9BC0_2939E8(push);
         sum = 0.0f;
         for (j = 0; j < 4; j++) {
-            Vec_2939E8 *e = &a->pts[j];
-            if (a->mask & bit) {
-                h = FUN_L04_002922d0_c((float *)e);
-                sum += h;
-                if (0.0f < h) {
+            Vec_2939E8 *probe_point = &steer_state->pts[j];
+            if (steer_state->mask & bit) {
+                ground_height = FUN_L04_002922d0_c((float *)probe_point);
+                sum += ground_height;
+                if (0.0f < ground_height) {
                     t = absolute_float(((StTab_2939E8 *)D_L04_00174040_2939E8)->v40.x);
                     t = t + absolute_float(((StTab_2939E8 *)D_L04_00174040_2939E8)->v40.y);
                     if (t < absolute_float(((StTab_2939E8 *)D_L04_00174040_2939E8)->v40.z)) {
                         add_vector_xyz(push, push, &((StTab_2939E8 *)D_L04_00174040_2939E8)->v40);
-                        n += 4.0f;
-                        dz += h - e->z;
+                        height_correction_divisor += 4.0f;
+                        dz += ground_height - probe_point->z;
                     }
                 }
             }
@@ -228,57 +228,57 @@ int FUN_L04_00292828(StMoby_2939E8 *m, Steer_2939E8 *a)
             bit <<= 2;
         }
         if (sum == 0.0f) {
-            h = probe_ground_height(&m->pos, 0, 0.5f);
-            if (0.0f < h) {
-                n += 4.0f;
-                dz += h - m->pos.z;
+            ground_height = probe_ground_height(&moby->pos, 0, 0.5f);
+            if (0.0f < ground_height) {
+                height_correction_divisor += 4.0f;
+                dz += ground_height - moby->pos.z;
             }
         }
         if (push[0] != 0.0f || push[1] != 0.0f || push[2] != 0.0f) {
-            dir[0] = func_001F9F90_2939E8(m->rotz);
-            dir[1] = func_001F9FA8_2939E8(m->rotz);
+            dir[0] = func_001F9F90_2939E8(moby->rotz);
+            dir[1] = func_001F9FA8_2939E8(moby->rotz);
             dir[2] = 0.0f;
             cross_vectors_xyz(dir, dir, push);
             cross_vectors_xyz(dir, dir, push);
-            a->tilt = angle_atan2(vector_length_xy(dir), dir[2]);
+            steer_state->tilt = angle_atan2(vector_length_xy(dir), dir[2]);
         } else {
-            a->tilt = 0.0f;
+            steer_state->tilt = 0.0f;
         }
-        if (0.785398f < absolute_float(a->tilt)) {
+        if (0.785398f < absolute_float(steer_state->tilt)) {
             ret = 2;
         }
-        if (a->kind == 0xD && 0.0f < a->ground && (a->mask & 0xF) == 0) {
-            t = -angle_atan2(a->f8C[1], a->ground - m->pos.z);
+        if (steer_state->kind == 0xD && 0.0f < steer_state->ground && (steer_state->mask & 0xF) == 0) {
+            t = -angle_atan2(steer_state->f8C[1], steer_state->ground - moby->pos.z);
             if (absolute_float(t) < 0.5235988f) {
                 pinned = 1;
-                dz += a->ground - m->pos.z;
-                a->tilt = t;
-                n += 4.0f;
+                dz += steer_state->ground - moby->pos.z;
+                steer_state->tilt = t;
+                height_correction_divisor += 4.0f;
             }
         }
     }
-    if (n != 0.0f) {
-        dz = dz / n;
+    if (height_correction_divisor != 0.0f) {
+        dz = dz / height_correction_divisor;
     }
-    if (a->flags & 8) {
+    if (steer_state->flags & 8) {
         if (dz < -0.025f) {
             dz = 0.0f;
         }
-        a->vel = 0.0f;
+        steer_state->vel = 0.0f;
     } else if (-0.025f < dz) {
         if (0.025f < dz && pinned == 0) {
             dz = 0.0f;
         }
-        a->vel = 0.0f;
+        steer_state->vel = 0.0f;
     } else {
-        a->vel = a->vel - a->accel;
-        dz = a->vel;
+        steer_state->vel = steer_state->vel - steer_state->accel;
+        dz = steer_state->vel;
     }
     for (j = 0; j < 6; j++) {
-        Vec_2939E8 *p = &a->pts[j];
-        p->z += dz;
+        Vec_2939E8 *point_to_shift = &steer_state->pts[j];
+        point_to_shift->z += dz;
     }
-    m->pos.z = m->pos.z + dz;
+    moby->pos.z = moby->pos.z + dz;
     return ret;
 }
 extern void get_joint_matrix_2d48(struct Moby *, int, float *) __asm__("FUN_0020cca8");
@@ -547,13 +547,13 @@ extern float animation_start(int, int) __asm__("FUN_L04_002418b0");
 extern float FUN_001f99c0(float);
 extern int rig_pick_mode(struct Moby *m, LegRig *rig, float t) __asm__("FUN_L04_002927d0");
 
-void FUN_L04_00295de8(struct Moby *m, LegRig *rig) {
+void FUN_L04_00295de8(struct Moby *moby, LegRig *rig) {
     int joints[6];
     float mtx[4][4];
-    float t;
+    float animation_time;
     int i;
     int j;
-    LegRigAnim **e;
+    LegRigAnim **animation_cursor;
 
     joints[0] = rig->legs[0].joint;
     joints[1] = rig->legs[0].joint2;
@@ -561,34 +561,34 @@ void FUN_L04_00295de8(struct Moby *m, LegRig *rig) {
     joints[3] = rig->legs[1].joint2;
     joints[4] = rig->jointB4;
     joints[5] = rig->jointB5;
-    transform_scaled_vertex_batch(m, 6, joints, rig);
+    transform_scaled_vertex_batch(moby, 6, joints, rig);
     for (i = 0; i < 2; i++) {
-        get_joint_matrix(m, rig->legs[i].joint, mtx[0]);
+        get_joint_matrix(moby, rig->legs[i].joint, mtx[0]);
         rig->legs[i].upper_turn = 0;
         rig->legs[i].lower_turn = 0;
         rig->legs[i].yaw = fast_arc_tan(mtx[1][0], mtx[1][1]);
         if (rig->legs[i].manip_b.attached == 0)
-            attach_manipulator(m, rig->legs[i].slot_b, &rig->legs[i].manip_b);
+            attach_manipulator(moby, rig->legs[i].slot_b, &rig->legs[i].manip_b);
         if (rig->legs[i].manip_a.attached == 0)
-            attach_manipulator(m, rig->legs[i].slot_a, &rig->legs[i].manip_a);
+            attach_manipulator(moby, rig->legs[i].slot_a, &rig->legs[i].manip_a);
     }
-    if (m->seq != 0xFF) {
-        t = compute_interpolated_record_value(m);
+    if (moby->seq != 0xFF) {
+        animation_time = compute_interpolated_record_value(moby);
     } else {
-        t = convert_integer_to_float(m->prev_frame);
-        t += animation_start(m->class_slot, m->prev_seq);
+        animation_time = convert_integer_to_float(moby->prev_frame);
+        animation_time += animation_start(moby->class_slot, moby->prev_seq);
     }
     rig->mode = 5;
     rig->speed = 0.0f;
     rig->unkB7 = 0;
-    e = rig->anims;
-    for (j = 12; j >= 0; j--, e++) {
-        if ((*e)->id == m->prev_seq) {
-            rig->speed = FUN_001f99c0(m->anim_speed * (*e)->rate);
+    animation_cursor = rig->anims;
+    for (j = 12; j >= 0; j--, animation_cursor++) {
+        if ((*animation_cursor)->id == moby->prev_seq) {
+            rig->speed = FUN_001f99c0(moby->anim_speed * (*animation_cursor)->rate);
             rig->unkB7 = D_L04_001CA938[12 - j][0];
         }
     }
-    rig->mode = rig_pick_mode(m, rig, t);
+    rig->mode = rig_pick_mode(moby, rig, animation_time);
     rig->unkB8 = 0;
     rig->unkBC = 0;
     rig->unkC8 = 0;

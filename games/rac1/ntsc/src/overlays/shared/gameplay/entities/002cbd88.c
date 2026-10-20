@@ -20,10 +20,10 @@ extern short D_L15_00161ACC __attribute__((sda));
 extern short D_L15_00161AD0 __attribute__((sda));
 extern short D_L15_00161AD4 __attribute__((sda));
 void FUN_L15_002cbd88(void) {
-    int n = scale_game_frames(*(int *)&D_L15_00161AD4);
-    float d = convert_integer_to_float(n);
-    float s = fast_sin((float)(D_L15_0015F5CC % n) / d * 6.28318f);
-    float v = *(float *)&D_L15_00161ABC + *(float *)&D_L15_00161AD0 * s;
+    int period_frames = scale_game_frames(*(int *)&D_L15_00161AD4);
+    float period_frames_float = convert_integer_to_float(period_frames);
+    float sine_value = fast_sin((float)(D_L15_0015F5CC % period_frames) / period_frames_float * 6.28318f);
+    float v = *(float *)&D_L15_00161ABC + *(float *)&D_L15_00161AD0 * sine_value;
     int r;
     int k;
     if (v < 0.0f)
@@ -40,19 +40,19 @@ extern int FUN_L00_0020d568(void);
 f32 probe_ground_height(void *arg0, s32 arg1, f32 arg2) __asm__("FUN_00213508");
 
 int FUN_L15_002d6770(void) {
-    struct Hero *p;
+    struct Hero *hero_ptr;
     float vec[4];
-    float h;
+    float ground_height;
     if (FUN_L00_0020d568() != 0)
         return 1;
-    p = &hero;
-    if ((unsigned)(p->state.current - 0x18) < 2) {
-        *(OvlQuad *)vec = *(OvlQuad *)&p->motion.pos;
+    hero_ptr = &hero;
+    if ((unsigned)(hero_ptr->state.current - 0x18) < 2) {
+        *(OvlQuad *)vec = *(OvlQuad *)&hero_ptr->motion.pos;
         vec[2] = vec[2] + 2.0f;
-        h = probe_ground_height(vec, 0, 0.5f);
+        ground_height = probe_ground_height(vec, 0, 0.5f);
         if (collision_hit_material() != 0)
             return 0;
-        if (p->motion.pos.f[2] <= h)
+        if (hero_ptr->motion.pos.f[2] <= ground_height)
             return 1;
     }
     return 0;
