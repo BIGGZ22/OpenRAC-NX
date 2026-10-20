@@ -26,5 +26,7 @@
 #define RAC1_TYPE_func_001F5800_u64 unsigned long long
 /* The text lookup's result, a string's address. */
 #define RAC1_TYPE_func_001FE540_result gaddr
+/* The sprite's TEX0 (func_00200CA0). */
+#define RAC1_TYPE_func_00200CA0_tex0 long long
 
 #endif /* OPENRAC_RAC1_VERSION_H */

@@ -51,6 +51,8 @@
 #define RAC1_TYPE_func_001F5800_u64 long long
 /* The text lookup's result, a string's address. */
 #define RAC1_TYPE_func_001FE540_result int
+/* The sprite's TEX0 (FUN_00200468 here, PAL's func_00200CA0). */
+#define RAC1_TYPE_func_00200CA0_tex0 unsigned long long
 /* ---- generated below ---- */
 
 /* Functions: games/rac1's name, this version's. */

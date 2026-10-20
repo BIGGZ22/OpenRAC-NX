@@ -222,7 +222,9 @@ void func_00200A90(int tex, int x, int y, int w, int h, int u, int v, int alpha)
 
 /* A sprite of the texture tex0 at (x, y), w x h in 16ths of a pixel, texels from (u, v) on by
  * (1 << (lw + 4), 1 << (lh + 4)), with alpha. */
-void func_00200CA0(long long tex0, int x, int y, int lw, int lh, int w, int h, int u, int v, int alpha) {
+void func_00200CA0(RAC1_TYPE_func_00200CA0_tex0 tex0_, int x, int y, int lw, int lh, int w, int h, int u, int v,
+                   int alpha) {
+    const long long tex0 = (long long)tex0_;
     if (skipped(RAC1_NAME(func_00200CA0))) {
         func_00200CA0__game(tex0, x, y, lw, lh, w, h, u, v, alpha);
         return;
