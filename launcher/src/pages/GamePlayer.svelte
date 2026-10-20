@@ -201,7 +201,9 @@
           <CrashNotice notice={app.stopped} title={v.title} />
         {/if}
 
-        <section class="hero" aria-label={v.title} in:fly={enter()}>
+        <!-- |global like the rest of the page: a local intro inside {#key} could leave the band at its
+             starting opacity when the key changed (switching discs), so the band stayed invisible. -->
+        <section class="hero" aria-label={v.title} in:fly|global={enter()}>
           {#if art}
             <div class="hero-backdrop" aria-hidden="true">
               <img src={art} alt="" class="hero-bg" decoding="async" fetchpriority="high" onerror={hideMissing} />

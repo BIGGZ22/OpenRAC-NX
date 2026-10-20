@@ -54,7 +54,7 @@
 </script>
 
 {#if data && groups.length}
-  <section class="panel differences" aria-labelledby="differences-title" in:fly={enter()}>
+  <section class="panel differences" aria-labelledby="differences-title" in:fly|global={enter()}>
     <div class="row top">
       <h2 id="differences-title" class="grow">Differences from the original</h2>
       {#if developer}<span class="chip mono" title="The game's settings file">{data.settingsFile}</span>{/if}
