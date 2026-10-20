@@ -44,12 +44,19 @@ static inline float openrac_ee_sqrt(float x) {
 static inline float openrac_ee_rsqrt(float a, float b) {
     return openrac_fdiv(a, sqrtf(fabsf(b)));
 }
-/* cvt.w.s: truncated toward zero, saturated at the ends of the range (no exception). */
+/* cvt.w.s: truncated toward zero, saturated at the ends of the range (no exception). The EE has
+ * no NaN: a float with exponent 255 is a large number, so one the host reads as a NaN saturates
+ * by its sign like any other value out of range. */
 static inline uint32_t openrac_ee_cvtws(float f) {
+    if (f != f) {
+        uint32_t bits;
+        memcpy(&bits, &f, 4);
+        return (bits >> 31) != 0 ? 0x80000000u : 0x7FFFFFFFu;
+    }
     if (f >= 2147483647.0f) {
         return 0x7FFFFFFFu;
     }
-    if (f <= -2147483648.0f || f != f) {
+    if (f <= -2147483648.0f) {
         return 0x80000000u;
     }
     return (uint32_t)(int32_t)f;
@@ -62,6 +69,11 @@ extern openrac_vu0_state openrac_vu0;
 #define OPENRAC_VU0 (&openrac_vu0)
 #define OPENRAC_VU0_IN()
 #define OPENRAC_VU0_OUT()
+
+/* The calling thread's floating point as the EE's: rounding toward zero, denormals read and made
+ * as zero (ee.cpp). The game's thread sets it before it runs the game; each argument, when not
+ * zero, keeps the host's way of that instead (OPENRAC_ROUND_NEAREST, OPENRAC_DENORMALS). */
+void openrac_ee_float_mode(int round_nearest, int keep_denormals);
 
 /* A break or trap instruction the function reached (a divide by zero check, an assertion of
  * the game's): logged once per place, and the function goes on, as the EE's handler returns. */

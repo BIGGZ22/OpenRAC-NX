@@ -1733,6 +1733,38 @@ class FromAssembly(unittest.TestCase):
             """)}, symbols={})
         self.assertEqual(out, ["10", "30", "50", "70", "10", "-20", "30", "-40", "50", "-60", "70", "32767"])
 
+    def test_conversions_saturate_by_sign(self):
+        # cvt.w.s and vftoi0 of floats with exponent 255 (a NaN to the host, a large number to
+        # the EE) and of 3e9 (item 5): 0x7FFFFFFF or 0x80000000 by the sign, never x86's 0x80000000.
+        out = self.run_asm("""
+            extern unsigned int D_00300000[16];
+            INCLUDE_ASM("asm", func_00100000);
+            extern void func_00100000(unsigned int *v);
+            int test_main(void) {
+                int i;
+                D_00300000[0] = 0x7FFFEF02u; D_00300000[1] = 0xFFFFEF02u;
+                D_00300000[2] = 0x4F32D05Eu; D_00300000[3] = 0xBFC00000u; /* 3e9, -1.5 */
+                func_00100000(D_00300000);
+                for (i = 4; i < 12; i++) test_print((int)D_00300000[i]);
+                return 0;
+            }
+        """, {"func_00100000": (0x00100000, """
+                lwc1 $f0, 0($4)
+                cvt.w.s $f1, $f0
+                mfc1 $2, $f1
+                sw $2, 16($4)
+                lwc1 $f0, 4($4)
+                cvt.w.s $f1, $f0
+                mfc1 $2, $f1
+                sw $2, 20($4)
+                lqc2 $vf1, 0($4)
+                vftoi0.xyzw $vf2, $vf1
+                jr $31
+                sqc2 $vf2, 32($4)
+            """)}, symbols={})
+        self.assertEqual([int(x) for x in out], [2147483647, -2147483648, 0, 0,
+                                                 2147483647, -2147483648, 2147483647, -1])
+
     def test_declared_nowhere_gets_its_parameters_from_its_registers(self):
         # Called only through its code address; the C calls it as (int, int).
         out = self.run_asm("""

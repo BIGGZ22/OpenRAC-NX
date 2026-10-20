@@ -535,9 +535,14 @@ typedef struct openrac_vu0_state {
     openrac_f32 scratch[4]; /* room for moving a register in the console's form (asmc.py), 16-aligned */
 } openrac_vu0_state;
 
-/* Float to fixed point with `frac` fraction bits, as vftoi: truncated, saturated. */
+/* Float to fixed point with `frac` fraction bits, as vftoi: truncated, saturated. A float with
+ * exponent 255 is a large number to the VU (a NaN to the host) and saturates by its sign: the
+ * texture cache of the engine's later games reads 0x80000000 as "very close". */
 OPENRAC_EE_INLINE openrac_u32 openrac_ee_ftoi(openrac_f32 f, int frac) {
     openrac_f32 v = f * (openrac_f32)(1 << frac);
+    if ((openrac_ee_bits(f) & 0x7F800000u) == 0x7F800000u) {
+        return (openrac_ee_bits(f) >> 31) != 0 ? 0x80000000u : 0x7FFFFFFFu;
+    }
     if (v >= openrac_ee_f(0x4F000000u)) { /* 2^31 */
         return 0x7FFFFFFFu;
     }
