@@ -83,6 +83,7 @@ class Program:
     sizes: dict[str, int] = field(default_factory=dict)  # catalogued symbol -> bytes
     splits: dict[str, list] = field(default_factory=dict)  # symbol -> places split off to variants
     split_parent: dict[str, str] = field(default_factory=dict)  # a variant -> the symbol it was split from
+    split_twin: dict[str, str] = field(default_factory=dict)  # an executable function -> the variant at its level copies
     symbols: dict[str, int] = field(default_factory=dict)  # other named globals -> address
     typedefs: dict[str, set] = field(default_factory=dict)  # name -> desugared type strings
     host: set = field(default_factory=set)  # functions the port writes by hand (port/game/<game>/)
@@ -442,7 +443,10 @@ def read_split_places(path: Path, program: Program) -> int:
     """Places the catalogue folded into a function by its fingerprint although their code differs
     in a constant or a field offset (port/game/<id>/split_places.tsv: function, the variant's name,
     its places as level:address,...): each variant gets those places as its own, and calls to the
-    function are resolved through the caller's own jal (lower.py, _folded_places)."""
+    function are resolved through the caller's own jal (lower.py, _folded_places).
+    An optional fourth column names the executable's function whose level copies the variant's
+    places are (its twin: the C calls it by its own name): the C's calls to the twin are calls to
+    the variant's family where lower.py counts them (openrac_folded_call's k)."""
     if not path.exists():
         return 0
     count = 0
@@ -466,6 +470,8 @@ def read_split_places(path: Path, program: Program) -> int:
         if name in program.sizes:
             program.sizes[variant] = program.sizes[name]
         program.splits.setdefault(name, []).extend(places)
+        if len(cols) > 3 and cols[3].strip():
+            program.split_twin[cols[3].strip()] = variant
         program.split_parent[variant] = name
         count += 1
     return count

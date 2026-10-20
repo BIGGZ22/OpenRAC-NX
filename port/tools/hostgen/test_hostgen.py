@@ -11,6 +11,7 @@ is game code.
 from __future__ import annotations
 
 import json
+import re
 import shutil
 import subprocess
 import sys
@@ -901,6 +902,35 @@ class Translate(unittest.TestCase):
             """,
         }, config={"groups": [{"path": "src/menu", "suffix": "menu", "overlay": 100}]})
         self.assertEqual(out, ["1", "20"])
+
+    def test_split_places_twin_counts_with_the_variants_calls(self):
+        # The catalogue folds the level copy of an executable function (func_00110080, at 0x300080
+        # in level 3) into a folded function (func_00110000) as a variant; engine code calls the
+        # executable function by its own name before the folded one (rac1/pal's frame draw: packet
+        # calls, then AA_BlurPass). split_places.tsv's fourth column names the twin, so the folded
+        # call is the caller's second call to the family (k = 1), not its first.
+        rows = "func_00110000\tfunc_L03_00300080\t03:00300080{}\n"
+        program = {"a.c": """
+            void func_00110000(void) {}
+            void func_00110080(void) {}
+            void func_L03_00300080(void) {}
+            void func_00110100(void) { func_00110080(); func_00110000(); }
+            int test_main(void) { test_print(0); return 0; }
+        """}
+        places = ("func_00110000\texe\t8\t0\t1\t03:00300000,03:00300080\n"
+                  "func_00110100\texe\t16\t0\t1\t03:00300100\n")
+        for twin, k in (("", 0), ("\tfunc_00110080", 1)):
+            out = self.run_program(program, places=places, config={"split_places": "split_places.tsv"},
+                                   extra_files={"split_places.tsv": "# function\tvariant\tplaces\ttwin\n"
+                                                + rows.format(twin)},
+                                   host_c="""
+                                       gaddr openrac_guest_nearest(const uint32_t *p, int n, gaddr c) { return 0; }
+                                       gaddr openrac_folded_call(const uint32_t *p, int n, gaddr c, uint32_t s, int k) { return 0; }
+                                   """)
+            self.assertEqual(out, ["0"])
+            calls = re.findall(r"openrac_folded_call\(\(const uint32_t\[\]\)\{0x00110000u, [^;]*?, (\d+)\)\)",
+                               self.last_generated)
+            self.assertEqual(calls, [str(k)], twin or "no twin")
 
 
 class InputsDigest(unittest.TestCase):
