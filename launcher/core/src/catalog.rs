@@ -173,7 +173,7 @@ struct RawBuild {
     readme: Option<String>,
 }
 
-#[derive(Deserialize)]
+#[derive(Deserialize, Debug)]
 struct RawSummaryRow {
     /// None for a version with no report yet: one such row must not make the whole file unread.
     #[serde(default)]
@@ -212,8 +212,18 @@ pub fn load_with(root: &Path, cache: Option<&Path>) -> Result<Catalog, String> {
     Ok(Catalog { games })
 }
 
+/// The rows of a progress file: the ones that can be read. A row that is malformed (a figure
+/// of the wrong kind) is left out, not the whole file: one bad row must not take every game's
+/// figures away.
 fn read_rows(path: &Path) -> BTreeMap<String, RawSummaryRow> {
-    std::fs::read_to_string(path).ok().and_then(|text| serde_json::from_str(&text).ok()).unwrap_or_default()
+    let Some(text) = std::fs::read_to_string(path).ok() else { return BTreeMap::new() };
+    let Some(json) = serde_json::from_str::<serde_json::Value>(&text).ok() else { return BTreeMap::new() };
+    let Some(rows) = json.as_object() else { return BTreeMap::new() };
+    rows.iter()
+        .filter_map(|(key, value)| {
+            serde_json::from_value::<RawSummaryRow>(value.clone()).ok().map(|row| (key.clone(), row))
+        })
+        .collect()
 }
 
 /// The checkout's own figures, with bytematch.dev's in their place wherever the site has a
@@ -458,6 +468,22 @@ mod tests {
         let ntsc = catalog.version("rac9/ntsc").unwrap();
         assert_eq!(ntsc.title, "Nine");
         assert!(ntsc.progress.is_none());
+    }
+
+    #[test]
+    fn a_malformed_row_leaves_the_others_readable() {
+        let dir = tempfile::tempdir().unwrap();
+        let summary = dir.path().join("summary.json");
+        // One row with a figure of the wrong kind, and one that is right.
+        std::fs::write(
+            &summary,
+            r#"{"rac1/pal": {"progress": {"matched_code": 5, "total_code": 10, "percent": 50.0}},
+                "rac1/ntsc": {"progress": {"percent": "86%"}}}"#,
+        )
+        .unwrap();
+        let rows = read_rows(&summary);
+        assert_eq!(rows.len(), 1, "the row that can be read is kept: {rows:?}");
+        assert_eq!(rows["rac1/pal"].progress.as_ref().unwrap().percent, 50.0);
     }
 
     #[test]
