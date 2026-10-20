@@ -39,12 +39,19 @@
   let open = $state(false);
   const shown = $derived(entries ? (all ? entries : entries.slice(0, FIRST)) : []);
 
+  /** The list read in flight: only the newest answer is kept, so that a list read before a
+   *  delete does not put the deleted log back. */
+  let reading = 0;
+
   async function load(only: string | null) {
+    const mine = ++reading;
     try {
       const list = await api.reportsList(game);
+      if (mine !== reading) return;
       entries = only ? list.filter((e) => !e.program || e.program === only) : list;
       failed = null;
     } catch (e) {
+      if (mine !== reading) return;
       entries = [];
       failed = String(e);
     }
