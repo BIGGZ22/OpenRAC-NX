@@ -13,6 +13,8 @@ the first table; go to a game's documents when you work on that game.
 | [LAYOUT.md](LAYOUT.md) | How the repository is organised, and where a new file goes |
 | [policy/SOURCING.md](policy/SOURCING.md) | What may and may not be used or committed |
 | [policy/OPEN_QUESTIONS.md](policy/OPEN_QUESTIONS.md) | Decisions the group still has to make |
+| [TODO.md](TODO.md) | Larger work that is scoped and decided but not started, ready to pick up |
+| [port/KNOWN_ISSUES.md](port/KNOWN_ISSUES.md) | Bugs that are understood and guarded but not properly fixed yet |
 | [SOURCES.md](SOURCES.md) | Where each game's code came from, what changed on import, how to sync |
 | [baserom/README.md](../baserom/README.md), [toolchains/README.md](../toolchains/README.md) | Setting up your discs and compilers |
 
