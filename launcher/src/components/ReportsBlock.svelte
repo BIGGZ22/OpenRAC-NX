@@ -31,6 +31,8 @@
   let cleared = $state(false);
 
   const crashes = $derived(entries?.filter((e) => e.kind === "crash").length ?? 0);
+  /** The logs: a session the game kept, whether it ended well or not. */
+  const logs = $derived(entries?.filter((e) => e.kind !== "crash").length ?? 0);
   /** The crash to tell the player about: the newest, while it is recent and not dismissed (the tile's mark). */
   const latest = $derived(
     (app.crashes[game]?.recent ?? 0) > 0 ? (entries?.find((e) => e.kind === "crash") ?? null) : null,
@@ -156,10 +158,11 @@
     <summary>
       Logs and crash reports{entries
         ? entries.length
-          ? ` (${entries.length})`
+          ? // What the number holds, said in words: a count of logs alone reads as a count of
+            // crashes, and a player who closed the game a few times would think it had crashed.
+            `: ${logs} ${logs === 1 ? "log" : "logs"}${crashes > 0 ? `, ${crashes} ${crashes === 1 ? "crash" : "crashes"}` : ""}`
           : ": none yet"
-        : ""}{#if crashes > 0 && !latest}<span class="dim count">· {crashes} {crashes === 1 ? "crash" : "crashes"}</span
-        >{/if}
+        : ""}
     </summary>
     <div class="inside">
       <p class="intro muted">
@@ -357,11 +360,6 @@
     font-weight: 600;
     font-size: 0.875rem;
     padding: 2px 0;
-  }
-
-  summary .count {
-    margin-left: 6px;
-    font-weight: 400;
   }
 
   details[open] .inside {
