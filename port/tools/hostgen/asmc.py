@@ -115,6 +115,7 @@ def is_control(i: asm.Insn) -> bool:
 
 
 class Translator:
+    forward_unprototyped = False  # asm.forward_unprototyped in hostgen.json
     def __init__(self, program: Program, index: asm.Index | None, gp: int | None = None, mode: str = "host",
                  source: Path | None = None):
         self.program = program
@@ -189,6 +190,7 @@ class Translator:
             return False
         cache[key] = False                   # while it is looked at: a call back to it is a call
         sub = Translator(self.program, self.index, self.gp, self.mode, self.source)
+        sub.forward_unprototyped = self.forward_unprototyped
         try:
             sub._load(Function(f"sub_{target:08X}", Signature(ctype.Base("int"), (), False, False)),
                       (self.home, target))
@@ -228,9 +230,13 @@ class Translator:
         sig = self._signature(f)
         if re.search(r"\b" + re.escape(cname(f.symbol)) + r"\b", self.host_text):
             return  # the port's own C calls it by the signature it has
-        # An old-style declaration has no argument information. Keep the
-        # assembly's inferred parameters so lower._match_args can forward
-        # incoming registers omitted from the decompilation's call expression.
+        if not self.forward_unprototyped and not f.sig.prototyped and self._compatible(sig, f.sig):
+            # Declared `int f()`: callers keep calling it so; the definition with its integer
+            # parameters is compatible with that declaration.
+            return
+        # With asm.forward_unprototyped, an old-style declaration keeps the assembly's inferred
+        # parameters, so lower._match_args can forward incoming registers omitted from the
+        # decompilation's call expression (rac4).
         f.sig = sig
 
     def _compatible(self, sig: Signature, unprototyped: Signature) -> bool:
@@ -643,7 +649,7 @@ class Translator:
             callee = f"GFN({fn_type}, {self._code_literal(target)})"
         else:
             callee = cname(sym)
-        if not f.sig.prototyped:
+        if self.forward_unprototyped and not f.sig.prototyped:
             # The same generated unit may already contain this function's
             # definition with fewer integer parameters. Keep the original
             # unprototyped call contract even in that case (extra EE args).
@@ -1338,6 +1344,7 @@ def run(program: Program, cfg: dict, source: Path, host_text: str = "") -> tuple
     dirs = [base / d for d in a.get("dirs", [])]
     gp = int(str(a["gp"]), 0) if a.get("gp") is not None else None
     tr = Translator(program, None, gp, "host", base)
+    tr.forward_unprototyped = bool(a.get("forward_unprototyped"))
     tr.host_text = host_text
     index = asm.read_index(dirs, tr.overlay_of)
     tr.index = index
@@ -1522,6 +1529,7 @@ def write_console(stage: Stage, out: Path, names: list[str] | None = None) -> di
         return problems
     out.mkdir(parents=True, exist_ok=True)
     console = Translator(tr.program, tr.index, tr.gp, "console", tr.source)
+    console.forward_unprototyped = tr.forward_unprototyped
     # Named functions are written whether or not they have C (the check of the translator on
     # more of the program than its stubs); otherwise every one translated for the port.
     todo = names or [r.name for r in stage.translated]

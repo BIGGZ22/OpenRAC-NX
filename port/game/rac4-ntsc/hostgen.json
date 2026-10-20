@@ -178,6 +178,7 @@
   "asm": {
     "enabled": true,
     "discover_entries": true,
+    "forward_unprototyped": true,
     "dirs": [],
     "gp": "0x0022597F",
     "retail": {
