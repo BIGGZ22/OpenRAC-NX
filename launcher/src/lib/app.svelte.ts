@@ -465,8 +465,9 @@ function taskOf(actionId: string): string | null {
 }
 
 export function updateDiscordPresence(page: Page = app.page, version: string | null = app.version) {
-  // While the game (the native port) runs, the status stays PlayingGame:
-  const playingJob = jobs.list.find((j) => j.actionId === "play" && j.state === "running");
+  // While the game (the native port) runs, the status stays PlayingGame. The game with
+  // the player's mods is the same program, so it counts too.
+  const playingJob = jobs.list.find((j) => PLAY_ACTIONS.includes(j.actionId) && j.state === "running");
   if (playingJob?.scope.kind === "version") {
     const scope = playingJob.scope;
     const versions = app.library?.games.flatMap((g) => g.versions) ?? [];
