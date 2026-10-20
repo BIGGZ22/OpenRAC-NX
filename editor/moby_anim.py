@@ -146,7 +146,14 @@ def bind_pose(data: bytes, joint_count: int, skeleton: int, common: int,
         if not all(math.isfinite(v) for row in rows for v in row):
             raise FormatError("invalid moby skeleton matrix")
         x, y, z, word = unpack("<3fI", data, common + j * 16)
-        if word == 0:
+        if three_rows:
+            # Deadlocked names the parent by its number, with bit 7 sometimes set; 0x7f is none
+            # (Wrench's recover_moby_joints).
+            number = word & 0xff7f
+            parent = None if number == 0x7f or j == 0 else number
+            if parent is not None and parent >= j:
+                raise FormatError("invalid moby joint parent")
+        elif word == 0:
             parent = None
         elif word >= SCRATCHPAD and (word - SCRATCHPAD) % 0x40 == 0 and (word - SCRATCHPAD) // 0x40 < j:
             parent = (word - SCRATCHPAD) // 0x40

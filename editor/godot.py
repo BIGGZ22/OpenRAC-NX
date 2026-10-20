@@ -263,7 +263,8 @@ class LevelWriter:
         sky_offset, = unpack("<I", level.index, 0x10)
         self.write_environment(sky(level.block(sky_offset), fmt) if sky_offset else None)
         self.scene.node("Game", ".", "Node3D", transform=transform(GAME_TO_GODOT))
-        self.write_terrain(terrain(level.block(unpack("<I", level.index, 0x08)[0]), lod, problems=problems), lod)
+        self.write_terrain(terrain(level.block(unpack("<I", level.index, 0x08)[0]), lod, problems=problems)
+                           + chunk_terrain(level, lod, None, problems), lod)
         ties = tie_classes(level)
         self.write_objects("tie", ties, tie_instances(level.instances, ties, fmt, problems))
         shrubs = shrub_classes(level)
@@ -271,12 +272,19 @@ class LevelWriter:
         self.write_mobys(moby_instances(level.gameplay, fmt), moby_classes(level))
         collision, = unpack("<I", level.index, 0x14)
         if collision:  # Deadlocked's multiplayer menu has none
-            self.write_collision(level.block(collision))
+            self.write_collision(level.block(collision), [block for _, _, block in level.chunks if block])
         return self.finish()
 
-    def write_collision(self, block: bytes) -> None:
-        """collision.glb and a hidden Game/Collision; it is not counted with the textured meshes."""
+    def write_collision(self, block: bytes, more: list[bytes] = ()) -> None:
+        """collision.glb and a hidden Game/Collision; it is not counted with the textured meshes.
+        MORE: a later game's chunks' collision blocks, put in the same mesh."""
         data = decode(block)
+        for extra in more:
+            chunk = decode(extra)
+            data.cells += chunk.cells
+            data.faces += chunk.faces
+            data.triangles += chunk.triangles
+            data.hero_groups += chunk.hero_groups
         self.stats["collision"] = {"cells": data.cells, "faces": data.faces, "triangles": len(data.triangles),
                                    "surfaces": {str(k): v for k, v in data.surfaces().items()},
                                    "hero_groups": data.hero_groups}
@@ -406,6 +414,19 @@ class LevelWriter:
         (self.dir / f"{self.name}.tscn").write_text(self.scene.text())
         (self.dir / "level.json").write_text(json.dumps(self.stats, indent=2) + "\n")
         return self.stats
+
+
+def chunk_terrain(level, lod: int, lights, problems) -> list[Mesh]:
+    """The terrain of a later game's streamed chunks (level.chunks), its fragments named
+    Terrain_cN_NNN; nothing for Ratchet & Clank's levels, which have none."""
+    meshes = []
+    for chunk, tfrags, _ in getattr(level, "chunks", ()):
+        if tfrags is None:
+            continue
+        for mesh in terrain(tfrags, lod, lights, problems):
+            mesh.name = f"Terrain_c{chunk}_{mesh.name.removeprefix('Terrain_')}"
+            meshes.append(mesh)
+    return meshes
 
 
 def problem_summary(problems: list[str]) -> list[str]:

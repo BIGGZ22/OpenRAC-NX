@@ -31,7 +31,7 @@ from pathlib import Path
 from formats import png, unpack
 import games
 from gltf import Gltf
-from godot import PANORAMA, STORED_W, LevelWriter, problem_summary
+from godot import PANORAMA, STORED_W, LevelWriter, chunk_terrain, problem_summary
 from level import Level
 from lighting import light_bank, light_shrub_instance, light_tie_instance
 from mesh import Mesh
@@ -129,7 +129,8 @@ class PortLevelWriter(LevelWriter):
         # The terrain block (usually at the core's start, offset 0); the flight world has none.
         tfrags, = unpack("<I", level.index, 0x08)
         has_terrain = not getattr(level, "no_terrain", False)
-        self.write_terrain(terrain(level.block(tfrags), lod, lights, problems) if has_terrain else [], lod)
+        self.write_terrain(terrain(level.block(tfrags), lod, lights, problems) + chunk_terrain(level, lod, lights, problems)
+                           if has_terrain else [], lod)
         ties = tie_classes(level)
         tie_placements = tie_instances(level.instances, ties, fmt, problems)
         if lights is not None:
@@ -157,7 +158,7 @@ class PortLevelWriter(LevelWriter):
                          {**getattr(level, "extra_moby_classes", {}), **moby_classes(level)})
         collision, = unpack("<I", level.index, 0x14)
         if collision:  # the title world has none
-            self.write_collision(level.block(collision))
+            self.write_collision(level.block(collision), [block for _, _, block in level.chunks if block])
         return self.finish()
 
     def write_objects(self, family: str, classes: dict[int, Mesh], placements: list[dict]) -> None:

@@ -46,6 +46,9 @@ class Level:
     art: bytes | None = None
     # What a later game's level could not decode and left out (games.Format.lenient), in words.
     problems: list[str] = field(default_factory=list)
+    # A later game's streamed chunks past the core's (wads.chunk_ranges): (chunk, tfrag block,
+    # collision block), each decoded, or None where the chunk has none.
+    chunks: list[tuple[int, bytes | None, bytes | None]] = field(default_factory=list)
 
     @property
     def instances(self) -> bytes:
@@ -228,6 +231,13 @@ def load_wad_level(source, entry: dict) -> Level:
     level = Level(entry["id"], part["header"], stored, index, core, gameplay,
                   overlay or {"entry_point": 0, "sections": []})
     level.game, level.version, level.art = version.game, version.key, art
+    for chunk, sector, count in wads.chunk_ranges(part["header"]):
+        if chunk == 0:
+            continue  # chunk 0 is the core's own terrain and collision (Wrench reads it from the core)
+        data = disc.sectors(part["lba"] + sector, count)
+        tfrags, collision = unpack("<ii", data)
+        level.chunks.append((chunk, decoded(data[tfrags:]) if tfrags > 0 else None,
+                             decoded(data[collision:]) if collision > 0 else None))
     level.boundaries = core_boundaries(level)
     level.textures = textures(level, sections["gs_ram"])
     return level

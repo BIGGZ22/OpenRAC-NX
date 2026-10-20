@@ -222,6 +222,16 @@ def level_ranges(header: bytes, version: Version) -> dict[str, dict]:
     return ranges
 
 
+def chunk_ranges(header: bytes) -> list[tuple[int, int, int]]:
+    """(chunk, sector, sectors) of a level's streamed chunks, relative to its file: Wrench's
+    ChunkWadHeader at +0x30 of a 0x60 level header and +0x28 of Deadlocked's, three sector ranges
+    (then three sound banks, not read). A chunk is its own terrain and collision, which the game
+    swaps in as the player moves between parts of a large level; chunk 0's are the core's."""
+    at = 0x30 if len(header) == 0x60 else 0x28
+    ranges = unpack("<6i", header, at)
+    return [(i, ranges[2 * i], ranges[2 * i + 1]) for i in range(3) if ranges[2 * i + 1] > 0]
+
+
 # The level data WAD: (offset, size) byte ranges from its start (Wrench's level_data_wad.cpp).
 DATA_SECTIONS = {
     0x60: ("overlay", "core_index", "gs_ram", "hud_header", "hud_bank_0", "hud_bank_1", "hud_bank_2",

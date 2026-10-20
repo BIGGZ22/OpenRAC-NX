@@ -178,6 +178,9 @@ class ReaderTests(unittest.TestCase):
             rows = [struct.unpack_from("<4f", data, 0x100 + j * 64 + r * 16) for r in range(4)]
             packed = b"".join(struct.pack("<4f", *rows[r][:3], rows[3][r]) for r in range(3))
             data[0x300 + j * 48:0x300 + (j + 1) * 48] = packed
+        # Parents by number: 0x7f for none, joint 0 with bit 7 set (Wrench's recover_moby_joints).
+        struct.pack_into("<I", data, 0x18c, 0x7f)
+        struct.pack_into("<I", data, 0x19c, 0x80)
         joints, rest = bind_pose(bytes(data), 2, 0x300, 0x180, three_rows=True)
         self.assertEqual(rest, expected[1])
         for mine, theirs in zip(joints, expected[0]):
