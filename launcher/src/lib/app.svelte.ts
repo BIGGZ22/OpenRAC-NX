@@ -224,31 +224,10 @@ export async function start() {
   setInterval(() => (clock.now = Date.now()), 1000);
   await onJobEvent((event) => {
     queue.apply(event);
-    if (event.type === "exit") {
-      const job = queue.jobs.find((j) => j.id === event.id);
-      const played = !!job && PLAY_ACTIONS.includes(job.actionId) && job.scope.kind === "version";
-      if (played) {
-        app.reportsChanged++;
-        void countCrashes();
-      }
-      // The game stopping on its own is not a failed task: the Play page says what happened.
-      if (job?.state === "failed" && played) void gameStopped(job);
-      else if (job?.state === "failed") toast(`${job.title} failed`, "error");
-      // Played to the end since: the notice folds to a line (CrashNotice), the report still a click away.
-      if (
-        job?.state === "succeeded" &&
-        played &&
-        job.scope.kind === "version" &&
-        app.stopped &&
-        job.scope.key.startsWith(`${app.stopped.game}/`)
-      ) {
-        app.stopped = { ...app.stopped, playedSince: true };
-      }
-      if (job) settle(job.key, job.state === "succeeded");
-      void refresh();
-      updateDiscordPresence();
-      pump();
-    }
+    // A job that ended: the exit event, whether it came before the start call
+    // returned (the queue kept it until the id was known) or after it.
+    const ended = queue.takeEnded();
+    if (ended) handleExit(ended);
   });
   if (onAndroid) {
     keepAliveInBackground();
@@ -283,6 +262,31 @@ async function prepareTools() {
     clearTimeout(shown);
     app.preparing = false;
   }
+}
+
+/**
+ * A job ended: what the launcher does about it. Called once per job, whether
+ * its exit event came before the start call returned or after it (the queue
+ * keeps the end until it is taken).
+ */
+function handleExit(job: Job) {
+  const version = job.scope.kind === "version" ? job.scope.key : null;
+  const played = version !== null && PLAY_ACTIONS.includes(job.actionId);
+  if (played) {
+    app.reportsChanged++;
+    void countCrashes();
+  }
+  // The game stopping on its own is not a failed task: the Play page says what happened.
+  if (job.state === "failed" && played) void gameStopped(job);
+  else if (job.state === "failed") toast(`${job.title} failed`, "error");
+  // Played to the end since: the notice folds to a line (CrashNotice), the report still a click away.
+  if (job.state === "succeeded" && played && app.stopped && version.startsWith(`${app.stopped.game}/`)) {
+    app.stopped = { ...app.stopped, playedSince: true };
+  }
+  settle(job.key, job.state === "succeeded");
+  void refresh();
+  updateDiscordPresence();
+  pump();
 }
 
 /** The game ended with an error status or a signal: find its crash report and show the notice. */
@@ -686,7 +690,11 @@ function pump() {
         return;
       }
       queue.started(job, started.id, started.command);
-      updateDiscordPresence();
+      // The job may have ended before the start call returned: its exit event was kept
+      // until the id was known, and the end is acted on now.
+      const ended = queue.takeEnded();
+      if (ended) handleExit(ended);
+      else updateDiscordPresence();
     },
     (e: unknown) => {
       queue.refused(job, errorText(e));
