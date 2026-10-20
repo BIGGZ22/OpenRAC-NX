@@ -53,6 +53,10 @@
 #define RAC1_TYPE_func_001FE540_result int
 /* The sprite's TEX0 (FUN_00200468 here, PAL's func_00200CA0). */
 #define RAC1_TYPE_func_00200CA0_tex0 unsigned long long
+/* The hero's position (PAL gHeroPos D_0013F4D0: the hero record D_0013F450, here 0x0013F350,
+ * plus 0x80), for crash reports (boot.c). */
+#define RAC1_HERO_POS 0x0013F3D0u
+
 /* ---- generated below ---- */
 
 /* Functions: games/rac1's name, this version's. */
