@@ -20,8 +20,34 @@ class PlayerActions(unittest.TestCase):
         self.assertEqual(self.actions["repository"], [])
         for key, actions in self.actions["versions"].items():
             self.assertLessEqual({a["id"] for a in actions}, set(bundle.KEEP), key)
-        self.assertEqual(set(self.pal), {"port-levels", "port-levels-check", "play"})
-        self.assertEqual(set(self.ntsc), {"port-levels", "port-levels-check", "play"})
+        # Playing, and modding: every player gets the Mods page, not only a checkout's.
+        self.assertEqual(set(self.pal), set(bundle.KEEP))
+        self.assertEqual(set(self.ntsc), set(bundle.KEEP))
+
+    def test_mods_work_in_the_data_folder(self):
+        extract, pack = self.pal["editor-extract"], self.pal["editor-pack"]
+        self.assertEqual(extract["args"][-3:], ["{data}/levels/pal", "--split", "--anywhere"])
+        self.assertEqual(pack["args"][-3:], ["{data}/levels/pal", "{data}/packed/pal", "--anywhere"])
+        self.assertEqual(pack["artifact"], "{data}/levels/pal/level_00/project.godot")
+        self.assertEqual(self.pal["editor-open"]["artifact"], "{data}/levels/pal/level_{level}/project.godot")
+        self.assertIn("{data}/levels/pal/level_{level}", self.pal["editor-open"]["args"])
+        stack = self.pal["overrides-stack"]["args"]
+        self.assertEqual(stack[stack.index("--packed") + 1], "{data}/packed/pal")
+        self.assertEqual(stack[stack.index("--levels") + 1], "{data}/port/pal")
+        exported = self.pal["assets-export"]
+        self.assertEqual(exported["args"][2], "{data}/port/pal")
+        self.assertEqual([need["path"] for need in exported["needs"]], ["{data}/port/pal/level_99/manifest.json"])
+        edited = self.pal["play-edited"]
+        self.assertEqual(edited["args"][edited["args"].index("--levels") + 1], "{data}/port/pal")
+        self.assertEqual([need["path"] for need in edited["needs"]], [self.pal["port-levels-check"]["makes"]])
+        self.assertEqual(edited["cwd"], "{data}")
+        # NTSC-U's editor folders are its own.
+        self.assertEqual(self.ntsc["editor-extract"]["args"][-3], "{data}/levels/ntsc")
+
+    def test_no_mod_action_names_the_checkout(self):
+        for action in [*self.pal.values(), *self.ntsc.values()]:
+            text = json.dumps({k: action.get(k) for k in ("args", "artifact", "needs", "makes")})
+            self.assertNotIn("assets/", text.replace("{data}", ""), action["id"])
 
     def test_levels_go_to_the_data_folder(self):
         levels = self.pal["port-levels"]

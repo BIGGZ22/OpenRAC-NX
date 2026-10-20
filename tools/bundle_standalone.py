@@ -48,8 +48,18 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent.parent
 
 # What a player's launcher offers for a version, from launcher/actions.json. The rest (the
-# decompilation's builds and checks, the level editor, building the port) needs a checkout.
-KEEP = ("port-levels", "port-levels-check", "play")
+# decompilation's builds and checks, building the port, the tools' tests) needs a checkout.
+PLAY = ("port-levels", "port-levels-check", "play")
+# Mods: the level editor (Godot projects of the disc's levels, packed back into the game's data),
+# models and textures, packs, and playing with them. In a checkout they work in its assets/; the
+# carried copy is read-only, so they work in the data folder instead (MOD_FOLDERS).
+MODS = ("editor-extract", "editor-preview", "editor-import", "editor-open", "editor-pack",
+        "assets-export", "assets-import", "overrides-add", "overrides-stack", "play-edited")
+KEEP = PLAY + MODS
+# Where a checkout's folders for version <game>/<version> go in the carried copy, longest first:
+# the levels the port draws, the level editor's projects, and the packed levels.
+MOD_FOLDERS = (("{root}/assets/port/", "port"), ("assets/port/", "port"), ("assets/levels/", "levels"),
+               ("{root}/assets/packed/", "packed"), ("assets/packed/", "packed"))
 # Where the carried copy writes instead of the checkout's assets/port/<game>/<version>. {data} is the
 # game's, shared by its versions: each version's levels are <data>/port/<version>, which is also where
 # the program looks without --levels.
@@ -61,6 +71,26 @@ GAMES = ("openrac-rac1-pal", "openrac-rac1-ntsc")
 def levels_folder(key: str) -> str:
     """The data folder's place for version KEY's levels: <data>/port/<version>."""
     return f"{LEVELS_ROOT}/{key.split('/')[-1]}"
+
+
+def in_data_folder(text: str, key: str) -> str:
+    """TEXT with version KEY's checkout folders (MOD_FOLDERS) moved into the data folder:
+    assets/levels/rac1/pal/level_{level} becomes {data}/levels/pal/level_{level}."""
+    version = key.split("/")[-1]
+    for prefix, kind in MOD_FOLDERS:
+        text = text.replace(f"{prefix}{key}", f"{{data}}/{kind}/{version}")
+    return text
+
+
+def moved(value, key: str):
+    """VALUE (an action's field: a string, a list or a dict of them) with in_data_folder applied."""
+    if isinstance(value, str):
+        return in_data_folder(value, key)
+    if isinstance(value, list):
+        return [moved(v, key) for v in value]
+    if isinstance(value, dict):
+        return {k: moved(v, key) for k, v in value.items()}
+    return value
 
 
 def point_at(args: list[str], levels: str) -> list[str]:
@@ -97,6 +127,16 @@ def player_actions() -> dict:
                     action["makes"] = f"{levels}/verified-3.json"
                     action["needs"] = [{"path": f"{levels}/level_99/manifest.json", "from": need["from"]}
                                        for need in action.get("needs", [])]
+                elif action["id"] in MODS:
+                    for field in ("args", "artifact", "needs", "makes"):
+                        if field in action:
+                            action[field] = moved(action[field], key)
+                    if args[:2] in (["editor/extract.py", "godot"], ["editor/extract.py", "pack"]):
+                        # The editor writes only under a checkout's assets/ unless told otherwise.
+                        action["args"] = action["args"] + ["--anywhere"]
+                    if action["id"] == "play-edited":
+                        # Started where Play is (below), for the same reason.
+                        action["cwd"] = "{data}"
                 else:
                     action["args"] = point_at(args, levels)
                     action["needs"] = [{"path": f"{levels}/verified-3.json", "from": need["from"]}

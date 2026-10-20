@@ -256,6 +256,8 @@ def main() -> None:
                         help="terrain detail: 0 finest (default), 2 coarsest")
     export.add_argument("--split", action="store_true",
                         help="a Godot project per level (OUT/level_NN): each opens in seconds")
+    export.add_argument("--anywhere", action="store_true",
+                        help="OUT may be outside this repository (the installed launcher's data folder)")
     native = commands.add_parser("port")
     native.add_argument("iso", type=Path)
     native.add_argument("out", type=Path)
@@ -274,6 +276,8 @@ def main() -> None:
     packing.add_argument("project", type=Path,
                          help="the Godot project the levels were edited in, or the folder of per-level projects")
     packing.add_argument("out", type=Path, help="where the packed levels go (under assets/ or build/)")
+    packing.add_argument("--anywhere", action="store_true",
+                         help="OUT may be outside this repository (the installed launcher's data folder)")
     dump = commands.add_parser("raw")
     dump.add_argument("iso", type=Path)
     dump.add_argument("out", type=Path)
@@ -293,7 +297,7 @@ def main() -> None:
                     print(f"moved the Godot projects made before into {args.out.resolve()}")
                     return
                 dest = publish(args.out, lambda out: godot(args.iso, survey, levels, args.terrain_lod, max(1, args.jobs), out,
-                                                           args.split, disc.version.region))
+                                                           args.split, disc.version.region), args.anywhere)
                 print(f"Godot project{'s, one per level' if args.split else ''}: {dest}")
             elif args.command == "port":
                 levels = sorted(set(args.level or range(LEVEL_COUNT)))
@@ -310,7 +314,7 @@ def main() -> None:
                     print(f"moved the Godot projects made before into {args.project.resolve()}")
                 if adopt_flat_export(dest, disc.version.key, "packed"):
                     print(f"moved the packed levels made before into {dest}")
-                if not any(root in dest.parents for root in (ROOT / "assets", ROOT / "build")):
+                if not args.anywhere and not any(root in dest.parents for root in (ROOT / "assets", ROOT / "build")):
                     raise FormatError("output must be a directory under this repository's assets/ or build/")
                 if not (args.project / "project.godot").is_file() and not list(args.project.glob("level_*/project.godot")):
                     raise FormatError(f"{args.project} is not the editor's Godot project or its folder of "

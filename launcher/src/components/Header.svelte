@@ -14,8 +14,9 @@
   // developer tools on, Develop is a tab of its own: the checkout, each version and the jobs.
   const tabs = $derived<{ page: Page; label: string; icon: IconName }[]>([
     { page: "library", label: "Games", icon: "library" },
-    // The level editor works in a checkout's folders: not from the copy an installed launcher carries.
-    ...(app.info?.standalone ? [] : [{ page: "mods" as Page, label: "Mods", icon: "edit" as IconName }]),
+    // Every desktop launcher, installed or on a checkout (an installed one mods in its data folder,
+    // tools/bundle_standalone.py); Android has no Godot to edit levels in.
+    ...(app.info?.platform === "android" ? [] : [{ page: "mods" as Page, label: "Mods", icon: "edit" as IconName }]),
     ...(app.config?.developer ? [{ page: "develop" as Page, label: "Develop", icon: "terminal" as IconName }] : []),
     { page: "settings", label: "Settings", icon: "gear" },
   ]);

@@ -36,11 +36,22 @@
     return v && extract && extract.state !== "planned" ? v : null;
   }
 
-  /** A version's folders in a checkout (launcher/actions.json): its level projects and packed levels. */
+  const standalone = $derived(app.info?.standalone ?? false);
+
+  /** A version's folders: its level projects and packed levels. In a checkout they are its own
+   *  (launcher/actions.json); an installed launcher's are in the game's data folder, where
+   *  tools/bundle_standalone.py points its actions (install.rs, data_dir). */
   const folders = (v: VersionView) => {
-    const tree = v.name === "pal" ? v.game : `${v.game}-${v.name}`;
-    return { projects: `assets/levels/${tree}`, packed: `assets/packed/${tree}` };
+    if (standalone && app.config?.installDir) {
+      const data = `${app.config.installDir}/active/${v.game}/data`;
+      return { projects: `${data}/levels/${v.name}`, packed: `${data}/packed/${v.name}` };
+    }
+    return { projects: `assets/levels/${v.game}/${v.name}`, packed: `assets/packed/${v.game}/${v.name}` };
   };
+
+  /** Opens one of those folders: a checkout's through its root, an installed launcher's in the data folder. */
+  const openFolder = (v: VersionView, path: string) =>
+    guard(standalone ? api.openGameFolder(v.game, path) : api.openPath(path));
 
   const live = (j: Job) => j.state === "queued" || j.state === "running";
   const jobsOf = (v: VersionView, ids: string[]) =>
@@ -315,10 +326,10 @@
                   <code>{dirs.projects}/level_NN</code>; packed levels: <code>{dirs.packed}</code>.
                 </p>
                 <div class="row">
-                  <button class="small" onclick={() => void guard(api.openPath(dirs.projects))}
+                  <button class="small" onclick={() => void openFolder(v, dirs.projects)}
                     ><Icon name="folder" size={14} />Level projects</button
                   >
-                  <button class="small" onclick={() => void guard(api.openPath(dirs.packed))}
+                  <button class="small" onclick={() => void openFolder(v, dirs.packed)}
                     ><Icon name="folder" size={14} />Packed levels</button
                   >
                   <button class="small" onclick={() => void guard(api.openPath("editor/README.md"))}
