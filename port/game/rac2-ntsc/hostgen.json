@@ -5,18 +5,94 @@
   "serial": "SCUS_972.68",
   "source": "games/rac2/ntsc",
   "frame_rate": 60,
-  "entry": null,
+  "entry": "func_00131AE8",
   "sources": [
     "src"
   ],
-  "skip": [],
+  "skip": [
+    "src/core/00121B20.c",
+    "src/core/001220F0.c",
+    "src/core/001232F0.c"
+  ],
   "includes": [
     "include",
     "src"
   ],
-  "defines": [],
+  "defines": [
+    "INCLUDE_ASM_H",
+    "ASM_FUNC(FOLDER,NAME)=extern int openrac_asm_##NAME",
+    "LINKER_REMNANT(FOLDER,NAME)=",
+    "INCLUDE_RODATA(FOLDER,NAME)="
+  ],
+  "aliases": [
+    "include/names.h",
+    "build/boot/placed.json"
+  ],
+  "symbols": [
+    "symbol_addrs/usa/symbol_addrs.txt",
+    "build/boot/placed.json"
+  ],
   "places": "config/levels/functions.tsv",
-  "relocate": [1735808, 5242880],
+  "names": {
+    "code": [
+      "^func_(?:L(?P<overlay>\\d\\d)_)?(?P<addr>[0-9A-Fa-f]{6,8})(?:_\\w*)?$",
+      "^FUN_(?:L(?P<overlay>\\d\\d)_)?(?P<addr>[0-9A-Fa-f]{8})$",
+      "^F[0-9a-f]{8}_(?:FUN|func)_(?P<addr>[0-9A-Fa-f]{8})$"
+    ],
+    "data": [
+      "^(?:D|func)_(?:L(?P<overlay>\\d\\d)_)?(?P<addr>[0-9A-Fa-f]{6,8})(?:_\\w*)?$",
+      "^F[0-9a-f]{8}_D_(?P<addr>[0-9A-Fa-f]{8})$"
+    ]
+  },
+  "relocate": [
+    1735808,
+    5242880
+  ],
   "libraries": "libraries.tsv",
-  "roots": []
+  "host_functions": [
+    "func_0011F718",
+    "func_0011B800",
+    "func_002FC070",
+    "func_0029D4D0",
+    "func_00283180",
+    "func_00283198",
+    "func_00132C48",
+    "func_00132DF0",
+    "func_00115D48",
+    "func_00115DA8",
+    "func_0011C7E8",
+    "func_0011C820",
+    "func_0034EF58"
+  ],
+  "from_assembly": [
+    "func_00272550",
+    "func_00293CA8",
+    "func_0029B658",
+    "func_0029CB58",
+    "func_0029CB80",
+    "func_002A7A00",
+    "func_002A90C8",
+    "func_002AA738",
+    "func_002ACE78",
+    "func_00335D80",
+    "func_00335DA0",
+    "func_003361E0",
+    "func_003369A8",
+    "func_00336A08",
+    "func_00351828"
+  ],
+  "roots": [
+    "func_00131AE8",
+    "func_00131D98"
+  ],
+  "asm": {
+    "enabled": true,
+    "discover_entries": true,
+    "forward_unprototyped": true,
+    "dirs": [],
+    "gp": "0x001AEFF0",
+    "retail": {
+      "exe": "baserom/SCUS_972.68"
+    }
+  }
 }

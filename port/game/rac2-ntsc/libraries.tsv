@@ -1,7 +1,174 @@
-# The libraries Ratchet & Clank: Going Commando (NTSC-U) calls, by entry point, and what the port does with
-# each: the same columns and port values as port/game/rac1-pal/libraries.tsv.
-# Empty for now: the decompilation does not name its library functions yet.
-# A row binds an entry point to one of the replacements every game shares
-# (port/game/common/libraries.tsv); until then such calls are stubs.
+# The libraries Ratchet & Clank: Going Commando (NTSC-U) calls, by entry point, and what the port
+# does with each: the same columns and port values as port/game/rac1-pal/libraries.tsv.
+# A host row binds an entry point to the replacement of that name every game shares
+# (port/game/common/libraries.tsv), or, with a signature of its own, to this game's host C
+# (port/game/rac2-ntsc/host). Names come from the decompilation's symbol_addrs/usa/symbol_addrs.txt
+# where it has them; the kernel's system-call wrappers are identified by the call number each
+# loads into $v1 (ps2tek's EE kernel table). Entry points not here run from their C, or from
+# their assembly (hostgen.json "asm").
 #
 # symbol	library	name	port	notes	signature (optional)
+func_00131AE8	boot	rac2NativeEntry	host	crt0 at the ELF entry: _InitSys, FlushCache(0), main(argc, argv) without the PS2 thread and heap syscalls	int (void)
+func_00115340	libc	memcmp	host	symbol_addrs.txt name
+func_001153D4	libc	memcpy	host	symbol_addrs.txt name
+func_00115484	libc	memset	host	symbol_addrs.txt name
+func_00115544	libc	strcmp	host	symbol_addrs.txt name
+func_00115690	libc	strcpy	host	symbol_addrs.txt name
+func_001157AC	libc	strlen	host	symbol_addrs.txt name
+func_00115AC0	libc	strncpy	host	symbol_addrs.txt name
+func_0011A820	kernel	SetGsCrt	host	symbol_addrs.txt name
+func_0011A840	kernel	Exit	host	syscall wrapper 0x04 (_Exit)
+func_0011A900	kernel	AddIntcHandler	host	syscall wrapper 0x10
+func_0011A910	kernel	AddIntcHandler	host	syscall wrapper 0x10, second entry
+func_0011A920	kernel	RemoveIntcHandler	host	symbol_addrs.txt name
+func_0011A930	kernel	AddDmacHandler	host	syscall wrapper 0x12
+func_0011A940	kernel	AddDmacHandler2	host	syscall wrapper 0x12, second entry with the handler argument
+func_0011A950	kernel	RemoveDmacHandler	host	symbol_addrs.txt name
+func_0011A960	kernel	EnableIntc	host	syscall wrapper 0x14 (_EnableIntc)
+func_0011A970	kernel	DisableIntc	host	syscall wrapper 0x15 (_DisableIntc)
+func_0011A980	kernel	EnableDmac	host	syscall wrapper 0x16 (_EnableDmac)
+func_0011A990	kernel	DisableDmac	host	syscall wrapper 0x17 (_DisableDmac)
+func_0011A9A0	kernel	SetAlarm	host	symbol_addrs.txt name
+func_0011A9C0	kernel	EnableIntc	host	syscall wrapper -0x1a (_iEnableIntc)
+func_0011A9D0	kernel	DisableIntc	host	syscall wrapper -0x1b (_iDisableIntc)
+func_0011A9E0	kernel	EnableDmac	host	syscall wrapper -0x1c (_iEnableDmac)
+func_0011A9F0	kernel	DisableDmac	host	syscall wrapper -0x1d (_iDisableDmac)
+func_0011AA20	kernel	CreateThread	host	symbol_addrs.txt name
+func_0011AA30	kernel	DeleteThread	host	symbol_addrs.txt name
+func_0011AA40	kernel	StartThread	host	symbol_addrs.txt name
+func_0011AA70	kernel	TerminateThread	host	symbol_addrs.txt name
+func_0011AA80	kernel	TerminateThread	host	syscall wrapper -0x26 (iTerminateThread)
+func_0011AAB0	kernel	ChangeThreadPriority	host	symbol_addrs.txt name
+func_0011AAC0	kernel	ChangeThreadPriority	host	syscall wrapper -0x2a (iChangeThreadPriority)
+func_0011AAD0	kernel	RotateThreadReadyQueue	host	symbol_addrs.txt name
+func_0011AAE0	kernel	RotateThreadReadyQueue	host	syscall wrapper -0x2c (_iRotateThreadReadyQueue)
+func_0011AB10	kernel	GetThreadId	host	symbol_addrs.txt name
+func_0011AB20	kernel	ReferThreadStatus	host	symbol_addrs.txt name
+func_0011AB30	kernel	ReferThreadStatus	host	syscall wrapper -0x31 (iReferThreadStatus)
+func_0011AB40	kernel	SleepThread	host	symbol_addrs.txt name
+func_0011AB50	kernel	WakeupThread	host	symbol_addrs.txt name
+func_0011AB60	kernel	WakeupThread	host	syscall wrapper -0x34 (_iWakeupThread)
+func_0011AB90	kernel	SuspendThread	host	symbol_addrs.txt name
+func_0011ABA0	kernel	SuspendThread	host	syscall wrapper -0x38 (_iSuspendThread)
+func_0011AC00	kernel	EndOfHeap	host	symbol_addrs.txt name
+func_0011AC20	kernel	CreateSema	host	symbol_addrs.txt name
+func_0011AC30	kernel	DeleteSema	host	symbol_addrs.txt name
+func_0011AC40	kernel	SignalSema	host	symbol_addrs.txt name
+func_0011AC50	kernel	SignalSema	host	syscall wrapper -0x43 (iSignalSema)
+func_0011AC60	kernel	WaitSema	host	symbol_addrs.txt name
+func_0011AC70	kernel	PollSema	host	symbol_addrs.txt name
+func_0011AC80	kernel	PollSema	host	syscall wrapper -0x46 (iPollSema)
+func_0011ACC0	kernel	SetOsdConfigParam	host	symbol_addrs.txt name
+func_0011ACD0	kernel	GetOsdConfigParam	host	symbol_addrs.txt name
+func_0011AE70	kernel	EnableCache	host	symbol_addrs.txt name
+func_0011AEA0	kernel	FlushCache	host	symbol_addrs.txt name
+func_0011AED0	kernel	FlushCache	host	syscall wrapper -0x68 (iFlushCache)
+func_0011AEF0	kernel	sceSifStopDma	host	symbol_addrs.txt name
+func_0011AF30	kernel	GetOsdConfigParam2	host	symbol_addrs.txt name
+func_0011AF60	kernel	GsPutIMR	host	symbol_addrs.txt name
+func_0011AF70	kernel	GsPutIMR	host	syscall wrapper -0x71 (iGsPutIMR)
+func_0011AF90	kernel	SetVSyncFlag	host	symbol_addrs.txt name
+func_0011AFA0	kernel	SetSyscall	host	syscall wrapper 0x74
+func_0011AFC0	kernel	sceSifDmaStat	host	symbol_addrs.txt name
+func_0011AFD0	kernel	sceSifDmaStat	host	syscall wrapper -0x76 (isceSifDmaStat)
+func_0011AFE0	kernel	sceSifSetDma	host	symbol_addrs.txt name
+func_0011AFF0	kernel	sceSifSetDma	host	syscall wrapper -0x77 (isceSifSetDma)
+func_0011B000	kernel	sceSifSetDChain	host	symbol_addrs.txt name
+func_0011B010	kernel	sceSifSetDChain	host	syscall wrapper -0x78 (isceSifSetDChain)
+func_0011B020	kernel	sceSifSetReg	host	symbol_addrs.txt name
+func_0011B030	kernel	sceSifGetReg	host	symbol_addrs.txt name
+func_0011B050	kernel	Deci2Call	host	symbol_addrs.txt name
+func_0011B080	kernel	GetMemorySize	host	symbol_addrs.txt name
+func_0011B090	kernel	_InitTLB	host	symbol_addrs.txt name
+func_0011D450	sif	sceSifBindRpc	host	symbol_addrs.txt name
+func_0011D620	sif	sceSifCallRpc	host	symbol_addrs.txt name
+func_0011D810	sif	sceSifCheckStatRpc	host	symbol_addrs.txt name
+func_0011EED8	sif	sceSifRebootIop	host	symbol_addrs.txt name
+func_0011EFF0	kernel	Copy	host	syscall wrapper 0x5a
+func_0011F038	kernel	GetEntryAddress	host	syscall wrapper 0x5b
+func_0011F048	kernel	SetSyscall	host	syscall wrapper 0x74
+func_0011F120	kernel	_SetTLBEntry	host	syscall wrapper 0x56
+func_0011F700	kernel	FindAddress	host	symbol_addrs.txt name
+func_0011F818	kernel	SetSyscall	host	syscall wrapper 0x74
+func_0011F868	kernel	SetSyscall	host	syscall wrapper 0x74
+func_0011F878	kernel	Copy	host	syscall wrapper 0x5a
+func_0011F8C0	kernel	GetEntryAddress	host	syscall wrapper 0x5b
+func_0011FA50	kernel	SetSyscall	host	syscall wrapper 0x74
+func_0011FA60	kernel	Copy	host	syscall wrapper 0x5a
+func_0011FAA8	kernel	GetEntryAddress	host	syscall wrapper 0x5b
+func_00121AB8	libgcc	__muldi3	host	symbol_addrs.txt name
+func_00121B20	libgcc	__udivdi3	host	symbol_addrs.txt name
+func_001220F0	libgcc	__umoddi3	host	symbol_addrs.txt name
+func_00124E08	cdvd	sceCdInit	host	symbol_addrs.txt name
+func_001250E8	cdvd	sceCdDiskReady	host	symbol_addrs.txt name
+func_001252E0	cdvd	sceCdMmode	host	symbol_addrs.txt name
+func_001253A8	cdvd	sceCdRead	host	symbol_addrs.txt name
+func_001256D8	cdvd	sceCdReadClock	host	symbol_addrs.txt name
+func_001257D0	graph	sceGsResetGraph	host	symbol_addrs.txt name
+func_001282A8	dbc	sceDbcInit	host	symbol_addrs.txt name
+func_00124418	vu	sceGsResetPath	host	resets VU1/VIF1/GIF (VU0 FBRST, then VIF and GIF reset writes); the native renderer has no paths to reset
+func_001244B8	vu	sceGsSyncPath	host	symbol_addrs.txt WaitGsPathsIdle: polls the DMA, VIF1 and GIF status; native hand-offs are synchronous
+func_001158F8	libc	strncmp	host	same instructions as rac4's strncmp (relocations masked)
+func_0011B1E8	fileio	sceWrite	host	same instructions as rac4's (libkernl glue.o write)
+func_0011B3D0	kernel	SyncDCache	host	interrupt-safe range wrapper around _sceSDC (0x0011B328)
+func_0011B500	kernel	InvalidDCache	host	interrupt-safe range wrapper around _sceIDC (0x0011B458)
+func_0011B588	kernel	DisableIntc	host	interrupt-safe wrapper around _DisableIntc (syscall 0x15)
+func_0011B5F0	kernel	EnableIntc	host	interrupt-safe wrapper around _EnableIntc (syscall 0x14)
+func_0011B658	kernel	DisableDmac	host	interrupt-safe wrapper around _DisableDmac (syscall 0x17)
+func_0011B6C0	kernel	EnableDmac	host	interrupt-safe wrapper around _EnableDmac (syscall 0x16)
+func_0011CF78	sif	sceSifInitRpc	host	same instructions as rac1-pal's and rac4's
+func_0011E0A0	fileio	sceFsReset	host	same instructions as rac1-pal's
+func_0011E0D8	fileio	rac2SceOpen	host	same instructions as rac1-pal's sceOpen; declared variadic, so bound in host/io.c	int (char *, int, ...)
+func_0011E360	fileio	sceClose	host	same instructions as rac1-pal's
+func_0011E4E0	fileio	sceRead	host	same instructions as rac1-pal's
+func_0011E7A0	sif	sceSifInitIopHeap	host	same instructions as rac1-pal's and rac4's
+func_0011ED08	sif	sceSifLoadModuleBuffer	host	same instructions as rac1-pal's
+func_0011EEA0	sif	sceSifSyncIop	host	same instructions as rac1-pal's
+func_0011F5E0	kernel	DIntr	host	same instructions as rac1-pal's
+func_0011F628	kernel	EIntr	host	same instructions as rac1-pal's
+func_0011FC48	libgcc	__main	host	the host runs no global constructors for the game: it has none
+func_001234F0	libgcc	__extendsfdf2	host	same instructions as rac1-pal's
+func_00124B88	cdvd	sceCdSync	host	same instructions as rac1-pal's
+func_00125588	cdvd	sceCdGetError	host	same instructions as rac1-pal's and rac4's
+func_00125620	cdvd	sceCdBreak	host	same instructions as rac1-pal's and rac4's
+func_00125A20	graph	sceGsSetDefDispEnv	host	same instructions as rac1-pal's and rac4's
+func_00125D98	graph	sceGsPutDispEnv	host	same instructions as rac1-pal's and rac4's; the catalogue starts it 4 bytes early, at the fill word
+func_00126108	graph	sceGsPutDrawEnv	host	same instructions as rac1-pal's and rac4's; catalogue place 0x00126104
+func_001261F0	graph	sceGsSyncV	host	same instructions as rac1-pal's and rac4's
+func_00126288	graph	sceGsSetDefLoadImage	host	same instructions as rac1-pal's; catalogue place 0x00126284
+func_00126470	graph	sceGsSetDefStoreImage	host	same instructions as rac1-pal's; catalogue place 0x0012646C
+func_001265B0	graph	sceGsExecLoadImage	host	same instructions as rac1-pal's and rac4's
+func_00126730	graph	sceGsExecStoreImage	host	same instructions as rac1-pal's; catalogue place 0x0012672C
+func_00126DC0	graph	sceGsSyncVCallback	host	same instructions as rac1-pal's and rac4's; catalogue place 0x00126DBC
+func_00126F60	dma	sceDmaReset	host	same instructions as rac1-pal's and rac4's
+func_00127220	dma	rac2DmaSend	host	same instructions as rac1-pal's sceDmaSend (catalogue place 0x00127218); host/dma.c leaves the end tag's CHCR for the game's VIF1 handler	void (unsigned int, unsigned int)
+func_00127348	mc	sceMcInit	host	same instructions as rac1-pal's
+func_00127508	mc	sceMcOpen	host	same instructions as rac1-pal's
+func_00127630	mc	sceMcMkdir	host	same instructions as rac1-pal's
+func_00127668	mc	sceMcClose	host	same instructions as rac1-pal's
+func_00127720	mc	sceMcSeek	host	same instructions as rac1-pal's
+func_00127888	mc	sceMcRead	host	same instructions as rac1-pal's
+func_001279A0	mc	sceMcWrite	host	same instructions as rac1-pal's
+func_00127B88	mc	sceMcSync	host	same instructions as rac1-pal's and rac4's
+func_00127CC0	mc	sceMcGetInfo	host	same instructions as rac1-pal's and rac4's
+func_00127E48	mc	sceMcGetDir	host	same instructions as rac1-pal's
+func_00127F98	mc	sceMcFormat	host	same instructions as rac1-pal's sceMcFormat (and its sceMcUnformat; the library's order decides)
+func_00128068	mc	sceMcDelete	host	same instructions as rac1-pal's
+func_00128180	mc	sceMcUnformat	host	same instructions as rac1-pal's sceMcUnformat (and its sceMcFormat; the library's order decides)
+func_001288C0	pad2	scePad2Init	host	same instructions as rac1-pal's
+func_00128900	pad2	scePad2CreateSocket	host	same instructions as rac1-pal's
+func_00128A50	pad2	scePad2Read	host	same instructions as rac1-pal's
+func_00128B28	pad2	scePad2GetButtonProfile	host	same instructions as rac1-pal's
+func_00128C18	pad2	scePad2GetState	host	same instructions as rac1-pal's
+func_00128F50	vib	sceVibGetProfile	host	same instructions as rac1-pal's
+func_00129218	vu0	sceVu0RotMatrixZ	host	same instructions as rac1-pal's (Z, X, Y in the library's order)
+func_001292C0	vu0	sceVu0RotMatrixX	host	same instructions as rac1-pal's (Z, X, Y in the library's order)
+func_00129368	vu0	sceVu0RotMatrixY	host	same instructions as rac1-pal's (Z, X, Y in the library's order)
+func_00131A98	scf	sceScfGetLocalTimefromRTC	host	same instructions as rac1-pal's and rac4's
+func_00132028	989snd	snd_FlushSoundCommands	host	symbol_addrs.txt snd_Pump; same opening as rac4's snd_FlushSoundCommands; the native flush also delivers deferred disc completion
+func_00133250	989snd	snd_InitVAGStreamingEx	host	same opening as rac4's
+func_001334B8	989snd	snd_StreamSafeCdRead	host	same opening as rac4's: sector, count, destination
+func_00133580	989snd	snd_StreamSafeCdSync	host	symbol_addrs.txt snd_CheckLoadInProgress; sceCdSync (0x00124B88) when no stream plays
+func_00133640	989snd	snd_StreamSafeCdBreak	host	symbol_addrs.txt CdStopRead; queues the stream stop, then sceCdBreak (0x00125620)
+func_00133688	989snd	snd_StreamSafeCdGetError	host	symbol_addrs.txt CdGetLoadStatus; the stream's error, else sceCdGetError (0x00125588)
+func_001336D0	989snd	snd_StreamSafeCdCallback	host	same opening as rac4's; installs the callback or forwards to sceCdCallback (0x001245D0); catalogue place 0x001336C0
