@@ -1,10 +1,24 @@
 # Going Commando NTSC-U native start-up
 
 `openrac-rac2-ntsc` boots Ratchet & Clank: Going Commando (SCUS-97268) from
-its decompilation to the front end's main menu: the splash and the memory
-card check, the intro movies (skipped with `--skip-movies`) and the menu's
-three buttons with their labels, drawn by the direct renderer. What is not there yet is
-listed at the end. Nothing of a level runs.
+its decompilation to the front end's main menu and works it: the splash and
+the memory card check, the intro movies (skipped with `--skip-movies`), the
+menu's three buttons with their labels (New Game, Load, Options), Up and Down
+moving the selection, Cross opening an entry and Triangle backing out. Each
+entry's page draws: Options (16:9, Progressive Scan, Vibration, Subtitles,
+navigable), Load (with no card: "Please insert a Memory Card ... Go back?")
+and New Game (with no card: "No Memory Card (PS2) inserted ... Continue
+anyway? Yes / No"). Yes there starts the game: the first level's load is
+where it stops (below).
+
+A run that does all of it, hidden, with the frames on which the pad is
+pressed (Cross 0x4000, Start 0x8, Down 0x40, Up 0x10, Triangle 0x1000):
+
+```sh
+OPENRAC_HIDDEN=1 OPENRAC_PRESS=300:4000:10,500:8:10,700:4000:10,900:8:10,1300:40:8,1340:40:8,1400:4000:8,1500:40:8,1600:1000:8,1700:10:8,1760:4000:8,2000:1000:8 \
+  port/build/release/openrac-rac2-ntsc --data build/rac2-data --window --frames 2200 \
+  --no-card --skip-movies --stop-on-missing
+```
 
 ## Building and running
 
@@ -74,6 +88,21 @@ FontPrintWindow wrappers).
 
 ## Not there yet
 
+- The first level's load (New Game, then Yes): after the intro cinematic
+  (skipped) the loader (0x002EC408 -> 0x002EAB18 -> 0x00294070 -> 0x00293D30)
+  reads 635 sectors at 1277354 to 0x00A54000 and hands them to the WAD
+  decompressor, which finds no WAD header there. Levels also need their
+  programs and the overlay hook, the level-copy functions (`func_..._N`)
+  that register at one address in overlay 30 (logged at start), and the
+  world renderer.
+- The menu's selected button differs from the others only faintly (a pixel
+  difference of at most 32 of 255): its highlight may not be drawn as the
+  game draws it.
+- The Options page's value boxes (beside each row) stay empty: their four
+  32x32 8-bit icons (TBP0 0x2C88 to 0x2C98) are drawn with a TEX0 whose
+  upper word is 0 (no palette, CBP 0) in the display list at 0x0035C200;
+  the full value is never in memory, so something between their VRAM
+  allocation and the packet keeps it in 32 bits. Not found yet.
 - Sound: only play and parameter commands reach the native engine; the
   banks, the master volume and the streams are dropped with a warning.
 - `rom0:ROMVER` cannot be opened (the game logs it and goes on).
