@@ -55,9 +55,11 @@ def moby_mesh(key) -> Mesh:
     return mesh
 
 
-def write_levels(root: Path, version: str = "pal", keys=((0, ("moby", 3)), (1, ("moby", 7)))) -> Path:
+def write_levels(root: Path, version: str = "pal", keys=((0, ("moby", 3)), (1, ("moby", 7))),
+                 game: str = "rac1") -> Path:
     """Two levels for the port, each with Ratchet (class 0, two joints) and tie class 3. KEYS: each
-    level's texture for Ratchet (another disc may number the same picture otherwise)."""
+    level's texture for Ratchet (another disc may number the same picture otherwise). GAME: the
+    game the manifests say they are from."""
     data = fixture()
     for number, moby_key in keys:
         writer = LevelWriter(root, Level(number))
@@ -69,7 +71,7 @@ def write_levels(root: Path, version: str = "pal", keys=((0, ("moby", 3)), (1, (
         (writer.dir / "textures").mkdir(parents=True, exist_ok=True)
         for name, tex in writer.textures.items():
             (writer.dir / "textures" / f"{name}.png").write_bytes(tex.png())
-        manifest = {"format": assets.LEVELS_FORMAT, "game": "rac1", "version": version, "level": number,
+        manifest = {"format": assets.LEVELS_FORMAT, "game": game, "version": version, "level": number,
                     "classes": {"moby": {"0": {"mesh": "mobys/moby_0.glb", "scale": 0.5, "name": "ratchet"},
                                          "1": {"mesh": None, "scale": 1.0}},
                                 "tie": {"3": {"mesh": "ties/tie_3.glb"}}, "shrub": {}},
@@ -146,6 +148,25 @@ class AssetTests(unittest.TestCase):
         # An export is read back with the levels it came from, not another disc's.
         with self.assertRaisesRegex(assets.AssetError, "another disc"):
             quiet(assets.import_edits, export, self.levels, assets.Report())
+
+    def test_a_later_game_s_levels_export_and_import_as_its_own(self):
+        levels = write_levels(self.root / "uya", "ntsc", game="rac3")
+        export = self.root / "uya-export"
+        quiet(assets.export, levels, export, [0], "all")
+        for path in (export / "export.json", export / "level_00/textures/textures.json",
+                     export / "level_00/mobys/moby_0_ratchet/asset.json"):
+            self.assertEqual(json.loads(path.read_text())["game"], "rac3", path)
+        big = rgb_png(16, 8, (255, 255, 0))
+        (export / "level_00/textures/moby_0003.png").write_bytes(big)
+        pack, _ = quiet(assets.import_edits, export, levels, assets.Report())
+        self.assertEqual((pack.game, pack.version), ("rac3", "ntsc"))
+        manifest = assets.write_pack(pack, self.root / "uya-pack", "UYA", "me", "", None, levels)
+        self.assertEqual((manifest["game"], manifest["version"]), ("rac3", "ntsc"))
+        self.assertEqual(overrides.check(self.root / "uya-pack")[1], ["level_00/textures/moby_0003.png",
+                                                                     "level_01/textures/moby_0007.png"])
+        # Another game's levels do not take it.
+        with self.assertRaisesRegex(assets.AssetError, "Up Your Arsenal's levels"):
+            quiet(assets.import_edits, export, write_levels(self.root / "rc", "ntsc"), assets.Report())
 
     def test_export_turns_into_gltf_axes_at_the_class_scale(self):
         document = gltf_read.read(self.model())

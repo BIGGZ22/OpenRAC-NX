@@ -16,7 +16,8 @@ port loads on top of the extracted levels, without reading the disc again.
 A pack is a folder, or a .zip of one, with openrac-mod.json at its root (or
 in the zip's one top folder) and files laid out as the extracted levels are:
 
-  openrac-mod.json                  {"format": 1, "game": "rac1", "version": "pal" or "ntsc",
+  openrac-mod.json                  {"format": 1, "game": "rac1" (or "rac2", "rac3", "rac4"),
+                                     "version": "pal" or "ntsc" (the others: "ntsc"),
                                      "name": ..., "author": ..., "description": ...,
                                      "levels_format": 3, "replaces": {...}, "originals": {...}}
   level_NN/textures/<name>.png      a texture, any size of the same shape
@@ -34,6 +35,10 @@ original picture's PNG hash} (or {"new": true} for a model's own
 picture); for a model, {"kind", "class", "vertices": a hash of the
 original's vertex positions, "textures": {name: hash of each level
 texture it draws with}}.
+
+Going Commando's, Up Your Arsenal's and Deadlocked's packs (game rac2, rac3, rac4; early access)
+hold textures and models only: their levels are not packed back yet, so a level edit in one is
+left out. A pack is stacked only for levels of its own game.
 
 An OVERRIDES folder holds the packs that were added (packs/<id>/) and
 overrides.json, their order and which are on: {"format": 1, "packs":
@@ -66,14 +71,15 @@ import tempfile
 import zipfile
 
 import disc
+import games
 from port import FORMAT
 
 MANIFEST = "openrac-mod.json"
 STATE = "overrides.json"
 MARKER = ".openrac-stack"
 PACK_FORMAT = 1
-GAME = "rac1"
-VERSIONS = tuple(v.key for v in disc.VERSIONS)  # the discs a pack's files can come from: pal, ntsc
+GAME = "rac1"  # the game of a pack whose manifest does not say
+VERSIONS = tuple(v.key for v in disc.VERSIONS)  # Ratchet & Clank's discs: pal, ntsc (games.VERSIONS for every game)
 LEVELS_FORMAT = FORMAT
 # The oldest levels format whose models a pack's models are drawn with: 2 gave the mobys their
 # metal packets and chrome and glass maps; 3 only added classes (port.py FORMAT).
@@ -118,8 +124,8 @@ def read_manifest(data: bytes, where: str) -> dict:
         raise PackError(f"{where}: {MANIFEST} is not a JSON object")
     if manifest.get("format") != PACK_FORMAT:
         raise PackError(f"{where}: pack format {manifest.get('format')!r}; this OpenRAC reads {PACK_FORMAT}")
-    if manifest.get("game") != GAME or manifest.get("version", "pal") not in VERSIONS:
-        raise PackError(f"{where} is not a pack for Ratchet & Clank ({manifest.get('game')}/"
+    if not games.known(manifest.get("game"), manifest.get("version", "pal" if manifest.get("game") == GAME else None)):
+        raise PackError(f"{where} is not a pack for a game OpenRAC reads ({manifest.get('game')}/"
                         f"{manifest.get('version')})")
     name = manifest.get("name")
     if not isinstance(name, str) or not name.strip() or len(name) > 120:
@@ -197,6 +203,13 @@ def check(path: Path) -> tuple[dict, list[str], list[str], list[str]]:
             if not FILES.match(rel):
                 if not PEOPLE.match(rel):
                     ignored.append(rel)
+                continue
+            if manifest["game"] != GAME and not (TEXTURE.match(rel) or MODEL.match(rel)):
+                # Early access: the later games' levels are not packed back, so only textures and
+                # models of theirs are used.
+                ignored.append(rel)
+                problems.append(f"{rel}: a level edit; {games.title(manifest['game'])}'s levels are not packed "
+                                "back yet, so only its textures and models are used")
                 continue
             data = source.read(rel)
             try:
@@ -503,6 +516,7 @@ class Target:
             raise PackError(f"{levels} holds no levels this OpenRAC reads: get the levels ready first")
         self.levels = self.index.levels
         self.version = self.index.version
+        self.game = self.index.game or GAME
         self.names = {}                       # (level, name) -> picture hash
         for picture, places in self.index.by_hash().items():
             for place in places:
@@ -680,6 +694,12 @@ def stack(folder: Path | None, out: Path, packed: Path | None = None, levels: Pa
     try:
         for name, ident, root, manifest in layers:
             made = manifest if isinstance(manifest, str) else manifest.get("version", "pal")
+            game = GAME if isinstance(manifest, str) else manifest.get("game", GAME)
+            if target is not None and game != target.game:
+                # Another game's textures and models never fit these levels.
+                skipped[ident] = sorted(layer_files(root))
+                notes.append(f"{name} is a pack for {games.title(game)}, not for {games.title(target.game)}: left out")
+                continue
             if target is None or made == target.version:
                 files = layer_files(root)
             elif ident == "packed":

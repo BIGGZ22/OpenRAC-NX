@@ -40,11 +40,11 @@ def write_pack(root: Path, name: str, files: dict, **fields) -> Path:
     return root
 
 
-def levels(root: Path, version: str = "pal") -> Path:
-    """A levels folder the stack is for: one level of VERSION's, with nothing in it."""
+def levels(root: Path, version: str = "pal", game: str = "rac1") -> Path:
+    """A levels folder the stack is for: one level of GAME's from VERSION's disc, with nothing in it."""
     (root / "level_00").mkdir(parents=True)
     (root / "level_00/manifest.json").write_text(json.dumps(
-        {"format": overrides.LEVELS_FORMAT, "game": "rac1", "version": version, "level": 0,
+        {"format": overrides.LEVELS_FORMAT, "game": game, "version": version, "level": 0,
          "classes": {"moby": {}, "tie": {}, "shrub": {}}, "textures": []}))
     return root
 
@@ -88,10 +88,12 @@ class PackTests(unittest.TestCase):
             self.assertEqual(any("levels of format" in p for p in problems), flagged, made)
 
     def test_wrong_game_or_nothing_inside_is_refused(self):
-        other = write_pack(self.root / "uya", "UYA", {"level_00/textures/a.png": rgb_png(2, 2, (0, 0, 0))},
-                           game="rac3")
-        with self.assertRaisesRegex(overrides.PackError, "not a pack for Ratchet & Clank"):
-            overrides.check(other)
+        # Up Your Arsenal is read from its NTSC-U disc only; a game OpenRAC does not know at all.
+        for game, version in (("rac3", "pal"), ("rac9", "ntsc")):
+            other = write_pack(self.root / f"{game}-{version}", "Other", {"level_00/textures/a.png": rgb_png(2, 2, (0, 0, 0))},
+                               game=game, version=version)
+            with self.assertRaisesRegex(overrides.PackError, "not a pack for a game OpenRAC reads"):
+                overrides.check(other)
         empty = write_pack(self.root / "empty", "Empty", {"README.txt": b"x"})
         with self.assertRaisesRegex(overrides.PackError, "replaces nothing"):
             overrides.check(empty)
@@ -183,6 +185,30 @@ class PackTests(unittest.TestCase):
         self.assertTrue(any("pack them again" in n for n in summary["notes"]))
         summary = overrides.stack(None, self.root / "mods-us", packed, levels(self.root / "us", "ntsc"))
         self.assertEqual(summary["files"], {"level_02/gameplay_ntsc.wad": "packed"})
+
+    def test_later_games_packs_hold_textures_and_models(self):
+        pack = write_pack(self.root / "gc", "GC textures", {
+            "level_01/textures/moby_0001.png": rgb_png(8, 8, (1, 2, 3)),
+            "level_01/mobys/moby_500.glb": glb(),
+            "level_01/placements.json": b"{}"}, game="rac2", version="ntsc")
+        manifest, used, ignored, problems = overrides.check(pack)
+        self.assertEqual(used, ["level_01/mobys/moby_500.glb", "level_01/textures/moby_0001.png"])
+        self.assertEqual(ignored, ["level_01/placements.json"])
+        self.assertTrue(any("not packed back yet" in p for p in problems))
+
+    def test_a_pack_goes_to_its_own_game_s_levels_only(self):
+        red = rgb_png(2, 2, (255, 0, 0))
+        overrides.add(write_pack(self.root / "gc", "Going", {"level_00/textures/x.png": red},
+                                 game="rac2", version="ntsc"), self.into)
+        overrides.add(write_pack(self.root / "rc", "First", {"level_00/textures/y.png": red}), self.into)
+        summary = overrides.stack(self.into, self.root / "mods-gc", None,
+                                  levels(self.root / "gc-levels", "ntsc", "rac2"))
+        self.assertEqual(summary["files"], {"level_00/textures/x.png": "going"})
+        self.assertEqual(summary["skipped"]["first"], ["level_00/textures/y.png"])
+        self.assertTrue(any("is a pack for Ratchet & Clank, not for Ratchet & Clank: Going Commando" in n
+                            for n in summary["notes"]))
+        summary = overrides.stack(self.into, self.root / "mods-rc", None, levels(self.root / "rc-levels"))
+        self.assertEqual(summary["files"], {"level_00/textures/y.png": "first"})
 
     def test_stack_with_nothing_still_writes_an_empty_list(self):
         out = self.root / "mods"
