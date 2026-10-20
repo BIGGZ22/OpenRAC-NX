@@ -2686,8 +2686,10 @@ bool frame(std::span<const std::uint8_t> ram, std::uint32_t chain, std::uint32_t
     }
     // The 2D path: the frame's direct GIF data, drawn by the direct renderer.
     // RAC1 keeps two alternating list buffers and the sent list is one tick behind; Deadlocked
-    // submits the title's list through VIF1 DMA without that RAC1 buffer-index convention.
-    const std::uint32_t shown = g->game == "rac4-ntsc" ? chain : viewer::shown_chain(ram, a);
+    // submits the title's list through VIF1 DMA without that RAC1 buffer-index convention, and
+    // so does Going Commando.
+    const bool sent_chain = g->game == "rac4-ntsc" || g->game == "rac2-ntsc";
+    const std::uint32_t shown = sent_chain ? chain : viewer::shown_chain(ram, a);
     std::vector<renderer::EffectVertex> strip_vertices;
     std::vector<renderer::EffectStrip> strips;
     std::size_t before_world = SIZE_MAX;
