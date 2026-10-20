@@ -657,6 +657,9 @@ std::uint32_t game_word(gaddr at) {
 // Pairs the address operands of a function's executable code and its copy: known register values
 // (lui, then addiu or ori), loads and stores through them or through $gp. The two codes are the
 // same instructions apart from addresses, so every pair computed in step is a correspondence.
+// Past the first `own` bytes (a piece's code run on into the next pieces, piece_bytes) only an
+// address whose high half was formed before them is paired: the later pieces pair the rest at their
+// own places.
 using WordReader = std::uint32_t (*)(int program, gaddr at);
 
 std::uint32_t exe_reader(int, gaddr at) {
@@ -664,13 +667,14 @@ std::uint32_t exe_reader(int, gaddr at) {
 }
 
 void pair_code(WordReader reference, int program, gaddr exe, gaddr level, std::uint32_t size,
-               gaddr low, gaddr high, std::map<gaddr, std::int32_t>& out) {
+               gaddr low, gaddr high, std::map<gaddr, std::int32_t>& out, std::uint32_t own = UINT32_MAX) {
     std::uint32_t ve[32] = {}, vl[32] = {};
     bool known[32] = {};
+    std::uint32_t origin[32] = {};  // where a known value's high half was formed
     // A branch's target gets the registers as the branch leaves them (after its delay slot), so a
     // value formed in a delay slot (lui in a branch-likely's slot, the addiu at the target) pairs.
     struct Registers {
-        std::uint32_t ve[32], vl[32];
+        std::uint32_t ve[32], vl[32], origin[32];
         bool known[32];
     };
     std::map<std::uint32_t, Registers> at_target;
@@ -697,6 +701,7 @@ void pair_code(WordReader reference, int program, gaddr exe, gaddr level, std::u
             Registers& r = at_target[pending_target];
             std::memcpy(r.ve, ve, sizeof(ve));
             std::memcpy(r.vl, vl, sizeof(vl));
+            std::memcpy(r.origin, origin, sizeof(origin));
             std::memcpy(r.known, known, sizeof(known));
             pending = false;
         }
@@ -705,6 +710,7 @@ void pair_code(WordReader reference, int program, gaddr exe, gaddr level, std::u
                 if (t->second.known[r]) {
                     ve[r] = t->second.ve[r];
                     vl[r] = t->second.vl[r];
+                    origin[r] = t->second.origin[r];
                     known[r] = true;
                 }
             }
@@ -731,6 +737,7 @@ void pair_code(WordReader reference, int program, gaddr exe, gaddr level, std::u
         if (op == 0x0F) {  // lui
             ve[rt] = (we & 0xFFFF) << 16;
             vl[rt] = (wl & 0xFFFF) << 16;
+            origin[rt] = i;
             known[rt] = true;
             continue;
         }
@@ -738,7 +745,7 @@ void pair_code(WordReader reference, int program, gaddr exe, gaddr level, std::u
         const bool store = (op >= 0x28 && op <= 0x2F) || op == 0x3F || op == 0x1F;
         const bool fpu = op == 0x31 || op == 0x39;  // lwc1, swc1: an address, no GPR written
         const bool add = op == 0x09 || op == 0x19 || op == 0x0D;  // addiu, daddiu, ori
-        std::uint32_t ae = 0, al = 0;
+        std::uint32_t ae = 0, al = 0, formed = i;
         bool have = false;
         if ((load || store || fpu || add) && rs == 28 && g_relocate_gp != 0) {
             ae = g_relocate_gp + se;
@@ -747,6 +754,7 @@ void pair_code(WordReader reference, int program, gaddr exe, gaddr level, std::u
         } else if ((load || store || fpu || add) && known[rs]) {
             ae = op == 0x0D ? (ve[rs] | (we & 0xFFFF)) : ve[rs] + se;
             al = op == 0x0D ? (vl[rs] | (wl & 0xFFFF)) : vl[rs] + sl;
+            formed = origin[rs];
             have = true;
         }
         // What the instruction writes is no longer a known value (unless it is the address just
@@ -756,6 +764,7 @@ void pair_code(WordReader reference, int program, gaddr exe, gaddr level, std::u
             // A move (addu, or, daddu with $zero): the value goes along.
             ve[rd] = ve[rs];
             vl[rd] = vl[rs];
+            origin[rd] = origin[rs];
             known[rd] = known[rs];
         } else if (op == 0x00 || op == 0x1C) {
             known[rd] = false;
@@ -771,17 +780,59 @@ void pair_code(WordReader reference, int program, gaddr exe, gaddr level, std::u
             if (have) {
                 ve[rt] = ae;
                 vl[rt] = al;
+                origin[rt] = formed;
             }
         } else if (load || (op >= 0x08 && op <= 0x0E) || op == 0x18) {
             known[rt] = false;
         }
-        if (!have) {
+        if (!have || (i >= own && formed >= own)) {
             continue;
         }
         if (ae - low < high - low) {
             out.emplace(ae, static_cast<std::int32_t>(al - ae));
         }
     }
+}
+
+// The functions of a program in address order: a function's code is up to the next one.
+using Functions = std::vector<std::pair<gaddr, openrac_host_fn>>;
+
+std::uint32_t piece_size(const Functions& fns, std::size_t k) {
+    return k + 1 < fns.size() ? std::min<std::uint32_t>(fns[k + 1].first - fns[k].first, 0x8000) : 0x400;
+}
+
+// jr, j, b (beq or bgez on $zero), eret: the code after it (and its delay slot) is not reached
+// from it.
+bool jumps_away(std::uint32_t w) {
+    const std::uint32_t op = w >> 26;
+    return (op == 0x00 && (w & 0x3F) == 0x08) || op == 0x02 || (op == 0x04 && ((w >> 16) & 0x3FF) == 0)
+           || (op == 0x01 && ((w >> 16) & 0x3FF) == 0x01) || w == 0x42000018u;
+}
+
+// The bytes to pair for fns[k], and how many of them are its own: a function whose code runs on
+// into the next one (it does not end in a jump and its delay slot, then nops) is one the catalogue
+// cut where a branch or a table gave the next address a start (games/rac1's
+// config/overlays/joined.tsv), so its registers go on into the pieces after it. rac1: the pulse
+// channels' update (func_L00_001EAD88) forms the high half of its table D_L00_00166100 in its first
+// piece and adds the low half in the third; paired piece by piece, the table had no pair and moved
+// with the one below it, 0x20-0x40 bytes off in levels 4, 11 and 16.
+std::pair<std::uint32_t, std::uint32_t> piece_bytes(WordReader reader, int program, const Functions& fns,
+                                                    std::size_t k) {
+    const std::uint32_t own = piece_size(fns, k);
+    std::uint32_t size = own;
+    for (std::size_t j = k; j + 1 < fns.size() && size < 0x8000; ++j) {
+        const std::uint32_t piece = piece_size(fns, j);
+        std::uint32_t last = piece / 4;
+        while (last > 0 && reader(program, fns[j].first + 4 * (last - 1)) == 0) {
+            --last;  // nops after the end
+        }
+        if (last == 0 || jumps_away(reader(program, fns[j].first + 4 * (last - 1)))
+            || (last >= 2 && jumps_away(reader(program, fns[j].first + 4 * (last - 2))))) {
+            break;
+        }
+        size = std::min<std::uint32_t>(size + piece_size(fns, j + 1), 0x8000);
+    }
+    return {size, own};
 }
 
 // Pairs each function of a reference program (`own`: its places and host functions, in address
@@ -795,7 +846,9 @@ void pair_code(WordReader reference, int program, gaddr exe, gaddr level, std::u
 // - otherwise, each copy's pairs that every copy agrees on (an address all of them form the same
 //   way), and none of the others: those are each copy's own, which another function's pairs or
 //   openrac_data_in_copy give; the code address goes to the lowest copy.
-void pair_programs(WordReader reference, int program, const std::vector<std::pair<gaddr, openrac_host_fn>>& own,
+// Each function's code is what piece_bytes gives (its registers run on into the catalogue pieces
+// after it).
+void pair_programs(WordReader reference, int program, const Functions& own,
                    std::unordered_map<openrac_host_fn, std::vector<gaddr>> copies, gaddr low, gaddr high,
                    bool skip_same_place, std::unordered_map<gaddr, gaddr>& code,
                    std::map<gaddr, std::int32_t>& out) {
@@ -813,25 +866,24 @@ void pair_programs(WordReader reference, int program, const std::vector<std::pai
             continue;
         }
         const std::vector<gaddr>& places = copy->second;
-        const std::uint32_t size =
-            k + 1 < own.size() ? std::min<std::uint32_t>(own[k + 1].first - own[k].first, 0x8000) : 0x400;
+        const auto [size, first] = piece_bytes(reference, program, own, k);
         const gaddr at = own[k].first;
         if (places.size() == 1 || places.size() == own_count[own[k].second]) {
             const gaddr place = places.size() == 1 ? places[0] : places[rank];
             if (!(skip_same_place && place == at)) {
                 code.emplace(at, place);
             }
-            pair_code(reference, program, at, place, size, low, high, out);
+            pair_code(reference, program, at, place, size, low, high, out, first);
             continue;
         }
         if (!(skip_same_place && places[0] == at)) {
             code.emplace(at, places[0]);
         }
         std::map<gaddr, std::int32_t> agreed;
-        pair_code(reference, program, at, places[0], size, low, high, agreed);
+        pair_code(reference, program, at, places[0], size, low, high, agreed, first);
         for (std::size_t c = 1; c < places.size() && !agreed.empty(); ++c) {
             std::map<gaddr, std::int32_t> other;
-            pair_code(reference, program, at, places[c], size, low, high, other);
+            pair_code(reference, program, at, places[c], size, low, high, other, first);
             for (auto it = agreed.begin(); it != agreed.end();) {
                 auto o = other.find(it->first);
                 it = o != other.end() && o->second == it->second ? std::next(it) : agreed.erase(it);
@@ -854,7 +906,7 @@ LevelMap& level_map(int overlay) {
         return map;
     }
     // The executable's functions in address order, for their sizes.
-    std::vector<std::pair<gaddr, openrac_host_fn>> exe;
+    Functions exe;
     exe.reserve(g_exe.size());
     for (const auto& [address, entry] : g_exe) {
         exe.emplace_back(address, entry.fn);
@@ -926,7 +978,7 @@ LevelMap& level_pair_map(int from, int loaded) {
     if (source == g_overlays.end() || level == g_overlays.end() || level_program(from).empty()) {
         return map;
     }
-    std::vector<std::pair<gaddr, openrac_host_fn>> own;
+    Functions own;
     own.reserve(source->second.size());
     for (const auto& [address, entry] : source->second) {
         own.emplace_back(address, entry.fn);
