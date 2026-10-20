@@ -62,7 +62,18 @@ start four bytes after their catalogue place, at the linker's fill word.
 ## Not there yet
 
 - The menu's text: the buttons are drawn, their labels come out as dark
-  boxes (the font's texture or its TEX0, as Deadlocked's glyphs were).
+  boxes. The glyph quads are drawn with TEX0 0, while the font (256x128,
+  8-bit indexed) is uploaded to block 0x2C04 with its palette at 0x2C00 and
+  the TEX0 written next to it has TBP0 and CBP 0. The font's TEX0 comes from
+  0x0027C878, which builds all 64 bits; its C callers keep it in an `int`
+  (`int font = func_0027C878(1)` in 0x0027F538 and its siblings, `r` in the
+  GUI text element's draw, 0x00336A78) before the glyph builders 0x0027F2A8,
+  0x0027FC70 and 0x0027F640 take it, as rac1's FontPrintWindow and
+  Deadlocked's glyph builders did. Translating those callers from assembly
+  (`from_assembly`) with `returns_64` on 0x0027C878 and 64-bit
+  `asm.signatures` for the builders was tried: the dark boxes went, but no
+  glyph was drawn instead, so it is not in; the TBP0 of 0 is the next thing
+  to follow.
 - Sound: only play and parameter commands reach the native engine; the
   banks, the master volume and the streams are dropped with a warning.
 - `rom0:ROMVER` cannot be opened (the game logs it and goes on).
