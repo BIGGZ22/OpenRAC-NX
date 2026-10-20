@@ -32,6 +32,7 @@
 #include "common/log.h"
 #include "imgui_gl.h"
 #include "common/stats.h"
+#include "fixes.h"
 #include "options_menu.h"
 #include "settings.h"
 #include "openrac/game_host.h"
@@ -1915,6 +1916,19 @@ void drawer(const Shown& shown) {
         }
         setting_row(options_menu::kStrafe);
         card_end();
+
+        // What the port changes from the console that the player may switch back (fixes.h): on is
+        // the port's fix, off the console's behaviour. The launcher's page for the game says more.
+        if (fixes::count() > 0) {
+            drawer_section("GAME FIXES");
+            card_begin();
+            for (int i = 0; i < fixes::count(); ++i) {
+                if (drawer_switch(fixes::fix(i).name, fixes::on(i))) {
+                    change_setting(options_menu::kRows + 1 + i, 1);
+                }
+            }
+            card_end();
+        }
 
         ImGui::Dummy(ImVec2(0.0f, dp(16.0f)));
         card_begin();

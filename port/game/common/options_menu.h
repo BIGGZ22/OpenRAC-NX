@@ -33,6 +33,12 @@ enum Row {
     kRows
 };
 
+// After the rows above, when the program's disc has game fixes (fixes.h): a "Game fixes" row that
+// heads them (nothing to change), then a row for each, On (the port's fix) or Original (the
+// console's behaviour). Every page that lists the rows scrolls through all of them.
+int row_count();
+int fix_of_row(int row);  // the fix's index (fixes.h), or -1 for any other row
+
 // A row's name, and its setting's value now, as the player reads them.
 const char* label(int row);
 std::string value(int row);
