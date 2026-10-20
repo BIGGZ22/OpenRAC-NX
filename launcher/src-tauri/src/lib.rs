@@ -95,7 +95,10 @@ fn app_info(app: AppHandle, state: State<'_, AppState>) -> AppInfo {
         version: launcher_version(&app),
         platform: Platform::current(),
         config_file: state.config_file.clone(),
-        standalone: state.bundled.is_some() && state.config.lock().unwrap().root == state.bundled,
+        standalone: state
+            .bundled
+            .as_deref()
+            .is_some_and(|copy| detect::on_the_copy(state.config.lock().unwrap().root.as_deref(), copy)),
         update_channels: UpdateChannels { stable: updates.on(Channel::Stable), dev: updates.on(Channel::Dev) },
         updates,
     }
@@ -501,7 +504,13 @@ fn open_path(app: AppHandle, state: State<'_, AppState>, path: String) -> Result
     let root = state.config.lock().unwrap().root.clone().ok_or("the OpenRAC folder is not set")?;
     let root = std::fs::canonicalize(&root).map_err(|e| e.to_string())?;
     let rel = path.split('#').next().unwrap_or_default();
-    let target = std::fs::canonicalize(openrac_launcher_core::under(&root, rel)).map_err(|e| format!("{path}: {e}"))?;
+    let wanted = openrac_launcher_core::under(&root, rel);
+    if rel.starts_with("assets/") && !rel.split('/').any(|part| part == "..") && !wanted.exists() {
+        // A folder the tools write (the level editor's projects, packed levels) before they first
+        // have: opened empty rather than refused.
+        std::fs::create_dir_all(&wanted).map_err(|e| format!("{path}: {e}"))?;
+    }
+    let target = std::fs::canonicalize(wanted).map_err(|e| format!("{path}: {e}"))?;
     if !target.starts_with(&root) {
         return Err(format!("{path} is outside the OpenRAC folder"));
     }
@@ -812,7 +821,16 @@ fn open_game_folder(app: AppHandle, state: State<'_, AppState>, game: String, pa
     let data = install::data_dir(&install, &game);
     let _ = std::fs::create_dir_all(data.join("exports"));
     let data = std::fs::canonicalize(&data).map_err(|e| format!("{}: {e}", data.display()))?;
-    let target = std::fs::canonicalize(Path::new(&path)).map_err(|e| format!("{path}: {e}"))?;
+    let wanted = Path::new(&path);
+    if !wanted.exists()
+        && !wanted.components().any(|c| c == std::path::Component::ParentDir)
+        && detect::plain(wanted).starts_with(detect::plain(&data))
+    {
+        // A folder of the set-up a tool writes (the level editor's projects, packed levels)
+        // before it first has: opened empty rather than refused.
+        std::fs::create_dir_all(wanted).map_err(|e| format!("{path}: {e}"))?;
+    }
+    let target = std::fs::canonicalize(wanted).map_err(|e| format!("{path}: {e}"))?;
     if !target.starts_with(&data) || !target.is_dir() {
         return Err(format!("{path} is not a folder of the game's set-up"));
     }
