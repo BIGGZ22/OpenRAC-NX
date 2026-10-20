@@ -38,6 +38,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 
 import asmc  # noqa: E402
 import clangast  # noqa: E402
+import derived  # noqa: E402
 import ctype  # noqa: E402
 import prep  # noqa: E402
 from lower import Unit, UnitReport  # noqa: E402
@@ -690,6 +691,17 @@ def main(argv: list[str] | None = None) -> int:
                                              ("dump", args.retail_dump)) if v}}
     source = args.source.resolve()
     out = args.out.resolve()
+    # The names the decompilation's build derives (hostgen.json "derived"): its build's table, or
+    # the port's copy; read as aliases and as symbols. Neither there stops here, at configure, not
+    # in a program whose functions that use them are stubs.
+    try:
+        derived_table = derived.resolve(source, args.game.resolve().parent, cfg)
+    except derived.Missing as e:
+        print(f"hostgen: error: {e}", file=sys.stderr)
+        return 1
+    if derived_table is not None:
+        cfg["aliases"] = cfg.get("aliases", []) + [str(derived_table)]
+        cfg["symbols"] = cfg["symbols"] + [str(derived_table)]
     if args.list:
         for u in units_of(source, cfg):
             print(generated_name(u))
@@ -707,6 +719,15 @@ def main(argv: list[str] | None = None) -> int:
             print(f"hostgen: {out} is up to date")
         return 0
     stamp.unlink(missing_ok=True)
+    if derived_table is not None and not derived_table.is_relative_to(source):
+        # The port's copy was written from a build of an earlier commit of the decompilation: the
+        # names the C has started to use since have no value, and their functions become stubs.
+        missing = derived.uncovered(source, cfg, json.loads(derived_table.read_text()))
+        if missing:
+            print(f"hostgen: warning: {derived_table} has no value for {len(missing)} names the C uses "
+                  f"({', '.join(missing[:8])}{', ...' if len(missing) > 8 else ''}); the functions that use "
+                  f"them are stubs. Build the decompilation, then run port/tools/hostgen/derived.py "
+                  f"--game {args.game} --source <it>.", file=sys.stderr)
     root = out / "prep"
     started = time.time()
     # The port's own C for hand-written assembly first; a decompilation's

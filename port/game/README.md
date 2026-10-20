@@ -37,6 +37,7 @@ layer and the renderer.
 | `sources`, `skip`, `includes`, `defines` | the C to translate and how to read it |
 | `names` | how the decompilation names code and data by address, as regular expressions with `addr` (and `overlay`) groups; rac1/pal's (`func_`, `func_Lnn_`, `D_`) by default |
 | `symbols` | splat symbol files that give named globals and functions their addresses |
+| `derived` | `{"build": ..., "table": ...}`: the names the decompilation's own build derives (Going Commando's `build/boot/placed.json`), read from that build when it is there, else from the port's copy beside the configuration; neither stops hostgen ([derived.py](../tools/hostgen/derived.py)) |
 | `places` | where each level function sits in each level (rac1/pal's `functions.tsv`) |
 | `groups` | parts of the tree that are separate programs over the same addresses (rac3's menu, `src/frontbin`, overlay 100) |
 | `overlay_hook` | true if `host/` provides `openrac_game_loaded_overlay` (which level's program is loaded) |

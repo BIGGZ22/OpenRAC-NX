@@ -25,13 +25,15 @@
     "INCLUDE_RODATA(FOLDER,NAME)="
   ],
   "aliases": [
-    "include/names.h",
-    "build/boot/placed.json"
+    "include/names.h"
   ],
   "symbols": [
-    "symbol_addrs/usa/symbol_addrs.txt",
-    "build/boot/placed.json"
+    "symbol_addrs/usa/symbol_addrs.txt"
   ],
+  "derived": {
+    "build": "build/boot/placed.json",
+    "table": "derived_names.json"
+  },
   "places": "config/levels/functions.tsv",
   "names": {
     "code": [

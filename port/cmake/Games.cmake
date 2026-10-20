@@ -142,6 +142,12 @@ function(openrac_add_game config)
       endif()
     endforeach()
   endif()
+  # The names the decompilation's build derives ("derived"): its build's table when that checkout
+  # was built (the port's copy beside hostgen.json is among the tables below).
+  string(JSON derived_build ERROR_VARIABLE no_derived GET "${json}" derived build)
+  if(NOT no_derived AND EXISTS "${game_source}/${derived_build}")
+    list(APPEND inputs "${game_source}/${derived_build}")
+  endif()
   # The assembly the game's setup wrote (hostgen.json "asm", when enabled): functions with no C are
   # translated from it (asmc.py), so hostgen runs again when it changes. Missing directories (no
   # disc set up, as in CI) add nothing.
