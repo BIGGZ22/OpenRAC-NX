@@ -1733,6 +1733,28 @@ class FromAssembly(unittest.TestCase):
             """)}, symbols={})
         self.assertEqual(out, ["10", "30", "50", "70", "10", "-20", "30", "-40", "50", "-60", "70", "32767"])
 
+    def test_conditional_call_tests_all_64_bits(self):
+        # bltzal on a register whose low word is positive and whose doubleword is negative
+        # (item 3): the EE calls; $ra is set either way.
+        out = self.run_asm("""
+            int func_00100100(int x) { return x * 2; }
+            INCLUDE_ASM("asm", func_00100000);
+            extern int func_00100000(int a);
+            int test_main(void) { test_print(func_00100000(-1)); test_print(func_00100000(1)); return 0; }
+        """, {"func_00100000": (0x00100000, """
+                addiu $29, $29, -16
+                sq $31, 0($29)
+                addiu $2, $0, 0
+                dsll32 $8, $4, 0
+                ori $8, $8, 1          # (a << 32) | 1
+                bltzal $8, func_00100100
+                addiu $4, $0, 21       # its argument, in the delay slot
+                lq $31, 0($29)
+                jr $31
+                addiu $29, $29, 16
+            """)}, symbols={"func_00100100": 0x00100100})
+        self.assertEqual(out, ["42", "0"])
+
     def test_conversions_saturate_by_sign(self):
         # cvt.w.s and vftoi0 of floats with exponent 255 (a NaN to the host, a large number to
         # the EE) and of 3e9 (item 5): 0x7FFFFFFF or 0x80000000 by the sign, never x86's 0x80000000.

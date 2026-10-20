@@ -70,9 +70,10 @@ UNSUPPORTED = {
     "vcallmsr": "a VU0 microprogram (vcallmsr)", "vclipw": "VU0 clipping (vclipw)",
     "bc0f": "COP0 branch", "bc0t": "COP0 branch", "bc0fl": "COP0 branch", "bc0tl": "COP0 branch",
     "bc2f": "VU0 branch", "bc2t": "VU0 branch", "bc2fl": "VU0 branch", "bc2tl": "VU0 branch",
-    "bltzal": "a conditional call", "bgezal": "a conditional call", "bltzall": "a conditional call",
-    "bgezall": "a conditional call",
 }
+# bltzal and bgezal (and their likely forms): a call when the 64-bit register's sign says so; $ra
+# is written either way (hand-written code calls its helpers so: bgezal $t0, ...).
+COND_CALLS = {"bltzal", "bgezal", "bltzall", "bgezall"}
 MMI_OPS = {
     "paddw", "psubw", "pcgtw", "pmaxw", "pminw", "pceqw", "paddh", "psubh", "pcgth", "pmaxh", "pminh",
     "pceqh", "paddb", "psubb", "pcgtb", "pceqb", "pextlw", "pextuw", "pextlh", "pextuh", "pextlb",
@@ -343,13 +344,13 @@ class Translator:
             reach.add(a + 4)
             delay.add(a + 4)
             op = ins.op
-            if op == "jal" and self._inline_target(ins.target):
+            if op in ("jal", *COND_CALLS) and self._inline_target(ins.target):
                 # A hand-written routine that takes its inputs in registers no prototype names:
                 # run in place, as the EE does, and back to the call through $ra (control).
                 self.inline_calls.add(a)
                 self.returns.add(a + 8)
                 todo += [ins.target, a + 8]
-            elif op in ("jal", "jalr"):
+            elif op in ("jal", "jalr", *COND_CALLS):
                 todo.append(a + 8)
             elif op == "jr":
                 if ins.rs != 31:
@@ -527,7 +528,7 @@ class Translator:
             else:
                 delay = self.stmt(self.at(a + 4))
                 out += self.control(ins, delay)
-                falls = a + 8 if (ins.op in ("jal", "jalr") or (ins.op in CONDITIONAL and not (
+                falls = a + 8 if (ins.op in ("jal", "jalr", *COND_CALLS) or (ins.op in CONDITIONAL and not (
                     ins.op in ("beq", "beql") and ins.rs == ins.rt))) else None
             nxt = heads[k + 1] if k + 1 < len(heads) else None
             if falls is not None and falls != nxt:
@@ -553,6 +554,17 @@ class Translator:
             if ins.likely:
                 return [f"if ({cond}) {{", *["    " + s for s in delay], f"    {go}", "}"]
             return [f"c_ = {cond};", *delay, f"if (c_) {go}"]
+        if op in COND_CALLS:
+            # The sign of all 64 bits decides; $ra is the return point whether or not it calls.
+            cond = f"(openrac_s64){R(ins.rs)} {'<' if op.startswith('bltz') else '>='} 0"
+            link = f"r31 = {S32(hx(a + 8))};"
+            if a in self.inline_calls:
+                taken = [f"goto L_{ins.target:08X};"]
+            else:
+                taken = self.call(ins.target, self._operand_name(a))
+            if ins.likely:
+                return [f"c_ = {cond};", link, "if (c_) {", *["    " + s for s in delay + taken], "}"]
+            return [f"c_ = {cond};", *delay, link, "if (c_) {", *["    " + s for s in taken], "}"]
         if op == "j":
             if not self._is_other_entry(ins.target):
                 return delay + [f"goto L_{ins.target:08X};"]
@@ -1260,11 +1272,18 @@ def rw(i: asm.Insn) -> tuple[set, set, set, set]:
     elif op == "jalr":
         g_r.add(i.rs)
         g_w.add(i.rd)
-    elif op in ("mfhi", "mflo", "mfhi1", "mflo1", "mfsa", "pmfhi", "pmflo", "pmfhl.lw", "pmfhl.uw", "pmfhl.sh"):
+    elif op in ("mfhi", "mflo", "mfhi1", "mflo1", "mfsa", "pmfhi", "pmflo", "pmfhl.lw", "pmfhl.uw", "pmfhl.sh",
+                "pmfhl.slw", "pmfhl.lh"):
         g_w.add(i.rd)
     elif op == "pmulth":
         g_r |= {i.rs, i.rt}
-        g_w.add(i.rd)
+        if not op.startswith("pdiv"):
+            g_w.add(i.rd)
+    elif op == "pmthl":
+        g_r.add(i.rs)
+    elif op in COND_CALLS:
+        g_r.add(i.rs)
+        g_w.add(31)
     elif op in ("lb", "lbu", "lh", "lhu", "lw", "lwu", "ld", "lq"):
         g_r.add(i.rs)
         g_w.add(i.rt)
