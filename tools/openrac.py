@@ -331,8 +331,11 @@ def progress(fetch: bool) -> None:
     for game, name, version in versions():
         key = f"{game['id']}/{name}"
         m = measure(version)
-        summary[key] = {"title": game["title"], "region": version["region"], "serial": version["serial"],
-                        "progress": m, "note": version.get("progress", {}).get("note")}
+        if m is not None:
+            # A version with no report yet has no row: the launcher reads each row's progress as
+            # figures, and one null made it read none of the file (launcher/core/src/catalog.rs).
+            summary[key] = {"title": game["title"], "region": version["region"], "serial": version["serial"],
+                            "progress": m, "note": version.get("progress", {}).get("note")}
         rows.append((game, name, version, m))
     PROGRESS.mkdir(exist_ok=True)
     (PROGRESS / "summary.json").write_text(json.dumps(summary, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")

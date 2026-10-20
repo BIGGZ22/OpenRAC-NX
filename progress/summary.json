@@ -73,12 +73,5 @@
       "percent": 0.51
     },
     "note": "Functions are compared one by one with most 16-bit immediates masked (symbols, struct offsets and small constants are not checked), and nothing is linked yet, so this is a looser proof than the other games'. Overlay code identical to resident code is counted once."
-  },
-  "rac5/ntsc": {
-    "title": "Ratchet & Clank: Size Matters",
-    "region": "NTSC-U (North America)",
-    "serial": "SCUS_976.15",
-    "progress": null,
-    "note": null
   }
 }

@@ -175,7 +175,9 @@ struct RawBuild {
 
 #[derive(Deserialize)]
 struct RawSummaryRow {
-    progress: Progress,
+    /// None for a version with no report yet: one such row must not make the whole file unread.
+    #[serde(default)]
+    progress: Option<Progress>,
     #[serde(default)]
     note: Option<String>,
 }
@@ -220,7 +222,11 @@ fn read_summary(root: &Path) -> BTreeMap<String, RawSummaryRow> {
     let mut rows = read_rows(&root.join("progress").join("summary.json"));
     for (key, site) in read_rows(&site_cache(root)) {
         match rows.get_mut(&key) {
-            Some(own) => own.progress = site.progress,
+            Some(own) => {
+                if site.progress.is_some() {
+                    own.progress = site.progress;
+                }
+            }
             None => {
                 rows.insert(key, site);
             }
@@ -235,7 +241,9 @@ fn game(raw: RawGame, summary: &BTreeMap<String, RawSummaryRow>) -> Result<Game,
         let v: RawVersion = serde_json::from_value(value).map_err(|e| format!("version {name}: {e}"))?;
         versions.push({
             let key = format!("{}/{}", raw.id, name);
-            let progress = summary.get(&key).map(|row| Progress { note: row.note.clone(), ..row.progress.clone() });
+            let progress = summary
+                .get(&key)
+                .and_then(|row| row.progress.clone().map(|p| Progress { note: row.note.clone(), ..p }));
             Version {
                 title: raw.titles.get(&name).cloned().unwrap_or_else(|| raw.title.clone()),
                 dir: v.dir.clone().unwrap_or_else(|| format!("games/{}/{}", raw.id, name)),
@@ -436,7 +444,8 @@ mod tests {
             dir.path().join("progress").join("summary.json"),
             r#"{"rac9/pal": {"title": "Nine", "progress": {"matched_code": 5, "total_code": 10,
                 "matched_functions": null, "total_functions": null, "fuzzy_percent": null,
-                "date": "2026-10-08", "percent": 50.0}, "note": "all of it"}}"#,
+                "date": "2026-10-08", "percent": 50.0}, "note": "all of it"},
+                "rac9/ntsc": {"title": "Nine", "progress": null, "note": "no report yet"}}"#,
         )
         .unwrap();
         let catalog = load(dir.path()).unwrap();

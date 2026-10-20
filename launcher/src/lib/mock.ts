@@ -87,7 +87,7 @@ type RawSummary = Record<
       fuzzy_percent: number | null;
       percent: number;
       date: string | null;
-    };
+    } | null;
     note?: string;
   }
 >;
@@ -339,7 +339,8 @@ function view(action: RawAction, st: VersionStatus | null): ActionView {
 
 function progress(key: string): Progress | null {
   const row = summary[key];
-  if (!row) return null;
+  // A version with no report yet (progress null) has no figures, as in catalog.rs.
+  if (!row?.progress) return null;
   const p = row.progress;
   return {
     matchedCode: p.matched_code,
