@@ -76,8 +76,10 @@ Players describe what they see, not what broke. Before reproducing, know:
   - `crashes/crash-<date>_<time>.txt`: one per crash (a fault, a fatal
     error, the game's own trap, an uncaught exception): the reason, the
     native backtrace (with the program's load address, for `atos -l` or
-    `addr2line`), the level, the game mode word, the frame and the
-    hero's position, the log's last 200 lines and the session header.
+    `addr2line`), the level, the game mode word, the frame, the
+    hero's position, the moby whose update was running (Ratchet &
+    Clank: its class, uid, position and address) and the camera's
+    position, the log's last 200 lines and the session header.
     The reason, backtrace and state are also at the end of the session's
     log. `[error]` and `[warning]` lines often name the cause (section 4).
   - For a bug that does not crash, ask the player to turn on **Detailed
