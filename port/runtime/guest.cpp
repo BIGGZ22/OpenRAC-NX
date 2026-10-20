@@ -532,7 +532,17 @@ int openrac_guest_write_reach(const char* path, const char* game, long frames) {
     }
     std::fputs("\n]}\n", f);
     const bool ok = std::fclose(f) == 0;
-    return ok && std::rename(part.c_str(), path) == 0 ? 1 : 0;
+    if (!ok) {
+        return 0;
+    }
+#if defined(_WIN32)
+    // The Windows CRT's rename refuses an existing destination. Replace it in
+    // one operation so periodic reports refresh without discarding the last
+    // complete report if the move fails.
+    return MoveFileExA(part.c_str(), path, MOVEFILE_REPLACE_EXISTING) != 0 ? 1 : 0;
+#else
+    return std::rename(part.c_str(), path) == 0 ? 1 : 0;
+#endif
 }
 
 void openrac_guest_stop_on_missing(int stop) {

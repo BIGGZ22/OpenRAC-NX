@@ -182,7 +182,7 @@ def run(game: str, levels: list[int] | None, build: Path, out: Path | None = Non
         progress=print, route_set: str | None = None, only: list[str] | None = None) -> Path:
     """Plays a set's routes (the standard level routes by default) whose level is in levels and,
     with only, whose key is listed."""
-    exe = build / f"openrac-{game}"
+    exe = build / f"openrac-{game}{'.exe' if os.name == 'nt' else ''}"
     if not exe.exists():
         raise SystemExit(f"no {exe}: build the port first (cd port && cmake --build --preset release)")
     d, lv = default_inputs(game)

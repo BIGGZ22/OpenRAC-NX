@@ -3,7 +3,11 @@
 //
 // Game memory, the guest contract and the executable loader.
 
+#include <chrono>
 #include <cstring>
+#include <filesystem>
+#include <fstream>
+#include <iterator>
 #include <vector>
 
 #include "check.h"
@@ -260,6 +264,36 @@ volatile bool g_asked = false;
     g_asked = true;
 }
 
+void reach_report_updates() {
+    namespace fs = std::filesystem;
+    const fs::path dir = fs::temp_directory_path() /
+                         ("openrac-reach-" + std::to_string(std::chrono::steady_clock::now().time_since_epoch().count()));
+    const bool created = fs::create_directory(dir);
+    CHECK(created);
+    if (!created) {
+        return;
+    }
+    const std::string path = (dir / "reach.json").string();
+    const auto read = [&] {
+        std::ifstream f(path);
+        return std::string(std::istreambuf_iterator<char>(f), std::istreambuf_iterator<char>());
+    };
+    CHECK(openrac_guest_write_reach(path.c_str(), "runtime-test", 600) == 1);
+    CHECK(read().find("\"frames\": 600") != std::string::npos);
+    CHECK(openrac_guest_write_reach(path.c_str(), "runtime-test", 1200) == 1);
+    CHECK(read().find("\"frames\": 1200") != std::string::npos);
+    CHECK(!fs::exists(path + ".part"));
+
+    // A failed replacement must leave the destination and its contents alone.
+    const fs::path blocked = dir / "blocked";
+    CHECK(fs::create_directory(blocked));
+    std::ofstream(blocked / "keep.txt") << "keep";
+    CHECK(openrac_guest_write_reach(blocked.string().c_str(), "runtime-test", 1800) == 0);
+    CHECK(fs::is_regular_file(blocked / "keep.txt"));
+    CHECK(openrac_guest_write_reach((dir / "absent/reach.json").string().c_str(), "runtime-test", 2400) == 0);
+    fs::remove_all(dir);
+}
+
 void host_stack() {
     char text[160] = "";
     ask_caller(text, sizeof(text));
@@ -287,6 +321,7 @@ int main() {
     folded_address();
     relocation_with_folded_copies();
     elf();
+    reach_report_updates();
     host_stack();
     return openrac::test::result();
 }
