@@ -110,27 +110,61 @@ void report_has_every_section(const fs::path& dir) {
     s.hero[0] = 101.25f;
     s.hero[1] = -7.5f;
     s.hero[2] = 33.0f;
+    s.has_camera = true;
+    s.camera[0] = 95.5f;
+    s.camera[1] = -12.0f;
+    s.camera[2] = 40.25f;
     crash::set_state(s);
-    const fs::path out = dir / "report.txt";
+    // The moby being updated, asked for while the report is written.
+    crash::set_moby_source([](crash::Moby& m) {
+        m.address = 0x00A1B200;
+        m.oclass = 340;
+        m.position[0] = 12.3f;
+        m.position[1] = 45.6f;
+        m.position[2] = 7.8f;
+        m.has_uid = true;
+        m.uid = 57;
+        return true;
+    });
+    const auto written_report = [&dir](const char* name) {
+        const fs::path out = dir / name;
 #if defined(_WIN32)
-    const int fd = _open(out.string().c_str(), _O_WRONLY | _O_CREAT | _O_TRUNC | _O_BINARY, 0644);
+        const int fd = _open(out.string().c_str(), _O_WRONLY | _O_CREAT | _O_TRUNC | _O_BINARY, 0644);
 #else
-    const int fd = ::open(out.string().c_str(), O_WRONLY | O_CREAT | O_TRUNC, 0644);
+        const int fd = ::open(out.string().c_str(), O_WRONLY | O_CREAT | O_TRUNC, 0644);
 #endif
-    CHECK(fd >= 0);
-    crash::write_report(fd, "access at game address 0x7FFF0000, which is not mapped", crash::Kind::Signal,
-                        1792238602LL);
+        CHECK(fd >= 0);
+        crash::write_report(fd, "access at game address 0x7FFF0000, which is not mapped", crash::Kind::Signal,
+                            1792238602LL);
 #if defined(_WIN32)
-    _close(fd);
+        _close(fd);
 #else
-    ::close(fd);
+        ::close(fd);
 #endif
-    const std::string text = read(out);
+        return read(out);
+    };
+    const std::string text = written_report("report.txt");
     CHECK(text.find("Reason:   access at game address 0x7FFF0000") != std::string::npos);
     CHECK(text.find("Kind:     fault") != std::string::npos);
-    CHECK(text.find("level 3, game mode 2, frame 1234, hero at 101.25 -7.50 33.00") != std::string::npos);
+    CHECK(text.find("Game:     level 3, game mode 2, frame 1234, hero at 101.25 -7.50 33.00, updating moby class 340 "
+                    "uid 57 at 12.30 45.60 7.80 (0x00A1B200), camera at 95.50 -12.00 40.25\n")
+          != std::string::npos);
     CHECK(text.find("Backtrace") != std::string::npos);
     CHECK(text.find("[info] line 249") != std::string::npos);
+    // No moby being updated (or no uid), no camera: only what is known.
+    crash::set_moby_source([](crash::Moby& m) {
+        m.address = 0x00A1B300;
+        m.oclass = 7;
+        return true;
+    });
+    CHECK(written_report("report_no_uid.txt").find("33.00, updating moby class 7 at 0.00 0.00 0.00 (0x00A1B300), camera")
+          != std::string::npos);
+    crash::set_moby_source([](crash::Moby&) { return false; });
+    s.has_camera = false;
+    crash::set_state(s);
+    CHECK(written_report("report_plain.txt").find("Game:     level 3, game mode 2, frame 1234, hero at 101.25 -7.50 33.00\n")
+          != std::string::npos);
+    crash::set_moby_source(nullptr);
     CHECK(text.find("[info] line 49\n") == std::string::npos);  // 200 lines kept: 50..249
     CHECK(text.find("game     rac1-pal") != std::string::npos);
     CHECK(text.find("OpenRAC ") != std::string::npos);

@@ -98,6 +98,7 @@ char g_session[64] = {};
 long g_offset = 0;
 std::uintptr_t g_base = 0;  // where the program is loaded (to turn backtrace addresses into its own)
 GameState g_state;
+std::atomic<MobySource> g_moby_source{nullptr};
 std::atomic<int> g_reporting{0};
 char g_written[1100] = {};
 
@@ -240,6 +241,29 @@ void write_state(Out& out) {
             decimal(t, s.hero[1]);
             t.str(" ");
             decimal(t, s.hero[2]);
+        }
+        Moby m;
+        const MobySource source = g_moby_source.load(std::memory_order_relaxed);
+        if (source != nullptr && source(m)) {
+            t.str(", updating moby class ").dec(m.oclass);
+            if (m.has_uid) {
+                t.str(" uid ").dec(m.uid);
+            }
+            t.str(" at ");
+            decimal(t, m.position[0]);
+            t.str(" ");
+            decimal(t, m.position[1]);
+            t.str(" ");
+            decimal(t, m.position[2]);
+            t.str(" (").hex(m.address, 8).str(")");
+        }
+        if (s.has_camera) {
+            t.str(", camera at ");
+            decimal(t, s.camera[0]);
+            t.str(" ");
+            decimal(t, s.camera[1]);
+            t.str(" ");
+            decimal(t, s.camera[2]);
         }
     }
     t.str("\n");
@@ -509,6 +533,10 @@ void set_state(const GameState& s) {
 
 const GameState& state() {
     return g_state;
+}
+
+void set_moby_source(MobySource source) {
+    g_moby_source.store(source, std::memory_order_relaxed);
 }
 
 // ---- The report ----

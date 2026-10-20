@@ -656,7 +656,7 @@ Reason:   access (SIGBUS) at game address 0x0F000000, which is not mapped
 Kind:     fault
 When:     2026-10-17 20:08:29 -0600 (the session began 2026-10-17 20:08:09 -0600)
 Program:  openrac-rac1-pal, OpenRAC 0.7.1, commit ceffee00
-Game:     level 3, game mode 0, frame 3000, hero at 263.98 101.90 54.50
+Game:     level 3, game mode 0, frame 3000, hero at 263.98 101.90 54.50, updating moby class 340 uid 57 at 12.30 45.60 7.80 (0x00A1B200), camera at 255.10 95.40 58.00
 
 Backtrace (the newest call first):
 0   Ratchet & Clank (PAL)               0x0000000102847018 _ZN7openrac5crash6reportEPKcNS0_4KindE + 100
@@ -751,6 +751,10 @@ graphics  Apple M5 Max (Apple), OpenGL 4.1 Metal, hardware through SDL's cocoa d
         let text = copy_text(data.path(), "crashes/crash-2026-10-17_20-08-29.txt", "0.7.1").unwrap();
         assert!(text.contains("What happened: access (SIGBUS)"), "{text}");
         assert!(text.contains("Where: Kerwan (level 3)"), "{text}");
+        assert!(
+            text.contains("Game state: level 3, game mode 0, frame 3000, hero at 263.98 101.90 54.50, updating moby class 340 uid 57 at 12.30 45.60 7.80 (0x00A1B200), camera at 255.10 95.40 58.00\n"),
+            "{text}"
+        );
         assert!(text.contains("OpenRAC: 0.7.1, commit ceffee00; launcher 0.7.1"), "{text}");
         assert!(text.contains("Graphics: Apple M5 Max"), "{text}");
         assert!(text.contains("openrac_game_vsync"), "{text}");

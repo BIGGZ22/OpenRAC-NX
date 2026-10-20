@@ -4,8 +4,8 @@
 // Crash reports: when the program stops on a fault (runtime/crash.cpp's signal and exception
 // handlers), a fatal error (log::fatal) or a trap the game raises on purpose, a text file
 // `<data>/crashes/crash-<date>_<time>.txt` says why, with the native backtrace, what the game was
-// doing (the level, its game mode, the frame, where the hero was), the log's last lines and the
-// session's header (common/log.h). The reason, the backtrace and the state also go to the session
+// doing (the level, its game mode, the frame, where the hero and the camera were, the moby whose
+// update was running), the log's last lines and the session's header (common/log.h). The reason, the backtrace and the state also go to the session
 // log and to stderr, so the log alone is enough.
 //
 // report() can run inside a signal handler: it writes with write() from buffers allocated before
@@ -35,7 +35,25 @@ struct GameState {
     std::uint32_t mode = 0;  // the game's mode word (rac1: 0x15F6A8)
     bool has_hero = false;
     float hero[3] = {0.0f, 0.0f, 0.0f};
+    bool has_camera = false;
+    float camera[3] = {0.0f, 0.0f, 0.0f};
 };
+
+// The moby (the game's object) whose update was running when the program stopped. Not sampled each
+// frame: the game asks for it while the report is written (set_moby_source), from the signal
+// handler too, so what it reads must be plain reads of memory known to be there.
+struct Moby {
+    std::uint32_t address = 0;  // in game memory
+    int oclass = -1;            // its class (rac1: +0xA6)
+    float position[3] = {0.0f, 0.0f, 0.0f};
+    bool has_uid = false;
+    int uid = 0;  // its id in the level's placements, when it has one
+};
+
+// The game's answer to "which moby was being updated": true and `out` filled, or false (none, or
+// the game does not say). Called by report() and write_report(); null: never asked.
+using MobySource = bool (*)(Moby& out);
+void set_moby_source(MobySource source);
 
 // Where reports go (`folder` is made when the first is written), the program's name and the
 // session's id (the time it started, as the log's header has it). Prepares what report() needs.

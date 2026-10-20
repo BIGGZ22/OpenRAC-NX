@@ -93,6 +93,8 @@ int (*openrac_game_skip_buttons)(void) = nullptr;
 void (*openrac_game_skip)(void) = nullptr;
 int (*openrac_game_mode)(uint32_t* mode) = nullptr;
 int (*openrac_game_hero_position)(float xyz[3]) = nullptr;
+int (*openrac_game_camera_position)(float xyz[3]) = nullptr;
+int (*openrac_game_updating_moby)(openrac_game_moby* out) = nullptr;
 int (*openrac_game_hero)(float position[3], float rotation[3], int32_t* state) = nullptr;
 const openrac_front_end* openrac_game_front_end = nullptr;
 }
@@ -279,6 +281,22 @@ std::string command_line(int argc, char** argv) {
     return line;
 }
 
+// The moby being updated, asked by the report itself (common/crash.h, set_moby_source).
+bool updating_moby(crash::Moby& out) {
+    openrac_game_moby m{};
+    if (openrac_game_updating_moby == nullptr || openrac_game_updating_moby(&m) == 0) {
+        return false;
+    }
+    out.address = m.address;
+    out.oclass = m.oclass;
+    for (int i = 0; i < 3; ++i) {
+        out.position[i] = m.position[i];
+    }
+    out.has_uid = m.uid >= 0;
+    out.uid = m.uid;
+    return true;
+}
+
 // This run's log (common/log.h: the earlier runs' moved along) and its header; crash reports go
 // to <data>/crashes (common/crash.h).
 void open_session(int argc, char** argv) {
@@ -289,6 +307,7 @@ void open_session(int argc, char** argv) {
         log::warn("the log cannot be written in {}", g_options.data.string());
     }
     crash::configure(g_options.data / "crashes", program_name(), started);
+    crash::set_moby_source(updating_moby);
     const char* level = log::level() <= log::Level::Debug     ? "debug"
                         : log::level() <= log::Level::Verbose ? "verbose"
                                                               : "info (OPENRAC_LOG=verbose, or verbose_log = 1 in the settings, for more)";
@@ -314,6 +333,9 @@ void sample_state() {
     }
     if (openrac_game_hero_position != nullptr) {
         s.has_hero = openrac_game_hero_position(s.hero) != 0;
+    }
+    if (openrac_game_camera_position != nullptr) {
+        s.has_camera = openrac_game_camera_position(s.camera) != 0;
     }
     crash::set_state(s);
 }

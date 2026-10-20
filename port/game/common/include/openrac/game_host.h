@@ -87,10 +87,24 @@ extern int (*openrac_game_bolts)(void);
 extern int (*openrac_game_skip_buttons)(void);
 
 /* For crash reports (port/common/crash.h), sampled once a frame, when a game installs them (rac1:
- * boot.c): the game's mode word, and where the hero is. Each returns 0 when it has no answer now
- * (no level loaded). */
+ * boot.c): the game's mode word, where the hero is and where the camera is. Each returns 0 when it
+ * has no answer now (no level loaded). */
 extern int (*openrac_game_mode)(uint32_t* mode);
 extern int (*openrac_game_hero_position)(float xyz[3]);
+extern int (*openrac_game_camera_position)(float xyz[3]);
+
+/* For crash reports: the moby whose update was running when the program stopped. */
+typedef struct openrac_game_moby {
+    uint32_t address; /* in game memory */
+    int32_t oclass;   /* its class */
+    float position[3];
+    int32_t uid; /* its id in the level's placements, or -1 */
+} openrac_game_moby;
+
+/* Asked while the report is written, not each frame: from a signal handler, so it only reads game
+ * memory it has checked is there, and allocates nothing. 1 and `out` filled when a moby's update
+ * was running (rac1: boot.c's func_00213C78, the moby update loop), 0 otherwise. */
+extern int (*openrac_game_updating_moby)(openrac_game_moby* out);
 
 /* For OPENRAC_TRACE (frontend.cpp), when a game installs it (rac1: boot.c): the hero's position,
  * rotation (game axes; z the yaw) and state id. 0 when there is none now (no level loaded). */
