@@ -329,8 +329,17 @@ async function gameStopped(job: Job) {
   }
 }
 
+// The reads of the state that are in flight. Several run at once (a job ends while the
+// window gets the focus, the settings change, the figures are fetched from the site), and
+// the answers can come back in any order: only the newest one is used, so that an older
+// answer cannot put an out-of-date library, disc list or crash count back.
+let librarySeq = 0;
+let discsSeq = 0;
+let crashesSeq = 0;
+
 /** How many crash reports each set-up game has, for the tiles and the Play page's badge. */
 export async function countCrashes() {
+  const seq = ++crashesSeq;
   const counts: AppState["crashes"] = {};
   const recent = Date.now() / 1000 - 3 * 86400;
   for (const g of app.library?.games ?? []) {
@@ -343,7 +352,8 @@ export async function countCrashes() {
       // no install folder: nothing to count
     }
   }
-  app.crashes = counts;
+  // A count that is not the newest one is not put in: it would undo a newer one.
+  if (seq === crashesSeq) app.crashes = counts;
 }
 
 /**
@@ -406,31 +416,39 @@ export async function refresh() {
     app.libraryError = "Choose your OpenRAC folder in Settings.";
     return;
   }
+  const library = ++librarySeq;
   try {
-    setLibrary(await api.library());
-    app.libraryError = null;
+    const read = await api.library();
+    if (library === librarySeq) {
+      setLibrary(read);
+      app.libraryError = null;
+    }
   } catch (e) {
-    app.libraryError = errorText(e);
+    if (library === librarySeq) app.libraryError = errorText(e);
   }
   void countCrashes();
+  const discs = ++discsSeq;
   let scan: { found: FoundDisc[]; choices: DiscChoice[] } = { found: [], choices: [] };
   try {
     if (app.config.discsDir) scan = await api.scanDiscs();
   } catch {
     // A folder that went away: the game pages ask for an image as before.
   }
-  if (!same("discs", scan)) {
+  if (discs === discsSeq && !same("discs", scan)) {
     app.discs = scan.found;
     app.discChoices = scan.choices;
   }
 }
 
 /** Fetches every game's latest progress from bytematch.dev (the matched figures and the functional
- *  C beside them); the Rust side fetches and keeps a copy under build/ for offline use. */
+ *  C beside them); the Rust side fetches and keeps a copy in the launcher's own folder, for
+ *  offline use. */
 export async function syncProgressWeb() {
   if (!app.config?.root) return;
+  const library = ++librarySeq;
   try {
-    setLibrary(await api.syncProgressFromWeb());
+    const read = await api.syncProgressFromWeb();
+    if (library === librarySeq) setLibrary(read);
   } catch {
     // Offline: keep what was read at start (the kept copy)
   }
