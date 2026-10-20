@@ -61,6 +61,16 @@ private:
     // Whether this pass draws `strip` (m_part).
     bool draws(const EffectStrip& strip) const;
 
+    struct AppliedState {
+        TextureHandle texture{};
+        std::uint64_t tex1_bits = ~0ull;
+        std::uint64_t clamp_bits = ~0ull;
+        std::uint64_t alpha_bits = ~0ull;
+        int tcc = -1;
+        int tfx = -1;
+        float alpha_scale = -1.0f;
+    } m_applied;
+
     EffectPart m_part = EffectPart::All;
     Shader m_shader;
     int m_view_projection = -1;

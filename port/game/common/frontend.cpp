@@ -887,7 +887,11 @@ void sky_sprite_quads(const viewer::GameState& state) {
         quads.push_back(q);
     }
     if (!quads.empty()) {
-        g->effects.insert(g->effects.begin(), quads.rbegin(), quads.rend());
+        std::stable_sort(quads.begin(), quads.end(), [](const renderer::EffectQuad& a, const renderer::EffectQuad& b) {
+            if (a.tbp != b.tbp) return a.tbp < b.tbp;
+            return a.alpha < b.alpha;
+        });
+        g->effects.insert(g->effects.begin(), quads.begin(), quads.end());
     }
     g->sky_sprites.clear();
 }

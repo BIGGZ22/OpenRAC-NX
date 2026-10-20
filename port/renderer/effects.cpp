@@ -89,6 +89,7 @@ void EffectRenderer::render(const FrameInput& input, RenderState& state) {
     glBindVertexArray(m_vao);
     glBindBuffer(GL_ARRAY_BUFFER, m_vbo);
     glActiveTexture(GL_TEXTURE0);
+    m_applied = AppliedState{};
 
     // Every strip and quad as triangles in one buffer, sent once; consecutive ones with the same GS
     // state are then one draw. A frame has hundreds to thousands of them (particles, glows), and
@@ -219,8 +220,6 @@ bool EffectRenderer::apply(std::uint64_t tex0_bits, std::uint64_t tex1_bits, std
         tex0.tbp0 = tbp;
         tex0.cbp = cbp;
     }
-    const gs::Tex1 tex1 = gs::Tex1::decode(tex1_bits);
-    const gs::Clamp clamp = gs::Clamp::decode(clamp_bits);
     const TextureHandle texture = state.textures.resolve(tex0, texa);
     if (log::level() <= log::Level::Debug) {
         static std::set<std::uint64_t> seen;
@@ -230,22 +229,46 @@ bool EffectRenderer::apply(std::uint64_t tex0_bits, std::uint64_t tex1_bits, std
                        state.textures.name(texture), texture == state.textures.placeholder() ? " (placeholder)" : "");
         }
     }
-    glBindTexture(GL_TEXTURE_2D, state.textures.gl_texture(texture));
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, static_cast<GLint>(tex1.mmag ? GL_LINEAR : GL_NEAREST));
-    const bool linear_min = tex1.mmin == 1 || tex1.mmin == 4 || tex1.mmin == 5;
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, static_cast<GLint>(linear_min ? GL_LINEAR : GL_NEAREST));
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S,
-                    static_cast<GLint>(clamp.wms == gs::Wrap::Repeat ? GL_REPEAT : GL_CLAMP_TO_EDGE));
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T,
-                    static_cast<GLint>(clamp.wmt == gs::Wrap::Repeat ? GL_REPEAT : GL_CLAMP_TO_EDGE));
-    glUniform1i(m_tcc, tex0.tcc ? 1 : 0);
-    glUniform1i(m_tfx, static_cast<GLint>(tex0.tfx));
-    glUniform1f(m_tex_alpha_scale, state.textures.alpha_scale(texture) == AlphaScale::Full ? 0.5f : 1.0f);
-    const GlBlend b = translate_blend(gs::Alpha::decode(alpha_bits));
-    glEnable(GL_BLEND);
-    glBlendEquation(b.equation);
-    glBlendFuncSeparate(b.src, b.dst, GL_ONE, GL_ZERO);
-    glBlendColor(0.0f, 0.0f, 0.0f, b.constant);
+    if (texture != m_applied.texture) {
+        glBindTexture(GL_TEXTURE_2D, state.textures.gl_texture(texture));
+        m_applied.texture = texture;
+    }
+    if (tex1_bits != m_applied.tex1_bits || clamp_bits != m_applied.clamp_bits) {
+        const gs::Tex1 tex1 = gs::Tex1::decode(tex1_bits);
+        const gs::Clamp clamp = gs::Clamp::decode(clamp_bits);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, static_cast<GLint>(tex1.mmag ? GL_LINEAR : GL_NEAREST));
+        const bool linear_min = tex1.mmin == 1 || tex1.mmin == 4 || tex1.mmin == 5;
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, static_cast<GLint>(linear_min ? GL_LINEAR : GL_NEAREST));
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S,
+                        static_cast<GLint>(clamp.wms == gs::Wrap::Repeat ? GL_REPEAT : GL_CLAMP_TO_EDGE));
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T,
+                        static_cast<GLint>(clamp.wmt == gs::Wrap::Repeat ? GL_REPEAT : GL_CLAMP_TO_EDGE));
+        m_applied.tex1_bits = tex1_bits;
+        m_applied.clamp_bits = clamp_bits;
+    }
+    const int tcc_val = tex0.tcc ? 1 : 0;
+    if (tcc_val != m_applied.tcc) {
+        glUniform1i(m_tcc, tcc_val);
+        m_applied.tcc = tcc_val;
+    }
+    const int tfx_val = static_cast<GLint>(tex0.tfx);
+    if (tfx_val != m_applied.tfx) {
+        glUniform1i(m_tfx, tfx_val);
+        m_applied.tfx = tfx_val;
+    }
+    const float scale = state.textures.alpha_scale(texture) == AlphaScale::Full ? 0.5f : 1.0f;
+    if (scale != m_applied.alpha_scale) {
+        glUniform1f(m_tex_alpha_scale, scale);
+        m_applied.alpha_scale = scale;
+    }
+    if (alpha_bits != m_applied.alpha_bits) {
+        const GlBlend b = translate_blend(gs::Alpha::decode(alpha_bits));
+        glEnable(GL_BLEND);
+        glBlendEquation(b.equation);
+        glBlendFuncSeparate(b.src, b.dst, GL_ONE, GL_ZERO);
+        glBlendColor(0.0f, 0.0f, 0.0f, b.constant);
+        m_applied.alpha_bits = alpha_bits;
+    }
     return texture != state.textures.placeholder();
 }
 
