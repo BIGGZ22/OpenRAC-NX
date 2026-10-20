@@ -983,8 +983,8 @@ void FUN_L02_002da938(void *unused, f32 a, f32 b, f32 c, s32 d) {
 
 typedef struct { long a, b, c, d; } Q_2dae88;
 extern int D_L02_00161B1C_gp __asm__("D_L02_00161B1C") __attribute__((sda));
-int tex_2dae88(int) __asm__("FUN_001f44b8");
-void f20bc88_2dae88(Q_2dae88 *, int *, int *, int, int) __asm__("FUN_L02_0020bc88");
+u64 tex_2dae88(int) __asm__("FUN_001f44b8");
+void f20bc88_2dae88(Q_2dae88 *, int *, int *, u64, int) __asm__("FUN_L02_0020bc88");
 extern Q_2dae88 D_L02_001D3310[];
 extern int D_L02_00161B94 __attribute__((sda));
 extern int D_L02_00161AAC __attribute__((sda));
