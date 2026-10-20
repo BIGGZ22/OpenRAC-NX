@@ -1706,6 +1706,33 @@ class FromAssembly(unittest.TestCase):
             """)}, symbols={})
         self.assertEqual(out, ["20.000", "40.000", "60.000", "44.000", "1", "2", "1", "1"])
 
+    def test_parallel_halfword_multiply(self):
+        # Going Commando's sprite colour code: eight signed products, the even ones in rd, all
+        # of them in LO and HI, read back saturated to halfwords.
+        out = self.run_asm("""
+            extern short D_00300200[32];
+            INCLUDE_ASM("asm", func_00100000);
+            extern void func_00100000(short *v);
+            int test_main(void) {
+                static const short a[8] = {1, -2, 3, -4, 5, -6, 7, 300};
+                int i;
+                for (i = 0; i < 8; i++) { D_00300200[i] = a[i]; D_00300200[8 + i] = i == 7 ? 200 : 10; }
+                func_00100000(D_00300200);
+                for (i = 16; i < 24; i += 2) test_print((D_00300200[i] & 0xFFFF) | (D_00300200[i + 1] << 16));
+                for (i = 24; i < 32; i++) test_print(D_00300200[i]);
+                return 0;
+            }
+        """, {"func_00100000": (0x00100000, """
+                lq $8, 0($4)
+                lq $9, 16($4)
+                pmulth $10, $8, $9
+                sq $10, 32($4)
+                pmfhl.sh $11, $0, $0
+                jr $31
+                sq $11, 48($4)
+            """)}, symbols={})
+        self.assertEqual(out, ["10", "30", "50", "70", "10", "-20", "30", "-40", "50", "-60", "70", "32767"])
+
     def test_declared_nowhere_gets_its_parameters_from_its_registers(self):
         # Called only through its code address; the C calls it as (int, int).
         out = self.run_asm("""

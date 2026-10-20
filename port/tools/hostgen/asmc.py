@@ -951,6 +951,30 @@ class Translator:
                     f"h{rd} = ((lo1_ >> {k}) & 0xFFFFFFFFull) | (((hi1_ >> {k}) & 0xFFFFFFFFull) << 32);"]
         if op == "pmthl":
             raise AsmUnsupported(f"pmthl at {ins.addr:08X}")
+        if op == "pmulth":
+            # Eight signed halfword products: LO takes those of halfwords 0, 1, 4, 5, HI those of
+            # 2, 3, 6, 7, a word each; rd the even ones (0, 2, 4, 6).
+            def half(n: int, k: int) -> str:
+                reg = self.R(n) if k < 4 else self.H(n)
+                return f"(openrac_s32)(openrac_s16)({reg} >> {16 * (k % 4)})"
+            p = [f"(openrac_u64)(openrac_u32)({half(rs, k)} * {half(rt, k)})" for k in range(8)]
+            out = [f"lo_ = {p[0]} | ({p[1]} << 32);", f"hi_ = {p[2]} | ({p[3]} << 32);",
+                   f"lo1_ = {p[4]} | ({p[5]} << 32);", f"hi1_ = {p[6]} | ({p[7]} << 32);"]
+            if rd != 0:
+                out += [f"r{rd} = (lo_ & 0xFFFFFFFFull) | (hi_ << 32);",
+                        f"h{rd} = (lo1_ & 0xFFFFFFFFull) | (hi1_ << 32);"]
+            return out
+        if op == "pmfhl.sh":
+            # LO's and HI's eight words, saturated to halfwords: LO 0, 1, HI 0, 1, LO 2, 3, HI 2, 3.
+            if rd == 0:
+                return []
+            def sat(src: str, k: int) -> str:
+                w = f"(openrac_s32)({src} >> {32 * k})"
+                return f"(openrac_u64)(openrac_u16)({w} > 32767 ? 32767 : {w} < -32768 ? -32768 : {w})"
+            low = [sat("lo_", 0), sat("lo_", 1), sat("hi_", 0), sat("hi_", 1)]
+            high = [sat("lo1_", 0), sat("lo1_", 1), sat("hi1_", 0), sat("hi1_", 1)]
+            return [f"r{rd} = " + " | ".join(f"({v} << {16 * k})" for k, v in enumerate(low)) + ";",
+                    f"h{rd} = " + " | ".join(f"({v} << {16 * k})" for k, v in enumerate(high)) + ";"]
         # The FPU.
         if op.endswith(".s") or op in ("mtc1", "mfc1", "ctc1", "cfc1", "cvt.s.w"):
             return self.fpu(ins)
@@ -1236,7 +1260,10 @@ def rw(i: asm.Insn) -> tuple[set, set, set, set]:
     elif op == "jalr":
         g_r.add(i.rs)
         g_w.add(i.rd)
-    elif op in ("mfhi", "mflo", "mfhi1", "mflo1", "mfsa", "pmfhi", "pmflo", "pmfhl.lw", "pmfhl.uw"):
+    elif op in ("mfhi", "mflo", "mfhi1", "mflo1", "mfsa", "pmfhi", "pmflo", "pmfhl.lw", "pmfhl.uw", "pmfhl.sh"):
+        g_w.add(i.rd)
+    elif op == "pmulth":
+        g_r |= {i.rs, i.rt}
         g_w.add(i.rd)
     elif op in ("lb", "lbu", "lh", "lhu", "lw", "lwu", "ld", "lq"):
         g_r.add(i.rs)
