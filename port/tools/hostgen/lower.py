@@ -837,9 +837,14 @@ class Unit:
         if k == "ReturnStmt":
             kids = _inner(n)
             if not kids:
-                # In a definition that returns its last call's result, an earlier return leaves
-                # the register as it was: nothing a caller could use.
-                return [pad + ("return 0;" if self.fn.tail_id is not None else "return;")]
+                # A bare return in a function with a result (old GCC takes `return;` in an int
+                # function, the matching C keeps it, today's Clang refuses it), or in a definition
+                # that returns its last call's result: the register is left as it was, nothing a
+                # caller could use. Zero, for a scalar or a pointer.
+                ret = self.cls(self.fn.sig.ret)
+                if self.fn.tail_id is not None or ret in ("int", "ptr", "float", "double"):
+                    return [pad + "return 0;"]
+                return [pad + "return;"]
             if self.cls(self.fn.sig.ret) == "void":
                 return [pad + f"{self.rv(kids[0])};", pad + "return;"]
             return [pad + f"return {self.convert(kids[0], self.fn.sig.ret)};"]

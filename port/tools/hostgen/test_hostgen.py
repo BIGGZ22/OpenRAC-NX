@@ -229,6 +229,31 @@ class Translate(unittest.TestCase):
         """})
         self.assertEqual(out, ["5", "6", "8", "0", "0", "6"])
 
+    def test_a_bare_return_in_a_function_with_a_result(self):
+        # Matching C keeps the original's `return;` in an int (or pointer) function: old GCC took
+        # it, and today's Clang refuses to compile it. The translation returns zero.
+        out = self.run_program({"bare.c": """
+            int early(int x) {
+                if (x < 0) {
+                    return;
+                }
+                return x * 2;
+            }
+            char *nothing(int x) {
+                if (x) {
+                    return;
+                }
+                return 0;
+            }
+            int test_main(void) {
+                test_print(early(4));
+                test_print(early(-1));
+                test_print(nothing(1) == 0);
+                return 0;
+            }
+        """})
+        self.assertEqual(out, ["8", "0", "1"])
+
     def test_a_call_short_of_arguments_is_reported(self):
         # The caller has no argument of its own for the callee's second: the register held
         # whatever the caller left there, so the call is filled with 0 and listed.
