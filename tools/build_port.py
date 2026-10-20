@@ -47,6 +47,7 @@ import argparse
 import json
 import os
 import shutil
+import stat
 import subprocess
 import sys
 from pathlib import Path
@@ -127,6 +128,21 @@ def read_cache(build: Path) -> dict[str, str]:
         return parse_cache((build / "CMakeCache.txt").read_text(encoding="utf-8", errors="replace"))
     except OSError:
         return {}
+
+
+def remove_tree(path: Path) -> None:
+    """Deletes the folder PATH and everything in it. Windows refuses to delete a read-only file,
+    and git makes its objects read-only: a dependency CMake cloned into the build folder
+    (_deps/*-src/.git) stopped --clean with "Access is denied". Such a file is made writable and
+    deleted again."""
+    def writable_then_again(function, name, _error):
+        os.chmod(name, stat.S_IWRITE)
+        function(name)
+
+    if sys.version_info >= (3, 12):
+        shutil.rmtree(path, onexc=writable_then_again)
+    else:
+        shutil.rmtree(path, onerror=writable_then_again)
 
 
 def parse_environment(text: str) -> dict[str, str]:
@@ -392,7 +408,7 @@ def main(argv: list[str] | None = None) -> int:
     if args.clean and build.exists():
         kept = kept_choices(cache)
         say(f"deleting {build.relative_to(ROOT).as_posix()} to build everything again")
-        shutil.rmtree(build)
+        remove_tree(build)
         cache = {}
     try:
         env, cmake, compilers = prepare(cache)

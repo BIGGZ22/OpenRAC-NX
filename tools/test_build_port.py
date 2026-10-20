@@ -49,6 +49,21 @@ class Reading(unittest.TestCase):
         ])
 
 
+class Clean(unittest.TestCase):
+    def test_a_read_only_file_is_deleted_too(self):
+        # git's objects are read-only, and Windows will not delete those: --clean stopped at a
+        # dependency CMake had cloned into the build folder.
+        with tempfile.TemporaryDirectory() as tmp:
+            build = Path(tmp) / "release"
+            pack = build / "_deps" / "cgltf-src" / ".git" / "objects" / "pack"
+            pack.mkdir(parents=True)
+            index = pack / "pack-0.idx"
+            index.write_bytes(b"x")
+            index.chmod(0o444)
+            build_port.remove_tree(build)
+            self.assertFalse(build.exists())
+
+
 class Commands(unittest.TestCase):
     def setUp(self):
         self.tmp = tempfile.TemporaryDirectory()
