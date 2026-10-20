@@ -137,11 +137,17 @@ def read_hand(config_dir: Path, cfg: dict) -> dict[str, str]:
 
 def read_aliases(source: Path, cfg: dict) -> dict[str, str]:
     """The decompilation's readable names, each a macro for an address name (hostgen.json
-    "aliases": headers in the decompilation of `#define NAME func_ADDR` lines), or none."""
+    "aliases": headers in the decompilation of `#define NAME func_ADDR` lines), or none.
+    A `.json` entry is a table of values its own build derived ({"values": {name: "0x..."}},
+    Going Commando's build/boot/placed.json), read for its carried names only (prep.py,
+    read_carried_aliases)."""
     out: dict[str, str] = {}
     for header in cfg.get("aliases", []):
-        if (source / header).is_file():
-            out.update(prep.read_aliases((source / header).read_text(encoding="utf-8", errors="surrogateescape")))
+        path = source / header
+        if not path.is_file():
+            continue
+        text = path.read_text(encoding="utf-8", errors="surrogateescape")
+        out.update(prep.read_carried_aliases(text) if path.suffix == ".json" else prep.read_aliases(text))
     return out
 
 
@@ -602,6 +608,8 @@ def inputs_digest(source: Path, config: Path, cfg: dict, options: list[str]) -> 
     cache, a second configure) skips the translation."""
     paths = [source / d for d in sorted(set(cfg["sources"] + cfg["includes"]))]
     paths += [source / t for t in cfg["symbols"]]
+    # An alias table outside the include directories (a build's derived values) counts too.
+    paths += [source / t for t in cfg.get("aliases", []) if Path(t).suffix == ".json"]
     for key in ("places", "candidates"):
         if cfg.get(key):
             paths.append(source / cfg[key])

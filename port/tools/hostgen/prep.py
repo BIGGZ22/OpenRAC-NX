@@ -31,6 +31,7 @@ where it was:
 
 from __future__ import annotations
 
+import json
 import re
 from pathlib import Path
 
@@ -362,11 +363,37 @@ def read_aliases(text: str) -> dict[str, str]:
     return {m.group(1): m.group(2) for m in _ALIAS_DEFINE.finditer(text) if m.group(1) != m.group(2)}
 
 
+_CARRIED = re.compile(r"\br1_(func|D)_(?:L\d\d_)?[0-9A-Fa-f]{8}\b")
+
+
+def read_carried_aliases(text: str) -> dict[str, str]:
+    """carried name -> address name, from a build's table of derived values (JSON, "values":
+    {name: "0x00123456"}). Going Commando's C keeps rac1-decomp's names for what it has not
+    named yet (`r1_func_0011DB98`, `r1_D_00130420`: rac1's addresses, not this game's); its own
+    build reads their values from the retail bytes. Each becomes the address name of its value
+    here (`func_0011F818`, `D_00134DB8`)."""
+    values = json.loads(text).get("values", {})
+    out = {}
+    for name, value in values.items():
+        m = _CARRIED.fullmatch(name)
+        if m and isinstance(value, str):
+            out[name] = f"{m.group(1)}_{int(value, 0):08X}"
+    return out
+
+
 def unalias(text: str, aliases: dict[str, str]) -> str:
     """TEXT with each readable name of ALIASES written as its address name (see the top)."""
     if not aliases:
         return text
-    return _ALIAS_TOKEN.sub(lambda m: aliases.get(m.group(0), m.group(0)), text)
+
+    def one(m: re.Match) -> str:
+        word = m.group(0)
+        if word.lstrip().startswith("#"):
+            # A carried name keeps its meaning inside a macro's body too (a `#define SIFCMD`
+            # over `r1_D_00158300`); readable names stay as they are there.
+            return _CARRIED.sub(lambda c: aliases.get(c.group(0), c.group(0)), word)
+        return aliases.get(word, word)
+    return _ALIAS_TOKEN.sub(one, text)
 
 
 def prepare(text: str) -> str:

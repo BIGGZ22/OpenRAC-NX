@@ -1342,6 +1342,28 @@ class Preparation(unittest.TestCase):
         text = prep.use_candidates(out, {"func_0022F4C0": both}, set())
         self.assertEqual(text.count("void func_0022F4C8(char *m)"), 1)
 
+    def test_carried_names_become_the_address_names_of_their_values(self):
+        # Going Commando keeps rac1-decomp's names (rac1's addresses) for what it has not named;
+        # its build's table of derived values says where each is in this game, macro bodies too.
+        table = json.dumps({"values": {"r1_func_0011DB98": "0x0011f818", "r1_D_00158300": "0x00140300",
+                                       "D_00115E38": "0x00115e38", "Fbbb7bee1_FUN_00282A38": "0x00282a38"}})
+        aliases = prep.read_carried_aliases(table)
+        self.assertEqual(aliases, {"r1_func_0011DB98": "func_0011F818", "r1_D_00158300": "D_00140300"})
+        src = ('extern char r1_D_00158300[];\n'
+               '#define SIFCMD ((char *) r1_D_00158300)\n'
+               'void f(void) { r1_func_0011DB98(1, 2); /* r1_func_0011DB98 */ }\n')
+        out = prep.unalias(src, aliases)
+        self.assertIn('extern char D_00140300[];\n#define SIFCMD ((char *) D_00140300)\n', out)
+        self.assertIn('func_0011F818(1, 2); /* r1_func_0011DB98 */', out)
+
+    def test_a_table_of_derived_values_gives_symbols(self):
+        program = hostgen.Program()
+        with tempfile.TemporaryDirectory() as d:
+            path = Path(d) / "placed.json"
+            path.write_text(json.dumps({"values": {"BOOT_D_001395B8": "0x001395b8", "§.text": "0x1"}}))
+            self.assertEqual(hostgen.read_symbols(path, program), 1)
+        self.assertEqual(program.symbols, {"BOOT_D_001395B8": 0x001395B8})
+
     def test_each_declarator_keeps_its_own_assembler_name(self):
         # Batalia: several names in one extern statement each reach their own symbol, not the first's.
         src = ('extern float func_A(int),func_B(float), *D_C;\n'

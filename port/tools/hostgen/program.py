@@ -11,6 +11,7 @@ first, to know each definition (index_unit), before any is translated.
 
 from __future__ import annotations
 
+import json
 import re
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -549,10 +550,18 @@ def read_catalogue(path: Path, program: Program) -> int:
 
 def read_symbols(path: Path, program: Program) -> int:
     """Named symbols and their addresses from a splat symbol file
-    (`name = 0x00123456; // comment`)."""
+    (`name = 0x00123456; // comment`), or from a JSON table of the values a decompilation's
+    own build derived for names that state no address ({"values": {name: "0x..."}}: Going
+    Commando's build/boot/placed.json)."""
     if not path.exists():
         return 0
     count = 0
+    if path.suffix == ".json":
+        for name, value in json.loads(path.read_text(errors="replace")).get("values", {}).items():
+            if isinstance(value, str) and re.fullmatch(r"[A-Za-z_]\w*", name):
+                program.symbols.setdefault(name, int(value, 0))
+                count += 1
+        return count
     for line in path.read_text(errors="replace").splitlines():
         m = _SPLAT_SYMBOL.match(line)
         if m:
