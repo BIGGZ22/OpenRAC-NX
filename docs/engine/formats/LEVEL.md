@@ -8,8 +8,11 @@ describes them, with ReRAC's corrections from the game's loader; where
 OpenRAC checked them on the PAL disc, [ASSETS.md](../../../games/rac1/docs/ASSETS.md)
 says so and is linked.
 
-**Games.** RAC1 only (NTSC-U by ReRAC, PAL by OpenRAC). Notes on how the
-sequels differ are Wrench's (**reference**); RAC2's level data header was
+**Games.** RAC1 (NTSC-U by ReRAC, PAL by OpenRAC). The core index, class
+and texture tables are the same in Going Commando, Up Your Arsenal and
+Deadlocked, measured on their retail discs; what differs (the level data's
+slots, the instance records, the moby texture stash) is in
+[LATER_GAMES.md](LATER_GAMES.md). RAC2's level data header was also
 measured on prerelease discs ([LEVEL-ARCHIVE-FORMAT.md](../../../games/rac2/ntsc/docs/LEVEL-ARCHIVE-FORMAT.md)).
 
 **Addresses.** NTSC-U addresses are ReRAC's (`SCUS_971.99`); PAL names come

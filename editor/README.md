@@ -5,9 +5,11 @@ The editor turns the levels on your own disc of Ratchet & Clank (PAL,
 Godot is the map editor: open a level, move, add or delete objects, and save. Tools to pack edited scenes back into game
 data come later; the scenes already keep what they will need.
 
-It sits at the top of OpenRAC because it is meant to serve all four games.
-Today it reads Ratchet & Clank's PAL and NTSC-U discs; the formats of the
-later games are close relatives (see [docs/engine](../docs/engine/README.md)).
+It sits at the top of OpenRAC because it serves all four games. It reads
+Ratchet & Clank's PAL and NTSC-U discs in full, and Going Commando's, Up
+Your Arsenal's and Deadlocked's NTSC-U discs in early access: their levels,
+textures and models, to look at and to make texture and model packs from
+([The later games](#the-later-games-early-access)).
 
 Never commit or share what it produces (see [docs/policy/SOURCING.md](../docs/policy/SOURCING.md)).
 It only writes to new directories under OpenRAC's ignored `assets/` or `build/`.
@@ -436,6 +438,75 @@ Not yet extracted: low-detail moby meshes, hero collision, audio, video
 and each level's code overlay. [ASSETS.md](../games/rac1/docs/ASSETS.md) describes
 the formats and the evidence for them.
 
+## The later games (early access)
+
+Going Commando (`SCUS_972.68` v1.01), Up Your Arsenal (`SCUS_973.53`) and
+Deadlocked (`SCUS_974.65`), NTSC-U. Their levels are the first game's
+format with a few differences, read by the same readers through a table of
+what each game changes ([games.py](games.py); the formats, and what was
+checked on each disc, are in
+[docs/engine/formats/LATER_GAMES.md](../docs/engine/formats/LATER_GAMES.md)).
+None of these games is playable in OpenRAC yet: this is for modders to get
+ready, looking at the levels and making texture and model packs that will
+apply once they are.
+
+```sh
+python3 editor/extract.py survey baserom/SCUS_972.68.iso                  # the levels on the disc, as JSON
+python3 editor/extract.py godot baserom/SCUS_972.68.iso assets/levels/rac2/ntsc --split
+godot --path assets/levels/rac2/ntsc/level_01 -e                         # Oozla
+python3 editor/extract.py port baserom/SCUS_973.53.iso assets/port/rac3/ntsc   # for texture and model packs
+python3 editor/assets.py export assets/port/rac3/ntsc build/uya-export --level 2 --what textures
+python3 editor/assets.py import build/uya-export --levels assets/port/rac3/ntsc --out build/uya-pack
+```
+
+The disc is told apart by the executable `SYSTEM.CNF` boots, as for the
+first game. A level is numbered as the game numbers it (its level header's
+number), so the folders have gaps: Going Commando 0–20, 22–26 and 30 (the
+Insomniac Museum); Up Your Arsenal 1–55 but for 15, 25, 37 and 38;
+Deadlocked 0–74 with its multiplayer maps and split-screen copies. The
+launcher's Mods page lists them by name.
+
+| What | Going Commando | Up Your Arsenal | Deadlocked |
+|---|---|---|---|
+| Levels | 27 | 51 | 47 |
+| Terrain, with the chunks large levels stream | yes | yes | yes |
+| Ties and shrubs, with placements | yes | yes | yes |
+| Moby class meshes, with placements | yes | yes | yes |
+| Moby skeletons | yes | yes | yes |
+| Moby animations | yes, but some classes | yes, but some classes | not yet |
+| Textures | yes | yes | yes (Deadlocked's swizzled pixels are put back in order) |
+| Chrome map for metal parts | not found: grey | not found: grey | not found: grey |
+| Sky | yes | yes | yes |
+| Collision layer | yes | yes | yes |
+| Lighting baked as the game does it | not yet | not yet | not yet |
+| Moby class names and update functions | not yet | not yet | not yet |
+| Deadlocked's mission instances and classes | | | not yet |
+| Packing edits back into the game | not yet | not yet | not yet |
+| Playing | not yet | not yet | not yet |
+
+What does not decode yet is left out rather than stopping the level, and
+each level says what: `level.json`'s `problems` in a Godot project,
+`stats.problems` in the port layout's `manifest.json` (a class without its
+animations, a terrain fragment, a texture drawn grey).
+
+In Godot a later game's level opens like the first game's, with the same
+nodes and `rc1_*` metadata. Its level node carries `rc1_game` and
+`rc1_packable = false`, and its description in the Scene dock says that the
+level is for looking and making packs: you can move things, but the packer
+reads Ratchet & Clank's levels only and refuses another game's project
+(`extract.py pack` stops with a message), so nothing you change in the scene
+reaches the game yet. Moby nodes are named `Class<N>_NNNN`: the class names
+are the first game's only.
+
+Texture and model packs work as for the first game ([MODDING.md](MODDING.md)):
+an export made from a later game's levels says its game, its import makes a
+pack for that game (`"game": "rac2"`, `"rac3"` or `"rac4"`, `"version":
+"ntsc"`), and `overrides.py` stacks a pack only for levels of its own game.
+Such a pack holds textures and models; a level edit in it is ignored and
+said so. The launcher's Mods page has all of it: **Read the levels**, then
+**Models and textures**, and the level editor; its Pack and Play steps say
+they are not there yet for these games.
+
 ## Code
 
 The GDScript files follow [`GDSCRIPT_CONVENTIONS.md`](GDSCRIPT_CONVENTIONS.md).
@@ -444,7 +515,9 @@ The GDScript files follow [`GDSCRIPT_CONVENTIONS.md`](GDSCRIPT_CONVENTIONS.md).
 |---|---|
 | `extract.py` | Command line and safe output |
 | `disc.py` | ISO files, the two discs' versions, sector table of contents, level headers |
-| `level.py` | A level's sections, core blocks and textures |
+| `wads.py` | Going Commando's, Up Your Arsenal's and Deadlocked's discs: table of contents, level table, level headers |
+| `games.py` | What the four games' level formats share and what each changes, for the shared readers |
+| `level.py` | A level's sections, core blocks and textures (each game's) |
 | `formats.py` | Bounded reads, WAD decompression, code overlays, textures |
 | `terrain.py`, `ties.py`, `shrubs.py`, `sky.py`, `collision.py` | Geometry and placements |
 | `mobys.py`, `moby_class.py`, `moby_anim.py` | Moby placements, class meshes, skeletons and animations |
@@ -462,7 +535,12 @@ The decoders accept only the layouts found on these discs and raise
   contributors (GPL-3.0-or-later). Most of what the extractor knows about
   terrain, ties, shrubs, the sky, textures and placements comes from
   reading its source. [ASSETS.md](../games/rac1/docs/ASSETS.md#sources-and-credits)
-  lists which files each format came from.
+  lists which files each format came from. What the later games change
+  (their table of contents, level headers and level data, the instance
+  records, the tie and moby headers, Deadlocked's swizzle, skeletons and
+  sky, the streamed chunks) comes from reading it too, and their level
+  names are its `data/underlay/*_levels.asset`
+  ([LATER_GAMES.md](../docs/engine/formats/LATER_GAMES.md)).
 - **[Replanetizer](https://github.com/RatchetModding/Replanetizer)** by
   RatchetModding contributors, consulted for what fields mean.
 - **[ReRAC](https://github.com/re-rac/rerac)** (ISC): the moby instance

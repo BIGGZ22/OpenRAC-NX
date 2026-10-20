@@ -122,6 +122,17 @@ Consulted for what formats and fields mean; no code from them is included
 [Wrench](https://github.com/chaoticgd/wrench) (GPL-3.0-or-later) and
 [Replanetizer](https://github.com/RatchetModding/Replanetizer).
 
+The editor's reading of Going Commando's, Up Your Arsenal's and Deadlocked's
+levels (editor/wads.py, editor/games.py, the per-game paths in the readers)
+follows Wrench's `src/iso/table_of_contents.cpp`, `wad_identifier.cpp`,
+`src/wrenchbuild/level/`, `src/engine/` and `src/instancemgr/` (read at
+commit `46e8043`), re-implemented in Python; Deadlocked's pixel order
+(editor/level.py `unswizzle`) is its `map_pixel_index_rac4`
+(`src/core/texture.cpp`) written out again. The later games' level names
+in editor/games.py and launcher/src/lib/labels.ts are those of its
+`data/underlay/{gc,uya,dl}_levels.asset`. Wrench is GPL-3.0-or-later, as
+OpenRAC's top level is.
+
 ## The native port's libraries
 
 The port ([port/](port/README.md)) builds with these libraries. CMake fetches

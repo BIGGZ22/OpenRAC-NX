@@ -10,9 +10,9 @@ Commando: level, audio, scene; Up Your Arsenal and Deadlocked: audio, level, sce
 kind is told by its header's size, as Wrench does (src/iso/table_of_contents.cpp,
 wad_identifier.cpp; GPL-3.0-or-later; re-implemented here, nothing copied).
 
-A level file starts with a header that names its sections (LEVEL_HEADERS): the level data, the
-gameplay file (the instances), the occlusion and, in Deadlocked, the art instances (its ties and
-shrubs, which the gameplay file of the others holds). The level data is a WAD of its own whose
+A level file's header names its sections (level_ranges): the level data, the gameplay file (the
+instances), the occlusion and, in Deadlocked, the art instances, and the streamed chunks of a
+large level's terrain and collision (chunk_ranges). The level data is a WAD of its own whose
 header lists the code overlay, the core index, the GS RAM lump and the core data
 (level_data_wad.cpp's GcUyaLevelDataHeader and DlLevelDataHeader): the same core the first game
 has, which level.load_wad_level reads with the shared readers.
@@ -25,7 +25,9 @@ from disc import BOOT, SECTOR, Disc
 from formats import FormatError, span, unpack
 
 TOC_LBA = 1001
-TOC_LIMIT = 0x200000         # read this much of the table of contents (Wrench's TOC_MAX_SIZE): the level headers reach 0x72000 on these discs
+# How much of the table of contents is read (Wrench's TOC_MAX_SIZE); the level headers end
+# before +0x72000 on these discs.
+TOC_LIMIT = 0x200000
 MAX_LEVELS = 100
 LEVEL_PAIR = 24              # three (sector, sector count) pairs
 

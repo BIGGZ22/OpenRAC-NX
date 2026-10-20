@@ -149,7 +149,11 @@ RAC1 PAL: **reference** layouts from ReRAC, checked on all 19 PAL levels
 - Ties (+0x34, 0xe0-byte records) and shrubs (+0x3c, 0x70-byte records) are
   placed the same way.
 
-No placement format is documented for RAC1 US, RAC2 or RAC3.
+RAC2, RAC3 and RAC4: **retail**, Wrench's layouts read on every level of
+the three NTSC-U discs: 0x88-byte moby records in RAC2 and RAC3 (gameplay
++0x4c), 0x70-byte ones in RAC4, ties of 0x60 bytes, shrubs as RAC1's
+([formats/LATER_GAMES.md](formats/LATER_GAMES.md#29-instances)). No
+placement format is documented for RAC1 US.
 
 ### Classes
 
@@ -256,13 +260,25 @@ on the 6 August and 7 September discs
   and slots 4–9 start with the `"WAD"` container.
 
 A community note's layout does not hold on these discs; the doc lists each
-difference. Whether this layout holds on the retail v1.01 disc is not
-recorded.
+difference. On the retail v1.01 disc the 0x60-byte level header is the same
+(level id, reverb, the four ranges from +0x10, chunks at +0x30, used on 8
+levels), measured on 2026-10-20 ([formats/LATER_GAMES.md](formats/LATER_GAMES.md#22-the-level-header)).
 
 ### RAC3
 
 Levels are unpacked with Wrench; the repository documents no level format
 ([Toolchain-and-Build.md](../../games/rac3/ntsc/docs/wiki/Toolchain-and-Build.md)).
+
+### RAC2, RAC3 and RAC4 retail, as the editor reads them
+
+**Retail**, 2026-10-20: the editor reads every level of the three NTSC-U
+discs ([formats/LATER_GAMES.md](formats/LATER_GAMES.md)). The table of
+contents is at sector 1001 on all three; RAC2's 27 levels, RAC3's 51 and
+RAC4's 47 are numbered by their level headers (RAC2: 0–20, 22–26, 30, as
+above). The level core is RAC1's format with a few per-game values
+([editor/games.py](../../editor/games.py)); large levels stream part of
+their terrain and collision in chunks; RAC4 keeps its instances in the level
+data and swizzles its textures.
 
 ## 5. Rendering
 

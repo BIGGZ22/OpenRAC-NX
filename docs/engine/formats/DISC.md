@@ -223,9 +223,12 @@ in Wrench's section order `.lit`, `.bss`, `.data`, `lvl.vtbl`, `lvl.camvtbl`,
 `lvl.sndvtbl`, `.text` ([README.md, section 2](../README.md#loading-a-levels-program)).
 RAC1's boot executable is an ordinary ELF.
 
-## 8. How the sequels differ (reference)
+## 8. How the sequels differ
 
-From Wrench, as ReRAC records it. Not measured in OpenRAC except where noted.
+From Wrench, as ReRAC records it. The table of contents, the level table and
+the level headers were measured on the three NTSC-U retail discs on
+2026-10-20, when the editor learned to read them: [LATER_GAMES.md](LATER_GAMES.md)
+has what was found.
 
 | | RAC1 | Going Commando, Up Your Arsenal, Deadlocked |
 |---|---|---|
@@ -240,14 +243,16 @@ From Wrench, as ReRAC records it. Not measured in OpenRAC except where noted.
 Wrench classifies the sequels' headers by their size alone (for example
 RAC2 level 0x60, audio 0x1018, scene 0x137C; Deadlocked level 0xC68). The
 table is in ReRAC's `disc_layout.md` section 4; it is ambiguous by
-construction and OpenRAC does not rely on it.
+construction. The editor ([wads.py](../../../editor/wads.py)) uses only the
+sizes the three NTSC-U discs have, and checks each against its game's
+level header size.
 
 ## Open
 
 - RAC1: the 36 `bindata` slots, the `irx` bundle's layout, the unknown
   table-of-contents groups.
-- RAC2–RAC4: none of this is measured on a retail disc in OpenRAC; RAC2's
-  prerelease layout is in its own doc.
+- RAC2–RAC4: the global WADs are not read; the audio and scene headers are
+  located, not decoded. RAC2's prerelease layout is in its own doc.
 
 Sources: ReRAC (https://github.com/re-rac/rerac, ISC, Copyright (c) 2026
 ReRAC contributors), `docs/formats/disc_layout.md` and
