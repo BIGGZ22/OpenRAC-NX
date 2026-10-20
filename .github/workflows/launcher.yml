@@ -417,8 +417,15 @@ jobs:
         if: matrix.name == 'fedora'
         working-directory: launcher
         run: |
-          for f in target/release/bundle/rpm/*.x86_64.rpm; do mv "$f" "${f%.x86_64.rpm}.fc44.x86_64.rpm"; done
-          for f in target/release/bundle/rpm/*.x86_64.rpm.sig; do mv "$f" "${f%.x86_64.rpm.sig}.fc44.x86_64.rpm.sig"; done
+          for f in target/release/bundle/rpm/*.x86_64.rpm; do
+            [ -f "$f" ] || continue
+            mv "$f" "${f%.x86_64.rpm}.fc44.x86_64.rpm"
+          done
+          # A build without the updater key (a pull request from a fork) has no signature.
+          for f in target/release/bundle/rpm/*.x86_64.rpm.sig; do
+            [ -f "$f" ] || continue
+            mv "$f" "${f%.x86_64.rpm.sig}.fc44.x86_64.rpm.sig"
+          done
 
       # Named as the desktop installers are, and checked: the game's activity, SDL's and the
       # libraries the programs need are in it. Signed for the launcher's updater when the key is
