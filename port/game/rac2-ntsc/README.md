@@ -22,13 +22,16 @@ OPENRAC_HIDDEN=1 OPENRAC_PRESS=300:4000:10,500:8:10,700:4000:10,900:8:10,1300:40
 
 ## Building and running
 
-The decompilation this was brought up with is the live `rac2-decomp`
-checkout (about 170 more functions in C than OpenRAC's `games/rac2/ntsc`,
-synced at 86dbd852); its build products are used where present:
+The default build reads OpenRAC's own `games/rac2/ntsc` (synced at
+8bc9d785, 2026-10-20). It needs the boot executable at
+`games/rac2/ntsc/baserom/SCUS_972.68` (the project's `python3 tools/levels.py dump`
+writes it from `baserom/SCUS_972.68.iso`; or copy it from your rac2-decomp's
+`baserom/`); `OPENRAC_RAC2_NTSC_SOURCE`
+points it at another checkout instead (your rac2-decomp, further along):
 
 ```sh
 cd port
-cmake --preset release -DOPENRAC_RAC2_NTSC_SOURCE=<rac2-decomp checkout>
+cmake --preset release
 cmake --build --preset release -j 8 --target openrac-rac2-ntsc
 python3 tools/extractor.py <SCUS_972.68 image> --game rac2 --proj-path build/rac2-data -e --boot-only   # from the top
 OPENRAC_HIDDEN=1 OPENRAC_PRESS=300:4000:10,500:8:10,700:4000:10,900:8:10 \
@@ -36,13 +39,26 @@ OPENRAC_HIDDEN=1 OPENRAC_PRESS=300:4000:10,500:8:10,700:4000:10,900:8:10 \
   --no-card --skip-movies --stop-on-missing
 ```
 
-What the translation reads from the decompilation (`hostgen.json`):
+`OPENRAC_RAC2_NTSC_RETAIL_IMAGE` (a disc image) does not work for Going
+Commando yet: the disc reader hostgen uses (`editor/disc.py`) knows only
+Ratchet & Clank's discs, whose root has no subdirectories.
 
-- `symbol_addrs/usa/symbol_addrs.txt`, and `build/boot/placed.json` (as
-  aliases and as symbols): the values the decompilation's own build derived
-  for the names it carries from rac1-decomp (`r1_func_...`, `r1_D_...`) and
-  for its family-qualified ones (`F<hash>_FUN_<addr>`). Without a build of
-  the decompilation (CI) they are absent and those functions are stubs.
+What the translation reads (`hostgen.json`):
+
+- `symbol_addrs/usa/symbol_addrs.txt`, and the values the decompilation's
+  own build derived (`derived`, as aliases and as symbols) for the names it
+  carries from rac1-decomp (`r1_func_...`, `r1_D_...`) and for its
+  family-qualified ones (`F<hash>_FUN_<addr>`): its `build/boot/placed.json`
+  when the checkout has been built, else `derived_names.json` here, the same
+  table kept with the port (names and addresses only). Without either,
+  hostgen stops: the functions that use those names would be stubs and the
+  menu's set-up crashes. After syncing `games/rac2/ntsc`, build its boot
+  program and write the copy again (hostgen warns, and `test_derived` fails,
+  when the C uses a name the copy does not know):
+
+  ```sh
+  python3 port/tools/hostgen/derived.py --game port/game/rac2-ntsc/hostgen.json --source <built rac2-decomp at the synced commit>
+  ```
 - `baserom/SCUS_972.68` (`asm.retail`): every function still in assembly is
   translated from the retail executable's instructions, entries found by
   their calls (`discover_entries`). Its `include_asm.h` defines the markers

@@ -98,6 +98,9 @@ python3 tools/sources.py sync rac1/ntsc    # apply the checkout's new commits to
 A checkout is looked for at the path in `game.json` (for example
 `~/Projects/rac1-decomp-ntsc`), or in `$OPENRAC_SOURCE_RAC1_NTSC`. A hunk
 that touches a line changed here is left as a `.rej` file to resolve by hand.
+After syncing rac2/ntsc, write the port's copy of the names its build derives
+again from a build of that commit
+([port/game/rac2-ntsc](../port/game/rac2-ntsc/README.md#building-and-running)).
 Before committing a sync, check it against the
 [sourcing policy](policy/SOURCING.md), including the removal requests, and
 commit it as one `chore(import)` commit per project, naming the new commit.
