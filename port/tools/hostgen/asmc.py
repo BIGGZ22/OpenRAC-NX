@@ -35,9 +35,10 @@ The C keeps the EE's registers as locals (port/runtime/include/openrac/ee.h):
 - an address formed from a symbol (%hi / %lo) or through $gp is relocated as hostgen
   relocates the C's globals (lower.Unit.global_address, code_address).
 
-What it cannot write (system calls, COP0, VU0 microprograms, a few rare MMI
-operations, a function reading a register no caller passes) keeps the stub, and the report lists
-the function with the reason.
+What it cannot write (system calls, COP0, VU0 microprograms and branches on VU0, the
+random-number unit, a function reading a register no caller passes) keeps the stub, and the
+report lists the function with the reason. The hardware's semantics it keeps are listed in
+docs/port/HARDWARE_SEMANTICS.md.
 
 mode "console" writes the same C for the console's own compiler instead, calls and
 globals by retail address: the form rac1-decomp's tools/fcheck.py checks against
