@@ -8,7 +8,7 @@ use std::io::{BufRead, BufReader, Read};
 use std::process::{Child, Command, Stdio};
 use std::sync::atomic::{AtomicU32, Ordering};
 use std::sync::{Arc, Mutex};
-use std::time::Duration;
+use std::time::{Duration, Instant};
 
 use serde::Serialize;
 
@@ -27,6 +27,11 @@ pub enum Stream {
     Stdout,
     Stderr,
 }
+
+/// How long the end of a job waits for its output to be read, after the program itself has
+/// ended: long enough for the last lines, short enough that a program that left something
+/// behind (a daemon, a watcher) does not hold the queue up for ever.
+const OUTPUT_GRACE: Duration = Duration::from_secs(3);
 
 #[derive(Debug, Clone, Serialize)]
 #[serde(rename_all = "camelCase")]
@@ -115,8 +120,21 @@ impl Jobs {
                 }
                 std::thread::sleep(Duration::from_millis(100));
             };
+            // The output is read by two threads, which end when the pipe is closed. A
+            // program that leaves something behind (a daemon, a watcher) keeps the pipe
+            // open after it has ended, so the end of the job is reported after a moment:
+            // the tail of the output may be lost, but a process that is not the job's
+            // never holds the queue up.
+            let deadline = Instant::now() + OUTPUT_GRACE;
             for p in pumps {
-                let _ = p.join();
+                while !p.is_finished() && Instant::now() < deadline {
+                    std::thread::sleep(Duration::from_millis(20));
+                }
+                if p.is_finished() {
+                    let _ = p.join();
+                }
+                // Not finished: the thread ends when the pipe is closed, at the latest when
+                // the program holding it ends. It is left to end on its own.
             }
             inner.running.lock().unwrap().remove(&id);
             let cancelled = inner.cancelled.lock().unwrap().remove(&id);
@@ -351,6 +369,30 @@ mod tests {
         jobs.cancel(started.id).unwrap();
         let exit = rx.recv_timeout(Duration::from_secs(10)).unwrap();
         assert!(matches!(exit, Event::Exit { cancelled: true, .. }), "{exit:?}");
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn a_job_that_leaves_a_process_behind_still_ends() {
+        let jobs = Jobs::default();
+        let (tx, rx) = mpsc::channel();
+        let tx = Mutex::new(tx);
+        // The program ends at once, but the process it left behind keeps the output pipe
+        // open: the job must still report its end, or the queue waits for ever.
+        let started = jobs
+            .start(&sh("sleep 10 & echo started; exit 0"), None, move |e| {
+                tx.lock().unwrap().send(e).unwrap();
+            })
+            .unwrap();
+        let mut lines = Vec::new();
+        let exit = loop {
+            match rx.recv_timeout(Duration::from_secs(8)).unwrap() {
+                Event::Output { line, .. } => lines.push(line),
+                exit @ Event::Exit { .. } => break exit,
+            }
+        };
+        assert_eq!(exit, Event::Exit { id: started.id, code: Some(0), cancelled: false });
+        assert!(lines.contains(&"started".to_string()), "{lines:?}");
     }
 
     #[test]
