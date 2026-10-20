@@ -17,7 +17,9 @@
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
+#include <filesystem>
 #include <format>
+#include <fstream>
 #include <functional>
 #include <memory>
 #include <string>
@@ -3425,6 +3427,129 @@ bool pick_device(std::string& error) {
     return true;
 }
 
+std::filesystem::path pipeline_cache_file() {
+    if (g == nullptr) {
+        return {};
+    }
+    if (const char* env = std::getenv("OPENRAC_VULKAN_PIPELINE_CACHE"); env != nullptr) {
+        if (std::strcmp(env, "0") == 0 || std::strcmp(env, "off") == 0 || std::strcmp(env, "none") == 0) {
+            return {};
+        }
+        if (env[0] != '\0') {
+            return env;
+        }
+    }
+    std::filesystem::path base;
+#if defined(__APPLE__)
+    const char* home = std::getenv("HOME");
+    base = std::filesystem::path(home != nullptr ? home : ".") / "Library/Caches/OpenRAC";
+#elif defined(__ANDROID__)
+    const char* home = std::getenv("HOME");
+    base = std::filesystem::path(home != nullptr ? home : ".") / "cache";
+#else
+    if (const char* xdg = std::getenv("XDG_CACHE_HOME"); xdg != nullptr && xdg[0] != '\0') {
+        base = std::filesystem::path(xdg) / "openrac";
+    } else {
+        const char* home = std::getenv("USERPROFILE");
+        if (home == nullptr || home[0] == '\0') {
+            home = std::getenv("HOME");
+        }
+        base = std::filesystem::path(home != nullptr ? home : ".") / ".cache/openrac";
+    }
+#endif
+    return base / std::format("vulkan_pipelines_{:04x}_{:04x}.bin", g->properties.vendorID, g->properties.deviceID);
+}
+
+bool make_pipeline_cache() {
+    std::vector<char> initial_data;
+    const std::filesystem::path path = pipeline_cache_file();
+    if (!path.empty()) {
+        std::ifstream in(path, std::ios::binary | std::ios::ate);
+        if (in.is_open()) {
+            const auto size = in.tellg();
+            if (size >= static_cast<std::streamoff>(sizeof(VkPipelineCacheHeaderVersionOne))) {
+                in.seekg(0, std::ios::beg);
+                initial_data.resize(static_cast<std::size_t>(size));
+                if (!in.read(initial_data.data(), size)) {
+                    initial_data.clear();
+                }
+            }
+        }
+    }
+    bool use_cache = false;
+    if (!initial_data.empty()) {
+        VkPipelineCacheHeaderVersionOne header{};
+        std::memcpy(&header, initial_data.data(), sizeof(header));
+        if (header.headerSize == sizeof(VkPipelineCacheHeaderVersionOne)
+            && header.headerVersion == VK_PIPELINE_CACHE_HEADER_VERSION_ONE
+            && header.vendorID == g->properties.vendorID
+            && header.deviceID == g->properties.deviceID
+            && std::memcmp(header.pipelineCacheUUID, g->properties.pipelineCacheUUID, VK_UUID_SIZE) == 0) {
+            use_cache = true;
+        } else {
+            log::info("vulkan: pipeline cache UUID changed, starting a fresh cache");
+        }
+    }
+    VkPipelineCacheCreateInfo cache{VK_STRUCTURE_TYPE_PIPELINE_CACHE_CREATE_INFO};
+    if (use_cache) {
+        cache.initialDataSize = initial_data.size();
+        cache.pInitialData = initial_data.data();
+    }
+    if (!check(vkCreatePipelineCache(g->device, &cache, nullptr, &g->pipeline_cache), "the pipeline cache")) {
+        if (use_cache) {
+            log::warn("vulkan: driver refused cached pipelines, starting a fresh cache");
+            cache.initialDataSize = 0;
+            cache.pInitialData = nullptr;
+            if (!check(vkCreatePipelineCache(g->device, &cache, nullptr, &g->pipeline_cache), "the pipeline cache")) {
+                return false;
+            }
+        } else {
+            return false;
+        }
+    } else if (use_cache) {
+        log::info("vulkan: loaded {} bytes of cached pipelines from {}", initial_data.size(), path.string());
+    }
+    return true;
+}
+
+void save_pipeline_cache() {
+    if (g == nullptr || g->device == VK_NULL_HANDLE || g->pipeline_cache == VK_NULL_HANDLE || !g->open) {
+        return;
+    }
+    const std::filesystem::path path = pipeline_cache_file();
+    if (path.empty()) {
+        return;
+    }
+    std::size_t size = 0;
+    if (vkGetPipelineCacheData(g->device, g->pipeline_cache, &size, nullptr) != VK_SUCCESS
+        || size <= sizeof(VkPipelineCacheHeaderVersionOne)) {
+        return;
+    }
+    std::vector<char> buffer(size);
+    if (vkGetPipelineCacheData(g->device, g->pipeline_cache, &size, buffer.data()) != VK_SUCCESS) {
+        return;
+    }
+    std::error_code ec;
+    std::filesystem::create_directories(path.parent_path(), ec);
+    if (ec) {
+        log::warn("vulkan: could not make cache folder {}: {}", path.parent_path().string(), ec.message());
+        return;
+    }
+    const std::filesystem::path temp = path.string() + ".tmp";
+    std::ofstream out(temp, std::ios::binary | std::ios::trunc);
+    if (!out.is_open() || !out.write(buffer.data(), static_cast<std::streamsize>(buffer.size()))) {
+        log::warn("vulkan: could not write pipeline cache to {}", temp.string());
+        return;
+    }
+    out.close();
+    std::filesystem::rename(temp, path, ec);
+    if (ec) {
+        log::warn("vulkan: could not rename pipeline cache to {}: {}", path.string(), ec.message());
+        return;
+    }
+    log::info("vulkan: saved {} bytes of pipeline cache to {}", size, path.string());
+}
+
 bool make_device(std::string& error) {
     const float priority = 1.0f;
     VkDeviceQueueCreateInfo queue{VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO};
@@ -3494,9 +3619,7 @@ bool make_device(std::string& error) {
             break;
         }
     }
-    VkPipelineCacheCreateInfo cache{VK_STRUCTURE_TYPE_PIPELINE_CACHE_CREATE_INFO};
-    vkCreatePipelineCache(g->device, &cache, nullptr, &g->pipeline_cache);
-    return true;
+    return make_pipeline_cache();
 }
 
 bool make_frames() {
@@ -3606,6 +3729,7 @@ void describe_device() {
 void destroy_all() {
     if (g->device != VK_NULL_HANDLE) {
         vkDeviceWaitIdle(g->device);
+        save_pipeline_cache();
         for (Frame& f : g->frames) {
             run_deferred(f);
         }
@@ -3660,6 +3784,7 @@ void destroy_all() {
         }
         if (g->pipeline_cache != VK_NULL_HANDLE) {
             vkDestroyPipelineCache(g->device, g->pipeline_cache, nullptr);
+            g->pipeline_cache = VK_NULL_HANDLE;
         }
         if (g->allocator != nullptr) {
             vmaDestroyAllocator(g->allocator);
