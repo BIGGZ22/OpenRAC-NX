@@ -63,6 +63,12 @@ pub struct Config {
     /// game's page plays (`rac1` -> `rac1/ntsc`). Used only with developer tools on
     /// (disc_choice.rs); without one, the disc set up, as for a player.
     pub disc_choice: BTreeMap<String, String>,
+    /// Where the launcher keeps its own copy of the figures it fetched from bytematch.dev: in
+    /// the per-user folder beside its settings, which the launcher can always write (a
+    /// checkout it does not own, as an installed launcher carries one, is read-only).
+    /// Not saved with the settings: the app sets it at every start.
+    #[serde(skip)]
+    pub progress_cache: Option<PathBuf>,
 }
 
 impl Default for Config {
@@ -87,6 +93,7 @@ impl Default for Config {
             renderer: "opengl".into(),
             crashes_seen: BTreeMap::new(),
             disc_choice: BTreeMap::new(),
+            progress_cache: None,
         }
     }
 }

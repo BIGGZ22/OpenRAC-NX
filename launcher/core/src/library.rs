@@ -68,7 +68,7 @@ fn version_status(root: &std::path::Path, config: &Config, version: &Version) ->
 
 pub fn library(config: &Config) -> Result<Library, String> {
     let root = config.root()?.to_path_buf();
-    let catalog = catalog::load(&root)?;
+    let catalog = catalog::load_with(&root, config.progress_cache.as_deref())?;
     let (file, actions_error) = match actions::load(&root) {
         Ok(file) => (Some(file), None),
         Err(e) => (None, Some(e)),
