@@ -43,7 +43,7 @@ class CatalogueTests(unittest.TestCase):
                     {wide: 0x100000, consumer: 0x100300}))
                 p.functions[name] = Function(name, Signature(ctype.Base('int'), (), False, False), asm=True)
             p.index_places()
-            _, results = asmc.run(p, {'asm': {'enabled': True, 'dirs': ['.'],
+            _, results = asmc.run(p, {'asm': {'enabled': True, 'dirs': ['.'], 'forward_unprototyped': True,
                 'signatures': {consumer: 'int (unsigned long long)'}}}, folder)
             for result in results.values():
                 self.assertIsNotNone(result.text, result.reason)
@@ -81,6 +81,7 @@ class CatalogueTests(unittest.TestCase):
             f = Function(name, Signature(ctype.Base('int'), (), False, False), asm=True)
             p.functions[name] = f
             tr = asmc.Translator(p, asm.read_index([folder], lambda _: -1))
+            tr.forward_unprototyped = True  # rac4's asm.forward_unprototyped
             tr.prepare_signature(f, tr.find(f))
             self.assertTrue(f.sig.prototyped)
             self.assertEqual(len(f.sig.params), 2)
@@ -102,6 +103,7 @@ class CatalogueTests(unittest.TestCase):
                 (folder / (name + '.s')).write_text(mips.assemble(name, addr, body,
                     {'func_00100000': 0x100000}))
             tr = asmc.Translator(p, asm.read_index([folder], lambda _: -1))
+            tr.forward_unprototyped = True  # rac4's asm.forward_unprototyped
             for f in p.functions.values():
                 tr.prepare_signature(f, tr.find(f))
                 f.unit = '<asm>'
@@ -128,9 +130,27 @@ class CatalogueTests(unittest.TestCase):
             f = Function(name, old, asm=True, declared=[old])
             p.functions[name] = f
             tr = asmc.Translator(p, asm.read_index([folder], lambda _: -1))
+            tr.forward_unprototyped = True  # rac4's asm.forward_unprototyped
             tr.prepare_signature(f, tr.find(f))
             self.assertTrue(f.sig.prototyped)
             self.assertEqual(len(f.sig.params), 2)
+
+    def test_old_style_declaration_kept_by_default(self):
+        # Without asm.forward_unprototyped (rac1, rac2) a compatible `int f()` stays as declared,
+        # so the generated prototypes agree with the decompilation's own definitions.
+        with tempfile.TemporaryDirectory() as temp:
+            folder = Path(temp)
+            name = 'func_00100000'
+            (folder / 'f.s').write_text(mips.assemble(name, 0x100000,
+                'addu $2, $4, $5\njr $31\nnop\n'))
+            p = Program()
+            old = Signature(ctype.Base('int'), (), False, False)
+            f = Function(name, old, asm=True, declared=[old])
+            p.functions[name] = f
+            tr = asmc.Translator(p, asm.read_index([folder], lambda _: -1))
+            tr.prepare_signature(f, tr.find(f))
+            self.assertFalse(f.sig.prototyped)
+            self.assertEqual(f.sig.params, ())
 
     def test_forwarded_parameters_and_call_delay_slot(self):
         with tempfile.TemporaryDirectory() as temp:
@@ -150,6 +170,7 @@ class CatalogueTests(unittest.TestCase):
             p.symbols[callee] = 0x100100
             p.index_places()
             tr = asmc.Translator(p, asm.read_index([folder], lambda _: -1))
+            tr.forward_unprototyped = True  # rac4's asm.forward_unprototyped
             tr.prepare_signature(f, tr.find(f))
             self.assertEqual(len(f.sig.params), 3)
             result = tr.translate(f)
