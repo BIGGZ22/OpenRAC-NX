@@ -38,7 +38,7 @@ def manifests() -> dict[str, tuple[Path, dict]]:
     """'game/version' -> (its game.json, the whole manifest), for every version with a source."""
     out = {}
     for path in sorted(GAMES.glob("*/game.json")):
-        game = json.loads(path.read_text())
+        game = json.loads(path.read_text(encoding="utf-8"))
         for version, info in game["versions"].items():
             if info.get("source"):
                 out[f"{game['id']}/{version}"] = (path, game)
@@ -96,9 +96,15 @@ def do_sync(key: str, rev: str | None) -> None:
         return
     specs = [f":(exclude){e}" for e in source.get("exclude", [])]
     diff = git(repo, "diff", "--binary", source["commit"], commit, "--", ".", *specs, binary=True)
-    apply = subprocess.run(["git", "apply", "--reject", f"--directory={dest.relative_to(ROOT)}"],
+    rejects_before = set(dest.rglob("*.rej"))
+    # git takes the directory with /: on Windows, games\rac1 made every path of the patch "invalid".
+    apply = subprocess.run(["git", "apply", "--reject", f"--directory={dest.relative_to(ROOT).as_posix()}"],
                            input=diff, cwd=ROOT, capture_output=True)
     sys.stderr.write(apply.stderr.decode())
+    if apply.returncode and not set(dest.rglob("*.rej")) - rejects_before:
+        # Nothing applied (not some hunks rejected): the recorded commit stays, or the next sync
+        # would skip what this one never brought in.
+        raise SystemExit(f"{key}: the diff did not apply; {source['commit'][:10]} stays recorded")
     old = source["commit"]
     record(path, game, version, commit, repo)
     state = "with rejected hunks (*.rej) to resolve" if apply.returncode else "cleanly"
@@ -110,7 +116,7 @@ def record(path: Path, game: dict, version: str, commit: str, repo: Path) -> Non
     source["commit"] = commit
     source["date"] = git(repo, "log", "-1", "--format=%cs", commit)
     source["imported"] = time.strftime("%Y-%m-%d")
-    path.write_text(json.dumps(game, indent=2, ensure_ascii=False) + "\n")
+    path.write_text(json.dumps(game, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
 
 
 def do_status() -> None:
