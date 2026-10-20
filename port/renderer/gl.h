@@ -91,6 +91,10 @@ inline constexpr GLenum GL_FILL = 0x1B02;
 
 inline constexpr GLenum GL_CULL_FACE = 0x0B44;
 inline constexpr GLenum GL_DEPTH_TEST = 0x0B71;
+inline constexpr GLenum GL_STENCIL_TEST = 0x0B90;
+inline constexpr GLenum GL_KEEP = 0x1E00;
+inline constexpr GLenum GL_INCR_WRAP = 0x8507;
+inline constexpr GLenum GL_DECR_WRAP = 0x8508;
 inline constexpr GLenum GL_BLEND = 0x0BE2;
 inline constexpr GLenum GL_SCISSOR_TEST = 0x0C11;
 inline constexpr GLenum GL_CLIP_DISTANCE0 = 0x3000;
@@ -180,6 +184,10 @@ inline constexpr GLenum GL_FRAMEBUFFER_COMPLETE = 0x8CD5;
     X(void, glScissor, (GLint x, GLint y, GLsizei width, GLsizei height))                          \
     X(void, glDepthFunc, (GLenum func))                                                            \
     X(void, glDepthMask, (GLboolean flag))                                                         \
+    X(void, glStencilFunc, (GLenum func, GLint ref, GLuint mask))                                  \
+    X(void, glStencilOpSeparate, (GLenum face, GLenum sfail, GLenum dpfail, GLenum dppass))        \
+    X(void, glStencilMask, (GLuint mask))                                                          \
+    X(void, glClearStencil, (GLint s))                                                             \
     X(void, glColorMask, (GLboolean r, GLboolean g, GLboolean b, GLboolean a))                     \
     X(void, glBlendFuncSeparate, (GLenum src_rgb, GLenum dst_rgb, GLenum src_a, GLenum dst_a))     \
     X(void, glBlendEquation, (GLenum mode))                                                        \

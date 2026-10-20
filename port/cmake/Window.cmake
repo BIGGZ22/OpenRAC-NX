@@ -101,6 +101,8 @@ add_library(openrac_renderer STATIC
   renderer/gl.cpp
   renderer/gl_stats.cpp
   renderer/renderer.cpp
+  renderer/shadow_volume.cpp
+  renderer/shadows.cpp
   renderer/shader.cpp
   renderer/subsystems.cpp
   renderer/texture.cpp
@@ -110,6 +112,9 @@ openrac_embed_shaders(openrac_renderer renderer openrac::renderer
   "${CMAKE_CURRENT_SOURCE_DIR}/renderer/shaders/direct.vert"
   "${CMAKE_CURRENT_SOURCE_DIR}/renderer/shaders/direct.frag"
   "${CMAKE_CURRENT_SOURCE_DIR}/renderer/shaders/effect.vert"
+  "${CMAKE_CURRENT_SOURCE_DIR}/renderer/shaders/shadow.vert"
+  "${CMAKE_CURRENT_SOURCE_DIR}/renderer/shaders/shadow_composite.vert"
+  "${CMAKE_CURRENT_SOURCE_DIR}/renderer/shaders/shadow.frag"
 )
 target_link_libraries(openrac_renderer PUBLIC openrac_common)
 openrac_warnings(openrac_renderer)
@@ -147,6 +152,7 @@ add_library(openrac_viewer_lib STATIC
   viewer/level.cpp
   viewer/level_renderer.cpp
   viewer/moby_pose.cpp
+  viewer/moby_shadow.cpp
   viewer/screenshot.cpp
 )
 openrac_embed_shaders(openrac_viewer_lib viewer openrac::viewer
