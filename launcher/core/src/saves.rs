@@ -64,15 +64,20 @@ pub struct GameSaveStatus {
 
 /// Returns the host directory where OpenRAC stores memory cards for the given serial.
 pub fn get_memcard_dir(serial: &str) -> PathBuf {
-    #[cfg(target_os = "macos")]
-    let base = dirs_home().join("Library/Application Support/OpenRAC");
-    #[cfg(not(target_os = "macos"))]
-    let base = std::env::var_os("XDG_DATA_HOME")
+    data_home().join("memcard").join(serial)
+}
+
+/// OpenRAC's data folder, where the games keep their memory cards (`memcard/`) and settings
+/// (`settings/`): the port's own `data_home()` (port/game/common/main.cpp), from the same variables.
+pub fn data_home() -> PathBuf {
+    if cfg!(target_os = "macos") {
+        return dirs_home().join("Library/Application Support/OpenRAC");
+    }
+    std::env::var_os("XDG_DATA_HOME")
+        .filter(|xdg| !xdg.is_empty())
         .map(PathBuf::from)
         .unwrap_or_else(|| dirs_home().join(".local/share"))
-        .join("openrac");
-
-    base.join("memcard").join(serial)
+        .join("openrac")
 }
 
 fn dirs_home() -> PathBuf {

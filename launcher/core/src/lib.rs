@@ -15,6 +15,7 @@
 //! - [`detect`]: finding the checkout, Python, Godot and Docker.
 //! - [`install`]: setting a game up from the player's disc, OpenGOAL's way.
 //! - [`disc_choice`]: for developers with two discs of a game, which one is played.
+//! - [`differences`]: what the port does otherwise than the PS2 game, and the fixes a player switches back.
 //! - [`jobs`]: running an action as a child process and streaming its output.
 //! - [`overrides`]: a game's overrides packs (replacement textures and models): list, order, on/off.
 //! - [`library`]: all of the above, put together for the UI.
@@ -28,6 +29,7 @@ pub mod catalog;
 pub mod chd;
 pub mod config;
 pub mod detect;
+pub mod differences;
 pub mod disc_choice;
 pub mod discord;
 pub mod discs;

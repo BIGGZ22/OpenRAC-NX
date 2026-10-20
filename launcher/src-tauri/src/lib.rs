@@ -354,6 +354,52 @@ fn run_action(
     started
 }
 
+// ---- Differences from the original (core/src/differences.rs) ----
+
+/// The checkout a game's list of differences is read from: the one set, else the copy carried.
+fn differences_root(state: &State<'_, AppState>) -> Option<PathBuf> {
+    state.config.lock().unwrap().root.clone().or_else(|| state.bundled.clone())
+}
+
+/// What the port does otherwise than the PS2 game for one version, with the fixes' values.
+#[tauri::command]
+async fn differences(
+    state: State<'_, AppState>,
+    game: String,
+    version: String,
+) -> Result<openrac_launcher_core::differences::Differences, String> {
+    let root = differences_root(&state);
+    let home = openrac_launcher_core::saves::data_home();
+    tauri::async_runtime::spawn_blocking(move || {
+        openrac_launcher_core::differences::view(root.as_deref(), &home, &game, &version)
+    })
+    .await
+    .map_err(|e| e.to_string())?
+}
+
+/// Switches a game fix on (the port's) or off (the console's behaviour) in the version's settings.
+#[tauri::command]
+async fn set_game_fix(
+    state: State<'_, AppState>,
+    game: String,
+    version: String,
+    id: String,
+    on: bool,
+) -> Result<openrac_launcher_core::differences::Differences, String> {
+    let root = differences_root(&state);
+    let home = openrac_launcher_core::saves::data_home();
+    let what = format!("{game}/{version}: game fix {id} {}", if on { "on" } else { "off (the original's)" });
+    let result = tauri::async_runtime::spawn_blocking(move || {
+        openrac_launcher_core::differences::set_fix(root.as_deref(), &home, &game, &version, &id, on)
+    })
+    .await
+    .map_err(|e| e.to_string())?;
+    if result.is_ok() {
+        launcher_log::line(&what);
+    }
+    result
+}
+
 // ---- Logs and crash reports (core/src/reports.rs) ----
 
 /// A game's data folder, where its logs and crash reports are.
@@ -1188,6 +1234,8 @@ pub fn run() {
             report_delete,
             reports_delete_all,
             open_reports_folder,
+            differences,
+            set_game_fix,
             android::pick_disc,
             android::gpu_drivers,
             android::gpu_driver_import,
