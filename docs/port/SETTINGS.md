@@ -3,8 +3,9 @@
 What the port adds to a game's own options for a PC's display: the settings,
 their keys in the settings file, how the window paces its frames against the
 game's tick, what was found about the PAL game's 50/60 Hz option, the graphics
-card checks, and where a frame's time goes. The last section compares the
-settings with what OpenGOAL and ReRAC give their players.
+card checks, and where a frame's time goes. Section 6 compares the
+settings with what OpenGOAL and ReRAC give their players; section 8 the game
+fixes, which switch the port's changes back to the console's behaviour.
 
 Code: [settings.h](../../port/game/common/settings.h) (the settings and the
 file), [options_menu.cpp](../../port/game/common/options_menu.cpp) (the rows
@@ -45,6 +46,7 @@ needs the game started again.
 | (Alt) | `menu_bar` | `1`, `0` | The menus along the window's top on Windows and Linux (macOS has them in its own menu bar) |
 | Mute in background | `mute_unfocused` | `0`, `1` | Silence while another window has the keyboard |
 | Strafe (experimental) | `strafe` | `off`, `hold`, `lock` | How Ratchet strafes on foot (section 7): the game's own turning; **Hold L2-R2**, while L2 or R2 is held the camera swings behind him once, then he faces the camera's way (the right stick turning it) and the stick moves him sideways and back; **Lock with weapons**, with a forward-firing weapon in hand he always faces the camera's way, the right stick turning it, and Hold otherwise. An old file's `lock_strafe = 1` is `lock` |
+| Game fixes: one row each | `fix_...` | `1` (the port's fix), `0` (the console's behaviour) | What the port changes from the console that a player may switch back (section 8). Ratchet & Clank: `fix_wide_moby_effects`, `fix_wide_nanotech_orbs`, `fix_wide_liquids` |
 | (F9, F10) | `volume` | `100`, `0` to `100` | How loud everything the port plays is |
 | (the launcher's Detailed logs) | `verbose_log` | `0`, `1` | The detailed log, as `OPENRAC_LOG=verbose` ([DEBUGGING.md](DEBUGGING.md#logs-and-traces)). Written only when on |
 
@@ -433,3 +435,65 @@ frame. A level's camera (a wall, a camera volume) can still turn
 the camera while L2 or R2 is held, and once the swing is done he turns with
 it.
 
+
+## 8. Game fixes and the differences from the original
+
+Players see everything the port does otherwise than the PS2 game, and a
+purist can switch some of it back. One list per game holds it:
+[port/game/rac1/differences.json](../../port/game/rac1/differences.json)
+(another game's goes at `port/game/<game>/differences.json`). The port's
+build reads it ([cmake/Differences.cmake](../../port/cmake/Differences.cmake)),
+and so does the launcher ([core/src/differences.rs](../../launcher/core/src/differences.rs),
+which also carries a copy for a launcher without a checkout): nothing is
+written twice.
+
+Each entry:
+
+| Field | |
+|---|---|
+| `id` | lower-case words joined by hyphens: `wide-liquids` |
+| `kind` | `fix`: the player may switch it back. `guard`: keeps the game from crashing where the console carried on unnoticed; shown, never switched (off would only mean the crash). `port`: a difference that comes with being a PC program, for the record |
+| `name` | a few words. A fix's is its row on the game's Options page: 22 letters at most |
+| `discs` | `["pal"]`, `["ntsc"]` or both |
+| `original` | what the PS2 game does |
+| `port` | what the port does, and why; for a fix, what off brings back |
+| `setting` | a fix only: `{"key": "fix_...", "default": true}`. On is the port's fix |
+| `refs` | where it is: commits, files, docs. Shown with the launcher's developer tools on |
+
+Write only what the code or a commit shows. A fix is:
+
+- **a setting**: `fix_... = 1` or `0` in the settings file (section 1),
+  written with the others, read at start;
+- **a row** of the Options page (title and pause menu), after the port's own
+  under a **Game fixes** heading: On, or Original. The page scrolls, four or
+  five rows at a time. The in-game drawer has a **Game fixes** card too;
+- **a switch** in the launcher, under the game's **Differences from the
+  original**, which edits that one line of the file (it counts from the
+  game's next start);
+- **a flag** the code reads. The build writes the disc's fixes into a table
+  ([fixes.h](../../port/game/common/fixes.h)); host C asks for its flag once
+  and reads it through the pointer from then on, so the test costs a load:
+
+  ```c
+  static const unsigned char* fix;
+  if (!fix) fix = openrac_game_fix("fix_wide_liquids");
+  if (*fix) { /* the port's fix */ } else { /* the console's behaviour */ }
+  ```
+
+To add one: the entry in the file, the flag at the code it changes (off
+must give the console's behaviour, exactly), and its key in
+`tests/game_fixes_test.cpp` if the test should hold it to its code. The
+configure refuses a file that breaks a rule (a fix without a setting, a
+setting on anything else, a key twice, a name too long), the launcher's
+tests the same, and `game_fixes` checks that every key the rac1 host C asks
+for is in the table.
+
+Ratchet & Clank's fixes now, all on by default and all for both discs:
+
+| Key | Off |
+|---|---|
+| `fix_wide_moby_effects` | MobyProc's "drawn" test ([render_native.c](../../port/game/rac1/host/render_native.c), [moby_view.h](../../port/game/rac1/host/moby_view.h)) against the 4:3 view: mobys near the sides of a wide picture lose their effects |
+| `fix_wide_nanotech_orbs` | the nanotech cluster's sphere test ([wide_view.c](../../port/game/rac1/host/wide_view.c)) against the 4:3 view: crates near the sides lose their orb |
+| `fix_wide_liquids` | the draw callback lists and the liquid grid's cull ([wide_view.c](../../port/game/rac1/host/wide_view.c)) against the 4:3 view: seas, lava and sand are missing near the sides |
+
+At 4:3 none of them changes anything.

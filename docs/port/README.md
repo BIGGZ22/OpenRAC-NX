@@ -34,7 +34,7 @@ The code is in [port/](../../port/README.md).
 |---|---|
 | [DESIGN.md](DESIGN.md) | What is decided, the shape of the port, the open decisions |
 | [ROADMAP.md](ROADMAP.md) | The order of work, and whether the decompilation must be finished first |
-| [SETTINGS.md](SETTINGS.md) | The PC settings and their file, frame pacing against the game's tick, the game's 50/60 Hz option, the graphics card checks, where a frame's time goes, and the settings beside OpenGOAL's and ReRAC's |
+| [SETTINGS.md](SETTINGS.md) | The PC settings and their file, frame pacing against the game's tick, the game's 50/60 Hz option, the graphics card checks, where a frame's time goes, the settings beside OpenGOAL's and ReRAC's, and the game fixes (what the port does otherwise than the original, and what a player switches back) |
 | [DECOMP_STATUS.md](DECOMP_STATUS.md) | How much of Ratchet & Clank (PAL) is C a PC could build, and what is not |
 | [DEBUGGING.md](DEBUGGING.md) | The debug overlay, the frame dump, pause and slow motion, every `OPENRAC_*` environment variable |
 | [RENDERER.md](RENDERER.md) | How the game builds a frame, everything it draws, the VU programs, the graphics chip's conventions |
