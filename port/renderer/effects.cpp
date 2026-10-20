@@ -222,11 +222,13 @@ bool EffectRenderer::apply(std::uint64_t tex0_bits, std::uint64_t tex1_bits, std
     const gs::Tex1 tex1 = gs::Tex1::decode(tex1_bits);
     const gs::Clamp clamp = gs::Clamp::decode(clamp_bits);
     const TextureHandle texture = state.textures.resolve(tex0, texa);
-    static std::set<std::uint64_t> seen;
-    if (seen.insert(tex0_bits).second) {
-        const Rgba8Image& image = state.textures.image(texture);
-        log::debug("effect texture {:#x}: block {:#x}, {}x{}, {}{}", tex0_bits, tex0.tbp0, image.width, image.height,
-                   state.textures.name(texture), texture == state.textures.placeholder() ? " (placeholder)" : "");
+    if (log::level() <= log::Level::Debug) {
+        static std::set<std::uint64_t> seen;
+        if (seen.insert(tex0_bits).second) {
+            const Rgba8Image& image = state.textures.image(texture);
+            log::debug("effect texture {:#x}: block {:#x}, {}x{}, {}{}", tex0_bits, tex0.tbp0, image.width, image.height,
+                       state.textures.name(texture), texture == state.textures.placeholder() ? " (placeholder)" : "");
+        }
     }
     glBindTexture(GL_TEXTURE_2D, state.textures.gl_texture(texture));
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, static_cast<GLint>(tex1.mmag ? GL_LINEAR : GL_NEAREST));

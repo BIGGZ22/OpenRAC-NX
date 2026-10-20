@@ -837,6 +837,8 @@ void sky_sprite_quads(const viewer::GameState& state) {
     const std::array<float, 3> right{-state.left[0], -state.left[1], -state.left[2]};
     const std::array<float, 3> down{-state.up[0], -state.up[1], -state.up[2]};
     const float tan_y = state.tan_half_fov_y > 0.0f ? state.tan_half_fov_y : 0.476f;
+    std::vector<renderer::EffectQuad> quads;
+    quads.reserve(g->sky_sprites.size());
     for (const auto& [r, tex0] : g->sky_sprites) {
         float pos[3];
         float theta;
@@ -882,7 +884,10 @@ void sky_sprite_quads(const viewer::GameState& state) {
         q.clamp = 5;
         q.tex1 = 0xFF9000000120ull;
         q.alpha = r[3];
-        g->effects.insert(g->effects.begin(), q);
+        quads.push_back(q);
+    }
+    if (!quads.empty()) {
+        g->effects.insert(g->effects.begin(), quads.rbegin(), quads.rend());
     }
     g->sky_sprites.clear();
 }
