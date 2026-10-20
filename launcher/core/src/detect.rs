@@ -539,6 +539,9 @@ pub fn run(mut cmd: Command, timeout: Duration) -> Result<String, String> {
             Ok(None) if start.elapsed() < timeout => std::thread::sleep(Duration::from_millis(25)),
             _ => {
                 let _ = child.kill();
+                // The killed process is reaped: one that is not waited for stays a zombie
+                // until the launcher exits, and a probe that times out is not rare.
+                let _ = child.wait();
                 return Err(format!("{program} did not finish within {} s", timeout.as_secs()));
             }
         }
