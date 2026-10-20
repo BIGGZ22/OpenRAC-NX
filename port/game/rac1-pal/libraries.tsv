@@ -294,7 +294,6 @@ func_L00_002A2020	game	func_L00_002A2020	host	a place the catalogue folds into a
 func_L00_002A2148	game	func_L00_002A2148	host	a place the catalogue folds into another function although its code differs (split_places.tsv, rac1/host/variants.c)	void (void)
 func_L00_0024F054	game	func_L00_0024F054	host	a place the catalogue folds into another function although its code differs (split_places.tsv, rac1/host/variants.c)	int (void)
 func_L00_00267080	game	func_L00_00267080	host	a place the catalogue folds into another function although its code differs (split_places.tsv, rac1/host/variants.c)	void (int, long long)
-func_L00_00296CD0	game	func_L00_00296CD0	host	a place the catalogue folds into another function although its code differs (split_places.tsv, rac1/host/variants.c)	void (void)
 func_L01_002A2B68	game	func_L01_002A2B68	host	a place the catalogue folds into another function although its code differs (split_places.tsv, rac1/host/variants.c)	int (int, int)
 func_L00_002E9A88	game	func_L00_002E9A88	host	a place the catalogue folds into another function although its code differs (split_places.tsv, rac1/host/variants.c)	void (float, float)
 func_L05_0031AAA8	game	func_L05_0031AAA8	host	the moby of a class list with a given id (rac1/host/variants.c; no C in the decompilation)	unsigned int (unsigned int, int)

@@ -97,20 +97,6 @@ void func_L00_00267080(int arg0, long long arg1) {
     }
 }
 
-#if !RAC1_OMIT(func_L00_00296CD0)
-/* The places of func_00229C08 (DmaShrubTextures) the catalogue lists at the level programs' second
- * copy (level 0's 0x296CD0) are DmaTieTextures' (func_00236958) copies: the two share a
- * fingerprint, and these read the tie words of D_0018A3B0 (6 and 5, not 8 and 7), call the tie
- * builder (func_002383D8) and splice the tie list (DrawTies_1's D_00161068, largest size in
- * D_00161074). DmaTieTextures itself is that code; its globals become the loaded level's
- * (OPENRAC_DATA). Written as the shrub code with the tie words, this spliced the shrub list
- * (D_001604F0) instead: still 0 on a level's first frame in the US game, so the tie tag went to
- * game address 0, over the star records of a sky without a star table (Gaspar's). */
-void func_L00_00296CD0(void) {
-    func_00236958();
-}
-#endif
-
 #if !RAC1_OMIT(func_L01_002A2B68)
 /* func_L00_0028F210's copy in some levels: the sound slot's +0x80, not +0x84. */
 int func_L01_002A2B68(int i, int v) {
