@@ -471,7 +471,9 @@ void openrac_sound_stop_readers() {
     }
     // Outside the lock: a reader that is waiting for it must be able to take it and end.
     for (auto& reader : readers) {
-        if (reader.joinable()) reader.join();
+        if (reader.joinable()) {
+            reader.join();
+        }
     }
 }
 
