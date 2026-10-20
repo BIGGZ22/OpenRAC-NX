@@ -332,9 +332,20 @@ const STANDARD: [number, PadButton][] = [
   [15, "right"],
 ];
 
-function pollGamepads(previous: Set<PadButton>) {
+/**
+ * The buttons down on the controllers in `pads` now; with `acting`, those pressed or let go since
+ * `previous` are acted on. Without `acting` (the launcher's window is not the one in front) they are
+ * only noted: the browser reports a controller whichever window has the focus, and a press meant
+ * for the game also moved and pressed things in the launcher behind it. A button still down when
+ * the launcher comes back to the front acts only once it is let go and pressed again.
+ */
+export function pollGamepads(
+  previous: Set<PadButton>,
+  pads: readonly (Gamepad | null)[] = navigator.getGamepads(),
+  acting = true,
+): Set<PadButton> {
   const now = new Set<PadButton>();
-  for (const pad of navigator.getGamepads()) {
+  for (const pad of pads) {
     if (pad?.mapping !== "standard") continue;
     for (const [index, button] of STANDARD) if (pad.buttons[index]?.pressed) now.add(button);
     const [x = 0, y = 0] = pad.axes;
@@ -343,6 +354,7 @@ function pollGamepads(previous: Set<PadButton>) {
     if (y <= -0.5) now.add("up");
     if (y >= 0.5) now.add("down");
   }
+  if (!acting) return now;
   for (const button of now) if (!previous.has(button)) padEvent(`down:${button}`);
   for (const button of previous) if (!now.has(button)) padEvent(`up:${button}`);
   return now;
@@ -374,7 +386,7 @@ export function startPad(home: () => boolean, gamepadApi: boolean) {
   let pressed = new Set<PadButton>();
   let polling = false;
   const poll = () => {
-    pressed = pollGamepads(pressed);
+    pressed = pollGamepads(pressed, navigator.getGamepads(), document.hasFocus());
     if (navigator.getGamepads().some((p) => p)) requestAnimationFrame(poll);
     else polling = false;
   };
