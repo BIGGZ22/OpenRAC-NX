@@ -74,6 +74,9 @@ UNSUPPORTED = {
 # bltzal and bgezal (and their likely forms): a call when the 64-bit register's sign says so; $ra
 # is written either way (hand-written code calls its helpers so: bgezal $t0, ...).
 COND_CALLS = {"bltzal", "bgezal", "bltzall", "bgezall"}
+# The parallel multiplies and divides on LO and HI (openrac_ee_pmul, ee_ops.h).
+PMUL_OPS = {"pmultw", "pmultuw", "pmaddw", "pmadduw", "pmsubw", "pmaddh", "pmsubh", "phmadh", "phmsbh",
+            "pdivw", "pdivuw", "pdivbw"}
 MMI_OPS = {
     "paddw", "psubw", "pcgtw", "pmaxw", "pminw", "pceqw", "paddh", "psubh", "pcgth", "pmaxh", "pminh",
     "pceqh", "paddb", "psubb", "pcgtb", "pceqb", "pextlw", "pextuw", "pextlh", "pextuh", "pextlb",
@@ -81,6 +84,7 @@ MMI_OPS = {
     "psllw", "psrlw", "psraw", "psllh", "psrlh", "psrah", "pexew", "pexcw", "prot3w", "pexeh", "pexch",
     "prevh", "pabsw", "pabsh", "padduw", "psubuw", "padduh", "psubuh", "paddub", "psubub", "paddsw",
     "psubsw", "paddsh", "psubsh", "paddsb", "psubsb", "plzcw", "pext5", "ppac5", "pinth", "pinteh",
+    "psllvw", "psrlvw", "psravw", "padsbh",
 }
 CONDITIONAL = {"beq", "bne", "blez", "bgtz", "bltz", "bgez", "beql", "bnel", "blezl", "bgtzl", "bltzl",
                "bgezl", "bc1f", "bc1t", "bc1fl", "bc1tl"}
@@ -961,8 +965,28 @@ class Translator:
             k = 0 if op == "pmfhl.lw" else 32
             return [f"r{rd} = ((lo_ >> {k}) & 0xFFFFFFFFull) | (((hi_ >> {k}) & 0xFFFFFFFFull) << 32);",
                     f"h{rd} = ((lo1_ >> {k}) & 0xFFFFFFFFull) | (((hi1_ >> {k}) & 0xFFFFFFFFull) << 32);"]
+        if op in ("pmfhl.slw", "pmfhl.lh"):
+            if rd == 0:
+                return []
+            fn = "openrac_ee_pmfhl_slw" if op == "pmfhl.slw" else "openrac_ee_pmfhl_lh"
+            return [f"q_ = {fn}(openrac_ee_qof(lo_, lo1_), openrac_ee_qof(hi_, hi1_));",
+                    f"r{rd} = q_.lo;", f"h{rd} = q_.hi;"]
         if op == "pmthl":
-            raise AsmUnsupported(f"pmthl at {ins.addr:08X}")
+            # pmthl.lw: rs's words 0, 1, 2, 3 to LO 0, HI 0, LO 2, HI 2; the odd words stay.
+            r, h = R(rs), self.H(rs)
+            keep = "0xFFFFFFFF00000000ull"
+            return [f"lo_ = (lo_ & {keep}) | ({r} & 0xFFFFFFFFull);",
+                    f"hi_ = (hi_ & {keep}) | (({r} >> 32) & 0xFFFFFFFFull);",
+                    f"lo1_ = (lo1_ & {keep}) | ({h} & 0xFFFFFFFFull);",
+                    f"hi1_ = (hi1_ & {keep}) | (({h} >> 32) & 0xFFFFFFFFull);"]
+        if op in PMUL_OPS:
+            lines = ["qlo_ = openrac_ee_qof(lo_, lo1_);", "qhi_ = openrac_ee_qof(hi_, hi1_);",
+                     f"q_ = openrac_ee_pmul(OPENRAC_PMUL_{op.upper()}, openrac_ee_qof({R(rs)}, {self.H(rs)}), "
+                     f"openrac_ee_qof({R(rt)}, {self.H(rt)}), &qlo_, &qhi_);",
+                     "lo_ = qlo_.lo;", "lo1_ = qlo_.hi;", "hi_ = qhi_.lo;", "hi1_ = qhi_.hi;"]
+            if rd != 0 and not op.startswith("pdiv"):
+                lines += [f"r{rd} = q_.lo;", f"h{rd} = q_.hi;"]
+            return lines
         if op == "pmulth":
             # Eight signed halfword products: LO takes those of halfwords 0, 1, 4, 5, HI those of
             # 2, 3, 6, 7, a word each; rd the even ones (0, 2, 4, 6).
@@ -1202,7 +1226,8 @@ class Translator:
             decl.append("    openrac_f32 " + ", ".join(f"f{n} = 0.0f" for n in fprs) + ";")
         extras = [("openrac_u64", "lo_"), ("openrac_u64", "hi_"), ("openrac_u64", "lo1_"), ("openrac_u64", "hi1_"),
                   ("int", "c_"), ("int", "fcc_"), ("openrac_f32", "facc_"), ("openrac_u32", "t_"),
-                  ("openrac_u32", "sa_"), ("openrac_ee_q", "q_"), ("openrac_f32", "v_[4]")]
+                  ("openrac_u32", "sa_"), ("openrac_ee_q", "q_"), ("openrac_ee_q", "qlo_"), ("openrac_ee_q", "qhi_"),
+                  ("openrac_f32", "v_[4]"), ("openrac_u32", "m_")]
         for t, name in extras:
             bare = name.split("[")[0]
             if re.search(r"\b" + re.escape(bare) + r"\b", text):
@@ -1275,7 +1300,7 @@ def rw(i: asm.Insn) -> tuple[set, set, set, set]:
     elif op in ("mfhi", "mflo", "mfhi1", "mflo1", "mfsa", "pmfhi", "pmflo", "pmfhl.lw", "pmfhl.uw", "pmfhl.sh",
                 "pmfhl.slw", "pmfhl.lh"):
         g_w.add(i.rd)
-    elif op == "pmulth":
+    elif op == "pmulth" or op in PMUL_OPS:
         g_r |= {i.rs, i.rt}
         if not op.startswith("pdiv"):
             g_w.add(i.rd)

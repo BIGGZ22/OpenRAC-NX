@@ -1733,6 +1733,104 @@ class FromAssembly(unittest.TestCase):
             """)}, symbols={})
         self.assertEqual(out, ["10", "30", "50", "70", "10", "-20", "30", "-40", "50", "-60", "70", "32767"])
 
+    def test_parallel_word_multiplies_shifts_and_divides(self):
+        # The R5900's two-result word operations (HARDWARE_SEMANTICS.md, item 10): two 64-bit
+        # products, not a sum; the variable shifts, sign-extended to doublewords; the divides.
+        out = self.run_asm("""
+            extern int D_00300000[56];
+            INCLUDE_ASM("asm", func_00100000);
+            extern void func_00100000(int *v);
+            int test_main(void) {
+                static const int s[4] = {3, 100, -5, 200}, t[4] = {7, 0, 11, 0};
+                int i;
+                for (i = 0; i < 4; i++) { D_00300000[i] = s[i]; D_00300000[4 + i] = t[i]; }
+                func_00100000(D_00300000);
+                for (i = 8; i < 56; i++) test_print(D_00300000[i]);
+                return 0;
+            }
+        """, {"func_00100000": (0x00100000, """
+                lq $8, 0($4)
+                lq $9, 16($4)
+                pmultw $10, $8, $9     # (3 * 7, -5 * 11) as doublewords
+                sq $10, 32($4)
+                pmaddw $11, $8, $9     # HI:LO plus the products again
+                sq $11, 48($4)
+                pmfhi $12
+                sq $12, 64($4)
+                pmflo $13
+                sq $13, 80($4)
+                psllvw $14, $9, $8     # rt << rs: (3 << 7, -5 << 11)
+                sq $14, 96($4)
+                psravw $15, $9, $8
+                sq $15, 112($4)
+                psrlvw $16, $9, $8
+                sq $16, 128($4)
+                pdivw $0, $8, $9       # quotients to LO, remainders to HI
+                pmfhl.lw $17, $0, $0
+                sq $17, 144($4)
+                pmultuw $18, $8, $9    # 0xFFFFFFFB * 11, unsigned
+                sq $18, 160($4)
+                pmfhl.slw $19, $0, $0  # HI:LO saturated to 32 bits
+                sq $19, 176($4)
+                pdivbw $0, $8, $9      # each word over halfword 0 of rt (7)
+                pmflo $20
+                sq $20, 192($4)
+                pmfhi $21
+                jr $31
+                sq $21, 208($4)
+            """)}, symbols={})
+        self.assertEqual([int(x) for x in out], [
+            21, 0, -55, -1,  42, 0, -110, -1,  0, 0, -1, -1,  42, 0, -110, -1,
+            384, 0, -10240, -1,  0, 0, -1, -1,  0, 0, 2097151, 0,  0, 3, 0, -5,
+            21, 0, -55, 10,  21, 0, 2147483647, 0,  0, 14, 0, 28,  3, 2, -5, 4])
+
+    def test_parallel_halfword_multiply_add(self):
+        # The halfword family on LO and HI's eight words (item 10): phmadh's pair sums (and the
+        # higher product in the odd words), pmaddh's accumulation, pmfhl.lh, pmthl, padsbh, phmsbh.
+        out = self.run_asm("""
+            extern short D_00300000[16];
+            extern int D_00300100[28];
+            extern short D_00300200[16];
+            INCLUDE_ASM("asm", func_00100000);
+            extern void func_00100000(short *v, int *w, short *h);
+            int test_main(void) {
+                int i;
+                for (i = 0; i < 8; i++) { D_00300000[i] = (short)(i + 1); D_00300000[8 + i] = (short)(10 * (i + 1)); }
+                func_00100000(D_00300000, D_00300100, D_00300200);
+                for (i = 0; i < 28; i++) test_print(D_00300100[i]);
+                for (i = 0; i < 16; i++) test_print(D_00300200[i]);
+                return 0;
+            }
+        """, {"func_00100000": (0x00100000, """
+                lq $8, 0($4)           # 1 .. 8
+                lq $9, 16($4)          # 10 .. 80
+                phmadh $10, $8, $9
+                sq $10, 0($5)
+                pmfhl.uw $11, $0, $0   # the odd words: the higher products
+                sq $11, 16($5)
+                pmaddh $12, $8, $9
+                sq $12, 32($5)
+                pmfhl.lh $13, $0, $0
+                sq $13, 0($6)
+                pmthl $0, $9, $0       # rt's words to LO 0, HI 0, LO 2, HI 2
+                pmfhl.lw $14, $0, $0
+                sq $14, 48($5)
+                pmfhl.uw $15, $0, $0   # the odd words kept
+                sq $15, 64($5)
+                phmsbh $16, $8, $9
+                sq $16, 80($5)
+                pmfhl.uw $17, $0, $0
+                sq $17, 96($5)
+                padsbh $18, $9, $8     # rs - rt below, rs + rt above
+                jr $31
+                sq $18, 16($6)
+            """)}, symbols={})
+        self.assertEqual([int(x) for x in out], [
+            50, 250, 610, 1130,  40, 160, 360, 640,  60, 340, 860, 1620,
+            10 | 20 << 16, 30 | 40 << 16, 50 | 60 << 16, 70 | 80 << 16,  80, 320, 720, 1280,
+            30, 70, 110, 150,  -41, -161, -361, -641,
+            60, 80, 340, 320, 860, 720, 1620, 1280,  9, 18, 27, 36, 55, 66, 77, 88])
+
     def test_conditional_call_tests_all_64_bits(self):
         # bltzal on a register whose low word is positive and whose doubleword is negative
         # (item 3): the EE calls; $ra is set either way.
