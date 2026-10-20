@@ -19,6 +19,8 @@ import type {
   Check,
   Config,
   Detected,
+  DifferenceView,
+  Differences,
   GameView,
   JobEvent,
   Library,
@@ -93,6 +95,44 @@ type RawSummary = Record<
 >;
 
 const manifests = import.meta.glob<RawGame>("../../../games/*/game.json", { eager: true, import: "default" });
+
+/** port/game/<game>/differences.json, as core/src/differences.rs reads it. */
+interface RawDifferences {
+  game: string;
+  differences: (Omit<DifferenceView, "on" | "refs" | "setting"> & {
+    discs: string[];
+    refs?: string[];
+    setting?: { key: string; default: boolean };
+  })[];
+}
+const differenceLists = import.meta.glob<RawDifferences>("../../../port/game/*/differences.json", {
+  eager: true,
+  import: "default",
+});
+/** The preview's settings files: `rac1/pal` -> key -> on. */
+const fixValues = new Map<string, Map<string, boolean>>();
+
+function mockDifferences(game: string, version: string): Differences {
+  const list = Object.values(differenceLists).find((l) => l.game === game);
+  const values = fixValues.get(`${game}/${version}`) ?? new Map<string, boolean>();
+  return {
+    game,
+    version,
+    settingsFile: `~/.local/share/openrac/settings/${game}-${version}.ini`,
+    entries: (list?.differences ?? [])
+      .filter((d) => d.discs.includes(version))
+      .map((d) => ({
+        id: d.id,
+        kind: d.kind,
+        name: d.name,
+        original: d.original,
+        port: d.port,
+        refs: d.refs ?? [],
+        setting: d.setting ?? null,
+        on: d.setting ? (values.get(d.setting.key) ?? d.setting.default) : null,
+      })),
+  };
+}
 const actions = actionsFile as { repository: RawAction[]; versions: Record<string, RawAction[] | undefined> };
 const summary = summaryFile as RawSummary;
 
@@ -1042,6 +1082,18 @@ export async function mockCall(command: string, args: Record<string, unknown> = 
     case "open_reports_folder":
       console.info(`[preview] ${command}`, args);
       return delay(null);
+    case "differences":
+      return delay(mockDifferences(String(args.game), String(args.version)));
+    case "set_game_fix": {
+      const now = mockDifferences(String(args.game), String(args.version));
+      const fix = now.entries.find((e) => e.id === args.id && e.kind === "fix" && e.setting);
+      if (!fix?.setting) throw new Error(`${String(args.id)} is not something that can be switched off`);
+      const key = `${now.game}/${now.version}`;
+      const values = fixValues.get(key) ?? new Map<string, boolean>();
+      values.set(fix.setting.key, Boolean(args.on));
+      fixValues.set(key, values);
+      return delay(mockDifferences(now.game, now.version));
+    }
     case "read_save":
       return delay(mockSave(typeof args.serial === "string" ? args.serial : "SCES_509.16", Number(args.slot ?? 0)));
     case "write_save": {

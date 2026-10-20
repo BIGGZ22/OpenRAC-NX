@@ -116,6 +116,15 @@ the disc image and saves are kept.
   beside the saves. A recent crash marks the game in the list.
   **Detailed logs** makes the game write more, for
   when we ask for it.
+- **Differences from the original**, for a game with a port: what it does
+  otherwise than the PS2 game, and why, in three groups. **Game fixes** have
+  a switch each: off, the game plays as the console does (the 4:3 culling at
+  the sides of a wide picture, for one). The switch is the port's own setting
+  (`fix_... = 1` in its settings file), the same the game's Options menu
+  changes, and it counts from the game's next start. **Kept from crashing**
+  are never switched off, and **Playing on a PC** is for the record. The list
+  is `port/game/<game>/differences.json` (the checkout's, else the copy the
+  launcher carries; [docs/port/SETTINGS.md](../docs/port/SETTINGS.md#8-game-fixes-and-the-differences-from-the-original)).
 - **Level editor**: under **Mods** (below), and in the game's menu.
 - **Two discs of a game, for developers**: with developer tools on and both
   a game's PAL and NTSC-U images in the games folder, a small **Disc** switch

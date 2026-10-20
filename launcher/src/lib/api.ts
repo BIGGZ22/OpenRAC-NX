@@ -116,6 +116,37 @@ export interface Config {
   discChoice: Record<string, string>;
 }
 
+/** What the port does otherwise than the PS2 game (core/src/differences.rs,
+ *  port/game/<game>/differences.json): a fix the player may switch back to the console's
+ *  behaviour, a guard that keeps the game from crashing where the console carried on, or a
+ *  difference that comes with being a PC program. */
+export type DifferenceKind = "fix" | "guard" | "port";
+
+export interface DifferenceView {
+  id: string;
+  kind: DifferenceKind;
+  name: string;
+  /** What the PS2 game does. */
+  original: string;
+  /** What the port does, and why. */
+  port: string;
+  /** Where it is in the code or the history: a contributor's detail. */
+  refs: string[];
+  /** A fix's key in the port's settings file, and its default (on: the port's fix). */
+  setting: { key: string; default: boolean } | null;
+  /** A fix's value now; null for anything else. */
+  on: boolean | null;
+}
+
+/** One version's differences: those that apply to its disc. */
+export interface Differences {
+  game: string;
+  version: string;
+  /** The port's settings file the fixes are kept in. */
+  settingsFile: string;
+  entries: DifferenceView[];
+}
+
 /** One of a game's logs or crash reports (core/src/reports.rs). */
 export interface ReportEntry {
   kind: "crash" | "session";
@@ -538,6 +569,11 @@ export const api = {
   reportSave: (game: string, file: string) => call<string>("report_save", { game, file }),
   /** Deletes one log or crash report from the game's data folder (core refuses any other file). */
   reportDelete: (game: string, file: string) => call<null>("report_delete", { game, file }),
+  /** What the port does otherwise than the PS2 game, for one version (`rac1`, `pal`). */
+  differences: (game: string, version: string) => call<Differences>("differences", { game, version }),
+  /** Switches a game fix on (the port's) or off (as the original plays) in the version's settings. */
+  setGameFix: (game: string, version: string, id: string, on: boolean) =>
+    call<Differences>("set_game_fix", { game, version, id, on }),
   /** Deletes every log and crash report of the game; returns how many files went. */
   reportsDeleteAll: (game: string) => call<number>("reports_delete_all", { game }),
   /** Opens the folder of a game's logs, or of its crash reports. */

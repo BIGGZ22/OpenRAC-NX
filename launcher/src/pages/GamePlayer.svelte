@@ -7,6 +7,7 @@
   // With developer tools on, one row of chips under the band leads there.
   import CountUp from "$components/CountUp.svelte";
   import CrashNotice from "$components/CrashNotice.svelte";
+  import DifferencesBlock from "$components/DifferencesBlock.svelte";
   import DiscSwitch from "$components/DiscSwitch.svelte";
   import FolderPrompt from "$components/FolderPrompt.svelte";
   import GamesFrame from "$components/GamesFrame.svelte";
@@ -290,6 +291,10 @@
             <SaveManagerBlock version={v} />
             {#if setUp}<ReportsBlock game={v.game} program={choice ? programOf(v.key) : null} />{/if}
           </div>
+        {/if}
+        {#if portReady}
+          <!-- What the port does otherwise than the PS2 game; the game fixes switch back. -->
+          <DifferencesBlock version={v} />
         {/if}
       </div>
     {/key}
