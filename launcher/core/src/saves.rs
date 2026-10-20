@@ -359,6 +359,15 @@ pub fn find_game_folder(card_dir: &Path) -> Option<PathBuf> {
     found.into_iter().next()
 }
 
+/// Whether `name` is the name of a backup on a card: one folder of its own, named
+/// `.backup_...`. A name with a path in it (an absolute path, `..`, a separator) is not:
+/// it would name something outside the card.
+fn is_backup_name(name: &str) -> bool {
+    let mut parts = Path::new(name).components();
+    let one_folder = matches!(parts.next(), Some(std::path::Component::Normal(_))) && parts.next().is_none();
+    one_folder && name.starts_with(".backup_")
+}
+
 /// Backs up everything on the card in `card_dir` into `.backup_<seconds>[_<note>]` beside it. A
 /// second backup in the same second gets `-2`, `-3` ... so it never overwrites the first.
 pub fn backup_card(card_dir: &Path, note: Option<&str>) -> Result<SaveBackupInfo, String> {
@@ -431,6 +440,12 @@ pub fn backup_note(name: &str) -> Option<String> {
 /// Restores a snapshot backup, replacing current saves.
 pub fn restore_backup(serial: &str, backup_name: &str) -> Result<(), String> {
     let card_dir = get_memcard_dir(serial);
+    // The name of a backup on this card: one folder of its own. A name with a path in it
+    // (an absolute path, `..`) would restore from somewhere else entirely, and the card's
+    // own folders are removed first.
+    if !is_backup_name(backup_name) {
+        return Err(format!("{backup_name} is not a backup of this card"));
+    }
     let backup_path = card_dir.join(backup_name);
     if !backup_path.is_dir() {
         return Err(format!("backup {backup_name} not found"));
@@ -599,6 +614,30 @@ mod tests {
         fs::create_dir_all(card.path().join("BESCES-50916RATCHET")).unwrap();
         let b = backup_card(card.path(), Some(" before the last boss! ")).unwrap();
         assert_eq!(b.note.as_deref(), Some("before the last boss"));
+    }
+
+    #[test]
+    fn a_backup_name_cannot_reach_outside_the_card() {
+        assert!(is_backup_name(".backup_1791560000"));
+        assert!(is_backup_name(".backup_1791560000_before_edit_slot2"));
+        assert!(is_backup_name(".backup_1791560000-2"));
+        // Not a backup of the card: another folder, or a path somewhere else.
+        assert!(!is_backup_name("BESCES-50916RATCHET"));
+        assert!(!is_backup_name("/etc"));
+        assert!(!is_backup_name("../../elsewhere"));
+        assert!(!is_backup_name(".."));
+        assert!(!is_backup_name(".backup_1/../.backup_2"));
+        assert!(!is_backup_name(""));
+    }
+
+    #[test]
+    fn a_restore_from_outside_the_card_is_refused() {
+        // A name that is not a backup of the card: refused before anything is read or
+        // removed, so a path somewhere else cannot replace the card's own folders.
+        for name in ["../../elsewhere", "/etc", "BESCES-50916RATCHET", ""] {
+            let err = restore_backup("SCES_509.16", name).unwrap_err();
+            assert!(err.contains("not a backup"), "{name}: {err}");
+        }
     }
 
     #[test]
