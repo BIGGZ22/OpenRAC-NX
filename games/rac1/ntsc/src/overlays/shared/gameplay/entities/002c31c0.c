@@ -144,11 +144,12 @@ int FUN_L00_002d57d0(char *a) {
 #include "rnc/math/vector.h"
 
 
-/* Calls the optional function reached through the moby pointer at +0x24; 1 when it is null. */
-int FUN_L00_002da218(char *a) {
-    int (*fn)(char *) = *(int (**)(char *))(*(char **)(*(char **)(a + 0x24) + 0x2C) + 0x4);
+/* Calls the optional function reached through the moby pointer at +0x24; 1 when it is null.
+   The function places the moby at b (the retail code leaves the caller's a1 in place for it). */
+int FUN_L00_002da218(char *a, void *b) {
+    int (*fn)(char *, void *) = *(int (**)(char *, void *))(*(char **)(*(char **)(a + 0x24) + 0x2C) + 0x4);
     if (fn != 0) {
-        return fn(a);
+        return fn(a, b);
     }
     return 1;
 }
