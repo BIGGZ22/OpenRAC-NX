@@ -42,6 +42,10 @@
  * "drawn" (moby_view.h). Its state changes (homing in on the hero, the pickup) do not depend on
  * the test.
  *
+ * Both are game fixes the player can switch back to the console's 4:3 view (differences.json;
+ * openrac_game_fix, game_host.h): fix_wide_liquids for the lists' runs and the liquid grid's cull,
+ * fix_wide_nanotech_orbs for the cluster's update. Off, they run as the game wrote them.
+ *
  * Not opened: the callbacks' tests that project a point to the screen and compare it with the
  * screen's pixels. The rest of the world is the port's own: it draws every terrain part, tie and
  * shrub and every live moby from the extracted level, whatever the game culled.
@@ -139,6 +143,18 @@ static opened g_list_matrix, g_list_clip;
 static int g_effects;
 static float g_effect_wider = 1.0f;
 
+/* How much wider than 4:3 the picture is for the game fix `key`: 1 (the game's own view) while
+ * the player has it off. `*flag` is its flag, asked for the first time. */
+static float wider_for(const unsigned char** flag, const char* key) {
+    if (!*flag) {
+        *flag = openrac_game_fix(key);
+    }
+    return **flag ? openrac_game_picture_wider() : 1.0f;
+}
+
+static const unsigned char* g_fix_liquids;
+static const unsigned char* g_fix_orbs;
+
 static void run_list(void (*run)(void)) {
     if (g_lists > 0) {
         g_lists++;
@@ -146,7 +162,7 @@ static void run_list(void (*run)(void)) {
         g_lists--;
         return;
     }
-    g_wider = openrac_game_picture_wider();
+    g_wider = wider_for(&g_fix_liquids, "fix_wide_liquids");
     if (!(g_wider > 1.0f)) {
         run();
         return;
@@ -183,7 +199,7 @@ void func_001F4AF0(void) {
 
 /* The liquid grid's cull: a flag per block into the scratchpad (0: not drawn). */
 void func_L02_00250720(gaddr grid) {
-    const float wider = g_lists > 0 ? g_wider : openrac_game_picture_wider();
+    const float wider = g_lists > 0 ? g_wider : wider_for(&g_fix_liquids, "fix_wide_liquids");
     if (!(wider > 1.0f) || (g_lists > 0 && still_open(&g_list_matrix))) {
         func_L02_00250720__game(grid);
         return;
@@ -211,7 +227,7 @@ int func_L00_00200290(gaddr sphere, float far) {
  * sphere test finds it in view; it is run against the picture's sides. */
 void func_L00_002D9EA0(gaddr moby) {
     if (g_effects++ == 0) {
-        g_effect_wider = openrac_game_picture_wider();
+        g_effect_wider = wider_for(&g_fix_orbs, "fix_wide_nanotech_orbs");
     }
     func_L00_002D9EA0__game(moby);
     g_effects--;

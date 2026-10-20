@@ -2,13 +2,16 @@
 // Copyright (c) 2026 the OpenRAC contributors
 //
 // The game fixes (game/common/fixes.h) of Ratchet & Clank's PAL disc, from port/game/rac1/differences.json
-// as cmake/Differences.cmake wrote them (the configure checked the file itself): a default reaches
-// its setting; the settings file switches one off and keeps it; the flag the code reads follows.
+// as cmake/Differences.cmake wrote them (the configure checked the file itself): every fix the host C
+// asks for is in the table; a default reaches its setting; the settings file switches one off and
+// keeps it; the flag the code reads follows.
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
 #include <filesystem>
 #include <fstream>
+#include <regex>
+#include <set>
 #include <sstream>
 #include <string>
 
@@ -52,6 +55,32 @@ int main() {
         CHECK(std::strlen(fixes::fix(i).name) > 0);
     }
     CHECK(fixes::find("fix_not_a_fix") < 0);
+
+    // Every key the shared rac1 host C asks for is one of the table's (a typing mistake would read
+    // as always on).
+    std::set<std::string> asked;
+    const std::regex call(R"re(openrac_game_fix\("([a-z0-9_]+)"\))re");
+    const std::regex helper(R"re(wider_for\([^,]+,\s*"([a-z0-9_]+)"\))re");
+    for (const auto& entry : fs::directory_iterator(fs::path(OPENRAC_RAC1_HOST))) {
+        if (entry.path().extension() != ".c") {
+            continue;
+        }
+        const std::string text = read(entry.path());
+        for (const std::regex* re : {&call, &helper}) {
+            for (auto it = std::sregex_iterator(text.begin(), text.end(), *re); it != std::sregex_iterator(); ++it) {
+                asked.insert((*it)[1].str());
+            }
+        }
+    }
+    CHECK(asked.count("fix_wide_moby_effects") == 1);
+    CHECK(asked.count("fix_wide_liquids") == 1);
+    CHECK(asked.count("fix_wide_nanotech_orbs") == 1);
+    for (const std::string& key : asked) {
+        if (fixes::find(key.c_str()) < 0) {
+            std::fprintf(stderr, "the host C asks for %s, which differences.json does not have\n", key.c_str());
+            return 1;
+        }
+    }
 
     const fs::path dir = fs::temp_directory_path() / "openrac_game_fixes_test";
     fs::remove_all(dir);
