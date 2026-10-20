@@ -84,7 +84,9 @@ and quad builders that take it (`0x0027E1A0` DrawTexturedQuad2d, `0x0027F2A8`,
 keeps it with an `sd` in a call's delay slot, which the register inference
 does not see as an input), and the C that held it in an `int` is replaced by
 `host/font.c`. This is rac1's pattern (`returns_64` on func_001F4868 and its
-FontPrintWindow wrappers).
+FontPrintWindow wrappers). `0x0028E640` (GetHudIconTex0, the Options page's
+icons and other HUD sprites) returns a whole TEX0 too and is in `returns_64`;
+its two C callers in `0x002D5E98.c` still pass it on as an `int`.
 
 ## Not there yet
 
@@ -95,17 +97,6 @@ FontPrintWindow wrappers).
   programs and the overlay hook, the level-copy functions (`func_..._N`)
   that register at one address in overlay 30 (logged at start), and the
   world renderer.
-- The menu's selected button differs from the others only faintly (a pixel
-  difference of at most 32 of 255): its highlight may not be drawn as the
-  game draws it.
-- The Options page's value boxes (beside each row) stay empty: their four
-  32x32 8-bit icons (TBP0 0x2C88 to 0x2C98) are drawn with a TEX0 whose
-  upper word is 0 (no palette, CBP 0) in the display list at 0x0035C200;
-  the full value is never in memory, so something between their VRAM
-  allocation and the packet keeps it in 32 bits. Not found yet.
 - Sound: only play and parameter commands reach the native engine; the
   banks, the master volume and the streams are dropped with a warning.
 - `rom0:ROMVER` cannot be opened (the game logs it and goes on).
-- Levels: their programs and the overlay hook, the level-copy functions
-  (`func_..._N`) that register at one address in overlay 30 (logged at
-  start), the world renderer.
