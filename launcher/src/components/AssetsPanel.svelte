@@ -7,7 +7,7 @@
   import Icon from "$components/Icon.svelte";
   import { api, inTauri, pickFolder, type ActionView, type VersionView } from "$lib/api";
   import { app, guard, jobs, runChain, toast } from "$lib/app.svelte";
-  import { RAC1_LEVELS } from "$lib/labels";
+  import { levelName, levelsOf } from "$lib/labels";
   import CommandBox from "./CommandBox.svelte";
 
   let { version: v, onimported }: { version: VersionView; onimported?: () => void } = $props();
@@ -17,6 +17,9 @@
   const action = (id: string): ActionView | null => v.actions.find((a) => a.id === id && a.thisPlatform) ?? null;
   const exporter = $derived(action("assets-export"));
   const importer = $derived(action("assets-import"));
+  /** Reads the levels into the layout the exports are made from (on the game's page, for a game
+   *  that plays; here, for one in early access whose page has no such step). */
+  const reader = $derived(action("port-levels"));
 
   const WHAT = [
     { id: "mobys", label: "Characters and objects" },
@@ -25,7 +28,8 @@
     { id: "all", label: "Everything" },
   ];
 
-  let level = $state(0);
+  // svelte-ignore state_referenced_locally
+  let level = $state(levelsOf(v.game)[0]?.number ?? 0);
   let what = $state("mobys");
   let busy = $state<string | null>(null);
   /** What the last import said, in a sentence. */
@@ -53,11 +57,25 @@
     const end = ending("assets-export");
     const folder = /: (\/.*|[A-Za-z]:\\.*)$/.exec(end?.line ?? "")?.[1];
     if (ok && folder) {
-      toast(`Exported ${RAC1_LEVELS[level] ?? "the level"}: the folder is opening.`);
+      toast(`Exported ${levelName(v.game, level)}: the folder is opening.`);
       await guard(api.openGameFolder(v.game, folder));
     } else if (!ok) {
       toast("The export stopped. The activity log has what it said.", "error");
     }
+  }
+
+  /** The game page's play action is planned: its levels are read here, for packs. */
+  const playable = $derived.by(() => {
+    const play = action("play");
+    return !!play && play.state !== "planned";
+  });
+
+  async function readLevels() {
+    if (!reader) return;
+    busy = "read";
+    const ok = await runChain(scope, [reader]);
+    busy = null;
+    if (!ok) toast("Reading the levels stopped. The activity log has what it said.", "error");
   }
 
   async function importEdits() {
@@ -101,6 +119,8 @@
               Writing the files…
             {:else if exporter.runnable}
               A folder of glTF models (with their skeletons) and PNG textures opens when it is ready.
+            {:else if reader && !reader.done && !playable}
+              Read the levels from your disc first: a few minutes, once.
             {:else}
               Get the levels ready first, on the game's page.
             {/if}
@@ -108,11 +128,17 @@
         </div>
         <div class="controls">
           <select aria-label="Level to export" bind:value={level} disabled={!exporter.runnable}>
-            {#each RAC1_LEVELS as name, i (i)}<option value={i}>{name}</option>{/each}
+            {#each levelsOf(v.game) as l (l.number)}<option value={l.number}>{l.name}</option>{/each}
           </select>
           <select aria-label="What to export" bind:value={what} disabled={!exporter.runnable}>
             {#each WHAT as w (w.id)}<option value={w.id}>{w.label}</option>{/each}
           </select>
+          {#if reader && !reader.done && !playable}
+            <button disabled={!reader.runnable || busy !== null} onclick={() => void readLevels()}>
+              {#if busy === "read"}<span class="spinner"></span>{:else}<Icon name="build" size={16} />{/if}Read the
+              levels
+            </button>
+          {/if}
           <button disabled={!exporter.runnable || busy !== null} onclick={() => void exportAssets()}>
             {#if busy === "export"}<span class="spinner"></span>{:else}<Icon name="folder" size={16} />{/if}Export
           </button>

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { regionLabel, shortTitle } from "./labels";
+import { levelName, levelsOf, regionLabel, shortTitle } from "./labels";
 
 describe("labels", () => {
   it("shortens a game's name for a narrow list", () => {
@@ -7,6 +7,17 @@ describe("labels", () => {
     expect(shortTitle("Ratchet & Clank: Going Commando")).toBe("Going Commando");
     expect(shortTitle("Ratchet: Deadlocked")).toBe("Deadlocked");
     expect(shortTitle("Ratchet & Clank: Size Matters")).toBe("Size Matters");
+  });
+
+  it("lists each game's levels by their numbers", () => {
+    expect(levelsOf("rac1")).toHaveLength(19);
+    expect(levelsOf("rac1")[18]).toEqual({ number: 18, name: "Veldin (the return)" });
+    // The later games number their levels as their level headers do: gaps, and Going Commando's museum is 30.
+    expect(levelsOf("rac2").map((l) => l.number)).toContain(30);
+    expect(levelsOf("rac3")[0]).toEqual({ number: 1, name: "Veldin" });
+    expect(levelsOf("rac4")).toHaveLength(47);
+    expect(levelName("rac2", 30)).toBe("Insomniac Museum");
+    expect(levelName("rac4", 99)).toBe("Level 99");
   });
 
   it("names regions", () => {

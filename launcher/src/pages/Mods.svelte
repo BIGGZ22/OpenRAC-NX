@@ -3,7 +3,9 @@
   // same page. "Your mods" first: the game's packs (PacksPanel) and Play with mods, the page's one
   // main button. Then "Make your own", in two tabs: Levels (edit them in Godot, pack the edits)
   // and Models and textures (AssetsPanel). A game the editor cannot open yet says so, and where to
-  // follow it. The disc image is never changed.
+  // follow it. A game it reads in early access (Going Commando, Up Your Arsenal, Deadlocked: no
+  // pack or play action of theirs yet) says what works and what does not. The disc image is never
+  // changed.
   // The version is the one the game page plays (playerVersion: the player's own disc), so every
   // disc goes the same way and no region is named; packs are shared by the discs
   // (editor/overrides.py stacks them for the one played). With developer tools on: the version,
@@ -15,7 +17,7 @@
   import PacksPanel from "$components/PacksPanel.svelte";
   import { api, pickFile, type ActionView, type GameView, type VersionView } from "$lib/api";
   import { app, guard, jobs, run, runChain, saveConfig, toast } from "$lib/app.svelte";
-  import { RAC1_LEVELS, type EntryState } from "$lib/labels";
+  import { levelName, levelsOf, type EntryState } from "$lib/labels";
   import { GODOT_URL, SITE_URL } from "$lib/links";
   import { playerVersion } from "$lib/player.svelte";
   import type { Job } from "$lib/queue";
@@ -60,10 +62,25 @@
   const running = (v: VersionView, ids: string[]) => jobsOf(v, ids).find(live) ?? null;
   const needs = (a: ActionView | null) => (a?.blockers ?? []).map((b) => b.replace(/^needs /, ""));
 
+  /** Early access: the editor reads the game's levels, but they are not packed back and the game
+   *  is not playable yet (the version has no editor-pack, and its play is planned). */
+  const early = (v: VersionView) => !action(v, "editor-pack");
+  const playable = (v: VersionView) => {
+    const play = action(v, "play");
+    return !!play && play.state !== "planned";
+  };
+
   /** What the game list says for each game on this tab. */
   function modState(game: GameView): EntryState {
     const v = editable(game);
     if (!v) return { text: "Not moddable yet", tone: "info" };
+    if (
+      early(v) &&
+      v.status.disc.state === "found" &&
+      !running(v, ["editor-extract", "assets-export", "assets-import", "port-levels"])
+    ) {
+      return { text: "Early access", tone: "info" };
+    }
     if (running(v, ["editor-extract", "editor-import", "editor-pack", "assets-export", "assets-import"])) {
       return { text: "Working…", tone: "warn", busy: true };
     }
@@ -116,12 +133,12 @@
   async function editLevels(v: VersionView) {
     const edit = action(v, "editor-open");
     if (!edit) return;
-    const which = level[v.game] ?? 0;
+    const which = level[v.game] ?? levelsOf(v.game)[0]?.number ?? 0;
     opening = v.key;
     const steps = edit.runnable ? [edit] : [action(v, "editor-extract"), edit].filter((a) => a !== null);
     const done = await runChain({ kind: "version", key: v.key }, steps, which);
     opening = null;
-    if (done) toast(`Godot is opening ${RAC1_LEVELS[which] ?? "your level"}.`);
+    if (done) toast(`Godot is opening ${levelName(v.game, which)}.`);
   }
 
   /** The last line the packer printed: "Packed 1 level(s), 3 moby edit(s): …". */
@@ -149,7 +166,12 @@
         <div class="intro">
           <h1>{shown.title}</h1>
           <p class="muted lead">
-            Edit its levels, pack your edits, and play with them. Your disc image is never changed.
+            {#if v && early(v)}
+              Look around its levels in Godot, and make texture and model packs for when it can be played. Your disc
+              image is never changed.
+            {:else}
+              Edit its levels, pack your edits, and play with them. Your disc image is never changed.
+            {/if}
           </p>
         </div>
 
@@ -158,8 +180,8 @@
           <section class="panel none">
             <h2>Mods are not possible for this game yet</h2>
             <p class="muted">
-              The level editor reads Ratchet &amp; Clank's levels so far. When it can open {shown.title}'s, its packs,
-              the editor and Play with mods appear here, as they do for the first game.
+              The level editor reads Ratchet &amp; Clank, Going Commando, Up Your Arsenal and Deadlocked so far. When it
+              can open {shown.title}'s, its packs and the editor appear here, as they do for the others.
             </p>
             <p>
               <button class="link" onclick={() => void guard(api.openUrl(SITE_URL))}
@@ -179,6 +201,19 @@
           {@const noDisc = v.status.disc.state !== "found"}
           {@const dirs = folders(v)}
 
+          {#if early(v)}
+            <!-- Honest about early access: what the editor reads, what it does not do yet. -->
+            <section class="panel early">
+              <h2>Early access</h2>
+              <p class="muted">
+                The editor reads this game's levels: its scenery, objects and textures open in Godot, and you can make
+                texture and model packs from them. Edits in Godot are not packed back into the game yet, and the game is
+                not playable yet{playable(v) ? "" : ": your packs are kept for when it is"}. Some objects and pieces of
+                scenery are not read yet; each level lists them in its <code>level.json</code>.
+              </p>
+            </section>
+          {/if}
+
           <PacksPanel
             version={v}
             {reload}
@@ -189,7 +224,9 @@
             <div class="grow">
               <h2>Play with your mods</h2>
               <p class="muted">
-                {#if !play}
+                {#if !play && early(v)}
+                  {shown.title} is not playable yet. Your packs stay in Your mods until it is.
+                {:else if !play}
                   Playing is not available on this computer yet.
                 {:else if play.runnable}
                   Starts the game with your packed levels and the packs that are on.
@@ -259,8 +296,12 @@
                             then choose where it is.
                           {:else if preparing}
                             {preparing.title}: {preparing.lines.at(-1)?.line ?? "starting…"}
+                          {:else if edit?.runnable && early(v)}
+                            Look around a level, its objects and textures, in Godot. Each level opens on its own.
                           {:else if edit?.runnable}
                             Move, turn or scale a level's objects in Godot, and save. Each level opens on its own.
+                          {:else if early(v)}
+                            The first time, the levels are read from your disc: a few minutes and a few GB.
                           {:else}
                             The first time, the levels are read from your disc: about 20 seconds and 800 MB.
                           {/if}
@@ -275,10 +316,10 @@
                           <select
                             aria-label="Level to edit"
                             disabled={noDisc}
-                            value={level[v.game] ?? 0}
+                            value={level[v.game] ?? levelsOf(v.game)[0]?.number ?? 0}
                             onchange={(e) => (level[v.game] = Number(e.currentTarget.value))}
                           >
-                            {#each RAC1_LEVELS as name, i (i)}<option value={i}>{name}</option>{/each}
+                            {#each levelsOf(v.game) as l (l.number)}<option value={l.number}>{l.name}</option>{/each}
                           </select>
                           <button
                             disabled={noDisc || opening === v.key || !!preparing}
@@ -302,7 +343,10 @@
                       <div class="text">
                         <h3>Pack your edits</h3>
                         <p class="muted" class:failed={result?.failed}>
-                          {#if packing}
+                          {#if !pack && early(v)}
+                            Not yet for {shown.title}: packing edits back into the game is Ratchet &amp; Clank's only so
+                            far. Texture and model packs work (Models and textures).
+                          {:else if packing}
                             {packing.lines.at(-1)?.line ?? "Reading your levels…"}
                           {:else if result}
                             {result.text}
@@ -386,9 +430,22 @@
     gap: 10px;
   }
 
-  .none p {
+  .none p,
+  .early p {
     margin: 0;
     max-width: 68ch;
+  }
+
+  /* Early access: dashed, as what is planned and not there yet (docs/STYLE.md). */
+  .early {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    border-style: dashed;
+  }
+
+  .early h2 {
+    font-size: 1rem;
   }
 
   /* Play with mods: one row, its button in the same column as the steps' below. */

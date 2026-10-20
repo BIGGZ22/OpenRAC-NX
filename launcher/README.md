@@ -140,14 +140,22 @@ the disc image and saves are kept.
 
 ## Mods
 
-The Mods tab has, for each game that can be edited (Ratchet & Clank, PAL, for
-now), the three steps of modding in order: **Open the editor** (choose a
+The Mods tab has, for each game that can be edited (Ratchet & Clank, PAL and
+NTSC-U), the three steps of modding in order: **Open the editor** (choose a
 level: each is a Godot 4 project of its own under `assets/levels/<game>`, so
 only that level loads; the first time they are read from the disc), **Pack** (turns the
 edits into the game's own level data, in `assets/packed/<game>`) and **Play**
 with them (the port's `--mods`). The disc image is never changed. With
 developer tools on, the page also shows the folders and the three commands
 behind the buttons ([editor/README.md](../editor/README.md#pack-your-edits)).
+
+Going Commando, Up Your Arsenal and Deadlocked (NTSC-U) are there in early
+access: their levels open in Godot to look around, and **Models and
+textures** works for them (their levels are read for it with **Read the
+levels**, since their game page has no Play yet). The page says what is not
+there: edits are not packed back into those games, and they are not
+playable, so their packs wait in Your mods until they are
+([editor/README.md](../editor/README.md#the-later-games-early-access)).
 
 Below them, **Models and textures**: export a level's models (glTF, with
 their skeletons) and textures (PNG) to a folder that opens when it is ready,

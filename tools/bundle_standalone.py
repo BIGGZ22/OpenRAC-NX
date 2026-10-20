@@ -116,7 +116,12 @@ def player_actions() -> dict:
             action = dict(action)
             if action.get("state") != "planned":
                 args = action.get("args", [])
-                if action["id"] == "port-levels":
+                if action["id"] == "port-levels" and not key.startswith("rac1/"):
+                    # A later game's levels, read for packs (early access): no worlds behind the
+                    # menus, and the first level's manifest is its own.
+                    action["args"] = args[:3] + [levels, "--anywhere", "--replace"]
+                    action["artifact"] = moved(action["artifact"], key)
+                elif action["id"] == "port-levels":
                     # editor/extract.py port DISC OUT: OUT is the data folder's, wherever it is.
                     action["args"] = args[:3] + [levels, "--anywhere", "--replace"]
                     action["artifact"] = f"{levels}/level_99/manifest.json"

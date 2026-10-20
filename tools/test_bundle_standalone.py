@@ -24,6 +24,19 @@ class PlayerActions(unittest.TestCase):
         self.assertEqual(set(self.pal), set(bundle.KEEP))
         self.assertEqual(set(self.ntsc), set(bundle.KEEP))
 
+    def test_the_later_games_levels_are_read_for_packs_in_the_data_folder(self):
+        # Going Commando, Up Your Arsenal and Deadlocked: early access, so no play and no packing
+        # back; their levels are read into the data folder for texture and model packs.
+        for key, first in (("rac2/ntsc", "00"), ("rac3/ntsc", "01"), ("rac4/ntsc", "00")):
+            with self.subTest(key):
+                actions = {a["id"]: a for a in self.actions["versions"][key]}
+                self.assertNotIn("editor-pack", actions)
+                levels = actions["port-levels"]
+                self.assertEqual(levels["args"][-3:], ["{data}/port/ntsc", "--anywhere", "--replace"])
+                self.assertEqual(levels["artifact"], f"{{data}}/port/ntsc/level_{first}/manifest.json")
+                self.assertEqual(actions["editor-extract"]["args"][-3:], ["{data}/levels/ntsc", "--split", "--anywhere"])
+                self.assertEqual([n["path"] for n in actions["assets-export"]["needs"]], [levels["artifact"]])
+
     def test_mods_work_in_the_data_folder(self):
         extract, pack = self.pal["editor-extract"], self.pal["editor-pack"]
         self.assertEqual(extract["args"][-3:], ["{data}/levels/pal", "--split", "--anywhere"])
