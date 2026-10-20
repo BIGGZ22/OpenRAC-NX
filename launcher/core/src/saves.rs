@@ -224,7 +224,11 @@ fn parse_save_gameplay_info(bytes: &[u8]) -> SaveGameplayInfo {
     info
 }
 pub fn inspect_saves(serial: &str) -> GameSaveStatus {
-    let card_dir = get_memcard_dir(serial);
+    inspect_card(&get_memcard_dir(serial), serial)
+}
+
+/// The card at `card_dir`: its slots, its title and its backups.
+fn inspect_card(card_dir: &Path, serial: &str) -> GameSaveStatus {
     let exists = card_dir.is_dir();
 
     let mut game_folder_name = None;
@@ -233,8 +237,14 @@ pub fn inspect_saves(serial: &str) -> GameSaveStatus {
     let mut backups = Vec::new();
 
     if exists {
-        // Find the game folder inside the serial directory (e.g. BESCES-50916RATCHET)
-        if let Ok(entries) = fs::read_dir(&card_dir) {
+        // The game's own folder inside the serial directory (e.g. BESCES-50916RATCHET): the
+        // one the save editor opens, so the list of slots and the editor never show
+        // different saves of the same card.
+        game_folder_name =
+            find_game_folder(card_dir).and_then(|p| p.file_name().map(|n| n.to_string_lossy().to_string()));
+
+        // The backups on the card.
+        if let Ok(entries) = fs::read_dir(card_dir) {
             for entry in entries.flatten() {
                 let path = entry.path();
                 let file_name = entry.file_name().to_string_lossy().to_string();
@@ -256,8 +266,6 @@ pub fn inspect_saves(serial: &str) -> GameSaveStatus {
                         created_millis: mtime,
                         total_size,
                     });
-                } else if path.is_dir() && game_folder_name.is_none() {
-                    game_folder_name = Some(file_name);
                 }
             }
         }
@@ -638,6 +646,24 @@ mod tests {
             let err = restore_backup("SCES_509.16", name).unwrap_err();
             assert!(err.contains("not a backup"), "{name}: {err}");
         }
+    }
+
+    #[test]
+    fn the_slots_and_the_save_editor_read_the_same_folder_of_the_card() {
+        let card = tempfile::tempdir().unwrap();
+        // Two folders of games on one card: the list of slots and the editor must read
+        // the same one, or the player edits a different save than the one they clicked.
+        for folder in ["BESCES-50916RATCHET", "BESCES-50916RATCHET-2"] {
+            fs::create_dir_all(card.path().join(folder)).unwrap();
+            fs::write(card.path().join(folder).join("save0.bin"), b"one").unwrap();
+        }
+        let status = inspect_card(card.path(), "SCES_509.16");
+        let folder = status.game_folder_name.clone().expect("the game's folder");
+        assert_eq!(
+            Some(folder.clone()),
+            find_game_folder(card.path()).and_then(|p| p.file_name().map(|n| n.to_string_lossy().to_string()))
+        );
+        assert_eq!(status.slots[0].path, card.path().join(&folder).join("save0.bin").to_string_lossy());
     }
 
     #[test]
