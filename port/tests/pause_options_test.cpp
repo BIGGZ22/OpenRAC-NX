@@ -20,7 +20,7 @@ using openrac::frontend::pause_options::options_stream;
 
 std::map<std::uint32_t, std::uint32_t> memory;
 
-std::uint32_t read(std::uint32_t at) {
+std::uint32_t read_word(std::uint32_t at) {
     const auto it = memory.find(at);
     return it != memory.end() ? it->second : 0;
 }
@@ -42,11 +42,11 @@ int main() {
     memory[0x1B5278 + 0x34] = 0x1B5218u;
     page(kVideo, kOptions, 13, 0xE0200300);
 
-    CHECK(options_list(read, kOptions) == 0x1B5278u);
-    CHECK(options_list(read, kGrid) == 0);   // pause pages 0 to 3: the crash was reading this focus's list
-    CHECK(options_list(read, kRoot) == 0);   // the pause menu's own page
-    CHECK(options_list(read, kVideo) == 0);  // the port's Video page is not the Options page
-    CHECK(options_list(read, 0) == 0);       // no page
+    CHECK(options_list(read_word, kOptions) == 0x1B5278u);
+    CHECK(options_list(read_word, kGrid) == 0);   // pause pages 0 to 3: the crash was reading this focus's list
+    CHECK(options_list(read_word, kRoot) == 0);   // the pause menu's own page
+    CHECK(options_list(read_word, kVideo) == 0);  // the port's Video page is not the Options page
+    CHECK(options_list(read_word, 0) == 0);       // no page
 
     // The Options page's screens as on Rilgar (PAL): the hint box (+0x30 its flags 0x90), the picture
     // stream (+0x30 its entries, flags 0x20, two buffers) and the list (+0x30 its flags 0x1000).
@@ -68,11 +68,11 @@ int main() {
     for (std::uint32_t i = 0; i < 16; ++i) {
         memory[kEntries + 4 * i] = game[i];
     }
-    CHECK(options_stream(read, kOptions, kList, 7) == kStream);
-    CHECK(options_stream(read, kOptions, kList, 0) == 0);
-    CHECK(options_stream(read, kGrid, 0x1B36D8, 7) == 0);
+    CHECK(options_stream(read_word, kOptions, kList, 7) == kStream);
+    CHECK(options_stream(read_word, kOptions, kList, 0) == 0);
+    CHECK(options_stream(read_word, kGrid, 0x1B36D8, 7) == 0);
     memory[kStream + 0x34] = 0x24;  // a grid cell's picture: not the list's index
-    CHECK(options_stream(read, kOptions, kList, 7) == 0);
+    CHECK(options_stream(read_word, kOptions, kList, 7) == 0);
     memory[kStream + 0x34] = 0x20;
 
     // Video after Sound (the list's fifth item): an empty entry there, Camera's picture at Camera's
@@ -87,7 +87,7 @@ int main() {
     for (std::uint32_t i = 0; i < 16; ++i) {
         memory[kEntries + 4 * i] = with[i];
     }
-    CHECK(options_stream(read, kOptions, kList, 7) == 0);
+    CHECK(options_stream(read_word, kOptions, kList, 7) == 0);
     // At the end: after every item.
     std::uint32_t last[16] = {};
     entries_with_video(game, 7, 7, last);
