@@ -751,10 +751,11 @@ int CallClassHookC(char *a) {
     }
     return 1;
 }
-int CallClassHook4(char *a) {
-    int (*fn)(char *) = *(int (**)(char *))(*(char **)(*(char **)(a + 0x24) + 0x2C) + 0x4);
+/* The hook places the moby at b (the cannon's muzzle): retail leaves a1 as it came. */
+int CallClassHook4(char *a, void *b) {
+    int (*fn)(char *, void *) = *(int (**)(char *, void *))(*(char **)(*(char **)(a + 0x24) + 0x2C) + 0x4);
     if (fn != 0) {
-        return fn(a);
+        return fn(a, b);
     }
     return 1;
 }
