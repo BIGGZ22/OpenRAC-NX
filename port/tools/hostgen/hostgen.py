@@ -788,6 +788,11 @@ def main(argv: list[str] | None = None) -> int:
     host_dirs = [args.game.parent / "host", args.game.parent.parent / str(cfg.get("game", "")) / "host"]
     host_text = "".join(p.read_text(errors="replace") for d in host_dirs if d.is_dir()
                         for p in sorted(d.glob("*.c")))
+    # The results C wrappers pass on from their tail calls, before the assembly stage: a translated
+    # caller reads such a wrapper's result in $v0 as the EE's did (Going Commando's menu read its
+    # selection through a `void` wrapper and lost it). Only C callees count, so the assembly stage
+    # changes nothing of this.
+    inherited_early = inherit_results(program)
     asm_stage, asm_results = asmc.run(program, cfg, source, host_text)
     if args.asm_console:
         names = None
@@ -796,7 +801,7 @@ def main(argv: list[str] | None = None) -> int:
                      if l.strip() and not l.startswith("#")]
         for name, why in sorted(asmc.write_console(asm_stage, args.asm_console.resolve(), names).items()):
             print(f"hostgen: {name}: no console form: {why}", file=sys.stderr)
-    inherited = inherit_results(program)
+    inherited = inherited_early + inherit_results(program)
     state["program"] = program
     with ProcessPoolExecutor(args.jobs, initializer=_init, initargs=(state,)) as ex:
         reports = list(ex.map(_lower_one, units))
