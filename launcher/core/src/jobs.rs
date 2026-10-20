@@ -53,8 +53,15 @@ pub struct Jobs {
 #[derive(Default)]
 struct Inner {
     next: AtomicU32,
-    running: Mutex<HashMap<u32, Arc<Mutex<Child>>>>,
-    cancelled: Mutex<HashSet<u32>>,
+    /// The running jobs and the ones the player cancelled, under one lock: a cancel and
+    /// the end of a job are decided together, so that one cannot come apart from the other.
+    jobs: Mutex<State>,
+}
+
+#[derive(Default)]
+struct State {
+    running: HashMap<u32, Arc<Mutex<Child>>>,
+    cancelled: HashSet<u32>,
 }
 
 /// What every job gets in its environment: unbuffered, UTF-8 Python output,
@@ -107,7 +114,7 @@ impl Jobs {
             pumps.push(pump(id, Stream::Stderr, err, sink.clone()));
         }
         let child = Arc::new(Mutex::new(child));
-        self.inner.running.lock().unwrap().insert(id, child.clone());
+        self.inner.jobs.lock().unwrap().running.insert(id, child.clone());
 
         let inner = self.inner.clone();
         std::thread::spawn(move || {
@@ -136,8 +143,11 @@ impl Jobs {
                 // Not finished: the thread ends when the pipe is closed, at the latest when
                 // the program holding it ends. It is left to end on its own.
             }
-            inner.running.lock().unwrap().remove(&id);
-            let cancelled = inner.cancelled.lock().unwrap().remove(&id);
+            let cancelled = {
+                let mut jobs = inner.jobs.lock().unwrap();
+                jobs.running.remove(&id);
+                jobs.cancelled.remove(&id)
+            };
             sink(Event::Exit { id, code: status.and_then(|s| s.code()), cancelled });
         });
         Ok(Started { id, title: plan.title.clone(), command: command_line(plan), detached: false })
@@ -146,14 +156,27 @@ impl Jobs {
     /// Stops job `id` and everything it started (a build runs compilers in
     /// containers). A job that has already ended is not an error.
     pub fn cancel(&self, id: u32) -> Result<(), String> {
-        let Some(child) = self.inner.running.lock().unwrap().get(&id).cloned() else { return Ok(()) };
-        self.inner.cancelled.lock().unwrap().insert(id);
+        // The end of a job and the cancel of it are decided together: a cancel that
+        // arrives as the job ends is either the one that stopped it (the exit says so) or
+        // nothing at all (the job had already ended). They cannot come apart, and one
+        // cannot leave the other behind.
+        let child = {
+            let mut jobs = self.inner.jobs.lock().unwrap();
+            match jobs.running.get(&id).cloned() {
+                Some(child) => {
+                    jobs.cancelled.insert(id);
+                    Some(child)
+                }
+                None => None,
+            }
+        };
+        let Some(child) = child else { return Ok(()) };
         let mut child = child.lock().unwrap();
         kill_tree(&mut child)
     }
 
     pub fn running(&self) -> Vec<u32> {
-        let mut ids: Vec<u32> = self.inner.running.lock().unwrap().keys().copied().collect();
+        let mut ids: Vec<u32> = self.inner.jobs.lock().unwrap().running.keys().copied().collect();
         ids.sort_unstable();
         ids
     }
@@ -369,6 +392,9 @@ mod tests {
         jobs.cancel(started.id).unwrap();
         let exit = rx.recv_timeout(Duration::from_secs(10)).unwrap();
         assert!(matches!(exit, Event::Exit { cancelled: true, .. }), "{exit:?}");
+        // The cancel and the end of the job are decided together: nothing is left behind.
+        assert!(jobs.inner.jobs.lock().unwrap().cancelled.is_empty());
+        assert!(jobs.running().is_empty());
     }
 
     #[cfg(unix)]
