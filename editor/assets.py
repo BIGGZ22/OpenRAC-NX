@@ -1459,6 +1459,7 @@ def main(argv: list[str] | None = None) -> int:
             summary = export(args.levels, target, sorted(set(args.level)), args.what, args.classes)
             # The launcher opens the folder this last line names.
             print(f"Exported {summary['models']} models and {summary['textures']} textures: {target.resolve()}")
+            print(f"openrac-output: {target.resolve()}")  # the folder, for the launcher (jobs.rs)
             return 0
         report = Report()
         edited = args.edited.resolve()
@@ -1479,13 +1480,16 @@ def main(argv: list[str] | None = None) -> int:
                 write_pack(pack, staged, name, args.author, args.description, source_id, args.levels)
                 pack_id = overrides.install(staged, args.into, replace_export=source_id)
             where_to = f"{args.into.resolve()} as {pack_id}"
+            folder = args.into.resolve() / pack_id
+            written = folder if folder.is_dir() else args.into.resolve()
         else:
             write_pack(pack, output_dir(args.out), name, args.author, args.description, source_id, args.levels)
-            where_to = str(args.out.resolve())
+            where_to = written = args.out.resolve()
         textures = sum(1 for p in pack.files if "/textures/" in p)
         models = len(pack.files) - textures
         tail = f"; {report.refused} refused (see above)" if report.refused else ""
         print(f"Imported {models} model file(s) and {textures} texture file(s) into {where_to}{tail}")
+        print(f"openrac-output: {written}")  # the folder, for the launcher (jobs.rs)
         return 0
     except (AssetError, GltfError, PngError, OSError) as exc:
         print(f"assets: {exc}", file=sys.stderr)

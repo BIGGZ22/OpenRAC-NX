@@ -127,6 +127,11 @@ def update_godot(dest: Path, levels: list[int], split: bool, export, schema: int
     return report
 
 
+def say_output(path: Path) -> None:
+    """The line on which the launcher reads the folder a command wrote (launcher/core/src/jobs.rs)."""
+    print(f"openrac-output: {path}", flush=True)
+
+
 def export_godot(out: Path, levels: list[int], anywhere: bool, split: bool, export) -> str:
     """The godot command's output, made or updated (update_godot); a sentence saying what was done."""
     dest = output_path(out, anywhere, replace=True)
@@ -391,11 +396,13 @@ def later_main(args, parser, disc: Disc, version: wads.Version) -> None:
         print(export_godot(args.out, wanted, args.anywhere, args.split,
                            lambda out, todo: godot(args.iso, survey, todo, args.terrain_lod, max(1, args.jobs), out,
                                                    args.split, version.region, version.game)))
+        say_output(args.out.resolve())
     elif args.command == "port":
         ours(output_path(args.out, args.anywhere, replace=True), "port")
         dest = publish(args.out, lambda out: port(args.iso, survey, wanted, args.terrain_lod, max(1, args.jobs), out,
                                                   version.game), args.anywhere, replace=True)
         print(f"Levels in the port's layout (early access, not playable yet): {dest}")
+        say_output(dest)
     else:
         dest = publish(args.out, lambda out: raw_later(source, args.level[0], out))
         print(f"Level {args.level[0]} sections: {dest}")
@@ -480,6 +487,7 @@ def main() -> None:
                 print(export_godot(args.out, levels, args.anywhere, args.split,
                                    lambda out, todo: godot(args.iso, survey, todo, args.terrain_lod, max(1, args.jobs),
                                                            out, args.split, disc.version.region)))
+                say_output(args.out.resolve())
             elif args.command == "port":
                 levels = sorted(set(args.level or range(LEVEL_COUNT)))
                 if adopt_flat_export(args.out.resolve(), disc.version.key):
@@ -490,6 +498,7 @@ def main() -> None:
                 dest = publish(args.out, lambda out: port(args.iso, survey, levels, args.terrain_lod, max(1, args.jobs), out),
                                args.anywhere, replace=True)
                 print(f"Levels for the port's viewer: {dest}")
+                say_output(dest)
             elif args.command == "pack":
                 # Its own output, written again after each edit: the one command that may write
                 # into a directory that exists.
@@ -510,6 +519,7 @@ def main() -> None:
                 levels, mobys = pack(disc, survey, args.project, dest)
                 print((dest / "changes.txt").read_text(), end="")
                 print(f"Packed {levels} level(s), {mobys} moby edit(s): {dest}")
+                say_output(dest)
             else:
                 dest = publish(args.out, lambda out: raw(disc, survey, args.level[0], out))
                 print(f"Level {args.level[0]} sections: {dest}")
