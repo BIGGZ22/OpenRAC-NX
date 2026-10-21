@@ -197,5 +197,87 @@ class Archives(unittest.TestCase):
         self.assertEqual(pm.main(["--check", str(folder)]), 1)
 
 
+
+SCRIPT = {
+    "format": 2,
+    "id": "button-swap",
+    "name": "Button swap",
+    "version": "1.0.0",
+    "type": "script",
+    "api": "1.1",
+    "scripts": ["main.luau"],
+    "games": {"rac1": ["pal", "ntsc"]},
+    "settings": [{"key": "pair", "name": "Pair", "type": "choice", "default": "cross-square",
+                  "choices": [{"value": "cross-square", "name": "Cross, Square"},
+                              {"value": "l1-r1", "name": "L1, R1"}]}],
+}
+
+
+def script(**kw):
+    m = copy.deepcopy(SCRIPT)
+    for k, v in kw.items():
+        if v is None:
+            m.pop(k, None)
+        else:
+            m[k] = v
+    return m
+
+
+class ScriptMods(unittest.TestCase):
+    def setUp(self):
+        self.tmp = tempfile.TemporaryDirectory()
+        self.root = Path(self.tmp.name)
+
+    def tearDown(self):
+        self.tmp.cleanup()
+
+    def test_rules(self):
+        self.assertEqual(pm.check_manifest(SCRIPT), [])
+        errors = lambda **kw: " ".join(pm.check_manifest(script(**kw)))  # noqa: E731
+        self.assertIn("script mods need interface 1.1", errors(api="1.0"))
+        self.assertIn("api", errors(api=None))
+        self.assertIn("this SDK knows", errors(api="2.1"))
+        self.assertIn("at least one", errors(scripts=[]))
+        self.assertIn("at least one", errors(scripts=None))
+        self.assertIn("inside the mod", errors(scripts=["../main.luau"]))
+        self.assertIn("inside the mod", errors(scripts=["main.lua"]))
+        self.assertIn("no library", errors(plugin={"linux-x86_64": "x.so"}))
+        self.assertIn("native (the default) or script", errors(type="dll"))
+        native = changed(scripts=["main.luau"])
+        self.assertIn("only a script mod", " ".join(pm.check_manifest(native)))
+
+    def folder(self):
+        folder = self.root / "button-swap"
+        (folder / "lib").mkdir(parents=True)
+        (folder / pm.MANIFEST).write_text(json.dumps(SCRIPT))
+        (folder / "main.luau").write_text("openrac.log('hi')\n")
+        (folder / "lib" / "pairs.luau").write_text("return {}\n")
+        (folder / "README.md").write_text("# Button swap\n")
+        (folder / "LICENSE").write_text("GPL\n")
+        (folder / "notes.tmp").write_text("left out")
+        (folder / ".luaurc").write_text("{}")
+        (folder / "build").mkdir()
+        (folder / "build" / "x.luau").write_text("left out")
+        return folder
+
+    def test_package(self):
+        out = pm.package(self.folder(), self.root / "dist")
+        self.assertEqual(out.name, "button-swap-1.0.0.zip")
+        with zipfile.ZipFile(out) as z:
+            self.assertEqual(z.namelist()[0], "openrac-mod.json")
+            self.assertEqual(sorted(z.namelist()),
+                             ["LICENSE", "README.md", "lib/pairs.luau", "main.luau", "openrac-mod.json"])
+
+    def test_package_refuses_a_missing_script(self):
+        folder = self.folder()
+        (folder / "main.luau").unlink()
+        with self.assertRaises(pm.ManifestError) as e:
+            pm.package(folder, self.root / "dist")
+        self.assertIn("main.luau is not in the mod", str(e.exception))
+        self.assertEqual(pm.main(["--check", str(folder)]), 1, "--check looks for a script mod's scripts")
+        (folder / "main.luau").write_text("-- back")
+        self.assertEqual(pm.main(["--check", str(folder / pm.MANIFEST)]), 0)
+
+
 if __name__ == "__main__":
     unittest.main()

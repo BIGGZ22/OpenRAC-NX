@@ -4,8 +4,14 @@
 """A mod's archive, from the folder its build laid out (docs/port/MODS.md, sdk/README.md).
 
     package_mod.py build/package/my_mod [-o dist]       dist/<id>-<version>-<platform>.zip
+    package_mod.py my-script-mod [-o dist]               dist/<id>-<version>.zip (a script mod: no build)
     package_mod.py --merge A.zip B.zip ... -o OUT.zip    one archive for all their platforms
     package_mod.py --check openrac-mod.json              the manifest checked, nothing written
+
+A native mod is packaged from the folder its build laid out; a script mod ("type": "script",
+MODS.md section 11) from its own folder: the manifest, its scripts, and the .luau, .json and .md
+files and the license beside them (sub-folders too, for the modules it requires), one archive for
+every platform.
 
 The manifest is checked by the rules of MODS.md, section 3, the same the launcher and the port
 apply; an archive that breaks one is not written. Standard library only.
@@ -24,6 +30,12 @@ MANIFEST = "openrac-mod.json"
 FORMAT = 2
 # The interface's major versions this SDK knows (openrac_mod.h, OPENRAC_MOD_API_MAJOR).
 API_MAJORS = {1}
+# The first interface with script mods: 1.1.
+SCRIPT_API = (1, 1)
+# What a script mod's archive carries of its folder, beside the manifest and its scripts.
+SCRIPT_FILES = re.compile(r"\.(luau|json|md)$", re.IGNORECASE)
+# Folders a script mod's archive never takes (a build, the SDK fetched, a repository's own).
+SKIP_DIRS = {"build", "dist", "node_modules", "__pycache__"}
 PLATFORMS = ("macos-arm64", "macos-x86_64", "linux-x86_64", "linux-aarch64", "windows-x86_64", "windows-arm64")
 ID = re.compile(r"^[a-z0-9]+(-[a-z0-9]+)*$")
 SEMVER = re.compile(r"^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)(-[0-9A-Za-z.-]+)?$")
@@ -156,8 +168,38 @@ def check_manifest(m, root: Path | None = None) -> list[str]:
             if not isinstance(versions, list) or not versions or not all(
                     isinstance(v, str) and GAME.match(v) for v in versions):
                 errors.append(f"games {g}: a list of at least one disc version (pal, ntsc)")
+    kind = m.get("type", "native")
+    if kind not in ("native", "script"):
+        errors.append("type: native (the default) or script")
+    scripts = m.get("scripts")
+    if kind == "script":
+        if "plugin" in m:
+            errors.append("plugin: a script mod carries no library")
+        api = m.get("api")
+        if not isinstance(api, str) or not API.match(api):
+            errors.append("api: MAJOR.MINOR, the interface the scripts are written for (required)")
+        else:
+            major, minor = (int(x) for x in api.split("."))
+            if major not in API_MAJORS:
+                errors.append(f"api: {api}: this SDK knows interface {', '.join(f'{x}.x' for x in sorted(API_MAJORS))}")
+            elif (major, minor) < SCRIPT_API:
+                errors.append(f"api: {api}: script mods need interface {SCRIPT_API[0]}.{SCRIPT_API[1]} or later")
+        if not isinstance(scripts, list) or not scripts:
+            errors.append("scripts: the .luau files to run, at least one")
+        else:
+            for path in scripts:
+                p = PurePosixPath(path) if isinstance(path, str) else None
+                if p is None or not path or p.is_absolute() or ".." in p.parts or "\\" in path \
+                        or not path.endswith(".luau"):
+                    errors.append(f"scripts: {path!r} is not a .luau file inside the mod")
+                elif root is not None and not (root / p).is_file():
+                    errors.append(f"scripts: {path} is not in the mod")
+    elif scripts is not None:
+        errors.append("scripts: only a script mod (\"type\": \"script\") has scripts")
     plugin = m.get("plugin")
-    if plugin is not None:
+    if kind == "script":
+        pass
+    elif plugin is not None:
         api = m.get("api")
         if not isinstance(api, str) or not API.match(api):
             errors.append("api: MAJOR.MINOR, the interface the mod was built for (required with a plugin)")
@@ -219,9 +261,31 @@ def _require(m, root: Path | None, where: str) -> None:
         raise ManifestError(f"{where}:\n  " + "\n  ".join(errors))
 
 
+def _script_files(folder: Path, m: dict) -> list[Path]:
+    """A script mod's files: its scripts, and the .luau, .json and .md files and the license of its
+    folder, hidden files and folders and builds left out."""
+    out = {folder / PurePosixPath(p) for p in m.get("scripts", [])}
+
+    def walk(at: Path) -> None:
+        for p in sorted(at.iterdir()):
+            if p.name.startswith(".") or p.is_symlink():
+                continue
+            if p.is_dir():
+                if p.name not in SKIP_DIRS:
+                    walk(p)
+            elif SCRIPT_FILES.search(p.name) or (at == folder and EXTRAS.match(p.name)):
+                out.add(p)
+
+    walk(folder)
+    out.discard(folder / MANIFEST)
+    return [folder / MANIFEST] + sorted(out)
+
+
 def _files(folder: Path) -> list[Path]:
     """What goes in the archive: the manifest, the plugin files, the files for people."""
     m = read_manifest(folder / MANIFEST)
+    if m.get("type") == "script":
+        return _script_files(folder, m)
     out = [folder / MANIFEST]
     for path in (m.get("plugin") or {}).values():
         out.append(folder / PurePosixPath(path))
@@ -325,7 +389,10 @@ def main(argv: list[str] | None = None) -> int:
         if a.check:
             for p in a.inputs:
                 path = p / MANIFEST if p.is_dir() else p
-                _require(read_manifest(path), None, str(path))
+                m = read_manifest(path)
+                # A script mod's scripts are its sources, so they are there to check; a native mod's
+                # library is not built yet.
+                _require(m, path.parent if isinstance(m, dict) and m.get("type") == "script" else None, str(path))
                 print(f"{path}: ok")
         elif a.merge:
             out = a.output
