@@ -301,8 +301,20 @@ describes every key). What hostgen itself reads:
 decompilation's C runs as it is (`game`), the port answers it with the
 shared replacement of that name (`host`: hostgen binds the address to it in
 `libraries.c`, and callers are matched to its signature), the C runs under a
-host function of the same name (`wrap`: the C is kept as `<name>__game`), or a
-host version is still to be written (`todo`).
+host function of the same name (`wrap`: the C is kept as `<name>__game`), the
+C runs unless a mod takes the function (`hook`: the C is kept as `<name>__game`
+and hostgen writes `<name>` itself in `hooks.c`), or a host version is still
+to be written (`todo`).
+
+A `hook` row is a hook point for mods ([docs/port/MODS.md](../../../docs/port/MODS.md),
+section 4): its third column is the name mods ask for, the same on every disc
+of a game, and two rows may not share one. `hooks.c` holds, for each, a slot
+and the function of the row's symbol, which calls the slot when a mod filled
+it and the game's C otherwise, and the table the mod loader reads,
+`openrac_game_hook_points` (name, symbol, signature such as
+`void(i32,f32,f32,f32)`, slot, the game's C). A hook point whose signature has
+no such form (a record by value, a double, varargs) stops hostgen with an
+error.
 
 Two spellings of one address (`FUN_0020c828` and `func_0020C828`) are one
 function: a call to a name without C goes to the function with C at the same
@@ -318,6 +330,7 @@ with C). A level function is one named `func_Lnn_...` or `FUN_Lnn_...`.
 | `stubs.c` | the functions with no C yet |
 | `asm_<n>.c` | the functions with no C, translated from their assembly (when `asm` is on) |
 | `functions.c` | every function by code address, per level program (`openrac_game_register_functions`), and, where `OPENRAC_REGS_THUNKS` is on, each one's thunk for a call with the EE's registers |
+| `hooks.c` | the hook points mods may take (`hook` rows of `libraries.tsv`) and their table, `openrac_game_hook_points`; empty for a game with none |
 | `libraries.c` | the game's library addresses bound to the shared replacements |
 | `game_info.c` | the game's description (`openrac_game`), its entry (`openrac_game_run`) and, unless the game has its own, its overlay hook |
 | `report.json` `literal_addresses` | each function's literal addresses in the relocated range and what each became (`OPENRAC_DATA(...)`, `OPENRAC_LDATA(...)`, or `kept` in a function of one level, whose addresses are that level's) |
