@@ -1,4 +1,5 @@
-"""The moby behaviour catalogue for modders: for each Ratchet & Clank (PAL) moby class, the
+"""The moby behaviour catalogue for the mod SDK (experimental: names follow the decompilation and will
+change in the C++ refactor; the hook names are the stable handle): for each Ratchet & Clank (PAL) moby class, the
 function that updates it, what its pvars hold, and how a native mod can take that function.
 
     catalogue.py write           # regenerate sdk/catalogue/rac1/
@@ -7,6 +8,8 @@ function that updates it, what its pvars hold, and how a native mod can take tha
 
 Writes, in sdk/catalogue/rac1/ (shipped with the mod SDK, sdk/tools/package_sdk.py):
 
+    classes.json     the stable table for bindings and mods (format below): per class, its update
+                     functions and their hook names, and its pvar fields
     behaviour.json   the catalogue, for tools (format below)
     behaviour.tsv    one row per class, the same facts flattened
     BEHAVIOUR.md     the catalogue to read: overview, hook points, update functions, pvars
@@ -20,7 +23,33 @@ include/moby_pvars.h for the typed pvars), the port's tables for the PAL and NTS
 no_c.tsv; port/game/rac1-ntsc/libraries.tsv), the SDK's game header
 (sdk/include/openrac/games/rac1.h), editor/moby_classes.tsv and editor/behaviour_api.tsv.
 
-behaviour.json, format 1:
+classes.json, format 1, the stable contract. Fields are only added within a format; one that
+changes meaning or goes raises the format. One class per line:
+
+    {"format": 1, "game": "rac1", "disc": "pal", "generated_by": "editor/catalogue.py",
+     "moby": {"struct": "Moby", "size": 256,
+              "class_field": {"name": "oclass", "offset": 166, "type": "s16"},   # filter a shared hook on it
+              "update_field": {...}, "pvars_field": {...}},                     # +0x74, +0x78
+     "classes": [{
+         "id": 500, "name": "bolt_crate" or null,     # editor/moby_classes.tsv
+         "levels": [level numbers it is updated in],
+         "updates": [{                                # usually one; a class updated by another function
+             "function": "func_L00_002D06C8",         #   in some levels has one entry per function
+             "name": readable name or null,
+             "levels": [...],
+             "hook": "Moby_BoltCrate_Update",         # the hook point's name for mods: Moby_<Class>_Update
+                                                      #   after the function's first named class (MODS.md 4)
+             "hook_status": "available" | "needs_hook_row" | "wrapped" | "no_signature" | "needs_c",
+             "signature": "void(u32)" or null,        # MODS.md notation; u32 is the moby's game address
+             "gets_moby": true,                       # false: the C takes no parameter
+             "shared_with": [other class ids the same function updates]}],
+         "pvars": [{"struct": "update500", "size": 0x.., "checked": bool,   # false: the header's stated
+                    "fields": [{"name", "offset", "type", "meaning"}]}]}]}  #   size disagrees
+
+A hook name is one function's: every class in shared_with reaches the same hook point, so a
+replacement for one class checks the class field and calls the original for the others.
+
+behaviour.json, format 1 (everything, for tools; may grow):
 
     {"format": 1, "game": "rac1", "disc": "pal", "generated_by": "editor/catalogue.py",
      "moby": {"size", "class_field", "update_field", "pvars_field"},   # {name, offset, type}
@@ -75,6 +104,7 @@ NTSC = REPO / "port" / "game" / "rac1-ntsc"
 SDK_HEADER = REPO / "sdk" / "include" / "openrac" / "games" / "rac1.h"
 OUT = REPO / "sdk" / "catalogue" / "rac1"
 PVARS_HEADER = "moby_pvars.h"
+CLASSES_FORMAT = 1  # classes.json: raised only when a field changes meaning or goes
 KEYWORDS = {"if", "while", "for", "switch", "return", "sizeof", "do", "else", "case"}
 SYMBOL = re.compile(r"(?:func|FUN)_(?:L\d\d_)?[0-9A-Fa-f]{8}")
 
@@ -525,11 +555,10 @@ def hook_status(sym, classes, row, in_port, sig, name, taken, proposed_names, le
     if row is not None and row[3] == "hook":
         return {"status": "hook_point", "point": row[2], "proposed": None, "row": None, "covers": cover,
                 "missing": None if row[2] in ntsc_hooks else "no hook row for it in port/game/rac1-ntsc/libraries.tsv"}
-    proposed = name if name and not SYMBOL.match(name) else f"MobyUpdate_{classes[0]}"
-    base, k = proposed, 2
-    while proposed in taken or proposed in proposed_names:
-        proposed = f"{base}_{k}"
-        k += 1
+    proposed = hook_name(classes, class_names)
+    if proposed in taken or proposed in proposed_names:
+        # Two functions update classes of one name (a class per level): the class number tells them apart.
+        proposed = hook_name(classes, class_names, numbered=True)
     proposed_names.add(proposed)
     if row is not None:
         return {"status": "wrapped", "point": None, "proposed": proposed, "row": None, "covers": cover,
@@ -549,6 +578,24 @@ def hook_status(sym, classes, row, in_port, sig, name, taken, proposed_names, le
         missing += "; its C takes no parameter, so a replacement does not get the moby"
     return {"status": "needs_hook_row", "point": None, "proposed": proposed,
             "row": f"{sym}\tmoby\t{proposed}\thook\t{note}\t{c_signature(sig)}", "covers": cover, "missing": missing}
+
+
+def pascal(name: str) -> str:
+    """bolt_crate -> BoltCrate; a name that starts with a digit keeps it after an underscore-free join."""
+    return "".join(part[:1].upper() + part[1:] for part in re.split(r"[^0-9A-Za-z]+", name) if part)
+
+
+def hook_name(classes: list[int], class_names: dict, numbered: bool = False) -> str:
+    """The hook point's name for mods, docs/port/MODS.md section 4: Moby_<Class>_Update, after the
+    first named class the function updates (by number), else Class<N> after its first class. A function
+    shared by several classes is one hook point, named after that class; the catalogue's classes list
+    which classes reach it."""
+    named = [c for c in classes if class_names.get(c)]
+    c = named[0] if named else classes[0]
+    base = pascal(class_names[c]) if named else f"Class{c}"
+    if numbered and named:
+        base += str(c)
+    return f"Moby_{base}_Update"
 
 
 def _ranges(levels: list[int]) -> str:
@@ -626,6 +673,12 @@ def render_md(cat: dict) -> str:
         "regenerates it, `check` says whether it is stale. The same facts for tools are",
         "[behaviour.json](behaviour.json) (its format is in the generator's docstring) and, one row per class,",
         "[behaviour.tsv](behaviour.tsv).",
+        "",
+        "**Experimental.** The function and struct names come from the decompilation as it is today and",
+        "will change in the C++ refactor; hook names (`Moby_<Class>_Update`) are the stable handle. This",
+        "catalogue is for the mod SDK (native mods and the Luau binding), not for the level editor:",
+        "behaviour is modded through the SDK. [classes.json](classes.json) is the stable table for",
+        "bindings (its format is in the generator's docstring).",
         "",
         "## What it says",
         "",
@@ -763,9 +816,36 @@ _SRC = {"decomp": "C in the decompilation (src/)", "candidate": "candidate C (no
         "hand": "the port's own C", "assembly": "C hostgen translates from the assembly", "none": "no C"}
 
 
+def classes_table(cat: dict) -> dict:
+    """classes.json: the stable part of the catalogue, per class, for bindings made from it (the
+    format is in the module docstring; it changes only with its format number)."""
+    out = []
+    for c in cat["classes"]:
+        updates = []
+        for u in c["updates"]:
+            f = cat["functions"][u["function"]]
+            h = f["hook"]
+            updates.append({"function": u["function"], "name": f["name"], "levels": u["levels"],
+                            "hook": h["point"] or h["proposed"],
+                            "hook_status": "available" if h["status"] == "hook_point" else h["status"],
+                            "signature": f["signature"], "gets_moby": f["signature"] not in (None, "void()"),
+                            "shared_with": [o for o in f["classes"] if o != c["id"]]})
+        pvars = []
+        for name in c["pvars"]:
+            st = cat["pvar_structs"].get(name)
+            if st is None:
+                continue
+            pvars.append({"struct": name, "size": st["size"], "checked": st["declared_size"] in (None, st["size"]),
+                          "fields": [{"name": fl["name"], "offset": fl["offset"], "type": fl["type"],
+                                      "meaning": fl["comment"]} for fl in st["fields"]]})
+        out.append({"id": c["id"], "name": c["name"], "levels": c["levels"], "updates": updates, "pvars": pvars})
+    return {"format": CLASSES_FORMAT, "game": cat["game"], "disc": cat["disc"], "generated_by": cat["generated_by"],
+            "moby": cat["moby"], "classes": out}
+
+
 def outputs(cat: dict) -> dict[Path, str]:
-    return {OUT / "behaviour.json": render_json(cat), OUT / "behaviour.tsv": render_tsv(cat),
-            OUT / "BEHAVIOUR.md": render_md(cat)}
+    return {OUT / "classes.json": render_json(classes_table(cat)), OUT / "behaviour.json": render_json(cat),
+            OUT / "behaviour.tsv": render_tsv(cat), OUT / "BEHAVIOUR.md": render_md(cat)}
 
 
 def main(argv=None) -> int:

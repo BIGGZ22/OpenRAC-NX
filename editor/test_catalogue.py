@@ -158,8 +158,8 @@ class BuildTests(unittest.TestCase):
         self.assertEqual(f["source"], {"kind": "decomp", "file": "games/rac1/src/a.c", "defined_as": "TestUpdate"})
         self.assertEqual(f["signature"], "void(u32)")
         self.assertEqual(f["hook"]["status"], "needs_hook_row")
-        self.assertEqual(f["hook"]["proposed"], "TestUpdate")
-        self.assertEqual(f["hook"]["row"].split("\t")[:4], ["func_L00_00100000", "moby", "TestUpdate", "hook"])
+        self.assertEqual(f["hook"]["proposed"], "Moby_Bolt_Update")  # after its first named class
+        self.assertEqual(f["hook"]["row"].split("\t")[:4], ["func_L00_00100000", "moby", "Moby_Bolt_Update", "hook"])
         self.assertTrue(f["hook"]["row"].endswith("\tvoid (unsigned int)"))
         self.assertIn("not the places split_places.tsv gives to func_L00_00100010 (levels 2)", f["hook"]["covers"])
         c10 = next(c for c in self.cat["classes"] if c["id"] == 10)
@@ -189,7 +189,7 @@ class BuildTests(unittest.TestCase):
         self.assertEqual((bare["signature"], bare["hook"]["status"]), ("void()", "needs_hook_row"))
         self.assertIn("does not get the moby", bare["hook"]["missing"])
         self.assertEqual(fs["func_L00_00100500"]["source"]["kind"], "candidate")
-        self.assertEqual(fs["func_L00_00100500"]["hook"]["proposed"], "MobyUpdate_20")
+        self.assertEqual(fs["func_L00_00100500"]["hook"]["proposed"], "Moby_Thing_Update")
         self.assertEqual(fs["func_L00_00100600"]["hook"]["status"], "needs_c")
         self.assertEqual(fs["func_L00_00100800"]["hook"]["status"], "wrapped")
         self.assertEqual(fs["func_L00_00100800"]["port_row"], "wrap")
@@ -213,11 +213,30 @@ class BuildTests(unittest.TestCase):
                          {"hook_point": 1, "needs_c": 1, "needs_hook_row": 3, "wrapped": 1})
 
     def test_proposed_names_do_not_clash(self):
-        cat = build(inputs(names_h={"QuietUpdate": "func_00100700", "TestUpdate": "func_L00_00100000"}))
-        self.assertEqual(cat["functions"]["func_00100700"]["hook"]["proposed"], "QuietUpdate_2")
+        cat = build(inputs(class_names={10: "bolt", 11: "big_bolt", 20: "bolt"}))
+        self.assertEqual(cat["functions"]["func_L00_00100000"]["hook"]["proposed"], "Moby_Bolt_Update")
+        self.assertEqual(cat["functions"]["func_L00_00100500"]["hook"]["proposed"], "Moby_Bolt20_Update")
+
+    def test_hook_name(self):
+        self.assertEqual(catalogue.hook_name([5, 9], {9: "horny_toad"}), "Moby_HornyToad_Update")
+        self.assertEqual(catalogue.hook_name([1750], {}), "Moby_Class1750_Update")
 
 
 class RenderTests(unittest.TestCase):
+    def test_classes_table(self):
+        table = catalogue.classes_table(build(inputs()))
+        self.assertEqual(table["format"], 1)
+        bolt = next(c for c in table["classes"] if c["id"] == 10)
+        self.assertEqual(bolt["name"], "bolt")
+        u = bolt["updates"][0]
+        self.assertEqual((u["function"], u["hook"], u["hook_status"], u["signature"], u["gets_moby"], u["shared_with"]),
+                         ("func_L00_00100000", "Moby_Bolt_Update", "needs_hook_row", "void(u32)", True, [11]))
+        self.assertEqual(bolt["pvars"][0]["struct"], "TestVars")
+        self.assertEqual(set(bolt["pvars"][0]["fields"][0]), {"name", "offset", "type", "meaning"})
+        quiet = next(c for c in table["classes"]
+                     if any(x["function"] == "func_L00_00100400" for x in c["updates"]))
+        self.assertEqual(quiet["updates"][0]["hook_status"], "available")
+
     def test_outputs(self):
         cat = build(inputs())
         self.assertEqual(json.loads(render_json(cat)), cat)
