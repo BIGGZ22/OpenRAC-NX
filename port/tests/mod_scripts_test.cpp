@@ -233,7 +233,7 @@ end)
     const auto s = status_of(plugins, "broken");
     CHECK(s.first == "failed");
     CHECK(s.second.find("boom at 3") != std::string::npos);
-    CHECK(s.second.find("hook Test_Add") != std::string::npos);
+    CHECK(s.second.find("hook test.add") != std::string::npos);
     CHECK(add(5) == 6);
     mods::reset();
 }
@@ -320,6 +320,21 @@ openrac.hook("Test_Add", function(original, x) return original(x) + 40 end)
     mods::reset();
 }
 
+// A hook point by its permanent id, and by a name it had before a rename (the test table's Old_Add,
+// an alias of test.add): both bind to the same chain (docs/port/MODS.md, section 4).
+void ids_and_old_names(const fs::path& plugins) {
+    install_script(plugins, "renamed", {{"main.luau", R"(
+openrac.hook("Old_Add", function(original, x) return original(x) + 100 end)
+openrac.hook("test.add", function(original, x) return original(x) * 3 end)
+)"}});
+    list(plugins, R"({"id": "renamed", "enabled": true})");
+    CHECK(mods::load(host(plugins)) == "renamed 1.0.0");
+    // The later hook runs first: (x * 3 of what the earlier gives) = ((1 + 1) + 100) * 3.
+    CHECK(add(1) == 306);
+    CHECK(read(plugins / "status.json").find("\"test.add\"") != std::string::npos);
+    mods::reset();
+}
+
 void refused_without_a_binding(const fs::path& plugins) {
     install_script(plugins, "plus", {{"main.luau", "openrac.log('hi')"}});
     list(plugins, R"({"id": "plus", "enabled": true})");
@@ -347,6 +362,7 @@ int main() {
     one_chain_with_native_mods(plugins);
     before_after_pad_fields(plugins);
     an_installed_launchers_layout(dir);
+    ids_and_old_names(plugins);
     refused_without_a_binding(plugins);
     std::error_code e;
     fs::remove_all(dir, e);

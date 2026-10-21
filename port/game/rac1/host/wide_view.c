@@ -224,11 +224,13 @@ int func_L00_00200290(gaddr sphere, float far) {
 }
 
 /* NanotechBallUpdate: the nanotech cluster (the orb on a nanotech crate) draws only while its
- * sphere test finds it in view; it is run against the picture's sides. */
+ * sphere test finds it in view; it is run against the picture's sides. It is also a hook point for
+ * mods (rac1.moby.nanotech_ball.update): the hook sits under this, as func_L00_002D9EA0__hooked
+ * (hostgen's hooks.c: the mod's replacement, or the game's C), so the fix holds for a mod's too. */
 void func_L00_002D9EA0(gaddr moby) {
     if (g_effects++ == 0) {
         g_effect_wider = wider_for(&g_fix_orbs, "fix_wide_nanotech_orbs");
     }
-    func_L00_002D9EA0__game(moby);
+    func_L00_002D9EA0__hooked(moby);
     g_effects--;
 }

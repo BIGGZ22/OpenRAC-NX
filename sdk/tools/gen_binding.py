@@ -1,37 +1,46 @@
 #!/usr/bin/env python3
 # SPDX-License-Identifier: GPL-3.0-or-later
 # Copyright (c) 2026 the OpenRAC contributors
-"""A game's binding for mods, generated from one table (docs/port/MODS.md, section 11).
+"""A game's binding for mods, generated from one table (docs/port/MODS.md, sections 4 and 11).
 
-    python3 sdk/tools/gen_binding.py [GAME ...] [--catalogue FILE] [--check]
+    python3 sdk/tools/gen_binding.py [GAME ...] [--check]
 
-reads sdk/bindings/<game>.json (rac1 when no game is named) and writes:
+reads sdk/bindings/<game>.json (rac1 when no game is named), with the behaviour catalogue its
+"catalogue" names, and writes:
 
-  port/game/<game>/script_binding.c   the port's side for script mods: for each hook point,
-                                           OPENRAC_SCRIPT_LINKS C functions of its signature that hand
-                                           their arguments to the script runtime, and the fields
+  port/game/<game>/script_binding.c       the port's side: for each hook point the C functions that
+                                           hand its arguments to the script runtime, the fields, the
+                                           classes' pvars, and every name a hook point answers to
                                            (port/game/common/include/openrac/script_binding.h)
   sdk/include/openrac/games/<game>.hpp     the hook points as C++ types, for the SDK's C++ layer
   sdk/types/<game>.d.luau                  the `openrac` global's types, for an editor's autocomplete
+  sdk/bindings/<game>.ids.lock             every hook point's id, its anchor and its aliases: it only
+                                           grows (below)
+  launcher/core/src/hook_ids.json          names to ids, for the launcher's shared-hook check
+  port/game/<game>-<disc>/libraries.tsv    the block of `hook` rows for the catalogue's update
+                                           functions, between its markers
 
-The behaviour catalogue (the level editor's moby classes, their update functions and pvars) is its
-other input: the table's "catalogue" (a path from the top of OpenRAC), or --catalogue FILE. Each
-class with an update function becomes a hook point Moby_<Class>_Update, and its pvars the fields
-openrac.pvars(moby) gives for a moby of that class. Its format:
+**Ids.** Every hook point has a permanent id, `<game>.<area>.<name>` in lower case
+(`rac1.player.turn_to_heading`); its other names (the table's `name`, each disc's symbol, any
+earlier name) are aliases, which the port's loader, the C++ layer and the scripts all resolve. A
+hook point is anchored to its function's place on the table's first disc (`pal:L00:002124E8`),
+which a rename of the function does not move. The lock keeps, for each id ever given, its anchor
+and every alias it has had: the generator reuses an anchor's id, keeps its old aliases, and fails
+when an id of the lock is no longer produced. So ids are never removed or reused, and a mod that
+names a hook point by an old name still binds after the decompilation renames it.
 
-  {"format": 1, "game": "rac1",
-   "moby": {"class": "0xAA", "class_type": "i16", "pvars": "0x78"},   where a moby keeps its class
-                                                                     number and its pvars' address
-   "classes": [{"name": "Crate", "class": 500,
-                "update": {"pal": "func_L05_002D48B8", "ntsc": "FUN_L05_..."},
-                "signature": "void(u32)", "params": ["moby"],        (these two are the default)
-                "pvars": [{"name": "timer", "type": "f32", "offset": "0x10",
-                           "readonly": false, "about": "..."}],
-                "about": "..."}]}
+**Catalogue hook points.** Each update function of the behaviour catalogue
+(sdk/catalogue/<game>/classes.json, editor/catalogue.py) is a hook point, but those the table's
+"catalogue_exclude" leaves out with a reason. Its id is `<game>.moby.<name>.update`, `<name>` the
+function's name without its `Update` when it ends so (`BlargTurretUpdate`:
+`rac1.moby.blarg_turret.update`), else the class name of its lowest class, else
+`class_<lowest class number>`; when two new ones would
+share an id, each gets `_<lowest class number>`. A function several classes share is one hook
+point (its replacement filters by the moby's class). The other discs' symbols come from the
+table's "catalogue_symbols" (one TSV per disc, made with port/tools/versionmap/carry.py names).
 
 --check writes nothing: it fails when an output differs from what the table gives, or when the
-table's hook points (with the catalogue's) are not exactly the hook rows of every disc's
-port/game/<game>-<disc>/libraries.tsv. Stdlib only.
+hook points are not exactly the hook rows of every disc's libraries.tsv. Stdlib only.
 """
 from __future__ import annotations
 
@@ -57,7 +66,23 @@ KINDS = {
     "f32": ("float", "OPENRAC_SV_F32", "f", "number"),
 }
 FIELD_KINDS = {"i8", "u8", "i16", "u16", "i32", "u32", "f32"}
+# The catalogue's pvar types (editor/catalogue.py: the decompilation's) as field kinds.
+CATALOGUE_TYPES = {"s8": "i8", "u8": "u8", "s16": "i16", "u16": "u16", "s32": "i32", "u32": "u32", "f32": "f32"}
+# Vector types the decompilation gives pvars: their float lanes.
+VECTORS = {"Vec4": "xyzw", "Vec4f": "xyzw", "Vec4A": "xyzw"}
 NAME = re.compile(r"^[A-Za-z_][A-Za-z0-9_]*$")
+ID = re.compile(r"^[a-z][a-z0-9]*(\.[a-z][a-z0-9_]*)+$")
+SYMBOL = re.compile(r"^(?:func|FUN)_(?:L(\d\d)_)?([0-9A-Fa-f]{8})$")
+BLOCK_BEGIN = "# ---- generated by sdk/tools/gen_binding.py: the behaviour catalogue's hook points; do not edit ----"
+BLOCK_END = "# ---- end of the generated hook points ----"
+CPP_KEYWORDS = {
+    "alignas", "alignof", "and", "asm", "auto", "bool", "break", "case", "catch", "char", "class", "const",
+    "continue", "default", "delete", "do", "double", "else", "enum", "explicit", "export", "extern", "false",
+    "float", "for", "friend", "goto", "if", "inline", "int", "long", "mutable", "namespace", "new", "not",
+    "operator", "or", "private", "protected", "public", "register", "return", "short", "signed", "sizeof",
+    "static", "struct", "switch", "template", "this", "throw", "true", "try", "typedef", "typename", "union",
+    "unsigned", "using", "virtual", "void", "volatile", "while", "xor",
+}
 
 
 class BindingError(Exception):
@@ -79,52 +104,236 @@ def number(text: str | int) -> int:
     return text if isinstance(text, int) else int(str(text), 0)
 
 
-def load(game: str, catalogue: Path | None = None, table_path: Path | None = None) -> dict:
-    """The table, checked, with the catalogue's hook points and classes merged in."""
+def snake(text: str) -> str:
+    s = re.sub(r"(?<=[a-z0-9])(?=[A-Z])|(?<=[A-Z])(?=[A-Z][a-z])", "_", text)
+    s = re.sub(r"[^A-Za-z0-9]+", "_", s).strip("_").lower()
+    return s if s and s[0].isalpha() else f"c{s}"
+
+
+def anchor(disc: str, symbol: str) -> str:
+    """Where a hook point's function is on a disc, whatever it is called: pal:L00:002124E8."""
+    m = SYMBOL.match(symbol)
+    if not m:
+        raise BindingError(f"{symbol}: not a function's address name, which a hook point is anchored by")
+    return f"{disc}:{'L' + m.group(1) + ':' if m.group(1) else ''}{m.group(2).upper()}"
+
+
+# ---- The lock ----
+
+def read_lock(path: Path) -> dict[str, tuple[str, set[str]]]:
+    out: dict[str, tuple[str, set[str]]] = {}
+    if not path.is_file():
+        return out
+    for line in path.read_text().splitlines():
+        if not line or line.startswith("#"):
+            continue
+        cols = line.split("\t")
+        out[cols[0]] = (cols[1], set(a for a in (cols[2].split(",") if len(cols) > 2 else []) if a))
+    return out
+
+
+def lock_text(game: str, hooks: list[dict]) -> str:
+    lines = [f"# The hook points' ids of {game}, by sdk/tools/gen_binding.py: id, anchor (the function's place",
+             "# on the first disc) and every alias it has had. It only grows: an id is never removed or reused,",
+             "# and an alias once given stays (docs/port/MODS.md, section 4). Regenerated, never edited."]
+    for h in sorted(hooks, key=lambda h: h["id"]):
+        lines.append(f"{h['id']}\t{h['anchor']}\t{','.join(sorted(h['aliases']))}")
+    return "\n".join(lines) + "\n"
+
+
+# ---- The catalogue ----
+
+def read_symbols(path: Path) -> dict[str, str]:
+    """A disc's symbols for the first disc's: carry.py names' output (first, there, kind)."""
+    out = {}
+    for line in path.read_text().splitlines():
+        if not line or line.startswith("#"):
+            continue
+        cols = line.split("\t")
+        if len(cols) >= 2 and cols[1] != "-":
+            out[cols[0]] = cols[1]
+    return out
+
+
+def pvar_fields(struct: dict) -> list[dict]:
+    """A class's pvars as fields a script reads by name: numbers, addresses (pointers, read-only),
+    small arrays of numbers (name_0, name_1, ...) and float vectors (name_x, ...). Others are left out."""
+    out = []
+    for f in struct.get("fields", []):
+        name, t, off = f["name"], f["type"], number(f["offset"])
+        if not NAME.match(name):
+            continue
+        if t in CATALOGUE_TYPES:
+            out.append({"name": name, "type": CATALOGUE_TYPES[t], "offset": off, "readonly": False})
+        elif t.endswith("*"):
+            out.append({"name": name, "type": "u32", "offset": off, "readonly": True})
+        elif t in VECTORS:
+            for i, lane in enumerate(VECTORS[t]):
+                out.append({"name": f"{name}_{lane}", "type": "f32", "offset": off + 4 * i, "readonly": False})
+        else:
+            m = re.fullmatch(r"(s8|u8|s16|u16|s32|u32|f32)\[(\d+)\]", t)
+            if m and int(m.group(2)) <= 4:
+                kind = CATALOGUE_TYPES[m.group(1)]
+                size = {"i8": 1, "u8": 1, "i16": 2, "u16": 2}.get(kind, 4)
+                for i in range(int(m.group(2))):
+                    out.append({"name": f"{name}_{i}", "type": kind, "offset": off + size * i, "readonly": False})
+    seen, unique = set(), []
+    for f in out:
+        if f["name"] not in seen:
+            seen.add(f["name"])
+            unique.append(f)
+    return unique
+
+
+def catalogue_hooks(cat: dict, discs: list[str], symbols: dict[str, dict[str, str]],
+                    exclude: dict[str, str]) -> tuple[list[dict], list[dict], list[tuple[str, str]]]:
+    """(hook points, classes with pvars, (symbol, reason) left out) of a classes.json (format 1)."""
+    functions: dict[str, dict] = {}
+    classes = []
+    for c in cat.get("classes", []):
+        cname = c.get("name") or f"class_{c['id']}"
+        structs = c.get("pvars") or []
+        struct = next((s for s in structs if s.get("checked")), structs[0] if structs else None)
+        pvars = pvar_fields(struct) if struct else []
+        if pvars:
+            classes.append({"name": cname, "class": number(c["id"]), "pvars": pvars, "about": ""})
+        for u in c.get("updates", []):
+            f = functions.setdefault(u["function"], {"symbol": u["function"], "fname": u.get("name"),
+                                                      "hook": u["hook"], "signature": u["signature"],
+                                                      "gets_moby": u.get("gets_moby", True), "classes": []})
+            f["classes"].append((number(c["id"]), c.get("name")))
+    hooks, left = [], []
+    first = discs[0]
+    for sym in sorted(functions):
+        f = functions[sym]
+        if sym in exclude:
+            left.append((sym, exclude[sym]))
+            continue
+        syms = {first: sym}
+        for d in discs[1:]:
+            there = symbols.get(d, {}).get(sym)
+            if there:
+                syms[d] = there
+        ids = sorted(f["classes"])
+        names = [f"{n} ({i})" if n else str(i) for i, n in ids[:4]]
+        more = f" and {len(ids) - 4} more" if len(ids) > 4 else ""
+        what = f"class{'es' if len(ids) > 1 else ''} {', '.join(names)}{more}"
+        about = f"The update of {what}, each tick" + ("" if f["gets_moby"] else "; it gets no moby") + "."
+        # The function's own name when it says it is an update (a name another project gave a
+        # function of other use is not taken), else its lowest class's name.
+        fname = f["fname"] or ""
+        base = re.sub(r"_?update$", "", snake(fname)) if fname.lower().endswith("update") else ""
+        if not base:
+            base = snake(next((n for _, n in ids if n), "") or f"class_{ids[0][0]}")
+        hooks.append({"name": f["hook"], "signature": f["signature"],
+                      "params": ["moby"] if f["signature"] == "void(u32)" else [],
+                      "symbols": syms, "about": about, "origin": "catalogue", "base": base,
+                      "lowest": ids[0][0], "classes": [i for i, _ in ids]})
+    return hooks, classes, left
+
+
+# ---- The table ----
+
+def assign_ids(game: str, hooks: list[dict], lock: dict[str, tuple[str, set[str]]], first: str) -> None:
+    by_anchor = {a: i for i, (a, _) in lock.items()}
+    taken = set(lock)
+    for h in hooks:
+        h["anchor"] = anchor(first, h["symbols"][first])
+    for h in hooks:
+        if "id" in h:
+            if not ID.match(h["id"]) or not h["id"].startswith(game + "."):
+                raise BindingError(f"hook point {h['name']}: id {h['id']!r} is not {game}.<area>.<name> in lower case")
+            locked = lock.get(h["id"])
+            if locked and locked[0] != h["anchor"]:
+                raise BindingError(f"id {h['id']} is {locked[0]}'s in the lock, not {h['anchor']}'s: ids are never reused")
+            if h["anchor"] in by_anchor and by_anchor[h["anchor"]] != h["id"]:
+                raise BindingError(f"hook point {h['name']} ({h['anchor']}) has id {by_anchor[h['anchor']]} in the lock: "
+                                   "an id never changes")
+            taken.add(h["id"])
+    new = []
+    for h in hooks:
+        if "id" not in h and h.get("origin") == "table":
+            raise BindingError(f"hook point {h['name']}: the table gives every hook point its id")
+        if "id" not in h:
+            if h["anchor"] in by_anchor:
+                h["id"] = by_anchor[h["anchor"]]
+            else:
+                new.append(h)
+    bases: dict[str, int] = {}
+    for h in new:
+        bases[h["base"]] = bases.get(h["base"], 0) + 1
+    for h in sorted(new, key=lambda h: h["anchor"]):
+        candidate = f"{game}.moby.{h['base']}.update"
+        if bases[h["base"]] > 1 or candidate in taken:
+            candidate = f"{game}.moby.{h['base']}_{h['lowest']}.update"
+        if candidate in taken:
+            candidate = f"{game}.moby.{h['base']}_{h['anchor'].split(':')[-1].lower()}.update"
+        if candidate in taken:
+            raise BindingError(f"{h['name']}: no free id ({candidate})")
+        h["id"] = candidate
+        taken.add(candidate)
+
+
+def load(game: str, catalogue: Path | None = None, table_path: Path | None = None,
+         lock_path: Path | None = None) -> dict:
+    """The table, checked, with the catalogue's hook points and classes merged in, ids and aliases
+    resolved against the lock."""
     path = table_path or ROOT / "sdk" / "bindings" / f"{game}.json"
     table = json.loads(path.read_text())
     game = game or table.get("game", "")
     if table.get("format") != 1 or not game or table.get("game") != game:
         raise BindingError(f"{path}: format 1 for game {game} expected")
     discs = table["discs"]
-    hooks = []
-    for h in table["hooks"]:
-        hooks.append(dict(h, origin="table"))
-    classes = []
+    hooks = [dict(h, origin="table") for h in table["hooks"]]
+    classes: list[dict] = []
     moby = None
+    left: list[tuple[str, str]] = []
     cat_path = catalogue or (ROOT / table["catalogue"] if table.get("catalogue") else None)
     if cat_path is not None:
         cat = json.loads(Path(cat_path).read_text())
         if cat.get("format") != 1 or cat.get("game") != game:
             raise BindingError(f"{cat_path}: a catalogue of format 1 for game {game} expected")
-        moby = cat.get("moby")
-        for c in cat.get("classes", []):
-            if not NAME.match(c["name"]):
-                raise BindingError(f"{cat_path}: class name {c['name']!r} is not an identifier")
-            pvars = []
-            for p in c.get("pvars", []):
-                if p["type"] not in FIELD_KINDS or not NAME.match(p["name"]):
-                    raise BindingError(f"{cat_path}: {c['name']}.{p.get('name')}: a name and one of {sorted(FIELD_KINDS)}")
-                pvars.append({"name": p["name"], "type": p["type"], "offset": number(p["offset"]),
-                              "readonly": bool(p.get("readonly")), "about": p.get("about", "")})
-            classes.append({"name": c["name"], "class": number(c["class"]), "pvars": pvars, "about": c.get("about", "")})
-            if c.get("update"):
-                hooks.append({"name": f"Moby_{c['name']}_Update", "signature": c.get("signature", "void(u32)"),
-                              "params": c.get("params", ["moby"]), "symbols": c["update"],
-                              "about": c.get("about") or f"The update of a {c['name']} moby, each tick.",
-                              "origin": "catalogue"})
-        if classes and not moby:
-            raise BindingError(f"{cat_path}: classes but no \"moby\" layout (class, class_type, pvars)")
+        if cat.get("disc", discs[0]) != discs[0]:
+            raise BindingError(f"{cat_path}: a catalogue of the {discs[0]} disc expected")
+        m = cat["moby"]
+        moby = {"class": m["class_field"]["offset"], "class_type": {"s16": "i16", "u16": "u16", "s32": "i32"}.get(
+            m["class_field"]["type"], "i16"), "pvars": m["pvars_field"]["offset"]}
+        symbols = {d: read_symbols(ROOT / p) for d, p in table.get("catalogue_symbols", {}).items()}
+        more, classes, left = catalogue_hooks(cat, discs, symbols, table.get("catalogue_exclude", {}))
+        hooks += more
     names = set()
     for h in hooks:
         if not NAME.match(h["name"]) or h["name"] in names:
             raise BindingError(f"hook point {h['name']!r}: an identifier, once")
         names.add(h["name"])
+        if discs[0] not in h["symbols"]:
+            raise BindingError(f"hook point {h['name']}: no symbol on {discs[0]}, where it is anchored")
         ret, params = parse_signature(h["signature"])
         h["ret"], h["kinds"] = ret, params
         h["params"] = h.get("params") or [f"a{i}" for i in range(len(params))]
         if len(h["params"]) != len(params) or not all(NAME.match(p) for p in h["params"]):
             raise BindingError(f"hook point {h['name']}: one parameter name per argument")
+    lock = read_lock(lock_path or path.with_suffix(".ids.lock")) if (lock_path or table_path is None) else {}
+    assign_ids(game, hooks, lock, discs[0])
+    ids = {h["id"]: h for h in hooks}
+    if len(ids) != len(hooks):
+        raise BindingError("two hook points with one id")
+    for i, (a, _) in sorted(lock.items()):
+        if i not in ids:
+            raise BindingError(f"id {i} ({a}) is in the lock but no hook point has it: ids are never removed")
+    aliases: dict[str, str] = {}
+    for h in hooks:
+        al = {h["name"], *h["symbols"].values(), *h.get("aliases", [])}
+        if h["id"] in lock:
+            al |= lock[h["id"]][1]
+        al.discard(h["id"])
+        h["aliases"] = sorted(al)
+        for a in h["aliases"]:
+            if a in aliases and aliases[a] != h["id"]:
+                raise BindingError(f"alias {a} names both {aliases[a]} and {h['id']}")
+            if a in ids:
+                raise BindingError(f"alias {a} of {h['id']} is another hook point's id")
+            aliases[a] = h["id"]
     bases = {k: {d: number(v[d]) for d in discs if d in v} for k, v in table.get("bases", {}).items()}
     fields = []
     for f in table.get("fields", []):
@@ -137,11 +346,12 @@ def load(game: str, catalogue: Path | None = None, table_path: Path | None = Non
             addresses = [number(f["address"][d]) if d in f["address"] else 0 for d in discs]
         fields.append({"name": f["name"], "type": f["type"], "readonly": bool(f.get("readonly")),
                        "addresses": addresses, "about": f.get("about", "")})
-    names = [f["name"] for f in fields]
-    for n in names:
-        if any(o.startswith(n + ".") for o in names):
+    names_f = [f["name"] for f in fields]
+    for n in names_f:
+        if any(o.startswith(n + ".") for o in names_f):
             raise BindingError(f"field {n} is also a table of fields")
-    return {"game": game, "discs": discs, "hooks": hooks, "fields": fields, "classes": classes, "moby": moby}
+    return {"game": game, "discs": discs, "hooks": hooks, "fields": fields, "classes": classes, "moby": moby,
+            "aliases": aliases, "left": left, "table": path}
 
 
 # ---- The outputs ----
@@ -149,12 +359,23 @@ def load(game: str, catalogue: Path | None = None, table_path: Path | None = Non
 HEAD_C = "/* Generated from sdk/bindings/{game}.json by sdk/tools/gen_binding.py. Do not edit. */\n"
 
 
+def shapes(b: dict) -> dict[tuple, str]:
+    """One shape per signature and parameter names: hook points of a shape share their kinds,
+    names, call and thunk macro."""
+    out: dict[tuple, str] = {}
+    for h in b["hooks"]:
+        key = (h["signature"], tuple(h["params"]))
+        if key not in out:
+            out[key] = f"S{len(out)}"
+    return out
+
+
 def c_binding(b: dict) -> str:
     g = b["game"]
     out = [HEAD_C.format(game=g),
            "/* SPDX-License-Identifier: GPL-3.0-or-later */",
-           "/* The script mods' side of the game's hook points and its fields (docs/port/MODS.md, section 11;",
-           " * openrac/script_binding.h). */",
+           "/* The script mods' side of the game's hook points, their names and its fields (docs/port/MODS.md,",
+           " * sections 4 and 11; openrac/script_binding.h). */",
            "#include <stddef.h>",
            "#include <stdint.h>",
            "",
@@ -162,61 +383,73 @@ def c_binding(b: dict) -> str:
            "",
            f"static const openrac_script_point k_points[{max(1, len(b['hooks']))}];",
            ""]
-    for i, h in enumerate(b["hooks"]):
-        n = h["name"]
-        ret = "void" if h["ret"] == "void" else KINDS[h["ret"]][0]
-        ctypes = [KINDS[k][0] for k in h["kinds"]]
-        params = ", ".join(f"{t} {p}" for t, p in zip(ctypes, h["params"])) or "void"
-        fn_t = f"{n}_fn"
-        out.append(f"/* {n} {h['signature']}: {h.get('about', '')} */")
-        out.append(f"typedef {ret} (*{fn_t})({', '.join(ctypes) or 'void'});")
-        out.append(f"static openrac_script_link k_{n}_links[OPENRAC_SCRIPT_LINKS];")
-        kinds = ", ".join(KINDS[k][1] for k in h["kinds"]) or "OPENRAC_SV_VOID"
-        out.append(f"static const uint8_t k_{n}_kinds[] = {{{kinds}}};")
-        names = ", ".join(f'"{p}"' for p in h["params"]) or "NULL"
-        out.append(f"static const char* const k_{n}_names[] = {{{names}}};")
-        # The call of an original with the values.
-        args = ", ".join(f"({t})v[{j}].{KINDS[k][2]}" for j, (t, k) in enumerate(zip(ctypes, h["kinds"])))
-        out.append(f"static void {n}_call(void* original, const openrac_script_value* v, openrac_script_value* r) {{")
-        if not h["kinds"]:
+    shape_of = shapes(b)
+    for (sig, params), s in shape_of.items():
+        ret, kinds = parse_signature(sig)
+        cret = "void" if ret == "void" else KINDS[ret][0]
+        ctypes = [KINDS[k][0] for k in kinds]
+        decl = ", ".join(f"{t} {p}" for t, p in zip(ctypes, params)) or "void"
+        out.append(f"/* Shape {s}: {sig} ({', '.join(params) or 'no parameters'}). */")
+        out.append(f"typedef {cret} (*{s}_fn)({', '.join(ctypes) or 'void'});")
+        kl = ", ".join(KINDS[k][1] for k in kinds) or "OPENRAC_SV_VOID"
+        out.append(f"static const uint8_t k_{s}_kinds[] = {{{kl}}};")
+        nl = ", ".join(f'"{p}"' for p in params) or "NULL"
+        out.append(f"static const char* const k_{s}_names[] = {{{nl}}};")
+        args = ", ".join(f"({t})v[{j}].{KINDS[k][2]}" for j, (t, k) in enumerate(zip(ctypes, kinds)))
+        out.append(f"static void {s}_call(void* original, const openrac_script_value* v, openrac_script_value* r) {{")
+        if not kinds:
             out.append("    (void)v;")
-        if h["ret"] == "void":
+        if ret == "void":
             out.append("    (void)r;")
-            out.append(f"    (({fn_t})original)({args});")
+            out.append(f"    (({s}_fn)original)({args});")
         else:
-            out.append(f"    r->{KINDS[h['ret']][2]} = (({fn_t})original)({args});")
+            out.append(f"    r->{KINDS[ret][2]} = (({s}_fn)original)({args});")
         out.append("}")
-        for k in range(LINKS):
-            out.append(f"static {ret} {n}_{k}({params}) {{")
-            nv = max(1, len(h["kinds"]))
-            out.append(f"    openrac_script_value v[{nv}] = {{{{0, 0.0}}}};")
-            for j, (p, kind) in enumerate(zip(h["params"], h["kinds"])):
-                field = KINDS[kind][2]
-                cast = "(double)" if field == "f" else "(int64_t)"
-                out.append(f"    v[{j}].{field} = {cast}{p};")
-            out.append("    openrac_script_value r = {0, 0.0};")
-            call = ", ".join(h["params"])
-            out.append(f"    if (!openrac_script_dispatch(&k_points[{i}], &k_{n}_links[{k}], v, &r)) {{")
-            if h["ret"] == "void":
-                out.append(f"        (({fn_t})k_{n}_links[{k}].original)({call});")
-                out.append("        return;")
-                out.append("    }")
-            else:
-                out.append(f"        return (({fn_t})k_{n}_links[{k}].original)({call});")
-                out.append("    }")
-                out.append(f"    return ({ret})r.{KINDS[h['ret']][2]};")
-            out.append("}")
-        thunks = ", ".join(f"(void*){n}_{k}" for k in range(LINKS))
-        out.append(f"static void* const k_{n}_thunks[OPENRAC_SCRIPT_LINKS] = {{{thunks}}};")
+        # The thunk of link K of hook point I: its arguments to the runtime, or on to the original.
+        body = [f"#define {s}_THUNK(N, I, K) static {cret} N##_##K({decl}) {{ \\",
+                f"    openrac_script_value v[{max(1, len(kinds))}] = {{{{0, 0.0}}}}; \\"]
+        for j, (p, kind) in enumerate(zip(params, kinds)):
+            field = KINDS[kind][2]
+            cast = "(double)" if field == "f" else "(int64_t)"
+            body.append(f"    v[{j}].{field} = {cast}{p}; \\")
+        body.append("    openrac_script_value r = {0, 0.0}; \\")
+        call = ", ".join(params)
+        body.append("    if (!openrac_script_dispatch(&k_points[I], &k_##N##_links[K], v, &r)) { \\")
+        if ret == "void":
+            body.append(f"        (({s}_fn)k_##N##_links[K].original)({call}); \\")
+            body.append("        return; \\")
+            body.append("    } \\")
+        else:
+            body.append(f"        return (({s}_fn)k_##N##_links[K].original)({call}); \\")
+            body.append("    } \\")
+            body.append(f"    return ({cret})r.{KINDS[ret][2]}; \\")
+        body.append("}")
+        out += body
+        thunks = " ".join(f"{s}_THUNK(N, I, {k})" for k in range(LINKS))
+        refs = ", ".join(f"(void*)N##_{k}" for k in range(LINKS))
+        out.append(f"#define {s}_POINT(N, I) static openrac_script_link k_##N##_links[OPENRAC_SCRIPT_LINKS]; "
+                   f"{thunks} static void* const k_##N##_thunks[OPENRAC_SCRIPT_LINKS] = {{{refs}}};")
         out.append("")
+    for i, h in enumerate(b["hooks"]):
+        out.append(f"{shape_of[(h['signature'], tuple(h['params']))]}_POINT({h['name']}, {i}) /* {h['id']} */")
+    out.append("")
     out.append(f"static const openrac_script_point k_points[{max(1, len(b['hooks']))}] = {{")
     for h in b["hooks"]:
-        n = h["name"]
+        n, s = h["name"], shape_of[(h["signature"], tuple(h["params"]))]
         rk = "OPENRAC_SV_VOID" if h["ret"] == "void" else KINDS[h["ret"]][1]
-        out.append(f'    {{"{n}", "{h["signature"]}", {len(h["kinds"])}, k_{n}_kinds, k_{n}_names, {rk}, k_{n}_links, '
-                   f"k_{n}_thunks, {n}_call}},")
+        out.append(f'    {{"{h["id"]}", "{h["signature"]}", {len(h["kinds"])}, k_{s}_kinds, k_{s}_names, {rk}, '
+                   f"k_{n}_links, k_{n}_thunks, {s}_call}},")
     if not b["hooks"]:
         out.append("    {NULL, NULL, 0, NULL, NULL, 0, NULL, NULL, NULL},")
+    out.append("};")
+    out.append("")
+    # Every other name of a hook point, to its id, sorted (the loader searches it by halves).
+    aliases = sorted(b["aliases"].items())
+    out.append(f"static const openrac_script_alias k_aliases[{max(1, len(aliases))}] = {{")
+    for a, i in aliases:
+        out.append(f'    {{"{a}", "{i}"}},')
+    if not aliases:
+        out.append("    {NULL, NULL},")
     out.append("};")
     out.append("")
     discs = ", ".join(f'"{d}"' for d in b["discs"])
@@ -232,7 +465,7 @@ def c_binding(b: dict) -> str:
     out.append("};")
     out.append("")
     # Classes from the catalogue: openrac.pvars(moby).
-    if b["classes"]:
+    if b["moby"] is not None:
         m = b["moby"]
         for i, c in enumerate(b["classes"]):
             out.append(f"static const openrac_script_pvar k_class_{i}_pvars[{max(1, len(c['pvars']))}] = {{")
@@ -241,9 +474,11 @@ def c_binding(b: dict) -> str:
             if not c["pvars"]:
                 out.append("    {NULL, 0, 0, 0},")
             out.append("};")
-        out.append(f"static const openrac_script_class k_classes[] = {{")
+        out.append(f"static const openrac_script_class k_classes[{max(1, len(b['classes']))}] = {{")
         for i, c in enumerate(b["classes"]):
             out.append(f'    {{"{c["name"]}", {c["class"]}, {len(c["pvars"])}, k_class_{i}_pvars}},')
+        if not b["classes"]:
+            out.append("    {NULL, 0, 0, NULL},")
         out.append("};")
         out.append(f"static const openrac_script_moby k_moby = {{0x{number(m['class']):X}u, {KINDS[m.get('class_type', 'i16')][1]}, "
                    f"0x{number(m['pvars']):X}u, {len(b['classes'])}, k_classes}};")
@@ -252,6 +487,7 @@ def c_binding(b: dict) -> str:
         moby = "NULL"
     out.append("static const openrac_script_binding k_binding = {")
     out.append(f'    "{g}", {len(b["discs"])}, k_discs, {len(b["hooks"])}, k_points, {len(b["fields"])}, k_fields, {moby},')
+    out.append(f"    {len(aliases)}, k_aliases,")
     out.append("};")
     out.append("")
     out.append("const openrac_script_binding* openrac_game_script_binding(void) {")
@@ -266,7 +502,9 @@ def cpp_header(b: dict) -> str:
            "// SPDX-License-Identifier: GPL-3.0-or-later",
            "//",
            f"// {g}'s hook points as C++ types, for the SDK's C++ layer (openrac/mod.hpp, docs/port/MODS.md):",
-           "// each one's name and signature as openrac_api.hook takes them, and the type of a function of it.",
+           "// each one's permanent id, its name and signature as openrac_api.hook takes them, and the type of a",
+           "// function of it. mod.hook<...>() asks for a hook point by its id. The same types by id are in",
+           f"// openrac::{g}::hooks (rac1.player.turn_to_heading: hooks::player::turn_to_heading).",
            "#pragma once",
            "",
            "#include <cstdint>",
@@ -277,13 +515,45 @@ def cpp_header(b: dict) -> str:
         ret = "void" if h["ret"] == "void" else KINDS[h["ret"]][0]
         args = ", ".join(KINDS[k][0] for k in h["kinds"])
         if h.get("about"):
-            out.append(f"// {h['about']}")
+            out.append(f"// {h['about']}" + (" Experimental: from the behaviour catalogue." if h["origin"] == "catalogue" else ""))
         out.append(f"struct {h['name']} {{")
+        out.append(f"    static constexpr const char* id = \"{h['id']}\";")
         out.append(f"    static constexpr const char* name = \"{h['name']}\";")
         out.append(f"    static constexpr const char* signature = \"{h['signature']}\";")
         out.append(f"    using fn = {ret} (*)({args});")
         out.append("};")
         out.append("")
+    # The same by id: nested namespaces, the last part a type alias (a C++ keyword gets an underscore).
+    tree: dict = {}
+    for h in b["hooks"]:
+        parts = [p + "_" if p in CPP_KEYWORDS else p for p in h["id"].split(".")[1:]]
+        node, ok = tree, True
+        for p in parts[:-1]:
+            nxt = node.setdefault(p, {})
+            if not isinstance(nxt, dict):
+                ok = False
+                break
+            node = nxt
+        if ok and parts[-1] not in node:
+            node[parts[-1]] = h["name"]
+
+    def emit(node, depth):
+        lines = []
+        pad = "    " * depth
+        for k in sorted(node):
+            v = node[k]
+            if isinstance(v, dict):
+                lines.append(f"{pad}namespace {k} {{")
+                lines += emit(v, depth + 1)
+                lines.append(f"{pad}}}  // namespace {k}")
+            else:
+                lines.append(f"{pad}using {k} = {g}::{v};")
+        return lines
+
+    out.append("namespace hooks {")
+    out += emit(tree, 1)
+    out.append("}  // namespace hooks")
+    out.append("")
     out.append(f"}}  // namespace openrac::{g}")
     return "\n".join(out) + "\n"
 
@@ -295,10 +565,16 @@ def luau_types(b: dict) -> str:
            "--",
            f"-- The `openrac` global as a script mod for {g} sees it (docs/port/MODS.md, section 11): put this",
            "-- file where your editor's Luau language server reads definitions (luau-lsp: --definitions).",
+           "-- A hook point is named by its permanent id (rac1.player.turn_to_heading) or one of its aliases.",
+           "-- EXPERIMENTAL: the rac1.moby.* hook points and openrac.pvars come from the behaviour catalogue,",
+           "-- whose names may still change; their ids do not.",
            ""]
     hooks = b["hooks"]
     if hooks:
-        out.append("type HookPoint = " + " | ".join(f'"{h["name"]}"' for h in hooks))
+        names = [h["id"] for h in hooks] + sorted({h["name"] for h in hooks})
+        out.append("type HookPoint =")
+        for i, n in enumerate(names):
+            out.append(f'    {"|" if i else " "} "{n}"')
     else:
         out.append("type HookPoint = string")
     out.append('type MemoryType = "u8" | "i8" | "u16" | "i16" | "u32" | "i32" | "f32"')
@@ -333,10 +609,15 @@ def luau_types(b: dict) -> str:
     out.append("}")
     out.append("")
     for h in hooks:
+        if h["origin"] == "catalogue":
+            continue
         params = ", ".join(f"{p}: number" for p in h["params"])
         ret = "()" if h["ret"] == "void" else "number"
-        out.append(f"-- {h['name']} {h['signature']}: {h.get('about', '')}")
+        out.append(f"-- {h['id']} ({h['name']}) {h['signature']}: {h.get('about', '')}")
         out.append(f"type {h['name']}Fn = ({params}) -> {ret}")
+    if any(h["origin"] == "catalogue" for h in hooks):
+        out.append("-- rac1.moby.<class>.update (experimental): (moby: number) -> (), or () -> () where it gets no moby.")
+        out.append("type MobyUpdateFn = (moby: number) -> ()")
     out.append("")
     out.append("declare openrac: {")
     out.append("    game: string,")
@@ -354,28 +635,66 @@ def luau_types(b: dict) -> str:
     out.append("    read: (kind: MemoryType, address: number) -> number,")
     out.append("    write: (kind: MemoryType, address: number, value: number) -> (),")
     out.append("    fields: Fields,")
-    if b["classes"]:
+    if b["moby"] is not None:
+        out.append("    -- experimental: a moby's pvars by name, from the behaviour catalogue")
         out.append("    pvars: (moby: number) -> { [string]: number }?,")
     out.append("}")
     return "\n".join(out) + "\n"
 
 
+def launcher_ids(bindings: list[dict]) -> str:
+    """Names to ids for the launcher (no symbols: a manifest names hook points by name or id)."""
+    games = {}
+    for b in bindings:
+        games[b["game"]] = {h["name"]: h["id"] for h in sorted(b["hooks"], key=lambda h: h["name"])}
+    return json.dumps({"format": 1, "about": "Generated by sdk/tools/gen_binding.py: each game's hook point "
+                       "names to their permanent ids (docs/port/MODS.md, section 4). Do not edit.",
+                       "games": games}, indent=1, sort_keys=False) + "\n"
+
+
+def libraries_block(b: dict, disc: str) -> str:
+    rows = [BLOCK_BEGIN]
+    for h in b["hooks"]:
+        if h["origin"] != "catalogue" or disc not in h["symbols"]:
+            continue
+        note = h["about"].rstrip(".") + f": a hook point for mods, {h['id']} (docs/port/MODS.md); retail with none"
+        rows.append(f"{h['symbols'][disc]}\tmoby\t{h['name']}\thook\t{note}")
+    rows.append(BLOCK_END)
+    return "\n".join(rows) + "\n"
+
+
+def with_block(text: str, block: str) -> str:
+    if BLOCK_BEGIN in text:
+        start = text.index(BLOCK_BEGIN)
+        end = text.index(BLOCK_END, start) + len(BLOCK_END)
+        end = end + 1 if text[end:end + 1] == "\n" else end
+        return text[:start] + block + text[end:]
+    return text + ("" if text.endswith("\n") else "\n") + block
+
+
 def outputs(b: dict) -> dict[Path, str]:
     g = b["game"]
-    return {
+    out = {
         ROOT / "port" / "game" / g / "script_binding.c": c_binding(b),
         ROOT / "sdk" / "include" / "openrac" / "games" / f"{g}.hpp": cpp_header(b),
         ROOT / "sdk" / "types" / f"{g}.d.luau": luau_types(b),
+        b["table"].with_suffix(".ids.lock"): lock_text(g, b["hooks"]),
     }
+    if any(h["origin"] == "catalogue" for h in b["hooks"]):
+        for d in b["discs"]:
+            path = ROOT / "port" / "game" / f"{g}-{d}" / "libraries.tsv"
+            out[path] = with_block(path.read_text(), libraries_block(b, d))
+    return out
 
 
-def hook_rows(game: str, discs: list[str]) -> dict[str, dict[str, str]]:
+def hook_rows(game: str, discs: list[str], texts: dict[Path, str] | None = None) -> dict[str, dict[str, str]]:
     """disc -> {name: symbol} of the hook rows of port/game/<game>-<disc>/libraries.tsv."""
     out = {}
     for d in discs:
         rows = {}
         path = ROOT / "port" / "game" / f"{game}-{d}" / "libraries.tsv"
-        for line in path.read_text().splitlines():
+        text = (texts or {}).get(path) or path.read_text()
+        for line in text.splitlines():
             cols = line.split("\t")
             if not line.startswith("#") and len(cols) >= 4 and cols[3].strip() == "hook":
                 rows[cols[2].strip()] = cols[0].strip()
@@ -383,9 +702,9 @@ def hook_rows(game: str, discs: list[str]) -> dict[str, dict[str, str]]:
     return out
 
 
-def check_rows(b: dict) -> list[str]:
+def check_rows(b: dict, texts: dict[Path, str] | None = None) -> list[str]:
     problems = []
-    rows = hook_rows(b["game"], b["discs"])
+    rows = hook_rows(b["game"], b["discs"], texts)
     for d in b["discs"]:
         want = {h["name"]: h["symbols"].get(d) for h in b["hooks"] if h["symbols"].get(d)}
         have = rows[d]
@@ -401,18 +720,16 @@ def check_rows(b: dict) -> list[str]:
 def main(argv: list[str] | None = None) -> int:
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("games", nargs="*", default=["rac1"])
-    ap.add_argument("--catalogue", type=Path, help="the behaviour catalogue (one game only)")
     ap.add_argument("--check", action="store_true", help="write nothing; fail when anything differs")
     ap.add_argument("--table", type=Path, help="another table (a test's): only its C binding, to --c")
     ap.add_argument("--c", type=Path, help="with --table: where its C binding goes")
+    ap.add_argument("--report", action="store_true", help="also say what was left out of the catalogue, and why")
     args = ap.parse_args(argv)
-    if args.catalogue and len(args.games) != 1:
-        ap.error("--catalogue goes with one game")
     if args.table:
         if not args.c:
             ap.error("--table needs --c")
         try:
-            text = c_binding(load("", args.catalogue, args.table))
+            text = c_binding(load("", None, args.table))
         except (BindingError, KeyError, ValueError) as e:
             print(f"gen_binding: {args.table}: {e}", file=sys.stderr)
             return 1
@@ -424,13 +741,21 @@ def main(argv: list[str] | None = None) -> int:
         args.c.write_text(text)
         return 0
     failed = False
+    loaded = []
     for game in args.games:
         try:
-            b = load(game, args.catalogue)
+            b = load(game)
         except (BindingError, KeyError, ValueError) as e:
             print(f"gen_binding: {game}: {e}", file=sys.stderr)
             return 1
-        for path, text in outputs(b).items():
+        loaded.append(b)
+        texts = outputs(b)
+        if args.report:
+            for sym, why in b["left"]:
+                print(f"gen_binding: {game}: left out {sym}: {why}", file=sys.stderr)
+            print(f"gen_binding: {game}: {len(b['hooks'])} hook points, {len(b['aliases'])} aliases, "
+                  f"{len(b['classes'])} classes with pvars", file=sys.stderr)
+        for path, text in texts.items():
             rel = path.relative_to(ROOT)
             if args.check:
                 if not path.is_file() or path.read_text() != text:
@@ -441,9 +766,19 @@ def main(argv: list[str] | None = None) -> int:
                 if not path.is_file() or path.read_text() != text:
                     path.write_text(text)
                     print(rel)
-        for p in check_rows(b):
+        for p in check_rows(b, texts if not args.check else None):
             print(f"gen_binding: {p}", file=sys.stderr)
             failed = True
+    ids = ROOT / "launcher" / "core" / "src" / "hook_ids.json"
+    if args.games == ["rac1"] or set(args.games) >= {"rac1"}:
+        text = launcher_ids(loaded)
+        if args.check:
+            if not ids.is_file() or ids.read_text() != text:
+                print("gen_binding: launcher/core/src/hook_ids.json is not what the tables give", file=sys.stderr)
+                failed = True
+        elif not ids.is_file() or ids.read_text() != text:
+            ids.write_text(text)
+            print(ids.relative_to(ROOT))
     return 1 if failed else 0
 
 

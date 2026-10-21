@@ -4,8 +4,8 @@
   "game": "test",
   "discs": ["one"],
   "hooks": [
-    { "name": "Test_Add", "signature": "i32(i32)", "params": ["x"], "symbols": { "one": "func_00100000" } },
-    { "name": "Test_Scale", "signature": "f32(f32,u32)", "params": ["x", "by"], "symbols": { "one": "func_00100100" } }
+    { "id": "test.add", "name": "Test_Add", "aliases": ["Old_Add"], "signature": "i32(i32)", "params": ["x"], "symbols": { "one": "func_00100000" } },
+    { "id": "test.scale", "name": "Test_Scale", "signature": "f32(f32,u32)", "params": ["x", "by"], "symbols": { "one": "func_00100100" } }
   ],
   "fields": [
     { "name": "counter", "type": "i32", "address": { "one": "0x00100000" } },

@@ -219,7 +219,7 @@
 #define func_L00_002A8A20 game_FUN_L00_002a7780
 #define func_L00_002D8898 game_FUN_L00_002d73e8
 #define func_L00_002D9EA0 game_FUN_L00_002d89f0
-#define func_L00_002D9EA0__game game_FUN_L00_002d89f0__game
+#define func_L00_002D9EA0__hooked game_FUN_L00_002d89f0__hooked
 #define func_L02_0020A690 func_L02_0020A390
 #define func_L02_00250720 game_FUN_L02_0024f748
 #define func_L02_00250720__game game_FUN_L02_0024f748__game
