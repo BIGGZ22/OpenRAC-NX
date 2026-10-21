@@ -15,6 +15,7 @@ import gltf_read
 import overrides
 import pngio
 from formats import Texture, png
+from gltf import Gltf
 from godot import LevelWriter
 from mesh import Mesh
 from moby_anim import class_sequences, skeleton
@@ -25,9 +26,9 @@ from test_moby_anim import fixture
 # The other disc (CrossDiscTests) numbers Ratchet's picture 5 in level 0 and 6 in level 1; a
 # version of it with a picture of its own (9) has it a shade darker.
 PICTURES = {0: {("moby", 3): (200, 10, 10), ("moby", 5): (200, 10, 10), ("moby", 9): (199, 10, 10),
-                ("tie", 1): (10, 200, 10)},
+                ("tie", 1): (10, 200, 10), ("terrain", 2): (90, 60, 30), ("terrain", 4): (90, 60, 30)},
             1: {("moby", 7): (200, 10, 10), ("moby", 6): (200, 10, 10), ("moby", 9): (199, 10, 10),
-                ("tie", 1): (10, 10, 200)}}
+                ("tie", 1): (10, 10, 200), ("terrain", 2): (90, 60, 30), ("terrain", 4): (90, 60, 30)}}
 OTHER_DISC = ((0, ("moby", 5)), (1, ("moby", 6)))
 OTHER_PICTURE = ((0, ("moby", 9)), (1, ("moby", 9)))
 
@@ -78,6 +79,31 @@ def write_levels(root: Path, version: str = "pal", keys=((0, ("moby", 3)), (1, (
                     "textures": sorted(f"textures/{n}.png" for n in writer.textures)}
         (writer.dir / "manifest.json").write_text(json.dumps(manifest))
     return root / "levels"
+
+
+# The terrain's two fragments: 4 x 4 squares side by side, each corner lit differently (0x80 = 1.0).
+SQUARE = [(0, 0), (4, 0), (0, 4), (4, 4)]
+CORNER_COLOURS = [(0.5, 0.5, 0.5, 1.0), (1.5, 1.5, 1.5, 1.0), (1.0, 1.0, 1.0, 1.0), (1.875, 1.875, 1.875, 1.0)]
+
+
+def add_terrain(levels: Path, level: int, key=("terrain", 2), shift: float = 0.0) -> None:
+    """Give a level of write_levels' a terrain.glb as the port's writer has it: one node per
+    fragment, unindexed, lit by its vertex colours. SHIFT moves it (another terrain)."""
+    writer = LevelWriter(levels.parent, Level(level))
+    fragments = []
+    for n in range(2):
+        mesh = Mesh(f"Terrain_{n:03}", [(x + 4 * n, y + shift, 0.0) for x, y in SQUARE],
+                    [(x / 4, y / 4) for x, y in SQUARE], colours=list(CORNER_COLOURS))
+        mesh.add_face(key, (0, 1, 2))
+        mesh.add_face(key, (1, 3, 2))
+        fragments.append(mesh)
+    writer.glb("terrain.glb", fragments, 0)
+    for name, tex in writer.textures.items():
+        (writer.dir / "textures" / f"{name}.png").write_bytes(tex.png())
+    manifest = json.loads((writer.dir / "manifest.json").read_text())
+    manifest["terrain"] = "terrain.glb"
+    manifest["textures"] = sorted(set(manifest["textures"]) | {f"textures/{n}.png" for n in writer.textures})
+    (writer.dir / "manifest.json").write_text(json.dumps(manifest))
 
 
 def quiet(function, *args, **kwargs):
@@ -441,6 +467,207 @@ class CrossDiscTests(unittest.TestCase):
             "level_02/placements.json (it belongs to the other disc's level data)"])
         summary, _ = self.stack(self.pal, "mods-pal")
         self.assertEqual(len(summary["files"]), 4)
+
+
+def to_gltf(p) -> tuple:
+    """A game point (Z up) in glTF's axes (Y up)."""
+    return (p[0], p[2], -p[1])
+
+
+def edited_terrain(path: Path, grid: int = 3, texture_name: str = "terrain_0002", colours: bool = False,
+                   uvs: bool = True) -> None:
+    """A terrain as Blender exports it after subdividing the first fragment into a GRID x GRID mesh
+    (no vertex colours: Blender drops them), the second fragment kept with its colours as
+    exported (half) when COLOURS."""
+    gltf = Gltf()
+    material = {("t",): gltf.material(texture_name, f"../textures/{texture_name}.png")}
+    first = Mesh("Terrain_000", normals=[])
+    for j in range(grid):
+        for i in range(grid):
+            x, y = 4 * i / (grid - 1), 4 * j / (grid - 1)
+            first.positions.append(to_gltf((x, y, 0.0)))
+            first.uvs.append((x / 4, y / 4))
+            first.normals.append((0.0, 1.0, 0.0))
+    for j in range(grid - 1):
+        for i in range(grid - 1):
+            a = j * grid + i
+            first.add_face(("t",), (a, a + 1, a + grid))
+            first.add_face(("t",), (a + 1, a + grid + 1, a + grid))
+    second = Mesh("Terrain_001", [to_gltf((x + 4, y, 0.0)) for x, y in SQUARE], [(x / 4, y / 4) for x, y in SQUARE],
+                  normals=[(0.0, 1.0, 0.0)] * 4,
+                  colours=[(r / 2, g / 2, b / 2, a) for r, g, b, a in CORNER_COLOURS] if colours else None)
+    second.add_face(("t",), (0, 1, 2))
+    second.add_face(("t",), (1, 3, 2))
+    for mesh in (first, second):
+        index = gltf.mesh(mesh, material)
+        if not uvs:
+            for primitive in gltf.doc["meshes"][index]["primitives"]:
+                primitive["attributes"].pop("TEXCOORD_0")
+        gltf.node(mesh.name, index)
+    path.write_bytes(gltf.glb())
+
+
+def terrain_rows(data: bytes, root: Path) -> dict:
+    """A port terrain.glb's nodes: name -> (positions, colours, image URIs)."""
+    path = root / "read.glb"
+    path.write_bytes(data)
+    document = gltf_read.read(path)
+    out = {}
+    for node in document.list("nodes"):
+        positions, colours, uris = [], [], []
+        for primitive in document.list("meshes")[node["mesh"]]["primitives"]:
+            attributes = primitive["attributes"]
+            assert "_LIGHT_SLOT" not in attributes
+            positions += document.accessor(attributes["POSITION"])
+            colours += document.accessor(attributes["COLOR_0"])
+            material = document.list("materials")[primitive["material"]]
+            image = document.list("textures")[material["pbrMetallicRoughness"]["baseColorTexture"]["index"]]["source"]
+            uris.append(document.list("images")[image]["uri"])
+        out[node["name"]] = (positions, colours, uris)
+    return out
+
+
+class TerrainTests(unittest.TestCase):
+    """The terrain as a family: exported for Blender, a denser one read back into a pack."""
+
+    def setUp(self):
+        self.tmp = tempfile.TemporaryDirectory()
+        self.root = Path(self.tmp.name)
+        self.levels = write_levels(self.root)
+        add_terrain(self.levels, 0)
+        self.export = self.root / "export"
+        quiet(assets.export, self.levels, self.export, [0], "terrain")
+        self.folder = self.export / "level_00/terrain"
+
+    def tearDown(self):
+        self.tmp.cleanup()
+
+    def import_(self):
+        report = assets.Report()
+        pack, out = quiet(assets.import_edits, self.export, self.levels, report)
+        return pack, report, out
+
+    def test_export_layout_axes_and_half_colours(self):
+        summary = json.loads((self.export / "export.json").read_text())
+        self.assertEqual((summary["what"], summary["models"], summary["textures"]), ("terrain", 1, 1))
+        manifest = json.loads((self.folder / "asset.json").read_text())
+        self.assertEqual((manifest["kind"], manifest["source"], manifest["fragments"], manifest["colour_scale"]),
+                         ("terrain", "terrain.glb", 2, 2.0))
+        self.assertEqual(manifest["textures"], {"terrain_0002": [4, 2]})
+        self.assertEqual(sorted(json.loads((self.export / "level_00/textures/textures.json").read_text())["textures"]),
+                         ["terrain_0002"])
+        document = gltf_read.read(self.folder / "terrain.gltf")
+        self.assertEqual([n["name"] for n in document.list("nodes")], ["Terrain_000", "Terrain_001"])
+        self.assertEqual(document.list("images")[0]["uri"], "../textures/terrain_0002.png")
+        primitive = document.list("meshes")[0]["primitives"][0]
+        positions = document.accessor(primitive["attributes"]["POSITION"])
+        colours = document.accessor(primitive["attributes"]["COLOR_0"])
+        corner = next(i for i, p in enumerate(positions) if close(p, to_gltf((4, 4, 0))))
+        self.assertTrue(close(colours[corner], (0.9375, 0.9375, 0.9375, 1.0)), colours[corner])
+        self.assertTrue(all(max(c) <= 1.0 for c in colours))
+
+    def test_everything_holds_the_terrain_and_a_class_choice_does_not(self):
+        quiet(assets.export, self.levels, self.root / "all", [0], "all")
+        self.assertTrue((self.root / "all/level_00/terrain/terrain.gltf").is_file())
+        self.assertEqual(json.loads((self.root / "all/export.json").read_text())["models"], 3)
+        quiet(assets.export, self.levels, self.root / "one", [0], "all", [0])
+        self.assertFalse((self.root / "one/level_00/terrain").exists())
+        with self.assertRaisesRegex(assets.AssetError, "no terrain"):
+            quiet(assets.export, self.levels, self.root / "none", [1], "terrain")
+
+    def test_unchanged_terrain_imports_nothing(self):
+        pack, report, _ = self.import_()
+        self.assertEqual((pack.files, report.refused), ({}, 0))
+
+    def test_denser_terrain_takes_the_original_s_colours(self):
+        edited_terrain(self.folder / "terrain_edited.glb", colours=True)
+        pack, report, out = self.import_()
+        self.assertEqual(report.refused, 0, out)
+        self.assertEqual(sorted(pack.files), ["level_00/terrain.glb"])
+        self.assertIn("9 vertices took their colour", out)
+        rows = terrain_rows(pack.files["level_00/terrain.glb"], self.root)
+        positions, colours, uris = rows["Terrain_000"]
+        self.assertEqual(len(positions), 9)       # three by three: four more than the original's four corners
+        self.assertEqual(uris, ["textures/terrain_0002.png"])
+
+        def colour_at(x, y):
+            return colours[next(i for i, p in enumerate(positions) if close(p, (x, y, 0)))][0]
+        # Corners are the original's; a new vertex blends the face it lies on: the middle of an edge,
+        # and the centre, on the diagonal between (4, 0) and (0, 4).
+        self.assertAlmostEqual(colour_at(0, 0), 0.5)
+        self.assertAlmostEqual(colour_at(4, 4), 1.875)
+        self.assertAlmostEqual(colour_at(2, 0), 1.0)
+        self.assertAlmostEqual(colour_at(2, 2), 1.25)
+        self.assertAlmostEqual(colour_at(0, 2), 0.75)
+        # The second fragment's colours, exported at half, are the game's again.
+        positions, colours, _ = rows["Terrain_001"]
+        corner = next(i for i, p in enumerate(positions) if close(p, (8, 4, 0)))
+        self.assertTrue(close(colours[corner], (1.875, 1.875, 1.875, 1.0)), colours[corner])
+
+    def test_a_far_vertex_takes_the_nearest_surface(self):
+        surface = assets.Surface(assets.original_triangles(gltf_read.read(self.levels / "level_00/terrain.glb")))
+        # Raised 30 units above the middle of the far edge of the second fragment.
+        self.assertTrue(close(surface.colour((8.0, 2.0, 30.0)), (1.6875, 1.6875, 1.6875, 1.0)))
+        self.assertTrue(close(surface.colour((0.0, 0.0, 0.0)), CORNER_COLOURS[0]))
+
+    def test_missing_uvs_or_pictures_are_refused(self):
+        edited_terrain(self.folder / "terrain_edited.glb", uvs=False)
+        pack, report, out = self.import_()
+        self.assertEqual((report.refused, pack.files), (1, {}))
+        self.assertIn("no UV map", out)
+        # A material without a picture (Blender's default for new faces).
+        edited_terrain(self.folder / "terrain_edited.glb")
+        doc, binary = overrides.glb_parts((self.folder / "terrain_edited.glb").read_bytes())
+        doc["materials"][0]["pbrMetallicRoughness"].pop("baseColorTexture")
+        (self.folder / "terrain_edited.glb").write_bytes(overrides.glb_join(doc, binary))
+        pack, report, out = self.import_()
+        self.assertEqual((report.refused, pack.files), (1, {}))
+        self.assertIn("faces without a picture", out)
+
+    def test_a_new_picture_travels_with_the_terrain(self):
+        new = rgb_png(8, 4, (0, 0, 255))
+        (self.export / "level_00/textures/grass.png").write_bytes(new)
+        edited_terrain(self.folder / "terrain_edited.glb", texture_name="grass")
+        pack, report, out = self.import_()
+        self.assertEqual(report.refused, 0, out)
+        own = [p for p in pack.files if "/textures/terrain_ovr_" in p]
+        self.assertEqual(len(own), 1)
+        rows = terrain_rows(pack.files["level_00/terrain.glb"], self.root)
+        self.assertEqual(rows["Terrain_000"][2], [own[0].replace("level_00/", "")])
+
+    def test_levels_extracted_again_are_refused(self):
+        edited_terrain(self.folder / "terrain_edited.glb")
+        terrain = self.levels / "level_00/terrain.glb"
+        terrain.write_bytes(terrain.read_bytes() + b"\0\0\0\0")
+        _, report, out = self.import_()
+        self.assertEqual(report.refused, 1)
+        self.assertIn("export again", out)
+
+    def test_pack_records_the_terrain_and_goes_to_the_other_disc(self):
+        edited_terrain(self.folder / "terrain_edited.glb")
+        into = self.root / "overrides"
+        code, text = quiet(assets.main, ["import", str(self.export), "--levels", str(self.levels), "--into",
+                                         str(into), "--name", "Dense"])
+        self.assertEqual(code, 0, text)
+        root = into / "packs/dense"
+        manifest = json.loads((root / overrides.MANIFEST).read_text())
+        self.assertEqual(manifest["replaces"], {"level_00": {"models": ["terrain"]}})
+        original = manifest["originals"]["level_00/terrain.glb"]
+        self.assertEqual((original["kind"], original["class_textures"]), ("terrain", ["terrain_0002"]))
+        self.assertEqual(overrides.check(root)[3], [])
+        # The other disc names the same picture terrain_0004; its terrain is the same.
+        us = write_levels(self.root / "us", "ntsc", OTHER_DISC)
+        add_terrain(us, 0, ("terrain", 4))
+        summary = overrides.stack(into, self.root / "mods", None, us)
+        self.assertEqual(summary["skipped"], {}, summary["notes"])
+        rows = terrain_rows((self.root / "mods/level_00/terrain.glb").read_bytes(), self.root)
+        self.assertEqual(rows["Terrain_000"][2], ["textures/terrain_0004.png"])
+        self.assertEqual(len(rows["Terrain_000"][0]), 9)
+        # A disc whose terrain is another leaves it out.
+        moved = write_levels(self.root / "moved", "ntsc", OTHER_DISC)
+        add_terrain(moved, 0, ("terrain", 4), shift=1.0)
+        summary = overrides.stack(into, self.root / "mods-moved", None, moved)
+        self.assertEqual(summary["skipped"]["dense"], ["level_00/terrain.glb (the level's terrain is another here)"])
 
 
 class SkinTests(unittest.TestCase):
