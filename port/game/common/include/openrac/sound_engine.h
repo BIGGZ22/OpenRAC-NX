@@ -66,6 +66,11 @@ void openrac_sound_render(int16_t* interleaved, size_t frames);
  * so it is ready at the same tick on every run (OPENRAC_AUDIO_TICKED, main.cpp). */
 void openrac_stream_read_at_once(int at_once);
 
+/* Stops the threads reading a track and waits for them: called before the program exits, so that
+ * the globals the readers use are not taken away under them (a crash at quit, when the player
+ * closed the window while a track was being read). */
+void openrac_sound_stop_readers(void);
+
 #ifdef __cplusplus
 }
 #endif
