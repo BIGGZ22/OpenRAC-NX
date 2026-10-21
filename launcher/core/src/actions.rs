@@ -444,7 +444,12 @@ impl Action {
         }
         let fill = |text: &str| fill(text, ctx, self.artifact_path(ctx).ok().as_deref());
         let program = PathBuf::from(fill(program)?);
-        let args = self.args.iter().map(|a| fill(a)).collect::<Result<Vec<_>, _>>()?;
+        let mut args = self.args.iter().map(|a| fill(a)).collect::<Result<Vec<_>, _>>()?;
+        // Settings, "Purist mode": the game loads none of the native mods the Mods tab switched on
+        // (docs/port/MODS.md). The packs of Play with mods are what that action is for, and stay.
+        if self.kind == Kind::Play && ctx.config.purist {
+            args.push("--no-mods".to_string());
+        }
         let cwd = match (&self.cwd, ctx.version) {
             (Some(cwd), _) => abs(ctx.root, &fill(cwd)?),
             (None, Some(version)) => under(ctx.root, &version.dir),
@@ -675,6 +680,11 @@ mod tests {
         let data = Path::new("/games").join("active").join("rac1").join("data");
         assert_eq!(plan.args[1], data.display().to_string());
         assert!(!plan.env.iter().any(|(k, _)| k == "OPENRAC_LOG"));
+        assert!(!plan.args.iter().any(|a| a == "--no-mods"), "mods load unless purist mode is on");
+        // Settings, "Purist mode": no native mods.
+        let purist = Config { purist: true, ..installed.clone() };
+        let plan = play.plan(&ctx(&purist)).unwrap();
+        assert_eq!(plan.args.last().map(String::as_str), Some("--no-mods"), "{:?}", plan.args);
         // Settings, "Detailed game logs": the game's verbose log.
         let detailed = Config { detailed_game_log: true, ..installed.clone() };
         let plan = play.plan(&ctx(&detailed)).unwrap();

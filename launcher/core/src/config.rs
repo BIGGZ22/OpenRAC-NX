@@ -56,6 +56,9 @@ pub struct Config {
     /// (port/platform/window.cpp). Not used on Android, which keeps its own choice
     /// (src-tauri/src/android.rs).
     pub renderer: String,
+    /// Purist mode: the game loads no native mods (`--no-mods`, docs/port/MODS.md), whatever the
+    /// Mods tab has switched on. Off by default.
+    pub purist: bool,
     /// For each game, the time (seconds since 1970) of the newest crash report the player has
     /// dismissed: crashes up to then are seen, and no notice, button or mark is shown for them.
     pub crashes_seen: BTreeMap<String, u64>,
@@ -91,6 +94,7 @@ impl Default for Config {
             layout: "compact".into(),
             detailed_game_log: false,
             renderer: "opengl".into(),
+            purist: false,
             crashes_seen: BTreeMap::new(),
             disc_choice: BTreeMap::new(),
             progress_cache: None,
