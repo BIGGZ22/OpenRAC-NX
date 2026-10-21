@@ -89,6 +89,8 @@ def write_groups(items: list[list[int] | None]) -> bytes:
         offsets.append(2 * len(members))
         members += group[:-1] + [group[-1] | 0x8000]
     body = struct.pack(f"<{len(members)}H", *members)
+    # The byte count takes in the zeros that end the section at a multiple of 16 (all 19 levels).
+    body += bytes(-(0x10 + 4 * len(offsets) + len(body)) % 16)
     return struct.pack("<2i8x", len(items), len(body)) + struct.pack(f"<{len(offsets)}i", *offsets) + body
 
 
