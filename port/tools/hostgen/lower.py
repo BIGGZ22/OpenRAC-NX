@@ -119,6 +119,7 @@ class _Fn:
     float_params: list = field(default_factory=list)
     wide: set = field(default_factory=set)           # locals kept 64-bit (returns_64)
     wide_params: set = field(default_factory=set)    # parameters only passed on to 64-bit ones (widen_forwarded)
+    sibling_named: set = field(default_factory=set)  # folded functions the body also names by another place's name
 
 
 def _inner(n: dict) -> list:
@@ -594,6 +595,7 @@ class Unit:
         self.fn = _Fn(sym, sig_t, params, report=report)
         self.fn.wide_params = {params[i].get("id") for i in widened if i < len(params)}
         body = next(c for c in _inner(decl) if c.get("kind") == "CompoundStmt")
+        self.fn.sibling_named = self._sibling_named(body)
         if inherits:
             self.fn.tail_id = [s for s in _inner(body) if s.get("kind")][-1].get("id")
         local_types = self._local_types(body)
@@ -1256,7 +1258,13 @@ class Unit:
             sym = self._callee_symbol(n)
             named = self._folded_place_name(n, sym)
             address = self.code_address(named)
-            places = self._folded_places(sym) if named == sym and self.fn is not None else []
+            # A body that also names another place of the fold by that place's own name tells the
+            # places apart itself: the folded name is its own first place, which the code forms
+            # there (code_address). RegisterPartTypes stores 0x26AB10 and its copy 0x26B2B8
+            # (func_L00_0026B2B8) in entries 5 and 7, and its code forms 0x26B2B8 first: the k-th
+            # formation of any place put 0x26B2B8 in entry 5.
+            sibling = self.fn is not None and sym in self.fn.sibling_named
+            places = self._folded_places(sym) if named == sym and self.fn is not None and not sibling else []
             own_size = getattr(self.program, "sizes", {}).get(self.fn.name) or 0 if places else 0
             if places and own_size:
                 # A name the catalogue folded, whose places in one program are other functions (each
@@ -1343,6 +1351,25 @@ class Unit:
         overlay = named[0][0]
         folded = [p for p in self.program.code_places(sym) if p[0] == overlay]
         return raw if len(folded) > 1 and named[0] in folded else sym
+
+    def _sibling_named(self, body: dict) -> set:
+        """The folded functions whose address the body also takes by the name of another of their
+        places in one program (_folded_place_name): it tells their places apart itself."""
+        out: set = set()
+        stack = [body]
+        while stack:
+            n = stack.pop()
+            if not isinstance(n, dict):
+                continue
+            if n.get("kind") == "DeclRefExpr" and (n.get("referencedDecl") or {}).get("kind") == "FunctionDecl":
+                try:
+                    sym = self._callee_symbol(n)
+                    if self._folded_place_name(n, sym) != sym:
+                        out.add(sym)
+                except (KeyError, AttributeError):
+                    pass
+            stack.extend(c for c in n.get("inner", ()) if isinstance(c, dict))
+        return out
 
     def _callee_symbol(self, ref: dict) -> str:
         d = self.decls.get(ref["referencedDecl"]["id"])
