@@ -10,6 +10,7 @@ covered by the license of the closest directory below that has one.
 | [`games/rac2/ntsc`](games/rac2/ntsc/LICENSE) | MIT, Copyright (c) 2026 llesieur99. `ports/pal-functional/` is platypet2217-star's RAC2Decomp, MIT under its own [LICENSE](games/rac2/ntsc/ports/pal-functional/LICENSE). |
 | [`games/rac3/ntsc`](games/rac3/ntsc/LICENSE) | GNU General Public License v3 (since 2026-10-04). |
 | [`games/rac4/ntsc`](games/rac4/ntsc/LICENSE) | MIT, Copyright (c) 2026 Kryštof "Lynder063" Malinda. `src/libgcc/` keeps the GPL with the runtime exception, and `src/libm/` newlib's fdlibm notice ([THIRD_PARTY_NOTICES.md](games/rac4/ntsc/THIRD_PARTY_NOTICES.md)). |
+| [`sdk`](sdk/LICENSE) | MIT, Copyright (c) 2026 the OpenRAC contributors (chosen 2026-10-21), so that mods built with the SDK can be under any license; the port they run in stays GPL. |
 | [`editor`](editor/LICENSE) | MIT ([editor/LICENSE](editor/LICENSE)): it was written in rac1-decomp and moved here while rac1-decomp was MIT. |
 | Everything else (`launcher/`, `tools/`, `docs/` and the top-level files) | GNU General Public License v3 or later ([COPYING](COPYING)), Copyright (c) 2026 the OpenRAC contributors (chosen 2026-10-08). Code adapted from another project keeps that project's notice, listed in [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md). |
 

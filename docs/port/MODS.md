@@ -781,10 +781,15 @@ callback that swaps two buttons, chosen in its settings.
   mods and their settings, written back to `plugins.json`.
 - **Proposed: more hook points** as mods ask for them, and a hook on the
   renderer's frame for mods that draw.
-- **Open: the license of the SDK and of mods.** The SDK is GPL-3.0-or-later
-  like the rest of OpenRAC's top level. A mod runs inside the GPL'd port; a
-  permissive license for the SDK's headers would let mods choose their own.
-  For the maintainers to settle (AGENTS.md, rule 11).
+- **Decided (2026-10-21): the SDK is MIT.** Everything under `sdk/` (the
+  headers, the CMake package, the templates, the tools, the guides) is under
+  the MIT license ([sdk/LICENSE](../../sdk/LICENSE)), so mods can be under any
+  license their authors choose; the port and the rest of OpenRAC stay
+  GPL-3.0-or-later. rac1-mods is GPL-3.0-or-later.
+- **Decided (2026-10-21): SDK releases stay in OpenRAC's release list**, as
+  `sdk-v<version>`, never marked Latest (the workflow passes `--latest=false`,
+  and the launcher reads only its own `launcher-v` releases). A repository of
+  their own would need a token across repositories for the workflow.
 - **Open: a mod index.** Mods are installed from files and repository
   addresses (section 10); a list to browse them from, as OpenGOAL's launcher
   has for its mods, waits on where it would be hosted.

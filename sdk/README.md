@@ -257,8 +257,15 @@ port's `--no-mods`.
 
 ## License
 
-The SDK is under the GNU GPL, version 3 or later, as the rest of OpenRAC's
-top level. A mod runs inside the GPL'd port; whether the SDK's headers should
-be under a permissive license so that mods can choose their own is an open
-question for the maintainers (MODS.md, section 10). Until it is settled,
-write mods under the GPL, as rac1-mods does.
+The SDK (everything under `sdk/`: the headers, the CMake package, the
+templates, the tools and the guides) is under the MIT license
+([LICENSE](LICENSE)), so a mod built with it can be under any license its
+author chooses. The rest of OpenRAC, the port the mods run in included, stays
+under the GPL v3 or later. The templates carry the MIT license as their
+starting point; replace it with your mod's own.
+
+## Releases
+
+Each SDK version is a release `sdk-v<version>` of OpenRAC/OpenRAC, beside the
+launcher's. SDK releases are never marked Latest (the launcher's updates read
+the Latest release), and the launcher ignores releases that are not its own.
