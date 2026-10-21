@@ -232,7 +232,8 @@ cd ../rac1-decomp && python3 tools/fcheck.py func_001F98C0 build-sn/fcheck/asmc/
 
 [prep.py](prep.py) copies the files it reads and changes the copies without
 moving a line: `long` becomes `long long` (the EE's long is 64-bit; `long
-double` stays), file-scope `__asm__` (padding for the matching build) is
+double` stays), a unit's own `long long` becomes the 128-bit `openrac_ti` where
+the game's compiler had it so (`long_long_128`), file-scope `__asm__` (padding for the matching build) is
 blanked, and strings that run across lines are split.
 [clangast.py](clangast.py) has Clang read each file for a 32-bit MIPS
 target, so every type has the console's size and layout. Where Clang
@@ -260,6 +261,7 @@ describes every key). What hostgen itself reads:
 | Key | |
 |---|---|
 | `sources`, `skip` | the C to translate (`src`, without `src/libgcc`: the host compiler has its own) |
+| `long_long_128` | `{"except_objects": TABLE, "except_compilers": [...]}`: the units whose `long long` is the 128-bit integer of the game's own compiler (SN's GCC 2.95.3: `*(long long *)p = 0` is `por` + `sq`), every unit of `sources` but `skip` and the objects TABLE (in the decompilation: object, address, compiler) gives one of `except_compilers`. Their `long long` is written `openrac_ti` / `openrac_uti` in hostgen's copy ([prep.py](prep.py)); candidates and the port's own C keep a 64-bit one. rac1/pal's leaves out `config/core_text.objects`' `ee29` objects, the libraries Sony's compiler built |
 | `includes`, `defines` | how to read it, relative to the decompilation |
 | `names` | how the decompilation names code and data by address: regular expressions with an `addr` group (and `overlay` for a level's code). The defaults (`func_`, `func_Lnn_`, `D_`, `D_Lnn_`) also cover Going Commando's current `master` |
 | `aliases` | headers in the decompilation of `#define NAME func_ADDR` lines, its readable names for address-named symbols. Each name is written as its address name in hostgen's copy of the sources, outside comments, strings and `#define` lines ([prep.py](prep.py)), so the passes that know game symbols by address see every definition and call. rac1/pal's is `include/names.h`. An entry ending in `.json` is a table of the values the decompilation's own build derived from the retail bytes (`{"values": {name: "0x..."}}`, Going Commando's `build/boot/placed.json`): of it, the names carried from rac1-decomp that state rac1's address, not this game's (`r1_func_0011DB98`, `r1_D_00130420`), are written as the address names of their values, inside macro bodies too |

@@ -12,6 +12,7 @@
   "skip": [
     "src/libgcc"
   ],
+  "long_long_128": {"except_objects": "config/core_text.objects", "except_compilers": ["ee29"]},
   "includes": [
     "include",
     "src"

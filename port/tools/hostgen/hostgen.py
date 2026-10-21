@@ -136,6 +136,38 @@ def read_hand(config_dir: Path, cfg: dict) -> dict[str, str]:
     return read_table_of_c(config_dir / table)
 
 
+def read_long_long_128(source: Path, cfg: dict) -> set[str]:
+    """The units whose `long long` is a 128-bit integer (hostgen.json "long_long_128"), as paths
+    from the decompilation's top (src/game/draw.c): every unit of "sources" but "skip" and the
+    objects a table of the decompilation names as another compiler's, {"except_objects": TABLE,
+    "except_compilers": [NAME, ...]}: whitespace-separated rows, the object (its path with the
+    build directory first, build-sn/core/00125630.o for src/core/00125630.c) first, the compiler
+    third. rac1-pal: SN's GCC 2.95.3, which built the game, has a 128-bit long long; Sony's 2.9-ee
+    built the libraries config/core_text.objects marks ee29 (libmpeg's 64-bit `long long v[2]`)."""
+    spec = cfg.get("long_long_128")
+    if not spec:
+        return set()
+    others: set[str] = set()
+    table = source / spec.get("except_objects", "")
+    if spec.get("except_objects") and table.is_file():
+        compilers = set(spec.get("except_compilers", []))
+        for line in table.read_text().splitlines():
+            row = line.split()
+            if not row or row[0].startswith("#") or len(row) < 3 or row[2] not in compilers:
+                continue
+            others.add(Path(*Path(row[0]).parts[1:]).with_suffix(".c").as_posix())
+    units = set()
+    for src in cfg["sources"]:
+        for p in (source / src).rglob("*.c"):
+            rel = p.relative_to(source).as_posix()
+            if any(rel == s or rel.startswith(s.rstrip("/") + "/") for s in cfg["skip"]):
+                continue
+            if any(rel == f"{s.rstrip('/')}/{o}" for s in cfg["sources"] for o in others):
+                continue
+            units.add(rel)
+    return units
+
+
 def read_aliases(source: Path, cfg: dict) -> dict[str, str]:
     """The decompilation's readable names, each a macro for an address name (hostgen.json
     "aliases": headers in the decompilation of `#define NAME func_ADDR` lines), or none.
@@ -614,6 +646,9 @@ def inputs_digest(source: Path, config: Path, cfg: dict, options: list[str]) -> 
     for key in ("places", "candidates"):
         if cfg.get(key):
             paths.append(source / cfg[key])
+    # The table that names the units of another compiler (long_long_128) decides how their C reads.
+    if (cfg.get("long_long_128") or {}).get("except_objects"):
+        paths.append(source / cfg["long_long_128"]["except_objects"])
     table = source / cfg["candidates"] if cfg.get("candidates") else None
     if table and table.is_file():
         for line in table.read_text().splitlines():
@@ -737,6 +772,7 @@ def main(argv: list[str] | None = None) -> int:
     # candidate for the same function stands aside.
     candidates = {**read_candidates(source, cfg), **read_hand(args.game.parent, cfg)}
     aliases = read_aliases(source, cfg)
+    long_long_128 = read_long_long_128(source, cfg)
     if aliases:
         # One text for several functions stays one text (use_candidates puts it in once).
         texts = {id(c): prep.unalias(c, aliases) for c in candidates.values()}
@@ -746,7 +782,7 @@ def main(argv: list[str] | None = None) -> int:
     for d in sorted(set(cfg["sources"] + cfg["includes"])):
         if (source / d).is_dir():
             prep.copy_tree(source / d, root / d, candidates=candidates, used=used, drafts=drafts, prefix=d,
-                           aliases=aliases)
+                           aliases=aliases, long_long_128=long_long_128)
     units = units_of(root, cfg)
     if args.only:
         units = [u for u in units if u in args.only]

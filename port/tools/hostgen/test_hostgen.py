@@ -370,6 +370,26 @@ class Translate(unittest.TestCase):
            host_c="int func_00100100(void) { return 2; }")
         self.assertEqual(out, ["2", "2"])
 
+    def test_a_long_long_copy_of_the_games_compiler_moves_a_quadword(self):
+        # SN's GCC 2.95.3 has a 128-bit long long (hostgen.json "long_long_128"): rac1's CannonUpdate
+        # clears and copies vectors through `*(long long *)v` (por + sq, lq + sq), all four words.
+        # Without the setting long long is Clang's 64 bits, and only x and y move.
+        files = {"a.c": """
+            int test_main(void) {
+                float v[4];
+                float w[4];
+                v[0] = 1.0f; v[1] = 2.0f; v[2] = 3.0f; v[3] = 4.0f;
+                w[0] = w[1] = w[2] = w[3] = 0.0f;
+                *(long long *)w = *(long long *)v;
+                test_print((int)(w[0] + w[1] + w[2] + w[3]));
+                *(long long *)v = 0;
+                test_print((int)(v[0] + v[1] + v[2] + v[3]));
+                return 0;
+            }
+        """}
+        self.assertEqual(self.run_program(files, config={"long_long_128": {"except_compilers": []}}), ["10", "0"])
+        self.assertEqual(self.run_program(files), ["3", "7"])
+
     def test_pass_through(self):
         out = self.run_program({
             "callee.c": "int two(int a, int b) { return a * 10 + b; }",
@@ -1400,6 +1420,33 @@ class Preparation(unittest.TestCase):
         src = 'long a; unsigned long b; long long c; char *s = "long"; /* long */'
         self.assertEqual(prep.widen_long(src),
                          'long long a; unsigned long long b; long long c; char *s = "long"; /* long */')
+
+    def test_long_long_of_the_games_compiler_is_128_bit(self):
+        # SN's GCC 2.95.3 has a 128-bit long long: a quadword clear or copy through it moves 16 bytes.
+        src = ('*(long long *)&b = 0; unsigned long long p; signed long long int q; long x;\n'
+               'typedef union { unsigned long long v __attribute__((mode(TI))); float f[4]; } H;\n'
+               '*(unsigned long long __attribute__((mode(TI))) *)a = 0; /* long long */ s = "long long"; n = 5LL;\n')
+        out = prep.widen_long_long(src).split("\n")
+        self.assertEqual(out[0], "*(openrac_ti *)&b = 0; openrac_uti p; openrac_ti q; long x;")
+        self.assertEqual(out[1], "typedef union { openrac_uti v __attribute__((mode(TI))); float f[4]; } H;")
+        self.assertEqual(out[2], '*(unsigned long long __attribute__((mode(TI))) *)a = 0; /* long long */ s = "long long"; n = 5LL;')
+        # widen_long runs after it: the 64-bit long stays the only long long.
+        self.assertEqual(prep.prepare(prep.widen_long_long(src)).split("\n")[0],
+                         "*(openrac_ti *)&b = 0; openrac_uti p; openrac_ti q; long long x;")
+
+    def test_long_long_128_units_leave_out_the_other_compilers_objects(self):
+        with tempfile.TemporaryDirectory() as d:
+            root = Path(d)
+            for rel in ("src/core/a.c", "src/core/lib.c", "src/game/b.c", "src/libgcc/c.c"):
+                (root / rel).parent.mkdir(parents=True, exist_ok=True)
+                (root / rel).write_text("long long x;\n")
+            (root / "config").mkdir()
+            (root / "config/objects").write_text("# object address compiler\n"
+                                                 "build-sn/core/a.o 0x100000 sn\nbuild-sn/core/lib.o 0x100100 ee29\n")
+            cfg = {"sources": ["src"], "skip": ["src/libgcc"],
+                   "long_long_128": {"except_objects": "config/objects", "except_compilers": ["ee29"]}}
+            self.assertEqual(hostgen.read_long_long_128(root, cfg), {"src/core/a.c", "src/game/b.c"})
+            self.assertEqual(hostgen.read_long_long_128(root, {"sources": ["src"], "skip": []}), set())
 
     def test_file_scope_asm_is_blanked_keeping_lines(self):
         src = 'int a;\n__asm__(".section .text\n\tnop\n");\nint b;\nvoid f(void) { __asm__("sync"); }\n'
