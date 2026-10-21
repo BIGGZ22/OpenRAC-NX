@@ -95,13 +95,21 @@ func frame_terrain() -> void:
 	camera.look_at(center)
 
 
-## Shows the collision layer if it is hidden, and hides it if it is shown.
+## Shows the collision layers (the collision and the hero walls) if the collision is hidden,
+## and hides them if it is shown.
 func toggle_collision() -> void:
 	var collision := get_node_or_null("Game/Collision") as Node3D
 
 	# Not every level has a collision layer.
-	if collision != null:
-		collision.visible = not collision.visible
+	if collision == null:
+		return
+
+	collision.visible = not collision.visible
+	var hero_walls := get_node_or_null("Game/HeroWalls") as Node3D
+
+	# Levels without hero groups have no hero walls.
+	if hero_walls != null:
+		hero_walls.visible = collision.visible
 
 
 func _unhandled_input(event: InputEvent) -> void:
