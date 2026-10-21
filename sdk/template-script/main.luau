@@ -17,7 +17,7 @@ end)
 -- Each pad report, before the game reads it: `report` is a buffer the script may change (rac1-mods'
 -- button-swap shows its layout). Uncomment to see the buttons.
 -- openrac.on_pad(function(port: number, report: buffer)
--- 	openrac.log(`port {port}: buttons {buffer.readu16(report, 2)}`)
+-- 	openrac.log(`port {port}: buttons {buffer.readu16(report, 0)}`) -- a bit clear for a button held
 -- end)
 
 -- A hook point by name, wrapped: the game's own call goes on through `original`.
