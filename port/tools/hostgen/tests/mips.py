@@ -17,6 +17,11 @@ comment before each instruction), from test programs written here. Only what the
 from __future__ import annotations
 
 import re
+import sys
+from pathlib import Path
+
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
+import asm  # noqa: E402  (hostgen's decoder: its tables give the MMI and VU0 encodings)
 
 SPECIAL = {"sll": 0x00, "srl": 0x02, "sra": 0x03, "jr": 0x08, "jalr": 0x09, "movz": 0x0A, "movn": 0x0B,
            "syscall": 0x0C, "break": 0x0D, "mfhi": 0x10, "mflo": 0x12, "mult": 0x18, "div": 0x1A, "addu": 0x21,
@@ -36,13 +41,26 @@ FPU2 = {"abs.s": 0x05, "mov.s": 0x06, "neg.s": 0x07, "cvt.w.s": 0x24}
 FCMP = {"c.eq.s": 0x32, "c.lt.s": 0x34, "c.le.s": 0x36}
 MMI = {"pextlw": (0x08, 0x12), "pcpyld": (0x09, 0x0E), "pcpyud": (0x29, 0x0E), "paddw": (0x08, 0x00),
        "por": (0x29, 0x12), "pand": (0x09, 0x12), "pmulth": (0x09, 0x1C), "pmfhl.sh": (0x30, 0x04)}
+# Every other MMI operation, from the decoder's own tables (encoded as `op rd, rs, rt`).
+for _funct, _table in ((0x08, asm._MMI0), (0x28, asm._MMI1), (0x09, asm._MMI2), (0x29, asm._MMI3)):
+    for _sa, _name in _table.items():
+        MMI.setdefault(_name, (_funct, _sa))
+for _k, _name in enumerate(["pmfhl.lw", "pmfhl.uw", "pmfhl.slw", "pmfhl.lh", "pmfhl.sh"]):
+    MMI[_name] = (0x30, _k)
+MMI["pmthl"] = (0x31, 0)
+BRANCH1.update({"bltzal": (0x01, 0x10), "bgezal": (0x01, 0x11), "bltzall": (0x01, 0x12), "bgezall": (0x01, 0x13)})
 VU_BC = {"vaddbc": 0x00, "vsubbc": 0x04, "vmulbc": 0x18}
 VU_3 = {"vadd": 0x28, "vmul": 0x2A, "vsub": 0x2C}
+# The VU0 operations of the second table that tests write: `op.dest first, second` with the
+# fields each puts first (fs or ft).
+VU_2 = {"vclipw": "fs", "vlqi": "ft", "vlqd": "ft", "vsqi": "fs", "vsqd": "fs", "vilwr": "ft", "viswr": "ft",
+        "vftoi0": "ft"}
+_VU2_CODE = {name: code for code, name in asm._VU2.items()}
 
 
 def reg(text: str) -> int:
     text = text.strip()
-    m = re.fullmatch(r"\$(?:f|vf)?(\d+)", text)
+    m = re.fullmatch(r"\$(?:f|vf|vi)?(\d+)", text)
     if not m:
         raise ValueError(f"not a register: {text}")
     return int(m.group(1))
@@ -68,6 +86,8 @@ def encode(op: str, args: list[str], addr: int, labels: dict[str, int], symbols:
     base, _, suffix = op.partition(".")
     if op == "nop":
         return 0
+    if op == "raw":  # an instruction given as its word (vdiv's field selects, say)
+        return int(args[0], 0)
     if op in ("sll", "srl", "sra", "dsll", "dsrl", "dsra", "dsll32", "dsrl32", "dsra32"):
         return reg(args[1]) << 16 | reg(args[0]) << 11 | int(args[2], 0) << 6 | SPECIAL[op]
     if op == "jr":
@@ -119,9 +139,18 @@ def encode(op: str, args: list[str], addr: int, labels: dict[str, int], symbols:
         return 0x11 << 26 | (4 if op == "mtc1" else 0) << 21 | reg(args[0]) << 16 | reg(args[1]) << 11
     if op in MMI:
         funct, sa = MMI[op]
+        args = args + ["$0"] * (3 - len(args))  # pmfhi $12: the registers it does not name are $0
         return 0x1C << 26 | reg(args[1]) << 21 | reg(args[2]) << 16 | reg(args[0]) << 11 | sa << 6 | funct
     if op in ("qmfc2", "qmtc2"):
         return 0x12 << 26 | (1 if op == "qmfc2" else 5) << 21 | reg(args[0]) << 16 | reg(args[1]) << 11
+    if op in ("cfc2", "ctc2"):
+        return 0x12 << 26 | (2 if op == "cfc2" else 6) << 21 | reg(args[0]) << 16 | reg(args[1]) << 11
+    if base in VU_2:
+        a, b = reg(args[0]), reg(args[1])
+        fs, ft = (a, b) if VU_2[base] == "fs" else (b, a)
+        code = _VU2_CODE[base]
+        return (0x12 << 26 | 1 << 25 | dest(suffix or "xyzw") << 21 | ft << 16 | fs << 11 | (code >> 2) << 6
+                | 0x3C | (code & 3))
     if base in VU_BC or base in VU_3:
         # vaddbc.xyzw $vf1, $vf2, $vf3x / vadd.xyz $vf1, $vf2, $vf3
         d = dest(suffix)

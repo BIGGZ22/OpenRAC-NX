@@ -171,6 +171,7 @@ int main(void) {
     openrac_guest_base = base;
     mprotect(openrac_guest_base, GUEST_RAM_SIZE, PROT_READ | PROT_WRITE);
     mprotect(openrac_guest_base + GUEST_PORT, GUEST_PORT_SIZE, PROT_READ | PROT_WRITE);
+    mprotect(openrac_guest_base + GUEST_VU_MEM, GUEST_VU_MEM_SIZE, PROT_READ | PROT_WRITE);
     openrac_game_register_functions();
     return game_test_main();
 }

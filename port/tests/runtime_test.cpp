@@ -3,7 +3,9 @@
 //
 // Game memory, the guest contract and the executable loader.
 
+#include <cfenv>
 #include <chrono>
+#include <cstdint>
 #include <cstring>
 #include <filesystem>
 #include <fstream>
@@ -11,6 +13,7 @@
 #include <vector>
 
 #include "check.h"
+#include "openrac/ee.h"
 #include "openrac/elf.h"
 #include "openrac/guest.h"
 #include "openrac/memory.h"
@@ -312,8 +315,30 @@ void host_stack() {
 
 }  // namespace
 
+// The game thread's floating point (docs/port/HARDWARE_SEMANTICS.md, item 1): toward zero, so
+// the animation code's 12582912.0 takes the fraction off 1.5 as the EE does, and no denormals.
+static void ee_float_mode() {
+    std::fenv_t saved;
+    std::fegetenv(&saved);
+    openrac_ee_float_mode(0, 0);
+    volatile float magic = 12582912.0f, x = 1.5f, one = 1.0f, three = 3.0f;
+    const float whole = (x + magic) - magic;
+    CHECK(whole == 1.0f);  // 2.0 rounded to nearest: the animation ran backwards
+    const float third = one / three;
+    std::uint32_t bits;
+    std::memcpy(&bits, &third, 4);
+    CHECK(bits == 0x3EAAAAAAu);  // 0x3EAAAAAB to nearest
+    volatile float tiny = 1e-39f;  // a denormal: zero to the EE
+    const float product = tiny * one;
+    const float sum = tiny + tiny;
+    CHECK(product == 0.0f);
+    CHECK(sum == 0.0f);
+    std::fesetenv(&saved);
+}
+
 int main() {
     Memory::create();
+    ee_float_mode();
     memory_map();
     frames_and_strings();
     functions();

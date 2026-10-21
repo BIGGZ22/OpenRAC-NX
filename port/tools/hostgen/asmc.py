@@ -35,9 +35,10 @@ The C keeps the EE's registers as locals (port/runtime/include/openrac/ee.h):
 - an address formed from a symbol (%hi / %lo) or through $gp is relocated as hostgen
   relocates the C's globals (lower.Unit.global_address, code_address).
 
-What it cannot write (system calls, COP0, VU0 microprograms, a few rare MMI
-operations, a function reading a register no caller passes) keeps the stub, and the report lists
-the function with the reason.
+What it cannot write (system calls, COP0, VU0 microprograms and branches on VU0, the
+random-number unit, a function reading a register no caller passes) keeps the stub, and the
+report lists the function with the reason. The hardware's semantics it keeps are listed in
+docs/port/HARDWARE_SEMANTICS.md.
 
 mode "console" writes the same C for the console's own compiler instead, calls and
 globals by retail address: the form rac1-decomp's tools/fcheck.py checks against
@@ -67,12 +68,16 @@ SKIP = {"nop", "sync", "pref", "cache", "vnop", "vwaitq", "ssnop", "ei", "di"}
 UNSUPPORTED = {
     "syscall": "a system call", "mfc0": "COP0 (mfc0)", "mtc0": "COP0 (mtc0)", "eret": "COP0 (eret)",
     "cop0": "COP0", "vcallms": "a VU0 microprogram (vcallms)",
-    "vcallmsr": "a VU0 microprogram (vcallmsr)", "vclipw": "VU0 clipping (vclipw)",
+    "vcallmsr": "a VU0 microprogram (vcallmsr)",
     "bc0f": "COP0 branch", "bc0t": "COP0 branch", "bc0fl": "COP0 branch", "bc0tl": "COP0 branch",
     "bc2f": "VU0 branch", "bc2t": "VU0 branch", "bc2fl": "VU0 branch", "bc2tl": "VU0 branch",
-    "bltzal": "a conditional call", "bgezal": "a conditional call", "bltzall": "a conditional call",
-    "bgezall": "a conditional call",
 }
+# bltzal and bgezal (and their likely forms): a call when the 64-bit register's sign says so; $ra
+# is written either way (hand-written code calls its helpers so: bgezal $t0, ...).
+COND_CALLS = {"bltzal", "bgezal", "bltzall", "bgezall"}
+# The parallel multiplies and divides on LO and HI (openrac_ee_pmul, ee_ops.h).
+PMUL_OPS = {"pmultw", "pmultuw", "pmaddw", "pmadduw", "pmsubw", "pmaddh", "pmsubh", "phmadh", "phmsbh",
+            "pdivw", "pdivuw", "pdivbw"}
 MMI_OPS = {
     "paddw", "psubw", "pcgtw", "pmaxw", "pminw", "pceqw", "paddh", "psubh", "pcgth", "pmaxh", "pminh",
     "pceqh", "paddb", "psubb", "pcgtb", "pceqb", "pextlw", "pextuw", "pextlh", "pextuh", "pextlb",
@@ -80,6 +85,7 @@ MMI_OPS = {
     "psllw", "psrlw", "psraw", "psllh", "psrlh", "psrah", "pexew", "pexcw", "prot3w", "pexeh", "pexch",
     "prevh", "pabsw", "pabsh", "padduw", "psubuw", "padduh", "psubuh", "paddub", "psubub", "paddsw",
     "psubsw", "paddsh", "psubsh", "paddsb", "psubsb", "plzcw", "pext5", "ppac5", "pinth", "pinteh",
+    "psllvw", "psrlvw", "psravw", "padsbh",
 }
 CONDITIONAL = {"beq", "bne", "blez", "bgtz", "bltz", "bgez", "beql", "bnel", "blezl", "bgtzl", "bltzl",
                "bgezl", "bc1f", "bc1t", "bc1fl", "bc1tl"}
@@ -173,6 +179,11 @@ class Translator:
         self.inline_calls: set[int] = set()
         self.returns: set[int] = set()
         self.reach, self.delay_only, self.jtables = self._flow()
+        # VU0's MAC and STATUS flags are kept only by a function that reads them (CFC2 $vi16 or
+        # $vi17, after its own macro operations: the collision code's tests); elsewhere they would
+        # cost every vector operation a few more for nothing.
+        self.vu_flags = any((i := self.at(a)) is not None and i.op == "cfc2" and i.rd in (16, 17)
+                            for a in self.reach)
         self._check_inputs()
 
     _inline_cache: dict = {}
@@ -343,13 +354,13 @@ class Translator:
             reach.add(a + 4)
             delay.add(a + 4)
             op = ins.op
-            if op == "jal" and self._inline_target(ins.target):
+            if op in ("jal", *COND_CALLS) and self._inline_target(ins.target):
                 # A hand-written routine that takes its inputs in registers no prototype names:
                 # run in place, as the EE does, and back to the call through $ra (control).
                 self.inline_calls.add(a)
                 self.returns.add(a + 8)
                 todo += [ins.target, a + 8]
-            elif op in ("jal", "jalr"):
+            elif op in ("jal", "jalr", *COND_CALLS):
                 todo.append(a + 8)
             elif op == "jr":
                 if ins.rs != 31:
@@ -527,7 +538,7 @@ class Translator:
             else:
                 delay = self.stmt(self.at(a + 4))
                 out += self.control(ins, delay)
-                falls = a + 8 if (ins.op in ("jal", "jalr") or (ins.op in CONDITIONAL and not (
+                falls = a + 8 if (ins.op in ("jal", "jalr", *COND_CALLS) or (ins.op in CONDITIONAL and not (
                     ins.op in ("beq", "beql") and ins.rs == ins.rt))) else None
             nxt = heads[k + 1] if k + 1 < len(heads) else None
             if falls is not None and falls != nxt:
@@ -553,6 +564,17 @@ class Translator:
             if ins.likely:
                 return [f"if ({cond}) {{", *["    " + s for s in delay], f"    {go}", "}"]
             return [f"c_ = {cond};", *delay, f"if (c_) {go}"]
+        if op in COND_CALLS:
+            # The sign of all 64 bits decides; $ra is the return point whether or not it calls.
+            cond = f"(openrac_s64){R(ins.rs)} {'<' if op.startswith('bltz') else '>='} 0"
+            link = f"r31 = {S32(hx(a + 8))};"
+            if a in self.inline_calls:
+                taken = [f"goto L_{ins.target:08X};"]
+            else:
+                taken = self.call(ins.target, self._operand_name(a))
+            if ins.likely:
+                return [f"c_ = {cond};", link, "if (c_) {", *["    " + s for s in delay + taken], "}"]
+            return [f"c_ = {cond};", *delay, link, "if (c_) {", *["    " + s for s in taken], "}"]
         if op == "j":
             if not self._is_other_entry(ins.target):
                 return delay + [f"goto L_{ins.target:08X};"]
@@ -949,8 +971,28 @@ class Translator:
             k = 0 if op == "pmfhl.lw" else 32
             return [f"r{rd} = ((lo_ >> {k}) & 0xFFFFFFFFull) | (((hi_ >> {k}) & 0xFFFFFFFFull) << 32);",
                     f"h{rd} = ((lo1_ >> {k}) & 0xFFFFFFFFull) | (((hi1_ >> {k}) & 0xFFFFFFFFull) << 32);"]
+        if op in ("pmfhl.slw", "pmfhl.lh"):
+            if rd == 0:
+                return []
+            fn = "openrac_ee_pmfhl_slw" if op == "pmfhl.slw" else "openrac_ee_pmfhl_lh"
+            return [f"q_ = {fn}(openrac_ee_qof(lo_, lo1_), openrac_ee_qof(hi_, hi1_));",
+                    f"r{rd} = q_.lo;", f"h{rd} = q_.hi;"]
         if op == "pmthl":
-            raise AsmUnsupported(f"pmthl at {ins.addr:08X}")
+            # pmthl.lw: rs's words 0, 1, 2, 3 to LO 0, HI 0, LO 2, HI 2; the odd words stay.
+            r, h = R(rs), self.H(rs)
+            keep = "0xFFFFFFFF00000000ull"
+            return [f"lo_ = (lo_ & {keep}) | ({r} & 0xFFFFFFFFull);",
+                    f"hi_ = (hi_ & {keep}) | (({r} >> 32) & 0xFFFFFFFFull);",
+                    f"lo1_ = (lo1_ & {keep}) | ({h} & 0xFFFFFFFFull);",
+                    f"hi1_ = (hi1_ & {keep}) | (({h} >> 32) & 0xFFFFFFFFull);"]
+        if op in PMUL_OPS:
+            lines = ["qlo_ = openrac_ee_qof(lo_, lo1_);", "qhi_ = openrac_ee_qof(hi_, hi1_);",
+                     f"q_ = openrac_ee_pmul(OPENRAC_PMUL_{op.upper()}, openrac_ee_qof({R(rs)}, {self.H(rs)}), "
+                     f"openrac_ee_qof({R(rt)}, {self.H(rt)}), &qlo_, &qhi_);",
+                     "lo_ = qlo_.lo;", "lo1_ = qlo_.hi;", "hi_ = qhi_.lo;", "hi1_ = qhi_.hi;"]
+            if rd != 0 and not op.startswith("pdiv"):
+                lines += [f"r{rd} = q_.lo;", f"h{rd} = q_.hi;"]
+            return lines
         if op == "pmulth":
             # Eight signed halfword products: LO takes those of halfwords 0, 1, 4, 5, HI those of
             # 2, 3, 6, 7, a word each; rd the even ones (0, 2, 4, 6).
@@ -1064,6 +1106,10 @@ class Translator:
             if n in (20, 21, 22):
                 reg = {20: "r", 21: "i", 22: "q"}[n]
                 return self.W(ins.rt, S32(f"openrac_ee_bits({V}{reg})"))
+            if n in (16, 17, 18):
+                # STATUS, MAC, the clip flag (ee_ops.h): MAC and STATUS as this function's own
+                # vector operations left them (self.vu_flags).
+                return self.W(ins.rt, f"(openrac_u64){V}{ {16: 'status', 17: 'mac', 18: 'clip'}[n] }")
             raise AsmUnsupported(f"cfc2 of VU0 control register {n}")
         if op == "ctc2":
             n = ins.rd
@@ -1074,15 +1120,48 @@ class Translator:
             if n in (20, 21, 22):
                 reg = {20: "r", 21: "i", 22: "q"}[n]
                 return [f"{V}{reg} = openrac_ee_f({self.R(ins.rt)});"]
+            if n == 16:
+                return [f"{V}status = ({V}status & 0x3Fu) | ((openrac_u32){self.R(ins.rt)} & 0xFC0u);"]  # the sticky bits
+            if n == 17:
+                return []  # MAC is read only
+            if n == 18:
+                return [f"{V}clip = (openrac_u32){self.R(ins.rt)} & 0xFFFFFFu;"]
             if n in (27, 28, 31):
                 return []  # resets and microprogram starts: no microprograms run here
             raise AsmUnsupported(f"ctc2 to VU0 control register {n}")
         if op in ("vwaitq", "vnop"):
             return []
+        vi = lambda n: "0" if n & 15 == 0 else f"{V}vi[{n & 15}]"
+        if op in ("vlqi", "vlqd", "vsqi", "vsqd", "vilwr", "viswr"):
+            # Macro-mode loads and stores reach VU0's data memory (ee_ops.h), a quadword per vi.
+            # vlq*: ft from (fs); vsq*: fs to (ft); vilwr / viswr: vi ft from / to (fs). The
+            # increment comes after, the decrement before; both 16-bit, and vi0 stays 0.
+            ptr = fs if op in ("vlqi", "vlqd", "vilwr", "viswr") else ft
+            step = lambda d: [] if ptr & 15 == 0 else [f"{V}vi[{ptr & 15}] = ({V}vi[{ptr & 15}] {d} 1u) & 0xFFFFu;"]
+            lines = step("-") if op in ("vlqd", "vsqd") else []
+            lines.append(f"t_ = openrac_vu0_addr({vi(ptr)});")
+            for c in comps:
+                if op in ("vlqi", "vlqd") and ft != 0:
+                    lines.append(f"{vf(ft, c)} = openrac_ee_lwc1(t_ + {4 * c}u);")
+                elif op in ("vsqi", "vsqd"):
+                    lines.append(f"openrac_ee_swc1(t_ + {4 * c}u, {vf(fs, c)});")
+                elif op == "vilwr" and ft & 15 != 0:
+                    lines.append(f"{V}vi[{ft & 15}] = (openrac_u32)openrac_ee_lwu(t_ + {4 * c}u) & 0xFFFFu;")
+                elif op == "viswr":
+                    lines.append(f"openrac_ee_sw(t_ + {4 * c}u, {vi(ft)} & 0xFFFFu);")
+            if op.endswith("i"):
+                lines += step("+")
+            return lines
+        if op == "vclipw":
+            return [f"openrac_vu0_clip({V[:-2]}, {vf(fs, 0)}, {vf(fs, 1)}, {vf(fs, 2)}, {vf(ft, 3)});"]
 
-        def store(dst, values: dict[int, str]) -> list[str]:
+        def store(dst, values: dict[int, str], flags: bool = False) -> list[str]:
             # Every operand read before any field is written: dst may be an operand.
             lines = [f"v_[{c}] = {values[c]};" for c in values]
+            if flags and self.vu_flags:
+                # An FMAC operation: MAC from the fields it wrote (the others' flags are clear).
+                lines.append("m_ = " + " | ".join(f"openrac_vu0_mac(v_[{c}], {c})" for c in values) + ";")
+                lines.append(f"openrac_vu0_set_mac({V[:-2]}, m_);")
             for c in values:
                 if dst == "acc":
                     lines.append(f"{V}acc[{c}] = v_[{c}];")
@@ -1110,7 +1189,7 @@ class Translator:
                     vals[c] = f"{acc(c)} + {a} * {b}"
                 elif kind == "msub":
                     vals[c] = f"{acc(c)} - {a} * {b}"
-            return store(dst, vals)
+            return store(dst, vals, flags=kind not in ("max", "mini"))
         if op in ("vopmula", "vopmsub"):
             rot_s, rot_t = [1, 2, 0], [2, 0, 1]
             vals = {}
@@ -1119,7 +1198,7 @@ class Translator:
                     continue
                 prod = f"{vf(fs, rot_s[c])} * {vf(ft, rot_t[c])}"
                 vals[c] = prod if op == "vopmula" else f"{acc(c)} - {prod}"
-            return store("acc" if op == "vopmula" else fd, vals)
+            return store("acc" if op == "vopmula" else fd, vals, flags=True)
         if op in ("vmove", "vabs", "vmr32"):
             vals = {}
             for c in comps:
@@ -1140,12 +1219,15 @@ class Translator:
                 else:
                     vals[c] = f"openrac_ee_itof(openrac_ee_bits({vf(fs, c)}), {frac})"
             return store(ft, vals)
-        if op == "vdiv":
-            return [f"{V}q = openrac_ee_fdiv({vf(fs, bc)}, {vf(ft, ins.ftf)});"]
-        if op == "vsqrt":
-            return [f"{V}q = openrac_ee_sqrt({vf(ft, ins.ftf)});"]
-        if op == "vrsqrt":
-            return [f"{V}q = openrac_ee_rsqrt({vf(fs, bc)}, {vf(ft, ins.ftf)});"]
+        if op in ("vdiv", "vsqrt", "vrsqrt"):
+            s, t = ("0.0f" if op == "vsqrt" else vf(fs, bc)), vf(ft, ins.ftf)
+            flags = ([f"openrac_vu0_set_div({V[:-2]}, {('vdiv', 'vsqrt', 'vrsqrt').index(op)}, {s}, {t});"]
+                     if self.vu_flags else [])
+            if op == "vdiv":
+                return flags + [f"{V}q = openrac_ee_fdiv({s}, {t});"]
+            if op == "vsqrt":
+                return flags + [f"{V}q = openrac_ee_sqrt({t});"]
+            return flags + [f"{V}q = openrac_ee_rsqrt({s}, {t});"]
         if op == "vmtir":
             return [] if ft & 15 == 0 else [f"{V}vi[{ft & 15}] = openrac_ee_bits({vf(fs, bc)}) & 0xFFFFu;"]
         if op == "vmfir":
@@ -1190,7 +1272,8 @@ class Translator:
             decl.append("    openrac_f32 " + ", ".join(f"f{n} = 0.0f" for n in fprs) + ";")
         extras = [("openrac_u64", "lo_"), ("openrac_u64", "hi_"), ("openrac_u64", "lo1_"), ("openrac_u64", "hi1_"),
                   ("int", "c_"), ("int", "fcc_"), ("openrac_f32", "facc_"), ("openrac_u32", "t_"),
-                  ("openrac_u32", "sa_"), ("openrac_ee_q", "q_"), ("openrac_f32", "v_[4]")]
+                  ("openrac_u32", "sa_"), ("openrac_ee_q", "q_"), ("openrac_ee_q", "qlo_"), ("openrac_ee_q", "qhi_"),
+                  ("openrac_f32", "v_[4]"), ("openrac_u32", "m_")]
         for t, name in extras:
             bare = name.split("[")[0]
             if re.search(r"\b" + re.escape(bare) + r"\b", text):
@@ -1260,11 +1343,18 @@ def rw(i: asm.Insn) -> tuple[set, set, set, set]:
     elif op == "jalr":
         g_r.add(i.rs)
         g_w.add(i.rd)
-    elif op in ("mfhi", "mflo", "mfhi1", "mflo1", "mfsa", "pmfhi", "pmflo", "pmfhl.lw", "pmfhl.uw", "pmfhl.sh"):
+    elif op in ("mfhi", "mflo", "mfhi1", "mflo1", "mfsa", "pmfhi", "pmflo", "pmfhl.lw", "pmfhl.uw", "pmfhl.sh",
+                "pmfhl.slw", "pmfhl.lh"):
         g_w.add(i.rd)
-    elif op == "pmulth":
+    elif op == "pmulth" or op in PMUL_OPS:
         g_r |= {i.rs, i.rt}
-        g_w.add(i.rd)
+        if not op.startswith("pdiv"):
+            g_w.add(i.rd)
+    elif op == "pmthl":
+        g_r.add(i.rs)
+    elif op in COND_CALLS:
+        g_r.add(i.rs)
+        g_w.add(31)
     elif op in ("lb", "lbu", "lh", "lhu", "lw", "lwu", "ld", "lq"):
         g_r.add(i.rs)
         g_w.add(i.rt)
@@ -1498,13 +1588,15 @@ def _vu0_sync() -> str:
     save.append(asm_.format(f"{_vu0_word('q_to_vf1')}\\n\\t{_vu0_word('sqc2', 1)}", "&p_->scratch[0]"))
     save.append("p_->q = p_->scratch[0];")
     save.append(asm_.format(_vu0_word("lqc2", 1), "&p_->vf[1][0]"))
-    for n in list(range(1, 16)) + [21]:
+    flags = {16: "p_->status", 17: "p_->mac", 18: "p_->clip"}
+    for n in list(range(1, 19)) + [21]:
         save.append(f'__asm__ __volatile__("{_vu0_word("cfc2", n, rt=8)}\\n\\tmove %0, $8" : "=r"(v_) : : "$8");')
-        save.append(f"p_->vi[{n}] = v_ & 0xFFFFu;" if n < 16 else "p_->i = openrac_ee_f(v_);")
+        save.append(f"p_->vi[{n}] = v_ & 0xFFFFu;" if n < 16 else f"{flags[n]} = v_;" if n in flags
+                    else "p_->i = openrac_ee_f(v_);")
     save.append("p_->vi[0] = 0;")
     load = ["openrac_vu0_state *p_ = OPENRAC_VU0;", "openrac_u32 v_;"]
-    for n in list(range(1, 16)) + [21]:
-        load.append(f"v_ = {f'p_->vi[{n}]' if n < 16 else 'openrac_ee_bits(p_->i)'};")
+    for n in list(range(1, 16)) + [16, 18, 21]:  # MAC is read only; of STATUS, the sticky bits
+        load.append(f"v_ = {f'p_->vi[{n}]' if n < 16 else flags[n] if n in flags else 'openrac_ee_bits(p_->i)'};")
         load.append(f'__asm__ __volatile__("move $8, %0\\n\\t{_vu0_word("ctc2", n, rt=8)}" : : "r"(v_) : "$8");')
     load.append("p_->scratch[0] = p_->q;")
     load.append(asm_.format(f"{_vu0_word('lqc2', 1)}\\n\\t{_vu0_word('vf1_to_q')}\\n\\t{_vu0_word('waitq')}",

@@ -729,6 +729,9 @@ def main(argv: list[str] | None = None) -> int:
                   f"them are stubs. Build the decompilation, then run port/tools/hostgen/derived.py "
                   f"--game {args.game} --source <it>.", file=sys.stderr)
     root = out / "prep"
+    # The lock the units take to rewrite a prepared header (clangast.drop_superseded_declarations),
+    # left behind by a translation that was stopped.
+    shutil.rmtree(root / ".openrac-header.lock", ignore_errors=True)
     started = time.time()
     # The port's own C for hand-written assembly first; a decompilation's
     # candidate for the same function stands aside.
@@ -773,10 +776,18 @@ def main(argv: list[str] | None = None) -> int:
     # Stubs of the executable that every level program fills with a function of its own.
     program.level_hooks = set(cfg.get("level_hooks", []))
     with ProcessPoolExecutor(args.jobs, initializer=_init, initargs=(state,)) as ex:
-        for rel, part, probs, _fixes in ex.map(_index_one, units):
-            problems += [f"{rel}: {p}" for p in probs]
-            if part is not None:
-                problems += merge(program, part)
+        indexed = list(ex.map(_index_one, units))
+    # A unit read while another rewrote a header they share can fail to read, and its definitions
+    # would be missing from the program (the prototypes then said what a caller's declaration
+    # said, and the unit's own definition, read again by the lowering, contradicted them). The
+    # headers are settled now: such a unit is read once more, alone.
+    _init(state)
+    indexed = [_index_one(rel) if part is None else (rel, part, probs, fixes)
+               for rel, part, probs, fixes in indexed]
+    for rel, part, probs, _fixes in indexed:
+        problems += [f"{rel}: {p}" for p in probs]
+        if part is not None:
+            problems += merge(program, part)
     # C a game translates from the function's instructions instead (hostgen.json "from_assembly"):
     # matching C whose declaration leaves out what its callers pass in registers it forwards (a
     # wrapper that hands its second and third arguments on without naming them). Its definition
