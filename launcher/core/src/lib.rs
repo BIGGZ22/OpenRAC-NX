@@ -17,6 +17,8 @@
 //! - [`disc_choice`]: for developers with two discs of a game, which one is played.
 //! - [`differences`]: what the port does otherwise than the PS2 game, and the fixes a player switches back.
 //! - [`jobs`]: running an action as a child process and streaming its output.
+//! - [`appimage`]: the environment an AppImage hands over, and what the launcher takes back.
+//! - [`webkit`]: the webview's own environment, on the systems that need it changed.
 //! - [`overrides`]: a game's overrides packs (replacement textures and models): list, order, on/off.
 //! - [`library`]: all of the above, put together for the UI.
 //! - [`reports`]: a game's session logs and crash reports, the text and the .zip players send.
@@ -25,6 +27,7 @@
 
 pub mod actions;
 pub mod android;
+pub mod appimage;
 pub mod catalog;
 pub mod chd;
 pub mod config;
@@ -44,6 +47,7 @@ pub mod save_edit;
 pub mod saves;
 pub mod status;
 pub mod update;
+pub mod webkit;
 
 use std::path::{Path, PathBuf};
 
