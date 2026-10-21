@@ -567,15 +567,19 @@ pub fn list(dir: &Path, game: &str, version: &str) -> Result<Vec<PluginView>, St
                 value: entry.settings.get(&spec.key).and_then(|v| check_value(spec, v)).unwrap_or(spec.default.clone()),
             })
             .collect();
+        // By permanent id (hook_ids.rs): one mod may name a hook point by its name, another by its id.
         let shared_hooks = m
             .hooks
             .iter()
             .filter_map(|hook| {
+                let hid = crate::hook_ids::id(game, hook);
                 let with: Vec<String> = mods
                     .iter()
                     .zip(&manifests)
                     .filter(|(e, other)| {
-                        e.id != entry.id && e.enabled && other.as_ref().is_ok_and(|o| o.hooks.contains(hook))
+                        e.id != entry.id
+                            && e.enabled
+                            && other.as_ref().is_ok_and(|o| o.hooks.iter().any(|h| crate::hook_ids::id(game, h) == hid))
                     })
                     .map(|(e, other)| other.as_ref().map_or(e.id.clone(), |o| o.name.clone()))
                     .collect();
