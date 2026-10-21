@@ -21,9 +21,44 @@ use serde_json::{Map, Value};
 /// The mod interface this launcher's port has: `OPENRAC_MOD_API_MAJOR` and `_MINOR` of
 /// `sdk/include/openrac/openrac_mod.h`. Change them with it.
 pub const API_MAJOR: u32 = 1;
-pub const API_MINOR: u32 = 1;
+pub const API_MINOR: u32 = 2;
 /// The interface a script mod needs at least: 1.1, the first with scripts (MODS.md, section 11).
 pub const SCRIPT_API_MINOR: u32 = 1;
+
+/// The names a keybind setting's binds take (interface 1.2): `sdk/include/openrac/keys.h`'s table,
+/// keys by position as the web's `KeyboardEvent.code` names them, then the mouse's buttons and the
+/// wheel's directions. Change it with keys.h (a test checks they agree).
+#[rustfmt::skip]
+pub const BIND_NAMES: &[&str] = &[
+    "KeyA", "KeyB", "KeyC", "KeyD", "KeyE", "KeyF", "KeyG", "KeyH",
+    "KeyI", "KeyJ", "KeyK", "KeyL", "KeyM", "KeyN", "KeyO", "KeyP",
+    "KeyQ", "KeyR", "KeyS", "KeyT", "KeyU", "KeyV", "KeyW", "KeyX",
+    "KeyY", "KeyZ", "Digit1", "Digit2", "Digit3", "Digit4", "Digit5", "Digit6",
+    "Digit7", "Digit8", "Digit9", "Digit0", "Enter", "Escape", "Backspace", "Tab",
+    "Space", "Minus", "Equal", "BracketLeft", "BracketRight", "Backslash", "IntlHash", "Semicolon",
+    "Quote", "Backquote", "Comma", "Period", "Slash", "CapsLock", "F1", "F2",
+    "F3", "F4", "F5", "F6", "F7", "F8", "F9", "F10",
+    "F11", "F12", "PrintScreen", "ScrollLock", "Pause", "Insert", "Home", "PageUp",
+    "Delete", "End", "PageDown", "ArrowRight", "ArrowLeft", "ArrowDown", "ArrowUp", "NumLock",
+    "NumpadDivide", "NumpadMultiply", "NumpadSubtract", "NumpadAdd", "NumpadEnter", "Numpad1", "Numpad2", "Numpad3",
+    "Numpad4", "Numpad5", "Numpad6", "Numpad7", "Numpad8", "Numpad9", "Numpad0", "NumpadDecimal",
+    "IntlBackslash", "ContextMenu", "NumpadEqual", "ControlLeft", "ShiftLeft", "AltLeft", "MetaLeft", "ControlRight",
+    "ShiftRight", "AltRight", "MetaRight", "MouseLeft", "MouseRight", "MouseMiddle", "MouseBack", "MouseForward",
+    "WheelUp", "WheelDown", "WheelLeft", "WheelRight",
+];
+
+/// A keybind's value as the setting keeps it: its names comma-joined ("KeyW,ArrowUp"), or None
+/// when one is no name of [`BIND_NAMES`], one is there twice, or there are more than `most`.
+pub fn parse_binds(text: &str, most: usize) -> Option<String> {
+    let names: Vec<&str> = text.split([',', ' ']).filter(|n| !n.is_empty()).collect();
+    if names.len() > most || names.iter().any(|n| !BIND_NAMES.contains(n)) {
+        return None;
+    }
+    if names.iter().enumerate().any(|(i, n)| names[..i].contains(n)) {
+        return None;
+    }
+    Some(names.join(","))
+}
 
 /// A mod's manifest, at the root of its folder (the overrides packs' name; they are format 1).
 pub const MANIFEST: &str = "openrac-mod.json";
@@ -89,6 +124,30 @@ pub struct SettingSpec {
     pub choices: Vec<Choice>,
     #[serde(default, alias = "max_length", skip_serializing_if = "Option::is_none")]
     pub max_length: Option<usize>,
+    /// A keybind's most binds: 1 or 2 (2 when absent).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub binds: Option<u32>,
+    /// A keybind's group: two keybinds of one group on the same input conflict; of two groups
+    /// ("play", "menu") they may share it.
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub group: String,
+}
+
+impl SettingSpec {
+    /// A keybind's most binds.
+    pub fn most_binds(&self) -> usize {
+        self.binds.unwrap_or(2) as usize
+    }
+}
+
+/// A set of keybind values offered as one button (the manifest's `presets`): the keybinds it does
+/// not name go back to their defaults.
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub struct Preset {
+    pub id: String,
+    pub name: String,
+    #[serde(default)]
+    pub values: Map<String, Value>,
 }
 
 #[derive(Debug, Clone, Deserialize, PartialEq, Default)]
@@ -147,6 +206,9 @@ pub struct Manifest {
     pub hooks: Vec<String>,
     #[serde(default)]
     pub settings: Vec<SettingSpec>,
+    /// Keybind presets (interface 1.2).
+    #[serde(default)]
+    pub presets: Vec<Preset>,
     #[serde(default)]
     pub requires: Vec<Requirement>,
     #[serde(default)]
@@ -288,13 +350,30 @@ impl Manifest {
                 return Err(format!("setting {:?}: the key is not [a-z0-9_]+, or is there twice", s.key));
             }
             match s.kind.as_str() {
-                "bool" | "int" | "float" | "string" => {}
+                "bool" | "int" | "float" | "string" | "keybind" => {}
                 "choice" if s.choices.len() >= 2 => {}
                 "choice" => return Err(format!("setting {:?}: a choice needs two or more choices", s.key)),
                 other => return Err(format!("setting {:?}: no type {other:?}", s.key)),
             }
+            if s.binds.is_some() && (s.kind != "keybind" || !matches!(s.binds, Some(1 | 2))) {
+                return Err(format!("setting {:?}: \"binds\" is 1 or 2, for a keybind", s.key));
+            }
             if check_value(s, &s.default).is_none() {
                 return Err(format!("setting {:?}: its default is not one of its values", s.key));
+            }
+        }
+        let mut presets = BTreeSet::new();
+        for p in &self.presets {
+            if !valid_key(&p.id) || p.name.trim().is_empty() || !presets.insert(p.id.as_str()) {
+                return Err(format!("preset {:?}: its id is not [a-z0-9_]+, is there twice, or it has no name", p.id));
+            }
+            for (key, value) in &p.values {
+                let Some(spec) = self.settings.iter().find(|s| s.key == *key && s.kind == "keybind") else {
+                    return Err(format!("preset {:?}: {key} is not a keybind setting of the mod", p.id));
+                };
+                if check_value(spec, value).is_none() {
+                    return Err(format!("preset {:?}: {value} is not a value of {key}", p.id));
+                }
             }
         }
         for r in &self.requires {
@@ -350,6 +429,7 @@ pub fn check_value(spec: &SettingSpec, value: &Value) -> Option<Value> {
             .as_str()
             .filter(|v| spec.max_length.is_none_or(|n| v.chars().count() <= n))
             .map(|v| Value::String(v.into())),
+        "keybind" => value.as_str().and_then(|v| parse_binds(v, spec.most_binds())).map(Value::String),
         _ => None,
     }
 }
@@ -480,6 +560,31 @@ pub struct SettingView {
     #[serde(flatten)]
     pub spec: SettingSpec,
     pub value: Value,
+    /// A keybind's: the names of the mod's other keybinds of its group bound to one of its inputs.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub conflicts: Vec<String>,
+}
+
+/// Fills each keybind's `conflicts`: the other keybinds of its group that share one of its binds.
+pub fn mark_conflicts(settings: &mut [SettingView]) {
+    let binds: Vec<Vec<String>> = settings
+        .iter()
+        .map(|s| match (s.spec.kind.as_str(), s.value.as_str()) {
+            ("keybind", Some(v)) => v.split(',').filter(|n| !n.is_empty()).map(String::from).collect(),
+            _ => Vec::new(),
+        })
+        .collect();
+    for i in 0..settings.len() {
+        let with: Vec<String> = (0..settings.len())
+            .filter(|&j| {
+                j != i
+                    && settings[j].spec.group == settings[i].spec.group
+                    && binds[i].iter().any(|b| binds[j].contains(b))
+            })
+            .map(|j| settings[j].spec.name.clone())
+            .collect();
+        settings[i].conflicts = with;
+    }
 }
 
 /// A hook point this mod shares with other mods that are on.
@@ -509,6 +614,9 @@ pub struct PluginView {
     /// Off, and could not be switched on as things are: why (also for a mod that is off).
     pub blocked: String,
     pub settings: Vec<SettingView>,
+    /// Keybind presets the mod offers (its manifest's).
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub presets: Vec<Preset>,
     pub hooks: Vec<String>,
     pub shared_hooks: Vec<SharedHook>,
     /// Whether it carries code (a library) or only data.
@@ -559,14 +667,16 @@ pub fn list(dir: &Path, game: &str, version: &str) -> Result<Vec<PluginView>, St
                 }
             }
         }
-        let settings = m
+        let mut settings: Vec<SettingView> = m
             .settings
             .iter()
             .map(|spec| SettingView {
                 spec: spec.clone(),
                 value: entry.settings.get(&spec.key).and_then(|v| check_value(spec, v)).unwrap_or(spec.default.clone()),
+                conflicts: Vec::new(),
             })
             .collect();
+        mark_conflicts(&mut settings);
         // By permanent id (hook_ids.rs): one mod may name a hook point by its name, another by its id.
         let shared_hooks = m
             .hooks
@@ -599,6 +709,7 @@ pub fn list(dir: &Path, game: &str, version: &str) -> Result<Vec<PluginView>, St
             reason,
             blocked,
             settings,
+            presets: m.presets.clone(),
             hooks: m.hooks.clone(),
             shared_hooks,
             native: !m.plugin.is_empty(),
@@ -1201,6 +1312,72 @@ mod tests {
         let flag = spec(json!({"key": "b", "name": "B", "type": "bool", "default": false}));
         assert_eq!(check_value(&flag, &json!(true)), Some(json!(true)));
         assert_eq!(check_value(&flag, &json!(1)), None);
+    }
+
+    #[test]
+    fn keybind_values() {
+        let spec = |v: Value| -> SettingSpec { serde_json::from_value(v).unwrap() };
+        let two = spec(json!({"key": "jump", "name": "Jump", "type": "keybind", "default": "Space"}));
+        assert_eq!(check_value(&two, &json!("KeyW, ArrowUp")), Some(json!("KeyW,ArrowUp")));
+        assert_eq!(check_value(&two, &json!("")), Some(json!("")));
+        assert_eq!(check_value(&two, &json!("MouseRight,WheelDown")), Some(json!("MouseRight,WheelDown")));
+        assert_eq!(check_value(&two, &json!("KeyW,KeyW")), None);
+        assert_eq!(check_value(&two, &json!("KeyW,KeyA,KeyS")), None);
+        assert_eq!(check_value(&two, &json!("W")), None);
+        assert_eq!(check_value(&two, &json!(4)), None);
+        let one = spec(json!({"key": "pause", "name": "Pause", "type": "keybind", "default": "Escape", "binds": 1}));
+        assert_eq!(check_value(&one, &json!("KeyP")), Some(json!("KeyP")));
+        assert_eq!(check_value(&one, &json!("KeyP,KeyO")), None);
+    }
+
+    #[test]
+    fn bind_names_are_keys_h() {
+        let header =
+            std::fs::read_to_string(Path::new(env!("CARGO_MANIFEST_DIR")).join("../../sdk/include/openrac/keys.h"))
+                .unwrap();
+        let names: Vec<&str> = header
+            .split("{\"")
+            .skip(1)
+            .filter_map(|rest| rest.split_once("\", ").map(|(name, _)| name))
+            .filter(|n| n.chars().all(|c| c.is_ascii_alphanumeric()))
+            .collect();
+        assert_eq!(names, BIND_NAMES);
+    }
+
+    #[test]
+    fn keybind_manifests_presets_and_conflicts() {
+        let with = |settings: Value, presets: Value| -> Result<(), String> {
+            let m: Manifest =
+                serde_json::from_value(manifest("kbm", json!({"settings": settings, "presets": presets}))).unwrap();
+            m.validate()
+        };
+        let settings = json!([
+            {"key": "jump", "name": "Jump", "type": "keybind", "default": "Space", "group": "play"},
+            {"key": "fire", "name": "Fire", "type": "keybind", "default": "MouseLeft", "group": "play"},
+            {"key": "back", "name": "Back", "type": "keybind", "default": "Space", "group": "menu", "binds": 1},
+        ]);
+        let arrows = json!([{"id": "arrows", "name": "Arrows", "values": {"jump": "Numpad0"}}]);
+        assert_eq!(with(settings.clone(), arrows), Ok(()));
+        assert!(with(settings.clone(), json!([{"id": "x", "name": "X", "values": {"nothing": "KeyA"}}])).is_err());
+        assert!(with(settings.clone(), json!([{"id": "x", "name": "X", "values": {"jump": "Nope"}}])).is_err());
+        assert!(with(settings.clone(), json!([{"id": "x", "name": "X", "values": {"back": "KeyA,KeyB"}}])).is_err());
+        assert!(with(settings.clone(), json!([{"id": "x", "name": "X"}, {"id": "x", "name": "Y"}])).is_err());
+        assert!(with(json!([{"key": "j", "name": "J", "type": "keybind", "default": "Spacebar"}]), json!([])).is_err());
+        assert!(with(json!([{"key": "j", "name": "J", "type": "keybind", "default": "Space", "binds": 3}]), json!([]))
+            .is_err());
+        assert!(with(json!([{"key": "n", "name": "N", "type": "int", "default": 1, "binds": 1}]), json!([])).is_err());
+
+        // Jump and Fire share KeyQ (one group): both say so; Back has Space with Jump, in another group.
+        let specs: Vec<SettingSpec> = serde_json::from_value(settings).unwrap();
+        let mut views: Vec<SettingView> = specs
+            .into_iter()
+            .zip(["Space,KeyQ", "KeyQ", "Space"])
+            .map(|(spec, v)| SettingView { spec, value: json!(v), conflicts: Vec::new() })
+            .collect();
+        mark_conflicts(&mut views);
+        assert_eq!(views[0].conflicts, vec!["Fire".to_string()]);
+        assert_eq!(views[1].conflicts, vec!["Jump".to_string()]);
+        assert!(views[2].conflicts.is_empty());
     }
 
     #[test]
