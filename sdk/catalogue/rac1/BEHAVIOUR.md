@@ -29,9 +29,9 @@ the moby's class number: **`s16 oclass` at +0xa6** of the moby
 | candidate C (nonmatching/) | 6 |
 | C in the decompilation (src/) | 639 |
 | with C in the port's build | 645 |
-| hook points today | 0 |
-| needing only a `hook` row in [libraries.tsv](../../../port/game/rac1-pal/libraries.tsv) (behaviour.json's `hook.row` is the row) | 644 |
-| with a row of the port's own that a hook would have to share (`wrap`) | 1 |
+| hook points today | 637 |
+| needing only a `hook` row in [libraries.tsv](../../../port/game/rac1-pal/libraries.tsv) (behaviour.json's `hook.row` is the row) | 8 |
+| with a row of the port's own that a hook would have to share (`wrap`) | 0 |
 | with a signature a hook cannot take | 0 |
 | without C in the port (stubs) | 0 |
 
@@ -72,9 +72,646 @@ NTSC decomp's symbol for the function, under the same name.
 | `Hero_SetPlanarVelocity` | `func_L00_00212790` | `FUN_L00_002120d8` | `void(f32)` | yes |
 | `Hero_TurnToHeading` | `func_L00_002124E8` | `FUN_L00_00211e30` | `void(i32,f32,f32,f32)` | yes |
 | `Hero_UpdateMotionInput` | `func_L00_00211D28` | `FUN_L00_00211670` | `void()` | yes |
+| `Moby_AgnoggShipFront_Update` | `func_L01_002FC140` | `FUN_L01_002fad68` | `` | no |
+| `Moby_AirshipPart1181_Update` | `func_L09_00305710` | `FUN_L09_00304360` | `` | no |
+| `Moby_AirshipPart_Update` | `func_L09_002C3858` | `FUN_L09_002c26c8` | `` | no |
+| `Moby_AlienQueen_Update` | `func_L06_002FAE58` | `FUN_L06_002f9a28` | `` | no |
+| `Moby_AlienSnapper_Update` | `func_L06_002F91A8` | `FUN_L06_002f7d78` | `` | no |
+| `Moby_Ammocrate224_Update` | `func_L13_002E3010` | `FUN_L13_002e1cc8` | `` | no |
+| `Moby_Ammocrate_Update` | `func_L11_00310BF0` | `FUN_L11_0030f728` | `` | no |
+| `Moby_Amoeboid_Update` | `func_L05_002DBF10` | `FUN_L05_002dac80` | `` | no |
+| `Moby_ArmedTransport_Update` | `func_L16_002E3740` | `FUN_L16_002e22d8` | `` | no |
+| `Moby_Asteroid212_Update` | `func_L13_002E2980` | `FUN_L13_002e1638` | `` | no |
+| `Moby_Asteroid_Update` | `func_L09_002ECC50` | `FUN_L09_002eb970` | `` | no |
+| `Moby_BackgroundShip1_Update` | `func_L02_002ED8F0` | `FUN_L02_002ec4b8` | `` | no |
+| `Moby_BackgroundShip2_Update` | `func_L02_002EE250` | `FUN_L02_002ece18` | `` | no |
+| `Moby_Barrier_Update` | `func_L09_00309688` | `FUN_L09_003082d8` | `` | no |
+| `Moby_BataliaDeserter_Update` | `func_L08_00306730` | `FUN_L08_00305270` | `` | no |
+| `Moby_Beehive_Update` | `func_L01_00303590` | `FUN_L01_003021b8` | `` | no |
+| `Moby_BigAl_Update` | `func_L03_002DC920` | `FUN_L03_002db558` | `` | no |
+| `Moby_BigAxebot_Update` | `func_L04_002BB7B0` | `FUN_L04_002ba520` | `` | no |
+| `Moby_Birdbot_Update` | `func_L01_002E7FC8` | `FUN_L01_002e6bf0` | `` | no |
+| `Moby_BlargBombthrower_Update` | `func_L08_002DBF68` | `FUN_L08_002dabf0` | `` | no |
+| `Moby_BlargCommander_Update` | `func_L12_00309CF8` | `FUN_L12_00308918` | `` | no |
+| `Moby_BlargEliteCommando_Update` | `func_L16_002D40B8` | `FUN_L16_002d2cf0` | `` | no |
+| `Moby_BlargGun_Update` | `func_L05_00319C08` | `FUN_L05_003186f8` | `` | no |
+| `Moby_BlargGunner_Update` | `func_L13_002B5E30` | `FUN_L13_002b4c80` | `` | no |
+| `Moby_BlargHeavyInterceptor1417_Update` | `func_L14_00308368` | `FUN_L14_00306ee0` | `` | no |
+| `Moby_BlargHeavyInterceptor_Update` | `func_L14_002AD858` | `FUN_L14_002ac618` | `` | no |
+| `Moby_BlargHelicopter326_Update` | `func_L12_002EB2E8` | `FUN_L12_002e9f68` | `` | no |
+| `Moby_BlargHelicopter_Update` | `func_L03_002CDDC8` | `FUN_L03_002cca00` | `` | no |
+| `Moby_BlargParatrooper_Update` | `func_L08_00302618` | `FUN_L08_00301158` | `` | no |
+| `Moby_BlargShip1319_Update` | `func_L11_0031ACA8` | `FUN_L11_00319838` | `` | no |
+| `Moby_BlargShip1805_Update` | `func_L13_0030E280` | `FUN_L13_0030cdb8` | `` | no |
+| `Moby_BlargShip1843_Update` | `func_L17_002F5C18` | `FUN_L17_002f40d8` | `` | no |
+| `Moby_BlargShip_Update` | `func_L10_002E5E48` | `FUN_L10_002e4a88` | `` | no |
+| `Moby_BlargSpaceCommando1262_Update` | `func_L13_00309330` | `FUN_L13_00307e98` | `` | no |
+| `Moby_BlargSpaceCommando_Update` | `func_L06_002FF000` | `FUN_L06_002fdbd0` | `` | no |
+| `Moby_BlargSpaceFighter111_Update` | `func_L13_002C56B0` | `FUN_L13_002c4428` | `` | no |
+| `Moby_BlargSpaceFighter_Update` | `func_L13_002C3840` | `FUN_L13_002c25b8` | `` | no |
+| `Moby_BlargTrooper294_Update` | `func_L12_002E8640` | `FUN_L12_002e72c0` | `` | no |
+| `Moby_BlargTrooper_Update` | `func_L04_002C5BD0` | `FUN_L04_002c4850` | `` | no |
+| `Moby_BlargTurret_Update` | `func_L13_002B5368` | `FUN_L13_002b41b8` | `` | no |
+| `Moby_BlockCave_Update` | `func_L10_002DEA10` | `FUN_L10_002dd650` | `` | no |
+| `Moby_Bob_Update` | `func_L11_002D18D0` | `FUN_L11_002d0710` | `` | no |
+| `Moby_BoltCrank_Update` | `func_L01_002E1FE0` | `FUN_L01_002e0c68` | `` | no |
+| `Moby_BoltCrate_Update` | `func_L00_002D06C8` | `FUN_L00_002cf218` | `` | no |
+| `Moby_BoltGrabber_Update` | `func_L15_002EBB38` | `FUN_L15_002ea748` | `` | no |
+| `Moby_BoltThief1401_Update` | `func_L16_002E4C08` | `FUN_L16_002e37a0` | `` | no |
+| `Moby_BoltThief923_Update` | `func_L14_002FF728` | `FUN_L14_002fe2a0` | `` | no |
+| `Moby_BoltThief_Update` | `func_L08_002E4168` | `FUN_L08_002e2df0` | `` | no |
+| `Moby_Bolt_Update` | `func_L00_002A7078` | `FUN_L00_002a5dd8` | `` | no |
+| `Moby_BoltcratePossiblyForMetalDetector_Update` | `func_L07_0030C3E0` | `FUN_L07_0030b000` | `` | no |
+| `Moby_Bomb248_Update` | `func_L08_002D36F8` | `FUN_L08_002d23f0` | `` | no |
+| `Moby_Bomb281_Update` | `func_L16_002C7218` | `FUN_L16_002c5eb0` | `` | no |
+| `Moby_Bomb425_Update` | `func_L08_002DDD20` | `FUN_L08_002dc9a8` | `` | no |
+| `Moby_Bomb545_Update` | `func_L03_002C5AE0` | `FUN_L03_002c4718` | `` | no |
+| `Moby_Bomb882_Update` | `func_L07_0030CFA8` | `FUN_L07_0030bbc8` | `` | no |
+| `Moby_Bomb938_Update` | `func_L10_002D9988` | `FUN_L10_002d85c8` | `` | no |
+| `Moby_BombGlove_Update` | `func_L00_002C39D0` | `FUN_L00_002c26c8` | `` | no |
+| `Moby_Bomb_Update` | `func_L00_002C9DC8` | `FUN_L00_002c89e8` | `` | no |
+| `Moby_BomberJet_Update` | `func_L01_002F8B00` | `FUN_L01_002f7728` | `` | no |
+| `Moby_BomberTank_Update` | `func_L08_002D55E0` | `FUN_L08_002d42d8` | `` | no |
+| `Moby_Bombomatic_Update` | `func_L07_0030E8B8` | `FUN_L07_0030d4d8` | `` | no |
+| `Moby_BombthrowerGrass939_Update` | `func_L10_002D9FC0` | `FUN_L10_002d8c00` | `` | no |
+| `Moby_BombthrowerGrass_Update` | `func_L00_002E5158` | `FUN_L00_002e3ca8` | `` | no |
+| `Moby_BotDoorLock_Update` | `func_L06_00309170` | `FUN_L06_00307d30` | `` | no |
+| `Moby_Box_Update` | `func_L05_0030D3F0` | `FUN_L05_0030bf98` | `` | no |
+| `Moby_BridgeHalf_Update` | `func_L01_002FCC80` | `FUN_L01_002fb8a8` | `` | no |
+| `Moby_BridgePiece1_Update` | `func_L01_002FB158` | `FUN_L01_002f9d80` | `` | no |
+| `Moby_Bridge_Update` | `func_L07_0031C2B0` | `FUN_L07_0031aee0` | `` | no |
+| `Moby_Bulldozer_Update` | `func_L02_002DDE48` | `FUN_L02_002dca10` | `` | no |
+| `Moby_Button1416_Update` | `func_L14_00308000` | `FUN_L14_00306b78` | `` | no |
+| `Moby_Button_Update` | `func_L10_002DA678` | `FUN_L10_002d92b8` | `` | no |
+| `Moby_CameraObject_Update` | `func_L00_002A60D8` | `FUN_L00_002a4e48` | `` | no |
+| `Moby_CaveDoor_Update` | `func_L01_002F5720` | `FUN_L01_002f4348` | `` | no |
+| `Moby_Chomper_Update` | `func_L16_002E7270` | `FUN_L16_002e5e08` | `` | no |
+| `Moby_CircularSawEnemy_Update` | `func_L04_002C35F0` | `FUN_L04_002c2270` | `` | no |
+| `Moby_ClankCutsceneTrigger_Update` | `func_L00_002DB278` | `FUN_L00_002d9dc8` | `` | no |
+| `Moby_Class1000_Update` | `func_L09_00301C38` | `FUN_L09_00300888` | `` | no |
+| `Moby_Class1009_Update` | `func_L11_00309DA0` | `FUN_L11_003089d0` | `` | no |
+| `Moby_Class1013_Update` | `func_L07_0030E370` | `FUN_L07_0030cf90` | `` | no |
+| `Moby_Class1017_Update` | `func_L11_0030A468` | `FUN_L11_00309098` | `` | no |
+| `Moby_Class1021_Update` | `func_L06_002F6330` | `FUN_L06_002f4f00` | `` | no |
+| `Moby_Class1028_Update` | `func_L06_002F69D0` | `FUN_L06_002f55a0` | `` | no |
+| `Moby_Class1035_Update` | `func_L06_002F78A0` | `FUN_L06_002f6470` | `` | no |
+| `Moby_Class1039_Update` | `func_L06_002F8D60` | `FUN_L06_002f7930` | `` | no |
+| `Moby_Class1046_Update` | `func_L07_0030F5D8` | `FUN_L07_0030e1f8` | `` | no |
+| `Moby_Class1047_Update` | `func_L10_002DB278` | `FUN_L10_002d9eb8` | `` | no |
+| `Moby_Class1049_Update` | `func_L07_0030F838` | `FUN_L07_0030e458` | `` | no |
+| `Moby_Class1054_Update` | `func_L06_002FD3E0` | `FUN_L06_002fbfb0` | `` | no |
+| `Moby_Class1061_Update` | `func_L06_002FDA70` | `FUN_L06_002fc640` | `` | no |
+| `Moby_Class1062_Update` | `func_L06_002FE4B8` | `FUN_L06_002fd088` | `` | no |
+| `Moby_Class1066_Update` | `func_L06_002FEE60` | `FUN_L06_002fda30` | `` | no |
+| `Moby_Class1067_Update` | `func_L10_002DB688` | `FUN_L10_002da2c8` | `` | no |
+| `Moby_Class1069_Update` | `func_L07_003126A8` | `FUN_L07_003112c8` | `` | no |
+| `Moby_Class1080_Update` | `func_L07_00312FA8` | `FUN_L07_00311bc8` | `` | no |
+| `Moby_Class1083_Update` | `func_L06_003010E0` | `FUN_L06_002ffcb0` | `` | no |
+| `Moby_Class1085_Update` | `func_L06_00301FE8` | `FUN_L06_00300b90` | `` | no |
+| `Moby_Class1090_Update` | `func_L10_002DE798` | `FUN_L10_002dd3d8` | `` | no |
+| `Moby_Class1091_Update` | `func_L06_00302248` | `FUN_L06_00300df0` | `` | no |
+| `Moby_Class1108_Update` | `func_L06_00302FE8` | `FUN_L06_00301b90` | `` | no |
+| `Moby_Class1113_Update` | `func_L07_0031B318` | `FUN_L07_00319f48` | `` | no |
+| `Moby_Class1123_Update` | `func_L06_00305E38` | `FUN_L06_003049f8` | `` | no |
+| `Moby_Class1128_Update` | `func_L07_0031BDB8` | `FUN_L07_0031a9e8` | `` | no |
+| `Moby_Class112_Update` | `func_L00_002ADD78` | `FUN_L00_002acad8` | `` | no |
+| `Moby_Class1133_Update` | `func_L07_0031C7C0` | `FUN_L07_0031b3f0` | `` | no |
+| `Moby_Class1138_Update` | `func_L00_002E0AE8` | `FUN_0023a2c0` | `` | no |
+| `Moby_Class1142_Update` | `func_L07_0031E6B0` | `FUN_L07_0031d2e0` | `` | no |
+| `Moby_Class1156_Update` | `func_L11_0030DBF8` | `FUN_L11_0030c788` | `` | no |
+| `Moby_Class1157_Update` | `func_L11_0030EC70` | `FUN_L11_0030d800` | `` | no |
+| `Moby_Class1158_Update` | `func_L11_0030F4F8` | `FUN_L11_0030e088` | `` | no |
+| `Moby_Class1159_Update` | `func_L11_0030FE40` | `FUN_L11_0030e978` | `` | no |
+| `Moby_Class1180_Update` | `func_L11_00310770` | `FUN_L11_0030f2a8` | `` | no |
+| `Moby_Class1193_Update` | `func_L14_00302288` | `FUN_L14_00300e00` | `` | no |
+| `Moby_Class1199_Update` | `func_L10_002E1568` | `FUN_L10_002e01a8` | `` | no |
+| `Moby_Class1206_Update` | `func_L09_00306DD8` | `FUN_L09_00305a28` | `` | no |
+| `Moby_Class1219_Update` | `func_L11_003114F0` | `FUN_L11_00310028` | `` | no |
+| `Moby_Class121_Update` | `func_L00_002AEDD0` | `FUN_L00_002adb30` | `` | no |
+| `Moby_Class1221_Update` | `func_L03_002DF738` | `FUN_L03_002de370` | `` | no |
+| `Moby_Class1224_Update` | `func_L14_00302A58` | `FUN_L14_003015d0` | `` | no |
+| `Moby_Class1225_Update` | `func_L01_0030B070` | `FUN_L01_00309c98` | `` | no |
+| `Moby_Class122_Update` | `func_L00_002B08A0` | `FUN_L00_002af5b8` | `` | no |
+| `Moby_Class1238_Update` | `func_L13_00307798` | `FUN_L13_00306300` | `` | no |
+| `Moby_Class1240_Update` | `func_L10_002E6FA0` | `FUN_L10_002e5be0` | `` | no |
+| `Moby_Class1248_Update` | `func_L11_00317790` | `FUN_L11_00316320` | `` | no |
+| `Moby_Class1258_Update` | `func_L09_00309118` | `FUN_L09_00307d68` | `` | no |
+| `Moby_Class1259_Update` | `func_L12_00304310` | `FUN_L12_00302f30` | `` | no |
+| `Moby_Class1263_Update` | `func_L13_0030B340` | `FUN_L13_00309e88` | `` | no |
+| `Moby_Class1265_Update` | `func_L11_00319660` | `FUN_L11_003181f0` | `` | no |
+| `Moby_Class1270_Update` | `func_L13_0030BB90` | `FUN_L13_0030a6d8` | `` | no |
+| `Moby_Class1271_Update` | `func_L13_0030C408` | `FUN_L13_0030af50` | `` | no |
+| `Moby_Class127_Update` | `func_L13_002C9208` | `FUN_L13_002c7f38` | `` | no |
+| `Moby_Class1292_Update` | `func_L08_00308758` | `FUN_L08_00307298` | `` | no |
+| `Moby_Class1293_Update` | `func_L09_0030A560` | `FUN_L09_003091b0` | `` | no |
+| `Moby_Class1324_Update` | `func_L02_002EFCC8` | `FUN_L02_002ee890` | `` | no |
+| `Moby_Class1331_Update` | `func_L14_00304E68` | `FUN_L14_003039e0` | `` | no |
+| `Moby_Class1341_Update` | `func_L01_0030C090` | `FUN_L01_0030acb8` | `` | no |
+| `Moby_Class1342_Update` | `func_L03_002E08E8` | `FUN_L03_002df520` | `` | no |
+| `Moby_Class1343_Update` | `func_L04_002E57F8` | `FUN_L04_002e4418` | `` | no |
+| `Moby_Class1344_Update` | `func_L10_002E9978` | `FUN_L10_002e85b8` | `` | no |
+| `Moby_Class1345_Update` | `func_L12_00309590` | `FUN_L12_003081b0` | `` | no |
+| `Moby_Class1347_Update` | `func_L05_0031D450` | `FUN_L05_0031bf40` | `` | no |
+| `Moby_Class1348_Update` | `func_L06_003097F0` | `FUN_L06_003083b0` | `` | no |
+| `Moby_Class1349_Update` | `func_L08_00308A00` | `FUN_L08_00307540` | `` | no |
+| `Moby_Class1350_Update` | `func_L11_0031BEF0` | `FUN_L11_0031aa80` | `` | no |
+| `Moby_Class1352_Update` | `func_L14_00306890` | `FUN_L14_00305408` | `` | no |
+| `Moby_Class1353_Update` | `func_L13_0030CAE0` | `FUN_L13_0030b628` | `` | no |
+| `Moby_Class1368_Update` | `func_L17_002EA8F8` | `FUN_L17_002e8e08` | `` | no |
+| `Moby_Class1378_Update` | `func_L10_002EA3E8` | `FUN_L10_002e9028` | `` | no |
+| `Moby_Class1381_Update` | `func_L18_002F2AE0` | `FUN_L18_002f16f0` | `` | no |
+| `Moby_Class1387_Update` | `func_L16_002E4B50` | `FUN_L16_002e36e8` | `` | no |
+| `Moby_Class1392_Update` | `func_L18_002F3268` | `FUN_L18_002f1e68` | `` | no |
+| `Moby_Class1394_Update` | `func_L15_002EBFC8` | `FUN_L15_002eabd8` | `` | no |
+| `Moby_Class1395_Update` | `func_L14_003071B0` | `FUN_L14_00305d28` | `` | no |
+| `Moby_Class1397_Update` | `func_L14_00307660` | `FUN_L14_003061d8` | `` | no |
+| `Moby_Class1400_Update` | `func_L08_003091B0` | `FUN_L08_00307cf0` | `` | no |
+| `Moby_Class1402_Update` | `func_L18_002F3710` | `FUN_L18_002f2310` | `` | no |
+| `Moby_Class1403_Update` | `func_L13_0030D028` | `FUN_L13_0030bb70` | `` | no |
+| `Moby_Class1404_Update` | `func_L12_0030A7A8` | `FUN_L12_003093c8` | `` | no |
+| `Moby_Class1405_Update` | `func_L15_002EC490` | `FUN_L15_002eb0a0` | `` | no |
+| `Moby_Class1413_Update` | `func_L00_002E1E38` | `FUN_L00_002e0988` | `` | no |
+| `Moby_Class1418_Update` | `func_L14_00308F08` | `FUN_L14_00307a80` | `` | no |
+| `Moby_Class1419_Update` | `func_L15_002EC8B0` | `FUN_L15_002eb4c0` | `` | no |
+| `Moby_Class1425_Update` | `func_L15_002ECD18` | `FUN_L15_002eb928` | `` | no |
+| `Moby_Class1427_Update` | `func_L15_0029FCB0` | `FUN_L15_0029ead0` | `` | no |
+| `Moby_Class1432_Update` | `func_L18_002F8F10` | `FUN_L18_002f7ab0` | `` | no |
+| `Moby_Class1469_Update` | `func_L15_002EE7E8` | `FUN_L15_002ed398` | `` | no |
+| `Moby_Class1470_Update` | `func_L17_002F4210` | `FUN_L17_002f26d0` | `` | no |
+| `Moby_Class1471_Update` | `func_L00_002E32A0` | `FUN_L00_002e1df0` | `` | no |
+| `Moby_Class1479_Update` | `func_L02_002F0458` | `FUN_L02_002ef020` | `` | no |
+| `Moby_Class148_Update` | `func_L15_002A8AA8` | `FUN_L15_002a7880` | `` | no |
+| `Moby_Class1504_Update` | `func_L01_0030C9F0` | `FUN_L01_0030b618` | `` | no |
+| `Moby_Class1510_Update` | `func_L01_0030CDF0` | `FUN_L01_0030ba18` | `` | no |
+| `Moby_Class1512_Update` | `func_L06_0030A0A8` | `FUN_L06_00308c68` | `` | no |
+| `Moby_Class1516_Update` | `func_L04_002E6558` | `FUN_L04_002e5178` | `` | no |
+| `Moby_Class1523_Update` | `func_L15_0029FF90` | `FUN_L15_0029edb0` | `` | no |
+| `Moby_Class1524_Update` | `func_L11_0031BF78` | `FUN_L11_0031ab08` | `` | no |
+| `Moby_Class152_Update` | `func_L08_002B94B0` | `FUN_L08_002b82a0` | `` | no |
+| `Moby_Class1544_Update` | `func_L10_002EB5B0` | `FUN_L10_002ea1f0` | `` | no |
+| `Moby_Class1545_Update` | `func_L00_002E4CB0` | `FUN_L00_002e3800` | `` | no |
+| `Moby_Class1546_Update` | `func_L01_0030D568` | `FUN_L01_0030c190` | `` | no |
+| `Moby_Class1548_Update` | `func_L03_002E1598` | `FUN_L03_002e01d0` | `` | no |
+| `Moby_Class1549_Update` | `func_L04_002E6780` | `FUN_L04_002e53a0` | `` | no |
+| `Moby_Class154_Update` | `func_L15_002AB4A8` | `FUN_L15_002aa280` | `` | no |
+| `Moby_Class1550_Update` | `func_L05_0031EAD8` | `FUN_L05_0031d5c8` | `` | no |
+| `Moby_Class1551_Update` | `func_L06_0030A788` | `FUN_L06_00309348` | `` | no |
+| `Moby_Class1552_Update` | `func_L07_0031FF78` | `FUN_L07_0031eba8` | `` | no |
+| `Moby_Class1553_Update` | `func_L08_00309998` | `FUN_L08_003084d8` | `` | no |
+| `Moby_Class1555_Update` | `func_L10_002EC098` | `FUN_L10_002eacd8` | `` | no |
+| `Moby_Class1557_Update` | `func_L12_0030A880` | `FUN_L12_003094a0` | `` | no |
+| `Moby_Class1558_Update` | `func_L13_0030D2A8` | `FUN_L13_0030bdf0` | `` | no |
+| `Moby_Class1559_Update` | `func_L14_00309C48` | `FUN_L14_003087c0` | `` | no |
+| `Moby_Class1560_Update` | `func_L15_002EEF70` | `FUN_L15_002edb20` | `` | no |
+| `Moby_Class1561_Update` | `func_L16_002E8680` | `FUN_L16_002e7208` | `` | no |
+| `Moby_Class1562_Update` | `func_L17_002F49B8` | `FUN_L17_002f2e78` | `` | no |
+| `Moby_Class1563_Update` | `func_L18_002F9D48` | `FUN_L18_002f88e8` | `` | no |
+| `Moby_Class156_Update` | `func_L01_002C8740` | `FUN_L01_002c7530` | `` | no |
+| `Moby_Class1577_Update` | `func_L13_0030D318` | `FUN_L13_0030be60` | `` | no |
+| `Moby_Class1584_Update` | `func_L18_002FBB88` | `FUN_L18_002fa728` | `` | no |
+| `Moby_Class161_Update` | `func_L04_002A6C20` | `FUN_L04_002a5a08` | `` | no |
+| `Moby_Class1629_Update` | `func_L08_00309AB0` | `FUN_L08_003085f0` | `` | no |
+| `Moby_Class1632_Update` | `func_L13_0030D528` | `FUN_L13_0030c060` | `` | no |
+| `Moby_Class1633_Update` | `func_L01_0030DD80` | `FUN_L01_0030c9a8` | `` | no |
+| `Moby_Class1634_Update` | `func_L13_0030D880` | `FUN_L13_0030c3b8` | `` | no |
+| `Moby_Class1641_Update` | `func_L08_0030A150` | `FUN_L08_00308c90` | `` | no |
+| `Moby_Class1649_Update` | `func_L08_0030AC70` | `FUN_L08_003097b0` | `` | no |
+| `Moby_Class1660_Update` | `func_L06_0030B248` | `FUN_L06_00309e08` | `` | no |
+| `Moby_Class1667_Update` | `func_L16_002E8B30` | `FUN_L16_002e76b8` | `` | no |
+| `Moby_Class166_Update` | `func_L00_002B4748` | `FUN_L00_002b3458` | `` | no |
+| `Moby_Class167_Update` | `func_L00_002B5488` | `FUN_L00_002b4198` | `` | no |
+| `Moby_Class1750_Update` | `func_00216270` | `FUN_00215420` | `` | no |
+| `Moby_Class1772_Update` | `func_L17_002F5388` | `FUN_L17_002f3848` | `` | no |
+| `Moby_Class1789_Update` | `func_L07_00320CD0` | `FUN_L07_0031f900` | `` | no |
+| `Moby_Class1799_Update` | `func_L18_002FC188` | `FUN_L18_002fad28` | `` | no |
+| `Moby_Class179_Update` | `func_L00_002BC708` | `FUN_L00_002bb400` | `` | no |
+| `Moby_Class1812_Update` | `func_L16_002E9278` | `FUN_L16_002e7e00` | `` | no |
+| `Moby_Class1848_Update` | `func_L01_003105E0` | `FUN_L01_0030f208` | `` | no |
+| `Moby_Class184_Update` | `func_L04_002B0290` | `FUN_L04_002af058` | `` | no |
+| `Moby_Class1855_Update` | `func_L10_002ECAB0` | `FUN_L10_002eb6f0` | `` | no |
+| `Moby_Class1856_Update` | `func_L10_002ECBA0` | `FUN_L10_002eb7e0` | `` | no |
+| `Moby_Class1873_Update` | `func_L17_002F6DA0` | `FUN_L17_002f5260` | `` | no |
+| `Moby_Class1876_Update` | `func_L17_002F6ED0` | `FUN_L17_002f5390` | `` | no |
+| `Moby_Class1898_Update` | `func_L06_0030D2A0` | `FUN_L06_0030be60` | `` | no |
+| `Moby_Class1901_Update` | `func_L12_0030D3D0` | `FUN_L12_0030bff0` | `` | no |
+| `Moby_Class1903_Update` | `func_L11_0031F760` | `FUN_L11_0031e2f0` | `` | no |
+| `Moby_Class1907_Update` | `func_L16_002EB268` | `FUN_L16_002e9df0` | `` | no |
+| `Moby_Class1919_Update` | `func_L11_003205C0` | `FUN_L11_0031f150` | `` | no |
+| `Moby_Class1923_Update` | `func_L16_002E9DE8` | `FUN_L16_002e8970` | `` | no |
+| `Moby_Class193_Update` | `func_L09_002E39E0` | `FUN_L09_002e27d8` | `` | no |
+| `Moby_Class1943_Update` | `func_L16_002EA2F8` | `FUN_L16_002e8e80` | `` | no |
+| `Moby_Class1947_Update` | `func_L16_002EA828` | `FUN_L16_002e93b0` | `` | no |
+| `Moby_Class1948_Update` | `func_L16_002EAD58` | `FUN_L16_002e98e0` | `` | no |
+| `Moby_Class1953_Update` | `func_L16_002EB5A0` | `FUN_L16_002ea128` | `` | no |
+| `Moby_Class19_Update` | `func_L12_002C0310` | `FUN_L12_002bf140` | `` | no |
+| `Moby_Class22_Update` | `func_L10_00299D18` | `FUN_L10_00298b68` | `` | no |
+| `Moby_Class231_Update` | `func_L13_002E5810` | `FUN_L13_002e4448` | `` | no |
+| `Moby_Class235_Update` | `func_L03_002BC140` | `FUN_L03_002bae48` | `` | no |
+| `Moby_Class238_Update` | `func_L12_002E2EF0` | `FUN_L12_002e1be0` | `` | no |
+| `Moby_Class23_Update` | `func_L11_002CC828` | `FUN_L11_002cb668` | `` | no |
+| `Moby_Class256_Update` | `func_L15_0029E8A0` | `FUN_L15_0029d6c0` | `` | no |
+| `Moby_Class257_Update` | `func_L16_002C5030` | `FUN_L16_002c3d38` | `` | no |
+| `Moby_Class258_Update` | `func_L05_002F6588` | `FUN_L05_002f5200` | `` | no |
+| `Moby_Class279_Update` | `func_L09_002EF460` | `FUN_L09_002ee110` | `` | no |
+| `Moby_Class27_Update` | `func_L01_002BE2C8` | `FUN_L01_002bd100` | `` | no |
+| `Moby_Class293_Update` | `func_L12_002E8588` | `FUN_L12_002e7208` | `` | no |
+| `Moby_Class305_Update` | `func_L00_002CC868` | `FUN_L00_002cb418` | `` | no |
+| `Moby_Class313_Update` | `func_L09_002F0780` | `FUN_L09_002ef430` | `` | no |
+| `Moby_Class317_Update` | `func_L07_002F9438` | `FUN_L07_002f8058` | `` | no |
+| `Moby_Class320_Update` | `func_L09_002F0D00` | `FUN_L09_002ef9b0` | `` | no |
+| `Moby_Class325_Update` | `func_L14_002DFA70` | `FUN_L14_002de670` | `` | no |
+| `Moby_Class327_Update` | `func_L08_002DB468` | `FUN_L08_002da0f0` | `` | no |
+| `Moby_Class352_Update` | `func_L13_002E9910` | `FUN_L13_002e84d8` | `` | no |
+| `Moby_Class361_Update` | `func_L11_002F46C0` | `FUN_L11_002f3350` | `` | no |
+| `Moby_Class367_Update` | `func_L06_002DB0E0` | `FUN_L06_002d9d10` | `` | no |
+| `Moby_Class37_Update` | `func_L11_002CC950` | `FUN_L11_002cb790` | `` | no |
+| `Moby_Class386_Update` | `func_L14_002E0228` | `FUN_L14_002dee28` | `` | no |
+| `Moby_Class403_Update` | `func_L14_002E1110` | `FUN_L14_002dfd10` | `` | no |
+| `Moby_Class417_Update` | `func_L09_002F1390` | `FUN_L09_002f0040` | `` | no |
+| `Moby_Class422_Update` | `func_L12_002EE600` | `FUN_L12_002ed280` | `` | no |
+| `Moby_Class428_Update` | `func_L00_002CD660` | `FUN_L00_002cc210` | `` | no |
+| `Moby_Class436_Update` | `func_L07_002F6F20` | `FUN_L07_002f5ba0` | `` | no |
+| `Moby_Class438_Update` | `func_L08_002DFBC0` | `FUN_L08_002de848` | `` | no |
+| `Moby_Class440_Update` | `func_L08_002E16A0` | `FUN_L08_002e0328` | `` | no |
+| `Moby_Class441_Update` | `func_L08_002E2A38` | `FUN_L08_002e16c0` | `` | no |
+| `Moby_Class444_Update` | `func_L08_002E3860` | `FUN_L08_002e24e8` | `` | no |
+| `Moby_Class463_Update` | `func_L08_002EAF48` | `FUN_L08_002e9b70` | `` | no |
+| `Moby_Class467_Update` | `func_L08_002EB770` | `FUN_L08_002ea398` | `` | no |
+| `Moby_Class468_Update` | `func_L08_002EB980` | `FUN_L08_002ea4c0` | `` | no |
+| `Moby_Class482_Update` | `func_L00_00237B70` | `FUN_L00_002371e0` | `` | no |
+| `Moby_Class552_Update` | `func_L16_002D0870` | `FUN_L16_002cf4a8` | `` | no |
+| `Moby_Class558_Update` | `func_L13_002F4C10` | `FUN_L13_002f3778` | `` | no |
+| `Moby_Class567_Update` | `func_L01_002EEDD8` | `FUN_L01_002eda00` | `` | no |
+| `Moby_Class574_Update` | `func_L03_002C8398` | `FUN_L03_002c6fd0` | `` | no |
+| `Moby_Class582_Update` | `func_L18_002D76D8` | `FUN_L18_002d62e8` | `` | no |
+| `Moby_Class584_Update` | `func_L04_002D4960` | `FUN_L04_002d3580` | `` | no |
+| `Moby_Class600_Update` | `func_L08_002F2A08` | `FUN_L08_002f1548` | `` | no |
+| `Moby_Class605_Update` | `func_L01_002F4290` | `FUN_L01_002f2eb8` | `` | no |
+| `Moby_Class610_Update` | `func_L14_002EC3E8` | `FUN_L14_002eaf88` | `` | no |
+| `Moby_Class617_Update` | `func_L04_002D8348` | `FUN_L04_002d6f68` | `` | no |
+| `Moby_Class621_Update` | `func_L08_002F5980` | `FUN_L08_002f44c0` | `` | no |
+| `Moby_Class624_Update` | `func_L18_002DC850` | `FUN_L18_002db460` | `` | no |
+| `Moby_Class628_Update` | `func_L18_002DD650` | `FUN_L18_002dc260` | `` | no |
+| `Moby_Class639_Update` | `func_L00_002D4EC0` | `FUN_L00_002d3a10` | `` | no |
+| `Moby_Class644_Update` | `func_L18_002E09F8` | `FUN_L18_002df608` | `` | no |
+| `Moby_Class648_Update` | `func_L08_002F6CF0` | `FUN_L08_002f5830` | `` | no |
+| `Moby_Class654_Update` | `func_L16_002D72C0` | `FUN_L16_002d5ef8` | `` | no |
+| `Moby_Class655_Update` | `func_L15_002D7C00` | `FUN_L15_002d6810` | `` | no |
+| `Moby_Class65_Update` | `func_L11_002CC9D0` | `FUN_L11_002cb810` | `` | no |
+| `Moby_Class667_Update` | `func_L13_002F9D18` | `FUN_L13_002f8880` | `` | no |
+| `Moby_Class669_Update` | `func_L17_002D8CC8` | `FUN_L17_002d77f0` | `` | no |
+| `Moby_Class671_Update` | `func_L08_002F8560` | `FUN_L08_002f70a0` | `` | no |
+| `Moby_Class674_Update` | `func_L13_002F9F10` | `FUN_L13_002f8a78` | `` | no |
+| `Moby_Class676_Update` | `func_0023BF48` | `FUN_0023ab78` | `` | no |
+| `Moby_Class678_Update` | `func_L01_002F7558` | `FUN_L01_002f6180` | `` | no |
+| `Moby_Class679_Update` | `func_L01_002F7700` | `FUN_L01_002f6328` | `` | no |
+| `Moby_Class67_Update` | `func_L15_0029C1D0` | `FUN_L15_0029aff0` | `` | no |
+| `Moby_Class681_Update` | `func_L14_002EE260` | `FUN_L14_002ece00` | `` | no |
+| `Moby_Class684_Update` | `func_L14_002EE6E0` | `FUN_L14_002ed280` | `` | no |
+| `Moby_Class686_Update` | `func_L01_002F7E08` | `FUN_L01_002f6a30` | `` | no |
+| `Moby_Class6_Update` | `func_L13_002B2020` | `FUN_L13_002b0e80` | `` | no |
+| `Moby_Class700_Update` | `func_L01_002FA030` | `FUN_L01_002f8c58` | `` | no |
+| `Moby_Class702_Update` | `func_L10_002C8DE0` | `FUN_L10_002c7a20` | `` | no |
+| `Moby_Class722_Update` | `func_L01_002FB898` | `FUN_L01_002fa4c0` | `` | no |
+| `Moby_Class737_Update` | `func_L01_002FC988` | `FUN_L01_002fb5b0` | `` | no |
+| `Moby_Class751_Update` | `func_L01_002FE4C0` | `FUN_L01_002fd0e8` | `` | no |
+| `Moby_Class761_Update` | `func_L01_002FFF30` | `FUN_L01_002feb58` | `` | no |
+| `Moby_Class775_Update` | `func_L00_002D93E8` | `FUN_L00_002d7f38` | `` | no |
+| `Moby_Class779_Update` | `func_L01_00300F00` | `FUN_L01_002ffb28` | `` | no |
+| `Moby_Class787_Update` | `func_L01_00301198` | `FUN_L01_002ffdc0` | `` | no |
+| `Moby_Class78_Update` | `func_L15_002A3DD0` | `FUN_L15_002a2bf0` | `` | no |
+| `Moby_Class794_Update` | `func_L10_002CB030` | `FUN_L10_002c9c70` | `` | no |
+| `Moby_Class800_Update` | `func_L16_002D7B08` | `FUN_L16_002d6740` | `` | no |
+| `Moby_Class804_Update` | `func_L00_002D9438` | `FUN_L00_002d7f88` | `` | no |
+| `Moby_Class809_Update` | `func_L00_002A5F68` | `FUN_L00_002a4cd8` | `` | no |
+| `Moby_Class81_Update` | `func_L14_002BBEC8` | `FUN_L14_002bac78` | `` | no |
+| `Moby_Class832_Update` | `func_L01_00303A20` | `FUN_L01_00302648` | `` | no |
+| `Moby_Class833_Update` | `func_L03_002D5790` | `FUN_L03_002d43c8` | `` | no |
+| `Moby_Class835_Update` | `func_L17_002DD8D0` | `FUN_L17_002dc3f8` | `` | no |
+| `Moby_Class841_Update` | `func_L05_0030F6C0` | `FUN_L05_0030e1f8` | `` | no |
+| `Moby_Class843_Update` | `func_L05_0030F9D0` | `FUN_L05_0030e508` | `` | no |
+| `Moby_Class845_Update` | `func_L01_002F6540` | `FUN_L01_002f5168` | `` | no |
+| `Moby_Class848_Update` | `func_L03_002D5B88` | `FUN_L03_002d47c0` | `` | no |
+| `Moby_Class852_Update` | `func_L05_00316378` | `FUN_L05_00314eb0` | `` | no |
+| `Moby_Class855_Update` | `func_L05_003165B8` | `FUN_L05_003150f0` | `` | no |
+| `Moby_Class859_Update` | `func_L10_002D8F40` | `FUN_L10_002d7b80` | `` | no |
+| `Moby_Class86_Update` | `func_L04_0029FEC8` | `FUN_L04_0029ecf8` | `` | no |
+| `Moby_Class880_Update` | `func_L07_0030CA88` | `FUN_L07_0030b6a8` | `` | no |
+| `Moby_Class885_Update` | `func_L18_002EAB58` | `FUN_L18_002e9768` | `` | no |
+| `Moby_Class893_Update` | `func_L05_00317720` | `FUN_L05_00316258` | `` | no |
+| `Moby_Class895_Update` | `func_L05_00317B68` | `FUN_L05_003166a0` | `` | no |
+| `Moby_Class898_Update` | `func_L03_002DC3E8` | `FUN_L03_002db020` | `` | no |
+| `Moby_Class899_Update` | `func_L03_002DC648` | `FUN_L03_002db280` | `` | no |
+| `Moby_Class934_Update` | `func_L15_002E5770` | `FUN_L15_002e4380` | `` | no |
+| `Moby_Class937_Update` | `func_L15_002E5AA0` | `FUN_L15_002e46b0` | `` | no |
+| `Moby_Class947_Update` | `func_L10_002DA0F0` | `FUN_L10_002d8d30` | `` | no |
+| `Moby_Class982_Update` | `func_L05_00319F78` | `FUN_L05_00318a68` | `` | no |
+| `Moby_Class983_Update` | `func_L18_002EB260` | `FUN_L18_002e9e70` | `` | no |
+| `Moby_Class994_Update` | `func_L03_002DDD78` | `FUN_L03_002dc9b0` | `` | no |
+| `Moby_Class99_Update` | `func_L17_002AA068` | `FUN_L17_002a8da0` | `` | no |
+| `Moby_CodebotSlot_Update` | `func_L15_002ED420` | `FUN_L15_002ec030` | `` | no |
+| `Moby_Codebot_Update` | `func_L15_002ED168` | `FUN_L15_002ebd78` | `` | no |
+| `Moby_Commando_Update` | `func_L08_003041A8` | `FUN_L08_00302ce8` | `` | no |
+| `Moby_ConstructionArm_Update` | `func_L15_002C3BD8` | `FUN_L15_002c2938` | `` | no |
+| `Moby_Constructorbot1208_Update` | `func_L02_002ED358` | `FUN_L02_002ebf20` | `` | no |
+| `Moby_Constructorbot_Update` | `func_L02_002D8B80` | `FUN_L02_002d7748` | `` | no |
+| `Moby_ConveyorBelt1250_Update` | `func_L15_002E87B0` | `FUN_L15_002e73c0` | `` | no |
+| `Moby_ConveyorBelt471_Update` | `func_L16_002CAC40` | `FUN_L16_002c9878` | `` | no |
+| `Moby_ConveyorBelt_Update` | `func_L02_002DDAE8` | `FUN_L02_002dc6b0` | `` | no |
+| `Moby_CraneArm_Update` | `func_L12_002ED550` | `FUN_L12_002ec1d0` | `` | no |
+| `Moby_Crane_Update` | `func_L02_002E05E0` | `FUN_L02_002df1a8` | `` | no |
+| `Moby_DecoyGlove_Update` | `func_L00_002D3B20` | `FUN_L00_002d2670` | `` | no |
+| `Moby_Decoy_Update` | `func_L00_002C5688` | `FUN_L00_002c4380` | `` | no |
+| `Moby_DeplanetizerGun1568_Update` | `func_L18_002FBAA0` | `FUN_L18_002fa640` | `` | no |
+| `Moby_DeplanetizerGun_Update` | `func_L18_002F8F38` | `FUN_L18_002f7ad8` | `` | no |
+| `Moby_DestroyableCaveWall_Update` | `func_L01_002FBBD8` | `FUN_L01_002fa800` | `` | no |
+| `Moby_DevestatorAmmo_Update` | `func_L00_002C6720` | `FUN_L00_002c53c0` | `` | no |
+| `Moby_Display_Update` | `func_L09_002EEF80` | `FUN_L09_002edc30` | `` | no |
+| `Moby_DoomBot_Update` | `func_L00_002C12B0` | `FUN_L00_002bffa8` | `` | no |
+| `Moby_Door1359_Update` | `func_L17_002EA2C8` | `FUN_L17_002e87d8` | `` | no |
+| `Moby_Door196_Update` | `func_L15_002BEFF8` | `FUN_L15_002bddb0` | `` | no |
+| `Moby_Door647_Update` | `func_L16_002D6DA8` | `FUN_L16_002d59e0` | `` | no |
+| `Moby_DoorHalf_Update` | `func_L01_002F5AE8` | `FUN_L01_002f4710` | `` | no |
+| `Moby_DoorLeft_Update` | `func_L01_00300140` | `FUN_L01_002fed68` | `` | no |
+| `Moby_Door_Update` | `func_L07_003121D0` | `FUN_L07_00310df0` | `` | no |
+| `Moby_DrainCover_Update` | `func_L05_0030FCC0` | `FUN_L05_0030e7f8` | `` | no |
+| `Moby_DrekFightMissile_Update` | `func_L18_002F0F78` | `FUN_L18_002efb88` | `` | no |
+| `Moby_DrekFinalBossRobot_Update` | `func_L18_002F4050` | `FUN_L18_002f2bf0` | `` | no |
+| `Moby_DreksFleetTurret_Update` | `func_L17_002CC788` | `FUN_L17_002cb310` | `` | no |
+| `Moby_Drone_Update` | `func_L00_002CF808` | `FUN_L00_002ce358` | `` | no |
+| `Moby_Edwina_Update` | `func_L12_002EC8F0` | `FUN_L12_002eb570` | `` | no |
+| `Moby_ElectricGate_Update` | `func_L05_0030F130` | `FUN_L05_0030dc68` | `` | no |
+| `Moby_Elevator1150_Update` | `func_L09_00304750` | `FUN_L09_003033a0` | `` | no |
+| `Moby_Elevator1826_Update` | `func_L16_002E93F8` | `FUN_L16_002e7f80` | `` | no |
+| `Moby_Elevator21_Update` | `func_L13_002B4B90` | `FUN_L13_002b39e0` | `` | no |
+| `Moby_Elevator685_Update` | `func_L14_002EFD38` | `FUN_L14_002ee8d8` | `` | no |
+| `Moby_ElevatorWithButton_Update` | `func_L05_00316B98` | `FUN_L05_003156d0` | `` | no |
+| `Moby_Elevator_Update` | `func_L02_002DD170` | `FUN_L02_002dbd38` | `` | no |
+| `Moby_EnergySphere1297_Update` | `func_L11_00319FA0` | `FUN_L11_00318b30` | `` | no |
+| `Moby_EnergySphereHolder_Update` | `func_L06_002F86B8` | `FUN_L06_002f7288` | `` | no |
+| `Moby_EnergySphere_Update` | `func_L06_002F8EE8` | `FUN_L06_002f7ab8` | `` | no |
+| `Moby_EudoraBridge_Update` | `func_L04_002C7BD8` | `FUN_L04_002c6858` | `` | no |
+| `Moby_Extermibot_Update` | `func_L05_003033A0` | `FUN_L05_00301f48` | `` | no |
+| `Moby_Extermitank_Update` | `func_L05_00305778` | `FUN_L05_00304320` | `` | no |
+| `Moby_FallingRock_Update` | `func_L01_002FA458` | `FUN_L01_002f9080` | `` | no |
+| `Moby_Fan_Update` | `func_L01_002FAFC8` | `FUN_L01_002f9bf0` | `` | no |
+| `Moby_FighterJet1379_Update` | `func_L17_002EEB08` | `FUN_L17_002ed018` | `` | no |
+| `Moby_FighterJet69_Update` | `func_L13_002BC2D8` | `FUN_L13_002bb068` | `` | no |
+| `Moby_FighterJet_Update` | `func_L01_002F5800` | `FUN_L01_002f4428` | `` | no |
+| `Moby_FloatingPlatform587_Update` | `func_L18_002D96B0` | `FUN_L18_002d82c0` | `` | no |
+| `Moby_FloatingPlatform810_Update` | `func_L05_0030D230` | `FUN_L05_0030bdd8` | `` | no |
+| `Moby_FloatingPlatform_Update` | `func_L04_002CF180` | `FUN_L04_002cdda0` | `` | no |
+| `Moby_FloorButton_Update` | `func_L05_0030DA08` | `FUN_L05_0030c5b0` | `` | no |
+| `Moby_ForcefieldTower_Update` | `func_L13_002D0298` | `FUN_L13_002cefc0` | `` | no |
+| `Moby_Forcefield_Update` | `func_L13_002EE8E0` | `FUN_L13_002ed4a8` | `` | no |
+| `Moby_Fred1_Update` | `func_L03_002DD6D8` | `FUN_L03_002dc310` | `` | no |
+| `Moby_FredPokitaru_Update` | `func_L11_002F21B0` | `FUN_L11_002f0e40` | `` | no |
+| `Moby_Fred_Update` | `func_L06_003024C8` | `FUN_L06_00301070` | `` | no |
+| `Moby_Frog_Update` | `func_L06_002E9AA8` | `FUN_L06_002e8678` | `` | no |
+| `Moby_Gadgebot1906_Update` | `func_L18_002FD058` | `FUN_L18_002fbb98` | `` | no |
+| `Moby_GadgebotSpawnContainer_Update` | `func_L06_002D9970` | `FUN_L06_002d85a0` | `` | no |
+| `Moby_GadgebotSpawnPad_Update` | `func_L06_002D9FF0` | `FUN_L06_002d8c20` | `` | no |
+| `Moby_GadgebotTelepotPad_Update` | `func_L10_002BFBB8` | `FUN_L10_002be858` | `` | no |
+| `Moby_Gadgebot_Update` | `func_L06_002F1470` | `FUN_L06_002f0040` | `` | no |
+| `Moby_GadgetronCeo_Update` | `func_L16_002E7C70` | `FUN_L16_002e6808` | `` | no |
+| `Moby_GadgetronSign_Update` | `func_L16_002E9D48` | `FUN_L16_002e88d0` | `` | no |
+| `Moby_Gate1_Update` | `func_L10_002EAA08` | `FUN_L10_002e9648` | `` | no |
+| `Moby_Gate2_Update` | `func_L10_002EAD50` | `FUN_L10_002e9990` | `` | no |
+| `Moby_Gate92_Update` | `func_L15_002A48B0` | `FUN_L15_002a36d0` | `` | no |
+| `Moby_Gate93_Update` | `func_L15_002A4D88` | `FUN_L15_002a3ba8` | `` | no |
+| `Moby_Gate_Update` | `func_L03_002DDDF8` | `FUN_L03_002dca30` | `` | no |
+| `Moby_GiantClankPad_Update` | `func_L15_002EE458` | `FUN_L15_002ed068` | `` | no |
+| `Moby_GloveOfDoom_Update` | `func_L00_002C8DB8` | `FUN_L00_002c7a58` | `` | no |
+| `Moby_GoldBolt_Update` | `func_L01_00309078` | `FUN_L01_00307ca0` | `` | no |
+| `Moby_GoldDevastatorMissile_Update` | `func_L00_002B1688` | `FUN_L00_002b03a0` | `` | no |
+| `Moby_GoldWeaponCase_Update` | `func_L01_002E2E38` | `FUN_L01_002e1ac0` | `` | no |
+| `Moby_GrabCrane_Update` | `func_L02_002DE7A8` | `FUN_L02_002dd370` | `` | no |
+| `Moby_GreenMushroom_Update` | `func_L01_002FED78` | `FUN_L01_002fd9a0` | `` | no |
+| `Moby_GrindrailBarrier_Update` | `func_L16_002E6B70` | `FUN_L16_002e5708` | `` | no |
+| `Moby_GrindrailButton_Update` | `func_L16_002E6908` | `FUN_L16_002e54a0` | `` | no |
+| `Moby_GrindrailGate1441_Update` | `func_L16_002E66C0` | `FUN_L16_002e5258` | `` | no |
+| `Moby_GrindrailGate_Update` | `func_L16_002E6478` | `FUN_L16_002e5010` | `` | no |
+| `Moby_Gun_Update` | `func_L10_002E9E70` | `FUN_L10_002e8ab0` | `` | no |
+| `Moby_HangarDoor_Update` | `func_L06_002B5990` | `FUN_L06_002b4770` | `` | no |
+| `Moby_Helga_Update` | `func_L03_002DBC38` | `FUN_L03_002da870` | `` | no |
+| `Moby_Helicopter233_Update` | `func_L15_002C6950` | `FUN_L15_002c5630` | `` | no |
+| `Moby_Helicopter_Update` | `func_L12_002ED228` | `FUN_L12_002ebea8` | `` | no |
+| `Moby_Helipack_Update` | `func_L00_002D4C80` | `FUN_L00_002d37d0` | `` | no |
+| `Moby_HelpDeskLady_Update` | `func_L16_002E45F8` | `FUN_L16_002e3190` | `` | no |
+| `Moby_HomingMineSpawner_Update` | `func_L12_00308C20` | `FUN_L12_00307840` | `` | no |
+| `Moby_HornyToad_Update` | `func_L00_002D5AC0` | `FUN_L00_002d4610` | `` | no |
+| `Moby_HovenTurret_Update` | `func_L12_00304920` | `FUN_L12_00303540` | `` | no |
+| `Moby_Hoverboard439_Update` | `func_L05_002F9BA0` | `FUN_L05_002f87a8` | `` | no |
+| `Moby_HoverboardGirl_Update` | `func_L05_00317F80` | `FUN_L05_00316ab8` | `` | no |
+| `Moby_HoverboardRing_Update` | `func_L05_0031C0F0` | `FUN_L05_0031abe0` | `` | no |
+| `Moby_Hoverboard_Update` | `func_L00_002E5238` | `FUN_L00_002e3d88` | `` | no |
+| `Moby_HydrodisplacerFaucet_Update` | `func_L05_002F9478` | `FUN_L05_002f8080` | `` | no |
+| `Moby_Hydrodisplacer_Update` | `func_L00_002E0E50` | `FUN_L00_002df9a0` | `` | no |
+| `Moby_Infobot_Update` | `func_L00_002D7298` | `FUN_L00_002d5de8` | `` | no |
+| `Moby_Jet921_Update` | `func_L14_002FE038` | `FUN_L14_002fcbb0` | `` | no |
+| `Moby_JetFighter_Update` | `func_L11_003146E0` | `FUN_L11_00313290` | `` | no |
+| `Moby_Jet_Update` | `func_L14_002FD578` | `FUN_L14_002fc0f0` | `` | no |
+| `Moby_LabDoor_Update` | `func_L10_002DA468` | `FUN_L10_002d90a8` | `` | no |
+| `Moby_Lamp1511_Update` | `func_L05_0031DDF0` | `FUN_L05_0031c8e0` | `` | no |
+| `Moby_Lamp_Update` | `func_L05_0030D500` | `FUN_L05_0030c0a8` | `` | no |
+| `Moby_LargeAmoeboid_Update` | `func_L01_002EF078` | `FUN_L01_002edca0` | `` | no |
+| `Moby_Leaf_Update` | `func_L04_002D9270` | `FUN_L04_002d7e90` | `` | no |
+| `Moby_Lieutenant_Update` | `func_L04_002E4458` | `FUN_L04_002e3078` | `` | no |
+| `Moby_LiftcarPlatform_Update` | `func_L02_002E3660` | `FUN_L02_002e2228` | `` | no |
+| `Moby_MachinegunTurret30_Update` | `func_L14_002B4E40` | `FUN_L14_002b3bf0` | `` | no |
+| `Moby_MachinegunTurret_Update` | `func_L07_0031B620` | `FUN_L07_0031a250` | `` | no |
+| `Moby_MagnetElevator_Update` | `func_L17_002EFDC0` | `FUN_L17_002ee2b0` | `` | no |
+| `Moby_Magnetboots_Update` | `func_L10_00299818` | `FUN_L10_00298668` | `` | no |
+| `Moby_MetalDetector_Update` | `func_L00_002D4398` | `FUN_L00_002d2ee8` | `` | no |
+| `Moby_MetropolisTrainCarriage_Update` | `func_L03_002965A0` | `FUN_L03_002953f8` | `` | no |
+| `Moby_MetropolisTrainLocomotive_Update` | `func_L03_00294040` | `FUN_L03_00292e98` | `` | no |
+| `Moby_Mine1112_Update` | `func_L07_0031AAB0` | `FUN_L07_003196e0` | `` | no |
+| `Moby_Mine1269_Update` | `func_L12_003061E0` | `FUN_L12_00304e00` | `` | no |
+| `Moby_Mine568_Update` | `func_L18_002D6D08` | `FUN_L18_002d5918` | `` | no |
+| `Moby_Mine627_Update` | `func_L03_002CD270` | `FUN_L03_002cbea8` | `` | no |
+| `Moby_Mine643_Update` | `func_L14_002EDC70` | `FUN_L14_002ec810` | `` | no |
+| `Moby_Mine77_Update` | `func_L15_002A3668` | `FUN_L15_002a2488` | `` | no |
+| `Moby_Mine83_Update` | `func_L13_002C32D0` | `FUN_L13_002c2048` | `` | no |
+| `Moby_Mine933_Update` | `func_L14_00300AC8` | `FUN_L14_002ff640` | `` | no |
+| `Moby_MineGlove_Update` | `func_L00_002C2DD8` | `FUN_L00_002c1ad0` | `` | no |
+| `Moby_MineLayer_Update` | `func_L03_002CB280` | `FUN_L03_002c9eb8` | `` | no |
+| `Moby_Mine_Update` | `func_L00_002AB910` | `FUN_L00_002aa670` | `` | no |
+| `Moby_Miner_Update` | `func_L12_002E7FC8` | `FUN_L12_002e6c48` | `` | no |
+| `Moby_Minibomber_Update` | `func_L14_002B5938` | `FUN_L14_002b46e8` | `` | no |
+| `Moby_Morphoray1354_Update` | `func_L14_00306BE0` | `FUN_L14_00305758` | `` | no |
+| `Moby_MorphorayChicken_Update` | `func_L00_002CABC0` | `FUN_L00_002c97e0` | `` | no |
+| `Moby_Morphoray_Update` | `func_L00_002BDAF0` | `FUN_L00_002bc7e8` | `` | no |
+| `Moby_MovingPlatformSmall_Update` | `func_L03_00295DB0` | `FUN_L03_00294c08` | `` | no |
+| `Moby_MushroomUnderside_Update` | `func_L01_00309020` | `FUN_L01_00307c48` | `` | no |
+| `Moby_Mushroom_Update` | `func_L06_0030ACA0` | `FUN_L06_00309860` | `` | no |
+| `Moby_NanotechBall_Update` | `func_L00_002D9EA0` | `FUN_L00_002d89f0` | `` | no |
+| `Moby_NanotechCrateFragment_Update` | `func_L00_002B0D30` | `FUN_L00_002afa48` | `` | no |
+| `Moby_NanotechUpgradeVendor_Update` | `func_L10_002E9718` | `FUN_L10_002e8358` | `` | no |
+| `Moby_NovalisElevator_Update` | `func_L01_002BB068` | `FUN_L01_002b9eb0` | `` | no |
+| `Moby_OceanAridia_Update` | `func_L02_002EB5D0` | `FUN_L02_002ea198` | `` | no |
+| `Moby_OceanPokitaru_Update` | `func_L11_0030C728` | `FUN_L11_0030b358` | `` | no |
+| `Moby_OceanRilgar_Update` | `func_L05_003175D8` | `FUN_L05_00316110` | `` | no |
+| `Moby_OceanUmbris_Update` | `func_L07_0030E820` | `FUN_L07_0030d440` | `` | no |
+| `Moby_OilTankerFront_Update` | `func_L11_00318730` | `FUN_L11_003172c0` | `` | no |
+| `Moby_ParticleSpawnerSmokeFire_Update` | `func_L00_002D83D8` | `FUN_L00_002d6f28` | `` | no |
+| `Moby_Peckbot_Update` | `func_L01_002F1038` | `FUN_L01_002efc60` | `` | no |
+| `Moby_PilotsHelmet_Update` | `func_L00_002E1850` | `FUN_L00_002e03a0` | `` | no |
+| `Moby_PipeMountedGrating_Update` | `func_L05_00310A90` | `FUN_L05_0030f5c8` | `` | no |
+| `Moby_Pipe_Update` | `func_L01_00300C38` | `FUN_L01_002ff860` | `` | no |
+| `Moby_PistonPlatform_Update` | `func_L01_002FA998` | `FUN_L01_002f95c0` | `` | no |
+| `Moby_PlanetbusterMaximusPart_Update` | `func_L12_00307DB0` | `FUN_L12_003069d0` | `` | no |
+| `Moby_Plasmabot211_Update` | `func_L14_002D7250` | `FUN_L14_002d5f40` | `` | no |
+| `Moby_PlasmabotHatch_Update` | `func_L14_002DAA70` | `FUN_L14_002d96e0` | `` | no |
+| `Moby_Plasmabot_Update` | `func_L14_002B2A28` | `FUN_L14_002b17d8` | `` | no |
+| `Moby_Platform1033_Update` | `func_L10_00296BD8` | `FUN_L10_00295a38` | `` | no |
+| `Moby_Platform1117_Update` | `func_L10_00296DC0` | `FUN_L10_00295c20` | `` | no |
+| `Moby_Platform240_Update` | `func_L12_002E51E8` | `FUN_L12_002e3ed8` | `` | no |
+| `Moby_Platform309_Update` | `func_L14_002DF5F8` | `FUN_L14_002de1f8` | `` | no |
+| `Moby_Platform664_Update` | `func_L09_002F9A50` | `FUN_L09_002f86a0` | `` | no |
+| `Moby_Platform903_Update` | `func_L14_002ACCC0` | `FUN_L14_002aba80` | `` | no |
+| `Moby_PlatformBooster_Update` | `func_L04_002C7F38` | `FUN_L04_002c6bb8` | `` | no |
+| `Moby_Platform_Update` | `func_L02_002DF038` | `FUN_L02_002ddc00` | `` | no |
+| `Moby_PoisonVessel1257_Update` | `func_L15_002E9358` | `FUN_L15_002e7f68` | `` | no |
+| `Moby_PoisonVessel_Update` | `func_L13_00308FA8` | `FUN_L13_00307b10` | `` | no |
+| `Moby_PokitaruBoat_Update` | `func_L11_0030AE90` | `FUN_L11_00309ac0` | `` | no |
+| `Moby_Psytcopus_Update` | `func_L11_00311648` | `FUN_L11_00310180` | `` | no |
+| `Moby_Pterodactyl_Update` | `func_L00_002E4F38` | `FUN_L00_002e3a88` | `` | no |
+| `Moby_Puffoid_Update` | `func_L11_00315788` | `FUN_L11_00314318` | `` | no |
+| `Moby_PurpleShip533_Update` | `func_L13_002F4BE8` | `FUN_L13_002f3750` | `` | no |
+| `Moby_PurpleShip_Update` | `func_L07_002FD198` | `FUN_L07_002fbdb8` | `` | no |
+| `Moby_Pyrocitor_Update` | `func_L00_002B8AE8` | `FUN_L00_002b77f0` | `` | no |
+| `Moby_QwarkOltanis_Update` | `func_L14_002FCEA8` | `FUN_L14_002fba20` | `` | no |
+| `Moby_QwarkUmbris_Update` | `func_L03_002DD840` | `FUN_L03_002dc478` | `` | no |
+| `Moby_QwarksBouncer_Update` | `func_L05_00318980` | `FUN_L05_00317470` | `` | no |
+| `Moby_QwarksStarfighterPart389_Update` | `func_L13_002EE238` | `FUN_L13_002ece00` | `` | no |
+| `Moby_QwarksStarfighterPart_Update` | `func_L13_002EC4D0` | `FUN_L13_002eb098` | `` | no |
+| `Moby_QwarksTrailer_Update` | `func_L05_0031B138` | `FUN_L05_00319c28` | `` | no |
+| `Moby_RedButton_Update` | `func_L06_003054D8` | `FUN_L06_00304098` | `` | no |
+| `Moby_RedOrb_Update` | `func_L00_002E09A8` | `FUN_L00_002df4f8` | `` | no |
+| `Moby_RedShip1_Update` | `func_L03_0029ED60` | `FUN_L03_0029dba8` | `` | no |
+| `Moby_RefuelingStation_Update` | `func_L09_003050C0` | `FUN_L09_00303d10` | `` | no |
+| `Moby_ResortOwner_Update` | `func_L11_002D2168` | `FUN_L11_002d0fa8` | `` | no |
+| `Moby_RoboShackSign_Update` | `func_L03_002D5220` | `FUN_L03_002d3e58` | `` | no |
+| `Moby_Robosquawker_Update` | `func_L13_002B6288` | `FUN_L13_002b50d8` | `` | no |
+| `Moby_RobotDog1382_Update` | `func_L17_002F0678` | `FUN_L17_002eeb68` | `` | no |
+| `Moby_RobotDog_Update` | `func_L03_002C6F80` | `FUN_L03_002c5bb8` | `` | no |
+| `Moby_RobotQwark_Update` | `func_L03_002DD158` | `FUN_L03_002dbd90` | `` | no |
+| `Moby_RockFormation_Update` | `func_L01_002FABE8` | `FUN_L01_002f9810` | `` | no |
+| `Moby_Rock_Update` | `func_L01_002F9AF0` | `FUN_L01_002f8718` | `` | no |
+| `Moby_Rocket1034_Update` | `func_L11_0030A8C8` | `FUN_L11_003094f8` | `` | no |
+| `Moby_Rocket1475_Update` | `func_L16_002A50F0` | `FUN_L16_002a3f38` | `` | no |
+| `Moby_Rocket295_Update` | `func_L13_002E8040` | `FUN_L13_002e6c08` | `` | no |
+| `Moby_Rocket409_Update` | `func_L12_002EE180` | `FUN_L12_002ece00` | `` | no |
+| `Moby_Rocket41_Update` | `func_L18_002A8400` | `FUN_L18_002a7220` | `` | no |
+| `Moby_Rocket435_Update` | `func_L08_002DE738` | `FUN_L08_002dd3c0` | `` | no |
+| `Moby_Rocket458_Update` | `func_L08_002E95E8` | `FUN_L08_002e8210` | `` | no |
+| `Moby_Rocket470_Update` | `func_L16_002CA848` | `FUN_L16_002c9480` | `` | no |
+| `Moby_Rocket49_Update` | `func_L15_0029BE10` | `FUN_L15_0029ac30` | `` | no |
+| `Moby_Rocket50_Update` | `func_L16_002A1C50` | `FUN_L16_002a0a98` | `` | no |
+| `Moby_Rocket564_Update` | `func_L18_002D6440` | `FUN_L18_002d5050` | `` | no |
+| `Moby_Rocket819_Update` | `func_L10_002CD6A8` | `FUN_L10_002cc2e8` | `` | no |
+| `Moby_Rocket82_Update` | `func_L13_002C27B0` | `FUN_L13_002c1528` | `` | no |
+| `Moby_Rocket922_Update` | `func_L14_002FF040` | `FUN_L14_002fdbb8` | `` | no |
+| `Moby_RocketDoor1_Update` | `func_L02_002E0D80` | `FUN_L02_002df948` | `` | no |
+| `Moby_RocketLauncher_Update` | `func_L02_002E0810` | `FUN_L02_002df3d8` | `` | no |
+| `Moby_RocketTank_Update` | `func_L18_002F90A0` | `FUN_L18_002f7c40` | `` | no |
+| `Moby_Rocket_Update` | `func_L00_002CE6A0` | `FUN_L00_002cd1f0` | `` | no |
+| `Moby_Rocks_Update` | `func_L02_002E1B58` | `FUN_L02_002e0720` | `` | no |
+| `Moby_Ryno_Update` | `func_L00_002CDAB8` | `FUN_L00_002cc608` | `` | no |
+| `Moby_Sam_Update` | `func_L14_00300468` | `FUN_L14_002fefe0` | `` | no |
+| `Moby_SandMouse_Update` | `func_L01_002E5298` | `FUN_L01_002e3f20` | `` | no |
+| `Moby_SandSharkNest_Update` | `func_L02_002DDF70` | `FUN_L02_002dcb38` | `` | no |
+| `Moby_SandShark_Update` | `func_L02_002D5250` | `FUN_L02_002d3e50` | `` | no |
+| `Moby_SandmouseHouse_Update` | `func_L01_002F3F40` | `FUN_L01_002f2b68` | `` | no |
+| `Moby_Sandmouse_Update` | `func_L01_0030F318` | `FUN_L01_0030df40` | `` | no |
+| `Moby_SandsharkEgg_Update` | `func_L02_002E16B8` | `FUN_L02_002e0280` | `` | no |
+| `Moby_SceneryShip_Update` | `func_L05_002D8388` | `FUN_L05_002d7140` | `` | no |
+| `Moby_Scoutbot_Update` | `func_L08_002D3DF8` | `FUN_L08_002d2af0` | `` | no |
+| `Moby_Screamer_Update` | `func_L10_002E0630` | `FUN_L10_002df270` | `` | no |
+| `Moby_Seeker_Update` | `func_L09_002C6B30` | `FUN_L09_002c5990` | `` | no |
+| `Moby_SeesawPlatform_Update` | `func_L11_00310058` | `FUN_L11_0030eb90` | `` | no |
+| `Moby_SentrybotAlarm_Update` | `func_L15_002CC858` | `FUN_L15_002cb4c8` | `` | no |
+| `Moby_Sentrybot_Update` | `func_L15_00298BB8` | `FUN_L15_002979d8` | `` | no |
+| `Moby_ShadySalesman_Update` | `func_L05_003195B0` | `FUN_L05_003180a0` | `` | no |
+| `Moby_Sharkigator1059_Update` | `func_L07_003109D0` | `FUN_L07_0030f5f0` | `` | no |
+| `Moby_Sharkigator_Update` | `func_L05_002D28D0` | `FUN_L05_002d1688` | `` | no |
+| `Moby_Shrub_Update` | `func_L08_002EA0A8` | `FUN_L08_002e8cd0` | `` | no |
+| `Moby_Shuttle1448_Update` | `func_L17_002F3450` | `FUN_L17_002f1940` | `` | no |
+| `Moby_Shuttle1766_Update` | `func_L09_0030AFB8` | `FUN_L09_00309c08` | `` | no |
+| `Moby_Shuttle424_Update` | `func_L08_002DD128` | `FUN_L08_002dbdb0` | `` | no |
+| `Moby_Shuttle557_Update` | `func_L14_002E9038` | `FUN_L14_002e7bd8` | `` | no |
+| `Moby_Shuttle_Update` | `func_L06_003039B8` | `FUN_L06_00302578` | `` | no |
+| `Moby_SkidMcmarx717_Update` | `func_L05_00308D68` | `FUN_L05_00307910` | `` | no |
+| `Moby_SkidMcmarx_Update` | `func_L02_002E2D88` | `FUN_L02_002e1950` | `` | no |
+| `Moby_SkidsAgent_Update` | `func_L02_002E21F8` | `FUN_L02_002e0dc0` | `` | no |
+| `Moby_Snagglebeast_Update` | `func_L07_00315528` | `FUN_L07_00314150` | `` | no |
+| `Moby_SnowPlow_Update` | `func_L04_002CB800` | `FUN_L04_002ca420` | `` | no |
+| `Moby_SpawnPoint_Update` | `func_L01_003015F8` | `FUN_L01_00300220` | `` | no |
+| `Moby_Spawner1885_Update` | `func_L09_0030BF88` | `FUN_L09_0030ab80` | `` | no |
+| `Moby_SpawnerEgg_Update` | `func_L09_0030C7F0` | `FUN_L09_0030b3b0` | `` | no |
+| `Moby_Spawner_Update` | `func_L03_002C0330` | `FUN_L03_002bef68` | `` | no |
+| `Moby_Spiderbot_Update` | `func_L15_002A8090` | `FUN_L15_002a6e68` | `` | no |
+| `Moby_StationaryShip_Update` | `func_L01_002F5D38` | `FUN_L01_002f4960` | `` | no |
+| `Moby_Statue_Update` | `func_L03_002D50A0` | `FUN_L03_002d3cd8` | `` | no |
+| `Moby_SuckCannon_Update` | `func_L04_002E2DF0` | `FUN_L04_002e1a10` | `` | no |
+| `Moby_Suckcannon_Update` | `func_L00_002DBC40` | `FUN_L00_002da790` | `` | no |
+| `Moby_SwingshotHook_Update` | `func_L00_002C83D0` | `FUN_L00_002c7070` | `` | no |
+| `Moby_SwingshotVersatarget_Update` | `func_L02_002E1888` | `FUN_L02_002e0450` | `` | no |
+| `Moby_TallShroom_Update` | `func_L01_0030E4C8` | `FUN_L01_0030d0f0` | `` | no |
+| `Moby_Taunter_Update` | `func_L00_002B8208` | `FUN_L00_002b6f10` | `` | no |
+| `Moby_Taxi1012_Update` | `func_L03_002DE088` | `FUN_L03_002dccc0` | `` | no |
+| `Moby_Taxi1410_Update` | `func_L16_002E5848` | `FUN_L16_002e43e0` | `` | no |
+| `Moby_Taxi712_Update` | `func_L14_002F19C0` | `FUN_L14_002f0538` | `` | no |
+| `Moby_Taxi998_Update` | `func_L05_0031A188` | `FUN_L05_00318c78` | `` | no |
+| `Moby_TaxiPlatform1474_Update` | `func_L07_002CECE8` | `FUN_L07_002cdb28` | `` | no |
+| `Moby_TaxiPlatform_Update` | `func_L07_002CE470` | `FUN_L07_002cd2b0` | `` | no |
+| `Moby_Taxi_Update` | `func_L03_002D4560` | `FUN_L03_002d3198` | `` | no |
+| `Moby_Teleporter318_Update` | `func_L11_002F3888` | `FUN_L11_002f2518` | `` | no |
+| `Moby_Teleporter_Update` | `func_L01_00309FB0` | `FUN_L01_00308bd8` | `` | no |
+| `Moby_Television_Update` | `func_L05_0031A0A8` | `FUN_L05_00318b98` | `` | no |
+| `Moby_TestDummyDoor_Update` | `func_L16_002D7080` | `FUN_L16_002d5cb8` | `` | no |
+| `Moby_TestDummyOnHoverboard_Update` | `func_L16_002D1868` | `FUN_L16_002d04a0` | `` | no |
+| `Moby_TestDummy_Update` | `func_L16_002CF180` | `FUN_L16_002cddb8` | `` | no |
+| `Moby_ThePlumberBatalia_Update` | `func_L08_00307A98` | `FUN_L08_003065d8` | `` | no |
+| `Moby_ThePlumber_Update` | `func_L01_003004F0` | `FUN_L01_002ff118` | `` | no |
+| `Moby_ThrusterPackLockGreen_Update` | `func_L18_002D79F0` | `FUN_L18_002d6600` | `` | no |
+| `Moby_ThrusterPackLockRed_Update` | `func_L18_002D8F10` | `FUN_L18_002d7b20` | `` | no |
+| `Moby_ThrusterPackLock_Update` | `func_L11_003102C8` | `FUN_L11_0030ee00` | `` | no |
+| `Moby_TimedActivationPads_Update` | `func_L07_0030D370` | `FUN_L07_0030bf90` | `` | no |
+| `Moby_ToxicCrab_Update` | `func_L10_002E30F8` | `FUN_L10_002e1d38` | `` | no |
+| `Moby_ToxicGasVent_Update` | `func_L06_002F4F08` | `FUN_L06_002f3ad8` | `` | no |
+| `Moby_TrackdriveLeft_Update` | `func_L02_002CCD18` | `FUN_L02_002cb978` | `` | no |
+| `Moby_TransportPod_Update` | `func_L02_002DF0C0` | `FUN_L02_002ddc88` | `` | no |
+| `Moby_TransportShip_Update` | `func_L04_002CF440` | `FUN_L04_002ce060` | `` | no |
+| `Moby_Trespasser_Update` | `func_L00_002C2A20` | `FUN_L00_002c1718` | `` | no |
+| `Moby_TresspasserDoor1_Update` | `func_L02_002E1400` | `FUN_L02_002dffc8` | `` | no |
+| `Moby_TresspasserDoor2_Update` | `func_L02_002E1570` | `FUN_L02_002e0138` | `` | no |
+| `Moby_TresspasserPad_Update` | `func_L02_002D9F08` | `FUN_L02_002d8ad0` | `` | no |
+| `Moby_Tresspasser_Update` | `func_L02_002EB648` | `FUN_L02_002ea210` | `` | no |
+| `Moby_Turret_Update` | `func_L09_00306030` | `FUN_L09_00304c80` | `` | no |
+| `Moby_UltramechScientist_Update` | `func_L15_002EDB50` | `FUN_L15_002ec760` | `` | no |
+| `Moby_UltramechUnlimited_Update` | `func_L15_002D0798` | `FUN_L15_002cf3a8` | `` | no |
+| `Moby_UnderwaterRing_Update` | `func_L15_002E6D48` | `FUN_L15_002e5958` | `` | no |
+| `Moby_UpperDoor_Update` | `func_L04_002E2BB8` | `FUN_L04_002e17d8` | `` | no |
+| `Moby_VeldinRobotEnemy_Update` | `func_L00_002E2038` | `FUN_L00_002e0b88` | `` | no |
+| `Moby_VeldinShip_Update` | `func_L00_002D3330` | `FUN_L00_002d1e80` | `` | no |
+| `Moby_VendorOrb_Update` | `func_L00_002E0BE0` | `FUN_L00_002df730` | `` | no |
+| `Moby_Vendor_Update` | `func_L00_002A6A38` | `FUN_L00_002a57a8` | `` | no |
+| `Moby_VisibombMissile_Update` | `func_L00_002B7430` | `FUN_L00_002b6140` | `` | no |
+| `Moby_Visibomb_Update` | `func_L00_002B4340` | `FUN_L00_002b3058` | `` | no |
+| `Moby_WallButton_Update` | `func_L16_002D0560` | `FUN_L16_002cf198` | `` | no |
+| `Moby_Walloper_Update` | `func_L00_002BC860` | `FUN_L00_002bb558` | `` | no |
+| `Moby_Water902_Update` | `func_L07_0030D8E8` | `FUN_L07_0030c508` | `` | no |
+| `Moby_WaterCurrent_Update` | `func_L01_002F44F8` | `FUN_L01_002f3120` | `` | no |
+| `Moby_WaterLily_Update` | `func_L01_002F9640` | `FUN_L01_002f8268` | `` | no |
+| `Moby_WaterReservoir_Update` | `func_L12_002EDAA0` | `FUN_L12_002ec720` | `` | no |
+| `Moby_Water_Update` | `func_L05_0030DED8` | `FUN_L05_0030ca80` | `` | no |
+| `Moby_WhiteFlower_Update` | `func_L02_002F3398` | `FUN_L02_002f1f60` | `` | no |
+| `Moby_WoodcutBot_Update` | `func_L04_002D2A98` | `FUN_L04_002d16b8` | `` | no |
+| `Moby_Wrench_Update` | `func_L00_002A9768` | `FUN_L00_002a84c8` | `` | no |
 | `Pad_ProcessReport` | `func_002181F0` | `FUN_00217328` | `void(u32,u32,i32)` | yes |
 
-0 of them are moby update functions.
+637 of them are moby update functions: `Moby_Class1750_Update`, `Moby_Class676_Update`, `Moby_Class482_Update`, `Moby_Class809_Update`, `Moby_CameraObject_Update`, `Moby_Vendor_Update`, `Moby_Bolt_Update`, `Moby_Wrench_Update`, `Moby_Mine_Update`, `Moby_Class112_Update`, `Moby_Class121_Update`, `Moby_Class122_Update`, `Moby_NanotechCrateFragment_Update`, `Moby_GoldDevastatorMissile_Update`, `Moby_Visibomb_Update`, `Moby_Class166_Update`, `Moby_Class167_Update`, `Moby_VisibombMissile_Update`, `Moby_Taunter_Update`, `Moby_Pyrocitor_Update`, `Moby_Class179_Update`, `Moby_Walloper_Update`, `Moby_Morphoray_Update`, `Moby_DoomBot_Update`, `Moby_Trespasser_Update`, `Moby_MineGlove_Update`, `Moby_BombGlove_Update`, `Moby_Decoy_Update`, `Moby_DevestatorAmmo_Update`, `Moby_SwingshotHook_Update`, `Moby_GloveOfDoom_Update`, `Moby_Bomb_Update`, `Moby_MorphorayChicken_Update`, `Moby_Class305_Update`, `Moby_Class428_Update`, `Moby_Ryno_Update`, `Moby_Rocket_Update`, `Moby_Drone_Update`, `Moby_BoltCrate_Update`, `Moby_VeldinShip_Update`, `Moby_DecoyGlove_Update`, `Moby_MetalDetector_Update`, `Moby_Helipack_Update`, `Moby_Class639_Update`, `Moby_HornyToad_Update`, `Moby_Infobot_Update`, `Moby_ParticleSpawnerSmokeFire_Update`, `Moby_Class775_Update`, `Moby_Class804_Update`, `Moby_NanotechBall_Update`, `Moby_ClankCutsceneTrigger_Update`, `Moby_Suckcannon_Update`, `Moby_RedOrb_Update`, `Moby_Class1138_Update`, `Moby_VendorOrb_Update`, `Moby_Hydrodisplacer_Update`, `Moby_PilotsHelmet_Update`, `Moby_Class1413_Update`, `Moby_VeldinRobotEnemy_Update`, `Moby_Class1471_Update`, `Moby_Class1545_Update`, `Moby_Pterodactyl_Update`, `Moby_BombthrowerGrass_Update`, `Moby_Hoverboard_Update`, `Moby_NovalisElevator_Update`, `Moby_Class27_Update`, `Moby_Class156_Update`, `Moby_BoltCrank_Update`, `Moby_GoldWeaponCase_Update`, `Moby_SandMouse_Update`, `Moby_Birdbot_Update`, `Moby_Class567_Update`, `Moby_LargeAmoeboid_Update`, `Moby_Peckbot_Update`, `Moby_SandmouseHouse_Update`, `Moby_Class605_Update`, `Moby_WaterCurrent_Update`, `Moby_CaveDoor_Update`, `Moby_FighterJet_Update`, `Moby_DoorHalf_Update`, `Moby_StationaryShip_Update`, `Moby_Class845_Update`, `Moby_Class678_Update`, `Moby_Class679_Update`, `Moby_Class686_Update`, `Moby_BomberJet_Update`, `Moby_WaterLily_Update`, `Moby_Rock_Update`, `Moby_Class700_Update`, `Moby_FallingRock_Update`, `Moby_PistonPlatform_Update`, `Moby_RockFormation_Update`, `Moby_Fan_Update`, `Moby_BridgePiece1_Update`, `Moby_Class722_Update`, `Moby_DestroyableCaveWall_Update`, `Moby_AgnoggShipFront_Update`, `Moby_Class737_Update`, `Moby_BridgeHalf_Update`, `Moby_Class751_Update`, `Moby_GreenMushroom_Update`, `Moby_Class761_Update`, `Moby_DoorLeft_Update`, `Moby_ThePlumber_Update`, `Moby_Pipe_Update`, `Moby_Class779_Update`, `Moby_Class787_Update`, `Moby_SpawnPoint_Update`, `Moby_Beehive_Update`, `Moby_Class832_Update`, `Moby_MushroomUnderside_Update`, `Moby_GoldBolt_Update`, `Moby_Teleporter_Update`, `Moby_Class1225_Update`, `Moby_Class1341_Update`, `Moby_Class1504_Update`, `Moby_Class1510_Update`, `Moby_Class1546_Update`, `Moby_Class1633_Update`, `Moby_TallShroom_Update`, `Moby_Sandmouse_Update`, `Moby_Class1848_Update`, `Moby_TrackdriveLeft_Update`, `Moby_SandShark_Update`, `Moby_Constructorbot_Update`, `Moby_TresspasserPad_Update`, `Moby_Elevator_Update`, `Moby_ConveyorBelt_Update`, `Moby_Bulldozer_Update`, `Moby_SandSharkNest_Update`, `Moby_GrabCrane_Update`, `Moby_Platform_Update`, `Moby_TransportPod_Update`, `Moby_Crane_Update`, `Moby_RocketLauncher_Update`, `Moby_RocketDoor1_Update`, `Moby_TresspasserDoor1_Update`, `Moby_TresspasserDoor2_Update`, `Moby_SandsharkEgg_Update`, `Moby_SwingshotVersatarget_Update`, `Moby_Rocks_Update`, `Moby_SkidsAgent_Update`, `Moby_SkidMcmarx_Update`, `Moby_LiftcarPlatform_Update`, `Moby_OceanAridia_Update`, `Moby_Tresspasser_Update`, `Moby_Constructorbot1208_Update`, `Moby_BackgroundShip1_Update`, `Moby_BackgroundShip2_Update`, `Moby_Class1324_Update`, `Moby_Class1479_Update`, `Moby_WhiteFlower_Update`, `Moby_MetropolisTrainLocomotive_Update`, `Moby_MovingPlatformSmall_Update`, `Moby_MetropolisTrainCarriage_Update`, `Moby_RedShip1_Update`, `Moby_Class235_Update`, `Moby_Spawner_Update`, `Moby_Bomb545_Update`, `Moby_RobotDog_Update`, `Moby_Class574_Update`, `Moby_MineLayer_Update`, `Moby_Mine627_Update`, `Moby_BlargHelicopter_Update`, `Moby_Taxi_Update`, `Moby_Statue_Update`, `Moby_RoboShackSign_Update`, `Moby_Class833_Update`, `Moby_Class848_Update`, `Moby_Helga_Update`, `Moby_Class898_Update`, `Moby_Class899_Update`, `Moby_BigAl_Update`, `Moby_RobotQwark_Update`, `Moby_Fred1_Update`, `Moby_QwarkUmbris_Update`, `Moby_Class994_Update`, `Moby_Gate_Update`, `Moby_Taxi1012_Update`, `Moby_Class1221_Update`, `Moby_Class1342_Update`, `Moby_Class1548_Update`, `Moby_Class86_Update`, `Moby_Class161_Update`, `Moby_Class184_Update`, `Moby_BigAxebot_Update`, `Moby_CircularSawEnemy_Update`, `Moby_BlargTrooper_Update`, `Moby_EudoraBridge_Update`, `Moby_PlatformBooster_Update`, `Moby_SnowPlow_Update`, `Moby_FloatingPlatform_Update`, `Moby_TransportShip_Update`, `Moby_WoodcutBot_Update`, `Moby_Class584_Update`, `Moby_Class617_Update`, `Moby_Leaf_Update`, `Moby_UpperDoor_Update`, `Moby_SuckCannon_Update`, `Moby_Lieutenant_Update`, `Moby_Class1343_Update`, `Moby_Class1516_Update`, `Moby_Class1549_Update`, `Moby_Sharkigator_Update`, `Moby_SceneryShip_Update`, `Moby_Amoeboid_Update`, `Moby_Class258_Update`, `Moby_HydrodisplacerFaucet_Update`, `Moby_Hoverboard439_Update`, `Moby_Extermibot_Update`, `Moby_Extermitank_Update`, `Moby_SkidMcmarx717_Update`, `Moby_FloatingPlatform810_Update`, `Moby_Box_Update`, `Moby_Lamp_Update`, `Moby_FloorButton_Update`, `Moby_Water_Update`, `Moby_ElectricGate_Update`, `Moby_Class841_Update`, `Moby_Class843_Update`, `Moby_DrainCover_Update`, `Moby_PipeMountedGrating_Update`, `Moby_Class852_Update`, `Moby_Class855_Update`, `Moby_ElevatorWithButton_Update`, `Moby_OceanRilgar_Update`, `Moby_Class893_Update`, `Moby_Class895_Update`, `Moby_HoverboardGirl_Update`, `Moby_QwarksBouncer_Update`, `Moby_ShadySalesman_Update`, `Moby_BlargGun_Update`, `Moby_Class982_Update`, `Moby_Television_Update`, `Moby_Taxi998_Update`, `Moby_QwarksTrailer_Update`, `Moby_HoverboardRing_Update`, `Moby_Class1347_Update`, `Moby_Lamp1511_Update`, `Moby_Class1550_Update`, `Moby_HangarDoor_Update`, `Moby_GadgebotSpawnContainer_Update`, `Moby_GadgebotSpawnPad_Update`, `Moby_Class367_Update`, `Moby_Frog_Update`, `Moby_Gadgebot_Update`, `Moby_ToxicGasVent_Update`, `Moby_Class1021_Update`, `Moby_Class1028_Update`, `Moby_Class1035_Update`, `Moby_EnergySphereHolder_Update`, `Moby_Class1039_Update`, `Moby_EnergySphere_Update`, `Moby_AlienSnapper_Update`, `Moby_AlienQueen_Update`, `Moby_Class1054_Update`, `Moby_Class1061_Update`, `Moby_Class1062_Update`, `Moby_Class1066_Update`, `Moby_BlargSpaceCommando_Update`, `Moby_Class1083_Update`, `Moby_Class1085_Update`, `Moby_Class1091_Update`, `Moby_Fred_Update`, `Moby_Class1108_Update`, `Moby_Shuttle_Update`, `Moby_RedButton_Update`, `Moby_Class1123_Update`, `Moby_BotDoorLock_Update`, `Moby_Class1348_Update`, `Moby_Class1512_Update`, `Moby_Class1551_Update`, `Moby_Mushroom_Update`, `Moby_Class1660_Update`, `Moby_Class1898_Update`, `Moby_TaxiPlatform_Update`, `Moby_TaxiPlatform1474_Update`, `Moby_Class436_Update`, `Moby_Class317_Update`, `Moby_PurpleShip_Update`, `Moby_BoltcratePossiblyForMetalDetector_Update`, `Moby_Class880_Update`, `Moby_Bomb882_Update`, `Moby_TimedActivationPads_Update`, `Moby_Water902_Update`, `Moby_Class1013_Update`, `Moby_OceanUmbris_Update`, `Moby_Bombomatic_Update`, `Moby_Class1046_Update`, `Moby_Class1049_Update`, `Moby_Sharkigator1059_Update`, `Moby_Door_Update`, `Moby_Class1069_Update`, `Moby_Class1080_Update`, `Moby_Snagglebeast_Update`, `Moby_Mine1112_Update`, `Moby_Class1113_Update`, `Moby_MachinegunTurret_Update`, `Moby_Class1128_Update`, `Moby_Bridge_Update`, `Moby_Class1133_Update`, `Moby_Class1142_Update`, `Moby_Class1552_Update`, `Moby_Class1789_Update`, `Moby_Class152_Update`, `Moby_Bomb248_Update`, `Moby_Scoutbot_Update`, `Moby_BomberTank_Update`, `Moby_Class327_Update`, `Moby_BlargBombthrower_Update`, `Moby_Shuttle424_Update`, `Moby_Bomb425_Update`, `Moby_Rocket435_Update`, `Moby_Class438_Update`, `Moby_Class440_Update`, `Moby_Class441_Update`, `Moby_Class444_Update`, `Moby_BoltThief_Update`, `Moby_Rocket458_Update`, `Moby_Shrub_Update`, `Moby_Class463_Update`, `Moby_Class467_Update`, `Moby_Class468_Update`, `Moby_Class600_Update`, `Moby_Class621_Update`, `Moby_Class648_Update`, `Moby_Class671_Update`, `Moby_BlargParatrooper_Update`, `Moby_Commando_Update`, `Moby_BataliaDeserter_Update`, `Moby_ThePlumberBatalia_Update`, `Moby_Class1292_Update`, `Moby_Class1349_Update`, `Moby_Class1400_Update`, `Moby_Class1553_Update`, `Moby_Class1629_Update`, `Moby_Class1641_Update`, `Moby_Class1649_Update`, `Moby_AirshipPart_Update`, `Moby_Seeker_Update`, `Moby_Class193_Update`, `Moby_Asteroid_Update`, `Moby_Display_Update`, `Moby_Class279_Update`, `Moby_Class313_Update`, `Moby_Class320_Update`, `Moby_Class417_Update`, `Moby_Platform664_Update`, `Moby_Class1000_Update`, `Moby_Elevator1150_Update`, `Moby_RefuelingStation_Update`, `Moby_AirshipPart1181_Update`, `Moby_Turret_Update`, `Moby_Class1206_Update`, `Moby_Class1258_Update`, `Moby_Barrier_Update`, `Moby_Class1293_Update`, `Moby_Shuttle1766_Update`, `Moby_Spawner1885_Update`, `Moby_SpawnerEgg_Update`, `Moby_Platform1033_Update`, `Moby_Platform1117_Update`, `Moby_Magnetboots_Update`, `Moby_Class22_Update`, `Moby_GadgebotTelepotPad_Update`, `Moby_Class702_Update`, `Moby_Class794_Update`, `Moby_Rocket819_Update`, `Moby_Class859_Update`, `Moby_Bomb938_Update`, `Moby_BombthrowerGrass939_Update`, `Moby_Class947_Update`, `Moby_LabDoor_Update`, `Moby_Button_Update`, `Moby_Class1047_Update`, `Moby_Class1067_Update`, `Moby_Class1090_Update`, `Moby_BlockCave_Update`, `Moby_Screamer_Update`, `Moby_Class1199_Update`, `Moby_ToxicCrab_Update`, `Moby_BlargShip_Update`, `Moby_Class1240_Update`, `Moby_NanotechUpgradeVendor_Update`, `Moby_Class1344_Update`, `Moby_Gun_Update`, `Moby_Class1378_Update`, `Moby_Gate1_Update`, `Moby_Gate2_Update`, `Moby_Class1544_Update`, `Moby_Class1555_Update`, `Moby_Class1855_Update`, `Moby_Class1856_Update`, `Moby_Class23_Update`, `Moby_Class37_Update`, `Moby_Class65_Update`, `Moby_Bob_Update`, `Moby_ResortOwner_Update`, `Moby_FredPokitaru_Update`, `Moby_Teleporter318_Update`, `Moby_Class361_Update`, `Moby_Class1009_Update`, `Moby_Class1017_Update`, `Moby_Rocket1034_Update`, `Moby_PokitaruBoat_Update`, `Moby_OceanPokitaru_Update`, `Moby_Class1156_Update`, `Moby_Class1157_Update`, `Moby_Class1158_Update`, `Moby_Class1159_Update`, `Moby_SeesawPlatform_Update`, `Moby_ThrusterPackLock_Update`, `Moby_Class1180_Update`, `Moby_Ammocrate_Update`, `Moby_Class1219_Update`, `Moby_Psytcopus_Update`, `Moby_JetFighter_Update`, `Moby_Puffoid_Update`, `Moby_Class1248_Update`, `Moby_OilTankerFront_Update`, `Moby_Class1265_Update`, `Moby_EnergySphere1297_Update`, `Moby_BlargShip1319_Update`, `Moby_Class1350_Update`, `Moby_Class1524_Update`, `Moby_Class1903_Update`, `Moby_Class1919_Update`, `Moby_Class19_Update`, `Moby_Class238_Update`, `Moby_Platform240_Update`, `Moby_Miner_Update`, `Moby_Class293_Update`, `Moby_BlargTrooper294_Update`, `Moby_BlargHelicopter326_Update`, `Moby_Edwina_Update`, `Moby_Helicopter_Update`, `Moby_CraneArm_Update`, `Moby_WaterReservoir_Update`, `Moby_Rocket409_Update`, `Moby_Class422_Update`, `Moby_Class1259_Update`, `Moby_HovenTurret_Update`, `Moby_Mine1269_Update`, `Moby_PlanetbusterMaximusPart_Update`, `Moby_HomingMineSpawner_Update`, `Moby_Class1345_Update`, `Moby_BlargCommander_Update`, `Moby_Class1404_Update`, `Moby_Class1557_Update`, `Moby_Class1901_Update`, `Moby_Class6_Update`, `Moby_Elevator21_Update`, `Moby_BlargTurret_Update`, `Moby_BlargGunner_Update`, `Moby_Robosquawker_Update`, `Moby_FighterJet69_Update`, `Moby_Rocket82_Update`, `Moby_Mine83_Update`, `Moby_BlargSpaceFighter_Update`, `Moby_BlargSpaceFighter111_Update`, `Moby_Class127_Update`, `Moby_ForcefieldTower_Update`, `Moby_Asteroid212_Update`, `Moby_Ammocrate224_Update`, `Moby_Class231_Update`, `Moby_Rocket295_Update`, `Moby_Class352_Update`, `Moby_QwarksStarfighterPart_Update`, `Moby_QwarksStarfighterPart389_Update`, `Moby_Forcefield_Update`, `Moby_PurpleShip533_Update`, `Moby_Class558_Update`, `Moby_Class667_Update`, `Moby_Class674_Update`, `Moby_Class1238_Update`, `Moby_PoisonVessel_Update`, `Moby_BlargSpaceCommando1262_Update`, `Moby_Class1263_Update`, `Moby_Class1270_Update`, `Moby_Class1271_Update`, `Moby_Class1353_Update`, `Moby_Class1403_Update`, `Moby_Class1558_Update`, `Moby_Class1577_Update`, `Moby_Class1632_Update`, `Moby_Class1634_Update`, `Moby_BlargShip1805_Update`, `Moby_Platform903_Update`, `Moby_BlargHeavyInterceptor_Update`, `Moby_Plasmabot_Update`, `Moby_MachinegunTurret30_Update`, `Moby_Minibomber_Update`, `Moby_Class81_Update`, `Moby_Plasmabot211_Update`, `Moby_PlasmabotHatch_Update`, `Moby_Platform309_Update`, `Moby_Class325_Update`, `Moby_Class386_Update`, `Moby_Class403_Update`, `Moby_Shuttle557_Update`, `Moby_Class610_Update`, `Moby_Mine643_Update`, `Moby_Class681_Update`, `Moby_Class684_Update`, `Moby_Elevator685_Update`, `Moby_Taxi712_Update`, `Moby_QwarkOltanis_Update`, `Moby_Jet_Update`, `Moby_Jet921_Update`, `Moby_Rocket922_Update`, `Moby_BoltThief923_Update`, `Moby_Sam_Update`, `Moby_Mine933_Update`, `Moby_Class1193_Update`, `Moby_Class1224_Update`, `Moby_Class1331_Update`, `Moby_Class1352_Update`, `Moby_Morphoray1354_Update`, `Moby_Class1395_Update`, `Moby_Class1397_Update`, `Moby_Button1416_Update`, `Moby_BlargHeavyInterceptor1417_Update`, `Moby_Class1418_Update`, `Moby_Class1559_Update`, `Moby_Sentrybot_Update`, `Moby_Rocket49_Update`, `Moby_Class67_Update`, `Moby_Class256_Update`, `Moby_Class1427_Update`, `Moby_Class1523_Update`, `Moby_Mine77_Update`, `Moby_Class78_Update`, `Moby_Gate92_Update`, `Moby_Gate93_Update`, `Moby_Spiderbot_Update`, `Moby_Class148_Update`, `Moby_Class154_Update`, `Moby_Door196_Update`, `Moby_ConstructionArm_Update`, `Moby_Helicopter233_Update`, `Moby_SentrybotAlarm_Update`, `Moby_UltramechUnlimited_Update`, `Moby_Class655_Update`, `Moby_Class934_Update`, `Moby_Class937_Update`, `Moby_UnderwaterRing_Update`, `Moby_ConveyorBelt1250_Update`, `Moby_PoisonVessel1257_Update`, `Moby_BoltGrabber_Update`, `Moby_Class1394_Update`, `Moby_Class1405_Update`, `Moby_Class1419_Update`, `Moby_Class1425_Update`, `Moby_Codebot_Update`, `Moby_CodebotSlot_Update`, `Moby_UltramechScientist_Update`, `Moby_GiantClankPad_Update`, `Moby_Class1469_Update`, `Moby_Class1560_Update`, `Moby_Rocket50_Update`, `Moby_Rocket1475_Update`, `Moby_Class257_Update`, `Moby_Bomb281_Update`, `Moby_Rocket470_Update`, `Moby_ConveyorBelt471_Update`, `Moby_TestDummy_Update`, `Moby_WallButton_Update`, `Moby_Class552_Update`, `Moby_TestDummyOnHoverboard_Update`, `Moby_BlargEliteCommando_Update`, `Moby_Door647_Update`, `Moby_TestDummyDoor_Update`, `Moby_Class654_Update`, `Moby_Class800_Update`, `Moby_ArmedTransport_Update`, `Moby_HelpDeskLady_Update`, `Moby_Class1387_Update`, `Moby_BoltThief1401_Update`, `Moby_Taxi1410_Update`, `Moby_GrindrailGate_Update`, `Moby_GrindrailGate1441_Update`, `Moby_GrindrailButton_Update`, `Moby_GrindrailBarrier_Update`, `Moby_Chomper_Update`, `Moby_GadgetronCeo_Update`, `Moby_Class1561_Update`, `Moby_Class1667_Update`, `Moby_Class1812_Update`, `Moby_Elevator1826_Update`, `Moby_GadgetronSign_Update`, `Moby_Class1923_Update`, `Moby_Class1943_Update`, `Moby_Class1947_Update`, `Moby_Class1948_Update`, `Moby_Class1907_Update`, `Moby_Class1953_Update`, `Moby_Class99_Update`, `Moby_DreksFleetTurret_Update`, `Moby_Class669_Update`, `Moby_Class835_Update`, `Moby_Door1359_Update`, `Moby_Class1368_Update`, `Moby_FighterJet1379_Update`, `Moby_MagnetElevator_Update`, `Moby_RobotDog1382_Update`, `Moby_Shuttle1448_Update`, `Moby_Class1470_Update`, `Moby_Class1562_Update`, `Moby_Class1772_Update`, `Moby_BlargShip1843_Update`, `Moby_Class1873_Update`, `Moby_Class1876_Update`, `Moby_Rocket41_Update`, `Moby_Rocket564_Update`, `Moby_Mine568_Update`, `Moby_Class582_Update`, `Moby_ThrusterPackLockGreen_Update`, `Moby_ThrusterPackLockRed_Update`, `Moby_FloatingPlatform587_Update`, `Moby_Class624_Update`, `Moby_Class628_Update`, `Moby_Class644_Update`, `Moby_Class885_Update`, `Moby_Class983_Update`, `Moby_DrekFightMissile_Update`, `Moby_Class1381_Update`, `Moby_Class1392_Update`, `Moby_Class1402_Update`, `Moby_DrekFinalBossRobot_Update`, `Moby_Class1432_Update`, `Moby_DeplanetizerGun_Update`, `Moby_RocketTank_Update`, `Moby_Class1563_Update`, `Moby_DeplanetizerGun1568_Update`, `Moby_Class1584_Update`, `Moby_Class1799_Update`, `Moby_Gadgebot1906_Update`.
 
 ## Update functions
 
@@ -87,650 +724,650 @@ its instructions). **Hook**: the hook point, or the name proposed for one and wh
 | Function | Name | Classes | Levels | C | Signature | Hook | Pvars | Calls |
 |---|---|---|---|---|---|---|---|---|
 | `func_001E9768` | Profile_Mark | 85 butterfly, 87 clank, 164 drill, 178, 283, 284, 324, 346 and 38 more | 0-18 | decomp | `void()` | row: `Moby_Butterfly_Update` (no moby) |  |  |
-| `func_00216270` | register_audio_stream_callback | 1750 | 0-18 | decomp | `void()` | row: `Moby_Class1750_Update` (no moby) |  | `func_0012F068` |
-| `func_0023BF48` | ErrMessage | 676 | 0-18 | decomp | `void(u32)` | row: `Moby_Class676_Update` |  | `STUB_printf` |
-| `func_L00_00237B70` | DefaultVtbl_DeleteMoby | 482 | 0-18 | decomp | `void(u32)` | row: `Moby_Class482_Update` |  | `Hud_UpdateCounter` |
-| `func_L00_002A5F68` | TextureScrollUpdate | 809 | 0-1, 14 | decomp | `void(u32)` | row: `Moby_Class809_Update` |  |  |
-| `func_L00_002A60D8` | Moby_FollowCameraSightLine | 1007 camera_object | 0-18 | decomp | `void(u32)` | row: `Moby_CameraObject_Update` |  |  |
-| `func_L00_002A6A38` | LightBeamUpdate | 11 vendor | 0-18 | decomp | `void(u32)` | row: `Moby_Vendor_Update` |  | `func_L00_00251E30`, `func_L00_001FFED8`, `try_set_help_message`, `VendorOpenMenu` |
-| `func_L00_002A7078` | BoltUpdate | 13 bolt, 14 bolt_hexnut, 15 bolt_starnut, 16 bolt_circlenut | 0-18 | decomp | `void(u32)` | row: `Moby_Bolt_Update` |  | `func_001F9CE8`, `GetFlaggedPvarWord`, `RotateIntoMobySpace`, `func_001FA648`, `func_001FA4F0`, `Moby_StartTumble`, `func_L00_001FF610`, `MatrixToEuler`, `BuildEulerMatrix`, `ThrownMobyOrient` |
-| `func_L00_002A9768` | WrenchUpdate | 71 wrench | 0-18 | decomp | `void(u32)` | row: `Moby_Wrench_Update` |  | `EffectQueue_Add`, `BuildSphericalOffset`, `CopyHeroAnimToMoby`, `Vec_ScaleByHeadingDiff`, `CollType`, `IsMobyClass502OrOutsideRange`, `SpawnImpactBurst`, `PostHitMessage`, `Hero_IsTimeInWindow`, `HeroMoveUpAlongNormal` |
-| `func_L00_002AB910` | MineUpdate | 74 mine | 0-18 | decomp | `void(u32)` | row: `Moby_Mine_Update` |  | `GetFlaggedPvarWord`, `ProjectilePath_Trace`, `func_001FA218`, `MobyTransformScaledVertex`, `sce_vu0_mul_matrix`, `func_001FA480`, `GetGroundHeight`, `PartType34Spawn`, `func_L00_001FF500`, `CollType` |
-| `func_L00_002ADD78` | SpinFadeOutUpdate | 112, 1192 | 0-18 | decomp | `void(u32)` | row: `Moby_Class112_Update` |  |  |
-| `func_L00_002AEDD0` | HeroBombUpdate | 121 | 0-18 | decomp | `void(u32)` | row: `Moby_Class121_Update` |  | `GetFlaggedPvarWord`, `HeroBomb_StepFlight`, `rand_vec`, `FastTweenColor`, `PartType02Spawn`, `GetGroundHeight`, `PartType34Spawn`, `func_L00_001FF500`, `CollType`, `RippleDisturb` |
-| `func_L00_002B08A0` | FallingSparkUpdate | 122 | 0-18 | decomp | `void(u32)` | row: `Moby_Class122_Update` |  | `PermuteColorChannels`, `PartType04Spawn` |
-| `func_L00_002B0D30` | DebrisBounceUpdate | 149, 348 nanotech_crate_fragment, 349 nanotech_crate_fragment, 354 metal_crate_fragment, 355 metal_crate_fragment, 356 metal_crate_fragment, 357 crate_fragment, 358 crate_fragment and 3 more | 0-18 | decomp | `void(u32)` | row: `Moby_NanotechCrateFragment_Update` |  | `func_L00_001FF610`, `randf_sym` |
-| `func_L00_002B1688` | MissileUpdate | 153 gold_devastator_missile | 0-18 | decomp | `void(u32)` | row: `Moby_GoldDevastatorMissile_Update` |  | `func_L00_001FF270`, `func_L00_001FF3E0`, `func_001F9B50`, `func_001F9CE8`, `SpringTurn`, `BuildSphericalOffset`, `PartType44Spawn`, `func_001F9EC0`, `build_look_at_matrix`, `PermuteColorChannels` |
+| `func_00216270` | register_audio_stream_callback | 1750 | 0-18 | decomp | `void()` | **`Moby_Class1750_Update`** |  | `func_0012F068` |
+| `func_0023BF48` | ErrMessage | 676 | 0-18 | decomp | `void(u32)` | **`Moby_Class676_Update`** |  | `STUB_printf` |
+| `func_L00_00237B70` | DefaultVtbl_DeleteMoby | 482 | 0-18 | decomp | `void(u32)` | **`Moby_Class482_Update`** |  | `Hud_UpdateCounter` |
+| `func_L00_002A5F68` | TextureScrollUpdate | 809 | 0-1, 14 | decomp | `void(u32)` | **`Moby_Class809_Update`** |  |  |
+| `func_L00_002A60D8` | Moby_FollowCameraSightLine | 1007 camera_object | 0-18 | decomp | `void(u32)` | **`Moby_CameraObject_Update`** |  |  |
+| `func_L00_002A6A38` | LightBeamUpdate | 11 vendor | 0-18 | decomp | `void(u32)` | **`Moby_Vendor_Update`** |  | `func_L00_00251E30`, `func_L00_001FFED8`, `try_set_help_message`, `VendorOpenMenu` |
+| `func_L00_002A7078` | BoltUpdate | 13 bolt, 14 bolt_hexnut, 15 bolt_starnut, 16 bolt_circlenut | 0-18 | decomp | `void(u32)` | **`Moby_Bolt_Update`** |  | `func_001F9CE8`, `GetFlaggedPvarWord`, `RotateIntoMobySpace`, `func_001FA648`, `func_001FA4F0`, `Moby_StartTumble`, `func_L00_001FF610`, `MatrixToEuler`, `BuildEulerMatrix`, `ThrownMobyOrient` |
+| `func_L00_002A9768` | WrenchUpdate | 71 wrench | 0-18 | decomp | `void(u32)` | **`Moby_Wrench_Update`** |  | `EffectQueue_Add`, `BuildSphericalOffset`, `CopyHeroAnimToMoby`, `Vec_ScaleByHeadingDiff`, `CollType`, `IsMobyClass502OrOutsideRange`, `SpawnImpactBurst`, `PostHitMessage`, `Hero_IsTimeInWindow`, `HeroMoveUpAlongNormal` |
+| `func_L00_002AB910` | MineUpdate | 74 mine | 0-18 | decomp | `void(u32)` | **`Moby_Mine_Update`** |  | `GetFlaggedPvarWord`, `ProjectilePath_Trace`, `func_001FA218`, `MobyTransformScaledVertex`, `sce_vu0_mul_matrix`, `func_001FA480`, `GetGroundHeight`, `PartType34Spawn`, `func_L00_001FF500`, `CollType` |
+| `func_L00_002ADD78` | SpinFadeOutUpdate | 112, 1192 | 0-18 | decomp | `void(u32)` | **`Moby_Class112_Update`** |  |  |
+| `func_L00_002AEDD0` | HeroBombUpdate | 121 | 0-18 | decomp | `void(u32)` | **`Moby_Class121_Update`** |  | `GetFlaggedPvarWord`, `HeroBomb_StepFlight`, `rand_vec`, `FastTweenColor`, `PartType02Spawn`, `GetGroundHeight`, `PartType34Spawn`, `func_L00_001FF500`, `CollType`, `RippleDisturb` |
+| `func_L00_002B08A0` | FallingSparkUpdate | 122 | 0-18 | decomp | `void(u32)` | **`Moby_Class122_Update`** |  | `PermuteColorChannels`, `PartType04Spawn` |
+| `func_L00_002B0D30` | DebrisBounceUpdate | 149, 348 nanotech_crate_fragment, 349 nanotech_crate_fragment, 354 metal_crate_fragment, 355 metal_crate_fragment, 356 metal_crate_fragment, 357 crate_fragment, 358 crate_fragment and 3 more | 0-18 | decomp | `void(u32)` | **`Moby_NanotechCrateFragment_Update`** |  | `func_L00_001FF610`, `randf_sym` |
+| `func_L00_002B1688` | MissileUpdate | 153 gold_devastator_missile | 0-18 | decomp | `void(u32)` | **`Moby_GoldDevastatorMissile_Update`** |  | `func_L00_001FF270`, `func_L00_001FF3E0`, `func_001F9B50`, `func_001F9CE8`, `SpringTurn`, `BuildSphericalOffset`, `PartType44Spawn`, `func_001F9EC0`, `build_look_at_matrix`, `PermuteColorChannels` |
 | `func_L00_002B33E8` | Moby157Update | 157 devastator | 0-18 | decomp | `void(u32)` | row: `Moby_Devastator_Update` | Data_2B33E8 | `EmitMuzzleSmoke`, `func_001FA480`, `func_001FA4A0`, `HeroEnterMoveState`, `func_001F9EE8`, `EffectQueue_Add`, `FastNormalizeAngle`, `GetAmmo`, `func_001F9EC0`, `TakeAmmo` |
-| `func_L00_002B4340` | Moby163Update | 163 visibomb | 0-18 | decomp | `void(u32)` | row: `Moby_Visibomb_Update` |  | `TakeAmmo`, `func_001F9CE8`, `BuildSphericalOffset`, `HelpPopup_RequestDismiss`, `VisibombMissileSpawn` |
-| `func_L00_002B4748` | Moby166Update | 166 | 0-18 | decomp | `void(u32)` | row: `Moby_Class166_Update` |  |  |
-| `func_L00_002B5488` | Moby167Update | 167 | 0-18 | decomp | `void(u32)` | row: `Moby_Class167_Update` |  | `Hero_GetSlotModuleId`, `Moby_SpawnTrailParticles` |
+| `func_L00_002B4340` | Moby163Update | 163 visibomb | 0-18 | decomp | `void(u32)` | **`Moby_Visibomb_Update`** |  | `TakeAmmo`, `func_001F9CE8`, `BuildSphericalOffset`, `HelpPopup_RequestDismiss`, `VisibombMissileSpawn` |
+| `func_L00_002B4748` | Moby166Update | 166 | 0-18 | decomp | `void(u32)` | **`Moby_Class166_Update`** |  |  |
+| `func_L00_002B5488` | Moby167Update | 167 | 0-18 | decomp | `void(u32)` | **`Moby_Class167_Update`** |  | `Hero_GetSlotModuleId`, `Moby_SpawnTrailParticles` |
 | `func_L00_002B5C98` | Moby168Update | 168 blaster | 0-18 | decomp | `void(u32)` | row: `Moby_Blaster_Update` | Data_2B5C98 | `HeroEnterMoveState`, `func_001FA480`, `func_001FA4A0`, `func_001F9EE8`, `EffectQueue_Add`, `func_001F9EC0`, `func_001F9CE8`, `Aim_RefineTarget`, `GetAmmo`, `GetFlaggedPvarWord` |
-| `func_L00_002B7430` | VisibombMissileUpdate | 172 visibomb_missile | 0-18 | decomp | `void(u32)` | row: `Moby_VisibombMissile_Update` | D_2B7430 | `HelpPopup_RequestDismiss`, `force_help_message`, `Moby_EndGadgetControl`, `Camera_PlaceBehindMoby`, `Moby_RestoreGlobalsState`, `HeldObject_UpdatePose`, `Sound_SetPitchBend`, `RecordMobyShadow`, `BuildSphericalOffset`, `func_L00_001FFED8` |
-| `func_L00_002B8208` | Moby175Update | 175 taunter | 0-18 | decomp | `void(u32)` | row: `Moby_Taunter_Update` | Vars | `Moby175_HitNearbyTargets`, `Moby175SlotsUpdate` |
-| `func_L00_002B8AE8` |  | 176 pyrocitor | 0-18 | candidate | `void(u32)` | row: `Moby_Pyrocitor_Update` |  | `func_L00_002B9528`, `MobyGetFrameValue`, `SpawnMoby179`, `func_001F9C08`, `FreePointLight`, `GetAmmo`, `Hero_StartModuleAnim`, `AllocPointLight`, `func_001F9EC0`, `ApproachWithVelocity` |
+| `func_L00_002B7430` | VisibombMissileUpdate | 172 visibomb_missile | 0-18 | decomp | `void(u32)` | **`Moby_VisibombMissile_Update`** | D_2B7430 | `HelpPopup_RequestDismiss`, `force_help_message`, `Moby_EndGadgetControl`, `Camera_PlaceBehindMoby`, `Moby_RestoreGlobalsState`, `HeldObject_UpdatePose`, `Sound_SetPitchBend`, `RecordMobyShadow`, `BuildSphericalOffset`, `func_L00_001FFED8` |
+| `func_L00_002B8208` | Moby175Update | 175 taunter | 0-18 | decomp | `void(u32)` | **`Moby_Taunter_Update`** | Vars | `Moby175_HitNearbyTargets`, `Moby175SlotsUpdate` |
+| `func_L00_002B8AE8` |  | 176 pyrocitor | 0-18 | candidate | `void(u32)` | **`Moby_Pyrocitor_Update`** |  | `func_L00_002B9528`, `MobyGetFrameValue`, `SpawnMoby179`, `func_001F9C08`, `FreePointLight`, `GetAmmo`, `Hero_StartModuleAnim`, `AllocPointLight`, `func_001F9EC0`, `ApproachWithVelocity` |
 | `func_L00_002B9AD8` | Moby177Update | 177 tesla_claw | 0-18 | decomp | `void(u32)` | row: `Moby_TeslaClaw_Update` | Data_2B9AD8 | `GetAmmo`, `Help_Request`, `TakeAmmo`, `AllocPointLight`, `GetFlaggedPvarWord`, `func_001F9EC0`, `StartBeamWhenPending`, `func_L00_002BA7C8`, `Hero_StartModuleAnim`, `Hero_ClearPendingModuleAnim` |
-| `func_L00_002BC708` | Moby179Update | 179 | 0-18 | decomp | `void(u32)` | row: `Moby_Class179_Update` |  | `OffsetShortPairTables`, `WrapAngle`, `func_0020EEE8` |
-| `func_L00_002BC860` | Moby180Update | 180 walloper | 0-18 | decomp | `void(u32)` | row: `Moby_Walloper_Update` |  | `MobyGetFrameValue`, `RandomSphericalOffset`, `build_look_at_matrix`, `randf_sym` |
-| `func_L00_002BDAF0` | MorphorayUpdate | 185 morphoray | 0-18 | decomp | `void(u32)` | row: `Moby_Morphoray_Update` | Ray_2BDAF0 | `MobyGetFrameValue`, `Hero_StartModuleAnim`, `HeroEnterMoveState`, `func_001FA480`, `func_001FA4A0`, `func_001F9EE8`, `func_001F9EC0`, `func_001F9CE8`, `Aim_FindAssistTarget`, `GetFlaggedPvarWord` |
-| `func_L00_002C12B0` |  | 186 doom_bot | 0-18 | candidate | `void(u32)` | row: `Moby_DoomBot_Update` |  | `func_001153FC`, `Hero_SetMotionBlock`, `Hero_SetTargetBlock`, `Hero_ProbeSphereRaised`, `func_L00_001FF548`, `func_L00_001FF5B0`, `RotateWithMoby`, `STUB_printf`, `MoveMobyScaledStep`, `GetFlaggedPvarWord` |
-| `func_L00_002C2A20` | Moby188Update | 188 trespasser | 0-18 | decomp | `void(u32)` | row: `Moby_Trespasser_Update` |  | `Moby188_StateStep` |
-| `func_L00_002C2DD8` | MineGloveUpdate | 190 mine_glove | 0-18 | decomp | `void(u32)` | row: `Moby_MineGlove_Update` | GloveVars_2DD8 | `func_001FA480`, `func_001FA4A0`, `MobyTransformScaledVertex`, `func_001F9EE8`, `HeroEnterMoveState`, `GetAmmo`, `Hero_PlayActiveSound`, `TakeAmmo`, `func_001F9EC0`, `func_001F9CE8` |
-| `func_L00_002C39D0` | Moby192Update | 192 bomb_glove | 0-18 | decomp | `void(u32)` | row: `Moby_BombGlove_Update` | CarrierVars_2c26c8 | `func_001FA480`, `func_001FA4A0`, `MobyTransformScaledVertex`, `func_001F9EE8`, `HeroEnterMoveState`, `GetAmmo`, `Hero_PlayActiveSound`, `TakeAmmo`, `func_001F9EC0`, `func_001F9CE8` |
-| `func_L00_002C5688` | ThrownObjectUpdate | 203 decoy, 1900 gold_decoy | 0-18 | decomp | `void(u32)` | row: `Moby_Decoy_Update` |  | `MobyList_Remove`, `GetFlaggedPvarWord`, `ThrownObject_TracePath`, `func_L00_001FF610`, `func_001F9CE8`, `func_001F9B50`, `ExplodeOnSelectedCollType`, `JitterVector`, `PostHitMessageAtPoint`, `Moby_FollowHeroDistance` |
-| `func_L00_002C6720` | AmmoPickupUpdate | 204 devestator_ammo, 213 tesla_claw_ammo, 214 pyrocitor_ammo, 222 visibomb_ammo, 223 glove_of_doom_ammo, 225 mine_glove_ammo, 226 bomb_glove_ammo, 1006 blaster_ammo and 3 more | 0-18 | decomp | `void(u32)` | row: `Moby_DevestatorAmmo_Update` | AmmoPickup_6720 | `AddAmmo`, `ShowBannerf`, `func_001F9B70`, `Sound_PlayClassSound`, `func_L00_00251468` |
+| `func_L00_002BC708` | Moby179Update | 179 | 0-18 | decomp | `void(u32)` | **`Moby_Class179_Update`** |  | `OffsetShortPairTables`, `WrapAngle`, `func_0020EEE8` |
+| `func_L00_002BC860` | Moby180Update | 180 walloper | 0-18 | decomp | `void(u32)` | **`Moby_Walloper_Update`** |  | `MobyGetFrameValue`, `RandomSphericalOffset`, `build_look_at_matrix`, `randf_sym` |
+| `func_L00_002BDAF0` | MorphorayUpdate | 185 morphoray | 0-18 | decomp | `void(u32)` | **`Moby_Morphoray_Update`** | Ray_2BDAF0 | `MobyGetFrameValue`, `Hero_StartModuleAnim`, `HeroEnterMoveState`, `func_001FA480`, `func_001FA4A0`, `func_001F9EE8`, `func_001F9EC0`, `func_001F9CE8`, `Aim_FindAssistTarget`, `GetFlaggedPvarWord` |
+| `func_L00_002C12B0` |  | 186 doom_bot | 0-18 | candidate | `void(u32)` | **`Moby_DoomBot_Update`** |  | `func_001153FC`, `Hero_SetMotionBlock`, `Hero_SetTargetBlock`, `Hero_ProbeSphereRaised`, `func_L00_001FF548`, `func_L00_001FF5B0`, `RotateWithMoby`, `STUB_printf`, `MoveMobyScaledStep`, `GetFlaggedPvarWord` |
+| `func_L00_002C2A20` | Moby188Update | 188 trespasser | 0-18 | decomp | `void(u32)` | **`Moby_Trespasser_Update`** |  | `Moby188_StateStep` |
+| `func_L00_002C2DD8` | MineGloveUpdate | 190 mine_glove | 0-18 | decomp | `void(u32)` | **`Moby_MineGlove_Update`** | GloveVars_2DD8 | `func_001FA480`, `func_001FA4A0`, `MobyTransformScaledVertex`, `func_001F9EE8`, `HeroEnterMoveState`, `GetAmmo`, `Hero_PlayActiveSound`, `TakeAmmo`, `func_001F9EC0`, `func_001F9CE8` |
+| `func_L00_002C39D0` | Moby192Update | 192 bomb_glove | 0-18 | decomp | `void(u32)` | **`Moby_BombGlove_Update`** | CarrierVars_2c26c8 | `func_001FA480`, `func_001FA4A0`, `MobyTransformScaledVertex`, `func_001F9EE8`, `HeroEnterMoveState`, `GetAmmo`, `Hero_PlayActiveSound`, `TakeAmmo`, `func_001F9EC0`, `func_001F9CE8` |
+| `func_L00_002C5688` | ThrownObjectUpdate | 203 decoy, 1900 gold_decoy | 0-18 | decomp | `void(u32)` | **`Moby_Decoy_Update`** |  | `MobyList_Remove`, `GetFlaggedPvarWord`, `ThrownObject_TracePath`, `func_L00_001FF610`, `func_001F9CE8`, `func_001F9B50`, `ExplodeOnSelectedCollType`, `JitterVector`, `PostHitMessageAtPoint`, `Moby_FollowHeroDistance` |
+| `func_L00_002C6720` | AmmoPickupUpdate | 204 devestator_ammo, 213 tesla_claw_ammo, 214 pyrocitor_ammo, 222 visibomb_ammo, 223 glove_of_doom_ammo, 225 mine_glove_ammo, 226 bomb_glove_ammo, 1006 blaster_ammo and 3 more | 0-18 | decomp | `void(u32)` | **`Moby_DevestatorAmmo_Update`** | AmmoPickup_6720 | `AddAmmo`, `ShowBannerf`, `func_001F9B70`, `Sound_PlayClassSound`, `func_L00_00251468` |
 | `func_L00_002C74B8` | SwingshotUpdate | 208 swingshot | 0-18 | decomp | `void(u32)` | row: `Moby_Swingshot_Update` | Data_2C74B8 | `HeroEnterMoveState`, `SpawnMoby209`, `EffectQueue_Add`, `HeroStartAnim`, `Hero_PickSituationId` |
-| `func_L00_002C83D0` | Moby209Update | 209 swingshot_hook | 0-18 | decomp | `void(u32)` | row: `Moby_SwingshotHook_Update` |  | `func_0020EEE8` |
-| `func_L00_002C8DB8` | CarrierUpdate | 229 glove_of_doom | 0-18 | decomp | `void(u32)` | row: `Moby_GloveOfDoom_Update` | CarrierVars_2C8DB8 | `MobyTransformScaledVertex`, `func_001F9EE8`, `HeroEnterMoveState`, `GetAmmo`, `Hero_PlayActiveSound`, `TakeAmmo`, `Carrier_StepCamera`, `PlaceMobyAtSpot`, `SpawnMoby230` |
-| `func_L00_002C9DC8` |  | 230 bomb | 0-18 | decomp | `void(u32)` | row: `Moby_Bomb_Update` |  | `GetFlaggedPvarWord`, `ThrownObject_TracePathCopy`, `PartType32Spawn`, `func_L00_001FF240`, `func_L00_001FF610`, `BurstOnSelectedCollType`, `RotateWithMoby`, `SpawnMoby186` |
-| `func_L00_002CABC0` | MorphorayChickenUpdate | 270 morphoray_chicken | 0-18 | decomp | `void(u32)` | row: `Moby_MorphorayChicken_Update` | Vars_2CABC0 | `Manipulator_ApplyScale`, `BuildSphericalOffset`, `PartType22Spawn`, `SendRadialMessageToMobys`, `SpawnMoby428`, `MoveKeepingOverGround`, `MobySpringTurn`, `CarriedMobyUpdate`, `func_L00_0025A748`, `CollType` |
-| `func_L00_002CC868` | Moby305Update | 305 | 0-18 | decomp | `void(u32)` | row: `Moby_Class305_Update` |  | `SpringTurn`, `BuildSphericalOffset`, `RefreshSparkParts`, `func_L00_001FF500`, `CollType`, `func_L00_001FF610`, `PartType27Spawn`, `func_001F9CE8`, `randf_sym`, `FastVecCross` |
-| `func_L00_002CD660` | Moby428Update | 428 | 0-18 | decomp | `void(u32)` | row: `Moby_Class428_Update` |  |  |
-| `func_L00_002CDAB8` | RynoUpdate | 454 ryno | 0-18 | decomp | `void(u32)` | row: `Moby_Ryno_Update` |  | `func_001FA480`, `func_001FA4A0`, `FindBestTargetMoby`, `GetFlaggedPvarWord`, `GetAmmo`, `EffectQueue_Add`, `HeroEnterMoveState`, `TakeAmmo`, `Hero_StartModuleAnim`, `func_001F9EE8` |
-| `func_L00_002CE6A0` | RocketSteerUpdate | 457 rocket | 0-18 | decomp | `void(u32)` | row: `Moby_Rocket_Update` |  | `func_L00_001FF3E0`, `func_001F9B50`, `SpringTurn`, `func_001F9CE8`, `BuildSphericalOffset`, `PartType04Spawn`, `func_001FA218`, `func_001F9EE8`, `func_L00_001FF500`, `func_L00_001FF610` |
-| `func_L00_002CF808` |  | 479 drone | 0-18 | candidate | `void(u32)` | row: `Moby_Drone_Update` |  | `Moby_FindNearestTarget`, `GetFlaggedPvarWord`, `func_001160D8`, `AttachTrailEffects`, `func_001FA218`, `func_001F9EE8`, `func_L00_001FF548`, `MoveMobyWithCollision`, `InitHitQuery`, `func_L00_001FF500` |
-| `func_L00_002D06C8` | CrateUpdate | 500 bolt_crate, 501 nanotech_crate, 502 metal_crate, 505 oom_oom_box, 511 ammo_crate | 0-18 | decomp | `void(u32)` | row: `Moby_BoltCrate_Update` | CrateVars | `ThrownChainUpdate`, `ComputeHitResponse`, `GroundAttachedUpdate`, `CreateMoby806ForMoby`, `func_L00_002D1E68`, `CrateDropBolts`, `func_L00_00251328` |
-| `func_L00_002D3330` |  | 530 veldin_ship | 0-1 | decomp | `void(u32)` | row: `Moby_VeldinShip_Update` |  | `MobyTransformScaledVertex` |
-| `func_L00_002D3B20` | DecoyGloveUpdate | 562 decoy_glove | 0-18 | decomp | `void(u32)` | row: `Moby_DecoyGlove_Update` |  | `func_001F9EE8`, `MobyTransformScaledVertex`, `MobyList_Remove`, `SpawnThrownObject`, `HeroEnterMoveState`, `GetAmmo`, `Hero_PlayActiveSound`, `TakeAmmo`, `DecoyGlove_AimThrow`, `ThrownObject_BounceOffHero` |
-| `func_L00_002D4398` | TargetTrackerUpdate | 585 metal_detector | 0-18 | decomp | `void(u32)` | row: `Moby_MetalDetector_Update` | Vars_2D4398 | `BuildSphericalOffset`, `Profile_Mark`, `FastVecCross`, `MobyTransformScaledVertex`, `func_001FA4A0`, `sce_vu0_mul_matrix`, `MatrixToQuaternion`, `BuildEulerMatrix`, `func_001FA5C8`, `Sound_SetPitchBend` |
-| `func_L00_002D4C80` | ClankPackUpdate | 607 helipack | 0-18 | decomp | `void(u32)` | row: `Moby_Helipack_Update` |  |  |
-| `func_L00_002D4EC0` | Moby639Update | 639 | 0-18 | decomp | `void(u32)` | row: `Moby_Class639_Update` |  | `FreePointLight`, `func_001F9EC0`, `UpdatePointLight` |
-| `func_L00_002D5AC0` | HornyToadUpdate | 749 horny_toad | 0, 18 | decomp | `void(u32)` | row: `Moby_HornyToad_Update` | Data_5AC0 | `func_L00_002D6610`, `SetGroundHeightBand`, `Manipulator_ApplyScale`, `CarriedMobyUpdate`, `WalkTowardPoint`, `WanderSteer`, `IsFrameWithinWindow`, `MobySphereHitAtPoint`, `DoesSegmentCrossPath`, `SpawnExplosionFxSwapped` |
-| `func_L00_002D7298` | InfobotUpdate | 750 infobot | 0-1, 3-8, 10, 12-15, 17 | decomp | `void(u32)` | row: `Moby_Infobot_Update` | Infobot | `DriftingSprites_Init`, `DriftingSprites_Draw`, `LevelTable_SetSlotValue`, `Path_SteerWithLimits`, `func_L00_0025EFC0`, `UnlockPlanet`, `SetLevelTriggerDone`, `PauseMenu_SeedSnapshot`, `StartCutscene`, `PlayMovieEntryIfIdle` |
-| `func_L00_002D83D8` | ParticleFieldUpdate | 760 particle_spawner_smoke__fire | 0-1, 14 | decomp | `void(u32)` | row: `Moby_ParticleSpawnerSmokeFire_Update` |  | `FetchAddCounter`, `ResetEmitterParticle`, `ParticleField_InitWobble`, `randf_sym`, `func_001F9EE8`, `PartType23Spawn` |
-| `func_L00_002D93E8` | GrowAndFadeOutUpdate | 775 | 0-18 | decomp | `void(u32)` | row: `Moby_Class775_Update` |  |  |
-| `func_L00_002D9438` | TrailMobyUpdate | 804 | 0-18 | decomp | `void(u32)` | row: `Moby_Class804_Update` |  | `func_001F9EC0` |
-| `func_L00_002D9EA0` | NanotechBallUpdate | 806 nanotech_ball | 0-18 | decomp | `void(u32)` | wrapped (wrap) | D_2D9EA0 | `func_001FA1F8`, `FastVecCross`, `BuildSphericalOffset`, `randf_sym`, `DropMobyToGround`, `HasLineOfSightToHero`, `build_look_at_matrix`, `func_L00_002D9DB8`, `func_L00_002D9D00`, `PartType62Spawn` |
-| `func_L00_002DB278` | Moby834Update | 834 clank_cutscene_trigger | 0 | decomp | `void(u32)` | row: `Moby_ClankCutsceneTrigger_Update` |  | `DialogRequest_Init`, `Npc_TryStartDialog`, `RequestPlanetLoad` |
-| `func_L00_002DBC40` | SuckCannonUpdate | 849 suckcannon | 0-18 | decomp | `void(u32)` | row: `Moby_Suckcannon_Update` |  | `queue_animation_update`, `SuckBeam_QueueDraw`, `UpdateHeroSlots`, `SuckBeam_Reset`, `Hero_ClearPendingModuleAnim`, `SuckCannon_IsBlockedByHeroMode`, `Hero_StartModuleAnim`, `SuckBeam_ApplyPulls`, `SuckCannon_ScanTargets`, `HeroEnterMoveState` |
-| `func_L00_002E09A8` | PulsingColorMobyUpdate | 1060 red_orb | 0, 2, 5, 18 | decomp | `void(u32)` | row: `Moby_RedOrb_Update` |  | `FastTweenColor`, `PulsingColor_QueueDraw`, `func_L00_00251328` |
-| `func_L00_002E0AE8` | QuadMoby_Update | 1138 | 0-18 | decomp | `void(u32)` | row: `Moby_Class1138_Update` |  | `QuadMoby_UpdateEdgeLengths` |
-| `func_L00_002E0BE0` | Moby1143Update | 1143 vendor_orb | 0-18 | decomp | `void(u32)` | row: `Moby_VendorOrb_Update` |  | `func_L00_001FFED8` |
-| `func_L00_002E0E50` | HydrodisplacerPadUpdate | 1251 hydrodisplacer | 0-18 | decomp | `void(u32)` | row: `Moby_Hydrodisplacer_Update` | Data_2E0E50 | `func_L00_002E17F0`, `DriftParticleEmit`, `PadPressedWithin`, `func_L00_002E1790`, `HeroEnterMoveState`, `HeroStartAnim`, `CameraScript`, `CameraScript_SetPosition`, `CameraScript_SetLookAt`, `ApproachWithVelocity` |
-| `func_L00_002E1850` | Moby1290Update | 1290 pilots_helmet | 0-18 | decomp | `void(u32)` | row: `Moby_PilotsHelmet_Update` |  | `DriftingSprites_Init`, `STUB_printf`, `HueStreakFxUpdate`, `StartCutscene`, `ShowBanner`, `GiveItem`, `Help_Request`, `SetLevelTriggerDone`, `memcard_Save` |
-| `func_L00_002E1E38` | Moby1413Update | 1413 | 0 | decomp | `void(u32)` | row: `Moby_Class1413_Update` |  | `Help_Request` |
-| `func_L00_002E2038` | VendorUpdate | 1440 veldin_robot_enemy | 0 | decomp | `void(u32)` | row: `Moby_VeldinRobotEnemy_Update` |  | `Troll_UpdateHitsAndTarget`, `Manipulator_SetScale`, `EaseManipulatorOffsets`, `SetGroundHeightBand`, `ApproachWithVelocity`, `EffectSlot_Alloc`, `MobyTransformScaledVertex`, `MobyGetFrameValue`, `EffectSlot_Free`, `EffectSlot_Update` |
-| `func_L00_002E32A0` | BeamSlotManagerUpdate | 1471 | 0 | decomp | `void(u32)` | row: `Moby_Class1471_Update` |  | `EffectSlot_FreeAt`, `BeamSlotUpdate` |
-| `func_L00_002E4CB0` | Moby1545Update | 1545 | 0 | decomp | `void(u32)` | row: `Moby_Class1545_Update` |  | `SpawnMoby750Sparks`, `SpawnSparkRings`, `PartType23Spawn` |
-| `func_L00_002E4F38` | PathFollowMobyUpdate | 1564 pterodactyl | 0, 7, 10, 18 | decomp | `void(u32)` | row: `Moby_Pterodactyl_Update` |  | `SamplePathAt` |
-| `func_L00_002E5158` | GrassUpdate | 492 bombthrower_grass, 724 green_leaves, 725 blue_leaves, 766 plant, 767, 1781 red_plant, 1782 green_plant | 0-2, 8 | decomp | `void(u32)` | row: `Moby_BombthrowerGrass_Update` |  |  |
-| `func_L00_002E5238` | FxGroupUpdate | 1505, 1506, 1517, 1518, 1522, 1525, 1526, 1528 and 195 more | 0-18 | decomp | `void(u32)` | row: `Moby_Hoverboard_Update` |  | `func_001F9EC0`, `SpawnExplosionFxSwapped`, `func_001FA1F8`, `func_001FA4F0`, `func_L00_001FF610`, `FastVecCross`, `build_quaternion_from_axis_angle`, `func_001FA6C0`, `MatrixToEuler` |
-| `func_L01_002BB068` | PathPlatformUpdate | 726 novalis_elevator, 1141 elevator | 1, 3, 10, 13 | decomp | `void(u32)` | row: `Moby_NovalisElevator_Update` |  | `Hero_IsOnMoby`, `CarryRiders` |
-| `func_L01_002BE2C8` | ParticleEmitterUpdate | 27 | 1 | decomp | `void(u32)` | row: `Moby_Class27_Update` |  | `func_001FA218`, `func_001F9EE8`, `PartType06Spawn` |
-| `func_L01_002C8740` | Moby156Update | 156 | 1, 6, 8-9, 15, 17 | decomp | `void(u32)` | row: `Moby_Class156_Update` |  | `PartType14Spawn`, `InitDirectionalHitQuery`, `NullMobyUpdate`, `PostHitMessage` |
-| `func_L01_002E1FE0` | BoltCrankUpdate | 280 bolt_crank | 1, 4, 8 | decomp | `void(u32)` | row: `Moby_BoltCrank_Update` |  | `CameraScript2`, `PadPressedWithin`, `Hero_SetMoveState`, `CameraScript`, `CameraScript_SetLookAt`, `CameraScript_SetPosition`, `BoltCrank_SetCameraParams`, `FindOrAddMobyEntry`, `SetLevelTriggerDone`, `PauseMenu_SeedSnapshot` |
-| `func_L01_002E2E38` | ItemOfferUpdate | 304 gold_weapon_case, 1456 gold_bomb_glove, 1457 gold_pyrocitor, 1458 gold_blaster, 1459 gold_glove_of_doom, 1460 gold_mine_glove, 1461 gold_devastator, 1462 gold_decoy_glove and 3 more | 1, 13 | decomp | `void(u32)` | row: `Moby_GoldWeaponCase_Update` | SaleVars_2e1ac0 | `DialogRequest_Init`, `Npc_TryStartDialog`, `OpenVendorScreen`, `memcard_Save` |
-| `func_L01_002E5298` | SandMouseUpdate | 437 sand_mouse | 1-2, 4 | decomp | `void(u32)` | row: `Moby_SandMouse_Update` |  | `STUB_printf`, `MoveCtl_Init`, `func_L01_002649D8`, `func_001160D8`, `MobySpringTurn`, `Hero_GetPointAhead`, `Hero_SetMoveState`, `HeroStartAnim`, `ClassifyTargetInCone`, `SandMouse_ComputeTarget` |
-| `func_L01_002E7FC8` | BirdbotUpdate | 459 birdbot | 1 | decomp | `void(u32)` | row: `Moby_Birdbot_Update` |  | `MobyGetFrameValue`, `Manipulator_ApplyScale`, `PickFollowerPathNode`, `FindNearestTargetMoby`, `ComputeHitResponse`, `func_001F9B50`, `HeadingFromVector`, `InitKnockback`, `RerollEffectCounter`, `STUB_printf` |
-| `func_L01_002EEDD8` | BurningDebrisUpdate | 567 | 1, 8-9, 15, 17 | decomp | `void(u32)` | row: `Moby_Class567_Update` |  | `PartType04Spawn`, `InitDirectionalHitQuery`, `func_L00_001FF500`, `PostHitMessageFromRecord`, `SpawnExplosionFx` |
-| `func_L01_002EF078` | AmoeboidUpdate | 572 large_amoeboid, 865 medium_amoeboid, 866 small_amoeboid | 1, 5, 11 | decomp | `void(u32)` | row: `Moby_LargeAmoeboid_Update` |  | `Manipulator_ApplyScale`, `SetGroundHeightBand`, `Amoeboid_HitAndSearch`, `MoveCtl_Init`, `func_L01_00277FD8`, `MobySteerToward`, `SpawnMobyParticles`, `SegmentCrossPolyline`, `MobyGetFrameValue`, `IsFrameWithinWindow` |
-| `func_L01_002F1038` | PeckbotUpdate | 577 peckbot | 1 | decomp | `void(u32)` | row: `Moby_Peckbot_Update` |  | `Manipulator_ApplyScale`, `FindNearestTargetMoby`, `ComputeHitResponse`, `MobyGroup_SetByteBC`, `HeadingFromVector`, `InitKnockback`, `RerollEffectCounter`, `SetDeathBits`, `MoveCtl_Init`, `func_001160D8` |
-| `func_L01_002F3F40` | Moby604Update | 604 sandmouse_house | 1-6, 8, 11-12, 14 | decomp | `void(u32)` | row: `Moby_SandmouseHouse_Update` |  | `SpringTurn` |
-| `func_L01_002F4290` | Moby605Update | 605 | 1-18 | decomp | `void(u32)` | row: `Moby_Class605_Update` | AreaVars_2f2eb8_F4290 | `IsPointInPolygon` |
-| `func_L01_002F44F8` | PathCarrierUpdate | 613 water_current | 1 | decomp | `void(u32)` | row: `Moby_WaterCurrent_Update` | PathCarrierVars | `func_L00_0025EFC0`, `Spline_AdvanceByDistance` |
-| `func_L01_002F5720` | CrankRotatorUpdate | 641 cave_door | 1 | decomp | `void(u32)` | row: `Moby_CaveDoor_Update` |  | `FastNormalizeAngle` |
-| `func_L01_002F5800` | TetheredMineUpdate | 660 fighter_jet | 1 | decomp | `void(u32)` | row: `Moby_FighterJet_Update` |  | `PlayBankSound`, `ShowBanner`, `SpawnDebrisMoby`, `func_L01_002F6540` |
-| `func_L01_002F5AE8` | CrankSliderUpdate | 665 door_half | 1 | decomp | `void(u32)` | row: `Moby_DoorHalf_Update` |  |  |
-| `func_L01_002F5D38` | RiderCarrierUpdate | 666 stationary_ship | 1 | decomp | `void(u32)` | row: `Moby_StationaryShip_Update` | CarrierVars | `func_L01_002F6540`, `SpringTurn`, `func_001F9EC0`, `MobyAnimAdvance`, `func_L00_00251E30` |
-| `func_L01_002F6540` |  | 845 | 1, 3-4, 14 | candidate | `void(u32)` | row: `Moby_Class845_Update` |  | `IsBSphereVisibleScaled`, `STUB_printf`, `InitPathSegmentLengths`, `FindClosestDistanceEntry`, `SplineSegmentTangent`, `func_001F9CE8`, `Moby_AddTiltOffset`, `TracePathWithParticles`, `SplineNextIndex`, `SplineWrapIndex` |
-| `func_L01_002F7558` | ScrollingLayers2Update | 678 | 1 | decomp | `void(u32)` | row: `Moby_Class678_Update` |  |  |
-| `func_L01_002F7700` | GrindRailUpdate | 679 | 1, 5, 8, 15 | decomp | `void(u32)` | row: `Moby_Class679_Update` | RailVars_F7700 | `func_L00_0025EFC0`, `Spline_AdvanceByDistance`, `func_001F9CE8`, `Spring` |
-| `func_L01_002F7E08` | FlyingBurstUpdate | 686 | 1, 14 | decomp | `void(u32)` | row: `Moby_Class686_Update` |  | `PartType04Spawn`, `PartType11Spawn`, `PartType08Spawn`, `func_L00_002ADBB0`, `PartType15Spawn` |
-| `func_L01_002F8B00` | GunshipUpdate | 688 bomber_jet | 1 | decomp | `void(u32)` | row: `Moby_BomberJet_Update` | Vars_F8B00 | `PlayBankSound`, `ShowBanner`, `SpawnDebrisMoby`, `STUB_printf`, `func_L01_002F6540`, `Hero_SetMoveState`, `CameraScript`, `CameraScript2`, `SpawnBeam` |
-| `func_L01_002F9640` | HoverEnemyUpdate | 695 water_lily | 1 | decomp | `void(u32)` | row: `Moby_WaterLily_Update` | HoverVars | `SpringStepToward`, `MoveKeepingOverGround`, `GetGroundHeight` |
-| `func_L01_002F9AF0` | DebrisMobyUpdate | 200, 201, 205, 206, 207, 210, 696 rock, 697 rock and 3 more | 1-2, 7, 10, 15, 18 | decomp | `void(u32)` | row: `Moby_Rock_Update` | DebrisVars_2f8530 | `func_L00_001FF610`, `PartType22Spawn` |
-| `func_L01_002FA030` | SteamVentUpdate | 700 | 1 | decomp | `void(u32)` | row: `Moby_Class700_Update` | SteamVars | `func_L01_002F9908`, `PartType16Spawn` |
-| `func_L01_002FA458` | CollapsingPlatformUpdate | 701 falling_rock | 1 | decomp | `void(u32)` | row: `Moby_FallingRock_Update` | CapVars | `func_L01_002F9908`, `ApplyNodeLighting`, `CameraScript2`, `Hero_SetMoveState` |
-| `func_L01_002FA998` | LiftMoveUpdate | 703 piston_platform, 715 piston_platform_2 | 1 | decomp | `void(u32)` | row: `Moby_PistonPlatform_Update` | LiftVars | `CarryRiders` |
-| `func_L01_002FABE8` | BreakableRockUpdate | 704 rock_formation | 1 | decomp | `void(u32)` | row: `Moby_RockFormation_Update` |  | `PartType22Spawn`, `SetDeathBits` |
-| `func_L01_002FAFC8` | OscillatingSpinnerUpdate | 705 fan | 1 | decomp | `void(u32)` | row: `Moby_Fan_Update` | SwayVars | `func_L00_0025E210`, `func_001160D8` |
-| `func_L01_002FB158` | ProjectileBreakableUpdate | 709 bridge_piece_1, 710 bridge_piece_2, 711 bridge_piece_3 | 1 | decomp | `void(u32)` | row: `Moby_BridgePiece1_Update` |  | `func_L01_002F9908` |
-| `func_L01_002FB898` | FallingDropUpdate | 722 | 1 | decomp | `void(u32)` | row: `Moby_Class722_Update` |  | `SpawnExplosionEffect` |
-| `func_L01_002FBBD8` | BreakableWallUpdate | 729 destroyable_cave_wall | 1 | decomp | `void(u32)` | row: `Moby_DestroyableCaveWall_Update` |  | `PartType22Spawn`, `func_L01_002F9908` |
-| `func_L01_002FC140` | AgnoggShipUpdate | 730 agnogg_ship_front, 731 agnogg_ship_back, 790 ship_rear | 1 | decomp | `void(u32)` | row: `Moby_AgnoggShipFront_Update` | Data_2FC140 | `AttachMarkerManipulators`, `StartCutscene`, `Ship_ReleaseCurrent`, `MobySetAnimation`, `PlayMovieEntryIfIdle`, `UnlockPlanet`, `ShowPlanetBanner`, `FindOrAddMobyEntry`, `SetLevelTriggerDone`, `PauseMenu_SeedSnapshot` |
-| `func_L01_002FC988` | CutsceneTriggerUpdate | 737 | 1-3, 7, 10, 13 | decomp | `void(u32)` | row: `Moby_Class737_Update` |  | `AttachCheatManipulatorToClasses`, `STUB_printf`, `Hero_ResetToPosition`, `CameraScript`, `CameraScript2`, `Hero_SetMoveStateFromMode`, `CameraScript_SetPosition`, `CameraScript_SetLookAt` |
-| `func_L01_002FCC80` | HingedBridgeUpdate | 746 bridge_half | 1 | decomp | `void(u32)` | row: `Moby_BridgeHalf_Update` |  |  |
-| `func_L01_002FE4C0` | WaterSurfaceFxUpdate | 751 | 1 | decomp | `void(u32)` | row: `Moby_Class751_Update` |  | `RipplePatchesInit`, `RescaleFloatTable`, `RipplePatch_ToFixedPoint`, `Ripple_DisturbDefault`, `RippleSimClock`, `SpawnDripMoby`, `PartType57Spawn`, `PartType56Spawn` |
-| `func_L01_002FED78` | BreakablePotUpdate | 754 green_mushroom | 1 | decomp | `void(u32)` | row: `Moby_GreenMushroom_Update` |  | `SpawnBreakFxByDistance`, `SpawnMobyCopyingPlacement` |
-| `func_L01_002FFF30` | PulsingMeshUpdate | 761 | 1 | decomp | `void(u32)` | row: `Moby_Class761_Update` |  |  |
-| `func_L01_00300140` | SlidingDoorUpdate | 768 door_left, 769 door_right | 1 | decomp | `void(u32)` | row: `Moby_DoorLeft_Update` |  |  |
-| `func_L01_003004F0` | TalkingNpcUpdate | 774 the_plumber | 1, 8 | decomp | `void(u32)` | row: `Moby_ThePlumber_Update` |  | `AttachCheatManipulatorToMatching`, `SetGroundHeightBand`, `DialogRequest_Init`, `Npc_TryStartDialog`, `PlaceMarkerAheadOfMoby`, `SetLevelTriggerDone`, `PauseMenu_SeedSnapshot`, `UnlockPlanet`, `ShowPlanetBanner`, `FindOrAddMobyEntry` |
-| `func_L01_00300C38` | Moby778Update | 778 pipe | 1 | decomp | `void(u32)` | row: `Moby_Pipe_Update` |  | `PartType22Spawn`, `SpawnMoby30B` |
-| `func_L01_00300F00` | SmokeEmitterUpdate | 779 | 1 | decomp | `void(u32)` | row: `Moby_Class779_Update` |  | `func_001F9EC0`, `PartType22Spawn` |
-| `func_L01_00301198` | FallingChunkUpdate | 787 | 1 | decomp | `void(u32)` | row: `Moby_Class787_Update` |  | `CollType`, `RippleDisturb`, `Moby775Spawn`, `PartType35Spawn` |
-| `func_L01_003015F8` | CheckpointTriggerUpdate | 805 spawn_point | 1-18 | decomp | `void(u32)` | row: `Moby_SpawnPoint_Update` | PickupVars_015F8 | `SetLevelTriggerDone`, `PauseMenu_SeedSnapshot` |
-| `func_L01_00303590` | EnemySpawnerUpdate | 815 beehive | 1 | decomp | `void(u32)` | row: `Moby_Beehive_Update` | SpawnerVars | `MobyGroup_CountNotInState`, `SpawnTemplateMoby`, `InitKnockback` |
-| `func_L01_00303A20` | RcRangeLimiterUpdate | 832 | 1-15, 18 | decomp | `void(u32)` | row: `Moby_Class832_Update` |  | `IsPointInPolygon`, `Moby_EndGadgetControl` |
-| `func_L01_00309020` | Moby1042Update | 1042 mushroom_underside | 1 | decomp | `void(u32)` | row: `Moby_MushroomUnderside_Update` |  |  |
-| `func_L01_00309078` | GoldBoltUpdate | 1134 gold_bolt | 1-18 | decomp | `void(u32)` | row: `Moby_GoldBolt_Update` | Vars_00309078 | `InitRandomFloatsAndSounds`, `DrawGlowRings`, `SpawnJitteredEffects`, `ShowBanner`, `memcard_Save`, `FadeToBlack`, `HeroEndScene`, `Hero_ResetToPosition`, `CameraScript`, `CameraScript_SetPosition` |
-| `func_L01_00309FB0` | TeleporterPadUpdate | 1135 teleporter | 1, 7-8, 12-13, 16-18 | decomp | `void(u32)` | row: `Moby_Teleporter_Update` |  | `MarkMobyCollected`, `ShowParentAndChildren`, `ResetParentAndChildren`, `PlaceChildMobys`, `MobyGroup_SetState`, `ShowStageHelpMessage`, `HeroSetTargetAndEnterMove`, `MobySphereHitDirectional`, `ApproachWithVelocity`, `Level_GetSpecialMode` |
-| `func_L01_0030B070` | Moby1225Update | 1225 | 1 | decomp | `void(u32)` | row: `Moby_Class1225_Update` |  |  |
-| `func_L01_0030C090` | HelpHintDirectorUpdate | 1341 | 1 | decomp | `void(u32)` | row: `Moby_Class1341_Update` |  | `Help_Request`, `IsMobyState1`, `IsBSphereVisibleScaled` |
-| `func_L01_0030C9F0` | WanderingLightUpdate | 1504 | 1, 6 | decomp | `void(u32)` | row: `Moby_Class1504_Update` |  | `FreePointLight`, `LerpVec4`, `UpdatePointLight` |
-| `func_L01_0030CDF0` | Moby1510Update | 1510 | 1 | decomp | `void(u32)` | row: `Moby_Class1510_Update` | BlobVars | `func_L00_001FF610`, `PartType21Spawn`, `PartType23Spawn` |
-| `func_L01_0030D568` | Moby1546Update | 1546 | 1 | decomp | `void(u32)` | row: `Moby_Class1546_Update` |  | `SpawnMoby750Sparks`, `PartType46Spawn`, `Moby775Spawn`, `PartType35Spawn`, `PartType23Spawn`, `SpawnSparkRings` |
-| `func_L01_0030DD80` |  | 1633 | 1-6, 8, 11-12, 14 | decomp | `void(u32)` | row: `Moby_Class1633_Update` |  | `SpringTurn`, `BuildSphericalOffset`, `func_L00_001FF500`, `CollType` |
-| `func_L01_0030E4C8` | Moby1813Update | 1813 tall_shroom | 1 | decomp | `void(u32)` | row: `Moby_TallShroom_Update` |  | `SpawnBreakFxByDistance`, `SpawnMobyCopyingPlacement` |
-| `func_L01_0030F318` | MouseCritterUpdate | 1818 sandmouse | 1-6, 8, 11-12, 14 | decomp | `void(u32)` | row: `Moby_Sandmouse_Update` | Pv_30F318 | `DetachManipulator`, `TwinGlowInit`, `STUB_printf`, `MoveCtl_Init`, `MobySpringTurn`, `Hero_GetPointAhead`, `Hero_SetMoveState`, `HeroStartAnim`, `GetHeroFrontOffsetPoint`, `MouseCritter_StepCommand` |
-| `func_L01_003105E0` | Moby1848Update | 1848 | 1 | decomp | `void(u32)` | row: `Moby_Class1848_Update` |  |  |
-| `func_L02_002CCD18` |  | 331 trackdrive_left | 2, 8, 18 | decomp | `void(u32)` | row: `Moby_TrackdriveLeft_Update` |  |  |
-| `func_L02_002D5250` | SandSharkUpdate | 580 sand_shark | 2 | decomp | `void(u32)` | row: `Moby_SandShark_Update` |  | `Manipulator_ApplyScale`, `SetGroundHeightBand`, `PathEnemy_HitAndRespawn`, `STUB_printf`, `MoveCtl_Init`, `func_001160D8`, `MobySpringTurn`, `SpawnRandomParticle`, `MobySteerToward`, `SandShark_CheckInsideArea` |
-| `func_L02_002D8B80` | Moby612Update | 612 constructorbot | 2 | decomp | `void(u32)` | row: `Moby_Constructorbot_Update` |  | `Manipulator_ApplyScale`, `SetGroundHeightBand`, `Moby612TakeHit`, `func_001160D8`, `MoveCtl_Init`, `EffectSlots_Clear`, `MobySpringTurn`, `ClampVectorLength`, `ClassifyTargetInCone`, `PartType21Spawn` |
-| `func_L02_002D9F08` | TrespasserPuzzleUpdate | 615 tresspasser_pad | 2, 4, 6, 8, 11, 13, 18 | decomp | `void(u32)` | row: `Moby_TresspasserPad_Update` | Data_2D9F08 | `HeroL02_SetMoveState`, `HeroStartAnim`, `CameraScript`, `PullHeroToMoby`, `GetMobySpawnPoint`, `ApproachWithVelocity`, `func_001F9C08`, `CameraScript_SetPosition`, `CameraScript_SetLookAt`, `force_help_message` |
-| `func_L02_002DD170` | ElevatorUpdate | 651 elevator | 2 | decomp | `void(u32)` | row: `Moby_Elevator_Update` | Data_2DD170 | `func_001F9EC0`, `func_001F9EE8`, `IsPointInCylinderVolume`, `ApproachWithVelocity`, `CarryRiders` |
-| `func_L02_002DDAE8` | PusherUpdate | 296 conveyor_belt, 652 escalator, 653 escalator_end | 2, 12 | decomp | `void(u32)` | row: `Moby_ConveyorBelt_Update` |  | `CarryRiders` |
-| `func_L02_002DDE48` | Moby656Update | 656 bulldozer | 2 | decomp | `void(u32)` | row: `Moby_Bulldozer_Update` |  |  |
-| `func_L02_002DDF70` | SandSharkNestUpdate | 668 sand_shark_nest | 2 | decomp | `void(u32)` | row: `Moby_SandSharkNest_Update` |  | `EnemyHitKnockback`, `SetGroundHeightBand`, `SandSharkNest_FindShark`, `MobyGetFrameValue`, `func_L00_001FF500`, `Moby_PlaceWithDirection` |
-| `func_L02_002DE7A8` | Moby675Update | 675 grab_crane | 2 | decomp | `void(u32)` | row: `Moby_GrabCrane_Update` |  |  |
-| `func_L02_002DF038` | RotatePlatformUpdate | 707 platform, 734 platform | 2 | decomp | `void(u32)` | row: `Moby_Platform_Update` |  | `CarryRiders` |
-| `func_L02_002DF0C0` | Moby713Update | 713 transport_pod | 2 | decomp | `void(u32)` | row: `Moby_TransportPod_Update` |  | `PartType41Spawn`, `LinkedPair_SnapToMoby`, `func_L00_00251E30`, `ApproachWithVelocity`, `LinkedPair_ApproachHeights`, `HeroSetTargetAndEnterMove`, `CameraScript`, `func_L02_002F9ED8`, `CameraScript_SetPosition`, `CameraScript_SetLookAt` |
-| `func_L02_002E05E0` | Moby732Update | 732 crane | 2 | decomp | `void(u32)` | row: `Moby_Crane_Update` |  |  |
-| `func_L02_002E0810` | RocketLauncherUpdate | 733 rocket_launcher | 2 | decomp | `void(u32)` | row: `Moby_RocketLauncher_Update` |  | `RangeWave_PlaySounds`, `SpawnAridiaProjectile`, `MobyGetFrameValue`, `FastTweenColor` |
-| `func_L02_002E0D80` | TurnMobyToGoalAngles | 735 rocket_door1, 736 rocket_door2 | 2 | decomp | `void(u32)` | row: `Moby_RocketDoor1_Update` | TurnerVars | `func_L00_001FFED8`, `func_001FA588`, `func_001FA5C8`, `func_001FA648` |
-| `func_L02_002E1400` | Moby743Update | 743 tresspasser_door1 | 2 | decomp | `void(u32)` | row: `Moby_TresspasserDoor1_Update` |  | `ClampVectorLength` |
-| `func_L02_002E1570` | Moby744Update | 744 tresspasser_door2 | 2 | decomp | `void(u32)` | row: `Moby_TresspasserDoor2_Update` |  | `ClampVectorLength` |
-| `func_L02_002E16B8` | Moby755Update | 755 sandshark_egg | 2 | decomp | `void(u32)` | row: `Moby_SandsharkEgg_Update` |  | `PartType04Spawn`, `func_L00_00251E30` |
-| `func_L02_002E1888` | HideableFlowerUpdate | 758 swingshot_versatarget, 803 swingshot_swinging_versatarget | 2-7, 9-18 | decomp | `void(u32)` | row: `Moby_SwingshotVersatarget_Update` |  | `func_L00_00251328`, `CamOffsetFx_Reset`, `PartType60Spawn`, `Camera_TrackNearestTarget` |
-| `func_L02_002E1B58` | Moby762Update | 762 rocks | 2 | decomp | `void(u32)` | row: `Moby_Rocks_Update` |  | `PartType22Spawn`, `func_L01_002F9908` |
-| `func_L02_002E21F8` | SkidsAgentUpdate | 786 skids_agent | 2 | decomp | `void(u32)` | row: `Moby_SkidsAgent_Update` |  | `AttachManipulatorsIfCheat`, `DialogRequest_Init`, `SetMobyZBand`, `Npc_TryStartDialog`, `PlaceMarkerAheadOfMoby`, `Help_Request`, `SetLevelTriggerDone`, `PauseMenu_SeedSnapshot`, `PlayMovieEntryIfIdle`, `GiveItem` |
-| `func_L02_002E2D88` | SkidMcMarxAridiaUpdate | 788 skid_mcmarx | 2 | decomp | `void(u32)` | row: `Moby_SkidMcmarx_Update` |  | `AttachManipulatorsIfCheat`, `SkidMcMarxWarpUpdate`, `DialogRequest_Init`, `SetMobyZBand`, `Npc_TryStartDialog`, `PlaceMarkerAheadOfMoby`, `Help_Request`, `GiveItem`, `SetLevelTriggerDone`, `PauseMenu_SeedSnapshot` |
-| `func_L02_002E3660` | DriverLiftUpdate | 792 liftcar_platform | 2 | decomp | `void(u32)` | row: `Moby_LiftcarPlatform_Update` |  | `MobyTransformScaledVertex`, `MobySetAnimation`, `CarryRiders` |
-| `func_L02_002EB5D0` | Moby854Update | 854 ocean_aridia | 2 | decomp | `void(u32)` | row: `Moby_OceanAridia_Update` |  | `func_L02_002A59D8` |
-| `func_L02_002EB648` | Moby1005Update | 1005 tresspasser, 1016 hydrodisplacer | 2, 6 | decomp | `void(u32)` | row: `Moby_Tresspasser_Update` |  | `InitRandomMobyData`, `SparkleSpritesDrawL02`, `StartCutscene`, `GiveItem`, `ShowBanner`, `HelpPopup_Cancel`, `Help_Request`, `Hero_ResetToPosition`, `memcard_Save`, `ApproachWithVelocity` |
-| `func_L02_002ED358` | ShardDebrisUpdate | 1208 constructorbot | 2 | decomp | `void(u32)` | row: `Moby_Constructorbot1208_Update` | ShardVars_ED358 | `func_001F9CE8`, `PartType44Spawn`, `rand_vec` |
-| `func_L02_002ED8F0` | BackgroundShipUpdate | 1212 background_ship_1 | 2, 9 | decomp | `void(u32)` | row: `Moby_BackgroundShip1_Update` |  | `STUB_printf`, `SamplePathAt`, `SpawnThreeParticles`, `PlayBankSound`, `ShowBanner`, `FastTweenColor`, `RefreshMobyAttachPoints3` |
-| `func_L02_002EE250` | ShipPathUpdate | 1213 background_ship_2, 1973 ship | 2, 9-10 | decomp | `void(u32)` | row: `Moby_BackgroundShip2_Update` |  | `STUB_printf`, `SamplePathAt`, `SpawnJointParticles`, `SpawnTwoParticles`, `PlayBankSound`, `ShowBanner`, `FastTweenColor`, `RefreshMobyAttachPoints6` |
-| `func_L02_002EFCC8` | TutorialHintUpdate | 1324 | 2 | decomp | `void(u32)` | row: `Moby_Class1324_Update` |  | `Help_Request`, `PlayBankSound`, `ShowBanner` |
-| `func_L02_002F0458` | Moby1479Update | 1479 | 2 | decomp | `void(u32)` | row: `Moby_Class1479_Update` |  | `func_001FA1F8`, `rand_vec`, `PartType02Spawn`, `FastTweenColor` |
-| `func_L02_002F3398` | BreakOnHitL02Update | 1819 white_flower, 1827 lightpost, 1834 pipe, 1844, 1849 lamp, 1859 lamp, 1862 lamp | 2 | decomp | `void(u32)` | row: `Moby_WhiteFlower_Update` |  | `SpawnBreakFxByDistance`, `SpawnMobyBurstFx`, `SpawnMobyCopyingPlacement` |
-| `func_L03_00294040` | MetropolisTrainUpdate | 822 metropolis_train_locomotive | 3 | decomp | `void(u32)` | row: `Moby_MetropolisTrainLocomotive_Update` |  | `STUB_printf`, `PlaceTrain`, `func_L01_002F6540`, `TrainDragCars`, `MusicRequestTrack`, `LevelTable_SetSlotValue`, `TrainSteerAndPullCars`, `func_L00_0025EFC0`, `FadeToBlack`, `Hero_IsOnMoby` |
-| `func_L03_00295DB0` | MovingPlatformUpdate | 868 moving_platform_small, 905 moving_platform_medium, 928 moving_platform_large | 3 | decomp | `void(u32)` | row: `Moby_MovingPlatformSmall_Update` |  | `Profile_Mark`, `Sound_PlayClassSound`, `ClampVectorLength`, `CarryRiders` |
-| `func_L03_002965A0` | Platform_CarryRiders | 1210 metropolis_train_carriage | 3 | decomp | `void(u32)` | row: `Moby_MetropolisTrainCarriage_Update` |  | `CarryRiders` |
-| `func_L03_0029ED60` | TrainCarUpdate | 75 red_ship_1, 115 white_ship, 116 red_ship_2, 117 yellow_ship, 118 truck_ship, 119 green_ship, 120 beige_ship, 132 purple_ship and 1 more | 3 | decomp | `void(u32)` | row: `Moby_RedShip1_Update` |  | `IsBSphereVisibleScaled`, `UpdateEnemyClassSound`, `EnemyPeriodicSoundUpdate`, `STUB_printf`, `InitPathSegmentLengths`, `FindClosestDistanceEntry`, `SplineSegmentTangent`, `func_001F9CE8`, `func_L03_0029DA60`, `TracePathWithParticles` |
-| `func_L03_002BC140` | ParentFollowFadeUpdate | 235 | 3, 16 | decomp | `void(u32)` | row: `Moby_Class235_Update` |  | `AddSphericalOffset`, `FastTweenColor`, `func_L00_00251328` |
-| `func_L03_002C0330` | ChildSpawnerUpdate | 455 spawner | 3, 8, 14 | decomp | `void(u32)` | row: `Moby_Spawner_Update` | Data_2C0330 | `SetGroundHeightBand`, `ComputeHitResponse`, `RerollEffectCounter`, `SetDeathBits`, `func_001153FC`, `WrapAngle`, `func_L00_001FF548`, `RandomPointInVolume`, `func_001160D8`, `JitterVector` |
-| `func_L03_002C5AE0` | Moby545Update | 545 bomb | 3, 8, 14 | decomp | `void(u32)` | row: `Moby_Bomb545_Update` |  | `func_L00_001FF610`, `func_001F9CE8`, `CollType`, `WrapAngle`, `SpawnLinkedChild`, `RecordMobyShadow` |
-| `func_L03_002C6F80` | Moby573Update | 573 robot_dog | 3 | decomp | `void(u32)` | row: `Moby_RobotDog_Update` |  | `FindNearestTargetMoby`, `Manipulator_ApplyScale`, `Moby573DamageReaction`, `MoveCtl_Init`, `func_001160D8`, `GroupHasMoby573Or574`, `IsMoby574Finished`, `MobySpringTurn`, `MobySteerToward`, `func_L00_0025EFC0` |
-| `func_L03_002C8398` | Moby574Update | 574 | 3 | decomp | `void(u32)` | row: `Moby_Class574_Update` |  | `FindNearestTargetMoby`, `Manipulator_SetScale`, `Moby574DamageReaction`, `EaseManipulatorOffsets`, `MoveCtl_Init`, `GroupHasMoby573Or574`, `Moby574_TryTurnToTarget`, `PickNextPathNode`, `IsFrameWithinWindow`, `func_L00_001FF240` |
-| `func_L03_002CB280` | TrooperUpdate | 578 mine_layer | 3 | decomp | `void(u32)` | row: `Moby_MineLayer_Update` | TrooperVars_CB280 | `FindNearestTargetMoby`, `Manipulator_ApplyScale`, `TrooperHitHandler`, `MoveCtl_Init`, `MobySpringTurn`, `ClassifyTargetInCone`, `Sound_PlayClassSound`, `func_L00_001FF500`, `Moby627Spawn`, `SetDeathBits` |
-| `func_L03_002CD270` | KerwanMineUpdate | 627 mine | 3 | decomp | `void(u32)` | row: `Moby_Mine627_Update` | MineVars | `KerwanMine_CheckHit`, `SendRadialMessageToMobys`, `PartType16Spawn`, `DefaultVtbl_DeleteMoby`, `BuildSphericalOffset`, `Moby639Spawn`, `MobyList_Remove` |
-| `func_L03_002CDDC8` | HelicopterGunshipUpdate | 631 blarg_helicopter | 3, 7 | decomp | `void(u32)` | row: `Moby_BlargHelicopter_Update` |  | `FindNearestTargetMoby`, `Manipulator_SetScale`, `EaseManipulatorOffsets`, `Moby_UpdateHitHealth`, `func_L00_0025EFC0`, `func_001F9978`, `SpringTurn`, `func_001FA4A0`, `func_001F9EE8`, `func_001F9CE8` |
-| `func_L03_002D4560` | RailTaxiUpdate | 816 taxi | 3 | decomp | `void(u32)` | row: `Moby_Taxi_Update` | RailTaxiVars_D4560 | `LevelTable_SetSlotValue`, `IsTaxiInTransit`, `PartType41Spawn`, `FollowWaypointPath`, `ShowPlatformHelpMessage`, `HeroSetTargetAndEnterMove`, `Level_GetSpecialMode`, `Hero_IsOnMoby`, `UpdateMobyBobSway`, `CarryRiders` |
-| `func_L03_002D50A0` | Moby817Update | 817 statue, 1686 seashell | 3 | decomp | `void(u32)` | row: `Moby_Statue_Update` |  | `SpawnBreakFxByDistance` |
-| `func_L03_002D5220` | SpinnerUpdate | 825 robo_shack_sign | 3 | decomp | `void(u32)` | row: `Moby_RoboShackSign_Update` | SpinnerVars_D5220 | `CarryRiders` |
-| `func_L03_002D5790` | KerwanHomingRocketUpdate | 833 | 3 | decomp | `void(u32)` | row: `Moby_Class833_Update` | RocketVars_D5790 | `FindNearestTargetMoby`, `func_L00_001FF240`, `PartType04Spawn`, `SpringTurn`, `InitDirectionalHitQuery`, `PostHitMessageFromRecord`, `SpawnExplosionFx` |
-| `func_L03_002D5B88` | Moby848Update | 848 | 3, 7, 15 | decomp | `void(u32)` | row: `Moby_Class848_Update` |  | `FindNearestTargetMoby`, `func_L00_001FF500`, `InitDirectionalHitQuery`, `StepAngleToward`, `func_001F9CE8`, `PartType27Spawn`, `PartType49Spawn`, `func_L00_001FF610` |
-| `func_L03_002DBC38` | QuestGiverUpdate | 890 helga | 3 | decomp | `void(u32)` | row: `Moby_Helga_Update` | QuestGiverVars_hg | `QuestGiver_AttachCheatManipulator`, `SetMobyZBand`, `Npc_TryStartDialog`, `PlaceMarkerAheadOfMoby`, `SetLevelTriggerDone`, `PauseMenu_SeedSnapshot`, `GiveItem`, `ShowBanner`, `memcard_Save`, `BuildSphericalOffset` |
-| `func_L03_002DC3E8` | RailMobyUpdate | 898 | 3 | decomp | `void(u32)` | row: `Moby_Class898_Update` |  | `CarryRiders` |
-| `func_L03_002DC648` | RailSpawnerUpdate | 899 | 3 | decomp | `void(u32)` | row: `Moby_Class899_Update` |  | `STUB_printf`, `SpawnRailMoby`, `Sound_PlayClassSound` |
-| `func_L03_002DC920` | GuideUpdate | 909 big_al | 3 | decomp | `void(u32)` | row: `Moby_BigAl_Update` | GuideVars_gd | `AttachCheatManipulatorToMatchingL03`, `DialogRequest_Init`, `SetMobyZBand`, `Npc_TryStartDialog`, `PlaceMarkerAheadOfMoby`, `SetLevelTriggerDone`, `PauseMenu_SeedSnapshot`, `GiveItem`, `ShowBanner`, `Hero_ResetToPosition` |
-| `func_L03_002DD158` | Moby914Update | 914 robot_qwark | 3 | decomp | `void(u32)` | row: `Moby_RobotQwark_Update` |  | `SetGroundHeightBand`, `MobySetAnimation`, `PlayBankSound`, `ShowBanner`, `DialogRequest_Init`, `Npc_TryStartDialog`, `PlaceMarkerAheadOfMoby`, `PauseMenu_SeedSnapshot`, `func_L00_001FF240`, `PartType22Spawn` |
-| `func_L03_002DD6D8` | Moby_DeleteSelf | 915 fred_1, 916 fred_2, 917 fred_3 | 3, 10 | decomp | `void(u32)` | row: `Moby_Fred1_Update` |  |  |
-| `func_L03_002DD840` | QwarkWatchUpdate | 447 qwark_umbris, 920 qwark_rilgar | 3, 5, 7, 13, 17 | decomp | `void(u32)` | row: `Moby_QwarkUmbris_Update` |  | `AttachCheatManipulatorToClasses`, `SetGroundHeightBand`, `STUB_printf`, `LevelTable_SetSlotValue`, `BuildSphericalOffset`, `func_001F9CE8`, `EaseManipulatorOffsets` |
-| `func_L03_002DDD78` | AmbientStreamL03Update | 994, 1260 | 3 | decomp | `void(u32)` | row: `Moby_Class994_Update` |  | `ScaleTableIntoBuffer` |
-| `func_L03_002DDDF8` | RiseWhenCollectedUpdate | 353 gate, 997 garage_door | 3, 10 | decomp | `void(u32)` | row: `Moby_Gate_Update` | Vec4 |  |
-| `func_L03_002DE088` | RailLiftUpdate | 1012 taxi | 3 | decomp | `void(u32)` | row: `Moby_Taxi1012_Update` | RailLiftVars_DE088 | `LevelTable_SetSlotValue`, `IsLiftMobyActive`, `Hero_IsOnMoby`, `ShowModeHelpMessage`, `HeroSetTargetAndEnterMove`, `Level_GetSpecialMode`, `FollowWaypointPath`, `UpdateMobyAimSway`, `CarryRiders` |
-| `func_L03_002DF738` | FallingMobyUpdate | 1221, 1222 | 3, 7, 12, 15 | decomp | `void(u32)` | row: `Moby_Class1221_Update` |  | `func_L00_001FF240` |
-| `func_L03_002E08E8` | TutorialHintTriggerUpdate | 1342 | 3 | decomp | `void(u32)` | row: `Moby_Class1342_Update` |  | `Help_Request`, `GetAmmo`, `PlayBankSound`, `ShowBanner` |
-| `func_L03_002E1598` | CutsceneBeamsUpdate | 1548 | 3 | decomp | `void(u32)` | row: `Moby_Class1548_Update` |  | `SpawnMoby750Sparks`, `PartType22Spawn` |
-| `func_L04_0029FEC8` | SwarmUpdate | 86 | 4 | decomp | `void(u32)` | row: `Moby_Class86_Update` | SwarmVars | `func_001153FC`, `Path_AdvanceMoby`, `func_L00_00251E30`, `MobySteer`, `StepMobyOutOfCollision` |
-| `func_L04_002A6C20` | IdleAnimTick | 161 | 4 | decomp | `void(u32)` | row: `Moby_Class161_Update` |  | `func_001160D8`, `func_0020EEE8` |
-| `func_L04_002B0290` | Moby184ShotUpdate | 184 | 4, 12 | decomp | `void(u32)` | row: `Moby_Class184_Update` | ShotVars | `func_L00_001FF500`, `func_L00_001FF610`, `PartType27Spawn` |
-| `func_L04_002BB7B0` | BigAxebotUpdate | 217 big_axebot | 4 | decomp | `void(u32)` | row: `Moby_BigAxebot_Update` |  | `Manipulator_ApplyScale`, `SetGroundHeightBand`, `FindNearestTargetMoby`, `MobyGetFrameValue`, `ComputeHitResponse`, `RerollEffectCounter`, `BlendAnimationWithLinked`, `SetValueOnSelfAndLinked`, `InitKnockback`, `SetSpringParams` |
-| `func_L04_002C35F0` | CircularSawUpdate | 340 circular_saw_enemy | 4 | decomp | `void(u32)` | row: `Moby_CircularSawEnemy_Update` |  | `Manipulator_ApplyScale`, `SetGroundHeightBand`, `FindNearestTargetMoby`, `MobyGetFrameValue`, `EngineSoundUpdate`, `ComputeHitResponse`, `SilenceAndBurst`, `RerollEffectCounter`, `MoveCtl_Init`, `WanderSteer` |
-| `func_L04_002C5BD0` | BlargTrooperUpdate | 427 blarg_trooper | 4 | decomp | `void(u32)` | row: `Moby_BlargTrooper_Update` |  | `Manipulator_SetScale`, `SetGroundHeightBand`, `FindNearestTargetMoby`, `MobyGetFrameValue`, `STUB_printf`, `DeleteMobyAndLinked`, `ComputeHitResponse`, `HeadingFromVector`, `InitKnockback`, `SetDeathBits` |
-| `func_L04_002C7BD8` | SwitchFollowerUpdate | 432 eudora_bridge, 1052 bridge | 4 | decomp | `void(u32)` | row: `Moby_EudoraBridge_Update` | SwitchFollowerVars_C7BD8 | `func_0020EEE8` |
-| `func_L04_002C7F38` | LeverDoorUpdate | 434 platform_booster | 4 | decomp | `void(u32)` | row: `Moby_PlatformBooster_Update` | DoorVars |  |
-| `func_L04_002CB800` | PathVehicleUpdate | 466 snow_plow, 480 grab_helicopter, 485 ball_ship_1, 486 ball_ship_2, 488 circular_saw_ship, 490 chainsaw_ship, 493 tank_ship, 494 log_ship_1 and 3 more | 4 | decomp | `void(u32)` | row: `Moby_SnowPlow_Update` |  | `STUB_printf`, `func_L01_002F6540`, `MobySpringTurn`, `func_L00_001FFED8`, `func_001F9EC0`, `MobyAnimAdvance`, `func_L00_00251E30`, `func_0020EEE8`, `PlayBankSound`, `ShowBanner` |
-| `func_L04_002CF180` | FloatingPlatformUpdate | 481 floating_platform | 4 | decomp | `void(u32)` | row: `Moby_FloatingPlatform_Update` |  | `FastNormalizeAngle`, `MobyGetFrameValue`, `EaseManipulatorOffsets`, `CarryRiders` |
-| `func_L04_002CF440` | DeleteMobyUpdate | 484 transport_ship | 4 | decomp | `void(u32)` | row: `Moby_TransportShip_Update` |  |  |
-| `func_L04_002D2A98` | WBMoby_Update | 563 woodcut_bot | 4 | decomp | `void(u32)` | row: `Moby_WoodcutBot_Update` |  | `FindNearestTargetMoby`, `Manipulator_ApplyScale`, `SetGroundHeightBand`, `MobyGetFrameValue`, `ComputeHitResponse`, `HeadingFromVector`, `InitKnockback`, `SetDeathBits`, `RerollEffectCounter`, `WalkCycle_ResetFeet` |
-| `func_L04_002D4960` | Moby584Update | 584 | 4 | decomp | `void(u32)` | row: `Moby_Class584_Update` |  | `CarryRiders`, `func_L00_0025E210` |
-| `func_L04_002D8348` | PathKeyframeBlendUpdate | 617 | 4 | decomp | `void(u32)` | row: `Moby_Class617_Update` |  | `func_L00_00200210` |
-| `func_L04_002D9270` | DriftSparkMoby_Update | 642 leaf | 4 | decomp | `void(u32)` | row: `Moby_Leaf_Update` |  | `func_001F9CE8`, `func_L00_001FF610` |
-| `func_L04_002E2BB8` | CollectableUpdate | 1101 upper_door, 1102 lower_door, 1531 lower_door, 1532 upper_door | 4 | decomp | `void(u32)` | row: `Moby_UpperDoor_Update` |  | `Sound_PlayClassSound`, `func_L04_002E2B48` |
-| `func_L04_002E2DF0` | WarpPortalUpdate | 1120 suck_cannon | 4 | decomp | `void(u32)` | row: `Moby_SuckCannon_Update` | PortalVars_002E2DF0 | `DriftingSprites_Init`, `SparkleSpritesDraw`, `StartCutscene`, `ShowBanner`, `GiveItem`, `PauseMenu_SeedSnapshot`, `STUB_printf`, `memcard_Save` |
-| `func_L04_002E4458` | UnlockPlanetPad_Update | 1190 lieutenant | 4 | decomp | `void(u32)` | row: `Moby_Lieutenant_Update` |  | `SetGroundHeightBand`, `AttachManipulatorsIfCheat`, `DialogRequest_Init`, `Npc_TryStartDialog`, `UnlockPlanet`, `SetLevelTriggerDone`, `memcard_Save` |
-| `func_L04_002E57F8` | Moby1343Update | 1343 | 4 | decomp | `void(u32)` | row: `Moby_Class1343_Update` |  | `Help_Request` |
-| `func_L04_002E6558` | BouncingDebrisUpdate | 1516 | 4 | decomp | `void(u32)` | row: `Moby_Class1516_Update` |  | `func_L00_001FF610`, `randf_sym` |
-| `func_L04_002E6780` | SparksTriggerL04_Update | 1549 | 4 | decomp | `void(u32)` | row: `Moby_Class1549_Update` |  | `SpawnMoby750Sparks` |
-| `func_L05_002D28D0` |  | 35 sharkigator | 5 | candidate | `void(u32)` | row: `Moby_Sharkigator_Update` |  | `SpawnSideParticles`, `ApproachWithVelocity`, `func_001FA1F8`, `CameraScript`, `IsPointInPolygon`, `SpawnBurstAndSparkRing`, `Hero_ResetToPosition`, `Hero_OnKilled` |
-| `func_L05_002D8388` | SceneryShipUpdate | 79 scenery_ship | 5 | decomp | `void(u32)` | row: `Moby_SceneryShip_Update` |  | `FastTweenColor`, `AdvancePathPosition`, `func_001F9EC0`, `GlowOrbs_Update` |
-| `func_L05_002DBF10` | GrazingCritterUpdate | 133 amoeboid | 5 | decomp | `void(u32)` | row: `Moby_Amoeboid_Update` |  | `MobyDestroyWithDebris`, `MoveCtl_Init`, `MobySteerToward`, `EmitRandomParticlePair` |
-| `func_L05_002F6588` | Moby258Update | 258 | 5, 7, 9-10, 12-15, 17 | decomp | `void(u32)` | row: `Moby_Class258_Update` | TriggerVars_2f5200 | `IsPointInPolygon`, `ApplyTriggerSwitchesToList`, `ApplyTriggerSwitches` |
-| `func_L05_002F9478` | Moby341Update | 341 hydrodisplacer_faucet | 5, 7, 11-12, 18 | decomp | `void(u32)` | row: `Moby_HydrodisplacerFaucet_Update` |  | `UpdateFocusPulse` |
-| `func_L05_002F9BA0` | HoverboardUpdate | 439 hoverboard | 5, 16 | decomp | `void(u32)` | row: `Moby_Hoverboard439_Update` |  | `Help_Request`, `PartType04Spawn`, `PartType21Spawn` |
-| `func_L05_003033A0` | ExtermibotUpdate | 623 extermibot | 5 | decomp | `void(u32)` | row: `Moby_Extermibot_Update` |  | `Manipulator_SetScale`, `SetGroundHeightBand`, `FlyingEnemyUpdate`, `MoveCtl_Init`, `BuildAdjacencyMasks`, `func_L01_00277FD8`, `rand_vec`, `MobySteerToward`, `PushPointOutsidePath`, `SegmentCrossPolyline` |
-| `func_L05_00305778` | ExtermitankUpdate | 625 extermitank | 5 | decomp | `void(u32)` | row: `Moby_Extermitank_Update` |  | `Extermitank_ProcessHit`, `RepelSlotMobysFromHero`, `SetGroundHeightBand`, `func_L00_00251E30`, `MoveCtl_Init`, `ClassifyTargetInCone`, `IsPointInPolygon`, `StepAngleToward`, `func_L00_001FFED8` |
-| `func_L05_00308D68` | SkidMcMarxUpdate | 717 skid_mcmarx | 5 | decomp | `void(u32)` | row: `Moby_SkidMcmarx717_Update` |  | `SetGroundHeightBand`, `GetPathNodePoint`, `Moby439Spawn`, `AdvancePathNodeIndex`, `AddTimerBonusNearPlayer`, `AdvanceToFlaggedWaypoint`, `StepTableIndex`, `AimAtTargetWithTimer`, `SpringAngle`, `PostHitMessage` |
-| `func_L05_0030D230` |  | 810 floating_platform | 5 | decomp | `void(u32)` | row: `Moby_FloatingPlatform810_Update` |  | `CarryRiders` |
-| `func_L05_0030D3F0` | Moby812Update | 812 box | 5 | decomp | `void(u32)` | row: `Moby_Box_Update` |  | `RotateIntoMobySpace`, `TransformToMobyLocal`, `CarryRiders` |
-| `func_L05_0030D500` | Moby823Update | 823 lamp | 5, 7 | decomp | `void(u32)` | row: `Moby_Lamp_Update` |  | `randf_sym`, `func_L00_00251328`, `func_L00_001FFED8` |
-| `func_L05_0030DA08` | FloorButtonUpdate | 830 floor_button | 5, 11, 15, 17-18 | decomp | `void(u32)` | row: `Moby_FloorButton_Update` |  |  |
-| `func_L05_0030DED8` | WaterSurfaceUpdate | 831 water | 5 | decomp | `void(u32)` | row: `Moby_Water_Update` |  | `RipplePatchesInit`, `RescaleFloatTable`, `RipplePatch_ToFixedPoint`, `FindGridNeighbors`, `MobyGroup_SetState`, `ApproachWithVelocity`, `SyncClass831Heights`, `RippleDisturb`, `IsBSphereVisibleScaled`, `RippleSimClock` |
-| `func_L05_0030F130` |  | 838 electric_gate | 5 | decomp | `void(u32)` | row: `Moby_ElectricGate_Update` |  |  |
-| `func_L05_0030F6C0` | FogZoneUpdate | 841 | 5 | decomp | `void(u32)` | row: `Moby_Class841_Update` |  | `func_001F9EC0`, `FastTweenColor` |
-| `func_L05_0030F9D0` | PoseSlideOutUpdate | 843 | 5 | decomp | `void(u32)` | row: `Moby_Class843_Update` |  | `ApproachWithVelocity` |
-| `func_L05_0030FCC0` | DrainCoverUpdate | 844 drain_cover | 5 | decomp | `void(u32)` | row: `Moby_DrainCover_Update` | Data_0030FCC0 | `randf_sym`, `Moby_EaseTiltTowardHero`, `func_001F9B50`, `ScatterParticlesInRange`, `func_L00_001FF500`, `PartType02Spawn`, `MobySphereHitDirectional`, `ApproachWithVelocity`, `PostHitMessage`, `CarryRiders` |
-| `func_L05_00310A90` | Moby980Break | 846 pipe_mounted_grating | 5 | decomp | `void(u32)` | row: `Moby_PipeMountedGrating_Update` |  | `InitSpinningPiece`, `func_001F9EC0`, `rand_vec`, `PartType53Spawn`, `func_L00_00251E30`, `FindOrAddMobyEntry` |
-| `func_L05_00316378` | GateRiseUpdate | 852, 853 | 5 | decomp | `void(u32)` | row: `Moby_Class852_Update` | GateVars_16378 | `ApproachWithVelocity` |
-| `func_L05_003165B8` | EmitterL05_Update | 855 | 5 | decomp | `void(u32)` | row: `Moby_Class855_Update` | EmitterVars_165B8 | `MobyGroup_SetState`, `Particle_SpawnRandomized`, `func_001F9B50`, `PartType46Spawn` |
-| `func_L05_00316B98` | LiftL05_Update | 877 elevator_with_button | 5 | decomp | `void(u32)` | row: `Moby_ElevatorWithButton_Update` | LiftVars | `LiftL05_GetCameraView`, `CameraScript`, `CameraScript_SetPosition`, `CameraScript_SetLookAt`, `ApproachWithVelocity`, `CameraScript2`, `LayoutCirclePathPoints`, `CarryRiders` |
-| `func_L05_003175D8` | PulsingMarkerUpdate | 879 ocean_rilgar | 5 | decomp | `void(u32)` | row: `Moby_OceanRilgar_Update` |  | `ScaleTableIntoBuffer128` |
-| `func_L05_00317720` |  | 893 | 5 | decomp | `void(u32)` | row: `Moby_Class893_Update` |  | `func_L00_001FFED8`, `ApproachWithVelocity` |
-| `func_L05_00317B68` | TriggeredRotorUpdate | 895 | 5 | decomp | `void(u32)` | row: `Moby_Class895_Update` |  |  |
-| `func_L05_00317F80` | HoverboardGirlUpdate | 918 hoverboard_girl | 5 | decomp | `void(u32)` | row: `Moby_HoverboardGirl_Update` |  |  |
-| `func_L05_00318980` | BouncerUpdate | 919 qwarks_bouncer | 5 | decomp | `void(u32)` | row: `Moby_QwarksBouncer_Update` |  | `AttachCheatManipulatorToSiblings`, `DialogRequest_Init`, `SetMobyZBand`, `Npc_TryStartDialog`, `PlaceMarkerAheadOfMoby`, `UnlockPlanet`, `memcard_Save`, `BuildSphericalOffset`, `func_001F9CE8`, `EaseManipulatorOffsets` |
-| `func_L05_003195B0` | ShadySalesmanUpdate | 925 shady_salesman | 5 | decomp | `void(u32)` | row: `Moby_ShadySalesman_Update` |  | `AttachManipulatorsIfCheat`, `SetGroundHeightBand`, `DialogRequest_Init`, `Npc_TryStartDialog`, `PlaceMarkerAheadOfMoby`, `GiveItem`, `ShowBanner`, `memcard_Save`, `BuildSphericalOffset`, `func_001F9CE8` |
-| `func_L05_00319C08` |  | 344 blarg_gun, 547, 548, 549, 550, 551, 588, 589 and 15 more | 5, 8 | decomp | `void(u32)` | row: `Moby_BlargGun_Update` |  | `func_001FA218`, `func_001FA480`, `func_001F9EC0`, `func_L00_001FF610` |
-| `func_L05_00319F78` | WaterPlaneMarkerUpdate | 982 | 5 | decomp | `void(u32)` | row: `Moby_Class982_Update` |  |  |
-| `func_L05_0031A0A8` | BobbingMobyL05_Update | 984 television | 5 | decomp | `void(u32)` | row: `Moby_Television_Update` |  |  |
-| `func_L05_0031A188` | PickupL05_Update | 998 taxi | 5 | decomp | `void(u32)` | row: `Moby_Taxi998_Update` |  | `LevelTable_SetSlotValue`, `PickNearestTargetSlot`, `func_001FA4A0`, `func_001F9EE8`, `SelectSlotPath`, `ShowVariantHelpMessage`, `FindMobyByDataId`, `ApproachWithVelocity`, `SamplePathAt`, `func_001F9C08` |
-| `func_L05_0031B138` | UpdateVisibilityByLevelFlag | 1099 qwarks_trailer | 5 | decomp | `void(u32)` | row: `Moby_QwarksTrailer_Update` |  |  |
-| `func_L05_0031C0F0` | Moby1139Update | 1139 hoverboard_ring | 5, 16 | decomp | `void(u32)` | row: `Moby_HoverboardRing_Update` |  | `PartType67Spawn` |
-| `func_L05_0031D450` | ChallengeUpdate | 1347 | 5 | decomp | `void(u32)` | row: `Moby_Class1347_Update` |  | `Help_Request`, `FUN_001f99f8`, `KillMoby` |
-| `func_L05_0031DDF0` | MineMobyUpdate | 1511 lamp | 5, 14 | decomp | `void(u32)` | row: `Moby_Lamp1511_Update` | MineVars_c8e0 | `Moby1514Spawn`, `SpawnBreakFxByDistance`, `BuildSphericalOffset`, `randf_sym`, `PartType53Spawn`, `PartType23Spawn` |
-| `func_L05_0031EAD8` | Moby1550Update | 1550 | 5 | decomp | `void(u32)` | row: `Moby_Class1550_Update` |  | `SpawnMoby750Sparks` |
-| `func_L06_002B5990` | OrbitingPlatformUpdate | 55 hangar_door | 6 | decomp | `void(u32)` | row: `Moby_HangarDoor_Update` |  |  |
-| `func_L06_002D9970` | Moby302Update | 302 gadgebot_spawn_container | 6, 10 | decomp | `void(u32)` | row: `Moby_GadgebotSpawnContainer_Update` |  | `FastTweenColor`, `SpawnBreakBurst` |
-| `func_L06_002D9FF0` | Moby303Update | 303 gadgebot_spawn_pad | 6, 10 | decomp | `void(u32)` | row: `Moby_GadgebotSpawnPad_Update` |  | `FastTweenColor` |
-| `func_L06_002DB0E0` | Moby367Update | 367 | 6 | decomp | `void(u32)` | row: `Moby_Class367_Update` |  | `ApproachWithVelocity`, `func_001F9C08` |
-| `func_L06_002E9AA8` | FrogUpdate | 827 frog | 6, 10 | decomp | `void(u32)` | row: `Moby_Frog_Update` |  | `Manipulator_ApplyScale`, `RespawnMobyUpdate`, `SetGroundHeightBand`, `func_L00_00251E30`, `SpawnDeathParticlesAndRemove`, `LineTestAlongForward`, `BuildMobyFrame`, `MoveMobyColliding`, `func_001F9EC0`, `func_001F9CE8` |
-| `func_L06_002F1470` | GadgebotUpdate | 857 gadgebot | 6, 10 | decomp | `void(u32)` | row: `Moby_Gadgebot_Update` |  | `TryEnterAttackState`, `DetachManipulator`, `SpawnMoby303LinkedToOwner`, `SpawnMoby302AtOwner`, `BuildAdjacencyMasks`, `BuildPathNodeVisibilityMask`, `Gadgebot_DrawGlow`, `WanderSteer`, `IsPointInPolygon`, `randf_sym` |
-| `func_L06_002F4F08` | SwingingHazardUpdate | 911 toxic_gas_vent | 6 | decomp | `void(u32)` | row: `Moby_ToxicGasVent_Update` |  | `SwingingHazard_EmitSparks`, `SwingingHazard_DrawSwingArcs`, `SwingingHazard_DrawBeam` |
-| `func_L06_002F6330` | DoorRingUpdate | 1021 | 6, 17-18 | decomp | `void(u32)` | row: `Moby_Class1021_Update` |  | `func_001FA1F8` |
-| `func_L06_002F69D0` | DrawbridgeUpdate | 1028 | 6 | decomp | `void(u32)` | row: `Moby_Class1028_Update` | Data_2F69D0 | `LayoutDrawbridgePieces`, `Hero_ResetToPosition`, `CameraScript`, `SetLevelTriggerDone`, `ApproachWithVelocity`, `func_001F9C08`, `CameraScript_SetPosition`, `CameraScript_SetLookAt`, `HeroL06_SetStateFromMode`, `CameraScript2` |
-| `func_L06_002F78A0` |  | 1035 | 6 | decomp | `void(u32)` | row: `Moby_Class1035_Update` |  | `StrandEffectUpdate`, `InitDirectionalHitQuery`, `PostHitMessageFromRecord`, `Help_Request`, `func_001FA218`, `func_001FA1C0`, `sce_vu0_mul_matrix`, `func_001F9EE8`, `randf_sym`, `FastTweenColor` |
-| `func_L06_002F86B8` | CollectibleSpawnerUpdate | 1038 energy_sphere_holder | 6, 10, 17 | decomp | `void(u32)` | row: `Moby_EnergySphereHolder_Update` |  | `InitMobyRandomData`, `PostHitMessage`, `LightBeamDraw` |
-| `func_L06_002F8D60` | TriggerListsUpdate | 1039 | 6, 8, 13, 18 | decomp | `void(u32)` | row: `Moby_Class1039_Update` |  | `FadeToBlack`, `Hero_OnKilled`, `HeroL06_TrySetMoveState` |
-| `func_L06_002F8EE8` | Moby1040Update | 1040 energy_sphere | 6, 10, 17 | decomp | `void(u32)` | row: `Moby_EnergySphere_Update` |  | `Moby1040_SpawnSparks`, `func_L00_00251328` |
-| `func_L06_002F91A8` | Moby1048Update | 1048 alien_snapper | 6 | decomp | `void(u32)` | row: `Moby_AlienSnapper_Update` | SnapperVars_91A8 | `Snapper_ApplyDamage`, `Manipulator_ApplyScale`, `SetGroundHeightBand`, `MoveCtl_Init`, `MobyGroup_AdvanceState1To2`, `ComputeLaunchVelocityZ`, `InitKnockback`, `MobySpringTurn`, `Snapper_GetSteerAngle`, `MobySteerToward` |
-| `func_L06_002FAE58` | AlienQueenUpdate | 1051 alien_queen | 6 | decomp | `void(u32)` | row: `Moby_AlienQueen_Update` |  | `AlienQueen_ApplyDamage`, `Manipulator_ApplyScale`, `SetGroundHeightBand`, `queue_animation_update`, `func_001F9C08`, `MobyGroup_SetState18`, `Moby_EnterState8WithChildren`, `Moby16F_EnableGroup`, `Cutscene_BeginCamera`, `AimCameraAtMoby` |
-| `func_L06_002FD3E0` | Moby1054Update | 1054 | 6 | decomp | `void(u32)` | row: `Moby_Class1054_Update` |  | `func_L00_00251E30`, `MobyGroup_SetState`, `ApproachWithVelocity` |
-| `func_L06_002FDA70` | CallableLiftUpdate | 1061 | 6 | decomp | `void(u32)` | row: `Moby_Class1061_Update` | Data_2FDA70 | `Moby_EnterState8WithChildren`, `try_set_help_message`, `FadeToBlack`, `Moby_EnterState2WithChildren`, `Moby_EnterState4WithChildren`, `Hero_EndObjectControl`, `Hero_ResetToPosition`, `MusicRequestTrack`, `StartCutscene`, `HeroStartScene` |
-| `func_L06_002FE4B8` | RegisterMobyDrawCallbacks | 1062 | 6 | decomp | `void(u32)` | row: `Moby_Class1062_Update` |  |  |
-| `func_L06_002FEE60` | LaunchTriggerUpdate | 1066 | 6 | decomp | `void(u32)` | row: `Moby_Class1066_Update` |  | `Moby_LaunchSpinning` |
-| `func_L06_002FF000` | Moby1068Update | 1068 blarg_space_commando | 6, 10 | decomp | `void(u32)` | row: `Moby_BlargSpaceCommando_Update` | Moby1068Vars | `func_L06_002FFF70`, `Manipulator_ApplyScale`, `SetGroundHeightBand`, `MoveCtl_Init`, `MobySpringTurn`, `MobySteerToward`, `BuildFanVectors`, `MobyGetFrameValue`, `InitDirectionalHitQuery`, `SweepSegmentCheck` |
-| `func_L06_003010E0` | CameraTakeoverTriggerUpdate | 1083 | 6 | decomp | `void(u32)` | row: `Moby_Class1083_Update` |  | `MobyBreakAndBurst`, `CameraScript`, `func_L02_002F9ED8`, `CameraScript_SetPosition`, `Hero_ResetToPosition`, `HeroL06_TrySetMoveState`, `CameraScript2`, `ApproachWithVelocity`, `func_001F9C08`, `CameraScript_SetLookAt` |
-| `func_L06_00301FE8` | SpinningDebrisUpdate | 1085, 1086, 1087, 1088, 1089 | 6, 10, 13 | decomp | `void(u32)` | row: `Moby_Class1085_Update` |  |  |
-| `func_L06_00302248` | BobbingMobyUpdate | 1091, 1092, 1093, 1094, 1095, 1096, 1097, 1098 and 1 more | 6 | decomp | `void(u32)` | row: `Moby_Class1091_Update` |  |  |
-| `func_L06_003024C8` | Moby1105Update | 1105 fred | 6 | decomp | `void(u32)` | row: `Moby_Fred_Update` |  | `AttachCheatManipulatorToMatchingL03`, `SetGroundHeightBand`, `Moby_EnterState8WithChildren`, `DialogRequest_Init`, `IsMoby33BGroupDone`, `Npc_TryStartDialog`, `PlaceMarkerAheadOfMoby`, `Moby_EnterState4WithChildren`, `SetLevelTriggerDone`, `GiveItem` |
-| `func_L06_00302FE8` | Moby1108Update | 1108 | 6 | decomp | `void(u32)` | row: `Moby_Class1108_Update` |  | `MobyGroup_SetState4`, `MobyGroup_SetState18`, `MobyGroup_CountNotInState`, `Moby_AdvanceFromState1`, `GetMobyStateClass`, `func_L06_00303858`, `MusicRequestTrack`, `Music_ContinueStreamIfReady`, `SetMobyGroupDormant`, `MobyGroup_SetState15` |
-| `func_L06_003039B8` | ShuttleUpdate | 1109 shuttle | 6 | decomp | `void(u32)` | row: `Moby_Shuttle_Update` |  | `SpawnMoby1898`, `DeleteMobyGroup`, `Shuttle_SelectMode`, `MusicRequestTrack`, `Hud_ClosePopupIfActive`, `FadeToBlack`, `CameraScript`, `func_L02_002F9ED8`, `CameraScript_SetPosition`, `CameraScript_SetLookAt` |
-| `func_L06_003054D8` | RedButtonUpdate | 1118 red_button | 6 | decomp | `void(u32)` | row: `Moby_RedButton_Update` |  | `ApproachWithVelocity`, `func_L00_00251E30`, `try_set_help_message`, `Hud_ClosePopupIfActive`, `FadeToBlack`, `CameraScript`, `func_L02_002F9ED8`, `CameraScript_SetPosition`, `CameraScript_SetLookAt`, `Moby1123_SpawnDebris` |
-| `func_L06_00305E38` | Moby1123Update | 1123 | 6 | decomp | `void(u32)` | row: `Moby_Class1123_Update` |  | `Moby1123_ProbeCorners`, `func_L06_002172B0`, `rand_vec`, `func_001FA218`, `func_001FA1C0`, `sce_vu0_mul_matrix`, `randf_sym`, `FastTweenColor`, `PartType60Spawn` |
-| `func_L06_00309170` | Moby1302Update | 1302 bot_door_lock | 6, 10 | decomp | `void(u32)` | row: `Moby_BotDoorLock_Update` |  | `PartType41Spawn`, `func_L00_001FF240`, `Moby_AdvanceStateByClass` |
-| `func_L06_003097F0` | Level6_UpdateHelpHints | 1348 | 6 | decomp | `void(u32)` | row: `Moby_Class1348_Update` |  | `Help_Request`, `MobyGroup_CountNotInState` |
-| `func_L06_0030A0A8` | SparkEmitterUpdate | 1512 | 6 | decomp | `void(u32)` | row: `Moby_Class1512_Update` |  | `func_001FA1F8`, `SpawnExplosionFx`, `FastTweenColor`, `PartType02Spawn`, `rand_vec` |
-| `func_L06_0030A788` | SparksTriggerL06_Update | 1551 | 6 | decomp | `void(u32)` | row: `Moby_Class1551_Update` |  | `SpawnMoby750Sparks` |
-| `func_L06_0030ACA0` | SpawnChildAndDeleteUpdate | 1650 mushroom, 1655, 1663 robot_head, 1677 | 6 | decomp | `void(u32)` | row: `Moby_Mushroom_Update` |  | `SpawnBreakFxByDistance`, `func_L00_00251E30` |
-| `func_L06_0030B248` | BreakOnHitBlargUpdate | 1660, 1664 | 6 | decomp | `void(u32)` | row: `Moby_Class1660_Update` |  | `SpawnBreakFxByDistance`, `func_L00_00251E30` |
-| `func_L06_0030D2A0` | Moby1898Update | 1898 | 6, 18 | decomp | `void(u32)` | row: `Moby_Class1898_Update` |  |  |
-| `func_L07_002CE470` | FollowPathTrackHero | 38 taxi_platform | 7 | decomp | `void(u32)` | row: `Moby_TaxiPlatform_Update` |  | `Hero_IsOnMoby`, `HeroEnterMoveState`, `Hero_SetStateFromMode`, `CarryRiders` |
-| `func_L07_002CECE8` | ShuttleBetweenPathEnds | 1474 taxi_platform | 7 | decomp | `void(u32)` | row: `Moby_TaxiPlatform1474_Update` |  | `Hero_IsOnMoby`, `HeroEnterMoveState`, `Hero_SetStateFromMode`, `CarryRiders` |
-| `func_L07_002F6F20` | Moby436Update | 436 | 7 | decomp | `void(u32)` | row: `Moby_Class436_Update` | MobyData_2F6F20 | `StartCutscene`, `Hero_ResetToPosition`, `MusicRequestTrack`, `PlayMovieEntryIfIdle`, `func_L00_001FF548`, `ClearBitGridRect`, `UnlockPlanet`, `memcard_Save`, `RequestPlanetLoad` |
-| `func_L07_002F9438` | AmbientStreamL07Update | 317, 460 | 7, 9 | decomp | `void(u32)` | row: `Moby_Class317_Update` |  | `ScaleTableIntoBuffer` |
-| `func_L07_002FD198` | InitEnvMappedMoby | 529 purple_ship | 7 | decomp | `void(u32)` | row: `Moby_PurpleShip_Update` |  |  |
-| `func_L07_0030C3E0` | PathTrainUpdate | 871 boltcrate_possibly_for_metal_detector | 7 | decomp | `void(u32)` | row: `Moby_BoltcratePossiblyForMetalDetector_Update` |  | `ComputeHitResponse`, `MobyGroup_SetState`, `RerollEffectCounter`, `StepColorFade`, `STUB_printf`, `FindClosestDistanceEntry`, `Spline_AdvanceByDistance`, `ResetMobyFromClassDefaults`, `RecordMobyShadow` |
-| `func_L07_0030CA88` | BoltProjectileUpdate | 880 | 7 | decomp | `void(u32)` | row: `Moby_Class880_Update` |  | `SpawnPuffParticle`, `func_L00_001FF610`, `PartType27Spawn` |
-| `func_L07_0030CFA8` | GravityDebrisUpdate | 882 bomb | 7 | decomp | `void(u32)` | row: `Moby_Bomb882_Update` | DebrisVars_0CFA8 |  |
-| `func_L07_0030D370` | TimedPadUpdate | 886 timed_activation_pads | 7, 12 | decomp | `void(u32)` | row: `Moby_TimedActivationPads_Update` |  | `MobyGroup_SetState`, `func_001FA190`, `func_001FA4A0`, `func_001F9EE8`, `func_L00_00251328`, `MobyGroup_SetByteBC`, `SetLevelTriggerDone` |
-| `func_L07_0030D8E8` | WaterPlateUpdate | 902 water, 941 water, 943 water, 944 water, 948 water, 949 water, 950 water, 951 and 12 more | 7 | decomp | `void(u32)` | row: `Moby_Water902_Update` | Data_30D8E8 | `RipplePatchesInit`, `RescaleFloatTable`, `RipplePatch_ToFixedPoint`, `Ripple_DisturbDefault`, `LinkWaterGridNeighbours`, `MobyGroup_SetState`, `IsCurrentMobyId`, `MobyGroup_SetByteBC`, `RippleDisturb`, `IsBSphereVisibleScaled` |
-| `func_L07_0030E370` | TargetDrivenSliderUpdate | 1013, 1014, 1064, 1065 | 7 | decomp | `void(u32)` | row: `Moby_Class1013_Update` |  | `func_001F9EC0` |
-| `func_L07_0030E820` | AudioStreamTriggerUpdate | 1018 ocean_umbris | 7 | decomp | `void(u32)` | row: `Moby_OceanUmbris_Update` |  | `ScaleTableIntoBuffer128` |
-| `func_L07_0030E8B8` | LobberEnemyUpdate | 1041 bombomatic | 7 | decomp | `void(u32)` | row: `Moby_Bombomatic_Update` |  | `SetGroundHeightBand`, `ComputeHitResponse`, `SetDeathBits`, `RerollEffectCounter`, `StepColorFade`, `FindNearestTargetMoby`, `func_001FA218`, `func_001F9EE8`, `ComputeLaunchVelocityZ`, `SpawnMobyWithRandomVelocity` |
-| `func_L07_0030F5D8` | ShockwaveUpdate | 1046 | 7 | decomp | `void(u32)` | row: `Moby_Class1046_Update` |  | `Shockwave_PushMoby` |
-| `func_L07_0030F838` | LobbedBombUpdate | 1049 | 7 | decomp | `void(u32)` | row: `Moby_Class1049_Update` |  | `SpawnMobyAttachedParticle` |
-| `func_L07_003109D0` | SharkigatorUpdate | 1059 sharkigator | 7 | decomp | `void(u32)` | row: `Moby_Sharkigator1059_Update` |  | `Manipulator_ApplyScale`, `WalkerInit`, `STUB_printf`, `FindNearestTargetMoby`, `EnemyTakeHit`, `StepColorFade`, `IsPointInPolygon`, `GetPathProximityBand`, `CollType`, `RippleDisturb` |
-| `func_L07_003121D0` |  | 129, 130, 182 door, 183 door, 360 hangar_door, 1063, 1078, 1079 and 1 more | 7, 13 | decomp | `void(u32)` | row: `Moby_Door_Update` |  | `func_001F9EC0` |
-| `func_L07_003126A8` | Moby1069Update | 1069 | 7 | decomp | `void(u32)` | row: `Moby_Class1069_Update` | D_3126A8 | `func_001160D8`, `MobyGroup_SetByteBC`, `WrapAngle`, `TransformPointAboutPivot`, `StepAngleToward`, `CarryRiders` |
-| `func_L07_00312FA8` | FallingLeafUpdate | 1080 | 7 | decomp | `void(u32)` | row: `Moby_Class1080_Update` |  | `func_L00_00251328`, `Hero_IsOnMoby`, `WrapAngle`, `CarryRiders` |
-| `func_L07_00315528` | SnagglebeastUpdate | 1106 snagglebeast | 7 | decomp | `void(u32)` | row: `Moby_Snagglebeast_Update` |  | `Manipulator_ApplyScale`, `AttachCheatManipulators`, `SetGroundHeightBand`, `EnemyHitReact`, `FindNearestTargetMoby`, `SuckBeam_QueueDraw`, `AimYawTowardTarget`, `queue_animation_update`, `BuildAdjacencyMasks`, `FindClosestDistanceEntry` |
+| `func_L00_002C83D0` | Moby209Update | 209 swingshot_hook | 0-18 | decomp | `void(u32)` | **`Moby_SwingshotHook_Update`** |  | `func_0020EEE8` |
+| `func_L00_002C8DB8` | CarrierUpdate | 229 glove_of_doom | 0-18 | decomp | `void(u32)` | **`Moby_GloveOfDoom_Update`** | CarrierVars_2C8DB8 | `MobyTransformScaledVertex`, `func_001F9EE8`, `HeroEnterMoveState`, `GetAmmo`, `Hero_PlayActiveSound`, `TakeAmmo`, `Carrier_StepCamera`, `PlaceMobyAtSpot`, `SpawnMoby230` |
+| `func_L00_002C9DC8` |  | 230 bomb | 0-18 | decomp | `void(u32)` | **`Moby_Bomb_Update`** |  | `GetFlaggedPvarWord`, `ThrownObject_TracePathCopy`, `PartType32Spawn`, `func_L00_001FF240`, `func_L00_001FF610`, `BurstOnSelectedCollType`, `RotateWithMoby`, `SpawnMoby186` |
+| `func_L00_002CABC0` | MorphorayChickenUpdate | 270 morphoray_chicken | 0-18 | decomp | `void(u32)` | **`Moby_MorphorayChicken_Update`** | Vars_2CABC0 | `Manipulator_ApplyScale`, `BuildSphericalOffset`, `PartType22Spawn`, `SendRadialMessageToMobys`, `SpawnMoby428`, `MoveKeepingOverGround`, `MobySpringTurn`, `CarriedMobyUpdate`, `func_L00_0025A748`, `CollType` |
+| `func_L00_002CC868` | Moby305Update | 305 | 0-18 | decomp | `void(u32)` | **`Moby_Class305_Update`** |  | `SpringTurn`, `BuildSphericalOffset`, `RefreshSparkParts`, `func_L00_001FF500`, `CollType`, `func_L00_001FF610`, `PartType27Spawn`, `func_001F9CE8`, `randf_sym`, `FastVecCross` |
+| `func_L00_002CD660` | Moby428Update | 428 | 0-18 | decomp | `void(u32)` | **`Moby_Class428_Update`** |  |  |
+| `func_L00_002CDAB8` | RynoUpdate | 454 ryno | 0-18 | decomp | `void(u32)` | **`Moby_Ryno_Update`** |  | `func_001FA480`, `func_001FA4A0`, `FindBestTargetMoby`, `GetFlaggedPvarWord`, `GetAmmo`, `EffectQueue_Add`, `HeroEnterMoveState`, `TakeAmmo`, `Hero_StartModuleAnim`, `func_001F9EE8` |
+| `func_L00_002CE6A0` | RocketSteerUpdate | 457 rocket | 0-18 | decomp | `void(u32)` | **`Moby_Rocket_Update`** |  | `func_L00_001FF3E0`, `func_001F9B50`, `SpringTurn`, `func_001F9CE8`, `BuildSphericalOffset`, `PartType04Spawn`, `func_001FA218`, `func_001F9EE8`, `func_L00_001FF500`, `func_L00_001FF610` |
+| `func_L00_002CF808` |  | 479 drone | 0-18 | candidate | `void(u32)` | **`Moby_Drone_Update`** |  | `Moby_FindNearestTarget`, `GetFlaggedPvarWord`, `func_001160D8`, `AttachTrailEffects`, `func_001FA218`, `func_001F9EE8`, `func_L00_001FF548`, `MoveMobyWithCollision`, `InitHitQuery`, `func_L00_001FF500` |
+| `func_L00_002D06C8` | CrateUpdate | 500 bolt_crate, 501 nanotech_crate, 502 metal_crate, 505 oom_oom_box, 511 ammo_crate | 0-18 | decomp | `void(u32)` | **`Moby_BoltCrate_Update`** | CrateVars | `ThrownChainUpdate`, `ComputeHitResponse`, `GroundAttachedUpdate`, `CreateMoby806ForMoby`, `func_L00_002D1E68`, `CrateDropBolts`, `func_L00_00251328` |
+| `func_L00_002D3330` |  | 530 veldin_ship | 0-1 | decomp | `void(u32)` | **`Moby_VeldinShip_Update`** |  | `MobyTransformScaledVertex` |
+| `func_L00_002D3B20` | DecoyGloveUpdate | 562 decoy_glove | 0-18 | decomp | `void(u32)` | **`Moby_DecoyGlove_Update`** |  | `func_001F9EE8`, `MobyTransformScaledVertex`, `MobyList_Remove`, `SpawnThrownObject`, `HeroEnterMoveState`, `GetAmmo`, `Hero_PlayActiveSound`, `TakeAmmo`, `DecoyGlove_AimThrow`, `ThrownObject_BounceOffHero` |
+| `func_L00_002D4398` | TargetTrackerUpdate | 585 metal_detector | 0-18 | decomp | `void(u32)` | **`Moby_MetalDetector_Update`** | Vars_2D4398 | `BuildSphericalOffset`, `Profile_Mark`, `FastVecCross`, `MobyTransformScaledVertex`, `func_001FA4A0`, `sce_vu0_mul_matrix`, `MatrixToQuaternion`, `BuildEulerMatrix`, `func_001FA5C8`, `Sound_SetPitchBend` |
+| `func_L00_002D4C80` | ClankPackUpdate | 607 helipack | 0-18 | decomp | `void(u32)` | **`Moby_Helipack_Update`** |  |  |
+| `func_L00_002D4EC0` | Moby639Update | 639 | 0-18 | decomp | `void(u32)` | **`Moby_Class639_Update`** |  | `FreePointLight`, `func_001F9EC0`, `UpdatePointLight` |
+| `func_L00_002D5AC0` | HornyToadUpdate | 749 horny_toad | 0, 18 | decomp | `void(u32)` | **`Moby_HornyToad_Update`** | Data_5AC0 | `func_L00_002D6610`, `SetGroundHeightBand`, `Manipulator_ApplyScale`, `CarriedMobyUpdate`, `WalkTowardPoint`, `WanderSteer`, `IsFrameWithinWindow`, `MobySphereHitAtPoint`, `DoesSegmentCrossPath`, `SpawnExplosionFxSwapped` |
+| `func_L00_002D7298` | InfobotUpdate | 750 infobot | 0-1, 3-8, 10, 12-15, 17 | decomp | `void(u32)` | **`Moby_Infobot_Update`** | Infobot | `DriftingSprites_Init`, `DriftingSprites_Draw`, `LevelTable_SetSlotValue`, `Path_SteerWithLimits`, `func_L00_0025EFC0`, `UnlockPlanet`, `SetLevelTriggerDone`, `PauseMenu_SeedSnapshot`, `StartCutscene`, `PlayMovieEntryIfIdle` |
+| `func_L00_002D83D8` | ParticleFieldUpdate | 760 particle_spawner_smoke__fire | 0-1, 14 | decomp | `void(u32)` | **`Moby_ParticleSpawnerSmokeFire_Update`** |  | `FetchAddCounter`, `ResetEmitterParticle`, `ParticleField_InitWobble`, `randf_sym`, `func_001F9EE8`, `PartType23Spawn` |
+| `func_L00_002D93E8` | GrowAndFadeOutUpdate | 775 | 0-18 | decomp | `void(u32)` | **`Moby_Class775_Update`** |  |  |
+| `func_L00_002D9438` | TrailMobyUpdate | 804 | 0-18 | decomp | `void(u32)` | **`Moby_Class804_Update`** |  | `func_001F9EC0` |
+| `func_L00_002D9EA0` | NanotechBallUpdate | 806 nanotech_ball | 0-18 | decomp | `void(u32)` | **`Moby_NanotechBall_Update`** | D_2D9EA0 | `func_001FA1F8`, `FastVecCross`, `BuildSphericalOffset`, `randf_sym`, `DropMobyToGround`, `HasLineOfSightToHero`, `build_look_at_matrix`, `func_L00_002D9DB8`, `func_L00_002D9D00`, `PartType62Spawn` |
+| `func_L00_002DB278` | Moby834Update | 834 clank_cutscene_trigger | 0 | decomp | `void(u32)` | **`Moby_ClankCutsceneTrigger_Update`** |  | `DialogRequest_Init`, `Npc_TryStartDialog`, `RequestPlanetLoad` |
+| `func_L00_002DBC40` | SuckCannonUpdate | 849 suckcannon | 0-18 | decomp | `void(u32)` | **`Moby_Suckcannon_Update`** |  | `queue_animation_update`, `SuckBeam_QueueDraw`, `UpdateHeroSlots`, `SuckBeam_Reset`, `Hero_ClearPendingModuleAnim`, `SuckCannon_IsBlockedByHeroMode`, `Hero_StartModuleAnim`, `SuckBeam_ApplyPulls`, `SuckCannon_ScanTargets`, `HeroEnterMoveState` |
+| `func_L00_002E09A8` | PulsingColorMobyUpdate | 1060 red_orb | 0, 2, 5, 18 | decomp | `void(u32)` | **`Moby_RedOrb_Update`** |  | `FastTweenColor`, `PulsingColor_QueueDraw`, `func_L00_00251328` |
+| `func_L00_002E0AE8` | QuadMoby_Update | 1138 | 0-18 | decomp | `void(u32)` | **`Moby_Class1138_Update`** |  | `QuadMoby_UpdateEdgeLengths` |
+| `func_L00_002E0BE0` | Moby1143Update | 1143 vendor_orb | 0-18 | decomp | `void(u32)` | **`Moby_VendorOrb_Update`** |  | `func_L00_001FFED8` |
+| `func_L00_002E0E50` | HydrodisplacerPadUpdate | 1251 hydrodisplacer | 0-18 | decomp | `void(u32)` | **`Moby_Hydrodisplacer_Update`** | Data_2E0E50 | `func_L00_002E17F0`, `DriftParticleEmit`, `PadPressedWithin`, `func_L00_002E1790`, `HeroEnterMoveState`, `HeroStartAnim`, `CameraScript`, `CameraScript_SetPosition`, `CameraScript_SetLookAt`, `ApproachWithVelocity` |
+| `func_L00_002E1850` | Moby1290Update | 1290 pilots_helmet | 0-18 | decomp | `void(u32)` | **`Moby_PilotsHelmet_Update`** |  | `DriftingSprites_Init`, `STUB_printf`, `HueStreakFxUpdate`, `StartCutscene`, `ShowBanner`, `GiveItem`, `Help_Request`, `SetLevelTriggerDone`, `memcard_Save` |
+| `func_L00_002E1E38` | Moby1413Update | 1413 | 0 | decomp | `void(u32)` | **`Moby_Class1413_Update`** |  | `Help_Request` |
+| `func_L00_002E2038` | VendorUpdate | 1440 veldin_robot_enemy | 0 | decomp | `void(u32)` | **`Moby_VeldinRobotEnemy_Update`** |  | `Troll_UpdateHitsAndTarget`, `Manipulator_SetScale`, `EaseManipulatorOffsets`, `SetGroundHeightBand`, `ApproachWithVelocity`, `EffectSlot_Alloc`, `MobyTransformScaledVertex`, `MobyGetFrameValue`, `EffectSlot_Free`, `EffectSlot_Update` |
+| `func_L00_002E32A0` | BeamSlotManagerUpdate | 1471 | 0 | decomp | `void(u32)` | **`Moby_Class1471_Update`** |  | `EffectSlot_FreeAt`, `BeamSlotUpdate` |
+| `func_L00_002E4CB0` | Moby1545Update | 1545 | 0 | decomp | `void(u32)` | **`Moby_Class1545_Update`** |  | `SpawnMoby750Sparks`, `SpawnSparkRings`, `PartType23Spawn` |
+| `func_L00_002E4F38` | PathFollowMobyUpdate | 1564 pterodactyl | 0, 7, 10, 18 | decomp | `void(u32)` | **`Moby_Pterodactyl_Update`** |  | `SamplePathAt` |
+| `func_L00_002E5158` | GrassUpdate | 492 bombthrower_grass, 724 green_leaves, 725 blue_leaves, 766 plant, 767, 1781 red_plant, 1782 green_plant | 0-2, 8 | decomp | `void(u32)` | **`Moby_BombthrowerGrass_Update`** |  |  |
+| `func_L00_002E5238` | FxGroupUpdate | 1505, 1506, 1517, 1518, 1522, 1525, 1526, 1528 and 195 more | 0-18 | decomp | `void(u32)` | **`Moby_Hoverboard_Update`** |  | `func_001F9EC0`, `SpawnExplosionFxSwapped`, `func_001FA1F8`, `func_001FA4F0`, `func_L00_001FF610`, `FastVecCross`, `build_quaternion_from_axis_angle`, `func_001FA6C0`, `MatrixToEuler` |
+| `func_L01_002BB068` | PathPlatformUpdate | 726 novalis_elevator, 1141 elevator | 1, 3, 10, 13 | decomp | `void(u32)` | **`Moby_NovalisElevator_Update`** |  | `Hero_IsOnMoby`, `CarryRiders` |
+| `func_L01_002BE2C8` | ParticleEmitterUpdate | 27 | 1 | decomp | `void(u32)` | **`Moby_Class27_Update`** |  | `func_001FA218`, `func_001F9EE8`, `PartType06Spawn` |
+| `func_L01_002C8740` | Moby156Update | 156 | 1, 6, 8-9, 15, 17 | decomp | `void(u32)` | **`Moby_Class156_Update`** |  | `PartType14Spawn`, `InitDirectionalHitQuery`, `NullMobyUpdate`, `PostHitMessage` |
+| `func_L01_002E1FE0` | BoltCrankUpdate | 280 bolt_crank | 1, 4, 8 | decomp | `void(u32)` | **`Moby_BoltCrank_Update`** |  | `CameraScript2`, `PadPressedWithin`, `Hero_SetMoveState`, `CameraScript`, `CameraScript_SetLookAt`, `CameraScript_SetPosition`, `BoltCrank_SetCameraParams`, `FindOrAddMobyEntry`, `SetLevelTriggerDone`, `PauseMenu_SeedSnapshot` |
+| `func_L01_002E2E38` | ItemOfferUpdate | 304 gold_weapon_case, 1456 gold_bomb_glove, 1457 gold_pyrocitor, 1458 gold_blaster, 1459 gold_glove_of_doom, 1460 gold_mine_glove, 1461 gold_devastator, 1462 gold_decoy_glove and 3 more | 1, 13 | decomp | `void(u32)` | **`Moby_GoldWeaponCase_Update`** | SaleVars_2e1ac0 | `DialogRequest_Init`, `Npc_TryStartDialog`, `OpenVendorScreen`, `memcard_Save` |
+| `func_L01_002E5298` | SandMouseUpdate | 437 sand_mouse | 1-2, 4 | decomp | `void(u32)` | **`Moby_SandMouse_Update`** |  | `STUB_printf`, `MoveCtl_Init`, `func_L01_002649D8`, `func_001160D8`, `MobySpringTurn`, `Hero_GetPointAhead`, `Hero_SetMoveState`, `HeroStartAnim`, `ClassifyTargetInCone`, `SandMouse_ComputeTarget` |
+| `func_L01_002E7FC8` | BirdbotUpdate | 459 birdbot | 1 | decomp | `void(u32)` | **`Moby_Birdbot_Update`** |  | `MobyGetFrameValue`, `Manipulator_ApplyScale`, `PickFollowerPathNode`, `FindNearestTargetMoby`, `ComputeHitResponse`, `func_001F9B50`, `HeadingFromVector`, `InitKnockback`, `RerollEffectCounter`, `STUB_printf` |
+| `func_L01_002EEDD8` | BurningDebrisUpdate | 567 | 1, 8-9, 15, 17 | decomp | `void(u32)` | **`Moby_Class567_Update`** |  | `PartType04Spawn`, `InitDirectionalHitQuery`, `func_L00_001FF500`, `PostHitMessageFromRecord`, `SpawnExplosionFx` |
+| `func_L01_002EF078` | AmoeboidUpdate | 572 large_amoeboid, 865 medium_amoeboid, 866 small_amoeboid | 1, 5, 11 | decomp | `void(u32)` | **`Moby_LargeAmoeboid_Update`** |  | `Manipulator_ApplyScale`, `SetGroundHeightBand`, `Amoeboid_HitAndSearch`, `MoveCtl_Init`, `func_L01_00277FD8`, `MobySteerToward`, `SpawnMobyParticles`, `SegmentCrossPolyline`, `MobyGetFrameValue`, `IsFrameWithinWindow` |
+| `func_L01_002F1038` | PeckbotUpdate | 577 peckbot | 1 | decomp | `void(u32)` | **`Moby_Peckbot_Update`** |  | `Manipulator_ApplyScale`, `FindNearestTargetMoby`, `ComputeHitResponse`, `MobyGroup_SetByteBC`, `HeadingFromVector`, `InitKnockback`, `RerollEffectCounter`, `SetDeathBits`, `MoveCtl_Init`, `func_001160D8` |
+| `func_L01_002F3F40` | Moby604Update | 604 sandmouse_house | 1-6, 8, 11-12, 14 | decomp | `void(u32)` | **`Moby_SandmouseHouse_Update`** |  | `SpringTurn` |
+| `func_L01_002F4290` | Moby605Update | 605 | 1-18 | decomp | `void(u32)` | **`Moby_Class605_Update`** | AreaVars_2f2eb8_F4290 | `IsPointInPolygon` |
+| `func_L01_002F44F8` | PathCarrierUpdate | 613 water_current | 1 | decomp | `void(u32)` | **`Moby_WaterCurrent_Update`** | PathCarrierVars | `func_L00_0025EFC0`, `Spline_AdvanceByDistance` |
+| `func_L01_002F5720` | CrankRotatorUpdate | 641 cave_door | 1 | decomp | `void(u32)` | **`Moby_CaveDoor_Update`** |  | `FastNormalizeAngle` |
+| `func_L01_002F5800` | TetheredMineUpdate | 660 fighter_jet | 1 | decomp | `void(u32)` | **`Moby_FighterJet_Update`** |  | `PlayBankSound`, `ShowBanner`, `SpawnDebrisMoby`, `func_L01_002F6540` |
+| `func_L01_002F5AE8` | CrankSliderUpdate | 665 door_half | 1 | decomp | `void(u32)` | **`Moby_DoorHalf_Update`** |  |  |
+| `func_L01_002F5D38` | RiderCarrierUpdate | 666 stationary_ship | 1 | decomp | `void(u32)` | **`Moby_StationaryShip_Update`** | CarrierVars | `func_L01_002F6540`, `SpringTurn`, `func_001F9EC0`, `MobyAnimAdvance`, `func_L00_00251E30` |
+| `func_L01_002F6540` |  | 845 | 1, 3-4, 14 | candidate | `void(u32)` | **`Moby_Class845_Update`** |  | `IsBSphereVisibleScaled`, `STUB_printf`, `InitPathSegmentLengths`, `FindClosestDistanceEntry`, `SplineSegmentTangent`, `func_001F9CE8`, `Moby_AddTiltOffset`, `TracePathWithParticles`, `SplineNextIndex`, `SplineWrapIndex` |
+| `func_L01_002F7558` | ScrollingLayers2Update | 678 | 1 | decomp | `void(u32)` | **`Moby_Class678_Update`** |  |  |
+| `func_L01_002F7700` | GrindRailUpdate | 679 | 1, 5, 8, 15 | decomp | `void(u32)` | **`Moby_Class679_Update`** | RailVars_F7700 | `func_L00_0025EFC0`, `Spline_AdvanceByDistance`, `func_001F9CE8`, `Spring` |
+| `func_L01_002F7E08` | FlyingBurstUpdate | 686 | 1, 14 | decomp | `void(u32)` | **`Moby_Class686_Update`** |  | `PartType04Spawn`, `PartType11Spawn`, `PartType08Spawn`, `func_L00_002ADBB0`, `PartType15Spawn` |
+| `func_L01_002F8B00` | GunshipUpdate | 688 bomber_jet | 1 | decomp | `void(u32)` | **`Moby_BomberJet_Update`** | Vars_F8B00 | `PlayBankSound`, `ShowBanner`, `SpawnDebrisMoby`, `STUB_printf`, `func_L01_002F6540`, `Hero_SetMoveState`, `CameraScript`, `CameraScript2`, `SpawnBeam` |
+| `func_L01_002F9640` | HoverEnemyUpdate | 695 water_lily | 1 | decomp | `void(u32)` | **`Moby_WaterLily_Update`** | HoverVars | `SpringStepToward`, `MoveKeepingOverGround`, `GetGroundHeight` |
+| `func_L01_002F9AF0` | DebrisMobyUpdate | 200, 201, 205, 206, 207, 210, 696 rock, 697 rock and 3 more | 1-2, 7, 10, 15, 18 | decomp | `void(u32)` | **`Moby_Rock_Update`** | DebrisVars_2f8530 | `func_L00_001FF610`, `PartType22Spawn` |
+| `func_L01_002FA030` | SteamVentUpdate | 700 | 1 | decomp | `void(u32)` | **`Moby_Class700_Update`** | SteamVars | `func_L01_002F9908`, `PartType16Spawn` |
+| `func_L01_002FA458` | CollapsingPlatformUpdate | 701 falling_rock | 1 | decomp | `void(u32)` | **`Moby_FallingRock_Update`** | CapVars | `func_L01_002F9908`, `ApplyNodeLighting`, `CameraScript2`, `Hero_SetMoveState` |
+| `func_L01_002FA998` | LiftMoveUpdate | 703 piston_platform, 715 piston_platform_2 | 1 | decomp | `void(u32)` | **`Moby_PistonPlatform_Update`** | LiftVars | `CarryRiders` |
+| `func_L01_002FABE8` | BreakableRockUpdate | 704 rock_formation | 1 | decomp | `void(u32)` | **`Moby_RockFormation_Update`** |  | `PartType22Spawn`, `SetDeathBits` |
+| `func_L01_002FAFC8` | OscillatingSpinnerUpdate | 705 fan | 1 | decomp | `void(u32)` | **`Moby_Fan_Update`** | SwayVars | `func_L00_0025E210`, `func_001160D8` |
+| `func_L01_002FB158` | ProjectileBreakableUpdate | 709 bridge_piece_1, 710 bridge_piece_2, 711 bridge_piece_3 | 1 | decomp | `void(u32)` | **`Moby_BridgePiece1_Update`** |  | `func_L01_002F9908` |
+| `func_L01_002FB898` | FallingDropUpdate | 722 | 1 | decomp | `void(u32)` | **`Moby_Class722_Update`** |  | `SpawnExplosionEffect` |
+| `func_L01_002FBBD8` | BreakableWallUpdate | 729 destroyable_cave_wall | 1 | decomp | `void(u32)` | **`Moby_DestroyableCaveWall_Update`** |  | `PartType22Spawn`, `func_L01_002F9908` |
+| `func_L01_002FC140` | AgnoggShipUpdate | 730 agnogg_ship_front, 731 agnogg_ship_back, 790 ship_rear | 1 | decomp | `void(u32)` | **`Moby_AgnoggShipFront_Update`** | Data_2FC140 | `AttachMarkerManipulators`, `StartCutscene`, `Ship_ReleaseCurrent`, `MobySetAnimation`, `PlayMovieEntryIfIdle`, `UnlockPlanet`, `ShowPlanetBanner`, `FindOrAddMobyEntry`, `SetLevelTriggerDone`, `PauseMenu_SeedSnapshot` |
+| `func_L01_002FC988` | CutsceneTriggerUpdate | 737 | 1-3, 7, 10, 13 | decomp | `void(u32)` | **`Moby_Class737_Update`** |  | `AttachCheatManipulatorToClasses`, `STUB_printf`, `Hero_ResetToPosition`, `CameraScript`, `CameraScript2`, `Hero_SetMoveStateFromMode`, `CameraScript_SetPosition`, `CameraScript_SetLookAt` |
+| `func_L01_002FCC80` | HingedBridgeUpdate | 746 bridge_half | 1 | decomp | `void(u32)` | **`Moby_BridgeHalf_Update`** |  |  |
+| `func_L01_002FE4C0` | WaterSurfaceFxUpdate | 751 | 1 | decomp | `void(u32)` | **`Moby_Class751_Update`** |  | `RipplePatchesInit`, `RescaleFloatTable`, `RipplePatch_ToFixedPoint`, `Ripple_DisturbDefault`, `RippleSimClock`, `SpawnDripMoby`, `PartType57Spawn`, `PartType56Spawn` |
+| `func_L01_002FED78` | BreakablePotUpdate | 754 green_mushroom | 1 | decomp | `void(u32)` | **`Moby_GreenMushroom_Update`** |  | `SpawnBreakFxByDistance`, `SpawnMobyCopyingPlacement` |
+| `func_L01_002FFF30` | PulsingMeshUpdate | 761 | 1 | decomp | `void(u32)` | **`Moby_Class761_Update`** |  |  |
+| `func_L01_00300140` | SlidingDoorUpdate | 768 door_left, 769 door_right | 1 | decomp | `void(u32)` | **`Moby_DoorLeft_Update`** |  |  |
+| `func_L01_003004F0` | TalkingNpcUpdate | 774 the_plumber | 1, 8 | decomp | `void(u32)` | **`Moby_ThePlumber_Update`** |  | `AttachCheatManipulatorToMatching`, `SetGroundHeightBand`, `DialogRequest_Init`, `Npc_TryStartDialog`, `PlaceMarkerAheadOfMoby`, `SetLevelTriggerDone`, `PauseMenu_SeedSnapshot`, `UnlockPlanet`, `ShowPlanetBanner`, `FindOrAddMobyEntry` |
+| `func_L01_00300C38` | Moby778Update | 778 pipe | 1 | decomp | `void(u32)` | **`Moby_Pipe_Update`** |  | `PartType22Spawn`, `SpawnMoby30B` |
+| `func_L01_00300F00` | SmokeEmitterUpdate | 779 | 1 | decomp | `void(u32)` | **`Moby_Class779_Update`** |  | `func_001F9EC0`, `PartType22Spawn` |
+| `func_L01_00301198` | FallingChunkUpdate | 787 | 1 | decomp | `void(u32)` | **`Moby_Class787_Update`** |  | `CollType`, `RippleDisturb`, `Moby775Spawn`, `PartType35Spawn` |
+| `func_L01_003015F8` | CheckpointTriggerUpdate | 805 spawn_point | 1-18 | decomp | `void(u32)` | **`Moby_SpawnPoint_Update`** | PickupVars_015F8 | `SetLevelTriggerDone`, `PauseMenu_SeedSnapshot` |
+| `func_L01_00303590` | EnemySpawnerUpdate | 815 beehive | 1 | decomp | `void(u32)` | **`Moby_Beehive_Update`** | SpawnerVars | `MobyGroup_CountNotInState`, `SpawnTemplateMoby`, `InitKnockback` |
+| `func_L01_00303A20` | RcRangeLimiterUpdate | 832 | 1-15, 18 | decomp | `void(u32)` | **`Moby_Class832_Update`** |  | `IsPointInPolygon`, `Moby_EndGadgetControl` |
+| `func_L01_00309020` | Moby1042Update | 1042 mushroom_underside | 1 | decomp | `void(u32)` | **`Moby_MushroomUnderside_Update`** |  |  |
+| `func_L01_00309078` | GoldBoltUpdate | 1134 gold_bolt | 1-18 | decomp | `void(u32)` | **`Moby_GoldBolt_Update`** | Vars_00309078 | `InitRandomFloatsAndSounds`, `DrawGlowRings`, `SpawnJitteredEffects`, `ShowBanner`, `memcard_Save`, `FadeToBlack`, `HeroEndScene`, `Hero_ResetToPosition`, `CameraScript`, `CameraScript_SetPosition` |
+| `func_L01_00309FB0` | TeleporterPadUpdate | 1135 teleporter | 1, 7-8, 12-13, 16-18 | decomp | `void(u32)` | **`Moby_Teleporter_Update`** |  | `MarkMobyCollected`, `ShowParentAndChildren`, `ResetParentAndChildren`, `PlaceChildMobys`, `MobyGroup_SetState`, `ShowStageHelpMessage`, `HeroSetTargetAndEnterMove`, `MobySphereHitDirectional`, `ApproachWithVelocity`, `Level_GetSpecialMode` |
+| `func_L01_0030B070` | Moby1225Update | 1225 | 1 | decomp | `void(u32)` | **`Moby_Class1225_Update`** |  |  |
+| `func_L01_0030C090` | HelpHintDirectorUpdate | 1341 | 1 | decomp | `void(u32)` | **`Moby_Class1341_Update`** |  | `Help_Request`, `IsMobyState1`, `IsBSphereVisibleScaled` |
+| `func_L01_0030C9F0` | WanderingLightUpdate | 1504 | 1, 6 | decomp | `void(u32)` | **`Moby_Class1504_Update`** |  | `FreePointLight`, `LerpVec4`, `UpdatePointLight` |
+| `func_L01_0030CDF0` | Moby1510Update | 1510 | 1 | decomp | `void(u32)` | **`Moby_Class1510_Update`** | BlobVars | `func_L00_001FF610`, `PartType21Spawn`, `PartType23Spawn` |
+| `func_L01_0030D568` | Moby1546Update | 1546 | 1 | decomp | `void(u32)` | **`Moby_Class1546_Update`** |  | `SpawnMoby750Sparks`, `PartType46Spawn`, `Moby775Spawn`, `PartType35Spawn`, `PartType23Spawn`, `SpawnSparkRings` |
+| `func_L01_0030DD80` |  | 1633 | 1-6, 8, 11-12, 14 | decomp | `void(u32)` | **`Moby_Class1633_Update`** |  | `SpringTurn`, `BuildSphericalOffset`, `func_L00_001FF500`, `CollType` |
+| `func_L01_0030E4C8` | Moby1813Update | 1813 tall_shroom | 1 | decomp | `void(u32)` | **`Moby_TallShroom_Update`** |  | `SpawnBreakFxByDistance`, `SpawnMobyCopyingPlacement` |
+| `func_L01_0030F318` | MouseCritterUpdate | 1818 sandmouse | 1-6, 8, 11-12, 14 | decomp | `void(u32)` | **`Moby_Sandmouse_Update`** | Pv_30F318 | `DetachManipulator`, `TwinGlowInit`, `STUB_printf`, `MoveCtl_Init`, `MobySpringTurn`, `Hero_GetPointAhead`, `Hero_SetMoveState`, `HeroStartAnim`, `GetHeroFrontOffsetPoint`, `MouseCritter_StepCommand` |
+| `func_L01_003105E0` | Moby1848Update | 1848 | 1 | decomp | `void(u32)` | **`Moby_Class1848_Update`** |  |  |
+| `func_L02_002CCD18` |  | 331 trackdrive_left | 2, 8, 18 | decomp | `void(u32)` | **`Moby_TrackdriveLeft_Update`** |  |  |
+| `func_L02_002D5250` | SandSharkUpdate | 580 sand_shark | 2 | decomp | `void(u32)` | **`Moby_SandShark_Update`** |  | `Manipulator_ApplyScale`, `SetGroundHeightBand`, `PathEnemy_HitAndRespawn`, `STUB_printf`, `MoveCtl_Init`, `func_001160D8`, `MobySpringTurn`, `SpawnRandomParticle`, `MobySteerToward`, `SandShark_CheckInsideArea` |
+| `func_L02_002D8B80` | Moby612Update | 612 constructorbot | 2 | decomp | `void(u32)` | **`Moby_Constructorbot_Update`** |  | `Manipulator_ApplyScale`, `SetGroundHeightBand`, `Moby612TakeHit`, `func_001160D8`, `MoveCtl_Init`, `EffectSlots_Clear`, `MobySpringTurn`, `ClampVectorLength`, `ClassifyTargetInCone`, `PartType21Spawn` |
+| `func_L02_002D9F08` | TrespasserPuzzleUpdate | 615 tresspasser_pad | 2, 4, 6, 8, 11, 13, 18 | decomp | `void(u32)` | **`Moby_TresspasserPad_Update`** | Data_2D9F08 | `HeroL02_SetMoveState`, `HeroStartAnim`, `CameraScript`, `PullHeroToMoby`, `GetMobySpawnPoint`, `ApproachWithVelocity`, `func_001F9C08`, `CameraScript_SetPosition`, `CameraScript_SetLookAt`, `force_help_message` |
+| `func_L02_002DD170` | ElevatorUpdate | 651 elevator | 2 | decomp | `void(u32)` | **`Moby_Elevator_Update`** | Data_2DD170 | `func_001F9EC0`, `func_001F9EE8`, `IsPointInCylinderVolume`, `ApproachWithVelocity`, `CarryRiders` |
+| `func_L02_002DDAE8` | PusherUpdate | 296 conveyor_belt, 652 escalator, 653 escalator_end | 2, 12 | decomp | `void(u32)` | **`Moby_ConveyorBelt_Update`** |  | `CarryRiders` |
+| `func_L02_002DDE48` | Moby656Update | 656 bulldozer | 2 | decomp | `void(u32)` | **`Moby_Bulldozer_Update`** |  |  |
+| `func_L02_002DDF70` | SandSharkNestUpdate | 668 sand_shark_nest | 2 | decomp | `void(u32)` | **`Moby_SandSharkNest_Update`** |  | `EnemyHitKnockback`, `SetGroundHeightBand`, `SandSharkNest_FindShark`, `MobyGetFrameValue`, `func_L00_001FF500`, `Moby_PlaceWithDirection` |
+| `func_L02_002DE7A8` | Moby675Update | 675 grab_crane | 2 | decomp | `void(u32)` | **`Moby_GrabCrane_Update`** |  |  |
+| `func_L02_002DF038` | RotatePlatformUpdate | 707 platform, 734 platform | 2 | decomp | `void(u32)` | **`Moby_Platform_Update`** |  | `CarryRiders` |
+| `func_L02_002DF0C0` | Moby713Update | 713 transport_pod | 2 | decomp | `void(u32)` | **`Moby_TransportPod_Update`** |  | `PartType41Spawn`, `LinkedPair_SnapToMoby`, `func_L00_00251E30`, `ApproachWithVelocity`, `LinkedPair_ApproachHeights`, `HeroSetTargetAndEnterMove`, `CameraScript`, `func_L02_002F9ED8`, `CameraScript_SetPosition`, `CameraScript_SetLookAt` |
+| `func_L02_002E05E0` | Moby732Update | 732 crane | 2 | decomp | `void(u32)` | **`Moby_Crane_Update`** |  |  |
+| `func_L02_002E0810` | RocketLauncherUpdate | 733 rocket_launcher | 2 | decomp | `void(u32)` | **`Moby_RocketLauncher_Update`** |  | `RangeWave_PlaySounds`, `SpawnAridiaProjectile`, `MobyGetFrameValue`, `FastTweenColor` |
+| `func_L02_002E0D80` | TurnMobyToGoalAngles | 735 rocket_door1, 736 rocket_door2 | 2 | decomp | `void(u32)` | **`Moby_RocketDoor1_Update`** | TurnerVars | `func_L00_001FFED8`, `func_001FA588`, `func_001FA5C8`, `func_001FA648` |
+| `func_L02_002E1400` | Moby743Update | 743 tresspasser_door1 | 2 | decomp | `void(u32)` | **`Moby_TresspasserDoor1_Update`** |  | `ClampVectorLength` |
+| `func_L02_002E1570` | Moby744Update | 744 tresspasser_door2 | 2 | decomp | `void(u32)` | **`Moby_TresspasserDoor2_Update`** |  | `ClampVectorLength` |
+| `func_L02_002E16B8` | Moby755Update | 755 sandshark_egg | 2 | decomp | `void(u32)` | **`Moby_SandsharkEgg_Update`** |  | `PartType04Spawn`, `func_L00_00251E30` |
+| `func_L02_002E1888` | HideableFlowerUpdate | 758 swingshot_versatarget, 803 swingshot_swinging_versatarget | 2-7, 9-18 | decomp | `void(u32)` | **`Moby_SwingshotVersatarget_Update`** |  | `func_L00_00251328`, `CamOffsetFx_Reset`, `PartType60Spawn`, `Camera_TrackNearestTarget` |
+| `func_L02_002E1B58` | Moby762Update | 762 rocks | 2 | decomp | `void(u32)` | **`Moby_Rocks_Update`** |  | `PartType22Spawn`, `func_L01_002F9908` |
+| `func_L02_002E21F8` | SkidsAgentUpdate | 786 skids_agent | 2 | decomp | `void(u32)` | **`Moby_SkidsAgent_Update`** |  | `AttachManipulatorsIfCheat`, `DialogRequest_Init`, `SetMobyZBand`, `Npc_TryStartDialog`, `PlaceMarkerAheadOfMoby`, `Help_Request`, `SetLevelTriggerDone`, `PauseMenu_SeedSnapshot`, `PlayMovieEntryIfIdle`, `GiveItem` |
+| `func_L02_002E2D88` | SkidMcMarxAridiaUpdate | 788 skid_mcmarx | 2 | decomp | `void(u32)` | **`Moby_SkidMcmarx_Update`** |  | `AttachManipulatorsIfCheat`, `SkidMcMarxWarpUpdate`, `DialogRequest_Init`, `SetMobyZBand`, `Npc_TryStartDialog`, `PlaceMarkerAheadOfMoby`, `Help_Request`, `GiveItem`, `SetLevelTriggerDone`, `PauseMenu_SeedSnapshot` |
+| `func_L02_002E3660` | DriverLiftUpdate | 792 liftcar_platform | 2 | decomp | `void(u32)` | **`Moby_LiftcarPlatform_Update`** |  | `MobyTransformScaledVertex`, `MobySetAnimation`, `CarryRiders` |
+| `func_L02_002EB5D0` | Moby854Update | 854 ocean_aridia | 2 | decomp | `void(u32)` | **`Moby_OceanAridia_Update`** |  | `func_L02_002A59D8` |
+| `func_L02_002EB648` | Moby1005Update | 1005 tresspasser, 1016 hydrodisplacer | 2, 6 | decomp | `void(u32)` | **`Moby_Tresspasser_Update`** |  | `InitRandomMobyData`, `SparkleSpritesDrawL02`, `StartCutscene`, `GiveItem`, `ShowBanner`, `HelpPopup_Cancel`, `Help_Request`, `Hero_ResetToPosition`, `memcard_Save`, `ApproachWithVelocity` |
+| `func_L02_002ED358` | ShardDebrisUpdate | 1208 constructorbot | 2 | decomp | `void(u32)` | **`Moby_Constructorbot1208_Update`** | ShardVars_ED358 | `func_001F9CE8`, `PartType44Spawn`, `rand_vec` |
+| `func_L02_002ED8F0` | BackgroundShipUpdate | 1212 background_ship_1 | 2, 9 | decomp | `void(u32)` | **`Moby_BackgroundShip1_Update`** |  | `STUB_printf`, `SamplePathAt`, `SpawnThreeParticles`, `PlayBankSound`, `ShowBanner`, `FastTweenColor`, `RefreshMobyAttachPoints3` |
+| `func_L02_002EE250` | ShipPathUpdate | 1213 background_ship_2, 1973 ship | 2, 9-10 | decomp | `void(u32)` | **`Moby_BackgroundShip2_Update`** |  | `STUB_printf`, `SamplePathAt`, `SpawnJointParticles`, `SpawnTwoParticles`, `PlayBankSound`, `ShowBanner`, `FastTweenColor`, `RefreshMobyAttachPoints6` |
+| `func_L02_002EFCC8` | TutorialHintUpdate | 1324 | 2 | decomp | `void(u32)` | **`Moby_Class1324_Update`** |  | `Help_Request`, `PlayBankSound`, `ShowBanner` |
+| `func_L02_002F0458` | Moby1479Update | 1479 | 2 | decomp | `void(u32)` | **`Moby_Class1479_Update`** |  | `func_001FA1F8`, `rand_vec`, `PartType02Spawn`, `FastTweenColor` |
+| `func_L02_002F3398` | BreakOnHitL02Update | 1819 white_flower, 1827 lightpost, 1834 pipe, 1844, 1849 lamp, 1859 lamp, 1862 lamp | 2 | decomp | `void(u32)` | **`Moby_WhiteFlower_Update`** |  | `SpawnBreakFxByDistance`, `SpawnMobyBurstFx`, `SpawnMobyCopyingPlacement` |
+| `func_L03_00294040` | MetropolisTrainUpdate | 822 metropolis_train_locomotive | 3 | decomp | `void(u32)` | **`Moby_MetropolisTrainLocomotive_Update`** |  | `STUB_printf`, `PlaceTrain`, `func_L01_002F6540`, `TrainDragCars`, `MusicRequestTrack`, `LevelTable_SetSlotValue`, `TrainSteerAndPullCars`, `func_L00_0025EFC0`, `FadeToBlack`, `Hero_IsOnMoby` |
+| `func_L03_00295DB0` | MovingPlatformUpdate | 868 moving_platform_small, 905 moving_platform_medium, 928 moving_platform_large | 3 | decomp | `void(u32)` | **`Moby_MovingPlatformSmall_Update`** |  | `Profile_Mark`, `Sound_PlayClassSound`, `ClampVectorLength`, `CarryRiders` |
+| `func_L03_002965A0` | Platform_CarryRiders | 1210 metropolis_train_carriage | 3 | decomp | `void(u32)` | **`Moby_MetropolisTrainCarriage_Update`** |  | `CarryRiders` |
+| `func_L03_0029ED60` | TrainCarUpdate | 75 red_ship_1, 115 white_ship, 116 red_ship_2, 117 yellow_ship, 118 truck_ship, 119 green_ship, 120 beige_ship, 132 purple_ship and 1 more | 3 | decomp | `void(u32)` | **`Moby_RedShip1_Update`** |  | `IsBSphereVisibleScaled`, `UpdateEnemyClassSound`, `EnemyPeriodicSoundUpdate`, `STUB_printf`, `InitPathSegmentLengths`, `FindClosestDistanceEntry`, `SplineSegmentTangent`, `func_001F9CE8`, `func_L03_0029DA60`, `TracePathWithParticles` |
+| `func_L03_002BC140` | ParentFollowFadeUpdate | 235 | 3, 16 | decomp | `void(u32)` | **`Moby_Class235_Update`** |  | `AddSphericalOffset`, `FastTweenColor`, `func_L00_00251328` |
+| `func_L03_002C0330` | ChildSpawnerUpdate | 455 spawner | 3, 8, 14 | decomp | `void(u32)` | **`Moby_Spawner_Update`** | Data_2C0330 | `SetGroundHeightBand`, `ComputeHitResponse`, `RerollEffectCounter`, `SetDeathBits`, `func_001153FC`, `WrapAngle`, `func_L00_001FF548`, `RandomPointInVolume`, `func_001160D8`, `JitterVector` |
+| `func_L03_002C5AE0` | Moby545Update | 545 bomb | 3, 8, 14 | decomp | `void(u32)` | **`Moby_Bomb545_Update`** |  | `func_L00_001FF610`, `func_001F9CE8`, `CollType`, `WrapAngle`, `SpawnLinkedChild`, `RecordMobyShadow` |
+| `func_L03_002C6F80` | Moby573Update | 573 robot_dog | 3 | decomp | `void(u32)` | **`Moby_RobotDog_Update`** |  | `FindNearestTargetMoby`, `Manipulator_ApplyScale`, `Moby573DamageReaction`, `MoveCtl_Init`, `func_001160D8`, `GroupHasMoby573Or574`, `IsMoby574Finished`, `MobySpringTurn`, `MobySteerToward`, `func_L00_0025EFC0` |
+| `func_L03_002C8398` | Moby574Update | 574 | 3 | decomp | `void(u32)` | **`Moby_Class574_Update`** |  | `FindNearestTargetMoby`, `Manipulator_SetScale`, `Moby574DamageReaction`, `EaseManipulatorOffsets`, `MoveCtl_Init`, `GroupHasMoby573Or574`, `Moby574_TryTurnToTarget`, `PickNextPathNode`, `IsFrameWithinWindow`, `func_L00_001FF240` |
+| `func_L03_002CB280` | TrooperUpdate | 578 mine_layer | 3 | decomp | `void(u32)` | **`Moby_MineLayer_Update`** | TrooperVars_CB280 | `FindNearestTargetMoby`, `Manipulator_ApplyScale`, `TrooperHitHandler`, `MoveCtl_Init`, `MobySpringTurn`, `ClassifyTargetInCone`, `Sound_PlayClassSound`, `func_L00_001FF500`, `Moby627Spawn`, `SetDeathBits` |
+| `func_L03_002CD270` | KerwanMineUpdate | 627 mine | 3 | decomp | `void(u32)` | **`Moby_Mine627_Update`** | MineVars | `KerwanMine_CheckHit`, `SendRadialMessageToMobys`, `PartType16Spawn`, `DefaultVtbl_DeleteMoby`, `BuildSphericalOffset`, `Moby639Spawn`, `MobyList_Remove` |
+| `func_L03_002CDDC8` | HelicopterGunshipUpdate | 631 blarg_helicopter | 3, 7 | decomp | `void(u32)` | **`Moby_BlargHelicopter_Update`** |  | `FindNearestTargetMoby`, `Manipulator_SetScale`, `EaseManipulatorOffsets`, `Moby_UpdateHitHealth`, `func_L00_0025EFC0`, `func_001F9978`, `SpringTurn`, `func_001FA4A0`, `func_001F9EE8`, `func_001F9CE8` |
+| `func_L03_002D4560` | RailTaxiUpdate | 816 taxi | 3 | decomp | `void(u32)` | **`Moby_Taxi_Update`** | RailTaxiVars_D4560 | `LevelTable_SetSlotValue`, `IsTaxiInTransit`, `PartType41Spawn`, `FollowWaypointPath`, `ShowPlatformHelpMessage`, `HeroSetTargetAndEnterMove`, `Level_GetSpecialMode`, `Hero_IsOnMoby`, `UpdateMobyBobSway`, `CarryRiders` |
+| `func_L03_002D50A0` | Moby817Update | 817 statue, 1686 seashell | 3 | decomp | `void(u32)` | **`Moby_Statue_Update`** |  | `SpawnBreakFxByDistance` |
+| `func_L03_002D5220` | SpinnerUpdate | 825 robo_shack_sign | 3 | decomp | `void(u32)` | **`Moby_RoboShackSign_Update`** | SpinnerVars_D5220 | `CarryRiders` |
+| `func_L03_002D5790` | KerwanHomingRocketUpdate | 833 | 3 | decomp | `void(u32)` | **`Moby_Class833_Update`** | RocketVars_D5790 | `FindNearestTargetMoby`, `func_L00_001FF240`, `PartType04Spawn`, `SpringTurn`, `InitDirectionalHitQuery`, `PostHitMessageFromRecord`, `SpawnExplosionFx` |
+| `func_L03_002D5B88` | Moby848Update | 848 | 3, 7, 15 | decomp | `void(u32)` | **`Moby_Class848_Update`** |  | `FindNearestTargetMoby`, `func_L00_001FF500`, `InitDirectionalHitQuery`, `StepAngleToward`, `func_001F9CE8`, `PartType27Spawn`, `PartType49Spawn`, `func_L00_001FF610` |
+| `func_L03_002DBC38` | QuestGiverUpdate | 890 helga | 3 | decomp | `void(u32)` | **`Moby_Helga_Update`** | QuestGiverVars_hg | `QuestGiver_AttachCheatManipulator`, `SetMobyZBand`, `Npc_TryStartDialog`, `PlaceMarkerAheadOfMoby`, `SetLevelTriggerDone`, `PauseMenu_SeedSnapshot`, `GiveItem`, `ShowBanner`, `memcard_Save`, `BuildSphericalOffset` |
+| `func_L03_002DC3E8` | RailMobyUpdate | 898 | 3 | decomp | `void(u32)` | **`Moby_Class898_Update`** |  | `CarryRiders` |
+| `func_L03_002DC648` | RailSpawnerUpdate | 899 | 3 | decomp | `void(u32)` | **`Moby_Class899_Update`** |  | `STUB_printf`, `SpawnRailMoby`, `Sound_PlayClassSound` |
+| `func_L03_002DC920` | GuideUpdate | 909 big_al | 3 | decomp | `void(u32)` | **`Moby_BigAl_Update`** | GuideVars_gd | `AttachCheatManipulatorToMatchingL03`, `DialogRequest_Init`, `SetMobyZBand`, `Npc_TryStartDialog`, `PlaceMarkerAheadOfMoby`, `SetLevelTriggerDone`, `PauseMenu_SeedSnapshot`, `GiveItem`, `ShowBanner`, `Hero_ResetToPosition` |
+| `func_L03_002DD158` | Moby914Update | 914 robot_qwark | 3 | decomp | `void(u32)` | **`Moby_RobotQwark_Update`** |  | `SetGroundHeightBand`, `MobySetAnimation`, `PlayBankSound`, `ShowBanner`, `DialogRequest_Init`, `Npc_TryStartDialog`, `PlaceMarkerAheadOfMoby`, `PauseMenu_SeedSnapshot`, `func_L00_001FF240`, `PartType22Spawn` |
+| `func_L03_002DD6D8` | Moby_DeleteSelf | 915 fred_1, 916 fred_2, 917 fred_3 | 3, 10 | decomp | `void(u32)` | **`Moby_Fred1_Update`** |  |  |
+| `func_L03_002DD840` | QwarkWatchUpdate | 447 qwark_umbris, 920 qwark_rilgar | 3, 5, 7, 13, 17 | decomp | `void(u32)` | **`Moby_QwarkUmbris_Update`** |  | `AttachCheatManipulatorToClasses`, `SetGroundHeightBand`, `STUB_printf`, `LevelTable_SetSlotValue`, `BuildSphericalOffset`, `func_001F9CE8`, `EaseManipulatorOffsets` |
+| `func_L03_002DDD78` | AmbientStreamL03Update | 994, 1260 | 3 | decomp | `void(u32)` | **`Moby_Class994_Update`** |  | `ScaleTableIntoBuffer` |
+| `func_L03_002DDDF8` | RiseWhenCollectedUpdate | 353 gate, 997 garage_door | 3, 10 | decomp | `void(u32)` | **`Moby_Gate_Update`** | Vec4 |  |
+| `func_L03_002DE088` | RailLiftUpdate | 1012 taxi | 3 | decomp | `void(u32)` | **`Moby_Taxi1012_Update`** | RailLiftVars_DE088 | `LevelTable_SetSlotValue`, `IsLiftMobyActive`, `Hero_IsOnMoby`, `ShowModeHelpMessage`, `HeroSetTargetAndEnterMove`, `Level_GetSpecialMode`, `FollowWaypointPath`, `UpdateMobyAimSway`, `CarryRiders` |
+| `func_L03_002DF738` | FallingMobyUpdate | 1221, 1222 | 3, 7, 12, 15 | decomp | `void(u32)` | **`Moby_Class1221_Update`** |  | `func_L00_001FF240` |
+| `func_L03_002E08E8` | TutorialHintTriggerUpdate | 1342 | 3 | decomp | `void(u32)` | **`Moby_Class1342_Update`** |  | `Help_Request`, `GetAmmo`, `PlayBankSound`, `ShowBanner` |
+| `func_L03_002E1598` | CutsceneBeamsUpdate | 1548 | 3 | decomp | `void(u32)` | **`Moby_Class1548_Update`** |  | `SpawnMoby750Sparks`, `PartType22Spawn` |
+| `func_L04_0029FEC8` | SwarmUpdate | 86 | 4 | decomp | `void(u32)` | **`Moby_Class86_Update`** | SwarmVars | `func_001153FC`, `Path_AdvanceMoby`, `func_L00_00251E30`, `MobySteer`, `StepMobyOutOfCollision` |
+| `func_L04_002A6C20` | IdleAnimTick | 161 | 4 | decomp | `void(u32)` | **`Moby_Class161_Update`** |  | `func_001160D8`, `func_0020EEE8` |
+| `func_L04_002B0290` | Moby184ShotUpdate | 184 | 4, 12 | decomp | `void(u32)` | **`Moby_Class184_Update`** | ShotVars | `func_L00_001FF500`, `func_L00_001FF610`, `PartType27Spawn` |
+| `func_L04_002BB7B0` | BigAxebotUpdate | 217 big_axebot | 4 | decomp | `void(u32)` | **`Moby_BigAxebot_Update`** |  | `Manipulator_ApplyScale`, `SetGroundHeightBand`, `FindNearestTargetMoby`, `MobyGetFrameValue`, `ComputeHitResponse`, `RerollEffectCounter`, `BlendAnimationWithLinked`, `SetValueOnSelfAndLinked`, `InitKnockback`, `SetSpringParams` |
+| `func_L04_002C35F0` | CircularSawUpdate | 340 circular_saw_enemy | 4 | decomp | `void(u32)` | **`Moby_CircularSawEnemy_Update`** |  | `Manipulator_ApplyScale`, `SetGroundHeightBand`, `FindNearestTargetMoby`, `MobyGetFrameValue`, `EngineSoundUpdate`, `ComputeHitResponse`, `SilenceAndBurst`, `RerollEffectCounter`, `MoveCtl_Init`, `WanderSteer` |
+| `func_L04_002C5BD0` | BlargTrooperUpdate | 427 blarg_trooper | 4 | decomp | `void(u32)` | **`Moby_BlargTrooper_Update`** |  | `Manipulator_SetScale`, `SetGroundHeightBand`, `FindNearestTargetMoby`, `MobyGetFrameValue`, `STUB_printf`, `DeleteMobyAndLinked`, `ComputeHitResponse`, `HeadingFromVector`, `InitKnockback`, `SetDeathBits` |
+| `func_L04_002C7BD8` | SwitchFollowerUpdate | 432 eudora_bridge, 1052 bridge | 4 | decomp | `void(u32)` | **`Moby_EudoraBridge_Update`** | SwitchFollowerVars_C7BD8 | `func_0020EEE8` |
+| `func_L04_002C7F38` | LeverDoorUpdate | 434 platform_booster | 4 | decomp | `void(u32)` | **`Moby_PlatformBooster_Update`** | DoorVars |  |
+| `func_L04_002CB800` | PathVehicleUpdate | 466 snow_plow, 480 grab_helicopter, 485 ball_ship_1, 486 ball_ship_2, 488 circular_saw_ship, 490 chainsaw_ship, 493 tank_ship, 494 log_ship_1 and 3 more | 4 | decomp | `void(u32)` | **`Moby_SnowPlow_Update`** |  | `STUB_printf`, `func_L01_002F6540`, `MobySpringTurn`, `func_L00_001FFED8`, `func_001F9EC0`, `MobyAnimAdvance`, `func_L00_00251E30`, `func_0020EEE8`, `PlayBankSound`, `ShowBanner` |
+| `func_L04_002CF180` | FloatingPlatformUpdate | 481 floating_platform | 4 | decomp | `void(u32)` | **`Moby_FloatingPlatform_Update`** |  | `FastNormalizeAngle`, `MobyGetFrameValue`, `EaseManipulatorOffsets`, `CarryRiders` |
+| `func_L04_002CF440` | DeleteMobyUpdate | 484 transport_ship | 4 | decomp | `void(u32)` | **`Moby_TransportShip_Update`** |  |  |
+| `func_L04_002D2A98` | WBMoby_Update | 563 woodcut_bot | 4 | decomp | `void(u32)` | **`Moby_WoodcutBot_Update`** |  | `FindNearestTargetMoby`, `Manipulator_ApplyScale`, `SetGroundHeightBand`, `MobyGetFrameValue`, `ComputeHitResponse`, `HeadingFromVector`, `InitKnockback`, `SetDeathBits`, `RerollEffectCounter`, `WalkCycle_ResetFeet` |
+| `func_L04_002D4960` | Moby584Update | 584 | 4 | decomp | `void(u32)` | **`Moby_Class584_Update`** |  | `CarryRiders`, `func_L00_0025E210` |
+| `func_L04_002D8348` | PathKeyframeBlendUpdate | 617 | 4 | decomp | `void(u32)` | **`Moby_Class617_Update`** |  | `func_L00_00200210` |
+| `func_L04_002D9270` | DriftSparkMoby_Update | 642 leaf | 4 | decomp | `void(u32)` | **`Moby_Leaf_Update`** |  | `func_001F9CE8`, `func_L00_001FF610` |
+| `func_L04_002E2BB8` | CollectableUpdate | 1101 upper_door, 1102 lower_door, 1531 lower_door, 1532 upper_door | 4 | decomp | `void(u32)` | **`Moby_UpperDoor_Update`** |  | `Sound_PlayClassSound`, `func_L04_002E2B48` |
+| `func_L04_002E2DF0` | WarpPortalUpdate | 1120 suck_cannon | 4 | decomp | `void(u32)` | **`Moby_SuckCannon_Update`** | PortalVars_002E2DF0 | `DriftingSprites_Init`, `SparkleSpritesDraw`, `StartCutscene`, `ShowBanner`, `GiveItem`, `PauseMenu_SeedSnapshot`, `STUB_printf`, `memcard_Save` |
+| `func_L04_002E4458` | UnlockPlanetPad_Update | 1190 lieutenant | 4 | decomp | `void(u32)` | **`Moby_Lieutenant_Update`** |  | `SetGroundHeightBand`, `AttachManipulatorsIfCheat`, `DialogRequest_Init`, `Npc_TryStartDialog`, `UnlockPlanet`, `SetLevelTriggerDone`, `memcard_Save` |
+| `func_L04_002E57F8` | Moby1343Update | 1343 | 4 | decomp | `void(u32)` | **`Moby_Class1343_Update`** |  | `Help_Request` |
+| `func_L04_002E6558` | BouncingDebrisUpdate | 1516 | 4 | decomp | `void(u32)` | **`Moby_Class1516_Update`** |  | `func_L00_001FF610`, `randf_sym` |
+| `func_L04_002E6780` | SparksTriggerL04_Update | 1549 | 4 | decomp | `void(u32)` | **`Moby_Class1549_Update`** |  | `SpawnMoby750Sparks` |
+| `func_L05_002D28D0` |  | 35 sharkigator | 5 | candidate | `void(u32)` | **`Moby_Sharkigator_Update`** |  | `SpawnSideParticles`, `ApproachWithVelocity`, `func_001FA1F8`, `CameraScript`, `IsPointInPolygon`, `SpawnBurstAndSparkRing`, `Hero_ResetToPosition`, `Hero_OnKilled` |
+| `func_L05_002D8388` | SceneryShipUpdate | 79 scenery_ship | 5 | decomp | `void(u32)` | **`Moby_SceneryShip_Update`** |  | `FastTweenColor`, `AdvancePathPosition`, `func_001F9EC0`, `GlowOrbs_Update` |
+| `func_L05_002DBF10` | GrazingCritterUpdate | 133 amoeboid | 5 | decomp | `void(u32)` | **`Moby_Amoeboid_Update`** |  | `MobyDestroyWithDebris`, `MoveCtl_Init`, `MobySteerToward`, `EmitRandomParticlePair` |
+| `func_L05_002F6588` | Moby258Update | 258 | 5, 7, 9-10, 12-15, 17 | decomp | `void(u32)` | **`Moby_Class258_Update`** | TriggerVars_2f5200 | `IsPointInPolygon`, `ApplyTriggerSwitchesToList`, `ApplyTriggerSwitches` |
+| `func_L05_002F9478` | Moby341Update | 341 hydrodisplacer_faucet | 5, 7, 11-12, 18 | decomp | `void(u32)` | **`Moby_HydrodisplacerFaucet_Update`** |  | `UpdateFocusPulse` |
+| `func_L05_002F9BA0` | HoverboardUpdate | 439 hoverboard | 5, 16 | decomp | `void(u32)` | **`Moby_Hoverboard439_Update`** |  | `Help_Request`, `PartType04Spawn`, `PartType21Spawn` |
+| `func_L05_003033A0` | ExtermibotUpdate | 623 extermibot | 5 | decomp | `void(u32)` | **`Moby_Extermibot_Update`** |  | `Manipulator_SetScale`, `SetGroundHeightBand`, `FlyingEnemyUpdate`, `MoveCtl_Init`, `BuildAdjacencyMasks`, `func_L01_00277FD8`, `rand_vec`, `MobySteerToward`, `PushPointOutsidePath`, `SegmentCrossPolyline` |
+| `func_L05_00305778` | ExtermitankUpdate | 625 extermitank | 5 | decomp | `void(u32)` | **`Moby_Extermitank_Update`** |  | `Extermitank_ProcessHit`, `RepelSlotMobysFromHero`, `SetGroundHeightBand`, `func_L00_00251E30`, `MoveCtl_Init`, `ClassifyTargetInCone`, `IsPointInPolygon`, `StepAngleToward`, `func_L00_001FFED8` |
+| `func_L05_00308D68` | SkidMcMarxUpdate | 717 skid_mcmarx | 5 | decomp | `void(u32)` | **`Moby_SkidMcmarx717_Update`** |  | `SetGroundHeightBand`, `GetPathNodePoint`, `Moby439Spawn`, `AdvancePathNodeIndex`, `AddTimerBonusNearPlayer`, `AdvanceToFlaggedWaypoint`, `StepTableIndex`, `AimAtTargetWithTimer`, `SpringAngle`, `PostHitMessage` |
+| `func_L05_0030D230` |  | 810 floating_platform | 5 | decomp | `void(u32)` | **`Moby_FloatingPlatform810_Update`** |  | `CarryRiders` |
+| `func_L05_0030D3F0` | Moby812Update | 812 box | 5 | decomp | `void(u32)` | **`Moby_Box_Update`** |  | `RotateIntoMobySpace`, `TransformToMobyLocal`, `CarryRiders` |
+| `func_L05_0030D500` | Moby823Update | 823 lamp | 5, 7 | decomp | `void(u32)` | **`Moby_Lamp_Update`** |  | `randf_sym`, `func_L00_00251328`, `func_L00_001FFED8` |
+| `func_L05_0030DA08` | FloorButtonUpdate | 830 floor_button | 5, 11, 15, 17-18 | decomp | `void(u32)` | **`Moby_FloorButton_Update`** |  |  |
+| `func_L05_0030DED8` | WaterSurfaceUpdate | 831 water | 5 | decomp | `void(u32)` | **`Moby_Water_Update`** |  | `RipplePatchesInit`, `RescaleFloatTable`, `RipplePatch_ToFixedPoint`, `FindGridNeighbors`, `MobyGroup_SetState`, `ApproachWithVelocity`, `SyncClass831Heights`, `RippleDisturb`, `IsBSphereVisibleScaled`, `RippleSimClock` |
+| `func_L05_0030F130` |  | 838 electric_gate | 5 | decomp | `void(u32)` | **`Moby_ElectricGate_Update`** |  |  |
+| `func_L05_0030F6C0` | FogZoneUpdate | 841 | 5 | decomp | `void(u32)` | **`Moby_Class841_Update`** |  | `func_001F9EC0`, `FastTweenColor` |
+| `func_L05_0030F9D0` | PoseSlideOutUpdate | 843 | 5 | decomp | `void(u32)` | **`Moby_Class843_Update`** |  | `ApproachWithVelocity` |
+| `func_L05_0030FCC0` | DrainCoverUpdate | 844 drain_cover | 5 | decomp | `void(u32)` | **`Moby_DrainCover_Update`** | Data_0030FCC0 | `randf_sym`, `Moby_EaseTiltTowardHero`, `func_001F9B50`, `ScatterParticlesInRange`, `func_L00_001FF500`, `PartType02Spawn`, `MobySphereHitDirectional`, `ApproachWithVelocity`, `PostHitMessage`, `CarryRiders` |
+| `func_L05_00310A90` | Moby980Break | 846 pipe_mounted_grating | 5 | decomp | `void(u32)` | **`Moby_PipeMountedGrating_Update`** |  | `InitSpinningPiece`, `func_001F9EC0`, `rand_vec`, `PartType53Spawn`, `func_L00_00251E30`, `FindOrAddMobyEntry` |
+| `func_L05_00316378` | GateRiseUpdate | 852, 853 | 5 | decomp | `void(u32)` | **`Moby_Class852_Update`** | GateVars_16378 | `ApproachWithVelocity` |
+| `func_L05_003165B8` | EmitterL05_Update | 855 | 5 | decomp | `void(u32)` | **`Moby_Class855_Update`** | EmitterVars_165B8 | `MobyGroup_SetState`, `Particle_SpawnRandomized`, `func_001F9B50`, `PartType46Spawn` |
+| `func_L05_00316B98` | LiftL05_Update | 877 elevator_with_button | 5 | decomp | `void(u32)` | **`Moby_ElevatorWithButton_Update`** | LiftVars | `LiftL05_GetCameraView`, `CameraScript`, `CameraScript_SetPosition`, `CameraScript_SetLookAt`, `ApproachWithVelocity`, `CameraScript2`, `LayoutCirclePathPoints`, `CarryRiders` |
+| `func_L05_003175D8` | PulsingMarkerUpdate | 879 ocean_rilgar | 5 | decomp | `void(u32)` | **`Moby_OceanRilgar_Update`** |  | `ScaleTableIntoBuffer128` |
+| `func_L05_00317720` |  | 893 | 5 | decomp | `void(u32)` | **`Moby_Class893_Update`** |  | `func_L00_001FFED8`, `ApproachWithVelocity` |
+| `func_L05_00317B68` | TriggeredRotorUpdate | 895 | 5 | decomp | `void(u32)` | **`Moby_Class895_Update`** |  |  |
+| `func_L05_00317F80` | HoverboardGirlUpdate | 918 hoverboard_girl | 5 | decomp | `void(u32)` | **`Moby_HoverboardGirl_Update`** |  |  |
+| `func_L05_00318980` | BouncerUpdate | 919 qwarks_bouncer | 5 | decomp | `void(u32)` | **`Moby_QwarksBouncer_Update`** |  | `AttachCheatManipulatorToSiblings`, `DialogRequest_Init`, `SetMobyZBand`, `Npc_TryStartDialog`, `PlaceMarkerAheadOfMoby`, `UnlockPlanet`, `memcard_Save`, `BuildSphericalOffset`, `func_001F9CE8`, `EaseManipulatorOffsets` |
+| `func_L05_003195B0` | ShadySalesmanUpdate | 925 shady_salesman | 5 | decomp | `void(u32)` | **`Moby_ShadySalesman_Update`** |  | `AttachManipulatorsIfCheat`, `SetGroundHeightBand`, `DialogRequest_Init`, `Npc_TryStartDialog`, `PlaceMarkerAheadOfMoby`, `GiveItem`, `ShowBanner`, `memcard_Save`, `BuildSphericalOffset`, `func_001F9CE8` |
+| `func_L05_00319C08` |  | 344 blarg_gun, 547, 548, 549, 550, 551, 588, 589 and 15 more | 5, 8 | decomp | `void(u32)` | **`Moby_BlargGun_Update`** |  | `func_001FA218`, `func_001FA480`, `func_001F9EC0`, `func_L00_001FF610` |
+| `func_L05_00319F78` | WaterPlaneMarkerUpdate | 982 | 5 | decomp | `void(u32)` | **`Moby_Class982_Update`** |  |  |
+| `func_L05_0031A0A8` | BobbingMobyL05_Update | 984 television | 5 | decomp | `void(u32)` | **`Moby_Television_Update`** |  |  |
+| `func_L05_0031A188` | PickupL05_Update | 998 taxi | 5 | decomp | `void(u32)` | **`Moby_Taxi998_Update`** |  | `LevelTable_SetSlotValue`, `PickNearestTargetSlot`, `func_001FA4A0`, `func_001F9EE8`, `SelectSlotPath`, `ShowVariantHelpMessage`, `FindMobyByDataId`, `ApproachWithVelocity`, `SamplePathAt`, `func_001F9C08` |
+| `func_L05_0031B138` | UpdateVisibilityByLevelFlag | 1099 qwarks_trailer | 5 | decomp | `void(u32)` | **`Moby_QwarksTrailer_Update`** |  |  |
+| `func_L05_0031C0F0` | Moby1139Update | 1139 hoverboard_ring | 5, 16 | decomp | `void(u32)` | **`Moby_HoverboardRing_Update`** |  | `PartType67Spawn` |
+| `func_L05_0031D450` | ChallengeUpdate | 1347 | 5 | decomp | `void(u32)` | **`Moby_Class1347_Update`** |  | `Help_Request`, `FUN_001f99f8`, `KillMoby` |
+| `func_L05_0031DDF0` | MineMobyUpdate | 1511 lamp | 5, 14 | decomp | `void(u32)` | **`Moby_Lamp1511_Update`** | MineVars_c8e0 | `Moby1514Spawn`, `SpawnBreakFxByDistance`, `BuildSphericalOffset`, `randf_sym`, `PartType53Spawn`, `PartType23Spawn` |
+| `func_L05_0031EAD8` | Moby1550Update | 1550 | 5 | decomp | `void(u32)` | **`Moby_Class1550_Update`** |  | `SpawnMoby750Sparks` |
+| `func_L06_002B5990` | OrbitingPlatformUpdate | 55 hangar_door | 6 | decomp | `void(u32)` | **`Moby_HangarDoor_Update`** |  |  |
+| `func_L06_002D9970` | Moby302Update | 302 gadgebot_spawn_container | 6, 10 | decomp | `void(u32)` | **`Moby_GadgebotSpawnContainer_Update`** |  | `FastTweenColor`, `SpawnBreakBurst` |
+| `func_L06_002D9FF0` | Moby303Update | 303 gadgebot_spawn_pad | 6, 10 | decomp | `void(u32)` | **`Moby_GadgebotSpawnPad_Update`** |  | `FastTweenColor` |
+| `func_L06_002DB0E0` | Moby367Update | 367 | 6 | decomp | `void(u32)` | **`Moby_Class367_Update`** |  | `ApproachWithVelocity`, `func_001F9C08` |
+| `func_L06_002E9AA8` | FrogUpdate | 827 frog | 6, 10 | decomp | `void(u32)` | **`Moby_Frog_Update`** |  | `Manipulator_ApplyScale`, `RespawnMobyUpdate`, `SetGroundHeightBand`, `func_L00_00251E30`, `SpawnDeathParticlesAndRemove`, `LineTestAlongForward`, `BuildMobyFrame`, `MoveMobyColliding`, `func_001F9EC0`, `func_001F9CE8` |
+| `func_L06_002F1470` | GadgebotUpdate | 857 gadgebot | 6, 10 | decomp | `void(u32)` | **`Moby_Gadgebot_Update`** |  | `TryEnterAttackState`, `DetachManipulator`, `SpawnMoby303LinkedToOwner`, `SpawnMoby302AtOwner`, `BuildAdjacencyMasks`, `BuildPathNodeVisibilityMask`, `Gadgebot_DrawGlow`, `WanderSteer`, `IsPointInPolygon`, `randf_sym` |
+| `func_L06_002F4F08` | SwingingHazardUpdate | 911 toxic_gas_vent | 6 | decomp | `void(u32)` | **`Moby_ToxicGasVent_Update`** |  | `SwingingHazard_EmitSparks`, `SwingingHazard_DrawSwingArcs`, `SwingingHazard_DrawBeam` |
+| `func_L06_002F6330` | DoorRingUpdate | 1021 | 6, 17-18 | decomp | `void(u32)` | **`Moby_Class1021_Update`** |  | `func_001FA1F8` |
+| `func_L06_002F69D0` | DrawbridgeUpdate | 1028 | 6 | decomp | `void(u32)` | **`Moby_Class1028_Update`** | Data_2F69D0 | `LayoutDrawbridgePieces`, `Hero_ResetToPosition`, `CameraScript`, `SetLevelTriggerDone`, `ApproachWithVelocity`, `func_001F9C08`, `CameraScript_SetPosition`, `CameraScript_SetLookAt`, `HeroL06_SetStateFromMode`, `CameraScript2` |
+| `func_L06_002F78A0` |  | 1035 | 6 | decomp | `void(u32)` | **`Moby_Class1035_Update`** |  | `StrandEffectUpdate`, `InitDirectionalHitQuery`, `PostHitMessageFromRecord`, `Help_Request`, `func_001FA218`, `func_001FA1C0`, `sce_vu0_mul_matrix`, `func_001F9EE8`, `randf_sym`, `FastTweenColor` |
+| `func_L06_002F86B8` | CollectibleSpawnerUpdate | 1038 energy_sphere_holder | 6, 10, 17 | decomp | `void(u32)` | **`Moby_EnergySphereHolder_Update`** |  | `InitMobyRandomData`, `PostHitMessage`, `LightBeamDraw` |
+| `func_L06_002F8D60` | TriggerListsUpdate | 1039 | 6, 8, 13, 18 | decomp | `void(u32)` | **`Moby_Class1039_Update`** |  | `FadeToBlack`, `Hero_OnKilled`, `HeroL06_TrySetMoveState` |
+| `func_L06_002F8EE8` | Moby1040Update | 1040 energy_sphere | 6, 10, 17 | decomp | `void(u32)` | **`Moby_EnergySphere_Update`** |  | `Moby1040_SpawnSparks`, `func_L00_00251328` |
+| `func_L06_002F91A8` | Moby1048Update | 1048 alien_snapper | 6 | decomp | `void(u32)` | **`Moby_AlienSnapper_Update`** | SnapperVars_91A8 | `Snapper_ApplyDamage`, `Manipulator_ApplyScale`, `SetGroundHeightBand`, `MoveCtl_Init`, `MobyGroup_AdvanceState1To2`, `ComputeLaunchVelocityZ`, `InitKnockback`, `MobySpringTurn`, `Snapper_GetSteerAngle`, `MobySteerToward` |
+| `func_L06_002FAE58` | AlienQueenUpdate | 1051 alien_queen | 6 | decomp | `void(u32)` | **`Moby_AlienQueen_Update`** |  | `AlienQueen_ApplyDamage`, `Manipulator_ApplyScale`, `SetGroundHeightBand`, `queue_animation_update`, `func_001F9C08`, `MobyGroup_SetState18`, `Moby_EnterState8WithChildren`, `Moby16F_EnableGroup`, `Cutscene_BeginCamera`, `AimCameraAtMoby` |
+| `func_L06_002FD3E0` | Moby1054Update | 1054 | 6 | decomp | `void(u32)` | **`Moby_Class1054_Update`** |  | `func_L00_00251E30`, `MobyGroup_SetState`, `ApproachWithVelocity` |
+| `func_L06_002FDA70` | CallableLiftUpdate | 1061 | 6 | decomp | `void(u32)` | **`Moby_Class1061_Update`** | Data_2FDA70 | `Moby_EnterState8WithChildren`, `try_set_help_message`, `FadeToBlack`, `Moby_EnterState2WithChildren`, `Moby_EnterState4WithChildren`, `Hero_EndObjectControl`, `Hero_ResetToPosition`, `MusicRequestTrack`, `StartCutscene`, `HeroStartScene` |
+| `func_L06_002FE4B8` | RegisterMobyDrawCallbacks | 1062 | 6 | decomp | `void(u32)` | **`Moby_Class1062_Update`** |  |  |
+| `func_L06_002FEE60` | LaunchTriggerUpdate | 1066 | 6 | decomp | `void(u32)` | **`Moby_Class1066_Update`** |  | `Moby_LaunchSpinning` |
+| `func_L06_002FF000` | Moby1068Update | 1068 blarg_space_commando | 6, 10 | decomp | `void(u32)` | **`Moby_BlargSpaceCommando_Update`** | Moby1068Vars | `func_L06_002FFF70`, `Manipulator_ApplyScale`, `SetGroundHeightBand`, `MoveCtl_Init`, `MobySpringTurn`, `MobySteerToward`, `BuildFanVectors`, `MobyGetFrameValue`, `InitDirectionalHitQuery`, `SweepSegmentCheck` |
+| `func_L06_003010E0` | CameraTakeoverTriggerUpdate | 1083 | 6 | decomp | `void(u32)` | **`Moby_Class1083_Update`** |  | `MobyBreakAndBurst`, `CameraScript`, `func_L02_002F9ED8`, `CameraScript_SetPosition`, `Hero_ResetToPosition`, `HeroL06_TrySetMoveState`, `CameraScript2`, `ApproachWithVelocity`, `func_001F9C08`, `CameraScript_SetLookAt` |
+| `func_L06_00301FE8` | SpinningDebrisUpdate | 1085, 1086, 1087, 1088, 1089 | 6, 10, 13 | decomp | `void(u32)` | **`Moby_Class1085_Update`** |  |  |
+| `func_L06_00302248` | BobbingMobyUpdate | 1091, 1092, 1093, 1094, 1095, 1096, 1097, 1098 and 1 more | 6 | decomp | `void(u32)` | **`Moby_Class1091_Update`** |  |  |
+| `func_L06_003024C8` | Moby1105Update | 1105 fred | 6 | decomp | `void(u32)` | **`Moby_Fred_Update`** |  | `AttachCheatManipulatorToMatchingL03`, `SetGroundHeightBand`, `Moby_EnterState8WithChildren`, `DialogRequest_Init`, `IsMoby33BGroupDone`, `Npc_TryStartDialog`, `PlaceMarkerAheadOfMoby`, `Moby_EnterState4WithChildren`, `SetLevelTriggerDone`, `GiveItem` |
+| `func_L06_00302FE8` | Moby1108Update | 1108 | 6 | decomp | `void(u32)` | **`Moby_Class1108_Update`** |  | `MobyGroup_SetState4`, `MobyGroup_SetState18`, `MobyGroup_CountNotInState`, `Moby_AdvanceFromState1`, `GetMobyStateClass`, `func_L06_00303858`, `MusicRequestTrack`, `Music_ContinueStreamIfReady`, `SetMobyGroupDormant`, `MobyGroup_SetState15` |
+| `func_L06_003039B8` | ShuttleUpdate | 1109 shuttle | 6 | decomp | `void(u32)` | **`Moby_Shuttle_Update`** |  | `SpawnMoby1898`, `DeleteMobyGroup`, `Shuttle_SelectMode`, `MusicRequestTrack`, `Hud_ClosePopupIfActive`, `FadeToBlack`, `CameraScript`, `func_L02_002F9ED8`, `CameraScript_SetPosition`, `CameraScript_SetLookAt` |
+| `func_L06_003054D8` | RedButtonUpdate | 1118 red_button | 6 | decomp | `void(u32)` | **`Moby_RedButton_Update`** |  | `ApproachWithVelocity`, `func_L00_00251E30`, `try_set_help_message`, `Hud_ClosePopupIfActive`, `FadeToBlack`, `CameraScript`, `func_L02_002F9ED8`, `CameraScript_SetPosition`, `CameraScript_SetLookAt`, `Moby1123_SpawnDebris` |
+| `func_L06_00305E38` | Moby1123Update | 1123 | 6 | decomp | `void(u32)` | **`Moby_Class1123_Update`** |  | `Moby1123_ProbeCorners`, `func_L06_002172B0`, `rand_vec`, `func_001FA218`, `func_001FA1C0`, `sce_vu0_mul_matrix`, `randf_sym`, `FastTweenColor`, `PartType60Spawn` |
+| `func_L06_00309170` | Moby1302Update | 1302 bot_door_lock | 6, 10 | decomp | `void(u32)` | **`Moby_BotDoorLock_Update`** |  | `PartType41Spawn`, `func_L00_001FF240`, `Moby_AdvanceStateByClass` |
+| `func_L06_003097F0` | Level6_UpdateHelpHints | 1348 | 6 | decomp | `void(u32)` | **`Moby_Class1348_Update`** |  | `Help_Request`, `MobyGroup_CountNotInState` |
+| `func_L06_0030A0A8` | SparkEmitterUpdate | 1512 | 6 | decomp | `void(u32)` | **`Moby_Class1512_Update`** |  | `func_001FA1F8`, `SpawnExplosionFx`, `FastTweenColor`, `PartType02Spawn`, `rand_vec` |
+| `func_L06_0030A788` | SparksTriggerL06_Update | 1551 | 6 | decomp | `void(u32)` | **`Moby_Class1551_Update`** |  | `SpawnMoby750Sparks` |
+| `func_L06_0030ACA0` | SpawnChildAndDeleteUpdate | 1650 mushroom, 1655, 1663 robot_head, 1677 | 6 | decomp | `void(u32)` | **`Moby_Mushroom_Update`** |  | `SpawnBreakFxByDistance`, `func_L00_00251E30` |
+| `func_L06_0030B248` | BreakOnHitBlargUpdate | 1660, 1664 | 6 | decomp | `void(u32)` | **`Moby_Class1660_Update`** |  | `SpawnBreakFxByDistance`, `func_L00_00251E30` |
+| `func_L06_0030D2A0` | Moby1898Update | 1898 | 6, 18 | decomp | `void(u32)` | **`Moby_Class1898_Update`** |  |  |
+| `func_L07_002CE470` | FollowPathTrackHero | 38 taxi_platform | 7 | decomp | `void(u32)` | **`Moby_TaxiPlatform_Update`** |  | `Hero_IsOnMoby`, `HeroEnterMoveState`, `Hero_SetStateFromMode`, `CarryRiders` |
+| `func_L07_002CECE8` | ShuttleBetweenPathEnds | 1474 taxi_platform | 7 | decomp | `void(u32)` | **`Moby_TaxiPlatform1474_Update`** |  | `Hero_IsOnMoby`, `HeroEnterMoveState`, `Hero_SetStateFromMode`, `CarryRiders` |
+| `func_L07_002F6F20` | Moby436Update | 436 | 7 | decomp | `void(u32)` | **`Moby_Class436_Update`** | MobyData_2F6F20 | `StartCutscene`, `Hero_ResetToPosition`, `MusicRequestTrack`, `PlayMovieEntryIfIdle`, `func_L00_001FF548`, `ClearBitGridRect`, `UnlockPlanet`, `memcard_Save`, `RequestPlanetLoad` |
+| `func_L07_002F9438` | AmbientStreamL07Update | 317, 460 | 7, 9 | decomp | `void(u32)` | **`Moby_Class317_Update`** |  | `ScaleTableIntoBuffer` |
+| `func_L07_002FD198` | InitEnvMappedMoby | 529 purple_ship | 7 | decomp | `void(u32)` | **`Moby_PurpleShip_Update`** |  |  |
+| `func_L07_0030C3E0` | PathTrainUpdate | 871 boltcrate_possibly_for_metal_detector | 7 | decomp | `void(u32)` | **`Moby_BoltcratePossiblyForMetalDetector_Update`** |  | `ComputeHitResponse`, `MobyGroup_SetState`, `RerollEffectCounter`, `StepColorFade`, `STUB_printf`, `FindClosestDistanceEntry`, `Spline_AdvanceByDistance`, `ResetMobyFromClassDefaults`, `RecordMobyShadow` |
+| `func_L07_0030CA88` | BoltProjectileUpdate | 880 | 7 | decomp | `void(u32)` | **`Moby_Class880_Update`** |  | `SpawnPuffParticle`, `func_L00_001FF610`, `PartType27Spawn` |
+| `func_L07_0030CFA8` | GravityDebrisUpdate | 882 bomb | 7 | decomp | `void(u32)` | **`Moby_Bomb882_Update`** | DebrisVars_0CFA8 |  |
+| `func_L07_0030D370` | TimedPadUpdate | 886 timed_activation_pads | 7, 12 | decomp | `void(u32)` | **`Moby_TimedActivationPads_Update`** |  | `MobyGroup_SetState`, `func_001FA190`, `func_001FA4A0`, `func_001F9EE8`, `func_L00_00251328`, `MobyGroup_SetByteBC`, `SetLevelTriggerDone` |
+| `func_L07_0030D8E8` | WaterPlateUpdate | 902 water, 941 water, 943 water, 944 water, 948 water, 949 water, 950 water, 951 and 12 more | 7 | decomp | `void(u32)` | **`Moby_Water902_Update`** | Data_30D8E8 | `RipplePatchesInit`, `RescaleFloatTable`, `RipplePatch_ToFixedPoint`, `Ripple_DisturbDefault`, `LinkWaterGridNeighbours`, `MobyGroup_SetState`, `IsCurrentMobyId`, `MobyGroup_SetByteBC`, `RippleDisturb`, `IsBSphereVisibleScaled` |
+| `func_L07_0030E370` | TargetDrivenSliderUpdate | 1013, 1014, 1064, 1065 | 7 | decomp | `void(u32)` | **`Moby_Class1013_Update`** |  | `func_001F9EC0` |
+| `func_L07_0030E820` | AudioStreamTriggerUpdate | 1018 ocean_umbris | 7 | decomp | `void(u32)` | **`Moby_OceanUmbris_Update`** |  | `ScaleTableIntoBuffer128` |
+| `func_L07_0030E8B8` | LobberEnemyUpdate | 1041 bombomatic | 7 | decomp | `void(u32)` | **`Moby_Bombomatic_Update`** |  | `SetGroundHeightBand`, `ComputeHitResponse`, `SetDeathBits`, `RerollEffectCounter`, `StepColorFade`, `FindNearestTargetMoby`, `func_001FA218`, `func_001F9EE8`, `ComputeLaunchVelocityZ`, `SpawnMobyWithRandomVelocity` |
+| `func_L07_0030F5D8` | ShockwaveUpdate | 1046 | 7 | decomp | `void(u32)` | **`Moby_Class1046_Update`** |  | `Shockwave_PushMoby` |
+| `func_L07_0030F838` | LobbedBombUpdate | 1049 | 7 | decomp | `void(u32)` | **`Moby_Class1049_Update`** |  | `SpawnMobyAttachedParticle` |
+| `func_L07_003109D0` | SharkigatorUpdate | 1059 sharkigator | 7 | decomp | `void(u32)` | **`Moby_Sharkigator1059_Update`** |  | `Manipulator_ApplyScale`, `WalkerInit`, `STUB_printf`, `FindNearestTargetMoby`, `EnemyTakeHit`, `StepColorFade`, `IsPointInPolygon`, `GetPathProximityBand`, `CollType`, `RippleDisturb` |
+| `func_L07_003121D0` |  | 129, 130, 182 door, 183 door, 360 hangar_door, 1063, 1078, 1079 and 1 more | 7, 13 | decomp | `void(u32)` | **`Moby_Door_Update`** |  | `func_001F9EC0` |
+| `func_L07_003126A8` | Moby1069Update | 1069 | 7 | decomp | `void(u32)` | **`Moby_Class1069_Update`** | D_3126A8 | `func_001160D8`, `MobyGroup_SetByteBC`, `WrapAngle`, `TransformPointAboutPivot`, `StepAngleToward`, `CarryRiders` |
+| `func_L07_00312FA8` | FallingLeafUpdate | 1080 | 7 | decomp | `void(u32)` | **`Moby_Class1080_Update`** |  | `func_L00_00251328`, `Hero_IsOnMoby`, `WrapAngle`, `CarryRiders` |
+| `func_L07_00315528` | SnagglebeastUpdate | 1106 snagglebeast | 7 | decomp | `void(u32)` | **`Moby_Snagglebeast_Update`** |  | `Manipulator_ApplyScale`, `AttachCheatManipulators`, `SetGroundHeightBand`, `EnemyHitReact`, `FindNearestTargetMoby`, `SuckBeam_QueueDraw`, `AimYawTowardTarget`, `queue_animation_update`, `BuildAdjacencyMasks`, `FindClosestDistanceEntry` |
 | `func_L07_0031A410` | HomingMineUpdate | 1110 homing_mine | 7 | decomp | `void(u32)` | row: `Moby_HomingMine_Update` | Mine_p | `ComputeHitResponse`, `SetDeathBits`, `MobyGroup_SetState`, `InitDirectionalHitQuery` |
-| `func_L07_0031AAB0` | SwooperUpdate | 1112 mine | 7 | decomp | `void(u32)` | row: `Moby_Mine1112_Update` | SwooperVars_31AAB0 | `FindNearestTargetMoby`, `SetGroundHeightBand`, `ComputeHitResponse`, `SetDeathBits`, `DeleteMobyCopyTimer`, `MobySpringTurn`, `SpringTurn`, `func_L00_001FF548`, `InitDirectionalHitQuery`, `RecordMobyShadow` |
-| `func_L07_0031B318` | BreakablePropUpdate | 1113, 1114, 1115, 1116 | 7 | decomp | `void(u32)` | row: `Moby_Class1113_Update` | BreakableVars_31B318 | `func_001F9EC0`, `rand_vec`, `func_L01_002F9908` |
-| `func_L07_0031B620` | GunMoby_HandleHit | 1126 machinegun_turret | 7 | decomp | `void(u32)` | row: `Moby_MachinegunTurret_Update` |  | `ComputeHitResponse`, `SetDeathBits`, `RerollEffectCounter`, `StepColorFade`, `WrapAngle`, `Moby880Spawn` |
-| `func_L07_0031BDB8` | MovingMobyL07_Update | 1128 | 7 | decomp | `void(u32)` | row: `Moby_Class1128_Update` | L07MovingVars | `func_001F9EC0` |
-| `func_L07_0031C2B0` |  | 104 bridge, 106 bridge, 1129 | 7, 13 | decomp | `void(u32)` | row: `Moby_Bridge_Update` |  | `func_001F9EC0`, `CarryRiders` |
-| `func_L07_0031C7C0` | Moby1133Update | 1133 | 7 | decomp | `void(u32)` | row: `Moby_Class1133_Update` |  |  |
-| `func_L07_0031E6B0` | Moby1142Update | 1142 | 7 | decomp | `void(u32)` | row: `Moby_Class1142_Update` |  | `STUB_printf`, `Spline_AdvanceByDistance`, `func_00120778`, `SpawnMobyFromTable` |
-| `func_L07_0031FF78` | SparkBurstSpawnerUpdate | 1552 | 7 | decomp | `void(u32)` | row: `Moby_Class1552_Update` |  | `SpawnMoby750Sparks`, `PartType23Spawn` |
-| `func_L07_00320CD0` | Moby1789Update | 1789 | 7 | decomp | `void(u32)` | row: `Moby_Class1789_Update` |  | `SpawnSparkRings` |
-| `func_L08_002B94B0` | Moby152Update | 152 | 8 | decomp | `void(u32)` | row: `Moby_Class152_Update` | MobyData_2B94B0 | `Moby152Init`, `func_L00_001F39B0`, `func_L00_001FF610`, `queue_animation_update` |
-| `func_L08_002D36F8` | BombUpdate | 248 bomb | 8 | decomp | `void(u32)` | row: `Moby_Bomb248_Update` |  | `func_L00_001FF610`, `PartType04Spawn`, `FastVecCross`, `RerollEffectCounter`, `StepColorFade`, `SpawnExplosionFx`, `RecordMobyShadow` |
-| `func_L08_002D3DF8` | ScoutbotUpdate | 252 scoutbot | 8, 14 | decomp | `void(u32)` | row: `Moby_Scoutbot_Update` | Data_3DF8 | `Manipulator_ApplyScale`, `SetGroundHeightBand`, `PathEnemyHitUpdate`, `MobySpringTurn`, `MobyGetFrameValue`, `IsFrameWithinWindow`, `PostHitMessage`, `CarriedMobyUpdate`, `SteerAlongPath`, `FastTweenColor` |
-| `func_L08_002D55E0` | BomberTankUpdate | 253 bomber_tank | 8 | decomp | `void(u32)` | row: `Moby_BomberTank_Update` |  | `TurretUpdate`, `func_L00_00251E30`, `DeleteLinkedGroupMobys`, `PathMover_Step`, `Help_Request`, `IsFrameWithinWindow`, `MobyGetFrameValue`, `Moby425Spawn`, `SpawnGroupDebris`, `BomberTank_SpawnJointDebris` |
-| `func_L08_002DB468` | Moby327Update | 327 | 8 | decomp | `void(u32)` | row: `Moby_Class327_Update` |  | `ScaleTableIntoBuffer128`, `Moby775Spawn`, `PartType35Spawn`, `rand_vec`, `PartType46Spawn` |
-| `func_L08_002DBF68` | BlargBombThrowerUpdate | 333 blarg_bombthrower | 8 | decomp | `void(u32)` | row: `Moby_BlargBombthrower_Update` | Data_DBF68 | `Manipulator_ApplyScale`, `SetGroundHeightBand`, `SpawnSmokeTrails`, `ComputeHitResponse`, `InitKnockback`, `SetDeathBits`, `RerollEffectCounter`, `FindNearestTargetMoby`, `MoveCtl_Init`, `FindBestGroupTarget` |
-| `func_L08_002DD128` | RoutePlatformUpdate | 424 shuttle | 8 | decomp | `void(u32)` | row: `Moby_Shuttle424_Update` |  | `BuildEulerMatrix`, `PlatformChooseRoute`, `PushPointOutsidePath`, `Platform_ShowHelpMessage`, `Platform_MoveToRouteTarget`, `Platform_BobAndSway`, `TransformPathPoints`, `CarryRiders` |
-| `func_L08_002DDD20` | Moby425Update | 425 bomb | 8 | decomp | `void(u32)` | row: `Moby_Bomb425_Update` |  | `func_L00_001FF610`, `PartType16Spawn`, `DefaultVtbl_DeleteMoby`, `BuildSphericalOffset` |
-| `func_L08_002DE738` | GuidedRocketUpdate | 435 rocket | 8 | decomp | `void(u32)` | row: `Moby_Rocket435_Update` |  | `SpawnExplosionFx`, `AddSphericalOffset`, `ClampVectorLength`, `func_001F9CE8`, `PartType04Spawn`, `MobySpringTurn`, `InitSpinningPiece`, `SpawnDebrisBurst`, `StepAngleToward`, `BuildSphericalOffset` |
-| `func_L08_002DFBC0` | Moby438Update | 438 | 8 | decomp | `void(u32)` | row: `Moby_Class438_Update` |  | `randf_sym`, `SamplePathAt`, `func_001F9CE8`, `PlayBankSound`, `ShowBanner`, `SpawnHitParticle` |
-| `func_L08_002E16A0` | CannonUpdate | 440 | 8 | decomp | `void(u32)` | row: `Moby_Class440_Update` |  | `FastMemZero16`, `CameraScript2`, `Hero_ResetToPosition`, `Moby1283SetMode`, `Hero_OnKilled`, `Hero_TryMoveStateL08`, `func_001FA1F8`, `func_001F9EC0`, `CameraScript`, `func_001F9CE8` |
-| `func_L08_002E2A38` | FallingDebrisUpdate | 441, 442, 443, 445, 448, 449, 450, 451 and 2 more | 8 | decomp | `void(u32)` | row: `Moby_Class441_Update` | Data_2E2A38 | `PartType11Spawn`, `PartType02Spawn` |
-| `func_L08_002E3860` | Moby444Update | 444 | 8 | decomp | `void(u32)` | row: `Moby_Class444_Update` | GunshipVars | `SpawnPartMobys`, `MobySpringTurn`, `LaunchDamagedPart`, `UpdatePartMobys`, `Moby435Spawn`, `SpawnExplosionFx` |
-| `func_L08_002E4168` | Batalia_BoltThiefUpdate | 452 bolt_thief | 8 | decomp | `void(u32)` | row: `Moby_BoltThief_Update` | Data_2E4168 | `Manipulator_ApplyScale`, `SetGroundHeightBand`, `InitKnockback`, `SetDeathBits`, `CollectClass279Mobys`, `MobySpringTurn`, `ClampVectorLength`, `Moby_StartTumble`, `FindMobyByPvarId`, `SpawnExplosionFx` |
-| `func_L08_002E95E8` | Moby458Update | 458 rocket | 8, 12 | decomp | `void(u32)` | row: `Moby_Rocket458_Update` |  | `PartType02Spawn`, `ClampVectorLength` |
-| `func_L08_002EA0A8` | Moby462Update | 462 shrub | 8 | decomp | `void(u32)` | row: `Moby_Shrub_Update` | SwarmVars_EA0A8 | `SpawnChildMobys`, `MobySpringTurn`, `LaunchDamagedPartSmall`, `UpdateTwelvePartMobys`, `Moby435Spawn`, `SpawnExplosionFx` |
-| `func_L08_002EAF48` | SwarmLeaderUpdate | 463 | 8 | decomp | `void(u32)` | row: `Moby_Class463_Update` | SwarmVars_2EAF48 | `BuildPartHierarchy`, `MobySpringTurn`, `LaunchDamagedSwarmPart`, `UpdateSixteenPartMobys`, `Moby435Spawn`, `SpawnExplosionFx` |
-| `func_L08_002EB770` | GroupClearUpdate | 467, 472 | 8 | decomp | `void(u32)` | row: `Moby_Class467_Update` |  |  |
-| `func_L08_002EB980` | GateSwingUpdate | 468, 469 | 8 | decomp | `void(u32)` | row: `Moby_Class468_Update` | SwingGateVars | `Sound_SetPitchBend`, `func_001FA218`, `func_001F9EE8` |
-| `func_L08_002F2A08` | Moby600Update | 600 | 8 | decomp | `void(u32)` | row: `Moby_Class600_Update` |  | `ScaleColorTables`, `AdvanceScrollOffsets`, `AdvanceWavePhase`, `AdvanceScrollEntry` |
-| `func_L08_002F5980` | Moby621Update | 621 | 8 | decomp | `void(u32)` | row: `Moby_Class621_Update` | SwarmPathFollower | `MobySpringTurn` |
-| `func_L08_002F6CF0` | Moby648Update | 648 | 8, 10 | decomp | `void(u32)` | row: `Moby_Class648_Update` |  | `func_001FA218`, `PartType02Spawn` |
-| `func_L08_002F8560` | FlickerLightUpdate | 671 | 8 | decomp | `void(u32)` | row: `Moby_Class671_Update` | FlickerLightVars_2F8560 | `STUB_printf`, `UpdatePointLight`, `FreePointLight` |
-| `func_L08_00302618` | ParatrooperUpdate | 1023 blarg_paratrooper | 8-9 | decomp | `void(u32)` | row: `Moby_BlargParatrooper_Update` |  | `Manipulator_ApplyScale`, `SetGroundHeightBand`, `func_L08_00303998`, `STUB_printf`, `MoveCtl_Init`, `func_001160D8`, `FindClosestDistanceEntry`, `ClassifyTargetInCone`, `MobyGetFrameValue`, `func_001F9C08` |
-| `func_L08_003041A8` | CommandoUpdate | 1130 commando | 8 | decomp | `void(u32)` | row: `Moby_Commando_Update` |  | `AttachManipulatorsIfCheat`, `SetGroundHeightBand`, `DialogRequest_Init`, `Npc_TryStartDialog`, `PlaceMarkerAheadOfMoby`, `UnlockPlanet`, `ShowPlanetBanner`, `SetLevelTriggerDone`, `PauseMenu_SeedSnapshot`, `memcard_Save` |
-| `func_L08_00306730` | DeserterUpdate | 1144 batalia_deserter | 8 | decomp | `void(u32)` | row: `Moby_BataliaDeserter_Update` |  | `TriggerMobysOfClass`, `SetGroundHeightBand`, `DialogRequest_Init`, `SetLevelTriggerDone`, `Npc_TryStartDialog`, `PlaceMarkerAheadOfMoby`, `UnlockPlanet`, `memcard_Save`, `BuildSphericalOffset`, `func_001F9CE8` |
-| `func_L08_00307A98` | Moby1283Update | 1283 the_plumber_batalia | 8 | decomp | `void(u32)` | row: `Moby_ThePlumberBatalia_Update` |  | `Moby1283_AttachCheatManipulators`, `DialogRequest_Init`, `Npc_TryStartDialog`, `PlaceMarkerAheadOfMoby`, `PauseMenu_SeedSnapshot`, `Moby1283_SetHeroState`, `PlayMovieEntryIfIdle`, `Hero_OnKilled`, `SetLevelTriggerDone`, `GiveItem` |
-| `func_L08_00308758` | FireBoltUpdate | 1292 | 8-9 | decomp | `void(u32)` | row: `Moby_Class1292_Update` |  | `func_L00_001FF240`, `PartType04Spawn`, `PostHitMessage`, `SpawnExplosionFx` |
-| `func_L08_00308A00` | Moby1349Update | 1349 | 8 | decomp | `void(u32)` | row: `Moby_Class1349_Update` |  | `PlayBankSound`, `ShowBanner`, `Help_Request` |
-| `func_L08_003091B0` | Moby1400Update | 1400 | 8, 12, 14 | decomp | `void(u32)` | row: `Moby_Class1400_Update` | Obj_3091B0 | `func_L08_00309050`, `func_L08_00211A38`, `AddSphericalOffset`, `func_001F9CE8`, `SampleHeightMap`, `SpawnKindParticle`, `Particle_SpawnByKind`, `SpawnImpactSparks` |
-| `func_L08_00309998` | Moby1553Update | 1553 | 8 | decomp | `void(u32)` | row: `Moby_Class1553_Update` |  | `SpawnMoby750Sparks` |
-| `func_L08_00309AB0` | Moby1629Update | 1629 | 8, 14 | decomp | `void(u32)` | row: `Moby_Class1629_Update` |  | `func_001F9CE8`, `SpawnKindParticle` |
-| `func_L08_0030A150` | Moby1641Update | 1641 | 8 | decomp | `void(u32)` | row: `Moby_Class1641_Update` |  | `func_001FA1F8`, `func_001F9EC0`, `SpawnParticleType4D` |
-| `func_L08_0030AC70` | Moby1649Update | 1649 | 8 | decomp | `void(u32)` | row: `Moby_Class1649_Update` |  | `ScaleColorTables`, `AdvanceScrollOffsets`, `AdvanceWavePhase`, `AdvanceScrollEntry` |
-| `func_L09_002C3858` | AirshipPartUpdate | 1182 airship_part, 1183 airship_part, 1184 airship_part, 1185 airship_part, 1186 airship_part, 1187 airship_part, 1188 airship_part, 1189 airship_part | 9 | decomp | `void(u32)` | row: `Moby_AirshipPart_Update` |  | `SpawnAttachedMoby`, `FindClosestMobyOfClass`, `STUB_printf`, `func_00120778`, `func_002116A0`, `MobyBobZ`, `LissajousOffsetUpdate`, `func_001FA218`, `func_001F9EE8`, `SetDeathBits` |
-| `func_L09_002C6B30` | Moby52Update | 52 seeker | 9, 16 | decomp | `void(u32)` | row: `Moby_Seeker_Update` | Moby52Vars_2C6B30 | `ChaseEnemyUpdate`, `Manipulator_ApplyScale`, `SetGroundHeightBand`, `STUB_printf`, `MoveCtl_Init`, `MobyGroup_SetByteBC`, `MoveMobyWithCollision`, `SpawnExplosionFx`, `SetDeathBits` |
-| `func_L09_002E39E0` | GroundEnemyUpdate | 193 | 9, 15 | decomp | `void(u32)` | row: `Moby_Class193_Update` | Data_2E39E0 | `ComputeHitResponse`, `MobyGroup_SetByteBC`, `InitKnockback`, `SetDeathBits`, `RerollEffectCounter`, `Manipulator_ApplyScale`, `SetGroundHeightBand`, `FindNearestTargetMoby`, `MoveCtl_Init`, `func_001160D8` |
-| `func_L09_002ECC50` | AsteroidBeltUpdate | 263 asteroid, 264 asteroid, 265 asteroid, 266 asteroid, 267 asteroid | 9 | decomp | `void(u32)` | row: `Moby_Asteroid_Update` |  | `FadingDriftUpdate`, `FallingRockUpdate`, `SpawnFallingDebrisRing`, `SpawnPebble`, `AdvancePathIndexByDistance` |
-| `func_L09_002EEF80` | BreakableStackUpdate | 276 display, 1298 display_damaged, 1299 display_damaged | 9 | decomp | `void(u32)` | row: `Moby_Display_Update` |  | `SetDeathBits`, `SpawnMobyAtSource`, `JitterVector`, `func_001F9EC0`, `SpawnDebrisPiece`, `SpawnExplosionFx` |
-| `func_L09_002EF460` | Moby279Update | 279 | 9 | decomp | `void(u32)` | row: `Moby_Class279_Update` |  | `RerollEffectCounter`, `PartType27Spawn`, `Moby284Spawn` |
-| `func_L09_002F0780` | TumblingDebrisUpdate | 313 | 9 | decomp | `void(u32)` | row: `Moby_Class313_Update` |  | `PartType27Spawn`, `func_L00_001FF610` |
-| `func_L09_002F0D00` | HeavyTumblingDebrisUpdate | 320, 321 | 9 | decomp | `void(u32)` | row: `Moby_Class320_Update` |  | `PartType27Spawn`, `CollType`, `func_L00_001FF610` |
-| `func_L09_002F1390` | Moby417Update | 417 | 9 | decomp | `void(u32)` | row: `Moby_Class417_Update` |  |  |
-| `func_L09_002F9A50` | Moby664Update | 664 platform | 9 | decomp | `void(u32)` | row: `Moby_Platform664_Update` |  | `SpringAngle`, `TransformPointAboutPivot`, `MobyBobZ`, `LissajousOffsetUpdate`, `CarryRiders` |
-| `func_L09_00301C38` | Moby1000Update | 1000 | 9 | decomp | `void(u32)` | row: `Moby_Class1000_Update` |  | `PlayBankSound`, `ShowBanner`, `Help_Request` |
-| `func_L09_00304750` | PathPlatformL09_Update | 1150 elevator, 1151 elevator | 9 | decomp | `void(u32)` | row: `Moby_Elevator1150_Update` |  | `Hero_IsOnMoby`, `HeroEnterMoveState`, `CarryRiders` |
-| `func_L09_003050C0` | PressurePlateUpdate | 1172 refueling_station | 9 | decomp | `void(u32)` | row: `Moby_RefuelingStation_Update` |  | `ApplyHitToHealth` |
-| `func_L09_00305710` | AirshipChainLinkUpdate | 1181 airship_part | 9 | decomp | `void(u32)` | row: `Moby_AirshipPart1181_Update` |  | `FindNearestLinkTarget`, `STUB_printf` |
-| `func_L09_00306030` | MountableTurretUpdate | 1201 turret | 9 | decomp | `void(u32)` | row: `Moby_Turret_Update` | TurretVars | `FastMemZero16`, `CameraScript2`, `CameraScript`, `func_001F9EC0`, `UpdatePointLight`, `FreePointLight`, `func_001F9CE8`, `func_L00_001FF328`, `func_L00_001FFED8`, `MobyGetFrameValue` |
-| `func_L09_00306DD8` | Moby1206Update | 1206 | 9 | decomp | `void(u32)` | row: `Moby_Class1206_Update` | SweepData_306DD8 | `func_001F9EC0`, `InitHitQuery`, `STUB_printf` |
-| `func_L09_00309118` | EnemyShotUpdate | 1258 | 9-10 | decomp | `void(u32)` | row: `Moby_Class1258_Update` | ShotVars_307ba8_09118 | `func_L00_001FF500`, `func_L00_001FF610`, `PartType27Spawn` |
-| `func_L09_00309688` | BarrierUpdate | 1285 barrier, 1286 barrier, 1287 barrier, 1288 barrier | 9 | decomp | `void(u32)` | row: `Moby_Barrier_Update` |  | `CloneMobyAsClass`, `func_001F9EC0`, `SpawnDebrisPiece`, `SpawnExplosionFx` |
-| `func_L09_0030A560` | LinkedRiserUpdate | 1293, 1320 | 9 | decomp | `void(u32)` | row: `Moby_Class1293_Update` |  | `STUB_printf`, `SpringAngle`, `TransformPointAboutPivot`, `MobyBobZ`, `LissajousOffsetUpdate`, `CarryRiders` |
-| `func_L09_0030AFB8` | Moby1766Update | 1766 shuttle | 9 | decomp | `void(u32)` | row: `Moby_Shuttle1766_Update` | PathFlyerVars_00309c08 | `FUN_L00_00262b00`, `FUN_L00_00262b80`, `LinkedRiser_StepAlongPath`, `FUN_L00_00260738` |
-| `func_L09_0030BF88` | Moby1885Update | 1885 spawner | 9, 13 | decomp | `void(u32)` | row: `Moby_Spawner1885_Update` |  | `Moby_TickHitTimer`, `FindNearestEligibleMoby`, `CountLiveMoby1886Slots`, `func_L00_001FF548`, `RandomRadialOffset`, `JitterVector`, `ComputeLaunchVelocityZ`, `SpawnMoby1886` |
-| `func_L09_0030C7F0` | Moby1886Update | 1886 spawner_egg | 9, 13 | decomp | `void(u32)` | row: `Moby_SpawnerEgg_Update` | BubbleVars | `WrapAngle`, `Moby_SpawnChildFromOwner`, `Moby1886_ReleaseOwnerSlot`, `RecordMobyShadow` |
-| `func_L10_00296BD8` | Moby1033Update | 1033 platform | 10 | decomp | `void(u32)` | row: `Moby_Platform1033_Update` |  | `STUB_printf` |
-| `func_L10_00296DC0` | BobbingPlatformUpdate | 1117 platform | 10 | decomp | `void(u32)` | row: `Moby_Platform1117_Update` |  | `Hero_IsOnMoby`, `randf_sym`, `MobyBobZ`, `LissajousOffsetUpdate`, `CarryRiders` |
-| `func_L10_00299818` | SpinningPickupUpdate | 18 magnetboots | 10 | decomp | `void(u32)` | row: `Moby_Magnetboots_Update` |  | `DriftingSprites_Init`, `DriftingSprites_DrawL10`, `StartCutscene`, `ShowBanner`, `GiveItem`, `PauseMenu_SeedSnapshot`, `memcard_Save` |
-| `func_L10_00299D18` | Moby22Update | 22 | 10 | decomp | `void(u32)` | row: `Moby_Class22_Update` |  | `try_set_help_message`, `Hero_ResetToPosition`, `Hero_BeginObjectControl`, `MusicRequestTrack`, `ResetHelpState` |
-| `func_L10_002BFBB8` | NearHeroSparkleUpdate | 351 gadgebot_telepot_pad, 1301 bot_elevator | 10 | decomp | `void(u32)` | row: `Moby_GadgebotTelepotPad_Update` |  | `PartType53Spawn`, `Hero_ResetToPosition`, `PartType45Spawn`, `FastTweenColor`, `func_L00_002E9A40`, `func_L00_002E9B30`, `func_L00_002E9AF8`, `func_L00_002E9A18` |
-| `func_L10_002C8DE0` | Moby702Update | 702 | 10 | decomp | `void(u32)` | row: `Moby_Class702_Update` |  | `func_001FA218`, `func_001F9EE8`, `PartType40Spawn`, `Sound_PlayClassSound` |
-| `func_L10_002CB030` | Moby794Update | 794 | 10 | decomp | `void(u32)` | row: `Moby_Class794_Update` |  | `STUB_printf`, `HitMobysInBox` |
-| `func_L10_002CD6A8` | Moby819Update | 819 rocket | 10-11, 15, 17 | decomp | `void(u32)` | row: `Moby_Rocket819_Update` |  | `func_L00_001FF3E0`, `func_001F9B50`, `func_001F9CE8`, `SpringTurn`, `BuildSphericalOffset`, `PartType04Spawn`, `func_L00_001FF500`, `PostHitMessage`, `SpawnExplosionFx`, `Sound_PlayClassSound` |
-| `func_L10_002D8F40` | Moby859Update | 859 | 10 | decomp | `void(u32)` | row: `Moby_Class859_Update` |  | `FindNearestTargetMoby`, `Moby_StepZToward`, `func_L00_001FF500`, `InitDirectionalHitQuery`, `func_L00_001FF610`, `PartType27Spawn` |
-| `func_L10_002D9988` | Moby938Update | 938 bomb | 10 | decomp | `void(u32)` | row: `Moby_Bomb938_Update` |  | `HeadingFromVector`, `SwirlMoby_RayCollide`, `func_L00_00251358`, `func_L00_00251328`, `func_L00_001FF500`, `SendRadialMessageToMobys`, `SpawnExplosionFx` |
-| `func_L10_002D9FC0` | TimedShooterUpdate | 939 bombthrower_grass | 10 | decomp | `void(u32)` | row: `Moby_BombthrowerGrass939_Update` |  | `BuildSphericalOffset`, `SpawnSwirlMoby` |
-| `func_L10_002DA0F0` | ElectricSparkUpdate | 947 | 10 | decomp | `void(u32)` | row: `Moby_Class947_Update` |  | `STUB_printf`, `FreePointLight`, `PathSampleAtDistance`, `UpdatePointLight`, `SpawnMoby1090`, `Sound_PlayClassSound` |
-| `func_L10_002DA468` | HeightGlideUpdate | 1015 lab_door, 1282 flame_door | 10 | decomp | `void(u32)` | row: `Moby_LabDoor_Update` |  | `STUB_printf`, `IsPointInMobyBox` |
-| `func_L10_002DA678` | Moby1031Update | 1031 button | 10 | decomp | `void(u32)` | row: `Moby_Button_Update` |  | `func_L00_00251328` |
-| `func_L10_002DB278` | Moby1047Update | 1047 | 10 | decomp | `void(u32)` | row: `Moby_Class1047_Update` |  | `SpawnMoby1122AtOwner`, `Moby1921Spawn`, `Sound_PlayClassSound`, `func_001F9EC0`, `func_L00_001FF240`, `func_L01_002F9908` |
-| `func_L10_002DB688` | SoundPropUpdate | 1067 | 10 | decomp | `void(u32)` | row: `Moby_Class1067_Update` |  | `STUB_printf`, `func_001F9B50` |
+| `func_L07_0031AAB0` | SwooperUpdate | 1112 mine | 7 | decomp | `void(u32)` | **`Moby_Mine1112_Update`** | SwooperVars_31AAB0 | `FindNearestTargetMoby`, `SetGroundHeightBand`, `ComputeHitResponse`, `SetDeathBits`, `DeleteMobyCopyTimer`, `MobySpringTurn`, `SpringTurn`, `func_L00_001FF548`, `InitDirectionalHitQuery`, `RecordMobyShadow` |
+| `func_L07_0031B318` | BreakablePropUpdate | 1113, 1114, 1115, 1116 | 7 | decomp | `void(u32)` | **`Moby_Class1113_Update`** | BreakableVars_31B318 | `func_001F9EC0`, `rand_vec`, `func_L01_002F9908` |
+| `func_L07_0031B620` | GunMoby_HandleHit | 1126 machinegun_turret | 7 | decomp | `void(u32)` | **`Moby_MachinegunTurret_Update`** |  | `ComputeHitResponse`, `SetDeathBits`, `RerollEffectCounter`, `StepColorFade`, `WrapAngle`, `Moby880Spawn` |
+| `func_L07_0031BDB8` | MovingMobyL07_Update | 1128 | 7 | decomp | `void(u32)` | **`Moby_Class1128_Update`** | L07MovingVars | `func_001F9EC0` |
+| `func_L07_0031C2B0` |  | 104 bridge, 106 bridge, 1129 | 7, 13 | decomp | `void(u32)` | **`Moby_Bridge_Update`** |  | `func_001F9EC0`, `CarryRiders` |
+| `func_L07_0031C7C0` | Moby1133Update | 1133 | 7 | decomp | `void(u32)` | **`Moby_Class1133_Update`** |  |  |
+| `func_L07_0031E6B0` | Moby1142Update | 1142 | 7 | decomp | `void(u32)` | **`Moby_Class1142_Update`** |  | `STUB_printf`, `Spline_AdvanceByDistance`, `func_00120778`, `SpawnMobyFromTable` |
+| `func_L07_0031FF78` | SparkBurstSpawnerUpdate | 1552 | 7 | decomp | `void(u32)` | **`Moby_Class1552_Update`** |  | `SpawnMoby750Sparks`, `PartType23Spawn` |
+| `func_L07_00320CD0` | Moby1789Update | 1789 | 7 | decomp | `void(u32)` | **`Moby_Class1789_Update`** |  | `SpawnSparkRings` |
+| `func_L08_002B94B0` | Moby152Update | 152 | 8 | decomp | `void(u32)` | **`Moby_Class152_Update`** | MobyData_2B94B0 | `Moby152Init`, `func_L00_001F39B0`, `func_L00_001FF610`, `queue_animation_update` |
+| `func_L08_002D36F8` | BombUpdate | 248 bomb | 8 | decomp | `void(u32)` | **`Moby_Bomb248_Update`** |  | `func_L00_001FF610`, `PartType04Spawn`, `FastVecCross`, `RerollEffectCounter`, `StepColorFade`, `SpawnExplosionFx`, `RecordMobyShadow` |
+| `func_L08_002D3DF8` | ScoutbotUpdate | 252 scoutbot | 8, 14 | decomp | `void(u32)` | **`Moby_Scoutbot_Update`** | Data_3DF8 | `Manipulator_ApplyScale`, `SetGroundHeightBand`, `PathEnemyHitUpdate`, `MobySpringTurn`, `MobyGetFrameValue`, `IsFrameWithinWindow`, `PostHitMessage`, `CarriedMobyUpdate`, `SteerAlongPath`, `FastTweenColor` |
+| `func_L08_002D55E0` | BomberTankUpdate | 253 bomber_tank | 8 | decomp | `void(u32)` | **`Moby_BomberTank_Update`** |  | `TurretUpdate`, `func_L00_00251E30`, `DeleteLinkedGroupMobys`, `PathMover_Step`, `Help_Request`, `IsFrameWithinWindow`, `MobyGetFrameValue`, `Moby425Spawn`, `SpawnGroupDebris`, `BomberTank_SpawnJointDebris` |
+| `func_L08_002DB468` | Moby327Update | 327 | 8 | decomp | `void(u32)` | **`Moby_Class327_Update`** |  | `ScaleTableIntoBuffer128`, `Moby775Spawn`, `PartType35Spawn`, `rand_vec`, `PartType46Spawn` |
+| `func_L08_002DBF68` | BlargBombThrowerUpdate | 333 blarg_bombthrower | 8 | decomp | `void(u32)` | **`Moby_BlargBombthrower_Update`** | Data_DBF68 | `Manipulator_ApplyScale`, `SetGroundHeightBand`, `SpawnSmokeTrails`, `ComputeHitResponse`, `InitKnockback`, `SetDeathBits`, `RerollEffectCounter`, `FindNearestTargetMoby`, `MoveCtl_Init`, `FindBestGroupTarget` |
+| `func_L08_002DD128` | RoutePlatformUpdate | 424 shuttle | 8 | decomp | `void(u32)` | **`Moby_Shuttle424_Update`** |  | `BuildEulerMatrix`, `PlatformChooseRoute`, `PushPointOutsidePath`, `Platform_ShowHelpMessage`, `Platform_MoveToRouteTarget`, `Platform_BobAndSway`, `TransformPathPoints`, `CarryRiders` |
+| `func_L08_002DDD20` | Moby425Update | 425 bomb | 8 | decomp | `void(u32)` | **`Moby_Bomb425_Update`** |  | `func_L00_001FF610`, `PartType16Spawn`, `DefaultVtbl_DeleteMoby`, `BuildSphericalOffset` |
+| `func_L08_002DE738` | GuidedRocketUpdate | 435 rocket | 8 | decomp | `void(u32)` | **`Moby_Rocket435_Update`** |  | `SpawnExplosionFx`, `AddSphericalOffset`, `ClampVectorLength`, `func_001F9CE8`, `PartType04Spawn`, `MobySpringTurn`, `InitSpinningPiece`, `SpawnDebrisBurst`, `StepAngleToward`, `BuildSphericalOffset` |
+| `func_L08_002DFBC0` | Moby438Update | 438 | 8 | decomp | `void(u32)` | **`Moby_Class438_Update`** |  | `randf_sym`, `SamplePathAt`, `func_001F9CE8`, `PlayBankSound`, `ShowBanner`, `SpawnHitParticle` |
+| `func_L08_002E16A0` | CannonUpdate | 440 | 8 | decomp | `void(u32)` | **`Moby_Class440_Update`** |  | `FastMemZero16`, `CameraScript2`, `Hero_ResetToPosition`, `Moby1283SetMode`, `Hero_OnKilled`, `Hero_TryMoveStateL08`, `func_001FA1F8`, `func_001F9EC0`, `CameraScript`, `func_001F9CE8` |
+| `func_L08_002E2A38` | FallingDebrisUpdate | 441, 442, 443, 445, 448, 449, 450, 451 and 2 more | 8 | decomp | `void(u32)` | **`Moby_Class441_Update`** | Data_2E2A38 | `PartType11Spawn`, `PartType02Spawn` |
+| `func_L08_002E3860` | Moby444Update | 444 | 8 | decomp | `void(u32)` | **`Moby_Class444_Update`** | GunshipVars | `SpawnPartMobys`, `MobySpringTurn`, `LaunchDamagedPart`, `UpdatePartMobys`, `Moby435Spawn`, `SpawnExplosionFx` |
+| `func_L08_002E4168` | Batalia_BoltThiefUpdate | 452 bolt_thief | 8 | decomp | `void(u32)` | **`Moby_BoltThief_Update`** | Data_2E4168 | `Manipulator_ApplyScale`, `SetGroundHeightBand`, `InitKnockback`, `SetDeathBits`, `CollectClass279Mobys`, `MobySpringTurn`, `ClampVectorLength`, `Moby_StartTumble`, `FindMobyByPvarId`, `SpawnExplosionFx` |
+| `func_L08_002E95E8` | Moby458Update | 458 rocket | 8, 12 | decomp | `void(u32)` | **`Moby_Rocket458_Update`** |  | `PartType02Spawn`, `ClampVectorLength` |
+| `func_L08_002EA0A8` | Moby462Update | 462 shrub | 8 | decomp | `void(u32)` | **`Moby_Shrub_Update`** | SwarmVars_EA0A8 | `SpawnChildMobys`, `MobySpringTurn`, `LaunchDamagedPartSmall`, `UpdateTwelvePartMobys`, `Moby435Spawn`, `SpawnExplosionFx` |
+| `func_L08_002EAF48` | SwarmLeaderUpdate | 463 | 8 | decomp | `void(u32)` | **`Moby_Class463_Update`** | SwarmVars_2EAF48 | `BuildPartHierarchy`, `MobySpringTurn`, `LaunchDamagedSwarmPart`, `UpdateSixteenPartMobys`, `Moby435Spawn`, `SpawnExplosionFx` |
+| `func_L08_002EB770` | GroupClearUpdate | 467, 472 | 8 | decomp | `void(u32)` | **`Moby_Class467_Update`** |  |  |
+| `func_L08_002EB980` | GateSwingUpdate | 468, 469 | 8 | decomp | `void(u32)` | **`Moby_Class468_Update`** | SwingGateVars | `Sound_SetPitchBend`, `func_001FA218`, `func_001F9EE8` |
+| `func_L08_002F2A08` | Moby600Update | 600 | 8 | decomp | `void(u32)` | **`Moby_Class600_Update`** |  | `ScaleColorTables`, `AdvanceScrollOffsets`, `AdvanceWavePhase`, `AdvanceScrollEntry` |
+| `func_L08_002F5980` | Moby621Update | 621 | 8 | decomp | `void(u32)` | **`Moby_Class621_Update`** | SwarmPathFollower | `MobySpringTurn` |
+| `func_L08_002F6CF0` | Moby648Update | 648 | 8, 10 | decomp | `void(u32)` | **`Moby_Class648_Update`** |  | `func_001FA218`, `PartType02Spawn` |
+| `func_L08_002F8560` | FlickerLightUpdate | 671 | 8 | decomp | `void(u32)` | **`Moby_Class671_Update`** | FlickerLightVars_2F8560 | `STUB_printf`, `UpdatePointLight`, `FreePointLight` |
+| `func_L08_00302618` | ParatrooperUpdate | 1023 blarg_paratrooper | 8-9 | decomp | `void(u32)` | **`Moby_BlargParatrooper_Update`** |  | `Manipulator_ApplyScale`, `SetGroundHeightBand`, `func_L08_00303998`, `STUB_printf`, `MoveCtl_Init`, `func_001160D8`, `FindClosestDistanceEntry`, `ClassifyTargetInCone`, `MobyGetFrameValue`, `func_001F9C08` |
+| `func_L08_003041A8` | CommandoUpdate | 1130 commando | 8 | decomp | `void(u32)` | **`Moby_Commando_Update`** |  | `AttachManipulatorsIfCheat`, `SetGroundHeightBand`, `DialogRequest_Init`, `Npc_TryStartDialog`, `PlaceMarkerAheadOfMoby`, `UnlockPlanet`, `ShowPlanetBanner`, `SetLevelTriggerDone`, `PauseMenu_SeedSnapshot`, `memcard_Save` |
+| `func_L08_00306730` | DeserterUpdate | 1144 batalia_deserter | 8 | decomp | `void(u32)` | **`Moby_BataliaDeserter_Update`** |  | `TriggerMobysOfClass`, `SetGroundHeightBand`, `DialogRequest_Init`, `SetLevelTriggerDone`, `Npc_TryStartDialog`, `PlaceMarkerAheadOfMoby`, `UnlockPlanet`, `memcard_Save`, `BuildSphericalOffset`, `func_001F9CE8` |
+| `func_L08_00307A98` | Moby1283Update | 1283 the_plumber_batalia | 8 | decomp | `void(u32)` | **`Moby_ThePlumberBatalia_Update`** |  | `Moby1283_AttachCheatManipulators`, `DialogRequest_Init`, `Npc_TryStartDialog`, `PlaceMarkerAheadOfMoby`, `PauseMenu_SeedSnapshot`, `Moby1283_SetHeroState`, `PlayMovieEntryIfIdle`, `Hero_OnKilled`, `SetLevelTriggerDone`, `GiveItem` |
+| `func_L08_00308758` | FireBoltUpdate | 1292 | 8-9 | decomp | `void(u32)` | **`Moby_Class1292_Update`** |  | `func_L00_001FF240`, `PartType04Spawn`, `PostHitMessage`, `SpawnExplosionFx` |
+| `func_L08_00308A00` | Moby1349Update | 1349 | 8 | decomp | `void(u32)` | **`Moby_Class1349_Update`** |  | `PlayBankSound`, `ShowBanner`, `Help_Request` |
+| `func_L08_003091B0` | Moby1400Update | 1400 | 8, 12, 14 | decomp | `void(u32)` | **`Moby_Class1400_Update`** | Obj_3091B0 | `func_L08_00309050`, `func_L08_00211A38`, `AddSphericalOffset`, `func_001F9CE8`, `SampleHeightMap`, `SpawnKindParticle`, `Particle_SpawnByKind`, `SpawnImpactSparks` |
+| `func_L08_00309998` | Moby1553Update | 1553 | 8 | decomp | `void(u32)` | **`Moby_Class1553_Update`** |  | `SpawnMoby750Sparks` |
+| `func_L08_00309AB0` | Moby1629Update | 1629 | 8, 14 | decomp | `void(u32)` | **`Moby_Class1629_Update`** |  | `func_001F9CE8`, `SpawnKindParticle` |
+| `func_L08_0030A150` | Moby1641Update | 1641 | 8 | decomp | `void(u32)` | **`Moby_Class1641_Update`** |  | `func_001FA1F8`, `func_001F9EC0`, `SpawnParticleType4D` |
+| `func_L08_0030AC70` | Moby1649Update | 1649 | 8 | decomp | `void(u32)` | **`Moby_Class1649_Update`** |  | `ScaleColorTables`, `AdvanceScrollOffsets`, `AdvanceWavePhase`, `AdvanceScrollEntry` |
+| `func_L09_002C3858` | AirshipPartUpdate | 1182 airship_part, 1183 airship_part, 1184 airship_part, 1185 airship_part, 1186 airship_part, 1187 airship_part, 1188 airship_part, 1189 airship_part | 9 | decomp | `void(u32)` | **`Moby_AirshipPart_Update`** |  | `SpawnAttachedMoby`, `FindClosestMobyOfClass`, `STUB_printf`, `func_00120778`, `func_002116A0`, `MobyBobZ`, `LissajousOffsetUpdate`, `func_001FA218`, `func_001F9EE8`, `SetDeathBits` |
+| `func_L09_002C6B30` | Moby52Update | 52 seeker | 9, 16 | decomp | `void(u32)` | **`Moby_Seeker_Update`** | Moby52Vars_2C6B30 | `ChaseEnemyUpdate`, `Manipulator_ApplyScale`, `SetGroundHeightBand`, `STUB_printf`, `MoveCtl_Init`, `MobyGroup_SetByteBC`, `MoveMobyWithCollision`, `SpawnExplosionFx`, `SetDeathBits` |
+| `func_L09_002E39E0` | GroundEnemyUpdate | 193 | 9, 15 | decomp | `void(u32)` | **`Moby_Class193_Update`** | Data_2E39E0 | `ComputeHitResponse`, `MobyGroup_SetByteBC`, `InitKnockback`, `SetDeathBits`, `RerollEffectCounter`, `Manipulator_ApplyScale`, `SetGroundHeightBand`, `FindNearestTargetMoby`, `MoveCtl_Init`, `func_001160D8` |
+| `func_L09_002ECC50` | AsteroidBeltUpdate | 263 asteroid, 264 asteroid, 265 asteroid, 266 asteroid, 267 asteroid | 9 | decomp | `void(u32)` | **`Moby_Asteroid_Update`** |  | `FadingDriftUpdate`, `FallingRockUpdate`, `SpawnFallingDebrisRing`, `SpawnPebble`, `AdvancePathIndexByDistance` |
+| `func_L09_002EEF80` | BreakableStackUpdate | 276 display, 1298 display_damaged, 1299 display_damaged | 9 | decomp | `void(u32)` | **`Moby_Display_Update`** |  | `SetDeathBits`, `SpawnMobyAtSource`, `JitterVector`, `func_001F9EC0`, `SpawnDebrisPiece`, `SpawnExplosionFx` |
+| `func_L09_002EF460` | Moby279Update | 279 | 9 | decomp | `void(u32)` | **`Moby_Class279_Update`** |  | `RerollEffectCounter`, `PartType27Spawn`, `Moby284Spawn` |
+| `func_L09_002F0780` | TumblingDebrisUpdate | 313 | 9 | decomp | `void(u32)` | **`Moby_Class313_Update`** |  | `PartType27Spawn`, `func_L00_001FF610` |
+| `func_L09_002F0D00` | HeavyTumblingDebrisUpdate | 320, 321 | 9 | decomp | `void(u32)` | **`Moby_Class320_Update`** |  | `PartType27Spawn`, `CollType`, `func_L00_001FF610` |
+| `func_L09_002F1390` | Moby417Update | 417 | 9 | decomp | `void(u32)` | **`Moby_Class417_Update`** |  |  |
+| `func_L09_002F9A50` | Moby664Update | 664 platform | 9 | decomp | `void(u32)` | **`Moby_Platform664_Update`** |  | `SpringAngle`, `TransformPointAboutPivot`, `MobyBobZ`, `LissajousOffsetUpdate`, `CarryRiders` |
+| `func_L09_00301C38` | Moby1000Update | 1000 | 9 | decomp | `void(u32)` | **`Moby_Class1000_Update`** |  | `PlayBankSound`, `ShowBanner`, `Help_Request` |
+| `func_L09_00304750` | PathPlatformL09_Update | 1150 elevator, 1151 elevator | 9 | decomp | `void(u32)` | **`Moby_Elevator1150_Update`** |  | `Hero_IsOnMoby`, `HeroEnterMoveState`, `CarryRiders` |
+| `func_L09_003050C0` | PressurePlateUpdate | 1172 refueling_station | 9 | decomp | `void(u32)` | **`Moby_RefuelingStation_Update`** |  | `ApplyHitToHealth` |
+| `func_L09_00305710` | AirshipChainLinkUpdate | 1181 airship_part | 9 | decomp | `void(u32)` | **`Moby_AirshipPart1181_Update`** |  | `FindNearestLinkTarget`, `STUB_printf` |
+| `func_L09_00306030` | MountableTurretUpdate | 1201 turret | 9 | decomp | `void(u32)` | **`Moby_Turret_Update`** | TurretVars | `FastMemZero16`, `CameraScript2`, `CameraScript`, `func_001F9EC0`, `UpdatePointLight`, `FreePointLight`, `func_001F9CE8`, `func_L00_001FF328`, `func_L00_001FFED8`, `MobyGetFrameValue` |
+| `func_L09_00306DD8` | Moby1206Update | 1206 | 9 | decomp | `void(u32)` | **`Moby_Class1206_Update`** | SweepData_306DD8 | `func_001F9EC0`, `InitHitQuery`, `STUB_printf` |
+| `func_L09_00309118` | EnemyShotUpdate | 1258 | 9-10 | decomp | `void(u32)` | **`Moby_Class1258_Update`** | ShotVars_307ba8_09118 | `func_L00_001FF500`, `func_L00_001FF610`, `PartType27Spawn` |
+| `func_L09_00309688` | BarrierUpdate | 1285 barrier, 1286 barrier, 1287 barrier, 1288 barrier | 9 | decomp | `void(u32)` | **`Moby_Barrier_Update`** |  | `CloneMobyAsClass`, `func_001F9EC0`, `SpawnDebrisPiece`, `SpawnExplosionFx` |
+| `func_L09_0030A560` | LinkedRiserUpdate | 1293, 1320 | 9 | decomp | `void(u32)` | **`Moby_Class1293_Update`** |  | `STUB_printf`, `SpringAngle`, `TransformPointAboutPivot`, `MobyBobZ`, `LissajousOffsetUpdate`, `CarryRiders` |
+| `func_L09_0030AFB8` | Moby1766Update | 1766 shuttle | 9 | decomp | `void(u32)` | **`Moby_Shuttle1766_Update`** | PathFlyerVars_00309c08 | `FUN_L00_00262b00`, `FUN_L00_00262b80`, `LinkedRiser_StepAlongPath`, `FUN_L00_00260738` |
+| `func_L09_0030BF88` | Moby1885Update | 1885 spawner | 9, 13 | decomp | `void(u32)` | **`Moby_Spawner1885_Update`** |  | `Moby_TickHitTimer`, `FindNearestEligibleMoby`, `CountLiveMoby1886Slots`, `func_L00_001FF548`, `RandomRadialOffset`, `JitterVector`, `ComputeLaunchVelocityZ`, `SpawnMoby1886` |
+| `func_L09_0030C7F0` | Moby1886Update | 1886 spawner_egg | 9, 13 | decomp | `void(u32)` | **`Moby_SpawnerEgg_Update`** | BubbleVars | `WrapAngle`, `Moby_SpawnChildFromOwner`, `Moby1886_ReleaseOwnerSlot`, `RecordMobyShadow` |
+| `func_L10_00296BD8` | Moby1033Update | 1033 platform | 10 | decomp | `void(u32)` | **`Moby_Platform1033_Update`** |  | `STUB_printf` |
+| `func_L10_00296DC0` | BobbingPlatformUpdate | 1117 platform | 10 | decomp | `void(u32)` | **`Moby_Platform1117_Update`** |  | `Hero_IsOnMoby`, `randf_sym`, `MobyBobZ`, `LissajousOffsetUpdate`, `CarryRiders` |
+| `func_L10_00299818` | SpinningPickupUpdate | 18 magnetboots | 10 | decomp | `void(u32)` | **`Moby_Magnetboots_Update`** |  | `DriftingSprites_Init`, `DriftingSprites_DrawL10`, `StartCutscene`, `ShowBanner`, `GiveItem`, `PauseMenu_SeedSnapshot`, `memcard_Save` |
+| `func_L10_00299D18` | Moby22Update | 22 | 10 | decomp | `void(u32)` | **`Moby_Class22_Update`** |  | `try_set_help_message`, `Hero_ResetToPosition`, `Hero_BeginObjectControl`, `MusicRequestTrack`, `ResetHelpState` |
+| `func_L10_002BFBB8` | NearHeroSparkleUpdate | 351 gadgebot_telepot_pad, 1301 bot_elevator | 10 | decomp | `void(u32)` | **`Moby_GadgebotTelepotPad_Update`** |  | `PartType53Spawn`, `Hero_ResetToPosition`, `PartType45Spawn`, `FastTweenColor`, `func_L00_002E9A40`, `func_L00_002E9B30`, `func_L00_002E9AF8`, `func_L00_002E9A18` |
+| `func_L10_002C8DE0` | Moby702Update | 702 | 10 | decomp | `void(u32)` | **`Moby_Class702_Update`** |  | `func_001FA218`, `func_001F9EE8`, `PartType40Spawn`, `Sound_PlayClassSound` |
+| `func_L10_002CB030` | Moby794Update | 794 | 10 | decomp | `void(u32)` | **`Moby_Class794_Update`** |  | `STUB_printf`, `HitMobysInBox` |
+| `func_L10_002CD6A8` | Moby819Update | 819 rocket | 10-11, 15, 17 | decomp | `void(u32)` | **`Moby_Rocket819_Update`** |  | `func_L00_001FF3E0`, `func_001F9B50`, `func_001F9CE8`, `SpringTurn`, `BuildSphericalOffset`, `PartType04Spawn`, `func_L00_001FF500`, `PostHitMessage`, `SpawnExplosionFx`, `Sound_PlayClassSound` |
+| `func_L10_002D8F40` | Moby859Update | 859 | 10 | decomp | `void(u32)` | **`Moby_Class859_Update`** |  | `FindNearestTargetMoby`, `Moby_StepZToward`, `func_L00_001FF500`, `InitDirectionalHitQuery`, `func_L00_001FF610`, `PartType27Spawn` |
+| `func_L10_002D9988` | Moby938Update | 938 bomb | 10 | decomp | `void(u32)` | **`Moby_Bomb938_Update`** |  | `HeadingFromVector`, `SwirlMoby_RayCollide`, `func_L00_00251358`, `func_L00_00251328`, `func_L00_001FF500`, `SendRadialMessageToMobys`, `SpawnExplosionFx` |
+| `func_L10_002D9FC0` | TimedShooterUpdate | 939 bombthrower_grass | 10 | decomp | `void(u32)` | **`Moby_BombthrowerGrass939_Update`** |  | `BuildSphericalOffset`, `SpawnSwirlMoby` |
+| `func_L10_002DA0F0` | ElectricSparkUpdate | 947 | 10 | decomp | `void(u32)` | **`Moby_Class947_Update`** |  | `STUB_printf`, `FreePointLight`, `PathSampleAtDistance`, `UpdatePointLight`, `SpawnMoby1090`, `Sound_PlayClassSound` |
+| `func_L10_002DA468` | HeightGlideUpdate | 1015 lab_door, 1282 flame_door | 10 | decomp | `void(u32)` | **`Moby_LabDoor_Update`** |  | `STUB_printf`, `IsPointInMobyBox` |
+| `func_L10_002DA678` | Moby1031Update | 1031 button | 10 | decomp | `void(u32)` | **`Moby_Button_Update`** |  | `func_L00_00251328` |
+| `func_L10_002DB278` | Moby1047Update | 1047 | 10 | decomp | `void(u32)` | **`Moby_Class1047_Update`** |  | `SpawnMoby1122AtOwner`, `Moby1921Spawn`, `Sound_PlayClassSound`, `func_001F9EC0`, `func_L00_001FF240`, `func_L01_002F9908` |
+| `func_L10_002DB688` | SoundPropUpdate | 1067 | 10 | decomp | `void(u32)` | **`Moby_Class1067_Update`** |  | `STUB_printf`, `func_001F9B50` |
 | `func_L10_002DE018` |  | 1073 | 10 | candidate | `void(u32)` | row: `Moby_Class1073_Update` |  | `rand_vec` |
-| `func_L10_002DE798` | Moby1090Update | 1090 | 10 | decomp | `void(u32)` | row: `Moby_Class1090_Update` |  | `PathSampleAtDistance`, `SendRadialMessageToMobys` |
-| `func_L10_002DEA10` | CollectibleTriggerUpdate | 1100 block_cave | 10 | decomp | `void(u32)` | row: `Moby_BlockCave_Update` |  | `func_001FA4A0`, `func_001F9EE8` |
-| `func_L10_002E0630` | Moby1196Update | 1196 screamer | 10 | decomp | `void(u32)` | row: `Moby_Screamer_Update` | D_2E0630 | `PathEnemyL10Update`, `Manipulator_ApplyScale`, `SetGroundHeightBand`, `ApproachWithVelocity`, `ClampVectorLength`, `MoveMobyScaledStep`, `Group_ActivateMobys`, `StepAngleToward`, `MobySpringTurn`, `SetDeathBits` |
-| `func_L10_002E1568` | Moby1199Update | 1199 | 10 | decomp | `void(u32)` | row: `Moby_Class1199_Update` | D_2E1568 | `OwnerTrackingShooterUpdate`, `Manipulator_ApplyScale`, `SetGroundHeightBand`, `func_L00_001FF240`, `ApproachWithVelocity`, `ClampVectorLength`, `MoveMobyScaledStep`, `Group_ResetTimers`, `MobySpringTurn`, `func_001F9CE8` |
-| `func_L10_002E30F8` | ToxicCrabUpdate | 1202 toxic_crab | 10 | decomp | `void(u32)` | row: `Moby_ToxicCrab_Update` |  | `ToxicCrabL10_Update`, `Manipulator_ApplyScale`, `MoveCtl_Init`, `MobySpringTurn`, `Group_ActivateMobys`, `ComputeNarrowedAimAngle`, `MobySteerToward`, `MobyGetFrameValue`, `func_L00_001FF240`, `CollType` |
-| `func_L10_002E5E48` | BlargShipUpdate | 1229 blarg_ship | 10 | decomp | `void(u32)` | row: `Moby_BlargShip_Update` |  | `Manipulator_ApplyScale`, `STUB_printf`, `Enemy_ProcessHit`, `Help_Request`, `MobySpringTurn`, `SpringTurn`, `func_L00_001FF240`, `IsFrameWithinWindow`, `BuildSphericalOffset`, `func_L03_00251AC8` |
-| `func_L10_002E6FA0` | ExhaustVentUpdate | 1240 | 10 | decomp | `void(u32)` | row: `Moby_Class1240_Update` |  | `BuildSphericalOffset`, `FastTweenColor`, `PartType64Spawn` |
-| `func_L10_002E9718` | NanotechVendorUpdate | 1326 nanotech_upgrade_vendor | 10 | decomp | `void(u32)` | row: `Moby_NanotechUpgradeVendor_Update` |  | `LevelTable_SetSlotValue`, `try_set_help_message`, `StartCutscene`, `memcard_Save`, `ShowBanner` |
-| `func_L10_002E9978` | Moby1344Update | 1344 | 10 | decomp | `void(u32)` | row: `Moby_Class1344_Update` |  | `Help_Request` |
-| `func_L10_002E9E70` | LinkedTurretUpdate | 1346 gun | 10 | decomp | `void(u32)` | row: `Moby_Gun_Update` |  | `SpringTurn`, `func_L00_001FF240`, `BuildSphericalOffset`, `SpawnEnemyShot` |
-| `func_L10_002EA3E8` | Moby1378Update | 1378 | 10, 17 | decomp | `void(u32)` | row: `Moby_Class1378_Update` |  | `func_001FA4A0`, `func_001F9EE8` |
-| `func_L10_002EAA08` | SwingDoorUpdate | 1421 gate_1 | 10 | decomp | `void(u32)` | row: `Moby_Gate1_Update` | DoorVars_e9648 | `Trigger_Arm` |
-| `func_L10_002EAD50` | Moby1424Update | 1424 gate_2 | 10 | decomp | `void(u32)` | row: `Moby_Gate2_Update` |  | `Trigger_Arm` |
-| `func_L10_002EB5B0` | EffectEmitterUpdate | 1544 | 10 | decomp | `void(u32)` | row: `Moby_Class1544_Update` |  | `EmitSparkBursts`, `EmitDripBursts`, `EmitSmokeParticle` |
-| `func_L10_002EC098` | Moby1555Update | 1555 | 10 | decomp | `void(u32)` | row: `Moby_Class1555_Update` |  | `SpawnMoby750Sparks` |
-| `func_L10_002ECAB0` | Moby1855Update | 1855 | 10 | decomp | `void(u32)` | row: `Moby_Class1855_Update` |  | `SpawnBreakFxByDistance`, `SpawnMobyBurstFx` |
-| `func_L10_002ECBA0` | Moby1856Update | 1856 | 10 | decomp | `void(u32)` | row: `Moby_Class1856_Update` |  | `SpawnBreakFxByDistance`, `SpawnMobyCopyingPlacement` |
-| `func_L11_002CC828` | PickupUpdate | 23 | 11 | decomp | `void(u32)` | row: `Moby_Class23_Update` |  | `memcard_Save`, `Help_Request` |
-| `func_L11_002CC950` | Moby37Update | 37 | 11-12 | decomp | `void(u32)` | row: `Moby_Class37_Update` |  | `func_00116248` |
-| `func_L11_002CC9D0` | Moby65Update | 65 | 11 | decomp | `void(u32)` | row: `Moby_Class65_Update` |  |  |
-| `func_L11_002D18D0` | Moby90Update | 90 bob | 11 | decomp | `void(u32)` | row: `Moby_Bob_Update` |  | `AttachCheatManipulatorToSiblings`, `DialogRequest_Init`, `Npc_TryStartDialog`, `PlaceMarkerAheadOfMoby`, `GiveItem`, `PauseMenu_SeedSnapshot`, `memcard_Save`, `HelpPopup_Cancel`, `Help_Request`, `BuildSphericalOffset` |
-| `func_L11_002D2168` | Moby114Update | 114 resort_owner | 11 | decomp | `void(u32)` | row: `Moby_ResortOwner_Update` |  | `AttachManipulatorsIfCheat`, `SetGroundHeightBand`, `BossL11_UpdateMovement`, `BossL11_MoveWithParts`, `PokitaruGuideUpdate`, `GuardHeadUpdate` |
-| `func_L11_002F21B0` | PokitaruVendorUpdate | 298 fred_pokitaru | 11 | decomp | `void(u32)` | row: `Moby_FredPokitaru_Update` |  | `AttachManipulatorsIfCheat`, `SetGroundHeightBand`, `DialogRequest_Init`, `Npc_TryStartDialog`, `PlaceMarkerAheadOfMoby`, `Help_Request`, `SetLevelTriggerDone`, `PauseMenu_SeedSnapshot`, `ShowBanner`, `memcard_Save` |
-| `func_L11_002F3888` | Moby318Update | 318 teleporter | 11 | decomp | `void(u32)` | row: `Moby_Teleporter318_Update` |  | `PlaceChildMobys`, `Moby318_ShowChildren`, `ShowStateHelpMessage`, `HeroSetTargetAndEnterMove`, `MobySphereHitDirectional`, `Level_GetSpecialMode`, `ApproachWithVelocity`, `Hero_ResetToPosition`, `MusicRequestTrack` |
-| `func_L11_002F46C0` | Moby361Update | 361 | 11 | decomp | `void(u32)` | row: `Moby_Class361_Update` |  |  |
-| `func_L11_00309DA0` |  | 1009 | 11, 13, 17 | decomp | `void(u32)` | row: `Moby_Class1009_Update` | MissileVars_089d0 | `FindBestAimMobyClass5`, `BuildSphericalOffset`, `Profile_Mark`, `InitHitQuery`, `func_L00_001FF610`, `PartType27Spawn` |
-| `func_L11_0030A468` | FireballUpdate | 1017 | 11, 13, 17 | decomp | `void(u32)` | row: `Moby_Class1017_Update` |  | `FastTweenColor`, `rand_vec`, `PartType27Spawn`, `InitDirectionalHitQuery`, `func_L00_001FF610` |
-| `func_L11_0030A8C8` | Moby1034Update | 1034 rocket | 11, 13, 17 | decomp | `void(u32)` | row: `Moby_Rocket1034_Update` | Missile | `PartType44Spawn`, `func_001F9EC0`, `build_look_at_matrix`, `PartType21Spawn`, `BuildSphericalOffset` |
-| `func_L11_0030AE90` | PokitaruBoatUpdate | 1075 pokitaru_boat | 11 | decomp | `void(u32)` | row: `Moby_PokitaruBoat_Update` | D_30AE90 | `RotatingParts_Update`, `func_001FA4A0`, `func_001F9EE8`, `ClampVectorLength`, `func_001F9CE8`, `Cam_SetDistanceGoal`, `func_L00_002E9968`, `func_001F9EC0`, `EnemyGroup_AllBusy`, `ApproachWithVelocity` |
-| `func_L11_0030C728` | OceanUpdate | 1111 ocean_pokitaru | 11, 16 | decomp | `void(u32)` | row: `Moby_OceanPokitaru_Update` |  |  |
-| `func_L11_0030DBF8` | CutsceneControllerUpdate | 1156 | 11 | decomp | `void(u32)` | row: `Moby_Class1156_Update` | Data_30DBF8 | `CutsceneController_ArrangeMobys`, `IsMoby1179Active`, `Hero_ResetToPosition`, `CameraScript`, `ApproachWithVelocity`, `func_001F9C08`, `CameraScript_SetPosition`, `CameraScript_SetLookAt`, `CameraScript2` |
-| `func_L11_0030EC70` | Moby1157Update | 1157 | 11 | decomp | `void(u32)` | row: `Moby_Class1157_Update` |  | `Hero_ResetToPosition`, `CameraScript`, `ApproachWithVelocity`, `func_001F9C08`, `CameraScript_SetPosition`, `CameraScript_SetLookAt`, `CameraScript2`, `LayoutChildMobyGrid` |
-| `func_L11_0030F4F8` | Moby1158Update | 1158 | 11 | decomp | `void(u32)` | row: `Moby_Class1158_Update` |  | `STUB_printf`, `RipplePatchesInit`, `RescaleFloatTable`, `RipplePatch_ToFixedPoint`, `BuildGridNeighbors`, `MobyGroup_SetState`, `ApproachWithVelocity`, `Group_CopyZToTableSlots`, `RippleDisturb`, `IsBSphereVisibleScaled` |
-| `func_L11_0030FE40` | Moby1159Update | 1159 | 11 | decomp | `void(u32)` | row: `Moby_Class1159_Update` |  | `func_L00_00251E30`, `ApproachWithVelocity` |
-| `func_L11_00310058` | Moby1178Update | 1178 seesaw_platform | 11 | decomp | `void(u32)` | row: `Moby_SeesawPlatform_Update` | L11TiltVars_10058 | `func_001FA4A0`, `func_001F9EE8`, `Hero_TrySetMoveStateL11`, `CarryRiders` |
-| `func_L11_003102C8` | Moby1179Update | 1179 thruster_pack_lock | 11, 15 | decomp | `void(u32)` | row: `Moby_ThrusterPackLock_Update` |  | `Help_Request` |
-| `func_L11_00310770` | Moby1180Update | 1180 | 11 | decomp | `void(u32)` | row: `Moby_Class1180_Update` |  | `IsMoby1179Active` |
-| `func_L11_00310BF0` | ShipCollider_Update | 1218 ammocrate, 1220 jet_fighter_health_crate | 11 | decomp | `void(u32)` | row: `Moby_Ammocrate_Update` |  | `Moby1219_SyncChild`, `func_001F9B50`, `RecordMobyShadow` |
-| `func_L11_003114F0` | Moby1219Update | 1219 | 11 | decomp | `void(u32)` | row: `Moby_Class1219_Update` |  | `ApplyHitToHealthL11`, `MobyGetFrameValue` |
-| `func_L11_00311648` | PsytcopusUpdate | 1231 psytcopus | 11 | decomp | `void(u32)` | row: `Moby_Psytcopus_Update` | PsyData_311648 | `PsytcopusMove`, `Manipulator_ApplyScale`, `SetGroundHeightBand`, `IsFrameWithinWindow`, `Moby1297_Spawn`, `Moby1297_Launch`, `IsPointInPolygon`, `SetDeathBits`, `SpawnExplosionFxSwapped` |
-| `func_L11_003146E0` | JetFighterUpdate | 1242 jet_fighter | 11 | decomp | `void(u32)` | row: `Moby_JetFighter_Update` |  | `BuildSphericalOffset`, `func_L00_001FF610`, `func_001F9CE8`, `Hero_TrySetMoveStateL11`, `func_L00_00251468`, `try_set_help_message`, `Help_Request`, `MusicRequestTrack`, `CameraScript`, `JetFighterFlight` |
-| `func_L11_00315788` | Moby1246Update | 1246 puffoid | 11 | decomp | `void(u32)` | row: `Moby_Puffoid_Update` | CreatureVars_4318 | `PathEnemyStep`, `Manipulator_ApplyScale`, `SetGroundHeightBand`, `MoveCtl_Init`, `func_001160D8`, `func_L00_0025A748`, `func_L00_001FF500`, `ComputeLaunchVelocityZ`, `Enemy_TurnTowardPoint`, `DoesSegmentCrossPath` |
-| `func_L11_00317790` | GateUpdate | 1248 | 11 | decomp | `void(u32)` | row: `Moby_Class1248_Update` | L11GateVars | `ApproachWithVelocity`, `func_L00_00251E30` |
-| `func_L11_00318730` | Moby1264Update | 1264 oil_tanker_front | 11 | decomp | `void(u32)` | row: `Moby_OilTankerFront_Update` |  | `PlaceGroupCraftsOnTable`, `Moby_OrientAlongPath`, `MoveChainAlongPath`, `ChainHandleHits` |
-| `func_L11_00319660` | BubblingVentUpdate | 1265 | 11 | decomp | `void(u32)` | row: `Moby_Class1265_Update` |  | `func_001F9EC0`, `rand_vec`, `Bubble_Spawn`, `SpawnExplosionFx` |
-| `func_L11_00319FA0` | Moby1297Update | 1297 energy_sphere | 11 | decomp | `void(u32)` | row: `Moby_EnergySphere1297_Update` |  | `Moby1297_EmitRingParticles`, `Moby1297_EmitBurstParticle` |
-| `func_L11_0031ACA8` | FlyingCraftUpdate | 1319 blarg_ship | 11 | decomp | `void(u32)` | row: `Moby_BlargShip1319_Update` |  | `CollectableCrateUpdate`, `randf_sym`, `TrailRingUpdate`, `PathOrbitMobyUpdate`, `SpawnExplosionFx`, `SpawnDirectedMoby`, `func_001FA1F8`, `ApproachWithVelocity`, `ClampVectorLength`, `func_001F9CE8` |
-| `func_L11_0031BEF0` | Moby1350Update | 1350 | 11 | decomp | `void(u32)` | row: `Moby_Class1350_Update` |  | `MobyGroup_CountNotInState`, `PlayBankSound`, `ShowBanner` |
-| `func_L11_0031BF78` | BubbleUpdate | 1524 | 11 | decomp | `void(u32)` | row: `Moby_Class1524_Update` |  | `Bubble_EmitParticle`, `SpawnSparksAndSmoke`, `rand_vec`, `PartType34Spawn`, `FastTweenColor`, `func_001F9CE8`, `func_L00_001FF500` |
-| `func_L11_0031F760` | PokitaruSurfaceNearUpdate | 1903 | 11 | decomp | `void(u32)` | row: `Moby_Class1903_Update` |  | `ScaleColorTables`, `AdvanceScrollOffsets`, `AdvanceWavePhase`, `AdvanceScrollEntry` |
-| `func_L11_003205C0` | PokitaruSurfaceFarUpdate | 1919 | 11 | decomp | `void(u32)` | row: `Moby_Class1919_Update` |  | `ScaleColorTables`, `AdvanceScrollOffsets`, `AdvanceWavePhase`, `AdvanceScrollEntry` |
-| `func_L12_002C0310` | Moby19Update | 19 | 12 | decomp | `void(u32)` | row: `Moby_Class19_Update` |  | `STUB_printf`, `RipplePatchesInit`, `RescaleFloatTable`, `RipplePatch_ToFixedPoint`, `Grid_LinkNeighbours`, `ApproachWithVelocity`, `Group_CopyZToTableSlots`, `RippleDisturb`, `IsBSphereVisibleScaled`, `RippleSimClock` |
-| `func_L12_002E2EF0` | HovenTrollUpdate | 238 | 12 | decomp | `void(u32)` | row: `Moby_Class238_Update` |  | `TrollDamageAndAlert`, `Manipulator_SetScale`, `FindNearestTargetMoby`, `MoveCtl_Init`, `func_001160D8`, `WanderSteer`, `MobyGroup_SetByteBC`, `SpawnParticleScatter27`, `MobySpringTurn`, `TrollPlayRandomIdle` |
-| `func_L12_002E51E8` | HovenPlatformUpdate | 240 platform | 12 | decomp | `void(u32)` | row: `Moby_Platform240_Update` |  | `HovenExhaustUpdate`, `MobyGroup_CountNotInState`, `Hero_IsOnMoby`, `HeroOffsetInMobyFrame`, `Moby240SteerToward`, `LerpVec4`, `func_L00_001F39B0`, `CarryRiders` |
-| `func_L12_002E7FC8` | MinerUpdate | 282 miner | 12 | decomp | `void(u32)` | row: `Moby_Miner_Update` | Data_2E7FC8 | `Moby_AttachCheatManipulators`, `DialogRequest_Init`, `SetMobyZBand`, `Npc_TryStartDialog`, `PlaceMarkerAheadOfMoby`, `ShowBanner`, `SetLevelTriggerDone`, `PauseMenu_SeedSnapshot`, `memcard_Save`, `BuildSphericalOffset` |
-| `func_L12_002E8588` | Moby293Update | 293 | 12 | decomp | `void(u32)` | row: `Moby_Class293_Update` |  |  |
-| `func_L12_002E8640` | Moby294Update | 294 blarg_trooper | 12 | decomp | `void(u32)` | row: `Moby_BlargTrooper294_Update` |  | `Manipulator_SetScale`, `MoveCtl_Init`, `func_001160D8`, `randf_sym`, `MobyBlendAnimationEx`, `IsPointWithinMobyLimits`, `FindClosestDistanceEntry`, `IsFrameWithinWindow`, `SpawnShotMoby`, `SetDeathBits` |
-| `func_L12_002EB2E8` | Moby326Update | 326 blarg_helicopter | 12 | decomp | `void(u32)` | row: `Moby_BlargHelicopter326_Update` |  | `FindNearestTargetMoby`, `Manipulator_ApplyScale`, `Moby326TakeDamage`, `LobbedMoby_Launch`, `Path_ComputeOpenSegmentLengths`, `SpawnMoby55B`, `FollowPath`, `Help_Request`, `SpringTurn`, `SpringTowardHeading` |
-| `func_L12_002EC8F0` | EdwinaUpdate | 328 edwina | 12 | decomp | `void(u32)` | row: `Moby_Edwina_Update` |  | `AttachCheatManipulatorToMatchingL03`, `DialogRequest_Init`, `SetMobyZBand`, `Npc_TryStartDialog`, `PlaceMarkerAheadOfMoby`, `SetLevelTriggerDone`, `PauseMenu_SeedSnapshot`, `GiveItem`, `ShowBanner`, `memcard_Save` |
-| `func_L12_002ED228` | Moby336Update | 336 helicopter | 12 | decomp | `void(u32)` | row: `Moby_Helicopter_Update` |  | `IsBSphereVisibleScaled`, `Moby336_HandleHit`, `InitPathSegmentLengths` |
-| `func_L12_002ED550` | Moby339Update | 339 crane_arm | 12 | decomp | `void(u32)` | row: `Moby_CraneArm_Update` |  |  |
-| `func_L12_002EDAA0` | WaterReservoirUpdate | 384 water_reservoir | 12 | decomp | `void(u32)` | row: `Moby_WaterReservoir_Update` |  | `rand_vec`, `PartType02Spawn` |
-| `func_L12_002EE180` | HovenShotUpdate | 409 rocket | 12 | decomp | `void(u32)` | row: `Moby_Rocket409_Update` | ShotVars_ece00 | `func_L00_001FF240`, `PartType04Spawn`, `InitDirectionalHitQuery`, `PostHitMessageFromRecord`, `SpawnExplosionFx` |
-| `func_L12_002EE600` | HovenChallengeUpdate | 422 | 12 | decomp | `void(u32)` | row: `Moby_Class422_Update` |  | `MobyGroup_CountNotInState`, `PlayBankSound`, `ShowBanner`, `Help_Request` |
-| `func_L12_00304310` | Moby1259Update | 1259 | 12 | decomp | `void(u32)` | row: `Moby_Class1259_Update` |  | `LerpVec4`, `ElectricArcUpdate`, `InitDirectionalHitQuery` |
-| `func_L12_00304920` | Moby1267Update | 1267 hoven_turret | 12 | decomp | `void(u32)` | row: `Moby_HovenTurret_Update` |  | `CameraScript`, `MobySetAnimation`, `HeroL12_SetMoveState`, `Moby1267_SetCameraView`, `UpdateViewConeTimer`, `Hero_OnKilled`, `DetachManipulator`, `SetLevelTriggerDone`, `PlayMovieEntryIfIdle`, `UnlockPlanet` |
-| `func_L12_003061E0` | HovenHomingMineUpdate | 1269 mine | 12 | decomp | `void(u32)` | row: `Moby_Mine1269_Update` | Data_304e00 | `FindNearestTargetMoby`, `ComputeHitResponse`, `SetDeathBits`, `Spring`, `InitDirectionalHitQuery`, `RecordMobyShadow` |
-| `func_L12_00307DB0` | PlanetbusterPartUpdate | 1274 planetbuster_maximus_part | 12 | decomp | `void(u32)` | row: `Moby_PlanetbusterMaximusPart_Update` |  | `TransformChildrenToParentSpace`, `Spring`, `MobyBobZ`, `LissajousOffsetUpdate`, `Moby_UpdateAttachedChildren`, `MobySpringTurn`, `TurretBatteryUpdate`, `SpringAngle`, `CameraScript_SetPosition`, `CameraScript_SetLookAt` |
-| `func_L12_00308C20` | DoorSwitchUpdate | 1281 homing_mine_spawner | 12 | decomp | `void(u32)` | row: `Moby_HomingMineSpawner_Update` |  | `Moby_UpdateApproachState`, `SpawnSlotDebris` |
-| `func_L12_00309590` | Moby1345Update | 1345 | 12 | decomp | `void(u32)` | row: `Moby_Class1345_Update` |  | `IsBSphereVisibleScaled`, `SetLevelTriggerDone` |
-| `func_L12_00309CF8` | LobbedMoby_UpdateFlight | 1371 blarg_commander | 12, 15 | decomp | `void(u32)` | row: `Moby_BlargCommander_Update` |  |  |
-| `func_L12_0030A7A8` | CutsceneVolumeTriggerUpdate | 1404 | 12 | decomp | `void(u32)` | row: `Moby_Class1404_Update` |  | `StartCutscene` |
-| `func_L12_0030A880` |  | 1557 | 12 | decomp | `void(u32)` | row: `Moby_Class1557_Update` |  | `SpawnMoby750Sparks` |
-| `func_L12_0030D3D0` | Moby1901Update | 1901 | 12 | decomp | `void(u32)` | row: `Moby_Class1901_Update` |  | `ScaleColorTables` |
-| `func_L13_002B2020` | ClipVolumeTriggerUpdate | 6 | 13 | decomp | `void(u32)` | row: `Moby_Class6_Update` |  | `STUB_printf`, `MobyGroup_SetState` |
-| `func_L13_002B4B90` | LiftL13_UpdateAlt | 21 elevator, 244 elevator | 13 | decomp | `void(u32)` | row: `Moby_Elevator21_Update` |  | `ApproachWithVelocity`, `ComputeFlankPosition`, `CameraScript_SetPosition`, `CameraScript_SetLookAt`, `HeroEnterMoveState`, `CameraScript2`, `CameraScript`, `CarryRiders` |
-| `func_L13_002B5368` | BlargTurretUpdate | 29 blarg_turret | 13 | decomp | `void(u32)` | row: `Moby_BlargTurret_Update` | Data_2B5368 | `Moby_PickTargetByState`, `Manipulator_ApplyScale`, `SpawnChildMoby24`, `SpawnAimedProjectile`, `rand_vec`, `SetDeathBits` |
-| `func_L13_002B5E30` | GemLockTurretUpdate | 36 blarg_gunner | 13 | decomp | `void(u32)` | row: `Moby_BlargGunner_Update` |  | `GemLockTurret_HandleHit` |
-| `func_L13_002B6288` | RobosquawkerUpdate | 63 robosquawker | 13 | decomp | `void(u32)` | row: `Moby_Robosquawker_Update` |  | `Manipulator_ApplyScale`, `SetGroundHeightBand`, `FindNearestTargetMoby`, `ComputeHitResponse`, `MobyGroup_SetByteBC`, `HeadingFromVector`, `InitKnockback`, `func_001160D8`, `KillAttachedParticle`, `RerollEffectCounter` |
-| `func_L13_002BC2D8` | JetFighterUpdateL13 | 69 fighter_jet | 13 | decomp | `void(u32)` | row: `Moby_FighterJet69_Update` |  | `BuildSphericalOffset`, `func_L00_001FF548`, `func_L00_001FF610`, `func_001F9CE8`, `SetGroupMobyFlags`, `SetMobyFlagsByClassList`, `SetStateOfMobysByClass`, `func_L00_00251468`, `try_set_help_message`, `HeroEnterMoveState` |
-| `func_L13_002C27B0` | HomingRocket82Update | 82 rocket | 13 | decomp | `void(u32)` | row: `Moby_Rocket82_Update` | Rocket_2C27B0 | `PartType44Spawn`, `func_001F9EC0`, `build_look_at_matrix`, `PartType21Spawn`, `BuildSphericalOffset` |
-| `func_L13_002C32D0` | Moby83Update | 83 mine | 13 | decomp | `void(u32)` | row: `Moby_Mine83_Update` |  | `InitDirectionalHitQuery` |
-| `func_L13_002C3840` | BlargSpaceFighterUpdate | 101 blarg_space_fighter | 13 | decomp | `void(u32)` | row: `Moby_BlargSpaceFighter_Update` |  | `BlargFighter_UpdateCommon`, `Moby1233Spawn`, `ApproachWithVelocity`, `Moby1233Init` |
-| `func_L13_002C56B0` | BlargFighter111Update | 111 blarg_space_fighter | 13 | decomp | `void(u32)` | row: `Moby_BlargSpaceFighter111_Update` | Data_2C56B0 | `STUB_printf`, `FindClosestDistanceEntry`, `BlargFighter_TakeHit`, `PathVehicle_ControlSpeed`, `FastVecCross`, `JitterVector`, `SpawnStreakMoby`, `func_001160D8`, `SpawnMobyAt` |
-| `func_L13_002C9208` | RotatingDoorUpdate | 127, 128, 159, 169 | 13 | decomp | `void(u32)` | row: `Moby_Class127_Update` |  |  |
-| `func_L13_002D0298` | ForcefieldTowerUpdate | 170 forcefield_tower | 13 | decomp | `void(u32)` | row: `Moby_ForcefieldTower_Update` |  | `Moby1632Spawn`, `EnableSoundEffect`, `func_001160D8`, `PartType05Spawn`, `Moby_TakeDamage`, `IsFrameWithinWindow`, `SpawnGemlikSparks` |
-| `func_L13_002E2980` | DriftingBlobUpdate | 212 asteroid, 1412 asteroid | 13 | decomp | `void(u32)` | row: `Moby_Asteroid212_Update` | BlobVarsP | `func_L00_001FF610`, `func_L00_001FF548`, `func_001160D8` |
-| `func_L13_002E3010` | ShipPickupUpdate | 224 ammocrate, 228 jet_fighter_health_crate | 13, 17 | decomp | `void(u32)` | row: `Moby_Ammocrate224_Update` |  | `func_001F9B50`, `MobyBobZ` |
-| `func_L13_002E5810` | SwitchUpdate | 231 | 13 | decomp | `void(u32)` | row: `Moby_Class231_Update` |  | `Moby_StepHealth`, `func_L00_00251328`, `MobyGroup_SetState`, `STUB_printf` |
-| `func_L13_002E8040` | Rocket295Update | 295 rocket | 13, 17 | decomp | `void(u32)` | row: `Moby_Rocket295_Update` |  | `PartType44Spawn`, `func_001F9EC0`, `build_look_at_matrix`, `PartType21Spawn`, `BuildSphericalOffset` |
-| `func_L13_002E9910` | FadeInHoldOutUpdate | 352 | 13 | decomp | `void(u32)` | row: `Moby_Class352_Update` |  | `OffsetShortPairTables` |
-| `func_L13_002EC4D0` | QwarkStarfighterPartUpdate | 388 qwarks_starfighter_part | 13 | decomp | `void(u32)` | row: `Moby_QwarksStarfighterPart_Update` |  | `SpawnChildMobyAtPoint`, `Hud_SetBarValueById`, `STUB_printf`, `queue_animation_update`, `Moby_SteerAlongPathFacing`, `FindClosestDistanceEntry`, `QwarkStarfighter_UpdateByMode`, `Path_ChooseDirectionTowardHero`, `VehiclePart_UpdateDamage`, `StepColorFade` |
-| `func_L13_002EE238` | StarfighterPartUpdate | 389 qwarks_starfighter_part, 390 qwarks_starfighter_part, 391 qwarks_starfighter_part, 392 qwarks_starfighter_part, 393 qwarks_starfighter_part, 394 qwarks_starfighter_part, 395 qwarks_starfighter_part, 396 qwarks_starfighter_part and 3 more | 13 | decomp | `void(u32)` | row: `Moby_QwarksStarfighterPart389_Update` |  | `func_L00_001FF610` |
-| `func_L13_002EE8E0` | GemLockPickupUpdate | 404 forcefield, 405 forcefield | 13 | decomp | `void(u32)` | row: `Moby_Forcefield_Update` |  | `func_L00_00251328`, `STUB_printf`, `Moby_HitMobysInBox`, `FreePointLight`, `OffsetShortPairTables` |
-| `func_L13_002F4BE8` | Moby_ClearUnlessTargeted | 533 purple_ship | 13 | decomp | `void(u32)` | row: `Moby_PurpleShip533_Update` |  |  |
-| `func_L13_002F4C10` | HelpVolumeUpdate | 558 | 13 | decomp | `void(u32)` | row: `Moby_Class558_Update` |  | `Help_Request` |
-| `func_L13_002F9D18` | MobyStateRelayUpdate | 667 | 13 | decomp | `void(u32)` | row: `Moby_Class667_Update` |  | `STUB_printf` |
-| `func_L13_002F9F10` | ControlledGateUpdate | 674, 677, 680 | 13 | decomp | `void(u32)` | row: `Moby_Class674_Update` |  | `STUB_printf`, `func_L00_00251328`, `OffsetShortPairTables` |
+| `func_L10_002DE798` | Moby1090Update | 1090 | 10 | decomp | `void(u32)` | **`Moby_Class1090_Update`** |  | `PathSampleAtDistance`, `SendRadialMessageToMobys` |
+| `func_L10_002DEA10` | CollectibleTriggerUpdate | 1100 block_cave | 10 | decomp | `void(u32)` | **`Moby_BlockCave_Update`** |  | `func_001FA4A0`, `func_001F9EE8` |
+| `func_L10_002E0630` | Moby1196Update | 1196 screamer | 10 | decomp | `void(u32)` | **`Moby_Screamer_Update`** | D_2E0630 | `PathEnemyL10Update`, `Manipulator_ApplyScale`, `SetGroundHeightBand`, `ApproachWithVelocity`, `ClampVectorLength`, `MoveMobyScaledStep`, `Group_ActivateMobys`, `StepAngleToward`, `MobySpringTurn`, `SetDeathBits` |
+| `func_L10_002E1568` | Moby1199Update | 1199 | 10 | decomp | `void(u32)` | **`Moby_Class1199_Update`** | D_2E1568 | `OwnerTrackingShooterUpdate`, `Manipulator_ApplyScale`, `SetGroundHeightBand`, `func_L00_001FF240`, `ApproachWithVelocity`, `ClampVectorLength`, `MoveMobyScaledStep`, `Group_ResetTimers`, `MobySpringTurn`, `func_001F9CE8` |
+| `func_L10_002E30F8` | ToxicCrabUpdate | 1202 toxic_crab | 10 | decomp | `void(u32)` | **`Moby_ToxicCrab_Update`** |  | `ToxicCrabL10_Update`, `Manipulator_ApplyScale`, `MoveCtl_Init`, `MobySpringTurn`, `Group_ActivateMobys`, `ComputeNarrowedAimAngle`, `MobySteerToward`, `MobyGetFrameValue`, `func_L00_001FF240`, `CollType` |
+| `func_L10_002E5E48` | BlargShipUpdate | 1229 blarg_ship | 10 | decomp | `void(u32)` | **`Moby_BlargShip_Update`** |  | `Manipulator_ApplyScale`, `STUB_printf`, `Enemy_ProcessHit`, `Help_Request`, `MobySpringTurn`, `SpringTurn`, `func_L00_001FF240`, `IsFrameWithinWindow`, `BuildSphericalOffset`, `func_L03_00251AC8` |
+| `func_L10_002E6FA0` | ExhaustVentUpdate | 1240 | 10 | decomp | `void(u32)` | **`Moby_Class1240_Update`** |  | `BuildSphericalOffset`, `FastTweenColor`, `PartType64Spawn` |
+| `func_L10_002E9718` | NanotechVendorUpdate | 1326 nanotech_upgrade_vendor | 10 | decomp | `void(u32)` | **`Moby_NanotechUpgradeVendor_Update`** |  | `LevelTable_SetSlotValue`, `try_set_help_message`, `StartCutscene`, `memcard_Save`, `ShowBanner` |
+| `func_L10_002E9978` | Moby1344Update | 1344 | 10 | decomp | `void(u32)` | **`Moby_Class1344_Update`** |  | `Help_Request` |
+| `func_L10_002E9E70` | LinkedTurretUpdate | 1346 gun | 10 | decomp | `void(u32)` | **`Moby_Gun_Update`** |  | `SpringTurn`, `func_L00_001FF240`, `BuildSphericalOffset`, `SpawnEnemyShot` |
+| `func_L10_002EA3E8` | Moby1378Update | 1378 | 10, 17 | decomp | `void(u32)` | **`Moby_Class1378_Update`** |  | `func_001FA4A0`, `func_001F9EE8` |
+| `func_L10_002EAA08` | SwingDoorUpdate | 1421 gate_1 | 10 | decomp | `void(u32)` | **`Moby_Gate1_Update`** | DoorVars_e9648 | `Trigger_Arm` |
+| `func_L10_002EAD50` | Moby1424Update | 1424 gate_2 | 10 | decomp | `void(u32)` | **`Moby_Gate2_Update`** |  | `Trigger_Arm` |
+| `func_L10_002EB5B0` | EffectEmitterUpdate | 1544 | 10 | decomp | `void(u32)` | **`Moby_Class1544_Update`** |  | `EmitSparkBursts`, `EmitDripBursts`, `EmitSmokeParticle` |
+| `func_L10_002EC098` | Moby1555Update | 1555 | 10 | decomp | `void(u32)` | **`Moby_Class1555_Update`** |  | `SpawnMoby750Sparks` |
+| `func_L10_002ECAB0` | Moby1855Update | 1855 | 10 | decomp | `void(u32)` | **`Moby_Class1855_Update`** |  | `SpawnBreakFxByDistance`, `SpawnMobyBurstFx` |
+| `func_L10_002ECBA0` | Moby1856Update | 1856 | 10 | decomp | `void(u32)` | **`Moby_Class1856_Update`** |  | `SpawnBreakFxByDistance`, `SpawnMobyCopyingPlacement` |
+| `func_L11_002CC828` | PickupUpdate | 23 | 11 | decomp | `void(u32)` | **`Moby_Class23_Update`** |  | `memcard_Save`, `Help_Request` |
+| `func_L11_002CC950` | Moby37Update | 37 | 11-12 | decomp | `void(u32)` | **`Moby_Class37_Update`** |  | `func_00116248` |
+| `func_L11_002CC9D0` | Moby65Update | 65 | 11 | decomp | `void(u32)` | **`Moby_Class65_Update`** |  |  |
+| `func_L11_002D18D0` | Moby90Update | 90 bob | 11 | decomp | `void(u32)` | **`Moby_Bob_Update`** |  | `AttachCheatManipulatorToSiblings`, `DialogRequest_Init`, `Npc_TryStartDialog`, `PlaceMarkerAheadOfMoby`, `GiveItem`, `PauseMenu_SeedSnapshot`, `memcard_Save`, `HelpPopup_Cancel`, `Help_Request`, `BuildSphericalOffset` |
+| `func_L11_002D2168` | Moby114Update | 114 resort_owner | 11 | decomp | `void(u32)` | **`Moby_ResortOwner_Update`** |  | `AttachManipulatorsIfCheat`, `SetGroundHeightBand`, `BossL11_UpdateMovement`, `BossL11_MoveWithParts`, `PokitaruGuideUpdate`, `GuardHeadUpdate` |
+| `func_L11_002F21B0` | PokitaruVendorUpdate | 298 fred_pokitaru | 11 | decomp | `void(u32)` | **`Moby_FredPokitaru_Update`** |  | `AttachManipulatorsIfCheat`, `SetGroundHeightBand`, `DialogRequest_Init`, `Npc_TryStartDialog`, `PlaceMarkerAheadOfMoby`, `Help_Request`, `SetLevelTriggerDone`, `PauseMenu_SeedSnapshot`, `ShowBanner`, `memcard_Save` |
+| `func_L11_002F3888` | Moby318Update | 318 teleporter | 11 | decomp | `void(u32)` | **`Moby_Teleporter318_Update`** |  | `PlaceChildMobys`, `Moby318_ShowChildren`, `ShowStateHelpMessage`, `HeroSetTargetAndEnterMove`, `MobySphereHitDirectional`, `Level_GetSpecialMode`, `ApproachWithVelocity`, `Hero_ResetToPosition`, `MusicRequestTrack` |
+| `func_L11_002F46C0` | Moby361Update | 361 | 11 | decomp | `void(u32)` | **`Moby_Class361_Update`** |  |  |
+| `func_L11_00309DA0` |  | 1009 | 11, 13, 17 | decomp | `void(u32)` | **`Moby_Class1009_Update`** | MissileVars_089d0 | `FindBestAimMobyClass5`, `BuildSphericalOffset`, `Profile_Mark`, `InitHitQuery`, `func_L00_001FF610`, `PartType27Spawn` |
+| `func_L11_0030A468` | FireballUpdate | 1017 | 11, 13, 17 | decomp | `void(u32)` | **`Moby_Class1017_Update`** |  | `FastTweenColor`, `rand_vec`, `PartType27Spawn`, `InitDirectionalHitQuery`, `func_L00_001FF610` |
+| `func_L11_0030A8C8` | Moby1034Update | 1034 rocket | 11, 13, 17 | decomp | `void(u32)` | **`Moby_Rocket1034_Update`** | Missile | `PartType44Spawn`, `func_001F9EC0`, `build_look_at_matrix`, `PartType21Spawn`, `BuildSphericalOffset` |
+| `func_L11_0030AE90` | PokitaruBoatUpdate | 1075 pokitaru_boat | 11 | decomp | `void(u32)` | **`Moby_PokitaruBoat_Update`** | D_30AE90 | `RotatingParts_Update`, `func_001FA4A0`, `func_001F9EE8`, `ClampVectorLength`, `func_001F9CE8`, `Cam_SetDistanceGoal`, `func_L00_002E9968`, `func_001F9EC0`, `EnemyGroup_AllBusy`, `ApproachWithVelocity` |
+| `func_L11_0030C728` | OceanUpdate | 1111 ocean_pokitaru | 11, 16 | decomp | `void(u32)` | **`Moby_OceanPokitaru_Update`** |  |  |
+| `func_L11_0030DBF8` | CutsceneControllerUpdate | 1156 | 11 | decomp | `void(u32)` | **`Moby_Class1156_Update`** | Data_30DBF8 | `CutsceneController_ArrangeMobys`, `IsMoby1179Active`, `Hero_ResetToPosition`, `CameraScript`, `ApproachWithVelocity`, `func_001F9C08`, `CameraScript_SetPosition`, `CameraScript_SetLookAt`, `CameraScript2` |
+| `func_L11_0030EC70` | Moby1157Update | 1157 | 11 | decomp | `void(u32)` | **`Moby_Class1157_Update`** |  | `Hero_ResetToPosition`, `CameraScript`, `ApproachWithVelocity`, `func_001F9C08`, `CameraScript_SetPosition`, `CameraScript_SetLookAt`, `CameraScript2`, `LayoutChildMobyGrid` |
+| `func_L11_0030F4F8` | Moby1158Update | 1158 | 11 | decomp | `void(u32)` | **`Moby_Class1158_Update`** |  | `STUB_printf`, `RipplePatchesInit`, `RescaleFloatTable`, `RipplePatch_ToFixedPoint`, `BuildGridNeighbors`, `MobyGroup_SetState`, `ApproachWithVelocity`, `Group_CopyZToTableSlots`, `RippleDisturb`, `IsBSphereVisibleScaled` |
+| `func_L11_0030FE40` | Moby1159Update | 1159 | 11 | decomp | `void(u32)` | **`Moby_Class1159_Update`** |  | `func_L00_00251E30`, `ApproachWithVelocity` |
+| `func_L11_00310058` | Moby1178Update | 1178 seesaw_platform | 11 | decomp | `void(u32)` | **`Moby_SeesawPlatform_Update`** | L11TiltVars_10058 | `func_001FA4A0`, `func_001F9EE8`, `Hero_TrySetMoveStateL11`, `CarryRiders` |
+| `func_L11_003102C8` | Moby1179Update | 1179 thruster_pack_lock | 11, 15 | decomp | `void(u32)` | **`Moby_ThrusterPackLock_Update`** |  | `Help_Request` |
+| `func_L11_00310770` | Moby1180Update | 1180 | 11 | decomp | `void(u32)` | **`Moby_Class1180_Update`** |  | `IsMoby1179Active` |
+| `func_L11_00310BF0` | ShipCollider_Update | 1218 ammocrate, 1220 jet_fighter_health_crate | 11 | decomp | `void(u32)` | **`Moby_Ammocrate_Update`** |  | `Moby1219_SyncChild`, `func_001F9B50`, `RecordMobyShadow` |
+| `func_L11_003114F0` | Moby1219Update | 1219 | 11 | decomp | `void(u32)` | **`Moby_Class1219_Update`** |  | `ApplyHitToHealthL11`, `MobyGetFrameValue` |
+| `func_L11_00311648` | PsytcopusUpdate | 1231 psytcopus | 11 | decomp | `void(u32)` | **`Moby_Psytcopus_Update`** | PsyData_311648 | `PsytcopusMove`, `Manipulator_ApplyScale`, `SetGroundHeightBand`, `IsFrameWithinWindow`, `Moby1297_Spawn`, `Moby1297_Launch`, `IsPointInPolygon`, `SetDeathBits`, `SpawnExplosionFxSwapped` |
+| `func_L11_003146E0` | JetFighterUpdate | 1242 jet_fighter | 11 | decomp | `void(u32)` | **`Moby_JetFighter_Update`** |  | `BuildSphericalOffset`, `func_L00_001FF610`, `func_001F9CE8`, `Hero_TrySetMoveStateL11`, `func_L00_00251468`, `try_set_help_message`, `Help_Request`, `MusicRequestTrack`, `CameraScript`, `JetFighterFlight` |
+| `func_L11_00315788` | Moby1246Update | 1246 puffoid | 11 | decomp | `void(u32)` | **`Moby_Puffoid_Update`** | CreatureVars_4318 | `PathEnemyStep`, `Manipulator_ApplyScale`, `SetGroundHeightBand`, `MoveCtl_Init`, `func_001160D8`, `func_L00_0025A748`, `func_L00_001FF500`, `ComputeLaunchVelocityZ`, `Enemy_TurnTowardPoint`, `DoesSegmentCrossPath` |
+| `func_L11_00317790` | GateUpdate | 1248 | 11 | decomp | `void(u32)` | **`Moby_Class1248_Update`** | L11GateVars | `ApproachWithVelocity`, `func_L00_00251E30` |
+| `func_L11_00318730` | Moby1264Update | 1264 oil_tanker_front | 11 | decomp | `void(u32)` | **`Moby_OilTankerFront_Update`** |  | `PlaceGroupCraftsOnTable`, `Moby_OrientAlongPath`, `MoveChainAlongPath`, `ChainHandleHits` |
+| `func_L11_00319660` | BubblingVentUpdate | 1265 | 11 | decomp | `void(u32)` | **`Moby_Class1265_Update`** |  | `func_001F9EC0`, `rand_vec`, `Bubble_Spawn`, `SpawnExplosionFx` |
+| `func_L11_00319FA0` | Moby1297Update | 1297 energy_sphere | 11 | decomp | `void(u32)` | **`Moby_EnergySphere1297_Update`** |  | `Moby1297_EmitRingParticles`, `Moby1297_EmitBurstParticle` |
+| `func_L11_0031ACA8` | FlyingCraftUpdate | 1319 blarg_ship | 11 | decomp | `void(u32)` | **`Moby_BlargShip1319_Update`** |  | `CollectableCrateUpdate`, `randf_sym`, `TrailRingUpdate`, `PathOrbitMobyUpdate`, `SpawnExplosionFx`, `SpawnDirectedMoby`, `func_001FA1F8`, `ApproachWithVelocity`, `ClampVectorLength`, `func_001F9CE8` |
+| `func_L11_0031BEF0` | Moby1350Update | 1350 | 11 | decomp | `void(u32)` | **`Moby_Class1350_Update`** |  | `MobyGroup_CountNotInState`, `PlayBankSound`, `ShowBanner` |
+| `func_L11_0031BF78` | BubbleUpdate | 1524 | 11 | decomp | `void(u32)` | **`Moby_Class1524_Update`** |  | `Bubble_EmitParticle`, `SpawnSparksAndSmoke`, `rand_vec`, `PartType34Spawn`, `FastTweenColor`, `func_001F9CE8`, `func_L00_001FF500` |
+| `func_L11_0031F760` | PokitaruSurfaceNearUpdate | 1903 | 11 | decomp | `void(u32)` | **`Moby_Class1903_Update`** |  | `ScaleColorTables`, `AdvanceScrollOffsets`, `AdvanceWavePhase`, `AdvanceScrollEntry` |
+| `func_L11_003205C0` | PokitaruSurfaceFarUpdate | 1919 | 11 | decomp | `void(u32)` | **`Moby_Class1919_Update`** |  | `ScaleColorTables`, `AdvanceScrollOffsets`, `AdvanceWavePhase`, `AdvanceScrollEntry` |
+| `func_L12_002C0310` | Moby19Update | 19 | 12 | decomp | `void(u32)` | **`Moby_Class19_Update`** |  | `STUB_printf`, `RipplePatchesInit`, `RescaleFloatTable`, `RipplePatch_ToFixedPoint`, `Grid_LinkNeighbours`, `ApproachWithVelocity`, `Group_CopyZToTableSlots`, `RippleDisturb`, `IsBSphereVisibleScaled`, `RippleSimClock` |
+| `func_L12_002E2EF0` | HovenTrollUpdate | 238 | 12 | decomp | `void(u32)` | **`Moby_Class238_Update`** |  | `TrollDamageAndAlert`, `Manipulator_SetScale`, `FindNearestTargetMoby`, `MoveCtl_Init`, `func_001160D8`, `WanderSteer`, `MobyGroup_SetByteBC`, `SpawnParticleScatter27`, `MobySpringTurn`, `TrollPlayRandomIdle` |
+| `func_L12_002E51E8` | HovenPlatformUpdate | 240 platform | 12 | decomp | `void(u32)` | **`Moby_Platform240_Update`** |  | `HovenExhaustUpdate`, `MobyGroup_CountNotInState`, `Hero_IsOnMoby`, `HeroOffsetInMobyFrame`, `Moby240SteerToward`, `LerpVec4`, `func_L00_001F39B0`, `CarryRiders` |
+| `func_L12_002E7FC8` | MinerUpdate | 282 miner | 12 | decomp | `void(u32)` | **`Moby_Miner_Update`** | Data_2E7FC8 | `Moby_AttachCheatManipulators`, `DialogRequest_Init`, `SetMobyZBand`, `Npc_TryStartDialog`, `PlaceMarkerAheadOfMoby`, `ShowBanner`, `SetLevelTriggerDone`, `PauseMenu_SeedSnapshot`, `memcard_Save`, `BuildSphericalOffset` |
+| `func_L12_002E8588` | Moby293Update | 293 | 12 | decomp | `void(u32)` | **`Moby_Class293_Update`** |  |  |
+| `func_L12_002E8640` | Moby294Update | 294 blarg_trooper | 12 | decomp | `void(u32)` | **`Moby_BlargTrooper294_Update`** |  | `Manipulator_SetScale`, `MoveCtl_Init`, `func_001160D8`, `randf_sym`, `MobyBlendAnimationEx`, `IsPointWithinMobyLimits`, `FindClosestDistanceEntry`, `IsFrameWithinWindow`, `SpawnShotMoby`, `SetDeathBits` |
+| `func_L12_002EB2E8` | Moby326Update | 326 blarg_helicopter | 12 | decomp | `void(u32)` | **`Moby_BlargHelicopter326_Update`** |  | `FindNearestTargetMoby`, `Manipulator_ApplyScale`, `Moby326TakeDamage`, `LobbedMoby_Launch`, `Path_ComputeOpenSegmentLengths`, `SpawnMoby55B`, `FollowPath`, `Help_Request`, `SpringTurn`, `SpringTowardHeading` |
+| `func_L12_002EC8F0` | EdwinaUpdate | 328 edwina | 12 | decomp | `void(u32)` | **`Moby_Edwina_Update`** |  | `AttachCheatManipulatorToMatchingL03`, `DialogRequest_Init`, `SetMobyZBand`, `Npc_TryStartDialog`, `PlaceMarkerAheadOfMoby`, `SetLevelTriggerDone`, `PauseMenu_SeedSnapshot`, `GiveItem`, `ShowBanner`, `memcard_Save` |
+| `func_L12_002ED228` | Moby336Update | 336 helicopter | 12 | decomp | `void(u32)` | **`Moby_Helicopter_Update`** |  | `IsBSphereVisibleScaled`, `Moby336_HandleHit`, `InitPathSegmentLengths` |
+| `func_L12_002ED550` | Moby339Update | 339 crane_arm | 12 | decomp | `void(u32)` | **`Moby_CraneArm_Update`** |  |  |
+| `func_L12_002EDAA0` | WaterReservoirUpdate | 384 water_reservoir | 12 | decomp | `void(u32)` | **`Moby_WaterReservoir_Update`** |  | `rand_vec`, `PartType02Spawn` |
+| `func_L12_002EE180` | HovenShotUpdate | 409 rocket | 12 | decomp | `void(u32)` | **`Moby_Rocket409_Update`** | ShotVars_ece00 | `func_L00_001FF240`, `PartType04Spawn`, `InitDirectionalHitQuery`, `PostHitMessageFromRecord`, `SpawnExplosionFx` |
+| `func_L12_002EE600` | HovenChallengeUpdate | 422 | 12 | decomp | `void(u32)` | **`Moby_Class422_Update`** |  | `MobyGroup_CountNotInState`, `PlayBankSound`, `ShowBanner`, `Help_Request` |
+| `func_L12_00304310` | Moby1259Update | 1259 | 12 | decomp | `void(u32)` | **`Moby_Class1259_Update`** |  | `LerpVec4`, `ElectricArcUpdate`, `InitDirectionalHitQuery` |
+| `func_L12_00304920` | Moby1267Update | 1267 hoven_turret | 12 | decomp | `void(u32)` | **`Moby_HovenTurret_Update`** |  | `CameraScript`, `MobySetAnimation`, `HeroL12_SetMoveState`, `Moby1267_SetCameraView`, `UpdateViewConeTimer`, `Hero_OnKilled`, `DetachManipulator`, `SetLevelTriggerDone`, `PlayMovieEntryIfIdle`, `UnlockPlanet` |
+| `func_L12_003061E0` | HovenHomingMineUpdate | 1269 mine | 12 | decomp | `void(u32)` | **`Moby_Mine1269_Update`** | Data_304e00 | `FindNearestTargetMoby`, `ComputeHitResponse`, `SetDeathBits`, `Spring`, `InitDirectionalHitQuery`, `RecordMobyShadow` |
+| `func_L12_00307DB0` | PlanetbusterPartUpdate | 1274 planetbuster_maximus_part | 12 | decomp | `void(u32)` | **`Moby_PlanetbusterMaximusPart_Update`** |  | `TransformChildrenToParentSpace`, `Spring`, `MobyBobZ`, `LissajousOffsetUpdate`, `Moby_UpdateAttachedChildren`, `MobySpringTurn`, `TurretBatteryUpdate`, `SpringAngle`, `CameraScript_SetPosition`, `CameraScript_SetLookAt` |
+| `func_L12_00308C20` | DoorSwitchUpdate | 1281 homing_mine_spawner | 12 | decomp | `void(u32)` | **`Moby_HomingMineSpawner_Update`** |  | `Moby_UpdateApproachState`, `SpawnSlotDebris` |
+| `func_L12_00309590` | Moby1345Update | 1345 | 12 | decomp | `void(u32)` | **`Moby_Class1345_Update`** |  | `IsBSphereVisibleScaled`, `SetLevelTriggerDone` |
+| `func_L12_00309CF8` | LobbedMoby_UpdateFlight | 1371 blarg_commander | 12, 15 | decomp | `void(u32)` | **`Moby_BlargCommander_Update`** |  |  |
+| `func_L12_0030A7A8` | CutsceneVolumeTriggerUpdate | 1404 | 12 | decomp | `void(u32)` | **`Moby_Class1404_Update`** |  | `StartCutscene` |
+| `func_L12_0030A880` |  | 1557 | 12 | decomp | `void(u32)` | **`Moby_Class1557_Update`** |  | `SpawnMoby750Sparks` |
+| `func_L12_0030D3D0` | Moby1901Update | 1901 | 12 | decomp | `void(u32)` | **`Moby_Class1901_Update`** |  | `ScaleColorTables` |
+| `func_L13_002B2020` | ClipVolumeTriggerUpdate | 6 | 13 | decomp | `void(u32)` | **`Moby_Class6_Update`** |  | `STUB_printf`, `MobyGroup_SetState` |
+| `func_L13_002B4B90` | LiftL13_UpdateAlt | 21 elevator, 244 elevator | 13 | decomp | `void(u32)` | **`Moby_Elevator21_Update`** |  | `ApproachWithVelocity`, `ComputeFlankPosition`, `CameraScript_SetPosition`, `CameraScript_SetLookAt`, `HeroEnterMoveState`, `CameraScript2`, `CameraScript`, `CarryRiders` |
+| `func_L13_002B5368` | BlargTurretUpdate | 29 blarg_turret | 13 | decomp | `void(u32)` | **`Moby_BlargTurret_Update`** | Data_2B5368 | `Moby_PickTargetByState`, `Manipulator_ApplyScale`, `SpawnChildMoby24`, `SpawnAimedProjectile`, `rand_vec`, `SetDeathBits` |
+| `func_L13_002B5E30` | GemLockTurretUpdate | 36 blarg_gunner | 13 | decomp | `void(u32)` | **`Moby_BlargGunner_Update`** |  | `GemLockTurret_HandleHit` |
+| `func_L13_002B6288` | RobosquawkerUpdate | 63 robosquawker | 13 | decomp | `void(u32)` | **`Moby_Robosquawker_Update`** |  | `Manipulator_ApplyScale`, `SetGroundHeightBand`, `FindNearestTargetMoby`, `ComputeHitResponse`, `MobyGroup_SetByteBC`, `HeadingFromVector`, `InitKnockback`, `func_001160D8`, `KillAttachedParticle`, `RerollEffectCounter` |
+| `func_L13_002BC2D8` | JetFighterUpdateL13 | 69 fighter_jet | 13 | decomp | `void(u32)` | **`Moby_FighterJet69_Update`** |  | `BuildSphericalOffset`, `func_L00_001FF548`, `func_L00_001FF610`, `func_001F9CE8`, `SetGroupMobyFlags`, `SetMobyFlagsByClassList`, `SetStateOfMobysByClass`, `func_L00_00251468`, `try_set_help_message`, `HeroEnterMoveState` |
+| `func_L13_002C27B0` | HomingRocket82Update | 82 rocket | 13 | decomp | `void(u32)` | **`Moby_Rocket82_Update`** | Rocket_2C27B0 | `PartType44Spawn`, `func_001F9EC0`, `build_look_at_matrix`, `PartType21Spawn`, `BuildSphericalOffset` |
+| `func_L13_002C32D0` | Moby83Update | 83 mine | 13 | decomp | `void(u32)` | **`Moby_Mine83_Update`** |  | `InitDirectionalHitQuery` |
+| `func_L13_002C3840` | BlargSpaceFighterUpdate | 101 blarg_space_fighter | 13 | decomp | `void(u32)` | **`Moby_BlargSpaceFighter_Update`** |  | `BlargFighter_UpdateCommon`, `Moby1233Spawn`, `ApproachWithVelocity`, `Moby1233Init` |
+| `func_L13_002C56B0` | BlargFighter111Update | 111 blarg_space_fighter | 13 | decomp | `void(u32)` | **`Moby_BlargSpaceFighter111_Update`** | Data_2C56B0 | `STUB_printf`, `FindClosestDistanceEntry`, `BlargFighter_TakeHit`, `PathVehicle_ControlSpeed`, `FastVecCross`, `JitterVector`, `SpawnStreakMoby`, `func_001160D8`, `SpawnMobyAt` |
+| `func_L13_002C9208` | RotatingDoorUpdate | 127, 128, 159, 169 | 13 | decomp | `void(u32)` | **`Moby_Class127_Update`** |  |  |
+| `func_L13_002D0298` | ForcefieldTowerUpdate | 170 forcefield_tower | 13 | decomp | `void(u32)` | **`Moby_ForcefieldTower_Update`** |  | `Moby1632Spawn`, `EnableSoundEffect`, `func_001160D8`, `PartType05Spawn`, `Moby_TakeDamage`, `IsFrameWithinWindow`, `SpawnGemlikSparks` |
+| `func_L13_002E2980` | DriftingBlobUpdate | 212 asteroid, 1412 asteroid | 13 | decomp | `void(u32)` | **`Moby_Asteroid212_Update`** | BlobVarsP | `func_L00_001FF610`, `func_L00_001FF548`, `func_001160D8` |
+| `func_L13_002E3010` | ShipPickupUpdate | 224 ammocrate, 228 jet_fighter_health_crate | 13, 17 | decomp | `void(u32)` | **`Moby_Ammocrate224_Update`** |  | `func_001F9B50`, `MobyBobZ` |
+| `func_L13_002E5810` | SwitchUpdate | 231 | 13 | decomp | `void(u32)` | **`Moby_Class231_Update`** |  | `Moby_StepHealth`, `func_L00_00251328`, `MobyGroup_SetState`, `STUB_printf` |
+| `func_L13_002E8040` | Rocket295Update | 295 rocket | 13, 17 | decomp | `void(u32)` | **`Moby_Rocket295_Update`** |  | `PartType44Spawn`, `func_001F9EC0`, `build_look_at_matrix`, `PartType21Spawn`, `BuildSphericalOffset` |
+| `func_L13_002E9910` | FadeInHoldOutUpdate | 352 | 13 | decomp | `void(u32)` | **`Moby_Class352_Update`** |  | `OffsetShortPairTables` |
+| `func_L13_002EC4D0` | QwarkStarfighterPartUpdate | 388 qwarks_starfighter_part | 13 | decomp | `void(u32)` | **`Moby_QwarksStarfighterPart_Update`** |  | `SpawnChildMobyAtPoint`, `Hud_SetBarValueById`, `STUB_printf`, `queue_animation_update`, `Moby_SteerAlongPathFacing`, `FindClosestDistanceEntry`, `QwarkStarfighter_UpdateByMode`, `Path_ChooseDirectionTowardHero`, `VehiclePart_UpdateDamage`, `StepColorFade` |
+| `func_L13_002EE238` | StarfighterPartUpdate | 389 qwarks_starfighter_part, 390 qwarks_starfighter_part, 391 qwarks_starfighter_part, 392 qwarks_starfighter_part, 393 qwarks_starfighter_part, 394 qwarks_starfighter_part, 395 qwarks_starfighter_part, 396 qwarks_starfighter_part and 3 more | 13 | decomp | `void(u32)` | **`Moby_QwarksStarfighterPart389_Update`** |  | `func_L00_001FF610` |
+| `func_L13_002EE8E0` | GemLockPickupUpdate | 404 forcefield, 405 forcefield | 13 | decomp | `void(u32)` | **`Moby_Forcefield_Update`** |  | `func_L00_00251328`, `STUB_printf`, `Moby_HitMobysInBox`, `FreePointLight`, `OffsetShortPairTables` |
+| `func_L13_002F4BE8` | Moby_ClearUnlessTargeted | 533 purple_ship | 13 | decomp | `void(u32)` | **`Moby_PurpleShip533_Update`** |  |  |
+| `func_L13_002F4C10` | HelpVolumeUpdate | 558 | 13 | decomp | `void(u32)` | **`Moby_Class558_Update`** |  | `Help_Request` |
+| `func_L13_002F9D18` | MobyStateRelayUpdate | 667 | 13 | decomp | `void(u32)` | **`Moby_Class667_Update`** |  | `STUB_printf` |
+| `func_L13_002F9F10` | ControlledGateUpdate | 674, 677, 680 | 13 | decomp | `void(u32)` | **`Moby_Class674_Update`** |  | `STUB_printf`, `func_L00_00251328`, `OffsetShortPairTables` |
 | `func_L13_00306EF0` | Moby1233Update | 1233 rocket | 13 | decomp | `void(u32)` | row: `Moby_Rocket1233_Update` |  | `PartType44Spawn`, `func_L00_001FF500`, `InitDirectionalHitQuery`, `SpawnPuffParticle`, `Moby1233_SpawnBigBurst`, `func_L00_001FF610`, `PartType27Spawn`, `Moby1233_SpawnSmallBurst` |
-| `func_L13_00307798` | ProjectileL13_Update | 1238 | 13 | decomp | `void(u32)` | row: `Moby_Class1238_Update` |  | `func_L00_001FF500`, `InitDirectionalHitQuery`, `PostHitMessageFromRecord`, `SpawnPuffParticle`, `func_L00_001FF610`, `PartType27Spawn` |
-| `func_L13_00308FA8` | Moby1261Update | 1261 poison_vessel | 13 | decomp | `void(u32)` | row: `Moby_PoisonVessel_Update` |  | `STUB_printf`, `func_00120778`, `ComputeHitResponse`, `SetDeathBits`, `RerollEffectCounter`, `DrawVendorBurst`, `SpawnPartType52Near`, `StepColorFade`, `Lerp`, `SendRadialMessageToMobys` |
-| `func_L13_00309330` | BlargSpaceCommandoUpdate | 1262 blarg_space_commando | 13 | decomp | `void(u32)` | row: `Moby_BlargSpaceCommando1262_Update` | Vars_309330 | `RopeWalkerUpdate`, `Manipulator_ApplyScale`, `SetGroundHeightBand`, `MoveCtl_Init`, `InitCurvedTrail`, `MobyGetFrameValue`, `InitDirectionalHitQuery`, `SweepSegmentCheck`, `MobySpringTurn`, `MobySteerToward` |
-| `func_L13_0030B340` | BobbingLights_Update | 1263, 1393 | 13 | decomp | `void(u32)` | row: `Moby_Class1263_Update` | Bob_9e88 | `RipplePatchesInit`, `RescaleFloatTable`, `RipplePatch_ToFixedPoint`, `Ripple_DisturbDefault`, `GridEntry_LinkNeighbors`, `RippleDisturb`, `IsBSphereVisibleScaled`, `RippleSimClock` |
-| `func_L13_0030BB90` | Lift1270Update | 1270 | 13 | decomp | `void(u32)` | row: `Moby_Class1270_Update` |  | `ApproachWithVelocity`, `Moby_GetSidePointFacingHero`, `CameraScript_SetPosition`, `CameraScript_SetLookAt`, `CameraScript2`, `HeroEnterMoveState`, `CameraScript`, `CarryRiders` |
-| `func_L13_0030C408` | GroupClearedSetState | 1271 | 13 | decomp | `void(u32)` | row: `Moby_Class1271_Update` |  | `CountLiveMobysInGroup` |
-| `func_L13_0030CAE0` | Moby1353Update | 1353 | 13 | decomp | `void(u32)` | row: `Moby_Class1353_Update` | MobyData_30CAE0 | `StartCutscene`, `Hero_ResetToPosition`, `MusicRequestTrack`, `PlayMovieEntryIfIdle`, `UnlockPlanet`, `Ship_Register`, `memcard_Save` |
-| `func_L13_0030D028` | FollowTargetAlongPath | 1403 | 13 | decomp | `void(u32)` | row: `Moby_Class1403_Update` |  | `func_L00_0025EFC0`, `AdvancePathIndexByDistance` |
-| `func_L13_0030D2A8` | SparksTriggerL13_Update | 1558 | 13 | decomp | `void(u32)` | row: `Moby_Class1558_Update` |  | `SpawnMoby750Sparks` |
-| `func_L13_0030D318` | WatchMobysUpdate | 1577 | 13 | decomp | `void(u32)` | row: `Moby_Class1577_Update` |  |  |
-| `func_L13_0030D528` | Moby1632Update | 1632 | 13 | decomp | `void(u32)` | row: `Moby_Class1632_Update` |  | `PostHitMessageFromRecord` |
-| `func_L13_0030D880` | Moby1634Update | 1634 | 13 | decomp | `void(u32)` | row: `Moby_Class1634_Update` |  | `PartType02Spawn`, `SpawnPartType52Near` |
-| `func_L13_0030E280` | Moby1805Update | 1805 blarg_ship | 13 | decomp | `void(u32)` | row: `Moby_BlargShip1805_Update` |  | `ComputeHitResponse`, `RerollEffectCounter`, `StepColorFade`, `MobyGroup_CountNotInState`, `PlayBankSound`, `ShowBanner`, `SpawnBreakFxByDistance`, `JitterVector` |
-| `func_L14_002ACCC0` | KeyframePlatformUpdate | 903 platform | 14 | decomp | `void(u32)` | row: `Moby_Platform903_Update` |  | `Hero_IsOnMoby`, `Spring`, `EasePositionToPathEnd`, `CarryRiders` |
-| `func_L14_002AD858` | Moby8Update | 8 blarg_heavy_interceptor | 14 | decomp | `void(u32)` | row: `Moby_BlargHeavyInterceptor_Update` |  | `UpdateBlinkLights`, `Moby8_ApplyHit`, `SetGroundHeightBand`, `GetFlaggedPvarWord`, `CountShortTableEntries`, `MeasurePathSegments`, `FastMemSet`, `Group_AnyMemberTriggered`, `Moby8_PrepareGlowDraw`, `Moby8_AdvanceTargetPath` |
-| `func_L14_002B2A28` | PlasmabotUpdate | 28 plasmabot | 14-15 | decomp | `void(u32)` | row: `Moby_Plasmabot_Update` |  | `Manipulator_ApplyScale`, `EffectSlot_Free`, `SetDeathBits`, `EnemyHitReaction`, `CheckTargetOutOfRange`, `UpdateRandomDelay`, `STUB_printf`, `MobyPathInit`, `Moby_ClearLinkedWord`, `MobyL14_Activate` |
-| `func_L14_002B4E40` |  | 30 machinegun_turret | 14 | decomp | `void(u32)` | row: `Moby_MachinegunTurret30_Update` |  | `Turret_ApplyHit`, `STUB_printf`, `MobySetAnimation`, `FindNearestTargetMoby`, `func_L00_00251328`, `SpawnProjectile` |
-| `func_L14_002B5938` | MinibomberUpdate | 31 minibomber | 14 | decomp | `void(u32)` | row: `Moby_Minibomber_Update` | Data_2B5938 | `MobySetAnimation`, `Minibomber_ApplyHit`, `Minibomber_FindTarget`, `Minibomber_EaseToTarget`, `Minibomber_HoverMotion`, `Minibomber_EmitExhaust`, `SetGroundHeightBand`, `STUB_printf`, `RecomputePathLengths`, `Minibomber_StopSound` |
-| `func_L14_002BBEC8` | Moby81Update | 81 | 14 | decomp | `void(u32)` | row: `Moby_Class81_Update` |  | `Moby81Destroy`, `Sound_PlayClassSound`, `randf_sym`, `PartType21Spawn`, `PartType23Spawn`, `UpdatePointLight` |
-| `func_L14_002D7250` | Moby211Update | 211 plasmabot | 14 | decomp | `void(u32)` | row: `Moby_Plasmabot211_Update` | L14RacerVars | `SumPathSegmentsBetween`, `FastMemSet`, `MobySetAnimation`, `MobyGetFrameValue`, `Moby211_StepLerp`, `Moby211_AdvanceOnPath`, `Moby211_UpdateGunAim`, `Moby325Spawn`, `Moby403Spawn`, `PuffExhaustSmoke` |
-| `func_L14_002DAA70` | Moby250Update | 250 plasmabot_hatch | 14-15 | decomp | `void(u32)` | row: `Moby_PlasmabotHatch_Update` |  | `MobySetAnimation` |
-| `func_L14_002DF5F8` | Moby309Update | 309 platform | 14 | decomp | `void(u32)` | row: `Moby_Platform309_Update` |  | `Moby309_TrackHero`, `CarryRiders` |
-| `func_L14_002DFA70` | DebrisParticleUpdate | 325 | 14-15 | decomp | `void(u32)` | row: `Moby_Class325_Update` |  | `PartType21Spawn`, `PartType23Spawn` |
-| `func_L14_002E0228` | GemLockSentryUpdate | 386 | 14 | decomp | `void(u32)` | row: `Moby_Class386_Update` |  | `InitSpacedVectorTables`, `Sound_PlayClassSound`, `Hero_RequestEffectInVolume`, `func_L14_002E0538` |
-| `func_L14_002E1110` | RaceDebrisUpdate | 403 | 14-15 | decomp | `void(u32)` | row: `Moby_Class403_Update` | Data_dfd10 | `Spline_AdvanceByDistance`, `MobyL14_EngineExhaust`, `Sound_PlayClassSound` |
-| `func_L14_002E9038` | PathLiftUpdate | 557 shuttle | 14 | decomp | `void(u32)` | row: `Moby_Shuttle557_Update` | L14LiftVars | `STUB_printf`, `func_L01_002F6540`, `func_001FA218`, `func_001F9EE8`, `func_L00_001FFED8`, `CarryRiders` |
-| `func_L14_002EC3E8` | Moby610Update | 610 | 14 | decomp | `void(u32)` | row: `Moby_Class610_Update` | Data_2EC3E8 | `STUB_printf`, `Sparks_InitParticle`, `Sparks_Update` |
-| `func_L14_002EDC70` | MineL14_Update | 643 mine | 14 | decomp | `void(u32)` | row: `Moby_Mine643_Update` | L14MineVars | `STUB_printf`, `randf_sym`, `Spline_AdvanceByDistance`, `Spring`, `ComputeHitResponse` |
-| `func_L14_002EE260` | SweepingBoltUpdate | 681 | 14 | decomp | `void(u32)` | row: `Moby_Class681_Update` | L14BoltVars | `func_L00_001FF500`, `InitDirectionalHitQuery`, `SpawnPuffParticle`, `func_L00_001FF610`, `PartType27Spawn` |
-| `func_L14_002EE6E0` | CameraIntroController | 684 | 14 | decomp | `void(u32)` | row: `Moby_Class684_Update` |  | `StartCutscene`, `Ship_ReleaseCurrent`, `ShowTrackedMoby`, `randf_sym`, `LightningArcUpdate` |
-| `func_L14_002EFD38` | Moby685Update | 685 elevator | 14 | decomp | `void(u32)` | row: `Moby_Elevator685_Update` |  | `Moby685_InitPathLengths`, `Moby685_UpdateGlowTint`, `Sound_SetPitchBend`, `FastTweenColor`, `MoveAlongPath`, `RebuildPathEntryFromMoby`, `CarryRiders`, `Spring`, `SpringToPathPoint` |
-| `func_L14_002F19C0` | TaxiUpdate | 712 taxi | 14 | decomp | `void(u32)` | row: `Moby_Taxi712_Update` |  | `LevelTable_SetSlotValue`, `SnapToPathPoint`, `func_001FA4A0`, `func_001F9EE8`, `Taxi_SelectPath`, `Vendor_ShowHelpMessage`, `FindGroupMobyByTag`, `Cam_SetDistanceGoal`, `ApproachWithVelocity`, `SamplePathAt` |
-| `func_L14_002FCEA8` | Moby851Update | 851 qwark_oltanis | 14 | decomp | `void(u32)` | row: `Moby_QwarkOltanis_Update` |  | `AttachManipulatorsIfCheat`, `SetGroundHeightBand`, `DialogRequest_Init`, `SetLevelTriggerDone`, `PauseMenu_SeedSnapshot`, `Vendor_InitState`, `Npc_TryStartDialog`, `PlaceMarkerAheadOfMoby`, `ShowBanner`, `GiveItem` |
-| `func_L14_002FD578` | Moby908Update | 908 jet | 14 | decomp | `void(u32)` | row: `Moby_Jet_Update` | Class908Vars_FD578 | `PlayBankSound`, `ShowBanner`, `SpawnExplosionFx`, `STUB_printf`, `PathFollowerInit`, `Moby_SpringAlongPath`, `ThrusterPuffs_Spawn` |
-| `func_L14_002FE038` | OltanisJetUpdate | 921 jet | 14 | decomp | `void(u32)` | row: `Moby_Jet921_Update` | Jet_2FE038 | `DeleteLinkedAndSelf`, `PlayBankSound`, `ShowBanner`, `SpawnExplosionFx`, `STUB_printf`, `PathFollowerInit`, `Trigger_Arm`, `OltanisJet_FollowPath`, `Moby_SetState2`, `SecondEngineExhaustUpdate` |
-| `func_L14_002FF040` | FlyerUpdate | 922 rocket | 14 | decomp | `void(u32)` | row: `Moby_Rocket922_Update` | FlyerVars_2FF040 | `LerpAngle`, `func_001F9CE8`, `SpawnHitSparkPieces` |
-| `func_L14_002FF728` | BoltThiefUpdate | 923 bolt_thief | 14 | decomp | `void(u32)` | row: `Moby_BoltThief923_Update` |  | `InitKnockback`, `SetDeathBits`, `MobySetAnimation`, `STUB_printf`, `MobyDualPathInit`, `MobySpringTurn`, `SpawnEngineTrailParticles`, `Moby933Spawn`, `AttachLinkedMobyToTransform`, `FollowPathSmoothed` |
-| `func_L14_00300468` | Moby924Update | 924 sam | 14 | decomp | `void(u32)` | row: `Moby_Sam_Update` |  | `AttachManipulatorsIfCheat`, `DialogRequest_Init`, `SetLevelTriggerDone`, `PauseMenu_SeedSnapshot`, `Npc_TryStartDialog`, `UnlockPlanet`, `ShowPlanetBanner`, `memcard_Save`, `BuildSphericalOffset`, `func_001F9CE8` |
-| `func_L14_00300AC8` | FloatingMineUpdate | 933 mine | 14, 16 | decomp | `void(u32)` | row: `Moby_Mine933_Update` | FloatMineVars_ff640 | `Spring`, `FastMemZero16`, `ComputeHitResponse` |
-| `func_L14_00302288` | BouncingSparkUpdate | 1193 | 14 | decomp | `void(u32)` | row: `Moby_Class1193_Update` | Spark_2288 | `LerpVec4`, `PartType23Spawn`, `func_L00_001FF610`, `func_L00_001FF500`, `func_001F9CE8` |
-| `func_L14_00302A58` | Moby1224Update | 1224 | 14-15, 17 | decomp | `void(u32)` | row: `Moby_Class1224_Update` |  | `InitRopeStripMoby`, `BeamSweepDamage`, `func_L14_00303270` |
-| `func_L14_00304E68` | Moby1331Update | 1331 | 14-15 | decomp | `void(u32)` | row: `Moby_Class1331_Update` |  | `EffectSlot_FreeAt`, `BeamSlotUpdate` |
-| `func_L14_00306890` | TriggeredUnlockUpdate | 1352 | 14 | decomp | `void(u32)` | row: `Moby_Class1352_Update` |  | `LowerListedParts`, `Trigger_Arm`, `SlideListedPartsUpdate` |
-| `func_L14_00306BE0` | CollectiblePickupUpdate | 1354 morphoray | 14 | decomp | `void(u32)` | row: `Moby_Morphoray1354_Update` |  | `StreakDataInit`, `StreakParticlesUpdate`, `GiveItem`, `StartCutscene`, `SetLevelTriggerDone`, `memcard_Save`, `ShowBanner`, `Help_Request` |
-| `func_L14_003071B0` | Moby1395Update | 1395 | 14 | decomp | `void(u32)` | row: `Moby_Class1395_Update` | Data_3071B0 | `SpawnMoby1396`, `Sound_PlayClassSound`, `LerpAngle`, `Lerp` |
-| `func_L14_00307660` | Moby1397Update | 1397 | 14 | decomp | `void(u32)` | row: `Moby_Class1397_Update` |  |  |
-| `func_L14_00308000` | StepOnSwitchUpdate | 1416 button | 14 | decomp | `void(u32)` | row: `Moby_Button1416_Update` |  |  |
-| `func_L14_00308368` | BlargInterceptorUpdate | 1417 blarg_heavy_interceptor | 14 | decomp | `void(u32)` | row: `Moby_BlargHeavyInterceptor1417_Update` | Data_308368 | `SpawnExplosionFx`, `STUB_printf`, `InitPathSegments`, `FastMemSet`, `RerollEffectCounter`, `LissajousOffsetUpdate`, `BlargInterceptor_FollowPath`, `BlargInterceptor_NotifyGrab`, `func_L00_00251328` |
-| `func_L14_00308F08` | QueueEffectDrawUpdate | 1418 | 14 | decomp | `void(u32)` | row: `Moby_Class1418_Update` |  |  |
-| `func_L14_00309C48` | SkillPointUpdate | 1559 | 14 | decomp | `void(u32)` | row: `Moby_Class1559_Update` |  | `MobyGroup_CountNotInState`, `PlayBankSound`, `ShowBanner`, `SpawnMoby750Sparks` |
-| `func_L15_00298BB8` | SentrybotUpdate | 44 sentrybot | 15, 17 | decomp | `void(u32)` | row: `Moby_Sentrybot_Update` |  | `DamageableMoby_HandleHit`, `Manipulator_SetScale`, `SetGroundHeightBand`, `Group_SetClass198Timer`, `TurnTowardPoint`, `Moby_FindVisible27BTarget`, `func_L15_0029B1D8`, `PickFacingState`, `Moby_MarkKilled`, `Anim_GetEndTime` |
-| `func_L15_0029BE10` | ProjectileUpdate | 49 rocket | 15-18 | decomp | `void(u32)` | row: `Moby_Rocket49_Update` |  | `Sound_PlayClassSound`, `InitDirectionalHitQuery`, `SpawnImpactFx`, `SpawnTrailParticles` |
-| `func_L15_0029C1D0` | Moby67Update | 67 | 15 | decomp | `void(u32)` | row: `Moby_Class67_Update` | MovingVars_ZZ |  |
-| `func_L15_0029E8A0` |  | 256 | 15, 18 | decomp | `void(u32)` | row: `Moby_Class256_Update` |  | `EffectQueue_Add`, `func_L00_001FF270`, `func_L00_001FF3E0`, `func_001F9B50`, `func_001F9CE8`, `SpringTurn`, `BuildSphericalOffset`, `PartType44Spawn`, `func_001F9EC0`, `build_look_at_matrix` |
-| `func_L15_0029FCB0` | ScaleFadeAndDeleteUpdate | 1427 | 15, 18 | decomp | `void(u32)` | row: `Moby_Class1427_Update` |  | `MobySphereHitDirectional` |
-| `func_L15_0029FF90` | Moby1523Update | 1523 | 15, 18 | decomp | `void(u32)` | row: `Moby_Class1523_Update` |  | `func_L00_001FF240`, `PartType31Spawn`, `PartType05Spawn`, `AllocPointLight`, `FreePointLight`, `SendRadialMessageToMobys`, `PartType26Spawn`, `RandomSphericalOffset`, `PartType15Spawn`, `PartType69Spawn` |
-| `func_L15_002A3668` | Moby77Update | 77 mine | 15, 17 | decomp | `void(u32)` | row: `Moby_Mine77_Update` |  | `rand_vec`, `PartType60Spawn`, `MoveMobyWithCollision`, `SpawnExplosionFx`, `MobySphereHitDirectional` |
-| `func_L15_002A3DD0` | Moby78Update | 78 | 15, 17 | decomp | `void(u32)` | row: `Moby_Class78_Update` |  | `Moby_MarkKilled`, `func_001FA4A0`, `func_001F9EE8`, `func_001F9EC0`, `PartType71Spawn` |
-| `func_L15_002A48B0` | SlidingGateUpdate | 92 gate | 15 | decomp | `void(u32)` | row: `Moby_Gate92_Update` |  |  |
-| `func_L15_002A4D88` | ClipVolumeDoorUpdate | 93 gate | 15 | decomp | `void(u32)` | row: `Moby_Gate93_Update` | DoorVars | `GetFlaggedPvarWord` |
-| `func_L15_002A8090` | SpiderbotUpdate | 123 spiderbot | 15, 17 | decomp | `void(u32)` | row: `Moby_Spiderbot_Update` |  | `build_look_at_matrix`, `func_001FA218`, `func_001FA480`, `normalize_vector_triplet`, `FastNormalizeAngle`, `BuildSphericalOffset`, `func_001F9EC0`, `func_001160D8`, `func_L00_001FF240`, `PartType60Spawn` |
-| `func_L15_002A8AA8` | DestructibleHitEffect | 148, 255 | 15 | decomp | `void(u32)` | row: `Moby_Class148_Update` |  | `func_L00_001FF240`, `func_L01_002F9908`, `DefaultVtbl_DeleteMoby`, `PartType16Spawn`, `SetDeathBits` |
-| `func_L15_002AB4A8` | HitReactionEffectAltUpdate | 154 | 15 | decomp | `void(u32)` | row: `Moby_Class154_Update` |  | `func_L00_001FF240`, `func_L01_002F9908`, `DefaultVtbl_DeleteMoby`, `PartType16Spawn`, `SetDeathBits` |
-| `func_L15_002BEFF8` | MovingMobyUpdate | 196 door, 197 door, 1958 underwater_door | 15, 17 | decomp | `void(u32)` | row: `Moby_Door196_Update` | MovingMobyVars |  |
-| `func_L15_002C3BD8` | ConstructionArmUpdate | 221 construction_arm | 15 | decomp | `void(u32)` | row: `Moby_ConstructionArm_Update` |  | `EaseManipulatorOffsets`, `SpringTurn`, `func_L00_001FF240`, `PartType21Spawn`, `SpawnExplosionFx`, `SpawnBreakFxByDistance` |
-| `func_L15_002C6950` |  | 233 helicopter | 15 | decomp | `void(u32)` | row: `Moby_Helicopter233_Update` |  | `SpawnMoby55B`, `EnemyTakeHitAndAim`, `FindNearestTargetMoby`, `FindNearestEligibleMoby`, `MobyGroup_CountNotInState`, `func_L00_0025EFC0`, `IsPointInPolygon`, `SpringTurn`, `SteerFlyingMoby`, `FlockStepToGoal` |
-| `func_L15_002CC858` | SentrybotAlarmUpdate | 408 sentrybot_alarm | 15, 17 | decomp | `void(u32)` | row: `Moby_SentrybotAlarm_Update` |  | `FastTweenColor`, `Group_SetClass198Timer`, `Group_ActivateFirstIdle`, `LoopingFx_Update` |
-| `func_L15_002D0798` | UltramechUpdate | 491 ultramech_unlimited | 15 | decomp | `void(u32)` | row: `Moby_UltramechUnlimited_Update` |  | `TableEntryMobyUpdate`, `Manipulator_ApplyScale`, `func_001160D8`, `MobyGroup_CountNotInState`, `IsPointInPolygon`, `func_L00_001FF500`, `ComputeLaunchVelocityZ`, `func_L00_0025EFC0`, `SpringTurn`, `IsFrameWithinWindow` |
-| `func_L15_002D7C00` |  | 655 | 15, 17 | decomp | `void(u32)` | row: `Moby_Class655_Update` |  | `FreePointLight`, `Moby_ActivateIfTriggered`, `Hero_IsNearGround`, `func_L00_00251328`, `UpdatePointLight`, `ResetBeamPoints`, `QuartuArcEmitter`, `Sound_PlayClassSound`, `BuildSphericalOffset`, `func_L00_001FF240` |
-| `func_L15_002E5770` | Moby934Update | 934 | 15, 17 | decomp | `void(u32)` | row: `Moby_Class934_Update` |  | `InitDirectionalHitQuery`, `MobySphereHitDirectional`, `SpawnExplosionFx`, `SpawnMobyAttachedParticle` |
-| `func_L15_002E5AA0` | RotateWithLinkedMoby | 937 | 15 | decomp | `void(u32)` | row: `Moby_Class937_Update` |  |  |
-| `func_L15_002E6D48` | UnderwaterRingUpdate | 1209 underwater_ring | 15, 17 | decomp | `void(u32)` | row: `Moby_UnderwaterRing_Update` |  | `func_001FA4A0`, `func_001F9EE8`, `func_L00_00251328`, `MobyGroup_SetState` |
-| `func_L15_002E87B0` | SideDriftUpdate | 1250 conveyor_belt | 15 | decomp | `void(u32)` | row: `Moby_ConveyorBelt1250_Update` |  | `CarryRiders` |
-| `func_L15_002E9358` | PoisonVesselUpdate | 1257 poison_vessel | 15 | decomp | `void(u32)` | row: `Moby_PoisonVessel1257_Update` | Data_2E9358 | `GetFlaggedPvarWord`, `func_L00_001FF240`, `func_L00_001FF610`, `RotateWithMoby`, `Sound_PlayClassSound`, `SendRadialMessageToMobys` |
-| `func_L15_002EBB38` | Moby1388Update | 1388 bolt_grabber | 15 | decomp | `void(u32)` | row: `Moby_BoltGrabber_Update` |  | `DriftingSprites_Init`, `DriftingSprites_DrawL10`, `StartCutscene`, `ShowBanner`, `GiveItem`, `memcard_Save` |
-| `func_L15_002EBFC8` | Moby1257SpawnerUpdate | 1394 | 15 | decomp | `void(u32)` | row: `Moby_Class1394_Update` |  | `Moby1257Spawn` |
-| `func_L15_002EC490` | RippleStripsMobyUpdate | 1405, 1406, 1407, 1408, 1409, 1426, 1565, 1567 | 15, 17 | decomp | `void(u32)` | row: `Moby_Class1405_Update` |  | `func_L00_00251328` |
-| `func_L15_002EC8B0` | Moby1419Update | 1419 | 15 | decomp | `void(u32)` | row: `Moby_Class1419_Update` |  | `StartCutscene`, `SetLevelTriggerDone`, `HeroSetObjectFlags`, `PlayMovieEntryIfIdle`, `HeroClearObjectFlags`, `Hero_ResetToPosition`, `UnlockPlanet`, `PauseMenu_SeedSnapshot`, `ShowPlanetBanner`, `memcard_Save` |
-| `func_L15_002ECD18` | EmitRisingParticles | 1425 | 15 | decomp | `void(u32)` | row: `Moby_Class1425_Update` |  | `PartType34Spawn` |
-| `func_L15_002ED168` | Moby1428Update | 1428 codebot | 15, 17 | decomp | `void(u32)` | row: `Moby_Codebot_Update` |  | `InitRandomMobyData`, `SparkleSpritesDrawL02`, `StartCutscene`, `ShowBanner`, `memcard_Save` |
-| `func_L15_002ED420` | CodebotSlotUpdate | 1430 codebot_slot | 15 | decomp | `void(u32)` | row: `Moby_CodebotSlot_Update` |  | `func_L00_001FF240`, `SetMobyGroupVisible`, `Trigger_Arm`, `IsVendorEntryAvailable`, `Moby1428Spawn`, `Hero_ResetToPosition`, `CountDeadMobysInGroup` |
-| `func_L15_002EDB50` | UltramechScientistUpdate | 1446 ultramech_scientist | 15 | decomp | `void(u32)` | row: `Moby_UltramechScientist_Update` |  | `Moby_AttachCheatManipulators`, `SetMobyZBand`, `DialogRequest_Init`, `Npc_TryStartDialog`, `SetLevelTriggerDone`, `PauseMenu_SeedSnapshot`, `MobyGroup_CountNotInState`, `Help_Reset`, `MobySetAnimation`, `UnlockPlanet` |
-| `func_L15_002EE458` | GiantClankPadUpdate | 1451 giant_clank_pad, 1899 giant_clank_pad | 15, 18 | decomp | `void(u32)` | row: `Moby_GiantClankPad_Update` |  | `try_set_help_message`, `Help_Reset`, `MobySetAnimation`, `StartCutscene`, `MusicRequestTrack`, `PauseMenu_SeedSnapshot`, `Hero_ResetToPosition`, `Hero_BeginObjectControl` |
-| `func_L15_002EE7E8` | Moby1469Update | 1469 | 15 | decomp | `void(u32)` | row: `Moby_Class1469_Update` | Talk_2EE7E8 | `Help_Request`, `Hero_IsInSpecialState` |
-| `func_L15_002EEF70` | BossSlotEffectUpdate | 1560 | 15 | decomp | `void(u32)` | row: `Moby_Class1560_Update` |  | `SpawnMoby750Sparks` |
-| `func_L16_002A1C50` | HomingProjectileUpdate | 50 rocket | 16, 18 | decomp | `void(u32)` | row: `Moby_Rocket50_Update` |  | `Sound_PlayClassSound`, `SpawnTrailParticles`, `func_001F9CE8`, `BuildSphericalOffset`, `func_001F9C08`, `MobySphereHitDirectional` |
-| `func_L16_002A50F0` | HomingSparkUpdate | 1475 rocket | 16 | decomp | `void(u32)` | row: `Moby_Rocket1475_Update` |  | `SpringAngle`, `BuildSphericalOffset`, `PartType44Spawn`, `func_001F9EC0`, `build_look_at_matrix`, `PartType21Spawn`, `func_L00_001FF500` |
-| `func_L16_002C5030` | Moby257Update | 257 | 16 | decomp | `void(u32)` | row: `Moby_Class257_Update` |  | `SamplePathAt` |
-| `func_L16_002C7218` | ThrownBombUpdate | 281 bomb | 16 | decomp | `void(u32)` | row: `Moby_Bomb281_Update` |  | `func_L00_001FF610`, `RerollEffectCounter`, `StepColorFade` |
-| `func_L16_002CA848` | Moby470Update | 470 rocket | 16 | decomp | `void(u32)` | row: `Moby_Rocket470_Update` |  | `InitRandomDataBlock`, `AnimateSpriteLayers` |
-| `func_L16_002CAC40` | Moby471Update | 471 conveyor_belt | 16 | decomp | `void(u32)` | row: `Moby_ConveyorBelt471_Update` |  | `Moby471_CarryGroupRiders`, `Moby471_AttachToNearest` |
-| `func_L16_002CF180` | TestDummyUpdate | 541 test_dummy | 16 | decomp | `void(u32)` | row: `Moby_TestDummy_Update` |  | `TestDummyHandleHit`, `Manipulator_ApplyScale`, `FindNearestLinkedMoby`, `EffectSlots_Clear`, `Moby_RateLimitedNotify`, `Moby_SteerToward`, `FindNearestEligibleMoby`, `IsFrameWithinWindow`, `ComputeLaunchVelocityZ`, `SpawnThrownBomb` |
-| `func_L16_002D0560` | Moby546Update | 546 wall_button | 16 | decomp | `void(u32)` | row: `Moby_WallButton_Update` |  | `SetMoby1387Target` |
-| `func_L16_002D0870` | Moby552Update | 552 | 16 | decomp | `void(u32)` | row: `Moby_Class552_Update` |  | `RefreshLinkedPeers228`, `Moby552_AllGroupIdle` |
-| `func_L16_002D1868` | HoverboardRacerUpdate | 556 test_dummy_on_hoverboard | 16 | decomp | `void(u32)` | row: `Moby_TestDummyOnHoverboard_Update` |  | `Manipulator_SetScale`, `GetNodeVector`, `SpawnMobyBurstFx`, `ChooseSteerNode`, `HoverboardRacer_CheckBoostGates`, `HoverboardRacer_SkipToMarker`, `StepTableIndex`, `LeapMoby_AdjustPitch`, `SpringAngle`, `PostHitMessage` |
-| `func_L16_002D40B8` | FloatingEnemyUpdate | 638 blarg_elite_commando | 16, 18 | decomp | `void(u32)` | row: `Moby_BlargEliteCommando_Update` |  | `Moby_HandleDamageKnockback`, `Manipulator_SetScale`, `func_001F9EC0`, `SteerTowardTarget`, `Moby_UpdateTurnAnim`, `IsFrameWithinWindow`, `SpawnMoby31`, `Moby_SpawnHitParticles`, `Moby_AimJointsAtTarget`, `Moby_EmitJointParticles` |
-| `func_L16_002D6DA8` | Moby647Update | 647 door | 16 | decomp | `void(u32)` | row: `Moby_Door647_Update` |  | `ApproachWithVelocity` |
-| `func_L16_002D7080` | Moby650Update | 650 test_dummy_door | 16 | decomp | `void(u32)` | row: `Moby_TestDummyDoor_Update` |  | `func_001F9B70`, `ApproachWithVelocity` |
-| `func_L16_002D72C0` | Moby654Update | 654 | 16 | decomp | `void(u32)` | row: `Moby_Class654_Update` |  | `ActivateLinkedMobysNearest`, `CameraScript`, `ActivateLinkedMobysClearTimers`, `TestDummies_SetState`, `Moby654_ComputePose`, `CameraScript_SetPosition`, `CameraScript_SetLookAt`, `MobyGroup_CountNotInState`, `CameraScript2`, `Hero_ResetToPosition` |
-| `func_L16_002D7B08` | Moby800Update | 800 | 16 | decomp | `void(u32)` | row: `Moby_Class800_Update` |  | `SetDeathBits`, `SpawnBreakFxByDistance`, `SpawnMobyBurstFx` |
-| `func_L16_002E3740` | ArmedTransportUpdate | 1356 armed_transport | 16, 18 | decomp | `void(u32)` | row: `Moby_ArmedTransport_Update` |  | `Moby_UpdateHitsAndPursuit`, `Path_ComputeHeadings`, `IsPointInPolygon`, `Passenger_AttachOwner`, `ApproachWithVelocity`, `Moby_AdvancePathSegment`, `func_001F9EC0`, `Passenger_StartRide`, `SpawnThrownMoby`, `SetDeathBits` |
-| `func_L16_002E45F8` | WatcherUpdate | 1377 help_desk_lady | 16 | decomp | `void(u32)` | row: `Moby_HelpDeskLady_Update` |  | `Moby_AttachCheatManipulators`, `DialogRequest_Init`, `Npc_TryStartDialog`, `Hero_ResetToPosition`, `Help_Request`, `GiveItem`, `SetLevelTriggerDone`, `PauseMenu_SeedSnapshot`, `memcard_Save`, `BuildSphericalOffset` |
-| `func_L16_002E4B50` | Moby1387Update | 1387 | 16 | decomp | `void(u32)` | row: `Moby_Class1387_Update` |  | `func_L00_00251E30` |
-| `func_L16_002E4C08` | CratePlatformUpdate | 1401 bolt_thief | 16 | decomp | `void(u32)` | row: `Moby_BoltThief1401_Update` |  | `InitKnockback`, `SetDeathBits`, `MobySetAnimation`, `STUB_printf`, `MobyDualPathInit`, `MobySpringTurn`, `SpawnEngineTrailParticles`, `Moby933Spawn`, `AttachLinkedMobyToTransform`, `CratePlatform_FollowPath` |
-| `func_L16_002E5848` | PathPickup_Update | 1410 taxi | 16 | decomp | `void(u32)` | row: `Moby_Taxi1410_Update` |  | `LevelTable_SetSlotValue`, `SelectNearestTargetSlot`, `func_001FA4A0`, `func_001F9EE8`, `SelectSegmentPath`, `ShowPickupHelpMessage`, `FindMobyByDataId`, `ApproachWithVelocity`, `SamplePathAt`, `func_001F9C08` |
-| `func_L16_002E6478` | Moby1439Update | 1439 grindrail_gate | 16 | decomp | `void(u32)` | row: `Moby_GrindrailGate_Update` |  | `FastTweenColor`, `func_001FA4A0`, `func_001F9EE8` |
-| `func_L16_002E66C0` | Moby1441Update | 1441 grindrail_gate | 16 | decomp | `void(u32)` | row: `Moby_GrindrailGate1441_Update` |  | `FastTweenColor`, `func_001FA4A0`, `func_001F9EE8` |
-| `func_L16_002E6908` | Moby1442Update | 1442 grindrail_button | 16 | decomp | `void(u32)` | row: `Moby_GrindrailButton_Update` |  | `func_001F9EC0`, `Moby_StartTurn`, `FastTweenColor` |
-| `func_L16_002E6B70` | RingEffectUpdate | 1443 grindrail_barrier, 1890 | 16, 18 | decomp | `void(u32)` | row: `Moby_GrindrailBarrier_Update` |  | `Group_AreAllReady`, `Group_TriggerNearest` |
-| `func_L16_002E7270` | WanderingHelperUpdate | 1445 chomper | 16 | decomp | `void(u32)` | row: `Moby_Chomper_Update` |  | `PursuitMobyUpdate`, `Manipulator_ApplyScale`, `SetGroundHeightBand`, `func_001160D8`, `SteerMobyToward`, `IsFrameWithinWindow`, `MobySphereHitAtPoint`, `CarriedMobyUpdate`, `SpawnExplosionFx`, `SetDeathBits` |
-| `func_L16_002E7C70` | ChallengeNpcUpdate | 1455 gadgetron_ceo | 16 | decomp | `void(u32)` | row: `Moby_GadgetronCeo_Update` |  | `SetGroundHeightBand`, `AttachManipulatorsIfCheat`, `DialogRequest_Init`, `Challenge_SetIdleLayout`, `Npc_TryStartDialog`, `PlaceMarkerAheadOfMoby`, `Help_Request`, `Hero_ResetToPosition`, `Challenge_SetActiveLayout`, `PlayMovieEntryIfIdle` |
-| `func_L16_002E8680` | BannerTriggerUpdate | 1561 | 16 | decomp | `void(u32)` | row: `Moby_Class1561_Update` |  | `PlayBankSound`, `ShowBanner` |
-| `func_L16_002E8B30` | PathWalkerUpdate | 1667, 1668, 1669, 1670, 1671 | 16 | decomp | `void(u32)` | row: `Moby_Class1667_Update` |  | `WalkerGroup_Init`, `SamplePathAt`, `Moby_EmitProximityParticle` |
-| `func_L16_002E9278` | SparkRingEmitterUpdate | 1812 | 16 | decomp | `void(u32)` | row: `Moby_Class1812_Update` |  | `SpawnSparkRings` |
-| `func_L16_002E93F8` | ElevatorPlatformUpdate | 1826 elevator | 16 | decomp | `void(u32)` | row: `Moby_Elevator1826_Update` |  | `func_001F9EC0`, `func_001F9EE8`, `ApproachWithVelocity`, `CarryRiders` |
-| `func_L16_002E9D48` | SpinningObjectUpdate | 1891 gadgetron_sign | 16 | decomp | `void(u32)` | row: `Moby_GadgetronSign_Update` |  |  |
-| `func_L16_002E9DE8` | TargetActivator_Update | 1923 | 16 | decomp | `void(u32)` | row: `Moby_Class1923_Update` |  | `FindMoby270InGroup`, `Moby_ActivateFromState1`, `TargetMoby_GetPhase`, `SpawnEffectsAroundMoby` |
-| `func_L16_002EA2F8` | EnvMapA_Update | 1943 | 16 | decomp | `void(u32)` | row: `Moby_Class1943_Update` |  |  |
-| `func_L16_002EA828` | RegisterMeshSpheres | 1947 | 16 | decomp | `void(u32)` | row: `Moby_Class1947_Update` |  |  |
-| `func_L16_002EAD58` | EnvMapB_Update | 1948 | 16 | decomp | `void(u32)` | row: `Moby_Class1948_Update` |  |  |
-| `func_L16_002EB268` | Moby_UpdateDrawOnly | 1907, 1908, 1910, 1911, 1913, 1918, 1952 | 16-17 | decomp | `void(u32)` | row: `Moby_Class1907_Update` |  |  |
-| `func_L16_002EB5A0` | EnvMapC_Update | 1953 | 16 | decomp | `void(u32)` | row: `Moby_Class1953_Update` |  |  |
-| `func_L17_002AA068` | Moby99Update | 99 | 17 | decomp | `void(u32)` | row: `Moby_Class99_Update` |  | `Anim_GetStartTime`, `Anim_GetEndTime`, `func_001F9EC0`, `func_001F9C08`, `MobyGetFrameValue`, `InitDirectionalHitQuery`, `func_L00_001FF240`, `SpawnTrailParticle` |
-| `func_L17_002CC788` | FleetTurretUpdate | 347 dreks_fleet_turret | 17 | decomp | `void(u32)` | row: `Moby_DreksFleetTurret_Update` |  | `FleetTurret_HandleHit`, `SpreadCraftOnPath`, `MobyTransformScaledVertexBatch`, `func_001F9CE8`, `EaseManipulatorOffsets`, `PartType27Spawn`, `SpawnMoby558`, `FindNearestTargetMoby`, `LaunchRandomMoby733`, `SpawnExplosionFx` |
-| `func_L17_002D8CC8` | Moby669Update | 669 | 17 | decomp | `void(u32)` | row: `Moby_Class669_Update` |  | `Hero_IsInSpecialState`, `func_001FA1F8`, `normalize_vector_triplet`, `func_001FA460`, `FastNormalizeAngle`, `BuildSphericalOffset`, `func_001F9EE8`, `func_L00_001FF240`, `func_001F9EC0`, `func_001160D8` |
-| `func_L17_002DD8D0` | Moby835Update | 835 | 17 | decomp | `void(u32)` | row: `Moby_Class835_Update` |  | `ComputeHitResponse`, `MobyBobZ`, `InitDirectionalHitQuery`, `GetGroundHeight`, `PartType34Spawn` |
-| `func_L17_002EA2C8` | StopsPlatformUpdate | 1359 door, 1360 door, 1361 door, 1362 door, 1363 door, 1364 door, 1367 door, 1369 door and 2 more | 17 | decomp | `void(u32)` | row: `Moby_Door1359_Update` |  |  |
-| `func_L17_002EA8F8` | Moby1368Update | 1368 | 17 | decomp | `void(u32)` | row: `Moby_Class1368_Update` |  | `func_001F9C08`, `SpawnFadingParticle`, `InitDirectionalHitQuery`, `MobySphereHitDirectional`, `BuildSphericalOffset`, `PartType60Spawn` |
-| `func_L17_002EEB08` | FighterJetUpdate | 1379 fighter_jet | 17 | decomp | `void(u32)` | row: `Moby_FighterJet1379_Update` |  | `BuildSphericalOffset`, `func_L00_001FF548`, `func_L00_001FF610`, `func_001F9CE8`, `HeroL17_SetMoveState`, `SetGroupMobyFlags`, `Moby_SetFlagsByClass`, `func_L00_00251468`, `try_set_help_message`, `Hud_ClosePopupIfActive` |
-| `func_L17_002EFDC0` | Moby1380Update | 1380 magnet_elevator | 17 | decomp | `void(u32)` | row: `Moby_MagnetElevator_Update` |  | `WrapAngle`, `ApproachWithVelocity`, `Moby1380_InitAim`, `CameraScript_SetPosition`, `CameraScript_SetLookAt`, `RebuildPathEntryFromMobyL17`, `FastTweenColor`, `HeroL17_SetMoveState`, `CarryRiders` |
-| `func_L17_002F0678` | Moby1382Update | 1382 robot_dog | 17 | decomp | `void(u32)` | row: `Moby_RobotDog1382_Update` |  | `EnemyHitStateUpdate`, `AimTurretAtHero`, `Moby1382_UpdatePulse`, `Manipulator_SetScale`, `SetGroundHeightBand`, `CarriedMobyUpdate`, `IsPointInPolygon`, `MobySpringTurn`, `SteerTowardPoint`, `MobyGetFrameValue` |
-| `func_L17_002F3450` | Moby1448Update | 1448 shuttle | 17 | decomp | `void(u32)` | row: `Moby_Shuttle1448_Update` |  | `ShowModeSelectHelp`, `Hud_ClosePopupIfActive`, `FadeToBlack`, `CameraScript`, `func_L02_002F9ED8`, `CameraScript_SetPosition`, `CameraScript_SetLookAt`, `Hero_ResetToPosition`, `func_001FA1F8`, `AdvanceAlongCurvePath` |
-| `func_L17_002F4210` | Moby1470Update | 1470 | 17 | decomp | `void(u32)` | row: `Moby_Class1470_Update` |  | `PlayBankSound`, `ShowBanner`, `STUB_printf`, `Help_Request`, `Hero_IsInSpecialState`, `HelpPopup_Cancel`, `HeroL17_SetMoveState`, `func_L00_002E9B30`, `func_L00_002E9E20`, `HeroL06_SetStateFromMode` |
-| `func_L17_002F49B8` | Moby750SparkTriggerUpdate | 1562 | 17 | decomp | `void(u32)` | row: `Moby_Class1562_Update` |  | `SpawnMoby750Sparks` |
-| `func_L17_002F5388` | FleetReflectionUpdate | 1772 | 17 | decomp | `void(u32)` | row: `Moby_Class1772_Update` |  | `BuildSphericalOffset` |
-| `func_L17_002F5C18` | Moby1843Update | 1843 blarg_ship | 17 | decomp | `void(u32)` | row: `Moby_BlargShip1843_Update` |  | `CollectableCrateUpdate`, `randf_sym`, `TrailRingUpdate`, `PathOrbitMobyUpdate`, `SpawnExplosionFx`, `SpawnMobyAt`, `func_001FA1F8`, `ApproachWithVelocity`, `ClampVectorLength`, `func_001F9CE8` |
-| `func_L17_002F6DA0` | Moby1873Update | 1873 | 17 | decomp | `void(u32)` | row: `Moby_Class1873_Update` |  | `SetDeathBits`, `SpawnBreakFxByDistance`, `SpawnMobyBurstFx`, `SpawnMobyCopyingPlacement` |
-| `func_L17_002F6ED0` | Moby1876Update | 1876 | 17 | decomp | `void(u32)` | row: `Moby_Class1876_Update` |  | `SetDeathBits`, `SpawnBreakFxByDistance`, `SpawnMobyBurstFx`, `SpawnMobyCopyingPlacement` |
-| `func_L18_002A8400` | Moby41Update | 41 rocket | 18 | decomp | `void(u32)` | row: `Moby_Rocket41_Update` |  | `func_001F9CE8`, `InitDirectionalHitQuery`, `rand_vec`, `PartType44Spawn`, `func_001F9EC0`, `PartType21Spawn` |
-| `func_L18_002D6440` | Moby564Update | 564 rocket | 18 | decomp | `void(u32)` | row: `Moby_Rocket564_Update` |  | `func_001FA1F8`, `func_001FA4A0`, `func_001F9EC0`, `func_001F9C08`, `Moby564_SpawnTrail`, `func_001F9CE8`, `Moby564_SpawnImpact` |
-| `func_L18_002D6D08` | Moby568Update | 568 mine | 18 | decomp | `void(u32)` | row: `Moby_Mine568_Update` |  | `Moby568_CheckImpact`, `FindNearestTargetMoby`, `func_001F9CE8`, `func_L00_001FF500`, `MoveMobyWithCollision`, `CarriedMobyUpdate` |
-| `func_L18_002D76D8` | PathJunctionUpdate | 582 | 18 | decomp | `void(u32)` | row: `Moby_Class582_Update` | PathJunctionVars | `Moby806Spawn` |
-| `func_L18_002D79F0` | EnergyFieldEmitterUpdate | 583 thruster_pack_lock_green | 18 | decomp | `void(u32)` | row: `Moby_ThrusterPackLockGreen_Update` |  | `func_L00_00251E30`, `ApproachWithVelocity` |
-| `func_L18_002D8F10` | TimedLiftUpdate | 586 thruster_pack_lock_red | 18 | decomp | `void(u32)` | row: `Moby_ThrusterPackLockRed_Update` |  | `ApproachWithVelocity`, `Help_Request` |
-| `func_L18_002D96B0` | SinkingPlatformUpdate | 587 floating_platform | 18 | decomp | `void(u32)` | row: `Moby_FloatingPlatform587_Update` |  | `SpawnSparkBurstNearMoby`, `HeroL18_SetMoveState`, `HoverTurnUpdate`, `CarryRiders` |
-| `func_L18_002DC850` | FallingFireballUpdate | 624 | 18 | decomp | `void(u32)` | row: `Moby_Class624_Update` |  | `rand_vec`, `FastTweenColor`, `PartType02Spawn`, `RecordMobyShadow`, `Sound_PlayClassSound`, `FireballDamageRing` |
-| `func_L18_002DD650` | Moby628Update | 628 | 18 | decomp | `void(u32)` | row: `Moby_Class628_Update` |  | `InitDirectionalHitQuery`, `PostHitMessageFromRecord`, `MobySphereHitDirectional` |
-| `func_L18_002E09F8` | VendorMobyUpdate | 644 | 18 | decomp | `void(u32)` | row: `Moby_Class644_Update` |  | `Hero_ResetToPosition`, `CameraScript`, `Help_Request`, `ApproachWithVelocity`, `func_001F9C08`, `CameraScript_SetPosition`, `CameraScript_SetLookAt`, `CameraScript2` |
-| `func_L18_002EAB58` | HitTrigger_Update | 885, 888, 891, 892, 894, 900, 901, 936 | 18 | decomp | `void(u32)` | row: `Moby_Class885_Update` |  | `SetGroupStateTwo`, `Sound_PlayClassSound`, `PartType11Spawn`, `PartType08Spawn`, `randf_sym`, `rand_vec`, `SpawnExplosionFx` |
-| `func_L18_002EB260` | HomingSpark_Update | 983 | 18 | decomp | `void(u32)` | row: `Moby_Class983_Update` |  | `HomingSpark_EmitTrail`, `rand_vec`, `HomingSpark_InitTrail`, `ArcEmitterUpdate`, `Moby_SpawnExplosionBurst`, `MobySphereHitDirectional` |
-| `func_L18_002F0F78` | Moby1355Update | 1355 drek_fight_missile | 18 | decomp | `void(u32)` | row: `Moby_DrekFightMissile_Update` |  | `Moby1355_PickWanderPoint`, `Moby1355_SteerStep`, `Moby1355_RecordTrail`, `func_001F9C08`, `func_001F9CE8`, `StepAngleToward` |
-| `func_L18_002F2AE0` | Moby1381Update | 1381 | 18 | decomp | `void(u32)` | row: `Moby_Class1381_Update` |  | `TransformChildrenToParentSpace`, `ApproachWithVelocity`, `RemoveMobyAndChild`, `func_001F9C08`, `Moby_UpdateAttachedChildren`, `func_L01_002F9908` |
-| `func_L18_002F3268` | Moby1392Update | 1392 | 18 | decomp | `void(u32)` | row: `Moby_Class1392_Update` |  |  |
-| `func_L18_002F3710` | Moby1402Update | 1402 | 18 | decomp | `void(u32)` | row: `Moby_Class1402_Update` |  | `ApproachWithVelocity`, `Group_CopyZFromOwner` |
-| `func_L18_002F4050` | FinalBossUpdate | 1422 drek_final_boss_robot | 18 | decomp | `void(u32)` | row: `Moby_DrekFinalBossRobot_Update` |  | `Boss_LatchTargetHit`, `Boss_HitUpdate`, `Moby1249_AttachManipulators`, `Manipulator_ApplyScale`, `SetGroundHeightBand`, `Group_DisableMobys`, `Hero_OnKilled`, `Moby_InitActionMode`, `Moby583_ActivateGroup`, `PauseMenu_SeedSnapshot` |
-| `func_L18_002F8F10` | VendorActivate | 1432 | 18 | decomp | `void(u32)` | row: `Moby_Class1432_Update` |  |  |
-| `func_L18_002F8F38` | Moby1434Update | 1434 deplanetizer_gun, 1435 | 18 | decomp | `void(u32)` | row: `Moby_DeplanetizerGun_Update` |  |  |
-| `func_L18_002F90A0` | Moby1454Update | 1454 rocket_tank | 18 | decomp | `void(u32)` | row: `Moby_RocketTank_Update` |  | `Moby1454TakeHit`, `func_L00_00251E30`, `Moby_TurnTowardPathNode`, `IsFrameWithinWindow`, `MobyGetFrameValue`, `func_L03_00251AC8`, `Moby41Spawn` |
-| `func_L18_002F9D48` | Moby1563Update | 1563 | 18 | decomp | `void(u32)` | row: `Moby_Class1563_Update` | V_9D48 | `SpawnSparkRings`, `func_001F9C08`, `EmitBeamSparks`, `func_001F9CE8`, `TeslaClawArcDraw`, `func_001F9EC0`, `build_look_at_matrix`, `PartType23Spawn` |
-| `func_L18_002FBAA0` | Moby1568Update | 1568 deplanetizer_gun | 18 | decomp | `void(u32)` | row: `Moby_DeplanetizerGun1568_Update` |  |  |
-| `func_L18_002FBB88` | Moby1584Update | 1584 | 18 | decomp | `void(u32)` | row: `Moby_Class1584_Update` |  | `CarryRiders`, `func_L00_00251E30` |
-| `func_L18_002FC188` | Moby1799Update | 1799 | 18 | decomp | `void(u32)` | row: `Moby_Class1799_Update` |  | `SpawnSparkRings` |
-| `func_L18_002FD058` | Moby1906Update | 1906 gadgebot | 18 | decomp | `void(u32)` | row: `Moby_Gadgebot1906_Update` |  | `Moby1906SharedUpdate`, `CarriedMobyUpdate`, `Moby1906SteerToward`, `IsFrameWithinWindow`, `MobySphereHitAtPoint`, `func_001FA1F8` |
+| `func_L13_00307798` | ProjectileL13_Update | 1238 | 13 | decomp | `void(u32)` | **`Moby_Class1238_Update`** |  | `func_L00_001FF500`, `InitDirectionalHitQuery`, `PostHitMessageFromRecord`, `SpawnPuffParticle`, `func_L00_001FF610`, `PartType27Spawn` |
+| `func_L13_00308FA8` | Moby1261Update | 1261 poison_vessel | 13 | decomp | `void(u32)` | **`Moby_PoisonVessel_Update`** |  | `STUB_printf`, `func_00120778`, `ComputeHitResponse`, `SetDeathBits`, `RerollEffectCounter`, `DrawVendorBurst`, `SpawnPartType52Near`, `StepColorFade`, `Lerp`, `SendRadialMessageToMobys` |
+| `func_L13_00309330` | BlargSpaceCommandoUpdate | 1262 blarg_space_commando | 13 | decomp | `void(u32)` | **`Moby_BlargSpaceCommando1262_Update`** | Vars_309330 | `RopeWalkerUpdate`, `Manipulator_ApplyScale`, `SetGroundHeightBand`, `MoveCtl_Init`, `InitCurvedTrail`, `MobyGetFrameValue`, `InitDirectionalHitQuery`, `SweepSegmentCheck`, `MobySpringTurn`, `MobySteerToward` |
+| `func_L13_0030B340` | BobbingLights_Update | 1263, 1393 | 13 | decomp | `void(u32)` | **`Moby_Class1263_Update`** | Bob_9e88 | `RipplePatchesInit`, `RescaleFloatTable`, `RipplePatch_ToFixedPoint`, `Ripple_DisturbDefault`, `GridEntry_LinkNeighbors`, `RippleDisturb`, `IsBSphereVisibleScaled`, `RippleSimClock` |
+| `func_L13_0030BB90` | Lift1270Update | 1270 | 13 | decomp | `void(u32)` | **`Moby_Class1270_Update`** |  | `ApproachWithVelocity`, `Moby_GetSidePointFacingHero`, `CameraScript_SetPosition`, `CameraScript_SetLookAt`, `CameraScript2`, `HeroEnterMoveState`, `CameraScript`, `CarryRiders` |
+| `func_L13_0030C408` | GroupClearedSetState | 1271 | 13 | decomp | `void(u32)` | **`Moby_Class1271_Update`** |  | `CountLiveMobysInGroup` |
+| `func_L13_0030CAE0` | Moby1353Update | 1353 | 13 | decomp | `void(u32)` | **`Moby_Class1353_Update`** | MobyData_30CAE0 | `StartCutscene`, `Hero_ResetToPosition`, `MusicRequestTrack`, `PlayMovieEntryIfIdle`, `UnlockPlanet`, `Ship_Register`, `memcard_Save` |
+| `func_L13_0030D028` | FollowTargetAlongPath | 1403 | 13 | decomp | `void(u32)` | **`Moby_Class1403_Update`** |  | `func_L00_0025EFC0`, `AdvancePathIndexByDistance` |
+| `func_L13_0030D2A8` | SparksTriggerL13_Update | 1558 | 13 | decomp | `void(u32)` | **`Moby_Class1558_Update`** |  | `SpawnMoby750Sparks` |
+| `func_L13_0030D318` | WatchMobysUpdate | 1577 | 13 | decomp | `void(u32)` | **`Moby_Class1577_Update`** |  |  |
+| `func_L13_0030D528` | Moby1632Update | 1632 | 13 | decomp | `void(u32)` | **`Moby_Class1632_Update`** |  | `PostHitMessageFromRecord` |
+| `func_L13_0030D880` | Moby1634Update | 1634 | 13 | decomp | `void(u32)` | **`Moby_Class1634_Update`** |  | `PartType02Spawn`, `SpawnPartType52Near` |
+| `func_L13_0030E280` | Moby1805Update | 1805 blarg_ship | 13 | decomp | `void(u32)` | **`Moby_BlargShip1805_Update`** |  | `ComputeHitResponse`, `RerollEffectCounter`, `StepColorFade`, `MobyGroup_CountNotInState`, `PlayBankSound`, `ShowBanner`, `SpawnBreakFxByDistance`, `JitterVector` |
+| `func_L14_002ACCC0` | KeyframePlatformUpdate | 903 platform | 14 | decomp | `void(u32)` | **`Moby_Platform903_Update`** |  | `Hero_IsOnMoby`, `Spring`, `EasePositionToPathEnd`, `CarryRiders` |
+| `func_L14_002AD858` | Moby8Update | 8 blarg_heavy_interceptor | 14 | decomp | `void(u32)` | **`Moby_BlargHeavyInterceptor_Update`** |  | `UpdateBlinkLights`, `Moby8_ApplyHit`, `SetGroundHeightBand`, `GetFlaggedPvarWord`, `CountShortTableEntries`, `MeasurePathSegments`, `FastMemSet`, `Group_AnyMemberTriggered`, `Moby8_PrepareGlowDraw`, `Moby8_AdvanceTargetPath` |
+| `func_L14_002B2A28` | PlasmabotUpdate | 28 plasmabot | 14-15 | decomp | `void(u32)` | **`Moby_Plasmabot_Update`** |  | `Manipulator_ApplyScale`, `EffectSlot_Free`, `SetDeathBits`, `EnemyHitReaction`, `CheckTargetOutOfRange`, `UpdateRandomDelay`, `STUB_printf`, `MobyPathInit`, `Moby_ClearLinkedWord`, `MobyL14_Activate` |
+| `func_L14_002B4E40` |  | 30 machinegun_turret | 14 | decomp | `void(u32)` | **`Moby_MachinegunTurret30_Update`** |  | `Turret_ApplyHit`, `STUB_printf`, `MobySetAnimation`, `FindNearestTargetMoby`, `func_L00_00251328`, `SpawnProjectile` |
+| `func_L14_002B5938` | MinibomberUpdate | 31 minibomber | 14 | decomp | `void(u32)` | **`Moby_Minibomber_Update`** | Data_2B5938 | `MobySetAnimation`, `Minibomber_ApplyHit`, `Minibomber_FindTarget`, `Minibomber_EaseToTarget`, `Minibomber_HoverMotion`, `Minibomber_EmitExhaust`, `SetGroundHeightBand`, `STUB_printf`, `RecomputePathLengths`, `Minibomber_StopSound` |
+| `func_L14_002BBEC8` | Moby81Update | 81 | 14 | decomp | `void(u32)` | **`Moby_Class81_Update`** |  | `Moby81Destroy`, `Sound_PlayClassSound`, `randf_sym`, `PartType21Spawn`, `PartType23Spawn`, `UpdatePointLight` |
+| `func_L14_002D7250` | Moby211Update | 211 plasmabot | 14 | decomp | `void(u32)` | **`Moby_Plasmabot211_Update`** | L14RacerVars | `SumPathSegmentsBetween`, `FastMemSet`, `MobySetAnimation`, `MobyGetFrameValue`, `Moby211_StepLerp`, `Moby211_AdvanceOnPath`, `Moby211_UpdateGunAim`, `Moby325Spawn`, `Moby403Spawn`, `PuffExhaustSmoke` |
+| `func_L14_002DAA70` | Moby250Update | 250 plasmabot_hatch | 14-15 | decomp | `void(u32)` | **`Moby_PlasmabotHatch_Update`** |  | `MobySetAnimation` |
+| `func_L14_002DF5F8` | Moby309Update | 309 platform | 14 | decomp | `void(u32)` | **`Moby_Platform309_Update`** |  | `Moby309_TrackHero`, `CarryRiders` |
+| `func_L14_002DFA70` | DebrisParticleUpdate | 325 | 14-15 | decomp | `void(u32)` | **`Moby_Class325_Update`** |  | `PartType21Spawn`, `PartType23Spawn` |
+| `func_L14_002E0228` | GemLockSentryUpdate | 386 | 14 | decomp | `void(u32)` | **`Moby_Class386_Update`** |  | `InitSpacedVectorTables`, `Sound_PlayClassSound`, `Hero_RequestEffectInVolume`, `func_L14_002E0538` |
+| `func_L14_002E1110` | RaceDebrisUpdate | 403 | 14-15 | decomp | `void(u32)` | **`Moby_Class403_Update`** | Data_dfd10 | `Spline_AdvanceByDistance`, `MobyL14_EngineExhaust`, `Sound_PlayClassSound` |
+| `func_L14_002E9038` | PathLiftUpdate | 557 shuttle | 14 | decomp | `void(u32)` | **`Moby_Shuttle557_Update`** | L14LiftVars | `STUB_printf`, `func_L01_002F6540`, `func_001FA218`, `func_001F9EE8`, `func_L00_001FFED8`, `CarryRiders` |
+| `func_L14_002EC3E8` | Moby610Update | 610 | 14 | decomp | `void(u32)` | **`Moby_Class610_Update`** | Data_2EC3E8 | `STUB_printf`, `Sparks_InitParticle`, `Sparks_Update` |
+| `func_L14_002EDC70` | MineL14_Update | 643 mine | 14 | decomp | `void(u32)` | **`Moby_Mine643_Update`** | L14MineVars | `STUB_printf`, `randf_sym`, `Spline_AdvanceByDistance`, `Spring`, `ComputeHitResponse` |
+| `func_L14_002EE260` | SweepingBoltUpdate | 681 | 14 | decomp | `void(u32)` | **`Moby_Class681_Update`** | L14BoltVars | `func_L00_001FF500`, `InitDirectionalHitQuery`, `SpawnPuffParticle`, `func_L00_001FF610`, `PartType27Spawn` |
+| `func_L14_002EE6E0` | CameraIntroController | 684 | 14 | decomp | `void(u32)` | **`Moby_Class684_Update`** |  | `StartCutscene`, `Ship_ReleaseCurrent`, `ShowTrackedMoby`, `randf_sym`, `LightningArcUpdate` |
+| `func_L14_002EFD38` | Moby685Update | 685 elevator | 14 | decomp | `void(u32)` | **`Moby_Elevator685_Update`** |  | `Moby685_InitPathLengths`, `Moby685_UpdateGlowTint`, `Sound_SetPitchBend`, `FastTweenColor`, `MoveAlongPath`, `RebuildPathEntryFromMoby`, `CarryRiders`, `Spring`, `SpringToPathPoint` |
+| `func_L14_002F19C0` | TaxiUpdate | 712 taxi | 14 | decomp | `void(u32)` | **`Moby_Taxi712_Update`** |  | `LevelTable_SetSlotValue`, `SnapToPathPoint`, `func_001FA4A0`, `func_001F9EE8`, `Taxi_SelectPath`, `Vendor_ShowHelpMessage`, `FindGroupMobyByTag`, `Cam_SetDistanceGoal`, `ApproachWithVelocity`, `SamplePathAt` |
+| `func_L14_002FCEA8` | Moby851Update | 851 qwark_oltanis | 14 | decomp | `void(u32)` | **`Moby_QwarkOltanis_Update`** |  | `AttachManipulatorsIfCheat`, `SetGroundHeightBand`, `DialogRequest_Init`, `SetLevelTriggerDone`, `PauseMenu_SeedSnapshot`, `Vendor_InitState`, `Npc_TryStartDialog`, `PlaceMarkerAheadOfMoby`, `ShowBanner`, `GiveItem` |
+| `func_L14_002FD578` | Moby908Update | 908 jet | 14 | decomp | `void(u32)` | **`Moby_Jet_Update`** | Class908Vars_FD578 | `PlayBankSound`, `ShowBanner`, `SpawnExplosionFx`, `STUB_printf`, `PathFollowerInit`, `Moby_SpringAlongPath`, `ThrusterPuffs_Spawn` |
+| `func_L14_002FE038` | OltanisJetUpdate | 921 jet | 14 | decomp | `void(u32)` | **`Moby_Jet921_Update`** | Jet_2FE038 | `DeleteLinkedAndSelf`, `PlayBankSound`, `ShowBanner`, `SpawnExplosionFx`, `STUB_printf`, `PathFollowerInit`, `Trigger_Arm`, `OltanisJet_FollowPath`, `Moby_SetState2`, `SecondEngineExhaustUpdate` |
+| `func_L14_002FF040` | FlyerUpdate | 922 rocket | 14 | decomp | `void(u32)` | **`Moby_Rocket922_Update`** | FlyerVars_2FF040 | `LerpAngle`, `func_001F9CE8`, `SpawnHitSparkPieces` |
+| `func_L14_002FF728` | BoltThiefUpdate | 923 bolt_thief | 14 | decomp | `void(u32)` | **`Moby_BoltThief923_Update`** |  | `InitKnockback`, `SetDeathBits`, `MobySetAnimation`, `STUB_printf`, `MobyDualPathInit`, `MobySpringTurn`, `SpawnEngineTrailParticles`, `Moby933Spawn`, `AttachLinkedMobyToTransform`, `FollowPathSmoothed` |
+| `func_L14_00300468` | Moby924Update | 924 sam | 14 | decomp | `void(u32)` | **`Moby_Sam_Update`** |  | `AttachManipulatorsIfCheat`, `DialogRequest_Init`, `SetLevelTriggerDone`, `PauseMenu_SeedSnapshot`, `Npc_TryStartDialog`, `UnlockPlanet`, `ShowPlanetBanner`, `memcard_Save`, `BuildSphericalOffset`, `func_001F9CE8` |
+| `func_L14_00300AC8` | FloatingMineUpdate | 933 mine | 14, 16 | decomp | `void(u32)` | **`Moby_Mine933_Update`** | FloatMineVars_ff640 | `Spring`, `FastMemZero16`, `ComputeHitResponse` |
+| `func_L14_00302288` | BouncingSparkUpdate | 1193 | 14 | decomp | `void(u32)` | **`Moby_Class1193_Update`** | Spark_2288 | `LerpVec4`, `PartType23Spawn`, `func_L00_001FF610`, `func_L00_001FF500`, `func_001F9CE8` |
+| `func_L14_00302A58` | Moby1224Update | 1224 | 14-15, 17 | decomp | `void(u32)` | **`Moby_Class1224_Update`** |  | `InitRopeStripMoby`, `BeamSweepDamage`, `func_L14_00303270` |
+| `func_L14_00304E68` | Moby1331Update | 1331 | 14-15 | decomp | `void(u32)` | **`Moby_Class1331_Update`** |  | `EffectSlot_FreeAt`, `BeamSlotUpdate` |
+| `func_L14_00306890` | TriggeredUnlockUpdate | 1352 | 14 | decomp | `void(u32)` | **`Moby_Class1352_Update`** |  | `LowerListedParts`, `Trigger_Arm`, `SlideListedPartsUpdate` |
+| `func_L14_00306BE0` | CollectiblePickupUpdate | 1354 morphoray | 14 | decomp | `void(u32)` | **`Moby_Morphoray1354_Update`** |  | `StreakDataInit`, `StreakParticlesUpdate`, `GiveItem`, `StartCutscene`, `SetLevelTriggerDone`, `memcard_Save`, `ShowBanner`, `Help_Request` |
+| `func_L14_003071B0` | Moby1395Update | 1395 | 14 | decomp | `void(u32)` | **`Moby_Class1395_Update`** | Data_3071B0 | `SpawnMoby1396`, `Sound_PlayClassSound`, `LerpAngle`, `Lerp` |
+| `func_L14_00307660` | Moby1397Update | 1397 | 14 | decomp | `void(u32)` | **`Moby_Class1397_Update`** |  |  |
+| `func_L14_00308000` | StepOnSwitchUpdate | 1416 button | 14 | decomp | `void(u32)` | **`Moby_Button1416_Update`** |  |  |
+| `func_L14_00308368` | BlargInterceptorUpdate | 1417 blarg_heavy_interceptor | 14 | decomp | `void(u32)` | **`Moby_BlargHeavyInterceptor1417_Update`** | Data_308368 | `SpawnExplosionFx`, `STUB_printf`, `InitPathSegments`, `FastMemSet`, `RerollEffectCounter`, `LissajousOffsetUpdate`, `BlargInterceptor_FollowPath`, `BlargInterceptor_NotifyGrab`, `func_L00_00251328` |
+| `func_L14_00308F08` | QueueEffectDrawUpdate | 1418 | 14 | decomp | `void(u32)` | **`Moby_Class1418_Update`** |  |  |
+| `func_L14_00309C48` | SkillPointUpdate | 1559 | 14 | decomp | `void(u32)` | **`Moby_Class1559_Update`** |  | `MobyGroup_CountNotInState`, `PlayBankSound`, `ShowBanner`, `SpawnMoby750Sparks` |
+| `func_L15_00298BB8` | SentrybotUpdate | 44 sentrybot | 15, 17 | decomp | `void(u32)` | **`Moby_Sentrybot_Update`** |  | `DamageableMoby_HandleHit`, `Manipulator_SetScale`, `SetGroundHeightBand`, `Group_SetClass198Timer`, `TurnTowardPoint`, `Moby_FindVisible27BTarget`, `func_L15_0029B1D8`, `PickFacingState`, `Moby_MarkKilled`, `Anim_GetEndTime` |
+| `func_L15_0029BE10` | ProjectileUpdate | 49 rocket | 15-18 | decomp | `void(u32)` | **`Moby_Rocket49_Update`** |  | `Sound_PlayClassSound`, `InitDirectionalHitQuery`, `SpawnImpactFx`, `SpawnTrailParticles` |
+| `func_L15_0029C1D0` | Moby67Update | 67 | 15 | decomp | `void(u32)` | **`Moby_Class67_Update`** | MovingVars_ZZ |  |
+| `func_L15_0029E8A0` |  | 256 | 15, 18 | decomp | `void(u32)` | **`Moby_Class256_Update`** |  | `EffectQueue_Add`, `func_L00_001FF270`, `func_L00_001FF3E0`, `func_001F9B50`, `func_001F9CE8`, `SpringTurn`, `BuildSphericalOffset`, `PartType44Spawn`, `func_001F9EC0`, `build_look_at_matrix` |
+| `func_L15_0029FCB0` | ScaleFadeAndDeleteUpdate | 1427 | 15, 18 | decomp | `void(u32)` | **`Moby_Class1427_Update`** |  | `MobySphereHitDirectional` |
+| `func_L15_0029FF90` | Moby1523Update | 1523 | 15, 18 | decomp | `void(u32)` | **`Moby_Class1523_Update`** |  | `func_L00_001FF240`, `PartType31Spawn`, `PartType05Spawn`, `AllocPointLight`, `FreePointLight`, `SendRadialMessageToMobys`, `PartType26Spawn`, `RandomSphericalOffset`, `PartType15Spawn`, `PartType69Spawn` |
+| `func_L15_002A3668` | Moby77Update | 77 mine | 15, 17 | decomp | `void(u32)` | **`Moby_Mine77_Update`** |  | `rand_vec`, `PartType60Spawn`, `MoveMobyWithCollision`, `SpawnExplosionFx`, `MobySphereHitDirectional` |
+| `func_L15_002A3DD0` | Moby78Update | 78 | 15, 17 | decomp | `void(u32)` | **`Moby_Class78_Update`** |  | `Moby_MarkKilled`, `func_001FA4A0`, `func_001F9EE8`, `func_001F9EC0`, `PartType71Spawn` |
+| `func_L15_002A48B0` | SlidingGateUpdate | 92 gate | 15 | decomp | `void(u32)` | **`Moby_Gate92_Update`** |  |  |
+| `func_L15_002A4D88` | ClipVolumeDoorUpdate | 93 gate | 15 | decomp | `void(u32)` | **`Moby_Gate93_Update`** | DoorVars | `GetFlaggedPvarWord` |
+| `func_L15_002A8090` | SpiderbotUpdate | 123 spiderbot | 15, 17 | decomp | `void(u32)` | **`Moby_Spiderbot_Update`** |  | `build_look_at_matrix`, `func_001FA218`, `func_001FA480`, `normalize_vector_triplet`, `FastNormalizeAngle`, `BuildSphericalOffset`, `func_001F9EC0`, `func_001160D8`, `func_L00_001FF240`, `PartType60Spawn` |
+| `func_L15_002A8AA8` | DestructibleHitEffect | 148, 255 | 15 | decomp | `void(u32)` | **`Moby_Class148_Update`** |  | `func_L00_001FF240`, `func_L01_002F9908`, `DefaultVtbl_DeleteMoby`, `PartType16Spawn`, `SetDeathBits` |
+| `func_L15_002AB4A8` | HitReactionEffectAltUpdate | 154 | 15 | decomp | `void(u32)` | **`Moby_Class154_Update`** |  | `func_L00_001FF240`, `func_L01_002F9908`, `DefaultVtbl_DeleteMoby`, `PartType16Spawn`, `SetDeathBits` |
+| `func_L15_002BEFF8` | MovingMobyUpdate | 196 door, 197 door, 1958 underwater_door | 15, 17 | decomp | `void(u32)` | **`Moby_Door196_Update`** | MovingMobyVars |  |
+| `func_L15_002C3BD8` | ConstructionArmUpdate | 221 construction_arm | 15 | decomp | `void(u32)` | **`Moby_ConstructionArm_Update`** |  | `EaseManipulatorOffsets`, `SpringTurn`, `func_L00_001FF240`, `PartType21Spawn`, `SpawnExplosionFx`, `SpawnBreakFxByDistance` |
+| `func_L15_002C6950` |  | 233 helicopter | 15 | decomp | `void(u32)` | **`Moby_Helicopter233_Update`** |  | `SpawnMoby55B`, `EnemyTakeHitAndAim`, `FindNearestTargetMoby`, `FindNearestEligibleMoby`, `MobyGroup_CountNotInState`, `func_L00_0025EFC0`, `IsPointInPolygon`, `SpringTurn`, `SteerFlyingMoby`, `FlockStepToGoal` |
+| `func_L15_002CC858` | SentrybotAlarmUpdate | 408 sentrybot_alarm | 15, 17 | decomp | `void(u32)` | **`Moby_SentrybotAlarm_Update`** |  | `FastTweenColor`, `Group_SetClass198Timer`, `Group_ActivateFirstIdle`, `LoopingFx_Update` |
+| `func_L15_002D0798` | UltramechUpdate | 491 ultramech_unlimited | 15 | decomp | `void(u32)` | **`Moby_UltramechUnlimited_Update`** |  | `TableEntryMobyUpdate`, `Manipulator_ApplyScale`, `func_001160D8`, `MobyGroup_CountNotInState`, `IsPointInPolygon`, `func_L00_001FF500`, `ComputeLaunchVelocityZ`, `func_L00_0025EFC0`, `SpringTurn`, `IsFrameWithinWindow` |
+| `func_L15_002D7C00` |  | 655 | 15, 17 | decomp | `void(u32)` | **`Moby_Class655_Update`** |  | `FreePointLight`, `Moby_ActivateIfTriggered`, `Hero_IsNearGround`, `func_L00_00251328`, `UpdatePointLight`, `ResetBeamPoints`, `QuartuArcEmitter`, `Sound_PlayClassSound`, `BuildSphericalOffset`, `func_L00_001FF240` |
+| `func_L15_002E5770` | Moby934Update | 934 | 15, 17 | decomp | `void(u32)` | **`Moby_Class934_Update`** |  | `InitDirectionalHitQuery`, `MobySphereHitDirectional`, `SpawnExplosionFx`, `SpawnMobyAttachedParticle` |
+| `func_L15_002E5AA0` | RotateWithLinkedMoby | 937 | 15 | decomp | `void(u32)` | **`Moby_Class937_Update`** |  |  |
+| `func_L15_002E6D48` | UnderwaterRingUpdate | 1209 underwater_ring | 15, 17 | decomp | `void(u32)` | **`Moby_UnderwaterRing_Update`** |  | `func_001FA4A0`, `func_001F9EE8`, `func_L00_00251328`, `MobyGroup_SetState` |
+| `func_L15_002E87B0` | SideDriftUpdate | 1250 conveyor_belt | 15 | decomp | `void(u32)` | **`Moby_ConveyorBelt1250_Update`** |  | `CarryRiders` |
+| `func_L15_002E9358` | PoisonVesselUpdate | 1257 poison_vessel | 15 | decomp | `void(u32)` | **`Moby_PoisonVessel1257_Update`** | Data_2E9358 | `GetFlaggedPvarWord`, `func_L00_001FF240`, `func_L00_001FF610`, `RotateWithMoby`, `Sound_PlayClassSound`, `SendRadialMessageToMobys` |
+| `func_L15_002EBB38` | Moby1388Update | 1388 bolt_grabber | 15 | decomp | `void(u32)` | **`Moby_BoltGrabber_Update`** |  | `DriftingSprites_Init`, `DriftingSprites_DrawL10`, `StartCutscene`, `ShowBanner`, `GiveItem`, `memcard_Save` |
+| `func_L15_002EBFC8` | Moby1257SpawnerUpdate | 1394 | 15 | decomp | `void(u32)` | **`Moby_Class1394_Update`** |  | `Moby1257Spawn` |
+| `func_L15_002EC490` | RippleStripsMobyUpdate | 1405, 1406, 1407, 1408, 1409, 1426, 1565, 1567 | 15, 17 | decomp | `void(u32)` | **`Moby_Class1405_Update`** |  | `func_L00_00251328` |
+| `func_L15_002EC8B0` | Moby1419Update | 1419 | 15 | decomp | `void(u32)` | **`Moby_Class1419_Update`** |  | `StartCutscene`, `SetLevelTriggerDone`, `HeroSetObjectFlags`, `PlayMovieEntryIfIdle`, `HeroClearObjectFlags`, `Hero_ResetToPosition`, `UnlockPlanet`, `PauseMenu_SeedSnapshot`, `ShowPlanetBanner`, `memcard_Save` |
+| `func_L15_002ECD18` | EmitRisingParticles | 1425 | 15 | decomp | `void(u32)` | **`Moby_Class1425_Update`** |  | `PartType34Spawn` |
+| `func_L15_002ED168` | Moby1428Update | 1428 codebot | 15, 17 | decomp | `void(u32)` | **`Moby_Codebot_Update`** |  | `InitRandomMobyData`, `SparkleSpritesDrawL02`, `StartCutscene`, `ShowBanner`, `memcard_Save` |
+| `func_L15_002ED420` | CodebotSlotUpdate | 1430 codebot_slot | 15 | decomp | `void(u32)` | **`Moby_CodebotSlot_Update`** |  | `func_L00_001FF240`, `SetMobyGroupVisible`, `Trigger_Arm`, `IsVendorEntryAvailable`, `Moby1428Spawn`, `Hero_ResetToPosition`, `CountDeadMobysInGroup` |
+| `func_L15_002EDB50` | UltramechScientistUpdate | 1446 ultramech_scientist | 15 | decomp | `void(u32)` | **`Moby_UltramechScientist_Update`** |  | `Moby_AttachCheatManipulators`, `SetMobyZBand`, `DialogRequest_Init`, `Npc_TryStartDialog`, `SetLevelTriggerDone`, `PauseMenu_SeedSnapshot`, `MobyGroup_CountNotInState`, `Help_Reset`, `MobySetAnimation`, `UnlockPlanet` |
+| `func_L15_002EE458` | GiantClankPadUpdate | 1451 giant_clank_pad, 1899 giant_clank_pad | 15, 18 | decomp | `void(u32)` | **`Moby_GiantClankPad_Update`** |  | `try_set_help_message`, `Help_Reset`, `MobySetAnimation`, `StartCutscene`, `MusicRequestTrack`, `PauseMenu_SeedSnapshot`, `Hero_ResetToPosition`, `Hero_BeginObjectControl` |
+| `func_L15_002EE7E8` | Moby1469Update | 1469 | 15 | decomp | `void(u32)` | **`Moby_Class1469_Update`** | Talk_2EE7E8 | `Help_Request`, `Hero_IsInSpecialState` |
+| `func_L15_002EEF70` | BossSlotEffectUpdate | 1560 | 15 | decomp | `void(u32)` | **`Moby_Class1560_Update`** |  | `SpawnMoby750Sparks` |
+| `func_L16_002A1C50` | HomingProjectileUpdate | 50 rocket | 16, 18 | decomp | `void(u32)` | **`Moby_Rocket50_Update`** |  | `Sound_PlayClassSound`, `SpawnTrailParticles`, `func_001F9CE8`, `BuildSphericalOffset`, `func_001F9C08`, `MobySphereHitDirectional` |
+| `func_L16_002A50F0` | HomingSparkUpdate | 1475 rocket | 16 | decomp | `void(u32)` | **`Moby_Rocket1475_Update`** |  | `SpringAngle`, `BuildSphericalOffset`, `PartType44Spawn`, `func_001F9EC0`, `build_look_at_matrix`, `PartType21Spawn`, `func_L00_001FF500` |
+| `func_L16_002C5030` | Moby257Update | 257 | 16 | decomp | `void(u32)` | **`Moby_Class257_Update`** |  | `SamplePathAt` |
+| `func_L16_002C7218` | ThrownBombUpdate | 281 bomb | 16 | decomp | `void(u32)` | **`Moby_Bomb281_Update`** |  | `func_L00_001FF610`, `RerollEffectCounter`, `StepColorFade` |
+| `func_L16_002CA848` | Moby470Update | 470 rocket | 16 | decomp | `void(u32)` | **`Moby_Rocket470_Update`** |  | `InitRandomDataBlock`, `AnimateSpriteLayers` |
+| `func_L16_002CAC40` | Moby471Update | 471 conveyor_belt | 16 | decomp | `void(u32)` | **`Moby_ConveyorBelt471_Update`** |  | `Moby471_CarryGroupRiders`, `Moby471_AttachToNearest` |
+| `func_L16_002CF180` | TestDummyUpdate | 541 test_dummy | 16 | decomp | `void(u32)` | **`Moby_TestDummy_Update`** |  | `TestDummyHandleHit`, `Manipulator_ApplyScale`, `FindNearestLinkedMoby`, `EffectSlots_Clear`, `Moby_RateLimitedNotify`, `Moby_SteerToward`, `FindNearestEligibleMoby`, `IsFrameWithinWindow`, `ComputeLaunchVelocityZ`, `SpawnThrownBomb` |
+| `func_L16_002D0560` | Moby546Update | 546 wall_button | 16 | decomp | `void(u32)` | **`Moby_WallButton_Update`** |  | `SetMoby1387Target` |
+| `func_L16_002D0870` | Moby552Update | 552 | 16 | decomp | `void(u32)` | **`Moby_Class552_Update`** |  | `RefreshLinkedPeers228`, `Moby552_AllGroupIdle` |
+| `func_L16_002D1868` | HoverboardRacerUpdate | 556 test_dummy_on_hoverboard | 16 | decomp | `void(u32)` | **`Moby_TestDummyOnHoverboard_Update`** |  | `Manipulator_SetScale`, `GetNodeVector`, `SpawnMobyBurstFx`, `ChooseSteerNode`, `HoverboardRacer_CheckBoostGates`, `HoverboardRacer_SkipToMarker`, `StepTableIndex`, `LeapMoby_AdjustPitch`, `SpringAngle`, `PostHitMessage` |
+| `func_L16_002D40B8` | FloatingEnemyUpdate | 638 blarg_elite_commando | 16, 18 | decomp | `void(u32)` | **`Moby_BlargEliteCommando_Update`** |  | `Moby_HandleDamageKnockback`, `Manipulator_SetScale`, `func_001F9EC0`, `SteerTowardTarget`, `Moby_UpdateTurnAnim`, `IsFrameWithinWindow`, `SpawnMoby31`, `Moby_SpawnHitParticles`, `Moby_AimJointsAtTarget`, `Moby_EmitJointParticles` |
+| `func_L16_002D6DA8` | Moby647Update | 647 door | 16 | decomp | `void(u32)` | **`Moby_Door647_Update`** |  | `ApproachWithVelocity` |
+| `func_L16_002D7080` | Moby650Update | 650 test_dummy_door | 16 | decomp | `void(u32)` | **`Moby_TestDummyDoor_Update`** |  | `func_001F9B70`, `ApproachWithVelocity` |
+| `func_L16_002D72C0` | Moby654Update | 654 | 16 | decomp | `void(u32)` | **`Moby_Class654_Update`** |  | `ActivateLinkedMobysNearest`, `CameraScript`, `ActivateLinkedMobysClearTimers`, `TestDummies_SetState`, `Moby654_ComputePose`, `CameraScript_SetPosition`, `CameraScript_SetLookAt`, `MobyGroup_CountNotInState`, `CameraScript2`, `Hero_ResetToPosition` |
+| `func_L16_002D7B08` | Moby800Update | 800 | 16 | decomp | `void(u32)` | **`Moby_Class800_Update`** |  | `SetDeathBits`, `SpawnBreakFxByDistance`, `SpawnMobyBurstFx` |
+| `func_L16_002E3740` | ArmedTransportUpdate | 1356 armed_transport | 16, 18 | decomp | `void(u32)` | **`Moby_ArmedTransport_Update`** |  | `Moby_UpdateHitsAndPursuit`, `Path_ComputeHeadings`, `IsPointInPolygon`, `Passenger_AttachOwner`, `ApproachWithVelocity`, `Moby_AdvancePathSegment`, `func_001F9EC0`, `Passenger_StartRide`, `SpawnThrownMoby`, `SetDeathBits` |
+| `func_L16_002E45F8` | WatcherUpdate | 1377 help_desk_lady | 16 | decomp | `void(u32)` | **`Moby_HelpDeskLady_Update`** |  | `Moby_AttachCheatManipulators`, `DialogRequest_Init`, `Npc_TryStartDialog`, `Hero_ResetToPosition`, `Help_Request`, `GiveItem`, `SetLevelTriggerDone`, `PauseMenu_SeedSnapshot`, `memcard_Save`, `BuildSphericalOffset` |
+| `func_L16_002E4B50` | Moby1387Update | 1387 | 16 | decomp | `void(u32)` | **`Moby_Class1387_Update`** |  | `func_L00_00251E30` |
+| `func_L16_002E4C08` | CratePlatformUpdate | 1401 bolt_thief | 16 | decomp | `void(u32)` | **`Moby_BoltThief1401_Update`** |  | `InitKnockback`, `SetDeathBits`, `MobySetAnimation`, `STUB_printf`, `MobyDualPathInit`, `MobySpringTurn`, `SpawnEngineTrailParticles`, `Moby933Spawn`, `AttachLinkedMobyToTransform`, `CratePlatform_FollowPath` |
+| `func_L16_002E5848` | PathPickup_Update | 1410 taxi | 16 | decomp | `void(u32)` | **`Moby_Taxi1410_Update`** |  | `LevelTable_SetSlotValue`, `SelectNearestTargetSlot`, `func_001FA4A0`, `func_001F9EE8`, `SelectSegmentPath`, `ShowPickupHelpMessage`, `FindMobyByDataId`, `ApproachWithVelocity`, `SamplePathAt`, `func_001F9C08` |
+| `func_L16_002E6478` | Moby1439Update | 1439 grindrail_gate | 16 | decomp | `void(u32)` | **`Moby_GrindrailGate_Update`** |  | `FastTweenColor`, `func_001FA4A0`, `func_001F9EE8` |
+| `func_L16_002E66C0` | Moby1441Update | 1441 grindrail_gate | 16 | decomp | `void(u32)` | **`Moby_GrindrailGate1441_Update`** |  | `FastTweenColor`, `func_001FA4A0`, `func_001F9EE8` |
+| `func_L16_002E6908` | Moby1442Update | 1442 grindrail_button | 16 | decomp | `void(u32)` | **`Moby_GrindrailButton_Update`** |  | `func_001F9EC0`, `Moby_StartTurn`, `FastTweenColor` |
+| `func_L16_002E6B70` | RingEffectUpdate | 1443 grindrail_barrier, 1890 | 16, 18 | decomp | `void(u32)` | **`Moby_GrindrailBarrier_Update`** |  | `Group_AreAllReady`, `Group_TriggerNearest` |
+| `func_L16_002E7270` | WanderingHelperUpdate | 1445 chomper | 16 | decomp | `void(u32)` | **`Moby_Chomper_Update`** |  | `PursuitMobyUpdate`, `Manipulator_ApplyScale`, `SetGroundHeightBand`, `func_001160D8`, `SteerMobyToward`, `IsFrameWithinWindow`, `MobySphereHitAtPoint`, `CarriedMobyUpdate`, `SpawnExplosionFx`, `SetDeathBits` |
+| `func_L16_002E7C70` | ChallengeNpcUpdate | 1455 gadgetron_ceo | 16 | decomp | `void(u32)` | **`Moby_GadgetronCeo_Update`** |  | `SetGroundHeightBand`, `AttachManipulatorsIfCheat`, `DialogRequest_Init`, `Challenge_SetIdleLayout`, `Npc_TryStartDialog`, `PlaceMarkerAheadOfMoby`, `Help_Request`, `Hero_ResetToPosition`, `Challenge_SetActiveLayout`, `PlayMovieEntryIfIdle` |
+| `func_L16_002E8680` | BannerTriggerUpdate | 1561 | 16 | decomp | `void(u32)` | **`Moby_Class1561_Update`** |  | `PlayBankSound`, `ShowBanner` |
+| `func_L16_002E8B30` | PathWalkerUpdate | 1667, 1668, 1669, 1670, 1671 | 16 | decomp | `void(u32)` | **`Moby_Class1667_Update`** |  | `WalkerGroup_Init`, `SamplePathAt`, `Moby_EmitProximityParticle` |
+| `func_L16_002E9278` | SparkRingEmitterUpdate | 1812 | 16 | decomp | `void(u32)` | **`Moby_Class1812_Update`** |  | `SpawnSparkRings` |
+| `func_L16_002E93F8` | ElevatorPlatformUpdate | 1826 elevator | 16 | decomp | `void(u32)` | **`Moby_Elevator1826_Update`** |  | `func_001F9EC0`, `func_001F9EE8`, `ApproachWithVelocity`, `CarryRiders` |
+| `func_L16_002E9D48` | SpinningObjectUpdate | 1891 gadgetron_sign | 16 | decomp | `void(u32)` | **`Moby_GadgetronSign_Update`** |  |  |
+| `func_L16_002E9DE8` | TargetActivator_Update | 1923 | 16 | decomp | `void(u32)` | **`Moby_Class1923_Update`** |  | `FindMoby270InGroup`, `Moby_ActivateFromState1`, `TargetMoby_GetPhase`, `SpawnEffectsAroundMoby` |
+| `func_L16_002EA2F8` | EnvMapA_Update | 1943 | 16 | decomp | `void(u32)` | **`Moby_Class1943_Update`** |  |  |
+| `func_L16_002EA828` | RegisterMeshSpheres | 1947 | 16 | decomp | `void(u32)` | **`Moby_Class1947_Update`** |  |  |
+| `func_L16_002EAD58` | EnvMapB_Update | 1948 | 16 | decomp | `void(u32)` | **`Moby_Class1948_Update`** |  |  |
+| `func_L16_002EB268` | Moby_UpdateDrawOnly | 1907, 1908, 1910, 1911, 1913, 1918, 1952 | 16-17 | decomp | `void(u32)` | **`Moby_Class1907_Update`** |  |  |
+| `func_L16_002EB5A0` | EnvMapC_Update | 1953 | 16 | decomp | `void(u32)` | **`Moby_Class1953_Update`** |  |  |
+| `func_L17_002AA068` | Moby99Update | 99 | 17 | decomp | `void(u32)` | **`Moby_Class99_Update`** |  | `Anim_GetStartTime`, `Anim_GetEndTime`, `func_001F9EC0`, `func_001F9C08`, `MobyGetFrameValue`, `InitDirectionalHitQuery`, `func_L00_001FF240`, `SpawnTrailParticle` |
+| `func_L17_002CC788` | FleetTurretUpdate | 347 dreks_fleet_turret | 17 | decomp | `void(u32)` | **`Moby_DreksFleetTurret_Update`** |  | `FleetTurret_HandleHit`, `SpreadCraftOnPath`, `MobyTransformScaledVertexBatch`, `func_001F9CE8`, `EaseManipulatorOffsets`, `PartType27Spawn`, `SpawnMoby558`, `FindNearestTargetMoby`, `LaunchRandomMoby733`, `SpawnExplosionFx` |
+| `func_L17_002D8CC8` | Moby669Update | 669 | 17 | decomp | `void(u32)` | **`Moby_Class669_Update`** |  | `Hero_IsInSpecialState`, `func_001FA1F8`, `normalize_vector_triplet`, `func_001FA460`, `FastNormalizeAngle`, `BuildSphericalOffset`, `func_001F9EE8`, `func_L00_001FF240`, `func_001F9EC0`, `func_001160D8` |
+| `func_L17_002DD8D0` | Moby835Update | 835 | 17 | decomp | `void(u32)` | **`Moby_Class835_Update`** |  | `ComputeHitResponse`, `MobyBobZ`, `InitDirectionalHitQuery`, `GetGroundHeight`, `PartType34Spawn` |
+| `func_L17_002EA2C8` | StopsPlatformUpdate | 1359 door, 1360 door, 1361 door, 1362 door, 1363 door, 1364 door, 1367 door, 1369 door and 2 more | 17 | decomp | `void(u32)` | **`Moby_Door1359_Update`** |  |  |
+| `func_L17_002EA8F8` | Moby1368Update | 1368 | 17 | decomp | `void(u32)` | **`Moby_Class1368_Update`** |  | `func_001F9C08`, `SpawnFadingParticle`, `InitDirectionalHitQuery`, `MobySphereHitDirectional`, `BuildSphericalOffset`, `PartType60Spawn` |
+| `func_L17_002EEB08` | FighterJetUpdate | 1379 fighter_jet | 17 | decomp | `void(u32)` | **`Moby_FighterJet1379_Update`** |  | `BuildSphericalOffset`, `func_L00_001FF548`, `func_L00_001FF610`, `func_001F9CE8`, `HeroL17_SetMoveState`, `SetGroupMobyFlags`, `Moby_SetFlagsByClass`, `func_L00_00251468`, `try_set_help_message`, `Hud_ClosePopupIfActive` |
+| `func_L17_002EFDC0` | Moby1380Update | 1380 magnet_elevator | 17 | decomp | `void(u32)` | **`Moby_MagnetElevator_Update`** |  | `WrapAngle`, `ApproachWithVelocity`, `Moby1380_InitAim`, `CameraScript_SetPosition`, `CameraScript_SetLookAt`, `RebuildPathEntryFromMobyL17`, `FastTweenColor`, `HeroL17_SetMoveState`, `CarryRiders` |
+| `func_L17_002F0678` | Moby1382Update | 1382 robot_dog | 17 | decomp | `void(u32)` | **`Moby_RobotDog1382_Update`** |  | `EnemyHitStateUpdate`, `AimTurretAtHero`, `Moby1382_UpdatePulse`, `Manipulator_SetScale`, `SetGroundHeightBand`, `CarriedMobyUpdate`, `IsPointInPolygon`, `MobySpringTurn`, `SteerTowardPoint`, `MobyGetFrameValue` |
+| `func_L17_002F3450` | Moby1448Update | 1448 shuttle | 17 | decomp | `void(u32)` | **`Moby_Shuttle1448_Update`** |  | `ShowModeSelectHelp`, `Hud_ClosePopupIfActive`, `FadeToBlack`, `CameraScript`, `func_L02_002F9ED8`, `CameraScript_SetPosition`, `CameraScript_SetLookAt`, `Hero_ResetToPosition`, `func_001FA1F8`, `AdvanceAlongCurvePath` |
+| `func_L17_002F4210` | Moby1470Update | 1470 | 17 | decomp | `void(u32)` | **`Moby_Class1470_Update`** |  | `PlayBankSound`, `ShowBanner`, `STUB_printf`, `Help_Request`, `Hero_IsInSpecialState`, `HelpPopup_Cancel`, `HeroL17_SetMoveState`, `func_L00_002E9B30`, `func_L00_002E9E20`, `HeroL06_SetStateFromMode` |
+| `func_L17_002F49B8` | Moby750SparkTriggerUpdate | 1562 | 17 | decomp | `void(u32)` | **`Moby_Class1562_Update`** |  | `SpawnMoby750Sparks` |
+| `func_L17_002F5388` | FleetReflectionUpdate | 1772 | 17 | decomp | `void(u32)` | **`Moby_Class1772_Update`** |  | `BuildSphericalOffset` |
+| `func_L17_002F5C18` | Moby1843Update | 1843 blarg_ship | 17 | decomp | `void(u32)` | **`Moby_BlargShip1843_Update`** |  | `CollectableCrateUpdate`, `randf_sym`, `TrailRingUpdate`, `PathOrbitMobyUpdate`, `SpawnExplosionFx`, `SpawnMobyAt`, `func_001FA1F8`, `ApproachWithVelocity`, `ClampVectorLength`, `func_001F9CE8` |
+| `func_L17_002F6DA0` | Moby1873Update | 1873 | 17 | decomp | `void(u32)` | **`Moby_Class1873_Update`** |  | `SetDeathBits`, `SpawnBreakFxByDistance`, `SpawnMobyBurstFx`, `SpawnMobyCopyingPlacement` |
+| `func_L17_002F6ED0` | Moby1876Update | 1876 | 17 | decomp | `void(u32)` | **`Moby_Class1876_Update`** |  | `SetDeathBits`, `SpawnBreakFxByDistance`, `SpawnMobyBurstFx`, `SpawnMobyCopyingPlacement` |
+| `func_L18_002A8400` | Moby41Update | 41 rocket | 18 | decomp | `void(u32)` | **`Moby_Rocket41_Update`** |  | `func_001F9CE8`, `InitDirectionalHitQuery`, `rand_vec`, `PartType44Spawn`, `func_001F9EC0`, `PartType21Spawn` |
+| `func_L18_002D6440` | Moby564Update | 564 rocket | 18 | decomp | `void(u32)` | **`Moby_Rocket564_Update`** |  | `func_001FA1F8`, `func_001FA4A0`, `func_001F9EC0`, `func_001F9C08`, `Moby564_SpawnTrail`, `func_001F9CE8`, `Moby564_SpawnImpact` |
+| `func_L18_002D6D08` | Moby568Update | 568 mine | 18 | decomp | `void(u32)` | **`Moby_Mine568_Update`** |  | `Moby568_CheckImpact`, `FindNearestTargetMoby`, `func_001F9CE8`, `func_L00_001FF500`, `MoveMobyWithCollision`, `CarriedMobyUpdate` |
+| `func_L18_002D76D8` | PathJunctionUpdate | 582 | 18 | decomp | `void(u32)` | **`Moby_Class582_Update`** | PathJunctionVars | `Moby806Spawn` |
+| `func_L18_002D79F0` | EnergyFieldEmitterUpdate | 583 thruster_pack_lock_green | 18 | decomp | `void(u32)` | **`Moby_ThrusterPackLockGreen_Update`** |  | `func_L00_00251E30`, `ApproachWithVelocity` |
+| `func_L18_002D8F10` | TimedLiftUpdate | 586 thruster_pack_lock_red | 18 | decomp | `void(u32)` | **`Moby_ThrusterPackLockRed_Update`** |  | `ApproachWithVelocity`, `Help_Request` |
+| `func_L18_002D96B0` | SinkingPlatformUpdate | 587 floating_platform | 18 | decomp | `void(u32)` | **`Moby_FloatingPlatform587_Update`** |  | `SpawnSparkBurstNearMoby`, `HeroL18_SetMoveState`, `HoverTurnUpdate`, `CarryRiders` |
+| `func_L18_002DC850` | FallingFireballUpdate | 624 | 18 | decomp | `void(u32)` | **`Moby_Class624_Update`** |  | `rand_vec`, `FastTweenColor`, `PartType02Spawn`, `RecordMobyShadow`, `Sound_PlayClassSound`, `FireballDamageRing` |
+| `func_L18_002DD650` | Moby628Update | 628 | 18 | decomp | `void(u32)` | **`Moby_Class628_Update`** |  | `InitDirectionalHitQuery`, `PostHitMessageFromRecord`, `MobySphereHitDirectional` |
+| `func_L18_002E09F8` | VendorMobyUpdate | 644 | 18 | decomp | `void(u32)` | **`Moby_Class644_Update`** |  | `Hero_ResetToPosition`, `CameraScript`, `Help_Request`, `ApproachWithVelocity`, `func_001F9C08`, `CameraScript_SetPosition`, `CameraScript_SetLookAt`, `CameraScript2` |
+| `func_L18_002EAB58` | HitTrigger_Update | 885, 888, 891, 892, 894, 900, 901, 936 | 18 | decomp | `void(u32)` | **`Moby_Class885_Update`** |  | `SetGroupStateTwo`, `Sound_PlayClassSound`, `PartType11Spawn`, `PartType08Spawn`, `randf_sym`, `rand_vec`, `SpawnExplosionFx` |
+| `func_L18_002EB260` | HomingSpark_Update | 983 | 18 | decomp | `void(u32)` | **`Moby_Class983_Update`** |  | `HomingSpark_EmitTrail`, `rand_vec`, `HomingSpark_InitTrail`, `ArcEmitterUpdate`, `Moby_SpawnExplosionBurst`, `MobySphereHitDirectional` |
+| `func_L18_002F0F78` | Moby1355Update | 1355 drek_fight_missile | 18 | decomp | `void(u32)` | **`Moby_DrekFightMissile_Update`** |  | `Moby1355_PickWanderPoint`, `Moby1355_SteerStep`, `Moby1355_RecordTrail`, `func_001F9C08`, `func_001F9CE8`, `StepAngleToward` |
+| `func_L18_002F2AE0` | Moby1381Update | 1381 | 18 | decomp | `void(u32)` | **`Moby_Class1381_Update`** |  | `TransformChildrenToParentSpace`, `ApproachWithVelocity`, `RemoveMobyAndChild`, `func_001F9C08`, `Moby_UpdateAttachedChildren`, `func_L01_002F9908` |
+| `func_L18_002F3268` | Moby1392Update | 1392 | 18 | decomp | `void(u32)` | **`Moby_Class1392_Update`** |  |  |
+| `func_L18_002F3710` | Moby1402Update | 1402 | 18 | decomp | `void(u32)` | **`Moby_Class1402_Update`** |  | `ApproachWithVelocity`, `Group_CopyZFromOwner` |
+| `func_L18_002F4050` | FinalBossUpdate | 1422 drek_final_boss_robot | 18 | decomp | `void(u32)` | **`Moby_DrekFinalBossRobot_Update`** |  | `Boss_LatchTargetHit`, `Boss_HitUpdate`, `Moby1249_AttachManipulators`, `Manipulator_ApplyScale`, `SetGroundHeightBand`, `Group_DisableMobys`, `Hero_OnKilled`, `Moby_InitActionMode`, `Moby583_ActivateGroup`, `PauseMenu_SeedSnapshot` |
+| `func_L18_002F8F10` | VendorActivate | 1432 | 18 | decomp | `void(u32)` | **`Moby_Class1432_Update`** |  |  |
+| `func_L18_002F8F38` | Moby1434Update | 1434 deplanetizer_gun, 1435 | 18 | decomp | `void(u32)` | **`Moby_DeplanetizerGun_Update`** |  |  |
+| `func_L18_002F90A0` | Moby1454Update | 1454 rocket_tank | 18 | decomp | `void(u32)` | **`Moby_RocketTank_Update`** |  | `Moby1454TakeHit`, `func_L00_00251E30`, `Moby_TurnTowardPathNode`, `IsFrameWithinWindow`, `MobyGetFrameValue`, `func_L03_00251AC8`, `Moby41Spawn` |
+| `func_L18_002F9D48` | Moby1563Update | 1563 | 18 | decomp | `void(u32)` | **`Moby_Class1563_Update`** | V_9D48 | `SpawnSparkRings`, `func_001F9C08`, `EmitBeamSparks`, `func_001F9CE8`, `TeslaClawArcDraw`, `func_001F9EC0`, `build_look_at_matrix`, `PartType23Spawn` |
+| `func_L18_002FBAA0` | Moby1568Update | 1568 deplanetizer_gun | 18 | decomp | `void(u32)` | **`Moby_DeplanetizerGun1568_Update`** |  |  |
+| `func_L18_002FBB88` | Moby1584Update | 1584 | 18 | decomp | `void(u32)` | **`Moby_Class1584_Update`** |  | `CarryRiders`, `func_L00_00251E30` |
+| `func_L18_002FC188` | Moby1799Update | 1799 | 18 | decomp | `void(u32)` | **`Moby_Class1799_Update`** |  | `SpawnSparkRings` |
+| `func_L18_002FD058` | Moby1906Update | 1906 gadgebot | 18 | decomp | `void(u32)` | **`Moby_Gadgebot1906_Update`** |  | `Moby1906SharedUpdate`, `CarriedMobyUpdate`, `Moby1906SteerToward`, `IsFrameWithinWindow`, `MobySphereHitAtPoint`, `func_001FA1F8` |
 
 ## Hook-after candidates
 
