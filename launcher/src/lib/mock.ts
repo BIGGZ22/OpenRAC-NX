@@ -26,6 +26,8 @@ import type {
   Library,
   PackView,
   Platform,
+  PluginStatus,
+  PluginView,
   ReportEntry,
   Progress,
   SaveChange,
@@ -203,6 +205,8 @@ let config: Config = {
   renderer: new URLSearchParams(typeof location === "undefined" ? "" : location.search).has("vulkan")
     ? "vulkan"
     : "opengl",
+  // ?purist: Purist mode is on.
+  purist: new URLSearchParams(typeof location === "undefined" ? "" : location.search).has("purist"),
   crashesSeen: {},
   discChoice: {},
 };
@@ -503,6 +507,83 @@ function lastLines(id: string, args: Record<string, unknown>): string[] {
     default:
       return ["\u2714 step one", "\u2714 step two", "done"];
   }
+}
+
+/** The native mods the preview pretends are installed: ?nomods shows none. */
+let mockPlugins: PluginView[] = query.has("nomods")
+  ? []
+  : [
+      {
+        id: "lock-strafe",
+        name: "Lock-strafe",
+        version: "1.0.0",
+        author: "OpenRAC contributors",
+        description:
+          "Strafe as in the later games: with a weapon that fires ahead the camera stays behind Ratchet, the right stick turns him and the left stick strafes.",
+        homepage: "https://github.com/OpenRAC/rac1-mods",
+        license: "GPL-3.0-or-later",
+        enabled: true,
+        state: "ready",
+        reason: "",
+        blocked: "",
+        settings: [
+          {
+            key: "mode",
+            name: "Mode",
+            type: "choice",
+            default: "lock",
+            description: "Lock: always, with a weapon that fires ahead. Hold: while L2 or R2 is held.",
+            choices: [
+              { value: "lock", name: "Lock with weapons" },
+              { value: "hold", name: "Hold L2 or R2" },
+            ],
+            value: "lock",
+          },
+          { key: "trace", name: "Log each pad report", type: "bool", default: false, value: false },
+        ],
+        hooks: ["Pad_ProcessReport", "Hero_TurnToHeading", "FollowCamera_ApplyOverrides"],
+        sharedHooks: [],
+        native: true,
+        path: "/home/you/.local/share/dev.openrac.launcher/active/rac1/data/plugins/lock-strafe",
+      },
+      {
+        id: "camera-tweaks",
+        name: "Camera tweaks",
+        version: "0.3.0",
+        author: "someone",
+        description: "A wider field of view and a slower follow camera.",
+        homepage: "",
+        license: "",
+        enabled: true,
+        state: "refused",
+        reason: "Needs OpenRAC with mod interface 2.0; this one has 1.0.",
+        blocked: "",
+        settings: [{ key: "fov", name: "Field of view", type: "int", default: 70, min: 50, max: 110, value: 80 }],
+        hooks: ["FollowCamera_ApplyOverrides"],
+        sharedHooks: [{ hook: "FollowCamera_ApplyOverrides", with: ["Lock-strafe"] }],
+        native: true,
+        path: "/home/you/.local/share/dev.openrac.launcher/active/rac1/data/plugins/camera-tweaks",
+      },
+    ];
+
+/** What the preview's game says it did with the mods at its last start. */
+function mockPluginStatus(): PluginStatus | null {
+  if (mockPlugins.length === 0) return null;
+  return {
+    time: new Date().toISOString(),
+    version: "pal",
+    purist: config.purist,
+    mods: mockPlugins
+      .filter((p) => p.enabled)
+      .map((p) => ({
+        id: p.id,
+        version: p.version,
+        state: p.state === "ready" ? "loaded" : "refused",
+        reason: p.reason,
+        hooks: p.hooks,
+      })),
+    hookPoints: ["Pad_ProcessReport", "Hero_TurnToHeading", "FollowCamera_ApplyOverrides"],
+  };
 }
 
 function samplePack(name: string): PackView {
@@ -949,6 +1030,56 @@ export async function mockCall(command: string, args: Record<string, unknown> = 
         mockPacks.splice(Math.max(0, Math.min(mockPacks.length, at + (args.up ? -1 : 1))), 0, pack);
       }
       return delay([...mockPacks]);
+    }
+    case "plugins_list":
+      return delay(mockPlugins.map((p) => ({ ...p })));
+    case "plugins_status":
+      return delay(mockPluginStatus());
+    case "plugins_set_enabled":
+    case "plugins_move":
+    case "plugins_set_setting":
+    case "plugins_remove": {
+      const at = mockPlugins.findIndex((p) => p.id === args.id);
+      const mod = mockPlugins[at];
+      if (!mod) throw new Error(`no mod ${String(args.id)}`);
+      if (command === "plugins_set_enabled") {
+        if (args.enabled && mod.state === "refused") throw new Error(mod.reason);
+        mockPlugins[at] = { ...mod, enabled: !!args.enabled, state: args.enabled ? "ready" : "off" };
+      } else if (command === "plugins_move") {
+        mockPlugins.splice(at, 1);
+        mockPlugins.splice(Math.max(0, Math.min(mockPlugins.length, at + (args.up ? -1 : 1))), 0, mod);
+      } else if (command === "plugins_set_setting") {
+        mockPlugins[at] = {
+          ...mod,
+          settings: mod.settings.map((s) => (s.key === args.key ? { ...s, value: args.value } : s)),
+        };
+      } else {
+        mockPlugins = mockPlugins.filter((p) => p.id !== mod.id);
+      }
+      return delay(mockPlugins.map((p) => ({ ...p })));
+    }
+    case "plugins_install": {
+      const path = String(args.path ?? "");
+      // A name with "pack" in it stands for a data pack, which goes to the overrides.
+      if (/pack/i.test(path)) return delay({ kind: "pack" });
+      const name =
+        path
+          .split(/[\\/]/)
+          .at(-1)
+          ?.replace(/\.zip$/i, "") ?? "mod";
+      const id =
+        name
+          .toLowerCase()
+          .replace(/[^a-z0-9]+/g, "-")
+          .replace(/^-|-$/g, "") || "mod";
+      const replaced = mockPlugins.some((p) => p.id === id);
+      if (!replaced) {
+        mockPlugins.push({
+          ...mockPlugins[0],
+          ...{ id, name, settings: [], hooks: [], sharedHooks: [], path: `/home/you/plugins/${id}` },
+        } as PluginView);
+      }
+      return delay({ kind: "plugin", id, name, version: "1.0.0", replaced, enabled: true });
     }
     case "open_game_folder":
       console.info(`[preview] ${command}`, args);

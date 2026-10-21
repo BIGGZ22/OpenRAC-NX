@@ -110,6 +110,8 @@ export interface Config {
   /** Windows, Linux and macOS: what the game draws with, OpenGL (the default) or the experimental
    *  Vulkan renderer (OPENRAC_GL_API=vulkan). Android keeps its own choice (Renderer, gpuRendererSelect). */
   renderer: DesktopRenderer;
+  /** Purist mode: the game loads no native mods (`--no-mods`), whatever is switched on in Mods. */
+  purist: boolean;
   /** Per game, the time (seconds since 1970) of the newest crash report the player dismissed. */
   crashesSeen: Record<string, number>;
   /** Developers only: the version each game with two discs found plays (`rac1` -> `rac1/ntsc`). */
@@ -339,6 +341,60 @@ export interface PackView {
   textures: number;
   models: number;
   levelFiles: number;
+}
+
+/** core/src/plugins.rs: a setting a native mod declares in its manifest (docs/port/MODS.md). */
+export interface PluginSetting {
+  key: string;
+  name: string;
+  type: "bool" | "int" | "float" | "choice" | "string";
+  default: unknown;
+  description?: string;
+  min?: number;
+  max?: number;
+  step?: number;
+  choices?: { value: string; name: string }[];
+  maxLength?: number;
+  /** The value now: the player's, or the default. */
+  value: unknown;
+}
+
+/** core/src/plugins.rs: a native mod as the Mods tab shows it, in load order. */
+export interface PluginView {
+  id: string;
+  name: string;
+  version: string;
+  author: string;
+  description: string;
+  homepage: string;
+  license: string;
+  enabled: boolean;
+  /** ready: on, nothing against it; off; refused: it cannot load (reason); failed: the port did
+   *  not load it at its last start (reason). */
+  state: "ready" | "off" | "refused" | "failed";
+  reason: string;
+  /** Off, and could not be switched on as things are: why. */
+  blocked: string;
+  settings: PluginSetting[];
+  hooks: string[];
+  sharedHooks: { hook: string; with: string[] }[];
+  /** It carries code (a library), not only data. */
+  native: boolean;
+  /** The installed folder. */
+  path: string;
+}
+
+/** core/src/plugins.rs: what adding a .zip or a folder came to. */
+export type PluginInstalled =
+  { kind: "plugin"; id: string; name: string; version: string; replaced: boolean; enabled: boolean } | { kind: "pack" };
+
+/** core/src/plugins.rs: what the port did with the game's mods at its last start. */
+export interface PluginStatus {
+  time: string;
+  version: string;
+  purist: boolean;
+  mods: { id: string; version: string; state: string; reason: string; hooks: string[] }[];
+  hookPoints: string[];
 }
 
 /** core/src/jobs.rs */
@@ -589,6 +645,19 @@ export const api = {
     call<PackView[]>("overrides_set_enabled", { game, id, enabled }),
   overridesMove: (game: string, id: string, up: boolean) => call<PackView[]>("overrides_move", { game, id, up }),
   overridesRemove: (game: string, id: string) => call<PackView[]>("overrides_remove", { game, id }),
+  /** A game's native mods (core/src/plugins.rs) for its disc `version` ("pal"), in load order. */
+  pluginsList: (game: string, version: string) => call<PluginView[]>("plugins_list", { game, version }),
+  pluginsSetEnabled: (game: string, version: string, id: string, enabled: boolean) =>
+    call<PluginView[]>("plugins_set_enabled", { game, version, id, enabled }),
+  pluginsMove: (game: string, version: string, id: string, up: boolean) =>
+    call<PluginView[]>("plugins_move", { game, version, id, up }),
+  pluginsSetSetting: (game: string, version: string, id: string, key: string, value: unknown) =>
+    call<PluginView[]>("plugins_set_setting", { game, version, id, key, value }),
+  pluginsRemove: (game: string, version: string, id: string) =>
+    call<PluginView[]>("plugins_remove", { game, version, id }),
+  pluginsInstall: (game: string, version: string, path: string) =>
+    call<PluginInstalled>("plugins_install", { game, version, path }),
+  pluginsStatus: (game: string) => call<PluginStatus | null>("plugins_status", { game }),
   /** A folder inside the game's set-up folder (an export), opened with the system. */
   openGameFolder: (game: string, path: string) => call<null>("open_game_folder", { game, path }),
   /** Android: the player's GPU driver packages (src-tauri/src/android.rs). */
