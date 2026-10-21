@@ -413,6 +413,7 @@
           "mobys",
           "textures",
           "scenery",
+          "terrain",
           "all"
         ],
         "cwd": ".",
@@ -905,6 +906,7 @@
           "mobys",
           "textures",
           "scenery",
+          "terrain",
           "all"
         ],
         "cwd": ".",
@@ -1226,6 +1228,7 @@
           "mobys",
           "textures",
           "scenery",
+          "terrain",
           "all"
         ],
         "cwd": ".",
@@ -1502,6 +1505,7 @@
           "mobys",
           "textures",
           "scenery",
+          "terrain",
           "all"
         ],
         "cwd": ".",
@@ -1828,6 +1832,7 @@
           "mobys",
           "textures",
           "scenery",
+          "terrain",
           "all"
         ],
         "cwd": ".",

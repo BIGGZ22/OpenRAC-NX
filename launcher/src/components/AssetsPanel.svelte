@@ -25,6 +25,7 @@
     { id: "mobys", label: "Characters and objects" },
     { id: "textures", label: "Textures" },
     { id: "scenery", label: "Scenery (ties and shrubs)" },
+    { id: "terrain", label: "Terrain (the ground and walls)" },
     { id: "all", label: "Everything" },
   ];
 
