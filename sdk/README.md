@@ -22,6 +22,7 @@ type files below. This README is the SDK's own notes.
 | [docs/](docs/README.md) | the modders' guides, and the generated API reference |
 | [include/openrac/openrac_mod.h](include/openrac/openrac_mod.h) | the interface: the entry points a mod exports and the table (`openrac_api`) the port hands it |
 | [include/openrac/games/rac1.h](include/openrac/games/rac1.h) | Ratchet & Clank's hook points: names, signatures, replacement types |
+| [include/openrac/keys.h](include/openrac/keys.h) | names for keys, mouse buttons and the wheel (interface 1.2): keybind settings and `openrac_input` |
 | [include/openrac/mod.hpp](include/openrac/mod.hpp) | the C++ layer over the interface (C++17, header-only) |
 | [include/openrac/games/rac1.hpp](include/openrac/games/rac1.hpp) | the hook points as C++ types, for `mod.hook<...>()` |
 | [cmake/](cmake/OpenRACModConfig.cmake) | `find_package(OpenRACMod)` and `openrac_add_mod()` |
@@ -64,7 +65,9 @@ OPENRAC_MOD_EXPORT int openrac_mod_load(const openrac_api* api, openrac_mod* mod
 
 What the table offers (MODS.md, section 6): the game's memory
 (`api->memory + address`), the log, the mod's settings, hook points, a
-callback after each game tick and one for each pad report, the game's
+callback after each game tick and one for each pad report, the keyboard and
+mouse (interface 1.2: their state each tick, the port's keyboard table taken
+over, the cursor captured), the game's
 functions by name or by code address, the relocation of globals for the
 level loaded, and room on the game's stack. Nothing else of the port is
 reachable, and a mod links against nothing of OpenRAC's: the build refuses a

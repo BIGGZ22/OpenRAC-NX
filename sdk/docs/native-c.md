@@ -70,6 +70,45 @@ api->on_pad(mod, pad, NULL);
 
 The pad report's layout is in [scripts.md](scripts.md#the-pad-report).
 
+## The keyboard and mouse
+
+Interface 1.2 (`"api": "1.2"`) lets a mod read the keyboard and mouse and
+press the pad's buttons from them, for a mod that plays the game with a
+keyboard and mouse (rac1-mods' keyboard-mouse):
+
+```c
+#include "openrac/keys.h"   /* names for keys, mouse buttons and the wheel */
+
+static int s_jump;          /* a bind: from a keybind setting (settings.md) */
+
+static void pad(void* user, int port, uint8_t* report, int size) {
+    const openrac_input* in = s_api->input();      /* this tick's keys and mouse */
+    if (port == 0 && openrac_bind_held(in, s_jump)) {
+        report[1] &= (uint8_t)~0x40;               /* Cross held (bit 14: a clear bit is held) */
+    }
+    /* in->mouse_dx, mouse_dy: the motion since the last tick; wheel_x, wheel_y in notches */
+}
+
+/* in openrac_mod_load: */
+s_jump = openrac_bind_from_name(api->setting_string(mod, "jump"));  /* one bind; split a pair at ',' */
+api->take_input(mod, OPENRAC_INPUT_KEYBOARD);  /* the port's own WASD table stops */
+api->capture_mouse(mod, 1);                     /* hidden cursor, relative motion */
+```
+
+- `input()` is the state for the tick about to run, the same for every call
+  in that tick (`in->tick` says which). Each key, `keys[usage]`, has
+  `OPENRAC_KEY_HELD` and `OPENRAC_KEY_PRESSED` (it went down since the last
+  tick, so a tap shorter than a tick still counts). Nothing is held while the
+  window has no focus.
+- `take_input` gives the keyboard to your mod: the port's table (WASD, IJKL,
+  Space, ...) no longer presses pad 0's buttons. A gamepad still does, so
+  merge your buttons into the report rather than overwrite it.
+- `capture_mouse` asks; the port lets the cursor go anyway while the window
+  has no focus or its overlay (F3) is open (`in->overlay`), and captures it
+  again after.
+- The game's state (playing, paused, a menu) is the game's own: read it from
+  game memory.
+
 ## Settings and logging
 
 `api->setting_bool/int/float/string(mod, key)` ([settings](settings.md)), and

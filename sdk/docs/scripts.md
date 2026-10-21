@@ -42,6 +42,11 @@ end)
 | `openrac.fields` | game state by name, read and written as plain values: `openrac.fields.bolts`, `openrac.fields.hero.position.x` (experimental: see the [reference](reference/hooks-rac1.md#fields)) |
 | `openrac.read(type, address)`, `openrac.write(type, address, value)` | game memory; `type` is `u8 i8 u16 i16 u32 i32 f32`; addresses in game RAM only (below 32 MB) |
 | `openrac.pvars(moby)` | with the behaviour catalogue: the per-class variables of the moby at that address, by name (experimental) |
+| `openrac.key(bind)`, `openrac.pressed(bind)` (1.2) | whether a key, mouse button or wheel direction is held, or went down since the last tick, by its name: `openrac.key("KeyW")`, `openrac.pressed("MouseLeft")`, `openrac.pressed("WheelUp")` ([settings](settings.md#key-bindings)) |
+| `openrac.mouse()` (1.2) | `dx, dy, wheel_x, wheel_y`: the mouse's motion since the last tick and its wheel in notches |
+| `openrac.window()` (1.2) | `focused, captured, overlay`: the window has the keyboard; the cursor is captured; OpenRAC's overlay has the input |
+| `openrac.take_input("keyboard")` (1.2) | while your scripts first run: the port's own keyboard table stops pressing pad 0's buttons, so your `on_pad` presses them |
+| `openrac.capture_mouse(on)` (1.2) | hide the cursor and keep it in the window (relative motion), or let it go |
 | `require(name)` | another `.luau` file of your mod's own folder: `require("util")`, `require("lib/util")` |
 
 Hook points are named by their [ids](hooks.md#stable-ids)

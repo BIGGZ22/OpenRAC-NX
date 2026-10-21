@@ -191,6 +191,18 @@ A setting is `{key, name, type, default, description?}` with `key` in
 | `float` | `min`, `max`, `step` | a number |
 | `choice` | `choices`: `[{value, name}]`, two or more | one of the values (a string) |
 | `string` | `max_length` | a string |
+| `keybind` (1.2) | `binds` (1 or 2, default 2), `group` | up to `binds` names of `openrac/keys.h`, comma-separated: `"KeyW,ArrowUp"`; `""` binds nothing |
+
+A `keybind` names keys by where they are, as the web's `KeyboardEvent.code`
+does (`KeyW`, `Space`, `ShiftLeft`, `Digit1`, `ArrowUp`), mouse buttons
+(`MouseLeft`, `MouseRight`, `MouseMiddle`, `MouseBack`, `MouseForward`) and
+the wheel (`WheelUp`, `WheelDown`, `WheelLeft`, `WheelRight`). The launcher
+shows it as "press a key" buttons and marks an input bound to two keybinds of
+the same `group` (settings without one share the group `""`). The manifest
+may also list `"presets": [{"id", "name", "values": {key: value}}]`: buttons
+over the settings that set several keybinds at once (a keybind a preset does
+not name goes back to its default; the launcher adds a Default button of its
+own).
 
 A value that is missing, of the wrong type or out of range is the default
 (the port logs it). Settings count from the game's next start.
@@ -400,15 +412,30 @@ OPENRAC_MOD_EXPORT void openrac_mod_unload(void);                        /* opti
 | `relocate_data(a)`, `relocate_level_data(level, a)` | a global's address in the code loaded now (guest.h's `OPENRAC_DATA`, `OPENRAC_LDATA`) |
 | `loaded_level()` | the level whose program is loaded, -1 for none |
 | `stack_push(size, &saved)`, `stack_pop(saved)` | room on the game's stack for a call that takes a pointer to a local |
+| `input()` (1.2) | the keyboard and mouse for the tick about to run (`openrac_input`): each key by its USB HID usage, held and pressed since the last tick; the mouse's buttons, its motion since the last tick (raw while captured) and its wheel; whether the window has focus, the cursor is captured, the port's overlay has the input. Never null: without a window nothing is held |
+| `take_input(mod, devices)` (1.2) | during load: `OPENRAC_INPUT_KEYBOARD` stops the port's own keyboard table driving pad 0 (WASD, Space, ...), so the mod presses the pad's buttons through `on_pad`; a gamepad goes on as before, the port's window keys stay its own |
+| `capture_mouse(mod, capture)` (1.2) | any time: ask for the cursor captured (hidden, held in the window, relative motion) or let go. The port lets it go anyway while the window has no focus or its overlay or debug menu is open |
 
 A mod for several discs carries its own table of the addresses and names it
 uses on each, as the port's `rac1_version.h` does, and picks it by
 `api->version`; one it has no table for it refuses (`fail`).
 
+`openrac/keys.h` (1.2) names every key, mouse button and wheel direction
+("binds") and tests them against `openrac_input`; the C++ layer has
+`mod.input()`, `mod.take_input()`, `mod.capture_mouse()`, and scripts
+`openrac.key(name)`, `pressed(name)`, `mouse()`, `window()`, `take_input(...)`
+and `capture_mouse(on)`. The game's own state (in play, paused, the Quick
+Select open) is the game's: a mod reads it from game memory as it reads
+anything else of the game (rac1-mods' keyboard-mouse reads the game mode).
+
 **Compatibility.** The major version changes when something in the table
 changes or goes; a mod built for another major is refused. The minor version
 grows when something is added at the end; a mod built for a minor at most
-the port's loads. The port keeps every hook point it has had, with its
+the port's loads. A mod reports the interface its manifest's `api` names,
+not the SDK's: `openrac_add_mod` passes it in (`OPENRAC_MOD_TARGET_MINOR`), so
+a 1.1 mod rebuilt with SDK 1.2 still loads on a port of 1.1. 1.2 (SDK 1.2.0)
+added the keyboard and mouse (`input`, `take_input`, `capture_mouse`, the
+`keybind` setting and manifest presets). The port keeps every hook point it has had, with its
 signature, for as long as the major version lasts.
 
 **What a mod must not do**: keep pointers into game memory across levels
