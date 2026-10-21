@@ -26,10 +26,11 @@ import struct
 import subprocess
 import sys
 import tempfile
+import time
 
 from disc import LEVEL_COUNT, Disc
 from formats import FormatError
-from godot import LevelWriter, write_project
+from godot import SCHEMA as GODOT_SCHEMA, SCRIPTS, LevelWriter, write_project
 from spaceships import add_spaceships
 from level import load_flight, load_level, load_title
 from level import load_wad_level
@@ -43,13 +44,106 @@ ROOT = Path(__file__).resolve().parents[1]
 
 def output_path(path: Path, anywhere: bool = False, replace: bool = False) -> Path:
     """A new directory inside assets/ or build/, after resolving symlinks. ANYWHERE: any new
-    directory (an installed launcher has no checkout to write in: it names its own data folder)."""
+    directory (an installed launcher has no checkout to write in: it names its own data folder).
+    REPLACE: it may exist."""
     resolved = path.resolve()
     if not anywhere and not any(root in resolved.parents for root in (ROOT / "assets", ROOT / "build")):
         raise FormatError("output must be a new directory under this repository's assets/ or build/")
     if resolved.exists() and not replace:
         raise FormatError(f"{resolved} already exists; choose a new directory")
     return resolved
+
+
+def export_kind(path: Path) -> str | None:
+    """What a directory holds: None when it is missing or empty, "port" for levels extracted for
+    the port (a manifest.json per level, or one beside), "godot" for the editor's Godot projects
+    (project.godot, or one per level_NN), "other" for anything else."""
+    if not path.is_dir() or not any(path.iterdir()):
+        return None
+    if (path / "manifest.json").is_file() or any(path.glob("level_*/manifest.json")):
+        return "port"
+    if (path / "project.godot").is_file() or any(path.glob("level_*/project.godot")):
+        return "godot"
+    return "other"
+
+
+def ours(path: Path, kind: str) -> None:
+    """Refuses to write over a directory that holds something other than an export of KIND."""
+    found = export_kind(path)
+    if found not in (None, kind):
+        what = {"port": "levels extracted for the game", "godot": "Godot projects of the level editor",
+                "other": "files that are not an export"}[found]
+        raise FormatError(f"{path} holds {what}, not what this command writes; choose another folder")
+
+
+def level_schema(level_dir: Path) -> int | None:
+    """The level.json schema a Godot level was written with, None when it has none."""
+    try:
+        return json.loads((level_dir / "level.json").read_text()).get("schema")
+    except (OSError, ValueError, AttributeError):
+        return None
+
+
+def update_godot(dest: Path, levels: list[int], split: bool, export, schema: int) -> dict[str, list[int]]:
+    """Brings the Godot projects in DEST (an earlier export of this command) up to date, keeping
+    every edit: a level of the current SCHEMA is left as it is (its scene, with the player's
+    edits, is the one they work on); a missing level is exported; a level an older extractor wrote
+    moves to DEST's backups folder, edits and all, and a new one takes its place. EXPORT(out,
+    levels) writes those levels as a fresh export into OUT, the way godot() does. The editor's
+    scripts (rc1/) are refreshed in every project. Returns the levels "kept", "added" and
+    "replaced", and the "backup" folder when one was made."""
+    place = (lambda i: dest / f"level_{i:02}") if split else (lambda i: dest / "levels" / f"level_{i:02}")
+    level_dir = (lambda i: place(i) / "levels" / f"level_{i:02}") if split else place
+    report: dict = {"kept": [], "added": [], "replaced": [], "backup": None}
+    todo = []
+    for i in levels:
+        if not level_dir(i).is_dir():
+            report["added"].append(i)
+            todo.append(i)
+        elif level_schema(level_dir(i)) != schema:
+            report["replaced"].append(i)
+            todo.append(i)
+        else:
+            report["kept"].append(i)
+    if report["replaced"]:
+        backup = dest.parent / f"{dest.name}-backups" / time.strftime("%Y%m%d-%H%M%S")
+        backup.mkdir(parents=True, exist_ok=True)
+        for i in report["replaced"]:
+            place(i).rename(backup / f"level_{i:02}")
+        report["backup"] = backup
+    if todo:
+        fresh = Path(tempfile.mkdtemp(prefix=f".{dest.name}-", dir=dest.parent))
+        try:
+            export(fresh, todo)
+            for i in todo:
+                source = fresh / f"level_{i:02}" if split else fresh / "levels" / f"level_{i:02}"
+                place(i).parent.mkdir(parents=True, exist_ok=True)
+                source.rename(place(i))
+        finally:
+            shutil.rmtree(fresh, ignore_errors=True)
+    for project in ([place(i) for i in levels] if split else [dest]):
+        if (project / "project.godot").is_file():
+            shutil.copytree(SCRIPTS, project / "rc1", dirs_exist_ok=True)
+    return report
+
+
+def export_godot(out: Path, levels: list[int], anywhere: bool, split: bool, export) -> str:
+    """The godot command's output, made or updated (update_godot); a sentence saying what was done."""
+    dest = output_path(out, anywhere, replace=True)
+    ours(dest, "godot")
+    if export_kind(dest) is None:
+        publish(dest, lambda fresh: export(fresh, levels), anywhere, replace=True)
+        return f"Godot project{'s, one per level' if split else ''}: {dest}"
+    report = update_godot(dest, levels, split, export, GODOT_SCHEMA)
+    said = [f"Godot project{'s' if split else ''} in {dest}:"]
+    if report["kept"]:
+        said.append(f"{len(report['kept'])} level(s) kept as they are, with your edits")
+    if report["added"]:
+        said.append(f"{len(report['added'])} added")
+    if report["replaced"]:
+        said.append(f"{len(report['replaced'])} made by an older extractor written again; the old ones, with "
+                    f"any edits, are in {report['backup']}")
+    return " ".join(said[:1]) + " " + "; ".join(said[1:]) + "."
 
 
 def adopt_flat_export(out: Path, version: str, kind: str = "port") -> bool:
@@ -294,12 +388,13 @@ def later_main(args, parser, disc: Disc, version: wads.Version) -> None:
     if unknown:
         raise FormatError(f"{version.game} has no level {unknown[0]}; its levels are {', '.join(map(str, numbers))}")
     if args.command == "godot":
-        dest = publish(args.out, lambda out: godot(args.iso, survey, wanted, args.terrain_lod, max(1, args.jobs), out,
-                                                   args.split, version.region, version.game), args.anywhere)
-        print(f"Godot project{'s, one per level' if args.split else ''}: {dest}")
+        print(export_godot(args.out, wanted, args.anywhere, args.split,
+                           lambda out, todo: godot(args.iso, survey, todo, args.terrain_lod, max(1, args.jobs), out,
+                                                   args.split, version.region, version.game)))
     elif args.command == "port":
+        ours(output_path(args.out, args.anywhere, replace=True), "port")
         dest = publish(args.out, lambda out: port(args.iso, survey, wanted, args.terrain_lod, max(1, args.jobs), out,
-                                                  version.game), args.anywhere, args.replace)
+                                                  version.game), args.anywhere, replace=True)
         print(f"Levels in the port's layout (early access, not playable yet): {dest}")
     else:
         dest = publish(args.out, lambda out: raw_later(source, args.level[0], out))
@@ -346,7 +441,8 @@ def main() -> None:
     native.add_argument("--terrain-lod", type=int, choices=(0, 2), default=0,
                         help="terrain detail: 0 finest (default), 2 coarsest")
     native.add_argument("--replace", action="store_true",
-                        help="OUT may exist: it is replaced by the new export once that is complete")
+                        help="kept for older launchers: an earlier export in OUT is always replaced once the new "
+                             "one is complete")
     native.add_argument("--anywhere", action="store_true",
                         help="OUT may be outside this repository (the installed launcher's data folder)")
     packing = commands.add_parser("pack")
@@ -381,15 +477,18 @@ def main() -> None:
                     # written over.
                     print(f"moved the Godot projects made before into {args.out.resolve()}")
                     return
-                dest = publish(args.out, lambda out: godot(args.iso, survey, levels, args.terrain_lod, max(1, args.jobs), out,
-                                                           args.split, disc.version.region), args.anywhere)
-                print(f"Godot project{'s, one per level' if args.split else ''}: {dest}")
+                print(export_godot(args.out, levels, args.anywhere, args.split,
+                                   lambda out, todo: godot(args.iso, survey, todo, args.terrain_lod, max(1, args.jobs),
+                                                           out, args.split, disc.version.region)))
             elif args.command == "port":
                 levels = sorted(set(args.level or range(LEVEL_COUNT)))
-                if args.replace and adopt_flat_export(args.out.resolve(), disc.version.key):
+                if adopt_flat_export(args.out.resolve(), disc.version.key):
                     print(f"moved the levels extracted before into {args.out.resolve()}")
+                # The levels for the port are made from the disc alone: a folder of them is replaced
+                # by the new export once that is whole (an earlier export, of any format).
+                ours(output_path(args.out, args.anywhere, replace=True), "port")
                 dest = publish(args.out, lambda out: port(args.iso, survey, levels, args.terrain_lod, max(1, args.jobs), out),
-                               args.anywhere, args.replace)
+                               args.anywhere, replace=True)
                 print(f"Levels for the port's viewer: {dest}")
             elif args.command == "pack":
                 # Its own output, written again after each edit: the one command that may write

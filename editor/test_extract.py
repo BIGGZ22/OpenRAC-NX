@@ -123,3 +123,92 @@ class AdoptFlatExportTests(unittest.TestCase):
             (packed / "patches.tsv").write_text("")
             self.assertTrue(adopt_flat_export(packed / "pal", "pal", "packed"))
             self.assertEqual(sorted(p.name for p in (packed / "pal").iterdir()), ["level_03", "patches.tsv"])
+
+
+def fake_godot(schema: int, split: bool = True):
+    """An exporter shaped as godot(): a project per level (or one for all) with its level.json."""
+    def export(out: Path, levels: list[int]) -> None:
+        for i in levels:
+            project = out / f"level_{i:02}" if split else out
+            level = project / "levels" / f"level_{i:02}"
+            level.mkdir(parents=True)
+            (project / "project.godot").write_text("config_version=5\n")
+            (level / "level.json").write_text(json.dumps({"schema": schema, "level": i}))
+            (level / f"level_{i:02}.tscn").write_text("[gd_scene format=3]\n")
+    return export
+
+
+class SecondExportTests(unittest.TestCase):
+    """The launcher exports into its own data folder again and again: each time must work."""
+
+    def setUp(self):
+        self.temp = tempfile.TemporaryDirectory()
+        self.data = Path(self.temp.name)
+
+    def tearDown(self):
+        self.temp.cleanup()
+
+    def scene(self, dest: Path, i: int, split: bool = True) -> Path:
+        project = dest / f"level_{i:02}" if split else dest
+        return project / "levels" / f"level_{i:02}" / f"level_{i:02}.tscn"
+
+    def test_godot_twice_keeps_edits_and_adds_levels(self):
+        dest = self.data / "levels" / "pal"
+        schema = extract.GODOT_SCHEMA
+        said = extract.export_godot(dest, [0, 1], True, True, fake_godot(schema))
+        self.assertIn("one per level", said)
+        self.scene(dest, 0).write_text("[gd_scene format=3]\n; moved a crate\n")
+        said = extract.export_godot(dest, [0, 1, 2], True, True, fake_godot(schema))
+        self.assertIn("2 level(s) kept", said)
+        self.assertIn("1 added", said)
+        self.assertIn("moved a crate", self.scene(dest, 0).read_text())
+        self.assertTrue(self.scene(dest, 2).is_file())
+        self.assertTrue((dest / "level_00" / "rc1" / "level.gd").is_file())     # scripts refreshed
+        self.assertFalse((self.data / "levels" / "pal-backups").exists())
+
+    def test_godot_after_a_format_bump_backs_up_and_replaces(self):
+        dest = self.data / "levels" / "pal"
+        old = extract.GODOT_SCHEMA - 1
+        extract.export_godot(dest, [0, 1], True, True, fake_godot(old))
+        self.scene(dest, 1).write_text("[gd_scene format=3]\n; my edit\n")
+        said = extract.export_godot(dest, [0, 1], True, True, fake_godot(extract.GODOT_SCHEMA))
+        self.assertIn("older extractor", said)
+        self.assertEqual(extract.level_schema(self.scene(dest, 1).parent), extract.GODOT_SCHEMA)
+        backups = list((self.data / "levels" / "pal-backups").iterdir())
+        self.assertEqual(len(backups), 1)
+        self.assertIn("my edit", (backups[0] / "level_01" / "levels" / "level_01" / "level_01.tscn").read_text())
+
+    def test_godot_one_project_for_every_level(self):
+        dest = self.data / "godot"
+        extract.export_godot(dest, [0], True, False, fake_godot(extract.GODOT_SCHEMA, split=False))
+        self.scene(dest, 0, split=False).write_text("; edited\n")
+        extract.export_godot(dest, [0, 3], True, False, fake_godot(extract.GODOT_SCHEMA, split=False))
+        self.assertIn("edited", self.scene(dest, 0, split=False).read_text())
+        self.assertTrue(self.scene(dest, 3, split=False).is_file())
+
+    def test_port_twice_and_after_a_format_bump(self):
+        dest = self.data / "port" / "pal"
+
+        def export(fmt):
+            def write(out: Path) -> None:
+                (out / "level_00").mkdir()
+                (out / "level_00" / "manifest.json").write_text(json.dumps({"format": fmt}))
+            return write
+
+        for fmt in (2, 3, 3):
+            extract.ours(output_path(dest, True, replace=True), "port")
+            publish(dest, export(fmt), True, replace=True)
+            self.assertEqual(json.loads((dest / "level_00" / "manifest.json").read_text())["format"], fmt)
+
+    def test_a_folder_that_is_not_an_export_is_refused(self):
+        dest = self.data / "port"
+        dest.mkdir()
+        (dest / "notes.txt").write_text("mine")
+        with self.assertRaisesRegex(FormatError, "choose another folder"):
+            extract.ours(dest, "port")
+        with self.assertRaisesRegex(FormatError, "choose another folder"):
+            extract.export_godot(dest, [0], True, True, fake_godot(extract.GODOT_SCHEMA))
+        godot = self.data / "levels"
+        extract.export_godot(godot, [0], True, True, fake_godot(extract.GODOT_SCHEMA))
+        with self.assertRaisesRegex(FormatError, "Godot projects"):
+            extract.ours(godot, "port")

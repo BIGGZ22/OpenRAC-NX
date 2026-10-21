@@ -49,6 +49,10 @@ SCRIPTS = Path(__file__).parent / "rc1"
 GAME_TO_GODOT = [1, 0, 0, 0, 0, 0, -1, 0, 0, 1, 0, 0, 0, 0, 0, 1]  # (x, y, z) -> (x, z, -y)
 # Placements store W = 0.01 (0.0 on some); only other values become metadata.
 STORED_W = struct.unpack("<f", struct.pack("<f", 0.01))[0]
+# level.json's schema: what a Godot level of this extractor holds. Raised when the scene changes in
+# a way the packer or a newer extractor tells apart (3: the editable collision); extract.py writes a
+# level of an older schema again, after backing it up with its edits.
+SCHEMA = 3
 COLLISION_ALPHA = 0.55
 MIN_SCALE = 1e-4  # the smallest joint scale the editor's models get (LevelWriter.scale)
 PANORAMA = (2048, 1024)  # About one texel per pixel around the horizon.
@@ -165,7 +169,7 @@ class LevelWriter:
         self.corners = []
         self.fmt = games.of(level)
         self.moby_extra = {}  # moby index -> its pvar metadata (gamedata.py)
-        self.stats = {"schema": 3, "level": level.id,
+        self.stats = {"schema": SCHEMA, "level": level.id,
                       "overlay": {"entry_point": level.overlay["entry_point"],
                                   "sections": [{k: s[k] for k in ("address", "bytes", "type")}
                                                for s in level.overlay["sections"]]},
