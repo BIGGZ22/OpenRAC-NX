@@ -13,6 +13,8 @@
 #include <filesystem>
 #include <string>
 
+#include "openrac/script_binding.h"
+
 namespace openrac::mods {
 
 // One hook point as hostgen's hooks.c lists it (openrac_game_hook_points): the same layout.
@@ -39,6 +41,9 @@ struct Host {
     void (**pad_hook)(int port, unsigned char* report, int size) = nullptr;
     // The time status.json says it was written ("2026-10-21T14:02:11+02:00").
     std::string now;
+    // The game's binding for script mods (openrac/script_binding.h): null where it has none, and
+    // then a script mod is refused.
+    const openrac_script_binding* scripts = nullptr;
 };
 
 // Loads the mods the list has on. Returns the session header's line: "lock-strafe 1.0.0", "none",

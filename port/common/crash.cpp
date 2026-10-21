@@ -103,6 +103,7 @@ std::atomic<int> g_reporting{0};
 char g_written[1100] = {};
 const ModImage* g_mods = nullptr;
 int g_mod_count = 0;
+const char* const* g_running_script = nullptr;
 
 void copy(char* to, std::size_t size, const std::string& from) {
     const std::size_t n = from.size() < size - 1 ? from.size() : size - 1;
@@ -304,6 +305,9 @@ const void* module_base(const void* address) {
 void write_mods(Out& out) {
     if (g_mod_count <= 0) {
         return;
+    }
+    if (g_running_script != nullptr && *g_running_script != nullptr) {
+        out.str("\nA script of mod ").str(*g_running_script).str(" was running (its log lines say more).\n");
     }
     out.str("\nMods loaded (docs/port/MODS.md; Purist mode starts the game without them):\n");
     for (int m = 0; m < g_mod_count; ++m) {
@@ -579,6 +583,10 @@ const GameState& state() {
 void set_mods(const ModImage* mods, int count) {
     g_mods = mods;
     g_mod_count = mods != nullptr ? count : 0;
+}
+
+void set_running_script(const char* const* current) {
+    g_running_script = current;
 }
 
 void set_moby_source(MobySource source) {

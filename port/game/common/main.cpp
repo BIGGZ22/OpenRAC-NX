@@ -352,6 +352,7 @@ void load_mods() {
     host.purist = g_options.no_mods;
     host.loaded_level = openrac_game_loaded_overlay;
     host.pad_hook = &openrac_game_pad_report_hook;
+    host.scripts = openrac_game_script_binding();  // generated (sdk/tools/gen_binding.py), or none
     // "2026-10-21 14:02:11 +0200" as "2026-10-21T14:02:11+02:00".
     char when[40];
     crash::format_time(static_cast<long long>(std::time(nullptr)), crash::local_offset(), when, sizeof(when));

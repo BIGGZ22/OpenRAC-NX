@@ -1,0 +1,14 @@
+{
+  "format": 1,
+  "about": "The binding of mod_scripts_test.cpp's game: sdk/tools/gen_binding.py --table port/tests/script_binding_test.json --c port/tests/script_binding_test.c",
+  "game": "test",
+  "discs": ["one"],
+  "hooks": [
+    { "name": "Test_Add", "signature": "i32(i32)", "params": ["x"], "symbols": { "one": "func_00100000" } },
+    { "name": "Test_Scale", "signature": "f32(f32,u32)", "params": ["x", "by"], "symbols": { "one": "func_00100100" } }
+  ],
+  "fields": [
+    { "name": "counter", "type": "i32", "address": { "one": "0x00100000" } },
+    { "name": "nested.value", "type": "f32", "address": { "one": "0x00100004" }, "readonly": true }
+  ]
+}

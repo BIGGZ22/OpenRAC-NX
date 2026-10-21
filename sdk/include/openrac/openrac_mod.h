@@ -27,7 +27,7 @@ extern "C" {
 #endif
 
 #define OPENRAC_MOD_API_MAJOR 1
-#define OPENRAC_MOD_API_MINOR 0
+#define OPENRAC_MOD_API_MINOR 1 /* 1.1: script mods (docs/port/MODS.md, section 11); table unchanged */
 
 #if defined(_WIN32)
 #define OPENRAC_MOD_EXPORT __declspec(dllexport)

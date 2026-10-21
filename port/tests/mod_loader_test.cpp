@@ -71,7 +71,7 @@ const char* library_name() {
 }
 
 // Installs test-<which> into `plugins`: its library copied in, its manifest.
-void install(const fs::path& plugins, const std::string& which, const char* built, const std::string& api = "1.0") {
+void install(const fs::path& plugins, const std::string& which, const char* built, const std::string& api = "1.1") {
     const fs::path dir = plugins / ("test-" + which);
     fs::create_directories(dir / "lib");
     fs::copy_file(built, dir / "lib" / library_name(), fs::copy_options::overwrite_existing);
@@ -211,7 +211,7 @@ void an_installed_launchers_layout(const fs::path& root) {
     fs::create_directories(mod / lib.parent_path());
     fs::copy_file(OPENRAC_TEST_MOD_A, mod / lib, fs::copy_options::overwrite_existing);
     write(mod / "openrac-mod.json", R"({"format": 2, "id": "test-a", "name": "Test", "version": "1.0.0",
-        "api": "1.0", "games": {"test": ["one"]}, "hooks": ["Test_Add"],
+        "api": "1.1", "games": {"test": ["one"]}, "hooks": ["Test_Add"],
         "plugin": {")" + std::string(mods::platform_key()) + R"(": ")" + lib.generic_string() + R"("},
         "settings": [{"key": "tag", "name": "Tag", "type": "int", "default": 0}]})");
     write(plugins / "plugins.json", R"({"format": 1, "mods": [{"id": "test-a", "enabled": true, "settings": {"tag": 4}}]})");

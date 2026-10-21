@@ -16,6 +16,7 @@
 #include "common/log.h"
 #include "mod_library.h"
 #include "mod_manifest.h"
+#include "mod_scripts.h"
 #include "openrac/guest.h"
 #include "openrac/openrac_mod.h"
 
@@ -26,7 +27,8 @@ using namespace openrac;
 struct openrac_mod {
     std::string id;
     std::string version;
-    std::string file;  // the library's file name
+    std::string file;  // the library's file name (a script mod's: its first script)
+    bool script = false;  // a script mod (mod_scripts.h): no library
     void* library = nullptr;
     const void* base = nullptr;
     mods::Manifest manifest;
@@ -348,6 +350,24 @@ bool read_text(const fs::path& path, std::string& out) {
     return true;
 }
 
+// What status.json says of each mod of the list, kept for a script mod that stops later.
+std::vector<Outcome> g_outcomes;
+
+// A script mod stopped while the game ran (an error, its budget): status.json says so from now on.
+// Its hooks pass to their originals and its callbacks stop (mod_scripts.cpp).
+void script_stopped(openrac_mod* mod, const std::string& reason) {
+    if (mod == nullptr || g_host == nullptr) {
+        return;
+    }
+    for (Outcome& o : g_outcomes) {
+        if (o.id == mod->id) {
+            o.state = "failed";
+            o.reason = "stopped while the game ran: " + reason;
+        }
+    }
+    write_status(*g_host, g_outcomes);
+}
+
 // Takes back what a mod did in a load that failed: its hooks (it was the last to take any), its
 // callbacks.
 void undo(openrac_mod* mod) {
@@ -367,13 +387,41 @@ bool load_one(const fs::path& folder, const Candidate& c, std::unique_ptr<openra
     mod->id = c.manifest.id;
     mod->version = c.manifest.version_text;
     mod->manifest = c.manifest;
-    const fs::path path = folder / c.manifest.id / fs::path(c.manifest.plugin.at(platform_key()));
-    mod->file = path.filename().string();
     std::vector<std::string> notes;
     mod->settings = resolve_settings(c.manifest, c.entry.settings, notes);
     for (const std::string& n : notes) {
         log::warn("mod {}: {}", mod->id, n);
     }
+    if (c.manifest.script) {
+        mod->script = true;
+        mod->file = c.manifest.scripts.front();
+        scripts::Mod s;
+        s.handle = mod.get();
+        s.id = mod->id;
+        s.folder = folder / c.manifest.id;
+        s.scripts = c.manifest.scripts;
+        s.settings = mod->settings;
+        s.game = g_host->game;
+        s.version = g_host->version;
+        s.platform = platform_key();
+        s.api = std::format("{}.{}", OPENRAC_MOD_API_MAJOR, OPENRAC_MOD_API_MINOR);
+        const scripts::Services services{api_hook, api_on_frame, api_on_pad, api_log, script_stopped};
+        std::string why;
+        g_loading = mod.get();
+        const bool loaded = scripts::load(s, g_host->scripts, services, why);
+        g_loading = nullptr;
+        if (!loaded || mod->hook_refused) {
+            undo(mod.get());
+            scripts::close(mod.get());
+            state = "failed";
+            reason = !mod->failure.empty() ? mod->failure : why;
+            return false;
+        }
+        out = std::move(mod);
+        return true;
+    }
+    const fs::path path = folder / c.manifest.id / fs::path(c.manifest.plugin.at(platform_key()));
+    mod->file = path.filename().string();
     std::string error;
     mod->library = library::open(path, error);
     if (mod->library == nullptr) {
@@ -466,7 +514,8 @@ std::string load(const Host& host) {
         return "none";
     }
     fill_api(kept);
-    const Target target{host.game, host.version, platform_key(), OPENRAC_MOD_API_MAJOR, OPENRAC_MOD_API_MINOR};
+    const Target target{host.game, host.version, platform_key(), OPENRAC_MOD_API_MAJOR, OPENRAC_MOD_API_MINOR,
+                        host.scripts != nullptr};
     const auto decisions = plan(enabled, target, [&](const std::string& id, const std::string& path) {
         std::error_code e;
         return fs::is_regular_file(folder / id / fs::path(path), e);
@@ -517,6 +566,7 @@ std::string load(const Host& host) {
     if (host.pad_hook != nullptr) {
         *host.pad_hook = g_pads.empty() ? nullptr : run_pads;
     }
+    g_outcomes = outcomes;
     write_status(kept, outcomes);
     g_images.clear();
     for (const auto& m : g_loaded) {
@@ -559,8 +609,12 @@ void reset() {
     unload();
     for (auto it = g_loaded.rbegin(); it != g_loaded.rend(); ++it) {
         undo(it->get());
-        library::close((*it)->library);
+        if ((*it)->library != nullptr) {
+            library::close((*it)->library);
+        }
     }
+    scripts::reset();
+    g_outcomes.clear();
     g_loaded.clear();
     g_frames.clear();
     g_pads.clear();

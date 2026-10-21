@@ -73,6 +73,9 @@ struct ModImage {
     const void* base;  // where the system loaded it
 };
 void set_mods(const ModImage* mods, int count);
+// The script mod running when the report is written (game/common/mod_scripts.cpp): *current is its
+// id, or null when no script runs. The pointer must last as long as the program.
+void set_running_script(const char* const* current);
 
 void set_state(const GameState& state);
 const GameState& state();
