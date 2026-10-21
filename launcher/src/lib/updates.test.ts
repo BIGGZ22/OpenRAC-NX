@@ -50,4 +50,20 @@ describe("checkGitHubRelease", () => {
     expect((await checkGitHubRelease("0.8.0-dev.3", source))?.version).toBe("0.8.0-dev.4");
     expect(await checkGitHubRelease("0.8.0-dev.4", source)).toBeNull();
   });
+
+  it("passes over a latest release that is not the launcher's", async () => {
+    const stable = { repository: "someone/OpenRAC", channel: null, manifest: "", page: "" };
+    const sdk = JSON.stringify({ tag_name: "sdk-v1.0.1", name: "Mod SDK 1.0.1" });
+    const list = JSON.stringify([
+      { tag_name: "sdk-v1.0.1", name: "Mod SDK 1.0.1" },
+      { tag_name: "launcher-v0.9.0", name: "draft", draft: true },
+      { tag_name: "launcher-v0.8.4", name: "OpenRAC Launcher v0.8.4" },
+    ]);
+    vi.stubGlobal(
+      "fetch",
+      vi.fn((url: string) => Promise.resolve(new Response(url.endsWith("/latest") ? sdk : list, { status: 200 }))),
+    );
+    expect((await checkGitHubRelease("0.8.3", stable))?.version).toBe("0.8.4");
+    expect(await checkGitHubRelease("0.8.4", stable)).toBeNull();
+  });
 });

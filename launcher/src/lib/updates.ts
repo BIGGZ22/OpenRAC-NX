@@ -69,7 +69,13 @@ interface GitHubReleaseResponse {
   name?: string;
   body?: string;
   published_at?: string;
+  draft?: boolean;
+  prerelease?: boolean;
 }
+
+/** The launcher's own releases are tagged `launcher-v<version>`; the repository publishes others
+ *  (the mod SDK's `sdk-v<version>`), and GitHub's "latest" can be one of those. */
+const LAUNCHER_TAG = /^launcher-v\d/;
 
 export async function checkGitHubRelease(
   currentVersion: string,
@@ -92,7 +98,20 @@ export async function checkGitHubRelease(
   if (res.status === 404) throw new Error(`no release has been published there yet (${where})`);
   if (!res.ok) throw new Error(`GitHub answered ${res.status} (${where})`);
   try {
-    const data = (await res.json()) as GitHubReleaseResponse;
+    let data = (await res.json()) as GitHubReleaseResponse;
+    // GitHub's latest release that is not the launcher's (the mod SDK's, 1.0.1, was offered to every
+    // launcher as "Update 1.0.1"): the newest of the launcher's own releases instead.
+    if (!source.channel && !LAUNCHER_TAG.test(data.tag_name ?? "")) {
+      const list = await fetch(`https://api.github.com/repos/${source.repository}/releases?per_page=30`, {
+        headers: { Accept: "application/vnd.github.v3+json" },
+        signal: AbortSignal.timeout(4000),
+      });
+      if (!list.ok) throw new Error(`GitHub answered ${list.status} (${where})`);
+      const releases = (await list.json()) as GitHubReleaseResponse[];
+      const own = releases.find((r) => !r.draft && !r.prerelease && LAUNCHER_TAG.test(r.tag_name ?? ""));
+      if (!own) return null;
+      data = own;
+    }
     const tag = data.tag_name ?? "";
     // A branch's rolling release keeps its tag: its version is in its title, "vX (branch)".
     const cleanVersion = source.channel
