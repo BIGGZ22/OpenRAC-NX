@@ -1338,6 +1338,21 @@ gaddr openrac_data_in_copy(int from, gaddr canon, uint32_t size, gaddr self, gad
                     break;
                 }
             }
+        } else if (completes(op) && op != 0x0D && rs == 28 && g_relocate_gp != 0) {
+            // A small global, reached from $gp (the same in every program): the copy at `self` has
+            // its own offset in the same instruction (rac1: Drek's Fleet's three window-glass
+            // callbacks, one function folded, each drawing its own panes from its own tables).
+            const gaddr at = g_relocate_gp + static_cast<std::uint32_t>(static_cast<std::int16_t>(w & 0xFFFFu));
+            const std::uint32_t distance = at > target ? at - target : target - at;
+            const std::uint32_t lo = self_word(self + i * 4);
+            if (distance <= 0x100 && distance < best && (lo >> 26) == op && ((lo >> 21) & 31) == 28) {
+                best = distance;
+                result = g_relocate_gp + static_cast<std::uint32_t>(static_cast<std::int16_t>(lo & 0xFFFFu))
+                         + (target - at);
+                if (distance == 0) {
+                    break;
+                }
+            }
         }
         upper.step(w, i);
     }

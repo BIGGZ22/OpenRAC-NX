@@ -278,8 +278,9 @@ static inline gaddr openrac_guest_entry(openrac_host_fn self) {
 gaddr openrac_code_in_copy(int from, gaddr canon, uint32_t size, gaddr self, gaddr target);
 /* The same for a global: where the copy at `self` reads or writes what the copy at `canon` does at
  * `target` (folded copies of one function in one program, each on its own globals: a lui and the
- * addiu, ori, load or store that completes it; an address within 0x100 of one formed there keeps
- * its offset from it). Without a place, `target` relocated as OPENRAC_LDATA; `from` -1 is the
+ * addiu, ori, load or store that completes it, or such an instruction on $gp for a small global,
+ * $gp being the same in every program; an address within 0x100 of one formed there keeps its
+ * offset from it). Without a place, `target` relocated as OPENRAC_LDATA; `from` -1 is the
  * executable (its code read from the executable, `target` relocated as OPENRAC_DATA). */
 gaddr openrac_data_in_copy(int from, gaddr canon, uint32_t size, gaddr self, gaddr target);
 /* The same for a call: the function the copy at `self` calls where the copy at `canon` calls
