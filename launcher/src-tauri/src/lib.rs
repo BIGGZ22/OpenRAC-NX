@@ -1237,6 +1237,25 @@ fn open_with_system(target: &str) -> Result<(), String> {
     Ok(())
 }
 
+/// On a screen too small for the window (a 1080p screen at 150 % or 200 %), the window opens at
+/// what the screen has room for and can be made that small (core/src/window.rs).
+#[cfg(desktop)]
+fn fit_to_screen(window: &tauri::WebviewWindow) {
+    let (Ok(Some(monitor)), Ok(size)) = (window.current_monitor(), window.inner_size()) else { return };
+    let scale = monitor.scale_factor();
+    let area = monitor.work_area().size.to_logical::<f64>(scale);
+    let size = size.to_logical::<f64>(scale);
+    let floor =
+        window.config().app.windows.first().and_then(|w| w.min_width.zip(w.min_height)).unwrap_or((960.0, 560.0));
+    if let Some(((width, height), (min_width, min_height))) =
+        openrac_launcher_core::window::fit((size.width, size.height), floor, (area.width, area.height))
+    {
+        let _ = window.set_min_size(Some(tauri::LogicalSize::new(min_width, min_height)));
+        let _ = window.set_size(tauri::LogicalSize::new(width, height));
+        let _ = window.center();
+    }
+}
+
 // On Android and iOS the launcher is a library the app's activity starts through this entry point.
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
@@ -1270,6 +1289,7 @@ pub fn run() {
                 if let Some(icon) = app.default_window_icon() {
                     let _ = window.set_icon(icon.clone());
                 }
+                fit_to_screen(&window);
             }
 
             let config_file = app.path().app_config_dir().ok().map(|dir| dir.join("launcher.json"));

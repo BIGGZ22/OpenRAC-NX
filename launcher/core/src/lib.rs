@@ -19,6 +19,7 @@
 //! - [`jobs`]: running an action as a child process and streaming its output.
 //! - [`appimage`]: the environment an AppImage hands over, and what the launcher takes back.
 //! - [`webkit`]: the webview's own environment, on the systems that need it changed.
+//! - [`window`]: the window's size on a screen too small for it.
 //! - [`overrides`]: a game's overrides packs (replacement textures and models): list, order, on/off.
 //! - [`plugins`]: a game's native mods (docs/port/MODS.md): install, list, order, on/off, settings.
 //! - [`library`]: all of the above, put together for the UI.
@@ -50,6 +51,7 @@ pub mod saves;
 pub mod status;
 pub mod update;
 pub mod webkit;
+pub mod window;
 
 use std::path::{Path, PathBuf};
 
