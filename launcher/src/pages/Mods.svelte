@@ -75,7 +75,10 @@
   /** What the game list says for each game on this tab. */
   function modState(game: GameView): EntryState {
     const v = editable(game);
-    if (!v) return { text: "Not moddable yet", tone: "info" };
+    if (!v) {
+      const pv = playerVersion(game);
+      return pv && playable(pv) ? { text: "Gameplay mods", tone: "ok" } : { text: "Not moddable yet", tone: "info" };
+    }
     if (
       early(v) &&
       v.status.disc.state === "found" &&
@@ -99,6 +102,12 @@
     return byId(picked) ?? (last && editable(last) ? last : null) ?? games.find((g) => editable(g)) ?? games[0] ?? null;
   });
   const v = $derived(shown ? editable(shown) : null);
+  /** The version the game page plays, when it has a port: its gameplay mods need no level editor,
+   *  so an installed launcher without the editor's tools still shows them. */
+  const played = $derived.by(() => {
+    const pv = shown ? playerVersion(shown) : null;
+    return pv && playable(pv) ? pv : null;
+  });
 
   /** Make your own: the level editor, or models and textures. */
   let tab = $state<"levels" | "assets">("levels");
@@ -179,7 +188,11 @@
           </p>
         </div>
 
-        {#if !v}
+        {#if !v && played}
+          <!-- The level editor cannot open it here (an installed launcher without its tools, say), but the
+               game plays: its gameplay mods. -->
+          <PluginsPanel version={played} reload={pluginsReload} onpack={() => (reload += 1)} />
+        {:else if !v}
           <!-- Every game has this page; one the editor cannot open yet says so. -->
           <section class="panel none">
             <h2>Mods are not possible for this game yet</h2>

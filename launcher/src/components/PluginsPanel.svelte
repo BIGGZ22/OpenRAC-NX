@@ -4,9 +4,24 @@
   // settings from its manifest, up and down, and Remove in its menu; Add a mod takes a .zip or a
   // folder (a texture and model pack goes to the packs below: lib/addMods.ts), and Purist mode,
   // the launcher's one switch, starts the game with none. Every change is written at once to the
-  // list the game reads at its next start (plugins.json). With developer tools on: ids, folders
-  // and the hook points each mod takes.
-  import { api, inTauri, pickFolder, pickZip, type PluginSetting, type PluginView, type VersionView } from "$lib/api";
+  // list the game reads at its next start (plugins.json). Add from a link reads a repository's
+  // address (core/src/remote.rs, docs/port/MODS.md section 10): its mods are shown, with where they
+  // come from and whether this computer's game can take them, before one is installed; each mod
+  // installed so keeps its source, offers its updates (checked once a day here) and can be kept at
+  // its version. With developer tools on: ids, folders, sources and the hook points each mod takes.
+  import {
+    api,
+    inTauri,
+    pickFolder,
+    pickZip,
+    type ModSources,
+    type ModUpdate,
+    type PluginSetting,
+    type PluginView,
+    type RemoteMod,
+    type RemotePreview,
+    type VersionView,
+  } from "$lib/api";
   import { addMods } from "$lib/addMods";
   import { app, guard, saveConfig } from "$lib/app.svelte";
   import { pluginState, settingControl, settingNumber, settingRange, sharedWith } from "$lib/plugins";
@@ -36,14 +51,154 @@
   /** What the last add or change said, in a sentence. */
   let said = $state<{ text: string; failed: boolean } | null>(null);
 
+  /** Where each installed mod came from (sources.json), and the updates the last check found. */
+  let sources = $state<ModSources["mods"]>({});
+  let updates = $state<Record<string, ModUpdate>>({});
+  let checking = $state(false);
+  let updating = $state<string | null>(null);
+
+  /** Add from a link: the address typed, what it holds, the mod being installed. */
+  let link = $state("");
+  let reading = $state(false);
+  let preview = $state<RemotePreview | null>(null);
+  let previewError = $state<string | null>(null);
+  let installing = $state<string | null>(null);
+
+  const message = (e: unknown) => (typeof e === "string" ? e : String(e));
+
   async function load() {
     try {
       mods = await api.pluginsList(v.game, v.name);
       listError = null;
     } catch (e) {
-      listError = typeof e === "string" ? e : String(e);
+      listError = message(e);
+    }
+    try {
+      sources = (await api.pluginsSources(v.game)).mods;
+    } catch {
+      sources = {};
     }
   }
+
+  /** The last update check, per game, in this browser's storage: once a day by itself. */
+  const checkedKey = () => `openrac.mods.checked.${v.game}`;
+  const DAY = 24 * 60 * 60 * 1000;
+
+  function lastChecked(): number {
+    try {
+      return Number(localStorage.getItem(checkedKey()) ?? 0) || 0;
+    } catch {
+      return 0;
+    }
+  }
+
+  async function checkUpdates(quiet = false) {
+    checking = true;
+    try {
+      const found = await api.pluginsCheckUpdates(v.game, v.name);
+      updates = Object.fromEntries(found.updates.map((u) => [u.id, u]));
+      try {
+        localStorage.setItem(checkedKey(), String(Date.now()));
+      } catch {
+        // Private windows: checked again next time.
+      }
+      if (!quiet) {
+        const n = found.updates.length;
+        said = {
+          text:
+            (n === 0 ? "Every mod from a link is up to date." : `${n} update${n === 1 ? "" : "s"} found.`) +
+            (found.errors.length ? ` Not checked: ${found.errors.join("; ")}` : ""),
+          failed: found.errors.length > 0 && n === 0,
+        };
+      }
+    } catch (e) {
+      if (!quiet) said = { text: message(e), failed: true };
+    }
+    checking = false;
+  }
+
+  async function runUpdate(id: string) {
+    updating = id;
+    try {
+      const done = await api.pluginsUpdate(v.game, v.name, id);
+      if (done.kind === "pack") {
+        const added = await addMods(v, [done.path]);
+        said = { text: added.text, failed: added.failed };
+        onpack();
+      } else {
+        said = { text: `Updated ${done.name} to ${done.version}; its settings are kept.`, failed: false };
+      }
+      updates = Object.fromEntries(Object.entries(updates).filter(([k]) => k !== id));
+    } catch (e) {
+      said = { text: message(e), failed: true };
+    }
+    updating = null;
+    await load();
+  }
+
+  async function setPin(id: string, pin: boolean) {
+    try {
+      sources = (await api.pluginsSetPin(v.game, id, pin)).mods;
+      if (pin) {
+        updates = Object.fromEntries(Object.entries(updates).filter(([k]) => k !== id));
+      }
+    } catch (e) {
+      said = { text: message(e), failed: true };
+    }
+  }
+
+  async function readLink(e: SubmitEvent) {
+    e.preventDefault();
+    if (!link.trim()) return;
+    reading = true;
+    preview = null;
+    previewError = null;
+    try {
+      preview = await api.pluginsPreview(v.game, v.name, link.trim());
+    } catch (err) {
+      previewError = message(err);
+    }
+    reading = false;
+  }
+
+  async function installRemote(m: RemoteMod) {
+    if (!preview) return;
+    installing = m.id;
+    try {
+      const done = await api.pluginsInstallRemote(v.game, v.name, link.trim(), m.id);
+      if (done.kind === "pack") {
+        // A data pack's files, downloaded: the packs below take them (overrides-add).
+        const added = await addMods(v, [done.path]);
+        said = { text: added.text, failed: added.failed };
+        if (added.pack) onpack();
+      } else {
+        said = {
+          text: done.replaced
+            ? `Installed ${done.name} ${done.version} from ${preview.label}; its settings are kept.`
+            : done.enabled
+              ? `Installed ${done.name} from ${preview.label}. It is on from the game's next start.`
+              : `Installed ${done.name} from ${preview.label}. It is off: its row says why.`,
+          failed: false,
+        };
+      }
+      preview = null;
+      link = "";
+    } catch (err) {
+      said = { text: `${m.name}: ${message(err)}`, failed: true };
+    }
+    installing = null;
+    await load();
+  }
+
+  const hasSources = $derived(Object.keys(sources).length > 0);
+
+  $effect(() => {
+    // Once a day by itself, when a mod came from a link.
+    if (hasSources && !checking && Date.now() - lastChecked() > DAY) void checkUpdates(true);
+  });
+
+  /** "OpenRAC/rac1-mods" from a source's address. */
+  const sourceLabel = (url: string) => url.replace(/^https?:\/\/(www\.)?github\.com\//, "");
 
   $effect(() => {
     // Again whenever RELOAD is bumped, and for another game.
@@ -116,7 +271,94 @@
     <button class="small" disabled={adding} onclick={() => void addFolder()}
       ><Icon name="folder" size={14} />Add a folder…</button
     >
+    {#if hasSources}
+      <button class="small" disabled={checking} onclick={() => void checkUpdates()}
+        >{#if checking}<span class="spinner"></span>{/if}Check for updates</button
+      >
+    {/if}
   </div>
+
+  <form class="link-row" onsubmit={(e) => void readLink(e)}>
+    <label class="grow">
+      <span class="sr-only">A mod's repository address</span>
+      <input
+        class="link-field"
+        type="url"
+        inputmode="url"
+        spellcheck="false"
+        autocomplete="off"
+        placeholder="Add from a link: https://github.com/owner/repository"
+        bind:value={link}
+      />
+    </label>
+    <button class="small" type="submit" disabled={reading || !link.trim()}
+      >{#if reading}<span class="spinner"></span>{/if}Look</button
+    >
+  </form>
+
+  {#if previewError}<p class="said failed" role="status">{previewError}</p>{/if}
+
+  {#if preview}
+    <div class="preview" aria-label={`Mods in ${preview.label}`}>
+      <p class="from small-text">
+        In <strong>{preview.label}</strong>{#if preview.owner}, published by {preview.owner}{/if}{#if developer}
+          <span class="mono dim"
+            >· {preview.reference}{#if preview.commit}&nbsp;({preview.commit.slice(0, 10)}){/if}</span
+          >{/if}
+      </p>
+      {#if preview.note}<p class="dim small-text">{preview.note}</p>{/if}
+      {#if preview.mods.some((m) => m.kind === "native")}
+        <p class="warn small-text">
+          A gameplay mod is a program: it runs on this computer with the game's rights. Install only mods from people
+          you trust.
+        </p>
+      {/if}
+      <ul>
+        {#each preview.mods as m (m.id)}
+          <li class="mod remote">
+            <div class="line">
+              <div class="grow">
+                <div class="name">
+                  {m.name}<span class="by"
+                    >{m.version}{#if m.author}&nbsp;· {m.author}{/if}</span
+                  >
+                </div>
+                {#if m.description}<div class="dim small-text">{m.description}</div>{/if}
+                <div class="dim small-text">
+                  {m.kind === "native" ? "Gameplay mod (code)" : "Texture and model pack"}{#if m.installed}&nbsp;·
+                    {m.installed} installed{/if}
+                </div>
+              </div>
+              <span class={`state ${m.compatible ? "ok" : "err"}`}
+                ><span class="dot"></span>{m.compatible ? "Works here" : "Cannot be installed"}</span
+              >
+              <button
+                class="small"
+                disabled={!m.compatible || installing !== null}
+                onclick={() => void installRemote(m)}
+                >{#if installing === m.id}<span class="spinner"></span>{/if}{m.installed === m.version
+                  ? "Reinstall"
+                  : m.installed
+                    ? `Update to ${m.version}`
+                    : "Install"}</button
+              >
+            </div>
+            {#if !m.compatible && m.why}<p class="why failed">{m.why}</p>{/if}
+            {#if developer}
+              <div class="dev dim">
+                <code>{m.id}</code>{#if m.path}&nbsp;· <span class="mono">{m.path}/</span>{/if}{#if m.asset}&nbsp;·
+                  <span class="mono">{m.asset}</span> ({m.tag}){/if}{#if m.api}&nbsp;· interface {m.api}{/if}
+                · {Object.entries(m.games)
+                  .map(([g, d]) => `${g}: ${d.join(", ")}`)
+                  .join("; ")}
+              </div>
+            {/if}
+          </li>
+        {/each}
+      </ul>
+      <p><button class="link" onclick={() => (preview = null)}>Close</button></p>
+    </div>
+  {/if}
 
   <label class="setting purist">
     <span class="text">
@@ -139,14 +381,16 @@
   {:else if mods.length === 0}
     <p class="dim empty">
       No gameplay mods yet. They change how the game plays, as a lock-strafe does. Ratchet &amp; Clank's are at
-      <button class="link" onclick={() => void guard(api.openUrl(MODS_URL))}>OpenRAC/rac1-mods</button>: add the .zip
-      for your computer here.
+      <button class="link" onclick={() => void guard(api.openUrl(MODS_URL))}>OpenRAC/rac1-mods</button>: paste its
+      address above, or add the .zip for your computer here.
     </p>
   {:else}
     <ul>
       {#each mods as mod, i (mod.id)}
         {@const state = pluginState(mod, purist)}
         {@const shared = sharedWith(mod)}
+        {@const source = sources[mod.id]}
+        {@const update = updates[mod.id]}
         <li class="mod" class:off={!mod.enabled || purist}>
           <div class="line">
             <input
@@ -188,6 +432,15 @@
               <Menu
                 label={`More for ${mod.name}`}
                 items={[
+                  ...(source
+                    ? [
+                        {
+                          label: source.pin ? "Let it update" : "Keep this version",
+                          icon: "save" as const,
+                          run: () => void setPin(mod.id, !source.pin),
+                        },
+                      ]
+                    : []),
                   ...(mod.homepage
                     ? [
                         {
@@ -210,6 +463,16 @@
             </div>
           </div>
 
+          {#if source}
+            <p class="why dim">
+              From {sourceLabel(source.url)}{#if source.pin}&nbsp;· kept at {source.version}{/if}
+              {#if update}
+                <button class="small update" disabled={updating !== null} onclick={() => void runUpdate(mod.id)}
+                  >{#if updating === mod.id}<span class="spinner"></span>{/if}Update to {update.available}</button
+                >
+              {/if}
+            </p>
+          {/if}
           {#if mod.enabled && (mod.state === "refused" || mod.state === "failed")}
             <p class="why failed">{mod.reason}</p>
           {:else if !mod.enabled && mod.blocked}
@@ -316,6 +579,9 @@
               <code>{mod.id}</code> · <span class="mono">{mod.path}</span>
               {#if mod.hooks.length}<br />Hooks: <span class="mono">{mod.hooks.join(", ")}</span>{/if}
               {#if mod.license}<br />License: {mod.license}{/if}
+              {#if source}<br />Source: <span class="mono">{source.url}</span>{#if source.path}&nbsp;(<span class="mono"
+                    >{source.path}/</span
+                  >){/if}{#if source.tag}, {source.tag}{/if}{/if}
             </div>
           {/if}
         </li>
@@ -341,6 +607,44 @@
 
   .purist {
     border-bottom: 1px solid var(--line);
+  }
+
+  .link-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .link-field {
+    width: 100%;
+  }
+
+  .link-field:focus-visible {
+    outline: 2px solid var(--amber);
+    outline-offset: 2px;
+  }
+
+  .sr-only {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
+
+  /* What a link holds: rows under a rule, dashed while it is not installed (STYLE.md). */
+  .preview {
+    padding: 4px 0 4px 12px;
+    border-left: 2px dashed var(--line-strong);
+  }
+
+  .preview .from {
+    margin: 0 0 4px;
+  }
+
+  .update {
+    margin-left: 8px;
   }
 
   ul {
