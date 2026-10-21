@@ -27,6 +27,19 @@
   const fresh = $derived(Date.now() - notice.at < 10_000);
   const when = $derived(new Date(notice.at).toLocaleString([], { dateStyle: "medium", timeStyle: "short" }));
 
+  /** The gameplay mods the game loaded at its last start (status.json, docs/port/MODS.md): a mod
+   *  may be what crashed, and purist mode plays without them. */
+  let modsLoaded = $state<string[]>([]);
+  $effect(() => {
+    if (!crash || onAndroid) return;
+    void api
+      .pluginsStatus(notice.game)
+      .then((status) => {
+        modsLoaded = status && !status.purist ? status.mods.filter((m) => m.state === "loaded").map((m) => m.id) : [];
+      })
+      .catch(() => (modsLoaded = []));
+  });
+
   async function copy() {
     const text = crash
       ? await guard(api.reportText(notice.game, crash.file))
@@ -93,6 +106,12 @@
         us. Its log is under Logs and crash reports, if you want to look at it.
       {/if}
     </p>
+    {#if crash && modsLoaded.length}
+      <p class="say">
+        Gameplay mods were on ({modsLoaded.join(", ")}). If it crashes again, try Purist mode on the Mods tab, and tell
+        us which mods you had.
+      </p>
+    {/if}
 
     <div class="actions">
       <button onclick={() => void copy()}>
