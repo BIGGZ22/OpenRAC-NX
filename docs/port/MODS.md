@@ -521,7 +521,124 @@ releases, a newer commit on its branch), and offers **Update** on the mod's
 row. A pinned mod (**Keep this version**) is never offered one. An update
 installs as a reinstall does: the mod's place, on/off and settings are kept.
 
-## 11. What is proposed or open
+## 11. Three ways to write a mod: C, C++ and Luau scripts
+
+Decided 2026-10-21. The C interface (section 6) is the boundary that lasts:
+the port's own code is to become C++, and the table, the entry points and the
+hook points' signatures stay as they are through that. Two tiers sit on it.
+
+### C++ (`sdk/include/openrac/mod.hpp`)
+
+A header-only C++17 layer over `openrac_mod.h`, compiled into the mod, never
+into the port: nothing of it crosses the boundary.
+
+- `openrac::Mod` wraps the handle and the table: `log`, `fail`, typed settings
+  (`setting<bool>("trace")`, `setting<std::string>("mode")`, ...).
+- Hooks take lambdas or `std::function`, with the original as a typed callable:
+  `mod.hook<openrac::rac1::Hero_TurnToHeading>([](auto original, int mode, float a, float d, float l) { ... original(mode, a, d, l); })`.
+  Each hook point is a type in the generated `openrac/games/rac1.hpp`
+  (its name, signature and function type), and a static thunk per hook point
+  holds the callable, so the C slot still gets a plain function.
+- `mod.on_frame(fn)`, `mod.on_pad(fn)`, `openrac::Memory` (typed reads and
+  writes at game addresses), `openrac::StackFrame` (RAII over `stack_push` and
+  `stack_pop`).
+- **No exception crosses the C boundary**: every thunk catches, logs the error
+  with the mod's id, and calls the original (a hook) or returns (a callback).
+  `OPENRAC_MOD_CPP(id, version, load)` writes the two entry points, and turns
+  an exception out of `load` into `fail()`.
+
+The SDK template is C++ (`template/src/mod.cpp`); the lock-strafe in
+rac1-mods is the reference C++ mod.
+
+### Luau scripts
+
+[Luau](https://luau.org) (Roblox's Lua, MIT), pinned by version and built into
+the port (`port/third_party`, THIRD_PARTY_NOTICES.md). A script mod needs no
+compiler and runs on every platform, Android included.
+
+```jsonc
+{
+  "format": 2, "id": "button-swap", "name": "Button swap", "version": "1.0.0",
+  "type": "script",                 // "native" (the default) or "script"
+  "api": "1.1",                     // scripts need interface 1.1 or later
+  "scripts": ["main.luau"],         // run in this order at load, from the mod's folder
+  "games": { "rac1": ["pal", "ntsc"] },
+  "hooks": [], "settings": [ ... ]
+}
+```
+
+Interface **1.1** is 1.0 with script mods: the C table is unchanged, and a port
+of 1.1 loads mods built for 1.0. A script mod carries no `plugin`; its archive
+is one for every platform, `<id>-<version>.zip`, and from a git repository the
+repository's own files are the mod (no release asset, no build).
+
+**What a script sees**: one global table, `openrac`; nothing else of the
+standard library but the safe parts (`math`, `string`, `table`, `buffer`,
+`bit32`, `utf8`, `coroutine`, `os.clock`; no `io`, no other `os`, no
+`loadstring`, no `getfenv`/`setfenv`, no `debug` but `debug.traceback`).
+
+| | |
+|---|---|
+| `openrac.game`, `.version`, `.platform`, `.api` | as `openrac_api`'s |
+| `openrac.log(...)`, `openrac.warn(...)` | the session log, after the mod's id |
+| `openrac.setting(key)` | the mod's setting, typed by the manifest |
+| `openrac.hook(name, fn)` | wrap or replace: `fn(original, ...)` gets the hook point's arguments; `original(...)` goes on down the chain |
+| `openrac.before(name, fn)`, `openrac.after(name, fn)` | `fn(...)` before or after the rest of the chain |
+| `openrac.on_frame(fn)` | after each game tick |
+| `openrac.on_pad(fn)` | `fn(port, report)` for each pad report, `report` a `buffer` the script may change |
+| `openrac.read(type, address)`, `openrac.write(type, address, value)` | game memory, `type` one of `u8 i8 u16 i16 u32 i32 f32`; addresses in game RAM only (below 32 MB) |
+| `openrac.fields` | the game state exposed by name (the hero's, the mobys' and their pvars): generated, below |
+| `require(name)` | another `.luau` file of the mod's own folder, nothing else |
+
+Hooks and callbacks are taken only while the scripts first run. Script and
+native mods share one chain per hook point, in the list's order: a script mod
+after a native one wraps it, and the other way round.
+
+**The binding is generated**, so it follows the hook points and survives the
+port's move to C++. Its source is a committed table per game,
+`sdk/bindings/<game>.json`: the hook points (name, signature, the disc symbols
+that have it), and the exposed state (`fields`: name, type, where on each disc,
+read-only or not). `sdk/tools/gen_binding.py` writes from it the port's
+script thunks (one C function per hook point that hands the arguments to the
+VM: `port/game/<game>/script_binding.c`, committed), the SDK's C++ hook types
+(`games/<game>.hpp`) and the script type definitions
+(`sdk/types/<game>.d.luau`, for an editor's autocomplete); a test holds the
+table to the `hook` rows of every disc's `libraries.tsv`. **The behaviour
+catalogue** (the level editor's: the moby classes, their update functions and
+pvars) is its other input: `gen_binding.py --catalogue FILE` adds its update
+functions as hook points (`Moby_<Class>_Update`) and its fields under
+`openrac.fields.mobys`, once that catalogue is committed. Until then the
+table holds the six hook points and the hero's fields the port's own code
+already names.
+
+**Sandbox and budget.** Each script mod has its own Luau state (sandboxed
+with `luaL_sandbox`), so mods cannot see each other's globals. Every call into
+a script (a hook, a callback, the first run) has a budget, checked by Luau's
+interrupt: 2 ms of time by default (`OPENRAC_SCRIPT_BUDGET_MS`). A script that
+runs over it, or raises an error, is stopped there: the error and its
+traceback go to the log with the mod's id, `status.json` marks the mod
+`failed` with the reason, its hooks pass straight to the original from then
+on, and its callbacks stop. A crash report names the script mod running at
+the time, as for a native one.
+
+**Cost.** With no script mod on, no Luau state is made and nothing of it
+runs. With one, a hook point the scripts did not take costs nothing more.
+
+### In the launcher
+
+A script mod installs from a `.zip`, a folder or a repository's address
+(the repository's archive at the release's tag, or at the newest commit
+without releases: its own files). Its row and its preview say **Runs scripts
+(sandboxed)** where a native mod says it runs code on this computer.
+
+### In the SDK
+
+`sdk/template-script/` is a script mod's repository (manifest, `main.luau`,
+the type definitions, the same workflow, which packages script mods without
+building them), and rac1-mods' `button-swap` is the example: one `on_pad`
+callback that swaps two buttons, chosen in its settings.
+
+## 12. What is proposed or open
 
 - **Proposed: a mod with data.** A format-2 mod with an `assets` folder that
   is a data pack, added to the packs when the mod is installed and on when the
@@ -538,7 +655,7 @@ installs as a reinstall does: the mod's place, on/off and settings are kept.
   addresses (section 10); a list to browse them from, as OpenGOAL's launcher
   has for its mods, waits on where it would be hosted.
 
-## 12. How others do it
+## 13. How others do it
 
 - **OpenGOAL** (Jak and Daxter) ships mods as whole builds of its game from
   a fork, listed in a JSON index its launcher reads; a mod is its own copy
