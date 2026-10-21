@@ -168,6 +168,14 @@ add_dependencies(mod_scripts_test mod_loader_test_a)
 openrac_warnings(mod_scripts_test)
 add_test(NAME mod_scripts COMMAND mod_scripts_test)
 
+# The bindings the generator writes are what their tables give, and the tables' hook points the
+# hook rows of every disc's libraries.tsv.
+find_package(Python3 COMPONENTS Interpreter QUIET)
+if(Python3_FOUND)
+  add_test(NAME mod_binding COMMAND "${Python3_EXECUTABLE}" -m unittest discover
+           -s "${PROJECT_SOURCE_DIR}/../sdk/tools" -p "test_gen_binding.py")
+endif()
+
 add_executable(rac4_io_test tests/rac4_io_test.c
   game/rac4-ntsc/host/pad.c game/rac4-ntsc/host/sound.c game/common/lib/pad.c)
 target_include_directories(rac4_io_test PRIVATE runtime/include game/common/include)

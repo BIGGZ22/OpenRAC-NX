@@ -1,0 +1,62 @@
+{
+  "format": 1,
+  "about": "Ratchet & Clank's binding for mods (docs/port/MODS.md, section 11): its hook points and the game state exposed to scripts by name. sdk/tools/gen_binding.py writes port/game/rac1/host/script_binding.c, sdk/include/openrac/games/rac1.hpp and sdk/types/rac1.d.luau from it; --check holds the hook points to the hook rows of port/game/rac1-<disc>/libraries.tsv. Addresses are each disc's; a field's offset is added to its base's.",
+  "game": "rac1",
+  "discs": ["pal", "ntsc"],
+  "hooks": [
+    {
+      "name": "Pad_ProcessReport",
+      "signature": "void(u32,u32,i32)",
+      "params": ["pad", "report", "size"],
+      "symbols": { "pal": "func_002181F0", "ntsc": "FUN_00217328" },
+      "about": "One pad report into the pad's state (PadState, at pad), each poll, before the tick reads it."
+    },
+    {
+      "name": "Hero_UpdateMotionInput",
+      "signature": "void()",
+      "params": [],
+      "symbols": { "pal": "func_L00_00211D28", "ntsc": "FUN_L00_00211670" },
+      "about": "The stick read into the hero, early in his update each tick."
+    },
+    {
+      "name": "Hero_TurnToHeading",
+      "signature": "void(i32,f32,f32,f32)",
+      "params": ["mode", "accel", "damping", "limit"],
+      "symbols": { "pal": "func_L00_002124E8", "ntsc": "FUN_L00_00211e30" },
+      "about": "Eases the hero's facing toward his move yaw."
+    },
+    {
+      "name": "Hero_SetPlanarVelocity",
+      "signature": "void(f32)",
+      "params": ["angle"],
+      "symbols": { "pal": "func_L00_00212790", "ntsc": "FUN_L00_002120d8" },
+      "about": "The hero's velocity at his ground speed along an angle; an angle above pi means his facing."
+    },
+    {
+      "name": "FollowCamera_ApplyOverrides",
+      "signature": "void(u32)",
+      "params": ["camera"],
+      "symbols": { "pal": "func_L00_002E74B0", "ntsc": "FUN_L00_002e6000" },
+      "about": "The follow camera's per-tick requests from the hero's state; the camera moby's update calls it before it places the eye."
+    },
+    {
+      "name": "Hero_AdvanceAnimation",
+      "signature": "void()",
+      "params": [],
+      "symbols": { "pal": "func_L00_00232EF0", "ntsc": "FUN_L00_00232670" },
+      "about": "Ratchet's animation moved on by his animation speed, once a tick after his state's update."
+    }
+  ],
+  "bases": {
+    "hero": { "pal": "0x0013F450", "ntsc": "0x0013F350", "about": "The hero's state (HERO in the port's rac1/host C)." }
+  },
+  "fields": [
+    { "name": "hero.position.x", "type": "f32", "base": "hero", "offset": "0x80", "about": "Where the hero is (gHeroPos)." },
+    { "name": "hero.position.y", "type": "f32", "base": "hero", "offset": "0x84" },
+    { "name": "hero.position.z", "type": "f32", "base": "hero", "offset": "0x88" },
+    { "name": "hero.facing", "type": "f32", "base": "hero", "offset": "0x98", "about": "The way he faces (rot.z), in radians." },
+    { "name": "hero.move_yaw", "type": "f32", "base": "hero", "offset": "0x180", "about": "Where the stick moves him: the stick's angle plus the camera's yaw." },
+    { "name": "hero.state", "type": "i32", "base": "hero", "offset": "0x2084", "readonly": true, "about": "His state: 0 standing, 2 running, 7 jumping, ..." },
+    { "name": "bolts", "type": "i32", "address": { "pal": "0x0015EE98", "ntsc": "0x0015ED98" }, "about": "The player's bolts." }
+  ]
+}
