@@ -226,9 +226,20 @@ legal, but the launcher shows that they share it.
 
 Which moby update functions and helpers a hook point could be added for, with the
 row each needs, the levels it covers and the class field a mod filters a shared
-function on, is the generated behaviour catalogue,
-[sdk/catalogue/rac1/BEHAVIOUR.md](../../sdk/catalogue/rac1/BEHAVIOUR.md)
-([editor/catalogue.py](../../editor/catalogue.py)).
+function on, is the generated behaviour catalogue (experimental: its function and
+struct names follow the decompilation and will change in the C++ refactor; the hook
+names are the stable handle), shipped in the SDK archive:
+
+- **`sdk/catalogue/rac1/classes.json`**, the stable table for bindings (the Luau
+  tier) and tools: per class, its update functions with their hook names
+  (`Moby_<Class>_Update`), status and signature, the classes sharing each, and its
+  pvar fields (name, offset, type, meaning). Its format is documented in
+  [editor/catalogue.py](../../editor/catalogue.py) and changes only with its
+  `format` number;
+- `sdk/catalogue/rac1/behaviour.json` (everything, may grow), `behaviour.tsv`, and
+  [BEHAVIOUR.md](../../sdk/catalogue/rac1/BEHAVIOUR.md) to read.
+
+`python3 editor/catalogue.py write` regenerates them; `check` fails when stale.
 
 Hook points are added as mods need them; adding one changes nothing for a
 game without mods. Which exist is the game header in the SDK, and the port
