@@ -45,6 +45,7 @@ pub mod library;
 pub mod overrides;
 pub mod plugins;
 pub mod port_build;
+pub mod remote;
 pub mod reports;
 pub mod save_edit;
 pub mod saves;

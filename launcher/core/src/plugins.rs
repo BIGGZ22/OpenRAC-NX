@@ -173,7 +173,7 @@ pub fn parse_version(text: &str) -> Option<(u64, u64, u64, bool)> {
 }
 
 /// `a` against `b`: a version with a suffix comes before the same numbers without one.
-fn compare_versions(a: (u64, u64, u64, bool), b: (u64, u64, u64, bool)) -> std::cmp::Ordering {
+pub(crate) fn compare_versions(a: (u64, u64, u64, bool), b: (u64, u64, u64, bool)) -> std::cmp::Ordering {
     (a.0, a.1, a.2, !a.3).cmp(&(b.0, b.1, b.2, !b.3))
 }
 
@@ -278,7 +278,7 @@ impl Manifest {
 }
 
 /// A path inside a folder: relative, no `..`, no drive.
-fn safe_relative(path: &str) -> bool {
+pub(crate) fn safe_relative(path: &str) -> bool {
     let p = Path::new(path);
     !path.is_empty() && !path.contains('\\') && p.components().all(|c| matches!(c, std::path::Component::Normal(_)))
 }
@@ -721,10 +721,10 @@ pub enum Installed {
 }
 
 /// A folder of our own beside the store, which a rename moves into place (the same file system).
-struct Scratch(PathBuf);
+pub(crate) struct Scratch(pub(crate) PathBuf);
 
 impl Scratch {
-    fn new(dir: &Path, what: &str) -> Result<Scratch, String> {
+    pub(crate) fn new(dir: &Path, what: &str) -> Result<Scratch, String> {
         let stamp = std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).map_or(0, |d| d.as_nanos());
         let path = dir.join(format!(".{what}-{}-{stamp}", std::process::id()));
         std::fs::create_dir_all(&path).map_err(|e| format!("{}: {e}", path.display()))?;
@@ -761,7 +761,7 @@ fn manifest_root(folder: &Path) -> Result<PathBuf, String> {
 }
 
 /// Copies a folder, refusing links (a mod is files and folders only).
-fn copy_tree(from: &Path, to: &Path) -> Result<(), String> {
+pub(crate) fn copy_tree(from: &Path, to: &Path) -> Result<(), String> {
     std::fs::create_dir_all(to).map_err(|e| format!("{}: {e}", to.display()))?;
     for entry in std::fs::read_dir(from).map_err(|e| format!("{}: {e}", from.display()))? {
         let entry = entry.map_err(|e| e.to_string())?;
@@ -779,7 +779,7 @@ fn copy_tree(from: &Path, to: &Path) -> Result<(), String> {
 }
 
 /// Unpacks a .zip into `into`, refusing a path out of it (`..`, an absolute path) and links.
-fn unzip(zip_path: &Path, into: &Path) -> Result<(), String> {
+pub(crate) fn unzip(zip_path: &Path, into: &Path) -> Result<(), String> {
     let file = std::fs::File::open(zip_path).map_err(|e| format!("{}: {e}", zip_path.display()))?;
     let mut archive = zip::ZipArchive::new(file).map_err(|e| format!("{} is not a .zip ({e})", zip_path.display()))?;
     for i in 0..archive.len() {
