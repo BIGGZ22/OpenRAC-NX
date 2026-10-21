@@ -35,7 +35,13 @@
   /** What the last import said, in a sentence. */
   let said = $state<{ text: string; failed: boolean } | null>(null);
 
-  const levels = $derived(`assets/port/${v.game}/${v.name}`);
+  /** The levels the exports are read from: a checkout's under assets/, an installed launcher's in the
+   *  game's data folder (its own folder is read-only; tools/bundle_standalone.py). */
+  const levels = $derived(
+    app.info?.standalone && app.config?.installDir
+      ? `${app.config.installDir}/active/${v.game}/data/port/${v.name}`
+      : `assets/port/${v.game}/${v.name}`,
+  );
 
   /** The last line a finished job of ACTION printed, and whether it succeeded. */
   function ending(id: string): { line: string; ok: boolean; refused: number } | null {

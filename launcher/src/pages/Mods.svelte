@@ -49,9 +49,17 @@
   const folders = (v: VersionView) => {
     if (standalone && app.config?.installDir) {
       const data = `${app.config.installDir}/active/${v.game}/data`;
-      return { projects: `${data}/levels/${v.name}`, packed: `${data}/packed/${v.name}` };
+      return {
+        projects: `${data}/levels/${v.name}`,
+        packed: `${data}/packed/${v.name}`,
+        levels: `${data}/port/${v.name}`,
+      };
     }
-    return { projects: `assets/levels/${v.game}/${v.name}`, packed: `assets/packed/${v.game}/${v.name}` };
+    return {
+      projects: `assets/levels/${v.game}/${v.name}`,
+      packed: `assets/packed/${v.game}/${v.name}`,
+      levels: `assets/port/${v.game}/${v.name}`,
+    };
   };
 
   /** Opens one of those folders: a checkout's through its root, an installed launcher's in the data folder. */
@@ -265,8 +273,8 @@
               <div class="span">
                 <CommandBox
                   lines={[
-                    `python3 editor/overrides.py stack --into <data>/overrides --out <data>/mods/${v.name} --packed ${dirs.packed} --levels assets/port/${v.game}/${v.name}`,
-                    `openrac-${v.key.replace("/", "-")} --data <data> --levels assets/port/${v.game}/${v.name} --mods <data>/mods/${v.name}`,
+                    `python3 editor/overrides.py stack --into <data>/overrides --out <data>/mods/${v.name} --packed ${dirs.packed} --levels ${dirs.levels}`,
+                    `openrac-${v.key.replace("/", "-")} --data <data> --levels ${dirs.levels} --mods <data>/mods/${v.name}`,
                   ]}
                 />
               </div>

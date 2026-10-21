@@ -52,6 +52,28 @@ pub fn data_dir(install: &Path, game: &str) -> PathBuf {
     install.join("active").join(game).join("data")
 }
 
+/// Where an installed launcher keeps what a checkout keeps under `assets/` (tools/bundle_standalone.py,
+/// MOD_FOLDERS): `assets/levels|packed|port/<game>/<version>[/...]` is `<data>/levels|packed|port/<version>[/...]`
+/// of that game, in the per-user install folder, since an installed launcher's own folder (an AppImage,
+/// the macOS app) is read-only. None for any other path, or one that climbs out with `..`.
+pub fn player_folder(install: &Path, rel: &str) -> Option<PathBuf> {
+    let parts: Vec<&str> = rel.trim_end_matches('/').split('/').collect();
+    match parts.as_slice() {
+        ["assets", kind @ ("levels" | "packed" | "port"), game, version, rest @ ..]
+            if check_game(game).is_ok()
+                && check_game(version).is_ok()
+                && rest.iter().all(|p| !p.is_empty() && *p != "." && *p != "..") =>
+        {
+            let mut out = data_dir(install, game).join(kind).join(version);
+            for p in rest {
+                out.push(p);
+            }
+            Some(out)
+        }
+        _ => None,
+    }
+}
+
 fn check_game(game: &str) -> Result<&str, String> {
     let ok = !game.is_empty() && game.chars().all(|c| c.is_ascii_alphanumeric() || c == '_' || c == '-');
     if ok {
@@ -220,5 +242,21 @@ mod tests {
         assert_eq!(plan.cwd, PathBuf::from("/openrac"));
         assert!(plan_extract(&Config::default(), Path::new("/data"), "rac1", &image).is_err());
         assert!(plan_extract(&config, Path::new("/data"), "rac 1", &image).is_err());
+    }
+
+    #[test]
+    fn an_installed_launchers_folders_are_in_the_data_folder() {
+        let install = Path::new("/home/me/OpenRAC");
+        let data = data_dir(install, "rac1");
+        assert_eq!(player_folder(install, "assets/levels/rac1/pal"), Some(data.join("levels").join("pal")));
+        assert_eq!(player_folder(install, "assets/packed/rac1/ntsc/"), Some(data.join("packed").join("ntsc")));
+        assert_eq!(
+            player_folder(install, "assets/port/rac1/pal/level_00"),
+            Some(data.join("port").join("pal").join("level_00"))
+        );
+        assert_eq!(player_folder(install, "assets/levels/rac1"), None);
+        assert_eq!(player_folder(install, "assets/levels/rac1/pal/../../x"), None);
+        assert_eq!(player_folder(install, "assets/godot/rac1/pal"), None);
+        assert_eq!(player_folder(install, "editor/README.md"), None);
     }
 }

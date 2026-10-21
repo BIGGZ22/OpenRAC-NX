@@ -559,9 +559,21 @@ fn cancel_job(state: State<'_, AppState>, id: u32) -> Result<(), String> {
 /// system's default app. Paths outside the checkout are refused.
 #[tauri::command]
 fn open_path(app: AppHandle, state: State<'_, AppState>, path: String) -> Result<(), String> {
-    let root = state.config.lock().unwrap().root.clone().ok_or("the OpenRAC folder is not set")?;
-    let root = std::fs::canonicalize(&root).map_err(|e| e.to_string())?;
+    let (root, install) = {
+        let c = state.config.lock().unwrap();
+        (c.root.clone().ok_or("the OpenRAC folder is not set")?, c.install_dir.clone())
+    };
     let rel = path.split('#').next().unwrap_or_default();
+    // An installed launcher's own folder is read-only (an AppImage, the macOS app): the folders a
+    // checkout keeps under assets/ are the game's, in the per-user install folder.
+    let on_copy = state.bundled.as_deref().is_some_and(|copy| detect::on_the_copy(Some(&root), copy));
+    if let (true, Some(install)) = (on_copy, install.as_deref()) {
+        if let Some(folder) = install::player_folder(install, rel) {
+            std::fs::create_dir_all(&folder).map_err(|e| format!("{}: {e}", folder.display()))?;
+            return open_path_with_system(&app, &folder.to_string_lossy());
+        }
+    }
+    let root = std::fs::canonicalize(&root).map_err(|e| e.to_string())?;
     let wanted = openrac_launcher_core::under(&root, rel);
     if rel.starts_with("assets/") && !rel.split('/').any(|part| part == "..") && !wanted.exists() {
         // A folder the tools write (the level editor's projects, packed levels) before they first
