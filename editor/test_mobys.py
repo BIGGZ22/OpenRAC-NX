@@ -6,7 +6,7 @@ import unittest
 
 from formats import FormatError
 from godot import write_marker
-from mobys import POINTER, RECORD, SIZE, USUAL, matrix, moby_class_names, moby_instances
+from mobys import POINTER, RECORD, SIZE, USUAL, c_definitions, matrix, moby_class_names, moby_instances, update_roles
 
 
 def record(**changes):
@@ -65,6 +65,32 @@ class MobyTests(unittest.TestCase):
             text = path.read_text()
         self.assertIn('text = "11 vendor"', text)
         self.assertIn("metadata/rc1_class = 11", text)
+
+
+class LogicTests(unittest.TestCase):
+    def test_update_roles(self):
+        table = ("# name\troles\n"
+                 "func_L00_002A7078\tUpdateMoby_13:00/01,UpdateMoby_14:02,UpdateCamera_6:00\n"
+                 "func_001E97C8\tInitCamera_0:00\n")
+        self.assertEqual(update_roles(table), {"func_L00_002A7078": {13: [0, 1], 14: [2]}})
+
+    def test_definitions_by_symbol_readable_name_and_alias(self):
+        text = ("INCLUDE_ASM(\"asm/x\", func_L00_00100000);\n"
+                "void Profile_Mark(void) {\n}\n\n"
+                "void func_00100010(void) {\n}\n"
+                "/* An update (class 208): keeps (a) and (b). */\n"
+                "void func_L00_00100020_r(Moby *m) __asm__(\"func_L00_00100020\");\n"
+                "void func_L00_00100020_r(Moby *m) {\n}\n"
+                "#define func_L00_00100030_r func_L00_00100030\n"
+                "void func_L00_00100030_r(struct Moby *moby) {\n}\n"
+                "void func_L00_00100040(int);\n")
+        where, defined_as = c_definitions([("a.c", text)], {"Profile_Mark": "func_00100008"})
+        self.assertEqual(where["func_L00_00100000"], ("a.c", False))
+        for symbol in ("func_00100008", "func_00100010", "func_L00_00100020", "func_L00_00100030"):
+            self.assertEqual(where[symbol], ("a.c", True), symbol)
+        self.assertEqual(defined_as["func_00100008"], "Profile_Mark")
+        self.assertEqual(defined_as["func_L00_00100020"], "func_L00_00100020_r")
+        self.assertNotIn("func_L00_00100040", where)  # a prototype is not a definition
 
 
 if __name__ == "__main__":

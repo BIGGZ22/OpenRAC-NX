@@ -93,7 +93,48 @@ def node_name(class_id: int, index: int, names: dict[int, str]) -> str:
 
 DECOMPILATION = Path(__file__).resolve().parents[1] / "games" / "rac1"
 _UPDATE = re.compile(r"UpdateMoby_(\d+):([\d/]+)")
+_SYMBOL = re.compile(r"func_(?:L\d\d_)?[0-9A-F]{8}")
 _logic = None
+
+
+def update_roles(table: str) -> dict[str, dict[int, list[int]]]:
+    """function -> class -> the levels whose class table gives the class that update function,
+    from the text of config/overlays/names.tsv (`func_...<TAB>UpdateMoby_500:00/01,...`)."""
+    out: dict[str, dict[int, list[int]]] = {}
+    for line in table.splitlines():
+        if line.startswith("#") or "\t" not in line:
+            continue
+        function, roles = line.split("\t", 1)
+        for class_id, levels in _UPDATE.findall(roles):
+            out.setdefault(function, {})[int(class_id)] = [int(lv) for lv in levels.split("/")]
+    return out
+
+
+def names_h_symbols(path: Path) -> dict[str, str]:
+    """include/names.h: readable name -> func_ symbol."""
+    return dict(re.findall(r"^#define\s+(\w+)\s+(func_\w+)\s*$", path.read_text(), re.M)) if path.is_file() else {}
+
+
+def c_definitions(sources, symbol_of: dict[str, str]) -> tuple[dict, dict]:
+    """Where the C of each function is: (symbol -> (path, is_c), symbol -> the name it is defined
+    under) over SOURCES, (path, text) pairs. A function is C where a file defines it under its
+    func_ symbol, its readable name (SYMBOL_OF, from include/names.h: readable -> symbol) or a name
+    of the file's own that `__asm__("func_...")` or a `#define` gives that symbol; assembly where only
+    INCLUDE_ASM/ASM_FUNC has it."""
+    where, defined_as = {}, {}
+    for path, text in sources:
+        for name in re.findall(r"^(?:INCLUDE_ASM|ASM_FUNC)\([^)]*\b(func_\w+)\);", text, re.M):
+            where.setdefault(name, (path, False))
+        aliases = dict(re.findall(r'\b([A-Za-z_]\w*)\s*\([^;{}()]*\)\s*__asm__\s*\(\s*"(func_\w+)"\s*\)', text))
+        aliases.update(re.findall(r"^#define\s+(\w+)\s+(func_\w+)\s*$", text, re.M))
+        # A definition: a line starting with its type, with no ';' before the line's end (a
+        # prototype has one). Lazy, so that one definition does not swallow the ones after it.
+        for name in re.findall(r"^(?!extern\b)[A-Za-z_][^;=\n]*?\b([A-Za-z_]\w*)\s*\([^;]*?$", text, re.M):
+            symbol = name if _SYMBOL.fullmatch(name) else symbol_of.get(name) or aliases.get(name)
+            if symbol is not None:
+                where[symbol] = (path, True)
+                defined_as[symbol] = name
+    return where, defined_as
 
 
 def moby_logic(level: int) -> dict[int, dict]:
@@ -109,27 +150,14 @@ def moby_logic(level: int) -> dict[int, dict]:
         if table.is_file():
             # A function the decompilation has renamed is defined under its readable name
             # (include/names.h maps each one to its func_ symbol).
-            names_h = DECOMPILATION / "include" / "names.h"
-            symbol_of = dict(re.findall(r"^#define\s+(\w+)\s+(func_\w+)\s*$", names_h.read_text(), re.M)) \
-                if names_h.is_file() else {}
-            where, defined_as = {}, {}
-            for path in sorted((DECOMPILATION / "src").rglob("*.c")):
-                text = path.read_text(errors="replace")
-                for name in re.findall(r"^(?:INCLUDE_ASM|ASM_FUNC)\([^)]*\b(func_\w+)\);", text, re.M):
-                    where.setdefault(name, (path, False))
-                for name in re.findall(r"^(?!extern\b)[A-Za-z_][^;=\n]*?\b([A-Za-z_]\w*)\s*\([^;]*$", text, re.M):
-                    symbol = name if re.fullmatch(r"func_(?:L\d\d_)?[0-9A-F]{8}", name) else symbol_of.get(name)
-                    if symbol is not None:
-                        where[symbol] = (path, True)
-                        defined_as[symbol] = name
-            for line in table.read_text().splitlines():
-                if line.startswith("#") or "\t" not in line:
-                    continue
-                function, roles = line.split("\t", 1)
-                for class_id, levels in _UPDATE.findall(roles):
-                    path, is_c = where.get(function, (None, False))
-                    for lv in levels.split("/"):
-                        _logic.setdefault(int(lv), {})[int(class_id)] = {
+            symbol_of = names_h_symbols(DECOMPILATION / "include" / "names.h")
+            sources = ((p, p.read_text(errors="replace")) for p in sorted((DECOMPILATION / "src").rglob("*.c")))
+            where, defined_as = c_definitions(sources, symbol_of)
+            for function, classes in update_roles(table.read_text()).items():
+                path, is_c = where.get(function, (None, False))
+                for class_id, levels in classes.items():
+                    for lv in levels:
+                        _logic.setdefault(lv, {})[class_id] = {
                             "function": function, "decompiled": is_c,
                             "defined_as": defined_as.get(function, function),
                             "file": path.relative_to(DECOMPILATION.parents[1]).as_posix() if path else None}
