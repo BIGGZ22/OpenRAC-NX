@@ -1,6 +1,6 @@
 # The mod SDK as one archive (sdk/tools/package_sdk.py): what a modder downloads to write a native
 # mod without a copy of OpenRAC (docs/port/MODS.md, sdk/README.md). Each run makes the archive,
-# checks its tools, builds the template (C++) and the example (C) and runs the C++ layer's test on
+# checks its tools and that the docs' API reference is current (gen_reference.py), builds the template (C++) and the example (C) and runs the C++ layer's test on
 # Windows (MSVC), Linux (GCC) and macOS (Clang) from the archive alone, unpacked away from the
 # checkout; the archive is the run's artifact. A tag
 # `sdk-v<version>` (sdk/VERSION, whose MAJOR.MINOR is the interface's) also publishes it, with its
@@ -39,6 +39,9 @@ jobs:
           python-version: "3.12"
       - name: Test the SDK's tools
         run: python3 -m unittest discover -s sdk/tools
+      - name: The API reference is what the sources give
+        # sdk/docs/reference is generated from the headers, the bindings and the type files.
+        run: python3 sdk/tools/gen_reference.py --check
       - name: Make the archive
         run: python3 sdk/tools/package_sdk.py -o dist
       - name: A tag names the archive's version
