@@ -1,0 +1,14 @@
+# SPDX-License-Identifier: GPL-3.0-or-later
+# The SDK's version is the mod interface's (openrac_mod.h, OPENRAC_MOD_API_MAJOR.MINOR): a request
+# for 1.x is met by any 1.y with y >= x, never by another major.
+set(PACKAGE_VERSION "1.0")
+if(PACKAGE_FIND_VERSION_MAJOR AND NOT PACKAGE_FIND_VERSION_MAJOR EQUAL 1)
+  set(PACKAGE_VERSION_COMPATIBLE FALSE)
+elseif(PACKAGE_FIND_VERSION VERSION_GREATER PACKAGE_VERSION)
+  set(PACKAGE_VERSION_COMPATIBLE FALSE)
+else()
+  set(PACKAGE_VERSION_COMPATIBLE TRUE)
+  if(PACKAGE_FIND_VERSION VERSION_EQUAL PACKAGE_VERSION)
+    set(PACKAGE_VERSION_EXACT TRUE)
+  endif()
+endif()
