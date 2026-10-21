@@ -267,9 +267,10 @@ gaddr openrac_relocate_level_code(int from, gaddr address);
  * draw callback). The function asks at entry which place it was called at (openrac_guest_entry:
  * the place of the last call through a code address, when that call came to it; 0 otherwise), and
  * a code address it takes is read from that copy's own instructions: openrac_code_in_copy finds
- * where the copy at `canon` (in level `from`'s program, `size` bytes) forms `target`, and reads
- * the same instructions at `self`. Without a place, or one that does not form it, it is
- * OPENRAC_LCODE's. */
+ * where the copy at `canon` (in level `from`'s program, `size` bytes) forms `target` (or, where it
+ * forms that nowhere, another place of target's function in that program: a place the catalogue
+ * folded into it), and reads the same instructions at `self`. Without a place, or one that does
+ * not form it, it is OPENRAC_LCODE's. */
 extern OPENRAC_GUEST_GLOBAL gaddr openrac_guest_last_entry;
 extern OPENRAC_GUEST_GLOBAL openrac_host_fn openrac_guest_last_fn;
 static inline gaddr openrac_guest_entry(openrac_host_fn self) {

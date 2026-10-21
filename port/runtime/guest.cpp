@@ -1402,21 +1402,46 @@ gaddr openrac_code_in_copy(int from, gaddr canon, uint32_t size, gaddr self, gad
     // its own function at the same instruction (rac1: func_L00_0029D988 calls the hero update
     // through a pointer; in Novalis that is func_L01_00228E08, not level 0's func_L00_002076E8).
     std::uint32_t jal_at = size;
-    UpperHalves upper;
-    for (std::uint32_t i = 0; i * 4 < size; upper.step(canon_word(canon + i * 4), i), ++i) {
-        const std::uint32_t w = canon_word(canon + i * 4);
-        const std::uint32_t op = w >> 26, rs = (w >> 21) & 31;
-        if (op == 3 && jal_at == size && ((w & 0x03FFFFFFu) << 2) == (target & 0x0FFFFFFFu)) {
-            jal_at = i;
+    // The function at target in the program of from: a place the catalogue folded into it is the
+    // same function at another address, which the code may form instead (rac1: level 0's
+    // func_L00_002C9820 registers the billboard draw at 0x2C9158, folded into func_L00_002ADE90,
+    // and forms only that address). Searched for when the code forms target itself nowhere.
+    openrac_host_fn target_fn = nullptr;
+    const Table* from_table = nullptr;
+    if (auto t = g_overlays.find(from); t != g_overlays.end()) {
+        from_table = &t->second;
+        if (auto e = from_table->find(target); e != from_table->end()) {
+            target_fn = e->second.fn;
         }
-        if ((op == 0x09 || op == 0x0D) && upper.set[rs]
-                   && formed(canon_word(canon + upper.at[rs] * 4), w) == target) {
-            const std::uint32_t hi = self_word(self + upper.at[rs] * 4), lo = self_word(self + i * 4);
-            if ((hi >> 26) == 0x0F && (lo >> 26) == op) {
-                result = formed(hi, lo);
-            }
-            formed_here = true;
+    }
+    for (int folded = 0; folded < 2 && !formed_here; ++folded) {
+        if (folded && target_fn == nullptr) {
             break;
+        }
+        UpperHalves upper;
+        for (std::uint32_t i = 0; i * 4 < size; upper.step(canon_word(canon + i * 4), i), ++i) {
+            const std::uint32_t w = canon_word(canon + i * 4);
+            const std::uint32_t op = w >> 26, rs = (w >> 21) & 31;
+            if (!folded && op == 3 && jal_at == size && ((w & 0x03FFFFFFu) << 2) == (target & 0x0FFFFFFFu)) {
+                jal_at = i;
+            }
+            if ((op != 0x09 && op != 0x0D) || !upper.set[rs]) {
+                continue;
+            }
+            const gaddr at = formed(canon_word(canon + upper.at[rs] * 4), w);
+            bool match = at == target;
+            if (!match && folded) {
+                auto e = from_table->find(at);
+                match = e != from_table->end() && e->second.fn == target_fn;
+            }
+            if (match) {
+                const std::uint32_t hi = self_word(self + upper.at[rs] * 4), lo = self_word(self + i * 4);
+                if ((hi >> 26) == 0x0F && (lo >> 26) == op) {
+                    result = formed(hi, lo);
+                }
+                formed_here = true;
+                break;
+            }
         }
     }
     if (!formed_here && jal_at != size) {
