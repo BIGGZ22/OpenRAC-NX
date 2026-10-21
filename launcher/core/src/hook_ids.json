@@ -4,10 +4,12 @@
  "games": {
   "rac1": {
    "FollowCamera_ApplyOverrides": "rac1.camera.follow.apply_overrides",
+   "GoldBolts_CountCollected": "rac1.gold_bolt.count_collected",
    "Hero_AdvanceAnimation": "rac1.player.advance_animation",
    "Hero_SetPlanarVelocity": "rac1.player.set_planar_velocity",
    "Hero_TurnToHeading": "rac1.player.turn_to_heading",
    "Hero_UpdateMotionInput": "rac1.player.update_motion_input",
+   "Item_Give": "rac1.item.give",
    "Moby_AgnoggShipFront_Update": "rac1.moby.agnogg_ship.update",
    "Moby_AirshipPart1181_Update": "rac1.moby.airship_chain_link.update",
    "Moby_AirshipPart_Update": "rac1.moby.airship_part.update",
@@ -645,7 +647,10 @@
    "Moby_WhiteFlower_Update": "rac1.moby.break_on_hit_l02.update",
    "Moby_WoodcutBot_Update": "rac1.moby.wb_moby.update",
    "Moby_Wrench_Update": "rac1.moby.wrench.update",
-   "Pad_ProcessReport": "rac1.pad.process_report"
+   "Pad_ProcessReport": "rac1.pad.process_report",
+   "Planet_Unlock": "rac1.planet.unlock",
+   "Vendor_BuildItemList": "rac1.vendor.build_item_list",
+   "Vendor_InitLevelStock": "rac1.vendor.init_level_stock"
   }
  }
 }

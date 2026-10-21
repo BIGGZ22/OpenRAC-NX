@@ -106,6 +106,46 @@ rac1.player.advance_animation (Hero_AdvanceAnimation) void(): Ratchet's animatio
 type Hero_AdvanceAnimationFn = () -> ()
 ```
 
+### `Item_GiveFn`
+
+rac1.item.give (Item_Give) void(i32,i32): Gives the player item id (GiveItem): sets its owned and obtained bytes, shows its banner, gives its starting ammo, marks it bought in the vendor's stock and adds it to the quick select; equip non-zero also puts it in hand. Every item the game gives goes through it but the Persuader's.
+
+```lua
+type Item_GiveFn = (id: number, equip: number) -> ()
+```
+
+### `Planet_UnlockFn`
+
+rac1.planet.unlock (Planet_Unlock) void(i32): Unlocks a planet's coordinates (UnlockPlanet): its flag (one byte per level), the galaxy list, and its banner unless it is the planet the player is on.
+
+```lua
+type Planet_UnlockFn = (planet: number) -> ()
+```
+
+### `Vendor_InitLevelStockFn`
+
+rac1.vendor.init_level_stock (Vendor_InitLevelStock) void(): The vendor's stock at each level start (VendorStockLevelInit): gives the Bomb Glove while the player has none, keeps the stock's known items and adds the level's new weapon.
+
+```lua
+type Vendor_InitLevelStockFn = () -> ()
+```
+
+### `Vendor_BuildItemListFn`
+
+rac1.vendor.build_item_list (Vendor_BuildItemList) void(i32): The vendor menu's list (VendorBuildItemList), from the stock and the items owned: each time the menu opens and after each purchase. skip_unflagged leaves out what is for sale (the menu opened from the pause screen).
+
+```lua
+type Vendor_BuildItemListFn = (skip_unflagged: number) -> ()
+```
+
+### `GoldBolts_CountCollectedFn`
+
+rac1.gold_bolt.count_collected (GoldBolts_CountCollected) i32(): The gold bolts collected, at most 40 (count_nonzero_entries_up_to_40): what the pause screen shows; the unspent ones are this less 4 per gold weapon.
+
+```lua
+type GoldBolts_CountCollectedFn = () -> number
+```
+
 ### `MobyUpdateFn`
 
 rac1.moby.<class>.update (experimental): (moby: number) -> (), or () -> () where it gets no moby.

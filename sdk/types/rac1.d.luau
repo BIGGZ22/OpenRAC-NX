@@ -14,6 +14,11 @@ type HookPoint =
     | "rac1.player.set_planar_velocity"
     | "rac1.camera.follow.apply_overrides"
     | "rac1.player.advance_animation"
+    | "rac1.item.give"
+    | "rac1.planet.unlock"
+    | "rac1.vendor.init_level_stock"
+    | "rac1.vendor.build_item_list"
+    | "rac1.gold_bolt.count_collected"
     | "rac1.moby.class_1750.update"
     | "rac1.moby.class_676.update"
     | "rac1.moby.class_482.update"
@@ -652,10 +657,12 @@ type HookPoint =
     | "rac1.moby.moby1799.update"
     | "rac1.moby.moby1906.update"
     | "FollowCamera_ApplyOverrides"
+    | "GoldBolts_CountCollected"
     | "Hero_AdvanceAnimation"
     | "Hero_SetPlanarVelocity"
     | "Hero_TurnToHeading"
     | "Hero_UpdateMotionInput"
+    | "Item_Give"
     | "Moby_AgnoggShipFront_Update"
     | "Moby_AirshipPart1181_Update"
     | "Moby_AirshipPart_Update"
@@ -1294,6 +1301,9 @@ type HookPoint =
     | "Moby_WoodcutBot_Update"
     | "Moby_Wrench_Update"
     | "Pad_ProcessReport"
+    | "Planet_Unlock"
+    | "Vendor_BuildItemList"
+    | "Vendor_InitLevelStock"
 type MemoryType = "u8" | "i8" | "u16" | "i16" | "u32" | "i32" | "f32"
 
 type Fields = {
@@ -1322,6 +1332,16 @@ type Hero_SetPlanarVelocityFn = (angle: number) -> ()
 type FollowCamera_ApplyOverridesFn = (camera: number) -> ()
 -- rac1.player.advance_animation (Hero_AdvanceAnimation) void(): Ratchet's animation moved on by his animation speed, once a tick after his state's update.
 type Hero_AdvanceAnimationFn = () -> ()
+-- rac1.item.give (Item_Give) void(i32,i32): Gives the player item id (GiveItem): sets its owned and obtained bytes, shows its banner, gives its starting ammo, marks it bought in the vendor's stock and adds it to the quick select; equip non-zero also puts it in hand. Every item the game gives goes through it but the Persuader's.
+type Item_GiveFn = (id: number, equip: number) -> ()
+-- rac1.planet.unlock (Planet_Unlock) void(i32): Unlocks a planet's coordinates (UnlockPlanet): its flag (one byte per level), the galaxy list, and its banner unless it is the planet the player is on.
+type Planet_UnlockFn = (planet: number) -> ()
+-- rac1.vendor.init_level_stock (Vendor_InitLevelStock) void(): The vendor's stock at each level start (VendorStockLevelInit): gives the Bomb Glove while the player has none, keeps the stock's known items and adds the level's new weapon.
+type Vendor_InitLevelStockFn = () -> ()
+-- rac1.vendor.build_item_list (Vendor_BuildItemList) void(i32): The vendor menu's list (VendorBuildItemList), from the stock and the items owned: each time the menu opens and after each purchase. skip_unflagged leaves out what is for sale (the menu opened from the pause screen).
+type Vendor_BuildItemListFn = (skip_unflagged: number) -> ()
+-- rac1.gold_bolt.count_collected (GoldBolts_CountCollected) i32(): The gold bolts collected, at most 40 (count_nonzero_entries_up_to_40): what the pause screen shows; the unspent ones are this less 4 per gold weapon.
+type GoldBolts_CountCollectedFn = () -> number
 -- rac1.moby.<class>.update (experimental): (moby: number) -> (), or () -> () where it gets no moby.
 type MobyUpdateFn = (moby: number) -> ()
 

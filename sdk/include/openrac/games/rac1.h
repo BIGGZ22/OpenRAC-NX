@@ -55,6 +55,42 @@ typedef void (*openrac_rac1_FollowCamera_ApplyOverrides)(openrac_gaddr camera);
 #define OPENRAC_RAC1_SIG_Hero_AdvanceAnimation "void()"
 typedef void (*openrac_rac1_Hero_AdvanceAnimation)(void);
 
+/* Item_Give (func_L00_002618D8, rac1.item.give): gives the player item id (GiveItem): its owned
+ * and obtained bytes, its banner, its starting ammo, its vendor stock mark and the quick select;
+ * equip non-zero also puts it in hand. Every item the game gives goes through it but the
+ * Persuader's. */
+#define OPENRAC_RAC1_HOOK_Item_Give "Item_Give"
+#define OPENRAC_RAC1_SIG_Item_Give "void(i32,i32)"
+typedef void (*openrac_rac1_Item_Give)(int32_t id, int32_t equip);
+
+/* Planet_Unlock (func_L00_00261848, rac1.planet.unlock): unlocks a planet's coordinates
+ * (UnlockPlanet): its flag, the galaxy list, and its banner unless it is the planet the player
+ * is on. */
+#define OPENRAC_RAC1_HOOK_Planet_Unlock "Planet_Unlock"
+#define OPENRAC_RAC1_SIG_Planet_Unlock "void(i32)"
+typedef void (*openrac_rac1_Planet_Unlock)(int32_t planet);
+
+/* Vendor_InitLevelStock (func_L00_0023DB30, rac1.vendor.init_level_stock): the vendor's stock at
+ * each level start (VendorStockLevelInit): the Bomb Glove while the player has none, the level's
+ * new weapon. */
+#define OPENRAC_RAC1_HOOK_Vendor_InitLevelStock "Vendor_InitLevelStock"
+#define OPENRAC_RAC1_SIG_Vendor_InitLevelStock "void()"
+typedef void (*openrac_rac1_Vendor_InitLevelStock)(void);
+
+/* Vendor_BuildItemList (func_L00_0029B770, rac1.vendor.build_item_list): the vendor menu's list
+ * from the stock and the items owned (VendorBuildItemList), each time it opens and after each
+ * purchase; skip_unflagged leaves out what is for sale. */
+#define OPENRAC_RAC1_HOOK_Vendor_BuildItemList "Vendor_BuildItemList"
+#define OPENRAC_RAC1_SIG_Vendor_BuildItemList "void(i32)"
+typedef void (*openrac_rac1_Vendor_BuildItemList)(int32_t skip_unflagged);
+
+/* GoldBolts_CountCollected (func_002160E0, rac1.gold_bolt.count_collected): the gold bolts
+ * collected, at most 40 (count_nonzero_entries_up_to_40): the pause screen's count; the unspent
+ * ones are this less 4 per gold weapon. */
+#define OPENRAC_RAC1_HOOK_GoldBolts_CountCollected "GoldBolts_CountCollected"
+#define OPENRAC_RAC1_SIG_GoldBolts_CountCollected "i32()"
+typedef int32_t (*openrac_rac1_GoldBolts_CountCollected)(void);
+
 /* Take a hook point by its short name: OPENRAC_RAC1_HOOK(api, mod, Hero_TurnToHeading, my_turn,
  * &s_turn_original). */
 #define OPENRAC_RAC1_HOOK(api, mod, point, replacement, original)                                  \

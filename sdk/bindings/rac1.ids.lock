@@ -2,6 +2,8 @@
 # on the first disc) and every alias it has had. It only grows: an id is never removed or reused,
 # and an alias once given stays (docs/port/MODS.md, section 4). Regenerated, never edited.
 rac1.camera.follow.apply_overrides	pal:L00:002E74B0	FUN_L00_002e6000,FollowCamera_ApplyOverrides,func_L00_002E74B0
+rac1.gold_bolt.count_collected	pal:002160E0	FUN_00215290,GoldBolts_CountCollected,func_002160E0
+rac1.item.give	pal:L00:002618D8	FUN_L00_00260860,Item_Give,func_L00_002618D8
 rac1.moby.agnogg_ship.update	pal:L01:002FC140	FUN_L01_002fad68,Moby_AgnoggShipFront_Update,func_L01_002FC140
 rac1.moby.airship_chain_link.update	pal:L09:00305710	FUN_L09_00304360,Moby_AirshipPart1181_Update,func_L09_00305710
 rac1.moby.airship_part.update	pal:L09:002C3858	FUN_L09_002c26c8,Moby_AirshipPart_Update,func_L09_002C3858
@@ -640,7 +642,10 @@ rac1.moby.water_surface_fx.update	pal:L01:002FE4C0	FUN_L01_002fd0e8,Moby_Class75
 rac1.moby.wb_moby.update	pal:L04:002D2A98	FUN_L04_002d16b8,Moby_WoodcutBot_Update,func_L04_002D2A98
 rac1.moby.wrench.update	pal:L00:002A9768	FUN_L00_002a84c8,Moby_Wrench_Update,func_L00_002A9768
 rac1.pad.process_report	pal:002181F0	FUN_00217328,Pad_ProcessReport,func_002181F0
+rac1.planet.unlock	pal:L00:00261848	FUN_L00_002607d0,Planet_Unlock,func_L00_00261848
 rac1.player.advance_animation	pal:L00:00232EF0	FUN_L00_00232670,Hero_AdvanceAnimation,func_L00_00232EF0
 rac1.player.set_planar_velocity	pal:L00:00212790	FUN_L00_002120d8,Hero_SetPlanarVelocity,func_L00_00212790
 rac1.player.turn_to_heading	pal:L00:002124E8	FUN_L00_00211e30,Hero_TurnToHeading,func_L00_002124E8
 rac1.player.update_motion_input	pal:L00:00211D28	FUN_L00_00211670,Hero_UpdateMotionInput,func_L00_00211D28
+rac1.vendor.build_item_list	pal:L00:0029B770	FUN_L00_0029a400,Vendor_BuildItemList,func_L00_0029B770
+rac1.vendor.init_level_stock	pal:L00:0023DB30	FUN_L00_0023d198,Vendor_InitLevelStock,func_L00_0023DB30

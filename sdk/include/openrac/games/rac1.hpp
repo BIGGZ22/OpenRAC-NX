@@ -59,6 +59,46 @@ struct Hero_AdvanceAnimation {
     using fn = void (*)();
 };
 
+// Gives the player item id (GiveItem): sets its owned and obtained bytes, shows its banner, gives its starting ammo, marks it bought in the vendor's stock and adds it to the quick select; equip non-zero also puts it in hand. Every item the game gives goes through it but the Persuader's.
+struct Item_Give {
+    static constexpr const char* id = "rac1.item.give";
+    static constexpr const char* name = "Item_Give";
+    static constexpr const char* signature = "void(i32,i32)";
+    using fn = void (*)(int32_t, int32_t);
+};
+
+// Unlocks a planet's coordinates (UnlockPlanet): its flag (one byte per level), the galaxy list, and its banner unless it is the planet the player is on.
+struct Planet_Unlock {
+    static constexpr const char* id = "rac1.planet.unlock";
+    static constexpr const char* name = "Planet_Unlock";
+    static constexpr const char* signature = "void(i32)";
+    using fn = void (*)(int32_t);
+};
+
+// The vendor's stock at each level start (VendorStockLevelInit): gives the Bomb Glove while the player has none, keeps the stock's known items and adds the level's new weapon.
+struct Vendor_InitLevelStock {
+    static constexpr const char* id = "rac1.vendor.init_level_stock";
+    static constexpr const char* name = "Vendor_InitLevelStock";
+    static constexpr const char* signature = "void()";
+    using fn = void (*)();
+};
+
+// The vendor menu's list (VendorBuildItemList), from the stock and the items owned: each time the menu opens and after each purchase. skip_unflagged leaves out what is for sale (the menu opened from the pause screen).
+struct Vendor_BuildItemList {
+    static constexpr const char* id = "rac1.vendor.build_item_list";
+    static constexpr const char* name = "Vendor_BuildItemList";
+    static constexpr const char* signature = "void(i32)";
+    using fn = void (*)(int32_t);
+};
+
+// The gold bolts collected, at most 40 (count_nonzero_entries_up_to_40): what the pause screen shows; the unspent ones are this less 4 per gold weapon.
+struct GoldBolts_CountCollected {
+    static constexpr const char* id = "rac1.gold_bolt.count_collected";
+    static constexpr const char* name = "GoldBolts_CountCollected";
+    static constexpr const char* signature = "i32()";
+    using fn = int32_t (*)();
+};
+
 // The update of class 1750, each tick; it gets no moby. Experimental: from the behaviour catalogue.
 struct Moby_Class1750_Update {
     static constexpr const char* id = "rac1.moby.class_1750.update";
@@ -5161,6 +5201,12 @@ namespace hooks {
             using apply_overrides = rac1::FollowCamera_ApplyOverrides;
         }  // namespace follow
     }  // namespace camera
+    namespace gold_bolt {
+        using count_collected = rac1::GoldBolts_CountCollected;
+    }  // namespace gold_bolt
+    namespace item {
+        using give = rac1::Item_Give;
+    }  // namespace item
     namespace moby {
         namespace agnogg_ship {
             using update = rac1::Moby_AgnoggShipFront_Update;
@@ -7077,12 +7123,19 @@ namespace hooks {
     namespace pad {
         using process_report = rac1::Pad_ProcessReport;
     }  // namespace pad
+    namespace planet {
+        using unlock = rac1::Planet_Unlock;
+    }  // namespace planet
     namespace player {
         using advance_animation = rac1::Hero_AdvanceAnimation;
         using set_planar_velocity = rac1::Hero_SetPlanarVelocity;
         using turn_to_heading = rac1::Hero_TurnToHeading;
         using update_motion_input = rac1::Hero_UpdateMotionInput;
     }  // namespace player
+    namespace vendor {
+        using build_item_list = rac1::Vendor_BuildItemList;
+        using init_level_stock = rac1::Vendor_InitLevelStock;
+    }  // namespace vendor
 }  // namespace hooks
 
 }  // namespace openrac::rac1

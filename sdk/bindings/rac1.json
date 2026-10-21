@@ -99,6 +99,68 @@
         "ntsc": "FUN_L00_00232670"
       },
       "about": "Ratchet's animation moved on by his animation speed, once a tick after his state's update."
+    },
+    {
+      "id": "rac1.item.give",
+      "name": "Item_Give",
+      "signature": "void(i32,i32)",
+      "params": [
+        "id",
+        "equip"
+      ],
+      "symbols": {
+        "pal": "func_L00_002618D8",
+        "ntsc": "FUN_L00_00260860"
+      },
+      "about": "Gives the player item id (GiveItem): sets its owned and obtained bytes, shows its banner, gives its starting ammo, marks it bought in the vendor's stock and adds it to the quick select; equip non-zero also puts it in hand. Every item the game gives goes through it but the Persuader's."
+    },
+    {
+      "id": "rac1.planet.unlock",
+      "name": "Planet_Unlock",
+      "signature": "void(i32)",
+      "params": [
+        "planet"
+      ],
+      "symbols": {
+        "pal": "func_L00_00261848",
+        "ntsc": "FUN_L00_002607d0"
+      },
+      "about": "Unlocks a planet's coordinates (UnlockPlanet): its flag (one byte per level), the galaxy list, and its banner unless it is the planet the player is on."
+    },
+    {
+      "id": "rac1.vendor.init_level_stock",
+      "name": "Vendor_InitLevelStock",
+      "signature": "void()",
+      "params": [],
+      "symbols": {
+        "pal": "func_L00_0023DB30",
+        "ntsc": "FUN_L00_0023d198"
+      },
+      "about": "The vendor's stock at each level start (VendorStockLevelInit): gives the Bomb Glove while the player has none, keeps the stock's known items and adds the level's new weapon."
+    },
+    {
+      "id": "rac1.vendor.build_item_list",
+      "name": "Vendor_BuildItemList",
+      "signature": "void(i32)",
+      "params": [
+        "skip_unflagged"
+      ],
+      "symbols": {
+        "pal": "func_L00_0029B770",
+        "ntsc": "FUN_L00_0029a400"
+      },
+      "about": "The vendor menu's list (VendorBuildItemList), from the stock and the items owned: each time the menu opens and after each purchase. skip_unflagged leaves out what is for sale (the menu opened from the pause screen)."
+    },
+    {
+      "id": "rac1.gold_bolt.count_collected",
+      "name": "GoldBolts_CountCollected",
+      "signature": "i32()",
+      "params": [],
+      "symbols": {
+        "pal": "func_002160E0",
+        "ntsc": "FUN_00215290"
+      },
+      "about": "The gold bolts collected, at most 40 (count_nonzero_entries_up_to_40): what the pause screen shows; the unspent ones are this less 4 per gold weapon."
     }
   ],
   "bases": {
