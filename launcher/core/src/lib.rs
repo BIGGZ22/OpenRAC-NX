@@ -18,6 +18,7 @@
 //! - [`differences`]: what the port does otherwise than the PS2 game, and the fixes a player switches back.
 //! - [`jobs`]: running an action as a child process and streaming its output.
 //! - [`overrides`]: a game's overrides packs (replacement textures and models): list, order, on/off.
+//! - [`plugins`]: a game's native mods (docs/port/MODS.md): install, list, order, on/off, settings.
 //! - [`library`]: all of the above, put together for the UI.
 //! - [`reports`]: a game's session logs and crash reports, the text and the .zip players send.
 //! - [`launcher_log`]: the launcher's own log, which goes in that .zip.
@@ -38,6 +39,7 @@ pub mod jobs;
 pub mod launcher_log;
 pub mod library;
 pub mod overrides;
+pub mod plugins;
 pub mod port_build;
 pub mod reports;
 pub mod save_edit;

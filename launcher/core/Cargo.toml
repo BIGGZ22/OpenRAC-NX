@@ -11,6 +11,8 @@ chd = { version = "=0.3.4", default-features = false, features = ["std"] }
 minisign-verify = "0.3"
 serde.workspace = true
 serde_json = { workspace = true, features = ["preserve_order"] }
+# Mods added as a .zip (plugins.rs): reading, deflate through flate2's Rust back end.
+zip = { version = "7.2", default-features = false, features = ["deflate-flate2"] }
 
 [dev-dependencies]
 tempfile = "3"
