@@ -8,6 +8,7 @@
 
 #include <algorithm>
 #include <array>
+#include <atomic>
 #include <cstdio>
 #include <cstring>
 #include <deque>
@@ -34,7 +35,13 @@ bool g_read_at_once = false;
 // minutes is read on a thread of its own, and the player may close the window while one is
 // reading: the program then waits for them (openrac_sound_stop_readers), so that the globals
 // this file has are not taken away under a thread that is using them.
-std::vector<std::thread> g_readers;
+// A reader that has finished says so (done), and the next track's start joins it: a thread
+// that ended is not left unjoined, holding its stack, for the rest of the session.
+struct Reader {
+    std::thread thread;
+    std::shared_ptr<std::atomic<bool>> done;
+};
+std::vector<Reader> g_readers;
 bool g_stopping = false;
 
 // A place on the disc image, which is larger than 2 GB: fseek takes a long, 32 bits on Windows,
@@ -454,7 +461,21 @@ uint32_t openrac_stream_play(
             track->failed = true;
             return handle;
         }
-        g_readers.emplace_back(read_track, sector, track);
+        // The readers that have finished are joined (their work is done: the join only waits for
+        // the thread to end); the others are kept.
+        std::erase_if(g_readers, [](Reader& reader) {
+            if (!reader.done->load()) {
+                return false;
+            }
+            reader.thread.join();
+            return true;
+        });
+        auto done = std::make_shared<std::atomic<bool>>(false);
+        g_readers.push_back({std::thread([sector, track, done] {
+                                 read_track(sector, track);
+                                 done->store(true);
+                             }),
+                             done});
     }
     return handle;
 }
@@ -463,7 +484,7 @@ uint32_t openrac_stream_play(
 // exits, so that nothing they use is taken away while they are still working (a reader that
 // locks g_lock after the static destructors have run is a crash at quit).
 void openrac_sound_stop_readers() {
-    std::vector<std::thread> readers;
+    std::vector<Reader> readers;
     {
         std::lock_guard lock(g_lock);
         g_stopping = true;
@@ -471,8 +492,8 @@ void openrac_sound_stop_readers() {
     }
     // Outside the lock: a reader that is waiting for it must be able to take it and end.
     for (auto& reader : readers) {
-        if (reader.joinable()) {
-            reader.join();
+        if (reader.thread.joinable()) {
+            reader.thread.join();
         }
     }
 }
