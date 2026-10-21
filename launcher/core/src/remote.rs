@@ -411,10 +411,10 @@ fn describe(
         description: m.description.clone(),
         homepage: m.homepage.clone(),
         path: folder,
-        kind: match m.kind_name() {
-            "data" => "pack".into(),
-            kind => kind.into(),
-        },
+        // A repository's manifest is a mod's source: a native mod's names no library yet (its
+        // release's archive adds it), so format 2 that is not a script is native. A data pack
+        // is format 1 (handled above).
+        kind: if m.is_script() { "script".into() } else { "native".into() },
         games: m.games.clone(),
         api: m.api.clone(),
         compatible: check.is_ok(),
@@ -538,6 +538,10 @@ fn read_github(
         let mut m = describe(&raw, &path, repo, game, version, platform, &installed)?;
         if m.kind == "native" {
             match platform {
+                None if m.compatible => {
+                    m.compatible = false;
+                    m.why = Some("Native mods are not loaded on this system.".to_string());
+                }
                 None => {}
                 Some(p) => {
                     let name = asset_name(&m.id, &m.version, p);
@@ -1213,6 +1217,25 @@ mod tests {
         assert!(discover(&p(&["README.md"]), None).unwrap_err().contains("No OpenRAC mod"));
         let bad = serde_json::json!({"mods": ["../x"]});
         assert!(discover(&p(&["../x/openrac-mod.json"]), Some(&bad)).is_err());
+    }
+
+    #[test]
+    fn a_manifest_in_its_sources_is_a_native_mod() {
+        // As a repository holds it: no `plugin` yet (the release's archive adds it).
+        let dir = tempfile::tempdir().unwrap();
+        let mut fx = Fixture::default();
+        let rel = release(&mut fx, "v1.0.0", "lock-strafe", "1.0.0", Some(String::new()), false);
+        let source = r#"{"format": 2, "id": "lock-strafe", "name": "Lock-strafe", "version": "1.0.0",
+            "author": "A", "api": "1.1", "games": {"rac1": ["pal", "ntsc"]}}"#;
+        repo(&mut fx, &[("lock-strafe/openrac-mod.json", source.to_string())], serde_json::json!([rel]), "c1");
+        let m = &preview(&ctx(dir.path(), &fx), "https://github.com/o/r").unwrap().mods[0];
+        assert_eq!(m.kind, "native");
+        assert!(m.compatible, "{:?}", m.why);
+        assert_eq!(m.asset.as_deref(), Some("lock-strafe-1.0.0-linux-x86_64.zip"));
+        // No platform for native mods (Android): refused, with the reason.
+        let none = Context { platform: None, ..ctx(dir.path(), &fx) };
+        let m = &preview(&none, "https://github.com/o/r").unwrap().mods[0];
+        assert!(!m.compatible && m.why.as_deref().unwrap().contains("not loaded"), "{:?}", m.why);
     }
 
     #[test]
