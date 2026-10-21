@@ -416,14 +416,19 @@ def tile_name(key: tuple) -> str:
 def core_with(core: bytes, index: bytes, at: int, room: int, block: bytes) -> tuple[bytes, bytes, list[str]]:
     """The core data and core index with BLOCK as the level's collision. It is written where the
     disc's was when it fits (the rest of that room zeroed); a larger one goes to the end of the core
-    data (0x40-aligned), and the index's collision offset (+0x14) and core size (+0x8C) follow. The
+    data (0x40-aligned), its old place zeroed, and the index's collision offset (+0x14) and core size
+    (+0x8C) follow. The
     loader places what comes after the core from its decompressed size, so a larger core moves that
     up by as much."""
     if len(block) <= room:
         out = bytearray(core)
         out[at:at + room] = block + bytes(room - len(block))
         return bytes(out), index, []
-    out = bytearray(core) + bytes(-len(core) % 0x40)
+    out = bytearray(core)
+    # The old place is no longer read: zeros, so that the stream, which has to fit the disc's room,
+    # carries almost nothing for it.
+    out[at:at + room] = bytes(room)
+    out += bytes(-len(core) % 0x40)
     moved = len(out)
     out += block
     new_index = bytearray(index)

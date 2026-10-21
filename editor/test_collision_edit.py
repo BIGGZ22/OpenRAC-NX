@@ -268,6 +268,8 @@ class LevelDataTests(unittest.TestCase):
         self.assertEqual(struct.unpack_from("<I", new_index, 0x14)[0], len(core))
         self.assertEqual(struct.unpack_from("<I", new_index, 0x8C)[0], len(out))
         self.assertEqual(out[len(core):], b"\x02" * 0xC0)
+        self.assertEqual(out[0x40:0xC0], bytes(0x80))       # the old place, no longer read
+        self.assertEqual(out[:0x40] + out[0xC0:len(core)], core[:0x40] + core[0xC0:])
         self.assertTrue(notes)
 
     def test_level_data_patches(self):
