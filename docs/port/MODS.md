@@ -13,6 +13,20 @@ Mods live outside OpenRAC: [OpenRAC/rac1-mods](https://github.com/OpenRAC/rac1-m
 holds Ratchet & Clank's, starting with the lock-strafe that was an option of
 the port's own until 2026-10-21. The SDK to write one is [sdk/](../../sdk/README.md).
 
+**Two kinds of documentation** (decided 2026-10-21). For modders, the
+stable layer is documented in [sdk/docs](../../sdk/docs/README.md), shipped in
+the SDK's archive: getting started, the manifest, settings, the hook model with
+its stable ids, native mods in C and C++, script mods, packaging and releases,
+install from a link, where mods live, troubleshooting, and an API reference
+generated from the SDK's headers, bindings and type files
+([sdk/tools/gen_reference.py](../../sdk/tools/gen_reference.py), checked in
+CI). This page is the design and the internals: why things are as they are,
+and how the port, the launcher and the generators do them. Marked
+**experimental** in both: the behaviour catalogue and anything that names the
+game's internals (moby classes and pvars, the fields exposed to scripts, game
+functions and addresses), which follow the decompilation. Guides to the port's
+internals wait for its move to C++.
+
 Status words as in [DESIGN.md](DESIGN.md): **decided**, **proposed**, **open**.
 
 ## 1. What is decided (2026-10-21)

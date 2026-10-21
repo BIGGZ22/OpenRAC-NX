@@ -11,8 +11,15 @@ starting with the lock-strafe.
 A mod of textures, models or level edits needs none of this: that is a data
 pack, made with the level editor ([editor/MODDING.md](https://github.com/OpenRAC/OpenRAC/blob/master/editor/MODDING.md)).
 
+**New to modding OpenRAC? Start with [the guides](docs/README.md)**:
+[getting started](docs/getting-started.md) takes you from the template to a mod
+players install by pasting your repository's link. The
+[API reference](docs/README.md#reference) is generated from the headers and
+type files below. This README is the SDK's own notes.
+
 | | |
 |---|---|
+| [docs/](docs/README.md) | the modders' guides, and the generated API reference |
 | [include/openrac/openrac_mod.h](include/openrac/openrac_mod.h) | the interface: the entry points a mod exports and the table (`openrac_api`) the port hands it |
 | [include/openrac/games/rac1.h](include/openrac/games/rac1.h) | Ratchet & Clank's hook points: names, signatures, replacement types |
 | [include/openrac/mod.hpp](include/openrac/mod.hpp) | the C++ layer over the interface (C++17, header-only) |
