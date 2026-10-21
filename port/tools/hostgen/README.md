@@ -190,6 +190,14 @@ sign-extended from 32 bits, as the EE's register holds them (rac1/pal's
 RibbonTrailDraw: its `unsigned int color` takes FastTweenColor's colour and
 `(color & 0xFFFFFF) + (a << 24)`).
 
+A local the original keeps in a stack slot across calls loses those bits: GCC
+believes the value is an int, stores it with `sw` after the call and loads it
+back sign-extended with `lw`. Nothing in the C says which locals the register
+allocation spilled; `spilled_locals` names them per function
+(`{"func_001FBE80": ["c1"]}`: rac1/pal's freeze screen keeps two FastTweenColor
+colours in saved registers and one in its frame), and they stay 32-bit. A
+function the program does not have is an index problem.
+
 For verified argument types that register-use inference cannot establish,
 `asm.signatures` maps a function name to a C function type, for example
 `"func_00100000": "int (unsigned long long, float)"`. This applies after

@@ -582,6 +582,33 @@ class Translate(unittest.TestCase):
         """}, config={"returns_64": ["tween"]})
         self.assertEqual(out, ["0", "4660", "-1", "4660"])
 
+    def test_a_spilled_local_keeps_a_returns_64_result_sign_extended(self):
+        # The freeze screen (rac1 func_001FBE80) keeps three FastTweenColor colours: two in saved registers, whole,
+        # and one in a stack slot (sw after the call, lw before its use), sign-extended from its low half. hostgen.json
+        # "spilled_locals" names that one.
+        out = self.run_program({"a.c": """
+            void callee(unsigned long long x) { test_print((int)(x >> 32)); test_print((int)(x & 0xFFFF)); }
+            unsigned long long tween(int c) { return (unsigned int)c; }
+        """, "b.c": """
+            extern void callee(int x);
+            extern int tween(int c);
+            void colours(int c) {
+                int c1 = 0x10;
+                int c2 = 0x20;
+                if (c != 0) {
+                    c1 = tween(c);
+                    c2 = tween(c);
+                }
+                callee(c1);
+                callee(c2);
+            }
+            int test_main(void) {
+                colours((int)0x80001234u);
+                return 0;
+            }
+        """}, config={"returns_64": ["tween"], "spilled_locals": {"colours": ["c1"]}})
+        self.assertEqual(out, ["-1", "4660", "0", "4660"])
+
     def test_va_list_passed_as_a_pointer_becomes_a_stub(self):
         # The console's C passes a va_list where a pointer is declared (and the
         # other way round); the host cannot, so the caller becomes a stub and the

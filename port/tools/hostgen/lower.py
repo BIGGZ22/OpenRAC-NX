@@ -1019,20 +1019,24 @@ class Unit:
         returns = getattr(self.program, "returns_64", ())
         if not returns:
             return wide
+        # Locals the original keeps in a stack slot across calls (hostgen.json "spilled_locals"): GCC stores the
+        # 32-bit value it believes the result is (sw) and loads it back sign-extended (lw), so the 64 bits are gone.
+        spilled = set(getattr(self.program, "spilled_locals", {}).get(self.fn.name, ()))
         stack = [body]
         while stack:
             n = stack.pop()
             k = n.get("kind")
             if k == "VarDecl" and n.get("init") and n["id"] not in self.fn.memory and n.get("storageClass") not in ("static", "extern"):
                 init = [c for c in _inner(n) if c.get("kind") not in ("AlignedAttr", "AsmLabelAttr", "SectionAttr")]
-                if init and self._is_int32(self.ty(n)) and self._wide_call(init[0]):
+                if init and self._is_int32(self.ty(n)) and self._wide_call(init[0]) and n.get("name") not in spilled:
                     wide.add(n["id"])
             elif k == "BinaryOperator" and n.get("opcode") == "=":
                 a, b = _inner(n)
                 a = _strip_parens(a)
                 if a.get("kind") == "DeclRefExpr" and a["referencedDecl"].get("kind") == "VarDecl":
                     vid = a["referencedDecl"]["id"]
-                    if vid not in self.fn.memory and self._is_int32(self.ty(a)) and self._wide_call(b):
+                    if (vid not in self.fn.memory and self._is_int32(self.ty(a)) and self._wide_call(b)
+                            and a["referencedDecl"].get("name") not in spilled):
                         wide.add(vid)
             stack.extend(_inner(n))
         return wide

@@ -808,6 +808,10 @@ def main(argv: list[str] | None = None) -> int:
     # relocation): [low, high), or none.
     program.relocate = cfg.get("relocate")
     program.returns_64 = set(cfg.get("returns_64", []))
+    # Locals that receive a "returns_64" call's result but which the original keeps in a stack slot across calls,
+    # where its 32-bit store and load leave the low half sign-extended (hostgen.json "spilled_locals": function ->
+    # local names): lower.py keeps them 32-bit.
+    program.spilled_locals = {sym: list(names) for sym, names in cfg.get("spilled_locals", {}).items()}
     program.entries = {sym: int(str(off), 0) for sym, off in cfg.get("entries", {}).items()}
     # Stubs of the executable that every level program fills with a function of its own.
     program.level_hooks = set(cfg.get("level_hooks", []))
@@ -854,6 +858,8 @@ def main(argv: list[str] | None = None) -> int:
     # A 32-bit result that is a "returns_64" function's result, returned as it is, is 64-bit itself (program.py
     # widen_returns): the EE's result register carries all its bits through (Pause_GetFadeColor's FastTweenColor).
     program.results_widened = widen_returns(program)
+    problems += [f"spilled_locals: {sym} is not a function of the program"
+                 for sym in sorted(program.spilled_locals) if sym not in program.functions]
     # Functions with no C whose assembly the game's setup wrote (hostgen.json "asm"): C from their
     # instructions, so the port runs them instead of stubs (asmc.py). Before the units, so calls to
     # them are matched to the signatures they are written with.
