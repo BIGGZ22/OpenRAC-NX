@@ -1443,10 +1443,20 @@ pub fn run() {
             // Apple silicon one): the launcher then works on a checkout, as it did.
             // On Android the copy is unpacked from the APK into the app's files (OpenracSetup.kt),
             // maybe still now: the page waits for it (tools_ready) before it reads anything there.
+            // `tauri dev` works on its checkout: a copy in its resources is a leftover of an
+            // installer built there, as old as that build (detect::leave_copy). OPENRAC_STANDALONE
+            // set makes a debug build an installed launcher, to try the copy.
+            let resources_copy = app.path().resource_dir().ok().and_then(|dir| detect::bundled_root(&dir));
+            let contributor = cfg!(debug_assertions) && std::env::var_os("OPENRAC_STANDALONE").is_none();
             let bundled = if Platform::current() == Platform::Android {
                 android::bundled_root()
+            } else if contributor {
+                if let Some(copy) = &resources_copy {
+                    detect::leave_copy(&mut config, copy, &start_folders());
+                }
+                None
             } else {
-                app.path().resource_dir().ok().and_then(|dir| detect::bundled_root(&dir)).filter(|dir| {
+                resources_copy.filter(|dir| {
                     detect::bundled_python(dir).is_some_and(|python| detect::check_tool(Tool::Python, &python).ok)
                 })
             };

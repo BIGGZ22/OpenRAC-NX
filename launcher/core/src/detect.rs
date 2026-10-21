@@ -95,6 +95,21 @@ pub fn settle(config: &mut crate::config::Config, bundled: Option<&Path>) {
     }
 }
 
+/// A contributor's launcher (`tauri dev`, a debug build) works on the checkout it runs from, never
+/// on a carried copy. Its resources can still hold one (`copy`), left behind by an installer built
+/// in that checkout: it is as old as that build, with the actions of then (a copy from before the
+/// mods came into it has no level editor, so the Mods page had none for any game). A folder and a
+/// Python saved on that copy give way to the checkout found next to the launcher (`start`,
+/// [`roots`]) and to a Python of this machine's.
+pub fn leave_copy(config: &mut crate::config::Config, copy: &Path, start: &[PathBuf]) {
+    if on_the_copy(config.root.as_deref(), copy) {
+        config.root = roots(start).into_iter().map(|c| c.path).find(|path| !on_the_copy(Some(path), copy));
+    }
+    if config.python.as_deref().is_some_and(|python| plain(python).starts_with(plain(copy))) {
+        config.python = tool_candidates(Tool::Python).into_iter().next().map(|c| c.path);
+    }
+}
+
 /// Whether `root` is the carried copy `bundled`: the same folder whether or not either is written
 /// with Windows' `\\?\` prefix. 0.7 saved the copy as `\\?\C:\...`, 0.8 names it `C:\...`: with
 /// developer tools on (which keep the saved folder) the launcher took its own copy for a checkout,

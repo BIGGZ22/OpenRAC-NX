@@ -171,6 +171,102 @@ mod tests {
     use super::*;
     use crate::testing::checkout;
 
+    /// The versions launcher/actions.json says the level editor reads (an editor-extract that is
+    /// not planned): rac1's two, and the later games' in early access.
+    fn editable_versions() -> Vec<String> {
+        let file = actions::load(&checkout()).unwrap();
+        let mut keys: Vec<String> = file
+            .versions
+            .iter()
+            .filter(|(_, list)| list.iter().any(|a| a.id == "editor-extract" && a.state != actions::State::Planned))
+            .map(|(key, _)| key.clone())
+            .collect();
+        keys.sort();
+        keys
+    }
+
+    /// The Mods page offers "Make your own" for a version whose actions have the editor's
+    /// (Mods.svelte, editable): each version the editor reads has them, on this platform.
+    fn assert_the_editor_is_offered(library: &Library, editable: &[String]) {
+        for key in editable {
+            let version = library.games.iter().flat_map(|g| &g.versions).find(|v| &v.version.key == key);
+            let version = version.unwrap_or_else(|| panic!("{key} is not in the library"));
+            for id in ["editor-extract", "editor-open"] {
+                let action = version.actions.iter().find(|a| a.id == id && a.this_platform);
+                let action = action.unwrap_or_else(|| panic!("{key} has no {id}"));
+                assert_ne!(action.state, actions::State::Planned, "{key} {id}");
+            }
+        }
+    }
+
+    #[test]
+    fn every_game_the_editor_reads_offers_it() {
+        let editable = editable_versions();
+        for key in ["rac1/pal", "rac1/ntsc", "rac2/ntsc", "rac3/ntsc", "rac4/ntsc"] {
+            assert!(editable.iter().any(|k| k == key), "{key} is not editable: {editable:?}");
+        }
+        let config = Config { root: Some(checkout()), ..Config::default() };
+        assert_the_editor_is_offered(&library(&config).unwrap(), &editable);
+    }
+
+    /// `tauri dev` with a copy left in its resources by an installer built there (0fdd5b1e's, from
+    /// before the mods came into the copy): the launcher worked on that copy, whose actions had no
+    /// level editor, and the Mods page showed none for any game. A contributor's launcher leaves
+    /// it for the checkout it runs from (detect::leave_copy).
+    #[test]
+    fn a_contributors_launcher_leaves_an_old_copy_for_its_checkout() {
+        let tmp = tempfile::tempdir().unwrap();
+        let copy = tmp.path().join("openrac");
+        for dir in ["tools", "games/rac1", "launcher", "python/bin"] {
+            std::fs::create_dir_all(copy.join(dir)).unwrap();
+        }
+        std::fs::write(copy.join("STANDALONE"), "commit: 0fdd5b1e\n").unwrap();
+        std::fs::write(copy.join("tools/openrac.py"), "").unwrap();
+        std::fs::write(copy.join("python/bin/python3"), "").unwrap();
+        std::fs::copy(checkout().join("games/rac1/game.json"), copy.join("games/rac1/game.json")).unwrap();
+        std::fs::write(copy.join("launcher/actions.json"), r#"{"format": 1, "versions": {"rac1/pal": []}}"#).unwrap();
+        let copy = crate::detect::bundled_root(tmp.path()).expect("a carried copy");
+
+        let mut config = Config {
+            root: Some(copy.clone()),
+            python: Some(copy.join("python/bin/python3")),
+            developer: true,
+            ..Config::default()
+        };
+        let stale = library(&config).unwrap();
+        let pal = stale.games.iter().flat_map(|g| &g.versions).find(|v| v.version.key == "rac1/pal").unwrap();
+        assert!(!pal.actions.iter().any(|a| a.id == "editor-extract"), "the old copy reproduces the bug");
+
+        crate::detect::leave_copy(&mut config, &copy, &[checkout().join("launcher")]);
+        let root = config.root.clone().expect("the checkout");
+        assert_eq!(std::fs::canonicalize(&root).unwrap(), std::fs::canonicalize(checkout()).unwrap());
+        assert!(!config.python.as_deref().is_some_and(|p| p.starts_with(&copy)), "{:?}", config.python);
+        assert_the_editor_is_offered(&library(&config).unwrap(), &editable_versions());
+    }
+
+    /// An installed launcher's copy (tools/bundle_standalone.py, as an installer makes it) offers
+    /// the level editor for the same games as a checkout, working in the data folder.
+    #[test]
+    fn an_installed_launchers_copy_offers_the_editor() {
+        let tmp = tempfile::tempdir().unwrap();
+        let out = tmp.path().join("openrac");
+        let python = if cfg!(windows) { "python" } else { "python3" };
+        let Ok(status) = std::process::Command::new(python)
+            .arg(checkout().join("tools/bundle_standalone.py"))
+            .arg(&out)
+            .stdout(std::process::Stdio::null())
+            .status()
+        else {
+            return; // no Python here to put a copy together
+        };
+        assert!(status.success(), "bundle_standalone.py ended with {status}");
+        let install = tmp.path().join("install");
+        let config = Config { root: Some(out), install_dir: Some(install), ..Config::default() };
+        let library = library(&config).unwrap();
+        assert_eq!(library.actions_error, None);
+        assert_the_editor_is_offered(&library, &editable_versions());
+    }
+
     #[test]
     fn the_checkout_makes_a_library() {
         let config = Config { root: Some(checkout()), ..Config::default() };
