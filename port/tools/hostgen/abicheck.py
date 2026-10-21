@@ -209,6 +209,15 @@ def compare(call_ret: str, call_params: list[str], def_ret: str, def_params: lis
     return what
 
 
+def passes_more(call_params: list[str], def_params: list[str]) -> bool:
+    """Whether a call passes more arguments of a kind than the definition takes: through a place of a
+    folded wrapper, a call to another function, which the wrapper there passes them on to (hostgen's
+    lower.py, _call_as_defined: such a call keeps the call site's type)."""
+    cp = [kind(p) for p in call_params if p != "..."]
+    dp = [kind(p) for p in def_params if p != "..."]
+    return any(cp.count(k) > dp.count(k) for k in ("i", "f", "d"))
+
+
 def check(gen: Path, include_all: bool = False) -> tuple[list[str], dict]:
     protos = read_protos(gen / "game_protos.h")
     at, where = read_tables(gen / "functions.c")
@@ -273,6 +282,8 @@ def check(gen: Path, include_all: bool = False) -> tuple[list[str], dict]:
                     if fn not in protos:
                         continue
                     dret, dparams = protos[fn]
+                    if expr.lstrip().startswith("openrac_folded_call(") and passes_more(params, dparams):
+                        continue
                     what = compare(ft.group("ret"), params, dret, dparams, used)
                     if what:
                         problems.append(f"{rel}:{line}: {caller or '?'} calls {fn} at "

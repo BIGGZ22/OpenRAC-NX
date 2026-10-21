@@ -1917,6 +1917,14 @@ class Unit:
         pcls = [("agg" if self.sig_cls(p) == "rec" else self._reg_class(self.sig_cls(p))) for p in sig.params]
         if "agg" in classes or "agg" in pcls or any(self.cls(p) == "valist" for p in sig.params):
             return None
+        if self._folded_places(sym) and any(classes.count(k) > pcls.count(k) for k in ("i", "f")):
+            # A name the catalogue folded (a small wrapper at several places of one program, each
+            # calling another function): its definition is one of them, and a call site that passes
+            # more of a kind than that one takes calls another, whose type is the call site's.
+            # PartType74Update's colour tween goes through a place of func_L00_00237B70 with
+            # (float, int, int); as the folded definition's (void *) the tween got neither the
+            # fraction nor the second colour, and the fraction's IntToFloat never ran.
+            return None
         result_cls = self.cls(result_t)
         ret_cls = self.sig_cls(sig.ret)
         if ret_cls == "rec":
