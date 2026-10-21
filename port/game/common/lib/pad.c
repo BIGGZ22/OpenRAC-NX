@@ -14,6 +14,8 @@
 
 #include <stdint.h>
 
+void (*openrac_game_pad_report_hook)(int port, uint8_t* report, int size);
+
 int openrac_lib_sceDbcInit(void) {
     return 1;
 } /* sceDbcInit */
@@ -53,6 +55,9 @@ int openrac_lib_scePad2Read(int socket, gaddr data) { /* scePad2Read */
     out[5] = analog[3];
     for (n = 0; n < 12; n++) {
         out[6 + n] = (buttons >> bit[n]) & 1 ? 0 : 0xFF;
+    }
+    if (openrac_game_pad_report_hook != 0) {
+        openrac_game_pad_report_hook(socket, out, 18);
     }
     return 18;
 }

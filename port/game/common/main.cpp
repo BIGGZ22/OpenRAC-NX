@@ -6,7 +6,7 @@
 // (openrac_game, generated from port/game/<id>/hostgen.json).
 //
 //   openrac-<id> --data <install>/active/<game>/data [--cards DIR] [--frames N] [--stop-on-missing]
-//                [--level N] [--skip-movies] [--mods DIR] [--settings FILE]
+//                [--level N] [--skip-movies] [--mods DIR] [--settings FILE] [--plugins FILE] [--no-mods]
 //
 // The data folder is what the extractor made from the player's disc
 // (tools/extractor.py; the launcher's "Set up from your disc"). The program
@@ -47,6 +47,7 @@
 #include "common/crash.h"
 #include "common/log.h"
 #include "common/system_info.h"
+#include "mods.h"
 #ifdef OPENRAC_HAS_DISC
 #include "assets/disc/disc.h"
 #endif
@@ -98,6 +99,11 @@ int (*openrac_game_camera_position)(float xyz[3]) = nullptr;
 int (*openrac_game_updating_moby)(openrac_game_moby* out) = nullptr;
 int (*openrac_game_hero)(float position[3], float rotation[3], int32_t* state) = nullptr;
 const openrac_front_end* openrac_game_front_end = nullptr;
+
+// The hook points of this disc's build, for mods (hostgen's hooks.c; mods.h's HookPoint is its
+// layout).
+extern const openrac::mods::HookPoint openrac_game_hook_points[];
+extern const int openrac_game_hook_point_count;
 }
 
 namespace {
@@ -115,6 +121,8 @@ struct Options {
     fs::path levels;  // the extracted levels the window draws (level_00, ...)
     fs::path mods;  // levels edited in Godot and packed (editor/pack.py), read in place of the disc's
     fs::path settings;  // the player's settings (settings.h); in OpenRAC's data folder unless given
+    fs::path plugins;   // the native mods' list (mods.h): <data>/plugins/plugins.json unless given
+    bool no_mods = false;  // purist mode: no native mod is loaded (docs/port/MODS.md)
     fs::path debug_dump;  // each frame's measurements, a JSON object a line (docs/port/DEBUGGING.md)
     bool debug_overlay = false;  // the debug overlay shown from the start (F3 shows and hides it)
     bool check_levels = false;  // read every extracted level as the window would, say what is wrong, and stop
@@ -139,7 +147,7 @@ std::string program_name() {
 [[noreturn]] void usage(const std::string& why) {
     log::error("{}", why);
     log::error(
-        "usage: {} --data <install>/active/{}/data [--cards DIR] [--frames N] [--stop-on-missing] [--level N] [--skip-movies] [--mods DIR] [--settings FILE] [--debug-overlay] [--debug-dump FILE]",
+        "usage: {} --data <install>/active/{}/data [--cards DIR] [--frames N] [--stop-on-missing] [--level N] [--skip-movies] [--mods DIR] [--settings FILE] [--plugins FILE] [--no-mods] [--debug-overlay] [--debug-dump FILE]",
         program_name(),
         openrac_game.game
     );
@@ -226,6 +234,10 @@ Options parse(int argc, char** argv) {
             o.mods = value();
         } else if (a == "--settings") {
             o.settings = value();
+        } else if (a == "--plugins") {
+            o.plugins = value();
+        } else if (a == "--no-mods") {
+            o.no_mods = true;
         } else if (a == "--levels") {
             o.levels = value();
         } else if (a == "--frames") {
@@ -265,6 +277,9 @@ Options parse(int argc, char** argv) {
     }
     if (o.settings.empty()) {
         o.settings = default_settings();
+    }
+    if (o.plugins.empty()) {
+        o.plugins = o.data / "plugins" / "plugins.json";
     }
     return o;
 }
@@ -321,6 +336,32 @@ void open_session(int argc, char** argv) {
     log::header(std::format("command   {}", command_line(argc, argv)));
     log::header(std::format("log       {}", level));
     log::header("=========================");
+}
+
+// The native mods the launcher's list has on (mods.h, docs/port/MODS.md), bound to this disc's hook
+// points (hostgen's hooks.c), once the game's functions are registered and before it runs; the
+// session header says which loaded.
+void load_mods() {
+    mods::Host host;
+    host.game = openrac_game.game;
+    host.version = game_version();
+    host.openrac_version = build_info::version();
+    host.hooks = openrac_game_hook_points;
+    host.hook_count = openrac_game_hook_point_count;
+    host.list = g_options.plugins;
+    host.purist = g_options.no_mods;
+    host.loaded_level = openrac_game_loaded_overlay;
+    host.pad_hook = &openrac_game_pad_report_hook;
+    // "2026-10-21 14:02:11 +0200" as "2026-10-21T14:02:11+02:00".
+    char when[40];
+    crash::format_time(static_cast<long long>(std::time(nullptr)), crash::local_offset(), when, sizeof(when));
+    std::string now = when;
+    if (now.size() == 25) {
+        now = now.substr(0, 10) + "T" + now.substr(11, 8) + now.substr(20, 3) + ":" + now.substr(23, 2);
+    }
+    host.now = now;
+    log::header(std::format("mods      {}", mods::load(host)));
+    std::atexit([] { mods::unload(); });
 }
 
 // What a crash report says the game was doing (common/crash.h): sampled each frame.
@@ -599,6 +640,7 @@ int openrac_game_vsync(void) {
     audio_tick();
     sample_state();
     crash_test();
+    mods::frame();
     // The level being played, once per change: the launcher reads this line for Discord's presence.
     static int shown_level = OPENRAC_OVERLAY_EXE;
     static int shown_bolts = -1;
@@ -1375,6 +1417,7 @@ int main(int argc, char** argv) {
     }
 
     openrac_game_register_functions();
+    load_mods();
     openrac_guest_set_overlay_source(openrac_game_loaded_overlay);
     openrac_guest_set_level_programs(load_level_program);
     openrac_guest_stop_on_missing(g_options.keep_going ? 0 : 1);
