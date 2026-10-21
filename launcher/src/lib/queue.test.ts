@@ -13,7 +13,7 @@ describe("queue", () => {
     expect(q.next()).toBeUndefined();
     expect(q.pending()).toBe(2);
     q.apply({ type: "output", id: 7, stream: "stdout", line: "missing: ..." });
-    q.apply({ type: "exit", id: 7, code: 0, cancelled: false });
+    q.apply({ type: "exit", id: 7, code: 0, cancelled: false, outputs: [] });
     expect(a.state).toBe("succeeded");
     expect(a.lines).toEqual([{ stream: "stdout", line: "missing: ..." }]);
     expect(q.next()).toBe(b);
@@ -23,7 +23,7 @@ describe("queue", () => {
     const q = new Queue();
     const a = q.add(repo, "discs", "Identify discs");
     q.apply({ type: "output", id: 3, stream: "stderr", line: "early" });
-    q.apply({ type: "exit", id: 3, code: 2, cancelled: false });
+    q.apply({ type: "exit", id: 3, code: 2, cancelled: false, outputs: [] });
     q.started(a, 3, "cmd");
     expect(a.lines).toEqual([{ stream: "stderr", line: "early" }]);
     expect(a.state).toBe("failed");
@@ -35,7 +35,7 @@ describe("queue", () => {
     const a = q.add(repo, "play", "Play");
     // The event comes after the start call returned: the end is there to be taken.
     q.started(a, 4, "cmd");
-    q.apply({ type: "exit", id: 4, code: 0, cancelled: false });
+    q.apply({ type: "exit", id: 4, code: 0, cancelled: false, outputs: [] });
     expect(q.takeEnded()).toBe(a);
     expect(q.takeEnded()).toBeUndefined();
   });
@@ -44,7 +44,7 @@ describe("queue", () => {
     const q = new Queue();
     const a = q.add(repo, "play", "Play");
     // The event comes first: nothing can be reported until the id is known.
-    q.apply({ type: "exit", id: 4, code: 0, cancelled: false });
+    q.apply({ type: "exit", id: 4, code: 0, cancelled: false, outputs: [] });
     expect(q.takeEnded()).toBeUndefined();
     q.started(a, 4, "cmd");
     expect(a.state).toBe("succeeded");
@@ -56,7 +56,7 @@ describe("queue", () => {
     const q = new Queue();
     const a = q.add(repo, "a", "A");
     q.started(a, 1, "cmd");
-    q.apply({ type: "exit", id: 1, code: 0, cancelled: false });
+    q.apply({ type: "exit", id: 1, code: 0, cancelled: false, outputs: [] });
     q.clear();
     expect(q.jobs).toEqual([]);
     expect(q.takeEnded()).toBeUndefined();
@@ -70,7 +70,7 @@ describe("queue", () => {
     q.refused(a, "A: needs Python (Settings)");
     expect(a.state).toBe("failed");
     q.started(b, 1, "cmd");
-    q.apply({ type: "exit", id: 1, code: null, cancelled: true });
+    q.apply({ type: "exit", id: 1, code: null, cancelled: true, outputs: [] });
     expect(b.state).toBe("cancelled");
     q.dequeue(c);
     expect(c.state).toBe("cancelled");

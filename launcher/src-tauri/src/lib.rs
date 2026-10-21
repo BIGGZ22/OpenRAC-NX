@@ -1089,6 +1089,42 @@ fn open_game_folder(app: AppHandle, state: State<'_, AppState>, game: String, pa
     open_path_with_system(&app, &target.to_string_lossy())
 }
 
+/// Opens a folder a job wrote (a `job-exit`'s `outputs`, a `Started`'s `output`) with the system's
+/// file manager; a file opens its folder. Only the folders the launcher's tools write: the
+/// checkout's assets/ and build/, and the per-user install folder with the games' set-up folders.
+#[tauri::command]
+fn open_output(app: AppHandle, state: State<'_, AppState>, path: String) -> Result<(), String> {
+    let (root, install) = {
+        let c = state.config.lock().unwrap();
+        (c.root.clone(), c.install_dir.clone())
+    };
+    let target = std::fs::canonicalize(&path).map_err(|e| format!("{path}: {e}"))?;
+    let target = if target.is_dir() { target } else { target.parent().map(Path::to_path_buf).unwrap_or(target) };
+    let mut allowed = Vec::new();
+    if let Some(root) = root.and_then(|r| std::fs::canonicalize(r).ok()) {
+        allowed.push(root.join("assets"));
+        allowed.push(root.join("build"));
+    }
+    if let Some(install) = install.and_then(|i| std::fs::canonicalize(i).ok()) {
+        allowed.push(install);
+    }
+    if !allowed.iter().any(|folder| target.starts_with(folder)) {
+        return Err(format!("{path} is not a folder the launcher's tools write"));
+    }
+    open_path_with_system(&app, &target.to_string_lossy())
+}
+
+/// Opens one level's Godot project in the Godot editor (the version's `editor-open` action, with
+/// its checks: Godot set up, the level extracted), for a job's result or a level's row.
+#[tauri::command]
+fn open_level_in_godot(state: State<'_, AppState>, version: String, level: u32) -> Result<Started, String> {
+    let config = state.config.lock().unwrap().clone();
+    let inputs = openrac_launcher_core::actions::Inputs { level: Some(level), path: None, option: None };
+    let plan = library::plan(&config, &Scope::Version(version), "editor-open", &inputs)?;
+    launcher_log::line(&format!("run: {}", openrac_launcher_core::jobs::command_line(&plan)));
+    state.jobs.start(&plan, config.root.as_deref(), |_| {})
+}
+
 #[tauri::command]
 fn open_saves_folder(app: AppHandle, serial: String) -> Result<(), String> {
     let dir = openrac_launcher_core::saves::get_memcard_dir(&serial);
@@ -1545,6 +1581,8 @@ pub fn run() {
             plugins_sources,
             plugins_set_pin,
             open_game_folder,
+            open_output,
+            open_level_in_godot,
             reports_list,
             latest_crash,
             report_text,

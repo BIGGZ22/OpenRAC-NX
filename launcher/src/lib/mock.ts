@@ -745,7 +745,7 @@ function start(scope: Scope, id: string, args: Record<string, unknown> = {}): St
   const v = list.find((a) => a.id === id);
   if (!v?.runnable) throw new Error(`${action.label}: ${v?.blockers.join("; ") ?? "cannot run"}`);
   const command = [action.program ?? "?", ...(action.args ?? [])].join(" ");
-  if (action.detached) return { id: 0, title: action.label, command, detached: true };
+  if (action.detached) return { id: 0, title: action.label, command, detached: true, output: null };
 
   const lines = [`$ ${command}`, "(browser preview: nothing really runs)", "working…", ...lastLines(id, args)];
   // The build prints ninja's counter and long paths, as the real one does: to try the progress strip.
@@ -787,10 +787,10 @@ function fakeJob(title: string, command: string, lines: string[], done: () => vo
       clearInterval(timers.get(job));
       timers.delete(job);
       done();
-      emit({ type: "exit", id: job, code, cancelled: false });
+      emit({ type: "exit", id: job, code, cancelled: false, outputs: [] });
     }, 450),
   );
-  return { id: job, title, command, detached: false };
+  return { id: job, title, command, detached: false, output: null };
 }
 
 function install(game: string, image: string): Started {
@@ -1127,7 +1127,7 @@ export async function mockCall(command: string, args: Record<string, unknown> = 
       const id = args.id as number;
       clearInterval(timers.get(id));
       timers.delete(id);
-      emit({ type: "exit", id, code: null, cancelled: true });
+      emit({ type: "exit", id, code: null, cancelled: true, outputs: [] });
       return delay(null);
     }
     case "open_path":
@@ -1251,6 +1251,8 @@ export async function mockCall(command: string, args: Record<string, unknown> = 
       }
       return delay({ kind: "plugin", id, name, version: "1.0.0", replaced, enabled: true });
     }
+    case "open_output":
+    case "open_level_in_godot":
     case "open_game_folder":
       console.info(`[preview] ${command}`, args);
       return delay(null);

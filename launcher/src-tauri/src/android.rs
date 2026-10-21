@@ -431,7 +431,7 @@ pub fn launch<R: Runtime>(app: &AppHandle<R>, plan: &Plan) -> Result<Started, St
             )
             .map_err(|e| e.to_string())?;
         let command = std::iter::once(library).chain(plan.args.iter().cloned()).collect::<Vec<_>>().join(" ");
-        Ok(Started { id: 0, title: plan.title.clone(), command, detached: true })
+        Ok(Started { id: 0, title: plan.title.clone(), command, detached: true, output: None })
     }
     #[cfg(not(target_os = "android"))]
     {

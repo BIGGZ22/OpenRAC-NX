@@ -146,6 +146,7 @@ mod tests {
             cwd: PathBuf::from("."),
             detached: false,
             env: vec![],
+            output: None,
         };
         assert_eq!(game_library(&plan("/r/port/build/release/openrac-rac1-pal")).unwrap(), "openrac-rac1-pal");
         assert_eq!(game_library(&plan("/r/openrac-rac1-ntsc.exe")).unwrap(), "openrac-rac1-ntsc");

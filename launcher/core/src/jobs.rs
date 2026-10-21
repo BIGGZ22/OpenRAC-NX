@@ -18,8 +18,13 @@ use crate::actions::Plan;
 #[serde(rename_all = "camelCase", tag = "type")]
 pub enum Event {
     Output { id: u32, stream: Stream, line: String },
-    Exit { id: u32, code: Option<i32>, cancelled: bool },
+    /// `outputs`: the folders the job wrote, as the tool named them on its `openrac-output:` lines,
+    /// else the action's `output`; empty when it names none.
+    Exit { id: u32, code: Option<i32>, cancelled: bool, outputs: Vec<String> },
 }
+
+/// The start of a line on which a tool names a folder it wrote (editor/extract.py, assets.py).
+pub const OUTPUT_LINE: &str = "openrac-output: ";
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
 #[serde(rename_all = "camelCase")]
@@ -42,6 +47,8 @@ pub struct Started {
     /// The command line, for the Tasks page and bug reports.
     pub command: String,
     pub detached: bool,
+    /// The folder the action writes in (its `output`), when it names one.
+    pub output: Option<String>,
 }
 
 /// The running jobs. Cheap to clone; clones share the same jobs.
@@ -99,7 +106,21 @@ impl Jobs {
         let mut child = cmd.spawn().map_err(|e| format!("cannot start {}: {e}", plan.program.display()))?;
 
         let id = self.inner.next.fetch_add(1, Ordering::Relaxed) + 1;
-        let sink = Arc::new(sink);
+        let named: Arc<Mutex<Vec<String>>> = Arc::default();
+        let sink = {
+            let named = named.clone();
+            Arc::new(move |event: Event| {
+                if let Event::Output { line, .. } = &event {
+                    if let Some(path) = line.strip_prefix(OUTPUT_LINE) {
+                        let mut named = named.lock().unwrap();
+                        if !named.iter().any(|p| p == path.trim()) {
+                            named.push(path.trim().to_string());
+                        }
+                    }
+                }
+                sink(event)
+            })
+        };
         let mut pumps = Vec::new();
         if let Some(out) = child.stdout.take() {
             pumps.push(pump(id, Stream::Stdout, out, sink.clone()));
@@ -107,6 +128,7 @@ impl Jobs {
         if let Some(err) = child.stderr.take() {
             pumps.push(pump(id, Stream::Stderr, err, sink.clone()));
         }
+        let declared = plan.output.as_ref().map(|p| p.display().to_string());
         let child = Arc::new(Mutex::new(child));
         self.inner.jobs.lock().unwrap().running.insert(id, child.clone());
 
@@ -142,9 +164,19 @@ impl Jobs {
                 jobs.running.remove(&id);
                 jobs.cancelled.remove(&id)
             };
-            sink(Event::Exit { id, code: status.and_then(|s| s.code()), cancelled });
+            let mut outputs = named.lock().unwrap().clone();
+            if outputs.is_empty() {
+                outputs.extend(declared);
+            }
+            sink(Event::Exit { id, code: status.and_then(|s| s.code()), cancelled, outputs });
         });
-        Ok(Started { id, title: plan.title.clone(), command: command_line(plan), detached: false })
+        Ok(Started {
+            id,
+            title: plan.title.clone(),
+            command: command_line(plan),
+            detached: false,
+            output: plan.output.as_ref().map(|p| p.display().to_string()),
+        })
     }
 
     /// Stops job `id` and everything it started (a build runs compilers in
@@ -188,7 +220,13 @@ pub fn launch(plan: &Plan, root: Option<&std::path::Path>) -> Result<Started, St
     let mut child = cmd.spawn().map_err(|e| format!("cannot start {}: {e}", plan.program.display()))?;
     // Reap it when it ends, so it never lingers as a zombie on Unix.
     std::thread::spawn(move || child.wait());
-    Ok(Started { id: 0, title: plan.title.clone(), command: command_line(plan), detached: true })
+    Ok(Started {
+        id: 0,
+        title: plan.title.clone(),
+        command: command_line(plan),
+        detached: true,
+        output: plan.output.as_ref().map(|p| p.display().to_string()),
+    })
 }
 
 /// The command line as a person would type it, for display only.
@@ -329,6 +367,7 @@ mod tests {
             cwd: ".".into(),
             detached: false,
             env: Vec::new(),
+            output: None,
         };
         assert_eq!(command_line(&plan), "python3 tools/openrac.py \"my disc.iso\" \"\"");
     }
@@ -342,6 +381,7 @@ mod tests {
             cwd: std::env::temp_dir(),
             detached: false,
             env: Vec::new(),
+            output: None,
         }
     }
 
@@ -363,11 +403,36 @@ mod tests {
                 exit @ Event::Exit { .. } => break exit,
             }
         };
-        assert_eq!(exit, Event::Exit { id: started.id, code: Some(3), cancelled: false });
+        assert_eq!(exit, Event::Exit { id: started.id, code: Some(3), cancelled: false, outputs: vec![] });
         let stdout: Vec<_> = lines.iter().filter(|(s, _)| *s == Stream::Stdout).map(|(_, l)| l.as_str()).collect();
         assert_eq!(stdout, ["one", "a", "b"]);
         assert!(lines.contains(&(Stream::Stderr, "two".to_string())));
         assert!(jobs.running().is_empty());
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn the_exit_names_the_folders_the_job_wrote() {
+        let jobs = Jobs::default();
+        let run = |plan: Plan| {
+            let (tx, rx) = mpsc::channel();
+            let tx = Mutex::new(tx);
+            jobs.start(&plan, None, move |e| tx.lock().unwrap().send(e).unwrap()).unwrap();
+            loop {
+                if let Event::Exit { outputs, .. } = rx.recv_timeout(Duration::from_secs(10)).unwrap() {
+                    break outputs;
+                }
+            }
+        };
+        // The tool names them: those, once each.
+        let mut plan = sh("echo 'openrac-output: /a/b'; echo 'openrac-output: /a/b'; echo 'openrac-output: /c' >&2");
+        plan.output = Some(PathBuf::from("/declared"));
+        assert_eq!(run(plan), ["/a/b", "/c"]);
+        // It names none: the action's output.
+        let mut plan = sh("echo done");
+        plan.output = Some(PathBuf::from("/declared"));
+        assert_eq!(run(plan), ["/declared"]);
+        assert!(run(sh("true")).is_empty());
     }
 
     #[cfg(unix)]
@@ -411,7 +476,7 @@ mod tests {
                 exit @ Event::Exit { .. } => break exit,
             }
         };
-        assert_eq!(exit, Event::Exit { id: started.id, code: Some(0), cancelled: false });
+        assert_eq!(exit, Event::Exit { id: started.id, code: Some(0), cancelled: false, outputs: vec![] });
         assert!(lines.contains(&"started".to_string()), "{lines:?}");
     }
 

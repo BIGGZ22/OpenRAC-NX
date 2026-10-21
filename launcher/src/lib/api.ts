@@ -476,11 +476,15 @@ export interface Started {
   title: string;
   command: string;
   detached: boolean;
+  /** The folder the action writes in (its `output` in actions.json), when it names one. */
+  output: string | null;
 }
 
 export type JobEvent =
   | { type: "output"; id: number; stream: "stdout" | "stderr"; line: string }
-  | { type: "exit"; id: number; code: number | null; cancelled: boolean };
+  /** `outputs`: the folders the job wrote (the tool's `openrac-output:` lines, else the action's
+   *  `output`), for "Open folder" (api.openOutput). */
+  | { type: "exit"; id: number; code: number | null; cancelled: boolean; outputs: string[] };
 
 /** core/src/install.rs: a game set up from the player's disc, OpenGOAL's way. */
 export interface BuildInfo {
@@ -743,6 +747,10 @@ export const api = {
   pluginsSetPin: (game: string, id: string, pin: boolean) => call<ModSources>("plugins_set_pin", { game, id, pin }),
   /** A folder inside the game's set-up folder (an export), opened with the system. */
   openGameFolder: (game: string, path: string) => call<null>("open_game_folder", { game, path }),
+  /** A folder a job wrote (a job exit's `outputs`), opened with the system; a file opens its folder. */
+  openOutput: (path: string) => call<null>("open_output", { path }),
+  /** One level's Godot project in the Godot editor (the version's editor-open action). */
+  openLevelInGodot: (version: string, level: number) => call<Started>("open_level_in_godot", { version, level }),
   /** Android: the player's GPU driver packages (src-tauri/src/android.rs). */
   gpuDrivers: () => call<GpuDrivers>("gpu_drivers"),
   /** Android: the player picks a package's zip; null when they cancelled. */

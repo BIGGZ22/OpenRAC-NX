@@ -94,6 +94,11 @@ pub struct Action {
     /// Not shown to players.
     #[serde(default)]
     pub todo: Option<String>,
+    /// The folder the action writes its results in (`assets/levels/rac1/pal`, `{data}/exports`),
+    /// relative to the checkout: its job's result names it and the page can open it. The tool
+    /// may name the exact folder it wrote on a line `openrac-output: <path>` (jobs.rs).
+    #[serde(default)]
+    pub output: Option<String>,
     /// The values `{option}` may take, one of which the UI chooses when it runs the action (what
     /// to export: `mobys`, `textures`...). An action with `{option}` lists them; anything else is
     /// refused.
@@ -241,6 +246,8 @@ pub struct Plan {
     pub detached: bool,
     /// Environment variables set for it besides the usual ones.
     pub env: Vec<(String, String)>,
+    /// The action's `output`, filled in and absolute.
+    pub output: Option<PathBuf>,
 }
 
 /// Everything an action's placeholders and requirements are filled from.
@@ -490,7 +497,11 @@ impl Action {
         {
             env.push(("OPENRAC_GL_API".to_string(), "vulkan".to_string()));
         }
-        Ok(Plan { title, program, args, cwd, detached: self.detached, env })
+        let output = match &self.output {
+            Some(output) => Some(abs(ctx.root, &fill(output)?)),
+            None => None,
+        };
+        Ok(Plan { title, program, args, cwd, detached: self.detached, env, output })
     }
 }
 
