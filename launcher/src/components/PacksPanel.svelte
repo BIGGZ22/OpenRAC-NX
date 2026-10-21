@@ -1,22 +1,11 @@
 <script lang="ts">
-  // Your mods: a game's overrides packs, the first thing on Mods. Switch one on or off, change the
-  // order (a pack lower in the list wins), remove one, add a .zip or a folder, or drop one on the
-  // page. The list and its changes are instant (core/src/overrides.rs); adding goes through
-  // editor/overrides.py (actions.json). The packs are the game's, shared by its discs. A native
-  // mod dropped on the page goes to the game's mods instead (PluginsPanel, lib/addMods.ts).
-  import { onMount } from "svelte";
-  import {
-    api,
-    inTauri,
-    onDrop,
-    pickFolder,
-    pickZip,
-    type ActionView,
-    type PackView,
-    type VersionView,
-  } from "$lib/api";
-  import { addMods } from "$lib/addMods";
+  // A game's overrides packs (textures, models and levels), on My mods: switch one on or off,
+  // change the order (a pack lower in the list wins), remove one. The list and its changes are
+  // instant (core/src/overrides.rs). Adding is AddMod's (editor/overrides.py, through lib/addMods.ts).
+  // The packs are the game's, shared by its discs.
+  import { api, type PackView, type VersionView } from "$lib/api";
   import { app, guard } from "$lib/app.svelte";
+  import { PACKS } from "$lib/modsText";
   import CommandBox from "./CommandBox.svelte";
   import Icon from "./Icon.svelte";
 
@@ -24,26 +13,18 @@
     version: v,
     reload = 0,
     commands = [],
-    onplugin = () => undefined,
   }: {
     version: VersionView;
-    /** Bumped when something else made a pack (Import your edits): the list is read again. */
+    /** Bumped when something else made a pack (AddMod, an import): the list is read again. */
     reload?: number;
     /** With developer tools on: the same steps from a shell. */
     commands?: string[];
-    /** A native mod dropped on the page went to the game's mods: their list is read again. */
-    onplugin?: () => void;
   } = $props();
 
   const developer = $derived(app.config?.developer ?? false);
-  const adder = $derived<ActionView | null>(v.actions.find((a) => a.id === "overrides-add" && a.thisPlatform) ?? null);
 
   let packs = $state<PackView[]>([]);
   let packsError = $state<string | null>(null);
-  let adding = $state(false);
-  let dropping = $state(false);
-  /** What the last add said, in a sentence. */
-  let said = $state<{ text: string; failed: boolean } | null>(null);
 
   async function load() {
     try {
@@ -58,48 +39,6 @@
     // Again whenever RELOAD is bumped.
     if (reload >= 0) void load();
   });
-
-  onMount(() => {
-    let stop: (() => void) | undefined;
-    // The listener is registered when the promise is answered, which may be after this
-    // panel is closed: it is then taken away at once, or a file dropped later would start
-    // an add for a game the player has left.
-    let closed = false;
-    void onDrop(
-      (paths) => {
-        dropping = false;
-        void addPaths(paths);
-      },
-      (over) => (dropping = over),
-    ).then((off) => {
-      if (closed) off();
-      else stop = off;
-    });
-    return () => {
-      closed = true;
-      stop?.();
-    };
-  });
-
-  async function addPaths(paths: string[]) {
-    adding = true;
-    // A native mod dropped here goes to the game's mods (lib/addMods.ts), a pack to the packs.
-    const added = await addMods(v, paths);
-    said = { text: added.text, failed: added.failed };
-    if (added.plugin) onplugin();
-    adding = false;
-    await load();
-  }
-
-  async function addZip() {
-    const zip = await pickZip("Choose an overrides pack (.zip)");
-    if (zip) await addPaths([zip]);
-  }
-
-  async function addFolder() {
-    const folder = inTauri ? await pickFolder("Choose an overrides pack's folder") : "/home/you/Downloads/HD Veldin";
-    if (folder) await addPaths([folder]);
-  }
 
   async function change(work: Promise<PackView[]>) {
     const result = await guard(work);
@@ -124,29 +63,28 @@
   }
 </script>
 
-<section class="panel packs" class:dropping aria-label="Your mods">
+<section class="panel packs" aria-label={PACKS.title}>
   <div class="row head">
-    <h2 class="grow">Your mods</h2>
-    <button class="small" disabled={!adder?.runnable || adding} onclick={() => void addZip()}
-      >{#if adding}<span class="spinner"></span>{:else}<Icon name="library" size={14} />{/if}Add a .zip…</button
-    >
-    <button class="small" disabled={!adder?.runnable || adding} onclick={() => void addFolder()}
-      ><Icon name="folder" size={14} />Add a folder…</button
-    >
+    <div class="grow">
+      <h2>{PACKS.title}</h2>
+      <p class="dim sub">
+        {PACKS.sub}{#if packs.length > 1}<span title={PACKS.moveDownTitle}>&nbsp;· {PACKS.orderHint}</span>{/if}
+      </p>
+    </div>
   </div>
-
-  {#if said}<p class="said" class:failed={said.failed}>{said.text}</p>{/if}
 
   {#if packsError}
     <p class="failed">{packsError}</p>
   {:else if packs.length === 0}
-    <p class="dim empty">No packs yet. Make your own below, add a pack someone made, or drop a .zip or folder here.</p>
+    <p class="dim empty">{PACKS.empty}</p>
   {:else}
     <ul>
       {#each packs as pack, i (pack.id)}
         <li class="pack" class:off={!pack.enabled}>
           <input
             type="checkbox"
+            role="switch"
+            class="switch"
             aria-label={`Use ${pack.name}`}
             checked={pack.enabled}
             onchange={(e) => void change(api.overridesSetEnabled(v.game, pack.id, e.currentTarget.checked))}
@@ -164,14 +102,14 @@
             <button
               class="icon"
               aria-label={`Move ${pack.name} up`}
-              title="Move up: the packs under it replace what it changes"
+              title={PACKS.moveUpTitle}
               disabled={i === 0}
               onclick={() => void change(api.overridesMove(v.game, pack.id, true))}><Icon name="up" size={14} /></button
             >
             <button
               class="icon"
               aria-label={`Move ${pack.name} down`}
-              title="Move down: it replaces what the packs above it change"
+              title={PACKS.moveDownTitle}
               disabled={i === packs.length - 1}
               onclick={() => void change(api.overridesMove(v.game, pack.id, false))}
               ><Icon name="down" size={14} /></button
@@ -179,7 +117,7 @@
             <button
               class="icon remove"
               aria-label={`Remove ${pack.name}`}
-              title="Remove"
+              title={PACKS.remove}
               onclick={() => {
                 remove(pack);
               }}><Icon name="trash" size={14} /></button
@@ -188,20 +126,14 @@
         </li>
       {/each}
     </ul>
-    <p class="dim small-text note">
-      When two packs change the same thing, the one lower in the list is the one you see. Play with mods uses the packs
-      that are switched on.
-      {#if inTauri}<span class="after">Drop a .zip or folder here to add it.</span>{/if}
-    </p>
   {/if}
 
   {#if developer && commands.length}<CommandBox lines={commands} />{/if}
 </section>
 
 <style>
-  /* What follows a name or a sentence on its line, a space after it (Svelte trims the space). */
-  .by,
-  .after {
+  /* What follows a name on its line, a space after it (Svelte trims the space). */
+  .by {
     margin-left: 0.3em;
   }
 
@@ -211,13 +143,13 @@
     gap: 8px;
   }
 
-  .packs.dropping {
-    border-color: var(--amber);
-    border-style: dashed;
-  }
-
   h2 {
     font-size: 1rem;
+  }
+
+  .sub {
+    margin: 2px 0 0;
+    font-size: 0.8125rem;
   }
 
   ul {
@@ -232,19 +164,6 @@
     gap: 12px;
     padding: 11px 0;
     border-top: 1px solid var(--line);
-  }
-
-  .pack:last-child {
-    border-bottom: 1px solid var(--line);
-  }
-
-  .pack input {
-    flex: none;
-    width: 18px;
-    height: 18px;
-    margin: 0;
-    accent-color: var(--amber);
-    cursor: pointer;
   }
 
   .pack input:focus-visible {
@@ -299,18 +218,9 @@
     color: var(--err);
   }
 
-  .note {
-    padding-top: 2px;
-  }
-
   .empty {
     font-size: 0.875rem;
     padding: 4px 0;
-  }
-
-  .said {
-    font-size: 0.8125rem;
-    color: var(--ok);
   }
 
   .failed {

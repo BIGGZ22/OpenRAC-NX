@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { PluginSetting, PluginView } from "./api";
-import { modKind, pluginState, settingControl, settingNumber, settingRange, sharedWith } from "./plugins";
+import { modHint, modKind, pluginState, settingControl, settingNumber, settingRange, sharedWith } from "./plugins";
 
 const mod = (over: Partial<PluginView> = {}): PluginView => ({
   id: "lock-strafe",
@@ -85,10 +85,16 @@ describe("sharedWith", () => {
 });
 
 describe("modKind", () => {
-  it("warns about native code and says scripts run sandboxed", () => {
-    expect(modKind("native")).toEqual({ text: "Runs code on this computer", tone: "warn" });
-    expect(modKind("script")).toEqual({ text: "Runs scripts (sandboxed)", tone: "ok" });
+  it("marks native code and says scripts run sandboxed", () => {
+    expect(modKind("native")).toEqual({ text: "Runs code", tone: "warn" });
+    expect(modKind("script")).toEqual({ text: "Sandboxed script", tone: "ok" });
     expect(modKind("pack").tone).toBe("off");
     expect(modKind("data").text).toBe("Textures and models");
+  });
+
+  it("explains each kind in its tooltip, trust for native code", () => {
+    expect(modHint("native")).toContain("people you trust");
+    expect(modHint("script")).toContain("sandbox");
+    expect(modHint("data")).toContain("runs nothing");
   });
 });

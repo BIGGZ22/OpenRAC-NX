@@ -1,6 +1,7 @@
-// Every word the gameplay mods' part of the launcher shows (PluginsPanel.svelte, the plugin parts of
-// Mods.svelte, CrashNotice.svelte's mods line, Settings' Purist mode, lib/plugins.ts, lib/addMods.ts),
-// in one place for the Mods tab's redesign (launcher/docs/MODS_TAB.md lists where each shows).
+// Every word the Mods tab shows (Mods.svelte, AddMod.svelte, PluginsPanel.svelte, PacksPanel.svelte,
+// AssetsPanel.svelte), with CrashNotice.svelte's mods line, Settings' Purist mode, lib/plugins.ts and
+// lib/addMods.ts, in one place (launcher/docs/MODS_TAB.md lists where each shows). Written for
+// players: short, plain, one idea per line; the longer "why" goes in a tooltip.
 // Plain constants, maps from a state to its words, and small functions where a name or a number goes
 // into a sentence: no decision is made here, only wording.
 
@@ -24,10 +25,17 @@ export type StateKey = keyof typeof STATE_LABEL;
 
 /** What a mod runs (lib/plugins.ts, modKind): code, scripts in the sandbox, or data only. */
 export const KIND_LABEL = {
-  native: { text: "Runs code on this computer", tone: "warn" },
-  script: { text: "Runs scripts (sandboxed)", tone: "ok" },
+  native: { text: "Runs code", tone: "warn" },
+  script: { text: "Sandboxed script", tone: "ok" },
   pack: { text: "Textures and models", tone: "off" },
 } as const satisfies Record<string, Label>;
+
+/** The kinds' tooltips: what each means, for whoever wonders. */
+export const KIND_HINT = {
+  native: "A program: it runs on this computer with the game's rights. Install it only from people you trust.",
+  script: "Runs in the game's sandbox: it reaches only what the game lets scripts change, never your files.",
+  pack: "Data only: it replaces textures, models or levels, and runs nothing.",
+} as const satisfies Record<KindKey, string>;
 export type KindKey = keyof typeof KIND_LABEL;
 
 /** Whether a mod from a link can be installed here, in its preview row. */
@@ -36,32 +44,66 @@ export const COMPATIBLE_LABEL = {
   no: { text: "Cannot be installed", tone: "err" },
 } as const satisfies Record<string, Label>;
 
-/** The Mods tab's game list, for a game the level editor cannot open (Mods.svelte, modState). */
+/** The Mods tab's game list (Mods.svelte, modState). */
 export const GAME_LIST = {
   gameplayMods: "Gameplay mods",
   notModdable: "Not moddable yet",
+  early: "Early access",
+  working: "Working…",
+  setUp: "Set it up first",
+  ready: "Ready to mod",
 } as const;
 
-/** The panel (PluginsPanel.svelte). */
-export const PANEL = {
-  title: "Gameplay mods",
-  addZip: "Add a .zip…",
-  addFolder: "Add a folder…",
+/** The page around the panels (Mods.svelte). */
+export const PAGE = {
+  lead: "Add mods, switch them on, and play.",
+  tabsLabel: "Mods",
+  tabMine: "My mods",
+  tabEditor: "Level editor",
+  tabAssets: "Models and textures",
+  play: "Play with mods",
+  /** Under Play with mods when it cannot start. */
+  playEarly: "Not playable yet",
+  playMissing: "Not on this computer yet",
+  playBuild: "Build the game first, on its page",
+  earlyTitle: "Early access",
+  earlyLine:
+    "Its levels open in Godot and you can make texture and model packs. Packing level edits and playing come later.",
+  noneTitle: "No mods for this game yet",
+  noneLine: "Mods arrive once the level editor can read its levels.",
+  noneLink: "Follow the progress on openrac.dev",
+  makeOwn: "Want to make your own?",
+  makeOwnButton: "Edit a level in Godot",
+  developerTitle: "For developers",
+} as const;
+
+/** Adding a mod: a link, a file or a folder (AddMod.svelte). */
+export const ADD = {
+  title: "Add a mod",
+  linkLabel: "A mod's link",
+  linkPlaceholder: "Paste a mod's link, like github.com/OpenRAC/rac1-mods",
+  go: "Find",
+  file: "File…",
+  folder: "Folder…",
   pickZip: "Choose a mod (.zip)",
   pickFolder: "Choose a mod's folder",
-  checkUpdates: "Check for updates",
-  linkLabel: "A mod's repository address",
-  linkPlaceholder: "Add from a link: https://github.com/owner/repository",
-  look: "Look",
-  close: "Close",
+  drop: "or drop a .zip or folder on this page",
+  dropHere: "Drop to add it",
+  browse: "Browse mods",
   modsUrl: "https://github.com/OpenRAC/rac1-mods",
-  modsUrlLabel: "OpenRAC/rac1-mods",
-  /** The empty list, around the link to modsUrl. */
-  emptyBefore: "No gameplay mods yet. They change how the game plays, as a lock-strafe does. Ratchet & Clank's are at",
-  emptyAfter: ": paste its address above, or add the .zip for your computer here.",
-  note: "Mods load from the top down; where two change the same thing, the lower one goes first. Changes count from the game's next start. A mod is a program: add only those you trust.",
+  close: "Close",
+} as const;
+
+/** The gameplay mods' list (PluginsPanel.svelte). */
+export const PANEL = {
+  title: "Gameplay mods",
+  checkUpdates: "Check for updates",
+  sub: "Change how the game plays",
+  empty: "None yet. Paste a mod's link above, or choose its file.",
+  orderHint: "Lower in the list wins",
   moveUpTitle: "Move up: it loads earlier",
-  moveDownTitle: "Move down: it loads later, and goes first where it changes what a mod above it does",
+  moveDownTitle: "Move down: it loads later, and wins where it changes what a mod above it does",
+  settings: "Settings",
   keepVersion: "Keep this version",
   letUpdate: "Let it update",
   homepage: "Its page",
@@ -72,12 +114,20 @@ export const PANEL = {
   interface: "interface",
 } as const;
 
+/** The packs' list (PacksPanel.svelte). */
+export const PACKS = {
+  title: "Textures, models and levels",
+  sub: "Change how the game looks",
+  empty: "None yet. Add one above, or make your own in the Level editor or Models and textures.",
+  orderHint: "Lower in the list wins",
+  moveUpTitle: "Move up: the packs under it win where they change the same thing",
+  moveDownTitle: "Move down: it wins over the packs above it",
+  remove: "Remove",
+} as const;
+
 /** The preview of what a link holds. */
 export const PREVIEW = {
-  nativeWarning:
-    "A gameplay mod with code is a program: it runs on this computer with the game's rights. Install only mods from people you trust.",
-  scriptNote:
-    "A script mod runs in the game's sandbox: it can change only what the game lets scripts reach, never your files.",
+  nativeWarning: "Mods that run code are programs. Install them only from people you trust.",
   install: "Install",
   reinstall: "Reinstall",
 } as const;
@@ -85,8 +135,46 @@ export const PREVIEW = {
 /** Purist mode, on the panel and in Settings. */
 export const PURIST = {
   title: "Purist mode",
-  panelLine: "Play the game as the PS2 plays it: no gameplay mod is loaded, whatever is on below.",
+  panelLine: "Play exactly as on the PS2: no gameplay mod loads.",
   settingsLine: "Play as the PS2 plays: the game loads none of your gameplay mods (Mods).",
+  onNotice: "Purist mode is on: gameplay mods are skipped.",
+  turnOff: "Turn off",
+} as const;
+
+/** The level editor's tab (Mods.svelte). */
+export const EDITOR = {
+  lead: "Change a level in Godot, then pack your changes and play them.",
+  leadEarly: "Look around a level in Godot.",
+  openTitle: "Open a level in Godot",
+  packTitle: "Pack your changes",
+  levelLabel: "Level to edit",
+  noDisc: "Set the game up from your disc first.",
+  setUp: "Set up the disc",
+  noGodot: "Levels open in Godot 4, a free editor: get it, then choose where it is.",
+  getGodot: "Get Godot",
+  chooseGodot: "Choose Godot…",
+  pickGodot: "Godot 4",
+  ready: "Move, turn or scale objects, then save in Godot.",
+  readyEarly: "Look around a level's objects and textures.",
+  firstTime: "The first time reads the levels from your disc: about 20 seconds.",
+  firstTimeEarly: "The first time reads the levels from your disc: a few minutes.",
+  open: "Open in Godot",
+  prepare: "Prepare and open",
+  opening: (level: string) => `Godot is opening ${level}.`,
+  notGodot: (why: string) => `That is not a Godot 4 the editor can use: ${why}`,
+  packLine: "Turns what you saved into level data the game reads.",
+  packEarly: "Not yet for this game. Texture and model packs work.",
+  packReading: "Reading your levels…",
+  pack: "Pack",
+  openFolder: "Open folder",
+  packStopped: "Packing stopped. The activity log says why.",
+  packed: "Packed.",
+  packedSome: (edits: number, levels: number) =>
+    `Packed ${edits} changed object${edits === 1 ? "" : "s"} in ${levels} level${levels === 1 ? "" : "s"}. Play with mods to try them.`,
+  packedNone: "Nothing to pack: your levels are as on the disc.",
+  docs: "Editor documentation",
+  projects: "Level projects",
+  packedFolder: "Packed levels",
 } as const;
 
 // ---- Sentences with a name or a number in them ----

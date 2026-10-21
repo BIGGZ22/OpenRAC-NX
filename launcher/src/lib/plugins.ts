@@ -3,7 +3,7 @@
 // switch for on/off, a segmented control for two or three choices, radios for more). The words are
 // lib/modsText.ts's; here only which ones.
 import type { PluginSetting, PluginView } from "./api";
-import { KIND_LABEL, STATE_LABEL, rangeText, sharesWith, type Label, type ModTone } from "./modsText";
+import { KIND_HINT, KIND_LABEL, STATE_LABEL, rangeText, sharesWith, type Label, type ModTone } from "./modsText";
 
 export type PluginTone = ModTone;
 
@@ -34,6 +34,11 @@ export function modKind(kind: string): Label {
     default:
       return KIND_LABEL.pack;
   }
+}
+
+/** What a mod's kind means, in a sentence: its label's tooltip. */
+export function modHint(kind: string): string {
+  return kind === "native" ? KIND_HINT.native : kind === "script" ? KIND_HINT.script : KIND_HINT.pack;
 }
 
 export type SettingControl = "switch" | "segmented" | "radios" | "number" | "text";

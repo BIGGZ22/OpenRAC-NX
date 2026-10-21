@@ -1,6 +1,12 @@
 import { describe, expect, it } from "vitest";
 import {
+  ADD,
   COMPATIBLE_LABEL,
+  EDITOR,
+  PACKS,
+  PAGE,
+  PANEL,
+  PURIST,
   KIND_LABEL,
   STATE_LABEL,
   added,
@@ -33,8 +39,19 @@ describe("the label maps", () => {
     expect(STATE_LABEL.purist.text).toBe("Not in purist mode");
     expect(STATE_LABEL.refused).toEqual({ text: "Cannot load", tone: "err" });
     expect(KIND_LABEL.native.tone).toBe("warn");
-    expect(KIND_LABEL.script.text).toBe("Runs scripts (sandboxed)");
+    expect(KIND_LABEL.script.text).toBe("Sandboxed script");
     expect(COMPATIBLE_LABEL.no.text).toBe("Cannot be installed");
+  });
+});
+
+describe("the page's words", () => {
+  it("stay short: a line each, the longer why in a tooltip", () => {
+    for (const group of [ADD, EDITOR, PACKS, PAGE, PANEL, PURIST]) {
+      for (const [key, text] of Object.entries(group)) {
+        if (typeof text !== "string" || key.endsWith("Url") || key.endsWith("Title")) continue;
+        expect(text.length, `${key}: ${text}`).toBeLessThanOrEqual(120);
+      }
+    }
   });
 });
 

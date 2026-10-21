@@ -1,16 +1,19 @@
 <script lang="ts">
   // Mods, one game at a time, with the game list on the left as in Games: every game gets the
-  // same page. For a game with a port, its gameplay mods first (PluginsPanel: native mods, and
-  // Purist mode). "Your mods" next: the game's packs (PacksPanel) and Play with mods, the page's one
-  // main button. Then "Make your own", in two tabs: Levels (edit them in Godot, pack the edits)
-  // and Models and textures (AssetsPanel). A game the editor cannot open yet says so, and where to
-  // follow it. A game it reads in early access (Going Commando, Up Your Arsenal, Deadlocked: no
-  // pack or play action of theirs yet) says what works and what does not. The disc image is never
-  // changed.
+  // same page. Its head: the game's name and Play with mods, the page's one main button, in the
+  // same place on every tab. Then three tabs, so that each of the player's jobs has a place of
+  // its own that can be seen from the top: My mods (AddMod: a link, a file or a folder; the
+  // gameplay mods with Purist mode, PluginsPanel; the texture, model and level packs,
+  // PacksPanel), Level editor (open a level in Godot, pack the changes) and Models and textures
+  // (AssetsPanel). A game the editor cannot open but that plays has My mods alone; one the editor
+  // cannot open yet says so, and where to follow it. A game it reads in early access (Going
+  // Commando, Up Your Arsenal, Deadlocked: no pack or play action of theirs yet) says so in a line.
+  // The words are lib/modsText.ts's. The disc image is never changed.
   // The version is the one the game page plays (playerVersion: the player's own disc), so every
   // disc goes the same way and no region is named; packs are shared by the discs
   // (editor/overrides.py stacks them for the one played). With developer tools on: the version,
   // its folders, and the command behind each step under a "Show command" toggle.
+  import AddMod from "$components/AddMod.svelte";
   import AssetsPanel from "$components/AssetsPanel.svelte";
   import CommandBox from "$components/CommandBox.svelte";
   import GamesFrame from "$components/GamesFrame.svelte";
@@ -21,7 +24,7 @@
   import { app, guard, jobs, run, runChain, saveConfig, toast } from "$lib/app.svelte";
   import { levelName, levelsOf, type EntryState } from "$lib/labels";
   import { GODOT_URL, SITE_URL } from "$lib/links";
-  import { GAME_LIST } from "$lib/modsText";
+  import { EDITOR, GAME_LIST, PAGE } from "$lib/modsText";
   import { foundDisc, playerVersion, setUp } from "$lib/player.svelte";
   import type { Job } from "$lib/queue";
   import { enter } from "$lib/motion";
@@ -95,13 +98,13 @@
       v.status.disc.state === "found" &&
       !running(v, ["editor-extract", "assets-export", "assets-import", "port-levels"])
     ) {
-      return { text: "Early access", tone: "info" };
+      return { text: GAME_LIST.early, tone: "info" };
     }
     if (running(v, ["editor-extract", "editor-import", "editor-pack", "assets-export", "assets-import"])) {
-      return { text: "Working…", tone: "warn", busy: true };
+      return { text: GAME_LIST.working, tone: "warn", busy: true };
     }
-    if (v.status.disc.state !== "found") return { text: "Set it up first", tone: "warn" };
-    return { text: "Ready to mod", tone: "ok" };
+    if (v.status.disc.state !== "found") return { text: GAME_LIST.setUp, tone: "warn" };
+    return { text: GAME_LIST.ready, tone: "ok" };
   }
 
   // The game shown: the one picked in the list, else the one the player last opened if it can be
@@ -120,15 +123,28 @@
     return pv && playable(pv) ? pv : null;
   });
 
-  /** Make your own: the level editor, or models and textures. */
-  let tab = $state<"levels" | "assets">("levels");
-  /** Bumped when Import made a pack: Your mods reads its list again. */
+  /** The page's tab: My mods, the level editor, or models and textures. */
+  type Tab = "mine" | "editor" | "assets";
+  let tab = $state<Tab>("mine");
+  const TABS: { id: Tab; label: string; icon: "library" | "edit" | "folder" }[] = [
+    { id: "mine", label: PAGE.tabMine, icon: "library" },
+    { id: "editor", label: PAGE.tabEditor, icon: "edit" },
+    { id: "assets", label: PAGE.tabAssets, icon: "folder" },
+  ];
+  /** Bumped when a pack was added or imported: the packs' list is read again. */
   let reload = $state(0);
-  /** Bumped when a native mod was dropped on the packs: Gameplay mods reads its list again. */
+  /** Bumped when a gameplay mod was added: their list is read again. */
   let pluginsReload = $state(0);
+  const added = (what: { plugin: boolean; pack: boolean }) => {
+    if (what.plugin) pluginsReload += 1;
+    if (what.pack) reload += 1;
+  };
   let opening = $state<string | null>(null);
   /** The level the editor opens, per game. Each level is a Godot project of its own. */
   const level = $state<Record<string, number>>({});
+
+  /** Play with mods, the page's main action. */
+  const play = $derived(v ? action(v, "play-edited") : null);
 
   /** Puts the packed levels and the packs that are on together, then starts the game with them. */
   async function playModded(v: VersionView) {
@@ -140,46 +156,49 @@
 
   async function chooseGodot() {
     if (!app.config) return;
-    const picked = await pickFile("Godot 4");
+    const picked = await pickFile(EDITOR.pickGodot);
     if (!picked) return;
     // Settings checks a pick the same way: the zip, a Godot 3 or another program is said at once,
     // not when a level does not open.
     const check = await guard(api.checkTool("godot", picked));
     if (!check) return;
     if (!check.ok) {
-      toast(`That is not a Godot 4 the editor can use: ${check.message}`, "error");
+      toast(EDITOR.notGodot(check.message), "error");
       return;
     }
     await saveConfig({ ...app.config, godot: picked });
   }
 
-  /** Reads the levels from the disc when that has not been done yet, then opens the chosen one in Godot. */
+  /** Opens the chosen level in Godot (api.openLevelInGodot); the first time, reads the levels from
+   *  the disc before. */
   async function editLevels(v: VersionView) {
     const edit = action(v, "editor-open");
     if (!edit) return;
     const which = level[v.game] ?? levelsOf(v.game)[0]?.number ?? 0;
     opening = v.key;
-    const steps = edit.runnable ? [edit] : [action(v, "editor-extract"), edit].filter((a) => a !== null);
-    const done = await runChain({ kind: "version", key: v.key }, steps, which);
+    let done: boolean;
+    if (edit.runnable) {
+      done = (await guard(api.openLevelInGodot(v.key, which))) !== undefined;
+    } else {
+      const extract = action(v, "editor-extract");
+      done = await runChain({ kind: "version", key: v.key }, extract ? [extract, edit] : [edit], which);
+    }
     opening = null;
-    if (done) toast(`Godot is opening ${levelName(v.game, which)}.`);
+    if (done) toast(EDITOR.opening(levelName(v.game, which)));
   }
 
-  /** The last line the packer printed: "Packed 1 level(s), 3 moby edit(s): …". */
-  function packed(v: VersionView): { text: string; failed: boolean } | null {
+  /** The last pack, from the line the packer printed ("Packed 1 level(s), 3 moby edit(s): …"), and
+   *  the folder it wrote, for Open folder. */
+  function packed(v: VersionView): { text: string; failed: boolean; folder: string | null } | null {
     const last = jobsOf(v, ["editor-pack"]).at(-1);
     if (!last || live(last)) return null;
-    if (last.state !== "succeeded") return { text: "Packing stopped. The activity log has why.", failed: true };
+    if (last.state !== "succeeded") return { text: EDITOR.packStopped, failed: true, folder: null };
+    const folder = last.outputs[0] ?? null;
     const line = last.lines.findLast((l) => l.line.startsWith("Packed "))?.line ?? "";
     const found = /^Packed (\d+) level\(s\), (\d+) moby edit\(s\)/.exec(line);
-    if (!found) return { text: "Packed.", failed: false };
+    if (!found) return { text: EDITOR.packed, failed: false, folder };
     const [levels, edits] = [Number(found[1]), Number(found[2])];
-    return {
-      text: levels
-        ? `Packed ${edits} edited object${edits === 1 ? "" : "s"} in ${levels} level${levels === 1 ? "" : "s"}.`
-        : "Nothing to pack: your levels are as they are on the disc.",
-      failed: false,
-    };
+    return { text: levels ? EDITOR.packedSome(edits, levels) : EDITOR.packedNone, failed: false, folder };
   }
 </script>
 
@@ -188,32 +207,38 @@
     {#key shown.id}
       <div class="page" style={themeStyle(shown.id)} in:fly={enter()}>
         <div class="intro">
-          <h1>{shown.title}</h1>
-          <p class="muted lead">
-            {#if v && early(v)}
-              Look around its levels in Godot, and make texture and model packs for when it can be played. Your disc
-              image is never changed.
-            {:else}
-              Edit its levels, pack your edits, and play with them. Your disc image is never changed.
-            {/if}
-          </p>
+          <div class="grow">
+            <h1>{shown.title}</h1>
+            {#if v ? !early(v) : played}<p class="muted lead">{PAGE.lead}</p>{/if}
+          </div>
+          {#if v}
+            <!-- The page's one main action, in the same place on every tab. -->
+            <div class="play">
+              <button class="primary" disabled={!play?.runnable} onclick={() => void playModded(v)}
+                ><Icon name="play" size={16} />{PAGE.play}</button
+              >
+              {#if !play?.runnable}
+                <span class="dim why-not"
+                  >{!play && early(v) ? PAGE.playEarly : !play ? PAGE.playMissing : PAGE.playBuild}</span
+                >
+              {/if}
+            </div>
+          {/if}
         </div>
 
         {#if !v && played}
           <!-- The level editor cannot open it here (an installed launcher without its tools, say), but the
-               game plays: its gameplay mods. -->
+               game plays: its gameplay mods, which load when it is played from its page. -->
+          <AddMod version={played} onadded={added} />
           <PluginsPanel version={played} reload={pluginsReload} onpack={() => (reload += 1)} />
         {:else if !v}
           <!-- Every game has this page; one the editor cannot open yet says so. -->
           <section class="panel none">
-            <h2>Mods are not possible for this game yet</h2>
-            <p class="muted">
-              The level editor reads Ratchet &amp; Clank, Going Commando, Up Your Arsenal and Deadlocked so far. When it
-              can open {shown.title}'s, its packs and the editor appear here, as they do for the others.
-            </p>
+            <h2>{PAGE.noneTitle}</h2>
+            <p class="muted">{PAGE.noneLine}</p>
             <p>
               <button class="link" onclick={() => void guard(api.openUrl(SITE_URL))}
-                >Follow the progress on openrac.dev</button
+                >{PAGE.noneLink}<Icon name="external" size={14} /></button
               >
             </p>
           </section>
@@ -221,7 +246,7 @@
           {@const scope = { kind: "version" as const, key: v.key }}
           {@const edit = action(v, "editor-open")}
           {@const pack = action(v, "editor-pack")}
-          {@const play = action(v, "play-edited")}
+          {@const adder = action(v, "overrides-add")}
           {@const preparing = running(v, ["editor-extract", "editor-import"])}
           {@const packing = running(v, ["editor-pack"])}
           {@const result = packed(v)}
@@ -230,129 +255,85 @@
           {@const dirs = folders(v)}
 
           {#if early(v)}
-            <!-- Honest about early access: what the editor reads, what it does not do yet. -->
-            <section class="panel early">
-              <h2>Early access</h2>
-              <p class="muted">
-                The editor reads this game's levels: its scenery, objects and textures open in Godot, and you can make
-                texture and model packs from them. Edits in Godot are not packed back into the game yet, and the game is
-                not playable yet{playable(v) ? "" : ": your packs are kept for when it is"}. Some objects and pieces of
-                scenery are not read yet; each level lists them in its <code>level.json</code>.
-              </p>
-            </section>
+            <!-- Honest about early access, in a line: what works, what comes later. -->
+            <p class="early"><strong>{PAGE.earlyTitle}</strong><span class="muted">{PAGE.earlyLine}</span></p>
           {/if}
 
-          {#if playable(v)}
-            <!-- Native mods need the game's port: they plug into it (docs/port/MODS.md). -->
-            <PluginsPanel version={v} reload={pluginsReload} onpack={() => (reload += 1)} />
-          {/if}
-
-          <PacksPanel
-            version={v}
-            {reload}
-            onplugin={() => (pluginsReload += 1)}
-            commands={[`python3 editor/overrides.py add <pack.zip> --into <data>/overrides`]}
-          />
-
-          <section class="panel play">
-            <div class="grow">
-              <h2>Play with your mods</h2>
-              <p class="muted">
-                {#if !play && early(v)}
-                  {shown.title} is not playable yet. Your packs stay in Your mods until it is.
-                {:else if !play}
-                  Playing is not available on this computer yet.
-                {:else if play.runnable}
-                  Starts the game with your packed levels and the packs that are on.
-                {:else}
-                  Build the game first, on its page.
-                {/if}
-              </p>
-            </div>
-            <button class="primary" disabled={!play?.runnable} onclick={() => void playModded(v)}
-              ><Icon name="play" size={16} />Play with mods</button
-            >
-            {#if developer}
-              <div class="span">
-                <CommandBox
-                  lines={[
-                    `python3 editor/overrides.py stack --into <data>/overrides --out <data>/mods/${v.name} --packed ${dirs.packed} --levels ${dirs.levels}`,
-                    `openrac-${v.key.replace("/", "-")} --data <data> --levels ${dirs.levels} --mods <data>/mods/${v.name}`,
-                  ]}
-                />
-              </div>
-            {/if}
-          </section>
-
-          <section class="panel make">
-            <div class="row head">
-              <h2 class="grow">Make your own</h2>
-              <div class="tabs" role="tablist" aria-label="Make your own" use:tablist>
-                <button
-                  role="tab"
-                  id="make-tab-levels"
-                  aria-controls="make-panel"
-                  aria-selected={tab === "levels"}
-                  tabindex={tab === "levels" ? 0 : -1}
-                  class:on={tab === "levels"}
-                  onclick={() => (tab = "levels")}>Levels</button
-                >
-                <button
-                  role="tab"
-                  id="make-tab-assets"
-                  aria-controls="make-panel"
-                  aria-selected={tab === "assets"}
-                  tabindex={tab === "assets" ? 0 : -1}
-                  class:on={tab === "assets"}
-                  onclick={() => (tab = "assets")}>Models and textures</button
-                >
-              </div>
-            </div>
-
-            {#key tab}
-              <div
-                id="make-panel"
-                role="tabpanel"
-                aria-labelledby={`make-tab-${tab}`}
-                in:fade={{ duration: enter().duration ?? 0 }}
+          <div class="tabs" role="tablist" aria-label={PAGE.tabsLabel} use:tablist>
+            {#each TABS as t (t.id)}
+              <button
+                role="tab"
+                id={`mods-tab-${t.id}`}
+                aria-controls="mods-panel"
+                aria-selected={tab === t.id}
+                tabindex={tab === t.id ? 0 : -1}
+                class:on={tab === t.id}
+                onclick={() => (tab = t.id)}><Icon name={t.icon} size={16} />{t.label}</button
               >
-                {#if tab === "levels"}
+            {/each}
+          </div>
+
+          {#key tab}
+            <div
+              id="mods-panel"
+              class="tabpanel"
+              role="tabpanel"
+              aria-labelledby={`mods-tab-${tab}`}
+              in:fade={{ duration: enter().duration ?? 0 }}
+            >
+              {#if tab === "mine"}
+                <AddMod version={v} links={playable(v)} files={playable(v) || !!adder?.runnable} onadded={added} />
+                {#if playable(v)}
+                  <!-- Gameplay mods need the game's port: they plug into it (docs/port/MODS.md). -->
+                  <PluginsPanel version={v} reload={pluginsReload} onpack={() => (reload += 1)} />
+                {/if}
+                <PacksPanel
+                  version={v}
+                  {reload}
+                  commands={[`python3 editor/overrides.py add <pack.zip> --into <data>/overrides`]}
+                />
+                <p class="make-own">
+                  <span class="muted">{PAGE.makeOwn}</span>
+                  <button class="small" onclick={() => (tab = "editor")}
+                    ><Icon name="edit" size={14} />{PAGE.makeOwnButton}</button
+                  >
+                </p>
+              {:else if tab === "editor"}
+                <section class="panel">
+                  <p class="muted tab-lead">{early(v) ? EDITOR.leadEarly : EDITOR.lead}</p>
                   <ol class="steps">
                     <li>
                       <div class="text">
-                        <h3>Edit the levels</h3>
+                        <h3>{EDITOR.openTitle}</h3>
                         <p class="muted">
                           {#if noDisc}
-                            Set the game up from your disc first; the editor reads the levels from it.
+                            {EDITOR.noDisc}
                           {:else if lacksGodot}
-                            The levels open in Godot 4, a free editor.
-                            <button class="link" onclick={() => void guard(api.openUrl(GODOT_URL))}>Get Godot</button>,
-                            then choose where it is.
+                            {EDITOR.noGodot}
                           {:else if preparing}
-                            {preparing.title}: {preparing.lines.at(-1)?.line ?? "starting…"}
-                          {:else if edit?.runnable && early(v)}
-                            Look around a level, its objects and textures, in Godot. Each level opens on its own.
+                            {preparing.title}: {preparing.lines.at(-1)?.line ?? "…"}
                           {:else if edit?.runnable}
-                            Move, turn or scale a level's objects in Godot, and save. Each level opens on its own.
-                          {:else if early(v)}
-                            The first time, the levels are read from your disc: a few minutes and a few GB.
+                            {early(v) ? EDITOR.readyEarly : EDITOR.ready}
                           {:else}
-                            The first time, the levels are read from your disc: about 20 seconds and 800 MB.
+                            {early(v) ? EDITOR.firstTimeEarly : EDITOR.firstTime}
                           {/if}
                         </p>
                       </div>
                       <div class="controls">
                         {#if noDisc}
                           <button onclick={() => void setUp(shown.id, shown.title, foundDisc(shown.id)?.path)}
-                            ><Icon name="disc" size={16} />Set up the disc</button
+                            ><Icon name="disc" size={16} />{EDITOR.setUp}</button
                           >
                         {:else if lacksGodot}
+                          <button class="ghost" onclick={() => void guard(api.openUrl(GODOT_URL))}
+                            ><Icon name="external" size={16} />{EDITOR.getGodot}</button
+                          >
                           <button onclick={() => void chooseGodot()}
-                            ><Icon name="folder" size={16} />Choose Godot</button
+                            ><Icon name="folder" size={16} />{EDITOR.chooseGodot}</button
                           >
                         {:else}
                           <select
-                            aria-label="Level to edit"
+                            aria-label={EDITOR.levelLabel}
                             value={level[v.game] ?? levelsOf(v.game)[0]?.number ?? 0}
                             onchange={(e) => (level[v.game] = Number(e.currentTarget.value))}
                           >
@@ -363,72 +344,84 @@
                                 name="edit"
                                 size={16}
                               />{/if}
-                            {edit?.runnable ? "Open the editor" : "Prepare the editor"}
+                            {edit?.runnable ? EDITOR.open : EDITOR.prepare}
                           </button>
                         {/if}
                       </div>
-                      {#if developer}
-                        <div class="span">
-                          <CommandBox lines={[`python3 editor/extract.py godot <disc.iso> ${dirs.projects} --split`]} />
-                        </div>
-                      {/if}
                     </li>
                     <li>
                       <div class="text">
-                        <h3>Pack your edits</h3>
-                        <p class="muted" class:failed={result?.failed}>
+                        <h3>{EDITOR.packTitle}</h3>
+                        <p class="muted" class:failed={result?.failed} class:done={result && !result.failed}>
                           {#if !pack && early(v)}
-                            Not yet for {shown.title}: packing edits back into the game is Ratchet &amp; Clank's only so
-                            far. Texture and model packs work (Models and textures).
+                            {EDITOR.packEarly}
                           {:else if packing}
-                            {packing.lines.at(-1)?.line ?? "Reading your levels…"}
+                            {packing.lines.at(-1)?.line ?? EDITOR.packReading}
                           {:else if result}
                             {result.text}
                           {:else}
-                            Turns what you changed into the game's own level data, in a folder of its own.
+                            {EDITOR.packLine}
                           {/if}
                         </p>
                       </div>
                       <div class="controls">
+                        {#if result?.folder}
+                          {@const folder = result.folder}
+                          <button class="ghost" onclick={() => void guard(api.openOutput(folder))}
+                            ><Icon name="folder" size={16} />{EDITOR.openFolder}</button
+                          >
+                        {/if}
                         <button disabled={!pack?.runnable || !!packing} onclick={() => pack && void run(scope, pack)}>
-                          {#if packing}<span class="spinner"></span>{:else}<Icon name="save" size={16} />{/if}Pack
+                          {#if packing}<span class="spinner"></span>{:else}<Icon
+                              name="save"
+                              size={16}
+                            />{/if}{EDITOR.pack}
                         </button>
                       </div>
-                      {#if developer}
-                        <div class="span">
-                          <CommandBox
-                            lines={[`python3 editor/extract.py pack <disc.iso> ${dirs.projects} ${dirs.packed}`]}
-                          />
-                        </div>
-                      {/if}
                     </li>
                   </ol>
-                {:else}
+                </section>
+              {:else}
+                <section class="panel">
                   <AssetsPanel version={v} onimported={() => reload++} />
-                {/if}
-              </div>
-            {/key}
+                </section>
+              {/if}
+            </div>
+          {/key}
 
-            {#if developer}
-              <div class="sdk">
-                <p class="dim">
-                  This is <code>{v.key}</code>, the version of the disc set up. Level projects:
-                  <code>{dirs.projects}/level_NN</code>; packed levels: <code>{dirs.packed}</code>.
-                </p>
-                <div class="row">
-                  <button class="small" onclick={() => void openFolder(v, dirs.projects)}
-                    ><Icon name="folder" size={14} />Level projects</button
-                  >
-                  <button class="small" onclick={() => void openFolder(v, dirs.packed)}
-                    ><Icon name="folder" size={14} />Packed levels</button
-                  >
-                  <button class="small" onclick={() => void guard(api.openPath("editor/README.md"))}
-                    ><Icon name="book" size={14} />Editor documentation</button
-                  >
-                </div>
+          {#if developer && tab !== "assets"}
+            <!-- The developer view: kept apart from the player's, under the tabs. -->
+            <section class="panel sdk">
+              <h2>{PAGE.developerTitle}</h2>
+              <p class="dim">
+                This is <code>{v.key}</code>, the version of the disc set up. Level projects:
+                <code>{dirs.projects}/level_NN</code>; packed levels: <code>{dirs.packed}</code>.
+              </p>
+              <CommandBox
+                lines={[
+                  ...(tab === "editor"
+                    ? [
+                        `python3 editor/extract.py godot <disc.iso> ${dirs.projects} --split`,
+                        `python3 editor/extract.py pack <disc.iso> ${dirs.projects} ${dirs.packed}`,
+                      ]
+                    : []),
+                  `python3 editor/overrides.py stack --into <data>/overrides --out <data>/mods/${v.name} --packed ${dirs.packed} --levels ${dirs.levels}`,
+                  `openrac-${v.key.replace("/", "-")} --data <data> --levels ${dirs.levels} --mods <data>/mods/${v.name}`,
+                ]}
+              />
+              <div class="row">
+                <button class="small" onclick={() => void openFolder(v, dirs.projects)}
+                  ><Icon name="folder" size={14} />{EDITOR.projects}</button
+                >
+                <button class="small" onclick={() => void openFolder(v, dirs.packed)}
+                  ><Icon name="folder" size={14} />{EDITOR.packedFolder}</button
+                >
+                <button class="small" onclick={() => void guard(api.openPath("editor/README.md"))}
+                  ><Icon name="book" size={14} />{EDITOR.docs}</button
+                >
               </div>
-            {/if}
-          </section>
+            </section>
+          {/if}
         {/if}
       </div>
     {/key}
@@ -445,10 +438,16 @@
     gap: var(--page-gap, 16px);
   }
 
+  /* The head: the game's name, and Play with mods at its right. */
   .intro {
     display: flex;
-    flex-direction: column;
-    gap: 4px;
+    align-items: flex-start;
+    gap: 16px 24px;
+    flex-wrap: wrap;
+  }
+
+  .lead {
+    margin: 4px 0 0;
   }
 
   /* The game's name in its own typeface and colour, as on its page. */
@@ -458,190 +457,138 @@
     color: var(--tx);
   }
 
+  .play {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 6px;
+  }
+
+  .play button {
+    min-width: 200px;
+    padding: 10px 22px;
+    justify-content: center;
+  }
+
+  .why-not {
+    font-size: 0.8125rem;
+  }
+
   .none {
     display: flex;
     flex-direction: column;
     gap: 10px;
   }
 
-  .none p,
-  .early p {
+  .none h2 {
+    font-size: 1rem;
+  }
+
+  .none p {
     margin: 0;
     max-width: 68ch;
   }
 
-  /* Early access: dashed, as what is planned and not there yet (docs/STYLE.md). */
+  /* Early access: one line, dashed, as what is not there yet (docs/STYLE.md). */
   .early {
     display: flex;
-    flex-direction: column;
-    gap: 8px;
-    border-style: dashed;
-  }
-
-  .early h2 {
-    font-size: 1rem;
-  }
-
-  /* Play with mods: one row, its button in the same column as the steps' below. */
-  .play {
-    display: grid;
-    grid-template-columns: minmax(0, 1fr) 200px;
-    align-items: center;
-    gap: 10px 18px;
-  }
-
-  .play h2,
-  .steps h3 {
-    font-family: var(--font-sans);
-    font-size: 0.9375rem;
-    font-weight: 600;
-    color: var(--text);
-  }
-
-  .play p,
-  .steps p {
-    margin: 2px 0 0;
+    flex-wrap: wrap;
+    gap: 4px 10px;
+    margin: 0;
+    padding: 10px 16px;
+    border: 1px dashed var(--line-strong);
+    border-radius: var(--radius-sm);
     font-size: 0.875rem;
   }
 
-  .play > button {
-    justify-content: center;
+  .early strong {
+    color: var(--gold);
   }
 
-  .span {
-    grid-column: 1 / -1;
-  }
-
-  .make {
-    display: flex;
-    flex-direction: column;
-    gap: 12px;
-  }
-
-  /* The size of its neighbour's, Your mods (PacksPanel). */
-  .make h2 {
-    font-size: 1rem;
-  }
-
-  .head {
-    flex-wrap: wrap;
-    gap: 10px;
-  }
-
-  /* Make your own's two tabs: the header's round tabs, on the panel. */
+  /* The page's tabs: the header's round tabs, larger, with an icon each, so the level editor can be
+     seen from the top of the page. */
   .tabs {
     display: flex;
+    align-self: flex-start;
+    flex-wrap: wrap;
     gap: 4px;
-    padding: 3px;
+    padding: 4px;
     border: 1px solid var(--line-strong);
     border-radius: 999px;
+    background: var(--panel);
   }
 
   .tabs button {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
     border: 0;
     background: none;
-    padding: 5px 14px;
-    font-size: 0.8125rem;
-    font-weight: 500;
+    padding: 8px 18px;
+    font-size: 0.875rem;
+    font-weight: 600;
     color: var(--soft);
+    transition:
+      color var(--fast) var(--ease),
+      background var(--fast) var(--ease);
   }
 
   .tabs button.on {
     background: var(--panel-hi);
     color: var(--amber);
+    box-shadow: inset 0 0 0 1px var(--line-strong);
   }
 
-  /* The steps: numbered rows with a rule between them; the controls in a column of their own. */
-  .steps {
-    margin: 0;
-    padding: 0;
-    list-style: none;
-    counter-reset: step;
+  @media (hover: hover) {
+    .tabs button:hover:not(.on) {
+      color: var(--text);
+    }
   }
 
-  .steps li {
-    display: grid;
-    grid-template-columns: 26px minmax(0, 1fr) auto;
-    align-items: center;
-    gap: 8px 16px;
-    padding: 14px 0;
-    counter-increment: step;
-  }
-
-  .steps li + li {
-    border-top: 1px solid var(--line);
-  }
-
-  .steps li::before {
-    content: counter(step);
-    width: 26px;
-    height: 26px;
-    display: grid;
-    place-items: center;
-    border-radius: 50%;
-    border: 1px solid var(--line-strong);
-    font-size: 0.8125rem;
-    font-weight: 600;
-    color: var(--soft);
-  }
-
-  .steps .span {
-    grid-column: 2 / -1;
-  }
-
-  .controls {
-    display: flex;
-    flex-wrap: wrap;
-    justify-content: flex-end;
-    gap: 8px;
-  }
-
-  .controls button {
-    min-width: 170px;
-    justify-content: center;
-  }
-
-  select {
-    font: inherit;
-    font-size: 0.875rem;
-    color: var(--text);
-    background: var(--ink-deep);
-    border: 1px solid var(--line-strong);
-    border-radius: var(--radius-sm);
-    padding: 7px 10px;
-  }
-
-  select:focus-visible {
+  .tabs button:focus-visible {
     outline: 2px solid var(--amber);
     outline-offset: 2px;
   }
 
-  @media (max-width: 900px) {
-    .steps li {
-      grid-template-columns: 26px minmax(0, 1fr);
-    }
+  .tabpanel {
+    display: flex;
+    flex-direction: column;
+    gap: var(--page-gap, 16px);
+  }
 
-    .controls {
-      grid-column: 2;
-      justify-content: flex-start;
-    }
+  .make-own {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    margin: 4px 0 0;
+    font-size: 0.875rem;
+  }
 
-    .play {
-      grid-template-columns: minmax(0, 1fr);
-    }
+  .tab-lead {
+    margin: 0 0 4px;
+    font-size: 0.875rem;
   }
 
   .failed {
     color: var(--err);
   }
 
+  .done {
+    color: var(--ok);
+  }
+
   .sdk {
     display: flex;
     flex-direction: column;
     gap: 10px;
-    padding-top: 14px;
-    border-top: 1px solid var(--line);
+    border-style: dashed;
     font-size: 0.8125rem;
+  }
+
+  .sdk h2 {
+    font-size: 0.875rem;
   }
 
   .sdk p {
@@ -649,6 +596,9 @@
   }
 
   .link {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
     border: 0;
     background: none;
     padding: 0;
