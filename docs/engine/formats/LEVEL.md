@@ -149,7 +149,7 @@ file opens with 37 s32 offsets from its start (0: absent):
 | 0x34 | tie instances | 0xE0 (section 8.4) |
 | 0x3C | shrub instances | 0x70 (section 8.4) |
 | 0x44 | moby instances | 0x78 (section 8.3) |
-| 0x48 | moby groups | `count; data_size`, offsets into a u16 member array (index = offset / 2; negative: empty) |
+| 0x48 | moby groups | `count; data_size`, offsets into a u16 member array (index = offset / 2; negative: empty; the last member has 0x8000 set); `data_size` counts the zeros that end the section at a multiple of 16 |
 | 0x4C | shared data | `data_size; pointer_count`, the data, then 8-byte `{u16 pvar, u16 offset, s32 shared offset}` |
 | 0x50 | pvar moby-link fixups | `{s32 pvar, u32 offset}` until pvar < 0 |
 | 0x54 | pvar table | `{s32 offset, s32 size}`; the count is 1 + the largest pvar index used by mobys, cameras and sounds |
@@ -157,7 +157,7 @@ file opens with 37 s32 offsets from its start (0: absent):
 | 0x5C | pvar relative-pointer fixups | as 0x50 |
 | 0x60–0x6C | cuboids, spheres, cylinders, pills | 0x80: matrix, inverse matrix (3 rows), rotation |
 | 0x70 | paths | `count; data_offset; data_size`, offsets, then count-prefixed runs of four-float points |
-| 0x74 | grind paths | the same, with 0x20 records before: bounding sphere, unknown, closed-loop flag, inactive |
+| 0x74 | grind paths | the same, with 0x20 records before the offsets: bounding sphere, s32 flag (0 or 1), then three words (0x14–0x1F) that are 0 on all PAL levels (Wrench: closed-loop flag, inactive) |
 | 0x78 | point-light grid | RAC1 only; 64 × 64 grid (section 8.5) |
 | 0x7C | point lights | 0x20: position, radius, RGB bytes |
 | 0x80 | environment transitions | section 8.5 |
@@ -175,7 +175,8 @@ separate tie colour section and no areas (Wrench).
 
 Background colour (three s32, −1: none), fog colour (the same), fog near and
 far distance, fog near and far intensity, death height, ship position and
-rotation about Z, ship path, ship camera cuboids (first, last). Their use is
+rotation about Z, ship path, ship camera cuboids (first, last), two words 0
+on all PAL levels. Their use is
 in [CAMERA_FOG.md](../systems/CAMERA_FOG.md).
 
 ### 8.2 Help messages
