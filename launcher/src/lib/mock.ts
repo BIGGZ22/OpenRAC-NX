@@ -1059,7 +1059,7 @@ export async function mockCall(command: string, args: Record<string, unknown> = 
       return delay(mockPlugins.map((p) => ({ ...p })));
     }
     case "plugins_install": {
-      const path = String(args.path ?? "");
+      const path = typeof args.path === "string" ? args.path : "";
       // A name with "pack" in it stands for a data pack, which goes to the overrides.
       if (/pack/i.test(path)) return delay({ kind: "pack" });
       const name =

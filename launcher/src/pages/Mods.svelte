@@ -1,6 +1,7 @@
 <script lang="ts">
   // Mods, one game at a time, with the game list on the left as in Games: every game gets the
-  // same page. "Your mods" first: the game's packs (PacksPanel) and Play with mods, the page's one
+  // same page. For a game with a port, its gameplay mods first (PluginsPanel: native mods, and
+  // Purist mode). "Your mods" next: the game's packs (PacksPanel) and Play with mods, the page's one
   // main button. Then "Make your own", in two tabs: Levels (edit them in Godot, pack the edits)
   // and Models and textures (AssetsPanel). A game the editor cannot open yet says so, and where to
   // follow it. A game it reads in early access (Going Commando, Up Your Arsenal, Deadlocked: no
@@ -15,6 +16,7 @@
   import GamesFrame from "$components/GamesFrame.svelte";
   import Icon from "$components/Icon.svelte";
   import PacksPanel from "$components/PacksPanel.svelte";
+  import PluginsPanel from "$components/PluginsPanel.svelte";
   import { api, pickFile, type ActionView, type GameView, type VersionView } from "$lib/api";
   import { app, guard, jobs, run, runChain, saveConfig, toast } from "$lib/app.svelte";
   import { levelName, levelsOf, type EntryState } from "$lib/labels";
@@ -102,6 +104,8 @@
   let tab = $state<"levels" | "assets">("levels");
   /** Bumped when Import made a pack: Your mods reads its list again. */
   let reload = $state(0);
+  /** Bumped when a native mod was dropped on the packs: Gameplay mods reads its list again. */
+  let pluginsReload = $state(0);
   let opening = $state<string | null>(null);
   /** The level the editor opens, per game. Each level is a Godot project of its own. */
   const level = $state<Record<string, number>>({});
@@ -214,9 +218,15 @@
             </section>
           {/if}
 
+          {#if playable(v)}
+            <!-- Native mods need the game's port: they plug into it (docs/port/MODS.md). -->
+            <PluginsPanel version={v} reload={pluginsReload} onpack={() => (reload += 1)} />
+          {/if}
+
           <PacksPanel
             version={v}
             {reload}
+            onplugin={() => (pluginsReload += 1)}
             commands={[`python3 editor/overrides.py add <pack.zip> --into <data>/overrides`]}
           />
 

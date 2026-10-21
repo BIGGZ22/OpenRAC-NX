@@ -2,7 +2,8 @@
   // Your mods: a game's overrides packs, the first thing on Mods. Switch one on or off, change the
   // order (a pack lower in the list wins), remove one, add a .zip or a folder, or drop one on the
   // page. The list and its changes are instant (core/src/overrides.rs); adding goes through
-  // editor/overrides.py (actions.json). The packs are the game's, shared by its discs.
+  // editor/overrides.py (actions.json). The packs are the game's, shared by its discs. A native
+  // mod dropped on the page goes to the game's mods instead (PluginsPanel, lib/addMods.ts).
   import { onMount } from "svelte";
   import {
     api,
@@ -14,7 +15,8 @@
     type PackView,
     type VersionView,
   } from "$lib/api";
-  import { app, guard, jobs, runChain } from "$lib/app.svelte";
+  import { addMods } from "$lib/addMods";
+  import { app, guard } from "$lib/app.svelte";
   import CommandBox from "./CommandBox.svelte";
   import Icon from "./Icon.svelte";
 
@@ -22,16 +24,18 @@
     version: v,
     reload = 0,
     commands = [],
+    onplugin = () => undefined,
   }: {
     version: VersionView;
     /** Bumped when something else made a pack (Import your edits): the list is read again. */
     reload?: number;
     /** With developer tools on: the same steps from a shell. */
     commands?: string[];
+    /** A native mod dropped on the page went to the game's mods: their list is read again. */
+    onplugin?: () => void;
   } = $props();
 
   const developer = $derived(app.config?.developer ?? false);
-  const scope = $derived({ kind: "version" as const, key: v.key });
   const adder = $derived<ActionView | null>(v.actions.find((a) => a.id === "overrides-add" && a.thisPlatform) ?? null);
 
   let packs = $state<PackView[]>([]);
@@ -77,24 +81,12 @@
     };
   });
 
-  /** The last line the add printed. */
-  function lastLine(): string {
-    const job = jobs.list.filter((j) => j.scope.kind === "version" && j.actionId === "overrides-add").at(-1);
-    return job?.lines.map((l) => l.line).findLast((l) => l.trim() !== "") ?? "";
-  }
-
   async function addPaths(paths: string[]) {
-    if (!adder) return;
     adding = true;
-    for (const path of paths) {
-      const ok = await runChain(scope, [adder], { path });
-      const name = path.split(/[\\/]/).at(-1) ?? path;
-      const why = lastLine().replace(/^overrides: /, "");
-      said = ok
-        ? { text: `Added ${name}.`, failed: false }
-        : { text: `${name}: ${why.length > 0 ? why : "it could not be added"}`, failed: true };
-      if (!ok) break;
-    }
+    // A native mod dropped here goes to the game's mods (lib/addMods.ts), a pack to the packs.
+    const added = await addMods(v, paths);
+    said = { text: added.text, failed: added.failed };
+    if (added.plugin) onplugin();
     adding = false;
     await load();
   }
