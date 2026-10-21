@@ -85,6 +85,10 @@ impl Default for Hosts {
 
 // ---- Addresses ------------------------------------------------------------------------------
 
+/// What a repository GitHub does not show is, to someone without a login: private, or not there.
+pub const NOT_FOUND: &str =
+    "This repository is private or doesn't exist. OpenRAC can only install from public repositories.";
+
 /// A repository's address, as the player pasted it.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase", tag = "host")]
@@ -128,6 +132,18 @@ pub fn parse_url(text: &str) -> Result<Source, String> {
     }
     let bare = text.strip_prefix("https://").or_else(|| text.strip_prefix("http://")).unwrap_or(text);
     let bare = bare.strip_prefix("www.").unwrap_or(bare);
+    // git@github.com:<owner>/<repo>(.git), the address GitHub's "Code" button gives for SSH.
+    let bare = match bare.strip_prefix("git@github.com:").or_else(|| bare.strip_prefix("ssh://git@github.com/")) {
+        Some(path) => format!("github.com/{path}"),
+        None => bare.to_string(),
+    };
+    // <owner>/<repo>: GitHub's own shorthand.
+    let bare = match bare.split('/').collect::<Vec<_>>().as_slice() {
+        [owner, repo] if !bare.contains(':') && !owner.contains('.') && github_name(owner) && github_name(repo) => {
+            format!("github.com/{bare}")
+        }
+        _ => bare,
+    };
     if let Some(path) = bare.strip_prefix("github.com/") {
         let path = path.split(['?', '#']).next().unwrap_or_default().trim_end_matches('/');
         let parts: Vec<&str> = path.split('/').collect();
@@ -441,10 +457,10 @@ fn read_github(
     let base = format!("{}/repos/{owner}/{repo}", hosts.api);
     let releases: Vec<Release> = json(
         &fetch.get(&format!("{base}/releases?per_page=100"), true).map_err(|e| {
+            // GitHub answers a private repository and one that is not there alike (404) without a
+            // login, so the message cannot tell them apart.
             if e.ends_with("not found") {
-                format!(
-                    "github.com/{owner}/{repo} was not found: check the address (a private repository cannot be read)"
-                )
+                NOT_FOUND.to_string()
             } else {
                 e
             }
@@ -463,16 +479,30 @@ fn read_github(
     };
     // What the manifests are read at: the release named, a branch or commit named, the newest
     // release, or the default branch.
-    let at = match (tag, reference, eligible.first()) {
-        (Some(t), _, _) => t.to_string(),
-        (None, Some(r), _) => r.to_string(),
-        (None, None, Some(r)) => r.tag_name.clone(),
-        (None, None, None) => "HEAD".to_string(),
+    // A link to a folder, /tree/<branch>/<folder>: the branch is the shortest start of the path the
+    // repository knows (a branch's name may hold slashes), the rest the folder whose mods are shown.
+    let (at, commit, subdir) = match (tag, reference, eligible.first()) {
+        (Some(t), _, _) => (t.to_string(), commit_of(fetch, &base, t)?, None),
+        (None, Some(r), _) => {
+            let parts: Vec<&str> = r.split('/').collect();
+            let mut found = None;
+            for n in 1..=parts.len() {
+                let branch = parts[..n].join("/");
+                match commit_of(fetch, &base, &branch) {
+                    Ok(c) => {
+                        let rest = parts[n..].join("/");
+                        found = Some((branch, c, (!rest.is_empty()).then_some(rest)));
+                        break;
+                    }
+                    Err(e) if n == parts.len() || !e.ends_with("not found") => return Err(e),
+                    Err(_) => {}
+                }
+            }
+            found.ok_or_else(|| format!("github.com/{owner}/{repo} has no branch {r}"))?
+        }
+        (None, None, Some(r)) => (r.tag_name.clone(), commit_of(fetch, &base, &r.tag_name)?, None),
+        (None, None, None) => ("HEAD".to_string(), commit_of(fetch, &base, "HEAD")?, None),
     };
-    let commit = json::<Value>(&fetch.get(&format!("{base}/commits/{at}"), true)?, "the repository's commit")?
-        .get("sha")
-        .and_then(Value::as_str)
-        .map(str::to_string);
     let tree_at = commit.clone().unwrap_or_else(|| at.clone());
     let tree: Value =
         json(&fetch.get(&format!("{base}/git/trees/{tree_at}?recursive=1"), true)?, "the repository's files")?;
@@ -494,7 +524,16 @@ fn read_github(
     };
     let installed = installed_versions(dir);
     let mut mods = Vec::new();
-    for path in discover(&paths, index.as_ref())? {
+    // A folder named in the link: only the mods in it.
+    let found = discover(&paths, index.as_ref())?;
+    let shown: Vec<String> = match &subdir {
+        None => found.clone(),
+        Some(d) => found.iter().filter(|p| p.starts_with(&format!("{d}/"))).cloned().collect(),
+    };
+    if !found.is_empty() && shown.is_empty() {
+        return Err(format!("github.com/{owner}/{repo} has no mod in {}", subdir.unwrap_or_default()));
+    }
+    for path in shown {
         let raw: Value = json(&fetch.get(&raw_at(&path), false)?, &path)?;
         let mut m = describe(&raw, &path, repo, game, version, platform, &installed)?;
         if m.kind == "native" {
@@ -548,6 +587,14 @@ fn read_github(
         },
         releases,
     })
+}
+
+/// The commit `at` names (a tag, a branch, HEAD), or none when the answer has no sha.
+fn commit_of(fetch: &dyn Fetch, base: &str, at: &str) -> Result<Option<String>, String> {
+    Ok(json::<Value>(&fetch.get(&format!("{base}/commits/{at}"), true)?, "the repository's commit")?
+        .get("sha")
+        .and_then(Value::as_str)
+        .map(str::to_string))
 }
 
 // ---- Other git hosts --------------------------------------------------------------------------
@@ -1076,6 +1123,76 @@ mod tests {
         );
         assert!(parse_url("not a url").is_err());
         assert!(parse_url("").is_err());
+    }
+
+    #[test]
+    fn every_common_link_form() {
+        let plain = Source::GitHub { owner: "OpenRAC".into(), repo: "rac1-mods".into(), reference: None, tag: None };
+        for text in [
+            "https://github.com/OpenRAC/rac1-mods",
+            "http://github.com/OpenRAC/rac1-mods",
+            "github.com/OpenRAC/rac1-mods",
+            "  https://github.com/OpenRAC/rac1-mods/  ",
+            "https://github.com/OpenRAC/rac1-mods.git",
+            "https://github.com/OpenRAC/rac1-mods?tab=readme",
+            "git@github.com:OpenRAC/rac1-mods.git",
+            "git@github.com:OpenRAC/rac1-mods",
+            "ssh://git@github.com/OpenRAC/rac1-mods.git",
+            "OpenRAC/rac1-mods",
+        ] {
+            assert_eq!(parse_url(text).unwrap(), plain, "{text}");
+        }
+        assert_eq!(
+            parse_url("https://github.com/OpenRAC/rac1-mods/tree/master/lock-strafe").unwrap(),
+            Source::GitHub {
+                owner: "OpenRAC".into(),
+                repo: "rac1-mods".into(),
+                reference: Some("master/lock-strafe".into()),
+                tag: None
+            }
+        );
+        assert_eq!(
+            parse_url("https://github.com/OpenRAC/rac1-mods/releases/tag/v1.0.0").unwrap(),
+            Source::GitHub {
+                owner: "OpenRAC".into(),
+                repo: "rac1-mods".into(),
+                reference: None,
+                tag: Some("v1.0.0".into())
+            }
+        );
+        // Not a shorthand: a host's name, or a path deeper than owner/repo.
+        assert!(matches!(parse_url("gitlab.com/x").unwrap_err(), e if e.contains("not a repository")));
+        assert!(parse_url("a/b/c").is_err());
+    }
+
+    #[test]
+    fn a_link_to_a_folder_shows_its_mods_only() {
+        let dir = tempfile::tempdir().unwrap();
+        let mut fx = Fixture::default();
+        let files = [
+            ("lock-strafe/openrac-mod.json", manifest("lock-strafe", "1.0.0")),
+            ("button-swap/openrac-mod.json", script_manifest("button-swap", "1.0.0")),
+        ];
+        repo(&mut fx, &files, serde_json::json!([]), "c1");
+        // The branch is the first part of the path the repository knows; the rest is the folder.
+        let p = preview(&ctx(dir.path(), &fx), "https://github.com/o/r/tree/main/button-swap").unwrap();
+        assert_eq!(p.reference, "main");
+        assert_eq!(p.mods.iter().map(|m| m.id.as_str()).collect::<Vec<_>>(), ["button-swap"]);
+        // A branch whose name holds a slash: the longer start is tried when the shorter is unknown.
+        fx.put(&format!("{API}/repos/o/r/commits/feature/x"), serde_json::json!({"sha": "c1"}).to_string());
+        let p = preview(&ctx(dir.path(), &fx), "https://github.com/o/r/tree/feature/x/lock-strafe").unwrap();
+        assert_eq!(p.reference, "feature/x");
+        assert_eq!(p.mods.iter().map(|m| m.id.as_str()).collect::<Vec<_>>(), ["lock-strafe"]);
+        let err = preview(&ctx(dir.path(), &fx), "https://github.com/o/r/tree/main/nothing-here").unwrap_err();
+        assert!(err.contains("no mod in nothing-here"), "{err}");
+    }
+
+    #[test]
+    fn a_repository_github_does_not_show_is_said_plainly() {
+        let dir = tempfile::tempdir().unwrap();
+        let fx = Fixture::default();
+        let err = preview(&ctx(dir.path(), &fx), "https://github.com/someone/private-thing").unwrap_err();
+        assert_eq!(err, NOT_FOUND);
     }
 
     #[test]
