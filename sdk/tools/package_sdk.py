@@ -17,6 +17,7 @@ from __future__ import annotations
 
 import argparse
 import hashlib
+import json
 import re
 import sys
 import zipfile
@@ -43,6 +44,9 @@ def version(sdk: Path = SDK) -> str:
     cmake = (sdk / "cmake" / "OpenRACModConfigVersion.cmake").read_text()
     if f'set(PACKAGE_VERSION "{api[0]}.{api[1]}")' not in cmake:
         raise SystemExit(f"cmake/OpenRACModConfigVersion.cmake does not say {'.'.join(api)}")
+    lock = json.loads((sdk / "template" / "sdk.lock").read_text())
+    if lock.get("version") != text or f"sdk-v{text}/openrac-mod-sdk-{text}.zip" not in lock.get("url", ""):
+        raise SystemExit(f"template/sdk.lock does not pin {text} (its version and url)")
     return text
 
 

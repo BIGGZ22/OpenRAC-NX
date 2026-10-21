@@ -27,7 +27,9 @@ class PackageSdk(unittest.TestCase):
             for need in ["include/openrac/openrac_mod.h", "include/openrac/games/rac1.h",
                          "cmake/OpenRACModConfig.cmake", "cmake/OpenRACModConfigVersion.cmake",
                          "tools/package_mod.py", "template/openrac-mod.json", "README.md",
-                         "docs/MODS.md", "LICENSE", "VERSION"]:
+                         "docs/MODS.md", "LICENSE", "VERSION", "template/.github/workflows/build.yml",
+                         "template/tools/fetch_sdk.py", "template/sdk.lock", "template/.gitignore",
+                         "template/LICENSE"]:
                 self.assertIn(top + need, names)
             self.assertFalse([n for n in names if "__pycache__" in n or "/build/" in n])
             sha = (Path(a) / (one.name + ".sha256")).read_text().split()[0]
