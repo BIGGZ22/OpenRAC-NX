@@ -12,7 +12,8 @@ with the host C its game's versions share (port/game/rac1/host, README.md).
 
 VERSION_DIR is port/game/<id> (its hostgen.json names the shared C,
 "host_shared"). The shared C names functions as games/rac1 does
-(func_001F8B6C, func_L00_002A8A20, func_0022C9A8__game) and writes addresses
+(func_001F8B6C, func_L00_002A8A20, func_0022C9A8__game, a hook under a wrap's
+func_L00_002D9EA0__hooked) and writes addresses
 as RAC1_ADDR(0x...u) and RAC1_LADDR(NN, 0x...u); `#if !RAC1_OMIT(name)`
 leaves a function out where the table says RAC1_OMIT_name. MAP is the map
 versionmap.py builds from games/rac1's version to this one, GEN this
@@ -33,7 +34,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
 MARK = "/* ---- generated below ---- */"
-NAME = re.compile(r"\b(func_(?:L(\d\d)_)?([0-9A-F]{8})(?:__game)?)\b")
+NAME = re.compile(r"\b(func_(?:L(\d\d)_)?([0-9A-F]{8})(?:__game|__hooked)?)\b")
 ADDR = re.compile(r"\bRAC1_ADDR\(\s*(0x[0-9A-F]{8}u)\s*\)")
 LADDR = re.compile(r"\bRAC1_LADDR\(\s*(\d\d)\s*,\s*(0x[0-9A-F]{8}u)\s*\)")
 LITERAL = re.compile(r"\b0x00([0-9A-Fa-f]{6})[uU]?\b")
@@ -163,7 +164,7 @@ def expected(key: str, carrier) -> tuple[str | None, str]:
         if hit is None:
             return None, "no place found"
         return f"0x{hit[0]:08X}u", hit[1]
-    suffix = "__game" if key.endswith("__game") else ""
+    suffix = next((s for s in ("__game", "__hooked") if key.endswith(s)), "")
     there, kind = carrier.symbol(key[: len(key) - len(suffix)])
     if there is None:
         return None, kind
