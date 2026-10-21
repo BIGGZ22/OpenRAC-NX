@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-# SPDX-License-Identifier: GPL-3.0-or-later
+# SPDX-License-Identifier: MIT
 # Copyright (c) 2026 the OpenRAC contributors
 """The SDK's API reference, generated from its sources (sdk/docs/reference/).
 

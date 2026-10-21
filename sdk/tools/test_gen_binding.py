@@ -1,4 +1,4 @@
-# SPDX-License-Identifier: GPL-3.0-or-later
+# SPDX-License-Identifier: MIT
 # Copyright (c) 2026 the OpenRAC contributors
 """Tests of gen_binding.py: python3 -m unittest discover -s sdk/tools -p test_gen_binding.py"""
 import json

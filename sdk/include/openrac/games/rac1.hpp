@@ -1,5 +1,5 @@
 // Generated from sdk/bindings/rac1.json by sdk/tools/gen_binding.py. Do not edit.
-// SPDX-License-Identifier: GPL-3.0-or-later
+// SPDX-License-Identifier: MIT
 //
 // rac1's hook points as C++ types, for the SDK's C++ layer (openrac/mod.hpp, docs/port/MODS.md):
 // each one's permanent id, its name and signature as openrac_api.hook takes them, and the type of a

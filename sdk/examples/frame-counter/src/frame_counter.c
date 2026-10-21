@@ -1,4 +1,4 @@
-/* SPDX-License-Identifier: GPL-3.0-or-later
+/* SPDX-License-Identifier: MIT
  * Copyright (c) 2026 the OpenRAC contributors
  *
  * An example mod that uses each part of the interface (sdk/README.md): it refuses a game it is not

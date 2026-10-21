@@ -5,7 +5,7 @@
   "version": "1.0.0",
   "author": "OpenRAC contributors",
   "description": "An example for mod authors: counts the game's ticks and pad reports and writes them in the log. Changes nothing in the game.",
-  "license": "GPL-3.0-or-later",
+  "license": "MIT",
   "homepage": "https://github.com/OpenRAC/OpenRAC/tree/master/sdk/examples/frame-counter",
   "api": "1.0",
   "games": { "rac1": ["pal", "ntsc"] },

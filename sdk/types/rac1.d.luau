@@ -1,5 +1,5 @@
 -- Generated from sdk/bindings/rac1.json by sdk/tools/gen_binding.py. Do not edit.
--- SPDX-License-Identifier: GPL-3.0-or-later
+-- SPDX-License-Identifier: MIT
 --
 -- The `openrac` global as a script mod for rac1 sees it (docs/port/MODS.md, section 11): put this
 -- file where your editor's Luau language server reads definitions (luau-lsp: --definitions).

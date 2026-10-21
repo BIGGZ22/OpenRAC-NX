@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: GPL-3.0-or-later
+// SPDX-License-Identifier: MIT
 // Copyright (c) 2026 the OpenRAC contributors
 //
 // The C++ layer of the mod interface (docs/port/MODS.md, section 11): header-only, C++17, compiled

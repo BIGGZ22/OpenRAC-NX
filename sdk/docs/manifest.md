@@ -15,7 +15,7 @@ checks a manifest the same way.
   "version": "1.0.0",
   "author": "Your name",
   "description": "Swaps two buttons of the pad.",
-  "license": "GPL-3.0-or-later",
+  "license": "MIT",
   "homepage": "https://github.com/you/your-mods",
   "type": "script",
   "api": "1.1",

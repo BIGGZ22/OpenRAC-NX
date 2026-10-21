@@ -1,4 +1,4 @@
-# SPDX-License-Identifier: GPL-3.0-or-later
+# SPDX-License-Identifier: MIT
 """Tests for package_mod.py: the manifest's rules, an archive, joining platforms.
 
     python3 -m unittest discover -s sdk/tools

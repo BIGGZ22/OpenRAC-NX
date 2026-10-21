@@ -1,4 +1,4 @@
-# SPDX-License-Identifier: GPL-3.0-or-later
+# SPDX-License-Identifier: MIT
 # The frame-counter example (sdk/README.md):
 #   cmake -S sdk/examples/frame-counter -B build/frame-counter -G Ninja
 #   cmake --build build/frame-counter

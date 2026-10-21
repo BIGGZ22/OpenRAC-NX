@@ -1,4 +1,4 @@
-/* SPDX-License-Identifier: GPL-3.0-or-later
+/* SPDX-License-Identifier: MIT
  * Copyright (c) 2026 the OpenRAC contributors
  *
  * Ratchet & Clank's hook points (docs/port/MODS.md, section 4): for each, its name, its signature

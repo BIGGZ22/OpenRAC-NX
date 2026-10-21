@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-# SPDX-License-Identifier: GPL-3.0-or-later
+# SPDX-License-Identifier: MIT
 # Copyright (c) 2026 the OpenRAC contributors
 """A game's binding for mods, generated from one table (docs/port/MODS.md, sections 4 and 11).
 
@@ -499,7 +499,7 @@ def c_binding(b: dict) -> str:
 def cpp_header(b: dict) -> str:
     g = b["game"]
     out = [f"// Generated from sdk/bindings/{g}.json by sdk/tools/gen_binding.py. Do not edit.",
-           "// SPDX-License-Identifier: GPL-3.0-or-later",
+           "// SPDX-License-Identifier: MIT",
            "//",
            f"// {g}'s hook points as C++ types, for the SDK's C++ layer (openrac/mod.hpp, docs/port/MODS.md):",
            "// each one's permanent id, its name and signature as openrac_api.hook takes them, and the type of a",
@@ -561,7 +561,7 @@ def cpp_header(b: dict) -> str:
 def luau_types(b: dict) -> str:
     g = b["game"]
     out = [f"-- Generated from sdk/bindings/{g}.json by sdk/tools/gen_binding.py. Do not edit.",
-           "-- SPDX-License-Identifier: GPL-3.0-or-later",
+           "-- SPDX-License-Identifier: MIT",
            "--",
            f"-- The `openrac` global as a script mod for {g} sees it (docs/port/MODS.md, section 11): put this",
            "-- file where your editor's Luau language server reads definitions (luau-lsp: --definitions).",

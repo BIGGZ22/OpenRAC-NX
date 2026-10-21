@@ -1,4 +1,4 @@
-/* SPDX-License-Identifier: GPL-3.0-or-later
+/* SPDX-License-Identifier: MIT
  * Copyright (c) 2026 the OpenRAC contributors
  *
  * The interface between OpenRAC's native port and a native mod (docs/port/MODS.md).

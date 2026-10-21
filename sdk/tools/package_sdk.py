@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-# SPDX-License-Identifier: GPL-3.0-or-later
+# SPDX-License-Identifier: MIT
 # Copyright (c) 2026 the OpenRAC contributors
 """The SDK as one archive, for writing a mod without a copy of OpenRAC.
 
@@ -33,7 +33,7 @@ PARTS = ["README.md", "VERSION", "include", "cmake", "template", "template-scrip
          "types", "tests", "docs", "tools/package_mod.py"]
 # The templates whose sdk.lock pins the SDK they come in.
 TEMPLATES = ("template", "template-script")
-EXTRA = {"docs/MODS.md": ROOT / "docs" / "port" / "MODS.md", "LICENSE": ROOT / "COPYING"}
+EXTRA = {"docs/MODS.md": ROOT / "docs" / "port" / "MODS.md", "LICENSE": SDK / "LICENSE"}
 SKIP = {"__pycache__", ".DS_Store", "build", "dist"}
 DATE = (2026, 1, 1, 0, 0, 0)
 

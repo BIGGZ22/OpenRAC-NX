@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: GPL-3.0-or-later
+// SPDX-License-Identifier: MIT
 // Copyright (c) 2026 the OpenRAC contributors
 //
 // openrac/mod.hpp against a host table of the test's own: the entry points, settings, hooks as

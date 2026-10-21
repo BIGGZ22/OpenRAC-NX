@@ -1,4 +1,4 @@
-# SPDX-License-Identifier: GPL-3.0-or-later
+# SPDX-License-Identifier: MIT
 # Copyright (c) 2026 the OpenRAC contributors
 #
 # The OpenRAC mod SDK as a CMake package (docs/port/MODS.md, section 8; sdk/README.md).

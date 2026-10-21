@@ -1,4 +1,4 @@
-# SPDX-License-Identifier: GPL-3.0-or-later
+# SPDX-License-Identifier: MIT
 # The C++ layer's test (openrac/mod.hpp): built by any C++17 compiler, from a checkout or from the
 # unpacked SDK.
 #
