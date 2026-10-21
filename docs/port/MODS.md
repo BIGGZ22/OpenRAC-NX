@@ -230,6 +230,29 @@ writes them in `status.json`. A version's table names a hook point only where
 that disc has the function; a mod for both discs that needs one the other
 disc lacks is refused there, with the reason.
 
+**What a hook point can be.** Any function of the game with C (translated
+from the decompilation or from its assembly) can be made one, by a `hook` row
+for its symbol; nothing else in the port changes. That covers the three ways
+mods change behaviour:
+
+- **wrap**: the replacement does something, calls `original`, and does more
+  after (lock-strafe's camera and pad hooks);
+- **replace**: the replacement never calls `original` (a moby class's
+  behaviour written anew);
+- **after** or **before** a named function: a wrap that does its work only on
+  one side of the call.
+
+A function the game reaches through a code address rather than by name (a
+moby class's update in its class table, a callback the game registers) is a
+hook point the same way: the registry of functions by address
+(`functions.c`) points at the hook's function, so a call through the table
+reaches the mod's replacement too. A behaviour catalogue that names class
+update functions (the level editor's work) proposes them as hook points by
+those names: each becomes a `hook` row in every disc's `libraries.tsv` whose
+game has it, with a name for mods of the form `Moby_<Class>_Update`, and a
+line in the SDK's game header. Nothing else is needed for it to be wrapped
+or replaced.
+
 ## 5. The list and the answer
 
 `<data>/plugins/plugins.json`, written by the launcher (also by hand: it is
@@ -405,7 +428,83 @@ Play passes nothing more: the port reads `plugins.json` from the data folder
 it is given. The Rust side is `core/src/plugins.rs`, with tests on mods made
 in a temporary folder.
 
-## 10. What is proposed or open
+## 10. Mods in a git repository
+
+A player pastes a repository's address in the Mods tab (**Add from a
+link**), and the launcher finds the mods in it, shows them, and installs the
+one chosen, built: players have no compilers, and nothing is ever built on
+their machine. For that, a repository keeps to these conventions; the SDK's
+template ([sdk/template](../../sdk/template)) and
+[rac1-mods](https://github.com/OpenRAC/rac1-mods) follow them.
+
+**Where the manifests are.** One mod: `openrac-mod.json` at the top of the
+repository. Several: one folder per mod at the top, each with its
+`openrac-mod.json` (rac1-mods: `lock-strafe/openrac-mod.json`). A top-level
+`openrac-mods.json`, `{"format": 1, "mods": ["lock-strafe", ...]}`, may list
+the folders instead, and then only those are read. In a mod's folder:
+
+```
+openrac-mod.json        the manifest (section 3)
+README.md, LICENSE      shown to players before they install
+CMakeLists.txt, src/    a native mod's sources (built by the workflow, never by the launcher)
+tests/                  its tests
+level_NN/, ...          a data pack's files, as editor/MODDING.md lays them out (format 1)
+```
+
+**Releases carry the built mods.** A tag `v<version>` (or, in a repository
+of several mods released apart, `<id>-v<version>`) makes a GitHub release
+with, for each mod:
+
+| Asset | |
+|---|---|
+| `<id>-<version>-<platform>.zip` | the mod for one platform (`macos-arm64`, `linux-x86_64`, `windows-x86_64`, ...): what the launcher downloads |
+| `<id>-<version>.zip` | every platform's joined, for installing by hand |
+| `SHA256SUMS` | `sha256sum`'s format, a line per asset: the launcher refuses an asset whose hash is not listed or differs |
+
+The SDK's template carries the workflow that makes them
+([template/.github/workflows/build.yml](../../sdk/template/.github/workflows/build.yml):
+build and test on macOS, Linux and Windows, package, join, publish on a tag),
+so a modder pushes a tag and nothing else; rac1-mods uses the same file.
+
+**What the launcher does** (`launcher/core/src/remote.rs`):
+
+1. reads the address: `https://github.com/<owner>/<repo>` (with
+   `/tree/<ref>` or `/releases/tag/<tag>` naming a version), or any other git
+   host's address;
+2. on GitHub, without git: the latest release (or the one named) through
+   GitHub's HTTPS API, the repository's tree at its tag for the manifests, and
+   each manifest's text. It shows each mod's name, version, author, the
+   repository and its owner, the games and discs it is for, its interface
+   version and whether this launcher's port can load it, before anything is
+   installed, with the warning that a native mod runs code on this computer;
+3. installs the chosen mod: a native mod is the release's
+   `<id>-<version>-<platform>.zip` for this computer, checked against
+   `SHA256SUMS`, then installed as a `.zip` is (section 9). A mod with no
+   asset for this platform, no `SHA256SUMS`, a hash that differs, or a
+   manifest in the archive that is not the one shown, is refused with that
+   reason. A data pack (no `plugin`) comes from its asset when the release
+   has one, else from the repository's archive at the release's tag (or the
+   commit shown), its folder only;
+4. other git hosts: a data pack through `git` (a shallow clone at the
+   tag) when git is installed; a native mod needs a host with releases
+   (GitHub today; GitLab, Gitea and Forgejo have the same and can follow);
+5. remembers where each mod came from, `<data>/plugins/sources.json`:
+
+```json
+{ "format": 1,
+  "mods": { "lock-strafe": { "url": "https://github.com/OpenRAC/rac1-mods",
+                             "path": "lock-strafe", "version": "1.0.0",
+                             "tag": "v1.0.0", "commit": null, "pin": false } } }
+```
+
+**Updates.** **Check for updates** (on the Mods tab, and once a day when it
+opens) asks each source for its newest release with an asset for this
+platform whose version is above the installed one (for a data pack with no
+releases, a newer commit on its branch), and offers **Update** on the mod's
+row. A pinned mod (**Keep this version**) is never offered one. An update
+installs as a reinstall does: the mod's place, on/off and settings are kept.
+
+## 11. What is proposed or open
 
 - **Proposed: a mod with data.** A format-2 mod with an `assets` folder that
   is a data pack, added to the packs when the mod is installed and on when the
@@ -418,11 +517,11 @@ in a temporary folder.
   like the rest of OpenRAC's top level. A mod runs inside the GPL'd port; a
   permissive license for the SDK's headers would let mods choose their own.
   For the maintainers to settle (AGENTS.md, rule 11).
-- **Open: a mod index.** Mods are installed from files today; a list to
-  browse and update them from, as OpenGOAL's launcher has for its mods,
-  waits on where it would be hosted.
+- **Open: a mod index.** Mods are installed from files and repository
+  addresses (section 10); a list to browse them from, as OpenGOAL's launcher
+  has for its mods, waits on where it would be hosted.
 
-## 11. How others do it
+## 12. How others do it
 
 - **OpenGOAL** (Jak and Daxter) ships mods as whole builds of its game from
   a fork, listed in a JSON index its launcher reads; a mod is its own copy
