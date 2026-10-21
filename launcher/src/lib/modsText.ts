@@ -241,3 +241,31 @@ export function rangeText(min?: number, max?: number): string {
 /** The crash notice, when gameplay mods were on at the start that crashed (CrashNotice.svelte). */
 export const crashModsLine = (ids: string[]) =>
   `Gameplay mods were on (${ids.join(", ")}). If it crashes again, try Purist mode on the Mods tab, and tell us which mods you had.`;
+
+/** Models and textures (AssetsPanel.svelte). */
+export const ASSETS = {
+  lead: "Export a level's models and textures, edit them in Blender or an image editor, then import them back as a pack.",
+  howItWorks: "How it works",
+  exportTitle: "Export",
+  exportLine: "Opens a folder of glTF models and PNG textures.",
+  exporting: "Writing the files…",
+  readFirst: "Read the levels from your disc first: a few minutes, once.",
+  readyFirst: "Get the levels ready first, on the game's page.",
+  levelLabel: "Level to export",
+  whatLabel: "What to export",
+  read: "Read the levels",
+  export: "Export",
+  openFolder: "Open folder",
+  importTitle: "Import your edits",
+  importLine: "Choose the folder you edited: your changes become a pack in My mods.",
+  importing: "Checking what you changed…",
+  import: "Import…",
+  pickImport: "Choose the export folder you edited",
+  imported: "Imported: your edits are a pack in My mods, switched on.",
+  importedRefused: (n: number) =>
+    `Imported, but ${n} change${n === 1 ? " was" : "s were"} refused: the activity log says why and what to do.`,
+  importStopped: "The import stopped. The activity log has what it said.",
+  exportStopped: "The export stopped. The activity log has what it said.",
+  readStopped: "Reading the levels stopped. The activity log has what it said.",
+  exported: (level: string) => `Exported ${level}: the folder is opening.`,
+} as const;

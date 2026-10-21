@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   ADD,
+  ASSETS,
   COMPATIBLE_LABEL,
   EDITOR,
   PACKS,
@@ -46,7 +47,7 @@ describe("the label maps", () => {
 
 describe("the page's words", () => {
   it("stay short: a line each, the longer why in a tooltip", () => {
-    for (const group of [ADD, EDITOR, PACKS, PAGE, PANEL, PURIST]) {
+    for (const group of [ADD, ASSETS, EDITOR, PACKS, PAGE, PANEL, PURIST]) {
       for (const [key, text] of Object.entries(group)) {
         if (typeof text !== "string" || key.endsWith("Url") || key.endsWith("Title")) continue;
         expect(text.length, `${key}: ${text}`).toBeLessThanOrEqual(120);
