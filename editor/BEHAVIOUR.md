@@ -29,6 +29,24 @@ Update functions are shared: **645 distinct update functions serve 1,167 class r
 (bolts 13-16 share one; crates 500/501/502/505/511 share one). Per-class differences
 sit in the class number and the pvars. 554 of the 645 are C in the checkout.
 
+## The catalogue for native mods
+
+[catalogue.py](catalogue.py) writes, from the source tree alone, what a native mod
+([docs/port/MODS.md](../docs/port/MODS.md)) needs to change a class's behaviour:
+[sdk/catalogue/rac1/BEHAVIOUR.md](../sdk/catalogue/rac1/BEHAVIOUR.md) to read, and
+`behaviour.json` / `behaviour.tsv` beside it for tools. For each class: its update function
+(symbol, readable name, levels, where the port gets its C), the classes sharing it and the
+moby's class field to filter on (`s16 oclass`, +0xA6), its pvar structs with field offsets,
+types and comments, the game functions the update calls (hook-after candidates), and its
+hook status: the hook point, or the `hook` row of `libraries.tsv` that would make one and
+the levels that row covers. It ships in the mod SDK's archive.
+
+```sh
+python3 editor/catalogue.py write        # regenerate sdk/catalogue/rac1/
+python3 editor/catalogue.py check        # exit 1 when it is stale
+python3 editor/catalogue.py show 500     # one class, as JSON
+```
+
 ## The API a script needs
 
 [behaviour_api.tsv](behaviour_api.tsv) lists the helpers and what each does (about 60,
