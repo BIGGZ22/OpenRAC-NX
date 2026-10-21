@@ -2172,7 +2172,37 @@ class Unit:
             raise Unsupported("a va_list passed as a game pointer, or the other way round")
         if c in ("rec", "valist"):
             return self.rv(a)
-        return self._cast_to(self.rv(a), p)
+        v = self.rv(a)
+        if (self._wide(p) and self.cls(self.ty(a)) in ("int", "ptr") and not self._wide(self.ty(a))
+                and not self._names_a_variable(a) and not self._wide_call(a)):
+            # A 32-bit value (an int, an unsigned, a pointer: the call site's own type) that the
+            # call computes or loads, where the definition takes 64 bits: on the EE the register
+            # holds it sign-extended, as every 32-bit load and operation leaves it (rac1:
+            # FontPrintWindow hands its colour on as a `void *` loaded from a table to FontPrint's
+            # u64, 0x80FFA888 is 0xFFFFFFFF80FFA888 there). A variable or parameter passed as it is
+            # keeps whatever its register held, as the port carries it (a TEX0 the matching C keeps
+            # in an int, a parameter passed on); so does a call of a "returns_64" function (all its
+            # bits: Effect_DrawEntryList(..., GetEffectTex(0x2C), ...)).
+            v = f"(int32_t)({v})"
+        return self._cast_to(v, p)
+
+    def _names_a_variable(self, a: dict) -> bool:
+        """The argument is a variable or parameter by name (through casts and parentheses)."""
+        n = a
+        while n.get("kind") in ("ImplicitCastExpr", "CStyleCastExpr", "ParenExpr") and _inner(n):
+            n = _inner(n)[0]
+        return n.get("kind") == "DeclRefExpr" and n.get("referencedDecl", {}).get("kind") in ("VarDecl", "ParmVarDecl")
+
+    _WIDE_INTS = frozenset({"long long", "long long int", "unsigned long long", "unsigned long long int",
+                            "signed long long", "signed long long int"})
+
+    def _wide(self, t: ctype.Type) -> bool:
+        """An integer type of 64 bits (the EE's long, long long and their typedefs)."""
+        r = self.resolve(t)
+        if self.cls(r) != "int" or not isinstance(r, ctype.Base):
+            return False
+        k = r.name if r.name in ctype.INT_NAMES else canon(r, self.program.typedefs if self.program else None)
+        return k in self._WIDE_INTS
 
     def _cast_to(self, v: str, p: ctype.Type) -> str:
         canon = self.canon(p)

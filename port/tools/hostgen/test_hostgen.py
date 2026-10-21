@@ -448,6 +448,31 @@ class Translate(unittest.TestCase):
         })
         self.assertEqual(out, ["11"])
 
+    def test_a_32_bit_argument_to_a_64_bit_parameter_is_sign_extended(self):
+        # The call site declares 32 bits, the definition takes 64: the EE's register held the value
+        # sign-extended (FontPrintWindow's colour, a void * there, FontPrint's u64). The result of a
+        # "returns_64" function keeps all its bits, as the register does.
+        out = self.run_program({"a.c": """
+            void callee(unsigned long long x) { test_print((int)(x >> 32)); test_print((int)(x & 0xFFFF)); }
+            unsigned long long tex(int i) { return ((unsigned long long)i << 32) | 0x8000ABCDu; }
+        """, "b.c": """
+            extern void callee(unsigned int x);
+            extern void callee_too(void *x) __asm__("callee");
+            extern void callee_int(int x) __asm__("callee");
+            extern int tex(int i);
+            int test_main(void) {
+                unsigned int table[2];
+                table[0] = 0x80001234u;
+                table[1] = 0x00005678u;
+                callee(table[0]);
+                callee(table[1]);
+                callee_too((void *)0x80009ABCu);
+                callee_int(tex(3));
+                return 0;
+            }
+        """}, config={"returns_64": ["tex"]})
+        self.assertEqual(out, ["-1", "4660", "0", "22136", "-1", "39612", "3", "43981"])
+
     def test_va_list_passed_as_a_pointer_becomes_a_stub(self):
         # The console's C passes a va_list where a pointer is declared (and the
         # other way round); the host cannot, so the caller becomes a stub and the
