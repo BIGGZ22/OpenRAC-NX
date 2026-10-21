@@ -2,7 +2,7 @@
 
 Ratchet & Clank in OpenRAC's native port can draw your own textures and
 models in place of the game's: upscaled textures, a remodelled Ratchet, a
-repainted vendor. You export what you want to change from your own disc's
+repainted vendor, denser or reshaped terrain. You export what you want to change from your own disc's
 levels, edit it in Blender or any image editor, import it back, and the
 result is an **overrides pack** the game loads on top of its levels. Packs
 from other people go in the same way, as a .zip or a folder.
@@ -30,7 +30,7 @@ changed; share it only with people who own the game.
 Everything below is on the **Mods** page, under **Models and textures**:
 
 1. **Export**: choose a level and what to export (characters and objects,
-   textures, scenery, or everything), then Export. The folder opens when it
+   textures, scenery, terrain, or everything), then Export. The folder opens when it
    is ready: `exports/level_NN-<what>` in the game's set-up folder. Exporting
    again writes a new folder (`-2`, `-3`...), never over your edits.
 2. Edit the files (below).
@@ -105,6 +105,38 @@ What the import checks and does:
   cannot be held by Blender's bones; the import undoes what Blender's
   importer did to the vertices they move.
 
+## Editing the terrain
+
+The terrain (the ground, the walls, the cliffs: the level's static
+geometry that is neither a tie nor a shrub) is `level_NN/terrain/`, one
+`terrain.gltf` with its `.bin` and `asset.json`. Open it in Blender the same
+way (File > Import > glTF 2.0); each of the game's terrain fragments is an
+object, `Terrain_000`, `Terrain_001`... Subdivide it, sculpt it, reshape it,
+add detail, and export it into the same folder as for a model.
+
+- **Any number of vertices and triangles.** The port draws the terrain as
+  one mesh, whatever its size.
+- **UVs and pictures** as for models: UVs are required, a material's picture
+  that is one of the level's textures (same file name) uses that texture, a
+  new picture travels with the terrain, and a material without a picture is
+  refused (Blender gives new faces one unless they take their neighbours').
+- **Lighting is the vertex colours.** The game lights its terrain once, at
+  level load, into a colour per vertex, and the port draws the terrain with
+  those colours alone. The export holds them at half strength (0.5 is the
+  game's normal brightness, 1.0 twice it; glTF's colours stop at 1.0), and
+  the import doubles them again. A vertex without a colour (Blender drops
+  them unless the export's Vertex Color option keeps them, and some edits
+  make vertices without any) takes the colour of the original terrain at
+  the nearest point, blended across the face it lies on, from the fragment
+  of the same name where the object keeps it: a subdivided face keeps its
+  shading, and a raised hill takes the colour of the ground below it.
+  Paint the colours to light it otherwise.
+- **One level.** The terrain replaces its own level's only.
+
+The game's collision is not the terrain: Ratchet still walks on the
+original's ground, so keep the surfaces he stands on where they were
+(editing the collision is level editing: [LEVEL_MODDING.md](LEVEL_MODDING.md)).
+
 The levels must be the ones the export was made from: after "Get the levels
 ready" runs again with a newer OpenRAC, or after setting the game up from
 another disc, export again and redo the edit. The pack you made keeps
@@ -126,6 +158,9 @@ belongs there:
   the same models use it, if it is the same size;
 - a **model** in each level whose class has the same skeleton (a model
   without one: the same vertices), drawing with that disc's own textures;
+- the **terrain** in its level where that disc's terrain has the same
+  vertices (both discs' levels have the same terrain), drawing with that
+  disc's textures; its lighting stays the one it was made with;
 - **level edits** (a packed level's gameplay file, ties and shrubs placed
   again) belong to the disc they were packed from and are left out on the
   other.
@@ -155,7 +190,7 @@ are the same for either. `stack --levels` names the levels the game will
 play, and its `--out` is that disc's folder: `stack --into build/overrides
 --out build/mods/ntsc --levels assets/port/rac1/ntsc` puts the same packs
 together for the other disc. `--what` is `mobys`, `textures`, `scenery`
-(ties and shrubs) or `all`. Inside this repository, output goes under
+(ties and shrubs), `terrain` or `all`. Inside this repository, output goes under
 `assets/` or `build/` only.
 
 ## The pack format
@@ -171,6 +206,7 @@ openrac-mod.json                  {"format": 1, "game": "rac1", "version": "pal"
 level_NN/textures/<name>.png      a level texture, by its name in that level
 level_NN/mobys/moby_<class>.glb   a class's model, as the port reads it (game axes, model units)
 level_NN/ties/tie_<class>.glb, level_NN/shrubs/shrub_<class>.glb
+level_NN/terrain.glb              the level's terrain, as the port reads it
 level_NN/placements.json          ties and shrubs placed again (the level packer's)
 level_NN/gameplay_<version>.wad, patches.tsv   a packed level (the level packer's)
 README*, LICENSE*, *.txt, *.md    for people; other files are ignored
@@ -183,16 +219,20 @@ original picture's hash, its size and the models that use it
 textures, how many]]}`, or `{"new": true}` for a model's own picture), and
 for each model its class, a hash of the original's vertex positions and the
 pictures it and its class draw with (`{"kind", "class", "vertices",
-"textures": {name: hash}, "class_textures": [...]}`). The hashes and sizes
-are all a pack holds of the originals.
+"textures": {name: hash}, "class_textures": [...]}`; the terrain's the same,
+with `"kind": "terrain"` and `"class": null`, and `used_by` names it as
+`["terrain", 0, ...]`). The hashes and sizes are all a pack holds of the
+originals.
 
 The files mirror the extracted levels (`editor/extract.py port`): the port
 reads each level's files from the stacked mods folder (`--mods`,
 `<mods>/level_NN/`) where they are there and from the levels otherwise
 ([port/viewer/level.cpp](../port/viewer/level.cpp)), and the disc sectors
 `patches.tsv` lists from the files beside it. A model GLB names textures
-as `../textures/<name>.png`: the pack's own where it carries them, the
-level's otherwise. Joints are `joint_NNN` nodes, numbered as the game's.
+as `../textures/<name>.png` (the terrain as `textures/<name>.png`): the
+pack's own where it carries them, the level's otherwise. Joints are
+`joint_NNN` nodes, numbered as the game's. A terrain GLB has one node per
+mesh, no skin, and `COLOR_0` in the game's scale (0x80 = 1.0, up to 2.0).
 
 The game's set-up folder holds the packs that were added
 (`overrides/packs/<id>/`), their order and state (`overrides/overrides.json`,
@@ -203,9 +243,14 @@ mods, with `stack.json` saying what it holds and what was left out).
 
 ## Limits
 
-- Sky textures the sky's sprites use, the game's 2D pictures (the HUD,
-  menus, fonts) and the terrain's geometry cannot be replaced yet;
-  terrain, tie and shrub textures can.
-- A replacement model draws in the port only; the game's collision, bone
-  points (where Ratchet holds things) and bounds stay the original's.
+- Sky textures the sky's sprites use and the game's 2D pictures (the HUD,
+  menus, fonts) cannot be replaced yet; terrain, tie and shrub textures
+  can, and the terrain's geometry.
+- A replacement model or terrain draws in the port only; the game's
+  collision, bone points (where Ratchet holds things) and bounds stay the
+  original's. The game's own terrain data (what it culls and lights at
+  level load) is not changed either: the port draws the replacement whole.
+- A replacement terrain keeps the lighting it was made with: when the
+  game's lights change (a level edit), export it again or paint its
+  colours.
 - Low-detail models are not exported; the port draws the high-detail one.

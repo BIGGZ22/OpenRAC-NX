@@ -178,7 +178,9 @@ each axis its own, another class of the level, other values, added, deleted),
 paths, grind paths, cameras, sound instances and the level settings
 ([Gameplay data](#gameplay-data)), and **the collision**: tiles and hero walls
 deleted, moved, edited or added ([Collision](#collision)). A moby keeps one scale for all three axes.
-Not yet: terrain, and anything of a class the level does not load.
+Not yet: terrain, and anything of a class the level does not load (the
+port draws a denser or reshaped terrain from an overrides pack instead:
+[MODDING.md](MODDING.md#editing-the-terrain)).
 
 Ties and shrubs are packed for the native port only ([scenery.py](scenery.py)):
 the port draws them from the extractor's files, so the pack writes the
@@ -230,8 +232,9 @@ python3 editor/assets.py import build/my-export --levels assets/port/rac1/pal --
 ```
 
 Exports a level's moby, tie and shrub models as glTF (mesh, UVs, vertex
-colours, materials, skeleton, inverse bind matrices, weights, animations) and
-its textures as PNG, each with a manifest; reads the edited files back as an
+colours, materials, skeleton, inverse bind matrices, weights, animations), its
+terrain (`--what terrain`: one node per fragment, any vertex count coming
+back) and its textures as PNG, each with a manifest; reads the edited files back as an
 overrides pack ([overrides.py](overrides.py)) that the port loads with
 `--mods`. Either disc's levels (`assets/port/rac1/ntsc` the same way), and a
 pack made from one disc's applies to the other's where it matches. [MODDING.md](MODDING.md) is the guide: editing in Blender,
