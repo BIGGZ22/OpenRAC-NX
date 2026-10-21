@@ -447,8 +447,16 @@ impl Action {
         let mut args = self.args.iter().map(|a| fill(a)).collect::<Result<Vec<_>, _>>()?;
         // Settings, "Purist mode": the game loads none of the native mods the Mods tab switched on
         // (docs/port/MODS.md). The packs of Play with mods are what that action is for, and stay.
-        if self.kind == Kind::Play && ctx.config.purist {
-            args.push("--no-mods".to_string());
+        // Otherwise the game is told where the launcher keeps the list, in the game's set-up folder
+        // in the per-user install folder, so that the port never guesses it: the same in a
+        // checkout and in an installed launcher, whose own folder is read-only.
+        if self.kind == Kind::Play {
+            if ctx.config.purist {
+                args.push("--no-mods".to_string());
+            } else if let Ok(data) = fill("{data}") {
+                args.push("--plugins".to_string());
+                args.push(PathBuf::from(data).join("plugins").join(crate::plugins::LIST).display().to_string());
+            }
         }
         let cwd = match (&self.cwd, ctx.version) {
             (Some(cwd), _) => abs(ctx.root, &fill(cwd)?),
@@ -681,10 +689,14 @@ mod tests {
         assert_eq!(plan.args[1], data.display().to_string());
         assert!(!plan.env.iter().any(|(k, _)| k == "OPENRAC_LOG"));
         assert!(!plan.args.iter().any(|a| a == "--no-mods"), "mods load unless purist mode is on");
+        // The list the launcher writes, named explicitly: <data>/plugins/plugins.json.
+        let list = data.join("plugins").join("plugins.json").display().to_string();
+        assert_eq!(plan.args[plan.args.len() - 2..], ["--plugins".to_string(), list], "{:?}", plan.args);
         // Settings, "Purist mode": no native mods.
         let purist = Config { purist: true, ..installed.clone() };
         let plan = play.plan(&ctx(&purist)).unwrap();
         assert_eq!(plan.args.last().map(String::as_str), Some("--no-mods"), "{:?}", plan.args);
+        assert!(!plan.args.iter().any(|a| a == "--plugins"), "{:?}", plan.args);
         // Settings, "Detailed game logs": the game's verbose log.
         let detailed = Config { detailed_game_log: true, ..installed.clone() };
         let plan = play.plan(&ctx(&detailed)).unwrap();
