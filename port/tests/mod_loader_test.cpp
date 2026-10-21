@@ -198,6 +198,37 @@ void a_library_of_another_id(const fs::path& plugins) {
     install(plugins, "b", OPENRAC_TEST_MOD_B);
 }
 
+// A player's install, with no checkout anywhere: the launcher's per-user install folder
+// (~/OpenRAC by default), the game's set-up folder in it, a mod as the launcher installs one from its
+// .zip (the SDK's layout, lib/<platform>/<file>), the list named on the command line as the launcher
+// names it, and the program started in an unrelated folder. Nothing is looked for beside the program
+// or in a source tree: an installed launcher's own folder (an AppImage, an .app) is read-only.
+void an_installed_launchers_layout(const fs::path& root) {
+    const fs::path data = root / "home" / "OpenRAC" / "active" / "test" / "data";
+    const fs::path plugins = data / "plugins";
+    const fs::path mod = plugins / "test-a";
+    const fs::path lib = fs::path("lib") / mods::platform_key() / library_name();
+    fs::create_directories(mod / lib.parent_path());
+    fs::copy_file(OPENRAC_TEST_MOD_A, mod / lib, fs::copy_options::overwrite_existing);
+    write(mod / "openrac-mod.json", R"({"format": 2, "id": "test-a", "name": "Test", "version": "1.0.0",
+        "api": "1.0", "games": {"test": ["one"]}, "hooks": ["Test_Add"],
+        "plugin": {")" + std::string(mods::platform_key()) + R"(": ")" + lib.generic_string() + R"("},
+        "settings": [{"key": "tag", "name": "Tag", "type": "int", "default": 0}]})");
+    write(plugins / "plugins.json", R"({"format": 1, "mods": [{"id": "test-a", "enabled": true, "settings": {"tag": 4}}]})");
+    const fs::path elsewhere = root / "somewhere-else";
+    fs::create_directories(elsewhere);
+    const fs::path before = fs::current_path();
+    fs::current_path(elsewhere);
+    const std::string line = mods::load(host(plugins));
+    fs::current_path(before);
+    CHECK(line == "test-a 1.0.0");
+    CHECK(add(0) == 14);
+    CHECK(status_of(plugins, "test-a").first == "loaded");
+    // Only status.json is written, beside the list; nothing in the folder the program ran in.
+    CHECK(fs::is_empty(elsewhere));
+    mods::reset();
+}
+
 }  // namespace
 
 int main() {
@@ -215,6 +246,7 @@ int main() {
     refused_before_opening(plugins);
     purist_and_no_list(plugins);
     a_library_of_another_id(plugins);
+    an_installed_launchers_layout(dir);
     std::error_code e;
     fs::remove_all(dir, e);
     return test::result();
