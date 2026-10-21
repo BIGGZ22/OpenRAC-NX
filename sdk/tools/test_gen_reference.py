@@ -101,5 +101,34 @@ class Reference(unittest.TestCase):
                                         {"name": "log", "type": "(...any) -> ()", "about": "the log"}])
 
 
+class Docs(unittest.TestCase):
+    PAGES = ["README.md", "getting-started.md", "manifest.md", "settings.md", "hooks.md", "scripts.md",
+             "native-c.md", "native-cpp.md", "packaging-and-releases.md", "install-from-link.md",
+             "where-mods-live.md", "troubleshooting.md"]
+
+    def test_pages_are_there(self):
+        for name in self.PAGES:
+            self.assertTrue((DOCS / name).is_file(), name)
+
+    def test_links_resolve(self):
+        """Every relative link of the docs (and of the SDK's README) reaches a file of the SDK, and its
+        #anchor a heading there: the docs are shipped in the SDK's archive, where only the SDK is."""
+        broken = []
+        for page in sorted(DOCS.rglob("*.md")) + [SDK / "README.md"]:
+            text = re.sub(r"```.*?```", "", page.read_text(), flags=re.S)
+            for target in re.findall(r"\]\(([^)\s]+)\)", text):
+                if re.match(r"[a-z]+:", target):
+                    continue
+                path, _, anchor = target.partition("#")
+                file = (page.parent / path).resolve() if path else page
+                if page.parent == SDK and path.startswith("../"):
+                    continue  # the README's links into OpenRAC, outside the archive
+                if not file.exists() or SDK not in file.parents and file != SDK:
+                    broken.append(f"{page.relative_to(SDK)}: {target}")
+                elif anchor and file.suffix == ".md" and anchor not in anchors(file.read_text()):
+                    broken.append(f"{page.relative_to(SDK)}: {target} (no such heading)")
+        self.assertEqual(broken, [])
+
+
 if __name__ == "__main__":
     unittest.main()
