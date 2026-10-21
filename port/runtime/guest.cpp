@@ -15,6 +15,7 @@
 #include <map>
 #include <mutex>
 #include <string>
+#include <string_view>
 #include <tuple>
 #include <unordered_map>
 #include <vector>
@@ -427,6 +428,33 @@ gaddr openrac_folded_address(const uint32_t* places, int count, gaddr caller, ui
 const char* openrac_guest_function_name(gaddr address) {
     const Entry* e = find(address);
     return e == nullptr ? nullptr : e->name;
+}
+
+openrac_host_fn openrac_guest_function_named(const char* name) {
+    if (name == nullptr) {
+        return nullptr;
+    }
+    std::string_view want(name);
+    if (want.starts_with("game_")) {
+        want.remove_prefix(5);
+    }
+    auto search = [&](const Table& table) -> openrac_host_fn {
+        for (const auto& [address, e] : table) {
+            if (e.name != nullptr && want == e.name) {
+                return e.fn;
+            }
+        }
+        return nullptr;
+    };
+    if (openrac_host_fn fn = search(g_exe)) {
+        return fn;
+    }
+    for (const auto& [overlay, table] : g_overlays) {
+        if (openrac_host_fn fn = search(table)) {
+            return fn;
+        }
+    }
+    return nullptr;
 }
 
 void openrac_guest_missing(const char* name) {

@@ -169,6 +169,10 @@ void openrac_guest_set_overlay(int overlay);
 int openrac_guest_overlay(void);
 openrac_host_fn openrac_guest_function(gaddr address);
 const char* openrac_guest_function_name(gaddr address);
+/* A registered function by its name (the executable's first, then each level program's), or null;
+ * a name with hostgen's "game_" prefix is found too. A linear search: for set-up (mods), not for
+ * calls the game makes. */
+openrac_host_fn openrac_guest_function_named(const char* name);
 #define GFN(T, a) ((T)openrac_guest_function(a))
 
 /* A call through a code address with the EE's argument registers as they are, which C written
