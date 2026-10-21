@@ -471,8 +471,10 @@ int take_hook(lua_State* L, Link::Mode mode) {
         luaL_error(L, "hooks are taken while the mod's scripts first run");
     }
     const openrac_script_point* point = nullptr;
+    // By its id or any alias: the binding's points are named by their ids.
+    const char* id = openrac_script_hook_id(s->binding, name);
     for (int i = 0; i < s->binding->point_count; ++i) {
-        if (std::strcmp(s->binding->points[i].name, name) == 0) {
+        if (std::strcmp(s->binding->points[i].name, id) == 0) {
             point = &s->binding->points[i];
         }
     }

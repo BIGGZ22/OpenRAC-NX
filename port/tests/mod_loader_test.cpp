@@ -18,6 +18,7 @@
 #include "mod_manifest.h"
 #include "mods.h"
 #include "openrac/guest.h"
+#include "openrac/script_binding.h"
 #include "viewer/json.h"
 
 namespace fs = std::filesystem;
@@ -231,6 +232,38 @@ void an_installed_launchers_layout(const fs::path& root) {
 
 }  // namespace
 
+// A hook point renamed after a mod was written (docs/port/MODS.md, section 4): the decompilation now
+// calls the function Test_Add_Renamed, and the game's binding keeps Test_Add as an alias of its
+// permanent id, test.add. The mod still asks for Test_Add, and binds; status.json names the id.
+void an_old_name_still_binds(const fs::path& plugins) {
+    static const mods::HookPoint renamed[] = {
+        {"Test_Add_Renamed", "func_00100000", "i32(i32)", &g_slot_add, reinterpret_cast<void*>(add_game)},
+    };
+    static const openrac_script_alias aliases[] = {
+        {"Test_Add", "test.add"},
+        {"Test_Add_Renamed", "test.add"},
+        {"func_00100000", "test.add"},
+    };
+    static const char* const discs[] = {"one"};
+    static const openrac_script_binding binding = {"test", 1, discs, 0, nullptr, 0, nullptr, nullptr, 3, aliases};
+    CHECK(std::string(openrac_script_hook_id(&binding, "Test_Add")) == "test.add");
+    CHECK(std::string(openrac_script_hook_id(&binding, "func_00100000")) == "test.add");
+    CHECK(std::string(openrac_script_hook_id(&binding, "test.add")) == "test.add");
+    CHECK(std::string(openrac_script_hook_id(&binding, "Unknown")) == "Unknown");
+    CHECK(std::string(openrac_script_hook_id(nullptr, "Test_Add")) == "Test_Add");
+    write(plugins / "plugins.json", R"({"format": 1, "mods": [{"id": "test-a", "enabled": true, "settings": {"tag": 5}}]})");
+    mods::Host h = host(plugins);
+    h.hooks = renamed;
+    h.scripts = &binding;
+    CHECK(mods::load(h) == "test-a 1.0.0");
+    CHECK(add(0) == 15);
+    CHECK(status_of(plugins, "test-a").first == "loaded");
+    const std::string status = read(plugins / "status.json");
+    CHECK(status.find("\"hooks\": [\"test.add\"]") != std::string::npos);
+    CHECK(status.find("\"hook_points\": [\"test.add\"]") != std::string::npos);
+    mods::reset();
+}
+
 int main() {
     const fs::path dir = fs::temp_directory_path() / ("openrac_mod_loader_test_" + std::to_string(std::rand()));
     fs::remove_all(dir);
@@ -247,6 +280,7 @@ int main() {
     purist_and_no_list(plugins);
     a_library_of_another_id(plugins);
     an_installed_launchers_layout(dir);
+    an_old_name_still_binds(plugins);
     std::error_code e;
     fs::remove_all(dir, e);
     return test::result();

@@ -96,6 +96,13 @@ typedef struct openrac_script_moby {
     const openrac_script_class* classes;
 } openrac_script_moby;
 
+/* Another name of a hook point (its name in the table, a disc's symbol, a name it had before), to
+ * its permanent id (docs/port/MODS.md, section 4). */
+typedef struct openrac_script_alias {
+    const char* alias;
+    const char* id;
+} openrac_script_alias;
+
 typedef struct openrac_script_binding {
     const char* game;
     int disc_count;
@@ -105,7 +112,13 @@ typedef struct openrac_script_binding {
     int field_count;
     const openrac_script_field* fields;
     const openrac_script_moby* moby; /* null until the game's behaviour catalogue is in */
+    int alias_count;
+    const openrac_script_alias* aliases; /* sorted by alias (strcmp) */
 } openrac_script_binding;
+
+/* The permanent id `name` stands for: name itself when it is an id or the binding has no such
+ * alias (and with no binding). */
+const char* openrac_script_hook_id(const openrac_script_binding* binding, const char* name);
 
 /* The game's binding, or null for a game with none. */
 const openrac_script_binding* openrac_game_script_binding(void);

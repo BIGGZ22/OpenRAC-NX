@@ -40,6 +40,29 @@ struct openrac_mod {
     openrac_mod_unload_fn unload = nullptr;
 };
 
+// A hook point's permanent id from any of its names (openrac/script_binding.h): the binding's
+// aliases are sorted, so by halves.
+extern "C" const char* openrac_script_hook_id(const openrac_script_binding* binding, const char* name) {
+    if (binding == nullptr || name == nullptr || binding->aliases == nullptr) {
+        return name;
+    }
+    int low = 0;
+    int high = binding->alias_count - 1;
+    while (low <= high) {
+        const int mid = low + (high - low) / 2;
+        const int c = std::strcmp(binding->aliases[mid].alias, name);
+        if (c == 0) {
+            return binding->aliases[mid].id;
+        }
+        if (c < 0) {
+            low = mid + 1;
+        } else {
+            high = mid - 1;
+        }
+    }
+    return name;
+}
+
 namespace openrac::mods {
 
 bool g_frame_callbacks = false;
@@ -58,6 +81,11 @@ struct PadCallback {
 };
 
 const Host* g_host = nullptr;
+
+// A hook point's id from one of its names, through the game's binding (none: the name).
+const char* hook_id(const Host& host, const char* name) {
+    return openrac_script_hook_id(host.scripts, name);
+}
 openrac_mod* g_loading = nullptr;  // the mod whose openrac_mod_load runs: hooks are taken then only
 std::vector<std::unique_ptr<openrac_mod>> g_loaded;
 std::vector<FrameCallback> g_frames;
@@ -133,9 +161,11 @@ int api_hook(openrac_mod* mod, const char* name, const char* signature, void* re
     if (name == nullptr || replacement == nullptr || original == nullptr) {
         return OPENRAC_HOOK_UNKNOWN;
     }
+    // Asked for by its id or any alias (an earlier name, a symbol): the hook point's id decides.
+    const char* id = hook_id(*g_host, name);
     for (int i = 0; i < g_host->hook_count; ++i) {
         const HookPoint& p = g_host->hooks[i];
-        if (p.name == nullptr || std::strcmp(p.name, name) != 0) {
+        if (p.name == nullptr || std::strcmp(hook_id(*g_host, p.name), id) != 0) {
             continue;
         }
         if (signature == nullptr || std::strcmp(p.signature, signature) != 0) {
@@ -149,8 +179,9 @@ int api_hook(openrac_mod* mod, const char* name, const char* signature, void* re
         *original = before != nullptr ? before : p.original;
         mod->taken.emplace_back(p.slot, before);
         *p.slot = replacement;
-        mod->hooks.emplace_back(name);
-        if (std::find(mod->manifest.hooks.begin(), mod->manifest.hooks.end(), name) == mod->manifest.hooks.end()) {
+        mod->hooks.emplace_back(id);
+        const auto listed = [&](const std::string& h) { return std::strcmp(hook_id(*g_host, h.c_str()), id) == 0; };
+        if (std::none_of(mod->manifest.hooks.begin(), mod->manifest.hooks.end(), listed)) {
             log::warn("mod {} takes hook point {}, which its manifest's \"hooks\" does not list", mod->id, name);
         }
         return OPENRAC_HOOK_OK;
@@ -319,7 +350,7 @@ void write_status(const Host& host, const std::vector<Outcome>& outcomes) {
     o << (outcomes.empty() ? "],\n" : "\n  ],\n");
     o << "  \"hook_points\": [";
     for (int i = 0; i < host.hook_count; ++i) {
-        o << (i == 0 ? "" : ", ") << quoted(host.hooks[i].name);
+        o << (i == 0 ? "" : ", ") << quoted(hook_id(host, host.hooks[i].name));
     }
     o << "]\n}\n";
     // Written beside and moved into place, so the launcher never reads half a file.
