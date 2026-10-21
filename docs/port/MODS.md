@@ -88,6 +88,37 @@ folder is the player's own (in the install folder, a per-user folder by
 default) and only the launcher writes it; the port reads it and writes
 `status.json`.
 
+**Where that is on each system.** The install folder is the launcher's
+setting (Settings, "Install folder"); everything above lives in it, with the
+player's games, and never beside a program. The launcher's own folder (an
+AppImage, the macOS app, the Windows installer's folder) is read-only and
+replaced by an update, so nothing a player adds goes there. Unless the player
+chose another, the install folder is:
+
+| System | Install folder | A game's mods |
+|---|---|---|
+| Linux (AppImage, deb, rpm, a checkout) | `~/OpenRAC` | `~/OpenRAC/active/rac1/data/plugins/` |
+| macOS | `~/OpenRAC` | `~/OpenRAC/active/rac1/data/plugins/` |
+| Windows | `%USERPROFILE%\OpenRAC` | `%USERPROFILE%\OpenRAC\active\rac1\data\plugins\` |
+
+and when that folder cannot be made, the launcher's per-user data folder
+(`~/.local/share/dev.openrac.launcher` on Linux, `~/Library/Application
+Support/dev.openrac.launcher` on macOS, `%LOCALAPPDATA%\dev.openrac.launcher`
+on Windows). The launcher's Settings show the folder in use.
+
+**Neither side guesses.** The launcher starts the game with `--data <data>`
+and `--plugins <data>/plugins/plugins.json` (or `--no-mods` in Purist mode),
+the same in an installed launcher and a checkout; the port reads only what
+those name and writes `status.json` beside the list. Run by hand without
+`--plugins`, the port reads `<data>/plugins/plugins.json`. Nothing of a
+source tree is read at run time.
+
+**Android** carries the game inside the app and runs it there; the system
+does not let an app load code from the files it writes (since Android 10), so
+native mods are not loaded on Android: the Mods tab shows them as not for
+this platform (no `plugin` entry for it). Data packs work there as
+elsewhere.
+
 ## 3. The manifest: `openrac-mod.json`
 
 ```jsonc
@@ -323,11 +354,20 @@ game's thread.
 ## 8. The SDK
 
 `sdk/` in OpenRAC: the headers, a CMake package, a template and an example.
+No copy of OpenRAC is needed to use it: each version is published as one
+archive, `openrac-mod-sdk-<version>.zip`, on the release `sdk-v<version>`
+of OpenRAC/OpenRAC, with its SHA-256 ([sdk.yml](../../.github/workflows/sdk.yml),
+[package_sdk.py](../../sdk/tools/package_sdk.py)). Its version is the
+interface's, `MAJOR.MINOR`, and a patch number for fixes to the SDK itself
+(`sdk/VERSION`): the SDK 1.0.x builds mods for interface 1.0. The archive is
+the same bytes wherever it is made, so a mod's build can pin the version and
+its hash (rac1-mods does: `sdk.lock`).
 
 ```sh
-cmake -S my-mod -B build -DOpenRACMod_DIR=<OpenRAC>/sdk/cmake
+unzip openrac-mod-sdk-1.0.0.zip
+cmake -S my-mod -B build -DOpenRACMod_DIR=$PWD/openrac-mod-sdk-1.0.0/cmake
 cmake --build build
-python3 <OpenRAC>/sdk/tools/package_mod.py build/package   # dist/<id>-<version>-<platform>.zip
+python3 openrac-mod-sdk-1.0.0/tools/package_mod.py build/package/*   # dist/<id>-<version>-<platform>.zip
 ```
 
 `openrac_add_mod(<target> MANIFEST openrac-mod.json SOURCES ...)` makes the

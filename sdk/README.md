@@ -4,12 +4,12 @@ What you need to write a **native mod** for OpenRAC's native port: a small
 shared library the game loads at start, which changes what the game does
 through named hook points, a callback each game tick, the pad's reports and
 its own settings. The design, the rules and how the port and the launcher
-treat a mod are in [docs/port/MODS.md](../docs/port/MODS.md); Ratchet &
+treat a mod are in [docs/port/MODS.md](https://github.com/OpenRAC/OpenRAC/blob/master/docs/port/MODS.md) (`docs/MODS.md` in the archive); Ratchet &
 Clank's mods are in [OpenRAC/rac1-mods](https://github.com/OpenRAC/rac1-mods),
 starting with the lock-strafe.
 
 A mod of textures, models or level edits needs none of this: that is a data
-pack, made with the level editor ([editor/MODDING.md](../editor/MODDING.md)).
+pack, made with the level editor ([editor/MODDING.md](https://github.com/OpenRAC/OpenRAC/blob/master/editor/MODDING.md)).
 
 | | |
 |---|---|
@@ -62,19 +62,31 @@ and the mod loaded last runs first. A mod for several discs keeps a table of
 the addresses and names it uses on each and picks it by `api->version`
 (the lock-strafe does: `lock-strafe/src/discs.h` in rac1-mods).
 
+## Getting the SDK
+
+Download `openrac-mod-sdk-<version>.zip` from the
+[OpenRAC releases](https://github.com/OpenRAC/OpenRAC/releases) named
+`sdk-v<version>` and unpack it anywhere; no copy of OpenRAC is needed. The
+version is the mod interface's `MAJOR.MINOR` and a patch for fixes to the SDK
+(`VERSION`): the SDK 1.0.x builds mods for interface 1.0, which every port of
+interface 1.y loads. Each release gives the archive's SHA-256, so a build can
+pin it (rac1-mods' `sdk.lock` and `tools/fetch_sdk.py` do). Below, `<SDK>` is
+the unpacked folder (`openrac-mod-sdk-1.0.0`), or `sdk/` in a checkout of
+OpenRAC; `python3 sdk/tools/package_sdk.py` makes the archive from a checkout.
+
 ## Building
 
 You need CMake 3.20 or newer, a C compiler (Clang, GCC or MSVC) and Python 3
 for the packaging. Ninja is the quickest generator; any works.
 
 ```sh
-cp -r <OpenRAC>/sdk/template my-mod      # then set the id, the name, the target
+cp -r <SDK>/template my-mod      # then set the id, the name, the target
 cd my-mod
-cmake -S . -B build -G Ninja -DOPENRAC_SDK=<OpenRAC>/sdk
+cmake -S . -B build -G Ninja -DOPENRAC_SDK=<SDK>
 cmake --build build
 ```
 
-(`-DOpenRACMod_DIR=<OpenRAC>/sdk/cmake` does the same as `OPENRAC_SDK`.)
+(`-DOpenRACMod_DIR=<SDK>/cmake` does the same as `OPENRAC_SDK`.)
 
 - **macOS**: Xcode's command-line tools (`xcode-select --install`) and
   `brew install cmake ninja`. A build is for the Mac's own processor;
@@ -100,9 +112,9 @@ the library, and the README and LICENSE beside the manifest. The platforms are
 ## Packaging
 
 ```sh
-python3 <OpenRAC>/sdk/tools/package_mod.py build/package/my_mod        # dist/my-mod-0.1.0-macos-arm64.zip
-python3 <OpenRAC>/sdk/tools/package_mod.py --merge dist/my-mod-0.1.0-*.zip -o dist/my-mod-0.1.0.zip
-python3 <OpenRAC>/sdk/tools/package_mod.py --check openrac-mod.json     # the manifest only
+python3 <SDK>/tools/package_mod.py build/package/my_mod        # dist/my-mod-0.1.0-macos-arm64.zip
+python3 <SDK>/tools/package_mod.py --merge dist/my-mod-0.1.0-*.zip -o dist/my-mod-0.1.0.zip
+python3 <SDK>/tools/package_mod.py --check openrac-mod.json     # the manifest only
 ```
 
 The archive is checked by the rules the launcher and the port apply (MODS.md,
@@ -123,6 +135,21 @@ settings, and Play: the game's log (Logs, under the game's saves) says
 that was not loaded says why on its row in the Mods tab. By hand, without the
 launcher: copy the folder to `<data>/plugins/my-mod/` and list it in
 `<data>/plugins/plugins.json` (MODS.md, section 5).
+
+`<data>` is the game's set-up folder in the launcher's install folder, the
+same for an installed launcher (AppImage, deb, rpm, the macOS app, the Windows
+installer) and a checkout; the launcher's own folder is never written:
+
+| System | A game's mods, by default |
+|---|---|
+| Linux, macOS | `~/OpenRAC/active/<game>/data/plugins/` |
+| Windows | `%USERPROFILE%\OpenRAC\active\<game>\data\plugins\` |
+
+(Settings in the launcher shows the install folder, if the player chose
+another.) The launcher starts the game with `--plugins` naming that list, and
+the game writes `status.json` beside it: what it did with each mod at its last
+start, which is the first place to look when yours did not load. Android does
+not load native mods (the system refuses code an app wrote itself).
 
 **Purist mode** (Settings) starts the game with no mods at all; so does the
 port's `--no-mods`.
