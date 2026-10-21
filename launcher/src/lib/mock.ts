@@ -283,6 +283,11 @@ const installs: Record<string, BuildInfo | undefined> = fresh
 /** ?built (and ?crash): the game is built and its levels are ready, so Play is the main button. */
 const built = query.has("built") || query.has("crash");
 
+/** The steps a built game and ready levels mean are done: the ones that made them. The rest
+ *  (the editor's projects, the exports, the packs) are not, whatever the mock is asked to
+ *  pretend. */
+const BUILT_DONE = new Set(["play", "port-build", "port-rebuild", "port-levels", "port-levels-check"]);
+
 function installState(game: string): InstallState {
   return {
     dir: `${config.installDir ?? ""}/active/${game}/data`,
@@ -372,8 +377,10 @@ function view(action: RawAction, st: VersionStatus | null): ActionView {
     thisPlatform,
     runnable: blockers.length === 0,
     blockers,
-    // The mock has no files: nothing is built or made (but with ?built).
-    done: built,
+    // The mock has no files: nothing is built or made, except what ?built says is (the game
+    // built and its levels ready). Only the steps that made those are done; the rest are not,
+    // or a page would say an action that never ran is done.
+    done: built && BUILT_DONE.has(action.id),
   };
 }
 

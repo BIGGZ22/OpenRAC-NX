@@ -17,6 +17,10 @@ describe("format", () => {
     expect(size(4214784000)).toBe("4,2 GB");
     expect(size(1388100)).toBe("1,4 MB");
     expect(size(630_000_000)).toBe("630 MB");
+    // Rounded before the unit: 999 999 bytes is a megabyte, not "1000 KB".
+    expect(size(999_999)).toBe("1,0 MB");
+    expect(size(999_999_999)).toBe("1,0 GB");
+    expect(size(1000)).toBe("1,0 KB");
   });
 
   it("writes durations", () => {

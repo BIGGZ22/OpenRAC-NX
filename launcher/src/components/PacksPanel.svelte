@@ -57,14 +57,24 @@
 
   onMount(() => {
     let stop: (() => void) | undefined;
+    // The listener is registered when the promise is answered, which may be after this
+    // panel is closed: it is then taken away at once, or a file dropped later would start
+    // an add for a game the player has left.
+    let closed = false;
     void onDrop(
       (paths) => {
         dropping = false;
         void addPaths(paths);
       },
       (over) => (dropping = over),
-    ).then((off) => (stop = off));
-    return () => stop?.();
+    ).then((off) => {
+      if (closed) off();
+      else stop = off;
+    });
+    return () => {
+      closed = true;
+      stop?.();
+    };
   });
 
   /** The last line the add printed. */

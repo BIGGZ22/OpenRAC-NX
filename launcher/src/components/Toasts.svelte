@@ -7,22 +7,35 @@
 
   const infos = $derived(app.toasts.filter((t) => t.kind !== "error"));
   const errors = $derived(app.toasts.filter((t) => t.kind === "error"));
+
+  // The pointer and the focus each hold the toasts, and each lets them go: the two are counted
+  // apart, so that moving the pointer out while the focus is still on them (or the other way
+  // round) does not let a message go before it is read.
+  let pointerOver = false;
+  let focusWithin = false;
+  const hold = () => {
+    holdToasts(pointerOver || focusWithin);
+  };
 </script>
 
 <div
   class="toasts"
   role="presentation"
   onpointerenter={() => {
-    holdToasts(true);
+    pointerOver = true;
+    hold();
   }}
   onpointerleave={() => {
-    holdToasts(false);
+    pointerOver = false;
+    hold();
   }}
   onfocusin={() => {
-    holdToasts(true);
+    focusWithin = true;
+    hold();
   }}
   onfocusout={() => {
-    holdToasts(false);
+    focusWithin = false;
+    hold();
   }}
 >
   <div class="list" role="alert">

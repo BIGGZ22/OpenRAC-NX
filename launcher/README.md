@@ -251,10 +251,13 @@ launcher/
   (`baserom/` inputs, build output, `assets/godot` for the level editor), all
   ignored by git.
 - **Progress from openrac.dev**: at start-up it fetches
-  `https://openrac.dev/progress.json` and keeps a copy in
-  `build/launcher/progress.json` for the next start without a network. A
-  version shows the site's figures only where they are ahead of the
-  checkout's own `progress/summary.json`, which the launcher never writes.
+  `https://openrac.dev/progress.json` and keeps a copy in the per-user
+  folder beside its settings (`progress.json` next to `launcher.json`), for
+  the next start without a network. That folder is the player's own to
+  write, unlike a checkout the launcher does not own (the copy an
+  installed launcher carries). A version shows the site's figures only
+  where they are ahead of the checkout's own `progress/summary.json`, which
+  the launcher never writes.
 - **Discord**: unless switched off in Settings, Discord's Rich Presence shows
   the game being viewed, set up, built or played. While a game plays, Discord
   says "Playing Ratchet & Clank", "Exploring Kerwan · Metropolis" and the

@@ -4,7 +4,7 @@
   // to copy and send us when something failed. With developer tools on this is Develop's console.
   import DevConsole from "$components/DevConsole.svelte";
   import Icon from "$components/Icon.svelte";
-  import { app, cancel, clearFinished, clock, jobs } from "$lib/app.svelte";
+  import { app, cancel, clearFinished, clock, jobs, toast } from "$lib/app.svelte";
   import { elapsed } from "$lib/format";
   import { isGame, phaseLabel, readProgress } from "$lib/progress";
   import type { Job } from "$lib/queue";
@@ -51,12 +51,18 @@
     }
     if (job.state === "succeeded") return did(job);
     if (job.state === "cancelled") return "Stopped before it finished.";
-    if (isGame(job)) return "The game stopped unexpectedly. Its page has a report you can send us.";
+    // The game ended by itself: it may have crashed, or it may have been closed. Its page says
+    // which, so this does not claim a crash.
+    if (isGame(job)) return "The game stopped. Its page has what happened.";
     return "It did not finish. Copy what it printed and send it to us on GitHub or Discord.";
   }
 
   async function copy(job: Job) {
-    await navigator.clipboard.writeText([`$ ${job.command}`, ...job.lines.map((l) => l.line)].join("\n"));
+    try {
+      await navigator.clipboard.writeText([`$ ${job.command}`, ...job.lines.map((l) => l.line)].join("\n"));
+    } catch {
+      toast("The output could not be copied: the browser would not give it to the clipboard.", "error");
+    }
   }
 </script>
 

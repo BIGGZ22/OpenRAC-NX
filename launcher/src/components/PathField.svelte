@@ -24,6 +24,8 @@
 
   let result = $state<Check | null>(null);
   let checking = $state(false);
+  /** The field's id: the label's words, without the spaces an id may not hold. */
+  const id = $derived(`path-${label.toLowerCase().replace(/[^a-z0-9]+/g, "-")}`);
 
   $effect(() => {
     const path = value;
@@ -51,7 +53,7 @@
 
 <div class="field">
   <div class="row">
-    <label class="grow" for={label}>{label}</label>
+    <label class="grow" for={id}>{label}</label>
     {#if checking}
       <span class="spinner dim"></span>
     {:else if result && !result.ok}
@@ -63,7 +65,7 @@
   <p class="dim hint">{hint}</p>
   <div class="row">
     <input
-      id={label}
+      {id}
       type="text"
       spellcheck="false"
       value={value ?? ""}

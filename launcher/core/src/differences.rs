@@ -270,7 +270,10 @@ pub fn set_fix(
     let mut written = file.clone().into_os_string();
     written.push(".new");
     let written = PathBuf::from(written);
-    std::fs::write(&written, changed).map_err(|e| format!("{}: {e}", written.display()))?;
+    if let Err(e) = std::fs::write(&written, changed) {
+        let _ = std::fs::remove_file(&written);
+        return Err(format!("{}: {e}", written.display()));
+    }
     std::fs::rename(&written, &file).map_err(|e| {
         let _ = std::fs::remove_file(&written);
         format!("{}: {e}", file.display())

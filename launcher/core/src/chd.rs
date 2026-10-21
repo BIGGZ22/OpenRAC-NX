@@ -50,6 +50,11 @@ impl<F: Read + Seek> ChdImage<F> {
             );
         }
         let hunk = chd.get_hunksized_buffer();
+        if hunk.is_empty() {
+            // A hunk size of zero: the image cannot be read (and reading it would divide by
+            // that size).
+            return Err("this CHD image has no hunk size: it cannot be read".into());
+        }
         Ok(ChdImage { chd, hunk, compressed: Vec::new(), current: None })
     }
 
@@ -78,6 +83,9 @@ impl<F: Read + Seek> ChdImage<F> {
             return Err("past the end of the image".into());
         }
         let size = self.hunk.len() as u64;
+        if size == 0 {
+            return Err("this CHD image has no hunk size: it cannot be read".into());
+        }
         let mut done = 0;
         while done < buffer.len() {
             let at = offset + done as u64;
@@ -176,6 +184,19 @@ pub(crate) mod tests {
 
     fn data(len: usize) -> Vec<u8> {
         (0..len).map(|i| (i * 7 % 251) as u8).collect()
+    }
+
+    #[test]
+    fn an_image_without_a_hunk_size_is_refused() {
+        let mut image = chd_of(&data(4096), 4096);
+        // The header's hunk size: zero. Such an image cannot be read (reading it would
+        // divide by that size), so it is refused rather than read.
+        image[56..60].copy_from_slice(&0u32.to_be_bytes());
+        let err = match ChdImage::new(Cursor::new(image)) {
+            Ok(_) => panic!("an image without a hunk size is read"),
+            Err(e) => e,
+        };
+        assert!(!err.is_empty());
     }
 
     #[test]

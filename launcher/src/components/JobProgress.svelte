@@ -22,7 +22,7 @@
 
   // The newest line is in view while the box is open.
   $effect(() => {
-    if (open && box && text.length >= 0) box.scrollTop = box.scrollHeight;
+    if (open && box && text.length > 0) box.scrollTop = box.scrollHeight;
   });
 </script>
 

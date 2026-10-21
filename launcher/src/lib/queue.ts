@@ -42,6 +42,8 @@ export class Queue {
   private nextKey = 0;
   /** Events for ids no job has yet (the start call has not returned). */
   private early = new Map<number, JobEvent[]>();
+  /** The jobs that ended, waiting to be reported (see takeEnded). */
+  private ended: Job[] = [];
 
   constructor(jobs: Job[] = []) {
     this.jobs = jobs;
@@ -129,6 +131,7 @@ export class Queue {
     job.code = event.code;
     job.endedAt = now;
     job.state = event.cancelled ? "cancelled" : event.code === 0 ? "succeeded" : "failed";
+    this.ended.push(job);
   }
 
   /** Forgets finished jobs. */
@@ -137,5 +140,17 @@ export class Queue {
       const state = this.jobs[i]?.state;
       if (state !== "queued" && state !== "running") this.jobs.splice(i, 1);
     }
+    this.ended = this.ended.filter((job) => this.jobs.includes(job));
+  }
+
+  /**
+   * The job that ended, if one has and the app has not taken it yet.
+   *
+   * A job's end is reported here, and only here, so that it is acted on once
+   * whether its exit event came before the start call returned (the event was
+   * kept until the id was known) or after it.
+   */
+  takeEnded(): Job | undefined {
+    return this.ended.shift();
   }
 }

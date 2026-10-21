@@ -526,12 +526,21 @@ fn send_packet<W: Write>(writer: &mut W, opcode: u32, payload: &str) -> std::io:
     Ok(())
 }
 
+/// The largest a reply from Discord's socket may be: the launcher sends a presence and
+/// reads a handshake or an acknowledgement, both small. The length comes from the other
+/// side, and the socket's path is in a folder any local program can write, so it is
+/// checked before anything is allocated for it.
+const MAX_REPLY: usize = 1024 * 1024;
+
 #[cfg(any(unix, windows))]
 fn read_packet<R: Read>(reader: &mut R) -> std::io::Result<(u32, Vec<u8>)> {
     let mut header = [0u8; 8];
     reader.read_exact(&mut header)?;
     let opcode = u32::from_le_bytes(header[0..4].try_into().unwrap());
     let len = u32::from_le_bytes(header[4..8].try_into().unwrap()) as usize;
+    if len > MAX_REPLY {
+        return Err(std::io::Error::new(std::io::ErrorKind::InvalidData, "the reply is too large"));
+    }
 
     let mut buf = vec![0u8; len];
     reader.read_exact(&mut buf)?;
@@ -541,6 +550,16 @@ fn read_packet<R: Read>(reader: &mut R) -> std::io::Result<(u32, Vec<u8>)> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn a_reply_that_asks_for_too_much_is_refused() {
+        // The length comes from the other side: a reply that asks for four gigabytes is
+        // refused before anything is allocated for it.
+        let mut packet = Vec::new();
+        packet.extend_from_slice(&1u32.to_le_bytes());
+        packet.extend_from_slice(&u32::MAX.to_le_bytes());
+        assert!(read_packet(&mut packet.as_slice()).is_err());
+    }
 
     #[test]
     fn serializes_activity_cleanly() {

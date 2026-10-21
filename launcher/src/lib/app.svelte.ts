@@ -36,6 +36,9 @@ interface AppState {
   library: Library | null;
   /** Why the library could not be read (no checkout set, a broken game.json). */
   libraryError: string | null;
+  /** Why the launcher could not start (a command that failed at start-up); the start-up
+   *  screen says it, and offers to try again. */
+  startError: string | null;
   /** The games found in the player's games folder (api.scanDiscs). */
   discs: FoundDisc[];
   /** Developers only: the games whose disc can be switched (core/src/disc_choice.rs). */
@@ -67,6 +70,7 @@ export const app = $state<AppState>({
   config: null,
   library: null,
   libraryError: null,
+  startError: null,
   discs: [],
   discChoices: [],
   page: "library",
@@ -220,48 +224,48 @@ export async function guard<T>(work: Promise<T>): Promise<T | undefined> {
 
 // ---- loading ----------------------------------------------------------------------------
 
+/** Whether the launcher is already listening for its job's events: the start-up can fail and
+ *  be tried again, and the events must not be handled twice. */
+let listening = false;
+/** The clock's timer, so that a second start leaves only one running. */
+let clockTimer: ReturnType<typeof setInterval> | undefined;
+
 export async function start() {
-  setInterval(() => (clock.now = Date.now()), 1000);
-  await onJobEvent((event) => {
-    queue.apply(event);
-    if (event.type === "exit") {
-      const job = queue.jobs.find((j) => j.id === event.id);
-      const played = !!job && PLAY_ACTIONS.includes(job.actionId) && job.scope.kind === "version";
-      if (played) {
-        app.reportsChanged++;
-        void countCrashes();
+  app.startError = null;
+  try {
+    if (!listening) {
+      await onJobEvent((event) => {
+        queue.apply(event);
+        // A job that ended: the exit event, whether it came before the start call
+        // returned (the queue kept it until the id was known) or after it.
+        const ended = queue.takeEnded();
+        if (ended) handleExit(ended);
+      });
+      listening = true;
+      // The time, once a second: what a running job's elapsed time is counted against.
+      if (clockTimer) clearInterval(clockTimer);
+      clockTimer = setInterval(() => (clock.now = Date.now()), 1000);
+      if (onAndroid) {
+        keepAliveInBackground();
+        void readGame();
+        // Back in front (from the game, or from Home): is the game still running?
+        document.addEventListener("visibilitychange", () => {
+          if (document.visibilityState === "visible") void readGame();
+        });
       }
-      // The game stopping on its own is not a failed task: the Play page says what happened.
-      if (job?.state === "failed" && played) void gameStopped(job);
-      else if (job?.state === "failed") toast(`${job.title} failed`, "error");
-      // Played to the end since: the notice folds to a line (CrashNotice), the report still a click away.
-      if (
-        job?.state === "succeeded" &&
-        played &&
-        job.scope.kind === "version" &&
-        app.stopped &&
-        job.scope.key.startsWith(`${app.stopped.game}/`)
-      ) {
-        app.stopped = { ...app.stopped, playedSince: true };
-      }
-      if (job) settle(job.key, job.state === "succeeded");
-      void refresh();
-      updateDiscordPresence();
-      pump();
     }
-  });
-  if (onAndroid) {
-    keepAliveInBackground();
-    void readGame();
-    // Back in front (from the game, or from Home): is the game still running?
-    document.addEventListener("visibilitychange", () => {
-      if (document.visibilityState === "visible") void readGame();
-    });
+    app.info = await api.appInfo();
+    app.config = await firstRun(await api.getConfig());
+  } catch (e) {
+    // The launcher could not read what it needs to start: it says so, and the player may
+    // try again. Without this the window waits for a spinner that never goes away.
+    app.startError = errorText(e);
+    return;
   }
   if (onAndroid) await prepareTools();
-  app.info = await api.appInfo();
-  app.config = await firstRun(await api.getConfig());
-  if (app.config.lastVersion) app.version = app.config.lastVersion;
+  // The version the launcher showed last; a version named in the address (the browser
+  // preview's ?version=) is kept.
+  if (!app.version && app.config.lastVersion) app.version = app.config.lastVersion;
   await refresh();
   void syncProgressWeb();
   void adoptGodot();
@@ -285,6 +289,31 @@ async function prepareTools() {
   }
 }
 
+/**
+ * A job ended: what the launcher does about it. Called once per job, whether
+ * its exit event came before the start call returned or after it (the queue
+ * keeps the end until it is taken).
+ */
+function handleExit(job: Job) {
+  const version = job.scope.kind === "version" ? job.scope.key : null;
+  const played = version !== null && PLAY_ACTIONS.includes(job.actionId);
+  if (played) {
+    app.reportsChanged++;
+    void countCrashes();
+  }
+  // The game stopping on its own is not a failed task: the Play page says what happened.
+  if (job.state === "failed" && played) void gameStopped(job);
+  else if (job.state === "failed") toast(`${job.title} failed`, "error");
+  // Played to the end since: the notice folds to a line (CrashNotice), the report still a click away.
+  if (job.state === "succeeded" && played && app.stopped && version.startsWith(`${app.stopped.game}/`)) {
+    app.stopped = { ...app.stopped, playedSince: true };
+  }
+  settle(job.key, job.state === "succeeded");
+  void refresh();
+  updateDiscordPresence();
+  pump();
+}
+
 /** The game ended with an error status or a signal: find its crash report and show the notice. */
 async function gameStopped(job: Job) {
   if (job.scope.kind !== "version") return;
@@ -294,14 +323,25 @@ async function gameStopped(job: Job) {
   // No install folder: the notice still says it stopped.
   const crash = await api.latestCrash(game, since).catch(() => null);
   app.stopped = { game, versionKey, code: job.code, at: job.endedAt ?? Date.now(), crash, lines: lastLines(job.lines) };
-  // On another page, the player is told where to look.
+  // On another page, the player is told where to look. A crash is worth a message to us; a game
+  // that was closed is not.
   if (app.page !== "game" || currentVersion()?.game !== game) {
-    toast("The game stopped unexpectedly. Its page has a report you can send us.", "error");
+    if (crash) toast("The game crashed. Its page has a report you can send us.", "error");
+    else toast("The game was closed. Its page has what happened.", "info");
   }
 }
 
+// The reads of the state that are in flight. Several run at once (a job ends while the
+// window gets the focus, the settings change, the figures are fetched from the site), and
+// the answers can come back in any order: only the newest one is used, so that an older
+// answer cannot put an out-of-date library, disc list or crash count back.
+let librarySeq = 0;
+let discsSeq = 0;
+let crashesSeq = 0;
+
 /** How many crash reports each set-up game has, for the tiles and the Play page's badge. */
 export async function countCrashes() {
+  const seq = ++crashesSeq;
   const counts: AppState["crashes"] = {};
   const recent = Date.now() / 1000 - 3 * 86400;
   for (const g of app.library?.games ?? []) {
@@ -314,7 +354,8 @@ export async function countCrashes() {
       // no install folder: nothing to count
     }
   }
-  app.crashes = counts;
+  // A count that is not the newest one is not put in: it would undo a newer one.
+  if (seq === crashesSeq) app.crashes = counts;
 }
 
 /**
@@ -377,31 +418,39 @@ export async function refresh() {
     app.libraryError = "Choose your OpenRAC folder in Settings.";
     return;
   }
+  const library = ++librarySeq;
   try {
-    setLibrary(await api.library());
-    app.libraryError = null;
+    const read = await api.library();
+    if (library === librarySeq) {
+      setLibrary(read);
+      app.libraryError = null;
+    }
   } catch (e) {
-    app.libraryError = errorText(e);
+    if (library === librarySeq) app.libraryError = errorText(e);
   }
   void countCrashes();
+  const discs = ++discsSeq;
   let scan: { found: FoundDisc[]; choices: DiscChoice[] } = { found: [], choices: [] };
   try {
     if (app.config.discsDir) scan = await api.scanDiscs();
   } catch {
     // A folder that went away: the game pages ask for an image as before.
   }
-  if (!same("discs", scan)) {
+  if (discs === discsSeq && !same("discs", scan)) {
     app.discs = scan.found;
     app.discChoices = scan.choices;
   }
 }
 
 /** Fetches every game's latest progress from bytematch.dev (the matched figures and the functional
- *  C beside them); the Rust side fetches and keeps a copy under build/ for offline use. */
+ *  C beside them); the Rust side fetches and keeps a copy in the launcher's own folder, for
+ *  offline use. */
 export async function syncProgressWeb() {
   if (!app.config?.root) return;
+  const library = ++librarySeq;
   try {
-    setLibrary(await api.syncProgressFromWeb());
+    const read = await api.syncProgressFromWeb();
+    if (library === librarySeq) setLibrary(read);
   } catch {
     // Offline: keep what was read at start (the kept copy)
   }
@@ -420,12 +469,14 @@ async function adoptGodot() {
   }
 }
 
-export async function saveConfig(config: Config) {
+/** Saves the settings. False when the write failed: the page then keeps what was typed
+ *  and says so, instead of going back to the settings that were saved. */
+export async function saveConfig(config: Config): Promise<boolean> {
   const saved = await guard(api.saveConfig(config));
-  if (saved) {
-    app.config = saved;
-    await refresh();
-  }
+  if (!saved) return false;
+  app.config = saved;
+  await refresh();
+  return true;
 }
 
 // ---- navigation ---------------------------------------------------------------------------
@@ -461,8 +512,9 @@ function taskOf(actionId: string): string | null {
 }
 
 export function updateDiscordPresence(page: Page = app.page, version: string | null = app.version) {
-  // While the game (the native port) runs, the status stays PlayingGame:
-  const playingJob = jobs.list.find((j) => j.actionId === "play" && j.state === "running");
+  // While the game (the native port) runs, the status stays PlayingGame. The game with
+  // the player's mods is the same program, so it counts too.
+  const playingJob = jobs.list.find((j) => PLAY_ACTIONS.includes(j.actionId) && j.state === "running");
   if (playingJob?.scope.kind === "version") {
     const scope = playingJob.scope;
     const versions = app.library?.games.flatMap((g) => g.versions) ?? [];
@@ -686,7 +738,11 @@ function pump() {
         return;
       }
       queue.started(job, started.id, started.command);
-      updateDiscordPresence();
+      // The job may have ended before the start call returned: its exit event was kept
+      // until the id was known, and the end is acted on now.
+      const ended = queue.takeEnded();
+      if (ended) handleExit(ended);
+      else updateDiscordPresence();
     },
     (e: unknown) => {
       queue.refused(job, errorText(e));

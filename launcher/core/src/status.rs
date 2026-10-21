@@ -67,10 +67,16 @@ pub struct InputStatus {
     pub message: String,
 }
 
-/// Whether the shared toolchains/ folder holds anything besides its README.
+/// Whether the shared toolchains/ folder holds a compiler: a folder of its own, not a file
+/// left there (a .gitkeep, an archive) and not the README.
 pub fn toolchains_present(root: &Path) -> bool {
     std::fs::read_dir(root.join("toolchains"))
-        .map(|entries| entries.filter_map(|e| e.ok()).any(|e| e.file_name() != "README.md"))
+        .map(|entries| {
+            entries.filter_map(|e| e.ok()).any(|e| {
+                let name = e.file_name().to_string_lossy().to_string();
+                !name.starts_with('.') && name != "README.md" && e.path().is_dir()
+            })
+        })
         .unwrap_or(false)
 }
 
@@ -199,6 +205,22 @@ mod tests {
             source: None,
             progress: None,
         }
+    }
+
+    #[test]
+    fn the_toolchains_are_there_when_a_compiler_is() {
+        let dir = tempfile::tempdir().unwrap();
+        let root = dir.path();
+        std::fs::create_dir_all(root.join("toolchains")).unwrap();
+        // Only the README: no compiler.
+        std::fs::write(root.join("toolchains").join("README.md"), b"compilers you supply").unwrap();
+        assert!(!toolchains_present(root));
+        // A file left there is not a compiler either.
+        std::fs::write(root.join("toolchains").join("sn-prodg.tar.gz"), b"x").unwrap();
+        assert!(!toolchains_present(root));
+        // A folder of a compiler is.
+        std::fs::create_dir_all(root.join("toolchains").join("sn-prodg-3.01")).unwrap();
+        assert!(toolchains_present(root));
     }
 
     #[test]

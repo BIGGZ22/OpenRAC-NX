@@ -68,12 +68,14 @@ export function when(seconds: number, now = Date.now(), locale?: string): string
   return `${date} at ${time}`;
 }
 
-/** The short text to copy when the game stopped without writing a report (it ended early). */
+/** The short text to copy when the game stopped without writing a report (it was closed, or it
+ *  ended by itself): what happened, and the launcher's version. Not a crash: the game wrote no
+ *  report, so there is nothing to report. */
 export function stopText(n: StopNotice, title: string, launcherVersion: string | null): string {
-  const how = n.code === null ? "it was stopped by the system" : `it ended with exit code ${n.code}`;
+  const how = n.code === null ? "it was closed (by you, or by the system)" : `it ended with exit code ${n.code}`;
   const tail = n.lines.slice(-25).join("\n");
   return [
-    `**OpenRAC: ${title} stopped unexpectedly**`,
+    `**OpenRAC: ${title} stopped**`,
     "",
     `- What happened: ${how}, without a crash report`,
     `- Launcher: ${launcherVersion ?? "?"}`,
