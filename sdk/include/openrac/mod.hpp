@@ -114,6 +114,21 @@ class Mod;
 
 namespace detail {
 
+// A hook point type's id, when it declares one (static constexpr const char* id), else its name.
+template <class T, class = void>
+struct HasId : std::false_type {};
+template <class T>
+struct HasId<T, std::void_t<decltype(T::id)>> : std::true_type {};
+template <class T>
+constexpr const char* hook_id() {
+    if constexpr (HasId<T>::value) {
+        return T::id;
+    } else {
+        return T::name;
+    }
+}
+
+
 // The library's one mod, made at load and never destroyed: the port may call a hook or a callback
 // while the program ends, after the library's statics would have gone.
 inline Mod*& instance() {
@@ -239,12 +254,16 @@ public:
     template <class HookPoint, class F>
     void hook(F&& callable) {
         using H = detail::Hook<HookPoint>;
+        // By its permanent id where the type has one (the generated games/<game>.hpp do), which
+        // lasts through renames of the game's functions; else by its name (docs/port/MODS.md,
+        // section 4).
+        const char* const asked = detail::hook_id<HookPoint>();
         if (H::callable() != nullptr) {
             throw Error(std::string(HookPoint::name) + ": this mod has already taken it");
         }
         H::callable() = new typename H::Callable(std::forward<F>(callable));
         void* original = nullptr;
-        const int result = api_->hook(handle_, HookPoint::name, HookPoint::signature,
+        const int result = api_->hook(handle_, asked, HookPoint::signature,
                                       reinterpret_cast<void*>(&H::thunk), &original);
         if (result != OPENRAC_HOOK_OK) {
             delete H::callable();

@@ -8,6 +8,8 @@
 #include <map>
 #include <stdexcept>
 #include <string>
+#include <string_view>
+#include <type_traits>
 #include <vector>
 
 #include "openrac/games/rac1.hpp"
@@ -205,8 +207,14 @@ void load(openrac::Mod& mod) {
 
 OPENRAC_MOD_CPP("test-cpp", "1.2.3", load)
 
+// A hook point's type by its permanent id is the same type (games/rac1.hpp, hooks::), and asks for
+// the id.
+static_assert(std::is_same_v<openrac::rac1::hooks::player::set_planar_velocity, openrac::rac1::Hero_SetPlanarVelocity>);
+static_assert(std::string_view(openrac::rac1::hooks::moby::bolt::update::id) == "rac1.moby.bolt.update");
+static_assert(std::string_view(openrac::detail::hook_id<Test_Twice>()) == "Test_Twice");
+
 int main() {
-    g_slots["Hero_SetPlanarVelocity"] = reinterpret_cast<void*>(&game_set_planar_velocity);
+    g_slots[openrac::rac1::Hero_SetPlanarVelocity::id] = reinterpret_cast<void*>(&game_set_planar_velocity);
     g_slots["Test_Twice"] = reinterpret_cast<void*>(&game_twice);
     openrac_api api = make_api();
     auto* handle = reinterpret_cast<openrac_mod*>(&api);
@@ -221,7 +229,7 @@ int main() {
     CHECK(g_failed.empty());
 
     // The port calls what the slot holds: the lambda, which goes on to the game's function.
-    auto velocity = reinterpret_cast<void (*)(float)>(g_slots["Hero_SetPlanarVelocity"]);
+    auto velocity = reinterpret_cast<void (*)(float)>(g_slots[openrac::rac1::Hero_SetPlanarVelocity::id]);
     velocity(1.0f);
     CHECK(g_game_angles.size() == 1 && g_game_angles[0] == 2.0f);
     auto twice = reinterpret_cast<int32_t (*)(int32_t)>(g_slots["Test_Twice"]);
