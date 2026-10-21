@@ -224,6 +224,12 @@ last) is the order they wrap the game in. A mod that does not call the
 original takes the call for itself; two such mods on one hook point are
 legal, but the launcher shows that they share it.
 
+Which moby update functions and helpers a hook point could be added for, with the
+row each needs, the levels it covers and the class field a mod filters a shared
+function on, is the generated behaviour catalogue,
+[sdk/catalogue/rac1/BEHAVIOUR.md](../../sdk/catalogue/rac1/BEHAVIOUR.md)
+([editor/catalogue.py](../../editor/catalogue.py)).
+
 Hook points are added as mods need them; adding one changes nothing for a
 game without mods. Which exist is the game header in the SDK, and the port
 writes them in `status.json`. A version's table names a hook point only where
