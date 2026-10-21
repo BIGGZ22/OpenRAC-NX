@@ -388,6 +388,72 @@ export interface PluginView {
 export type PluginInstalled =
   { kind: "plugin"; id: string; name: string; version: string; replaced: boolean; enabled: boolean } | { kind: "pack" };
 
+/** core/src/remote.rs: one mod a repository holds, shown before it is installed (docs/port/MODS.md, section 10). */
+export interface RemoteMod {
+  id: string;
+  name: string;
+  version: string;
+  author: string;
+  description: string;
+  homepage: string;
+  /** Its folder in the repository, "" for the top. */
+  path: string;
+  /** "native": code the game loads; "pack": textures, models, levels. */
+  kind: "native" | "pack";
+  games: Record<string, string[]>;
+  api: string | null;
+  compatible: boolean;
+  why: string | null;
+  /** The release asset that would be installed, and its release. */
+  asset: string | null;
+  tag: string | null;
+  /** The version installed now, if it is. */
+  installed: string | null;
+}
+
+/** core/src/remote.rs: what a repository's address holds. */
+export interface RemotePreview {
+  url: string;
+  /** "owner/repo", or the address. */
+  label: string;
+  host: "github" | "git";
+  owner: string;
+  reference: string;
+  commit: string | null;
+  mods: RemoteMod[];
+  note: string | null;
+}
+
+/** core/src/remote.rs: what installing from an address came to. */
+export type RemoteInstalled =
+  | { kind: "plugin"; id: string; name: string; version: string; replaced: boolean; enabled: boolean }
+  | { kind: "pack"; id: string; version: string; path: string };
+
+/** core/src/remote.rs: where an installed mod came from (sources.json). */
+export interface ModSource {
+  url: string;
+  path: string;
+  version: string;
+  tag: string | null;
+  commit: string | null;
+  kind: string;
+  pin: boolean;
+}
+
+export interface ModSources {
+  format: number;
+  mods: Record<string, ModSource>;
+}
+
+/** core/src/remote.rs: a newer version of an installed mod. */
+export interface ModUpdate {
+  id: string;
+  installed: string;
+  available: string;
+  tag: string | null;
+  commit: string | null;
+}
+
 /** core/src/plugins.rs: what the port did with the game's mods at its last start. */
 export interface PluginStatus {
   time: string;
@@ -658,6 +724,17 @@ export const api = {
   pluginsInstall: (game: string, version: string, path: string) =>
     call<PluginInstalled>("plugins_install", { game, version, path }),
   pluginsStatus: (game: string) => call<PluginStatus | null>("plugins_status", { game }),
+  /** Mods from a repository's address (core/src/remote.rs): what it holds, before anything is installed. */
+  pluginsPreview: (game: string, version: string, url: string) =>
+    call<RemotePreview>("plugins_preview", { game, version, url }),
+  pluginsInstallRemote: (game: string, version: string, url: string, id: string) =>
+    call<RemoteInstalled>("plugins_install_remote", { game, version, url, id }),
+  pluginsCheckUpdates: (game: string, version: string) =>
+    call<{ updates: ModUpdate[]; errors: string[] }>("plugins_check_updates", { game, version }),
+  pluginsUpdate: (game: string, version: string, id: string) =>
+    call<RemoteInstalled>("plugins_update", { game, version, id }),
+  pluginsSources: (game: string) => call<ModSources>("plugins_sources", { game }),
+  pluginsSetPin: (game: string, id: string, pin: boolean) => call<ModSources>("plugins_set_pin", { game, id, pin }),
   /** A folder inside the game's set-up folder (an export), opened with the system. */
   openGameFolder: (game: string, path: string) => call<null>("open_game_folder", { game, path }),
   /** Android: the player's GPU driver packages (src-tauri/src/android.rs). */

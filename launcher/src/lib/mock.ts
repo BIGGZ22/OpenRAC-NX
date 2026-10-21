@@ -26,7 +26,9 @@ import type {
   Library,
   PackView,
   Platform,
+  ModSources,
   PluginStatus,
+  RemotePreview,
   PluginView,
   ReportEntry,
   Progress,
@@ -510,6 +512,73 @@ function lastLines(id: string, args: Record<string, unknown>): string[] {
 }
 
 /** The native mods the preview pretends are installed: ?nomods shows none. */
+/** Where the mock's mods came from (remote.rs's sources.json): the lock-strafe, from rac1-mods. */
+const mockSources: ModSources = {
+  format: 1,
+  mods: query.has("nomods")
+    ? {}
+    : {
+        "lock-strafe": {
+          url: "https://github.com/OpenRAC/rac1-mods",
+          path: "lock-strafe",
+          version: "1.0.0",
+          tag: "v1.0.0",
+          commit: null,
+          kind: "native",
+          pin: false,
+        },
+      },
+};
+
+/** What rac1-mods holds, as remote.rs's preview gives it: the lock-strafe, and a mod for another game. */
+function mockPreview(url: string): RemotePreview {
+  return {
+    url: "https://github.com/OpenRAC/rac1-mods",
+    label: url.includes("rac1-mods") ? "OpenRAC/rac1-mods" : url.replace(/^https?:\/\/(www\.)?github\.com\//, ""),
+    host: "github",
+    owner: "OpenRAC",
+    reference: "v1.1.0",
+    commit: "7c11ca00e36c814b8e56d8d331df47852c3af271",
+    note: null,
+    mods: [
+      {
+        id: "lock-strafe",
+        name: "Lock-strafe",
+        version: "1.1.0",
+        author: "OpenRAC contributors",
+        description: "Strafe as in the later games: hold L2 or R2, or lock it on with a weapon in hand.",
+        homepage: "https://github.com/OpenRAC/rac1-mods",
+        path: "lock-strafe",
+        kind: "native",
+        games: { rac1: ["pal", "ntsc"] },
+        api: "1.0",
+        compatible: true,
+        why: null,
+        asset: "lock-strafe-1.1.0-macos-arm64.zip",
+        tag: "v1.1.0",
+        installed: mockSources.mods["lock-strafe"]?.version ?? null,
+      },
+      {
+        id: "commando-hud",
+        name: "Commando HUD",
+        version: "0.2.0",
+        author: "Someone",
+        description: "Going Commando's HUD layout.",
+        homepage: "",
+        path: "commando-hud",
+        kind: "native",
+        games: { rac2: ["ntsc"] },
+        api: "1.0",
+        compatible: false,
+        why: "It is not for rac1.",
+        asset: null,
+        tag: null,
+        installed: null,
+      },
+    ],
+  };
+}
+
 let mockPlugins: PluginView[] = query.has("nomods")
   ? []
   : [
@@ -1057,6 +1126,56 @@ export async function mockCall(command: string, args: Record<string, unknown> = 
         mockPlugins = mockPlugins.filter((p) => p.id !== mod.id);
       }
       return delay(mockPlugins.map((p) => ({ ...p })));
+    }
+    case "plugins_preview": {
+      const url = typeof args.url === "string" ? args.url : "";
+      if (!/github\.com\/[^/]+\/[^/]+/.test(url)) {
+        throw new Error(`${url} is not a repository's address: paste one that starts with https://`);
+      }
+      return delay(mockPreview(url));
+    }
+    case "plugins_install_remote": {
+      const m = mockPreview(String(args.url)).mods.find((x) => x.id === args.id);
+      if (!m) throw new Error(`no mod ${String(args.id)}`);
+      if (!m.compatible) throw new Error(m.why ?? "it cannot be installed here");
+      mockSources.mods[m.id] = {
+        url: "https://github.com/OpenRAC/rac1-mods",
+        path: m.path,
+        version: m.version,
+        tag: m.tag,
+        commit: null,
+        kind: m.kind,
+        pin: mockSources.mods[m.id]?.pin ?? false,
+      };
+      return delay({ kind: "plugin", id: m.id, name: m.name, version: m.version, replaced: true, enabled: true });
+    }
+    case "plugins_check_updates":
+      return delay({
+        updates: Object.entries(mockSources.mods)
+          .filter(([, s]) => !s.pin && s.version !== "1.1.0")
+          .map(([id, s]) => ({ id, installed: s.version, available: "1.1.0", tag: "v1.1.0", commit: null })),
+        errors: [],
+      });
+    case "plugins_update": {
+      const s = mockSources.mods[String(args.id)];
+      if (!s) throw new Error(`${String(args.id)} was not installed from a repository`);
+      s.version = "1.1.0";
+      return delay({
+        kind: "plugin",
+        id: String(args.id),
+        name: "Lock-strafe",
+        version: "1.1.0",
+        replaced: true,
+        enabled: true,
+      });
+    }
+    case "plugins_sources":
+      return delay(structuredClone(mockSources));
+    case "plugins_set_pin": {
+      const s = mockSources.mods[String(args.id)];
+      if (!s) throw new Error(`${String(args.id)} was not installed from a repository`);
+      s.pin = !!args.pin;
+      return delay(structuredClone(mockSources));
     }
     case "plugins_install": {
       const path = typeof args.path === "string" ? args.path : "";
