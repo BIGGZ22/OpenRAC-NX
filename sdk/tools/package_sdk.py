@@ -26,8 +26,8 @@ from pathlib import Path
 
 SDK = Path(__file__).resolve().parent.parent
 ROOT = SDK.parent
-# What goes in, relative to sdk/ (folders whole), and the files from elsewhere in OpenRAC.
-PARTS = ["README.md", "VERSION", "include", "cmake", "template", "examples", "catalogue", "tools/package_mod.py"]
+# What goes in, relative to sdk/ (folders whole; tests/ is the C++ layer's test, built by sdk.yml), and the files from elsewhere in OpenRAC.
+PARTS = ["README.md", "VERSION", "include", "cmake", "template", "examples", "catalogue", "tests", "tools/package_mod.py"]
 EXTRA = {"docs/MODS.md": ROOT / "docs" / "port" / "MODS.md", "LICENSE": ROOT / "COPYING"}
 SKIP = {"__pycache__", ".DS_Store", "build", "dist"}
 DATE = (2026, 1, 1, 0, 0, 0)

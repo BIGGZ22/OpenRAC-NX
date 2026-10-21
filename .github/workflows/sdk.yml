@@ -1,7 +1,8 @@
 # The mod SDK as one archive (sdk/tools/package_sdk.py): what a modder downloads to write a native
 # mod without a copy of OpenRAC (docs/port/MODS.md, sdk/README.md). Each run makes the archive,
-# checks its tools, and builds the template and the example on Windows, Linux and macOS from the
-# archive alone, unpacked away from the checkout; the archive is the run's artifact. A tag
+# checks its tools, builds the template (C++) and the example (C) and runs the C++ layer's test on
+# Windows (MSVC), Linux (GCC) and macOS (Clang) from the archive alone, unpacked away from the
+# checkout; the archive is the run's artifact. A tag
 # `sdk-v<version>` (sdk/VERSION, whose MAJOR.MINOR is the interface's) also publishes it, with its
 # SHA-256, on a release of that name, which mods pin (OpenRAC/rac1-mods). The archive is the same
 # bytes wherever it is made, so the pin holds.
@@ -99,6 +100,11 @@ jobs:
             python "$SDK/tools/package_mod.py" -o "$RUNNER_TEMP/dist" "$src"/build/package/*
           done
           ls "$RUNNER_TEMP/dist"
+      - name: Test the C++ layer
+        run: |
+          cmake -S "$SDK/tests" -B "$RUNNER_TEMP/build/sdk-tests" -G Ninja -DCMAKE_BUILD_TYPE=Release
+          cmake --build "$RUNNER_TEMP/build/sdk-tests"
+          ctest --test-dir "$RUNNER_TEMP/build/sdk-tests" --output-on-failure
 
   release:
     if: startsWith(github.ref, 'refs/tags/sdk-v')
