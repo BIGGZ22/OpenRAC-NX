@@ -25,6 +25,7 @@ level node says (rc1_packable, and its description in the Scene dock).
 import colorsys
 from dataclasses import replace
 import json
+import math
 import shutil
 import struct
 from pathlib import Path
@@ -49,6 +50,7 @@ GAME_TO_GODOT = [1, 0, 0, 0, 0, 0, -1, 0, 0, 1, 0, 0, 0, 0, 0, 1]  # (x, y, z) -
 # Placements store W = 0.01 (0.0 on some); only other values become metadata.
 STORED_W = struct.unpack("<f", struct.pack("<f", 0.01))[0]
 COLLISION_ALPHA = 0.55
+MIN_SCALE = 1e-4  # the smallest joint scale the editor's models get (LevelWriter.scale)
 PANORAMA = (2048, 1024)  # About one texel per pixel around the horizon.
 
 PROJECT = """config_version=5
@@ -150,6 +152,8 @@ class LevelWriter:
     # The collision as tiles to edit (collision_scene.py) where the level packs back; the port's
     # writer keeps the one collision.glb its viewer draws.
     editable_collision = True
+    # Zero joint scales become MIN_SCALE in the models (scale()); the port's writer keeps them.
+    godot_scales = True
 
     def __init__(self, project: Path, level: Level):
         self.level = level
@@ -222,7 +226,8 @@ class LevelWriter:
             children = [first + c for c, other in enumerate(bones.joints) if other.parent == j]
             children += [post[j]] if j in post else []
             gltf.node(f"joint_{j:03}", root=joint.parent is None, translation=list(joint.translation),
-                      rotation=list(joint.rotation), scale=list(joint.scale), **({"children": children} if children else {}))
+                      rotation=list(joint.rotation), scale=self.scale(joint.scale),
+                      **({"children": children} if children else {}))
         for j in post:
             gltf.node(f"joint_{j:03}_post", root=False)
         skin = gltf.skin(list(range(first, first + count + len(scaled))),
@@ -237,12 +242,22 @@ class LevelWriter:
             gltf.node(moby.metal.name, metal, skin=skin)
         for animation in bones.animations:
             gltf.animation(animation.name + ("_loop" if animation.loop else ""), animation.times,
-                           [(post[j], "scale", values) if kind == "post_scale" else (first + j, kind, values)
+                           [(post[j], "scale", [self.scale(v) for v in values]) if kind == "post_scale"
+                            else (first + j, kind, [self.scale(v) for v in values] if kind == "scale" else values)
                             for (j, kind), values in animation.tracks.items()])
         target = self.dir / path
         target.parent.mkdir(parents=True, exist_ok=True)
         target.write_bytes(gltf.glb())
         return f"{self.res}/{path}"
+
+    def scale(self, value) -> list[float]:
+        """A joint's scale as Godot can import it. The game hides a part by scaling its joint to
+        zero; Godot's importer cannot take a rotation out of a zero basis and reports an error for
+        each, so the editor's models get MIN_SCALE instead, too small to see (the same picture).
+        The port's models keep the game's zeros (PortLevelWriter)."""
+        if not self.godot_scales:
+            return list(value)
+        return [v if abs(v) >= MIN_SCALE else math.copysign(MIN_SCALE, v) for v in value]
 
     def place(self, mesh: Mesh, matrix: list[float] | None = None) -> None:
         """Count a placed mesh, and keep its corners in Godot space for check.gd."""

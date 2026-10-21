@@ -108,6 +108,7 @@ class PortLevelWriter(LevelWriter):
     """
 
     editable_collision = False
+    godot_scales = False
 
     def __init__(self, out: Path, level: Level, normals=None):
         super().__init__(out, level)
