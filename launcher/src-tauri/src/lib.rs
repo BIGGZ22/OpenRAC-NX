@@ -1265,7 +1265,20 @@ pub fn run() {
     tune_webkit();
     #[cfg(target_os = "linux")]
     ensure_wayland_cursor_fallback();
-    let builder = tauri::Builder::default().plugin(tauri_plugin_dialog::init()).plugin(tauri_plugin_opener::init());
+    let builder = tauri::Builder::default();
+    // A second start while the launcher is open shows the open one's window and goes. Registered
+    // first, as the plugin asks. Without it, on Linux the GTK application id (enableGTKAppId)
+    // handed the second start to the first launcher, which set its window up again and stopped:
+    // "a webview with label `main` already exists".
+    #[cfg(desktop)]
+    let builder = builder.plugin(tauri_plugin_single_instance::init(|app, _args, _cwd| {
+        if let Some(window) = app.get_webview_window("main") {
+            let _ = window.unminimize();
+            let _ = window.show();
+            let _ = window.set_focus();
+        }
+    }));
+    let builder = builder.plugin(tauri_plugin_dialog::init()).plugin(tauri_plugin_opener::init());
     #[cfg(desktop)]
     let builder = builder.plugin(
         tauri_plugin_updater::Builder::new()
