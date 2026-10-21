@@ -9,6 +9,9 @@
 #         (port/game/common/libraries.tsv, lib/*.c), or this game's own (host/*.c).
 #   game: the decompilation's C runs as it is (it only computes).
 #   wrap: the decompilation's C runs, as <symbol>__game, under a host function (host/*.c).
+#   hook: a hook point for mods (docs/port/MODS.md): the C runs, as <symbol>__game,
+#         unless a mod takes it; hostgen writes <symbol> (hooks.c). The name is
+#         the one mods ask for, the same on both discs.
 #   todo: needs a host version that is not written yet; it stays a stub.
 #
 # symbol	library	name	port	notes	signature (optional)
@@ -318,12 +321,12 @@ Rfu091Tail	kernel	GetEntryAddress	host	system call 0x5B; PAL func_0011DE28
 __muldi3	libgcc	__muldi3	host	64-bit multiply; PAL func_0011EEC8
 __udivdi3	libgcc	__udivdi3	host	64-bit unsigned divide (src/sdk/library/udivdi3.c, which hostgen.json skips: libgcc's GCC-only assembly); newlib's printf, strtol and malloc call it
 __umoddi3	libgcc	__umoddi3	host	64-bit unsigned remainder (src/sdk/library/umoddi3.c, skipped as above)
-FUN_00217328	pad	Pad_ProcessReport	wrap	the pad's report into its state, each poll: with the player's strafe on, in play on foot, L2 and R2 are kept for the strafe and taken out of the pad's button words, so the game does not look or crouch on them (L1 still looks, R1 still crouches) (rac1/host/strafe.c); PAL func_002181F0	void (unsigned int, unsigned int, int)
-FUN_L00_00211670	hero	Hero_UpdateMotionInput	wrap	the stick into the hero, early in his update: with the player's strafe on and the hero standing in Lock, or in Hold after its swing, he is turned toward the camera first (rac1/host/strafe.c); PAL func_L00_00211D28	void (void)
-FUN_L00_00211e30	hero	Hero_TurnToHeading	wrap	eases the facing toward the move yaw: with the player's strafe on and the hero strafing, toward the camera's yaw, or while Hold's swing lasts the facing latched when L2 or R2 went down (rac1/host/strafe.c); PAL func_L00_002124E8	void (int, float, float, float)
-FUN_L00_002120d8	hero	Hero_SetPlanarVelocity	wrap	the velocity along an angle, the facing for one above pi: while the hero strafes, along the move yaw (rac1/host/strafe.c); PAL func_L00_00212790	void (float)
-FUN_L00_002e6000	camera	follow_camera_apply_overrides	wrap	the follow camera's requests from the hero's state: while the hero strafes, the strafe camera the game asks for in state 0x81 with L2 or R2 held, swung once behind the latched facing for Hold (rac1/host/strafe.c); PAL func_L00_002E74B0	void (unsigned int)
-FUN_L00_00232670	hero	Hero_AdvanceAnimation	wrap	Ratchet's animation advance: while he strafes away from his facing, the walk or the run stepped back first so that it plays backwards (rac1/host/strafe.c); PAL func_L00_00232EF0	void (void)
+FUN_00217328	pad	Pad_ProcessReport	hook	the pad's report into its state, each poll: a hook point for mods (docs/port/MODS.md; the lock-strafe mod takes it); the game's C with none; PAL func_002181F0	void (unsigned int, unsigned int, int)
+FUN_L00_00211670	hero	Hero_UpdateMotionInput	hook	the stick into the hero, early in his update: a hook point for mods (docs/port/MODS.md; the lock-strafe mod takes it); the game's C with none; PAL func_L00_00211D28	void (void)
+FUN_L00_00211e30	hero	Hero_TurnToHeading	hook	eases the facing toward the move yaw: a hook point for mods (docs/port/MODS.md; the lock-strafe mod takes it); the game's C with none; PAL func_L00_002124E8	void (int, float, float, float)
+FUN_L00_002120d8	hero	Hero_SetPlanarVelocity	hook	the velocity along an angle, the facing for one above pi: a hook point for mods (docs/port/MODS.md; the lock-strafe mod takes it); the game's C with none; PAL func_L00_00212790	void (float)
+FUN_L00_002e6000	camera	FollowCamera_ApplyOverrides	hook	the follow camera's per-tick requests from the hero's state: a hook point for mods (docs/port/MODS.md; the lock-strafe mod takes it); the game's C with none; PAL func_L00_002E74B0	void (unsigned int)
+FUN_L00_00232670	hero	Hero_AdvanceAnimation	hook	Ratchet's animation advance, once a tick after his state's update: a hook point for mods (docs/port/MODS.md; the lock-strafe mod takes it); the game's C with none; PAL func_L00_00232EF0	void (void)
 FUN_L02_0024f748	draw	func_L02_00250720	wrap	the liquid grid's cull (seas, lava, sand): in a picture wider than the game's, against the cull matrix opened by as much as the picture is wider, put back after it (rac1/host/wide_view.c); PAL func_L02_00250720
 FUN_001fa728	draw	fast_bsphere_check	wrap	the bounding sphere view test: while a draw callback list or the nanotech cluster's update runs, in a picture wider than the game's, against clip constants opened by as much as the picture is wider, put back after it (rac1/host/wide_view.c); PAL func_L00_00200290
 FUN_L00_002d89f0	draw	nanotech_ball_update	wrap	the nanotech cluster's update (the orb on a nanotech crate), which draws it only while the bounding sphere test finds it in view: in a picture wider than the game's, that test against clip constants opened by as much as the picture is wider (rac1/host/wide_view.c); PAL func_L00_002D9EA0	void (unsigned int)

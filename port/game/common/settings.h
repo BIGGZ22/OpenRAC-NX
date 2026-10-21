@@ -51,15 +51,6 @@ enum class VSync {
     Count,
 };
 
-// Ratchet & Clank: how Ratchet strafes on foot (rac1/host/strafe.c, docs/port/SETTINGS.md
-// section 7). The game's own turning when Off.
-enum class Strafe {
-    Off,
-    Hold,  // L2 or R2 held: the camera swings behind him once, then he faces its way (Going Commando's)
-    Lock,  // with a forward-firing weapon in hand he always faces the camera's way; Hold otherwise
-    Count,
-};
-
 // How many frames are drawn. The game's tick stays its own (50 a second for PAL): the frames
 // between two ticks move the camera, the mobys and their poses from one tick to the next.
 enum class FrameRate {
@@ -91,7 +82,6 @@ struct Settings {
     bool menu_bar = true;   // the menus along the window's top (not on macOS, whose menu bar has them); Alt hides and shows it
     bool mute_unfocused = false;  // silence while another window has the keyboard
     bool skip_cutscenes = true;   // Start skips an in-game cutscene (without the game's L1 L2 R1 R2 hold)
-    Strafe strafe = Strafe::Off;  // the file's `strafe`; an old file's `lock_strafe = 1` is Lock
     int volume = 100;  // of everything the port plays, 0 (nothing at all) to 100 (as mixed)
     bool verbose_log = false;  // the detailed log (as OPENRAC_LOG=verbose): level loads, pad changes, callers
 };
@@ -132,7 +122,6 @@ const char* name(DisplayMode mode);
 const char* name(Aspect aspect);
 const char* name(Hud hud);
 const char* name(VSync vsync);
-const char* name(Strafe strafe);
 std::string frame_rate_name(const Settings& settings);
 
 }  // namespace openrac::settings

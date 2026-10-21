@@ -1914,7 +1914,6 @@ void drawer(const Shown& shown) {
         if (drawer_switch("Skip cutscenes", settings::get().skip_cutscenes)) {
             change_setting(options_menu::kSkipCutscenes, 1);
         }
-        setting_row(options_menu::kStrafe);
         card_end();
 
         // What the port changes from the console that the player may switch back (fixes.h): on is

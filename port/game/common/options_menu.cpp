@@ -28,7 +28,7 @@ namespace {
 constexpr const char* kLabels[kRows] = {
     "Display mode", "Monitor",   "Resolution", "Picture",       "HUD",           "Render scale", "Anti-aliasing",
     "Texture filter", "VSync",   "Frame rate", "Frame cap",     "Frame counter", "Mute in background",
-    "Skip cutscenes", "Strafe (experimental)",
+    "Skip cutscenes",
 };
 
 // The "Game fixes" group, after the settings' own rows: its heading, then a row a fix.
@@ -115,8 +115,6 @@ std::string value_of(int row) {
             return s.mute_unfocused ? "On" : "Off";
         case kSkipCutscenes:
             return s.skip_cutscenes ? "Start" : "Off";
-        case kStrafe:
-            return settings::name(s.strafe);
         default:
             return {};
     }
@@ -227,9 +225,6 @@ void step_value(int row, int by) {
             break;
         case kSkipCutscenes:
             s.skip_cutscenes = !s.skip_cutscenes;
-            break;
-        case kStrafe:
-            s.strafe = stepped_enum(s.strafe, by);
             break;
         default:
             break;

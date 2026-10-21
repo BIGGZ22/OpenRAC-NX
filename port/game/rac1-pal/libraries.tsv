@@ -7,6 +7,9 @@
 #   game: the decompilation's C runs as it is (it only computes).
 #   wrap: the decompilation's C runs, as <symbol>__game, under a host function
 #         that does what the port needs around it (rac1/host/boot.c).
+#   hook: a hook point for mods (docs/port/MODS.md): the C runs, as <symbol>__game,
+#         unless a mod takes it; hostgen writes <symbol> (hooks.c). The name is
+#         the one mods ask for, the same on both discs.
 #   todo: needs a host version that is not written yet; it stays a stub.
 #
 # symbol	library	name	port	notes	signature (optional)
@@ -322,12 +325,12 @@ func_L08_002DB448	game	func_L08_002DB448	host	a place the catalogue folds into a
 func_L14_003047D8	game	func_L14_003047D8	host	a place the catalogue folds into another function although its code differs (split_places.tsv, rac1/host/variants.c)	void (void)
 func_L18_002FC168	game	func_L18_002FC168	host	a place the catalogue folds into another function although its code differs (split_places.tsv, rac1/host/variants.c)	void (void)
 func_L02_00299F28	game	func_L02_00299F28	host	a place the catalogue folds into another function although its code differs (split_places.tsv, rac1/host/variants.c)	void (int)
-func_002181F0	pad	Pad_ProcessReport	wrap	the pad's report into its state, each poll: with the player's strafe on, in play on foot, L2 and R2 are kept for the strafe and taken out of the pad's button words, so the game does not look or crouch on them (L1 still looks, R1 still crouches) (rac1/host/strafe.c)	void (unsigned int, unsigned int, int)
-func_L00_00211D28	hero	Hero_UpdateMotionInput	wrap	the stick into the hero, early in his update: with the player's strafe on and the hero standing in Lock, or in Hold after its swing, he is turned toward the camera first (rac1/host/strafe.c)	void (void)
-func_L00_002124E8	hero	Hero_TurnToHeading	wrap	eases the facing toward the move yaw: with the player's strafe on and the hero strafing, toward the camera's yaw, or while Hold's swing lasts the facing latched when L2 or R2 went down (rac1/host/strafe.c)	void (int, float, float, float)
-func_L00_00212790	hero	Hero_SetPlanarVelocity	wrap	the velocity along an angle, the facing for one above pi: while the hero strafes, along the move yaw (rac1/host/strafe.c)	void (float)
-func_L00_002E74B0	camera	func_L00_002E74B0	wrap	the follow camera's requests from the hero's state: while the hero strafes, the strafe camera the game asks for in state 0x81 with L2 or R2 held, swung once behind the latched facing for Hold (rac1/host/strafe.c)	void (unsigned int)
-func_L00_00232EF0	hero	Hero_AdvanceAnimation	wrap	Ratchet's animation advance: while he strafes away from his facing, the walk or the run stepped back first so that it plays backwards (rac1/host/strafe.c)	void (void)
+func_002181F0	pad	Pad_ProcessReport	hook	the pad's report into its state, each poll: a hook point for mods (docs/port/MODS.md; the lock-strafe mod takes it); the game's C with none	void (unsigned int, unsigned int, int)
+func_L00_00211D28	hero	Hero_UpdateMotionInput	hook	the stick into the hero, early in his update: a hook point for mods (docs/port/MODS.md; the lock-strafe mod takes it); the game's C with none	void (void)
+func_L00_002124E8	hero	Hero_TurnToHeading	hook	eases the facing toward the move yaw: a hook point for mods (docs/port/MODS.md; the lock-strafe mod takes it); the game's C with none	void (int, float, float, float)
+func_L00_00212790	hero	Hero_SetPlanarVelocity	hook	the velocity along an angle, the facing for one above pi: a hook point for mods (docs/port/MODS.md; the lock-strafe mod takes it); the game's C with none	void (float)
+func_L00_002E74B0	camera	FollowCamera_ApplyOverrides	hook	the follow camera's per-tick requests from the hero's state: a hook point for mods (docs/port/MODS.md; the lock-strafe mod takes it); the game's C with none	void (unsigned int)
+func_L00_00232EF0	hero	Hero_AdvanceAnimation	hook	Ratchet's animation advance, once a tick after his state's update: a hook point for mods (docs/port/MODS.md; the lock-strafe mod takes it); the game's C with none	void (void)
 func_L02_00250720	draw	func_L02_00250720	wrap	the liquid grid's cull (seas, lava, sand): in a picture wider than the game's, against the cull matrix opened by as much as the picture is wider, put back after it (rac1/host/wide_view.c)
 func_L00_00200290	draw	FastBSphereCheck	wrap	the bounding sphere view test: while a draw callback list or the nanotech cluster's update runs, in a picture wider than the game's, against clip constants opened by as much as the picture is wider, put back after it (rac1/host/wide_view.c)
 func_L00_002D9EA0	draw	NanotechBallUpdate	wrap	the nanotech cluster's update (the orb on a nanotech crate), which draws it only while the bounding sphere test finds it in view: in a picture wider than the game's, that test against clip constants opened by as much as the picture is wider (rac1/host/wide_view.c)	void (unsigned int)

@@ -28,7 +28,6 @@ constexpr const char* kDisplayMode[] = {"windowed", "borderless", "fullscreen"};
 constexpr const char* kAspect[] = {"4:3", "16:10", "16:9", "21:9", "32:9", "window", "custom"};
 constexpr const char* kHud[] = {"centre", "edges"};
 constexpr const char* kVSync[] = {"off", "on", "adaptive"};
-constexpr const char* kStrafe[] = {"off", "hold", "lock"};
 
 std::string trimmed(const std::string& s) {
     const auto first = s.find_first_not_of(" \t\r\n");
@@ -167,10 +166,9 @@ void load(const std::filesystem::path& file) {
     // "display" frame rate, and so it does until the player says otherwise.
     bool has_vsync = false;
     bool has_frame_rate = false;
-    // A file from before `strafe`: `lock_strafe = 1` was the strafe while firing, now Lock. A file
-    // with both is the newer one's.
-    bool has_strafe = false;
-    bool old_lock_strafe = false;
+    // A file from before the strafe was a mod (2026-10-21): its `strafe` or `lock_strafe` is left
+    // out, and said once.
+    bool old_strafe = false;
     std::string line;
     while (in && std::getline(in, line)) {
         const auto eq = line.find('=');
@@ -226,11 +224,8 @@ void load(const std::filesystem::path& file) {
             known = parse_bool(value, s.mute_unfocused);
         } else if (key == "skip_cutscenes") {
             known = parse_bool(value, s.skip_cutscenes);
-        } else if (key == "strafe") {
-            known = parse(value, kStrafe, s.strafe);
-            has_strafe = has_strafe || known;
-        } else if (key == "lock_strafe") {
-            known = parse_bool(value, old_lock_strafe);
+        } else if (key == "strafe" || key == "lock_strafe") {
+            old_strafe = true;
         } else if (key == "volume") {
             known = parse_int(value, 0, 100, s.volume);
         } else if (key == "verbose_log") {
@@ -250,8 +245,10 @@ void load(const std::filesystem::path& file) {
     if (has_frame_rate && !has_vsync) {
         s.vsync = s.frame_rate == FrameRate::Display ? VSync::On : VSync::Off;
     }
-    if (!has_strafe && old_lock_strafe) {
-        s.strafe = Strafe::Lock;
+    if (old_strafe) {
+        log::info("{}: the strafe is a mod now, lock-strafe (OpenRAC/rac1-mods): add it in the launcher's "
+                  "Mods tab. This file's strafe setting is left out.",
+                  file.string());
     }
     g_gain = gain_now();
     log::info("settings from {}: {}", file.string(), summary());
@@ -263,11 +260,10 @@ std::string summary() {
                                    ? std::format("{}x{}", s.window_width, s.window_height)
                                    : std::string("default size");
     return std::format("{} ({}, display {}), picture {}, {}% scale, {} sample(s), anisotropy {}, frames {}, vsync {}, "
-                       "volume {}{}{}{}",
+                       "volume {}{}{}",
                        kDisplayMode[static_cast<int>(s.display_mode)], window, s.monitor,
                        kAspect[static_cast<int>(s.aspect)], s.render_scale, s.msaa, s.anisotropy, frame_rate_value(s),
                        kVSync[static_cast<int>(s.vsync)], s.volume,
-                       s.strafe == Strafe::Off ? std::string() : std::format(", strafe {}", kStrafe[static_cast<int>(s.strafe)]),
                        s.verbose_log ? ", detailed log" : "", fixes_off());
 }
 
@@ -311,7 +307,6 @@ void save() {
         << "menu_bar = " << (s.menu_bar ? 1 : 0) << "\n"
         << "mute_unfocused = " << (s.mute_unfocused ? 1 : 0) << "\n"
         << "skip_cutscenes = " << (s.skip_cutscenes ? 1 : 0) << "\n"
-        << "strafe = " << kStrafe[static_cast<int>(s.strafe)] << "\n"
         << "volume = " << s.volume << "\n";
     if (s.verbose_log) {
         out << "verbose_log = 1\n";
@@ -393,10 +388,6 @@ const char* name(VSync vsync) {
     return names[std::min<int>(static_cast<int>(vsync), 2)];
 }
 
-const char* name(Strafe strafe) {
-    constexpr const char* names[] = {"Off", "Hold L2-R2", "Lock with weapons"};
-    return names[std::min<int>(static_cast<int>(strafe), 2)];
-}
 
 std::string frame_rate_name(const Settings& settings) {
     switch (settings.frame_rate) {
