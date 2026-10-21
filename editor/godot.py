@@ -31,6 +31,7 @@ from pathlib import Path
 
 from collision import collision_mesh, decode
 from formats import png, unpack
+import gamedata
 import games
 from gltf import Gltf
 from level import Level
@@ -154,7 +155,8 @@ class LevelWriter:
         self.scene = Scene()
         self.corners = []
         self.fmt = games.of(level)
-        self.stats = {"schema": 1, "level": level.id,
+        self.moby_extra = {}  # moby index -> its pvar metadata (gamedata.py)
+        self.stats = {"schema": 2, "level": level.id,
                       "overlay": {"entry_point": level.overlay["entry_point"],
                                   "sections": [{k: s[k] for k in ("address", "bytes", "type")}
                                                for s in level.overlay["sections"]]},
@@ -269,7 +271,11 @@ class LevelWriter:
         self.write_objects("tie", ties, tie_instances(level.instances, ties, fmt, problems))
         shrubs = shrub_classes(level)
         self.write_objects("shrub", shrubs, shrub_instances(level.instances, shrubs, fmt, problems))
+        if fmt.packable:  # the gameplay data, packed back by pack.py (gamedata.py)
+            self.moby_extra = gamedata.moby_metadata(level.gameplay)
         self.write_mobys(moby_instances(level.gameplay, fmt), moby_classes(level))
+        if fmt.packable:
+            self.stats["gameplay"] = gamedata.write_scene(self.scene, self.dir, self.res, level.gameplay)
         collision, = unpack("<I", level.index, 0x14)
         if collision:  # Deadlocked's multiplayer menu has none
             self.write_collision(level.block(collision), [block for _, _, block in level.chunks if block])
@@ -364,6 +370,7 @@ class LevelWriter:
         self.scene.node("Mobys", "Game", "Node3D")
         for p in placements:
             fields = {f"metadata__rc1_{k}": v for k, v in {"index": p["index"], **p["fields"]}.items()}
+            fields.update(self.moby_extra.get(p["index"], {}))
             self.scene.node(node_name(p["class_id"], p["index"], names), "Game/Mobys", instance=scenes[p["class_id"]],
                             rotation_order=0, transform=transform(p["matrix"]), **fields)
         shown = [models[p["class_id"]].mesh for p in placements if p["class_id"] in models]

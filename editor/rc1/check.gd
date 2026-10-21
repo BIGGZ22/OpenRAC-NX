@@ -15,6 +15,14 @@ extends SceneTree
 ## separately.
 
 # =============================================================================
+# CONSTANTS
+# =============================================================================
+
+## The nodes under Game that hold the gameplay data (editor/gamedata.py's GROUPS).
+const GAMEPLAY: Array[String] = ["LevelSettings", "MobyGroups", "Cameras", "Sounds", "Volumes", "Paths",
+	"GrindPaths"]
+
+# =============================================================================
 # METHODS
 # =============================================================================
 
@@ -72,8 +80,9 @@ func _initialize() -> void:
 ## world transform of node's parent. Mobys and the collision layer are
 ## skipped; they are counted elsewhere.
 func walk(node: Node, parent: Transform3D, totals: Dictionary) -> void:
-	# Placed mobys are not level geometry.
-	if node.name == &"Mobys":
+	# Placed mobys are not level geometry, nor are the gameplay data's markers and volumes.
+	if node.name == &"Mobys" or (node.get_parent() != null and node.get_parent().name == &"Game"
+			and String(node.name) in GAMEPLAY):
 		return
 
 	# Only 3D nodes carry a transform; others pass the parent's through.
