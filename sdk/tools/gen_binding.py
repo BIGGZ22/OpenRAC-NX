@@ -635,6 +635,13 @@ def luau_types(b: dict) -> str:
     out.append("    read: (kind: MemoryType, address: number) -> number,")
     out.append("    write: (kind: MemoryType, address: number, value: number) -> (),")
     out.append("    fields: Fields,")
+    out.append("    -- interface 1.2: the keyboard and mouse; a bind is a name of openrac/keys.h (\"KeyW\", \"MouseLeft\", \"WheelUp\")")
+    out.append("    key: (bind: string) -> boolean,")
+    out.append("    pressed: (bind: string) -> boolean,")
+    out.append("    mouse: () -> (number, number, number, number),")
+    out.append("    window: () -> (boolean, boolean, boolean),")
+    out.append("    take_input: (...(\"keyboard\" | \"mouse\")) -> (),")
+    out.append("    capture_mouse: (capture: boolean) -> (),")
     if b["moby"] is not None:
         out.append("    -- experimental: a moby's pvars by name, from the behaviour catalogue")
         out.append("    pvars: (moby: number) -> { [string]: number }?,")

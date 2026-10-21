@@ -22,7 +22,7 @@ Everything runs on the game's thread: load, the hooks, the callbacks, unload.
 | Name | Value | |
 |---|---|---|
 | `OPENRAC_MOD_API_MAJOR` | `1` |  |
-| `OPENRAC_MOD_API_MINOR` | `1` | 1.1: script mods (docs/port/MODS.md, section 11); table unchanged |
+| `OPENRAC_MOD_API_MINOR` | `2` | 1.2: the keyboard and mouse (input, take_input, capture_mouse) |
 | `OPENRAC_MOD_EXPORT` | `__declspec(dllexport)` or `__attribute__((visibility("default")))` |  |
 | `OPENRAC_LOG_DEBUG` | `0` | Log levels for openrac_api.log. |
 | `OPENRAC_LOG_INFO` | `1` |  |
@@ -32,6 +32,16 @@ Everything runs on the game's thread: load, the hooks, the callbacks, unload.
 | `OPENRAC_HOOK_UNKNOWN` | `(-1)` | this port has no hook point of that name (on this disc) |
 | `OPENRAC_HOOK_SIGNATURE` | `(-2)` | the hook point's signature is another |
 | `OPENRAC_HOOK_TOO_LATE` | `(-3)` | hooks are taken in openrac_mod_load only |
+| `OPENRAC_KEY_COUNT` | `512` | 1.2: the keyboard and mouse. A key is its USB HID usage, the same on every layout and system (openrac/keys.h names them: "KeyW", "Space", "ShiftLeft"). |
+| `OPENRAC_KEY_HELD` | `1u` | openrac_input.keys[k]: the key is down |
+| `OPENRAC_KEY_PRESSED` | `2u` | it went down since the last tick (a tap shorter than a tick too) |
+| `OPENRAC_MOUSE_LEFT` | `1u` | openrac_input.mouse_held and mouse_pressed's bits. |
+| `OPENRAC_MOUSE_MIDDLE` | `2u` |  |
+| `OPENRAC_MOUSE_RIGHT` | `4u` |  |
+| `OPENRAC_MOUSE_BACK` | `8u` | the side button nearer the wrist (X1) |
+| `OPENRAC_MOUSE_FORWARD` | `16u` | the other side button (X2) |
+| `OPENRAC_INPUT_KEYBOARD` | `1u` | the port's own keyboard table stops driving pad 0 |
+| `OPENRAC_INPUT_MOUSE` | `2u` | the mod uses the mouse in play (reserved: the port has no mouse use of its own in play) |
 | `OPENRAC_MOD_QUERY` | `"openrac_mod_query"` |  |
 | `OPENRAC_MOD_LOAD` | `"openrac_mod_load"` |  |
 | `OPENRAC_MOD_UNLOAD` | `"openrac_mod_unload"` |  |
@@ -91,6 +101,27 @@ What openrac_mod_query tells the port before it loads the mod.
 | `const char* id` | the manifest's id: the port checks they agree |
 | `const char* version` | the mod's version, as its manifest's |
 
+## `openrac_input`
+
+The keyboard and mouse as the port read them for the tick about to run: taken once a tick, after
+the window's events and before the game reads its pads (so before the tick's pad reports).
+
+| Member | |
+|---|---|
+| `uint32_t size` | sizeof(openrac_input) as the port was built: a newer port's is larger |
+| `uint32_t tick` | counts the ticks: a new value, a new state |
+| `uint8_t keys[OPENRAC_KEY_COUNT]` | by HID usage: OPENRAC_KEY_HELD \| OPENRAC_KEY_PRESSED |
+| `uint32_t mouse_held` | OPENRAC_MOUSE_* down now |
+| `uint32_t mouse_pressed` | OPENRAC_MOUSE_* that went down since the last tick |
+| `float mouse_dx` | the mouse's motion since the last tick, in the system's pixels; |
+| `float mouse_dy` | raw (no pointer acceleration) while captured; y grows downward |
+| `float wheel_x` | the wheel since the last tick, in notches: x > 0 to the right, |
+| `float wheel_y` | y > 0 away from the player (up), whatever the system's scroll direction |
+| `uint8_t focused` | the game's window has the keyboard; while not, nothing is held |
+| `uint8_t captured` | the cursor is captured: hidden, kept in the window, motion relative |
+| `uint8_t overlay` | the port's own overlay or menu has the input now (F3): leave it |
+| `uint8_t reserved` |  |
+
 ## `openrac_api`
 
 What the port offers a mod. Filled by the port; valid for the life of the program.
@@ -121,3 +152,6 @@ What the port offers a mod. Filled by the port; valid for the life of the progra
 | `int (*loaded_level)(void)` | The level whose program is loaded, -1 for none (the executable's). |
 | `openrac_gaddr (*stack_push)(uint32_t size, openrac_gaddr* saved)` | Room on the game's stack for a call that takes the address of a local: stack_push gives `size` bytes (aligned to 16) and keeps the stack as it was in *saved; stack_pop(saved) gives them back. Pushes and pops pair, innermost first. |
 | `void (*stack_pop)(openrac_gaddr saved)` |  |
+| `const openrac_input* (*input)(void)` | The keyboard and mouse for the tick about to run (openrac_input). Never null: without a window (a test, a server) nothing is held and nothing moves. Valid until the next tick. |
+| `int (*take_input)(openrac_mod* mod, uint32_t devices)` | Takes `devices` (OPENRAC_INPUT_*) from the port: with OPENRAC_INPUT_KEYBOARD the port's own keyboard table (WASD, Space, ...) no longer presses pad 0's buttons, and the mod presses them through on_pad instead. A gamepad goes on as before; the port's window keys (F3, F11) stay the port's. 0, or OPENRAC_HOOK_TOO_LATE after openrac_mod_load. |
+| `void (*capture_mouse)(openrac_mod* mod, int capture)` | Asks for the cursor captured (1: hidden, held in the window, motion relative, as a game's mouse look wants it) or let go (0). Any time; the latest asking of any mod counts. The port lets it go anyway while the window is not focused or its overlay is open, and takes it back when the reason is gone and the mod still asks. |

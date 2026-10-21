@@ -24,6 +24,12 @@ language server at the SDK's `types/rac1.d.luau` for autocomplete. How to use it
 | `openrac.read` | `(kind: MemoryType, address: number) -> number` |
 | `openrac.write` | `(kind: MemoryType, address: number, value: number) -> ()` |
 | `openrac.fields` | `Fields` |
+| `openrac.key` | `(bind: string) -> boolean` |
+| `openrac.pressed` | `(bind: string) -> boolean` |
+| `openrac.mouse` | `() -> (number, number, number, number)` |
+| `openrac.window` | `() -> (boolean, boolean, boolean)` |
+| `openrac.take_input` | `(...("keyboard" \| "mouse")) -> ()` |
+| `openrac.capture_mouse` | `(capture: boolean) -> ()` |
 | `openrac.pvars` | `(moby: number) -> { [string]: number }?` |
 
 ## Types

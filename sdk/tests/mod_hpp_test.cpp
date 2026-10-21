@@ -116,6 +116,20 @@ void host_stack_pop(openrac_gaddr saved) {
     g_sp = saved;
 }
 
+openrac_input g_input{};
+uint32_t g_taken = 0;
+int g_capture = -1;
+const openrac_input* host_input() {
+    return &g_input;
+}
+int host_take_input(openrac_mod*, uint32_t devices) {
+    g_taken |= devices;
+    return 0;
+}
+void host_capture_mouse(openrac_mod*, int capture) {
+    g_capture = capture;
+}
+
 openrac_api make_api() {
     openrac_api api{};
     api.size = sizeof api;
@@ -142,6 +156,9 @@ openrac_api make_api() {
     api.loaded_level = host_loaded_level;
     api.stack_push = host_stack_push;
     api.stack_pop = host_stack_pop;
+    api.input = host_input;
+    api.take_input = host_take_input;
+    api.capture_mouse = host_capture_mouse;
     return api;
 }
 
@@ -200,6 +217,8 @@ void load(openrac::Mod& mod) {
     CHECK(mod.relocate(0x100) == 0x110);
     CHECK(mod.relocate_level(2, 0x100) == 0x102);
     CHECK(mod.loaded_level() == 3);
+    CHECK(mod.has_input());
+    mod.take_input(OPENRAC_INPUT_KEYBOARD);
     mod.info("loaded");
 }
 
@@ -264,6 +283,33 @@ int main() {
         CHECK(g_sp == 0x100 - 32);
     }
     CHECK(g_sp == 0x100);
+
+    // The keyboard and mouse (1.2): binds by name, held and pressed, the wheel, the capture.
+    CHECK(g_taken == OPENRAC_INPUT_KEYBOARD);
+    CHECK(openrac::bind_from_name("KeyW") == 26 && openrac::bind_name(26) == "KeyW");
+    CHECK(openrac::bind_from_name("MouseRight") == OPENRAC_BIND_MOUSE_RIGHT);
+    CHECK(openrac::bind_from_name("WheelDown") == OPENRAC_BIND_WHEEL_DOWN);
+    CHECK(openrac::bind_from_name("NoSuchKey") == OPENRAC_BIND_NONE);
+    CHECK(openrac::bind_from_name(std::string_view("Space,KeyW").substr(0, 5)) == 44);
+    for (int i = 0; i < OPENRAC_BIND_NAME_COUNT; ++i) {  // every name goes there and back
+        CHECK(openrac::bind_from_name(openrac_bind_names[i].name) == openrac_bind_names[i].bind);
+    }
+    g_input.keys[26] = OPENRAC_KEY_HELD | OPENRAC_KEY_PRESSED;
+    g_input.keys[44] = OPENRAC_KEY_PRESSED;  // tapped between two ticks
+    g_input.mouse_held = OPENRAC_MOUSE_LEFT;
+    g_input.mouse_pressed = OPENRAC_MOUSE_RIGHT;
+    g_input.wheel_y = -1.0f;
+    g_input.mouse_dx = 3.0f;
+    const openrac::Input in = mod.input();
+    CHECK(in.held(26) && in.pressed(26) && !in.held(44) && in.pressed(44) && !in.held(4));
+    CHECK(in.held(OPENRAC_BIND_MOUSE_LEFT) && !in.pressed(OPENRAC_BIND_MOUSE_LEFT));
+    CHECK(!in.held(OPENRAC_BIND_MOUSE_RIGHT) && in.pressed(OPENRAC_BIND_MOUSE_RIGHT));
+    CHECK(in.pressed(OPENRAC_BIND_WHEEL_DOWN) && !in.pressed(OPENRAC_BIND_WHEEL_UP));
+    CHECK(in.mouse_dx() == 3.0f && !in.held(OPENRAC_BIND_NONE));
+    mod.capture_mouse(true);
+    CHECK(g_capture == 1);
+    mod.capture_mouse(false);
+    CHECK(g_capture == 0);
 
     // A load that throws refuses the mod with the message.
     g_failed.clear();

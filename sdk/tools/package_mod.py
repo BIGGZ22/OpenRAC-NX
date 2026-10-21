@@ -43,7 +43,26 @@ API = re.compile(r"^(0|[1-9]\d*)\.(0|[1-9]\d*)$")
 REQUIREMENT = re.compile(r"^(>=|=)(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)$")
 KEY = re.compile(r"^[a-z0-9_]+$")
 GAME = re.compile(r"^[a-z0-9]+$")
-SETTING_TYPES = {"bool", "int", "float", "choice", "string"}
+SETTING_TYPES = {"bool", "int", "float", "choice", "string", "keybind"}
+# A keybind's names (interface 1.2): openrac/keys.h's table, beside this tool in the SDK.
+_KEYS_H = Path(__file__).resolve().parent.parent / "include" / "openrac" / "keys.h"
+BIND_NAMES = frozenset(re.findall(r'\{"([A-Za-z0-9]+)", ', _KEYS_H.read_text())) if _KEYS_H.is_file() else frozenset()
+
+
+def bind_problem(value, most: int = 2) -> str | None:
+    """Why a keybind's value is not one (names of keys.h, comma-separated, none twice, at most
+    `most`), or None."""
+    if not isinstance(value, str):
+        return "is not text"
+    names = [n for n in re.split(r"[,\s]+", value) if n]
+    unknown = [n for n in names if n not in BIND_NAMES]
+    if unknown:
+        return f"names no key, button or wheel direction: {', '.join(unknown)}"
+    if len(set(names)) != len(names):
+        return "names one input twice"
+    if len(names) > most:
+        return f"has {len(names)} binds, more than {most}"
+    return None
 # Files for people, carried beside the manifest.
 EXTRAS = re.compile(r"^(README|LICENSE|COPYING)", re.IGNORECASE)
 
@@ -112,6 +131,14 @@ def _check_setting(i: int, s, errors: list[str]) -> None:
             errors.append(f"{where}: a value twice among the choices")
         if d not in values:
             errors.append(f"{where}: the default is not one of the choices")
+    elif kind == "keybind":
+        most = s.get("binds", 2)
+        if not (isinstance(most, int) and not isinstance(most, bool) and most in (1, 2)):
+            errors.append(f"{where}: binds must be 1 or 2")
+            return
+        why = bind_problem(d, most)
+        if why:
+            errors.append(f"{where}: the default {why}")
     elif kind == "string":
         if not isinstance(d, str):
             errors.append(f"{where}: the default is not text")
@@ -120,6 +147,34 @@ def _check_setting(i: int, s, errors: list[str]) -> None:
             errors.append(f"{where}: max_length must be a positive integer")
         elif m is not None and isinstance(d, str) and len(d) > m:
             errors.append(f"{where}: the default is longer than max_length")
+
+
+def _check_presets(presets, settings: dict, errors: list[str]) -> None:
+    """"presets" (interface 1.2): [{id, name, values: {key: value}}], buttons in the launcher that
+    set several keybind settings at once. Each value is one its keybind takes."""
+    if presets is None:
+        return
+    if not isinstance(presets, list):
+        errors.append("presets: a list")
+        return
+    ids = []
+    for i, p in enumerate(presets):
+        where = f"presets[{i}]"
+        if not (isinstance(p, dict) and isinstance(p.get("id"), str) and KEY.match(p["id"])
+                and isinstance(p.get("name"), str) and p["name"] and isinstance(p.get("values"), dict)):
+            errors.append(f"{where}: {{id (a-z, 0-9, _), name, values}}")
+            continue
+        ids.append(p["id"])
+        for key, value in p["values"].items():
+            s = settings.get(key)
+            if s is None or s.get("type") != "keybind":
+                errors.append(f"preset {p['id']}: {key} is not a keybind setting of the mod")
+                continue
+            why = bind_problem(value, s.get("binds", 2) if isinstance(s.get("binds"), int) else 2)
+            if why:
+                errors.append(f"preset {p['id']}: {key} {why}")
+    if len(set(ids)) != len(ids):
+        errors.append("presets: an id twice")
 
 
 def _check_refs(name: str, refs, errors: list[str], version: bool) -> None:
@@ -234,6 +289,7 @@ def check_manifest(m, root: Path | None = None) -> list[str]:
         dup = {k for k in keys if keys.count(k) > 1}
         if dup:
             errors.append(f"settings: a key twice ({', '.join(sorted(map(str, dup)))})")
+        _check_presets(m.get("presets"), {s["key"]: s for s in settings if isinstance(s, dict) and "key" in s}, errors)
     _check_refs("requires", m.get("requires", []), errors, True)
     _check_refs("conflicts", m.get("conflicts", []), errors, False)
     load = m.get("load", {})

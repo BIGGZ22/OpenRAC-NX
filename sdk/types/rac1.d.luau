@@ -1361,6 +1361,13 @@ declare openrac: {
     read: (kind: MemoryType, address: number) -> number,
     write: (kind: MemoryType, address: number, value: number) -> (),
     fields: Fields,
+    -- interface 1.2: the keyboard and mouse; a bind is a name of openrac/keys.h ("KeyW", "MouseLeft", "WheelUp")
+    key: (bind: string) -> boolean,
+    pressed: (bind: string) -> boolean,
+    mouse: () -> (number, number, number, number),
+    window: () -> (boolean, boolean, boolean),
+    take_input: (...("keyboard" | "mouse")) -> (),
+    capture_mouse: (capture: boolean) -> (),
     -- experimental: a moby's pvars by name, from the behaviour catalogue
     pvars: (moby: number) -> { [string]: number }?,
 }

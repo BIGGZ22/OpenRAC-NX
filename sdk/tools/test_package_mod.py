@@ -118,6 +118,25 @@ class ManifestRules(unittest.TestCase):
         twice = changed(settings=[GOOD["settings"][1], GOOD["settings"][1]])
         self.assertIn("a key twice", " ".join(pm.check_manifest(twice)))
 
+    def test_keybinds_and_presets(self):
+        jump = {"key": "jump", "name": "Jump", "type": "keybind", "default": "Space"}
+        fire = {"key": "fire", "name": "Fire", "type": "keybind", "default": "MouseLeft,KeyF"}
+        pause = {"key": "pause", "name": "Pause", "type": "keybind", "default": "Escape", "binds": 1}
+        self.assertEqual(pm.check_manifest(changed(settings=[jump, fire, pause])), [])
+        self.assertEqual(pm.check_manifest(changed(settings=[dict(jump, default="")])), [])
+        for bad in ("Spacebar", "KeyW,KeyW", "KeyW,KeyA,KeyS", 3):
+            self.assertTrue(pm.check_manifest(changed(settings=[dict(jump, default=bad)])), bad)
+        self.assertTrue(pm.check_manifest(changed(settings=[dict(pause, default="KeyP,KeyO")])))
+        self.assertTrue(pm.check_manifest(changed(settings=[dict(jump, binds=3)])))
+        good = [{"id": "arrows", "name": "Arrows", "values": {"jump": "Numpad0", "fire": "ControlRight"}}]
+        self.assertEqual(pm.check_manifest(changed(settings=[jump, fire], presets=good)), [])
+        for bad in ([{"id": "x", "name": "X", "values": {"nothing": "KeyA"}}],
+                    [{"id": "x", "name": "X", "values": {"jump": "Nope"}}],
+                    [{"id": "X!", "name": "X", "values": {}}],
+                    [{"id": "x", "name": "X", "values": {}}, {"id": "x", "name": "Y", "values": {}}],
+                    {"x": 1}):
+            self.assertTrue(pm.check_manifest(changed(settings=[jump, fire], presets=bad)), bad)
+
     def test_references(self):
         self.assertTrue(pm.check_manifest(changed(requires=[{"id": "x", "version": "1.0.0"}])))
         self.assertTrue(pm.check_manifest(changed(requires=[{"id": "X"}])))

@@ -28,6 +28,7 @@
 #ifndef OPENRAC_MOD_HPP
 #define OPENRAC_MOD_HPP
 
+#include <cstddef>
 #include <cstdint>
 #include <cstring>
 #include <deque>
@@ -39,6 +40,7 @@
 #include <type_traits>
 #include <utility>
 
+#include "openrac/keys.h"
 #include "openrac/openrac_mod.h"
 
 // Nothing of the layer is seen outside the mod's library, whatever the build's visibility: two mods
@@ -92,6 +94,37 @@ public:
 
 private:
     std::uint8_t* base_;
+};
+
+// A bind (openrac/keys.h): a key, a mouse button or a wheel direction, by its name ("KeyW",
+// "MouseLeft", "WheelUp"); bind_from_name gives OPENRAC_BIND_NONE (0) for a name of no bind.
+inline int bind_from_name(std::string_view name) {
+    return openrac_bind_from_name_n(name.data(), name.size());
+}
+inline std::string_view bind_name(int bind) {
+    return openrac_bind_to_name(bind);
+}
+
+// The keyboard and mouse for the tick about to run (interface 1.2, openrac_input): a view of the
+// port's state, renewed each tick.
+class Input {
+public:
+    explicit Input(const openrac_input* state) : s_(state) {}
+    const openrac_input& raw() const { return *s_; }
+    // A bind (a key's HID usage, OPENRAC_BIND_*): held now; went down since the last tick.
+    bool held(int bind) const { return openrac_bind_held(s_, bind) != 0; }
+    bool pressed(int bind) const { return openrac_bind_pressed(s_, bind) != 0; }
+    float mouse_dx() const { return s_->mouse_dx; }
+    float mouse_dy() const { return s_->mouse_dy; }
+    float wheel_x() const { return s_->wheel_x; }
+    float wheel_y() const { return s_->wheel_y; }
+    bool focused() const { return s_->focused != 0; }
+    bool captured() const { return s_->captured != 0; }
+    bool overlay() const { return s_->overlay != 0; }
+    std::uint32_t tick() const { return s_->tick; }
+
+private:
+    const openrac_input* s_;
 };
 
 // A hook's way on: the function the replacement goes on to (the game's own, or the replacement of
@@ -320,6 +353,23 @@ public:
     Fn function_at(gaddr address) const {
         return reinterpret_cast<Fn>(api_->function_at(address));
     }
+
+    // Interface 1.2: the keyboard and mouse. has_input() says whether the port offers them (a
+    // mod built for 1.2 is loaded only by a port that does).
+    bool has_input() const {
+        return api_->api_minor >= 2 && api_->size >= offsetof(openrac_api, capture_mouse) + sizeof(void*);
+    }
+    // The state for the tick about to run.
+    Input input() const { return Input(api_->input()); }
+    // Takes the keyboard (OPENRAC_INPUT_KEYBOARD) and or the mouse from the port's own use of them
+    // in play: the mod presses pad 0's buttons through on_pad. Only during load.
+    void take_input(std::uint32_t devices) {
+        if (api_->take_input(handle_, devices) != 0) {
+            throw Error("take_input: refused (only during load)");
+        }
+    }
+    // Asks for the cursor captured (hidden, motion relative) or let go; any time.
+    void capture_mouse(bool capture) const { api_->capture_mouse(handle_, capture ? 1 : 0); }
 
     Memory memory() const { return Memory(api_->memory); }
     gaddr relocate(gaddr address) const { return api_->relocate_data(address); }

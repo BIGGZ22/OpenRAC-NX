@@ -48,6 +48,25 @@ Game memory: typed reads and writes at game addresses. Reads and writes copy (an
 | `void* pointer(gaddr address) const` |  |
 | `std::uint8_t* base() const` |  |
 
+## `openrac::Input`
+
+The keyboard and mouse for the tick about to run (interface 1.2, openrac_input): a view of the port's state, renewed each tick.
+
+| Member | |
+|---|---|
+| `explicit Input(const openrac_input* state)` |  |
+| `const openrac_input& raw() const` |  |
+| `bool held(int bind) const` | A bind (a key's HID usage, OPENRAC_BIND_*): held now; went down since the last tick. |
+| `bool pressed(int bind) const` |  |
+| `float mouse_dx() const` |  |
+| `float mouse_dy() const` |  |
+| `float wheel_x() const` |  |
+| `float wheel_y() const` |  |
+| `bool focused() const` |  |
+| `bool captured() const` |  |
+| `bool overlay() const` |  |
+| `std::uint32_t tick() const` |  |
+
 ## `openrac::Original`
 
 `template <class R, class... A>`
@@ -88,6 +107,10 @@ The mod as the port loaded it: the table, the handle, and what the mod takes of 
 | `template <class Fn> Fn function(const char* name) const` | A game function by its name in this disc's build, as Fn (a function pointer type); nullptr when there is none. required_function throws instead. |
 | `template <class Fn> Fn required_function(const char* name) const` |  |
 | `template <class Fn> Fn function_at(gaddr address) const` | The function at a code address of the level loaded now, as Fn; nullptr when there is none. |
+| `bool has_input() const` | Interface 1.2: the keyboard and mouse. has_input() says whether the port offers them (a mod built for 1.2 is loaded only by a port that does). |
+| `Input input() const` | The state for the tick about to run. |
+| `void take_input(std::uint32_t devices)` | Takes the keyboard (OPENRAC_INPUT_KEYBOARD) and or the mouse from the port's own use of them in play: the mod presses pad 0's buttons through on_pad. Only during load. |
+| `void capture_mouse(bool capture) const` | Asks for the cursor captured (hidden, motion relative) or let go; any time. |
 | `Memory memory() const` |  |
 | `gaddr relocate(gaddr address) const` |  |
 | `gaddr relocate_level(int level, gaddr address) const` |  |
