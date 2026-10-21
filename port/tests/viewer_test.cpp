@@ -8,6 +8,7 @@
 //
 //   viewer_test DIR    writes the level into DIR (replacing it)
 
+#include <algorithm>
 #include <cmath>
 #include <cstdint>
 #include <cstdio>
@@ -271,6 +272,104 @@ void overrides(const fs::path& dir) {
     fs::remove_all(mods.parent_path());
 }
 
+// A terrain as editor/assets.py imports a denser one: an N x N grid of quads, side `size`,
+// centred on the origin at height z, with vertex colours (the game's lighting, 0x80 = 1.0, so up
+// to 2) and 32-bit indices.
+void write_grid(const fs::path& path, int n, float size, float z, float colour, const std::string& image) {
+    std::vector<float> positions;
+    std::vector<float> normals;
+    std::vector<float> uvs;
+    std::vector<float> colours;
+    std::vector<std::uint32_t> indices;
+    const auto side = static_cast<std::uint32_t>(n + 1);
+    for (std::uint32_t j = 0; j < side; ++j) {
+        for (std::uint32_t i = 0; i < side; ++i) {
+            const float u = static_cast<float>(i) / static_cast<float>(n);
+            const float v = static_cast<float>(j) / static_cast<float>(n);
+            positions.insert(positions.end(), {(u - 0.5f) * size, (v - 0.5f) * size, z});
+            normals.insert(normals.end(), {0.0f, 0.0f, 1.0f});
+            uvs.insert(uvs.end(), {u, 1.0f - v});
+            colours.insert(colours.end(), {colour, colour, colour, 1.0f});
+        }
+    }
+    for (std::uint32_t j = 0; j + 1 < side; ++j) {
+        for (std::uint32_t i = 0; i + 1 < side; ++i) {
+            const std::uint32_t a = j * side + i;
+            indices.insert(indices.end(), {a, a + 1, a + side, a + 1, a + side + 1, a + side});
+        }
+    }
+    std::vector<std::uint8_t> buffer;
+    std::vector<std::size_t> offsets;
+    auto append = [&](const void* data, std::size_t bytes) {
+        offsets.push_back(buffer.size());
+        const auto* p = static_cast<const std::uint8_t*>(data);
+        buffer.insert(buffer.end(), p, p + bytes);
+    };
+    append(positions.data(), positions.size() * sizeof(float));
+    append(normals.data(), normals.size() * sizeof(float));
+    append(uvs.data(), uvs.size() * sizeof(float));
+    append(colours.data(), colours.size() * sizeof(float));
+    append(indices.data(), indices.size() * sizeof(std::uint32_t));
+    offsets.push_back(buffer.size());
+    const std::string count = std::to_string(side * side);
+    const float h = size / 2;
+    std::string views;
+    for (std::size_t k = 0; k + 1 < offsets.size(); ++k) {
+        views += (k != 0 ? "," : "") + std::string(R"({"buffer":0,"byteOffset":)") + std::to_string(offsets[k])
+                 + R"(,"byteLength":)" + std::to_string(offsets[k + 1] - offsets[k]) + "}";
+    }
+    const std::string gltf =
+        std::string(R"({"asset":{"version":"2.0"},"scene":0,"scenes":[{"nodes":[0]}],)")
+        + R"("nodes":[{"name":"Terrain_000","mesh":0}],)"
+        + R"("meshes":[{"primitives":[{"attributes":{"POSITION":0,"NORMAL":1,"TEXCOORD_0":2,"COLOR_0":3},"indices":4,"material":0}]}],)"
+        + R"("materials":[{"name":"terrain_0000","pbrMetallicRoughness":{"baseColorTexture":{"index":0}},"doubleSided":true}],)"
+        + R"("textures":[{"source":0}],"images":[{"uri":")" + image + R"("}],)" + R"("accessors":[)"
+        + R"({"bufferView":0,"componentType":5126,"count":)" + count + R"(,"type":"VEC3","min":[)"
+        + std::to_string(-h) + "," + std::to_string(-h) + "," + std::to_string(z) + R"(],"max":[)"
+        + std::to_string(h) + "," + std::to_string(h) + "," + std::to_string(z) + "]},"
+        + R"({"bufferView":1,"componentType":5126,"count":)" + count + R"(,"type":"VEC3"},)"
+        + R"({"bufferView":2,"componentType":5126,"count":)" + count + R"(,"type":"VEC2"},)"
+        + R"({"bufferView":3,"componentType":5126,"count":)" + count + R"(,"type":"VEC4"},)"
+        + R"({"bufferView":4,"componentType":5125,"count":)" + std::to_string(indices.size()) + R"(,"type":"SCALAR"}],)"
+        + R"("bufferViews":[)" + views + "],"
+        + R"("buffers":[{"byteLength":)" + std::to_string(buffer.size())
+        + R"(,"uri":"data:application/octet-stream;base64,)" + base64(buffer) + R"("}]})";
+    write_text(path, gltf);
+}
+
+// A mod's terrain (editor/overrides.py: level_NN/terrain.glb, as the manifest names it), denser than
+// the level's: drawn in its place whatever its vertex count, lit by its vertex colours, naming the
+// level's terrain texture it does not carry.
+void denser_terrain(const fs::path& dir) {
+    const fs::path mods = dir.parent_path() / (dir.filename().string() + "_terrain_mods") / "level_03";
+    fs::remove_all(mods.parent_path());
+    constexpr int kQuads = 300;  // 90601 vertices, more than 16-bit indices hold
+    write_grid(mods / "terrain.glb.gltf", kQuads, 20.0f, 0.5f, 1.5f, "textures/terrain_0000.png");
+
+    viewer::LevelData level;
+    std::string error;
+    CHECK(viewer::load_level(dir, level, error, mods / "placements.json"));
+    CHECK(level.overridden_models == 1);
+    CHECK(level.overridden_images == 0);  // the texture is the level's
+    CHECK(level.missing_images == 0);
+    const auto& terrain = level.instances[static_cast<std::size_t>(viewer::Layer::Terrain)];
+    CHECK(terrain.size() == 1);
+    const viewer::Model& model = level.models[terrain[0].model];
+    CHECK(model.primitives.size() == 1);
+    CHECK(model.primitives[0].index_count == 6u * kQuads * kQuads);
+    CHECK(std::fabs(model.min[2] - 0.5f) < 1e-6f && std::fabs(model.max[0] - 10.0f) < 1e-4f);
+    // The mod's grid in place of the level's square, then the tie (4 vertices) and the box (24).
+    CHECK(level.vertices.size() == static_cast<std::size_t>((kQuads + 1) * (kQuads + 1)) + 4 + 24);
+    std::uint32_t highest = 0;
+    for (std::uint32_t i = 0; i < model.primitives[0].index_count; ++i) {
+        highest = std::max(highest, level.indices[model.primitives[0].first_index + i]);
+    }
+    CHECK(highest == static_cast<std::uint32_t>((kQuads + 1) * (kQuads + 1)) - 1);
+    CHECK(std::fabs(level.vertices[highest].colour[0] - 1.5f) < 1e-6f && level.vertices[highest].light_slot == -1.0f);
+    CHECK(level.images.size() == 2 && level.images[0].width == 2);
+    fs::remove_all(mods.parent_path());
+}
+
 // A tie texture part-clear all over with no fully clear texel (Novalis's windows: glass at alpha
 // 0x1F in an opaque frame), which the export leaves OPAQUE, takes the cutout passes as the GS draws
 // it (blended); the opaque terrain's material does not.
@@ -331,6 +430,7 @@ int main(int argc, char** argv) {
     viewer::LevelData level;
     loader(dir, level);
     overrides(dir);
+    denser_terrain(dir);
     translucent_texels(dir);
     if (openrac::test::failures() != 0) {
         return openrac::test::result();
