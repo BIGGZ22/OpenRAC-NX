@@ -239,6 +239,23 @@ bool satisfies(const Version& have, const Requirement& r) {
 
 }  // namespace
 
+bool script_path(std::string_view p) {
+    if (p.size() < 6 || !p.ends_with(".luau") || p.front() == '/' || p.find('\\') != std::string_view::npos
+        || p.find(':') != std::string_view::npos) {
+        return false;
+    }
+    std::size_t start = 0;
+    while (start <= p.size()) {
+        const std::size_t end = std::min(p.find('/', start), p.size());
+        const std::string_view part = p.substr(start, end - start);
+        if (part.empty() || part == "." || part == "..") {
+            return false;
+        }
+        start = end + 1;
+    }
+    return true;
+}
+
 std::optional<Version> parse_version(std::string_view text) {
     Version v;
     const std::size_t dash = text.find('-');
@@ -386,6 +403,46 @@ bool parse_manifest(std::string_view source, Manifest& m, std::string& error) {
     } else if (!m.plugin.empty()) {
         error = "a mod with a \"plugin\" must say which \"api\" it was built for";
         return false;
+    }
+    // A script mod (MODS.md, section 11): .luau files run by the port's Luau, no library.
+    const json::Value& type = v["type"];
+    if (!type.is_null()) {
+        if (!type.is_string() || (type.string() != "native" && type.string() != "script")) {
+            error = "\"type\" is \"native\" or \"script\"";
+            return false;
+        }
+        m.script = type.string() == "script";
+    }
+    const json::Value& scripts = v["scripts"];
+    if (!scripts.is_null() && !m.script) {
+        error = "\"scripts\" are for a mod of \"type\": \"script\"";
+        return false;
+    }
+    if (m.script) {
+        if (!m.plugin.empty()) {
+            error = "a script mod has no \"plugin\"";
+            return false;
+        }
+        if (!m.has_api) {
+            error = "a script mod must say which \"api\" it was written for (1.1 or later)";
+            return false;
+        }
+        if (m.api_major == 1 && m.api_minor < 1) {
+            error = "script mods need interface 1.1 or later (\"api\": \"1.1\")";
+            return false;
+        }
+        if (!scripts.is_array() || scripts.items().empty()) {
+            error = "a script mod must list its \"scripts\" (\"main.luau\", ...)";
+            return false;
+        }
+        for (const json::Value& s : scripts.items()) {
+            const std::string p = s.is_string() ? s.string() : std::string();
+            if (!script_path(p)) {
+                error = std::format("\"scripts\": \"{}\" must be a .luau file inside the mod, with /", p);
+                return false;
+            }
+            m.scripts.push_back(p);
+        }
     }
     if (!id_list(v["hooks"], "hooks", m.hooks, error)) {
         return false;
@@ -559,14 +616,23 @@ std::vector<Decision> plan(const std::vector<Candidate>& enabled, const Target& 
         } else if (const auto& discs = m.games.at(target.game);
                    std::find(discs.begin(), discs.end(), target.version) == discs.end()) {
             refuse(d, std::format("it is not for this disc ({}/{})", target.game, target.version));
-        } else if (m.plugin.empty()) {
+        } else if (!m.script && m.plugin.empty()) {
             refuse(d, "it has no library: data mods are packs (editor/MODDING.md)");
+        } else if (m.script && !target.scripts) {
+            refuse(d, std::format("this OpenRAC runs no scripts for {}", target.game));
         } else if (m.api_major != target.api_major) {
             refuse(d, std::format("needs interface {}.{}; this OpenRAC has {}.{}", m.api_major, m.api_minor,
                                   target.api_major, target.api_minor));
         } else if (m.api_minor > target.api_minor) {
             refuse(d, std::format("needs interface {}.{}; this OpenRAC has {}.{}: update OpenRAC", m.api_major,
                                   m.api_minor, target.api_major, target.api_minor));
+        } else if (m.script) {
+            for (const std::string& s : m.scripts) {
+                if (!has_file(m.id, s)) {
+                    refuse(d, std::format("its script {} is missing", s));
+                    break;
+                }
+            }
         } else if (!m.plugin.contains(target.platform)) {
             refuse(d, std::format("it has no library for this system ({})", target.platform));
         } else if (!has_file(m.id, m.plugin.at(target.platform))) {

@@ -226,6 +226,54 @@ void checks() {
     }
 }
 
+// Script mods (MODS.md, section 11): "type": "script", their "scripts", interface 1.1, no library.
+void scripts() {
+    auto script = [](const std::string& extra, const std::string& api = "1.1") {
+        return R"({"format": 2, "id": "s", "name": "S", "version": "1.0.0", "type": "script", "api": ")" + api
+               + R"(", "games": {"rac1": ["pal"]})" + extra + "}";
+    };
+    Manifest m;
+    std::string error;
+    CHECK(parse_manifest(script(R"(, "scripts": ["main.luau", "more/other.luau"])"), m, error));
+    CHECK(m.script && m.scripts.size() == 2 && m.scripts[1] == "more/other.luau" && m.plugin.empty());
+    CHECK(!parse_manifest(script(""), m, error));                                   // no scripts
+    CHECK(!parse_manifest(script(R"(, "scripts": [])"), m, error));
+    CHECK(error.find("scripts") != std::string::npos);
+    CHECK(!parse_manifest(script(R"(, "scripts": ["main.lua"])"), m, error));      // not .luau
+    CHECK(!parse_manifest(script(R"(, "scripts": ["../main.luau"])"), m, error));  // outside the mod
+    CHECK(!parse_manifest(script(R"(, "scripts": ["/main.luau"])"), m, error));
+    CHECK(!parse_manifest(script(R"(, "scripts": ["a\\main.luau"])"), m, error));
+    CHECK(!parse_manifest(script(R"(, "scripts": ["main.luau"])", "1.0"), m, error));  // scripts need 1.1
+    CHECK(error.find("1.1") != std::string::npos);
+    CHECK(!parse_manifest(script(R"(, "scripts": ["main.luau"], "plugin": {"linux-x86_64": "lib/a.so"})"), m, error));
+    CHECK(!parse_manifest(R"({"format": 2, "id": "s", "name": "S", "version": "1.0.0", "type": "other",
+        "games": {"rac1": ["pal"]}})", m, error));
+    CHECK(!parse_manifest(manifest("n", "1.0.0", R"(, "scripts": ["main.luau"])"), m, error));  // a native's
+    CHECK(parse_manifest(manifest("n", "1.0.0", R"(, "type": "native")"), m, error) && !m.script);
+    CHECK(script_path("main.luau") && script_path("lib/util.luau"));
+    CHECK(!script_path("lib/./util.luau") && !script_path("lib//util.luau") && !script_path("c:/x.luau"));
+
+    // The plan: a port with scripts loads it when its files are there; one without refuses it; a port
+    // of interface 1.0 refuses it for its version.
+    Target with = rac1_pal();
+    with.api_minor = 1;
+    with.scripts = true;
+    const Candidate c = candidate(script(R"(, "scripts": ["main.luau"])"));
+    CHECK(c.has_manifest);
+    auto d = plan({c}, with, [](const std::string&, const std::string& path) { return path == "main.luau"; });
+    CHECK(d[0].load);
+    d = plan({c}, with, [](const std::string&, const std::string&) { return false; });
+    CHECK(!d[0].load && d[0].reason.find("main.luau is missing") != std::string::npos);
+    Target without = with;
+    without.scripts = false;
+    d = plan_all({c}, without);
+    CHECK(!d[0].load && d[0].reason.find("runs no scripts") != std::string::npos);
+    Target old = with;
+    old.api_minor = 0;
+    d = plan_all({c}, old);
+    CHECK(!d[0].load && d[0].reason.find("update OpenRAC") != std::string::npos);
+}
+
 void platform() {
     const std::string p = platform_key();
     CHECK(p == "macos-arm64" || p == "macos-x86_64" || p == "linux-x86_64" || p == "linux-aarch64"
@@ -240,6 +288,7 @@ int main() {
     settings();
     lists();
     checks();
+    scripts();
     platform();
     return test::result();
 }

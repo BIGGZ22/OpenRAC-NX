@@ -71,6 +71,8 @@ struct Manifest {
     int api_major = 0, api_minor = 0;
     std::map<std::string, std::vector<std::string>> games;  // game -> its versions (discs)
     std::map<std::string, std::string> plugin;               // platform -> path inside the mod
+    bool script = false;                                     // "type": "script" (MODS.md, section 11)
+    std::vector<std::string> scripts;                        // a script mod's .luau files, run in order
     std::vector<std::string> hooks;
     std::vector<Setting> settings;
     std::vector<Requirement> requirements;  // the manifest's "requires"
@@ -82,6 +84,9 @@ struct Manifest {
 bool parse_manifest(std::string_view text, Manifest& out, std::string& error);
 
 bool valid_id(std::string_view id);
+
+// A path inside a mod to one of its .luau files: relative, with /, no empty, "." or ".." part.
+bool script_path(std::string_view path);
 
 // One mod of the launcher's list, in its order. `settings` keeps the values as written (JSON
 // values of the object), checked against the manifest by resolve_settings.
@@ -108,6 +113,7 @@ struct Target {
     std::string platform;  // platform_key()
     int api_major = 0;
     int api_minor = 0;
+    bool scripts = false;  // a script binding for this game (script mods can run)
 };
 
 // A mod the list has on, with its manifest (or why it could not be read).
