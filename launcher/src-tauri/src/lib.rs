@@ -1050,7 +1050,8 @@ fn ensure_linux_game_desktop_integration(root: &std::path::Path) {
 /// Qt program told to look for its platform plugin in the AppImage's
 /// directories, which hold no Qt, stops with "Could not find the Qt platform
 /// plugin"), so they go. The launcher's own webview keeps the AppImage's
-/// libraries; everything else gets the system's (core/src/appimage.rs).#[cfg(target_os = "linux")]
+/// libraries; everything else gets the system's (core/src/appimage.rs).
+#[cfg(target_os = "linux")]
 fn clean_appimage_env() {
     openrac_launcher_core::appimage::clean_process_env();
 }
@@ -1100,7 +1101,7 @@ fn open_path_with_system(app: &AppHandle, path: &str) -> Result<(), String> {
     }
     #[cfg(not(target_os = "linux"))]
     {
-        app.opener().open_path(path.to_string_lossy(), None::<&str>).map_err(|e| e.to_string())
+        app.opener().open_path(path, None::<&str>).map_err(|e| e.to_string())
     }
 }
 
@@ -1125,7 +1126,11 @@ fn open_with_system(target: &str) -> Result<(), String> {
     let mut cmd = std::process::Command::new("xdg-open");
     cmd.arg(target);
     openrac_launcher_core::appimage::sanitize(&mut cmd);
-    cmd.spawn().map(|_| ()).map_err(|e| e.to_string())
+    let mut child = cmd.spawn().map_err(|e| format!("cannot start xdg-open: {e}"))?;
+    // Reaped when it ends (xdg-open hands over to the desktop's program and exits): a child
+    // that is not waited for stays a zombie until the launcher exits.
+    std::thread::spawn(move || child.wait());
+    Ok(())
 }
 
 // On Android and iOS the launcher is a library the app's activity starts through this entry point.
