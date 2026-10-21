@@ -47,6 +47,15 @@ then X. All offsets are from the mesh start.
 0x1000 bytes). The game reads the bases unsigned and only answers queries
 inside [0, 1024)³; all retail coordinates are ≥ 0 (up to cell 200, 220, 111).
 
+**Layout in memory** (all 19 PAL levels): the root, then every slab table,
+then every row table (each 4-byte aligned), then every leaf (16-byte aligned,
+zero-padded to its quadword count); the mesh is zero-padded to 0x40, and the
+hero section after it pads the block to 0x40. The tables and leaves are not in
+coordinate order but in the build tool's own (the slabs of level 0 run Z 8, 9,
+7, 5, ...), so a writer that keeps that order reproduces the block byte for
+byte; OpenRAC's editor does ([collision.py](../../../editor/collision.py)), and
+edits only the cells an edit touches. Leaves with no faces occur (level 15).
+
 ## 3. Leaf
 
 | Field | Content |
@@ -80,12 +89,18 @@ counted 39 distinct bytes on NTSC-U; 31 (0x1F) and 12 dominate.
 (1,312,557 quads). OpenRAC on PAL: 429,500 cells and 2,374,105 faces; the
 two builds' levels differ slightly.
 
+**Editing.** A face must be in every cell it touches, with all its vertices
+inside the ±32-unit range of each of those cells' centres; OpenRAC's packer
+puts an added triangle into every cell its box test hits (exact, on the
+integer grid) and halves triangles too large for that range. A cell holds at
+most 255 vertices and 255 quads, and at most 0xFF quadwords (4,080 bytes).
+
 ## 4. Hero groups
 
 Player-only geometry, not in the grid: a count, padding to 16, then 16-byte
-groups: bounding sphere (u16 x, y, z, radius at 1/64), triangle count (the
-game reads a byte; at most 214 on the disc), vertex count, data offset from
-the section. Data: vertices of u16 x, y, z at 1/64 (absolute, unsigned) and
+groups: bounding sphere (u16 x, y, z, radius at 1/64), triangle count (u16;
+the game reads a byte; at most 214 on the disc), vertex count (u16), data
+offset from the section (u32). Each group's data is 16-byte aligned. Data: vertices of u16 x, y, z at 1/64 (absolute, unsigned) and
 a zero, then triangles of three u8 indices and a zero. No type byte. Hero
 coordinates are confined to 0–1024 units. 516 groups on NTSC-U (518 on PAL);
 six levels have none.

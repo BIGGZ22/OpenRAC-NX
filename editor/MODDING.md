@@ -18,6 +18,9 @@ their own (`"game": "rac2"`, `"rac3"`, `"rac4"`), which wait in Your mods
 until those games are playable. A pack is used only with its own game's
 levels ([README.md](README.md#the-later-games-early-access)).
 
+Moving objects, editing their values, volumes, paths, cameras and the
+collision is level editing, in Godot: [LEVEL_MODDING.md](LEVEL_MODDING.md).
+
 Nothing here changes your disc image or the extracted levels, and nothing
 you export may be shared: it is your disc's data. A pack holds only what you
 changed; share it only with people who own the game.
