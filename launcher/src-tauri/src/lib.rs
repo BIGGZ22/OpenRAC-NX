@@ -18,6 +18,7 @@ use openrac_launcher_core::jobs::{Event, Jobs, Started};
 use openrac_launcher_core::launcher_log;
 use openrac_launcher_core::library::{self, Library};
 use openrac_launcher_core::overrides::{self, PackView};
+use openrac_launcher_core::plugins::{self, Installed, PluginView};
 use openrac_launcher_core::reports::{self, ReportEntry};
 use serde::Serialize;
 use tauri::{AppHandle, Emitter, Manager, State};
@@ -872,6 +873,97 @@ fn overrides_remove(state: State<'_, AppState>, game: String, id: String) -> Res
     overrides::remove(&overrides_dir(&state, &game)?, &id)
 }
 
+/// A game's native mods' folder (`<data>/plugins`, docs/port/MODS.md), from the install folder in
+/// Settings.
+fn plugins_dir(state: &State<'_, AppState>, game: &str) -> Result<PathBuf, String> {
+    let install = state.config.lock().unwrap().install_dir.clone().ok_or("no install folder (Settings)")?;
+    Ok(plugins::dir(&install, game))
+}
+
+/// Runs a change to a game's native mods away from the window's thread.
+async fn on_plugins<T: Send + 'static>(
+    state: State<'_, AppState>,
+    game: &str,
+    work: impl FnOnce(&Path) -> Result<T, String> + Send + 'static,
+) -> Result<T, String> {
+    let dir = plugins_dir(&state, game)?;
+    tauri::async_runtime::spawn_blocking(move || work(&dir)).await.map_err(|e| e.to_string())?
+}
+
+/// The game's native mods in load order, as they stand for its disc `version` (`pal`).
+#[tauri::command]
+async fn plugins_list(state: State<'_, AppState>, game: String, version: String) -> Result<Vec<PluginView>, String> {
+    let g = game.clone();
+    on_plugins(state, &game, move |dir| plugins::list(dir, &g, &version)).await
+}
+
+#[tauri::command]
+async fn plugins_set_enabled(
+    state: State<'_, AppState>,
+    game: String,
+    version: String,
+    id: String,
+    enabled: bool,
+) -> Result<Vec<PluginView>, String> {
+    let g = game.clone();
+    on_plugins(state, &game, move |dir| plugins::set_enabled(dir, &g, &version, &id, enabled)).await
+}
+
+#[tauri::command]
+async fn plugins_move(
+    state: State<'_, AppState>,
+    game: String,
+    version: String,
+    id: String,
+    up: bool,
+) -> Result<Vec<PluginView>, String> {
+    let g = game.clone();
+    on_plugins(state, &game, move |dir| plugins::move_mod(dir, &g, &version, &id, up)).await
+}
+
+#[tauri::command]
+async fn plugins_set_setting(
+    state: State<'_, AppState>,
+    game: String,
+    version: String,
+    id: String,
+    key: String,
+    value: serde_json::Value,
+) -> Result<Vec<PluginView>, String> {
+    let g = game.clone();
+    on_plugins(state, &game, move |dir| plugins::set_setting(dir, &g, &version, &id, &key, value)).await
+}
+
+#[tauri::command]
+async fn plugins_remove(
+    state: State<'_, AppState>,
+    game: String,
+    version: String,
+    id: String,
+) -> Result<Vec<PluginView>, String> {
+    let g = game.clone();
+    on_plugins(state, &game, move |dir| plugins::remove(dir, &g, &version, &id)).await
+}
+
+/// Adds a mod from a .zip or a folder: a native mod to the store, or the answer that it is a data
+/// pack (the page then adds it to the overrides with `overrides-add`).
+#[tauri::command]
+async fn plugins_install(
+    state: State<'_, AppState>,
+    game: String,
+    version: String,
+    path: PathBuf,
+) -> Result<Installed, String> {
+    let g = game.clone();
+    on_plugins(state, &game, move |dir| plugins::install(dir, &g, &version, &path)).await
+}
+
+/// What the port did with the game's mods at its last start (`status.json`), if it wrote it.
+#[tauri::command]
+async fn plugins_status(state: State<'_, AppState>, game: String) -> Result<Option<plugins::Status>, String> {
+    on_plugins(state, &game, |dir| Ok(plugins::read_status(dir))).await
+}
+
 /// Opens a folder inside a game's set-up folder (an export, the overrides): folders only, and
 /// only there, so the page cannot open anything else with it.
 #[tauri::command]
@@ -1240,6 +1332,13 @@ pub fn run() {
             overrides_set_enabled,
             overrides_move,
             overrides_remove,
+            plugins_list,
+            plugins_set_enabled,
+            plugins_move,
+            plugins_set_setting,
+            plugins_remove,
+            plugins_install,
+            plugins_status,
             open_game_folder,
             reports_list,
             latest_crash,
