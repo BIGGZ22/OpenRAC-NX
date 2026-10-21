@@ -1394,6 +1394,37 @@ class Places(unittest.TestCase):
             for addr in ("0x0024A080u", "0x0024A0A0u", "0x00262970u", "0x00262990u"):
                 self.assertIn(f"{{{addr}, (openrac_host_fn)func_L06_0024A080", text)
 
+    @unittest.skipUnless(have_compiler(), "needs Clang on a POSIX host")
+    def test_a_copys_call_keeps_a_returns_64_result_whole(self):
+        # rac1's EnvMapA_Draw (Kalebo, two copies) passes GetEffectTex's 64-bit TEX0 to
+        # VU1_addGSregister; its unit declares GetEffectTex int. Called through the running copy's
+        # place, the call keeps the 64 bits a direct call keeps (hostgen.json "returns_64").
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            src = root / "game"
+            (src / "src").mkdir(parents=True)
+            (src / "src" / "a.c").write_text(
+                "extern int func_L00_00320000(int);\n"
+                "extern void func_00330000(int, long long);\n"
+                "void func_L00_00300000(void) { func_00330000(6, func_L00_00320000(41)); }\n")
+            (src / "src" / "b.c").write_text(
+                "unsigned long long func_L00_00320000(int i) { return (unsigned long long)i << 40; }\n")
+            (src / "functions.tsv").write_text(
+                "func_L00_00300000\tshared\t76\tfingerprint\t3\t00:00300000,00:00300050,01:00310000\n"
+                "func_L00_00320000\tshared\t40\tfingerprint\t2\t00:00320000,01:00340000\n")
+            (root / "hostgen.json").write_text(json.dumps({
+                "sources": ["src"], "includes": [], "places": "functions.tsv",
+                "relocate": [0x1A7C80, 0x500000], "returns_64": ["func_L00_00320000"],
+            }))
+            out = root / "gen"
+            self.assertEqual(hostgen.main(["--game", str(root / "hostgen.json"),
+                                           "--source", str(src), "--out", str(out),
+                                           "--jobs", "1", "--quiet"]), 0)
+            text = (out / "a.c").read_text()
+            self.assertIn("openrac_call_in_copy(0, 0x00300000u, 76u, openrac_self_, 0x00320000u)", text)
+            self.assertIn("GFN(unsigned long long (*)(int", text)
+            self.assertNotIn("GFN(int (*)(int", text)
+
 
 class TypeStrings(unittest.TestCase):
     def test_declarators(self):

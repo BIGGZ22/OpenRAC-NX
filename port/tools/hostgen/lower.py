@@ -1744,10 +1744,18 @@ class Unit:
         if c.get("kind") == "ImplicitCastExpr" and c.get("castKind") == "BuiltinFnToFnPtr":
             return self.builtin_call(_strip_parens(_inner(c)[0]), args)
         named = None  # the function a call by name reaches through a code address
+        wide_ret = None
         if c.get("kind") == "ImplicitCastExpr" and c.get("castKind") == "FunctionToPointerDecay":
             target = _strip_parens(_inner(c)[0])
             if target.get("kind") == "DeclRefExpr" and target["referencedDecl"].get("kind") == "FunctionDecl":
                 sym = self._callee_symbol(target)
+                if sym in getattr(self.program, "returns_64", ()):
+                    # A function returning 64 bits that this unit declares int (hostgen.json
+                    # "returns_64"): called through a code address below, it keeps them as a direct
+                    # call does (EnvMapA_Draw's GetEffectTex TEX0 in the copy at 0x2EB460).
+                    own_f = self.program.lookup(self.unit, sym)
+                    if own_f is not None:
+                        wide_ret = self._canon_type(own_f.sig.ret)
                 named = sym
                 # Calls to a folded function and to the variants split off it (split_places.tsv)
                 # are counted together, in the order they come: retail's k-th call to any of the
@@ -1850,6 +1858,8 @@ class Unit:
             raise Unsupported("a call through something that is not a function pointer")
         hostft = ctype.Func(self._canon_type(ft.ret), tuple(self._canon_type(p) for p in ft.params),
                             ft.variadic, ft.prototyped)
+        if wide_ret is not None and self.cls(hostft.ret) == "int" and self.cls(wide_ret) == "int":
+            hostft = ctype.Func(wide_ret, hostft.params, hostft.variadic, hostft.prototyped)
         recast = self._recast_call(c, ft, args, result_t, fp)
         if recast is not None:
             return recast
