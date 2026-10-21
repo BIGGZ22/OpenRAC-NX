@@ -19,6 +19,7 @@ use openrac_launcher_core::launcher_log;
 use openrac_launcher_core::library::{self, Library};
 use openrac_launcher_core::overrides::{self, PackView};
 use openrac_launcher_core::plugins::{self, Installed, PluginView};
+use openrac_launcher_core::remote;
 use openrac_launcher_core::reports::{self, ReportEntry};
 use serde::Serialize;
 use tauri::{AppHandle, Emitter, Manager, State};
@@ -942,7 +943,12 @@ async fn plugins_remove(
     id: String,
 ) -> Result<Vec<PluginView>, String> {
     let g = game.clone();
-    on_plugins(state, &game, move |dir| plugins::remove(dir, &g, &version, &id)).await
+    on_plugins(state, &game, move |dir| {
+        let left = plugins::remove(dir, &g, &version, &id)?;
+        remote::forget(dir, &id)?;
+        Ok(left)
+    })
+    .await
 }
 
 /// Adds a mod from a .zip or a folder: a native mod to the store, or the answer that it is a data
@@ -959,6 +965,89 @@ async fn plugins_install(
 }
 
 /// What the port did with the game's mods at its last start (`status.json`), if it wrote it.
+/// A game's mods from a repository's address (docs/port/MODS.md, section 10): what it holds,
+/// installing one, newer versions, keeping one at its version. Through curl, no git needed.
+fn remote_context<'a>(dir: &'a Path, game: &'a str, version: &'a str) -> remote::Context<'a> {
+    remote::Context {
+        dir,
+        game,
+        version,
+        platform: plugins::platform_key(),
+        fetch: &remote::Curl,
+        hosts: remote::Hosts::default(),
+    }
+}
+
+#[tauri::command]
+async fn plugins_preview(
+    state: State<'_, AppState>,
+    game: String,
+    version: String,
+    url: String,
+) -> Result<remote::Preview, String> {
+    let g = game.clone();
+    on_plugins(state, &game, move |dir| remote::preview(&remote_context(dir, &g, &version), &url)).await
+}
+
+#[tauri::command]
+async fn plugins_install_remote(
+    state: State<'_, AppState>,
+    game: String,
+    version: String,
+    url: String,
+    id: String,
+) -> Result<remote::RemoteInstalled, String> {
+    let g = game.clone();
+    on_plugins(state, &game, move |dir| remote::install(&remote_context(dir, &g, &version), &url, &id)).await
+}
+
+#[derive(serde::Serialize)]
+#[serde(rename_all = "camelCase")]
+struct UpdateCheck {
+    updates: Vec<remote::Update>,
+    errors: Vec<String>,
+}
+
+#[tauri::command]
+async fn plugins_check_updates(
+    state: State<'_, AppState>,
+    game: String,
+    version: String,
+) -> Result<UpdateCheck, String> {
+    let g = game.clone();
+    on_plugins(state, &game, move |dir| {
+        let (updates, errors) = remote::check_updates(&remote_context(dir, &g, &version));
+        Ok(UpdateCheck { updates, errors })
+    })
+    .await
+}
+
+#[tauri::command]
+async fn plugins_update(
+    state: State<'_, AppState>,
+    game: String,
+    version: String,
+    id: String,
+) -> Result<remote::RemoteInstalled, String> {
+    let g = game.clone();
+    on_plugins(state, &game, move |dir| remote::update(&remote_context(dir, &g, &version), &id)).await
+}
+
+#[tauri::command]
+async fn plugins_sources(state: State<'_, AppState>, game: String) -> Result<remote::Sources, String> {
+    on_plugins(state, &game, |dir| Ok(remote::read_sources(dir))).await
+}
+
+#[tauri::command]
+async fn plugins_set_pin(
+    state: State<'_, AppState>,
+    game: String,
+    id: String,
+    pin: bool,
+) -> Result<remote::Sources, String> {
+    on_plugins(state, &game, move |dir| remote::set_pin(dir, &id, pin)).await
+}
+
 #[tauri::command]
 async fn plugins_status(state: State<'_, AppState>, game: String) -> Result<Option<plugins::Status>, String> {
     on_plugins(state, &game, |dir| Ok(plugins::read_status(dir))).await
@@ -1427,6 +1516,12 @@ pub fn run() {
             plugins_remove,
             plugins_install,
             plugins_status,
+            plugins_preview,
+            plugins_install_remote,
+            plugins_check_updates,
+            plugins_update,
+            plugins_sources,
+            plugins_set_pin,
             open_game_folder,
             reports_list,
             latest_crash,
