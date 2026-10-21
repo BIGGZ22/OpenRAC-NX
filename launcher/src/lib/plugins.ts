@@ -1,36 +1,38 @@
 // What the Mods tab says about a game's native mods (core/src/plugins.rs, docs/port/MODS.md): each
 // one's state in a few words, and the control each of its settings gets (launcher/docs/STYLE.md: a
-// switch for on/off, a segmented control for two or three choices, radios for more).
+// switch for on/off, a segmented control for two or three choices, radios for more). The words are
+// lib/modsText.ts's; here only which ones.
 import type { PluginSetting, PluginView } from "./api";
+import { KIND_LABEL, STATE_LABEL, rangeText, sharesWith, type Label, type ModTone } from "./modsText";
 
-export type PluginTone = "ok" | "off" | "warn" | "err";
+export type PluginTone = ModTone;
 
 /** A mod's state, as a dot and a few words. Purist mode loads none, whatever is switched on. */
-export function pluginState(mod: PluginView, purist: boolean): { text: string; tone: PluginTone } {
-  if (!mod.enabled) return { text: "Off", tone: "off" };
-  if (purist) return { text: "Not in purist mode", tone: "off" };
+export function pluginState(mod: PluginView, purist: boolean): Label {
+  if (!mod.enabled) return STATE_LABEL.off;
+  if (purist) return STATE_LABEL.purist;
   switch (mod.state) {
     case "ready":
-      return { text: "On", tone: "ok" };
+      return STATE_LABEL.on;
     case "failed":
-      return { text: "Not loaded", tone: "err" };
+      return STATE_LABEL.failed;
     case "refused":
-      return { text: "Cannot load", tone: "err" };
+      return STATE_LABEL.refused;
     default:
-      return { text: "Off", tone: "off" };
+      return STATE_LABEL.off;
   }
 }
 
 /** What a mod runs, as a dot and a few words: a native mod is a program on this computer, a script
  *  mod runs in the game's sandbox (docs/port/MODS.md, section 11), a pack runs nothing. */
-export function modKind(kind: string): { text: string; tone: PluginTone } {
+export function modKind(kind: string): Label {
   switch (kind) {
     case "native":
-      return { text: "Runs code on this computer", tone: "warn" };
+      return KIND_LABEL.native;
     case "script":
-      return { text: "Runs scripts (sandboxed)", tone: "ok" };
+      return KIND_LABEL.script;
     default:
-      return { text: "Textures and models", tone: "off" };
+      return KIND_LABEL.pack;
   }
 }
 
@@ -64,17 +66,10 @@ export function settingNumber(setting: PluginSetting, typed: string): number | n
 
 /** The range a number setting takes, for its line: "50 to 110". */
 export function settingRange(setting: PluginSetting): string {
-  const { min, max } = setting;
-  if (min !== undefined && max !== undefined) return `${min} to ${max}`;
-  if (min !== undefined) return `${min} or more`;
-  if (max !== undefined) return `up to ${max}`;
-  return "";
+  return rangeText(setting.min, setting.max);
 }
 
 /** The other mods it changes the same part of the game with, in one sentence; empty when none. */
 export function sharedWith(mod: PluginView): string {
-  const names = [...new Set(mod.sharedHooks.flatMap((h) => h.with))];
-  if (names.length === 0) return "";
-  const list = names.length === 1 ? names[0] : `${names.slice(0, -1).join(", ")} and ${names.at(-1)}`;
-  return `Changes the same part of the game as ${list}: the one lower in the list goes first.`;
+  return sharesWith([...new Set(mod.sharedHooks.flatMap((h) => h.with))]);
 }

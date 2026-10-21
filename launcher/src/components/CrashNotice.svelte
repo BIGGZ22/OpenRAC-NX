@@ -7,6 +7,7 @@
   import { api, onAndroid } from "$lib/api";
   import { app, dismissStopped, guard, toast } from "$lib/app.svelte";
   import { DISCORD_URL, ISSUES_URL } from "$lib/links";
+  import { crashModsLine } from "$lib/modsText";
   import { place, stopText, type StopNotice } from "$lib/reports";
 
   let { notice, title }: { notice: StopNotice; title: string } = $props();
@@ -107,10 +108,7 @@
       {/if}
     </p>
     {#if crash && modsLoaded.length}
-      <p class="say">
-        Gameplay mods were on ({modsLoaded.join(", ")}). If it crashes again, try Purist mode on the Mods tab, and tell
-        us which mods you had.
-      </p>
+      <p class="say">{crashModsLine(modsLoaded)}</p>
     {/if}
 
     <div class="actions">

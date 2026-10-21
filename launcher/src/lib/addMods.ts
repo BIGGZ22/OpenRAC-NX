@@ -3,6 +3,7 @@
 // the version's overrides-add action). The player never has to know which is which.
 import { api, type VersionView } from "./api";
 import { jobs, runChain } from "./app.svelte";
+import { added, withName } from "./modsText";
 
 export interface Added {
   /** What happened, in a sentence. */
@@ -32,27 +33,27 @@ export async function addMods(v: VersionView, paths: string[]): Promise<Added> {
     try {
       installed = await api.pluginsInstall(v.game, v.name, path);
     } catch (e) {
-      return { ...result, text: `${name}: ${typeof e === "string" ? e : String(e)}`, failed: true };
+      return { ...result, text: withName(name, typeof e === "string" ? e : String(e)), failed: true };
     }
     if (installed.kind === "plugin") {
       result.plugin = true;
       result.text = installed.replaced
-        ? `Updated ${installed.name} to ${installed.version}; its settings are kept.`
+        ? added.replaced(installed.name, installed.version)
         : installed.enabled
-          ? `Added ${installed.name}. It is on from the game's next start.`
-          : `Added ${installed.name}. It is off: its row says why.`;
+          ? added.on(installed.name)
+          : added.off(installed.name);
       continue;
     }
     if (!adder?.runnable) {
-      return { ...result, text: `${name} is a texture and model pack, which cannot be added here yet.`, failed: true };
+      return { ...result, text: added.packHereNot(name), failed: true };
     }
     const ok = await runChain({ kind: "version", key: v.key }, [adder], { path });
     if (!ok) {
       const why = lastLine().replace(/^overrides: /, "");
-      return { ...result, text: `${name}: ${why.length > 0 ? why : "it could not be added"}`, failed: true };
+      return { ...result, text: added.packFailed(name, why), failed: true };
     }
     result.pack = true;
-    result.text = `Added ${name}.`;
+    result.text = added.pack(name);
   }
   return result;
 }

@@ -21,6 +21,7 @@
   import { app, guard, jobs, run, runChain, saveConfig, toast } from "$lib/app.svelte";
   import { levelName, levelsOf, type EntryState } from "$lib/labels";
   import { GODOT_URL, SITE_URL } from "$lib/links";
+  import { GAME_LIST } from "$lib/modsText";
   import { playerVersion } from "$lib/player.svelte";
   import type { Job } from "$lib/queue";
   import { enter } from "$lib/motion";
@@ -85,7 +86,9 @@
     const v = editable(game);
     if (!v) {
       const pv = playerVersion(game);
-      return pv && playable(pv) ? { text: "Gameplay mods", tone: "ok" } : { text: "Not moddable yet", tone: "info" };
+      return pv && playable(pv)
+        ? { text: GAME_LIST.gameplayMods, tone: "ok" }
+        : { text: GAME_LIST.notModdable, tone: "info" };
     }
     if (
       early(v) &&

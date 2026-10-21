@@ -25,10 +25,9 @@
   import { addMods } from "$lib/addMods";
   import { app, guard, saveConfig } from "$lib/app.svelte";
   import { modKind, pluginState, settingControl, settingNumber, settingRange, sharedWith } from "$lib/plugins";
+  import * as T from "$lib/modsText";
   import Icon from "./Icon.svelte";
   import Menu from "./Menu.svelte";
-
-  const MODS_URL = "https://github.com/OpenRAC/rac1-mods";
 
   let {
     version: v,
@@ -104,12 +103,7 @@
       }
       if (!quiet) {
         const n = found.updates.length;
-        said = {
-          text:
-            (n === 0 ? "Every mod from a link is up to date." : `${n} update${n === 1 ? "" : "s"} found.`) +
-            (found.errors.length ? ` Not checked: ${found.errors.join("; ")}` : ""),
-          failed: found.errors.length > 0 && n === 0,
-        };
+        said = { text: T.updatesFound(n, found.errors), failed: found.errors.length > 0 && n === 0 };
       }
     } catch (e) {
       if (!quiet) said = { text: message(e), failed: true };
@@ -126,7 +120,7 @@
         said = { text: added.text, failed: added.failed };
         onpack();
       } else {
-        said = { text: `Updated ${done.name} to ${done.version}; its settings are kept.`, failed: false };
+        said = { text: T.updated(done.name, done.version), failed: false };
       }
       updates = Object.fromEntries(Object.entries(updates).filter(([k]) => k !== id));
     } catch (e) {
@@ -174,17 +168,17 @@
       } else {
         said = {
           text: done.replaced
-            ? `Installed ${done.name} ${done.version} from ${preview.label}; its settings are kept.`
+            ? T.installedFrom.replaced(done.name, done.version, preview.label)
             : done.enabled
-              ? `Installed ${done.name} from ${preview.label}. It is on from the game's next start.`
-              : `Installed ${done.name} from ${preview.label}. It is off: its row says why.`,
+              ? T.installedFrom.on(done.name, preview.label)
+              : T.installedFrom.off(done.name, preview.label),
           failed: false,
         };
       }
       preview = null;
       link = "";
     } catch (err) {
-      said = { text: `${m.name}: ${message(err)}`, failed: true };
+      said = { text: T.withName(m.name, message(err)), failed: true };
     }
     installing = null;
     await load();
@@ -215,12 +209,12 @@
   }
 
   async function addZip() {
-    const zip = await pickZip("Choose a mod (.zip)");
+    const zip = await pickZip(T.PANEL.pickZip);
     if (zip) await add([zip]);
   }
 
   async function addFolder() {
-    const folder = inTauri ? await pickFolder("Choose a mod's folder") : "/home/you/Downloads/lock-strafe";
+    const folder = inTauri ? await pickFolder(T.PANEL.pickFolder) : "/home/you/Downloads/lock-strafe";
     if (folder) await add([folder]);
   }
 
@@ -236,7 +230,7 @@
   }
 
   function remove(mod: PluginView) {
-    if (!confirm(`Remove ${mod.name}? The launcher's copy and its settings are deleted.`)) return;
+    if (!confirm(T.removeConfirm(mod.name))) return;
     void change(api.pluginsRemove(v.game, v.name, mod.id));
   }
 
@@ -248,10 +242,7 @@
     const n = settingNumber(s, field.value);
     if (n === null) {
       field.value = String(s.value);
-      said = {
-        text: `${s.name} takes ${settingRange(s) || (s.type === "int" ? "a whole number" : "a number")}.`,
-        failed: true,
-      };
+      said = { text: T.settingTakes(s.name, settingRange(s), s.type === "int"), failed: true };
       return;
     }
     setValue(mod, s, n);
@@ -262,65 +253,61 @@
   }
 </script>
 
-<section class="panel plugins" aria-label="Gameplay mods">
+<section class="panel plugins" aria-label={T.PANEL.title}>
   <div class="row head">
-    <h2 class="grow">Gameplay mods</h2>
+    <h2 class="grow">{T.PANEL.title}</h2>
     <button class="small" disabled={adding} onclick={() => void addZip()}
-      >{#if adding}<span class="spinner"></span>{:else}<Icon name="library" size={14} />{/if}Add a .zip…</button
+      >{#if adding}<span class="spinner"></span>{:else}<Icon name="library" size={14} />{/if}{T.PANEL.addZip}</button
     >
     <button class="small" disabled={adding} onclick={() => void addFolder()}
-      ><Icon name="folder" size={14} />Add a folder…</button
+      ><Icon name="folder" size={14} />{T.PANEL.addFolder}</button
     >
     {#if hasSources}
       <button class="small" disabled={checking} onclick={() => void checkUpdates()}
-        >{#if checking}<span class="spinner"></span>{/if}Check for updates</button
+        >{#if checking}<span class="spinner"></span>{/if}{T.PANEL.checkUpdates}</button
       >
     {/if}
   </div>
 
   <form class="link-row" onsubmit={(e) => void readLink(e)}>
     <label class="grow">
-      <span class="sr-only">A mod's repository address</span>
+      <span class="sr-only">{T.PANEL.linkLabel}</span>
       <input
         class="link-field"
-        type="url"
+        type="text"
         inputmode="url"
         spellcheck="false"
         autocomplete="off"
-        placeholder="Add from a link: https://github.com/owner/repository"
+        placeholder={T.PANEL.linkPlaceholder}
         bind:value={link}
       />
     </label>
     <button class="small" type="submit" disabled={reading || !link.trim()}
-      >{#if reading}<span class="spinner"></span>{/if}Look</button
+      >{#if reading}<span class="spinner"></span>{/if}{T.PANEL.look}</button
     >
   </form>
 
   {#if previewError}<p class="said failed" role="status">{previewError}</p>{/if}
 
   {#if preview}
-    <div class="preview" aria-label={`Mods in ${preview.label}`}>
+    {@const from = T.fromPublisher(preview.label, preview.owner)}
+    <div class="preview" aria-label={T.modsAria(preview.label)}>
       <p class="from small-text">
-        In <strong>{preview.label}</strong>{#if preview.owner}, published by {preview.owner}{/if}{#if developer}
+        {from.before}<strong>{from.label}</strong>{from.after}{#if developer}
           <span class="mono dim"
             >· {preview.reference}{#if preview.commit}&nbsp;({preview.commit.slice(0, 10)}){/if}</span
           >{/if}
       </p>
       {#if preview.note}<p class="dim small-text">{preview.note}</p>{/if}
       {#if preview.mods.some((m) => m.kind === "native")}
-        <p class="warn small-text">
-          A gameplay mod with code is a program: it runs on this computer with the game's rights. Install only mods from
-          people you trust.
-        </p>
+        <p class="warn small-text">{T.PREVIEW.nativeWarning}</p>
       {/if}
       {#if preview.mods.some((m) => m.kind === "script")}
-        <p class="dim small-text">
-          A script mod runs in the game's sandbox: it can change only what the game lets scripts reach, never your
-          files.
-        </p>
+        <p class="dim small-text">{T.PREVIEW.scriptNote}</p>
       {/if}
       <ul>
         {#each preview.mods as m (m.id)}
+          {@const fits = m.compatible ? T.COMPATIBLE_LABEL.yes : T.COMPATIBLE_LABEL.no}
           <li class="mod remote">
             <div class="line">
               <div class="grow">
@@ -332,29 +319,27 @@
                 {#if m.description}<div class="dim small-text">{m.description}</div>{/if}
                 <div class={`kind small-text ${modKind(m.kind).tone}`}>
                   <span class="dot"></span>{modKind(m.kind).text}{#if m.installed}<span class="dim"
-                      >&nbsp;· {m.installed} installed</span
+                      >&nbsp;· {T.installedAlready(m.installed)}</span
                     >{/if}
                 </div>
               </div>
-              <span class={`state ${m.compatible ? "ok" : "err"}`}
-                ><span class="dot"></span>{m.compatible ? "Works here" : "Cannot be installed"}</span
-              >
+              <span class={`state ${fits.tone}`}><span class="dot"></span>{fits.text}</span>
               <button
                 class="small"
                 disabled={!m.compatible || installing !== null}
                 onclick={() => void installRemote(m)}
                 >{#if installing === m.id}<span class="spinner"></span>{/if}{m.installed === m.version
-                  ? "Reinstall"
+                  ? T.PREVIEW.reinstall
                   : m.installed
-                    ? `Update to ${m.version}`
-                    : "Install"}</button
+                    ? T.updateTo(m.version)
+                    : T.PREVIEW.install}</button
               >
             </div>
             {#if !m.compatible && m.why}<p class="why failed">{m.why}</p>{/if}
             {#if developer}
               <div class="dev dim">
                 <code>{m.id}</code>{#if m.path}&nbsp;· <span class="mono">{m.path}/</span>{/if}{#if m.asset}&nbsp;·
-                  <span class="mono">{m.asset}</span> ({m.tag}){/if}{#if m.api}&nbsp;· interface {m.api}{/if}
+                  <span class="mono">{m.asset}</span> ({m.tag}){/if}{#if m.api}&nbsp;· {T.PANEL.interface} {m.api}{/if}
                 · {Object.entries(m.games)
                   .map(([g, d]) => `${g}: ${d.join(", ")}`)
                   .join("; ")}
@@ -363,14 +348,14 @@
           </li>
         {/each}
       </ul>
-      <p><button class="link" onclick={() => (preview = null)}>Close</button></p>
+      <p><button class="link" onclick={() => (preview = null)}>{T.PANEL.close}</button></p>
     </div>
   {/if}
 
   <label class="setting purist">
     <span class="text">
-      <strong>Purist mode</strong>
-      <small>Play the game as the PS2 plays it: no gameplay mod is loaded, whatever is on below.</small>
+      <strong>{T.PURIST.title}</strong>
+      <small>{T.PURIST.panelLine}</small>
     </span>
     <input
       type="checkbox"
@@ -387,9 +372,9 @@
     <p class="failed">{listError}</p>
   {:else if mods.length === 0}
     <p class="dim empty">
-      No gameplay mods yet. They change how the game plays, as a lock-strafe does. Ratchet &amp; Clank's are at
-      <button class="link" onclick={() => void guard(api.openUrl(MODS_URL))}>OpenRAC/rac1-mods</button>: paste its
-      address above, or add the .zip for your computer here.
+      {T.PANEL.emptyBefore}
+      <button class="link" onclick={() => void guard(api.openUrl(T.PANEL.modsUrl))}>{T.PANEL.modsUrlLabel}</button>{T
+        .PANEL.emptyAfter}
     </p>
   {:else}
     <ul>
@@ -404,7 +389,7 @@
               type="checkbox"
               role="switch"
               class="switch"
-              aria-label={`Use ${mod.name}`}
+              aria-label={T.useAria(mod.name)}
               checked={mod.enabled}
               disabled={!mod.enabled && mod.blocked !== ""}
               title={!mod.enabled && mod.blocked ? mod.blocked : undefined}
@@ -425,27 +410,27 @@
             <div class="order">
               <button
                 class="icon"
-                aria-label={`Move ${mod.name} up`}
-                title="Move up: it loads earlier"
+                aria-label={T.moveUpAria(mod.name)}
+                title={T.PANEL.moveUpTitle}
                 disabled={i === 0}
                 onclick={() => void change(api.pluginsMove(v.game, v.name, mod.id, true))}
                 ><Icon name="up" size={14} /></button
               >
               <button
                 class="icon"
-                aria-label={`Move ${mod.name} down`}
-                title="Move down: it loads later, and goes first where it changes what a mod above it does"
+                aria-label={T.moveDownAria(mod.name)}
+                title={T.PANEL.moveDownTitle}
                 disabled={i === mods.length - 1}
                 onclick={() => void change(api.pluginsMove(v.game, v.name, mod.id, false))}
                 ><Icon name="down" size={14} /></button
               >
               <Menu
-                label={`More for ${mod.name}`}
+                label={T.moreAria(mod.name)}
                 items={[
                   ...(source
                     ? [
                         {
-                          label: source.pin ? "Let it update" : "Keep this version",
+                          label: source.pin ? T.PANEL.letUpdate : T.PANEL.keepVersion,
                           icon: "save" as const,
                           run: () => void setPin(mod.id, !source.pin),
                         },
@@ -454,14 +439,14 @@
                   ...(mod.homepage
                     ? [
                         {
-                          label: "Its page",
+                          label: T.PANEL.homepage,
                           icon: "external" as const,
                           run: () => void guard(api.openUrl(mod.homepage)),
                         },
                       ]
                     : []),
                   {
-                    label: "Remove",
+                    label: T.PANEL.remove,
                     icon: "trash" as const,
                     danger: true,
                     run: () => {
@@ -475,10 +460,10 @@
 
           {#if source}
             <p class="why dim">
-              From {sourceLabel(source.url)}{#if source.pin}&nbsp;· kept at {source.version}{/if}
+              {T.fromSource(sourceLabel(source.url))}{#if source.pin}&nbsp;· {T.keptAt(source.version)}{/if}
               {#if update}
                 <button class="small update" disabled={updating !== null} onclick={() => void runUpdate(mod.id)}
-                  >{#if updating === mod.id}<span class="spinner"></span>{/if}Update to {update.available}</button
+                  >{#if updating === mod.id}<span class="spinner"></span>{/if}{T.updateTo(update.available)}</button
                 >
               {/if}
             </p>
@@ -486,7 +471,7 @@
           {#if mod.enabled && (mod.state === "refused" || mod.state === "failed")}
             <p class="why failed">{mod.reason}</p>
           {:else if !mod.enabled && mod.blocked}
-            <p class="why dim">Cannot be switched on: {mod.blocked}</p>
+            <p class="why dim">{T.cannotSwitchOn(mod.blocked)}</p>
           {/if}
           {#if shared && mod.enabled}<p class="why warn">{shared}</p>{/if}
 
@@ -587,20 +572,17 @@
           {#if developer}
             <div class="dev dim">
               <code>{mod.id}</code> · <span class="mono">{mod.path}</span>
-              {#if mod.hooks.length}<br />Hooks: <span class="mono">{mod.hooks.join(", ")}</span>{/if}
-              {#if mod.license}<br />License: {mod.license}{/if}
-              {#if source}<br />Source: <span class="mono">{source.url}</span>{#if source.path}&nbsp;(<span class="mono"
-                    >{source.path}/</span
+              {#if mod.hooks.length}<br />{T.PANEL.hooks} <span class="mono">{mod.hooks.join(", ")}</span>{/if}
+              {#if mod.license}<br />{T.PANEL.license} {mod.license}{/if}
+              {#if source}<br />{T.PANEL.source} <span class="mono">{source.url}</span>{#if source.path}&nbsp;(<span
+                    class="mono">{source.path}/</span
                   >){/if}{#if source.tag}, {source.tag}{/if}{/if}
             </div>
           {/if}
         </li>
       {/each}
     </ul>
-    <p class="dim small-text note">
-      Mods load from the top down; where two change the same thing, the lower one goes first. Changes count from the
-      game's next start. A mod is a program: add only those you trust.
-    </p>
+    <p class="dim small-text note">{T.PANEL.note}</p>
   {/if}
 </section>
 
