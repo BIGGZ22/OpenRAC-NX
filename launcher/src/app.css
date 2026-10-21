@@ -494,6 +494,95 @@ details.more[open] > :not(summary) {
   animation: rise var(--medium) var(--ease) both;
 }
 
+/* Steps (Mods: the level editor, models and textures): numbered rows with a rule between them,
+   the text on the left and the step's controls in a column of their own on the right. */
+ol.steps {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  counter-reset: step;
+}
+
+ol.steps > li {
+  display: grid;
+  grid-template-columns: 26px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 8px 16px;
+  padding: 14px 0;
+  counter-increment: step;
+}
+
+ol.steps > li + li {
+  border-top: 1px solid var(--line);
+}
+
+ol.steps > li::before {
+  content: counter(step);
+  width: 26px;
+  height: 26px;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  border: 1px solid var(--line-strong);
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: var(--soft);
+}
+
+ol.steps h3 {
+  font-family: var(--font-sans);
+  font-size: 0.9375rem;
+  font-weight: 600;
+  color: var(--text);
+}
+
+ol.steps p {
+  margin: 2px 0 0;
+  font-size: 0.875rem;
+}
+
+ol.steps .controls {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+ol.steps .controls button {
+  min-width: 150px;
+  justify-content: center;
+}
+
+ol.steps .span {
+  grid-column: 2 / -1;
+}
+
+ol.steps select {
+  font: inherit;
+  font-size: 0.875rem;
+  color: var(--text);
+  background: var(--ink-deep);
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius-sm);
+  padding: 7px 10px;
+}
+
+ol.steps select:focus-visible {
+  outline: 2px solid var(--amber);
+  outline-offset: 2px;
+}
+
+@media (max-width: 900px) {
+  ol.steps > li {
+    grid-template-columns: 26px minmax(0, 1fr);
+  }
+
+  ol.steps .controls {
+    grid-column: 2;
+    justify-content: flex-start;
+  }
+}
+
 /* Status pills: a dot and a word. */
 .pill {
   display: inline-flex;
