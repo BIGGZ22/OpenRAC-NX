@@ -64,10 +64,11 @@ struct State {
     cancelled: HashSet<u32>,
 }
 
-/// What every job gets in its environment: unbuffered, UTF-8 Python output,
-/// and the checkout, for tools that want it.
+/// What every job gets in its environment: unbuffered, UTF-8 Python output, no `__pycache__`
+/// (an installed launcher's copy is inside its own bundle: the macOS app in /Applications, the
+/// AppImage, /usr/lib for a package), and the checkout, for tools that want it.
 fn environment(cmd: &mut Command, root: Option<&std::path::Path>) {
-    cmd.env("PYTHONUNBUFFERED", "1").env("PYTHONIOENCODING", "utf-8");
+    cmd.env("PYTHONUNBUFFERED", "1").env("PYTHONIOENCODING", "utf-8").env("PYTHONDONTWRITEBYTECODE", "1");
     if let Some(root) = root {
         cmd.env("OPENRAC_ROOT", root);
     }
