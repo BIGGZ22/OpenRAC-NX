@@ -1,0 +1,4 @@
+{
+  "luau-lsp.types.definitionFiles": [".sdk/openrac-mod-sdk-1.0.3/types/rac1.d.luau"],
+  "luau-lsp.sourcemap.enabled": false
+}
