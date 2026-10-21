@@ -179,9 +179,11 @@ launcher's Mods page does all three steps (edit, pack, play).
 What is packed today: **mobys that were moved, turned, scaled, given another
 class, given other values** (the `rc1_*` metadata in the Inspector), **added
 or deleted**, and **ties and shrubs** the same way (moved, turned, scaled
-each axis its own, another class of the level, other values, added, deleted).
-A moby keeps one scale for all three axes. Not yet: terrain, and anything of
-a class the level does not load.
+each axis its own, another class of the level, other values, added, deleted),
+and **the gameplay data**: pvars, links between objects, moby groups, volumes,
+paths, grind paths, cameras, sound instances and the level settings
+([Gameplay data](#gameplay-data)). A moby keeps one scale for all three axes.
+Not yet: terrain, and anything of a class the level does not load.
 
 Ties and shrubs are packed for the native port only ([scenery.py](scenery.py)):
 the port draws them from the extractor's files, so the pack writes the
@@ -280,6 +282,8 @@ levels/level_NN/
   shrubs/shrub_<class>.glb   one mesh per shrub class
   mobys/moby_<class>.tscn    a moby class: its mesh (or a box) and a label
   mobys/moby_<class>.glb     a moby class's mesh, skeleton and animations
+  gameplay/<kind>.tscn       a volume's unit shape (cuboid, sphere, cylinder, pill), or a
+                             camera's, sound's or the ship's marker
   sky.png                    the sky as a panorama, used by the WorldEnvironment
   textures/*.png             shared by the level's meshes
 ```
@@ -297,6 +301,10 @@ Level_NN
     Shrubs/Shrub_NNNN   one node per placed shrub
     Mobys/Vendor_0012   one node per placed moby (crates, enemies, NPCs...), named
                         after its class and its place in the level's table
+    LevelSettings       the gameplay data (Gameplay data, below): fog, death height,
+    MobyGroups, Cameras,  ship; groups; cameras; sounds; volumes; paths
+    Sounds, Volumes,
+    Paths, GrindPaths
 ```
 
 To edit a level:
@@ -348,6 +356,90 @@ Run a level (F6) to fly around it:
 | Mouse wheel | Change speed |
 | F | Frame the terrain |
 | C | Show or hide the collision layer |
+
+## Gameplay data
+
+RAC1 moby behaviour is C in the port, but each level's gameplay file says
+what every object starts with, and those values are in the scene, editable,
+and packed back like the mobys ([gamedata.py](gamedata.py); the formats are in
+[LEVEL.md](../docs/engine/formats/LEVEL.md#8-the-gameplay-file)):
+
+| Node | What | Packed |
+|---|---|---|
+| `Game/LevelSettings` | `rc1_background`, `rc1_fog_colour` (r, g, b), `rc1_fog_near`, `rc1_fog_far` and their `_intensity`, `rc1_death_height`, `rc1_ship_path`, `rc1_ship_camera_cuboids` (first, last) | values |
+| `Game/LevelSettings/Ship` | where the player's ship lands; turn it about Z only | moved |
+| `Game/MobyGroups` | `rc1_group_<n>`: each group's members, by node name | members |
+| `Game/Cameras/Camera_NNNN` | position and rotation (the game's Euler angles), `rc1_class`, pvars | edited in place |
+| `Game/Sounds/Sound_NNNN` | the record's matrix, `rc1_class`, `rc1_m_class`, `rc1_range`, pvars (hidden) | edited in place |
+| `Game/Volumes/Cuboids/Cuboid_NNNN`, `Spheres`, `Cylinders`, `Pills` | the unit shape through the record's matrix, translucent (hidden until you show `Volumes`) | moved, turned, scaled, added |
+| `Game/Paths/Path_NNNN` | a `Path3D`: the points in its curve, `rc1_w` each point's fourth float | points moved, added or removed; paths added |
+| `Game/GrindPaths/GrindPath_NNNN` | as paths, with `rc1_bounding_sphere` (x, y, z, r) and `rc1_flag` | the same |
+
+On a moby, camera or sound with a pvar block (its class's private
+variables, `rc1_pvar_index`):
+
+- `rc1_pvar`: the block as 32-bit words. A number with a decimal point or an
+  exponent packs as a float, any other as an integer; the list keeps its
+  length (blocks are not resized).
+- `rc1_pv_<field>`: the fields the decompilation names, typed (the classes'
+  `struct update<class>` in games/rac1's
+  [moby_pvars.h](../games/rac1/include/moby_pvars.h), 19 classes, and the
+  header every camera block starts with: `rc1_pv_sphere`, `_cuboid`,
+  `_cylinder`, `_path` name the volumes and path the camera's region test
+  uses, `rc1_pv_activation` when it switches on). A field and the word under
+  it are the same bytes: edit either; when both change, the field wins.
+- `rc1_link_<offset>`: a moby link in the block (the gameplay file's +0x50
+  list), as the name of the moby node it names, or `"-1"` for none. Name
+  another moby node to point it there; a link follows its moby when mobys
+  are added or deleted.
+- The words the level loader rewrites (moby links, pointers into the block,
+  addresses of shared data) are not packed from `rc1_pvar`: links through
+  `rc1_link_*`, the others not at all.
+
+A copy of a moby (Ctrl+D) gets a copy of its pvar block, and its own
+`rc1_pv*` values pack into the copy. Moby groups: removing a name from
+`rc1_group_<n>` or adding one moves that moby (its `rc1_group`), and each
+group then lists the mobys whose `rc1_group` names it, so setting a moby's
+`rc1_group` moves it between the lists too (in a project exported with
+`MobyGroups`; an older one packs its groups as before).
+
+Volumes, paths and grind paths are named by their place in their table by
+other data (camera blocks, moby pvars, the camera collision grid, the level
+settings), so they are never deleted or renumbered: a node deleted in Godot
+is packed as it was, with a note in `changes.txt`. A new one (a copy, or
+`gameplay/<kind>.tscn` dropped under its group, or a new `Path3D` under
+`Game/Paths`) goes after the table's own; when the section no longer fits
+where it was it moves to the end of the file. Cameras and sound instances
+are edited in place only. An edited volume's inverse matrix and Euler angles
+are computed again; an edited grind path keeps its bounding sphere when it
+still holds every point, and grows it just enough otherwise (the disc's own
+rule is not known). Curve handles and tilts are not the game's: paths are
+polylines, so they are ignored, and a point added in Godot gets the fourth
+float -1, which nearly every path point on the disc has (on grind paths it
+varies per point; its meaning is not established).
+
+"Triggers" in RAC1 are mostly these volumes: cameras switch by the cuboid,
+sphere or cylinder of their block's header, many moby classes keep a cuboid
+or path index in their pvars (shown as words, or as a typed field where the
+layout is known), the level settings name the ship's camera cuboids, and
+the camera collision grid (not exported) lists volumes per 16-unit cell.
+Environment transitions (fog zones) have matrices of their own and are not
+exported yet.
+
+As with mobys, what the scene has as the extractor wrote it keeps its bytes:
+an untouched project packs to nothing, and Godot's own saving is not an
+edit. Values that cannot be packed (not a number, out of the field's range,
+a link to no moby, an index past its table) are listed as `not packed:` in
+`changes.txt` and leave the bytes as they were.
+
+Checked on 2026-10-21 on the PAL disc: every section above, read and written
+again unchanged, gives its bytes back in all 19 levels; each level exported
+and packed untouched gives the disc's gameplay file; and one edit of each
+kind (a pvar word, a typed field, a link, a group, a camera, a sound's range,
+a cuboid moved and one added, a path point and its fourth float, a grind
+path, the death height, the ship) on levels 3 and 16 changed only that
+record's bytes (or, for an added cuboid, the table moved to the end of the
+file).
 
 ## Collision layer
 
@@ -409,6 +501,8 @@ Extracted:
   animations;
 - the sky;
 - the collision mesh, as a hidden layer;
+- the gameplay data: pvars, moby links and groups, volumes, paths, grind
+  paths, cameras, sound instances and level settings;
 - the textures they use.
 
 Approximations:
@@ -525,6 +619,8 @@ The GDScript files follow [`GDSCRIPT_CONVENTIONS.md`](GDSCRIPT_CONVENTIONS.md).
 | `gltf_read.py`, `pngio.py` | Reading glTF and PNG files back (a modder's edits) |
 | `assets.py`, `overrides.py` | Export for modding and re-import; overrides packs ([MODDING.md](MODDING.md)) |
 | `godot.py` | Project, scenes and level.json |
+| `gamedata.py` | The gameplay data (pvars, links, groups, volumes, paths, cameras, sounds, level settings) in the scene and packed back |
+| `pack.py`, `gameplay.py`, `scenery.py`, `wadpack.py` | Packing edited scenes back into the game's level data |
 
 The decoders accept only the layouts found on these discs and raise
 `FormatError` on anything else. Nothing is skipped silently.
