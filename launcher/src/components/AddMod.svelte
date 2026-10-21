@@ -87,8 +87,14 @@
         };
         onadded({ plugin: true, pack: false });
       }
-      preview = null;
-      link = "";
+      if (preview.mods.length > 1) {
+        // A repository of several mods (rac1-mods): the preview stays for the others, this one
+        // now installed.
+        preview = { ...preview, mods: preview.mods.map((x) => (x.id === m.id ? { ...x, installed: m.version } : x)) };
+      } else {
+        preview = null;
+        link = "";
+      }
     } catch (err) {
       said = { text: T.withName(m.name, message(err)), failed: true };
     }
