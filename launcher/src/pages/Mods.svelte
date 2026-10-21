@@ -22,7 +22,7 @@
   import { levelName, levelsOf, type EntryState } from "$lib/labels";
   import { GODOT_URL, SITE_URL } from "$lib/links";
   import { GAME_LIST } from "$lib/modsText";
-  import { playerVersion } from "$lib/player.svelte";
+  import { foundDisc, playerVersion, setUp } from "$lib/player.svelte";
   import type { Job } from "$lib/queue";
   import { enter } from "$lib/motion";
   import { tablist } from "$lib/tabs";
@@ -342,23 +342,23 @@
                         </p>
                       </div>
                       <div class="controls">
-                        {#if lacksGodot && !noDisc}
+                        {#if noDisc}
+                          <button onclick={() => void setUp(shown.id, shown.title, foundDisc(shown.id)?.path)}
+                            ><Icon name="disc" size={16} />Set up the disc</button
+                          >
+                        {:else if lacksGodot}
                           <button onclick={() => void chooseGodot()}
                             ><Icon name="folder" size={16} />Choose Godot</button
                           >
                         {:else}
                           <select
                             aria-label="Level to edit"
-                            disabled={noDisc}
                             value={level[v.game] ?? levelsOf(v.game)[0]?.number ?? 0}
                             onchange={(e) => (level[v.game] = Number(e.currentTarget.value))}
                           >
                             {#each levelsOf(v.game) as l (l.number)}<option value={l.number}>{l.name}</option>{/each}
                           </select>
-                          <button
-                            disabled={noDisc || opening === v.key || !!preparing}
-                            onclick={() => void editLevels(v)}
-                          >
+                          <button disabled={opening === v.key || !!preparing} onclick={() => void editLevels(v)}>
                             {#if opening === v.key || preparing}<span class="spinner"></span>{:else}<Icon
                                 name="edit"
                                 size={16}
