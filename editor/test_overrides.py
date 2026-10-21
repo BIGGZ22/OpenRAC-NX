@@ -265,3 +265,32 @@ class PackTests(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class PreviewTests(unittest.TestCase):
+    """A modder's textures shown in the editor's Godot projects, and taken back out."""
+
+    def test_preview_and_undo(self):
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            textures = root / "projects" / "level_03" / "levels" / "level_03" / "textures"
+            textures.mkdir(parents=True)
+            (textures / "terrain_0001.png").write_bytes(b"small")
+            (textures / "moby_0002.png").write_bytes(b"kept")
+            mods = root / "mods" / "level_03" / "textures"
+            mods.mkdir(parents=True)
+            (mods / "terrain_0001.png").write_bytes(b"four times larger")
+            (mods / "moby_ovr_abc.png").write_bytes(b"a model's own picture")
+            counts = overrides.preview(root / "mods", root / "projects")
+            self.assertEqual((counts["shown"], counts["left_out"]), (1, 1))
+            self.assertEqual((textures / "terrain_0001.png").read_bytes(), b"four times larger")
+            self.assertEqual((textures / ".originals" / "terrain_0001.png").read_bytes(), b"small")
+            # Shown again (another pack on top): the extractor's original stays the one kept.
+            (mods / "terrain_0001.png").write_bytes(b"newer")
+            overrides.preview(root / "mods", root / "projects")
+            self.assertEqual((textures / ".originals" / "terrain_0001.png").read_bytes(), b"small")
+            counts = overrides.preview(None, root / "projects", undo=True)
+            self.assertEqual(counts["restored"], 1)
+            self.assertEqual((textures / "terrain_0001.png").read_bytes(), b"small")
+            self.assertEqual((textures / "moby_0002.png").read_bytes(), b"kept")
+            self.assertFalse((textures / ".originals").exists())

@@ -12,6 +12,9 @@ port loads on top of the extracted levels, without reading the disc again.
                                                  the folder the port's --mods reads, for the
                                                  levels it plays (either disc's)
   overrides.py zip ID OUT.zip --into OVERRIDES   a pack as a .zip to share
+  overrides.py preview MODS --projects PROJECTS [--undo]
+                                                 show a stacked mods folder's (or a pack's) textures
+                                                 in the editor's Godot projects, at their own size
 
 A pack is a folder, or a .zip of one, with openrac-mod.json at its root (or
 in the zip's one top folder) and files laid out as the extracted levels are:
@@ -803,10 +806,62 @@ def read_json(path: Path) -> dict:
     return value if isinstance(value, dict) else {}
 
 
+ORIGINALS = ".originals"  # beside a project's textures: the extractor's own, while a preview is on
+
+
+def project_textures(projects: Path, level: str) -> Path | None:
+    """A level's textures folder in the editor's Godot projects: one project per level
+    (projects/level_NN/levels/level_NN) or one for every level (projects/levels/level_NN)."""
+    for folder in (projects / level / "levels" / level / "textures", projects / "levels" / level / "textures"):
+        if folder.is_dir():
+            return folder
+    return None
+
+
+def preview(mods: Path, projects: Path, undo: bool = False) -> dict[str, int]:
+    """Shows the textures of MODS (a stacked mods folder, stack(), or one pack) in the editor's
+    Godot projects: each level texture a pack replaces, at the pack's size, in place of the
+    extractor's, which goes to textures/.originals/ (a folder Godot does not import) to come
+    back with UNDO. A pack's pictures that replace no level texture (a model's own) have no place
+    there and are left out. Returns {"shown", "restored", "left_out"}."""
+    counts = {"shown": 0, "restored": 0, "left_out": 0}
+    levels = sorted({p.name for p in projects.glob("level_*")} | {p.name for p in projects.glob("levels/level_*")})
+    for level in levels:
+        folder = project_textures(projects, level)
+        if folder is None:
+            continue
+        kept = folder / ORIGINALS
+        if undo:
+            for original in sorted(kept.glob("*.png")) if kept.is_dir() else []:
+                shutil.copyfile(original, folder / original.name)
+                original.unlink()
+                counts["restored"] += 1
+            if kept.is_dir() and not any(kept.iterdir()):
+                kept.rmdir()
+            continue
+        for picture in sorted((mods / level / "textures").glob("*.png")):
+            target = folder / picture.name
+            if not target.is_file():
+                counts["left_out"] += 1
+                continue
+            kept.mkdir(exist_ok=True)
+            if not (kept / picture.name).is_file():
+                shutil.copyfile(target, kept / picture.name)
+            shutil.copyfile(picture, target)
+            counts["shown"] += 1
+    return counts
+
+
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     commands = parser.add_subparsers(dest="command", required=True)
     commands.add_parser("check").add_argument("source", type=Path)
+    shown = commands.add_parser("preview", help="show a stacked mods folder's (or a pack's) textures in the "
+                                                "editor's Godot projects; --undo puts the extractor's back")
+    shown.add_argument("mods", type=Path, nargs="?")
+    shown.add_argument("--projects", type=Path, required=True, help="the editor's Godot projects (a folder of "
+                                                                     "per-level projects, or one project)")
+    shown.add_argument("--undo", action="store_true")
     for name in ("add", "list", "enable", "disable", "move", "remove", "stack", "zip"):
         command = commands.add_parser(name)
         if name == "add":
@@ -828,6 +883,18 @@ def main(argv: list[str] | None = None) -> int:
                                       "disc's go where they match")
     args = parser.parse_args(argv)
     try:
+        if args.command == "preview":
+            if not args.undo and args.mods is None:
+                parser.error("preview needs the mods folder (or --undo)")
+            counts = preview(args.mods, args.projects, args.undo)
+            if args.undo:
+                print(f"Put back {counts['restored']} texture(s) the extractor wrote: {args.projects.resolve()}")
+            else:
+                print(f"Showing {counts['shown']} texture(s) of {args.mods} in {args.projects.resolve()}"
+                      + (f"; {counts['left_out']} replace no level texture (a model's own) and are left out"
+                         if counts["left_out"] else "") + ". Godot reimports them when its window has focus.")
+            print(f"openrac-output: {args.projects.resolve()}")
+            return 0
         if args.command == "check":
             manifest, used, ignored, problems = check(args.source)
             print(f"{manifest['name']}" + (f" by {manifest['author']}" if manifest.get("author") else ""))
