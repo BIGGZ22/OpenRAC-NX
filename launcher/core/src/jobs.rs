@@ -84,15 +84,22 @@ struct State {
 /// (an installed launcher's copy is inside its own bundle: the macOS app in /Applications, the
 /// AppImage, /usr/lib for a package), and the checkout, for tools that want it.
 fn environment(cmd: &mut Command, root: Option<&std::path::Path>) {
-    cmd.env("PYTHONUNBUFFERED", "1").env("PYTHONIOENCODING", "utf-8").env("PYTHONDONTWRITEBYTECODE", "1");
-    if let Some(root) = root {
-        cmd.env("OPENRAC_ROOT", root);
-    }
     // An AppImage's own environment (the AppRun's PYTHONHOME, its paths, its
     // libraries) would follow the job: a Python told that its home is the
     // AppImage's cannot start, and the game would find the AppImage's
     // libraries instead of the system's. The job gets the system's.
-    crate::appimage::sanitize(cmd);
+    environment_with(cmd, root, crate::appimage::appdir().as_deref());
+}
+
+/// [`environment`] for an AppImage mounted at `appdir` (`None`: not from one).
+fn environment_with(cmd: &mut Command, root: Option<&std::path::Path>, appdir: Option<&std::path::Path>) {
+    cmd.env("PYTHONUNBUFFERED", "1").env("PYTHONIOENCODING", "utf-8").env("PYTHONDONTWRITEBYTECODE", "1");
+    if let Some(root) = root {
+        cmd.env("OPENRAC_ROOT", root);
+    }
+    if let Some(appdir) = appdir {
+        crate::appimage::sanitize_with(cmd, appdir);
+    }
 }
 
 impl Jobs {
@@ -428,7 +435,9 @@ mod tests {
             let tx = Mutex::new(tx);
             jobs.start(&plan, None, move |e| tx.lock().unwrap().send(e).unwrap()).unwrap();
             loop {
-                if let Event::Exit { outputs, .. } = rx.recv_timeout(Duration::from_secs(10)).unwrap() {
+                if let Event::Exit { mut outputs, .. } = rx.recv_timeout(Duration::from_secs(30)).unwrap() {
+                    // stdout and stderr are read by two threads: the order across them is not defined.
+                    outputs.sort();
                     break outputs;
                 }
             }
@@ -489,16 +498,15 @@ mod tests {
         assert!(lines.contains(&"started".to_string()), "{lines:?}");
     }
 
+    /// The AppImage is given as an argument, not set in this process's environment: the tests
+    /// run in parallel, and a PYTHONHOME pointing at nothing would follow every Python another
+    /// test starts meanwhile.
     #[test]
     fn cleans_appimage_python_environment() {
-        std::env::set_var("APPDIR", "/tmp/.mount_test");
-        std::env::set_var("PYTHONHOME", "/tmp/.mount_test/usr/");
-        std::env::set_var("PYTHONPATH", "/tmp/.mount_test/usr/share/pyshared/:");
         let mut cmd = Command::new("true");
-        environment(&mut cmd, None);
-        std::env::remove_var("APPDIR");
-        std::env::remove_var("PYTHONHOME");
-        std::env::remove_var("PYTHONPATH");
+        cmd.env("PYTHONHOME", "/tmp/.mount_test/usr/");
+        cmd.env("PYTHONPATH", "/tmp/.mount_test/usr/share/pyshared/:");
+        environment_with(&mut cmd, None, Some(std::path::Path::new("/tmp/.mount_test")));
         let envs: HashMap<_, _> = cmd.get_envs().collect();
         assert_eq!(envs.get(std::ffi::OsStr::new("PYTHONHOME")), Some(&None));
         assert_eq!(envs.get(std::ffi::OsStr::new("PYTHONPATH")), Some(&None));

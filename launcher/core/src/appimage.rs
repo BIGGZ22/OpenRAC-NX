@@ -109,7 +109,7 @@ pub fn sanitize(cmd: &mut Command) {
     sanitize_with(cmd, &appdir);
 }
 
-fn sanitize_with(cmd: &mut Command, appdir: &Path) {
+pub(crate) fn sanitize_with(cmd: &mut Command, appdir: &Path) {
     // What the child would have: its own value where it has one, the
     // process's otherwise.
     let own: std::collections::HashMap<_, _> =
