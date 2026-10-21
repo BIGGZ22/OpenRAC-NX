@@ -237,8 +237,9 @@ static inline gaddr OPENRAC_CODE(gaddr a) {
  * address. A call through that place goes where its code calls (openrac_guest_function). */
 gaddr openrac_guest_nearest(const uint32_t* places, int count, gaddr caller);
 /* The place of a folded function a call goes to: the k-th call in the caller's code (at `caller`,
- * `size` bytes, in the program loaded) to any of `places`; openrac_guest_nearest's when the caller's
- * code has no such call (or its size is not known). */
+ * `size` bytes, in the program loaded) to any of `places`; when the code has fewer such calls than
+ * its C (branches the compiler merged), the place they all call if they agree; else
+ * openrac_guest_nearest's (also when its size is not known). */
 gaddr openrac_folded_call(const uint32_t* places, int count, gaddr caller, uint32_t size, int k);
 /* The address of a folded function a function takes (a draw callback it registers): the k-th
  * address of any of `places` the caller's code forms (a lui and an addiu or ori on its register,
@@ -266,19 +267,29 @@ gaddr openrac_relocate_level_code(int from, gaddr address);
  * draw callback). The function asks at entry which place it was called at (openrac_guest_entry:
  * the place of the last call through a code address, when that call came to it; 0 otherwise), and
  * a code address it takes is read from that copy's own instructions: openrac_code_in_copy finds
- * where the copy at `canon` (in level `from`'s program, `size` bytes) forms `target`, and reads
- * the same instructions at `self`. Without a place, or one that does not form it, it is
- * OPENRAC_LCODE's. */
+ * where the copy at `canon` (in level `from`'s program, `size` bytes) forms `target` (or, where it
+ * forms that nowhere, another place of target's function in that program: a place the catalogue
+ * folded into it), and reads the same instructions at `self`. Without a place, or one that does
+ * not form it, it is OPENRAC_LCODE's. */
 extern OPENRAC_GUEST_GLOBAL gaddr openrac_guest_last_entry;
 extern OPENRAC_GUEST_GLOBAL openrac_host_fn openrac_guest_last_fn;
 static inline gaddr openrac_guest_entry(openrac_host_fn self) {
     return openrac_guest_last_fn == self ? openrac_guest_last_entry : 0;
 }
 gaddr openrac_code_in_copy(int from, gaddr canon, uint32_t size, gaddr self, gaddr target);
+/* The address of a function taken by name in code written for a level, where the name may stand for
+ * several places of that level (a function the catalogue folded: one name for the same small code at
+ * several places, each a routine of its own, rac1's `return 0` leaf func_001E97C8): the place of it the
+ * code at `canon` forms (target, or any place of target's function, in level `from`'s program), read at
+ * the same instructions of the copy at `self` (0: the copy of canon in the program loaded; in level
+ * `from`'s own program, canon itself). Retail's Suck Cannon (func_L00_002DB810) skips the mobys whose
+ * class function is the leaf next to it, a place of that name. `fallback` where no copy forms one. */
+gaddr openrac_code_formed(int from, gaddr canon, uint32_t size, gaddr self, gaddr target, gaddr fallback);
 /* The same for a global: where the copy at `self` reads or writes what the copy at `canon` does at
  * `target` (folded copies of one function in one program, each on its own globals: a lui and the
- * addiu, ori, load or store that completes it; an address within 0x100 of one formed there keeps
- * its offset from it). Without a place, `target` relocated as OPENRAC_LDATA; `from` -1 is the
+ * addiu, ori, load or store that completes it, or such an instruction on $gp for a small global,
+ * $gp being the same in every program; an address within 0x100 of one formed there keeps its
+ * offset from it). Without a place, `target` relocated as OPENRAC_LDATA; `from` -1 is the
  * executable (its code read from the executable, `target` relocated as OPENRAC_DATA). */
 gaddr openrac_data_in_copy(int from, gaddr canon, uint32_t size, gaddr self, gaddr target);
 /* The same for a call: the function the copy at `self` calls where the copy at `canon` calls
@@ -290,8 +301,9 @@ gaddr openrac_call_in_copy(int from, gaddr canon, uint32_t size, gaddr self, gad
  * that only return), which every level's program fills with a function of its own. The executable's
  * copy of the caller (`exe_fn`, `size` bytes) calls the stub at its k-th such call; the copy the
  * loaded level carries (the place of the caller in level `home`, `home_fn`, relocated to the loaded
- * program) calls that level's function at the same instruction. In the executable's own program,
- * or where the copy does not call at that place, it is the stub (OPENRAC_CODE's). */
+ * program) calls that level's function at the same instruction; a k past the code's calls (the
+ * compiler merged two of the C's into one jal) is its first. In the executable's own program, or
+ * where the copy does not call at that place, it is the stub (OPENRAC_CODE's). */
 gaddr openrac_hook_in_copy(gaddr exe_fn, uint32_t size, int home, gaddr home_fn, gaddr stub, uint32_t k);
 
 /* The EE FPU's divide, for the game's float `/`: no infinities or NaNs. A divisor of zero (or a

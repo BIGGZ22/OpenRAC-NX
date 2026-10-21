@@ -120,6 +120,7 @@ class _Fn:
     wide: set = field(default_factory=set)           # locals kept 64-bit (returns_64)
     wide_params: set = field(default_factory=set)    # parameters only passed on to 64-bit ones (widen_forwarded)
     wide_result: bool = False                        # returns a "returns_64" call's result whole (widen_returns)
+    sibling_named: set = field(default_factory=set)  # folded functions the body also names by another place's name
 
 
 def _inner(n: dict) -> list:
@@ -600,6 +601,7 @@ class Unit:
         self.fn.wide_params = {params[i].get("id") for i in widened if i < len(params)}
         self.fn.wide_result = wide_result
         body = next(c for c in _inner(decl) if c.get("kind") == "CompoundStmt")
+        self.fn.sibling_named = self._sibling_named(body)
         if inherits:
             self.fn.tail_id = [s for s in _inner(body) if s.get("kind")][-1].get("id")
         local_types = self._local_types(body)
@@ -1311,7 +1313,13 @@ class Unit:
             sym = self._callee_symbol(n)
             named = self._folded_place_name(n, sym)
             address = self.code_address(named)
-            places = self._folded_places(sym) if named == sym and self.fn is not None else []
+            # A body that also names another place of the fold by that place's own name tells the
+            # places apart itself: the folded name is its own first place, which the code forms
+            # there (code_address). RegisterPartTypes stores 0x26AB10 and its copy 0x26B2B8
+            # (func_L00_0026B2B8) in entries 5 and 7, and its code forms 0x26B2B8 first: the k-th
+            # formation of any place put 0x26B2B8 in entry 5.
+            sibling = self.fn is not None and sym in self.fn.sibling_named
+            places = self._folded_places(sym) if named == sym and self.fn is not None and not sibling else []
             own_size = getattr(self.program, "sizes", {}).get(self.fn.name) or 0 if places else 0
             if places and own_size:
                 # A name the catalogue folded, whose places in one program are other functions (each
@@ -1348,16 +1356,36 @@ class Unit:
         places = places + [p for p in getattr(self.program, "splits", {}).get(sym, []) if p not in places]
         level = self._shared_level()
         copy = self._copy_places()
+        rel = getattr(self.program, "relocate", None)
+        if copy is not None and places[0][0] < 0 and rel and rel[0] <= places[0][1] < rel[1]:
+            home, canon, size = copy
+            mine = [a for o, a in places if o == home]
+            if mine:
+                # An executable function taken by name in code written for a level: the executable's
+                # address is level code while that runs (the level's program overwrites it there). The
+                # place the code forms in its level, and in another level's copy the same instructions'
+                # (guest.h); of a function the catalogue folded (one name for small routines at several
+                # places, the `return 0` leaf func_001E97C8), whichever of them this code forms. Where no
+                # copy forms one: a function with one place there is that place relocated
+                # (OPENRAC_LCODE), a folded one the executable's address (level 18 has nothing at level
+                # 0's first place of func_001E9768).
+                self.fn.uses_self = True
+                fallback = f"OPENRAC_LCODE({home}, {hexaddr(mine[0])})" if len(mine) == 1 else hexaddr(places[0][1])
+                return (f"openrac_code_formed({home}, {hexaddr(canon)}, {size}u, openrac_self_, {hexaddr(mine[0])}, "
+                        f"{fallback})")
         if copy is not None and places[0][0] >= 0:
             # One C for copies at several places: the address this copy forms (guest.h).
             home, canon, size = copy
             own = next((a for o, a in places if o == home), places[0][1])
             self.fn.uses_self = True
             return f"openrac_code_in_copy({home}, {hexaddr(canon)}, {size}u, openrac_self_, {hexaddr(own)})"
-        if level is not None and (places[0][0] >= 0 or any(o == level for o, _ in places)):
+        if level is not None and (places[0][0] >= 0 or sum(o == level for o, _ in places) == 1):
             # An executable function the levels' programs also carry (its catalogue places)
             # counts as theirs here: the copy in the level loaded, as the level's own
-            # instruction forms it, not the executable's address under the level program.
+            # instruction forms it, not the executable's address under the level program. Not
+            # one the catalogue folds at several places of a level (func_001E9768, an empty
+            # routine at 43 places of level 0): which of them is the copy's own is not known
+            # here, and level 18 has none at level 0's first; the executable's does the same.
             own = next((a for o, a in places if o == level), places[0][1])
             return f"OPENRAC_LCODE({level}, {hexaddr(own)})"
         # A function of one level only: the place of the other in that level (its program is
@@ -1398,6 +1426,25 @@ class Unit:
         overlay = named[0][0]
         folded = [p for p in self.program.code_places(sym) if p[0] == overlay]
         return raw if len(folded) > 1 and named[0] in folded else sym
+
+    def _sibling_named(self, body: dict) -> set:
+        """The folded functions whose address the body also takes by the name of another of their
+        places in one program (_folded_place_name): it tells their places apart itself."""
+        out: set = set()
+        stack = [body]
+        while stack:
+            n = stack.pop()
+            if not isinstance(n, dict):
+                continue
+            if n.get("kind") == "DeclRefExpr" and (n.get("referencedDecl") or {}).get("kind") == "FunctionDecl":
+                try:
+                    sym = self._callee_symbol(n)
+                    if self._folded_place_name(n, sym) != sym:
+                        out.add(sym)
+                except (KeyError, AttributeError):
+                    pass
+            stack.extend(c for c in n.get("inner", ()) if isinstance(c, dict))
+        return out
 
     def _callee_symbol(self, ref: dict) -> str:
         d = self.decls.get(ref["referencedDecl"]["id"])
@@ -1916,8 +1963,9 @@ class Unit:
                     if family_k is not None:
                         k = family_k
                     own_size = getattr(self.program, "sizes", {}).get(self.fn.name) or 0
+                    copies = self._copies_in_one_program()
                     own = self._own_address()
-                    if self._copies_in_one_program() is not None and self._shared_level() is not None:
+                    if copies is not None and self._shared_level() is not None:
                         # This function is several levels' code and has more than one copy in some
                         # program, each calling its own place (level 7's two func_L00_002E0490 call
                         # AddDrawCallback's places 0x2214C8 and 0x2216D0): the k-th call of the copy
@@ -1926,6 +1974,14 @@ class Unit:
                         own = f"(openrac_self_ != 0 ? openrac_self_ : {own})"
                     fp = (f"openrac_folded_call((const uint32_t[]){{{literal}}}, {len(places)}, "
                           f"{own}, {own_size}u, {k})")
+                    if copies is not None and self._shared_level() is None:
+                        # This function is itself one of several copies in one level's program, and a
+                        # copy may call another function at that place than the first copy does (Drek's
+                        # Fleet's third window-glass callback calls a reflection helper of its own): the
+                        # function the running copy's own call goes to (guest.h).
+                        home, canon, size = copies
+                        self.fn.uses_self = True
+                        fp = f"openrac_call_in_copy({home}, {hexaddr(canon)}, {size}u, openrac_self_, {fp})"
             else:
                 fp = self.function_value(target)
         else:
@@ -1971,6 +2027,14 @@ class Unit:
         classes = [self._arg_class(a) for a in args]
         pcls = [("agg" if self.sig_cls(p) == "rec" else self._reg_class(self.sig_cls(p))) for p in sig.params]
         if "agg" in classes or "agg" in pcls or any(self.cls(p) == "valist" for p in sig.params):
+            return None
+        if self._folded_places(sym) and any(classes.count(k) > pcls.count(k) for k in ("i", "f")):
+            # A name the catalogue folded (a small wrapper at several places of one program, each
+            # calling another function): its definition is one of them, and a call site that passes
+            # more of a kind than that one takes calls another, whose type is the call site's.
+            # PartType74Update's colour tween goes through a place of func_L00_00237B70 with
+            # (float, int, int); as the folded definition's (void *) the tween got neither the
+            # fraction nor the second colour, and the fraction's IntToFloat never ran.
             return None
         result_cls = self.cls(result_t)
         ret_cls = self.sig_cls(sig.ret)
