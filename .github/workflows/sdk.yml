@@ -90,6 +90,7 @@ jobs:
           }
       - name: Build the template and the example
         run: |
+          mkdir -p "$RUNNER_TEMP/build"
           for mod in template examples/frame-counter; do
             src="$RUNNER_TEMP/build/$(basename "$mod")"
             cp -r "$SDK/$mod" "$src"
