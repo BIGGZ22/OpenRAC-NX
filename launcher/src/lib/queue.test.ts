@@ -19,6 +19,15 @@ describe("queue", () => {
     expect(q.next()).toBe(b);
   });
 
+  it("keeps the folders a job wrote, for Open folder", () => {
+    const q = new Queue();
+    const a = q.add(repo, "editor-pack", "Pack");
+    expect(a.outputs).toEqual([]);
+    q.started(a, 5, "cmd");
+    q.apply({ type: "exit", id: 5, code: 0, cancelled: false, outputs: ["/data/packed/pal"] });
+    expect(a.outputs).toEqual(["/data/packed/pal"]);
+  });
+
   it("keeps events that arrive before the job's id is known", () => {
     const q = new Queue();
     const a = q.add(repo, "discs", "Identify discs");

@@ -27,6 +27,8 @@ export interface Job {
   queuedAt: number;
   startedAt: number | null;
   endedAt: number | null;
+  /** The folders it wrote, from its exit event: what "Open folder" opens (api.openOutput). */
+  outputs: string[];
 }
 
 /** Older lines are dropped past this many, so a chatty build cannot exhaust memory. */
@@ -63,6 +65,7 @@ export class Queue {
       queuedAt: now,
       startedAt: null,
       endedAt: null,
+      outputs: [],
     };
     this.jobs.push(job);
     // The array's own element: a reactive proxy when the array is $state.
@@ -129,6 +132,7 @@ export class Queue {
       return;
     }
     job.code = event.code;
+    job.outputs = event.outputs;
     job.endedAt = now;
     job.state = event.cancelled ? "cancelled" : event.code === 0 ? "succeeded" : "failed";
     this.ended.push(job);

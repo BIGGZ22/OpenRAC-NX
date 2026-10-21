@@ -769,11 +769,27 @@ function start(scope: Scope, id: string, args: Record<string, unknown> = {}): St
     const crashed = [...lines, "[error] ==== the program stopped: fault ===="];
     return fakeJob(action.label, command, crashed, () => (mockCrash.time = Math.floor(Date.now() / 1000)), 3);
   }
-  return fakeJob(action.label, command, lines, () => undefined);
+  // The folder the editor's pack and the asset export write, for the Mods tab's "Open folder".
+  const outputs =
+    id === "editor-pack"
+      ? [`/home/you/OpenRAC/assets/packed/${scope.kind === "version" ? scope.key : ""}`]
+      : id === "assets-export"
+        ? [
+            `/home/you/exports/level_${String(Number(args.level ?? 0)).padStart(2, "0")}-${typeof args.option === "string" ? args.option : "mobys"}`,
+          ]
+        : [];
+  return fakeJob(action.label, command, lines, () => undefined, 0, outputs);
 }
 
 /** A job that prints LINES one by one, then ends with CODE (0: it worked) and calls DONE. */
-function fakeJob(title: string, command: string, lines: string[], done: () => void, code = 0): Started {
+function fakeJob(
+  title: string,
+  command: string,
+  lines: string[],
+  done: () => void,
+  code = 0,
+  outputs: string[] = [],
+): Started {
   const job = ++nextJob;
   let i = 0;
   timers.set(
@@ -787,7 +803,7 @@ function fakeJob(title: string, command: string, lines: string[], done: () => vo
       clearInterval(timers.get(job));
       timers.delete(job);
       done();
-      emit({ type: "exit", id: job, code, cancelled: false, outputs: [] });
+      emit({ type: "exit", id: job, code, cancelled: false, outputs });
     }, 450),
   );
   return { id: job, title, command, detached: false, output: null };

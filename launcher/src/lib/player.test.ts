@@ -20,6 +20,7 @@ function job(actionId: string): Job {
     queuedAt: 0,
     startedAt: 0,
     endedAt: null,
+    outputs: [],
   };
 }
 
