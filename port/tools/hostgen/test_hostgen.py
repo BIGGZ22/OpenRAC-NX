@@ -1166,6 +1166,32 @@ class Places(unittest.TestCase):
             self.assertIn("openrac_data_in_copy(-1, 0x00300000u, 36u, openrac_self_, 0x00200000u)", text)
             self.assertIn("openrac_guest_entry((openrac_host_fn)func_00300000)", text)
 
+    @unittest.skipUnless(have_compiler(), "needs Clang on a POSIX host")
+    def test_a_folded_call_of_shared_code_with_copies_in_one_program_is_the_running_copys(self):
+        # rac1's func_L00_002E0490 (several levels' code) has two copies in level 7's program, and
+        # each registers its draw callback through its own place of the folded AddDrawCallback.
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            src = root / "game"
+            (src / "src").mkdir(parents=True)
+            (src / "src" / "a.c").write_text(
+                "extern void func_L00_00320000(int);\n"
+                "void func_L00_00300000(int a) { func_L00_00320000(a); }\n")
+            (src / "functions.tsv").write_text(
+                "func_L00_00300000\tshared\t104\tfingerprint\t3\t00:00300000,07:00310000,07:00310100\n"
+                "func_L00_00320000\tshared\t40\tfingerprint\t3\t00:00320000,07:00330000,07:00330040\n")
+            (root / "hostgen.json").write_text(json.dumps({
+                "sources": ["src"], "includes": [], "places": "functions.tsv",
+                "relocate": [0x1A7C80, 0x500000],
+            }))
+            out = root / "gen"
+            self.assertEqual(hostgen.main(["--game", str(root / "hostgen.json"),
+                                           "--source", str(src), "--out", str(out),
+                                           "--jobs", "1", "--quiet"]), 0)
+            text = (out / "a.c").read_text()
+            self.assertIn("(openrac_self_ != 0 ? openrac_self_ : OPENRAC_LCODE(0, 0x00300000u)), 104u, 0)", text)
+            self.assertIn("openrac_guest_entry((openrac_host_fn)func_L00_00300000)", text)
+
     def generate(self, root: Path, source: str, places: str, cfg: dict | None = None) -> Path:
         src = root / "game"
         (src / "src").mkdir(parents=True)
