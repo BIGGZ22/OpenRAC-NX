@@ -121,10 +121,35 @@ The archive is checked by the rules the launcher and the port apply (MODS.md,
 section 3) and is not written when the manifest breaks one. `--merge` joins
 the archives each platform's build made into one for every platform, which is
 what a release publishes: their manifests must be the same but for `plugin`.
-rac1-mods' workflow does both on GitHub's runners for macOS, Linux and
-Windows; copy it for a repository of your own.
+The template's workflow does both on GitHub's runners (below).
 
 The tests: `python3 -m unittest discover -s sdk/tools`.
+
+## Publishing a mod from a repository
+
+Players install mods by pasting a repository's address in the launcher
+(MODS.md, section 10), so a mod's repository keeps to its conventions, which
+the template already follows:
+
+- **The manifest** at the top of the repository (one mod), or one folder per
+  mod at the top, each with its `openrac-mod.json` (several; an
+  `openrac-mods.json` at the top, `{"format": 1, "mods": ["a", "b"]}`, may
+  list them). Sources beside each manifest: `CMakeLists.txt`, `src/`,
+  `tests/`; a data pack's files as [editor/MODDING.md](https://github.com/OpenRAC/OpenRAC/blob/master/editor/MODDING.md)
+  lays them out. The top `CMakeLists.txt` builds every mod.
+- **The SDK pinned**: `sdk.lock` (version, url, SHA-256) and
+  `tools/fetch_sdk.py`, which downloads it into `.sdk/`. The template's lock
+  has no hash yet; the first fetch takes it from the release and writes it in:
+  commit it.
+- **The workflow** `.github/workflows/build.yml`: build and test on Windows
+  (MSVC), Linux (x86_64, aarch64) and macOS (arm64, x86_64), package, join, and
+  on a tag `v<version>` (or `<id>-v<version>`) publish the release with
+  `<id>-<version>-<platform>.zip`, `<id>-<version>.zip` and `SHA256SUMS`.
+  The launcher downloads only an asset `SHA256SUMS` lists with the same hash.
+
+So releasing is: set the version in the manifest, commit, push a tag
+`v<version>`. [rac1-mods](https://github.com/OpenRAC/rac1-mods) uses the same
+workflow, file for file.
 
 ## Installing and trying a mod
 
