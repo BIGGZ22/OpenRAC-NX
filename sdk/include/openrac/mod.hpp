@@ -452,7 +452,7 @@ int load(const openrac_api* api, openrac_mod* handle, Load&& load_fn) {
 #define OPENRAC_MOD_CPP(mod_id, mod_version, load_fn)                                              \
     extern "C" OPENRAC_MOD_EXPORT void openrac_mod_query(openrac_mod_info* info) {                 \
         info->api_major = OPENRAC_MOD_API_MAJOR;                                                   \
-        info->api_minor = OPENRAC_MOD_API_MINOR;                                                   \
+        info->api_minor = OPENRAC_MOD_TARGET_MINOR;                                                \
         info->id = (mod_id);                                                                       \
         info->version = (mod_version);                                                             \
     }                                                                                              \

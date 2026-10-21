@@ -29,6 +29,13 @@ extern "C" {
 #define OPENRAC_MOD_API_MAJOR 1
 #define OPENRAC_MOD_API_MINOR 2 /* 1.2: the keyboard and mouse (input, take_input, capture_mouse) */
 
+/* The interface a mod is built for, what its openrac_mod_query reports: its manifest's "api" minor,
+ * which the SDK's openrac_add_mod passes in, else this header's. A mod for 1.1 built with a newer
+ * SDK thus still loads on a port of 1.1 (and uses nothing newer without checking api->api_minor). */
+#ifndef OPENRAC_MOD_TARGET_MINOR
+#define OPENRAC_MOD_TARGET_MINOR OPENRAC_MOD_API_MINOR
+#endif
+
 #if defined(_WIN32)
 #define OPENRAC_MOD_EXPORT __declspec(dllexport)
 #else
@@ -196,7 +203,7 @@ typedef void (*openrac_mod_unload_fn)(void);
 #define OPENRAC_MOD_DEFINE(mod_id, mod_version)                                                    \
     OPENRAC_MOD_EXPORT void openrac_mod_query(openrac_mod_info* info) {                            \
         info->api_major = OPENRAC_MOD_API_MAJOR;                                                   \
-        info->api_minor = OPENRAC_MOD_API_MINOR;                                                   \
+        info->api_minor = OPENRAC_MOD_TARGET_MINOR;                                                \
         info->id = (mod_id);                                                                       \
         info->version = (mod_version);                                                             \
     }

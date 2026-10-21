@@ -128,6 +128,21 @@ function(openrac_add_mod target)
   if(err)
     message(FATAL_ERROR "openrac_add_mod(${target}): ${manifest} has no id (${err})")
   endif()
+  # The interface the mod is built for is its manifest's "api": a mod that says 1.1 reports 1.1
+  # (OPENRAC_MOD_TARGET_MINOR, openrac_mod.h) whatever this SDK's minor, and loads on a port of 1.1.
+  string(JSON api ERROR_VARIABLE err GET "${json}" api)
+  if(NOT err AND api MATCHES "^([0-9]+)\\.([0-9]+)$")
+    set(api_major "${CMAKE_MATCH_1}")
+    set(api_minor "${CMAKE_MATCH_2}")
+    file(STRINGS "${OPENRAC_MOD_SDK_DIR}/include/openrac/openrac_mod.h" sdk_minor_line
+         REGEX "^#define OPENRAC_MOD_API_MINOR [0-9]+")
+    string(REGEX REPLACE "^#define OPENRAC_MOD_API_MINOR ([0-9]+).*" "\\1" sdk_minor "${sdk_minor_line}")
+    if(NOT api_major EQUAL 1 OR api_minor GREATER sdk_minor)
+      message(FATAL_ERROR "openrac_add_mod(${target}): its manifest's api ${api} is not one this SDK "
+                          "(interface 1.${sdk_minor}) builds")
+    endif()
+    target_compile_definitions(${target} PRIVATE "OPENRAC_MOD_TARGET_MINOR=${api_minor}")
+  endif()
   set(file_name "${target}${CMAKE_SHARED_LIBRARY_SUFFIX}")
   set(plugin_path "lib/${OPENRAC_MOD_PLATFORM}/${file_name}")
   # This build's platform only: the archives of the others are joined later (package_mod.py --merge).
