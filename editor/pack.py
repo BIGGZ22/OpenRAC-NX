@@ -21,8 +21,9 @@ What it packs, for now: mobys that were moved, turned, scaled, given another
 class or other values (the `rc1_*` metadata), added (a copy made in Godot, or
 a class scene of the level dropped in) or deleted. Ties and shrubs are packed
 for the native port, as the files it draws them from (scenery.py:
-<out>/level_NN/placements.json). Terrain is a later step, as are classes the
-level does not have.
+<out>/level_NN/placements.json). The gameplay data (pvars, links, groups, volumes,
+paths, cameras, sounds, level settings) is gamedata.py's, called from pack_level. Terrain
+is a later step, as are classes the level does not have.
 
 A moby the scene has as the extractor wrote it keeps its bytes on the disc,
 so a scene nobody edited packs to nothing, and a level whose mobys were only
@@ -40,6 +41,7 @@ from pathlib import Path
 from disc import SECTOR
 from formats import FormatError, unpack
 from level import decoded, load_level
+import gamedata
 import gameplay as gp
 from mobys import (ALWAYS, FIELDS, POINTER, RECORD, SIZE, USUAL, matrix, moby_class_names,
                    moby_instances, node_name)
@@ -101,10 +103,16 @@ def scene_nodes(text: str, parent: str, kind: str) -> list[dict]:
         elif key.startswith("metadata/rc1_"):
             name, value = key[len("metadata/rc1_"):], value.strip()
             if value.startswith("["):
-                node["meta"][name] = [int(float(v)) for v in value.strip("[]").split(",") if v.strip()]
+                try:
+                    node["meta"][name] = [int(float(v)) for v in value.strip("[]").split(",") if v.strip()]
+                except ValueError:      # a list of names or a multi-line one (gamedata.py's)
+                    node["meta"][name] = value
             else:
-                number = float(value)
-                node["meta"][name] = int(number) if number == int(number) and "." not in value else number
+                try:
+                    number = float(value)
+                    node["meta"][name] = int(number) if number == int(number) and "." not in value else number
+                except (ValueError, OverflowError):     # text (a link's target) or not finite: gamedata.py's
+                    node["meta"][name] = value
     return nodes
 
 
@@ -168,7 +176,7 @@ def apply(node: dict, record: dict, original: dict | None, whole: bool, problems
         edits.append(f"class {record['class_id']} -> {node['class_id']}")
         record["class_id"] = node["class_id"]
     # rc1_class is the class scene's own; Godot saves it on each instance too.
-    meta = {k: v for k, v in node["meta"].items() if k not in ("index", "class")}
+    meta = {k: v for k, v in node["meta"].items() if k not in ("index", "class") and not gamedata.owns(k)}
     if original is None or not same_fields(meta, original["fields"]):
         for key in ALWAYS:
             if key in meta:
@@ -216,6 +224,7 @@ def pack_level(level_id: int, gameplay: bytes, scene: str) -> tuple[bytes, list[
 
     kept: dict[int, bytes] = {}
     added: list[tuple[dict, int | None]] = []          # the new moby's fields, the moby it takes after
+    added_names: list[str] = []                         # their nodes' names
     for node in nodes:
         index = index_of(node)
         try:
@@ -245,6 +254,7 @@ def pack_level(level_id: int, gameplay: bytes, scene: str) -> tuple[bytes, list[
             apply(node, record, None, index is not None, problems)
             record["pvar_index"] = source_pvar          # the copy gets a block of its own below
             added.append((record, model))
+            added_names.append(node["name"])
             changes.append(f"{node['name']}: added" + (f", after moby {model}" if model is not None else ""))
         except FormatError as e:
             problems.append(f"{node['name']}: {e}; not packed")
@@ -260,7 +270,8 @@ def pack_level(level_id: int, gameplay: bytes, scene: str) -> tuple[bytes, list[
         start, = unpack("<I", gameplay, POINTER)
         for index, record in kept.items():
             out[start + 0x10 + index * SIZE:start + 0x10 + (index + 1) * SIZE] = record
-        return bytes(out), changes, problems
+        # The gameplay data (pvars, links, volumes, paths, cameras...): gamedata.py.
+        return gamedata.pack_level(gameplay, bytes(out), scene, {owner[i]["name"]: i for i in kept}, changes, problems)
 
     # The table again: the mobys that stay, in their order, then the new ones.
     place = {old: new for new, old in enumerate(sorted(kept))}
@@ -314,7 +325,9 @@ def pack_level(level_id: int, gameplay: bytes, scene: str) -> tuple[bytes, list[
         start = gp.offset(gameplay, pointer)
         if start > 0 and new and gameplay[start:start + len(new)] != new:
             sections[pointer] = new
-    return gp.replace(gameplay, sections), changes, problems
+    numbering = {owner[old]["name"]: new for old, new in place.items()}
+    numbering.update({name: len(kept) + k for k, name in enumerate(added_names)})
+    return gamedata.pack_level(gameplay, gp.replace(gameplay, sections), scene, numbering, changes, problems)
 
 
 def pack(disc, survey: dict, project: Path, out: Path) -> tuple[int, int]:
