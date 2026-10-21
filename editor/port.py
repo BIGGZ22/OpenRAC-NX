@@ -107,6 +107,8 @@ class PortLevelWriter(LevelWriter):
     needs the class table and the shells, not Godot's marker scenes.
     """
 
+    editable_collision = False
+
     def __init__(self, out: Path, level: Level, normals=None):
         super().__init__(out, level)
         self.dir = out / self.name

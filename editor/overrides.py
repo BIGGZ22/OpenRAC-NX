@@ -85,7 +85,8 @@ LEVELS_FORMAT = FORMAT
 # metal packets and chrome and glass maps; 3 only added classes (port.py FORMAT).
 MODELS_SINCE = 2
 FILES = re.compile(r"^(?:patches\.tsv|level_\d{2}/(?:textures/[A-Za-z0-9_.-]+\.png|(?:mobys|ties|shrubs)/"
-                   r"[A-Za-z0-9_.-]+\.glb|placements\.json|gameplay_(?:" + "|".join(VERSIONS) + r")\.wad))$")
+                   r"[A-Za-z0-9_.-]+\.glb|placements\.json|gameplay_(?:" + "|".join(VERSIONS) + r")\.wad"
+                   r"|(?:core|index)_(?:" + "|".join(VERSIONS) + r")\.bin))$")
 TEXTURE = re.compile(r"^level_(\d{2})/textures/([A-Za-z0-9_.-]+)\.png$")
 MODEL = re.compile(r"^level_(\d{2})/(moby|tie|shrub)s/\2_(\d+)\.glb$")
 PACKED = "packed.json"  # the level packer's note of the disc it packed (pack.py)

@@ -45,8 +45,10 @@ func _initialize() -> void:
 		walk(root, Transform3D.IDENTITY, totals)
 		var sky: Vector2i = sky_size(root)
 		var mobys: int = moby_count(root)
-		var collision: int = collision_triangles(root)
+		var collision: int = collision_triangles(root, "Game/Collision")
 		var expected_collision: int = int(info.collision.triangles) if info.has("collision") else 0
+		var heroes: int = collision_triangles(root, "Game/HeroWalls")
+		var expected_heroes: int = int(info.collision.get("hero_triangles", 0)) if info.has("collision") else 0
 		failed += 0 if check_moby_meshes(name, root, info) else 1
 		root.free()
 
@@ -63,6 +65,7 @@ func _initialize() -> void:
 			and totals.meshes.size() == int(info.meshes)
 			and totals.untextured == 0
 			and collision == expected_collision
+			and heroes == expected_heroes
 			and sky == Vector2i(int(expected_sky[0]), int(expected_sky[1]))
 			and mobys == expected_mobys
 			and box.position.distance_to(low) < 0.01 and box.end.distance_to(high) < 0.01)
@@ -88,8 +91,8 @@ func walk(node: Node, parent: Transform3D, totals: Dictionary) -> void:
 	# Only 3D nodes carry a transform; others pass the parent's through.
 	var here: Transform3D = parent * node.transform if node is Node3D else parent
 
-	# A layer for the editor, counted by collision_triangles().
-	if node.name == "Collision" and node.get_parent().name == "Game":
+	# Layers for the editor, counted by collision_triangles().
+	if node.name in [&"Collision", &"HeroWalls"] and node.get_parent().name == &"Game":
 		return
 
 	if node is MeshInstance3D:
@@ -156,17 +159,17 @@ func moby_count(root: Node) -> int:
 	return count
 
 
-## The triangles of the collision layer, which must be hidden by default.
-func collision_triangles(root: Node) -> int:
-	var layer := root.get_node_or_null("Game/Collision") as Node3D
+## The triangles of a collision layer (Game/Collision, Game/HeroWalls), which must be hidden by default.
+func collision_triangles(root: Node, path: String) -> int:
+	var layer := root.get_node_or_null(path) as Node3D
 
-	# A level without collision has no such node.
+	# A level without collision, or without hero walls, has no such node.
 	if layer == null:
 		return 0
 
 	# The layer is for the editor; it must not cover the level when it opens.
 	if layer.visible:
-		printerr("Game/Collision should be hidden by default")
+		printerr("%s should be hidden by default" % path)
 		return -1
 
 	var total: int = 0

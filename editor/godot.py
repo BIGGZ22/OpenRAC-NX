@@ -30,6 +30,7 @@ import struct
 from pathlib import Path
 
 from collision import collision_mesh, decode
+import collision_scene
 from formats import png, unpack
 import gamedata
 import games
@@ -146,6 +147,10 @@ class Scene:
 class LevelWriter:
     """Textures, meshes and the scene for one level."""
 
+    # The collision as tiles to edit (collision_scene.py) where the level packs back; the port's
+    # writer keeps the one collision.glb its viewer draws.
+    editable_collision = True
+
     def __init__(self, project: Path, level: Level):
         self.level = level
         self.name = f"level_{level.id:02}"
@@ -156,11 +161,12 @@ class LevelWriter:
         self.corners = []
         self.fmt = games.of(level)
         self.moby_extra = {}  # moby index -> its pvar metadata (gamedata.py)
-        self.stats = {"schema": 2, "level": level.id,
+        self.stats = {"schema": 3, "level": level.id,
                       "overlay": {"entry_point": level.overlay["entry_point"],
                                   "sections": [{k: s[k] for k in ("address", "bytes", "type")}
                                                for s in level.overlay["sections"]]},
                       "mesh_instances": 0, "meshes": 0, "triangles": 0}
+        self.editable_collision = self.editable_collision and self.fmt.packable
         if self.fmt.game != "rac1":  # Ratchet & Clank's level.json stays as it was
             self.stats["game"] = self.fmt.game
 
@@ -295,6 +301,12 @@ class LevelWriter:
                                    "surfaces": {str(k): v for k, v in data.surfaces().items()},
                                    "hero_groups": data.hero_groups}
         if not data.triangles:
+            return
+        if self.editable_collision and not more:
+            # Ratchet & Clank's levels: tiles and hero walls the packer reads back (collision_scene.py).
+            manifest = collision_scene.export(self.dir, block)
+            self.stats["collision"]["hero_triangles"] = sum(h["triangles"] for h in manifest["hero_walls"].values())
+            collision_scene.scene_nodes(self.scene, self.res, manifest)
             return
         gltf = Gltf()
         gltf.node("Collision", gltf.coloured(collision_mesh(data), gltf.overlay("collision", COLLISION_ALPHA)))

@@ -330,6 +330,40 @@ def pack_level(level_id: int, gameplay: bytes, scene: str) -> tuple[bytes, list[
     return gamedata.pack_level(gameplay, gp.replace(gameplay, sections), scene, numbering, changes, problems)
 
 
+def pack_collision(disc, info: dict, scene: Path, text: str, out: Path, patches: list[str]) -> tuple[list[str], list[str]]:
+    """The level's collision as the scene has it: when it differs from the disc's, the level data's
+    sectors that change (the core data stream, and the core index when the block moved) go to
+    OUT/level_NN/{core,index}_<version>.bin with their lines in PATCHES. Returns (changes, problems,
+    whether files were written)."""
+    import collision_scene
+    level_dir = scene.parent
+    try:
+        found = collision_scene.scene_collision(scene.parents[2], level_dir, text)
+    except (FormatError, ValueError) as e:
+        return [], [f"collision: {e}"], False
+    if found is None:
+        return [], [], False
+    level = load_level(disc, info)
+    at, = unpack("<I", level.index, 0x14)
+    block = level.block(at)
+    try:
+        new, changes, problems = collision_scene.pack_block(block, found)
+    except FormatError as e:
+        return [], found["problems"] + [f"{e}; the collision is left as the disc has it"], False
+    if new is None:
+        return changes, problems, False
+    core, index, notes = collision_scene.core_with(level.core, level.index, at, len(block), new)
+    data = disc.sectors(info["ranges"]["data"]["lba"], info["ranges"]["data"]["sectors"])
+    runs = collision_scene.level_data_patches(data, core, index, level.index, compress)
+    name = f"level_{info['id']:02}"
+    for (offset, payload), kind in zip(runs, ["index", "core"] if len(runs) == 2 else ["core"]):
+        file = f"{name}/{kind}_{disc.version.key}.bin"
+        (out / name).mkdir(parents=True, exist_ok=True)
+        (out / file).write_bytes(payload)
+        patches.append(f"{info['ranges']['data']['lba'] + offset // SECTOR}\t{len(payload) // SECTOR}\t{file}")
+    return changes + notes, problems, True
+
+
 def pack(disc, survey: dict, project: Path, out: Path) -> tuple[int, int]:
     """Writes OUT from the scenes of PROJECT, for DISC's version. Returns (levels packed, mobys changed)."""
     import scenery          # it reads the scene with this module's reader
@@ -351,6 +385,13 @@ def pack(disc, survey: dict, project: Path, out: Path) -> tuple[int, int]:
         placements, scenery_changes, scenery_problems = None, [], []
         if scenery.edited(gameplay, text):
             placements, scenery_changes, scenery_problems = scenery.pack_scenery(load_level(disc, info), text)
+        # Collision: the level data's core (collision_scene.py), only when the scene's differs.
+        collision_changes, collision_problems, wrote = pack_collision(disc, info, scene, text, out, patches)
+        scenery_changes += collision_changes
+        scenery_problems += collision_problems
+        if wrote:
+            packed += 0 if changes or placements is not None else 1
+            total += len(collision_changes)
         if changes or problems or scenery_changes or scenery_problems:
             report.append(f"level {info['id']:02}")
             report += [f"  {line}" for line in changes + scenery_changes]
