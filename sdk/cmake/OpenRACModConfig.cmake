@@ -4,11 +4,12 @@
 # The OpenRAC mod SDK as a CMake package (docs/port/MODS.md, section 8; sdk/README.md).
 #
 #   find_package(OpenRACMod 1.0 REQUIRED)        # -DOpenRACMod_DIR=<OpenRAC>/sdk/cmake
-#   openrac_add_mod(my_mod MANIFEST openrac-mod.json SOURCES src/mod.c)
+#   openrac_add_mod(my_mod MANIFEST openrac-mod.json SOURCES src/mod.cpp)   # C or C++ sources
 #
 # gives:
 #
-#   OpenRAC::mod                the interface's headers (openrac/openrac_mod.h, openrac/games/*.h)
+#   OpenRAC::mod                the interface's headers (openrac/openrac_mod.h, openrac/games/*.h) and
+#                               its C++ layer (openrac/mod.hpp, openrac/games/*.hpp)
 #   OPENRAC_MOD_PLATFORM        this build's platform key: macos-arm64, macos-x86_64, linux-x86_64,
 #                               linux-aarch64, windows-x86_64 or windows-arm64
 #   OPENRAC_MOD_SDK_DIR         the SDK's folder (its tools: ${OPENRAC_MOD_SDK_DIR}/tools)
@@ -51,6 +52,8 @@ function(_openrac_mod_platform out)
       set(arch "${CMAKE_GENERATOR_PLATFORM}")
     elseif(CMAKE_C_COMPILER_ARCHITECTURE_ID)
       set(arch "${CMAKE_C_COMPILER_ARCHITECTURE_ID}")
+    elseif(CMAKE_CXX_COMPILER_ARCHITECTURE_ID)
+      set(arch "${CMAKE_CXX_COMPILER_ARCHITECTURE_ID}")
     else()
       set(arch "${CMAKE_SYSTEM_PROCESSOR}")
     endif()
@@ -96,6 +99,11 @@ function(openrac_add_mod target)
     PREFIX ""
     C_STANDARD 11
     C_STANDARD_REQUIRED ON
+    # C++ sources: C++17 (openrac/mod.hpp), with the compiler's own runtime as the port has it
+    # (libc++ on macOS, libstdc++ on Linux, the DLL runtime /MD on Windows, CMake's default).
+    CXX_STANDARD 17
+    CXX_STANDARD_REQUIRED ON
+    CXX_EXTENSIONS OFF
     C_VISIBILITY_PRESET hidden
     CXX_VISIBILITY_PRESET hidden
     VISIBILITY_INLINES_HIDDEN ON)
@@ -104,6 +112,13 @@ function(openrac_add_mod target)
   # Microsoft's linkers refuse it already (ld64 deprecates saying -undefined error).
   if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
     target_link_options(${target} PRIVATE "LINKER:--no-undefined")
+    # Only the entry points are seen from outside: the C++ standard library's template code a mod
+    # instantiates (std::function, std::string, ...) would otherwise be exported, weak, on Linux,
+    # where its headers give it default visibility whatever the build asks for.
+    set(exports "${CMAKE_CURRENT_BINARY_DIR}/${target}.exports")
+    file(WRITE "${exports}" "{\n  global: openrac_mod_query; openrac_mod_load; openrac_mod_unload;\n  local: *;\n};\n")
+    target_link_options(${target} PRIVATE "LINKER:--version-script=${exports}")
+    set_property(TARGET ${target} APPEND PROPERTY LINK_DEPENDS "${exports}")
   endif()
 
   # The manifest as the archive holds it: its plugin entry for this platform names the library.
