@@ -63,6 +63,14 @@ fn install_from_link_end_to_end() {
     assert!(lib.is_dir() && std::fs::read_dir(&lib).unwrap().count() == 1, "{}", lib.display());
     assert_eq!(state(&dir, "lock-strafe").map(|s| s.1), Some("ready".to_string()));
 
+    // The item randomizer, released apart (item-randomizer-v1.0.0): its own archive for this
+    // platform, checked against its release's SHA256SUMS.
+    let rando = preview.mods.iter().find(|m| m.id == "item-randomizer").expect("item-randomizer listed");
+    assert!(rando.compatible, "{rando:?}");
+    assert_eq!(rando.tag.as_deref(), Some("item-randomizer-v1.0.0"));
+    remote::install(&ctx, REPO, "item-randomizer").expect("item-randomizer installs");
+    assert_eq!(state(&dir, "item-randomizer").map(|s| s.1), Some("ready".to_string()));
+
     // The script mod: no release of its own, so the repository's files at the release's tag.
     let got = remote::install(&ctx, REPO, "button-swap").expect("button-swap installs");
     eprintln!("installed: {got:?}");
@@ -97,7 +105,7 @@ fn install_from_link_end_to_end() {
     eprintln!("updated: {again:?}");
 
     // Removed: the folders, the list and the sources forget them.
-    for id in ["lock-strafe", "button-swap"] {
+    for id in ["lock-strafe", "button-swap", "item-randomizer"] {
         plugins::remove(&dir, "rac1", "pal", id).unwrap();
         remote::forget(&dir, id).unwrap();
         assert!(!dir.join(id).exists());
