@@ -10,6 +10,7 @@ by Clang's own diagnostics (fix_from_diagnostics), and recorded.
 
 from __future__ import annotations
 
+import contextlib
 import json
 import os
 import re
@@ -376,21 +377,48 @@ def drop_superseded_declarations(root: Path, rel: str, text: str, stderr: str) -
         other = other if other.is_absolute() else root / other
         if not other.is_file() or other.resolve() == (root / rel).resolve():
             continue
-        lines = other.read_text(encoding="utf-8", errors="surrogateescape").split("\n")
-        at = int(note["line"]) - 1
-        if name not in lines[at] or "{" in lines[at] or not lines[at].rstrip().endswith(";"):
-            continue
-        # The header's line becomes the definition's own prototype, so the other files that take the
-        # function from that header still have it (a matched debug menu that calls sound_update
-        # by the header's declaration, while a candidate defines it as returning int). A
-        # definition whose signature does not fit on its first line, or a static one, is dropped.
-        sig = defline.split("{")[0].strip()
-        whole = sig.endswith(")") and sig.count("(") == sig.count(")") and not sig.startswith("static")
-        lines[at] = f"{sig};" if whole else ""
-        done.append(f"{other.name}:{at + 1}: declaration of {name} "
-                    + (f"replaced by {rel}'s definition" if whole else f"dropped, {rel} defines it differently"))
-        other.write_text("\n".join(lines), encoding="utf-8", errors="surrogateescape")
+        with _header_lock(root):
+            fix = _supersede(other, int(note["line"]) - 1, name, rel, defline)
+        if fix:
+            done.append(fix)
     return done
+
+
+@contextlib.contextmanager
+def _header_lock(root: Path):
+    """One unit at a time rewrites the prepared headers: units are read in parallel, and two
+    that each read a header, changed a line of it and wrote it back left only one of the two
+    changes."""
+    lock = root / ".openrac-header.lock"
+    for _ in range(6000):
+        try:
+            os.mkdir(lock)
+            break
+        except FileExistsError:
+            time.sleep(0.01)
+    else:
+        raise RuntimeError(f"hostgen: {lock} was held for a minute; remove it if no hostgen is running")
+    try:
+        yield
+    finally:
+        os.rmdir(lock)
+
+
+def _supersede(other: Path, at: int, name: str, rel: str, defline: str) -> str | None:
+    """drop_superseded_declarations' change to one header line, under the header lock."""
+    lines = other.read_text(encoding="utf-8", errors="surrogateescape").split("\n")
+    if at >= len(lines) or name not in lines[at] or "{" in lines[at] or not lines[at].rstrip().endswith(";"):
+        return None
+    # The header's line becomes the definition's own prototype, so the other files that take the
+    # function from that header still have it (a matched debug menu that calls sound_update
+    # by the header's declaration, while a candidate defines it as returning int). A
+    # definition whose signature does not fit on its first line, or a static one, is dropped.
+    sig = defline.split("{")[0].strip()
+    whole = sig.endswith(")") and sig.count("(") == sig.count(")") and not sig.startswith("static")
+    lines[at] = f"{sig};" if whole else ""
+    _write(other, "\n".join(lines))
+    return (f"{other.name}:{at + 1}: declaration of {name} "
+            + (f"replaced by {rel}'s definition" if whole else f"dropped, {rel} defines it differently"))
 
 
 def _bracketed(s: str, at: int) -> int | None:
@@ -486,10 +514,16 @@ def parse_unit(clang: str, root: Path, rel: str, flags: list[str], attempts: int
 def _write(path: Path, text: str) -> None:
     """Writes the prepared copy again. On Windows a file another program has open cannot be
     written, and an editor's indexer or a virus scanner opens a file just written for a moment:
-    the write is tried again for a few seconds before it is given up."""
+    the write is tried again for a few seconds before it is given up.
+
+    The new text goes to a file of its own first and then takes the old one's place: a shared
+    header is rewritten while other units are being read (drop_superseded_declarations), and a
+    Clang that opened it half written read a header with no declarations in it."""
+    tmp = path.with_name(f"{path.name}.{os.getpid()}.tmp")
     for attempt in range(60):
         try:
-            path.write_text(text, encoding="utf-8", errors="surrogateescape")
+            tmp.write_text(text, encoding="utf-8", errors="surrogateescape")
+            os.replace(tmp, path)
             return
         except PermissionError:
             if attempt == 59:
