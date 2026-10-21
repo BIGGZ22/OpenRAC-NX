@@ -1,0 +1,16 @@
+{
+  "format": 2,
+  "id": "my-mod",
+  "name": "My mod",
+  "version": "0.1.0",
+  "author": "You",
+  "description": "What it changes, in a sentence or two, for players.",
+  "license": "GPL-3.0-or-later",
+  "api": "1.0",
+  "games": { "rac1": ["pal", "ntsc"] },
+  "hooks": [],
+  "settings": [
+    { "key": "enabled_extra", "name": "Something extra", "type": "bool", "default": false,
+      "description": "One line on what it does." }
+  ]
+}

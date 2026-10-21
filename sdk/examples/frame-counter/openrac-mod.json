@@ -1,0 +1,19 @@
+{
+  "format": 2,
+  "id": "frame-counter",
+  "name": "Frame counter",
+  "version": "1.0.0",
+  "author": "OpenRAC contributors",
+  "description": "An example for mod authors: counts the game's ticks and pad reports and writes them in the log. Changes nothing in the game.",
+  "license": "GPL-3.0-or-later",
+  "homepage": "https://github.com/OpenRAC/OpenRAC/tree/master/sdk/examples/frame-counter",
+  "api": "1.0",
+  "games": { "rac1": ["pal", "ntsc"] },
+  "hooks": ["Pad_ProcessReport"],
+  "settings": [
+    { "key": "every", "name": "Every", "type": "int", "default": 600, "min": 1, "max": 36000,
+      "description": "A line in the log every so many ticks." },
+    { "key": "verbose", "name": "In the normal log", "type": "bool", "default": false,
+      "description": "Off, the lines show only in the detailed log." }
+  ]
+}
