@@ -170,9 +170,11 @@ jobs:
         if: matrix.name != 'fedora'
         with:
           python-version: "3.12"
+      # Each key's prefix is no other job's: "linux-" was the start of "linux-arm64-" too, and the
+      # x86 build restored the ARM one's configuration (its Python) and objects.
       - uses: hendrikmuhs/ccache-action@f09c25b45002a07be2955cbe52e8cee55643f89d # v1.2.24
         with:
-          key: game-${{ matrix.name }}
+          key: ${{ matrix.name }}-game
           max-size: 1G
       # The game's C as hostgen wrote it last (port/tools/hostgen): hostgen checks its inputs'
       # fingerprint and skips the translation, the longest step of a game's build, when they
@@ -192,10 +194,9 @@ jobs:
             !port/build/**/*.o
             !port/build/**/*.obj
             !port/build/**/*.pdb
-          key: port-${{ matrix.name }}-${{ hashFiles('games/rac1/src/**', 'games/rac1/include/**', 'games/rac1/config/**', 'games/rac1/ntsc/src/**', 'games/rac1/ntsc/include/**', 'games/rac1/ntsc/config/**', 'port/game/**', 'port/tools/hostgen/*.py', 'port/tools/hostgen/include/**', 'port/**/CMakeLists.txt', 'port/cmake/**', 'port/CMakePresets.json') }}
+          key: port-${{ matrix.name }}-h${{ hashFiles('games/rac1/src/**', 'games/rac1/include/**', 'games/rac1/config/**', 'games/rac1/ntsc/src/**', 'games/rac1/ntsc/include/**', 'games/rac1/ntsc/config/**', 'port/game/**', 'port/tools/hostgen/*.py', 'port/tools/hostgen/include/**', 'port/**/CMakeLists.txt', 'port/cmake/**', 'port/CMakePresets.json') }}
           restore-keys: |
-            port-${{ matrix.name }}-
-            hostgen-${{ matrix.name }}-
+            port-${{ matrix.name }}-h
 
       # LLVM 19 from apt.llvm.org (its key checked by fingerprint): Clang, and libc++ to build
       # into the game.
