@@ -1,6 +1,7 @@
 //! Mods from a git repository's address (docs/port/MODS.md, section 10): what the address holds,
 //! shown before anything is installed; a native mod's built archive for this computer from the
-//! repository's release, checked against its `SHA256SUMS`; a data pack's files; where each mod came
+//! repository's release, checked against its `SHA256SUMS`; a script mod's or a data pack's files (the
+//! release's joined archive, checked, else the repository's own files: MODS.md, section 11); where each mod came
 //! from (`<data>/plugins/sources.json`), and newer releases to update to.
 //!
 //! GitHub is read through its HTTPS API and raw files, with `curl` (no git, no compiler): the
@@ -192,7 +193,8 @@ pub struct RemoteMod {
     pub homepage: String,
     /// Its folder in the repository, "" for the top.
     pub path: String,
-    /// "native" (a library the game loads: code) or "pack" (textures, models, levels).
+    /// "native" (a library the game loads: code), "script" (Luau the game runs sandboxed) or "pack"
+    /// (textures, models, levels).
     pub kind: String,
     pub games: BTreeMap<String, Vec<String>>,
     pub api: Option<String>,
@@ -374,7 +376,7 @@ fn describe(
     }
     let m: Manifest = serde_json::from_value(raw.clone()).map_err(|e| format!("{path} cannot be read ({e})"))?;
     let check = m.validate().map_err(|e| format!("Its {MANIFEST} breaks a rule: {e}.")).and_then(|()| {
-        if m.plugin.is_empty() {
+        if m.plugin.is_empty() && !m.is_script() {
             m.games
                 .get(game)
                 .filter(|d| d.iter().any(|d| d == version))
@@ -393,7 +395,10 @@ fn describe(
         description: m.description.clone(),
         homepage: m.homepage.clone(),
         path: folder,
-        kind: if m.plugin.is_empty() { "pack".into() } else { "native".into() },
+        kind: match m.kind_name() {
+            "data" => "pack".into(),
+            kind => kind.into(),
+        },
         games: m.games.clone(),
         api: m.api.clone(),
         compatible: check.is_ok(),
@@ -519,7 +524,8 @@ fn read_github(
                 }
             }
         } else {
-            // A data pack: its joined archive from a release when there is one, else its files.
+            // A script mod or a data pack: its joined archive from a release when there is one
+            // (checked against SHA256SUMS), else the repository's own files.
             let name = format!("{}-{}.zip", m.id, m.version);
             if let Some(r) = eligible.iter().find(|r| r.asset(&name).is_some() && r.asset(SUMS).is_some()) {
                 m.asset = Some(name);
@@ -655,7 +661,7 @@ pub struct ModSource {
     pub tag: Option<String>,
     #[serde(default)]
     pub commit: Option<String>,
-    /// "native" or "pack".
+    /// "native", "script" or "pack".
     #[serde(default)]
     pub kind: String,
     /// Kept at this version: no update is offered.
@@ -745,14 +751,15 @@ pub fn preview(ctx: &Context, url: &str) -> Result<Preview, String> {
 #[derive(Debug, Clone, Serialize, PartialEq)]
 #[serde(rename_all = "camelCase", tag = "kind")]
 pub enum RemoteInstalled {
-    /// A native mod, now in the store.
+    /// A native or script mod, now in the store.
     Plugin { id: String, name: String, version: String, replaced: bool, enabled: bool },
     /// A data pack, its files in `path`: the overrides' to add (actions.json `overrides-add`).
     Pack { id: String, version: String, path: String },
 }
 
 /// Installs mod `id` of the repository at `url`: a native mod's built archive for this computer,
-/// checked against the release's SHA256SUMS; a data pack's files for the overrides. Remembers the
+/// checked against the release's SHA256SUMS; a script mod into the store and a data pack's files for
+/// the overrides, each from its release's joined archive (checked) or the repository's files. Remembers the
 /// source, keeping its pin.
 pub fn install(ctx: &Context, url: &str, id: &str) -> Result<RemoteInstalled, String> {
     let source = parse_url(url)?;
@@ -805,7 +812,8 @@ pub fn install(ctx: &Context, url: &str, id: &str) -> Result<RemoteInstalled, St
             Installed::Pack => return Err(format!("{name} is a data pack, not the native mod described")),
         }
     } else {
-        // A pack's files wait in .downloads/<id>-<version>/ for overrides-add.
+        // A script mod goes to the store; a pack's files wait in .downloads/<id>-<version>/ for
+        // overrides-add.
         let target = ctx.dir.join(".downloads").join(format!("{}-{}", m.id, m.version.replace('/', "_")));
         let _ = std::fs::remove_dir_all(&target);
         let staging = plugins::Scratch::new(ctx.dir, "pack")?;
@@ -816,7 +824,8 @@ pub fn install(ctx: &Context, url: &str, id: &str) -> Result<RemoteInstalled, St
             std::fs::write(&zip, &bytes).map_err(|e| e.to_string())?;
             let out = staging.0.join("unpacked");
             plugins::unzip(&zip, &out)?;
-            out
+            // package_mod.py's archives hold one top folder, <id>-<version>/.
+            plugins::manifest_root(&out)?
         } else if let Some(scratch) = &clone {
             scratch.0.join("repo").join(&m.path)
         } else {
@@ -839,12 +848,32 @@ pub fn install(ctx: &Context, url: &str, id: &str) -> Result<RemoteInstalled, St
         if !folder.join(MANIFEST).is_file() {
             return Err(format!("the download of {} has no {MANIFEST} where the repository has it", m.name));
         }
-        std::fs::create_dir_all(target.parent().unwrap_or(ctx.dir)).map_err(|e| e.to_string())?;
-        plugins::copy_tree(&folder, &target)?;
-        RemoteInstalled::Pack {
-            id: m.id.clone(),
-            version: m.version.clone(),
-            path: target.to_string_lossy().into_owned(),
+        if m.kind == "script" {
+            let inside: Value = json(&std::fs::read(folder.join(MANIFEST)).map_err(|e| e.to_string())?, MANIFEST)?;
+            let (got_id, got_version) = (
+                inside.get("id").and_then(Value::as_str).unwrap_or_default(),
+                inside.get("version").and_then(Value::as_str).unwrap_or_default(),
+            );
+            if got_id != m.id || got_version != m.version {
+                return Err(format!(
+                    "The download holds {got_id} {got_version}, not the {} {} the repository describes: it is not installed.",
+                    m.id, m.version
+                ));
+            }
+            match plugins::install(ctx.dir, ctx.game, ctx.version, &folder)? {
+                Installed::Plugin { id, name, version, replaced, enabled } => {
+                    RemoteInstalled::Plugin { id, name, version, replaced, enabled }
+                }
+                Installed::Pack => return Err(format!("{} is a data pack, not the script mod described", m.name)),
+            }
+        } else {
+            std::fs::create_dir_all(target.parent().unwrap_or(ctx.dir)).map_err(|e| e.to_string())?;
+            plugins::copy_tree(&folder, &target)?;
+            RemoteInstalled::Pack {
+                id: m.id.clone(),
+                version: m.version.clone(),
+                path: target.to_string_lossy().into_owned(),
+            }
         }
     };
     let mut sources = read_sources(ctx.dir);
@@ -878,7 +907,7 @@ pub struct Update {
 }
 
 /// What each source not pinned offers that is newer: a release with a newer version built for
-/// this computer, or, for a data pack with no release, a newer commit. A source that cannot be read
+/// this computer, or, for a script mod or a data pack with no release, a newer commit. A source that cannot be read
 /// now is left out (`errors` says which).
 pub fn check_updates(ctx: &Context) -> (Vec<Update>, Vec<String>) {
     let mut updates = Vec::new();
@@ -895,7 +924,7 @@ pub fn check_updates(ctx: &Context) -> (Vec<Update>, Vec<String>) {
                     (Some(a), Some(b)) => plugins::compare_versions(a, b).is_gt(),
                     _ => false,
                 };
-                let moved = m.tag.is_none() && m.kind == "pack" && p.commit.is_some() && p.commit != s.commit;
+                let moved = m.tag.is_none() && m.kind != "native" && p.commit.is_some() && p.commit != s.commit;
                 if newer || (moved && m.version == s.version) {
                     updates.push(Update {
                         id,
@@ -1232,6 +1261,102 @@ mod tests {
         let mut fx3 = Fixture::default();
         repo(&mut fx3, &[("openrac-mod.json", pack.replace("rac1", "rac2"))], serde_json::json!([]), "c1");
         assert!(!preview(&ctx(dir.path(), &fx3), "https://github.com/o/r").unwrap().mods[0].compatible);
+    }
+
+    fn script_manifest(id: &str, version: &str) -> String {
+        format!(
+            r#"{{"format": 2, "id": "{id}", "name": "Mod {id}", "version": "{version}", "author": "Someone",
+                "type": "script", "scripts": ["main.luau"], "api": "1.1", "games": {{"rac1": ["pal", "ntsc"]}}}}"#
+        )
+    }
+
+    /// The repository's archive at `commit`, holding a script mod in `folder`.
+    fn script_zipball(fx: &mut Fixture, commit: &str, folder: &str, id: &str, version: &str) {
+        let mut w = zip::ZipWriter::new(std::io::Cursor::new(Vec::new()));
+        let o = zip::write::SimpleFileOptions::default();
+        w.start_file(format!("o-r-{commit}/{folder}/openrac-mod.json"), o).unwrap();
+        w.write_all(script_manifest(id, version).as_bytes()).unwrap();
+        w.start_file(format!("o-r-{commit}/{folder}/main.luau"), o).unwrap();
+        w.write_all(b"openrac.log('hi')\n").unwrap();
+        w.start_file(format!("o-r-{commit}/README.md"), o).unwrap();
+        fx.put(&format!("{API}/repos/o/r/zipball/{commit}"), w.finish().unwrap().into_inner());
+    }
+
+    #[test]
+    fn a_script_mod_from_the_repository_itself() {
+        let dir = tempfile::tempdir().unwrap();
+        let mut fx = Fixture::default();
+        // No release: the repository's own files are the mod.
+        repo(
+            &mut fx,
+            &[("swap/openrac-mod.json", script_manifest("swap", "1.0.0")), ("swap/main.luau", "-- x".into())],
+            serde_json::json!([]),
+            "c1",
+        );
+        script_zipball(&mut fx, "c1", "swap", "swap", "1.0.0");
+        // On a system with no native mods (Android: no platform) it is offered all the same.
+        let android = Context { platform: None, ..ctx(dir.path(), &fx) };
+        let p = preview(&android, "https://github.com/o/r").unwrap();
+        let m = &p.mods[0];
+        assert_eq!((m.id.as_str(), m.kind.as_str(), m.compatible, m.asset.as_deref()), ("swap", "script", true, None));
+        let got = install(&android, "https://github.com/o/r", "swap").unwrap();
+        assert!(matches!(got, RemoteInstalled::Plugin { ref id, enabled: true, .. } if id == "swap"));
+        assert!(dir.path().join("swap/main.luau").is_file());
+        assert!(!dir.path().join("swap/README.md").exists(), "only the mod's folder");
+        let s = &read_sources(dir.path()).mods["swap"];
+        assert_eq!((s.kind.as_str(), s.commit.as_deref(), s.tag.as_deref()), ("script", Some("c1"), None));
+        // A newer commit on the branch is an update, and installs as one.
+        let mut fx2 = Fixture::default();
+        repo(&mut fx2, &[("swap/openrac-mod.json", script_manifest("swap", "1.0.0"))], serde_json::json!([]), "c2");
+        script_zipball(&mut fx2, "c2", "swap", "swap", "1.0.0");
+        let c2 = ctx(dir.path(), &fx2);
+        let (u, errors) = check_updates(&c2);
+        assert!(errors.is_empty(), "{errors:?}");
+        assert_eq!((u.len(), u[0].commit.as_deref()), (1, Some("c2")));
+        assert!(matches!(update(&c2, "swap").unwrap(), RemoteInstalled::Plugin { replaced: true, .. }));
+        assert_eq!(read_sources(dir.path()).mods["swap"].commit.as_deref(), Some("c2"));
+        assert!(check_updates(&c2).0.is_empty());
+        // A script mod for an interface this launcher's port does not have is not offered.
+        let mut fx3 = Fixture::default();
+        repo(
+            &mut fx3,
+            &[("openrac-mod.json", script_manifest("swap", "1.0.0").replace("\"1.1\"", "\"1.9\""))],
+            serde_json::json!([]),
+            "c1",
+        );
+        let p = preview(&ctx(dir.path(), &fx3), "https://github.com/o/r").unwrap();
+        assert!(!p.mods[0].compatible && p.mods[0].why.as_deref().unwrap().contains("interface 1.9"));
+    }
+
+    #[test]
+    fn a_script_mod_from_its_release() {
+        let dir = tempfile::tempdir().unwrap();
+        let mut fx = Fixture::default();
+        // The joined archive package_mod.py writes for a script mod, listed in SHA256SUMS.
+        let mut w = zip::ZipWriter::new(std::io::Cursor::new(Vec::new()));
+        let o = zip::write::SimpleFileOptions::default();
+        w.start_file("swap-1.0.0/openrac-mod.json", o).unwrap();
+        w.write_all(script_manifest("swap", "1.0.0").as_bytes()).unwrap();
+        w.start_file("swap-1.0.0/main.luau", o).unwrap();
+        w.write_all(b"-- released").unwrap();
+        let bytes = w.finish().unwrap().into_inner();
+        let name = "swap-1.0.0.zip";
+        fx.put(&format!("{DL}/v1.0.0/{name}"), bytes.clone());
+        let release = serde_json::json!({"tag_name": "v1.0.0", "draft": false, "prerelease": false, "assets": [
+            {"name": name, "browser_download_url": format!("{DL}/v1.0.0/{name}")},
+            {"name": "SHA256SUMS", "browser_download_url": format!("{DL}/v1.0.0/SHA256SUMS")}]});
+        fx.put(&format!("{DL}/v1.0.0/SHA256SUMS"), format!("{}  {name}\n", sha(&bytes)));
+        repo(&mut fx, &[("openrac-mod.json", script_manifest("swap", "1.0.0"))], serde_json::json!([release]), "c1");
+        let c = ctx(dir.path(), &fx);
+        let p = preview(&c, "https://github.com/o/r").unwrap();
+        assert_eq!((p.mods[0].asset.as_deref(), p.mods[0].tag.as_deref()), (Some(name), Some("v1.0.0")));
+        assert!(matches!(install(&c, "https://github.com/o/r", "swap").unwrap(), RemoteInstalled::Plugin { .. }));
+        assert_eq!(std::fs::read_to_string(dir.path().join("swap/main.luau")).unwrap(), "-- released");
+        assert_eq!(read_sources(dir.path()).mods["swap"].tag.as_deref(), Some("v1.0.0"));
+        // A hash that differs is refused.
+        fx.put(&format!("{DL}/v1.0.0/SHA256SUMS"), format!("{}  {name}\n", "0".repeat(64)));
+        let refused = install(&ctx(dir.path(), &fx), "https://github.com/o/r", "swap").unwrap_err();
+        assert!(refused.contains("SHA-256") || refused.contains("differs"), "{refused}");
     }
 
     #[test]
