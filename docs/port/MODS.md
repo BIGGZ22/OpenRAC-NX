@@ -209,6 +209,35 @@ the hook point's name for mods, the same for every disc of a game (rac1/pal's
 `Hero_TurnToHeading`), so a mod names it once. With no mod on it the slot is
 null and the game's C runs: one load and a branch the processor predicts.
 
+**Ids and aliases.** Every hook point has a **permanent id**, in lower case:
+`<game>.<area>.<name>` (`rac1.pad.process_report`, `rac1.player.turn_to_heading`,
+`rac1.camera.follow.apply_overrides`, `rac1.moby.bolt.update`). Its other
+names are **aliases**: the name in `libraries.tsv` (`Hero_TurnToHeading`),
+each disc's symbol (`func_L00_002124E8`, `FUN_L00_00211e30`), and every name
+it has had before. The port's loader, the C++ layer and the scripts take
+either, and `status.json` and the launcher speak in ids. The decompilation's
+names will change (the port's C++ refactor renames functions); ids do not:
+
+- [sdk/bindings/rac1.json](../../sdk/bindings/rac1.json) gives each hook point
+  of its own its id; the catalogue's get theirs by a rule (section 11);
+- each hook point is **anchored** to its function's place on the first disc
+  (`pal:L00:002124E8`), which a rename does not move;
+- [sdk/bindings/rac1.ids.lock](../../sdk/bindings/rac1.ids.lock) keeps every
+  id ever given, with its anchor and every alias it has had. The generator
+  reuses an anchor's id and keeps its old aliases, refuses a table that gives
+  a locked hook point another id or reuses an id, and fails when an id of the
+  lock is no longer given. So **an id is never removed, reused or changed**,
+  and a mod written today against `Hero_TurnToHeading` (or the id) binds
+  after the function is renamed;
+- the launcher carries the names-to-ids table
+  ([launcher/core/src/hook_ids.json](../../launcher/core/src/hook_ids.json),
+  generated) to tell two mods that name one hook point differently that they
+  share it.
+
+A new hook point (a hand-written `hook` row, for the item randomizer's item
+grants for example) is a row in each disc's `libraries.tsv` and an entry in
+the table with its id, as the six are; the generator adds it to the lock.
+
 **Signatures** are written the same way on both sides: the return type, then
 the parameters, from `void`, `i32`, `u32` (a game address too), `i64`,
 `u64`, `f32`, `i16`, `u16`, `i8`, `u8` (`void(i32,f32,f32,f32)`). The SDK's
@@ -224,18 +253,22 @@ last) is the order they wrap the game in. A mod that does not call the
 original takes the call for itself; two such mods on one hook point are
 legal, but the launcher shows that they share it.
 
-Which moby update functions and helpers a hook point could be added for, with the
-row each needs, the levels it covers and the class field a mod filters a shared
-function on, is the generated behaviour catalogue (experimental: its function and
-struct names follow the decompilation and will change in the C++ refactor; the hook
-names are the stable handle), shipped in the SDK archive:
+**The behaviour catalogue's hook points (experimental).** Every update
+function of the behaviour catalogue is a hook point: 637 of them in
+Ratchet & Clank, on both discs, covering 1,114 classes' updates (a function
+several classes share is one hook point; its replacement tells them apart by
+the moby's class, `oclass`, an `i16` at +0xA6). Their ids are permanent; what
+is experimental is everything else about them: their names follow the
+decompilation, and the catalogue's pvar names follow its structs, both of
+which the C++ refactor will change. Section 11 says how they are made; the
+catalogue itself, shipped in the SDK archive:
 
 - **`sdk/catalogue/rac1/classes.json`**, the stable table for bindings (the Luau
   tier) and tools: per class, its update functions with their hook names
-  (`Moby_<Class>_Update`), status and signature, the classes sharing each, and its
-  pvar fields (name, offset, type, meaning). Its format is documented in
-  [editor/catalogue.py](../../editor/catalogue.py) and changes only with its
-  `format` number;
+  (`Moby_<Class>_Update`, aliases of the ids), status and signature, the classes
+  sharing each, and its pvar fields (name, offset, type, meaning). Its format is
+  documented in [editor/catalogue.py](../../editor/catalogue.py) and changes only
+  with its `format` number;
 - `sdk/catalogue/rac1/behaviour.json` (everything, may grow), `behaviour.tsv`, and
   [BEHAVIOUR.md](../../sdk/catalogue/rac1/BEHAVIOUR.md) to read.
 
@@ -263,12 +296,14 @@ A function the game reaches through a code address rather than by name (a
 moby class's update in its class table, a callback the game registers) is a
 hook point the same way: the registry of functions by address
 (`functions.c`) points at the hook's function, so a call through the table
-reaches the mod's replacement too. A behaviour catalogue that names class
-update functions (the level editor's work) proposes them as hook points by
-those names: each becomes a `hook` row in every disc's `libraries.tsv` whose
-game has it, with a name for mods of the form `Moby_<Class>_Update`, and a
-line in the SDK's game header. Nothing else is needed for it to be wrapped
-or replaced.
+reaches the mod's replacement too. The behaviour catalogue's class updates are
+hook points this way (above).
+
+**A function the port wraps too** (a `wrap` row of its own beside the `hook`
+row: NanotechBallUpdate, for the wide-screen orb fix) keeps the port's
+function, and hostgen writes the hook as `<name>__hooked`, which the port's
+function calls where it called `<name>__game`: the mod replaces the game's
+code under the port's fix, and the fix holds for the mod's update too.
 
 ## 5. The list and the answer
 
@@ -609,8 +644,11 @@ port's move to C++. Its source is a committed table per game,
 ```jsonc
 {
   "format": 1, "game": "rac1", "discs": ["pal", "ntsc"],
-  "catalogue": "path/from/the/top/of/OpenRAC.json",     // optional: the behaviour catalogue
-  "hooks": [ { "name": "Hero_TurnToHeading", "signature": "void(i32,f32,f32,f32)",
+  "catalogue": "sdk/catalogue/rac1/classes.json",       // the behaviour catalogue (optional)
+  "catalogue_symbols": { "ntsc": "sdk/bindings/rac1.ntsc.tsv" },  // its functions on the other discs
+  "catalogue_exclude": { "func_001E9768": "why it is not a hook point" },
+  "hooks": [ { "id": "rac1.player.turn_to_heading",       // permanent (section 4)
+               "name": "Hero_TurnToHeading", "aliases": [], "signature": "void(i32,f32,f32,f32)",
                "params": ["mode", "accel", "damping", "limit"],
                "symbols": { "pal": "func_L00_002124E8", "ntsc": "FUN_L00_00211e30" },
                "about": "..." } ],
@@ -645,28 +683,49 @@ the table gives, or when the table's hook points (with the catalogue's) are not
 exactly the `hook` rows of every disc's `libraries.tsv`: a hook point added
 there needs its line in the table, and the other way round.
 
-**The behaviour catalogue** (the level editor's) is the generator's other
-input: the table's `catalogue`, or `gen_binding.py --catalogue FILE`. Its
-format:
+**The behaviour catalogue** (the level editor's,
+[sdk/catalogue/rac1/classes.json](../../sdk/catalogue/rac1/classes.json),
+format 1 of [editor/catalogue.py](../../editor/catalogue.py)) is the
+generator's other input, and experimental (section 4). From it:
 
-```jsonc
-{
-  "format": 1, "game": "rac1",
-  "moby": { "class": "0xAA", "class_type": "i16", "pvars": "0x78" },  // where a moby keeps its class number and its pvars' address
-  "classes": [
-    { "name": "Crate", "class": 500,                                   // a C identifier; the class's number
-      "update": { "pal": "func_L05_...", "ntsc": "FUN_L05_..." },      // its update function on each disc (optional)
-      "signature": "void(u32)", "params": ["moby"],                    // the update's (these are the default)
-      "pvars": [ { "name": "timer", "type": "f32", "offset": "0x10", "readonly": false, "about": "..." } ],
-      "about": "..." } ]
-}
-```
+- **hook points**: each update function, but those `catalogue_exclude` names
+  with a reason, is a hook point (`void(u32)` with the moby, or `void()` for
+  the one that gets none). The generator writes its `hook` row into each
+  disc's `libraries.tsv`, in a block between `# ---- generated by
+  sdk/tools/gen_binding.py ...` and `# ---- end of the generated hook points
+  ----` that nothing else edits (hand-written rows stay above it). The other
+  disc's symbol comes from `catalogue_symbols`
+  ([rac1.ntsc.tsv](../../sdk/bindings/rac1.ntsc.tsv), made once with
+  `port/tools/versionmap/carry.py names` from the two discs' map: 585 the
+  same instructions, 60 changed at the same place); committed, so the
+  generator needs no disc;
+- **ids**: `rac1.moby.<name>.update`, `<name>` the function's own name less
+  its `Update` when it ends so (`BlargTurretUpdate`: `rac1.moby.blarg_turret.update`),
+  else its lowest class's name, else `class_<lowest class number>`; two new
+  ones that would share an id each get `_<lowest class number>`. Once given,
+  the lock keeps it (section 4). The catalogue's hook name
+  (`Moby_<Class>_Update`) and the symbols are aliases;
+- **pvars**: each class's typed pvar struct (the checked one where it has two)
+  as `openrac.pvars(moby)`'s fields: numbers by their type, pointers as
+  read-only `u32` addresses, a vector's lanes (`spot_x` ... `spot_w`), arrays
+  of up to four numbers (`v_0` ...); larger arrays and nested structs are left
+  out. 224 classes have some.
 
-Each class with an `update` becomes a hook point `Moby_<Class>_Update` (wrap,
-replace or before and after it, from C, C++ or a script), which needs its
-`hook` row in each disc's `libraries.tsv` as any hook point does (`--check`
-says which are missing); each class's pvars are what `openrac.pvars(moby)`
-gives for a moby of it.
+Left out, with the reason in the table: `Profile_Mark` (an empty routine 46
+classes take as their update, which the engine also calls as a profiler mark:
+a hook would run for every mark and never see a moby), and the seven update
+functions the decompilation defines under another name (`..._r`, `..._impl`),
+whose `hook` row hostgen does not check against the name it compiles.
+
+What it costs, measured on the Mac (Apple clang, RelWithDebInfo):
+643 hook points for Ratchet & Clank (6 + 637), each one load of its slot, a
+compare and a branch the processor predicts while no mod takes it.
+`hooks.c` is 0.22 MB of C per disc (from 3 KB) and compiles in 0.1 s;
+`script_binding.c` is 0.45 MB (eight script links per hook point, one macro
+line each) and compiles in 3.8 s per disc; the program's code (`__text`) grows
+by 0.73 MB (10.59 to 11.31 MB, 6.9 %), the file by 1.8 MB with its debug
+information. A fresh build of the whole port took 182 s at `-j 18`.
+`games/rac1.hpp`, 0.31 MB of declarations, adds nothing a mod's build notices.
 
 **Sandbox and budget.** Each script mod has its own Luau state, sandboxed
 with `luaL_sandbox` and its scripts run in a thread of its own
