@@ -167,10 +167,12 @@ mod tests {
         assert_eq!(envs.get(OsStr::new("PYTHONHOME")), Some(&None));
     }
 
+    // By its full path: the child's PATH is the one being changed, and macOS has no /usr/bin/sh.
+    #[cfg(unix)]
     #[test]
     fn a_child_really_runs_with_the_systems_own_environment() {
         let appdir = mount();
-        let mut cmd = Command::new("sh");
+        let mut cmd = Command::new("/bin/sh");
         cmd.arg("-c").arg("echo \"[$LD_LIBRARY_PATH]\"; echo \"[$QT_PLUGIN_PATH]\"; echo \"[$PATH]\"");
         cmd.env("LD_LIBRARY_PATH", "/tmp/.mount_openrac/usr/lib/:/usr/lib");
         cmd.env("QT_PLUGIN_PATH", "/tmp/.mount_openrac/usr/lib/qt5/plugins/:");
