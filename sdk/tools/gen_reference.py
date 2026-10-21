@@ -386,22 +386,23 @@ def hooks_page(table_file: Path) -> str:
                 on = [d for d in discs if d in bases.get(f.get("base", ""), {})]
             out.append(f"| {code(f['name'])} | {code(f['type'])} | {'yes' if f.get('readonly') else ''} | "
                        f"{', '.join(on)} | {cell(f.get('about', ''))} |\n")
-    cat_path = table.get("catalogue")
-    if cat_path and (ROOT / cat_path).is_file():
-        cat = json.loads((ROOT / cat_path).read_text())
-        classes = [c for c in cat.get("classes", []) if c.get("update")]
+    # The catalogue's hook points as the binding's generator makes them (their ids, aliases and
+    # classes), so this page lists what a mod can actually take.
+    if table.get("catalogue"):
+        sys.path.insert(0, str(Path(__file__).resolve().parent))
+        import gen_binding  # noqa: E402
+
+        merged = gen_binding.load(game, table_path=table_file)
+        moby = [h for h in merged["hooks"] if h.get("origin") == "catalogue"]
         out.append("\n## Moby updates from the behaviour catalogue\n\n"
                    "**Experimental**: the catalogue is generated from the decompilation and names its\n"
-                   "internals. Each class whose update is a hook point is listed; several classes may\n"
-                   "share one update function.\n\n")
-        has_cid = any("id" in c for c in classes)
-        head = (["Id"] if has_cid else []) + ["Class", "Number", "Hook point", "Signature"]
-        out.append("| " + " | ".join(head) + " |\n|" + "---|" * len(head) + "\n")
-        for c in classes:
-            row = ([code(c["id"]) if c.get("id") else ""] if has_cid else []) + \
-                [cell(str(c.get("name", ""))), str(c.get("class", "")),
-                 code(c.get("hook", f"Moby_{c.get('name', '')}_Update")), code(c.get("signature", "void(u32)"))]
-            out.append("| " + " | ".join(row) + " |\n")
+                   "internals. One hook point per update function; a function several classes share is\n"
+                   f"one hook point, which a mod filters by the moby's class. {len(moby)} hook points.\n\n"
+                   "| Id | Classes | Signature | Also named |\n|---|---|---|---|\n")
+        for h in sorted(moby, key=lambda h: h["id"]):
+            classes = ", ".join(str(c) for c in h.get("classes", []))
+            aliases = ", ".join(code(a) for a in sorted(h.get("aliases", [])) if not a.startswith(("func_", "FUN_")))
+            out.append(f"| {code(h['id'])} | {classes} | {code(h['signature'])} | {aliases} |\n")
     return "".join(out).rstrip() + "\n"
 
 

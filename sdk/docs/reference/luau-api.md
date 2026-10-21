@@ -24,13 +24,14 @@ language server at the SDK's `types/rac1.d.luau` for autocomplete. How to use it
 | `openrac.read` | `(kind: MemoryType, address: number) -> number` |
 | `openrac.write` | `(kind: MemoryType, address: number, value: number) -> ()` |
 | `openrac.fields` | `Fields` |
+| `openrac.pvars` | `(moby: number) -> { [string]: number }?` |
 
 ## Types
 
 ### `HookPoint`
 
 ```lua
-type HookPoint = "Pad_ProcessReport" | "Hero_UpdateMotionInput" | "Hero_TurnToHeading" | "Hero_SetPlanarVelocity" | "FollowCamera_ApplyOverrides" | "Hero_AdvanceAnimation"
+type HookPoint =
 ```
 
 ### `MemoryType`
@@ -59,7 +60,7 @@ type Fields = {
 
 ### `Pad_ProcessReportFn`
 
-Pad_ProcessReport void(u32,u32,i32): One pad report into the pad's state (PadState, at pad), each poll, before the tick reads it.
+rac1.pad.process_report (Pad_ProcessReport) void(u32,u32,i32): One pad report into the pad's state (PadState, at pad), each poll, before the tick reads it.
 
 ```lua
 type Pad_ProcessReportFn = (pad: number, report: number, size: number) -> ()
@@ -67,7 +68,7 @@ type Pad_ProcessReportFn = (pad: number, report: number, size: number) -> ()
 
 ### `Hero_UpdateMotionInputFn`
 
-Hero_UpdateMotionInput void(): The stick read into the hero, early in his update each tick.
+rac1.player.update_motion_input (Hero_UpdateMotionInput) void(): The stick read into the hero, early in his update each tick.
 
 ```lua
 type Hero_UpdateMotionInputFn = () -> ()
@@ -75,7 +76,7 @@ type Hero_UpdateMotionInputFn = () -> ()
 
 ### `Hero_TurnToHeadingFn`
 
-Hero_TurnToHeading void(i32,f32,f32,f32): Eases the hero's facing toward his move yaw.
+rac1.player.turn_to_heading (Hero_TurnToHeading) void(i32,f32,f32,f32): Eases the hero's facing toward his move yaw.
 
 ```lua
 type Hero_TurnToHeadingFn = (mode: number, accel: number, damping: number, limit: number) -> ()
@@ -83,7 +84,7 @@ type Hero_TurnToHeadingFn = (mode: number, accel: number, damping: number, limit
 
 ### `Hero_SetPlanarVelocityFn`
 
-Hero_SetPlanarVelocity void(f32): The hero's velocity at his ground speed along an angle; an angle above pi means his facing.
+rac1.player.set_planar_velocity (Hero_SetPlanarVelocity) void(f32): The hero's velocity at his ground speed along an angle; an angle above pi means his facing.
 
 ```lua
 type Hero_SetPlanarVelocityFn = (angle: number) -> ()
@@ -91,7 +92,7 @@ type Hero_SetPlanarVelocityFn = (angle: number) -> ()
 
 ### `FollowCamera_ApplyOverridesFn`
 
-FollowCamera_ApplyOverrides void(u32): The follow camera's per-tick requests from the hero's state; the camera moby's update calls it before it places the eye.
+rac1.camera.follow.apply_overrides (FollowCamera_ApplyOverrides) void(u32): The follow camera's per-tick requests from the hero's state; the camera moby's update calls it before it places the eye.
 
 ```lua
 type FollowCamera_ApplyOverridesFn = (camera: number) -> ()
@@ -99,8 +100,16 @@ type FollowCamera_ApplyOverridesFn = (camera: number) -> ()
 
 ### `Hero_AdvanceAnimationFn`
 
-Hero_AdvanceAnimation void(): Ratchet's animation moved on by his animation speed, once a tick after his state's update.
+rac1.player.advance_animation (Hero_AdvanceAnimation) void(): Ratchet's animation moved on by his animation speed, once a tick after his state's update.
 
 ```lua
 type Hero_AdvanceAnimationFn = () -> ()
+```
+
+### `MobyUpdateFn`
+
+rac1.moby.<class>.update (experimental): (moby: number) -> (), or () -> () where it gets no moby.
+
+```lua
+type MobyUpdateFn = (moby: number) -> ()
 ```

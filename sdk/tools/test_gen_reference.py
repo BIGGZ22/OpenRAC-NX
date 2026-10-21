@@ -69,13 +69,9 @@ class Reference(unittest.TestCase):
 
     def test_hooks_with_ids_aliases_and_a_catalogue(self):
         with tempfile.TemporaryDirectory() as d:
-            cat = Path(d) / "cat.json"
-            cat.write_text(json.dumps({"format": 1, "game": "x", "classes": [
-                {"name": "Crate", "class": 500, "id": "x.moby.crate.update", "update": {"pal": "f"}},
-                {"name": "Rock", "class": 501}]}))
             table = Path(d) / "x.json"
             table.write_text(json.dumps({
-                "format": 1, "game": "x", "discs": ["pal"], "catalogue": str(cat),
+                "format": 1, "game": "x", "discs": ["pal"],
                 "hooks": [{"id": "x.player.jump", "name": "Hero_Jump", "aliases": ["Jump"],
                            "signature": "void(f32)", "params": ["height"], "symbols": {"pal": "f"}}]}))
             # The page names its source relative to the SDK; a table elsewhere is given a stand-in.
@@ -87,9 +83,12 @@ class Reference(unittest.TestCase):
                 gen_reference.SDK = real
         self.assertIn("| Id | Name | Aliases | Signature |", page)
         self.assertIn("| `x.player.jump` | `Hero_Jump` | `Jump` | `void(f32)` | height | pal |", page)
-        self.assertIn("**Experimental**", page)
-        self.assertIn("`x.moby.crate.update`", page)
-        self.assertNotIn("Rock", page)
+        self.assertNotIn("behaviour catalogue", page)
+        # The real table names the catalogue: its updates are listed by the generator's ids.
+        real_page = gen_reference.hooks_page(gen_reference.SDK / "bindings" / "rac1.json")
+        self.assertIn("## Moby updates from the behaviour catalogue", real_page)
+        self.assertIn("**Experimental**", real_page)
+        self.assertIn("| `rac1.moby.", real_page)
 
     def test_luau_types(self):
         t = gen_reference.parse_luau_types(

@@ -8,14 +8,14 @@ game address.
 
 ## Hook points
 
-| Name | Signature | Parameters | Discs |  |
-|---|---|---|---|---|
-| `Pad_ProcessReport` | `void(u32,u32,i32)` | pad, report, size | pal, ntsc | One pad report into the pad's state (PadState, at pad), each poll, before the tick reads it. |
-| `Hero_UpdateMotionInput` | `void()` |  | pal, ntsc | The stick read into the hero, early in his update each tick. |
-| `Hero_TurnToHeading` | `void(i32,f32,f32,f32)` | mode, accel, damping, limit | pal, ntsc | Eases the hero's facing toward his move yaw. |
-| `Hero_SetPlanarVelocity` | `void(f32)` | angle | pal, ntsc | The hero's velocity at his ground speed along an angle; an angle above pi means his facing. |
-| `FollowCamera_ApplyOverrides` | `void(u32)` | camera | pal, ntsc | The follow camera's per-tick requests from the hero's state; the camera moby's update calls it before it places the eye. |
-| `Hero_AdvanceAnimation` | `void()` |  | pal, ntsc | Ratchet's animation moved on by his animation speed, once a tick after his state's update. |
+| Id | Name | Signature | Parameters | Discs |  |
+|---|---|---|---|---|---|
+| `rac1.pad.process_report` | `Pad_ProcessReport` | `void(u32,u32,i32)` | pad, report, size | pal, ntsc | One pad report into the pad's state (PadState, at pad), each poll, before the tick reads it. |
+| `rac1.player.update_motion_input` | `Hero_UpdateMotionInput` | `void()` |  | pal, ntsc | The stick read into the hero, early in his update each tick. |
+| `rac1.player.turn_to_heading` | `Hero_TurnToHeading` | `void(i32,f32,f32,f32)` | mode, accel, damping, limit | pal, ntsc | Eases the hero's facing toward his move yaw. |
+| `rac1.player.set_planar_velocity` | `Hero_SetPlanarVelocity` | `void(f32)` | angle | pal, ntsc | The hero's velocity at his ground speed along an angle; an angle above pi means his facing. |
+| `rac1.camera.follow.apply_overrides` | `FollowCamera_ApplyOverrides` | `void(u32)` | camera | pal, ntsc | The follow camera's per-tick requests from the hero's state; the camera moby's update calls it before it places the eye. |
+| `rac1.player.advance_animation` | `Hero_AdvanceAnimation` | `void()` |  | pal, ntsc | Ratchet's animation moved on by his animation speed, once a tick after his state's update. |
 
 ## Fields
 
@@ -31,3 +31,649 @@ In a script, `openrac.fields.<name>`.
 | `hero.move_yaw` | `f32` |  | pal, ntsc | Where the stick moves him: the stick's angle plus the camera's yaw. |
 | `hero.state` | `i32` | yes | pal, ntsc | His state: 0 standing, 2 running, 7 jumping, ... |
 | `bolts` | `i32` |  | pal, ntsc | The player's bolts. |
+
+## Moby updates from the behaviour catalogue
+
+**Experimental**: the catalogue is generated from the decompilation and names its
+internals. One hook point per update function; a function several classes share is
+one hook point, which a mod filters by the moby's class. 637 hook points.
+
+| Id | Classes | Signature | Also named |
+|---|---|---|---|
+| `rac1.moby.agnogg_ship.update` | 730, 731, 790 | `void(u32)` | `Moby_AgnoggShipFront_Update` |
+| `rac1.moby.airship_chain_link.update` | 1181 | `void(u32)` | `Moby_AirshipPart1181_Update` |
+| `rac1.moby.airship_part.update` | 1182, 1183, 1184, 1185, 1186, 1187, 1188, 1189 | `void(u32)` | `Moby_AirshipPart_Update` |
+| `rac1.moby.alien_queen.update` | 1051 | `void(u32)` | `Moby_AlienQueen_Update` |
+| `rac1.moby.ambient_stream_l03.update` | 994, 1260 | `void(u32)` | `Moby_Class994_Update` |
+| `rac1.moby.ambient_stream_l07.update` | 317, 460 | `void(u32)` | `Moby_Class317_Update` |
+| `rac1.moby.ammo_pickup.update` | 204, 213, 214, 222, 223, 225, 226, 1006, 1438, 1447, 1449 | `void(u32)` | `Moby_DevestatorAmmo_Update` |
+| `rac1.moby.amoeboid.update` | 572, 865, 866 | `void(u32)` | `Moby_LargeAmoeboid_Update` |
+| `rac1.moby.armed_transport.update` | 1356 | `void(u32)` | `Moby_ArmedTransport_Update` |
+| `rac1.moby.asteroid_belt.update` | 263, 264, 265, 266, 267 | `void(u32)` | `Moby_Asteroid_Update` |
+| `rac1.moby.audio_stream_trigger.update` | 1018 | `void(u32)` | `Moby_OceanUmbris_Update` |
+| `rac1.moby.background_ship.update` | 1212 | `void(u32)` | `Moby_BackgroundShip1_Update` |
+| `rac1.moby.banner_trigger.update` | 1561 | `void(u32)` | `Moby_Class1561_Update` |
+| `rac1.moby.barrier.update` | 1285, 1286, 1287, 1288 | `void(u32)` | `Moby_Barrier_Update` |
+| `rac1.moby.batalia_bolt_thief.update` | 452 | `void(u32)` | `Moby_BoltThief_Update` |
+| `rac1.moby.beam_slot_manager.update` | 1471 | `void(u32)` | `Moby_Class1471_Update` |
+| `rac1.moby.big_axebot.update` | 217 | `void(u32)` | `Moby_BigAxebot_Update` |
+| `rac1.moby.birdbot.update` | 459 | `void(u32)` | `Moby_Birdbot_Update` |
+| `rac1.moby.blarg_bomb_thrower.update` | 333 | `void(u32)` | `Moby_BlargBombthrower_Update` |
+| `rac1.moby.blarg_commander.update` | 1371 | `void(u32)` | `Moby_BlargCommander_Update` |
+| `rac1.moby.blarg_fighter111.update` | 111 | `void(u32)` | `Moby_BlargSpaceFighter111_Update` |
+| `rac1.moby.blarg_gun.update` | 344, 547, 548, 549, 550, 551, 588, 589, 590, 591, 592, 593, 594, 595, 596, 597, 598, 782, 783, 784, 785, 980, 981 | `void(u32)` | `Moby_BlargGun_Update` |
+| `rac1.moby.blarg_interceptor.update` | 1417 | `void(u32)` | `Moby_BlargHeavyInterceptor1417_Update` |
+| `rac1.moby.blarg_ship.update` | 1229 | `void(u32)` | `Moby_BlargShip_Update` |
+| `rac1.moby.blarg_space_commando.update` | 1262 | `void(u32)` | `Moby_BlargSpaceCommando1262_Update` |
+| `rac1.moby.blarg_space_fighter.update` | 101 | `void(u32)` | `Moby_BlargSpaceFighter_Update` |
+| `rac1.moby.blarg_trooper.update` | 427 | `void(u32)` | `Moby_BlargTrooper_Update` |
+| `rac1.moby.blarg_turret.update` | 29 | `void(u32)` | `Moby_BlargTurret_Update` |
+| `rac1.moby.bobbing_lights.update` | 1263, 1393 | `void(u32)` | `Moby_Class1263_Update` |
+| `rac1.moby.bobbing_moby.update` | 1091, 1092, 1093, 1094, 1095, 1096, 1097, 1098, 1103 | `void(u32)` | `Moby_Class1091_Update` |
+| `rac1.moby.bobbing_moby_l05.update` | 984 | `void(u32)` | `Moby_Television_Update` |
+| `rac1.moby.bobbing_platform.update` | 1117 | `void(u32)` | `Moby_Platform1117_Update` |
+| `rac1.moby.bolt.update` | 13, 14, 15, 16 | `void(u32)` | `Moby_Bolt_Update` |
+| `rac1.moby.bolt_crank.update` | 280 | `void(u32)` | `Moby_BoltCrank_Update` |
+| `rac1.moby.bolt_projectile.update` | 880 | `void(u32)` | `Moby_Class880_Update` |
+| `rac1.moby.bolt_thief.update` | 923 | `void(u32)` | `Moby_BoltThief923_Update` |
+| `rac1.moby.bomb_230.update` | 230 | `void(u32)` | `Moby_Bomb_Update` |
+| `rac1.moby.bomb_248.update` | 248 | `void(u32)` | `Moby_Bomb248_Update` |
+| `rac1.moby.bomber_tank.update` | 253 | `void(u32)` | `Moby_BomberTank_Update` |
+| `rac1.moby.boss_slot_effect.update` | 1560 | `void(u32)` | `Moby_Class1560_Update` |
+| `rac1.moby.bouncer.update` | 919 | `void(u32)` | `Moby_QwarksBouncer_Update` |
+| `rac1.moby.bouncing_debris.update` | 1516 | `void(u32)` | `Moby_Class1516_Update` |
+| `rac1.moby.bouncing_spark.update` | 1193 | `void(u32)` | `Moby_Class1193_Update` |
+| `rac1.moby.break_on_hit_blarg.update` | 1660, 1664 | `void(u32)` | `Moby_Class1660_Update` |
+| `rac1.moby.break_on_hit_l02.update` | 1819, 1827, 1834, 1844, 1849, 1859, 1862 | `void(u32)` | `Moby_WhiteFlower_Update` |
+| `rac1.moby.breakable_pot.update` | 754 | `void(u32)` | `Moby_GreenMushroom_Update` |
+| `rac1.moby.breakable_prop.update` | 1113, 1114, 1115, 1116 | `void(u32)` | `Moby_Class1113_Update` |
+| `rac1.moby.breakable_rock.update` | 704 | `void(u32)` | `Moby_RockFormation_Update` |
+| `rac1.moby.breakable_stack.update` | 276, 1298, 1299 | `void(u32)` | `Moby_Display_Update` |
+| `rac1.moby.breakable_wall.update` | 729 | `void(u32)` | `Moby_DestroyableCaveWall_Update` |
+| `rac1.moby.bridge.update` | 104, 106, 1129 | `void(u32)` | `Moby_Bridge_Update` |
+| `rac1.moby.bubble.update` | 1524 | `void(u32)` | `Moby_Class1524_Update` |
+| `rac1.moby.bubbling_vent.update` | 1265 | `void(u32)` | `Moby_Class1265_Update` |
+| `rac1.moby.burning_debris.update` | 567 | `void(u32)` | `Moby_Class567_Update` |
+| `rac1.moby.callable_lift.update` | 1061 | `void(u32)` | `Moby_Class1061_Update` |
+| `rac1.moby.camera_object.update` | 1007 | `void(u32)` | `Moby_CameraObject_Update` |
+| `rac1.moby.camera_takeover_trigger.update` | 1083 | `void(u32)` | `Moby_Class1083_Update` |
+| `rac1.moby.cannon.update` | 440 | `void(u32)` | `Moby_Class440_Update` |
+| `rac1.moby.carrier.update` | 229 | `void(u32)` | `Moby_GloveOfDoom_Update` |
+| `rac1.moby.challenge.update` | 1347 | `void(u32)` | `Moby_Class1347_Update` |
+| `rac1.moby.challenge_npc.update` | 1455 | `void(u32)` | `Moby_GadgetronCeo_Update` |
+| `rac1.moby.checkpoint_trigger.update` | 805 | `void(u32)` | `Moby_SpawnPoint_Update` |
+| `rac1.moby.child_spawner.update` | 455 | `void(u32)` | `Moby_Spawner_Update` |
+| `rac1.moby.circular_saw.update` | 340 | `void(u32)` | `Moby_CircularSawEnemy_Update` |
+| `rac1.moby.clank_pack.update` | 607 | `void(u32)` | `Moby_Helipack_Update` |
+| `rac1.moby.class_1009.update` | 1009 | `void(u32)` | `Moby_Class1009_Update` |
+| `rac1.moby.class_1035.update` | 1035 | `void(u32)` | `Moby_Class1035_Update` |
+| `rac1.moby.class_1062.update` | 1062 | `void(u32)` | `Moby_Class1062_Update` |
+| `rac1.moby.class_1271.update` | 1271 | `void(u32)` | `Moby_Class1271_Update` |
+| `rac1.moby.class_1348.update` | 1348 | `void(u32)` | `Moby_Class1348_Update` |
+| `rac1.moby.class_1403.update` | 1403 | `void(u32)` | `Moby_Class1403_Update` |
+| `rac1.moby.class_1425.update` | 1425 | `void(u32)` | `Moby_Class1425_Update` |
+| `rac1.moby.class_1432.update` | 1432 | `void(u32)` | `Moby_Class1432_Update` |
+| `rac1.moby.class_148.update` | 148, 255 | `void(u32)` | `Moby_Class148_Update` |
+| `rac1.moby.class_1557.update` | 1557 | `void(u32)` | `Moby_Class1557_Update` |
+| `rac1.moby.class_161.update` | 161 | `void(u32)` | `Moby_Class161_Update` |
+| `rac1.moby.class_1633.update` | 1633 | `void(u32)` | `Moby_Class1633_Update` |
+| `rac1.moby.class_1750.update` | 1750 | `void()` | `Moby_Class1750_Update` |
+| `rac1.moby.class_1907.update` | 1907, 1908, 1910, 1911, 1913, 1918, 1952 | `void(u32)` | `Moby_Class1907_Update` |
+| `rac1.moby.class_1947.update` | 1947 | `void(u32)` | `Moby_Class1947_Update` |
+| `rac1.moby.class_256.update` | 256 | `void(u32)` | `Moby_Class256_Update` |
+| `rac1.moby.class_482.update` | 482 | `void(u32)` | `Moby_Class482_Update` |
+| `rac1.moby.class_655.update` | 655 | `void(u32)` | `Moby_Class655_Update` |
+| `rac1.moby.class_676.update` | 676 | `void(u32)` | `Moby_Class676_Update` |
+| `rac1.moby.class_684.update` | 684 | `void(u32)` | `Moby_Class684_Update` |
+| `rac1.moby.class_845.update` | 845 | `void(u32)` | `Moby_Class845_Update` |
+| `rac1.moby.class_893.update` | 893 | `void(u32)` | `Moby_Class893_Update` |
+| `rac1.moby.class_937.update` | 937 | `void(u32)` | `Moby_Class937_Update` |
+| `rac1.moby.clip_volume_door.update` | 93 | `void(u32)` | `Moby_Gate93_Update` |
+| `rac1.moby.clip_volume_trigger.update` | 6 | `void(u32)` | `Moby_Class6_Update` |
+| `rac1.moby.codebot_slot.update` | 1430 | `void(u32)` | `Moby_CodebotSlot_Update` |
+| `rac1.moby.collapsing_platform.update` | 701 | `void(u32)` | `Moby_FallingRock_Update` |
+| `rac1.moby.collectable.update` | 1101, 1102, 1531, 1532 | `void(u32)` | `Moby_UpperDoor_Update` |
+| `rac1.moby.collectible_pickup.update` | 1354 | `void(u32)` | `Moby_Morphoray1354_Update` |
+| `rac1.moby.collectible_spawner.update` | 1038 | `void(u32)` | `Moby_EnergySphereHolder_Update` |
+| `rac1.moby.collectible_trigger.update` | 1100 | `void(u32)` | `Moby_BlockCave_Update` |
+| `rac1.moby.commando.update` | 1130 | `void(u32)` | `Moby_Commando_Update` |
+| `rac1.moby.construction_arm.update` | 221 | `void(u32)` | `Moby_ConstructionArm_Update` |
+| `rac1.moby.controlled_gate.update` | 674, 677, 680 | `void(u32)` | `Moby_Class674_Update` |
+| `rac1.moby.crank_rotator.update` | 641 | `void(u32)` | `Moby_CaveDoor_Update` |
+| `rac1.moby.crank_slider.update` | 665 | `void(u32)` | `Moby_DoorHalf_Update` |
+| `rac1.moby.crate.update` | 500, 501, 502, 505, 511 | `void(u32)` | `Moby_BoltCrate_Update` |
+| `rac1.moby.crate_platform.update` | 1401 | `void(u32)` | `Moby_BoltThief1401_Update` |
+| `rac1.moby.cutscene_beams.update` | 1548 | `void(u32)` | `Moby_Class1548_Update` |
+| `rac1.moby.cutscene_controller.update` | 1156 | `void(u32)` | `Moby_Class1156_Update` |
+| `rac1.moby.cutscene_trigger.update` | 737 | `void(u32)` | `Moby_Class737_Update` |
+| `rac1.moby.cutscene_volume_trigger.update` | 1404 | `void(u32)` | `Moby_Class1404_Update` |
+| `rac1.moby.debris_bounce.update` | 149, 348, 349, 354, 355, 356, 357, 358, 359, 363, 364 | `void(u32)` | `Moby_NanotechCrateFragment_Update` |
+| `rac1.moby.debris_moby.update` | 200, 201, 205, 206, 207, 210, 696, 697, 698, 1806, 1807 | `void(u32)` | `Moby_Rock_Update` |
+| `rac1.moby.debris_particle.update` | 325 | `void(u32)` | `Moby_Class325_Update` |
+| `rac1.moby.decoy_glove.update` | 562 | `void(u32)` | `Moby_DecoyGlove_Update` |
+| `rac1.moby.delete_moby.update` | 484 | `void(u32)` | `Moby_TransportShip_Update` |
+| `rac1.moby.deserter.update` | 1144 | `void(u32)` | `Moby_BataliaDeserter_Update` |
+| `rac1.moby.doom_bot.update` | 186 | `void(u32)` | `Moby_DoomBot_Update` |
+| `rac1.moby.door.update` | 129, 130, 182, 183, 360, 1063, 1078, 1079, 1131 | `void(u32)` | `Moby_Door_Update` |
+| `rac1.moby.door_ring.update` | 1021 | `void(u32)` | `Moby_Class1021_Update` |
+| `rac1.moby.door_switch.update` | 1281 | `void(u32)` | `Moby_HomingMineSpawner_Update` |
+| `rac1.moby.drain_cover.update` | 844 | `void(u32)` | `Moby_DrainCover_Update` |
+| `rac1.moby.drawbridge.update` | 1028 | `void(u32)` | `Moby_Class1028_Update` |
+| `rac1.moby.drift_spark_moby.update` | 642 | `void(u32)` | `Moby_Leaf_Update` |
+| `rac1.moby.drifting_blob.update` | 212, 1412 | `void(u32)` | `Moby_Asteroid212_Update` |
+| `rac1.moby.driver_lift.update` | 792 | `void(u32)` | `Moby_LiftcarPlatform_Update` |
+| `rac1.moby.drone.update` | 479 | `void(u32)` | `Moby_Drone_Update` |
+| `rac1.moby.edwina.update` | 328 | `void(u32)` | `Moby_Edwina_Update` |
+| `rac1.moby.effect_emitter.update` | 1544 | `void(u32)` | `Moby_Class1544_Update` |
+| `rac1.moby.electric_gate.update` | 838 | `void(u32)` | `Moby_ElectricGate_Update` |
+| `rac1.moby.electric_spark.update` | 947 | `void(u32)` | `Moby_Class947_Update` |
+| `rac1.moby.elevator_21.update` | 21, 244 | `void(u32)` | `Moby_Elevator21_Update` |
+| `rac1.moby.elevator_651.update` | 651 | `void(u32)` | `Moby_Elevator_Update` |
+| `rac1.moby.elevator_platform.update` | 1826 | `void(u32)` | `Moby_Elevator1826_Update` |
+| `rac1.moby.emitter_l05.update` | 855 | `void(u32)` | `Moby_Class855_Update` |
+| `rac1.moby.enemy_shot.update` | 1258 | `void(u32)` | `Moby_Class1258_Update` |
+| `rac1.moby.enemy_spawner.update` | 815 | `void(u32)` | `Moby_Beehive_Update` |
+| `rac1.moby.energy_field_emitter.update` | 583 | `void(u32)` | `Moby_ThrusterPackLockGreen_Update` |
+| `rac1.moby.env_map_a.update` | 1943 | `void(u32)` | `Moby_Class1943_Update` |
+| `rac1.moby.env_map_b.update` | 1948 | `void(u32)` | `Moby_Class1948_Update` |
+| `rac1.moby.env_map_c.update` | 1953 | `void(u32)` | `Moby_Class1953_Update` |
+| `rac1.moby.exhaust_vent.update` | 1240 | `void(u32)` | `Moby_Class1240_Update` |
+| `rac1.moby.extermibot.update` | 623 | `void(u32)` | `Moby_Extermibot_Update` |
+| `rac1.moby.extermitank.update` | 625 | `void(u32)` | `Moby_Extermitank_Update` |
+| `rac1.moby.fade_in_hold_out.update` | 352 | `void(u32)` | `Moby_Class352_Update` |
+| `rac1.moby.falling_chunk.update` | 787 | `void(u32)` | `Moby_Class787_Update` |
+| `rac1.moby.falling_debris.update` | 441, 442, 443, 445, 448, 449, 450, 451, 464, 465 | `void(u32)` | `Moby_Class441_Update` |
+| `rac1.moby.falling_drop.update` | 722 | `void(u32)` | `Moby_Class722_Update` |
+| `rac1.moby.falling_fireball.update` | 624 | `void(u32)` | `Moby_Class624_Update` |
+| `rac1.moby.falling_leaf.update` | 1080 | `void(u32)` | `Moby_Class1080_Update` |
+| `rac1.moby.falling_moby.update` | 1221, 1222 | `void(u32)` | `Moby_Class1221_Update` |
+| `rac1.moby.falling_spark.update` | 122 | `void(u32)` | `Moby_Class122_Update` |
+| `rac1.moby.fighter_jet_1379.update` | 1379 | `void(u32)` | `Moby_FighterJet1379_Update` |
+| `rac1.moby.fighter_jet_69.update` | 69 | `void(u32)` | `Moby_FighterJet69_Update` |
+| `rac1.moby.final_boss.update` | 1422 | `void(u32)` | `Moby_DrekFinalBossRobot_Update` |
+| `rac1.moby.fire_bolt.update` | 1292 | `void(u32)` | `Moby_Class1292_Update` |
+| `rac1.moby.fireball.update` | 1017 | `void(u32)` | `Moby_Class1017_Update` |
+| `rac1.moby.fleet_reflection.update` | 1772 | `void(u32)` | `Moby_Class1772_Update` |
+| `rac1.moby.fleet_turret.update` | 347 | `void(u32)` | `Moby_DreksFleetTurret_Update` |
+| `rac1.moby.flicker_light.update` | 671 | `void(u32)` | `Moby_Class671_Update` |
+| `rac1.moby.floating_enemy.update` | 638 | `void(u32)` | `Moby_BlargEliteCommando_Update` |
+| `rac1.moby.floating_mine.update` | 933 | `void(u32)` | `Moby_Mine933_Update` |
+| `rac1.moby.floating_platform_481.update` | 481 | `void(u32)` | `Moby_FloatingPlatform_Update` |
+| `rac1.moby.floating_platform_810.update` | 810 | `void(u32)` | `Moby_FloatingPlatform810_Update` |
+| `rac1.moby.floor_button.update` | 830 | `void(u32)` | `Moby_FloorButton_Update` |
+| `rac1.moby.flyer.update` | 922 | `void(u32)` | `Moby_Rocket922_Update` |
+| `rac1.moby.flying_burst.update` | 686 | `void(u32)` | `Moby_Class686_Update` |
+| `rac1.moby.flying_craft.update` | 1319 | `void(u32)` | `Moby_BlargShip1319_Update` |
+| `rac1.moby.fog_zone.update` | 841 | `void(u32)` | `Moby_Class841_Update` |
+| `rac1.moby.forcefield_tower.update` | 170 | `void(u32)` | `Moby_ForcefieldTower_Update` |
+| `rac1.moby.fred_1.update` | 915, 916, 917 | `void(u32)` | `Moby_Fred1_Update` |
+| `rac1.moby.frog.update` | 827 | `void(u32)` | `Moby_Frog_Update` |
+| `rac1.moby.fx_group.update` | 1505, 1506, 1517, 1518, 1522, 1525, 1526, 1528, 1529, 1533, 1534, 1537, 1538, 1539, 1569, 1570, 1571, 1572, 1588, 1589, 1590, 1591, 1592, 1593, 1594, 1595, 1599, 1601, 1602, 1603, 1604, 1605, 1606, 1607, 1608, 1609, 1610, 1611, 1612, 1613, 1614, 1615, 1616, 1617, 1618, 1619, 1620, 1621, 1622, 1623, 1624, 1652, 1653, 1654, 1656, 1657, 1658, 1659, 1661, 1662, 1665, 1666, 1673, 1674, 1675, 1676, 1678, 1679, 1680, 1688, 1689, 1690, 1692, 1693, 1694, 1695, 1696, 1697, 1698, 1699, 1700, 1701, 1702, 1703, 1704, 1705, 1706, 1707, 1708, 1709, 1710, 1711, 1712, 1713, 1714, 1715, 1716, 1717, 1718, 1719, 1720, 1721, 1722, 1724, 1726, 1727, 1728, 1729, 1730, 1731, 1732, 1733, 1734, 1735, 1736, 1737, 1738, 1739, 1740, 1741, 1742, 1743, 1744, 1745, 1746, 1747, 1748, 1749, 1751, 1752, 1753, 1754, 1755, 1756, 1757, 1759, 1760, 1761, 1762, 1763, 1764, 1765, 1769, 1770, 1786, 1787, 1790, 1791, 1792, 1793, 1794, 1796, 1801, 1802, 1803, 1804, 1814, 1815, 1817, 1821, 1829, 1830, 1831, 1832, 1833, 1836, 1838, 1846, 1847, 1851, 1858, 1861, 1864, 1867, 1868, 1869, 1870, 1875, 1878, 1909, 1914, 1915, 1916, 1917, 1922, 1924, 1925, 1926, 1927, 1933, 1934, 1935, 1936, 1939, 1940, 1941, 1942, 1944, 1945, 1946, 1961, 1962, 1963 | `void(u32)` | `Moby_Hoverboard_Update` |
+| `rac1.moby.gadgebot.update` | 857 | `void(u32)` | `Moby_Gadgebot_Update` |
+| `rac1.moby.gate.update` | 1248 | `void(u32)` | `Moby_Class1248_Update` |
+| `rac1.moby.gate_rise.update` | 852, 853 | `void(u32)` | `Moby_Class852_Update` |
+| `rac1.moby.gate_swing.update` | 468, 469 | `void(u32)` | `Moby_Class468_Update` |
+| `rac1.moby.gem_lock_pickup.update` | 404, 405 | `void(u32)` | `Moby_Forcefield_Update` |
+| `rac1.moby.gem_lock_sentry.update` | 386 | `void(u32)` | `Moby_Class386_Update` |
+| `rac1.moby.gem_lock_turret.update` | 36 | `void(u32)` | `Moby_BlargGunner_Update` |
+| `rac1.moby.giant_clank_pad.update` | 1451, 1899 | `void(u32)` | `Moby_GiantClankPad_Update` |
+| `rac1.moby.gold_bolt.update` | 1134 | `void(u32)` | `Moby_GoldBolt_Update` |
+| `rac1.moby.grass.update` | 492, 724, 725, 766, 767, 1781, 1782 | `void(u32)` | `Moby_BombthrowerGrass_Update` |
+| `rac1.moby.gravity_debris.update` | 882 | `void(u32)` | `Moby_Bomb882_Update` |
+| `rac1.moby.grazing_critter.update` | 133 | `void(u32)` | `Moby_Amoeboid_Update` |
+| `rac1.moby.grind_rail.update` | 679 | `void(u32)` | `Moby_Class679_Update` |
+| `rac1.moby.ground_enemy.update` | 193 | `void(u32)` | `Moby_Class193_Update` |
+| `rac1.moby.group_clear.update` | 467, 472 | `void(u32)` | `Moby_Class467_Update` |
+| `rac1.moby.grow_and_fade_out.update` | 775 | `void(u32)` | `Moby_Class775_Update` |
+| `rac1.moby.guide.update` | 909 | `void(u32)` | `Moby_BigAl_Update` |
+| `rac1.moby.guided_rocket.update` | 435 | `void(u32)` | `Moby_Rocket435_Update` |
+| `rac1.moby.gunship.update` | 688 | `void(u32)` | `Moby_BomberJet_Update` |
+| `rac1.moby.heavy_tumbling_debris.update` | 320, 321 | `void(u32)` | `Moby_Class320_Update` |
+| `rac1.moby.height_glide.update` | 1015, 1282 | `void(u32)` | `Moby_LabDoor_Update` |
+| `rac1.moby.helicopter.update` | 233 | `void(u32)` | `Moby_Helicopter233_Update` |
+| `rac1.moby.helicopter_gunship.update` | 631 | `void(u32)` | `Moby_BlargHelicopter_Update` |
+| `rac1.moby.help_hint_director.update` | 1341 | `void(u32)` | `Moby_Class1341_Update` |
+| `rac1.moby.help_volume.update` | 558 | `void(u32)` | `Moby_Class558_Update` |
+| `rac1.moby.hero_bomb.update` | 121 | `void(u32)` | `Moby_Class121_Update` |
+| `rac1.moby.hideable_flower.update` | 758, 803 | `void(u32)` | `Moby_SwingshotVersatarget_Update` |
+| `rac1.moby.hinged_bridge.update` | 746 | `void(u32)` | `Moby_BridgeHalf_Update` |
+| `rac1.moby.hit_reaction_effect_alt.update` | 154 | `void(u32)` | `Moby_Class154_Update` |
+| `rac1.moby.hit_trigger.update` | 885, 888, 891, 892, 894, 900, 901, 936 | `void(u32)` | `Moby_Class885_Update` |
+| `rac1.moby.homing_projectile.update` | 50 | `void(u32)` | `Moby_Rocket50_Update` |
+| `rac1.moby.homing_rocket82.update` | 82 | `void(u32)` | `Moby_Rocket82_Update` |
+| `rac1.moby.homing_spark_1475.update` | 1475 | `void(u32)` | `Moby_Rocket1475_Update` |
+| `rac1.moby.homing_spark_983.update` | 983 | `void(u32)` | `Moby_Class983_Update` |
+| `rac1.moby.horny_toad.update` | 749 | `void(u32)` | `Moby_HornyToad_Update` |
+| `rac1.moby.hoven_challenge.update` | 422 | `void(u32)` | `Moby_Class422_Update` |
+| `rac1.moby.hoven_homing_mine.update` | 1269 | `void(u32)` | `Moby_Mine1269_Update` |
+| `rac1.moby.hoven_platform.update` | 240 | `void(u32)` | `Moby_Platform240_Update` |
+| `rac1.moby.hoven_shot.update` | 409 | `void(u32)` | `Moby_Rocket409_Update` |
+| `rac1.moby.hoven_troll.update` | 238 | `void(u32)` | `Moby_Class238_Update` |
+| `rac1.moby.hover_enemy.update` | 695 | `void(u32)` | `Moby_WaterLily_Update` |
+| `rac1.moby.hoverboard.update` | 439 | `void(u32)` | `Moby_Hoverboard439_Update` |
+| `rac1.moby.hoverboard_girl.update` | 918 | `void(u32)` | `Moby_HoverboardGirl_Update` |
+| `rac1.moby.hoverboard_racer.update` | 556 | `void(u32)` | `Moby_TestDummyOnHoverboard_Update` |
+| `rac1.moby.hydrodisplacer_pad.update` | 1251 | `void(u32)` | `Moby_Hydrodisplacer_Update` |
+| `rac1.moby.infobot.update` | 750 | `void(u32)` | `Moby_Infobot_Update` |
+| `rac1.moby.item_offer.update` | 304, 1456, 1457, 1458, 1459, 1460, 1461, 1462, 1463, 1464, 1465 | `void(u32)` | `Moby_GoldWeaponCase_Update` |
+| `rac1.moby.jet_fighter.update` | 1242 | `void(u32)` | `Moby_JetFighter_Update` |
+| `rac1.moby.kerwan_homing_rocket.update` | 833 | `void(u32)` | `Moby_Class833_Update` |
+| `rac1.moby.kerwan_mine.update` | 627 | `void(u32)` | `Moby_Mine627_Update` |
+| `rac1.moby.keyframe_platform.update` | 903 | `void(u32)` | `Moby_Platform903_Update` |
+| `rac1.moby.launch_trigger.update` | 1066 | `void(u32)` | `Moby_Class1066_Update` |
+| `rac1.moby.lever_door.update` | 434 | `void(u32)` | `Moby_PlatformBooster_Update` |
+| `rac1.moby.lift1270.update` | 1270 | `void(u32)` | `Moby_Class1270_Update` |
+| `rac1.moby.lift_l05.update` | 877 | `void(u32)` | `Moby_ElevatorWithButton_Update` |
+| `rac1.moby.lift_move.update` | 703, 715 | `void(u32)` | `Moby_PistonPlatform_Update` |
+| `rac1.moby.light_beam.update` | 11 | `void(u32)` | `Moby_Vendor_Update` |
+| `rac1.moby.linked_riser.update` | 1293, 1320 | `void(u32)` | `Moby_Class1293_Update` |
+| `rac1.moby.linked_turret.update` | 1346 | `void(u32)` | `Moby_Gun_Update` |
+| `rac1.moby.lobbed_bomb.update` | 1049 | `void(u32)` | `Moby_Class1049_Update` |
+| `rac1.moby.lobber_enemy.update` | 1041 | `void(u32)` | `Moby_Bombomatic_Update` |
+| `rac1.moby.machinegun_turret_1126.update` | 1126 | `void(u32)` | `Moby_MachinegunTurret_Update` |
+| `rac1.moby.machinegun_turret_30.update` | 30 | `void(u32)` | `Moby_MachinegunTurret30_Update` |
+| `rac1.moby.metropolis_train.update` | 822 | `void(u32)` | `Moby_MetropolisTrainLocomotive_Update` |
+| `rac1.moby.metropolis_train_carriage.update` | 1210 | `void(u32)` | `Moby_MetropolisTrainCarriage_Update` |
+| `rac1.moby.mine.update` | 74 | `void(u32)` | `Moby_Mine_Update` |
+| `rac1.moby.mine_glove.update` | 190 | `void(u32)` | `Moby_MineGlove_Update` |
+| `rac1.moby.mine_l14.update` | 643 | `void(u32)` | `Moby_Mine643_Update` |
+| `rac1.moby.mine_moby.update` | 1511 | `void(u32)` | `Moby_Lamp1511_Update` |
+| `rac1.moby.miner.update` | 282 | `void(u32)` | `Moby_Miner_Update` |
+| `rac1.moby.minibomber.update` | 31 | `void(u32)` | `Moby_Minibomber_Update` |
+| `rac1.moby.missile.update` | 153 | `void(u32)` | `Moby_GoldDevastatorMissile_Update` |
+| `rac1.moby.moby1000.update` | 1000 | `void(u32)` | `Moby_Class1000_Update` |
+| `rac1.moby.moby1005.update` | 1005, 1016 | `void(u32)` | `Moby_Tresspasser_Update` |
+| `rac1.moby.moby1031.update` | 1031 | `void(u32)` | `Moby_Button_Update` |
+| `rac1.moby.moby1033.update` | 1033 | `void(u32)` | `Moby_Platform1033_Update` |
+| `rac1.moby.moby1034.update` | 1034 | `void(u32)` | `Moby_Rocket1034_Update` |
+| `rac1.moby.moby1040.update` | 1040 | `void(u32)` | `Moby_EnergySphere_Update` |
+| `rac1.moby.moby1042.update` | 1042 | `void(u32)` | `Moby_MushroomUnderside_Update` |
+| `rac1.moby.moby1047.update` | 1047 | `void(u32)` | `Moby_Class1047_Update` |
+| `rac1.moby.moby1048.update` | 1048 | `void(u32)` | `Moby_AlienSnapper_Update` |
+| `rac1.moby.moby1054.update` | 1054 | `void(u32)` | `Moby_Class1054_Update` |
+| `rac1.moby.moby1068.update` | 1068 | `void(u32)` | `Moby_BlargSpaceCommando_Update` |
+| `rac1.moby.moby1069.update` | 1069 | `void(u32)` | `Moby_Class1069_Update` |
+| `rac1.moby.moby1090.update` | 1090 | `void(u32)` | `Moby_Class1090_Update` |
+| `rac1.moby.moby1105.update` | 1105 | `void(u32)` | `Moby_Fred_Update` |
+| `rac1.moby.moby1108.update` | 1108 | `void(u32)` | `Moby_Class1108_Update` |
+| `rac1.moby.moby1123.update` | 1123 | `void(u32)` | `Moby_Class1123_Update` |
+| `rac1.moby.moby1133.update` | 1133 | `void(u32)` | `Moby_Class1133_Update` |
+| `rac1.moby.moby1139.update` | 1139 | `void(u32)` | `Moby_HoverboardRing_Update` |
+| `rac1.moby.moby114.update` | 114 | `void(u32)` | `Moby_ResortOwner_Update` |
+| `rac1.moby.moby1142.update` | 1142 | `void(u32)` | `Moby_Class1142_Update` |
+| `rac1.moby.moby1143.update` | 1143 | `void(u32)` | `Moby_VendorOrb_Update` |
+| `rac1.moby.moby1157.update` | 1157 | `void(u32)` | `Moby_Class1157_Update` |
+| `rac1.moby.moby1158.update` | 1158 | `void(u32)` | `Moby_Class1158_Update` |
+| `rac1.moby.moby1159.update` | 1159 | `void(u32)` | `Moby_Class1159_Update` |
+| `rac1.moby.moby1178.update` | 1178 | `void(u32)` | `Moby_SeesawPlatform_Update` |
+| `rac1.moby.moby1179.update` | 1179 | `void(u32)` | `Moby_ThrusterPackLock_Update` |
+| `rac1.moby.moby1180.update` | 1180 | `void(u32)` | `Moby_Class1180_Update` |
+| `rac1.moby.moby1196.update` | 1196 | `void(u32)` | `Moby_Screamer_Update` |
+| `rac1.moby.moby1199.update` | 1199 | `void(u32)` | `Moby_Class1199_Update` |
+| `rac1.moby.moby1206.update` | 1206 | `void(u32)` | `Moby_Class1206_Update` |
+| `rac1.moby.moby1219.update` | 1219 | `void(u32)` | `Moby_Class1219_Update` |
+| `rac1.moby.moby1224.update` | 1224 | `void(u32)` | `Moby_Class1224_Update` |
+| `rac1.moby.moby1225.update` | 1225 | `void(u32)` | `Moby_Class1225_Update` |
+| `rac1.moby.moby1246.update` | 1246 | `void(u32)` | `Moby_Puffoid_Update` |
+| `rac1.moby.moby1257_spawner.update` | 1394 | `void(u32)` | `Moby_Class1394_Update` |
+| `rac1.moby.moby1259.update` | 1259 | `void(u32)` | `Moby_Class1259_Update` |
+| `rac1.moby.moby1261.update` | 1261 | `void(u32)` | `Moby_PoisonVessel_Update` |
+| `rac1.moby.moby1264.update` | 1264 | `void(u32)` | `Moby_OilTankerFront_Update` |
+| `rac1.moby.moby1267.update` | 1267 | `void(u32)` | `Moby_HovenTurret_Update` |
+| `rac1.moby.moby1283.update` | 1283 | `void(u32)` | `Moby_ThePlumberBatalia_Update` |
+| `rac1.moby.moby1290.update` | 1290 | `void(u32)` | `Moby_PilotsHelmet_Update` |
+| `rac1.moby.moby1297.update` | 1297 | `void(u32)` | `Moby_EnergySphere1297_Update` |
+| `rac1.moby.moby1302.update` | 1302 | `void(u32)` | `Moby_BotDoorLock_Update` |
+| `rac1.moby.moby1331.update` | 1331 | `void(u32)` | `Moby_Class1331_Update` |
+| `rac1.moby.moby1343.update` | 1343 | `void(u32)` | `Moby_Class1343_Update` |
+| `rac1.moby.moby1344.update` | 1344 | `void(u32)` | `Moby_Class1344_Update` |
+| `rac1.moby.moby1345.update` | 1345 | `void(u32)` | `Moby_Class1345_Update` |
+| `rac1.moby.moby1349.update` | 1349 | `void(u32)` | `Moby_Class1349_Update` |
+| `rac1.moby.moby1350.update` | 1350 | `void(u32)` | `Moby_Class1350_Update` |
+| `rac1.moby.moby1353.update` | 1353 | `void(u32)` | `Moby_Class1353_Update` |
+| `rac1.moby.moby1355.update` | 1355 | `void(u32)` | `Moby_DrekFightMissile_Update` |
+| `rac1.moby.moby1368.update` | 1368 | `void(u32)` | `Moby_Class1368_Update` |
+| `rac1.moby.moby1378.update` | 1378 | `void(u32)` | `Moby_Class1378_Update` |
+| `rac1.moby.moby1380.update` | 1380 | `void(u32)` | `Moby_MagnetElevator_Update` |
+| `rac1.moby.moby1381.update` | 1381 | `void(u32)` | `Moby_Class1381_Update` |
+| `rac1.moby.moby1382.update` | 1382 | `void(u32)` | `Moby_RobotDog1382_Update` |
+| `rac1.moby.moby1387.update` | 1387 | `void(u32)` | `Moby_Class1387_Update` |
+| `rac1.moby.moby1388.update` | 1388 | `void(u32)` | `Moby_BoltGrabber_Update` |
+| `rac1.moby.moby1392.update` | 1392 | `void(u32)` | `Moby_Class1392_Update` |
+| `rac1.moby.moby1395.update` | 1395 | `void(u32)` | `Moby_Class1395_Update` |
+| `rac1.moby.moby1397.update` | 1397 | `void(u32)` | `Moby_Class1397_Update` |
+| `rac1.moby.moby1400.update` | 1400 | `void(u32)` | `Moby_Class1400_Update` |
+| `rac1.moby.moby1402.update` | 1402 | `void(u32)` | `Moby_Class1402_Update` |
+| `rac1.moby.moby1413.update` | 1413 | `void(u32)` | `Moby_Class1413_Update` |
+| `rac1.moby.moby1419.update` | 1419 | `void(u32)` | `Moby_Class1419_Update` |
+| `rac1.moby.moby1424.update` | 1424 | `void(u32)` | `Moby_Gate2_Update` |
+| `rac1.moby.moby1428.update` | 1428 | `void(u32)` | `Moby_Codebot_Update` |
+| `rac1.moby.moby1434.update` | 1434, 1435 | `void(u32)` | `Moby_DeplanetizerGun_Update` |
+| `rac1.moby.moby1439.update` | 1439 | `void(u32)` | `Moby_GrindrailGate_Update` |
+| `rac1.moby.moby1441.update` | 1441 | `void(u32)` | `Moby_GrindrailGate1441_Update` |
+| `rac1.moby.moby1442.update` | 1442 | `void(u32)` | `Moby_GrindrailButton_Update` |
+| `rac1.moby.moby1448.update` | 1448 | `void(u32)` | `Moby_Shuttle1448_Update` |
+| `rac1.moby.moby1454.update` | 1454 | `void(u32)` | `Moby_RocketTank_Update` |
+| `rac1.moby.moby1469.update` | 1469 | `void(u32)` | `Moby_Class1469_Update` |
+| `rac1.moby.moby1470.update` | 1470 | `void(u32)` | `Moby_Class1470_Update` |
+| `rac1.moby.moby1479.update` | 1479 | `void(u32)` | `Moby_Class1479_Update` |
+| `rac1.moby.moby1510.update` | 1510 | `void(u32)` | `Moby_Class1510_Update` |
+| `rac1.moby.moby152.update` | 152 | `void(u32)` | `Moby_Class152_Update` |
+| `rac1.moby.moby1523.update` | 1523 | `void(u32)` | `Moby_Class1523_Update` |
+| `rac1.moby.moby1545.update` | 1545 | `void(u32)` | `Moby_Class1545_Update` |
+| `rac1.moby.moby1546.update` | 1546 | `void(u32)` | `Moby_Class1546_Update` |
+| `rac1.moby.moby1550.update` | 1550 | `void(u32)` | `Moby_Class1550_Update` |
+| `rac1.moby.moby1553.update` | 1553 | `void(u32)` | `Moby_Class1553_Update` |
+| `rac1.moby.moby1555.update` | 1555 | `void(u32)` | `Moby_Class1555_Update` |
+| `rac1.moby.moby156.update` | 156 | `void(u32)` | `Moby_Class156_Update` |
+| `rac1.moby.moby1563.update` | 1563 | `void(u32)` | `Moby_Class1563_Update` |
+| `rac1.moby.moby1568.update` | 1568 | `void(u32)` | `Moby_DeplanetizerGun1568_Update` |
+| `rac1.moby.moby1584.update` | 1584 | `void(u32)` | `Moby_Class1584_Update` |
+| `rac1.moby.moby1629.update` | 1629 | `void(u32)` | `Moby_Class1629_Update` |
+| `rac1.moby.moby163.update` | 163 | `void(u32)` | `Moby_Visibomb_Update` |
+| `rac1.moby.moby1632.update` | 1632 | `void(u32)` | `Moby_Class1632_Update` |
+| `rac1.moby.moby1634.update` | 1634 | `void(u32)` | `Moby_Class1634_Update` |
+| `rac1.moby.moby1641.update` | 1641 | `void(u32)` | `Moby_Class1641_Update` |
+| `rac1.moby.moby1649.update` | 1649 | `void(u32)` | `Moby_Class1649_Update` |
+| `rac1.moby.moby166.update` | 166 | `void(u32)` | `Moby_Class166_Update` |
+| `rac1.moby.moby167.update` | 167 | `void(u32)` | `Moby_Class167_Update` |
+| `rac1.moby.moby175.update` | 175 | `void(u32)` | `Moby_Taunter_Update` |
+| `rac1.moby.moby1766.update` | 1766 | `void(u32)` | `Moby_Shuttle1766_Update` |
+| `rac1.moby.moby1789.update` | 1789 | `void(u32)` | `Moby_Class1789_Update` |
+| `rac1.moby.moby179.update` | 179 | `void(u32)` | `Moby_Class179_Update` |
+| `rac1.moby.moby1799.update` | 1799 | `void(u32)` | `Moby_Class1799_Update` |
+| `rac1.moby.moby180.update` | 180 | `void(u32)` | `Moby_Walloper_Update` |
+| `rac1.moby.moby1805.update` | 1805 | `void(u32)` | `Moby_BlargShip1805_Update` |
+| `rac1.moby.moby1813.update` | 1813 | `void(u32)` | `Moby_TallShroom_Update` |
+| `rac1.moby.moby1843.update` | 1843 | `void(u32)` | `Moby_BlargShip1843_Update` |
+| `rac1.moby.moby1848.update` | 1848 | `void(u32)` | `Moby_Class1848_Update` |
+| `rac1.moby.moby184_shot.update` | 184 | `void(u32)` | `Moby_Class184_Update` |
+| `rac1.moby.moby1855.update` | 1855 | `void(u32)` | `Moby_Class1855_Update` |
+| `rac1.moby.moby1856.update` | 1856 | `void(u32)` | `Moby_Class1856_Update` |
+| `rac1.moby.moby1873.update` | 1873 | `void(u32)` | `Moby_Class1873_Update` |
+| `rac1.moby.moby1876.update` | 1876 | `void(u32)` | `Moby_Class1876_Update` |
+| `rac1.moby.moby188.update` | 188 | `void(u32)` | `Moby_Trespasser_Update` |
+| `rac1.moby.moby1885.update` | 1885 | `void(u32)` | `Moby_Spawner1885_Update` |
+| `rac1.moby.moby1886.update` | 1886 | `void(u32)` | `Moby_SpawnerEgg_Update` |
+| `rac1.moby.moby1898.update` | 1898 | `void(u32)` | `Moby_Class1898_Update` |
+| `rac1.moby.moby19.update` | 19 | `void(u32)` | `Moby_Class19_Update` |
+| `rac1.moby.moby1901.update` | 1901 | `void(u32)` | `Moby_Class1901_Update` |
+| `rac1.moby.moby1906.update` | 1906 | `void(u32)` | `Moby_Gadgebot1906_Update` |
+| `rac1.moby.moby192.update` | 192 | `void(u32)` | `Moby_BombGlove_Update` |
+| `rac1.moby.moby209.update` | 209 | `void(u32)` | `Moby_SwingshotHook_Update` |
+| `rac1.moby.moby211.update` | 211 | `void(u32)` | `Moby_Plasmabot211_Update` |
+| `rac1.moby.moby22.update` | 22 | `void(u32)` | `Moby_Class22_Update` |
+| `rac1.moby.moby250.update` | 250 | `void(u32)` | `Moby_PlasmabotHatch_Update` |
+| `rac1.moby.moby257.update` | 257 | `void(u32)` | `Moby_Class257_Update` |
+| `rac1.moby.moby258.update` | 258 | `void(u32)` | `Moby_Class258_Update` |
+| `rac1.moby.moby279.update` | 279 | `void(u32)` | `Moby_Class279_Update` |
+| `rac1.moby.moby293.update` | 293 | `void(u32)` | `Moby_Class293_Update` |
+| `rac1.moby.moby294.update` | 294 | `void(u32)` | `Moby_BlargTrooper294_Update` |
+| `rac1.moby.moby302.update` | 302 | `void(u32)` | `Moby_GadgebotSpawnContainer_Update` |
+| `rac1.moby.moby303.update` | 303 | `void(u32)` | `Moby_GadgebotSpawnPad_Update` |
+| `rac1.moby.moby305.update` | 305 | `void(u32)` | `Moby_Class305_Update` |
+| `rac1.moby.moby309.update` | 309 | `void(u32)` | `Moby_Platform309_Update` |
+| `rac1.moby.moby318.update` | 318 | `void(u32)` | `Moby_Teleporter318_Update` |
+| `rac1.moby.moby326.update` | 326 | `void(u32)` | `Moby_BlargHelicopter326_Update` |
+| `rac1.moby.moby327.update` | 327 | `void(u32)` | `Moby_Class327_Update` |
+| `rac1.moby.moby336.update` | 336 | `void(u32)` | `Moby_Helicopter_Update` |
+| `rac1.moby.moby339.update` | 339 | `void(u32)` | `Moby_CraneArm_Update` |
+| `rac1.moby.moby341.update` | 341 | `void(u32)` | `Moby_HydrodisplacerFaucet_Update` |
+| `rac1.moby.moby361.update` | 361 | `void(u32)` | `Moby_Class361_Update` |
+| `rac1.moby.moby367.update` | 367 | `void(u32)` | `Moby_Class367_Update` |
+| `rac1.moby.moby37.update` | 37 | `void(u32)` | `Moby_Class37_Update` |
+| `rac1.moby.moby41.update` | 41 | `void(u32)` | `Moby_Rocket41_Update` |
+| `rac1.moby.moby417.update` | 417 | `void(u32)` | `Moby_Class417_Update` |
+| `rac1.moby.moby425.update` | 425 | `void(u32)` | `Moby_Bomb425_Update` |
+| `rac1.moby.moby428.update` | 428 | `void(u32)` | `Moby_Class428_Update` |
+| `rac1.moby.moby436.update` | 436 | `void(u32)` | `Moby_Class436_Update` |
+| `rac1.moby.moby438.update` | 438 | `void(u32)` | `Moby_Class438_Update` |
+| `rac1.moby.moby444.update` | 444 | `void(u32)` | `Moby_Class444_Update` |
+| `rac1.moby.moby458.update` | 458 | `void(u32)` | `Moby_Rocket458_Update` |
+| `rac1.moby.moby462.update` | 462 | `void(u32)` | `Moby_Shrub_Update` |
+| `rac1.moby.moby470.update` | 470 | `void(u32)` | `Moby_Rocket470_Update` |
+| `rac1.moby.moby471.update` | 471 | `void(u32)` | `Moby_ConveyorBelt471_Update` |
+| `rac1.moby.moby52.update` | 52 | `void(u32)` | `Moby_Seeker_Update` |
+| `rac1.moby.moby545.update` | 545 | `void(u32)` | `Moby_Bomb545_Update` |
+| `rac1.moby.moby546.update` | 546 | `void(u32)` | `Moby_WallButton_Update` |
+| `rac1.moby.moby552.update` | 552 | `void(u32)` | `Moby_Class552_Update` |
+| `rac1.moby.moby564.update` | 564 | `void(u32)` | `Moby_Rocket564_Update` |
+| `rac1.moby.moby568.update` | 568 | `void(u32)` | `Moby_Mine568_Update` |
+| `rac1.moby.moby573.update` | 573 | `void(u32)` | `Moby_RobotDog_Update` |
+| `rac1.moby.moby574.update` | 574 | `void(u32)` | `Moby_Class574_Update` |
+| `rac1.moby.moby584.update` | 584 | `void(u32)` | `Moby_Class584_Update` |
+| `rac1.moby.moby600.update` | 600 | `void(u32)` | `Moby_Class600_Update` |
+| `rac1.moby.moby604.update` | 604 | `void(u32)` | `Moby_SandmouseHouse_Update` |
+| `rac1.moby.moby605.update` | 605 | `void(u32)` | `Moby_Class605_Update` |
+| `rac1.moby.moby610.update` | 610 | `void(u32)` | `Moby_Class610_Update` |
+| `rac1.moby.moby612.update` | 612 | `void(u32)` | `Moby_Constructorbot_Update` |
+| `rac1.moby.moby621.update` | 621 | `void(u32)` | `Moby_Class621_Update` |
+| `rac1.moby.moby628.update` | 628 | `void(u32)` | `Moby_Class628_Update` |
+| `rac1.moby.moby639.update` | 639 | `void(u32)` | `Moby_Class639_Update` |
+| `rac1.moby.moby647.update` | 647 | `void(u32)` | `Moby_Door647_Update` |
+| `rac1.moby.moby648.update` | 648 | `void(u32)` | `Moby_Class648_Update` |
+| `rac1.moby.moby65.update` | 65 | `void(u32)` | `Moby_Class65_Update` |
+| `rac1.moby.moby650.update` | 650 | `void(u32)` | `Moby_TestDummyDoor_Update` |
+| `rac1.moby.moby654.update` | 654 | `void(u32)` | `Moby_Class654_Update` |
+| `rac1.moby.moby656.update` | 656 | `void(u32)` | `Moby_Bulldozer_Update` |
+| `rac1.moby.moby664.update` | 664 | `void(u32)` | `Moby_Platform664_Update` |
+| `rac1.moby.moby669.update` | 669 | `void(u32)` | `Moby_Class669_Update` |
+| `rac1.moby.moby67.update` | 67 | `void(u32)` | `Moby_Class67_Update` |
+| `rac1.moby.moby675.update` | 675 | `void(u32)` | `Moby_GrabCrane_Update` |
+| `rac1.moby.moby685.update` | 685 | `void(u32)` | `Moby_Elevator685_Update` |
+| `rac1.moby.moby702.update` | 702 | `void(u32)` | `Moby_Class702_Update` |
+| `rac1.moby.moby713.update` | 713 | `void(u32)` | `Moby_TransportPod_Update` |
+| `rac1.moby.moby732.update` | 732 | `void(u32)` | `Moby_Crane_Update` |
+| `rac1.moby.moby743.update` | 743 | `void(u32)` | `Moby_TresspasserDoor1_Update` |
+| `rac1.moby.moby744.update` | 744 | `void(u32)` | `Moby_TresspasserDoor2_Update` |
+| `rac1.moby.moby750_spark_trigger.update` | 1562 | `void(u32)` | `Moby_Class1562_Update` |
+| `rac1.moby.moby755.update` | 755 | `void(u32)` | `Moby_SandsharkEgg_Update` |
+| `rac1.moby.moby762.update` | 762 | `void(u32)` | `Moby_Rocks_Update` |
+| `rac1.moby.moby77.update` | 77 | `void(u32)` | `Moby_Mine77_Update` |
+| `rac1.moby.moby778.update` | 778 | `void(u32)` | `Moby_Pipe_Update` |
+| `rac1.moby.moby78.update` | 78 | `void(u32)` | `Moby_Class78_Update` |
+| `rac1.moby.moby794.update` | 794 | `void(u32)` | `Moby_Class794_Update` |
+| `rac1.moby.moby8.update` | 8 | `void(u32)` | `Moby_BlargHeavyInterceptor_Update` |
+| `rac1.moby.moby800.update` | 800 | `void(u32)` | `Moby_Class800_Update` |
+| `rac1.moby.moby81.update` | 81 | `void(u32)` | `Moby_Class81_Update` |
+| `rac1.moby.moby812.update` | 812 | `void(u32)` | `Moby_Box_Update` |
+| `rac1.moby.moby817.update` | 817, 1686 | `void(u32)` | `Moby_Statue_Update` |
+| `rac1.moby.moby819.update` | 819 | `void(u32)` | `Moby_Rocket819_Update` |
+| `rac1.moby.moby823.update` | 823 | `void(u32)` | `Moby_Lamp_Update` |
+| `rac1.moby.moby83.update` | 83 | `void(u32)` | `Moby_Mine83_Update` |
+| `rac1.moby.moby834.update` | 834 | `void(u32)` | `Moby_ClankCutsceneTrigger_Update` |
+| `rac1.moby.moby835.update` | 835 | `void(u32)` | `Moby_Class835_Update` |
+| `rac1.moby.moby848.update` | 848 | `void(u32)` | `Moby_Class848_Update` |
+| `rac1.moby.moby851.update` | 851 | `void(u32)` | `Moby_QwarkOltanis_Update` |
+| `rac1.moby.moby854.update` | 854 | `void(u32)` | `Moby_OceanAridia_Update` |
+| `rac1.moby.moby859.update` | 859 | `void(u32)` | `Moby_Class859_Update` |
+| `rac1.moby.moby90.update` | 90 | `void(u32)` | `Moby_Bob_Update` |
+| `rac1.moby.moby908.update` | 908 | `void(u32)` | `Moby_Jet_Update` |
+| `rac1.moby.moby914.update` | 914 | `void(u32)` | `Moby_RobotQwark_Update` |
+| `rac1.moby.moby924.update` | 924 | `void(u32)` | `Moby_Sam_Update` |
+| `rac1.moby.moby934.update` | 934 | `void(u32)` | `Moby_Class934_Update` |
+| `rac1.moby.moby938.update` | 938 | `void(u32)` | `Moby_Bomb938_Update` |
+| `rac1.moby.moby99.update` | 99 | `void(u32)` | `Moby_Class99_Update` |
+| `rac1.moby.moby_state_relay.update` | 667 | `void(u32)` | `Moby_Class667_Update` |
+| `rac1.moby.morphoray.update` | 185 | `void(u32)` | `Moby_Morphoray_Update` |
+| `rac1.moby.morphoray_chicken.update` | 270 | `void(u32)` | `Moby_MorphorayChicken_Update` |
+| `rac1.moby.mountable_turret.update` | 1201 | `void(u32)` | `Moby_Turret_Update` |
+| `rac1.moby.mouse_critter.update` | 1818 | `void(u32)` | `Moby_Sandmouse_Update` |
+| `rac1.moby.moving_moby.update` | 196, 197, 1958 | `void(u32)` | `Moby_Door196_Update` |
+| `rac1.moby.moving_moby_l07.update` | 1128 | `void(u32)` | `Moby_Class1128_Update` |
+| `rac1.moby.moving_platform.update` | 868, 905, 928 | `void(u32)` | `Moby_MovingPlatformSmall_Update` |
+| `rac1.moby.nanotech_ball.update` | 806 | `void(u32)` | `Moby_NanotechBall_Update` |
+| `rac1.moby.nanotech_vendor.update` | 1326 | `void(u32)` | `Moby_NanotechUpgradeVendor_Update` |
+| `rac1.moby.near_hero_sparkle.update` | 351, 1301 | `void(u32)` | `Moby_GadgebotTelepotPad_Update` |
+| `rac1.moby.ocean.update` | 1111 | `void(u32)` | `Moby_OceanPokitaru_Update` |
+| `rac1.moby.oltanis_jet.update` | 921 | `void(u32)` | `Moby_Jet921_Update` |
+| `rac1.moby.orbiting_platform.update` | 55 | `void(u32)` | `Moby_HangarDoor_Update` |
+| `rac1.moby.oscillating_spinner.update` | 705 | `void(u32)` | `Moby_Fan_Update` |
+| `rac1.moby.paratrooper.update` | 1023 | `void(u32)` | `Moby_BlargParatrooper_Update` |
+| `rac1.moby.parent_follow_fade.update` | 235 | `void(u32)` | `Moby_Class235_Update` |
+| `rac1.moby.particle_emitter.update` | 27 | `void(u32)` | `Moby_Class27_Update` |
+| `rac1.moby.particle_field.update` | 760 | `void(u32)` | `Moby_ParticleSpawnerSmokeFire_Update` |
+| `rac1.moby.path_carrier.update` | 613 | `void(u32)` | `Moby_WaterCurrent_Update` |
+| `rac1.moby.path_follow_moby.update` | 1564 | `void(u32)` | `Moby_Pterodactyl_Update` |
+| `rac1.moby.path_junction.update` | 582 | `void(u32)` | `Moby_Class582_Update` |
+| `rac1.moby.path_keyframe_blend.update` | 617 | `void(u32)` | `Moby_Class617_Update` |
+| `rac1.moby.path_lift.update` | 557 | `void(u32)` | `Moby_Shuttle557_Update` |
+| `rac1.moby.path_pickup.update` | 1410 | `void(u32)` | `Moby_Taxi1410_Update` |
+| `rac1.moby.path_platform.update` | 726, 1141 | `void(u32)` | `Moby_NovalisElevator_Update` |
+| `rac1.moby.path_platform_l09.update` | 1150, 1151 | `void(u32)` | `Moby_Elevator1150_Update` |
+| `rac1.moby.path_train.update` | 871 | `void(u32)` | `Moby_BoltcratePossiblyForMetalDetector_Update` |
+| `rac1.moby.path_vehicle.update` | 466, 480, 485, 486, 488, 490, 493, 494, 495, 498, 555 | `void(u32)` | `Moby_SnowPlow_Update` |
+| `rac1.moby.path_walker.update` | 1667, 1668, 1669, 1670, 1671 | `void(u32)` | `Moby_Class1667_Update` |
+| `rac1.moby.peckbot.update` | 577 | `void(u32)` | `Moby_Peckbot_Update` |
+| `rac1.moby.pickup.update` | 23 | `void(u32)` | `Moby_Class23_Update` |
+| `rac1.moby.pickup_l05.update` | 998 | `void(u32)` | `Moby_Taxi998_Update` |
+| `rac1.moby.pipe_mounted_grating.update` | 846 | `void(u32)` | `Moby_PipeMountedGrating_Update` |
+| `rac1.moby.planetbuster_part.update` | 1274 | `void(u32)` | `Moby_PlanetbusterMaximusPart_Update` |
+| `rac1.moby.plasmabot.update` | 28 | `void(u32)` | `Moby_Plasmabot_Update` |
+| `rac1.moby.poison_vessel.update` | 1257 | `void(u32)` | `Moby_PoisonVessel1257_Update` |
+| `rac1.moby.pokitaru_boat.update` | 1075 | `void(u32)` | `Moby_PokitaruBoat_Update` |
+| `rac1.moby.pokitaru_surface_far.update` | 1919 | `void(u32)` | `Moby_Class1919_Update` |
+| `rac1.moby.pokitaru_surface_near.update` | 1903 | `void(u32)` | `Moby_Class1903_Update` |
+| `rac1.moby.pokitaru_vendor.update` | 298 | `void(u32)` | `Moby_FredPokitaru_Update` |
+| `rac1.moby.pose_slide_out.update` | 843 | `void(u32)` | `Moby_Class843_Update` |
+| `rac1.moby.pressure_plate.update` | 1172 | `void(u32)` | `Moby_RefuelingStation_Update` |
+| `rac1.moby.projectile.update` | 49 | `void(u32)` | `Moby_Rocket49_Update` |
+| `rac1.moby.projectile_breakable.update` | 709, 710, 711 | `void(u32)` | `Moby_BridgePiece1_Update` |
+| `rac1.moby.projectile_l13.update` | 1238 | `void(u32)` | `Moby_Class1238_Update` |
+| `rac1.moby.psytcopus.update` | 1231 | `void(u32)` | `Moby_Psytcopus_Update` |
+| `rac1.moby.pulsing_color_moby.update` | 1060 | `void(u32)` | `Moby_RedOrb_Update` |
+| `rac1.moby.pulsing_marker.update` | 879 | `void(u32)` | `Moby_OceanRilgar_Update` |
+| `rac1.moby.pulsing_mesh.update` | 761 | `void(u32)` | `Moby_Class761_Update` |
+| `rac1.moby.purple_ship_529.update` | 529 | `void(u32)` | `Moby_PurpleShip_Update` |
+| `rac1.moby.purple_ship_533.update` | 533 | `void(u32)` | `Moby_PurpleShip533_Update` |
+| `rac1.moby.pusher.update` | 296, 652, 653 | `void(u32)` | `Moby_ConveyorBelt_Update` |
+| `rac1.moby.pyrocitor.update` | 176 | `void(u32)` | `Moby_Pyrocitor_Update` |
+| `rac1.moby.quad_moby.update` | 1138 | `void(u32)` | `Moby_Class1138_Update` |
+| `rac1.moby.quest_giver.update` | 890 | `void(u32)` | `Moby_Helga_Update` |
+| `rac1.moby.queue_effect_draw.update` | 1418 | `void(u32)` | `Moby_Class1418_Update` |
+| `rac1.moby.qwark_starfighter_part.update` | 388 | `void(u32)` | `Moby_QwarksStarfighterPart_Update` |
+| `rac1.moby.qwark_watch.update` | 447, 920 | `void(u32)` | `Moby_QwarkUmbris_Update` |
+| `rac1.moby.qwarks_trailer.update` | 1099 | `void(u32)` | `Moby_QwarksTrailer_Update` |
+| `rac1.moby.race_debris.update` | 403 | `void(u32)` | `Moby_Class403_Update` |
+| `rac1.moby.rail_lift.update` | 1012 | `void(u32)` | `Moby_Taxi1012_Update` |
+| `rac1.moby.rail_moby.update` | 898 | `void(u32)` | `Moby_Class898_Update` |
+| `rac1.moby.rail_spawner.update` | 899 | `void(u32)` | `Moby_Class899_Update` |
+| `rac1.moby.rail_taxi.update` | 816 | `void(u32)` | `Moby_Taxi_Update` |
+| `rac1.moby.rc_range_limiter.update` | 832 | `void(u32)` | `Moby_Class832_Update` |
+| `rac1.moby.red_button.update` | 1118 | `void(u32)` | `Moby_RedButton_Update` |
+| `rac1.moby.rider_carrier.update` | 666 | `void(u32)` | `Moby_StationaryShip_Update` |
+| `rac1.moby.ring_effect.update` | 1443, 1890 | `void(u32)` | `Moby_GrindrailBarrier_Update` |
+| `rac1.moby.ripple_strips_moby.update` | 1405, 1406, 1407, 1408, 1409, 1426, 1565, 1567 | `void(u32)` | `Moby_Class1405_Update` |
+| `rac1.moby.rise_when_collected.update` | 353, 997 | `void(u32)` | `Moby_Gate_Update` |
+| `rac1.moby.robosquawker.update` | 63 | `void(u32)` | `Moby_Robosquawker_Update` |
+| `rac1.moby.rocket295.update` | 295 | `void(u32)` | `Moby_Rocket295_Update` |
+| `rac1.moby.rocket_door1.update` | 735, 736 | `void(u32)` | `Moby_RocketDoor1_Update` |
+| `rac1.moby.rocket_launcher.update` | 733 | `void(u32)` | `Moby_RocketLauncher_Update` |
+| `rac1.moby.rocket_steer.update` | 457 | `void(u32)` | `Moby_Rocket_Update` |
+| `rac1.moby.rotate_platform.update` | 707, 734 | `void(u32)` | `Moby_Platform_Update` |
+| `rac1.moby.rotating_door.update` | 127, 128, 159, 169 | `void(u32)` | `Moby_Class127_Update` |
+| `rac1.moby.route_platform.update` | 424 | `void(u32)` | `Moby_Shuttle424_Update` |
+| `rac1.moby.ryno.update` | 454 | `void(u32)` | `Moby_Ryno_Update` |
+| `rac1.moby.sand_mouse.update` | 437 | `void(u32)` | `Moby_SandMouse_Update` |
+| `rac1.moby.sand_shark.update` | 580 | `void(u32)` | `Moby_SandShark_Update` |
+| `rac1.moby.sand_shark_nest.update` | 668 | `void(u32)` | `Moby_SandSharkNest_Update` |
+| `rac1.moby.scale_fade_and_delete.update` | 1427 | `void(u32)` | `Moby_Class1427_Update` |
+| `rac1.moby.scenery_ship.update` | 79 | `void(u32)` | `Moby_SceneryShip_Update` |
+| `rac1.moby.scoutbot.update` | 252 | `void(u32)` | `Moby_Scoutbot_Update` |
+| `rac1.moby.scrolling_layers2.update` | 678 | `void(u32)` | `Moby_Class678_Update` |
+| `rac1.moby.sentrybot.update` | 44 | `void(u32)` | `Moby_Sentrybot_Update` |
+| `rac1.moby.sentrybot_alarm.update` | 408 | `void(u32)` | `Moby_SentrybotAlarm_Update` |
+| `rac1.moby.shady_salesman.update` | 925 | `void(u32)` | `Moby_ShadySalesman_Update` |
+| `rac1.moby.shard_debris.update` | 1208 | `void(u32)` | `Moby_Constructorbot1208_Update` |
+| `rac1.moby.sharkigator_1059.update` | 1059 | `void(u32)` | `Moby_Sharkigator1059_Update` |
+| `rac1.moby.sharkigator_35.update` | 35 | `void(u32)` | `Moby_Sharkigator_Update` |
+| `rac1.moby.ship_collider.update` | 1218, 1220 | `void(u32)` | `Moby_Ammocrate_Update` |
+| `rac1.moby.ship_path.update` | 1213, 1973 | `void(u32)` | `Moby_BackgroundShip2_Update` |
+| `rac1.moby.ship_pickup.update` | 224, 228 | `void(u32)` | `Moby_Ammocrate224_Update` |
+| `rac1.moby.shockwave.update` | 1046 | `void(u32)` | `Moby_Class1046_Update` |
+| `rac1.moby.shuttle.update` | 1109 | `void(u32)` | `Moby_Shuttle_Update` |
+| `rac1.moby.side_drift.update` | 1250 | `void(u32)` | `Moby_ConveyorBelt1250_Update` |
+| `rac1.moby.sinking_platform.update` | 587 | `void(u32)` | `Moby_FloatingPlatform587_Update` |
+| `rac1.moby.skid_mc_marx.update` | 717 | `void(u32)` | `Moby_SkidMcmarx717_Update` |
+| `rac1.moby.skid_mc_marx_aridia.update` | 788 | `void(u32)` | `Moby_SkidMcmarx_Update` |
+| `rac1.moby.skids_agent.update` | 786 | `void(u32)` | `Moby_SkidsAgent_Update` |
+| `rac1.moby.skill_point.update` | 1559 | `void(u32)` | `Moby_Class1559_Update` |
+| `rac1.moby.sliding_door.update` | 768, 769 | `void(u32)` | `Moby_DoorLeft_Update` |
+| `rac1.moby.sliding_gate.update` | 92 | `void(u32)` | `Moby_Gate92_Update` |
+| `rac1.moby.smoke_emitter.update` | 779 | `void(u32)` | `Moby_Class779_Update` |
+| `rac1.moby.snagglebeast.update` | 1106 | `void(u32)` | `Moby_Snagglebeast_Update` |
+| `rac1.moby.sound_prop.update` | 1067 | `void(u32)` | `Moby_Class1067_Update` |
+| `rac1.moby.spark_burst_spawner.update` | 1552 | `void(u32)` | `Moby_Class1552_Update` |
+| `rac1.moby.spark_emitter.update` | 1512 | `void(u32)` | `Moby_Class1512_Update` |
+| `rac1.moby.spark_ring_emitter.update` | 1812 | `void(u32)` | `Moby_Class1812_Update` |
+| `rac1.moby.sparks_trigger_l04.update` | 1549 | `void(u32)` | `Moby_Class1549_Update` |
+| `rac1.moby.sparks_trigger_l06.update` | 1551 | `void(u32)` | `Moby_Class1551_Update` |
+| `rac1.moby.sparks_trigger_l13.update` | 1558 | `void(u32)` | `Moby_Class1558_Update` |
+| `rac1.moby.spawn_child_and_delete.update` | 1650, 1655, 1663, 1677 | `void(u32)` | `Moby_Mushroom_Update` |
+| `rac1.moby.spiderbot.update` | 123 | `void(u32)` | `Moby_Spiderbot_Update` |
+| `rac1.moby.spin_fade_out.update` | 112, 1192 | `void(u32)` | `Moby_Class112_Update` |
+| `rac1.moby.spinner.update` | 825 | `void(u32)` | `Moby_RoboShackSign_Update` |
+| `rac1.moby.spinning_debris.update` | 1085, 1086, 1087, 1088, 1089 | `void(u32)` | `Moby_Class1085_Update` |
+| `rac1.moby.spinning_object.update` | 1891 | `void(u32)` | `Moby_GadgetronSign_Update` |
+| `rac1.moby.spinning_pickup.update` | 18 | `void(u32)` | `Moby_Magnetboots_Update` |
+| `rac1.moby.starfighter_part.update` | 389, 390, 391, 392, 393, 394, 395, 396, 399, 400, 401 | `void(u32)` | `Moby_QwarksStarfighterPart389_Update` |
+| `rac1.moby.steam_vent.update` | 700 | `void(u32)` | `Moby_Class700_Update` |
+| `rac1.moby.step_on_switch.update` | 1416 | `void(u32)` | `Moby_Button1416_Update` |
+| `rac1.moby.stops_platform.update` | 1359, 1360, 1361, 1362, 1363, 1364, 1367, 1369, 1372, 1373 | `void(u32)` | `Moby_Door1359_Update` |
+| `rac1.moby.suck_cannon.update` | 849 | `void(u32)` | `Moby_Suckcannon_Update` |
+| `rac1.moby.swarm.update` | 86 | `void(u32)` | `Moby_Class86_Update` |
+| `rac1.moby.swarm_leader.update` | 463 | `void(u32)` | `Moby_Class463_Update` |
+| `rac1.moby.sweeping_bolt.update` | 681 | `void(u32)` | `Moby_Class681_Update` |
+| `rac1.moby.swing_door.update` | 1421 | `void(u32)` | `Moby_Gate1_Update` |
+| `rac1.moby.swinging_hazard.update` | 911 | `void(u32)` | `Moby_ToxicGasVent_Update` |
+| `rac1.moby.switch.update` | 231 | `void(u32)` | `Moby_Class231_Update` |
+| `rac1.moby.switch_follower.update` | 432, 1052 | `void(u32)` | `Moby_EudoraBridge_Update` |
+| `rac1.moby.swooper.update` | 1112 | `void(u32)` | `Moby_Mine1112_Update` |
+| `rac1.moby.talking_npc.update` | 774 | `void(u32)` | `Moby_ThePlumber_Update` |
+| `rac1.moby.target_activator.update` | 1923 | `void(u32)` | `Moby_Class1923_Update` |
+| `rac1.moby.target_driven_slider.update` | 1013, 1014, 1064, 1065 | `void(u32)` | `Moby_Class1013_Update` |
+| `rac1.moby.target_tracker.update` | 585 | `void(u32)` | `Moby_MetalDetector_Update` |
+| `rac1.moby.taxi.update` | 712 | `void(u32)` | `Moby_Taxi712_Update` |
+| `rac1.moby.taxi_platform_1474.update` | 1474 | `void(u32)` | `Moby_TaxiPlatform1474_Update` |
+| `rac1.moby.taxi_platform_38.update` | 38 | `void(u32)` | `Moby_TaxiPlatform_Update` |
+| `rac1.moby.teleporter_pad.update` | 1135 | `void(u32)` | `Moby_Teleporter_Update` |
+| `rac1.moby.test_dummy.update` | 541 | `void(u32)` | `Moby_TestDummy_Update` |
+| `rac1.moby.tethered_mine.update` | 660 | `void(u32)` | `Moby_FighterJet_Update` |
+| `rac1.moby.texture_scroll.update` | 809 | `void(u32)` | `Moby_Class809_Update` |
+| `rac1.moby.thrown_bomb.update` | 281 | `void(u32)` | `Moby_Bomb281_Update` |
+| `rac1.moby.thrown_object.update` | 203, 1900 | `void(u32)` | `Moby_Decoy_Update` |
+| `rac1.moby.timed_lift.update` | 586 | `void(u32)` | `Moby_ThrusterPackLockRed_Update` |
+| `rac1.moby.timed_pad.update` | 886 | `void(u32)` | `Moby_TimedActivationPads_Update` |
+| `rac1.moby.timed_shooter.update` | 939 | `void(u32)` | `Moby_BombthrowerGrass939_Update` |
+| `rac1.moby.toxic_crab.update` | 1202 | `void(u32)` | `Moby_ToxicCrab_Update` |
+| `rac1.moby.trackdrive_left.update` | 331 | `void(u32)` | `Moby_TrackdriveLeft_Update` |
+| `rac1.moby.trail_moby.update` | 804 | `void(u32)` | `Moby_Class804_Update` |
+| `rac1.moby.train_car.update` | 75, 115, 116, 117, 118, 119, 120, 132, 795 | `void(u32)` | `Moby_RedShip1_Update` |
+| `rac1.moby.trespasser_puzzle.update` | 615 | `void(u32)` | `Moby_TresspasserPad_Update` |
+| `rac1.moby.trigger_lists.update` | 1039 | `void(u32)` | `Moby_Class1039_Update` |
+| `rac1.moby.triggered_rotor.update` | 895 | `void(u32)` | `Moby_Class895_Update` |
+| `rac1.moby.triggered_unlock.update` | 1352 | `void(u32)` | `Moby_Class1352_Update` |
+| `rac1.moby.trooper.update` | 578 | `void(u32)` | `Moby_MineLayer_Update` |
+| `rac1.moby.tumbling_debris.update` | 313 | `void(u32)` | `Moby_Class313_Update` |
+| `rac1.moby.tutorial_hint.update` | 1324 | `void(u32)` | `Moby_Class1324_Update` |
+| `rac1.moby.tutorial_hint_trigger.update` | 1342 | `void(u32)` | `Moby_Class1342_Update` |
+| `rac1.moby.ultramech.update` | 491 | `void(u32)` | `Moby_UltramechUnlimited_Update` |
+| `rac1.moby.ultramech_scientist.update` | 1446 | `void(u32)` | `Moby_UltramechScientist_Update` |
+| `rac1.moby.underwater_ring.update` | 1209 | `void(u32)` | `Moby_UnderwaterRing_Update` |
+| `rac1.moby.unlock_planet_pad.update` | 1190 | `void(u32)` | `Moby_Lieutenant_Update` |
+| `rac1.moby.veldin_ship.update` | 530 | `void(u32)` | `Moby_VeldinShip_Update` |
+| `rac1.moby.vendor.update` | 1440 | `void(u32)` | `Moby_VeldinRobotEnemy_Update` |
+| `rac1.moby.vendor_moby.update` | 644 | `void(u32)` | `Moby_Class644_Update` |
+| `rac1.moby.visibomb_missile.update` | 172 | `void(u32)` | `Moby_VisibombMissile_Update` |
+| `rac1.moby.wandering_helper.update` | 1445 | `void(u32)` | `Moby_Chomper_Update` |
+| `rac1.moby.wandering_light.update` | 1504 | `void(u32)` | `Moby_Class1504_Update` |
+| `rac1.moby.warp_portal.update` | 1120 | `void(u32)` | `Moby_SuckCannon_Update` |
+| `rac1.moby.watch_mobys.update` | 1577 | `void(u32)` | `Moby_Class1577_Update` |
+| `rac1.moby.watcher.update` | 1377 | `void(u32)` | `Moby_HelpDeskLady_Update` |
+| `rac1.moby.water_plane_marker.update` | 982 | `void(u32)` | `Moby_Class982_Update` |
+| `rac1.moby.water_plate.update` | 902, 941, 943, 944, 948, 949, 950, 951, 952, 953, 954, 955, 958, 961, 962, 967, 968, 969, 970, 971 | `void(u32)` | `Moby_Water902_Update` |
+| `rac1.moby.water_reservoir.update` | 384 | `void(u32)` | `Moby_WaterReservoir_Update` |
+| `rac1.moby.water_surface.update` | 831 | `void(u32)` | `Moby_Water_Update` |
+| `rac1.moby.water_surface_fx.update` | 751 | `void(u32)` | `Moby_Class751_Update` |
+| `rac1.moby.wb_moby.update` | 563 | `void(u32)` | `Moby_WoodcutBot_Update` |
+| `rac1.moby.wrench.update` | 71 | `void(u32)` | `Moby_Wrench_Update` |
