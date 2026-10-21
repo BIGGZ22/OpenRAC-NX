@@ -17,10 +17,19 @@ use crate::actions::Plan;
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
 #[serde(rename_all = "camelCase", tag = "type")]
 pub enum Event {
-    Output { id: u32, stream: Stream, line: String },
+    Output {
+        id: u32,
+        stream: Stream,
+        line: String,
+    },
     /// `outputs`: the folders the job wrote, as the tool named them on its `openrac-output:` lines,
     /// else the action's `output`; empty when it names none.
-    Exit { id: u32, code: Option<i32>, cancelled: bool, outputs: Vec<String> },
+    Exit {
+        id: u32,
+        code: Option<i32>,
+        cancelled: bool,
+        outputs: Vec<String>,
+    },
 }
 
 /// The start of a line on which a tool names a folder it wrote (editor/extract.py, assets.py).
