@@ -385,13 +385,16 @@ class LevelWriter:
             fields.update(self.moby_extra.get(p["index"], {}))
             self.scene.node(node_name(p["class_id"], p["index"], names), "Game/Mobys", instance=scenes[p["class_id"]],
                             rotation_order=0, transform=transform(p["matrix"]), **fields)
-        shown = [models[p["class_id"]].mesh for p in placements if p["class_id"] in models]
+        # A class's metal packets are a mesh of their own in its model, and Godot shows both.
+        def meshes(m: MobyClass) -> list[Mesh]:
+            return [m.mesh] + ([m.metal] if m.metal is not None else [])
+        shown = [mesh for p in placements if p["class_id"] in models for mesh in meshes(models[p["class_id"]])]
         animated = [m.skeleton for m in models.values() if m.skeleton is not None]
         self.stats["mobys"] = {"classes": len(set(classes) | placed),
                                "named_classes": sum(c in names for c in set(classes) | placed),
                                "instances": len(placements), "model_classes": len(models),
-                               "class_triangles": sum(m.mesh.triangles for m in models.values()),
-                               "textures": len({key for m in models.values() for key in m.mesh.faces}),
+                               "class_triangles": sum(mesh.triangles for m in models.values() for mesh in meshes(m)),
+                               "textures": len({key for m in models.values() for mesh in meshes(m) for key in mesh.faces}),
                                "mesh_instances": len(shown), "triangles": sum(m.triangles for m in shown),
                                "animated_classes": len(animated),
                                "bones": sum(len(s.joints) + sum(j.post_scale for j in s.joints) for s in animated),
