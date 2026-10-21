@@ -265,7 +265,7 @@ def worker() -> None:
 def export_level(iso: Path, info: dict, out: Path, lod: int) -> dict:
     """One level of a Godot project; runs in its own process."""
     with Disc(iso) as disc:
-        return LevelWriter(out, load_level(disc, info)).write(lod)
+        return LevelWriter(out, load_level(disc, info), normals(disc)).write(lod)
 
 
 def open_later(iso: Path) -> tuple[Disc, wads.WadDisc]:

@@ -33,6 +33,7 @@ from pathlib import Path
 from collision import collision_mesh, decode
 import collision_scene
 from formats import png, unpack
+from lighting import light_bank
 import gamedata
 import games
 from gltf import Gltf
@@ -70,7 +71,8 @@ scene={{
 "meshes/create_shadow_meshes": false,
 "meshes/ensure_tangents": false,
 "meshes/force_disable_compression": true,
-"meshes/generate_lods": false
+"meshes/generate_lods": false,
+"import_script/path": "res://rc1/import_lit.gd"
 }}
 texture={{
 "compress/mode": 0,
@@ -159,8 +161,11 @@ class LevelWriter:
     # Zero joint scales become MIN_SCALE in the models (scale()); the port's writer keeps them.
     godot_scales = True
 
-    def __init__(self, project: Path, level: Level):
+    def __init__(self, project: Path, level: Level, normals=None):
         self.level = level
+        # The executable's (cos, sin) table: with it the terrain is lit as the game lights it at
+        # level load (lighting.py), so the editor shows the level's own light and shade.
+        self.normals = normals
         self.name = f"level_{level.id:02}"
         self.dir = project / "levels" / self.name
         self.res = f"res://levels/{self.name}"
@@ -290,8 +295,9 @@ class LevelWriter:
         sky_offset, = unpack("<I", level.index, 0x10)
         self.write_environment(sky(level.block(sky_offset), fmt) if sky_offset else None)
         self.scene.node("Game", ".", "Node3D", transform=transform(GAME_TO_GODOT))
-        self.write_terrain(terrain(level.block(unpack("<I", level.index, 0x08)[0]), lod, problems=problems)
-                           + chunk_terrain(level, lod, None, problems), lod)
+        lights = (light_bank(level.gameplay), self.normals) if self.normals is not None and fmt.lighting else None
+        self.write_terrain(terrain(level.block(unpack("<I", level.index, 0x08)[0]), lod, lights, problems)
+                           + chunk_terrain(level, lod, lights, problems), lod)
         ties = tie_classes(level)
         self.write_objects("tie", ties, tie_instances(level.instances, ties, fmt, problems))
         shrubs = shrub_classes(level)
@@ -340,6 +346,12 @@ class LevelWriter:
         self.scene.editable.append("Game/Collision")
 
     def write_terrain(self, fragments: list[Mesh], lod: int) -> None:
+        if self.godot_scales:
+            # The game multiplies a texel by the vertex colour as stored (0x80 = 1.0, up to 2.0);
+            # Godot multiplies in linear light, so the editor's terrain carries the colour in
+            # linear (c ** 2.2) to look as the game's does. The port's terrain keeps the game's.
+            fragments = [replace(m, colours=[tuple(c ** 2.2 for c in rgba[:3]) + tuple(rgba[3:]) for rgba in m.colours])
+                         if m.colours else m for m in fragments]
         path = self.glb("terrain.glb", fragments, 0)
         self.scene.node("Terrain", "Game", instance=self.scene.resource("PackedScene", path, "terrain"))
         self.scene.editable.append("Game/Terrain")
