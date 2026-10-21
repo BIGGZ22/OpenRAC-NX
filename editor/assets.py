@@ -2,7 +2,7 @@
 """Export a level's models and textures as files a modder opens in Blender,
 and read edited ones back as an overrides pack the native port loads.
 
-  assets.py export LEVELS OUT --level N [--level N ...] [--what mobys|textures|scenery|all] [--class C ...]
+  assets.py export LEVELS OUT --level N [--level N ...] [--what mobys|textures|scenery|terrain|all] [--class C ...]
   assets.py import EDITED --levels LEVELS (--out PACK | --into OVERRIDES) [--name NAME] [--author WHO]
 
 LEVELS is the levels folder the port draws from (`editor/extract.py port`:
@@ -25,6 +25,8 @@ What an export holds (OUT, one folder per level):
                                 ../../textures/*.png, skin and animations
       asset.json                the asset's manifest: what it is, where it came from
   level_NN/ties/tie_<class>/, level_NN/shrubs/shrub_<class>/   the same, without skins
+  level_NN/terrain/             the level's terrain: terrain.gltf, .bin (one node per
+                                fragment, materials naming ../textures/*.png), asset.json
 
 The glTF files are in glTF's own axes (Y up), so Blender shows a model
 standing; moby classes are at the size the game draws them (the class
@@ -42,6 +44,13 @@ The import finds what changed against the manifests and checks it:
   game's (the port animates from the game's own data). A moby model
   replaces its class in every level whose class has the same skeleton,
   unless its asset.json says "levels": [N, ...].
+- The terrain is re-read the same way, without a skeleton: any number of
+  vertices and triangles, with UVs, drawing with the level's textures or
+  pictures of its own, for its own level. Its vertex colours are the game's
+  lighting (the port draws the terrain lit by them alone); the export holds
+  them at half ("colour_scale": 2 in its asset.json: 0.5 is the game's 1.0,
+  so that glTF's 0..1 colours hold the game's 0..2), and a vertex the edited
+  file gives none takes the colour of the original surface's nearest point.
 
 Nothing here is ever committed (docs/policy/SOURCING.md): exports and packs
 hold the game's data.
@@ -72,8 +81,15 @@ from port import FORMAT as LEVELS_FORMAT  # the levels these assets come from
 ASSET_FORMAT = 1
 GAME = "rac1"  # the game of levels whose manifests do not say (those written before they did)
 ROOT = Path(__file__).resolve().parents[1]
-WHAT = ("mobys", "textures", "scenery", "all")
-FAMILIES = {"mobys": ("moby",), "scenery": ("tie", "shrub"), "textures": (), "all": ("moby", "tie", "shrub")}
+WHAT = ("mobys", "textures", "scenery", "terrain", "all")
+FAMILIES = {"mobys": ("moby",), "scenery": ("tie", "shrub"), "textures": (), "terrain": (),
+            "all": ("moby", "tie", "shrub")}
+WITH_TERRAIN = ("terrain", "all")
+# The terrain's vertex colours are the game's lighting, 0x80 = 1.0 and up to 0xFF (terrain.py): 0..2
+# in the port's files. glTF's colours are 0..1 (Blender's exporter may write them as normalised
+# integers), so the export holds them at half and the import doubles them again.
+TERRAIN_COLOUR_SCALE = 2.0
+COLOUR_MAX = 255 / 128
 # Game axes (Z up) to glTF's (Y up): (x, y, z) -> (x, z, -y); column-major.
 TO_GLTF = [1.0, 0, 0, 0, 0, 0, -1.0, 0, 0, 1.0, 0, 0, 0, 0, 0, 1.0]
 HALF = math.sqrt(0.5)
@@ -97,6 +113,11 @@ Editing
   "glTF Separate" or "glTF Binary", into the same folder (replace the file
   or add a new one beside it). Leave "+Y Up" on.
   The bones' animations are the game's own and come back unchanged.
+- Terrain: level_NN/terrain/terrain.gltf, the same way (it has no bones).
+  Subdivide or reshape it; keep its UVs and its materials' pictures. Its
+  vertex colours are the game's lighting at half (0.5 is normal); vertices
+  without any take the original's colour where they are. The collision
+  stays the game's: keep the ground where Ratchet walks.
 
 Bringing your edits back
 - In the launcher: Mods > Models and textures > Import your edits, and
@@ -196,10 +217,10 @@ def quat_multiply(a, b) -> tuple:
 # ---- export -----------------------------------------------------------------------------------
 
 
-def to_gltf_axes(document: gltf_read.Document, scale: float) -> tuple[dict, bytes]:
+def to_gltf_axes(document: gltf_read.Document, scale: float, colours: float = 1.0) -> tuple[dict, bytes]:
     """A port GLB (game axes, model units) as a glTF in glTF's axes at `scale`: positions and
-    normals turned, inverse bind matrices, root nodes and their animation keys with them.
-    Returns the new JSON and its one buffer."""
+    normals turned, inverse bind matrices, root nodes and their animation keys with them; the
+    vertex colours' RGB times COLOURS. Returns the new JSON and its one buffer."""
     doc = json.loads(json.dumps(document.doc))
     turn = [v * (scale if i % 4 < 3 and i < 12 else 1) for i, v in enumerate(TO_GLTF)]
     unturn = invert(turn)
@@ -219,6 +240,8 @@ def to_gltf_axes(document: gltf_read.Document, scale: float) -> tuple[dict, byte
                 claim(attributes["POSITION"], "point")
             if "NORMAL" in attributes:
                 claim(attributes["NORMAL"], "vector")
+            if "COLOR_0" in attributes and colours != 1.0:
+                claim(attributes["COLOR_0"], "colour")
     for skin in doc.get("skins", []):
         if "inverseBindMatrices" in skin:
             claim(skin["inverseBindMatrices"], "inverse_bind")
@@ -258,6 +281,8 @@ def to_gltf_axes(document: gltf_read.Document, scale: float) -> tuple[dict, byte
             return [quat_multiply(Q_TO_GLTF, r) for r in rows]
         if how == "scale":
             return [tuple(v * scale for v in r) for r in rows]
+        if how == "colour":
+            return [tuple(v * colours for v in r[:3]) + tuple(r[3:]) for r in rows]
         return rows
 
     buffer, views, accessors = bytearray(), [], []
@@ -363,6 +388,44 @@ def export_model(export: LevelExport, family: str, class_id: int, entry: dict) -
     return manifest
 
 
+def export_terrain(export: LevelExport, level_entry: dict) -> dict | None:
+    """The level's terrain (the port's terrain.glb, one node per fragment) as a glTF folder with
+    its asset.json; returns the manifest, or None for a level without terrain."""
+    rel = level_entry.get("terrain")
+    if not rel:
+        return None
+    source = export.levels / f"level_{export.level:02}" / rel
+    data = source.read_bytes()
+    document = gltf_read.read(source)
+    doc, buffer = to_gltf_axes(document, 1.0, colours=1 / TERRAIN_COLOUR_SCALE)
+    out = export.dir / "terrain"
+    out.mkdir(parents=True)
+    textures = {}
+    for image in doc.get("images", []):
+        texture = document.image_path({"uri": image["uri"]})
+        if texture is None or not texture.is_file():
+            raise AssetError(f"{source}: its texture {image.get('uri')} is missing: get the levels ready again")
+        texture_name = export.texture(texture)
+        image["uri"] = f"../textures/{texture.name}"
+        textures[texture_name] = export.textures[texture_name]["size"]
+    doc["buffers"][0]["uri"] = "terrain.bin"
+    (out / "terrain.bin").write_bytes(buffer)
+    (out / "terrain.gltf").write_text(json.dumps(doc, indent=1, allow_nan=False) + "\n")
+    manifest = {
+        "format": ASSET_FORMAT, "game": export.game, "version": export.version, "levels_format": LEVELS_FORMAT,
+        "level": export.level, "kind": "terrain", "class": None, "name": "terrain",
+        "source": rel, "source_sha256": sha256(data), "scale": 1.0, "model": "terrain.gltf",
+        "files": {"terrain.gltf": file_hash(out / "terrain.gltf"), "terrain.bin": sha256(buffer)},
+        "textures": textures, "skeleton": None, "levels": [export.level],
+        "fragments": sum(1 for node in document.list("nodes") if "mesh" in node),
+        # The file's vertex colours (RGB) times this are the game's: 0.5 in the file is 0x80.
+        "colour_scale": TERRAIN_COLOUR_SCALE,
+        "axes": "glTF (Y up); the game's are Z up: (x, y, z) in the game is (x, z, -y) here",
+    }
+    (out / "asset.json").write_text(json.dumps(manifest, indent=1) + "\n")
+    return manifest
+
+
 def unique(path: Path) -> Path:
     """PATH, or PATH-2, PATH-3...: the first that is not there yet."""
     candidate, n = path, 2
@@ -392,6 +455,8 @@ def export(levels: Path, out: Path, level_ids: list[int], what: str, classes: li
                     if entry.get("mesh") and (classes is None or int(key) in classes):
                         export_model(export_level, family, int(key), entry)
                         counts["models"] += 1
+            if what in WITH_TERRAIN and classes is None and export_terrain(export_level, manifest) is not None:
+                counts["models"] += 1
             if what in ("textures", "all"):
                 for name in manifest.get("textures", []):
                     export_level.texture(levels / f"level_{level:02}" / name)
@@ -400,10 +465,12 @@ def export(levels: Path, out: Path, level_ids: list[int], what: str, classes: li
             (export_level.dir / "textures").mkdir(exist_ok=True)
             (export_level.dir / "textures" / "textures.json").write_text(json.dumps(textures, indent=1) + "\n")
             counts["textures"] += len(export_level.textures)
+            terrain = (export_level.dir / "terrain" / "asset.json").is_file()
             print(f"level {level:02}: {sum(1 for _ in export_level.dir.glob('*s/*/asset.json'))} models, "
-                  f"{len(export_level.textures)} textures", flush=True)
+                  + ("the terrain, " if terrain else "") + f"{len(export_level.textures)} textures", flush=True)
         if counts["models"] == 0 and counts["textures"] == 0:
-            raise AssetError("nothing to export: no class with a model was chosen")
+            raise AssetError("nothing to export: the level has no terrain" if what == "terrain"
+                             else "nothing to export: no class with a model was chosen")
         summary = {"format": ASSET_FORMAT, "tool": "openrac-assets", "game": game, "version": version,
                    "levels_format": LEVELS_FORMAT, "id": os.urandom(8).hex(), "what": what,
                    "levels": sorted(level_ids), **counts}
@@ -1062,6 +1129,225 @@ def port_glb(meshes, textures: dict, names: dict, original_doc: gltf_read.Docume
     return gltf.glb()
 
 
+def import_terrain(folder: Path, manifest: dict, index: LevelsIndex, edited_textures: dict,
+                   export_textures: dict, pack: Pack, report: Report) -> None:
+    """Read an edited terrain back and write the level's terrain.glb into the pack: any number of
+    vertices, lit by its vertex colours as the game's is (filled from the original where missing)."""
+    level = manifest["level"]
+    where = f"level {level:02} terrain"
+    path = edited_model(folder, manifest)
+    if path is None:
+        return
+    rel = index.manifests[level].get("terrain")
+    source = index.levels / f"level_{level:02}" / (rel or manifest["source"])
+    if not rel or not source.is_file() or file_hash(source) != manifest["source_sha256"]:
+        report.refuse(f"{where}: the levels were read from the disc again since this export and differ; "
+                      "export again and redo the edit on the new export")
+        return
+    try:
+        document = gltf_read.read(path)
+        meshes = read_edited(document, None, 0, 1.0, report, f"{where}: {path.name}")
+    except (GltfError, OSError, ValueError) as exc:
+        report.refuse(f"{where}: {path.name}: {exc}")
+        return
+    if meshes is None:
+        return
+    textures = model_textures(document, manifest, index, export_textures, edited_textures, report,
+                              f"{where}: {path.name}")
+    if textures is None:
+        return
+    for label, _, triangles in meshes:
+        bare = {m for *_, m in triangles if m is None or textures[m].name is None and textures[m].data is None}
+        if bare:
+            report.refuse(f"{where}: {path.name}: {label} has faces without a picture; give them a material "
+                          "with one of the level's textures (or a picture of your own)")
+            return
+    scale = float(manifest.get("colour_scale", 1.0))
+    for _, vertices, _ in meshes:
+        for v in vertices:
+            if v.colour is not None:
+                v.colour = tuple(min(COLOUR_MAX, c * scale) for c in v.colour[:3]) + tuple(v.colour[3:])
+    fill_terrain(meshes, gltf_read.read(source), report, where)
+    names = texture_names(textures, index, level, level, export_textures, edited_textures, pack, report, where,
+                          "terrain")
+    pack.put(f"level_{level:02}/{rel}", terrain_glb(meshes, textures, names), where, report)
+    triangles = sum(len(t) for _, _, t in meshes)
+    vertices = sum(len(v) for _, v, _ in meshes)
+    report.note(f"{where}: {path.name} ({len(meshes)} meshes, {vertices} vertices, {triangles} triangles) "
+                "replaces the terrain")
+
+
+def original_triangles(document: gltf_read.Document, name: str | None = None) -> list[tuple]:
+    """A port GLB's triangles in game axes (NAME: only its node's): ((a, b, c) positions, (a, b, c)
+    colours or None)."""
+    out = []
+    for n, node in enumerate(document.list("nodes")):
+        if "mesh" not in node or name is not None and node.get("name") != name:
+            continue
+        world = document.node_world(n)
+        for primitive in document.list("meshes")[node["mesh"]]["primitives"]:
+            if primitive.get("mode", 4) != 4:
+                continue
+            attributes = primitive["attributes"]
+            positions = [point(world, p) for p in document.accessor(attributes["POSITION"])]
+            colours = document.accessor(attributes["COLOR_0"]) if "COLOR_0" in attributes else None
+            corners = [r[0] for r in document.accessor(primitive["indices"], normalize=False)] \
+                if "indices" in primitive else list(range(len(positions)))
+            for t in range(0, len(corners) - 2, 3):
+                abc = corners[t:t + 3]
+                out.append((tuple(positions[i] for i in abc),
+                            tuple(colours[i] for i in abc) if colours is not None else None))
+    return out
+
+
+def closest_on_triangle(p, a, b, c) -> tuple[float, tuple[float, float, float]]:
+    """The squared distance from P to the triangle ABC, and the barycentric weights of its closest
+    point (Ericson, Real-Time Collision Detection, 5.1.5)."""
+    ab = [b[i] - a[i] for i in range(3)]
+    ac = [c[i] - a[i] for i in range(3)]
+    ap = [p[i] - a[i] for i in range(3)]
+    d1, d2 = sum(ab[i] * ap[i] for i in range(3)), sum(ac[i] * ap[i] for i in range(3))
+    if d1 <= 0 and d2 <= 0:
+        weights = (1.0, 0.0, 0.0)
+    else:
+        bp = [p[i] - b[i] for i in range(3)]
+        d3, d4 = sum(ab[i] * bp[i] for i in range(3)), sum(ac[i] * bp[i] for i in range(3))
+        cp = [p[i] - c[i] for i in range(3)]
+        d5, d6 = sum(ab[i] * cp[i] for i in range(3)), sum(ac[i] * cp[i] for i in range(3))
+        vc, vb, va = d1 * d4 - d3 * d2, d5 * d2 - d1 * d6, d3 * d6 - d5 * d4
+        if d3 >= 0 and d4 <= d3:
+            weights = (0.0, 1.0, 0.0)
+        elif d6 >= 0 and d5 <= d6:
+            weights = (0.0, 0.0, 1.0)
+        elif vc <= 0 and d1 >= 0 and d3 <= 0:
+            v = d1 / (d1 - d3) if d1 != d3 else 0.0
+            weights = (1 - v, v, 0.0)
+        elif vb <= 0 and d2 >= 0 and d6 <= 0:
+            w = d2 / (d2 - d6) if d2 != d6 else 0.0
+            weights = (1 - w, 0.0, w)
+        elif va <= 0 and d4 - d3 >= 0 and d5 - d6 >= 0:
+            w = (d4 - d3) / ((d4 - d3) + (d5 - d6)) if (d4 - d3) + (d5 - d6) else 0.0
+            weights = (0.0, 1 - w, w)
+        else:
+            total = va + vb + vc
+            v, w = (vb / total, vc / total) if total else (0.0, 0.0)
+            weights = (1 - v - w, v, w)
+    q = [weights[0] * a[i] + weights[1] * b[i] + weights[2] * c[i] for i in range(3)]
+    return sum((p[i] - q[i]) ** 2 for i in range(3)), weights
+
+
+class Surface:
+    """The original terrain's triangles in a uniform grid, for the colour of its nearest point."""
+
+    def __init__(self, triangles: list[tuple]):
+        self.triangles = [t for t in triangles if t[1] is not None]
+        self.exact = {}
+        lengths = []
+        for corners, colours in self.triangles:
+            for p, colour in zip(corners, colours):
+                self.exact.setdefault(self.key(p), colour)
+            lengths.append(max(math.dist(corners[i], corners[(i + 1) % 3]) for i in range(3)))
+        lengths.sort()
+        # A cell about two triangles across: a handful of triangles in each.
+        self.cell = max(2 * lengths[len(lengths) // 2], 1e-3) if lengths else 1.0
+        self.grid = {}
+        for t, (corners, _) in enumerate(self.triangles):
+            low = [int(math.floor(min(p[i] for p in corners) / self.cell)) for i in range(3)]
+            high = [int(math.floor(max(p[i] for p in corners) / self.cell)) for i in range(3)]
+            for x in range(low[0], high[0] + 1):
+                for y in range(low[1], high[1] + 1):
+                    for z in range(low[2], high[2] + 1):
+                        self.grid.setdefault((x, y, z), []).append(t)
+
+    @staticmethod
+    def key(p) -> tuple:
+        return tuple(round(c * 1e4) for c in p)
+
+    def colour(self, p) -> tuple | None:
+        """The colour at P: an original vertex's where P is one, else the barycentric blend at the
+        nearest point of the original's surface."""
+        if not self.triangles:
+            return None
+        if self.key(p) in self.exact:
+            return self.exact[self.key(p)]
+        centre = [int(math.floor(c / self.cell)) for c in p]
+        best, seen = None, set()
+        for radius in range(0, 48):
+            for dx in range(-radius, radius + 1):
+                for dy in range(-radius, radius + 1):
+                    for dz in range(-radius, radius + 1):
+                        if max(abs(dx), abs(dy), abs(dz)) != radius:
+                            continue
+                        for t in self.grid.get((centre[0] + dx, centre[1] + dy, centre[2] + dz), ()):
+                            if t not in seen:
+                                seen.add(t)
+                                found = closest_on_triangle(p, *self.triangles[t][0])
+                                if best is None or found[0] < best[0]:
+                                    best = (found[0], found[1], t)
+            # A triangle in no cell searched yet is at least RADIUS cells away.
+            if best is not None and best[0] <= (radius * self.cell) ** 2:
+                break
+        else:
+            for t, (corners, _) in enumerate(self.triangles):
+                found = closest_on_triangle(p, *corners)
+                if best is None or found[0] < best[0]:
+                    best = (found[0], found[1], t)
+        _, weights, t = best
+        colours = self.triangles[t][1]
+        return tuple(sum(w * colour[k] for w, colour in zip(weights, colours)) for k in range(len(colours[0])))
+
+
+def fill_terrain(meshes, original_doc: gltf_read.Document, report: Report, where: str) -> None:
+    """Vertex colours the edited terrain lacks (Blender drops them unless asked; a new vertex may
+    have none), from the original surface's nearest point: a subdivided face keeps its gradient.
+    A mesh named as an original fragment (Blender keeps the names) takes them from that fragment:
+    where two fragments meet, each is lit on its own."""
+    missing = 0
+    fragments = {node.get("name") for node in original_doc.list("nodes") if "mesh" in node}
+    whole = None
+    for label, vertices, _ in meshes:
+        lacking = [v for v in vertices if v.colour is None]
+        if not lacking:
+            continue
+        if label in fragments:
+            surface = Surface(original_triangles(original_doc, label))
+        else:
+            whole = whole or Surface(original_triangles(original_doc))
+            surface = whole
+        for v in lacking:
+            colour = surface.colour(v.position)
+            v.colour = tuple(colour) + ((1.0,) if len(colour) == 3 else ()) if colour is not None else None
+        missing += len(lacking)
+    if missing:
+        report.note(f"{where}: {missing} vertices took their colour from the original terrain's nearest point")
+
+
+def terrain_glb(meshes, textures: dict, names: dict) -> bytes:
+    """The edited terrain as the port reads terrain.glb (port.py): game axes, one node per mesh,
+    vertex colours (0x80 = 1.0) and no light slots; materials name textures/<name>.png."""
+    gltf = Gltf()
+    for label, vertices, triangles in meshes:
+        mesh = Mesh(label, normals=[], colours=[])
+        local = {}
+        for a, b, c, material in triangles:
+            corners = []
+            for v in (a, b, c):
+                if v not in local:
+                    vertex = vertices[v]
+                    local[v] = len(mesh.positions)
+                    mesh.positions.append(vertex.position)
+                    mesh.normals.append(vertex.normal)
+                    mesh.uvs.append(vertex.uv)
+                    mesh.colours.append(tuple(vertex.colour) if vertex.colour is not None else (1.0, 1.0, 1.0, 1.0))
+                corners.append(local[v])
+            mesh.add_face((names[material], textures[material].cutout), tuple(corners))
+        if not mesh.faces:
+            continue
+        materials = {key: gltf.material(key[0], f"textures/{key[0]}.png", cutout=key[1]) for key in mesh.faces}
+        gltf.node(label, gltf.mesh(mesh, materials))
+    return gltf.glb()
+
+
 def quantise(skin: tuple) -> tuple:
     """Weights 0..1 as 256ths summing to 256 (the GLB writer's form), largest remainders first."""
     raw = [(j, w * 256) for j, w in skin]
@@ -1106,6 +1392,14 @@ def import_edits(edited: Path, levels: Path, report: Report) -> Pack:
                 report.refuse(f"{manifest_path}: not an asset manifest of this export")
                 continue
             import_model(manifest_path.parent, manifest, index, edited_textures, export_textures, pack, report)
+        terrain_path = edited / f"level_{level:02}" / "terrain" / "asset.json"
+        if terrain_path.is_file():
+            manifest = read_json(terrain_path)
+            if manifest.get("format") != ASSET_FORMAT or manifest.get("level") != level \
+                    or manifest.get("kind") != "terrain":
+                report.refuse(f"{terrain_path}: not an asset manifest of this export")
+            else:
+                import_terrain(terrain_path.parent, manifest, index, edited_textures, export_textures, pack, report)
         # A picture a model's material took as an edit of a level texture goes where that texture is.
         for name, (data, original_hash) in edited_textures.items():
             for target_level, target_name in index.by_hash().get(original_hash) or [(level, name)]:
@@ -1144,7 +1438,7 @@ def main(argv: list[str] | None = None) -> int:
     out.add_argument("--level", type=int, action="append", required=True, help="a level (repeatable)")
     out.add_argument("--what", choices=WHAT, default="mobys",
                      help="mobys (characters, enemies, items), textures (every texture), scenery (ties and "
-                          "shrubs) or all (default: mobys)")
+                          "shrubs), terrain (the level's ground and walls) or all (default: mobys)")
     out.add_argument("--class", dest="classes", type=int, action="append", help="only this class (repeatable)")
     out.add_argument("--unique", action="store_true",
                      help="when OUT exists, write OUT-2 (OUT-3...) instead: an earlier export is never touched")
