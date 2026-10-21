@@ -118,6 +118,7 @@ class _Fn:
     record_params: set = field(default_factory=set)  # host names of parameters passed as records
     float_params: list = field(default_factory=list)
     wide: set = field(default_factory=set)           # locals kept 64-bit (returns_64)
+    wide_params: set = field(default_factory=set)    # parameters only passed on to 64-bit ones (widen_forwarded)
 
 
 def _inner(n: dict) -> list:
@@ -579,12 +580,19 @@ class Unit:
         # A definition that returns nothing and ends in a call returns that call's result, as the
         # console's result register did (program.py, inherit_results).
         known = self.program.lookup(self.unit, sym)
+        widened = dict(getattr(known, "widened", None) or {}) if known is not None and not static else {}
+        if widened:
+            # Parameters the C only passes on to 64-bit ones (program.py widen_forwarded): 64-bit here, as the
+            # EE's register reaches the callee with all its bits.
+            sig_t = ctype.Func(sig_t.ret, tuple(ctype.Base(widened[i]) if i in widened else t
+                                               for i, t in enumerate(sig_t.params)), sig_t.variadic, sig_t.prototyped)
         inherits = known is not None and getattr(known, "inherits", False) and self.cls(sig_t.ret) == "void"
         if inherits:
             sig_t = ctype.Func(known.sig.ret, sig_t.params, sig_t.variadic, sig_t.prototyped)
         proto = self.signature(sym, sig_t, names, static)
         report = FnReport(sym, "translated")
         self.fn = _Fn(sym, sig_t, params, report=report)
+        self.fn.wide_params = {params[i].get("id") for i in widened if i < len(params)}
         body = next(c for c in _inner(decl) if c.get("kind") == "CompoundStmt")
         if inherits:
             self.fn.tail_id = [s for s in _inner(body) if s.get("kind")][-1].get("id")
@@ -1142,7 +1150,19 @@ class Unit:
         child = _inner(n)[0]
         t = self.ty(n)
         if kind == "LValueToRValue":
+            wide = self._wide_param(child)
+            if wide is not None:
+                # A parameter made 64-bit for what it passes on (program.py widen_forwarded), read as its own C type
+                # where the C computes with it: the EE's 32-bit arithmetic and shifts read the register's low half
+                # (DrawFramedText's `(s32)color >> 24`, a sra).
+                return f"(({self.host(ctype.strip_quals(self.ty(child)))})({wide}))"
             return self.lv(child).text
+        if kind == "IntegralCast" and self._wide(t):
+            wide = self._wide_param(child)
+            if wide is not None:
+                # ... and whole where the C converts it to a 64-bit integer, which is no instruction on the EE
+                # (DrawFramedText's `(s64)color & ...`, an and of the register as the caller left it).
+                return f"(({self.host(ctype.strip_quals(t))})({wide}))"
         if kind == "ArrayToPointerDecay":
             if self._code_variable(child):
                 return self.function_value(child)
@@ -2172,6 +2192,15 @@ class Unit:
             raise Unsupported("a va_list passed as a game pointer, or the other way round")
         if c in ("rec", "valist"):
             return self.rv(a)
+        if self.fn is not None and self.fn.wide_params and self._wide(p):
+            # A parameter of the function's own that it only passes on (widen_forwarded): all 64 bits, unchanged,
+            # whatever casts the C puts around it.
+            n = a
+            while n.get("kind") in ("ImplicitCastExpr", "CStyleCastExpr", "ParenExpr") and _inner(n):
+                n = _inner(n)[0]
+            ref = n.get("referencedDecl", {}) if n.get("kind") == "DeclRefExpr" else {}
+            if ref.get("id") in self.fn.wide_params and ref.get("id") in self.fn.host:
+                return self._cast_to(self.fn.host[ref["id"]], p)
         v = self.rv(a)
         if (self._wide(p) and self.cls(self.ty(a)) in ("int", "ptr") and not self._wide(self.ty(a))
                 and not self._names_a_variable(a) and not self._wide_call(a)):
@@ -2185,6 +2214,19 @@ class Unit:
             # bits: Effect_DrawEntryList(..., GetEffectTex(0x2C), ...)).
             v = f"(int32_t)({v})"
         return self._cast_to(v, p)
+
+    def _wide_param(self, n: dict) -> str | None:
+        """The host name of the widened parameter (widen_forwarded) N reads, through parentheses, NoOp casts
+        and the read itself; None for anything else."""
+        if self.fn is None or not self.fn.wide_params:
+            return None
+        while (n.get("kind") == "ParenExpr" or (n.get("kind") in ("ImplicitCastExpr", "CStyleCastExpr")
+                                                 and n.get("castKind") in ("LValueToRValue", "NoOp"))) and _inner(n):
+            n = _inner(n)[0]
+        ref = n.get("referencedDecl", {}) if n.get("kind") == "DeclRefExpr" else {}
+        if ref.get("id") in self.fn.wide_params and ref.get("id") in self.fn.host:
+            return self.fn.host[ref["id"]]
+        return None
 
     def _names_a_variable(self, a: dict) -> bool:
         """The argument is a variable or parameter by name (through casts and parentheses)."""

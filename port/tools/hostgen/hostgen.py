@@ -42,7 +42,7 @@ import derived  # noqa: E402
 import ctype  # noqa: E402
 import prep  # noqa: E402
 from lower import Unit, UnitReport  # noqa: E402
-from program import Function, Program, Signature, canon, cname, index_unit, prototype, inherit_results, merge, read_places, read_split_places, read_symbols, read_catalogue  # noqa: E402
+from program import Function, Program, Signature, canon, cname, index_unit, prototype, inherit_results, merge, read_places, read_split_places, read_symbols, read_catalogue, widen_forwarded  # noqa: E402
 
 HERE = Path(__file__).resolve().parent
 PROGRAM_FILES = ["stubs.c", "functions.c", "libraries.c", "game_info.c", "game_protos.h"]
@@ -847,6 +847,9 @@ def main(argv: list[str] | None = None) -> int:
             sig = Signature.of(ctype.parse(text))
             f = program.functions.get(sym)
             program.functions[sym] = Function(sym, sig, None, asm=f.asm if f else False)
+    # A parameter the C only passes on to 64-bit parameters is 64-bit itself (program.py widen_forwarded): the EE's
+    # register carries all its bits through (FontPrintCenter's colour to FontPrint's u64).
+    program.widened = widen_forwarded(program)
     program.index_places()
     # Functions with no C whose assembly the game's setup wrote (hostgen.json "asm"): C from their
     # instructions, so the port runs them instead of stubs (asmc.py). Before the units, so calls to
@@ -878,6 +881,7 @@ def main(argv: list[str] | None = None) -> int:
     extra["roots"] = cfg.get("roots", [])
     extra["candidates_used"] = sorted(used)
     extra["results_inherited"] = sorted(inherited)
+    extra["params_widened"] = sorted(getattr(program, "widened", []))
     extra["bound_libraries"] = write_libraries(program, out, host_rows, library_api(args.game.parent, cfg))
     write_game_info(program, out, cfg)
     extra["index_problems"] = problems

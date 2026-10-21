@@ -473,6 +473,54 @@ class Translate(unittest.TestCase):
         """}, config={"returns_64": ["tex"]})
         self.assertEqual(out, ["-1", "4660", "0", "22136", "-1", "39612", "3", "43981"])
 
+    def test_a_parameter_only_passed_on_to_64_bits_is_64_bit(self):
+        # FontPrintCenter's `int c` is FontPrint's u64 colour: the EE passes the register on with all its bits,
+        # so the parameter is 64-bit here, and each caller converts its own value (an int sign-extended).
+        out = self.run_program({"a.c": """
+            void callee(int y, unsigned long long x) { test_print((int)(x >> 32)); test_print((int)(x & 0xFFFF)); }
+        """, "b.c": """
+            extern void callee(void *y, void *x);
+            int middle(int y, int c) { callee((void *)y, (void *)c); return y; }
+            int outer(int c) { return middle(1, c); }
+            int test_main(void) {
+                int colour = (int)0x80001234u;
+                middle(2, colour);
+                outer(colour);
+                middle(3, 0x5678);
+                return 0;
+            }
+        """})
+        self.assertEqual(out, ["-1", "4660", "-1", "4660", "0", "22136"])
+        self.assertIn("middle: parameter 2 (unsigned long long)", self.last_report["params_widened"])
+
+    def test_a_widened_parameter_is_whole_in_64_bit_casts_and_its_low_half_in_arithmetic(self):
+        # DrawFramedText's `s32 color` (rac1): `(s32)color >> 24` is a sra of the register's low half,
+        # `(s64)color & ...` an and of the whole register, and the colour is passed on to a u64 as well; its
+        # caller hands it a colour that is zero-extended in the register (FastTweenColor's).
+        out = self.run_program({"a.c": """
+            void callee(int y, unsigned long long x) { test_print((int)(x >> 32)); test_print((int)(x >> 16)); }
+            unsigned long long tween(int c) { return (unsigned int)c; }
+        """, "b.c": """
+            extern void callee(int y, unsigned long long x);
+            extern int tween(int c);
+            void framed(int y, int c) {
+                int alpha = (int)c >> 24;
+                test_print(alpha);
+                test_print(c + 1);
+                callee(y, (long long)c & (long long)(int)0xFF000000);
+                callee(y, c);
+            }
+            int test_main(void) {
+                int zero_extended = tween((int)0x80001234u);
+                framed(1, zero_extended);
+                framed(2, (int)0x80001234u);
+                return 0;
+            }
+        """}, config={"returns_64": ["tween"]})
+        self.assertEqual(out, ["-128", "-2147478987", "0", "32768", "0", "32768",
+                               "-128", "-2147478987", "-1", "-32768", "-1", "-32768"])
+        self.assertIn("unsigned long long c", self.last_generated)
+
     def test_va_list_passed_as_a_pointer_becomes_a_stub(self):
         # The console's C passes a va_list where a pointer is declared (and the
         # other way round); the host cannot, so the caller becomes a stub and the
