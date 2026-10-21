@@ -1,0 +1,5 @@
+# The same bytes on every system: a mod's archive is built on each and joined (package_mod.py --merge).
+* text=auto eol=lf
+*.zip binary
+*.png binary
+*.glb binary

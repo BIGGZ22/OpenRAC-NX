@@ -28,7 +28,7 @@ class PackageSdk(unittest.TestCase):
                          "cmake/OpenRACModConfig.cmake", "cmake/OpenRACModConfigVersion.cmake",
                          "tools/package_mod.py", "template/openrac-mod.json", "README.md",
                          "docs/MODS.md", "LICENSE", "VERSION", "template/.github/workflows/build.yml",
-                         "template/tools/fetch_sdk.py", "template/sdk.lock", "template/.gitignore",
+                         "template/tools/fetch_sdk.py", "template/sdk.lock", "template/.gitignore", "template/.gitattributes",
                          "template/LICENSE"]:
                 self.assertIn(top + need, names)
             self.assertFalse([n for n in names if "__pycache__" in n or "/build/" in n])
