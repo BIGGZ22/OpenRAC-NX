@@ -522,6 +522,66 @@ class Translate(unittest.TestCase):
                                "-128", "-2147478987", "-1", "-32768", "-1", "-32768"])
         self.assertIn("unsigned long long c", self.last_generated)
 
+    def test_a_returns_64_result_returned_as_it_is_is_64_bit_and_constants_beside_it_are_sign_extended(self):
+        # Pause_GetFadeColor (rac1) is an int that returns FastTweenColor's colour, zero-extended in the EE's result
+        # register: its callers keep all 64 bits (Pause_DrawDescriptionBox hands them on to FontPrintWindow's u64). A
+        # local that receives such a colour and, on another path, a constant (DrawMenuItemList's `color =
+        # 0x80FFA888`) holds the constant sign-extended, as lui/ori leave it; so does a widened result's other return
+        # value.
+        out = self.run_program({"a.c": """
+            void callee(unsigned long long x) { test_print((int)(x >> 32)); test_print((int)(x & 0xFFFF)); }
+            unsigned long long tween(int c) { return (unsigned int)c; }
+        """, "b.c": """
+            extern void callee(int x);
+            extern int tween(int c);
+            int fade(int c) { return tween(c); }
+            int fade_or(int c) { if (c == 0) { return 0x80009ABCu; } return fade(c); }
+            void pick(int sel, int c) {
+                int color;
+                if (sel) {
+                    color = 0x80005678u;
+                } else {
+                    color = fade(c);
+                }
+                callee(color);
+            }
+            int test_main(void) {
+                pick(0, (int)0x80001234u);
+                pick(1, 0);
+                callee(fade_or((int)0x80001234u));
+                callee(fade_or(0));
+                return 0;
+            }
+        """}, config={"returns_64": ["tween"]})
+        self.assertEqual(out, ["0", "4660", "-1", "22136", "0", "4660", "-1", "39612"])
+        self.assertEqual(self.last_report["results_widened"], ["fade", "fade_or"])
+
+    def test_an_unsigned_value_beside_a_returns_64_result_in_a_local_is_sign_extended(self):
+        # RibbonTrailDraw (rac1 func_L10_002DBA50) keeps FastTweenColor's colour in an unsigned int local, which
+        # hostgen keeps 64-bit, and on another path stores `(color & 0xFFFFFF) + (a << 24)` there: addu leaves the sum
+        # sign-extended in the register, where C's conversion of an unsigned int to 64 bits zero-extends it.
+        out = self.run_program({"a.c": """
+            void callee(unsigned long long x) { test_print((int)(x >> 32)); test_print((int)(x & 0xFFFF)); }
+            unsigned long long tween(int c) { return (unsigned int)c; }
+        """, "b.c": """
+            extern void callee(unsigned int x);
+            extern unsigned int tween(int c);
+            void trail(int sel, int c) {
+                unsigned int color;
+                color = tween(c);
+                if (sel) {
+                    color = (color & 0xFFFFFF) + ((unsigned int)sel << 31);
+                }
+                callee(color);
+            }
+            int test_main(void) {
+                trail(0, (int)0x80001234u);
+                trail(1, 0x1234);
+                return 0;
+            }
+        """}, config={"returns_64": ["tween"]})
+        self.assertEqual(out, ["0", "4660", "-1", "4660"])
+
     def test_va_list_passed_as_a_pointer_becomes_a_stub(self):
         # The console's C passes a va_list where a pointer is declared (and the
         # other way round); the host cannot, so the caller becomes a stub and the

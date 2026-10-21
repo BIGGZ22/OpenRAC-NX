@@ -119,6 +119,7 @@ class _Fn:
     float_params: list = field(default_factory=list)
     wide: set = field(default_factory=set)           # locals kept 64-bit (returns_64)
     wide_params: set = field(default_factory=set)    # parameters only passed on to 64-bit ones (widen_forwarded)
+    wide_result: bool = False                        # returns a "returns_64" call's result whole (widen_returns)
 
 
 def _inner(n: dict) -> list:
@@ -589,10 +590,15 @@ class Unit:
         inherits = known is not None and getattr(known, "inherits", False) and self.cls(sig_t.ret) == "void"
         if inherits:
             sig_t = ctype.Func(known.sig.ret, sig_t.params, sig_t.variadic, sig_t.prototyped)
+        # A 32-bit result that is a "returns_64" call's result returned as it is: 64 bits (program.py widen_returns).
+        wide_result = known is not None and not static and getattr(known, "wide_result", False)
+        if wide_result:
+            sig_t = ctype.Func(known.sig.ret, sig_t.params, sig_t.variadic, sig_t.prototyped)
         proto = self.signature(sym, sig_t, names, static)
         report = FnReport(sym, "translated")
         self.fn = _Fn(sym, sig_t, params, report=report)
         self.fn.wide_params = {params[i].get("id") for i in widened if i < len(params)}
+        self.fn.wide_result = wide_result
         body = next(c for c in _inner(decl) if c.get("kind") == "CompoundStmt")
         if inherits:
             self.fn.tail_id = [s for s in _inner(body) if s.get("kind")][-1].get("id")
@@ -857,7 +863,9 @@ class Unit:
                 return [pad + "return;"]
             if self.cls(self.fn.sig.ret) == "void":
                 return [pad + f"{self.rv(kids[0])};", pad + "return;"]
-            return [pad + f"return {self.convert(kids[0], self.fn.sig.ret)};"]
+            value = (self._wide_value(kids[0], self.fn.sig.ret) if self.fn.wide_result
+                     else self.convert(kids[0], self.fn.sig.ret))
+            return [pad + f"return {value};"]
         if k == "IfStmt":
             kids = _inner(n)
             if n.get("hasInit") or n.get("hasVar"):
@@ -961,6 +969,47 @@ class Unit:
                 return self._callee_symbol(target) in getattr(self.program, "returns_64", ())
         return False
 
+    def _wide_value(self, n: dict, t: ctype.Type) -> str:
+        """N as the 64-bit value T that the EE's register holds: a "returns_64" call's result, a local kept 64-bit
+        or a widened parameter all their bits; an unsigned int or a pointer sign-extended from 32 bits, as every
+        32-bit load and operation leaves it (lui/ori, addiu, lw, addu), where C's conversion would zero-extend it: an
+        unsigned wide local's other values (RibbonTrailDraw's `color = (color & 0xFFFFFF) + (a << 24)` is
+        sign-extended in the register, where FastTweenColor's colour is zero-extended), a wide result's other return
+        values. Anything else converts as C converts it (a signed int: sign-extended already)."""
+        whole = self._wide_name(n)
+        if whole is not None:
+            return f"({self.host(ctype.strip_quals(t))})({whole})"
+        if self._sign_extends(n):
+            return f"({self.host(ctype.strip_quals(t))})(int32_t)({self.rv(n)})"
+        return self.convert(n, t)
+
+    def _sign_extends(self, n: dict) -> bool:
+        """N is an unsigned int or a pointer (not a "returns_64" call's result) that the EE keeps sign-extended in a
+        register, where C's conversion to 64 bits would zero-extend it (_wide_value). A signed or narrower value
+        converts as the register holds it already."""
+        if self._wide_call(n) or self._wide_name(n) is not None:
+            return False
+        if self.cls(self.ty(n)) == "ptr":
+            return True
+        r = self.resolve(self.ty(n))
+        return isinstance(r, ctype.Base) and r.name in ("unsigned int", "unsigned")
+
+    def _wide_name(self, n: dict) -> str | None:
+        """The host name of the local kept 64-bit (returns_64) or the widened parameter (widen_forwarded) that N reads
+        as it is: through parentheses, reads, NoOp casts and conversions between 32-bit integers, which are no
+        instruction on the EE. None for anything else."""
+        if self.fn is None or not (self.fn.wide or self.fn.wide_params):
+            return None
+        while _inner(n) and (n.get("kind") == "ParenExpr" or (n.get("kind") in ("ImplicitCastExpr", "CStyleCastExpr")
+                                                               and (n.get("castKind") in ("LValueToRValue", "NoOp")
+                                                                    or (n.get("castKind") == "IntegralCast"
+                                                                        and self._is_int32(self.ty(n)))))):
+            n = _inner(n)[0]
+        ref = n.get("referencedDecl", {}) if n.get("kind") == "DeclRefExpr" else {}
+        if ref.get("id") in self.fn.wide or ref.get("id") in self.fn.wide_params:
+            return self.fn.host.get(ref.get("id"))
+        return None
+
     def _is_int32(self, t: ctype.Type) -> bool:
         r = self.resolve(t)
         return isinstance(r, ctype.Base) and r.name in ("int", "signed int", "unsigned int", "unsigned")
@@ -1020,6 +1069,8 @@ class Unit:
         fn.host[d["id"]] = name
         if d["id"] in fn.wide:
             t = ctype.Base("long long")
+            if init is not None and (self._sign_extends(init) or self._wide_name(init) is not None):
+                return [pad + f"{self.declare(t, name)} = {self._wide_value(init, t)};"]
         text = self.declare(t, name)
         if init is not None:
             text += f" = {self.initializer(init, t)}"
@@ -1408,7 +1459,7 @@ class Unit:
             lv = self.lv(a)
             sa = _strip_parens(a)
             if sa.get("kind") == "DeclRefExpr" and sa["referencedDecl"].get("id") in self.fn.wide:
-                return f"({lv.text} = {self.convert(b, ctype.Base('long long'))})"
+                return f"({lv.text} = {self._wide_value(b, ctype.Base('long long'))})"
             return f"({lv.text} = {self.convert(b, self.ty(a))})"
         if op in ("+", "-"):
             ta, tb = self.ty(a), self.ty(b)
