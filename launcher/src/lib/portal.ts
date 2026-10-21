@@ -19,14 +19,29 @@ export function portal(node: HTMLElement): { destroy: () => void } {
 export function modal(node: HTMLElement): { destroy: () => void } {
   const back = document.activeElement instanceof HTMLElement ? document.activeElement : null;
   document.body.appendChild(node);
-  const page = document.getElementById("app");
-  page?.setAttribute("inert", "");
+  const release = inertPage();
   node.querySelector<HTMLElement>('[role="dialog"]')?.focus();
   return {
     destroy() {
       node.remove();
-      page?.removeAttribute("inert");
+      release();
       back?.focus();
     },
+  };
+}
+
+/** The overlays that are open: the page behind them is inert while any of them is, and the
+ *  last one to close takes that back. Two overlays open at once (the update window over the save
+ *  editor) must not make the page reachable when the first of them closes. */
+let overlays = 0;
+
+/** Makes the page behind an overlay inert; returns what undoes it. */
+export function inertPage(): () => void {
+  const page = document.getElementById("app");
+  overlays++;
+  page?.setAttribute("inert", "");
+  return () => {
+    overlays--;
+    if (overlays <= 0) page?.removeAttribute("inert");
   };
 }

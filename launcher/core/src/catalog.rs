@@ -173,7 +173,7 @@ struct RawBuild {
     readme: Option<String>,
 }
 
-#[derive(Deserialize)]
+#[derive(Deserialize, Debug)]
 struct RawSummaryRow {
     /// None for a version with no report yet: one such row must not make the whole file unread.
     #[serde(default)]
@@ -186,6 +186,13 @@ struct RawSummaryRow {
 /// not parse is an error (CI keeps them valid); a missing or unreadable
 /// progress/summary.json only leaves the progress out.
 pub fn load(root: &Path) -> Result<Catalog, String> {
+    load_with(root, None)
+}
+
+/// The catalogue from the checkout at `root`, with the launcher's own copy of the figures
+/// from bytematch.dev in `cache` (the file the launcher keeps them in, so that it can show
+/// them without a network; none when it keeps no copy).
+pub fn load_with(root: &Path, cache: Option<&Path>) -> Result<Catalog, String> {
     let games_dir = root.join("games");
     let mut manifests: Vec<_> = std::fs::read_dir(&games_dir)
         .map_err(|e| format!("cannot read {}: {e}", games_dir.display()))?
@@ -195,7 +202,7 @@ pub fn load(root: &Path) -> Result<Catalog, String> {
         .collect();
     manifests.sort();
 
-    let summary = read_summary(root);
+    let summary = read_summary(root, cache);
     let mut games = Vec::new();
     for path in manifests {
         let text = std::fs::read_to_string(&path).map_err(|e| format!("cannot read {}: {e}", path.display()))?;
@@ -205,22 +212,26 @@ pub fn load(root: &Path) -> Result<Catalog, String> {
     Ok(Catalog { games })
 }
 
-/// Where the figures fetched from bytematch.dev are kept between runs: under build/, which git
-/// does not track. progress/summary.json belongs to the checkout (`openrac.py progress` writes
-/// it) and the launcher never changes it.
-fn site_cache(root: &Path) -> std::path::PathBuf {
-    root.join("build").join("launcher").join("progress.json")
-}
-
+/// The rows of a progress file: the ones that can be read. A row that is malformed (a figure
+/// of the wrong kind) is left out, not the whole file: one bad row must not take every game's
+/// figures away.
 fn read_rows(path: &Path) -> BTreeMap<String, RawSummaryRow> {
-    std::fs::read_to_string(path).ok().and_then(|text| serde_json::from_str(&text).ok()).unwrap_or_default()
+    let Some(text) = std::fs::read_to_string(path).ok() else { return BTreeMap::new() };
+    let Some(json) = serde_json::from_str::<serde_json::Value>(&text).ok() else { return BTreeMap::new() };
+    let Some(rows) = json.as_object() else { return BTreeMap::new() };
+    rows.iter()
+        .filter_map(|(key, value)| {
+            serde_json::from_value::<RawSummaryRow>(value.clone()).ok().map(|row| (key.clone(), row))
+        })
+        .collect()
 }
 
 /// The checkout's own figures, with bytematch.dev's in their place wherever the site has a
 /// version: the site is what every project's CI last reported, so it is the current figure.
-fn read_summary(root: &Path) -> BTreeMap<String, RawSummaryRow> {
+fn read_summary(root: &Path, cache: Option<&Path>) -> BTreeMap<String, RawSummaryRow> {
     let mut rows = read_rows(&root.join("progress").join("summary.json"));
-    for (key, site) in read_rows(&site_cache(root)) {
+    let Some(cache) = cache else { return rows };
+    for (key, site) in read_rows(cache) {
         match rows.get_mut(&key) {
             Some(own) => {
                 if site.progress.is_some() {
@@ -351,11 +362,13 @@ pub fn bytematch_projects_for(root: &Path, projects_json: &str) -> Result<Vec<(S
 }
 
 /// Keeps the latest figures from bytematch.dev's project list, with the functional C summary of
-/// each project's own JSON in PROJECT_JSONS ("owner/repo" -> its JSON), in build/launcher/ for the
-/// next start without a network, and returns the reloaded Catalog. A version takes the project
-/// bytematch_projects_for gives it. The checkout's progress/summary.json is read, never written.
+/// each project's own JSON in PROJECT_JSONS ("owner/repo" -> its JSON), in `cache` (the file
+/// the launcher keeps them in, for the next start without a network), and returns the reloaded
+/// Catalog. A version takes the project bytematch_projects_for gives it. The checkout's
+/// progress/summary.json is read, never written.
 pub fn update_progress_from_bytematch(
     root: &Path,
+    cache: &Path,
     projects_json: &str,
     project_jsons: &BTreeMap<String, String>,
 ) -> Result<Catalog, String> {
@@ -387,13 +400,12 @@ pub fn update_progress_from_bytematch(
             }),
         );
     }
-    let summary_path = site_cache(root);
-    if let Some(dir) = summary_path.parent() {
+    if let Some(dir) = cache.parent() {
         let _ = std::fs::create_dir_all(dir);
     }
     let formatted = serde_json::to_string_pretty(&rows).map_err(|e| e.to_string())?;
-    std::fs::write(&summary_path, formatted).map_err(|e| format!("cannot write {}: {e}", summary_path.display()))?;
-    load(root)
+    std::fs::write(cache, formatted).map_err(|e| format!("cannot write {}: {e}", cache.display()))?;
+    load_with(root, Some(cache))
 }
 
 impl Catalog {
@@ -459,6 +471,22 @@ mod tests {
     }
 
     #[test]
+    fn a_malformed_row_leaves_the_others_readable() {
+        let dir = tempfile::tempdir().unwrap();
+        let summary = dir.path().join("summary.json");
+        // One row with a figure of the wrong kind, and one that is right.
+        std::fs::write(
+            &summary,
+            r#"{"rac1/pal": {"progress": {"matched_code": 5, "total_code": 10, "percent": 50.0}},
+                "rac1/ntsc": {"progress": {"percent": "86%"}}}"#,
+        )
+        .unwrap();
+        let rows = read_rows(&summary);
+        assert_eq!(rows.len(), 1, "the row that can be read is kept: {rows:?}");
+        assert_eq!(rows["rac1/pal"].progress.as_ref().unwrap().percent, 50.0);
+    }
+
+    #[test]
     fn updates_progress_from_bytematch_and_caches_offline() {
         let dir = tempfile::tempdir().unwrap();
         let game = dir.path().join("games").join("rac1");
@@ -492,7 +520,11 @@ mod tests {
             "OpenRAC/rac1-decomp".to_string(),
             r#"{"functional": {"code": 370968, "code_percent": 9.99, "functions": 389}}"#.to_string(),
         );
-        let catalog = update_progress_from_bytematch(dir.path(), site_json, &jsons).unwrap();
+        // The launcher's own folder, beside its settings: where it can always write, unlike
+        // a checkout it does not own (the copy an installed launcher carries).
+        let mine = tempfile::tempdir().unwrap();
+        let cache = mine.path().join("progress.json");
+        let catalog = update_progress_from_bytematch(dir.path(), &cache, site_json, &jsons).unwrap();
         // By serial, and the site's figure wins over the checkout's.
         let pal = catalog.version("rac1/pal").unwrap().progress.as_ref().unwrap();
         assert_eq!(pal.percent, 86.18);
@@ -503,9 +535,11 @@ mod tests {
         // By the project game.json names, though another project has the same serial.
         assert_eq!(catalog.version("rac1/ntsc").unwrap().progress.as_ref().unwrap().percent, 89.75);
 
-        // The checkout's own file is not changed; offline, the kept copy is read again.
+        // The checkout's own file is not changed, and nothing is written in the checkout;
+        // offline, the kept copy is read again.
         assert!(std::fs::read_to_string(dir.path().join("progress").join("summary.json")).unwrap().contains("99.0"));
-        let offline = load(dir.path()).unwrap();
+        assert!(!dir.path().join("build").exists(), "the copy is not written in the checkout");
+        let offline = load_with(dir.path(), Some(&cache)).unwrap();
         assert_eq!(offline.version("rac1/pal").unwrap().progress.as_ref().unwrap().percent, 86.18);
     }
 }

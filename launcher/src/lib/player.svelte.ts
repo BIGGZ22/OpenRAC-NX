@@ -18,6 +18,7 @@ import {
 } from "./app.svelte";
 import { choiceFor, pickVersion } from "./discChoice";
 import { phaseLabel } from "./progress";
+import { PLAY_ACTIONS } from "./reports";
 import type { Job } from "./queue";
 
 export type PlayerKind =
@@ -60,9 +61,10 @@ function jobOf(v: VersionView, ids: string[]): Job | null {
   );
 }
 
-/** The launcher is running V's game, which writes its memory card too. */
+/** The launcher is running V's game, which writes its memory card too. The game with
+ *  the player's mods counts too: it is the same program, writing the same card. */
 export function isPlaying(v: VersionView): boolean {
-  return jobOf(v, ["play"]) !== null;
+  return jobOf(v, PLAY_ACTIONS) !== null;
 }
 
 const action = (v: VersionView, id: string): ActionView | null =>
@@ -223,7 +225,7 @@ export function playerState(game: GameView, v: VersionView): PlayerState {
       tone: "ok",
     };
   }
-  const playing = jobOf(v, ["play"]);
+  const playing = jobOf(v, PLAY_ACTIONS);
   if (playing) {
     return {
       ...base,

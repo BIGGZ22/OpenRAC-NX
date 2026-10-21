@@ -155,6 +155,9 @@ fn save_config(state: State<'_, AppState>, mut config: Config) -> Result<Config,
     let file = state.config_file.as_deref().ok_or("no per-user config folder")?;
     // Developer tools switched off: back to the carried copy (detect::settle).
     detect::settle(&mut config, state.bundled.as_deref());
+    // The page sends the settings back without the paths the launcher keeps its own files
+    // in; they are set again here.
+    config.progress_cache = progress_cache(state.config_file.as_deref());
     config::save(file, &config)?;
     *state.config.lock().unwrap() = config.clone();
 
@@ -180,8 +183,15 @@ fn save_config(state: State<'_, AppState>, mut config: Config) -> Result<Config,
 
 /// Where to look for a checkout: next to the launcher and the folder it was started from.
 fn start_folders() -> Vec<PathBuf> {
-    let exe = std::env::current_exe().ok().and_then(|p| p.parent().map(Path::to_path_buf));
+    let exe = std::env::current_exe().ok().and_then(|p| p.parent().map(PathBuf::from));
     exe.into_iter().chain(std::env::current_dir().ok()).collect()
+}
+
+/// The file the launcher keeps its own copy of the figures it fetched from bytematch.dev in:
+/// in the per-user folder beside its settings, which the launcher can always write. A
+/// checkout it does not own (the copy an installed launcher carries) is read-only.
+fn progress_cache(config_file: Option<&std::path::Path>) -> Option<PathBuf> {
+    config_file.and_then(|file| file.parent()).map(|dir| dir.join("progress.json"))
 }
 
 #[tauri::command]
@@ -681,10 +691,12 @@ async fn uninstall_game(state: State<'_, AppState>, game: String) -> Result<(), 
 async fn sync_progress_from_web(state: State<'_, AppState>) -> Result<Library, String> {
     let config = state.config.lock().unwrap().clone();
     let root = config.root.clone().ok_or("the OpenRAC folder is not set")?;
+    let cache = config.progress_cache.clone().ok_or("no per-user folder for the launcher's own files")?;
 
     // Every project's latest progress from bytematch.dev, and each game's project JSON for its
     // functional C, with curl (on Linux, macOS and Windows 10+). Offline, the kept copy is read.
     let root_for_fetch = root.clone();
+    let cache_for_fetch = cache.clone();
     tauri::async_runtime::spawn_blocking(move || {
         use openrac_launcher_core::catalog;
         // detect::quiet: each curl opened a console window of its own on Windows, at every start.
@@ -707,7 +719,7 @@ async fn sync_progress_from_web(state: State<'_, AppState>) -> Result<Library, S
                 jsons.insert(slug, text);
             }
         }
-        let _ = catalog::update_progress_from_bytematch(&root_for_fetch, &list, &jsons);
+        let _ = catalog::update_progress_from_bytematch(&root_for_fetch, &cache_for_fetch, &list, &jsons);
     })
     .await
     .map_err(|e| e.to_string())?;
@@ -719,7 +731,8 @@ async fn sync_progress_from_web(state: State<'_, AppState>) -> Result<Library, S
 async fn apply_progress_json(state: State<'_, AppState>, json: String) -> Result<Library, String> {
     let config = state.config.lock().unwrap().clone();
     let root = config.root.clone().ok_or("the OpenRAC folder is not set")?;
-    openrac_launcher_core::catalog::update_progress_from_bytematch(&root, &json, &Default::default())?;
+    let cache = config.progress_cache.clone().ok_or("no per-user folder for the launcher's own files")?;
+    openrac_launcher_core::catalog::update_progress_from_bytematch(&root, &cache, &json, &Default::default())?;
     tauri::async_runtime::spawn_blocking(move || library::library(&config)).await.map_err(|e| e.to_string())?
 }
 
@@ -1114,6 +1127,7 @@ pub fn run() {
 
             let config_file = app.path().app_config_dir().ok().map(|dir| dir.join("launcher.json"));
             let mut config = config_file.as_deref().map(config::load).unwrap_or_default();
+            config.progress_cache = progress_cache(config_file.as_deref());
 
             // First run / startup: ensure the OpenRAC folder exists in the user's home directory.
             // On Linux: /home/<user>/OpenRAC

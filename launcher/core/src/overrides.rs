@@ -80,8 +80,15 @@ fn write_state(dir: &Path, state: &State) -> Result<(), String> {
     let path = dir.join(STATE);
     let temporary = dir.join(format!("{STATE}.tmp"));
     let text = serde_json::to_string_pretty(state).map_err(|e| e.to_string())? + "\n";
-    std::fs::write(&temporary, text).map_err(|e| format!("{}: {e}", temporary.display()))?;
-    std::fs::rename(&temporary, &path).map_err(|e| format!("{}: {e}", path.display()))
+    if let Err(e) = std::fs::write(&temporary, text) {
+        let _ = std::fs::remove_file(&temporary);
+        return Err(format!("{}: {e}", temporary.display()));
+    }
+    if let Err(e) = std::fs::rename(&temporary, &path) {
+        let _ = std::fs::remove_file(&temporary);
+        return Err(format!("{}: {e}", path.display()));
+    }
+    Ok(())
 }
 
 /// An id `editor/overrides.py` makes: lowercase letters, digits and dashes. Anything else

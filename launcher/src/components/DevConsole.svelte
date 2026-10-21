@@ -2,7 +2,7 @@
   // Develop's console: what ran, what runs, what waits, and each job's output, as a contributor
   // reads it. The list filters by state; a finished check or build can be run again.
   import type { ActionView } from "$lib/api";
-  import { app, cancel, clearFinished, clock, jobs, run } from "$lib/app.svelte";
+  import { app, cancel, clearFinished, clock, jobs, run, toast } from "$lib/app.svelte";
   import { elapsed } from "$lib/format";
   import type { Job, JobState } from "$lib/queue";
   import Icon from "./Icon.svelte";
@@ -65,7 +65,11 @@
   });
 
   async function copy(job: Job) {
-    await navigator.clipboard.writeText([`$ ${job.command}`, ...job.lines.map((l) => l.line)].join("\n"));
+    try {
+      await navigator.clipboard.writeText([`$ ${job.command}`, ...job.lines.map((l) => l.line)].join("\n"));
+    } catch {
+      toast("The output could not be copied: the browser would not give it to the clipboard.", "error");
+    }
   }
 </script>
 

@@ -10,7 +10,7 @@
   import Icon from "$components/Icon.svelte";
   import { api, type SaveBackupInfo, type SaveChange, type SaveFields, type SaveView } from "$lib/api";
   import { app, toast } from "$lib/app.svelte";
-  import { portal } from "$lib/portal";
+  import { inertPage, portal } from "$lib/portal";
   import { tablist } from "$lib/tabs";
   import { fold } from "$lib/motion";
   import {
@@ -258,12 +258,11 @@
     // A dialog: focus goes into it, the page behind cannot be reached until it closes, and focus
     // goes back where it was (the slot's Edit button).
     const back = document.activeElement instanceof HTMLElement ? document.activeElement : null;
-    const page = document.getElementById("app");
-    page?.setAttribute("inert", "");
+    const release = inertPage();
     modalEl?.focus();
     void load();
     return () => {
-      page?.removeAttribute("inert");
+      release();
       back?.focus();
     };
   });
@@ -590,8 +589,8 @@
             </div>
           </div>
           <ul class="rows planets">
-            {#each view.planets as p, i (p.id)}
-              {@const s = fields.planets[i]}
+            {#each view.planets as p (p.id)}
+              {@const s = fields.planets.find((x) => x.id === p.id)}
               {#if s}
                 <li>
                   <span class="planet">

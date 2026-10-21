@@ -8,18 +8,23 @@
   import { app, dismissStopped, guard, toast } from "$lib/app.svelte";
   import { DISCORD_URL, ISSUES_URL } from "$lib/links";
   import { place, stopText, type StopNotice } from "$lib/reports";
-  import { untrack } from "svelte";
 
   let { notice, title }: { notice: StopNotice; title: string } = $props();
 
   const crash = $derived(notice.crash);
+  /** No crash report: the game was closed or stopped, not crashed. A signal (no exit code) is
+   *  the game being stopped from outside, most of all by the player closing it. */
+  const closed = $derived(!crash);
+  const signalled = $derived(closed && notice.code === null);
   /** The session log of the version played, for a stop that left no report. */
   const sessionLog = $derived(`openrac-${notice.versionKey.replace("/", "-")}.log`);
   let copied = $state(false);
   let saving = $state(false);
   let savedTo = $state<string | null>(null);
-  /** Stopped moments ago: announced as it arrives, not each time the page is opened again. */
-  const fresh = untrack(() => Date.now() - notice.at < 10_000);
+  /** Stopped moments ago: announced as it arrives, not each time the page is opened again. It
+   *  is worked out again when another stop replaces this one, so that a second crash is
+   *  announced as well. */
+  const fresh = $derived(Date.now() - notice.at < 10_000);
   const when = $derived(new Date(notice.at).toLocaleString([], { dateStyle: "medium", timeStyle: "short" }));
 
   async function copy() {
@@ -46,25 +51,29 @@
 
 {#if notice.playedSince}
   <!-- Played to the end since: a line, the report still a click away. -->
-  <section class="notice short" aria-labelledby="stopped-title">
-    <span class="mark" aria-hidden="true"><Icon name="warn" size={18} /></span>
+  <section class="notice short" class:quiet={closed} aria-labelledby="stopped-title">
+    <span class="mark" aria-hidden="true"><Icon name={closed ? "info" : "warn"} size={18} /></span>
     <p id="stopped-title" class="grow">
-      {title} stopped unexpectedly {when}. It has run fine since; the report can still help us.
+      {title}
+      {crash ? "crashed" : "was closed"}
+      {when}. It has run fine since{#if crash}; the report can still help us{/if}.
     </p>
     <button class="small" onclick={() => void copy()}>
-      <Icon name={copied ? "check" : "book"} size={14} />{copied ? "Copied" : "Copy report"}
+      <Icon name={copied ? "check" : "book"} size={14} />{copied ? "Copied" : crash ? "Copy report" : "Copy the log"}
     </button>
-    <button class="ghost small" onclick={dismissStopped} aria-label="Dismiss the crash notice">
+    <button class="ghost small" onclick={dismissStopped} aria-label="Dismiss the notice">
       <Icon name="x" size={14} />Dismiss
     </button>
     <span class="live" aria-live="polite">{copied ? "The report is copied." : ""}</span>
   </section>
 {:else}
   <!-- An alert only as it arrives: coming back to the page does not announce it again. -->
-  <section class="notice rise" role={fresh ? "alert" : undefined} aria-labelledby="stopped-title">
+  <section class="notice rise" class:quiet={closed} role={fresh ? "alert" : undefined} aria-labelledby="stopped-title">
     <div class="head">
-      <span class="mark" aria-hidden="true"><Icon name="warn" size={22} /></span>
-      <h2 id="stopped-title" class="grow">The game stopped unexpectedly</h2>
+      <span class="mark" aria-hidden="true"><Icon name={closed ? "info" : "warn"} size={22} /></span>
+      <h2 id="stopped-title" class="grow">
+        {crash ? "The game crashed" : signalled ? "The game was closed" : "The game stopped"}
+      </h2>
       <button
         class="ghost small close"
         onclick={dismissStopped}
@@ -76,18 +85,24 @@
     </div>
 
     <p class="say">
-      {title} closed by itself{crash ? ` while you were ${place(crash)}` : ""}. This is a problem in OpenRAC, not
-      something you did, and your saves are kept. Copy the report and paste it in a message to us on Discord: it helps
-      us fix it.
+      {#if crash}
+        {title} crashed while you were {place(crash)}. This is a problem in OpenRAC, not something you did, and your
+        saves are kept. Copy the report and paste it in a message to us on Discord: it helps us fix it.
+      {:else}
+        {title} was closed without a crash report, so nothing is wrong: your saves are kept, and there is nothing to send
+        us. Its log is under Logs and crash reports, if you want to look at it.
+      {/if}
     </p>
 
     <div class="actions">
       <button onclick={() => void copy()}>
-        <Icon name={copied ? "check" : "book"} size={16} />{copied ? "Copied" : "Copy report"}
+        <Icon name={copied ? "check" : "book"} size={16} />{copied ? "Copied" : crash ? "Copy report" : "Copy the log"}
       </button>
-      <button class="ghost" onclick={() => void api.openUrl(DISCORD_URL)}>
-        <Icon name="external" size={16} />Open Discord
-      </button>
+      {#if crash}
+        <button class="ghost" onclick={() => void api.openUrl(DISCORD_URL)}>
+          <Icon name="external" size={16} />Open Discord
+        </button>
+      {/if}
       <span class="live" aria-live="polite">{copied ? "The report is copied: paste it in your message." : ""}</span>
     </div>
 
@@ -123,7 +138,7 @@
           <dt>What happened</dt>
           <dd>
             {notice.code === null
-              ? "The system stopped the game."
+              ? "The game was closed (by you, or by the system)."
               : `The game ended with exit code ${notice.code}, without a crash report.`}
           </dd>
         {/if}
@@ -148,6 +163,16 @@
     border-radius: 16px;
     border: 1px solid color-mix(in srgb, var(--err) 55%, transparent);
     background: linear-gradient(color-mix(in srgb, var(--err) 7%, transparent), transparent 60%), var(--panel);
+  }
+
+  /* No crash report: the game was closed, which is not a fault. Not red, and no alarm. */
+  .notice.quiet {
+    border-color: var(--line-strong);
+    background: var(--panel);
+  }
+
+  .notice.quiet .mark {
+    color: var(--dim);
   }
 
   .short {

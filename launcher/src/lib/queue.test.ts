@@ -30,6 +30,38 @@ describe("queue", () => {
     expect(a.code).toBe(2);
   });
 
+  it("reports the end of a job once, whenever its event arrives", () => {
+    const q = new Queue();
+    const a = q.add(repo, "play", "Play");
+    // The event comes after the start call returned: the end is there to be taken.
+    q.started(a, 4, "cmd");
+    q.apply({ type: "exit", id: 4, code: 0, cancelled: false });
+    expect(q.takeEnded()).toBe(a);
+    expect(q.takeEnded()).toBeUndefined();
+  });
+
+  it("reports the end of a job whose event came before its id was known", () => {
+    const q = new Queue();
+    const a = q.add(repo, "play", "Play");
+    // The event comes first: nothing can be reported until the id is known.
+    q.apply({ type: "exit", id: 4, code: 0, cancelled: false });
+    expect(q.takeEnded()).toBeUndefined();
+    q.started(a, 4, "cmd");
+    expect(a.state).toBe("succeeded");
+    expect(q.takeEnded()).toBe(a);
+    expect(q.takeEnded()).toBeUndefined();
+  });
+
+  it("forgets the jobs it is done with", () => {
+    const q = new Queue();
+    const a = q.add(repo, "a", "A");
+    q.started(a, 1, "cmd");
+    q.apply({ type: "exit", id: 1, code: 0, cancelled: false });
+    q.clear();
+    expect(q.jobs).toEqual([]);
+    expect(q.takeEnded()).toBeUndefined();
+  });
+
   it("records refusals, cancellations and dequeues", () => {
     const q = new Queue();
     const a = q.add(repo, "a", "A");

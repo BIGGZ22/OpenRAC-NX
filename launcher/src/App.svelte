@@ -2,7 +2,7 @@
   import Header from "$components/Header.svelte";
   import Toasts from "$components/Toasts.svelte";
   import UpdateModal from "$components/UpdateModal.svelte";
-  import { onAndroid } from "$lib/api";
+  import { errorText, onAndroid } from "$lib/api";
   import { app, openDevelop, refresh, start, updateDiscordPresence, type Page } from "$lib/app.svelte";
   import Game from "./pages/Game.svelte";
   import Library from "./pages/Library.svelte";
@@ -58,18 +58,23 @@
     // ?page=tasks (and ?version=rac1/pal) open a page directly: handy for screenshots.
     // ?page=develop opens Develop on ?version, or on ?develop=checkout|console.
     const params = new URLSearchParams(location.search);
-    void start().then(() => {
-      const version = params.get("version");
-      if (version) {
-        app.version = version;
-        app.page = "game";
-      }
-      const page = params.get("page") as Page | null;
-      if (page === "develop") openDevelop(params.get("develop") ?? version ?? undefined);
-      else if (page) app.page = page;
-      // ?update&modal=update: the update window open on the preview's update (mock.ts).
-      if (params.get("modal") === "update") app.showUpdateModal = true;
-    });
+    void start()
+      .then(() => {
+        const version = params.get("version");
+        if (version) {
+          app.version = version;
+          app.page = "game";
+        }
+        const page = params.get("page") as Page | null;
+        if (page === "develop") openDevelop(params.get("develop") ?? version ?? undefined);
+        else if (page) app.page = page;
+        // ?update&modal=update: the update window open on the preview's update (mock.ts).
+        if (params.get("modal") === "update") app.showUpdateModal = true;
+      })
+      .catch((e: unknown) => {
+        // start() says what went wrong itself; this is the last word for anything else.
+        app.startError = errorText(e);
+      });
     // Pick up what changed outside the launcher (a build in a terminal, a new disc).
     const onFocus = () => void refresh();
     window.addEventListener("focus", onFocus);
@@ -81,8 +86,13 @@
 
 {#if !app.config}
   <div class="loading">
-    <span class="spinner"></span>
-    {#if app.preparing}<p>Preparing OpenRAC's tools. This happens once after installing or updating.</p>{/if}
+    {#if app.startError}
+      <p>The launcher could not start: {app.startError}</p>
+      <button class="primary" onclick={() => void start()}>Try again</button>
+    {:else}
+      <span class="spinner"></span>
+      {#if app.preparing}<p>Preparing OpenRAC's tools. This happens once after installing or updating.</p>{/if}
+    {/if}
   </div>
 {:else}
   <div class="shell">

@@ -130,6 +130,9 @@ fn inputs_changed(root: &Path, game: &str, from: &str, to: &str) -> bool {
 /// what the game is built from, or the game not among those it built. Only asked of a game that is
 /// built.
 pub fn outdated(root: &Path, game: &str) -> bool {
+    // A copy that is not a checkout (the one an installed launcher carries) has no version to
+    // compare the build with, and cannot be built again here: it is not outdated.
+    let Some(current) = checkout_version(root) else { return false };
     let stamp: Stamp = match std::fs::read_to_string(root.join(BUILD_DIR).join(STAMP)) {
         Ok(text) => serde_json::from_str(&text).unwrap_or_default(),
         Err(_) => return true,
@@ -137,7 +140,7 @@ pub fn outdated(root: &Path, game: &str) -> bool {
     if !stamp.games.iter().any(|g| g == game) {
         return true;
     }
-    if stamp.version != checkout_version(root) {
+    if stamp.version != Some(current) {
         return true;
     }
     // A checkout whose commit cannot be read (an installer's copy) goes by the version alone.
@@ -197,6 +200,17 @@ mod tests {
         assert!(outdated(dir.path(), "rac1-pal"));
         std::fs::write(dir.path().join(BUILD_DIR).join(STAMP), "not json").unwrap();
         assert!(outdated(dir.path(), "rac1-pal"));
+    }
+
+    /// A copy that is not a checkout: the one an installed launcher carries, with the game built
+    /// in it and no version of its own to compare that build with.
+    #[test]
+    fn a_carried_copy_is_not_outdated() {
+        let dir = tempfile::tempdir().unwrap();
+        let root = dir.path();
+        std::fs::create_dir_all(root.join(BUILD_DIR)).unwrap();
+        std::fs::write(root.join(BUILD_DIR).join("openrac-rac1-pal"), b"x").unwrap();
+        assert!(!outdated(root, "rac1-pal"), "there is nothing to compare the build with");
     }
 
     #[test]

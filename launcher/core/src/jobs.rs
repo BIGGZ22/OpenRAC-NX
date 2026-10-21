@@ -8,7 +8,7 @@ use std::io::{BufRead, BufReader, Read};
 use std::process::{Child, Command, Stdio};
 use std::sync::atomic::{AtomicU32, Ordering};
 use std::sync::{Arc, Mutex};
-use std::time::Duration;
+use std::time::{Duration, Instant};
 
 use serde::Serialize;
 
@@ -27,6 +27,11 @@ pub enum Stream {
     Stdout,
     Stderr,
 }
+
+/// How long the end of a job waits for its output to be read, after the program itself has
+/// ended: long enough for the last lines, short enough that a program that left something
+/// behind (a daemon, a watcher) does not hold the queue up for ever.
+const OUTPUT_GRACE: Duration = Duration::from_secs(3);
 
 #[derive(Debug, Clone, Serialize)]
 #[serde(rename_all = "camelCase")]
@@ -48,8 +53,15 @@ pub struct Jobs {
 #[derive(Default)]
 struct Inner {
     next: AtomicU32,
-    running: Mutex<HashMap<u32, Arc<Mutex<Child>>>>,
-    cancelled: Mutex<HashSet<u32>>,
+    /// The running jobs and the ones the player cancelled, under one lock: a cancel and
+    /// the end of a job are decided together, so that one cannot come apart from the other.
+    jobs: Mutex<State>,
+}
+
+#[derive(Default)]
+struct State {
+    running: HashMap<u32, Arc<Mutex<Child>>>,
+    cancelled: HashSet<u32>,
 }
 
 /// What every job gets in its environment: unbuffered, UTF-8 Python output,
@@ -102,7 +114,7 @@ impl Jobs {
             pumps.push(pump(id, Stream::Stderr, err, sink.clone()));
         }
         let child = Arc::new(Mutex::new(child));
-        self.inner.running.lock().unwrap().insert(id, child.clone());
+        self.inner.jobs.lock().unwrap().running.insert(id, child.clone());
 
         let inner = self.inner.clone();
         std::thread::spawn(move || {
@@ -115,11 +127,27 @@ impl Jobs {
                 }
                 std::thread::sleep(Duration::from_millis(100));
             };
+            // The output is read by two threads, which end when the pipe is closed. A
+            // program that leaves something behind (a daemon, a watcher) keeps the pipe
+            // open after it has ended, so the end of the job is reported after a moment:
+            // the tail of the output may be lost, but a process that is not the job's
+            // never holds the queue up.
+            let deadline = Instant::now() + OUTPUT_GRACE;
             for p in pumps {
-                let _ = p.join();
+                while !p.is_finished() && Instant::now() < deadline {
+                    std::thread::sleep(Duration::from_millis(20));
+                }
+                if p.is_finished() {
+                    let _ = p.join();
+                }
+                // Not finished: the thread ends when the pipe is closed, at the latest when
+                // the program holding it ends. It is left to end on its own.
             }
-            inner.running.lock().unwrap().remove(&id);
-            let cancelled = inner.cancelled.lock().unwrap().remove(&id);
+            let cancelled = {
+                let mut jobs = inner.jobs.lock().unwrap();
+                jobs.running.remove(&id);
+                jobs.cancelled.remove(&id)
+            };
             sink(Event::Exit { id, code: status.and_then(|s| s.code()), cancelled });
         });
         Ok(Started { id, title: plan.title.clone(), command: command_line(plan), detached: false })
@@ -128,14 +156,27 @@ impl Jobs {
     /// Stops job `id` and everything it started (a build runs compilers in
     /// containers). A job that has already ended is not an error.
     pub fn cancel(&self, id: u32) -> Result<(), String> {
-        let Some(child) = self.inner.running.lock().unwrap().get(&id).cloned() else { return Ok(()) };
-        self.inner.cancelled.lock().unwrap().insert(id);
+        // The end of a job and the cancel of it are decided together: a cancel that
+        // arrives as the job ends is either the one that stopped it (the exit says so) or
+        // nothing at all (the job had already ended). They cannot come apart, and one
+        // cannot leave the other behind.
+        let child = {
+            let mut jobs = self.inner.jobs.lock().unwrap();
+            match jobs.running.get(&id).cloned() {
+                Some(child) => {
+                    jobs.cancelled.insert(id);
+                    Some(child)
+                }
+                None => None,
+            }
+        };
+        let Some(child) = child else { return Ok(()) };
         let mut child = child.lock().unwrap();
         kill_tree(&mut child)
     }
 
     pub fn running(&self) -> Vec<u32> {
-        let mut ids: Vec<u32> = self.inner.running.lock().unwrap().keys().copied().collect();
+        let mut ids: Vec<u32> = self.inner.jobs.lock().unwrap().running.keys().copied().collect();
         ids.sort_unstable();
         ids
     }
@@ -351,6 +392,33 @@ mod tests {
         jobs.cancel(started.id).unwrap();
         let exit = rx.recv_timeout(Duration::from_secs(10)).unwrap();
         assert!(matches!(exit, Event::Exit { cancelled: true, .. }), "{exit:?}");
+        // The cancel and the end of the job are decided together: nothing is left behind.
+        assert!(jobs.inner.jobs.lock().unwrap().cancelled.is_empty());
+        assert!(jobs.running().is_empty());
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn a_job_that_leaves_a_process_behind_still_ends() {
+        let jobs = Jobs::default();
+        let (tx, rx) = mpsc::channel();
+        let tx = Mutex::new(tx);
+        // The program ends at once, but the process it left behind keeps the output pipe
+        // open: the job must still report its end, or the queue waits for ever.
+        let started = jobs
+            .start(&sh("sleep 10 & echo started; exit 0"), None, move |e| {
+                tx.lock().unwrap().send(e).unwrap();
+            })
+            .unwrap();
+        let mut lines = Vec::new();
+        let exit = loop {
+            match rx.recv_timeout(Duration::from_secs(8)).unwrap() {
+                Event::Output { line, .. } => lines.push(line),
+                exit @ Event::Exit { .. } => break exit,
+            }
+        };
+        assert_eq!(exit, Event::Exit { id: started.id, code: Some(0), cancelled: false });
+        assert!(lines.contains(&"started".to_string()), "{lines:?}");
     }
 
     #[test]

@@ -102,7 +102,7 @@
     const game = v?.game;
     const mine = ++reading;
     last = null;
-    if (!game || !setUp || app.reportsChanged < 0) return;
+    if (!game || !setUp) return;
     void api
       .reportsList(game)
       .then((entries) => {
