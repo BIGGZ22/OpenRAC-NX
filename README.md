@@ -93,7 +93,7 @@ turns the levels from your own disc into Godot projects:
 
 The desktop launcher also includes a built-in **Mods** tab that handles extracting,
 launching Godot, packing your changes, and playing your modded levels in one click.
-See [editor/README.md](editor/README.md) for moby class data, pvars, and GDScript behaviour details.
+See [editor/README.md](editor/README.md) for moby class data, pvars and the level's gameplay data; behaviour is modded through the mod SDK ([docs/port/MODS.md](docs/port/MODS.md)).
 
 ## Decompiling
 

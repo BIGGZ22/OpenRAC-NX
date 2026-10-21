@@ -121,26 +121,15 @@ class is and what runs it, in its tooltip in the Scene dock and as metadata:
 | `rc1_source` | where that function is in the decompilation ([games/rac1](../games/rac1)), and the tooltip says whether it is C there yet |
 
 That function is the moby's behaviour: an enemy's attack pattern, a crate
-breaking, a vendor's menu. It is ordinary C in the decompilation, and the
-native port is built from that C, so **changing a moby's logic is editing
-that function and building the port again** (the launcher's Build the game).
-There is no scripting layer on top of it yet: no way to change behaviour
-from Godot or without a compiler. The table comes from the decompilation's
-`config/overlays/names.tsv` (its `UpdateMoby_<class>` roles), per level, so
-it is only written when `games/rac1` is in the checkout.
-
-## Moby behaviour as GDScript (prototype)
-
-```sh
-python3 editor/behaviour.py export <exported level project> --level 0 --classes 357,749,500
-```
-
-Writes a GDScript per moby class into `levels/level_NN/mobys/behaviour/` and attaches it to
-the class scene: the class, its update function and source, its pvars as typed exported
-variables with their offsets, and the update function translated from the decompiled C (what
-could not be translated is a `pass  # not translated` line saying why). The scripts run against
-the `RcEngine` stub in `rc1/` for reading and preview; the port still runs the C. See
-[BEHAVIOUR.md](BEHAVIOUR.md) for what was found and the routes to getting scripts into the game.
+breaking, a vendor's menu. It is C in the decompilation, and the native port
+is built from that C. Behaviour is not edited in Godot: the level editor edits
+levels and their data, and nothing in a project runs game logic. A class's
+behaviour is changed by a mod through the mod SDK, on the port's hook points
+([docs/port/MODS.md](../docs/port/MODS.md)); the SDK's behaviour catalogue
+([BEHAVIOUR.md](BEHAVIOUR.md), `sdk/catalogue/rac1/`) names each class's update
+function, its hook point and its pvar fields. The table comes from the
+decompilation's `config/overlays/names.tsv` (its `UpdateMoby_<class>` roles),
+per level, so it is only written when `games/rac1` is in the checkout.
 
 ## Pack your edits
 

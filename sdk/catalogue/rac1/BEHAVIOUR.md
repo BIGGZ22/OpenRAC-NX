@@ -735,7 +735,7 @@ its instructions). **Hook**: the hook point, or the name proposed for one and wh
 ## Hook-after candidates
 
 The game functions update functions call most, engine maths helpers left out
-([editor/behaviour_api.tsv](../../../editor/behaviour_api.tsv) lists those): a hook on one runs
+([editor/engine_helpers.tsv](../../../editor/engine_helpers.tsv) lists those): a hook on one runs
 for every update function that calls it.
 
 | Function | Name | Called by | C | Signature | Hook point |

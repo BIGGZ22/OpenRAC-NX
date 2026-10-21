@@ -21,7 +21,7 @@ nonmatching/functional.tsv for candidate C, include/moby.h for the moby record,
 include/moby_pvars.h for the typed pvars), the port's tables for the PAL and NTSC-U discs
 (port/game/rac1-pal: libraries.tsv for hook and wrap rows, split_places.tsv, hand/hand.tsv,
 no_c.tsv; port/game/rac1-ntsc/libraries.tsv), the SDK's game header
-(sdk/include/openrac/games/rac1.h), editor/moby_classes.tsv and editor/behaviour_api.tsv.
+(sdk/include/openrac/games/rac1.h), editor/moby_classes.tsv and editor/engine_helpers.tsv.
 
 classes.json, format 1, the stable contract. Fields are only added within a format; one that
 changes meaning or goes raises the format. One class per line:
@@ -93,7 +93,6 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parent))
 
-from behaviour import TYPE_HEADERS
 from cparse import Types, strip
 from mobys import CLASS_NAMES, DECOMPILATION, LEVEL_NAMES, c_definitions, names_h_symbols, update_roles
 
@@ -104,6 +103,8 @@ NTSC = REPO / "port" / "game" / "rac1-ntsc"
 SDK_HEADER = REPO / "sdk" / "include" / "openrac" / "games" / "rac1.h"
 OUT = REPO / "sdk" / "catalogue" / "rac1"
 PVARS_HEADER = "moby_pvars.h"
+# The decompilation's headers the struct layouts are read from (games/rac1/include).
+TYPE_HEADERS = ("common.h", "vector.h", "moby.h", "hero.h", "pad.h", "records.h", "structs.h")
 CLASSES_FORMAT = 1  # classes.json: raised only when a field changes meaning or goes
 KEYWORDS = {"if", "while", "for", "switch", "return", "sizeof", "do", "else", "case"}
 SYMBOL = re.compile(r"(?:func|FUN)_(?:L\d\d_)?[0-9A-Fa-f]{8}")
@@ -137,7 +138,7 @@ class Inputs:
     headers: list = field(default_factory=list)        # (path, text) read for struct layouts
     pvars_header: tuple = ("", "")                     # (path, text) of moby_pvars.h
     class_names: dict = field(default_factory=dict)
-    api: dict = field(default_factory=dict)            # behaviour_api.tsv: symbol or name -> meaning
+    api: dict = field(default_factory=dict)            # engine_helpers.tsv: symbol or name -> meaning
     sdk_header: str = ""
 
 
@@ -165,9 +166,9 @@ def load() -> Inputs:
     extra = [(p, _read(REPO / p)) for p in sorted(set(candidates.values()) | set(hand.values()))]
     no_c = {cols[0]: cols[3].strip() for cols in _table(_read(PAL / "no_c.tsv")) if len(cols) >= 4 and cols[0] != "name"}
     api = {}
-    for cols in _table(_read(HERE / "behaviour_api.tsv")):
-        if len(cols) >= 4 and cols[0] == "func":
-            api[cols[1]] = cols[3]
+    for cols in _table(_read(HERE / "engine_helpers.tsv")):
+        if len(cols) >= 3 and cols[0] == "func":
+            api[cols[1]] = cols[2]
     names = {int(cols[0]): cols[1] for cols in _table(_read(CLASS_NAMES)) if len(cols) >= 2}
     return Inputs(
         names_tsv=_read(DECOMPILATION / "config" / "overlays" / "names.tsv"),
@@ -765,7 +766,7 @@ def render_md(cat: dict) -> str:
                      key=lambda x: (-x[1]["called_by"], x[0]))[:60]
     out += ["", "## Hook-after candidates", "",
             "The game functions update functions call most, engine maths helpers left out",
-            "([editor/behaviour_api.tsv](../../../editor/behaviour_api.tsv) lists those): a hook on one runs",
+            "([editor/engine_helpers.tsv](../../../editor/engine_helpers.tsv) lists those): a hook on one runs",
             "for every update function that calls it.", "",
             "| Function | Name | Called by | C | Signature | Hook point |", "|---|---|---|---|---|---|"]
     for s, h in helpers:
