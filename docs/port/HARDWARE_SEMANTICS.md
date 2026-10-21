@@ -101,13 +101,22 @@ type the C gives it in between. hostgen reads the matched C so: a unit's `long l
 64-bit one), and so is a `mode(TI)` cast on any integer type; a 32-bit value a call computes is
 sign-extended where the callee takes 64 bits, as the EE's register holds it; a parameter the C
 only passes on to 64-bit parameters is 64-bit itself (program.py `widen_forwarded`, report.json
-`params_widened`); and a `returns_64` result stays whole through a call by code address. Tests
+`params_widened`); a `returns_64` result stays whole through a call by code address, and
+through a definition with a 32-bit result that returns it as it is (program.py `widen_returns`,
+report.json `results_widened`). An unsigned int or a pointer that an int local kept 64-bit for
+such a result also receives is sign-extended, as `lui`/`ori` or `lw` leave it in the register.
+A local the original keeps in a stack slot across calls holds only the sign-extended low half
+after its `lw`; nothing in the C tells it apart from one kept in a saved register, so hostgen.json
+`spilled_locals` names it (rac1-pal's freeze screen). Tests
 (`Translate`, `Preparation`, `Places`): `test_a_long_long_copy_of_the_games_compiler_moves_a_quadword`,
 `test_a_mode_ti_cast_on_any_integer_type_is_128_bit`,
 `test_a_32_bit_argument_to_a_64_bit_parameter_is_sign_extended`,
 `test_a_parameter_only_passed_on_to_64_bits_is_64_bit`,
 `test_a_widened_parameter_is_whole_in_64_bit_casts_and_its_low_half_in_arithmetic`,
-`test_a_copys_call_keeps_a_returns_64_result_whole`.
+`test_a_copys_call_keeps_a_returns_64_result_whole`,
+`test_a_returns_64_result_returned_as_it_is_is_64_bit_and_constants_beside_it_are_sign_extended`,
+`test_an_unsigned_value_beside_a_returns_64_result_in_a_local_is_sign_extended`,
+`test_a_spilled_local_keeps_a_returns_64_result_sign_extended`.
 
 ## 4. vf0 is read only
 

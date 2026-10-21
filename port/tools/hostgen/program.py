@@ -77,6 +77,10 @@ class Function:
     # (forwarded_params); widen_forwarded makes such a parameter 64-bit where every one of them takes 64 bits
     forwards: dict = field(default_factory=dict)
     widened: dict = field(default_factory=dict)  # parameter index -> the 64-bit type it was given
+    # the functions whose result a `return` statement hands back as it is (returned_calls); widen_returns makes a
+    # 32-bit result 64-bit where one of them is "returns_64"
+    returns: tuple = ()
+    wide_result: bool = False   # its result was made 64-bit so (widen_returns): sig.ret is the 64-bit type
 
 
 @dataclass
@@ -507,6 +511,89 @@ def widen_forwarded(program: Program) -> list[str]:
     return changed
 
 
+# A function result the EE keeps 32-bit in its register (sign-extended): what widen_returns may make 64-bit
+RESULT32 = {"int", "signed int", "signed", "unsigned int", "unsigned", "gaddr"}
+
+
+def returned_calls(decl: dict, by_id: dict) -> tuple:
+    """The functions (symbols) whose result a definition's `return` statements hand back as it is: the value is a
+    direct call's result, through parentheses and conversions that are no instruction on the EE (between 32-bit
+    integers and pointers). The callee's register reaches the caller with all its bits, whatever type the C gives it
+    (widen_returns)."""
+    body = next((c for c in decl.get("inner", ()) if c.get("kind") == "CompoundStmt"), None)
+    if body is None:
+        return ()
+    out = []
+    stack = [body]
+    while stack:
+        n = stack.pop()
+        if n.get("kind") != "ReturnStmt":
+            stack.extend(n.get("inner", ()))
+            continue
+        v = (n.get("inner") or [None])[0]
+        while v is not None and v.get("kind") in _CASTS and v.get("inner"):
+            cast = v.get("castKind")
+            if v.get("kind") != "ParenExpr" and cast not in ("NoOp", "LValueToRValue", "BitCast", "IntegralToPointer",
+                                                             "PointerToIntegral", "IntegralCast"):
+                v = None
+                break
+            if cast in ("IntegralCast", "IntegralToPointer", "PointerToIntegral"):
+                try:
+                    t = parse_type(v)
+                except Exception:  # noqa: BLE001
+                    v = None
+                    break
+                if not (isinstance(t, ctype.Ptr) or (isinstance(t, ctype.Base) and t.name in RESULT32)):
+                    v = None    # a narrower or a 64-bit conversion is an instruction (seh, dsll32 ...)
+                    break
+            v = v["inner"][0]
+        if v is None or v.get("kind") != "CallExpr" or not v.get("inner"):
+            continue
+        callee = v["inner"][0]
+        while callee.get("kind") in ("ImplicitCastExpr", "ParenExpr") and callee.get("inner"):
+            callee = callee["inner"][0]
+        ref = callee.get("referencedDecl") or {}
+        d = by_id.get(ref.get("id")) if callee.get("kind") == "DeclRefExpr" and ref.get("kind") == "FunctionDecl" else None
+        if d is not None and symbol_of(d) not in out:
+            out.append(symbol_of(d))
+    return tuple(out)
+
+
+def widen_returns(program: Program) -> list[str]:
+    """A definition with a 32-bit result that returns the result of a "returns_64" function as it is (returned_calls)
+    returns 64 bits itself: on the EE the callee's register is the caller's result, all its bits, whatever type the C
+    gives it in between (rac1: Pause_GetFadeColor `return FastTweenColor(...)`, an int, is the zero-extended packed
+    colour 0x0000000080FFA888 that Pause_DrawDescriptionBox and DrawMenuItemList pass on to FontPrintWindow's and
+    FontPrint's 64-bit colour). Such a function becomes "returns_64" too (its callers keep the 64 bits: lower.py),
+    its result type the callee's, in the program's signature and in the definition, where every other value it
+    returns is the EE's sign-extended register; through chains of such functions too. Not for the port's own host or
+    wrapped functions (their signatures are the port's). Returns the names changed."""
+    returns_64 = getattr(program, "returns_64", None)
+    if not returns_64:
+        return []
+    changed = []
+    again = True
+    while again:
+        again = False
+        for f in program.functions.values():
+            if f.unit is None or not f.returns or f.wide_result:
+                continue    # no definition, no returned call, or widened already
+            if f.symbol in program.host or f.symbol in program.wrap or canon(f.sig.ret, program.typedefs) not in RESULT32:
+                continue
+            wide = [program.canonical(s) for s in f.returns if program.canonical(s) in returns_64]
+            if not wide:
+                continue
+            g = program.functions.get(wide[0])
+            ret = canon(g.sig.ret, program.typedefs) if g is not None else None
+            f.sig = Signature(ctype.Base(ret if ret in WIDE else "long long"), f.sig.params, f.sig.variadic,
+                              f.sig.prototyped)
+            f.wide_result = True
+            returns_64.add(f.symbol)
+            changed.append(f.symbol)
+            again = True
+    return changed
+
+
 def inherit_results(program: Program) -> list[str]:
     """A definition that returns nothing and ends in a call leaves that call's result in the
     result register, and the decompilation's callers read it there (a wrapper matched as `void
@@ -600,7 +687,8 @@ def index_unit(program: Program, unit: str, ast: dict) -> list[str]:
                 continue
             declared = f.declared if f else []
             program.functions[sym] = Function(sym, sig, unit, asm=f.asm if f else False, declared=declared, tail=tail,
-                                              forwards=forwarded_params(decl, by_id))
+                                              forwards=forwarded_params(decl, by_id),
+                                              returns=returned_calls(decl, by_id))
         else:
             f = program.functions.get(sym)
             if f is None:
@@ -698,7 +786,7 @@ def merge(into: Program, part: Program) -> list[str]:
                 continue
             declared = have.declared + f.declared
             into.functions[sym] = Function(sym, f.sig, f.unit, asm=have.asm, declared=declared, tail=f.tail,
-                                           forwards=f.forwards)
+                                           forwards=f.forwards, returns=f.returns)
         else:
             have.declared.extend(f.declared)
             if have.unit is None and have.declared:
