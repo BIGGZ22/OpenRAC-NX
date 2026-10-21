@@ -1,4 +1,5 @@
-//! A game's native mods: shared libraries the port loads at start (docs/port/MODS.md).
+//! A game's gameplay mods (docs/port/MODS.md): native ones, shared libraries the port loads at
+//! start, and script mods, Luau files the port runs in a sandbox (section 11).
 //!
 //! They live in the game's set-up folder, `<install>/active/<game>/data/plugins`: `<id>/` (each
 //! one as installed, with its `openrac-mod.json`, format 2), `plugins.json` (the order, which are
@@ -20,7 +21,9 @@ use serde_json::{Map, Value};
 /// The mod interface this launcher's port has: `OPENRAC_MOD_API_MAJOR` and `_MINOR` of
 /// `sdk/include/openrac/openrac_mod.h`. Change them with it.
 pub const API_MAJOR: u32 = 1;
-pub const API_MINOR: u32 = 0;
+pub const API_MINOR: u32 = 1;
+/// The interface a script mod needs at least: 1.1, the first with scripts (MODS.md, section 11).
+pub const SCRIPT_API_MINOR: u32 = 1;
 
 /// A mod's manifest, at the root of its folder (the overrides packs' name; they are format 1).
 pub const MANIFEST: &str = "openrac-mod.json";
@@ -134,6 +137,12 @@ pub struct Manifest {
     pub games: BTreeMap<String, Vec<String>>,
     #[serde(default)]
     pub plugin: BTreeMap<String, String>,
+    /// `native` (the default, also when absent) or `script`.
+    #[serde(default, rename = "type")]
+    pub kind: String,
+    /// A script mod's entry files, run in this order, relative to its folder.
+    #[serde(default)]
+    pub scripts: Vec<String>,
     #[serde(default)]
     pub hooks: Vec<String>,
     #[serde(default)]
@@ -201,6 +210,22 @@ fn meets(version: &str, wanted: Option<&str>) -> Result<bool, String> {
 }
 
 impl Manifest {
+    /// Whether it is a script mod (Luau, sandboxed: MODS.md, section 11).
+    pub fn is_script(&self) -> bool {
+        self.kind == "script"
+    }
+
+    /// What it is, as the Mods tab tells it: `script`, `native` (a library), or `data`.
+    pub fn kind_name(&self) -> &'static str {
+        if self.is_script() {
+            "script"
+        } else if self.plugin.is_empty() {
+            "data"
+        } else {
+            "native"
+        }
+    }
+
     /// The rules of MODS.md, section 3, that need nothing but the file: the first broken one.
     pub fn validate(&self) -> Result<(), String> {
         if self.format != 2 {
@@ -220,6 +245,30 @@ impl Manifest {
         }
         if self.games.is_empty() || self.games.values().any(Vec::is_empty) {
             return Err("it names no game, or a game with no disc".into());
+        }
+        match self.kind.as_str() {
+            "" | "native" | "script" => {}
+            other => return Err(format!("its type {other:?} is not native or script")),
+        }
+        if self.is_script() {
+            if !self.plugin.is_empty() {
+                return Err("a script mod carries no library (\"plugin\")".into());
+            }
+            if self.scripts.is_empty() {
+                return Err("a script mod names no scripts".into());
+            }
+            for path in &self.scripts {
+                if !safe_relative(path) || !path.ends_with(".luau") {
+                    return Err(format!("its script {path:?} is not a .luau file inside the mod"));
+                }
+            }
+            let api = self.api.as_deref().ok_or("a script mod has no \"api\"")?;
+            let (major, minor) = parse_api(api).ok_or_else(|| format!("its api {api:?} is not MAJOR.MINOR"))?;
+            if major == API_MAJOR && minor < SCRIPT_API_MINOR {
+                return Err(format!("its api {api} is older than the first with scripts (1.{SCRIPT_API_MINOR})"));
+            }
+        } else if !self.scripts.is_empty() {
+            return Err("only a script mod (\"type\": \"script\") names scripts".into());
         }
         if !self.plugin.is_empty() {
             let api = self.api.as_deref().ok_or("it has a library but no \"api\"")?;
@@ -260,7 +309,7 @@ impl Manifest {
         if !discs.iter().any(|d| d == version) {
             return Err(format!("Not for this disc ({version}): it runs on {}.", discs.join(", ")));
         }
-        if self.plugin.is_empty() {
+        if self.plugin.is_empty() && !self.is_script() {
             return Ok(());
         }
         let (major, minor) = parse_api(self.api.as_deref().unwrap_or_default()).unwrap_or_default();
@@ -268,6 +317,10 @@ impl Manifest {
             return Err(format!(
                 "Needs OpenRAC with mod interface {major}.{minor}; this one has {API_MAJOR}.{API_MINOR}."
             ));
+        }
+        // A script runs wherever the port does, Android included.
+        if self.is_script() {
+            return Ok(());
         }
         match platform {
             Some(p) if self.plugin.contains_key(p) => Ok(()),
@@ -460,6 +513,8 @@ pub struct PluginView {
     pub shared_hooks: Vec<SharedHook>,
     /// Whether it carries code (a library) or only data.
     pub native: bool,
+    /// `native` (runs code on this computer), `script` (runs scripts, sandboxed) or `data`.
+    pub kind: String,
     /// The installed folder (developer tools show it).
     pub path: String,
 }
@@ -543,6 +598,7 @@ pub fn list(dir: &Path, game: &str, version: &str) -> Result<Vec<PluginView>, St
             hooks: m.hooks.clone(),
             shared_hooks,
             native: !m.plugin.is_empty(),
+            kind: m.kind_name().into(),
             path: folder.display().to_string(),
         });
     }
@@ -740,7 +796,7 @@ impl Drop for Scratch {
 
 /// Where the manifest is in an unpacked mod: its root, or its one folder (a zip of a folder).
 /// Hidden entries and macOS's `__MACOSX` do not count.
-fn manifest_root(folder: &Path) -> Result<PathBuf, String> {
+pub(crate) fn manifest_root(folder: &Path) -> Result<PathBuf, String> {
     if folder.join(MANIFEST).is_file() {
         return Ok(folder.to_path_buf());
     }
@@ -767,6 +823,10 @@ pub(crate) fn copy_tree(from: &Path, to: &Path) -> Result<(), String> {
         let entry = entry.map_err(|e| e.to_string())?;
         let kind = entry.file_type().map_err(|e| e.to_string())?;
         let target = to.join(entry.file_name());
+        // A repository's own metadata is not the mod's (a script mod taken from a clone).
+        if entry.file_name() == ".git" {
+            continue;
+        }
         if kind.is_symlink() {
             return Err(format!("{} is a link: a mod holds files and folders only", entry.path().display()));
         } else if kind.is_dir() {
@@ -857,6 +917,11 @@ pub fn install(dir: &Path, game: &str, version: &str, source: &Path) -> Result<I
     for path in m.plugin.values() {
         if !root.join(path).is_file() {
             return Err(format!("{} names a library it does not hold ({path})", m.name));
+        }
+    }
+    for path in &m.scripts {
+        if !root.join(path).is_file() {
+            return Err(format!("{} names a script it does not hold ({path})", m.name));
         }
     }
     // The copy is made beside the store, then put in place with renames.
@@ -1029,6 +1094,90 @@ mod tests {
         let data: Manifest = serde_json::from_value(manifest("a", json!({"plugin": {}, "api": null}))).unwrap();
         data.validate().unwrap();
         assert!(data.runs_on("rac1", "pal", None).is_ok(), "a data-only mod needs no library");
+    }
+
+    fn script(id: &str, extra: Value) -> Value {
+        let mut m = manifest(id, json!({"type": "script", "scripts": ["main.luau"], "plugin": {}, "api": "1.1"}));
+        for (k, v) in extra.as_object().unwrap() {
+            m[k] = v.clone();
+        }
+        m
+    }
+
+    #[test]
+    fn script_mods_are_checked() {
+        let good: Manifest = serde_json::from_value(script("swap", json!({}))).unwrap();
+        good.validate().unwrap();
+        assert!(good.is_script());
+        assert_eq!(good.kind_name(), "script");
+        let broken = |extra: Value| -> String {
+            let m: Manifest = serde_json::from_value(script("x", extra)).unwrap();
+            m.validate().unwrap_err()
+        };
+        assert!(broken(json!({"plugin": {"linux-x86_64": "x.so"}})).contains("no library"));
+        assert!(broken(json!({"scripts": []})).contains("names no scripts"));
+        assert!(broken(json!({"scripts": ["../main.luau"]})).contains("inside the mod"));
+        assert!(broken(json!({"scripts": ["/main.luau"]})).contains("inside the mod"));
+        assert!(broken(json!({"scripts": ["main.lua"]})).contains(".luau"));
+        assert!(broken(json!({"api": "1.0"})).contains("first with scripts"));
+        assert!(broken(json!({"api": null})).contains("no \"api\""));
+        assert!(broken(json!({"type": "dll"})).contains("not native or script"));
+        // Only a script mod names scripts; "native" is the default and may be written.
+        let native = |extra: Value| -> Result<(), String> {
+            serde_json::from_value::<Manifest>(manifest("n", extra)).unwrap().validate()
+        };
+        assert!(native(json!({"scripts": ["main.luau"]})).unwrap_err().contains("only a script mod"));
+        native(json!({"type": "native"})).unwrap();
+        // A native mod built for interface 1.0 still loads on 1.1.
+        let old: Manifest = serde_json::from_value(manifest("n", json!({"api": "1.0"}))).unwrap();
+        assert!(old.runs_on("rac1", "pal", Some(here())).is_ok());
+    }
+
+    #[test]
+    fn a_script_mod_runs_on_every_system() {
+        let m: Manifest = serde_json::from_value(script("swap", json!({"games": {"rac1": ["pal"]}}))).unwrap();
+        // Android has no platform key for native mods; a script runs there all the same.
+        assert!(m.runs_on("rac1", "pal", None).is_ok());
+        assert!(m.runs_on("rac1", "pal", Some("windows-arm64")).is_ok());
+        assert!(m.runs_on("rac1", "ntsc", None).unwrap_err().contains("Not for this disc"));
+        let newer: Manifest = serde_json::from_value(script("swap", json!({"api": "1.7"}))).unwrap();
+        assert!(newer.runs_on("rac1", "pal", None).unwrap_err().contains("interface 1.7"));
+    }
+
+    #[test]
+    fn install_a_script_mod() {
+        let tmp = tempfile::tempdir().unwrap();
+        let dir = tmp.path().join("plugins");
+        // From a folder: it must hold the scripts it names.
+        let src = tmp.path().join("button-swap");
+        std::fs::create_dir_all(&src).unwrap();
+        std::fs::write(src.join(MANIFEST), serde_json::to_vec(&script("button-swap", json!({}))).unwrap()).unwrap();
+        assert!(install(&dir, "rac1", "pal", &src).unwrap_err().contains("does not hold (main.luau)"));
+        std::fs::write(src.join("main.luau"), "openrac.log(\"hi\")\n").unwrap();
+        std::fs::create_dir_all(src.join(".git")).unwrap();
+        std::fs::write(src.join(".git").join("HEAD"), "ref: refs/heads/master\n").unwrap();
+        match install(&dir, "rac1", "pal", &src).unwrap() {
+            Installed::Plugin { id, enabled, .. } => assert_eq!((id.as_str(), enabled), ("button-swap", true)),
+            other => panic!("{other:?}"),
+        }
+        assert!(dir.join("button-swap").join("main.luau").is_file());
+        assert!(!dir.join("button-swap").join(".git").exists(), "a repository's metadata is not copied");
+        let views = list(&dir, "rac1", "pal").unwrap();
+        let v = view(&views, "button-swap");
+        assert_eq!((v.kind.as_str(), v.native, v.state.as_str()), ("script", false, "ready"));
+        // From a zip, as package_mod.py writes it (one top folder).
+        let zip = tmp.path().join("other.zip");
+        let m = serde_json::to_vec(&script("other", json!({}))).unwrap();
+        zip_of(&zip, &[("other-1.0.0/openrac-mod.json", &m), ("other-1.0.0/main.luau", b"-- empty")]);
+        assert!(matches!(install(&dir, "rac1", "pal", &zip).unwrap(), Installed::Plugin { .. }));
+        let views = list(&dir, "rac1", "pal").unwrap();
+        assert_eq!(view(&views, "other").kind, "script");
+        // A native mod's view says so; a data-only one says data.
+        installed_mod(&dir, "native", json!({}));
+        installed_mod(&dir, "data", json!({"plugin": {}, "api": null}));
+        let views = list(&dir, "rac1", "pal").unwrap();
+        assert_eq!(view(&views, "native").kind, "native");
+        assert_eq!(view(&views, "data").kind, "data");
     }
 
     #[test]
