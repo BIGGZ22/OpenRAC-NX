@@ -9,7 +9,7 @@
 # Push a tag v0.1.0 and the workflow (.github/workflows/build.yml) publishes the release the
 # launcher installs from.
 cmake_minimum_required(VERSION 3.20)
-project(my_mod LANGUAGES C)
+project(my_mod LANGUAGES C CXX)
 
 # The SDK: the release sdk.lock pins (tools/fetch_sdk.py puts it in .sdk/); OPENRAC_SDK=<dir> (an
 # unpacked SDK, or sdk/ in a checkout of OpenRAC) or OpenRACMod_DIR=<dir>/cmake for another.
@@ -28,4 +28,4 @@ if(NOT OpenRACMod_DIR)
 endif()
 find_package(OpenRACMod 1.0 REQUIRED)
 
-openrac_add_mod(my_mod MANIFEST openrac-mod.json SOURCES src/mod.c)
+openrac_add_mod(my_mod MANIFEST openrac-mod.json SOURCES src/mod.cpp)

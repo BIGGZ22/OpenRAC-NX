@@ -8,7 +8,7 @@
   "license": "GPL-3.0-or-later",
   "api": "1.0",
   "games": { "rac1": ["pal", "ntsc"] },
-  "hooks": [],
+  "hooks": ["Hero_SetPlanarVelocity"],
   "settings": [
     { "key": "enabled_extra", "name": "Something extra", "type": "bool", "default": false,
       "description": "One line on what it does." }
