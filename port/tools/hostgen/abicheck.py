@@ -186,7 +186,11 @@ def targets(expr: str, own: set[int]) -> list[tuple[int, int]] | None:
     if m:
         a = _split_top(m.group(1))
         if len(a) == 5 and a[0].lstrip("-").isdigit():
-            return [(int(a[0]), int(a[4].rstrip("uU"), 16))]
+            if re.fullmatch(HEX, a[4]):
+                return [(int(a[0]), int(a[4].rstrip("uU"), 16))]
+            # the call the copy's own code makes, where hostgen found it through another rule (a
+            # folded name's places: openrac_folded_call)
+            return targets(a[4], own)
     return None
 
 
@@ -207,6 +211,15 @@ def compare(call_ret: str, call_params: list[str], def_ret: str, def_params: lis
     if used and rc in ("i", "f", "d") and dc in ("i", "f", "d") and rc != dc:
         what.append(f"reads a {call_ret} result, returns {def_ret}")
     return what
+
+
+def passes_more(call_params: list[str], def_params: list[str]) -> bool:
+    """Whether a call passes more arguments of a kind than the definition takes: through a place of a
+    folded wrapper, a call to another function, which the wrapper there passes them on to (hostgen's
+    lower.py, _call_as_defined: such a call keeps the call site's type)."""
+    cp = [kind(p) for p in call_params if p != "..."]
+    dp = [kind(p) for p in def_params if p != "..."]
+    return any(cp.count(k) > dp.count(k) for k in ("i", "f", "d"))
 
 
 def check(gen: Path, include_all: bool = False) -> tuple[list[str], dict]:
@@ -273,6 +286,8 @@ def check(gen: Path, include_all: bool = False) -> tuple[list[str], dict]:
                     if fn not in protos:
                         continue
                     dret, dparams = protos[fn]
+                    if expr.lstrip().startswith("openrac_folded_call(") and passes_more(params, dparams):
+                        continue
                     what = compare(ft.group("ret"), params, dret, dparams, used)
                     if what:
                         problems.append(f"{rel}:{line}: {caller or '?'} calls {fn} at "

@@ -339,6 +339,8 @@ gaddr openrac_folded_call(const uint32_t* places, int count, gaddr caller, uint3
     }
     gaddr result = 0;
     int seen = 0;
+    gaddr only = 0;  // the one place every call in the caller's code goes to, if they agree
+    bool several = false;
     for (std::uint32_t i = 0; i * 4 < size && result == 0; ++i) {
         std::uint32_t w;
         std::memcpy(&w, G(caller + i * 4), 4);
@@ -352,9 +354,17 @@ gaddr openrac_folded_call(const uint32_t* places, int count, gaddr caller, uint3
                 if (seen++ == k) {
                     result = target;
                 }
+                several = several || (only != 0 && only != target);
+                only = target;
                 break;
             }
         }
+    }
+    // The compiler merges the same code at the ends of several branches (cross-jumping), so the
+    // caller's code can have fewer calls than its C: a call past the last one goes where they all
+    // go when they agree (rac1: level 10's swoop flyer bobs with the place its other calls use).
+    if (result == 0 && only != 0 && !several) {
+        result = only;
     }
     if (result == 0) {
         result = openrac_guest_nearest(places, count, caller);
@@ -1328,6 +1338,21 @@ gaddr openrac_data_in_copy(int from, gaddr canon, uint32_t size, gaddr self, gad
                     break;
                 }
             }
+        } else if (completes(op) && op != 0x0D && rs == 28 && g_relocate_gp != 0) {
+            // A small global, reached from $gp (the same in every program): the copy at `self` has
+            // its own offset in the same instruction (rac1: Drek's Fleet's three window-glass
+            // callbacks, one function folded, each drawing its own panes from its own tables).
+            const gaddr at = g_relocate_gp + static_cast<std::uint32_t>(static_cast<std::int16_t>(w & 0xFFFFu));
+            const std::uint32_t distance = at > target ? at - target : target - at;
+            const std::uint32_t lo = self_word(self + i * 4);
+            if (distance <= 0x100 && distance < best && (lo >> 26) == op && ((lo >> 21) & 31) == 28) {
+                best = distance;
+                result = g_relocate_gp + static_cast<std::uint32_t>(static_cast<std::int16_t>(lo & 0xFFFFu))
+                         + (target - at);
+                if (distance == 0) {
+                    break;
+                }
+            }
         }
         upper.step(w, i);
     }
@@ -1335,16 +1360,11 @@ gaddr openrac_data_in_copy(int from, gaddr canon, uint32_t size, gaddr self, gad
     return result;
 }
 
-gaddr openrac_code_in_copy(int from, gaddr canon, uint32_t size, gaddr self, gaddr target) {
-    const int overlay = current_overlay();
-    const gaddr fallback = openrac_relocate_level_code(from, target);
-    if (self == 0 && from >= 0 && overlay != from) {
-        std::scoped_lock hold(g_relocate_lock);
-        self = own_place(from, canon, overlay);
-    }
-    if (self == 0 || (self == canon && overlay == from)) {
-        return fallback;
-    }
+// openrac_code_in_copy's and openrac_code_formed's search: where the copy at canon (level from's
+// program, `size` bytes) forms target, or another place of target's function, read at the same
+// instructions of the copy at self; fallback when it forms neither.
+static gaddr code_in_copy_at(int from, int overlay, gaddr canon, uint32_t size, gaddr self, gaddr target,
+                             gaddr fallback) {
     static std::map<std::tuple<int, int, gaddr, gaddr, gaddr>, gaddr> found;
     std::scoped_lock hold(g_relocate_lock);
     const auto key = std::make_tuple(from, overlay, canon, self, target);
@@ -1377,21 +1397,46 @@ gaddr openrac_code_in_copy(int from, gaddr canon, uint32_t size, gaddr self, gad
     // its own function at the same instruction (rac1: func_L00_0029D988 calls the hero update
     // through a pointer; in Novalis that is func_L01_00228E08, not level 0's func_L00_002076E8).
     std::uint32_t jal_at = size;
-    UpperHalves upper;
-    for (std::uint32_t i = 0; i * 4 < size; upper.step(canon_word(canon + i * 4), i), ++i) {
-        const std::uint32_t w = canon_word(canon + i * 4);
-        const std::uint32_t op = w >> 26, rs = (w >> 21) & 31;
-        if (op == 3 && jal_at == size && ((w & 0x03FFFFFFu) << 2) == (target & 0x0FFFFFFFu)) {
-            jal_at = i;
+    // The function at target in the program of from: a place the catalogue folded into it is the
+    // same function at another address, which the code may form instead (rac1: level 0's
+    // func_L00_002C9820 registers the billboard draw at 0x2C9158, folded into func_L00_002ADE90,
+    // and forms only that address). Searched for when the code forms target itself nowhere.
+    openrac_host_fn target_fn = nullptr;
+    const Table* from_table = nullptr;
+    if (auto t = g_overlays.find(from); t != g_overlays.end()) {
+        from_table = &t->second;
+        if (auto e = from_table->find(target); e != from_table->end()) {
+            target_fn = e->second.fn;
         }
-        if ((op == 0x09 || op == 0x0D) && upper.set[rs]
-                   && formed(canon_word(canon + upper.at[rs] * 4), w) == target) {
-            const std::uint32_t hi = self_word(self + upper.at[rs] * 4), lo = self_word(self + i * 4);
-            if ((hi >> 26) == 0x0F && (lo >> 26) == op) {
-                result = formed(hi, lo);
-            }
-            formed_here = true;
+    }
+    for (int folded = 0; folded < 2 && !formed_here; ++folded) {
+        if (folded && target_fn == nullptr) {
             break;
+        }
+        UpperHalves upper;
+        for (std::uint32_t i = 0; i * 4 < size; upper.step(canon_word(canon + i * 4), i), ++i) {
+            const std::uint32_t w = canon_word(canon + i * 4);
+            const std::uint32_t op = w >> 26, rs = (w >> 21) & 31;
+            if (!folded && op == 3 && jal_at == size && ((w & 0x03FFFFFFu) << 2) == (target & 0x0FFFFFFFu)) {
+                jal_at = i;
+            }
+            if ((op != 0x09 && op != 0x0D) || !upper.set[rs]) {
+                continue;
+            }
+            const gaddr at = formed(canon_word(canon + upper.at[rs] * 4), w);
+            bool match = at == target;
+            if (!match && folded) {
+                auto e = from_table->find(at);
+                match = e != from_table->end() && e->second.fn == target_fn;
+            }
+            if (match) {
+                const std::uint32_t hi = self_word(self + upper.at[rs] * 4), lo = self_word(self + i * 4);
+                if ((hi >> 26) == 0x0F && (lo >> 26) == op) {
+                    result = formed(hi, lo);
+                }
+                formed_here = true;
+                break;
+            }
         }
     }
     if (!formed_here && jal_at != size) {
@@ -1402,6 +1447,33 @@ gaddr openrac_code_in_copy(int from, gaddr canon, uint32_t size, gaddr self, gad
     }
     found.emplace(key, result);
     return result;
+}
+
+gaddr openrac_code_in_copy(int from, gaddr canon, uint32_t size, gaddr self, gaddr target) {
+    const int overlay = current_overlay();
+    const gaddr fallback = openrac_relocate_level_code(from, target);
+    if (self == 0 && from >= 0 && overlay != from) {
+        std::scoped_lock hold(g_relocate_lock);
+        self = own_place(from, canon, overlay);
+    }
+    if (self == 0 || (self == canon && overlay == from)) {
+        return fallback;
+    }
+    return code_in_copy_at(from, overlay, canon, size, self, target, fallback);
+}
+
+gaddr openrac_code_formed(int from, gaddr canon, uint32_t size, gaddr self, gaddr target, gaddr fallback) {
+    const int overlay = current_overlay();
+    if (self == 0 && overlay == from) {
+        self = canon;  // the code its name is written for: which of the places it forms itself
+    } else if (self == 0 && from >= 0) {
+        std::scoped_lock hold(g_relocate_lock);
+        self = own_place(from, canon, overlay);
+    }
+    if (self == 0) {
+        return fallback;
+    }
+    return code_in_copy_at(from, overlay, canon, size, self, target, fallback);
 }
 
 gaddr openrac_call_in_copy(int from, gaddr canon, uint32_t size, gaddr self, gaddr target) {
@@ -1466,18 +1538,31 @@ gaddr openrac_hook_in_copy(gaddr exe_fn, uint32_t size, int home, gaddr home_fn,
     if (auto it = found.find(key); it != found.end()) {
         return it->second;
     }
+    // The K-th call of the stub in the C is the K-th jal to it in the executable's code, unless the
+    // compiler merged calls the C makes on two paths into one jal (rac1: GameStateUpdate,
+    // func_00230A90, ends both ship states in the same func_0022DD68 .. func_001E97A8 run): a K past
+    // the jals takes the first, as every jal to one stub goes to the same function in a level's copy.
     gaddr result = fallback;
+    gaddr first = 0;
     std::uint32_t seen = 0;
     for (std::uint32_t i = 0; i * 4 < size; ++i) {
         const std::uint32_t w = exe_word(exe_fn + i * 4);
-        if ((w >> 26) == 3 && ((w & 0x03FFFFFFu) << 2) == (stub & 0x0FFFFFFFu) && seen++ == k) {
-            std::uint32_t mine;
-            std::memcpy(&mine, G(self + i * 4), 4);
-            if ((mine >> 26) == 3) {
-                result = (self & 0xF0000000u) | ((mine & 0x03FFFFFFu) << 2);
-            }
+        if ((w >> 26) != 3 || ((w & 0x03FFFFFFu) << 2) != (stub & 0x0FFFFFFFu)) {
+            continue;
+        }
+        std::uint32_t mine;
+        std::memcpy(&mine, G(self + i * 4), 4);
+        const gaddr target = (mine >> 26) == 3 ? (self & 0xF0000000u) | ((mine & 0x03FFFFFFu) << 2) : fallback;
+        if (seen == 0) {
+            first = target;
+        }
+        if (seen++ == k) {
+            result = target;
             break;
         }
+    }
+    if (seen <= k && first != 0) {
+        result = first;
     }
     found.emplace(key, result);
     if (std::getenv("OPENRAC_TRACE_RELOCATION") != nullptr) {
