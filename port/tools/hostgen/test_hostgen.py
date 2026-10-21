@@ -1063,6 +1063,39 @@ class Translate(unittest.TestCase):
         """)
         self.assertEqual(out, ["11", "1", "1", "1011"])
 
+    def test_a_hook_point_under_a_wrap_of_the_ports(self):
+        # A function the port wraps (`wrap`) and mods hook (`hook`): the port's <name> stays, and
+        # calls <name>__hooked, which hooks.c writes: the mod's replacement, or else the game's C.
+        out = self.run_program({"a.c": """
+            extern void test_take(void);
+            int func_00100000(int x) { return x * 2; }
+            int test_main(void) {
+                test_print(func_00100000(5));
+                test_take();
+                test_print(func_00100000(5));
+                return 0;
+            }
+        """}, places="func_00100000\t0x00100000\t0x40\n",
+            config={"libraries": "libraries.tsv", "host_functions": HOST_FUNCTIONS + ["test_take"]},
+            extra_files={"libraries.tsv": "# symbol\tlibrary\tname\tport\n"
+                                          "func_00100000\tgame\tTwice\twrap\n"
+                                          "func_00100000\tgame\tTwice\thook\n"},
+            host_c="""
+            typedef struct { const char* name; const char* symbol; const char* signature; void** slot; void* original; } point;
+            extern const point openrac_game_hook_points[];
+            void game_test_print(int v);
+            int func_00100000__hooked(int x);
+            int func_00100000(int x) { return 1 + func_00100000__hooked(x); }  /* the port's wrap */
+            static int (*s_original)(int);
+            static int replacement(int x) { return 100 + s_original(x); }
+            void game_test_take(void) {
+                const point* p = &openrac_game_hook_points[0];
+                s_original = (int (*)(int))p->original;
+                *p->slot = (void*)replacement;
+            }
+        """)
+        self.assertEqual(out, ["11", "111"])
+
     def test_two_hook_points_of_one_name_are_refused(self):
         with tempfile.TemporaryDirectory() as tmp:
             table = Path(tmp) / "libraries.tsv"

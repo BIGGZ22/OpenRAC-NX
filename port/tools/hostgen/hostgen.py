@@ -271,6 +271,21 @@ def wrapped(config_dir: Path, cfg: dict) -> set[str]:
     return out
 
 
+def wrapped_by_host(config_dir: Path, cfg: dict) -> set[str]:
+    """Functions with a `wrap` row: the port's host C is their <name>. One that is a hook point too
+    gets its hook under the port's function: hooks.c writes <name>__hooked (the mod's replacement
+    or the game's C), which the host C calls where it would call <name>__game."""
+    out = set()
+    table = cfg.get("libraries")
+    if not table:
+        return out
+    for line in (config_dir / table).read_text().splitlines():
+        cols = line.split("\t")
+        if not line.startswith("#") and len(cols) >= 4 and cols[3].strip() == "wrap":
+            out.add(cols[0].strip())
+    return out
+
+
 def hooked(config_dir: Path, cfg: dict) -> dict[str, str]:
     """The hook points mods may take (docs/port/MODS.md): libraries.tsv rows with port = hook,
     symbol -> the hook point's name (the third column), the same for every disc of a game."""
@@ -349,12 +364,15 @@ def write_hooks(program: Program, out: Path, game: str) -> list[str]:
         text, params, ret = shape
         c = cname(sym)
         slot = f"hook_{c}"
+        # Under a wrap of the port's own (wrapped_by_host): the hook is <name>__hooked, which the
+        # port's <name> calls.
+        entry = f"{c}__hooked" if sym in program.wrap_host else c
         decl = ", ".join(f"{t} a{i}" for i, t in enumerate(params)) or "void"
         args = ", ".join(f"a{i}" for i in range(len(params)))
         fptr = f"{ret} (*)({', '.join(params) or 'void'})"
         give = "" if ret == "void" else "return "
         lines += [f"static void* {slot};",
-                  f"{ret} {c}({decl}) {{",
+                  f"{ret} {entry}({decl}) {{",
                   f"    if ({slot} != 0) {{",
                   f"        {give}(({fptr}){slot})({args});"]
         if ret == "void":
@@ -397,6 +415,8 @@ def write_program_files(program: Program, out: Path, game: str) -> dict:
         protos.append(p + ";")
         if sym in program.wrap:
             protos.append(p.replace(f" {cname(sym)}(", f" {cname(sym)}__game(", 1) + ";")
+        if sym in program.hook and sym in program.wrap_host:
+            protos.append(p.replace(f" {cname(sym)}(", f" {cname(sym)}__hooked(", 1) + ";")
     protos += ["", "#endif", ""]
     _write(out / "game_protos.h", "\n".join(protos))
 
@@ -903,6 +923,7 @@ def main(argv: list[str] | None = None) -> int:
     host_sigs = {sym: sig for sym, (_name, sig) in host_rows.items()}
     program.host = set(cfg.get("host_functions", [])) | set(host_rows)
     program.wrap = wrapped(args.game.parent, cfg)
+    program.wrap_host = wrapped_by_host(args.game.parent, cfg)
     try:
         program.hook = hooked(args.game.parent, cfg)
     except ValueError as e:

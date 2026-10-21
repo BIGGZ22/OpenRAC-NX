@@ -97,6 +97,7 @@ class Program:
     host: set = field(default_factory=set)  # functions the port writes by hand (port/game/<game>/)
     from_assembly: set = field(default_factory=set)  # C left out for C from the instructions (hostgen.json "from_assembly")
     wrap: set = field(default_factory=set)  # translated as <name>__game, called by a host <name>
+    wrap_host: set = field(default_factory=set)  # with a `wrap` row: a hook point among them is <name>__hooked
     hook: dict = field(default_factory=dict)  # hook points (in wrap too): symbol -> its name for mods
     aliases: dict = field(default_factory=dict)  # (unit, name) -> symbol, from labels Clang refused
     by_place: dict = field(default_factory=dict)  # (overlay, address) -> the symbol defined there

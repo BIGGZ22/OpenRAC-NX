@@ -314,7 +314,11 @@ it and the game's C otherwise, and the table the mod loader reads,
 `openrac_game_hook_points` (name, symbol, signature such as
 `void(i32,f32,f32,f32)`, slot, the game's C). A hook point whose signature has
 no such form (a record by value, a double, varargs) stops hostgen with an
-error.
+error. The name is an alias of the hook point's permanent id
+(`sdk/bindings/<game>.json`, which the loader resolves). A symbol with both a
+`wrap` row and a `hook` row keeps the port's `<name>`, and the hook is written
+as `<name>__hooked` (the mod's replacement or the game's C), which the port's
+function calls in place of `<name>__game`.
 
 Two spellings of one address (`FUN_0020c828` and `func_0020C828`) are one
 function: a call to a name without C goes to the function with C at the same
