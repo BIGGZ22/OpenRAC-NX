@@ -7,7 +7,7 @@
 // wrapper and its types here, and a case in mock.ts (docs/ARCHITECTURE.md).
 import { invoke } from "@tauri-apps/api/core";
 import { listen, type UnlistenFn } from "@tauri-apps/api/event";
-import { open } from "@tauri-apps/plugin-dialog";
+import { confirm, open } from "@tauri-apps/plugin-dialog";
 import { REPO_URL } from "./links";
 import type { BackgroundStatus } from "./progress";
 
@@ -844,6 +844,14 @@ export interface DiscCopy {
   name: string;
   copied: number;
   total: number;
+}
+
+/** Asks before something that cannot be undone, with `yes` on the button that goes ahead. The
+ *  system's dialog: in the desktop app the page's own confirm() says yes on Linux (WebKitGTK)
+ *  without asking anything. The browser preview asks with the page's. */
+export async function ask(message: string, yes: string): Promise<boolean> {
+  if (!inTauri) return window.confirm(message);
+  return confirm(message, { title: "OpenRAC", kind: "warning", okLabel: yes, cancelLabel: "Cancel" });
 }
 
 /** A folder picker; null when cancelled (or in the browser preview). */

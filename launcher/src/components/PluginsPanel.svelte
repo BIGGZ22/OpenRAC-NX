@@ -9,6 +9,7 @@
   // on: ids, folders, sources and the hook points each mod takes.
   import {
     api,
+    ask,
     type ModSources,
     type ModUpdate,
     type PluginSetting,
@@ -155,8 +156,8 @@
     }
   }
 
-  function remove(mod: PluginView) {
-    if (!confirm(T.removeConfirm(mod.name))) return;
+  async function remove(mod: PluginView) {
+    if (!(await ask(T.removeConfirm(mod.name), T.PANEL.remove))) return;
     void change(api.pluginsRemove(v.game, v.name, mod.id));
   }
 
@@ -307,9 +308,7 @@
                     label: T.PANEL.remove,
                     icon: "trash" as const,
                     danger: true,
-                    run: () => {
-                      remove(mod);
-                    },
+                    run: () => void remove(mod),
                   },
                 ]}
               />

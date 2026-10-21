@@ -1,12 +1,13 @@
 {
   "$schema": "../gen/schemas/desktop-schema.json",
   "identifier": "default",
-  "description": "The launcher window: its own commands and the folder and file pickers. Links and folders are opened by the Rust side (open_url, open_path), so no opener permission is granted to the page.",
+  "description": "The launcher window: its own commands, the folder and file pickers, and the dialogs that ask before something is removed (api.ask). Links and folders are opened by the Rust side (open_url, open_path), so no opener permission is granted to the page.",
   "windows": [
     "main"
   ],
   "permissions": [
     "core:default",
-    "dialog:allow-open"
+    "dialog:allow-open",
+    "dialog:allow-message"
   ]
 }

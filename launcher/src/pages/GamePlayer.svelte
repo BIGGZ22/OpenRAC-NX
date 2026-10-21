@@ -17,7 +17,7 @@
   import Menu, { type MenuItem } from "$components/Menu.svelte";
   import ReportsBlock from "$components/ReportsBlock.svelte";
   import SaveManagerBlock from "$components/SaveManagerBlock.svelte";
-  import { api, type ActionView, type ReportEntry } from "$lib/api";
+  import { api, ask, type ActionView, type ReportEntry } from "$lib/api";
   import {
     app,
     clock,
@@ -75,8 +75,9 @@
 
   async function removeSetUp() {
     if (!v) return;
-    const sure = confirm(
+    const sure = await ask(
       `Remove what was set up from your ${v.title} disc? Your disc image and your saves are kept; set it up again any time.`,
+      "Remove",
     );
     if (sure) await uninstallGame(v.game);
   }

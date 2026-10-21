@@ -3,7 +3,7 @@
   // or a package the player adds: the zip Android emulators take (Mesa's Turnip, Qualcomm's own
   // drivers), with a meta.json. Packages load on Adreno only (libadrenotools); on Mali the
   // system's driver is the one there is.
-  import { api, type GpuDrivers, type Renderer } from "$lib/api";
+  import { api, ask, type GpuDrivers, type Renderer } from "$lib/api";
   import { app, gameWindow, guard, readGame, toast } from "$lib/app.svelte";
 
   let info = $state<GpuDrivers | null>(null);
@@ -49,7 +49,7 @@
   }
 
   async function quitGame() {
-    if (!confirm("Quit the game? What is not saved in it is lost.")) return;
+    if (!(await ask("Quit the game? What is not saved in it is lost.", "Quit the game"))) return;
     await gameWindow(true);
   }
 
@@ -62,7 +62,7 @@
   }
 
   async function remove(id: string, name: string) {
-    if (!confirm(`Remove ${name}?`)) return;
+    if (!(await ask(`Remove ${name}?`, "Remove"))) return;
     busy = true;
     await guard(api.gpuDriverRemove(id));
     await load();

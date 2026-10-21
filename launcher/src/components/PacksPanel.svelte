@@ -3,7 +3,7 @@
   // change the order (a pack lower in the list wins), remove one. The list and its changes are
   // instant (core/src/overrides.rs). Adding is AddMod's (editor/overrides.py, through lib/addMods.ts).
   // The packs are the game's, shared by its discs.
-  import { api, type PackView, type VersionView } from "$lib/api";
+  import { api, ask, type PackView, type VersionView } from "$lib/api";
   import { app, guard } from "$lib/app.svelte";
   import { PACKS } from "$lib/modsText";
   import CommandBox from "./CommandBox.svelte";
@@ -45,11 +45,9 @@
     if (result) packs = result;
   }
 
-  function remove(pack: PackView) {
-    if (
-      !confirm(`Remove "${pack.name}"? The launcher's copy is deleted; the .zip or folder you added it from is kept.`)
-    )
-      return;
+  async function remove(pack: PackView) {
+    const message = `Remove "${pack.name}"? The launcher's copy is deleted; the .zip or folder you added it from is kept.`;
+    if (!(await ask(message, PACKS.remove))) return;
     void change(api.overridesRemove(v.game, pack.id));
   }
 
@@ -119,7 +117,7 @@
               aria-label={`Remove ${pack.name}`}
               title={PACKS.remove}
               onclick={() => {
-                remove(pack);
+                void remove(pack);
               }}><Icon name="trash" size={14} /></button
             >
           </div>

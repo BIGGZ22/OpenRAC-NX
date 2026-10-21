@@ -4,7 +4,7 @@
   // note. File names, sizes and the card's folder name are a contributor's details: a chip and
   // tooltips with developer tools on.
   import Icon from "$components/Icon.svelte";
-  import { api, type GameSaveStatus, type SaveBackupInfo, type VersionView } from "$lib/api";
+  import { api, ask, type GameSaveStatus, type SaveBackupInfo, type VersionView } from "$lib/api";
   import { app, toast } from "$lib/app.svelte";
   import { grouped, size } from "$lib/format";
   import { when } from "$lib/reports";
@@ -76,7 +76,9 @@
 
   async function restoreBackup(backup: SaveBackupInfo) {
     const label = `${backupLabel(backup)} (${when(backup.createdMillis / 1000)})`;
-    if (!confirm(`Restore the backup "${label}"? Your current saves are backed up first, then replaced.`)) {
+    if (
+      !(await ask(`Restore the backup "${label}"? Your current saves are backed up first, then replaced.`, "Restore"))
+    ) {
       return;
     }
     restoringBackupName = backup.name;
