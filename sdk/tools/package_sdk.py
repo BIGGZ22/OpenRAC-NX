@@ -27,9 +27,10 @@ from pathlib import Path
 SDK = Path(__file__).resolve().parent.parent
 ROOT = SDK.parent
 # What goes in, relative to sdk/ (folders whole; tests/ is the C++ layer's test, built by sdk.yml), and the files from elsewhere in OpenRAC.
-# types/ holds the script mods' type definitions (<game>.d.luau, from gen_binding.py).
+# types/ holds the script mods' type definitions (<game>.d.luau, from gen_binding.py); docs/ the
+# modders' guides and the generated reference (gen_reference.py), beside MODS.md.
 PARTS = ["README.md", "VERSION", "include", "cmake", "template", "template-script", "examples", "catalogue",
-         "types", "tests", "tools/package_mod.py"]
+         "types", "tests", "docs", "tools/package_mod.py"]
 # The templates whose sdk.lock pins the SDK they come in.
 TEMPLATES = ("template", "template-script")
 EXTRA = {"docs/MODS.md": ROOT / "docs" / "port" / "MODS.md", "LICENSE": ROOT / "COPYING"}

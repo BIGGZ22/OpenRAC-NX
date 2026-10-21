@@ -34,7 +34,9 @@ class PackageSdk(unittest.TestCase):
                          "tests/CMakeLists.txt",
                          "template-script/openrac-mod.json", "template-script/main.luau",
                          "template-script/sdk.lock", "template-script/tools/fetch_sdk.py",
-                         "template-script/.github/workflows/build.yml", "template-script/.gitattributes"]:
+                         "template-script/.github/workflows/build.yml", "template-script/.gitattributes",
+                         "docs/README.md", "docs/getting-started.md", "docs/reference/c-api.md",
+                         "docs/reference/hooks-rac1.md"]:
                 self.assertIn(top + need, names)
             self.assertFalse([n for n in names if "__pycache__" in n or "/build/" in n])
             sha = (Path(a) / (one.name + ".sha256")).read_text().split()[0]
