@@ -517,6 +517,52 @@
         "todo": "Run it from the desktop app. From a shell on macOS it stacked a pack of 99 files with hard links, and the port read them with --mods."
       },
       {
+        "id": "editor-show-packs",
+        "label": "Show your textures in the editor",
+        "description": "Puts the textures of the mods you put together (Put the mods together) into the level editor's projects, at their own size, so that the levels you edit in Godot look as they will in the game. The editor's own come back with Hide them again.",
+        "kind": "edit",
+        "area": "editor",
+        "state": "unverified",
+        "program": "{python}",
+        "args": [
+          "editor/overrides.py",
+          "preview",
+          "{data}/mods/pal",
+          "--projects",
+          "assets/levels/rac1/pal"
+        ],
+        "output": "assets/levels/rac1/pal",
+        "cwd": ".",
+        "requires": [
+          "python"
+        ],
+        "docs": "editor/MODDING.md",
+        "todo": "Run it from the desktop app. From a shell on macOS a 4x terrain texture showed at its size in Godot 4.7.2 after the import."
+      },
+      {
+        "id": "editor-hide-packs",
+        "label": "Hide your textures in the editor",
+        "description": "Puts the level editor's own textures back in its projects, in place of the mods' (Show your textures in the editor).",
+        "kind": "edit",
+        "area": "editor",
+        "state": "unverified",
+        "program": "{python}",
+        "args": [
+          "editor/overrides.py",
+          "preview",
+          "--projects",
+          "assets/levels/rac1/pal",
+          "--undo"
+        ],
+        "output": "assets/levels/rac1/pal",
+        "cwd": ".",
+        "requires": [
+          "python"
+        ],
+        "docs": "editor/MODDING.md",
+        "todo": "Run it from the desktop app. From a shell on macOS a 4x terrain texture showed at its size in Godot 4.7.2 after the import."
+      },
+      {
         "id": "play-edited",
         "label": "Play with your edits",
         "description": "The game with your mods: the levels you packed and the overrides packs you switched on (textures, models), read in place of the disc's. Without any it plays the disc's.",
@@ -1016,6 +1062,52 @@
         ],
         "docs": "editor/MODDING.md",
         "todo": "Run it from the desktop app. From a shell on macOS (2026-10-16): a pack made from PAL's levels (Ratchet and the vendor edited, two textures upscaled, then two classes of level 5) stacked onto the NTSC-U levels with every file placed and the models' textures renamed to the NTSC-U ones."
+      },
+      {
+        "id": "editor-show-packs",
+        "label": "Show your textures in the editor",
+        "description": "Puts the textures of the mods you put together (Put the mods together) into the level editor's projects, at their own size, so that the levels you edit in Godot look as they will in the game. The editor's own come back with Hide them again.",
+        "kind": "edit",
+        "area": "editor",
+        "state": "unverified",
+        "program": "{python}",
+        "args": [
+          "editor/overrides.py",
+          "preview",
+          "{data}/mods/ntsc",
+          "--projects",
+          "assets/levels/rac1/ntsc"
+        ],
+        "output": "assets/levels/rac1/ntsc",
+        "cwd": ".",
+        "requires": [
+          "python"
+        ],
+        "docs": "editor/MODDING.md",
+        "todo": "Run it from the desktop app. From a shell on macOS a 4x terrain texture showed at its size in Godot 4.7.2 after the import."
+      },
+      {
+        "id": "editor-hide-packs",
+        "label": "Hide your textures in the editor",
+        "description": "Puts the level editor's own textures back in its projects, in place of the mods' (Show your textures in the editor).",
+        "kind": "edit",
+        "area": "editor",
+        "state": "unverified",
+        "program": "{python}",
+        "args": [
+          "editor/overrides.py",
+          "preview",
+          "--projects",
+          "assets/levels/rac1/ntsc",
+          "--undo"
+        ],
+        "output": "assets/levels/rac1/ntsc",
+        "cwd": ".",
+        "requires": [
+          "python"
+        ],
+        "docs": "editor/MODDING.md",
+        "todo": "Run it from the desktop app. From a shell on macOS a 4x terrain texture showed at its size in Godot 4.7.2 after the import."
       },
       {
         "id": "play-edited",

@@ -54,7 +54,8 @@ PLAY = ("port-levels", "port-levels-check", "play")
 # models and textures, packs, and playing with them. In a checkout they work in its assets/; the
 # carried copy is read-only, so they work in the data folder instead (MOD_FOLDERS).
 MODS = ("editor-extract", "editor-preview", "editor-import", "editor-open", "editor-pack",
-        "assets-export", "assets-import", "overrides-add", "overrides-stack", "play-edited")
+        "assets-export", "assets-import", "overrides-add", "overrides-stack", "editor-show-packs",
+        "editor-hide-packs", "play-edited")
 KEEP = PLAY + MODS
 # Where a checkout's folders for version <game>/<version> go in the carried copy, longest first:
 # the levels the port draws, the level editor's projects, and the packed levels.

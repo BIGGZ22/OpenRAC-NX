@@ -142,6 +142,27 @@ ready" runs again with a newer OpenRAC, or after setting the game up from
 another disc, export again and redo the edit. The pack you made keeps
 working either way.
 
+## Seeing your textures in the level editor
+
+The level editor's Godot projects show the textures the extractor wrote. To
+edit a level while seeing it as your packs make it look, put the mods
+together (**Put the mods together**), then **Show your textures in the editor**
+(the Mods page), or from a shell:
+
+```sh
+python3 editor/overrides.py preview <data>/mods/pal --projects assets/levels/rac1/pal
+python3 editor/overrides.py preview --projects assets/levels/rac1/pal --undo   # the editor's own again
+```
+
+Each level texture a pack replaces goes into the projects at the pack's size
+(Godot imports it the next time its window has focus; the texture
+coordinates are the same, so a 4x picture covers the same faces at four times
+the detail). The extractor's own picture waits in `textures/.originals/`,
+which Godot does not import, until **Hide your textures in the editor** puts it
+back. A pack's pictures that replace no level texture (a new model's own)
+have no place in the projects and are left out. The levels open lit as the
+game lights them at level load, so what you see is close to the game.
+
 ## Packs and discs
 
 The two discs hold the same levels, built a little differently: many
