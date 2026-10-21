@@ -195,9 +195,11 @@ void refusals() {
     o.minimum_size = 0;
     o.extract = true;
 
-    // The serial is known, its boot executable is another build.
+    // The serial is known, its boot executable is another build. The hash outlives the
+    // version, whose field only views it.
+    const std::string other_sha1(40, '0');
     const GameVersion other_build[] = {
-        fake_version("rac1-ntsc", "rac1/ntsc", Game::Rac1, "SCUS_971.99", std::string(40, '0'))
+        fake_version("rac1-ntsc", "rac1/ntsc", Game::Rac1, "SCUS_971.99", other_sha1)
     };
     o.known = other_build;
     Run r = run_with(o, true);
