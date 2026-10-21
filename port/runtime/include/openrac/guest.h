@@ -237,8 +237,9 @@ static inline gaddr OPENRAC_CODE(gaddr a) {
  * address. A call through that place goes where its code calls (openrac_guest_function). */
 gaddr openrac_guest_nearest(const uint32_t* places, int count, gaddr caller);
 /* The place of a folded function a call goes to: the k-th call in the caller's code (at `caller`,
- * `size` bytes, in the program loaded) to any of `places`; openrac_guest_nearest's when the caller's
- * code has no such call (or its size is not known). */
+ * `size` bytes, in the program loaded) to any of `places`; when the code has fewer such calls than
+ * its C (branches the compiler merged), the place they all call if they agree; else
+ * openrac_guest_nearest's (also when its size is not known). */
 gaddr openrac_folded_call(const uint32_t* places, int count, gaddr caller, uint32_t size, int k);
 /* The address of a folded function a function takes (a draw callback it registers): the k-th
  * address of any of `places` the caller's code forms (a lui and an addiu or ori on its register,
@@ -290,8 +291,9 @@ gaddr openrac_call_in_copy(int from, gaddr canon, uint32_t size, gaddr self, gad
  * that only return), which every level's program fills with a function of its own. The executable's
  * copy of the caller (`exe_fn`, `size` bytes) calls the stub at its k-th such call; the copy the
  * loaded level carries (the place of the caller in level `home`, `home_fn`, relocated to the loaded
- * program) calls that level's function at the same instruction. In the executable's own program,
- * or where the copy does not call at that place, it is the stub (OPENRAC_CODE's). */
+ * program) calls that level's function at the same instruction; a k past the code's calls (the
+ * compiler merged two of the C's into one jal) is its first. In the executable's own program, or
+ * where the copy does not call at that place, it is the stub (OPENRAC_CODE's). */
 gaddr openrac_hook_in_copy(gaddr exe_fn, uint32_t size, int home, gaddr home_fn, gaddr stub, uint32_t k);
 
 /* The EE FPU's divide, for the game's float `/`: no infinities or NaNs. A divisor of zero (or a

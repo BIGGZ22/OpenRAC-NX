@@ -339,6 +339,8 @@ gaddr openrac_folded_call(const uint32_t* places, int count, gaddr caller, uint3
     }
     gaddr result = 0;
     int seen = 0;
+    gaddr only = 0;  // the one place every call in the caller's code goes to, if they agree
+    bool several = false;
     for (std::uint32_t i = 0; i * 4 < size && result == 0; ++i) {
         std::uint32_t w;
         std::memcpy(&w, G(caller + i * 4), 4);
@@ -352,9 +354,17 @@ gaddr openrac_folded_call(const uint32_t* places, int count, gaddr caller, uint3
                 if (seen++ == k) {
                     result = target;
                 }
+                several = several || (only != 0 && only != target);
+                only = target;
                 break;
             }
         }
+    }
+    // The compiler merges the same code at the ends of several branches (cross-jumping), so the
+    // caller's code can have fewer calls than its C: a call past the last one goes where they all
+    // go when they agree (rac1: level 10's swoop flyer bobs with the place its other calls use).
+    if (result == 0 && only != 0 && !several) {
+        result = only;
     }
     if (result == 0) {
         result = openrac_guest_nearest(places, count, caller);
@@ -1466,18 +1476,31 @@ gaddr openrac_hook_in_copy(gaddr exe_fn, uint32_t size, int home, gaddr home_fn,
     if (auto it = found.find(key); it != found.end()) {
         return it->second;
     }
+    // The K-th call of the stub in the C is the K-th jal to it in the executable's code, unless the
+    // compiler merged calls the C makes on two paths into one jal (rac1: GameStateUpdate,
+    // func_00230A90, ends both ship states in the same func_0022DD68 .. func_001E97A8 run): a K past
+    // the jals takes the first, as every jal to one stub goes to the same function in a level's copy.
     gaddr result = fallback;
+    gaddr first = 0;
     std::uint32_t seen = 0;
     for (std::uint32_t i = 0; i * 4 < size; ++i) {
         const std::uint32_t w = exe_word(exe_fn + i * 4);
-        if ((w >> 26) == 3 && ((w & 0x03FFFFFFu) << 2) == (stub & 0x0FFFFFFFu) && seen++ == k) {
-            std::uint32_t mine;
-            std::memcpy(&mine, G(self + i * 4), 4);
-            if ((mine >> 26) == 3) {
-                result = (self & 0xF0000000u) | ((mine & 0x03FFFFFFu) << 2);
-            }
+        if ((w >> 26) != 3 || ((w & 0x03FFFFFFu) << 2) != (stub & 0x0FFFFFFFu)) {
+            continue;
+        }
+        std::uint32_t mine;
+        std::memcpy(&mine, G(self + i * 4), 4);
+        const gaddr target = (mine >> 26) == 3 ? (self & 0xF0000000u) | ((mine & 0x03FFFFFFu) << 2) : fallback;
+        if (seen == 0) {
+            first = target;
+        }
+        if (seen++ == k) {
+            result = target;
             break;
         }
+    }
+    if (seen <= k && first != 0) {
+        result = first;
     }
     found.emplace(key, result);
     if (std::getenv("OPENRAC_TRACE_RELOCATION") != nullptr) {
