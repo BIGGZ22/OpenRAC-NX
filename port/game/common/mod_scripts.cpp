@@ -5,6 +5,8 @@
 
 #include "mod_scripts.h"
 
+#include "openrac/keys.h"
+
 #include <algorithm>
 #include <chrono>
 #include <cmath>
@@ -634,6 +636,82 @@ int api_setting(lua_State* L) {
     return 1;
 }
 
+// ---- The keyboard and mouse (interface 1.2) ----
+
+const openrac_input* input_of(lua_State* L) {
+    State* s = state_of(L);
+    return s->services.input != nullptr ? s->services.input() : nullptr;
+}
+
+int bind_named(lua_State* L) {
+    std::size_t len = 0;
+    const char* name = luaL_checklstring(L, 1, &len);
+    const int bind = openrac_bind_from_name_n(name, len);
+    if (bind == OPENRAC_BIND_NONE) {
+        luaL_error(L, "no key, mouse button or wheel direction is named \"%s\"", name);
+    }
+    return bind;
+}
+
+int api_key(lua_State* L) {
+    const int bind = bind_named(L);
+    lua_pushboolean(L, openrac_bind_held(input_of(L), bind));
+    return 1;
+}
+
+int api_pressed(lua_State* L) {
+    const int bind = bind_named(L);
+    lua_pushboolean(L, openrac_bind_pressed(input_of(L), bind));
+    return 1;
+}
+
+int api_mouse(lua_State* L) {
+    const openrac_input* in = input_of(L);
+    lua_pushnumber(L, in != nullptr ? in->mouse_dx : 0.0);
+    lua_pushnumber(L, in != nullptr ? in->mouse_dy : 0.0);
+    lua_pushnumber(L, in != nullptr ? in->wheel_x : 0.0);
+    lua_pushnumber(L, in != nullptr ? in->wheel_y : 0.0);
+    return 4;
+}
+
+int api_window(lua_State* L) {
+    const openrac_input* in = input_of(L);
+    lua_pushboolean(L, in != nullptr && in->focused != 0);
+    lua_pushboolean(L, in != nullptr && in->captured != 0);
+    lua_pushboolean(L, in != nullptr && in->overlay != 0);
+    return 3;
+}
+
+int api_take_input(lua_State* L) {
+    State* s = state_of(L);
+    if (!s->loading) {
+        luaL_error(L, "take_input is called while the mod's scripts first run");
+    }
+    uint32_t devices = 0;
+    for (int i = 1; i <= lua_gettop(L); ++i) {
+        const std::string_view d = luaL_checkstring(L, i);
+        if (d == "keyboard") {
+            devices |= OPENRAC_INPUT_KEYBOARD;
+        } else if (d == "mouse") {
+            devices |= OPENRAC_INPUT_MOUSE;
+        } else {
+            luaL_error(L, "take_input: \"keyboard\" or \"mouse\"");
+        }
+    }
+    if (s->services.take_input == nullptr || s->services.take_input(s->mod.handle, devices) != OPENRAC_HOOK_OK) {
+        luaL_error(L, "take_input was refused");
+    }
+    return 0;
+}
+
+int api_capture_mouse(lua_State* L) {
+    State* s = state_of(L);
+    if (s->services.capture_mouse != nullptr) {
+        s->services.capture_mouse(s->mod.handle, lua_toboolean(L, 1) ? 1 : 0);
+    }
+    return 0;
+}
+
 int api_read(lua_State* L) {
     std::uint8_t kind = 0;
     if (!kind_named(luaL_checkstring(L, 1), kind)) {
@@ -774,6 +852,12 @@ void push_openrac(lua_State* L, State* s) {
     set_function(L, "on_pad", api_on_pad);
     set_function(L, "read", api_read);
     set_function(L, "write", api_write);
+    set_function(L, "key", api_key);
+    set_function(L, "pressed", api_pressed);
+    set_function(L, "mouse", api_mouse);
+    set_function(L, "window", api_window);
+    set_function(L, "take_input", api_take_input);
+    set_function(L, "capture_mouse", api_capture_mouse);
     if (s->binding->moby != nullptr) {
         set_function(L, "pvars", api_pvars);
     }

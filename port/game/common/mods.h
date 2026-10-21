@@ -10,9 +10,11 @@
 
 #pragma once
 
+#include <cstdint>
 #include <filesystem>
 #include <string>
 
+#include "openrac/openrac_mod.h"
 #include "openrac/script_binding.h"
 
 namespace openrac::mods {
@@ -44,6 +46,12 @@ struct Host {
     // The game's binding for script mods (openrac/script_binding.h): null where it has none, and
     // then a script mod is refused.
     const openrac_script_binding* scripts = nullptr;
+    // The keyboard and mouse (interface 1.2): the state for the tick about to run (null: a test's,
+    // or no window, and then nothing is held), the port's keyboard table given up to a mod, and the
+    // cursor captured or let go as a mod asks.
+    const openrac_input* (*input)(void) = nullptr;
+    void (*take_input)(std::uint32_t devices) = nullptr;
+    void (*capture_mouse)(bool capture) = nullptr;
 };
 
 // Loads the mods the list has on. Returns the session header's line: "lock-strafe 1.0.0", "none",

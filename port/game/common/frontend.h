@@ -113,6 +113,22 @@ std::int64_t since_control();
 // left sticks (x, y each).
 bool pad(int port, std::uint16_t* buttons, std::uint8_t analog[4]);
 
+// The keyboard and mouse for the mods (mod interface 1.2, platform/input.h's KeyboardMouse): as
+// the last frame read them; null without a window. `overlay` is set while the port's own overlay
+// or menu has the input.
+struct KeyboardMouseView {
+    const void* state = nullptr;  // const platform::KeyboardMouse*
+    bool overlay = false;
+};
+KeyboardMouseView keyboard_mouse();
+
+// A mod took the keyboard: the port's own keyboard table stops pressing pad 0's buttons.
+void take_keyboard();
+
+// A mod asks for the cursor captured (relative mouse mode) or let go. Applied each frame, and let
+// go anyway while the window is not focused or the overlay or the debug menu is open.
+void capture_mouse(bool capture);
+
 // While the debug overlay holds the game (its pause): draws the last tick again and reads the
 // window's events until the overlay lets a tick through. False once the window was closed.
 bool hold();

@@ -144,10 +144,34 @@ void Input::handle_event(const SDL_Event& event) {
             m_touch.finger_up(event.tfinger.fingerID);
             break;
         // Another device in use: the on-screen pad is put away until the screen is touched again.
-        case SDL_EVENT_GAMEPAD_BUTTON_DOWN:
         case SDL_EVENT_KEY_DOWN:
+            if (!event.key.repeat && static_cast<std::size_t>(event.key.scancode) < kKeyCount) {
+                m_went_down[static_cast<std::size_t>(event.key.scancode)] = 1;
+            }
             m_touch.hide();
             break;
+        case SDL_EVENT_GAMEPAD_BUTTON_DOWN:
+            m_touch.hide();
+            break;
+        // The mouse, for the mods (KeyboardMouse): gathered until the next update(). A touch screen's
+        // fingers that SDL also reports as the mouse are not the mouse.
+        case SDL_EVENT_MOUSE_MOTION:
+            if (event.motion.which != SDL_TOUCH_MOUSEID) {
+                m_dx += event.motion.xrel;
+                m_dy += event.motion.yrel;
+            }
+            break;
+        case SDL_EVENT_MOUSE_BUTTON_DOWN:
+            if (event.button.which != SDL_TOUCH_MOUSEID && event.button.button >= 1 && event.button.button <= 5) {
+                m_mouse_went_down |= 1u << (event.button.button - 1);
+            }
+            break;
+        case SDL_EVENT_MOUSE_WHEEL: {
+            const float flip = event.wheel.direction == SDL_MOUSEWHEEL_FLIPPED ? -1.0f : 1.0f;
+            m_wheel_x += event.wheel.x * flip;
+            m_wheel_y += event.wheel.y * flip;
+            break;
+        }
         case SDL_EVENT_GAMEPAD_AXIS_MOTION:
             // A stick pushed well past its dead zone, not a resting stick's drift.
             if (event.gaxis.value > 16000 || event.gaxis.value < -16000) {
@@ -179,6 +203,27 @@ void Input::update() {
     const std::span<const bool> keys(
         state, state != nullptr && keyboard_ours ? static_cast<std::size_t>(key_count) : 0
     );
+
+    // The keyboard and mouse for the mods: what is held now, and what went down since the last frame.
+    ++m_km.tick;
+    m_km.focused = keyboard_ours;
+    for (std::size_t k = 0; k < kKeyCount; ++k) {
+        const bool held = k < keys.size() && keys[k];
+        m_km.keys[k] = static_cast<std::uint8_t>((held ? 1 : 0) | (keyboard_ours && m_went_down[k] ? 2 : 0));
+    }
+    m_went_down.fill(0);
+    float mx = 0.0f;
+    float my = 0.0f;
+    const SDL_MouseButtonFlags buttons = SDL_GetMouseState(&mx, &my);
+    const bool mouse_ours = SDL_GetMouseFocus() != nullptr || m_km.captured;
+    m_km.mouse_held = keyboard_ours && mouse_ours ? static_cast<std::uint32_t>(buttons) & 0x1Fu : 0u;
+    m_km.mouse_pressed = keyboard_ours ? m_mouse_went_down & 0x1Fu : 0u;
+    m_km.mouse_dx = keyboard_ours ? m_dx : 0.0f;
+    m_km.mouse_dy = keyboard_ours ? m_dy : 0.0f;
+    m_km.wheel_x = keyboard_ours ? m_wheel_x : 0.0f;
+    m_km.wheel_y = keyboard_ours ? m_wheel_y : 0.0f;
+    m_mouse_went_down = 0;
+    m_dx = m_dy = m_wheel_x = m_wheel_y = 0.0f;
 
     for (int port = 0; port < kPadPorts; ++port) {
         Pad& pad = m_pads[static_cast<std::size_t>(port)];
@@ -219,7 +264,9 @@ void Input::update() {
             SDL_RumbleGamepad(g, low, high, 100);
         }
         if (port == 0) {
-            apply_keyboard(pad, keys);
+            if (m_keyboard_table) {
+                apply_keyboard(pad, keys);
+            }
             m_touch.idle(SDL_GetTicks());
             m_touch.apply(pad);
         }

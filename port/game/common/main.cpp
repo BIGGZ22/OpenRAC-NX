@@ -64,6 +64,7 @@
 #include "settings.h"
 #include "openrac/sound_engine.h"
 #include "platform/audio.h"
+#include "platform/input.h"
 #include "platform/performance_hint.h"
 #include "platform/pump.h"
 #include "renderer/direct.h"
@@ -338,6 +339,35 @@ void open_session(int argc, char** argv) {
     log::header("=========================");
 }
 
+// The keyboard and mouse as a mod reads them (openrac_mod.h's openrac_input), from the frontend's
+// state for the tick about to run; null without a window.
+const openrac_input* mod_input() {
+#ifdef OPENRAC_FRONTEND
+    if (g_window) {
+        const frontend::KeyboardMouseView view = frontend::keyboard_mouse();
+        const auto* km = static_cast<const platform::KeyboardMouse*>(view.state);
+        if (km != nullptr) {
+            static openrac_input in{};
+            in.size = sizeof in;
+            in.tick = km->tick;
+            static_assert(sizeof in.keys == platform::kKeyCount);
+            std::memcpy(in.keys, km->keys.data(), sizeof in.keys);
+            in.mouse_held = km->mouse_held;
+            in.mouse_pressed = km->mouse_pressed;
+            in.mouse_dx = km->mouse_dx;
+            in.mouse_dy = km->mouse_dy;
+            in.wheel_x = km->wheel_x;
+            in.wheel_y = km->wheel_y;
+            in.focused = km->focused ? 1 : 0;
+            in.captured = km->captured ? 1 : 0;
+            in.overlay = view.overlay ? 1 : 0;
+            return &in;
+        }
+    }
+#endif
+    return nullptr;
+}
+
 // The native mods the launcher's list has on (mods.h, docs/port/MODS.md), bound to this disc's hook
 // points (hostgen's hooks.c), once the game's functions are registered and before it runs; the
 // session header says which loaded.
@@ -353,6 +383,19 @@ void load_mods() {
     host.loaded_level = openrac_game_loaded_overlay;
     host.pad_hook = &openrac_game_pad_report_hook;
     host.scripts = openrac_game_script_binding();  // generated (sdk/tools/gen_binding.py), or none
+    host.input = mod_input;
+#ifdef OPENRAC_FRONTEND
+    host.take_input = [](std::uint32_t devices) {
+        if ((devices & OPENRAC_INPUT_KEYBOARD) != 0 && g_window) {
+            frontend::take_keyboard();
+        }
+    };
+    host.capture_mouse = [](bool capture) {
+        if (g_window) {
+            frontend::capture_mouse(capture);
+        }
+    };
+#endif
     // "2026-10-21 14:02:11 +0200" as "2026-10-21T14:02:11+02:00".
     char when[40];
     crash::format_time(static_cast<long long>(std::time(nullptr)), crash::local_offset(), when, sizeof(when));

@@ -10,6 +10,8 @@
 #include <format>
 #include <set>
 
+#include "openrac/keys.h"
+
 namespace openrac::mods {
 namespace json = viewer::json;
 
@@ -83,6 +85,8 @@ const char* type_name(SettingType t) {
             return "choice";
         case SettingType::String:
             return "string";
+        case SettingType::Keybind:
+            return "keybind";
     }
     return "?";
 }
@@ -123,6 +127,8 @@ bool value_of(const Setting& s, const json::Value& v, SettingValue& out) {
             }
             out.s = v.string();
             return true;
+        case SettingType::Keybind:
+            return v.is_string() && parse_binds(v.string(), s.binds, out.s);
     }
     return false;
 }
@@ -155,6 +161,8 @@ bool parse_setting(const json::Value& v, Setting& s, std::string& error) {
         s.type = SettingType::Choice;
     } else if (type == "string") {
         s.type = SettingType::String;
+    } else if (type == "keybind") {
+        s.type = SettingType::Keybind;
     } else {
         error = std::format("setting \"{}\": unknown type \"{}\"", s.key, type);
         return false;
@@ -194,6 +202,13 @@ bool parse_setting(const json::Value& v, Setting& s, std::string& error) {
             return false;
         }
         s.max_length = static_cast<std::size_t>(m.number());
+    }
+    if (const json::Value& n = v["binds"]; !n.is_null()) {
+        if (!is_integer(n) || n.number() < 1 || n.number() > 2 || s.type != SettingType::Keybind) {
+            error = std::format("setting \"{}\": \"binds\" is 1 or 2, for a keybind", s.key);
+            return false;
+        }
+        s.binds = static_cast<int>(n.number());
     }
     if (!value_of(s, v["default"], s.fallback)) {
         error = std::format("setting \"{}\": \"default\" must be a {} within its limits", s.key, type_name(s.type));
@@ -238,6 +253,33 @@ bool satisfies(const Version& have, const Requirement& r) {
 }
 
 }  // namespace
+
+bool parse_binds(std::string_view text, int most, std::string& normalized) {
+    normalized.clear();
+    std::vector<int> seen;
+    std::size_t i = 0;
+    while (i < text.size()) {
+        if (text[i] == ',' || text[i] == ' ') {
+            ++i;
+            continue;
+        }
+        std::size_t end = i;
+        while (end < text.size() && text[end] != ',' && text[end] != ' ') {
+            ++end;
+        }
+        const std::string_view name = text.substr(i, end - i);
+        const int bind = openrac_bind_from_name_n(name.data(), name.size());
+        if (bind == OPENRAC_BIND_NONE || std::find(seen.begin(), seen.end(), bind) != seen.end()
+            || static_cast<int>(seen.size()) >= most) {
+            normalized.clear();
+            return false;
+        }
+        seen.push_back(bind);
+        normalized += (normalized.empty() ? "" : ",") + std::string(name);
+        i = end;
+    }
+    return true;
+}
 
 bool script_path(std::string_view p) {
     if (p.size() < 6 || !p.ends_with(".luau") || p.front() == '/' || p.find('\\') != std::string_view::npos

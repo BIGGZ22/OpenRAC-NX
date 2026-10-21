@@ -30,6 +30,10 @@ struct Services {
     int (*on_pad)(openrac_mod* mod, openrac_pad_fn fn, void* user);
     void (*log)(openrac_mod* mod, int level, const char* text);
     void (*stopped)(openrac_mod* mod, const std::string& reason);
+    // Interface 1.2: the keyboard and mouse (openrac_api's input, take_input, capture_mouse).
+    const openrac_input* (*input)(void) = nullptr;
+    int (*take_input)(openrac_mod* mod, uint32_t devices) = nullptr;
+    void (*capture_mouse)(openrac_mod* mod, int capture) = nullptr;
 };
 
 struct Mod {

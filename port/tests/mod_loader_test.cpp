@@ -72,7 +72,7 @@ const char* library_name() {
 }
 
 // Installs test-<which> into `plugins`: its library copied in, its manifest.
-void install(const fs::path& plugins, const std::string& which, const char* built, const std::string& api = "1.1") {
+void install(const fs::path& plugins, const std::string& which, const char* built, const std::string& api = "1.2") {
     const fs::path dir = plugins / ("test-" + which);
     fs::create_directories(dir / "lib");
     fs::copy_file(built, dir / "lib" / library_name(), fs::copy_options::overwrite_existing);
@@ -83,7 +83,9 @@ void install(const fs::path& plugins, const std::string& which, const char* buil
                      {"key": "behaviour", "name": "Behaviour", "type": "choice", "default": "ok",
                       "choices": [{"value": "ok", "name": "OK"}, {"value": "fail", "name": "Fail"},
                                   {"value": "unknown_hook", "name": "Unknown"},
-                                  {"value": "bad_signature", "name": "Bad"}]}]})");
+                                  {"value": "bad_signature", "name": "Bad"},
+                                  {"value": "input", "name": "Input"}]},
+                     {"key": "jump", "name": "Jump", "type": "keybind", "default": "Space"}]})");
 }
 
 mods::Host host(const fs::path& plugins) {
@@ -212,7 +214,7 @@ void an_installed_launchers_layout(const fs::path& root) {
     fs::create_directories(mod / lib.parent_path());
     fs::copy_file(OPENRAC_TEST_MOD_A, mod / lib, fs::copy_options::overwrite_existing);
     write(mod / "openrac-mod.json", R"({"format": 2, "id": "test-a", "name": "Test", "version": "1.0.0",
-        "api": "1.1", "games": {"test": ["one"]}, "hooks": ["Test_Add"],
+        "api": "1.2", "games": {"test": ["one"]}, "hooks": ["Test_Add"],
         "plugin": {")" + std::string(mods::platform_key()) + R"(": ")" + lib.generic_string() + R"("},
         "settings": [{"key": "tag", "name": "Tag", "type": "int", "default": 0}]})");
     write(plugins / "plugins.json", R"({"format": 1, "mods": [{"id": "test-a", "enabled": true, "settings": {"tag": 4}}]})");
@@ -227,6 +229,50 @@ void an_installed_launchers_layout(const fs::path& root) {
     CHECK(status_of(plugins, "test-a").first == "loaded");
     // Only status.json is written, beside the list; nothing in the folder the program ran in.
     CHECK(fs::is_empty(elsewhere));
+    mods::reset();
+}
+
+// The keyboard and mouse (interface 1.2): the mod takes the keyboard during load, reads the
+// state the host gives for the tick, and asks for the cursor (let go while the overlay is open).
+openrac_input g_input{};
+std::uint32_t g_taken = 0;
+int g_captures = 0;
+bool g_captured = false;
+
+void input_reaches_the_mod(const fs::path& plugins) {
+    write(plugins / "plugins.json", R"({"format": 1, "mods": [
+        {"id": "test-a", "enabled": true, "settings": {"behaviour": "input", "jump": "KeyQ"}}]})");
+    mods::Host h = host(plugins);
+    g_input = openrac_input{};
+    g_input.size = sizeof g_input;
+    g_taken = 0;
+    g_captures = 0;
+    h.input = [] { return static_cast<const openrac_input*>(&g_input); };
+    h.take_input = [](std::uint32_t devices) { g_taken |= devices; };
+    h.capture_mouse = [](bool capture) {
+        ++g_captures;
+        g_captured = capture;
+    };
+    CHECK(mods::load(h) == "test-a 1.0.0");
+    CHECK(g_taken == OPENRAC_INPUT_KEYBOARD);
+    CHECK(g_captures == 1 && g_captured);
+    g_input.keys[26] = OPENRAC_KEY_HELD;
+    g_input.mouse_dx = 7.0f;
+    g_input.overlay = 1;
+    unsigned char report[18] = {0};
+    CHECK(g_pad_hook != nullptr);
+    g_pad_hook(0, report, 18);
+    CHECK(report[1] == 0x57 && report[2] == 7);
+    CHECK(g_captures == 2 && !g_captured);  // the overlay is open: it lets the cursor go
+    mods::reset();
+
+    // Without a host's input (a test, no window) the state is all released, never null.
+    write(plugins / "plugins.json", R"({"format": 1, "mods": [
+        {"id": "test-a", "enabled": true, "settings": {"behaviour": "input"}}]})");
+    CHECK(mods::load(host(plugins)) == "test-a 1.0.0");
+    unsigned char quiet[18] = {0, 9, 9};
+    g_pad_hook(0, quiet, 18);
+    CHECK(quiet[1] == 0 && quiet[2] == 0);
     mods::reset();
 }
 
@@ -281,6 +327,7 @@ int main() {
     a_library_of_another_id(plugins);
     an_installed_launchers_layout(dir);
     an_old_name_still_binds(plugins);
+    input_reaches_the_mod(plugins);
     std::error_code e;
     fs::remove_all(dir, e);
     return test::result();

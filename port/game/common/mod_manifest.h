@@ -31,7 +31,8 @@ struct Version {
 std::optional<Version> parse_version(std::string_view text);
 int compare(const Version& a, const Version& b);
 
-enum class SettingType { Bool, Int, Float, Choice, String };
+// Keybind (interface 1.2): up to `binds` names of openrac/keys.h, "KeyW,ArrowUp", kept as a string.
+enum class SettingType { Bool, Int, Float, Choice, String, Keybind };
 
 // A setting's value, of its declaration's type.
 struct SettingValue {
@@ -50,7 +51,12 @@ struct Setting {
     std::optional<double> min, max;
     std::vector<std::string> choices;  // the values of a choice
     std::size_t max_length = 0;        // a string's (0: no limit)
+    int binds = 2;                     // a keybind's most binds
 };
+
+// A keybind's text as names of openrac/keys.h, split at commas or spaces: false when one is no
+// name, one is there twice or there are more than `most`; else `normalized` is them comma-joined.
+bool parse_binds(std::string_view text, int most, std::string& normalized);
 
 struct Requirement {
     std::string id;

@@ -114,6 +114,8 @@ struct State {
     std::unique_ptr<platform::Platform> sdl;
     std::unique_ptr<platform::Window> window;
     platform::Input input;
+    bool capture_wanted = false;  // a mod's asking (capture_mouse)
+    bool keyboard_taken = false;  // a mod took the keyboard (take_keyboard)
     std::unique_ptr<renderer::Renderer> renderer;
     renderer::FrameBuffer frame;
     renderer::FrameBuffer picture;  // show_picture's: a movie frame, a boot still
@@ -1436,6 +1438,8 @@ static void draw_touch_pad(int window_width, int window_height) {
     touch_overlay::draw(touch, window_width, window_height);
 }
 
+void apply_mouse_capture();  // below, beside pad()
+
 bool show_picture(const std::uint8_t* rgba, int width, int height, float black) {
     using namespace gl;
     if (!g || width <= 0 || height <= 0) {
@@ -1451,6 +1455,7 @@ bool show_picture(const std::uint8_t* rgba, int width, int height, float black) 
         }
         g->input.handle_event(event);
     }
+    apply_mouse_capture();
     g->input.update();
     stats::begin_frame(stats::FrameKind::Picture, g->index);  // [debug tools]
 
@@ -2188,6 +2193,7 @@ bool frame(std::span<const std::uint8_t> ram, std::uint32_t chain, std::uint32_t
         }
         g->input.handle_event(event);
     }
+    apply_mouse_capture();
     g->input.update();
     // The port's rows on the game's Video options page (options_menu.h), and the overlay's drawer
     // and menus: a changed one is applied. Before the debug menu, which adds its entry to the
@@ -2983,6 +2989,41 @@ bool hold() {
 
 std::int64_t since_control() {
     return g && g_route.control >= 0 ? static_cast<std::int64_t>(g->index) - g_route.control : -1;
+}
+
+// The cursor as the mods ask for it, while nothing else has the mouse: captured only with the
+// window focused and the overlay and the debug menu shut.
+void apply_mouse_capture() {
+    if (!g || !g->window || g->window->sdl() == nullptr) {
+        return;
+    }
+    SDL_Window* w = g->window->sdl();
+    const bool focused = (SDL_GetWindowFlags(w) & SDL_WINDOW_INPUT_FOCUS) != 0;
+    const bool capture = g->capture_wanted && focused && !debug_overlay::visible() && !debug_menu::is_open();
+    if (SDL_GetWindowRelativeMouseMode(w) != capture) {
+        SDL_SetWindowRelativeMouseMode(w, capture);
+    }
+    g->input.set_captured(capture);
+}
+
+KeyboardMouseView keyboard_mouse() {
+    if (!g) {
+        return {};
+    }
+    return {&g->input.keyboard_mouse(), debug_overlay::visible() || debug_menu::is_open()};
+}
+
+void take_keyboard() {
+    if (g) {
+        g->keyboard_taken = true;
+        g->input.set_keyboard_table(false);
+    }
+}
+
+void capture_mouse(bool capture) {
+    if (g) {
+        g->capture_wanted = capture;
+    }
 }
 
 bool pad(int port, std::uint16_t* buttons, std::uint8_t analog[4]) {

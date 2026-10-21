@@ -135,6 +135,44 @@ void settings() {
     CHECK(defaults.at("mode").s == "lock" && defaults.at("count").i == 3 && notes.empty());
 }
 
+// Key bindings (interface 1.2): names of openrac/keys.h, at most `binds` of them, none twice.
+void keybinds() {
+    std::string out;
+    CHECK(parse_binds("KeyW", 2, out) && out == "KeyW");
+    CHECK(parse_binds("KeyW, ArrowUp", 2, out) && out == "KeyW,ArrowUp");
+    CHECK(parse_binds("", 2, out) && out.empty());
+    CHECK(parse_binds("MouseRight,WheelUp", 2, out) && out == "MouseRight,WheelUp");
+    CHECK(!parse_binds("KeyW,KeyW", 2, out));        // twice
+    CHECK(!parse_binds("KeyW,KeyA,KeyS", 2, out));   // three
+    CHECK(!parse_binds("KeyW,KeyA", 1, out));        // over its "binds"
+    CHECK(!parse_binds("W", 2, out));                // not a name of the table
+    Manifest m;
+    std::string error;
+    CHECK(parse_manifest(manifest("a", "1.0.0", R"(, "settings": [
+          {"key": "jump", "name": "Jump", "type": "keybind", "default": "Space"},
+          {"key": "fire", "name": "Fire", "type": "keybind", "default": "MouseLeft,KeyF", "binds": 2},
+          {"key": "pause", "name": "Pause", "type": "keybind", "default": "Escape", "binds": 1}])"),
+                         m, error));
+    CHECK(m.settings.size() == 3 && m.settings[0].type == SettingType::Keybind && m.settings[2].binds == 1);
+    CHECK(!parse_manifest(manifest("a", "1.0.0", R"(, "settings": [
+          {"key": "jump", "name": "Jump", "type": "keybind", "default": "Spacebar"}])"), m, error));
+    CHECK(!parse_manifest(manifest("a", "1.0.0", R"(, "settings": [
+          {"key": "jump", "name": "Jump", "type": "keybind", "default": "Space", "binds": 3}])"), m, error));
+    CHECK(!parse_manifest(manifest("a", "1.0.0", R"(, "settings": [
+          {"key": "n", "name": "N", "type": "int", "default": 1, "binds": 1}])"), m, error));
+    CHECK(parse_manifest(manifest("a", "1.0.0", R"(, "settings": [
+          {"key": "jump", "name": "Jump", "type": "keybind", "default": "Space"},
+          {"key": "pause", "name": "Pause", "type": "keybind", "default": "Escape", "binds": 1}])"), m, error));
+    std::vector<ListEntry> list;
+    CHECK(parse_list(R"({"format": 1, "mods": [{"id": "a", "enabled": true,
+        "settings": {"jump": "KeyQ, Digit1", "pause": "KeyP,KeyO"}}]})", list, error));
+    std::vector<std::string> notes;
+    const auto values = resolve_settings(m, list[0].settings, notes);
+    CHECK(values.at("jump").s == "KeyQ,Digit1");  // as written, normalized
+    CHECK(values.at("pause").s == "Escape");      // two where one is taken: the default
+    CHECK(notes.size() == 1);
+}
+
 void lists() {
     std::vector<ListEntry> list;
     std::string error;
@@ -286,6 +324,7 @@ int main() {
     versions();
     manifests();
     settings();
+    keybinds();
     lists();
     checks();
     scripts();

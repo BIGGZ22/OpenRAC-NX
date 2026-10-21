@@ -105,7 +105,7 @@ void install_native(const fs::path& plugins) {
     fs::create_directories(dir / "lib");
     fs::copy_file(OPENRAC_TEST_MOD_A, dir / "lib" / library_name(), fs::copy_options::overwrite_existing);
     write(dir / "openrac-mod.json", R"({"format": 2, "id": "test-a", "name": "Test", "version": "1.0.0",
-        "api": "1.1", "games": {"test": ["one"]}, "hooks": ["Test_Add"],
+        "api": "1.2", "games": {"test": ["one"]}, "hooks": ["Test_Add"],
         "plugin": {")" + std::string(mods::platform_key()) + R"(": "lib/)" + library_name() + R"("},
         "settings": [{"key": "tag", "name": "Tag", "type": "int", "default": 0},
                      {"key": "behaviour", "name": "Behaviour", "type": "choice", "default": "ok",
@@ -303,6 +303,48 @@ end)
 
 // A player's install, no checkout: ~/OpenRAC/active/<game>/data/plugins under a temporary folder,
 // the list named as the launcher names it, the program started elsewhere.
+// The keyboard and mouse (interface 1.2) from a script: binds by name, the mouse, the window, the
+// keyboard taken while the scripts first run, the cursor asked for.
+openrac_input g_input{};
+std::uint32_t g_taken = 0;
+bool g_captured = false;
+
+void keyboard_and_mouse(const fs::path& plugins) {
+    install_script(plugins, "kbm", {{"main.luau", R"(
+openrac.take_input("keyboard")
+assert(not pcall(openrac.key, "NoSuchKey"), "an unknown name is an error")
+openrac.on_pad(function(port, report)
+    local dx, dy, wx, wy = openrac.mouse()
+    local focused, captured, overlay = openrac.window()
+    buffer.writeu8(report, 1, if openrac.key("KeyW") then 1 else 0)
+    buffer.writeu8(report, 2, if openrac.pressed("MouseLeft") then 1 else 0)
+    buffer.writeu8(report, 3, dx)
+    buffer.writeu8(report, 4, if openrac.pressed("WheelDown") then 1 else 0)
+    buffer.writeu8(report, 5, if focused and not overlay then 1 else 0)
+    openrac.capture_mouse(focused)
+end)
+)"}});
+    list(plugins, R"({"id": "kbm", "enabled": true})");
+    mods::Host h = host(plugins);
+    g_input = openrac_input{};
+    g_input.size = sizeof g_input;
+    h.input = [] { return static_cast<const openrac_input*>(&g_input); };
+    h.take_input = [](std::uint32_t devices) { g_taken |= devices; };
+    h.capture_mouse = [](bool capture) { g_captured = capture; };
+    CHECK(mods::load(h) == "kbm 1.0.0");
+    CHECK(g_taken == OPENRAC_INPUT_KEYBOARD);
+    g_input.keys[26] = OPENRAC_KEY_HELD;
+    g_input.mouse_pressed = OPENRAC_MOUSE_LEFT;
+    g_input.mouse_dx = 9.0f;
+    g_input.wheel_y = -1.0f;
+    g_input.focused = 1;
+    unsigned char report[18] = {0};
+    g_pad_hook(0, report, 18);
+    CHECK(report[1] == 1 && report[2] == 1 && report[3] == 9 && report[4] == 1 && report[5] == 1);
+    CHECK(g_captured);
+    mods::reset();
+}
+
 void an_installed_launchers_layout(const fs::path& root) {
     const fs::path plugins = root / "home" / "OpenRAC" / "active" / "test" / "data" / "plugins";
     install_script(plugins, "plus", {{"main.luau", R"(
@@ -363,6 +405,7 @@ int main() {
     before_after_pad_fields(plugins);
     an_installed_launchers_layout(dir);
     ids_and_old_names(plugins);
+    keyboard_and_mouse(plugins);
     refused_without_a_binding(plugins);
     std::error_code e;
     fs::remove_all(dir, e);

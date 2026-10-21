@@ -151,6 +151,9 @@ double api_setting_float(openrac_mod* mod, const char* key) {
 
 const char* api_setting_string(openrac_mod* mod, const char* key) {
     const SettingValue* v = setting(mod, key, SettingType::String, SettingType::Choice);
+    if (v == nullptr) {
+        v = setting(mod, key, SettingType::Keybind, SettingType::Keybind);
+    }
     return v != nullptr ? v->s.c_str() : "";
 }
 
@@ -244,6 +247,37 @@ void api_stack_pop(openrac_gaddr saved) {
     openrac_guest_sp = saved;
 }
 
+const openrac_input* api_input(void) {
+    static openrac_input none = [] {
+        openrac_input i{};
+        i.size = sizeof(openrac_input);
+        return i;
+    }();
+    const openrac_input* in = g_host != nullptr && g_host->input != nullptr ? g_host->input() : nullptr;
+    return in != nullptr ? in : &none;
+}
+
+int api_take_input(openrac_mod* mod, uint32_t devices) {
+    if (mod == nullptr || mod != g_loading) {
+        return OPENRAC_HOOK_TOO_LATE;
+    }
+    devices &= OPENRAC_INPUT_KEYBOARD | OPENRAC_INPUT_MOUSE;
+    if (devices != 0 && g_host != nullptr && g_host->take_input != nullptr) {
+        g_host->take_input(devices);
+    }
+    if ((devices & OPENRAC_INPUT_KEYBOARD) != 0) {
+        log::info("mod {} takes the keyboard: the port's own keys no longer press pad 0's buttons", mod->id);
+    }
+    return OPENRAC_HOOK_OK;
+}
+
+void api_capture_mouse(openrac_mod* mod, int capture) {
+    (void)mod;
+    if (g_host != nullptr && g_host->capture_mouse != nullptr) {
+        g_host->capture_mouse(capture != 0);
+    }
+}
+
 void fill_api(const Host& host) {
     static std::string game, version, openrac_version;
     game = host.game;
@@ -274,6 +308,9 @@ void fill_api(const Host& host) {
     g_api.loaded_level = api_loaded_level;
     g_api.stack_push = api_stack_push;
     g_api.stack_pop = api_stack_pop;
+    g_api.input = api_input;
+    g_api.take_input = api_take_input;
+    g_api.capture_mouse = api_capture_mouse;
 }
 
 // ---- status.json ----
@@ -436,7 +473,8 @@ bool load_one(const fs::path& folder, const Candidate& c, std::unique_ptr<openra
         s.version = g_host->version;
         s.platform = platform_key();
         s.api = std::format("{}.{}", OPENRAC_MOD_API_MAJOR, OPENRAC_MOD_API_MINOR);
-        const scripts::Services services{api_hook, api_on_frame, api_on_pad, api_log, script_stopped};
+        const scripts::Services services{api_hook,  api_on_frame,  api_on_pad,        api_log,
+                                         script_stopped, api_input, api_take_input, api_capture_mouse};
         std::string why;
         g_loading = mod.get();
         const bool loaded = scripts::load(s, g_host->scripts, services, why);
