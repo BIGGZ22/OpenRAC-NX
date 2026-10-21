@@ -168,7 +168,10 @@ The C keeps the EE's registers as locals ([ee.h](../../runtime/include/openrac/e
 | `j` | a goto, unless it goes to a function with C (a tail call); a hand-written routine's continuation in the next file is followed |
 | `jalr`, a jump through a register | through `GFN` (eight integer registers, and eight float ones when the function sets any), or, where an argument's position decides its register whatever its type (Windows x64, `OPENRAC_REGS_THUNKS`), through the callee's thunk in `functions.c`, which gives the registers to its parameters as the EE passes them (`openrac_guest_call_regs`, [guest.h](../../runtime/include/openrac/guest.h)); a jump table (the tables and `jlabel`s beside the function) is a `switch` on the offset into the copy loaded |
 | `%hi` / `%lo` of a symbol | relocated as the C's globals and function addresses are (`Unit.global_address`, `code_address`) |
-| `div.s`, `sqrt.s`, `rsqrt.s`, `cvt.w.s` | the EE's: no infinities, no NaN, saturation |
+| `bltzal`, `bgezal` (and `-l`) | a call when the 64-bit register's sign says so; `$ra` is written either way |
+| `div.s`, `sqrt.s`, `rsqrt.s`, `cvt.w.s` | the EE's: no infinities, no NaN, saturation (by the sign, for a float with exponent 255) |
+| the MMI operations | lanes of the two halves; the multiplies and divides on LO and HI as 128-bit registers (`openrac_ee_pmul`: two 64-bit results for `pmultw`, the halfword family's eight words) |
+| VU0 in macro mode | `openrac_vu0`; `vf0` is never written; `vlqi`, `vsqi`, `vilwr` and the rest reach VU0's data memory (`0x11004000`); `vclipw` and the clip flag; MAC and STATUS (`cfc2 $vi16`, `$vi17`) kept only in a function that reads them |
 | a `double` (a parameter, an argument, a result) | software on the EE: its 64 bits in one general register, in the integer registers' order; the host's `double` (`openrac_ee_d`, `openrac_ee_dbits`) |
 | `ei`, `di` | nothing: the port takes no interrupts (its handlers run at set points) |
 | `break`, `teq` and the other traps | `openrac_ee_break`: logged, and the function goes on |
@@ -186,9 +189,9 @@ retail entry discovery and only to functions without a C or host definition.
 Both direct calls and the register thunks then use that prototype.
 
 What it cannot write keeps the stub, and the report lists the function and
-why: system calls, COP0 (but `ei`, `di`), VU0 microprograms (`vcallms`) and
-clipping, a few rare MMI operations, a variadic definition, records by
-value, and code that reads a register no caller passes (a hand-written
+why: system calls, COP0 (but `ei`, `di`), VU0 microprograms (`vcallms`),
+branches on VU0 (`bc2t`) and its random numbers (`vrinit`), a variadic
+definition, records by value, and code that reads a register no caller passes (a hand-written
 routine's own convention, or a fragment of a function with C that the
 catalogue named).
 

@@ -1733,6 +1733,239 @@ class FromAssembly(unittest.TestCase):
             """)}, symbols={})
         self.assertEqual(out, ["10", "30", "50", "70", "10", "-20", "30", "-40", "50", "-60", "70", "32767"])
 
+    def test_parallel_word_multiplies_shifts_and_divides(self):
+        # The R5900's two-result word operations (HARDWARE_SEMANTICS.md, item 10): two 64-bit
+        # products, not a sum; the variable shifts, sign-extended to doublewords; the divides.
+        out = self.run_asm("""
+            extern int D_00300000[56];
+            INCLUDE_ASM("asm", func_00100000);
+            extern void func_00100000(int *v);
+            int test_main(void) {
+                static const int s[4] = {3, 100, -5, 200}, t[4] = {7, 0, 11, 0};
+                int i;
+                for (i = 0; i < 4; i++) { D_00300000[i] = s[i]; D_00300000[4 + i] = t[i]; }
+                func_00100000(D_00300000);
+                for (i = 8; i < 56; i++) test_print(D_00300000[i]);
+                return 0;
+            }
+        """, {"func_00100000": (0x00100000, """
+                lq $8, 0($4)
+                lq $9, 16($4)
+                pmultw $10, $8, $9     # (3 * 7, -5 * 11) as doublewords
+                sq $10, 32($4)
+                pmaddw $11, $8, $9     # HI:LO plus the products again
+                sq $11, 48($4)
+                pmfhi $12
+                sq $12, 64($4)
+                pmflo $13
+                sq $13, 80($4)
+                psllvw $14, $9, $8     # rt << rs: (3 << 7, -5 << 11)
+                sq $14, 96($4)
+                psravw $15, $9, $8
+                sq $15, 112($4)
+                psrlvw $16, $9, $8
+                sq $16, 128($4)
+                pdivw $0, $8, $9       # quotients to LO, remainders to HI
+                pmfhl.lw $17, $0, $0
+                sq $17, 144($4)
+                pmultuw $18, $8, $9    # 0xFFFFFFFB * 11, unsigned
+                sq $18, 160($4)
+                pmfhl.slw $19, $0, $0  # HI:LO saturated to 32 bits
+                sq $19, 176($4)
+                pdivbw $0, $8, $9      # each word over halfword 0 of rt (7)
+                pmflo $20
+                sq $20, 192($4)
+                pmfhi $21
+                jr $31
+                sq $21, 208($4)
+            """)}, symbols={})
+        self.assertEqual([int(x) for x in out], [
+            21, 0, -55, -1,  42, 0, -110, -1,  0, 0, -1, -1,  42, 0, -110, -1,
+            384, 0, -10240, -1,  0, 0, -1, -1,  0, 0, 2097151, 0,  0, 3, 0, -5,
+            21, 0, -55, 10,  21, 0, 2147483647, 0,  0, 14, 0, 28,  3, 2, -5, 4])
+
+    def test_parallel_halfword_multiply_add(self):
+        # The halfword family on LO and HI's eight words (item 10): phmadh's pair sums (and the
+        # higher product in the odd words), pmaddh's accumulation, pmfhl.lh, pmthl, padsbh, phmsbh.
+        out = self.run_asm("""
+            extern short D_00300000[16];
+            extern int D_00300100[28];
+            extern short D_00300200[16];
+            INCLUDE_ASM("asm", func_00100000);
+            extern void func_00100000(short *v, int *w, short *h);
+            int test_main(void) {
+                int i;
+                for (i = 0; i < 8; i++) { D_00300000[i] = (short)(i + 1); D_00300000[8 + i] = (short)(10 * (i + 1)); }
+                func_00100000(D_00300000, D_00300100, D_00300200);
+                for (i = 0; i < 28; i++) test_print(D_00300100[i]);
+                for (i = 0; i < 16; i++) test_print(D_00300200[i]);
+                return 0;
+            }
+        """, {"func_00100000": (0x00100000, """
+                lq $8, 0($4)           # 1 .. 8
+                lq $9, 16($4)          # 10 .. 80
+                phmadh $10, $8, $9
+                sq $10, 0($5)
+                pmfhl.uw $11, $0, $0   # the odd words: the higher products
+                sq $11, 16($5)
+                pmaddh $12, $8, $9
+                sq $12, 32($5)
+                pmfhl.lh $13, $0, $0
+                sq $13, 0($6)
+                pmthl $0, $9, $0       # rt's words to LO 0, HI 0, LO 2, HI 2
+                pmfhl.lw $14, $0, $0
+                sq $14, 48($5)
+                pmfhl.uw $15, $0, $0   # the odd words kept
+                sq $15, 64($5)
+                phmsbh $16, $8, $9
+                sq $16, 80($5)
+                pmfhl.uw $17, $0, $0
+                sq $17, 96($5)
+                padsbh $18, $9, $8     # rs - rt below, rs + rt above
+                jr $31
+                sq $18, 16($6)
+            """)}, symbols={})
+        self.assertEqual([int(x) for x in out], [
+            50, 250, 610, 1130,  40, 160, 360, 640,  60, 340, 860, 1620,
+            10 | 20 << 16, 30 | 40 << 16, 50 | 60 << 16, 70 | 80 << 16,  80, 320, 720, 1280,
+            30, 70, 110, 150,  -41, -161, -361, -641,
+            60, 80, 340, 320, 860, 720, 1620, 1280,  9, 18, 27, 36, 55, 66, 77, 88])
+
+    def test_conditional_call_tests_all_64_bits(self):
+        # bltzal on a register whose low word is positive and whose doubleword is negative
+        # (item 3): the EE calls; $ra is set either way.
+        out = self.run_asm("""
+            int func_00100100(int x) { return x * 2; }
+            INCLUDE_ASM("asm", func_00100000);
+            extern int func_00100000(int a);
+            int test_main(void) { test_print(func_00100000(-1)); test_print(func_00100000(1)); return 0; }
+        """, {"func_00100000": (0x00100000, """
+                addiu $29, $29, -16
+                sq $31, 0($29)
+                addiu $2, $0, 0
+                dsll32 $8, $4, 0
+                ori $8, $8, 1          # (a << 32) | 1
+                bltzal $8, func_00100100
+                addiu $4, $0, 21       # its argument, in the delay slot
+                lq $31, 0($29)
+                jr $31
+                addiu $29, $29, 16
+            """)}, symbols={"func_00100100": 0x00100100})
+        self.assertEqual(out, ["42", "0"])
+
+    def test_conversions_saturate_by_sign(self):
+        # cvt.w.s and vftoi0 of floats with exponent 255 (a NaN to the host, a large number to
+        # the EE) and of 3e9 (item 5): 0x7FFFFFFF or 0x80000000 by the sign, never x86's 0x80000000.
+        out = self.run_asm("""
+            extern unsigned int D_00300000[16];
+            INCLUDE_ASM("asm", func_00100000);
+            extern void func_00100000(unsigned int *v);
+            int test_main(void) {
+                int i;
+                D_00300000[0] = 0x7FFFEF02u; D_00300000[1] = 0xFFFFEF02u;
+                D_00300000[2] = 0x4F32D05Eu; D_00300000[3] = 0xBFC00000u; /* 3e9, -1.5 */
+                func_00100000(D_00300000);
+                for (i = 4; i < 12; i++) test_print((int)D_00300000[i]);
+                return 0;
+            }
+        """, {"func_00100000": (0x00100000, """
+                lwc1 $f0, 0($4)
+                cvt.w.s $f1, $f0
+                mfc1 $2, $f1
+                sw $2, 16($4)
+                lwc1 $f0, 4($4)
+                cvt.w.s $f1, $f0
+                mfc1 $2, $f1
+                sw $2, 20($4)
+                lqc2 $vf1, 0($4)
+                vftoi0.xyzw $vf2, $vf1
+                jr $31
+                sqc2 $vf2, 32($4)
+            """)}, symbols={})
+        self.assertEqual([int(x) for x in out], [2147483647, -2147483648, 0, 0,
+                                                 2147483647, -2147483648, 2147483647, -1])
+
+    def test_vu0_macro_memory_and_vf0(self):
+        # VSQI/VLQD/VILWR/VISWR reach VU0's data memory at (vi & 0xFF) * 16, not main RAM; the
+        # increments and decrements are vi's (item 8); vf0 stays (0, 0, 0, 1) (item 4).
+        out = self.run_asm("""
+            extern float D_00300000[24];
+            INCLUDE_ASM("asm", func_00100000);
+            extern void func_00100000(float *v);
+            int test_main(void) {
+                int i;
+                for (i = 0; i < 4; i++) D_00300000[i] = (float)(i + 1);
+                func_00100000(D_00300000);
+                for (i = 4; i < 12; i++) test_print_float(D_00300000[i]);
+                test_print(((int *)D_00300000)[12]);
+                test_print(((int *)D_00300000)[13]);
+                for (i = 16; i < 20; i++) test_print_float(D_00300000[i]);
+                test_print_float(((float *)0x11004020)[0]);
+                test_print(((int *)0x11004020)[2]);
+                return 0;
+            }
+        """, {"func_00100000": (0x00100000, """
+                addiu $8, $0, 0x102    # vi1 = 2 (only its low eight bits address a quadword)
+                ctc2 $8, $vi1
+                lqc2 $vf1, 0($4)
+                vsqi.xyzw $vf1, $vi1   # to quadword 2; vi1 = 3
+                vsqi.xyzw $vf0, $vi1   # (0, 0, 0, 1) to 3; vi1 = 4
+                vlqd.xyzw $vf2, $vi1   # vi1 = 3: (0, 0, 0, 1)
+                vlqd.xy $vf3, $vi1     # vi1 = 2: x and y of (1, 2, 3, 4)
+                sqc2 $vf2, 16($4)
+                sqc2 $vf3, 32($4)
+                addiu $9, $0, 0x1234
+                ctc2 $9, $vi2
+                viswr.z $vi2, $vi1     # the word z of quadword 2
+                vilwr.z $vi3, $vi1
+                vlqi.xyzw $vf0, $vi1   # vf0 is not written; vi1 = 3
+                cfc2 $2, $vi3
+                sw $2, 48($4)
+                cfc2 $3, $vi1
+                sw $3, 52($4)
+                qmtc2 $8, $vf0         # nor here
+                jr $31
+                sqc2 $vf0, 64($4)
+            """)}, symbols={})
+        self.assertEqual(out, ["0.000", "0.000", "0.000", "1.000", "1.000", "2.000", "0.000", "0.000",
+                               "4660", "259", "0.000", "0.000", "0.000", "1.000", "1.000", "4660"])
+
+    def test_vu0_flags_and_clipping(self):
+        # MAC and STATUS after a macro subtraction, read with CFC2 as the collision code does; the
+        # clip flag of two VCLIPw; the invalid flag of 0 / 0 (item 9).
+        out = self.run_asm("""
+            extern float D_00300000[12];
+            extern int D_00300100[4];
+            INCLUDE_ASM("asm", func_00100000);
+            extern void func_00100000(float *v, int *w);
+            int test_main(void) {
+                static const float v[12] = {1, -2, 0, 5,  1, 1, 0, 4,  10, -10, 3, 2};
+                int i;
+                for (i = 0; i < 12; i++) D_00300000[i] = v[i];
+                func_00100000(D_00300000, D_00300100);
+                for (i = 0; i < 4; i++) test_print(D_00300100[i]);
+                return 0;
+            }
+        """, {"func_00100000": (0x00100000, """
+                lqc2 $vf1, 0($4)
+                lqc2 $vf2, 16($4)
+                lqc2 $vf4, 32($4)
+                vsub.xyz $vf3, $vf1, $vf2   # (0, -3, 0): x and z zero, y negative
+                cfc2 $2, $vi17
+                sw $2, 0($5)
+                cfc2 $3, $vi16
+                sw $3, 4($5)
+                vclipw.xyz $vf4, $vf2       # (10, -10, 3) against 4: +x, -y
+                vclipw.xyz $vf1, $vf2       # inside
+                cfc2 $6, $vi18
+                sw $6, 8($5)
+                raw 0x4A0003BC              # vdiv Q, $vf0x, $vf0x: 0 / 0
+                cfc2 $7, $vi16
+                jr $31
+                sw $7, 12($5)
+            """)}, symbols={})
+        self.assertEqual([int(x) for x in out], [0x4A, 0xC3, 9 << 6, 0xC3 | 0x10 | 0x400])
+
     def test_declared_nowhere_gets_its_parameters_from_its_registers(self):
         # Called only through its code address; the C calls it as (int, int).
         out = self.run_asm("""

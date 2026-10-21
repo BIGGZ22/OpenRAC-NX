@@ -336,6 +336,8 @@ These variables are read by `openrac-<game>` at run time. Unless said otherwise,
 | Variable | Value | What it does | Read in |
 | --- | --- | --- | --- |
 | `OPENRAC_STRICT` | `1` | Stops with a fatal error on a call to a code address that no function of the port has, instead of going to the unknown-function handler. Only a value starting with `1` counts. | `port/runtime/guest.cpp` |
+| `OPENRAC_ROUND_NEAREST` | any | The game's thread keeps the host's rounding to nearest instead of the EE's toward zero, to compare ([HARDWARE_SEMANTICS.md](HARDWARE_SEMANTICS.md), item 1). | `port/game/common/main.cpp` |
+| `OPENRAC_DENORMALS` | any | The game's thread keeps the host's denormal floats instead of reading and making them as zero, as the EE does, to compare (item 1). | `port/game/common/main.cpp` |
 
 ### Build-time
 

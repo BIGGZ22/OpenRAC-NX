@@ -302,7 +302,8 @@ enum {
     OPENRAC_MMI_PABSH, OPENRAC_MMI_PADDUW, OPENRAC_MMI_PSUBUW, OPENRAC_MMI_PADDUH, OPENRAC_MMI_PSUBUH,
     OPENRAC_MMI_PADDUB, OPENRAC_MMI_PSUBUB, OPENRAC_MMI_PADDSW, OPENRAC_MMI_PSUBSW, OPENRAC_MMI_PADDSH,
     OPENRAC_MMI_PSUBSH, OPENRAC_MMI_PADDSB, OPENRAC_MMI_PSUBSB, OPENRAC_MMI_PLZCW, OPENRAC_MMI_PEXT5,
-    OPENRAC_MMI_PPAC5, OPENRAC_MMI_PINTH, OPENRAC_MMI_PINTEH
+    OPENRAC_MMI_PPAC5, OPENRAC_MMI_PINTH, OPENRAC_MMI_PINTEH, OPENRAC_MMI_PSLLVW, OPENRAC_MMI_PSRLVW,
+    OPENRAC_MMI_PSRAVW, OPENRAC_MMI_PADSBH
 };
 
 OPENRAC_EE_INLINE openrac_s64 openrac_ee_clamp(openrac_s64 v, openrac_s64 lo, openrac_s64 hi) {
@@ -507,6 +508,177 @@ OPENRAC_EE_INLINE openrac_ee_q openrac_ee_mmi(int op, openrac_ee_q s, openrac_ee
                                        | ((v >> 31) << 15));
         }
         break;
+    case OPENRAC_MMI_PSLLVW: case OPENRAC_MMI_PSRLVW: case OPENRAC_MMI_PSRAVW:
+        /* Words 0 and 2 of rt, each shifted by the low five bits of the same word of rs; each
+         * result sign-extended to its doubleword. */
+        for (i = 0; i < 2; i++) {
+            openrac_u32 v = openrac_ee_w(t, 2 * i), r;
+            int n = (int)(openrac_ee_w(s, 2 * i) & 31u);
+            r = op == OPENRAC_MMI_PSLLVW ? v << n : op == OPENRAC_MMI_PSRLVW ? v >> n : (openrac_u32)((openrac_s32)v >> n);
+            if (i == 0) {
+                d.lo = OPENRAC_EE_S32(r);
+            } else {
+                d.hi = OPENRAC_EE_S32(r);
+            }
+        }
+        break;
+    case OPENRAC_MMI_PADSBH:
+        /* The low four halfwords subtracted, the high four added. */
+        for (i = 0; i < 8; i++) {
+            openrac_u32 a = openrac_ee_h(s, i), b = openrac_ee_h(t, i);
+            openrac_ee_seth(&d, i, i < 4 ? a - b : a + b);
+        }
+        break;
+    }
+    return d;
+}
+
+/* The parallel multiplies and divides, on LO and HI as 128-bit registers (lo and hi: their two
+ * doublewords each, the second the LO1 / HI1 of mult1 and div1). The result in rd, where the
+ * operation has one. */
+enum {
+    OPENRAC_PMUL_PMULTW, OPENRAC_PMUL_PMULTUW, OPENRAC_PMUL_PMADDW, OPENRAC_PMUL_PMADDUW, OPENRAC_PMUL_PMSUBW,
+    OPENRAC_PMUL_PMADDH, OPENRAC_PMUL_PMSUBH, OPENRAC_PMUL_PHMADH, OPENRAC_PMUL_PHMSBH, OPENRAC_PMUL_PDIVW,
+    OPENRAC_PMUL_PDIVUW, OPENRAC_PMUL_PDIVBW
+};
+
+OPENRAC_EE_INLINE void openrac_ee_setd(openrac_ee_q *q, int i, openrac_u64 v) {
+    if (i == 0) {
+        q->lo = v;
+    } else {
+        q->hi = v;
+    }
+}
+
+OPENRAC_EE_INLINE openrac_ee_q openrac_ee_pmul(int op, openrac_ee_q s, openrac_ee_q t, openrac_ee_q *lo,
+                                               openrac_ee_q *hi) {
+    openrac_ee_q d;
+    int i;
+    d.lo = 0;
+    d.hi = 0;
+    switch (op) {
+    case OPENRAC_PMUL_PMULTW: case OPENRAC_PMUL_PMULTUW: case OPENRAC_PMUL_PMADDW: case OPENRAC_PMUL_PMADDUW:
+    case OPENRAC_PMUL_PMSUBW:
+        /* Words 0 and 2: two 64-bit results, each also split over LO and HI (a sign-extended word
+         * each), the accumulating ones from HI:LO as they were. Not a sum. */
+        for (i = 0; i < 2; i++) {
+            openrac_u32 a = openrac_ee_w(s, 2 * i), b = openrac_ee_w(t, 2 * i);
+            openrac_u64 p, acc;
+            if (op == OPENRAC_PMUL_PMULTUW || op == OPENRAC_PMUL_PMADDUW) {
+                p = (openrac_u64)a * (openrac_u64)b;
+            } else {
+                p = (openrac_u64)((openrac_s64)(openrac_s32)a * (openrac_s64)(openrac_s32)b);
+            }
+            acc = ((openrac_u64)openrac_ee_w(*hi, 2 * i) << 32) | openrac_ee_w(*lo, 2 * i);
+            if (op == OPENRAC_PMUL_PMULTW || op == OPENRAC_PMUL_PMULTUW) {
+                acc = p;
+            } else if (op == OPENRAC_PMUL_PMSUBW) {
+                acc -= p;
+            } else {
+                acc += p;
+            }
+            openrac_ee_setd(lo, i, OPENRAC_EE_S32(acc));
+            openrac_ee_setd(hi, i, OPENRAC_EE_S32(acc >> 32));
+            openrac_ee_setd(&d, i, acc);
+        }
+        break;
+    case OPENRAC_PMUL_PMADDH: case OPENRAC_PMUL_PMSUBH:
+        /* Eight signed halfword products into the words of LO and HI as pmulth places them (LO 0,
+         * 1, HI 0, 1, LO 2, 3, HI 2, 3), each added to or taken from the word there; rd the even
+         * ones. */
+        for (i = 0; i < 8; i++) {
+            openrac_s32 p = (openrac_s32)(openrac_s16)openrac_ee_h(s, i) * (openrac_s32)(openrac_s16)openrac_ee_h(t, i);
+            openrac_ee_q *to = (i & 2) != 0 ? hi : lo;
+            int w = (i & 1) | ((i & 4) >> 1);
+            openrac_u32 cur = openrac_ee_w(*to, w);
+            openrac_ee_setw(to, w, op == OPENRAC_PMUL_PMADDH ? cur + (openrac_u32)p : cur - (openrac_u32)p);
+        }
+        openrac_ee_setw(&d, 0, openrac_ee_w(*lo, 0));
+        openrac_ee_setw(&d, 1, openrac_ee_w(*hi, 0));
+        openrac_ee_setw(&d, 2, openrac_ee_w(*lo, 2));
+        openrac_ee_setw(&d, 3, openrac_ee_w(*hi, 2));
+        break;
+    case OPENRAC_PMUL_PHMADH: case OPENRAC_PMUL_PHMSBH:
+        /* Each pair of halfword products summed (phmadh) or the lower taken from the higher
+         * (phmsbh): pairs 0, 1, 2, 3 to LO word 0, HI word 0, LO word 2, HI word 2, and rd. The
+         * odd words get the higher product (inverted for phmsbh), as the R5900 leaves them. */
+        for (i = 0; i < 4; i++) {
+            openrac_s32 low = (openrac_s32)(openrac_s16)openrac_ee_h(s, 2 * i)
+                              * (openrac_s32)(openrac_s16)openrac_ee_h(t, 2 * i);
+            openrac_s32 high = (openrac_s32)(openrac_s16)openrac_ee_h(s, 2 * i + 1)
+                               * (openrac_s32)(openrac_s16)openrac_ee_h(t, 2 * i + 1);
+            openrac_ee_q *to = (i & 1) != 0 ? hi : lo;
+            int w = i & 2;
+            if (op == OPENRAC_PMUL_PHMADH) {
+                openrac_ee_setw(to, w, (openrac_u32)high + (openrac_u32)low);
+                openrac_ee_setw(to, w + 1, (openrac_u32)high);
+            } else {
+                openrac_ee_setw(to, w, (openrac_u32)high - (openrac_u32)low);
+                openrac_ee_setw(to, w + 1, ~(openrac_u32)high);
+            }
+            openrac_ee_setw(&d, i, openrac_ee_w(*to, w));
+        }
+        break;
+    case OPENRAC_PMUL_PDIVW: case OPENRAC_PMUL_PDIVUW:
+        /* Words 0 and 2, as div and divu (a divisor of zero included): quotients in LO, remainders
+         * in HI, a sign-extended word in each doubleword. */
+        for (i = 0; i < 2; i++) {
+            openrac_u64 q, r;
+            if (op == OPENRAC_PMUL_PDIVW) {
+                openrac_ee_div(openrac_ee_w(s, 2 * i), openrac_ee_w(t, 2 * i), &q, &r);
+            } else {
+                openrac_ee_divu(openrac_ee_w(s, 2 * i), openrac_ee_w(t, 2 * i), &q, &r);
+            }
+            openrac_ee_setd(lo, i, q);
+            openrac_ee_setd(hi, i, r);
+        }
+        break;
+    case OPENRAC_PMUL_PDIVBW:
+        /* Each word of rs over halfword 0 of rt, signed: quotients in LO's words, remainders in HI's. */
+        for (i = 0; i < 4; i++) {
+            openrac_s32 a = (openrac_s32)openrac_ee_w(s, i), b = (openrac_s16)openrac_ee_h(t, 0), q, r;
+            if (b == 0) {
+                q = a < 0 ? 1 : -1;
+                r = a;
+            } else if (a == (openrac_s32)0x80000000 && b == -1) {
+                q = a;
+                r = 0;
+            } else {
+                q = a / b;
+                r = a % b;
+            }
+            openrac_ee_setw(lo, i, (openrac_u32)q);
+            openrac_ee_setw(hi, i, (openrac_u32)r);
+        }
+        break;
+    }
+    return d;
+}
+
+/* pmfhl.slw: HI:LO's words 0 and 2 as 64-bit numbers, saturated to 32 bits and sign-extended;
+ * pmfhl.lh: the even halfwords of LO and HI (LO 0, 2, HI 0, 2, then LO 4, 6, HI 4, 6). */
+OPENRAC_EE_INLINE openrac_ee_q openrac_ee_pmfhl_slw(openrac_ee_q lo, openrac_ee_q hi) {
+    openrac_ee_q d;
+    int i;
+    d.lo = 0;
+    d.hi = 0;
+    for (i = 0; i < 2; i++) {
+        openrac_s64 v = (openrac_s64)(((openrac_u64)openrac_ee_w(hi, 2 * i) << 32) | openrac_ee_w(lo, 2 * i));
+        openrac_s64 c = v > 0x7FFFFFFF ? 0x7FFFFFFF : v < -0x7FFFFFFF - 1 ? -0x7FFFFFFF - 1 : v;
+        openrac_ee_setd(&d, i, (openrac_u64)c);
+    }
+    return d;
+}
+OPENRAC_EE_INLINE openrac_ee_q openrac_ee_pmfhl_lh(openrac_ee_q lo, openrac_ee_q hi) {
+    openrac_ee_q d;
+    int i;
+    d.lo = 0;
+    d.hi = 0;
+    for (i = 0; i < 2; i++) {
+        openrac_ee_seth(&d, 4 * i, openrac_ee_h(lo, 4 * i));
+        openrac_ee_seth(&d, 4 * i + 1, openrac_ee_h(lo, 4 * i + 2));
+        openrac_ee_seth(&d, 4 * i + 2, openrac_ee_h(hi, 4 * i));
+        openrac_ee_seth(&d, 4 * i + 3, openrac_ee_h(hi, 4 * i + 2));
     }
     return d;
 }
@@ -533,11 +705,104 @@ typedef struct openrac_vu0_state {
     openrac_u32 vi[16];
     openrac_f32 q, i, r, p;
     openrac_f32 scratch[4]; /* room for moving a register in the console's form (asmc.py), 16-aligned */
+    /* The flags (CFC2 $vi16, $vi17, $vi18), kept by the functions that read them (asmc.py). */
+    openrac_u32 status, mac, clip;
 } openrac_vu0_state;
 
-/* Float to fixed point with `frac` fraction bits, as vftoi: truncated, saturated. */
+/* VU0's data memory, as the EE sees it, and where a macro-mode load or store through vi reaches:
+ * a quadword index into its 4 KB (VLQI, VSQI, VLQD, VSQD, VILWR, VISWR), never main RAM. */
+#define OPENRAC_VU0_DATA 0x11004000u
+OPENRAC_EE_INLINE openrac_u32 openrac_vu0_addr(openrac_u32 vi) {
+    return OPENRAC_VU0_DATA + ((vi & 0xFFu) << 4);
+}
+
+/* The MAC flag bits of one FMAC result in field c (x 0 ... w 3; x is the top bit of each group of
+ * four): zero (a zero or denormal exponent, which the VU reads as zero), sign, and overflow (an
+ * exponent of 255, the host's infinity or NaN where the VU would have saturated). Underflow is
+ * not seen: the host has flushed such a result to zero already. */
+OPENRAC_EE_INLINE openrac_u32 openrac_vu0_mac(openrac_f32 v, int c) {
+    openrac_u32 b = openrac_ee_bits(v), at = 3u - (openrac_u32)c, m = 0;
+    if ((b & 0x7F800000u) == 0) {
+        m |= 1u << at;
+    }
+    if ((b & 0x80000000u) != 0) {
+        m |= 0x10u << at;
+    }
+    if ((b & 0x7F800000u) == 0x7F800000u) {
+        m |= 0x1000u << at;
+    }
+    return m;
+}
+/* After an FMAC operation: MAC as computed, and STATUS's zero, sign, underflow and overflow
+ * (bits 0-3) set when any field has it, and kept in their sticky bits (6-9). */
+OPENRAC_EE_INLINE void openrac_vu0_set_mac(openrac_vu0_state *vu, openrac_u32 mac) {
+    openrac_u32 s = 0;
+    if ((mac & 0x000Fu) != 0) {
+        s |= 1u;
+    }
+    if ((mac & 0x00F0u) != 0) {
+        s |= 2u;
+    }
+    if ((mac & 0x0F00u) != 0) {
+        s |= 4u;
+    }
+    if ((mac & 0xF000u) != 0) {
+        s |= 8u;
+    }
+    vu->mac = mac;
+    vu->status = (vu->status & ~0xFu) | s | (s << 6);
+}
+/* After VDIV (kind 0), VSQRT (1) or VRSQRT (2) of s by t: STATUS's invalid (0/0, the root of a
+ * negative number) and divide-by-zero bits (4, 5), and their sticky bits (10, 11). */
+OPENRAC_EE_INLINE void openrac_vu0_set_div(openrac_vu0_state *vu, int kind, openrac_f32 s, openrac_f32 t) {
+    int s_zero = (openrac_ee_bits(s) & 0x7F800000u) == 0;
+    int t_zero = (openrac_ee_bits(t) & 0x7F800000u) == 0;
+    int t_negative = !t_zero && (openrac_ee_bits(t) & 0x80000000u) != 0;
+    openrac_u32 flags = 0;
+    if (kind == 1) {
+        flags = t_negative ? 0x10u : 0;
+    } else if (t_zero) {
+        flags = s_zero ? 0x10u : 0x20u;
+    } else if (kind == 2 && t_negative) {
+        flags = 0x10u;
+    }
+    vu->status = (vu->status & ~0x30u) | flags | (flags << 6);
+}
+/* VCLIPw.xyz: the clip flag moves up six bits (it keeps the last four judgements) and takes x, y
+ * and z against +|w| and -|w|: bit 0 x > +|w|, bit 1 x < -|w|, then y, then z. */
+OPENRAC_EE_INLINE void openrac_vu0_clip(openrac_vu0_state *vu, openrac_f32 x, openrac_f32 y, openrac_f32 z,
+                                        openrac_f32 w) {
+    openrac_f32 a = openrac_ee_f(openrac_ee_bits(w) & 0x7FFFFFFFu);
+    openrac_u32 b = 0;
+    if (x > a) {
+        b |= 1u;
+    }
+    if (x < -a) {
+        b |= 2u;
+    }
+    if (y > a) {
+        b |= 4u;
+    }
+    if (y < -a) {
+        b |= 8u;
+    }
+    if (z > a) {
+        b |= 0x10u;
+    }
+    if (z < -a) {
+        b |= 0x20u;
+    }
+    vu->clip = ((vu->clip << 6) | b) & 0xFFFFFFu;
+}
+
+/* Float to fixed point with `frac` fraction bits, as vftoi: truncated, saturated. A float with
+ * exponent 255 is a large number to the VU (a NaN to the host) and saturates by its sign: the
+ * texture cache of the engine's later games reads 0x80000000 as "very close". */
 OPENRAC_EE_INLINE openrac_u32 openrac_ee_ftoi(openrac_f32 f, int frac) {
     openrac_f32 v = f * (openrac_f32)(1 << frac);
+    if ((openrac_ee_bits(f) & 0x7F800000u) == 0x7F800000u) {
+        return (openrac_ee_bits(f) >> 31) != 0 ? 0x80000000u : 0x7FFFFFFFu;
+    }
     if (v >= openrac_ee_f(0x4F000000u)) { /* 2^31 */
         return 0x7FFFFFFFu;
     }
