@@ -269,7 +269,8 @@ def check(gen: Path, include_all: bool = False) -> tuple[list[str], dict]:
                     caller = name
                 else:
                     break
-            places = targets(expr, where.get(caller or "", set()))
+            # A wrapped or hooked function's C is <name>__game: its places are <name>'s.
+            places = targets(expr, where.get((caller or "").removesuffix("__game"), set()))
             if places is None:
                 stats["unknown"] += 1
                 continue
