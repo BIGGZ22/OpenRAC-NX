@@ -513,6 +513,25 @@ pub fn quiet(program: &Path) -> Command {
     cmd
 }
 
+/// `program` as a Linux desktop entry's `Exec` runs it: in double quotes, a backslash before `"`,
+/// `` ` ``, `$` and a backslash (each then doubled, as an entry's strings take it) and `%` as `%%`,
+/// the Desktop Entry Specification's rules, so a path with spaces or a `%` in it works.
+pub fn desktop_exec(program: &Path) -> String {
+    let mut out = String::from("\"");
+    for c in program.to_string_lossy().chars() {
+        match c {
+            '"' | '`' | '$' | '\\' => {
+                out.push_str("\\\\");
+                out.push(c);
+            }
+            '%' => out.push_str("%%"),
+            _ => out.push(c),
+        }
+    }
+    out.push('"');
+    out
+}
+
 /// Runs a short probe; its output, or why it failed or did not finish in `timeout`.
 pub fn run(mut cmd: Command, timeout: Duration) -> Result<String, String> {
     let program = cmd.get_program().to_string_lossy().into_owned();
@@ -562,6 +581,15 @@ pub fn run(mut cmd: Command, timeout: Duration) -> Result<String, String> {
 mod tests {
     use super::*;
     use crate::testing::checkout;
+
+    #[test]
+    fn a_desktop_entry_starts_a_path_with_spaces_and_signs() {
+        assert_eq!(
+            desktop_exec(Path::new("/home/p/My Games/OpenRAC.AppImage")),
+            r#""/home/p/My Games/OpenRAC.AppImage""#
+        );
+        assert_eq!(desktop_exec(Path::new("/a/100%/$x\"y")), r#""/a/100%%/\\$x\\"y""#);
+    }
 
     /// Godot for Windows as players have it: Extract All's folder named for the zip in
     /// Downloads, winget's package folder, Steam's, a renamed copy loose in a folder. The window

@@ -1034,11 +1034,18 @@ fn ensure_linux_desktop_integration() {
         icons_changed |= write_if_changed(&dir.join("openrac-launcher.png"), bytes);
     }
 
+    // An AppImage runs from a mount that is gone when it exits (/tmp/.mount_…): the entry starts
+    // the AppImage file itself, or the menu's launcher started nothing once it was closed. A
+    // package (deb, rpm) puts its own entry in the menu: this one is then only for the taskbar's
+    // icon, hidden, so the menu does not list the launcher twice.
+    let appimage = std::env::var_os("APPIMAGE").map(PathBuf::from).filter(|path| path.is_file());
     let exe_path = std::env::current_exe().unwrap_or_else(|_| PathBuf::from("openrac-launcher"));
+    let packaged = appimage.is_none() && exe_path.starts_with("/usr");
+    let program = appimage.unwrap_or(exe_path);
     let entry = |wm_class: &str, hidden: bool| {
         format!(
-            "[Desktop Entry]\nType=Application\nName=OpenRAC Launcher\nComment=Set up, build and play the decompiled Ratchet & Clank games\nExec=\"{}\"\nIcon=dev.openrac.launcher\nTerminal=false\nCategories=Game;Development;\nStartupNotify=true\nStartupWMClass={}\n{}",
-            exe_path.to_string_lossy(),
+            "[Desktop Entry]\nType=Application\nName=OpenRAC Launcher\nComment=Set up, build and play the decompiled Ratchet & Clank games\nExec={}\nIcon=dev.openrac.launcher\nTerminal=false\nCategories=Game;Development;\nStartupNotify=true\nStartupWMClass={}\n{}",
+            detect::desktop_exec(&program),
             wm_class,
             if hidden { "NoDisplay=true\n" } else { "" }
         )
@@ -1046,7 +1053,7 @@ fn ensure_linux_desktop_integration() {
     let mut entries_changed = false;
     entries_changed |= write_if_changed(
         &app_dir.join("dev.openrac.launcher.desktop"),
-        entry("dev.openrac.launcher", false).as_bytes(),
+        entry("dev.openrac.launcher", packaged).as_bytes(),
     );
     entries_changed |=
         write_if_changed(&app_dir.join("openrac-launcher.desktop"), entry("openrac-launcher", true).as_bytes());
@@ -1073,6 +1080,11 @@ fn ensure_linux_desktop_integration() {
 /// icon when launched from the launcher or directly.
 #[cfg(target_os = "linux")]
 fn ensure_linux_game_desktop_integration(root: &std::path::Path) {
+    // The copy inside an AppImage is mounted afresh at each start: an entry for its game would
+    // name a folder that is gone once the launcher exits.
+    if openrac_launcher_core::appimage::appdir().is_some_and(|appdir| root.starts_with(appdir)) {
+        return;
+    }
     let Ok(home) = std::env::var("HOME") else { return };
     let home_path = PathBuf::from(home);
     let icons_base = home_path.join(".local/share/icons/hicolor");
@@ -1116,8 +1128,8 @@ fn ensure_linux_game_desktop_integration(root: &std::path::Path) {
 
         let make_entry = |wm_class: &str, hidden: bool| {
             format!(
-                "[Desktop Entry]\nType=Application\nName={title}\nComment=Play {title} with OpenRAC\nExec=\"{}\"\nIcon={app_id}\nTerminal=false\nCategories=Game;\nStartupNotify=true\nStartupWMClass={wm_class}\n{}",
-                exe_path.to_string_lossy(),
+                "[Desktop Entry]\nType=Application\nName={title}\nComment=Play {title} with OpenRAC\nExec={}\nIcon={app_id}\nTerminal=false\nCategories=Game;\nStartupNotify=true\nStartupWMClass={wm_class}\n{}",
+                detect::desktop_exec(&exe_path),
                 if hidden { "NoDisplay=true\n" } else { "" }
             )
         };
