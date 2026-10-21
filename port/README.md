@@ -101,6 +101,24 @@ saved at once. The game's own row there, the television's 50 or 60 Hz, is
 gone: the game ticks at its own rate (50 a second for PAL) and the window
 shows it at the display's.
 
+## Mods
+
+Changes of play are mods, not settings of the port: shared libraries the
+program loads at start through a versioned C interface
+([sdk/include/openrac/openrac_mod.h](../sdk/include/openrac/openrac_mod.h)),
+which take the game's hook points (`hook` rows of a version's
+`libraries.tsv`, written by hostgen in `hooks.c`) and run each tick and each
+pad report. The launcher installs them in `<data>/plugins/` and writes the
+list the program reads, `<data>/plugins/plugins.json` (`--plugins FILE`
+names another); the program writes what it loaded, and why it left any out,
+to `status.json` beside it, and a `mods` line in the log's header.
+`--no-mods` (the launcher's Purist mode) loads none. Without a mod the hook
+points run the game's own C. The loader is
+[game/common/mods.cpp](game/common/mods.cpp); the design, the manifest and
+the SDK are in [docs/port/MODS.md](../docs/port/MODS.md). Ratchet & Clank's
+mods, the lock-strafe first, are in
+[OpenRAC/rac1-mods](https://github.com/OpenRAC/rac1-mods).
+
 ## Direct level probes (RAC1 PAL)
 
 For development, `OPENRAC_DIRECT=1` with `--level 0` starts a fresh game

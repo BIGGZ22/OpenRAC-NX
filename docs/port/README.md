@@ -35,6 +35,7 @@ The code is in [port/](../../port/README.md).
 | [DESIGN.md](DESIGN.md) | What is decided, the shape of the port, the open decisions |
 | [ROADMAP.md](ROADMAP.md) | The order of work, and whether the decompilation must be finished first |
 | [SETTINGS.md](SETTINGS.md) | The PC settings and their file, frame pacing against the game's tick, the game's 50/60 Hz option, the graphics card checks, where a frame's time goes, the settings beside OpenGOAL's and ReRAC's, and the game fixes (what the port does otherwise than the original, and what a player switches back) |
+| [MODS.md](MODS.md) | Mods: native plugins behind a versioned C interface, their manifest, hook points, the launcher's list and the port's answer, purist mode, crash reports that name them, the SDK ([sdk/](../../sdk/README.md)) |
 | [DECOMP_STATUS.md](DECOMP_STATUS.md) | How much of Ratchet & Clank (PAL) is C a PC could build, and what is not |
 | [HARDWARE_SEMANTICS.md](HARDWARE_SEMANTICS.md) | What the original code relies on in the PS2's processors (rounding, no NaN, 128-bit registers, VU0 flags, MMI, the GIF stream, ...) and how the port keeps each |
 | [DEBUGGING.md](DEBUGGING.md) | The debug overlay, the frame dump, pause and slow motion, every `OPENRAC_*` environment variable |
