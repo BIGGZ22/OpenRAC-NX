@@ -105,6 +105,12 @@ jobs:
           cmake -S "$SDK/tests" -B "$RUNNER_TEMP/build/sdk-tests" -G Ninja -DCMAKE_BUILD_TYPE=Release
           cmake --build "$RUNNER_TEMP/build/sdk-tests"
           ctest --test-dir "$RUNNER_TEMP/build/sdk-tests" --output-on-failure
+      - name: Package the script template
+        run: |
+          # A script mod has no build: checked and packaged from its own folder.
+          python "$SDK/tools/package_mod.py" --check "$SDK/template-script"
+          python "$SDK/tools/package_mod.py" -o "$RUNNER_TEMP/dist" "$SDK/template-script"
+          ls "$RUNNER_TEMP/dist"
 
   release:
     if: startsWith(github.ref, 'refs/tags/sdk-v')

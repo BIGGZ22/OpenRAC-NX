@@ -27,7 +27,11 @@ from pathlib import Path
 SDK = Path(__file__).resolve().parent.parent
 ROOT = SDK.parent
 # What goes in, relative to sdk/ (folders whole; tests/ is the C++ layer's test, built by sdk.yml), and the files from elsewhere in OpenRAC.
-PARTS = ["README.md", "VERSION", "include", "cmake", "template", "examples", "catalogue", "tests", "tools/package_mod.py"]
+# types/ holds the script mods' type definitions (<game>.d.luau, from gen_binding.py).
+PARTS = ["README.md", "VERSION", "include", "cmake", "template", "template-script", "examples", "catalogue",
+         "types", "tests", "tools/package_mod.py"]
+# The templates whose sdk.lock pins the SDK they come in.
+TEMPLATES = ("template", "template-script")
 EXTRA = {"docs/MODS.md": ROOT / "docs" / "port" / "MODS.md", "LICENSE": ROOT / "COPYING"}
 SKIP = {"__pycache__", ".DS_Store", "build", "dist"}
 DATE = (2026, 1, 1, 0, 0, 0)
@@ -45,9 +49,13 @@ def version(sdk: Path = SDK) -> str:
     cmake = (sdk / "cmake" / "OpenRACModConfigVersion.cmake").read_text()
     if f'set(PACKAGE_VERSION "{api[0]}.{api[1]}")' not in cmake:
         raise SystemExit(f"cmake/OpenRACModConfigVersion.cmake does not say {'.'.join(api)}")
-    lock = json.loads((sdk / "template" / "sdk.lock").read_text())
-    if lock.get("version") != text or f"sdk-v{text}/openrac-mod-sdk-{text}.zip" not in lock.get("url", ""):
-        raise SystemExit(f"template/sdk.lock does not pin {text} (its version and url)")
+    for template in TEMPLATES:
+        lock_path = sdk / template / "sdk.lock"
+        if not lock_path.is_file():
+            continue
+        lock = json.loads(lock_path.read_text())
+        if lock.get("version") != text or f"sdk-v{text}/openrac-mod-sdk-{text}.zip" not in lock.get("url", ""):
+            raise SystemExit(f"{template}/sdk.lock does not pin {text} (its version and url)")
     return text
 
 
@@ -58,7 +66,7 @@ def files(sdk: Path = SDK) -> dict[str, Path]:
         if p.is_file():
             out[part] = p
             continue
-        for f in sorted(p.rglob("*")):
+        for f in sorted(p.rglob("*")) if p.is_dir() else []:
             if f.is_file() and not SKIP.intersection(f.relative_to(sdk).parts):
                 out[f.relative_to(sdk).as_posix()] = f
     for name, path in EXTRA.items():

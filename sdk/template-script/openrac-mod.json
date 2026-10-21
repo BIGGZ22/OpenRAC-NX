@@ -1,0 +1,25 @@
+{
+  "format": 2,
+  "id": "my-script-mod",
+  "name": "My script mod",
+  "version": "0.1.0",
+  "author": "",
+  "description": "What it does, in a sentence.",
+  "license": "GPL-3.0-or-later",
+  "type": "script",
+  "api": "1.1",
+  "scripts": ["main.luau"],
+  "games": { "rac1": ["pal", "ntsc"] },
+  "hooks": [],
+  "settings": [
+    {
+      "key": "every",
+      "name": "Log every",
+      "type": "int",
+      "default": 10,
+      "min": 1,
+      "max": 600,
+      "description": "Seconds between two lines in the game's log."
+    }
+  ]
+}
