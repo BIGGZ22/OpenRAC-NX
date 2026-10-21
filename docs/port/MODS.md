@@ -552,9 +552,12 @@ rac1-mods is the reference C++ mod.
 
 ### Luau scripts
 
-[Luau](https://luau.org) (Roblox's Lua, MIT), pinned by version and built into
-the port (`port/third_party`, THIRD_PARTY_NOTICES.md). A script mod needs no
-compiler and runs on every platform, Android included.
+[Luau](https://luau.org) (Roblox's Lua, MIT), release 0.741 (commit
+`2d88f9b5`), fetched and built by the port's CMake, its virtual machine and
+compiler only ([port/cmake/Luau.cmake](../../port/cmake/Luau.cmake),
+[THIRD_PARTY_NOTICES.md](../../THIRD_PARTY_NOTICES.md)). A script mod needs no
+compiler and runs on every platform, Android included. The runtime is
+[port/game/common/mod_scripts.cpp](../../port/game/common/mod_scripts.cpp).
 
 ```jsonc
 {
@@ -572,54 +575,112 @@ of 1.1 loads mods built for 1.0. A script mod carries no `plugin`; its archive
 is one for every platform, `<id>-<version>.zip`, and from a git repository the
 repository's own files are the mod (no release asset, no build).
 
-**What a script sees**: one global table, `openrac`; nothing else of the
-standard library but the safe parts (`math`, `string`, `table`, `buffer`,
-`bit32`, `utf8`, `coroutine`, `os.clock`; no `io`, no other `os`, no
-`loadstring`, no `getfenv`/`setfenv`, no `debug` but `debug.traceback`).
+**What a script sees**: one global table, `openrac`, and the safe parts of
+Luau's library: `math`, `string`, `table`, `buffer`, `bit32`, `utf8`,
+`vector`, `coroutine`, `os.clock` and `debug.traceback`; `print` writes to the
+log. There is no `io` (Luau has none), no other `os`, no `getfenv`, `setfenv`,
+`load`, `loadstring` or `dofile`, and every library table and `openrac` itself
+is read-only.
 
 | | |
 |---|---|
-| `openrac.game`, `.version`, `.platform`, `.api` | as `openrac_api`'s |
+| `openrac.game`, `.version`, `.platform`, `.api` | as `openrac_api`'s (`api` is the port's, `"1.1"`) |
 | `openrac.log(...)`, `openrac.warn(...)` | the session log, after the mod's id |
-| `openrac.setting(key)` | the mod's setting, typed by the manifest |
-| `openrac.hook(name, fn)` | wrap or replace: `fn(original, ...)` gets the hook point's arguments; `original(...)` goes on down the chain |
-| `openrac.before(name, fn)`, `openrac.after(name, fn)` | `fn(...)` before or after the rest of the chain |
+| `openrac.setting(key)` | the mod's setting, typed by the manifest (a boolean, a number or a string; nil for a key it does not declare) |
+| `openrac.hook(name, fn)` | wrap or replace: `fn(original, ...)` gets the hook point's arguments as numbers; `original(...)` goes on down the chain and returns its result (`original()` with no arguments passes the call's own); `fn`'s return is the hook point's result (nil: the original's) |
+| `openrac.before(name, fn)`, `openrac.after(name, fn)` | `fn(...)` with the arguments, before or after the rest of the chain, which runs whatever `fn` does |
 | `openrac.on_frame(fn)` | after each game tick |
-| `openrac.on_pad(fn)` | `fn(port, report)` for each pad report, `report` a `buffer` the script may change |
-| `openrac.read(type, address)`, `openrac.write(type, address, value)` | game memory, `type` one of `u8 i8 u16 i16 u32 i32 f32`; addresses in game RAM only (below 32 MB) |
-| `openrac.fields` | the game state exposed by name (the hero's, the mobys' and their pvars): generated, below |
-| `require(name)` | another `.luau` file of the mod's own folder, nothing else |
+| `openrac.on_pad(fn)` | `fn(port, report)` for each pad report, `report` a `buffer` of the report's bytes, which the script may change |
+| `openrac.read(type, address)`, `openrac.write(type, address, value)` | game memory, `type` one of `u8 i8 u16 i16 u32 i32 f32`; addresses in game RAM only (below 32 MB), anything else an error |
+| `openrac.fields` | the game state exposed by name (`openrac.fields.hero.position.x`, `openrac.fields.bolts`): read and written as plain values; a read-only one, or one this disc does not have, is an error to write |
+| `openrac.pvars(moby)` | with the behaviour catalogue (below): the pvars of the moby at that address by name (`.class` its class's name), nil for a class the catalogue does not have |
+| `require(name)` | another `.luau` file of the mod's own folder (`"util"`, `"lib/util"`), run once; nothing outside the folder |
 
 Hooks and callbacks are taken only while the scripts first run. Script and
 native mods share one chain per hook point, in the list's order: a script mod
-after a native one wraps it, and the other way round.
+after a native one wraps it, and the other way round. At most eight script
+mods take one hook point (`OPENRAC_SCRIPT_LINKS`): each place in a chain is a
+C function of its own in the binding.
 
 **The binding is generated**, so it follows the hook points and survives the
 port's move to C++. Its source is a committed table per game,
-`sdk/bindings/<game>.json`: the hook points (name, signature, the disc symbols
-that have it), and the exposed state (`fields`: name, type, where on each disc,
-read-only or not). `sdk/tools/gen_binding.py` writes from it the port's
-script thunks (one C function per hook point that hands the arguments to the
-VM: `port/game/<game>/script_binding.c`, committed), the SDK's C++ hook types
-(`games/<game>.hpp`) and the script type definitions
-(`sdk/types/<game>.d.luau`, for an editor's autocomplete); a test holds the
-table to the `hook` rows of every disc's `libraries.tsv`. **The behaviour
-catalogue** (the level editor's: the moby classes, their update functions and
-pvars) is its other input: `gen_binding.py --catalogue FILE` adds its update
-functions as hook points (`Moby_<Class>_Update`) and its fields under
-`openrac.fields.mobys`, once that catalogue is committed. Until then the
-table holds the six hook points and the hero's fields the port's own code
-already names.
+[sdk/bindings/rac1.json](../../sdk/bindings/rac1.json):
 
-**Sandbox and budget.** Each script mod has its own Luau state (sandboxed
-with `luaL_sandbox`), so mods cannot see each other's globals. Every call into
-a script (a hook, a callback, the first run) has a budget, checked by Luau's
-interrupt: 2 ms of time by default (`OPENRAC_SCRIPT_BUDGET_MS`). A script that
-runs over it, or raises an error, is stopped there: the error and its
-traceback go to the log with the mod's id, `status.json` marks the mod
-`failed` with the reason, its hooks pass straight to the original from then
-on, and its callbacks stop. A crash report names the script mod running at
-the time, as for a native one.
+```jsonc
+{
+  "format": 1, "game": "rac1", "discs": ["pal", "ntsc"],
+  "catalogue": "path/from/the/top/of/OpenRAC.json",     // optional: the behaviour catalogue
+  "hooks": [ { "name": "Hero_TurnToHeading", "signature": "void(i32,f32,f32,f32)",
+               "params": ["mode", "accel", "damping", "limit"],
+               "symbols": { "pal": "func_L00_002124E8", "ntsc": "FUN_L00_00211e30" },
+               "about": "..." } ],
+  "bases": { "hero": { "pal": "0x0013F450", "ntsc": "0x0013F350" } },
+  "fields": [ { "name": "hero.state", "type": "i32", "base": "hero", "offset": "0x2084",
+                "readonly": true, "about": "..." },
+              { "name": "bolts", "type": "i32", "address": { "pal": "0x0015EE98", "ntsc": "0x0015ED98" } } ]
+}
+```
+
+A field's `type` is one of `u8 i8 u16 i16 u32 i32 f32`; its address is a
+base's plus its offset, or its own per disc (none: not on that disc). The
+table holds the six hook points and the fields the port's own C already
+names: the hero's position, facing, move yaw and state, and the bolts.
+
+[sdk/tools/gen_binding.py](../../sdk/tools/gen_binding.py) writes from it,
+all committed:
+
+- `port/game/<game>/host/script_binding.c`: for each hook point eight C
+  functions of its signature that hand their arguments to the runtime
+  (`openrac_script_dispatch`) and call what they go on to when no script
+  handles the call, a caller of the signature for `original`, and the fields
+  ([openrac/script_binding.h](../../port/game/common/include/openrac/script_binding.h));
+  a game with none gets `script_binding_none.c`, which refuses script mods;
+- `sdk/include/openrac/games/<game>.hpp`: the hook points as C++ types for
+  the C++ layer;
+- `sdk/types/<game>.d.luau`: the `openrac` global's types, for an editor's
+  autocomplete (luau-lsp's `--definitions`).
+
+`gen_binding.py --check` (ctest `mod_binding`) fails when an output is not what
+the table gives, or when the table's hook points (with the catalogue's) are not
+exactly the `hook` rows of every disc's `libraries.tsv`: a hook point added
+there needs its line in the table, and the other way round.
+
+**The behaviour catalogue** (the level editor's) is the generator's other
+input: the table's `catalogue`, or `gen_binding.py --catalogue FILE`. Its
+format:
+
+```jsonc
+{
+  "format": 1, "game": "rac1",
+  "moby": { "class": "0xAA", "class_type": "i16", "pvars": "0x78" },  // where a moby keeps its class number and its pvars' address
+  "classes": [
+    { "name": "Crate", "class": 500,                                   // a C identifier; the class's number
+      "update": { "pal": "func_L05_...", "ntsc": "FUN_L05_..." },      // its update function on each disc (optional)
+      "signature": "void(u32)", "params": ["moby"],                    // the update's (these are the default)
+      "pvars": [ { "name": "timer", "type": "f32", "offset": "0x10", "readonly": false, "about": "..." } ],
+      "about": "..." } ]
+}
+```
+
+Each class with an `update` becomes a hook point `Moby_<Class>_Update` (wrap,
+replace or before and after it, from C, C++ or a script), which needs its
+`hook` row in each disc's `libraries.tsv` as any hook point does (`--check`
+says which are missing); each class's pvars are what `openrac.pvars(moby)`
+gives for a moby of it.
+
+**Sandbox and budget.** Each script mod has its own Luau state, sandboxed
+with `luaL_sandbox` and its scripts run in a thread of its own
+(`luaL_sandboxthread`), so mods cannot see or change each other's globals.
+Every call into a script (a hook, a callback, the first run) has a budget,
+checked by Luau's interrupt: 2 ms by default (`OPENRAC_SCRIPT_BUDGET_MS`),
+not counting the time spent in the game's own code that the script calls on to
+(`original`). A script that runs over it, or raises an error, is stopped
+there: the error and its traceback go to the log with the mod's id,
+`status.json` marks the mod `failed` with the reason (`stopped while the game
+ran: hook Hero_TurnToHeading: ...`), its hooks pass straight to the original
+from then on, and its callbacks stop. A hook whose script stopped before
+calling its original has the original run anyway. A crash report says which
+script mod was running at the time, as it names a native one.
 
 **Cost.** With no script mod on, no Luau state is made and nothing of it
 runs. With one, a hook point the scripts did not take costs nothing more.

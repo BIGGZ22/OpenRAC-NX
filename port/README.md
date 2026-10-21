@@ -119,6 +119,16 @@ the SDK are in [docs/port/MODS.md](../docs/port/MODS.md). Ratchet & Clank's
 mods, the lock-strafe first, are in
 [OpenRAC/rac1-mods](https://github.com/OpenRAC/rac1-mods).
 
+Script mods are `.luau` files that the program runs in Luau (fetched by
+[cmake/Luau.cmake](cmake/Luau.cmake)), one sandboxed state each, with a time
+budget per call ([game/common/mod_scripts.cpp](game/common/mod_scripts.cpp)):
+no compiler for the modder, and every system, Android included. They reach
+the same hook points through a game's binding,
+[game/rac1/host/script_binding.c](game/rac1/host/script_binding.c), which
+`python3 ../sdk/tools/gen_binding.py` writes from
+[sdk/bindings/rac1.json](../sdk/bindings/rac1.json) (a new `hook` row needs
+its line there; ctest's `mod_binding` says when they disagree).
+
 ## Direct level probes (RAC1 PAL)
 
 For development, `OPENRAC_DIRECT=1` with `--level 0` starts a fresh game
