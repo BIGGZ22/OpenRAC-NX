@@ -12,6 +12,7 @@
     ask,
     type ModSources,
     type ModUpdate,
+    type PluginPreset,
     type PluginSetting,
     type PluginView,
     type VersionView,
@@ -20,7 +21,9 @@
   import { app, guard, saveConfig } from "$lib/app.svelte";
   import { modHint, modKind, pluginState, settingControl, settingNumber, settingRange, sharedWith } from "$lib/plugins";
   import * as T from "$lib/modsText";
+  import { isPreset, keybindConflicts, presetChanges, sharedBinds } from "$lib/keybinds";
   import Icon from "./Icon.svelte";
+  import KeyBindSetting from "./KeyBindSetting.svelte";
   import Menu from "./Menu.svelte";
 
   let {
@@ -163,6 +166,19 @@
 
   const setValue = (mod: PluginView, s: PluginSetting, value: unknown) =>
     void change(api.pluginsSetSetting(v.game, v.name, mod.id, s.key, value));
+
+  /** A preset of the mod's keybinds (null: their defaults): each binding it changes, one after the other. */
+  function applyPreset(mod: PluginView, preset: PluginPreset | null) {
+    const changes = Object.entries(presetChanges(mod.settings, preset));
+    if (!changes.length) return;
+    void change(
+      (async () => {
+        let views = mods;
+        for (const [key, value] of changes) views = await api.pluginsSetSetting(v.game, v.name, mod.id, key, value);
+        return views;
+      })(),
+    );
+  }
 
   /** A number typed: kept when the setting takes it, else put back as it was. */
   function setNumber(mod: PluginView, s: PluginSetting, field: HTMLInputElement) {
@@ -323,10 +339,30 @@
           {#if shared && mod.enabled}<p class="why warn">{shared}</p>{/if}
 
           {#if unfolded}
+            {@const clashes = keybindConflicts(mod.settings)}
             <div class="settings" id={`settings-${mod.id}`}>
+              {#if mod.presets?.length}
+                <div class="setting">
+                  <span class="text"><strong>{T.KEYBIND.presets}</strong><small>{T.KEYBIND.presetsHint}</small></span>
+                  <div class="segmented" role="radiogroup" aria-label={T.KEYBIND.presets}>
+                    {#each mod.presets.some((p) => p.id === "default") ? mod.presets : [null, ...mod.presets] as p (p?.id ?? "")}
+                      <button role="radio" aria-checked={isPreset(mod.settings, p)} onclick={() => applyPreset(mod, p)}
+                        >{p?.name ?? T.KEYBIND.defaults}</button
+                      >
+                    {/each}
+                  </div>
+                </div>
+              {/if}
               {#each mod.settings as s (s.key)}
                 {@const control = settingControl(s)}
-                {#if control === "switch"}
+                {#if control === "keybind"}
+                  <KeyBindSetting
+                    setting={s}
+                    conflicts={clashes[s.key] ?? []}
+                    clashing={clashes[s.key] ? sharedBinds(mod.settings, s.key) : []}
+                    onchange={(value) => setValue(mod, s, value)}
+                  />
+                {:else if control === "switch"}
                   <label class="setting">
                     <span class="text"
                       ><strong>{s.name}</strong>{#if s.description}<small>{s.description}</small>{/if}</span

@@ -114,6 +114,24 @@ export const PANEL = {
   interface: "interface",
 } as const;
 
+/** A key-binding setting (KeyBindSetting.svelte) and a mod's presets of them. */
+export const KEYBIND = {
+  press: "Press a key…",
+  pressHint: "A key, a mouse button or the wheel. Click elsewhere to cancel.",
+  cancel: "Cancel",
+  none: "Not bound",
+  add: "Add",
+  swapped: "That one was its other bind: the two swapped.",
+  presets: "Controls",
+  presetsHint: "Sets every binding below; you can change each one after.",
+  defaults: "Default",
+} as const;
+export const bindAria = (setting: string, bind: string) => `${setting}: ${bind}. Change`;
+export const addBindAria = (setting: string) => `${setting}: add a binding`;
+export const clearBindAria = (setting: string, bind: string) => `Remove ${bind} from ${setting}`;
+export const alsoBound = (names: string[]) =>
+  `Also bound to ${names.length === 1 ? names[0] : `${names.slice(0, -1).join(", ")} and ${names[names.length - 1]}`}`;
+
 /** The packs' list (PacksPanel.svelte). */
 export const PACKS = {
   title: "Textures, models and levels",

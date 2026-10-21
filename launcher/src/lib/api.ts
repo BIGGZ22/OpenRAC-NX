@@ -347,7 +347,7 @@ export interface PackView {
 export interface PluginSetting {
   key: string;
   name: string;
-  type: "bool" | "int" | "float" | "choice" | "string";
+  type: "bool" | "int" | "float" | "choice" | "string" | "keybind";
   default: unknown;
   description?: string;
   min?: number;
@@ -355,8 +355,23 @@ export interface PluginSetting {
   step?: number;
   choices?: { value: string; name: string }[];
   maxLength?: number;
+  /** A keybind's most binds, 1 or 2 (2 when absent): its value is that many bind names of
+   *  sdk/include/openrac/keys.h, comma-separated ("KeyW,ArrowUp"; "" for none). */
+  binds?: number;
+  /** A keybind's group: keybinds of one group on the same input conflict. */
+  group?: string;
+  /** A keybind's: the mod's other keybinds of its group that share one of its inputs (the core's
+   *  answer when the list was read). */
+  conflicts?: string[];
   /** The value now: the player's, or the default. */
   value: unknown;
+}
+
+/** core/src/plugins.rs: a set of keybind values a mod offers as one button. */
+export interface PluginPreset {
+  id: string;
+  name: string;
+  values: Record<string, string>;
 }
 
 /** What a gameplay mod is: code the game loads (a library), Luau scripts the game runs sandboxed,
@@ -380,6 +395,8 @@ export interface PluginView {
   /** Off, and could not be switched on as things are: why. */
   blocked: string;
   settings: PluginSetting[];
+  /** Keybind presets the mod offers. */
+  presets?: PluginPreset[];
   hooks: string[];
   sharedHooks: { hook: string; with: string[] }[];
   /** It carries code (a library), not only data. */

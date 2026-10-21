@@ -41,7 +41,7 @@ export function modHint(kind: string): string {
   return kind === "native" ? KIND_HINT.native : kind === "script" ? KIND_HINT.script : KIND_HINT.pack;
 }
 
-export type SettingControl = "switch" | "segmented" | "radios" | "number" | "text";
+export type SettingControl = "switch" | "segmented" | "radios" | "number" | "text" | "keybind";
 
 /** The control a setting is shown with. */
 export function settingControl(setting: PluginSetting): SettingControl {
@@ -53,6 +53,8 @@ export function settingControl(setting: PluginSetting): SettingControl {
     case "int":
     case "float":
       return "number";
+    case "keybind":
+      return "keybind";
     default:
       return "text";
   }

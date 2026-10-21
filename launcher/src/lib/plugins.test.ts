@@ -50,6 +50,7 @@ describe("settings", () => {
     expect(settingControl(setting({ type: "choice", choices: choices(2) }))).toBe("segmented");
     expect(settingControl(setting({ type: "choice", choices: choices(3) }))).toBe("segmented");
     expect(settingControl(setting({ type: "choice", choices: choices(4) }))).toBe("radios");
+    expect(settingControl(setting({ type: "keybind", default: "Space" }))).toBe("keybind");
     expect(settingControl(setting({ type: "int" }))).toBe("number");
     expect(settingControl(setting({ type: "float" }))).toBe("number");
     expect(settingControl(setting({ type: "string" }))).toBe("text");
