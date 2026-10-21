@@ -140,7 +140,21 @@ the disc image and saves are kept.
 
 ## Mods
 
-The Mods tab has, for each game that can be edited (Ratchet & Clank, PAL and
+**Gameplay mods** come first for a game the port plays: native mods, small
+programs the game loads at its start that change how it plays (Ratchet &
+Clank's lock-strafe is the first, in
+[OpenRAC/rac1-mods](https://github.com/OpenRAC/rac1-mods)). **Add a .zip**
+or a folder (or drop one on the page) installs one into the game's set-up
+folder, `<data>/plugins/<id>`; each has a switch, its place in the load
+order, its settings from its manifest and Remove in its menu, and says in a
+few words why it cannot load when it cannot (another disc, a newer mod
+interface, a missing or conflicting mod, or what the game said at its last
+start). The launcher writes the list the game reads, `<data>/plugins/plugins.json`;
+changes count from the game's next start. **Purist mode** (on the tab and in
+Settings) starts the game with none of them. How mods work and how to write
+one: [docs/port/MODS.md](../docs/port/MODS.md) and the [SDK](../sdk).
+
+The Mods tab also has, for each game that can be edited (Ratchet & Clank, PAL and
 NTSC-U), the three steps of modding in order: **Open the editor** (choose a
 level: each is a Godot 4 project of its own under `assets/levels/<game>`, so
 only that level loads; the first time they are read from the disc), **Pack** (turns the
@@ -240,6 +254,8 @@ launcher/
   it out (a developer's other disc of the same game waits beside it as
   `iso_data/<game>@<version>`). The game writes its logs there (`openrac-<id>.log` and the five
   before it) and its crash reports (`crashes/`).
+- **Gameplay mods**, only when you add, switch, order or remove one: the game's
+  `<data>/plugins/` (each mod's folder and `plugins.json`).
 - **Its own log**: `launcher.log` beside `launcher.json`: when it started,
   each command it ran and how it ended; moved to `launcher.1.log` past 1 MB.
 - **A saved report**: `OpenRAC-<report>.zip` in your Downloads folder, only
