@@ -249,8 +249,8 @@ launcher/
   (`~/.config/dev.openrac.launcher/` on Linux,
   `~/Library/Application Support/dev.openrac.launcher/` on macOS,
   `%APPDATA%\dev.openrac.launcher\` on Windows). Settings shows the path.
-- **Games set up from discs**: the install folder (Settings; by default the
-  launcher's per-user data folder), `active/<game>/data/`, as OpenGOAL lays
+- **Games set up from discs**: the install folder (Settings; by default
+  `OpenRAC` in your home folder: `~/OpenRAC`, `%USERPROFILE%\OpenRAC`), `active/<game>/data/`, as OpenGOAL lays
   it out (a developer's other disc of the same game waits beside it as
   `iso_data/<game>@<version>`). The game writes its logs there (`openrac-<id>.log` and the five
   before it) and its crash reports (`crashes/`).

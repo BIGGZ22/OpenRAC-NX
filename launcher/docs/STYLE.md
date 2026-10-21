@@ -147,7 +147,10 @@ release, and a new file adds its line there when it is added.
 - Window sizes: the window opens at 1200 × 780, can be resized, and cannot be
   made smaller than 960 × 560 (`tauri.conf.json`). 560 is as tall as a
   1366 × 768 laptop at 125 % scaling leaves room for above the taskbar, so the
-  floor does not go higher. A page scrolls down, never sideways. A tiling
+  floor does not go higher. On a screen with less room than that (a 1080p
+  screen at 150 % or 200 %) the window opens at what the screen has room for,
+  and that is its floor (`core/src/window.rs`). A page scrolls down, never
+  sideways. A tiling
   window manager may ignore the floor, so lay a page out to still fit from
   760 px wide.
 
