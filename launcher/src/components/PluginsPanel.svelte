@@ -24,7 +24,7 @@
   } from "$lib/api";
   import { addMods } from "$lib/addMods";
   import { app, guard, saveConfig } from "$lib/app.svelte";
-  import { pluginState, settingControl, settingNumber, settingRange, sharedWith } from "$lib/plugins";
+  import { modKind, pluginState, settingControl, settingNumber, settingRange, sharedWith } from "$lib/plugins";
   import Icon from "./Icon.svelte";
   import Menu from "./Menu.svelte";
 
@@ -309,8 +309,14 @@
       {#if preview.note}<p class="dim small-text">{preview.note}</p>{/if}
       {#if preview.mods.some((m) => m.kind === "native")}
         <p class="warn small-text">
-          A gameplay mod is a program: it runs on this computer with the game's rights. Install only mods from people
-          you trust.
+          A gameplay mod with code is a program: it runs on this computer with the game's rights. Install only mods from
+          people you trust.
+        </p>
+      {/if}
+      {#if preview.mods.some((m) => m.kind === "script")}
+        <p class="dim small-text">
+          A script mod runs in the game's sandbox: it can change only what the game lets scripts reach, never your
+          files.
         </p>
       {/if}
       <ul>
@@ -324,9 +330,10 @@
                   >
                 </div>
                 {#if m.description}<div class="dim small-text">{m.description}</div>{/if}
-                <div class="dim small-text">
-                  {m.kind === "native" ? "Gameplay mod (code)" : "Texture and model pack"}{#if m.installed}&nbsp;·
-                    {m.installed} installed{/if}
+                <div class={`kind small-text ${modKind(m.kind).tone}`}>
+                  <span class="dot"></span>{modKind(m.kind).text}{#if m.installed}<span class="dim"
+                      >&nbsp;· {m.installed} installed</span
+                    >{/if}
                 </div>
               </div>
               <span class={`state ${m.compatible ? "ok" : "err"}`}
@@ -410,6 +417,9 @@
                 >
               </div>
               {#if mod.description}<div class="dim small-text">{mod.description}</div>{/if}
+              <div class={`kind small-text ${modKind(mod.kind).tone}`}>
+                <span class="dot"></span>{modKind(mod.kind).text}
+              </div>
             </div>
             <span class={`state ${state.tone}`}><span class="dot"></span>{state.text}</span>
             <div class="order">
@@ -729,6 +739,34 @@
 
   .state.off {
     color: var(--dim);
+  }
+
+  /* What a mod runs: native code (amber), scripts in the sandbox, or data only. */
+  .kind {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    margin-top: 2px;
+    color: var(--dim);
+  }
+
+  .kind .dot {
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background: currentColor;
+  }
+
+  .kind.warn {
+    color: var(--warn);
+  }
+
+  .kind.ok {
+    color: var(--soft);
+  }
+
+  .kind.ok .dot {
+    background: var(--ok);
   }
 
   .order {

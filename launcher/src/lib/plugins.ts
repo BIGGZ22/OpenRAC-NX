@@ -21,6 +21,19 @@ export function pluginState(mod: PluginView, purist: boolean): { text: string; t
   }
 }
 
+/** What a mod runs, as a dot and a few words: a native mod is a program on this computer, a script
+ *  mod runs in the game's sandbox (docs/port/MODS.md, section 11), a pack runs nothing. */
+export function modKind(kind: string): { text: string; tone: PluginTone } {
+  switch (kind) {
+    case "native":
+      return { text: "Runs code on this computer", tone: "warn" };
+    case "script":
+      return { text: "Runs scripts (sandboxed)", tone: "ok" };
+    default:
+      return { text: "Textures and models", tone: "off" };
+  }
+}
+
 export type SettingControl = "switch" | "segmented" | "radios" | "number" | "text";
 
 /** The control a setting is shown with. */

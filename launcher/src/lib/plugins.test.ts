@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { PluginSetting, PluginView } from "./api";
-import { pluginState, settingControl, settingNumber, settingRange, sharedWith } from "./plugins";
+import { modKind, pluginState, settingControl, settingNumber, settingRange, sharedWith } from "./plugins";
 
 const mod = (over: Partial<PluginView> = {}): PluginView => ({
   id: "lock-strafe",
@@ -18,6 +18,7 @@ const mod = (over: Partial<PluginView> = {}): PluginView => ({
   hooks: [],
   sharedHooks: [],
   native: true,
+  kind: "native",
   path: "",
   ...over,
 });
@@ -80,5 +81,14 @@ describe("sharedWith", () => {
     expect(sharedWith(shared)).toBe(
       "Changes the same part of the game as Camera tweaks and Fast walk: the one lower in the list goes first.",
     );
+  });
+});
+
+describe("modKind", () => {
+  it("warns about native code and says scripts run sandboxed", () => {
+    expect(modKind("native")).toEqual({ text: "Runs code on this computer", tone: "warn" });
+    expect(modKind("script")).toEqual({ text: "Runs scripts (sandboxed)", tone: "ok" });
+    expect(modKind("pack").tone).toBe("off");
+    expect(modKind("data").text).toBe("Textures and models");
   });
 });

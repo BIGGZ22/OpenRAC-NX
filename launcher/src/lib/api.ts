@@ -359,7 +359,11 @@ export interface PluginSetting {
   value: unknown;
 }
 
-/** core/src/plugins.rs: a native mod as the Mods tab shows it, in load order. */
+/** What a gameplay mod is: code the game loads (a library), Luau scripts the game runs sandboxed,
+ *  or data only (docs/port/MODS.md, section 11). */
+export type ModKind = "native" | "script" | "data";
+
+/** core/src/plugins.rs: a gameplay mod (native or script) as the Mods tab shows it, in load order. */
 export interface PluginView {
   id: string;
   name: string;
@@ -380,6 +384,8 @@ export interface PluginView {
   sharedHooks: { hook: string; with: string[] }[];
   /** It carries code (a library), not only data. */
   native: boolean;
+  /** native, script or data. */
+  kind: ModKind;
   /** The installed folder. */
   path: string;
 }
@@ -398,8 +404,8 @@ export interface RemoteMod {
   homepage: string;
   /** Its folder in the repository, "" for the top. */
   path: string;
-  /** "native": code the game loads; "pack": textures, models, levels. */
-  kind: "native" | "pack";
+  /** "native": code the game loads; "script": Luau the game runs sandboxed; "pack": textures, models, levels. */
+  kind: "native" | "script" | "pack";
   games: Record<string, string[]>;
   api: string | null;
   compatible: boolean;
