@@ -34,6 +34,8 @@ HERE = Path(__file__).parent
 API = HERE / "behaviour_api.tsv"
 SCRIPTS = HERE / "rc1"
 MOBY_STRUCT = "Moby"
+# The decompilation's headers (include/) whose structs and typedefs the translator reads.
+TYPE_HEADERS = ("common.h", "vector.h", "moby.h", "hero.h", "pad.h", "records.h", "structs.h")
 REPO = DECOMPILATION.parents[1]
 
 GD_KEYWORDS = {"var", "const", "func", "class", "extends", "signal", "enum", "static", "match", "when", "in", "is", "as",
@@ -83,7 +85,7 @@ def load_macros() -> dict[str, str]:
 
 def load_types(source: Path | None) -> Types:
     types = Types()
-    for header in ("common.h", "vector.h", "moby.h", "hero.h", "pad.h", "records.h", "structs.h"):
+    for header in TYPE_HEADERS:
         path = DECOMPILATION / "include" / header
         if path.is_file():
             types.read(path.read_text())
