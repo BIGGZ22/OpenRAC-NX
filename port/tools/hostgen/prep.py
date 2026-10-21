@@ -288,15 +288,18 @@ def expand_cast_macros(text: str) -> str:
     return "\n".join(lines)
 
 
-# A 128-bit integer written as a type name: "int __attribute__((mode(TI)))" before a "*" or a ")".
-_WIDE_CAST = re.compile(r"\b(unsigned\s+)?int\s+__attribute__\(\(mode\(TI\)\)\)(?=\s*[*)])")
+# A 128-bit integer written as a type name: "int __attribute__((mode(TI)))" before a "*" or a ")";
+# the mode sets the width whatever integer type it is written on ("unsigned long long", "long"...).
+_WIDE_CAST = re.compile(r"\b(?:(unsigned|signed)\s+)?(?:long\s+long|long|int|short|char)(?:\s+int)?"
+                        r"\s+__attribute__\(\(mode\(TI\)\)\)(?=\s*[*)])")
 
 
 def name_wide_casts(text: str) -> str:
     """Clang keeps a mode attribute on a declaration and drops it from a type name, so a copy
-    through `*(int __attribute__((mode(TI))) *)p` moved 4 bytes of the 16. The type is written as
-    openrac_ti / openrac_uti (openrac_hostgen.h), which carry the attribute in their typedefs."""
-    return _WIDE_CAST.sub(lambda m: "openrac_uti" if m.group(1) else "openrac_ti", text)
+    through `*(int __attribute__((mode(TI))) *)p` moved 4 bytes of the 16 (8 through `unsigned long
+    long __attribute__((mode(TI)))`). The type is written as openrac_ti / openrac_uti
+    (openrac_hostgen.h), which carry the attribute in their typedefs."""
+    return _WIDE_CAST.sub(lambda m: "openrac_uti" if m.group(1) == "unsigned" else "openrac_ti", text)
 
 
 _VA_BUILTINS = ("vfprintf", "vprintf", "vsprintf", "vsnprintf", "vfscanf", "vscanf", "vsscanf")

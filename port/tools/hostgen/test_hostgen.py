@@ -1440,6 +1440,17 @@ class Preparation(unittest.TestCase):
         self.assertEqual(out[2], "int __attribute__((mode(TI))) whole;")
         self.assertEqual(out[3], "print __attribute__((mode(TI))) *p;")
 
+    def test_a_mode_ti_cast_on_any_integer_type_is_128_bit(self):
+        # The mode sets the width whatever integer type it is written on (rac1's Giant Clank update
+        # once copied the hero's joint point through `*(unsigned long long __attribute__((mode(TI))) *)`).
+        src = ("*(unsigned long long __attribute__((mode(TI))) *)a = *(long __attribute__((mode(TI))) *)b;\n"
+               "x = (signed char __attribute__((mode(TI))))y + (unsigned short int __attribute__((mode(TI))))z;\n"
+               "unsigned long long v __attribute__((mode(TI)));\n")
+        out = prep.name_wide_casts(src).split("\n")
+        self.assertEqual(out[0], "*(openrac_uti *)a = *(openrac_ti *)b;")
+        self.assertEqual(out[1], "x = (openrac_ti)y + (openrac_uti)z;")
+        self.assertEqual(out[2], "unsigned long long v __attribute__((mode(TI)));")
+
     def test_candidate_replaces_a_stub_whose_path_is_several_strings(self):
         # A long path written as adjacent strings over three lines: the stub is found, and the
         # lines it took stay, so nothing below it moves.
