@@ -1861,8 +1861,9 @@ class Unit:
                     if family_k is not None:
                         k = family_k
                     own_size = getattr(self.program, "sizes", {}).get(self.fn.name) or 0
+                    copies = self._copies_in_one_program()
                     own = self._own_address()
-                    if self._copies_in_one_program() is not None and self._shared_level() is not None:
+                    if copies is not None and self._shared_level() is not None:
                         # This function is several levels' code and has more than one copy in some
                         # program, each calling its own place (level 7's two func_L00_002E0490 call
                         # AddDrawCallback's places 0x2214C8 and 0x2216D0): the k-th call of the copy
@@ -1871,6 +1872,14 @@ class Unit:
                         own = f"(openrac_self_ != 0 ? openrac_self_ : {own})"
                     fp = (f"openrac_folded_call((const uint32_t[]){{{literal}}}, {len(places)}, "
                           f"{own}, {own_size}u, {k})")
+                    if copies is not None and self._shared_level() is None:
+                        # This function is itself one of several copies in one level's program, and a
+                        # copy may call another function at that place than the first copy does (Drek's
+                        # Fleet's third window-glass callback calls a reflection helper of its own): the
+                        # function the running copy's own call goes to (guest.h).
+                        home, canon, size = copies
+                        self.fn.uses_self = True
+                        fp = f"openrac_call_in_copy({home}, {hexaddr(canon)}, {size}u, openrac_self_, {fp})"
             else:
                 fp = self.function_value(target)
         else:

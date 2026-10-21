@@ -186,7 +186,11 @@ def targets(expr: str, own: set[int]) -> list[tuple[int, int]] | None:
     if m:
         a = _split_top(m.group(1))
         if len(a) == 5 and a[0].lstrip("-").isdigit():
-            return [(int(a[0]), int(a[4].rstrip("uU"), 16))]
+            if re.fullmatch(HEX, a[4]):
+                return [(int(a[0]), int(a[4].rstrip("uU"), 16))]
+            # the call the copy's own code makes, where hostgen found it through another rule (a
+            # folded name's places: openrac_folded_call)
+            return targets(a[4], own)
     return None
 
 
