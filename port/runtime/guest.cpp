@@ -1360,16 +1360,11 @@ gaddr openrac_data_in_copy(int from, gaddr canon, uint32_t size, gaddr self, gad
     return result;
 }
 
-gaddr openrac_code_in_copy(int from, gaddr canon, uint32_t size, gaddr self, gaddr target) {
-    const int overlay = current_overlay();
-    const gaddr fallback = openrac_relocate_level_code(from, target);
-    if (self == 0 && from >= 0 && overlay != from) {
-        std::scoped_lock hold(g_relocate_lock);
-        self = own_place(from, canon, overlay);
-    }
-    if (self == 0 || (self == canon && overlay == from)) {
-        return fallback;
-    }
+// openrac_code_in_copy's and openrac_code_formed's search: where the copy at canon (level from's
+// program, `size` bytes) forms target, or another place of target's function, read at the same
+// instructions of the copy at self; fallback when it forms neither.
+static gaddr code_in_copy_at(int from, int overlay, gaddr canon, uint32_t size, gaddr self, gaddr target,
+                             gaddr fallback) {
     static std::map<std::tuple<int, int, gaddr, gaddr, gaddr>, gaddr> found;
     std::scoped_lock hold(g_relocate_lock);
     const auto key = std::make_tuple(from, overlay, canon, self, target);
@@ -1452,6 +1447,33 @@ gaddr openrac_code_in_copy(int from, gaddr canon, uint32_t size, gaddr self, gad
     }
     found.emplace(key, result);
     return result;
+}
+
+gaddr openrac_code_in_copy(int from, gaddr canon, uint32_t size, gaddr self, gaddr target) {
+    const int overlay = current_overlay();
+    const gaddr fallback = openrac_relocate_level_code(from, target);
+    if (self == 0 && from >= 0 && overlay != from) {
+        std::scoped_lock hold(g_relocate_lock);
+        self = own_place(from, canon, overlay);
+    }
+    if (self == 0 || (self == canon && overlay == from)) {
+        return fallback;
+    }
+    return code_in_copy_at(from, overlay, canon, size, self, target, fallback);
+}
+
+gaddr openrac_code_formed(int from, gaddr canon, uint32_t size, gaddr self, gaddr target, gaddr fallback) {
+    const int overlay = current_overlay();
+    if (self == 0 && overlay == from) {
+        self = canon;  // the code its name is written for: which of the places it forms itself
+    } else if (self == 0 && from >= 0) {
+        std::scoped_lock hold(g_relocate_lock);
+        self = own_place(from, canon, overlay);
+    }
+    if (self == 0) {
+        return fallback;
+    }
+    return code_in_copy_at(from, overlay, canon, size, self, target, fallback);
 }
 
 gaddr openrac_call_in_copy(int from, gaddr canon, uint32_t size, gaddr self, gaddr target) {

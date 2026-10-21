@@ -1301,16 +1301,36 @@ class Unit:
         places = places + [p for p in getattr(self.program, "splits", {}).get(sym, []) if p not in places]
         level = self._shared_level()
         copy = self._copy_places()
+        rel = getattr(self.program, "relocate", None)
+        if copy is not None and places[0][0] < 0 and rel and rel[0] <= places[0][1] < rel[1]:
+            home, canon, size = copy
+            mine = [a for o, a in places if o == home]
+            if mine:
+                # An executable function taken by name in code written for a level: the executable's
+                # address is level code while that runs (the level's program overwrites it there). The
+                # place the code forms in its level, and in another level's copy the same instructions'
+                # (guest.h); of a function the catalogue folded (one name for small routines at several
+                # places, the `return 0` leaf func_001E97C8), whichever of them this code forms. Where no
+                # copy forms one: a function with one place there is that place relocated
+                # (OPENRAC_LCODE), a folded one the executable's address (level 18 has nothing at level
+                # 0's first place of func_001E9768).
+                self.fn.uses_self = True
+                fallback = f"OPENRAC_LCODE({home}, {hexaddr(mine[0])})" if len(mine) == 1 else hexaddr(places[0][1])
+                return (f"openrac_code_formed({home}, {hexaddr(canon)}, {size}u, openrac_self_, {hexaddr(mine[0])}, "
+                        f"{fallback})")
         if copy is not None and places[0][0] >= 0:
             # One C for copies at several places: the address this copy forms (guest.h).
             home, canon, size = copy
             own = next((a for o, a in places if o == home), places[0][1])
             self.fn.uses_self = True
             return f"openrac_code_in_copy({home}, {hexaddr(canon)}, {size}u, openrac_self_, {hexaddr(own)})"
-        if level is not None and (places[0][0] >= 0 or any(o == level for o, _ in places)):
+        if level is not None and (places[0][0] >= 0 or sum(o == level for o, _ in places) == 1):
             # An executable function the levels' programs also carry (its catalogue places)
             # counts as theirs here: the copy in the level loaded, as the level's own
-            # instruction forms it, not the executable's address under the level program.
+            # instruction forms it, not the executable's address under the level program. Not
+            # one the catalogue folds at several places of a level (func_001E9768, an empty
+            # routine at 43 places of level 0): which of them is the copy's own is not known
+            # here, and level 18 has none at level 0's first; the executable's does the same.
             own = next((a for o, a in places if o == level), places[0][1])
             return f"OPENRAC_LCODE({level}, {hexaddr(own)})"
         # A function of one level only: the place of the other in that level (its program is

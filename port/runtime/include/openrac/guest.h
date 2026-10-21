@@ -277,6 +277,14 @@ static inline gaddr openrac_guest_entry(openrac_host_fn self) {
     return openrac_guest_last_fn == self ? openrac_guest_last_entry : 0;
 }
 gaddr openrac_code_in_copy(int from, gaddr canon, uint32_t size, gaddr self, gaddr target);
+/* The address of a function taken by name in code written for a level, where the name may stand for
+ * several places of that level (a function the catalogue folded: one name for the same small code at
+ * several places, each a routine of its own, rac1's `return 0` leaf func_001E97C8): the place of it the
+ * code at `canon` forms (target, or any place of target's function, in level `from`'s program), read at
+ * the same instructions of the copy at `self` (0: the copy of canon in the program loaded; in level
+ * `from`'s own program, canon itself). Retail's Suck Cannon (func_L00_002DB810) skips the mobys whose
+ * class function is the leaf next to it, a place of that name. `fallback` where no copy forms one. */
+gaddr openrac_code_formed(int from, gaddr canon, uint32_t size, gaddr self, gaddr target, gaddr fallback);
 /* The same for a global: where the copy at `self` reads or writes what the copy at `canon` does at
  * `target` (folded copies of one function in one program, each on its own globals: a lui and the
  * addiu, ori, load or store that completes it, or such an instruction on $gp for a small global,
