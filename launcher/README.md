@@ -143,7 +143,9 @@ the disc image and saves are kept.
 **Gameplay mods** come first for a game the port plays: native mods, small
 programs the game loads at its start that change how it plays (Ratchet &
 Clank's lock-strafe is the first, in
-[OpenRAC/rac1-mods](https://github.com/OpenRAC/rac1-mods)). **Add a .zip**
+[OpenRAC/rac1-mods](https://github.com/OpenRAC/rac1-mods)), and script mods,
+Luau files the game runs in a sandbox (rac1-mods' button-swap). Each row says
+which: **Runs code on this computer**, or **Runs scripts (sandboxed)**. **Add a .zip**
 or a folder (or drop one on the page) installs one into the game's set-up
 folder, `<data>/plugins/<id>`; each has a switch, its place in the load
 order, its settings from its manifest and Remove in its menu, and says in a
@@ -159,14 +161,15 @@ game can take it, before anything is installed. A gameplay mod comes built,
 as its release's `.zip` for this computer, and is installed only when the
 release's `SHA256SUMS` lists it with the same hash; nothing is ever compiled
 on your computer, and git is not needed (GitHub is read over HTTPS with
-curl). A texture and model pack comes from the repository's files and goes
-to the packs. A mod added from a link remembers where it came from
+curl). A script mod needs no build: it is its release's `.zip`, checked the same
+way, or the repository's own files when there is no release. A texture and
+model pack comes from the repository's files and goes to the packs. A mod added from a link remembers where it came from
 (`<data>/plugins/sources.json`): **Check for updates** (and once a day by
 itself) offers **Update to X** on its row, and **Keep this version** in its
 menu stops that. Another git host than GitHub works for packs, with git
 installed ([docs/port/MODS.md](../docs/port/MODS.md#10-mods-in-a-git-repository)).
-Android does not load gameplay mods (the system refuses code an app wrote),
-and its launcher has no Mods tab. **Purist mode** (on the tab and in
+Android does not load native mods (the system refuses code an app wrote);
+script mods would run there, but its launcher has no Mods tab yet. **Purist mode** (on the tab and in
 Settings) starts the game with none of them. How mods work and how to write
 one: [docs/port/MODS.md](../docs/port/MODS.md) and the [SDK](../sdk).
 

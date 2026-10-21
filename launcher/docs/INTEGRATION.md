@@ -327,7 +327,8 @@ one exists the page offers Open, not Extract. The other games carry a planned
 `editor-extract` that says what the editor lacks for them
 ([editor/README.md](../../editor/README.md)).
 
-**Native mods** ([docs/port/MODS.md](../../docs/port/MODS.md)) are not
+**Gameplay mods** ([docs/port/MODS.md](../../docs/port/MODS.md)), native and
+script (`"type": "script"`, Luau files, interface 1.1, any platform), are not
 actions: the launcher manages them itself (`core/src/plugins.rs`), as it does
 the packs' order. Each is a folder in the game's set-up folder,
 `{data}/plugins/<id>/` with its `openrac-mod.json` (format 2), shared by the
@@ -346,8 +347,10 @@ Mods from a repository's address (`core/src/remote.rs`, MODS.md section 10):
 GitHub is read through its HTTPS API with `curl` (releases, the file list at
 the version read, the manifests); a native mod is its release's
 `<id>-<version>-<platform>.zip`, checked against `SHA256SUMS` and then
-installed as a .zip is; a data pack is the repository's files of its folder,
-handed to `overrides-add`. `{data}/plugins/sources.json` keeps each such mod's
+installed as a .zip is; a script mod is its release's `<id>-<version>.zip`
+(checked) or the repository's files of its folder, at the release's tag or the
+newest commit, installed into the store; a data pack is the repository's
+files of its folder, handed to `overrides-add`. `{data}/plugins/sources.json` keeps each such mod's
 address, version, release, commit and pin, for the update check. Everything
 remote goes through the `Fetch` trait, which the tests answer from memory.
 
