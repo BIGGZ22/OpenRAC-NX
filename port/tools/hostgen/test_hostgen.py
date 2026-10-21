@@ -11,6 +11,7 @@ is game code.
 from __future__ import annotations
 
 import json
+import re
 import shutil
 import subprocess
 import sys
@@ -902,6 +903,35 @@ class Translate(unittest.TestCase):
         }, config={"groups": [{"path": "src/menu", "suffix": "menu", "overlay": 100}]})
         self.assertEqual(out, ["1", "20"])
 
+    def test_split_places_twin_counts_with_the_variants_calls(self):
+        # The catalogue folds the level copy of an executable function (func_00110080, at 0x300080
+        # in level 3) into a folded function (func_00110000) as a variant; engine code calls the
+        # executable function by its own name before the folded one (rac1/pal's frame draw: packet
+        # calls, then AA_BlurPass). split_places.tsv's fourth column names the twin, so the folded
+        # call is the caller's second call to the family (k = 1), not its first.
+        rows = "func_00110000\tfunc_L03_00300080\t03:00300080{}\n"
+        program = {"a.c": """
+            void func_00110000(void) {}
+            void func_00110080(void) {}
+            void func_L03_00300080(void) {}
+            void func_00110100(void) { func_00110080(); func_00110000(); }
+            int test_main(void) { test_print(0); return 0; }
+        """}
+        places = ("func_00110000\texe\t8\t0\t1\t03:00300000,03:00300080\n"
+                  "func_00110100\texe\t16\t0\t1\t03:00300100\n")
+        for twin, k in (("", 0), ("\tfunc_00110080", 1)):
+            out = self.run_program(program, places=places, config={"split_places": "split_places.tsv"},
+                                   extra_files={"split_places.tsv": "# function\tvariant\tplaces\ttwin\n"
+                                                + rows.format(twin)},
+                                   host_c="""
+                                       gaddr openrac_guest_nearest(const uint32_t *p, int n, gaddr c) { return 0; }
+                                       gaddr openrac_folded_call(const uint32_t *p, int n, gaddr c, uint32_t s, int k) { return 0; }
+                                   """)
+            self.assertEqual(out, ["0"])
+            calls = re.findall(r"openrac_folded_call\(\(const uint32_t\[\]\)\{0x00110000u, [^;]*?, (\d+)\)\)",
+                               self.last_generated)
+            self.assertEqual(calls, [str(k)], twin or "no twin")
+
 
 class InputsDigest(unittest.TestCase):
     """The fingerprint that lets a build skip a translation it already has."""
@@ -1165,6 +1195,32 @@ class Places(unittest.TestCase):
             text = (out / "a.c").read_text()
             self.assertIn("openrac_data_in_copy(-1, 0x00300000u, 36u, openrac_self_, 0x00200000u)", text)
             self.assertIn("openrac_guest_entry((openrac_host_fn)func_00300000)", text)
+
+    @unittest.skipUnless(have_compiler(), "needs Clang on a POSIX host")
+    def test_a_folded_call_of_shared_code_with_copies_in_one_program_is_the_running_copys(self):
+        # rac1's func_L00_002E0490 (several levels' code) has two copies in level 7's program, and
+        # each registers its draw callback through its own place of the folded AddDrawCallback.
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            src = root / "game"
+            (src / "src").mkdir(parents=True)
+            (src / "src" / "a.c").write_text(
+                "extern void func_L00_00320000(int);\n"
+                "void func_L00_00300000(int a) { func_L00_00320000(a); }\n")
+            (src / "functions.tsv").write_text(
+                "func_L00_00300000\tshared\t104\tfingerprint\t3\t00:00300000,07:00310000,07:00310100\n"
+                "func_L00_00320000\tshared\t40\tfingerprint\t3\t00:00320000,07:00330000,07:00330040\n")
+            (root / "hostgen.json").write_text(json.dumps({
+                "sources": ["src"], "includes": [], "places": "functions.tsv",
+                "relocate": [0x1A7C80, 0x500000],
+            }))
+            out = root / "gen"
+            self.assertEqual(hostgen.main(["--game", str(root / "hostgen.json"),
+                                           "--source", str(src), "--out", str(out),
+                                           "--jobs", "1", "--quiet"]), 0)
+            text = (out / "a.c").read_text()
+            self.assertIn("(openrac_self_ != 0 ? openrac_self_ : OPENRAC_LCODE(0, 0x00300000u)), 104u, 0)", text)
+            self.assertIn("openrac_guest_entry((openrac_host_fn)func_L00_00300000)", text)
 
     def generate(self, root: Path, source: str, places: str, cfg: dict | None = None) -> Path:
         src = root / "game"

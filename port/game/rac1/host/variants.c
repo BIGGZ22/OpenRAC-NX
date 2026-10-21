@@ -97,20 +97,6 @@ void func_L00_00267080(int arg0, long long arg1) {
     }
 }
 
-#if !RAC1_OMIT(func_L00_00296CD0)
-/* The places of func_00229C08 (DmaShrubTextures) the catalogue lists at the level programs' second
- * copy (level 0's 0x296CD0) are DmaTieTextures' (func_00236958) copies: the two share a
- * fingerprint, and these read the tie words of D_0018A3B0 (6 and 5, not 8 and 7), call the tie
- * builder (func_002383D8) and splice the tie list (DrawTies_1's D_00161068, largest size in
- * D_00161074). DmaTieTextures itself is that code; its globals become the loaded level's
- * (OPENRAC_DATA). Written as the shrub code with the tie words, this spliced the shrub list
- * (D_001604F0) instead: still 0 on a level's first frame in the US game, so the tie tag went to
- * game address 0, over the star records of a sky without a star table (Gaspar's). */
-void func_L00_00296CD0(void) {
-    func_00236958();
-}
-#endif
-
 #if !RAC1_OMIT(func_L01_002A2B68)
 /* func_L00_0028F210's copy in some levels: the sound slot's +0x80, not +0x84. */
 int func_L01_002A2B68(int i, int v) {
@@ -272,3 +258,25 @@ void func_L07_0030E800(void) { func_L03_00292AC0(RAC1_LADDR(07, 0x00208820u)); }
 void func_L08_002DB448(void) { func_L03_00292AC0(RAC1_LADDR(08, 0x001D7320u)); }
 void func_L14_003047D8(void) { func_L03_00292AC0(RAC1_LADDR(14, 0x001E9FA0u)); }
 void func_L18_002FC168(void) { func_L18_00282F48(RAC1_LADDR(18, 0x001DFED0u)); }
+
+#if !RAC1_OMIT(func_L02_00299F28)
+/* PlayMovieEntryIfIdle's (func_L00_0029A7D0) second copy in levels 2, 8 and 16 (the first one there
+ * is level 0's): the same code on another table of D_00137C80, its sector/size pairs at +0x19F8 (the
+ * alternative ones, flag D_0015EE80, at +0x1A10) and not +0x1808/+0x18A0. Skid's agent (L02), moby
+ * class 1283 (L08) and the challenge NPC (L16) start their movies through it; folded, they played
+ * the entry of level 0's table. */
+void func_L02_00299F28(int idx) {
+    if (idx < 0) {
+        return;
+    }
+    const gaddr pair = RAC1_ADDR(0x00137C80u) + (gaddr)idx * 8u
+                       + (GREF(int, RAC1_ADDR(0x0015EE80u)) != 0 ? 0x1A10u : 0x19F8u);
+    const int b = GREF(int, pair);
+    const int a = GREF(int, pair + 4u);
+    if (GREF(int, HERO + 0x22A8u) == 0) {
+        func_L00_00211908();
+    } else if (GREF(uint8_t, HERO + 0x20B1u) == 0) {
+        func_L00_0029A940(b, a, GREF(int, RAC1_ADDR(0x0015EE88u)));
+    }
+}
+#endif

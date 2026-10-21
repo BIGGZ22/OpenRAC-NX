@@ -1735,7 +1735,23 @@ class Unit:
                 # a function calling three variants before the function itself took its call for the
                 # first variant's: the frame draw ran draw callback list 3 in place of list 1, and
                 # no list-1 callback (the nanotech crates' sphere among them) was ever drawn.
-                parent = getattr(self.program, "split_parent", {}).get(sym, sym)
+                # An executable function whose level copies are variants (split_places.tsv's fourth
+                # column: the variant's twin) is called by its own name and counts with them, in the
+                # family of the first function its variant was split off (a variant may be split off
+                # a variant): the frame draw (func_001F3D78) calls func_00234F40 and func_00234EE0,
+                # whose level copies the catalogue folds into AA_BlurPass (func_001FB848), eight
+                # times before AA_BlurPass; counted without them, AA_BlurPass took the first of those
+                # jals, and in every level the port ran func_00234F40's copy (a packet call) in
+                # place of the blur pass.
+                split_parent = getattr(self.program, "split_parent", {})
+                twin = getattr(self.program, "split_twin", {}).get(sym)
+                if twin is None:
+                    parent = split_parent.get(sym, sym)
+                else:
+                    parent, seen = twin, {twin}
+                    while parent in split_parent and split_parent[parent] not in seen:
+                        parent = split_parent[parent]
+                        seen.add(parent)
                 family_k = None
                 if self.fn is not None and parent in getattr(self.program, "splits", {}):
                     family = getattr(self.fn, "family_calls", None)
@@ -1817,8 +1833,16 @@ class Unit:
                     if family_k is not None:
                         k = family_k
                     own_size = getattr(self.program, "sizes", {}).get(self.fn.name) or 0
+                    own = self._own_address()
+                    if self._copies_in_one_program() is not None and self._shared_level() is not None:
+                        # This function is several levels' code and has more than one copy in some
+                        # program, each calling its own place (level 7's two func_L00_002E0490 call
+                        # AddDrawCallback's places 0x2214C8 and 0x2216D0): the k-th call of the copy
+                        # that runs, when it was called through its code address (guest.h).
+                        self.fn.uses_self = True
+                        own = f"(openrac_self_ != 0 ? openrac_self_ : {own})"
                     fp = (f"openrac_folded_call((const uint32_t[]){{{literal}}}, {len(places)}, "
-                          f"{self._own_address()}, {own_size}u, {k})")
+                          f"{own}, {own_size}u, {k})")
             else:
                 fp = self.function_value(target)
         else:
