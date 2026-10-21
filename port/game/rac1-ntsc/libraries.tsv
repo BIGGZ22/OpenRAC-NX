@@ -166,8 +166,8 @@ FUN_0012f208	wad	wad_GetSectors	game	PAL func_0012F348
 FUN_0012f2b8	wad	load_disc_sectors_into_global_buffer	game	PAL func_0012F3F8
 FUN_0012f368	wad	read_file_entry_with_retry	game	PAL func_0012F4A8
 FUN_0020b618	game	WadDecompress	host	the WAD decompressor (hand-written assembly), answered with the asset readers' own; returns the size it made; PAL func_0020C468	int (int, int)
-FUN_001f7580	game	FontPrintWindow (mode 1)	host	the decompilation keeps GetEffectTex's 64-bit TEX0 in an int (matching C: on the console the register keeps all 64 bits); the port's passes it whole; PAL func_001F7560	void (unsigned int, unsigned int, unsigned int, unsigned int)
-FUN_001f75f0	game	FontPrintWindow (mode 2)	host	as func_001F7560, the small font; PAL func_001F75D0	void (unsigned int, unsigned int, unsigned int, unsigned int)
+FUN_001f7580	game	FontPrintWindow (mode 1)	host	the decompilation keeps GetEffectTex's 64-bit TEX0 in an int (matching C: on the console the register keeps all 64 bits); the port's passes it whole, and the colour as the caller's register holds it; PAL func_001F7560	void (unsigned int, long long, unsigned int, int)
+FUN_001f75f0	game	FontPrintWindow (mode 2)	host	as func_001F7560, the small font; PAL func_001F75D0	void (unsigned int, long long, unsigned int, int)
 SetGsCrt	kernel	SetGsCrt	host	system call 0x02; PAL func_00118A50
 _EnableIntc	kernel	EnableIntc	host	system call 0x14; PAL func_00118AE0
 _DisableIntc	kernel	DisableIntc	host	system call 0x15; PAL func_00118AF0

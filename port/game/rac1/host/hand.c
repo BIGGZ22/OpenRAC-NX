@@ -423,12 +423,14 @@ int func_00116248(gaddr buffer, gaddr format, ...) {
  * FontPrintWindow in the large (mode 1) and small (mode 2) font: the effect texture's TEX0 from
  * GetEffectTex and the font's glyph table. The decompilation's matching C keeps the TEX0 in an int,
  * which is right on the console (the register holds all 64 bits) but cuts it to 32 here, so the
- * glyphs would be drawn with a wrong palette and size; the port passes it whole.
+ * glyphs would be drawn with a wrong palette and size; the port passes it whole. The colour (b) is
+ * a 64-bit register passed on as it came (FontPrintWindow takes it as a long): a caller's int
+ * colour sign-extended, another's `0x80F0F0F0LL` not (libraries.tsv gives both their prototype).
  */
-void func_001F7560(gaddr a, gaddr b, gaddr c, gaddr d) {
+void func_001F7560(gaddr a, long long b, gaddr c, int d) {
     func_001F7070(a, b, c, d, func_001F4868(1), OPENRAC_DATA(RAC1_ADDR(0x001DF3D0u)));
 }
 
-void func_001F75D0(gaddr a, gaddr b, gaddr c, gaddr d) {
+void func_001F75D0(gaddr a, long long b, gaddr c, int d) {
     func_001F7070(a, b, c, d, func_001F4868(2), OPENRAC_DATA(RAC1_ADDR(0x001DF770u)));
 }
