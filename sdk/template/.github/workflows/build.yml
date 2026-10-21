@@ -1,13 +1,16 @@
-# OpenRAC mods: build, test and release (the OpenRAC mod SDK's workflow, sdk/template). The same
-# file serves a repository of one mod (its openrac-mod.json at the top) and one of several (a
-# folder per mod, as OpenRAC/rac1-mods): it builds the top CMakeLists.txt, which makes every mod.
+# OpenRAC mods: build, test and release (the OpenRAC mod SDK's workflow, sdk/template and
+# sdk/template-script). The same file serves a repository of one mod (its openrac-mod.json at the
+# top) and one of several (a folder per mod, as OpenRAC/rac1-mods), native mods, script mods or
+# both: native mods are built from the top CMakeLists.txt, which makes every one of them; script
+# mods ("type": "script", docs/port/MODS.md section 11) are packaged as they are, with no build.
 #
-# Each push and pull request: every mod built and tested on Windows, Linux and macOS against the
-# SDK sdk.lock pins (tools/fetch_sdk.py), each platform's build packaged as
-# <id>-<version>-<platform>.zip, the platforms joined into <id>-<version>.zip, and SHA256SUMS over
-# them all: the run's artifacts. A tag v<version> (or <id>-v<version>) also publishes them on that
-# release, which is what OpenRAC's launcher installs from when a player pastes the repository's
-# address (docs/port/MODS.md, section 10): push a tag, nothing else. The libraries are not signed.
+# Each push and pull request: every native mod built and tested on Windows, Linux and macOS
+# against the SDK sdk.lock pins (tools/fetch_sdk.py), each platform's build packaged as
+# <id>-<version>-<platform>.zip and the platforms joined into <id>-<version>.zip; every script mod
+# packaged as <id>-<version>.zip; and SHA256SUMS over them all: the run's artifacts. A tag
+# v<version> (or <id>-v<version>) also publishes them on that release, which is what OpenRAC's
+# launcher installs from when a player pastes the repository's address (MODS.md, section 10):
+# push a tag, nothing else. The libraries are not signed.
 #
 # Every action is pinned to a commit.
 name: build
@@ -27,7 +30,40 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  # What the repository holds: native mods to build (a top CMakeLists.txt), script mods to package.
+  detect:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    outputs:
+      native: ${{ steps.find.outputs.native }}
+      scripts: ${{ steps.find.outputs.scripts }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Find the mods
+        id: find
+        shell: python
+        run: |
+          import json, os, pathlib
+          root = pathlib.Path(".")
+          index = root / "openrac-mods.json"
+          if index.is_file():
+              folders = [root / f for f in json.loads(index.read_text())["mods"]]
+          elif (root / "openrac-mod.json").is_file():
+              folders = [root]
+          else:
+              folders = sorted(p.parent for p in root.glob("*/openrac-mod.json"))
+          scripts = [f.as_posix() for f in folders
+                     if json.loads((f / "openrac-mod.json").read_text()).get("type") == "script"]
+          with open(os.environ["GITHUB_OUTPUT"], "a") as out:
+              out.write(f"native={'true' if (root / 'CMakeLists.txt').is_file() else 'false'}\n")
+              out.write(f"scripts={' '.join(scripts)}\n")
+          print("native mods:", (root / "CMakeLists.txt").is_file(), "script mods:", scripts or "none")
+
   build:
+    needs: detect
+    if: needs.detect.outputs.native == 'true'
     name: ${{ matrix.name }}
     runs-on: ${{ matrix.os }}
     timeout-minutes: 20
@@ -101,10 +137,40 @@ jobs:
           path: dist/*.zip
           if-no-files-found: error
 
-  # Each mod's archives of every platform joined into one, <id>-<version>.zip, and SHA256SUMS over
-  # every archive, which the launcher checks each download against.
+  # Script mods: checked and packaged from their own folders, one archive for every platform.
+  scripts:
+    needs: detect
+    if: needs.detect.outputs.scripts != ''
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: "3.12"
+      - name: The SDK sdk.lock pins
+        run: echo "SDK=$(python tools/fetch_sdk.py)" >> "$GITHUB_ENV"
+      - name: Package
+        env:
+          FOLDERS: ${{ needs.detect.outputs.scripts }}
+        run: |
+          # shellcheck disable=SC2086 # one folder per word
+          python "$SDK/tools/package_mod.py" $FOLDERS -o dist
+          ls -l dist
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: mods-scripts
+          path: dist/*.zip
+          if-no-files-found: error
+
+  # Each native mod's archives of every platform joined into one, <id>-<version>.zip, beside the
+  # script mods' archives, and SHA256SUMS over every archive, which the launcher checks each
+  # download against.
   merge:
-    needs: build
+    needs: [build, scripts]
+    if: ${{ !cancelled() && !contains(needs.*.result, 'failure') }}
     runs-on: ubuntu-24.04
     timeout-minutes: 10
     steps:
@@ -123,8 +189,10 @@ jobs:
           merge-multiple: true
       - name: Join the platforms, list the hashes
         run: |
-          # <id>-<version>-<platform>.zip: the platform is the last two words, the rest the mod.
-          for mod in $(ls dist/*.zip | sed -E 's#.*/(.*)-[a-z]+-[a-z0-9_]+\.zip#\1#' | sort -u); do
+          # A native mod's platform archives, <id>-<version>-<platform>.zip: the platform is the last
+          # two words, the rest the mod. A script mod's archive is already the one for every platform.
+          platforms='-(macos|linux|windows)-[a-z0-9_]+\.zip$'
+          for mod in $(ls dist/*.zip | grep -E -- "$platforms" | sed -E 's#.*/(.*)-[a-z]+-[a-z0-9_]+\.zip#\1#' | sort -u); do
             python "$SDK/tools/package_mod.py" --merge dist/"$mod"-*.zip -o dist/"$mod".zip
           done
           (cd dist && sha256sum *.zip > SHA256SUMS)
@@ -139,8 +207,8 @@ jobs:
 
   # A tag: every archive and SHA256SUMS on the tag's release, published, for the launcher.
   release:
-    if: startsWith(github.ref, 'refs/tags/')
     needs: merge
+    if: ${{ !cancelled() && needs.merge.result == 'success' && startsWith(github.ref, 'refs/tags/') }}
     runs-on: ubuntu-24.04
     timeout-minutes: 10
     permissions:
