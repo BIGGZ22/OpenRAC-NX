@@ -183,7 +183,10 @@ let config: Config = {
     ? null
     : "/home/you/OpenRAC",
   python: "/usr/bin/python3",
-  godot: null,
+  // ?godot: Godot is chosen, so the Mods tab's level editor can open a level.
+  godot: new URLSearchParams(typeof location === "undefined" ? "" : location.search).has("godot")
+    ? "/usr/bin/godot"
+    : null,
   docker: "/usr/bin/docker",
   // ?developer shows the contributor's pages.
   developer: new URLSearchParams(typeof location === "undefined" ? "" : location.search).has("developer"),
@@ -308,6 +311,8 @@ const discs: Record<string, "found" | "missing" | "mismatch"> = {
   "rac1/pal": "found",
   "rac1/ntsc": "found",
   "rac3/ntsc": "mismatch",
+  // ?early: Going Commando's disc is found, for the Mods tab's early access.
+  ...(query.has("early") ? { "rac2/ntsc": "found" as const } : {}),
 };
 const placed = new Set(["rac1/pal"]);
 const toolchains = false;
