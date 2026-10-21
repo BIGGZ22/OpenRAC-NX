@@ -230,6 +230,18 @@ jobs:
           sdk=$(python3 -c 'import json; print(json.load(open("sdk.lock"))["version"])')
           printf 'Built by the build workflow from %s, against the OpenRAC mod SDK %s.\n\nInstall: paste this repository'"'"'s address in the OpenRAC launcher'"'"'s Mods tab, or add a .zip there.\n' \
             "$GITHUB_SHA" "$sdk" > notes.md
+          # A tag <id>-v<version> releases that one mod of a repository of several: only its
+          # archives, and SHA256SUMS listing them. v<version> releases every mod.
+          case "$TAG" in
+            v[0-9]*) ;;
+            *-v[0-9]*)
+              mod="${TAG%-v*}" version="${TAG##*-v}"
+              ls dist/"$mod-$version"*.zip > /dev/null 2>&1 || { echo "::error::$TAG: no archive of $mod $version"; exit 1; }
+              find dist -name '*.zip' ! -name "$mod-$version.zip" ! -name "$mod-$version-*.zip" -delete
+              (cd dist && sha256sum *.zip > SHA256SUMS)
+              ;;
+          esac
+          ls dist
           if gh release view "$TAG" > /dev/null 2>&1; then
             gh release upload "$TAG" --clobber dist/*
           else

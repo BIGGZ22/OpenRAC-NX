@@ -52,7 +52,8 @@ On a **tag** it also publishes them on that tag's GitHub release.
    ```
 
    In a repository of several mods released apart, tag `<id>-v<version>`
-   (`lock-strafe-v1.2.0`).
+   (`lock-strafe-v1.2.0`): that release carries only that mod's archives, and a
+   `SHA256SUMS` listing them. `v<version>` releases every mod.
 3. When the workflow finishes, the release has the archives and `SHA256SUMS`,
    and players' launchers offer the update.
 
