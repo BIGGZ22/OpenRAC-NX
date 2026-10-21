@@ -7,7 +7,7 @@
 
 reads sdk/bindings/<game>.json (rac1 when no game is named) and writes:
 
-  port/game/<game>/host/script_binding.c   the port's side for script mods: for each hook point,
+  port/game/<game>/script_binding.c   the port's side for script mods: for each hook point,
                                            OPENRAC_SCRIPT_LINKS C functions of its signature that hand
                                            their arguments to the script runtime, and the fields
                                            (port/game/common/include/openrac/script_binding.h)
@@ -363,7 +363,7 @@ def luau_types(b: dict) -> str:
 def outputs(b: dict) -> dict[Path, str]:
     g = b["game"]
     return {
-        ROOT / "port" / "game" / g / "host" / "script_binding.c": c_binding(b),
+        ROOT / "port" / "game" / g / "script_binding.c": c_binding(b),
         ROOT / "sdk" / "include" / "openrac" / "games" / f"{g}.hpp": cpp_header(b),
         ROOT / "sdk" / "types" / f"{g}.d.luau": luau_types(b),
     }

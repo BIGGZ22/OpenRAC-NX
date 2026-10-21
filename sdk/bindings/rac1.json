@@ -1,6 +1,6 @@
 {
   "format": 1,
-  "about": "Ratchet & Clank's binding for mods (docs/port/MODS.md, section 11): its hook points and the game state exposed to scripts by name. sdk/tools/gen_binding.py writes port/game/rac1/host/script_binding.c, sdk/include/openrac/games/rac1.hpp and sdk/types/rac1.d.luau from it; --check holds the hook points to the hook rows of port/game/rac1-<disc>/libraries.tsv. Addresses are each disc's; a field's offset is added to its base's.",
+  "about": "Ratchet & Clank's binding for mods (docs/port/MODS.md, section 11): its hook points and the game state exposed to scripts by name. sdk/tools/gen_binding.py writes port/game/rac1/script_binding.c, sdk/include/openrac/games/rac1.hpp and sdk/types/rac1.d.luau from it; --check holds the hook points to the hook rows of port/game/rac1-<disc>/libraries.tsv. Addresses are each disc's; a field's offset is added to its base's.",
   "game": "rac1",
   "discs": ["pal", "ntsc"],
   "hooks": [

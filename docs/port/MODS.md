@@ -629,7 +629,7 @@ names: the hero's position, facing, move yaw and state, and the bolts.
 [sdk/tools/gen_binding.py](../../sdk/tools/gen_binding.py) writes from it,
 all committed:
 
-- `port/game/<game>/host/script_binding.c`: for each hook point eight C
+- `port/game/<game>/script_binding.c`: for each hook point eight C
   functions of its signature that hand their arguments to the runtime
   (`openrac_script_dispatch`) and call what they go on to when no script
   handles the call, a caller of the signature for `original`, and the fields

@@ -2,7 +2,7 @@
  * Copyright (c) 2026 the OpenRAC contributors
  *
  * A game's binding for script mods (docs/port/MODS.md, section 11), written by
- * sdk/tools/gen_binding.py from sdk/bindings/<game>.json into port/game/<game>/host/script_binding.c:
+ * sdk/tools/gen_binding.py from sdk/bindings/<game>.json into port/game/<game>/script_binding.c:
  * for each hook point, OPENRAC_SCRIPT_LINKS C functions of its exact signature, one for each script
  * mod that may take it (a slot of the hook point's chain holds a plain function, so each place in the
  * chain needs a function of its own), which hand their arguments to the script runtime
