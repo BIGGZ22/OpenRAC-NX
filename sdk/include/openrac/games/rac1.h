@@ -91,6 +91,48 @@ typedef void (*openrac_rac1_Vendor_BuildItemList)(int32_t skip_unflagged);
 #define OPENRAC_RAC1_SIG_GoldBolts_CountCollected "i32()"
 typedef int32_t (*openrac_rac1_GoldBolts_CountCollected)(void);
 
+/* Hero_TakeDamage (func_L00_002056D8, rac1.player.take_damage): takes hit points off the hero's
+ * health, at most one a call (none for 0), then the HUD's health bank. Every hit but the instant
+ * kills. */
+#define OPENRAC_RAC1_HOOK_Hero_TakeDamage "Hero_TakeDamage"
+#define OPENRAC_RAC1_SIG_Hero_TakeDamage "void(i32)"
+typedef void (*openrac_rac1_Hero_TakeDamage)(int32_t amount);
+
+/* Moby_GetHitMessage (func_L00_0025B478, rac1.combat.get_hit): the hit pending on a moby
+ * (MobyGetHitMessage): the record of the last hit posted to it (+0x20 the attacker, +0x24 the
+ * flags, +0x2C the damage, an f32) when its flags match mask, else 0; the hit is dropped unless
+ * keep. Read each tick, so a hit may be read more than once. */
+#define OPENRAC_RAC1_HOOK_Moby_GetHitMessage "Moby_GetHitMessage"
+#define OPENRAC_RAC1_SIG_Moby_GetHitMessage "u32(u32,i32,i32)"
+typedef openrac_gaddr (*openrac_rac1_Moby_GetHitMessage)(openrac_gaddr moby, int32_t mask, int32_t keep);
+
+/* Weapon_TakeAmmo (func_L00_00234638, rac1.weapon.take_ammo): takes ammo from an item for a shot
+ * (TakeAmmo; -1 the item in hand): 1 when taken, 0 when there is too little. */
+#define OPENRAC_RAC1_HOOK_Weapon_TakeAmmo "Weapon_TakeAmmo"
+#define OPENRAC_RAC1_SIG_Weapon_TakeAmmo "i32(i32,i32)"
+typedef int32_t (*openrac_rac1_Weapon_TakeAmmo)(int32_t item, int32_t amount);
+
+/* Moby_RecordDeath (func_L00_002584A8, rac1.moby.record_death): records a placed moby's death
+ * or a crate's break (SetDeathBits: its killed bits, none for a save id below 0) and drops its
+ * bolts, about the s16 at +0xB4, which it then clears. */
+#define OPENRAC_RAC1_HOOK_Moby_RecordDeath "Moby_RecordDeath"
+#define OPENRAC_RAC1_SIG_Moby_RecordDeath "void(u32,i32,i32)"
+typedef void (*openrac_rac1_Moby_RecordDeath)(openrac_gaddr moby, int32_t flags, int32_t index);
+
+/* Level_LoadGameplay (func_L00_002422D8, rac1.level.load_gameplay): loads a level's gameplay
+ * file (LoadLevelGameplay), once per level start: after it every placed moby exists and none has
+ * run. Returns the heap cursor. */
+#define OPENRAC_RAC1_HOOK_Level_LoadGameplay "Level_LoadGameplay"
+#define OPENRAC_RAC1_SIG_Level_LoadGameplay "u32(i32)"
+typedef openrac_gaddr (*openrac_rac1_Level_LoadGameplay)(int32_t full);
+
+/* Hero_ApproachSpeed (func_L00_00212740, rac1.player.approach_speed): eases the hero's ground
+ * speed (+0x194) toward his target speed (+0x190) by up below it and down above it, each tick he
+ * moves on foot. */
+#define OPENRAC_RAC1_HOOK_Hero_ApproachSpeed "Hero_ApproachSpeed"
+#define OPENRAC_RAC1_SIG_Hero_ApproachSpeed "void(f32,f32)"
+typedef void (*openrac_rac1_Hero_ApproachSpeed)(float up, float down);
+
 /* Take a hook point by its short name: OPENRAC_RAC1_HOOK(api, mod, Hero_TurnToHeading, my_turn,
  * &s_turn_original). */
 #define OPENRAC_RAC1_HOOK(api, mod, point, replacement, original)                                  \

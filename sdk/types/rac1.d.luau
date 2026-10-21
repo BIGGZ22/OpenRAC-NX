@@ -19,6 +19,12 @@ type HookPoint =
     | "rac1.vendor.init_level_stock"
     | "rac1.vendor.build_item_list"
     | "rac1.gold_bolt.count_collected"
+    | "rac1.player.take_damage"
+    | "rac1.combat.get_hit"
+    | "rac1.weapon.take_ammo"
+    | "rac1.moby.record_death"
+    | "rac1.level.load_gameplay"
+    | "rac1.player.approach_speed"
     | "rac1.moby.class_1750.update"
     | "rac1.moby.class_676.update"
     | "rac1.moby.class_482.update"
@@ -659,10 +665,13 @@ type HookPoint =
     | "FollowCamera_ApplyOverrides"
     | "GoldBolts_CountCollected"
     | "Hero_AdvanceAnimation"
+    | "Hero_ApproachSpeed"
     | "Hero_SetPlanarVelocity"
+    | "Hero_TakeDamage"
     | "Hero_TurnToHeading"
     | "Hero_UpdateMotionInput"
     | "Item_Give"
+    | "Level_LoadGameplay"
     | "Moby_AgnoggShipFront_Update"
     | "Moby_AirshipPart1181_Update"
     | "Moby_AirshipPart_Update"
@@ -1071,6 +1080,7 @@ type HookPoint =
     | "Moby_Gate92_Update"
     | "Moby_Gate93_Update"
     | "Moby_Gate_Update"
+    | "Moby_GetHitMessage"
     | "Moby_GiantClankPad_Update"
     | "Moby_GloveOfDoom_Update"
     | "Moby_GoldBolt_Update"
@@ -1177,6 +1187,7 @@ type HookPoint =
     | "Moby_QwarksStarfighterPart389_Update"
     | "Moby_QwarksStarfighterPart_Update"
     | "Moby_QwarksTrailer_Update"
+    | "Moby_RecordDeath"
     | "Moby_RedButton_Update"
     | "Moby_RedOrb_Update"
     | "Moby_RedShip1_Update"
@@ -1304,6 +1315,7 @@ type HookPoint =
     | "Planet_Unlock"
     | "Vendor_BuildItemList"
     | "Vendor_InitLevelStock"
+    | "Weapon_TakeAmmo"
 type MemoryType = "u8" | "i8" | "u16" | "i16" | "u32" | "i32" | "f32"
 
 type Fields = {
@@ -1342,6 +1354,18 @@ type Vendor_InitLevelStockFn = () -> ()
 type Vendor_BuildItemListFn = (skip_unflagged: number) -> ()
 -- rac1.gold_bolt.count_collected (GoldBolts_CountCollected) i32(): The gold bolts collected, at most 40 (count_nonzero_entries_up_to_40): what the pause screen shows; the unspent ones are this less 4 per gold weapon.
 type GoldBolts_CountCollectedFn = () -> number
+-- rac1.player.take_damage (Hero_TakeDamage) void(i32): Takes hit points off the hero's health (Hero_TakeDamage): at most one a call, none for 0, then the HUD's health bank. Every hit the hero takes goes through it but the instant kills (falls, crushers), which set his health to 0.
+type Hero_TakeDamageFn = (amount: number) -> ()
+-- rac1.combat.get_hit (Moby_GetHitMessage) u32(u32,i32,i32): The hit pending on moby (MobyGetHitMessage): the record of the last hit posted to it (+0x20 the attacker, +0x24 the flags, +0x2C the damage, an f32) when its flags match mask, else 0, dropping the hit unless keep. How the hero and every enemy read the hits they take, each tick, so a hit may be read more than once.
+type Moby_GetHitMessageFn = (moby: number, mask: number, keep: number) -> number
+-- rac1.weapon.take_ammo (Weapon_TakeAmmo) i32(i32,i32): Takes amount of ammo from item for a shot (TakeAmmo; -1 is the item in hand): 1 when taken, 0 when there is too little. An item with no ammo limit takes none and gives 1.
+type Weapon_TakeAmmoFn = (item: number, amount: number) -> number
+-- rac1.moby.record_death (Moby_RecordDeath) void(u32,i32,i32): Records a placed moby's death or a crate's break (SetDeathBits): its save id's killed bits (none for a save id below 0), its mission, then drops its bolts: about the s16 at +0xB4 (or what a tallied source has left of +0xB6), which it then clears.
+type Moby_RecordDeathFn = (moby: number, flags: number, index: number) -> ()
+-- rac1.level.load_gameplay (Level_LoadGameplay) u32(i32): Loads a level's gameplay file into the level heap (LoadLevelGameplay), once per level start: the settings, the placed mobys and their pvars, the spare moby pool, the paths and the rest; returns the heap cursor. After it, every placed moby exists and none has run.
+type Level_LoadGameplayFn = (full: number) -> number
+-- rac1.player.approach_speed (Hero_ApproachSpeed) void(f32,f32): Eases the hero's ground speed (+0x194, the speed Hero_SetPlanarVelocity moves him at) toward his target speed (+0x190) by up when below it and by down when above, each tick he moves on foot, in every level.
+type Hero_ApproachSpeedFn = (up: number, down: number) -> ()
 -- rac1.moby.<class>.update (experimental): (moby: number) -> (), or () -> () where it gets no moby.
 type MobyUpdateFn = (moby: number) -> ()
 

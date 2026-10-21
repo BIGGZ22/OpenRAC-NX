@@ -99,6 +99,54 @@ struct GoldBolts_CountCollected {
     using fn = int32_t (*)();
 };
 
+// Takes hit points off the hero's health (Hero_TakeDamage): at most one a call, none for 0, then the HUD's health bank. Every hit the hero takes goes through it but the instant kills (falls, crushers), which set his health to 0.
+struct Hero_TakeDamage {
+    static constexpr const char* id = "rac1.player.take_damage";
+    static constexpr const char* name = "Hero_TakeDamage";
+    static constexpr const char* signature = "void(i32)";
+    using fn = void (*)(int32_t);
+};
+
+// The hit pending on moby (MobyGetHitMessage): the record of the last hit posted to it (+0x20 the attacker, +0x24 the flags, +0x2C the damage, an f32) when its flags match mask, else 0, dropping the hit unless keep. How the hero and every enemy read the hits they take, each tick, so a hit may be read more than once.
+struct Moby_GetHitMessage {
+    static constexpr const char* id = "rac1.combat.get_hit";
+    static constexpr const char* name = "Moby_GetHitMessage";
+    static constexpr const char* signature = "u32(u32,i32,i32)";
+    using fn = uint32_t (*)(uint32_t, int32_t, int32_t);
+};
+
+// Takes amount of ammo from item for a shot (TakeAmmo; -1 is the item in hand): 1 when taken, 0 when there is too little. An item with no ammo limit takes none and gives 1.
+struct Weapon_TakeAmmo {
+    static constexpr const char* id = "rac1.weapon.take_ammo";
+    static constexpr const char* name = "Weapon_TakeAmmo";
+    static constexpr const char* signature = "i32(i32,i32)";
+    using fn = int32_t (*)(int32_t, int32_t);
+};
+
+// Records a placed moby's death or a crate's break (SetDeathBits): its save id's killed bits (none for a save id below 0), its mission, then drops its bolts: about the s16 at +0xB4 (or what a tallied source has left of +0xB6), which it then clears.
+struct Moby_RecordDeath {
+    static constexpr const char* id = "rac1.moby.record_death";
+    static constexpr const char* name = "Moby_RecordDeath";
+    static constexpr const char* signature = "void(u32,i32,i32)";
+    using fn = void (*)(uint32_t, int32_t, int32_t);
+};
+
+// Loads a level's gameplay file into the level heap (LoadLevelGameplay), once per level start: the settings, the placed mobys and their pvars, the spare moby pool, the paths and the rest; returns the heap cursor. After it, every placed moby exists and none has run.
+struct Level_LoadGameplay {
+    static constexpr const char* id = "rac1.level.load_gameplay";
+    static constexpr const char* name = "Level_LoadGameplay";
+    static constexpr const char* signature = "u32(i32)";
+    using fn = uint32_t (*)(int32_t);
+};
+
+// Eases the hero's ground speed (+0x194, the speed Hero_SetPlanarVelocity moves him at) toward his target speed (+0x190) by up when below it and by down when above, each tick he moves on foot, in every level.
+struct Hero_ApproachSpeed {
+    static constexpr const char* id = "rac1.player.approach_speed";
+    static constexpr const char* name = "Hero_ApproachSpeed";
+    static constexpr const char* signature = "void(f32,f32)";
+    using fn = void (*)(float, float);
+};
+
 // The update of class 1750, each tick; it gets no moby. Experimental: from the behaviour catalogue.
 struct Moby_Class1750_Update {
     static constexpr const char* id = "rac1.moby.class_1750.update";
@@ -5201,12 +5249,18 @@ namespace hooks {
             using apply_overrides = rac1::FollowCamera_ApplyOverrides;
         }  // namespace follow
     }  // namespace camera
+    namespace combat {
+        using get_hit = rac1::Moby_GetHitMessage;
+    }  // namespace combat
     namespace gold_bolt {
         using count_collected = rac1::GoldBolts_CountCollected;
     }  // namespace gold_bolt
     namespace item {
         using give = rac1::Item_Give;
     }  // namespace item
+    namespace level {
+        using load_gameplay = rac1::Level_LoadGameplay;
+    }  // namespace level
     namespace moby {
         namespace agnogg_ship {
             using update = rac1::Moby_AgnoggShipFront_Update;
@@ -6768,6 +6822,7 @@ namespace hooks {
         namespace rc_range_limiter {
             using update = rac1::Moby_Class832_Update;
         }  // namespace rc_range_limiter
+        using record_death = rac1::Moby_RecordDeath;
         namespace red_button {
             using update = rac1::Moby_RedButton_Update;
         }  // namespace red_button
@@ -7128,7 +7183,9 @@ namespace hooks {
     }  // namespace planet
     namespace player {
         using advance_animation = rac1::Hero_AdvanceAnimation;
+        using approach_speed = rac1::Hero_ApproachSpeed;
         using set_planar_velocity = rac1::Hero_SetPlanarVelocity;
+        using take_damage = rac1::Hero_TakeDamage;
         using turn_to_heading = rac1::Hero_TurnToHeading;
         using update_motion_input = rac1::Hero_UpdateMotionInput;
     }  // namespace player
@@ -7136,6 +7193,9 @@ namespace hooks {
         using build_item_list = rac1::Vendor_BuildItemList;
         using init_level_stock = rac1::Vendor_InitLevelStock;
     }  // namespace vendor
+    namespace weapon {
+        using take_ammo = rac1::Weapon_TakeAmmo;
+    }  // namespace weapon
 }  // namespace hooks
 
 }  // namespace openrac::rac1

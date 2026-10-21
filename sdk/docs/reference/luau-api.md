@@ -152,6 +152,54 @@ rac1.gold_bolt.count_collected (GoldBolts_CountCollected) i32(): The gold bolts 
 type GoldBolts_CountCollectedFn = () -> number
 ```
 
+### `Hero_TakeDamageFn`
+
+rac1.player.take_damage (Hero_TakeDamage) void(i32): Takes hit points off the hero's health (Hero_TakeDamage): at most one a call, none for 0, then the HUD's health bank. Every hit the hero takes goes through it but the instant kills (falls, crushers), which set his health to 0.
+
+```lua
+type Hero_TakeDamageFn = (amount: number) -> ()
+```
+
+### `Moby_GetHitMessageFn`
+
+rac1.combat.get_hit (Moby_GetHitMessage) u32(u32,i32,i32): The hit pending on moby (MobyGetHitMessage): the record of the last hit posted to it (+0x20 the attacker, +0x24 the flags, +0x2C the damage, an f32) when its flags match mask, else 0, dropping the hit unless keep. How the hero and every enemy read the hits they take, each tick, so a hit may be read more than once.
+
+```lua
+type Moby_GetHitMessageFn = (moby: number, mask: number, keep: number) -> number
+```
+
+### `Weapon_TakeAmmoFn`
+
+rac1.weapon.take_ammo (Weapon_TakeAmmo) i32(i32,i32): Takes amount of ammo from item for a shot (TakeAmmo; -1 is the item in hand): 1 when taken, 0 when there is too little. An item with no ammo limit takes none and gives 1.
+
+```lua
+type Weapon_TakeAmmoFn = (item: number, amount: number) -> number
+```
+
+### `Moby_RecordDeathFn`
+
+rac1.moby.record_death (Moby_RecordDeath) void(u32,i32,i32): Records a placed moby's death or a crate's break (SetDeathBits): its save id's killed bits (none for a save id below 0), its mission, then drops its bolts: about the s16 at +0xB4 (or what a tallied source has left of +0xB6), which it then clears.
+
+```lua
+type Moby_RecordDeathFn = (moby: number, flags: number, index: number) -> ()
+```
+
+### `Level_LoadGameplayFn`
+
+rac1.level.load_gameplay (Level_LoadGameplay) u32(i32): Loads a level's gameplay file into the level heap (LoadLevelGameplay), once per level start: the settings, the placed mobys and their pvars, the spare moby pool, the paths and the rest; returns the heap cursor. After it, every placed moby exists and none has run.
+
+```lua
+type Level_LoadGameplayFn = (full: number) -> number
+```
+
+### `Hero_ApproachSpeedFn`
+
+rac1.player.approach_speed (Hero_ApproachSpeed) void(f32,f32): Eases the hero's ground speed (+0x194, the speed Hero_SetPlanarVelocity moves him at) toward his target speed (+0x190) by up when below it and by down when above, each tick he moves on foot, in every level.
+
+```lua
+type Hero_ApproachSpeedFn = (up: number, down: number) -> ()
+```
+
 ### `MobyUpdateFn`
 
 rac1.moby.<class>.update (experimental): (moby: number) -> (), or () -> () where it gets no moby.

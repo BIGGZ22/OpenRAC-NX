@@ -161,6 +161,90 @@
         "ntsc": "FUN_00215290"
       },
       "about": "The gold bolts collected, at most 40 (count_nonzero_entries_up_to_40): what the pause screen shows; the unspent ones are this less 4 per gold weapon."
+    },
+    {
+      "id": "rac1.player.take_damage",
+      "name": "Hero_TakeDamage",
+      "signature": "void(i32)",
+      "params": [
+        "amount"
+      ],
+      "symbols": {
+        "pal": "func_L00_002056D8",
+        "ntsc": "FUN_L00_002050c0"
+      },
+      "about": "Takes hit points off the hero's health (Hero_TakeDamage): at most one a call, none for 0, then the HUD's health bank. Every hit the hero takes goes through it but the instant kills (falls, crushers), which set his health to 0."
+    },
+    {
+      "id": "rac1.combat.get_hit",
+      "name": "Moby_GetHitMessage",
+      "signature": "u32(u32,i32,i32)",
+      "params": [
+        "moby",
+        "mask",
+        "keep"
+      ],
+      "symbols": {
+        "pal": "func_L00_0025B478",
+        "ntsc": "FUN_L00_0025a420"
+      },
+      "about": "The hit pending on moby (MobyGetHitMessage): the record of the last hit posted to it (+0x20 the attacker, +0x24 the flags, +0x2C the damage, an f32) when its flags match mask, else 0, dropping the hit unless keep. How the hero and every enemy read the hits they take, each tick, so a hit may be read more than once."
+    },
+    {
+      "id": "rac1.weapon.take_ammo",
+      "name": "Weapon_TakeAmmo",
+      "signature": "i32(i32,i32)",
+      "params": [
+        "item",
+        "amount"
+      ],
+      "symbols": {
+        "pal": "func_L00_00234638",
+        "ntsc": "FUN_L00_00233db8"
+      },
+      "about": "Takes amount of ammo from item for a shot (TakeAmmo; -1 is the item in hand): 1 when taken, 0 when there is too little. An item with no ammo limit takes none and gives 1."
+    },
+    {
+      "id": "rac1.moby.record_death",
+      "name": "Moby_RecordDeath",
+      "signature": "void(u32,i32,i32)",
+      "params": [
+        "moby",
+        "flags",
+        "index"
+      ],
+      "about": "Records a placed moby's death or a crate's break (SetDeathBits): its save id's killed bits (none for a save id below 0), its mission, then drops its bolts: about the s16 at +0xB4 (or what a tallied source has left of +0xB6), which it then clears.",
+      "symbols": {
+        "pal": "func_L00_002584A8",
+        "ntsc": "FUN_L00_00257470"
+      }
+    },
+    {
+      "id": "rac1.level.load_gameplay",
+      "name": "Level_LoadGameplay",
+      "signature": "u32(i32)",
+      "params": [
+        "full"
+      ],
+      "symbols": {
+        "pal": "func_L00_002422D8",
+        "ntsc": "FUN_L00_00241940"
+      },
+      "about": "Loads a level's gameplay file into the level heap (LoadLevelGameplay), once per level start: the settings, the placed mobys and their pvars, the spare moby pool, the paths and the rest; returns the heap cursor. After it, every placed moby exists and none has run."
+    },
+    {
+      "id": "rac1.player.approach_speed",
+      "name": "Hero_ApproachSpeed",
+      "signature": "void(f32,f32)",
+      "params": [
+        "up",
+        "down"
+      ],
+      "symbols": {
+        "pal": "func_L00_00212740",
+        "ntsc": "FUN_L00_00212088"
+      },
+      "about": "Eases the hero's ground speed (+0x194, the speed Hero_SetPlanarVelocity moves him at) toward his target speed (+0x190) by up when below it and by down when above, each tick he moves on foot, in every level."
     }
   ],
   "bases": {

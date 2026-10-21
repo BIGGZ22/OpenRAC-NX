@@ -6,10 +6,13 @@
    "FollowCamera_ApplyOverrides": "rac1.camera.follow.apply_overrides",
    "GoldBolts_CountCollected": "rac1.gold_bolt.count_collected",
    "Hero_AdvanceAnimation": "rac1.player.advance_animation",
+   "Hero_ApproachSpeed": "rac1.player.approach_speed",
    "Hero_SetPlanarVelocity": "rac1.player.set_planar_velocity",
+   "Hero_TakeDamage": "rac1.player.take_damage",
    "Hero_TurnToHeading": "rac1.player.turn_to_heading",
    "Hero_UpdateMotionInput": "rac1.player.update_motion_input",
    "Item_Give": "rac1.item.give",
+   "Level_LoadGameplay": "rac1.level.load_gameplay",
    "Moby_AgnoggShipFront_Update": "rac1.moby.agnogg_ship.update",
    "Moby_AirshipPart1181_Update": "rac1.moby.airship_chain_link.update",
    "Moby_AirshipPart_Update": "rac1.moby.airship_part.update",
@@ -418,6 +421,7 @@
    "Moby_Gate92_Update": "rac1.moby.sliding_gate.update",
    "Moby_Gate93_Update": "rac1.moby.clip_volume_door.update",
    "Moby_Gate_Update": "rac1.moby.rise_when_collected.update",
+   "Moby_GetHitMessage": "rac1.combat.get_hit",
    "Moby_GiantClankPad_Update": "rac1.moby.giant_clank_pad.update",
    "Moby_GloveOfDoom_Update": "rac1.moby.carrier.update",
    "Moby_GoldBolt_Update": "rac1.moby.gold_bolt.update",
@@ -524,6 +528,7 @@
    "Moby_QwarksStarfighterPart389_Update": "rac1.moby.starfighter_part.update",
    "Moby_QwarksStarfighterPart_Update": "rac1.moby.qwark_starfighter_part.update",
    "Moby_QwarksTrailer_Update": "rac1.moby.qwarks_trailer.update",
+   "Moby_RecordDeath": "rac1.moby.record_death",
    "Moby_RedButton_Update": "rac1.moby.red_button.update",
    "Moby_RedOrb_Update": "rac1.moby.pulsing_color_moby.update",
    "Moby_RedShip1_Update": "rac1.moby.train_car.update",
@@ -650,7 +655,8 @@
    "Pad_ProcessReport": "rac1.pad.process_report",
    "Planet_Unlock": "rac1.planet.unlock",
    "Vendor_BuildItemList": "rac1.vendor.build_item_list",
-   "Vendor_InitLevelStock": "rac1.vendor.init_level_stock"
+   "Vendor_InitLevelStock": "rac1.vendor.init_level_stock",
+   "Weapon_TakeAmmo": "rac1.weapon.take_ammo"
   }
  }
 }

@@ -2,8 +2,10 @@
 # on the first disc) and every alias it has had. It only grows: an id is never removed or reused,
 # and an alias once given stays (docs/port/MODS.md, section 4). Regenerated, never edited.
 rac1.camera.follow.apply_overrides	pal:L00:002E74B0	FUN_L00_002e6000,FollowCamera_ApplyOverrides,func_L00_002E74B0
+rac1.combat.get_hit	pal:L00:0025B478	FUN_L00_0025a420,Moby_GetHitMessage,func_L00_0025B478
 rac1.gold_bolt.count_collected	pal:002160E0	FUN_00215290,GoldBolts_CountCollected,func_002160E0
 rac1.item.give	pal:L00:002618D8	FUN_L00_00260860,Item_Give,func_L00_002618D8
+rac1.level.load_gameplay	pal:L00:002422D8	FUN_L00_00241940,Level_LoadGameplay,func_L00_002422D8
 rac1.moby.agnogg_ship.update	pal:L01:002FC140	FUN_L01_002fad68,Moby_AgnoggShipFront_Update,func_L01_002FC140
 rac1.moby.airship_chain_link.update	pal:L09:00305710	FUN_L09_00304360,Moby_AirshipPart1181_Update,func_L09_00305710
 rac1.moby.airship_part.update	pal:L09:002C3858	FUN_L09_002c26c8,Moby_AirshipPart_Update,func_L09_002C3858
@@ -524,6 +526,7 @@ rac1.moby.rail_moby.update	pal:L03:002DC3E8	FUN_L03_002db020,Moby_Class898_Updat
 rac1.moby.rail_spawner.update	pal:L03:002DC648	FUN_L03_002db280,Moby_Class899_Update,func_L03_002DC648
 rac1.moby.rail_taxi.update	pal:L03:002D4560	FUN_L03_002d3198,Moby_Taxi_Update,func_L03_002D4560
 rac1.moby.rc_range_limiter.update	pal:L01:00303A20	FUN_L01_00302648,Moby_Class832_Update,func_L01_00303A20
+rac1.moby.record_death	pal:L00:002584A8	FUN_L00_00257470,Moby_RecordDeath,func_L00_002584A8
 rac1.moby.red_button.update	pal:L06:003054D8	FUN_L06_00304098,Moby_RedButton_Update,func_L06_003054D8
 rac1.moby.rider_carrier.update	pal:L01:002F5D38	FUN_L01_002f4960,Moby_StationaryShip_Update,func_L01_002F5D38
 rac1.moby.ring_effect.update	pal:L16:002E6B70	FUN_L16_002e5708,Moby_GrindrailBarrier_Update,func_L16_002E6B70
@@ -644,8 +647,11 @@ rac1.moby.wrench.update	pal:L00:002A9768	FUN_L00_002a84c8,Moby_Wrench_Update,fun
 rac1.pad.process_report	pal:002181F0	FUN_00217328,Pad_ProcessReport,func_002181F0
 rac1.planet.unlock	pal:L00:00261848	FUN_L00_002607d0,Planet_Unlock,func_L00_00261848
 rac1.player.advance_animation	pal:L00:00232EF0	FUN_L00_00232670,Hero_AdvanceAnimation,func_L00_00232EF0
+rac1.player.approach_speed	pal:L00:00212740	FUN_L00_00212088,Hero_ApproachSpeed,func_L00_00212740
 rac1.player.set_planar_velocity	pal:L00:00212790	FUN_L00_002120d8,Hero_SetPlanarVelocity,func_L00_00212790
+rac1.player.take_damage	pal:L00:002056D8	FUN_L00_002050c0,Hero_TakeDamage,func_L00_002056D8
 rac1.player.turn_to_heading	pal:L00:002124E8	FUN_L00_00211e30,Hero_TurnToHeading,func_L00_002124E8
 rac1.player.update_motion_input	pal:L00:00211D28	FUN_L00_00211670,Hero_UpdateMotionInput,func_L00_00211D28
 rac1.vendor.build_item_list	pal:L00:0029B770	FUN_L00_0029a400,Vendor_BuildItemList,func_L00_0029B770
 rac1.vendor.init_level_stock	pal:L00:0023DB30	FUN_L00_0023d198,Vendor_InitLevelStock,func_L00_0023DB30
+rac1.weapon.take_ammo	pal:L00:00234638	FUN_L00_00233db8,Weapon_TakeAmmo,func_L00_00234638
