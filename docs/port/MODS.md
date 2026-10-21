@@ -103,9 +103,9 @@ default) and only the launcher writes it; the port reads it and writes
   "api": "1.0",                          // the interface it was built for (section 6)
   "games": { "rac1": ["pal", "ntsc"] },  // game id: the discs (game.json versions)
   "plugin": {                            // the library for each platform it was built for
-    "macos-arm64": "lib/macos-arm64/liblock_strafe.dylib",
-    "macos-x86_64": "lib/macos-x86_64/liblock_strafe.dylib",
-    "linux-x86_64": "lib/linux-x86_64/liblock_strafe.so",
+    "macos-arm64": "lib/macos-arm64/lock_strafe.dylib",
+    "macos-x86_64": "lib/macos-x86_64/lock_strafe.dylib",
+    "linux-x86_64": "lib/linux-x86_64/lock_strafe.so",
     "windows-x86_64": "lib/windows-x86_64/lock_strafe.dll"
   },
   "hooks": ["Pad_ProcessReport", "Hero_TurnToHeading"],   // the hook points it takes
@@ -310,7 +310,7 @@ game's thread.
   version, library) in a section of its own, and when the faulting address,
   or one of the host frames, lies in a mod's library (`dladdr`;
   `GetModuleHandleEx` on Windows), it says so: `in mod lock-strafe
-  (liblock_strafe.dylib+0x1a2c)`. The launcher's crash notice suggests trying
+  (lock_strafe.dylib+0x1a2c)`. The launcher's crash notice suggests trying
   again in Purist mode when mods were loaded.
 - **Trust**: a native mod is a program and runs with the game's rights. The
   launcher says so when one is installed and shows where it came from
