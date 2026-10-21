@@ -498,7 +498,9 @@ fn home() -> Option<PathBuf> {
 #[cfg(windows)]
 const CREATE_NO_WINDOW: u32 = 0x0800_0000;
 
-/// A command for a console program that must not flash a console window on Windows.
+/// A command for a console program that must not flash a console window on Windows, and that
+/// gets the system's environment rather than an AppImage's ([`crate::appimage::sanitize`]): the
+/// probes of Python and Godot, curl, git.
 pub fn quiet(program: &Path) -> Command {
     #[allow(unused_mut)]
     let mut cmd = Command::new(program);
@@ -507,6 +509,7 @@ pub fn quiet(program: &Path) -> Command {
         use std::os::windows::process::CommandExt;
         cmd.creation_flags(CREATE_NO_WINDOW);
     }
+    crate::appimage::sanitize(&mut cmd);
     cmd
 }
 

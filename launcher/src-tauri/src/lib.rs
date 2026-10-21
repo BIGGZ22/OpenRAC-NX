@@ -524,7 +524,7 @@ fn open_reports_folder(app: AppHandle, state: State<'_, AppState>, game: String,
     if !dir.is_dir() {
         return Err("nothing has been logged for this game yet".into());
     }
-    app.opener().open_path(dir.to_string_lossy(), None::<&str>).map_err(|e| e.to_string())
+    open_path_with_system(&app, &dir.to_string_lossy())
 }
 
 #[tauri::command]
@@ -571,7 +571,7 @@ fn open_path(app: AppHandle, state: State<'_, AppState>, path: String) -> Result
     if !target.starts_with(&root) {
         return Err(format!("{path} is outside the OpenRAC folder"));
     }
-    app.opener().open_path(target.to_string_lossy(), None::<&str>).map_err(|e| e.to_string())
+    open_path_with_system(&app, &target.to_string_lossy())
 }
 
 /// Opens a web page in the browser: https only.
@@ -580,7 +580,7 @@ fn open_url(app: AppHandle, url: String) -> Result<(), String> {
     if !url.starts_with("https://") {
         return Err(format!("not an https address: {url}"));
     }
-    app.opener().open_url(url, None::<&str>).map_err(|e| e.to_string())
+    open_url_with_system(&app, &url)
 }
 
 /// Sets `game` up from the image of the player's own disc, OpenGOAL's way:
@@ -985,7 +985,7 @@ fn open_game_folder(app: AppHandle, state: State<'_, AppState>, game: String, pa
     if !target.starts_with(&data) || !target.is_dir() {
         return Err(format!("{path} is not a folder of the game's set-up"));
     }
-    app.opener().open_path(target.to_string_lossy(), None::<&str>).map_err(|e| e.to_string())
+    open_path_with_system(&app, &target.to_string_lossy())
 }
 
 #[tauri::command]
@@ -994,7 +994,7 @@ fn open_saves_folder(app: AppHandle, serial: String) -> Result<(), String> {
     if !dir.exists() {
         let _ = std::fs::create_dir_all(&dir);
     }
-    app.opener().open_path(dir.to_string_lossy(), None::<&str>).map_err(|e| e.to_string())
+    open_path_with_system(&app, &dir.to_string_lossy())
 }
 
 /// Writes `bytes` to `path` unless it already holds them; true when it wrote.
@@ -1052,11 +1052,11 @@ fn ensure_linux_desktop_integration() {
         write_if_changed(&app_dir.join("openrac-launcher.desktop"), entry("openrac-launcher", true).as_bytes());
 
     if icons_changed {
-        let _ = std::process::Command::new("gtk-update-icon-cache").arg("-f").arg("-t").arg(&icons_base).status();
+        let _ = detect::quiet(Path::new("gtk-update-icon-cache")).arg("-f").arg("-t").arg(&icons_base).status();
     }
     if entries_changed || icons_changed {
-        let _ = std::process::Command::new("update-desktop-database").arg(&app_dir).status();
-        let _ = std::process::Command::new("kbuildsycoca6").status();
+        let _ = detect::quiet(Path::new("update-desktop-database")).arg(&app_dir).status();
+        let _ = detect::quiet(Path::new("kbuildsycoca6")).status();
     }
 
     // If Flatpak Discord is running, ensure standard XDG_RUNTIME_DIR socket symlink exists
@@ -1129,39 +1129,36 @@ fn ensure_linux_game_desktop_integration(root: &std::path::Path) {
     }
 
     if icons_changed {
-        let _ = std::process::Command::new("gtk-update-icon-cache").arg("-f").arg("-t").arg(&icons_base).status();
+        let _ = detect::quiet(Path::new("gtk-update-icon-cache")).arg("-f").arg("-t").arg(&icons_base).status();
     }
     if entries_changed || icons_changed {
-        let _ = std::process::Command::new("update-desktop-database").arg(&app_dir).status();
-        let _ = std::process::Command::new("kbuildsycoca6").status();
+        let _ = detect::quiet(Path::new("update-desktop-database")).arg(&app_dir).status();
+        let _ = detect::quiet(Path::new("kbuildsycoca6")).status();
     }
 }
 
-/// AppImageKit's AppRun unconditionally sets PYTHONHOME=$APPDIR/usr/ and
-/// PYTHONPATH=$APPDIR/usr/share/pyshared/:, which poisons any Python process
-/// started from the AppImage (both our carried python in resources/openrac/python
-/// and any system python). Clear them before anything runs.
+/// What an AppImage's AppRun hands over: its own PYTHONHOME, its own paths,
+/// its own libraries. They are of no use to anything the launcher starts (a
+/// Qt program told to look for its platform plugin in the AppImage's
+/// directories, which hold no Qt, stops with "Could not find the Qt platform
+/// plugin"), so they go. The launcher's own webview keeps the AppImage's
+/// libraries; everything else gets the system's (core/src/appimage.rs).
 #[cfg(target_os = "linux")]
-fn clean_appimage_python_env() {
-    if let Ok(appdir) = std::env::var("APPDIR") {
-        if std::env::var("PYTHONHOME").is_ok_and(|h| h.starts_with(&appdir)) {
-            std::env::remove_var("PYTHONHOME");
-        }
-        if std::env::var("PYTHONPATH").is_ok_and(|p| p.starts_with(&appdir)) {
-            std::env::remove_var("PYTHONPATH");
-        }
-    }
+fn clean_appimage_env() {
+    openrac_launcher_core::appimage::clean_process_env();
 }
 
-/// WebKitGTK's DMA-BUF renderer draws a blank or flickering window under Wayland with NVIDIA's
-/// own driver; the launcher turns it off there (and only there), before GTK starts. A value the
-/// player set is left as it is.
+/// What WebKitGTK needs turned off on this system, before GTK starts: its
+/// DMA-BUF renderer under Wayland with NVIDIA's own driver, and its
+/// accelerated compositing mode on a Steam Deck, where the window opens empty
+/// unless the launcher is started with WEBKIT_DISABLE_COMPOSITING_MODE=1. A
+/// value the player set is left as it is (core/src/webkit.rs).
 #[cfg(target_os = "linux")]
-fn tune_webkit_for_wayland() {
-    let wayland = std::env::var_os("WAYLAND_DISPLAY").is_some();
-    let nvidia = std::path::Path::new("/proc/driver/nvidia/version").exists();
-    if wayland && nvidia && std::env::var_os("WEBKIT_DISABLE_DMABUF_RENDERER").is_none() {
-        std::env::set_var("WEBKIT_DISABLE_DMABUF_RENDERER", "1");
+fn tune_webkit() {
+    for (name, value) in openrac_launcher_core::webkit::webkit_env() {
+        if std::env::var_os(name).is_none() {
+            std::env::set_var(name, value);
+        }
     }
 }
 
@@ -1182,13 +1179,59 @@ fn ensure_wayland_cursor_fallback() {
     }
 }
 
+/// Opens a path or a folder with the system's own program.
+///
+/// On Linux the program that opens it (xdg-open, and on KDE the Qt program it
+/// calls) would get the AppImage's environment, in which a Qt program cannot
+/// find its platform plugin and says so. So xdg-open is started here, with the
+/// system's environment instead of the AppImage's.
+#[cfg_attr(target_os = "linux", allow(unused_variables))]
+fn open_path_with_system(app: &AppHandle, path: &str) -> Result<(), String> {
+    #[cfg(target_os = "linux")]
+    {
+        open_with_system(path)
+    }
+    #[cfg(not(target_os = "linux"))]
+    {
+        app.opener().open_path(path, None::<&str>).map_err(|e| e.to_string())
+    }
+}
+
+/// Opens a web page in the system's own browser, the way
+/// [`open_path_with_system`] opens a folder.
+#[cfg_attr(target_os = "linux", allow(unused_variables))]
+fn open_url_with_system(app: &AppHandle, url: &str) -> Result<(), String> {
+    #[cfg(target_os = "linux")]
+    {
+        open_with_system(url)
+    }
+    #[cfg(not(target_os = "linux"))]
+    {
+        app.opener().open_url(url, None::<&str>).map_err(|e| e.to_string())
+    }
+}
+
+/// Starts the system's own opener for a path or a link, in the environment the
+/// system expects: the AppImage's libraries are ours, not the system's.
+#[cfg(target_os = "linux")]
+fn open_with_system(target: &str) -> Result<(), String> {
+    let mut cmd = std::process::Command::new("xdg-open");
+    cmd.arg(target);
+    openrac_launcher_core::appimage::sanitize(&mut cmd);
+    let mut child = cmd.spawn().map_err(|e| format!("cannot start xdg-open: {e}"))?;
+    // Reaped when it ends (xdg-open hands over to the desktop's program and exits): a child
+    // that is not waited for stays a zombie until the launcher exits.
+    std::thread::spawn(move || child.wait());
+    Ok(())
+}
+
 // On Android and iOS the launcher is a library the app's activity starts through this entry point.
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     #[cfg(target_os = "linux")]
-    clean_appimage_python_env();
+    clean_appimage_env();
     #[cfg(target_os = "linux")]
-    tune_webkit_for_wayland();
+    tune_webkit();
     #[cfg(target_os = "linux")]
     ensure_wayland_cursor_fallback();
     let builder = tauri::Builder::default().plugin(tauri_plugin_dialog::init()).plugin(tauri_plugin_opener::init());

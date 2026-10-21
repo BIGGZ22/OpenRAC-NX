@@ -71,18 +71,11 @@ fn environment(cmd: &mut Command, root: Option<&std::path::Path>) {
     if let Some(root) = root {
         cmd.env("OPENRAC_ROOT", root);
     }
-    // AppImageKit's AppRun unconditionally exports PYTHONHOME=$APPDIR/usr/ and
-    // PYTHONPATH=$APPDIR/usr/share/pyshared/:, which poisons any Python process
-    // started from the AppImage (both the carried python in resources/openrac/python
-    // and any system python). Clear them before running any tool.
-    if let Ok(appdir) = std::env::var("APPDIR") {
-        if std::env::var("PYTHONHOME").is_ok_and(|h| h.starts_with(&appdir)) {
-            cmd.env_remove("PYTHONHOME");
-        }
-        if std::env::var("PYTHONPATH").is_ok_and(|p| p.starts_with(&appdir)) {
-            cmd.env_remove("PYTHONPATH");
-        }
-    }
+    // An AppImage's own environment (the AppRun's PYTHONHOME, its paths, its
+    // libraries) would follow the job: a Python told that its home is the
+    // AppImage's cannot start, and the game would find the AppImage's
+    // libraries instead of the system's. The job gets the system's.
+    crate::appimage::sanitize(cmd);
 }
 
 impl Jobs {

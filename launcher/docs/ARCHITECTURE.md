@@ -363,6 +363,29 @@ equally portable: each action lists the platforms it runs on, and the game
 page tucks the others away ("N more for other platforms"). The platform the
 launcher runs on comes from `Platform::current()` in `core/src/actions.rs`.
 
+### What Linux gets
+
+**The AppImage's environment.** Every AppImage carries AppImageKit's `AppRun`,
+which sets a list of variables before the launcher starts: `PYTHONHOME`,
+`PYTHONPATH`, `PERLLIB`, `GST_PLUGIN_SYSTEM_PATH`, `QT_PLUGIN_PATH` and
+`LD_LIBRARY_PATH`, all pointing into the AppImage. This AppImage carries no
+Perl, no GStreamer and no Qt, so those variables point at nothing: a Qt
+program told to look for its platform plugin in ten directories that do not
+exist says "Could not find the Qt platform plugin" and stops. The launcher
+takes them back (`core/src/appimage.rs`): the ones that mean nothing go, and
+what the launcher starts (the game, the tools, the program that opens a link
+or a folder) gets the system's own environment, not the AppImage's. The
+launcher's own webview keeps the AppImage's libraries, as its helper processes
+(WebKitWebProcess, WebKitNetworkProcess) find the AppImage's WebKit nowhere
+else.
+
+**The webview.** Two of WebKitGTK's settings draw nothing on some systems, and
+are turned off there, before GTK starts (`core/src/webkit.rs`): its DMA-BUF
+renderer under Wayland with NVIDIA's own driver, and its accelerated
+compositing mode on a Steam Deck, where the window opens empty unless the
+launcher is started with `WEBKIT_DISABLE_COMPOSITING_MODE=1`. A value the
+player set is left as it is.
+
 Android (`Platform::Android`) is an APK built by `tools/build_android.py`
 (docs/port/ANDROID.md): the same UI and Rust, a project of its own in
 `src-tauri/gen/android` (kept in git), and Kotlin for what only Android does
