@@ -119,4 +119,7 @@ jobs:
           version="${GITHUB_REF_NAME#sdk-v}"
           sha=$(cut -d' ' -f1 dist/*.sha256)
           notes="The OpenRAC mod SDK $version, for the mod interface ${version%.*} (docs/port/MODS.md). SHA-256 of the archive: $sha"
-          gh release create "$GITHUB_REF_NAME" --title "Mod SDK $version" --notes "$notes" --target "$GITHUB_SHA" dist/*
+          # Never the repository's latest release: installed launchers look for their updates at
+          # releases/latest/download/latest.json, which only a launcher-v release carries.
+          gh release create "$GITHUB_REF_NAME" --title "Mod SDK $version" --notes "$notes" --target "$GITHUB_SHA" \
+            --latest=false dist/*
