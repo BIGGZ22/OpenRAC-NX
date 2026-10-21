@@ -342,6 +342,15 @@ guesses where the launcher keeps it: the same in an installed launcher, whose
 own folder is read-only, and in a checkout. A data pack added on the Mods tab still goes through
 `overrides-add`.
 
+Mods from a repository's address (`core/src/remote.rs`, MODS.md section 10):
+GitHub is read through its HTTPS API with `curl` (releases, the file list at
+the version read, the manifests); a native mod is its release's
+`<id>-<version>-<platform>.zip`, checked against `SHA256SUMS` and then
+installed as a .zip is; a data pack is the repository's files of its folder,
+handed to `overrides-add`. `{data}/plugins/sources.json` keeps each such mod's
+address, version, release, commit and pin, for the update check. Everything
+remote goes through the `Fetch` trait, which the tests answer from memory.
+
 ### 9. Release and CI
 
 CI runs the launcher's checks (the `launcher` job in
