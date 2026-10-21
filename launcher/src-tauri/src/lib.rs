@@ -960,11 +960,11 @@ fn ensure_linux_desktop_integration() {
         write_if_changed(&app_dir.join("openrac-launcher.desktop"), entry("openrac-launcher", true).as_bytes());
 
     if icons_changed {
-        let _ = std::process::Command::new("gtk-update-icon-cache").arg("-f").arg("-t").arg(&icons_base).status();
+        let _ = detect::quiet(Path::new("gtk-update-icon-cache")).arg("-f").arg("-t").arg(&icons_base).status();
     }
     if entries_changed || icons_changed {
-        let _ = std::process::Command::new("update-desktop-database").arg(&app_dir).status();
-        let _ = std::process::Command::new("kbuildsycoca6").status();
+        let _ = detect::quiet(Path::new("update-desktop-database")).arg(&app_dir).status();
+        let _ = detect::quiet(Path::new("kbuildsycoca6")).status();
     }
 
     // If Flatpak Discord is running, ensure standard XDG_RUNTIME_DIR socket symlink exists
@@ -1037,11 +1037,11 @@ fn ensure_linux_game_desktop_integration(root: &std::path::Path) {
     }
 
     if icons_changed {
-        let _ = std::process::Command::new("gtk-update-icon-cache").arg("-f").arg("-t").arg(&icons_base).status();
+        let _ = detect::quiet(Path::new("gtk-update-icon-cache")).arg("-f").arg("-t").arg(&icons_base).status();
     }
     if entries_changed || icons_changed {
-        let _ = std::process::Command::new("update-desktop-database").arg(&app_dir).status();
-        let _ = std::process::Command::new("kbuildsycoca6").status();
+        let _ = detect::quiet(Path::new("update-desktop-database")).arg(&app_dir).status();
+        let _ = detect::quiet(Path::new("kbuildsycoca6")).status();
     }
 }
 

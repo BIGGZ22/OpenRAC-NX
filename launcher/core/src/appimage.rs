@@ -13,6 +13,12 @@
 //! programs a player sees that message from are their own system's, and the
 //! AppImage's libraries would only make it worse.)
 //!
+//! linuxdeploy's GTK hook, which the AppRun runs first, adds GTK's own:
+//! `GTK_PATH`, `GIO_MODULE_DIR`, `GSETTINGS_SCHEMA_DIR`, `XDG_DATA_DIRS` and
+//! the others below, for the AppImage's GTK 3 and its Ubuntu 22.04 modules and
+//! schemas, and `GTK_THEME=Adwaita:light` (or `:dark`) over whatever the
+//! player had.
+//!
 //! So the launcher takes them back. What belongs to the AppImage stays in the
 //! AppImage, and what the launcher starts is given the system's own
 //! environment ([`sanitize`]).
@@ -22,10 +28,17 @@ use std::path::{Path, PathBuf};
 use std::process::Command;
 
 /// The variables whose value is one path.
-const ONE_PATH: [&str; 1] = ["PYTHONHOME"];
+const ONE_PATH: [&str; 6] = [
+    "PYTHONHOME",
+    "GTK_DATA_PREFIX",
+    "GTK_EXE_PREFIX",
+    "GTK_IM_MODULE_FILE",
+    "GDK_PIXBUF_MODULE_FILE",
+    "GIO_MODULE_DIR",
+];
 
 /// The variables whose value is a list of paths, separated by ':'.
-const PATHS: [&str; 7] = [
+const PATHS: [&str; 11] = [
     "PATH",
     "LD_LIBRARY_PATH",
     "QT_PLUGIN_PATH",
@@ -33,6 +46,10 @@ const PATHS: [&str; 7] = [
     "PERLLIB",
     "GST_PLUGIN_SYSTEM_PATH",
     "GST_PLUGIN_SYSTEM_PATH_1_0",
+    "GTK_PATH",
+    "GI_TYPELIB_PATH",
+    "GSETTINGS_SCHEMA_DIR",
+    "XDG_DATA_DIRS",
 ];
 
 /// The variables the launcher takes back for itself: all of them but
@@ -116,6 +133,15 @@ fn sanitize_with(cmd: &mut Command, appdir: &Path) {
             }
         }
     }
+    // The GTK hook's theme, set over the player's own: a GTK program the launcher starts (a file
+    // manager, a browser) takes the player's theme again.
+    let theme = match own.get(OsStr::new("GTK_THEME")) {
+        Some(value) => value.clone(),
+        None => std::env::var_os("GTK_THEME"),
+    };
+    if theme.is_some_and(|theme| theme.to_string_lossy().starts_with("Adwaita:")) {
+        cmd.env_remove("GTK_THEME");
+    }
 }
 
 #[cfg(test)]
@@ -165,6 +191,23 @@ mod tests {
         assert_eq!(envs.get(OsStr::new("LD_LIBRARY_PATH")), Some(&Some(OsStr::new("/usr/lib"))));
         assert_eq!(envs.get(OsStr::new("QT_PLUGIN_PATH")), Some(&None));
         assert_eq!(envs.get(OsStr::new("PYTHONHOME")), Some(&None));
+    }
+
+    /// What linuxdeploy's GTK hook points into the AppImage goes as well, and its light theme.
+    #[test]
+    fn a_child_gets_the_systems_gtk_and_not_the_appimages() {
+        let appdir = mount();
+        let mut cmd = Command::new("true");
+        cmd.env("GIO_MODULE_DIR", "/tmp/.mount_openrac//usr/lib/gio/modules");
+        cmd.env("XDG_DATA_DIRS", "/tmp/.mount_openrac/usr/share/:/tmp/.mount_openrac/usr/share:/usr/share:");
+        cmd.env("GSETTINGS_SCHEMA_DIR", "/tmp/.mount_openrac//usr/share/glib-2.0/schemas");
+        cmd.env("GTK_THEME", "Adwaita:light");
+        sanitize_with(&mut cmd, &appdir);
+        let envs: std::collections::HashMap<_, _> = cmd.get_envs().collect();
+        assert_eq!(envs.get(OsStr::new("GIO_MODULE_DIR")), Some(&None));
+        assert_eq!(envs.get(OsStr::new("XDG_DATA_DIRS")), Some(&Some(OsStr::new("/usr/share"))));
+        assert_eq!(envs.get(OsStr::new("GSETTINGS_SCHEMA_DIR")), Some(&None));
+        assert_eq!(envs.get(OsStr::new("GTK_THEME")), Some(&None));
     }
 
     // By its full path: the child's PATH is the one being changed, and macOS has no /usr/bin/sh.
