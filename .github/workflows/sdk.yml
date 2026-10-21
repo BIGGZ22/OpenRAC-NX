@@ -1,0 +1,121 @@
+# The mod SDK as one archive (sdk/tools/package_sdk.py): what a modder downloads to write a native
+# mod without a copy of OpenRAC (docs/port/MODS.md, sdk/README.md). Each run makes the archive,
+# checks its tools, and builds the template and the example on Windows, Linux and macOS from the
+# archive alone, unpacked away from the checkout; the archive is the run's artifact. A tag
+# `sdk-v<version>` (sdk/VERSION, whose MAJOR.MINOR is the interface's) also publishes it, with its
+# SHA-256, on a release of that name, which mods pin (OpenRAC/rac1-mods). The archive is the same
+# bytes wherever it is made, so the pin holds.
+#
+# Every action is pinned to a commit, as in launcher.yml.
+name: sdk
+
+on:
+  push:
+    branches: [master]
+    tags: ["sdk-v*"]
+    paths: &paths
+      - "sdk/**"
+      - "docs/port/MODS.md"
+      - ".github/workflows/sdk.yml"
+  pull_request:
+    paths: *paths
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: sdk-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  archive:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: "3.12"
+      - name: Test the SDK's tools
+        run: python3 -m unittest discover -s sdk/tools
+      - name: Make the archive
+        run: python3 sdk/tools/package_sdk.py -o dist
+      - name: A tag names the archive's version
+        if: startsWith(github.ref, 'refs/tags/sdk-v')
+        run: |
+          want="${GITHUB_REF_NAME#sdk-v}"
+          test -f "dist/openrac-mod-sdk-$want.zip" || { echo "::error::$GITHUB_REF_NAME, but sdk/VERSION is $(cat sdk/VERSION)"; exit 1; }
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: openrac-mod-sdk
+          path: dist/*
+
+  # The template and the example, built from the archive alone.
+  build:
+    needs: archive
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { name: linux-x86_64, os: ubuntu-24.04 }
+          - { name: macos-arm64, os: macos-15 }
+          - { name: windows-x86_64, os: windows-2025 }
+    runs-on: ${{ matrix.os }}
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: "3.12"
+      - name: Ninja
+        run: python -m pip install ninja
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: openrac-mod-sdk
+          path: dist
+      - name: Unpack the SDK away from any checkout
+        run: |
+          mkdir -p "$RUNNER_TEMP/sdk"
+          cd "$RUNNER_TEMP/sdk"
+          unzip -q "$GITHUB_WORKSPACE"/dist/openrac-mod-sdk-*.zip
+          echo "SDK=$(ls -d "$RUNNER_TEMP"/sdk/openrac-mod-sdk-*)" >> "$GITHUB_ENV"
+      - name: Set up MSVC
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          $vs = & "${env:ProgramFiles(x86)}\Microsoft Visual Studio\Installer\vswhere.exe" -latest -property installationPath
+          cmd /c "`"$vs\VC\Auxiliary\Build\vcvars64.bat`" && set" | ForEach-Object {
+            if ($_ -match '^([^=]+)=(.*)$') { "$($matches[1])=$($matches[2])" | Out-File -Append $env:GITHUB_ENV }
+          }
+      - name: Build the template and the example
+        run: |
+          for mod in template examples/frame-counter; do
+            src="$RUNNER_TEMP/build/$(basename "$mod")"
+            cp -r "$SDK/$mod" "$src"
+            cmake -S "$src" -B "$src/build" -G Ninja -DCMAKE_BUILD_TYPE=Release -DOpenRACMod_DIR="$SDK/cmake"
+            cmake --build "$src/build"
+            python "$SDK/tools/package_mod.py" -o "$RUNNER_TEMP/dist" "$src"/build/package/*
+          done
+          ls "$RUNNER_TEMP/dist"
+
+  release:
+    if: startsWith(github.ref, 'refs/tags/sdk-v')
+    needs: [archive, build]
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: openrac-mod-sdk
+          path: dist
+      - name: Publish the archive on the tag's release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          version="${GITHUB_REF_NAME#sdk-v}"
+          sha=$(cut -d' ' -f1 dist/*.sha256)
+          notes="The OpenRAC mod SDK $version, for the mod interface ${version%.*} (docs/port/MODS.md). SHA-256 of the archive: $sha"
+          gh release create "$GITHUB_REF_NAME" --title "Mod SDK $version" --notes "$notes" --target "$GITHUB_SHA" dist/*
