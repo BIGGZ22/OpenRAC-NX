@@ -371,6 +371,26 @@ class Translate(unittest.TestCase):
            host_c="int func_00100100(void) { return 2; }")
         self.assertEqual(out, ["2", "2"])
 
+    def test_a_long_long_copy_of_the_games_compiler_moves_a_quadword(self):
+        # SN's GCC 2.95.3 has a 128-bit long long (hostgen.json "long_long_128"): rac1's CannonUpdate
+        # clears and copies vectors through `*(long long *)v` (por + sq, lq + sq), all four words.
+        # Without the setting long long is Clang's 64 bits, and only x and y move.
+        files = {"a.c": """
+            int test_main(void) {
+                float v[4];
+                float w[4];
+                v[0] = 1.0f; v[1] = 2.0f; v[2] = 3.0f; v[3] = 4.0f;
+                w[0] = w[1] = w[2] = w[3] = 0.0f;
+                *(long long *)w = *(long long *)v;
+                test_print((int)(w[0] + w[1] + w[2] + w[3]));
+                *(long long *)v = 0;
+                test_print((int)(v[0] + v[1] + v[2] + v[3]));
+                return 0;
+            }
+        """}
+        self.assertEqual(self.run_program(files, config={"long_long_128": {"except_compilers": []}}), ["10", "0"])
+        self.assertEqual(self.run_program(files), ["3", "7"])
+
     def test_pass_through(self):
         out = self.run_program({
             "callee.c": "int two(int a, int b) { return a * 10 + b; }",
@@ -428,6 +448,79 @@ class Translate(unittest.TestCase):
             """,
         })
         self.assertEqual(out, ["11"])
+
+    def test_a_32_bit_argument_to_a_64_bit_parameter_is_sign_extended(self):
+        # The call site declares 32 bits, the definition takes 64: the EE's register held the value
+        # sign-extended (FontPrintWindow's colour, a void * there, FontPrint's u64). The result of a
+        # "returns_64" function keeps all its bits, as the register does.
+        out = self.run_program({"a.c": """
+            void callee(unsigned long long x) { test_print((int)(x >> 32)); test_print((int)(x & 0xFFFF)); }
+            unsigned long long tex(int i) { return ((unsigned long long)i << 32) | 0x8000ABCDu; }
+        """, "b.c": """
+            extern void callee(unsigned int x);
+            extern void callee_too(void *x) __asm__("callee");
+            extern void callee_int(int x) __asm__("callee");
+            extern int tex(int i);
+            int test_main(void) {
+                unsigned int table[2];
+                table[0] = 0x80001234u;
+                table[1] = 0x00005678u;
+                callee(table[0]);
+                callee(table[1]);
+                callee_too((void *)0x80009ABCu);
+                callee_int(tex(3));
+                return 0;
+            }
+        """}, config={"returns_64": ["tex"]})
+        self.assertEqual(out, ["-1", "4660", "0", "22136", "-1", "39612", "3", "43981"])
+
+    def test_a_parameter_only_passed_on_to_64_bits_is_64_bit(self):
+        # FontPrintCenter's `int c` is FontPrint's u64 colour: the EE passes the register on with all its bits,
+        # so the parameter is 64-bit here, and each caller converts its own value (an int sign-extended).
+        out = self.run_program({"a.c": """
+            void callee(int y, unsigned long long x) { test_print((int)(x >> 32)); test_print((int)(x & 0xFFFF)); }
+        """, "b.c": """
+            extern void callee(void *y, void *x);
+            int middle(int y, int c) { callee((void *)y, (void *)c); return y; }
+            int outer(int c) { return middle(1, c); }
+            int test_main(void) {
+                int colour = (int)0x80001234u;
+                middle(2, colour);
+                outer(colour);
+                middle(3, 0x5678);
+                return 0;
+            }
+        """})
+        self.assertEqual(out, ["-1", "4660", "-1", "4660", "0", "22136"])
+        self.assertIn("middle: parameter 2 (unsigned long long)", self.last_report["params_widened"])
+
+    def test_a_widened_parameter_is_whole_in_64_bit_casts_and_its_low_half_in_arithmetic(self):
+        # DrawFramedText's `s32 color` (rac1): `(s32)color >> 24` is a sra of the register's low half,
+        # `(s64)color & ...` an and of the whole register, and the colour is passed on to a u64 as well; its
+        # caller hands it a colour that is zero-extended in the register (FastTweenColor's).
+        out = self.run_program({"a.c": """
+            void callee(int y, unsigned long long x) { test_print((int)(x >> 32)); test_print((int)(x >> 16)); }
+            unsigned long long tween(int c) { return (unsigned int)c; }
+        """, "b.c": """
+            extern void callee(int y, unsigned long long x);
+            extern int tween(int c);
+            void framed(int y, int c) {
+                int alpha = (int)c >> 24;
+                test_print(alpha);
+                test_print(c + 1);
+                callee(y, (long long)c & (long long)(int)0xFF000000);
+                callee(y, c);
+            }
+            int test_main(void) {
+                int zero_extended = tween((int)0x80001234u);
+                framed(1, zero_extended);
+                framed(2, (int)0x80001234u);
+                return 0;
+            }
+        """}, config={"returns_64": ["tween"]})
+        self.assertEqual(out, ["-128", "-2147478987", "0", "32768", "0", "32768",
+                               "-128", "-2147478987", "-1", "-32768", "-1", "-32768"])
+        self.assertIn("unsigned long long c", self.last_generated)
 
     def test_va_list_passed_as_a_pointer_becomes_a_stub(self):
         # The console's C passes a va_list where a pointer is declared (and the
@@ -1357,6 +1450,37 @@ class Places(unittest.TestCase):
             for addr in ("0x0024A080u", "0x0024A0A0u", "0x00262970u", "0x00262990u"):
                 self.assertIn(f"{{{addr}, (openrac_host_fn)func_L06_0024A080", text)
 
+    @unittest.skipUnless(have_compiler(), "needs Clang on a POSIX host")
+    def test_a_copys_call_keeps_a_returns_64_result_whole(self):
+        # rac1's EnvMapA_Draw (Kalebo, two copies) passes GetEffectTex's 64-bit TEX0 to
+        # VU1_addGSregister; its unit declares GetEffectTex int. Called through the running copy's
+        # place, the call keeps the 64 bits a direct call keeps (hostgen.json "returns_64").
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            src = root / "game"
+            (src / "src").mkdir(parents=True)
+            (src / "src" / "a.c").write_text(
+                "extern int func_L00_00320000(int);\n"
+                "extern void func_00330000(int, long long);\n"
+                "void func_L00_00300000(void) { func_00330000(6, func_L00_00320000(41)); }\n")
+            (src / "src" / "b.c").write_text(
+                "unsigned long long func_L00_00320000(int i) { return (unsigned long long)i << 40; }\n")
+            (src / "functions.tsv").write_text(
+                "func_L00_00300000\tshared\t76\tfingerprint\t3\t00:00300000,00:00300050,01:00310000\n"
+                "func_L00_00320000\tshared\t40\tfingerprint\t2\t00:00320000,01:00340000\n")
+            (root / "hostgen.json").write_text(json.dumps({
+                "sources": ["src"], "includes": [], "places": "functions.tsv",
+                "relocate": [0x1A7C80, 0x500000], "returns_64": ["func_L00_00320000"],
+            }))
+            out = root / "gen"
+            self.assertEqual(hostgen.main(["--game", str(root / "hostgen.json"),
+                                           "--source", str(src), "--out", str(out),
+                                           "--jobs", "1", "--quiet"]), 0)
+            text = (out / "a.c").read_text()
+            self.assertIn("openrac_call_in_copy(0, 0x00300000u, 76u, openrac_self_, 0x00320000u)", text)
+            self.assertIn("GFN(unsigned long long (*)(int", text)
+            self.assertNotIn("GFN(int (*)(int", text)
+
 
 class TypeStrings(unittest.TestCase):
     def test_declarators(self):
@@ -1457,6 +1581,33 @@ class Preparation(unittest.TestCase):
         self.assertEqual(prep.widen_long(src),
                          'long long a; unsigned long long b; long long c; char *s = "long"; /* long */')
 
+    def test_long_long_of_the_games_compiler_is_128_bit(self):
+        # SN's GCC 2.95.3 has a 128-bit long long: a quadword clear or copy through it moves 16 bytes.
+        src = ('*(long long *)&b = 0; unsigned long long p; signed long long int q; long x;\n'
+               'typedef union { unsigned long long v __attribute__((mode(TI))); float f[4]; } H;\n'
+               '*(unsigned long long __attribute__((mode(TI))) *)a = 0; /* long long */ s = "long long"; n = 5LL;\n')
+        out = prep.widen_long_long(src).split("\n")
+        self.assertEqual(out[0], "*(openrac_ti *)&b = 0; openrac_uti p; openrac_ti q; long x;")
+        self.assertEqual(out[1], "typedef union { openrac_uti v __attribute__((mode(TI))); float f[4]; } H;")
+        self.assertEqual(out[2], '*(unsigned long long __attribute__((mode(TI))) *)a = 0; /* long long */ s = "long long"; n = 5LL;')
+        # widen_long runs after it: the 64-bit long stays the only long long.
+        self.assertEqual(prep.prepare(prep.widen_long_long(src)).split("\n")[0],
+                         "*(openrac_ti *)&b = 0; openrac_uti p; openrac_ti q; long long x;")
+
+    def test_long_long_128_units_leave_out_the_other_compilers_objects(self):
+        with tempfile.TemporaryDirectory() as d:
+            root = Path(d)
+            for rel in ("src/core/a.c", "src/core/lib.c", "src/game/b.c", "src/libgcc/c.c"):
+                (root / rel).parent.mkdir(parents=True, exist_ok=True)
+                (root / rel).write_text("long long x;\n")
+            (root / "config").mkdir()
+            (root / "config/objects").write_text("# object address compiler\n"
+                                                 "build-sn/core/a.o 0x100000 sn\nbuild-sn/core/lib.o 0x100100 ee29\n")
+            cfg = {"sources": ["src"], "skip": ["src/libgcc"],
+                   "long_long_128": {"except_objects": "config/objects", "except_compilers": ["ee29"]}}
+            self.assertEqual(hostgen.read_long_long_128(root, cfg), {"src/core/a.c", "src/game/b.c"})
+            self.assertEqual(hostgen.read_long_long_128(root, {"sources": ["src"], "skip": []}), set())
+
     def test_file_scope_asm_is_blanked_keeping_lines(self):
         src = 'int a;\n__asm__(".section .text\n\tnop\n");\nint b;\nvoid f(void) { __asm__("sync"); }\n'
         out = prep.blank_file_scope_asm(src)
@@ -1495,6 +1646,17 @@ class Preparation(unittest.TestCase):
         self.assertEqual(out[1], "typedef int Quad __attribute__((mode(TI)));")
         self.assertEqual(out[2], "int __attribute__((mode(TI))) whole;")
         self.assertEqual(out[3], "print __attribute__((mode(TI))) *p;")
+
+    def test_a_mode_ti_cast_on_any_integer_type_is_128_bit(self):
+        # The mode sets the width whatever integer type it is written on (rac1's Giant Clank update
+        # once copied the hero's joint point through `*(unsigned long long __attribute__((mode(TI))) *)`).
+        src = ("*(unsigned long long __attribute__((mode(TI))) *)a = *(long __attribute__((mode(TI))) *)b;\n"
+               "x = (signed char __attribute__((mode(TI))))y + (unsigned short int __attribute__((mode(TI))))z;\n"
+               "unsigned long long v __attribute__((mode(TI)));\n")
+        out = prep.name_wide_casts(src).split("\n")
+        self.assertEqual(out[0], "*(openrac_uti *)a = *(openrac_ti *)b;")
+        self.assertEqual(out[1], "x = (openrac_ti)y + (openrac_uti)z;")
+        self.assertEqual(out[2], "unsigned long long v __attribute__((mode(TI)));")
 
     def test_candidate_replaces_a_stub_whose_path_is_several_strings(self):
         # A long path written as adjacent strings over three lines: the stub is found, and the

@@ -12,6 +12,7 @@
   "skip": [
     "src/libgcc"
   ],
+  "long_long_128": {"except_objects": "config/core_text.objects", "except_compilers": ["ee29"]},
   "includes": [
     "include",
     "src"
@@ -25,7 +26,7 @@
   "host_shared": ["../rac1/host"],
   "overlay_hook": true,
   "relocate": [1437696, 2424832],
-  "returns_64": ["func_001F4868"],
+  "returns_64": ["func_001F4868", "func_001FA8A8"],
   "level_hooks": ["func_001E9780", "func_001E9788", "func_001E9790", "func_001E9798", "func_001E97A0", "func_001E97A8", "func_001E97B0", "func_001E97B8", "func_001E97C0", "func_001E97D8", "func_001E97E0", "func_001E97E8", "func_001E97F0", "func_001E97F8"],
   "roots": [
     "func_0012DB18",
