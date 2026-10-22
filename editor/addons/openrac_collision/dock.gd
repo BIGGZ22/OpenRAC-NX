@@ -18,6 +18,9 @@ var plugin: EditorPlugin
 ## What the open scene is, in a line.
 var status_label: Label
 
+## The level's tools (see, select, edit, add), hidden in a scene without the level's collision.
+var level_box: VBoxContainer
+
 ## Shows the collision over the level.
 var show_toggle: CheckButton
 
@@ -107,10 +110,14 @@ func _init() -> void:
 	help_text.custom_minimum_size.x = TEXT_WIDTH
 	box.add_child(help_text)
 
-	build_view(box)
-	build_selection(box)
-	build_edit(box)
-	build_add(box)
+	level_box = VBoxContainer.new()
+	box.add_child(level_box)
+	build_view(level_box)
+	build_selection(level_box)
+	build_edit(level_box)
+	build_add(level_box)
+	# The report is outside the level's tools: a class scene's edits report there too.
+	report_label = wrapped(box, "")
 	build_object(box)
 	show_level(null)
 	show_object({})
@@ -194,7 +201,6 @@ func build_add(box: VBoxContainer) -> void:
 	wrapped(box, "New faces take the surface id, sound class and exclusion above. A mesh is simplified until "
 		+ "every 4-unit cell keeps under 255 corners.")
 	needs.level.append(button(box, "Check the limits", handle_check_pressed))
-	report_label = wrapped(box, "")
 
 
 ## The object (moby class) tools.
@@ -283,17 +289,19 @@ func show_level(faces) -> void:
 	for row in legend.get_children():
 		row.queue_free()
 
-	# A scene without the level's editable collision: say why, and leave the level tools off.
+	# A scene without the level's editable collision: say why, and hide the level tools.
 	if faces == null:
-		status_label.text = ("This scene has no level collision to edit: open a level scene "
-			+ "(levels/level_NN/level_NN.tscn), or a class scene (mobys/moby_<class>.tscn) for an "
-			+ "object's collision.")
+		status_label.text = ("This scene has no level collision: the level's tools are in a level scene "
+			+ "(levels/level_NN/level_NN.tscn). In a class scene (mobys/moby_<class>.tscn), its object "
+			+ "collision is edited below.")
+		level_box.visible = false
 		enable("level", false)
 		enable("selection", false)
 		enable("place", false)
 		enable("mesh", false)
 		return
 
+	level_box.visible = true
 	var counts: Dictionary = faces.kinds_present()
 	var by_surface: Dictionary = {}
 
