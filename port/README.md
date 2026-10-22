@@ -67,7 +67,9 @@ and the version's video standard from `games/<game>/game.json`, which the
 window's title shows too; see
 [cmake/MacApp.cmake](cmake/MacApp.cmake)). `build/release/openrac-rac1-pal`
 is a link to its program, for a shell; macOS names a program started through
-the link after the link. The launcher starts the one in the bundle.
+the link after the link. The launcher starts the one in the bundle. A game's
+bundle declares itself a game to macOS, so Game Mode turns on while it is in
+full screen (F11, or Borderless or Fullscreen in the game's video options).
 
 The program stops at the first function that has no C yet and names it.
 For OpenRAC's decompilation that is the boot stage, still assembly; a copy

@@ -10,7 +10,7 @@
 # when that matches), the rest by its Info.plist and executable, and the Dock and Finder show its
 # icon before the window opens. So on macOS
 #
-#   openrac_macos_app(openrac-rac1-pal NAME "Ratchet & Clank (PAL)" ID dev.openrac.rac1-pal ICON <png>)
+#   openrac_macos_app(openrac-rac1-pal NAME "Ratchet & Clank (PAL)" ID dev.openrac.rac1-pal ICON <png> GAME)
 #
 # builds the target as <build>/apps/openrac-rac1-pal/Ratchet & Clank (PAL).app, its program
 # Contents/MacOS/Ratchet & Clank (PAL), with Contents/Info.plist (CFBundleName and CFBundleDisplayName
@@ -19,6 +19,10 @@
 # is written " -". Each bundle has a folder named after its target, where the launcher finds it
 # from the target's name (launcher/core/src/lib.rs, program_path).
 #
+# GAME marks a game: its Info.plist says the bundle is in a game category and supports Game Mode,
+# so macOS turns Game Mode on while it runs in full screen (LSApplicationCategoryType, macOS 14,
+# and LSSupportsGameMode, macOS 26). The viewer has neither.
+#
 # With the Vulkan renderer, Contents/Frameworks/libMoltenVK.dylib (cmake/Dependencies.cmake) and
 # its license in Contents/Resources: OPENRAC_GL_API=vulkan needs nothing installed.
 #
@@ -26,12 +30,21 @@
 # it there: started through the link the program works the same, but macOS names it after the link.
 
 function(openrac_macos_app target)
-  cmake_parse_arguments(PARSE_ARGV 1 app "" "NAME;ID;ICON" "")
+  cmake_parse_arguments(PARSE_ARGV 1 app "GAME" "NAME;ID;ICON" "")
   string(REPLACE ":" " -" title "${app_NAME}")
   set(bundle "${CMAKE_BINARY_DIR}/apps/${target}/${title}.app")
   set_target_properties(${target} PROPERTIES
     OUTPUT_NAME "${title}"
     RUNTIME_OUTPUT_DIRECTORY "${bundle}/Contents/MacOS")
+
+  set(game_keys "")
+  if(app_GAME)
+    set(game_keys "\t<key>LSApplicationCategoryType</key>
+\t<string>public.app-category.games</string>
+\t<key>LSSupportsGameMode</key>
+\t<true/>
+")
+  endif()
 
   string(REPLACE "&" "&amp;" name "${title}")
   string(REPLACE "<" "&lt;" name "${name}")
@@ -55,7 +68,7 @@ function(openrac_macos_app target)
 	<string>${name}</string>
 	<key>CFBundlePackageType</key>
 	<string>APPL</string>
-	<key>NSHighResolutionCapable</key>
+${game_keys}	<key>NSHighResolutionCapable</key>
 	<true/>
 </dict>
 </plist>
