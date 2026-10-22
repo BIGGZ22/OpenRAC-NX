@@ -336,6 +336,7 @@ func legend_row(colour: Color, text: String) -> void:
 	var swatch := ColorRect.new()
 	swatch.color = colour
 	swatch.custom_minimum_size = SWATCH
+	swatch.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 	row.add_child(swatch)
 	var label := Label.new()
 	label.text = text
@@ -379,7 +380,8 @@ func show_selection(faces, selected: PackedInt32Array) -> void:
 	for surface in surfaces:
 		parts.append("surface %d (%d)" % [surface, surfaces[surface]])
 
-	var text: String = "%d faces selected: %s." % [selected.size(), ", ".join(parts)]
+	var text: String = "%d faces selected" % selected.size()
+	text += (": %s." % ", ".join(parts)) if not parts.is_empty() else "."
 
 	# Sound classes and exclusion only for faces with a type byte.
 	if not sounds.is_empty():
