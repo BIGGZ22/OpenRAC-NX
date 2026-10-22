@@ -45,8 +45,8 @@ EnableCache	kernel	EnableCache	host	PAL func_00118D60
 FlushCache	kernel	FlushCache	host	nothing to flush; PAL func_00118D80
 sceSifDmaStat	kernel	sceSifDmaStat	host	no IOP: transfers to it are done at once; PAL func_00118E10
 sceSifSetDma	kernel	sceSifSetDma	host	PAL func_00118E20
-FUN_00119028	kernel	EnableIntc	host	PAL func_00119328
-FUN_00119090	kernel	DisableIntc	host	PAL func_00119390
+FUN_00119028	kernel	DisableIntc	host	PAL func_00119328 (its jal is _DisableIntc, system call 0x15)
+FUN_00119090	kernel	EnableIntc	host	PAL func_00119390 (its jal is _EnableIntc, system call 0x14)
 FUN_001190f8	kernel	DisableDmac	host	PAL func_001193F8
 FUN_00119160	kernel	EnableDmac	host	PAL func_00119460
 sceSifInitRpc	sif	sceSifInitRpc	host	no IOP: its services are replaced at their EE libraries; PAL func_0011AE20
