@@ -22,7 +22,7 @@ Everything runs on the game's thread: load, the hooks, the callbacks, unload.
 | Name | Value | |
 |---|---|---|
 | `OPENRAC_MOD_API_MAJOR` | `1` |  |
-| `OPENRAC_MOD_API_MINOR` | `2` | 1.2: the keyboard and mouse (input, take_input, capture_mouse) |
+| `OPENRAC_MOD_API_MINOR` | `3` | 1.3: the pointer over the game's picture (openrac_input.pointer_*) |
 | `OPENRAC_MOD_TARGET_MINOR` | `OPENRAC_MOD_API_MINOR` |  |
 | `OPENRAC_MOD_EXPORT` | `__declspec(dllexport)` or `__attribute__((visibility("default")))` |  |
 | `OPENRAC_LOG_DEBUG` | `0` | Log levels for openrac_api.log. |
@@ -122,6 +122,10 @@ the window's events and before the game reads its pads (so before the tick's pad
 | `uint8_t captured` | the cursor is captured: hidden, kept in the window, motion relative |
 | `uint8_t overlay` | the port's own overlay or menu has the input now (F3): leave it |
 | `uint8_t reserved` |  |
+| `float pointer_x` | 1.3 (check size first): where the cursor is over the game's 4:3 picture, 0..1 across and down (outside it below 0 or above 1), as the game's 2D screen of 512 by 416 pixels has it: x * 512, y * 416 is the game's pixel. Meaningful while the cursor is not captured. |
+| `float pointer_y` |  |
+| `uint8_t pointer_inside` | the cursor is over the picture, in the focused window |
+| `uint8_t reserved2[3]` |  |
 
 ## `openrac_api`
 

@@ -122,6 +122,12 @@ public:
     bool captured() const { return s_->captured != 0; }
     bool overlay() const { return s_->overlay != 0; }
     std::uint32_t tick() const { return s_->tick; }
+    // Interface 1.3: the cursor over the game's picture, 0..1 (pointer_x() * 512, pointer_y() *
+    // 416 is the game's 2D pixel); has_pointer() false on an older port.
+    bool has_pointer() const { return s_->size >= offsetof(openrac_input, reserved2); }
+    float pointer_x() const { return has_pointer() ? s_->pointer_x : 0.0f; }
+    float pointer_y() const { return has_pointer() ? s_->pointer_y : 0.0f; }
+    bool pointer_inside() const { return has_pointer() && s_->pointer_inside != 0; }
 
 private:
     const openrac_input* s_;

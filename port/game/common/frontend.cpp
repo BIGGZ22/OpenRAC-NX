@@ -3010,7 +3010,39 @@ KeyboardMouseView keyboard_mouse() {
     if (!g) {
         return {};
     }
-    return {&g->input.keyboard_mouse(), debug_overlay::visible() || debug_menu::is_open()};
+    KeyboardMouseView view{&g->input.keyboard_mouse(), debug_overlay::visible() || debug_menu::is_open()};
+    SDL_Window* w = g->window ? g->window->sdl() : nullptr;
+    if (w == nullptr) {
+        return view;
+    }
+    // The cursor in the window's points, then in its pixels, then over the game's 4:3 picture: the
+    // picture's box for the aspect setting, and the 4:3 middle of it where it is wider (where the
+    // game's 2D screen, its menus, are drawn).
+    float mx = 0.0f;
+    float my = 0.0f;
+    SDL_GetMouseState(&mx, &my);
+    int points_w = 0;
+    int points_h = 0;
+    SDL_GetWindowSize(w, &points_w, &points_h);
+    int window_width = 0;
+    int window_height = 0;
+    g->window->drawable_size(window_width, window_height);
+    if (points_w <= 0 || points_h <= 0 || window_width <= 0 || window_height <= 0) {
+        return view;
+    }
+    const float px = mx * static_cast<float>(window_width) / static_cast<float>(points_w);
+    const float py = my * static_cast<float>(window_height) / static_cast<float>(points_h);
+    const Box box = frame_box(window_width, window_height, picture_aspect(window_width, window_height));
+    if (box.width <= 0 || box.height <= 0) {
+        return view;
+    }
+    const float tv_width = std::min(static_cast<float>(box.width), static_cast<float>(box.height) * kTvAspect);
+    const float tv_x = static_cast<float>(box.x) + (static_cast<float>(box.width) - tv_width) / 2.0f;
+    view.pointer_x = (px - tv_x) / tv_width;
+    view.pointer_y = (py - static_cast<float>(box.y)) / static_cast<float>(box.height);
+    view.pointer_inside = SDL_GetMouseFocus() == w && view.pointer_x >= 0.0f && view.pointer_x <= 1.0f
+                          && view.pointer_y >= 0.0f && view.pointer_y <= 1.0f;
+    return view;
 }
 
 void take_keyboard() {

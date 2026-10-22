@@ -640,6 +640,8 @@ def luau_types(b: dict) -> str:
     out.append("    pressed: (bind: string) -> boolean,")
     out.append("    mouse: () -> (number, number, number, number),")
     out.append("    window: () -> (boolean, boolean, boolean),")
+    out.append("    -- interface 1.3: the cursor over the game's picture, 0..1 each way (x * 512, y * 416 the game's 2D pixel), and whether it is over it")
+    out.append("    pointer: () -> (number, number, boolean),")
     out.append("    take_input: (...(\"keyboard\" | \"mouse\")) -> (),")
     out.append("    capture_mouse: (capture: boolean) -> (),")
     if b["moby"] is not None:

@@ -66,6 +66,10 @@ The keyboard and mouse for the tick about to run (interface 1.2, openrac_input):
 | `bool captured() const` |  |
 | `bool overlay() const` |  |
 | `std::uint32_t tick() const` |  |
+| `bool has_pointer() const` | Interface 1.3: the cursor over the game's picture, 0..1 (pointer_x() * 512, pointer_y() * 416 is the game's 2D pixel); has_pointer() false on an older port. |
+| `float pointer_x() const` |  |
+| `float pointer_y() const` |  |
+| `bool pointer_inside() const` |  |
 
 ## `openrac::Original`
 

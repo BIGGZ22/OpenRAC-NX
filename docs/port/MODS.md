@@ -415,6 +415,7 @@ OPENRAC_MOD_EXPORT void openrac_mod_unload(void);                        /* opti
 | `loaded_level()` | the level whose program is loaded, -1 for none |
 | `stack_push(size, &saved)`, `stack_pop(saved)` | room on the game's stack for a call that takes a pointer to a local |
 | `input()` (1.2) | the keyboard and mouse for the tick about to run (`openrac_input`): each key by its USB HID usage, held and pressed since the last tick; the mouse's buttons, its motion since the last tick (raw while captured) and its wheel; whether the window has focus, the cursor is captured, the port's overlay has the input. Never null: without a window nothing is held |
+| `input()->pointer_x/y`, `pointer_inside` (1.3) | where the cursor is over the game's 4:3 picture (the middle of a wider one), 0..1 each way: `x * 512`, `y * 416` is the game's 2D pixel, for a mod that lets the mouse point at the game's menus. Check `size` first |
 | `take_input(mod, devices)` (1.2) | during load: `OPENRAC_INPUT_KEYBOARD` stops the port's own keyboard table driving pad 0 (WASD, Space, ...), so the mod presses the pad's buttons through `on_pad`; a gamepad goes on as before, the port's window keys stay its own |
 | `capture_mouse(mod, capture)` (1.2) | any time: ask for the cursor captured (hidden, held in the window, relative motion) or let go. The port lets it go anyway while the window has no focus or its overlay or debug menu is open |
 
@@ -437,7 +438,11 @@ the port's loads. A mod reports the interface its manifest's `api` names,
 not the SDK's: `openrac_add_mod` passes it in (`OPENRAC_MOD_TARGET_MINOR`), so
 a 1.1 mod rebuilt with SDK 1.2 still loads on a port of 1.1. 1.2 (SDK 1.2.0)
 added the keyboard and mouse (`input`, `take_input`, `capture_mouse`, the
-`keybind` setting and manifest presets). The port keeps every hook point it has had, with its
+`keybind` setting and manifest presets); 1.3 (SDK 1.3.0) the pointer over
+the game's picture (`openrac_input.pointer_*`, appended to the state). The
+port's own readers of the pad (the movie player) and its Start skip take the
+report the mods leave, so a key a mod binds to Start skips as the pad's
+does. The port keeps every hook point it has had, with its
 signature, for as long as the major version lasts.
 
 **What a mod must not do**: keep pointers into game memory across levels

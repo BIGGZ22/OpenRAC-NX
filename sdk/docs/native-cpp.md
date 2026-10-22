@@ -46,7 +46,7 @@ OPENRAC_MOD_CPP("my-mod", "0.1.0", load)
 | `memory()` | an `openrac::Memory`: `read<T>(address)`, `write<T>(address, value)`, `ref<T>(address)` (experimental) |
 | `function<Fn>(name)`, `required_function<Fn>(name)`, `function_at<Fn>(address)` | game functions (experimental) |
 | `relocate(address)`, `relocate_level(level, address)`, `loaded_level()` | globals in the code loaded now (experimental) |
-| `input()` (1.2) | an `openrac::Input` for the tick about to run: `held(bind)`, `pressed(bind)`, `mouse_dx()`, `mouse_dy()`, `wheel_x()`, `wheel_y()`, `focused()`, `captured()`, `overlay()`, `tick()` ([the keyboard and mouse](native-c.md#the-keyboard-and-mouse)) |
+| `input()` (1.2) | an `openrac::Input` for the tick about to run: `held(bind)`, `pressed(bind)`, `mouse_dx()`, `mouse_dy()`, `wheel_x()`, `wheel_y()`, `focused()`, `captured()`, `overlay()`, `tick()`; 1.3: `has_pointer()`, `pointer_x()`, `pointer_y()`, `pointer_inside()` ([the keyboard and mouse](native-c.md#the-keyboard-and-mouse)) |
 | `take_input(devices)` (1.2) | during load: `OPENRAC_INPUT_KEYBOARD` turns the port's own keyboard table off |
 | `capture_mouse(on)` (1.2) | the cursor captured or let go |
 | `openrac::bind_from_name(name)`, `openrac::bind_name(bind)` | a key, button or wheel direction by its name (`"KeyW"`, `"MouseLeft"`) |

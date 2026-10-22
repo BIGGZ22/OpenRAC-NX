@@ -124,6 +124,11 @@ void skip_after_mods(int port, std::uint16_t& buttons);
 struct KeyboardMouseView {
     const void* state = nullptr;  // const platform::KeyboardMouse*
     bool overlay = false;
+    // The cursor over the game's 4:3 picture (the middle of a wider one), 0..1 each way; inside
+    // while it is over that picture in the focused window.
+    float pointer_x = 0.0f;
+    float pointer_y = 0.0f;
+    bool pointer_inside = false;
 };
 KeyboardMouseView keyboard_mouse();
 

@@ -11,6 +11,7 @@
 #include <chrono>
 #include <cmath>
 #include <cstdlib>
+#include <cstddef>
 #include <cstring>
 #include <format>
 #include <fstream>
@@ -682,6 +683,15 @@ int api_window(lua_State* L) {
     return 3;
 }
 
+int api_pointer(lua_State* L) {
+    const openrac_input* in = input_of(L);
+    const bool has = in != nullptr && in->size >= offsetof(openrac_input, reserved2);
+    lua_pushnumber(L, has ? in->pointer_x : 0.0);
+    lua_pushnumber(L, has ? in->pointer_y : 0.0);
+    lua_pushboolean(L, has && in->pointer_inside != 0);
+    return 3;
+}
+
 int api_take_input(lua_State* L) {
     State* s = state_of(L);
     if (!s->loading) {
@@ -856,6 +866,7 @@ void push_openrac(lua_State* L, State* s) {
     set_function(L, "pressed", api_pressed);
     set_function(L, "mouse", api_mouse);
     set_function(L, "window", api_window);
+    set_function(L, "pointer", api_pointer);
     set_function(L, "take_input", api_take_input);
     set_function(L, "capture_mouse", api_capture_mouse);
     if (s->binding->moby != nullptr) {

@@ -1390,6 +1390,8 @@ declare openrac: {
     pressed: (bind: string) -> boolean,
     mouse: () -> (number, number, number, number),
     window: () -> (boolean, boolean, boolean),
+    -- interface 1.3: the cursor over the game's picture, 0..1 each way (x * 512, y * 416 the game's 2D pixel), and whether it is over it
+    pointer: () -> (number, number, boolean),
     take_input: (...("keyboard" | "mouse")) -> (),
     capture_mouse: (capture: boolean) -> (),
     -- experimental: a moby's pvars by name, from the behaviour catalogue

@@ -105,7 +105,7 @@ void install_native(const fs::path& plugins) {
     fs::create_directories(dir / "lib");
     fs::copy_file(OPENRAC_TEST_MOD_A, dir / "lib" / library_name(), fs::copy_options::overwrite_existing);
     write(dir / "openrac-mod.json", R"({"format": 2, "id": "test-a", "name": "Test", "version": "1.0.0",
-        "api": "1.2", "games": {"test": ["one"]}, "hooks": ["Test_Add"],
+        "api": "1.3", "games": {"test": ["one"]}, "hooks": ["Test_Add"],
         "plugin": {")" + std::string(mods::platform_key()) + R"(": "lib/)" + library_name() + R"("},
         "settings": [{"key": "tag", "name": "Tag", "type": "int", "default": 0},
                      {"key": "behaviour", "name": "Behaviour", "type": "choice", "default": "ok",
@@ -321,6 +321,9 @@ openrac.on_pad(function(port, report)
     buffer.writeu8(report, 3, dx)
     buffer.writeu8(report, 4, if openrac.pressed("WheelDown") then 1 else 0)
     buffer.writeu8(report, 5, if focused and not overlay then 1 else 0)
+    local px, py, inside = openrac.pointer()
+    buffer.writeu8(report, 6, if inside then math.floor(px * 100 + 0.5) else 0)
+    buffer.writeu8(report, 7, math.floor(py * 100 + 0.5))
     openrac.capture_mouse(focused)
 end)
 )"}});
@@ -338,9 +341,13 @@ end)
     g_input.mouse_dx = 9.0f;
     g_input.wheel_y = -1.0f;
     g_input.focused = 1;
+    g_input.pointer_x = 0.25f;
+    g_input.pointer_y = 0.5f;
+    g_input.pointer_inside = 1;
     unsigned char report[18] = {0};
     g_pad_hook(0, report, 18);
     CHECK(report[1] == 1 && report[2] == 1 && report[3] == 9 && report[4] == 1 && report[5] == 1);
+    CHECK(report[6] == 25 && report[7] == 50);
     CHECK(g_captured);
     mods::reset();
 }

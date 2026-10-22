@@ -108,6 +108,9 @@ api->capture_mouse(mod, 1);                     /* hidden cursor, relative motio
   again after.
 - The game's state (playing, paused, a menu) is the game's own: read it from
   game memory.
+- Interface 1.3 adds the cursor over the game's picture: `in->pointer_x`,
+  `pointer_y` (0..1 of the 4:3 picture; times 512 and 416, the game's 2D
+  pixel) and `pointer_inside`. Check `in->size` covers them first.
 
 ## Settings and logging
 

@@ -3,6 +3,7 @@
 //
 // openrac/mod.hpp against a host table of the test's own: the entry points, settings, hooks as
 // lambdas chained to the original, exceptions caught at the boundary, callbacks, the stack frame.
+#include <cstddef>
 #include <cstdio>
 #include <cstring>
 #include <map>
@@ -300,7 +301,18 @@ int main() {
     g_input.mouse_pressed = OPENRAC_MOUSE_RIGHT;
     g_input.wheel_y = -1.0f;
     g_input.mouse_dx = 3.0f;
+    g_input.size = sizeof g_input;
+    g_input.pointer_x = 0.25f;
+    g_input.pointer_y = 0.5f;
+    g_input.pointer_inside = 1;
     const openrac::Input in = mod.input();
+    CHECK(in.has_pointer() && in.pointer_x() == 0.25f && in.pointer_y() == 0.5f && in.pointer_inside());
+    {
+        openrac_input old = g_input;  // a port of 1.2: the struct ends before the pointer
+        old.size = static_cast<uint32_t>(offsetof(openrac_input, pointer_x));
+        const openrac::Input before(&old);
+        CHECK(!before.has_pointer() && before.pointer_x() == 0.0f && !before.pointer_inside());
+    }
     CHECK(in.held(26) && in.pressed(26) && !in.held(44) && in.pressed(44) && !in.held(4));
     CHECK(in.held(OPENRAC_BIND_MOUSE_LEFT) && !in.pressed(OPENRAC_BIND_MOUSE_LEFT));
     CHECK(!in.held(OPENRAC_BIND_MOUSE_RIGHT) && in.pressed(OPENRAC_BIND_MOUSE_RIGHT));

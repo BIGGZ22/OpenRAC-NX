@@ -1,6 +1,6 @@
 {
   "about": "The OpenRAC mod SDK this mod builds against: tools/fetch_sdk.py downloads it into .sdk/ and checks its SHA-256 (the first fetch fills it in from the release: commit it); CMakeLists.txt finds it there.",
-  "version": "1.2.1",
-  "url": "https://github.com/OpenRAC/OpenRAC/releases/download/sdk-v1.2.1/openrac-mod-sdk-1.2.1.zip",
+  "version": "1.3.0",
+  "url": "https://github.com/OpenRAC/OpenRAC/releases/download/sdk-v1.3.0/openrac-mod-sdk-1.3.0.zip",
   "sha256": ""
 }

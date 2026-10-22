@@ -361,6 +361,9 @@ const openrac_input* mod_input() {
             in.focused = km->focused ? 1 : 0;
             in.captured = km->captured ? 1 : 0;
             in.overlay = view.overlay ? 1 : 0;
+            in.pointer_x = view.pointer_x;
+            in.pointer_y = view.pointer_y;
+            in.pointer_inside = view.pointer_inside ? 1 : 0;
             return &in;
         }
     }
