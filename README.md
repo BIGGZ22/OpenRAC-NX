@@ -2,6 +2,7 @@
 
 [![checks](https://github.com/OpenRAC/OpenRAC/actions/workflows/checks.yml/badge.svg)](https://github.com/OpenRAC/OpenRAC/actions/workflows/checks.yml)
 [![openrac.dev](https://img.shields.io/badge/community-openrac.dev-e8a317)](https://openrac.dev/)
+[![Discord](https://img.shields.io/badge/Discord-join%20us-5865F2?logo=discord&logoColor=white)](https://discord.gg/Sfd2B54PDG)
 
 The PlayStation 2 Ratchet & Clank games, decompiled back into C and brought to
 PC natively: Ratchet & Clank, Going Commando, Up Your Arsenal and Deadlocked.
