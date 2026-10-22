@@ -423,8 +423,9 @@ class LevelWriter:
             write_marker(self.dir / path, class_id, f"{class_id} {names[class_id]}" if class_id in names else str(class_id),
                          model, names.get(class_id), logic.get(class_id),
                          self.class_collision(starts.get(class_id, 0), class_id, collision, files))
-            if starts.get(class_id, 0) > 0:
-                written[class_id] = path
+            # Every class scene, with class data or not: an untouched project is then seen as one
+            # without reading the disc (moby_collision_scene.unchanged_scenes).
+            written[class_id] = path
             if class_id in placed:
                 scenes[class_id] = self.scene.resource("PackedScene", f"{self.res}/{path}", f"moby_{class_id}")
         self.scene.node("Mobys", "Game", "Node3D")
