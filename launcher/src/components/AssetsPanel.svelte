@@ -6,9 +6,10 @@
   // from. editor/MODDING.md is the modder's guide.
   import Icon from "$components/Icon.svelte";
   import { api, inTauri, pickFolder, type ActionView, type VersionView } from "$lib/api";
-  import { app, guard, jobs, runChain, toast } from "$lib/app.svelte";
+  import { app, guardShown, jobs, runChain, toast } from "$lib/app.svelte";
   import { levelName, levelsOf } from "$lib/labels";
   import { ASSETS } from "$lib/modsText";
+  import { hidePaths } from "$lib/paths";
   import CommandBox from "./CommandBox.svelte";
 
   let { version: v, onimported }: { version: VersionView; onimported?: () => void } = $props();
@@ -67,7 +68,7 @@
     const folder = end?.folder ?? /: (\/.*|[A-Za-z]:\\.*)$/.exec(end?.line ?? "")?.[1];
     if (ok && folder) {
       toast(ASSETS.exported(levelName(v.game, level)));
-      await guard(end?.folder ? api.openOutput(folder) : api.openGameFolder(v.game, folder));
+      await guardShown(end?.folder ? api.openOutput(folder) : api.openGameFolder(v.game, folder));
     } else if (!ok) {
       toast(ASSETS.exportStopped, "error");
     }
@@ -113,7 +114,9 @@
   <div class="assets">
     <p class="muted intro">
       {ASSETS.lead}
-      <button class="link" onclick={() => void guard(api.openPath("editor/MODDING.md"))}>{ASSETS.howItWorks}</button>
+      <button class="link" onclick={() => void guardShown(api.openPath("editor/MODDING.md"))}
+        >{ASSETS.howItWorks}</button
+      >
     </p>
     <ol class="steps">
       <li>
@@ -144,7 +147,7 @@
             </button>
           {/if}
           {#if exported && busy !== "export"}
-            <button class="ghost" onclick={() => void guard(api.openOutput(exported))}
+            <button class="ghost" onclick={() => void guardShown(api.openOutput(exported))}
               ><Icon name="folder" size={16} />{ASSETS.openFolder}</button
             >
           {/if}
@@ -168,7 +171,7 @@
             {#if busy === "import"}
               {ASSETS.importing}
             {:else if said}
-              {said.text}
+              {hidePaths(said.text).text}
             {:else}
               {ASSETS.importLine}
             {/if}

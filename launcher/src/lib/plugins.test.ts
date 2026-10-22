@@ -1,6 +1,16 @@
 import { describe, expect, it } from "vitest";
 import type { PluginSetting, PluginView } from "./api";
-import { modHint, modKind, pluginState, settingControl, settingNumber, settingRange, sharedWith } from "./plugins";
+import {
+  modBadge,
+  modHint,
+  modKind,
+  pluginState,
+  settingControl,
+  settingGroups,
+  settingNumber,
+  settingRange,
+  sharedWith,
+} from "./plugins";
 
 const mod = (over: Partial<PluginView> = {}): PluginView => ({
   id: "lock-strafe",
@@ -49,10 +59,18 @@ describe("settings", () => {
     expect(settingControl(setting({ type: "bool" }))).toBe("switch");
     expect(settingControl(setting({ type: "choice", choices: choices(2) }))).toBe("segmented");
     expect(settingControl(setting({ type: "choice", choices: choices(3) }))).toBe("segmented");
-    expect(settingControl(setting({ type: "choice", choices: choices(4) }))).toBe("radios");
+    expect(settingControl(setting({ type: "choice", choices: choices(4) }))).toBe("segmented");
+    expect(settingControl(setting({ type: "choice", choices: choices(5) }))).toBe("select");
+    const long = [
+      { value: "a", name: "Lock with weapons, always" },
+      { value: "b", name: "Hold L2 or R2 to strafe" },
+    ];
+    expect(settingControl(setting({ type: "choice", choices: long }))).toBe("select");
     expect(settingControl(setting({ type: "keybind", default: "Space" }))).toBe("keybind");
     expect(settingControl(setting({ type: "int" }))).toBe("number");
-    expect(settingControl(setting({ type: "float" }))).toBe("number");
+    expect(settingControl(setting({ type: "float", min: 0 }))).toBe("number");
+    expect(settingControl(setting({ type: "float", min: 0, max: 2 }))).toBe("slider");
+    expect(settingControl(setting({ type: "int", min: 1, max: 30 }))).toBe("slider");
     expect(settingControl(setting({ type: "string" }))).toBe("text");
   });
 
@@ -97,5 +115,38 @@ describe("modKind", () => {
     expect(modHint("native")).toContain("people you trust");
     expect(modHint("script")).toContain("sandbox");
     expect(modHint("data")).toContain("runs nothing");
+  });
+});
+
+describe("settingGroups", () => {
+  it("keeps the ungrouped settings first, then each group in the order it appears", () => {
+    const groups = settingGroups([
+      setting({ key: "sens", type: "float" }),
+      setting({ key: "jump", type: "keybind", group: "play" }),
+      setting({ key: "back", type: "keybind", group: "menu" }),
+      setting({ key: "fire", type: "keybind", group: "play" }),
+      setting({ key: "tilt", type: "choice" }),
+    ]);
+    expect(groups.map((g) => g.title)).toEqual(["General", "Play controls", "Menu controls"]);
+    expect(groups[0]?.settings.map((s) => s.key)).toEqual(["sens", "tilt"]);
+    expect(groups[1]?.settings.map((s) => s.key)).toEqual(["jump", "fire"]);
+  });
+
+  it("calls a mod's only section Settings, and a mixed group by its name", () => {
+    expect(settingGroups([setting({ key: "a" })]).map((g) => g.title)).toEqual(["Settings"]);
+    expect(settingGroups([setting({ key: "a", group: "camera_feel" })])[0]?.title).toBe("Camera feel");
+  });
+});
+
+describe("modBadge", () => {
+  it("says what is most pressing: cannot load, then an update, then what it runs", () => {
+    expect(modBadge(mod({ state: "refused", reason: "too old" }), "1.1.0", false)).toMatchObject({
+      text: "Cannot load",
+      tone: "err",
+      hint: "too old",
+    });
+    expect(modBadge(mod(), "1.1.0", false)).toMatchObject({ text: "Update 1.1.0", tone: "warn" });
+    expect(modBadge(mod({ kind: "script" }), null, false).text).toBe("Sandboxed script");
+    expect(modBadge(mod({ state: "refused" }), null, true).text).toBe("Runs code");
   });
 });

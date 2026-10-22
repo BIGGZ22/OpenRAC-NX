@@ -21,13 +21,16 @@
   import PacksPanel from "$components/PacksPanel.svelte";
   import PluginsPanel from "$components/PluginsPanel.svelte";
   import { api, pickFile, type ActionView, type GameView, type VersionView } from "$lib/api";
-  import { app, guard, jobs, run, runChain, saveConfig, toast } from "$lib/app.svelte";
+  import { app, guardShown, jobs, run, runChain, saveConfig, toast } from "$lib/app.svelte";
   import { levelName, levelsOf, type EntryState } from "$lib/labels";
   import { GODOT_URL, SITE_URL } from "$lib/links";
   import { EDITOR, GAME_LIST, PAGE } from "$lib/modsText";
   import { foundDisc, playerVersion, setUp } from "$lib/player.svelte";
   import type { Job } from "$lib/queue";
   import { enter } from "$lib/motion";
+  import { followHistory, modFromAddress, modNav, openMod, resetMod } from "$lib/modNav.svelte";
+  import { hidePaths } from "$lib/paths";
+  import { onMount } from "svelte";
   import { tablist } from "$lib/tabs";
   import { themeStyle } from "$lib/themes";
   import { fade, fly } from "svelte/transition";
@@ -68,7 +71,7 @@
 
   /** Opens one of those folders: a checkout's through its root, an installed launcher's in the data folder. */
   const openFolder = (v: VersionView, path: string) =>
-    guard(standalone ? api.openGameFolder(v.game, path) : api.openPath(path));
+    guardShown(standalone ? api.openGameFolder(v.game, path) : api.openPath(path));
 
   const live = (j: Job) => j.state === "queued" || j.state === "running";
   const jobsOf = (v: VersionView, ids: string[]) =>
@@ -140,6 +143,27 @@
     if (what.pack) reload += 1;
   };
   let opening = $state<string | null>(null);
+
+  // A mod's own page (PluginsPanel shows it in place of My mods' lists): Back and Escape return;
+  // another game or tab leaves it. ?mod=<id> opens one at start.
+  const onModPage = $derived(modNav.mod !== null);
+  onMount(() => {
+    const asked = modFromAddress(window.location);
+    if (asked) openMod(asked);
+    const stop = followHistory();
+    return () => {
+      stop();
+      resetMod();
+    };
+  });
+  $effect(() => {
+    if (modNav.mod === null) return;
+    // Only a game with gameplay mods has their pages.
+    if (v ? !playable(v) : !played) resetMod();
+    else tab = "mine";
+  });
+  /** A job's line on the page: no folder in it (lib/paths.ts). */
+  const lineOf = (line: string | undefined) => (line === undefined ? undefined : hidePaths(line).text);
   /** The level the editor opens, per game. Each level is a Godot project of its own. */
   const level = $state<Record<string, number>>({});
 
@@ -160,10 +184,10 @@
     if (!picked) return;
     // Settings checks a pick the same way: the zip, a Godot 3 or another program is said at once,
     // not when a level does not open.
-    const check = await guard(api.checkTool("godot", picked));
+    const check = await guardShown(api.checkTool("godot", picked));
     if (!check) return;
     if (!check.ok) {
-      toast(EDITOR.notGodot(check.message), "error");
+      toast(hidePaths(EDITOR.notGodot(check.message)).text, "error");
       return;
     }
     await saveConfig({ ...app.config, godot: picked });
@@ -178,7 +202,7 @@
     opening = v.key;
     let done: boolean;
     if (edit.runnable) {
-      done = (await guard(api.openLevelInGodot(v.key, which))) !== undefined;
+      done = (await guardShown(api.openLevelInGodot(v.key, which))) !== undefined;
     } else {
       const extract = action(v, "editor-extract");
       done = await runChain({ kind: "version", key: v.key }, extract ? [extract, edit] : [edit], which);
@@ -202,7 +226,15 @@
   }
 </script>
 
-<GamesFrame label="Mods" selected={shown?.id ?? null} onselect={(g) => (picked = g.id)} state={modState}>
+<GamesFrame
+  label="Mods"
+  selected={shown?.id ?? null}
+  onselect={(g) => {
+    if (g.id !== shown?.id) resetMod();
+    picked = g.id;
+  }}
+  state={modState}
+>
   {#if shown}
     {#key shown.id}
       <div class="page" style={themeStyle(shown.id)} in:fly={enter()}>
@@ -229,7 +261,7 @@
         {#if !v && played}
           <!-- The level editor cannot open it here (an installed launcher without its tools, say), but the
                game plays: its gameplay mods, which load when it is played from its page. -->
-          <AddMod version={played} onadded={added} />
+          {#if !onModPage}<AddMod version={played} onadded={added} />{/if}
           <PluginsPanel version={played} reload={pluginsReload} onpack={() => (reload += 1)} />
         {:else if !v}
           <!-- Every game has this page; one the editor cannot open yet says so. -->
@@ -237,7 +269,7 @@
             <h2>{PAGE.noneTitle}</h2>
             <p class="muted">{PAGE.noneLine}</p>
             <p>
-              <button class="link" onclick={() => void guard(api.openUrl(SITE_URL))}
+              <button class="link" onclick={() => void guardShown(api.openUrl(SITE_URL))}
                 >{PAGE.noneLink}<Icon name="external" size={14} /></button
               >
             </p>
@@ -259,19 +291,19 @@
             <p class="early"><strong>{PAGE.earlyTitle}</strong><span class="muted">{PAGE.earlyLine}</span></p>
           {/if}
 
-          <div class="tabs" role="tablist" aria-label={PAGE.tabsLabel} use:tablist>
-            {#each TABS as t (t.id)}
-              <button
-                role="tab"
-                id={`mods-tab-${t.id}`}
-                aria-controls="mods-panel"
-                aria-selected={tab === t.id}
-                tabindex={tab === t.id ? 0 : -1}
-                class:on={tab === t.id}
-                onclick={() => (tab = t.id)}><Icon name={t.icon} size={16} />{t.label}</button
-              >
-            {/each}
-          </div>
+          {#if !onModPage}<div class="tabs" role="tablist" aria-label={PAGE.tabsLabel} use:tablist>
+              {#each TABS as t (t.id)}
+                <button
+                  role="tab"
+                  id={`mods-tab-${t.id}`}
+                  aria-controls="mods-panel"
+                  aria-selected={tab === t.id}
+                  tabindex={tab === t.id ? 0 : -1}
+                  class:on={tab === t.id}
+                  onclick={() => (tab = t.id)}><Icon name={t.icon} size={16} />{t.label}</button
+                >
+              {/each}
+            </div>{/if}
 
           {#key tab}
             <div
@@ -281,7 +313,9 @@
               aria-labelledby={`mods-tab-${tab}`}
               in:fade={{ duration: enter().duration ?? 0 }}
             >
-              {#if tab === "mine"}
+              {#if tab === "mine" && onModPage && playable(v)}
+                <PluginsPanel version={v} reload={pluginsReload} onpack={() => (reload += 1)} />
+              {:else if tab === "mine"}
                 <AddMod version={v} links={playable(v)} files={playable(v) || !!adder?.runnable} onadded={added} />
                 {#if playable(v)}
                   <!-- Gameplay mods need the game's port: they plug into it (docs/port/MODS.md). -->
@@ -311,7 +345,7 @@
                           {:else if lacksGodot}
                             {EDITOR.noGodot}
                           {:else if preparing}
-                            {preparing.title}: {preparing.lines.at(-1)?.line ?? "…"}
+                            {preparing.title}: {lineOf(preparing.lines.at(-1)?.line) ?? "…"}
                           {:else if edit?.runnable}
                             {early(v) ? EDITOR.readyEarly : EDITOR.ready}
                           {:else}
@@ -325,7 +359,7 @@
                             ><Icon name="disc" size={16} />{EDITOR.setUp}</button
                           >
                         {:else if lacksGodot}
-                          <button class="ghost" onclick={() => void guard(api.openUrl(GODOT_URL))}
+                          <button class="ghost" onclick={() => void guardShown(api.openUrl(GODOT_URL))}
                             ><Icon name="external" size={16} />{EDITOR.getGodot}</button
                           >
                           <button onclick={() => void chooseGodot()}
@@ -356,7 +390,7 @@
                           {#if !pack && early(v)}
                             {EDITOR.packEarly}
                           {:else if packing}
-                            {packing.lines.at(-1)?.line ?? EDITOR.packReading}
+                            {lineOf(packing.lines.at(-1)?.line) ?? EDITOR.packReading}
                           {:else if result}
                             {result.text}
                           {:else}
@@ -367,7 +401,7 @@
                       <div class="controls">
                         {#if result?.folder}
                           {@const folder = result.folder}
-                          <button class="ghost" onclick={() => void guard(api.openOutput(folder))}
+                          <button class="ghost" onclick={() => void guardShown(api.openOutput(folder))}
                             ><Icon name="folder" size={16} />{EDITOR.openFolder}</button
                           >
                         {/if}
@@ -389,10 +423,11 @@
             </div>
           {/key}
 
-          {#if developer && tab !== "assets"}
-            <!-- The developer view: kept apart from the player's, under the tabs. -->
-            <section class="panel sdk">
-              <h2>{PAGE.developerTitle}</h2>
+          {#if developer && tab !== "assets" && !onModPage}
+            <!-- The developer view: kept apart from the player's, under the tabs, folded (its folders
+                 name the user's). -->
+            <details class="panel sdk more">
+              <summary><h2>{PAGE.developerTitle}</h2></summary>
               <p class="dim">
                 This is <code>{v.key}</code>, the version of the disc set up. Level projects:
                 <code>{dirs.projects}/level_NN</code>; packed levels: <code>{dirs.packed}</code>.
@@ -416,11 +451,11 @@
                 <button class="small" onclick={() => void openFolder(v, dirs.packed)}
                   ><Icon name="folder" size={14} />{EDITOR.packedFolder}</button
                 >
-                <button class="small" onclick={() => void guard(api.openPath("editor/README.md"))}
+                <button class="small" onclick={() => void guardShown(api.openPath("editor/README.md"))}
                   ><Icon name="book" size={14} />{EDITOR.docs}</button
                 >
               </div>
-            </section>
+            </details>
           {/if}
         {/if}
       </div>
@@ -580,11 +615,12 @@
   }
 
   .sdk {
-    display: flex;
-    flex-direction: column;
-    gap: 10px;
     border-style: dashed;
     font-size: 0.8125rem;
+  }
+
+  .sdk > :global(:not(summary)) {
+    margin-top: 10px;
   }
 
   .sdk h2 {

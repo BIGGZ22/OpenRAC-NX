@@ -129,6 +129,17 @@ release, and a new file adds its line there when it is added.
   (`details.more`), which opens by itself when something in it is on. A panel
   with nothing to choose on this system is not shown, and a choice that only
   matters with another one (Android's GPU driver, with Vulkan) shows with it.
+- A list of things that each have settings of their own (the gameplay mods)
+  is an overview of rows (a switch, a name and a line, one badge, "Settings ›"),
+  and each opens a page of its own with a back button and where you are
+  (`ModPage.svelte`), not settings unfolded in the list.
+- A setting applies as it changes, without Enter or a Save button, and says
+  that it saved. A number with both ends is a slider (the brand's orange up to
+  the value, a mark at the default) with its value in a field beside it; a
+  setting off its default has a Reset beside its control.
+- No path in plain view on a page players share screenshots of (Mods): a
+  folder is opened with a button, and its path waits in a folded About or
+  Details (`lib/paths.ts`, `Reason.svelte`).
 
 ## Rules
 

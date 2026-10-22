@@ -1098,6 +1098,120 @@ let mockPlugins: PluginView[] = query.has("nomods")
         kind: "script",
         path: "/home/you/OpenRAC/active/rac1/data/plugins/button-swap",
       },
+      // The item randomizer (OpenRAC/rac1-mods), its manifest's settings.
+      {
+        id: "item-randomizer",
+        name: "Item randomizer",
+        version: "1.0.0",
+        author: "OpenRAC contributors",
+        description:
+          "Shuffles what the game gives out: the gadgets and weapons from NPCs and pickups, the vendor's weapons, the gold bolts and the infobots' coordinates, so each seed is a new route through the game. The placement follows what each place needs, so every seed can be finished. Share a seed's code and a friend plays the same game. A spoiler log of each seed is written to the mod's data folder. A save made with a seed belongs to that seed.",
+        homepage: "https://github.com/OpenRAC/rac1-mods/tree/master/item-randomizer",
+        license: "GPL-3.0-or-later",
+        enabled: true,
+        state: "ready",
+        reason: "",
+        blocked: "",
+        settings: [
+          {
+            key: "seed",
+            name: "Seed",
+            type: "string",
+            default: "",
+            description:
+              "A seed code to play a shared game (it carries its settings), or any word. Blank: a random seed, rolled once and kept for your next starts (the log and the spoiler log show its code).",
+            maxLength: 32,
+            value: "K7QX-2M9P",
+          },
+          {
+            key: "difficulty",
+            name: "Logic",
+            type: "choice",
+            default: "standard",
+            choices: [
+              {
+                value: "relaxed",
+                name: "Relaxed",
+              },
+              {
+                value: "standard",
+                name: "Standard",
+              },
+              {
+                value: "expert",
+                name: "Expert",
+              },
+            ],
+            description:
+              "Standard: a gadget is placed only where you can get it without it, counting what each place uses. Relaxed: the same, with the gadgets early in the game and never in a gold bolt or an expensive purchase. Expert: only what a place cannot be done without counts.",
+            value: "standard",
+          },
+          {
+            key: "shuffle_gadgets",
+            name: "Shuffle gadgets",
+            type: "bool",
+            default: true,
+            description: "The gadgets NPCs and pickups give: the Swingshot, the Heli-Pack, the Magneboots, ...",
+            value: true,
+          },
+          {
+            key: "shuffle_weapons",
+            name: "Shuffle weapons",
+            type: "bool",
+            default: true,
+            description: "The weapons NPCs and pickups give: the Suck Cannon, the Morph-o-Ray, the R.Y.N.O.",
+            value: true,
+          },
+          {
+            key: "shuffle_vendor",
+            name: "Shuffle the vendor",
+            type: "bool",
+            default: true,
+            description:
+              "Each weapon the Gadgetron vendor sells is a slot that gives something else when bought, at the slot's price.",
+            value: true,
+          },
+          {
+            key: "shuffle_gold_bolts",
+            name: "Shuffle gold bolts",
+            type: "bool",
+            default: true,
+            description:
+              "Gold bolts join the pool: a gold bolt's place may hold a gadget, and a gold bolt may be anywhere.",
+            value: true,
+          },
+          {
+            key: "shuffle_infobots",
+            name: "Shuffle infobots",
+            type: "bool",
+            default: true,
+            description: "The planets' coordinates the infobots give join the pool.",
+            value: true,
+          },
+          {
+            key: "keep_starting_gear",
+            name: "Keep the starting gear",
+            type: "bool",
+            default: true,
+            description:
+              "Start with the Bomb Glove, as the game does. Off: what Veldin gives at the start is shuffled too.",
+            value: true,
+          },
+          {
+            key: "spoiler_log",
+            name: "Spoiler log",
+            type: "bool",
+            default: true,
+            description: "Write where everything is, and a way through, to the mod's data folder.",
+            value: true,
+          },
+        ],
+        hooks: ["rac1.items.give", "rac1.vendor.stock"],
+        sharedHooks: [],
+        native: true,
+        kind: "native",
+        path: "/home/you/.local/share/dev.openrac.launcher/active/rac1/data/plugins/item-randomizer",
+      },
       // The difficulty mod (OpenRAC/rac1-mods), its manifest's settings and presets.
       {
         id: "difficulty",

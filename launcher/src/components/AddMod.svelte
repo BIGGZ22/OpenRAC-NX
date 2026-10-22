@@ -17,10 +17,11 @@
     type VersionView,
   } from "$lib/api";
   import { addMods, type Added } from "$lib/addMods";
-  import { app, guard } from "$lib/app.svelte";
+  import { app, guardShown } from "$lib/app.svelte";
   import { modHint, modKind } from "$lib/plugins";
   import * as T from "$lib/modsText";
   import Icon from "./Icon.svelte";
+  import Reason from "./Reason.svelte";
 
   let {
     version: v,
@@ -148,7 +149,7 @@
   <div class="row head">
     <h2 class="grow">{T.ADD.title}</h2>
     {#if v.game === "rac1"}
-      <button class="small ghost" onclick={() => void guard(api.openUrl(T.ADD.modsUrl))}
+      <button class="small ghost" onclick={() => void guardShown(api.openUrl(T.ADD.modsUrl))}
         ><Icon name="external" size={14} />{T.ADD.browse}</button
       >
     {/if}
@@ -186,8 +187,8 @@
   </div>
   {#if files && inTauri}<p class="dim hint">{dropping ? T.ADD.dropHere : T.ADD.drop}</p>{/if}
 
-  {#if previewError}<p class="said failed" role="status">{previewError}</p>{/if}
-  {#if said}<p class="said" class:failed={said.failed} role="status">{said.text}</p>{/if}
+  {#if previewError}<Reason text={previewError} tone="err" role="status" />{/if}
+  {#if said}<Reason text={said.text} tone={said.failed ? "err" : "ok"} role="status" />{/if}
 
   {#if preview}
     {@const from = T.fromPublisher(preview.label, preview.owner)}
@@ -239,7 +240,7 @@
                 <span class="state err"><span class="dot"></span>{T.COMPATIBLE_LABEL.no.text}</span>
               {/if}
             </div>
-            {#if !m.compatible && m.why}<p class="why">{m.why}</p>{/if}
+            {#if !m.compatible && m.why}<div class="why"><Reason text={m.why} tone="err" /></div>{/if}
             {#if developer}
               <div class="dev dim">
                 <code>{m.id}</code>{#if m.path}&nbsp;· <span class="mono">{m.path}/</span>{/if}{#if m.asset}&nbsp;·
@@ -318,17 +319,6 @@
     overflow: hidden;
     clip-path: inset(50%);
     white-space: nowrap;
-  }
-
-  .said {
-    margin: 0;
-    font-size: 0.8125rem;
-    color: var(--ok);
-  }
-
-  .failed,
-  .why {
-    color: var(--err);
   }
 
   /* What a link holds, on the panel's darker ground until it is installed. */

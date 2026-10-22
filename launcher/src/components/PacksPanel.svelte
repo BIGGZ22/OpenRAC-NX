@@ -4,10 +4,11 @@
   // instant (core/src/overrides.rs). Adding is AddMod's (editor/overrides.py, through lib/addMods.ts).
   // The packs are the game's, shared by its discs.
   import { api, ask, type PackView, type VersionView } from "$lib/api";
-  import { app, guard } from "$lib/app.svelte";
+  import { app, guardShown } from "$lib/app.svelte";
   import { PACKS } from "$lib/modsText";
   import CommandBox from "./CommandBox.svelte";
   import Icon from "./Icon.svelte";
+  import Reason from "./Reason.svelte";
 
   let {
     version: v,
@@ -41,7 +42,7 @@
   });
 
   async function change(work: Promise<PackView[]>) {
-    const result = await guard(work);
+    const result = await guardShown(work);
     if (result) packs = result;
   }
 
@@ -72,7 +73,7 @@
   </div>
 
   {#if packsError}
-    <p class="failed">{packsError}</p>
+    <Reason text={packsError} tone="err" />
   {:else if packs.length === 0}
     <p class="dim empty">{PACKS.empty}</p>
   {:else}
@@ -219,9 +220,5 @@
   .empty {
     font-size: 0.875rem;
     padding: 4px 0;
-  }
-
-  .failed {
-    color: var(--err);
   }
 </style>

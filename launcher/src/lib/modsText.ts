@@ -94,24 +94,84 @@ export const ADD = {
   close: "Close",
 } as const;
 
-/** The gameplay mods' list (PluginsPanel.svelte). */
+/** The gameplay mods' list (PluginsPanel.svelte): a row each, its own page one click away. */
 export const PANEL = {
   title: "Gameplay mods",
   checkUpdates: "Check for updates",
-  sub: "Change how the game plays",
-  empty: "None yet. Paste a mod's link above, or choose its file.",
-  orderHint: "Lower in the list wins",
-  moveUpTitle: "Move up: it loads earlier",
-  moveDownTitle: "Move down: it loads later, and wins where it changes what a mod above it does",
+  empty: "No gameplay mods yet. Paste a mod's link above, or choose its file.",
   settings: "Settings",
+  details: "Details",
+  moveUp: "Move up",
+  moveDown: "Move down",
+  orderTitle: "Load order: a mod lower in the list goes after the ones above it.",
   keepVersion: "Keep this version",
   letUpdate: "Let it update",
   homepage: "Its page",
+  openFolder: "Open its folder",
   remove: "Remove",
-  hooks: "Hooks:",
-  license: "License:",
-  source: "Source:",
+  hooks: "Hooks",
+  license: "License",
+  source: "Source",
+  folder: "Folder",
+  id: "Id",
   interface: "interface",
+} as const;
+
+/** The badge on a mod's row besides its state and kind (lib/plugins.ts, modBadge). */
+export const BADGE = {
+  update: (version: string) => `Update ${version}`,
+  updateHint: "A newer version is out: open the mod to update it.",
+} as const;
+
+/** The sections of a mod's page (lib/plugins.ts, settingGroups). */
+export const GROUP_TITLE = {
+  only: "Settings",
+  general: "General",
+  controls: (name: string) => `${name} controls`,
+} as const;
+
+/** A mod's own page (ModPage.svelte). */
+export const MOD_PAGE = {
+  back: "Back to My mods",
+  crumbsLabel: "Where you are",
+  crumbRoot: "My mods",
+  on: "On",
+  off: "Off",
+  about: "About this mod",
+  aboutKind: "What it runs",
+  presets: "Presets",
+  resetAll: "Reset all",
+  resetAllConfirm: (name: string) => `Put every setting of ${name} back to its default?`,
+  resetAllDone: "Every setting is back to its default.",
+  noSettings: "This mod has nothing to set: switch it on and play.",
+  offNote: "Off: its settings are kept for when you switch it on.",
+  update: (version: string) => `Update to ${version}`,
+  more: (name: string) => `More for ${name}`,
+  details: "Details",
+} as const;
+
+/** Saving as you go, at the top of a mod's settings (lib/autosave.ts). */
+export const SAVE = {
+  idle: "Changes save as you make them",
+  waiting: "Saving…",
+  saving: "Saving…",
+  saved: "Saved. Used from the game's next start",
+  failed: "Not saved",
+  retry: "Try again",
+} as const;
+
+/** One setting's control (ModSetting.svelte). */
+export const SETTING = {
+  reset: (name: string, value: string) => `Reset ${name} to ${value}`,
+  resetShort: "Reset",
+  more: (name: string) => `More about ${name}`,
+  less: (name: string) => `Less about ${name}`,
+  valueAria: (name: string) => `${name}, value`,
+  saved: "Saved",
+  defaultMark: (value: string) => `Default: ${value}`,
+  yes: "On",
+  no: "Off",
+  empty: "Blank",
 } as const;
 
 /** A key-binding setting (KeyBindSetting.svelte) and a mod's presets of them. */
@@ -122,14 +182,8 @@ export const KEYBIND = {
   none: "Not bound",
   add: "Add",
   swapped: "That one was its other bind: the two swapped.",
-  presets: "Controls",
-  presetsHint: "Sets every binding below; you can change each one after.",
+  presets: "Control presets",
   defaults: "Default",
-} as const;
-/** A mod's presets that set more than its keybinds (lib/presets.ts). */
-export const PRESETS = {
-  title: "Presets",
-  hint: "Sets the settings below; you can change each one after.",
 } as const;
 export const bindAria = (setting: string, bind: string) => `${setting}: ${bind}. Change`;
 export const addBindAria = (setting: string) => `${setting}: add a binding`;
@@ -204,8 +258,7 @@ export const EDITOR = {
 
 export const modsAria = (label: string) => `Mods in ${label}`;
 export const useAria = (name: string) => `Use ${name}`;
-export const moveUpAria = (name: string) => `Move ${name} up`;
-export const moveDownAria = (name: string) => `Move ${name} down`;
+export const settingsAria = (name: string) => `Open ${name}`;
 export const moreAria = (name: string) => `More for ${name}`;
 export const fromPublisher = (label: string, owner: string) =>
   owner ? { before: "In ", label, after: `, published by ${owner}` } : { before: "In ", label, after: "" };
@@ -215,8 +268,6 @@ export const fromSource = (label: string) => `From ${label}`;
 export const keptAt = (version: string) => `kept at ${version}`;
 export const cannotSwitchOn = (why: string) => `Cannot be switched on: ${why}`;
 export const removeConfirm = (name: string) => `Remove ${name}? The launcher's copy and its settings are deleted.`;
-export const settingTakes = (name: string, range: string, int: boolean) =>
-  `${name} takes ${range || (int ? "a whole number" : "a number")}.`;
 export const withName = (name: string, why: string) => `${name}: ${why}`;
 
 /** The update check's answer. */

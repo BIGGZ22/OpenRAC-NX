@@ -1,9 +1,21 @@
 // What the Mods tab says about a game's native mods (core/src/plugins.rs, docs/port/MODS.md): each
-// one's state in a few words, and the control each of its settings gets (launcher/docs/STYLE.md: a
-// switch for on/off, a segmented control for two or three choices, radios for more). The words are
+// one's state in a few words, the one badge its row shows, its settings' sections, and the control
+// each setting gets (launcher/docs/STYLE.md: a switch for on/off, a segmented control for a few short
+// choices, a select for more, a slider for a number with both ends). The words are
 // lib/modsText.ts's; here only which ones.
 import type { PluginSetting, PluginView } from "./api";
-import { KIND_HINT, KIND_LABEL, STATE_LABEL, rangeText, sharesWith, type Label, type ModTone } from "./modsText";
+import { hasRange } from "./settingValues";
+import {
+  BADGE,
+  GROUP_TITLE,
+  KIND_HINT,
+  KIND_LABEL,
+  STATE_LABEL,
+  rangeText,
+  sharesWith,
+  type Label,
+  type ModTone,
+} from "./modsText";
 
 export type PluginTone = ModTone;
 
@@ -41,7 +53,13 @@ export function modHint(kind: string): string {
   return kind === "native" ? KIND_HINT.native : kind === "script" ? KIND_HINT.script : KIND_HINT.pack;
 }
 
-export type SettingControl = "switch" | "segmented" | "radios" | "number" | "text" | "keybind";
+export type SettingControl = "switch" | "segmented" | "select" | "slider" | "number" | "text" | "keybind";
+
+/** A choice fits a segmented control when it has two to four short choices; else a select. */
+const segmentable = (s: PluginSetting): boolean => {
+  const choices = s.choices ?? [];
+  return choices.length <= 4 && choices.reduce((n, c) => n + c.name.length, 0) <= 44;
+};
 
 /** The control a setting is shown with. */
 export function settingControl(setting: PluginSetting): SettingControl {
@@ -49,10 +67,10 @@ export function settingControl(setting: PluginSetting): SettingControl {
     case "bool":
       return "switch";
     case "choice":
-      return (setting.choices?.length ?? 0) <= 3 ? "segmented" : "radios";
+      return segmentable(setting) ? "segmented" : "select";
     case "int":
     case "float":
-      return "number";
+      return hasRange(setting) ? "slider" : "number";
     case "keybind":
       return "keybind";
     default:
@@ -79,4 +97,45 @@ export function settingRange(setting: PluginSetting): string {
 /** The other mods it changes the same part of the game with, in one sentence; empty when none. */
 export function sharedWith(mod: PluginView): string {
   return sharesWith([...new Set(mod.sharedHooks.flatMap((h) => h.with))]);
+}
+
+/** A mod's settings in the sections its page shows them in: by their manifest "group", in the
+ *  order each first appears; those without one first, as General (Settings when they are all). */
+export interface SettingGroup {
+  id: string;
+  title: string;
+  settings: PluginSetting[];
+}
+
+export function settingGroups(settings: PluginSetting[]): SettingGroup[] {
+  const groups = new Map<string, PluginSetting[]>();
+  for (const s of settings) {
+    const id = s.group ?? "";
+    groups.set(id, [...(groups.get(id) ?? []), s]);
+  }
+  const ordered = [...groups.entries()].sort(([a], [b]) => (a === "" ? -1 : b === "" ? 1 : 0));
+  return ordered.map(([id, list]) => ({
+    id: id || "general",
+    title: groupTitle(id, list, ordered.length),
+    settings: list,
+  }));
+}
+
+/** "play" → "Play controls" for a group of keybinds, "Camera" for others; the ungrouped ones General. */
+function groupTitle(id: string, list: PluginSetting[], count: number): string {
+  if (id === "") return count === 1 ? GROUP_TITLE.only : GROUP_TITLE.general;
+  const name = id.replace(/[_-]+/g, " ").replace(/^\w/, (c) => c.toUpperCase());
+  return list.every((s) => s.type === "keybind") ? GROUP_TITLE.controls(name) : name;
+}
+
+/** Whether a mod's page has a choice to make: its settings, or a preset. */
+export const hasSettings = (mod: PluginView): boolean => mod.settings.length > 0;
+
+/** The one badge a mod's row shows, most pressing first: it cannot load, an update, what it runs. */
+export function modBadge(mod: PluginView, update: string | null, purist: boolean): Label & { hint: string } {
+  if (mod.enabled && !purist && (mod.state === "refused" || mod.state === "failed")) {
+    return { ...STATE_LABEL[mod.state], hint: mod.reason };
+  }
+  if (update) return { text: BADGE.update(update), tone: "warn", hint: BADGE.updateHint };
+  return { ...modKind(mod.kind), hint: modHint(mod.kind) };
 }

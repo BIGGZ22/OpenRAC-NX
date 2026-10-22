@@ -1,5 +1,6 @@
 <script lang="ts">
-  // A key-binding setting of a mod (a "keybind" setting, docs/settings.md in the SDK): one key cap
+  // A key-binding setting's control (a "keybind" setting, docs/settings.md in the SDK), in its row
+  // of ModSetting.svelte, which says what a waiting cap wants and what else has its key: one key cap
   // per bind it may have (one or two), each a button. Pressed, a cap waits for the next key, mouse
   // button or turn of the wheel and takes it; any key counts, Escape and Tab too, so cancelling is a
   // click elsewhere (or Cancel). The cross clears a bind. A bind the setting already has in its other
@@ -19,34 +20,35 @@
     withoutBind,
   } from "$lib/keybinds";
   import * as T from "$lib/modsText";
+  import Icon from "./Icon.svelte";
 
   let {
     setting: s,
-    conflicts = [],
     clashing = [],
+    capturing = $bindable(null),
+    onnote = () => undefined,
     onchange,
   }: {
     setting: PluginSetting;
-    /** The names of the mod's other keybinds of its group that share one of its inputs. */
-    conflicts?: string[];
     /** Its binds that one of those has too. */
     clashing?: string[];
+    /** The cap waiting for an input, or null: the row then says to press one. */
+    capturing?: number | null;
+    /** What the last change did besides binding (a swap), for the row's line; null to clear it. */
+    onnote?: (note: string | null) => void;
     onchange: (value: string) => void;
   } = $props();
 
   const binds = $derived(parseBinds(s.value));
   const slots = $derived(Array.from({ length: mostBinds(s) }, (_, i) => i));
 
-  /** The cap waiting for an input, or null. */
-  let capturing = $state<number | null>(null);
-  let note = $state<string | null>(null);
   let caps: HTMLButtonElement[] = $state([]);
   /** When a mouse button was taken: the click that follows it is not a new capture. */
   let boundAt = 0;
 
   function start(slot: number) {
     if (Date.now() - boundAt < 400) return;
-    note = null;
+    onnote(null);
     capturing = slot;
   }
 
@@ -55,14 +57,14 @@
     if (slot === null) return;
     capturing = null;
     const next = withBind(binds, slot, name);
-    note = binds.includes(name) && binds.indexOf(name) !== slot ? T.KEYBIND.swapped : null;
+    onnote(binds.includes(name) && binds.indexOf(name) !== slot ? T.KEYBIND.swapped : null);
     const value = formatBinds(next);
     if (value !== formatBinds(binds)) onchange(value);
     caps[Math.min(slot, next.length - 1)]?.focus();
   }
 
   function clear(slot: number) {
-    note = null;
+    onnote(null);
     capturing = null;
     onchange(formatBinds(withoutBind(binds, slot)));
   }
@@ -114,49 +116,39 @@
   });
 </script>
 
-<div class="setting keybind">
-  <span class="text"
-    ><strong>{s.name}</strong>{#if capturing !== null}<small class="hint"
-        >{T.KEYBIND.pressHint}
-        <button class="cancel" onclick={() => (capturing = null)}>{T.KEYBIND.cancel}</button></small
-      >{:else if s.description}<small>{s.description}</small>{/if}{#if conflicts.length}<small class="conflict"
-        >{T.alsoBound(conflicts)}</small
-      >{/if}{#if note}<small>{note}</small>{/if}</span
-  >
-  <div class="caps" role="group" aria-label={s.name}>
-    {#each slots as slot (slot)}
-      {@const name = binds[slot]}
-      {#if name !== undefined || slot === binds.length || capturing === slot}
-        <span class="cap-wrap">
-          <button
-            bind:this={caps[slot]}
-            class="cap"
-            class:waiting={capturing === slot}
-            class:empty={!name && capturing !== slot}
-            class:clash={!!name && clashing.includes(name)}
-            aria-label={capturing === slot
-              ? T.KEYBIND.press
-              : name
-                ? T.bindAria(s.name, bindSpoken(name))
-                : T.addBindAria(s.name)}
+<div class="caps" role="group" aria-label={s.name}>
+  {#each slots as slot (slot)}
+    {@const name = binds[slot]}
+    {#if name !== undefined || slot === binds.length || capturing === slot}
+      <span class="cap-wrap">
+        <button
+          bind:this={caps[slot]}
+          class="cap"
+          class:waiting={capturing === slot}
+          class:empty={!name && capturing !== slot}
+          class:clash={!!name && clashing.includes(name)}
+          aria-label={capturing === slot
+            ? T.KEYBIND.press
+            : name
+              ? T.bindAria(s.name, bindSpoken(name))
+              : T.addBindAria(s.name)}
+          onclick={() => {
+            start(slot);
+          }}
+          >{#if capturing === slot}{T.KEYBIND.press}{:else if name}{bindLabel(name)}{:else}<span class="add"
+              >{slot === 0 ? T.KEYBIND.none : T.KEYBIND.add}</span
+            >{/if}</button
+        >{#if name && capturing !== slot}<button
+            class="clear"
+            aria-label={T.clearBindAria(s.name, bindSpoken(name))}
+            title={T.clearBindAria(s.name, bindSpoken(name))}
             onclick={() => {
-              start(slot);
-            }}
-            >{#if capturing === slot}{T.KEYBIND.press}{:else if name}{bindLabel(name)}{:else}<span class="add"
-                >{slot === 0 ? T.KEYBIND.none : T.KEYBIND.add}</span
-              >{/if}</button
-          >{#if name && capturing !== slot}<button
-              class="clear"
-              aria-label={T.clearBindAria(s.name, bindSpoken(name))}
-              title={T.clearBindAria(s.name, bindSpoken(name))}
-              onclick={() => {
-                clear(slot);
-              }}>×</button
-            >{/if}
-        </span>
-      {/if}
-    {/each}
-  </div>
+              clear(slot);
+            }}><Icon name="x" size={14} /></button
+          >{/if}
+      </span>
+    {/if}
+  {/each}
 </div>
 
 <style>
@@ -164,20 +156,9 @@
   .caps {
     flex: none;
     display: grid;
-    grid-template-columns: repeat(2, 148px);
+    grid-template-columns: repeat(2, 156px);
     align-items: center;
     gap: 8px;
-  }
-
-  .cancel {
-    padding: 0;
-    margin-left: 4px;
-    font: inherit;
-    color: var(--lav);
-    text-decoration: underline;
-    background: none;
-    border: none;
-    cursor: pointer;
   }
 
   .cap-wrap {
@@ -193,9 +174,10 @@
     white-space: nowrap;
     text-align: center;
     justify-content: center;
-    padding: 5px 10px;
+    min-height: 38px;
+    padding: 6px 12px;
     font-family: var(--font-mono);
-    font-size: 0.8125rem;
+    font-size: 0.875rem;
     font-weight: 600;
     color: var(--text);
     background: var(--panel-hi);
@@ -210,8 +192,14 @@
     border-bottom-right-radius: 0;
   }
 
-  .cap:hover {
-    border-color: var(--amber);
+  @media (hover: hover) {
+    .cap:hover {
+      border-color: var(--amber);
+    }
+
+    .clear:hover {
+      color: var(--err);
+    }
   }
 
   .cap.empty {
@@ -241,6 +229,9 @@
   }
 
   .clear {
+    display: grid;
+    place-items: center;
+    min-width: 34px;
     padding: 0 8px;
     font-size: 0.9375rem;
     line-height: 1;
@@ -253,22 +244,10 @@
     cursor: pointer;
   }
 
-  .clear:hover {
-    color: var(--err);
-  }
-
   .cap:focus-visible,
   .clear:focus-visible {
     outline: 2px solid var(--amber);
     outline-offset: 2px;
-  }
-
-  .conflict {
-    color: var(--amber) !important;
-  }
-
-  .hint {
-    color: var(--amber) !important;
   }
 
   @media (max-width: 560px) {

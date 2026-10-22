@@ -1,6 +1,7 @@
 // The UI's shared state: settings, the library, navigation, toasts and the
 // job queue. Pages read `app` and call the functions below; nothing else
 // talks to the Rust side except through api.ts.
+import { hidePaths } from "./paths";
 import {
   api,
   pickIso,
@@ -218,6 +219,17 @@ export async function guard<T>(work: Promise<T>): Promise<T | undefined> {
     return await work;
   } catch (e) {
     toast(errorText(e), "error");
+    return undefined;
+  }
+}
+
+/** As guard, for a page players share screenshots of (Mods): the toast names no folder, only its
+ *  last part (lib/paths.ts). */
+export async function guardShown<T>(work: Promise<T>): Promise<T | undefined> {
+  try {
+    return await work;
+  } catch (e) {
+    toast(hidePaths(errorText(e)).text, "error");
     return undefined;
   }
 }

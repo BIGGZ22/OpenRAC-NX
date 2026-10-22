@@ -19,6 +19,7 @@ only a contributor reads under developer tools (the last section).
 | The tabs: My mods, Level editor, Models and textures     | `pages/Mods.svelte`                                     | the level editor can open the game                                        |
 | My mods → Add a mod (a link, a file, a folder, a drop)   | `components/AddMod.svelte`                              | My mods; the link field when the game has a port that plays               |
 | My mods → Gameplay mods (native and script mods, Purist) | `components/PluginsPanel.svelte`                        | the game has a port that plays (its `play` action is not `planned`)       |
+| A gameplay mod's own page (its settings)                 | `components/ModPage.svelte`, `ModSetting.svelte`        | its row opened (`lib/modNav.svelte.ts`), in place of My mods' lists       |
 | My mods → Textures, models and levels (data packs)       | `components/PacksPanel.svelte`                          | the level editor can open the game                                        |
 | My mods → "Want to make your own?" (to the Level editor) | `pages/Mods.svelte`                                     | under the lists                                                           |
 | Level editor: Open a level in Godot, Pack your changes   | `pages/Mods.svelte` (tab `editor`)                      | the level editor can open the game                                        |
@@ -80,58 +81,90 @@ texture and model pack to the packs.
 
 ## Gameplay mods (PluginsPanel.svelte)
 
+An overview: a row per mod, and each mod's settings on a page of its own
+(ModPage.svelte), one click away. The main path reads left to right on a row:
+switch it on, open it, play (Play with mods, in the page's head).
+
 ### The panel's head
 
-| Element           | Words                                                                   | Notes                                                                               |
-| ----------------- | ----------------------------------------------------------------------- | ----------------------------------------------------------------------------------- |
-| Title, line       | `T.PANEL.title`, `T.PANEL.sub` (+ `T.PANEL.orderHint` with two or more) | the hint's tooltip is `T.PANEL.moveDownTitle`                                       |
-| Check for updates | `T.PANEL.checkUpdates`                                                  | only when a mod came from a link; also runs by itself once a day, silently          |
-| Purist mode       | `T.PURIST.title`, `T.PURIST.panelLine`                                  | the panel's last row; the launcher-wide setting (Settings: `T.PURIST.settingsLine`) |
+| Element           | Words                                  | Notes                                                                               |
+| ----------------- | -------------------------------------- | ----------------------------------------------------------------------------------- |
+| Title             | `T.PANEL.title`                        |                                                                                     |
+| Check for updates | `T.PANEL.checkUpdates`                 | only when a mod came from a link; also runs by itself once a day, silently          |
+| Load order        | `T.PANEL.orderTitle`                   | a small line under the list, with two or more mods                                  |
+| Purist mode       | `T.PURIST.title`, `T.PURIST.panelLine` | the panel's last row; the launcher-wide setting (Settings: `T.PURIST.settingsLine`) |
 
 ### States of the panel
 
-| State                        | What shows                                                           | Words                                   |
-| ---------------------------- | -------------------------------------------------------------------- | --------------------------------------- |
-| **Empty** (no mod installed) | a line; Purist mode under it                                         | `T.PANEL.empty`                         |
-| **List cannot be read**      | the error, in `--err`                                                | the error text from core (plugins.rs)   |
-| **Purist mode on**           | a notice above the list with Turn off; rows dimmed, no state on them | `T.PURIST.onNotice`, `T.PURIST.turnOff` |
-| **Checking for updates**     | spinner on Check for updates                                         | answer `T.updatesFound(n, errors)`      |
-| **Updating a mod**           | spinner on its Update button                                         | `T.updated`, or the error               |
-| A change refused             | a line under the head                                                | the core's reason                       |
-
-**Why a mod from a link cannot be installed** (core/src/remote.rs and
-plugins.rs, `why`): not for this game's disc; a pack for another game; needs a
-newer mod interface; not built for this computer; native mods do not run on this
-system (Android); no release yet (native mods install built); no release has it
-built for this computer; its release has no SHA256SUMS. At install, refused:
-SHA256SUMS does not list the file, its SHA-256 differs, the archive's manifest
-is not the one shown.
+| State                        | What shows                                                | Words                                   |
+| ---------------------------- | --------------------------------------------------------- | --------------------------------------- |
+| **Empty** (no mod installed) | a line; Purist mode under it                              | `T.PANEL.empty`                         |
+| **List cannot be read**      | the error, in `--err`, its folders hidden (Reason.svelte) | the error text from core (plugins.rs)   |
+| **Purist mode on**           | a notice above the list with Turn off; rows dimmed        | `T.PURIST.onNotice`, `T.PURIST.turnOff` |
+| **Checking for updates**     | spinner on Check for updates                              | answer `T.updatesFound(n, errors)`      |
+| A change refused             | a line under the head, its folders hidden                 | the core's reason                       |
 
 ### An installed mod's row
 
-| Element                            | Words                                                                                                                                                                                                       | Notes                                                                            |
-| ---------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------- |
-| Switch                             | aria `T.useAria(name)`                                                                                                                                                                                      | off and disabled when it cannot be switched on                                   |
-| Name, version, author, description | from the manifest                                                                                                                                                                                           |                                                                                  |
-| Kind                               | `T.KIND_LABEL.native` / `.script` / `.pack`, tooltip `T.KIND_HINT.*` (lib/plugins.ts `modHint`)                                                                                                             | a dot and words, under the description                                           |
-| State                              | `T.STATE_LABEL.*` via lib/plugins.ts `pluginState`                                                                                                                                                          | only `refused` and `failed`: the switch already says on or off                   |
-| Move up / down                     | aria `T.moveUpAria`, `T.moveDownAria`; titles `T.PANEL.moveUpTitle`, `T.PANEL.moveDownTitle`                                                                                                                |                                                                                  |
-| Menu                               | aria `T.moreAria`; items `T.PANEL.keepVersion` / `T.PANEL.letUpdate` (from a link only), `T.PANEL.homepage` (when it has one), `T.PANEL.remove` (in `--err`, confirms with `T.removeConfirm`)               |                                                                                  |
-| Source (from a link)               | `T.fromSource(owner/repo)`, `T.keptAt(version)` when pinned                                                                                                                                                 | after the kind                                                                   |
-| Update button                      | `T.updateTo(version)`                                                                                                                                                                                       | after the source, when the last check found a newer release and it is not pinned |
-| Shared hook point                  | `T.sharesWith(names)`, in amber                                                                                                                                                                             | when another on mod takes the same hook point                                    |
-| Settings                           | one row each: a switch (bool), a segmented control (2 or 3 choices), radios (more), a number field (int, float) with its range `T.rangeText`, a text field (string); a refused number says `T.settingTakes` | folded under a Settings button (`T.PANEL.settings`), only while the mod is on    |
-| Developer details                  | id, folder, hooks (`T.PANEL.hooks`), license (`T.PANEL.license`), source (`T.PANEL.source`)                                                                                                                 | developer tools on                                                               |
+| Element    | Words                                                                                | Notes                                                                                      |
+| ---------- | ------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------ |
+| Switch     | aria `T.useAria(name)`                                                               | off and disabled when it cannot be switched on (its title says why)                        |
+| Name, line | from the manifest: the description cut to one line                                   | the whole middle of the row opens the mod's page (aria `T.settingsAria(name)`)             |
+| Badge      | one, most pressing first (lib/plugins.ts `modBadge`)                                 | `T.STATE_LABEL.refused` / `.failed`, else `T.BADGE.update(version)`, else `T.KIND_LABEL.*` |
+| Settings › | `T.PANEL.settings`, or `T.PANEL.details` for a mod with no settings                  | the row's affordance; hovered, it turns amber                                              |
+| Menu       | aria `T.moreAria`; `T.PANEL.moveUp`, `moveDown`, `openFolder`, `remove` (in `--err`) | Remove confirms with `T.removeConfirm`                                                     |
 
-**States of an installed mod** (`T.STATE_LABEL`, decided in lib/plugins.ts):
+## A mod's own page (ModPage.svelte)
 
-| Key       | Words              | When                                                          | The line under it                                     |
-| --------- | ------------------ | ------------------------------------------------------------- | ----------------------------------------------------- |
-| `on`      | On                 | on, and it loaded (or will); not shown, the switch says it    |                                                       |
-| `off`     | Off                | switched off; not shown, the switch says it                   | `T.cannotSwitchOn(why)` when it cannot be switched on |
-| `purist`  | Not in purist mode | on, and Purist mode is on; not shown, the notice says it      |                                                       |
-| `refused` | Cannot load        | on, and a check refuses it now                                | the reason, in `--err`                                |
-| `failed`  | Not loaded         | on, and the game's last start did not load it (`status.json`) | "Not loaded at the last start: …"                     |
+Opened from its row; `lib/modNav.svelte.ts` keeps which (a history entry
+`#mod=<id>`, so Back, a mouse's back button and Escape return to the list,
+and the row takes the focus back). `?mod=<id>` opens one at start. The game
+list, the head and Play with mods stay; the tabs, Add a mod and the packs make
+way for the page.
+
+| Part          | What shows                                                                                                                                                | Words                                                                                                     |
+| ------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------- |
+| Where you are | a back button, then My mods › the mod's name                                                                                                              | `T.MOD_PAGE.back`, `crumbRoot`                                                                            |
+| Head          | its name, version, author, source (`T.fromSource`, `T.keptAt`), what it runs, its description in two lines                                                | `T.KIND_LABEL.*`, tooltip `T.KIND_HINT.*`                                                                 |
+| Actions       | Update (when the check found one and it is not kept), its switch with On / Off, the menu: keep this version, its page, its folder, Remove                 | `T.MOD_PAGE.update`, `on`, `off`, `T.PANEL.keepVersion` / `letUpdate`, `homepage`, `openFolder`, `remove` |
+| Notices       | Purist mode on; why it cannot load (`--err`); why it cannot be switched on; off, with settings kept; a shared hook point                                  | `T.PURIST.onNotice`, the core's reason, `T.cannotSwitchOn`, `T.MOD_PAGE.offNote`, `T.sharesWith`          |
+| About         | folded: the whole description, what it runs and what that means, source, license, its folder with Open its folder; with developer tools, its id and hooks | `T.MOD_PAGE.about`, `aboutKind`                                                                           |
+| Presets       | a segmented row, Default first unless a preset is `default`; the one the values match is lit                                                              | `T.MOD_PAGE.presets`, `T.KEYBIND.defaults`                                                                |
+| Saving        | beside the presets: Changes save as you make them; Saving…; Saved. Used from the game's next start; Not saved (and why, under it)                         | `T.SAVE.*`                                                                                                |
+| Reset all     | every setting back to its default, after a question                                                                                                       | `T.MOD_PAGE.resetAll`, `resetAllConfirm`                                                                  |
+| Sections      | a panel per manifest `group`, in the order each first appears, the ungrouped first                                                                        | `T.GROUP_TITLE.only` (one section), `general`, `controls(name)` (a group of keybinds)                     |
+| No settings   | a line                                                                                                                                                    | `T.MOD_PAGE.noSettings`                                                                                   |
+
+### A setting's row (ModSetting.svelte)
+
+Its name, one line of its description (the info button unfolds the rest:
+`T.SETTING.more` / `less`), its control on the right, Reset when it is not at
+its default (`T.SETTING.reset(name, default)`), and "Saved" by its name for a
+moment after each save. Every control applies as it changes, with no Enter
+(lib/autosave.ts): a slider and typed text after it settles (350 and 600 ms),
+a switch, a choice, a preset or a key at once; one save at a time, in order.
+
+| Type                            | Control                                                                                                                                                                         |
+| ------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `int`, `float` with min and max | a slider on the manifest's steps (lib/settingValues.ts), a mark at the default, its value in a field beside it: typed, it is snapped and clamped; the arrows step, Shift by ten |
+| `int`, `float` otherwise        | the field alone                                                                                                                                                                 |
+| `bool`                          | a switch                                                                                                                                                                        |
+| `choice`                        | a segmented control (up to four short choices), else a select                                                                                                                   |
+| `keybind`                       | the key caps (KeyBindSetting.svelte); waiting, the row's line says `T.KEYBIND.pressHint` with Cancel; a clash says `T.alsoBound`                                                |
+| `string`                        | a field the row's width                                                                                                                                                         |
+
+The values are kept where they always were, the per-user `plugins.json`
+(core/src/plugins.rs): the page saves each setting with `plugins_set_setting`
+as before, so the file's format does not change.
+
+### No folder in plain view
+
+Players share screenshots of this tab, so no path shows outside a folded
+section: a mod's folder only in its page's About, opened with Open its
+folder; the developer view folded under "For developers". A message that
+names a path (a refusal, an error, a job's line, a toast) says the file's or
+folder's last part instead (lib/paths.ts `hidePaths`), with the message as it
+came under a folded Details (Reason.svelte).
 
 **Reasons it cannot load or be switched on** (core/src/plugins.rs): it is not for
 this game; not for this disc; needs a newer mod interface; not built for this
@@ -179,10 +212,11 @@ with `curl`) and a `.zip` picker there.
 
 ## Developer view
 
-With developer tools on (Settings), each gameplay mod adds its id, folder, hook
-points, license and source, and a link's preview adds the commit read, each
+With developer tools on (Settings), each gameplay mod's About adds its id and
+hook points (its folder, license and source are there for everyone, folded),
+and a link's preview adds the commit read, each
 mod's folder, release asset and tag, interface version and discs. Under My mods
-and Level editor a dashed "For developers" panel (`T.PAGE.developerTitle`)
+and Level editor a dashed, folded "For developers" panel (`T.PAGE.developerTitle`)
 holds the version, its folders, the command lines behind the buttons
 (CommandBox) and buttons for the level projects, the packed levels and the
 editor's documentation; Models and textures shows each step's command under it.

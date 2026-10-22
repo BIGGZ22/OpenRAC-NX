@@ -8,13 +8,15 @@ import {
   PAGE,
   PANEL,
   PURIST,
+  MOD_PAGE,
+  SAVE,
+  SETTING,
   KIND_LABEL,
   STATE_LABEL,
   added,
   crashModsLine,
   installedFrom,
   rangeText,
-  settingTakes,
   sharesWith,
   updatesFound,
   type Label,
@@ -47,7 +49,7 @@ describe("the label maps", () => {
 
 describe("the page's words", () => {
   it("stay short: a line each, the longer why in a tooltip", () => {
-    for (const group of [ADD, ASSETS, EDITOR, PACKS, PAGE, PANEL, PURIST]) {
+    for (const group of [ADD, ASSETS, EDITOR, PACKS, PAGE, PANEL, PURIST, MOD_PAGE, SAVE, SETTING]) {
       for (const [key, text] of Object.entries(group)) {
         if (typeof text !== "string" || key.endsWith("Url") || key.endsWith("Title")) continue;
         expect(text.length, `${key}: ${text}`).toBeLessThanOrEqual(120);
@@ -71,12 +73,11 @@ describe("the sentences", () => {
     expect(added.packFailed("pack.zip", "")).toBe("pack.zip: it could not be added");
   });
 
-  it("list shared mods, ranges and setting refusals", () => {
+  it("list shared mods and ranges", () => {
     expect(sharesWith([])).toBe("");
     expect(sharesWith(["A", "B", "C"])).toContain("A, B and C");
     expect(rangeText(50, 110)).toBe("50 to 110");
     expect(rangeText(undefined, 3)).toBe("up to 3");
-    expect(settingTakes("Speed", "", true)).toBe("Speed takes a whole number.");
     expect(crashModsLine(["lock-strafe"])).toMatch(/^Gameplay mods were on \(lock-strafe\)\./);
   });
 });
