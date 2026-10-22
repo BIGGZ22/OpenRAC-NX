@@ -1,34 +1,33 @@
 # OpenRAC Launcher
 
-A desktop app for the Ratchet & Clank games through OpenRAC, for all five
-games. It is to OpenRAC what [OpenGOAL's launcher](https://github.com/open-goal/launcher)
-is to Jak and Daxter: a player sets a game up from the image of their own
-disc, plays the **native PC port**, and can open the levels in Godot to edit
-them. **There is no emulation**: the launcher never runs the retail program
-or a model of the console ([docs/port](../docs/port/README.md)).
+[![checks](https://github.com/OpenRAC/OpenRAC/actions/workflows/checks.yml/badge.svg)](https://github.com/OpenRAC/OpenRAC/actions/workflows/checks.yml)
+[![openrac.dev](https://img.shields.io/badge/community-openrac.dev-e8a317)](https://openrac.dev/)
+[![Discord](https://img.shields.io/badge/Discord-join%20us-5865F2?logo=discord&logoColor=white)](https://discord.gg/Sfd2B54PDG)
 
-Ratchet & Clank (PAL) builds and runs from the launcher on Windows, Linux
-and macOS: **Build the game** compiles its native port ([port/](../port/README.md)),
-**Play** starts it. The port is not complete yet, and the other versions
-are not playable yet: their Play says what is missing. With
-**developer tools** switched on in Settings, the launcher is also a
-contributor's console: place what each decompilation's build needs, set up
-the toolchains, build, check, and see each decompilation's progress. Either
-way it runs the same commands a contributor types, from the user's own
-OpenRAC checkout, and shows their output live.
+OpenRAC's desktop launcher for the Ratchet & Clank games. It sets a game up
+from your own disc, plays its native PC port, and opens its levels in Godot
+for editing. It is OpenRAC's counterpart to
+[OpenGOAL's launcher](https://github.com/open-goal/launcher) for Jak and
+Daxter; nothing here emulates the console.
 
-**An installed launcher needs nothing but your disc image.** Its installer
-carries a copy of what the launcher uses: the game built for the system, the
-set-up and level tools and a Python to run them
+It covers all five games in OpenRAC: Ratchet & Clank (PAL and NTSC-U), Going
+Commando, Up Your Arsenal, Deadlocked and Size Matters. Ratchet & Clank (PAL)
+is the only version playable today. The others can be browsed and, where their
+projects support it, set up, built and checked; each game's Play button says
+what is still missing.
+
+An installed launcher needs only your disc image to play. Its installer
+carries a copy of the game built for your system, the set-up and level tools,
+and a Python to run them
 ([tools/bundle_standalone.py](../tools/bundle_standalone.py); the
 [launcher workflow](../.github/workflows/launcher.yml) puts it together). The
-launcher uses that copy when it finds no OpenRAC checkout, and a contributor's
-checkout, when there is one, goes first. With the copy there is nothing to
-build: the steps are the disc, the levels, Play.
+launcher uses that copy when it finds no OpenRAC checkout; a contributor's
+checkout goes first. With the copy there is nothing to build: the steps are
+the disc, the levels, Play.
 
-It is a [Tauri 2](https://tauri.app/) app: a Rust side (`core/` and
-`src-tauri/`) that does every file and process operation, and a Svelte 5 UI
-(`src/`) styled after [openrac.dev](https://openrac.dev).
+It is a [Tauri 2](https://tauri.app/) app: Rust for every file and process
+operation (`core/` and `src-tauri/`), and Svelte 5 for the UI (`src/`), styled
+after [openrac.dev](https://openrac.dev).
 
 | Games                                                                                 | A game                                                                                           |
 | ------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------ |
@@ -48,188 +47,136 @@ OpenRAC's own rules apply here too ([AGENTS.md](../AGENTS.md),
 [CONTRIBUTING.md](../CONTRIBUTING.md), [SOURCING.md](../docs/policy/SOURCING.md)):
 the launcher never downloads, uploads or bundles a game.
 
-## Setting a game up from your disc
+## Using the launcher
 
-OpenGOAL's flow, step for step ([docs/INTEGRATION.md](docs/INTEGRATION.md#setting-a-game-up)):
+### Quick start
 
-1. On a first start the Games page asks for **the folder with your
-   PlayStation 2 games**. The launcher looks through it (two folders deep) for
-   images of games it knows, telling a disc by the boot program its
-   `SYSTEM.CNF` names, whatever the file is called
-   ([core/src/discs.rs](core/src/discs.rs)), and sets each playable one up
-   without further questions. The folder can be changed in Settings; a game's
-   own **Set up from your disc** still asks for a single image (`.iso`, or a
-   `.chd` made with `chdman createdvd`) when the folder holds none. The
-   extractor and the game read a plain image by sector, so a `.chd` is
-   unpacked once into `<install>/discs/<name>.iso` first
-   ([core/src/chd.rs](core/src/chd.rs)).
-2. The launcher runs OpenRAC's extractor ([tools/extractor.py](../tools/extractor.py))
-   as a job: it copies the disc's files into the install folder and checks
-   the boot executable against the builds OpenRAC knows
-   (`games/<game>/game.json`). An unknown or damaged image is refused, with
-   OpenGOAL's error number for the same failure.
-3. After the set-up the launcher goes on to **Get the levels ready** by itself
-   (the worlds the game draws from, read from the disc: half a minute, once),
-   and then has the game **check the levels**: it reads every one as it will
-   when played and names any it cannot draw. Play is offered only after that
-   check; levels that fail it are read from the disc again, once, and checked
-   again. Without it an export cut short was a black world behind the HUD.
-4. In a checkout, **Build the game** runs [tools/build_port.py](../tools/build_port.py): it
-   compiles the native port for this computer (a few minutes the first time).
-   **Rebuild the game**, in the game's menu, deletes what was built and
-   compiles everything again; Play never builds a game that is built. After
-   an update that changed what the game is built from (a new version, or a
-   `git pull` that touched `port/`, the game's decompilation or the build),
-   the game page recommends a rebuild in a notice with **Rebuild now**; Play
-   still starts the build there is. A pull of docs or of another game
-   changes nothing.
-5. **Play** starts the port with the set-up data.
+1. Start the launcher and choose the folder with your PlayStation 2 disc
+   images. It looks two folders deep and recognises a disc by the boot program
+   its `SYSTEM.CNF` names, whatever the image is called. A `.chd` is accepted
+   and unpacked once into the install folder
+   ([core/src/discs.rs](core/src/discs.rs), [core/src/chd.rs](core/src/chd.rs)).
+2. The launcher sets the game up from the disc with
+   [tools/extractor.py](../tools/extractor.py), then prepares its levels and
+   checks that the game can draw each one. Play is offered after that check;
+   a level that fails is read from the disc once more and checked again.
+3. Press **Play**. In a checkout, **Build the game** first builds the native
+   port ([tools/build_port.py](../tools/build_port.py)); an installed launcher
+   already carries a build.
 
 **Remove the set-up** deletes what set-up made, as OpenGOAL's uninstall does;
-the disc image and saves are kept.
+the disc image and saves are kept. The detailed flow is in
+[docs/INTEGRATION.md](docs/INTEGRATION.md#2-setting-a-game-up).
 
-## On a game's page
+### A game's page
 
-- **One main button**, always in the same place, says the next thing to do:
-  Set up from your disc, Build the game, Play. What is done less often
-  (rebuild, open the folder, the activity log, remove the set-up) is in the
-  menu beside it. Every game has this page, the same for all of them; the
-  list on the left switches between them, and the Games tab opens on the one
-  you used last.
-- **Save files**: the port's memory card (`~/.local/share/openrac/memcard/<serial>/`
-  on Linux) with each slot's planet, bolts and save time, backups you can
-  restore, and the folder. **Edit** opens a slot of Ratchet & Clank in the save
-  editor: the planet it loads on, bolts, health upgrades, weapons and gadgets,
-  ammo, gold weapons, gold bolts, planets and skill points. **Advanced save
-  editing** (Settings) adds every field and each part of the file as raw bytes,
-  for debugging. It refuses to write while the game runs
-  with that card, backs the card up before every write, and offers Undo
+Every game has the same page. The one main button always says the next thing
+to do: **Set up from your disc**, **Build the game**, or **Play**. Less common
+actions (rebuild, open the folder, the activity log, remove the set-up) are in
+the menu beside it. The list on the left switches games, and the Games tab
+opens on the one you used last.
+
+- **Saves**: the port's memory card (`~/.local/share/openrac/memcard/<serial>/`
+  on Linux) shows each slot's planet, bolts and save time, with backups you
+  can restore. **Edit** opens a slot in the save editor: planet, bolts, health
+  upgrades, weapons, gadgets, ammo, gold weapons, gold bolts, planets and
+  skill points. **Advanced save editing** adds every field and the raw bytes.
+  The editor refuses to write while the game runs, backs the card up before
+  every write, and offers Undo
   ([docs/ARCHITECTURE.md](docs/ARCHITECTURE.md#the-save-editor)).
-- **When the game crashes**: the game's page says "The game stopped
-  unexpectedly". Your saves are kept. To help us fix it, press **Copy
-  report** and paste it in a [GitHub issue](https://github.com/OpenRAC/OpenRAC/issues)
-  or on the Discord, or **Save report** for a .zip in your Downloads folder
-  to attach. Say what you were doing. Nothing personal goes in: your home
-  folder reads `~`.
-- **Logs and crash reports**, under the save files: each time you played
-  and each crash, newest first, with the same Copy and Save, under **Help**
-  beside the saves. A recent crash marks the game in the list.
-  **Detailed logs** makes the game write more, for
-  when we ask for it.
-- **Differences from the original**, for a game with a port: what it does
-  otherwise than the PS2 game, and why, in three groups. **Game fixes** have
-  a switch each: off, the game plays as the console does (the 4:3 culling at
-  the sides of a wide picture, for one). The switch is the port's own setting
-  (`fix_... = 1` in its settings file), the same the game's Options menu
-  changes, and it counts from the game's next start. **Kept from crashing**
-  are never switched off, and **Playing on a PC** is for the record. The list
-  is `port/game/<game>/differences.json` (the checkout's, else the copy the
-  launcher carries; [docs/port/SETTINGS.md](../docs/port/SETTINGS.md#8-game-fixes-and-the-differences-from-the-original)).
-- **Level editor**: under **Mods** (below), and in the game's menu.
-- **Two discs of a game, for developers**: with developer tools on and both
-  a game's PAL and NTSC-U images in the games folder, a small **Disc** switch
-  under Play picks which one the page plays; Play, the levels, saves, logs and
-  crash reports follow it, and the choice is remembered. Each disc keeps its
-  own set-up, levels and build: switching moves the other's set-up aside
-  (`iso_data/<game>@<version>`), never reads it again or deletes it
-  ([core/src/disc_choice.rs](core/src/disc_choice.rs)). Players never see it,
-  and with one disc nothing changes.
-- **Layout**: Settings → Launcher switches between Compact (the default:
-  the game's name and its main button side by side) and Classic, stacked and
-  centred. Compact is one stylesheet, `src/layouts/compact.css`.
+- **Crashes**: the game page says when the game stopped unexpectedly, and your
+  saves are kept. **Copy report** gives you text for a
+  [GitHub issue](https://github.com/OpenRAC/OpenRAC/issues) or Discord;
+  **Save report** writes a `.zip` to Downloads. Home paths are shortened to
+  `~`, so nothing personal goes in.
+- **Logs**: every play session and crash is kept under **Help**, newest first,
+  with the same Copy and Save actions. A recent crash marks the game in the
+  list. **Detailed logs** makes the game write more when we ask for it.
+- **Differences from the original**: for a game with a port, this lists what
+  it does differently and why. **Game fixes** have switches; **Kept from
+  crashing** and **Playing on a PC** are for the record. The list is
+  `port/game/<game>/differences.json`
+  ([docs/port/SETTINGS.md](../docs/port/SETTINGS.md#8-game-fixes-and-the-differences-from-the-original)).
+- **Two discs of a game**: with developer tools on and both a game's PAL and
+  NTSC-U images present, a small **Disc** switch under Play chooses which one
+  the page uses. Each disc keeps its own set-up, levels and build; switching
+  moves the other aside as `iso_data/<game>@<version>` and never deletes it
+  ([core/src/disc_choice.rs](core/src/disc_choice.rs)).
+- **Layout**: Settings → Launcher switches between Compact (the default) and
+  Classic. Compact puts the game's name and its main button side by side
+  (`src/layouts/compact.css`).
 
-## Mods
+## Mods and level editing
 
-**Gameplay mods** come first for a game the port plays: native mods, small
-programs the game loads at its start that change how it plays (Ratchet &
-Clank's lock-strafe is the first, in
-[OpenRAC/rac1-mods](https://github.com/OpenRAC/rac1-mods)), and script mods,
-Luau files the game runs in a sandbox (rac1-mods' button-swap). Each row says
-which: **Runs code on this computer**, or **Runs scripts (sandboxed)**. **Add a .zip**
-or a folder (or drop one on the page) installs one into the game's set-up
-folder, `<data>/plugins/<id>`; each has a switch, its place in the load
-order, its settings from its manifest and Remove in its menu, and says in a
-few words why it cannot load when it cannot (another disc, a newer mod
-interface, a missing or conflicting mod, or what the game said at its last
-start). The launcher writes the list the game reads, `<data>/plugins/plugins.json`;
-changes count from the game's next start.
+**Gameplay mods** are native mods, small programs the game loads at start, or
+script mods, Luau files run in a sandbox. Each row says which. Add a `.zip` or
+a folder (or drop one on the page) to install it into
+`<data>/plugins/<id>`; each mod has a switch, a place in the load order, its
+settings and Remove, and says why it cannot load when it cannot. Changes count
+from the game's next start. **Purist mode** starts the game with none of them.
+Android loads no native mods; its launcher has no Mods tab yet.
 
-**Add from a link** takes a repository's address (`https://github.com/OpenRAC/rac1-mods`,
-or one of its releases): the launcher reads the mods in it and shows each,
-with the repository and its owner, the author, and whether this computer's
-game can take it, before anything is installed. A gameplay mod comes built,
-as its release's `.zip` for this computer, and is installed only when the
-release's `SHA256SUMS` lists it with the same hash; nothing is ever compiled
-on your computer, and git is not needed (GitHub is read over HTTPS with
-curl). A script mod needs no build: it is its release's `.zip`, checked the same
-way, or the repository's own files when there is no release. A texture and
-model pack comes from the repository's files and goes to the packs. A mod added from a link remembers where it came from
-(`<data>/plugins/sources.json`): **Check for updates** (and once a day by
-itself) offers **Update to X** on its row, and **Keep this version** in its
-menu stops that. Another git host than GitHub works for packs, with git
-installed ([docs/port/MODS.md](../docs/port/MODS.md#10-mods-in-a-git-repository)).
-Android does not load native mods (the system refuses code an app wrote);
-script mods would run there, but its launcher has no Mods tab yet. **Purist mode** (on the tab and in
-Settings) starts the game with none of them. How mods work and how to write
-one: [docs/port/MODS.md](../docs/port/MODS.md) and the [SDK](../sdk).
+**Add from a link** takes a GitHub repository or release. The launcher shows
+the mods, their author and whether this computer's game can take them before
+installing anything. A gameplay mod is installed from its release `.zip` only
+when `SHA256SUMS` lists the same hash; nothing is compiled locally. A script
+mod is its release `.zip` or the repository's files. A texture and model pack
+comes from the repository and goes to the packs. A linked mod remembers its
+source in `<data>/plugins/sources.json`; **Check for updates** (also once a
+day) offers **Update to X**, and **Keep this version** stops it. Other git
+hosts work for packs if git is installed
+([docs/port/MODS.md](../docs/port/MODS.md#10-mods-in-a-git-repository)).
 
-The Mods tab also has, for each game that can be edited (Ratchet & Clank, PAL and
-NTSC-U), the three steps of modding in order: **Open the editor** (choose a
-level: each is a Godot 4 project of its own under `assets/levels/<game>`, so
-only that level loads; the first time they are read from the disc), **Pack** (turns the
-edits into the game's own level data, in `assets/packed/<game>`) and **Play**
-with them (the port's `--mods`). The disc image is never changed. With
-developer tools on, the page also shows the folders and the three commands
-behind the buttons ([editor/README.md](../editor/README.md#pack-your-edits)).
+**Level editing** is three steps for each editable game: **Open the editor**
+(choose a level; each is its own Godot 4 project under `assets/levels/<game>`),
+**Pack** the edits into `assets/packed/<game>`, and **Play** with them. The
+disc image is never changed. With developer tools on, the page also shows the
+folders and commands behind the buttons
+([editor/README.md](../editor/README.md#pack-your-edits)).
 
-Going Commando, Up Your Arsenal and Deadlocked (NTSC-U) are there in early
-access: their levels open in Godot to look around, and **Models and
-textures** works for them (their levels are read for it with **Read the
-levels**, since their game page has no Play yet). The page says what is not
-there: edits are not packed back into those games, and they are not
-playable, so their packs wait in Your mods until they are
-([editor/README.md](../editor/README.md#the-later-games-early-access)).
-
-Below them, **Models and textures**: export a level's models (glTF, with
-their skeletons) and textures (PNG) to a folder that opens when it is ready,
-import the edited folder back as an overrides pack, and manage the packs:
-on or off, their order, remove, add a .zip or a folder (or drop one on the
-page). Play with your mods puts the packed levels and the packs that are on
+Going Commando, Up Your Arsenal and Deadlocked (NTSC-U) are early access:
+their levels open in Godot and **Models and textures** works, but edits are
+not packed back and the games are not playable yet. Their packs wait in Your
+mods ([editor/README.md](../editor/README.md#the-later-games-early-access)).
+**Models and textures** exports a level's models (glTF, with skeletons) and
+textures (PNG), imports edited folders back as overrides, and manages the
+packs: on or off, order, remove, add a `.zip` or folder, or drop one on the
+page. **Play with your mods** puts the packed levels and the packs that are on
 together first ([editor/MODDING.md](../editor/MODDING.md)).
-
-What a contributor needs and a player does not is behind **Developer tools**
-(Settings → Launcher): decompilation progress, disc serials, the Tasks tab,
-file names and sizes of the saves, and the checks' details in Settings.
 
 ## Develop
 
-You need Node 20+, Yarn (the version `package.json` names, through Corepack:
-`corepack enable`) and Rust (stable). For the desktop app on Linux, Tauri's
-system libraries too (Debian and Ubuntu:
+With **developer tools** on (Settings → Launcher), the app also shows
+decompilation progress, disc serials, the Tasks tab, save file names and
+sizes, and the checks' details.
+
+You need Node 20+, Yarn (the version in `package.json`, through Corepack:
+`corepack enable`) and Rust stable. On Linux, install Tauri's system libraries
+(Debian and Ubuntu:
 `libwebkit2gtk-4.1-dev libgtk-3-dev librsvg2-dev libsoup-3.0-dev`; see
-[Tauri's prerequisites](https://tauri.app/start/prerequisites/) for the others).
-On Windows, Tauri builds with Rust's MSVC toolchain; if your default is the GNU
-one, `rustup override set stable-x86_64-pc-windows-msvc` in this folder.
+[Tauri's prerequisites](https://tauri.app/start/prerequisites/) for others).
+On Windows, use Rust's MSVC toolchain; if your default is GNU, run
+`rustup override set stable-x86_64-pc-windows-msvc` in this folder.
 
 ```sh
 cd launcher
 yarn install
-yarn dev           # the UI in a browser at http://localhost:1430, with mock data (no Rust needed)
+yarn dev           # UI in a browser at http://localhost:1430, with mock data
 yarn tauri dev     # the desktop app, with the real Rust side
 yarn tauri build   # an installer for this platform, in target/release/bundle/
 ```
 
-The browser preview (`yarn dev`) reads the real `games/*/game.json`,
-`progress/summary.json` and `actions.json`, and makes up the rest (which
-games are set up, what a job prints): see `src/lib/mock.ts`. Add `?setup` to
-the address for the first-run screen, `?version=rac1/pal` for a game page,
-`?page=tasks` for Tasks.
+The browser preview reads the real `games/*/game.json`,
+`progress/summary.json` and `actions.json`, and makes up the rest (which games
+are set up, what a job prints): see `src/lib/mock.ts`. Add `?setup` for the
+first-run screen, `?version=rac1/pal` for a game page, or `?page=tasks` for
+Tasks.
 
-The installers are also built by GitHub
-([launcher.yml](../.github/workflows/launcher.yml)) for Windows, Linux and
-macOS, on every change to `launcher/` on `master` and on pull requests:
-they are the run's artifacts, under Actions. A tag `launcher-v<version>`
-puts them on a draft release as well. They are not signed.
+GitHub builds installers for Windows, Linux and macOS on every change to
+`launcher/` on `master` and on pull requests; they are the run's artifacts
+under Actions. A tag `launcher-v<version>` also puts them on a draft release.
+The installers are not signed
+([launcher.yml](../.github/workflows/launcher.yml)).
 
 ## Check
 
@@ -242,9 +189,9 @@ python3 -m unittest discover -s ../tools               # includes the extractor'
 ```
 
 `cargo test -p openrac-launcher-core` also checks `actions.json` against the
-checkout: every version key exists in a game.json, no duplicate ids, only known
-placeholders, every `docs` path exists. CI runs all of these
-(`.github/workflows/checks.yml`, the `launcher` job).
+checkout: every version key exists in a `game.json`, no duplicate ids, only
+known placeholders, and every `docs` path exists. CI runs all of these in
+`.github/workflows/checks.yml`.
 
 ## Layout
 
@@ -258,66 +205,33 @@ launcher/
 │   ├── lib/            api.ts (commands and types), mock.ts (browser preview), app state, queue, themes
 │   ├── components/     header, game card, action card, progress bar, path field, toasts, icons
 │   └── pages/          Library, Game (player and developer views), Tasks, Settings (also the first run)
-├── public/             the wrench logo and favicon (from openrac-site), game backdrops and previews (img/)
-└── docs/               ARCHITECTURE, INTEGRATION, STYLE
+├── public/             the wrench logo and favicon (from openrac-site), game backdrops and previews
+└── docs/               ARCHITECTURE, INTEGRATION, STYLE, RELEASING
 ```
 
-## What it writes, and what it connects to
+## Files and network
 
-- **Its settings**: `launcher.json` in the per-user config folder
-  (`~/.config/dev.openrac.launcher/` on Linux,
-  `~/Library/Application Support/dev.openrac.launcher/` on macOS,
-  `%APPDATA%\dev.openrac.launcher\` on Windows). Settings shows the path.
-- **Games set up from discs**: the install folder (Settings; by default
-  `OpenRAC` in your home folder: `~/OpenRAC`, `%USERPROFILE%\OpenRAC`), `active/<game>/data/`, as OpenGOAL lays
-  it out (a developer's other disc of the same game waits beside it as
-  `iso_data/<game>@<version>`). The game writes its logs there (`openrac-<id>.log` and the five
-  before it) and its crash reports (`crashes/`).
-- **Gameplay mods**, only when you add, switch, order, update or remove one: the game's
-  `<data>/plugins/` (each mod's folder, `plugins.json`, and `sources.json` for those
-  added from a link, whose downloads it checks and then deletes; a pack's files wait in
-  `.downloads/` until the packs take them). Adding from a link and checking for
-  updates read GitHub's API (`api.github.com`), its raw files and the release's
-  downloads, nothing else.
-- **Its own log**: `launcher.log` beside `launcher.json`: when it started,
-  each command it ran and how it ended; moved to `launcher.1.log` past 1 MB.
-- **A saved report**: `OpenRAC-<report>.zip` in your Downloads folder, only
-  when you press Save report.
-- **The memory card**, only when you ask: a backup (`.backup_<time>…` beside the
-  game's folder in the card), a restored backup, or a slot changed in the save
-  editor, always after a backup of the whole card.
-- **Through the tools it runs**: whatever those tools write in the checkout
-  (`baserom/` inputs, build output, `assets/godot` for the level editor), all
-  ignored by git.
-- **Progress from openrac.dev**: at start-up it fetches
-  `https://openrac.dev/progress.json` and keeps a copy in the per-user
-  folder beside its settings (`progress.json` next to `launcher.json`), for
-  the next start without a network. That folder is the player's own to
-  write, unlike a checkout the launcher does not own (the copy an
-  installed launcher carries). A version shows the site's figures only
-  where they are ahead of the checkout's own `progress/summary.json`, which
-  the launcher never writes.
-- **Discord**: unless switched off in Settings, Discord's Rich Presence shows
-  the game being viewed, set up, built or played. While a game plays, Discord
-  says "Playing Ratchet & Clank", "Exploring Kerwan · Metropolis" and the
-  player's bolts, with the time on that planet (the port logs each level it
-  enters and its bolts), and links to openrac.dev and GitHub. It talks to
-  Discord's local socket (Linux, macOS) or named pipe (Windows), under
-  OpenRAC's Discord application. Its images are that application's art
-  assets, uploaded in Discord's Developer Portal: `openrac`
-  ([docs/discord/openrac.png](docs/discord/openrac.png)) in the launcher, and
-  while a game plays its logo, named after the game (`rac1` to `rac4`), which
-  is not kept in OpenRAC.
-- **Linux desktop integration**: at every start it writes its icons to
-  `~/.local/share/icons/hicolor/` and two `.desktop` files to
-  `~/.local/share/applications/`, and refreshes the desktop's caches.
+| Where | What |
+| --- | --- |
+| **Settings** | `launcher.json` in the per-user config folder (`~/.config/dev.openrac.launcher/` on Linux, `~/Library/Application Support/dev.openrac.launcher/` on macOS, `%APPDATA%\dev.openrac.launcher\` on Windows). Settings shows the path. |
+| **Progress cache** | `progress.json` beside `launcher.json`: the latest figures from [bytematch.dev](https://bytematch.dev), kept for the next start without a network. The launcher never writes the checkout's `progress/summary.json`. |
+| **Game installs** | The install folder (Settings; by default `~/OpenRAC` or `%USERPROFILE%\OpenRAC`), with `active/<game>/data/` laid out as OpenGOAL does. A developer's other disc waits beside it as `iso_data/<game>@<version>`. |
+| **Mods** | When you add, switch, order, update or remove one: `<data>/plugins/` (each mod's folder, `plugins.json`, and `sources.json` for linked mods, whose downloads it checks and then deletes). A pack's files wait in `.downloads/` until the packs take them. |
+| **Logs** | `openrac-<id>.log` and the five before it, plus `crashes/`, in the game's data folder. The launcher's own log is `launcher.log` beside `launcher.json`, moved to `launcher.1.log` past 1 MB. |
+| **Reports** | `OpenRAC-<report>.zip` in your Downloads folder, only when you press Save report. |
+| **Memory card** | Backups (`.backup_<time>…` beside the game's folder in the card), restored backups and edited slots, always after a backup of the whole card. |
+| **Tool output** | Whatever the tools it runs write in the checkout (`baserom/` inputs, build output, `assets/godot` for the level editor), all ignored by git. |
+| **ByteMatch** | At start-up: the project list and each mapped project's JSON. This is how the launcher shows current progress; it works without a network from the cached figures. |
+| **GitHub** | Only when adding a mod from a link or checking for updates: `api.github.com`, raw files and release downloads. |
+| **Discord** | Unless switched off in Settings, Discord Rich Presence over its local socket (Linux, macOS) or named pipe (Windows). While a game plays it shows the game, planet, bolts and time, and links to openrac.dev and GitHub. |
+| **Linux desktop** | At every start: icons in `~/.local/share/icons/hicolor/`, two `.desktop` files in `~/.local/share/applications/`, and refreshed desktop caches. |
 
 ## License and credits
 
 The launcher is under the GNU GPL v3 or later, as the rest of OpenRAC's top
-level ([LICENSE.md](../LICENSE.md), [COPYING](../COPYING)). It takes its
-look, logo and favicon from the OpenRAC website (MIT) and bundles three fonts
-(SIL Open Font License); see [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).
-Its design follows the T3SDK launcher for Thief: Deadly Shadows (MIT), and two
+level ([LICENSE.md](../LICENSE.md), [COPYING](../COPYING)). It takes its look,
+logo and favicon from the OpenRAC website (MIT) and bundles three fonts (SIL
+Open Font License); see [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md). Its
+design follows the T3SDK launcher for Thief: Deadly Shadows (MIT), and two
 small helpers are adapted from it; its disc set-up follows OpenGOAL's launcher
 and extractor (ISC), from their documented behaviour, with no code taken.
