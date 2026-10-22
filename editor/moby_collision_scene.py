@@ -545,11 +545,12 @@ def pack_classes(level, project: Path, level_dir: Path) -> tuple[dict[int, bytes
             problems.append(f"moby class {class_id}: {e}; its collision is left as the disc has it")
             continue
         edits[class_id] = None if blob is None else mc.write(blob)
+        whom = "every moby of the class in this level; other levels keep their own"
         if blob is None:
-            changes.append(f"moby class {class_id}: collision removed (every moby of the class in this level)")
+            changes.append(f"moby class {class_id}: collision removed ({whom})")
         else:
             changes.append(f"moby class {class_id}: collision edited, {len(blob.primitives)} primitives and "
-                           f"{len(blob.faces)} triangles (every moby of the class in this level)")
+                           f"{len(blob.faces)} triangles ({whom})")
     return edits, changes, problems
 
 
