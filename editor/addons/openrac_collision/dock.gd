@@ -373,11 +373,13 @@ func show_selection(faces, selected: PackedInt32Array) -> void:
 
 	var text: String = "%d faces selected: %s." % [selected.size(), ", ".join(parts)]
 
+	# Sound classes and exclusion only for faces with a type byte.
 	if not sounds.is_empty():
 		var classes: Array = sounds.keys()
 		classes.sort()
 		text += " Sound class %s; %d excluded from some queries." % [
 			", ".join(classes.map(func(c: int) -> String: return str(c))), excluded]
+	# Hero faces and added faces are worth a word each.
 	if heroes > 0:
 		text += " %d of a hero wall (delete only)." % heroes
 	if added > 0:

@@ -148,6 +148,7 @@ func overlay_root() -> Node3D:
 
 	var parent: Node = faces.game if faces != null else scene_root
 
+	# No scene is open: nowhere to draw.
 	if parent == null:
 		return null
 
@@ -165,6 +166,7 @@ func redraw() -> void:
 
 	var root: Node3D = overlay_root()
 
+	# Nothing to draw on.
 	if root == null:
 		return
 
@@ -178,6 +180,7 @@ func redraw() -> void:
 	if faces != null:
 		root.transform = faces.layer.transform
 
+		# The two face meshes are made once per overlay.
 		if face_view == null:
 			face_view = mesh_view(face_material())
 			selection_view = mesh_view(selection_material())
@@ -202,6 +205,7 @@ func class_layers_to_show() -> Array[Node3D]:
 	if faces == null and scene_root != null:
 		var own: Node3D = ClassCollision.class_layer(scene_root)
 
+		# Shown with the toggle, or while one of its parts (or itself) is selected.
 		if own != null and (is_showing or is_part(selected_node) or selected_node == own):
 			out.append(own)
 
@@ -216,6 +220,7 @@ func class_layers_to_show() -> Array[Node3D]:
 	for moby in mobys.get_children():
 		var layer: Node3D = ClassCollision.class_layer(moby)
 
+		# Every moby's with the toggle, else the selected one's.
 		if layer != null and (is_showing or moby == selected_node):
 			out.append(layer)
 
@@ -434,6 +439,7 @@ func check_limits() -> void:
 
 	var shown: PackedStringArray = lines.slice(0, REPORT_LINES)
 
+	# A long report says how much more there is.
 	if lines.size() > REPORT_LINES:
 		shown.append("... and %d more" % (lines.size() - REPORT_LINES))
 
@@ -562,6 +568,7 @@ func make_class_collision(mode: String, kind: int) -> void:
 	if mode == "mesh":
 		var node: Node3D = await mesh_part(ClassCollision.cluster(triangles), kind)
 
+		# The import did not finish: the report already says so.
 		if node == null:
 			return
 

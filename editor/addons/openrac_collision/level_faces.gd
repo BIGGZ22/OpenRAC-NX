@@ -124,6 +124,7 @@ func load_level(root: Node) -> bool:
 
 	layer = game.get_node_or_null("Collision") as Node3D
 
+	# An older export's display-only collision is not the editable layout.
 	if layer == null or not layer.has_meta("rc1_collision"):
 		return false
 
@@ -605,6 +606,7 @@ func pick(from: Vector3, direction: Vector3, hit: Array = []) -> int:
 			if at == null:
 				at = Geometry3D.ray_intersects_triangle(from, direction, points[0], points[2], points[1])
 
+			# The nearest hit wins.
 			if at != null and from.distance_to(at) < nearest:
 				nearest = from.distance_to(at)
 				best = face
