@@ -986,6 +986,37 @@ class Translate(unittest.TestCase):
         """}, config={"ps2_float": ["ee"]}, cxx=PS2FLOAT_CXX)
         self.assertEqual(out, ["1", "2", "1", "3", "4", "1", "5", "6", "1", "7", "8", "0"])
 
+    def test_an_override_runs_in_place_of_matched_c(self):
+        # hostgen.json "overrides": the port's own C for a function the decompilation has as
+        # matching C. Here the matching C takes a colour as an int that its caller passes, and it
+        # passes on, in a 64-bit register (DrawOutlinedRect's: FastTweenColor's zero-extended
+        # result, "returns_64"): as an int the port sign-extended it. The override takes it as a
+        # long and runs in its place; its signature is the one callers are matched to.
+        files = {"a.c": """
+            void sink(int i, unsigned long long colour) { test_print(i); test_print((int)(colour >> 32)); }
+            void draw(int i, int colour) {
+                sink(i, (colour & 0xFF000000) | 4);
+                sink(i + 1, colour);
+            }
+            int make(void);
+            int test_main(void) { draw(0, make()); return 0; }
+        """, "b.c": """
+            unsigned long make(void) { return 0x80123456u; }
+        """}
+        out = self.run_program(files, config={"returns_64": ["make"]})
+        self.assertEqual(out, ["0", "0", "1", "-1"])            # the matching C: sign-extended
+        out = self.run_program(files, config={"returns_64": ["make"], "overrides": "overrides.tsv"}, extra_files={
+            "overrides.tsv": "# name\tfile\ndraw\tmine.c\n",
+            "mine.c": """
+                void draw(int i, unsigned long colour) {
+                    sink(i, (colour & 0xFF000000) | 4);
+                    sink(i + 2, colour);
+                }
+            """})
+        self.assertEqual(out, ["0", "0", "2", "0"])               # the override, all 64 bits
+        self.assertEqual(self.last_report["overrides_used"], ["draw"])
+        self.assertEqual(self.last_report["index_problems"], [])
+
     def test_variable_length_array_of_a_local_length(self):
         # A one-dimensional array whose length is a local goes on the guest stack for its
         # block, as on the console, and its address can be passed on.
@@ -1937,6 +1968,48 @@ class Preparation(unittest.TestCase):
         self.assertEqual(lines[5].strip(), "*)&g)->v[i] = -1;")
         self.assertEqual(lines[7], "#define PEEK(p) ((struct { int x; } *)(p))")  # no function: as it was
         self.assertEqual(prep.name_cast_records("int a;\n"), "int a;\n")
+
+    def test_an_override_replaces_a_definition_with_cast_records_ahead(self):
+        # name_cast_records puts the records ahead of the function's first line: the matched
+        # definition is still found, blanked with them, and the override goes at the end.
+        src = prep.name_cast_records("int g;\n"
+                                     "void f(int i)\n"
+                                     "{\n"
+                                     "    ((struct { int v[8]; } *)&g)->v[i] = -1;\n"
+                                     "}\n"
+                                     "void h(void) {}\n")
+        self.assertTrue(src.split("\n")[1].startswith("struct openrac_cast_4_0 "))
+        used: set[str] = set()
+        out = prep.use_overrides(src, {"f": "void f(int i) { g = i; }\n"}, used)
+        self.assertEqual(used, {"f"})
+        self.assertNotIn("v[i] = -1", out)
+        self.assertNotIn("openrac_cast_4_0", out)
+        self.assertIn("void h(void) {}", out)
+        self.assertIn("g = i;", out)
+        self.assertEqual(out.split("\n")[5], "void h(void) {}")  # no line of the file moved
+
+    def test_an_overridden_definition_named_later_keeps_its_prototype(self):
+        # A file that registers the function as a callback after its definition needs a declaration
+        # there: the definition's first line stays as a prototype, on the line it started.
+        src = ("int g;\n"
+               "void f(char *self,\n"
+               "       int n) {\n"
+               "    g = n;\n"
+               "}\n"
+               "void h(void) { register_callback(f); }\n"
+               "void k(int i)\n"
+               "{\n"
+               "}\n")
+        used: set[str] = set()
+        out = prep.use_overrides(src, {"f": "void f(char *self, int n) { g = n + 1; }\n",
+                                       "k": "void k(int i) { g = i; }\n"}, used)
+        lines = out.split("\n")
+        self.assertEqual(lines[1], "void f(char *self, int n);")
+        self.assertEqual(lines[2], "")
+        self.assertEqual(lines[5], "void h(void) { register_callback(f); }")  # no line moved
+        self.assertEqual(lines[6], "")       # k is not named later: blanked as before
+        self.assertIn("g = n + 1;", out)
+        self.assertIn("g = i;", out)
 
     def test_wide_cast_is_named(self):
         """A 128-bit integer as a type name becomes openrac_ti: Clang drops the attribute there."""

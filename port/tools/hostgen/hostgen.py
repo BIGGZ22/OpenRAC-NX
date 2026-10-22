@@ -137,6 +137,17 @@ def read_hand(config_dir: Path, cfg: dict) -> dict[str, str]:
     return read_table_of_c(config_dir / table)
 
 
+def read_overrides(config_dir: Path, cfg: dict) -> dict[str, str]:
+    """The port's own C for functions the decompilation has as matching C (hostgen.json
+    "overrides": a table beside the game's configuration, files relative to it, as "hand"): what
+    the port has to do otherwise than the matching C says, in the decompilation's dialect,
+    translated like the game's C in place of the matched definition (prep.use_overrides)."""
+    table = cfg.get("overrides")
+    if not table or not (config_dir / table).is_file():
+        return {}
+    return read_table_of_c(config_dir / table)
+
+
 def read_long_long_128(source: Path, cfg: dict) -> set[str]:
     """The units whose `long long` is a 128-bit integer (hostgen.json "long_long_128"), as paths
     from the decompilation's top (src/game/draw.c): every unit of "sources" but "skip" and the
@@ -681,6 +692,7 @@ def write_report(out: Path, reports: list[UnitReport], program: Program, extra: 
         f"| ... of them another spelling of a function with C, whose calls go there | "
         f"{summary['functions_without_c_other_spelling']} |",
         f"| Functions from candidates (C that is not the matched C) | {len(extra.get('candidates_used', []))} |",
+        f"| Matched functions the port's own C overrides | {len(extra.get('overrides_used', []))} |",
         f"| Functions by code address | {extra.get('addresses', 0)} |",
         f"| Arguments passed through from the caller's registers | {summary['arguments_passed_through']} |",
         f"| Arguments a call leaves out, filled with 0 | "
@@ -908,18 +920,23 @@ def main(argv: list[str] | None = None) -> int:
     # The port's own C for hand-written assembly first; a decompilation's
     # candidate for the same function stands aside.
     candidates = {**read_candidates(source, cfg), **read_hand(args.game.parent, cfg)}
+    # The port's own C for functions the decompilation matches, in place of their definitions.
+    overrides = read_overrides(args.game.parent, cfg)
     aliases = read_aliases(source, cfg)
     long_long_128 = read_long_long_128(source, cfg)
     if aliases:
         # One text for several functions stays one text (use_candidates puts it in once).
-        texts = {id(c): prep.unalias(c, aliases) for c in candidates.values()}
+        texts = {id(c): prep.unalias(c, aliases) for c in [*candidates.values(), *overrides.values()]}
         candidates = {name: texts[id(c)] for name, c in candidates.items()}
+        overrides = {name: texts[id(c)] for name, c in overrides.items()}
     used: set[str] = set()
+    overridden: set[str] = set()
     drafts = read_drafts(args.game.parent, cfg)
     for d in sorted(set(cfg["sources"] + cfg["includes"])):
         if (source / d).is_dir():
             prep.copy_tree(source / d, root / d, candidates=candidates, used=used, drafts=drafts, prefix=d,
-                           aliases=aliases, long_long_128=long_long_128)
+                           aliases=aliases, long_long_128=long_long_128, overrides=overrides,
+                           overridden=overridden)
     units = units_of(root, cfg)
     if args.only:
         units = [u for u in units if u in args.only]
@@ -932,7 +949,8 @@ def main(argv: list[str] | None = None) -> int:
     program.groups = cfg["groups"]
     for table in cfg["symbols"]:
         read_symbols(source / table, program)
-    problems: list[str] = []
+    problems: list[str] = [f"overrides: {name} has no matched definition to replace"
+                           for name in sorted(set(overrides) - overridden)]
     if cfg.get("places"):
         read_places(source / cfg["places"], program)
     if cfg.get("split_places"):
@@ -1038,6 +1056,7 @@ def main(argv: list[str] | None = None) -> int:
     extra = write_program_files(program, out, cfg.get("title", cfg.get("name", args.game.parent.name)))
     extra["roots"] = cfg.get("roots", [])
     extra["candidates_used"] = sorted(used)
+    extra["overrides_used"] = sorted(overridden)
     extra["results_inherited"] = sorted(inherited)
     extra["params_widened"] = sorted(getattr(program, "widened", []))
     extra["results_widened"] = sorted(getattr(program, "results_widened", []))

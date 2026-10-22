@@ -27,6 +27,9 @@ where it was:
 - With candidates (hostgen.json "candidates"), a function the decompilation
   still has as an assembly stub gets the candidate's C at the end of its file
   (use_candidates).
+- With overrides (hostgen.json "overrides"), a function the decompilation has
+  as matching C has its definition blanked and the port's own C at the end of
+  its file (use_overrides).
 - With aliases (hostgen.json "aliases"), a readable name the decompilation
   defines as a macro for an address name (`#define DrawFlare func_0022F258`)
   is written as that address name, outside comments, strings and `#define`
@@ -537,31 +540,96 @@ def without_definitions(text: str, names: set[str]) -> str:
     Clang refuses the whole file. The matched C stands; the copy steps aside."""
     for name in names:
         while True:
-            m = re.search(r'^[A-Za-z_][\w \t\*]*?[ \t\*]' + re.escape(name) + r'\s*\([^;{}]*\)\s*\{', text, re.M)
-            if not m:
+            span = _definition(text, name)
+            if span is None:
                 break
-            depth, at = 0, m.end() - 1
-            while at < len(text):
-                c = text[at]
-                if c == '"' or c == "'":            # a brace in a string or a character is not one
-                    close = at + 1
-                    while close < len(text) and text[close] != c:
-                        close += 2 if text[close] == "\\" else 1
-                    at = close
-                elif text.startswith("/*", at):
-                    at = text.find("*/", at) + 1
-                elif text.startswith("//", at):
-                    at = text.find("\n", at)
-                elif c == "{":
-                    depth += 1
-                elif c == "}":
-                    depth -= 1
-                    if depth == 0:
-                        break
-                at += 1
-            text = (text[:m.start()] + f"/* hostgen: {name} is matched C in this file now; this copy is left out */"
-                    + text[at + 1:])
+            text = (text[:span[0]] + f"/* hostgen: {name} is matched C in this file now; this copy is left out */"
+                    + text[span[1]:])
     return text
+
+
+# The records name_cast_records defined ahead of a function, on its first line.
+_CAST_RECORDS_AHEAD = r'(?:(?:struct|union) openrac_cast_\d+_\d+ \{.*?\}; )*'
+
+
+def _definition(text: str, name: str) -> tuple[int, int] | None:
+    """Where TEXT defines the function NAME: from its first line (with the cast records
+    name_cast_records put ahead of it, which belong to it) to after its closing brace."""
+    m = re.search(r'^' + _CAST_RECORDS_AHEAD + r'[A-Za-z_][\w \t\*]*?[ \t\*]' + re.escape(name)
+                  + r'\s*\([^;{}]*\)\s*\{', text, re.M)
+    if not m:
+        return None
+    depth, at = 0, m.end() - 1
+    while at < len(text):
+        c = text[at]
+        if c == '"' or c == "'":            # a brace in a string or a character is not one
+            close = at + 1
+            while close < len(text) and text[close] != c:
+                close += 2 if text[close] == "\\" else 1
+            at = close
+        elif text.startswith("/*", at):
+            at = text.find("*/", at) + 1
+        elif text.startswith("//", at):
+            at = text.find("\n", at)
+        elif c == "{":
+            depth += 1
+        elif c == "}":
+            depth -= 1
+            if depth == 0:
+                break
+        at += 1
+    return m.start(), at + 1
+
+
+def _prototype(definition: str, name: str) -> str:
+    """The declaration of the function a DEFINITION (from _definition) defines, on one line,
+    without the cast records ahead of it (types of its body, not of its signature)."""
+    m = re.match(_CAST_RECORDS_AHEAD + r'([A-Za-z_][\w \t\*]*?[ \t\*]' + re.escape(name)
+                 + r'\s*\([^;{}]*\))\s*\{', definition)
+    return " ".join(m.group(1).split()) + ";"
+
+
+_STRINGS_AND_COMMENTS = re.compile(r'"(?:\\.|[^"\\\n])*"|/\*.*?\*/|//[^\n]*', re.S)
+
+
+def _named_in(text: str, name: str) -> bool:
+    """Whether C text names NAME as an identifier (not inside a string, an asm label, or a comment)."""
+    return re.search(r'\b' + re.escape(name) + r'\b', _STRINGS_AND_COMMENTS.sub(" ", text)) is not None
+
+
+def use_overrides(text: str, overrides: dict[str, str], used: set[str]) -> str:
+    """Puts the port's own C in place of matched C (hostgen.json "overrides").
+
+    An override is C for a function the decompilation has as matching C, for what the port has to
+    do otherwise: a stack slot retail reads before anything wrote it, a 64-bit value the matching C
+    keeps in an int. The matched definition is blanked (its lines stay, so no line of the file
+    moves; its prototype stays when the file names the function later, a callback it registers)
+    and the override goes at the end of the file, as a candidate does; the decompilation
+    itself is never changed. One file of C may override several functions of the file; one it
+    defines that is not overridden stands aside for the matched C (without_definitions)."""
+    names = [n for n in overrides if n in text and _definition(text, n) is not None]
+    if not names:
+        return text
+    tail = []
+    added: set[int] = set()
+    for name in names:
+        span = _definition(text, name)
+        # A file that names the function after its definition (a draw callback it registers) needs a
+        # declaration there: the override's prototype (its signature may differ from the matched C's:
+        # a result the matching C declares void), on the line the matched definition started.
+        own = overrides[name]
+        keep = ""
+        if _named_in(text[span[1]:], name):
+            mine = _definition(prepare(own), name)
+            keep = _prototype(prepare(own)[mine[0]:mine[1]], name) if mine else _prototype(text[span[0]:span[1]], name)
+        text = text[:span[0]] + keep + "\n" * text.count("\n", span[0], span[1]) + text[span[1]:]
+        used.add(name)
+        if id(own) not in added:   # one file of C for several functions goes in once
+            added.add(id(own))
+            others = set(_DEFINED.findall(text)) - set(names)
+            tail.append(f"\n/* hostgen: {name} from the port's own C, not the matched C (overrides) */\n"
+                        f"{own_declarations(without_definitions(prepare(own), others), f'_ho{len(added)}')}")
+    return text + "".join(tail)
 
 
 def use_candidates(text: str, candidates: dict[str, str], used: set[str]) -> str:
@@ -691,15 +759,17 @@ def apply_decomp_workarounds(rel: str, text: str) -> str:
 def copy_tree(src: Path, dst: Path, patterns=("*.c", "*.h", "*.inc"),
               candidates: dict[str, str] | None = None, used: set[str] | None = None,
               drafts: tuple[str, set[str]] | None = None, prefix: str = "",
-              aliases: dict[str, str] | None = None, long_long_128: set[str] | None = None) -> int:
+              aliases: dict[str, str] | None = None, long_long_128: set[str] | None = None,
+              overrides: dict[str, str] | None = None, overridden: set[str] | None = None) -> int:
     """Prepares every C file under src into dst; only rewrites what changed.
     aliases (readable name -> address name) are written as their address names first (unalias).
     candidates (function name -> C) replace their assembly stubs (use_candidates);
-    the names used are added to used. drafts (a guard macro, the files it applies to, named
-    from the decompilation's top with prefix as src's own name) has those files' own drafts
-    read (use_draft). long_long_128 (files named as drafts' are) has their own `long long`
-    read as the 128-bit integer it is there (widen_long_long), before the candidates, which
-    are C written for the port, go in."""
+    the names used are added to used. overrides (function name -> C) replace matched
+    definitions (use_overrides); the names replaced are added to overridden. drafts (a guard
+    macro, the files it applies to, named from the decompilation's top with prefix as src's own
+    name) has those files' own drafts read (use_draft). long_long_128 (files named as drafts'
+    are) has their own `long long` read as the 128-bit integer it is there (widen_long_long),
+    before the candidates and overrides, which are C written for the port, go in."""
     count = 0
     for pattern in patterns:
         for path in src.rglob(pattern):
@@ -711,6 +781,8 @@ def copy_tree(src: Path, dst: Path, patterns=("*.c", "*.h", "*.inc"),
             text = prepare(unalias(text, aliases or {}))
             if candidates and path.suffix == ".c":
                 text = use_candidates(text, candidates, used if used is not None else set())
+            if overrides and path.suffix == ".c":
+                text = use_overrides(text, overrides, overridden if overridden is not None else set())
             if drafts and rel in drafts[1]:
                 text = use_draft(text, drafts[0])
             text = apply_decomp_workarounds(rel, text)
