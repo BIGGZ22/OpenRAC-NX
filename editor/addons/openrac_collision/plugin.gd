@@ -600,9 +600,16 @@ func mesh_part(triangles: PackedVector3Array, kind: int) -> Node3D:
 	file.store_string(ClassCollision.mesh_gltf(triangles, kind))
 	file.close()
 	var filesystem := EditorInterface.get_resource_filesystem()
-	filesystem.scan()
-	await filesystem.filesystem_changed
-	var scene := load(path) as PackedScene
+
+	# A folder the editor has not seen yet is scanned first, so that the file can be added to it.
+	if filesystem.get_filesystem_path(folder) == null:
+		filesystem.scan()
+		await filesystem.filesystem_changed
+
+	# A scan only finds the file; its import is what makes it loadable, and that runs here.
+	filesystem.update_file(path)
+	filesystem.reimport_files(PackedStringArray([path]))
+	var scene := ResourceLoader.load(path, "PackedScene", ResourceLoader.CACHE_MODE_REPLACE) as PackedScene
 
 	# The import may not be done yet in a busy editor: the file stays, and a second press uses a new one.
 	if scene == null:
