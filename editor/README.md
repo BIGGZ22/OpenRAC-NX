@@ -151,8 +151,8 @@ and the list of disc sectors it replaces:
 assets/packed/rac1/pal/
   level_NN/gameplay_<version>.wad   one per level whose mobys were edited, the size of its place on the disc
   level_NN/placements.json    one per level whose ties or shrubs were edited, for the native port
-  level_NN/core_<version>.bin  one per level whose collision was edited: the level data's sectors of its core data
-  level_NN/index_<version>.bin with it, when the collision grew and moved: the core index's sector
+  level_NN/core_<version>.bin  one per level whose collision (the level's or a moby class's) was edited: the level data's sectors of its core data
+  level_NN/index_<version>.bin with it, when the core data grew (a collision moved to its end): the core index's sector
   patches.tsv                 first sector, sector count, file
   changes.txt                 what changed, in words
   packed.json                 the disc it was packed from
@@ -176,8 +176,10 @@ or deleted**, and **ties and shrubs** the same way (moved, turned, scaled
 each axis its own, another class of the level, other values, added, deleted),
 **the gameplay data**: pvars, links between objects, moby groups, volumes,
 paths, grind paths, cameras, sound instances and the level settings
-([Gameplay data](#gameplay-data)), and **the collision**: tiles and hero walls
-deleted, moved, edited or added ([Collision](#collision)). A moby keeps one scale for all three axes.
+([Gameplay data](#gameplay-data)), **the collision**: tiles and hero walls
+deleted, moved, edited or added ([Collision](#collision)), and **moby class
+collision**: a class's spheres, cylinders, capsules and triangles, for every
+moby of the class in that level ([Object collision](#object-collision-moby-classes)). A moby keeps one scale for all three axes.
 Not yet: terrain, and anything of a class the level does not load (the
 port draws a denser or reshaped terrain from an overrides pack instead:
 [MODDING.md](MODDING.md#editing-the-terrain)).
@@ -282,8 +284,10 @@ levels/level_NN/
   collision/collision.json   what was written: each file's name, SHA-1 and triangles
   ties/tie_<class>.glb       one mesh per tie class
   shrubs/shrub_<class>.glb   one mesh per shrub class
-  mobys/moby_<class>.tscn    a moby class: its mesh (or a box) and a label
+  mobys/moby_<class>.tscn    a moby class: its mesh (or a box), a label and its collision (hidden)
   mobys/moby_<class>.glb     a moby class's mesh, skeleton and animations
+  mobys/collision/moby_<class>_XX.glb   a class's collision triangles of type byte XX
+  mobys/collision.json       the class scenes and collision files as written (SHA-1)
   gameplay/<kind>.tscn       a volume's unit shape (cuboid, sphere, cylinder, pill), or a
                              camera's, sound's or the ship's marker
   sky.png                    the sky as a panorama, used by the WorldEnvironment
@@ -521,8 +525,99 @@ How it is packed ([collision_scene.py](collision_scene.py), [collision.py](colli
 
 What the decoded collision misses: the cells' quads are split into triangles
 here, and a face shared by cells appears once, so the tiles show the level's
-surfaces, not the cells. Moby collision is part of each moby class (MOBY.md,
-section 8) and its parts are not decoded yet, so it is not editable.
+surfaces, not the cells.
+
+### Object collision (moby classes)
+
+Crates, doors, enemies and the other mobys collide through their **class**:
+a class in the level's core can carry a collision blob
+([MOBY.md, section 8](../docs/engine/formats/MOBY.md#8-collision-bangles-gif-usage)) of
+**primitives** (spheres, spheres on a joint, upright cylinders, capsules
+between two joints) and **triangles** with type bytes, which the game's
+queries test against each moby of the class where it stands, turned and
+scaled with it. A bolt crate, for one, is a sphere and a 12-triangle box.
+Each class scene (`mobys/moby_<class>.tscn`) has it as a hidden `Collision`
+child of its root, in the class's model units (the node carries the class
+scale), coloured like the level's surfaces:
+
+```
+Moby_<class>
+  Collision             hidden; rc1_collision_format = 1
+    Sphere_NN           a SphereMesh: a sphere
+    JointSphere_NN      a SphereMesh on joint rc1_joint, drawn in the bind pose
+    Cylinder_NN         a CylinderMesh, upright (on a tilted moby the game keeps it upright too)
+    Capsule_NN          a CapsuleMesh between joints rc1_joints, drawn in the bind pose
+    Mesh_XX             collision/moby_<class>_XX.glb: the triangles of type byte XX
+```
+
+Every child has `rc1_collision_kind` (`sphere`, `joint_sphere`, `cylinder`,
+`capsule`, `mesh`) and `rc1_surface` (a mesh's type byte; 31 on the
+primitives, which have no surface: a hit on one reports none). A primitive
+also has `rc1_index`, its place in the blob, and `rc1_queries`: bit 0 for the
+queries that pass flag 0x4 (the player's movement among them), bit 1 for the others
+(shots, bolts, explosions; the ground probe tests no primitives). Triangles are tested by every
+query. Joint primitives follow their joints in the running game; the editor
+shows them in the bind pose. Open the class scene and click the `Collision`
+eye to see it (the editor plugin shows it on a selected moby).
+
+| In Godot or Blender | What the packer does |
+|---|---|
+| Move or scale a sphere or cylinder (the cylinder's height and radius), or a joint sphere (its offset from the joint) | the primitive moves or resizes |
+| Scale a capsule | its radius; it runs between `rc1_joints`, which you change instead of moving it |
+| Change `rc1_queries`, `rc1_joint` or `rc1_joints` | the primitive takes them (joints must be the class's) |
+| Delete a child | the primitive or those triangles go; with every child gone the class has no collision |
+| Add a `MeshInstance3D` with a `SphereMesh` (with `rc1_joint` on a joint), `CylinderMesh` or `CapsuleMesh` (with `rc1_joints`) | a new primitive |
+| Add a `BoxMesh`, `PlaneMesh`, `QuadMesh` or a `.glb`/`.gltf` instance, or edit a `Mesh_XX` glTF in Blender (a material `rc1_surface_YY` gives faces that type byte) | the triangles change |
+
+**What a class edit affects.** The collision belongs to the class, so an edit
+is **every moby of that class in that level**. Each level has its own core,
+so the same class in another level keeps its own collision: edit it there too.
+One moby alone cannot get other collision from the level data: nothing in a
+moby's record turns it on or off. What works is giving that moby another class
+the level has (which changes its model too), or behaviour code
+([docs/port/MODS.md](../docs/port/MODS.md)): the game sets a moby's own
+`collision` pointer (moby +0x94, copied from the class) to 0 to make it
+intangible and sets bits of `collision_disable` (+0x98: bit *i* turns off
+primitive *i*, the first 32) on objects being carried, and a mod can do the same.
+
+How it is packed ([moby_collision_scene.py](moby_collision_scene.py),
+[moby_collision.py](moby_collision.py)):
+
+- What is as the export wrote it keeps the disc's bytes: an untouched project
+  packs nothing (checked on every class of both discs: 2,972 PAL and 2,968
+  NTSC-U class scenes read back as the disc's), and an edited class keeps the
+  records of the primitives you left alone.
+- Checked first, or that class is left as the disc has it and `changes.txt`
+  says why: kinds, radii and heights above 0, joints within the class's
+  skeleton, vertices within 32 model units of the class's origin (16 bits in
+  1/1024), faces reaching only the first 256 vertices (byte indices).
+- The blob goes back where the class has it when it fits (its place is padded
+  to 16 bytes), else to the end of the core data: the class header's
+  collision offset is relative to the class and the loader adds the class's
+  address, so it can point anywhere in the core. Like a moved level collision
+  block, **that has not been tried in the running game yet**.
+- The port reads it as the game does: the core data, served from the packed
+  sectors by `--mods`, is in the game's memory, and the collision kernels read
+  the class blob there.
+
+**Custom models.** A model you replace with an overrides pack
+([MODDING.md](MODDING.md)) keeps the class's collision, so a bigger crate is
+still hit as the old one. Make collision for it from its mesh:
+
+```sh
+python3 editor/moby_collision.py generate my_crate.glb --scene assets/levels/rac1/pal/level_03/levels/level_03/mobys/moby_500.tscn
+python3 editor/moby_collision.py generate my_crate.glb --mode box --surface 0x7f --scene ...
+```
+
+`--mode mesh` (the default) takes the triangles themselves, merged until at
+most 256 vertices are left; `box` the box around them; `sphere` and
+`cylinder` one primitive around them. The model is read as `assets.py`
+exports models (glTF's Y up, at the drawn size: the class scale is taken
+from the class scene); `--axes game` reads one in the game's axes, `--scale`
+gives the size. The class scene's `Collision` children are replaced, and
+`extract.py pack` packs it. `--out FILE` writes the blob instead, for tools.
+A class the level does not have cannot be added yet, so neither can its
+collision.
 
 ## Checks
 
@@ -538,7 +633,8 @@ The collision layer is not counted with the textured meshes; its triangles
 are compared with `level.json` on their own, and it must be hidden.
 It also loads every moby class scene and compares their models, triangles,
 textures, skeletons, bones and animations, and the meshes the placed mobys
-show.
+show, and each class scene's collision (classes, primitives, triangles; it
+must be hidden).
 
 ## Coverage
 
@@ -577,7 +673,7 @@ Approximations:
   inferred rather than traced in the game's code. Sprites the game adds
   to the sky at run time are not included.
 
-Not yet extracted: low-detail moby meshes, moby class collision, audio, video
+Not yet extracted: low-detail moby meshes, audio, video
 and each level's code overlay. [ASSETS.md](../games/rac1/docs/ASSETS.md) describes
 the formats and the evidence for them.
 
@@ -670,6 +766,8 @@ The GDScript files follow [`GDSCRIPT_CONVENTIONS.md`](GDSCRIPT_CONVENTIONS.md).
 | `assets.py`, `overrides.py` | Export for modding and re-import; overrides packs ([MODDING.md](MODDING.md)) |
 | `godot.py` | Project, scenes and level.json |
 | `collision_scene.py` | The collision as tiles and hero walls in the scene, read back and packed into the level's core data |
+| `moby_collision.py` | Moby class collision: read, checked and written back byte-exact; generated from a mesh (also a command) |
+| `moby_collision_scene.py` | A class's collision in its class scene, read back and packed into the level's core data |
 | `gamedata.py` | The gameplay data (pvars, links, groups, volumes, paths, cameras, sounds, level settings) in the scene and packed back |
 | `pack.py`, `gameplay.py`, `scenery.py`, `wadpack.py` | Packing edited scenes back into the game's level data |
 

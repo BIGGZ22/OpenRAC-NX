@@ -54,6 +54,7 @@ up). Values the game stores are the Inspector's **Metadata** (`rc1_*`).
 | `Ties/...`, `Shrubs/...` | scenery: move, turn, scale, add, delete | drawn by the port; their collision is the level's (below) |
 | `Collision/Tile_XX_YY` | the collision, by 64-unit square: delete, move, edit in Blender, set `rc1_surface` | [Collision](#collision) |
 | `HeroWalls/HeroWall_NNN` | walls only the player meets | the same |
+| a class scene's `Collision` (`mobys/moby_<class>.tscn`) | a moby class's own collision: spheres, cylinders, capsules, triangles | [Object collision](#object-collision-a-crates-shape) |
 
 ## Collision
 
@@ -100,6 +101,36 @@ end of the level's core data, which takes more of the level's memory. That
 has not been tried in the running game yet: keep additions modest, and report
 how it goes.
 
+## Object collision: a crate's shape
+
+A crate, a door or an enemy collides with its class's own collision, not the
+level's. Open the class scene (`mobys/moby_<class>.tscn`, the scene each
+moby of that class is an instance of; a bolt crate is class 500) and show
+its hidden `Collision` node: spheres, upright cylinders, capsules between two
+joints, and `Mesh_XX` triangles (the glTF files in `mobys/collision/`, a
+material per type byte as the tiles have). Move or scale a sphere, set a
+cylinder's height and radius, delete a child, or add a `MeshInstance3D` with a
+`SphereMesh`, `CylinderMesh` or `CapsuleMesh` (a capsule names its two joints
+in `rc1_joints`); edit the triangles in Blender as you would a tile. Save the
+class scene and pack. The details are in the
+[README](README.md#object-collision-moby-classes).
+
+- **One class, every moby of it, this level only.** The edit applies to all
+  the level's mobys of that class; the same class in another level is a copy
+  of its own (each level has its own core data), so edit that one too. One
+  moby cannot get collision of its own from the level: give it another class
+  the level has, or turn its collision off in behaviour code (a mod made with
+  the SDK).
+- **Custom models.** A model you replaced keeps the old collision. Make some
+  from your model and put it in the class scene:
+  `python3 editor/moby_collision.py generate my_model.glb --scene <the class scene>`
+  (`--mode box`, `sphere` or `cylinder` for a simpler shape). Then pack.
+- **Limits.** The class's vertices stay within 32 model units of its origin
+  and its triangles use at most 256 of them; the packer refuses the class
+  otherwise and says why in `changes.txt`. A class's collision that grew past
+  its place moves to the end of the core data, which, as for the level's
+  collision, has not been tried in the running game yet.
+
 ## Projects from an older extractor
 
 The extractor never overwrites a project, so a project made before the
@@ -112,8 +143,8 @@ export of the same extractor shows each edit).
 
 ## Limits and what is next
 
-- Moby class collision (a class's own shape) is not decoded yet, so not
-  editable.
+- A project from before the class collision has no `Collision` node in its
+  class scenes: extract the level again to edit a class's collision.
 - Terrain meshes and classes the level does not load are not packed.
 - Cameras and sound emitters cannot be added or deleted yet; volumes and
   paths can be added but not deleted (other data refers to them by number).
