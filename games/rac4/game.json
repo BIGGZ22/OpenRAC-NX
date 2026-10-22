@@ -9,6 +9,7 @@
     "ntsc": {
       "region": "NTSC-U (North America)",
       "serial": "SCUS_974.65",
+      "bytematch": "OpenRAC/rac4-decomp",
       "disc": {
         "file": "SCUS_974.65.iso",
         "volume": "RATCHETDEADLOCKED",

@@ -6,6 +6,7 @@
     "ntsc": {
       "region": "NTSC-U (North America)",
       "serial": "SCUS_976.15",
+      "bytematch": "OpenRAC/rac5-sm-decomp",
       "disc": {
         "file": "SCUS_976.15.iso",
         "version": "1.00",

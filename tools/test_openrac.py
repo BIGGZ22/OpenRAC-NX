@@ -108,6 +108,37 @@ class ProgressTests(unittest.TestCase):
                          {"missing": "nowhere.json"})
         self.assertIsNone(openrac.measure({}))
 
+    def test_progress_table_uses_bytematch_badges(self):
+        game = {"id": "rac1", "title": "Ratchet & Clank",
+                "versions": {"pal": {"dir": "games/rac1"}}}
+        version = {"serial": "SCES_509.16", "bytematch": "OpenRAC/rac1-decomp", "source": {}}
+        measured = {"percent": 25.0, "matched_code": 250, "total_code": 1000,
+                    "matched_functions": 3, "total_functions": 10,
+                    "fuzzy_percent": 30.5, "date": "2026-10-22"}
+        table = openrac.render([(game, "pal", version, measured)], dates=False, badges=True)
+        self.assertIn("[![Code](https://bytematch.dev/OpenRAC/rac1-decomp.svg?"
+                      "mode=shield&label=Code&measure=matched_code_percent&version=SCES_509.16)]"
+                      "(https://bytematch.dev/OpenRAC/rac1-decomp/SCES_509.16)", table)
+        self.assertIn("label=Functions&measure=matched_functions", table)
+        self.assertIn("label=Fuzzy&measure=fuzzy_match_percent", table)
+
+    def test_progress_table_falls_back_without_bytematch(self):
+        game = {"id": "rac5", "title": "Ratchet & Clank: Size Matters", "versions": {"ntsc": {}}}
+        version = {"serial": "SCUS_976.15"}
+        measured = {"percent": 25.0, "matched_code": 250, "total_code": 1000,
+                    "matched_functions": 3, "total_functions": 10,
+                    "fuzzy_percent": 30.5, "date": "2026-10-22"}
+        table = openrac.render([(game, "ntsc", version, measured)], dates=False, badges=True)
+        self.assertIn("25.00% (250 / 1,000 bytes)", table)
+        self.assertNotIn("bytematch.dev", table)
+
+    def test_progress_table_badges_code_without_a_report(self):
+        game = {"id": "rac5", "title": "Ratchet & Clank: Size Matters", "versions": {"ntsc": {}}}
+        version = {"serial": "SCUS_976.15", "bytematch": "OpenRAC/rac5-sm-decomp"}
+        table = openrac.render([(game, "ntsc", version, None)], dates=False, badges=True)
+        self.assertIn("label=Code&measure=matched_code_percent&version=SCUS_976.15", table)
+        self.assertIn("| – | – |", table)
+
 
 if __name__ == "__main__":
     unittest.main()
