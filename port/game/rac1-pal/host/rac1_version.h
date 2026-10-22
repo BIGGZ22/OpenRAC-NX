@@ -14,6 +14,14 @@
 /* gHeroPos (D_0013F4D0), for crash reports (boot.c); a version without it reports no position. */
 #define RAC1_HERO_POS 0x0013F4D0u
 
+/* Where libmc (func_001236F0..func_00124528, the port's lib/mc.c) keeps the state of a command, for
+ * the port's library to keep it there too (boot.c, openrac_game_mc_state): D_00132EA8 the command that
+ * runs (0: none; sceMcSync func_00123F30 returns -1 then, else hands it out and clears it once the
+ * IOP has answered), D_0015B0C0 the library's RPC receive buffer, whose first word is the command's
+ * result that sceMcSync hands out. A version without them keeps lib/mc.c's own. */
+#define RAC1_MC_COMMAND 0x00132EA8u
+#define RAC1_MC_RESULT 0x0015B0C0u
+
 /* What this version leaves out of the shared C (rac1.h, RAC1_OMIT), and why. */
 /* The pause menu mobys' update at 0x0023B578: the decompilation has C for it (func_0023B578) since the
  * remnant in front of it was split off. */
