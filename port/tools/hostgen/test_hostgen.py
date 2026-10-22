@@ -1063,6 +1063,22 @@ class Translate(unittest.TestCase):
         """)
         self.assertEqual(out, ["11", "1", "1", "1011"])
 
+    def test_a_hook_point_passes_its_tail_calls_result_on(self):
+        # A wrapper matched `void` that ends in a call whose result its callers read (inherit_results)
+        # keeps that result as a hook point: rac1's folded colour tween func_L00_00237B70.
+        out = self.run_program({"a.c": """
+            int func_00100040(int x) { return x + 7; }
+            void func_00100000(int x) { func_00100040(x); }
+            extern int func_00100000_r(int x) __asm__("func_00100000");
+            int test_main(void) {
+                test_print(func_00100000_r(5));
+                return 0;
+            }
+        """}, places="func_00100000\t0x00100000\t0x40\nfunc_00100040\t0x00100040\t0x40\n",
+            config={"libraries": "libraries.tsv"},
+            extra_files={"libraries.tsv": "# symbol\tlibrary\tname\tport\nfunc_00100000\tgame\tTween\thook\n"})
+        self.assertEqual(out, ["12"])
+
     def test_a_hook_point_under_a_wrap_of_the_ports(self):
         # A function the port wraps (`wrap`) and mods hook (`hook`): the port's <name> stays, and
         # calls <name>__hooked, which hooks.c writes: the mod's replacement, or else the game's C.
