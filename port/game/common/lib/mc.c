@@ -59,6 +59,11 @@ enum {
 #define MC_NOT_FOUND (-4)
 #define MC_EXISTS (-4)
 #define MC_FAILED (-5)
+/* A missing or empty name: the library refuses it before it starts a command
+ * (sceMcOpen func_001238B0, and through it sceMcMkdir, sceMcGetDir
+ * func_001241F0, sceMcDelete func_00124410 test it once they hold the
+ * library's semaphore), so sceMcSync has nothing new to report. */
+#define MC_NO_NAME (-210)
 
 /* Directory entry attributes. */
 #define MC_ATTR_FILE 0x8497
@@ -74,6 +79,10 @@ static gaddr state_command, state_result;
 void openrac_game_mc_state(gaddr command, gaddr result) {
     state_command = command;
     state_result = result;
+}
+
+static int no_name(gaddr name) {
+    return name == 0 || *(const char*)G(name) == 0;
 }
 
 static int finish(int cmd, int result) {
@@ -154,6 +163,9 @@ static FILE* files[MAX_FILES];
 int openrac_lib_sceMcOpen(int port, int slot, gaddr name, int mode) {
     (void)slot;
     char path[1024];
+    if (no_name(name)) {
+        return MC_NO_NAME;
+    }
     if (!card_present(port) || !card_path(port, (const char*)G(name), path, sizeof path)) {
         return finish(MC_OPEN, MC_NO_CARD);
     }
@@ -226,6 +238,9 @@ int openrac_lib_sceMcMkdir(int port, int slot, gaddr name) {
     (void)slot;
     char path[1024];
     struct stat st;
+    if (no_name(name)) {
+        return MC_NO_NAME;
+    }
     if (!card_present(port) || !card_path(port, (const char*)G(name), path, sizeof path)) {
         return finish(MC_MKDIR, MC_NO_CARD);
     }
@@ -239,6 +254,9 @@ int openrac_lib_sceMcMkdir(int port, int slot, gaddr name) {
 int openrac_lib_sceMcDelete(int port, int slot, gaddr name) {
     (void)slot;
     char path[1024];
+    if (no_name(name)) {
+        return MC_NO_NAME;
+    }
     if (!card_present(port) || !card_path(port, (const char*)G(name), path, sizeof path)) {
         return finish(MC_DELETE, MC_NO_CARD);
     }
@@ -372,6 +390,9 @@ int openrac_lib_sceMcGetDir(
     int port, int slot, gaddr name, unsigned int mode, int max, gaddr table
 ) {
     (void)slot;
+    if (no_name(name)) {
+        return MC_NO_NAME;
+    }
     if (!card_present(port)) {
         return finish(MC_GET_DIR, MC_NO_CARD);
     }
