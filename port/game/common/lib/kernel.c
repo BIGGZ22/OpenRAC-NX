@@ -133,17 +133,29 @@ int openrac_lib_EnableDmac(int channel) {
     return 0;
 } /* EnableDmac */
 
+/* DIntr and EIntr return whether interrupts were on before (the EIE bit of
+ * the console's Status register). The game brackets its critical sections
+ * with them: DIntr finds interrupts on, the EIntr closing the bracket finds
+ * them off. */
 int openrac_lib_DIntr(void) {
     return 1;
 } /* DIntr */
 
 int openrac_lib_EIntr(void) {
-    return 1;
+    return 0;
 } /* EIntr */
 
 /* Threads: only the movie player makes them, and it is to be replaced as a
- * whole (libraries.tsv, libmpeg). They are given ids and never run. */
+ * whole (libraries.tsv, libmpeg). They are given ids and never run. As in
+ * the kernel, a call on a thread returns its id; terminating one fails (-1),
+ * as for a thread that has already ended. */
 static int next_thread = 2;
+
+/* A thread id the port has: 0 (the calling thread), 1 (the one thread that
+ * runs) or one CreateThread handed out. */
+static int known_thread(int id) {
+    return id >= 0 && id < next_thread;
+}
 
 int openrac_lib_CreateThread(gaddr param) {
     (void)param;
@@ -151,31 +163,27 @@ int openrac_lib_CreateThread(gaddr param) {
 } /* CreateThread */
 
 int openrac_lib_DeleteThread(int id) {
-    (void)id;
-    return 0;
+    return id;
 } /* DeleteThread */
 
 int openrac_lib_StartThread(int id, gaddr arg) { /* StartThread */
-    (void)id;
     (void)arg;
     openrac_guest_missing("StartThread (threads do not run in the port)");
-    return 0;
+    return id;
 }
 
 int openrac_lib_TerminateThread(int id) {
     (void)id;
-    return 0;
+    return -1;
 } /* TerminateThread */
 
 int openrac_lib_ChangeThreadPriority(int id, int priority) {
-    (void)id;
-    return priority;
+    return known_thread(id) ? priority : -1; /* the console: -1 for a thread it does not have */
 } /* ChangeThreadPriority */
 
 int openrac_lib_RotateThreadReadyQueue(int priority) {
-    (void)priority;
-    return 0;
-} /* RotateThreadReadyQueue */
+    return priority;
+} /* RotateThreadReadyQueue: the priority rotated */
 
 int openrac_lib_GetThreadId(void) {
     return 1;
