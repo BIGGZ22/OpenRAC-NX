@@ -196,6 +196,10 @@ func redraw() -> void:
 		# The copy stands where the class's node is, seen from the overlay (under Game in a level).
 		copy.transform = root.transform.affine_inverse() * LevelFaces.relative(layer, root.get_parent())
 
+		# The selected object's collision sits inside or on its model: drawn over it to be seen.
+		if is_selected_layer(layer):
+			draw_on_top(copy)
+
 
 ## The class collision nodes to draw: every moby's when shown, else the selected moby's, and the
 ## class scene's own.
@@ -226,6 +230,34 @@ func class_layers_to_show() -> Array[Node3D]:
 			out.append(layer)
 
 	return out
+
+
+## Whether a class collision node is the selection's: the selected moby's, itself or a part's.
+func is_selected_layer(layer: Node3D) -> bool:
+	return (selected_node != null and is_instance_valid(selected_node)
+		and (selected_node == layer or selected_node == layer.get_parent() or selected_node.get_parent() == layer))
+
+
+## Draws a class collision copy over everything, in its own colours.
+func draw_on_top(copy: Node3D) -> void:
+	for found in copy.find_children("*", "MeshInstance3D", true, false):
+		var view := found as MeshInstance3D
+
+		# A mesh instance without a mesh draws nothing.
+		if view.mesh == null:
+			continue
+
+		for surface in view.mesh.get_surface_count():
+			var material := view.get_active_material(surface) as BaseMaterial3D
+
+			# Only the export's standard materials are known to take the flag.
+			if material == null:
+				continue
+
+			var top := material.duplicate() as BaseMaterial3D
+			top.no_depth_test = true
+			top.render_priority = 1
+			view.set_surface_override_material(surface, top)
 
 
 ## A mesh instance for the overlay.
