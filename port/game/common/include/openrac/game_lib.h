@@ -127,7 +127,7 @@ void openrac_lib_sceGsPutDispEnv(gaddr);
 int openrac_lib_sceGsPutDrawEnv(gaddr);
 int openrac_lib_sceGsSyncV(int);
 void openrac_lib_sceGsSetDefLoadImage(gaddr, short, short, short, short, short, short, short);
-void openrac_lib_sceGsSetDefStoreImage(gaddr, short, short, short, short, short, short, short);
+int openrac_lib_sceGsSetDefStoreImage(gaddr, short, short, short, short, short, short, short);
 int openrac_lib_sceGsExecLoadImage(gaddr, gaddr);
 int openrac_lib_sceGsExecStoreImage(gaddr, gaddr);
 gaddr openrac_lib_sceGsSyncVCallback(gaddr);
