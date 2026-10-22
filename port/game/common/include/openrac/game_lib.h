@@ -67,6 +67,7 @@ void openrac_lib_GetOsdConfigParam(gaddr);
 void openrac_lib_GetOsdConfigParam2(gaddr, int, int);
 int openrac_lib__SetTLBEntry(unsigned int, unsigned int, unsigned int, unsigned int, unsigned int);
 int openrac_lib_Copy(gaddr, gaddr, int);
+int openrac_lib_iCopy(gaddr, gaddr, int);
 gaddr openrac_lib_GetEntryAddress(int);
 void openrac_lib_SetSyscall(int, gaddr);
 gaddr openrac_lib_FindAddress(gaddr, gaddr, gaddr);

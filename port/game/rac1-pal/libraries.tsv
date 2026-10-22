@@ -202,6 +202,7 @@ func_00118E70	kernel	sceSifGetReg	host	system call 0x7A
 func_00118E90	kernel	Deci2Call	host	system call 0x7C; kputs goes to the log
 func_00118EA0	kernel	GetMemorySize	host	system call 0x7F
 func_00118EB0	kernel	_InitTLB	host	system call 0x82
+func_00118D30	kernel	iCopy	host	system call -0x5A: Copy's number in the interrupt form, which copies nothing on the console (nothing calls it)
 func_0011D360	kernel	Copy	host	system call 0x5A
 func_0011D3A8	kernel	GetEntryAddress	host	system call 0x5B
 func_0011D3B8	kernel	SetSyscall	host	system call 0x74

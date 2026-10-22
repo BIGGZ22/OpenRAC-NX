@@ -631,6 +631,16 @@ int openrac_lib_Copy(gaddr dest, gaddr src, int size) { /* Copy */
     return 0;
 }
 
+/* System call -0x5A: Copy's number in the form for interrupt handlers, which
+ * the console's kernel does not implement: a call made on the console copies
+ * nothing and answers 0. */
+int openrac_lib_iCopy(gaddr dest, gaddr src, int size) { /* iCopy */
+    (void)dest;
+    (void)src;
+    (void)size;
+    return 0;
+}
+
 gaddr openrac_lib_FindAddress(gaddr start, gaddr end, gaddr value) { /* FindAddress */
     (void)start;
     (void)end;
