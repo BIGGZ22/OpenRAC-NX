@@ -202,9 +202,74 @@ list's first entry is the target joint of an animation modifier
 
 ## 8. Collision, bangles, GIF usage
 
-- **Collision** (+0x10): a 16-byte header (two unknown u16, then the sizes
-  of parts 1, 3 and 2), then part 1 (unknown), part 2 (vertices, four s16, /
-  1024, not × class scale), part 3 (unknown).
+**Collision** (+0x10; 0: none). What the game's moby query kernels read
+(the segment, sphere and capsule queries and `coll_sphere_mobys`,
+[COLLISION_QUERIES.md](../systems/COLLISION_QUERIES.md#5-mobys-and-hero-groups)),
+as the port's `port/game/rac1/host/collision.c` reads it from the game's
+memory (adapted from ReRAC's port of the kernels), measured by OpenRAC's
+editor on every class blob of both RAC1 discs: 1,064 on PAL and 1,064 on
+NTSC-U, all 19 levels each, every one read and written back byte for byte
+([moby_collision.py](../../../editor/moby_collision.py)).
+
+| Offset | Type | Field |
+|---|---|---|
+| 0x00 | u16 | joints posed for the queries with flag 0x4 (the hero's movement passes among them) |
+| 0x02 | u16 | joints posed for the other queries |
+| 0x04 | s32 | primitive bytes, 0x20 each |
+| 0x08 | s32 | face bytes, 4 each |
+| 0x0C | s32 | vertex bytes, 8 each |
+| 0x10 | | the primitives, then the vertices, then the faces |
+
+So "part 1" is the primitives and "part 3" the faces. The blob starts
+16-byte aligned and is zero-padded to 16; what follows it is the class's next
+block (the shadow entries before the skeleton, else the skeleton) on every
+blob of both discs, so its place is exactly its padded size. Counted per
+level (a class in several levels once in each), 1,064 of the PAL disc's 2,972
+class blobs have collision.
+
+**Primitive** (0x20): s8 kind, u8 always 4 (no kernel reads it), u16 mask,
+then by kind:
+
+| Kind | Shape | Fields | PAL / NTSC-U |
+|---|---|---|---|
+| 1 | sphere | centre +0x10 (3 × f32), radius +0x1C | 464 / 464 |
+| 2 | sphere on a joint | s32 joint +4, radius +0xC, offset from the joint +0x10 (zero on the disc) | 31 / 31 |
+| 3 | upright cylinder | height +4, centre of the base +0x10, radius +0x1C; the base turns with the moby, the axis stays the world's Z | 350 / 350 |
+| 4 | capsule between two joints | s16 joints +4 and +6, radius +0xC | 303 / 302 |
+
+The bytes a kind does not name are zero on both discs. Mask bit 0: tested
+by the queries that pass flag 0x4 (the hero's capsule passes, 0x24 / 0xD24);
+bit 1: by the others; bit 15: set on the last primitive and only there (on
+every blob with primitives). At most 15 primitives on the disc; the moby's
+own `collision_disable` (+0x98) turns primitive *i* off with bit *i*.
+Joints are the posed joint matrices' translations, so joint primitives move
+with the animation; the header's counts are how many joints a query poses:
+at least one past the highest joint the primitives of that query set name
+(exactly that on 1,027 of the 1,064 blobs, more on the others, never less).
+
+**Vertex** (8): s16 x, y, z and a zero. **Face** (4): three u8 vertex
+indices and a type byte, as the level collision's
+([COLLISION.md](COLLISION.md#3-leaf): surface id, footstep class, query
+exclusion), one-sided with the game's normal (v2 − v0) × (v1 − v0). The
+faces' byte indices reach 256 vertices (one blob, class 825 of level 3, has
+257, the last unused); the kernel transforms at most 2,048. At most 446 faces
+on the disc. Classes have the primitives only (486 blobs), the triangles only
+(460), or both (118). Faces are tested by every query that tests mobys
+(each face's type byte filtered as in the level mesh); primitives only by the
+queries whose mask bit they have, and never by one with flag 0x2.
+
+**Units**: a blob point p is at the moby's position + its rotation of
+p × the moby's scale / 1024, where the moby's scale (+0x2C) is the class
+scale times the instance's: the class's packed units, like its mesh. A hit on
+a primitive reports no surface (`CollType` returns −1 for it).
+
+**Where it lives**: in the level's core data, in the class blob; the loader
+(`MobyClassRelocate`) adds the class's address to +0x10 and relocates nothing
+inside it, so the blob may sit anywhere in the core. Each moby copies the
+pointer at spawn (`Moby.collision`, +0x94), and code that sets it to 0 makes
+that one moby intangible (the game does so in dozens of places); the moby's
+record in the gameplay file has no field for it.
+
 - **Bangles**: a 4-byte header, 15 slots of (high first packet, count, low
   first packet, count), then two 8-byte vectors per bangle, unknown.
 - **GIF usage**: per regular packet with setups, 12 texture slots and the
@@ -213,7 +278,7 @@ list's first entry is the target joint of an animation modifier
 
 ## Open
 
-- RAC1: the shadow block's records; the collision parts 1 and 3; the
+- RAC1: the shadow block's records; primitive byte 1 (always 4); the
   class mode bits one by one; the bangle vectors; the joint lists' second
   byte list beyond its first entry.
 - RAC2–RAC4: not measured.
@@ -221,5 +286,7 @@ list's first entry is the target joint of an animation modifier
 Sources: ReRAC (https://github.com/re-rac/rerac, ISC, Copyright (c) 2026
 ReRAC contributors), `docs/formats/moby_rac1.md`,
 `docs/plan/moby_skinning_lighting.md`, `docs/plan/moby_animation.md`,
-`docs/plan/moby_untextured.md`; PAL names from
+`docs/plan/moby_untextured.md`, and its port of the moby query kernels
+(`crates/rc-game/src/collision_query/mobys.rs`, as port/game/rac1/host/collision.c
+adapts it); PAL names from
 `games/rac1/config/overlays/us_map.tsv`.

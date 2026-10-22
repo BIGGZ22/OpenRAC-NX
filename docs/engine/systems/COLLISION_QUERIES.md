@@ -109,7 +109,8 @@ together with the level and the foot.
   between two joints. Bit 15 of a primitive's mask ends the list. The mesh is
   transformed by the moby's rows × scale and position; posed primitives read
   joint translations through an 8-entry pose cache. On the disc: 1,064 blobs,
-  kinds 1–4 = 464 / 31 / 350 / 302.
+  kinds 1–4 = 464 / 31 / 350 / 302 (303 on PAL). The full layout:
+  [MOBY.md](../formats/MOBY.md#8-collision-bangles-gif-usage).
 - **Hero groups**: groups culled by sphere at × 64; vertices unsigned;
   one-sided sphere test, no filters.
 - **Ties** have no query path: their collision is baked into the level mesh.
