@@ -73,6 +73,10 @@ class DockOnALevel(unittest.TestCase):
             # Every cell the edit did not reach keeps its bytes.
             old, again = col.parse(block), col.parse(new)
             reached = {c for k, _ in removed | added for c in col.cells_of(k)}
+            # A cell that holds a removed face where the disc put it is rewritten too.
+            reached |= {cell for cell, leaf in old.cells.items()
+                        if any((k, kind) in removed for corners, kind in leaf.faces
+                               for _, k in col.face_triangles(leaf, corners))}
             for cell, leaf in old.cells.items():
                 if cell not in reached:
                     self.assertEqual(col.encode_leaf(cell, again.cells[cell]), col.encode_leaf(cell, leaf), cell)
