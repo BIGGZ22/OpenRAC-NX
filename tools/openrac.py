@@ -29,6 +29,7 @@ import subprocess
 import sys
 import zlib
 from pathlib import Path
+from urllib.parse import urlencode
 
 ROOT = Path(__file__).resolve().parent.parent
 GAMES = ROOT / "games"
@@ -399,7 +400,7 @@ def tables() -> None:
     summary = PROGRESS / "summary.json"
     rows = [(g, n, v, measure(v)) for g, n, v in versions()]
     made = {"games": game_table(), "discs": disc_table(), "boot": boot_table(), "sources": source_table(),
-            "progress": render(rows, dates=False) if summary.exists() else None}
+            "progress": render(rows, dates=False, badges=True) if summary.exists() else None}
     for doc in (ROOT / "README.md", BASEROM / "README.md", GAMES / "README.md", ROOT / "docs/SOURCES.md"):
         if not doc.exists():
             continue
@@ -415,26 +416,43 @@ def tables() -> None:
         doc.write_text(text, encoding="utf-8")
 
 
-def render(rows, dates: bool = True) -> str:
+def progress_badge(version: dict, measure: str, label: str) -> str | None:
+    """A live bytematch.dev badge for VERSION's project, linked to its page for that version.
+    None when the version has no ByteMatch project (the table then keeps its report figures)."""
+    slug = version.get("bytematch")
+    if not slug:
+        return None
+    serial = version["serial"]
+    query = urlencode({"mode": "shield", "label": label, "measure": measure, "version": serial})
+    return f"[![{label}](https://bytematch.dev/{slug}.svg?{query})](https://bytematch.dev/{slug}/{serial})"
+
+
+def render(rows, dates: bool = True, badges: bool = False) -> str:
     """The progress table. Without DATES it depends only on the committed reports
-    and manifests, so CI can check that README.md is current."""
+    and manifests, so CI can check that README.md is current. With BADGES, each
+    figure that has a ByteMatch project comes live from bytematch.dev instead."""
     out = ["| Game | Version | Code matched | Functions | Fuzzy |" + (" Report date |" if dates else ""),
            "|---|---|---:|---:|---:|" + ("---|" if dates else "")]
     for game, name, version, m in rows:
         where = f"[`{vdir(game, name)}`]({vdir(game, name)})" if version.get("source") else "not started"
         label = f"{version['serial']} ({where})"
-        tail = " – |" if dates else ""
         if m is None:
-            out.append(f"| {game['title']} | {label} | – | – | – |{tail}")
+            code, fns, fuzzy, date = "–", "–", "–", " – " if dates else ""
         elif "missing" in m:
-            out.append(f"| {game['title']} | {label} | no report (`{m['missing']}`) | – | – |{tail}")
+            code, fns, fuzzy, date = f"no report (`{m['missing']}`)", "–", "–", " – " if dates else ""
         else:
             fns = (f"{m['matched_functions']:,} / {m['total_functions']:,}"
                    if m["matched_functions"] is not None else "not counted")
             fuzzy = f"{m['fuzzy_percent']:.2f}%" if m["fuzzy_percent"] is not None else "–"
-            out.append(f"| {game['title']} | {label} | {m['percent']:.2f}% "
-                       f"({m['matched_code']:,} / {m['total_code']:,} bytes) | {fns} | {fuzzy} |"
-                       + (f" {m['date']} |" if dates else ""))
+            code = f"{m['percent']:.2f}% ({m['matched_code']:,} / {m['total_code']:,} bytes)"
+            date = f" {m['date']} " if dates else ""
+        if badges:
+            code = progress_badge(version, "matched_code_percent", "Code") or code
+            if m is not None and "missing" not in m:
+                fns = progress_badge(version, "matched_functions", "Functions") or fns
+                fuzzy = progress_badge(version, "fuzzy_match_percent", "Fuzzy") or fuzzy
+        tail = f"|{date}|" if dates else "|"
+        out.append(f"| {game['title']} | {label} | {code} | {fns} | {fuzzy} {tail}")
     return "\n".join(out) + "\n"
 
 
