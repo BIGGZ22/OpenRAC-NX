@@ -69,7 +69,7 @@ the platform it built, and `package_mod.py --merge` joins the platforms
 | `games` | yes | The game and the discs the mod is for: `{"rac1": ["pal", "ntsc"]}` (PAL and NTSC-U). |
 | `scripts` | script mods | The `.luau` files to run at start, in order, as paths inside the mod (forward slashes). |
 | `plugin` | native mods | Platform to library path inside the mod. Platforms: `macos-arm64`, `macos-x86_64`, `linux-x86_64`, `linux-aarch64`, `windows-x86_64`, `windows-arm64`. |
-| `hooks` | no | The hook points the mod takes, by id ([hooks](hooks.md)). The launcher shows which mods share a hook point. |
+| `hooks` | no | The hook points the mod takes, by id (`rac1.player.take_damage`) or alias (`Hero_TakeDamage`) ([hooks](hooks.md)). `package_mod.py` checks each against the SDK's table of the mod's games. The launcher shows which mods share a hook point. |
 | `settings` | no | Options for players ([settings](settings.md)). |
 | `requires` | no | Mods that must be on, and load before this one: `[{"id": "other-mod", "version": ">=1.2.0"}]` (`version` is `>=X.Y.Z`, `=X.Y.Z`, or left out). |
 | `conflicts` | no | Mods it cannot run with: `[{"id": "other-strafe", "reason": "both take L2 and R2"}]`. |

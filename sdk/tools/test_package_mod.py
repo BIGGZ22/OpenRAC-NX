@@ -144,6 +144,26 @@ class ManifestRules(unittest.TestCase):
         self.assertTrue(pm.check_manifest(changed(load={"first": []})))
         self.assertTrue(pm.check_manifest(changed(homepage="http://example.com")))
 
+    def test_hooks_by_id_or_alias(self):
+        # The SDK's own table (bindings/rac1.ids.lock): ids, the names and the symbols are all aliases.
+        for hooks in (["rac1.player.take_damage"], ["Hero_TakeDamage"], ["rac1.combat.get_hit", "Moby_GetHitMessage"],
+                      ["func_L00_002124E8"], []):
+            self.assertEqual(pm.check_manifest(changed(hooks=hooks)), [], hooks)
+        for hooks in (["rac1.player.no_such_hook"], ["Hero_Nothing"], ["Rac1.Player.Take_Damage"], ["rac1."],
+                      ["has space"], "Hero_TakeDamage", [3]):
+            self.assertTrue(pm.check_manifest(changed(hooks=hooks)), hooks)
+        self.assertIn("is not a hook point of rac1", " ".join(pm.check_manifest(changed(hooks=["rac1.x.y"]))))
+
+    def test_hooks_of_a_game_without_a_table(self):
+        # A game this SDK has no table for: the names are only checked for their form.
+        other = changed(games={"rac9": ["pal"]}, hooks=["rac9.player.jump", "Hero_Jump"])
+        self.assertEqual(pm.check_manifest(other), [])
+        with tempfile.TemporaryDirectory() as d:
+            (Path(d) / "rac1.ids.lock").write_text("# a table\nrac1.a.b\tpal:00100000\tOld_Name,func_00100000\n")
+            self.assertEqual(pm.check_manifest(changed(hooks=["rac1.a.b", "Old_Name"]), bindings=Path(d)), [])
+            self.assertTrue(pm.check_manifest(changed(hooks=["Hero_TakeDamage"]), bindings=Path(d)))
+            self.assertIsNone(pm.hook_names("rac2", Path(d)))
+
 
 class Archives(unittest.TestCase):
     def setUp(self):
