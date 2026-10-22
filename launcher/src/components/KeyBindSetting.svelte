@@ -78,7 +78,7 @@
       if (name) take(name);
     };
     const down = (e: MouseEvent) => {
-      if (cap && cap.contains(e.target as Node)) {
+      if (cap?.contains(e.target as Node)) {
         e.preventDefault();
         e.stopPropagation();
         const name = bindOfMouse(e);
@@ -90,7 +90,9 @@
         capturing = null;
       }
     };
-    const menu = (e: MouseEvent) => e.preventDefault();
+    const menu = (e: MouseEvent) => {
+      e.preventDefault();
+    };
     const wheel = (e: WheelEvent) => {
       e.preventDefault();
       const name = bindOfWheel(e);
@@ -124,7 +126,7 @@
   <div class="caps" role="group" aria-label={s.name}>
     {#each slots as slot (slot)}
       {@const name = binds[slot]}
-      {#if name || slot === binds.length || capturing === slot}
+      {#if name !== undefined || slot === binds.length || capturing === slot}
         <span class="cap-wrap">
           <button
             bind:this={caps[slot]}
@@ -137,7 +139,9 @@
               : name
                 ? T.bindAria(s.name, bindSpoken(name))
                 : T.addBindAria(s.name)}
-            onclick={() => start(slot)}
+            onclick={() => {
+              start(slot);
+            }}
             >{#if capturing === slot}{T.KEYBIND.press}{:else if name}{bindLabel(name)}{:else}<span class="add"
                 >{slot === 0 ? T.KEYBIND.none : T.KEYBIND.add}</span
               >{/if}</button
@@ -145,7 +149,9 @@
               class="clear"
               aria-label={T.clearBindAria(s.name, bindSpoken(name))}
               title={T.clearBindAria(s.name, bindSpoken(name))}
-              onclick={() => clear(slot)}>×</button
+              onclick={() => {
+                clear(slot);
+              }}>×</button
             >{/if}
         </span>
       {/if}

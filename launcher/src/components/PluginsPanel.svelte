@@ -346,8 +346,12 @@
                   <span class="text"><strong>{T.KEYBIND.presets}</strong><small>{T.KEYBIND.presetsHint}</small></span>
                   <div class="segmented" role="radiogroup" aria-label={T.KEYBIND.presets}>
                     {#each mod.presets.some((p) => p.id === "default") ? mod.presets : [null, ...mod.presets] as p (p?.id ?? "")}
-                      <button role="radio" aria-checked={isPreset(mod.settings, p)} onclick={() => applyPreset(mod, p)}
-                        >{p?.name ?? T.KEYBIND.defaults}</button
+                      <button
+                        role="radio"
+                        aria-checked={isPreset(mod.settings, p)}
+                        onclick={() => {
+                          applyPreset(mod, p);
+                        }}>{p?.name ?? T.KEYBIND.defaults}</button
                       >
                     {/each}
                   </div>
@@ -360,7 +364,9 @@
                     setting={s}
                     conflicts={clashes[s.key] ?? []}
                     clashing={clashes[s.key] ? sharedBinds(mod.settings, s.key) : []}
-                    onchange={(value) => setValue(mod, s, value)}
+                    onchange={(value) => {
+                      setValue(mod, s, value);
+                    }}
                   />
                 {:else if control === "switch"}
                   <label class="setting">
