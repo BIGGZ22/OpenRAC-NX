@@ -83,8 +83,9 @@ no type byte.
 
 Turn on **Pick faces in the 3D view**, then click a face. Shift-click adds a
 face or takes it out; drag a box to select every face whose middle is inside
-it; Alt-click (or **Connected, same surface**) takes the faces that touch it
-with the same type byte. The dock says what is selected: how many faces, their
+it; Alt-click takes the faces that touch it with the same type byte
+(Shift-Alt-click adds them, **Connected, same surface** adds those of the
+whole selection). The dock says what is selected: how many faces, their
 surface ids, sound classes and how many are excluded. With Pick faces off, the
 editor selects nodes as usual: selecting a tie or a shrub selects the
 collision baked inside its bounds, and selecting a moby shows its class's

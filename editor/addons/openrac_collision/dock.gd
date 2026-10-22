@@ -143,8 +143,8 @@ func build_selection(box: VBoxContainer) -> void:
 	box.add_child(pick_toggle)
 	needs.level.append(pick_toggle)
 	wrapped(box, "Click a face to select it, Shift-click to add or take one out, drag for a box, "
-		+ "Alt-click for the connected faces of its surface. Selecting a tie or shrub selects the "
-		+ "collision baked inside its bounds.")
+		+ "Alt-click for the connected faces of its surface (Shift-Alt-click adds them). Selecting a "
+		+ "tie or shrub selects the collision baked inside its bounds.")
 	var row := HBoxContainer.new()
 	box.add_child(row)
 	needs.selection.append(button(row, "Connected, same surface", handle_connected_pressed))

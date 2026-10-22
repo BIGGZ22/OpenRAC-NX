@@ -322,7 +322,7 @@ func pick_at(camera: Camera3D, at: Vector2, is_adding: bool, is_connected: bool)
 	place = hit[0]
 	dock.show_place(place)
 	var picked := PackedInt32Array([face])
-	faces.select(faces.connected(picked) if is_connected else picked, is_adding or is_connected)
+	faces.select(faces.connected(picked) if is_connected else picked, is_adding)
 	refresh_selection()
 
 

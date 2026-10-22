@@ -14,7 +14,7 @@ const TEXT: String = """[b]How to edit collision[/b]
 
 [b]See it.[/b] Turn on [i]Show collision[/i]: every face is drawn over the level in its surface's colour, and every moby shows its class's collision. The legend lists the surfaces this level has. A face's type byte has three parts: the surface id (bits 0-4, the colour; 31 is nothing special, 0 water), the footstep sound class (bits 5-6) and a bit that keeps it out of some of the game's queries (bit 7).
 
-[b]Select.[/b] Turn on [i]Pick faces[/i], then click a face in the 3D view. Shift-click adds a face or takes it out; drag a box to select every face whose middle is inside it; Alt-click, or [i]Connected, same surface[/i], takes the faces that touch it with the same type byte. Selecting a tie or a shrub (Pick faces off) selects the collision baked inside its bounds; selecting a moby shows its class's collision.
+[b]Select.[/b] Turn on [i]Pick faces[/i], then click a face in the 3D view. Shift-click adds a face or takes it out; drag a box to select every face whose middle is inside it; Alt-click takes the faces that touch it with the same type byte (Shift-Alt-click adds them; [i]Connected, same surface[/i] adds those of the whole selection). Selecting a tie or a shrub (Pick faces off) selects the collision baked inside its bounds; selecting a moby shows its class's collision.
 
 [b]Repaint.[/b] Choose a surface id, sound class and the exclusion bit, then [i]Repaint the selected faces[/i].
 
