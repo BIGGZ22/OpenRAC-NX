@@ -272,9 +272,10 @@ with a manifest of their sizes and hashes.
 ## The project
 
 ```
-project.godot
+project.godot                enables the Collision dock ([editor_plugins])
 rc1/level.gd                 fly camera when a level is run
 rc1/check.gd                 headless check against level.json
+addons/openrac_collision/    the Collision dock, an editor plugin (Collision, below)
 levels/level_NN/
   level_NN.tscn              the level
   level.json                 what was extracted: counts, bounds, code overlay
@@ -479,7 +480,31 @@ lists its surfaces and how many triangles use each.
 
 ### Editing it
 
-The collision comes as tiles, one per 64 x 64-unit square of the level
+**The Collision dock** (`addons/openrac_collision`, an editor plugin every
+export enables; [LEVEL_MODDING.md](LEVEL_MODDING.md#collision) is the
+modder's guide) edits the collision face by face: Show collision draws it over
+the level with a legend of its surfaces; Pick faces selects faces in the 3D
+view (click, Shift-click, a box, connected faces of one type byte, the faces
+baked inside a selected tie or shrub); the selection is repainted (surface id,
+sound class, exclusion bit), deleted, moved by an offset, or faces are added
+(a quad, a box, the triangles of a selected mesh, simplified to fit the
+cells). Each edit is undoable and saved with the scene. The dock leaves the
+tiles alone and keeps its edits as metadata of `Game/Collision`, which
+`collision_scene.scene_collision` applies on top of the nodes' triangles:
+
+| Metadata | Ten ints per face |
+|---|---|
+| `rc1_removed` | the corners x0 y0 z0 x1 y1 z1 x2 y2 z2 in 1/64 game units (the tiles' positions times 64, glTF's winding), then the type byte |
+| `rc1_added` | the same, on the game's grid; a repaint or a move is a face removed and added again |
+| `rc1_hero_removed` | the hero wall's number (`HeroWall_NNN`), then the corners |
+
+A face is named by its corners and type byte, whichever corner comes first.
+A removed face no node holds any more (a tile edited in Blender since) is
+reported in `changes.txt`, not guessed at. The dock's logic is in plain
+scripts (`level_faces.gd`, `class_collision.gd`), which
+[test_collision_dock.gd](test_collision_dock.gd) runs headless on a real level.
+
+The collision also comes as tiles, one per 64 x 64-unit square of the level
 (`Game/Collision/Tile_XX_YY`, an instance of `collision/tile_XX_YY.glb`), and
 one node per hero wall (`Game/HeroWalls/HeroWall_NNN`, `collision/hero_NNN.glb`).
 A tile has a material per type byte named `rc1_surface_XX` (the byte in
@@ -558,7 +583,9 @@ queries that pass flag 0x4 (the player's movement among them), bit 1 for the oth
 (shots, bolts, explosions; the ground probe tests no primitives). Triangles are tested by every
 query. Joint primitives follow their joints in the running game; the editor
 shows them in the bind pose. Open the class scene and click the `Collision`
-eye to see it (the editor plugin shows it on a selected moby).
+eye to see it (the Collision dock shows it on a selected moby, and edits its
+parts' sizes, positions, queries and type bytes, or makes it from the class's
+model: the same rules as below).
 
 | In Godot or Blender | What the packer does |
 |---|---|
@@ -625,7 +652,16 @@ collision.
 python3 -m unittest discover -s editor                         # synthetic data only
 godot --headless --path assets/godot --import
 godot --headless --path assets/godot --script res://rc1/check.gd
+godot --headless --editor --quit --path assets/godot           # loads the Collision dock: no errors
+OPENRAC_GODOT=godot OPENRAC_DOCK_DISC=baserom/SCES_509.16.iso OPENRAC_DOCK_PROJECT=assets/levels/rac1/pal/level_00 \
+  python3 -m unittest discover -s editor -p test_collision_dock.py   # the dock's edits, packed
 ```
+
+The last runs the dock's logic headless on a copy of an exported, imported
+level (picking by ray, selecting, repainting, deleting, moving, adding, a
+mesh made into collision, a class's collision made from its model) and checks
+the packed block is the disc's with exactly those edits, every other cell byte
+for byte.
 
 The Godot check loads every level scene and compares its meshes, triangles,
 textures, bounds, sky panorama and moby count with what the extractor wrote.
@@ -770,6 +806,7 @@ The GDScript files follow [`GDSCRIPT_CONVENTIONS.md`](GDSCRIPT_CONVENTIONS.md).
 | `moby_collision_scene.py` | A class's collision in its class scene, read back and packed into the level's core data |
 | `gamedata.py` | The gameplay data (pvars, links, groups, volumes, paths, cameras, sounds, level settings) in the scene and packed back |
 | `pack.py`, `gameplay.py`, `scenery.py`, `wadpack.py` | Packing edited scenes back into the game's level data |
+| `addons/openrac_collision/` | The Collision dock (GDScript, editor only): `plugin.gd` the plugin, `dock.gd` and `help.gd` its panel, `level_faces.gd` the level's faces and their edits, `class_collision.gd` a class scene's collision, `surfaces.gd` the type bytes |
 
 The decoders accept only the layouts found on these discs and raise
 `FormatError` on anything else. Nothing is skipped silently.
