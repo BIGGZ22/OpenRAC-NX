@@ -137,6 +137,19 @@ class ManifestRules(unittest.TestCase):
                     {"x": 1}):
             self.assertTrue(pm.check_manifest(changed(settings=[jump, fire], presets=bad)), bad)
 
+    def test_presets_of_every_type(self):
+        # A preset fills any setting: sliders, a choice, a switch, text, keybinds.
+        settings = GOOD["settings"] + [{"key": "jump", "name": "Jump", "type": "keybind", "default": "Space"}]
+        hard = {"id": "hard", "name": "Hard",
+                "values": {"mode": "hold", "trace": True, "every": 600, "scale": 0.5, "label": "hard", "jump": "KeyJ"}}
+        self.assertEqual(pm.check_manifest(changed(settings=settings, presets=[hard])), [])
+        for key, bad in (("mode", "sideways"), ("trace", 1), ("every", 601), ("every", 1.5), ("scale", 2.5),
+                         ("scale", "1"), ("label", "too long a label"), ("jump", "Nope")):
+            p = {"id": "x", "name": "X", "values": {key: bad}}
+            errors = pm.check_manifest(changed(settings=settings, presets=[p]))
+            self.assertTrue(errors, (key, bad))
+            self.assertIn(f"preset x: {key}", " ".join(errors))
+
     def test_references(self):
         self.assertTrue(pm.check_manifest(changed(requires=[{"id": "x", "version": "1.0.0"}])))
         self.assertTrue(pm.check_manifest(changed(requires=[{"id": "X"}])))
