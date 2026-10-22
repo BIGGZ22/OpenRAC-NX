@@ -127,6 +127,19 @@ def fix_from_diagnostics(text: str, stderr: str, rel: str) -> tuple[str, list[st
     code_lines = _lines_outside_comments(text)
     fixes = []
     diags = list(_DIAG.finditer(stderr))
+    # The lines Clang named for a name: the declarations that contradict each other. Renaming
+    # one of them must not rename another into its alias (pause.c declares func_001F75D0 twice
+    # with other types, and each needs an alias of its own).
+    declared: dict[str, set[int]] = {}
+    for k, d in enumerate(diags):
+        m = re.match(r"(?:conflicting types for|redefinition of) '(\w+)'", d["msg"])
+        if not m or d["kind"] != "error":
+            continue
+        where = declared.setdefault(m.group(1), set())
+        where.add(int(d["line"]) - 1)
+        note = diags[k + 1] if k + 1 < len(diags) else None
+        if note is not None and note["kind"] == "note":
+            where.add(int(note["line"]) - 1)
     inserts: dict[int, list[str]] = {}
     for k, d in enumerate(diags):
         note = diags[k + 1] if k + 1 < len(diags) else None
@@ -207,6 +220,8 @@ def fix_from_diagnostics(text: str, stderr: str, rel: str) -> tuple[str, list[st
                     continue
                 lines[line] = decl
                 for j in range(line + 1, len(lines)):
+                    if j in declared.get(name, ()):
+                        continue  # another declaration of the same name: it is kept apart on its own
                     lines[j] = re.sub(rf"\b{name}\b", alias, lines[j])
                 fixes.append(f"line {line + 1}: {what} of {name} that contradicts the first, kept apart")
                 continue
