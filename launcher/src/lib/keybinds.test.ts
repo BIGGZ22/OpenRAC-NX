@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import keysH from "../../../sdk/include/openrac/keys.h?raw";
-import type { PluginPreset, PluginSetting } from "./api";
+import type { PluginSetting } from "./api";
 import {
   BIND_NAMES,
   bindLabel,
@@ -8,10 +8,8 @@ import {
   bindOfMouse,
   bindOfWheel,
   formatBinds,
-  isPreset,
   keybindConflicts,
   parseBinds,
-  presetChanges,
   sharedBinds,
   withBind,
   withoutBind,
@@ -88,7 +86,7 @@ describe("capture", () => {
   });
 });
 
-describe("conflicts and presets", () => {
+describe("conflicts", () => {
   const settings = [
     bind("jump", "Space,KeyQ"),
     bind("fire", "KeyQ"),
@@ -101,14 +99,5 @@ describe("conflicts and presets", () => {
     expect(keybindConflicts([bind("jump", "Space"), bind("fire", "MouseLeft")])).toEqual({});
     expect(sharedBinds(settings, "jump")).toEqual(["KeyQ"]);
     expect(sharedBinds(settings, "back")).toEqual([]);
-  });
-
-  it("set the keybinds a preset names, the others back to their defaults", () => {
-    const moved = [bind("jump", "KeyJ", { default: "Space" }), bind("fire", "MouseLeft")];
-    const arrows: PluginPreset = { id: "arrows", name: "Arrows", values: { fire: "ControlRight" } };
-    expect(presetChanges(moved, arrows)).toEqual({ jump: "Space", fire: "ControlRight" });
-    expect(presetChanges(moved, null)).toEqual({ jump: "Space" });
-    expect(isPreset(moved, null)).toBe(false);
-    expect(isPreset([bind("jump", "Space")], null)).toBe(true);
   });
 });

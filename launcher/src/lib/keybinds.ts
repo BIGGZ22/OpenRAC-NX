@@ -3,7 +3,7 @@
 // web's KeyboardEvent.code does: "KeyW", "Space", "ShiftLeft"; then "MouseLeft" .. "MouseForward"
 // and "WheelUp" .. "WheelRight"). A setting holds up to two, comma-separated. The core checks the
 // same names (core/src/plugins.rs, BIND_NAMES); here the control's words and its sums.
-import type { PluginPreset, PluginSetting } from "./api";
+import type { PluginSetting } from "./api";
 
 /** keys.h's names, in its order. */
 export const BIND_NAMES: readonly string[] = [
@@ -177,19 +177,3 @@ export function sharedBinds(settings: PluginSetting[], key: string): string[] {
     .flatMap((o) => parseBinds(o.value));
   return parseBinds(me.value).filter((b) => others.includes(b));
 }
-
-/** The values a preset gives each of the mod's keybinds: its own, else the setting's default (null:
- *  back to the defaults). Only those that differ from the value now. */
-export function presetChanges(settings: PluginSetting[], preset: PluginPreset | null): Record<string, string> {
-  const out: Record<string, string> = {};
-  for (const s of settings) {
-    if (s.type !== "keybind") continue;
-    const wanted = formatBinds(parseBinds(preset?.values[s.key] ?? s.default));
-    if (wanted !== formatBinds(parseBinds(s.value))) out[s.key] = wanted;
-  }
-  return out;
-}
-
-/** Whether the keybinds are as a preset (null: the defaults) would set them. */
-export const isPreset = (settings: PluginSetting[], preset: PluginPreset | null): boolean =>
-  Object.keys(presetChanges(settings, preset)).length === 0;

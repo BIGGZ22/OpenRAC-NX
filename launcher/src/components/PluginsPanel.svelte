@@ -21,7 +21,8 @@
   import { app, guard, saveConfig } from "$lib/app.svelte";
   import { modHint, modKind, pluginState, settingControl, settingNumber, settingRange, sharedWith } from "$lib/plugins";
   import * as T from "$lib/modsText";
-  import { isPreset, keybindConflicts, presetChanges, sharedBinds } from "$lib/keybinds";
+  import { keybindConflicts, sharedBinds } from "$lib/keybinds";
+  import { isPreset, presetChanges, presetsBindOnly } from "$lib/presets";
   import Icon from "./Icon.svelte";
   import KeyBindSetting from "./KeyBindSetting.svelte";
   import Menu from "./Menu.svelte";
@@ -167,9 +168,9 @@
   const setValue = (mod: PluginView, s: PluginSetting, value: unknown) =>
     void change(api.pluginsSetSetting(v.game, v.name, mod.id, s.key, value));
 
-  /** A preset of the mod's keybinds (null: their defaults): each binding it changes, one after the other. */
+  /** A preset of the mod's settings (null: their defaults): each setting it changes, one after the other. */
   function applyPreset(mod: PluginView, preset: PluginPreset | null) {
-    const changes = Object.entries(presetChanges(mod.settings, preset));
+    const changes = Object.entries(presetChanges(mod.settings, mod.presets ?? [], preset));
     if (!changes.length) return;
     void change(
       (async () => {
@@ -342,13 +343,18 @@
             {@const clashes = keybindConflicts(mod.settings)}
             <div class="settings" id={`settings-${mod.id}`}>
               {#if mod.presets?.length}
+                {@const presets = mod.presets}
+                {@const binds = presetsBindOnly(mod.settings, presets)}
+                {@const title = binds ? T.KEYBIND.presets : T.PRESETS.title}
                 <div class="setting">
-                  <span class="text"><strong>{T.KEYBIND.presets}</strong><small>{T.KEYBIND.presetsHint}</small></span>
-                  <div class="segmented" role="radiogroup" aria-label={T.KEYBIND.presets}>
-                    {#each mod.presets.some((p) => p.id === "default") ? mod.presets : [null, ...mod.presets] as p (p?.id ?? "")}
+                  <span class="text"
+                    ><strong>{title}</strong><small>{binds ? T.KEYBIND.presetsHint : T.PRESETS.hint}</small></span
+                  >
+                  <div class="segmented" role="radiogroup" aria-label={title}>
+                    {#each presets.some((p) => p.id === "default") ? presets : [null, ...presets] as p (p?.id ?? "")}
                       <button
                         role="radio"
-                        aria-checked={isPreset(mod.settings, p)}
+                        aria-checked={isPreset(mod.settings, presets, p)}
                         onclick={() => {
                           applyPreset(mod, p);
                         }}>{p?.name ?? T.KEYBIND.defaults}</button

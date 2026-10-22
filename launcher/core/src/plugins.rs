@@ -140,8 +140,9 @@ impl SettingSpec {
     }
 }
 
-/// A set of keybind values offered as one button (the manifest's `presets`): the keybinds it does
-/// not name go back to their defaults.
+/// A set of setting values offered as one button (the manifest's `presets`), of any type: sliders,
+/// choices, switches, text and keybinds. The settings it does not name, among the mod's keybinds
+/// and those another of its presets names, go back to their defaults.
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct Preset {
     pub id: String,
@@ -206,7 +207,7 @@ pub struct Manifest {
     pub hooks: Vec<String>,
     #[serde(default)]
     pub settings: Vec<SettingSpec>,
-    /// Keybind presets (interface 1.2).
+    /// Presets of its settings (interface 1.2).
     #[serde(default)]
     pub presets: Vec<Preset>,
     #[serde(default)]
@@ -368,8 +369,8 @@ impl Manifest {
                 return Err(format!("preset {:?}: its id is not [a-z0-9_]+, is there twice, or it has no name", p.id));
             }
             for (key, value) in &p.values {
-                let Some(spec) = self.settings.iter().find(|s| s.key == *key && s.kind == "keybind") else {
-                    return Err(format!("preset {:?}: {key} is not a keybind setting of the mod", p.id));
+                let Some(spec) = self.settings.iter().find(|s| s.key == *key) else {
+                    return Err(format!("preset {:?}: {key} is not a setting of the mod", p.id));
                 };
                 if check_value(spec, value).is_none() {
                     return Err(format!("preset {:?}: {value} is not a value of {key}", p.id));
@@ -614,7 +615,7 @@ pub struct PluginView {
     /// Off, and could not be switched on as things are: why (also for a mod that is off).
     pub blocked: String,
     pub settings: Vec<SettingView>,
-    /// Keybind presets the mod offers (its manifest's).
+    /// Presets of its settings the mod offers (its manifest's).
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub presets: Vec<Preset>,
     pub hooks: Vec<String>,
@@ -1366,6 +1367,31 @@ mod tests {
         assert!(with(json!([{"key": "j", "name": "J", "type": "keybind", "default": "Space", "binds": 3}]), json!([]))
             .is_err());
         assert!(with(json!([{"key": "n", "name": "N", "type": "int", "default": 1, "binds": 1}]), json!([])).is_err());
+
+        // A preset fills any type of setting: the sliders, a choice, a switch, text.
+        let mixed = json!([
+            {"key": "damage", "name": "Damage", "type": "float", "default": 1.0, "min": 0.25, "max": 4.0},
+            {"key": "count", "name": "Count", "type": "int", "default": 3, "min": 1, "max": 30},
+            {"key": "mode", "name": "Mode", "type": "choice", "default": "a",
+             "choices": [{"value": "a", "name": "A"}, {"value": "b", "name": "B"}]},
+            {"key": "chaos", "name": "Chaos", "type": "bool", "default": false},
+            {"key": "seed", "name": "Seed", "type": "string", "default": "", "max_length": 4},
+        ]);
+        let hard = json!([{"id": "hard", "name": "Hard",
+                           "values": {"damage": 2.5, "count": 30, "mode": "b", "chaos": true, "seed": "abcd"}}]);
+        assert_eq!(with(mixed.clone(), hard), Ok(()));
+        for bad in [
+            json!({"damage": 5.0}),
+            json!({"damage": "2"}),
+            json!({"count": 1.5}),
+            json!({"count": 0}),
+            json!({"mode": "c"}),
+            json!({"chaos": 1}),
+            json!({"seed": "abcde"}),
+        ] {
+            let err = with(mixed.clone(), json!([{"id": "x", "name": "X", "values": bad}])).unwrap_err();
+            assert!(err.contains("is not a value of"), "{err}");
+        }
 
         // Jump and Fire share KeyQ (one group): both say so; Back has Space with Jump, in another group.
         let specs: Vec<SettingSpec> = serde_json::from_value(settings).unwrap();

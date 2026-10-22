@@ -367,11 +367,11 @@ export interface PluginSetting {
   value: unknown;
 }
 
-/** core/src/plugins.rs: a set of keybind values a mod offers as one button. */
+/** core/src/plugins.rs: a set of setting values a mod offers as one button (lib/presets.ts). */
 export interface PluginPreset {
   id: string;
   name: string;
-  values: Record<string, string>;
+  values: Record<string, unknown>;
 }
 
 /** What a gameplay mod is: code the game loads (a library), Luau scripts the game runs sandboxed,
@@ -395,7 +395,7 @@ export interface PluginView {
   /** Off, and could not be switched on as things are: why. */
   blocked: string;
   settings: PluginSetting[];
-  /** Keybind presets the mod offers. */
+  /** Presets of its settings the mod offers. */
   presets?: PluginPreset[];
   hooks: string[];
   sharedHooks: { hook: string; with: string[] }[];

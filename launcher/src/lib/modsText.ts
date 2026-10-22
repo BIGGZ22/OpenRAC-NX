@@ -126,6 +126,11 @@ export const KEYBIND = {
   presetsHint: "Sets every binding below; you can change each one after.",
   defaults: "Default",
 } as const;
+/** A mod's presets that set more than its keybinds (lib/presets.ts). */
+export const PRESETS = {
+  title: "Presets",
+  hint: "Sets the settings below; you can change each one after.",
+} as const;
 export const bindAria = (setting: string, bind: string) => `${setting}: ${bind}. Change`;
 export const addBindAria = (setting: string) => `${setting}: add a binding`;
 export const clearBindAria = (setting: string, bind: string) => `Remove ${bind} from ${setting}`;
