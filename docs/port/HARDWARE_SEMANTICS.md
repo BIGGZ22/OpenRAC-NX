@@ -74,6 +74,17 @@ operand and every result would cost each float operation of the game a compare o
 port fixes such places where they show (`OPENRAC_WATCH`, docs/port/DEBUGGING.md) rather than
 everywhere. The MAC flags of item 9 do report an exponent-255 result as an overflow.
 
+Where a function needs all of it, it can have it: a function named in its game's hostgen.json
+`"ps2_float"` computes its float `+ - * /`, comparisons and conversions through
+[ps2float.h](../../port/runtime/include/openrac/ps2float.h), the model of
+[ps2_float.h](../../port/assets/ps2_float.h) in software: an overflow is ±`0x7FFFFFFF`, an
+exponent of 255 an ordinary number, and the adder drops the smaller operand's bits more than one
+place below the larger one's last bit before it adds (where the host, even rounding toward zero,
+cuts the exact sum: `1 - 1.5 * 2^-24` is `0x3F7FFFFF` on the console, `0x3F7FFFFE` on the host).
+The port's own C calls the same functions. That is for functions whose result the game cuts to an
+integer or compares, where one last place decides; the test is `ps2float` (ctest) and
+`test_ps2_float_computes_as_the_ee_does`.
+
 ## 3. 128-bit registers, 64-bit branches, the upper halves across system calls
 
 **b.** In translated assembly every general register is a 64-bit local, with a second 64-bit

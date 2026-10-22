@@ -62,16 +62,32 @@ def have_compiler() -> bool:
     return shutil.which("clang") is not None and sys.platform != "win32"
 
 
+def cxx_flags() -> list[str]:
+    """C++20 with <format> (the port's assets): libc++ where the system's own library has none
+    (the port's Linux build takes it the same way)."""
+    for flags in ([], ["-stdlib=libc++"]):
+        probe = subprocess.run(["clang++", "-std=c++20", *flags, "-x", "c++", "-fsyntax-only", "-"],
+                               input="#include <format>\n", capture_output=True, text=True)
+        if probe.returncode == 0:
+            return ["-std=c++20", *flags]
+    return ["-std=c++20"]
+
+
+# The EE's float arithmetic in software (openrac/ps2float.h): its C entry points and their model.
+PS2FLOAT_CXX = [HERE.parent.parent / "runtime" / "ps2float.cpp", HERE.parent.parent / "assets" / "ps2_float.cpp"]
+
+
 @unittest.skipUnless(have_compiler(), "needs Clang on a POSIX host")
 class Translate(unittest.TestCase):
     def run_program(self, files: dict[str, str], places: str = "", config: dict | None = None,
                     extra_files: dict[str, str] | None = None, host_c: str = "",
                     stubs: int = 0, hostgen_args: list[str] | None = None,
-                    cflags: list[str] | None = None) -> list[str]:
+                    cflags: list[str] | None = None, cxx: list[Path] | None = None) -> list[str]:
         """Translates, builds and runs files (name -> C); returns the printed lines.
         config adds to hostgen.json; extra_files are written beside it (tables);
         host_c is linked in (the port's own C); stubs is how many functions are
-        expected to become stubs."""
+        expected to become stubs; cxx are C++ sources of the port linked in (the
+        program is then linked as C++)."""
         with tempfile.TemporaryDirectory() as tmp:
             tmp = Path(tmp)
             src = tmp / "game"
@@ -105,9 +121,19 @@ class Translate(unittest.TestCase):
                 (tmp / "host.c").write_text('#include "openrac/guest.h"\n' + textwrap.dedent(host_c))
                 sources.append(tmp / "host.c")
             exe = tmp / "prog"
+            objects = []
+            flags = cxx_flags() if cxx else []
+            for k, path in enumerate(cxx or []):
+                objects.append(tmp / f"cxx{k}.o")
+                build = subprocess.run(["clang++", *flags, "-O1", "-w", "-I", str(RUNTIME_INCLUDE),
+                                        "-I", str(HERE.parent.parent), "-c", str(path), "-o", str(objects[-1])],
+                                       capture_output=True, text=True)
+                self.assertEqual(build.returncode, 0, build.stderr)
             build = subprocess.run(
-                ["clang", "-std=gnu11", "-O1", "-w", "-fno-strict-aliasing", "-fwrapv", "-fsigned-char",
-                 *(cflags or []), "-I", str(RUNTIME_INCLUDE), "-I", str(out), "-o", str(exe), *map(str, sources)],
+                ["clang++" if cxx else "clang", *(["-x", "c"] if cxx else []), "-std=gnu11", "-O1", "-w",
+                 "-fno-strict-aliasing", "-fwrapv", "-fsigned-char", *(cflags or []),
+                 "-I", str(RUNTIME_INCLUDE), "-I", str(out), "-o", str(exe), *map(str, sources),
+                 *(["-x", "none", *flags[1:], *map(str, objects)] if cxx else [])],
                 capture_output=True, text=True)
             self.assertEqual(build.returncode, 0, build.stderr)
             run = subprocess.run([str(exe)], capture_output=True, text=True, timeout=30)
@@ -894,6 +920,71 @@ class Translate(unittest.TestCase):
             }
         """})
         self.assertEqual(out, ["1", "253", "1", "1", "1", "50"])
+
+    def test_ps2_float_computes_as_the_ee_does(self):
+        # hostgen.json "ps2_float": in the functions it names, float + - * /, compound assignments,
+        # comparisons, a float's truth and the conversions between int and float are the EE FPU's,
+        # through openrac/ps2float.h: results cut, not rounded; the adder's dropped bits; no
+        # infinity (a divide by zero is +-0x7FFFFFFF, an ordinary number in comparisons and
+        # conversions). Functions not named compute as the port does.
+        files = {"a.c": """
+            extern float D_00200000[4];
+            extern int D_00200010[4];
+            int bits(float f) { D_00200000[3] = f; return *(int *)&D_00200000[3]; }
+            void ee(void) {
+                float one = D_00200000[0], small = D_00200000[1], zero = D_00200000[2];
+                float q = one / zero;
+                test_print(bits(one + small));
+                test_print(bits(one - small));
+                test_print(bits(q));
+                test_print(one < q);
+                test_print(!zero);
+                test_print(bits((float)D_00200010[0]));
+                test_print((int)q);
+                test_print((int)-q);
+                D_00200000[3] = one;
+                D_00200000[3] -= small;
+                test_print(*(int *)&D_00200000[3]);
+                one += small;
+                test_print(bits(one));
+            }
+            void host(void) {
+                float one = D_00200000[0], small = D_00200000[1], zero = D_00200000[2];
+                test_print(bits(one + small));
+                test_print(bits(one / zero));
+                test_print(bits((float)D_00200010[0]));
+            }
+            int test_main(void) {
+                *(int *)&D_00200000[1] = 0x33C00000;
+                D_00200000[0] = 1.0f;
+                D_00200000[2] = 0.0f;
+                D_00200010[0] = 16777219;
+                ee();
+                host();
+                return 0;
+            }
+        """}
+        out = self.run_program(files, config={"ps2_float": ["ee", "func_00100000"]}, cxx=PS2FLOAT_CXX)
+        self.assertEqual(out, [str(0x3F800000), str(0x3F7FFFFF), str(0x7FFFFFFF), "1", "1", str(0x4B800001),
+                               "2147483647", "-2147483648", str(0x3F7FFFFF), str(0x3F800000),
+                               str(0x3F800001), str(0x7F7FFFFF), str(0x4B800002)])
+        self.assertIn("openrac_ps2_sub(", self.last_generated)
+        self.assertIn("ps2_float: func_00100000 has no C here to translate", self.last_report["index_problems"])
+
+    def test_ps2_float_comparisons_keep_the_order_of_their_calls(self):
+        # a > b and a >= b with a call on each side: the left one is called first, as the game's
+        # code calls them (FastAbsF(r) > FastAbsF(*v)).
+        out = self.run_program({"a.c": """
+            float tag(int id, float f) { test_print(id); return f; }
+            void ee(void) {
+                test_print(tag(1, 2.0f) > tag(2, 1.0f));
+                test_print(tag(3, 1.0f) >= tag(4, 1.0f));
+                test_print(tag(5, -0.0f) >= tag(6, 0.0f));
+                test_print(tag(7, 1.0f) > tag(8, 2.0f));
+            }
+            int test_main(void) { ee(); return 0; }
+        """}, config={"ps2_float": ["ee"]}, cxx=PS2FLOAT_CXX)
+        self.assertEqual(out, ["1", "2", "1", "3", "4", "1", "5", "6", "1", "7", "8", "0"])
 
     def test_variable_length_array_of_a_local_length(self):
         # A one-dimensional array whose length is a local goes on the guest stack for its

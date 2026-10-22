@@ -958,6 +958,9 @@ def main(argv: list[str] | None = None) -> int:
     program.entries = {sym: int(str(off), 0) for sym, off in cfg.get("entries", {}).items()}
     # Stubs of the executable that every level program fills with a function of its own.
     program.level_hooks = set(cfg.get("level_hooks", []))
+    # Functions whose float arithmetic is the EE's, computed in software (hostgen.json "ps2_float";
+    # openrac/ps2float.h): lower.py.
+    program.ps2_float = set(cfg.get("ps2_float", []))
     with ProcessPoolExecutor(args.jobs, initializer=_init, initargs=(state,)) as ex:
         indexed = list(ex.map(_index_one, units))
     # A unit read while another rewrote a header they share can fail to read, and its definitions
@@ -981,6 +984,9 @@ def main(argv: list[str] | None = None) -> int:
         f = program.functions.get(sym)
         if f is not None and f.unit is not None and not f.static:
             program.functions[sym] = Function(sym, f.sig, None, asm=True, declared=f.declared)
+    # A "ps2_float" name with no C hostgen translates (none, or the port's host C) changes nothing.
+    problems += [f"ps2_float: {sym} has no C here to translate" for sym in sorted(program.ps2_float)
+                 if getattr(program.functions.get(sym), "unit", None) is None or sym in program.host]
     for table in cfg.get("catalogues", []):
         read_catalogue(source / table, program)
     # A verified indirect entry can be absent even from the catalogue.
