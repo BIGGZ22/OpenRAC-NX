@@ -80,7 +80,14 @@ def run(clang: str, path: Path, cwd: Path, flags: list[str], json_out: bool) -> 
     # Keep source locations comparable with hostgen's slash-separated unit names,
     # including the locations embedded in Clang's anonymous type names.
     cmd.append(path.as_posix())
-    return subprocess.run(cmd, cwd=cwd, capture_output=True, text=True, errors="replace")
+    # Never let a compiler cache answer this. hostgen asks about a prepared copy it has just
+    # rewritten, and ccache's inode cache can then give the answer to what the file held before
+    # (a cache hit kept a conflicting declaration's check quiet, while the AST dump after it
+    # failed): `clang` on PATH is ccache's wrapper on Fedora, and the port's build sets one up
+    # (cmake/FastBuild.cmake). The checks are a small part of hostgen's Clang time; the AST dumps
+    # after them cannot be cached anyway.
+    env = dict(os.environ, CCACHE_DISABLE="1")
+    return subprocess.run(cmd, cwd=cwd, capture_output=True, text=True, errors="replace", env=env)
 
 
 _DIAG = re.compile(r"^(?P<file>[^:\n]+):(?P<line>\d+):(?P<col>\d+): (?P<kind>error|note): (?P<msg>.*)$", re.M)
