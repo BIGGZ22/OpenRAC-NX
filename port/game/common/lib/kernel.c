@@ -323,6 +323,7 @@ int openrac_lib_sceSifCallRpc(
     gaddr end_param
 ) { /* sceSifCallRpc */
     const unsigned int server = server_of(client);
+    uint32_t bound;
     (void)mode;
     (void)ssize;
     if (trace_sif() && sif_rpc_calls++ < 32) {
@@ -341,8 +342,14 @@ int openrac_lib_sceSifCallRpc(
     }
     /* An unbound client has no IOP server to receive this request. Reporting
      * success without completing an async call leaves the game's wait loop
-     * spinning forever on its untouched receive buffer. */
-    if (server == 0) {
+     * spinning forever on its untouched receive buffer. Unbound is what the
+     * game's own memory says: the client's server word (+0x24), which binding
+     * sets and the console's sceSifCallRpc sends with the request, still 0.
+     * The table above only says which server a bound client is for (it holds
+     * RPC_CLIENTS of them); a call replayed on its own, without the binds
+     * before it, still sees the binding. */
+    memcpy(&bound, G(client + 0x24u), 4);
+    if (bound == 0) {
         return -1;
     }
     /* The stash: function 2 says where it is in the IOP's memory and how long;
