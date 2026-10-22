@@ -114,6 +114,7 @@
   ],
   "candidates": "nonmatching/functional.tsv",
   "hand": "hand/hand.tsv",
+  "overrides": "hand/overrides.tsv",
   "asm": {
     "enabled": true,
     "dirs": ["asm/nonmatchings", "asm/handwritten", "asm/overlays", "asm/remnants"],

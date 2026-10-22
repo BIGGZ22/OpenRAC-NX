@@ -35,8 +35,17 @@ Where a function's C comes from, later entries winning:
    does what retail does without matching its bytes; 323 entries);
 3. `port/game/rac1-pal/hand/hand.tsv` (the port's own C, translated like
    the rest; 95 entries);
-4. a definition in `port/game/rac1/host/*.c` (or `port/game/rac1-pal/host/*.c`) replaces the function
+4. `port/game/rac1-pal/hand/overrides.tsv` (the port's own C for a function
+   `src/` matches, where the port has to do otherwise: the matched C with
+   that change, in a `hand/matched_*.c` that says why, translated like the
+   rest in place of the matched definition; `src/` keeps its match);
+5. a definition in `port/game/rac1/host/*.c` (or `port/game/rac1-pal/host/*.c`) replaces the function
    outright with host C.
+
+A port fix to a function `src/` matches goes into an override (4), or into
+host C (5) when it is host work, never into `src/`: its byte match is the
+proof of the decompilation and cannot be checked without the original
+toolchain.
 
 `port/build/release/games/rac1-pal/gen/report.md` (and `report.json`) is
 written by every hostgen run: 4,026 functions translated, 944 without C,
