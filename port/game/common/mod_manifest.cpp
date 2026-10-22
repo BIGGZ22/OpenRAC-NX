@@ -217,6 +217,50 @@ bool parse_setting(const json::Value& v, Setting& s, std::string& error) {
     return true;
 }
 
+// "presets" (interface 1.2): [{"id", "name", "values": {key: value}}], buttons in the launcher that
+// set several settings at once, of any type. The game does not use them (the launcher writes the
+// values to the list), but a manifest with a broken one is refused here as there.
+bool check_presets(const json::Value& v, const std::vector<Setting>& settings, std::string& error) {
+    if (v.is_null()) {
+        return true;
+    }
+    if (!v.is_array()) {
+        error = "\"presets\" must be a list";
+        return false;
+    }
+    std::set<std::string> ids;
+    for (const json::Value& p : v.items()) {
+        std::string id, name;
+        if (!p.is_object() || !text(p, "id", true, id, error) || !text(p, "name", true, name, error)
+            || !p["values"].is_object()) {
+            if (error.empty()) {
+                error = "each preset is {\"id\", \"name\", \"values\": {...}}";
+            }
+            return false;
+        }
+        const bool key_like = !id.empty() && std::all_of(id.begin(), id.end(), [](char c) {
+            return (c >= 'a' && c <= 'z') || (c >= '0' && c <= '9') || c == '_';
+        });
+        if (!key_like || name.empty() || !ids.insert(id).second) {
+            error = std::format("preset \"{}\": its id is not a-z, 0-9 and _, is there twice, or it has no name", id);
+            return false;
+        }
+        for (const auto& [key, value] : p["values"].members()) {
+            const auto s = std::find_if(settings.begin(), settings.end(), [&](const Setting& x) { return x.key == key; });
+            SettingValue out;
+            if (s == settings.end()) {
+                error = std::format("preset \"{}\": \"{}\" is not a setting of the mod", id, key);
+                return false;
+            }
+            if (!value_of(*s, value, out)) {
+                error = std::format("preset \"{}\": its {} is not a value of setting \"{}\"", id, key, key);
+                return false;
+            }
+        }
+    }
+    return true;
+}
+
 bool parse_requirement(const json::Value& v, Requirement& r, std::string& error) {
     if (!v.is_object() || !v["id"].is_string() || !valid_id(v["id"].string())) {
         error = "each of \"requires\" is {\"id\", \"version\"} with a mod's id";
@@ -507,6 +551,9 @@ bool parse_manifest(std::string_view source, Manifest& m, std::string& error) {
             }
             m.settings.push_back(std::move(s));
         }
+    }
+    if (!check_presets(v["presets"], m.settings, error)) {
+        return false;
     }
     if (const json::Value& r = v["requires"]; !r.is_null()) {
         if (!r.is_array()) {

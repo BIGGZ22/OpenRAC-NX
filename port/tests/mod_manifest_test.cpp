@@ -173,6 +173,35 @@ void keybinds() {
     CHECK(notes.size() == 1);
 }
 
+void presets() {
+    // A preset fills settings of any type; each value must be one its setting takes.
+    const std::string settings = R"(, "settings": [
+          {"key": "damage", "name": "Damage", "type": "float", "default": 1.0, "min": 0.25, "max": 4.0},
+          {"key": "count", "name": "Count", "type": "int", "default": 3, "min": 1, "max": 30},
+          {"key": "mode", "name": "Mode", "type": "choice", "default": "a",
+           "choices": [{"value": "a", "name": "A"}, {"value": "b", "name": "B"}]},
+          {"key": "chaos", "name": "Chaos", "type": "bool", "default": false},
+          {"key": "jump", "name": "Jump", "type": "keybind", "default": "Space"}])";
+    const auto with = [&](const std::string& presets) {
+        Manifest m;
+        std::string error;
+        return parse_manifest(manifest("a", "1.0.0", settings + R"(, "presets": )" + presets, "1.2"), m, error);
+    };
+    CHECK(with(R"([{"id": "hard", "name": "Hard",
+                    "values": {"damage": 2.5, "count": 30, "mode": "b", "chaos": true, "jump": "KeyJ"}},
+                   {"id": "default", "name": "Retail", "values": {}}])"));
+    CHECK(with("[]"));
+    CHECK(!with(R"([{"id": "x", "name": "X", "values": {"damage": 5.0}}])"));     // out of range
+    CHECK(!with(R"([{"id": "x", "name": "X", "values": {"count": 1.5}}])"));      // not an integer
+    CHECK(!with(R"([{"id": "x", "name": "X", "values": {"mode": "c"}}])"));       // not a choice
+    CHECK(!with(R"([{"id": "x", "name": "X", "values": {"chaos": 1}}])"));        // not a bool
+    CHECK(!with(R"([{"id": "x", "name": "X", "values": {"jump": "Nope"}}])"));    // not a key
+    CHECK(!with(R"([{"id": "x", "name": "X", "values": {"nothing": 1}}])"));      // no such setting
+    CHECK(!with(R"([{"id": "X!", "name": "X", "values": {}}])"));
+    CHECK(!with(R"([{"id": "x", "name": "X", "values": {}}, {"id": "x", "name": "Y", "values": {}}])"));
+    CHECK(!with(R"({"x": 1})"));
+}
+
 void lists() {
     std::vector<ListEntry> list;
     std::string error;
@@ -325,6 +354,7 @@ int main() {
     manifests();
     settings();
     keybinds();
+    presets();
     lists();
     checks();
     scripts();
