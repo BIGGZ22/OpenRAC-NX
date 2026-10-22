@@ -1079,6 +1079,42 @@ class Translate(unittest.TestCase):
             extra_files={"libraries.tsv": "# symbol\tlibrary\tname\tport\nfunc_00100000\tgame\tTween\thook\n"})
         self.assertEqual(out, ["12"])
 
+    def test_a_hook_point_that_passes_a_result_on_is_void_for_mods(self):
+        # The same hook point taken by a mod: `void(i32)`, as the decompilation declares it (the SDK's
+        # tables). Its callers get what the game's C gave when the mod calls the original, else 0.
+        out = self.run_program({"a.c": """
+            extern void test_take(int which);
+            int func_00100040(int x) { return x + 7; }
+            void func_00100000(int x) { func_00100040(x); }
+            extern int func_00100000_r(int x) __asm__("func_00100000");
+            int test_main(void) {
+                test_print(func_00100000_r(5));
+                test_take(1);
+                test_print(func_00100000_r(5));
+                test_take(2);
+                test_print(func_00100000_r(5));
+                return 0;
+            }
+        """}, places="func_00100000\t0x00100000\t0x40\nfunc_00100040\t0x00100040\t0x40\n",
+            config={"libraries": "libraries.tsv", "host_functions": HOST_FUNCTIONS + ["test_take"]},
+            extra_files={"libraries.tsv": "# symbol\tlibrary\tname\tport\nfunc_00100000\tgame\tTween\thook\n"},
+            host_c="""
+            #include <string.h>
+            typedef struct { const char* name; const char* symbol; const char* signature; void** slot; void* original; } point;
+            extern const point openrac_game_hook_points[];
+            void game_test_print(int v);
+            static void (*s_original)(int);
+            static void wraps(int x) { s_original(x + 1); }
+            static void replaces(int x) { (void)x; }
+            void game_test_take(int which) {
+                const point* p = &openrac_game_hook_points[0];
+                game_test_print(strcmp(p->signature, "void(i32)") == 0);
+                s_original = (void (*)(int))p->original;
+                *p->slot = which == 1 ? (void*)wraps : (void*)replaces;
+            }
+        """)
+        self.assertEqual(out, ["12", "1", "13", "1", "0"])
+
     def test_a_hook_point_under_a_wrap_of_the_ports(self):
         # A function the port wraps (`wrap`) and mods hook (`hook`): the port's <name> stays, and
         # calls <name>__hooked, which hooks.c writes: the mod's replacement, or else the game's C.

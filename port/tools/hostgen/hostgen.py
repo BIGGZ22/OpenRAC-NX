@@ -369,6 +369,24 @@ def write_hooks(program: Program, out: Path, game: str) -> list[str]:
         entry = f"{c}__hooked" if sym in program.wrap_host else c
         decl = ", ".join(f"{t} a{i}" for i, t in enumerate(params)) or "void"
         args = ", ".join(f"a{i}" for i in range(len(params)))
+        if f.inherits:
+            # A `void` definition that passes its tail call's result on (program.py, inherit_results)
+            # returns that result to the game's callers, but mods take it as the decompilation
+            # declares it, `void(...)`, the signature the SDK's tables give it. Its callers get the
+            # result the game's C gave when the mod calls the original, else 0.
+            text = "void" + text[text.index("("):]
+            kept, original = f"result_{c}", f"{c}__original"
+            lines += [f"static {ret} {kept};",
+                      f"static void {original}({decl}) {{ {kept} = {c}__game({args}); }}",
+                      f"static void* {slot};",
+                      f"{ret} {entry}({decl}) {{",
+                      f"    if ({slot} != 0) {{",
+                      f"        {kept} = 0;",
+                      f"        ((void (*)({', '.join(params) or 'void'})){slot})({args});",
+                      f"        return {kept};",
+                      "    }", f"    return {c}__game({args});", "}", ""]
+            rows.append(f"    {{\"{program.hook[sym]}\", \"{sym}\", \"{text}\", &{slot}, (void*){original}}},")
+            continue
         fptr = f"{ret} (*)({', '.join(params) or 'void'})"
         give = "" if ret == "void" else "return "
         lines += [f"static void* {slot};",
