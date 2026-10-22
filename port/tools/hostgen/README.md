@@ -318,7 +318,12 @@ error. The name is an alias of the hook point's permanent id
 (`sdk/bindings/<game>.json`, which the loader resolves). A symbol with both a
 `wrap` row and a `hook` row keeps the port's `<name>`, and the hook is written
 as `<name>__hooked` (the mod's replacement or the game's C), which the port's
-function calls in place of `<name>__game`.
+function calls in place of `<name>__game`. A hook point declared `void` whose
+C ends in a call whose result its callers read (`inherit_results` gives it the
+callee's result type) keeps `void(...)` for mods, the signature the SDK's
+tables give it: its `<name>` returns the result the game's C gave when the
+mod calls the original (the table's original is a thunk that keeps it), and
+0 when the mod does not.
 
 Two spellings of one address (`FUN_0020c828` and `func_0020C828`) are one
 function: a call to a name without C goes to the function with C at the same
