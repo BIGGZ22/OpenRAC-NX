@@ -23,6 +23,7 @@ Everything runs on the game's thread: load, the hooks, the callbacks, unload.
 |---|---|---|
 | `OPENRAC_MOD_API_MAJOR` | `1` |  |
 | `OPENRAC_MOD_API_MINOR` | `2` | 1.2: the keyboard and mouse (input, take_input, capture_mouse) |
+| `OPENRAC_MOD_TARGET_MINOR` | `OPENRAC_MOD_API_MINOR` |  |
 | `OPENRAC_MOD_EXPORT` | `__declspec(dllexport)` or `__attribute__((visibility("default")))` |  |
 | `OPENRAC_LOG_DEBUG` | `0` | Log levels for openrac_api.log. |
 | `OPENRAC_LOG_INFO` | `1` |  |
