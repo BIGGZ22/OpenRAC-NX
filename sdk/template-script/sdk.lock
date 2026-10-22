@@ -1,6 +1,6 @@
 {
   "about": "The OpenRAC mod SDK this mod is packaged with: tools/fetch_sdk.py downloads it into .sdk/ and checks its SHA-256 (the first fetch fills it in from the release: commit it). Its types/ folder has the scripts' type definitions for an editor.",
-  "version": "1.2.0",
-  "url": "https://github.com/OpenRAC/OpenRAC/releases/download/sdk-v1.2.0/openrac-mod-sdk-1.2.0.zip",
+  "version": "1.2.1",
+  "url": "https://github.com/OpenRAC/OpenRAC/releases/download/sdk-v1.2.1/openrac-mod-sdk-1.2.1.zip",
   "sha256": ""
 }
