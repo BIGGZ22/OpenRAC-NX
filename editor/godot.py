@@ -48,6 +48,9 @@ from terrain import terrain
 from ties import tie_classes, tie_instances
 
 SCRIPTS = Path(__file__).parent / "rc1"
+# The Collision dock, an editor plugin (addons/openrac_collision/plugin.gd): editor tooling only.
+ADDON = Path(__file__).parent / "addons" / "openrac_collision"
+ADDON_CFG = "res://addons/openrac_collision/plugin.cfg"
 GAME_TO_GODOT = [1, 0, 0, 0, 0, 0, -1, 0, 0, 1, 0, 0, 0, 0, 0, 1]  # (x, y, z) -> (x, z, -y)
 # Placements store W = 0.01 (0.0 on some); only other values become metadata.
 STORED_W = struct.unpack("<f", struct.pack("<f", 0.01))[0]
@@ -80,6 +83,10 @@ texture={{
 "detect_3d/compress_to": 0,
 "mipmaps/generate": true
 }}
+
+[editor_plugins]
+
+enabled=PackedStringArray("{addon}")
 """
 
 
@@ -590,5 +597,25 @@ def write_project(project: Path, levels: list[int], region: str = "PAL", game: s
         fmt = games.FORMATS[game]
         name = (f"{fmt.title}: {fmt.level_name(levels[0])} ({region}, early access)" if len(levels) == 1
                 else f"{fmt.title} levels ({region}, early access)")
-    (project / "project.godot").write_text(PROJECT.format(main=main, name=name))
+    (project / "project.godot").write_text(PROJECT.format(main=main, name=name, addon=ADDON_CFG))
     shutil.copytree(SCRIPTS, project / "rc1")
+    install_addon(project)
+
+
+def install_addon(project: Path) -> None:
+    """The Collision dock's files in a project, enabled in its project.godot (an older export's
+    too: extract.py's update calls this, and a project.godot that names other plugins keeps them)."""
+    shutil.copytree(ADDON, project / "addons" / ADDON.name, dirs_exist_ok=True,
+                    ignore=shutil.ignore_patterns("*.uid"))
+    settings = project / "project.godot"
+    text = settings.read_text()
+    if ADDON_CFG in text:
+        return
+    if "[editor_plugins]" not in text:
+        text = text.rstrip("\n") + f'\n\n[editor_plugins]\n\nenabled=PackedStringArray("{ADDON_CFG}")\n'
+    elif "enabled=PackedStringArray(" in text:
+        text = text.replace("enabled=PackedStringArray(", f'enabled=PackedStringArray("{ADDON_CFG}", ', 1)
+        text = text.replace(f'"{ADDON_CFG}", )', f'"{ADDON_CFG}")')
+    else:
+        text = text.replace("[editor_plugins]\n", f'[editor_plugins]\n\nenabled=PackedStringArray("{ADDON_CFG}")\n', 1)
+    settings.write_text(text)

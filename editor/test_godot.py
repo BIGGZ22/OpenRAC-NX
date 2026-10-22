@@ -8,7 +8,7 @@ import tempfile
 import unittest
 
 from gltf import Gltf
-from godot import GAME_TO_GODOT, Raw, Scene, number, transform, write_project
+from godot import ADDON_CFG, GAME_TO_GODOT, Raw, Scene, install_addon, number, transform, write_project
 from mesh import Mesh
 
 
@@ -113,6 +113,28 @@ metadata/rc1_draw_distance = 2.5
             self.assertIn('"meshes/generate_lods": false', text)
             self.assertTrue((project / "rc1" / "level.gd").is_file())
             self.assertTrue((project / "rc1" / "check.gd").is_file())
+            # The Collision dock, enabled.
+            self.assertTrue((project / "addons" / "openrac_collision" / "plugin.cfg").is_file())
+            self.assertIn(f'[editor_plugins]\n\nenabled=PackedStringArray("{ADDON_CFG}")', text)
+
+    def test_addon_into_an_older_project(self):
+        """An export made before the dock gets it on update; plugins of the modder's stay."""
+        with tempfile.TemporaryDirectory() as temp:
+            plain, other = Path(temp) / "plain", Path(temp) / "other"
+            for project in (plain, other):
+                project.mkdir()
+            (plain / "project.godot").write_text("config_version=5\n\n[application]\n\nconfig/name=\"x\"\n")
+            (other / "project.godot").write_text(
+                'config_version=5\n\n[editor_plugins]\n\nenabled=PackedStringArray("res://addons/mine/plugin.cfg")\n')
+            for project in (plain, other):
+                install_addon(project)
+                install_addon(project)          # twice: still once
+                text = (project / "project.godot").read_text()
+                self.assertEqual(text.count(ADDON_CFG), 1)
+                self.assertEqual(text.count("[editor_plugins]"), 1)
+                self.assertTrue((project / "addons" / "openrac_collision" / "plugin.gd").is_file())
+            self.assertIn(f'enabled=PackedStringArray("{ADDON_CFG}", "res://addons/mine/plugin.cfg")',
+                          (other / "project.godot").read_text())
 
 
 if __name__ == "__main__":

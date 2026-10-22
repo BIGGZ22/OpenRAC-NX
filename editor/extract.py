@@ -30,7 +30,7 @@ import time
 
 from disc import LEVEL_COUNT, Disc
 from formats import FormatError
-from godot import SCHEMA as GODOT_SCHEMA, SCRIPTS, LevelWriter, write_project
+from godot import SCHEMA as GODOT_SCHEMA, SCRIPTS, LevelWriter, install_addon, write_project
 from spaceships import add_spaceships
 from level import load_flight, load_level, load_title
 from level import load_wad_level
@@ -90,8 +90,9 @@ def update_godot(dest: Path, levels: list[int], split: bool, export, schema: int
     edits, is the one they work on); a missing level is exported; a level an older extractor wrote
     moves to DEST's backups folder, edits and all, and a new one takes its place. EXPORT(out,
     levels) writes those levels as a fresh export into OUT, the way godot() does. The editor's
-    scripts (rc1/) are refreshed in every project. Returns the levels "kept", "added" and
-    "replaced", and the "backup" folder when one was made."""
+    scripts (rc1/) and the Collision dock (addons/openrac_collision, enabled in project.godot)
+    are refreshed in every project. Returns the levels "kept", "added" and "replaced", and the
+    "backup" folder when one was made."""
     place = (lambda i: dest / f"level_{i:02}") if split else (lambda i: dest / "levels" / f"level_{i:02}")
     level_dir = (lambda i: place(i) / "levels" / f"level_{i:02}") if split else place
     report: dict = {"kept": [], "added": [], "replaced": [], "backup": None}
@@ -124,6 +125,7 @@ def update_godot(dest: Path, levels: list[int], split: bool, export, schema: int
     for project in ([place(i) for i in levels] if split else [dest]):
         if (project / "project.godot").is_file():
             shutil.copytree(SCRIPTS, project / "rc1", dirs_exist_ok=True)
+            install_addon(project)
     return report
 
 
