@@ -996,7 +996,7 @@ int openrac_game_play_movie(uint32_t lsn, uint32_t bytes, int channel, int start
         // Start skips when pressed during the movie: what is held as it starts is not a press.
         std::uint16_t buttons = 0xFFFF;
         std::uint8_t analog[4];
-        frontend::pad(0, &buttons, analog);
+        openrac_game_pad_through_mods(0, &buttons, analog);  // a mod's key bound to Start skips too
         if (blank == 0) {
             previous = buttons;
         }
@@ -1164,6 +1164,54 @@ static void log_pad(int port, const uint16_t* buttons, const uint8_t analog[4]) 
     std::memcpy(last_analog, analog, 4);
     log::verbose("frame {}: pad 0 buttons {:#06x} (active low), sticks {} {} {} {}", g_frame, *buttons, analog[0],
                  analog[1], analog[2], analog[3]);
+}
+
+// The pad's report as the pad library builds it (lib/pad.c's scePad2Read: buttons, the sticks,
+// twelve pressures), through the mods' callbacks, back into buttons and sticks: for the port's own
+// readers of the pad (the movie player), so a mod's keys skip a movie as the pad's Start does.
+static const unsigned kPressureBit[12] = {5, 7, 4, 6, 12, 13, 14, 15, 10, 11, 8, 9};
+
+static void report_from(uint16_t buttons, const uint8_t analog[4], uint8_t out[18]) {
+    out[0] = static_cast<uint8_t>(buttons);
+    out[1] = static_cast<uint8_t>(buttons >> 8);
+    std::memcpy(out + 2, analog, 4);
+    for (int n = 0; n < 12; ++n) {
+        out[6 + n] = (buttons >> kPressureBit[n]) & 1 ? 0 : 0xFF;
+    }
+}
+
+int openrac_game_pad_through_mods(int port, uint16_t* buttons, uint8_t analog[4]) {
+    const int connected = openrac_game_pad(port, buttons, analog);
+    if (openrac_game_pad_report_hook != nullptr) {
+        uint8_t report[18];
+        report_from(*buttons, analog, report);
+        openrac_game_pad_report_hook(port, report, 18);
+        openrac_game_pad_after_mods(port, report, 18);
+        *buttons = static_cast<uint16_t>(report[0] | (report[1] << 8));
+        std::memcpy(analog, report + 2, 4);
+    }
+    return connected;
+}
+
+void openrac_game_pad_after_mods(int port, uint8_t* report, int size) {
+#ifdef OPENRAC_FRONTEND
+    if (g_window && size >= 2) {
+        uint16_t buttons = static_cast<uint16_t>(report[0] | (report[1] << 8));
+        const uint16_t before = buttons;
+        frontend::skip_after_mods(port, buttons);
+        report[0] = static_cast<uint8_t>(buttons);
+        report[1] = static_cast<uint8_t>(buttons >> 8);
+        // What the skip pressed is pressed hard, as the pad library gives a pressed button.
+        for (int n = 0; n < 12 && 6 + n < size; ++n) {
+            if (((before & ~buttons) >> kPressureBit[n]) & 1) {
+                report[6 + n] = 0xFF;
+            }
+        }
+    }
+#endif
+    (void)port;
+    (void)report;
+    (void)size;
 }
 
 int openrac_game_pad(int port, uint16_t* buttons, uint8_t analog[4]) {

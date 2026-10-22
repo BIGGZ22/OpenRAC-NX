@@ -113,6 +113,11 @@ std::int64_t since_control();
 // left sticks (x, y each).
 bool pad(int port, std::uint16_t* buttons, std::uint8_t analog[4]);
 
+// Start skipping what plays (the skip_cutscenes setting): what Start also presses for the game's
+// own skip, and the game's skip hook. pad() does it itself without mods on the pad's reports; with
+// some, the pad library calls it on the report the mods leave (openrac_game_pad_after_mods).
+void skip_after_mods(int port, std::uint16_t& buttons);
+
 // The keyboard and mouse for the mods (mod interface 1.2, platform/input.h's KeyboardMouse): as
 // the last frame read them; null without a window. `overlay` is set while the port's own overlay
 // or menu has the input.

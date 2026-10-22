@@ -58,6 +58,7 @@ int openrac_lib_scePad2Read(int socket, gaddr data) { /* scePad2Read */
     }
     if (openrac_game_pad_report_hook != 0) {
         openrac_game_pad_report_hook(socket, out, 18);
+        openrac_game_pad_after_mods(socket, out, 18);
     }
     return 18;
 }

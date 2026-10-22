@@ -326,6 +326,12 @@ int openrac_game_pad(int port, uint16_t* buttons, uint8_t analog[4]);
 /* The mods' pad callbacks (game/common/mods.h, docs/port/MODS.md): each report scePad2Read fills,
  * `size` bytes at `report`, before the game reads it. Null while no mod asked for one. */
 extern void (*openrac_game_pad_report_hook)(int port, uint8_t* report, int size);
+/* After the mods changed a report (openrac_game_pad_report_hook): what the port does with the
+ * buttons as they leave it (Start's skip), on the report's buttons and pressures. */
+void openrac_game_pad_after_mods(int port, uint8_t* report, int size);
+/* openrac_game_pad, then through the mods' callbacks as a report and back: for the port's own
+ * readers of the pad (the movie player). */
+int openrac_game_pad_through_mods(int port, uint16_t* buttons, uint8_t analog[4]);
 
 /* The game's text lookup, asked for a text id: the game address of a string of the port's own (the
  * rows it adds to the game's options), or 0 when the id is the game's. */

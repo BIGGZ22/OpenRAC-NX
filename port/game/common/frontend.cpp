@@ -3026,6 +3026,17 @@ void capture_mouse(bool capture) {
     }
 }
 
+void skip_after_mods(int port, std::uint16_t& buttons) {
+    if (port == 0 && settings::get().skip_cutscenes && (buttons & 0x8) == 0) {
+        if (openrac_game_skip_buttons != nullptr) {
+            buttons = static_cast<std::uint16_t>(buttons & ~(openrac_game_skip_buttons() & 0xFFFF));
+        }
+        if (openrac_game_skip != nullptr) {
+            openrac_game_skip();
+        }
+    }
+}
+
 bool pad(int port, std::uint16_t* buttons, std::uint8_t analog[4]) {
     if (!g || port < 0 || port >= platform::kPadPorts) {
         return false;
@@ -3086,13 +3097,10 @@ bool pad(int port, std::uint16_t* buttons, std::uint8_t analog[4]) {
     // since the game skips one on Start with L1, L2, R1 and R2 held, Start alone only once it is
     // beaten, ReRAC cutscenes_transitions.md, "skip"; in the ship's landing and take-off Cross).
     // Bits are active low: 0x8 Start, 0x4000 Cross, 0x0F00 L2 R2 L1 R1.
-    if (port == 0 && settings::get().skip_cutscenes && (*buttons & 0x8) == 0) {
-        if (openrac_game_skip_buttons != nullptr) {
-            *buttons = static_cast<std::uint16_t>(*buttons & ~(openrac_game_skip_buttons() & 0xFFFF));
-        }
-        if (openrac_game_skip != nullptr) {
-            openrac_game_skip();
-        }
+    // With a mod on the pad's reports, after the mods (skip_after_mods), so a Start a mod presses
+    // (a key bound to it) skips as the pad's does.
+    if (openrac_game_pad_report_hook == nullptr) {
+        skip_after_mods(port, *buttons);
     }
     if (port == 0) {
         debug_menu::filter_pad(*buttons, openrac_game_loaded_overlay());

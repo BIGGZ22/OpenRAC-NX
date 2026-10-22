@@ -43,6 +43,12 @@ int openrac_game_pad(int port, uint16_t *buttons, uint8_t analog[4]) {
     return port == 0 && sample_connected;
 }
 
+void openrac_game_pad_after_mods(int port, uint8_t *report, int size) {
+    (void)port;
+    (void)report;
+    (void)size;
+}
+
 int openrac_lib_snd_StartSoundSystem(void) {
     sound_starts++;
     return 0;
