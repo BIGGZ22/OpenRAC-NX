@@ -97,6 +97,7 @@ func _enter_tree() -> void:
 	dock.plugin = self
 	add_dock(dock)
 	set_input_event_forwarding_always_enabled()
+	set_force_draw_over_forwarding_enabled()
 	reload_timer = Timer.new()
 	reload_timer.one_shot = true
 	reload_timer.wait_time = 0.4
@@ -746,7 +747,7 @@ func _forward_3d_gui_input(camera: Camera3D, event: InputEvent) -> int:
 	return AFTER_GUI_INPUT_PASS
 
 
-func _forward_3d_draw_over_viewport(viewport_control: Control) -> void:
+func _forward_3d_force_draw_over_viewport(viewport_control: Control) -> void:
 	# Only a box being dragged is drawn over the view.
 	if is_dragging:
 		var rect := Rect2(drag_from, drag_to - drag_from).abs()
