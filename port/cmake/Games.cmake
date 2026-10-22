@@ -34,7 +34,9 @@ file(GLOB openrac_game_common_sources CONFIGURE_DEPENDS "${OPENRAC_GAME_DIR}/com
      "${OPENRAC_GAME_DIR}/common/lib/*.cpp")
 add_library(openrac_game_common STATIC ${openrac_game_common_sources})
 target_include_directories(openrac_game_common PUBLIC "${OPENRAC_GAME_DIR}/common/include")
-target_link_libraries(openrac_game_common PUBLIC openrac_runtime)
+# openrac_ps2float: the console's float arithmetic, for the functions hostgen.json "ps2_float" names
+# and the port's own C that computes as the console does (openrac/ps2float.h).
+target_link_libraries(openrac_game_common PUBLIC openrac_runtime openrac_ps2float)
 # The asset readers the library replacements use (the WAD decompressor).
 if(TARGET openrac_assets_disc)
   target_link_libraries(openrac_game_common PUBLIC openrac_assets_disc)
