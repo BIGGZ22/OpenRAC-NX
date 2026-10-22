@@ -112,13 +112,7 @@
   const textValue = $derived(typeof s.value === "string" ? s.value : "");
 </script>
 
-<div
-  class="row"
-  class:wide={control === "text"}
-  class:binds={control === "keybind"}
-  role="group"
-  aria-labelledby={`${id}-name`}
->
+<div class="setting-row" class:binds={control === "keybind"} role="group" aria-labelledby={`${id}-name`}>
   <div class="text">
     <div class="name-line">
       <span class="name" id={`${id}-name`}>{s.name}</span>
@@ -276,31 +270,26 @@
 </div>
 
 <style>
-  /* A row: the words take what is left, the control keeps its width, so the controls line up down
-     the page. */
-  .row {
-    display: grid;
-    grid-template-columns: minmax(0, 1fr) auto;
+  /* A row, always side by side: the words take what is left (and shrink, never the control), the
+     control keeps its width at the right, so the controls line up down the page. Plain flex, no
+     grid and no breakpoint, so every webview lays it out the same. */
+  .setting-row {
+    display: flex;
+    flex-direction: row;
+    flex-wrap: nowrap;
     align-items: center;
-    gap: 10px 24px;
+    gap: 24px;
     min-height: 64px;
     padding: 12px 0;
-  }
-
-  .row {
     border-top: 1px solid var(--line);
   }
 
-  .row:first-child {
+  .setting-row:first-child {
     border-top: 0;
   }
 
-  /* Text: the field under the words, the row's width. */
-  .row.wide {
-    grid-template-columns: minmax(0, 1fr);
-  }
-
   .text {
+    flex: 1 1 0;
     min-width: 0;
   }
 
@@ -403,21 +392,21 @@
   }
 
   .control {
+    flex: 0 0 auto;
     display: flex;
+    flex-direction: row;
+    flex-wrap: nowrap;
     align-items: center;
     justify-content: flex-end;
     gap: 12px;
-  }
-
-  .wide .control {
-    justify-content: stretch;
   }
 
   /* The slider: a 6 px track filled in the brand's orange up to the value, a 20 px knob, a hit area
      36 px tall; a tick where the default is, while the value is elsewhere. */
   .slider {
     position: relative;
-    width: clamp(180px, 26vw, 300px);
+    flex: 0 0 auto;
+    width: 260px;
     height: 36px;
     display: flex;
     align-items: center;
@@ -541,7 +530,8 @@
   }
 
   .field {
-    flex: 1;
+    flex: 0 0 auto;
+    width: 300px;
     height: 40px;
     font-size: 0.9375rem;
   }
@@ -593,19 +583,14 @@
     gap: 8px;
   }
 
-  /* A narrow window: the control under the words, the slider the row's width. */
-  @media (max-width: 860px) {
-    .row {
-      grid-template-columns: minmax(0, 1fr);
+  /* The narrowest windows only (below the launcher's 960 px floor): the control under the words. */
+  @media (max-width: 599px) {
+    .setting-row {
+      flex-wrap: wrap;
     }
 
-    .control {
-      justify-content: flex-start;
-    }
-
-    .slider {
-      flex: 1;
-      width: auto;
+    .text {
+      flex-basis: 100%;
     }
   }
 </style>

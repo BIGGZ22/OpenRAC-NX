@@ -331,6 +331,7 @@
 
   .head {
     display: flex;
+    flex-direction: row;
     align-items: center;
     justify-content: space-between;
     gap: 12px;
@@ -367,6 +368,8 @@
      its menu. */
   .mod {
     display: flex;
+    flex-direction: row;
+    flex-wrap: nowrap;
     align-items: center;
     gap: 6px;
     padding: 4px 4px 4px 10px;
@@ -383,11 +386,13 @@
   }
 
   .open {
-    flex: 1;
+    flex: 1 1 0;
     min-width: 0;
-    display: grid;
-    grid-template-columns: minmax(0, 1fr) auto auto;
+    display: flex;
+    flex-direction: row;
+    flex-wrap: nowrap;
     align-items: center;
+    justify-content: flex-start;
     gap: 16px;
     min-height: 64px;
     padding: 10px 12px 10px 12px;
@@ -415,9 +420,15 @@
   }
 
   .words {
+    flex: 1 1 0;
     display: flex;
     flex-direction: column;
+    align-items: flex-start;
     min-width: 0;
+  }
+
+  .words > span {
+    max-width: 100%;
   }
 
   .name {
@@ -440,6 +451,7 @@
 
   /* One badge: a dot and a few words (STYLE.md). */
   .badge {
+    flex: 0 0 auto;
     display: inline-flex;
     align-items: center;
     gap: 7px;
@@ -472,6 +484,7 @@
   }
 
   .go {
+    flex: 0 0 auto;
     display: inline-flex;
     align-items: center;
     gap: 2px;
@@ -498,21 +511,5 @@
   .purist {
     padding-bottom: 0;
     border-top: 1px solid var(--line);
-  }
-
-  @media (max-width: 860px) {
-    .open {
-      grid-template-columns: minmax(0, 1fr) auto;
-    }
-
-    .badge {
-      grid-column: 1;
-      grid-row: 2;
-    }
-
-    .go {
-      grid-column: 2;
-      grid-row: 1 / 3;
-    }
   }
 </style>

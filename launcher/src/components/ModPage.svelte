@@ -327,6 +327,7 @@
   /* Where you are: back, then My mods › the mod. */
   .crumbs {
     display: flex;
+    flex-direction: row;
     align-items: center;
     gap: 10px;
   }
@@ -390,19 +391,28 @@
   }
 
   /* The head: the name and what it is on the left, its switch and actions on the right. */
+  /* The name and what it is on the left, the switch and actions on the right, side by side; the
+     notices and About under both, the panel's width. Plain flex, no grid or :has(). */
   .head {
-    display: grid;
-    grid-template-columns: minmax(0, 1fr) auto;
+    display: flex;
+    flex-direction: row;
+    flex-wrap: wrap;
+    align-items: flex-start;
     gap: 14px 24px;
-    align-items: start;
   }
 
-  .head > :not(.title, .actions) {
-    grid-column: 1 / -1;
-  }
-
-  .title {
+  .head > * {
+    flex: 1 1 100%;
     min-width: 0;
+  }
+
+  .head > .title {
+    flex: 1 1 0;
+    min-width: 0;
+  }
+
+  .head > .actions {
+    flex: 0 0 auto;
   }
 
   h2 {
@@ -458,6 +468,8 @@
 
   .actions {
     display: flex;
+    flex-direction: row;
+    flex-wrap: nowrap;
     align-items: center;
     gap: 12px;
   }
@@ -487,13 +499,9 @@
     margin-right: 2px;
   }
 
-  .power:has(input:focus-visible) {
+  .power input:focus-visible {
     outline: 2px solid var(--amber);
     outline-offset: 2px;
-  }
-
-  .power input:focus-visible {
-    outline: none;
   }
 
   .notice {
@@ -586,6 +594,7 @@
   /* Presets on the left, the saving line and Reset all on the right. */
   .toolbar {
     display: flex;
+    flex-direction: row;
     flex-wrap: wrap;
     align-items: center;
     gap: 12px 16px;
@@ -670,9 +679,9 @@
     font-size: 0.875rem;
   }
 
-  @media (max-width: 760px) {
-    .head {
-      grid-template-columns: minmax(0, 1fr);
+  @media (max-width: 599px) {
+    .head > .title {
+      flex-basis: 100%;
     }
   }
 </style>
