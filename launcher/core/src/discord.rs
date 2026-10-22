@@ -458,6 +458,14 @@ fn find_socket_paths() -> Vec<PathBuf> {
 
 #[cfg(unix)]
 fn find_socket_paths() -> Vec<PathBuf> {
+    socket_paths(&std::env::temp_dir())
+}
+
+/// The folders Discord's socket may be in, in the order they are probed. `temp_dir` is the
+/// user's temporary folder: Discord keeps its socket there on macOS (`$TMPDIR`, a per-user
+/// path under `/var/folders`), and on Linux unless `XDG_RUNTIME_DIR` is set.
+#[cfg(unix)]
+fn socket_paths(temp_dir: &std::path::Path) -> Vec<PathBuf> {
     let mut candidates = Vec::new();
     let mut seen_canonical = Vec::new();
     let mut add_candidate = |p: PathBuf| {
@@ -489,6 +497,13 @@ fn find_socket_paths() -> Vec<PathBuf> {
                 add_candidate(base.join(sub).join(format!("discord-ipc-{i}")));
             }
         }
+    }
+
+    // The temporary folder: on macOS every Discord client puts its socket in $TMPDIR, which
+    // is a per-user path (/var/folders/...), not /tmp. Skipping it left the launcher with
+    // nothing to connect to on macOS.
+    for i in 0..10 {
+        add_candidate(temp_dir.join(format!("discord-ipc-{i}")));
     }
 
     if let Ok(uid) = std::env::var("UID") {
@@ -615,5 +630,21 @@ mod tests {
         // Does not panic or crash when Discord is offline
         let _ = ipc.set_status(&DiscordStatus::Idle, now_sec());
         let _ = ipc.clear();
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn finds_the_socket_in_the_temporary_folder() {
+        // On macOS Discord's socket is in the per-user $TMPDIR (/var/folders/...), not /tmp.
+        let temp = tempfile::tempdir().unwrap();
+        for i in [0, 2] {
+            std::fs::write(temp.path().join(format!("discord-ipc-{i}")), b"").unwrap();
+        }
+
+        let paths = socket_paths(temp.path());
+
+        assert!(paths.contains(&temp.path().join("discord-ipc-0")));
+        assert!(paths.contains(&temp.path().join("discord-ipc-2")));
+        assert!(!paths.contains(&temp.path().join("discord-ipc-1")));
     }
 }
