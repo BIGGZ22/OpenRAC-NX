@@ -200,9 +200,11 @@ the wheel (`WheelUp`, `WheelDown`, `WheelLeft`, `WheelRight`). The launcher
 shows it as "press a key" buttons and marks an input bound to two keybinds of
 the same `group` (settings without one share the group `""`). The manifest
 may also list `"presets": [{"id", "name", "values": {key: value}}]`: buttons
-over the settings that set several keybinds at once (a keybind a preset does
-not name goes back to its default; the launcher adds a Default button of its
-own).
+over the settings that set several at once, of any type, each value one its
+setting takes. A preset covers the mod's keybinds and every setting one of its
+presets names; of those, the ones it does not name go back to their defaults.
+The launcher adds a Default button of its own, unless a preset's id is
+`default`; the port and `package_mod.py` check the values as the launcher does.
 
 A value that is missing, of the wrong type or out of range is the default
 (the port logs it). Settings count from the game's next start.

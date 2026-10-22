@@ -53,16 +53,27 @@ what `input()` reports (see [native mods in C](native-c.md)).
 { "key": "menu_back", "name": "Menu: back", "type": "keybind", "default": "Backspace", "group": "menu" }
 ```
 
-Presets set several keybinds at once: the launcher shows them as buttons
-above the settings, beside a Default button of its own. A keybind a preset
-does not name goes back to its default.
+## Presets
+
+Presets (interface 1.2) set several settings at once, of any type: sliders,
+choices, switches, text and keybinds. The launcher shows them as buttons above
+the settings, beside a Default button of its own (a preset with the id
+`default` takes its place); the button whose values the settings have is
+lit. Each value must be one its setting takes: in range, one of the choices,
+and so on.
 
 ```json
 "presets": [
+  { "id": "easy", "name": "Easy",
+    "values": { "damage_taken": 0.5, "enemy_count": 0.75, "mode": "hold", "chaos": false } },
   { "id": "arrows", "name": "Arrow keys",
     "values": { "move_forward": "ArrowUp", "move_back": "ArrowDown" } }
 ]
 ```
+
+A preset covers every keybind of the mod and each setting one of its presets
+names: the ones of those it does not name go back to their defaults. A
+setting no preset names (a Trace switch, a seed) keeps the player's value.
 
 ## Reading them
 
