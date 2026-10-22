@@ -256,6 +256,82 @@ metadata/rc1_surface = 12
         self.assertIsNone(self.read(self.text))
 
 
+class DockEditTests(SceneTests):
+    """The collision dock's edits (metadata on Game/Collision, addons/openrac_collision) read back,
+    packed and decoded: exactly the edit, and nothing else."""
+
+    def edited(self, **edits) -> str:
+        lines = [f"metadata/{key} = PackedInt32Array({', '.join(str(v) for r in records for v in r)})"
+                 for key, records in edits.items()]
+        return self.text.replace("metadata/rc1_collision = 1", "\n".join(["metadata/rc1_collision = 1", *lines]))
+
+    def packed(self, text: str) -> tuple[set, list[str], list[str], bytes]:
+        new, changes, problems = cs.pack_block(self.block, self.read(text))
+        self.assertIsNotNone(new)
+        return {(col.canonical(t[:3]), t[3]) for t in col.decode(new).triangles}, changes, problems, new
+
+    @staticmethod
+    def record(key: tuple, kind: int, turn: int = 0) -> tuple:
+        points = key[turn:] + key[:turn]
+        return (*(c for p in points for c in p), kind)
+
+    def faces(self) -> list[tuple]:
+        return sorted(col.block_triangles(sample()))
+
+    def test_no_edits_pack_nothing(self):
+        self.assertIsNone(self.read(self.edited(rc1_removed=[], rc1_added=[])))
+
+    def test_repaint(self):
+        key, kind = next(f for f in self.faces() if f[1] == 0x0c)
+        shown, changes, problems, new = self.packed(self.edited(
+            rc1_removed=[self.record(key, kind, turn=1)], rc1_added=[self.record(key, 0x8a)]))
+        self.assertEqual(problems, [])
+        self.assertEqual(shown, set(self.faces()) - {(key, kind)} | {(key, 0x8a)})
+        self.assertIn("1 triangles removed, 1 added", changes[0])
+        # The cell without that face keeps its bytes.
+        old, again = col.parse(self.block), col.parse(new)
+        self.assertEqual(col.encode_leaf((11, 20, 5), old.cells[(11, 20, 5)]),
+                         col.encode_leaf((11, 20, 5), again.cells[(11, 20, 5)]))
+
+    def test_delete(self):
+        face = self.faces()[0]
+        shown, _, problems, _ = self.packed(self.edited(rc1_removed=[self.record(*face)]))
+        self.assertEqual((shown, problems), (set(self.faces()) - {face}, []))
+
+    def test_move(self):
+        key, kind = next(f for f in self.faces() if f[1] == 0x2b)
+        moved = tuple((x + 16, y, z + 64) for x, y, z in key)
+        shown, _, _, _ = self.packed(self.edited(rc1_removed=[self.record(key, kind)],
+                                                 rc1_added=[self.record(moved, kind)]))
+        self.assertEqual(shown, set(self.faces()) - {(key, kind)} | {(moved, kind)})
+
+    def test_add_quad_on_the_grid(self):
+        # Corners off the grid snap to it: 1/16 across, 1/64 up.
+        a, b, c, d = (2561, 5122, 1408), (2690, 5122, 1408), (2690, 5250, 1408), (2561, 5250, 1408)
+        shown, _, _, _ = self.packed(self.edited(rc1_added=[(*a, *b, *c, 0x1f), (*a, *c, *d, 0x1f)]))
+        added = shown - set(self.faces())
+        self.assertEqual(len(added), 2)
+        self.assertTrue(all(p[0] % 4 == 0 and p[1] % 4 == 0 for key, _ in added for p in key))
+
+    def test_hero_face_removed(self):
+        group = sample().heroes[0]
+        tri = tuple(group.vertices[i] for i in group.triangles[0])
+        new, changes, problems = cs.pack_block(self.block, self.read(self.edited(
+            rc1_hero_removed=[(0, *(c for p in tri for c in p))])))
+        self.assertEqual(problems, [])
+        self.assertEqual(col.parse(new).heroes[0].triangles, [(0, 1, 1)])
+        self.assertIn("collision: hero wall 0 edited", changes)
+
+    def test_stale_removal_is_a_problem(self):
+        new, _, problems = cs.pack_block(self.block, self.read(self.edited(rc1_removed=[(0,) * 9 + (31,)])))
+        self.assertIsNone(new)
+        self.assertTrue(any("no longer in the tiles" in p for p in problems))
+
+    def test_malformed(self):
+        with self.assertRaisesRegex(FormatError, "ten per face"):
+            self.read(self.edited(rc1_added=[(1, 2, 3)]))
+
+
 class LevelDataTests(unittest.TestCase):
     def test_core_in_place_and_moved(self):
         core, index = bytes(range(256)) * 4, bytearray(0x90)

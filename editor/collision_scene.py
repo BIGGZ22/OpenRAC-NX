@@ -27,7 +27,17 @@ What a modder can do, and what the packer makes of it:
   BoxMesh, PlaneMesh or QuadMesh, with `rc1_surface` metadata for its type byte (0x1f, "no special
   surface", without one; a material named rc1_surface_XX in a glTF wins); under Game/HeroWalls, a
   new hero group the same way;
-- set `rc1_surface` on a tile node: every face of it takes that type byte.
+- set `rc1_surface` on a tile node: every face of it takes that type byte;
+- edit faces with the editor plugin (addons/openrac_collision, the Collision dock): it leaves the
+  tiles as they are and keeps its edits as metadata of Game/Collision, saved with the scene:
+
+    rc1_removed       PackedInt32Array, ten per face: its corners x0 y0 z0 x1 y1 z1 x2 y2 z2 in
+                      1/64 game units (the tiles' positions times 64, glTF's winding), its type byte
+    rc1_added         the same form: faces added (a repaint or a move is the face removed and added
+                      again), on the game's grid
+    rc1_hero_removed  ten per face: the hero wall's number (HeroWall_NNN), then the corners
+
+  scene_collision applies them on top of what the nodes hold.
 
 The packer compares the scene's triangles with the disc's (collision.Block): what is gone is
 removed from every cell holding it, what is new goes into every cell it touches, and every other
@@ -51,6 +61,7 @@ ALPHA = 0.55
 DEFAULT_SURFACE = 0x1f
 MATERIAL = re.compile(r"rc1_surface_([0-9a-fA-F]{2})\b")
 PARENTS = ("Game/Collision", "Game/HeroWalls")
+EDITS = ("rc1_removed", "rc1_added", "rc1_hero_removed")  # the plugin's metadata on Game/Collision
 
 
 # --- export --------------------------------------------------------------------------------------
@@ -296,6 +307,54 @@ def unchanged(project: Path, level_dir: Path, nodes: list[dict], manifest: dict)
     return seen == set(written)
 
 
+def layer_edits(layer: dict) -> dict[str, list[tuple[int, ...]]]:
+    """The editor plugin's edits on Game/Collision (EDITS): each a list of ten-int records."""
+    out = {}
+    for key in EDITS:
+        value = layer["properties"].get(f"metadata/{key}")
+        values = [int(v) for v in numbers(value)] if value else []
+        if len(values) % 10:
+            raise FormatError(f"Game/Collision: {key} holds {len(values)} numbers, not ten per face")
+        out[key] = [tuple(values[i:i + 10]) for i in range(0, len(values), 10)]
+    return out
+
+
+def corners(record: tuple[int, ...]) -> tuple:
+    return (record[0:3], record[3:6], record[6:9])
+
+
+def apply_edits(result: dict, edits: dict) -> None:
+    """The plugin's edits on what the nodes hold (RESULT, scene_collision's): removed faces leave,
+    added ones are put on the grid and join; a removed face no node has any more is a problem."""
+    stale = 0
+    for record in edits["rc1_removed"]:
+        key = (col.canonical(corners(record)), record[9])
+        if key in result["triangles"]:
+            result["triangles"].discard(key)
+        else:
+            stale += 1
+    for record in edits["rc1_added"]:
+        if not 0 <= record[9] <= 0xff:
+            result["problems"].append(f"collision: an added face has type byte {record[9]}, not 0 to 255")
+            continue
+        q = tuple(col.quantise(tuple(c / SCALE for c in p)) for p in corners(record))
+        if col.degenerate(q):
+            result["dropped"] += 1
+            continue
+        result["triangles"].add((col.canonical(q), record[9]))
+    for record in edits["rc1_hero_removed"]:
+        name = f"HeroWall_{record[0]:03}"
+        key = col.canonical(corners(record[1:]))
+        tris = result["heroes"].get(name)
+        if tris is None or key not in map(col.canonical, tris):
+            stale += 1
+            continue
+        result["heroes"][name] = [t for t in tris if col.canonical(t) != key]
+    if stale:
+        result["problems"].append(f"collision: {stale} faces the collision dock removed are no longer in the "
+                                  "tiles (edited elsewhere since); nothing to remove there")
+
+
 def scene_collision(project: Path, level_dir: Path, text: str) -> dict | None:
     """What the scene holds of the collision: None for a project made before this layout, or one
     whose collision is as exported; else {"triangles": {(key, kind)}, "heroes": {name: [tri]},
@@ -311,7 +370,8 @@ def scene_collision(project: Path, level_dir: Path, text: str) -> dict | None:
     if layer is None or "metadata/rc1_collision" not in layer["properties"]:
         return None
     ours = [n for n in nodes if n["parent"] in PARENTS]
-    if unchanged(project, level_dir, ours, manifest):
+    edits = layer_edits(layer)
+    if not any(edits.values()) and unchanged(project, level_dir, ours, manifest):
         return None
     result = {"triangles": set(), "heroes": {}, "added_heroes": [], "problems": [], "dropped": 0}
     for node in ours:
@@ -343,6 +403,7 @@ def scene_collision(project: Path, level_dir: Path, text: str) -> dict | None:
                 result["added_heroes"].append(tris)
         else:
             result["triangles"].update((col.canonical(q), kind) for q, kind in triangles)
+    apply_edits(result, edits)
     result["manifest"] = manifest
     return result
 
