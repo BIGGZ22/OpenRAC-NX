@@ -31,7 +31,7 @@
 {#if v && next}
   <article class="tile rise" class:selected style={`${themeStyle(game.id)}; animation-delay: ${delay}ms`}>
     {#if art}
-      <img class="art" src={art} alt="" decoding="async" onerror={hideMissing} />
+      <img class="art" src={art} alt="" decoding="sync" onerror={hideMissing} />
     {/if}
     <div class="shade"></div>
 

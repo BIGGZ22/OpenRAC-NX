@@ -6,9 +6,10 @@
   import UpdateModal from "$components/UpdateModal.svelte";
   import { errorText, onAndroid } from "$lib/api";
   import { app, openDevelop, refresh, showLaunch, start, updateDiscordPresence, type Page } from "$lib/app.svelte";
+  import { preloadArt } from "$lib/media";
   import { reduced } from "$lib/motion";
-  import { tick } from "svelte";
   import { ACCENT_PROPERTIES, accentProperties } from "$lib/themes";
+  import { tick } from "svelte";
   import Game from "./pages/Game.svelte";
   import Library from "./pages/Library.svelte";
   import Settings from "./pages/Settings.svelte";
@@ -33,6 +34,9 @@
       clearTimeout(later);
     };
   });
+
+  // Android: the Games tab's pictures ready before it is first shown (media.ts).
+  if (onAndroid) preloadArt();
 
   $effect(() => {
     // Android: the launcher's accent is the picked game's own (themes.ts), the colour easing from
