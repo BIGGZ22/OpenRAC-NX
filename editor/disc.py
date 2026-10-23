@@ -13,6 +13,7 @@ from pathlib import Path
 import re
 
 from formats import FormatError, span, unpack
+import util
 
 SECTOR = 2048
 LEVEL_COUNT = 19
@@ -53,10 +54,12 @@ GROUPS = (
 
 @dataclass(frozen=True)
 class Version:
-    """One disc of the game: what identifies it and where it keeps what the readers need."""
+    """One disc of the game: what identifies it and where it keeps what the readers need. What
+    identifies it (region to executable_sha1) is read from games/rac1/game.json
+    (util.disc_identity); where it keeps things is known here."""
     key: str                # OpenRAC's name for it (games/rac1/game.json, launcher/actions.json)
-    region: str
-    label: str
+    region: str             # "PAL", "NTSC-U"
+    label: str              # "PAL v2.00": the region and the disc's version
     executable: str         # the boot executable, named after the serial
     executable_size: int
     executable_sha1: str
@@ -69,14 +72,12 @@ class Version:
 
 
 # PAL: func_0012F3F8 reads the table into D_00137C80, func_0012F4A8 the level table (D_0013A548).
-PAL = Version("pal", "PAL", "PAL v2.00", "SCES_509.16", 1388100,
-              "79956931bd62fafd8d20fa2eae796dbaf2e15e83", "gameplay_pal", 0x165600)
+PAL = Version(key="pal", **util.disc_identity("rac1", "pal"), gameplay="gameplay_pal", normal_table=0x165600)
 # NTSC-U: the same table of contents (ReRAC's docs/formats/disc_layout.md, sections 2.2 to 2.4;
 # ISC License, Copyright (c) 2026 ReRAC contributors: six sectors at 1500, 0x2960 bytes copied to
 # D_00137B80). Its game loads the NTSC gameplay copy: the NTSC decomp's load_level_gameplay reads
 # the level header that follows the table (+0x2970, header 0x10) unless pal_mode is set.
-NTSC = Version("ntsc", "NTSC-U", "NTSC-U v1.00", "SCUS_971.99", 1383028,
-               "72fd1de379dafd8f243dceeb3be50980f3fd3cd5", "gameplay_ntsc", 0x165500)
+NTSC = Version(key="ntsc", **util.disc_identity("rac1", "ntsc"), gameplay="gameplay_ntsc", normal_table=0x165500)
 VERSIONS = (PAL, NTSC)
 BOOT = re.compile(rb"BOOT2\s*=\s*cdrom0:\\([^;\r\n]+)")
 

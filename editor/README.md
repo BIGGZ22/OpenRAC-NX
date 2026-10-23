@@ -31,12 +31,15 @@ The RAC1 PAL build only needs the executable from that image
 ([games/rac1/README.md](../games/rac1/README.md)).
 The extractor reads the whole image, and it stops unless the executable
 inside is PAL v2.00's or NTSC-U v1.00's (its name in `SYSTEM.CNF`, its size
-and SHA-1).
+and SHA-1, which it reads from the version's entry in
+[games/rac1/game.json](../games/rac1/game.json), as it does for the later games'
+discs from theirs).
 
 ## The two discs
 
 Both discs keep their levels the same way, so every reader serves both;
-what differs is one table per version in [disc.py](disc.py) (`VERSIONS`):
+what differs is one table per version in [disc.py](disc.py) (`VERSIONS`;
+the executable's name, size and SHA-1 come from `games/rac1/game.json`):
 
 | | PAL v2.00 | NTSC-U v1.00 |
 |---|---|---|
@@ -789,11 +792,12 @@ The GDScript files follow [`GDSCRIPT_CONVENTIONS.md`](GDSCRIPT_CONVENTIONS.md).
 | File | Contents |
 |---|---|
 | `extract.py` | Command line and safe output |
-| `disc.py` | ISO files, the two discs' versions, sector table of contents, level headers |
-| `wads.py` | Going Commando's, Up Your Arsenal's and Deadlocked's discs: table of contents, level table, level headers |
-| `games.py` | What the four games' level formats share and what each changes, for the shared readers |
+| `disc.py` | ISO files, the two discs' versions (what identifies each from `games/rac1/game.json`), sector table of contents, level headers |
+| `wads.py` | Going Commando's, Up Your Arsenal's and Deadlocked's discs (identified from their `game.json`): table of contents, level table, level headers |
+| `games.py` | What the four games' level formats share and what each changes, for the shared readers; the versions each game's levels are read from (`game.json`) |
 | `level.py` | A level's sections, core blocks and textures (each game's) |
-| `formats.py` | Bounded reads, WAD decompression, code overlays, textures |
+| `formats.py` | `FormatError` and `check`, bounded reads, WAD decompression, code overlays, textures |
+| `util.py` | The helpers several modules share, one copy each: SHA-256, reading JSON with the caller's own error, 32-bit floats, the cross product, `games/<game>/game.json` and the disc identity in it |
 | `terrain.py`, `ties.py`, `shrubs.py`, `sky.py` | Geometry and placements |
 | `collision.py` | The collision block: decoded for display, and read, edited and written back byte-exact |
 | `mobys.py`, `moby_class.py`, `moby_anim.py` | Moby placements, class meshes, skeletons and animations |

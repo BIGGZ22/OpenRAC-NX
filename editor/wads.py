@@ -23,6 +23,7 @@ import hashlib
 
 from disc import BOOT, SECTOR, Disc
 from formats import FormatError, span, unpack
+import util
 
 TOC_LBA = 1001
 # How much of the table of contents is read (Wrench's TOC_MAX_SIZE); the level headers end
@@ -38,7 +39,9 @@ HEADER_KINDS = {0x60: LEVEL, 0xc68: LEVEL, 0x1018: AUDIO, 0x1818: AUDIO, 0x2a0: 
 
 @dataclass(frozen=True)
 class Version:
-    """One disc: the game, what identifies it, and the shape of its level files."""
+    """One disc: the game, what identifies it, and the shape of its level files. What identifies
+    it (region to executable_sha1) is read from games/<game>/game.json (util.disc_identity); the
+    shape of its level files is known here."""
     game: str               # rac2, rac3, rac4 (games/<game>/game.json)
     key: str                # the version's name there (ntsc)
     region: str
@@ -49,12 +52,9 @@ class Version:
     level_header: int       # the level header's size: 0x60 (Going Commando, Up Your Arsenal) or 0xc68 (Deadlocked)
 
 
-RAC2_NTSC = Version("rac2", "ntsc", "NTSC-U", "NTSC-U v1.01", "SCUS_972.68", 2618684,
-                    "bacda860cbd6723142e86db56f197e47e728970f", 0x60)
-RAC3_NTSC = Version("rac3", "ntsc", "NTSC-U", "NTSC-U v1.00", "SCUS_973.53", 771008,
-                    "601012bb03ef1213ad1253baebae8a071b8a7df7", 0x60)
-RAC4_NTSC = Version("rac4", "ntsc", "NTSC-U", "NTSC-U v1.00", "SCUS_974.65", 1692216,
-                    "aa91b1c3b9b1a244320c47580b77342ef9856e95", 0xc68)
+RAC2_NTSC = Version(game="rac2", key="ntsc", **util.disc_identity("rac2", "ntsc"), level_header=0x60)
+RAC3_NTSC = Version(game="rac3", key="ntsc", **util.disc_identity("rac3", "ntsc"), level_header=0x60)
+RAC4_NTSC = Version(game="rac4", key="ntsc", **util.disc_identity("rac4", "ntsc"), level_header=0xc68)
 VERSIONS = (RAC2_NTSC, RAC3_NTSC, RAC4_NTSC)
 
 
