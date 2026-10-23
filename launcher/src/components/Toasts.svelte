@@ -90,7 +90,8 @@
     display: flex;
     flex-direction: column;
     gap: 8px;
-    z-index: 50;
+    /* Over the full-screen launch and running screens (LaunchScreen, GameRunning). */
+    z-index: 70;
     max-width: 420px;
   }
 

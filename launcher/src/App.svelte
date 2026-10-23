@@ -1,9 +1,11 @@
 <script lang="ts">
+  import GameRunning from "$components/GameRunning.svelte";
   import Header from "$components/Header.svelte";
+  import LaunchScreen from "$components/LaunchScreen.svelte";
   import Toasts from "$components/Toasts.svelte";
   import UpdateModal from "$components/UpdateModal.svelte";
   import { errorText, onAndroid } from "$lib/api";
-  import { app, openDevelop, refresh, start, updateDiscordPresence, type Page } from "$lib/app.svelte";
+  import { app, openDevelop, refresh, showLaunch, start, updateDiscordPresence, type Page } from "$lib/app.svelte";
   import { reduced } from "$lib/motion";
   import { tick } from "svelte";
   import { ACCENT_PROPERTIES, accentProperties } from "$lib/themes";
@@ -99,6 +101,11 @@
         else if (page) app.page = page;
         // ?update&modal=update: the update window open on the preview's update (mock.ts).
         if (params.get("modal") === "update") app.showUpdateModal = true;
+        // ?launch: the version's start (Android's spinning disc), as Play shows it.
+        if (params.has("launch") && version) {
+          const game = app.library?.games.find((g) => g.id === version.split("/")[0]);
+          if (game) showLaunch(game.id, game.title);
+        }
       })
       .catch((e: unknown) => {
         // start() says what went wrong itself; this is the last word for anything else.
@@ -139,6 +146,8 @@
     </main>
   </div>
 {/if}
+<LaunchScreen />
+<GameRunning />
 <Toasts />
 <UpdateModal />
 

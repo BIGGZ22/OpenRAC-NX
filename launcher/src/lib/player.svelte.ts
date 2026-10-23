@@ -8,6 +8,7 @@ import {
   cancel,
   copyingDisc,
   gameWindow,
+  showLaunch,
   installGame,
   jobs,
   refresh,
@@ -427,12 +428,18 @@ async function act(v: VersionView, state: PlayerState): Promise<void> {
     // One press gets the game ready (the build, then its levels) and starts it.
     if (await prepare(v)) {
       const play = action(freshVersion(v), "play");
-      if (play?.runnable) await run(scope, play);
+      if (play?.runnable) {
+        showLaunch(v.game, v.title);
+        await run(scope, play);
+      }
     }
     return;
   }
   if (state.kind !== "play") return;
   await addVisibility(v);
   const act = action(freshVersion(v), "play");
-  if (act?.runnable) await run(scope, act);
+  if (act?.runnable) {
+    showLaunch(v.game, v.title);
+    await run(scope, act);
+  }
 }
