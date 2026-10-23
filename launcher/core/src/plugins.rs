@@ -1331,6 +1331,42 @@ mod tests {
         assert_eq!(check_value(&one, &json!("KeyP,KeyO")), None);
     }
 
+    /// The test vectors the SDK's and the port's checks load too (sdk/tests/manifests/README.md).
+    const SHARED_CASES: &str = include_str!("../../../sdk/tests/manifests/cases.json");
+
+    /// The launcher's verdict a shared case expects: its own where the three checks disagree.
+    fn expected(case: &Value) -> bool {
+        case["valid"].as_bool().unwrap_or_else(|| case["valid"]["launcher"].as_bool().unwrap())
+    }
+
+    #[test]
+    fn shared_ids() {
+        let cases: Value = serde_json::from_str(SHARED_CASES).unwrap();
+        let wrong: Vec<(&str, bool)> = cases["ids"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .filter(|c| valid_id(c["id"].as_str().unwrap()) != expected(c))
+            .map(|c| (c["id"].as_str().unwrap(), expected(c)))
+            .collect();
+        assert!(wrong.is_empty(), "ids whose verdict is not the expected one (id, expected): {wrong:?}");
+    }
+
+    #[test]
+    fn shared_manifests() {
+        let cases: Value = serde_json::from_str(SHARED_CASES).unwrap();
+        // A file serde cannot read as a Manifest is refused before validate, as read_manifest refuses it.
+        let accepted = |m: &Value| serde_json::from_value::<Manifest>(m.clone()).is_ok_and(|m| m.validate().is_ok());
+        let wrong: Vec<(&str, bool)> = cases["manifests"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .filter(|c| accepted(&c["manifest"]) != expected(c))
+            .map(|c| (c["name"].as_str().unwrap(), expected(c)))
+            .collect();
+        assert!(wrong.is_empty(), "manifests whose verdict is not the expected one (name, expected): {wrong:?}");
+    }
+
     #[test]
     fn bind_names_are_keys_h() {
         let header =
