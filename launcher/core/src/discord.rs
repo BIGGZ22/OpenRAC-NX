@@ -526,6 +526,27 @@ fn socket_paths(temp_dir: &std::path::Path) -> Vec<PathBuf> {
     candidates
 }
 
+/// Gives a Flatpak Discord's socket the standard name, for programs that look only there: the
+/// Flatpak's Discord listens at `<runtime>/app/com.discordapp.Discord/discord-ipc-0`, and a link at
+/// `<runtime>/discord-ipc-0` leads to it. Nothing is done when that Discord is not running or the
+/// name is taken. The launcher does this at each start on Linux (`src-tauri/src/lib.rs`).
+#[cfg(unix)]
+pub fn link_flatpak_socket_in(runtime_dir: &std::path::Path) {
+    let standard_sock = runtime_dir.join("discord-ipc-0");
+    let flatpak_sock = runtime_dir.join("app/com.discordapp.Discord/discord-ipc-0");
+    if flatpak_sock.exists() && !standard_sock.exists() {
+        let _ = std::os::unix::fs::symlink(&flatpak_sock, &standard_sock);
+    }
+}
+
+/// [`link_flatpak_socket_in`] the user's runtime folder (`$XDG_RUNTIME_DIR`), when it is set.
+#[cfg(unix)]
+pub fn link_flatpak_socket() {
+    if let Ok(runtime_dir) = std::env::var("XDG_RUNTIME_DIR") {
+        link_flatpak_socket_in(std::path::Path::new(&runtime_dir));
+    }
+}
+
 #[cfg(any(unix, windows))]
 fn send_packet<W: Write>(writer: &mut W, opcode: u32, payload: &str) -> std::io::Result<()> {
     let bytes = payload.as_bytes();
@@ -646,5 +667,33 @@ mod tests {
         assert!(paths.contains(&temp.path().join("discord-ipc-0")));
         assert!(paths.contains(&temp.path().join("discord-ipc-2")));
         assert!(!paths.contains(&temp.path().join("discord-ipc-1")));
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn a_flatpak_discords_socket_gets_the_standard_name() {
+        let runtime = tempfile::tempdir().unwrap();
+        // No Flatpak Discord running: nothing is linked.
+        link_flatpak_socket_in(runtime.path());
+        assert!(!runtime.path().join("discord-ipc-0").exists());
+
+        let flatpak = runtime.path().join("app/com.discordapp.Discord");
+        std::fs::create_dir_all(&flatpak).unwrap();
+        std::fs::write(flatpak.join("discord-ipc-0"), b"").unwrap();
+        link_flatpak_socket_in(runtime.path());
+        let standard = runtime.path().join("discord-ipc-0");
+        assert_eq!(std::fs::read_link(&standard).unwrap(), flatpak.join("discord-ipc-0"));
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn a_socket_already_at_the_standard_name_is_left_alone() {
+        let runtime = tempfile::tempdir().unwrap();
+        let flatpak = runtime.path().join("app/com.discordapp.Discord");
+        std::fs::create_dir_all(&flatpak).unwrap();
+        std::fs::write(flatpak.join("discord-ipc-0"), b"").unwrap();
+        std::fs::write(runtime.path().join("discord-ipc-0"), b"native").unwrap();
+        link_flatpak_socket_in(runtime.path());
+        assert!(std::fs::read_link(runtime.path().join("discord-ipc-0")).is_err(), "not replaced by a link");
     }
 }
