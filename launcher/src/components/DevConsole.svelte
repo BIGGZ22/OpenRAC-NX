@@ -1,7 +1,7 @@
 <script lang="ts">
   // Develop's console: what ran, what runs, what waits, and each job's output, as a contributor
   // reads it. The list filters by state; a finished check or build can be run again.
-  import type { ActionView } from "$lib/api";
+  import { onAndroid, type ActionView } from "$lib/api";
   import { app, cancel, clearFinished, clock, jobs, run } from "$lib/app.svelte";
   import { copyText } from "$lib/clipboard";
   import { jobDuration, jobTranscript, TRANSCRIPT_REFUSED } from "$lib/jobText";
@@ -77,7 +77,10 @@
       {/each}
     </div>
     {#if !jobs.list.length}
-      <p class="muted">Nothing has run yet. Run an action from the checkout or a version; its output shows here.</p>
+      <p class="muted">
+        Nothing has run yet. Run an action from {onAndroid ? "a version" : "the checkout or a version"}; its output
+        shows here.
+      </p>
     {:else if !shown.length}
       <p class="muted">No job is {FILTERS.find((f) => f.id === filter)?.label.toLowerCase()}.</p>
     {/if}

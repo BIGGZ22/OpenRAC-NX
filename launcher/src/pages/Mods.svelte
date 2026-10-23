@@ -16,6 +16,7 @@
   import AddMod from "$components/AddMod.svelte";
   import AssetsPanel from "$components/AssetsPanel.svelte";
   import CommandBox from "$components/CommandBox.svelte";
+  import GameChip from "$components/GameChip.svelte";
   import GamesFrame from "$components/GamesFrame.svelte";
   import Icon from "$components/Icon.svelte";
   import PacksPanel from "$components/PacksPanel.svelte";
@@ -261,16 +262,7 @@
             {#if v ? !early(v) : played}<p class="muted lead">{PAGE.lead}</p>{/if}
           </div>
           {#if onAndroid}
-            <button
-              class="game"
-              onclick={() => (app.page = "library")}
-              title="The mods of this game. Choose another in Games."
-              aria-label={`${shown.title}: choose another game in Games`}
-              ><span class="mark" aria-hidden="true"></span><span class="name">{shown.title}</span><Icon
-                name="library"
-                size={16}
-              /></button
-            >
+            <GameChip title={shown.title} what="mods" />
           {/if}
           {#if v}
             <!-- The page's one main action, in the same place on every tab. -->
@@ -535,41 +527,6 @@
     font-family: var(--font-head);
     font-weight: 600;
     color: var(--text);
-  }
-
-  /* Android: the game the mods are for, in its typeface, marked with the launcher's accent (the
-     game's own, themes.ts); a tap goes to Games to choose another. */
-  .game {
-    display: inline-flex;
-    align-items: center;
-    gap: 10px;
-    max-width: 100%;
-    padding: 8px 14px 8px 12px;
-    border-radius: 999px;
-    border: 1px solid color-mix(in srgb, var(--amber) 55%, transparent);
-    background: color-mix(in srgb, var(--amber) 12%, var(--panel));
-    color: var(--text);
-    transition:
-      background var(--medium) var(--ease),
-      border-color var(--medium) var(--ease);
-  }
-
-  .game .mark {
-    flex: none;
-    width: 10px;
-    height: 10px;
-    border-radius: 50%;
-    background: linear-gradient(var(--bar-top), var(--bar-bottom));
-    box-shadow: 0 0 10px color-mix(in srgb, var(--amber) 70%, transparent);
-  }
-
-  .game .name {
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-    font-family: var(--title-font);
-    font-weight: var(--title-weight);
-    color: var(--tx);
   }
 
   .play {

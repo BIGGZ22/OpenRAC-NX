@@ -2,7 +2,15 @@
   // A version in Develop: how far its decompilation is, its actions grouped by area, its files and
   // the facts about it. Develop's left list chooses the version; playing stays on the game's page,
   // and nothing chosen here changes what Play starts.
-  import { api, type ActionArea, type ActionKind, type DiscState, type GameView, type VersionView } from "$lib/api";
+  import {
+    api,
+    onAndroid,
+    type ActionArea,
+    type ActionKind,
+    type DiscState,
+    type GameView,
+    type VersionView,
+  } from "$lib/api";
   import { app, guard } from "$lib/app.svelte";
   import { grouped, matchedLine, pct, size } from "$lib/format";
   import { DISC, INPUT, regionLabel } from "$lib/labels";
@@ -19,7 +27,8 @@
   const here = $derived(
     v.actions.filter((a) => a.thisPlatform).toSorted((a, b) => ORDER.indexOf(a.kind) - ORDER.indexOf(b.kind)),
   );
-  const elsewhere = $derived(v.actions.filter((a) => !a.thisPlatform && a.area !== "port"));
+  // Android runs none of the others (no shell, Python or compiler there): they are not listed.
+  const elsewhere = $derived(onAndroid ? [] : v.actions.filter((a) => !a.thisPlatform && a.area !== "port"));
   const editor = $derived(here.filter((a) => a.area === "editor"));
   // Editing itself is under Mods; here, the editor's checks and what is not connected.
   const canEdit = $derived(editor.some((a) => a.kind === "edit" && a.state !== "planned"));
@@ -31,7 +40,13 @@
       title: "Decompilation",
       blurb: "The original PlayStation 2 program, rebuilt from the C and compared with your disc.",
     },
-    { area: "port", title: "Native port", blurb: "The game built for this computer, and its levels." },
+    {
+      area: "port",
+      title: "Native port",
+      blurb: onAndroid
+        ? "The game this launcher carries, built for this device."
+        : "The game built for this computer, and its levels.",
+    },
     { area: "editor", title: "Level editor", blurb: "" },
   ];
   const groups = $derived(
@@ -131,37 +146,40 @@
     {/if}
   </section>
 
-  <section class="panel">
-    <div class="row">
-      <h3 class="grow">Files</h3>
-      <button class="ghost small" onclick={() => void guard(api.openPath(v.dir))}
-        ><Icon name="folder" size={14} />Open folder</button
-      >
-    </div>
-    <dl class="files">
-      <dt>Disc image</dt>
-      <dd class="mono clip" title={v.disc?.file ?? ""}>
-        {v.disc?.file ?? "–"}{#if v.disc?.size}<span class="dim after">· {size(v.disc.size)}</span>{/if}
-      </dd>
-      <dd class={`mark ${DISC[v.status.disc.state].tone}`} title={v.status.disc.message}>
-        {v.status.disc.state === "found" ? "✓" : "!"}
-        {DISC_SHORT[v.status.disc.state]}
-      </dd>
-      {#each v.status.inputs as input (input.path)}
-        <dt>{INPUT[input.from] ?? input.from}</dt>
-        <dd class="mono clip" title={input.path}>{input.path}</dd>
-        <dd class={`mark ${input.present ? "ok" : "warn"}`} title={input.message}>
-          {input.present ? "✓" : "!"}
-          {input.message}
+  <!-- A checkout's files: Android has none of them, and cannot show a folder of the launcher's. -->
+  {#if !onAndroid}
+    <section class="panel">
+      <div class="row">
+        <h3 class="grow">Files</h3>
+        <button class="ghost small" onclick={() => void guard(api.openPath(v.dir))}
+          ><Icon name="folder" size={14} />Open folder</button
+        >
+      </div>
+      <dl class="files">
+        <dt>Disc image</dt>
+        <dd class="mono clip" title={v.disc?.file ?? ""}>
+          {v.disc?.file ?? "–"}{#if v.disc?.size}<span class="dim after">· {size(v.disc.size)}</span>{/if}
         </dd>
-      {/each}
-      <dt>Folder</dt>
-      <dd class="clip">
-        <button class="link mono" onclick={() => void guard(api.openPath(v.dir))}>{v.dir}</button>
-      </dd>
-      <dd></dd>
-    </dl>
-  </section>
+        <dd class={`mark ${DISC[v.status.disc.state].tone}`} title={v.status.disc.message}>
+          {v.status.disc.state === "found" ? "✓" : "!"}
+          {DISC_SHORT[v.status.disc.state]}
+        </dd>
+        {#each v.status.inputs as input (input.path)}
+          <dt>{INPUT[input.from] ?? input.from}</dt>
+          <dd class="mono clip" title={input.path}>{input.path}</dd>
+          <dd class={`mark ${input.present ? "ok" : "warn"}`} title={input.message}>
+            {input.present ? "✓" : "!"}
+            {input.message}
+          </dd>
+        {/each}
+        <dt>Folder</dt>
+        <dd class="clip">
+          <button class="link mono" onclick={() => void guard(api.openPath(v.dir))}>{v.dir}</button>
+        </dd>
+        <dd></dd>
+      </dl>
+    </section>
+  {/if}
 
   <details class="panel about">
     <summary>About this version</summary>
