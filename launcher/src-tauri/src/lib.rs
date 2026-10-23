@@ -765,33 +765,10 @@ async fn sync_progress_from_web(state: State<'_, AppState>) -> Result<Library, S
     let root = config.root.clone().ok_or("the OpenRAC folder is not set")?;
     let cache = config.progress_cache.clone().ok_or("no per-user folder for the launcher's own files")?;
 
-    // Every project's latest progress from bytematch.dev, and each game's project JSON for its
-    // functional C, with curl (on Linux, macOS and Windows 10+). Offline, the kept copy is read.
-    let root_for_fetch = root.clone();
-    let cache_for_fetch = cache.clone();
+    // Every project's latest progress from bytematch.dev, with curl (core progress_sync.rs).
+    // Offline, or when the site cannot be read, the kept copy is read as it was.
     tauri::async_runtime::spawn_blocking(move || {
-        use openrac_launcher_core::catalog;
-        // detect::quiet: each curl opened a console window of its own on Windows, at every start.
-        let fetch = |url: &str| -> Option<String> {
-            let out = detect::quiet(Path::new("curl"))
-                .args(["-s", "-f", "--connect-timeout", "4", "--max-time", "10", url])
-                .stdin(std::process::Stdio::null())
-                .output()
-                .ok()?;
-            if out.status.success() {
-                String::from_utf8(out.stdout).ok()
-            } else {
-                None
-            }
-        };
-        let Some(list) = fetch(catalog::BYTEMATCH_PROJECTS) else { return };
-        let mut jsons = std::collections::BTreeMap::new();
-        for (_key, slug) in catalog::bytematch_projects_for(&root_for_fetch, &list).unwrap_or_default() {
-            if let Some(text) = fetch(&catalog::bytematch_project_url(&slug)) {
-                jsons.insert(slug, text);
-            }
-        }
-        let _ = catalog::update_progress_from_bytematch(&root_for_fetch, &cache_for_fetch, &list, &jsons);
+        let _ = openrac_launcher_core::progress_sync::sync(&root, &cache, &remote::QuickCurl);
     })
     .await
     .map_err(|e| e.to_string())?;

@@ -35,8 +35,8 @@ pub trait Fetch {
     fn get(&self, url: &str, api: bool) -> Result<Vec<u8>, String>;
 }
 
-/// The real one: `curl`, as the launcher's progress fetch runs it (on Linux, macOS and Windows 10+),
-/// following redirects (a release's asset, a repository's archive), with a time limit and a size cap.
+/// The real one for mods: `curl` (on Linux, macOS and Windows 10+), https only, following
+/// redirects (a release's asset, a repository's archive), with a time limit and a size cap.
 pub struct Curl;
 
 impl Fetch for Curl {
@@ -51,23 +51,42 @@ impl Fetch for Curl {
         if api {
             cmd.args(["-H", "Accept: application/vnd.github+json", "-H", "X-GitHub-Api-Version: 2022-11-28"]);
         }
-        let out = cmd
-            .arg(url)
-            .stdin(std::process::Stdio::null())
-            .output()
-            .map_err(|e| format!("curl cannot be started ({e}): the launcher fetches mods with it"))?;
-        if out.status.success() {
-            return Ok(out.stdout);
-        }
-        let why = String::from_utf8_lossy(&out.stderr).trim().to_string();
-        Err(if why.contains("404") {
-            format!("{url}: not found")
-        } else if why.is_empty() {
-            format!("{url} could not be fetched")
-        } else {
-            format!("{url} could not be fetched ({why})")
-        })
+        run_curl(cmd, url, "the launcher fetches mods with it")
     }
+}
+
+/// A short fetch that must not hold the launcher's start up: bytematch.dev's progress figures
+/// (progress_sync.rs). `curl` with 4 seconds to connect and 10 in all, no redirects and no
+/// headers of its own; `api` is ignored.
+pub struct QuickCurl;
+
+impl Fetch for QuickCurl {
+    fn get(&self, url: &str, _api: bool) -> Result<Vec<u8>, String> {
+        let mut cmd = crate::detect::quiet(Path::new("curl"));
+        cmd.args(["-s", "-f", "--connect-timeout", "4", "--max-time", "10"]);
+        run_curl(cmd, url, "the launcher fetches its progress figures with it")
+    }
+}
+
+/// Runs `cmd` (a `curl` with its options) on `url`, its input closed: the body, or why not.
+/// `purpose` says, when curl cannot be started, what the launcher needed it for.
+fn run_curl(mut cmd: std::process::Command, url: &str, purpose: &str) -> Result<Vec<u8>, String> {
+    let out = cmd
+        .arg(url)
+        .stdin(std::process::Stdio::null())
+        .output()
+        .map_err(|e| format!("curl cannot be started ({e}): {purpose}"))?;
+    if out.status.success() {
+        return Ok(out.stdout);
+    }
+    let why = String::from_utf8_lossy(&out.stderr).trim().to_string();
+    Err(if why.contains("404") {
+        format!("{url}: not found")
+    } else if why.is_empty() {
+        format!("{url} could not be fetched")
+    } else {
+        format!("{url} could not be fetched ({why})")
+    })
 }
 
 /// Where GitHub answers: its API and its raw files (the tests point both elsewhere).

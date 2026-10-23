@@ -24,6 +24,7 @@
 //! - [`overrides`]: a game's overrides packs (replacement textures and models): list, order, on/off.
 //! - [`plugins`]: a game's native mods (docs/port/MODS.md): install, list, order, on/off, settings.
 //! - [`library`]: all of the above, put together for the UI.
+//! - [`progress_sync`]: the decompilations' latest progress from bytematch.dev, kept for offline starts.
 //! - [`reports`]: a game's session logs and crash reports, the text and the .zip players send.
 //! - [`launcher_log`]: the launcher's own log, which goes in that .zip.
 //! - [`update`]: the launcher's own updates on Android: the manifest and the signature check.
@@ -49,6 +50,7 @@ pub mod library;
 pub mod overrides;
 pub mod plugins;
 pub mod port_build;
+pub mod progress_sync;
 pub mod remote;
 pub mod reports;
 pub mod save_edit;
