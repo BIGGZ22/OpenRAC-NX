@@ -95,6 +95,12 @@ target_link_libraries(log_test PRIVATE openrac_common)
 openrac_warnings(log_test)
 add_test(NAME log COMMAND log_test)
 
+find_package(Threads REQUIRED)
+add_executable(joining_thread_test tests/joining_thread_test.cpp)
+target_link_libraries(joining_thread_test PRIVATE openrac_common Threads::Threads)
+openrac_warnings(joining_thread_test)
+add_test(NAME joining_thread COMMAND joining_thread_test)
+
 add_executable(frame_pacing_test tests/frame_pacing_test.cpp)
 target_include_directories(frame_pacing_test PRIVATE .)
 openrac_warnings(frame_pacing_test)
