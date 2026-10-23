@@ -21,6 +21,7 @@ function job(actionId: string): Job {
     startedAt: 0,
     endedAt: null,
     outputs: [],
+    inputs: "",
   };
 }
 

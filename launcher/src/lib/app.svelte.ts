@@ -608,16 +608,60 @@ export function updateDiscordPresence(page: Page = app.page, version: string | n
 /** Jobs that are not actions.json actions (setting a game up, an action for one level), by the job's key: how to start each. */
 const starters: Record<number, (() => Promise<Started>) | undefined> = {};
 
-/** Runs an action: a detached one (the game, Godot) at once, anything else through the queue. */
+/** Actions a second of is the same request (queue.ts, ActionGroups): the game with mods or without. */
+const ACTION_GROUPS = [PLAY_ACTIONS];
+
+/** The requests whose start has been asked for and has not been answered yet (a detached launch,
+ *  a chain between its steps, a disc being picked): by scope, action and inputs. A second click
+ *  on the same button finds its request here. */
+// Not shown, so not reactive.
+// eslint-disable-next-line svelte/prefer-svelte-reactivity
+const asking = new Set<string>();
+
+/** A request's key in `asking`: an action of a group is known by its group, whatever its inputs. */
+function requestKey(scope: Scope, id: string, inputs = ""): string {
+  const group = ACTION_GROUPS.find((g) => g.includes(id));
+  return `${scope.kind === "version" ? scope.key : "repository"}\n${group?.[0] ?? id}\n${group ? "" : inputs}`;
+}
+
+/** Whether asking for ACTION_ID in SCOPE would repeat what was already asked for: a queued or
+ *  running job of it (or of its group), or a start not yet answered. It selects the job it found
+ *  and says so, so a second click on a button shows the first one's job and starts nothing. */
+function alreadyAsked(scope: Scope, id: string, inputs = ""): boolean {
+  if (asking.has(requestKey(scope, id, inputs))) return true;
+  const job = queue.live(scope, id, inputs, ACTION_GROUPS);
+  if (!job) return false;
+  jobs.selected = job.key;
+  toast(job.state === "running" ? `Already running: ${job.title}` : `Already queued: ${job.title}`);
+  return true;
+}
+
+/** Runs FN with KEY marked as asked for, so that a second request for it waits on nothing and
+ *  starts nothing (see alreadyAsked). */
+async function asked<T>(key: string, fn: () => Promise<T>): Promise<T> {
+  asking.add(key);
+  try {
+    return await fn();
+  } finally {
+    asking.delete(key);
+  }
+}
+
+/** Runs an action: a detached one (the game, Godot) at once, anything else through the queue. A
+ *  second request for the same action while the first is queued, running or starting does nothing. */
 export async function run(scope: Scope, action: ActionView, given?: number | RunInputs) {
   const inputs = typeof given === "number" ? { level: given } : given;
+  const key = inputs === undefined ? "" : JSON.stringify(inputs);
+  if (alreadyAsked(scope, action.id, key)) return;
   if (action.detached) {
-    const started = await guard(api.runAction(scope, action.id, inputs));
+    const started = await asked(requestKey(scope, action.id, key), () =>
+      guard(api.runAction(scope, action.id, inputs)),
+    );
     if (started) toast(`Started: ${started.title}`);
     updateDiscordPresence();
     return;
   }
-  const job = queue.add(scope, action.id, action.label);
+  const job = queue.add(scope, action.id, action.label, Date.now(), key);
   if (inputs !== undefined) starters[job.key] = () => api.runAction(scope, action.id, inputs);
   jobs.selected = job.key;
   toast(queue.running() ? `Queued: ${action.label}` : `Started: ${action.label}`);
@@ -640,13 +684,28 @@ function settle(key: number, succeeded: boolean) {
  */
 export async function runChain(scope: Scope, actions: ActionView[], given?: number | RunInputs): Promise<boolean> {
   const inputs = typeof given === "number" ? { level: given } : given;
+  const key = inputs === undefined ? "" : JSON.stringify(inputs);
+  // The chain is one request, known by its last step (what the button is for: the game, the
+  // editor): a second click while any step is queued, running or between steps does nothing.
+  const last = actions.at(-1);
+  if (!last) return true;
+  if (actions.some((a) => alreadyAsked(scope, a.id, key))) return false;
+  return asked(requestKey(scope, last.id, key), () => chainSteps(scope, actions, inputs, key));
+}
+
+async function chainSteps(
+  scope: Scope,
+  actions: ActionView[],
+  inputs: RunInputs | undefined,
+  key: string,
+): Promise<boolean> {
   for (const action of actions) {
     if (action.detached) {
       const started = await guard(api.runAction(scope, action.id, inputs));
       if (!started) return false;
       continue;
     }
-    const job = queue.add(scope, action.id, action.label);
+    const job = queue.add(scope, action.id, action.label, Date.now(), key);
     if (inputs !== undefined) starters[job.key] = () => api.runAction(scope, action.id, inputs);
     jobs.selected = job.key;
     const ended = new Promise<boolean>((resolve) => {
@@ -664,6 +723,13 @@ export async function runChain(scope: Scope, actions: ActionView[], given?: numb
  * against the build OpenRAC knows. Resolves to whether it worked.
  */
 export async function installGame(game: string, title: string, found?: string): Promise<boolean> {
+  const scope: Scope = { kind: "repository" };
+  // A second click while the disc is being picked, copied or set up does nothing.
+  if (alreadyAsked(scope, `install:${game}`)) return false;
+  return asked(requestKey(scope, `install:${game}`), () => installFromDisc(game, title, found));
+}
+
+async function installFromDisc(game: string, title: string, found?: string): Promise<boolean> {
   // An image the games folder holds needs no picking.
   const picked =
     found ??

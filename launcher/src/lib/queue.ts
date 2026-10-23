@@ -29,7 +29,18 @@ export interface Job {
   endedAt: number | null;
   /** The folders it wrote, from its exit event: what "Open folder" opens (api.openOutput). */
   outputs: string[];
+  /** What it was asked with (a level, a file), as one string: the same action with other inputs
+   *  is another job. Empty when it was asked with nothing. */
+  inputs: string;
 }
+
+/** Actions that are one thing to the player: a second of any of them while one is queued or
+ *  running is the same request again (the game, and the game with the player's mods, are the
+ *  same program writing the same memory card). */
+export type ActionGroups = readonly (readonly string[])[];
+
+const sameScope = (a: Scope, b: Scope) =>
+  a.kind === b.kind && (a.kind === "repository" || (b.kind === "version" && a.key === b.key));
 
 /** Older lines are dropped past this many, so a chatty build cannot exhaust memory. */
 export const MAX_LINES = 5000;
@@ -51,7 +62,7 @@ export class Queue {
     this.jobs = jobs;
   }
 
-  add(scope: Scope, actionId: string, title: string, now = Date.now()): Job {
+  add(scope: Scope, actionId: string, title: string, now = Date.now(), inputs = ""): Job {
     const job: Job = {
       key: ++this.nextKey,
       scope,
@@ -66,10 +77,24 @@ export class Queue {
       startedAt: null,
       endedAt: null,
       outputs: [],
+      inputs,
     };
     this.jobs.push(job);
     // The array's own element: a reactive proxy when the array is $state.
     return this.jobs.at(-1) ?? job;
+  }
+
+  /** The queued or running job that asking for ACTION_ID in SCOPE with INPUTS would repeat: the
+   *  same action with the same inputs, or any action of its group. A second click on a button
+   *  finds the first one's job here and starts nothing. */
+  live(scope: Scope, actionId: string, inputs = "", groups: ActionGroups = []): Job | undefined {
+    const group = groups.find((g) => g.includes(actionId));
+    return this.jobs.find(
+      (j) =>
+        (j.state === "queued" || j.state === "running") &&
+        sameScope(j.scope, scope) &&
+        (group ? group.includes(j.actionId) : j.actionId === actionId && j.inputs === inputs),
+    );
   }
 
   running(): Job | undefined {

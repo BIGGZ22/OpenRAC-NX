@@ -106,4 +106,27 @@ describe("queue", () => {
     expect(a.lines.length).toBe(MAX_LINES);
     expect(a.lines[0]?.line).toBe("10");
   });
+
+  it("finds the live job a second request would repeat", () => {
+    const q = new Queue();
+    const pal = { kind: "version", key: "rac1/pal" } as const;
+    const ntsc = { kind: "version", key: "rac1/ntsc" } as const;
+    const groups = [["play", "play-edited"]];
+    const play = q.add(pal, "play", "Play");
+    // The same action, or another of its group, in the same scope.
+    expect(q.live(pal, "play", "", groups)).toBe(play);
+    expect(q.live(pal, "play-edited", "", groups)).toBe(play);
+    // Another version, or an action of no group, is another request.
+    expect(q.live(ntsc, "play", "", groups)).toBeUndefined();
+    expect(q.live(pal, "port-build", "", groups)).toBeUndefined();
+    // An action with other inputs is another job; with the same ones, the same.
+    const level = q.add(pal, "editor-open", "Open level 3", 0, '{"level":3}');
+    expect(q.live(pal, "editor-open", '{"level":3}', groups)).toBe(level);
+    expect(q.live(pal, "editor-open", '{"level":4}', groups)).toBeUndefined();
+    // Once it has ended, asking again starts it again.
+    q.started(play, 9, "openrac");
+    expect(q.live(pal, "play", "", groups)).toBe(play);
+    q.apply({ type: "exit", id: 9, code: 0, cancelled: false, outputs: [] });
+    expect(q.live(pal, "play", "", groups)).toBeUndefined();
+  });
 });
