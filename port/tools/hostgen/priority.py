@@ -31,6 +31,9 @@ import sys
 from collections import deque
 from pathlib import Path
 
+sys.path.insert(1, str(next(p for p in Path(__file__).resolve().parents if (p / "tools/openrac_common").is_dir()) / "tools"))
+from openrac_common import paths  # noqa: E402
+
 # How weak each kind is: higher goes first among functions reached as widely.
 WEIGHT = {
     "no C": 6, "untranslatable": 6, "mislabelled declaration": 5.5, "unverifiable": 5, "functional: low": 4,
@@ -538,8 +541,7 @@ def main(argv=None) -> int:
     args = ap.parse_args(argv)
     cfg = read_json(args.game)
     cfg["_dir"] = str(args.game.parent)
-    root = args.game.resolve().parents[3]
-    source = args.source or root / cfg.get("source", ".")
+    source = args.source or paths.repo_root(args.game) / cfg.get("source", ".")
     result = analyse(cfg, args.gen, source, args.dump, args.exe, args.frame)
     text = markdown(result, cfg.get("title", cfg.get("id", "")), args.top)
     if args.json:

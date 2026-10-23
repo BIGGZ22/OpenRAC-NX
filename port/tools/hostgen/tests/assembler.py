@@ -17,11 +17,8 @@ comment before each instruction), from test programs written here. Only what the
 from __future__ import annotations
 
 import re
-import sys
-from pathlib import Path
 
-sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
-import asm  # noqa: E402  (hostgen's decoder: its tables give the MMI and VU0 encodings)
+import asm  # hostgen's decoder (its tables give the MMI and VU0 encodings), on the tests' path
 
 SPECIAL = {"sll": 0x00, "srl": 0x02, "sra": 0x03, "jr": 0x08, "jalr": 0x09, "movz": 0x0A, "movn": 0x0B,
            "syscall": 0x0C, "break": 0x0D, "mfhi": 0x10, "mflo": 0x12, "mult": 0x18, "div": 0x1A, "addu": 0x21,

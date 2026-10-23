@@ -35,7 +35,10 @@ import sys
 from dataclasses import dataclass
 from pathlib import Path
 
-import asm
+sys.path.insert(1, str(next(p for p in Path(__file__).resolve().parents if (p / "tools/openrac_common").is_dir()) / "tools"))
+from openrac_common import paths  # noqa: E402
+
+import asm  # noqa: E402
 
 RAM = (0x00100000, 0x02000000)
 # A Ratchet & Clank level program's records in their order, as the level dumps name them.
@@ -164,7 +167,7 @@ def read_dump(dump: Path) -> dict[int, list[Part]]:
 
 def read_image(image: Path) -> tuple[bytes, dict[int, list[Part]]]:
     """The executable and every level's program from a disc image, through the editor's reader."""
-    editor = Path(__file__).resolve().parents[3] / "editor"
+    editor = paths.repo_root(__file__) / "editor"
     if str(editor) not in sys.path:
         sys.path.insert(0, str(editor))
     from disc import Disc  # noqa: E402  (the editor's ISO and table-of-contents reader)

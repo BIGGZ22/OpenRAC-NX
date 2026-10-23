@@ -35,7 +35,8 @@ import time
 from concurrent.futures import ProcessPoolExecutor
 from pathlib import Path
 
-sys.path.insert(0, str(Path(__file__).resolve().parent))
+sys.path.insert(1, str(next(p for p in Path(__file__).resolve().parents if (p / "tools/openrac_common").is_dir()) / "tools"))
+from openrac_common import tables  # noqa: E402
 
 import asmc  # noqa: E402
 import clangast  # noqa: E402
@@ -235,15 +236,7 @@ def library_api(config_dir: Path, cfg: dict) -> dict[str, str]:
     """The library functions every game shares (port/game/common/libraries.tsv):
     name -> signature, implemented by the port as openrac_lib_<name>."""
     path = config_dir / cfg.get("library_api", "../common/libraries.tsv")
-    api = {}
-    if path.exists():
-        for line in path.read_text().splitlines():
-            if not line.strip() or line.startswith("#"):
-                continue
-            cols = line.split("\t")
-            if len(cols) >= 3:
-                api[cols[0].strip()] = cols[2].strip()
-    return api
+    return {row[0]: row[2] for row in tables.read_tsv(path, strip=True) if len(row) >= 3}
 
 
 def host_table(config_dir: Path, cfg: dict) -> dict[str, tuple[str, str]]:
@@ -256,14 +249,11 @@ def host_table(config_dir: Path, cfg: dict) -> dict[str, tuple[str, str]]:
     if not table:
         return out
     api = library_api(config_dir, cfg)
-    for line in (config_dir / table).read_text().splitlines():
-        if not line.strip() or line.startswith("#"):
-            continue
-        cols = line.split("\t")
-        if len(cols) >= 4 and cols[3].strip() == "host":
-            name = cols[2].strip()
-            sig = cols[5].strip() if len(cols) > 5 and cols[5].strip() else api.get(name, "")
-            out[cols[0].strip()] = (name, sig)
+    for row in tables.read_tsv(config_dir / table, strip=True, required=True):
+        if len(row) >= 4 and row[3] == "host":
+            name = row[2]
+            sig = row[5] if len(row) > 5 and row[5] else api.get(name, "")
+            out[row[0]] = (name, sig)
     return out
 
 
@@ -271,30 +261,22 @@ def wrapped(config_dir: Path, cfg: dict) -> set[str]:
     """Functions whose C is kept under <name>__game, for a host <name> that
     calls it (libraries.tsv rows with port = wrap, and the hook points, port =
     hook, whose host <name> hostgen writes itself: hooks.c)."""
-    out = set()
     table = cfg.get("libraries")
     if not table:
-        return out
-    for line in (config_dir / table).read_text().splitlines():
-        cols = line.split("\t")
-        if not line.startswith("#") and len(cols) >= 4 and cols[3].strip() in ("wrap", "hook"):
-            out.add(cols[0].strip())
-    return out
+        return set()
+    return {row[0] for row in tables.read_tsv(config_dir / table, strip=True, required=True)
+            if len(row) >= 4 and row[3] in ("wrap", "hook")}
 
 
 def wrapped_by_host(config_dir: Path, cfg: dict) -> set[str]:
     """Functions with a `wrap` row: the port's host C is their <name>. One that is a hook point too
     gets its hook under the port's function: hooks.c writes <name>__hooked (the mod's replacement
     or the game's C), which the host C calls where it would call <name>__game."""
-    out = set()
     table = cfg.get("libraries")
     if not table:
-        return out
-    for line in (config_dir / table).read_text().splitlines():
-        cols = line.split("\t")
-        if not line.startswith("#") and len(cols) >= 4 and cols[3].strip() == "wrap":
-            out.add(cols[0].strip())
-    return out
+        return set()
+    return {row[0] for row in tables.read_tsv(config_dir / table, strip=True, required=True)
+            if len(row) >= 4 and row[3] == "wrap"}
 
 
 def hooked(config_dir: Path, cfg: dict) -> dict[str, str]:
@@ -305,10 +287,9 @@ def hooked(config_dir: Path, cfg: dict) -> dict[str, str]:
     if not table:
         return out
     names: dict[str, str] = {}
-    for line in (config_dir / table).read_text().splitlines():
-        cols = line.split("\t")
-        if not line.startswith("#") and len(cols) >= 4 and cols[3].strip() == "hook":
-            sym, name = cols[0].strip(), cols[2].strip()
+    for row in tables.read_tsv(config_dir / table, strip=True, required=True):
+        if len(row) >= 4 and row[3] == "hook":
+            sym, name = row[0], row[2]
             if not re.fullmatch(r"[A-Za-z_]\w*", name):
                 raise ValueError(f"{table}: hook point {sym} has no name a mod can ask for ({name!r})")
             if name in names:
@@ -471,19 +452,19 @@ def write_program_files(program: Program, out: Path, game: str) -> dict:
     # (The translation's calls through a code address take the type of the function found there:
     # Program.function_at, from the same tables.)
     program._code_tables = None
-    tables = program.code_tables()
+    code_tables = program.code_tables()
     fn = head + ["#include \"openrac/guest.h\"", "#include \"game_protos.h\"", ""]
-    for overlay in sorted(tables):
+    for overlay in sorted(code_tables):
         name = "exe" if overlay < 0 else f"overlay_{overlay:02d}"
         fn.append(f"static const openrac_fn_entry k_{name}[] = {{")
-        for addr, sym in sorted(tables[overlay]):
+        for addr, sym in sorted(code_tables[overlay]):
             fn.append(f"    {{0x{addr:08X}u, (openrac_host_fn){cname(sym)}, \"{sym}\"}},")
         fn.append("};")
         fn.append("")
     # Each function's thunk, for a call through its address with the EE's registers as they are
     # (guest.h, openrac_guest_call_regs; where OPENRAC_REGS_THUNKS is on: Windows).
     thunks = []
-    for sym in sorted({s for entries in tables.values() for _a, s in entries}):
+    for sym in sorted({s for entries in code_tables.values() for _a, s in entries}):
         text = thunk_text(sym, program.functions[sym], program.typedefs, len(thunks))
         if text is not None:
             thunks.append((sym, text))
@@ -496,7 +477,7 @@ def write_program_files(program: Program, out: Path, game: str) -> dict:
         fn += [f"    {{(openrac_host_fn){cname(sym)}, thunk_{k}}}," for k, (sym, _t) in enumerate(thunks)]
         fn += ["};", "#endif", ""]
     fn.append("void openrac_game_register_functions(void) {")
-    for overlay in sorted(tables):
+    for overlay in sorted(code_tables):
         name = "exe" if overlay < 0 else f"overlay_{overlay:02d}"
         fn.append(f"    openrac_guest_register({overlay}, k_{name}, sizeof k_{name} / sizeof k_{name}[0]);")
     if thunks:
@@ -505,7 +486,7 @@ def write_program_files(program: Program, out: Path, game: str) -> dict:
     fn.append("}")
     _write(out / "functions.c", "\n".join(fn) + "\n")
     return {"stubs": stub_count, "unprototyped": unprototyped,
-            "addresses": sum(len(v) for v in tables.values())}
+            "addresses": sum(len(v) for v in code_tables.values())}
 
 
 def thunk_text(sym: str, f: Function, typedefs: dict, k: int) -> str | None:
@@ -801,7 +782,7 @@ def _files(path: Path):
 
 def inputs_digest(source: Path, config: Path, cfg: dict, options: list[str]) -> str:
     """A fingerprint of everything hostgen reads: the decompilation's C and tables, the game's
-    configuration, hostgen's own code, the Clang it parses with and the options. Equal
+    configuration, hostgen's own code and the openrac_common modules it imports, the Clang it parses with and the options. Equal
     fingerprints write the same files, so a build whose generated C is already in place (a CI
     cache, a second configure) skips the translation."""
     paths = [source / d for d in sorted(set(cfg["sources"] + cfg["includes"]))]
@@ -822,6 +803,8 @@ def inputs_digest(source: Path, config: Path, cfg: dict, options: list[str]) -> 
     # The game's own folder and the tables every game shares (port/game/<id>, port/game/common).
     paths += [config.parent, config.parent.parent / "common", HERE / "include"]
     paths += sorted(HERE.glob("*.py"))
+    # The shared helpers it reads its tables through (tools/openrac_common) are its code as well.
+    paths += sorted(Path(tables.__file__).parent.glob("*.py"))
     h = hashlib.sha256()
     for root in paths:
         for f in sorted(_files(root)):

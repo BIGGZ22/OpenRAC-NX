@@ -7,10 +7,10 @@ Two kinds of test. Each helper's own behaviour, with expected values from its do
 (ECMA-119 for the image, hashlib for the digests). And characterisation: the existing copy each
 helper was written from runs on the same synthetic input as the helper, and both must give the
 same result, so a caller moved onto the package later behaves as it did. Those copies are
-imported from where they live today (port/tools/hostgen, sdk/tools, editor, and what tools/
-keeps: openrac.checksums,
+imported from where they live today (sdk/tools, editor, and what tools/ keeps: openrac.checksums,
 fcheck_gate.fcheck_commit); once their callers have moved and a copy is gone, its comparison
-goes with it, as tools/' copies went in P1-05 and versionmap's and the probe tools' in P2-10.
+goes with it, as tools/' copies went in P1-05 and port/tools' and the probe tools' in P2-10
+(hostgen's readers keep their characterisation in port/tools/hostgen/test_tables.py).
 """
 import contextlib
 import hashlib
@@ -32,15 +32,13 @@ ROOT = Path(__file__).resolve().parent.parent
 
 # The existing copies' folders go after tools/ on the path, so a tools/ module of the same name
 # (tools/port.py beside editor/port.py) is the one imported.
-for folder in ("port/tools/hostgen", "sdk/tools", "editor"):
+for folder in ("sdk/tools", "editor"):
     if str(ROOT / folder) not in sys.path:
         sys.path.append(str(ROOT / folder))
 
 import disc  # noqa: E402  editor
 import fcheck_gate  # noqa: E402
 import gen_binding  # noqa: E402  sdk/tools
-import hostgen  # noqa: E402  port/tools/hostgen
-import no_c  # noqa: E402  port/tools/hostgen
 import openrac  # noqa: E402
 
 SECTOR = iso9660.SECTOR
@@ -347,6 +345,8 @@ LIBRARY_API = (
     "memcpy\tlibc\tvoid *memcpy(void *, const void *, size_t)\n"
     "lonely\n"
 )
+# no_c.tsv's columns (port/tools/hostgen/no_c.py, COLUMNS).
+NO_C_COLUMNS = ["name", "class", "kind", "c", "reachable", "evidence"]
 NO_C = (
     "# a comment\n"
     "name\tclass\tkind\tc\treachable\tevidence\n"
@@ -376,7 +376,7 @@ class TablesTests(TempDir):
         self.assertEqual(rows[6], {"symbol": "short", "library": "row", "name": "", "port": ""})
 
     def test_an_uncommented_header_line_is_skipped_with_columns(self):
-        rows = tables.read_tsv(self.no_c, no_c.COLUMNS)
+        rows = tables.read_tsv(self.no_c, NO_C_COLUMNS)
         self.assertEqual([r["name"] for r in rows], ["func_a", "func_b", "func_c", "func_d"])
         self.assertEqual(tables.read_tsv(self.no_c)[0][0], "name")
 
@@ -390,28 +390,6 @@ class TablesTests(TempDir):
         self.assertEqual(tables.header(self.libraries),
                          ["symbol", "library", "name", "port", "notes", "signature (optional)"])
         self.assertEqual(tables.header(self.no_c), [])
-
-    def test_matches_no_c_read_tsv_names(self):
-        for column in (0, 1):
-            self.assertEqual([row[column] for row in tables.read_tsv(self.libraries, strip=True)],
-                             no_c.read_tsv_names(self.libraries, column))
-
-    def test_matches_no_c_keep_rows(self):
-        rows = tables.read_tsv(self.no_c)
-        ours = {row[0]: dict(zip(no_c.COLUMNS, row)) for row in rows[1:]
-                if len(row) == len(no_c.COLUMNS) and row[5].startswith("by hand:")}
-        self.assertEqual(ours, no_c.keep_rows(self.no_c))
-
-    def test_matches_hostgen_library_readers(self):
-        cfg = {"libraries": self.libraries.name, "library_api": self.api.name}
-        api = {row[0]: row[2] for row in tables.read_tsv(self.api, strip=True) if len(row) >= 3}
-        self.assertEqual(api, hostgen.library_api(self.dir, cfg))
-        columns = ["symbol", "library", "name", "port", "notes", "signature"]
-        rows = tables.read_tsv(self.libraries, columns, strip=True)
-        host = {r["symbol"]: (r["name"], r["signature"] or api.get(r["name"], "")) for r in rows if r["port"] == "host"}
-        self.assertEqual(host, hostgen.host_table(self.dir, cfg))
-        self.assertEqual({r["symbol"] for r in rows if r["port"] in ("wrap", "hook")}, hostgen.wrapped(self.dir, cfg))
-        self.assertEqual({r["symbol"] for r in rows if r["port"] == "wrap"}, hostgen.wrapped_by_host(self.dir, cfg))
 
     def test_matches_gen_binding_hook_rows(self):
         path = ROOT / "port" / "game" / "rac8-pal" / "libraries.tsv"

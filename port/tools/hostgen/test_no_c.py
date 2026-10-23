@@ -8,16 +8,12 @@ from __future__ import annotations
 
 import json
 import struct
-import sys
 import tempfile
 import unittest
 from pathlib import Path
 
-HERE = Path(__file__).resolve().parent
-sys.path.insert(0, str(HERE))
-
-import no_c  # noqa: E402
-import retail  # noqa: E402
+import no_c
+import retail
 
 JR_RA, NOP, FILL = 0x03E00008, 0, 0xCDCDCDCD
 

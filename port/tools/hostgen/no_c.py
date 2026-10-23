@@ -45,7 +45,8 @@ import struct
 import sys
 from pathlib import Path
 
-sys.path.insert(0, str(Path(__file__).resolve().parent))
+sys.path.insert(1, str(next(p for p in Path(__file__).resolve().parents if (p / "tools/openrac_common").is_dir()) / "tools"))
+from openrac_common import tables  # noqa: E402
 
 import asm  # noqa: E402
 import retail  # noqa: E402
@@ -58,15 +59,6 @@ COLUMNS = ["name", "class", "kind", "c", "reachable", "evidence"]
 BRANCH_OPS = {4, 5, 6, 7, 0x14, 0x15, 0x16, 0x17}
 REGIMM_BRANCHES = {0, 1, 2, 3, 0x10, 0x11, 0x12, 0x13}
 FILL = 0xCDCDCDCD
-
-
-def read_tsv_names(path: Path, col: int = 0) -> list[str]:
-    out = []
-    if path.is_file():
-        for line in path.read_text().splitlines():
-            if line.strip() and not line.startswith("#"):
-                out.append(line.split("\t")[col].strip())
-    return out
 
 
 def read_functions_c(path: Path) -> dict[int, dict[int, str]]:
@@ -133,26 +125,20 @@ def host_names(cfg: dict) -> dict[str, str]:
     """What the port writes itself: name -> why (libraries.tsv host rows, host_functions)."""
     out = {n: "hostgen.json host_functions" for n in cfg.get("host_functions", [])}
     table = cfg.get("libraries")
-    if table and (cfg["_dir"] / table).is_file():
-        for line in (cfg["_dir"] / table).read_text().splitlines():
-            if not line.strip() or line.startswith("#"):
-                continue
-            cols = line.split("\t")
-            if len(cols) >= 4 and cols[3].strip() == "host":
-                out[cols[0].strip()] = f"libraries.tsv host ({cols[1].strip()} {cols[2].strip()})"
+    if table:
+        for row in tables.read_tsv(cfg["_dir"] / table, strip=True):
+            if len(row) >= 4 and row[3] == "host":
+                out[row[0]] = f"libraries.tsv host ({row[1]} {row[2]})"
     return out
 
 
 def decomp_lists(source: Path) -> dict[str, set[str]]:
     """The decompilation's own classification, where it has one (rac1/pal)."""
     def names(path: Path) -> set[str]:
-        return {n.split("/")[-1] for n in read_tsv_names(path)}
+        return {row[0].split("/")[-1] for row in tables.read_tsv(path, strip=True)}
     joined = set()
-    p = source / "config/overlays/joined.tsv"
-    if p.is_file():
-        for line in p.read_text().splitlines():
-            if line.strip() and not line.startswith("#"):
-                joined.update(c.strip() for c in line.split("\t")[1:2])
+    for row in tables.read_tsv(source / "config/overlays/joined.tsv", strip=True):
+        joined.update(row[1:2])
     return {
         "remnant": names(source / "config/linker_remnants.txt") | names(source / "config/overlays/linker_remnants.txt"),
         "handwritten": names(source / "config/handwritten_asm.txt"),
@@ -161,14 +147,10 @@ def decomp_lists(source: Path) -> dict[str, set[str]]:
 
 
 def keep_rows(path: Path) -> dict[str, dict]:
-    rows = {}
-    if path.is_file():
-        lines = [l for l in path.read_text().splitlines() if l and not l.startswith("#")]
-        for line in lines[1:] if lines and lines[0].startswith("name\t") else lines:
-            cols = line.split("\t")
-            if len(cols) == len(COLUMNS) and cols[5].startswith("by hand:"):
-                rows[cols[0]] = dict(zip(COLUMNS, cols))
-    return rows
+    """The rows of no_c.tsv at PATH whose evidence was written by hand ("by hand: ..."): name ->
+    row. Its header line ("name<TAB>class...") has "evidence" there, so it is never one of them."""
+    return {row[0]: dict(zip(COLUMNS, row)) for row in tables.read_tsv(path)
+            if len(row) == len(COLUMNS) and row[5].startswith("by hand:")}
 
 
 def classify(cfg: dict, gen: Path, source: Path, asm_source: Path, memory: retail.Retail,

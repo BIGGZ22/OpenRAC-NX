@@ -14,13 +14,13 @@ import unittest
 from contextlib import redirect_stderr, redirect_stdout
 from pathlib import Path
 
-HERE = Path(__file__).resolve().parent
-sys.path.insert(0, str(HERE))
+sys.path.insert(1, str(next(p for p in Path(__file__).resolve().parents if (p / "tools/openrac_common").is_dir()) / "tools"))
+from openrac_common import paths  # noqa: E402
 
 import derived  # noqa: E402
 import hostgen  # noqa: E402
 
-REPO = HERE.parent.parent.parent
+REPO = paths.repo_root(__file__)
 CFG = {"id": "test", "sources": ["src"], "includes": ["include", "src"],
        "derived": {"build": "build/boot/placed.json", "table": "derived_names.json"}}
 
