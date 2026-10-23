@@ -3,6 +3,7 @@
 
 #include "renderer/shader.h"
 
+#include <algorithm>
 #include <format>
 #include <utility>
 
@@ -68,6 +69,12 @@ GLuint compile(GLenum type, std::string_view desktop_source, std::string& log) {
     if (is_es()) {
         translated = es_source(desktop_source, has_extension("GL_NV_shader_noperspective_interpolation"),
                                has_extension("GL_EXT_clip_cull_distance"));
+        source = translated;
+    }
+    // Give shader stages the same single opt-in as the C++ resource gates.
+    if (enhanced_rendering_available()) {
+        translated = source;
+        translated.insert(translated.find('\n') + 1, "#define OPENRAC_ENHANCED_RENDERING 1\n");
         source = translated;
     }
     const GLuint shader = glCreateShader(type);
@@ -149,6 +156,40 @@ bool Shader::build(
         if (location >= 0) {
             glUniform1i(location, unit);
         }
+    }
+    return true;
+}
+
+bool Shader::build_compute(std::string_view name, std::string_view source, std::string& error) {
+    std::string log;
+    std::string es;
+    if (is_es()) {
+        const auto line = source.find('\n');
+        es = "#version 310 es\nprecision highp float;\nprecision highp int;\nprecision highp "
+             "sampler2D;\n";
+        es += source.substr(line + 1);
+        source = es;
+    }
+    const GLuint shader = compile(GL_COMPUTE_SHADER, source, log);
+    if (!shader) {
+        error = std::format("{}: {}", name, log);
+        return false;
+    }
+    release();
+    m_program = glCreateProgram();
+    glAttachShader(m_program, shader);
+    glLinkProgram(m_program);
+    glDeleteShader(shader);
+    GLint ok = 0;
+    glGetProgramiv(m_program, GL_LINK_STATUS, &ok);
+    if (!ok) {
+        GLint size = 0;
+        glGetProgramiv(m_program, GL_INFO_LOG_LENGTH, &size);
+        log.resize(static_cast<std::size_t>(std::max(size, 1)));
+        glGetProgramInfoLog(m_program, size, nullptr, log.data());
+        error = std::format("{}: {}", name, log);
+        release();
+        return false;
     }
     return true;
 }

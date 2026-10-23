@@ -46,10 +46,12 @@ struct ProgramBlock {
 struct CompiledProgram {
     std::vector<std::uint32_t> vertex;
     std::vector<std::uint32_t> fragment;
+    std::vector<std::uint32_t> compute;
     int default_binding = -1;  // the default block's binding; -1 when the program has no loose uniforms
     int default_size = 0;
     std::vector<ProgramUniform> uniforms;
     std::vector<ProgramBlock> blocks;
+    std::vector<ProgramBlock> storage;
     // The vertex stage's inputs (glBindAttribLocation is not used by the renderer: its shaders
     // give every input a location), with their GL type: one the vertex array does not feed reads
     // GL's default (0, 0, 0, 1) of that kind.
@@ -63,8 +65,15 @@ struct CompiledProgram {
 
 // Compiles one stage alone, for glCompileShader's status and log (no SPIR-V is kept).
 bool check_stage(bool vertex, std::string_view source, std::string& log);
+bool check_compute_stage(std::string_view source, std::string& log);
 
 // Compiles and links the two stages. False, with the compiler's words in `log`, on failure.
-bool compile_program(std::string_view vertex, std::string_view fragment, CompiledProgram& out, std::string& log);
+bool compile_program(
+    std::string_view vertex,
+    std::string_view fragment,
+    CompiledProgram& out,
+    std::string& log,
+    std::string_view compute = {}
+);
 
 }  // namespace openrac::vkgl

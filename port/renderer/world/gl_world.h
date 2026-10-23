@@ -45,10 +45,6 @@ inline constexpr GLenum GL_TEXTURE_BASE_LEVEL = 0x813C;
 
 // clang-format off
 #define OPENRAC_WORLD_GL_FUNCTIONS(X)                                                              \
-    X(GLuint, glGetUniformBlockIndex, (GLuint program, const GLchar *name))                        \
-    X(void, glUniformBlockBinding, (GLuint program, GLuint block, GLuint binding))                 \
-    X(void, glBindBufferBase, (GLenum target, GLuint index, GLuint buffer))                        \
-    X(void, glTexBuffer, (GLenum target, GLenum internal_format, GLuint buffer))                   \
     X(void, glTexSubImage2D, (GLenum target, GLint level, GLint x, GLint y, GLsizei w, GLsizei h,  \
                               GLenum format, GLenum type, const void *pixels))                     \
     X(void, glTexImage3D, (GLenum target, GLint level, GLint internal_format, GLsizei w,           \

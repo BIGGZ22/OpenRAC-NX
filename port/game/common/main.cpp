@@ -595,6 +595,22 @@ void openrac_game_warn(const char* message) {
     log::warn("{}", message);
 }
 
+void openrac_game_moby_colour(gaddr object, unsigned colour) {
+#ifdef OPENRAC_FRONTEND
+    if (g_window) {
+        frontend::moby_colour(object, colour, openrac_game_loaded_overlay());
+    }
+#else
+    (void)object;
+    (void)colour;
+#endif
+}
+
+// hostgen namespaces external calls from translated game C with game_.
+extern "C" void game_openrac_game_moby_colour(unsigned object, unsigned colour) {
+    openrac_game_moby_colour(object, colour);
+}
+
 void openrac_game_draw(unsigned layers) {
     g_draws |= layers;
     g_reports_draws = true;

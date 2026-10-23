@@ -23,6 +23,7 @@ the window's own resolution. Until it is first shown nothing of it exists
 | Key | |
 |---|---|
 | F3 | show or hide the overlay |
+| F4 | toggle enhanced graphics (probe GI, modern shadows and GTAO); preserves individual preferences |
 | F5 | pause or resume the game |
 | F6 | run one tick, then pause again |
 | F7 / F8 | slower / faster: the game at 1/2, 1/4, 1/8, 1/16 of its speed |
@@ -33,7 +34,7 @@ paused or slowed, a line at the top of the picture says so and names the keys
 that undo it; a screenshot says where it went.
 
 The same keys are menus. On Windows and Linux a bar along the window's top
-has View, Graphics, Sound and Developer, with a tick beside what is on
+has View, Graphics, Enhanced, Sound and Developer, with a tick beside what is on
 (Graphics lists the picture's settings with their values; a click moves one
 to its next value, and the menu stays open); Alt by itself
 hides it and shows it again, and View > "Hide these menus" hides it (the
@@ -94,6 +95,9 @@ open at the start (`all`: every one; anything else, such as `1`: Frame).
 - A row per pass, in drawing order (the 2D before the world, sky, terrain,
   ties, shrubs, mobys, effects, hud): draw calls, triangles, CPU and GPU
   time, and a switch that stops the pass being drawn.
+  Moby GPU time is split into `mobys opaque`, `mobys glow`, `mobys translucent`,
+  `mobys effects` and `mobys metal`; the parent row reports CPU time without
+  double-counting the nested GPU timings.
 - Wireframe; the sizes of the window, the game's picture in it and the
   frame buffers; the GL textures alive and their size; the texture pool's
   entries; the shader programs in use; what the game sent for the 2D path.
@@ -325,6 +329,28 @@ These variables are read by `openrac-<game>` at run time. Unless said otherwise,
 | `OPENRAC_UNCAPPED` | any (set) | The frame loop does not wait for the next frame's time, so the game runs as fast as the machine allows; also forces one frame per tick (no interpolation) and no vertical sync. A measure, not a way to play. | `port/game/common/main.cpp`, `port/game/common/frontend.cpp` |
 | `OPENRAC_NO_BLEND` | any (set) | Forces one frame per tick (no interpolation between ticks) and no vertical sync, whatever the frame rate setting. | `port/game/common/frontend.cpp` |
 | `OPENRAC_ANIM` | `0` | Draws every moby in its bind pose. Only the value `0` has an effect; unset or anything else animates. | `port/game/common/frontend.cpp` |
+| `OPENRAC_PROBE_GI` | path to a local `.orpg` bake (`0` or unset: off) | Experimental terrain and moby fragment GI. Rejects a different region/level, changed scene or different bake settings; uncovered fragments retain original lighting. See [probe GI](../../port/enhanced/lighting/README.md). | `port/enhanced/viewer/probe_lighting.cpp` |
+| `OPENRAC_PROBE_DENSE` | path to a local `.orpg` bake (`0` or unset: none) | Registers one finer local region. Camera-distance and one-cell spatial fades; sparse fallback on invalid local samples. Bad assets leave the level grid active. | `port/enhanced/viewer/probe_lighting.cpp` |
+| `OPENRAC_PROBE_REGIONS` | path to a local JSON manifest; `0` disables sidecar discovery | Registers finer regions via `{"regions":["relative.orpg",...]}`. When unset, discovers `<OPENRAC_PROBE_GI>.regions.json`. Compute builds complete 16×16 tile masks; each fragment chooses up to two containing volumes. Supported resident sets upload once. See [region residency](../../port/enhanced/lighting/README.md#dense-regions). | `port/enhanced/viewer/probe_lighting.cpp` |
+| `OPENRAC_VK_UNIFORM_REUSE_OFF` | any (set; unset for the optimised path) | Vulkan profiling reference: redundant uniform writes dirty the default block; ordinary uniform descriptors include each upload offset. Default uses byte comparisons, dynamic uniform offsets and bounded per-frame descriptor reuse. Set before startup. | `port/renderer/vulkan/vkgl.cpp` |
+| `OPENRAC_GPU_MARKERS` | any (set; unset for off) | Names timed GPU passes in AMD RGP and other Vulkan profilers. Requires configuring with `-DOPENRAC_GPU_MARKERS=ON` (default OFF) and active stats collection, such as `--debug-dump`. Label lookup and Vulkan label calls are compiled out otherwise. | `port/renderer/vulkan/vkgl.cpp` |
+| `OPENRAC_PROBE_TILED_REFERENCE` | `1` | Evaluates every resident volume per fragment instead of tile masks, retaining the same ranking and two-sample GI limit. Correctness reference for tiled culling. | `port/enhanced/viewer/probe_selection.cpp` |
+| `OPENRAC_PROBE_COMPUTE_OFF` | `1` | Uses the CPU/frustum selector and two uploaded dense slots instead of compute coverage selection. Also used automatically when compute or full residency is unavailable. | `port/enhanced/viewer/probe_selection.cpp` |
+| `OPENRAC_HERO_SHADOW` | any (set) | Enables the separate Ratchet map independently; also enabled automatically with sun cascades. Main light grounded, downward cue airborne. See [hero shadow](../../port/enhanced/docs/RAC1_HERO_SHADOW.md). | `port/game/common/frontend.cpp` |
+| `OPENRAC_PROBE_ZERO_WEIGHT_REFERENCE` | any (set; unset for default) | Compiles the original probe sampler for comparison: valid zero-weight corners still read atlas textures. Set before startup. | `port/enhanced/viewer/probe_lighting.cpp` |
+| `OPENRAC_SHADOW_FILTER_REFERENCE` | any (set; unset for default) | Compiles the original 36-read sun/hero PCF filter instead of the normal 16-texel kernel. Set before startup; the default path has no depth-tie fallback. See [filtering](../../port/enhanced/docs/RAC1_SUN_SHADOW.md#unique-texel-pcf-filtering). | `port/enhanced/viewer/probe_lighting.cpp` |
+| `OPENRAC_MOBY_SPHERE_CULL_OFF` | any (set; unset for default) | Leaves animated instances unbounded for native camera/cascade culling. Re-evaluated on the next instance upload; rigid meshes keep their native boxes. | `port/viewer/level_renderer.cpp` |
+| `OPENRAC_SHADOW_SOLID_OFF` | any (set; unset for default) | Uses the original alpha-capable shader for opaque static sun casters. Profiling counters `sun solid draws` / `sun alpha draws` show cascade shader use. See [sun shadows](../../port/enhanced/docs/RAC1_SUN_SHADOW.md#opaque-static-caster-shader). | `port/viewer/level_renderer.cpp` |
+| `OPENRAC_SHADOW_BATCH_OFF` | any (set; unset for default) | Submits shadow casters in model order instead of grouping GPU commands by shader and skinning mode. Use to compare indirect-call counts and shadow output. | `port/viewer/level_renderer.cpp` |
+| `OPENRAC_SHADOW_ATLAS_OFF` | any (set; unset for default) | Uses separate shadow targets instead of the indexed-viewport atlas; retains batching across layers. | `port/viewer/level_renderer.cpp` |
+| `OPENRAC_OPAQUE_COLOUR_BATCH_OFF` | any (set; unset for default) | Restores opaque colour in per-layer order. The default Vulkan material path groups solid and alpha-capable opaque colour across enabled layers when reusing the world depth prepass. | `port/viewer/level_renderer.cpp` |
+| `OPENRAC_OPAQUE_SPECIALISE_OFF` | any (set; unset for default) | Restores the combined opaque and general static translucent shaders. The specialised Vulkan material path separates static solid, static cutout, opaque moby and static translucent programs, retaining layer-uniform skinning and probe controls. | `port/viewer/level_renderer.cpp` |
+| `OPENRAC_SHADOW_LAYER_REFERENCE` | any (set; unset for default) | Uses per-layer shadow buckets and separate targets. Detailed sun timing also uses separate targets. | `port/viewer/level_renderer.cpp` |
+| `OPENRAC_SUN_SHADOWS` | `0`: off; otherwise on in gameplay | Four sun cascades (nearest 2048, others 1024), 256-unit range, filtered comparisons. Fully shadowed primary and directional fill retain 10%; GI stays independent. Suppresses stencil shadows. See [sun shadows](../../port/enhanced/docs/RAC1_SUN_SHADOW.md). | `port/game/common/frontend.cpp` |
+| `OPENRAC_PROBE_RAYS` | integer, default `1024` | Expected bake ray budget for activation. Must match the ray budget used by the bake. | `port/enhanced/viewer/probe_lighting.cpp` |
+| `OPENRAC_PROBE_VIEW` | `original`, `combined`, `indirect`, `direct`, `coverage` | Comparison view (default combined). Coverage is green for a usable sample and magenta for fallback. Requires a valid bake. | `port/enhanced/viewer/probe_lighting.cpp` |
+| `OPENRAC_PROBE_BACKLIGHT` | `1` | Adds original artistic back-light factors to experimental direct lighting. Default off to match the Lambertian bake. | `port/enhanced/viewer/probe_lighting.cpp` |
+| `OPENRAC_PROBE_SPHERES` | `1` or `xray` | Actual probe positions: cyan valid, gold relocated valid, magenta invalid. `1` is depth-tested within five grid spacings; `xray` shows hidden portions translucently within ten spacings. Status colours, independent of irradiance. | `port/enhanced/viewer/probe_lighting.cpp` |
 | `OPENRAC_UI_REPLAY` | any (set) | Replays the game's own GS packets for the 2D layer instead of drawing its quads natively, for comparing. | `port/game/common/frontend.cpp` |
 | `OPENRAC_UI_SKIP` | `NAME,...` | The listed 2D routines (matched by substring against the list, for example `func_001F5800`) send the game's own packets instead of native quads, for bisecting. | `port/game/rac1/host/ui2d.c` |
 | `OPENRAC_UI_RESIDUAL` | any (set) | Logs, once each, the kinds of 2D primitive still drawn from the game's GS packets rather than as native quads. | `port/renderer/direct.cpp` |
@@ -344,3 +370,111 @@ These variables are read by `openrac-<game>` at run time. Unless said otherwise,
 | Variable | Value | What it does | Read in |
 | --- | --- | --- | --- |
 | `OPENRAC_CLANG` | path to a `clang` binary | The Clang that hostgen uses to read the decompilation's C. Without it, hostgen takes the first of `clang`, `clang-18`, `clang-17`, `clang-19`, `clang-20` on `PATH`. | `port/tools/hostgen/clangast.py` |
+
+### Vulkan uniform and descriptor submission
+
+Default uniforms are compared byte for byte before becoming dirty. Changed
+constants receive immutable frame-ring uploads; a dynamic uniform-buffer offset
+selects each draw's snapshot without changing resource descriptors. Named
+uniform/storage blocks keep their binding semantics. Descriptor keys include
+buffers, block offsets/ranges, sampler views and sampler state. Each program
+keeps up to 256 combinations per frame plus its latest set. Frame changes retire
+keys; relinking clears the cache. Frame-slot fences control pool and ring reuse.
+Genuine constant changes upload the whole default block.
+
+`--debug-dump` includes `vk_uniform_uploads`, `vk_uniform_upload_kb`,
+`vk_uniform_writes_skipped`, `vk_descriptor_sets` and `vk_descriptor_reuses`.
+`vkgl::submission_counters()` exposes cumulative counters to native fixtures.
+
+```sh
+ctest --test-dir port/build/release -R '^vulkan_uniform(_reference)?$'
+```
+
+The synthetic checks cover snapshots, texture switches, arrays/transposes,
+ignored locations, frame slots, readback flushes and upload-ring rollover.
+
+### Vulkan GPU timings
+
+Vulkan scope boundaries both use pipeline BOTTOM timestamps. They measure
+completion intervals and can include dependency waits; they do not isolate
+active shader execution. Adjacent work can overlap inside the GPU pipeline.
+CPU and GPU times also overlap and should not be added. See
+[Vulkan timestamp semantics](https://docs.vulkan.org/refpages/latest/refpages/source/vkCmdWriteTimestamp.html).
+
+Moby/tie GPU subpasses have separate timers; their parent rows report CPU time
+to avoid double-counting. Optional GPU labels require an
+`OPENRAC_GPU_MARKERS=ON` build, the runtime switch and active stats collection.
+
+### Probe sampling
+
+The sampler skips zero trilinear weights before metadata reads, atlas reads
+after a zero behind-surface guard, and irradiance reads when distance visibility
+reduces weight to zero. Valid/facing support is accumulated before visibility
+rejection: blocked dense samples must stay dark instead of restoring sparse GI.
+
+Use original, indirect and coverage views to distinguish compatibility, placement
+and visibility problems. Green coverage is not proof of correct illumination.
+See the [GI guide](../../port/enhanced/docs/RAC1_PROBE_GI.md#limits-and-troubleshooting).
+
+### Game moby bounds in native culling
+
+The frontend converts the game's animation-maintained sphere at moby +0x00 from
+packed to world units, including radius. Skinned instances use its padded box
+for camera/cascade tests; rigid meshes keep tighter transformed boxes. Sphere
+metadata stays on the CPU. Camera compaction preserves opaque, glow, translucent
+and additive order. Metal keeps the full list because its shader shifts depth.
+Cascade culling uses its own light frustum, not camera survivors.
+
+Missing, nonpositive or nonfinite bounds stay visible. Replacement meshes,
+debug stand-ins and objects with their own cameras do not receive authored
+bounds. Interpolation encloses both endpoint poses and the displayed transform's
+stretch, including nonuniform scale/shear. Missing endpoints or singular
+transforms retain the instance. `OPENRAC_MOBY_SPHERE_CULL_OFF` selects unbounded
+animated instances for comparison.
+
+### Baked camera PVS (Vulkan only)
+
+`OPENRAC_PVS_OFF=1` disables baked camera occlusion; F3 also exposes the switch.
+OpenGL/ES do not use it. RAC1 exports contain optional `pvs.json` / `pvs.bin`;
+add them to an existing export with:
+
+```sh
+python editor/occlusion.py <owned-disc.iso> <port-levels-directory>
+```
+
+Terrain mappings check counts/triangle keys for staleness. Ties use placement
+keys; live mobys use +0x36, with invalid keys/spawned objects visible. Shrubs have
+no mapping. Geometry overrides and edited tie/moby placements disable baked PVS.
+
+Each camera selects a 128-byte mask for its 4-unit cell, conservatively unioning
+adjacent cells when the exact cell is absent. Missing/invalid data keeps objects
+visible; no mask carries across levels. UI/render-to-texture mobys use their own
+camera. PVS does not affect gameplay, animation or shadow-caster submission.
+
+Camera passes use separate compact buffers, including transparent/metal passes.
+Terrain indices are cached by mask, preserving opaque material runs and blended
+order; shadow maps keep the original indices. PVS data is excluded from GI
+fingerprints, so adding it does not require rebaking lighting.
+
+Frame dumps expose `pvs enabled`, `pvs <layer> instances culled` and
+`pvs <layer> primitive passes culled`. The last counts primitive/pass pairs,
+not unique fragments. Counts precede frustum rejection and may overlap it.
+
+### Repeatable rendering comparisons
+
+Keep scene, camera, inventory, resolution, settings and probe inputs matched.
+Wait for loading, automatic movement and pipeline creation to settle. Exclude
+capture/readback frames from timing, and compare both run orders. Report geometry,
+CPU submission and per-pass GPU time alongside frame intervals.
+
+`port/tools/perf/orxon_start.py` automates a neutral-stick RAC1 NTSC Orxon ship-exit
+scene, grants the required inventory and checks stable hero/camera state:
+
+```sh
+python port/tools/perf/orxon_start.py --exe <game.exe> --data <game-data> --levels <port-levels> --probes <orxon.orpg> --out <new-results-directory>
+```
+
+Set `--sky-intensity` to match the supplied bake. The tool checks bake activation,
+PVS, depth reuse and timing availability. Use the same warmup/sample window for
+both paths and keep generated output untracked. For backend switches, counters
+and resource lifetime, see [GPU rendering](RAC1_GPU_DRIVEN.md).

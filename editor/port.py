@@ -28,6 +28,7 @@ import math
 import struct
 from pathlib import Path
 
+from enhanced.bake_inputs import write_bake_inputs
 from formats import png, unpack
 import games
 from gltf import Gltf
@@ -40,6 +41,7 @@ from mobys import moby_class_names, moby_instances
 from shrubs import shrub_class_normals, shrub_classes, shrub_instances
 from sky import Sky, panorama, sky
 from terrain import terrain
+from occlusion import export_pvs
 from ties import tie_classes, tie_instances, tie_slot_normals
 
 # The export's format: the port reads only its own (viewer/level.h kManifestFormat), and its level
@@ -211,6 +213,7 @@ class PortLevelWriter(LevelWriter):
 
     def finish(self) -> dict:
         """Textures, placements.json and manifest.json."""
+        export_pvs(self.level, self.dir)
         (self.dir / "textures").mkdir(parents=True, exist_ok=True)
         for name, texture in sorted(self.textures.items()):
             (self.dir / "textures" / f"{name}.png").write_bytes(texture.png())
@@ -229,6 +232,9 @@ class PortLevelWriter(LevelWriter):
                     "sky": self.sky, "classes": self.classes, "placements": "placements.json",
                     "textures": sorted(f"textures/{name}.png" for name in self.textures),
                     "bounds": self.stats["bounds"], "stats": self.stats}
+        bake_inputs = write_bake_inputs(self.level, self.dir)
+        if bake_inputs:
+            manifest["bake_inputs"] = bake_inputs
         if self.fmt.lenient:
             # Early access: what the editor and the overrides packs can use, and what not yet.
             manifest["early_access"] = {"playable": False, "packable": False, "lit": False}

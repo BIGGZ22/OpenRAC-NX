@@ -5,6 +5,7 @@
 
 #include <algorithm>
 #include <atomic>
+#include <cmath>
 #include <cstdio>
 #include <cstring>
 #include <format>
@@ -27,6 +28,7 @@ std::filesystem::path g_file;
 constexpr const char* kDisplayMode[] = {"windowed", "borderless", "fullscreen"};
 constexpr const char* kAspect[] = {"4:3", "16:10", "16:9", "21:9", "32:9", "window", "custom"};
 constexpr const char* kHud[] = {"centre", "edges"};
+constexpr const char* kGtaoQuality[] = {"performance", "quality"};
 constexpr const char* kVSync[] = {"off", "on", "adaptive"};
 
 std::string trimmed(const std::string& s) {
@@ -65,6 +67,17 @@ bool parse_int(const std::string& value, int low, int high, int& out) {
     int number = 0;
     char after = 0;
     if (std::sscanf(value.c_str(), "%d%c", &number, &after) != 1 || number < low || number > high) {
+        return false;
+    }
+    out = number;
+    return true;
+}
+
+bool parse_float(const std::string& value, float low, float high, float& out) {
+    float number = 0.0f;
+    char after = 0;
+    if (std::sscanf(value.c_str(), "%f%c", &number, &after) != 1 || !std::isfinite(number)
+        || number < low || number > high) {
         return false;
     }
     out = number;
@@ -208,6 +221,34 @@ void load(const std::filesystem::path& file) {
             known = parse_int(value, 25, 400, s.render_scale);
         } else if (key == "msaa") {
             known = parse_listed(value, kSampleCounts, s.msaa);
+        } else if (key == "enhanced_graphics") {
+            known = parse_bool(value, s.enhanced_graphics);
+        } else if (key == "enhanced_shadows") {
+            known = parse_bool(value, s.enhanced_shadows);
+        } else if (key == "probe_lighting") {
+            known = parse_bool(value, s.probe_lighting);
+        } else if (key == "probe_spheres") {
+            known = parse_bool(value, s.probe_spheres);
+        } else if (key == "probe_normal_bias") {
+            known = parse_float(value, 0.0f, 2.0f, s.probe_normal_bias);
+        } else if (key == "probe_view_bias") {
+            known = parse_float(value, 0.0f, 2.0f, s.probe_view_bias);
+        } else if (key == "probe_gi_multiplier") {
+            known = parse_float(value, 0.0f, 5.0f, s.probe_gi_multiplier);
+        } else if (key == "gtao") {
+            known = parse_bool(value, s.gtao);
+        } else if (key == "gtao_quality") {
+            known = parse(value, kGtaoQuality, s.gtao_settings.quality);
+        } else if (key == "gtao_slices") {
+            known = parse_int(value, 1, 12, s.gtao_settings.slices);
+        } else if (key == "gtao_steps") {
+            known = parse_int(value, 4, 24, s.gtao_settings.steps);
+        } else if (key == "gtao_half_resolution") {
+            known = parse_bool(value, s.gtao_settings.half_resolution);
+        } else if (key == "gtao_radius") {
+            known = parse_float(value, 0.05f, 8.0f, s.gtao_settings.radius);
+        } else if (key == "gtao_strength") {
+            known = parse_float(value, 0.0f, 3.0f, s.gtao_settings.strength);
         } else if (key == "anisotropy") {
             known = parse_listed(value, kAnisotropies, s.anisotropy);
         } else if (key == "vsync") {
@@ -300,6 +341,20 @@ void save() {
         << "hud = " << kHud[static_cast<int>(s.hud)] << "\n"
         << "render_scale = " << s.render_scale << "\n"
         << "msaa = " << s.msaa << "\n"
+        << "enhanced_graphics = " << (s.enhanced_graphics ? 1 : 0) << "\n"
+        << "enhanced_shadows = " << (s.enhanced_shadows ? 1 : 0) << "\n"
+        << "probe_lighting = " << (s.probe_lighting ? 1 : 0) << "\n"
+        << "probe_spheres = " << (s.probe_spheres ? 1 : 0) << "\n"
+        << "probe_gi_multiplier = " << s.probe_gi_multiplier << "\n"
+        << "probe_normal_bias = " << s.probe_normal_bias << "\n"
+        << "probe_view_bias = " << s.probe_view_bias << "\n"
+        << "gtao = " << (s.gtao ? 1 : 0) << "\n"
+        << "gtao_quality = " << kGtaoQuality[static_cast<int>(s.gtao_settings.quality)] << "\n"
+        << "gtao_slices = " << s.gtao_settings.slices << "\n"
+        << "gtao_steps = " << s.gtao_settings.steps << "\n"
+        << "gtao_half_resolution = " << (s.gtao_settings.half_resolution ? 1 : 0) << "\n"
+        << "gtao_radius = " << s.gtao_settings.radius << "\n"
+        << "gtao_strength = " << s.gtao_settings.strength << "\n"
         << "anisotropy = " << s.anisotropy << "\n"
         << "vsync = " << kVSync[static_cast<int>(s.vsync)] << "\n"
         << "frame_rate = " << frame_rate_value(s) << "\n"

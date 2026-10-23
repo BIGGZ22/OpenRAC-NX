@@ -25,7 +25,11 @@
 
 #pragma once
 
+#include <cstdint>
+#include <span>
 #include <string>
+
+#include "renderer/gpu_draw.h"
 
 struct SDL_Window;
 
@@ -50,9 +54,55 @@ bool open(const Config& config, std::string& error);
 void close();
 bool active();
 
+// GPU culling/compaction and device-generated indexed draw arguments. No
+// readback participates in visibility decisions. Handles last one recording
+// (including readback flush boundaries), not merely one displayed frame.
+bool gpu_driven_active();
+bool gpu_materials_active();
+// Indexed viewports route shadow draws to atlas rectangles from the vertex
+// shader. Empty rectangles restore the ordinary single-viewport path.
+bool indexed_viewports_supported(unsigned count);
+void indexed_viewports(std::span<const std::array<int, 4>> rectangles);
+renderer::GpuInstanceBatch gpu_instances(
+    unsigned instance_buffer,
+    std::span<const renderer::GpuCullBounds> bounds,
+    const renderer::GpuCullView& view
+);
+bool draw_gpu_instances(
+    renderer::GpuInstanceBatch batch, unsigned first_index, unsigned index_count
+);
+
+struct GpuDrawCounters {
+    std::uint64_t recording = 0, draws = 0, triangles = 0, visible_instances = 0;
+    std::uint64_t readback_bytes = 0;
+};
+
+// Last completed collected recording, read after its existing frame-slot fence.
+// Counters are collected only while stats are enabled; otherwise returns zero.
+GpuDrawCounters gpu_completed_draws();
+
+struct GpuMaterialCounters {
+    bool supported = false;
+    std::uint64_t draws = 0, records = 0, textures = 0, native_draws = 0;
+};
+
+GpuMaterialCounters gpu_material_counters();
+
 // renderer/gl.h's loader: the GL functions by name, null for one this does not carry out.
 using Proc = void (*)();
 Proc get_proc(const char* name);
+
+// Cumulative submission counters for profiling and offscreen regression tests.
+// Zero without an active context; reset when a new context opens.
+struct SubmissionCounters {
+    std::uint64_t validation_errors = 0;
+    std::uint64_t uniform_writes = 0, uniform_writes_skipped = 0;
+    std::uint64_t uniform_uploads = 0, uniform_upload_bytes = 0;
+    std::uint64_t descriptor_sets = 0, descriptor_reuses = 0;
+    std::uint64_t gpu_counter_dispatches = 0, gpu_counter_copies = 0;
+};
+
+SubmissionCounters submission_counters();
 
 // Shows the default framebuffer and starts the next frame.
 void present();

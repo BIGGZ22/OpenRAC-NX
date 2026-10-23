@@ -35,7 +35,14 @@ if(MSVC AND NOT CMAKE_C_COMPILER_ID MATCHES "Clang")
                       "needs __int128 and GNU C extensions that MSVC's C compiler lacks.")
 endif()
 
+# Experimental lighting is opt-in; core Vulkan performance work stays enabled.
+option(OPENRAC_ENHANCED_RENDERING "Enable experimental Vulkan lighting and shadows" OFF)
+if(OPENRAC_ENHANCED_RENDERING)
+  add_compile_definitions(OPENRAC_ENHANCED_RENDERING=1)
+endif()
+
 option(OPENRAC_PORT_WINDOW "Build the programs that open a window (needs SDL3)" ON)
+option(OPENRAC_GPU_MARKERS "Compile opt-in Vulkan GPU profiler labels" OFF)
 option(OPENRAC_PORT_GAMES "Build the games from their decompilations (needs Clang and Python 3)" ON)
 
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake")
@@ -69,6 +76,9 @@ add_library(openrac_common STATIC
 )
 add_dependencies(openrac_common openrac_build_info)
 target_include_directories(openrac_common PUBLIC .)
+if(OPENRAC_GPU_MARKERS)
+  target_compile_definitions(openrac_common PRIVATE OPENRAC_GPU_MARKERS=1)
+endif()
 if(UNIX AND NOT APPLE)
   target_link_libraries(openrac_common PUBLIC ${CMAKE_DL_LIBS})  # dladdr, for the crash report
 endif()
@@ -82,6 +92,16 @@ target_link_libraries(log_test PRIVATE openrac_common)
 openrac_warnings(log_test)
 add_test(NAME log COMMAND log_test)
 
+add_executable(settings_test tests/settings_test.cpp game/common/settings.cpp)
+target_link_libraries(settings_test PRIVATE openrac_common)
+openrac_warnings(settings_test)
+add_test(NAME settings COMMAND settings_test)
+
+add_executable(scripted_moby_colour_test enhanced/tests/scripted_moby_colour_test.cpp)
+target_include_directories(scripted_moby_colour_test PRIVATE .)
+openrac_warnings(scripted_moby_colour_test)
+add_test(NAME scripted_moby_colour COMMAND scripted_moby_colour_test)
+
 add_executable(pause_options_test tests/pause_options_test.cpp)
 target_include_directories(pause_options_test PRIVATE .)
 openrac_warnings(pause_options_test)
@@ -91,6 +111,11 @@ add_test(NAME pause_options COMMAND pause_options_test)
 # (cmake/Differences.cmake), and its fixes through the settings file. Needs no game.
 include(Differences)
 openrac_write_fixes(rac1 pal "${CMAKE_BINARY_DIR}/generated/openrac_fixes_test_rac1_pal.cpp")
+# settings.cpp now persists the upstream game-fix registry as well.
+target_sources(settings_test PRIVATE game/common/fixes.cpp
+  "${CMAKE_BINARY_DIR}/generated/openrac_fixes_test_rac1_pal.cpp")
+target_include_directories(settings_test PRIVATE game/common)
+
 add_executable(game_fixes_test tests/game_fixes_test.cpp game/common/fixes.cpp game/common/settings.cpp
                                "${CMAKE_BINARY_DIR}/generated/openrac_fixes_test_rac1_pal.cpp")
 target_include_directories(game_fixes_test PRIVATE . game/common game/common/include runtime/include)
@@ -194,6 +219,19 @@ openrac_warnings(crate_init_test)
 add_test(NAME crate_init COMMAND crate_init_test)
 
 include(Assets)
+
+# Probe assets and CPU sampling need neither a graphics context nor Embree.
+add_library(openrac_lighting STATIC enhanced/lighting/probes.cpp enhanced/lighting/probe_atlas.cpp enhanced/lighting/probe_regions.cpp)
+target_include_directories(openrac_lighting PUBLIC .)
+openrac_warnings(openrac_lighting)
+foreach(name IN ITEMS probes probe_atlas probe_regions)
+  add_executable(lighting_${name}_test enhanced/tests/lighting/${name}.cpp)
+  target_link_libraries(lighting_${name}_test PRIVATE openrac_lighting)
+  openrac_warnings(lighting_${name}_test)
+  add_test(NAME lighting_${name} COMMAND lighting_${name}_test)
+  set_tests_properties(lighting_${name} PROPERTIES SKIP_RETURN_CODE 77)
+endforeach()
+include(ProbeBake)
 
 add_executable(joint_matrices_test tests/joint_matrices_test.c)
 target_compile_options(joint_matrices_test PRIVATE -fno-strict-aliasing)

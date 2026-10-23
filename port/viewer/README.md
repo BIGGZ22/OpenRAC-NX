@@ -46,7 +46,14 @@ exporter's per-vertex joints and weights, the palettes in a float texture).
 
 The lighting is a fixed sun only so shapes read; the game's lights (tie and
 shrub light indices, moby colours, the level's directional lights), fog,
-level of detail, occlusion, animation in the viewer itself (it has no game
+level of detail, animation in the viewer itself (it has no game
 to read poses from), the runtime pose layers and joint modifiers (moby +0x60
 and +0x64: Ratchet's head and blinks, look-ats) and the collision layer are
 not drawn yet.
+
+RAC1 baked camera visibility is supported on Vulkan when the export has
+`pvs.json` and `pvs.bin`. The normal exporter writes them; existing exports
+can add just this metadata with `python editor/occlusion.py DISC.iso LEVELS`.
+The command verifies the disc/export identities and leaves meshes, placements
+and GI bakes untouched. Other games and exports without PVS remain visible
+subject to the existing frustum/distance tests.

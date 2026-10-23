@@ -1,0 +1,135 @@
+#version 410 core
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (c) 2026 the OpenRAC contributors
+// Frozen pre-optimization reference for pixel-equivalence tests.
+// Analytic horizon integration with near-contact sampling, depth-derived normals
+// and a fixed spatial pattern without temporal jitter.
+uniform float radius;
+uniform int slice_count;
+uniform int step_count;
+layout(location = 0) out vec4 result;
+
+float primitive(float angle, vec2 n) {
+    float s = sin(angle), c = cos(angle);
+    return 0.5 * (n.x * s * s + n.y * (angle - s * c));
+}
+
+// Decorrelate neighbouring estimates without moving the pattern between frames.
+// Identical rays at every pixel stamp displaced copies of occluder silhouettes
+// into the result; the spatial filter needs different estimates to combine.
+vec2 sample_phase(ivec2 pixel) {
+    uint seed = uint(pixel.x) * 1973u + uint(pixel.y) * 9277u + 89173u;
+    seed = (seed ^ (seed >> 16u)) * 2246822519u;
+    seed = (seed ^ (seed >> 13u)) * 3266489917u;
+    seed ^= seed >> 16u;
+    return (vec2(seed & 65535u, seed >> 16u) + 0.5) / 65536.0;
+}
+
+void main() {
+    int selected;
+    ivec2 pixel = source_pixel(ivec2(gl_FragCoord.xy), selected);
+    float depth = depth_at(pixel);
+    if (depth <= 0.0) {
+        result = vec4(1, 0, 0.5, 0.5);
+        return;
+    }
+    vec3 centre = position_at(pixel, depth);
+    vec3 normal = normal_at(pixel, centre);
+    if (dot(normal, normal) < 0.1) {
+        result = vec4(1, float(selected) / 3.0, 0.5, 0.5);
+        return;
+    }
+    vec3 view = normalize(-centre);
+    float pixelRadius = clamp(
+        radius * abs(projection[0][0]) * float(textureSize(tex_T0, 0).x) / (-2.0 * centre.z),
+        1.0,
+        96.0
+    );
+    vec2 phase = sample_phase(ivec2(gl_FragCoord.xy));
+    float visible = 0.0, total = 0.0;
+    for (int slice = 0; slice < slice_count; ++slice) {
+        float angle = (float(slice) + phase.x) * pi / float(slice_count);
+        vec2 direction = vec2(cos(angle), sin(angle));
+        // Pixel offsets become NDC offsets before inverse projection. Omitting
+        // the viewport dimensions rotates the integration plane at non-square
+        // aspect ratios away from the ray actually sampled in the depth image.
+        vec3 tangent = vec3(
+            direction / (vec2(textureSize(tex_T0, 0)) * vec2(projection[0][0], projection[1][1])), 0
+        );
+        tangent = normalize(tangent - view * dot(tangent, view));
+        vec2 projected = vec2(dot(normal, view), dot(normal, tangent));
+        float normalLength = length(projected);
+        if (normalLength < 1e-5) {
+            continue;
+        }
+        projected /= normalLength;
+        float normalAngle = atan(projected.y, projected.x);
+        vec2 openHorizon = vec2(projected.y, -projected.y);
+        vec2 horizon = openHorizon;
+        bvec2 foundSurface = bvec2(false);
+        float previousDistance = 0.0;
+        for (int step = 1; step <= step_count; ++step) {
+            float t = step == step_count
+                          ? 1.0
+                          : (float(step - 4) + phase.y) / float(max(step_count - 4, 1));
+            float distancePixels = step <= 3 ? float(step) : mix(3.0, max(3.0, pixelRadius), t * t);
+            for (int side = 0; side < 2; ++side) {
+                ivec2 tap =
+                    ivec2(round(vec2(pixel) + direction * distancePixels * (side == 0 ? -1.0 : 1.0))
+                    );
+                if (any(lessThan(tap, ivec2(0)))
+                    || any(greaterThanEqual(tap, textureSize(tex_T0, 0)))) {
+                    continue;
+                }
+                float d = depth_at(tap);
+                if (d <= 0.0) {
+                    continue;
+                }
+                vec3 delta = position_at(tap, d) - centre;
+                if (dot(normal, delta) <= radius * 0.002) {
+                    continue;
+                }
+                // Refine the first distant crossing instead of treating a
+                // sample deep inside an object as its silhouette.
+                if (step > 3 && !foundSurface[side]) {
+                    float lowerDistance = previousDistance, upperDistance = distancePixels;
+                    for (int refine = 0; refine < 7; ++refine) {
+                        float middle = (lowerDistance + upperDistance) * 0.5;
+                        ivec2 candidate =
+                            ivec2(round(vec2(pixel) + direction * middle * (side == 0 ? -1.0 : 1.0))
+                            );
+                        float candidateDepth = depth_at(candidate);
+                        vec3 candidateDelta =
+                            position_at(candidate, max(candidateDepth, 1e-8)) - centre;
+                        if (candidateDepth > 0.0 && dot(normal, candidateDelta) > radius * 0.002) {
+                            upperDistance = middle;
+                            delta = candidateDelta;
+                        } else {
+                            lowerDistance = middle;
+                        }
+                    }
+                }
+                foundSurface[side] = true;
+                float distanceWorld = length(delta);
+                if (distanceWorld < 1e-5 || distanceWorld >= radius) {
+                    continue;
+                }
+                float weight = 1.0 - smoothstep(radius * 0.65, radius, distanceWorld);
+                horizon[side] =
+                    max(horizon[side],
+                        mix(openHorizon[side], dot(view, delta / distanceWorld), weight));
+            }
+            previousDistance = distancePixels;
+        }
+        float lower = max(-acos(clamp(horizon.x, -1.0, 1.0)), normalAngle - pi * 0.5);
+        float upper = min(acos(clamp(horizon.y, -1.0, 1.0)), normalAngle + pi * 0.5);
+        float integral = upper > lower ? primitive(lower, projected) + primitive(upper, projected)
+                                             - 2.0 * primitive(clamp(0.0, lower, upper), projected)
+                                       : 0.0;
+        visible += integral * normalLength;
+        total += (projected.x + normalAngle * projected.y) * normalLength;
+    }
+    result = vec4(
+        clamp(visible / max(total, 1e-5), 0.0, 1.0), float(selected) / 3.0, encode_normal(normal)
+    );
+}

@@ -1,4 +1,5 @@
 #version 410 core
+invariant gl_Position;
 // SPDX-License-Identifier: GPL-3.0-or-later
 // Copyright (c) 2026 the OpenRAC contributors
 //
@@ -25,7 +26,8 @@ layout(location = 10) in uvec4 joints;
 layout(location = 11) in vec4 weights;
 layout(location = 12) in float light_slot;
 layout(location = 13) in float lights;
-layout(location = 14) in vec4 moby_light;    // set 0, set 1, cross-fade, 1 to light
+layout(location = 14) in vec4
+    moby_light;  // set 0, set 1, cross-fade; -1 authored light, 1 world, 2 UI
 layout(location = 15) in vec4 moby_ambient;  // ambient RGB / 128; w: 1 + glow RGB (mode 0x10), else 0
 
 uniform mat4 view_projection;
@@ -42,12 +44,21 @@ uniform vec4 light_sets[64];
 // normal, a sphere map of the level's chrome or glass picture, the vertex colour 0x70 and the
 // alpha the moby's distance gives (ReRAC moby_skinning_lighting.md 6 and 9).
 uniform int metal_pass;
+uniform int probe_mode;
+uniform int probe_receiver;
+uniform int sun_shadow_enabled;
+uniform int hero_shadow_enabled;
 
 out vec2 v_uv;
 out vec4 v_colour;
 out vec3 v_normal;
+out vec3 v_world_position;
+out vec4 v_probe_multiplier;
+flat out vec4 v_probe_selector;
 flat out int v_lit;
 flat out int v_glow;  // a glow packet's vertex drawn in the moby's glow colour
+out vec3 v_script_emission;
+out vec3 v_emission_colour;
 // GS F / 255: interpolated in screen space, as the GS does.
 noperspective out float v_fog;
 
@@ -79,6 +90,13 @@ void main() {
         n = mat3(skin) * n;
     }
     vec4 world = model * p;
+    v_world_position = world.xyz;
+    // Terrain COLOR_0 is already lit. Mobys' COLOR_0 is their authored
+    // multiplier. Keep alpha and the original colour path for fallback.
+    v_probe_multiplier = (probe_receiver == 1 ? vec4(1.0, 1.0, 1.0, colour.a) : colour) * tint;
+    v_probe_selector = moby_light;
+    v_script_emission = moby_light.w < -0.5 ? colour.rgb * tint.rgb * moby_ambient.rgb : vec3(0.0);
+    v_emission_colour = colour.rgb * tint.rgb;
     gl_Position = view_projection * world;
     // A moby of the 2D layer (a page menu's frame object, moby_light.w = 2) on a target wider than
     // the game's picture: cut at the picture's sides, where the television's edge cut it.
@@ -103,7 +121,7 @@ void main() {
     // A live moby, lit as MobyProc and its VU0 pass light it: its set's two directional
     // lights (or two sets cross-faded) on the skinned normal, with the leaky back clamp
     // max(d, -|K| d), plus its ambient colour, times the vertex's multiplier (all 0x80 = 1.0).
-    if (moby_light.w > 0.5) {
+    if (abs(moby_light.w) > 0.5) {
         int s0 = (int(moby_light.x + 0.5) & 15) * 4;
         int s1 = (int(moby_light.y + 0.5) & 15) * 4;
         float t = moby_light.z;
@@ -133,6 +151,12 @@ void main() {
         v_lit = 1;
     }
     v_normal = mat3(model) * n;
+#ifdef OPENRAC_ENHANCED_RENDERING
+    if ((probe_mode != 0 || sun_shadow_enabled != 0 || hero_shadow_enabled != 0)
+        && probe_receiver != 0) {
+        v_normal = transpose(inverse(mat3(model))) * n;
+    }
+#endif
     if (metal_pass != 0) {
         // st = (e.xy + 1) / 2, e the normal in camera space (x right, y down: t grows downward).
         vec3 e = normalize(mat3(view) * normalize(mat3(model) * n));

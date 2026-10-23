@@ -7,6 +7,7 @@
 // of functions the renderer never calls; this list is the renderer's real
 // dependency on GL, kept to OpenGL 4.1 core so the same code runs on macOS, and to what OpenGL ES
 // 3.2 also has (Android), but for the few OPENRAC_GL_DESKTOP_FUNCTIONS below.
+// Optional compute/storage entry points enable GPU probe selection on capable contexts.
 //
 // The functions live in namespace openrac::gl under their GL names, so a
 // renderer source says `using namespace openrac::gl;` and calls glClear(...)
@@ -102,6 +103,17 @@ inline constexpr GLenum GL_CLIP_DISTANCE1 = 0x3001;
 inline constexpr GLenum GL_MULTISAMPLE = 0x809D;
 inline constexpr GLenum GL_PRIMITIVE_RESTART = 0x8F9D;
 
+inline constexpr GLenum GL_RG = 0x8227;
+inline constexpr GLenum GL_RG32F = 0x8230;
+inline constexpr GLenum GL_RGBA16F = 0x881A;
+inline constexpr GLenum GL_R11F_G11F_B10F = 0x8C3A;
+inline constexpr GLenum GL_HALF_FLOAT = 0x140B;
+inline constexpr GLenum GL_UNSIGNED_INT_10F_11F_11F_REV = 0x8C3B;
+inline constexpr GLenum GL_TEXTURE_FETCH_BARRIER_BIT = 0x00000008;
+inline constexpr GLenum GL_MAX_TEXTURE_BUFFER_SIZE = 0x8C2B;
+inline constexpr GLenum GL_MAX_SHADER_STORAGE_BUFFER_BINDINGS = 0x90DD;
+inline constexpr GLenum GL_VIEWPORT = 0x0BA2;
+
 inline constexpr GLenum GL_UNPACK_ALIGNMENT = 0x0CF5;
 inline constexpr GLenum GL_PACK_ALIGNMENT = 0x0D05;
 inline constexpr GLenum GL_MAX_TEXTURE_SIZE = 0x0D33;
@@ -124,6 +136,8 @@ inline constexpr GLenum GL_FLOAT = 0x1406;
 inline constexpr GLenum GL_RGB = 0x1907;
 inline constexpr GLenum GL_RGBA = 0x1908;
 inline constexpr GLenum GL_RGBA8 = 0x8058;
+inline constexpr GLenum GL_DEPTH_STENCIL = 0x84F9;
+inline constexpr GLenum GL_UNSIGNED_INT_24_8 = 0x84FA;
 inline constexpr GLenum GL_DEPTH_COMPONENT = 0x1902;
 inline constexpr GLenum GL_DEPTH_COMPONENT24 = 0x81A6;
 inline constexpr GLenum GL_DEPTH24_STENCIL8 = 0x88F0;
@@ -153,6 +167,10 @@ inline constexpr GLenum GL_DYNAMIC_DRAW = 0x88E8;
 
 inline constexpr GLenum GL_FRAGMENT_SHADER = 0x8B30;
 inline constexpr GLenum GL_VERTEX_SHADER = 0x8B31;
+inline constexpr GLenum GL_COMPUTE_SHADER = 0x91B9;
+inline constexpr GLenum GL_SHADER_STORAGE_BUFFER = 0x90D2;
+inline constexpr GLbitfield GL_SHADER_STORAGE_BARRIER_BIT = 0x2000;
+inline constexpr GLbitfield GL_UNIFORM_BARRIER_BIT = 0x0004;
 inline constexpr GLenum GL_COMPILE_STATUS = 0x8B81;
 inline constexpr GLenum GL_LINK_STATUS = 0x8B82;
 inline constexpr GLenum GL_INFO_LOG_LENGTH = 0x8B84;
@@ -168,9 +186,18 @@ inline constexpr GLenum GL_STENCIL_ATTACHMENT = 0x8D20;
 inline constexpr GLenum GL_FRAMEBUFFER_COMPLETE = 0x8CD5;
 // clang-format on
 
+// Optional GL 4.3/ES 3.1 functionality; older contexts keep the CPU selector.
+#define OPENRAC_GL_COMPUTE_FUNCTIONS(X)                                                            \
+    X(void, glDispatchCompute, (GLuint x, GLuint y, GLuint z))                                     \
+    X(void, glMemoryBarrier, (GLbitfield barriers))
+
 // The functions: return type, name, parameters.
 // clang-format off
 #define OPENRAC_GL_FUNCTIONS(X)                                                                    \
+    X(void, glTexBuffer, (GLenum target, GLenum internal_format, GLuint buffer))                   \
+    X(GLuint, glGetUniformBlockIndex, (GLuint program, const GLchar *name))                        \
+    X(void, glUniformBlockBinding, (GLuint program, GLuint block, GLuint binding))                 \
+    X(void, glBindBufferBase, (GLenum target, GLuint index, GLuint buffer))                        \
     X(const GLubyte *, glGetString, (GLenum name))                                                 \
     X(const GLubyte *, glGetStringi, (GLenum name, GLuint index))                                  \
     X(void, glGetIntegerv, (GLenum pname, GLint *data))                                            \
@@ -310,6 +337,7 @@ inline constexpr GLenum GL_FRAMEBUFFER_COMPLETE = 0x8CD5;
 OPENRAC_GL_FUNCTIONS(OPENRAC_GL_DECLARE)
 OPENRAC_GL_DESKTOP_FUNCTIONS(OPENRAC_GL_DECLARE)
 OPENRAC_GL_ES_OPTIONAL_FUNCTIONS(OPENRAC_GL_DECLARE)
+OPENRAC_GL_COMPUTE_FUNCTIONS(OPENRAC_GL_DECLARE)
 #undef OPENRAC_GL_DECLARE
 
 // The context's loader, in SDL_GL_GetProcAddress's shape.
@@ -322,6 +350,20 @@ bool load(GetProcAddress get, std::string& missing);
 
 // True once load() has succeeded.
 bool loaded();
+
+// The native Vulkan backend exposes this GL surface, but can opt into its own
+// renderer optimisations without changing desktop GL or ES behaviour.
+bool is_vulkan();
+
+// Enhanced rendering is a build opt-in and is supported only by Vulkan.
+// Keep this decision at resource/pass/UI boundaries, not in every draw.
+inline bool enhanced_rendering_available() {
+#if defined(OPENRAC_ENHANCED_RENDERING) && OPENRAC_ENHANCED_RENDERING
+    return is_vulkan();
+#else
+    return false;
+#endif
+}
 
 // Which OpenGL the context is, as load() read it from GL_VERSION: the desktop's 4.1 core, or
 // OpenGL ES 3.2 (Android's, or a desktop driver's ES context: OPENRAC_GL_API=es, platform/window.h).

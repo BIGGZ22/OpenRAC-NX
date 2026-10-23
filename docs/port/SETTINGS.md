@@ -38,6 +38,20 @@ needs the game started again.
 | HUD | `hud` | `centre`, `edges` | In a picture wider than 4:3: the HUD where the game put it, in the 4:3 middle, or the elements the game anchors to the left or right of the screen (the weapon, the bolts, the side meters) out at the picture's sides. Menus and text stay in the middle either way |
 | Render scale | `render_scale` | `100`, `50`, `75`, `125`, `150`, `200` (a file may hold 25 to 400) | The frame's resolution as a percentage of the picture's pixels in the window. Over 100 is supersampling; under it is for a slow graphics card. The frame is never larger than 8192 pixels a side |
 | Anti-aliasing | `msaa` | `1` (`off`), `2`, `4`, `8`, `16` | Samples a pixel (MSAA). The page offers what the card gives (`GL_MAX_SAMPLES`); a file's larger number is held to it |
+| Enhanced graphics (F4) | `enhanced_graphics` | `1` (default), `0` | Master switch for probe lighting, modern sun/Ratchet shadows and GTAO. Turning it off restores original lighting/stencil shadows and bypasses AO without changing individual preferences |
+| Probe lighting | `probe_lighting` | `1` (default), `0` | Uses the verified level bake when loaded; toggle in the Enhanced menu. Disabling retains the bake for immediate switching back |
+| Probe spheres | `probe_spheres` | `0` (default), `1` | Enhanced menu placement overlay: cyan sparse, green dense, gold relocated, magenta invalid. Dense sphere opacity follows the region fade; only the two selected dense regions are shown |
+| Modern shadows | `enhanced_shadows` | `1` (default), `0` | Independently toggles sun cascades and Ratchet's shadow map in the Enhanced menu. Off restores original stencil shadows while keeping GI and GTAO preferences |
+| Probe normal bias | `probe_normal_bias` | `0.0` to `2.0` world units (default `0.5`) | Offsets the GI visibility receiver along the camera-facing surface normal; updates immediately |
+| Probe view bias | `probe_view_bias` | `0.0` to `2.0` world units (default `0.5`) | Offsets the GI visibility receiver toward the camera; updates immediately |
+| Probe GI multiplier | `probe_gi_multiplier` | `0.0` to `5.0` (default `1.0`) | Scales baked indirect irradiance only; direct lights are unchanged |
+| Ambient occlusion | `gtao` | `0` (off, default), `1` (GTAO) | In the Enhanced menu alongside GTAO settings. Adds optional contact shading from the visible world depth. Half-resolution analytic horizons by default, with edge-aware filtering; fixed samples, no temporal jitter or FSR dependency. Runs before particles and the HUD |
+| GTAO quality | `gtao_quality` | `performance` (default), `quality` | Performance uses three silhouette-refinement steps; Quality uses seven for more accurate contacts and silhouettes. Older settings files default to Performance |
+| GTAO directions | `gtao_slices` | `1` to `12` (default `4`) | Number of horizon-search directions; adjustable in ImGui's GTAO settings |
+| GTAO steps | `gtao_steps` | `4` to `24` (default `6`) | Depth samples per side of each direction |
+| GTAO half resolution | `gtao_half_resolution` | `0` (full resolution), `1` (half resolution, default) | A faster half-resolution evaluation with edge-aware upsampling |
+| GTAO radius | `gtao_radius` | `0.05` to `8.0` (default `1.25`) | Occlusion radius in scene units |
+| GTAO strength | `gtao_strength` | `0.0` to `3.0` (default `1.0`) | Multiplies indirect-light occlusion; zero leaves the picture unchanged |
 | Texture filter | `anisotropy` | `1` (`off`: trilinear), `2`, `4`, `8`, `16` | The anisotropic filter of the world's textures, held to what the driver offers |
 | VSync | `vsync` | `on`, `off`, `adaptive` | Whether a frame waits for the display's refresh. `adaptive` waits, but shows a frame that comes late at once (it tears) rather than a refresh later; a driver without it gives `on` |
 | Frame rate | `frame_rate` | `display`, `original`, a number, `unlimited` | How many frames are drawn (section 2). The page offers 30, 60, 75, 90, 120, 144, 165, 240 and 360; a file may hold any number from 20 to 1000 |

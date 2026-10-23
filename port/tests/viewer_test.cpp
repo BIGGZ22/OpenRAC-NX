@@ -20,6 +20,7 @@
 #include <vector>
 
 #include "check.h"
+#include "gpu_draw_reference.h"
 #include "renderer/framebuffer.h"
 #include "renderer/renderer.h"
 #include "renderer_gl_context.h"
@@ -33,6 +34,80 @@ namespace {
 
 namespace fs = std::filesystem;
 using namespace openrac;
+
+viewer::Pvs pvs_fixture(unsigned height = 0) {
+    viewer::Pvs pvs;
+    pvs.grid.resize(32 + 256);
+    auto put = [&](unsigned at, unsigned value) {
+        pvs.grid[at] = static_cast<std::uint8_t>(value);
+        pvs.grid[at + 1] = static_cast<std::uint8_t>(value >> 8);
+    };
+    put(0, 32);  // mask array
+    put(4, height);
+    put(6, 1);
+    put(8, 3);  // z -> y node at 12
+    put(12, 0);
+    put(14, 1);
+    put(16, 5);  // y -> x node at 20
+    put(20, 0);
+    put(22, 2);
+    put(24, 0);
+    put(26, 1);
+    pvs.grid[32] = 1;
+    pvs.grid[160] = 2;
+    return pvs;
+}
+
+void pvs_lookup() {
+    auto pvs = pvs_fixture();
+    auto a = pvs.select({0, 0, 0});
+    auto b = pvs.select({4, 0, 0});
+    CHECK(viewer::Pvs::visible(a, 1));
+    CHECK(!viewer::Pvs::visible(a, 2));
+    CHECK(!viewer::Pvs::visible(b, 1));
+    CHECK(viewer::Pvs::visible(b, 2));
+    CHECK(viewer::Pvs::visible(a, viewer::Pvs::always));
+    CHECK(viewer::Pvs::visible(a, 0));
+    CHECK(viewer::Pvs::visible(a, 3));
+    CHECK(viewer::Pvs::visible(a, 0xff01));
+    CHECK(pvs.select({-3.9f, 0, 0}) == a);  // truncate, never floor
+    CHECK(pvs.select({8, 0, 0}) == b);      // neighbouring-cell union
+    CHECK(pvs.select({400, 0, 0}) == viewer::Pvs::all_visible());
+    CHECK(pvs.select({NAN, 0, 0}) == viewer::Pvs::all_visible());
+    CHECK(pvs.select({INFINITY, 0, 0}) == viewer::Pvs::all_visible());
+    for (const unsigned size : {0u, 7u, 31u, 33u}) {
+        auto broken = pvs;
+        broken.grid.resize(size);
+        CHECK(broken.select({0, 0, 0}) == viewer::Pvs::all_visible());
+    }
+}
+
+void pvs_loader(const fs::path& dir) {
+    // Identity is checked before any mapping is activated; absent metadata is
+    // already covered by the normal loader fixture below.
+    const auto pvs = pvs_fixture();
+    std::ofstream grid(dir / "pvs.bin", std::ios::binary);
+    grid.write(
+        reinterpret_cast<const char*>(pvs.grid.data()),
+        static_cast<std::streamsize>(pvs.grid.size())
+    );
+    grid.close();
+    const auto metadata = [&](const char* version) {
+        std::ofstream(dir / "pvs.json")
+            << "{\"format\":1,\"game\":\"rac1\",\"version\":\"" << version
+            << "\",\"level\":3,\"grid\":\"pvs.bin\",\"terrain\":[1]}";
+    };
+    viewer::LevelData loaded;
+    std::string error;
+    metadata("ntsc");
+    CHECK(viewer::load_level(dir, loaded, error));
+    CHECK(loaded.pvs.grid.empty());
+    metadata("pal");
+    CHECK(viewer::load_level(dir, loaded, error));
+    CHECK(loaded.pvs.grid == pvs.grid);
+    fs::remove(dir / "pvs.json");
+    fs::remove(dir / "pvs.bin");
+}
 
 std::string base64(const std::vector<std::uint8_t>& data) {
     static const char* const kAlphabet =
@@ -74,10 +149,13 @@ void write_square(const fs::path& path, float size, float z, const std::string& 
     append(uvs, sizeof(uvs));
     append(indices, sizeof(indices));
     const std::string gltf =
-        std::string(R"({"asset":{"version":"2.0"},"scene":0,"scenes":[{"nodes":[0]}],)")
+        std::string(
+            R"({"asset":{"version":"2.0"},"extensionsUsed":["KHR_materials_emissive_strength"],"scene":0,"scenes":[{"nodes":[0]}],)"
+        )
         + R"("nodes":[{"name":"square","mesh":0}],)"
         + R"("meshes":[{"primitives":[{"attributes":{"POSITION":0,"NORMAL":1,"TEXCOORD_0":2},"indices":3,"material":0}]}],)"
-        + R"("materials":[{"pbrMetallicRoughness":{"baseColorTexture":{"index":0}},"doubleSided":true}],)"
+        + R"("materials":[{"pbrMetallicRoughness":{"baseColorTexture":{"index":0}},"doubleSided":true,)"
+        + R"("emissiveFactor":[0,0.25,0],"emissiveTexture":{"index":0},"extensions":{"KHR_materials_emissive_strength":{"emissiveStrength":2}}}],)"
         + R"("textures":[{"source":0}],"images":[{"uri":")" + image + R"("}],)" + R"("accessors":[)"
         + R"({"bufferView":0,"componentType":5126,"count":4,"type":"VEC3","min":[)"
         + std::to_string(-h) + "," + std::to_string(-h) + "," + std::to_string(z) + R"(],"max":[)"
@@ -102,12 +180,13 @@ void write_level(const fs::path& dir) {
     fs::remove_all(dir);
     write_png(dir / "textures" / "terrain_0000.png", 220, 30, 30);
     write_png(dir / "textures" / "tie_0001.png", 30, 30, 220);
+    write_png(dir / "sky.png", 80, 120, 200);
     write_square(dir / "terrain.glb.gltf", 20.0f, 0.0f, "textures/terrain_0000.png");
     write_square(dir / "ties" / "tie_5.gltf", 2.0f, 0.0f, "../textures/tie_0001.png");
     write_text(dir / "manifest.json", R"({
   "format": 3, "game": "rac1", "version": "pal", "level": 3,
   "terrain": "terrain.glb.gltf",
-  "sky": {"background": [10, 20, 30], "mesh": null},
+  "sky": {"background": [10, 20, 30], "mesh": null, "panorama": "sky.png"},
   "classes": {
     "tie": {"5": {"mesh": "ties/tie_5.gltf"}},
     "shrub": {},
@@ -157,6 +236,10 @@ void loader(const fs::path& dir, viewer::LevelData& level) {
     // The placement of an unknown class is left out.
     CHECK(level.instances[static_cast<std::size_t>(viewer::Layer::Mobys)].size() == 1);
     CHECK(level.images.size() == 2);
+    CHECK((level.materials[0].emission == viewer::Vec3{0, .5f, 0}));
+    CHECK(level.materials[0].emission_image == level.materials[0].image);
+    CHECK(level.sky_panorama.width == 2 && level.sky_panorama.height == 2);
+    CHECK(level.sky_panorama.pixels[0] == 80 && level.sky_panorama.pixels[2] == 200);
     CHECK(level.missing_images == 0);
     CHECK(level.vertices.size() == 4 + 4 + 24);
     CHECK(std::fabs(level.background[2] - 30.0f / 255.0f) < 1e-6f);
@@ -168,9 +251,131 @@ void loader(const fs::path& dir, viewer::LevelData& level) {
     const auto& tie = level.instances[static_cast<std::size_t>(viewer::Layer::Ties)][0];
     CHECK(tie.matrix[14] == 1.0f);
     CHECK(level.bounds_min[0] == -10.0f && level.bounds_max[0] >= 6.5f);
+    {
+        const auto ooze_dir = dir / "orxon-ooze";
+        write_level(ooze_dir);
+        write_png(ooze_dir / "textures/terrain_0012.png", 80, 220, 30);
+        write_square(ooze_dir / "terrain.glb.gltf", 20, 0, "textures/terrain_0012.png");
+        write_text(ooze_dir / "manifest.json", R"({
+          "format":3,"game":"rac1","version":"ntsc","level":10,
+          "terrain":"terrain.glb.gltf","placements":"placements.json",
+          "classes":{"tie":{"5":{"mesh":"ties/tie_5.gltf"}}}
+        })");
+        viewer::LevelData ooze;
+        CHECK(viewer::load_level(ooze_dir, ooze, error));
+        CHECK((ooze.materials[0].emission == viewer::Vec3{1, 1, 1}));
+        CHECK(ooze.emission_profile_revision == 2);
+        CHECK(ooze.materials[0].emission_vertex_colour);
+        CHECK(ooze.materials[0].diffuse_scale == 0);
+        CHECK((ooze.materials[1].emission == viewer::Vec3{0, .5f, 0}));
+        const auto source_emission = ooze.materials[0].emission;
+        write_text(ooze_dir / "probe-emission.json", R"({
+          "textures/terrain_0012.png":{"preserve_authored_lighting":false}
+        })");
+        CHECK(viewer::load_level(ooze_dir, ooze, error));
+        CHECK(ooze.materials[0].emission_mask == lighting::EmissionMask::None);
+        CHECK(ooze.materials[0].emission == source_emission);
+        for (const char* window : {"textures/tie_0048.png", "textures/terrain_0059.png"}) {
+            write_png(ooze_dir / window, 80, 220, 30);
+            write_square(ooze_dir / "terrain.glb.gltf", 20, 0, window);
+            CHECK(viewer::load_level(ooze_dir, ooze, error));
+            CHECK(ooze.materials[0].emission_mask == lighting::EmissionMask::Green);
+            CHECK(!ooze.materials[0].emission_vertex_colour);
+            CHECK(ooze.materials[0].diffuse_scale == 1);
+            CHECK(ooze.materials[1].emission_mask == lighting::EmissionMask::None);
+            CHECK(ooze.materials[0].emission == source_emission);
+        }
+        write_square(ooze_dir / "lava.gltf", 20, 0, "textures/probe_gaspar_lava.png");
+        write_png(ooze_dir / "textures/probe_gaspar_lava.png", 255, 255, 255);
+        write_text(ooze_dir / "manifest.json", R"({
+          "format":3,"game":"rac1","version":"ntsc","level":9,
+          "terrain":"terrain.glb.gltf","placements":"placements.json"
+        })");
+        write_text(ooze_dir / "probe-emission.json", R"({"surfaces":[{"mesh":"lava.gltf"}]})");
+        CHECK(viewer::load_level(ooze_dir, ooze, error));
+        CHECK(ooze.bake_surfaces.size() == 1);
+        CHECK(ooze.instances[static_cast<std::size_t>(viewer::Layer::Terrain)].size() == 1);
+        CHECK(ooze.emission_profile_revision == 1);
+        const auto lava_model = ooze.bake_surfaces[0].model;
+        const auto lava_material = ooze.models[lava_model].primitives[0].material;
+        CHECK((ooze.materials[lava_material].emission == viewer::Vec3{1, 1, 1}));
+        CHECK(ooze.materials[lava_material].emission_vertex_colour);
+        CHECK(ooze.materials[lava_material].diffuse_scale == 0);
+    }
     // The images: red terrain, blue tie.
     CHECK((level.images[0].texel(0, 0) & 0xFF) == 220);
     CHECK(((level.images[1].texel(1, 1) >> 16) & 0xFF) == 220);
+    {
+        const auto selection_dir = dir / "bake-selection";
+        write_level(selection_dir);
+        write_text(selection_dir / "manifest.json", R"({
+          "format":3,"game":"rac1","version":"ntsc","level":3,
+          "terrain":"terrain.glb.gltf","placements":"placements.json",
+          "classes":{"moby":{
+            "817":{"mesh":"ties/tie_5.gltf"},
+            "1827":{"mesh":"ties/tie_5.gltf","bake_static":false},
+            "500":{"mesh":null,"bake_static":true}}}
+        })");
+        write_text(selection_dir / "placements.json", R"({"mobys":[
+          {"class":817,"matrix":[1,0,0,0,0,1,0,0,0,0,1,0,0,0,0,1]},
+          {"class":817,"bake_static":false,"matrix":[1,0,0,0,0,1,0,0,0,0,1,0,0,0,0,1]},
+          {"class":1827,"matrix":[1,0,0,0,0,1,0,0,0,0,1,0,0,0,0,1]},
+          {"class":1827,"bake_static":true,"matrix":[1,0,0,0,0,1,0,0,0,0,1,0,0,0,0,1]},
+          {"class":500,"matrix":[1,0,0,0,0,1,0,0,0,0,1,0,0,0,0,1]}]})");
+        viewer::LevelData selected;
+        CHECK(viewer::load_level(selection_dir, selected, error));
+        const auto& props = selected.instances[static_cast<std::size_t>(viewer::Layer::Mobys)];
+        CHECK(props.size() == 5);
+        CHECK(props[0].bake_static && !props[0].stand_in);
+        CHECK(!props[1].bake_static && !props[2].bake_static);
+        CHECK(props[3].bake_static);
+        CHECK(props[4].bake_static && props[4].stand_in);
+        const auto source_emission = selected.materials[0].emission;
+        write_text(selection_dir / "probe-emission.json", R"({
+            "textures/terrain_0000.png":{"colour":[0.25,0.5,1],"intensity":4,"use_base_texture":false,"preserve_authored_lighting":true}
+        })");
+        CHECK(viewer::load_level(selection_dir, selected, error));
+        CHECK((selected.materials[0].emission == viewer::Vec3{1, 2, 4}));
+        CHECK(selected.materials[0].emission_image == -1);
+        CHECK(selected.materials[0].emission_mask == lighting::EmissionMask::None);
+        write_text(selection_dir / "probe-emission.json", R"({
+            "textures/terrain_0000.png":{"preserve_authored_lighting":true}
+        })");
+        CHECK(viewer::load_level(selection_dir, selected, error));
+        CHECK(selected.materials[0].emission_mask == lighting::EmissionMask::None);
+        CHECK(selected.materials[0].emission == source_emission);
+        write_text(selection_dir / "probe-emission.json", R"({
+            "textures/terrain_0000.png":{"colour":[1,2,3],"texture":"textures/tie_0001.png","mask":"green"}
+        })");
+        CHECK(viewer::load_level(selection_dir, selected, error));
+        CHECK((selected.materials[0].emission == viewer::Vec3{1, 2, 3}));
+        CHECK(selected.materials[0].emission_mask == lighting::EmissionMask::Green);
+        CHECK(selected.materials[0].emission_image != selected.materials[0].image);
+        write_text(selection_dir / "probe-emission.json", R"({
+            "textures/terrain_0000.png":{"mask":"bad"}
+        })");
+        CHECK(!viewer::load_level(selection_dir, selected, error));
+        write_text(selection_dir / "probe-emission.json", R"({
+            "textures/terrain_0000.png":{"intensity":-1}
+        })");
+        CHECK(!viewer::load_level(selection_dir, selected, error));
+        write_square(selection_dir / "unsupported.gltf", 2, 0, "textures/tie_0001.png");
+        const auto unsupported = selection_dir / "unsupported.gltf";
+        std::ifstream input(unsupported);
+        std::string source((std::istreambuf_iterator<char>(input)), {});
+        input.close();
+        const auto texture = source.find("\"emissiveTexture\":{\"index\":0}");
+        CHECK(texture != std::string::npos);
+        source.replace(
+            texture,
+            std::strlen("\"emissiveTexture\":{\"index\":0}"),
+            "\"emissiveTexture\":{\"index\":0,\"texCoord\":1}"
+        );
+        write_text(unsupported, source);
+        viewer::LevelData unsupported_level;
+        CHECK(!viewer::load_model(unsupported, unsupported_level, error).has_value());
+        CHECK(error.find("TEXCOORD_0") != std::string::npos);
+    }
 }
 
 int draw(viewer::LevelData& level) {
@@ -229,6 +434,290 @@ int draw(viewer::LevelData& level) {
     input.camera.view = camera.view();
     renderer.render(input, {frame.id(), 128, 128});
     CHECK(renderer.last_stats().draw_calls == 0);
+
+    // PVS rejects camera geometry, independently of frustum culling. Re-upload
+    // does not keep the previous level's mask or compacted instance buffers.
+    auto baked = level;
+    baked.pvs = pvs_fixture(7);
+    baked.models[baked.instances[1][0].model].primitives[0].occlusion = 1;
+    auto& fragments = baked.models[baked.instances[1][0].model].primitives;
+    auto hidden_fragment = fragments[0];
+    hidden_fragment.occlusion = 2;
+    fragments.push_back(hidden_fragment);
+    fragments.push_back(fragments[0]);
+    baked.instances[2][0].occlusion = 2;
+    baked.instances[4][0].occlusion = 2;
+    auto second_tie = baked.instances[2][0];
+    second_tie.matrix[12] = 6;
+    second_tie.occlusion = 1;
+    baked.instances[2].push_back(second_tie);
+    scene.release();
+    CHECK(scene.upload(baked, renderer.textures(), error));
+    scene.lighting = false;
+    camera.position = {0, 0, 30};
+    input.camera.view = camera.view();
+    input.camera.position = camera.position;
+    renderer.render(input, {frame.id(), 128, 128});
+    CHECK(renderer.last_stats().draw_calls == (gl::is_vulkan() ? 2 : 4));
+    auto pvs_pixels = frame.read_rgba();
+    if (gl::is_vulkan()) {
+        CHECK(pvs_pixels[(64 * 128 + 64) * 4] > 150);  // hidden blue tie exposes red terrain
+    } else {
+        CHECK(pvs_pixels[(64 * 128 + 64) * 4 + 2] > 150);  // GL/ES keep drawing the blue tie
+    }
+    camera.position[0] = 4;
+    input.camera.position = camera.position;
+    input.camera.view = camera.view();
+    renderer.render(input, {frame.id(), 128, 128});
+    CHECK(renderer.last_stats().draw_calls == 4);  // alternate fragment, tie and moby survive
+    camera.position[0] = 0;
+    input.camera.position = camera.position;
+    input.camera.view = camera.view();
+    renderer.render(input, {frame.id(), 128, 128});
+    CHECK(renderer.last_stats().draw_calls == (gl::is_vulkan() ? 2 : 4));  // camera cache refresh
+
+    if (gl::is_vulkan()) {
+        stats::set_enabled(stats::Client::Overlay, true);
+        // Exercise multiple compaction chunks and order-sensitive blended objects.
+        for (unsigned n = 0; n < 300; ++n) {
+            auto tie_copy = second_tie;
+            tie_copy.matrix =
+                renderer::translation({n % 3 == 0 ? 5000.f : float(n % 11) - 5, 0, 1});
+            tie_copy.occlusion = n % 2 ? 1 : 2;
+            if (n % 7 == 0) {
+                tie_copy.palette = 0;
+            }
+            baked.instances[2].push_back(tie_copy);
+        }
+        for (unsigned n = 0; n < 130; ++n) {
+            auto blended = baked.instances[4][0];
+            blended.blend = 1;
+            blended.occlusion = n % 2 ? 1 : 2;
+            blended.matrix = renderer::translation({0, 0, 1});
+            blended.tint = {n % 3 ? 1.f : .2f, n % 3 ? .2f : 1.f, .5f, .1f};
+            baked.instances[4].push_back(blended);
+        }
+        scene.release();
+        CHECK(scene.upload(baked, renderer.textures(), error));
+        scene.lighting = false;
+        for (float x : {0.f, 4.f, 0.f}) {
+            camera.position[0] = x;
+            input.camera.position = camera.position;
+            input.camera.view = camera.view();
+            test::gpu_draw_reference(true);
+            renderer.render(input, {frame.id(), 128, 128});
+            const auto cpu_reference = frame.read_rgba();
+            const auto cpu_draws = renderer.last_stats().draw_calls;
+            const auto cpu_triangles = renderer.last_stats().triangles;
+            test::gpu_draw_reference(false);
+            CHECK(test::gpu_draw_active());
+            renderer.render(input, {frame.id(), 128, 128});
+            CHECK(frame.read_rgba() == cpu_reference);
+#if defined(OPENRAC_VULKAN)
+            const auto completed = vkgl::gpu_completed_draws();
+            CHECK(completed.draws == static_cast<std::uint64_t>(cpu_draws));
+            CHECK(completed.triangles == cpu_triangles);
+#endif
+        }
+#if defined(OPENRAC_VULKAN)
+        // Counters are asynchronous: recording a frame must not read or wait for
+        // its result. Slot retirement returns the prior frame, including zeros.
+        std::array<std::uint64_t, 2> expected_draws{}, expected_triangles{};
+        test::gpu_draw_reference(true);
+        for (unsigned n = 0; n < 2; ++n) {
+            camera.position[0] = n ? 50000.f : 0.f;
+            input.camera.position = camera.position;
+            input.camera.view = camera.view();
+            renderer.render(input, {frame.id(), 128, 128});
+            expected_draws[n] = renderer.last_stats().draw_calls;
+            expected_triangles[n] = renderer.last_stats().triangles;
+            frame.read_rgba();
+        }
+        test::gpu_draw_reference(false);
+        for (unsigned n = 0; n < 8; ++n) {
+            const auto before = vkgl::gpu_completed_draws();
+            camera.position[0] = n % 2 ? 50000.f : 0.f;
+            input.camera.position = camera.position;
+            input.camera.view = camera.view();
+            renderer.render(input, {frame.id(), 128, 128});
+            CHECK(vkgl::gpu_completed_draws().recording == before.recording);
+            vkgl::present();  // only the existing frame-slot fence may wait
+            const auto completed = vkgl::gpu_completed_draws();
+            CHECK(completed.recording >= before.recording);
+            if (n > 0) {
+                CHECK(completed.draws == expected_draws[(n - 1) % 2]);
+                CHECK(completed.triangles == expected_triangles[(n - 1) % 2]);
+            }
+        }
+        // Synchronous pixel readback completes a newer, empty recording. An
+        // older in-flight slot retiring afterward must not rewind that result.
+        frame.read_rgba();
+        const auto empty = vkgl::gpu_completed_draws();
+        CHECK(empty.draws == 0 && empty.triangles == 0 && empty.visible_instances == 0);
+        vkgl::present();
+        CHECK(vkgl::gpu_completed_draws().recording >= empty.recording);
+        CHECK(vkgl::gpu_completed_draws().draws == 0);
+        // With no statistics client, rendering still matches but no summary
+        // dispatch, copy or readback is performed. Re-enabling cannot expose
+        // an old staging-buffer payload from an uncollected recording.
+        stats::set_enabled(stats::Client::Overlay, false);
+        CHECK(vkgl::gpu_completed_draws().recording == 0);
+        const auto no_stats = vkgl::submission_counters();
+        camera.position[0] = 0;
+        input.camera.position = camera.position;
+        input.camera.view = camera.view();
+        renderer.render(input, {frame.id(), 128, 128});
+        const auto without_stats = frame.read_rgba();
+        const auto disabled_work = vkgl::submission_counters();
+        CHECK(disabled_work.gpu_counter_dispatches == no_stats.gpu_counter_dispatches);
+        CHECK(disabled_work.gpu_counter_copies == no_stats.gpu_counter_copies);
+        stats::set_enabled(stats::Client::Overlay, true);
+        CHECK(vkgl::gpu_completed_draws().recording == 0);
+        // Retiring a previously collected slot cannot revive pre-disable data.
+        vkgl::present();
+        CHECK(vkgl::gpu_completed_draws().recording == 0);
+        renderer.render(input, {frame.id(), 128, 128});
+        CHECK(frame.read_rgba() == without_stats);
+        const auto enabled_work = vkgl::submission_counters();
+        CHECK(enabled_work.gpu_counter_dispatches > disabled_work.gpu_counter_dispatches);
+        CHECK(enabled_work.gpu_counter_copies > disabled_work.gpu_counter_copies);
+        CHECK(vkgl::gpu_completed_draws().draws == expected_draws[0]);
+        CHECK(vkgl::gpu_completed_draws().readback_bytes == 16);
+        // Exceed the 4096-group page limit. Each distinct model has one group;
+        // both page summaries must be included, and must survive slot reuse.
+        auto paged = baked;
+        paged.instances[2].clear();
+        paged.instances[4].clear();
+        const auto model = paged.models[second_tie.model];
+        for (unsigned n = 0; n < 4200; ++n) {
+            auto instance = second_tie;
+            instance.model = static_cast<unsigned>(paged.models.size());
+            instance.occlusion = viewer::Pvs::always;
+            instance.matrix = renderer::Mat4{1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1};
+            paged.models.push_back(model);
+            paged.instances[2].push_back(instance);
+        }
+        scene.release();
+        CHECK(scene.upload(paged, renderer.textures(), error));
+        scene.lighting = false;
+        test::gpu_draw_reference(true);
+        renderer.render(input, {frame.id(), 128, 128});
+        const auto paged_reference = frame.read_rgba();
+        const auto paged_draws = renderer.last_stats().draw_calls;
+        const auto paged_triangles = renderer.last_stats().triangles;
+        test::gpu_draw_reference(false);
+        for (unsigned n = 0; n < 3; ++n) {
+            renderer.render(input, {frame.id(), 128, 128});
+            CHECK(frame.read_rgba() == paged_reference);
+            const auto completed = vkgl::gpu_completed_draws();
+            CHECK(completed.draws == std::uint64_t(paged_draws));
+            CHECK(completed.triangles == paged_triangles);
+            CHECK(completed.readback_bytes == 32);
+            vkgl::present();
+        }
+        stats::set_enabled(stats::Client::Overlay, false);
+#endif
+        test::gpu_draw_reference(true);
+    }
+
+#if defined(OPENRAC_VULKAN)
+    if (gl::is_vulkan() && vkgl::gpu_material_counters().supported) {
+        // More unique textures than one descriptor page, interleaved repeated
+        // materials and different meshes. Compare actual legacy/bindless shaders,
+        // not just two instance-culling paths using the same material shader.
+        viewer::LevelData many;
+        for (const auto& position : std::array<renderer::Vec3, 4>{
+                 renderer::Vec3{-.7f, -.7f, 0}, {.7f, -.7f, 0}, {.7f, .7f, 0}, {-.7f, .7f, 0}
+             }) {
+            viewer::Vertex vertex{};
+            std::copy(position.begin(), position.end(), vertex.position);
+            vertex.normal[2] = 1;
+            vertex.light_slot = -1;
+            std::fill_n(vertex.colour, 4, 1.f);
+            many.vertices.push_back(vertex);
+        }
+        many.indices = {0, 1, 2, 0, 2, 3};
+        for (unsigned i = 0; i < 1050; ++i) {
+            renderer::Rgba8Image image(1, 1);
+            image.set_texel(
+                0,
+                0,
+                0xff000000u | ((i * 37u + 23u) & 255u) | (((i * 71u + 51u) & 255u) << 8)
+                    | (((i * 101u + 19u) & 255u) << 16)
+            );
+            many.images.push_back(std::move(image));
+            many.image_paths.push_back("material_fixture_" + std::to_string(i));
+            viewer::Material material;
+            material.image = static_cast<int>(i);
+            material.colour = {.5f + float(i % 5) * .1f, .7f, .9f, 1.f};
+            many.materials.push_back(material);
+            for (unsigned copy = 0; copy < (i % 32 == 0 ? 2u : 1u); ++copy) {
+                viewer::Model model;
+                model.min = {-.7f, -.7f, 0};
+                model.max = {.7f, .7f, 0};
+                model.primitives.push_back({0, 6, static_cast<int>(i)});
+                viewer::Instance instance;
+                instance.model = static_cast<std::uint32_t>(many.models.size());
+                const auto n = many.instances[2].size();
+                instance.matrix = renderer::translation(
+                    {float(n % 34) * 2.f - 33.f, float(n / 34) * 2.f - 31.f, 0}
+                );
+                many.models.push_back(std::move(model));
+                many.instances[2].push_back(instance);
+            }
+        }
+        test::gpu_draw_reference(false);
+        camera.position = {0, 0, 100};
+        camera.pitch = -1.57f;
+        input.camera.position = camera.position;
+        input.camera.view = camera.view();
+        std::vector<std::uint8_t> legacy;
+        std::uint64_t legacy_calls = 0;
+        for (bool reference : {true, false}) {
+            test::gpu_material_reference(reference);
+            scene.release();
+            CHECK(scene.upload(many, renderer.textures(), error));
+            scene.lighting = false;
+            const auto before = vkgl::gpu_material_counters();
+            renderer.render(input, {frame.id(), 128, 128});
+            const auto pixels = frame.read_rgba();
+            const auto after = vkgl::gpu_material_counters();
+            if (reference) {
+                legacy = pixels;
+                std::vector<std::uint32_t> colours;
+                for (std::size_t i = 0; i < pixels.size(); i += 4) {
+                    colours.push_back(
+                        std::uint32_t(pixels[i]) | (std::uint32_t(pixels[i + 1]) << 8)
+                        | (std::uint32_t(pixels[i + 2]) << 16)
+                    );
+                }
+                std::sort(colours.begin(), colours.end());
+                CHECK(std::unique(colours.begin(), colours.end()) - colours.begin() > 64);
+                legacy_calls = after.native_draws - before.native_draws;
+                CHECK(after.draws == before.draws);
+            } else {
+                CHECK(pixels == legacy);
+                CHECK(after.draws - before.draws > 1000);
+                CHECK(after.records - before.records < after.draws - before.draws);
+                CHECK(after.textures - before.textures > 1024);  // descriptor page rollover
+                CHECK(after.native_draws - before.native_draws < legacy_calls / 4);
+                std::printf(
+                    "bindless materials: %llu -> %llu native calls; %llu draws, "
+                    "%llu unique records, %llu texture/sampler slots\n",
+                    static_cast<unsigned long long>(legacy_calls),
+                    static_cast<unsigned long long>(after.native_draws - before.native_draws),
+                    static_cast<unsigned long long>(after.draws - before.draws),
+                    static_cast<unsigned long long>(after.records - before.records),
+                    static_cast<unsigned long long>(after.textures - before.textures)
+                );
+                // Readback starts a fresh recording; retired tables must be reusable.
+                renderer.render(input, {frame.id(), 128, 128});
+                CHECK(frame.read_rgba() == legacy);
+            }
+        }
+        test::gpu_draw_reference(true);
+    }
+#endif
 
     frame.release();
     scene.release();
@@ -419,19 +908,86 @@ void moby_draw_distance() {
     place(0.0f, 0.0f, 0.0f, 0.0f, 64);  // no sphere yet
     CHECK(!viewer::moby_beyond_draw_distance(moby, eye, forward));
 }
+
+// The authored sphere is world-space and packed independently of the model's scale.
+void moby_world_sphere() {
+    std::vector<std::uint8_t> ram(0x200);
+    constexpr unsigned address = 0x100;
+    const float scale = 2;
+    std::memcpy(ram.data() + address + 0x2c, &scale, sizeof(scale));
+    const auto set = [&](std::array<float, 4> sphere) {
+        std::memcpy(ram.data() + address, sphere.data(), sizeof(sphere));
+        return viewer::read_live_moby(ram, address);
+    };
+    auto live = set({10240, -20480, 30720, 4096});
+    CHECK(live.has_value());
+    CHECK((live->world_sphere == std::array<float, 4>{10, -20, 30, 4}));
+    CHECK(live->matrix[0] == 2);
+    for (auto sphere :
+         {std::array<float, 4>{0, 0, 0, 0},
+          std::array<float, 4>{1024, 2048, 3072, -4096},
+          std::array<float, 4>{NAN, 0, 0, 1024},
+          std::array<float, 4>{0, 0, 0, INFINITY}}) {
+        live = set(sphere);
+        CHECK(live.has_value());
+        CHECK((live->world_sphere == std::array<float, 4>{}));
+    }
+}
+
+// Joint poses and model transforms both interpolate. Endpoint world bounds
+// alone need not contain the intermediate product (rotation plus changing pose).
+void moby_blended_bounds() {
+    const renderer::Mat4 from{2, .2f, 0, 0, .4f, 1, 0, 0, 0, 0, .5f, 0, 10, 20, 30, 1};
+    const renderer::Mat4 to{0, 1, 0, 0, -2, .3f, 0, 0, 0, 0, 2, 0, 12, 21, 31, 1};
+    const std::array<float, 4> sphere0{11, 20, 30, 8}, sphere1{12, 22, 31, 8};
+    for (unsigned step = 0; step <= 10; ++step) {
+        const float alpha = step / 10.f;
+        auto drawn = from;
+        for (unsigned i = 0; i < drawn.size(); ++i) {
+            drawn[i] += (to[i] - from[i]) * alpha;
+        }
+        const auto bound = viewer::moby_sphere_envelope(sphere0, from, sphere1, to, drawn);
+        CHECK(bound[3] > 0);
+        for (unsigned corner = 0; corner < 8; ++corner) {
+            renderer::Vec3 p0{
+                corner & 1 ? 1.f : -1.f, corner & 2 ? 1.f : -1.f, corner & 4 ? 1.f : -1.f
+            };
+            renderer::Vec3 p1{-p0[1], p0[2], -p0[0]}, point;
+            for (unsigned k = 0; k < 3; ++k) {
+                point[k] = p0[k] + (p1[k] - p0[k]) * alpha;
+            }
+            const auto world = renderer::transform_point(drawn, point);
+            float distance2 = 0;
+            for (unsigned k = 0; k < 3; ++k) {
+                distance2 += (world[k] - bound[k]) * (world[k] - bound[k]);
+            }
+            CHECK(distance2 <= bound[3] * bound[3]);
+        }
+    }
+    CHECK(viewer::moby_sphere_envelope({}, from, sphere1, to, to)[3] == 0);
+    CHECK(viewer::moby_sphere_envelope(sphere0, renderer::scale(0), sphere1, to, to)[3] == 0);
+    auto invalid = from;
+    invalid[0] = NAN;
+    CHECK(viewer::moby_sphere_envelope(sphere0, invalid, sphere1, to, to)[3] == 0);
+}
 }  // namespace
 
 int main(int argc, char** argv) {
+    test::gpu_draw_reference(true);
     const fs::path dir =
         argc > 1 ? fs::path(argv[1]) : fs::temp_directory_path() / "openrac_viewer_test";
     json_reader();
+    pvs_lookup();
     moby_draw_distance();
+    moby_world_sphere();
+    moby_blended_bounds();
     write_level(dir);
     viewer::LevelData level;
     loader(dir, level);
     overrides(dir);
     denser_terrain(dir);
     translucent_texels(dir);
+    pvs_loader(dir);
     if (openrac::test::failures() != 0) {
         return openrac::test::result();
     }

@@ -2,32 +2,36 @@
 // Copyright (c) 2026 the OpenRAC contributors
 
 #include "frontend.h"
-#include "debug_menu.h"
-#include "debug_overlay.h"
-#include "fps_counter.h"
-#include "touch_overlay.h"
-#include "options_menu.h"
-#include "settings.h"
-
-#include <SDL3/SDL.h>
 
 #include <algorithm>
 #include <array>
+#include <chrono>
 #include <cmath>
+#include <cstdio>
+#include <cstdlib>
+#include <cstring>
 #include <filesystem>
 #include <format>
 #include <fstream>
-#include <chrono>
-#include <thread>
-#include <unordered_map>
 #include <memory>
 #include <optional>
+#include <thread>
+#include <unordered_map>
 #include <vector>
+
+#include <SDL3/SDL.h>
 
 #include "common/log.h"
 #include "common/stats.h"
+#include "debug_menu.h"
+#include "debug_overlay.h"
+#include "enhanced/game/scripted_moby_colour.h"
+#include "enhanced/viewer/hero_shadow.h"
+#include "fps_counter.h"
+#include "game/common/particle_texture_cache.h"
 #include "openrac/game_host.h"
 #include "openrac/guest.h"
+#include "options_menu.h"
 #include "platform/gpu_driver.h"
 #include "platform/input.h"
 #include "platform/performance_hint.h"
@@ -40,16 +44,14 @@
 #include "renderer/gl_stats.h"
 #include "renderer/renderer.h"
 #include "renderer/shadows.h"
+#include "settings.h"
+#include "touch_overlay.h"
 #include "viewer/game_state.h"
 #include "viewer/level.h"
 #include "viewer/level_renderer.h"
 #include "viewer/moby_pose.h"
 #include "viewer/moby_shadow.h"
 #include "viewer/screenshot.h"
-
-#include <cstdio>
-#include <cstdlib>
-#include <cstring>
 
 extern "C" int openrac_game_loaded_overlay(void);
 
@@ -78,10 +80,12 @@ struct Kept {
     std::vector<viewer::Instance> live;
     std::vector<std::uint32_t> addresses;  // each live moby's address, for its last matrix
     std::unordered_map<std::uint32_t, renderer::Mat4> prev_matrices;
+    std::unordered_map<std::uint32_t, std::array<float, 4>> prev_spheres;
     std::vector<viewer::LevelScene::JointColumns> palette;
     std::vector<renderer::ShadowCapsule> shadows, prev_shadows;
     std::uint32_t shadow_moby = 0, prev_shadow_moby = 0;
     viewer::MobyShadowState shadow_state, prev_shadow_state;
+    std::optional<bool> hero_airborne;
     // The last tick's poses, by moby: where its joints start in prev_palette and how many.
     std::vector<viewer::LevelScene::JointColumns> prev_palette;
     std::unordered_map<std::uint32_t, std::pair<int, int>> prev_poses;
@@ -110,6 +114,7 @@ struct Kept {
 
 struct State {
     std::string game;
+    ScriptedMobyColours scripted_moby_colours;
     std::filesystem::path levels;
     std::unique_ptr<platform::Platform> sdl;
     std::unique_ptr<platform::Window> window;
@@ -636,6 +641,16 @@ gaddr shadow_directions_address() {
     return 0;
 }
 
+gaddr hero_state_address() {
+    if (g->game == "rac1-pal") {
+        return 0x0013F450u;
+    }
+    if (g->game == "rac1-ntsc") {
+        return 0x0013F350u;
+    }
+    return 0;
+}
+
 // Uploads a level's geometry; while the boot program runs (the title and the main menu), the title
 // world's, or level 0's when the title world was not extracted.
 void use_level(int number) {
@@ -708,6 +723,22 @@ void use_level(int number) {
     auto hud = std::make_unique<renderer::DirectRenderer>("hud", renderer::Bucket::Hud, renderer::DirectConfig{},
                                                           renderer::DirectRenderer::Input::Vif);
     g->renderer->add(std::make_unique<renderer::DirectBackground>(*hud), error);
+    static const bool& hero_pixel_shadow = stats::probe(
+        "OPENRAC_HERO_SHADOW",
+        "Ratchet-only shadow map: sun direction grounded, downward platforming cue airborne"
+    );
+    const char* sun_option = std::getenv("OPENRAC_SUN_SHADOWS");
+    const bool sun_shadow = enhanced_graphics_available() && wanted >= 0 && wanted < 19
+                            && (!sun_option || std::string_view(sun_option) != "0");
+    if (!g->scene.enable_sun_shadow(sun_shadow, error)) {
+        log::warn("Cascaded sun shadows unavailable: {}", error);
+    }
+    if (!g->scene.enable_hero_shadow(
+            enhanced_graphics_available() && (hero_pixel_shadow || g->scene.sun_shadow_enabled()),
+            error
+        )) {
+        log::warn("Ratchet shadow map unavailable: {}", error);
+    }
     for (std::size_t layer = 0; layer < viewer::kLayerCount; ++layer) {
         // The caster is drawn after its shadow, so its proxy cannot darken
         // Ratchet himself. Opaque scenery has already filled the depth buffer.
@@ -985,6 +1016,19 @@ void particle_quads(std::span<const std::uint8_t> ram, const viewer::GameState& 
         renderer::EffectQuad quad;
     };
     std::vector<Item> items;
+    // RAM cannot change during extraction. Resolve each visible address pair once,
+    // retaining the content cache in particle_texture across passes/animation.
+    game::ParticleTextureCache texture_cache;
+    static const bool& texture_reference = stats::probe(
+        "OPENRAC_VK_PARTICLE_TEXTURE_REUSE_OFF",
+        "Reference: hash the texture of every visible particle"
+    );
+    const bool reuse_textures = gl::is_vulkan() && !texture_reference;
+    std::uint64_t texture_resolves = 0;
+    const auto resolve_texture = [&](std::uint32_t pixels, std::uint32_t palette) {
+        ++texture_resolves;
+        return particle_texture(ram, pixels, palette);
+    };
     for (const State::Particle& p : g->particles) {
         const std::uint8_t* r = p.record.data();
         const int kind = r[1] & 3;
@@ -1067,7 +1111,8 @@ void particle_quads(std::span<const std::uint8_t> ram, const viewer::GameState& 
         }
         // Its texture: 32 x 32 PSMT8 with a 256-colour CSM1 palette, decoded here and kept in the pool
         // at a key of its own (particle_texture).
-        q.tbp = particle_texture(ram, p.pixels, p.clut);
+        q.tbp = reuse_textures ? texture_cache.resolve(p.pixels, p.clut, resolve_texture)
+                               : resolve_texture(p.pixels, p.clut);
         q.cbp = 0;
         if (q.tbp == 0) {
             continue;
@@ -1078,6 +1123,8 @@ void particle_quads(std::span<const std::uint8_t> ram, const viewer::GameState& 
         q.alpha = r[3];
         items.push_back({z, q});
     }
+    stats::gauge("particle texture resolves", double(texture_resolves));
+    stats::gauge("particle texture reuse", reuse_textures ? 1 : 0);
     std::stable_sort(items.begin(), items.end(), [](const Item& a, const Item& b) { return a.depth > b.depth; });
     for (const Item& it : items) {
         g->effects.push_back(it.quad);
@@ -1407,6 +1454,13 @@ void mobys_drawn(std::span<const std::uint8_t> ram, std::uint32_t first, int cou
     for (int i = 0; i < count; ++i) {
         g->moby_cameras.emplace_back(first + static_cast<std::uint32_t>(i) * 0x100u, camera);
     }
+}
+
+void moby_colour(std::uint32_t object, unsigned colour, int level) {
+    if (!g) {
+        return;
+    }
+    g->scripted_moby_colours.set(level, object, colour);
 }
 
 void world_drawn(std::span<const std::uint8_t> ram) {
@@ -1750,6 +1804,10 @@ static bool g_held = false;
 
 // Draws the kept tick, the camera and mobys `alpha` of the way from the last tick's to its own,
 // and shows it. `first`: the tick's own frame (shots, the frame read back by store_image).
+bool enhanced_graphics_available() {
+    return g && gl::enhanced_rendering_available() && g->scene.probe_data_available();
+}
+
 void draw_kept(bool first) {
     const auto started = std::chrono::steady_clock::now();
     const float alpha = interpolating() ? alpha_at(next_display(started)) : 1.0f;
@@ -1774,6 +1832,16 @@ void draw_kept(bool first) {
                 auto it = k.prev_matrices.find(k.addresses[i]);
                 if (it != k.prev_matrices.end()) {
                     live[i].matrix = blend_matrix(it->second, live[i].matrix, alpha);
+                    const auto sphere = k.prev_spheres.find(k.addresses[i]);
+                    live[i].world_sphere = sphere == k.prev_spheres.end()
+                                               ? std::array<float, 4>{}
+                                               : viewer::moby_sphere_envelope(
+                                                     sphere->second,
+                                                     it->second,
+                                                     k.live[i].world_sphere,
+                                                     k.live[i].matrix,
+                                                     live[i].matrix
+                                                 );
                 }
             }
         }
@@ -1825,12 +1893,18 @@ void draw_kept(bool first) {
         ? std::min(1.0f, kTvAspect * static_cast<float>(box.height) / static_cast<float>(box.width)) : 1.0f;
     std::string error;
     const int samples = std::clamp(settings::get().msaa, 1, renderer::FrameBuffer::max_samples());
+    const bool sampleable_depth = samples == 1 && enhanced_graphics_available()
+                                  && settings::get().enhanced_graphics;
     if (box.width > 0 && box.height > 0
-        && (g->frame.width() != width || g->frame.height() != height || g->frame.samples() != samples)) {
-        if (!g->frame.create(width, height, error, samples) && samples > 1) {
+        && (g->frame.width() != width || g->frame.height() != height || g->frame.samples() != samples
+            || (g->frame.depth_texture() != 0) != sampleable_depth)) {
+        if (!g->frame.create(width, height, error, samples, sampleable_depth) && samples > 1) {
             // A card that refuses the samples it listed: the frame without them.
             log::warn("{}; drawing without anti-aliasing", error);
-            g->frame.create(width, height, error, 1);
+            g->frame.create(
+                width, height, error, 1,
+                enhanced_graphics_available() && settings::get().enhanced_graphics
+            );
         }
         log::info("frame {}x{} for a picture of {}x{} pixels, {} sample(s) a pixel", g->frame.width(),
                   g->frame.height(), box.width, box.height, g->frame.samples());
@@ -1839,6 +1913,17 @@ void draw_kept(bool first) {
         g->renderer->textures().set_anisotropy(static_cast<float>(settings::get().anisotropy));
     }
     renderer::FrameInput input;
+    const auto& graphics = settings::get();
+    const bool enhanced = enhanced_graphics_available() && graphics.enhanced_graphics;
+    g->scene.set_probe_lighting(enhanced && graphics.probe_lighting, graphics.probe_gi_multiplier);
+    g->scene.set_probe_bias(graphics.probe_normal_bias, graphics.probe_view_bias);
+    g->scene.set_probe_spheres(graphics.probe_spheres);
+    input.sun_pixel_shadow = enhanced && graphics.enhanced_shadows && g->scene.sun_shadow_enabled()
+                             && k.has_camera && k.level >= 0 && k.level < 19;
+    input.hero_pixel_shadow = enhanced && graphics.enhanced_shadows
+                              && g->scene.hero_shadow_enabled() && k.hero_airborne.has_value()
+                              && k.has_camera && k.level >= 0 && k.level < 19;
+    input.hero_airborne = k.hero_airborne.value_or(false);
     input.shadow_extrusion = k.shadow_state.extrusion;
     if (k.shadow_state.enabled) input.shadow_heights = k.shadow_state.heights;
     auto shadows = k.shadows;
@@ -1892,6 +1977,17 @@ void draw_kept(bool first) {
         0.05f, 2000.0f
     );
     input.camera.position = state.camera_position;
+    g->scene.update_probe_regions(input.camera);
+    input.after_world_depth =
+        g->scene.compute_probe_selection()
+            ? std::function<void(unsigned, int, int)>([&](unsigned depth, int width, int height) {
+                  g->scene.select_visible_probe_regions(depth, input.camera, width, height);
+              })
+            : std::function<void(unsigned, int, int)>{};
+    input.gtao_settings = settings::get().gtao_settings;
+    // Honor the user's GTAO setting alongside probe GI and modern shadows.
+    // Mesh shaders apply AO to indirect lighting before direct light is added.
+    input.gtao = enhanced && graphics.gtao && has_camera && (k.draws & 0x1Fu) != 0;
     input.frame = k.frame;
     input.strip_vertices = k.strip_vertices;
     input.strips = k.strips;
@@ -1982,6 +2078,7 @@ void draw_kept(bool first) {
         debug_overlay::before_render(g->renderer.get());
         const stats::Scope render_scope("render");
         renderer::RenderTarget target{g->frame.id(), width, height, picture_scale};
+        target.depth_texture = g->frame.depth_texture();
         target.resolve_framebuffer = g->frame.resolve_target();
         target.resolves_itself = g->frame.resolves_itself();
         target.wide_2d = picture_scale < 1.0f && settings::get().hud == settings::Hud::Edges;
@@ -2127,7 +2224,8 @@ void window_event(const SDL_Event& event) {
 }
 
 // The window's own keys: F11 and Alt+Return change between fullscreen and the window, F9 and F10
-// turn the port's volume down and up a tenth, F2 shows or hides the frame counter. True when the event was one of them.
+// turn the port's volume down and up a tenth, F2 shows or hides the frame counter,
+// and F4 toggles enhanced graphics. True when the event was one of them.
 bool window_key(const SDL_Event& event) {
     window_event(event);
     if (event.type != SDL_EVENT_KEY_DOWN || event.key.repeat) {
@@ -2136,6 +2234,18 @@ bool window_key(const SDL_Event& event) {
     if (event.key.key == SDLK_F2) {  // the frame counter, as the Video options' row
         settings::get().show_fps = !settings::get().show_fps;
         settings::save();
+        return true;
+    }
+    if (event.key.key == SDLK_F4 && gl::enhanced_rendering_available()) {
+        if (!enhanced_graphics_available()) {
+            debug_overlay::notice("Enhanced lighting requires compatible probe data for this level."
+            );
+            return true;
+        }
+        auto& graphics = settings::get();
+        graphics.enhanced_graphics = !graphics.enhanced_graphics;
+        settings::save();
+        log::info("enhanced graphics {}", graphics.enhanced_graphics ? "on" : "off");
         return true;
     }
     if (event.key.key == SDLK_F9 || event.key.key == SDLK_F10) {
@@ -2518,6 +2628,14 @@ bool frame(std::span<const std::uint8_t> ram, std::uint32_t chain, std::uint32_t
             continue;
         }
         viewer::Instance instance{cls->second.first, m.matrix, {1, 1, 1, 1}};
+        instance.occlusion = m.occlusion;
+        if (extra || into_texture.contains(m.address)) {
+            instance.occlusion = viewer::Pvs::always;
+        }
+        // Authored bounds do not cover debug stand-ins or replacement meshes.
+        if (!cls->second.second && g->level.overridden_models == 0) {
+            instance.world_sphere = m.world_sphere;
+        }
         // How MobyProc blends it (ReRAC's MobyBlend, from the game's moby draw): mode bit 0x200
         // (+0x34) adds it; an alpha (+0x23) below 0x80 blends it at that alpha (the explosions'
         // flashes start at 0x20..0x40 and fade out; a fireball can be spawned below 0x80).
@@ -2550,6 +2668,16 @@ bool frame(std::span<const std::uint8_t> ram, std::uint32_t chain, std::uint32_t
             instance.moby_ambient = {b[0x3C] / 128.0f, b[0x3D] / 128.0f, b[0x3E] / 128.0f,
                                      (b[0x34] & 0x10) != 0 ? static_cast<float>(glow) + 1.0f : 0.0f};
         }
+        // Preserve explicit gameplay colour writes while that RGB is still
+        // current. Countdown crates restore their saved colour between flashes;
+        // once restored they automatically resume normal GI. No class whitelist.
+        if (m.address + 0x3f <= ram.size()) {
+            const auto* b = ram.data() + m.address;
+            const unsigned colour = b[0x3c] | b[0x3d] << 8 | b[0x3e] << 16;
+            if (g->scripted_moby_colours.matches(g->loaded, m.address, colour)) {
+                instance.moby_light[3] = -1.0f;
+            }
+        }
         // Drawn by the game with a camera of its own: placed so the world's camera sees it where
         // that camera did (M' = V_world^-1 V_own M), as ReRAC draws the menu's frame objects.
         for (const auto& [address, camera] : g->moby_cameras) {
@@ -2560,6 +2688,10 @@ bool frame(std::span<const std::uint8_t> ram, std::uint32_t chain, std::uint32_t
                 // One of the 2D layer's: in a picture wider than the game's it is cut at the game's
                 // picture's sides (mesh.vert), where those parked beside the screen stay unseen.
                 instance.moby_light[3] = 2.0f;
+            }
+            if (address == m.address) {
+                instance.world_sphere = {};  // this object belongs to another camera's space
+                instance.occlusion = viewer::Pvs::always;
             }
             if (address == m.address
                 && (camera.camera_position != state.camera_position || camera.forward != state.forward)) {
@@ -2621,6 +2753,8 @@ bool frame(std::span<const std::uint8_t> ram, std::uint32_t chain, std::uint32_t
             target_mobys.back().camera.focal_y = frame_focal[1];
             continue;
         }
+        instance.hero_shadow_caster = m.class_id == 0 && !extra && g->loaded >= 0 && g->loaded < 19
+                                      && instance.moby_light[3] < 1.5f && instance.tint[3] > 0;
         live_joints.push_back(instance.palette >= 0 ? joints : 0);
         if (shadow_directions_address() != 0 && g->loaded >= 0 && g->loaded < 19 && animate
             && m.class_id == 0 && !extra && instance.moby_light[3] < 1.5f && instance.tint[3] > 0.0f) {
@@ -2652,6 +2786,11 @@ bool frame(std::span<const std::uint8_t> ram, std::uint32_t chain, std::uint32_t
             std::vector<float> sets(16 * 16);
             std::memcpy(sets.data(), ram.data() + bank, sets.size() * sizeof(float));
             g->scene.set_light_sets(sets);
+            if (bank + 16 * 0x40 + 8 * 0x20 <= ram.size()) {
+                std::array<float, 64> points{};
+                std::memcpy(points.data(), ram.data() + bank + 16 * 0x40, sizeof(points));
+                g->scene.set_point_lights(points);
+            }
         }
     }
     // What this tick drew, kept for the frames drawn until the next one (between): the scene
@@ -2669,9 +2808,11 @@ bool frame(std::span<const std::uint8_t> ram, std::uint32_t chain, std::uint32_t
     k.prev_state = k.state;
     k.has_prev_state = k.has_state;
     k.prev_matrices.clear();
+    k.prev_spheres.clear();
     k.prev_poses.clear();
     for (std::size_t i = 0; i < k.live.size() && i < k.addresses.size(); ++i) {
         k.prev_matrices[k.addresses[i]] = k.live[i].matrix;
+        k.prev_spheres[k.addresses[i]] = k.live[i].world_sphere;
         if (i < k.joints.size() && k.joints[i] > 0 && k.live[i].palette >= 0) {
             k.prev_poses[k.addresses[i]] = {k.live[i].palette, k.joints[i]};
         }
@@ -2683,6 +2824,9 @@ bool frame(std::span<const std::uint8_t> ram, std::uint32_t chain, std::uint32_t
     k.shadow_moby = shadow_moby;
     k.prev_shadow_state = k.shadow_state;
     k.shadow_state = shadow_state;
+    k.hero_airborne = hero_state_address() != 0
+                          ? viewer::hero_airborne(ram, OPENRAC_DATA(hero_state_address()))
+                          : std::nullopt;
     k.state = state;
     k.has_state = true;
     k.live = std::move(live);

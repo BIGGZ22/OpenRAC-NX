@@ -24,8 +24,10 @@
 #include <string>
 #include <vector>
 
+#include "enhanced/lighting/emission.h"
 #include "renderer/math.h"
 #include "renderer/texture.h"
+#include "viewer/pvs.h"
 
 namespace openrac::viewer {
 
@@ -56,6 +58,11 @@ struct Material {
     bool cutout = false;  // glTF alphaMode MASK: alpha test at 0.5
     bool blend = false;   // glTF alphaMode BLEND
     std::array<float, 4> colour{1.0f, 1.0f, 1.0f, 1.0f};
+    Vec3 emission{};  // shared linear emitted radiance, independent of diffuse lighting
+    int emission_image = -1;
+    lighting::EmissionMask emission_mask = lighting::EmissionMask::None;
+    bool emission_vertex_colour = false;
+    float diffuse_scale = 1;
 };
 
 struct Primitive {
@@ -63,6 +70,8 @@ struct Primitive {
     std::uint32_t index_count = 0;
     int material = 0;
     int shell = -1;  // a sky's: the game's shell number (its node Sky_N), for the shell's matrix
+    int terrain_fragment = -1;
+    std::uint16_t occlusion = Pvs::always;
 };
 
 struct Model {
@@ -84,11 +93,20 @@ struct Instance {
     int lights = -1;
     // A live moby lit as the game lights it: its light word (set 0, set 1, the cross-fade
     // 0..1; w = 1 to light it) and its ambient colour (RGB bytes / 128).
+    // w: 0 static, 1 live world, 2 UI; -1 adds scripted RGB as emission alongside GI.
     std::array<float, 4> moby_light{0.0f, 0.0f, 0.0f, 0.0f};
     std::array<float, 4> moby_ambient{0.5f, 0.5f, 0.5f, 1.0f};
     // How a live moby is blended, as MobyProc picks it (the explosions' flashes and fireballs,
     // a pickup fading in): 0 drawn as it is, 1 blended at its alpha (tint's w), 2 added.
     int blend = 0;
+    bool hero_shadow_caster = false;  // live Ratchet only; separate from world sun casters
+    // Explicit initial-state bake selection, never inferred from lack of a skeleton.
+    // Destructible scenery can retain baked lighting after it is removed.
+    bool bake_static = false;
+    bool stand_in = false;  // missing mesh: a debug box must never enter transport
+    // Game-maintained animated bound, already in world units; zero radius is unknown.
+    std::array<float, 4> world_sphere{};
+    std::uint16_t occlusion = Pvs::always;
 };
 
 // What the viewer draws, in the game's order.
@@ -106,6 +124,7 @@ inline constexpr std::size_t kLayerCount = static_cast<std::size_t>(Layer::Count
 const char* layer_name(Layer layer);
 
 struct LevelData {
+    Pvs pvs;
     std::filesystem::path dir;
     // A mod's folder for this level (the --mods folder's level_NN, editor/overrides.py): a mesh or
     // texture there is read in place of the level's own of the same path (an upscaled texture, a
@@ -114,6 +133,9 @@ struct LevelData {
     int overridden_models = 0;
     int overridden_images = 0;
     int level = -1;
+    unsigned emission_profile_revision = 0;  // built-in bake-affecting material defaults
+    // Authored animated surfaces exported for static transport, never drawn twice.
+    std::vector<Instance> bake_surfaces;
     std::vector<Vertex> vertices;
     std::vector<std::uint32_t> indices;
     std::vector<Model> models;
@@ -133,6 +155,8 @@ struct LevelData {
     // factor), direction A, colour B, direction B; empty when the export has none.
     std::vector<float> light_sets;
     std::array<float, 3> background{0.0f, 0.0f, 0.0f};  // where no sky shell covers
+    // Editor's static sky-shell panorama, separate from uploaded mesh textures.
+    renderer::Rgba8Image sky_panorama;
     Vec3 bounds_min{};
     Vec3 bounds_max{};
     int missing_images = 0;

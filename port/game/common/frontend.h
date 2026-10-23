@@ -28,6 +28,7 @@ bool open(const std::string& game_id, const std::filesystem::path& levels, std::
 // The game's world renderers are drawing now: the camera they draw with is kept for this frame's
 // world (a menu may set its own camera afterwards to draw its frame objects).
 void world_drawn(std::span<const std::uint8_t> ram);
+void moby_colour(std::uint32_t object, unsigned colour, int level);
 
 // The game drew `count` mobys from `first` with the camera it holds now (the page menu's frame
 // objects, drawn with the menu's camera): they are drawn as that camera saw them.
@@ -142,6 +143,9 @@ void capture_mouse(bool capture);
 // While the debug overlay holds the game (its pause): draws the last tick again and reads the
 // window's events until the overlay lets a tick through. False once the window was closed.
 bool hold();
+
+// Current level has validated, uploaded probes and a supported renderer.
+bool enhanced_graphics_available();
 
 void close();
 

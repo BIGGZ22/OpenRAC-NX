@@ -14,12 +14,14 @@ namespace openrac::gl {
 OPENRAC_GL_FUNCTIONS(OPENRAC_GL_DEFINE)
 OPENRAC_GL_DESKTOP_FUNCTIONS(OPENRAC_GL_DEFINE)
 OPENRAC_GL_ES_OPTIONAL_FUNCTIONS(OPENRAC_GL_DEFINE)
+OPENRAC_GL_COMPUTE_FUNCTIONS(OPENRAC_GL_DEFINE)
 #undef OPENRAC_GL_DEFINE
 
 namespace {
 
 bool g_loaded = false;
 Api g_api = Api::Desktop;
+bool g_vulkan = false;
 std::set<std::string, std::less<>> g_extensions;
 
 // OpenGL ES's forms of the desktop functions it lacks (OPENRAC_GL_DESKTOP_FUNCTIONS).
@@ -49,9 +51,15 @@ bool load(GetProcAddress get, std::string& missing) {
         missing += missing.empty() ? #name : " " #name;                                            \
     }
     OPENRAC_GL_FUNCTIONS(OPENRAC_GL_LOAD)
+#define OPENRAC_COMPUTE_LOAD(ret, name, params) name = reinterpret_cast<PFN_##name>(get(#name));
+    OPENRAC_GL_COMPUTE_FUNCTIONS(OPENRAC_COMPUTE_LOAD)
+#undef OPENRAC_COMPUTE_LOAD
 
     // "OpenGL ES 3.2 ..." on an ES context, by the specification's own wording of GL_VERSION.
     const GLubyte* version = glGetString != nullptr ? glGetString(GL_VERSION) : nullptr;
+    g_vulkan =
+        version != nullptr
+        && std::strstr(reinterpret_cast<const char*>(version), "OpenRAC on Vulkan") != nullptr;
     g_api = version != nullptr
                     && std::strncmp(reinterpret_cast<const char*>(version), "OpenGL ES", 9) == 0
                 ? Api::ES
@@ -116,6 +124,10 @@ bool loaded() {
 
 Api api() {
     return g_api;
+}
+
+bool is_vulkan() {
+    return g_vulkan;
 }
 
 bool has_extension(const char* name) {

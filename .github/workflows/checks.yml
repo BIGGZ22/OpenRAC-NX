@@ -52,6 +52,9 @@ jobs:
       - name: Level editor (synthetic data only)
         run: python -m unittest discover -s editor -v
 
+      - name: Probe bake planning (synthetic data only)
+        run: python -m unittest discover -s port/enhanced/tools/probes -v
+
       - name: Generated tables match games/*/game.json and the reports
         run: |
           python tools/openrac.py tables
@@ -175,6 +178,50 @@ jobs:
         env:
           SDL_VIDEO_DRIVER: offscreen
         run: ctest --preset release
+
+  # Experimental Vulkan lighting and the offline Embree baker. Keep the normal
+  # build above so compatibility and enhanced rendering are both exercised.
+  port-enhanced:
+    runs-on: ubuntu-26.04
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: hendrikmuhs/ccache-action@f09c25b45002a07be2955cbe52e8cee55643f89d # v1.2.24
+        with:
+          key: checks-port-enhanced
+          max-size: 1G
+      - name: Compilers, software Vulkan and Embree 4
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends clang ninja-build libembree-dev \
+            libgl1-mesa-dev libegl1-mesa-dev libgl1-mesa-dri mesa-vulkan-drivers vulkan-validationlayers \
+            libx11-dev libxext-dev libxrandr-dev libxcursor-dev libxi-dev libxss-dev \
+            libwayland-dev libxkbcommon-dev libasound2-dev libpulse-dev xvfb xauth
+      - name: Build enhanced lighting and baker
+        working-directory: port
+        run: |
+          cmake --preset enhanced -DOPENRAC_PORT_GAMES=OFF -DOPENRAC_PROBE_BAKER=ON
+          cmake --build --preset enhanced
+      - name: CPU, Vulkan and Embree tests
+        working-directory: port
+        env:
+          SDL_VIDEO_DRIVER: x11
+          LIBGL_ALWAYS_SOFTWARE: "1"
+        run: xvfb-run -a ctest --preset enhanced --output-junit "$PWD/build/enhanced/enhanced-tests.xml"
+      - name: Enhanced GPU and bake checks must run, not skip
+        working-directory: port
+        run: |
+          python3 - <<'PY'
+          import xml.etree.ElementTree as ET
+          required = {'probe_gpu_vulkan', 'early_lighting_vulkan', 'hero_shadow_vulkan',
+                      'sun_shadow_vulkan', 'gtao_vulkan', 'probe_bake', 'bake_liquids'}
+          cases = {case.attrib['name']: case for case in ET.parse('build/enhanced/enhanced-tests.xml').iter('testcase')}
+          missing = required - cases.keys()
+          skipped = {name for name in required & cases.keys() if cases[name].find('skipped') is not None}
+          assert not missing and not skipped, (missing, skipped)
+          PY
 
   # The native port on Fedora (the release players run): the program built as the launcher's
   # "Build the game" builds it (tools/build_port.py), against the system's SDL3, Clang and CMake,

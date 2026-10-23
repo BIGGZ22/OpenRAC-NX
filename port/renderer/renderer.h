@@ -19,13 +19,15 @@
 #pragma once
 
 #include <array>
-#include <functional>
 #include <cstdint>
+#include <functional>
 #include <memory>
 #include <span>
 #include <string>
 #include <vector>
 
+#include "enhanced/renderer/gtao.h"
+#include "enhanced/renderer/gtao_settings.h"
 #include "renderer/math.h"
 #include "renderer/shadow_volume.h"
 #include "renderer/texture_pool.h"
@@ -109,6 +111,11 @@ inline constexpr std::uint32_t kUiSprite = 2;
 inline constexpr std::uint32_t kUiGlyph = 1;
 
 struct FrameInput {
+    bool sun_pixel_shadow = false;
+    bool hero_pixel_shadow = false;
+    bool hero_airborne = false;
+    bool gtao = false;
+    GtaoSettings gtao_settings;
     std::span<const ShadowCapsule> shadow_capsules;
     Vec3 shadow_extrusion{};
     std::optional<std::array<float,2>> shadow_heights;
@@ -147,6 +154,8 @@ struct FrameInput {
     // Called with the target as drawn before the HUD's renderer (the world, without the 2D over
     // it): what a copy of the frame the game reads back should hold.
     std::function<void()> before_hud;
+    // Resolved world depth, before world colour: GPU probe selection.
+    std::function<void(unsigned, int, int)> after_world_depth;
     std::uint64_t frame = 0;
     double seconds = 0.0;
 };
@@ -172,6 +181,9 @@ struct RenderTarget {
     // of the screen's whole width) is cut at the target's sides instead, so that the HUD's parts
     // the game moved out past its picture's sides (the player's "HUD: Edges") are seen.
     bool wide_2d = false;
+    // Optional single-sample depth texture attached to this framebuffer.
+    // Borrowed for read-only compute/offscreen passes; zero keeps copy/resolve paths.
+    unsigned depth_texture = 0;
 };
 
 // The framebuffer to read `target` from (glReadPixels, glCopyTexSubImage2D, a scaled blit): the
@@ -189,6 +201,24 @@ struct RenderState {
     TexturePool& textures;
     RenderTarget target;
     FrameStats stats;
+    bool depth_prepass = false;
+    bool reuse_prepass_depth = false;
+    unsigned gtao_visibility = 0;
+    unsigned gtao_raw = 0;
+    int gtao_scale = 2;
+    float gtao_strength = 1;
+    bool early_lighting = false;
+    bool world_shadows_prepared = false;
+    int opaque_colour_phase = -1;
+    bool opaque_colour_batched = false;
+};
+
+// Legacy has inseparable prelit colour; Indirect consumes a visibility texture;
+// Unoccluded is a diagnostic view that must bypass both AO paths.
+enum class AoLighting {
+    Legacy,
+    Indirect,
+    Unoccluded
 };
 
 // One subsystem's renderer (OpenGOAL's BucketRenderer).
@@ -209,6 +239,27 @@ public:
 
     // Draw this subsystem's part of the frame.
     virtual void render(const FrameInput& input, RenderState& state) = 0;
+
+    virtual AoLighting ao_lighting() const { return AoLighting::Legacy; }
+
+    // Opaque/cutout depth only; never replay blended effects, UI or sky.
+    virtual void render_depth(const FrameInput&, RenderState&) {}
+
+    // Optional opaque colour rounds after the shared world depth prepass.
+    // Round 0 is static solid geometry; round 1 is alpha-capable geometry.
+    virtual bool batches_opaque_colour() const { return false; }
+
+    virtual bool opaque_colour_barrier() const { return true; }
+
+    virtual void render_opaque_colour(unsigned, const FrameInput&, RenderState&) {}
+
+    virtual bool enhanced_lighting_available() const { return false; }
+
+    virtual bool needs_early_lighting(const FrameInput&) const { return false; }
+
+    virtual void render_early_lighting(unsigned, const FrameInput&, RenderState&) {}
+
+    virtual bool owns_gpu_timing() const { return false; }
 
     // Free GL objects; the context is still current.
     virtual void release() {}
@@ -260,6 +311,8 @@ public:
     const FrameStats& last_stats() const { return m_stats; }
 
 private:
+    Gtao m_gtao;
+    FrameBuffer m_selection_depth;
     TexturePool m_textures;
     std::vector<std::unique_ptr<BucketRenderer>> m_renderers;
     FrameStats m_stats;

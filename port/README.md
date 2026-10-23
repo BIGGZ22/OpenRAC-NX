@@ -29,6 +29,17 @@ Studio's x64 environment itself (the MSVC libraries and the Windows SDK) and
 finds Clang and Ninja. `--source` builds from your own copy of the
 decompilation and is remembered by the build folder.
 
+Enhanced lighting is experimental and disabled in normal builds. Enable it
+with `cmake --preset enhanced` or `-DOPENRAC_ENHANCED_RENDERING=ON`. Probe GI,
+modern shadows and GTAO require Vulkan and compatible probes for the current
+level. OpenGL keeps original lighting; core Vulkan draw/culling optimizations
+work in either build. Only the offline baker needs Embree
+(`-DOPENRAC_PROBE_BAKER=ON`); the game never links it.
+
+Dedicated enhanced-rendering sources, shaders, tools and tests live in
+[`enhanced/`](enhanced/README.md). Shared renderer integration stays with its
+systems, and core Vulkan performance improvements remain in the core renderer.
+
 ## What is here
 
 | Directory | |

@@ -77,6 +77,9 @@ if(OPENRAC_VULKAN)
     renderer/vulkan/vma.cpp
   )
   target_link_libraries(openrac_vkgl PUBLIC openrac_common openrac_sdl3 openrac_vulkan PRIVATE openrac_glslang)
+  if(OPENRAC_GPU_MARKERS)
+    target_compile_definitions(openrac_vkgl PRIVATE OPENRAC_GPU_MARKERS=1)
+  endif()
   openrac_warnings(openrac_vkgl)
   # Vulkan's structures are written {VK_STRUCTURE_TYPE_...}, the rest zero.
   if(NOT MSVC OR CMAKE_CXX_COMPILER_ID MATCHES "Clang")
@@ -98,6 +101,7 @@ add_library(openrac_renderer STATIC
   renderer/direct.cpp
   renderer/effects.cpp
   renderer/framebuffer.cpp
+  enhanced/renderer/gtao.cpp
   renderer/gl.cpp
   renderer/gl_stats.cpp
   renderer/renderer.cpp
@@ -109,6 +113,10 @@ add_library(openrac_renderer STATIC
   renderer/texture_pool.cpp
 )
 openrac_embed_shaders(openrac_renderer renderer openrac::renderer
+  "${CMAKE_CURRENT_SOURCE_DIR}/enhanced/renderer/shaders/gtao.vert"
+  "${CMAKE_CURRENT_SOURCE_DIR}/enhanced/renderer/shaders/gtao_common.glsl"
+  "${CMAKE_CURRENT_SOURCE_DIR}/enhanced/renderer/shaders/gtao_evaluate.comp"
+  "${CMAKE_CURRENT_SOURCE_DIR}/enhanced/renderer/shaders/gtao_composite.frag"
   "${CMAKE_CURRENT_SOURCE_DIR}/renderer/shaders/direct.vert"
   "${CMAKE_CURRENT_SOURCE_DIR}/renderer/shaders/direct.frag"
   "${CMAKE_CURRENT_SOURCE_DIR}/renderer/shaders/effect.vert"
@@ -145,24 +153,106 @@ else()
   target_compile_options(openrac_viewer_third_party PRIVATE -w)
 endif()
 
+add_library(openrac_level_assets STATIC viewer/level.cpp)
+target_link_libraries(openrac_level_assets PUBLIC openrac_json openrac_renderer openrac_viewer_third_party openrac_assets_geometry)
+openrac_warnings(openrac_level_assets)
+
+# Scene conversion/fingerprinting is shared by activation checks and the
+# offline tool. It contains no Embree calls and is available in normal builds.
+add_library(openrac_probe_scene STATIC enhanced/tools/probes/level_scene.cpp enhanced/tools/probes/activation.cpp enhanced/tools/probes/liquids.cpp)
+target_link_libraries(openrac_probe_scene PUBLIC openrac_lighting openrac_level_assets openrac_assets_disc)
+openrac_warnings(openrac_probe_scene)
+
 add_library(openrac_viewer_lib STATIC
   viewer/camera.cpp
   viewer/game_state.cpp
-  viewer/level.cpp
   viewer/level_renderer.cpp
+  enhanced/viewer/probe_lighting.cpp
+  enhanced/viewer/probe_selection.cpp
+  enhanced/viewer/early_lighting.cpp
   viewer/moby_pose.cpp
   viewer/moby_shadow.cpp
+  enhanced/viewer/hero_shadow.cpp
+  enhanced/viewer/sun_shadow.cpp
   viewer/screenshot.cpp
 )
 openrac_embed_shaders(openrac_viewer_lib viewer openrac::viewer
   "${CMAKE_CURRENT_SOURCE_DIR}/viewer/shaders/mesh.vert"
   "${CMAKE_CURRENT_SOURCE_DIR}/viewer/shaders/mesh.frag"
+  "${CMAKE_CURRENT_SOURCE_DIR}/enhanced/viewer/shaders/early_lighting.comp"
+  "${CMAKE_CURRENT_SOURCE_DIR}/enhanced/viewer/shaders/probe_selection.comp"
+  "${CMAKE_CURRENT_SOURCE_DIR}/enhanced/viewer/shaders/early_lighting.glsl"
+  "${CMAKE_CURRENT_SOURCE_DIR}/viewer/shaders/mesh_depth.vert"
+  "${CMAKE_CURRENT_SOURCE_DIR}/viewer/shaders/mesh_depth.frag"
+  "${CMAKE_CURRENT_SOURCE_DIR}/enhanced/lighting/probes.glsl"
+  "${CMAKE_CURRENT_SOURCE_DIR}/enhanced/viewer/shaders/probe_spheres.vert"
+  "${CMAKE_CURRENT_SOURCE_DIR}/enhanced/viewer/shaders/probe_spheres.frag"
+  "${CMAKE_CURRENT_SOURCE_DIR}/enhanced/viewer/shaders/hero_shadow.frag"
+  "${CMAKE_CURRENT_SOURCE_DIR}/enhanced/viewer/shaders/shadow_depth.vert"
   "${CMAKE_CURRENT_SOURCE_DIR}/viewer/shaders/sky.vert"
   "${CMAKE_CURRENT_SOURCE_DIR}/viewer/shaders/sky.frag"
 )
-target_link_libraries(openrac_viewer_lib PUBLIC openrac_renderer openrac_viewer_third_party openrac_json
-  openrac_assets_geometry)
+target_link_libraries(openrac_viewer_lib PUBLIC openrac_renderer openrac_viewer_third_party
+  openrac_assets_geometry openrac_probe_scene)
+if(OPENRAC_VULKAN)
+  target_link_libraries(openrac_viewer_lib PRIVATE openrac_vkgl)
+  target_compile_definitions(openrac_viewer_lib PRIVATE OPENRAC_VULKAN=1)
+endif()
 openrac_warnings(openrac_viewer_lib)
+
+add_executable(probe_gpu_test enhanced/tests/probe_gpu_test.cpp)
+add_executable(early_lighting_test enhanced/tests/early_lighting_test.cpp)
+target_link_libraries(early_lighting_test PRIVATE openrac_viewer_lib openrac_platform)
+target_include_directories(early_lighting_test PRIVATE "${CMAKE_CURRENT_BINARY_DIR}/generated")
+openrac_warnings(early_lighting_test)
+if(OPENRAC_VULKAN AND OPENRAC_ENHANCED_RENDERING)
+  add_test(NAME early_lighting_vulkan COMMAND early_lighting_test)
+  set_tests_properties(early_lighting_vulkan PROPERTIES SKIP_RETURN_CODE 77
+    ENVIRONMENT "OPENRAC_GL_API=vulkan;OPENRAC_VULKAN_VALIDATION=1")
+endif()
+target_link_libraries(probe_gpu_test PRIVATE openrac_viewer_lib openrac_platform)
+target_include_directories(probe_gpu_test PRIVATE "${CMAKE_CURRENT_BINARY_DIR}/generated")
+openrac_warnings(probe_gpu_test)
+if(OPENRAC_VULKAN AND OPENRAC_ENHANCED_RENDERING)
+  add_test(NAME probe_gpu_vulkan COMMAND probe_gpu_test)
+  set_tests_properties(probe_gpu_vulkan PROPERTIES SKIP_RETURN_CODE 77
+    ENVIRONMENT "OPENRAC_GL_API=vulkan;OPENRAC_VULKAN_VALIDATION=1")
+endif()
+
+add_executable(probe_scene_test enhanced/tests/probe_scene_test.cpp)
+target_link_libraries(probe_scene_test PRIVATE openrac_probe_scene)
+openrac_warnings(probe_scene_test)
+add_test(NAME probe_scene COMMAND probe_scene_test)
+
+add_executable(hero_shadow_test enhanced/tests/hero_shadow_test.cpp)
+target_link_libraries(hero_shadow_test PRIVATE openrac_viewer_lib openrac_platform)
+openrac_warnings(hero_shadow_test)
+add_test(NAME hero_shadow_cpu COMMAND hero_shadow_test)
+if(OPENRAC_VULKAN AND OPENRAC_ENHANCED_RENDERING)
+  add_test(NAME hero_shadow_vulkan COMMAND hero_shadow_test --gpu)
+  set_tests_properties(hero_shadow_vulkan PROPERTIES SKIP_RETURN_CODE 77
+    ENVIRONMENT "OPENRAC_GL_API=vulkan;OPENRAC_VULKAN_VALIDATION=1")
+endif()
+add_executable(sun_shadow_test enhanced/tests/sun_shadow_test.cpp)
+target_link_libraries(sun_shadow_test PRIVATE openrac_viewer_lib openrac_platform)
+target_include_directories(sun_shadow_test PRIVATE "${CMAKE_CURRENT_BINARY_DIR}/generated")
+openrac_warnings(sun_shadow_test)
+add_test(NAME sun_shadow_cpu COMMAND sun_shadow_test)
+if(OPENRAC_VULKAN AND OPENRAC_ENHANCED_RENDERING)
+  add_test(NAME sun_shadow_vulkan COMMAND sun_shadow_test --gpu)
+  add_test(NAME sun_shadow_filter_reference_vulkan COMMAND sun_shadow_test --gpu)
+  set_tests_properties(sun_shadow_filter_reference_vulkan PROPERTIES SKIP_RETURN_CODE 77
+    ENVIRONMENT "OPENRAC_GL_API=vulkan;OPENRAC_VULKAN_VALIDATION=1;OPENRAC_SHADOW_FILTER_REFERENCE=1")
+  set_tests_properties(sun_shadow_vulkan PROPERTIES SKIP_RETURN_CODE 77
+    ENVIRONMENT "OPENRAC_GL_API=vulkan;OPENRAC_VULKAN_VALIDATION=1")
+endif()
+# This executable uses only the viewer's CPU level loader; it never opens a
+# window or creates a graphics context. Embree stays out of viewer/game targets.
+if(OPENRAC_PROBE_BAKER)
+  add_executable(openrac-probe-bake enhanced/tools/probes/main.cpp)
+  target_link_libraries(openrac-probe-bake PRIVATE openrac_probe_scene openrac_probe_bake)
+  openrac_warnings(openrac-probe-bake)
+endif()
 
 add_executable(openrac-viewer viewer/main.cpp)
 target_link_libraries(openrac-viewer PRIVATE openrac_viewer_lib openrac_platform)
@@ -227,6 +317,10 @@ add_test(NAME renderer_shader COMMAND renderer_shader_test)
 set_tests_properties(renderer_shader PROPERTIES SKIP_RETURN_CODE 77)
 
 add_executable(viewer_test tests/viewer_test.cpp)
+if(OPENRAC_VULKAN)
+  target_compile_definitions(viewer_test PRIVATE OPENRAC_VULKAN=1)
+  target_compile_definitions(sun_shadow_test PRIVATE OPENRAC_VULKAN=1)
+endif()
 target_link_libraries(viewer_test PRIVATE openrac_viewer_lib openrac_platform)
 openrac_warnings(viewer_test)
 add_test(NAME viewer COMMAND viewer_test "${CMAKE_CURRENT_BINARY_DIR}/viewer_test_level")
@@ -260,6 +354,15 @@ set_tests_properties(${openrac_es_bare_tests} PROPERTIES SKIP_RETURN_CODE 77 ENV
 # installed: every GL call the renderers make, carried out on Vulkan (Mesa's lavapipe in CI). Where
 # Vulkan cannot open, the window falls back to OpenGL and these repeat the tests above.
 if(OPENRAC_VULKAN)
+  add_executable(vulkan_uniform_test tests/vulkan_uniform_test.cpp)
+  target_link_libraries(vulkan_uniform_test PRIVATE openrac_renderer openrac_platform openrac_vkgl)
+  openrac_warnings(vulkan_uniform_test)
+  add_test(NAME vulkan_uniform COMMAND vulkan_uniform_test)
+  add_test(NAME vulkan_uniform_reference COMMAND vulkan_uniform_test)
+  set_tests_properties(vulkan_uniform PROPERTIES SKIP_RETURN_CODE 77 ENVIRONMENT
+    "OPENRAC_GL_API=vulkan;OPENRAC_VULKAN_VALIDATION=1")
+  set_tests_properties(vulkan_uniform_reference PROPERTIES SKIP_RETURN_CODE 77 ENVIRONMENT
+    "OPENRAC_GL_API=vulkan;OPENRAC_VULKAN_VALIDATION=1;OPENRAC_VK_UNIFORM_REUSE_OFF=1")
   add_test(NAME renderer_direct_vulkan COMMAND renderer_direct_test)
   add_test(NAME renderer_shader_vulkan COMMAND renderer_shader_test)
   add_test(NAME touch_overlay_vulkan COMMAND touch_overlay_test)
@@ -274,3 +377,47 @@ if(OPENRAC_VULKAN)
   set_tests_properties(${openrac_vulkan_tests} PROPERTIES SKIP_RETURN_CODE 77 ENVIRONMENT
     "OPENRAC_GL_API=vulkan;OPENRAC_VULKAN_VALIDATION=1")
 endif()
+
+# Spatial GTAO: plane invariance, contact occlusion, deterministic frames and MSAA depth resolve.
+add_executable(gtao_test enhanced/tests/gtao_test.cpp)
+target_link_libraries(gtao_test PRIVATE openrac_viewer_lib openrac_platform)
+openrac_warnings(gtao_test)
+if(OPENRAC_VULKAN AND OPENRAC_ENHANCED_RENDERING)
+  add_test(NAME gtao_vulkan COMMAND gtao_test)
+  target_compile_definitions(gtao_test PRIVATE OPENRAC_VULKAN=1)
+  set_tests_properties(gtao_vulkan PROPERTIES SKIP_RETURN_CODE 77 ENVIRONMENT
+    "OPENRAC_GL_API=vulkan;OPENRAC_VULKAN_VALIDATION=1")
+endif()
+
+# Preserve the original horizon shader as a pixel-exact optimization reference.
+add_executable(gtao_horizon_test enhanced/tests/gtao_horizon_test.cpp)
+target_link_libraries(gtao_horizon_test PRIVATE openrac_renderer openrac_platform)
+target_include_directories(gtao_horizon_test PRIVATE "${CMAKE_CURRENT_BINARY_DIR}/generated")
+openrac_embed_shaders(gtao_horizon_test gtao_reference openrac::test::gtao_reference
+  "${CMAKE_CURRENT_SOURCE_DIR}/enhanced/tests/shaders/gtao_horizons_reference.frag"
+  "${CMAKE_CURRENT_SOURCE_DIR}/enhanced/tests/shaders/gtao_horizons_candidates.comp")
+openrac_warnings(gtao_horizon_test)
+add_test(NAME gtao_horizon_cpu COMMAND gtao_horizon_test --cpu)
+if(OPENRAC_VULKAN AND OPENRAC_ENHANCED_RENDERING)
+  add_test(NAME gtao_horizon_vulkan COMMAND gtao_horizon_test)
+  set_tests_properties(gtao_horizon_vulkan PROPERTIES SKIP_RETURN_CODE 77 ENVIRONMENT
+    "OPENRAC_GL_API=vulkan;OPENRAC_VULKAN_VALIDATION=1")
+endif()
+
+# The disabled feature boundary is tested in both normal and enhanced builds.
+add_executable(enhanced_rendering_test enhanced/tests/enhanced_rendering_test.cpp)
+target_link_libraries(enhanced_rendering_test PRIVATE openrac_viewer_lib openrac_platform)
+openrac_warnings(enhanced_rendering_test)
+add_test(NAME enhanced_rendering_compat COMMAND enhanced_rendering_test)
+set_tests_properties(enhanced_rendering_compat PROPERTIES SKIP_RETURN_CODE 77
+  ENVIRONMENT "OPENRAC_GL_API=desktop")
+if(OPENRAC_VULKAN)
+  add_test(NAME enhanced_rendering_vulkan COMMAND enhanced_rendering_test)
+  set_tests_properties(enhanced_rendering_vulkan PROPERTIES SKIP_RETURN_CODE 77
+    ENVIRONMENT "OPENRAC_GL_API=vulkan;OPENRAC_VULKAN_VALIDATION=1")
+endif()
+
+add_executable(bake_liquids_test enhanced/tests/bake_liquids_test.cpp)
+target_link_libraries(bake_liquids_test PRIVATE openrac_probe_scene)
+openrac_warnings(bake_liquids_test)
+add_test(NAME bake_liquids COMMAND bake_liquids_test)

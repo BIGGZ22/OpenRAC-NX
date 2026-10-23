@@ -112,6 +112,24 @@ void TexturePool::upload(ImageUpload upload) {
     m_placed.erase(dbp);
 }
 
+bool TexturePool::upload_cached(const ImageUpload& upload) {
+    if (auto found = m_uploads.find(upload.dbp); found != m_uploads.end()) {
+        auto& stored = found->second;
+        const auto& old = stored.upload;
+        if (old.dbw == upload.dbw && old.dpsm == upload.dpsm && old.x == upload.x
+            && old.y == upload.y && old.width == upload.width && old.height == upload.height
+            && old.data == upload.data) {
+            // Even unchanged transfers are ordering events. A later overlapping
+            // upload must not hide this one, nor can a placement survive it.
+            stored.sequence = ++m_sequence;
+            m_placed.erase(upload.dbp);
+            return true;
+        }
+    }
+    this->upload(upload);
+    return false;
+}
+
 const TexturePool::Stored* TexturePool::upload_at(std::uint32_t block, std::uint32_t& offset) const {
     offset = 0;
     if (auto it = m_uploads.find(block); it != m_uploads.end()) {

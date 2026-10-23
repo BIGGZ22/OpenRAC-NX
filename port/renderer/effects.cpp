@@ -5,12 +5,12 @@
 
 #include <cstddef>
 #include <optional>
-#include <span>
 #include <set>
+#include <span>
 #include <vector>
 
 #include "common/log.h"
-
+#include "common/stats.h"
 #include "renderer/direct.h"
 #include "renderer/gl.h"
 #include "renderer/gs.h"
@@ -90,6 +90,22 @@ void EffectRenderer::render(const FrameInput& input, RenderState& state) {
     glBindBuffer(GL_ARRAY_BUFFER, m_vbo);
     glActiveTexture(GL_TEXTURE0);
     m_applied = AppliedState{};
+
+    static const bool& upload_reference = stats::probe(
+        "OPENRAC_VK_EFFECT_UPLOAD_REUSE_OFF", "Reference: copy and hash every effect texture upload"
+    );
+    const bool reuse_uploads = gl::is_vulkan() && !upload_reference;
+    std::uint64_t reused_uploads = 0, reused_bytes = 0;
+    const auto upload = [&](const ImageUpload& image) {
+        if (reuse_uploads) {
+            if (state.textures.upload_cached(image)) {
+                ++reused_uploads;
+                reused_bytes += image.data.size();
+            }
+        } else {
+            state.textures.upload(image);
+        }
+    };
 
     // Every strip and quad as triangles in one buffer, sent once; consecutive ones with the same GS
     // state are then one draw. A frame has hundreds to thousands of them (particles, glows), and
@@ -180,7 +196,7 @@ void EffectRenderer::render(const FrameInput& input, RenderState& state) {
             for (int u = 0; u < strip.upload_count; ++u) {
                 const std::size_t i = static_cast<std::size_t>(strip.uploads + u);
                 if (i < input.effect_uploads.size()) {
-                    state.textures.upload(input.effect_uploads[i]);
+                    upload(input.effect_uploads[i]);
                 }
             }
         }
@@ -196,8 +212,8 @@ void EffectRenderer::render(const FrameInput& input, RenderState& state) {
     // Refactor note: the uploads could travel as a list of their own instead of riding on quads.
     for (const EffectQuad& q : quads ? input.effects : std::span<const EffectQuad>{}) {
         if (q.uploads >= 0 && static_cast<std::size_t>(q.uploads) + 1 < input.effect_uploads.size()) {
-            state.textures.upload(input.effect_uploads[static_cast<std::size_t>(q.uploads)]);
-            state.textures.upload(input.effect_uploads[static_cast<std::size_t>(q.uploads) + 1]);
+            upload(input.effect_uploads[static_cast<std::size_t>(q.uploads)]);
+            upload(input.effect_uploads[static_cast<std::size_t>(q.uploads) + 1]);
         }
     }
     set.reset();
@@ -207,6 +223,8 @@ void EffectRenderer::render(const FrameInput& input, RenderState& state) {
         at += 6;
     }
     flush();
+    stats::gauge("effects uploads reused", double(reused_uploads));
+    stats::gauge("effects upload bytes reused", double(reused_bytes));
     glBindVertexArray(0);
     glDisable(GL_BLEND);
     glDepthMask(GL_TRUE);
