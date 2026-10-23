@@ -34,6 +34,7 @@ int openrac_lib_CreateThread(gaddr);
 int openrac_lib_DeleteThread(int);
 int openrac_lib_StartThread(int, gaddr);
 int openrac_lib_TerminateThread(int);
+void openrac_lib_ExitThread(void);
 int openrac_lib_ChangeThreadPriority(int, int);
 int openrac_lib_RotateThreadReadyQueue(int);
 int openrac_lib_GetThreadId(void);

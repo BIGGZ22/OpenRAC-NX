@@ -495,6 +495,14 @@ void openrac_lib_Exit(int status) {
     exit(status);
 } /* Exit */
 
+/* ExitThread (0x23): the calling thread ends. crt0 gives it to the main
+ * thread as its return address; the port's one thread is the game, so the
+ * program ends (the console's main never returns). */
+void openrac_lib_ExitThread(void) {
+    fprintf(stderr, "[game] ExitThread\n");
+    exit(0);
+} /* ExitThread */
+
 /* SetAlarm (0xFC): the callback runs once `time` horizontal blanks have
  * passed, from the timer interrupt. The port has no interrupts and treats
  * every wait as already over: it runs the callback at once. */

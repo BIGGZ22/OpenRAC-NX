@@ -164,6 +164,8 @@ func_0012F248	989snd	snd_StartMovieSound	host
 func_0012F288	989snd	snd_UpdateMovieADPCM	host
 func_0012F2B8	989snd	snd_GetMovieNAX	host
 func_0012F2E0	989snd	snd_GetDopplerPitchMod	host
+func_0012D868	game	_start	host	crt0, the program's entry point: the port starts at main and never enters it; what crt0 does, in the port's terms (rac1-pal/host/crt0.c)	void (void)
+func_0012DA30	kernel	ExitThread	host	system call 0x23: crt0's return address for the main thread, which never returns; the program ends
 func_0012DA38	boot	ParseBin	wrap	copies a level's program in: from then on, level code addresses mean that level's functions
 func_001F4630	draw	SetupGifPaging	wrap	sets the four draw flags at 0x18A3D0 retail has on before its first frame (nothing in the game's code stores them by name)
 func_00209DC0	memcard	NewGameInit	wrap	a new game starts in level 0; with --level N it starts in level N instead (rac1/host/boot.c)
