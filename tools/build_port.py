@@ -113,6 +113,10 @@ EMBREE_OPTIONS = {
     "EMBREE_GEOMETRY_INSTANCE_ARRAY": "OFF",
     "EMBREE_GEOMETRY_GRID": "OFF",
     "EMBREE_GEOMETRY_POINT": "OFF",
+    # Embree clears CMAKE_CXX_FLAGS with Clang and GCC unless told not to, which drops the build's
+    # CXXFLAGS: the launcher's Linux builds set -stdlib=libc++ there, and an Embree built against
+    # libstdc++ does not link into their baker. Embree's MSVC settings do not read this option.
+    "EMBREE_IGNORE_CMAKE_CXX_FLAGS": "OFF",
 }
 # x86-64: SSE2 for any machine, AVX and AVX2 for most; Embree picks one at run time. AVX stays on
 # beside AVX2: Embree compiles the 8-wide BVH and its primitives (bvh/bvh.cpp, BVHN<8>, CurveNi<8>)
@@ -171,9 +175,11 @@ def embree_options(machine: str | None = None) -> dict[str, str]:
     return {**EMBREE_OPTIONS, **(EMBREE_X86_ISAS if x86 else {})}
 
 
-def embree_stamp() -> dict:
-    """What an Embree build in EMBREE_DIR is of: a different one is built again."""
-    return {"version": EMBREE_VERSION, "sha256": EMBREE_SHA256, "options": embree_options()}
+def embree_stamp(env: dict[str, str]) -> dict:
+    """What an Embree build in EMBREE_DIR is of, built with ENV: a different one is built again.
+    ENV's CXXFLAGS count, since Embree is compiled with them (EMBREE_OPTIONS)."""
+    return {"version": EMBREE_VERSION, "sha256": EMBREE_SHA256, "options": embree_options(),
+            "cxxflags": env.get("CXXFLAGS", "")}
 
 
 def embree_config(install: Path) -> Path:
@@ -218,7 +224,7 @@ def build_embree(cmake: str, env: dict[str, str], compilers: tuple[str, str, str
     install = EMBREE_DIR / "install"
     stamp = EMBREE_DIR / "openrac-embree.json"
     try:
-        if json.loads(stamp.read_text(encoding="utf-8")) == embree_stamp():
+        if json.loads(stamp.read_text(encoding="utf-8")) == embree_stamp(env):
             return embree_config(install)
     except (OSError, ValueError, BuildError):
         pass
@@ -250,7 +256,7 @@ def build_embree(cmake: str, env: dict[str, str], compilers: tuple[str, str, str
     notices.mkdir(parents=True, exist_ok=True)
     for name in ("LICENSE.txt", "third-party-programs.txt"):
         shutil.copy2(source / name, notices / name)
-    stamp.write_text(json.dumps(embree_stamp(), indent=2) + "\n", encoding="utf-8")
+    stamp.write_text(json.dumps(embree_stamp(env), indent=2) + "\n", encoding="utf-8")
     return embree_config(install)
 
 

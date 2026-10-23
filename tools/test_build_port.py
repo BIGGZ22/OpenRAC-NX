@@ -175,6 +175,12 @@ class Commands(unittest.TestCase):
             self.assertFalse([key for key in options if key.startswith("EMBREE_ISA_")], machine)
             self.assertEqual(options["EMBREE_STATIC_LIB"], "ON")
 
+    def test_embree_is_compiled_with_the_builds_cxxflags(self):
+        # The launcher's Linux builds put -stdlib=libc++ in CXXFLAGS; Embree must not drop it, and
+        # an Embree built with other flags is built again.
+        self.assertEqual(build_port.EMBREE_OPTIONS["EMBREE_IGNORE_CMAKE_CXX_FLAGS"], "OFF")
+        self.assertNotEqual(build_port.embree_stamp({"CXXFLAGS": "-stdlib=libc++"}), build_port.embree_stamp({}))
+
 
 class Stamp(unittest.TestCase):
     def setUp(self):
