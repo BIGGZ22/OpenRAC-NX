@@ -39,7 +39,7 @@ The rest is the backend's own, which nothing outside this directory includes:
 (`gl_world.h`'s calls and enums) and `common` (the log, the statistics, `float_encoding.h`). Below
 them, SDL3 for the window's surface. The third-party libraries it wraps: volk (Vulkan's functions),
 the Vulkan Memory Allocator, and glslang (in `shader_compiler.cpp` only). The CMake target is
-`openrac_vkgl` (`port/cmake/Window.cmake`).
+`openrac_renderer_vulkan` (`port/cmake/Window.cmake`).
 
 ## State and threads
 
