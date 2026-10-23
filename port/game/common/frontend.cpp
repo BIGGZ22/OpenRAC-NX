@@ -1386,12 +1386,7 @@ bool open(const std::string& game_id, const std::filesystem::path& levels, std::
     if (!g->window) {
         return false;
     }
-    {
-        // A first character other than 0, as this read has always taken it: 00 or 01 is off.
-        const std::string_view developer =
-            env::value(env::Var::Developer).value_or(std::string_view{});
-        platform::install_app_menus(!developer.empty() && developer.front() != '0');
-    }
+    platform::install_app_menus(env::flag(env::Var::Developer));
     set_window_icon(*g->window);
     g->swap_asked = wanted_swap();
     g->swap = g->window->set_swap_interval(g->swap_asked);
