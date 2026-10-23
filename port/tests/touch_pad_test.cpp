@@ -55,6 +55,11 @@ int main() {
     CHECK(pad.left_x == 0xFF);
     CHECK(pad.left_y >= 0x7F && pad.left_y <= 0x81);
     CHECK(pad.right_x == kStickCentre);
+    // Pushed to a diagonal, the round stick reaches the corner, as a DualShock 2's does.
+    touch.finger_move(2, left.x + 0.5f, left.y + 0.5f * touch.aspect());
+    pad = read(touch);
+    CHECK(pad.left_x == 0xFF && pad.left_y == 0xFF);
+    touch.finger_move(2, left.x + 0.5f, left.y);
     // A second finger on Square while the stick is held: both count.
     const TouchControl& square = control(touch, TouchControl::Kind::Button, Button::Square);
     touch.finger_down(3, square.x, square.y);

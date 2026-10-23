@@ -6,6 +6,7 @@
 // pacer on a fake clock, and the audio output on SDL's dummy driver.
 
 #include <array>
+#include <cmath>
 #include <cstdio>
 #include <memory>
 #include <vector>
@@ -86,6 +87,43 @@ void conversions() {
     CHECK(key_stick_byte(-1) == 0x00);
     CHECK(key_stick_byte(0) == 0x80);
     CHECK(key_stick_byte(1) == 0xFF);
+}
+
+// A round stick's diagonal reaches the square's corner, as a DualShock 2's does; along an axis,
+// half way, or already square, it stays where it was.
+void squared_sticks() {
+    const auto near = [](float a, float b) { return std::abs(a - b) < 1e-4f; };
+    float x = 0.7071f;
+    float y = -0.7071f;
+    square_stick(x, y);
+    CHECK(near(x, 1.0f) && near(y, -1.0f));
+    x = 0.5f;
+    y = 0.0f;
+    square_stick(x, y);
+    CHECK(near(x, 0.5f) && near(y, 0.0f));
+    x = 0.25f;
+    y = 0.25f;
+    square_stick(x, y);
+    CHECK(near(x, 0.35355f) && near(y, 0.35355f));
+    x = 1.0f;
+    y = 0.5f;
+    square_stick(x, y);
+    CHECK(near(x, 1.0f) && near(y, 0.5f));
+    x = 0.0f;
+    y = 0.0f;
+    square_stick(x, y);
+    CHECK(x == 0.0f && y == 0.0f);
+
+    std::uint8_t bx = 0;
+    std::uint8_t by = 0;
+    stick_bytes(0, 0, bx, by);
+    CHECK(bx == 0x80 && by == 0x80);
+    stick_bytes(23170, 23170, bx, by);  // a round stick at 45 degrees, down and right
+    CHECK(bx == 0xFF && by == 0xFF);
+    stick_bytes(-23170, -23170, bx, by);
+    CHECK(bx == 0x00 && by == 0x00);
+    stick_bytes(32767, 0, bx, by);
+    CHECK(bx == 0xFF && by == 0x80);
 }
 
 void keyboard() {
@@ -175,6 +213,7 @@ int main() {
     pad_bits();
     read_buffer();
     conversions();
+    squared_sticks();
     keyboard();
     pacer();
     audio();

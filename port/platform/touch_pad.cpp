@@ -19,8 +19,8 @@ constexpr float kStickZoneRight = 0.42f;
 
 using Kind = TouchControl::Kind;
 
-std::uint8_t axis_byte(float offset, float radius) {
-    const float v = std::clamp(offset / radius, -1.0f, 1.0f);
+std::uint8_t axis_byte(float v) {
+    v = std::clamp(v, -1.0f, 1.0f);
     return static_cast<std::uint8_t>(std::lround(127.5f + v * 127.5f));
 }
 
@@ -268,12 +268,17 @@ void TouchPad::apply(Pad& pad) const {
         float dx = 0.0f;
         float dy = 0.0f;
         knob(i, dx, dy);
+        // The knob stays in its circle: squared as the DualShock 2's (pad.h), so a thumb pushed to
+        // a diagonal runs.
+        dx /= c.radius;
+        dy /= c.radius;
+        square_stick(dx, dy);
         if (c.kind == Kind::LeftStick) {
-            pad.left_x = axis_byte(dx, c.radius);
-            pad.left_y = axis_byte(dy, c.radius);
+            pad.left_x = axis_byte(dx);
+            pad.left_y = axis_byte(dy);
         } else {
-            pad.right_x = axis_byte(dx, c.radius);
-            pad.right_y = axis_byte(dy, c.radius);
+            pad.right_x = axis_byte(dx);
+            pad.right_y = axis_byte(dy);
         }
     }
 }

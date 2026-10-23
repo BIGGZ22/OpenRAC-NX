@@ -4,6 +4,7 @@
 #include "platform/pad.h"
 
 #include <algorithm>
+#include <cmath>
 
 namespace openrac::platform {
 
@@ -76,6 +77,27 @@ std::uint8_t stick_byte(std::int16_t axis) {
     // -32768..32767 shifted to 0..65535, keeping the top byte: 0 lands on
     // 0x80 exactly, the extremes on 0x00 and 0xFF.
     return static_cast<std::uint8_t>((static_cast<int>(axis) + 32768) >> 8);
+}
+
+void square_stick(float& x, float& y) {
+    const float larger = std::max(std::abs(x), std::abs(y));
+    if (larger <= 0.0f) {
+        return;
+    }
+    const float scale = std::min(std::sqrt(x * x + y * y), 1.0f) / larger;
+    x = std::clamp(x * scale, -1.0f, 1.0f);
+    y = std::clamp(y * scale, -1.0f, 1.0f);
+}
+
+void stick_bytes(std::int16_t x, std::int16_t y, std::uint8_t& out_x, std::uint8_t& out_y) {
+    float fx = static_cast<float>(x) / 32768.0f;
+    float fy = static_cast<float>(y) / 32768.0f;
+    square_stick(fx, fy);
+    const auto axis = [](float v) {
+        return static_cast<std::int16_t>(std::clamp(std::lround(v * 32768.0f), -32768L, 32767L));
+    };
+    out_x = stick_byte(axis(fx));
+    out_y = stick_byte(axis(fy));
 }
 
 std::uint8_t trigger_byte(std::int16_t axis) {
