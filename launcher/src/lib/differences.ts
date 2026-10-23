@@ -37,6 +37,21 @@ export function groupDifferences(entries: DifferenceView[]): DifferenceGroup[] {
   );
 }
 
+/** The folded list in a line (Android's game page): "3 game fixes on · 7 more changes", with how
+ *  many of the fixes are off when some are. */
+export function differencesSummary(entries: DifferenceView[]): string {
+  const fixes = entries.filter((e) => e.kind === "fix");
+  const off = fixes.filter((e) => e.on === false).length;
+  const others = entries.length - fixes.length;
+  const parts: string[] = [];
+  if (fixes.length) {
+    const noun = fixes.length === 1 ? "game fix" : "game fixes";
+    parts.push(off ? `${fixes.length - off} of ${fixes.length} ${noun} on` : `${fixes.length} ${noun} on`);
+  }
+  if (others) parts.push(`${others} ${fixes.length ? "more " : ""}${others === 1 ? "change" : "changes"}`);
+  return parts.join(" · ");
+}
+
 /** A version key's two halves: `rac1/pal` -> [`rac1`, `pal`]. */
 export function splitVersion(key: string): [string, string] {
   const at = key.indexOf("/");

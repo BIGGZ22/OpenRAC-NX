@@ -34,6 +34,7 @@
   import { SITE_URL } from "$lib/links";
   import { gameArt, hideMissing } from "$lib/media";
   import { enter } from "$lib/motion";
+  import { tick } from "svelte";
   import { fly } from "svelte/transition";
   import { place, when } from "$lib/reports";
   import { isBuilt, playerAct, playerState, playerVersion } from "$lib/player.svelte";
@@ -117,8 +118,13 @@
     return `Last played ${day.charAt(0).toLowerCase()}${day.slice(1)} ${place(last)}`;
   });
 
+  /** Android's Help, folded at the page's foot until opened. */
+  let helpOpen = $state(false);
+
   /** The menu's way to the logs: Help, with its logs unfolded. */
-  function showLogs() {
+  async function showLogs() {
+    helpOpen = true;
+    await tick();
     document.getElementById("logs-list")?.setAttribute("open", "");
     const logs = document.getElementById("logs");
     logs?.scrollIntoView({ behavior: "smooth", block: "start" });
@@ -149,11 +155,15 @@
       items.push({
         label: "Logs and crash reports",
         icon: "book",
-        run: showLogs,
+        run: () => void showLogs(),
       });
     }
-    items.push({ label: "Open the game's folder", icon: "folder", run: () => void guard(api.openPath(dir)) });
-    items.push({ label: "Activity log", icon: "terminal", run: () => (app.page = "tasks") });
+    // Android: the game's files are in the Files app (Settings, Your files), and the activity log
+    // is the rail's running job.
+    if (!onAndroid) {
+      items.push({ label: "Open the game's folder", icon: "folder", run: () => void guard(api.openPath(dir)) });
+      items.push({ label: "Activity log", icon: "terminal", run: () => (app.page = "tasks") });
+    }
     if (setUp) items.push({ label: "Remove the set-up", icon: "trash", danger: true, run: () => void removeSetUp() });
     return items;
   });
@@ -291,14 +301,21 @@
           </section>
         {/if}
         {#if !!setUp || portReady}
-          <div class="below" class:pair={!!setUp} in:fly|global={enter(90)}>
+          <!-- Android: the saves alone here; Help folds at the page's foot, as a player seldom needs it. -->
+          <div class="below" class:pair={!!setUp && !onAndroid} in:fly|global={enter(90)}>
             <SaveManagerBlock version={v} />
-            {#if setUp}<ReportsBlock game={v.game} program={choice ? programOf(v.key) : null} />{/if}
+            {#if setUp && !onAndroid}<ReportsBlock game={v.game} program={choice ? programOf(v.key) : null} />{/if}
           </div>
         {/if}
         {#if portReady}
-          <!-- What the port does otherwise than the PS2 game; the game fixes switch back. -->
-          <DifferencesBlock version={v} />
+          <!-- What the port does otherwise than the PS2 game; the game fixes switch back. Folded on
+               Android, under a line of what it holds. -->
+          <DifferencesBlock version={v} foldable={onAndroid} />
+        {/if}
+        {#if setUp && onAndroid}
+          <div in:fly|global={enter(120)}>
+            <ReportsBlock game={v.game} program={choice ? programOf(v.key) : null} foldable bind:unfolded={helpOpen} />
+          </div>
         {/if}
       </div>
     {/key}

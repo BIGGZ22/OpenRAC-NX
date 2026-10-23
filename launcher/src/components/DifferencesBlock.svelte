@@ -5,14 +5,17 @@
   // changes), then the guards that keep it from crashing, then what comes with being a PC program.
   // Each entry folds open to say what the original does and what the port does, and why. Where
   // in the code it is, and the settings file, are a contributor's details: with developer tools on.
+  // `foldable` (Android): closed under its title and a line of what it holds, until opened.
+  import FoldHead from "./FoldHead.svelte";
   import { api, type Differences, type DifferenceView, type VersionView } from "$lib/api";
   import { app, toast } from "$lib/app.svelte";
-  import { groupDifferences, splitVersion } from "$lib/differences";
+  import { differencesSummary, groupDifferences, splitVersion } from "$lib/differences";
   import { enter, fold } from "$lib/motion";
   import { isPlaying } from "$lib/player.svelte";
   import { fly, slide } from "svelte/transition";
 
-  let { version }: { version: VersionView } = $props();
+  let { version, foldable = false }: { version: VersionView; foldable?: boolean } = $props();
+  let unfolded = $state(false);
 
   const developer = $derived(app.config?.developer ?? false);
   const playing = $derived(isPlaying(version));
@@ -55,66 +58,82 @@
 
 {#if data && groups.length}
   <section class="panel differences" aria-labelledby="differences-title" in:fly|global={enter()}>
-    <div class="row top">
-      <h2 id="differences-title" class="grow">Differences from the original</h2>
-      {#if developer}<span class="chip mono" title="The game's settings file">{data.settingsFile}</span>{/if}
-    </div>
-    <p class="muted">What this PC version does otherwise than the PlayStation 2 game, and why.</p>
-
-    {#each groups as group (group.kind)}
-      <div class="group">
-        <h3>{group.title}</h3>
-        <p class="about">{group.about}</p>
-        {#if group.kind === "fix" && playing}
-          <p class="about warn">
-            The game is running, so these are locked here: the game would save over a change made now. Change them in
-            the game under Options, Game fixes, or here once it has closed.
-          </p>
-        {/if}
-        <ul>
-          {#each group.entries as entry (entry.id)}
-            {@const id = `difference-${entry.id}`}
-            <li>
-              <div class="head">
-                <button
-                  class="fold grow"
-                  class:open={open[entry.id]}
-                  aria-expanded={!!open[entry.id]}
-                  aria-controls={id}
-                  onclick={() => (open[entry.id] = !open[entry.id])}>{entry.name}</button
-                >
-                {#if entry.kind === "fix"}
-                  <span class="state" class:original={entry.on === false}>{entry.on ? "On" : "Original"}</span>
-                  <input
-                    type="checkbox"
-                    class="switch"
-                    role="switch"
-                    aria-label={`${entry.name}: on is the port's fix, off plays as the original`}
-                    checked={entry.on ?? true}
-                    disabled={playing || saving === entry.id}
-                    onchange={(ev) => void setFix(entry, ev.currentTarget.checked)}
-                  />
-                {:else if entry.kind === "guard"}
-                  <span class="state">Always on</span>
-                {/if}
-              </div>
-              {#if open[entry.id]}
-                <div {id} class="explain" transition:slide={fold}>
-                  <p><strong>On a PlayStation 2</strong>{entry.original}</p>
-                  <p><strong>In OpenRAC</strong>{entry.port}</p>
-                  {#if developer && entry.refs.length}
-                    <p class="refs mono">
-                      {#if entry.setting}{entry.setting.key} ·
-                      {/if}{entry.refs.join(" · ")}
-                    </p>
-                  {/if}
-                </div>
-              {/if}
-            </li>
-          {/each}
-        </ul>
+    {#if foldable}
+      <FoldHead
+        title="Differences from the original"
+        id="differences-title"
+        controls="differences-list"
+        line={differencesSummary(data.entries)}
+        bind:open={unfolded}
+      />
+    {:else}
+      <div class="row top">
+        <h2 id="differences-title" class="grow">Differences from the original</h2>
+        {#if developer}<span class="chip mono" title="The game's settings file">{data.settingsFile}</span>{/if}
       </div>
-    {/each}
+    {/if}
+    {#if !foldable || unfolded}
+      <div id="differences-list" class="list" transition:slide={fold}>
+        {#if foldable && developer}<span class="chip mono" title="The game's settings file">{data.settingsFile}</span
+          >{/if}
+        <p class="muted">What this PC version does otherwise than the PlayStation 2 game, and why.</p>
+
+        {#each groups as group (group.kind)}
+          <div class="group">
+            <h3>{group.title}</h3>
+            <p class="about">{group.about}</p>
+            {#if group.kind === "fix" && playing}
+              <p class="about warn">
+                The game is running, so these are locked here: the game would save over a change made now. Change them
+                in the game under Options, Game fixes, or here once it has closed.
+              </p>
+            {/if}
+            <ul>
+              {#each group.entries as entry (entry.id)}
+                {@const id = `difference-${entry.id}`}
+                <li>
+                  <div class="head">
+                    <button
+                      class="fold grow"
+                      class:open={open[entry.id]}
+                      aria-expanded={!!open[entry.id]}
+                      aria-controls={id}
+                      onclick={() => (open[entry.id] = !open[entry.id])}>{entry.name}</button
+                    >
+                    {#if entry.kind === "fix"}
+                      <span class="state" class:original={entry.on === false}>{entry.on ? "On" : "Original"}</span>
+                      <input
+                        type="checkbox"
+                        class="switch"
+                        role="switch"
+                        aria-label={`${entry.name}: on is the port's fix, off plays as the original`}
+                        checked={entry.on ?? true}
+                        disabled={playing || saving === entry.id}
+                        onchange={(ev) => void setFix(entry, ev.currentTarget.checked)}
+                      />
+                    {:else if entry.kind === "guard"}
+                      <span class="state">Always on</span>
+                    {/if}
+                  </div>
+                  {#if open[entry.id]}
+                    <div {id} class="explain" transition:slide={fold}>
+                      <p><strong>On a PlayStation 2</strong>{entry.original}</p>
+                      <p><strong>In OpenRAC</strong>{entry.port}</p>
+                      {#if developer && entry.refs.length}
+                        <p class="refs mono">
+                          {#if entry.setting}{entry.setting.key} ·
+                          {/if}{entry.refs.join(" · ")}
+                        </p>
+                      {/if}
+                    </div>
+                  {/if}
+                </li>
+              {/each}
+            </ul>
+          </div>
+        {/each}
+      </div>
+    {/if}
   </section>
 {/if}
 
@@ -129,6 +148,12 @@
 
   .top {
     flex-wrap: wrap;
+  }
+
+  .list {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
   }
 
   /* A contributor's detail: a small mono chip. */

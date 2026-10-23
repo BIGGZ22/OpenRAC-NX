@@ -4,15 +4,24 @@
   // one line, the newest first, in a player's words ("Crashed on Batalia", "Played 23 minutes on
   // Kerwan"), each with Copy, Save and Delete (and all at once), after a plain question; then
   // Detailed logs. File names are a contributor's detail: shown with developer tools on.
+  // `foldable` (Android): all of it closed under its title until opened, at the page's foot.
+  import FoldHead from "$components/FoldHead.svelte";
   import Icon from "$components/Icon.svelte";
   import { api, onAndroid, type ReportEntry } from "$lib/api";
   import { app, countCrashes, dismissCrashes, guard, saveConfig } from "$lib/app.svelte";
   import { copyText } from "$lib/clipboard";
   import { DISCORD_URL, ISSUES_URL } from "$lib/links";
+  import { fold } from "$lib/motion";
   import { headline, when } from "$lib/reports";
+  import { slide } from "svelte/transition";
 
   // PROGRAM: only that version's logs and reports (a developer's chosen disc, DiscSwitch); none: all.
-  let { game, program = null }: { game: string; program?: string | null } = $props();
+  let {
+    game,
+    program = null,
+    foldable = false,
+    unfolded = $bindable(false),
+  }: { game: string; program?: string | null; foldable?: boolean; unfolded?: boolean } = $props();
 
   const developer = $derived(app.config?.developer ?? false);
   /** Rows shown before "Show all". */
@@ -37,6 +46,11 @@
   /** The crash to tell the player about: the newest, while it is recent and not dismissed (the tile's mark). */
   const latest = $derived(
     (app.crashes[game]?.recent ?? 0) > 0 ? (entries?.find((e) => e.kind === "crash") ?? null) : null,
+  );
+  /** What the list holds, said in words: a count of logs alone reads as a count of crashes, and a
+   *  player who closed the game a few times would think it had crashed. */
+  const count = $derived(
+    `${logs} ${logs === 1 ? "log" : "logs"}${crashes > 0 ? `, ${crashes} ${crashes === 1 ? "crash" : "crashes"}` : ""}`,
   );
   /** The logs' fold; the game's menu opens it ("Logs and crash reports"). */
   let open = $state(false);
@@ -115,172 +129,188 @@
 </script>
 
 <section class="panel reports" id="logs" tabindex="-1" aria-labelledby="logs-title">
-  <div class="row top">
-    <h2 id="logs-title" class="grow">Help</h2>
-    {#if latest}<span class="badge">Crashed recently</span>{/if}
-  </div>
-
-  {#if latest}
-    {@const e = latest}
-    <div class="latest" role="group" aria-label="The last crash">
-      <p class="head">
-        <Icon name="warn" size={16} />
-        <strong>{headline(e)}</strong>
-        <span class="when">{when(e.time)}</span>
-      </p>
-      <p class="say">
-        Your saves are kept. To help us fix it, send us the report in a
-        <button class="link" onclick={() => void api.openUrl(ISSUES_URL)}>GitHub issue</button>
-        or on
-        <button class="link" onclick={() => void api.openUrl(DISCORD_URL)}>Discord</button>, and say what you were
-        doing.
-      </p>
-      <span class="acts">
-        <button class="small" onclick={() => void copy(e)}>
-          <Icon name={copied === e.file ? "check" : "book"} size={14} />{copied === e.file ? "Copied" : "Copy report"}
-        </button>
-        <button class="small" onclick={() => void save(e)} disabled={saving === e.file}>
-          {#if saving === e.file}<span class="spinner"></span>{:else}<Icon name="save" size={14} />{/if}Save report
-        </button>
-        <button
-          class="ghost small"
-          onclick={() => void dismissCrashes(game)}
-          title="Hide this until the game crashes again">Dismiss</button
-        >
-      </span>
+  {#if foldable}
+    <FoldHead
+      title="Help"
+      id="logs-title"
+      controls="logs-inside"
+      line={entries?.length ? `Logs and crash reports: ${count}` : "Logs and crash reports"}
+      bind:open={unfolded}
+    >
+      {#snippet extra()}{#if latest}<span class="badge">Crashed recently</span>{/if}{/snippet}
+    </FoldHead>
+  {:else}
+    <div class="row top">
+      <h2 id="logs-title" class="grow">Help</h2>
+      {#if latest}<span class="badge">Crashed recently</span>{/if}
     </div>
   {/if}
 
-  <details id="logs-list" bind:open>
-    <summary>
-      Logs and crash reports{entries
-        ? entries.length
-          ? // What the number holds, said in words: a count of logs alone reads as a count of
-            // crashes, and a player who closed the game a few times would think it had crashed.
-            `: ${logs} ${logs === 1 ? "log" : "logs"}${crashes > 0 ? `, ${crashes} ${crashes === 1 ? "crash" : "crashes"}` : ""}`
-          : ": none yet"
-        : ""}
-    </summary>
-    <div class="inside">
-      <p class="intro muted">
-        The game keeps a log each time you play, and writes a report when it crashes. If something goes wrong, copy or
-        save one and send it to us.
-      </p>
-      <div class="row tools">
-        {#if !onAndroid}
-          <!-- Android opens no app's own folders: Save puts a report where the player chooses. -->
-          <button class="ghost small" onclick={() => void guard(api.openReportsFolder(game, false))}>
-            <Icon name="folder" size={14} />Open folder
-          </button>
-        {/if}
-        {#if entries && entries.length > 0}
-          <button class="ghost small danger" onclick={() => (asking = asking === "all" ? null : "all")}>
-            <Icon name="trash" size={14} />Delete all
-          </button>
-        {/if}
-      </div>
-
-      {#if asking === "all" && entries}
-        <div class="ask" role="alertdialog" aria-label="Delete all logs and crash reports">
-          <p>
-            Delete all {entries.length} logs and crash reports of this game? They can't be undone. Your saves are not touched.
+  {#if !foldable || unfolded}
+    <div id="logs-inside" class="inside-all" transition:slide={fold}>
+      {#if latest}
+        {@const e = latest}
+        <div class="latest" role="group" aria-label="The last crash">
+          <p class="head">
+            <Icon name="warn" size={16} />
+            <strong>{headline(e)}</strong>
+            <span class="when">{when(e.time)}</span>
           </p>
-          <span class="choices">
-            <button class="danger-solid small" onclick={() => void removeAll()} disabled={deleting}>Delete all</button>
-            <button class="ghost small" onclick={() => (asking = null)}>Keep them</button>
+          <p class="say">
+            Your saves are kept. To help us fix it, send us the report in a
+            <button class="link" onclick={() => void api.openUrl(ISSUES_URL)}>GitHub issue</button>
+            or on
+            <button class="link" onclick={() => void api.openUrl(DISCORD_URL)}>Discord</button>, and say what you were
+            doing.
+          </p>
+          <span class="acts">
+            <button class="small" onclick={() => void copy(e)}>
+              <Icon name={copied === e.file ? "check" : "book"} size={14} />{copied === e.file
+                ? "Copied"
+                : "Copy report"}
+            </button>
+            <button class="small" onclick={() => void save(e)} disabled={saving === e.file}>
+              {#if saving === e.file}<span class="spinner"></span>{:else}<Icon name="save" size={14} />{/if}Save report
+            </button>
+            <button
+              class="ghost small"
+              onclick={() => void dismissCrashes(game)}
+              title="Hide this until the game crashes again">Dismiss</button
+            >
           </span>
         </div>
       {/if}
 
-      {#if entries === null}
-        <p class="muted row"><span class="spinner"></span>Reading the logs…</p>
-      {:else if entries.length === 0}
-        <p class="empty">
-          {#if cleared}
-            All cleared. A new log is kept here each time you play, and if the game ever crashes, its report too.
-          {:else}
-            Nothing here yet. After you play, each session is listed here, and if the game ever crashes, its report too,
-            ready to send to us.
+      <details id="logs-list" bind:open>
+        <summary>
+          Logs and crash reports{entries ? (entries.length ? `: ${count}` : ": none yet") : ""}
+        </summary>
+        <div class="inside">
+          <p class="intro muted">
+            The game keeps a log each time you play, and writes a report when it crashes. If something goes wrong, copy
+            or save one and send it to us.
+          </p>
+          <div class="row tools">
+            {#if !onAndroid}
+              <!-- Android opens no app's own folders: Save puts a report where the player chooses. -->
+              <button class="ghost small" onclick={() => void guard(api.openReportsFolder(game, false))}>
+                <Icon name="folder" size={14} />Open folder
+              </button>
+            {/if}
+            {#if entries && entries.length > 0}
+              <button class="ghost small danger" onclick={() => (asking = asking === "all" ? null : "all")}>
+                <Icon name="trash" size={14} />Delete all
+              </button>
+            {/if}
+          </div>
+
+          {#if asking === "all" && entries}
+            <div class="ask" role="alertdialog" aria-label="Delete all logs and crash reports">
+              <p>
+                Delete all {entries.length} logs and crash reports of this game? They can't be undone. Your saves are not
+                touched.
+              </p>
+              <span class="choices">
+                <button class="danger-solid small" onclick={() => void removeAll()} disabled={deleting}
+                  >Delete all</button
+                >
+                <button class="ghost small" onclick={() => (asking = null)}>Keep them</button>
+              </span>
+            </div>
           {/if}
-        </p>
-        {#if failed && developer}<p class="dim mono">{failed}</p>{/if}
-      {:else}
-        <ul>
-          {#each shown as e (e.file)}
-            <li class:crash={e.kind === "crash"}>
-              <span class="kind" aria-hidden="true">
-                <Icon name={e.kind === "crash" ? "warn" : "book"} size={16} />
-              </span>
-              <span class="what">
-                <strong>{headline(e)}</strong>
-                <span class="when">{when(e.time)}</span>
-                {#if developer}<span class="file mono dim">{e.file}</span>{/if}
-              </span>
-              <span class="acts">
-                <button
-                  class="ghost small"
-                  onclick={() => void copy(e)}
-                  aria-label={`Copy the report: ${headline(e)}, ${when(e.time)}`}
-                  title="Copy"
-                >
-                  <Icon name={copied === e.file ? "check" : "book"} size={14} />
-                </button>
-                <button
-                  class="ghost small"
-                  onclick={() => void save(e)}
-                  disabled={saving === e.file}
-                  aria-label={`Save the report as a file: ${headline(e)}, ${when(e.time)}`}
-                  title="Save as a file"
-                >
-                  {#if saving === e.file}<span class="spinner"></span>{:else}<Icon name="save" size={14} />{/if}
-                </button>
-                <button
-                  class="ghost small danger"
-                  onclick={() => (asking = asking === e.file ? null : e.file)}
-                  aria-expanded={asking === e.file}
-                  aria-label={`Delete the ${noun(e)}: ${headline(e)}, ${when(e.time)}`}
-                  title="Delete"
-                >
-                  <Icon name="trash" size={14} />
-                </button>
-              </span>
-              {#if asking === e.file}
-                <div class="ask" role="alertdialog" aria-label={`Delete this ${noun(e)}?`}>
-                  <p>Delete this {noun(e)}? It can't be undone.</p>
-                  <span class="choices">
-                    <button class="danger-solid small" onclick={() => void remove(e)} disabled={deleting}>Delete</button
-                    >
-                    <button class="ghost small" onclick={() => (asking = null)}>Keep it</button>
-                  </span>
-                </div>
+
+          {#if entries === null}
+            <p class="muted row"><span class="spinner"></span>Reading the logs…</p>
+          {:else if entries.length === 0}
+            <p class="empty">
+              {#if cleared}
+                All cleared. A new log is kept here each time you play, and if the game ever crashes, its report too.
+              {:else}
+                Nothing here yet. After you play, each session is listed here, and if the game ever crashes, its report
+                too, ready to send to us.
               {/if}
-            </li>
-          {/each}
-        </ul>
-        {#if entries.length > FIRST}
-          <button class="ghost small more" onclick={() => (all = !all)} aria-expanded={all}>
-            {all ? "Show fewer" : `Show all ${entries.length}`}
-          </button>
-        {/if}
-      {/if}
+            </p>
+            {#if failed && developer}<p class="dim mono">{failed}</p>{/if}
+          {:else}
+            <ul>
+              {#each shown as e (e.file)}
+                <li class:crash={e.kind === "crash"}>
+                  <span class="kind" aria-hidden="true">
+                    <Icon name={e.kind === "crash" ? "warn" : "book"} size={16} />
+                  </span>
+                  <span class="what">
+                    <strong>{headline(e)}</strong>
+                    <span class="when">{when(e.time)}</span>
+                    {#if developer}<span class="file mono dim">{e.file}</span>{/if}
+                  </span>
+                  <span class="acts">
+                    <button
+                      class="ghost small"
+                      onclick={() => void copy(e)}
+                      aria-label={`Copy the report: ${headline(e)}, ${when(e.time)}`}
+                      title="Copy"
+                    >
+                      <Icon name={copied === e.file ? "check" : "book"} size={14} />
+                    </button>
+                    <button
+                      class="ghost small"
+                      onclick={() => void save(e)}
+                      disabled={saving === e.file}
+                      aria-label={`Save the report as a file: ${headline(e)}, ${when(e.time)}`}
+                      title="Save as a file"
+                    >
+                      {#if saving === e.file}<span class="spinner"></span>{:else}<Icon name="save" size={14} />{/if}
+                    </button>
+                    <button
+                      class="ghost small danger"
+                      onclick={() => (asking = asking === e.file ? null : e.file)}
+                      aria-expanded={asking === e.file}
+                      aria-label={`Delete the ${noun(e)}: ${headline(e)}, ${when(e.time)}`}
+                      title="Delete"
+                    >
+                      <Icon name="trash" size={14} />
+                    </button>
+                  </span>
+                  {#if asking === e.file}
+                    <div class="ask" role="alertdialog" aria-label={`Delete this ${noun(e)}?`}>
+                      <p>Delete this {noun(e)}? It can't be undone.</p>
+                      <span class="choices">
+                        <button class="danger-solid small" onclick={() => void remove(e)} disabled={deleting}
+                          >Delete</button
+                        >
+                        <button class="ghost small" onclick={() => (asking = null)}>Keep it</button>
+                      </span>
+                    </div>
+                  {/if}
+                </li>
+              {/each}
+            </ul>
+            {#if entries.length > FIRST}
+              <button class="ghost small more" onclick={() => (all = !all)} aria-expanded={all}>
+                {all ? "Show fewer" : `Show all ${entries.length}`}
+              </button>
+            {/if}
+          {/if}
+        </div>
+      </details>
+
+      <span class="live" aria-live="polite">
+        {copied ? "Copied: paste it in your message." : ""}{savedTo ? ` Saved as ${savedTo}: attach this file.` : ""}
+      </span>
+
+      <label class="option">
+        <input
+          type="checkbox"
+          checked={app.config?.detailedGameLog ?? false}
+          onchange={(ev) => void setDetailed(ev.currentTarget.checked)}
+        />
+        <span>
+          <strong>Detailed logs</strong>
+          <small>Turn this on when we ask you to: the game writes more about what it does.</small>
+        </span>
+      </label>
     </div>
-  </details>
-
-  <span class="live" aria-live="polite">
-    {copied ? "Copied: paste it in your message." : ""}{savedTo ? ` Saved as ${savedTo}: attach this file.` : ""}
-  </span>
-
-  <label class="option">
-    <input
-      type="checkbox"
-      checked={app.config?.detailedGameLog ?? false}
-      onchange={(ev) => void setDetailed(ev.currentTarget.checked)}
-    />
-    <span>
-      <strong>Detailed logs</strong>
-      <small>Turn this on when we ask you to: the game writes more about what it does.</small>
-    </span>
-  </label>
+  {/if}
 </section>
 
 <style>
@@ -291,6 +321,12 @@
     flex-direction: column;
     gap: 12px;
     scroll-margin-top: 80px;
+  }
+
+  .inside-all {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
   }
 
   h2 {
