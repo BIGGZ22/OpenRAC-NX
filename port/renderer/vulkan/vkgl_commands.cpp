@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 // Copyright (c) 2026 the OpenRAC contributors
 //
-// The frame's work for the rest of the backend (vkgl_internal.h): what waits for the frame's end, the
-// ring that carries vertices, indices, uniforms and texels to the GPU, the two command buffers and the
-// order between them, GPU timing, submission, and the render target drawing goes to.
+// The frame's work for the rest of the backend (vkgl_internal.h): what waits for the frame's end,
+// the ring that carries vertices, indices, uniforms and texels to the GPU, the two command buffers
+// and the order between them, GPU timing, submission, and the render target drawing goes to.
 
 #include <algorithm>
 #include <cstddef>

@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 // Copyright (c) 2026 the OpenRAC contributors
-// Included inside vkgl.cpp: native instance work shares its frame-slot owners.
+// Included inside vkgl_draw.cpp: native instance work shares its frame-slot owners.
 constexpr unsigned kGpuSummaryAt = kGpuPageGroups + 5 * kGpuPageDraws;
 constexpr unsigned kGpuSummaryWords = 4;
 // Input words: a four-word header, four-word group records, then candidates

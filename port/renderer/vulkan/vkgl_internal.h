@@ -41,6 +41,7 @@
 
 namespace openrac::vkgl::detail {
 
+// The names of renderer/gl.h this header uses (a header has no `using namespace`).
 using openrac::gl::GL_ALWAYS;
 using openrac::gl::GL_BACK;
 using openrac::gl::GL_CCW;
@@ -62,6 +63,9 @@ using openrac::gl::GLuint;
 
 namespace wgl = openrac::renderer::world::gl;
 
+// The frames in flight; the slots of the per-frame state that is reused when its fence signals.
+// kUnits, kAttributes and kUniformBindings are the GL limits the backend reports and keeps
+// state for; kChunk is the size of one chunk of a frame's ring.
 inline constexpr int kFrames = 2;
 inline constexpr int kUnits = 32;
 inline constexpr int kAttributes = 16;
@@ -95,6 +99,8 @@ inline constexpr GLenum kGlUnsignedSamplerBuffer = 0x8DD8;
 
 // ---- The device ----
 
+// A buffer and its memory, mapped when the host writes it: a piece of a frame's ring, or a page
+// of GPU-driven or material data. Plain data: whoever made it destroys it.
 struct Chunk {
     VkBuffer buffer = VK_NULL_HANDLE;
     VmaAllocation allocation = nullptr;
@@ -107,10 +113,13 @@ struct Chunk {
 inline constexpr unsigned kGpuPageInstances = 32768, kGpuPageGroups = 4096, kGpuPageDraws = 32768;
 inline constexpr unsigned kGpuInputBytes = 8u << 20;
 
+// The native material path's pages: the draws one page holds, and the words and bytes of one
+// material record.
 inline constexpr unsigned kMaterialDraws = 32768;
 inline constexpr unsigned kMaterialWords = 20;
 inline constexpr unsigned kMaterialBytes = kMaterialWords * sizeof(std::uint32_t);
 
+// A hash of a fixed-size array (FNV-1a over its elements), for the material pages' maps.
 template <class T, std::size_t N>
 struct ArrayHash {
     std::size_t operator()(const std::array<T, N>& key) const {
@@ -122,6 +131,8 @@ struct ArrayHash {
     }
 };
 
+// One page of the native material path: the material records and texture slots of up to
+// kMaterialDraws draws, their buffer and the descriptor set that binds them.
 struct MaterialPage {
     Chunk data;
     VkDescriptorPool pool = VK_NULL_HANDLE;
@@ -136,6 +147,8 @@ struct MaterialPage {
     unsigned draws = 0;
 };
 
+// One page of GPU-driven instances in a frame: the culling input and output, the indirect
+// arguments and their readback, and the groups and draw commands recorded into it.
 struct GpuPage {
     Chunk input, output, arguments, readback;
     std::vector<std::array<std::uint32_t, 4>> groups, commands;
@@ -144,6 +157,7 @@ struct GpuPage {
     VkDescriptorSet descriptors = VK_NULL_HANDLE;
 };
 
+// A frame slot's GPU-driven pages, how many this recording used, and its counters' state.
 struct GpuFrame {
     std::vector<GpuPage> pages;
     unsigned used = 0;
@@ -151,6 +165,8 @@ struct GpuFrame {
     std::uint64_t recording = 0, reported = 0;
 };
 
+// The GPU-driven engine (gpu_draw.inc): the culling pipelines, the indirect draws merged while
+// they share their bindings, and the counters.
 struct GpuEngine {
     GpuDrawCounters completed;
     std::uint64_t counter_floor = 0;
@@ -183,6 +199,9 @@ struct GpuEngine {
     std::array<std::uint64_t, 10> batch_breaks{};
 };
 
+// The state of one frame slot: its command pool and two command buffers, its fence and
+// semaphore, timestamp queries, descriptor pools, the ring's chunks, the deferred work, and its
+// GPU-driven and material pages. Reused when its fence has signalled.
 struct Frame {
     GpuFrame gpu;
     std::vector<MaterialPage> material_pages;
@@ -213,6 +232,7 @@ struct Frame {
     bool submitted = false;  // the fence will be signalled
 };
 
+// A Vulkan image, its memory, views and the layout it was last left in. Owned through ImagePtr.
 struct Image {
     VkImage image = VK_NULL_HANDLE;
     VmaAllocation allocation = nullptr;
@@ -229,8 +249,10 @@ struct Image {
         views;  // (base | top << 16) -> view for sampling
 };
 
+// The owner of an image: the last one to go destroys it (make_image), or retire defers that.
 using ImagePtr = std::shared_ptr<Image>;
 
+// GL's sampler parameters for a texture or a sampler object.
 struct SamplerParams {
     GLenum min = GL_NEAREST;
     GLenum mag = GL_LINEAR;
@@ -240,6 +262,8 @@ struct SamplerParams {
     bool operator==(const SamplerParams&) const = default;
 };
 
+// A GL texture: its image and format, sampler parameters and levels, or a buffer texture's
+// buffer and format.
 struct Texture {
     GLenum target = 0;
     ImagePtr image;
@@ -251,10 +275,13 @@ struct Texture {
     GLenum buffer_format = 0;
 };
 
+// A GL renderbuffer: its image.
 struct Renderbuffer {
     ImagePtr image;
 };
 
+// A GL buffer: the data as GL was given it, the version that changes with each write, where that
+// version is on the GPU, and the texel views made of it this frame.
 struct Buffer {
     bool storage = false;  // GPU-written storage must keep one allocation across frames.
     std::vector<std::uint8_t> data;
@@ -281,6 +308,7 @@ struct Buffer {
     std::uint64_t views_frame = 0;
 };
 
+// One vertex attribute of a vertex array, as glVertexAttribPointer set it.
 struct Attribute {
     bool enabled = false;
     GLint size = 4;
@@ -293,11 +321,13 @@ struct Attribute {
     GLuint divisor = 0;
 };
 
+// A GL vertex array: its attributes and its element buffer.
 struct VertexArray {
     std::array<Attribute, kAttributes> attributes{};
     GLuint elements = 0;
 };
 
+// A GL shader: its type and source, and whether it compiled with what log.
 struct Shader {
     GLenum type = 0;
     std::string source;
@@ -305,6 +335,7 @@ struct Shader {
     std::string log;
 };
 
+// A hash of a descriptor set's key (the resources it binds), for Program::descriptor_sets.
 struct DescriptorKeyHash {
     std::size_t operator()(const std::vector<std::uint64_t>& key) const {
         std::size_t hash = 0;
@@ -315,6 +346,8 @@ struct DescriptorKeyHash {
     }
 };
 
+// True unless OPENRAC_VK_UNIFORM_REUSE_OFF is set (read once): the profiling reference that
+// uploads every uniform and makes descriptor sets anew.
 inline bool reuse_uniforms() {
     static const bool& off = stats::probe(
         "OPENRAC_VK_UNIFORM_REUSE_OFF",
@@ -323,6 +356,8 @@ inline bool reuse_uniforms() {
     return !off;
 }
 
+// A GL program: its shaders, the compiled SPIR-V and what it declares (shader_compiler.h), its
+// shader modules and layouts, the default uniform block, and the descriptor sets made this frame.
 struct Program {
     std::vector<GLuint> shaders;
     bool linked = false;
@@ -353,6 +388,7 @@ struct Program {
     std::uint64_t last_set_frame = 0;
 };
 
+// A GL framebuffer object: the textures or renderbuffers attached as colour and depth.
 struct Framebuffer {
     GLuint colour_texture = 0;
     GLuint colour_renderbuffer = 0;
@@ -370,12 +406,15 @@ struct Target {
     bool operator==(const Target&) const = default;
 };
 
+// The stencil operations of one face, as glStencilOpSeparate set them.
 struct StencilFace {
     GLenum sfail = wgl::GL_KEEP;
     GLenum dpfail = wgl::GL_KEEP;
     GLenum dppass = wgl::GL_KEEP;
 };
 
+// GL's state as the GL functions set it: capabilities, blending, depth, stencil, viewport and
+// scissor, pixel store, and the bindings of units, buffers, program and framebuffers.
 struct State {
     bool blend = false, depth_test = false, cull = false, scissor_test = false,
          stencil_test = false;
@@ -421,6 +460,7 @@ struct State {
     GLuint renderbuffer = 0;
 };
 
+// GL's names for one kind of object: a map from name to object, and the next name to give.
 template <class T>
 struct Names {
     std::unordered_map<GLuint, T> objects;
@@ -454,12 +494,15 @@ struct Measures {
     double present_s = 0.0;        // acquiring, copying to the screen, submitting
 };
 
+// The clock the measures are taken with.
 using Clock = std::chrono::steady_clock;
 
+// The seconds since `start`, for the measures.
 inline double seconds_since(Clock::time_point start) {
     return std::chrono::duration<double>(Clock::now() - start).count();
 }
 
+// All of the backend's state, one of it while the backend is open (`g`).
 struct Context {
     GpuEngine gpu;
     bool bindless_supported = false;
@@ -534,14 +577,18 @@ struct Context {
     GLenum error = GL_NO_ERROR;
 };
 
+// The backend's state: made by open() and destroyed by close() (vkgl.cpp), null while closed.
+// The thread that draws uses it; on_event, from SDL's event thread, only sets `surface_lost`.
 extern Context* g;
 
+// Records `error` for glGetError, unless an earlier one is still waiting to be read.
 inline void fail(GLenum error) {
     if (g->error == GL_NO_ERROR) {
         g->error = error;
     }
 }
 
+// True when `result` is VK_SUCCESS; otherwise logs that `what` failed and returns false.
 inline bool check(VkResult result, const char* what) {
     if (result == VK_SUCCESS) {
         return true;
@@ -550,22 +597,28 @@ inline bool check(VkResult result, const char* what) {
     return false;
 }
 
+// The frame slot being recorded.
 inline Frame& frame() {
     return g->frames[static_cast<std::size_t>(g->frame)];
 }
 
+// ---- Types the files hand each other ----
+
+// A piece of a frame's ring: the buffer, the offset into it, and where the host writes it.
 struct Slice {
     VkBuffer buffer = VK_NULL_HANDLE;
     VkDeviceSize offset = 0;
     std::uint8_t* data = nullptr;
 };
 
+// A GL internal format as Vulkan has it: the format, its aspect, the bytes of one texel.
 struct Format {
     VkFormat vk = VK_FORMAT_UNDEFINED;
     VkImageAspectFlags aspect = VK_IMAGE_ASPECT_COLOR_BIT;
     int bytes = 4;  // a texel's
 };
 
+// A range of a buffer on the GPU that a draw binds.
 struct BufferRef {
     VkBuffer buffer = VK_NULL_HANDLE;
     VkDeviceSize offset = 0;
@@ -575,6 +628,7 @@ struct BufferRef {
 inline constexpr VkDeviceSize kDefaultFloat = 256;    // in the dummy buffer: (0, 0, 0, 1) as floats
 inline constexpr VkDeviceSize kDefaultInteger = 272;  // and as integers
 
+// One vertex input of a pipeline's key: location, format, stride and whether it is per instance.
 struct Input {
     std::uint32_t location, format, stride, instanced;
 };
@@ -587,31 +641,47 @@ struct Sampled {
     VkBufferView texels = VK_NULL_HANDLE;
 };
 
-// ---- vkgl_commands.cpp ----
+// ---- Defined in vkgl_commands.cpp ----
 
+// Records the indirect draws merged so far (GpuEngine::pending_*) into `main` as one call;
+// nothing when none wait. Called before anything that must come after them.
 void gpu_flush_draws();
 
+// Runs `f` when this frame slot's fence has signalled (run_deferred): for destroying what this
+// frame's commands may still use.
 void defer(std::function<void()> f);
 
+// Destroys the image's views and the image now and leaves `image` empty. Only for an image no
+// submitted command still uses; retire is for the others.
 void destroy_image_now(Image& image);
 
 // Drops a reference to an image at the end of the frame: what this frame recorded may use it.
 void retire(ImagePtr image);
 
+// Takes `size` bytes (at least 4) of this frame's ring, aligned for any use, adding a chunk
+// when the ones there are full. An empty Slice when no chunk can be made.
 Slice ring(VkDeviceSize size);
 
+// Takes `size` bytes of the ring (ring) and copies `data` into them, when `data` is not null.
 Slice ring_copy(const void* data, VkDeviceSize size);
 
+// This frame's `upload` command buffer, marked used so that it is submitted.
 VkCommandBuffer upload_cmd();
 
+// Flushes the merged draws and ends the rendering pass `main` is in, if any, forgetting the
+// bound pipeline.
 void end_rendering();
 
 // The command buffer for an operation on `image`, outside any drawing: `upload` while this
 // recording has not used it in `main` (it then runs before everything `main` does), else `main`.
 VkCommandBuffer cmd_for(Image* image, bool force_main = false);
 
+// Records into `cmd` a barrier that moves the whole image from its last layout to `to`, and
+// notes `to` in `image`. It waits on all stages and all memory: correct, not narrow.
 void barrier(VkCommandBuffer cmd, Image& image, VkImageLayout to);
 
+// Begins this frame's two command buffers afresh, empties its GPU-driven and material pages,
+// resets its timestamp queries when unused, and counts a new recording.
 void begin_buffers();
 
 // Native timestamp pairs back the existing non-nesting stats::Scope API.
@@ -619,34 +689,51 @@ void begin_buffers();
 // query or adds per-pass submissions. Slots also survive readback flushes.
 bool timing_begin(std::uint64_t serial, int section);
 
+// Ends the GPU timing section timing_begin opened (and its debug label with
+// OPENRAC_GPU_MARKERS). Handed to stats::set_gpu_hooks by open().
 void timing_end();
 
+// Hands frame slot `f`'s finished timing sections and GPU-driven counters to common/stats.h.
+// Its fence must have signalled.
 void timing_results(Frame& f);
 
 // Ends both command buffers and submits them, `upload` first; `wait` waits for them to finish
 // (a read of pixels, glFinish), and the next ones are begun.
 void submit(VkSemaphore wait_semaphore, VkSemaphore signal, bool wait);
 
+// Submits what is recorded and waits for the GPU to finish it (glReadPixels, glFinish).
 void flush_and_wait();
 
+// What framebuffer `name` draws into (0: the default framebuffer), with its size and samples.
 Target target_of(GLuint name);
 
+// Begins rendering into `t`, keeping its contents, unless `main` already renders into it.
 void ensure_rendering(const Target& t);
 
+// The part of `t` drawing may touch: the scissor box clamped to `t`, or all of `t` without the
+// scissor test.
 VkRect2D scissor_rect(const Target& t);
 
+// glClear: clears the buffers in `mask` that the write masks leave writable, inside the scissor
+// box. A clear of the whole target becomes the load operation of the rendering pass it begins.
 void clear(GLbitfield mask);
 
-// ---- vkgl_resources.cpp ----
+// ---- Defined in vkgl_resources.cpp ----
 
+// The Vulkan format, aspect and texel size for GL internal format `internal`.
 Format format_of(GLenum internal);
 
+// True for the depth formats that have a stencil part.
 bool has_stencil(VkFormat f);
 
+// Makes a 2D image of `levels` levels and `samples` samples that can be copied to and from,
+// sampled when single-sampled, and drawn into when the format allows. Null when Vulkan fails
+// (logged). The image goes with its last owner.
 ImagePtr make_image(
     const Format& format, int width, int height, int levels, VkSampleCountFlagBits samples
 );
 
+// The view of level 0 that draws into the image, made the first time it is asked for.
 VkImageView attachment_view(Image& image);
 
 // For sampling: levels base..top; a depth image's depth.
@@ -658,6 +745,8 @@ Slice stage_pixels(
     const Format& to, int width, int height, GLenum format, GLenum type, const void* pixels
 );
 
+// Records into `cmd` a copy of the staged pixels `from` into the `width` by `height` rectangle
+// at (`x`, `y`) of level `level`, moving the image to TRANSFER_DST_OPTIMAL first.
 void copy_to_image(
     VkCommandBuffer cmd,
     Image& image,
@@ -673,45 +762,76 @@ void copy_to_image(
 // level past its first, or mipmaps.
 ImagePtr with_chain(const ImagePtr& old);
 
+// Fills each level past the first with a blit of the level above (glGenerateMipmap).
 void generate_mipmaps(Image& image);
 
+// The sampler for GL's parameters `p`, made once and kept under a packed key. An `integer`
+// texture is sampled with nearest filtering only.
 VkSampler sampler_for(const SamplerParams& p, bool integer);
 
+// The first 256 bytes of the dummy buffer (zeros): what a draw binds where no buffer is.
 BufferRef dummy_buffer_ref();
 
+// Where buffer `b`'s current data is on the GPU: its own copy once it has stayed the same for
+// a few frames (or at once for GPU-written storage), else a copy in this frame's ring made once
+// per version. With `persistent` false only storage gets its own copy. The dummy buffer when
+// `b` is empty.
 BufferRef resolve(Buffer& b, bool persistent = true);
 
+// Drops the texel views made of `b`, destroyed once the frame is done with them (defer).
 void forget_views(Buffer& b);
 
+// A texel view of buffer `name` as `gl_format` (RGBA32UI, RGBA32F, RGBA8, otherwise R32UI),
+// kept for this frame; `fallback` when the buffer is missing or too small.
 VkBufferView texel_view(GLuint name, GLenum gl_format, VkBufferView fallback);
 
-// ---- vkgl_pipelines.cpp ----
+// ---- Defined in vkgl_pipelines.cpp ----
 
+// The Vulkan vertex format for `size` components (clamped to 4 at most) of GL type `type`,
+// normalised or integer as glVertexAttribPointer was told.
 VkFormat vertex_format(GLenum type, int size, bool normalized, bool integer);
 
+// The bytes of one component of GL type `type`.
 int type_bytes(GLenum type);
 
 // The kind of number a shader input of this GL type holds: 0 float, 1 unsigned, 2 signed.
 int input_kind(std::uint32_t gl_type);
 
+// The graphics pipeline for program `p` drawing `mode` into `t` with the current state and the
+// `count` vertex `inputs`, made once per key (through the pipeline cache) and kept.
 VkPipeline pipeline_for(
     Program& p, GLenum mode, const Target& t, const Input* inputs, std::uint32_t count
 );
 
+// A descriptor set of `layout` from this frame's pools, adding a pool when they are full.
+// VK_NULL_HANDLE when none can be made.
 VkDescriptorSet allocate_set(VkDescriptorSetLayout layout);
 
+// What sampler uniform `i` of program `p` reads now (what is bound to its unit), or the fallback of
+// the shader's type when nothing usable is bound.
 Sampled sampled(const Program& p, std::size_t i);
 
+// The descriptor set with program `p`'s uniform blocks, default uniforms and `samplers` for
+// this draw, reused while the same resources are bound this frame. VK_NULL_HANDLE for a
+// program that binds nothing.
 VkDescriptorSet descriptors(Program& p, const std::vector<Sampled>& samplers);
 
+// glDispatchCompute: runs the current program's compute pipeline outside a rendering pass.
 void OPENRAC_GLAPI dispatch_compute(GLuint x, GLuint y, GLuint z);
 
+// glMemoryBarrier: orders shader writes before later shader and uniform reads, whatever bits
+// were asked for.
 void OPENRAC_GLAPI memory_barrier(GLbitfield);
 
-// ---- vkgl_draw.cpp ----
+// ---- Defined in vkgl_draw.cpp ----
 
+// The bound vertex array, or vertex array 0.
 VertexArray& vertex_array();
 
+// Records one draw with the current GL state: `count` vertices or indices from `first`, or the
+// indices of `index_type` at `index_offset` when `indexed`, `instances` times. With `gpu_page`
+// it is command `gpu_command` of that GPU-driven page: the instances come from the page's
+// culled output and the draw is indirect, merged with its neighbours where it can be.
 void draw(
     GLenum mode,
     GLsizei count,
@@ -724,76 +844,115 @@ void draw(
     unsigned gpu_command = 0
 );
 
+// True when the native material path is on: the device can index its textures and
+// OPENRAC_GPU_MATERIALS_OFF is unset.
 bool material_enabled();
 
+// Prepares program `p` for the native material path when its shaders draw meshes (a model
+// matrix and material uniforms); true, with nothing done, for any other program. False when
+// the preparation fails.
 bool material_program(Program& p, const std::string& vertex, const std::string& fragment);
 
+// Empties frame slot `f`'s material pages for a new recording.
 void material_reset(Frame& f);
 
+// Destroys every frame's material pages, when the backend closes.
 void material_release();
 
+// Makes the GPU-driven culling pipelines the first time; false, for good, once that failed.
 bool gpu_make_engine();
 
+// Makes a buffer of `size` bytes for `usage` in device memory, mapped for writing when
+// `mapped`. An empty Chunk on failure.
 Chunk gpu_buffer(VkDeviceSize size, VkBufferUsageFlags usage, bool mapped);
 
+// Empties frame slot `f`'s GPU-driven pages for a new recording.
 void gpu_reset(Frame& f);
 
+// gpu_instances (vkgl.h) carried out: the instances of vertex buffer `buffer` with `bounds`,
+// to be culled on the GPU against `view`. An empty batch when GPU-driven drawing is off.
 renderer::GpuInstanceBatch gpu_make_batch(
     unsigned buffer,
     std::span<const renderer::GpuCullBounds> bounds,
     const renderer::GpuCullView& view
 );
 
+// draw_gpu_instances (vkgl.h) carried out: `count` indices from `first` for each instance of
+// `batch` the culling keeps. False for a batch of another recording, or nothing to draw.
 bool gpu_submit_draw(renderer::GpuInstanceBatch batch, unsigned first, unsigned count);
 
+// Records this frame's culling dispatches into `upload`, which runs before `main` draws.
 void gpu_record();
 
+// Reads frame slot `f`'s GPU-driven counters for the statistics; its fence has signalled.
 void gpu_results(Frame& f);
 
+// Destroys every frame's GPU-driven pages and the culling pipelines, when the backend closes.
 void gpu_release();
 
-// ---- vkgl_gl.cpp ----
+// ---- Defined in vkgl_gl.cpp ----
 
+// Lets go of buffer `b`'s GPU copy and texel views, destroyed once the frame is done with them.
 void destroy_buffer(Buffer& b);
 
+// Destroys program `p`'s shader modules, compute pipeline and layouts once the frame is done
+// with them.
 void release_program(Program& p);
 
-// ---- vkgl_present.cpp ----
+// ---- Defined in vkgl_present.cpp ----
 
+// Runs and empties the work deferred in frame slot `f` (defer). Its fence has signalled.
 void run_deferred(Frame& f);
 
+// Makes the default framebuffer's colour and depth images, `width` by `height`.
 bool make_default_framebuffer(int width, int height);
 
+// The present mode for the swap interval asked for (`interval`): immediate, FIFO relaxed or
+// FIFO, as the surface offers them; FIFO when nothing else fits.
 VkPresentModeKHR present_mode();
 
+// Makes the swapchain anew for the surface at its current size, once the device is idle. True
+// with no surface (no window).
 bool make_swapchain();
 
 // The next frame: its slot's last use waited for, its leftovers freed, its buffers begun.
 void advance();
 
+// Copies the default framebuffer into the next swapchain image and presents it, making a new
+// surface or swapchain first when the old one went. False when it cannot.
 bool present_to_screen();
 
-// ---- vkgl_device.cpp ----
+// ---- Defined in vkgl_device.cpp ----
 
+// True when the Vulkan loader offers instance layer `name`.
 bool layer_available(const char* name);
 
+// Makes the instance with the extensions the window needs, and the validation layer and its
+// messenger when `validation`. False with `error` set when it cannot.
 bool make_instance(const Config& config, bool validation, std::string& error);
 
 // The device: a graphics card before an integrated one before one that draws on the CPU, with
 // Vulkan 1.3 (dynamic rendering) and a queue that draws and shows the window.
 bool pick_device(std::string& error);
 
+// Makes the logical device with the features and extensions the backend uses, its queue, the
+// memory allocator and the pipeline cache. False with `error` set when it cannot.
 bool make_device(std::string& error);
 
+// Makes each frame slot's command pool and buffers, fence, semaphore and timestamp queries.
 bool make_frames();
 
+// Makes the dummy buffer (zeros, and the default attributes), its texel views and the 1 by 1
+// dummy image, bound where nothing else is.
 bool make_dummies();
 
 // A new surface for the window, where the old one went (renew_surface).
 bool make_surface(SDL_Window* window, std::string& error);
 
+// Fills in the device's name, driver and API versions and the GL strings from its properties.
 void describe_device();
 
+// Waits for the device, then destroys all the backend made, the device and the instance last.
 void destroy_all();
 
 }  // namespace openrac::vkgl::detail

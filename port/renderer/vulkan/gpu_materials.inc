@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 // Copyright (c) 2026 the OpenRAC contributors
-// Included inside vkgl.cpp: the native material path leaves GL shader sources unchanged.
+// Included inside vkgl_draw.cpp: the native material path leaves GL shader sources unchanged.
 
 bool material_enabled() {
     static const bool& off = stats::probe(

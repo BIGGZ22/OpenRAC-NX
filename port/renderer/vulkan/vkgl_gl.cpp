@@ -2,8 +2,8 @@
 // Copyright (c) 2026 the OpenRAC contributors
 //
 // The GL functions renderer/gl.h's table holds (vkgl_internal.h): state, textures, buffers, vertex
-// arrays, draws, shaders and programs, uniforms, samplers and framebuffers, each carried out with the
-// rest of the backend; and get_proc (vkgl.h), which hands the table its entries by name.
+// arrays, draws, shaders and programs, uniforms, samplers and framebuffers, each carried out with
+// the rest of the backend; and get_proc (vkgl.h), which hands the table its entries by name.
 
 #include <algorithm>
 #include <cmath>

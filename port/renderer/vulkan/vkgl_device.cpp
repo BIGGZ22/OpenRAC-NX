@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 // Copyright (c) 2026 the OpenRAC contributors
 //
-// Setting the device up and taking it down (vkgl_internal.h): the instance and the validation layer,
-// the physical device, the logical device and its queue, the pipeline cache on disk, the frames'
-// objects, the dummy resources, the window's surface, and destroy_all.
+// Setting the device up and taking it down (vkgl_internal.h): the instance and the validation
+// layer, the physical device, the logical device and its queue, the pipeline cache on disk, the
+// frames' objects, the dummy resources, the window's surface, and destroy_all.
 
 #include <algorithm>
 #include <cstddef>

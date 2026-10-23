@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 // Copyright (c) 2026 the OpenRAC contributors
 //
-// Draws (vkgl_internal.h): one GL draw call recorded into the frame's main command buffer. The native
-// material path (gpu_materials.inc) and the GPU-driven instances (gpu_draw.inc) are included into this
-// file and share its state.
+// Draws (vkgl_internal.h): one GL draw call recorded into the frame's main command buffer. The
+// native material path (gpu_materials.inc) and the GPU-driven instances (gpu_draw.inc) are included
+// into this file and share its state.
 
 #include <algorithm>
 #include <array>
