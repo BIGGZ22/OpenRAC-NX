@@ -51,24 +51,54 @@ Group A is the port; group B is everything else and shares no file with group A.
 ## Phase 2: the host program's structure
 
 These touch the busiest files (`frontend.cpp`, `main.cpp`, `debug_overlay.cpp`, `game/rac1/`), so
-they run one at a time per file, after the level loader and moby pool work has landed, and the rac1
-ones after the next rac1 source sync. Each split is two commits: a pure move, then the interface
-changes.
+they run one at a time per file. The rac1 ones wait for the next rac1 source sync. Each split is two
+commits: a pure move, then the interface changes. The packages are grouped in three lanes that never
+touch the same files: the frontend and scene (P2-13 to P2-18 and P2-01, P2-02, P2-04, P2-09, P2-14),
+common/, the C contracts, `main.cpp` and the debug overlay (P2-05, P2-08, P2-19 to P2-27), and work
+outside the port (P2-10 to P2-12, P2-28 to P2-35). P2-03, P2-06, P2-07 and P2-36 to P2-39 come after
+the lanes, one at a time.
 
 | Id | Package | Depends on | Status | Owner | Commits |
 |---|---|---|---|---|---|
-| P2-01 | Characterisation tests for the frontend's pure helpers (frame box, aspect, frame size, pacing, camera blend), moved to `frontend/geometry` and `frontend/pacing` | P0-03 | todo | | |
-| P2-02 | The `scene` module (`openrac_scene`) from `viewer/`: level, level renderer, moby pose and shadow, PVS, screenshot; `viewer/` becomes the program | P1-01 | todo | | |
-| P2-03 | `host::GameProfile` for rac1: the game state and the frontend's addresses and game-id branches into `game/rac1/profile.cpp`, tables per disc | P2-02, the rac1 sync, the moby pool work | todo | | |
-| P2-04 | Split `frontend.cpp`: window and desktop integration, pacing, interpolation, world submission, input, the frame in named steps | P2-01, P2-03 | todo | | |
-| P2-05 | Split `debug_overlay.cpp` by panel, and `main.cpp` into options, vsync hook, program start | P2-04 | todo | | |
-| P2-06 | Raw GL confined to `renderer/`: `renderer/ui/` for the ImGui backend, touch overlay, FPS counter, debug menu drawing | P2-05 | todo | | |
-| P2-07 | `renderer` stops including `enhanced/`: renderer and scene own the hook interfaces, enhanced registers with them | P2-02, P2-06 | todo | | |
-| P2-08 | `common/result.h` (`openrac::Result<T>`) and the C-boundary wrapper, applied to `game_host`, `mods`, `mod_scripts` entry points | P0-01 | todo | | |
-| P2-09 | The remaining `getenv` (game/common, renderer/vulkan) onto `common/env.h` | P1-02, P1-03, P2-05 | todo | | |
-| P2-10 | Python packages: `port/tools` and `editor` use `openrac_common`; the `sys.path.insert` calls go; the longest functions split | P1-05, P1-06 | todo | | |
-| P2-11 | `editor/catalogue.py` moves to `sdk/tools/` | P1-06 | todo | | |
-| P2-12 | Launcher: TypeScript types generated from Rust; `mock.ts` built on them; `src-tauri`'s `run` split | P1-07, a maintainers' pick (question 5) | todo | | |
+| P2-01 | The frontend's pure helpers (frame box, aspect, frame size, pacing, camera blend) moved to `frontend/geometry` and `frontend/pacing`, with characterisation tests | P2-13, P2-14 | todo | | |
+| P2-02 | The `scene` module (`openrac_scene`) from `viewer/`, with forwarding headers left in `viewer/` until P2-37 | P2-14 | todo | | |
+| P2-03 | `host::GameProfile` for rac1: the game state moves into `game/rac1/`, read through the profile | P2-02, P2-18, P2-27, the level loader, the rac1 sync | todo | | |
+| P2-04 | Split `frontend.cpp` 1/5: shared state into an internal header; window and desktop integration | P2-01, P2-09 | todo | | |
+| P2-05 | Split `main.cpp` into `program/`: options, vsync, levels, sound; the two old warnings fixed | P2-25 | todo | | |
+| P2-06 | Raw GL confined to `renderer/`: `renderer/ui/` | P2-37 | todo | | |
+| P2-07 | `renderer` stops including `enhanced/`: a post-process hook, GTAO registers with it | P2-06 | todo | | |
+| P2-08 | `common/result.h` (`openrac::Result<T>`) and the C-boundary wrapper | | todo | | |
+| P2-09 | `frontend.cpp`'s getenv reads onto `common/env.h`; `OPENRAC_DEVELOPER` as decided | | todo | | |
+| P2-10 | `port/tools` and the probe tools use `openrac_common`, through one bootstrap; versionmap's `mips` clash | | todo | | |
+| P2-11 | `editor/catalogue.py` moves to `sdk/tools/` | P2-32 | todo | | |
+| P2-12 | Launcher TypeScript types generated with ts-rs (proposal, question 5); `mock.ts` typed on them | P2-34 | todo | | |
+| P2-13 | Source folders for the host program's split (`program/`, `frontend/`, `debug/` globbed) | | todo | | |
+| P2-14 | The test stanzas of `Window.cmake`, `ProbeBake.cmake`, `Assets.cmake` onto the helpers | | todo | | |
+| P2-15 | Split `frontend.cpp` 2/5: input | P2-04 | todo | | |
+| P2-16 | Split `frontend.cpp` 3/5: world submission | P2-15 | todo | | |
+| P2-17 | Split `frontend.cpp` 4/5: interpolation | P2-16 | todo | | |
+| P2-18 | Split `frontend.cpp` 5/5: `frame()` in named steps | P2-17 | todo | | |
+| P2-19 | A C entry point to the `OPENRAC_*` table (new contract); `game/common/lib` reads through it | P2-08 | todo | | |
+| P2-20 | getenv in `renderer/vulkan`, Android, the probe baker and `mod_scripts.cpp` onto `common/env.h` | | todo | | |
+| P2-21 | `stats::probe` and `log.cpp` read through the env table | P2-19 | todo | | |
+| P2-22 | getenv in `main.cpp`, `debug_overlay.cpp` and `debug_menu.cpp` onto `common/env.h`; `OPENRAC_DEVELOPER` as decided | | todo | | |
+| P2-23 | The C-boundary wrapper on the entry points of mods, scripts, fixes and the window | P2-08, P2-20 | todo | | |
+| P2-24 | The getenv rule in `check_conventions.py`; CODING_CONVENTIONS.md brought up to date | P2-19, P2-21, P2-22 | todo | | |
+| P2-25 | `program/game_host.cpp`: the host side of `game_host.h`, moved out of `main.cpp` and wrapped | P2-08, P2-13, P2-22 | todo | | |
+| P2-26 | Split `debug_overlay.cpp` 1/2: internal header and inspection panels | P2-13, P2-22 | todo | | |
+| P2-27 | Split `debug_overlay.cpp` 2/2: drawer, menu bar, controls | P2-26 | todo | | |
+| P2-28 | CI: the touched-line format check fails; the layering check runs | | todo | | |
+| P2-29 | Launcher desktop entries take their titles from game.json | | todo | | |
+| P2-30 | Sister checkouts from game.json, with the env override | | todo | | |
+| P2-31 | Intel Macs ship without the probe baker | | todo | | |
+| P2-32 | The editor uses `openrac_common`; `scene_nodes` renamed; one `unit()` | P2-10 | todo | | |
+| P2-33 | Launcher: Discord glue moves into the core | | todo | | |
+| P2-34 | Launcher: first-start install move into the core; `run()` split | P2-33 | todo | | |
+| P2-35 | hostgen `main` and no_c `classify` in named steps | P2-10 | todo | | |
+| P2-36 | The frontend's rac1 addresses and game-id branches move into the profile | P2-03 | todo | | |
+| P2-37 | `game/common` includes `scene/` directly; `openrac::scene`; forwarders removed | P2-02, P2-05, P2-18, P2-27 | todo | | |
+| P2-38 | rac1 host C reads through the C entry point | P2-19, the level loader, the rac1 sync | todo | | |
+| P2-39 | `scene` stops including `enhanced/`: lighting and shadow hooks | P2-07 | todo | | |
 
 ## Phase 3: conversion and deeper abstractions
 
