@@ -19,6 +19,7 @@ TransitionLump TransitionLump::parse(ByteView lump) {
     t.m_bytes = is_wad(lump) ? wad_decompress(lump) : lump.to_vector();
     t.m_base = ByteView(t.m_bytes).u32_at(4);
 
+    // A base of zero or past the end would send every later offset outside the lump.
     if (t.m_base == 0 || t.m_base > t.m_bytes.size()) {
         fail("transition lump: data base {:#x}", t.m_base);
     }
@@ -31,6 +32,7 @@ std::size_t TransitionLump::word(std::size_t i) const {
 }
 
 ByteView TransitionLump::variant(std::size_t v) const {
+    // The lump holds a fixed number of flight variants; a larger index has no data.
     if (v >= kVariants) {
         fail("transition lump: no flight variant {}", v);
     }
@@ -51,6 +53,7 @@ ByteView TransitionLump::picture(std::size_t k) const {
     const std::size_t table = m_base + word(0x13);
     const u32 count = b.u32_at(table);
 
+    // The picture table holds count entries; a larger index would read past it.
     if (k >= count) {
         fail("transition lump: picture {} of {}", k, count);
     }
@@ -59,6 +62,7 @@ ByteView TransitionLump::picture(std::size_t k) const {
 }
 
 ByteView TransitionLump::planet_picture(s32 level) const {
+    // Only the first kLevels pictures are planet pictures; the rest are captions.
     if (level < 0 || static_cast<std::size_t>(level) >= kLevels) {
         fail("transition lump: no picture for level {}", level);
     }
@@ -67,6 +71,7 @@ ByteView TransitionLump::planet_picture(s32 level) const {
 }
 
 ByteView TransitionLump::caption(s32 language, s32 level) const {
+    // Captions exist per level only, so an index outside the level count has none.
     if (level < 0 || static_cast<std::size_t>(level) >= kLevels) {
         fail("transition lump: no caption for level {}", level);
     }
@@ -79,6 +84,7 @@ std::vector<TransitionLump::FxEntry> TransitionLump::fx_entries() const {
     const std::size_t count = word(0xa);
     const std::size_t table = word(0xb);
 
+    // The FX texture table is small; a large count means the lump is damaged.
     if (count > 64) {
         fail("transition lump: {} FX textures", count);
     }
@@ -101,6 +107,7 @@ std::vector<std::pair<s32, std::size_t>> TransitionLump::classes() const {
     const std::size_t table = word(5);
     std::vector<std::pair<s32, std::size_t>> out;
 
+    // Read one class record per entry, up to the 16 the lump can hold.
     for (std::size_t i = 0; i < count; ++i) {
         out.emplace_back(b.s32_at(table + 32 * i + 4), b.u32_at(table + 32 * i));
     }

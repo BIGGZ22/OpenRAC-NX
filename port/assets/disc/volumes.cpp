@@ -18,12 +18,15 @@ std::optional<std::pair<std::size_t, std::size_t>> section_count(
 ) {
     const u32 s = g.u32_at(pointer);
 
+    // A zero pointer means the level has no such section.
     if (s == 0) {
         return std::nullopt;
     }
 
     const s32 n = g.s32_at(s);
 
+    // A count beyond 0x10000 cannot be real, so the section pointer is damaged; stop before
+    // allocating.
     if (n < 0 || n > 0x10000) {
         fail("implausible {} count {}", what, n);
     }
@@ -33,12 +36,14 @@ std::optional<std::pair<std::size_t, std::size_t>> section_count(
 
 // A spline: s32 count, pad[3], count vec4.
 std::vector<Vec4> spline(ByteView data, s32 offset, std::string_view what, std::size_t i) {
+    // A negative offset cannot address data inside the section.
     if (offset < 0) {
         fail("{} {}: negative offset", what, i);
     }
 
     const s32 k = data.s32_at(static_cast<std::size_t>(offset));
 
+    // A negative point count is a damaged record; read_array would take it as a huge size.
     if (k < 0) {
         fail("{} {}: negative point count", what, i);
     }
@@ -51,6 +56,7 @@ std::vector<Vec4> spline(ByteView data, s32 offset, std::string_view what, std::
 }  // namespace
 
 std::size_t shape_pointer(ShapeKind kind) {
+    // Each shape kind has its own section pointer in the gameplay header.
     switch (kind) {
         case ShapeKind::Cuboid:
             return kCuboidsPointer;
@@ -66,6 +72,7 @@ std::size_t shape_pointer(ShapeKind kind) {
 }
 
 s32 shape_grid_type(ShapeKind kind) {
+    // The grid stores each shape kind under its own type number.
     switch (kind) {
         case ShapeKind::Cuboid:
             return 3;
@@ -81,8 +88,10 @@ s32 shape_grid_type(ShapeKind kind) {
 }
 
 std::optional<ShapeKind> shape_from_grid_type(s32 type) {
+    // Try each shape kind to find the one whose grid type number matches.
     for (const ShapeKind k :
          {ShapeKind::Cuboid, ShapeKind::Sphere, ShapeKind::Cylinder, ShapeKind::Pill}) {
+        // The first kind with this type number is the answer.
         if (shape_grid_type(k) == type) {
             return k;
         }
@@ -101,6 +110,7 @@ Vec3 Shape::local(Vec3 p) const {
     const Vec3 d = {p[0] - c[0], p[1] - c[1], p[2] - c[2]};
     Vec3 l{};
 
+    // Multiply by the inverse matrix's columns to take the offset into the shape's local frame.
     for (std::size_t k = 0; k < 3; ++k) {
         l[k] = inverse[0][k] * d[0] + inverse[1][k] * d[1] + inverse[2][k] * d[2];
     }
@@ -111,6 +121,7 @@ Vec3 Shape::local(Vec3 p) const {
 Vec3 Shape::world(Vec3 l) const {
     Vec3 w{};
 
+    // Apply the shape's matrix to each component, then add its translation row.
     for (std::size_t k = 0; k < 3; ++k) {
         w[k] = l[0] * matrix[0][k] + l[1] * matrix[1][k] + l[2] * matrix[2][k] + matrix[3][k];
     }
@@ -119,6 +130,7 @@ Vec3 Shape::world(Vec3 l) const {
 }
 
 std::span<const Shape> Volumes::shapes(ShapeKind kind) const {
+    // Each shape kind has its own array; the pill's shapes are in a separate array.
     switch (kind) {
         case ShapeKind::Cuboid:
             return cuboids;
@@ -136,6 +148,7 @@ std::span<const Shape> Volumes::shapes(ShapeKind kind) const {
 const Shape* Volumes::shape(ShapeKind kind, s32 index) const {
     const auto s = shapes(kind);
 
+    // An index outside the array has no shape; the caller treats that as no volume.
     if (index < 0 || static_cast<std::size_t>(index) >= s.size()) {
         return nullptr;
     }
@@ -144,6 +157,7 @@ const Shape* Volumes::shape(ShapeKind kind, s32 index) const {
 }
 
 std::optional<f32> Volumes::pill_cap_radius(s32 index) const {
+    // Pills past the tail array have no cap radius.
     if (index < 0 || static_cast<std::size_t>(index) >= pill_tail.size()) {
         return std::nullopt;
     }
@@ -154,6 +168,7 @@ std::optional<f32> Volumes::pill_cap_radius(s32 index) const {
 std::vector<Shape> parse_shapes(ByteView gameplay, ShapeKind kind) {
     const auto s = section_count(gameplay, shape_pointer(kind), "shape");
 
+    // A level with no section of this kind has no shapes of it.
     if (!s) {
         return {};
     }
@@ -164,6 +179,7 @@ std::vector<Shape> parse_shapes(ByteView gameplay, ShapeKind kind) {
 std::vector<std::vector<Vec4>> parse_paths(ByteView gameplay) {
     const u32 s = gameplay.u32_at(kPathsPointer);
 
+    // A zero pointer means the level has no paths.
     if (s == 0) {
         return {};
     }
@@ -172,6 +188,7 @@ std::vector<std::vector<Vec4>> parse_paths(ByteView gameplay) {
     const s32 data_offset = gameplay.s32_at(s + 4);
     const s32 data_size = gameplay.s32_at(s + 8);
 
+    // Negative fields would turn into huge sizes when cast to unsigned; stop on a damaged section.
     if (count < 0 || data_offset < 0 || data_size < 0) {
         fail("negative path section field");
     }
@@ -181,6 +198,7 @@ std::vector<std::vector<Vec4>> parse_paths(ByteView gameplay) {
     );
     std::vector<std::vector<Vec4>> out;
 
+    // Read one spline per path from the offset table that follows the section header.
     for (std::size_t i = 0; i < static_cast<std::size_t>(count); ++i) {
         out.push_back(spline(data, gameplay.s32_at(s + 0x10 + 4 * i), "spline", i));
     }
@@ -191,6 +209,7 @@ std::vector<std::vector<Vec4>> parse_paths(ByteView gameplay) {
 std::vector<GrindPath> parse_grind_paths(ByteView gameplay) {
     const auto sc = section_count(gameplay, kGrindPathsPointer, "grind path");
 
+    // A level with no grind path section has no grind paths.
     if (!sc) {
         return {};
     }
@@ -199,6 +218,7 @@ std::vector<GrindPath> parse_grind_paths(ByteView gameplay) {
     const s32 data_offset = gameplay.s32_at(s + 4);
     const s32 data_size = gameplay.s32_at(s + 8);
 
+    // Negative fields would turn into huge sizes when cast to unsigned; stop on a damaged section.
     if (data_offset < 0 || data_size < 0) {
         fail("negative grind path data field");
     }
@@ -211,6 +231,7 @@ std::vector<GrindPath> parse_grind_paths(ByteView gameplay) {
     const std::size_t offsets = s + 0x10 + n * kGrindPathSize;
     std::vector<GrindPath> out;
 
+    // Read each grind path's record, then its spline from the offset table.
     for (std::size_t i = 0; i < n; ++i) {
         const std::size_t r = s + 0x10 + i * kGrindPathSize;
         GrindPath g;
@@ -230,6 +251,7 @@ Volumes parse_volumes(ByteView gameplay) {
     v.cylinders = parse_shapes(gameplay, ShapeKind::Cylinder);
     v.pills = parse_shapes(gameplay, ShapeKind::Pill);
 
+    // Only levels with a pill section have cap radii to read.
     if (const auto s = section_count(gameplay, kPillsPointer, "pill")) {
         // The loader's 0x90-byte copy: +0x80 of pill i is the word after its record.
         for (std::size_t i = 0; i < s->second; ++i) {

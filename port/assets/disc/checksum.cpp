@@ -33,20 +33,24 @@ void store_be32(u8* p, u32 v) {
 void sha1_block(std::array<u32, 5>& h, const u8* block) {
     std::array<u32, 80> w{};
 
+    // The first 16 schedule words are the block itself, read big-endian.
     for (int i = 0; i < 16; ++i) {
         w[i] = load_be32(block + 4 * i);
     }
 
+    // The other 64 words expand the block by the SHA-1 message schedule.
     for (int i = 16; i < 80; ++i) {
         w[i] = std::rotl(w[i - 3] ^ w[i - 8] ^ w[i - 14] ^ w[i - 16], 1);
     }
 
     u32 a = h[0], b = h[1], c = h[2], d = h[3], e = h[4];
 
+    // Eighty rounds, each with the boolean function and constant of its group of 20.
     for (int i = 0; i < 80; ++i) {
         u32 f = 0;
         u32 k = 0;
 
+        // The round's function and constant change every 20 rounds, as the standard defines.
         if (i < 20) {
             f = (b & c) | (~b & d);
             k = 0x5a827999;
@@ -90,10 +94,12 @@ constexpr std::array<u32, 64> kSha256K = {
 void sha256_block(std::array<u32, 8>& h, const u8* block) {
     std::array<u32, 64> w{};
 
+    // The first 16 schedule words are the block itself, read big-endian.
     for (int i = 0; i < 16; ++i) {
         w[i] = load_be32(block + 4 * i);
     }
 
+    // The other 48 words expand the block by the SHA-256 message schedule.
     for (int i = 16; i < 64; ++i) {
         const u32 s0 = std::rotr(w[i - 15], 7) ^ std::rotr(w[i - 15], 18) ^ (w[i - 15] >> 3);
         const u32 s1 = std::rotr(w[i - 2], 17) ^ std::rotr(w[i - 2], 19) ^ (w[i - 2] >> 10);
@@ -102,6 +108,7 @@ void sha256_block(std::array<u32, 8>& h, const u8* block) {
 
     u32 a = h[0], b = h[1], c = h[2], d = h[3], e = h[4], f = h[5], g = h[6], hh = h[7];
 
+    // Sixty-four rounds, each with its own constant from the standard's table.
     for (int i = 0; i < 64; ++i) {
         const u32 s1 = std::rotr(e, 6) ^ std::rotr(e, 11) ^ std::rotr(e, 25);
         const u32 ch = (e & f) ^ (~e & g);
@@ -142,12 +149,14 @@ void feed(
     length += data.size();
     std::size_t at = 0;
 
+    // A partly filled buffer from the last call is topped up before whole blocks are taken.
     if (fill > 0) {
         const std::size_t n = std::min(64 - fill, data.size());
         std::memcpy(buffer.data() + fill, data.data(), n);
         fill += n;
         at = n;
 
+        // Still less than one block: keep the bytes buffered until more arrive.
         if (fill < 64) {
             return;
         }
@@ -156,6 +165,7 @@ void feed(
         fill = 0;
     }
 
+    // Hash whole 64-byte blocks straight from the input, with no copy.
     while (data.size() - at >= 64) {
         block(h, data.data() + at);
         at += 64;
@@ -170,6 +180,8 @@ template <typename State, typename Block>
 State pad(State h, std::array<u8, 64> buffer, std::size_t fill, u64 length, Block block) {
     buffer[fill++] = 0x80;
 
+    // The 0x80 marker plus the 8-byte length need 9 bytes; if fewer than that remain, the length
+    // goes in the next block.
     if (fill > 56) {
         std::memset(buffer.data() + fill, 0, 64 - fill);
         block(h, buffer.data());
@@ -202,6 +214,7 @@ Sha1Digest Sha1::finish() const {
     const auto h = pad(m_h, m_block, m_fill, m_length, sha1_block);
     Sha1Digest out{};
 
+    // The digest is the state words written out big-endian.
     for (std::size_t i = 0; i < h.size(); ++i) {
         store_be32(out.data() + 4 * i, h[i]);
     }
@@ -221,6 +234,7 @@ Sha256Digest Sha256::finish() const {
     const auto h = pad(m_h, m_block, m_fill, m_length, sha256_block);
     Sha256Digest out{};
 
+    // The digest is the state words written out big-endian.
     for (std::size_t i = 0; i < h.size(); ++i) {
         store_be32(out.data() + 4 * i, h[i]);
     }
@@ -245,6 +259,7 @@ std::string to_hex(std::span<const u8> bytes) {
     std::string out;
     out.reserve(bytes.size() * 2);
 
+    // Each byte becomes two lowercase hex digits, high nibble first.
     for (const u8 b : bytes) {
         out.push_back(kDigits[b >> 4]);
         out.push_back(kDigits[b & 15]);
@@ -254,19 +269,23 @@ std::string to_hex(std::span<const u8> bytes) {
 }
 
 std::optional<Sha1Digest> parse_sha1(std::string_view hex) {
+    // A SHA-1 in hex is exactly 40 digits.
     if (hex.size() != 40) {
         return std::nullopt;
     }
 
     auto nibble = [](char c) -> int {
+        // Digits 0 to 9.
         if (c >= '0' && c <= '9') {
             return c - '0';
         }
 
+        // Lowercase a to f.
         if (c >= 'a' && c <= 'f') {
             return c - 'a' + 10;
         }
 
+        // Uppercase A to F.
         if (c >= 'A' && c <= 'F') {
             return c - 'A' + 10;
         }
@@ -275,10 +294,12 @@ std::optional<Sha1Digest> parse_sha1(std::string_view hex) {
     };
     Sha1Digest out{};
 
+    // Each digest byte is two hex digits.
     for (std::size_t i = 0; i < out.size(); ++i) {
         const int hi = nibble(hex[2 * i]);
         const int lo = nibble(hex[2 * i + 1]);
 
+        // Either digit being invalid makes the whole string invalid.
         if (hi < 0 || lo < 0) {
             return std::nullopt;
         }

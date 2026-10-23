@@ -38,6 +38,7 @@ TitleLump TitleLump::parse(ByteView lump) {
          b.sub(base + h(0x21), logo_size, "title logo").to_vector()};
     const std::size_t count = h(0x16);
 
+    // The title world lists a handful of FX textures; a large count means a damaged lump.
     if (count > 256) {
         fail("title world: {} FX textures", count);
     }
@@ -61,6 +62,7 @@ BootPictures BootPictures::parse(ByteView lump) {
 GsImage BootPictures::picture(BootPictureKind kind, bool pal, u32 language) const {
     std::size_t field = 0;
 
+    // Each picture kind has its own field in the lump's header, at a different offset.
     switch (kind) {
         case BootPictureKind::Still:
             field = pal ? 8 : 0;
@@ -78,6 +80,7 @@ GsImage BootPictures::picture(BootPictureKind kind, bool pal, u32 language) cons
         wad_decompress(b.sub(b.u32_at(field), b.u32_at(field + 4), "boot picture"));
     const std::size_t n = std::size_t{kBootPictureWidth} * kBootPictureHeight * 4;
 
+    // The decoded picture must hold a full width by height RGBA image.
     if (raw.size() < n) {
         fail("boot picture: {} bytes", raw.size());
     }
@@ -97,6 +100,7 @@ TitleWorld TitleWorld::parse(ByteView lump) {
     };
     const s32 base = h(1);
 
+    // A base of zero or past the end would send every later offset outside the lump.
     if (base <= 0 || static_cast<std::size_t>(base) > bytes.size()) {
         fail("title world: data base {:#x}", base);
     }

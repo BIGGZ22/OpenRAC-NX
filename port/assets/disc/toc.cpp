@@ -106,6 +106,7 @@ const DiscLayout& rac1_layout() {
 }
 
 const DiscLayout& disc_layout(const GameVersion& version) {
+    // Only RAC1 has a known layout so far; the other versions return a layout marked unknown.
     switch (version.game) {
         case Game::Rac1:
             return kRac1;
@@ -129,6 +130,7 @@ std::span<const s32> SceneRecord::chunk_sectors(bool pal_region) const {
 std::optional<std::pair<u32, u32>> SceneRecord::region_sectors(bool pal_region) const {
     const std::span<const s32> s = chunk_sectors(pal_region);
 
+    // A level with no chunks in this region (PAL or NTSC) has no scene run.
     if (s.empty()) {
         return std::nullopt;
     }
@@ -139,6 +141,7 @@ std::optional<std::pair<u32, u32>> SceneRecord::region_sectors(bool pal_region) 
 LevelHeader parse_level_header(ByteView bytes) {
     const auto h = bytes.read<LevelHeader>(0, "level header");
 
+    // The header's own size field is its signature; any other value is not a RAC1 level header.
     if (h.header_size != static_cast<s32>(kRac1LevelHeaderSize)) {
         fail("level header lacks the 0x2434 signature");
     }
@@ -147,25 +150,30 @@ LevelHeader parse_level_header(ByteView bytes) {
 }
 
 std::vector<std::optional<u32>> level_header_sectors(ByteView toc, const DiscLayout& layout) {
+    // An unknown layout has no table offsets to read from.
     if (!layout.known) {
         fail("{}", layout.source);
     }
 
+    // The table of contents starts with a version number, which must be 1.
     if (toc.s32_at(0) != 1) {
         fail("table of contents: version {} is not 1", toc.s32_at(0));
     }
 
     const s32 size = toc.s32_at(4);
 
+    // The header size must cover the 8-byte preamble and fit the table.
     if (size <= 8 || static_cast<std::size_t>(size) > toc.size()) {
         fail("table of contents: implausible header size {:#x}", size);
     }
 
     std::vector<std::optional<u32>> out;
 
+    // Read one sector number per level slot in the level table.
     for (u32 i = 0; i < layout.level_table_count; ++i) {
         const s32 s = toc.s32_at(layout.level_table_offset + i * 8);
 
+        // A negative sector is a damaged table.
         if (s < 0) {
             fail("table of contents: negative level sector in slot {}", i);
         }
@@ -181,12 +189,14 @@ SectorRange global_sector_range(ByteView toc, u32 field) {
 }
 
 ProbedSize probe_lump_size(ByteView head) {
+    // A VAG file starts with "VAGp", and its length is stored big-endian at 0x0c.
     if (head.size() >= 0x30 && std::memcmp(head.data(), "VAGp", 4) == 0) {
         const u32 be = head.u32_at(0x0c);
         const u32 size = (be >> 24) | ((be >> 8) & 0xff00) | ((be << 8) & 0xff0000) | (be << 24);
         return {0x30 + u64{size}, true};
     }
 
+    // A WAD lump carries its compressed size in its header.
     if (is_wad(head)) {
         return {wad_compressed_size(head), true};
     }

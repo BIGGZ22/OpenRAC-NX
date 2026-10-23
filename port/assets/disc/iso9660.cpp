@@ -28,6 +28,7 @@ public:
     explicit FileSource(const std::filesystem::path& path)
         : m_path(path.string()),
           m_file(path, std::ios::binary) {
+        // A file that cannot be opened is reported with its path.
         if (!m_file) {
             throw IoError(std::format("cannot open {}", m_path));
         }
@@ -35,6 +36,7 @@ public:
         m_file.seekg(0, std::ios::end);
         const std::streamoff end = m_file.tellg();
 
+        // A failed seek or a negative size means the size cannot be known.
         if (!m_file || end < 0) {
             throw IoError(std::format("cannot read the size of {}", m_path));
         }
@@ -45,6 +47,7 @@ public:
     u64 size() const override { return m_size; }
 
     void read(u64 offset, std::span<u8> dst) override {
+        // An empty read needs no seek and cannot fail.
         if (dst.empty()) {
             return;
         }
@@ -53,6 +56,7 @@ public:
         m_file.seekg(static_cast<std::streamoff>(offset));
         m_file.read(reinterpret_cast<char*>(dst.data()), static_cast<std::streamsize>(dst.size()));
 
+        // A short read means the file ends before the range asked for.
         if (!m_file || static_cast<std::size_t>(m_file.gcount()) != dst.size()) {
             throw IoError(
                 std::format("cannot read {:#x} bytes at {:#x} of {}", dst.size(), offset, m_path)
@@ -73,6 +77,7 @@ public:
     u64 size() const override { return m_bytes.size(); }
 
     void read(u64 offset, std::span<u8> dst) override {
+        // The range is checked as size > length - offset so the sum cannot overflow.
         if (offset > m_bytes.size() || dst.size() > m_bytes.size() - offset) {
             throw IoError(
                 std::format("read of {:#x} bytes at {:#x} past the end", dst.size(), offset)
@@ -89,6 +94,7 @@ private:
 std::string upper(std::string_view s) {
     std::string out(s);
 
+    // ISO 9660 names are compared in upper case.
     for (char& c : out) {
         c = static_cast<char>(std::toupper(static_cast<unsigned char>(c)));
     }
@@ -114,9 +120,11 @@ IsoImage::IsoImage(std::unique_ptr<ImageSource> source) : m_source(std::move(sou
     const u64 file_size = m_source->size();
     std::array<u8, 16> head{};
 
+    // An image too short for a sector header cannot be raw.
     if (file_size >= head.size()) {
         m_source->read(0, head);
 
+        // A raw CD image starts every sector with the 12-byte sync pattern, followed by the header.
         if (std::memcmp(head.data(), kSync, sizeof kSync) == 0) {
             m_raw_sector_size = kRawSectorSize;
             m_raw_user_offset = head[15] == 2 ? 24 : 16;  // mode 2 form 1, or mode 1
@@ -125,12 +133,14 @@ IsoImage::IsoImage(std::unique_ptr<ImageSource> source) : m_source(std::move(sou
 
     const u64 sectors = file_size / m_raw_sector_size;
 
+    // The sector number must fit in 32 bits.
     if (sectors > 0xffffffffull) {
         fail("ISO 9660: the image is too large");
     }
 
     m_sector_count = static_cast<u32>(sectors);
 
+    // The volume descriptor sits at sector 16, so the image must reach past it.
     if (m_sector_count <= kPvdSector) {
         fail("ISO 9660: the image is too small to hold a volume descriptor");
     }
@@ -138,18 +148,21 @@ IsoImage::IsoImage(std::unique_ptr<ImageSource> source) : m_source(std::move(sou
     const std::vector<u8> pvd = read_sectors(kPvdSector, 1);
     const ByteView b(pvd);
 
+    // The primary volume descriptor has type 1 and the identifier "CD001".
     if (b.u8_at(0) != 1 || std::memcmp(pvd.data() + 1, "CD001", 5) != 0) {
         fail("no ISO 9660 primary volume descriptor at sector 16");
     }
 
     m_volume_id = b.string_at(40, 32);
 
+    // The volume id is padded with blanks, which are not part of the name.
     while (!m_volume_id.empty() && m_volume_id.back() == ' ') {
         m_volume_id.pop_back();
     }
 
     m_volume_sectors = b.u32_at(80);
 
+    // The reader handles only 2048-byte logical blocks, as every PlayStation 2 disc has.
     if (b.u16_at(128) != kSectorSize) {
         fail("ISO 9660: unexpected logical block size {}", b.u16_at(128));
     }
@@ -159,10 +172,12 @@ IsoImage::IsoImage(std::unique_ptr<ImageSource> source) : m_source(std::move(sou
 }
 
 void IsoImage::walk_directory(u32 lba, u32 size, const std::string& prefix, int depth) {
+    // A deeper directory tree than this is a loop in a damaged image.
     if (depth > kMaxDepth) {
         fail("ISO 9660: directory nesting too deep");
     }
 
+    // A directory of more than this many bytes is not real.
     if (size > kMaxDirectoryBytes) {
         fail("ISO 9660: implausible directory size {:#x}", size);
     }
@@ -172,9 +187,11 @@ void IsoImage::walk_directory(u32 lba, u32 size, const std::string& prefix, int 
     const ByteView b(dir);
     std::size_t pos = 0;
 
+    // Read records until the directory's size is used up.
     while (pos < size) {
         const std::size_t length = b.u8_at(pos);
 
+        // A zero length marks the padding at the end of a sector.
         if (length == 0) {
             // Records never straddle sectors: zero means "go on at the next sector".
             pos = (pos / kSectorSize + 1) * kSectorSize;
@@ -195,6 +212,7 @@ void IsoImage::walk_directory(u32 lba, u32 size, const std::string& prefix, int 
 
         std::string name = upper({reinterpret_cast<const char*>(raw.data()), raw.size()});
 
+        // Names carry a ";1" version suffix, which is dropped.
         if (const auto semi = name.find(';'); semi != std::string::npos) {
             name.resize(semi);
         }
@@ -207,6 +225,7 @@ void IsoImage::walk_directory(u32 lba, u32 size, const std::string& prefix, int 
         entry.is_directory = (flags & 2) != 0;
         m_entries.push_back(entry);
 
+        // Descend into sub-directories so their files are listed too.
         if (entry.is_directory) {
             walk_directory(entry.lba, entry.size, entry.path, depth + 1);
         }
@@ -216,15 +235,19 @@ void IsoImage::walk_directory(u32 lba, u32 size, const std::string& prefix, int 
 const IsoEntry* IsoImage::find(std::string_view path) const {
     std::string want = upper(path);
 
+    // Drop a version suffix from the path asked for.
     if (const auto semi = want.rfind(';'); semi != std::string::npos) {
         want.resize(semi);
     }
 
+    // Entry paths are absolute, so make the lookup path absolute too.
     if (want.empty() || want.front() != '/') {
         want.insert(want.begin(), '/');
     }
 
+    // Search all entries; the list is short.
     for (const IsoEntry& e : m_entries) {
+        // Paths are stored in upper case with no version suffix, as the wanted path now is.
         if (e.path == want) {
             return &e;
         }
@@ -242,6 +265,7 @@ std::vector<u8> IsoImage::read_sectors(u32 lba, u32 count) const {
 }
 
 std::vector<u8> IsoImage::read_bytes(u64 offset, u64 size) const {
+    // A read of a terabyte is not a real request; stop before allocating.
     if (size > (u64{1} << 40)) {
         fail("ISO 9660: implausible read of {:#x} bytes", size);
     }
@@ -254,6 +278,7 @@ std::vector<u8> IsoImage::read_bytes(u64 offset, u64 size) const {
 void IsoImage::read_into(u64 offset, std::span<u8> dst) const {
     const u64 end = u64{m_sector_count} * kSectorSize;
 
+    // The range is checked as size > end - offset so the sum cannot overflow.
     if (offset > end || dst.size() > end - offset) {
         fail(
             "byte range {:#x}+{:#x} lies beyond the end of the image ({} sectors)",
@@ -265,6 +290,7 @@ void IsoImage::read_into(u64 offset, std::span<u8> dst) const {
 
     std::lock_guard guard(*m_lock);
 
+    // A cooked image has no sector headers, so the source can be read directly.
     if (m_raw_sector_size == kSectorSize) {
         m_source->read(offset, dst);
         return;
@@ -272,6 +298,7 @@ void IsoImage::read_into(u64 offset, std::span<u8> dst) const {
 
     std::size_t done = 0;
 
+    // A raw image skips the sync and header bytes of every sector, so read it sector by sector.
     while (done < dst.size()) {
         const u64 pos = offset + done;
         const u64 sector = pos / kSectorSize;

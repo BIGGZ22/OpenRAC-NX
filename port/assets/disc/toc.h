@@ -174,9 +174,11 @@ template <typename Probe>
 std::vector<StreamLump> level_stream_lumps(const LevelHeader& h, Probe&& probe) {
     std::vector<StreamLump> out;
 
+    // Stream the level's bindata slots first, one lump per slot.
     for (std::size_t i = 0; i < h.bindata.size(); ++i) {
         const SectorByteRange& r = h.bindata[i];
 
+        // A slot with no offset and no size is unused.
         if (r.offset == 0 && r.size == 0) {
             continue;
         }
@@ -186,17 +188,22 @@ std::vector<StreamLump> level_stream_lumps(const LevelHeader& h, Probe&& probe) 
         );
     }
 
+    // Music lumps are named by sector only; their length is probed from the data.
     for (std::size_t i = 0; i < h.music.size(); ++i) {
+        // A zero sector marks a missing music track.
         if (h.music[i] != 0) {
             const u32 s = static_cast<u32>(h.music[i]);
             out.push_back({std::format("music/{:03}", i), s, probe(s)});
         }
     }
 
+    // Every scene has speech per language and a run of chunks per region.
     for (std::size_t k = 0; k < h.scenes.size(); ++k) {
         const SceneRecord& scene = h.scenes[k];
 
+        // Each language has its own speech lump.
         for (std::size_t lang = 0; lang < kSceneLanguages.size(); ++lang) {
+            // A zero sector means the scene has no speech in that language.
             if (scene.speech[lang] != 0) {
                 const u32 s = static_cast<u32>(scene.speech[lang]);
                 out.push_back(
@@ -205,7 +212,9 @@ std::vector<StreamLump> level_stream_lumps(const LevelHeader& h, Probe&& probe) 
             }
         }
 
+        // The NTSC and PAL discs hold different scene chunk runs.
         for (const bool pal : {false, true}) {
+            // A run exists only if the scene has chunks in that region.
             if (const auto run = scene.region_sectors(pal)) {
                 out.push_back(
                     {std::format("scene/{:02}_{}", k, pal ? "pal" : "ntsc"),

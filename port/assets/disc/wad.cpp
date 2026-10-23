@@ -48,6 +48,7 @@ bool is_wad(ByteView bytes) {
 }
 
 u32 wad_compressed_size(ByteView bytes) {
+    // Only streams that start with the WAD header have a compressed size.
     if (!is_wad(bytes)) {
         fail("not a WAD stream");
     }
@@ -58,6 +59,7 @@ u32 wad_compressed_size(ByteView bytes) {
 std::vector<u8> wad_decompress(ByteView bytes) {
     const std::size_t total = wad_compressed_size(bytes);
 
+    // The size must cover the header and fit the buffer given.
     if (total < kWadHeaderSize || total > bytes.size()) {
         fail("WAD: compressed size {:#x} exceeds the {:#x}-byte buffer", total, bytes.size());
     }
@@ -69,6 +71,7 @@ std::vector<u8> wad_decompress(ByteView bytes) {
     out.reserve(total * 2);
 
     auto next = [&]() -> u8 {
+        // A read past the stream's end means it was cut short.
         if (ptr >= end) {
             fail("WAD: read past the end of the stream");
         }
@@ -76,6 +79,7 @@ std::vector<u8> wad_decompress(ByteView bytes) {
         return stream[ptr++];
     };
     auto literals = [&](std::size_t n) {
+        // A literal run past the end means the stream was cut short.
         if (end - ptr < n) {
             fail("WAD: a literal runs past the end of the stream");
         }
@@ -84,6 +88,7 @@ std::vector<u8> wad_decompress(ByteView bytes) {
         ptr += n;
     };
     auto copy_match = [&](std::size_t displacement, std::size_t length) {
+        // A match cannot point before the start of the output.
         if (displacement == 0 || displacement > out.size()) {
             fail("WAD: a match starts before the output");
         }
@@ -91,18 +96,23 @@ std::vector<u8> wad_decompress(ByteView bytes) {
         // Byte by byte: overlapping copies are run-length expansion.
         const std::size_t source = out.size() - displacement;
 
+        // Copy byte by byte so a match that overlaps its own output repeats it.
         for (std::size_t i = 0; i < length; ++i) {
             out.push_back(out[source + i]);
         }
     };
 
+    // Decode packets until the stream is used up.
     while (ptr < end) {
         const u8 flag = next();
 
+        // A flag below 0x10 starts a literal run.
         if (flag < 0x10) {
             const std::size_t n = flag == 0 ? std::size_t{next()} + 18 : std::size_t{flag} + 3;
             literals(n);
 
+            // The format never puts two literal runs in a row, so a second one means a damaged
+            // stream.
             if (ptr < end && stream[ptr] < 0x10) {
                 fail("WAD: two literal packets in a row");
             }
@@ -114,9 +124,11 @@ std::vector<u8> wad_decompress(ByteView bytes) {
         std::size_t displacement = 0;
         u8 little = 0;
 
+        // Flags 0x10 to 0x1f are far matches.
         if (flag < 0x20) {
             std::size_t ml = flag & 7;
 
+            // A zero length field means the length follows in the next byte.
             if (ml == 0) {
                 ml = std::size_t{next()} + 7;
             }
@@ -126,7 +138,9 @@ std::vector<u8> wad_decompress(ByteView bytes) {
             const std::size_t a = (flag >> 3) & 1;
             const std::size_t far = std::size_t{b1} * 0x40 + (b0 >> 2);
 
+            // A far match with no displacement is the padding code or the end of the stream.
             if (a == 0 && far == 0) {
+                // A length other than 1 is padding: the stream goes on at the next 0x1000 boundary.
                 if (ml != 1) {
                     ptr = (ptr + 0xfff) & ~std::size_t{0xfff};  // pad: on at the next 0x1000
                     continue;
@@ -143,6 +157,7 @@ std::vector<u8> wad_decompress(ByteView bytes) {
         } else if (flag < 0x40) {
             std::size_t ml = flag & 0x1f;
 
+            // A zero length field means the length follows in the next byte.
             if (ml == 0) {
                 ml = std::size_t{next()} + 0x1f;
             }
@@ -178,10 +193,12 @@ public:
 
     // A literal run with no packet before it to carry it.
     void free_literals(std::size_t at, std::size_t n) {
+        // No bytes need no packet.
         if (n == 0) {
             return;
         }
 
+        // A run of 3 bytes or less is carried by a dummy packet.
         if (n <= 3) {
             dummy(at, n);
             return;
@@ -189,13 +206,16 @@ public:
 
         bool first = true;
 
+        // Cut long runs into pieces a literal packet can hold.
         while (n > 0) {
             std::size_t chunk = std::min(n, kMaxLiteral);
 
+            // The rest of a run may not be 1 to 3 bytes, which no literal packet could carry.
             if (n - chunk > 0 && n - chunk < 4) {
                 chunk = n - 4;  // leave a run a literal packet can carry
             }
 
+            // Literal packets are never adjacent, so a dummy goes between pieces.
             if (!first) {
                 dummy(at, 0);  // literal packets are never adjacent
             }
@@ -213,6 +233,7 @@ public:
         u8 head[4];
         std::size_t size = 0;
 
+        // The shortest form fits a short match at a short distance.
         if (length <= kLittleMaxLength && displacement <= kLittleWindow) {
             const std::size_t d = displacement - 1;
             head[size++] = static_cast<u8>(((length - 1) << 5) | ((d & 7) << 2) | l);
@@ -220,6 +241,7 @@ public:
         } else if (displacement <= kMediumWindow) {
             const std::size_t d = displacement - 1;
 
+            // A medium match of up to 33 bytes puts its length in the flag.
             if (length <= 33) {
                 head[size++] = static_cast<u8>(0x20 | (length - 2));
             } else {
@@ -232,6 +254,7 @@ public:
         } else {
             const std::size_t far = displacement - 0x4000;
 
+            // A far match of up to 9 bytes puts its length in the flag.
             if (length <= 9) {
                 head[size++] = static_cast<u8>(0x10 | (length - 2));
             } else {
@@ -257,6 +280,7 @@ private:
         u8 head[2];
         std::size_t size = 0;
 
+        // A run of up to 18 bytes puts its length in the flag.
         if (n <= 18) {
             head[size++] = static_cast<u8>(n - 3);
         } else {
@@ -278,9 +302,11 @@ private:
         const std::size_t size = head.size() + trailing;
         const std::size_t offset = m_out.size() - kWadHeaderSize;
 
+        // A packet must not straddle a chunk, so pad out the chunk first.
         if (offset % kChunk + size > kChunk - 3) {
             m_out.insert(m_out.end(), {0x12, 0x00, 0x00});
 
+            // Fill with the filler byte until the chunk boundary.
             while ((m_out.size() - kWadHeaderSize) % kChunk != 0) {
                 m_out.push_back(kFiller);
             }
@@ -306,6 +332,7 @@ std::vector<Match> find_matches(ByteView data) {
     const std::size_t n = data.size();
     std::vector<Match> matches;
 
+    // Data shorter than the minimum match has none.
     if (n < 3) {
         return matches;
     }
@@ -317,6 +344,7 @@ std::vector<Match> find_matches(ByteView data) {
         return static_cast<std::size_t>((v * 2654435761u) >> (32 - kHashBits));
     };
     auto insert = [&](std::size_t i) {
+        // Only positions with three bytes left can be hashed.
         if (i + 3 <= n) {
             const std::size_t h = hash(i);
             prev[i] = head[h];
@@ -325,15 +353,18 @@ std::vector<Match> find_matches(ByteView data) {
     };
     std::size_t i = 0;
 
+    // Walk the data, looking for the longest match at each position.
     while (i + 3 <= n) {
         std::size_t best = 0;
         std::size_t best_displacement = 0;
         s64 candidate = head[hash(i)];
 
+        // Follow the hash chain of earlier positions with the same three bytes, up to a limit.
         for (int chain = 0; candidate >= 0 && chain < kChainLimit; ++chain) {
             const std::size_t c = static_cast<std::size_t>(candidate);
             const std::size_t displacement = i - c;
 
+            // Positions beyond the far window cannot be reached, and the chain only gets farther.
             if (displacement > kFarWindow) {
                 break;
             }
@@ -342,14 +373,17 @@ std::vector<Match> find_matches(ByteView data) {
                 std::min(n - i, displacement > kMediumWindow ? kMaxFarMatch : kMaxMatch);
             std::size_t length = 0;
 
+            // Extend the match for as long as the bytes agree.
             while (length < limit && d[c + length] == d[i + length]) {
                 ++length;
             }
 
+            // Keep the longest match found.
             if (length > best) {
                 best = length;
                 best_displacement = displacement;
 
+                // A match at the limit cannot be beaten.
                 if (length == limit) {
                     break;
                 }
@@ -358,9 +392,11 @@ std::vector<Match> find_matches(ByteView data) {
             candidate = prev[c];
         }
 
+        // Matches shorter than 3 bytes are not worth a packet.
         if (best >= 3) {
             matches.push_back({i, best, best_displacement});
 
+            // Hash the bytes inside the match so later positions can match them.
             for (std::size_t k = 0; k < best; ++k) {
                 insert(i + k);
             }
@@ -382,12 +418,14 @@ std::vector<u8> wad_compress(ByteView data) {
     Encoder e(data);
     e.free_literals(0, matches.empty() ? data.size() : matches.front().at);
 
+    // Emit each match with the literals that follow it.
     for (std::size_t k = 0; k < matches.size(); ++k) {
         const Match& m = matches[k];
         const std::size_t after = m.at + m.length;
         const std::size_t next = k + 1 < matches.size() ? matches[k + 1].at : data.size();
         const std::size_t run = next - after;
 
+        // A run of up to 3 literals rides in the match's own packet.
         if (run <= 3) {
             e.match(m.length, m.displacement, after, run);
         } else {
