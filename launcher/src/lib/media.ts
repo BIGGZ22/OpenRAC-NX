@@ -2,7 +2,7 @@
 // its page's band and faintly behind the page. Where these come from is in docs/STYLE.md.
 // A picture that is not there (size-matters-bg.webp until it is copied from the site) is left
 // out where it is shown, and the game's colours carry it.
-export const GAME_ART: Record<string, string> = {
+const GAME_ART: Record<string, string> = {
   rac1: "/img/rac1-bg.webp",
   rac2: "/img/gc-bg.webp",
   rac3: "/img/uya-bg.webp",
@@ -12,7 +12,7 @@ export const GAME_ART: Record<string, string> = {
 
 // Each game's thumbnail: its picture, small, for the game list (scripts/media.py thumbs makes
 // them). The list shows five at 64 by 44; five full pictures would decode tens of MB for that.
-export const GAME_THUMB: Record<string, string> = {
+const GAME_THUMB: Record<string, string> = {
   rac1: "/img/rac1-thumb.webp",
   rac2: "/img/gc-thumb.webp",
   rac3: "/img/uya-thumb.webp",

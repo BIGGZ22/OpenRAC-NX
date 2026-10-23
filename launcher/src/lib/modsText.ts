@@ -21,7 +21,6 @@ export const STATE_LABEL = {
   failed: { text: "Not loaded", tone: "err" },
   refused: { text: "Cannot load", tone: "err" },
 } as const satisfies Record<string, Label>;
-export type StateKey = keyof typeof STATE_LABEL;
 
 /** What a mod runs (lib/plugins.ts, modKind): code, scripts in the sandbox, or data only. */
 export const KIND_LABEL = {
@@ -38,7 +37,7 @@ export const KIND_HINT = {
   pack: "Data only: it replaces textures, models or levels, and runs nothing.",
   builtIn: "Part of the game, off unless you turn it on. Still being worked on.",
 } as const satisfies Record<KindKey, string>;
-export type KindKey = keyof typeof KIND_LABEL;
+type KindKey = keyof typeof KIND_LABEL;
 
 /** Whether a mod from a link can be installed here, in its preview row. */
 export const COMPATIBLE_LABEL = {

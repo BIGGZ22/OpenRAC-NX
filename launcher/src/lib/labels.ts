@@ -65,7 +65,7 @@ export const STATE: Record<ActionState, { text: string; tone: "ok" | "warn" | "i
 };
 
 /** Ratchet & Clank's levels, by the number the game and the level editor give them. */
-export const RAC1_LEVELS = [
+const RAC1_LEVELS = [
   "Veldin",
   "Novalis",
   "Aridia",

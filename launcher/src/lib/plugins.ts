@@ -5,19 +5,7 @@
 // lib/modsText.ts's; here only which ones.
 import type { PluginSetting, PluginView } from "./api";
 import { hasRange } from "./settingValues";
-import {
-  BADGE,
-  GROUP_TITLE,
-  KIND_HINT,
-  KIND_LABEL,
-  STATE_LABEL,
-  rangeText,
-  sharesWith,
-  type Label,
-  type ModTone,
-} from "./modsText";
-
-export type PluginTone = ModTone;
+import { BADGE, GROUP_TITLE, KIND_HINT, KIND_LABEL, STATE_LABEL, rangeText, sharesWith, type Label } from "./modsText";
 
 /** A mod's state, as a dot and a few words. Purist mode loads none, whatever is switched on. */
 export function pluginState(mod: PluginView, purist: boolean): Label {
