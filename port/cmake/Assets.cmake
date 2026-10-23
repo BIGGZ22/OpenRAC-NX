@@ -92,7 +92,9 @@ function(openrac_add_module target dir)
   openrac_warnings(${target})
 endfunction()
 
-# One test program per tests/<dir>/*.cpp, linked to `libs`.
+# One test per tests/<dir>/*.cpp, linked to `libs`, through openrac_add_test (cmake/Tests.cmake):
+# tests/<dir>/foo.cpp is the program <dir>_foo_test and the ctest test <dir>_foo. A test returns
+# 77, reported as skipped, without the player's data it needs (the file comment above).
 function(openrac_add_module_tests dir)
   file(GLOB tests CONFIGURE_DEPENDS "${CMAKE_CURRENT_SOURCE_DIR}/tests/${dir}/*.cpp")
   foreach(lib IN LISTS ARGN)
@@ -102,11 +104,7 @@ function(openrac_add_module_tests dir)
   endforeach()
   foreach(test IN LISTS tests)
     get_filename_component(name "${test}" NAME_WE)
-    set(target "${dir}_${name}_test")
-    add_executable(${target} "${test}")
-    target_link_libraries(${target} PRIVATE ${ARGN})
-    openrac_warnings(${target})
-    add_test(NAME "${dir}_${name}" COMMAND ${target})
+    openrac_add_test("${dir}_${name}" SOURCES "${test}" LIBS ${ARGN})
     set_tests_properties("${dir}_${name}" PROPERTIES SKIP_RETURN_CODE 77)
   endforeach()
 endfunction()
