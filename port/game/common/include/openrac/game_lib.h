@@ -49,6 +49,7 @@ int openrac_lib_sceSifDmaStat(unsigned int);
 unsigned int openrac_lib_sceSifSetDma(gaddr, int);
 void openrac_lib_SetGsCrt(int interlace, int mode, int field);
 void openrac_lib_GsPutIMR(unsigned int mask);
+unsigned long long openrac_lib_GsGetIMR(void);
 int openrac_lib_EnableIntc(int);
 int openrac_lib_DisableIntc(int);
 int openrac_lib_DisableDmac(int);
@@ -147,6 +148,7 @@ int openrac_lib_sceGsSetDefStoreImage(gaddr, short, short, short, short, short, 
 int openrac_lib_sceGsExecLoadImage(gaddr, gaddr);
 int openrac_lib_sceGsExecStoreImage(gaddr, gaddr);
 gaddr openrac_lib_sceGsSyncVCallback(gaddr);
+void openrac_lib__GetGsDxDyOffset(int, gaddr, gaddr, gaddr, gaddr);
 /* dma */
 int openrac_lib_sceDmaReset(int);
 void openrac_lib_sceDmaSend(gaddr, gaddr);

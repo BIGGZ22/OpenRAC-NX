@@ -465,10 +465,19 @@ void openrac_lib_SetGsCrt(int interlace, int mode, int field) {
     openrac_game_set_video_mode(interlace, mode, field);
 } /* SetGsCrt */
 
-/* GsPutIMR(mask): which GS events interrupt; the port has no GS interrupts. */
+/* GsPutIMR(mask): which GS events interrupt; the port has no GS interrupts,
+ * but keeps the mask for GsGetIMR (0x70), which reads it back: before any
+ * GsPutIMR the 0xFF00 (all masked) that the game's sceGsResetGraph puts at
+ * boot and the console's kernel answers in the title. */
+static uint64_t gs_imr = 0xFF00;
+
 void openrac_lib_GsPutIMR(unsigned int mask) {
-    (void)mask;
+    gs_imr = mask;
 } /* GsPutIMR */
+
+unsigned long long openrac_lib_GsGetIMR(void) {
+    return gs_imr;
+} /* GsGetIMR */
 
 /* ---- The other EE kernel services the game's libraries call ----
  *

@@ -82,6 +82,7 @@ func_00121930	cdvd	sceCdGetError	host
 func_001219C8	cdvd	sceCdBreak	host
 func_00121A80	cdvd	sceCdReadClock	host
 func_00121B78	graph	sceGsResetGraph	host	the renderer's video mode
+func_00121DB8	graph	_GetGsDxDyOffset	host	system call 0x80: no screen position adjustment (only libgraph's sceGsSetDefDispEnv calls it, the port's own)
 func_00121DC8	graph	sceGsSetDefDispEnv	host
 func_00122140	graph	sceGsPutDispEnv	host	the renderer's display state
 func_001222C8	graph	sceGsSetDefDrawEnv	game
@@ -178,6 +179,7 @@ func_00118AF0	kernel	DisableIntc	host	system call 0x15
 func_00118B00	kernel	EnableDmac	host	system call 0x16
 func_00118B10	kernel	DisableDmac	host	system call 0x17
 func_00118DE0	kernel	GsPutIMR	host	system call 0x71
+func_00118DD0	kernel	GsGetIMR	host	system call 0x70: the mask GsPutIMR set (only libgraph's sceGsExecStoreImage calls it, the port's own)
 func_00118A60	kernel	Exit	host	system call 0x04 (KExit)
 func_00118AC0	kernel	AddDmacHandler2	host	system call 0x12, the handler takes an argument (libmpeg's colour conversion)
 func_00118B20	kernel	SetAlarm	host	system call 0xFC; the callback runs at once
