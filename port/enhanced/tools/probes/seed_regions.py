@@ -201,8 +201,9 @@ def profile_spacing(profile: dict, horizontal=None, vertical=None) -> list[float
     return axis_spacing(spacing)
 
 
-def read_gameplay(level_dir: Path, manifest: dict, disc_path: Path | None = None) -> bytes:
-    """Prefer normal exported inputs; disc access is only for older exports."""
+def read_gameplay(level_dir: Path, manifest: dict, disc_path: Path | None = None) -> bytes | None:
+    """Prefer normal exported inputs; disc access is only for older exports. None for a scene
+    that is no level of the disc's own (it has no gameplay)."""
     tag = manifest.get('bake_inputs', {}).get('gameplay')
     if tag is not None:
         if tag != 'rac1-v1':
@@ -216,7 +217,11 @@ def read_gameplay(level_dir: Path, manifest: dict, disc_path: Path | None = None
     with Disc(disc_path) as disc:
         if manifest['game'] != 'rac1' or disc.version.key != manifest['version']:
             raise ValueError('disc and exported level differ')
-        level = disc.survey()['levels'][manifest['level']]
+        level = next((entry for entry in disc.survey()['levels'] if entry['id'] == manifest['level']), None)
+        if level is None:
+            # The title screen (99) and the flight between planets (98) are scenes the extractor
+            # builds from other parts of the disc: they have no gameplay file to seed from.
+            return None
         span = level['ranges'][disc.version.gameplay]
         return decoded(disc.sectors(span['lba'], span['sectors']))
 
