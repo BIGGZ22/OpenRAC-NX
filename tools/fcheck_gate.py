@@ -61,7 +61,7 @@ import subprocess
 import sys
 from pathlib import Path
 
-from openrac_common import digest, paths, tables
+from openrac_common import digest, paths, proc, tables
 
 ROOT = paths.repo_root()
 PAL_TABLE = ROOT / "games/rac1/nonmatching/functional.tsv"
@@ -157,10 +157,8 @@ def decomp_root() -> Path:
 
 
 def fcheck_commit(decomp: Path) -> str:
-    def git(*a: str) -> str:
-        return subprocess.run(["git", "-C", str(decomp), *a], capture_output=True, text=True).stdout.strip()
-    rev = git("rev-parse", "--short=8", "HEAD")
-    return rev + ("+dirty" if git("status", "--porcelain", "--", "tools/fcheck.py") else "")
+    rev = proc.git(decomp, "rev-parse", "--short=8", "HEAD", check=False)
+    return rev + ("+dirty" if proc.git(decomp, "status", "--porcelain", "--", "tools/fcheck.py", check=False) else "")
 
 
 def fcheck_env() -> dict:

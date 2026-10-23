@@ -16,12 +16,10 @@ change belongs to every game (`sync` it) or the files have parted ways (move
 the group to "related" and say why).
 """
 import json
-import subprocess
 import sys
 from collections import defaultdict
-from pathlib import Path
 
-from openrac_common import digest, paths
+from openrac_common import digest, paths, proc
 
 ROOT = paths.repo_root()
 MANIFEST = ROOT / "shared/files.json"
@@ -48,7 +46,7 @@ def problems() -> list[str]:
 
 def identical_across_games() -> list[list[str]]:
     """Groups of tracked files with the same content in two or more game versions."""
-    tracked = subprocess.run(["git", "-C", str(ROOT), "ls-files", "games"], capture_output=True, text=True).stdout.split("\n")
+    tracked = proc.git(ROOT, "ls-files", "games", check=False).split("\n")
     by_content = defaultdict(list)
     for name in tracked:
         path = ROOT / name

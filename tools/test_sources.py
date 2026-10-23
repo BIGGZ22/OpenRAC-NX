@@ -78,12 +78,6 @@ class SourcesTests(unittest.TestCase):
         self.assertFalse(sources.excluded("asmx/y.s", SOURCE["exclude"]))
         self.assertFalse(sources.excluded("tools/x.pyc", SOURCE["exclude"]))
 
-    def test_git_strips_text_and_keeps_bytes(self):
-        git = FakeGit({("rev-parse", "HEAD"): b"abc\n", ("archive", "HEAD"): b"\x00tar\n"})
-        with mock.patch("subprocess.run", git):
-            self.assertEqual(sources.git(Path("/repo"), "rev-parse", "HEAD"), "abc")
-            self.assertEqual(sources.git(Path("/repo"), "archive", "HEAD", binary=True), b"\x00tar\n")
-
     def test_record_writes_the_commit_and_its_date(self):
         path, game = sources.manifests()["a/pal"]
         git = FakeGit({("log", "-1", "--format=%cs", "2" * 40): b"2026-10-01\n"})

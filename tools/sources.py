@@ -23,14 +23,13 @@ the updated game.json.
 import io
 import json
 import os
-import shutil
 import subprocess
 import sys
 import tarfile
 import time
 from pathlib import Path
 
-from openrac_common import games, paths
+from openrac_common import games, paths, proc
 
 ROOT = paths.repo_root()
 
@@ -45,11 +44,6 @@ def manifests() -> dict[str, tuple[Path, dict]]:
 def checkout(key: str, source: dict) -> Path:
     env = "OPENRAC_SOURCE_" + key.replace("/", "_").upper()
     return Path(os.environ.get(env) or os.path.expanduser(source["checkout"]))
-
-
-def git(repo: Path, *args: str, binary: bool = False):
-    run = subprocess.run(["git", "-C", str(repo), *args], capture_output=True, check=True)
-    return run.stdout if binary else run.stdout.decode().strip()
 
 
 def version_dir(game: dict, version: str) -> Path:
@@ -69,8 +63,8 @@ def do_import(key: str, rev: str | None) -> None:
     repo, dest = checkout(key, source), version_dir(game, version)
     if dest.exists() and any(p.name != ".gitkeep" for p in dest.iterdir()):
         sys.exit(f"{dest.relative_to(ROOT)} is not empty: use sync")
-    commit = git(repo, "rev-parse", rev or "HEAD")
-    data = git(repo, "archive", "--format=tar", commit, binary=True)
+    commit = proc.git(repo, "rev-parse", rev or "HEAD")
+    data = proc.git(repo, "archive", "--format=tar", commit, binary=True)
     exclude = source.get("exclude", [])
     count = 0
     with tarfile.open(fileobj=io.BytesIO(data)) as tar:
@@ -87,12 +81,12 @@ def do_sync(key: str, rev: str | None) -> None:
     version = key.split("/")[1]
     source = game["versions"][version]["source"]
     repo, dest = checkout(key, source), version_dir(game, version)
-    commit = git(repo, "rev-parse", rev or "HEAD")
+    commit = proc.git(repo, "rev-parse", rev or "HEAD")
     if commit == source["commit"]:
         print(f"{key}: already at {commit[:10]}")
         return
     specs = [f":(exclude){e}" for e in source.get("exclude", [])]
-    diff = git(repo, "diff", "--binary", source["commit"], commit, "--", ".", *specs, binary=True)
+    diff = proc.git(repo, "diff", "--binary", source["commit"], commit, "--", ".", *specs, binary=True)
     rejects_before = set(dest.rglob("*.rej"))
     # git takes the directory with /: on Windows, games\rac1 made every path of the patch "invalid".
     apply = subprocess.run(["git", "apply", "--reject", f"--directory={dest.relative_to(ROOT).as_posix()}"],
@@ -111,7 +105,7 @@ def do_sync(key: str, rev: str | None) -> None:
 def record(path: Path, game: dict, version: str, commit: str, repo: Path) -> None:
     source = game["versions"][version]["source"]
     source["commit"] = commit
-    source["date"] = git(repo, "log", "-1", "--format=%cs", commit)
+    source["date"] = proc.git(repo, "log", "-1", "--format=%cs", commit)
     source["imported"] = time.strftime("%Y-%m-%d")
     path.write_text(json.dumps(game, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
 
@@ -123,7 +117,7 @@ def do_status() -> None:
         if not (repo / ".git").exists():
             print(f"{key}: no checkout at {repo}")
             continue
-        ahead = git(repo, "rev-list", "--count", f"{source['commit']}..HEAD")
+        ahead = proc.git(repo, "rev-list", "--count", f"{source['commit']}..HEAD")
         print(f"{key}: {source['name']} at {source['commit'][:10]} ({source['date']}); "
               f"checkout {repo} is {ahead} commits past it")
 

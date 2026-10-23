@@ -65,7 +65,7 @@ import time
 import urllib.request
 from pathlib import Path
 
-from openrac_common import digest, paths
+from openrac_common import digest, paths, proc
 
 ROOT = paths.repo_root()
 PORT = ROOT / "port"
@@ -351,12 +351,11 @@ def checkout_version() -> str | None:
 
 def checkout_commit() -> str | None:
     """The checkout's commit, or None outside git."""
-    git = shutil.which("git")
-    if git is None:
+    if shutil.which("git") is None:
         return None
-    done = subprocess.run([git, "-C", str(ROOT), "rev-parse", "HEAD"], capture_output=True, text=True)
-    commit = done.stdout.strip()
-    return commit if done.returncode == 0 and len(commit) == 40 else None
+    # A failed rev-parse prints nothing on standard output.
+    commit = proc.git(ROOT, "rev-parse", "HEAD", check=False)
+    return commit if len(commit) == 40 else None
 
 
 def write_stamp(build: Path, names: list[str]) -> None:

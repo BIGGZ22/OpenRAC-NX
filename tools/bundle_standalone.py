@@ -43,11 +43,10 @@ side against it (OPENRAC_ROOT=OUT); an installer needs both.
 import argparse
 import json
 import shutil
-import subprocess
 import sys
 from pathlib import Path
 
-from openrac_common import files, paths
+from openrac_common import files, paths, proc
 
 ROOT = paths.repo_root()
 
@@ -183,7 +182,7 @@ def strip_debug(path: Path) -> bool:
     if tool is None:
         print(f"no strip tool: {path.name} keeps its debug info", file=sys.stderr)
         return False
-    subprocess.run([tool, "--strip-debug", str(path)], check=True)
+    proc.run([tool, "--strip-debug", path])
     return True
 
 
@@ -281,7 +280,7 @@ def main() -> int:
                                                       "*.a", "include", "share"))
         carried.append("python")
 
-    commit = subprocess.run(["git", "rev-parse", "HEAD"], cwd=ROOT, capture_output=True, text=True).stdout.strip()
+    commit = proc.git(ROOT, "rev-parse", "HEAD", check=False)
     (out / "STANDALONE").write_text(
         "The copy of OpenRAC an installed launcher carries (tools/bundle_standalone.py).\n"
         f"commit: {commit or 'unknown'}\ncarries: {', '.join(carried) or 'no game, no Python'}\n"

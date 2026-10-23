@@ -30,7 +30,7 @@ import zlib
 from pathlib import Path
 from urllib.parse import urlencode
 
-from openrac_common import digest, files, games, paths
+from openrac_common import digest, files, games, paths, proc
 
 ROOT = paths.repo_root()
 GAMES = ROOT / "games"
@@ -244,12 +244,11 @@ def fetch_reports() -> None:
         repo = source_checkout(version)
         key = f"{game['id']}/{name}"
         try:
-            subprocess.run(["git", "-C", str(repo), "fetch", "-q", "origin", fetch["branch"]], check=True)
+            # The fetch shows what git says when it fails; the reads keep it.
+            proc.run(["git", "-C", repo, "fetch", "-q", "origin", fetch["branch"]])
             ref = f"origin/{fetch['branch']}"
-            data = subprocess.run(["git", "-C", str(repo), "show", f"{ref}:{fetch['path']}"],
-                                  check=True, capture_output=True).stdout
-            commit = subprocess.run(["git", "-C", str(repo), "log", "-1", "--format=%h %cs", ref],
-                                    check=True, capture_output=True, text=True).stdout.split()
+            data = proc.git(repo, "show", f"{ref}:{fetch['path']}", binary=True)
+            commit = proc.git(repo, "log", "-1", "--format=%h %cs", ref).split()
         except (subprocess.CalledProcessError, FileNotFoundError) as e:
             print(f"{key}: could not fetch its report from {repo} ({e})")
             continue
@@ -297,10 +296,9 @@ def report_date(version: dict, path: Path) -> str:
             rel, rev = path.relative_to(game_dir), source["commit"]
         else:
             rev = "HEAD"
-        run = subprocess.run(["git", "-C", str(repo), "log", "-1", "--format=%cs", rev, "--", str(rel)],
-                             capture_output=True, text=True)
-        if run.stdout.strip():
-            return run.stdout.strip()
+        date = proc.git(repo, "log", "-1", "--format=%cs", rev, "--", rel, check=False)
+        if date:
+            return date
     return "uncommitted"
 
 

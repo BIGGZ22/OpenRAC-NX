@@ -37,8 +37,6 @@ for folder in ("port/tools/hostgen", "port/tools/versionmap", "sdk/tools", "edit
         sys.path.append(str(ROOT / folder))
 
 import bake_all  # noqa: E402  port/enhanced/tools/probes
-import build_android  # noqa: E402
-import bundle_standalone  # noqa: E402
 import carry_functions  # noqa: E402  port/tools/versionmap
 import disc  # noqa: E402  editor
 import extractor  # noqa: E402
@@ -47,10 +45,7 @@ import gen_binding  # noqa: E402  sdk/tools
 import hostgen  # noqa: E402  port/tools/hostgen
 import no_c  # noqa: E402  port/tools/hostgen
 import openrac  # noqa: E402
-import shared  # noqa: E402
-import sources  # noqa: E402
 import versionmap  # noqa: E402  port/tools/versionmap
-import xmap  # noqa: E402
 
 SECTOR = iso9660.SECTOR
 
@@ -422,14 +417,12 @@ class FilesTests(TempDir):
 # ---- proc ----
 
 class ProcTests(TempDir):
-    def test_run_echoes_like_build_android(self):
-        command = [Path(sys.executable), "-c", "pass"]
-        ours, theirs = io.StringIO(), io.StringIO()
-        with contextlib.redirect_stdout(ours):
-            proc.run(command, cwd=self.dir, echo=True)
-        with contextlib.redirect_stdout(theirs):
-            build_android.run(command, self.dir)
-        self.assertEqual(ours.getvalue(), theirs.getvalue())
+    def test_run_echoes_the_command_as_strings(self):
+        # As tools/build_android.py's own run did before it moved onto this.
+        out = io.StringIO()
+        with contextlib.redirect_stdout(out):
+            proc.run([Path(sys.executable), "-c", "pass"], cwd=self.dir, echo=True)
+        self.assertEqual(out.getvalue(), f"+ {sys.executable} -c pass\n")
 
     def test_run_checks_the_exit_status(self):
         with self.assertRaises(subprocess.CalledProcessError):
@@ -441,7 +434,7 @@ class ProcTests(TempDir):
         self.assertEqual(done.stdout, "ok �")
 
     @unittest.skipUnless(shutil.which("git"), "git is not installed")
-    def test_git_matches_sources_and_fcheck_gate(self):
+    def test_git_reads_and_fcheck_gates_commit(self):
         repo = self.dir / "repo"
         repo.mkdir()
         # The setup ignores the user's git configuration (signing, hooks); the reads under test do not.
@@ -454,10 +447,8 @@ class ProcTests(TempDir):
         subprocess.run(["git", "-C", str(repo), "add", "."], check=True, env=env)
         subprocess.run(["git", "-C", str(repo), "commit", "-q", "-m", "one"], check=True, env=env)
 
-        self.assertEqual(proc.git(repo, "rev-parse", "HEAD"), sources.git(repo, "rev-parse", "HEAD"))
+        self.assertEqual(len(proc.git(repo, "rev-parse", "HEAD")), 40)
         self.assertEqual(proc.git(repo, "show", "HEAD:tools/fcheck.py", binary=True), b"x = 1\n")
-        self.assertEqual(proc.git(repo, "show", "HEAD:tools/fcheck.py", binary=True),
-                         sources.git(repo, "show", "HEAD:tools/fcheck.py", binary=True))
         with self.assertRaises(subprocess.CalledProcessError):
             proc.git(repo, "rev-parse", "no-such-ref")
 

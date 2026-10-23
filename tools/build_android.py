@@ -36,13 +36,12 @@ import argparse
 import hashlib
 import os
 import shutil
-import subprocess
 import sys
 import urllib.request
 import zipfile
 from pathlib import Path
 
-from openrac_common import digest, paths
+from openrac_common import digest, paths, proc
 
 ROOT = paths.repo_root()
 PORT = ROOT / "port"
@@ -63,11 +62,6 @@ PYTHON_FILES = {
 }
 # libadrenotools' hook libraries, which it loads by path from the app's native library folder.
 ADRENOTOOLS_HOOKS = ("hook_impl", "main_hook", "file_redirect_hook", "gsl_alloc_hook")
-
-
-def run(cmd: list, cwd: Path, env: dict | None = None) -> None:
-    print("+", " ".join(str(c) for c in cmd), flush=True)
-    subprocess.run([str(c) for c in cmd], cwd=cwd, env=env, check=True)
 
 
 def ndk_home() -> Path:
@@ -127,10 +121,11 @@ def python() -> tuple[Path, Path]:
 
 def build_port(games: list[str], ndk: Path, python_target: Path) -> None:
     env = dict(os.environ, ANDROID_NDK_HOME=str(ndk))
-    run(["cmake", "--preset", "android-arm64", f"-DOPENRAC_ANDROID_PYTHON={python_target}"], PORT, env)
+    proc.run(["cmake", "--preset", "android-arm64", f"-DOPENRAC_ANDROID_PYTHON={python_target}"],
+             cwd=PORT, env=env, echo=True)
     targets = [t for g in games for t in (f"openrac-{g}", f"openrac-{g}-cli")]
     targets += ["openrac-python", "SDL3-shared", *ADRENOTOOLS_HOOKS]
-    run(["cmake", "--build", PORT_BUILD, "--target", *targets], PORT, env)
+    proc.run(["cmake", "--build", PORT_BUILD, "--target", *targets], cwd=PORT, env=env, echo=True)
 
 
 def collect_libraries(games: list[str], ndk: Path, python_target: Path, keep_symbols: bool) -> list[str]:
@@ -161,7 +156,7 @@ def collect_libraries(games: list[str], ndk: Path, python_target: Path, keep_sym
         shutil.copy2(path, dest / path.name, follow_symlinks=True)
         # Gradle strips them again; this way the APK carries no debug info even when it cannot.
         if strip and not keep_symbols:
-            run([strip[0], "--strip-debug", dest / path.name], ROOT)
+            proc.run([strip[0], "--strip-debug", dest / path.name], cwd=ROOT, echo=True)
         names.append(path.name)
     # SDL's activity and its helpers, as the SDL the port was built with has them.
     sdl_java = sorted(PORT_BUILD.rglob("android-project/app/src/main/java/org/libsdl"))
@@ -175,7 +170,8 @@ def collect_libraries(games: list[str], ndk: Path, python_target: Path, keep_sym
 
 def bundle(python_home: Path) -> Path:
     out = BUILD / "openrac"
-    run([sys.executable, ROOT / "tools/bundle_standalone.py", out, "--android", "--python", python_home], ROOT)
+    proc.run([sys.executable, ROOT / "tools/bundle_standalone.py", out, "--android", "--python", python_home],
+             cwd=ROOT, echo=True)
     assets = APP / "src/main/assets"
     assets.mkdir(parents=True, exist_ok=True)
     archive = assets / "openrac.zip"
@@ -195,11 +191,11 @@ def build_apk(ndk: Path, release: bool, keep_symbols: bool) -> None:
         # The launcher's own library, which a debug build compiles with debug information.
         env.setdefault("CARGO_PROFILE_DEV_DEBUG", "0")
     yarn = shutil.which("yarn") or "yarn"
-    run([yarn, "install", "--immutable"], LAUNCHER, env)
+    proc.run([yarn, "install", "--immutable"], cwd=LAUNCHER, env=env, echo=True)
     cmd = [yarn, "tauri", "android", "build", "--apk", "--target", "aarch64"]
     if not release:
         cmd.append("--debug")
-    run(cmd, LAUNCHER, env)
+    proc.run(cmd, cwd=LAUNCHER, env=env, echo=True)
     for apk in sorted((APP / "build/outputs/apk").rglob("*.apk")):
         print(f"APK: {apk} ({apk.stat().st_size / 1e6:.0f} MB)")
 

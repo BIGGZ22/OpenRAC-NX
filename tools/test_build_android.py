@@ -1,12 +1,11 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
 # Copyright (c) 2026 the OpenRAC contributors
-"""Tests for tools/build_android.py's pure steps: how it shows and runs a command, where it finds
-the NDK, and how it downloads and checks Python for Android. A fake network and no build."""
+"""Tests for tools/build_android.py's pure steps: where it finds the NDK, and how it downloads and
+checks Python for Android. A fake network and no build."""
 import contextlib
 import hashlib
 import io
 import os
-import subprocess
 import sys
 import tempfile
 import unittest
@@ -37,17 +36,6 @@ class BuildAndroidTests(unittest.TestCase):
         tmp = tempfile.TemporaryDirectory()
         self.addCleanup(tmp.cleanup)
         self.dir = Path(tmp.name)
-
-    def test_run_shows_the_command_and_passes_strings(self):
-        out = io.StringIO()
-        with mock.patch("subprocess.run") as run, contextlib.redirect_stdout(out):
-            build_android.run(["cmake", Path("/a b"), 3], self.dir, {"X": "1"})
-        self.assertEqual(out.getvalue(), "+ cmake /a b 3\n")
-        run.assert_called_once_with(["cmake", "/a b", "3"], cwd=self.dir, env={"X": "1"}, check=True)
-
-    def test_run_fails_on_a_failed_command(self):
-        with contextlib.redirect_stdout(io.StringIO()), self.assertRaises(subprocess.CalledProcessError):
-            build_android.run([sys.executable, "-c", "raise SystemExit(3)"], self.dir)
 
     def make_ndk(self, path: Path) -> Path:
         (path / "build/cmake").mkdir(parents=True)
