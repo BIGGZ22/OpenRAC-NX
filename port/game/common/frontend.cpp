@@ -28,6 +28,7 @@
 #include "enhanced/game/scripted_moby_colour.h"
 #include "enhanced/viewer/hero_shadow.h"
 #include "fps_counter.h"
+#include "frame_pacing.h"
 #include "game/common/particle_texture_cache.h"
 #include "openrac/game_host.h"
 #include "openrac/guest.h"
@@ -1588,22 +1589,19 @@ struct Pacing {
     bool first_pending = false;
 } pacing;
 
-// Frames a second the port's own clock holds the frames between ticks to; 0: not held (one frame a
-// tick, which the tick paces; a display's rate kept by the swap's wait; unlimited).
+// The cap and refresh share one deadline schedule. A quick presentation return
+// is not proof of a missed VSync: Vulkan queues presentation asynchronously.
 double frame_cap() {
     if (!interpolating()) {
         return 0.0;
     }
     const settings::Settings& s = settings::get();
-    switch (s.frame_rate) {
-        case settings::FrameRate::Capped:
-            return static_cast<double>(std::clamp(s.frame_cap, settings::kFrameCapMin, settings::kFrameCapMax));
-        case settings::FrameRate::Display:
-            // Without the swap's wait the display's rate is kept here.
-            return g->swap == platform::SwapInterval::Immediate && pacing.interval > 0.0 ? 1.0 / pacing.interval : 0.0;
-        default:
-            return 0.0;
-    }
+    const double requested = s.frame_rate == settings::FrameRate::Capped
+                                 ? static_cast<double>(std::clamp(
+                                       s.frame_cap, settings::kFrameCapMin, settings::kFrameCapMax))
+                                 : 0.0;
+    return frame_pacing::limit(requested, s.frame_rate == settings::FrameRate::Display,
+                               g->swap != platform::SwapInterval::Immediate, pacing.interval);
 }
 
 // The frames between ticks show the game half a tick late, so that the next tick is ready before
@@ -1649,17 +1647,12 @@ void swapped(std::chrono::steady_clock::time_point started) {
     // player's frame cap when it is lower.
     const double cap = frame_cap();
     platform::set_frame_target(cap > 0.0 ? std::max(1.0 / cap, pacing.interval) : pacing.interval);
-    if (g->swap == platform::SwapInterval::Immediate) {
-        // No refresh is waited for: there is no phase to draw the next frame for.
+    if (g->swap == platform::SwapInterval::Immediate || gl::is_vulkan()
+        || duration<double>(after - before).count() < 0.0005) {
+        // Vulkan's return is not a vblank timestamp, and an immediate GL return
+        // supplies no display phase either. The shared deadline paces both;
+        // never add a second refresh-length sleep after drawing the tick.
         pacing.last_swap = {};
-    } else if (duration<double>(after - before).count() < 0.0005) {
-        // A swap that did not wait for a refresh (a driver or a compositor that ignores the swap
-        // interval; a window that is not shown) gives no phase; the frames are then paced at the
-        // display's rate here.
-        pacing.last_swap = {};
-        if (pacing.interval > 0.0) {
-            std::this_thread::sleep_until(started + duration_cast<steady_clock::duration>(duration<double>(pacing.interval)));
-        }
     } else {
         pacing.last_swap = after;
     }
@@ -1671,8 +1664,7 @@ void swapped(std::chrono::steady_clock::time_point started) {
     if (cap > 0.0) {
         const auto step = duration_cast<steady_clock::duration>(duration<double>(1.0 / cap));
         const auto now = steady_clock::now();
-        pacing.due = pacing.due.time_since_epoch().count() == 0 || now > pacing.due + 2 * step ? now
-                                                                                               : pacing.due + step;
+        pacing.due = frame_pacing::next_due(pacing.due, started, now, step);
     } else {
         pacing.due = {};
     }

@@ -121,6 +121,11 @@ ticks from tick 900):
 | `display`, off, every frame 27 ms slower | 26.6 | 50.05 |
 | `display`, on, every frame 27 ms slower | 24.7 | 49.95 |
 
+With VSync on or adaptive, a numeric cap is an upper bound: a 120 FPS cap on a
+60 Hz display shows at most 60 frames per second. Refresh and frame-cap limits
+share one deadline, so asynchronous Vulkan presentation does not add a second
+refresh-length sleep to the game tick.
+
 The display's refresh rate is read when the window says it moved to another
 display or the display changed mode, not polled.
 

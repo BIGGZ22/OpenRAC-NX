@@ -92,6 +92,11 @@ target_link_libraries(log_test PRIVATE openrac_common)
 openrac_warnings(log_test)
 add_test(NAME log COMMAND log_test)
 
+add_executable(frame_pacing_test tests/frame_pacing_test.cpp)
+target_include_directories(frame_pacing_test PRIVATE .)
+openrac_warnings(frame_pacing_test)
+add_test(NAME frame_pacing COMMAND frame_pacing_test)
+
 add_executable(settings_test tests/settings_test.cpp game/common/settings.cpp)
 target_link_libraries(settings_test PRIVATE openrac_common)
 openrac_warnings(settings_test)
