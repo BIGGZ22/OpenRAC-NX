@@ -129,6 +129,7 @@ add_library(openrac_runtime STATIC
   runtime/ee.cpp
   runtime/elf.cpp
   runtime/guest.cpp
+  runtime/host_env.cpp
   runtime/memory.cpp
 )
 target_include_directories(openrac_runtime PUBLIC runtime/include)
@@ -139,6 +140,8 @@ endif()
 openrac_warnings(openrac_runtime)
 
 openrac_add_test(runtime SOURCES tests/runtime_test.cpp tests/guest_c.c LIBS openrac_runtime)
+# The C entry point to the OPENRAC_* table (openrac/host_env.h), from C.
+openrac_add_c_test(host_env LIBS openrac_runtime)
 
 # ---- native mods (docs/port/MODS.md): manifests, the list, the loader ----
 include(Luau)
