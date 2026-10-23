@@ -173,6 +173,8 @@ func_0012F348	wad	wad_GetSectors	game
 func_0012F3F8	wad	load_disc_sectors_into_global_buffer	game
 func_0012F4A8	wad	read_file_entry_with_retry	game
 func_0020C468	game	WadDecompress	host	the WAD decompressor (hand-written assembly), answered with the asset readers' own; returns the size it made	int (int, int)
+func_0020C738	game	func_0020C738	host	WadDecompress's toSPR window (hand-written, inputs in $v1/$t3/$t6): MADR and SADR as arguments, the other half as its result; the port does the transfer (host/spr_dma.c); nothing in the port calls it	unsigned int (unsigned int, unsigned int)
+func_0020C758	game	func_0020C758	host	WadDecompress's wait for its toSPR window: the port's transfers are done when they start (host/spr_dma.c); nothing in the port calls it	void (void)
 func_001F7560	game	FontPrintWindow (mode 1)	host	the decompilation keeps GetEffectTex's 64-bit TEX0 in an int (matching C: on the console the register keeps all 64 bits); the port's passes it whole, and the colour as the caller's register holds it	void (unsigned int, long long, unsigned int, int)
 func_001F75D0	game	FontPrintWindow (mode 2)	host	as func_001F7560, the small font	void (unsigned int, long long, unsigned int, int)
 func_00118A50	kernel	SetGsCrt	host	system call 0x02
