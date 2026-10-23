@@ -907,11 +907,13 @@ int full_chain(int width, int height) {
 }
 
 ImagePtr make_image(const Format& format, int width, int height, int levels, VkSampleCountFlagBits samples) {
-    auto image = std::shared_ptr<Image>(new Image, [](Image* i) {
+    // Called by the last owner to let go: the image's Vulkan objects go first, while the device
+    // is open, then the Image itself.
+    auto image = std::shared_ptr<Image>(std::make_unique<Image>().release(), [](Image* i) {
+        std::unique_ptr<Image> owned(i);
         if (g != nullptr && g->device != VK_NULL_HANDLE) {
             destroy_image_now(*i);
         }
-        delete i;
     });
     const bool depth = (format.aspect & VK_IMAGE_ASPECT_DEPTH_BIT) != 0;
     VkImageCreateInfo info{VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO};
