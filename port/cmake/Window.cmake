@@ -74,6 +74,13 @@ if(OPENRAC_VULKAN)
   add_library(openrac_vkgl STATIC
     renderer/vulkan/shader_compiler.cpp
     renderer/vulkan/vkgl.cpp
+    renderer/vulkan/vkgl_commands.cpp
+    renderer/vulkan/vkgl_device.cpp
+    renderer/vulkan/vkgl_draw.cpp
+    renderer/vulkan/vkgl_gl.cpp
+    renderer/vulkan/vkgl_pipelines.cpp
+    renderer/vulkan/vkgl_present.cpp
+    renderer/vulkan/vkgl_resources.cpp
     renderer/vulkan/vma.cpp
   )
   target_link_libraries(openrac_vkgl PUBLIC openrac_common openrac_sdl3 openrac_vulkan PRIVATE openrac_glslang)
@@ -82,6 +89,14 @@ if(OPENRAC_VULKAN)
   # build saved (the tests' pictures came out black), although the cache's header matched.
   set(openrac_vkgl_pipeline_sources
     "${CMAKE_CURRENT_SOURCE_DIR}/renderer/vulkan/vkgl.cpp"
+    "${CMAKE_CURRENT_SOURCE_DIR}/renderer/vulkan/vkgl_commands.cpp"
+    "${CMAKE_CURRENT_SOURCE_DIR}/renderer/vulkan/vkgl_device.cpp"
+    "${CMAKE_CURRENT_SOURCE_DIR}/renderer/vulkan/vkgl_draw.cpp"
+    "${CMAKE_CURRENT_SOURCE_DIR}/renderer/vulkan/vkgl_gl.cpp"
+    "${CMAKE_CURRENT_SOURCE_DIR}/renderer/vulkan/vkgl_internal.h"
+    "${CMAKE_CURRENT_SOURCE_DIR}/renderer/vulkan/vkgl_pipelines.cpp"
+    "${CMAKE_CURRENT_SOURCE_DIR}/renderer/vulkan/vkgl_present.cpp"
+    "${CMAKE_CURRENT_SOURCE_DIR}/renderer/vulkan/vkgl_resources.cpp"
     "${CMAKE_CURRENT_SOURCE_DIR}/renderer/vulkan/shader_compiler.cpp"
     "${CMAKE_CURRENT_SOURCE_DIR}/renderer/vulkan/gpu_draw.inc"
     "${CMAKE_CURRENT_SOURCE_DIR}/renderer/vulkan/gpu_materials.inc")
