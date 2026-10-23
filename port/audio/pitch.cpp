@@ -16,10 +16,12 @@ namespace openrac::audio {
 const std::array<std::uint16_t, 140>& note_pitch_table() {
     static const std::array<std::uint16_t, 140> table = [] {
         std::array<std::uint16_t, 140> t{};
+
         for (int k = 0; k < 140; ++k) {
             const double e = k < 12 ? k / 12.0 : (k - 12) / 1536.0;
             t[k] = static_cast<std::uint16_t>(32768.0 * std::pow(2.0, e));
         }
+
         return t;
     }();
     return table;
@@ -33,31 +35,40 @@ std::uint16_t note_to_pitch(
     const int fine_carry = (fine_total < 0 ? fine_total + 127 : fine_total) / 128;
     const int n = note + fine_carry - center_note;
     int oct = n / 6;
+
     if (n < 0) {
         --oct;
     }
+
     int fine_index = fine_total - fine_carry * 128;
     const int negative = n < 0 ? -1 : 0;
+
     if (oct < 0) {
         --oct;
     }
+
     const int octave = oct / 2 - negative;
     int shift = octave - 2;
     int semitone = n - octave * 12;
+
     if (semitone < 0 || (semitone == 0 && fine_index < 0)) {
         semitone += 12;
         shift = octave - 3;
     }
+
     if (fine_index < 0) {
         semitone = semitone - 1 + fine_carry;
         fine_index += (fine_carry + 1) * 128;
     }
+
     int ret = (table[static_cast<std::size_t>(semitone)]
                * table[static_cast<std::size_t>(fine_index + 12)])
               / 0x10000;
+
     if (shift < 0) {
         ret = (ret + (1 << (-shift - 1))) >> -shift;
     }
+
     return static_cast<std::uint16_t>(ret);
 }
 

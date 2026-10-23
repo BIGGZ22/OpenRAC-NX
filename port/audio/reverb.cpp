@@ -38,6 +38,7 @@ struct Line {
 
     void write_advance(float x) {
         buffer[pos] = x;
+
         if (++pos == buffer.size()) {
             pos = 0;
         }
@@ -81,27 +82,35 @@ struct ReverbEffect::Network {
 
     std::array<float, 2> run(std::array<float, 2> x) {
         std::array<float, 2> out{};
+
         if (echo) {
             for (std::size_t ch = 0; ch < 2; ++ch) {
                 const float y = lines[ch].read();
                 lines[ch].write_advance(x[ch] + y * feedback);
                 out[ch] = y;
             }
+
             return out;
         }
+
         for (std::size_t ch = 0; ch < 2; ++ch) {
             // Combs 0 and 2 take this side's send, 1 and 3 the other side's
             // (the hardware's same-side and cross-side paths).
             float sum = 0;
+
             for (std::size_t k = 0; k < 4; ++k) {
                 sum += combs[ch * 4 + k].run(x[kCombs[k].first == 0 ? ch : 1 - ch]);
             }
+
             float y = sum * kCombOut;
+
             for (std::size_t k = 0; k < 2; ++k) {
                 y = allpass[ch * 2 + k].run(y);
             }
+
             out[ch] = y;
         }
+
         return out;
     }
 };
@@ -134,6 +143,7 @@ std::optional<ReverbPreset> reverb_preset(ReverbMode mode) {
         // 48 kHz has the square-rooted pole.
         return ReverbPreset{{same, cross}, rt60, std::sqrt(1.0f - iir), ap_ms, ap_gain};
     };
+
     switch (mode) {
         case ReverbMode::Room:
             return p(69.3f, 64.0f, 0.78f, 0.855f, {20.8f, 15.2f}, {0.69f, 0.65f});
@@ -162,6 +172,7 @@ std::unique_ptr<ReverbEffect::Network> ReverbEffect::build_network(
     ReverbMode mode, std::uint8_t delay, std::uint8_t feedback
 ) {
     auto net = std::make_unique<ReverbEffect::Network>();
+
     if (mode == ReverbMode::Echo || mode == ReverbMode::Delay) {
         const std::size_t n = echo_delay_samples(delay);
         net->echo = true;
@@ -170,15 +181,19 @@ std::unique_ptr<ReverbEffect::Network> ReverbEffect::build_network(
         net->feedback = echo_feedback(mode, feedback);
         return net;
     }
+
     const std::optional<ReverbPreset> p = reverb_preset(mode);
+
     if (!p) {
         return nullptr;
     }
+
     auto samples = [](float ms) {
         return std::max<std::size_t>(
             static_cast<std::size_t>(std::lround(ms * kRate / 1000.0f)), 1
         );
     };
+
     for (std::size_t ch = 0; ch < 2; ++ch) {
         for (const auto& [which, scale] : kCombs) {
             const std::size_t n =
@@ -187,6 +202,7 @@ std::unique_ptr<ReverbEffect::Network> ReverbEffect::build_network(
             net->combs.push_back(Comb{Line(n), gain, p->damp});
         }
     }
+
     for (std::size_t ch = 0; ch < 2; ++ch) {
         for (std::size_t k = 0; k < 2; ++k) {
             net->allpass.push_back(
@@ -194,6 +210,7 @@ std::unique_ptr<ReverbEffect::Network> ReverbEffect::build_network(
             );
         }
     }
+
     return net;
 }
 
@@ -208,12 +225,14 @@ void ReverbEffect::set(ReverbMode mode, int depth, std::uint8_t delay, std::uint
     m_mode = mode;
     m_delay = delay;
     m_feedback = feedback;
+
     if (rebuild) {
         m_network = build_network(mode, delay, feedback);
         m_lowpass = {};
     } else if (m_network && m_network->echo) {
         m_network->feedback = echo_feedback(mode, feedback);
     }
+
     m_depth = static_cast<float>(std::clamp(depth, 0, 0x7fff));
     m_target = m_depth;
     m_glide_left = 0;
@@ -234,16 +253,20 @@ std::array<int, 2> ReverbEffect::run(std::array<int, 2> send) {
     if (!active()) {
         return {0, 0};
     }
+
     if (m_glide_left > 0) {
         --m_glide_left;
         m_depth = m_glide_left == 0 ? m_target : m_depth + m_step;
     }
+
     std::array<float, 2> x{};
+
     for (std::size_t ch = 0; ch < 2; ++ch) {
         const auto s = static_cast<float>(send[ch]);
         m_lowpass[ch] = s + (m_lowpass[ch] - s) * kInputPole;
         x[ch] = m_lowpass[ch];
     }
+
     const std::array<float, 2> y = m_network->run(x);
     const float g = m_depth / 32768.0f;
     return {static_cast<int>(std::lround(y[0] * g)), static_cast<int>(std::lround(y[1] * g))};

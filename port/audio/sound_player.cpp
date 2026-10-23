@@ -48,9 +48,11 @@ std::array<std::int16_t, 2> make_volume(
     int vol = vol1 * 258;
     vol = vol * vol2 / 0x7f;
     vol = vol * vol3 / 0x7f;
+
     if (vol == 0) {
         return {0, 0};
     }
+
     int pan = wrap_degrees(pan1 + pan2 + pan3);
     // 0 degrees is straight ahead: the curve starts a quarter turn left.
     pan = pan >= 270 ? pan - 270 : pan + 90;
@@ -147,11 +149,13 @@ void SoundPlayer::unload_bank(BankHandle bank) {
                 m_mixer.voice(v).stop();
                 m_slots[v].owner = 0;
             }
+
             it = m_scripts.erase(it);
         } else {
             ++it;
         }
     }
+
     m_banks.erase(bank);
 }
 
@@ -162,15 +166,19 @@ const assets::SoundBank* SoundPlayer::bank(BankHandle bank) const {
 
 SoundHandle SoundPlayer::play(BankHandle bank_handle, std::uint32_t sound, const PlayRequest& r) {
     const auto it = m_banks.find(bank_handle);
+
     if (it == m_banks.end() || sound >= it->second->bank.sounds.size()) {
         return 0;
     }
+
     Bank& b = *it->second;
     const assets::SfxSound& sfx = b.bank.sounds[sound];
     const auto grains = b.bank.sound_grains(sound);
+
     if (grains.empty()) {
         return 0;
     }
+
     const std::int32_t volume = r.volume == kVolumeKeep ? 1024 : r.volume;
 
     // The instance limit (flag 8): when the sound already plays that many
@@ -179,32 +187,40 @@ SoundHandle SoundPlayer::play(BankHandle bank_handle, std::uint32_t sound, const
     if (sfx.instance_limit > 0 && (sfx.flags & 8)) {
         Script* weakest = nullptr;
         int count = 0;
+
         for (auto& [h, s] : m_scripts) {
             if (s->bank_handle != bank_handle || s->sound != sound) {
                 continue;
             }
+
             ++count;
+
             if (!weakest || ((sfx.flags & 0x10) && s->asked_volume < weakest->asked_volume)
                 || ((sfx.flags & 0x20) && s->started < weakest->started)) {
                 weakest = s.get();
             }
         }
+
         if (count >= sfx.instance_limit) {
             const bool replace =
                 weakest
                 && (((sfx.flags & 0x10) && weakest->asked_volume < volume) || (sfx.flags & 0x20));
+
             if (!replace) {
                 return 0;
             }
+
             stop(weakest->handle);
         }
     }
 
     auto s = std::make_unique<Script>();
     s->handle = m_next_sound++;
+
     if (m_next_sound == 0) {
         m_next_sound = 1;
     }
+
     s->bank_handle = bank_handle;
     s->bank = &b;
     s->sound = sound;
@@ -221,10 +237,12 @@ SoundHandle SoundPlayer::play(BankHandle bank_handle, std::uint32_t sound, const
     s->pitch_bend = s->asked_bend = r.pitch_bend;
     s->registers = r.registers;
     s->countdown = grains[0].delay;
+
     // Grains due at once run before play returns.
     while (s->countdown <= 0 && !s->done) {
         run_grain(*s);
     }
+
     const SoundHandle handle = s->handle;
     m_scripts.emplace(handle, std::move(s));
     return handle;
@@ -236,10 +254,13 @@ bool SoundPlayer::playing(SoundHandle sound) const {
 
 void SoundPlayer::stop(SoundHandle sound) {
     const auto it = m_scripts.find(sound);
+
     if (it == m_scripts.end()) {
         return;
     }
+
     it->second->done = true;
+
     for (const std::size_t v : voices_of(*it->second)) {
         m_mixer.voice(v).key_off();
     }
@@ -252,6 +273,7 @@ void SoundPlayer::stop_all() {
             m_slots[v].owner = 0;
         }
     }
+
     m_scripts.clear();
 }
 
@@ -285,11 +307,14 @@ void SoundPlayer::set_master_volume(std::size_t group, std::int32_t volume) {
     if (group >= kVolumeGroups) {
         return;
     }
+
     m_master[group] = volume;
+
     for (auto& [h, s] : m_scripts) {
         if (s->group != static_cast<int>(group) || s->paused) {
             continue;
         }
+
         for (const std::size_t v : voices_of(*s)) {
             const Slot& slot = m_slots[v];
             m_mixer.voice(v).set_volume({
@@ -305,7 +330,9 @@ void SoundPlayer::pause_groups(std::uint32_t mask) {
         if ((mask >> (s->group & 31) & 1) == 0 || s->paused) {
             continue;
         }
+
         s->paused = true;
+
         for (const std::size_t v : voices_of(*s)) {
             m_mixer.voice(v).set_volume({0, 0});
             m_mixer.voice(v).set_pitch(0);
@@ -318,9 +345,11 @@ void SoundPlayer::continue_groups(std::uint32_t mask) {
         if ((mask >> (s->group & 31) & 1) == 0 || !s->paused) {
             continue;
         }
+
         s->paused = false;
         const std::int32_t master =
             s->group < static_cast<int>(kVolumeGroups) ? m_master[s->group] : kFullVolume;
+
         for (const std::size_t v : voices_of(*s)) {
             const Slot& slot = m_slots[v];
             m_mixer.voice(v).set_volume({
@@ -328,6 +357,7 @@ void SoundPlayer::continue_groups(std::uint32_t mask) {
                 volume_register(group_volume(slot.base[1], master)),
             });
         }
+
         apply_pitch(*s);
     }
 }
@@ -337,6 +367,7 @@ void SoundPlayer::render(std::span<std::int16_t> interleaved) {
         if (m_frame_in_tick == 0) {
             tick();
         }
+
         m_frame_in_tick = (m_frame_in_tick + 1) % kFramesPerTick;
         const auto out = m_mixer.mix();
         interleaved[i] = out[0];
@@ -346,11 +377,14 @@ void SoundPlayer::render(std::span<std::int16_t> interleaved) {
 
 void SoundPlayer::tick() {
     ++m_ticks;
+
     for (auto it = m_scripts.begin(); it != m_scripts.end();) {
         Script& s = *it->second;
+
         if (!s.paused) {
             tick_lfos(s);
         }
+
         if (s.done) {
             if (voices_of(s).empty()) {
                 it = m_scripts.erase(it);
@@ -358,10 +392,12 @@ void SoundPlayer::tick() {
             }
         } else if (!s.paused) {
             --s.countdown;
+
             while (s.countdown <= 0 && !s.done) {
                 run_grain(s);
             }
         }
+
         ++it;
     }
 }
@@ -378,11 +414,13 @@ bool SoundPlayer::owns(const Script& s, std::size_t v) const {
 
 std::vector<std::size_t> SoundPlayer::voices_of(const Script& s) const {
     std::vector<std::size_t> out;
+
     for (std::size_t v = 0; v < kVoiceCount; ++v) {
         if (owns(s, v)) {
             out.push_back(v);
         }
     }
+
     return out;
 }
 
@@ -390,20 +428,25 @@ std::optional<std::size_t> SoundPlayer::allocate_voice(int priority) {
     // A free voice, else the lowest-priority one at or below this tone's,
     // the oldest first.
     std::optional<std::size_t> best;
+
     for (std::size_t v = 0; v < kVoiceCount; ++v) {
         if (!m_mixer.voices()[v].active()) {
             return v;
         }
+
         const Slot& slot = m_slots[v];
+
         if (slot.priority > priority) {
             continue;
         }
+
         if (!best || slot.priority < m_slots[*best].priority
-            || (slot.priority == m_slots[*best].priority && slot.started < m_slots[*best].started
-            )) {
+            || (slot.priority == m_slots[*best].priority
+                && slot.started < m_slots[*best].started)) {
             best = v;
         }
     }
+
     return best;
 }
 
@@ -418,6 +461,7 @@ std::int8_t& SoundPlayer::reg(Script& s, std::int32_t which) {
     if (which < 0) {
         return m_global_registers[static_cast<std::size_t>(std::min(-which - 1, 31))];
     }
+
     return s.registers[static_cast<std::size_t>(std::min(which, 3))];
 }
 
@@ -426,6 +470,7 @@ std::int8_t& SoundPlayer::reg(Script& s, std::int32_t which) {
 // otherwise register * scale / 127.
 std::int32_t SoundPlayer::register_value(const Script& s, std::int32_t selector, int scale) {
     std::int32_t raw = 0;
+
     if (selector >= -4) {
         raw = s.registers[static_cast<std::size_t>(-selector - 1)];
     } else if (selector == -5) {
@@ -433,6 +478,7 @@ std::int32_t SoundPlayer::register_value(const Script& s, std::int32_t selector,
     } else {
         raw = m_global_registers[static_cast<std::size_t>(std::min(-selector - 6, 31))];
     }
+
     return scale == 0 ? raw : scale * raw / 127;
 }
 
@@ -443,21 +489,26 @@ void SoundPlayer::unsupported(const char* what) {
 void SoundPlayer::start_tone(Script& s, const assets::Tone& tone) {
     s.volume = std::clamp(((s.asked_volume * s.own_volume) >> 10) + s.lfo_volume, 0, 127);
     s.pan = wrap_degrees(s.asked_pan + s.lfo_pan);
+
     if (tone.flags & assets::kToneNoise) {
         unsupported("noise tone");
         return;
     }
+
     if (tone.flags & assets::kToneReverbOnly) {
         unsupported("reverb-only tone");
         return;
     }
+
     const int vol = std::max(tone.volume < 0 ? register_value(s, tone.volume, 0) : tone.volume, 0);
     const int pan = wrap_degrees(tone.pan < 0 ? register_value(s, tone.pan, 360) : tone.pan);
     const auto v = allocate_voice(tone.priority);
+
     if (!v) {
         unsupported("tone dropped: no voice");
         return;
     }
+
     Slot& slot = m_slots[*v];
     slot.owner = s.handle;
     slot.started = m_ticks;
@@ -492,24 +543,30 @@ void SoundPlayer::apply_volume(Script& s, std::int32_t volume, std::int32_t pan)
     } else {
         s.asked_volume = -1024 * volume / 127;
     }
+
     if (pan == kPanReset) {
         s.asked_pan = s.bank->bank.sounds[s.sound].pan;
     } else if (pan != kPanKeep) {
         s.asked_pan = pan;
     }
+
     const std::int32_t new_volume =
         std::clamp(((s.asked_volume * s.own_volume) >> 10) + s.lfo_volume, 0, 127);
     const std::int32_t new_pan = wrap_degrees(s.asked_pan + s.lfo_pan);
+
     if (new_volume == s.volume && new_pan == s.pan) {
         return;
     }
+
     s.volume = new_volume;
     s.pan = new_pan;
     const std::int32_t master =
         s.group < static_cast<int>(kVolumeGroups) ? m_master[s.group] : kFullVolume;
+
     for (const std::size_t v : voices_of(s)) {
         Slot& slot = m_slots[v];
         slot.base = make_volume(127, 0, s.volume, s.pan, slot.tone_volume, slot.tone_pan);
+
         if (!s.paused) {
             m_mixer.voice(v).set_volume({
                 volume_register(group_volume(slot.base[0], master)),
@@ -522,9 +579,11 @@ void SoundPlayer::apply_volume(Script& s, std::int32_t volume, std::int32_t pan)
 void SoundPlayer::apply_pitch(Script& s) {
     s.pitch_mod = s.asked_mod + s.lfo_mod;
     s.pitch_bend = std::clamp<std::int32_t>(s.asked_bend + s.lfo_bend, -0x8000, 0x7fff);
+
     if (s.paused) {
         return;
     }
+
     for (const std::size_t v : voices_of(s)) {
         m_mixer.voice(v).set_pitch(tone_pitch(m_slots[v].tone, s.pitch_bend, s.pitch_mod));
     }
@@ -533,16 +592,21 @@ void SoundPlayer::apply_pitch(Script& s) {
 void SoundPlayer::tick_lfos(Script& s) {
     for (Lfo& l : s.lfos) {
         ++l.ticks;
+
         // The library's LFOs move every other tick.
         if (l.target == 0 || (l.ticks & 1) == 0) {
             continue;
         }
+
         const std::int32_t step = l.next_step >> 16;
         l.next_step += static_cast<std::int32_t>(2 * l.step_size);
+
         if (l.next_step > 0x7ffffff) {
             l.next_step -= 0x8000000;
         }
+
         std::int32_t wave = 0;
+
         switch (l.shape) {
             case 1:
                 wave = lfo_sine(step);
@@ -566,38 +630,45 @@ void SoundPlayer::tick_lfos(Script& s) {
                     l.hold2 = 1;
                     l.hold1 = -(random() & 0x7fff) * (random() & 1);
                 }
+
                 wave = l.hold1;
                 break;
             default:
                 break;
         }
+
         if (l.flags & 1) {
             wave = -wave;
         }
+
         switch (l.target) {
             case 1:
                 if (const std::int32_t v = (l.range * (wave - 0x7fff)) >> 16; v != s.lfo_volume) {
                     s.lfo_volume = v;
                     apply_volume(s, kVolumeKeep, kPanKeep);
                 }
+
                 break;
             case 2:
                 if (const std::int32_t p = (l.range * wave) >> 15; p != s.lfo_pan) {
                     s.lfo_pan = p;
                     apply_volume(s, kVolumeKeep, kPanKeep);
                 }
+
                 break;
             case 3:
                 if (const std::int32_t m = (wave * l.range) >> 15; m != s.lfo_mod) {
                     s.lfo_mod = m;
                     apply_pitch(s);
                 }
+
                 break;
             case 4:
                 if (const std::int32_t b = (wave * l.range) >> 15; b != s.lfo_bend) {
                     s.lfo_bend = b;
                     apply_pitch(s);
                 }
+
                 break;
             default:
                 break;
@@ -630,6 +701,7 @@ void SoundPlayer::run_grain(Script& s) {
                 return std::optional<std::int32_t>(i);
             }
         }
+
         return std::optional<std::int32_t>();
     };
     auto clamp8 = [](std::int32_t v) {
@@ -646,6 +718,7 @@ void SoundPlayer::run_grain(Script& s) {
             Lfo& l = s.lfos[set.which & 3];
             l = Lfo{};
             l.target = set.target;
+
             if (l.target != 0) {
                 l.shape = set.shape;
                 l.flags = set.flags;
@@ -653,10 +726,12 @@ void SoundPlayer::run_grain(Script& s) {
                 l.step_size = set.step_size;
                 l.hold1 = l.shape == 2 ? set.duty_cycle : 0;
                 l.next_step = (set.flags & 2) ? (random() & 0x7ff) << 16 : set.start_offset << 16;
+
                 if (l.shape == 5) {
                     l.hold1 = -(random() & 0x7fff) * (random() & 1);
                     l.hold2 = 1;
                 }
+
                 switch (l.target) {
                     case 1:
                         l.range = (s.own_volume * l.depth) >> 10;
@@ -674,17 +749,20 @@ void SoundPlayer::run_grain(Script& s) {
                         break;
                 }
             }
+
             break;
         }
         case GrainType::LoopEnd:
             if (const auto start = find(GrainType::LoopStart, s.next - 1, -1)) {
                 s.next = *start - 1;
             }
+
             break;
         case GrainType::LoopContinue:
             if (const auto end = find(GrainType::LoopEnd, s.next + 1, 1)) {
                 s.next = *end;
             }
+
             break;
         case GrainType::Stop:
             s.done = true;
@@ -693,9 +771,11 @@ void SoundPlayer::run_grain(Script& s) {
             const std::int32_t options = std::max<std::int32_t>(p[0], 1);
             std::int16_t& previous = s.bank->grain_state[s.first_grain + at];
             std::int32_t pick = random() % options;
+
             if (pick == previous && ++pick >= options) {
                 pick = 0;
             }
+
             previous = static_cast<std::int16_t>(pick);
             choose(
                 pick * p[1],
@@ -753,21 +833,26 @@ void SoundPlayer::run_grain(Script& s) {
             // Skips the next grain unless the test holds.
             const std::int32_t value = reg(s, p[0]);
             const bool skip = p[1] == 0 ? value >= p[2] : p[1] == 1 ? value != p[2] : p[2] >= value;
+
             if (skip) {
                 ++s.next;
             }
+
             break;
         }
         case GrainType::GotoMarker:
             if (const auto m = find(GrainType::Marker, 0, 1, p[0])) {
                 s.next = *m - 1;
             }
+
             break;
         case GrainType::GotoRandomMarker: {
             const std::int32_t mark = random() % std::max(p[1] - p[0] + 1, 1) + p[0];
+
             if (const auto m = find(GrainType::Marker, 0, 1, static_cast<std::int16_t>(mark))) {
                 s.next = *m - 1;
             }
+
             break;
         }
         case GrainType::WaitForAllVoices:
@@ -775,17 +860,20 @@ void SoundPlayer::run_grain(Script& s) {
                 --s.next;
                 extra_delay = 1;
             }
+
             break;
         case GrainType::KeyOffVoices:
             for (const std::size_t v : voices_of(s)) {
                 m_mixer.voice(v).key_off();
             }
+
             break;
         case GrainType::KillVoices:
             for (const std::size_t v : voices_of(s)) {
                 m_mixer.voice(v).key_off();
                 m_mixer.voice(v).set_volume({0, 0});
             }
+
             break;
         case GrainType::OnStopMarker:
             s.next = count - 1;
@@ -813,11 +901,14 @@ void SoundPlayer::run_grain(Script& s) {
         s.next += static_cast<std::int32_t>(s.to_skip);
         s.skipping = false;
     }
+
     ++s.next;
+
     if (s.next >= count) {
         s.done = true;
         return;
     }
+
     s.countdown = s.grains[static_cast<std::size_t>(s.next)].delay + extra_delay;
 }
 

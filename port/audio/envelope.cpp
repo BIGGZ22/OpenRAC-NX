@@ -17,6 +17,7 @@ void Envelope::update_settings() {
     auto bits = [r](unsigned pos, unsigned n) {
         return static_cast<int>((r >> pos) & ((1u << n) - 1));
     };
+
     switch (m_phase) {
         case EnvelopePhase::Attack:
             m_exponential = bits(15, 1) != 0;
@@ -64,6 +65,7 @@ void Envelope::release() {
     if (m_phase == EnvelopePhase::Stopped) {
         return;
     }
+
     m_phase = EnvelopePhase::Release;
     m_counter = 0;
     update_settings();
@@ -76,20 +78,26 @@ void Envelope::stop() {
 
 void Envelope::step() {
     std::uint32_t counter_step = 0x80'0000;
+
     if (m_shift > 11) {
         counter_step >>= m_shift - 11;
     }
+
     // The step as the hardware's signed 16-bit value.
     int step = static_cast<std::int16_t>(m_step << std::max(0, 11 - m_shift));
+
     if (m_exponential) {
         if (!m_decrease && m_level > 0x6000) {
             counter_step >>= 2;
         }
+
         if (m_decrease) {
             step = (step * m_level) >> 15;
         }
     }
+
     m_counter += counter_step;
+
     if (m_counter >= 0x80'0000) {
         m_counter = 0;
         m_level = std::clamp(m_level + step, 0, 0x7fff);
@@ -100,11 +108,15 @@ void Envelope::run() {
     if (m_phase == EnvelopePhase::Stopped) {
         return;
     }
+
     step();
+
     if (m_phase == EnvelopePhase::Sustain) {
         return;
     }
+
     const bool reached = m_decrease ? m_level <= m_target : m_level >= m_target;
+
     if (reached) {
         switch (m_phase) {
             case EnvelopePhase::Attack:
@@ -119,6 +131,7 @@ void Envelope::run() {
             default:
                 break;
         }
+
         update_settings();
     }
 }

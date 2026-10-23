@@ -119,6 +119,7 @@ std::size_t Voice::stream_remaining() const {
     if (!m_streaming || !m_part.data) {
         return 0;
     }
+
     const std::size_t frames = m_part.data->size() / assets::kAdpcmFrameBytes;
     const std::size_t left = frames > m_part_frame ? frames - m_part_frame : 0;
     const std::size_t in_block = m_counter >> 12;
@@ -128,14 +129,17 @@ std::size_t Voice::stream_remaining() const {
 
 void Voice::load_block() {
     const std::vector<std::uint8_t>* data = source();
+
     if (data == nullptr || m_address + assets::kAdpcmFrameBytes > data->size()) {
         // Past the data (a malformed sample): silence.
         m_envelope.stop();
         return;
     }
+
     const std::uint8_t* frame = data->data() + m_address;
     m_flags = frame[1];
     m_block = assets::decode_adpcm_frame(frame, m_history);
+
     if (m_flags & assets::kAdpcmFlagLoopStart) {
         m_loop_address = m_address;
     }
@@ -143,9 +147,11 @@ void Voice::load_block() {
 
 void Voice::next_block() {
     m_previous = {m_block[25], m_block[26], m_block[27]};
+
     if (m_flags & assets::kAdpcmFlagEnd) {
         if (!m_streaming) {
             m_address = m_loop_address;
+
             if ((m_flags & assets::kAdpcmFlagRepeat) == 0) {
                 m_envelope.stop();
                 return;
@@ -158,6 +164,7 @@ void Voice::next_block() {
                 m_envelope.stop();
                 return;
             }
+
             m_address = 0;
             m_loop_address = 0;
             m_part_frame = 0;
@@ -166,6 +173,7 @@ void Voice::next_block() {
         m_address += assets::kAdpcmFrameBytes;
         ++m_part_frame;
     }
+
     load_block();
 }
 
@@ -173,6 +181,7 @@ std::pair<int, int> Voice::run() {
     if (m_envelope.phase() == EnvelopePhase::Stopped || m_held) {
         return {0, 0};
     }
+
     const auto index = static_cast<int>(m_counter >> 12);
     auto at = [this](int k) -> int {
         return k >= 0 ? m_block[static_cast<std::size_t>(k)]
@@ -188,13 +197,16 @@ std::pair<int, int> Voice::run() {
     const int left = static_cast<std::int16_t>((sample * level(m_volume[0])) >> 15);
     const int right = static_cast<std::int16_t>((sample * level(m_volume[1])) >> 15);
     m_counter += std::min<std::uint16_t>(m_pitch, 0x3fff);
+
     while ((m_counter >> 12) >= assets::kAdpcmFrameSamples) {
         m_counter -= static_cast<std::uint32_t>(assets::kAdpcmFrameSamples) << 12;
         next_block();
+
         if (m_envelope.phase() == EnvelopePhase::Stopped) {
             break;
         }
     }
+
     m_envelope.run();
     return {left, right};
 }
@@ -208,20 +220,24 @@ std::array<std::int16_t, 2> VoiceMixer::mix(std::array<int, 2> extra) {
     std::int64_t left = extra[0];
     std::int64_t right = extra[1];
     std::array<int, 2> send{};
+
     for (Voice& v : m_voices) {
         const auto [a, b] = v.run();
         left += a;
         right += b;
+
         if (v.reverb()) {
             send[0] += a;
             send[1] += b;
         }
     }
+
     if (m_reverb.active()) {
         const auto wet = m_reverb.run(send);
         left += wet[0];
         right += wet[1];
     }
+
     return {master_out(left, m_master[0]), master_out(right, m_master[1])};
 }
 
