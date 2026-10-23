@@ -336,6 +336,21 @@ patched ANGLE was the alternative and was not chosen. The drawing tests also
 run on Vulkan (`*_vulkan`, with the validation layer, on Mesa's lavapipe in
 CI).
 
+**Why Vulkan and a custom driver gain less here than in an emulator.** A
+Switch or PS2 emulator is held back by the GPU: it draws the console's
+picture at several times its size through large shaders, and a faster
+driver shows at once. The port draws a PS2 game's scenes natively, which a
+current Adreno draws with time to spare, so its frame waits on the
+processor: the game's own code, and the renderer's calls, which the Vulkan
+layer translates from OpenGL's shape. A better driver changes neither, and
+when both renderers reach the screen's rate there is nothing left to gain
+in frames per second. What helps there is processor time: the Android
+build is linked with ThinLTO (`OPENRAC_PORT_LTO`, the `android-arm64`
+preset), which both renderers gain from. Which side a device is on is in
+`OPENRAC_FRAME_COST`'s lines (`scene`, `submit`, `gpu`, `show`) and
+`--debug-dump`'s `vk_*` numbers; those are what decide what of the layer
+is rewritten next.
+
 ## Building and CI
 
 `tools/build_android.py` builds everything: Python, the port with the NDK,
