@@ -22,12 +22,15 @@
 #include <imgui_impl_sdl3.h>
 #include <imgui_internal.h>  // ImGui::ClearActiveID: a finger that scrolls lets go of what it pressed
 #include <map>
+#include <optional>
 #include <set>
 #include <string>
+#include <string_view>
 #include <unordered_map>
 #include <utility>
 #include <vector>
 
+#include "common/env.h"
 #include "common/log.h"
 #include "common/stats.h"
 #include "fixes.h"
@@ -282,20 +285,37 @@ std::string megabytes(std::uint64_t bytes) {
 
 // ---- The environment ----
 
+// Returns the value `var` was set to as a string of its own, or nothing when it is unset. For the
+// reads below that walk the value as the C library does, up to its NUL, which env::value's view
+// need not have.
+std::optional<std::string> env_string(env::Var var) {
+    const std::optional<std::string_view> found = env::value(var);
+
+    // An unset variable stays nothing, which differs from the empty string.
+    if (!found) {
+        return std::nullopt;
+    }
+
+    return std::string(*found);
+}
+
 void configure() {
     if (s.configured) {
         return;
     }
     s.configured = true;
-    if (const char* developer = std::getenv("OPENRAC_DEVELOPER")) {
-        s.developer = developer[0] != '\0' && developer[0] != '0';
+    {
+        // A first character other than 0, as this read has always taken it: 00 or 01 is off.
+        const std::string_view developer =
+            env::value(env::Var::Developer).value_or(std::string_view{});
+        s.developer = !developer.empty() && developer.front() != '0';
     }
     // OPENRAC_OVERLAY: shown from the start; a list of names opens those sections ("all": every
     // one), "inspect" selects the hero and opens the inspector, "labels" names the mobys in view,
     // "memview" opens the memory viewer.
-    if (const char* v = std::getenv("OPENRAC_OVERLAY"); v != nullptr && std::strcmp(v, "0") != 0) {
+    if (const std::optional<std::string_view> v = env::value(env::Var::Overlay); v && *v != "0") {
         s.wanted = true;
-        const std::string list = v;
+        const std::string list(*v);
         const auto has = [&](const char* word) {
             std::size_t at = 0;
             const std::size_t n = std::strlen(word);
@@ -328,9 +348,9 @@ void configure() {
     }
     // OPENRAC_HIDE_PASSES=NAME,...: the renderer's passes of those names are not drawn (the names of
     // the Renderer section's rows: sky, terrain, ties, shrubs, mobys, effects, hud).
-    if (const char* v = std::getenv("OPENRAC_HIDE_PASSES")) {
+    if (const std::optional<std::string> v = env_string(env::Var::HidePasses)) {
         std::string name;
-        for (const char* at = v;; ++at) {
+        for (const char* at = v->c_str();; ++at) {
             if (*at == ',' || *at == '\0') {
                 if (!name.empty()) {
                     s.hidden.insert(name);
@@ -348,8 +368,8 @@ void configure() {
     // OPENRAC_PRESS presses pad buttons: KEY is SDL's name of a key (F3, F5, Return, ...), or
     // click@X,Y for a left click at that place of the window (in its own units, not pixels).
     // +HELD: that many pictures later while the game is paused at FRAME, where frames do not count.
-    if (const char* v = std::getenv("OPENRAC_KEYS")) {
-        for (const char* at = v; at != nullptr && *at != '\0';) {
+    if (const std::optional<std::string> v = env_string(env::Var::Keys)) {
+        for (const char* at = v->c_str(); at != nullptr && *at != '\0';) {
             ScriptedInput in;
             char* end = nullptr;
             in.frame = std::strtoull(at, &end, 10);
@@ -375,29 +395,30 @@ void configure() {
     }
     // OPENRAC_OVERLAY_SHOT=N:PREFIX: every N ticks the window, overlay included, to PREFIX<tick>.png
     // (from OPENRAC_SHOT_FROM on, as OPENRAC_SHOT's).
-    if (const char* v = std::getenv("OPENRAC_OVERLAY_SHOT")) {
-        const char* colon = std::strchr(v, ':');
-        s.shot_every = std::strtoull(v, nullptr, 10);
+    if (const std::optional<std::string> v = env_string(env::Var::OverlayShot)) {
+        const char* colon = std::strchr(v->c_str(), ':');
+        s.shot_every = std::strtoull(v->c_str(), nullptr, 10);
         s.shot_prefix = colon != nullptr ? colon + 1 : "overlay_";
-        if (const char* from = std::getenv("OPENRAC_SHOT_FROM")) {
-            s.shot_from = std::strtoull(from, nullptr, 10);
+
+        // Read with strtoull, as OPENRAC_SHOT's is (frontend.cpp), not env::integer's strtoll.
+        if (const std::optional<std::string> from = env_string(env::Var::ShotFrom)) {
+            s.shot_from = std::strtoull(from->c_str(), nullptr, 10);
         }
     }
     // OPENRAC_PAUSE_AT=TICK[:FRAMES]: the game pauses at that tick, and goes on by itself after
     // FRAMES pictures of it when given (for scripted checks of the pause).
-    if (const char* v = std::getenv("OPENRAC_PAUSE_AT")) {
-        s.pause_at = std::atoll(v);
-        const char* colon = std::strchr(v, ':');
+    if (const std::optional<std::string> v = env_string(env::Var::PauseAt)) {
+        s.pause_at = std::atoll(v->c_str());
+        const char* colon = std::strchr(v->c_str(), ':');
         s.held_frames = colon != nullptr ? std::atoi(colon + 1) : 0;
     }
     // OPENRAC_SHADER_RELOAD=TICK: every shader program is read again from its files at that tick
     // (what the Shaders section's button does), with the result in the log.
-    if (const char* v = std::getenv("OPENRAC_SHADER_RELOAD")) {
-        s.reload_at = std::atoll(v);
-    }
+    s.reload_at = env::integer(env::Var::ShaderReload, s.reload_at);
     // OPENRAC_TIME_SCALE=X: the game's speed (0.25: quarter speed), from 1/64 to 1.
-    if (const char* v = std::getenv("OPENRAC_TIME_SCALE")) {
-        const double scale = std::atof(v);
+    {
+        // Unset reads as 0, which, as any value not above 0, leaves the speed as it is.
+        const double scale = env::number(env::Var::TimeScale, 0.0);
         if (scale > 0.0) {
             s.stretch = std::clamp(1.0 / scale, 1.0, 64.0);
         }
@@ -1150,8 +1171,8 @@ void game_section() {
 }
 
 std::string shader_root() {
-    const char* named = std::getenv("OPENRAC_SHADER_DIR");
-    return named != nullptr ? named : stats::shader_root();
+    const std::optional<std::string_view> named = env::value(env::Var::ShaderDir);
+    return named ? std::string(*named) : stats::shader_root();
 }
 
 void shaders_section() {
@@ -1284,9 +1305,10 @@ void picture_marks(const Shown& shown) {
 std::string shot_name(std::uint64_t tick) {
     const std::string name = std::format("openrac_window_{}.png", tick);
 #if defined(__ANDROID__)
-    if (const char* home = std::getenv("HOME"); home != nullptr && *home != '\0') {
+    if (const std::optional<std::string> home = env::system_variable("HOME");
+        home && !home->empty()) {
         std::error_code ignored;
-        const std::filesystem::path dir = std::filesystem::path(home) / "screenshots";
+        const std::filesystem::path dir = std::filesystem::path(*home) / "screenshots";
         std::filesystem::create_directories(dir, ignored);
         return (dir / name).string();
     }
@@ -1301,8 +1323,7 @@ bool drawer_possible() {
 #if defined(__ANDROID__)
     return true;
 #else
-    static const bool forced = std::getenv("OPENRAC_DRAWER") != nullptr;
-    return forced;
+    return env::flag(env::Var::Drawer);
 #endif
 }
 
@@ -1551,8 +1572,7 @@ constexpr bool kMenuBar = true;
 
 // OPENRAC_MENU_BAR=1 has them on macOS as well (for looking at them there).
 bool menu_bar_possible() {
-    static const bool forced = std::getenv("OPENRAC_MENU_BAR") != nullptr;
-    return (kMenuBar || forced) && !drawer_possible();
+    return (kMenuBar || env::flag(env::Var::MenuBar)) && !drawer_possible();
 }
 
 bool menu_bar_shown() {
