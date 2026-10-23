@@ -4,6 +4,8 @@
   import UpdateModal from "$components/UpdateModal.svelte";
   import { errorText, onAndroid } from "$lib/api";
   import { app, openDevelop, refresh, start, updateDiscordPresence, type Page } from "$lib/app.svelte";
+  import { reduced } from "$lib/motion";
+  import { tick } from "svelte";
   import { ACCENT_PROPERTIES, accentProperties } from "$lib/themes";
   import Game from "./pages/Game.svelte";
   import Library from "./pages/Library.svelte";
@@ -44,12 +46,29 @@
     document.documentElement.dataset.layout = app.config?.layout ?? "compact";
   });
 
+  // The page shown. On Android one page gives way to the next in a view transition (app.css: the
+  // one leaving fades out as the other fades in); elsewhere, or without the browser's support, it
+  // simply changes.
+  let page = $state<Page>(app.page);
+  $effect(() => {
+    const next = app.page;
+    if (next === page) return;
+    if (!onAndroid || reduced || !("startViewTransition" in document)) {
+      page = next;
+      return;
+    }
+    document.startViewTransition(async () => {
+      page = next;
+      await tick();
+    });
+  });
+
   // Another page starts at its top, as it arrives (app.css: its sections rise in turn).
   let view = $state<HTMLElement | null>(null);
   let shown: Page | null = null;
   $effect(() => {
-    if (app.page === shown) return;
-    shown = app.page;
+    if (page === shown) return;
+    shown = page;
     view?.scrollTo({ top: 0 });
   });
 
@@ -110,11 +129,11 @@
     {#if app.config.setupComplete}<Header />{:else if !onAndroid}<Header setup />{/if}
     <main bind:this={view}>
       {#if !app.config.setupComplete}<Settings setup />
-      {:else if app.page === "game"}<Game />
-      {:else if app.page === "mods"}{#await modsPage() then page}<page.default />{/await}
-      {:else if app.page === "tasks"}{#await tasksPage() then page}<page.default />{/await}
-      {:else if app.page === "develop"}{#await developPage() then page}<page.default />{/await}
-      {:else if app.page === "settings"}<Settings />
+      {:else if page === "game"}<Game />
+      {:else if page === "mods"}{#await modsPage() then loaded}<loaded.default />{/await}
+      {:else if page === "tasks"}{#await tasksPage() then loaded}<loaded.default />{/await}
+      {:else if page === "develop"}{#await developPage() then loaded}<loaded.default />{/await}
+      {:else if page === "settings"}<Settings />
       {:else}<Library />
       {/if}
     </main>

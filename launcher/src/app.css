@@ -739,6 +739,38 @@ ol.steps select:focus-visible {
   animation: rise 0.6s var(--ease) both;
 }
 
+/* Android: one page gives way to the next (App.svelte's view transition). Only the page moves:
+   the rail stays live, its highlight sliding to the tab pressed. */
+html[data-platform="android"] main {
+  view-transition-name: page;
+}
+
+::view-transition-old(root),
+::view-transition-new(root) {
+  animation: none;
+}
+
+::view-transition-old(page) {
+  animation: page-out var(--fast) ease-in both;
+}
+
+::view-transition-new(page) {
+  animation: page-in var(--medium) var(--ease) both;
+}
+
+@keyframes page-out {
+  to {
+    opacity: 0;
+    transform: scale(0.985);
+  }
+}
+
+@keyframes page-in {
+  from {
+    opacity: 0;
+  }
+}
+
 /* A page's sections arrive one after another when it opens. */
 .page > :is(section, .panel, h1):not(.rise) {
   animation: rise var(--slow) var(--ease) both;
