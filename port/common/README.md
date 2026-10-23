@@ -59,8 +59,11 @@ compatibility library for the backtrace below API 33).
 
 `env.cpp`'s table lists every `OPENRAC_*` variable the port reads, and
 [docs/port/DEBUGGING.md](../../docs/port/DEBUGGING.md) documents each one; the `env` test holds the
-two to the same list. Within `common`, `OPENRAC_LOG` sets the log's level (`log.cpp`), and
-`stats::probe` reads each `OPENRAC_*` switch a module declares through it.
+two to the same list. `runtime/`, `platform/` and `renderer/` (outside `renderer/vulkan/`) read
+their variables through `env.h`; `game/`, `renderer/vulkan/`, `android/` and `enhanced/` still call
+`getenv` and move onto it later (docs/restructure/PROGRESS.md, P2-09). Within `common`,
+`OPENRAC_LOG` sets the log's level (`log.cpp`), and `stats::probe` reads each `OPENRAC_*` switch a
+module declares through it.
 
 ## Tests
 

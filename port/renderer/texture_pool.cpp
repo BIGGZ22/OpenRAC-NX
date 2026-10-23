@@ -5,14 +5,15 @@
 
 #include <algorithm>
 #include <cmath>
+#include <cstdint>
 #include <cstdio>
-#include <cstdlib>
 #include <cstring>
 #include <format>
 #include <string>
 #include <utility>
 #include <vector>
 
+#include "common/env.h"
 #include "common/log.h"
 #include "renderer/gl.h"
 
@@ -325,8 +326,9 @@ TextureHandle TexturePool::convert_upload(const gs::Tex0& tex0, const gs::Texa& 
     }
     // OPENRAC_DUMP_TEXTURE=BLOCK (hex): each conversion of a texture at that block is written as
     // a PPM (RGB) and its alpha as a PGM, for checking uploads and palettes.
-    static const char* dump = std::getenv("OPENRAC_DUMP_TEXTURE");
-    if (dump != nullptr && std::strtoul(dump, nullptr, 16) == tex0.tbp0) {
+    // Unset, it names no block, which is never negative.
+    constexpr std::int64_t kNoBlock = -1;
+    if (env::integer(env::Var::DumpTexture, kNoBlock) == tex0.tbp0) {
         static int n = 0;
         const std::string base = std::format("texture_{:04x}_{}", tex0.tbp0, n++);
         std::FILE* rgb = std::fopen((base + ".ppm").c_str(), "wb");
