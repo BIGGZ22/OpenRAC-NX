@@ -211,20 +211,20 @@ launcher/
 
 ## Files and network
 
-| Where | What |
-| --- | --- |
-| **Settings** | `launcher.json` in the per-user config folder (`~/.config/dev.openrac.launcher/` on Linux, `~/Library/Application Support/dev.openrac.launcher/` on macOS, `%APPDATA%\dev.openrac.launcher\` on Windows). Settings shows the path. |
-| **Progress cache** | `progress.json` beside `launcher.json`: the latest figures from [bytematch.dev](https://bytematch.dev), kept for the next start without a network. The launcher never writes the checkout's `progress/summary.json`. |
-| **Game installs** | The install folder (Settings; by default `~/OpenRAC` or `%USERPROFILE%\OpenRAC`), with `active/<game>/data/` laid out as OpenGOAL does. A developer's other disc waits beside it as `iso_data/<game>@<version>`. |
-| **Mods** | When you add, switch, order, update or remove one: `<data>/plugins/` (each mod's folder, `plugins.json`, and `sources.json` for linked mods, whose downloads it checks and then deletes). A pack's files wait in `.downloads/` until the packs take them. |
-| **Logs** | `openrac-<id>.log` and the five before it, plus `crashes/`, in the game's data folder. The launcher's own log is `launcher.log` beside `launcher.json`, moved to `launcher.1.log` past 1 MB. |
-| **Reports** | `OpenRAC-<report>.zip` in your Downloads folder, only when you press Save report. |
-| **Memory card** | Backups (`.backup_<time>…` beside the game's folder in the card), restored backups and edited slots, always after a backup of the whole card. |
-| **Tool output** | Whatever the tools it runs write in the checkout (`baserom/` inputs, build output, `assets/godot` for the level editor), all ignored by git. |
-| **ByteMatch** | At start-up: the project list and each mapped project's JSON. This is how the launcher shows current progress; it works without a network from the cached figures. |
-| **GitHub** | Only when adding a mod from a link or checking for updates: `api.github.com`, raw files and release downloads. |
-| **Discord** | Unless switched off in Settings, Discord Rich Presence over its local socket (Linux, macOS) or named pipe (Windows). While a game plays it shows the game, planet, bolts and time, and links to openrac.dev and GitHub. |
-| **Linux desktop** | At every start: icons in `~/.local/share/icons/hicolor/`, two `.desktop` files in `~/.local/share/applications/`, and refreshed desktop caches. |
+| Where              | What                                                                                                                                                                                                                                                      |
+| ------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Settings**       | `launcher.json` in the per-user config folder (`~/.config/dev.openrac.launcher/` on Linux, `~/Library/Application Support/dev.openrac.launcher/` on macOS, `%APPDATA%\dev.openrac.launcher\` on Windows). Settings shows the path.                        |
+| **Progress cache** | `progress.json` beside `launcher.json`: the latest figures from [bytematch.dev](https://bytematch.dev), kept for the next start without a network. The launcher never writes the checkout's `progress/summary.json`.                                      |
+| **Game installs**  | The install folder (Settings; by default `~/OpenRAC` or `%USERPROFILE%\OpenRAC`), with `active/<game>/data/` laid out as OpenGOAL does. A developer's other disc waits beside it as `iso_data/<game>@<version>`.                                          |
+| **Mods**           | When you add, switch, order, update or remove one: `<data>/plugins/` (each mod's folder, `plugins.json`, and `sources.json` for linked mods, whose downloads it checks and then deletes). A pack's files wait in `.downloads/` until the packs take them. |
+| **Logs**           | `openrac-<id>.log` and the five before it, plus `crashes/`, in the game's data folder. The launcher's own log is `launcher.log` beside `launcher.json`, moved to `launcher.1.log` past 1 MB.                                                              |
+| **Reports**        | `OpenRAC-<report>.zip` in your Downloads folder, only when you press Save report.                                                                                                                                                                         |
+| **Memory card**    | Backups (`.backup_<time>…` beside the game's folder in the card), restored backups and edited slots, always after a backup of the whole card.                                                                                                             |
+| **Tool output**    | Whatever the tools it runs write in the checkout (`baserom/` inputs, build output, `assets/godot` for the level editor), all ignored by git.                                                                                                              |
+| **ByteMatch**      | At start-up: the project list and each mapped project's JSON. This is how the launcher shows current progress; it works without a network from the cached figures.                                                                                        |
+| **GitHub**         | Only when adding a mod from a link or checking for updates: `api.github.com`, raw files and release downloads.                                                                                                                                            |
+| **Discord**        | Unless switched off in Settings, Discord Rich Presence over its local socket (Linux, macOS) or named pipe (Windows). While a game plays it shows the game, planet, bolts and time, and links to openrac.dev and GitHub.                                   |
+| **Linux desktop**  | At every start: icons in `~/.local/share/icons/hicolor/`, two `.desktop` files in `~/.local/share/applications/`, and refreshed desktop caches.                                                                                                           |
 
 ## License and credits
 
