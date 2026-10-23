@@ -1,5 +1,11 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 // Copyright (c) 2026 the OpenRAC contributors
+//
+// The moby lighting model (moby_lighting.h), done with the console's vector-unit arithmetic so
+// that the colours come out bit for bit as the game computes them: every add, multiply and
+// reciprocal square root goes through the ps2:: helpers on float bit patterns. The file builds a
+// rotation from three angles (with the unit's sine polynomial), turns a light set into model-space
+// lights, and then shades each vertex normal into an RGBA colour, packet by packet.
 
 #include "assets/geometry/moby_lighting.h"
 
@@ -11,6 +17,7 @@ namespace {
 
 using ps2::V4;
 
+// Float bit patterns of the constants the sine routine loads (1.5707963, pi, -pi).
 constexpr u32 kHalfPi = 0x3fc9'0fda;  // 1.57079625, the routine's first constant
 constexpr u32 kPi = 0x4049'0fda;
 constexpr u32 kNegPi = 0xc049'0fda;
@@ -23,6 +30,7 @@ constexpr std::array<u32, 4> kSinCoefficients =
 V4 mat3(const V4& a, const V4& b, const V4& c, const std::array<u32, 3>& v) {
     V4 r{};
 
+    // The same multiply-add is done on each of the four lanes.
     for (std::size_t k = 0; k < 4; ++k) {
         r[k] = ps2::add(ps2::add(ps2::mul(a[k], v[0]), ps2::mul(b[k], v[1])), ps2::mul(c[k], v[2]));
     }
@@ -30,16 +38,22 @@ V4 mat3(const V4& a, const V4& b, const V4& c, const std::array<u32, 3>& v) {
     return r;
 }
 
+// Whether a float bit pattern is zero or denormal (exponent bits all clear), which the unit
+// treats as zero.
 bool is_zero(u32 x) {
     return (x & 0x7f80'0000) == 0;
 }
 
+// The first three lanes of a vector.
 std::array<u32, 3> xyz(const V4& v) {
     return {v[0], v[1], v[2]};
 }
 
 }  // namespace
 
+// The sine and cosine of an angle (float bits), as the unit's routine computes them: the cosine
+// is the sine of the angle plus a quarter turn, and each argument is folded into -pi/2..pi/2
+// before the polynomial.
 std::pair<u32, u32> vu0_sin_cos(u32 a) {
     const u32 b = ps2::add(a, kHalfPi);
     const u32 pi = ps2::add(0, kPi);
@@ -62,6 +76,8 @@ std::pair<u32, u32> vu0_sin_cos(u32 a) {
     return {poly(fold(a)), poly(fold(b))};
 }
 
+// The rotation matrix rows for three angles (X, Y, Z), applied in that order, starting from the
+// identity.
 Rows rotation_rows(const std::array<f32, 3>& angles) {
     const u32 one = ps2::kOne;
     const std::array<u32, 3> r = {ps2::bits(angles[0]), ps2::bits(angles[1]), ps2::bits(angles[2])};
@@ -71,11 +87,13 @@ Rows rotation_rows(const std::array<f32, 3>& angles) {
     Rows rows = kIdentityRows;
     // rows' = y0 row.x + y1 row.y + y2 row.z, from the rows before the step.
     auto apply = [&](const V4& y0, const V4& y1, const V4& y2) {
+        // Each row of the matrix is transformed by the step's three rows.
         for (V4& row : rows) {
             row = mat3(y0, y1, y2, xyz(row));
         }
     };
 
+    // A zero angle skips its rotation step, because the routine tests the angle's zero flag.
     if (!is_zero(a[0])) {
         const auto [s, c] = vu0_sin_cos(r[0]);
         rows[1][1] = ps2::add(0, c);
@@ -84,6 +102,7 @@ Rows rotation_rows(const std::array<f32, 3>& angles) {
         rows[2][1] = ps2::sub(0, s);
     }
 
+    // The Y rotation runs only for a non-zero angle, as above.
     if (!is_zero(a[1])) {
         const auto [s, c] = vu0_sin_cos(ps2::add(0, a[1]));
         apply(
@@ -93,6 +112,7 @@ Rows rotation_rows(const std::array<f32, 3>& angles) {
         );
     }
 
+    // The Z rotation runs only for a non-zero angle, as above.
     if (!is_zero(a[2])) {
         const auto [s, c] = vu0_sin_cos(ps2::add(0, a[2]));
         apply(
@@ -105,10 +125,14 @@ Rows rotation_rows(const std::array<f32, 3>& angles) {
     return rows;
 }
 
+// The rows for a moby instance: the rotation, with the second row negated when bit 15 of `mode` is
+// set.
 Rows instance_rows(const std::array<f32, 3>& angles, u16 mode) {
     Rows rows = rotation_rows(angles);
 
+    // Bit 15 of the mode word negates the second row.
     if (mode & 0x8000) {
+        // Negate the first three lanes of the row; the fourth is not part of the rotation.
         for (std::size_t k = 0; k < 3; ++k) {
             rows[1][k] = ps2::sub(0, rows[1][k]);
         }
@@ -117,6 +141,9 @@ Rows instance_rows(const std::array<f32, 3>& angles, u16 mode) {
     return rows;
 }
 
+// The lights of one moby for a given orientation: the two directional lights of the set named by
+// `light_word` (blended with a second set when its fade byte is non-zero), moved into model space,
+// plus the ambient colour and alpha.
 MobyLights moby_lights(
     const Rows& rows,
     const LightBank& bank,
@@ -148,6 +175,7 @@ MobyLights moby_lights(
     V4 ca{};
     V4 cb{};
 
+    // A fade of 0 means a single light set, used as it is.
     if (fade == 0) {
         const DirLightSet s = set(i0);
         la = to_model(ps2::bits(s.dir_a));
@@ -155,6 +183,7 @@ MobyLights moby_lights(
         ca = ps2::bits(s.color_a);
         cb = ps2::bits(s.color_b);
     } else {
+        // A non-zero fade blends two light sets by weights t and w.
         // 0x212000: t = itof12(fade << 4), w = itof12(0x1000 - (fade << 4));
         // directions (xyz) and colours (xyzw) blended, then L = (-R^T d) *
         // rsqrt(|d|^2), |d|^2 = (x^2 + y^2) + 1 * z^2.
@@ -169,6 +198,7 @@ MobyLights moby_lights(
                 const V4 b = ps2::bits(fb);
                 V4 r = a;
 
+                // Blend only the first n lanes; the others keep the first set's values.
                 for (std::size_t k = 0; k < n; ++k) {
                     r[k] = ps2::add(ps2::mul(a[k], w), ps2::mul(b[k], t));
                 }
@@ -197,6 +227,8 @@ MobyLights moby_lights(
     out.rows = {V4{la[0], lb[0], 0, 0}, V4{la[1], lb[1], 0, 0}, V4{la[2], lb[2], 0, 0}};
     const V4 k = {ca[3], cb[3], 0, 0};
 
+    // Turn the two per-light factors into the negated clamp factors the shading uses (lane 3 is
+    // one).
     for (std::size_t i = 0; i < 4; ++i) {
         out.neg_k[i] = ps2::sub(i == 3 ? ps2::kOne : 0, k[i] & ~ps2::kSign);
     }
@@ -204,6 +236,8 @@ MobyLights moby_lights(
     out.colors = {V4{ca[0], ca[1], ca[2], 0}, V4{cb[0], cb[1], cb[2], 0}, V4{}};
     const std::array<u8, 4> amb = {ambient[0], ambient[1], ambient[2], alpha};
 
+    // The ambient lanes are float bit patterns with the byte as the mantissa, as the routine builds
+    // them.
     for (std::size_t i = 0; i < 4; ++i) {
         out.ambient[i] = 0x4780'0000u | amb[i];
     }
@@ -211,9 +245,12 @@ MobyLights moby_lights(
     return out;
 }
 
+// Converts the lit colour (16-bit lanes of the unit's fixed point) to bytes, scaled by the
+// vertex's multiplier and clamped to the signed 16-bit range first.
 std::array<u8, 4> pack_colour(const V4& colour, const std::array<u8, 4>& multiplier) {
     std::array<u8, 4> out{};
 
+    // Pack the four channels.
     for (std::size_t k = 0; k < 4; ++k) {
         const s32 h = static_cast<s16>(static_cast<u16>(colour[k]));
         const s32 p = std::clamp(h * multiplier[k], -32768, 32767);
@@ -223,6 +260,8 @@ std::array<u8, 4> pack_colour(const V4& colour, const std::array<u8, 4>& multipl
     return out;
 }
 
+// The colour of one vertex: its normal (from azimuth and elevation table entries) is rotated by
+// `m`, normalised, and dotted with the lights, then combined with the ambient term.
 std::array<u8, 4> light_vertex(
     const MobyLights& l,
     const NormalTable& table,
@@ -244,6 +283,7 @@ std::array<u8, 4> light_vertex(
     const V4 d = mat3(l.rows[0], l.rows[1], l.rows[2], xyz(np));
     std::array<u32, 3> f{};
 
+    // One diffuse term per light.
     for (std::size_t k = 0; k < 3; ++k) {
         f[k] = ps2::max(d[k], ps2::mul(d[k], l.neg_k[k]));
     }
@@ -252,6 +292,7 @@ std::array<u8, 4> light_vertex(
     const V4 s = mat3(l.colors[0], l.colors[1], l.colors[2], f);
     V4 c{};
 
+    // Combine the three weighted colours with the ambient term, per channel.
     for (std::size_t k = 0; k < 4; ++k) {
         c[k] = ps2::add(ps2::mul(s[k], q), ps2::mul(l.ambient[k], ps2::kOne));
     }
@@ -259,22 +300,30 @@ std::array<u8, 4> light_vertex(
     return pack_colour(c, multiplier);
 }
 
+// The colours of every vertex of every packet of one level of detail, in packet order. A packet
+// ends with vertices duplicated from other packets, which take the colour already computed for
+// their id (the cache is shared across the packets).
 std::vector<std::vector<std::array<u8, 4>>> light_lod(
     std::span<const MobyPacket> packets, const MobyLights& lights, const NormalTable& table
 ) {
     std::array<std::array<u8, 4>, 512> cache{};
     std::vector<std::vector<std::array<u8, 4>>> out;
 
+    // Light every packet of the level of detail on its own.
     for (const MobyPacket& p : packets) {
         const auto multipliers = p.rgba_multiplier_records();
         std::vector<std::array<u8, 4>> colours;
         colours.reserve(p.vertices.size());
         std::size_t in_file = 0;
 
+        // Find the first duplicated vertex: those before it are the packet's own, the rest copy
+        // another packet's.
         while (in_file < p.vertices.size() && !p.vertices[in_file].duplicate) {
             ++in_file;
         }
 
+        // Light the packet's own vertices; a vertex without a multiplier record uses 0x80, the
+        // neutral value.
         for (std::size_t i = 0; i < in_file; ++i) {
             const MobyVertex& v = p.vertices[i];
             const std::array<u8, 4> mult =
@@ -284,10 +333,12 @@ std::vector<std::vector<std::array<u8, 4>>> light_lod(
             ));
         }
 
+        // Remember each lit vertex by id, so that later duplicates can take its colour.
         for (std::size_t i = 0; i < in_file; ++i) {
             cache[p.vertices[i].id & 0x1ff] = colours[i];
         }
 
+        // A duplicate vertex takes the colour that the vertex with its id was given.
         for (std::size_t i = in_file; i < p.vertices.size(); ++i) {
             colours.push_back(cache[p.vertices[i].id & 0x1ff]);
         }

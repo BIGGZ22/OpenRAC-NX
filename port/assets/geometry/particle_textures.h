@@ -86,6 +86,8 @@ struct PartDefs {
     std::vector<u8> frames(std::size_t type) const;
 };
 
+// Everything parse_particle_textures reads for a level: the entries, their decoded images, the
+// frame lists and the FX textures.
 struct ParticleTextures {
     std::vector<PartTextureEntry> entries;
     std::vector<RgbaImage> textures;  // entries[i] decoded, side x side
@@ -111,6 +113,7 @@ struct ParticleTableRefs {
     s32 part_defs_offset = 0;
 };
 
+// Reads the tables named by `refs` from the core index and decodes each texture from its bank.
 ParticleTextures parse_particle_textures(
     ByteView index, const ParticleTableRefs& refs, ByteView part_bank, ByteView fx_bank
 );
