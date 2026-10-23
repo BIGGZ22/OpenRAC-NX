@@ -368,6 +368,64 @@ fn run_action(
 
 // ---- Differences from the original (core/src/differences.rs) ----
 
+/// The Mods tab's built-in Enhanced graphics entry for a version (core enhanced.rs), or None for a
+/// version that has none.
+#[tauri::command]
+async fn enhanced_view(
+    state: State<'_, AppState>,
+    game: String,
+    version: String,
+) -> Result<Option<openrac_launcher_core::enhanced::EnhancedView>, String> {
+    use openrac_launcher_core::enhanced;
+    if !enhanced::supported(&game, &version) {
+        return Ok(None);
+    }
+    let config = state.config.lock().unwrap().clone();
+    let home = openrac_launcher_core::saves::data_home();
+    tauri::async_runtime::spawn_blocking(move || {
+        let bake = enhanced::version_bake_status(&config, &format!("{game}/{version}"));
+        Some(enhanced::view(&home, &game, &version, bake))
+    })
+    .await
+    .map_err(|e| e.to_string())
+}
+
+/// Switches Enhanced graphics on or off for a version, in its settings file.
+#[tauri::command]
+async fn enhanced_set_enabled(
+    state: State<'_, AppState>,
+    game: String,
+    version: String,
+    enabled: bool,
+) -> Result<Option<openrac_launcher_core::enhanced::EnhancedView>, String> {
+    let home = openrac_launcher_core::saves::data_home();
+    let (g, v) = (game.clone(), version.clone());
+    tauri::async_runtime::spawn_blocking(move || openrac_launcher_core::enhanced::set_enabled(&home, &g, &v, enabled))
+        .await
+        .map_err(|e| e.to_string())??;
+    launcher_log::line(&format!("{game}/{version}: enhanced graphics {}", if enabled { "on" } else { "off" }));
+    enhanced_view(state, game, version).await
+}
+
+/// Sets one of Enhanced graphics' settings for a version, in its settings file.
+#[tauri::command]
+async fn enhanced_set_setting(
+    state: State<'_, AppState>,
+    game: String,
+    version: String,
+    key: String,
+    value: serde_json::Value,
+) -> Result<Option<openrac_launcher_core::enhanced::EnhancedView>, String> {
+    let home = openrac_launcher_core::saves::data_home();
+    let (g, v) = (game.clone(), version.clone());
+    tauri::async_runtime::spawn_blocking(move || {
+        openrac_launcher_core::enhanced::set_setting(&home, &g, &v, &key, &value)
+    })
+    .await
+    .map_err(|e| e.to_string())??;
+    enhanced_view(state, game, version).await
+}
+
 /// The checkout a game's list of differences is read from: the one set, else the copy carried.
 fn differences_root(state: &State<'_, AppState>) -> Option<PathBuf> {
     state.config.lock().unwrap().root.clone().or_else(|| state.bundled.clone())
@@ -1568,6 +1626,9 @@ pub fn run() {
             overrides_move,
             overrides_remove,
             plugins_list,
+            enhanced_view,
+            enhanced_set_enabled,
+            enhanced_set_setting,
             plugins_set_enabled,
             plugins_move,
             plugins_set_setting,

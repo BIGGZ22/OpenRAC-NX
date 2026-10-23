@@ -283,7 +283,8 @@
           "tools/build_port.py",
           "rac1-pal",
           "--disc",
-          "{disc}"
+          "{disc}",
+          "--probe-baker"
         ],
         "cwd": ".",
         "requires": [
@@ -305,7 +306,8 @@
           "rac1-pal",
           "--disc",
           "{disc}",
-          "--clean"
+          "--clean",
+          "--probe-baker"
         ],
         "cwd": ".",
         "requires": [
@@ -367,6 +369,45 @@
         ],
         "docs": "port/game/rac1-pal/README.md",
         "todo": "Run it from the desktop app. From a shell on macOS it passed a whole export (21 levels) and named the two levels of one with a folder removed and a file emptied."
+      },
+      {
+        "id": "probe-bake",
+        "label": "Prepare the enhanced lighting",
+        "description": "Bakes the light that bounces off each level, for Enhanced graphics (Mods), from your own extracted levels: one level per CPU thread, each kept until the levels are read again. A few minutes, once.",
+        "kind": "build",
+        "area": "port",
+        "state": "unverified",
+        "program": "{python}",
+        "args": [
+          "port/enhanced/tools/probes/bake_all.py",
+          "--levels-dir",
+          "{root}/assets/port/rac1/pal",
+          "--output-dir",
+          "{data}/probes/pal",
+          "--baker",
+          "{artifact}",
+          "--disc",
+          "{disc}",
+          "--jobs",
+          "0",
+          "--update"
+        ],
+        "output": "{data}/probes/pal",
+        "cwd": ".",
+        "requires": [
+          "artifact",
+          "python",
+          "disc"
+        ],
+        "artifact": "port/build/release/openrac-probe-bake.exe",
+        "needs": [
+          {
+            "path": "assets/port/rac1/pal/verified-3.json",
+            "from": "a check of the levels (Check the levels)"
+          }
+        ],
+        "docs": "port/enhanced/lighting/README.md",
+        "todo": "Run from the Mods tab's Enhanced graphics. From a shell on macOS bake_all.py --update baked a PAL level in 46 s; --disc is only read for exports made before the bake inputs."
       },
       {
         "id": "play",
@@ -830,7 +871,8 @@
           "tools/build_port.py",
           "rac1-ntsc",
           "--disc",
-          "{disc}"
+          "{disc}",
+          "--probe-baker"
         ],
         "cwd": ".",
         "requires": [
@@ -852,7 +894,8 @@
           "rac1-ntsc",
           "--disc",
           "{disc}",
-          "--clean"
+          "--clean",
+          "--probe-baker"
         ],
         "cwd": ".",
         "requires": [
@@ -914,6 +957,45 @@
         ],
         "docs": "port/game/rac1-ntsc/README.md",
         "todo": "Run it from the desktop app. The game is built by tools/build_port.py rac1-ntsc (no launcher action yet). From a shell on macOS, openrac-rac1-ntsc --data <data> --levels <the export> --check-levels passed all 21 levels (2026-10-16)."
+      },
+      {
+        "id": "probe-bake",
+        "label": "Prepare the enhanced lighting",
+        "description": "Bakes the light that bounces off each level, for Enhanced graphics (Mods), from your own extracted levels: one level per CPU thread, each kept until the levels are read again. A few minutes, once.",
+        "kind": "build",
+        "area": "port",
+        "state": "unverified",
+        "program": "{python}",
+        "args": [
+          "port/enhanced/tools/probes/bake_all.py",
+          "--levels-dir",
+          "{root}/assets/port/rac1/ntsc",
+          "--output-dir",
+          "{data}/probes/ntsc",
+          "--baker",
+          "{artifact}",
+          "--disc",
+          "{disc}",
+          "--jobs",
+          "0",
+          "--update"
+        ],
+        "output": "{data}/probes/ntsc",
+        "cwd": ".",
+        "requires": [
+          "artifact",
+          "python",
+          "disc"
+        ],
+        "artifact": "port/build/release/openrac-probe-bake.exe",
+        "needs": [
+          {
+            "path": "assets/port/rac1/ntsc/verified-3.json",
+            "from": "a check of the levels (Check the levels)"
+          }
+        ],
+        "docs": "port/enhanced/lighting/README.md",
+        "todo": "Run from the Mods tab's Enhanced graphics. From a shell on macOS bake_all.py --update baked a PAL level in 46 s; --disc is only read for exports made before the bake inputs."
       },
       {
         "id": "play",

@@ -166,6 +166,29 @@ pub fn plan(config: &Config, scope: &Scope, id: &str, inputs: &Inputs) -> Result
     }
 }
 
+/// A version's action's arguments and artifact, filled in, whether or not it can run now
+/// (Action::filled).
+pub fn filled(config: &Config, key: &str, id: &str) -> Result<(Vec<String>, Option<std::path::PathBuf>), String> {
+    let root = config.root()?;
+    let file: ActionFile = actions::load(root)?;
+    let scope = Scope::Version(key.to_string());
+    let action = file.find(&scope, id).ok_or_else(|| format!("no action {id:?} for {key}"))?;
+    let catalog = catalog::load(root)?;
+    let version = catalog.version(key).ok_or_else(|| format!("no version {key}"))?;
+    let status = version_status(root, config, version);
+    action.filled(&Context {
+        root,
+        config,
+        version: Some(version),
+        status: Some(&status),
+        toolchains: status::toolchains_present(root),
+        platform: Platform::current(),
+        level: None,
+        path: None,
+        option: None,
+    })
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

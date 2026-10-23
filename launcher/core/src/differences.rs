@@ -179,10 +179,32 @@ pub fn read_switch(text: &str, key: &str) -> Option<bool> {
     found
 }
 
+/// A `key = value` line's value as written (the last one counts), None when the key is not there.
+pub fn read_value(text: &str, key: &str) -> Option<String> {
+    let mut found = None;
+    for line in text.lines() {
+        let line = line.trim();
+        if line.starts_with('#') {
+            continue;
+        }
+        if let Some((k, v)) = line.split_once('=') {
+            if k.trim() == key {
+                found = Some(v.trim().to_string());
+            }
+        }
+    }
+    found
+}
+
 /// `text` with `key = 1|0`: the key's line changed where it is (every one, if there are several),
 /// else added at the end. Every other line is kept as it was.
 pub fn with_switch(text: &str, key: &str, on: bool) -> String {
-    let line = format!("{key} = {}", if on { 1 } else { 0 });
+    with_value(text, key, if on { "1" } else { "0" })
+}
+
+/// `text` with `key = value`, as with_switch.
+pub fn with_value(text: &str, key: &str, value: &str) -> String {
+    let line = format!("{key} = {value}");
     let mut out = String::new();
     let mut done = false;
     for l in text.lines() {
@@ -262,23 +284,27 @@ pub fn set_fix(
     };
     let file = settings_file(data_home, game, version);
     let text = std::fs::read_to_string(&file).unwrap_or_default();
-    let changed = with_switch(&text, &key, on);
+    write_settings(&file, &with_switch(&text, &key, on))?;
+    view(root, data_home, game, version)
+}
+
+/// Writes the port's settings file whole: through a file beside it, then over the old one, as the
+/// port writes it.
+pub fn write_settings(file: &Path, changed: &str) -> Result<(), String> {
     if let Some(dir) = file.parent() {
         std::fs::create_dir_all(dir).map_err(|e| format!("{}: {e}", dir.display()))?;
     }
-    // Through a file beside it, then over the old one, as the port writes it.
-    let mut written = file.clone().into_os_string();
+    let mut written = file.to_path_buf().into_os_string();
     written.push(".new");
     let written = PathBuf::from(written);
     if let Err(e) = std::fs::write(&written, changed) {
         let _ = std::fs::remove_file(&written);
         return Err(format!("{}: {e}", written.display()));
     }
-    std::fs::rename(&written, &file).map_err(|e| {
+    std::fs::rename(&written, file).map_err(|e| {
         let _ = std::fs::remove_file(&written);
         format!("{}: {e}", file.display())
-    })?;
-    view(root, data_home, game, version)
+    })
 }
 
 #[cfg(test)]

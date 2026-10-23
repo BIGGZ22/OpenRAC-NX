@@ -38,6 +38,7 @@ pub mod differences;
 pub mod disc_choice;
 pub mod discord;
 pub mod discs;
+pub mod enhanced;
 pub mod hook_ids;
 pub mod install;
 pub mod jobs;

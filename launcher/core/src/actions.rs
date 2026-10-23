@@ -497,6 +497,27 @@ impl Action {
         {
             env.push(("OPENRAC_GL_API".to_string(), "vulkan".to_string()));
         }
+        // The Mods tab's Enhanced graphics (enhanced.rs): with `enhanced_rendering = 1` in the
+        // version's settings file the game draws with Vulkan, the one renderer that has it, and
+        // takes the probe bakes made from the player's levels. Off, nothing is added.
+        if self.kind == Kind::Play && matches!(ctx.platform, Platform::Windows | Platform::Linux | Platform::Macos) {
+            if let (Some(v), Ok(data)) = (ctx.version, fill("{data}")) {
+                if crate::enhanced::supported(&v.game, &v.name) {
+                    let file = crate::differences::settings_file(&crate::saves::data_home(), &v.game, &v.name);
+                    let text = std::fs::read_to_string(file).unwrap_or_default();
+                    if let Some((more_env, more_args)) =
+                        crate::enhanced::play_additions(&text, Path::new(&data), &v.name)
+                    {
+                        for (key, value) in more_env {
+                            if !env.iter().any(|(k, _)| *k == key) {
+                                env.push((key, value));
+                            }
+                        }
+                        args.extend(more_args);
+                    }
+                }
+            }
+        }
         let output = match &self.output {
             Some(output) => Some(abs(ctx.root, &fill(output)?)),
             None => None,
@@ -506,6 +527,14 @@ impl Action {
 }
 
 impl Action {
+    /// The arguments with their placeholders filled in, and the artifact, whether or not the
+    /// action can run now: what a page shows about an action's files before it runs.
+    pub fn filled(&self, ctx: &Context) -> Result<(Vec<String>, Option<PathBuf>), String> {
+        let artifact = self.artifact_path(ctx).ok();
+        let args = self.args.iter().map(|a| fill(a, ctx, artifact.as_deref())).collect::<Result<Vec<_>, _>>()?;
+        Ok((args, artifact))
+    }
+
     /// `artifact`, filled in and absolute.
     fn artifact_path(&self, ctx: &Context) -> Result<PathBuf, String> {
         let artifact = self.artifact.as_deref().ok_or_else(|| format!("{} names no artifact", self.label))?;
