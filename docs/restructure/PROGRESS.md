@@ -67,7 +67,7 @@ the lanes, one at a time.
 | P2-05 | Split `main.cpp` into `program/`: options, vsync, levels, sound; the two old warnings fixed | P2-25 | todo | | |
 | P2-06 | Raw GL confined to `renderer/`: `renderer/ui/` | P2-37 | todo | | |
 | P2-07 | `renderer` stops including `enhanced/`: a post-process hook, GTAO registers with it | P2-06 | todo | | |
-| P2-08 | `common/result.h` (`openrac::Result<T>`) and the C-boundary wrapper | | todo | | |
+| P2-08 | `common/result.h` (`openrac::Result<T>`) and the C-boundary wrapper | | done | maintainer | [4101ec2d](https://github.com/OpenRAC/OpenRAC/commit/4101ec2d), [c22502bc](https://github.com/OpenRAC/OpenRAC/commit/c22502bc), and this page |
 | P2-09 | `frontend.cpp`'s getenv reads onto `common/env.h`; `OPENRAC_DEVELOPER` as decided | | todo | | |
 | P2-10 | `port/tools` and the probe tools use `openrac_common`, through one bootstrap; versionmap's `mips` clash | | todo | | |
 | P2-11 | `editor/catalogue.py` moves to `sdk/tools/` | P2-32 | todo | | |
@@ -286,3 +286,7 @@ Found while doing a package, for another package or the maintainers.
 | P2-13 | Section 19 of the conventions asks for no new globs; `cmake/Games.cmake` now globs `game/common/program/`, `frontend/` and `debug/` into the game programs, as the plan's phase 2 asks so that the splits never edit it. They are a program's source folders, not a module's library target; the page could say so beside the library replacements' glob, or each folder gets a target with listed sources once it is a module. | P2-24 |
 | P2-13 | A rebuild after reconfiguring never prints `ninja: no work to do`: `openrac_build_info` runs at every build, and its commit gains `-dirty` once `port/` has changes, which relinks every program. The proof that a CMake change keeps the build is `ninja -C build/<preset> -t commands` before and after, which must be identical. | the briefs of CMake packages |
 | P2-13 | `mod_loader` was killed (`Subprocess killed`, 0.39 s) once in a full `ctest --preset release` run, and passed alone three times and in a second full run; seen once, not investigated. | the maintainers |
+| P2-08 | The wrapper is `c_boundary::call(where, failure, body, reporter)` in `common/c_boundary.h` (a void overload has no `failure`); the reporter defaults to the log. The game side passes `openrac_game_crash`, which does not return, so the failure value is reached on the host side only. Wrapping `openrac_game_crash` itself, P2-25 keeps the log as its reporter, so a throw inside it does not recurse. | P2-23, P2-25 |
+| P2-08 | CODING_CONVENTIONS.md still says Result and the wrapper are arriving: section 1.3's two rows, 13.3's "arriving with P2-08" and "until it lands", and 13.4's written-out `try` (now `c_boundary::call`). Section 14.3 says P2-08 gathers `game_host.cpp`; that is P2-25. Section 2's clang-tidy line needs `--extra-arg=-isysroot$(xcrun --show-sdk-path)` with Homebrew's LLVM on macOS, or it finds no standard header. | P2-24 |
+| P2-08 | `port/README.md`'s "What is here" row for `common/` names `joining_thread.h` among the small helpers and not `result.h` or `c_boundary.h`; the file is outside P2-08's paths. | P2-24 |
+| P2-08 | clang-tidy reports `bugprone-implicit-widening-of-multiplication-result` at `common/log.h:63`, a finding of the existing code. | the next change to `log.h` |
