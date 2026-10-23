@@ -56,6 +56,7 @@ import argparse
 import hashlib
 import json
 import os
+import platform
 import shutil
 import stat
 import subprocess
@@ -112,10 +113,14 @@ EMBREE_OPTIONS = {
     "EMBREE_GEOMETRY_INSTANCE_ARRAY": "OFF",
     "EMBREE_GEOMETRY_GRID": "OFF",
     "EMBREE_GEOMETRY_POINT": "OFF",
-    # x86-64: SSE2 for any machine, AVX and AVX2 for most; Embree picks one at run time. ARM: NEON.
-    # AVX stays on beside AVX2: Embree compiles the 8-wide BVH and its primitives (bvh/bvh.cpp,
-    # BVHN<8>, CurveNi<8>) only into its AVX library, and the AVX2 code refers to them, so without
-    # it the baker does not link on Windows or Linux (kernels/CMakeLists.txt, embree_files).
+}
+# x86-64: SSE2 for any machine, AVX and AVX2 for most; Embree picks one at run time. AVX stays on
+# beside AVX2: Embree compiles the 8-wide BVH and its primitives (bvh/bvh.cpp, BVHN<8>, CurveNi<8>)
+# only into its AVX library, and the AVX2 code refers to them, so without it the baker does not link
+# on Windows or Linux (kernels/CMakeLists.txt, embree_files). ARM is given none of these and keeps
+# Embree's own single choice (NEON, or NEON2X on Apple silicon): Embree counts a value given for an
+# x86-64 ISA there too, and refuses a static library of several ISAs with AppleClang.
+EMBREE_X86_ISAS = {
     "EMBREE_ISA_SSE42": "OFF",
     "EMBREE_ISA_AVX": "ON",
     "EMBREE_ISA_AVX512": "OFF",
@@ -158,9 +163,17 @@ def targets(names: list[str], more: list[str] | None = None) -> list[str]:
     return [f"openrac-{name}" for name in names] + ["openrac-extractor"] + list(more or [])
 
 
+def embree_options(machine: str | None = None) -> dict[str, str]:
+    """The options Embree is configured with on MACHINE (platform.machine(), this one's unless
+    given): EMBREE_OPTIONS, and EMBREE_X86_ISAS on x86-64 only."""
+    machine = (machine or platform.machine()).lower()
+    x86 = machine in ("x86_64", "amd64", "x64", "i386", "i686")
+    return {**EMBREE_OPTIONS, **(EMBREE_X86_ISAS if x86 else {})}
+
+
 def embree_stamp() -> dict:
     """What an Embree build in EMBREE_DIR is of: a different one is built again."""
-    return {"version": EMBREE_VERSION, "sha256": EMBREE_SHA256, "options": EMBREE_OPTIONS}
+    return {"version": EMBREE_VERSION, "sha256": EMBREE_SHA256, "options": embree_options()}
 
 
 def embree_config(install: Path) -> Path:
@@ -226,7 +239,7 @@ def build_embree(cmake: str, env: dict[str, str], compilers: tuple[str, str, str
     configure = [cmake, "-S", str(source), "-B", str(work), "-G", "Ninja",
                  f"-DCMAKE_INSTALL_PREFIX={install.as_posix()}",
                  *(f"-D{key}={value}" for key, value in tools.items() if value),
-                 *(f"-D{key}={value}" for key, value in EMBREE_OPTIONS.items())]
+                 *(f"-D{key}={value}" for key, value in embree_options().items())]
     for command in (configure, [cmake, "--build", str(work)], [cmake, "--install", str(work)]):
         say("> " + " ".join(f'"{part}"' if " " in part else part for part in command))
         if subprocess.run(command, cwd=EMBREE_DIR, env=env).returncode != 0:
