@@ -23,7 +23,7 @@ void authored_terrain_albedo() {
     triangle.diffuse = {.8f, 1, .5f};
     triangle.terrain_prelighting = true;
     triangle.authored_colours = {{{0, 1, .5f}, {1, 2, 1.5f}, {1, 2, 1.5f}}};
-    const auto sampled = bake_material(scene, triangle, .25f, .25f, {1, 1, 1}, true);
+    const auto sampled = bake_material(scene, triangle, .25f, .25f, {{1, 1, 1}, true});
     const auto decode = [](float x) {
         return std::pow((x + .055f) / 1.055f, 2.4f);
     };
@@ -34,7 +34,7 @@ void authored_terrain_albedo() {
     }
 
     triangle.diffuse_scale = .25f;
-    const auto reduced = bake_material(scene, triangle, .25f, .25f, {1, 1, 1}, true);
+    const auto reduced = bake_material(scene, triangle, .25f, .25f, {{1, 1, 1}, true});
 
     for (unsigned c = 0; c < 3; ++c) {
         CHECK(std::abs(reduced[c] - expected[c] * .25f) < 1e-6f);

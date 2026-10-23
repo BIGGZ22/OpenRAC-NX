@@ -50,6 +50,25 @@ void validate_colour(Float3 c, bool bounded) {
     }
 }
 
+// Rejects nonfinite interpolation coordinates before Embree or texture traversal consumes them.
+void validate_triangle_coordinates(const BakeTriangle& triangle) {
+    // Wrapped UV arithmetic still requires finite coordinates.
+    for (auto uv : triangle.uv) {
+        // A nonfinite UV cannot select a valid texel footprint.
+        if (!std::isfinite(uv[0]) || !std::isfinite(uv[1])) {
+            throw std::runtime_error("invalid bake UV");
+        }
+    }
+
+    // Embree requires finite triangle positions.
+    for (auto p : triangle.vertices) {
+        // Reject invalid positions before uploading acceleration buffers.
+        if (!finite(p)) {
+            throw std::runtime_error("invalid bake vertex");
+        }
+    }
+}
+
 // Check material indices, authored tints and vertices before traversal can reference them.
 void validate_triangle(
     const BakeTriangle& triangle, const BakeScene& input, const BakeSettings& settings
@@ -105,21 +124,7 @@ void validate_triangle(
         throw std::runtime_error("invalid bake material");
     }
 
-    // Wrapped UV arithmetic still requires finite coordinates.
-    for (auto uv : triangle.uv) {
-        // A nonfinite UV cannot select a valid texel footprint.
-        if (!std::isfinite(uv[0]) || !std::isfinite(uv[1])) {
-            throw std::runtime_error("invalid bake UV");
-        }
-    }
-
-    // Embree requires finite triangle positions.
-    for (auto p : triangle.vertices) {
-        // Reject invalid positions before uploading acceleration buffers.
-        if (!finite(p)) {
-            throw std::runtime_error("invalid bake vertex");
-        }
-    }
+    validate_triangle_coordinates(triangle);
 }
 }  // namespace
 

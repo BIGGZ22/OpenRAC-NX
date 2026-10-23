@@ -46,6 +46,69 @@ std::array<TextureTap, 4> texture_taps(
     return taps;
 }
 
+// Decodes an sRGB component after the material-specific tint stage.
+float linear_colour(float value) {
+    return value <= .04045f ? value / 12.92f : std::pow((value + .055f) / 1.055f, 2.4f);
+}
+
+// Filters colour and linear coverage without changing the traversal footprint.
+std::array<float, 4> filtered_material(
+    const BakeTexture& texture,
+    const BakeTriangle& triangle,
+    Float2 uv,
+    const BakeMaterialOptions& options,
+    bool authored
+) {
+    const auto [u, v] = uv;
+    std::array<float, 4> filtered{};
+
+    // Colour uses the same footprint as traversal coverage.
+    for (const auto& tap : texture_taps(texture, triangle, u, v)) {
+        // Alpha remains linear while RGB follows the material colour path.
+        for (unsigned c = 0; c < 3; ++c) {
+            float f = static_cast<float>(texture.rgba[tap.offset + c]) / 255;
+            f = std::clamp(f * options.texture_tint[c], 0.0f, 1.0f);
+
+            // Ordinary materials decode each tap before interpolation.
+            if (!authored) {
+                f = linear_colour(f);
+            }
+
+            filtered[c] += f * tap.weight;
+        }
+
+        const float alpha = static_cast<float>(texture.rgba[tap.offset + 3]) / 255;
+        filtered[3] += alpha * tap.weight;
+    }
+
+    return filtered;
+}
+
+// Applies encoded authored tint to untextured reflectance before its final decode.
+void tint_untextured(
+    std::array<float, 4>& value,
+    Float3 authored_tint,
+    const BakeMaterialOptions& options,
+    bool authored
+) {
+    // Apply encoded tint before linear decoding on authored terrain.
+    for (unsigned c = 0; c < 3; ++c) {
+        const float f = std::clamp(options.texture_tint[c], 0.0f, 1.0f);
+        value[c] = authored ? linear_colour(std::clamp(value[c] * authored_tint[c] * f, 0.f, 1.f))
+                            : value[c] * linear_colour(f);
+    }
+}
+
+// Limits diffuse reflectance while keeping coverage independent of the reflectance scale.
+void scale_material(std::array<float, 4>& value, float diffuse_scale) {
+    // Diffuse reflectance stays within unity after material scaling.
+    for (unsigned c = 0; c < 3; ++c) {
+        value[c] = std::clamp(value[c] * diffuse_scale, 0.f, 1.f);
+    }
+
+    value[3] = std::clamp(value[3], 0.f, 1.f);
+}
+
 }  // namespace
 
 namespace bake_detail {
@@ -122,10 +185,9 @@ std::array<float, 4> bake_material(
     const BakeTriangle& triangle,
     float u,
     float v,
-    Float3 texture_tint,
-    bool terrain_vertex_albedo
+    const BakeMaterialOptions& options
 ) {
-    const bool authored = terrain_vertex_albedo && triangle.terrain_prelighting;
+    const bool authored = options.terrain_vertex_albedo && triangle.terrain_prelighting;
     Float3 authored_tint{1, 1, 1};
 
     // Authored terrain tint follows the runtime albedo path.
@@ -138,9 +200,6 @@ std::array<float, 4> bake_material(
         }
     }
 
-    const auto linear = [](float f) {
-        return f <= .04045f ? f / 12.92f : std::pow((f + .055f) / 1.055f, 2.4f);
-    };
     std::array<float, 4> value{triangle.diffuse[0], triangle.diffuse[1], triangle.diffuse[2], 1};
 
     // GS multipliers affect colour and coverage before filtering.
@@ -151,44 +210,13 @@ std::array<float, 4> bake_material(
 
     // Untextured surfaces still retain authored tint and GS modulation.
     if (triangle.texture < 0) {
-        // Apply encoded tint before linear decoding on authored terrain.
-        for (unsigned c = 0; c < 3; ++c) {
-            const float f = std::clamp(texture_tint[c], 0.0f, 1.0f);
-            value[c] = authored ? linear(std::clamp(value[c] * authored_tint[c] * f, 0.f, 1.f))
-                                : value[c] * linear(f);
-        }
-
-        // Diffuse reflectance stays within unity after material scaling.
-        for (unsigned c = 0; c < 3; ++c) {
-            value[c] = std::clamp(value[c] * triangle.diffuse_scale, 0.f, 1.f);
-        }
-
-        value[3] = std::clamp(value[3], 0.f, 1.f);
+        tint_untextured(value, authored_tint, options, authored);
+        scale_material(value, triangle.diffuse_scale);
         return value;
     }
 
     const auto& texture = scene.textures.at(static_cast<std::size_t>(triangle.texture));
-    std::array<float, 4> filtered{};
-
-    // Colour uses the same footprint as traversal coverage.
-    for (const auto& tap : texture_taps(texture, triangle, u, v)) {
-        // Alpha remains linear while RGB follows the material colour path.
-        for (unsigned c = 0; c < 4; ++c) {
-            float f = static_cast<float>(texture.rgba[tap.offset + c]) / 255;
-
-            // Only colour channels receive texture tint.
-            if (c < 3) {
-                f = std::clamp(f * texture_tint[c], 0.0f, 1.0f);
-
-                // Ordinary materials decode each tap before interpolation.
-                if (!authored) {
-                    f = linear(f);
-                }
-            }
-
-            filtered[c] += f * tap.weight;
-        }
-    }
+    const auto filtered = filtered_material(texture, triangle, {u, v}, options, authored);
 
     // Combine filtered texels with interpolated vertex modulation.
     for (unsigned c = 0; c < 4; ++c) {
@@ -198,17 +226,11 @@ std::array<float, 4> bake_material(
         // Authored tint is applied before the final decode.
         if (authored && c < 3) {
             // Match the original terrain's encoded texture filtering and GS modulation.
-            value[c] = linear(std::clamp(product * authored_tint[c], 0.f, 1.f));
-        }
-
-        // Diffuse scaling affects reflectance without changing coverage.
-        if (c < 3) {
-            value[c] = std::clamp(value[c] * triangle.diffuse_scale, 0.f, 1.f);
-        } else {
-            value[c] = std::clamp(value[c], 0.f, 1.f);
+            value[c] = linear_colour(std::clamp(product * authored_tint[c], 0.f, 1.f));
         }
     }
 
+    scale_material(value, triangle.diffuse_scale);
     return value;
 }
 
@@ -228,7 +250,7 @@ Float3 bake_emission(const BakeScene& scene, const BakeTriangle& triangle, float
         }
     }
 
-    const auto radiance = bake_material(scene, mask, u, v, tint);
+    const auto radiance = bake_material(scene, mask, u, v, {tint});
     float coverage = 1;
 
     // Masks isolate luminous parts of an otherwise ordinary texture.

@@ -37,17 +37,21 @@ struct BakeTexture {
     std::vector<std::uint8_t> rgba;  // sRGB colour, linear alpha, top row first
 };
 
+// Colour controls shared by ordinary material and emission-mask sampling.
+struct BakeMaterialOptions {
+    Float3 texture_tint{1, 1, 1};       // GS/sRGB modulation before decoding.
+    bool terrain_vertex_albedo = true;  // Decode authored terrain after filtering and tinting.
+};
+
 // Barycentric texture sampling: linear RGB and alpha. Repeat wrapping, as
-// exported level materials use. texture_tint is optional GS/sRGB modulation
-// before decoding. Optional terrain_vertex_albedo filters encoded texels, applies
+// exported level materials use. Optional terrain_vertex_albedo filters encoded texels, applies
 // the authored vertex/material tint, then decodes once, matching the runtime.
 std::array<float, 4> bake_material(
     const struct BakeScene& scene,
     const BakeTriangle& triangle,
     float u,
     float v,
-    Float3 texture_tint = {1, 1, 1},
-    bool terrain_vertex_albedo = true
+    const BakeMaterialOptions& options = {}
 );
 Float3 bake_emission(const struct BakeScene& scene, const BakeTriangle& triangle, float u, float v);
 

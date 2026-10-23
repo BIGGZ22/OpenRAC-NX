@@ -97,6 +97,285 @@ struct BakeDirections {
     }
 };
 
+// ---- Per-probe work ----
+
+// Disjoint per-probe writes sharing immutable scene, settings and direction tables.
+struct ProbeWork {
+    const Scene& scene;                // Prepared scene outlives all workers.
+    const BakeSettings& settings;      // Immutable bake controls.
+    const BakeDirections& directions;  // Immutable cached tables.
+    ProbeVolume& out;                  // Workers write only their claimed probe's storage.
+
+    // Seeks a nearby geometric exit without moving a probe out of its nominal cell.
+    void relocate(std::size_t probe) const {
+        const auto& grid = out.grid;
+        // Seek a nearby exit from geometric occupancy before baking. Keep
+        // the nominal cell fixed and cap displacement to avoid moving a
+        // probe into another cell. Unreachable placements remain invalid.
+        const float relocation_limit =
+            settings.relocation_max_fraction
+            * *std::min_element(grid.spacing.begin(), grid.spacing.end());
+        auto placement = classify(scene, out.position(probe), settings, directions.placement);
+
+        // Stop relocation after the configured attempts or a candidate outside this cell.
+        for (std::uint32_t iteration = 0;
+             placement.inside && iteration < settings.relocation_iterations;
+             ++iteration) {
+            const auto candidate =
+                add(out.probes[probe].offset,
+                    mul(placement.exit_direction, placement.nearest + 4 * settings.ray_bias));
+
+            // Relocation may not cross the cell-local displacement limit.
+            if (dot(candidate, candidate) > relocation_limit * relocation_limit) {
+                break;
+            }
+
+            out.probes[probe].offset = candidate;
+            placement = classify(scene, out.position(probe), settings, directions.placement);
+        }
+
+        out.probes[probe].valid = !placement.inside;
+    }
+
+    // Traces the original primary sequence and independent explicit-emitter sequence.
+    void sample(
+        std::size_t probe, std::vector<RaySample>& rays, std::vector<EmissionSample>& emission
+    ) const {
+        const auto& grid = out.grid;
+        const auto origin = out.position(probe);
+        Random random{settings.seed ^ (static_cast<std::uint32_t>(probe) * 747796405u)};
+        const float rotation = random.next() * 2 * kPi;
+        // Separate sequence: adding emitters cannot perturb first-hit moment rays.
+        Random emission_random{
+            settings.seed ^ (static_cast<std::uint32_t>(probe) * 747796405u) ^ 0x9e3779b9u
+        };
+
+        // Explicit emitters use a separate sequence from primary rays and their moments.
+        for (auto& light : emission) {
+            light = sample_emitter(scene, origin, settings.ray_bias, emission_random);
+        }
+
+        // Preserve primary order so transport random consumption stays independent of worker scheduling.
+        for (std::uint32_t i = 0; i < settings.rays_per_probe; ++i) {
+            const auto& base = directions.primary[i];
+            const float angle = base.angle + rotation;
+            const Float3 direction{
+                base.radius * std::cos(angle), base.radius * std::sin(angle), base.z
+            };
+            auto hit = scene.trace(
+                origin, direction, settings.ray_bias, std::numeric_limits<float>::infinity()
+            );
+            // Distant geometry still blocks GI; only the stored visibility distance is capped.
+            const float distance = std::min(hit.ray.tfar, grid.max_distance);
+            rays[i] = {direction, radiance(scene, settings, hit, random), distance};
+        }
+    }
+
+    // Writes integrated texels while leaving odd-resolution tail lanes outside the gutters.
+    void integrate(
+        std::size_t probe,
+        const std::vector<RaySample>& rays,
+        const std::vector<EmissionSample>& emission
+    ) const {
+        const auto& grid = out.grid;
+        const auto resolution = grid.map_resolution, side = resolution + 2;
+        const auto texel_count = std::size_t{resolution} * resolution;
+
+        // Each SIMD block accumulates the same ordered samples into independent texel lanes.
+        for (std::size_t block = 0; block < directions.texels.size(); ++block) {
+            const auto samples = bake_detail::integrate_probe_block(
+                directions.texels[block],
+                rays,
+                emission,
+                settings.distance_exponent,
+                grid.max_distance
+            );
+
+            // Store active texels into the bordered probe map.
+            for (std::size_t lane = 0; lane < bake_detail::kIntegrationLanes; ++lane) {
+                const auto texel = block * bake_detail::kIntegrationLanes + lane;
+
+                // Odd resolutions leave inactive lanes in the final block; never write them into gutters.
+                if (texel >= texel_count) {
+                    break;
+                }
+
+                const auto at = probe * grid.texels_per_probe() + (texel / resolution + 1) * side
+                                + texel % resolution + 1;
+                out.irradiance[at] = samples[lane].irradiance;
+                out.distance_moments[at] = samples[lane].moments;
+            }
+        }
+    }
+
+    // Completes one probe using buffers private to its worker.
+    void bake(
+        std::size_t probe, std::vector<RaySample>& rays, std::vector<EmissionSample>& emission
+    ) const {
+        relocate(probe);
+        sample(probe, rays, emission);
+        integrate(probe, rays, emission);
+    }
+};
+
+// ---- Worker coordination ----
+
+// Worker coordination; callbacks remain on the caller, and failures stop further claims.
+class BakeWorkers {
+public:
+    // Borrows the per-volume work and callback until run() has joined every worker.
+    BakeWorkers(
+        const ProbeWork& work,
+        const std::function<void(std::size_t, std::size_t)>& progress,
+        std::uint32_t thread_count
+    )
+        : m_work(work),
+          m_progress(progress),
+          m_thread_count(thread_count) {
+        // Workers inherit the caller's arithmetic environment, including directed rounding.
+        if (std::fegetenv(&m_environment) != 0) {
+            throw std::runtime_error("could not read bake floating-point environment");
+        }
+    }
+
+    // Runs serially on the caller or joins a set of workers before propagating their first error.
+    void run() {
+        // The serial path invokes progress at each probe without a condition-variable handoff.
+        if (m_thread_count == 1) {
+            worker();
+        } else {
+            run_parallel();
+        }
+
+        // Joined workers can no longer modify the stored exception.
+        if (m_failure) {
+            std::rethrow_exception(m_failure);
+        }
+    }
+
+private:
+    const ProbeWork& m_work;  // Borrowed immutable work descriptor with disjoint output writes.
+    const std::function<void(std::size_t, std::size_t)>& m_progress;  // Caller-thread callback.
+    std::uint32_t m_thread_count;        // Fixed before any worker starts.
+    std::fenv_t m_environment;           // Caller arithmetic environment copied to worker threads.
+    std::atomic<std::size_t> m_next{0};  // Atomic probe claim shared by workers.
+    std::atomic<bool> m_stopped{false};  // Atomic cancellation flag shared by caller and workers.
+    std::mutex m_mutex;                  // Guards completion count and the first worker failure.
+    std::condition_variable m_changed;   // Wakes the caller on completion or failure.
+    std::size_t m_completed = 0;         // Guarded by m_mutex.
+    std::exception_ptr m_failure;        // Guarded by m_mutex until all workers join.
+
+    // Reports directly on the serial path or wakes the caller after publishing completion.
+    void complete(std::size_t probe) {
+        // Serial callbacks already run on the caller's thread.
+        if (m_thread_count == 1) {
+            // An absent callback requires no progress delivery.
+            if (m_progress) {
+                m_progress(probe + 1, m_work.out.probes.size());
+            }
+
+            return;
+        }
+
+        {
+            const std::lock_guard lock(m_mutex);
+            ++m_completed;
+        }
+        m_changed.notify_one();
+    }
+
+    // Retains the first worker error and wakes a caller waiting for progress.
+    void fail() {
+        {
+            const std::lock_guard lock(m_mutex);
+
+            // Later errors must not replace the original cause.
+            if (!m_failure) {
+                m_failure = std::current_exception();
+            }
+        }
+        m_stopped.store(true, std::memory_order_relaxed);
+        m_changed.notify_one();
+    }
+
+    // Claims probes until exhausted or cancelled, with private reusable ray buffers.
+    void worker() {
+        // Every exit reports device errors or records an exception for the caller.
+        try {
+            // The serial path already uses the caller's environment.
+            if (m_thread_count > 1 && std::fesetenv(&m_environment) != 0) {
+                throw std::runtime_error("could not set bake floating-point environment");
+            }
+
+            std::vector<RaySample> rays(m_work.settings.rays_per_probe);
+            std::vector<EmissionSample> emission(
+                m_work.scene.emitters.empty() ? 0 : m_work.settings.rays_per_probe
+            );
+
+            // Cancellation stops new claims; already claimed probes may finish their disjoint writes.
+            while (!m_stopped.load(std::memory_order_relaxed)) {
+                const auto probe = m_next.fetch_add(1, std::memory_order_relaxed);
+
+                // The final claims may exceed the probe count when workers finish together.
+                if (probe >= m_work.out.probes.size()) {
+                    break;
+                }
+
+                m_work.bake(probe, rays, emission);
+                complete(probe);
+            }
+
+            // Embree records device errors per calling thread.
+            m_work.scene.check_error();
+        } catch (...) {
+            fail();
+        }
+    }
+
+    // Delivers completion notifications on the caller until all probes finish or a worker fails.
+    void report_progress() {
+        std::size_t reported = 0;
+
+        // Completion counts may coalesce while the caller handles a callback.
+        while (reported < m_work.out.probes.size()) {
+            std::unique_lock lock(m_mutex);
+            // Workers publish completion and failure under the same mutex before notifying.
+            m_changed.wait(lock, [&] { return m_failure || m_completed > reported; });
+
+            // Worker exceptions propagate only after joining in run_parallel().
+            if (m_failure) {
+                break;
+            }
+
+            reported = m_completed;
+            lock.unlock();
+
+            // Callbacks may throw and must run without holding the workers' mutex.
+            if (m_progress) {
+                m_progress(reported, m_work.out.probes.size());
+            }
+        }
+    }
+
+    // Joins on every exit, including thread-creation and callback failures.
+    void run_parallel() {
+        std::vector<JoiningThread> workers;
+
+        // Cancellation precedes unwinding the joining owners so outstanding claims can drain.
+        try {
+            // Workers borrow this coordination state only until their joining owners leave scope.
+            for (std::uint32_t i = 0; i < m_thread_count; ++i) {
+                workers.emplace_back([this] { worker(); });
+            }
+
+            report_progress();
+        } catch (...) {
+            m_stopped.store(true, std::memory_order_relaxed);
+            throw;
+        }
+    }
+};
+
 }  // namespace
 
 // ---- Prepared baker ----
@@ -147,199 +426,23 @@ ProbeVolume ProbeBaker::bake(
 
     const auto& scene = m_impl->scene;
 
+    // Notify the caller before allocation or worker startup can fail.
     if (progress) {
         progress(0, grid.probe_count());
     }
 
     auto out = ProbeVolume::allocate(grid);
 
-    const auto resolution = grid.map_resolution, side = resolution + 2;
-    const auto texel_count = std::size_t{resolution} * resolution;
-    const auto& directions = m_impl->directions(resolution);
-    const auto bake_probe = [&](std::size_t probe,
-                                std::vector<RaySample>& rays,
-                                std::vector<EmissionSample>& emission) {
-        // Seek a nearby exit from geometric occupancy before baking. Keep
-        // the nominal cell fixed and cap displacement to avoid moving a
-        // probe into another cell. Unreachable placements remain invalid.
-        const float relocation_limit =
-            settings.relocation_max_fraction
-            * *std::min_element(grid.spacing.begin(), grid.spacing.end());
-        auto placement = classify(scene, out.position(probe), settings, directions.placement);
+    const ProbeWork work{scene, settings, m_impl->directions(grid.map_resolution), out};
 
-        for (std::uint32_t iteration = 0;
-             placement.inside && iteration < settings.relocation_iterations;
-             ++iteration) {
-            const auto candidate =
-                add(out.probes[probe].offset,
-                    mul(placement.exit_direction, placement.nearest + 4 * settings.ray_bias));
-
-            if (dot(candidate, candidate) > relocation_limit * relocation_limit) {
-                break;
-            }
-
-            out.probes[probe].offset = candidate;
-            placement = classify(scene, out.position(probe), settings, directions.placement);
-        }
-
-        out.probes[probe].valid = !placement.inside;
-        const auto origin = out.position(probe);
-        Random random{settings.seed ^ (static_cast<std::uint32_t>(probe) * 747796405u)};
-        const float rotation = random.next() * 2 * kPi;
-        // Separate sequence: adding emitters cannot perturb first-hit moment rays.
-        Random emission_random{
-            settings.seed ^ (static_cast<std::uint32_t>(probe) * 747796405u) ^ 0x9e3779b9u
-        };
-
-        for (auto& light : emission) {
-            light = sample_emitter(scene, origin, settings.ray_bias, emission_random);
-        }
-
-        for (std::uint32_t i = 0; i < settings.rays_per_probe; ++i) {
-            const auto& base = directions.primary[i];
-            const float angle = base.angle + rotation;
-            const Float3 direction{
-                base.radius * std::cos(angle), base.radius * std::sin(angle), base.z
-            };
-            auto hit = scene.trace(
-                origin, direction, settings.ray_bias, std::numeric_limits<float>::infinity()
-            );
-            // Distant geometry still blocks GI; only the stored visibility distance is capped.
-            const float distance = std::min(hit.ray.tfar, grid.max_distance);
-            rays[i] = {direction, radiance(scene, settings, hit, random), distance};
-        }
-
-        for (std::size_t block = 0; block < directions.texels.size(); ++block) {
-            const auto samples = bake_detail::integrate_probe_block(
-                directions.texels[block],
-                rays,
-                emission,
-                settings.distance_exponent,
-                grid.max_distance
-            );
-
-            for (std::size_t lane = 0; lane < bake_detail::kIntegrationLanes; ++lane) {
-                const auto texel = block * bake_detail::kIntegrationLanes + lane;
-
-                // Odd resolutions leave inactive lanes in the final block; never write them into gutters.
-                if (texel >= texel_count) {
-                    break;
-                }
-
-                const auto at = probe * grid.texels_per_probe() + (texel / resolution + 1) * side
-                                + texel % resolution + 1;
-                out.irradiance[at] = samples[lane].irradiance;
-                out.distance_moments[at] = samples[lane].moments;
-            }
-        }
-    };
-
-    // Each probe has its own seed and disjoint output storage. Scheduling must
-    // not change the ray sequence or the floating-point accumulation order.
+    // Each probe has its own seed and disjoint storage; scheduling cannot change its arithmetic order.
     if (thread_count == 0) {
         thread_count = std::max(1u, std::thread::hardware_concurrency());
     }
 
     thread_count =
         static_cast<std::uint32_t>(std::min<std::size_t>(thread_count, out.probes.size()));
-    std::fenv_t environment;
-
-    if (std::fegetenv(&environment) != 0) {
-        throw std::runtime_error("could not read bake floating-point environment");
-    }
-
-    std::atomic<std::size_t> next{0};
-    std::atomic<bool> stopped{false};
-    std::mutex mutex;
-    std::condition_variable changed;
-    std::size_t completed = 0;
-    std::exception_ptr failure;
-    const auto worker = [&] {
-        try {
-            if (thread_count > 1 && std::fesetenv(&environment) != 0) {
-                throw std::runtime_error("could not set bake floating-point environment");
-            }
-
-            std::vector<RaySample> rays(settings.rays_per_probe);
-            std::vector<EmissionSample> emission(
-                scene.emitters.empty() ? 0 : settings.rays_per_probe
-            );
-
-            while (!stopped.load(std::memory_order_relaxed)) {
-                const auto probe = next.fetch_add(1, std::memory_order_relaxed);
-
-                if (probe >= out.probes.size()) {
-                    break;
-                }
-
-                bake_probe(probe, rays, emission);
-
-                if (thread_count == 1) {
-                    if (progress) {
-                        progress(probe + 1, out.probes.size());
-                    }
-                } else {
-                    {
-                        std::lock_guard lock(mutex);
-                        ++completed;
-                    }
-                    changed.notify_one();
-                }
-            }
-
-            // Embree records device errors per calling thread.
-            scene.check_error();
-        } catch (...) {
-            {
-                std::lock_guard lock(mutex);
-
-                if (!failure) {
-                    failure = std::current_exception();
-                }
-            }
-            stopped.store(true, std::memory_order_relaxed);
-            changed.notify_one();
-        }
-    };
-
-    if (thread_count == 1) {
-        worker();
-    } else {
-        // Keep callbacks on the calling thread, including exception handling.
-        // Joining on every exit keeps the scene and output alive for workers.
-        std::vector<JoiningThread> workers;
-
-        try {
-            for (std::uint32_t i = 0; i < thread_count; ++i) {
-                workers.emplace_back(worker);
-            }
-
-            std::size_t reported = 0;
-
-            while (reported < out.probes.size()) {
-                std::unique_lock lock(mutex);
-                changed.wait(lock, [&] { return failure || completed > reported; });
-
-                if (failure) {
-                    break;
-                }
-
-                reported = completed;
-                lock.unlock();
-
-                if (progress) {
-                    progress(reported, out.probes.size());
-                }
-            }
-        } catch (...) {
-            stopped.store(true, std::memory_order_relaxed);
-            throw;
-        }
-    }
-
-    if (failure) {
-        std::rethrow_exception(failure);
-    }
+    BakeWorkers(work, progress, thread_count).run();
 
     scene.check_error();
     update_probe_gutters(out);

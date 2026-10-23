@@ -87,8 +87,8 @@ except	renderer/renderer.h:30	enhanced/renderer/gtao_settings.h	P2-07: renderer 
 # and a level carries its emissive lighting. P2-02 moved these files from the viewer program's
 # directory, where the includes were allowed.
 except	scene/level.h:27	enhanced/lighting/emission.h	P2-39: scene owns the lighting and shadow hooks, enhanced registers with them
-except	scene/level_renderer.cpp:14	enhanced/viewer/hero_shadow.h	P2-39: scene owns the lighting and shadow hooks, enhanced registers with them
-except	scene/level_renderer.cpp:15	enhanced/viewer/shadow_atlas.h	P2-39: scene owns the lighting and shadow hooks, enhanced registers with them
+except	scene/level_renderer.cpp:15	enhanced/viewer/hero_shadow.h	P2-39: scene owns the lighting and shadow hooks, enhanced registers with them
+except	scene/level_renderer.cpp:16	enhanced/viewer/shadow_atlas.h	P2-39: scene owns the lighting and shadow hooks, enhanced registers with them
 except	scene/level_renderer.h:25	enhanced/viewer/early_lighting.h	P2-39: scene owns the lighting and shadow hooks, enhanced registers with them
 except	scene/level_renderer.h:26	enhanced/viewer/probe_lighting.h	P2-39: scene owns the lighting and shadow hooks, enhanced registers with them
 except	scene/level_renderer.h:27	enhanced/viewer/sun_shadow.h	P2-39: scene owns the lighting and shadow hooks, enhanced registers with them
