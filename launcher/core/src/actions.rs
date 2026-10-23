@@ -505,6 +505,11 @@ impl Action {
         if self.kind == Kind::Play && ctx.config.developer {
             env.push(("OPENRAC_DEVELOPER".to_string(), "1".to_string()));
         }
+        // Settings, "Theme": the game's options drawer wears the launcher's colours (theme.rs).
+        if self.kind == Kind::Play {
+            let game = ctx.version.map(|v| v.game.as_str());
+            env.push((crate::theme::ENV.to_string(), crate::theme::ui_colors(&ctx.config.theme, game, ctx.platform)));
+        }
         // Settings, "Detailed game logs": the port's verbose log (port/common/log.h).
         if self.kind == Kind::Play && ctx.config.detailed_game_log {
             env.push(("OPENRAC_LOG".to_string(), "verbose".to_string()));

@@ -33,12 +33,18 @@ The site has no status colours; the launcher adds `--ok` (`#8fd694`), `--warn`
 dark only, as the site is.
 
 These are the "OpenRAC" theme. The others (Settings → General: Gruvbox, OLED
-black, Nord, Catppuccin Mocha) are in `src/lib/palettes.ts`: each sets the
+black, Nord, Catppuccin Mocha) are in `src/lib/palettes.json`, read by
+`src/lib/palettes.ts` and by the core (`core/src/theme.rs`): each sets the
 page, panel, text, line and status tokens on the root element, never the
 accent (`--amber`, `--gold`, `--brand`, the bar's), which stays the launcher's
 orange or, on Android, the picked game's. So a colour that should follow the
 theme is written with a token, as `color-mix(in srgb, var(--ink-deep) 75%,
 transparent)` for a shade over a picture, not as a fixed `rgb()`.
+
+The game wears the same: Play hands it the theme's colours, and on Android
+the game's accent, in `OPENRAC_UI_COLORS`, and its options drawer is drawn
+with them (`port/game/common/ui_colors.h`). `palettes.json` repeats
+app.css's own colours under `base` for that; a test keeps the two equal.
 
 ## Type
 
