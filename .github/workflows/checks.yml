@@ -55,6 +55,30 @@ jobs:
       - name: Probe bake planning (synthetic data only)
         run: python -m unittest discover -s port/enhanced/tools/probes -v
 
+      # The port's countable conventions (port/docs/CODING_CONVENTIONS.md): the rules for every
+      # file, and the new-code rules on what this push or pull request adds. Lines it changes in
+      # older files are reported, not failed (the page, section 24.4). clang-format is pinned.
+      - name: Port conventions
+        env:
+          EVENT: ${{ github.event_name }}
+          BEFORE: ${{ github.event.before }}
+          PR_BASE: ${{ github.event.pull_request.base.sha }}
+        run: |
+          python -m pip install clang-format==21.1.8
+          python -m unittest discover -s port/tools/conventions -v
+          base=""
+          if [ "$EVENT" = pull_request ]; then
+            base="$PR_BASE"
+          elif [ "$EVENT" = push ] && [ -n "$BEFORE" ] && [ "$BEFORE" != 0000000000000000000000000000000000000000 ]; then
+            base="$BEFORE"
+          fi
+          if [ -n "$base" ]; then
+            git fetch --no-tags --depth=1 origin "$base"
+            python port/tools/conventions/check_conventions.py --since "$base" --touched --clang-format clang-format
+          else
+            python port/tools/conventions/check_conventions.py
+          fi
+
       - name: Generated tables match games/*/game.json and the reports
         run: |
           python tools/openrac.py tables
