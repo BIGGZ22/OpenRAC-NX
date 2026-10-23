@@ -14,3 +14,6 @@ export function jobDuration(job: Pick<Job, "startedAt" | "endedAt">, now: number
 export function jobTranscript(job: Pick<Job, "command" | "lines">): string {
   return [`$ ${job.command}`, ...job.lines.map((l) => l.line)].join("\n");
 }
+
+/** What a job list says when the browser keeps the transcript off the clipboard. */
+export const TRANSCRIPT_REFUSED = "The output could not be copied: the browser would not give it to the clipboard.";

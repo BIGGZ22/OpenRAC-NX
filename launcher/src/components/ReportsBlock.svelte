@@ -6,7 +6,8 @@
   // Detailed logs. File names are a contributor's detail: shown with developer tools on.
   import Icon from "$components/Icon.svelte";
   import { api, onAndroid, type ReportEntry } from "$lib/api";
-  import { app, countCrashes, dismissCrashes, guard, saveConfig, toast } from "$lib/app.svelte";
+  import { app, countCrashes, dismissCrashes, guard, saveConfig } from "$lib/app.svelte";
+  import { copyText } from "$lib/clipboard";
   import { DISCORD_URL, ISSUES_URL } from "$lib/links";
   import { headline, when } from "$lib/reports";
 
@@ -67,13 +68,9 @@
   async function copy(e: ReportEntry) {
     const text = await guard(api.reportText(game, e.file));
     if (text === undefined) return;
-    try {
-      await navigator.clipboard.writeText(text);
-      copied = e.file;
-      setTimeout(() => (copied = copied === e.file ? null : copied), 4000);
-    } catch {
-      toast("The report could not be copied: use Save instead.", "error");
-    }
+    if (!(await copyText(text, "The report could not be copied: use Save instead."))) return;
+    copied = e.file;
+    setTimeout(() => (copied = copied === e.file ? null : copied), 4000);
   }
 
   async function save(e: ReportEntry) {
