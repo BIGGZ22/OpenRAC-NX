@@ -115,6 +115,8 @@ struct TieUnpackHeader {
 
 static_assert(sizeof(TieUnpackHeader) == 12);
 
+// A strip record of a packet's unpack header: how many vertices one GS strip has and where its
+// GIF tag sits in the GS packet.
 struct TieStrip {
     u8 vertex_count = 0;  // the strip GIF tag's NLOOP
     u8 pad = 0;
@@ -200,6 +202,7 @@ struct TieDraw {
     bool operator==(const TieDraw&) const = default;
 };
 
+// A triangle of packet vertex indices and the class ad-gif block (texture slot) in effect.
 struct TieTriangle {
     u16 a = 0;
     u16 b = 0;
@@ -230,6 +233,8 @@ struct TiePacket {
     std::vector<TieDraw> draws;
 };
 
+// One parsed tie class: the header, the light-slot normals, the packets of each LOD (0 = most
+// detail) and the class's ad-gif blocks.
 struct TieClass {
     TieClassHeader header;
     // Bytes 0x80 up to the first packet table: bounding box min / max (w = 1)
@@ -243,6 +248,8 @@ struct TieClass {
     std::optional<std::array<f32, 3>> normal(u8 slot) const;
 };
 
+// Parses a class blob (the header at byte 0, offsets relative to it) and resolves every packet's
+// vertices. Throws if the blob is truncated or inconsistent.
 TieClass parse_tie_class(ByteView blob);
 
 // Fills packet.vertices from its dinky and fat records, colour indices and

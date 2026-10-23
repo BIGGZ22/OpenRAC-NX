@@ -163,6 +163,7 @@ struct ShrubVertexPart1 {
     s16 gs_packet_offset = 0;
 };
 
+// The second half of a vertex: texture coordinates, Q, and the normal index with the stop flag.
 struct ShrubVertexPart2 {
     s16 s = 0;
     s16 t = 0;
@@ -197,6 +198,7 @@ struct ShrubDraw {
     bool operator==(const ShrubDraw&) const = default;
 };
 
+// A triangle of packet vertex indices and the class texture slot in effect.
 struct ShrubTriangle {
     u16 a = 0;
     u16 b = 0;
@@ -206,6 +208,8 @@ struct ShrubTriangle {
     bool operator==(const ShrubTriangle&) const = default;
 };
 
+// One packet of a shrub class: the records VU1 reads from its input buffer and the draws that the
+// GIF makes of them.
 struct ShrubPacket {
     ShrubPacketEntry entry;
     ShrubPacketHeader header;
@@ -250,15 +254,20 @@ struct ShrubBillboard {
 
 static_assert(sizeof(ShrubBillboard) == 0x40);
 
+// One parsed shrub class: the header, its packets, the 24 light normals and the optional far-LOD
+// billboard.
 struct ShrubClass {
     ShrubClassHeader header;
     std::vector<ShrubPacket> packets;
     std::vector<std::array<s16, 4>> normals;  // 24, unit in 1/32767
     std::optional<ShrubBillboard> billboard;
 
+    // The unit normal of a normal index; empty past the table.
     std::optional<std::array<f32, 3>> normal(u8 index) const;
 };
 
+// Parses a class blob (header at byte 0, packet table at 0x40, offsets relative to the blob).
+// Throws if the blob is truncated or its packets do not fit VU1's model.
 ShrubClass parse_shrub_class(ByteView blob);
 
 // One packet's VIF list walked the way VU1 and the GIF consume it. `texture`
@@ -281,6 +290,8 @@ struct LevelShrubClass {
     ShrubClass shrub;
 };
 
+// Every class of the shrub class table that has a blob, in table order; `core_data` is the whole
+// decompressed core data.
 std::vector<LevelShrubClass> parse_level_shrub_classes(
     std::span<const CoreShrubClassEntry> table, ByteView core_data
 );
@@ -352,7 +363,9 @@ std::optional<std::array<f32, 2>> wind_sway(
 
 // --- Instances
 
-constexpr std::size_t kGameplayShrubClasses = 0x38;  // s32 count, count x s32
+// The gameplay file's shrub class list pointer (an s32 count, then count x s32).
+constexpr std::size_t kGameplayShrubClasses = 0x38;
+// The gameplay file's shrub instance section pointer.
 constexpr std::size_t kGameplayShrubInstances = 0x3c;
 
 // A gameplay shrub instance (0x70 bytes). Field use from the level loader
@@ -373,12 +386,16 @@ struct ShrubInstance {
     s32 dir_lights = 0;
     std::array<s32, 3> unused_64{};
 
+    // The matrix with [3][3] = 1.
     std::array<std::array<f32, 4>, 4> world_matrix() const;
+
+    // A class-space point (world units: already x scale / 1024) in world space.
     std::array<f32, 3> transform_point(const std::array<f32, 3>& p) const;
 
     // The ambient as the loader packs it, alpha 0x80.
     std::array<u8, 4> ambient_rgba() const;
 
+    // The light set selector split into its fields.
     struct LightSets {
         u8 a = 0;
         u8 b = 0;
@@ -387,12 +404,16 @@ struct ShrubInstance {
         bool operator==(const LightSets&) const = default;
     };
 
+    // The two set indices and the blend weight of the second.
     LightSets light_sets() const;
 };
 
 static_assert(sizeof(ShrubInstance) == 0x70);
 
+// An instance section: s32 count, 12 bytes of padding, count records.
 std::vector<ShrubInstance> parse_shrub_instance_section(ByteView section);
+
+// The shrub instances of a decompressed gameplay file.
 std::vector<ShrubInstance> parse_shrub_instances(ByteView gameplay);
 
 // The gameplay file's shrub class list (the distinct instance classes).

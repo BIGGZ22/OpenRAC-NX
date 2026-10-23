@@ -4,8 +4,12 @@
 // Adapted from ReRAC (https://github.com/re-rac/rerac), crates/rc-formats/src/tfrag_light.rs:
 // ISC License, Copyright (c) 2026 ReRAC contributors.
 //
-// LightTfrags on PS2 float arithmetic. The comments name the VU0 macro
-// instructions each step mirrors.
+// The implementation of tfrag_lighting.h: LightTfrags on PS2 float arithmetic. The comments name
+// the VU0 macro instructions each step mirrors.
+//
+// The file has two parts: the helpers in the anonymous namespace (resolving a vertex's light set
+// and combining colours) and the public functions, which light one vertex, add one point light,
+// or light a whole tfrag. Every function here is pure; callers may use them from any thread.
 
 #include "assets/geometry/tfrag_lighting.h"
 
@@ -49,12 +53,15 @@ struct ActiveSet {
     u32 wa, wb;
 };
 
+// A vertex's selector either names one set (high byte zero) or two sets to blend, with the blend
+// weight in bits 8..15; the blended directions are renormalised.
 ActiveSet active_set(const LightBank& bank, u16 select) {
     auto set = [&](u32 i) -> const DirLightSet& {
         return bank.sets[i & 0xf];
     };
     ActiveSet s{};
 
+    // A zero high byte means one plain set; anything else is a blend of two.
     if ((select & 0xff00) == 0) {
         const DirLightSet& d = set(select);
         s.ca = ps2::bits(d.color_a);
@@ -88,6 +95,8 @@ ActiveSet active_set(const LightBank& bank, u16 select) {
     return s;
 }
 
+// The directional pass for one vertex given its stored normal: colour + A * max(dA, dA * wA)
+// + B * max(dB, dB * wB), clamped and packed to bytes.
 std::array<u8, 4> light_with_normal(const LightBank& bank, const V4& n, u16 color, u16 select) {
     const ActiveSet s = active_set(bank, select);
     u32 da = ps2::dot3(n, s.da);
@@ -101,6 +110,8 @@ std::array<u8, 4> light_with_normal(const LightBank& bank, const V4& n, u16 colo
 
 }  // namespace
 
+// The stored normal is negated, so the dot product with a light's travel direction is positive
+// when the surface faces the light.
 ps2::V4 tfrag_stored_normal(const NormalTable& table, u8 azimuth, u8 elevation) {
     // ld of table[az] and table[el]; vmulz.xy; vaddw.z; vsub.xyz vf0 - v.
     const auto [ca, sa] = table.entries[azimuth];
@@ -111,6 +122,7 @@ ps2::V4 tfrag_stored_normal(const NormalTable& table, u8 azimuth, u8 elevation) 
     return {ps2::sub(0, x), ps2::sub(0, y), ps2::sub(0, z), se};
 }
 
+// Lights a single vertex from its own normal angles, colour and light selector.
 std::array<u8, 4> light_tfrag_vertex(
     const LightBank& bank, const NormalTable& table, const TfragLight& l
 ) {
@@ -119,6 +131,8 @@ std::array<u8, 4> light_tfrag_vertex(
     );
 }
 
+// Adds one point light to a vertex that is already lit, or returns nothing when the vertex is
+// outside the light's radius (the original skips the vertex then).
 std::optional<std::array<u8, 4>> light_tfrag_point(
     const PointLight& light,
     const std::array<u32, 3>& base,
@@ -130,6 +144,7 @@ std::optional<std::array<u8, 4>> light_tfrag_point(
     const V4 lp = ps2::bits(light.position);
     std::array<u32, 3> p{};
 
+    // Move the vertex from tfrag-local fixed point to a float position relative to the world.
     for (std::size_t k = 0; k < 3; ++k) {
         p[k] = ps2::add(ps2::itof12(s32{local[k]} * 4), base[k]);
     }
@@ -153,6 +168,8 @@ std::optional<std::array<u8, 4>> light_tfrag_point(
     return pack_color(madd(acc, c, d));
 }
 
+// The directional pass runs for every vertex first; the point lights then refine the results one
+// light at a time, in list order, because each light reads the colour the previous one left.
 std::vector<TfragRgba> light_tfrag(
     const Tfrag& t,
     const LightBank& bank,
@@ -167,6 +184,7 @@ std::vector<TfragRgba> light_tfrag(
     // level uses it: all are -1).
     const auto single = static_cast<s8>(t.header.dir_lights_one);
 
+    // Light every vertex with the directional sets and keep its normal for the point lights.
     for (std::size_t i = 0; i < n; ++i) {
         const TfragLight& l = t.lights[i];
         normals[i] = tfrag_stored_normal(table, l.azimuth, l.elevation);
@@ -174,26 +192,32 @@ std::vector<TfragRgba> light_tfrag(
         rgba[i] = light_with_normal(bank, normals[i], l.color, select);
     }
 
+    // Point lights only apply when the caller supplied a slot bank for this tfrag.
     if (points && points->bank != nullptr) {
         std::array<u32, 3> base{};
 
+        // The tfrag origin as floats, in the same units as the vertex positions.
         for (std::size_t k = 0; k < 3; ++k) {
             base[k] = ps2::itof12(static_cast<s32>(static_cast<u32>(points->origin[k]) << 2));
         }
 
         u32 list = u32{points->list} | 0xf'0000;
 
+        // Visit each listed light until the 0xf terminator reaches the low nibble.
         while ((list & 0xf) != 0xf) {
             const PointLight& light = (*points->bank)[(list & 0xf) % kPointLightSlots];
             list >>= 4;
 
+            // Apply this light to every vertex.
             for (std::size_t i = 0; i < n; ++i) {
                 std::array<s16, 3> q{};
 
+                // A tfrag with fewer positions than lit vertices treats the extras as the origin.
                 if (i < t.positions.size()) {
                     q = {t.positions[i].x, t.positions[i].y, t.positions[i].z};
                 }
 
+                // Take the new colour only when the vertex is inside the light's radius.
                 if (const auto lit = light_tfrag_point(light, base, q, normals[i], rgba[i])) {
                     rgba[i] = *lit;
                 }
@@ -201,6 +225,7 @@ std::vector<TfragRgba> light_tfrag(
         }
     }
 
+    // Write the lit colours over the stored ones; entries past n keep their stored values.
     for (std::size_t i = 0; i < n; ++i) {
         out[i] = {rgba[i][0], rgba[i][1], rgba[i][2], rgba[i][3]};
     }

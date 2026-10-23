@@ -28,6 +28,7 @@
 
 namespace openrac::assets::rac1 {
 
+// The number of light slots in a tie class, and so of colours in an instance's lit table.
 constexpr std::size_t kTieLightSlots = 64;
 
 // The instance's world bounding sphere as the level loader stores it in the

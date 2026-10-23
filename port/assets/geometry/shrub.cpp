@@ -4,8 +4,14 @@
 // Adapted from ReRAC (https://github.com/re-rac/rerac), crates/rc-formats/src/shrub.rs:
 // ISC License, Copyright (c) 2026 ReRAC contributors.
 //
-// The RAC1 shrub reader: packets replayed through VU1 program 56467's input
-// and output buffers, billboards, fades, wind sway and instances.
+// The implementation of shrub.h: the RAC1 shrub reader. Packets are replayed through VU1 program
+// 56467's input and output buffers, then come the billboards, fades, wind sway and instances.
+//
+// The file has four parts: the packet replay (the VIF list fills an input buffer, VU1's writes
+// fill GS-packet slots, the GIF reads the slots), the class and mesh readers built on it, the
+// billboard, fade and wind-sway arithmetic of ShrubProc, and the instance readers. Every check
+// throws an AssetError, because a packet that does not fit VU1's model means the format is
+// misread. All functions are pure and safe to call from any thread.
 
 #include "assets/geometry/shrub.h"
 
@@ -20,8 +26,11 @@
 
 namespace openrac::assets::rac1 {
 
+// ---- Packet replay ----
+
 namespace {
 
+// Throws an AssetError that names the shrub packet as the culprit.
 template <typename... Args>
 [[noreturn]] void packet_fail(std::format_string<Args...> fmt, Args&&... args) {
     fail("shrub packet: {}", std::format(fmt, std::forward<Args>(args)...));
@@ -30,14 +39,17 @@ template <typename... Args>
 // f32 to s32 as Rust's `as` does it (and the console's cvt saturates too):
 // truncation, saturating, NaN to 0.
 s32 trunc_s32(f32 x) {
+    // The cast below is undefined for NaN, which the console reads as 0.
     if (std::isnan(x)) {
         return 0;
     }
 
+    // At or above 2^31 the result saturates instead of overflowing.
     if (x >= 2147483648.0f) {
         return std::numeric_limits<s32>::max();
     }
 
+    // At or below -2^31 it saturates the other way.
     if (x <= -2147483648.0f) {
         return std::numeric_limits<s32>::min();
     }
@@ -45,14 +57,18 @@ s32 trunc_s32(f32 x) {
     return static_cast<s32>(x);
 }
 
-// The VU1 input buffer after the packet's unpacks, as 32-bit lanes.
+// The VU1 input buffer after the packet's unpacks, as 32-bit lanes. It also remembers which
+// quadwords were written, so a read of stale data is caught.
 class InputBuffer {
 public:
+    // The quadword at `a`; `what` names the reader in the error if the address is bad or unwritten.
     std::array<u32, 4> at(std::size_t a, std::string_view what) const {
+        // An address past the 0x76-quadword buffer would wrap on VU1, which no packet relies on.
         if (a >= kShrubInputQwc) {
             packet_fail("{} outside the input buffer", what);
         }
 
+        // Reading a quadword no unpack wrote means the packet header lies about its layout.
         if (!m_written[a]) {
             packet_fail("{} reads an input quadword no unpack wrote", what);
         }
@@ -60,6 +76,7 @@ public:
         return m_qw[a];
     }
 
+    // The quadword at `a` as a 16-byte record type.
     template <typename T>
     T record(std::size_t a, std::string_view what) const {
         static_assert(sizeof(T) == 16);
@@ -80,6 +97,7 @@ public:
         };
     }
 
+    // Stores a quadword and marks it written.
     void write(std::size_t a, const std::array<u32, 4>& q) {
         m_qw[a] = q;
         m_written[a] = true;
@@ -90,32 +108,42 @@ private:
     std::array<bool, kShrubInputQwc> m_written{};
 };
 
+// Replays a packet's VIF list into an input buffer. A shrub packet is exactly three unpacks, all
+// TOPS-relative V4_32 or V4_16, and anything else is rejected.
 InputBuffer run_vif(ByteView list) {
     InputBuffer buffer;
     int unpacks = 0;
 
+    // Handle each VIF code in order.
     for (const vif::Code& c : vif::parse(list)) {
+        // An unpack carries data into the buffer.
         if (c.is_unpack()) {
             ++unpacks;
             const bool v4_32 = c.vn() == 3 && c.vl() == 0;
             const bool v4_16 = c.vn() == 3 && c.vl() == 1;
 
+            // Shrub data is only ever V4_32 or V4_16.
             if (!v4_32 && !v4_16) {
                 packet_fail("unpack is neither V4_32 nor V4_16");
             }
 
+            // The packet is double buffered, so every address must be relative to TOPS.
             if (!c.flg()) {
                 packet_fail("unpack without FLG (not TOPS-relative)");
             }
 
+            // The unpack must fit the input buffer.
             if (std::size_t{c.addr()} + c.count() > kShrubInputQwc) {
                 packet_fail("unpack runs past the 0x76-qw input buffer");
             }
 
+            // Widen each quadword to four 32-bit lanes.
             for (std::size_t i = 0; i < c.count(); ++i) {
                 std::array<u32, 4> q{};
 
+                // Fill the four lanes of this quadword.
                 for (std::size_t k = 0; k < 4; ++k) {
+                    // V4_32 copies the words; V4_16 widens them, sign-extending unless USN is set.
                     if (v4_32) {
                         q[k] = c.data.u32_at(i * 16 + k * 4);
                     } else {
@@ -127,18 +155,23 @@ InputBuffer run_vif(ByteView list) {
                 buffer.write(c.addr() + i, q);
             }
         } else if (c.cmd == vif::kStcycl) {
+            // The unpacks assume contiguous writes, which needs the cycle length to equal the
+            // write length.
             if ((c.imm & 0xff) != (c.imm >> 8)) {
                 packet_fail("STCYCL with CL != WL");
             }
         } else if (c.cmd == vif::kStmod) {
+            // A nonzero mode would add to the data as it is unpacked.
             if ((c.imm & 3) != 0) {
                 packet_fail("STMOD mode != 0");
             }
         } else if (c.cmd != vif::kNop) {
+            // Nothing else belongs in a shrub packet.
             packet_fail("unexpected VIF code {:#x}", c.cmd);
         }
     }
 
+    // The header, tags with ad-gifs, and vertices make exactly three unpacks.
     if (unpacks != 3) {
         packet_fail("expected 3 unpacks, got {}", unpacks);
     }
@@ -146,7 +179,8 @@ InputBuffer run_vif(ByteView list) {
     return buffer;
 }
 
-// What a GS-packet quadword holds after VU1's writes.
+// What a GS-packet quadword holds after VU1's writes: a GIF tag, a part of an ad-gif block, or a
+// part of a vertex (ST, RGBAQ or XYZF2), with the index of its owner.
 struct Slot {
     enum class Kind : u8 {
         Unwritten,
@@ -164,11 +198,15 @@ struct Slot {
 
 }  // namespace
 
+// ---- Classes and meshes ----
+
+// Packed positions are s16 in units of scale / 1024, so this converts them to class units.
 std::array<f32, 3> ShrubVertex::class_position(f32 class_scale) const {
     const f32 k = class_scale / 1024.0f;
     return {position[0] * k, position[1] * k, position[2] * k};
 }
 
+// The same conversion as the tfrag's, with the shrub block's own register order.
 ShrubGsRegisters ShrubAdGifs::gs_registers(
     u8 texture_index, const CoreTextureEntry& texture, u32 gs_base
 ) const {
@@ -180,10 +218,13 @@ ShrubGsRegisters ShrubAdGifs::gs_registers(
     };
 }
 
+// K is the s32 in the high half of TEX1, in 1/16 mip levels.
 f32 ShrubBillboardRegisters::lod_k() const {
     return static_cast<f32>(assets::lod_k_raw(static_cast<s32>(tex1 >> 32))) / 16.0f;
 }
 
+// Rebuilds the three registers the class init writes: TEX1 from the stored LOD K and MMIN, TEX0
+// and MIPTBP1 from the resident texture's blocks, all relative to the texture area's base.
 ShrubBillboardRegisters ShrubBillboard::gs_registers(
     const CoreBillboardInfo& info, u32 gs_base
 ) const {
@@ -205,7 +246,9 @@ ShrubBillboardRegisters ShrubBillboard::gs_registers(
     return r;
 }
 
+// The normal's s16 components are scaled by 1/32767; an index past the table gives no normal.
 std::optional<std::array<f32, 3>> ShrubClass::normal(u8 index) const {
+    // Only the class's own 24 normals exist.
     if (index >= normals.size()) {
         return std::nullopt;
     }
@@ -214,14 +257,19 @@ std::optional<std::array<f32, 3>> ShrubClass::normal(u8 index) const {
     return std::array<f32, 3>{n[0] / 32767.0f, n[1] / 32767.0f, n[2] / 32767.0f};
 }
 
+// Replays the list, reads the header, GIF tags, ad-gif blocks and vertex tables from the buffer,
+// works out which vertices VU1 writes and where, and then follows the GIF through the output
+// buffer to get the draws. Every inconsistency throws.
 ShrubPacket read_shrub_packet(ByteView list, const ShrubPacketEntry& entry, s32& texture) {
     const InputBuffer in = run_vif(list);
     const auto h = in.record<ShrubPacketHeader>(0, "packet header");
 
+    // VU1's copy loops are do-whiles, so a packet always has at least one of each.
     if (h.texture_count < 1 || h.gif_tag_count < 1) {
         packet_fail("texture_count and gif_tag_count must be >= 1");
     }
 
+    // Both vertex tables must lie inside the input buffer.
     if (h.vertex_count < 0 || h.vertex_offset < 0
         || static_cast<std::size_t>(h.vertex_offset) + 2 * static_cast<std::size_t>(h.vertex_count)
                > kShrubInputQwc) {
@@ -233,10 +281,12 @@ ShrubPacket read_shrub_packet(ByteView list, const ShrubPacketEntry& entry, s32&
     pk.header = h;
     const auto tags = static_cast<std::size_t>(h.gif_tag_count);
 
+    // The GIF tags start at quadword 1.
     for (std::size_t k = 0; k < tags; ++k) {
         pk.gif_tags.push_back(in.record<ShrubGifTag>(1 + k, "GIF tag"));
     }
 
+    // The ad-gif blocks (four quadwords each) follow the tags.
     for (std::size_t k = 0; k < static_cast<std::size_t>(h.texture_count); ++k) {
         const std::size_t base = 1 + tags + 4 * k;
         ShrubAdGifs a;
@@ -250,6 +300,7 @@ ShrubPacket read_shrub_packet(ByteView list, const ShrubPacketEntry& entry, s32&
     const auto p1 = static_cast<std::size_t>(h.vertex_offset);
     const auto p2 = static_cast<std::size_t>(h.vertex_offset + h.vertex_count);
 
+    // Keep both vertex tables as stored.
     for (std::size_t i = 0; i < static_cast<std::size_t>(h.vertex_count); ++i) {
         const auto a = in.halves(p1 + i, "vertex part 1");
         const auto b = in.halves(p2 + i, "vertex part 2");
@@ -261,15 +312,18 @@ ShrubPacket read_shrub_packet(ByteView list, const ShrubPacketEntry& entry, s32&
     // more vertices after it.
     std::size_t stop = 2;
 
+    // Scan for the first vertex whose stop flag (bit 15 of n_and_stop) is set.
     while ((in.at(p2 + stop, "vertex stop scan")[3] & 0x8000) == 0) {
         ++stop;
     }
 
+    // Resolve the vertices VU1 writes: 0 through the stop vertex plus the three it drains.
     for (std::size_t i = 0; i < stop + 4; ++i) {
         const auto a = in.halves(p1 + i, "vertex part 1");
         const auto b = in.halves(p2 + i, "vertex part 2");
         const auto n = static_cast<u16>(b[3]);
 
+        // A normal index past the class's 24 would read outside the palette.
         if ((n & 0x7fff) >= kShrubNormals) {
             packet_fail("normal index {} > 23", n & 0x7fff);
         }
@@ -288,6 +342,7 @@ ShrubPacket read_shrub_packet(ByteView list, const ShrubPacketEntry& entry, s32&
     // later writes win.
     std::array<Slot, kShrubOutputQwc> slot{};
     auto put = [&](s32 at, Slot s) {
+        // A write outside the output buffer would corrupt VU1 memory on the console.
         if (at < 0 || static_cast<std::size_t>(at) >= kShrubOutputQwc) {
             packet_fail("GS slot {} outside the 0xa8-qw output buffer", at);
         }
@@ -295,17 +350,22 @@ ShrubPacket read_shrub_packet(ByteView list, const ShrubPacketEntry& entry, s32&
         slot[static_cast<std::size_t>(at)] = s;
     };
 
+    // VU1 copies the GIF tags first.
     for (std::size_t k = 0; k < pk.gif_tags.size(); ++k) {
         put(pk.gif_tags[k].gs_packet_offset, {Slot::Kind::Tag, static_cast<u16>(k), 0});
     }
 
+    // Then each ad-gif block, which takes five slots (its own A+D tag and four quadwords).
     for (std::size_t k = 0; k < pk.ad_gifs.size(); ++k) {
+        // Place the five quadwords of this block.
         for (u8 j = 0; j < 5; ++j) {
             put(pk.ad_gifs[k].gs_packet_offset() + j, {Slot::Kind::AdGif, static_cast<u16>(k), j});
         }
     }
 
+    // Last the vertices, each taking three slots (ST, RGBAQ, XYZF2); later writes win.
     for (std::size_t i = 0; i < pk.vertices.size(); ++i) {
+        // Place the three quadwords of this vertex.
         for (u8 j = 0; j < 3; ++j) {
             put(pk.vertices[i].gs_packet_offset + j, {Slot::Kind::Vertex, static_cast<u16>(i), j});
         }
@@ -314,15 +374,20 @@ ShrubPacket read_shrub_packet(ByteView list, const ShrubPacketEntry& entry, s32&
     // The GIF from slot 0 to the EOP tag.
     std::size_t cursor = 0;
 
+    // Follow the GIF packet by packet: ad-gif blocks set the texture, tags draw vertices.
     for (;;) {
+        // Running off the buffer means no tag had EOP.
         if (cursor >= kShrubOutputQwc) {
             packet_fail("GIF runs past the output buffer");
         }
 
         const Slot s = slot[cursor];
 
+        // An ad-gif block starts here: it must be intact, and it sets the texture slot.
         if (s.kind == Slot::Kind::AdGif && s.part == 0) {
+            // The other four quadwords must still belong to this block.
             for (u8 j = 1; j < 5; ++j) {
+                // A later write over part of the block would make the GIF read garbage.
                 if (cursor + j >= kShrubOutputQwc
                     || slot[cursor + j] != Slot{Slot::Kind::AdGif, s.index, j}) {
                     packet_fail("ad-gif block partly overwritten");
@@ -331,6 +396,7 @@ ShrubPacket read_shrub_packet(ByteView list, const ShrubPacketEntry& entry, s32&
 
             const s32 tex = pk.ad_gifs[s.index].tex0.data_lo;
 
+            // The class has at most 16 texture slots.
             if (tex < 0 || tex > 15) {
                 packet_fail("ad-gif texture slot {} out of range", tex);
             }
@@ -338,25 +404,31 @@ ShrubPacket read_shrub_packet(ByteView list, const ShrubPacketEntry& entry, s32&
             texture = tex;
             cursor += 5;
         } else if (s.kind == Slot::Kind::Tag) {
+            // A vertex GIF tag is here: check it is the one format the shrub program emits.
             const ShrubGifTag& g = pk.gif_tags[s.index];
 
+            // PACKED mode, three registers (ST, RGBAQ, XYZF2) and a PRIM field.
             if (g.flg() != 0 || g.nreg() != 3 || (g.tag_hi & 0xfff) != 0x412 || !g.pre()) {
                 packet_fail("vertex GIF tag is not PACKED ST/RGBAQ/XYZF2 with PRIM");
             }
 
+            // Only triangle lists (3) and strips (4) appear on the disc.
             if (g.prim() != 3 && g.prim() != 4) {
                 packet_fail("unexpected GS primitive type {}", g.prim());
             }
 
+            // Vertices need a texture, set by an ad-gif block of this or an earlier packet.
             if (texture < 0) {
                 packet_fail("vertices drawn before any ad-gif");
             }
 
             ShrubDraw draw{static_cast<u8>(texture), g.prim(), {}};
 
+            // Read the NLOOP vertices that follow the tag, three slots each.
             for (std::size_t m = 0; m < g.nloop(); ++m) {
                 const std::size_t q = cursor + 1 + 3 * m;
 
+                // The vertex must lie inside the output buffer.
                 if (q + 2 >= kShrubOutputQwc) {
                     packet_fail("GIF runs past the output buffer");
                 }
@@ -365,6 +437,7 @@ ShrubPacket read_shrub_packet(ByteView list, const ShrubPacketEntry& entry, s32&
                 const Slot& b = slot[q + 1];
                 const Slot& c = slot[q + 2];
 
+                // The three slots must come from the same vertex, in ST, RGBAQ, XYZF2 order.
                 if (a.kind != Slot::Kind::Vertex || b != Slot{Slot::Kind::Vertex, a.index, 1}
                     || c != Slot{Slot::Kind::Vertex, a.index, 2} || a.part != 0) {
                     packet_fail("GIF reads a vertex slot not written by one vertex at {}", q);
@@ -376,10 +449,12 @@ ShrubPacket read_shrub_packet(ByteView list, const ShrubPacketEntry& entry, s32&
             pk.draws.push_back(std::move(draw));
             cursor += 1 + 3 * std::size_t{g.nloop()};
 
+            // The tag with EOP is the last one the GIF reads.
             if (g.eop()) {
                 break;
             }
         } else {
+            // Neither an ad-gif block nor a tag starts here: the layout is misread.
             packet_fail("no GIF tag at GS slot {}", cursor);
         }
     }
@@ -387,11 +462,13 @@ ShrubPacket read_shrub_packet(ByteView list, const ShrubPacketEntry& entry, s32&
     return pk;
 }
 
+// Reads the header, the packet table at 0x40, every packet, the normals and the billboard.
 ShrubClass parse_shrub_class(ByteView blob) {
     ShrubClass sc;
     sc.header = blob.read<ShrubClassHeader>(0, "shrub class header");
     const ShrubClassHeader& h = sc.header;
 
+    // A negative or huge count is a misread header, not a class with that many packets.
     if (h.packet_count < 0 || h.packet_count > 1000) {
         fail("shrub class: implausible packet count {}", h.packet_count);
     }
@@ -401,7 +478,9 @@ ShrubClass parse_shrub_class(ByteView blob) {
     );
     s32 texture = -1;  // GS texture state carries from packet to packet
 
+    // Replay each packet in table order, because the GS texture state carries from one to the next.
     for (const ShrubPacketEntry& e : entries) {
+        // The list is addressed from the blob start, so neither value can be negative.
         if (e.offset < 0 || e.size < 0) {
             fail("shrub class: negative packet offset or size");
         }
@@ -412,6 +491,7 @@ ShrubClass parse_shrub_class(ByteView blob) {
         sc.packets.push_back(read_shrub_packet(list, e, texture));
     }
 
+    // The 24 normals are required by the lighting pass.
     if (h.normals_offset <= 0) {
         fail("shrub class without normals");
     }
@@ -420,6 +500,7 @@ ShrubClass parse_shrub_class(ByteView blob) {
         static_cast<std::size_t>(h.normals_offset), kShrubNormals, "shrub normals"
     );
 
+    // A zero offset means the class has no far-LOD billboard.
     if (h.billboard_offset > 0) {
         sc.billboard = blob.read<ShrubBillboard>(
             static_cast<std::size_t>(h.billboard_offset), "shrub billboard"
@@ -432,11 +513,14 @@ ShrubClass parse_shrub_class(ByteView blob) {
 std::vector<ShrubTriangle> shrub_triangles(const ShrubPacket& p) {
     std::vector<ShrubTriangle> out;
 
+    // Triangulate each GIF draw by its primitive type.
     for (const ShrubDraw& d : p.draws) {
         const std::vector<u16>& v = d.vertices;
         const u16 texture = d.texture;
 
+        // A strip: each vertex after the first two closes a triangle with the two before it.
         if (d.prim == 4) {
+            // The order alternates so the triangles of a strip face the same way.
             for (std::size_t i = 2; i < v.size(); ++i) {
                 out.push_back(
                     i % 2 == 0 ? ShrubTriangle{v[i - 2], v[i - 1], v[i], texture}
@@ -444,6 +528,7 @@ std::vector<ShrubTriangle> shrub_triangles(const ShrubPacket& p) {
                 );
             }
         } else {
+            // A list: every three vertices are one triangle; a partial last one is dropped.
             for (std::size_t i = 0; i + 3 <= v.size(); i += 3) {
                 out.push_back({v[i], v[i + 1], v[i + 2], texture});
             }
@@ -456,9 +541,11 @@ std::vector<ShrubTriangle> shrub_triangles(const ShrubPacket& p) {
 Mesh shrub_mesh(const ShrubClass& shrub) {
     Mesh mesh;
 
+    // Append each packet's vertices and triangles; triangle indices are offset by `base`.
     for (const ShrubPacket& p : shrub.packets) {
         const auto base = static_cast<u32>(mesh.vertices.size());
 
+        // Convert each vertex; its normal is the class normal of its normal index.
         for (const ShrubVertex& v : p.vertices) {
             MeshVertex out;
             out.position = v.class_position(shrub.header.scale);
@@ -467,6 +554,7 @@ Mesh shrub_mesh(const ShrubClass& shrub) {
             mesh.vertices.push_back(out);
         }
 
+        // Re-base the packet's triangles onto the shared vertex array.
         for (const ShrubTriangle& t : shrub_triangles(p)) {
             mesh.triangles.push_back({{base + t.a, base + t.b, base + t.c}, t.texture});
         }
@@ -480,11 +568,14 @@ std::vector<LevelShrubClass> parse_level_shrub_classes(
 ) {
     std::vector<LevelShrubClass> out;
 
+    // Parse each table entry that has a blob.
     for (const CoreShrubClassEntry& e : table) {
+        // A non-positive offset marks a class that has no data in this level.
         if (e.base.offset <= 0) {
             continue;
         }
 
+        // Name the failing class in the error, since the table has many of them.
         try {
             out.push_back(
                 {e,
@@ -500,6 +591,10 @@ std::vector<LevelShrubClass> parse_level_shrub_classes(
     return out;
 }
 
+// ---- Billboards, fades and wind sway ----
+
+// The low half is the mean of the x and y column lengths, the high half the z column length, both
+// in 1/4096 units, as the level loader packs them.
 u32 packed_column_lengths(const std::array<std::array<f32, 4>, 4>& m) {
     auto length = [](const std::array<f32, 4>& c) {
         return std::sqrt(c[0] * c[0] + c[1] * c[1] + c[2] * c[2]);
@@ -507,6 +602,7 @@ u32 packed_column_lengths(const std::array<std::array<f32, 4>, 4>& m) {
     const s32 lo = std::min(trunc_s32((length(m[0]) + length(m[1])) * 0.5f * 4096.0f), 0x10000);
     s32 hi = trunc_s32(length(m[2]) * 4096.0f);
 
+    // A z length too large for 16 bits is stored as zero, as the loader does.
     if (hi >= 0x10001) {
         hi = 0;
     }
@@ -514,6 +610,7 @@ u32 packed_column_lengths(const std::array<std::array<f32, 4>, 4>& m) {
     return static_cast<u32>(lo) | static_cast<u32>(hi) << 16;
 }
 
+// The width scales with the horizontal lengths, the height and z offset with the vertical one.
 std::array<f32, 3> billboard_extent(const ShrubBillboard& b, f32 class_scale, u32 packed) {
     // ShrubProc: itof12 of (lo, hi), width * lo, (height, z_ofs) * hi, all
     // times the scale; its projection takes 1024-scaled coordinates.
@@ -526,6 +623,8 @@ std::array<f32, 3> billboard_extent(const ShrubBillboard& b, f32 class_scale, u3
     };
 }
 
+// The quad is turned about the vertical axis to face the eye, so the horizontal axis is
+// perpendicular to the horizontal part of the view direction.
 std::array<std::array<f32, 3>, 4> billboard_corners(
     const std::array<f32, 3>& t, const std::array<f32, 3>& eye, const std::array<f32, 3>& extent
 ) {
@@ -535,6 +634,7 @@ std::array<std::array<f32, 3>, 4> billboard_corners(
     const f32 dy = d[1] * q;
     std::array<std::array<f32, 3>, 4> out{};
 
+    // Place each corner: h along the horizontal axis and v above the origin.
     for (std::size_t i = 0; i < 4; ++i) {
         const f32 h = kBillboardCorners[i][0] * extent[0];
         const f32 v = kBillboardCorners[i][1] * extent[1] + extent[2];
@@ -544,28 +644,36 @@ std::array<std::array<f32, 3>, 4> billboard_corners(
     return out;
 }
 
+// The alphas are in GS units (0x80 = opaque). With no billboard the mesh fades out towards the draw
+// distance. With one, the mesh fades out between F and F + 24 world units while the billboard
+// fades in, and the billboard alone fades out towards the draw distance.
 ShrubFade shrub_fade(f32 z, f32 d, std::optional<u8> f) {
     const s32 dz = trunc_s32((d - z) * 4096.0f);  // vftoi12 (D - z)
+    // The billboard's fade-out towards the draw distance, at half the mesh's rate.
     auto far = [&] {
         return static_cast<u8>(std::min(dz >> 1, 0x8000) >> 8);
     };
 
+    // No billboard: only the mesh, fading out at the draw distance.
     if (!f) {
         return {static_cast<u8>(std::min(dz, 0x8000) >> 8), std::nullopt};
     }
 
+    // A fade distance of zero means billboard only.
     if (*f == 0) {
         return {std::nullopt, far()};
     }
 
     const s32 iz = trunc_s32(std::max(z, 0.0f) * 4096.0f) - (s32{*f} << 12);
 
+    // Nearer than F: the mesh is fully opaque and the billboard has not started to fade in.
     if (iz < 0) {
         return {u8{0x80}, std::nullopt};
     }
 
     const auto a = static_cast<u8>(std::min(iz, 0x8000) >> 8);
 
+    // The mesh has fully faded into the billboard, which now fades out alone.
     if (a == 0x80) {
         return {std::nullopt, far()};
     }
@@ -573,20 +681,26 @@ ShrubFade shrub_fade(f32 z, f32 d, std::optional<u8> f) {
     return {static_cast<u8>((0x8000 - iz) >> 8), a};
 }
 
+// The table is 256 entries of -127 sin(2 pi i / 256), truncated towards zero.
 s8 sway_table(u32 i) {
     const double angle = 2.0 * std::numbers::pi * static_cast<double>(i & 0xff) / 256.0;
     return static_cast<s8>(std::trunc(-127.0 * std::sin(angle)));
 }
 
+// The sway has a slow gust shared across the level plus a per-instance wobble, both driven by the
+// frame counter and the instance's matrix-block address (which makes instances differ), and fades
+// to nothing at the range limit.
 std::optional<std::array<f32, 2>> wind_sway(
     u16 mode, u32 block, u32 tick, const std::array<f32, 3>& rel
 ) {
+    // Mode 0 is a class that does not sway.
     if (mode == 0) {
         return std::nullopt;
     }
 
     const f32 d2 = (rel[0] * rel[0] + rel[1] * rel[1]) + 1.0f * (rel[2] * rel[2]);
 
+    // Beyond the sway range (the squared distance exceeds the range squared) nothing moves.
     if (kSwayVf9[1] - d2 < 0.0f) {
         return std::nullopt;
     }
@@ -603,6 +717,7 @@ std::optional<std::array<f32, 2>> wind_sway(
     f32 sx = (s(w + 0x40) * kSwayVf8[1] + g * kSwayVf8[2]) * k;
     f32 sy = (s(w >> 1) * kSwayVf8[1] + g * kSwayVf8[3]) * k;
 
+    // Mode 1 sways at a reduced strength; mode 2 uses the full factor.
     if (!doubled) {
         sx *= kSwayVf9[3];
         sy *= kSwayVf9[3];
@@ -611,6 +726,9 @@ std::optional<std::array<f32, 2>> wind_sway(
     return std::array<f32, 2>{sx, sy};
 }
 
+// ---- Instances ----
+
+// The loader leaves 0.01 in [3][3]; the world matrix needs 1 there.
 std::array<std::array<f32, 4>, 4> ShrubInstance::world_matrix() const {
     auto m = matrix;
     m[3][3] = 1.0f;
@@ -620,6 +738,7 @@ std::array<std::array<f32, 4>, 4> ShrubInstance::world_matrix() const {
 std::array<f32, 3> ShrubInstance::transform_point(const std::array<f32, 3>& p) const {
     std::array<f32, 3> out{};
 
+    // Each output row is the dot of the point with a matrix row, plus the translation.
     for (std::size_t r = 0; r < 3; ++r) {
         out[r] = matrix[0][r] * p[0] + matrix[1][r] * p[1] + matrix[2][r] * p[2] + matrix[3][r];
     }
@@ -641,6 +760,7 @@ ShrubInstance::LightSets ShrubInstance::light_sets() const {
 std::vector<ShrubInstance> parse_shrub_instance_section(ByteView section) {
     const s32 count = section.s32_at(0);
 
+    // A negative or absurd count is a misread section, not a level with that many shrubs.
     if (count < 0 || count > 100'000) {
         fail("shrub instances: implausible count {}", count);
     }
@@ -652,6 +772,7 @@ std::vector<ShrubInstance> parse_shrub_instance_section(ByteView section) {
 std::vector<ShrubInstance> parse_shrub_instances(ByteView gameplay) {
     const std::size_t offset = gameplay.u32_at(kGameplayShrubInstances);
 
+    // An offset of zero means the gameplay file has no shrub instances.
     if (offset == 0) {
         return {};
     }
@@ -662,12 +783,14 @@ std::vector<ShrubInstance> parse_shrub_instances(ByteView gameplay) {
 std::vector<s32> parse_shrub_class_list(ByteView gameplay) {
     const std::size_t offset = gameplay.u32_at(kGameplayShrubClasses);
 
+    // An offset of zero means the gameplay file has no shrub class list.
     if (offset == 0) {
         return {};
     }
 
     const s32 count = gameplay.s32_at(offset);
 
+    // A negative or absurd count is a misread list.
     if (count < 0 || count > 10'000) {
         fail("shrub class list: implausible count {}", count);
     }
