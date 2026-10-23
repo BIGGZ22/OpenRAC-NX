@@ -337,6 +337,12 @@ class Job:
                 msg = self._q.get(timeout=0.5)
             except queue.Empty:
                 msg = None
+                if not any(pr.is_alive() for pr in self._procs):   # died before they could say so
+                    with self.lock:
+                        if self.state["status"] in ("running", "starting"):
+                            self.state["status"] = "error"
+                            self.state["message"] = self.state["message"] or "the workers exited"
+                    break
             now = time.time()
             with self.lock:
                 st = self.state
