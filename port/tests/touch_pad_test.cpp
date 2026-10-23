@@ -208,6 +208,36 @@ int main() {
     CHECK(pad.right_y > kStickCentre);
     camera.release_all();
 
+    // No control covers another's, up to the pad's own size and on any screen's shape; the shoulders sit
+    // below the top edge, where the game draws its health and bolts.
+    for (const float aspect : {4.0f / 3.0f, 16.0f / 9.0f, 2.0f, 2.4f}) {
+        for (const float scale : {TouchPad::kMinScale, TouchPad::kDefaultScale, 1.0f}) {
+            TouchPad shape;
+            shape.set_aspect(aspect);
+            shape.set_scale(scale);
+            shape.set_menu_button(true);
+            const auto all = shape.controls();
+            for (std::size_t i = 0; i < all.size(); ++i) {
+                for (std::size_t j = i + 1; j < all.size(); ++j) {
+                    const TouchControl& a = all[i];
+                    const TouchControl& b = all[j];
+                    if (a.group == b.group) {
+                        continue;  // a group's own controls are laid out together
+                    }
+                    const float dx = std::abs(a.x - b.x) * aspect;
+                    const float dy = std::abs(a.y - b.y);
+                    const bool round = a.stretch == 1.0f && b.stretch == 1.0f;
+                    const bool apart = round ? std::hypot(dx, dy) >= a.radius + b.radius
+                                             : dx >= a.radius * a.stretch + b.radius * b.stretch
+                                                   || dy >= a.radius + b.radius;
+                    CHECK(apart);
+                }
+            }
+            const TouchControl& l1 = control(shape, TouchControl::Kind::Button, Button::L1);
+            CHECK(l1.y - l1.radius > 0.08f * scale);
+        }
+    }
+
     // Smaller controls sit nearer the edges; the default is smaller than the pad's own.
     TouchPad sized;
     sized.set_aspect(16.0f / 9.0f);

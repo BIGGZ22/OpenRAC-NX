@@ -21,10 +21,12 @@ constexpr float kStickZoneRight = 0.42f;
 // Where a finger turns the camera: the right of the screen, from this across, off the buttons.
 constexpr float kLookZoneLeft = 0.5f;
 // The camera: a finger moving this many window heights a second pushes the right stick all the
-// way; slower, as far as its speed. The push follows the finger within about this many seconds,
-// so the frames between two touch reports do not stop the camera, and starts at kLookFloor,
-// past the game's dead zone, so that a slow drag turns it slowly rather than not at all.
-constexpr float kLookFullSpeed = 1.1f;
+// way; slower, as far as its speed (a third of a height a second: an unhurried swipe across the
+// right of the screen turns the camera most of the way round). The push follows the finger within
+// about this many seconds, so the frames between two touch reports do not stop the camera, and
+// starts at kLookFloor, past the game's dead zone, so that a slow drag turns it slowly rather than
+// not at all.
+constexpr float kLookFullSpeed = 0.3f;
 constexpr float kLookFollow = 0.05f;
 constexpr float kLookFloor = 0.22f;
 // How far the player may move a group from its place, in window heights.
@@ -61,12 +63,13 @@ TouchPad::TouchPad() {
         m_places[static_cast<std::size_t>(g)] = Place{from, offset, y};
     };
     group(G::Stick, From::Left, 0.27f, 0.69f);
-    group(G::Dpad, From::Left, 0.20f, 0.30f);
+    group(G::Dpad, From::Left, 0.20f, 0.36f);
     group(G::Face, From::Right, 0.26f, 0.64f);
-    group(G::L2, From::Left, 0.13f, 0.075f);
-    group(G::L1, From::Left, 0.32f, 0.075f);
-    group(G::R1, From::Right, 0.32f, 0.075f);
-    group(G::R2, From::Right, 0.13f, 0.075f);
+    // The shoulders a little below the top, where the game draws its health and bolts.
+    group(G::L2, From::Left, 0.13f, 0.15f);
+    group(G::L1, From::Left, 0.36f, 0.15f);
+    group(G::R1, From::Right, 0.36f, 0.15f);
+    group(G::R2, From::Right, 0.13f, 0.15f);
     group(G::Select, From::Middle, -0.14f, 0.075f);
     group(G::Start, From::Middle, 0.14f, 0.075f);
     group(G::Menu, From::Middle, 0.0f, 0.075f);
