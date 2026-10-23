@@ -1315,33 +1315,16 @@ pub fn run() {
             let mut config = config_file.as_deref().map(config::load).unwrap_or_default();
             config.progress_cache = progress_cache(config_file.as_deref());
 
-            // First run / startup: ensure the OpenRAC folder exists in the user's home directory.
-            // On Linux: /home/<user>/OpenRAC
-            // On macOS: /Users/<user>/OpenRAC
-            // On Windows: C:\Users\<user>\OpenRAC
+            // The install folder: ~/OpenRAC, made at first start, with what older launchers set up
+            // in the data folder moved into it (core install.rs).
             let home_dir = app.path().home_dir().ok().or_else(detect::home_dir);
-            let openrac_home = home_dir.as_ref().and_then(|h| detect::ensure_openrac_dir_in(h).ok());
-
-            // OpenGOAL asks for an install folder at first start; until the
-            // player picks one, games are set up in the user's OpenRAC folder (or launcher's data folder).
             let local_data = app.path().app_local_data_dir().ok();
-            if let Some(openrac_dir) = &openrac_home {
-                if config.install_dir.is_none() || config.install_dir.as_ref() == local_data.as_ref() {
-                    if let Some(data) = &local_data {
-                        let old_active = data.join("active");
-                        let new_active = openrac_dir.join("active");
-                        if old_active.exists() && !new_active.exists() {
-                            let _ = std::fs::rename(&old_active, &new_active);
-                        }
-                    }
-                    config.install_dir = Some(openrac_dir.clone());
-                    if let Some(cfg_file) = &config_file {
-                        let _ = config::save(cfg_file, &config);
-                    }
-                }
-            } else if config.install_dir.is_none() {
-                config.install_dir = local_data;
-            }
+            install::settle_install_dir(
+                &mut config,
+                home_dir.as_deref(),
+                local_data.as_deref(),
+                config_file.as_deref(),
+            );
 
             // The copy of OpenRAC the launcher carries: what a player plays from (detect::settle).
             // A copy whose Python does not run here is not for this machine (an Intel Mac has the
