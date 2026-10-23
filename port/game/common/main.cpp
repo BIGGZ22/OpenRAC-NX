@@ -57,12 +57,12 @@
 #include "openrac/game_host.h"
 #include "openrac/guest.h"
 #include "openrac/memory.h"
+#include "openrac/sound_engine.h"
 
 #ifdef OPENRAC_FRONTEND
 #include "debug_overlay.h"
 #include "frontend.h"
 #include "settings.h"
-#include "openrac/sound_engine.h"
 #include "platform/audio.h"
 #include "platform/input.h"
 #include "platform/performance_hint.h"
