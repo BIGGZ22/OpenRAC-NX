@@ -17,6 +17,7 @@ OpenRAC/
 ├── launcher/               desktop app to set up, build and play every game (Tauri)
 ├── port/                   the native PC port: runtime, hostgen, renderer, platform, the games' programs
 ├── tools/                  repository-wide tools: openrac.py, extractor.py, sources.py
+│   └── openrac_common/     the helpers the Python tools share (paths, game.json, tables, discs)
 ├── docs/                   knowledge and rules that span the games
 │   ├── policy/             sourcing policy, open questions
 │   ├── port/               the native port: design, studies, order of work
@@ -59,7 +60,8 @@ are what readers see.
 | Decompiled code, a symbol map, a game's build change | `games/<game>/<version>/`, following that project's layout |
 | A note about one game | that game's `docs/` |
 | Knowledge that holds across games (a format, a subsystem, a compiler) | `docs/engine/`, `docs/toolchains/` or `docs/workflow/`, linking the per-game evidence |
-| A tool that serves several games or the repository | `tools/` (standard library Python where possible), with tests |
+| A tool that serves several games or the repository | `tools/` (standard library Python where possible), with tests, using [`tools/openrac_common`](../tools/openrac_common/README.md) for what tools share |
+| A helper two or more Python tools need | `tools/openrac_common/`, with a test beside the others in `tools/test_openrac_common.py` |
 | A file a second game needs unchanged (a library source, a build helper) | a copy in that game, listed with the original in `shared/files.json` ([shared/](../shared/README.md)) |
 | Editor code | `editor/` |
 | A study or decision for the native port | `docs/port/` ([its README](port/README.md)) |
