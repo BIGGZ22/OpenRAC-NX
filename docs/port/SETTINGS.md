@@ -46,7 +46,7 @@ needs the game started again.
 | Probe normal bias | `probe_normal_bias` | `0.0` to `2.0` world units (default `0.5`) | Offsets the GI visibility receiver along the camera-facing surface normal; updates immediately |
 | Probe view bias | `probe_view_bias` | `0.0` to `2.0` world units (default `0.5`) | Offsets the GI visibility receiver toward the camera; updates immediately |
 | Probe GI multiplier | `probe_gi_multiplier` | `0.0` to `5.0` (default `1.0`) | Scales baked indirect irradiance only; direct lights are unchanged |
-| Ambient occlusion | `gtao` | `0` (off, default), `1` (GTAO) | In the Enhanced menu alongside GTAO settings. Adds optional contact shading from the visible world depth. Half-resolution analytic horizons by default, with edge-aware filtering; fixed samples, no temporal jitter or FSR dependency. Runs before particles and the HUD |
+| Ambient occlusion | `gtao` | `0` (off), `1` (GTAO, default with enhanced rendering) | In the Enhanced menu alongside GTAO settings. Adds optional contact shading from the visible world depth. Half-resolution analytic horizons by default, with edge-aware filtering; fixed samples, no temporal jitter or FSR dependency. Runs before particles and the HUD |
 | GTAO quality | `gtao_quality` | `performance` (default), `quality` | Performance uses three silhouette-refinement steps; Quality uses seven for more accurate contacts and silhouettes. Older settings files default to Performance |
 | GTAO directions | `gtao_slices` | `1` to `12` (default `4`) | Number of horizon-search directions; adjustable in ImGui's GTAO settings |
 | GTAO steps | `gtao_steps` | `4` to `24` (default `6`) | Depth samples per side of each direction |

@@ -17,6 +17,7 @@ int main() {
     }
     const auto file = folder / "settings.ini";
     settings::load(file);
+    CHECK(settings::get().gtao);
     // Enhanced rendering is off until the player turns it on (the launcher's Mods entry).
     CHECK(!settings::get().enhanced_rendering);
     CHECK(settings::get().enhanced_graphics);

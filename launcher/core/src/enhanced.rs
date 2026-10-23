@@ -89,7 +89,7 @@ pub fn settings() -> Vec<SettingSpec> {
     vec![
         spec("probe_lighting", "Probe lighting", "bool", true.into(), "Light that bounces off the world."),
         spec("enhanced_shadows", "Modern shadows", "bool", true.into(), "Sharp sun shadows, and Ratchet's own."),
-        spec("gtao", "Ambient occlusion", "bool", false.into(), "Soft shade in corners and under objects."),
+        spec("gtao", "Ambient occlusion", "bool", true.into(), "Soft shade in corners and under objects."),
         quality,
         range(
             spec("probe_gi_multiplier", "Bounce light", "float", 1.0.into(), "How bright the bounced light is."),

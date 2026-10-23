@@ -87,7 +87,7 @@ struct Settings {
     float probe_gi_multiplier = 1.0f;
     float probe_normal_bias = 0.5f;  // receiver offsets in world units
     float probe_view_bias = 0.5f;
-    bool gtao = false;       // optional ground-truth ambient occlusion
+    bool gtao = true;       // ground-truth ambient occlusion when enhanced rendering is enabled
     int anisotropy = 1;      // the textures' anisotropic filter: 1 (off), 2, 4, 8, 16
     VSync vsync = VSync::On;
     FrameRate frame_rate = FrameRate::Display;

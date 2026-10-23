@@ -637,8 +637,8 @@ const mockEnhanced: EnhancedView = {
         key: "gtao",
         name: "Ambient occlusion",
         type: "bool",
-        default: false,
-        value: false,
+        default: true,
+        value: true,
         description: "Soft shade in corners and under objects.",
       },
       {
