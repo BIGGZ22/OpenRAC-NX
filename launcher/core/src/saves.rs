@@ -661,11 +661,16 @@ mod tests {
     #[test]
     fn a_restore_from_outside_the_card_is_refused() {
         // A name that is not a backup of the card: refused before anything is read or
-        // removed, so a path somewhere else cannot replace the card's own folders.
-        for name in ["../../elsewhere", "/etc", "BESCES-50916RATCHET", ""] {
-            let err = restore_backup("SCES_509.16", name).unwrap_err();
-            assert!(err.contains("not a backup"), "{name}: {err}");
-        }
+        // removed, so a path somewhere else cannot replace the card's own folders. In an empty
+        // data folder, never the card of whoever runs the test.
+        let home = tempfile::tempdir().unwrap();
+        with_data_home(home.path(), || {
+            for name in ["../../elsewhere", "/etc", "BESCES-50916RATCHET", ""] {
+                let err = restore_backup("SCES_509.16", name).unwrap_err();
+                assert!(err.contains("not a backup"), "{name}: {err}");
+            }
+        });
+        assert!(std::fs::read_dir(home.path()).unwrap().next().is_none(), "nothing written");
     }
 
     #[test]
