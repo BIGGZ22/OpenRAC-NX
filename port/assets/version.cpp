@@ -40,6 +40,7 @@ constexpr SerialGame kOtherSerials[] = {
 }  // namespace
 
 std::string_view game_name(Game game) {
+    // Each game has a fixed short name.
     switch (game) {
         case Game::Rac1:
             return "rac1";
@@ -55,6 +56,7 @@ std::string_view game_name(Game game) {
 }
 
 std::string_view game_title(Game game) {
+    // Each game has a fixed title.
     switch (game) {
         case Game::Rac1:
             return "Ratchet & Clank";
@@ -70,6 +72,7 @@ std::string_view game_title(Game game) {
 }
 
 std::string_view region_name(Region region) {
+    // Each region has a fixed name.
     switch (region) {
         case Region::NtscU:
             return "NTSC-U";
@@ -87,7 +90,9 @@ std::span<const GameVersion> versions() {
 }
 
 const GameVersion* find_version_by_boot(std::string_view serial, std::string_view boot_sha1) {
+    // Look for the version with this boot serial and boot executable checksum.
     for (const GameVersion& v : kVersions) {
+        // The serial alone does not identify a build, so the checksum must match too.
         if (v.serial == serial && v.boot_sha1 == boot_sha1) {
             return &v;
         }
@@ -97,7 +102,9 @@ const GameVersion* find_version_by_boot(std::string_view serial, std::string_vie
 }
 
 const GameVersion* find_version(std::string_view id_or_key) {
+    // Look for a version by its id or its key.
     for (const GameVersion& v : kVersions) {
+        // Either spelling names the version.
         if (v.id == id_or_key || v.key == id_or_key) {
             return &v;
         }
@@ -107,14 +114,18 @@ const GameVersion* find_version(std::string_view id_or_key) {
 }
 
 bool game_of_serial(std::string_view serial, Game& game) {
+    // Look the serial up among the versions the port knows.
     for (const GameVersion& v : kVersions) {
+        // A serial identifies the game even when the build is not one the port can set up.
         if (v.serial == serial) {
             game = v.game;
             return true;
         }
     }
 
+    // Then try serials of games the port does not support, to name them in a message.
     for (const SerialGame& s : kOtherSerials) {
+        // A match names the game; the caller reports it as unsupported.
         if (s.serial == serial) {
             game = s.game;
             return true;

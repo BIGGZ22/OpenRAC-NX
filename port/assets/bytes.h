@@ -73,6 +73,7 @@ public:
 
     // Throws unless [offset, offset + length) lies inside the view.
     void check(std::size_t offset, std::size_t length, std::string_view what) const {
+        // The range is checked as length > size - offset so the sum cannot overflow.
         if (offset > m_size || length > m_size - offset) {
             fail(
                 "{}: {:#x} bytes at {:#x} run past the end of a {:#x}-byte buffer",
@@ -111,6 +112,7 @@ public:
     ) const {
         static_assert(std::is_trivially_copyable_v<T>);
 
+        // Reject a count whose records cannot fit in the buffer before multiplying count by size.
         if (count != 0 && sizeof(T) > (m_size + 1) / count + 1) {
             fail("{}: {} records of {:#x} bytes cannot fit", what, count, sizeof(T));
         }
@@ -118,6 +120,7 @@ public:
         check(offset, count * sizeof(T), what);
         std::vector<T> values(count);
 
+        // memcpy from a null data pointer is undefined, so an empty array copies nothing.
         if (count != 0) {
             std::memcpy(values.data(), m_data + offset, count * sizeof(T));
         }
@@ -177,6 +180,7 @@ public:
     void put_at(std::size_t offset, const T& value) {
         static_assert(std::is_trivially_copyable_v<T>);
 
+        // Grow the buffer to hold the value; a write may land past the current end.
         if (m_bytes.size() < offset + sizeof(T)) {
             m_bytes.resize(offset + sizeof(T));
         }
@@ -189,6 +193,7 @@ public:
     }
 
     void pad_to(std::size_t alignment, u8 fill = 0) {
+        // Pad up to the next multiple of the alignment.
         while (m_bytes.size() % alignment != 0) {
             m_bytes.push_back(fill);
         }
