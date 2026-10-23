@@ -45,6 +45,7 @@
 
 #include "common/build_info.h"
 #include "common/crash.h"
+#include "common/env.h"
 #include "common/log.h"
 #include "common/system_info.h"
 #include "mods.h"
@@ -133,6 +134,20 @@ struct Options {
 };
 
 Options g_options;
+
+// Returns the value `var` was set to as a string of its own, or nothing when it is unset. For the
+// reads below that hand the value to the C library (a script for sscanf, a file to write), which
+// wants a string that ends in a NUL: env::value's view need not.
+std::optional<std::string> env_string(env::Var var) {
+    const std::optional<std::string_view> found = env::value(var);
+
+    // An unset variable stays nothing, which differs from the empty string.
+    if (!found) {
+        return std::nullopt;
+    }
+
+    return std::string(*found);
+}
 long g_frame = 0;
 gaddr g_chain = 0;  // the display list sent this frame
 bool g_vsync_since_kick = true;  // a vertical blank was waited for since the last frame was sent
@@ -162,15 +177,16 @@ std::string program_name() {
 // (launcher/core/src/saves.rs, get_memcard_dir).
 fs::path data_home() {
 #if defined(__APPLE__)
-    const char* home = std::getenv("HOME");
-    fs::path base = fs::path(home != nullptr ? home : ".") / "Library/Application Support/OpenRAC";
+    const std::optional<std::string> home = env::system_variable("HOME");
+    fs::path base = fs::path(home.value_or(".")) / "Library/Application Support/OpenRAC";
 #else
     fs::path base;
-    if (const char* xdg = std::getenv("XDG_DATA_HOME"); xdg != nullptr && xdg[0] != '\0') {
-        base = fs::path(xdg) / "openrac";
+    if (const std::optional<std::string> xdg = env::system_variable("XDG_DATA_HOME");
+        xdg && !xdg->empty()) {
+        base = fs::path(*xdg) / "openrac";
     } else {
-        const char* home = std::getenv("HOME");
-        base = fs::path(home != nullptr ? home : ".") / ".local/share/openrac";
+        const std::optional<std::string> home = env::system_variable("HOME");
+        base = fs::path(home.value_or(".")) / ".local/share/openrac";
     }
 #endif
     return base;
@@ -269,8 +285,8 @@ Options parse(int argc, char** argv) {
         }
     }
     if (o.data.empty()) {
-        if (const char* env = std::getenv("OPENRAC_DATA")) {
-            o.data = env;
+        if (const std::optional<std::string_view> data = env::value(env::Var::Data)) {
+            o.data = *data;
         } else {
             usage(
                 std::string("no data folder: pass --data, the folder the extractor wrote for ")
@@ -438,13 +454,16 @@ void sample_state() {
 // the crash report: segv (an access to game memory that is not mapped), host (to a host address
 // that is not), abort, fpe (a raised SIGFPE), fatal (log::fatal), trap (the game's trap).
 void crash_test() {
-    static const char* test = std::getenv("OPENRAC_CRASH_TEST");
-    if (test == nullptr) {
+    static const std::optional<std::string> test = env_string(env::Var::CrashTest);
+
+    // Unset, no test is asked for.
+    if (!test) {
         return;
     }
+
     char kind[16] = {};
     long frame = 0;
-    if (std::sscanf(test, "%15[a-z]:%ld", kind, &frame) < 1 || g_frame != frame) {
+    if (std::sscanf(test->c_str(), "%15[a-z]:%ld", kind, &frame) < 1 || g_frame != frame) {
         return;
     }
     log::warn("OPENRAC_CRASH_TEST: stopping on purpose ({})", kind);
@@ -468,9 +487,10 @@ void crash_test() {
 // their calls (guest.h, openrac_reach_site; port/tools/regress reach). Written at exit and every
 // 600 frames, so a run that crashes still leaves most of it.
 void write_reach() {
-    static const char* path = std::getenv("OPENRAC_REACH");
-    if (path != nullptr && *path != 0 && openrac_guest_write_reach(path, openrac_game.id, g_frame) == 0) {
-        log::warn("OPENRAC_REACH: cannot write {}", path);
+    static const std::optional<std::string> path = env_string(env::Var::Reach);
+    if (path && !path->empty()
+        && openrac_guest_write_reach(path->c_str(), openrac_game.id, g_frame) == 0) {
+        log::warn("OPENRAC_REACH: cannot write {}", *path);
     }
 }
 
@@ -480,8 +500,7 @@ void write_reach() {
 // fast the machine runs it: port/tools/regress's runs repeat. A device pulls at the real clock's
 // rate, which an uncapped run outpaces by a varying amount.
 bool audio_ticked() {
-    static const bool on = std::getenv("OPENRAC_AUDIO_TICKED") != nullptr;
-    return on;
+    return env::flag(env::Var::AudioTicked);
 }
 
 void audio_tick() {
@@ -634,15 +653,18 @@ void openrac_game_draw(unsigned layers) {
 // around a new game's transition loads that level). cFRAME counts the window's frames from control
 // instead, as OPENRAC_PRESS's c entries do (port/tools/regress: the same moment in every version).
 static void apply_writes() {
-    static const char* script = std::getenv("OPENRAC_WRITE");
-    if (script == nullptr) {
+    static const std::optional<std::string> script = env_string(env::Var::Write);
+
+    // Unset, nothing is written.
+    if (!script) {
         return;
     }
+
     std::int64_t since = -1;
 #ifdef OPENRAC_FRONTEND
     since = g_window ? frontend::since_control() : -1;
 #endif
-    for (const char* at = script; at && *at;) {
+    for (const char* at = script->c_str(); at && *at;) {
         unsigned long frame = 0, address = 0, value = 0, length = 1;
         const bool from_control = *at == 'c';
         const std::int64_t now = from_control ? since : static_cast<std::int64_t>(g_frame);
@@ -744,14 +766,14 @@ int openrac_game_vsync(void) {
     // for the next frame's time (the game then runs as fast as the machine allows: a measure, not a
     // way to play, since the game's tick is its frame).
     static const bool& fps = stats::probe("OPENRAC_FPS", "the ticks per second over each 300 ticks, in the log");
-    static const bool uncapped = std::getenv("OPENRAC_UNCAPPED") != nullptr;
+    static const bool uncapped = env::flag(env::Var::Uncapped);
     static steady_clock::time_point fps_from = now;
     // OPENRAC_WATCH=ADDRESS:COUNT[:i],...: COUNT floats (or words, with i) from each ADDRESS, each
     // frame, in the log.
-    static const char* watch = std::getenv("OPENRAC_WATCH");
-    if (watch != nullptr) {
+    static const std::optional<std::string> watch = env_string(env::Var::Watch);
+    if (watch) {
         std::string line;
-        for (const char* at = watch; at && *at;) {
+        for (const char* at = watch->c_str(); at && *at;) {
             unsigned long address = 0, count = 1;
             char kind = 'f';
             std::sscanf(at, "%lx:%lu:%c", &address, &count, &kind);
@@ -770,10 +792,10 @@ int openrac_game_vsync(void) {
     }
     // OPENRAC_GUARD=FRAME:ADDRESS:BYTES[:SKIP]: from FRAME on, the first write (after SKIP) into
     // those bytes of game memory ends the program with the host's stack (runtime::guard_writes), to find who corrupts it.
-    static const char* guard = std::getenv("OPENRAC_GUARD");
-    if (guard != nullptr) {
+    static const std::optional<std::string> guard = env_string(env::Var::Guard);
+    if (guard) {
         unsigned long from = 0, address = 0, bytes = 4, skip = 0;
-        std::sscanf(guard, "%lu:%lx:%lx:%lu", &from, &address, &bytes, &skip);
+        std::sscanf(guard->c_str(), "%lu:%lx:%lx:%lu", &from, &address, &bytes, &skip);
         if (g_frame >= from) {
             runtime::guard_writes(static_cast<gaddr>(address), static_cast<std::uint32_t>(bytes),
                                   static_cast<std::uint32_t>(skip));
@@ -1410,7 +1432,7 @@ static int check_levels(const fs::path& levels) {
 // OPENRAC_ROUND_NEAREST=1 and OPENRAC_DENORMALS=1 keep the host's ways, to compare.
 static int run_game_as_the_ee() {
     crash::prepare_thread();  // the game may run on a thread of its own (platform/pump.h)
-    openrac_ee_float_mode(std::getenv("OPENRAC_ROUND_NEAREST") != nullptr, std::getenv("OPENRAC_DENORMALS") != nullptr);
+    openrac_ee_float_mode(env::flag(env::Var::RoundNearest), env::flag(env::Var::Denormals));
     return openrac_game_run();
 }
 
@@ -1521,8 +1543,8 @@ int main(int argc, char** argv) {
     // [debug tools] --debug-dump FILE (or OPENRAC_DEBUG_DUMP=FILE): each frame's measurements, with
     // or without a window.
     if (g_options.debug_dump.empty()) {
-        if (const char* env = std::getenv("OPENRAC_DEBUG_DUMP")) {
-            g_options.debug_dump = env;
+        if (const std::optional<std::string_view> dump = env::value(env::Var::DebugDump)) {
+            g_options.debug_dump = *dump;
         }
     }
     if (!g_options.debug_dump.empty()) {
