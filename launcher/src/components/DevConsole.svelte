@@ -3,7 +3,7 @@
   // reads it. The list filters by state; a finished check or build can be run again.
   import type { ActionView } from "$lib/api";
   import { app, cancel, clearFinished, clock, jobs, run, toast } from "$lib/app.svelte";
-  import { elapsed } from "$lib/format";
+  import { jobDuration, jobTranscript } from "$lib/jobText";
   import type { Job, JobState } from "$lib/queue";
   import Icon from "./Icon.svelte";
 
@@ -30,11 +30,6 @@
   const count = (f: (typeof FILTERS)[number]) => jobs.list.filter((j) => f.states.includes(j.state)).length;
 
   const selected = $derived(jobs.list.find((j) => j.key === jobs.selected) ?? jobs.list.at(-1) ?? null);
-  function duration(job: Job): string {
-    if (!job.startedAt) return "";
-    return elapsed((job.endedAt ?? clock.now) - job.startedAt);
-  }
-
   /** Which version or the checkout a job was for, in a few words. */
   function where(job: Job): string {
     if (job.scope.kind === "repository") return job.actionId.startsWith("install:") ? "Set-up" : "Checkout";
@@ -66,7 +61,7 @@
 
   async function copy(job: Job) {
     try {
-      await navigator.clipboard.writeText([`$ ${job.command}`, ...job.lines.map((l) => l.line)].join("\n"));
+      await navigator.clipboard.writeText(jobTranscript(job));
     } catch {
       toast("The output could not be copied: the browser would not give it to the clipboard.", "error");
     }
@@ -100,7 +95,7 @@
         <span class="row">
           <span class={`pill ${STATES[job.state].tone}`}><span class="dot"></span>{STATES[job.state].text}</span>
           <span class="dim small clip grow mono">{where(job)}</span>
-          <span class="dim small">{duration(job)}</span>
+          <span class="dim small">{jobDuration(job, clock.now)}</span>
         </span>
       </button>
     {/each}
@@ -114,7 +109,7 @@
           <h2 class="clip">{selected.title}</h2>
           <p class="mono dim clip" title={selected.command}>{selected.command || "not started"}</p>
         </div>
-        <span class="dim time">{duration(selected)}</span>
+        <span class="dim time">{jobDuration(selected, clock.now)}</span>
         {#if selected.code !== null}<span class="dim">exit {selected.code}</span>{/if}
         <button class="small" onclick={() => void copy(selected)}>Copy</button>
         {#if action}
