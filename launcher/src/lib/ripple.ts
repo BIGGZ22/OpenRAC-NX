@@ -1,11 +1,12 @@
 // Android's touch feedback: a press on a control sends a wave out from the finger, clipped to the
-// control's shape (app.css, .ripples and .ripple), as the buttons of Android's own apps do.
+// control's shape (app.css, .ripples and .ripple), as the buttons of Android's own apps do. Not on
+// the navigation rail (Header.svelte), whose highlight slides to the tab pressed instead.
 
 const CONTROLS = 'button, .button, [role="menuitem"], label.option, label.setting';
 
 function press(event: PointerEvent) {
   const target = event.target instanceof Element ? event.target.closest<HTMLElement>(CONTROLS) : null;
-  if (!target || (target as HTMLButtonElement).disabled) return;
+  if (!target || (target as HTMLButtonElement).disabled || target.closest(".site-header")) return;
   const box = target.getBoundingClientRect();
   // Wide enough to cover the control from any point inside it.
   const size = 2 * Math.hypot(box.width, box.height);
