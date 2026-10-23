@@ -1,0 +1,42 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (c) 2026 the OpenRAC contributors
+//
+// The frontend's geometry: where the game's picture sits in the window, and the mobys drawn
+// part way between two ticks. Arithmetic on what it is given only: nothing here reads the player's
+// settings or the frontend's state (frontend.cpp passes them in), so that
+// tests/frontend_geometry_test.cpp can pin each result.
+
+#pragma once
+
+#include "renderer/math.h"
+
+namespace openrac::frontend {
+
+// The shape of the picture the game was made for: a 4:3 TV.
+constexpr float kTvAspect = 4.0f / 3.0f;
+
+// A rectangle of the window, in window pixels.
+struct Box {
+    int x;       // The margin to its left.
+    int y;       // The margin above or below it (the window's height left over, halved).
+    int width;   // Its width.
+    int height;  // Its height.
+};
+
+// The game's frame as the TV showed it: 4:3 (the PS2's 512x448 PAL / 512x416 NTSC buffer), the
+// largest such box in the window, centred; the rest of the window is black. As ReRAC's game frame
+// (crates/rc-engine/src/display.rs; ISC License, Copyright (c) 2026 ReRAC contributors): the frame
+// keeps the game's framing whatever the window's shape. `aspect`: a wider picture (the player's
+// setting, settings.h), which shows more of the world to the sides.
+Box frame_box(int window_width, int window_height, float aspect = kTvAspect);
+
+// Whether `to` can be the moby `from` was a tick before: it moved at most 4 units (16 is that
+// squared) and its X axis turned by less than about 45 degrees (0.7 is that angle's cosine).
+bool same_moby(const renderer::Mat4& from, const renderer::Mat4& to);
+
+// A moby's matrix part way from the last tick's to this one's, or this one's when it moved too far
+// or turned too much in a tick to be the same thing moving (a moby slot used again, a teleport).
+// `t`: how far, from 0 (`from`) to 1 (`to`).
+renderer::Mat4 blend_matrix(const renderer::Mat4& from, const renderer::Mat4& to, float t);
+
+}  // namespace openrac::frontend

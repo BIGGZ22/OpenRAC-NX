@@ -33,6 +33,7 @@
 #include "enhanced/viewer/hero_shadow.h"
 #include "fps_counter.h"
 #include "frame_pacing.h"
+#include "game/common/frontend/geometry.h"
 #include "game/common/particle_texture_cache.h"
 #include "openrac/game_host.h"
 #include "openrac/guest.h"
@@ -599,29 +600,6 @@ std::vector<std::uint8_t> direct_packets(std::span<const std::uint8_t> ram, std:
         }
     }
     return gif;
-}
-
-// The game's frame as the TV showed it: 4:3 (the PS2's 512x448 PAL / 512x416 NTSC buffer), the
-// largest such box in the window, centred; the rest of the window is black. As ReRAC's game frame
-// (crates/rc-engine/src/display.rs; ISC License, Copyright (c) 2026 ReRAC contributors): the frame
-// keeps the game's framing whatever the window's shape. `aspect`: a wider picture (the player's
-// setting, settings.h), which shows more of the world to the sides.
-struct Box {
-    int x, y, width, height;
-};
-
-constexpr float kTvAspect = 4.0f / 3.0f;
-
-Box frame_box(int window_width, int window_height, float aspect = kTvAspect) {
-    int width = window_width;
-    int height = aspect == kTvAspect ? width * 3 / 4 : static_cast<int>(std::lround(static_cast<float>(width) / aspect));
-    if (height > window_height) {
-        height = window_height;
-        width = aspect == kTvAspect
-                    ? height * 4 / 3
-                    : std::min(window_width, static_cast<int>(std::lround(static_cast<float>(height) * aspect)));
-    }
-    return {(window_width - width) / 2, (window_height - height) / 2, width, height};
 }
 
 // The picture's shape now: the player's setting, for the window as it is.
@@ -1791,42 +1769,6 @@ void slow_frame() {
     if (ms > 0.0) {
         std::this_thread::sleep_for(std::chrono::duration<double, std::milli>(ms));
     }
-}
-
-// A moby's matrix part way from the last tick's to this one's, or this one's when it moved too far
-// or turned too much in a tick to be the same thing moving (a moby slot used again, a teleport).
-bool same_moby(const renderer::Mat4& from, const renderer::Mat4& to) {
-    const float dx = to[12] - from[12], dy = to[13] - from[13], dz = to[14] - from[14];
-    if (dx * dx + dy * dy + dz * dz > 16.0f) {
-        return false;
-    }
-    float dot = 0.0f, la = 0.0f, lb = 0.0f;
-    for (int i = 0; i < 3; ++i) {
-        dot += from[i] * to[i];
-        la += from[i] * from[i];
-        lb += to[i] * to[i];
-    }
-    return la > 0.0f && lb > 0.0f && dot >= 0.7f * std::sqrt(la * lb);
-}
-
-renderer::Mat4 blend_matrix(const renderer::Mat4& from, const renderer::Mat4& to, float t) {
-    const float dx = to[12] - from[12], dy = to[13] - from[13], dz = to[14] - from[14];
-    if (dx * dx + dy * dy + dz * dz > 16.0f) {
-        return to;  // a moby slot used again, a teleport
-    }
-    // Where it is always moves with the blend: a thing carried by another (the wrench in the
-    // hero's hand) turns fast, more in a tick than the same-moby test allows, and one left at this
-    // tick's place while its carrier is drawn part way there runs ahead of the hand. Only its
-    // turning is taken whole when it turned too far to blend its axes.
-    renderer::Mat4 m = to;
-    const int upto = same_moby(from, to) ? 12 : 0;
-    for (int i = 0; i < upto; ++i) {
-        m[i] = from[i] + (to[i] - from[i]) * t;
-    }
-    for (int i = 12; i < 15; ++i) {
-        m[i] = from[i] + (to[i] - from[i]) * t;
-    }
-    return m;
 }
 
 renderer::Vec3 normalised(renderer::Vec3 v) {
