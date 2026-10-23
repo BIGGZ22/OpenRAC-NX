@@ -133,17 +133,29 @@ int openrac_lib_EnableDmac(int channel) {
     return 0;
 } /* EnableDmac */
 
+/* DIntr and EIntr return whether interrupts were on before (the EIE bit of
+ * the console's Status register). The game brackets its critical sections
+ * with them: DIntr finds interrupts on, the EIntr closing the bracket finds
+ * them off. */
 int openrac_lib_DIntr(void) {
     return 1;
 } /* DIntr */
 
 int openrac_lib_EIntr(void) {
-    return 1;
+    return 0;
 } /* EIntr */
 
 /* Threads: only the movie player makes them, and it is to be replaced as a
- * whole (libraries.tsv, libmpeg). They are given ids and never run. */
+ * whole (libraries.tsv, libmpeg). They are given ids and never run. As in
+ * the kernel, a call on a thread returns its id; terminating one fails (-1),
+ * as for a thread that has already ended. */
 static int next_thread = 2;
+
+/* A thread id the port has: 0 (the calling thread), 1 (the one thread that
+ * runs) or one CreateThread handed out. */
+static int known_thread(int id) {
+    return id >= 0 && id < next_thread;
+}
 
 int openrac_lib_CreateThread(gaddr param) {
     (void)param;
@@ -151,31 +163,27 @@ int openrac_lib_CreateThread(gaddr param) {
 } /* CreateThread */
 
 int openrac_lib_DeleteThread(int id) {
-    (void)id;
-    return 0;
+    return id;
 } /* DeleteThread */
 
 int openrac_lib_StartThread(int id, gaddr arg) { /* StartThread */
-    (void)id;
     (void)arg;
     openrac_guest_missing("StartThread (threads do not run in the port)");
-    return 0;
+    return id;
 }
 
 int openrac_lib_TerminateThread(int id) {
     (void)id;
-    return 0;
+    return -1;
 } /* TerminateThread */
 
 int openrac_lib_ChangeThreadPriority(int id, int priority) {
-    (void)id;
-    return priority;
+    return known_thread(id) ? priority : -1; /* the console: -1 for a thread it does not have */
 } /* ChangeThreadPriority */
 
 int openrac_lib_RotateThreadReadyQueue(int priority) {
-    (void)priority;
-    return 0;
-} /* RotateThreadReadyQueue */
+    return priority;
+} /* RotateThreadReadyQueue: the priority rotated */
 
 int openrac_lib_GetThreadId(void) {
     return 1;
@@ -315,6 +323,7 @@ int openrac_lib_sceSifCallRpc(
     gaddr end_param
 ) { /* sceSifCallRpc */
     const unsigned int server = server_of(client);
+    uint32_t bound;
     (void)mode;
     (void)ssize;
     if (trace_sif() && sif_rpc_calls++ < 32) {
@@ -333,8 +342,14 @@ int openrac_lib_sceSifCallRpc(
     }
     /* An unbound client has no IOP server to receive this request. Reporting
      * success without completing an async call leaves the game's wait loop
-     * spinning forever on its untouched receive buffer. */
-    if (server == 0) {
+     * spinning forever on its untouched receive buffer. Unbound is what the
+     * game's own memory says: the client's server word (+0x24), which binding
+     * sets and the console's sceSifCallRpc sends with the request, still 0.
+     * The table above only says which server a bound client is for (it holds
+     * RPC_CLIENTS of them); a call replayed on its own, without the binds
+     * before it, still sees the binding. */
+    memcpy(&bound, G(client + 0x24u), 4);
+    if (bound == 0) {
         return -1;
     }
     /* The stash: function 2 says where it is in the IOP's memory and how long;
@@ -613,6 +628,16 @@ int openrac_lib_Copy(gaddr dest, gaddr src, int size) { /* Copy */
         src < GUEST_RAM_SIZE && (uint32_t)size <= GUEST_RAM_SIZE - src) {
         memmove(G(dest), G(src), (size_t)size);
     }
+    return 0;
+}
+
+/* System call -0x5A: Copy's number in the form for interrupt handlers, which
+ * the console's kernel does not implement: a call made on the console copies
+ * nothing and answers 0. */
+int openrac_lib_iCopy(gaddr dest, gaddr src, int size) { /* iCopy */
+    (void)dest;
+    (void)src;
+    (void)size;
     return 0;
 }
 

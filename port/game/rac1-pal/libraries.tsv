@@ -45,15 +45,15 @@ func_00118D60	kernel	EnableCache	host
 func_00118D80	kernel	FlushCache	host	nothing to flush
 func_00118E10	kernel	sceSifDmaStat	host	no IOP: transfers to it are done at once
 func_00118E20	kernel	sceSifSetDma	host
-func_00119328	kernel	EnableIntc	host
-func_00119390	kernel	DisableIntc	host
-func_001193F8	kernel	DisableDmac	host
-func_00119460	kernel	EnableDmac	host
+func_00119328	kernel	DisableIntc	game	libkernel's wrapper: DIntr, the system call, EIntr (nonmatching/functional); only the system call is the port's (func_00118AF0)
+func_00119390	kernel	EnableIntc	game	libkernel's wrapper: DIntr, the system call, EIntr (nonmatching/functional); only the system call is the port's (func_00118AE0)
+func_001193F8	kernel	DisableDmac	game	libkernel's wrapper: DIntr, the system call, EIntr (nonmatching/functional); only the system call is the port's (func_00118B10)
+func_00119460	kernel	EnableDmac	game	libkernel's wrapper: DIntr, the system call, EIntr (nonmatching/functional); only the system call is the port's (func_00118B00)
 func_0011AE20	sif	sceSifInitRpc	host	no IOP: its services are replaced at their EE libraries
 func_0011B2F8	sif	sceSifBindRpc	host
 func_0011B4C8	sif	sceSifCallRpc	host
-func_0011B6B8	sif	sceSifCheckStatRpc	host
-func_0011BF48	fileio	sceFsReset	host
+func_0011B6B8	sif	sceSifCheckStatRpc	game	it only reads the client: the port's sceSifBindRpc/sceSifCallRpc never give it a packet, so it reads idle
+func_0011BF48	fileio	sceFsReset	game	it only clears libfileio's state (a flag and a 4-byte buffer, through the port's memset), which only libfileio's functions read (host C in the port)
 func_0011BF80	fileio	sceOpen	host	debug and rom0: config only; no game asset is read this way
 func_0011C208	fileio	sceClose	host
 func_0011C388	fileio	sceLseek	host
@@ -91,7 +91,7 @@ func_00122630	graph	sceGsSetDefLoadImage	host
 func_00122818	graph	sceGsSetDefStoreImage	host
 func_00122958	graph	sceGsExecLoadImage	host	texture uploads go to the renderer's texture pool
 func_00122AD8	graph	sceGsExecStoreImage	host	readback from the renderer
-func_00123168	graph	sceGsSyncVCallback	host
+func_00123168	graph	sceGsSyncVCallback	game	the callback becomes a vblank INTC handler (AddIntcHandler), which the port's frame pacing calls
 func_001232E0	dma	sceDmaGetChan	game
 func_00123308	dma	sceDmaReset	host
 func_001235C8	dma	sceDmaSend	host	the hand-off: the renderer reads the game's display list here
@@ -109,7 +109,7 @@ func_00124340	mc	sceMcFormat	host
 func_00124410	mc	sceMcDelete	host
 func_00124528	mc	sceMcUnformat	host
 func_00124650	dbc	sceDbcInit	host	pads come from the platform layer
-func_00124B88	pad2	scePad2Init	host
+func_00124B88	pad2	scePad2Init	game	it only sets libpad2's state (its init flag, its socket table cleared); the port's pad functions keep no state there
 func_00124BC8	pad2	scePad2CreateSocket	host
 func_00124D18	pad2	scePad2Read	host
 func_00124DF0	pad2	scePad2GetButtonProfile	host
@@ -202,6 +202,7 @@ func_00118E70	kernel	sceSifGetReg	host	system call 0x7A
 func_00118E90	kernel	Deci2Call	host	system call 0x7C; kputs goes to the log
 func_00118EA0	kernel	GetMemorySize	host	system call 0x7F
 func_00118EB0	kernel	_InitTLB	host	system call 0x82
+func_00118D30	kernel	iCopy	host	system call -0x5A: Copy's number in the interrupt form, which copies nothing on the console (nothing calls it)
 func_0011D360	kernel	Copy	host	system call 0x5A
 func_0011D3A8	kernel	GetEntryAddress	host	system call 0x5B
 func_0011D3B8	kernel	SetSyscall	host	system call 0x74

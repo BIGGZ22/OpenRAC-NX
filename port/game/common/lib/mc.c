@@ -8,7 +8,9 @@
  *
  * The library's calls start a command and sceMcSync reports its result; here
  * every command finishes when it is issued, and sceMcSync hands back its
- * result the first time it is polled. The structures and codes are the
+ * result the first time it is polled; the command and its result stay where
+ * the game's own library kept them, when its host C says where
+ * (openrac_game_mc_state). The structures and codes are the
  * library's public interface as the game uses them
  * (docs/port/RAC1_PAL_SURVEY.md, section 7). */
 #include <stdio.h>
@@ -57,16 +59,38 @@ enum {
 #define MC_NOT_FOUND (-4)
 #define MC_EXISTS (-4)
 #define MC_FAILED (-5)
+/* A missing or empty name: the library refuses it before it starts a command
+ * (sceMcOpen func_001238B0, and through it sceMcMkdir, sceMcGetDir
+ * func_001241F0, sceMcDelete func_00124410 test it once they hold the
+ * library's semaphore), so sceMcSync has nothing new to report. */
+#define MC_NO_NAME (-210)
 
 /* Directory entry attributes. */
 #define MC_ATTR_FILE 0x8497
 #define MC_ATTR_DIR 0x8427
 
+/* The command that has finished and its result, for sceMcSync: in the game's memory where the game
+ * says the console's library kept them (openrac_game_mc_state), else here. */
 static int pending_cmd;
 static int pending_result;
 static int have_pending;
+static gaddr state_command, state_result;
+
+void openrac_game_mc_state(gaddr command, gaddr result) {
+    state_command = command;
+    state_result = result;
+}
+
+static int no_name(gaddr name) {
+    return name == 0 || *(const char*)G(name) == 0;
+}
 
 static int finish(int cmd, int result) {
+    if (state_command != 0) {
+        GREF(int, state_command) = cmd;
+        GREF(int, state_result) = result;
+        return 0;
+    }
     pending_cmd = cmd;
     pending_result = result;
     have_pending = 1;
@@ -139,6 +163,9 @@ static FILE* files[MAX_FILES];
 int openrac_lib_sceMcOpen(int port, int slot, gaddr name, int mode) {
     (void)slot;
     char path[1024];
+    if (no_name(name)) {
+        return MC_NO_NAME;
+    }
     if (!card_present(port) || !card_path(port, (const char*)G(name), path, sizeof path)) {
         return finish(MC_OPEN, MC_NO_CARD);
     }
@@ -211,6 +238,9 @@ int openrac_lib_sceMcMkdir(int port, int slot, gaddr name) {
     (void)slot;
     char path[1024];
     struct stat st;
+    if (no_name(name)) {
+        return MC_NO_NAME;
+    }
     if (!card_present(port) || !card_path(port, (const char*)G(name), path, sizeof path)) {
         return finish(MC_MKDIR, MC_NO_CARD);
     }
@@ -224,6 +254,9 @@ int openrac_lib_sceMcMkdir(int port, int slot, gaddr name) {
 int openrac_lib_sceMcDelete(int port, int slot, gaddr name) {
     (void)slot;
     char path[1024];
+    if (no_name(name)) {
+        return MC_NO_NAME;
+    }
     if (!card_present(port) || !card_path(port, (const char*)G(name), path, sizeof path)) {
         return finish(MC_DELETE, MC_NO_CARD);
     }
@@ -357,6 +390,9 @@ int openrac_lib_sceMcGetDir(
     int port, int slot, gaddr name, unsigned int mode, int max, gaddr table
 ) {
     (void)slot;
+    if (no_name(name)) {
+        return MC_NO_NAME;
+    }
     if (!card_present(port)) {
         return finish(MC_GET_DIR, MC_NO_CARD);
     }
@@ -423,9 +459,24 @@ int openrac_lib_sceMcChdir(int port, int slot, gaddr path, gaddr old_path) {
 }
 
 /* sceMcSync(mode, command, result): 1 when a command has finished (always,
- * once), -1 when none is running. */
+ * once), -1 when none is running. With the library's state in the game's
+ * memory, as the console's sceMcSync once the IOP has answered: the command
+ * word handed out and cleared, the result word handed out. */
 int openrac_lib_sceMcSync(int mode, gaddr cmd, gaddr result) {
     (void)mode;
+    if (state_command != 0) {
+        if (GREF(int, state_command) == 0) {
+            return -1;
+        }
+        if (cmd != 0) {
+            GREF(int, cmd) = GREF(int, state_command);
+        }
+        GREF(int, state_command) = 0;
+        if (result != 0) {
+            GREF(int, result) = GREF(int, state_result);
+        }
+        return 1;
+    }
     if (!have_pending) {
         return -1;
     }

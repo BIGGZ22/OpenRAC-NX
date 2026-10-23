@@ -238,6 +238,11 @@ static void skip(void) {
 }
 
 __attribute__((constructor)) static void install_direct_start(void) {
+#ifdef RAC1_MC_COMMAND
+    /* Where libmc keeps the command sceMcSync reports and its result (rac1_version.h), for the
+     * port's library to keep them there too (lib/mc.c). */
+    openrac_game_mc_state(RAC1_MC_COMMAND, RAC1_MC_RESULT);
+#endif
     openrac_game_on_frame = direct_start;
     openrac_game_bolts = bolts;
     openrac_game_skip_buttons = skip_buttons;
