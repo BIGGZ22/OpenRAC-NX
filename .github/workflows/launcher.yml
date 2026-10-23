@@ -200,26 +200,43 @@ jobs:
           restore-keys: |
             port-${{ matrix.name }}-h
 
+      # The Linux rows' packages, kept from the last run: apt.llvm.org's LLVM is a few hundred MB
+      # and its server is sometimes slow enough to hold this step for twenty minutes. apt fetches
+      # only what has changed since (a stale package is just downloaded again).
+      - uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        if: matrix.name == 'linux' || matrix.name == 'linux-arm64'
+        with:
+          path: ~/apt-archives/*.deb
+          key: apt-${{ matrix.name }}-${{ matrix.os }}-llvm19
+
       # LLVM 19 from apt.llvm.org (its key checked by fingerprint): Clang, and libc++ to build
       # into the game.
       - name: Compilers and what SDL3 is built against (Linux)
         if: matrix.name == 'linux' || matrix.name == 'linux-arm64'
         run: |
           codename=$(. /etc/os-release && echo "$VERSION_CODENAME")
-          curl -sSfL https://apt.llvm.org/llvm-snapshot.gpg.key | gpg --dearmor > "$RUNNER_TEMP/llvm.gpg"
+          curl -sSfL --retry 5 --connect-timeout 20 --max-time 120 https://apt.llvm.org/llvm-snapshot.gpg.key \
+            | gpg --dearmor > "$RUNNER_TEMP/llvm.gpg"
           gpg --show-keys --with-colons "$RUNNER_TEMP/llvm.gpg" | grep -q '^fpr:*6084F3CF814B57C1CF12EFD515CF4D18AF4F7421:' \
             || { echo "apt.llvm.org's key is not the one expected"; exit 1; }
           sudo install -m 644 "$RUNNER_TEMP/llvm.gpg" /usr/share/keyrings/llvm.gpg
           echo "deb [signed-by=/usr/share/keyrings/llvm.gpg] https://apt.llvm.org/$codename/ llvm-toolchain-$codename-19 main" \
             | sudo tee /etc/apt/sources.list.d/llvm.list
-          sudo apt-get update
-          sudo apt-get install -y --no-install-recommends clang-19 lld-19 llvm-19 libc++-19-dev libc++abi-19-dev \
+          # Packages kept in ~/apt-archives (above); a stalled download is dropped and tried again
+          # rather than waited on.
+          mkdir -p ~/apt-archives/partial
+          apt=(sudo apt-get -o Acquire::Retries=5 -o Acquire::http::Timeout=30 -o Acquire::https::Timeout=30
+            -o Dir::Cache::Archives="$HOME/apt-archives")
+          "${apt[@]}" update
+          "${apt[@]}" install -y --no-install-recommends clang-19 lld-19 llvm-19 libc++-19-dev libc++abi-19-dev \
             ninja-build pkg-config \
             libgl1-mesa-dev libegl1-mesa-dev libx11-dev libxext-dev libxrandr-dev libxcursor-dev libxi-dev \
             libxss-dev libxfixes-dev libwayland-dev wayland-protocols libxkbcommon-dev libdecor-0-dev \
             libasound2-dev libpulse-dev libpipewire-0.3-dev libdbus-1-dev libudev-dev libdrm-dev libgbm-dev \
             libwebkit2gtk-4.1-dev libgtk-3-dev librsvg2-dev libsoup-3.0-dev patchelf rpm file
-          sudo apt-get install -y libfuse2t64 || sudo apt-get install -y libfuse2 || true
+          "${apt[@]}" install -y libfuse2t64 || "${apt[@]}" install -y libfuse2 || true
+          # The cache saves only the packages, readable by the runner (apt's partial folder is _apt's).
+          sudo find ~/apt-archives -maxdepth 1 -name '*.deb' -exec chmod a+r {} +
           sudo ln -sf /usr/bin/clang-19 /usr/local/bin/clang
           sudo ln -sf /usr/bin/clang++-19 /usr/local/bin/clang++
           # CMake reads these when it first configures: libc++ and the compiler's runtime in the game.
