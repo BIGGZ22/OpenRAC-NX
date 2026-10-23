@@ -26,7 +26,7 @@ Independent of each other.
 | Id | Package | Paths | Depends on | Status | Owner | Commits |
 |---|---|---|---|---|---|---|
 | P0-01 | The port's coding conventions, decided, and the checks that enforce them; this page | `port/docs/`, `port/.clang-tidy`, `port/tools/conventions/`, `.github/workflows/checks.yml` | | done | maintainer | [f40d8bd8](https://github.com/OpenRAC/OpenRAC/commit/f40d8bd8), [419d8986](https://github.com/OpenRAC/OpenRAC/commit/419d8986), [3a925aad](https://github.com/OpenRAC/OpenRAC/commit/3a925aad), [23482f3c](https://github.com/OpenRAC/OpenRAC/commit/23482f3c), and this page |
-| P0-02 | Layering checker: includes against the allowed module edges, today's violations as known exceptions, new ones fail | `port/tools/layering/` (new) | | in progress | maintainer | |
+| P0-02 | Layering checker: includes against the allowed module edges, today's violations as known exceptions, new ones fail | `port/tools/layering/` (new) | | done | maintainer | [08656987](https://github.com/OpenRAC/OpenRAC/commit/08656987), [d2e768a8](https://github.com/OpenRAC/OpenRAC/commit/d2e768a8), and this page |
 | P0-03 | CMake test helpers (`openrac_add_test`, `openrac_add_c_test`); the copy-pasted test stanzas converted | `port/cmake/Tests.cmake` (new), `port/CMakeLists.txt` | | in progress | maintainer | |
 | P0-04 | Retire the dead `OPENRAC_PORT_WIP` gate and the stale WIP pages | `port/cmake/Assets.cmake`, `port/WIP.md`, `port/WIP_BRIEF.md`, references | | in progress | maintainer | |
 | P0-05 | Shared Python helpers package, with tests (no callers migrated yet) | `tools/openrac_common/` (new) | | in progress | maintainer | |
@@ -119,6 +119,8 @@ Run what your paths need, and say what you ran:
 git diff --quiet origin/master -- games/ && test -z "$(git status --porcelain -- games/)"
 # the conventions (every package)
 python3 port/tools/conventions/check_conventions.py --since origin/master --touched
+# the layering (every package that adds, moves or removes a port include)
+python3 port/tools/layering/layering.py
 # the port
 cd port && cmake --preset release && cmake --build --preset release && ctest --preset release
 cd port && cmake --preset headless && cmake --build --preset headless && ctest --preset headless
@@ -178,3 +180,9 @@ Found while doing a package, for another package or the maintainers.
 | P0-01 | clang-tidy is not run in CI (it needs a configured build). A job that runs it on the C++ files a pull request changes would hold new code to it. | a later CI package |
 | P0-01 | The module READMEs predate section 7.7's template; each gains the missing sections when its module is restructured. | each module's package |
 | P0-01 | `check_conventions.py` gains a `getenv` rule when `common/env.h` lands. | P1-03 |
+| P0-02 | CI does not run the layering check. A step beside "Port conventions" in checks.yml running `layering.py` and its tests would hold every push to it. | a later CI package |
+| P0-02 | A package that moves or removes an include listed in `port/tools/layering/rules.tsv` removes or updates its row in the same commit series (the check warns until it does): P1-01 (json, ps2_float), P2-02 (the scene files), P2-03 (the game state), P2-07 (GTAO). | P1-01, P2-02, P2-03, P2-07 |
+| P0-02 | `viewer/level.h`, `level_renderer.h` and `level_renderer.cpp` include `enhanced/` (6 includes), allowed while they sit in a program's directory. Moved to `scene/`, they become scene -> enhanced: list them in rules.tsv as exceptions until P2-07 inverts them. | P2-02 |
+| P0-02 | Moving the game state into `game/rac1` must not leave `game/common` including `game/rac1` (a higher layer): the host reads it through `host::GameProfile` only. | P2-03 |
+| P0-02 | `platform/window.cpp` opens the Vulkan backend (`renderer/vulkan/vkgl.h`), platform -> renderer. No package removes it: the renderer could open its backend on the window platform hands it. | the plan |
+| P0-02 | The check reads `#include "<dir>/..."` only: an include without a directory found through a target's own include directories, and the CMake link graph (section 19), are checked by review. | a later package |
