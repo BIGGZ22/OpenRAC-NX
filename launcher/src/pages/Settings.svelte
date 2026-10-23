@@ -632,7 +632,7 @@
 
 <style>
   .page {
-    max-width: 820px;
+    max-width: var(--page-max, 820px);
     margin: 0 auto;
     /* Room at the bottom for the bar that saves. */
     padding: var(--page-top, 28px) var(--page-x, 28px) calc(var(--page-bottom, 54px) + 56px);

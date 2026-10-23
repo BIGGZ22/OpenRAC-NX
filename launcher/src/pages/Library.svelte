@@ -62,7 +62,7 @@
 
 <style>
   .page {
-    max-width: 920px;
+    max-width: var(--page-max, 920px);
     margin: 0 auto;
     padding: var(--page-top, 28px) var(--page-x, 28px) var(--page-bottom, 60px);
     display: flex;

@@ -61,9 +61,9 @@
   --medium: 0.28s;
   --slow: 0.5s;
 
-  /* A page's margins and the space between its sections (--page-x, --page-top, --page-bottom,
-     --page-gap) are each page's own on a desktop, its fallback values; a narrow window and Android
-     set them below, the same on every page. */
+  /* A page's margins, the space between its sections and its width (--page-x, --page-top,
+     --page-bottom, --page-gap, --page-max) are each page's own on a desktop, its fallback values;
+     a narrow window and Android set them below, the same on every page. */
   /* What the navigation takes of the window: the header bar on top, or on Android the rail on
      the left or the bar at the bottom (Header.svelte). */
   --nav-top: 60px;
@@ -122,6 +122,9 @@ html[data-platform="android"] {
   --page-top: 20px;
   --page-bottom: 32px;
   --page-gap: 16px;
+  /* One width for every page, so that a page's edge stays put from tab to tab (a desktop's pages
+     each keep their own, the fallback of --page-max). */
+  --page-max: 960px;
   --nav-top: 0px;
   --nav-left: 80px;
 }

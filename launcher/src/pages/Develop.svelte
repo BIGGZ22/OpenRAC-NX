@@ -134,7 +134,7 @@
 
 <style>
   .page {
-    max-width: 1080px;
+    max-width: var(--page-max, 1080px);
     margin: 0 auto;
     padding: var(--page-top, 24px) var(--page-x, 24px) var(--page-bottom, 48px);
     display: flex;

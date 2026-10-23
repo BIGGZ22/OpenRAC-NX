@@ -496,7 +496,7 @@
 
 <style>
   .page {
-    max-width: 960px;
+    max-width: var(--page-max, 960px);
     margin: 0 auto;
     padding: var(--page-top, 24px) var(--page-x, 24px) var(--page-bottom, 48px);
     display: flex;
