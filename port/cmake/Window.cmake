@@ -72,6 +72,7 @@ endif()
 # window opens for OPENRAC_GL_API=vulkan.
 if(OPENRAC_VULKAN)
   add_library(openrac_renderer_vulkan STATIC
+    renderer/vulkan/pipeline_cache_file.cpp
     renderer/vulkan/shader_compiler.cpp
     renderer/vulkan/vkgl.cpp
     renderer/vulkan/vkgl_commands.cpp
@@ -393,6 +394,12 @@ if(OPENRAC_VULKAN)
   target_link_libraries(vulkan_uniform_test PRIVATE openrac_renderer openrac_platform openrac_renderer_vulkan)
   openrac_warnings(vulkan_uniform_test)
   add_test(NAME vulkan_uniform COMMAND vulkan_uniform_test)
+  # The pipeline cache's file, saved by writers in parallel; no GPU needed.
+  find_package(Threads REQUIRED)
+  add_executable(pipeline_cache_file_test tests/pipeline_cache_file_test.cpp)
+  target_link_libraries(pipeline_cache_file_test PRIVATE openrac_renderer_vulkan Threads::Threads)
+  openrac_warnings(pipeline_cache_file_test)
+  add_test(NAME pipeline_cache_file COMMAND pipeline_cache_file_test)
   add_test(NAME vulkan_uniform_reference COMMAND vulkan_uniform_test)
   set_tests_properties(vulkan_uniform PROPERTIES SKIP_RETURN_CODE 77 ENVIRONMENT
     "OPENRAC_GL_API=vulkan;OPENRAC_VULKAN_VALIDATION=1")

@@ -12,10 +12,9 @@
 #include <cstring>
 #include <filesystem>
 #include <format>
-#include <fstream>
-#include <ios>
 #include <string>
 #include <system_error>
+#include <utility>
 #include <vector>
 #include <volk.h>
 
@@ -23,6 +22,7 @@
 #include <SDL3/SDL_vulkan.h>
 
 #include "common/log.h"
+#include "renderer/vulkan/pipeline_cache_file.h"
 #include "renderer/vulkan/vkgl_internal.h"
 
 namespace openrac::vkgl::detail {
@@ -117,16 +117,15 @@ bool make_pipeline_cache() {
     std::vector<char> initial_data;
     const std::filesystem::path path = pipeline_cache_file();
     if (!path.empty()) {
-        std::ifstream in(path, std::ios::binary | std::ios::ate);
-        if (in.is_open()) {
-            const auto size = in.tellg();
-            if (size >= static_cast<std::streamoff>(sizeof(VkPipelineCacheHeaderVersionOne))) {
-                in.seekg(0, std::ios::beg);
-                initial_data.resize(static_cast<std::size_t>(size));
-                if (!in.read(initial_data.data(), size)) {
-                    initial_data.clear();
-                }
-            }
+        SavedCache saved = read_pipeline_cache(path);
+        // A save cut short or mixed from two programs is dropped; this run's save replaces it.
+        if (saved.state == SavedCacheState::Damaged) {
+            log::warn(
+                "vulkan: pipeline cache {} is damaged, starting a fresh cache", path.string()
+            );
+        }
+        if (saved.data.size() >= sizeof(VkPipelineCacheHeaderVersionOne)) {
+            initial_data = std::move(saved.data);
         }
     }
     bool use_cache = false;
@@ -194,24 +193,10 @@ void save_pipeline_cache() {
     if (vkGetPipelineCacheData(g->device, g->pipeline_cache, &size, buffer.data()) != VK_SUCCESS) {
         return;
     }
-    std::error_code ec;
-    std::filesystem::create_directories(path.parent_path(), ec);
-    if (ec) {
-        log::warn(
-            "vulkan: could not make cache folder {}: {}", path.parent_path().string(), ec.message()
-        );
-        return;
-    }
-    const std::filesystem::path temp = path.string() + ".tmp";
-    std::ofstream out(temp, std::ios::binary | std::ios::trunc);
-    if (!out.is_open() || !out.write(buffer.data(), static_cast<std::streamsize>(buffer.size()))) {
-        log::warn("vulkan: could not write pipeline cache to {}", temp.string());
-        return;
-    }
-    out.close();
-    std::filesystem::rename(temp, path, ec);
-    if (ec) {
-        log::warn("vulkan: could not rename pipeline cache to {}: {}", path.string(), ec.message());
+    std::string error;
+    // Other programs may save the same file now: each saves whole, through a file of its own.
+    if (!write_pipeline_cache(path, buffer, error)) {
+        log::warn("vulkan: could not save the pipeline cache: {}", error);
         return;
     }
     log::info("vulkan: saved {} bytes of pipeline cache to {}", size, path.string());
