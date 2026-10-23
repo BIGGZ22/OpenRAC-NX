@@ -34,6 +34,7 @@
 #include "fps_counter.h"
 #include "frame_pacing.h"
 #include "game/common/frontend/geometry.h"
+#include "game/common/frontend/pacing.h"
 #include "game/common/particle_texture_cache.h"
 #include "openrac/game_host.h"
 #include "openrac/guest.h"
@@ -1645,27 +1646,14 @@ double frame_cap() {
                                g->swap != platform::SwapInterval::Immediate, pacing.interval);
 }
 
-// The frames between ticks show the game half a tick late, so that the next tick is ready before
-// the refresh that needs it.
-constexpr double kLagTicks = 0.5;
-
 // The refresh a frame started now is shown at: the first after the frame is drawn.
 std::chrono::steady_clock::time_point next_display(std::chrono::steady_clock::time_point now) {
-    using namespace std::chrono;
-    const auto ready = now + duration_cast<steady_clock::duration>(duration<double>(pacing.cost));
-    if (pacing.interval <= 0.0 || pacing.last_swap.time_since_epoch().count() == 0) {
-        return ready;
-    }
-    const double since = duration<double>(ready - pacing.last_swap).count();
-    const double n = std::max(1.0, std::ceil(since / pacing.interval));
-    return pacing.last_swap + duration_cast<steady_clock::duration>(duration<double>(n * pacing.interval));
+    return shown_at(now, pacing.cost, pacing.interval, pacing.last_swap);
 }
 
 // How far the scene is from the last tick's to the kept one's at that refresh.
 float alpha_at(std::chrono::steady_clock::time_point display) {
-    using namespace std::chrono;
-    const double t = duration<double>(display - pacing.tick).count() / pacing.period.count() - kLagTicks;
-    return static_cast<float>(std::clamp(t, 0.0, 1.0));
+    return tick_alpha(display, pacing.tick, pacing.period);
 }
 
 void swapped(std::chrono::steady_clock::time_point started) {
@@ -1715,8 +1703,7 @@ void swapped(std::chrono::steady_clock::time_point started) {
 
 // Whether the frame cap lets a frame start now (within a millisecond: a sleep wakes that coarsely).
 bool frame_due(std::chrono::steady_clock::time_point now) {
-    return frame_cap() <= 0.0 || pacing.due.time_since_epoch().count() == 0
-           || now + std::chrono::milliseconds(1) >= pacing.due;
+    return frame_may_start(frame_cap(), pacing.due, now);
 }
 
 // OPENRAC_FRAME_COST=N: every N frames drawn (default 200), in the log, what a frame cost on
