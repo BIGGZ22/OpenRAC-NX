@@ -48,9 +48,11 @@
     document.documentElement.dataset.layout = app.config?.layout ?? "compact";
   });
 
-  // The page shown. On Android one page gives way to the next in a view transition (app.css: the
-  // one leaving fades out as the other fades in); elsewhere, or without the browser's support, it
+  // The page shown. On Android one page gives way to the next in a view transition (app.css): the
+  // one leaving slides away and fades as the next slides in, down the rail's order (a tab below
+  // comes up from below, one above from above); elsewhere, or without the browser's support, it
   // simply changes.
+  const ORDER: Record<Page, number> = { library: 0, game: 1, mods: 2, tasks: 3, develop: 4, settings: 5 };
   let page = $state<Page>(app.page);
   $effect(() => {
     const next = app.page;
@@ -59,6 +61,7 @@
       page = next;
       return;
     }
+    document.documentElement.dataset.nav = ORDER[next] >= ORDER[page] ? "forward" : "back";
     document.startViewTransition(async () => {
       page = next;
       await tick();

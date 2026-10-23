@@ -751,23 +751,46 @@ html[data-platform="android"] main {
 }
 
 ::view-transition-old(page) {
-  animation: page-out var(--fast) ease-in both;
+  animation: page-out 0.2s ease-in both;
 }
 
 ::view-transition-new(page) {
-  animation: page-in var(--medium) var(--ease) both;
+  animation: page-in 0.38s var(--ease) both;
+}
+
+html[data-nav="back"]::view-transition-old(page) {
+  animation-name: page-out-back;
+}
+
+html[data-nav="back"]::view-transition-new(page) {
+  animation-name: page-in-back;
 }
 
 @keyframes page-out {
   to {
     opacity: 0;
-    transform: scale(0.985);
+    transform: translateY(-28px) scale(0.98);
   }
 }
 
 @keyframes page-in {
   from {
     opacity: 0;
+    transform: translateY(48px);
+  }
+}
+
+@keyframes page-out-back {
+  to {
+    opacity: 0;
+    transform: translateY(28px) scale(0.98);
+  }
+}
+
+@keyframes page-in-back {
+  from {
+    opacity: 0;
+    transform: translateY(-48px);
   }
 }
 
