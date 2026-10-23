@@ -79,6 +79,12 @@ jobs:
             python port/tools/conventions/check_conventions.py
           fi
 
+      # The layout of the C++ under port/ and sdk/ (port/docs/CODING_CONVENTIONS.md, section 5.6):
+      # clang-format and the blank lines around control blocks. Report only for now: the step
+      # lists what would change and never fails the build. clang-format comes from the step above.
+      - name: C++ layout (report only)
+        run: python tools/cpp_style.py --report-only
+
       - name: Generated tables match games/*/game.json and the reports
         run: |
           python tools/openrac.py tables
