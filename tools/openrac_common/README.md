@@ -26,6 +26,12 @@ and `editor` in P2-10 ([PROGRESS.md](../../docs/restructure/PROGRESS.md)).
 | `proc` | `run(cmd, cwd, env, echo, check, capture)`, `git(repo, *args, check, binary)`: no shell, ever |
 | `iso9660` | `boot_serial(image)`, `parse_boot2(text)`, `files(image)`, `read(image, path)`, `find(f, path)`, `walk`, `records`, `root_directory`, `IsoError` |
 
+`repo_root` accepts two kinds of top directory, and both are meant: a checkout, marked by
+`AGENTS.md`, and the copy of the tools the launcher carries for players
+(`tools/bundle_standalone.py`), which has no `AGENTS.md` and is marked by the `STANDALONE` note that
+script writes. The launcher recognises that copy by the same file (`launcher/core/src/detect.rs`), and
+the copy's tools find their root through `repo_root` once they use this package (P1-05).
+
 Every function takes a `pathlib.Path` or a string for a path. The functions that read the repository
 (`games.*`) take an optional `root`, so a test can point them at a synthetic tree.
 
