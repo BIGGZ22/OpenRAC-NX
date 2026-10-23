@@ -1970,8 +1970,7 @@ void drawer_enhanced() {
     if (!gl::enhanced_rendering_enabled()) {
         drawer_note(
             "Off. Switch it on under Mods in the launcher: bounced light, modern shadows and "
-            "ambient "
-            "occlusion, from the game's next start."
+            "ambient occlusion, from the game's next start."
         );
         card_end();
         return;
@@ -1979,8 +1978,7 @@ void drawer_enhanced() {
     if (!gl::enhanced_rendering_available()) {
         drawer_note(
             "It needs the Vulkan renderer, and this run draws with OpenGL. Vulkan 1.3 could not "
-            "start "
-            "on this device or driver."
+            "start on this device or driver."
         );
         card_end();
         return;
