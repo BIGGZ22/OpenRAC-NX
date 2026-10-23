@@ -14,17 +14,18 @@
 
 #include "platform/gpu_driver.h"
 
-#include <cstdlib>
 #include <dlfcn.h>
 #include <filesystem>
 #include <format>
 #include <string>
+#include <string_view>
 #include <vector>
+
+#include "common/env.h"
+#include "common/log.h"
 
 #include <android/api-level.h>
 #include <vulkan/vulkan.h>
-
-#include "common/log.h"
 
 #if OPENRAC_ADRENOTOOLS
 #include <adrenotools/driver.h>
@@ -37,9 +38,9 @@ namespace fs = std::filesystem;
 
 PFN_vkGetInstanceProcAddr g_get_instance_proc_addr = nullptr;
 
-std::string env(const char* name) {
-    const char* value = std::getenv(name);
-    return value != nullptr ? std::string(value) : std::string();
+// The value of `var`, or the empty string when it is unset: load takes the two alike.
+std::string value_of(env::Var var) {
+    return std::string(env::value(var).value_or(std::string_view()));
 }
 
 // libadrenotools wants folders with their final slash.
@@ -90,8 +91,8 @@ std::string describe(PFN_vkGetInstanceProcAddr get) {
 
 GpuDriver load() {
     GpuDriver driver;
-    const std::string dir = env("OPENRAC_GPU_DRIVER_DIR");
-    const std::string library = env("OPENRAC_GPU_DRIVER_LIBRARY");
+    const std::string dir = value_of(env::Var::GpuDriverDir);
+    const std::string library = value_of(env::Var::GpuDriverLibrary);
     if (dir.empty() || library.empty()) {
         driver.detail = "the system's driver";
         return driver;
@@ -113,7 +114,7 @@ GpuDriver load() {
         driver.detail = "the system's driver: driver packages need Android 9 or later";
         return driver;
     }
-    const std::string hooks = folder(env("OPENRAC_NATIVE_LIBRARY_DIR"));
+    const std::string hooks = folder(value_of(env::Var::NativeLibraryDir));
     // A folder of the package's own for the files the driver writes (its shader cache).
     const std::string redirect = folder((fs::path(dir) / "redirect").string());
     fs::create_directories(redirect, ec);
