@@ -2,21 +2,35 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
 """Bake and verify sparse/dense probes for every exported level in one version.
 
-Uses each level's settings and preserves previous bakes. Outputs contain game
-data and must stay local. Levels run sequentially; each bake can use all CPUs.
+Uses each level's settings. Outputs contain game data and must stay local.
+--jobs bakes that many levels at once (0: one per CPU thread, as many as half
+the memory holds, each baker taking an equal share of the threads). Without --update a new output root is
+required and previous bakes are preserved. With --update (the launcher's way)
+the root is a cache: a level whose export, levels format, baker and options
+are those of its last verified bake is kept, any other is baked again in a
+folder of its own and put in place only once it is verified.
 """
 from __future__ import annotations
 
 import argparse
+from concurrent.futures import ThreadPoolExecutor
+import hashlib
 import json
 import os
 from pathlib import Path
 import re
+import shutil
 import subprocess
 import sys
+import threading
 
 import bake_level
 import seed_regions as seeds
+
+# Each level's record of what its bake was made from (--update compares it).
+STAMP = 'openrac-bake.json'
+# Options that change the bake's bytes; --threads does not (bake_level preserves output bytes).
+BAKE_OPTIONS = ('--rays', '--bounces')
 
 
 def discover_levels(levels_dir: Path):
@@ -31,49 +45,172 @@ def discover_levels(levels_dir: Path):
     return levels
 
 
+def sha256(path: Path) -> str:
+    digest = hashlib.sha256()
+    with path.open('rb') as file:
+        for block in iter(lambda: file.read(1 << 20), b''):
+            digest.update(block)
+    return digest.hexdigest()
+
+
+def bake_options(options) -> list[str]:
+    """The options that change a bake, in order (for its stamp)."""
+    options, out = list(options), []
+    for i, option in enumerate(options):
+        if option in BAKE_OPTIONS and i + 1 < len(options):
+            out += [option, options[i + 1]]
+    return out
+
+
+def level_stamp(level: Path, baker_hash: str, options) -> dict:
+    """What a level's bake is made from: its export's manifest (which carries the levels
+    format), the native baker and the options that change the result."""
+    manifest = level/'manifest.json'
+    try:
+        levels_format = json.loads(manifest.read_text()).get('format')
+    except (ValueError, AttributeError):
+        levels_format = None
+    return {'version': 1, 'manifest_sha256': sha256(manifest), 'levels_format': levels_format,
+            'baker_sha256': baker_hash, 'options': bake_options(options)}
+
+
+def up_to_date(output: Path, stamp: dict) -> bool:
+    try:
+        old = json.loads((output/STAMP).read_text())
+    except (OSError, ValueError):
+        return False
+    return old == stamp and (output/'sparse.orpg').is_file() and (output/'bake-result.json').is_file()
+
+
+# A level's bake takes up to about 0.75 GB at once (a large level's scene, regions and planner).
+LEVEL_MEMORY = 1 << 30
+
+
+def physical_memory() -> int | None:
+    """The machine's memory in bytes, or None when it cannot be told."""
+    try:
+        if os.name == 'nt':
+            import ctypes
+
+            class Status(ctypes.Structure):
+                _fields_ = [('length', ctypes.c_ulong), ('load', ctypes.c_ulong),
+                            ('total', ctypes.c_ulonglong), ('available', ctypes.c_ulonglong),
+                            ('page_total', ctypes.c_ulonglong), ('page_available', ctypes.c_ulonglong),
+                            ('virtual_total', ctypes.c_ulonglong), ('virtual_available', ctypes.c_ulonglong),
+                            ('extended', ctypes.c_ulonglong)]
+            status = Status()
+            status.length = ctypes.sizeof(Status)
+            return status.total if ctypes.windll.kernel32.GlobalMemoryStatusEx(ctypes.byref(status)) else None
+        return os.sysconf('SC_PAGE_SIZE') * os.sysconf('SC_PHYS_PAGES')
+    except (AttributeError, OSError, ValueError):
+        return None
+
+
+def automatic_jobs() -> int:
+    """One level per CPU thread, as many as half the memory holds."""
+    jobs = os.cpu_count() or 1
+    memory = physical_memory()
+    if memory:
+        jobs = min(jobs, max(1, memory // 2 // LEVEL_MEMORY))
+    return jobs
+
+
+def with_threads(options, jobs: int) -> list[str]:
+    """OPTIONS with --threads sharing the CPU between JOBS bakes at once, unless it names one."""
+    options = list(options)
+    if jobs > 1 and '--threads' not in options:
+        options += ['--threads', str(max(1, (os.cpu_count() or 1) // jobs))]
+    return options
+
+
 def bake_all(levels_dir: Path, output_dir: Path, baker: Path, *, disc=None,
-             options=(), dry_run=False):
+             options=(), dry_run=False, update=False, jobs=1):
     levels_dir, output_dir, baker = levels_dir.resolve(), output_dir.resolve(), baker.resolve()
     levels = discover_levels(levels_dir)
     # Check everything before starting the first potentially expensive bake.
     if output_dir.is_relative_to(levels_dir):
         raise ValueError('bake outputs must be outside the source levels directory')
-    if output_dir.exists():
+    if output_dir.exists() and not update:
         raise ValueError('choose a new output directory; previous bakes are preserved')
     if not dry_run and not baker.is_file():
         raise ValueError(f'native baker not found: {baker}; build it or pass --baker')
+    if jobs <= 0:
+        jobs = automatic_jobs()
+    jobs = max(1, min(jobs, len(levels)))
     if dry_run:
         for level in levels:
             print(f'{level} -> {output_dir/level.name}', flush=True)
-        print(f'{len(levels)} levels; no probes baked.', flush=True)
+        print(f'{len(levels)} levels, {jobs} at once; no probes baked.', flush=True)
         return True
 
-    output_dir.mkdir(parents=True)
-    report = {'version': 1, 'levels_dir': str(levels_dir), 'levels': []}
+    output_dir.mkdir(parents=True, exist_ok=update)
+    options = with_threads(options, jobs)
+    baker_hash = sha256(baker) if update else None
+    report = {'version': 1, 'levels_dir': str(levels_dir), 'levels': [
+        {'level': level.name, 'verified': False} for level in levels]}
+    lock = threading.Lock()
+    done = [0]
 
     def save_report():
-        (output_dir/'bake-all-result.json').write_text(
-            json.dumps(report, indent=2, allow_nan=False)+'\n', encoding='utf-8')
+        path = output_dir/'bake-all-result.json'
+        part = path.with_name(path.name + '.part')
+        part.write_text(json.dumps(report, indent=2, allow_nan=False)+'\n', encoding='utf-8')
+        part.replace(path)
 
-    save_report()
-    for index, level in enumerate(levels, 1):
-        print(f'[{index}/{len(levels)}] {level.name}', flush=True)
-        result = {'level': level.name, 'verified': False}
-        report['levels'].append(result)
-        save_report()
+    def finished(result, what):
+        with lock:
+            done[0] += 1
+            save_report()
+            # "[n/total]" is the launcher's progress (launcher/src/lib/progress.ts).
+            print(f'[{done[0]}/{len(levels)}] {result["level"]}: {what}', flush=True)
+
+    def bake(index):
+        level = levels[index]
+        result = report['levels'][index]
+        final = output_dir/level.name
+        stamp = level_stamp(level, baker_hash, options) if update else None
+        if update and up_to_date(final, stamp):
+            result.update(verified=True, sparse=f'{level.name}/sparse.orpg', kept=True)
+            finished(result, 'up to date')
+            return
+        # A cache's level is baked beside the one in place, which it replaces once verified.
+        work = output_dir/f'.{level.name}.partial' if update else final
+        if update and work.exists():
+            shutil.rmtree(work)
         try:
-            sparse = bake_level.bake_level(level, output_dir/level.name, baker,
-                                          disc=disc, options=options)
+            sparse = bake_level.bake_level(level, work, baker, disc=disc, options=options)
         except (OSError, ValueError, KeyError, subprocess.CalledProcessError) as error:
             result['error'] = str(error)
             print(f'{level.name}: {error}', file=sys.stderr, flush=True)
-        else:
-            result.update(verified=True, sparse=sparse.relative_to(output_dir).as_posix())
-        save_report()
+            if update and work.exists():
+                failed = output_dir/f'.{level.name}.failed'
+                if failed.exists():
+                    shutil.rmtree(failed)
+                work.rename(failed)  # its logs, for the report
+            finished(result, 'failed')
+            return
+        if update:
+            (work/STAMP).write_text(json.dumps(stamp, indent=2)+'\n', encoding='utf-8')
+            if final.exists():
+                shutil.rmtree(final)
+            work.rename(final)
+            sparse = final/sparse.name
+            shutil.rmtree(output_dir/f'.{level.name}.failed', ignore_errors=True)
+        result.update(verified=True, sparse=sparse.relative_to(output_dir).as_posix())
+        finished(result, 'baked')
+
+    save_report()
+    if jobs == 1:
+        for index in range(len(levels)):
+            bake(index)
+    else:
+        with ThreadPoolExecutor(max_workers=jobs) as pool:
+            list(pool.map(bake, range(len(levels))))
 
     passed = sum(result['verified'] for result in report['levels'])
     print(f'Verified {passed}/{len(levels)} levels. Summary: '
           f'{output_dir/"bake-all-result.json"}', flush=True)
+    print(f'openrac-output: {output_dir}', flush=True)
     return passed == len(levels)
 
 
@@ -82,13 +219,17 @@ def main():
     parser.add_argument('--levels-dir', type=Path, required=True,
                         help='one exported version containing level_XX directories')
     parser.add_argument('--output-dir', type=Path, required=True,
-                        help='new output root; each level gets its own directory')
+                        help='new output root (or, with --update, the cache); each level gets its own directory')
     parser.add_argument('--baker', type=Path, default=seeds.ROOT/'port/build/release'/
                         ('openrac-probe-bake.exe' if os.name == 'nt' else 'openrac-probe-bake'))
     parser.add_argument('--disc', type=Path, help='fallback for older exports without gameplay')
     parser.add_argument('--rays', type=int, help='quality override for every level')
     parser.add_argument('--bounces', type=int, help='bounce override for every level')
     parser.add_argument('--threads', type=int, help='CPU bake threads; 0 uses all, 1 is serial')
+    parser.add_argument('--jobs', type=int, default=1,
+                        help='levels baked at once; 0 is one per CPU thread, as memory allows (default 1)')
+    parser.add_argument('--update', action='store_true',
+                        help='keep up-to-date levels of an existing output root and bake the others again')
     parser.add_argument('--dry-run', action='store_true', help='list levels without baking or writing')
     args = parser.parse_args()
     options = []
@@ -98,7 +239,8 @@ def main():
             options.extend(('--'+key, str(value)))
     try:
         success = bake_all(args.levels_dir, args.output_dir, args.baker,
-                           disc=args.disc, options=options, dry_run=args.dry_run)
+                           disc=args.disc, options=options, dry_run=args.dry_run,
+                           update=args.update, jobs=args.jobs)
     except (OSError, ValueError) as error:
         parser.exit(1, f'{error}\n')
     return 0 if success else 1

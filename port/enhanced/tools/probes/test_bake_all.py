@@ -87,6 +87,64 @@ class AllLevelBake(unittest.TestCase):
             batch.bake_all(self.levels, self.output, self.root/'missing')
         self.assertFalse(self.output.exists())
 
+    def fake_bake(self, fail=()):
+        def bake(level, output, baker, **kwargs):
+            if level.name in fail:
+                output.mkdir(parents=True)
+                (output/'sparse.bake.log').write_text('failed')
+                raise subprocess.CalledProcessError(1, ['fake-baker'])
+            output.mkdir(parents=True)
+            (output/'sparse.orpg').write_text(level.name)
+            (output/'bake-result.json').write_text('{}')
+            return output/'sparse.orpg'
+        return bake
+
+    def test_update_keeps_current_levels_and_bakes_changed_ones_in_place(self):
+        with patch.object(batch.bake_level, 'bake_level', side_effect=self.fake_bake()) as run:
+            self.assertTrue(batch.bake_all(self.levels, self.output, self.baker, update=True, jobs=0))
+        self.assertEqual(run.call_count, 4)
+        for name in ('level_00', 'level_02', 'level_10', 'level_99'):
+            self.assertEqual((self.output/name/'sparse.orpg').read_text(), name)
+            self.assertTrue((self.output/name/batch.STAMP).is_file())
+        # Nothing changed: nothing is baked again.
+        with patch.object(batch.bake_level, 'bake_level', side_effect=self.fake_bake()) as run:
+            self.assertTrue(batch.bake_all(self.levels, self.output, self.baker, update=True, jobs=2))
+        run.assert_not_called()
+        # A level read again from the disc, another baker, or other options: baked again.
+        (self.levels/'level_02/manifest.json').write_text('{"format": 4}')
+        with patch.object(batch.bake_level, 'bake_level', side_effect=self.fake_bake()) as run:
+            self.assertTrue(batch.bake_all(self.levels, self.output, self.baker, update=True))
+        self.assertEqual([call.args[0].name for call in run.call_args_list], ['level_02'])
+        self.assertEqual(json.loads((self.output/'level_02'/batch.STAMP).read_text())['levels_format'], 4)
+        self.baker.write_text('a new baker')
+        with patch.object(batch.bake_level, 'bake_level', side_effect=self.fake_bake()) as run:
+            self.assertTrue(batch.bake_all(self.levels, self.output, self.baker, update=True,
+                                           options=['--threads', '3']))
+        self.assertEqual(run.call_count, 4)
+        with patch.object(batch.bake_level, 'bake_level', side_effect=self.fake_bake()) as run:
+            self.assertTrue(batch.bake_all(self.levels, self.output, self.baker, update=True,
+                                           options=['--rays', '64']))
+        self.assertEqual(run.call_count, 4)
+        self.assertFalse(list(self.output.glob('.*')))
+
+    def test_update_failure_keeps_the_previous_bake_and_the_logs(self):
+        with patch.object(batch.bake_level, 'bake_level', side_effect=self.fake_bake()):
+            self.assertTrue(batch.bake_all(self.levels, self.output, self.baker, update=True))
+        (self.levels/'level_10/manifest.json').write_text('{"changed": true}')
+        with patch.object(batch.bake_level, 'bake_level', side_effect=self.fake_bake(fail={'level_10'})):
+            self.assertFalse(batch.bake_all(self.levels, self.output, self.baker, update=True))
+        self.assertEqual((self.output/'level_10/sparse.orpg').read_text(), 'level_10')
+        self.assertEqual((self.output/'.level_10.failed/sparse.bake.log').read_text(), 'failed')
+        report = json.loads((self.output/'bake-all-result.json').read_text())
+        self.assertEqual([level['verified'] for level in report['levels']], [True, True, False, True])
+
+    def test_jobs_share_the_threads_unless_told(self):
+        self.assertEqual(batch.with_threads(['--rays', '8'], 1), ['--rays', '8'])
+        self.assertEqual(batch.with_threads(['--threads', '2'], 4), ['--threads', '2'])
+        with patch('os.cpu_count', return_value=8):
+            self.assertEqual(batch.with_threads([], 3), ['--threads', '2'])
+            self.assertEqual(batch.with_threads([], 16), ['--threads', '1'])
+
     def test_cli_exit_status_and_overrides(self):
         with patch('sys.argv', ['bake_all.py', '--levels-dir', str(self.levels),
                                '--output-dir', str(self.output), '--threads', '0',
