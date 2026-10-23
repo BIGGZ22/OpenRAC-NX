@@ -151,6 +151,7 @@ void TouchPad::set_layout(std::string_view text) {
                     m_offsets[g] =
                         {std::clamp(dx, -kMaxOffset, kMaxOffset),
                          std::clamp(dy, -kMaxOffset, kMaxOffset)};
+                    break;
                 }
             }
         }

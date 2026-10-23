@@ -209,6 +209,9 @@ private:
     float m_safe_right = 0.0f;
     float m_scale = kDefaultScale;
     float m_look_speed = 1.0f;
+    // The camera's push now (push_look), before look()'s dead zone and floor.
+    float m_look_x = 0.0f;
+    float m_look_y = 0.0f;
     std::vector<Finger> m_fingers;
     float m_aspect = 16.0f / 9.0f;
     bool m_visible = false;
@@ -216,8 +219,6 @@ private:
     // A finger came down since the last idle(): it counts even if it lifted within the frame.
     bool m_touched = false;
     std::uint64_t m_last_touch_ms = 0;
-    float m_look_x = 0.0f;
-    float m_look_y = 0.0f;
     bool m_menu_button = false;
     bool m_menu_pressed = false;
 };
