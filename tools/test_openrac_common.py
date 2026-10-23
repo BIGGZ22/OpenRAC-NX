@@ -7,9 +7,10 @@ Two kinds of test. Each helper's own behaviour, with expected values from its do
 (ECMA-119 for the image, hashlib for the digests). And characterisation: the existing copy each
 helper was written from runs on the same synthetic input as the helper, and both must give the
 same result, so a caller moved onto the package later behaves as it did. Those copies are
-imported from where they live today (tools/, port/tools/hostgen, port/tools/versionmap,
-sdk/tools, editor, port/enhanced/tools/probes); once their callers have moved and a copy is
-gone, its comparison goes with it.
+imported from where they live today (port/tools/hostgen, port/tools/versionmap, sdk/tools,
+editor, port/enhanced/tools/probes, and what tools/ keeps: openrac.checksums,
+fcheck_gate.fcheck_commit); once their callers have moved and a copy is gone, its comparison
+goes with it, as tools/' copies went in P1-05.
 """
 import contextlib
 import hashlib

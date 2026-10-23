@@ -11,8 +11,23 @@ It is not a framework and not a place for one tool's logic: a helper belongs her
 tools need it. It holds no game knowledge beyond the layout of `games/<game>/game.json` and the
 format of a PS2 disc, and no game data.
 
-No tool uses it yet. The tools move onto it package by package: `tools/*.py` in P1-05, `port/tools`
-and `editor` in P2-10 ([PROGRESS.md](../../docs/restructure/PROGRESS.md)).
+The tools in `tools/` use it since P1-05; `port/tools` and `editor` move onto it in P2-10
+([PROGRESS.md](../../docs/restructure/PROGRESS.md)). Who uses what today:
+
+| Module | Used by |
+|---|---|
+| `paths` | every tool in `tools/` that knows the repository: `openrac`, `extractor`, `sources`, `shared`, `xmap`, `versions`, `port`, `build_port`, `build_android`, `bundle_standalone`, `fcheck_gate` |
+| `games` | `openrac`, `extractor`, `sources`, `xmap` |
+| `tables` | `fcheck_gate`, `port`, `xmap`, `versions` |
+| `digest` | `openrac`, `extractor`, `shared`, `build_port`, `build_android`, `fcheck_gate` |
+| `files` | `openrac` (`place_link`), `extractor`, `bundle_standalone` |
+| `proc` | every `git` call in `tools/`; `build_android`'s and `bundle_standalone`'s commands |
+| `iso9660` | `openrac`, `extractor` |
+
+Two places in `tools/` keep their own code on purpose. `fcheck_level_build.py` runs copied alone
+inside rac1-decomp's container, from rac1-decomp's root, where neither OpenRAC nor this package is.
+`openrac.py`'s `checksums` hashes a disc image with several algorithms and CRC32 in one pass, which
+`digest` (one algorithm a read) would make three reads of 4 GiB.
 
 ## Interface
 
@@ -30,7 +45,8 @@ and `editor` in P2-10 ([PROGRESS.md](../../docs/restructure/PROGRESS.md)).
 `AGENTS.md`, and the copy of the tools the launcher carries for players
 (`tools/bundle_standalone.py`), which has no `AGENTS.md` and is marked by the `STANDALONE` note that
 script writes. The launcher recognises that copy by the same file (`launcher/core/src/detect.rs`), and
-the copy's tools find their root through `repo_root` once they use this package (P1-05).
+the copy's tools find their root through `repo_root`. The copy carries this package beside
+`openrac.py` and `extractor.py`, which import it.
 
 Every function takes a `pathlib.Path` or a string for a path. The functions that read the repository
 (`games.*`) take an optional `root`, so a test can point them at a synthetic tree.
@@ -48,6 +64,10 @@ A script elsewhere puts `tools/` on the path once, from its own place, and impor
 ```python
 sys.path.insert(0, str(next(p for p in Path(__file__).resolve().parents if (p / "AGENTS.md").is_file()) / "tools"))
 ```
+
+That line finds a checkout only. A script the launcher's bundled copy carries (`editor/`) runs where
+there is no `AGENTS.md`, so it needs a marker the copy has as well; P2-10 settles it when the editor
+moves onto this package.
 
 ## Depends on
 
@@ -85,12 +105,17 @@ directories and a root directory longer than one sector), never read from a disc
 
 - each helper's own behaviour, with expected values from the format (ECMA-119) or from `hashlib`;
 - characterisation: the existing copy each helper was written from runs on the same input, and both
-  must agree (`tools/openrac.py`, `extractor.py`, `sources.py`, `xmap.py`, `bundle_standalone.py`,
-  `build_android.py`, `fcheck_gate.py`, `shared.py`, `port/tools/hostgen/{hostgen,no_c}.py`,
+  must agree. The copies in `tools/` are gone (P1-05) and their comparisons with them; those left
+  are `tools/openrac.py`'s `checksums` and `fcheck_gate.py`'s `fcheck_commit` (which use the
+  package's results), `port/tools/hostgen/{hostgen,no_c}.py`,
   `port/tools/versionmap/{versionmap,carry_functions}.py`, `sdk/tools/gen_binding.py`,
-  `editor/disc.py`, `port/enhanced/tools/probes/bake_all.py`). The tables are also read from this
+  `editor/disc.py` and `port/enhanced/tools/probes/bake_all.py`. The tables are also read from this
   checkout's own `port/game/*/libraries.tsv` and compared. When a copy is removed by the package
   that moves its callers, its comparison goes with it.
+
+The tools that use the package have their own tests beside it (`test_openrac.py`,
+`test_extractor.py`, `test_sources.py`, `test_build_android.py`, `test_bundle_standalone.py`, ...);
+`test_bundle_standalone.py` also runs the bundled copy's tools from the copy.
 
 ## Further reading
 
