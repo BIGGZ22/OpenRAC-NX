@@ -9,6 +9,7 @@
   import {
     api,
     inTauri,
+    onAndroid,
     onDrop,
     pickFolder,
     pickZip,
@@ -179,13 +180,16 @@
         <button disabled={adding} onclick={() => void addZip()}
           >{#if adding}<span class="spinner"></span>{:else}<Icon name="library" size={16} />{/if}{T.ADD.file}</button
         >
-        <button disabled={adding} onclick={() => void addFolder()}
-          ><Icon name="folder" size={16} />{T.ADD.folder}</button
-        >
+        {#if !onAndroid}
+          <!-- Android's picker gives no folder the launcher can read: a .zip only. -->
+          <button disabled={adding} onclick={() => void addFolder()}
+            ><Icon name="folder" size={16} />{T.ADD.folder}</button
+          >
+        {/if}
       </div>
     {/if}
   </div>
-  {#if files && inTauri}<p class="dim hint">{dropping ? T.ADD.dropHere : T.ADD.drop}</p>{/if}
+  {#if files && inTauri && !onAndroid}<p class="dim hint">{dropping ? T.ADD.dropHere : T.ADD.drop}</p>{/if}
 
   {#if previewError}<Reason text={previewError} tone="err" role="status" />{/if}
   {#if said}<Reason text={said.text} tone={said.failed ? "err" : "ok"} role="status" />{/if}

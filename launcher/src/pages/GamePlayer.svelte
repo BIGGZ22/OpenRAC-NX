@@ -17,7 +17,7 @@
   import Menu, { type MenuItem } from "$components/Menu.svelte";
   import ReportsBlock from "$components/ReportsBlock.svelte";
   import SaveManagerBlock from "$components/SaveManagerBlock.svelte";
-  import { api, ask, type ActionView, type ReportEntry } from "$lib/api";
+  import { api, ask, onAndroid, type ActionView, type ReportEntry } from "$lib/api";
   import {
     app,
     clock,
@@ -141,7 +141,8 @@
     if (playGodot?.runnable) {
       items.push({ label: "Preview a level in Godot", icon: "play", run: () => void run(scope, playGodot) });
     }
-    if (extract && extract.state !== "planned") {
+    if (extract && extract.state !== "planned" && !onAndroid) {
+      // Android has no Godot: its Mods tab has the mods and packs, not the level editor.
       items.push({ label: "Edit its levels (Mods)", icon: "edit", run: () => (app.page = "mods") });
     }
     if (setUp) {

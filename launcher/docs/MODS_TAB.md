@@ -205,10 +205,21 @@ folder for the last export, `api.openOutput`) and Import your edits
 
 ## Android
 
-The Mods tab is not shown on Android (Header.svelte), and Settings hides
-Purist mode there. The core treats script mods as compatible on Android, but
-the tab would also need a way to download from a link (the launcher fetches
-with `curl`) and a `.zip` picker there.
+On Android the tab is one page, no tabs (Mods.svelte, `mine`): Gameplay mods
+first, with Enhanced graphics at their top and its switch in its row (it
+bakes the lighting on the device: tools/build_android.py carries the probe
+baker); Add a mod from a link or a `.zip`; then the texture and model packs.
+The level editor and Models and textures need Godot and a desktop, and are
+left out, as is the game page's "Edit its levels".
+
+- **From a link:** Android has no `curl`, so the core's fetches go through the
+  Kotlin side's `download`, the one the launcher's updates use
+  (`android::KotlinFetch`, lib.rs `with_remote`).
+- **A .zip:** the system's picker hands over a file, not a path; `pick_zip`
+  copies it into the app's cache (`mod-imports/`) and installs from there.
+  There is no folder button and no drop.
+- Native mods show as not for this platform; script mods load. Purist mode is
+  in Settings as on the desktops.
 
 ## Developer view
 

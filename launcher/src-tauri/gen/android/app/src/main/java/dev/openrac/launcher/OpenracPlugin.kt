@@ -50,6 +50,8 @@ class DownloadArgs {
   lateinit var path: String
   // The download downloadProgress reports (the update's APK), not a manifest read beside it.
   var progress: Boolean = false
+  // The media type asked for, when not empty: GitHub's API for a mod's releases (remote.rs).
+  var accept: String = ""
 }
 
 @InvokeArg
@@ -217,6 +219,10 @@ class OpenracPlugin(private val activity: Activity) : Plugin(activity) {
         connection.connectTimeout = 15_000
         connection.readTimeout = 30_000
         connection.setRequestProperty("User-Agent", "OpenRAC-Launcher")
+        if (args.accept.isNotEmpty()) {
+          connection.setRequestProperty("Accept", args.accept)
+          connection.setRequestProperty("X-GitHub-Api-Version", "2022-11-28")
+        }
         try {
           // Redirects are followed within https only (GitHub's downloads are redirected once).
           if (connection.responseCode != HttpURLConnection.HTTP_OK || connection.url.protocol != "https") {

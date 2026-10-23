@@ -919,6 +919,8 @@ export async function pickFile(title: string): Promise<string | null> {
 /** A picker for an overrides pack's .zip; null when cancelled (in the browser preview, a made-up one). */
 export async function pickZip(title: string): Promise<string | null> {
   if (!inTauri) return "/home/you/Downloads/HD Ratchet.zip";
+  // Android's picker hands over a file, not a path: it is copied into the app's cache first.
+  if (onAndroid) return await call<string | null>("pick_zip");
   const picked = await open({
     directory: false,
     multiple: false,

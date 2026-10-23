@@ -20,7 +20,7 @@
   import Icon from "$components/Icon.svelte";
   import PacksPanel from "$components/PacksPanel.svelte";
   import PluginsPanel from "$components/PluginsPanel.svelte";
-  import { api, pickFile, type ActionView, type GameView, type VersionView } from "$lib/api";
+  import { api, onAndroid, pickFile, type ActionView, type GameView, type VersionView } from "$lib/api";
   import { app, guardShown, jobs, run, runChain, saveConfig, toast } from "$lib/app.svelte";
   import { levelName, levelsOf, type EntryState } from "$lib/labels";
   import { GODOT_URL, SITE_URL } from "$lib/links";
@@ -125,6 +125,9 @@
     const pv = shown ? playerVersion(shown) : null;
     return pv && playable(pv) ? pv : null;
   });
+
+  /** Android's one page of mods (no level editor there): the version they are for. */
+  const mine = $derived(onAndroid ? (v ?? played) : null);
 
   /** The page's tab: My mods, the level editor, or models and textures. */
   type Tab = "mine" | "editor" | "assets";
@@ -262,7 +265,17 @@
           {/if}
         </div>
 
-        {#if !v && played}
+        {#if onAndroid && mine}
+          <!-- Android: one page, what a player does there in the order they do it. The mods first,
+               with Enhanced graphics at the top and its switch in its row; adding one, from a link or
+               a .zip the system's picker copies in; then the texture and model packs. No level editor
+               or model export: they need Godot and a desktop. -->
+          <PluginsPanel version={mine} reload={pluginsReload} onpack={() => (reload += 1)} />
+          {#if !onModPage}
+            <AddMod version={mine} links={playable(mine)} onadded={added} />
+            <PacksPanel version={mine} {reload} />
+          {/if}
+        {:else if !v && played}
           <!-- The level editor cannot open it here (an installed launcher without its tools, say), but the
                game plays: its gameplay mods, which load when it is played from its page. -->
           {#if !onModPage}<AddMod version={played} onadded={added} />{/if}

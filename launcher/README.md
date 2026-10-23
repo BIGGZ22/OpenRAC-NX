@@ -114,7 +114,8 @@ a folder (or drop one on the page) to install it into
 `<data>/plugins/<id>`; each mod has a switch, a place in the load order, its
 settings and Remove, and says why it cannot load when it cannot. Changes count
 from the game's next start. **Purist mode** starts the game with none of them.
-Android loads no native mods; its launcher has no Mods tab yet.
+Android loads no native mods; its Mods tab has the script mods, Enhanced
+graphics and the packs on one page, without the level editor.
 
 **Enhanced graphics** (experimental) is built in, the first row of Gameplay
 mods for Ratchet & Clank (PAL and NTSC-U): bounced light, modern sun and

@@ -38,6 +38,43 @@ pub struct DiscCopy {
 #[cfg(target_os = "android")]
 pub struct Openrac<R: Runtime>(tauri::plugin::PluginHandle<R>);
 
+/// Mods from a repository's address (core/src/remote.rs) on Android, which has no curl: the
+/// Kotlin side's download, the one the launcher's updates use, into the cache, read back and
+/// removed. Called from a blocking thread (lib.rs, on_plugins), so it waits for the download.
+#[cfg(target_os = "android")]
+pub struct KotlinFetch<R: Runtime> {
+    pub app: AppHandle<R>,
+}
+
+#[cfg(target_os = "android")]
+impl<R: Runtime> openrac_launcher_core::remote::Fetch for KotlinFetch<R> {
+    fn get(&self, url: &str, api: bool) -> Result<Vec<u8>, String> {
+        use std::sync::atomic::{AtomicU64, Ordering};
+        static NEXT: AtomicU64 = AtomicU64::new(0);
+        if !url.starts_with("https://") {
+            return Err(format!("{url} is not an https:// address"));
+        }
+        let plugin = self.app.try_state::<Openrac<R>>().ok_or("the launcher's Android plugin is not loaded")?;
+        let dir = self.app.path().app_cache_dir().map_err(|e| e.to_string())?.join("fetch");
+        let file = dir.join(format!("{}-{}", std::process::id(), NEXT.fetch_add(1, Ordering::Relaxed)));
+        let accept = if api { "application/vnd.github+json" } else { "" };
+        let done = plugin.0.run_mobile_plugin::<serde_json::Value>(
+            "download",
+            serde_json::json!({ "url": url, "path": file, "accept": accept }),
+        );
+        let bytes = done.map_err(|e| e.to_string()).and_then(|_| std::fs::read(&file).map_err(|e| e.to_string()));
+        let _ = std::fs::remove_file(&file);
+        match bytes {
+            Ok(bytes) if bytes.len() as u64 > openrac_launcher_core::remote::MAX_BYTES => {
+                Err(format!("{url} is larger than the launcher takes"))
+            }
+            Ok(bytes) => Ok(bytes),
+            Err(e) if e.contains("HTTP 404") => Err(format!("{url}: not found")),
+            Err(e) => Err(format!("{url} could not be fetched ({e})")),
+        }
+    }
+}
+
 /// The plugin that carries the Kotlin side; registered on Android only.
 #[cfg(target_os = "android")]
 pub fn init<R: Runtime>() -> tauri::plugin::TauriPlugin<R> {
@@ -120,6 +157,52 @@ pub async fn pick_disc<R: Runtime>(app: AppHandle<R>) -> Result<Option<PathBuf>,
             .await
             .map_err(|e| e.to_string())?
             .map_err(|e| format!("cannot copy the disc image into the app's storage: {e}"))?;
+        Ok(Some(dest))
+    }
+    #[cfg(not(target_os = "android"))]
+    {
+        let _ = app;
+        Err(ANDROID_ONLY.into())
+    }
+}
+
+/// A mod's .zip picked with the system's picker (the Mods tab's Add a mod): Android hands over an
+/// open file, not a path, so it is copied into the app's cache (`mod-imports/`), where the
+/// launcher installs it from as from any path. The copy's path, or None when the player cancelled.
+#[tauri::command]
+pub async fn pick_zip<R: Runtime>(app: AppHandle<R>) -> Result<Option<PathBuf>, String> {
+    #[cfg(target_os = "android")]
+    {
+        #[derive(Deserialize)]
+        struct Picked {
+            fd: Option<i32>,
+            name: Option<String>,
+            size: Option<i64>,
+        }
+        // The same picker as a disc's (it checks the room for the copy too).
+        let picked: Picked = kotlin(&app, "pickDisc", ()).await?;
+        let (Some(fd), Some(name)) = (picked.fd, picked.name) else { return Ok(None) };
+        // The descriptor Kotlin detached is this process's to close: File owns it from here.
+        let file = unsafe { <std::fs::File as std::os::fd::FromRawFd>::from_raw_fd(fd) };
+        let dir = app.path().app_cache_dir().map_err(|e| e.to_string())?.join("mod-imports");
+        // A folder of its own each time, so that two picks of one name do not meet.
+        let dest = dir
+            .join(format!(
+                "{}",
+                std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).map(|d| d.as_millis()).unwrap_or(0)
+            ))
+            .join(disc_file_name(&name));
+        let total = picked.size.unwrap_or(-1).max(0) as u64;
+        let copied = dest.clone();
+        tauri::async_runtime::spawn_blocking(move || {
+            if let Some(parent) = copied.parent() {
+                std::fs::create_dir_all(parent).map_err(|e| e.to_string())?;
+            }
+            copy_disc(file, total, &copied, |_| {}).map_err(|e| e.to_string())
+        })
+        .await
+        .map_err(|e| e.to_string())?
+        .map_err(|e| format!("cannot copy the chosen file into the app's storage: {e}"))?;
         Ok(Some(dest))
     }
     #[cfg(not(target_os = "android"))]

@@ -1001,31 +1001,47 @@ async fn plugins_install(
 
 /// What the port did with the game's mods at its last start (`status.json`), if it wrote it.
 /// A game's mods from a repository's address (docs/port/MODS.md, section 10): what it holds,
-/// installing one, newer versions, keeping one at its version. Through curl, no git needed.
-fn remote_context<'a>(dir: &'a Path, game: &'a str, version: &'a str) -> remote::Context<'a> {
-    remote::Context {
+/// installing one, newer versions, keeping one at its version. Through curl, no git needed; on
+/// Android, which has no curl, through the Kotlin side's download (android::KotlinFetch).
+fn with_remote<T>(
+    app: &AppHandle,
+    dir: &Path,
+    game: &str,
+    version: &str,
+    work: impl FnOnce(&remote::Context) -> T,
+) -> T {
+    #[cfg(target_os = "android")]
+    let fetch = android::KotlinFetch { app: app.clone() };
+    #[cfg(not(target_os = "android"))]
+    let fetch = {
+        let _ = app;
+        remote::Curl
+    };
+    work(&remote::Context {
         dir,
         game,
         version,
         platform: plugins::platform_key(),
-        fetch: &remote::Curl,
+        fetch: &fetch,
         hosts: remote::Hosts::default(),
-    }
+    })
 }
 
 #[tauri::command]
 async fn plugins_preview(
+    app: AppHandle,
     state: State<'_, AppState>,
     game: String,
     version: String,
     url: String,
 ) -> Result<remote::Preview, String> {
     let g = game.clone();
-    on_plugins(state, &game, move |dir| remote::preview(&remote_context(dir, &g, &version), &url)).await
+    on_plugins(state, &game, move |dir| with_remote(&app, dir, &g, &version, |c| remote::preview(c, &url))).await
 }
 
 #[tauri::command]
 async fn plugins_install_remote(
+    app: AppHandle,
     state: State<'_, AppState>,
     game: String,
     version: String,
@@ -1033,7 +1049,7 @@ async fn plugins_install_remote(
     id: String,
 ) -> Result<remote::RemoteInstalled, String> {
     let g = game.clone();
-    on_plugins(state, &game, move |dir| remote::install(&remote_context(dir, &g, &version), &url, &id)).await
+    on_plugins(state, &game, move |dir| with_remote(&app, dir, &g, &version, |c| remote::install(c, &url, &id))).await
 }
 
 #[derive(serde::Serialize)]
@@ -1045,13 +1061,14 @@ struct UpdateCheck {
 
 #[tauri::command]
 async fn plugins_check_updates(
+    app: AppHandle,
     state: State<'_, AppState>,
     game: String,
     version: String,
 ) -> Result<UpdateCheck, String> {
     let g = game.clone();
     on_plugins(state, &game, move |dir| {
-        let (updates, errors) = remote::check_updates(&remote_context(dir, &g, &version));
+        let (updates, errors) = with_remote(&app, dir, &g, &version, remote::check_updates);
         Ok(UpdateCheck { updates, errors })
     })
     .await
@@ -1059,13 +1076,14 @@ async fn plugins_check_updates(
 
 #[tauri::command]
 async fn plugins_update(
+    app: AppHandle,
     state: State<'_, AppState>,
     game: String,
     version: String,
     id: String,
 ) -> Result<remote::RemoteInstalled, String> {
     let g = game.clone();
-    on_plugins(state, &game, move |dir| remote::update(&remote_context(dir, &g, &version), &id)).await
+    on_plugins(state, &game, move |dir| with_remote(&app, dir, &g, &version, |c| remote::update(c, &id))).await
 }
 
 #[tauri::command]
@@ -1483,6 +1501,7 @@ pub fn run() {
             differences,
             set_game_fix,
             android::pick_disc,
+            android::pick_zip,
             android::gpu_drivers,
             android::gpu_driver_import,
             android::gpu_driver_select,

@@ -17,9 +17,10 @@
   // developer tools on, Develop is a tab of its own: the checkout, each version and the jobs.
   const tabs = $derived<{ page: Page; label: string; icon: IconName }[]>([
     { page: "library", label: "Games", icon: "library" },
-    // Every desktop launcher, installed or on a checkout (an installed one mods in its data folder,
-    // tools/bundle_standalone.py); Android has no Godot to edit levels in.
-    ...(app.info?.platform === "android" ? [] : [{ page: "mods" as Page, label: "Mods", icon: "edit" as IconName }]),
+    // Every launcher, installed or on a checkout (an installed one mods in its data folder,
+    // tools/bundle_standalone.py). Android's has the mods, Enhanced graphics and the packs, without
+    // the level editor (no Godot there: Mods.svelte).
+    { page: "mods", label: "Mods", icon: "edit" },
     ...(app.config?.developer ? [{ page: "develop" as Page, label: "Develop", icon: "terminal" as IconName }] : []),
     { page: "settings", label: "Settings", icon: "gear" },
   ]);
