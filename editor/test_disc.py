@@ -164,6 +164,19 @@ class IsoChecksTests(unittest.TestCase):
         self.assertEqual(d.files(), [{"name": "SYSTEM.CNF", "lba": 19, "bytes": len(cnf(A.executable))},
                                      {"name": A.executable, "lba": 20, "bytes": len(EXE_A)}])
 
+    def test_a_root_directory_of_two_sectors(self):
+        # Records never cross a sector: zeros pad the first, and the listing goes on in the second.
+        data = bytearray(image({}))
+        struct.pack_into("<I", data, self.PVD + 166, 2 * SECTOR)
+        second = record(b"LATE.BIN;1", 21, 5)
+        data[19 * SECTOR:19 * SECTOR + len(second)] = second
+        temp = tempfile.TemporaryDirectory()
+        self.addCleanup(temp.cleanup)
+        path = Path(temp.name) / "two.iso"
+        path.write_bytes(bytes(data))
+        with Disc(path) as d:
+            self.assertEqual(d.files(), [{"name": "LATE.BIN", "lba": 21, "bytes": 5}])
+
     def test_only_iso_9660_version_1_with_2048_byte_blocks(self):
         for patch in (("<H", self.PVD + 128, 4096),     # the logical block size
                       ("B", self.PVD + 6, 2),           # the descriptor's version

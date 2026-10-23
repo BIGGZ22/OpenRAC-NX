@@ -7,10 +7,12 @@ Two kinds of test. Each helper's own behaviour, with expected values from its do
 (ECMA-119 for the image, hashlib for the digests). And characterisation: the existing copy each
 helper was written from runs on the same synthetic input as the helper, and both must give the
 same result, so a caller moved onto the package later behaves as it did. Those copies are
-imported from where they live today (sdk/tools, editor, and what tools/ keeps: openrac.checksums,
+imported from where they live today (sdk/tools, and what tools/ keeps: openrac.checksums,
 fcheck_gate.fcheck_commit); once their callers have moved and a copy is gone, its comparison
-goes with it, as tools/' copies went in P1-05 and port/tools' and the probe tools' in P2-10
-(hostgen's readers keep their characterisation in port/tools/hostgen/test_tables.py).
+goes with it, as tools/' copies went in P1-05, port/tools' and the probe tools' in P2-10 and the
+editor's disc reader in P2-32 (hostgen's readers keep their characterisation in
+port/tools/hostgen/test_tables.py; the editor's reader, now on iso9660, keeps its stricter
+checks' tests in editor/test_disc.py).
 """
 import contextlib
 import hashlib
@@ -30,13 +32,12 @@ from openrac_common import digest, files, games, iso9660, paths, proc, tables
 
 ROOT = Path(__file__).resolve().parent.parent
 
-# The existing copies' folders go after tools/ on the path, so a tools/ module of the same name
-# (tools/port.py beside editor/port.py) is the one imported.
-for folder in ("sdk/tools", "editor"):
+# The existing copies' folder goes after tools/ on the path, so a tools/ module of the same name
+# would be the one imported.
+for folder in ("sdk/tools",):
     if str(ROOT / folder) not in sys.path:
         sys.path.append(str(ROOT / folder))
 
-import disc  # noqa: E402  editor
 import fcheck_gate  # noqa: E402
 import gen_binding  # noqa: E402  sdk/tools
 import openrac  # noqa: E402
@@ -622,14 +623,6 @@ class IsoTests(TempDir):
             with self.subTest(read=read.__name__), self.assertRaises(iso9660.IsoError) as caught:
                 read(cut)
             self.assertEqual(caught.exception.detail, "a directory record is cut short")
-
-    def test_matches_the_editors_disc_reader(self):
-        flat = self.write("flat.iso", build_image({"SYSTEM.CNF": CNF, "SCES_999.99": BOOT, **MANY}))
-        with disc.Disc(flat) as image:
-            theirs = [(r["name"], r["lba"], r["bytes"]) for r in image.files()]
-            boot = disc.BOOT.search(CNF).group(1).decode()
-        self.assertEqual(iso9660.files(flat), theirs)
-        self.assertEqual(iso9660.boot_serial(flat), boot)
 
 
 if __name__ == "__main__":
