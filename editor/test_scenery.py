@@ -4,7 +4,7 @@ import unittest
 
 from godot import transform
 from scenery import matrix_of, pack_family
-from pack import scene_nodes, scene_transform
+from pack import read_scene_nodes, scene_transform
 
 VALUES = ("draw_distance", "occlusion_index", "directional_lights", "uid")
 
@@ -34,7 +34,7 @@ class Ties(unittest.TestCase):
         self.ties = [tie(0, 10.0), tie(1, 20.0), tie(2, 30.0, 2021)]
 
     def pack(self, text: str):
-        return pack_family(scene_nodes(text, "Ties", "tie"), self.ties, {2020, 2021}, VALUES)
+        return pack_family(read_scene_nodes(text, "Ties", "tie"), self.ties, {2020, 2021}, VALUES)
 
     def test_an_untouched_scene_is_the_discs(self):
         self.assertEqual(self.pack(scene(self.ties)), (None, [], []))
@@ -63,7 +63,7 @@ class Ties(unittest.TestCase):
 
     def test_a_class_the_level_lacks_is_refused(self):
         text = scene(self.ties).replace('path="res://levels/level_00/ties/tie_2021.glb"', 'path="res://levels/level_00/ties/tie_9.glb"')
-        out, changes, problems = pack_family(scene_nodes(text, "Ties", "tie"), self.ties, {2020, 2021}, VALUES)
+        out, changes, problems = pack_family(read_scene_nodes(text, "Ties", "tie"), self.ties, {2020, 2021}, VALUES)
         self.assertIn("class 9 is not one of the level's", problems[0])
 
 

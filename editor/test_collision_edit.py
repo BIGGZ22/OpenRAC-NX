@@ -152,7 +152,7 @@ class SceneTests(unittest.TestCase):
         scene = Scene()
         scene.node("Level_00", kind="Node3D")
         scene.node("Game", ".", "Node3D")
-        cs.scene_nodes(scene, "res://levels/level_00", self.manifest)
+        cs.add_collision_nodes(scene, "res://levels/level_00", self.manifest)
         self.text = scene.text()
 
     def tearDown(self):

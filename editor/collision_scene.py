@@ -119,8 +119,10 @@ def export(level_dir: Path, block: bytes) -> dict:
     return manifest
 
 
-def scene_nodes(scene, res: str, manifest: dict) -> None:
-    """The nodes of the layout above, in a godot.Scene."""
+def add_collision_nodes(scene, res: str, manifest: dict) -> None:
+    """Adds the level's collision to SCENE (a godot.Scene) as nodes, in the layout above
+    (moby_collision_scene.add_class_collision_nodes does it for a class's collision, and
+    pack.read_scene_nodes reads a level scene's placements back)."""
     description = ("The level's collision, by 64-unit tile. Delete, move or edit tiles (their .glb in Blender; "
                    "a material rc1_surface_XX is the faces' type byte), or add meshes here with rc1_surface "
                    "metadata. Packed into the level's collision by extract.py pack.")
