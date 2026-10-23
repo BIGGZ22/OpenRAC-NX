@@ -29,6 +29,7 @@
 
 namespace openrac::assets::rac1 {
 
+// The three faces the game prints with, in the order of their FX textures.
 enum class FontFace : u8 {
     Regular,  // HUD numbers, most menus
     Small,    // help boxes, subtitles
@@ -58,8 +59,10 @@ static_assert(sizeof(GlyphCell) == 4);
 
 inline constexpr std::size_t kGlyphCount = 232;  // bytes 0x00..0xe7; accents from 0xc0
 
+// One face's glyphs, indexed by the text byte.
 using GlyphTable = std::array<GlyphCell, kGlyphCount>;
 
+// The three glyph tables of one level, read from its program.
 struct LevelFonts {
     std::array<GlyphTable, 3> tables{};
     std::array<u32, 3> addresses{};  // where each table is in the level program

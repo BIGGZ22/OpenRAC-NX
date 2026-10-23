@@ -108,9 +108,9 @@ private:
     ByteView m_bytes;
 };
 
-// ---------------------------------------------------------------------------
-// Level settings (section 0x00, 0x50 bytes in rac1)
+// ---- Level settings ----
 
+// Section 0x00, 0x50 bytes in rac1.
 struct LevelSettings {
     std::array<s32, 3> background_rgb{};  // 0..255; r = -1: none
     std::array<s32, 3> fog_rgb{};         // the same
@@ -133,9 +133,9 @@ struct LevelSettings {
 
 LevelSettings read_level_settings(const GameplayFile& file);
 
-// ---------------------------------------------------------------------------
-// Moby instances (section 0x44)
+// ---- Moby instances ----
 
+// Section 0x44.
 inline constexpr std::size_t kMobyInstanceSize = 0x78;
 
 // One placed moby (0x78 bytes). "moby+X" names the field of the 0x100-byte
@@ -202,9 +202,9 @@ std::vector<MobyInstance> read_moby_instances(const GameplayFile& file);
 // ShrubClasses): `s32 count, pad[3]`, then `count` s32.
 std::vector<s32> read_class_list(const GameplayFile& file, GameplaySection section);
 
-// ---------------------------------------------------------------------------
-// Pvars: per-instance class variables
+// ---- Pvars ----
 
+// Per-instance class variables.
 struct PvarFixup {
     s32 pvar_index = 0;
     s32 offset = 0;  // the byte offset of an s32 inside the block
@@ -254,14 +254,14 @@ std::vector<std::optional<std::vector<u8>>> read_pvars(
     const GameplayFile& file, std::span<const bool> spawned = {}
 );
 
-// ---------------------------------------------------------------------------
-// Paths (section 0x70)
+// ---- Paths ----
 
+// Section 0x70.
 // The paths (splines) are disc/volumes.h's parse_paths.
 
-// ---------------------------------------------------------------------------
-// Environment transitions (section 0x80): the fog zones
+// ---- Environment transitions ----
 
+// Section 0x80: the fog zones.
 // One end of a transition: the level fog at t = 0 or t = 1.
 struct EnvTransitionSide {
     float near_distance = 0;
@@ -303,9 +303,9 @@ struct EnvTransitions {
 // 0xb applied.
 EnvTransitions read_env_transitions(const GameplayFile& file);
 
-// ---------------------------------------------------------------------------
-// Point lights (sections 0x7c and 0x78)
+// ---- Point lights ----
 
+// Sections 0x7c and 0x78.
 struct GameplayPointLight {
     std::array<float, 4> position{};  // x, y, z, and the squared radius
     u32 rgba = 0;

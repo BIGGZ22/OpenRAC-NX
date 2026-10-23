@@ -4,7 +4,10 @@
 // Adapted from ReRAC (https://github.com/re-rac/rerac), crates/rc-formats/src/cameras.rs:
 // ISC License, Copyright (c) 2026 ReRAC contributors.
 //
-// The camera records and the layouts of their pvar blocks.
+// Implements cameras.h: reads a level's camera records from the gameplay file and decodes the
+// pvar block of each camera class into its own struct. Every decoder reads a block at fixed
+// offsets after the shared header and returns nothing when the block is too short, so a record
+// of an unknown or truncated class is left to the caller instead of throwing.
 
 #include "assets/world/cameras.h"
 
@@ -12,27 +15,32 @@
 
 namespace openrac::assets {
 
+// A level with no camera section has no cameras, which is not an error.
 std::vector<CameraRecord> read_camera_records(const GameplayFile& file) {
     const ByteView g = file.bytes();
     const std::size_t s = file.offset(GameplaySection::Cameras);
 
+    // A zero offset means the level does not have this section.
     if (s == 0) {
         return {};
     }
 
     const s32 count = g.s32_at(s);
 
+    // The runtime copies the records into a fixed set of slots, so more would overflow it.
     if (count < 0 || count > kCameraSlots) {
         fail("camera count {} (the runtime has 48 slots)", count);
     }
 
     std::vector<CameraRecord> out;
 
+    // Records follow the 0x10-byte section header, in file order.
     for (std::size_t i = 0; i < static_cast<std::size_t>(count); ++i) {
         const std::size_t r = s + 0x10 + kCameraRecordSize * i;
         CameraRecord c;
         c.class_id = g.s32_at(r);
 
+        // Position and rotation are three floats each, one float (4 bytes) per axis.
         for (std::size_t k = 0; k < 3; ++k) {
             c.position[k] = g.f32_at(r + 4 + 4 * k);
             c.rotation[k] = g.f32_at(r + 0x10 + 4 * k);
@@ -45,9 +53,11 @@ std::vector<CameraRecord> read_camera_records(const GameplayFile& file) {
     return out;
 }
 
+// Pairs each record with the loader's copy of its pvar block, when it has one.
 std::vector<LevelCamera> read_level_cameras(const GameplayFile& file) {
     std::vector<LevelCamera> out;
 
+    // One entry per record, in file order.
     for (const CameraRecord& r : read_camera_records(file)) {
         out.push_back({r, read_pvar_block(file, r.pvar_index)});
     }
@@ -55,6 +65,8 @@ std::vector<LevelCamera> read_level_cameras(const GameplayFile& file) {
     return out;
 }
 
+// The block's moby links hold instance indices in the file; the port's moby list is a different
+// order, so each is replaced by the runtime index (or -1) that `instance_to_moby` returns.
 void remap_camera_moby_links(
     std::vector<LevelCamera>& cameras,
     const GameplayFile& file,
@@ -62,14 +74,18 @@ void remap_camera_moby_links(
 ) {
     const PvarFixups fixups = read_pvar_fixups(file);
 
+    // Only cameras that have a block can hold links.
     for (LevelCamera& c : cameras) {
+        // A camera with no block has nothing to remap.
         if (!c.pvar) {
             continue;
         }
 
         std::vector<u8>& block = *c.pvar;
 
+        // The fixup list covers every block; pick this camera's entries.
         for (const PvarFixup& f : fixups.moby_links) {
+            // Skip links of other blocks and any offset that would write past this block's end.
             if (f.pvar_index != c.record.pvar_index || f.offset < 0
                 || static_cast<std::size_t>(f.offset) + 4 > block.size()) {
                 continue;
@@ -78,6 +94,7 @@ void remap_camera_moby_links(
             s32 value;
             std::memcpy(&value, block.data() + f.offset, 4);
 
+            // A negative value is the file's "no moby"; leave it as it is.
             if (value < 0) {
                 continue;
             }
@@ -89,7 +106,9 @@ void remap_camera_moby_links(
     }
 }
 
+// The shared header is the first 0x20 bytes of every class's block.
 std::optional<CameraHeader> CameraHeader::read(ByteView p) {
+    // A block shorter than the header cannot be a camera block.
     if (p.size() < 0x20) {
         return std::nullopt;
     }
@@ -108,9 +127,11 @@ std::optional<CameraHeader> CameraHeader::read(ByteView p) {
     return h;
 }
 
+// Class 17: the header, then the follow-camera tweak fields, which end at 0x58.
 std::optional<CameraRegionTweak> CameraRegionTweak::read(ByteView p) {
     const auto header = CameraHeader::read(p);
 
+    // Too short for the header or for this class's fields.
     if (!header || p.size() < 0x58) {
         return std::nullopt;
     }
@@ -139,9 +160,11 @@ std::optional<CameraRegionTweak> CameraRegionTweak::read(ByteView p) {
     return t;
 }
 
+// Class 23: the header, then the placed view's fields, which end at 0x48.
 std::optional<CameraPlacedView> CameraPlacedView::read(ByteView p) {
     const auto header = CameraHeader::read(p);
 
+    // Too short for the header or for this class's fields.
     if (!header || p.size() < 0x48) {
         return std::nullopt;
     }
@@ -163,9 +186,11 @@ std::optional<CameraPlacedView> CameraPlacedView::read(ByteView p) {
     return v;
 }
 
+// Class 18: the header, then the moby focus fields, which end at 0x54.
 std::optional<CameraMobyFocus> CameraMobyFocus::read(ByteView p) {
     const auto header = CameraHeader::read(p);
 
+    // Too short for the header or for this class's fields.
     if (!header || p.size() < 0x54) {
         return std::nullopt;
     }
@@ -190,9 +215,11 @@ std::optional<CameraMobyFocus> CameraMobyFocus::read(ByteView p) {
     return f;
 }
 
+// Class 3: the header, then the rail camera's fields, which end at 0x3c.
 std::optional<CameraRail> CameraRail::read(ByteView p) {
     const auto header = CameraHeader::read(p);
 
+    // Too short for the header or for this class's fields.
     if (!header || p.size() < 0x3c) {
         return std::nullopt;
     }
@@ -211,9 +238,11 @@ std::optional<CameraRail> CameraRail::read(ByteView p) {
     return r;
 }
 
+// Class 14: the header, then two floats, which end at 0x28.
 std::optional<CameraSideView> CameraSideView::read(ByteView p) {
     const auto header = CameraHeader::read(p);
 
+    // Too short for the header or for this class's fields.
     if (!header || p.size() < 0x28) {
         return std::nullopt;
     }

@@ -36,6 +36,7 @@
 
 namespace openrac::assets {
 
+// The number of hud banks a level has.
 inline constexpr std::size_t kHudBanks = 5;
 inline constexpr std::size_t kHudHeaderSize = 0xb4;  // the icon table follows on every level
 
@@ -65,11 +66,14 @@ struct HudIcon {
     u8 ticks_per_frame = 0;
 };
 
+// One frame: the palette and texture entries it draws with (-1 for none).
 struct HudFrame {
     s16 palette = 0;
     s16 texture = 0;
 };
 
+// A palette entry: where its colours are in the bank (bit 31 is a flag the loader clears), and
+// the GS address the game fills in at run time.
 struct HudPalette {
     u32 offset_flags = 0;
     u16 cbp = 0;
@@ -77,6 +81,8 @@ struct HudPalette {
     std::size_t offset() const { return offset_flags & 0x7fff'ffff; }
 };
 
+// A texture entry: where its pixels are in the bank, the GS address the game fills in at run
+// time, and the log2 of each side.
 struct HudTexture {
     u32 offset_flags = 0;
     u16 tbp = 0;
@@ -90,6 +96,7 @@ struct HudTexture {
     u32 height() const { return u32{1} << (log2_height & 0x1f); }
 };
 
+// Reads the header's fixed part; throws when `game`'s layout is unknown or `header` is short.
 HudHeader read_hud_header(Game game, ByteView header);
 
 // A level's HUD set with copies of its decompressed banks.
@@ -126,14 +133,17 @@ public:
     // Frame i's indices and palette, borrowed from this set.
     IndexedImage frame_image(std::size_t i) const;
 
+    // Frame i as RGBA, with `alpha` choosing how the GS alpha maps to 0..255.
     RgbaImage decode_frame(std::size_t i, GsAlpha alpha) const;
 
 private:
+    // The header and its four tables, copied so the set outlives the lump it was read from.
     HudHeader m_header;
     std::vector<HudIcon> m_icons;
     std::vector<HudFrame> m_frames;
     std::vector<HudPalette> m_palettes;
     std::vector<HudTexture> m_textures;
+    // The decompressed banks, copied; an absent bank is empty.
     std::array<std::vector<u8>, kHudBanks> m_banks;
 };
 
