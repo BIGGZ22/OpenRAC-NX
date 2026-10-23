@@ -240,9 +240,14 @@ def build_embree(cmake: str, env: dict[str, str], compilers: tuple[str, str, str
 
 def copy_licenses(build: Path) -> None:
     """Embree's license and notices beside the baker built with it: <build>/licenses/embree."""
-    notices = EMBREE_DIR / "install" / "licenses" / "embree"
-    if notices.is_dir():
-        shutil.copytree(notices, build / "licenses" / "embree", dirs_exist_ok=True)
+    dest = build / "licenses" / "embree"
+    for folder in (EMBREE_DIR / "install" / "licenses" / "embree", EMBREE_DIR / f"embree-{EMBREE_VERSION}"):
+        if all((folder / name).is_file() for name in ("LICENSE.txt", "third-party-programs.txt")):
+            dest.mkdir(parents=True, exist_ok=True)
+            for name in ("LICENSE.txt", "third-party-programs.txt"):
+                shutil.copy2(folder / name, dest / name)
+            return
+    raise BuildError("Embree's LICENSE.txt is missing: build it again (delete port/build/embree)")
 
 
 def parse_cache(text: str) -> dict[str, str]:
@@ -607,7 +612,10 @@ def main(argv: list[str] | None = None) -> int:
         program = next((build / "apps" / f"openrac-{name}").glob("*.app"), build / f"openrac-{name}{suffix}")
         say(f"built {program.relative_to(ROOT).as_posix()}")
     if BAKER in more:
-        copy_licenses(build)
+        try:
+            copy_licenses(build)
+        except (BuildError, OSError) as e:
+            print(f"warning: {e}", file=sys.stderr, flush=True)
         say(f"built {(build / (BAKER + suffix)).relative_to(ROOT).as_posix()}")
     return 0
 
