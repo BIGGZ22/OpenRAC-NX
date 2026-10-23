@@ -50,6 +50,7 @@ option(OPENRAC_PORT_GAMES "Build the games from their decompilations (needs Clan
 
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake")
 include(Warnings)
+include(Tests)
 include(FastBuild)
 include(Optimize)
 # Android (the android-arm64 preset, the NDK's toolchain file): docs/port/ANDROID.md.
