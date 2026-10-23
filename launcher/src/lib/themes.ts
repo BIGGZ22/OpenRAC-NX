@@ -104,3 +104,79 @@ export function themeStyle(game: string): string {
     `--title-weight: ${t.weight}`,
   ].join("; ");
 }
+
+/** The launcher's accent while a game is the one picked (Android): its bar gradient and the ink on
+ *  it, its amber (headings, the focus ring, what is on) and gold, in that game's colour, as the
+ *  games' own menus have it: Going Commando's pale blue, Up Your Arsenal's yellow, Deadlocked's
+ *  red, Size Matters' blue. Ratchet & Clank keeps the launcher's own orange (app.css). */
+export interface Accent {
+  barTop: string;
+  barBottom: string;
+  /** The text on the bar's colour (a main button's), and its deeper shade. */
+  barInk: string;
+  barInkDeep: string;
+  amber: string;
+  gold: string;
+}
+
+export const ACCENTS: Record<string, Accent> = {
+  rac2: {
+    barTop: "#7fcdf5",
+    barBottom: "#43a3de",
+    barInk: "#06233a",
+    barInkDeep: "#03141f",
+    amber: "#7fcff5",
+    gold: "#c4e8fb",
+  },
+  rac3: {
+    barTop: "#ffd84a",
+    barBottom: "#e9b30c",
+    barInk: "#2a2000",
+    barInkDeep: "#1c1500",
+    amber: "#ffd23f",
+    gold: "#ffe9a3",
+  },
+  rac4: {
+    barTop: "#f25a5a",
+    barBottom: "#e23c3c",
+    barInk: "#2a0606",
+    barInkDeep: "#1f0303",
+    amber: "#ff6b61",
+    gold: "#ffb8b2",
+  },
+  rac5: {
+    barTop: "#6aa0ff",
+    barBottom: "#3f78f0",
+    barInk: "#06173a",
+    barInkDeep: "#020c24",
+    amber: "#7aa8ff",
+    gold: "#c2d6ff",
+  },
+};
+
+/** The custom properties a game's accent sets on the page; none for the launcher's own (rac1, or
+ *  no game). The warning colour is its own (app.css), so a warning still reads as one. */
+export function accentProperties(game: string | null): [string, string][] {
+  const a = game ? ACCENTS[game] : undefined;
+  if (!a) return [];
+  return [
+    ["--bar-top", a.barTop],
+    ["--bar-bottom", a.barBottom],
+    ["--bar-ink", a.barInk],
+    ["--bar-ink-deep", a.barInkDeep],
+    ["--amber", a.amber],
+    ["--gold", a.gold],
+    ["--brand", a.barBottom],
+  ];
+}
+
+/** The custom properties accentProperties may set, to take them all off again. */
+export const ACCENT_PROPERTIES = [
+  "--bar-top",
+  "--bar-bottom",
+  "--bar-ink",
+  "--bar-ink-deep",
+  "--amber",
+  "--gold",
+  "--brand",
+];

@@ -10,7 +10,8 @@
   import { themeStyle } from "$lib/themes";
   import Icon from "./Icon.svelte";
 
-  let { game, delay = 0 }: { game: GameView; delay?: number } = $props();
+  /** `selected`: the game picked last, whose colour the launcher wears (themes.ts accent). */
+  let { game, delay = 0, selected = false }: { game: GameView; delay?: number; selected?: boolean } = $props();
 
   // The game's still picture (media.ts), zoomed in a little while the tile has the pointer or the
   // focus; without one, the tile shows the game's colours.
@@ -28,7 +29,7 @@
 </script>
 
 {#if v && next}
-  <article class="tile rise" style={`${themeStyle(game.id)}; animation-delay: ${delay}ms`}>
+  <article class="tile rise" class:selected style={`${themeStyle(game.id)}; animation-delay: ${delay}ms`}>
     {#if art}
       <img class="art" src={art} alt="" decoding="async" onerror={hideMissing} />
     {/if}
@@ -119,10 +120,41 @@
     transition-duration: var(--fast);
   }
 
-  /* Android: the games side by side as tall cards, about the height of the screen held
-     sideways, as a console's home screen has them. */
+  /* Android: compact cards, three rows of them in the screen held sideways, so that every game
+     shows at once. */
   :global(html[data-platform="android"]) .tile {
-    min-height: clamp(200px, calc(100vh - 2 * var(--page-top) - var(--nav-bottom)), 340px);
+    min-height: clamp(128px, calc((100vh - 2 * var(--page-top) - var(--nav-bottom) - 28px) / 3), 200px);
+    border-radius: 18px;
+  }
+
+  :global(html[data-platform="android"]) .foot {
+    padding: 14px 16px;
+    gap: 12px;
+  }
+
+  :global(html[data-platform="android"]) h2 {
+    font-size: 1.125rem;
+  }
+
+  :global(html[data-platform="android"]) .act {
+    padding: 8px 16px;
+    font-size: 0.875rem;
+  }
+
+  /* The game picked last: ringed in the launcher's accent, which is its colour. */
+  .tile::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    box-shadow: inset 0 0 0 2px var(--amber);
+    opacity: 0;
+    transition: opacity var(--medium) var(--ease);
+    pointer-events: none;
+  }
+
+  .tile.selected::after {
+    opacity: 1;
   }
 
   .art {
@@ -254,7 +286,7 @@
   }
 
   /* A narrow tile: its button under its name, the tile's width. */
-  @container (max-width: 420px) {
+  @container (max-width: 340px) {
     .foot {
       flex-direction: column;
       align-items: stretch;

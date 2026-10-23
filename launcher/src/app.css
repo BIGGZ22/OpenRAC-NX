@@ -38,7 +38,8 @@
   --line-field: rgb(156 161 212 / 0.6);
   /* States. The site has none; these sit with its palette. */
   --ok: #8fd694;
-  --warn: var(--amber);
+  /* Its own amber, not var(--amber): a game's accent (themes.ts) changes that one. */
+  --warn: #ffb443;
   --err: #ff8a7a;
   --info: var(--lav);
 
@@ -69,6 +70,40 @@
   --nav-left: 0px;
   --nav-bottom: 0px;
   color-scheme: dark;
+}
+
+/* The accent's colours as colours, so that they ease from one game's to the next (Android, App.svelte)
+   rather than jump. */
+@property --bar-top {
+  syntax: "<color>";
+  inherits: true;
+  initial-value: #e5a013;
+}
+
+@property --bar-bottom {
+  syntax: "<color>";
+  inherits: true;
+  initial-value: #cd8300;
+}
+
+@property --amber {
+  syntax: "<color>";
+  inherits: true;
+  initial-value: #ffb443;
+}
+
+@property --gold {
+  syntax: "<color>";
+  inherits: true;
+  initial-value: #ffd08a;
+}
+
+html[data-platform="android"] {
+  transition:
+    --bar-top var(--slow) var(--ease),
+    --bar-bottom var(--slow) var(--ease),
+    --amber var(--slow) var(--ease),
+    --gold var(--slow) var(--ease);
 }
 
 @media (max-width: 600px) {
