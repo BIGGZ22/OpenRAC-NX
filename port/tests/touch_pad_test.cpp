@@ -2,10 +2,11 @@
 // Copyright (c) 2026 the OpenRAC contributors
 //
 // The on-screen pad (platform/touch_pad.h): fingers on its controls, as SDL reports them, become
-// the pad's buttons and sticks.
+// the pad's buttons, its stick and the camera; the player resizes and moves the controls.
 
 #include <cmath>
 #include <cstdio>
+#include <string>
 
 #include "check.h"
 #include "platform/touch_pad.h"
@@ -151,7 +152,105 @@ int main() {
     const TouchControl& select = control(menu, TouchControl::Kind::Button, Button::Select);
     const TouchControl& start = control(menu, TouchControl::Kind::Button, Button::Start);
     const float gap = (start.x - options.x) * menu.aspect() - start.radius * start.stretch - options.radius;
-    CHECK(gap > 0.05f);
+    CHECK(gap > 0.05f * menu.scale());
     CHECK(select.x < options.x && options.x < start.x);
+
+    // No right stick: a finger on the right of the screen, off the buttons, turns the camera as
+    // fast as it moves, and the camera stands still when the finger does or lifts.
+    TouchPad camera;
+    camera.set_aspect(2.0f);
+    for (const TouchControl& c : camera.controls()) {
+        CHECK(c.kind != TouchControl::Kind::Button || c.button != Button::R3);
+    }
+    camera.idle(1000);
+    camera.finger_down(1, 0.6f, 0.4f);
+    camera.idle(1016);
+    CHECK(read(camera).right_x == kStickCentre);
+    for (int frame = 1; frame <= 10; ++frame) {
+        camera.finger_move(1, 0.6f + 0.01f * static_cast<float>(frame), 0.4f);  // right, 1.25 heights a second
+        camera.idle(1016 + 16 * static_cast<std::uint64_t>(frame));
+    }
+    pad = read(camera);
+    CHECK(pad.right_x > 0xE0);
+    CHECK(pad.right_y >= 0x7E && pad.right_y <= 0x82);
+    CHECK(pad.buttons == Pad{}.buttons);
+    for (int frame = 11; frame <= 30; ++frame) {
+        camera.idle(1016 + 16 * static_cast<std::uint64_t>(frame));  // held still
+    }
+    CHECK(read(camera).right_x == kStickCentre);
+    camera.finger_move(1, 0.75f, 0.35f);
+    camera.idle(1016 + 16 * 31);
+    CHECK(read(camera).right_y < kStickCentre);
+    camera.finger_up(1);
+    CHECK(read(camera).right_x == kStickCentre && read(camera).right_y == kStickCentre);
+    // A finger that lands on a button presses it and does not turn the camera, even dragged.
+    const TouchControl& triangle = control(camera, TouchControl::Kind::Button, Button::Triangle);
+    camera.finger_down(2, triangle.x, triangle.y);
+    camera.idle(2000);
+    camera.finger_move(2, triangle.x - 0.01f, triangle.y);
+    camera.idle(2016);
+    pad = read(camera);
+    CHECK(pad.held(Button::Triangle));
+    CHECK(pad.right_x == kStickCentre);
+    camera.finger_up(2);
+    // The left thumb on the stick and the right one on the camera at once.
+    const TouchControl& walk = control(camera, TouchControl::Kind::LeftStick);
+    camera.finger_down(3, walk.x, walk.y);
+    camera.finger_move(3, walk.x, walk.y - 0.5f);
+    camera.finger_down(4, 0.7f, 0.5f);
+    camera.idle(3000);
+    camera.finger_move(4, 0.7f, 0.55f);
+    camera.idle(3016);
+    pad = read(camera);
+    CHECK(pad.left_y == 0x00);
+    CHECK(pad.right_y > kStickCentre);
+    camera.release_all();
+
+    // Smaller controls sit nearer the edges; the default is smaller than the pad's own.
+    TouchPad sized;
+    sized.set_aspect(16.0f / 9.0f);
+    CHECK(sized.scale() == TouchPad::kDefaultScale && TouchPad::kDefaultScale < 1.0f);
+    const TouchControl& face = control(sized, TouchControl::Kind::Button, Button::Cross);
+    const float small_radius = face.radius;
+    const float small_y = face.y;
+    sized.set_scale(1.0f);
+    CHECK(face.radius > small_radius);
+    CHECK(face.y < small_y);  // further up from the bottom edge
+    sized.set_scale(9.0f);
+    CHECK(sized.scale() == TouchPad::kMaxScale);
+    sized.set_scale(0.0f);
+    CHECK(sized.scale() == TouchPad::kMinScale);
+
+    // Editing: a finger drags the group it lands on, the game gets nothing, and the layout is a
+    // line of text that brings it back.
+    TouchPad edit;
+    edit.set_aspect(2.0f);
+    const TouchControl& up = control(edit, TouchControl::Kind::Button, Button::Up);
+    const TouchControl& down = control(edit, TouchControl::Kind::Button, Button::Down);
+    const float up_x = up.x;
+    const float up_y = up.y;
+    const float gap_y = down.y - up.y;
+    edit.set_editing(true);
+    CHECK(edit.visible());
+    edit.finger_down(1, up.x, up.y);
+    CHECK(read(edit).buttons == Pad{}.buttons);
+    edit.finger_move(1, up.x + 0.1f, up.y + 0.05f);
+    CHECK(std::abs(up.x - (up_x + 0.1f)) < 1e-5f && std::abs(up.y - (up_y + 0.05f)) < 1e-5f);
+    CHECK(std::abs(down.y - up.y - gap_y) < 1e-5f);  // the whole d-pad moved
+    CHECK(read(edit).buttons == Pad{}.buttons);
+    edit.finger_up(1);
+    edit.set_editing(false);
+    const std::string text = edit.layout();
+    CHECK(text.starts_with("dpad 0.2000 0.0500"));
+    TouchPad again;
+    again.set_aspect(2.0f);
+    again.set_layout(text);
+    const TouchControl& up_again = control(again, TouchControl::Kind::Button, Button::Up);
+    CHECK(std::abs(up_again.x - up.x) < 1e-4f && std::abs(up_again.y - up.y) < 1e-4f);
+    again.set_layout("dpad nonsense, face 0.1, nothing 1 2, stick 0.01 -0.02");
+    CHECK(again.layout() == "stick 0.0100 -0.0200");
+    again.reset_layout();
+    CHECK(again.layout().empty());
+    CHECK(std::abs(up_again.x - up_x) < 1e-5f);
     return openrac::test::result();
 }
