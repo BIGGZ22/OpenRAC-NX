@@ -52,6 +52,7 @@ public:
     bool hero_shadow_enabled() const { return m_hero_enabled; }
 
     bool enable_sun_shadow(bool enabled, std::string& error);
+
     bool shadow_atlas_active() const { return m_shadow_atlas_active; }
 
     bool batches_opaque_colour() const;
@@ -166,8 +167,13 @@ public:
     // The game's fog for this frame (GameState): FOGCOL 0..1, the depths in raw units (game
     // units x 1024) and the GS F at them (255 = none). The world layers are fogged as the GS
     // fogs them: C = FOGCOL + (C - FOGCOL) x F / 255, F linear in camera depth, clamped.
-    void set_fog(const std::array<float, 3>& colour, float near_depth, float far_depth,
-                 float near_f, float far_f);
+    void set_fog(
+        const std::array<float, 3>& colour,
+        float near_depth,
+        float far_depth,
+        float near_f,
+        float far_f
+    );
 
     // The light bank the mobys are lit from this frame (16 sets of 16 floats, as the game holds
     // it); until set, the level's exported sets.
@@ -280,6 +286,7 @@ private:
     std::array<std::vector<Group>, kLayerCount> m_groups;
     // The groups a live layer does not draw this frame, kept for the frames it does (set_instances).
     std::array<std::vector<Group>, kLayerCount> m_idle;
+
     // build_groups' lists, by model, kept for their storage.
     struct InstanceGroup {
         std::uint32_t key = 0;

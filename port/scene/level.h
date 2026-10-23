@@ -170,7 +170,9 @@ struct LevelData {
 // meshes and textures are read in place of the level's own of the same path,
 // whether or not the placements file itself is there.
 bool load_level(
-    const std::filesystem::path& dir, LevelData& out, std::string& error,
+    const std::filesystem::path& dir,
+    LevelData& out,
+    std::string& error,
     const std::filesystem::path& edited = {}
 );
 
