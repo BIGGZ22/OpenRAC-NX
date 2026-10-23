@@ -4,13 +4,13 @@
 
 Uses each level's settings. Outputs contain game data and must stay local.
 --jobs bakes that many levels at once (0: one per CPU thread, as many as half
-the memory holds, each baker taking an equal share of the threads; on Android every baker may use
-every thread, the largest levels first, so that the last levels to finish still use the whole CPU).
-Without --update a new output root is
-required and previous bakes are preserved. With --update (the launcher's way)
-the root is a cache: a level whose export, levels format, baker and options
-are those of its last verified bake is kept, any other is baked again in a
-folder of its own and put in place only once it is verified.
+the memory holds, each baker taking an equal share of the threads; on Android
+every baker may use every thread, the largest levels first, so that the last
+levels to finish still use the whole CPU). Without --update a new output root
+is required and previous bakes are preserved. With --update (the launcher's
+way) the root is a cache: a level whose export, levels format, baker and
+options are those of its last verified bake is kept, any other is baked again
+in a folder of its own and put in place only once it is verified.
 """
 from __future__ import annotations
 
