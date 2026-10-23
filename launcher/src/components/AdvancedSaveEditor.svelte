@@ -29,7 +29,9 @@
     return view.items.find((i) => i.id === id)?.name ?? extraItems[id] ?? `Item ${String(id)} (not decoded)`;
   }
   const itemIds = Array.from({ length: 37 }, (_, i) => i);
-  function levelName(id: number): string {
+  // Not lib/labels.ts's levelName: the save editor's list (core/src/save_edit.rs), with each level's
+  // location, and the slots no level uses marked as such.
+  function levelLabel(id: number): string {
     const l = view.levels.find((x) => x.id === id);
     return l ? `${l.name} · ${l.location}` : `Level ${String(id)} (unused)`;
   }
@@ -138,7 +140,7 @@
         >
           {#each levelIds.slice(0, 19) as id (id)}
             <option value={id}
-              >{String(id)} · {levelName(id)}{view.levels.find((l) => l.id === id)?.canLand ? "" : " (story)"}</option
+              >{String(id)} · {levelLabel(id)}{view.levels.find((l) => l.id === id)?.canLand ? "" : " (story)"}</option
             >
           {/each}
         </select>
@@ -370,14 +372,14 @@
               setI32(g(20), i, e.currentTarget.value);
             }}
           >
-            {#each levelIds as id (id)}<option value={id}>{String(id)} · {levelName(id)}</option>{/each}
+            {#each levelIds as id (id)}<option value={id}>{String(id)} · {levelLabel(id)}</option>{/each}
           </select>
         </label>
       {/each}
     </div>
     {#each levelIds as l (l)}
       <details class="planet">
-        <summary>{String(l)} · {levelName(l)}</summary>
+        <summary>{String(l)} · {levelLabel(l)}</summary>
         <div class="grid">
           <label class="cell check">
             <input
@@ -459,7 +461,7 @@
       <label for="raw-section">Section</label>
       <select id="raw-section" bind:value={rawSection}>
         <option value="g">Global</option>
-        {#each levelIds as l (l)}<option value={String(l)}>{String(l)} · {levelName(l)}</option>{/each}
+        {#each levelIds as l (l)}<option value={String(l)}>{String(l)} · {levelLabel(l)}</option>{/each}
       </select>
     </div>
     <p class="note">
