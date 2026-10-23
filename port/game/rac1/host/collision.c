@@ -29,6 +29,12 @@
  * CollOutput +4/+8/+0xC, as retail does; a miss calls func_L00_00254218 to pose the moby into the
  * cache, as retail does (the port's is host/render_native.c's, its own evaluator). The scratchpad
  * copies the kernels leave behind are not made.
+ *
+ * The kernels keep the hit in vector registers and store them whole, w lanes included; the lanes
+ * no kernel computes hold what the vector unit had, and are written as such: g_vf, the registers
+ * as the kernels leave them (the hit triangle's carry over from one query to the next, as a
+ * primitive hit leaves them untouched). The port has no vector unit, so they hold what the
+ * kernels left there (other code using VU0 in between is not modelled).
  */
 #include "rac1.h"
 #include "openrac/ps2float.h"
@@ -218,6 +224,18 @@ typedef struct {
 
 static Vert g_verts[2048];
 
+/* ---- What the kernels leave in vector registers they do not compute ----
+ *
+ * g_vf: VU0's vf registers as bits, as far as the kernels' stores take lanes they do not compute:
+ * vf2's w and vf25..vf29 (the hit registers, below). The sphere, capsule and hero-group kernels
+ * store the push-out from vf2, whose w lane is the w of the last quadword loaded into vf2 whole: a
+ * decoded mesh vertex (its fourth halfword), a face's second vertex (the outcode word the kernel
+ * keeps in its w), a primitive record's +0xC or a joint's w; the line query's cell walk turns it
+ * into the start's z x1024 (vmr32 three times). The port follows those loads (g_vf2w) where the
+ * kernels make them. */
+static uint32_t g_vf[32][4];
+#define g_vf2w (g_vf[2][3])
+
 /* What the sphere and capsule kernels' register $7 holds when a pose-cache miss stores it (the
  * entry's second word): the moby grid's address from the start of the moby pass, then, for each
  * moby with a mesh, the vertex pass's last "above in x" bit (0 or 2, the first vertex of the last
@@ -230,9 +248,19 @@ static Vert g_verts[2048];
  * mostly is. */
 static uint32_t g_r7;
 
-/* The cell's vertices as halfwords (x << 6, y << 6, z << 4) and their outcodes against [lo, hi] with
- * 16-bit wrapping compares (psubh). */
+/* xyz of a vec4 in game memory, and its w. */
+static void vstw(gaddr a, V3 v, uint32_t w) {
+    F32(a) = v.v[0];
+    F32(a + 4) = v.v[1];
+    F32(a + 8) = v.v[2];
+    U32(a + 0xC) = w;
+}
+
+/* The cell's vertices as halfwords (x << 6, y << 6, z << 4) and their outcodes against [lo, hi]
+ * with 16-bit wrapping compares (psubh). The decode loads two vertices at a time into vf1 / vf2, w
+ * zero. */
 static void decode_vertices(const Cell* c, const int16_t lo[3], const int16_t hi[3]) {
+    g_vf2w = 0;
     for (int i = 0; i < c->nv; ++i) {
         const uint32_t w = U32(c->leaf + 4 + 4 * (gaddr)i);
         const int32_t f[3] = {((int32_t)(w << 22)) >> 22, ((int32_t)(w << 12)) >> 22, ((int32_t)w) >> 20};
@@ -285,12 +313,32 @@ static inline int face_excluded(uint32_t fl, int ty) {
 
 /* ---- The running best hit ---- */
 
+/* The hit registers: vf25 the point, vf26 the normal, vf27..vf29 the hit triangle (g_vf). The
+ * kernels set the triangle's on a face hit only and scale them in place when they store a hit, and
+ * they keep their values from one kernel to the next as the vector unit's registers do: a primitive
+ * hit stores the triangle the last stored hit left there, scaled once more (the line query loads
+ * its endpoints into vf28 / vf29 first, their w lanes cleared, then their integers). No kernel
+ * computes their w lanes. */
+static void vf_set(int r, V3 v) {
+    for (int k = 0; k < 3; ++k) {
+        g_vf[r][k] = fb(v.v[k]);
+    }
+}
+
 typedef struct {
     int have;
     int32_t kind; /* 0x1000 | face type, or -(primitive record address) */
-    V3 point, normal, tri[3];
+    V3 point, normal;
+    uint32_t tri[3][3]; /* vf27..vf29's xyz: the registers as the query starts, until a face hit */
     gaddr moby;
 } Best;
+
+static void best_start(Best* b) {
+    memset(b, 0, sizeof *b);
+    for (int i = 0; i < 3; ++i) {
+        memcpy(b->tri[i], g_vf[27 + i], sizeof b->tri[i]);
+    }
+}
 
 static void record(Best* b, int ty, V3 point, V3 normal, V3 v0, V3 e1, V3 e2, V3 centre, gaddr moby) {
     const V3 v0abs = vadd(v0, centre);
@@ -298,25 +346,33 @@ static void record(Best* b, int ty, V3 point, V3 normal, V3 v0, V3 e1, V3 e2, V3
     b->kind = 0x1000 + ty;
     b->point = vadd(point, v0abs);
     b->normal = normal;
-    b->tri[0] = v0abs;
-    b->tri[1] = vadd(e1, v0abs);
-    b->tri[2] = vadd(e2, v0abs);
+    const V3 tri[3] = {v0abs, vadd(e1, v0abs), vadd(e2, v0abs)};
+    for (int i = 0; i < 3; ++i) {
+        for (int k = 0; k < 3; ++k) {
+            b->tri[i][k] = fb(tri[i].v[k]);
+        }
+    }
     b->moby = moby;
 }
 
-/* xyz of a vec4 in game memory (the kernels' sqc2 writes w from a lane the port does not keep). */
-static void vst(gaddr a, V3 v) {
-    F32(a) = v.v[0];
-    F32(a + 4) = v.v[1];
-    F32(a + 8) = v.v[2];
-}
-
-static void write_out(gaddr out, const Best* b, float k) {
-    vst(out + 0x20, vmuls(b->point, k));
-    vst(out + 0x40, b->normal);
-    vst(out + 0x50, vmuls(b->tri[0], k));
-    vst(out + 0x60, vmuls(b->tri[1], k));
-    vst(out + 0x70, vmuls(b->tri[2], k));
+/* CollOutput from the hit registers vf25..vf29, stored whole (sqc2): the point and the triangle
+ * times 2^-shift (vmulx.xyz; the triangle's registers keep it so scaled), the w lanes as the
+ * registers hold them. */
+static void write_out(gaddr out, const Best* b, int shift) {
+    const float k = ldexpf(1.0f, -shift);
+    vf_set(25, vmuls(b->point, k));
+    vf_set(26, b->normal);
+    for (int i = 0; i < 3; ++i) {
+        for (int l = 0; l < 3; ++l) {
+            g_vf[27 + i][l] = fb(fmul(fbits(b->tri[i][l]), k));
+        }
+    }
+    static const gaddr at[5] = {0x20, 0x40, 0x50, 0x60, 0x70};
+    for (int r = 0; r < 5; ++r) {
+        for (int l = 0; l < 4; ++l) {
+            U32(out + at[r] + 4 * (gaddr)l) = g_vf[25 + r][l];
+        }
+    }
     U32(out + 0x18) = b->moby;
     S32(out + 0x1C) = b->kind;
 }
@@ -405,7 +461,9 @@ static inline V3 rot(const V3 r[3], V3 v) {
     return o;
 }
 
-/* The blob's mesh vertices relative to the moby's position, outcodes against [lo, hi] by sign. */
+/* The blob's mesh vertices relative to the moby's position, outcodes against [lo, hi] by sign. The
+ * kernels transform two at a time and load the next pair ahead (vf2 the second, its fourth halfword
+ * as w): after the last pair, the pair past it. */
 static int moby_mesh_verts(const MobyColl* c, V3 lo, V3 hi) {
     V3 rs[3];
     for (int r = 0; r < 3; ++r) {
@@ -425,12 +483,14 @@ static int moby_mesh_verts(const MobyColl* c, V3 lo, V3 hi) {
         g_verts[i].code = code;
     }
     if (c->nverts > 0) {
+        g_vf2w = (uint32_t)(int32_t)S16(c->verts + 16 * (gaddr)((c->nverts + 1) / 2) + 14);
         g_r7 = g_verts[2 * ((n + 1) / 2 - 1)].code & 2;
     }
     return n;
 }
 
-/* Face i of the blob, unless culled by its outcodes or the flags (face_excluded, step by step). */
+/* Face i of the blob, unless culled by its outcodes or the flags (face_excluded, step by step: one
+ * past the outcodes has its vertices loaded). */
 static int moby_face(const MobyColl* c, int n, int i, uint32_t fl, Vert* v, int* ty) {
     const gaddr f = c->faces + 4 * (gaddr)i;
     const int a = U8(f), b = U8(f + 1), d = U8(f + 2);
@@ -445,6 +505,7 @@ static int moby_face(const MobyColl* c, int n, int i, uint32_t fl, Vert* v, int*
     if ((v[0].code & v[1].code & v[2].code) != 0) {
         return 0;
     }
+    g_vf2w = v[1].code;
     if ((fl & 0x80 & (uint32_t)*ty) != 0) {
         return 0;
     }
@@ -538,10 +599,15 @@ static inline V3 joint_at(int j) {
     const gaddr a = joint_addr(j);
     return a != 0 ? vld(a) : v3(0.0f, 0.0f, 0.0f);
 }
+static inline uint32_t joint_w(int j) {
+    const gaddr a = joint_addr(j);
+    return a != 0 ? U32(a + 0xC) : 0;
+}
 
 /* The sphere / capsule kernels' primitive point nearest the query point (a capsule's base) and its
- * radius: kind 1 a sphere, 2 a sphere on a joint, 3 a vertical cylinder, any other a capsule between
- * two joints. */
+ * radius: kind 1 a sphere, 2 a sphere on a joint, 3 a vertical cylinder, any other a capsule
+ * between two joints. All but kind 1 load vf2 whole: the record's first quadword, the capsule its
+ * second joint. */
 static int vol_prim(const MobyColl* c, gaddr p, V3 cq, int capsule, V3* cc, float* rad) {
     const int kind = S8(p);
     const float s = c->s;
@@ -551,6 +617,7 @@ static int vol_prim(const MobyColl* c, gaddr p, V3 cq, int capsule, V3* cc, floa
         *rad = fmul(F32(p + 0x1C), s);
         return 1;
     }
+    g_vf2w = (kind == 2 || kind == 3) ? U32(p + 0xC) : joint_w(S16(p + 6));
     if (kind == 2) {
         const V3 v = vadd(joint_at(S32(p + 4)), vld(p + 0x10));
         *cc = vadd(rot(c->rows, vmuls(v, s)), c->pos);
@@ -818,14 +885,31 @@ typedef struct {
 #define DDA_MAX 256
 static LineCell g_list[3 * DDA_MAX + 2];
 
-/* `vmini`/`vmax` of the endpoints and the [0, 1024)^3 test from the MAC sign flags. */
-static int in_world(V3 a, V3 b) {
+/* `vmini`/`vmax` of the endpoints and the [0, 1024)^3 test from the MAC sign flags, in two steps:
+ * the low corner not below 0, the high corner below 1024. */
+static int in_world_lo(V3 a, V3 b) {
     for (int k = 0; k < 3; ++k) {
-        if (neg(fsub(fmin2(a.v[k], b.v[k]), 0.0f)) || !neg(fsub(fmax2(a.v[k], b.v[k]), K1024))) {
+        if (neg(fsub(fmin2(a.v[k], b.v[k]), 0.0f))) {
             return 0;
         }
     }
     return 1;
+}
+static int in_world_hi(V3 a, V3 b) {
+    for (int k = 0; k < 3; ++k) {
+        if (!neg(fsub(fmax2(a.v[k], b.v[k]), K1024))) {
+            return 0;
+        }
+    }
+    return 1;
+}
+
+/* vftoi0.xyzw into register r: its lanes' integers, kept as bits (w: 0 x1024). */
+static void vf_int(int r, V3 v) {
+    for (int k = 0; k < 3; ++k) {
+        g_vf[r][k] = (uint32_t)ftoi0(v.v[k]);
+    }
+    g_vf[r][3] = 0;
 }
 
 /* The DDA cell list: entries (t, cell) in walk order, without the 1.0 terminator; -1 for a zero-length
@@ -846,6 +930,9 @@ static int line_cell_list(V3 a1024, V3 b1024) {
         }
         return 1;
     }
+    /* the walk keeps the start in vf2 (vmove.xyz) and turns it once per axis (vmr32): its w ends as
+     * z */
+    g_vf2w = fb(a1024.v[2]);
     static int32_t lists[3][DDA_MAX + 1];
     int len[3] = {0, 0, 0}, dir[3];
     const V3 d = vsub(b1024, a1024);
@@ -1132,8 +1219,8 @@ static void line_mobys(const Ctx* x, uint32_t stamp, uint32_t fl, V3 a, V3 b, V3
 }
 
 /* A hit record for the moby a line with a template hit (moby +0xA4 indexes the record), unless the
- * record it has for it already carries more damage. */
-static void hit_record(const Ctx* x, gaddr moby, gaddr tmpl, V3 point, int32_t index, float w) {
+ * record it has for it already carries more damage. The point is the hit register, w zero. */
+static void hit_record(const Ctx* x, gaddr moby, gaddr tmpl, V3 point, int32_t index) {
     const int8_t old = S8(moby + 0xA4);
     if (old >= 0) {
         const gaddr r = x->hits + (gaddr)old * 64;
@@ -1145,24 +1232,33 @@ static void hit_record(const Ctx* x, gaddr moby, gaddr tmpl, V3 point, int32_t i
     U32(x->out + 0x14) = (i + 1) & 0x3F;
     S8(moby + 0xA4) = (int8_t)i;
     const gaddr r = x->hits + (i & 0x3F) * 64; /* the kernel does not mask the index it stores at */
-    vst(r, point);
-    F32(r + 0xC) = w;
+    vstw(r, point, 0);
     memmove(G(r + 0x10), G(tmpl), 0x24);
     U32(r + 0x34) = moby;
     S32(r + 0x38) = index;
 }
 
 static int coll_line(const Ctx* x, gaddr pa, gaddr pb, uint32_t fl, gaddr ignore, gaddr tmpl) {
+    /* The endpoints go to vf28 / vf29, then, past the stamp and each half of the world test, their
+     * integers x1024 (the triangle registers), their w lanes cleared first. */
+    const V3 a = vld(pa), b = vld(pb);
+    vf_set(28, a);
+    vf_set(29, b);
+    g_vf[28][3] = g_vf[29][3] = 0;
     const int64_t stamp = new_stamp(x->out);
     if (stamp < 0) {
         return 0;
     }
-    const V3 a = vld(pa), b = vld(pb);
-    if (!in_world(a, b)) {
-        return 0;
-    }
     const V3 a1024 = vmuls(a, K1024);
     const V3 b1024 = vmuls(b, K1024);
+    vf_int(28, a1024);
+    if (!in_world_lo(a, b)) {
+        return 0;
+    }
+    vf_int(29, b1024);
+    if (!in_world_hi(a, b)) {
+        return 0;
+    }
     const int n = line_cell_list(a1024, b1024);
     if (n < 0) {
         return 0;
@@ -1170,12 +1266,7 @@ static int coll_line(const Ctx* x, gaddr pa, gaddr pb, uint32_t fl, gaddr ignore
     const V3 d = vsub(b1024, a1024);
     float best_t = 1.0f;
     Best best;
-    memset(&best, 0, sizeof best);
-    /* A primitive hit keeps the triangle registers as they were: the previous hit's, or here what
-     * CollOutput holds. */
-    for (int k = 0; k < 3; ++k) {
-        best.tri[k] = vmuls(vld(x->out + 0x50 + 0x10 * (gaddr)k), K1024);
-    }
+    best_start(&best);
     g_joints = 0;
     if ((fl & 0x1) == 0) {
         line_world(U32(x->out), fl, a1024, b1024, d, n, &best_t, &best);
@@ -1184,11 +1275,11 @@ static int coll_line(const Ctx* x, gaddr pa, gaddr pb, uint32_t fl, gaddr ignore
     if (!best.have) {
         return 0;
     }
-    write_out(x->out, &best, INV1024);
+    write_out(x->out, &best, 10);
     if (best.moby != 0 && tmpl != 0 && (U16(best.moby + 0x34) & 0x4000) != 0) {
         const int32_t index =
             best.kind < 0 ? (int32_t)(((uint32_t)(-best.kind) - U32(best.moby + 0x94)) >> 5) : -1;
-        hit_record(x, best.moby, tmpl, vmuls(best.point, INV1024), index, 0.0f);
+        hit_record(x, best.moby, tmpl, vmuls(best.point, INV1024), index);
     }
     return 1;
 }
@@ -1365,10 +1456,7 @@ static int coll_volume(const Ctx* x, float radius, float height, gaddr centre, u
     const float shrink = best_shrink();
     float best_d = fmul(vol.rr, shrink);
     Best best;
-    memset(&best, 0, sizeof best);
-    for (int k = 0; k < 3; ++k) {
-        best.tri[k] = vmuls(vld(x->out + 0x50 + 0x10 * (gaddr)k), K1024);
-    }
+    best_start(&best);
     g_joints = 0;
     const gaddr mesh = U32(x->out);
     if ((fl & 0x1) == 0) {
@@ -1411,7 +1499,12 @@ static int coll_volume(const Ctx* x, float radius, float height, gaddr centre, u
                         const Vert* v0 = &g_verts[vi[0]];
                         const Vert* v1 = &g_verts[vi[1]];
                         const Vert* v2 = &g_verts[vi[2]];
-                        if ((v0->code & v1->code & v2->code) != 0 || face_excluded(fl, ty)) {
+                        if ((v0->code & v1->code & v2->code) != 0) {
+                            continue;
+                        }
+                        /* the face's vertices are loaded once past the outcodes */
+                        g_vf2w = v1->code;
+                        if (face_excluded(fl, ty)) {
                             continue;
                         }
                         V3 pt, nrm, e1, e2;
@@ -1434,8 +1527,8 @@ static int coll_volume(const Ctx* x, float radius, float height, gaddr centre, u
     if (!best.have) {
         return 0;
     }
-    write_out(x->out, &best, INV1024);
-    vst(x->out + 0x30, volume_pushed(&vol, &best, best_d));
+    write_out(x->out, &best, 10);
+    vstw(x->out + 0x30, volume_pushed(&vol, &best, best_d), g_vf2w);
     return 1;
 }
 
@@ -1674,7 +1767,7 @@ int func_L00_001F34F0(float a0, gaddr a1) {
             hi16[k] = (int16_t)ftoi0(fadd(c64.v[k], r64));
         }
         Best best;
-        memset(&best, 0, sizeof best);
+        best_start(&best);
         const int groups = S32(hero);
         for (int g = 0; g < groups; ++g) {
             const gaddr h = hero + 0x10 + 0x10 * (gaddr)g;
@@ -1689,6 +1782,8 @@ int func_L00_001F34F0(float a0, gaddr a1) {
             const int nv = U16(h + 0xA);
             const int nt = U8(h + 8);
             const gaddr data = U32(h + 0xC);
+            /* Decoded two at a time (at least once), vf2 the second, w its fourth halfword. */
+            g_vf2w = U16(data + 16 * (gaddr)(nv > 0 ? (nv + 1) / 2 : 1) - 2);
             for (int i = 0; i < nv && i < 2048; ++i) {
                 const gaddr vp = data + 8 * (gaddr)i;
                 const int16_t hv[3] = {(int16_t)U16(vp), (int16_t)U16(vp + 2), (int16_t)U16(vp + 4)};
@@ -1714,6 +1809,7 @@ int func_L00_001F34F0(float a0, gaddr a1) {
                 if ((v0->code & v1->code & v2->code) != 0) {
                     continue;
                 }
+                g_vf2w = v1->code;
                 V3 pt, nrm, e1, e2;
                 float d2;
                 if (!sphere_tri(0, c64, v0->p, v1->p, v2->p, best_d, &pt, &d2, &nrm, &e1, &e2)) {
@@ -1727,8 +1823,8 @@ int func_L00_001F34F0(float a0, gaddr a1) {
             const float q = fdiv(r64, fsqrt(best_d));
             const float k = 1.0f / 64.0f;
             const V3 w = vmuls(vmuls(vsub(c64, best.point), q), k);
-            write_out(x->out, &best, k);
-            vst(x->out + 0x30, vadd(w, vmuls(best.point, k)));
+            write_out(x->out, &best, 6);
+            vstw(x->out + 0x30, vadd(w, vmuls(best.point, k)), g_vf2w);
             result = 1;
         }
     }
