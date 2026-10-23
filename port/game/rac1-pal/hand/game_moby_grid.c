@@ -69,9 +69,15 @@ static int exe_grid_contains(unsigned int rect, int x, int y) {
 }
 
 static int exe_grid_valid(unsigned int rect) {
+    /* Retail checks no range. Its callers (func_0020ED48, func_L00_00251E30) drop a rect whose
+     * near corner is off the grid, not one whose far column is 64: a moby whose sphere reaches
+     * past x 1024 (on Hoven, one knocked back off the world's edge by func_L00_0025D6F0, which
+     * moves it once more after flagging it 0x100 at 1021) reaches column 64 of its rows, which
+     * retail's cell address (x * 4 + y * 256) makes column 0 of the next row. That stays in the
+     * table and is kept; a cell past the table's end (row 64, or column 64 of row 63) is fatal. */
     return (rect & 0x80000000u) || ((rect & 255) <= ((rect >> 16) & 255)
         && ((rect >> 8) & 255) <= (rect >> 24)
-        && ((rect >> 16) & 255) < 64 && (rect >> 24) < 64);
+        && ((rect >> 16) & 255) <= 64 && (rect >> 24) * 64 + ((rect >> 16) & 255) < 4096);
 }
 
 void func_0020EA70(unsigned char* moby, unsigned int next) {
