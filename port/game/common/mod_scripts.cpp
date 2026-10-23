@@ -5,13 +5,11 @@
 
 #include "mod_scripts.h"
 
-#include "openrac/keys.h"
-
 #include <algorithm>
 #include <chrono>
 #include <cmath>
-#include <cstdlib>
 #include <cstddef>
+#include <cstdlib>
 #include <cstring>
 #include <format>
 #include <fstream>
@@ -19,10 +17,12 @@
 #include <sstream>
 
 #include "common/crash.h"
+#include "common/env.h"
 #include "lua.h"
 #include "luacode.h"
 #include "lualib.h"
 #include "openrac/guest.h"
+#include "openrac/keys.h"
 
 namespace fs = std::filesystem;
 
@@ -35,11 +35,9 @@ constexpr std::uint32_t kRamSize = 32u * 1024u * 1024u;  // what read and write 
 using Clock = std::chrono::steady_clock;
 
 double g_budget_ms = [] {
-    if (const char* env = std::getenv("OPENRAC_SCRIPT_BUDGET_MS")) {
-        const double v = std::atof(env);
-        if (v > 0.0) {
-            return v;
-        }
+    const double v = env::number(env::Var::ScriptBudgetMs, 2.0);
+    if (v > 0.0) {
+        return v;
     }
     return 2.0;
 }();
