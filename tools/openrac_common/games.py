@@ -16,7 +16,7 @@ game's README, and this module does not check them.
 
 source_checkout is the one rule for where a version's sister project (its matching decomp, synced
 into games/) is checked out, written from tools/openrac.py's source_checkout and tools/sources.py's
-checkout, which said the same thing twice (P2-30).
+checkout, which said the same thing twice (P2-30). tools/fcheck_gate.py finds rac1-decomp by it.
 """
 import json
 import os

@@ -17,7 +17,7 @@ The tools in `tools/` use it since P1-05; `port/tools` and `editor` move onto it
 | Module | Used by |
 |---|---|
 | `paths` | every tool in `tools/` that knows the repository: `openrac`, `extractor`, `sources`, `shared`, `xmap`, `versions`, `port`, `build_port`, `build_android`, `bundle_standalone`, `fcheck_gate` |
-| `games` | `openrac`, `extractor`, `sources`, `xmap` |
+| `games` | `openrac`, `extractor`, `sources`, `xmap`; `fcheck_gate` (`source_checkout`) |
 | `tables` | `fcheck_gate`, `port`, `xmap`, `versions` |
 | `digest` | `openrac`, `extractor`, `shared`, `build_port`, `build_android`, `fcheck_gate` |
 | `files` | `openrac` (`place_link`), `extractor`, `bundle_standalone` |
@@ -62,7 +62,8 @@ is the one rule every tool follows to find it, decided by the maintainers (P2-30
 `game.json` records where the projects' own checkouts are; the variable is for a machine that keeps
 one somewhere else. Nothing checks that the folder exists: each tool says what is missing in its own
 words. `sources.py` (import, sync, status) and `openrac.py` (`progress --fetch` and the reports'
-dates) use it.
+dates) use it; `fcheck_gate.py` uses it for rac1-decomp, behind its own `OPENRAC_DECOMP`, which
+still wins when set.
 
 Every function takes a `pathlib.Path` or a string for a path. The functions that read the repository
 (`games.*`) take an optional `root`, so a test can point them at a synthetic tree.

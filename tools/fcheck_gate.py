@@ -44,7 +44,9 @@ port/game/rac1-ntsc/hand/fcheck.tsv for hand.tsv. Columns:
 
 Environment: OPENRAC_ROOT is the OpenRAC checkout that has build/runtime/
 openrac-fcheck and openrac-boot built (default: the checkout holding this script);
-OPENRAC_DECOMP is rac1-decomp (default ~/Projects/RAC/rac1-decomp).
+OPENRAC_DECOMP is rac1-decomp's checkout, when set; else the gate finds it as every
+tool finds a sister checkout (openrac_common.games.source_checkout): in
+OPENRAC_SOURCE_RAC1_PAL, else at the "checkout" games/rac1/game.json names for pal.
 Headless only: fcheck opens no window.
 
   python3 -m unittest tools/test_fcheck_gate.py
@@ -61,7 +63,7 @@ import subprocess
 import sys
 from pathlib import Path
 
-from openrac_common import digest, paths, proc, tables
+from openrac_common import digest, games, paths, proc, tables
 
 ROOT = paths.repo_root()
 PAL_TABLE = ROOT / "games/rac1/nonmatching/functional.tsv"
@@ -153,7 +155,17 @@ def csum(path: Path) -> str:
 # --- Running fcheck ---------------------------------------------------------------
 
 def decomp_root() -> Path:
-    return Path(os.environ.get("OPENRAC_DECOMP", str(Path.home() / "Projects/RAC/rac1-decomp")))
+    """rac1-decomp's checkout: $OPENRAC_DECOMP when set and not empty, else rac1/pal's sister
+    checkout by the rule every tool follows (games.source_checkout: $OPENRAC_SOURCE_RAC1_PAL, else
+    game.json's checkout). OPENRAC_DECOMP is kept, and wins, because the gate's users and
+    docs/workflow/BACKFILL.md already name it."""
+    override = os.environ.get("OPENRAC_DECOMP")
+    if override:
+        return Path(override)
+    checkout = games.source_checkout("rac1", "pal", ROOT)
+    if checkout is None:
+        raise SystemExit("games/rac1/game.json names no source project for pal: set OPENRAC_DECOMP")
+    return checkout
 
 
 def fcheck_commit(decomp: Path) -> str:
@@ -665,6 +677,9 @@ def check_row(decomp: Path, name: str, src: Path, log_dir: Path, levels: bool) -
 
 def cmd_run(args: argparse.Namespace) -> int:
     decomp = decomp_root()
+    if not decomp.is_dir():
+        raise SystemExit(f"no rac1-decomp checkout at {decomp}: set OPENRAC_DECOMP or "
+                         f"{games.source_variable('rac1', 'pal')} to it")
     back = Backfill(PAL_TABLE)
     table = Verdicts(PAL_VERDICTS, back)
     commit = fcheck_commit(decomp)
