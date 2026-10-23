@@ -7,16 +7,15 @@
  * (called where the console would raise the interrupt), answer at once, and
  * leave the IOP's services to the replacements of the libraries above them
  * (disc, memory card, pads, sound). */
+#include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 
 #include "openrac/game_host.h"
 #include "openrac/game_lib.h"
 #include "openrac/guest.h"
 #include "openrac/host_env.h"
-
-#include <stdint.h>
-#include <string.h>
 
 #define MAX_HANDLERS 8
 

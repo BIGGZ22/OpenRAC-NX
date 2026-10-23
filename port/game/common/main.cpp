@@ -24,24 +24,23 @@
 // library not replaced yet) is logged and returns, and the game carries on;
 // --stop-on-missing stops at the first one instead and says which, for checks.
 
+#include <algorithm>
+#include <cfenv>
 #include <chrono>
+#include <cmath>
+#include <csignal>
+#include <cstdio>
 #include <cstdlib>
 #include <cstring>
-#include <cstdio>
+#include <ctime>
 #include <filesystem>
+#include <format>
 #include <memory>
 #include <optional>
 #include <span>
-#include <algorithm>
-#include <format>
 #include <string>
 #include <thread>
 #include <vector>
-
-#include <cfenv>
-#include <cmath>
-#include <csignal>
-#include <ctime>
 
 #include "common/build_info.h"
 #include "common/crash.h"
@@ -62,16 +61,16 @@
 
 #ifdef OPENRAC_FRONTEND
 #include "debug_overlay.h"
+#include "enhanced/viewer/probe_lighting.h"
 #include "frontend.h"
-#include "settings.h"
 #include "platform/audio.h"
 #include "platform/input.h"
 #include "platform/performance_hint.h"
 #include "platform/pump.h"
-#include "enhanced/viewer/probe_lighting.h"
 #include "renderer/direct.h"
 #include "renderer/gl.h"
 #include "renderer/texture.h"
+#include "settings.h"
 #include "viewer/level.h"
 #include "viewer/moby_pose.h"
 #endif

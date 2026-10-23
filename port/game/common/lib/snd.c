@@ -8,13 +8,13 @@
  * VAG streams (music, speech) are read from the disc and played by the same
  * engine; movie sound is the movie player's. Disc reads made through the library's
  * stream-safe calls go to the disc replacement. */
+#include <stdio.h>
+
 #include "openrac/game_host.h"
 #include "openrac/game_lib.h"
 #include "openrac/guest.h"
 #include "openrac/host_env.h"
 #include "openrac/sound_engine.h"
-
-#include <stdio.h>
 
 /* OPENRAC_SOUND_LOG (as the command flush, rac1/host/hand.c): the stops and the still-playing
  * questions, which go to the engine directly rather than through the batch, on stderr too. */
