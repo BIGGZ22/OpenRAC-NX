@@ -176,16 +176,39 @@ void FUN_001f9bf8(float *out, float *a, float length) {
     put(out, x, y, z, bits_of(a, 3));
 }
 
+/*
+ * One product of the vector unit's multiplier: a factor with exponent 0 is zero and makes the
+ * product zero (with the sign of the two) whatever the other factor is, for the console's floats
+ * have no infinity or NaN (an exponent of 255 is an ordinary number); the host's 0 * NaN is a NaN.
+ * Such bit patterns sit in lanes no routine computes: the capsule query stores its push-out's w as
+ * a mesh vertex word it loaded (0xFFFFFF01, a -255), the hero's position takes that quadword whole,
+ * and func_L00_0024FF10 (HeroSyncMoby) multiplies (position - moby position) by a rotation whose
+ * fourth row is zero: 0 there on the console, here a NaN in the hero's collision primitive, which
+ * the camera's sphere query then hit (Oltanis: the camera, the stick's heading and the hero NaN).
+ */
+static __inline__ float vu_times(float a, float b) {
+    union {
+        float f;
+        unsigned u;
+    } p;
+    unsigned ua = bits_of(&a, 0), ub = bits_of(&b, 0);
+    if ((ua & 0x7F800000u) == 0 || (ub & 0x7F800000u) == 0) {
+        p.u = (ua ^ ub) & 0x80000000u;
+        return p.f;
+    }
+    return a * b;
+}
+
 /* out = m * v for a matrix of four columns and all four fields of v. (vmulax, vmadday, vmaddaz, vmaddw) */
 void FUN_001f9d20(float *out, float *v, float *m) {
     float x = v[0], y = v[1], z = v[2], w = v[3];
     float r[4];
     int i;
     for (i = 0; i < 4; i++) {
-        float sum = m[i] * x;
-        sum = sum + m[4 + i] * y;
-        sum = sum + m[8 + i] * z;
-        r[i] = sum + m[12 + i] * w;
+        float sum = vu_times(m[i], x);
+        sum = sum + vu_times(m[4 + i], y);
+        sum = sum + vu_times(m[8 + i], z);
+        r[i] = sum + vu_times(m[12 + i], w);
     }
     out[0] = r[0];
     out[1] = r[1];
@@ -200,10 +223,10 @@ void FUN_001f9cf8(float *out, float *v, float *m) {
     float r[4];
     int i;
     for (i = 0; i < 4; i++) {
-        float sum = m[i] * x;
-        sum = sum + m[4 + i] * y;
-        sum = sum + m[8 + i] * z;
-        r[i] = sum + last[i] * w;
+        float sum = vu_times(m[i], x);
+        sum = sum + vu_times(m[4 + i], y);
+        sum = sum + vu_times(m[8 + i], z);
+        r[i] = sum + vu_times(last[i], w);
     }
     out[0] = r[0];
     out[1] = r[1];
