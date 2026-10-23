@@ -9,6 +9,13 @@
  *
  * Parameters are as the port translates the game: u32 is a game address or an unsigned word, i32 an
  * int, f32 a float.
+ *
+ * Each hook point has three names here: OPENRAC_RAC1_HOOK_<name>, the string openrac_api.hook takes;
+ * OPENRAC_RAC1_SIG_<name>, its signature string; and openrac_rac1_<name>, the type of a function
+ * that can replace it. OPENRAC_RAC1_HOOK takes them together. The points are in the order they
+ * were added. The first six came with interface 1.0; the rest were added to the 1.x line without a
+ * minor of their own, because the table does not change: on a port that lacks one, openrac_api.hook
+ * returns OPENRAC_HOOK_UNKNOWN, and the mod decides whether to go on without it.
  */
 #ifndef OPENRAC_GAMES_RAC1_H
 #define OPENRAC_GAMES_RAC1_H
@@ -18,6 +25,10 @@
 #ifdef __cplusplus
 extern "C" {
 #endif
+
+/* ------------------------------------------------------------------------------------------ *
+ * The first hook points (interface 1.0)
+ * ------------------------------------------------------------------------------------------ */
 
 /* Pad_ProcessReport (func_002181F0): one pad report into the pad's state (PadState, at pad), each
  * poll, before the tick reads it. */
@@ -58,6 +69,10 @@ typedef void (*openrac_rac1_FollowCamera_ApplyOverrides)(openrac_gaddr camera);
 #define OPENRAC_RAC1_HOOK_Hero_AdvanceAnimation "Hero_AdvanceAnimation"
 #define OPENRAC_RAC1_SIG_Hero_AdvanceAnimation "void()"
 typedef void (*openrac_rac1_Hero_AdvanceAnimation)(void);
+
+/* ------------------------------------------------------------------------------------------ *
+ * Hook points added to the 1.x line (the table is unchanged: check openrac_api.hook's result)
+ * ------------------------------------------------------------------------------------------ */
 
 /* Item_Give (func_L00_002618D8, rac1.item.give): gives the player item id (GiveItem): its owned
  * and obtained bytes, its banner, its starting ammo, its vendor stock mark and the quick select;
@@ -139,8 +154,15 @@ typedef openrac_gaddr (*openrac_rac1_Level_LoadGameplay)(int32_t full);
 #define OPENRAC_RAC1_SIG_Hero_ApproachSpeed "void(f32,f32)"
 typedef void (*openrac_rac1_Hero_ApproachSpeed)(float up, float down);
 
-/* Take a hook point by its short name: OPENRAC_RAC1_HOOK(api, mod, Hero_TurnToHeading, my_turn,
- * &s_turn_original). */
+/* ------------------------------------------------------------------------------------------ *
+ * Taking a hook point
+ * ------------------------------------------------------------------------------------------ */
+
+/* Takes a hook point by its short name: OPENRAC_RAC1_HOOK(api, mod, Hero_TurnToHeading, my_turn,
+ * &s_turn_original). `api` and `mod` are what openrac_mod_load received, `replacement` a function of
+ * the hook point's type (openrac_rac1_<point>), and `original` the address of a variable of that
+ * type, which receives what the replacement goes on to. Evaluates to openrac_api.hook's result
+ * (OPENRAC_HOOK_OK, or the reason). Only during openrac_mod_load. Since 1.0. */
 #define OPENRAC_RAC1_HOOK(api, mod, point, replacement, original)                                  \
     (api)->hook(                                                                                   \
         (mod),                                                                                     \
