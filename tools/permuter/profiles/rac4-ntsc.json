@@ -1,0 +1,18 @@
+{
+ "name": "rac4/ntsc",
+ "about": "Deadlocked, NTSC-U (SCUS_974.65): tools/cc.sh compiles a copy of the function's file with the candidate in place (SN GCC 2.95.3 v1.36 and the ps2eeas fix-up passes; the file's flags are its /* cflags: */ comment, read by tools/layout.py); tools/check_func.py is the checker. On macOS and Linux a `wine` shim runs the compiler through wibo, the way check_func.py runs it with wine on PATH.",
+ "checkout": ["rac4", "ntsc"],
+ "env": {"RAC_VERSION": "us"},
+ "shims": {"wine": "~/Projects/RAC/rac3-toolchains/wibo", "python": "~/Projects/RAC/rac3-venv/bin/python"},
+ "python": ["~/Projects/RAC/rac4-venv/bin/python", "~/Projects/RAC/rac3-venv/bin/python", "python3"],
+ "sources": ["src/[!p]*/**/*.c", "src/p[!a]*/**/*.c", "nonmatching/**/*.c"],
+ "asm": ["asm/us/*/*/{func}.s"],
+ "prelude": "#include \"common.h\"\n",
+ "word_order": "word",
+ "cpp": ["gcc", "-E", "-P", "-DPERMUTER", "-I", "{checkout}/include"],
+ "flags": ["{python}", "-c", "import sys; sys.path.insert(0, 'tools'); import layout; print(' '.join(layout.cflags(open(sys.argv[1]).read())))", "{source}"],
+ "compile": [["bash", "tools/cc.sh", "{spliced}", "{out}", "{flags}", "-I{srcdir}"]],
+ "check": ["{python}", "tools/check_func.py", "--version", "us", "{func}", "{snippet}"],
+ "exact": "^{func}: MATCH",
+ "notes": "asm/us/ comes from `python3 tools/asm_programs.py --version us main frontbin ...` in rac4-decomp."
+}

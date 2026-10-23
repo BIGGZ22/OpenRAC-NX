@@ -1,0 +1,15 @@
+{
+ "name": "rac1/pal",
+ "about": "Ratchet & Clank, PAL (SCES_509.16), rac1-decomp: tools/permuter_compile.py puts the candidate in its source file and builds it with tools/try_func.py's own build() (SN ee-gcc under Wine, the file's flags from config/file_cflags.txt, the fix-up passes); tools/try_func.py is the checker. Both run in rac1-decomp's build image, in one container kept for the run (macOS and Linux without 32-bit Wine).",
+ "checkout": ["rac1", "pal"],
+ "env": {"RAC1_BUILD_IMAGE": "ghcr.io/lynder063/rac1-build:latest", "RAC1_PERMUTER_CONTAINER": "openrac-permuter-rac1"},
+ "start": [["sh", "-c", "docker start {RAC1_PERMUTER_CONTAINER} >/dev/null 2>&1 || docker run -d --init --platform linux/386 --name {RAC1_PERMUTER_CONTAINER} -v {checkout}:{checkout} -v {cache}:{cache} -w {checkout} {RAC1_BUILD_IMAGE} sleep infinity"]],
+ "sources": ["src/**/*.c", "nonmatching/**/*.c"],
+ "asm": ["asm/nonmatchings/*/{func}.s", "asm/overlays/{func}.s"],
+ "word_order": "le-bytes",
+ "cpp": ["gcc", "-E", "-P", "-DPERMUTER", "-I", "{checkout}/include", "-I", "{checkout}"],
+ "compile": [["docker", "exec", "-w", "{checkout}", "{RAC1_PERMUTER_CONTAINER}", "python3", "tools/permuter_compile.py", "--name", "{func}", "--decls", "{decls}", "{snippet}", "-o", "{out}"]],
+ "check": ["docker", "exec", "-w", "{checkout}", "{RAC1_PERMUTER_CONTAINER}", "python3", "tools/try_func.py", "{func}", "{snippet}", "--no-budget"],
+ "exact": "^{func}: EXACT\\b",
+ "notes": "Stop the container after a session with `docker rm -f openrac-permuter-rac1`. try_func.py's EXACT, bytes masked included, is what rac1-decomp calls a match."
+}
