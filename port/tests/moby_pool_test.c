@@ -1,4 +1,5 @@
 /* SPDX-License-Identifier: GPL-3.0-or-later */
+/* Copyright (c) 2026 the OpenRAC contributors */
 /* The bigger moby pool (rac1/host/moby_pool.c, PAL's table): while the level loader runs, the
  * gameplay header it named gets at least 768 spare slots as its decompression ends (but on the
  * three levels whose heap has no room); nothing else
@@ -7,7 +8,13 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#define CHECK(c) do { if (!(c)) { fprintf(stderr, "%d: %s\n", __LINE__, #c); exit(1); } } while (0)
+#define CHECK(c)                                                                                   \
+    do {                                                                                           \
+        if (!(c)) {                                                                                \
+            fprintf(stderr, "%d: %s\n", __LINE__, #c);                                             \
+            exit(1);                                                                               \
+        }                                                                                          \
+    } while (0)
 #ifdef _WIN32
 #include <windows.h>
 #else
@@ -16,15 +23,22 @@
 #include "../game/rac1/host/moby_pool.c"
 
 /* Guest memory: the first 4 MB and the scratchpad, at their addresses. */
-enum { RAM = 0x400000 };
+enum {
+    RAM = 0x400000
+};
+
 uint8_t* openrac_guest_base;
+
 static void map_guest(void) {
     const size_t span = GUEST_SCRATCHPAD + GUEST_SCRATCHPAD_SIZE;
 #ifdef _WIN32
     uint8_t* p = VirtualAlloc(NULL, span, MEM_RESERVE, PAGE_NOACCESS);
     CHECK(p != NULL);
     CHECK(VirtualAlloc(p, RAM, MEM_COMMIT, PAGE_READWRITE) != NULL);
-    CHECK(VirtualAlloc(p + GUEST_SCRATCHPAD, GUEST_SCRATCHPAD_SIZE, MEM_COMMIT, PAGE_READWRITE) != NULL);
+    CHECK(
+        VirtualAlloc(p + GUEST_SCRATCHPAD, GUEST_SCRATCHPAD_SIZE, MEM_COMMIT, PAGE_READWRITE)
+        != NULL
+    );
 #else
     uint8_t* p = mmap(NULL, span, PROT_NONE, MAP_PRIVATE | MAP_ANON, -1, 0);
     CHECK(p != MAP_FAILED);
@@ -33,17 +47,31 @@ static void map_guest(void) {
 #endif
     openrac_guest_base = p;
 }
+
 gaddr openrac_relocate_low = 0, openrac_relocate_high = 0;
-gaddr openrac_relocate_data(gaddr a) { return a; }
-gaddr openrac_relocate_level_data(int from, gaddr a) { (void)from; return a; }
+
+gaddr openrac_relocate_data(gaddr a) {
+    return a;
+}
+
+gaddr openrac_relocate_level_data(int from, gaddr a) {
+    (void)from;
+    return a;
+}
 
 static int warnings;
+
 void openrac_game_warn(const char* message) {
     (void)message;
     ++warnings;
 }
 
-enum { LOAD_STATE = 0x00173F00, HEADER = 0x100000, OTHER = 0x140000, SECTION = 0x2000 };
+enum {
+    LOAD_STATE = 0x00173F00,
+    HEADER = 0x100000,
+    OTHER = 0x140000,
+    SECTION = 0x2000
+};
 
 /* A gameplay header at `at`: the moby section at +SECTION, `placed` mobys and `spare` spare. */
 static void header(gaddr at, int placed, int spare) {
@@ -52,11 +80,14 @@ static void header(gaddr at, int placed, int spare) {
     GREF(int, at + SECTION + 4) = spare;
 }
 
-static int spare_of(gaddr at) { return GREF(int, at + SECTION + 4); }
+static int spare_of(gaddr at) {
+    return GREF(int, at + SECTION + 4);
+}
 
 /* The loader as the game runs it: its header decompressed (with another WAD before it), the spare
  * count read as the C reads it. */
 static int shipped, seen, other_seen, loads, last_arg;
+
 gaddr func_L00_002422D8__hooked(int a0) {
     ++loads;
     last_arg = a0;
@@ -71,7 +102,11 @@ gaddr func_L00_002422D8__hooked(int a0) {
 
 /* `count` live mobys in an array at ARRAY, each active (drawn last tick), in no group, of class
  * slot i % 3, with mode 0x1000 on all but every tenth; the tick's run list built. */
-enum { ARRAY = 0x200000, NEXT_TABLE = 0x001C8480 };
+enum {
+    ARRAY = 0x200000,
+    NEXT_TABLE = 0x001C8480
+};
+
 static gaddr run(int count) {
     memset(G(ARRAY), 0, (size_t)(count + 1) * 0x100u);
     for (int i = 0; i < count; ++i) {

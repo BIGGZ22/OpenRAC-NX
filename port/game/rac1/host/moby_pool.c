@@ -46,12 +46,14 @@
 
 /* The level load's state (Load244110 in loaders_00240398.c): +4 the gameplay file's header. */
 #define LOAD RAC1_LADDR(00, 0x00173F00u)
+
 enum {
     LOAD_HEADER = 0x4,
     HEADER_MOBYS = 0x44, /* the moby section's offset in the header */
     MOBYS_SPARE = 0x4,   /* in the section: the placed count, then the spare count n2 */
     SPARE = 768          /* spare slots a level with room gets at least (767 usable) */
 };
+
 #define CURRENT_LEVEL RAC1_ADDR(0x0015EE84u)
 
 /* The levels whose heap has no room for more: Rilgar, Blarg Station, Quartu. */
@@ -65,14 +67,17 @@ static gaddr g_header;
 /* The gameplay header decompressed to `to`, while a loader that named it runs: its spare count raised
  * to SPARE (once a run; a level that ships more keeps its own, and so does one without room). */
 void rac1_wad_decompressed(gaddr to) {
+    /* Only the header the running loader named: every other WAD decompresses as it is. */
     if (g_header == 0 || to != g_header) {
         return;
     }
     g_header = 0;
+    /* Rilgar, Blarg Station and Quartu: 192 KiB more would run past the heap's top. */
     if (heap_full(GREF(int, OPENRAC_DATA(CURRENT_LEVEL)))) {
         return;
     }
     const gaddr spare = to + (gaddr)GREF(int, to + HEADER_MOBYS) + MOBYS_SPARE;
+    /* A level that ships more (none does yet) keeps its own. */
     if (GREF(int, spare) < SPARE) {
         GREF(int, spare) = SPARE;
     }
@@ -107,10 +112,12 @@ gaddr func_L00_002422D8(int skip_read) {
  */
 #define MOBY_ARRAY RAC1_ADDR(0x00160018u)
 #define CAMERA_BLOCK RAC1_ADDR(0x00187040u)
-#define GROUP_MEMBERS RAC1_ADDR(0x001C7AC0u) /* u16 member lists, one per group, the last with bit 15 */
+#define GROUP_MEMBERS                                                                              \
+    RAC1_ADDR(0x001C7AC0u) /* u16 member lists, one per group, the last with bit 15 */
 #define TARGETS RAC1_ADDR(0x001C7C80u)
+
 enum {
-    SLOTS = 0x70000000u,      /* 224 class slots: {head, tail} */
+    SLOTS = 0x70000000u, /* 224 class slots: {head, tail} */
     SLOTS_END = 0x70000700u,
     TARGET_LIST = 0x70000800u,
     TARGET_LIST_END = 0x70000C00u,
@@ -135,6 +142,7 @@ static void run_list_append(gaddr m) {
     const gaddr sl = SLOTS + (gaddr)GREF(unsigned char, m + MOBY_SLOT) * 8u;
     const gaddr tail = GREF(gaddr, sl + 4);
     GREF(gaddr, sl + 4) = m;
+    /* The slot's first moby is its head; a later one hangs off the last. */
     if (tail == 0) {
         GREF(gaddr, sl) = m;
     } else {
@@ -145,19 +153,26 @@ static void run_list_append(gaddr m) {
 /* Index `idx` written at the target list's end, kept when `mode` has 0x1000 and there is room. */
 static gaddr target_add(gaddr tgt, int idx, unsigned mode) {
     GREF(short, tgt) = (short)idx;
+    /* Without 0x1000 the next moby writes over it, as retail's list does. */
     if (!(mode & 0x1000)) {
         return tgt;
     }
+    /* Two bytes an index: room while fewer than TARGETS_MAX are kept. */
     if (tgt < TARGET_LIST + TARGETS_MAX * 2u) {
         return tgt + 2;
     }
+    /* One warning a session is enough for a report. */
     if (!g_targets_capped) {
         g_targets_capped = 1;
-        openrac_game_warn("moby target list full: more than 511 active mobys to target, the rest left out");
+        openrac_game_warn(
+            "moby target list full: more than 511 active mobys to target, the rest left out"
+        );
     }
     return tgt;
 }
 
+/* build_resident_visibility_list: the tick's run lists and target list built; the first run list's
+ * head, every slot's list chained after it. */
 gaddr func_0020E6B8(void) {
     for (gaddr q = SLOTS; q != SLOTS_END; q += 4) {
         GREF(int, q) = 0;
@@ -178,6 +193,7 @@ gaddr func_0020E6B8(void) {
         const int st = GREF(signed char, cur + 0x100 + MOBY_STATE);
         cur += 0x100;
         idx++;
+        /* A negative state is a free or dead slot; 0xFF marks the array's end. */
         if (st < 0) {
             if (st == -1) {
                 break;
@@ -186,11 +202,13 @@ gaddr func_0020E6B8(void) {
         }
         const gaddr m = cur;
         const unsigned mode = GREF(unsigned short, m + MOBY_MODE);
+        /* Mode 2: the moby is not run. */
         if (mode & 2) {
             continue;
         }
         const unsigned drawn = GREF(unsigned char, m + MOBY_DRAWN);
         const unsigned dist = GREF(unsigned char, m + MOBY_DIST);
+        /* Not drawn last tick and with an update distance (0xFF: always): run only within it. */
         if (drawn == 0 && dist != 0xFF) {
             const float dx = GREF(float, m + MOBY_POS) - GREF(float, cam);
             const float dy = GREF(float, m + MOBY_POS + 4) - GREF(float, cam + 4);
@@ -200,6 +218,7 @@ gaddr func_0020E6B8(void) {
             t = t - dx * dx;
             t = t - dy * dy;
             t = t - dz * dz;
+            /* Farther than its update distance from the camera. */
             if (t < 0.0f) {
                 continue;
             }
@@ -208,6 +227,7 @@ gaddr func_0020E6B8(void) {
          * does); a group's members are added by the group pass. */
         const int group = GREF(signed char, m + MOBY_GROUP);
         GREF(char, GROUP_FLAGS + (gaddr)group) = 1;
+        /* A group's member waits for the group pass. */
         if (group >= 0) {
             continue;
         }
@@ -217,6 +237,7 @@ gaddr func_0020E6B8(void) {
 
     /* The group pass: each flagged group's live members. */
     for (int gi = 0; gi != GROUPS; gi++) {
+        /* No member of this group was active. */
         if (GREF(unsigned char, GROUP_FLAGS + (gaddr)gi) == 0) {
             continue;
         }
@@ -227,6 +248,7 @@ gaddr func_0020E6B8(void) {
             const int member = r5 & 0x7FFF;
             const gaddr m = base + ((gaddr)member << 8);
             const unsigned mode = GREF(unsigned short, m + MOBY_MODE);
+            /* A dead member is written but not kept, as retail does. */
             if (GREF(signed char, m + MOBY_STATE) < 0) {
                 GREF(short, tgt) = (short)member;
                 continue;
@@ -248,10 +270,12 @@ gaddr func_0020E6B8(void) {
     gaddr first = 0, last = 0;
     for (gaddr sl = SLOTS; sl != SLOTS_END; sl += 8) {
         const gaddr head = GREF(gaddr, sl);
+        /* An empty slot adds nothing. */
         if (head == 0) {
             continue;
         }
         const gaddr tail = GREF(gaddr, sl + 4);
+        /* The first slot with mobys gives the result; later ones hang off the last tail. */
         if (first == 0) {
             first = head;
         } else {
