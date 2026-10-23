@@ -19,7 +19,8 @@
  * level's collision tree, the moby grid, the moby records and their class collision blobs straight from
  * the game's memory (PAL addresses below, read from the PAL kernels), write CollOutput, the moby query
  * stamp (+0x9C), the hit records and coll_sphere_mobys's list as the game does, and do their float work
- * on the host's floats rounded toward zero (the VU's rounding; no model of its guard bits).
+ * in the units' arithmetic (openrac/ps2float.h: rounded toward zero, every add through the
+ * adder that cuts the smaller operand to one bit below the larger one's last place first).
  *
  * The joint primitives of posed classes (kinds 2 and 4: a sphere on a joint, a capsule between two;
  * most creatures are made of them) take their joints from the pose the port's own evaluator gives the
@@ -29,6 +30,7 @@
  * not made.
  */
 #include "rac1.h"
+#include "openrac/ps2float.h"
 
 #include <fenv.h>
 #include <stdio.h>
@@ -73,6 +75,18 @@ static inline uint32_t fb(float f) {
     memcpy(&u, &f, 4);
     return u;
 }
+static inline float fbits(uint32_t u) {
+    float f;
+    memcpy(&f, &u, 4);
+    return f;
+}
+/* The units' add, subtract and multiply: openrac/ps2float.h's (the model of assets/ps2_float.h):
+ * the adder cuts the smaller operand to one bit below the larger one's last place (25 or more
+ * places below, it is dropped whole) and every result is cut to 24 bits; an exponent of 0 is zero,
+ * one of 255 an ordinary number, an overflow saturates. */
+static inline float fadd(float a, float b) { return openrac_ps2_add(a, b); }
+static inline float fsub(float a, float b) { return openrac_ps2_sub(a, b); }
+static inline float fmul(float a, float b) { return openrac_ps2_mul(a, b); }
 /* The sign bit, which the kernels test (bltz after qmfc2): -0 counts as negative. */
 static inline int neg(float f) { return (fb(f) >> 31) != 0; }
 /* The bits as a signed integer above zero (bgtz on the word): positive and not +0. */
@@ -84,29 +98,15 @@ static inline int32_t fkey(float f) {
 }
 static inline float fmin2(float a, float b) { return fkey(b) < fkey(a) ? b : a; }
 static inline float fmax2(float a, float b) { return fkey(b) > fkey(a) ? b : a; }
-/* vdiv: a zero divisor gives the largest float of the quotient's sign (no infinities on the VU). */
-static inline float fdiv(float a, float b) {
-    if (b == 0.0f) {
-        return (neg(a) != neg(b)) ? -FLT_MAX : FLT_MAX;
-    }
-    const float q = a / b;
-    return isinf(q) ? (q < 0 ? -FLT_MAX : FLT_MAX) : q;
-}
-/* vsqrt takes the magnitude. */
-static inline float fsqrt(float a) { return sqrtf(fabsf(a)); }
-/* vftoi0: truncation toward zero, saturating. */
-static inline int32_t ftoi0(float f) {
-    if (f != f) {
-        return 0;
-    }
-    if (f >= 2147483648.0f) {
-        return INT32_MAX;
-    }
-    if (f <= -2147483648.0f) {
-        return INT32_MIN;
-    }
-    return (int32_t)f;
-}
+/* vdiv: the truncated quotient; a zero divisor gives the largest number of the quotient's sign. */
+static inline float fdiv(float a, float b) { return openrac_ps2_div(a, b); }
+/* vsqrt: the root of the magnitude, truncated (host/hand.c's, as the hand-written vector
+ * routines'). */
+float game_openrac_sqrt(float x);
+static inline float fsqrt(float a) { return game_openrac_sqrt(a); }
+/* vftoi0: truncation toward zero, saturating by the sign (an exponent of 255 too), as the FPU's
+ * cvt.w.s. */
+static inline int32_t ftoi0(float f) { return openrac_ps2_ftoi(f); }
 
 typedef struct {
     float v[3];
@@ -117,23 +117,33 @@ static inline V3 v3(float x, float y, float z) {
     return r;
 }
 static inline V3 vld(gaddr a) { return v3(F32(a), F32(a + 4), F32(a + 8)); }
-static inline V3 vadd(V3 a, V3 b) { return v3(a.v[0] + b.v[0], a.v[1] + b.v[1], a.v[2] + b.v[2]); }
-static inline V3 vsub(V3 a, V3 b) { return v3(a.v[0] - b.v[0], a.v[1] - b.v[1], a.v[2] - b.v[2]); }
-static inline V3 vmul(V3 a, V3 b) { return v3(a.v[0] * b.v[0], a.v[1] * b.v[1], a.v[2] * b.v[2]); }
-static inline V3 vmuls(V3 a, float s) { return v3(a.v[0] * s, a.v[1] * s, a.v[2] * s); }
+static inline V3 vadd(V3 a, V3 b) {
+    return v3(fadd(a.v[0], b.v[0]), fadd(a.v[1], b.v[1]), fadd(a.v[2], b.v[2]));
+}
+static inline V3 vsub(V3 a, V3 b) {
+    return v3(fsub(a.v[0], b.v[0]), fsub(a.v[1], b.v[1]), fsub(a.v[2], b.v[2]));
+}
+static inline V3 vmul(V3 a, V3 b) {
+    return v3(fmul(a.v[0], b.v[0]), fmul(a.v[1], b.v[1]), fmul(a.v[2], b.v[2]));
+}
+static inline V3 vmuls(V3 a, float s) {
+    return v3(fmul(a.v[0], s), fmul(a.v[1], s), fmul(a.v[2], s));
+}
 /* a + b * s per lane, the product rounded first. */
 static inline V3 vmadds(V3 a, V3 b, float s) {
-    return v3(a.v[0] + b.v[0] * s, a.v[1] + b.v[1] * s, a.v[2] + b.v[2] * s);
+    return v3(fadd(a.v[0], fmul(b.v[0], s)), fadd(a.v[1], fmul(b.v[1], s)),
+              fadd(a.v[2], fmul(b.v[2], s)));
 }
 /* vopmula / vopmsub: a x b, both products rounded before the subtraction. */
 static inline V3 cross(V3 a, V3 b) {
-    return v3(a.v[1] * b.v[2] - b.v[1] * a.v[2], a.v[2] * b.v[0] - b.v[2] * a.v[0],
-              a.v[0] * b.v[1] - b.v[0] * a.v[1]);
+    return v3(fsub(fmul(a.v[1], b.v[2]), fmul(b.v[1], a.v[2])),
+              fsub(fmul(a.v[2], b.v[0]), fmul(b.v[2], a.v[0])),
+              fsub(fmul(a.v[0], b.v[1]), fmul(b.v[0], a.v[1])));
 }
 /* (x + y) + z of the products. */
 static inline float dot(V3 a, V3 b) {
     const V3 p = vmul(a, b);
-    return (p.v[0] + p.v[1]) + p.v[2];
+    return fadd(fadd(p.v[0], p.v[1]), p.v[2]);
 }
 static inline V3 vzero(void) { return v3(0.0f, 0.0f, 0.0f); }
 
@@ -349,7 +359,8 @@ static void moby_coll(gaddr m, MobyColl* c) {
 static inline V3 rot(const V3 r[3], V3 v) {
     V3 o;
     for (int l = 0; l < 3; ++l) {
-        o.v[l] = (r[0].v[l] * v.v[0] + r[1].v[l] * v.v[1]) + r[2].v[l] * v.v[2];
+        o.v[l] =
+            fadd(fadd(fmul(r[0].v[l], v.v[0]), fmul(r[1].v[l], v.v[1])), fmul(r[2].v[l], v.v[2]));
     }
     return o;
 }
@@ -366,8 +377,8 @@ static int moby_mesh_verts(const MobyColl* c, V3 lo, V3 hi) {
         const V3 p = rot(rs, v3((float)S16(v), (float)S16(v + 2), (float)S16(v + 4)));
         uint32_t code = 0;
         for (int k = 0; k < 3; ++k) {
-            const int below = neg(p.v[k] - lo.v[k]);
-            const int above = neg(hi.v[k] - p.v[k]);
+            const int below = neg(fsub(p.v[k], lo.v[k]));
+            const int above = neg(fsub(hi.v[k], p.v[k]));
             code |= (uint32_t)(below | (above << 1)) << (8 * k);
         }
         g_verts[i].p = p;
@@ -452,44 +463,44 @@ static int vol_prim(const MobyColl* c, gaddr p, V3 cq, int capsule, V3* cc, floa
     if (kind == 1) {
         const V3 q = vld(p + 0x10);
         *cc = vadd(rot(c->rows, vmuls(q, s)), c->pos);
-        *rad = F32(p + 0x1C) * s;
+        *rad = fmul(F32(p + 0x1C), s);
         return 1;
     }
     if (kind == 2) {
         const V3 v = vadd(joint_at(S32(p + 4)), vld(p + 0x10));
         *cc = vadd(rot(c->rows, vmuls(v, s)), c->pos);
-        *rad = F32(p + 0xC) * s;
+        *rad = fmul(F32(p + 0xC), s);
         return 1;
     }
     if (kind == 3) {
         const V3 q = vld(p + 0x10);
         V3 o = vadd(rot(c->rows, vmuls(q, s)), c->pos);
-        const float top = o.v[2] + F32(p + 4) * s;
+        const float top = fadd(o.v[2], fmul(F32(p + 4), s));
         o.v[2] = fmin2(top, fmax2(o.v[2], cq.v[2]));
         *cc = o;
-        *rad = F32(p + 0x1C) * s;
+        *rad = fmul(F32(p + 0x1C), s);
         return 1;
     }
     const V3 a = vadd(rot(c->rows, vmuls(joint_at(S16(p + 4)), s)), c->pos);
     const V3 b = vadd(rot(c->rows, vmuls(joint_at(S16(p + 6)), s)), c->pos);
     const V3 e = vsub(b, a);
     const V3 w = vsub(cq, a);
-    *rad = F32(p + 0xC) * s;
+    *rad = fmul(F32(p + 0xC), s);
     if (!capsule) {
-        const float t = fmin2(fmax2(0.0f + fdiv(dot(w, e), dot(e, e)), 0.0f), 1.0f);
+        const float t = fmin2(fmax2(fadd(0.0f, fdiv(dot(w, e), dot(e, e))), 0.0f), 1.0f);
         *cc = vadd(a, vmuls(e, t));
         return 1;
     }
     /* A capsule query: the closest point in x/y, or the base's height clamped to the segment when
-     * the segment is upright (|e.xy|^2 <= 1). */
-    const float wd = w.v[0] * e.v[0] + w.v[1] * e.v[1];
-    const float ee = e.v[0] * e.v[0] + e.v[1] * e.v[1];
-    if (!neg(1.0f - fabsf(ee))) {
+     * the segment is upright (|e.xy|^2 <= 1), the top taken again as e + a. */
+    const float wd = fadd(fmul(w.v[0], e.v[0]), fmul(w.v[1], e.v[1]));
+    const float ee = fadd(fmul(e.v[0], e.v[0]), fmul(e.v[1], e.v[1]));
+    if (!neg(fsub(1.0f, fabsf(ee)))) {
         V3 o = a;
-        o.v[2] = fmin2(b.v[2], fmax2(a.v[2], cq.v[2]));
+        o.v[2] = fmin2(fadd(e.v[2], a.v[2]), fmax2(a.v[2], cq.v[2]));
         *cc = o;
     } else {
-        const float t = fmin2(fmax2(0.0f + fdiv(wd, ee), 0.0f), 1.0f);
+        const float t = fmin2(fmax2(fadd(0.0f, fdiv(wd, ee)), 0.0f), 1.0f);
         *cc = vmadds(a, e, t);
     }
     return 1;
@@ -498,22 +509,22 @@ static int vol_prim(const MobyColl* c, gaddr p, V3 cq, int capsule, V3* cc, floa
 /* The closest point of the primitive sphere (cc, rad) to c, its offset from cc and d^2, when r + rad
  * reaches c and d^2 <= best. */
 static int vol_prim_test(V3 c, float r, V3 cc, float rad, float best, V3* pt, V3* off, float* d2out) {
-    const float rr = r + rad;
+    const float rr = fadd(r, rad);
     V3 e = vsub(cc, c);
-    const float rr2 = rr * rr;
+    const float rr2 = fmul(rr, rr);
     const float d2 = dot(e, e);
-    const float s = rr2 - d2;
-    const float dist = 0.0f + fsqrt(d2);
+    const float s = fsub(rr2, d2);
+    const float dist = fadd(0.0f, fsqrt(d2));
     if (neg(s)) {
         return 0;
     }
-    const float q = 0.0f + fdiv(1.0f, dist);
-    const float k = fmin2(dist * 1.0f, rad);
+    const float q = fadd(0.0f, fdiv(1.0f, dist));
+    const float k = fmin2(fmul(dist, 1.0f), rad);
     const V3 o = vmuls(vmuls(vsub(c, cc), q), k);
     const V3 p = vadd(cc, o);
     e = vsub(p, c);
     const float dd = dot(e, e);
-    if (neg(best - dd)) {
+    if (neg(fsub(best, dd))) {
         return 0;
     }
     *pt = p;
@@ -552,7 +563,7 @@ static int line_tri(uint32_t fl, V3 d, V3 a_rel, V3 b_rel, V3 v0, V3 v1, V3 v2, 
     const float c0 = dot(cross(p, e1), n);
     const float c1 = dot(cross(e2, p), n);
     const float c2 = dot(cross(vsub(p, e1), vsub(e2, e1)), n);
-    const float margin = best_t - q;
+    const float margin = fsub(best_t, q);
     if (neg(c0) || neg(c1) || neg(c2) || !gtz(margin)) {
         return 0;
     }
@@ -568,14 +579,14 @@ static int line_tri(uint32_t fl, V3 d, V3 a_rel, V3 b_rel, V3 v0, V3 v1, V3 v2, 
 static V3 edge_point(V3 p, V3 a, V3 b) {
     const V3 ba = vsub(b, a);
     float t = fdiv(dot(vsub(p, a), ba), dot(ba, ba));
-    t = fmin2(fmax2(0.0f + t, 0.0f), 1.0f);
+    t = fmin2(fmax2(fadd(0.0f, t), 0.0f), 1.0f);
     return vmadds(a, ba, t);
 }
 
 /* The sphere / capsule triangle tail: p is the plane projection with squared plane distance d2; the
  * first failing edge test moves it to the closest point of that edge, measured again from `from`. */
 static int closest_on_triangle(V3 p, float d2, V3 from, V3 e1, V3 e2, V3 n, float best, V3* out, float* d2o) {
-    if (neg(best - d2)) {
+    if (neg(fsub(best, d2))) {
         return 0;
     }
     const float c0 = dot(cross(p, e1), n);
@@ -599,7 +610,7 @@ static int closest_on_triangle(V3 p, float d2, V3 from, V3 e1, V3 e2, V3 n, floa
     const V3 q = edge_point(p, a, b);
     const V3 diff = vsub(q, from);
     const float dd = dot(diff, diff);
-    if (neg(best - dd)) {
+    if (neg(fsub(best, dd))) {
         return 0;
     }
     *out = q;
@@ -623,7 +634,7 @@ static int sphere_tri(uint32_t fl, V3 c_rel, V3 v0, V3 v1, V3 v2, float best, V3
     const V3 nq = vmuls(n, q);
     const V3 p = vmadds(w, vsub(vzero(), n), q);
     const V3 sq = vmul(nq, nq);
-    const float d2 = (sq.v[0] + sq.v[1]) + sq.v[2];
+    const float d2 = fadd(fadd(sq.v[0], sq.v[1]), sq.v[2]);
     if (!closest_on_triangle(p, d2, w, e1, e2, n, best, pt, d2o)) {
         return 0;
     }
@@ -640,7 +651,7 @@ static int capsule_tri(uint32_t fl, V3 c_rel, float h, V3 v0, V3 v1, V3 v2, floa
     const V3 e2 = vsub(v2, v0);
     const V3 bot = vsub(c_rel, v0);
     V3 top = bot;
-    top.v[2] = top.v[2] + h;
+    top.v[2] = fadd(top.v[2], h);
     const V3 n = cross(e2, e1);
     const float sb = dot(bot, n);
     const float st = dot(top, n);
@@ -655,11 +666,11 @@ static int capsule_tri(uint32_t fl, V3 c_rel, float h, V3 v0, V3 v1, V3 v2, floa
         pz = 0.0f; /* a vertical face: the height of v0 */
         from_pz = 1;
     } else {
-        const float q = fdiv(sb, h * n.v[2]);
-        const float b1z = bot.v[2] - e1.v[2];
-        const float b2z = bot.v[2] - e2.v[2];
-        const float t1z = top.v[2] - e1.v[2];
-        const float t2z = top.v[2] - e2.v[2];
+        const float q = fdiv(sb, fmul(h, n.v[2]));
+        const float b1z = fsub(bot.v[2], e1.v[2]);
+        const float b2z = fsub(bot.v[2], e2.v[2]);
+        const float t1z = fsub(top.v[2], e1.v[2]);
+        const float t2z = fsub(top.v[2], e2.v[2]);
         if (!neg(bot.v[2]) && !neg(b1z) && !neg(b2z)) {
             axis = bot;
             nq = vmuls(n, fdiv(sb, nn));
@@ -668,7 +679,7 @@ static int capsule_tri(uint32_t fl, V3 c_rel, float h, V3 v0, V3 v1, V3 v2, floa
             nq = vmuls(n, fdiv(st, nn));
         } else {
             /* The axis meets the plane at X = (base.xy, base.z - h Q). */
-            const V3 x = v3(bot.v[0], bot.v[1], bot.v[2] - h * q);
+            const V3 x = v3(bot.v[0], bot.v[1], fsub(bot.v[2], fmul(h, q)));
             const float c0 = dot(cross(x, e1), n);
             const float c1 = dot(cross(e2, x), n);
             const float c2 = dot(cross(vsub(x, e1), vsub(e2, e1)), n);
@@ -687,12 +698,12 @@ static int capsule_tri(uint32_t fl, V3 c_rel, float h, V3 v0, V3 v1, V3 v2, floa
         }
     }
     if (from_pz) {
-        const float k = fmax2(fmin2(pz - bot.v[2], h), 0.0f);
-        axis = v3(bot.v[0], bot.v[1], k + bot.v[2]);
+        const float k = fmax2(fmin2(fsub(pz, bot.v[2]), h), 0.0f);
+        axis = v3(bot.v[0], bot.v[1], fadd(k, bot.v[2]));
         nq = vmuls(n, fdiv(dot(axis, n), nn));
     }
     const V3 sq = vmul(nq, nq);
-    const float d2 = (sq.v[0] + sq.v[1]) + sq.v[2];
+    const float d2 = fadd(fadd(sq.v[0], sq.v[1]), sq.v[2]);
     const V3 p = vsub(axis, nq);
     if (!closest_on_triangle(p, d2, axis, e1, e2, n, best, pt, d2o)) {
         return 0;
@@ -716,17 +727,11 @@ static LineCell g_list[3 * DDA_MAX + 2];
 /* `vmini`/`vmax` of the endpoints and the [0, 1024)^3 test from the MAC sign flags. */
 static int in_world(V3 a, V3 b) {
     for (int k = 0; k < 3; ++k) {
-        if (neg(fmin2(a.v[k], b.v[k]) - 0.0f) || !neg(fmax2(a.v[k], b.v[k]) - K1024)) {
+        if (neg(fsub(fmin2(a.v[k], b.v[k]), 0.0f)) || !neg(fsub(fmax2(a.v[k], b.v[k]), K1024))) {
             return 0;
         }
     }
     return 1;
-}
-
-static inline float fbits(uint32_t u) {
-    float f;
-    memcpy(&f, &u, 4);
-    return f;
 }
 
 /* The DDA cell list: entries (t, cell) in walk order, without the 1.0 terminator; -1 for a zero-length
@@ -765,7 +770,7 @@ static int line_cell_list(V3 a1024, V3 b1024) {
         dir[k] = step;
         while (at != end && len[k] < DDA_MAX) {
             at += step;
-            const float t = ((float)(at << 12) - a1024.v[k]) * q;
+            const float t = fmul(fsub((float)(at << 12), a1024.v[k]), q);
             int32_t bits = (int32_t)fb(t);
             bits = bits < 0x3F800000 ? bits : 0x3F800000;
             bits = bits > 0 ? bits : 0;
@@ -841,12 +846,12 @@ static void line_world(gaddr mesh, uint32_t fl, V3 a1024, V3 b1024, V3 d, int n,
 
 /* The segment's entry into a sphere (or, in x/y, a cylinder), clamped to [0, 1]. */
 static float entry_root(float wd, float ww, float dd, float rr) {
-    const float k = wd + wd;
-    const float wr = ww - rr;
-    const float disc = fmax2(k * k - (4.0f * dd) * wr, 0.0f);
+    const float k = fadd(wd, wd);
+    const float wr = fsub(ww, rr);
+    const float disc = fmax2(fsub(fmul(k, k), fmul(fmul(4.0f, dd), wr)), 0.0f);
     const float root = fsqrt(disc);
-    const float q = fdiv((0.0f - k) + root, dd + dd);
-    return fmin2(fmax2(0.0f - q, 0.0f), 1.0f);
+    const float q = fdiv(fadd(fsub(0.0f, k), root), fadd(dd, dd));
+    return fmin2(fmax2(fsub(0.0f, q), 0.0f), 1.0f);
 }
 
 /* One primitive against the segment: (t, hit, hit - C). */
@@ -857,39 +862,40 @@ static int line_prim(const MobyColl* c, gaddr p, V3 a, V3 b, float best_t, float
     float rad;
     if (kind == 1) {
         cc = vadd(rot(c->rows, vmuls(vld(p + 0x10), s)), c->pos);
-        rad = F32(p + 0x1C) * s;
+        rad = fmul(F32(p + 0x1C), s);
     } else if (kind == 3) {
         cc = vadd(rot(c->rows, vmuls(vld(p + 0x10), s)), c->pos);
-        rad = F32(p + 0x1C) * s;
+        rad = fmul(F32(p + 0x1C), s);
         const V3 d2 = vsub(b, a);
         const V3 w = vsub(cc, a);
-        const float dd = fmax2(d2.v[0] * d2.v[0] + d2.v[1] * d2.v[1], fbits(0x3C800000u));
-        const float wd = w.v[0] * d2.v[0] + w.v[1] * d2.v[1];
-        const float ww = w.v[0] * w.v[0] + w.v[1] * w.v[1];
+        const float dd =
+            fmax2(fadd(fmul(d2.v[0], d2.v[0]), fmul(d2.v[1], d2.v[1])), fbits(0x3C800000u));
+        const float wd = fadd(fmul(w.v[0], d2.v[0]), fmul(w.v[1], d2.v[1]));
+        const float ww = fadd(fmul(w.v[0], w.v[0]), fmul(w.v[1], w.v[1]));
         const float q = fdiv(wd, dd);
-        const float rr = rad * rad;
-        const float t = fmin2(fmax2(0.0f + q, 0.0f), 1.0f);
-        const float ex = (a.v[0] + d2.v[0] * t) - cc.v[0];
-        const float ey = (a.v[1] + d2.v[1] * t) - cc.v[1];
-        const float v = (ex * ex - rr) + ey * ey;
+        const float rr = fmul(rad, rad);
+        const float t = fmin2(fmax2(fadd(0.0f, q), 0.0f), 1.0f);
+        const float ex = fsub(fadd(a.v[0], fmul(d2.v[0], t)), cc.v[0]);
+        const float ey = fsub(fadd(a.v[1], fmul(d2.v[1], t)), cc.v[1]);
+        const float v = fadd(fsub(fmul(ex, ex), rr), fmul(ey, ey));
         if (gtz(v)) {
             return 0;
         }
         const float te = entry_root(wd, ww, dd, rr);
         const V3 p6 = vmadds(a, d2, te);
-        const float top = cc.v[2] + F32(p + 4) * s;
+        const float top = fadd(cc.v[2], fmul(F32(p + 4), s));
         cc.v[2] = fmin2(fmax2(cc.v[2], p6.v[2]), top);
     } else if (kind == 2) {
         const V3 v = vadd(joint_at(S32(p + 4)), vld(p + 0x10));
         cc = vadd(rot(c->rows, vmuls(v, s)), c->pos);
-        rad = F32(p + 0xC) * s;
+        rad = fmul(F32(p + 0xC), s);
     } else {
         /* A capsule between two joints: where the segment enters the capsule's infinite axis line (the
          * segment's start when they are parallel), brought back onto the axis between the joints. */
         const V3 a0 = rot(c->rows, vmuls(joint_at(S16(p + 4)), s));
         const V3 b0 = rot(c->rows, vmuls(joint_at(S16(p + 6)), s));
-        rad = F32(p + 0xC) * s;
-        const float rr = rad * rad;
+        rad = fmul(F32(p + 0xC), s);
+        const float rr = fmul(rad, rad);
         const V3 d = vsub(b, a);
         const V3 e = vsub(b0, a0);
         const V3 pa = vadd(a0, c->pos);
@@ -898,30 +904,31 @@ static int line_prim(const MobyColl* c, gaddr p, V3 a, V3 b, float best_t, float
         const V3 n3sq = vmul(n3, n3);
         const V3 n7 = cross(d, n3);
         const V3 n8 = cross(e, n4);
-        const int parallel = neg(n3sq.v[0] - 1.0f) && neg(n3sq.v[1] - 1.0f) && neg(n3sq.v[2] - 1.0f);
+        const int parallel =
+            neg(fsub(n3sq.v[0], 1.0f)) && neg(fsub(n3sq.v[1], 1.0f)) && neg(fsub(n3sq.v[2], 1.0f));
         V3 x = a;
         if (!parallel) {
-            const float nn = (n3sq.v[0] + n3sq.v[1]) + n3sq.v[2];
+            const float nn = fadd(fadd(n3sq.v[0], n3sq.v[1]), n3sq.v[2]);
             const float s7 = dot(n7, vsub(a, pa));
             const float s8 = dot(n8, vsub(pa, a));
             const V3 c3 = vmadds(pa, e, fdiv(s7, nn)); /* the axis line's point nearest the segment's line */
             const V3 c4 = vmadds(a, d, fdiv(s8, nn));  /* the segment's line's point nearest the axis */
             const V3 g = vsub(c4, c3);
             const V3 gs = vmul(g, g);
-            const float v = (((0.0f - rr) + gs.v[0]) + gs.v[1]) + gs.v[2];
+            const float v = fadd(fadd(fadd(fsub(0.0f, rr), gs.v[0]), gs.v[1]), gs.v[2]);
             if (!neg(v)) {
                 return 0;
             }
             const V3 eh = vmuls(e, fdiv(1.0f, fsqrt(dot(e, e))));
             const V3 dh = vmuls(d, fdiv(1.0f, fsqrt(dot(d, d))));
             const float cs = dot(eh, dh);
-            const float k = fmax2(0.0f + fdiv(0.0f - v, 1.0f - cs * cs), 0.0f);
+            const float k = fmax2(fadd(0.0f, fdiv(fsub(0.0f, v), fsub(1.0f, fmul(cs, cs)))), 0.0f);
             const V3 entry = vsub(c4, vmuls(dh, fsqrt(k)));
             if (!neg(dot(vsub(entry, a), d))) {
                 x = entry;
             }
         }
-        const float t = fmin2(fmax2(0.0f + fdiv(dot(vsub(x, pa), e), dot(e, e)), 0.0f), 1.0f);
+        const float t = fmin2(fmax2(fadd(0.0f, fdiv(dot(vsub(x, pa), e), dot(e, e))), 0.0f), 1.0f);
         cc = vadd(pa, vmuls(e, t));
     }
     const V3 d2 = vsub(b, a);
@@ -929,17 +936,17 @@ static int line_prim(const MobyColl* c, gaddr p, V3 a, V3 b, float best_t, float
     const float dd = dot(d2, d2);
     const float wd = dot(w, d2);
     const float ww = dot(w, w);
-    const float rr = rad * rad;
-    const float t0 = fmin2(fmax2(0.0f + fdiv(wd, dd), 0.0f), 1.0f);
+    const float rr = fmul(rad, rad);
+    const float t0 = fmin2(fmax2(fadd(0.0f, fdiv(wd, dd)), 0.0f), 1.0f);
     const V3 e = vsub(vmadds(a, d2, t0), cc);
     const V3 sq = vmul(e, e);
-    const float v = ((sq.v[0] - rr) + sq.v[1]) + sq.v[2];
+    const float v = fadd(fadd(fsub(sq.v[0], rr), sq.v[1]), sq.v[2]);
     if (gtz(v)) {
         return 0;
     }
     const float t = entry_root(wd, ww, dd, rr);
     const V3 h = vmadds(a, d2, t);
-    if (!gtz(best_t - t)) {
+    if (!gtz(fsub(best_t, t))) {
         return 0;
     }
     *to = t;
@@ -981,7 +988,7 @@ static void line_mobys(const Ctx* x, uint32_t stamp, uint32_t fl, V3 a, V3 b, V3
             const float t = fmin2(fmax2(dot(vsub(bc, a), dn), 0.0f), *best_t);
             const V3 e = vsub(vmadds(a, d, t), bc);
             const V3 sq = vmul(e, e);
-            const float v = ((sq.v[0] - br * br) + sq.v[1]) + sq.v[2];
+            const float v = fadd(fadd(fsub(sq.v[0], fmul(br, br)), sq.v[1]), sq.v[2]);
             if (U32(m + 0x94) == 0 || gtz(v) || U32(m + 0x9C) == stamp || unbounded(m)) {
                 continue;
             }
@@ -1027,7 +1034,7 @@ static void line_mobys(const Ctx* x, uint32_t stamp, uint32_t fl, V3 a, V3 b, V3
                     float t2;
                     V3 hit, nrm;
                     if (line_prim(&c, p, a, b, *best_t, &t2, &hit, &nrm)) {
-                        *best_t = 0.0f + t2;
+                        *best_t = fadd(0.0f, t2);
                         prim_best(best, p, hit, nrm, m);
                     }
                 }
@@ -1112,15 +1119,15 @@ static int volume_new(Volume* v, gaddr centre, float radius, float height, int c
     const V3 c = vld(centre);
     v->capsule = capsule;
     for (int k = 0; k < 3; ++k) {
-        v->lo.v[k] = c.v[k] - radius;
-        v->hi.v[k] = c.v[k] + radius;
+        v->lo.v[k] = fsub(c.v[k], radius);
+        v->hi.v[k] = fadd(c.v[k], radius);
     }
     if (capsule) {
-        v->hi.v[2] = v->hi.v[2] + height;
+        v->hi.v[2] = fadd(v->hi.v[2], height);
     }
-    v->r1024 = radius * K1024;
+    v->r1024 = fmul(radius, K1024);
     for (int k = 0; k < 3; ++k) {
-        if (neg(v->lo.v[k] - 0.0f)) {
+        if (neg(fsub(v->lo.v[k], 0.0f))) {
             return 0;
         }
     }
@@ -1128,7 +1135,7 @@ static int volume_new(Volume* v, gaddr centre, float radius, float height, int c
         return 0;
     }
     for (int k = 0; k < 3; ++k) {
-        if (!neg(v->hi.v[k] - K1024)) {
+        if (!neg(fsub(v->hi.v[k], K1024))) {
             return 0;
         }
     }
@@ -1138,8 +1145,8 @@ static int volume_new(Volume* v, gaddr centre, float radius, float height, int c
     v->c1024 = vmuls(c, K1024);
     v->lo1024 = vmuls(v->lo, K1024);
     v->hi1024 = vmuls(v->hi, K1024);
-    v->h1024 = capsule ? height * K1024 : 0.0f;
-    v->rr = v->r1024 * v->r1024;
+    v->h1024 = capsule ? fmul(height, K1024) : 0.0f;
+    v->rr = fmul(v->r1024, v->r1024);
     return 1;
 }
 
@@ -1149,13 +1156,13 @@ static V3 volume_pushed(const Volume* v, const Best* b, float best) {
     V3 w = vsub(v->c1024, b->point);
     float k = 0.0f;
     if (v->capsule) {
-        const float up = b->point.v[2] - v->c1024.v[2];
+        const float up = fsub(b->point.v[2], v->c1024.v[2]);
         k = fmax2(fmin2(up, v->h1024), 0.0f);
-        w.v[2] = w.v[2] + k;
+        w.v[2] = fadd(w.v[2], k);
     }
     w = vmuls(w, q);
     if (v->capsule) {
-        w.v[2] = w.v[2] - k;
+        w.v[2] = fsub(w.v[2], k);
     }
     return vadd(vmuls(w, INV1024), vmuls(b->point, INV1024));
 }
@@ -1182,19 +1189,19 @@ static void volume_mobys(const Ctx* x, uint32_t stamp, uint32_t fl, const Volume
                     continue;
                 }
                 const V3 bs = vld(m);
-                const float rr = r + F32(m + 0xC);
+                const float rr = fadd(r, F32(m + 0xC));
                 if (!vol->capsule) {
                     const V3 e = vsub(bs, c);
                     const V3 sq = vmul(e, e);
-                    const float v = ((sq.v[0] - rr * rr) + sq.v[1]) + sq.v[2];
+                    const float v = fadd(fadd(fsub(sq.v[0], fmul(rr, rr)), sq.v[1]), sq.v[2]);
                     if (gtz(v)) {
                         continue;
                     }
                 } else {
-                    const float ex = bs.v[0] - c.v[0], ey = bs.v[1] - c.v[1];
-                    const float z4 = ((bs.v[2] - rr) - c.v[2]) - h;
-                    const float z5 = (bs.v[2] + rr) - c.v[2];
-                    const float v = (ex * ex - rr * rr) + ey * ey;
+                    const float ex = fsub(bs.v[0], c.v[0]), ey = fsub(bs.v[1], c.v[1]);
+                    const float z4 = fsub(fsub(fsub(bs.v[2], rr), c.v[2]), h);
+                    const float z5 = fsub(fadd(bs.v[2], rr), c.v[2]);
+                    const float v = fadd(fsub(fmul(ex, ex), fmul(rr, rr)), fmul(ey, ey));
                     if (gtz(v) || !gtz(z5) || !neg(z4)) {
                         continue;
                     }
@@ -1210,11 +1217,11 @@ static void volume_mobys(const Ctx* x, uint32_t stamp, uint32_t fl, const Volume
                     const V3 c_rel = vsub(c, mc.pos);
                     V3 vlo, vhi;
                     for (int k = 0; k < 3; ++k) {
-                        vlo.v[k] = c_rel.v[k] - r;
-                        vhi.v[k] = c_rel.v[k] + r;
+                        vlo.v[k] = fsub(c_rel.v[k], r);
+                        vhi.v[k] = fadd(c_rel.v[k], r);
                     }
                     if (vol->capsule) {
-                        vhi.v[2] = vhi.v[2] + h;
+                        vhi.v[2] = fadd(vhi.v[2], h);
                     }
                     const int nv = moby_mesh_verts(&mc, vlo, vhi);
                     for (int fi = 0; fi < mc.nfaces; ++fi) {
@@ -1233,7 +1240,7 @@ static void volume_mobys(const Ctx* x, uint32_t stamp, uint32_t fl, const Volume
                         if (!hit) {
                             continue;
                         }
-                        *best_d = d2 * shrink;
+                        *best_d = fmul(d2, shrink);
                         record(best, ty, pt, nrm, v[0].p, e1, e2, mc.pos, m);
                     }
                 }
@@ -1250,10 +1257,11 @@ static void volume_mobys(const Ctx* x, uint32_t stamp, uint32_t fl, const Volume
                         if (vol_prim(&mc, p, c, vol->capsule, &cc, &rad)) {
                             V3 from = c;
                             if (vol->capsule) {
-                                from.v[2] = c.v[2] + fmax2(fmin2(cc.v[2] - c.v[2], h), 0.0f);
+                                from.v[2] =
+                                    fadd(c.v[2], fmax2(fmin2(fsub(cc.v[2], c.v[2]), h), 0.0f));
                             }
                             if (vol_prim_test(from, r, cc, rad, *best_d, &pt, &off, &d2)) {
-                                *best_d = d2 * 1.0f;
+                                *best_d = fmul(d2, 1.0f);
                                 prim_best(best, p, pt, off, m);
                             }
                         }
@@ -1278,7 +1286,7 @@ static int coll_volume(const Ctx* x, float radius, float height, gaddr centre, u
         return 0;
     }
     const float shrink = best_shrink();
-    float best_d = vol.rr * shrink;
+    float best_d = fmul(vol.rr, shrink);
     Best best;
     memset(&best, 0, sizeof best);
     for (int k = 0; k < 3; ++k) {
@@ -1291,7 +1299,7 @@ static int coll_volume(const Ctx* x, float radius, float height, gaddr centre, u
             lo[k] = (int)((uint32_t)ftoi0(vol.lo.v[k]) >> 2);
             hi[k] = (int)((uint32_t)ftoi0(vol.hi.v[k]) >> 2);
         }
-        const float nrr = 0.0f - vol.rr;
+        const float nrr = fsub(0.0f, vol.rr);
         for (int z = lo[2]; z <= hi[2]; ++z) {
             for (int y = lo[1]; y <= hi[1]; ++y) {
                 for (int xx = lo[0]; xx <= hi[0]; ++xx) {
@@ -1299,12 +1307,12 @@ static int coll_volume(const Ctx* x, float radius, float height, gaddr centre, u
                     float sq[3];
                     for (int k = 0; k < 3; ++k) {
                         const float cmin = (float)(cxyz[k] << 12);
-                        const float cmax = cmin + 4096.0f;
+                        const float cmax = fadd(cmin, 4096.0f);
                         const float p = fmin2(fmax2(cmin, vol.c1024.v[k]), cmax);
-                        const float e = p - vol.c1024.v[k];
-                        sq[k] = e * e;
+                        const float e = fsub(p, vol.c1024.v[k]);
+                        sq[k] = fmul(e, e);
                     }
-                    if (!neg(((nrr + sq[0]) + sq[1]) + sq[2])) {
+                    if (!neg(fadd(fadd(fadd(nrr, sq[0]), sq[1]), sq[2]))) {
                         continue;
                     }
                     Cell cell;
@@ -1315,8 +1323,8 @@ static int coll_volume(const Ctx* x, float radius, float height, gaddr centre, u
                                       (float)(z << 12) + 2048.0f);
                     int16_t blo[3], bhi[3];
                     for (int k = 0; k < 3; ++k) {
-                        blo[k] = (int16_t)ftoi0(vol.lo1024.v[k] - cen.v[k]);
-                        bhi[k] = (int16_t)ftoi0(vol.hi1024.v[k] - cen.v[k]);
+                        blo[k] = (int16_t)ftoi0(fsub(vol.lo1024.v[k], cen.v[k]));
+                        bhi[k] = (int16_t)ftoi0(fsub(vol.hi1024.v[k], cen.v[k]));
                     }
                     const V3 c_rel = vsub(vol.c1024, cen);
                     decode_vertices(&cell, blo, bhi);
@@ -1337,7 +1345,7 @@ static int coll_volume(const Ctx* x, float radius, float height, gaddr centre, u
                         if (!hit) {
                             continue;
                         }
-                        best_d = d2 * shrink;
+                        best_d = fmul(d2, shrink);
                         record(&best, ty, pt, nrm, v0->p, e1, e2, cen, 0);
                     }
                 }
@@ -1466,10 +1474,10 @@ int func_L00_001F2BE8(float a0, gaddr a1, int a2, gaddr a3, gaddr a4) {
                         continue;
                     }
                     const V3 bs = vld(m);
-                    const float rr = r + F32(m + 0xC);
+                    const float rr = fadd(r, F32(m + 0xC));
                     const V3 e = vsub(bs, c);
                     const V3 sq = vmul(e, e);
-                    if (gtz(((sq.v[0] - rr * rr) + sq.v[1]) + sq.v[2])) {
+                    if (gtz(fadd(fadd(fsub(sq.v[0], fmul(rr, rr)), sq.v[1]), sq.v[2]))) {
                         continue;
                     }
                     U32(m + 0x9C) = (uint32_t)stamp;
@@ -1481,8 +1489,8 @@ int func_L00_001F2BE8(float a0, gaddr a1, int a2, gaddr a3, gaddr a4) {
                         const V3 c_rel = vsub(c, mc.pos);
                         V3 vlo, vhi;
                         for (int k = 0; k < 3; ++k) {
-                            vlo.v[k] = c_rel.v[k] - r;
-                            vhi.v[k] = c_rel.v[k] + r;
+                            vlo.v[k] = fsub(c_rel.v[k], r);
+                            vhi.v[k] = fadd(c_rel.v[k], r);
                         }
                         const int nv = moby_mesh_verts(&mc, vlo, vhi);
                         for (int fi = 0; fi < mc.nfaces && !hit; ++fi) {
@@ -1583,13 +1591,13 @@ int func_L00_001F34F0(float a0, gaddr a1) {
     int result = 0;
     if (hero != 0) {
         const float shrink = best_shrink();
-        const float r64 = a0 * 64.0f;
+        const float r64 = fmul(a0, 64.0f);
         const V3 c64 = vmuls(vld(a1), 64.0f);
-        float best_d = r64 * r64;
+        float best_d = fmul(r64, r64);
         int16_t lo16[3], hi16[3];
         for (int k = 0; k < 3; ++k) {
-            lo16[k] = (int16_t)ftoi0(c64.v[k] - r64);
-            hi16[k] = (int16_t)ftoi0(c64.v[k] + r64);
+            lo16[k] = (int16_t)ftoi0(fsub(c64.v[k], r64));
+            hi16[k] = (int16_t)ftoi0(fadd(c64.v[k], r64));
         }
         Best best;
         memset(&best, 0, sizeof best);
@@ -1597,10 +1605,10 @@ int func_L00_001F34F0(float a0, gaddr a1) {
         for (int g = 0; g < groups; ++g) {
             const gaddr h = hero + 0x10 + 0x10 * (gaddr)g;
             const V3 s = v3((float)U16(h), (float)U16(h + 2), (float)U16(h + 4));
-            const float rr = r64 + (float)U16(h + 6);
+            const float rr = fadd(r64, (float)U16(h + 6));
             const V3 dd = vsub(s, c64);
             const V3 sq = vmul(dd, dd);
-            const float v = ((sq.v[1] - rr * rr) + sq.v[0]) + sq.v[2];
+            const float v = fadd(fadd(fsub(sq.v[1], fmul(rr, rr)), sq.v[0]), sq.v[2]);
             if (!neg(v) && !(fb(v) == 0 && fb(sq.v[0]) == 0)) {
                 continue;
             }
@@ -1637,7 +1645,7 @@ int func_L00_001F34F0(float a0, gaddr a1) {
                 if (!sphere_tri(0, c64, v0->p, v1->p, v2->p, best_d, &pt, &d2, &nrm, &e1, &e2)) {
                     continue;
                 }
-                best_d = d2 * shrink;
+                best_d = fmul(d2, shrink);
                 record(&best, U8(tp + 3), pt, nrm, v0->p, e1, e2, vzero(), 0);
             }
         }
