@@ -281,6 +281,7 @@ mod tests {
         assert_eq!(player_folder(install, "assets/godot/rac1/pal"), None);
         assert_eq!(player_folder(install, "editor/README.md"), None);
     }
+
     #[test]
     fn an_earlier_set_up_moves_into_the_wanted_install_folder() {
         let tmp = std::env::temp_dir().join(format!("openrac-settle-{}", std::process::id()));
