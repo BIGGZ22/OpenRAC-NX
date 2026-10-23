@@ -304,12 +304,7 @@ void configure() {
         return;
     }
     s.configured = true;
-    {
-        // A first character other than 0, as this read has always taken it: 00 or 01 is off.
-        const std::string_view developer =
-            env::value(env::Var::Developer).value_or(std::string_view{});
-        s.developer = !developer.empty() && developer.front() != '0';
-    }
+    s.developer = env::flag(env::Var::Developer);
     // OPENRAC_OVERLAY: shown from the start; a list of names opens those sections ("all": every
     // one), "inspect" selects the hero and opens the inspector, "labels" names the mobys in view,
     // "memview" opens the memory viewer.
