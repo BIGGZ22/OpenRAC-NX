@@ -1762,6 +1762,33 @@ class Places(unittest.TestCase):
             self.assertIn("0x082F9418u", text)
             self.assertIn("0x0828E068u", text)
 
+    def test_a_static_helpers_folded_calls_are_its_callers(self):
+        # rac1/pal's func_L03_00251AC8 (matched) takes its particles' lifetimes from game_frames(n), a
+        # static inline helper calling func_001F9850, whose places in a level's program are different
+        # tick scales. The console's compiler inlined the helper: each of its calls is a jal in the
+        # caller's code, the caller's next call of the folded function. Each call site gets a copy of
+        # the helper with the caller's address and that k (a helper's helper too); translated alone,
+        # the helper had no address, and every call took the place nearest 0.
+        with tempfile.TemporaryDirectory() as tmp:
+            out = self.generate(Path(tmp),
+                "extern int func_00100000(int);\n"
+                "static int frames(int n) { return func_00100000(n); }\n"
+                "static int pair(int a, int b) { return frames(a) + frames(b); }\n"
+                "static int twice(int n) { return n * 2; }\n"
+                "int func_L03_00300000(int n) { return func_00100000(n) + pair(n, 2) + frames(3) + twice(n); }\n"
+                "int unplaced(int n) { return frames(n); }\n",
+                "func_00100000\texe\t40\tfp\t2\t03:00200000,03:00200038\n"
+                "func_L03_00300000\tlevel\t96\tfp2\t1\t03:00300000\n",
+                {"relocate": [0x15F000, 0x500000]})
+            text = (out / "a.c").read_text()
+            self.assertEqual(sorted(re.findall(r"0x00300000u, 96u, (\d+)\)", text)), ["0", "1", "2", "3"])
+            self.assertIn("game_pair__in_func_L03_00300000_0(", text)
+            self.assertIn("game_frames__in_func_L03_00300000_3(", text)   # pair's two, then its own
+            self.assertIn("game_twice(", text)                             # no folded call: as it is
+            self.assertNotIn("game_twice__in_", text)
+            self.assertIn("0u, 0u, 0)", text)                              # the helper itself, for unplaced
+            self.assertRegex(text, r"int game_unplaced\(int n\)\s*\{\s*return \(int\)\(\(\(int\)\(game_frames\(")
+
     def test_a_larger_function_placed_twice_in_a_level_calls_its_copys_own_callee(self):
         # rac1's func_L02_002D75F8 (76 bytes) is two of Eudora's circular saw hooks: 04:002C53B0
         # calls the grab (func_L00_002DCDA8 there), 04:002C5400 the placing. Each copy's call goes

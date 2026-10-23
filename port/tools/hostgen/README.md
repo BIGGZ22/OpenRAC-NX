@@ -81,6 +81,13 @@ does what the EE did:
   known address whose type differs from the function there by position or
   by the kind of its result; the port's ctest runs it for each game
   (`<id>_call_abi`).
+- A static helper with no place of its own in the catalogue (the console's
+  compiler inlined it) whose calls of a folded name go where the caller's
+  own `jal` goes is translated once per call site from a function that has
+  a place: the copy (`<helper>__in_<caller>_<n>`) takes the caller's
+  address, size and level, and its calls of a folded name are the caller's
+  next ones, as the jals in the caller's code are (rac1/pal's
+  func_L03_00251AC8 and its `game_frames` helper).
 
 ### What it does not translate
 
