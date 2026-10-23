@@ -262,36 +262,23 @@ fn run_action(
     let plan = library::plan(&config, &scope, &id, &inputs)?;
     let is_play = library::is_play(&config, &scope, &id);
 
-    if is_play && config.discord_rpc {
-        if let Some(root) = &config.root {
-            if let Ok(catalog) = openrac_launcher_core::catalog::load(root) {
-                if let Scope::Version(key) = &scope {
-                    if let Some(v) = catalog.version(key) {
-                        let discord = state.discord.clone();
-                        let play_status = openrac_launcher_core::discord::DiscordStatus::PlayingGame {
-                            title: v.title.clone(),
-                            region: v.region.clone(),
-                            game_id: v.game.clone(),
-                            start_time: Some(openrac_launcher_core::discord::now_sec()),
-                        };
-                        tauri::async_runtime::spawn_blocking(move || {
-                            let mut discord = discord.lock().unwrap();
-                            let app_start = discord.app_start;
-                            let _ = discord.ipc.set_status(&play_status, app_start);
-                        });
-                    }
-                }
-            }
-        }
-    }
-
-    // The game id whose planet names the play job's log gives (Discord).
-    let play_game = match (&scope, is_play, &config.root) {
-        (Scope::Version(key), true, Some(root)) => {
-            openrac_launcher_core::catalog::load(root).ok().and_then(|c| c.version(key).map(|v| v.game.clone()))
+    // The play job's Discord presence (core discord.rs): its status now, its game for its log.
+    let play = match (is_play, &config.root) {
+        (true, Some(root)) => {
+            openrac_launcher_core::discord::play(root, &scope, openrac_launcher_core::discord::now_sec())
         }
         _ => None,
     };
+    if let (Some(play), true) = (&play, config.discord_rpc) {
+        let discord = state.discord.clone();
+        let status = play.status.clone();
+        tauri::async_runtime::spawn_blocking(move || {
+            let mut discord = discord.lock().unwrap();
+            let app_start = discord.app_start;
+            let _ = discord.ipc.set_status(&status, app_start);
+        });
+    }
+    let play_game = play.map(|p| p.game);
     // On Android the game is an activity of the launcher's own, not a program it runs.
     if is_play && Platform::current() == Platform::Android {
         launcher_log::line(&format!("play: {}", openrac_launcher_core::jobs::command_line(&plan)));
@@ -304,15 +291,14 @@ fn run_action(
         let _ = match &event {
             Event::Output { line, .. } => {
                 // The planet and bolts the game logs.
-                if let Some(game) =
-                    play_game.clone().filter(|_| line.contains("now playing level") || line.contains("] bolts "))
+                if let Some(log) =
+                    play_game.as_deref().and_then(|game| openrac_launcher_core::discord::read_game_log(game, line))
                 {
                     if let Some(st) = app_handle.try_state::<AppState>() {
                         if st.config.lock().unwrap().discord_rpc {
                             let discord = st.discord.clone();
-                            let line = line.clone();
                             tauri::async_runtime::spawn_blocking(move || {
-                                let _ = discord.lock().unwrap().ipc.on_game_log(&game, &line);
+                                let _ = discord.lock().unwrap().ipc.on_game_log(log);
                             });
                         }
                     }
@@ -336,10 +322,7 @@ fn run_action(
                             tauri::async_runtime::spawn_blocking(move || {
                                 let mut discord = discord.lock().unwrap();
                                 let app_start = discord.app_start;
-                                let _ = discord.ipc.set_planet(None);
-                                let _ = discord
-                                    .ipc
-                                    .set_status(&openrac_launcher_core::discord::DiscordStatus::Idle, app_start);
+                                let _ = discord.ipc.end_play(app_start);
                             });
                         }
                     }
