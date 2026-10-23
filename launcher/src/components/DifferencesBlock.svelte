@@ -10,7 +10,7 @@
   import { api, type Differences, type DifferenceView, type VersionView } from "$lib/api";
   import { app, toast } from "$lib/app.svelte";
   import { differencesSummary, groupDifferences, splitVersion } from "$lib/differences";
-  import { enter, fold } from "$lib/motion";
+  import { arrive, fold } from "$lib/motion";
   import { isPlaying } from "$lib/player.svelte";
   import { fly, slide } from "svelte/transition";
 
@@ -57,7 +57,7 @@
 </script>
 
 {#if data && groups.length}
-  <section class="panel differences" aria-labelledby="differences-title" in:fly|global={enter()}>
+  <section class="panel differences" aria-labelledby="differences-title" in:fly|global={arrive()}>
     {#if foldable}
       <FoldHead
         title="Differences from the original"
