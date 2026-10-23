@@ -67,9 +67,29 @@ pub fn get_memcard_dir(serial: &str) -> PathBuf {
     data_home().join("memcard").join(serial)
 }
 
+#[cfg(test)]
+thread_local! {
+    /// The data folder `data_home()` answers on this test's thread instead of the user's, so a
+    /// test never reads the settings of whoever runs it (`with_data_home`).
+    static TEST_DATA_HOME: std::cell::RefCell<Option<PathBuf>> = const { std::cell::RefCell::new(None) };
+}
+
+/// Runs `f` with `data_home()` answering `home` on the calling thread; tests only.
+#[cfg(test)]
+pub fn with_data_home<T>(home: &Path, f: impl FnOnce() -> T) -> T {
+    TEST_DATA_HOME.with(|cell| *cell.borrow_mut() = Some(home.to_path_buf()));
+    let result = f();
+    TEST_DATA_HOME.with(|cell| *cell.borrow_mut() = None);
+    result
+}
+
 /// OpenRAC's data folder, where the games keep their memory cards (`memcard/`) and settings
 /// (`settings/`): the port's own `data_home()` (port/game/common/main.cpp), from the same variables.
 pub fn data_home() -> PathBuf {
+    #[cfg(test)]
+    if let Some(home) = TEST_DATA_HOME.with(|cell| cell.borrow().clone()) {
+        return home;
+    }
     if cfg!(target_os = "macos") {
         return dirs_home().join("Library/Application Support/OpenRAC");
     }

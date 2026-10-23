@@ -672,6 +672,13 @@ mod tests {
 
     #[test]
     fn plans_fill_placeholders_and_report_blockers() {
+        // Play reads the version's settings file (Enhanced graphics): an empty data folder, not
+        // the settings of whoever runs the tests.
+        let home = std::env::temp_dir().join(format!("openrac-plans-{}", std::process::id()));
+        crate::saves::with_data_home(&home, plans_fill_placeholders_and_report_blockers_in_home);
+    }
+
+    fn plans_fill_placeholders_and_report_blockers_in_home() {
         let root = checkout();
         let catalog = crate::catalog::load(&root).unwrap();
         let version = catalog.version("rac1/pal").unwrap();
