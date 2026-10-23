@@ -200,9 +200,10 @@ jobs:
           restore-keys: |
             port-${{ matrix.name }}-h
 
-      # The Linux rows' packages, kept from the last run: apt.llvm.org's LLVM is a few hundred MB
-      # and its server is sometimes slow enough to hold this step for twenty minutes. apt fetches
-      # only what has changed since (a stale package is just downloaded again).
+      # The Linux rows' packages, kept from the last run: LLVM and the libraries WebKitGTK pulls
+      # in are a few hundred MB, and the runners' Ubuntu mirror has served them at 40 kB/s,
+      # holding this step for 24 minutes. apt fetches only what has changed since (a stale
+      # package is just downloaded again).
       - uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         if: matrix.name == 'linux' || matrix.name == 'linux-arm64'
         with:
