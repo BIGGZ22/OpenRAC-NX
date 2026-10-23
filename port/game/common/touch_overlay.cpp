@@ -4,7 +4,10 @@
 #include "touch_overlay.h"
 
 #include <algorithm>
+#include <chrono>
+#include <cmath>
 #include <string>
+#include <vector>
 
 #include "common/log.h"
 #include "renderer/gl.h"
@@ -43,7 +46,9 @@ uniform int label0;    // two letters (letter()), -1 for none
 uniform int label1;
 out vec4 colour;
 
-float fill(float d) { float w = fwidth(d) * 0.75; return 1.0 - smoothstep(-w, w, d); }
+// smoothstep() is undefined with equal edges: where d is flat across a pixel (fwidth 0, far from
+// any shape, d = 1e3) some drivers return garbage, so the edge keeps a width.
+float fill(float d) { float w = max(fwidth(d) * 0.75, 1e-5); return 1.0 - smoothstep(-w, w, d); }
 float pill(vec2 p, float half_width, float r) {
     return length(vec2(max(abs(p.x) - half_width, 0.0), p.y)) - r;
 }
@@ -138,7 +143,7 @@ void main() {
         vec3 face = mix(vec3(0.24, 0.24, 0.25), vec3(0.08, 0.08, 0.085), clamp(k.y / 0.42 * 0.5 + 0.5, 0.0, 1.0));
         float ribs = step(0.78, r) * (0.5 + 0.5 * cos(atan(k.y, k.x) * 28.0));
         face = mix(face, vec3(0.34, 0.34, 0.36), 0.5 * ribs);
-        face = mix(face, face * 0.6, smoothstep(0.65, 0.0, r) * 0.6);  // the dish
+        face = mix(face, face * 0.6, (1.0 - smoothstep(0.0, 0.65, r)) * 0.6);  // the dish
         face = mix(face, accent * 0.8, 0.5 * held);
         c = over(c, vec4(face, 0.88 * fill(kd)));
         c = over(c, vec4(mix(vec3(0.75), accent, held), (0.35 + 0.4 * held) * fill(abs(length(k) - 0.42 * press + 0.02) - 0.02)));
@@ -177,7 +182,14 @@ void main() {
             const float size = 0.38;  // half a letter's height
             vec2 at = q / size;
             s = min(letter(label0, at + vec2(0.8, 0.0)), letter(label1, at - vec2(0.8, 0.0))) * size - 0.07;
-            ink.rgb = vec3(0.95);
+            ink.rgb = mix(vec3(0.95), accent, 0.5 * held);
+        }
+        // A sheen across the top of the glass, which a press dims as the button sinks.
+        float sheen = fill(d + 0.10) * (1.0 - smoothstep(-0.85, 0.1, p.y / press));
+        c = over(c, vec4(vec3(1.0), (0.10 - 0.06 * held) * sheen));
+        // The symbol pressed into the glass: a faint shadow under it, then the ink.
+        if (stretch > 1.0) {
+            c = over(c, vec4(vec3(0.0), 0.45 * ink.a * fill(s - 0.02) * (1.0 - fill(s))));
         }
         ink.a *= 0.75 + 0.25 * held;
         c = over(c, vec4(ink.rgb, ink.a * fill(s)));
@@ -214,7 +226,14 @@ struct State {
     renderer::Shader shader;
     GLuint vao = 0;
     bool failed = false;
+    // How far each control is pressed in, easing toward held or let go (kPressEase), so that a
+    // press and its release move rather than jump; and when the pad was last drawn.
+    std::vector<float> press;
+    std::chrono::steady_clock::time_point last{};
 };
+
+// The seconds a press takes to ease most of the way in or out.
+constexpr float kPressEase = 0.06f;
 
 State s;
 
@@ -284,10 +303,12 @@ void draw(platform::TouchPad& touch, int width, int height) {
     if (!touch.visible() || !ready()) {
         return;
     }
+    // All of the state the pad's quads depend on, whatever the frame or picture under it left.
     glBindFramebuffer(GL_DRAW_FRAMEBUFFER, 0);
     glViewport(0, 0, width, height);
     glDisable(GL_SCISSOR_TEST);
     glDisable(GL_DEPTH_TEST);
+    glDisable(GL_STENCIL_TEST);
     glDisable(GL_CULL_FACE);
     glColorMask(GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE);
     glEnable(GL_BLEND);
@@ -297,6 +318,13 @@ void draw(platform::TouchPad& touch, int width, int height) {
     glBindVertexArray(s.vao);
     const float aspect = touch.aspect();
     const auto controls = touch.controls();
+    const auto now = std::chrono::steady_clock::now();
+    const float dt = s.last == std::chrono::steady_clock::time_point{}
+                         ? 1.0f
+                         : std::min(std::chrono::duration<float>(now - s.last).count(), 1.0f);
+    s.last = now;
+    const float ease = 1.0f - std::exp(-dt / kPressEase);
+    s.press.resize(controls.size(), 0.0f);
     // A control's box, in window units (0..1 down, the radius in heights), to device coordinates,
     // with `reach` radii around its centre (more than 1 leaves room for a press's glow).
     const auto box = [&](float x, float y, float radius, float stretch, float reach) {
@@ -322,7 +350,10 @@ void draw(platform::TouchPad& touch, int width, int height) {
         glUniform3f(s.shader.uniform("tint"), 0.93f, 0.91f, 0.88f);
         glUniform1f(s.shader.uniform("held"), 0.0f);
         glUniform1i(s.shader.uniform("symbol"), kDpad);
+        glUniform1f(s.shader.uniform("angle"), 0.0f);
         glUniform1i(s.shader.uniform("label0"), -1);
+        glUniform1i(s.shader.uniform("label1"), -1);
+        glUniform2f(s.shader.uniform("knob"), 0.0f, 0.0f);
         glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
     }
     for (std::size_t i = 0; i < controls.size(); ++i) {
@@ -333,7 +364,9 @@ void draw(platform::TouchPad& touch, int width, int height) {
         const Look l = look(c);
         box(c.x, c.y, c.radius, c.stretch, 1.2f);
         glUniform3f(s.shader.uniform("tint"), l.r, l.g, l.b);
-        glUniform1f(s.shader.uniform("held"), touch.held(i) ? 1.0f : 0.0f);
+        float& press = s.press[i];
+        press += ((touch.held(i) ? 1.0f : 0.0f) - press) * ease;
+        glUniform1f(s.shader.uniform("held"), press);
         glUniform1i(s.shader.uniform("symbol"), l.symbol);
         glUniform1f(s.shader.uniform("angle"), l.angle);
         glUniform1i(s.shader.uniform("label0"), l.label0);
