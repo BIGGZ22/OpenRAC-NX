@@ -89,6 +89,7 @@ back the kept value (`env::value`'s view ends in a NUL for it). The library repl
 | `result` | a value or an error through each accessor, the wrong side throwing, copies and moves (a move-only value included), and `Result<void>` |
 | `c_boundary` | a body that returns passes through unreported; a `std::exception` and a non-standard thrown value are reported and the failure value returned; a void body; a long message cut to the buffer; the default and a null reporter write to the log |
 | `env` | each kind of variable reads as the `getenv` calls it replaced read it, the values are read once, a variable is found by its whole name, and DEBUGGING.md documents the table's variables and no other |
+| `stats` | a probe is on when its variable is set, whatever the value, and off when it is unset; a variable has one probe, which keeps its first description; the list switches a probe for its callers |
 | `host_env` | the table read from C through `openrac/host_env.h` (runtime/README.md) |
 | `viewer` | the JSON reader's values and its errors (with the viewer's own checks) |
 | `mod_manifest`, `mod_loader`, `mod_scripts` | the mod manifests and status files, read through the JSON reader |
