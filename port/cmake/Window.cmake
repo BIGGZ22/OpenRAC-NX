@@ -146,8 +146,7 @@ openrac_warnings(openrac_renderer)
 
 # ---- the world's renderers: renderer/world, shaders in renderer/shaders/world ----
 file(GLOB world_sources CONFIGURE_DEPENDS "${CMAKE_CURRENT_SOURCE_DIR}/renderer/world/*.cpp")
-openrac_part_enabled(renderer_world enabled)
-if(world_sources AND enabled)
+if(world_sources)
   add_library(openrac_renderer_world STATIC ${world_sources})
   file(GLOB world_shaders CONFIGURE_DEPENDS
     "${CMAKE_CURRENT_SOURCE_DIR}/renderer/shaders/world/*.vert"
