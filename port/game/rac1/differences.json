@@ -38,8 +38,17 @@
       "name": "Cutscenes with a full moby pool",
       "discs": ["pal", "ntsc"],
       "original": "When a cutscene starts while the level's 255 moby slots are full (on Gaspar the falling rocks' lava sparks can fill them as the Pilot's Helmet's scene starts), the scene's actor cannot be made and the game reads through the missing moby. On a PS2 that read lands in readable memory and the game most likely carries on unnoticed.",
-      "port": "On a PC the same read crashes the game, so the port skips that actor: the scene plays without it, and the log says \"scene actor skipped\". A bigger pool, the proper fix, is being looked into.",
-      "refs": ["docs/port/KNOWN_ISSUES.md"]
+      "port": "On a PC the same read crashes the game, so the port skips that actor: the scene plays without it, and the log says \"scene actor skipped\". The port's bigger pool (More room for effects) makes this rare; the guard stays for a pool that still fills.",
+      "refs": ["docs/port/KNOWN_ISSUES.md", "port/game/rac1/host/scene_actors.c"]
+    },
+    {
+      "id": "bigger-moby-pool",
+      "kind": "port",
+      "name": "More room for effects",
+      "discs": ["pal", "ntsc"],
+      "original": "Each level has 255 slots for the mobys the game makes as it plays (sparks, debris, bolts, enemies a spawner sends). Busy effects can fill them: Gaspar's lava sparks reach 254. A full pool makes the game drop new ones, and a few callers read through the missing moby.",
+      "port": "More room for effects than on a PS2: the port gives each level 767 slots, so effects and the enemies mods add fit beside each other. Rilgar, Blarg Station and Quartu keep 255, since their memory has no room for more. The tick's list of mobys to target keeps the console's 511 entries, where the game would write past it with more.",
+      "refs": ["port/game/rac1/host/moby_pool.c", "docs/port/KNOWN_ISSUES.md"]
     },
     {
       "id": "pal-60-hz",
