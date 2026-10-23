@@ -8,69 +8,33 @@ and remove the section when it lands.
 Known bugs that are guarded but not properly fixed are in
 [port/KNOWN_ISSUES.md](port/KNOWN_ISSUES.md).
 
-## 1. A bigger moby pool for Ratchet & Clank (port)
+## 1. The rest of the bigger moby pool for Ratchet & Clank (port)
 
-**Goal.** No level runs out of room for dynamic mobys (objects).
+**Landed** (2026-10-22): the port gives every level at least 768 spare moby
+slots (767 usable, against the disc's 255) except Rilgar (5), Blarg Station
+(6) and Quartu (15), and caps the tick's target list at 511
+(`port/game/rac1/host/moby_pool.c`; the limits checked are in
+[port/KNOWN_ISSUES.md](port/KNOWN_ISSUES.md)). Left:
 
-**Why.** Every level gets 255 usable spawn slots. Busy effects can fill them,
-e.g. Gaspar's lava sparks: fcheck shows the original game reaching 254 of 255
-there. CreateMoby then returns 0, and any caller that doesn't check reads
-through a null moby and crashes the port. Gaspar's Pilot's Helmet cutscene was
-one such caller. 0.8.4 guards that one call site
-(`port/game/rac1/host/scene_actors.c`), but any other site can crash the same
-way. The details and evidence are in
-[port/KNOWN_ISSUES.md](port/KNOWN_ISSUES.md).
-
-**What is known** (from reading the code, 2026-10-20):
-
-- The pool's size is data. Each level's gameplay file gives a spare-slot
-  count at the moby section: header +0x44, second word (`n2`).
-- The level loader, `LoadLevelGameplay` (PAL `func_L00_002422D8` in
-  `games/rac1/src/overlays/shared/loaders_00240398.c`; US
-  `games/rac1/ntsc/src/overlays/shared/world/loaders/load_level_gameplay.c`),
-  sizes everything from it:
-  - the array, `(placed + n2) << 8` bytes;
-  - its pvars, 0x80 bytes per spare slot;
-  - the pool end, `base + (placed + n2 - 1) * 0x100`. The last slot holds the
-    free mark.
-- Everything after the array is allocated from where the array ends, so it
-  moves with `n2`.
-- Every level ships 256 spare slots except level 17, which ships 400. So a
-  larger count already works in retail data.
-
-**How.**
-
-1. Wrap the load step with the port's wrap mechanism (`libraries.tsv`
-   `wrap`, with the decomp's own function kept as `__game`, as
-   `port/game/rac1/host/wide_view.c` and `crash_state.c` do).
-2. After the header is in memory and before the loader reads it, raise `n2`
-   to `max(n2, N)`, with N around 512 or 768. Do this on both discs (PAL and
-   US).
-3. Make it a setting if needed, but the default should be the larger pool.
-4. Add an entry to `port/game/rac1/differences.json`: a `port` difference
-   ("more room for effects than on a PS2").
-
-**Check before choosing N:**
-
-- the level heap's headroom on the levels with the most placed mobys: 16
-  (1,569), 5 (1,431) and 3 (1,029);
-- the moby grid's 1,536 shared blocks of 16 ids
-  (`port/game/rac1-pal/hand/game_moby_grid.c`; it traps when they run out);
-- the 512-entry target list in the scratchpad (0x70000800–0x70000C00);
-- any fixed cap in the renderer or the VU packet buffers on how many mobys
-  are drawn (not checked yet).
-
-**Rejected approaches:** moving the array after load, because placed mobys,
-groups and the grid hold its addresses and indices; and a second overflow
-pool, because `(m - base) >> 8` indices break outside the array.
-
-**Verify.** Build both discs, run ctest, then a hidden Gaspar run with the
-moby census:
-- a temporary log of the live slots between the pool's two bounds, by class;
-- the pool should never reach its new end;
-- the guard's "scene actor skipped" line should not appear.
-
-**Effort:** about half a day to a day. Keep the 0.8.4 guard as the stopgap.
+- **Check it in game.** A hidden Gaspar run with a temporary census of the
+  live slots between the pool's two bounds, by class. The pool should stay
+  well short of its new end, and neither "scene actor skipped" nor "moby
+  target list full" should appear. Then a level with many placed mobys
+  (Kalebo III) with the difficulty mod's enemy count at 2 or more.
+- **Room on Rilgar, Blarg Station and Quartu.** Their level heap ends within
+  0 to 65 KiB of 0x1FF8000, so they keep 255. Room would have to come from
+  shrinking the per-level VU chain area (f4 to fC of the load state, 0x160000
+  to 0x1C0000 twice; the port's high-water mark there is not measured, and f4
+  also holds the decompressed gameplay file) or from guest memory past
+  32 MiB (several port paths mask addresses with `& 0x01FFFFFF`).
+- **The moby grid's per-cell count.** Only mobys with collision enter the
+  grid (lava sparks don't). A cell's count is a byte: the collision queries
+  read it signed, so a cell with 128 or more colliding mobys drops out of
+  collision, and at 256 it wraps and the next removal traps
+  (`port/game/rac1-pal/hand/game_moby_grid.c`). Kalebo III's densest cell
+  already holds about 117. Enemy copies piled into one 16-unit cell could
+  reach it; reading the count unsigned and refusing an insert into a full
+  cell would make it degrade instead.
 
 ## 2. Rearrange rac3-uya-decomp like rac1-decomp and rac2-decomp
 
