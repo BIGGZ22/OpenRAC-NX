@@ -1068,6 +1068,22 @@ class Translate(unittest.TestCase):
         self.assertEqual(self.last_report["overrides_used"], ["draw"])
         self.assertEqual(self.last_report["index_problems"], [])
 
+    def test_an_override_that_defines_another_name_stands_aside(self):
+        # An override whose C spells its definition with a name that is not the function's (a
+        # readable name the decompilation's names.h dropped) defines another function: the matched
+        # C stays, and the index says so, instead of the function going to the assembly stage.
+        out = self.run_program({"a.c": """
+            int draw(int i) { return i + 1; }
+            int test_main(void) { test_print(draw(1)); return 0; }
+        """}, config={"overrides": "overrides.tsv"}, extra_files={
+            "overrides.tsv": "# name\tfile\ndraw\tmine.c\n",
+            "mine.c": "int DrawOld(int i) { return i + 2; }\n"})
+        self.assertEqual(out, ["2"])                              # the matched C
+        self.assertEqual(self.last_report["overrides_used"], [])
+        self.assertEqual(self.last_report["index_problems"],
+                         ["overrides: the C for draw defines no draw (a readable name names.h no longer has?); "
+                          "the matched C stays"])
+
     def test_variable_length_array_of_a_local_length(self):
         # A one-dimensional array whose length is a local goes on the guest stack for its
         # block, as on the console, and its address can be passed on.

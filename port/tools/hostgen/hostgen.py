@@ -956,6 +956,11 @@ def main(argv: list[str] | None = None) -> int:
         texts = {id(c): prep.unalias(c, aliases) for c in [*candidates.values(), *overrides.values()]}
         candidates = {name: texts[id(c)] for name, c in candidates.items()}
         overrides = {name: texts[id(c)] for name, c in overrides.items()}
+    # An override whose C defines no function of its name (it spells the definition with a readable
+    # name the decompilation's names.h no longer has) would blank the matched definition and leave
+    # the function to the assembly stage, silently: it stands aside, and the index says so.
+    undefined = sorted(name for name, c in overrides.items() if not prep.defines(c, name))
+    overrides = {name: c for name, c in overrides.items() if name not in undefined}
     used: set[str] = set()
     overridden: set[str] = set()
     drafts = read_drafts(args.game.parent, cfg)
@@ -976,8 +981,13 @@ def main(argv: list[str] | None = None) -> int:
     program.groups = cfg["groups"]
     for table in cfg["symbols"]:
         read_symbols(source / table, program)
+    # Of those that stood aside, the ones with a matched definition (still in the prepared copy).
+    prepared = [p.read_text(errors="replace") for p in root.rglob("*.c")] if undefined else []
+    matched = {name for name in undefined if any(prep.has_definition(text, name) for text in prepared)}
     problems: list[str] = [f"overrides: {name} has no matched definition to replace"
-                           for name in sorted(set(overrides) - overridden)]
+                           for name in sorted((set(overrides) - overridden) | (set(undefined) - matched))]
+    problems += [f"overrides: the C for {name} defines no {name} (a readable name names.h no longer has?); "
+                 "the matched C stays" for name in sorted(matched)]
     if cfg.get("places"):
         read_places(source / cfg["places"], program)
     if cfg.get("split_places"):
@@ -1097,6 +1107,10 @@ def main(argv: list[str] | None = None) -> int:
     if extra["hooks_skipped"]:
         return 1
     extra["index_problems"] = problems
+    # An override that is not used leaves the port running C its table says it replaces: said.
+    for p in problems:
+        if p.startswith("overrides:"):
+            print(f"hostgen: warning: {p}", file=sys.stderr)
     asm_files = asmc.write_files(out, cfg, asm_results, cfg.get("title", cfg.get("name", "")))
     extra["asm"] = asm_stage
     (out / "units.txt").write_text("".join(generated_name(u) + "\n" for u in units)
