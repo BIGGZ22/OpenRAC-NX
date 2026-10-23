@@ -23,6 +23,7 @@
   let backupNote = $state("");
   let creatingBackup = $state(false);
   let restoringBackupName = $state<string | null>(null);
+  let confirming = $state(false);
   /** The slot open in the save editor. */
   let editing = $state<number | null>(null);
   /** The backups are folded until asked for. */
@@ -75,12 +76,15 @@
   }
 
   async function restoreBackup(backup: SaveBackupInfo) {
+    // A second press while the question is open, or while a restore runs, asks nothing again.
+    if (restoringBackupName !== null || confirming) return;
     const label = `${backupLabel(backup)} (${when(backup.createdMillis / 1000)})`;
-    if (
-      !(await ask(`Restore the backup "${label}"? Your current saves are backed up first, then replaced.`, "Restore"))
-    ) {
-      return;
-    }
+    confirming = true;
+    const sure = await ask(
+      `Restore the backup "${label}"? Your current saves are backed up first, then replaced.`,
+      "Restore",
+    ).finally(() => (confirming = false));
+    if (!sure) return;
     restoringBackupName = backup.name;
     try {
       await api.restoreBackup(version.serial, backup.name);

@@ -45,9 +45,18 @@
     };
   });
 
+  /** A dialog is open: a second press opens no other. */
+  let browsing = false;
+
   async function browse() {
-    const picked = folder ? await pickFolder(label) : await pickFile(label);
-    if (picked) value = picked;
+    if (browsing) return;
+    browsing = true;
+    try {
+      const picked = folder ? await pickFolder(label) : await pickFile(label);
+      if (picked) value = picked;
+    } finally {
+      browsing = false;
+    }
   }
 </script>
 

@@ -375,12 +375,28 @@ export async function prepareLevels(v: VersionView): Promise<boolean> {
 }
 
 /** Does what the main button says. */
+/** The versions whose main button has been pressed and whose request is still going (getting the
+ *  game ready, then starting it): a second press waits on nothing and starts nothing. */
+// Not shown, so not reactive.
+// eslint-disable-next-line svelte/prefer-svelte-reactivity
+const acting = new Set<string>();
+
 export async function playerAct(v: VersionView, state: PlayerState): Promise<void> {
-  const scope = { kind: "version" as const, key: v.key };
   if (state.job) {
     await cancel(state.job);
     return;
   }
+  if (acting.has(v.key)) return;
+  acting.add(v.key);
+  try {
+    await act(v, state);
+  } finally {
+    acting.delete(v.key);
+  }
+}
+
+async function act(v: VersionView, state: PlayerState): Promise<void> {
+  const scope = { kind: "version" as const, key: v.key };
   if (state.kind === "return") {
     await gameWindow(false);
     return;

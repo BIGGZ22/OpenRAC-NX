@@ -178,9 +178,13 @@
     await runChain({ kind: "version", key: v.key }, stack ? [stack, play] : [play]);
   }
 
+  /** The picker is open: a second press opens no other. */
+  let pickingGodot = false;
+
   async function chooseGodot() {
-    if (!app.config) return;
-    const picked = await pickFile(EDITOR.pickGodot);
+    if (!app.config || pickingGodot) return;
+    pickingGodot = true;
+    const picked = await pickFile(EDITOR.pickGodot).finally(() => (pickingGodot = false));
     if (!picked) return;
     // Settings checks a pick the same way: the zip, a Godot 3 or another program is said at once,
     // not when a level does not open.
