@@ -782,6 +782,18 @@ mod tests {
         let on_mac = Context { platform: Platform::Macos, ..ctx(&vulkan) };
         let plan = play.plan(&on_mac).unwrap();
         assert!(plan.env.contains(&("OPENRAC_GL_API".to_string(), "vulkan".to_string())), "{:?}", plan.env);
+        // Android keeps its own renderer, unless Enhanced graphics is on: then Vulkan and the
+        // probe bakes, as on the desktops.
+        let on_android = Context { platform: Platform::Android, ..ctx(&vulkan) };
+        assert!(!play.plan(&on_android).unwrap().env.iter().any(|(k, _)| k == "OPENRAC_GL_API"));
+        let file = crate::differences::settings_file(&crate::saves::data_home(), "rac1", "pal");
+        std::fs::create_dir_all(file.parent().unwrap()).unwrap();
+        std::fs::write(&file, format!("{} = 1\n", crate::enhanced::SWITCH)).unwrap();
+        let plan = play.plan(&Context { platform: Platform::Android, ..ctx(&installed) }).unwrap();
+        assert!(plan.env.contains(&("OPENRAC_GL_API".to_string(), "vulkan".to_string())), "{:?}", plan.env);
+        let probes = crate::enhanced::probes_dir(&data, "pal").display().to_string();
+        assert!(plan.args.ends_with(&["--probes".to_string(), probes]), "{:?}", plan.args);
+        std::fs::remove_file(&file).unwrap();
     }
 
     /// `{path}` is a chosen file or folder that is there; `{option}` one of the action's options.

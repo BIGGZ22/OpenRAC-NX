@@ -185,19 +185,16 @@ pub async fn pick_zip<R: Runtime>(app: AppHandle<R>) -> Result<Option<PathBuf>, 
         // The descriptor Kotlin detached is this process's to close: File owns it from here.
         let file = unsafe { <std::fs::File as std::os::fd::FromRawFd>::from_raw_fd(fd) };
         let dir = app.path().app_cache_dir().map_err(|e| e.to_string())?.join("mod-imports");
-        // A folder of its own each time, so that two picks of one name do not meet.
-        let dest = dir
-            .join(format!(
-                "{}",
-                std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).map(|d| d.as_millis()).unwrap_or(0)
-            ))
-            .join(disc_file_name(&name));
+        // The add copies the mod out at once, so the last pick's copy is no longer needed.
+        let dest = dir.join(disc_file_name(&name));
         let total = picked.size.unwrap_or(-1).max(0) as u64;
         let copied = dest.clone();
         tauri::async_runtime::spawn_blocking(move || {
-            if let Some(parent) = copied.parent() {
-                std::fs::create_dir_all(parent).map_err(|e| e.to_string())?;
+            match std::fs::remove_dir_all(&dir) {
+                Err(e) if e.kind() != std::io::ErrorKind::NotFound => return Err(e.to_string()),
+                _ => {}
             }
+            std::fs::create_dir_all(&dir).map_err(|e| e.to_string())?;
             copy_disc(file, total, &copied, |_| {}).map_err(|e| e.to_string())
         })
         .await
