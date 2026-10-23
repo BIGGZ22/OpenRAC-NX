@@ -463,8 +463,10 @@
     color: var(--err);
   }
 
-  button.danger:hover:not(:disabled) {
-    border-color: color-mix(in srgb, var(--err) 45%, transparent);
+  @media (hover: hover) {
+    button.danger:hover:not(:disabled) {
+      border-color: color-mix(in srgb, var(--err) 45%, transparent);
+    }
   }
 
   button.danger-solid {
@@ -474,8 +476,10 @@
     font-weight: 600;
   }
 
-  button.danger-solid:hover:not(:disabled) {
-    filter: brightness(1.08);
+  @media (hover: hover) {
+    button.danger-solid:hover:not(:disabled) {
+      filter: brightness(1.08);
+    }
   }
 
   /* The question before anything is deleted: in the row it is about, under its text. */

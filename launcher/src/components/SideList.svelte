@@ -101,9 +101,11 @@
     }
   }
 
-  .entry:hover:not(.on) {
-    background: color-mix(in srgb, var(--panel-hi) 60%, transparent);
-    transform: translateX(2px);
+  @media (hover: hover) {
+    .entry:hover:not(.on) {
+      background: color-mix(in srgb, var(--panel-hi) 60%, transparent);
+      transform: translateX(2px);
+    }
   }
 
   .entry:active {
@@ -154,12 +156,14 @@
       transform 0.3s ease;
   }
 
-  .entry:hover .thumb img {
-    transform: scale(1.06);
+  @media (hover: hover) {
+    .entry:hover .thumb img {
+      transform: scale(1.06);
+      filter: none;
+    }
   }
 
-  .entry.on .thumb img,
-  .entry:hover .thumb img {
+  .entry.on .thumb img {
     filter: none;
   }
 
@@ -265,10 +269,16 @@
     border-radius: 10px;
   }
 
-  :global(html[data-platform="android"]) .entry.on,
-  :global(html[data-platform="android"]) .entry:hover:not(.on) {
+  :global(html[data-platform="android"]) .entry.on {
     background: none;
     transform: none;
+  }
+
+  @media (hover: hover) {
+    :global(html[data-platform="android"]) .entry:hover:not(.on) {
+      background: none;
+      transform: none;
+    }
   }
 
   :global(html[data-platform="android"]) .thumb {

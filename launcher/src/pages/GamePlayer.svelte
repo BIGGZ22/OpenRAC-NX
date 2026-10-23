@@ -499,9 +499,11 @@
   }
 
   /* The main button lifts towards the pointer, and gives under it. */
-  .big.primary:hover:not(:disabled) {
-    transform: translateY(-2px);
-    box-shadow: 0 12px 28px color-mix(in srgb, var(--bar-top) 38%, transparent);
+  @media (hover: hover) {
+    .big.primary:hover:not(:disabled) {
+      transform: translateY(-2px);
+      box-shadow: 0 12px 28px color-mix(in srgb, var(--bar-top) 38%, transparent);
+    }
   }
 
   .big:active:not(:disabled) {
