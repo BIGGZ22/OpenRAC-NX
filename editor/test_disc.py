@@ -138,6 +138,61 @@ class VersionTests(unittest.TestCase):
             d.survey()
 
 
+class IsoChecksTests(unittest.TestCase):
+    """What Disc.files and identify ask of the file system, stricter than a PS2 disc needs: one
+    root directory of files in 2048-byte logical blocks, and a SYSTEM.CNF that boots from
+    cdrom0:\\. Each damaged image is the synthetic one with a few bytes changed."""
+
+    PVD = 16 * SECTOR
+    THIRD_RECORD = 18 * SECTOR + 2 * 34       # after the root's own and parent records
+
+    def open(self, files: dict[str, bytes], *patches: tuple[str, int, int]) -> Disc:
+        """A Disc of FILES' image with each (struct format, offset, value) of PATCHES written in."""
+        data = bytearray(image(files))
+        for fmt, offset, value in patches:
+            struct.pack_into(fmt, data, offset, value)
+        temp = tempfile.TemporaryDirectory()
+        self.addCleanup(temp.cleanup)
+        path = Path(temp.name) / "synthetic.iso"
+        path.write_bytes(bytes(data))
+        opened = Disc(path)
+        self.addCleanup(opened.file.close)
+        return opened
+
+    def test_the_root_directory_s_files(self):
+        d = self.open({"SYSTEM.CNF": cnf(A.executable), A.executable: EXE_A})
+        self.assertEqual(d.files(), [{"name": "SYSTEM.CNF", "lba": 19, "bytes": len(cnf(A.executable))},
+                                     {"name": A.executable, "lba": 20, "bytes": len(EXE_A)}])
+
+    def test_only_iso_9660_version_1_with_2048_byte_blocks(self):
+        for patch in (("<H", self.PVD + 128, 4096),     # the logical block size
+                      ("B", self.PVD + 6, 2),           # the descriptor's version
+                      ("B", self.PVD, 2)):              # a supplementary descriptor, not the primary
+            with self.subTest(patch=patch), self.assertRaisesRegex(FormatError, "2048-byte sectors"):
+                self.open({A.executable: EXE_A}, patch).files()
+
+    def test_no_subdirectory_or_multi_extent_file(self):
+        for flags in (0x02, 0x80):
+            with self.subTest(flags=flags), self.assertRaisesRegex(FormatError, "subdirectory or multi-extent"):
+                self.open({A.executable: EXE_A}, ("B", self.THIRD_RECORD + 25, flags)).files()
+
+    def test_a_root_directory_outside_the_image(self):
+        with self.assertRaisesRegex(FormatError, "outside the ISO"):
+            self.open({A.executable: EXE_A}, ("<I", self.PVD + 158, 1 << 20)).files()
+
+    def test_a_record_cut_short(self):
+        # The root ends 20 bytes into its third record, inside the record's fixed fields.
+        with self.assertRaises(FormatError):
+            self.open({A.executable: EXE_A}, ("<I", self.PVD + 166, 2 * 34 + 20)).files()
+
+    def test_boot2_must_boot_from_cdrom0(self):
+        # Without cdrom0:\ the line is not read, and the known executable on the disc decides.
+        files = {"SYSTEM.CNF": f"BOOT2 = {B.executable};1\r\n".encode(), A.executable: EXE_A, B.executable: EXE_B}
+        with mock.patch.object(disc, "VERSIONS", (A, B)):
+            self.assertEqual(self.open(files).identify()[0], A)
+            self.assertEqual(self.open({**files, "SYSTEM.CNF": cnf(B.executable)}).identify()[0], B)
+
+
 class KnownVersionTests(unittest.TestCase):
     def test_the_two_discs(self):
         self.assertEqual(VERSIONS, (PAL, NTSC))

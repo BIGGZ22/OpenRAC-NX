@@ -119,6 +119,17 @@ class WadDiscTests(unittest.TestCase):
         with mock.patch.object(wads, "VERSIONS", (wrong,)), self.assertRaisesRegex(FormatError, "SHA-1"):
             wads.identify(d)
 
+    def test_walk_wants_iso_9660_version_1_with_2048_byte_blocks(self):
+        for fmt, offset, value in (("<H", 16 * SECTOR + 128, 4096), ("B", 16 * SECTOR + 6, 2)):
+            data = bytearray(image(GC, [(0, 0)]))
+            struct.pack_into(fmt, data, offset, value)
+            temp = tempfile.TemporaryDirectory()
+            self.addCleanup(temp.cleanup)
+            path = Path(temp.name) / "damaged.iso"
+            path.write_bytes(bytes(data))
+            with self.subTest(offset=offset), Disc(path) as d, self.assertRaisesRegex(FormatError, "2048-byte sectors"):
+                wads.walk(d)
+
     def test_levels_are_numbered_by_their_headers(self):
         d = self.open(GC, [(0, 0), (1, 30)])
         source = wads.WadDisc(d, GC)
