@@ -84,6 +84,9 @@ def sky(data: bytes, fmt: games.Format = games.RAC1) -> Sky:
 
 
 def unit(p):
+    """P (a 3-vector) scaled to length 1, its squares added left to right. Not one with
+    moby_collision_scene.unit, whose sum() rounds differently on Python 3.12 and newer
+    (test_util.UnitTests)."""
     length = math.sqrt(p[0] * p[0] + p[1] * p[1] + p[2] * p[2])
     return (p[0] / length, p[1] / length, p[2] / length)
 

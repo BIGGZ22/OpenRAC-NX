@@ -2,6 +2,7 @@
 the disc identities read from games/*/game.json."""
 
 import hashlib
+import math
 from pathlib import Path
 import struct
 import sys
@@ -13,8 +14,10 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 import assets  # noqa: E402
 import disc  # noqa: E402
 import games  # noqa: E402
+import moby_collision_scene  # noqa: E402
 import overrides  # noqa: E402
 import pack  # noqa: E402
+import sky  # noqa: E402
 import util  # noqa: E402
 import wads  # noqa: E402
 
@@ -100,6 +103,29 @@ class CrossTests(unittest.TestCase):
         self.assertEqual(util.cross((1, 0, 0), (0, 1, 0)), (0, 0, 1))
         self.assertEqual(util.cross((0, 1, 0), (1, 0, 0)), (0, 0, -1))
         self.assertEqual(util.cross((1.5, 2.0, -3.0), (4.0, -0.5, 2.0)), (2.5, -15.0, -8.75))
+
+
+class UnitTests(unittest.TestCase):
+    """moby_collision_scene.unit and sky.unit stay two (P2-32): one for both would have to give
+    the same bits for every vector, and on Python 3.12 and newer sum() (compensated) and a plain
+    x*x + y*y + z*z differ in the last bit for some."""
+
+    SAMPLES = ((1.0, 0.0, 0.0), (0.0, -2.0, 0.0), (3.0, 4.0, 12.0), (1e-3, 2e5, -7.5), (0.1, 0.3, 0.1))
+
+    def test_both_scale_to_length_one(self):
+        for v in self.SAMPLES:
+            for unit in (moby_collision_scene.unit, sky.unit):
+                with self.subTest(v=v, unit=unit.__module__):
+                    self.assertAlmostEqual(math.sqrt(sum(c * c for c in unit(v))), 1.0, places=15)
+        self.assertEqual(sky.unit((3.0, 4.0, 12.0)), (3 / 13, 4 / 13, 12 / 13))
+
+    def test_they_differ_in_the_last_bit_since_python_3_12(self):
+        mine, sky_s = moby_collision_scene.unit((0.1, 0.3, 0.1)), sky.unit((0.1, 0.3, 0.1))
+        if sys.version_info >= (3, 12):
+            self.assertNotEqual(mine, sky_s)
+            self.assertEqual([abs(a - b) <= math.ulp(b) for a, b in zip(mine, sky_s)], [True] * 3)
+        else:
+            self.assertEqual(mine, sky_s)
 
 
 # What disc.py, wads.py and games.py wrote out before they read games/*/game.json: (region, label,

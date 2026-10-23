@@ -117,6 +117,9 @@ def column_major(basis_columns: tuple, origin: tuple) -> list[float]:
 
 
 def unit(v: tuple) -> tuple:
+    """V scaled to length 1. Not one with sky.unit: this length is sum()'s, which Python 3.12 and
+    newer add with compensated summation, so for some vectors its last bit differs from sky's
+    plain left-to-right sum (test_util.UnitTests)."""
     n = math.sqrt(sum(c * c for c in v))
     return tuple(c / n for c in v)
 
