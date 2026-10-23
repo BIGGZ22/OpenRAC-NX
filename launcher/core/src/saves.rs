@@ -67,9 +67,29 @@ pub fn get_memcard_dir(serial: &str) -> PathBuf {
     data_home().join("memcard").join(serial)
 }
 
+#[cfg(test)]
+thread_local! {
+    /// The data folder `data_home()` answers on this test's thread instead of the user's, so a
+    /// test never reads the settings of whoever runs it (`with_data_home`).
+    static TEST_DATA_HOME: std::cell::RefCell<Option<PathBuf>> = const { std::cell::RefCell::new(None) };
+}
+
+/// Runs `f` with `data_home()` answering `home` on the calling thread; tests only.
+#[cfg(test)]
+pub fn with_data_home<T>(home: &Path, f: impl FnOnce() -> T) -> T {
+    TEST_DATA_HOME.with(|cell| *cell.borrow_mut() = Some(home.to_path_buf()));
+    let result = f();
+    TEST_DATA_HOME.with(|cell| *cell.borrow_mut() = None);
+    result
+}
+
 /// OpenRAC's data folder, where the games keep their memory cards (`memcard/`) and settings
 /// (`settings/`): the port's own `data_home()` (port/game/common/main.cpp), from the same variables.
 pub fn data_home() -> PathBuf {
+    #[cfg(test)]
+    if let Some(home) = TEST_DATA_HOME.with(|cell| cell.borrow().clone()) {
+        return home;
+    }
     if cfg!(target_os = "macos") {
         return dirs_home().join("Library/Application Support/OpenRAC");
     }
@@ -641,11 +661,16 @@ mod tests {
     #[test]
     fn a_restore_from_outside_the_card_is_refused() {
         // A name that is not a backup of the card: refused before anything is read or
-        // removed, so a path somewhere else cannot replace the card's own folders.
-        for name in ["../../elsewhere", "/etc", "BESCES-50916RATCHET", ""] {
-            let err = restore_backup("SCES_509.16", name).unwrap_err();
-            assert!(err.contains("not a backup"), "{name}: {err}");
-        }
+        // removed, so a path somewhere else cannot replace the card's own folders. In an empty
+        // data folder, never the card of whoever runs the test.
+        let home = tempfile::tempdir().unwrap();
+        with_data_home(home.path(), || {
+            for name in ["../../elsewhere", "/etc", "BESCES-50916RATCHET", ""] {
+                let err = restore_backup("SCES_509.16", name).unwrap_err();
+                assert!(err.contains("not a backup"), "{name}: {err}");
+            }
+        });
+        assert!(std::fs::read_dir(home.path()).unwrap().next().is_none(), "nothing written");
     }
 
     #[test]

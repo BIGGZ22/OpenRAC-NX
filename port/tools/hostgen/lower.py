@@ -97,6 +97,9 @@ class FnReport:
     # Direct calls whose call site disagrees with the callee's definition (arity, kinds, result):
     # "callee: what differs", for port/tools/hostgen/priority.py.
     mismatches: list = field(default_factory=list)
+    # Instructions of its asm statements that the host does not run (asm_stmt): what they compute is
+    # missing from the translation.
+    asm_skipped: list = field(default_factory=list)
 
 
 @dataclass
@@ -129,6 +132,15 @@ class _Fn:
     wide_params: set = field(default_factory=set)    # parameters only passed on to 64-bit ones (widen_forwarded)
     wide_result: bool = False                        # returns a "returns_64" call's result whole (widen_returns)
     sibling_named: set = field(default_factory=set)  # folded functions the body also names by another place's name
+    # A static helper's copy for one call site (Unit._inline_copy): the function whose code its calls
+    # sit in, as the console's compiler inlined it there.
+    home: str | None = None
+
+    @property
+    def code(self) -> str:
+        """The function whose code this body is in the retail program: its own, or for an inline helper's
+        copy the caller's (its address, size, level and copies)."""
+        return self.home or self.name
 
 
 def _inner(n: dict) -> list:
@@ -188,6 +200,12 @@ class Unit:
         # Type names that are also a function's name (a names.h macro used as a
         # typedef name): renamed in this unit, since the port declares the function.
         self.type_renames: dict[str, str] = {}
+        # Static helpers inlined per call site (_inline_copy): the copies written so far, their count
+        # per caller, the helpers being copied (a helper that calls itself is called as it is).
+        self.inline_copies: list[tuple[str, str]] = []
+        self._inline_count: dict[str, int] = {}
+        self._inlining: set[str] = set()
+        self._helpers: dict[str, dict] | None = None
         self._index(ast)
         for name in list(self.typedefs):
             if name in HOST_TYPES:
@@ -401,6 +419,10 @@ class Unit:
                 proto, text = self.function(decl)
                 if decl.get("storageClass") == "static":
                     statics_protos.append(proto + ";")
+                for copy_proto, copy_text in self.inline_copies:
+                    statics_protos.append(copy_proto + ";")
+                    bodies.append(copy_text)
+                self.inline_copies = []
                 bodies.append(text)
         if getattr(self, "uses_ps2", False):
             out.insert(out.index("#include \"openrac/guest.h\"") + 1, "#include \"openrac/ps2float.h\"")
@@ -578,7 +600,9 @@ class Unit:
             return sym
         return self.program.grouped(self.unit, sym)
 
-    def function(self, decl: dict) -> tuple[str, str]:
+    def function(self, decl: dict, inline: tuple[str, _Fn] | None = None) -> tuple[str, str]:
+        """The host C of a definition: its prototype and its text. INLINE, for a static helper's copy for
+        one call site (_inline_copy): the copy's name and the function being translated that calls it."""
         sym = self._defined_symbol(decl)
         static = decl.get("storageClass") == "static"
         try:
@@ -605,9 +629,20 @@ class Unit:
         wide_result = known is not None and not static and getattr(known, "wide_result", False)
         if wide_result:
             sig_t = ctype.Func(known.sig.ret, sig_t.params, sig_t.variadic, sig_t.prototyped)
-        proto = self.signature(sym, sig_t, names, static)
-        report = FnReport(sym, "translated")
-        self.fn = _Fn(sym, sig_t, params, report=report)
+        own = inline[0] if inline is not None else sym
+        copies_before = len(self.inline_copies)
+        proto = self.signature(own, sig_t, names, static)
+        report = FnReport(own, "translated")
+        self.fn = _Fn(own, sig_t, params, report=report)
+        if inline is not None:
+            # The caller's code: its address, size and level, and its counts of the calls to each folded
+            # function (shared: the copy's calls are the caller's next ones, as the jals in its code are).
+            caller = inline[1]
+            self.fn.home = caller.code
+            for counts in ("folded_calls", "family_calls", "hook_calls", "folded_addresses"):
+                if getattr(caller, counts, None) is None:
+                    setattr(caller, counts, {})
+                setattr(self.fn, counts, getattr(caller, counts))
         self.fn.wide_params = {params[i].get("id") for i in widened if i < len(params)}
         self.fn.wide_result = wide_result
         body = next(c for c in _inner(decl) if c.get("kind") == "CompoundStmt")
@@ -618,8 +653,8 @@ class Unit:
         self.local_names = {}
         for d in local_types:
             if d.get("name"):
-                self.local_names[d["name"]] = f"{cname(sym)}__{d['name']}"
-                self.local_names[f"openrac_td_{d['name']}"] = f"openrac_td_{cname(sym)}__{d['name']}"
+                self.local_names[d["name"]] = f"{cname(own)}__{d['name']}"
+                self.local_names[f"openrac_td_{d['name']}"] = f"openrac_td_{cname(own)}__{d['name']}"
         try:
             hoisted = []
             for d in local_types:
@@ -636,6 +671,7 @@ class Unit:
         except Unsupported as e:
             report.status = "stub"
             report.reason = str(e)
+            del self.inline_copies[copies_before:]  # the copies of helpers it called go with it
             unused = " ".join(f"(void){n};" for n in names)
             ret_canon = self.canon(sig_t.ret)
             ret = "" if self.cls(sig_t.ret) == "void" else (
@@ -643,7 +679,8 @@ class Unit:
             out = (f"/* Not translated: {e} */\n{proto} {{\n    {unused}\n"
                    f"    static openrac_reach_site site_ = {{\"{sym}\", \"untranslated\", 0, 0, 0}};\n"
                    f"    openrac_guest_reach(&site_);\n   {ret}\n}}\n")
-        self.report.functions.append(report)
+        if inline is None:
+            self.report.functions.append(report)
         self.fn = None
         self.local_names = {}
         self.const_names = {}
@@ -721,7 +758,7 @@ class Unit:
             prologue.insert(0, "    gaddr openrac_alloca_sp_ __attribute__((cleanup(openrac_guest_frame_end))) = "
                                "openrac_guest_sp;")
         if getattr(fn, "uses_self", False):
-            prologue.insert(0, f"    const gaddr openrac_self_ = openrac_guest_entry((openrac_host_fn){cname(fn.name)});")
+            prologue.insert(0, f"    const gaddr openrac_self_ = openrac_guest_entry((openrac_host_fn){cname(fn.code)});")
         text = "{\n" + "\n".join(prologue + lines[1:])
         return ("\n".join(frame_decl) + "\n" if frame_decl else ""), text
 
@@ -949,11 +986,44 @@ class Unit:
         return [pad + self.rv(n) + ";"]
 
     def asm_stmt(self, n: dict) -> str:
-        text = n.get("asmString", "") or ""
-        first = text.strip().split()[0] if text.strip() else ""
-        if first in ("", "sync", "sync.l", "sync.p"):
+        """An asm statement (its instructions from clangast.asm_strings): an ordering barrier or a
+        nop (sync, sync.l, sync.p, nop: the console's scheduling) is GBARRIER. Other instructions
+        (the VU0's, COP0's, a sqrt.s) are code the host does not run: the statement stays a barrier,
+        as before, and the function's report lists what it skips (report.json
+        "inline_assembly_skipped"), since what those instructions compute is missing from the
+        translation. One whose text hostgen could not read (a header's, a macro's) is a barrier."""
+        text = n.get("asmString")
+        if text is None:
             return "GBARRIER();"
-        raise Unsupported(f"inline assembly ({first})")
+        words = text.replace(";", "\n").split("\n")
+        ops = [w.strip().split()[0] for w in words if w.strip()]
+        cons = n.get("asmConstraints") or {}
+        if not ops and cons.get("out"):
+            # No instructions, only operands: each output gets the input tied to it ("0" for output 0), the
+            # value the register holds (kputchar's pointer to the SIO's transmit register, hidden this way from
+            # the optimizer). An output tied to none keeps whatever it held, as before, and is reported.
+            kids = _inner(n)
+            outs, ins = kids[:len(cons["out"])], kids[len(cons["out"]):]
+            stmts = ["GBARRIER();"]
+            for k, (c, o) in enumerate(zip(cons["out"], outs)):
+                if c.startswith("+"):
+                    continue
+                tied = [i for i, ic in enumerate(cons["in"]) if ic.strip() == str(k)]
+                if not tied or tied[0] >= len(ins):
+                    self._asm_skipped([f"(output {k} without an input)"])
+                    continue
+                stmts.append(f"({self.lv(o).text} = {self.convert(ins[tied[0]], self.ty(o))});")
+            return " ".join(stmts)
+        if not all(op in ("sync", "sync.l", "sync.p", "nop") for op in ops):
+            self._asm_skipped(ops)
+        return "GBARRIER();"
+
+    def _asm_skipped(self, what: list[str]) -> None:
+        """Notes instructions (or operands) of an asm statement the host does not run in the report of
+        the function being translated."""
+        if self.fn is not None and self.fn.report is not None:
+            skipped = self.fn.report.asm_skipped
+            skipped.extend(w for w in dict.fromkeys(what) if w not in skipped)
 
     def _const(self, n: dict) -> str:
         if "value" in n:
@@ -1318,7 +1388,7 @@ class Unit:
 
     def _exe_code_at(self, address: int) -> bool:
         """An executable function starts at `address` (its code read as data through a literal)."""
-        if self.fn is None or LEVEL_NAME.match(self.fn.name):
+        if self.fn is None or LEVEL_NAME.match(self.fn.code):
             return False
         places = getattr(self.program, "by_place", {})
         return (-1, address) in places
@@ -1338,7 +1408,7 @@ class Unit:
             # formation of any place put 0x26B2B8 in entry 5.
             sibling = self.fn is not None and sym in self.fn.sibling_named
             places = self._folded_places(sym) if named == sym and self.fn is not None and not sibling else []
-            own_size = getattr(self.program, "sizes", {}).get(self.fn.name) or 0 if places else 0
+            own_size = getattr(self.program, "sizes", {}).get(self.fn.code) or 0 if places else 0
             if places and own_size:
                 # A name the catalogue folded, whose places in one program are other functions (each
                 # wrapper calls its own; split_places.tsv): the place the caller's own code forms,
@@ -1367,7 +1437,7 @@ class Unit:
         places = self.program.code_places(sym)
         if not places:
             raise Unsupported(f"the address of {sym}, which has none")
-        if getattr(self.program, "relocate", None) and self.fn is not None                     and not LEVEL_NAME.match(self.fn.name) and places[0][0] < 0:
+        if getattr(self.program, "relocate", None) and self.fn is not None                     and not LEVEL_NAME.match(self.fn.code) and places[0][0] < 0:
             return f"OPENRAC_CODE({hexaddr(places[0][1])})"
         # A place split off as a variant of its own (split_places.tsv) is still where this name
         # sits in that level: the address the level's own instruction forms.
@@ -1408,7 +1478,7 @@ class Unit:
             return f"OPENRAC_LCODE({level}, {hexaddr(own)})"
         # A function of one level only: the place of the other in that level (its program is
         # loaded whenever this runs), not the first level's.
-        levels = {o for o, _ in self.program.code_places(self.fn.name)} if self.fn is not None else set()
+        levels = {o for o, _ in self.program.code_places(self.fn.code)} if self.fn is not None else set()
         if len(levels) == 1 and min(levels) >= 0:
             here = next((a for o, a in places if o == min(levels)), None)
             if here is not None:
@@ -1493,7 +1563,7 @@ class Unit:
 
     def _ps2(self) -> bool:
         """Whether this function's float arithmetic is the EE's (hostgen.json "ps2_float")."""
-        if self.fn is None or self.fn.name not in getattr(self.program, "ps2_float", ()):
+        if self.fn is None or self.fn.code not in getattr(self.program, "ps2_float", ()):
             return False
         self.uses_ps2 = True
         return True
@@ -1762,9 +1832,9 @@ class Unit:
         from some of them (a level whose copy of the caller calls a variant of its own there): the
         level the caller is written for, its place there, its size, and the callee's place there."""
         fn = self.fn
-        if fn is None or not getattr(self.program, "relocate", None) or not LEVEL_NAME.match(fn.name):
+        if fn is None or not getattr(self.program, "relocate", None) or not LEVEL_NAME.match(fn.code):
             return None
-        caller = [(o, a) for o, a in self.program.code_places(fn.name) if o >= 0]
+        caller = [(o, a) for o, a in self.program.code_places(fn.code) if o >= 0]
         callee = [(o, a) for o, a in self.program.code_places(sym) if o >= 0]
         caller_levels, callee_levels = {o for o, _ in caller}, {o for o, _ in callee}
         if len(caller_levels) < 2 or not callee_levels or caller_levels <= callee_levels:
@@ -1775,22 +1845,22 @@ class Unit:
             return None
         canon = next(a for o, a in caller if o == home)
         own = next(a for o, a in callee if o == home)
-        return home, canon, getattr(self.program, "sizes", {}).get(fn.name) or 0x400, own
+        return home, canon, getattr(self.program, "sizes", {}).get(fn.code) or 0x400, own
 
     def _copies_in_one_program(self) -> tuple[int, int, int] | None:
         """For a level function the catalogue places more than once in one program (the same code
         on other globals): the program it is written for, its place there and its size."""
         fn = self.fn
-        if fn is None or not getattr(self.program, "relocate", None) or not LEVEL_NAME.match(fn.name):
+        if fn is None or not getattr(self.program, "relocate", None) or not LEVEL_NAME.match(fn.code):
             return None
-        places = [(o, a) for o, a in self.program.code_places(fn.name) if o >= 0]
+        places = [(o, a) for o, a in self.program.code_places(fn.code) if o >= 0]
         overlays = [o for o, _ in places]
         if len(overlays) == len(set(overlays)):
             return None
         level = self._shared_level()
         home = level if level is not None else places[0][0]
         canon = next((a for o, a in places if o == home), places[0][1])
-        return home, canon, getattr(self.program, "sizes", {}).get(fn.name) or 0x400
+        return home, canon, getattr(self.program, "sizes", {}).get(fn.code) or 0x400
 
     def _shared_level(self) -> int | None:
         """For a function several levels' programs carry (func_LNN_..., placed in more than one
@@ -1802,9 +1872,9 @@ class Unit:
         cached = getattr(fn, "shared_level", False)
         if cached is not False:
             return cached
-        m = LEVEL_NAME.match(fn.name)
+        m = LEVEL_NAME.match(fn.code)
         level = None
-        if m and len({o for o, _ in self.program.code_places(fn.name)}) > 1:
+        if m and len({o for o, _ in self.program.code_places(fn.code)}) > 1:
             level = int(m.group(1))
         fn.shared_level = level
         return level
@@ -1814,22 +1884,22 @@ class Unit:
         in several levels' programs): the program it is written for, its place there and its
         size; else None."""
         fn = self.fn
-        if fn is None or not getattr(self.program, "relocate", None) or not LEVEL_NAME.match(fn.name):
+        if fn is None or not getattr(self.program, "relocate", None) or not LEVEL_NAME.match(fn.code):
             return None
-        places = [(o, a) for o, a in self.program.code_places(fn.name) if o >= 0]
+        places = [(o, a) for o, a in self.program.code_places(fn.code) if o >= 0]
         if len(places) < 2:
             return None
         level = self._shared_level()
         home = level if level is not None else places[0][0]
         canon = next((a for o, a in places if o == home), places[0][1])
-        size = getattr(self.program, "sizes", {}).get(fn.name) or 0x400
+        size = getattr(self.program, "sizes", {}).get(fn.code) or 0x400
         return home, canon, size
 
     def _code_symbol(self, sym: str) -> int | None:
         """The executable address of sym when it names a function of the executable (its name is
         a code name, e.g. func_0022F4C0) and this is an executable function in a program whose
         levels move code (hostgen.json "relocate"); otherwise None."""
-        if not getattr(self.program, "relocate", None) or self.fn is None or LEVEL_NAME.match(self.fn.name):
+        if not getattr(self.program, "relocate", None) or self.fn is None or LEVEL_NAME.match(self.fn.code):
             return None
         if not any(p.match(sym) for p in self.program.code_names):
             return None
@@ -1856,7 +1926,7 @@ class Unit:
         """An executable function's global in the range that level programs move (hostgen.json
         "relocate"): its address is looked up for the level loaded (guest.h)."""
         rel = getattr(self.program, "relocate", None)
-        return bool(rel) and self.fn is not None and not LEVEL_NAME.match(self.fn.name)             and rel[0] <= address < rel[1]
+        return bool(rel) and self.fn is not None and not LEVEL_NAME.match(self.fn.code)             and rel[0] <= address < rel[1]
 
     def lv_member(self, n: dict) -> LV:
         name = n.get("name", "")
@@ -2001,8 +2071,8 @@ class Unit:
                 elif not places:
                     return self.direct_call(sym, args, result_t)
                 elif (sym in getattr(self.program, "splits", {})
-                      and not getattr(self.program, "sizes", {}).get(self.fn.name)
-                      and all(o < 0 for o, _ in self.program.code_places(self.fn.name))):
+                      and not getattr(self.program, "sizes", {}).get(self.fn.code)
+                      and all(o < 0 for o, _ in self.program.code_places(self.fn.code))):
                     # Code of the executable alone calls the executable's own function.
                     return self.direct_call(sym, args, result_t)
                 else:
@@ -2020,7 +2090,7 @@ class Unit:
                     calls[sym] = k + 1
                     if family_k is not None:
                         k = family_k
-                    own_size = getattr(self.program, "sizes", {}).get(self.fn.name) or 0
+                    own_size = getattr(self.program, "sizes", {}).get(self.fn.code) or 0
                     copies = self._copies_in_one_program()
                     own = self._own_address()
                     if copies is not None and self._shared_level() is not None:
@@ -2149,7 +2219,7 @@ class Unit:
         of those levels: the callee's first place; else None."""
         if self.fn is None:
             return None
-        mine = self.program.code_places(self.fn.name)
+        mine = self.program.code_places(self.fn.code)
         theirs = self.program.code_places(sym)
         if not mine or not theirs or any(o < 0 for o, _ in mine) or any(o < 0 for o, _ in theirs):
             return None
@@ -2164,16 +2234,96 @@ class Unit:
         fn = self.fn
         if fn is None or sym not in getattr(self.program, "level_hooks", ()):
             return None
-        size = getattr(self.program, "sizes", {}).get(fn.name)
+        size = getattr(self.program, "sizes", {}).get(fn.code)
         if not size or not getattr(self.program, "relocate", None):
             return None
-        places = self.program.code_places(fn.name)
+        places = self.program.code_places(fn.code)
         exe = [a for o, a in places if o < 0]
         levels = [(o, a) for o, a in places if o >= 0]
         stub = [a for o, a in self.program.code_places(sym) if o < 0]
         if not exe or not levels or not stub:
             return None
         return exe[0], size, levels[0][0], levels[0][1], stub[0]
+
+    def _inline_helpers(self) -> dict[str, dict]:
+        """The unit's static helpers that the console's compiler inlined into their callers and whose
+        calls go where the caller's code goes: static definitions with no place of their own in the
+        catalogue that call a folded function (_folded_places), themselves or through another such
+        helper. symbol -> definition."""
+        if self._helpers is not None:
+            return self._helpers
+        defs: dict[str, dict] = {}
+        for decl in _inner(self.ast):
+            if (decl.get("kind") == "FunctionDecl" and has_body(decl) and not decl.get("isImplicit")
+                    and decl.get("storageClass") == "static" and self._mine(decl)):
+                sym = self._defined_symbol(decl)
+                if not self.program.code_places(sym):
+                    defs[sym] = decl
+        calls: dict[str, set[str]] = {}
+        for sym, decl in defs.items():
+            out: set[str] = set()
+            stack = [decl]
+            while stack:
+                n = stack.pop()
+                if n.get("kind") == "CallExpr" and _inner(n):
+                    c = _strip_parens(_inner(n)[0])
+                    if c.get("kind") == "ImplicitCastExpr" and c.get("castKind") == "FunctionToPointerDecay":
+                        target = _strip_parens(_inner(c)[0])
+                        if (target.get("kind") == "DeclRefExpr"
+                                and target["referencedDecl"].get("kind") == "FunctionDecl"):
+                            out.add(self._callee_symbol(target))
+                stack.extend(_inner(n))
+            calls[sym] = out
+        needed = {sym for sym, out in calls.items() if any(c not in defs and self._folded_places(c) for c in out)}
+        grew = True
+        while grew:
+            more = {sym for sym, out in calls.items() if sym not in needed and out & needed}
+            needed |= more
+            grew = bool(more)
+        self._helpers = {sym: defs[sym] for sym in needed}
+        return self._helpers
+
+    def _inline_copy(self, sym: str) -> str | None:
+        """For a call of a static helper the console's compiler inlined (_inline_helpers) from a
+        function that has a place of its own: a copy of the helper for this call site, translated as if
+        its body were the caller's, and its name; else None.
+
+        The helper has no code of its own in the retail program: its calls are jals in each caller's
+        code. A call it makes to a folded function (one name for places that are different functions,
+        which the caller's own jal tells apart: openrac_folded_call) is the caller's next call of it, and
+        goes where the caller's code goes. Translated once on its own, the helper had no address to look
+        in, and every caller's call went to the place nearest address 0: rac1/pal's matched
+        func_L03_00251AC8 takes its particles' lifetimes from game_frames(n), a helper calling
+        func_001F9850, whose places in a level's program are three tick scales; retail calls the
+        level's 50/60 one there, the helper's call took another."""
+        caller = self.fn
+        decl = self._inline_helpers().get(sym)
+        if caller is None or decl is None or sym in self._inlining:
+            return None
+        if not self.program.code_places(caller.code):
+            return None
+        k = self._inline_count.get(caller.code, 0)
+        self._inline_count[caller.code] = k + 1
+        name = f"{sym}__in_{caller.code}_{k}"
+        counts = {c: dict(getattr(caller, c) or {}) for c in ("folded_calls", "family_calls", "hook_calls",
+                                                               "folded_addresses") if getattr(caller, c, None)}
+        saved = (self.fn, self.local_names, self.const_names)
+        self._inlining.add(sym)
+        try:
+            proto, text = self.function(decl, inline=(name, caller))
+            translated = not text.startswith("/* Not translated:")
+        finally:
+            self._inlining.discard(sym)
+            self.fn, self.local_names, self.const_names = saved
+        if not translated:
+            # The helper is a stub (it says why itself): the caller calls it as it is, its counts as they were.
+            for c in ("folded_calls", "family_calls", "hook_calls", "folded_addresses"):
+                if getattr(caller, c, None) is not None:
+                    getattr(caller, c).clear()
+                    getattr(caller, c).update(counts.get(c, {}))
+            return None
+        self.inline_copies.append((proto, text))
+        return name
 
     def _small_folded(self) -> tuple[int, int, int] | None:
         """For a small function (at most 64 bytes: a wrapper of a call or two) the catalogue folded
@@ -2182,10 +2332,10 @@ class Unit:
         fn = self.fn
         if fn is None or not getattr(self.program, "relocate", None):
             return None
-        size = getattr(self.program, "sizes", {}).get(fn.name)
+        size = getattr(self.program, "sizes", {}).get(fn.code)
         if not size or size > 64:
             return None
-        places = self.program.code_places(fn.name)
+        places = self.program.code_places(fn.code)
         overlays = [o for o, _ in places]
         if len(overlays) == len(set(overlays)):
             return None
@@ -2213,7 +2363,7 @@ class Unit:
 
     def _own_address(self) -> str:
         """This function's address in the program loaded when it runs."""
-        places = self.program.code_places(self.fn.name)
+        places = self.program.code_places(self.fn.code)
         if not places:
             return "0u"
         level = self._shared_level()
@@ -2281,7 +2431,10 @@ class Unit:
         sig = f.sig
         result_cls = self.cls(result_t)
         values = self._match_args(sym, sig, args)
-        text = f"{cname(sym)}({', '.join(values)})"
+        # A static helper the console's compiler inlined here: its copy for this call site (after the
+        # arguments, whose calls come first in the caller's code too).
+        copy = self._inline_copy(sym)
+        text = f"{cname(copy or sym)}({', '.join(values)})"
         ret_cls = self.sig_cls(sig.ret)
         self._note_mismatch(sym, sig, args, result_cls, ret_cls)
         if result_cls == "void":

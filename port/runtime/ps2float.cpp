@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 // Copyright (c) 2026 the OpenRAC contributors
 //
-// openrac/ps2float.h: the C entry points to port/assets/ps2_float.h's model of the EE's float
+// openrac/ps2float.h: the C entry points to port/common/ps2_float.h's model of the EE's float
 // arithmetic, for the functions hostgen translates with it (hostgen.json "ps2_float") and for the
 // port's own C that computes as the console does. The games' library links it
 // (cmake/Games.cmake).
@@ -11,11 +11,11 @@
 #include <bit>
 #include <cstdint>
 
-#include "assets/ps2_float.h"
+#include "common/ps2_float.h"
 
 namespace {
 
-namespace ps2 = openrac::assets::ps2;
+namespace ps2 = openrac::ps2;
 
 std::uint32_t bits(float x) {
     return std::bit_cast<std::uint32_t>(x);

@@ -17,7 +17,7 @@
 #include <cmath>
 #include <limits>
 
-#include "assets/ps2_float.h"
+#include "common/ps2_float.h"
 
 namespace openrac::assets {
 

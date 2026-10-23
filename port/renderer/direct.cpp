@@ -3,15 +3,14 @@
 
 #include "renderer/direct.h"
 
-#include <cstdint>
-#include <cstdlib>
-
 #include <algorithm>
 #include <bit>
 #include <cmath>
+#include <cstdint>
 #include <cstring>
 #include <format>
 
+#include "common/env.h"
 #include "common/log.h"
 #include "renderer/gl.h"
 #include "renderer_shaders.h"
@@ -708,8 +707,7 @@ void GifInterpreter::native_quad(const UiQuad& quad) {
 // OPENRAC_UI_RESIDUAL: each kind of 2D primitive still drawn from the game's packets (not a native
 // quad), once: what is left to move off the GS packets.
 static void log_residual(const gs::Prim& prim, const gs::Tex0& tex0, bool native) {
-    static const bool on = std::getenv("OPENRAC_UI_RESIDUAL") != nullptr;
-    if (!on || native) {
+    if (native || !env::flag(env::Var::UiResidual)) {
         return;
     }
     static std::vector<std::uint64_t> seen;
@@ -1068,7 +1066,7 @@ void GifInterpreter::ensure_draw() {
         // placeholder's magenta (OPENRAC_SHOW_MISSING shows it, for finding missing textures). A
         // draw of an off-screen target or of the frame has no texture of the pool (its handle is
         // the placeholder's 0) and is drawn.
-        static const bool show_missing = std::getenv("OPENRAC_SHOW_MISSING") != nullptr;
+        const bool show_missing = env::flag(env::Var::ShowMissing);
         if (s.textured && s.source == 0 && !s.frame_source && s.texture == m_textures.placeholder() && !show_missing) {
             s.fbmsk = 0xFFFFFFFFu;
             s.depth_write = false;

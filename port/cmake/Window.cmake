@@ -71,7 +71,8 @@ endif()
 # The Vulkan renderer: renderer/gl.h carried out with Vulkan (renderer/vulkan/vkgl.h), which the
 # window opens for OPENRAC_GL_API=vulkan.
 if(OPENRAC_VULKAN)
-  add_library(openrac_vkgl STATIC
+  add_library(openrac_renderer_vulkan STATIC
+    renderer/vulkan/pipeline_cache_file.cpp
     renderer/vulkan/shader_compiler.cpp
     renderer/vulkan/vkgl.cpp
     renderer/vulkan/vkgl_commands.cpp
@@ -83,11 +84,12 @@ if(OPENRAC_VULKAN)
     renderer/vulkan/vkgl_resources.cpp
     renderer/vulkan/vma.cpp
   )
-  target_link_libraries(openrac_vkgl PUBLIC openrac_common openrac_sdl3 openrac_vulkan PRIVATE openrac_glslang)
+  target_link_libraries(openrac_renderer_vulkan
+    PUBLIC openrac_common openrac_sdl3 openrac_vulkan PRIVATE openrac_glslang)
   # The pipeline cache file is named after the code that makes the pipelines, so a build whose
   # pipelines changed starts a fresh cache: MoltenVK has handed a newer build pipelines an older
   # build saved (the tests' pictures came out black), although the cache's header matched.
-  set(openrac_vkgl_pipeline_sources
+  set(openrac_renderer_vulkan_pipeline_sources
     "${CMAKE_CURRENT_SOURCE_DIR}/renderer/vulkan/vkgl.cpp"
     "${CMAKE_CURRENT_SOURCE_DIR}/renderer/vulkan/vkgl_commands.cpp"
     "${CMAKE_CURRENT_SOURCE_DIR}/renderer/vulkan/vkgl_device.cpp"
@@ -100,26 +102,29 @@ if(OPENRAC_VULKAN)
     "${CMAKE_CURRENT_SOURCE_DIR}/renderer/vulkan/shader_compiler.cpp"
     "${CMAKE_CURRENT_SOURCE_DIR}/renderer/vulkan/gpu_draw.inc"
     "${CMAKE_CURRENT_SOURCE_DIR}/renderer/vulkan/gpu_materials.inc")
-  set(openrac_vkgl_pipeline_text "")
-  foreach(source IN LISTS openrac_vkgl_pipeline_sources)
+  set(openrac_renderer_vulkan_pipeline_text "")
+  foreach(source IN LISTS openrac_renderer_vulkan_pipeline_sources)
     file(SHA256 "${source}" source_hash)
-    string(APPEND openrac_vkgl_pipeline_text "${source_hash}")
+    string(APPEND openrac_renderer_vulkan_pipeline_text "${source_hash}")
   endforeach()
-  string(SHA256 openrac_vkgl_pipeline_key "${openrac_vkgl_pipeline_text}")
-  string(SUBSTRING "${openrac_vkgl_pipeline_key}" 0 12 openrac_vkgl_pipeline_key)
-  set_property(DIRECTORY APPEND PROPERTY CMAKE_CONFIGURE_DEPENDS ${openrac_vkgl_pipeline_sources})
-  target_compile_definitions(openrac_vkgl PRIVATE OPENRAC_VK_PIPELINE_KEY="${openrac_vkgl_pipeline_key}")
+  string(SHA256 openrac_renderer_vulkan_pipeline_key "${openrac_renderer_vulkan_pipeline_text}")
+  string(SUBSTRING "${openrac_renderer_vulkan_pipeline_key}" 0 12
+    openrac_renderer_vulkan_pipeline_key)
+  set_property(DIRECTORY APPEND PROPERTY
+    CMAKE_CONFIGURE_DEPENDS ${openrac_renderer_vulkan_pipeline_sources})
+  target_compile_definitions(openrac_renderer_vulkan
+    PRIVATE OPENRAC_VK_PIPELINE_KEY="${openrac_renderer_vulkan_pipeline_key}")
   if(OPENRAC_GPU_MARKERS)
-    target_compile_definitions(openrac_vkgl PRIVATE OPENRAC_GPU_MARKERS=1)
+    target_compile_definitions(openrac_renderer_vulkan PRIVATE OPENRAC_GPU_MARKERS=1)
   endif()
-  openrac_warnings(openrac_vkgl)
+  openrac_warnings(openrac_renderer_vulkan)
   # Vulkan's structures are written {VK_STRUCTURE_TYPE_...}, the rest zero.
   if(NOT MSVC OR CMAKE_CXX_COMPILER_ID MATCHES "Clang")
-    target_compile_options(openrac_vkgl PRIVATE -Wno-missing-field-initializers)
+    target_compile_options(openrac_renderer_vulkan PRIVATE -Wno-missing-field-initializers)
   endif()
   # The allocator's own source is not ours to keep warning-free.
   set_source_files_properties(renderer/vulkan/vma.cpp PROPERTIES COMPILE_OPTIONS "$<IF:$<CXX_COMPILER_ID:MSVC>,/w,-w>")
-  target_link_libraries(openrac_platform PRIVATE openrac_vkgl)
+  target_link_libraries(openrac_platform PRIVATE openrac_renderer_vulkan)
   target_compile_definitions(openrac_platform PRIVATE OPENRAC_VULKAN=1)
 endif()
 # macOS: the menu bar's name and menus (platform/macos_app.mm).
@@ -185,7 +190,7 @@ else()
 endif()
 
 add_library(openrac_level_assets STATIC viewer/level.cpp)
-target_link_libraries(openrac_level_assets PUBLIC openrac_json openrac_renderer openrac_viewer_third_party openrac_assets_geometry)
+target_link_libraries(openrac_level_assets PUBLIC openrac_renderer openrac_viewer_third_party openrac_assets_geometry)
 openrac_warnings(openrac_level_assets)
 
 # Scene conversion/fingerprinting is shared by activation checks and the
@@ -226,7 +231,7 @@ openrac_embed_shaders(openrac_viewer_lib viewer openrac::viewer
 target_link_libraries(openrac_viewer_lib PUBLIC openrac_renderer openrac_viewer_third_party
   openrac_assets_geometry openrac_probe_scene)
 if(OPENRAC_VULKAN)
-  target_link_libraries(openrac_viewer_lib PRIVATE openrac_vkgl)
+  target_link_libraries(openrac_viewer_lib PRIVATE openrac_renderer_vulkan)
   target_compile_definitions(openrac_viewer_lib PRIVATE OPENRAC_VULKAN=1)
 endif()
 openrac_warnings(openrac_viewer_lib)
@@ -386,9 +391,15 @@ set_tests_properties(${openrac_es_bare_tests} PROPERTIES SKIP_RETURN_CODE 77 ENV
 # Vulkan cannot open, the window falls back to OpenGL and these repeat the tests above.
 if(OPENRAC_VULKAN)
   add_executable(vulkan_uniform_test tests/vulkan_uniform_test.cpp)
-  target_link_libraries(vulkan_uniform_test PRIVATE openrac_renderer openrac_platform openrac_vkgl)
+  target_link_libraries(vulkan_uniform_test PRIVATE openrac_renderer openrac_platform openrac_renderer_vulkan)
   openrac_warnings(vulkan_uniform_test)
   add_test(NAME vulkan_uniform COMMAND vulkan_uniform_test)
+  # The pipeline cache's file, saved by writers in parallel; no GPU needed.
+  find_package(Threads REQUIRED)
+  add_executable(pipeline_cache_file_test tests/pipeline_cache_file_test.cpp)
+  target_link_libraries(pipeline_cache_file_test PRIVATE openrac_renderer_vulkan Threads::Threads)
+  openrac_warnings(pipeline_cache_file_test)
+  add_test(NAME pipeline_cache_file COMMAND pipeline_cache_file_test)
   add_test(NAME vulkan_uniform_reference COMMAND vulkan_uniform_test)
   set_tests_properties(vulkan_uniform PROPERTIES SKIP_RETURN_CODE 77 ENVIRONMENT
     "OPENRAC_GL_API=vulkan;OPENRAC_VULKAN_VALIDATION=1")

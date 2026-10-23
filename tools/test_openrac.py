@@ -2,14 +2,17 @@
 python3 -m unittest discover -s tools"""
 
 import json
+import os
 import struct
 import tempfile
 import unittest
 from pathlib import Path
+from unittest import mock
 
 import openrac
+from openrac_common import games, iso9660
 
-SECTOR = openrac.SECTOR
+SECTOR = iso9660.SECTOR
 
 
 def record(name: bytes, lba: int, size: int, directory: bool = False) -> bytes:
@@ -42,23 +45,51 @@ def image(files: dict[str, bytes]) -> bytes:
     return bytes(out)
 
 
+class PlaceTests(unittest.TestCase):
+    def setUp(self):
+        tmp = tempfile.TemporaryDirectory()
+        self.addCleanup(tmp.cleanup)
+        self.dir = Path(tmp.name)
+        self.source = self.dir / "disc.iso"
+        self.source.write_bytes(b"image")
+        os.utime(self.source, (1_000_000_000, 1_000_000_000))
+
+    def test_place_link_links_once_and_leaves_other_files_alone(self):
+        dest = self.dir / "a/b/disc.iso"
+        self.assertEqual(openrac.place_link(self.source, dest), "linked")
+        self.assertEqual(dest.stat().st_ino, self.source.stat().st_ino)
+        self.assertEqual(openrac.place_link(self.source, dest), "already there")
+        other = self.dir / "other.iso"
+        other.write_bytes(b"image")
+        self.assertEqual(openrac.place_link(self.source, other), "exists, left alone")
+
+    def test_place_link_copies_with_its_times_when_it_cannot_link(self):
+        dest = self.dir / "copy/disc.iso"
+        with mock.patch("os.link", side_effect=OSError("cross-device link")):
+            self.assertEqual(openrac.place_link(self.source, dest), "copied")
+        self.assertEqual(dest.read_bytes(), b"image")
+        self.assertEqual(dest.stat().st_mtime, 1_000_000_000)
+
+
 class DiscTests(unittest.TestCase):
+    """The disc readers openrac.py uses (openrac_common.iso9660), on this file's images."""
+
     def test_finds_the_boot_executable(self):
         boot = b"\x7fELF" + bytes(3000)
         with tempfile.TemporaryDirectory() as tmp:
             iso = Path(tmp) / "any name.iso"
             iso.write_bytes(image({"SYSTEM.CNF": b"BOOT2 = cdrom0:\\SCES_509.16;1\r\nVER = 2.00\r\n",
                                    "SCES_509.16": boot}))
-            self.assertEqual(openrac.boot_serial(iso), "SCES_509.16")
-            self.assertEqual(openrac.read_boot(iso, "SCES_509.16"), boot)
+            self.assertEqual(iso9660.boot_serial(iso), "SCES_509.16")
+            self.assertEqual(iso9660.read(iso, "SCES_509.16"), boot)
 
     def test_not_a_ps2_disc(self):
         with tempfile.TemporaryDirectory() as tmp:
             iso = Path(tmp) / "blank.iso"
             iso.write_bytes(bytes(20 * SECTOR))
-            self.assertIsNone(openrac.boot_serial(iso))
+            self.assertIsNone(iso9660.boot_serial(iso))
             iso.write_bytes(image({"README.TXT": b"hello"}))
-            self.assertIsNone(openrac.boot_serial(iso))
+            self.assertIsNone(iso9660.boot_serial(iso))
 
     def test_checksums(self):
         with tempfile.TemporaryDirectory() as tmp:
@@ -73,7 +104,7 @@ class DiscTests(unittest.TestCase):
 class ManifestTests(unittest.TestCase):
     def test_every_manifest_is_complete(self):
         serials = set()
-        for game, name, version in openrac.versions():
+        for game, name, version in games.versions():
             for key in ("region", "serial", "disc", "boot", "target"):
                 self.assertIn(key, version, f"{game['id']}/{name}")
             # Size and SHA-256 pin a build; the other checksums follow once someone with the disc
@@ -89,7 +120,7 @@ class ManifestTests(unittest.TestCase):
             self.assertNotIn(version["serial"], serials)
             serials.add(version["serial"])
             if version.get("source"):
-                self.assertTrue((openrac.ROOT / openrac.vdir(game, name)).is_dir(), f"{game['id']}/{name}")
+                self.assertTrue((openrac.ROOT / games.version_dir(game, name)).is_dir(), f"{game['id']}/{name}")
                 self.assertRegex(version["source"]["commit"], r"^[0-9a-f]{40}$")
 
 

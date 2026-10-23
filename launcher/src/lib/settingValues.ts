@@ -9,7 +9,7 @@ export const hasRange = (s: PluginSetting): boolean =>
   (s.type === "int" || s.type === "float") && s.min !== undefined && s.max !== undefined && s.max > s.min;
 
 /** The decimals a number needs to be written without noise ("0.05" has 2). */
-export function decimalsOf(n: number): number {
+function decimalsOf(n: number): number {
   if (!Number.isFinite(n) || Number.isInteger(n)) return 0;
   const text = String(n);
   const e = /e-(\d+)$/.exec(text);

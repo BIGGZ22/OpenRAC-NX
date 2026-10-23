@@ -3,10 +3,12 @@
 
 #include "renderer/gl.h"
 
-#include <cstdlib>
 #include <cstring>
+#include <optional>
 #include <set>
 #include <string_view>
+
+#include "common/env.h"
 
 namespace openrac::gl {
 
@@ -76,8 +78,8 @@ bool load(GetProcAddress get, std::string& missing) {
     }
     // OPENRAC_GL_HIDE_EXTENSIONS=GL_A,GL_B: the renderer acts as if the driver lacked them, to try
     // its fallbacks on a driver that has them (a phone's driver that lacks one, on a desktop).
-    if (const char* hide = std::getenv("OPENRAC_GL_HIDE_EXTENSIONS"); hide != nullptr) {
-        std::string_view list(hide);
+    if (const std::optional<std::string_view> hide = env::value(env::Var::GlHideExtensions)) {
+        std::string_view list = *hide;
         while (!list.empty()) {
             const std::size_t comma = list.find(',');
             const std::string_view name = list.substr(0, comma);
@@ -135,12 +137,12 @@ namespace {
 int g_enhanced = -1;
 
 bool enhanced_from_environment() {
-    const char* enhanced = std::getenv("OPENRAC_ENHANCED");
-    if (enhanced != nullptr && enhanced[0] != '\0') {
-        return std::string_view(enhanced) == "1";
+    // OPENRAC_ENHANCED decides when it has a value; without one, a probe bake to light with does.
+    if (!env::value(env::Var::Enhanced).value_or("").empty()) {
+        return env::flag(env::Var::Enhanced);
     }
-    const char* probes = std::getenv("OPENRAC_PROBE_GI");
-    return probes != nullptr && probes[0] != '\0' && std::string_view(probes) != "0";
+    const std::string_view probes = env::value(env::Var::ProbeGi).value_or("");
+    return !probes.empty() && probes != "0";
 }
 }  // namespace
 

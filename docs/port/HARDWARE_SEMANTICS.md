@@ -77,7 +77,7 @@ everywhere. The MAC flags of item 9 do report an exponent-255 result as an overf
 Where a function needs all of it, it can have it: a function named in its game's hostgen.json
 `"ps2_float"` computes its float `+ - * /`, comparisons and conversions through
 [ps2float.h](../../port/runtime/include/openrac/ps2float.h), the model of
-[ps2_float.h](../../port/assets/ps2_float.h) in software: an overflow is ±`0x7FFFFFFF`, an
+[ps2_float.h](../../port/common/ps2_float.h) in software: an overflow is ±`0x7FFFFFFF`, an
 exponent of 255 an ordinary number, and the adder drops the smaller operand's bits more than one
 place below the larger one's last bit before it adds (where the host, even rounding toward zero,
 cuts the exact sum: `1 - 1.5 * 2^-24` is `0x3F7FFFFF` on the console, `0x3F7FFFFE` on the host).

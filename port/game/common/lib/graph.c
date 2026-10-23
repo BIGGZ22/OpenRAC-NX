@@ -23,6 +23,22 @@ void openrac_lib_sceGsResetGraph(short mode, short interlace, short video, short
     openrac_game_set_video_mode(interlace, video, field);
 }
 
+/* _GetGsDxDyOffset(mode, &dx1, &dy1, &dx2, &dy2) (system call 0x80): the console's screen position
+ * adjustment for a video mode from its OSD settings, which libgraph's sceGsSetDefDispEnv adds in the
+ * modes other than NTSC and PAL. The port places the picture itself: no adjustment (0, 0, 0, 0) for a
+ * mode the kernel knows (NTSC 2, PAL 3, the DTV and VESA modes 0x10.. 0x52); for any other the console
+ * writes nothing, nor does the port. */
+void openrac_lib__GetGsDxDyOffset(int mode, gaddr dx1, gaddr dy1, gaddr dx2, gaddr dy2) {
+    const gaddr out[4] = {dx1, dy1, dx2, dy2};
+    if (mode == 2 || mode == 3 || (mode >= 0x10 && mode <= 0x52)) {
+        for (int i = 0; i < 4; i++) {
+            if (out[i] != 0) {
+                GREF(int, out[i]) = 0;
+            }
+        }
+    }
+} /* _GetGsDxDyOffset */
+
 /* sceGsSetDefDispEnv(disp, psm, width, height, dx, dy): the display
  * environment is {PMODE, SMODE2, DISPFB, DISPLAY, BGCOLOR}, 64 bits each. */
 void openrac_lib_sceGsSetDefDispEnv(gaddr disp, short psm, short w, short h, short dx, short dy) {

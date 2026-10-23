@@ -260,19 +260,7 @@ fn run_action(
     let config = state.config.lock().unwrap().clone();
     let inputs = openrac_launcher_core::actions::Inputs { level, path, option };
     let plan = library::plan(&config, &scope, &id, &inputs)?;
-    let is_play = if let Scope::Version(_) = &scope {
-        if let Some(root) = &config.root {
-            if let Ok(file) = openrac_launcher_core::actions::load(root) {
-                file.find(&scope, &id).map(|a| a.kind == openrac_launcher_core::actions::Kind::Play).unwrap_or(false)
-            } else {
-                false
-            }
-        } else {
-            false
-        }
-    } else {
-        false
-    };
+    let is_play = library::is_play(&config, &scope, &id);
 
     if is_play && config.discord_rpc {
         if let Some(root) = &config.root {
@@ -765,33 +753,10 @@ async fn sync_progress_from_web(state: State<'_, AppState>) -> Result<Library, S
     let root = config.root.clone().ok_or("the OpenRAC folder is not set")?;
     let cache = config.progress_cache.clone().ok_or("no per-user folder for the launcher's own files")?;
 
-    // Every project's latest progress from bytematch.dev, and each game's project JSON for its
-    // functional C, with curl (on Linux, macOS and Windows 10+). Offline, the kept copy is read.
-    let root_for_fetch = root.clone();
-    let cache_for_fetch = cache.clone();
+    // Every project's latest progress from bytematch.dev, with curl (core progress_sync.rs).
+    // Offline, or when the site cannot be read, the kept copy is read as it was.
     tauri::async_runtime::spawn_blocking(move || {
-        use openrac_launcher_core::catalog;
-        // detect::quiet: each curl opened a console window of its own on Windows, at every start.
-        let fetch = |url: &str| -> Option<String> {
-            let out = detect::quiet(Path::new("curl"))
-                .args(["-s", "-f", "--connect-timeout", "4", "--max-time", "10", url])
-                .stdin(std::process::Stdio::null())
-                .output()
-                .ok()?;
-            if out.status.success() {
-                String::from_utf8(out.stdout).ok()
-            } else {
-                None
-            }
-        };
-        let Some(list) = fetch(catalog::BYTEMATCH_PROJECTS) else { return };
-        let mut jsons = std::collections::BTreeMap::new();
-        for (_key, slug) in catalog::bytematch_projects_for(&root_for_fetch, &list).unwrap_or_default() {
-            if let Some(text) = fetch(&catalog::bytematch_project_url(&slug)) {
-                jsons.insert(slug, text);
-            }
-        }
-        let _ = catalog::update_progress_from_bytematch(&root_for_fetch, &cache_for_fetch, &list, &jsons);
+        let _ = openrac_launcher_core::progress_sync::sync(&root, &cache, &remote::QuickCurl);
     })
     .await
     .map_err(|e| e.to_string())?;
@@ -1192,157 +1157,15 @@ fn open_saves_folder(app: AppHandle, serial: String) -> Result<(), String> {
     open_path_with_system(&app, &dir.to_string_lossy())
 }
 
-/// Writes `bytes` to `path` unless it already holds them; true when it wrote.
+/// The launcher's icons in each size the desktop's icon theme takes (core desktop.rs).
 #[cfg(target_os = "linux")]
-fn write_if_changed(path: &std::path::Path, bytes: &[u8]) -> bool {
-    if std::fs::read(path).map(|old| old == bytes).unwrap_or(false) {
-        return false;
-    }
-    std::fs::write(path, bytes).is_ok()
-}
-
-/// The menu entry and icons the desktop finds the launcher by. On Wayland the window's app id
-/// (the program's name, `openrac-launcher`) names the .desktop file the taskbar takes the icon
-/// from; `dev.openrac.launcher` is the bundle's identifier. Both entries are kept so either id
-/// finds the icon, but only one shows in the menu. Files are written, and the desktop's caches
-/// refreshed, only when something changed: nothing to do on most starts.
-#[cfg(target_os = "linux")]
-fn ensure_linux_desktop_integration() {
-    let sizes: &[(&str, &[u8])] = &[
-        ("32x32", include_bytes!("../icons/32x32.png")),
-        ("64x64", include_bytes!("../icons/64x64.png")),
-        ("128x128", include_bytes!("../icons/128x128.png")),
-        ("256x256", include_bytes!("../icons/128x128@2x.png")),
-        ("512x512", include_bytes!("../icons/icon.png")),
-    ];
-    let Ok(home) = std::env::var("HOME") else { return };
-    let home_path = PathBuf::from(home);
-    let icons_base = home_path.join(".local/share/icons/hicolor");
-    let app_dir = home_path.join(".local/share/applications");
-    let _ = std::fs::create_dir_all(&app_dir);
-
-    let mut icons_changed = false;
-    for (size, bytes) in sizes {
-        let dir = icons_base.join(size).join("apps");
-        let _ = std::fs::create_dir_all(&dir);
-        icons_changed |= write_if_changed(&dir.join("dev.openrac.launcher.png"), bytes);
-        icons_changed |= write_if_changed(&dir.join("openrac-launcher.png"), bytes);
-    }
-
-    // An AppImage runs from a mount that is gone when it exits (/tmp/.mount_…): the entry starts
-    // the AppImage file itself, or the menu's launcher started nothing once it was closed. A
-    // package (deb, rpm) puts its own entry in the menu: this one is then only for the taskbar's
-    // icon, hidden, so the menu does not list the launcher twice.
-    let appimage = std::env::var_os("APPIMAGE").map(PathBuf::from).filter(|path| path.is_file());
-    let exe_path = std::env::current_exe().unwrap_or_else(|_| PathBuf::from("openrac-launcher"));
-    let packaged = appimage.is_none() && exe_path.starts_with("/usr");
-    let program = appimage.unwrap_or(exe_path);
-    let entry = |wm_class: &str, hidden: bool| {
-        format!(
-            "[Desktop Entry]\nType=Application\nName=OpenRAC Launcher\nComment=Set up, build and play the decompiled Ratchet & Clank games\nExec={}\nIcon=dev.openrac.launcher\nTerminal=false\nCategories=Game;Development;\nStartupNotify=true\nStartupWMClass={}\n{}",
-            detect::desktop_exec(&program),
-            wm_class,
-            if hidden { "NoDisplay=true\n" } else { "" }
-        )
-    };
-    let mut entries_changed = false;
-    entries_changed |= write_if_changed(
-        &app_dir.join("dev.openrac.launcher.desktop"),
-        entry("dev.openrac.launcher", packaged).as_bytes(),
-    );
-    entries_changed |=
-        write_if_changed(&app_dir.join("openrac-launcher.desktop"), entry("openrac-launcher", true).as_bytes());
-
-    if icons_changed {
-        let _ = detect::quiet(Path::new("gtk-update-icon-cache")).arg("-f").arg("-t").arg(&icons_base).status();
-    }
-    if entries_changed || icons_changed {
-        let _ = detect::quiet(Path::new("update-desktop-database")).arg(&app_dir).status();
-        let _ = detect::quiet(Path::new("kbuildsycoca6")).status();
-    }
-
-    // If Flatpak Discord is running, ensure standard XDG_RUNTIME_DIR socket symlink exists
-    if let Ok(runtime_dir) = std::env::var("XDG_RUNTIME_DIR") {
-        let standard_sock = PathBuf::from(&runtime_dir).join("discord-ipc-0");
-        let flatpak_sock = PathBuf::from(&runtime_dir).join("app/com.discordapp.Discord/discord-ipc-0");
-        if flatpak_sock.exists() && !standard_sock.exists() {
-            let _ = std::os::unix::fs::symlink(&flatpak_sock, &standard_sock);
-        }
-    }
-}
-
-/// Game desktop entries and icons so KDE Plasma and other Linux desktop taskbars show the game's
-/// icon when launched from the launcher or directly.
-#[cfg(target_os = "linux")]
-fn ensure_linux_game_desktop_integration(root: &std::path::Path) {
-    // The copy inside an AppImage is mounted afresh at each start: an entry for its game would
-    // name a folder that is gone once the launcher exits.
-    if openrac_launcher_core::appimage::appdir().is_some_and(|appdir| root.starts_with(appdir)) {
-        return;
-    }
-    let Ok(home) = std::env::var("HOME") else { return };
-    let home_path = PathBuf::from(home);
-    let icons_base = home_path.join(".local/share/icons/hicolor");
-    let app_dir = home_path.join(".local/share/applications");
-    let _ = std::fs::create_dir_all(&app_dir);
-
-    let games_dir = root.join("port/game");
-    let Ok(entries) = std::fs::read_dir(games_dir) else { return };
-
-    let mut icons_changed = false;
-    let mut entries_changed = false;
-
-    for entry in entries.flatten() {
-        if !entry.path().is_dir() {
-            continue;
-        }
-        let game_id = entry.file_name().to_string_lossy().to_string();
-        let icon_path = entry.path().join("icon.png");
-        if !icon_path.is_file() {
-            continue;
-        }
-        let Ok(bytes) = std::fs::read(&icon_path) else { continue };
-
-        let dir = icons_base.join("512x512/apps");
-        let _ = std::fs::create_dir_all(&dir);
-        let app_id = format!("dev.openrac.{game_id}");
-        let prog_id = format!("openrac-{game_id}");
-
-        icons_changed |= write_if_changed(&dir.join(format!("{app_id}.png")), &bytes);
-        icons_changed |= write_if_changed(&dir.join(format!("{prog_id}.png")), &bytes);
-
-        let exe_path = root.join(format!("port/build/release/openrac-{game_id}"));
-        let title = match game_id.as_str() {
-            "rac1-pal" => "Ratchet & Clank (PAL)",
-            "rac1-ntsc" => "Ratchet & Clank (NTSC)",
-            "rac2-ntsc" => "Ratchet & Clank: Going Commando (NTSC)",
-            "rac3-ntsc" => "Ratchet & Clank: Up Your Arsenal (NTSC)",
-            "rac4-ntsc" => "Ratchet: Deadlocked (NTSC)",
-            _ => "Ratchet & Clank",
-        };
-
-        let make_entry = |wm_class: &str, hidden: bool| {
-            format!(
-                "[Desktop Entry]\nType=Application\nName={title}\nComment=Play {title} with OpenRAC\nExec={}\nIcon={app_id}\nTerminal=false\nCategories=Game;\nStartupNotify=true\nStartupWMClass={wm_class}\n{}",
-                detect::desktop_exec(&exe_path),
-                if hidden { "NoDisplay=true\n" } else { "" }
-            )
-        };
-
-        entries_changed |=
-            write_if_changed(&app_dir.join(format!("{app_id}.desktop")), make_entry(&app_id, false).as_bytes());
-        entries_changed |=
-            write_if_changed(&app_dir.join(format!("{prog_id}.desktop")), make_entry(&prog_id, true).as_bytes());
-    }
-
-    if icons_changed {
-        let _ = detect::quiet(Path::new("gtk-update-icon-cache")).arg("-f").arg("-t").arg(&icons_base).status();
-    }
-    if entries_changed || icons_changed {
-        let _ = detect::quiet(Path::new("update-desktop-database")).arg(&app_dir).status();
-        let _ = detect::quiet(Path::new("kbuildsycoca6")).status();
-    }
-}
+const LAUNCHER_ICONS: &[openrac_launcher_core::desktop::Icon] = &[
+    ("32x32", include_bytes!("../icons/32x32.png")),
+    ("64x64", include_bytes!("../icons/64x64.png")),
+    ("128x128", include_bytes!("../icons/128x128.png")),
+    ("256x256", include_bytes!("../icons/128x128@2x.png")),
+    ("512x512", include_bytes!("../icons/icon.png")),
+];
 
 /// What an AppImage's AppRun hands over: its own PYTHONHOME, its own paths,
 /// its own libraries. They are of no use to anything the launcher starts (a
@@ -1489,8 +1312,13 @@ pub fn run() {
     let builder = builder.plugin(android::init());
     builder
         .setup(|app| {
+            // The menu entry and icons the desktop finds the launcher by, and Discord's socket where
+            // a Flatpak Discord hides it (core desktop.rs, discord.rs).
             #[cfg(target_os = "linux")]
-            ensure_linux_desktop_integration();
+            {
+                openrac_launcher_core::desktop::ensure_launcher(LAUNCHER_ICONS);
+                openrac_launcher_core::discord::link_flatpak_socket();
+            }
 
             #[cfg(desktop)]
             if let Some(window) = app.get_webview_window("main") {
@@ -1561,9 +1389,10 @@ pub fn run() {
             }
             detect::settle(&mut config, bundled.as_deref());
 
+            // The games' entries and icons, so the taskbar shows a game's own icon (core desktop.rs).
             #[cfg(target_os = "linux")]
             if let Some(root) = &config.root {
-                ensure_linux_game_desktop_integration(root);
+                openrac_launcher_core::desktop::ensure_games(root);
             }
 
             let client_id = config

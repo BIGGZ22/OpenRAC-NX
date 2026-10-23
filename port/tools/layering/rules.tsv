@@ -82,21 +82,15 @@ allow	renderer/vulkan	renderer renderer/world
 allow	tests	viewer extract
 
 # Known violations (docs/restructure/PROGRESS.md names the packages).
-# runtime -> assets: the PS2 float semantics sit in assets/; P1-01 moves ps2_float to common/.
-except	runtime/ps2float.cpp:14	assets/ps2_float.h	P1-01 moves ps2_float to common/
 # platform -> renderer/vulkan: the window opens the Vulkan backend itself; no package yet.
-except	platform/window.cpp:23	renderer/vulkan/vkgl.h	no package yet: the renderer should open its backend on the platform's window
+except	platform/window.cpp:26	renderer/vulkan/vkgl.h	no package yet: the renderer should open its backend on the platform's window
 # renderer -> enhanced: the core renderer depends on the experimental layer's GTAO.
 except	renderer/renderer.h:29	enhanced/renderer/gtao.h	P2-07: renderer owns the post-process interface, enhanced registers GTAO
 except	renderer/renderer.h:30	enhanced/renderer/gtao_settings.h	P2-07: renderer owns the post-process interface, enhanced registers GTAO
-# enhanced -> viewer: the JSON library and the level live in the viewer program's directory.
-except	enhanced/tools/probes/activation.cpp:9	viewer/json.h	P1-01 moves json to common/
-except	enhanced/tools/probes/level_scene.cpp:15	viewer/json.h	P1-01 moves json to common/
+# enhanced -> viewer: the level lives in the viewer program's directory.
 except	enhanced/tools/probes/level_scene.h:4	viewer/level.h	P2-02 moves the level to scene/
-except	enhanced/tools/probes/main.cpp:17	viewer/json.h	P1-01 moves json to common/
-except	enhanced/viewer/probe_lighting.cpp:20	viewer/json.h	P1-01 moves json to common/
 except	enhanced/viewer/probe_lighting.h:11	viewer/level.h	P2-02 moves the level to scene/
-# game/common -> viewer: the game program uses the viewer's world drawing, game state and JSON.
+# game/common -> viewer: the game program uses the viewer's world drawing and game state.
 except	game/common/debug_overlay.cpp:42	viewer/screenshot.h	P2-02 moves the screenshot to scene/
 except	game/common/debug_overlay.h:28	viewer/game_state.h	P2-03 moves the game state into rac1's GameProfile
 except	game/common/frontend.cpp:50	viewer/game_state.h	P2-03 moves the game state into rac1's GameProfile
@@ -107,4 +101,3 @@ except	game/common/frontend.cpp:54	viewer/moby_shadow.h	P2-02 moves the moby sha
 except	game/common/frontend.cpp:55	viewer/screenshot.h	P2-02 moves the screenshot to scene/
 except	game/common/main.cpp:74	viewer/level.h	P2-02 moves the level to scene/
 except	game/common/main.cpp:75	viewer/moby_pose.h	P2-02 moves the moby pose to scene/
-except	game/common/mod_manifest.h:20	viewer/json.h	P1-01 moves json to common/

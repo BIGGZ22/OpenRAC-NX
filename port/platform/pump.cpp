@@ -11,6 +11,7 @@
 #include <windows.h>
 #endif
 
+#include "common/env.h"
 #include "common/log.h"
 
 namespace openrac::platform {
@@ -69,7 +70,7 @@ int run_pumped(int (*program)(void*), void* argument) {
     pump.argument = argument;
     pump.thread = GetCurrentThreadId();
     // OPENRAC_NO_PUMP_FIBER: the program and the pump in one loop, as before (for comparing).
-    if (SDL_getenv("OPENRAC_NO_PUMP_FIBER") != nullptr) {
+    if (env::flag(env::Var::NoPumpFiber)) {
         return program(argument);
     }
     // The floating-point state is each fiber's own: the game sets rounding modes.

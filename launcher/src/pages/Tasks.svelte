@@ -4,8 +4,9 @@
   // to copy and send us when something failed. With developer tools on this is Develop's console.
   import DevConsole from "$components/DevConsole.svelte";
   import Icon from "$components/Icon.svelte";
-  import { app, cancel, clearFinished, clock, jobs, toast } from "$lib/app.svelte";
-  import { elapsed } from "$lib/format";
+  import { app, cancel, clearFinished, clock, jobs } from "$lib/app.svelte";
+  import { copyText } from "$lib/clipboard";
+  import { jobDuration, jobTranscript, TRANSCRIPT_REFUSED } from "$lib/jobText";
   import { isGame, phaseLabel, readProgress } from "$lib/progress";
   import type { Job } from "$lib/queue";
 
@@ -17,11 +18,6 @@
   const opened = $state<Record<number, boolean>>({});
   /** The most lines of output written out on the page. */
   const SHOWN = 400;
-
-  function duration(job: Job): string {
-    if (!job.startedAt) return "";
-    return elapsed((job.endedAt ?? clock.now) - job.startedAt);
-  }
 
   /** What a finished job did, in the player's words. */
   function did(job: Job): string {
@@ -57,13 +53,7 @@
     return "It did not finish. Copy what it printed and send it to us on GitHub or Discord.";
   }
 
-  async function copy(job: Job) {
-    try {
-      await navigator.clipboard.writeText([`$ ${job.command}`, ...job.lines.map((l) => l.line)].join("\n"));
-    } catch {
-      toast("The output could not be copied: the browser would not give it to the clipboard.", "error");
-    }
-  }
+  const copy = (job: Job) => copyText(jobTranscript(job), TRANSCRIPT_REFUSED);
 </script>
 
 {#if developer}
@@ -108,7 +98,7 @@
               <strong class="clip">{job.title}</strong>
               <p class="line">{line(job)}</p>
             </div>
-            <span class="dim time">{duration(job)}</span>
+            <span class="dim time">{jobDuration(job, clock.now)}</span>
             {#if live(job)}
               <button class="small" onclick={() => void cancel(job)}>
                 <Icon name="x" size={14} />{job.state === "queued" ? "Don't run" : "Stop"}

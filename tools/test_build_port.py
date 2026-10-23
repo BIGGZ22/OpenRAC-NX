@@ -165,6 +165,22 @@ class Commands(unittest.TestCase):
         self.assertEqual(build_port.EMBREE_OPTIONS["EMBREE_STATIC_LIB"], "ON")
         self.assertEqual(build_port.EMBREE_OPTIONS["EMBREE_TASKING_SYSTEM"], "INTERNAL")
 
+    def test_embree_is_given_the_x86_isas_on_x86_only(self):
+        # On ARM a value for an x86-64 ISA still counts as one more ISA, and AppleClang's static
+        # Embree takes only one: the macOS launcher's baker was left out that way.
+        for machine in ("x86_64", "AMD64"):
+            self.assertEqual(build_port.embree_options(machine)["EMBREE_ISA_AVX"], "ON")
+        for machine in ("arm64", "aarch64", "ARM64"):
+            options = build_port.embree_options(machine)
+            self.assertFalse([key for key in options if key.startswith("EMBREE_ISA_")], machine)
+            self.assertEqual(options["EMBREE_STATIC_LIB"], "ON")
+
+    def test_embree_is_compiled_with_the_builds_cxxflags(self):
+        # The launcher's Linux builds put -stdlib=libc++ in CXXFLAGS; Embree must not drop it, and
+        # an Embree built with other flags is built again.
+        self.assertEqual(build_port.EMBREE_OPTIONS["EMBREE_IGNORE_CMAKE_CXX_FLAGS"], "OFF")
+        self.assertNotEqual(build_port.embree_stamp({"CXXFLAGS": "-stdlib=libc++"}), build_port.embree_stamp({}))
+
 
 class Stamp(unittest.TestCase):
     def setUp(self):

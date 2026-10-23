@@ -20,13 +20,13 @@
 #include <vector>
 
 #include "check.h"
+#include "common/json.h"
 #include "gpu_draw_reference.h"
 #include "renderer/framebuffer.h"
 #include "renderer/renderer.h"
 #include "renderer_gl_context.h"
 #include "viewer/camera.h"
 #include "viewer/game_state.h"
-#include "viewer/json.h"
 #include "viewer/level.h"
 #include "viewer/level_renderer.h"
 
@@ -204,10 +204,10 @@ void write_level(const fs::path& dir) {
 }
 
 void json_reader() {
-    using viewer::json::Value;
+    using json::Value;
     Value v;
     std::string error;
-    CHECK(viewer::json::parse(
+    CHECK(json::parse(
         R"({"a": [1, 2.5e1, -3], "b": {"c": "xé\n"}, "t": true, "n": null})", v, error
     ));
     CHECK(v["a"].items().size() == 3);
@@ -217,10 +217,10 @@ void json_reader() {
     CHECK(v["t"].boolean());
     CHECK(v["n"].is_null());
     CHECK(v["missing"]["deeper"].is_null());
-    CHECK(!viewer::json::parse("{\"a\": }", v, error));
+    CHECK(!json::parse("{\"a\": }", v, error));
     CHECK(!error.empty());
-    CHECK(!viewer::json::parse("[1, 2", v, error));
-    CHECK(!viewer::json::parse("[1] x", v, error));
+    CHECK(!json::parse("[1, 2", v, error));
+    CHECK(!json::parse("[1] x", v, error));
 }
 
 void loader(const fs::path& dir, viewer::LevelData& level) {

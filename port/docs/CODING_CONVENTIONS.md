@@ -100,8 +100,6 @@ what to do instead.
 | `openrac::Result<T>` in `common/result.h` (13.3) | P2-08 | `bool` and a `std::string& error`, or `std::optional<T>` |
 | The C-boundary wrapper that catches everything (13.4) | P2-08 | a `try` and two `catch` clauses written out, as 13.4 shows |
 | `common/env.h`, the table of `OPENRAC_*` variables (16) | P1-03 | one read per variable, in its module, listed in DEBUGGING.md |
-| `common/json.h` and `common/ps2_float.h` | P1-01 | `viewer/json.h` and `assets/ps2_float.h` |
-| `openrac_add_test` and `openrac_add_c_test` (19) | P0-03 | the stanza the neighbouring tests in `port/CMakeLists.txt` use |
 | `host::GameProfile`, one per game version (15) | P2-03 (rac1), P3-02 (all) | per-game knowledge in `port/game/<id>/`; nothing new in shared code |
 | The `scene` module and `renderer/ui` (9.1) | P2-02, P2-06 | `viewer/` and `game/common` |
 
@@ -1248,8 +1246,9 @@ layer.
 - Every target the port compiles calls `openrac_warnings(<target>)`.
 - Compile options are set per whole target, never per file.
 - Tests are registered through one helper, `openrac_add_test` for C++ and `openrac_add_c_test` for
-  C (arriving with P0-03). Until then, copy the stanza the neighbouring tests use. A test target is
-  `<subject>_test` and the ctest name is `<subject>`.
+  C ([cmake/Tests.cmake](../cmake/Tests.cmake), which documents their arguments). A test target is
+  `<subject>_test` and the ctest name is `<subject>`. A C test names the game C's options it needs
+  (`NO_STRICT_ALIASING`, `WRAPV`, `NO_FP_CONTRACT`, `MATH`) rather than spelling the flags.
 - A new module brings its README (7.7), its row in the port README's "What is here" and its edges
   in the layering checker's allow-list.
 
@@ -1363,7 +1362,7 @@ over the tree (the restructure plan forbids mass renames and reformatting).
 | `getenv` | `common/env.h` | P1-03 (runtime, platform, renderer), P2-09 (game/common, vulkan) |
 | `extern "C"` outside contract files, no catch-all | the contract's file, the wrapper | P2-08 |
 | game-id branches and addresses in shared code | `GameProfile` | P2-03, P3-02 |
-| copy-pasted test stanzas | `openrac_add_test` | P0-03 |
+| test stanzas written out in `cmake/*.cmake` | `openrac_add_test`, `openrac_add_c_test` | when the file is restructured |
 | raw `new`/`delete`, `printf`, missing doc comments | owners, the log, documentation | when the function is touched |
 
 ### 24.2 Characterisation tests first

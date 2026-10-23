@@ -50,6 +50,7 @@ option(OPENRAC_PORT_GAMES "Build the games from their decompilations (needs Clan
 
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake")
 include(Warnings)
+include(Tests)
 include(FastBuild)
 include(Optimize)
 # Android (the android-arm64 preset, the NDK's toolchain file): docs/port/ANDROID.md.
@@ -59,7 +60,7 @@ endif()
 
 enable_testing()
 
-# ---- common: the log, crash reports and small helpers, no dependencies ----
+# ---- common: the log, crash reports, JSON, PS2 float arithmetic, helpers; no dependencies ----
 # OpenRAC's version and the checkout's commit (common/build_info.h), written at every build and
 # replaced only when they change (cmake/BuildInfo.cmake).
 set(OPENRAC_BUILD_INFO "${CMAKE_BINARY_DIR}/generated/build_info.cpp")
@@ -71,8 +72,11 @@ add_custom_target(openrac_build_info
   VERBATIM)
 add_library(openrac_common STATIC
   common/crash.cpp
+  common/env.cpp
+  common/json.cpp
   common/log.cpp
   common/process.cpp
+  common/ps2_float.cpp
   common/stats.cpp
   common/system_info.cpp
   "${OPENRAC_BUILD_INFO}"
@@ -90,30 +94,16 @@ if(ANDROID)
 endif()
 openrac_warnings(openrac_common)
 
-add_executable(log_test tests/log_test.cpp)
-target_link_libraries(log_test PRIVATE openrac_common)
-openrac_warnings(log_test)
-add_test(NAME log COMMAND log_test)
-
-add_executable(frame_pacing_test tests/frame_pacing_test.cpp)
-target_include_directories(frame_pacing_test PRIVATE .)
-openrac_warnings(frame_pacing_test)
-add_test(NAME frame_pacing COMMAND frame_pacing_test)
-
-add_executable(settings_test tests/settings_test.cpp game/common/settings.cpp)
-target_link_libraries(settings_test PRIVATE openrac_common)
-openrac_warnings(settings_test)
-add_test(NAME settings COMMAND settings_test)
-
-add_executable(scripted_moby_colour_test enhanced/tests/scripted_moby_colour_test.cpp)
-target_include_directories(scripted_moby_colour_test PRIVATE .)
-openrac_warnings(scripted_moby_colour_test)
-add_test(NAME scripted_moby_colour COMMAND scripted_moby_colour_test)
-
-add_executable(pause_options_test tests/pause_options_test.cpp)
-target_include_directories(pause_options_test PRIVATE .)
-openrac_warnings(pause_options_test)
-add_test(NAME pause_options COMMAND pause_options_test)
+openrac_add_test(log LIBS openrac_common)
+find_package(Threads REQUIRED)
+openrac_add_test(joining_thread LIBS openrac_common Threads::Threads)
+openrac_add_test(env LIBS openrac_common)
+openrac_add_test(frame_pacing INCLUDES .)
+openrac_add_test(settings SOURCES tests/settings_test.cpp game/common/settings.cpp
+                          LIBS openrac_common)
+openrac_add_test(scripted_moby_colour SOURCES enhanced/tests/scripted_moby_colour_test.cpp
+                                      INCLUDES .)
+openrac_add_test(pause_options INCLUDES .)
 
 # The game fixes (game/common/fixes.h): rac1's list of differences, checked as the configure reads it
 # (cmake/Differences.cmake), and its fixes through the settings file. Needs no game.
@@ -124,13 +114,12 @@ target_sources(settings_test PRIVATE game/common/fixes.cpp
   "${CMAKE_BINARY_DIR}/generated/openrac_fixes_test_rac1_pal.cpp")
 target_include_directories(settings_test PRIVATE game/common)
 
-add_executable(game_fixes_test tests/game_fixes_test.cpp game/common/fixes.cpp game/common/settings.cpp
-                               "${CMAKE_BINARY_DIR}/generated/openrac_fixes_test_rac1_pal.cpp")
-target_include_directories(game_fixes_test PRIVATE . game/common game/common/include runtime/include)
-target_compile_definitions(game_fixes_test PRIVATE "OPENRAC_RAC1_HOST=\"${PROJECT_SOURCE_DIR}/game/rac1/host\"")
-target_link_libraries(game_fixes_test PRIVATE openrac_common)
-openrac_warnings(game_fixes_test)
-add_test(NAME game_fixes COMMAND game_fixes_test)
+openrac_add_test(game_fixes
+  SOURCES tests/game_fixes_test.cpp game/common/fixes.cpp game/common/settings.cpp
+          "${CMAKE_BINARY_DIR}/generated/openrac_fixes_test_rac1_pal.cpp"
+  INCLUDES . game/common game/common/include runtime/include
+  DEFINITIONS "OPENRAC_RAC1_HOST=\"${PROJECT_SOURCE_DIR}/game/rac1/host\""
+  LIBS openrac_common)
 
 # ---- runtime: game memory, the guest contract, the executable loader ----
 add_library(openrac_runtime STATIC
@@ -147,17 +136,9 @@ if(MINGW)
 endif()
 openrac_warnings(openrac_runtime)
 
-add_executable(runtime_test tests/runtime_test.cpp tests/guest_c.c)
-target_link_libraries(runtime_test PRIVATE openrac_runtime)
-openrac_warnings(runtime_test)
-add_test(NAME runtime COMMAND runtime_test)
+openrac_add_test(runtime SOURCES tests/runtime_test.cpp tests/guest_c.c LIBS openrac_runtime)
 
 # ---- native mods (docs/port/MODS.md): manifests, the list, the loader ----
-# The JSON reader the viewer and the mod loader share.
-add_library(openrac_json STATIC viewer/json.cpp)
-target_include_directories(openrac_json PUBLIC .)
-openrac_warnings(openrac_json)
-
 include(Luau)
 add_library(openrac_mods STATIC
   game/common/mod_library.cpp
@@ -166,14 +147,11 @@ add_library(openrac_mods STATIC
   game/common/mods.cpp
 )
 target_include_directories(openrac_mods PUBLIC game/common game/common/include "${PROJECT_SOURCE_DIR}/../sdk/include")
-target_link_libraries(openrac_mods PUBLIC openrac_runtime openrac_json ${CMAKE_DL_LIBS}
+target_link_libraries(openrac_mods PUBLIC openrac_runtime ${CMAKE_DL_LIBS}
                       PRIVATE openrac_luau)
 openrac_warnings(openrac_mods)
 
-add_executable(mod_manifest_test tests/mod_manifest_test.cpp)
-target_link_libraries(mod_manifest_test PRIVATE openrac_mods)
-openrac_warnings(mod_manifest_test)
-add_test(NAME mod_manifest COMMAND mod_manifest_test)
+openrac_add_test(mod_manifest LIBS openrac_mods)
 
 # A mod built as a mod is (a shared library against the SDK's header alone), loaded by the real
 # loader with hook points of the test's own.
@@ -209,232 +187,74 @@ if(Python3_FOUND)
            -s "${PROJECT_SOURCE_DIR}/../sdk/tools" -p "test_gen_binding.py")
 endif()
 
-add_executable(rac4_io_test tests/rac4_io_test.c
-  game/rac4-ntsc/host/pad.c game/rac4-ntsc/host/sound.c game/common/lib/pad.c)
-target_include_directories(rac4_io_test PRIVATE runtime/include game/common/include)
-openrac_warnings(rac4_io_test)
-add_test(NAME rac4_io COMMAND rac4_io_test)
-
-add_executable(graph_dma_test tests/graph_dma_test.c)
-target_include_directories(graph_dma_test PRIVATE runtime/include game/common/include)
-openrac_warnings(graph_dma_test)
-add_test(NAME graph_dma COMMAND graph_dma_test)
+openrac_add_c_test(rac4_io
+  SOURCES tests/rac4_io_test.c game/rac4-ntsc/host/pad.c game/rac4-ntsc/host/sound.c
+          game/common/lib/pad.c
+  INCLUDES runtime/include game/common/include)
+openrac_add_c_test(graph_dma INCLUDES runtime/include game/common/include)
 
 # ---- assets, media, audio, the extractor: no window ----
-add_executable(crate_init_test tests/crate_init_test.c)
-target_compile_options(crate_init_test PRIVATE -fno-strict-aliasing -fwrapv -ffp-contract=off)
-openrac_warnings(crate_init_test)
-add_test(NAME crate_init COMMAND crate_init_test)
+openrac_add_c_test(crate_init NO_STRICT_ALIASING WRAPV NO_FP_CONTRACT)
 
 include(Assets)
 
-# The EE FPU's float arithmetic for C (openrac/ps2float.h): the model of assets/ps2_float.h behind C
+# The EE FPU's float arithmetic for C (openrac/ps2float.h): the model of common/ps2_float.h behind C
 # entry points, for the functions hostgen translates with it (hostgen.json "ps2_float") and the
 # port's own C that computes as the console does. The games' library links it (cmake/Games.cmake).
 add_library(openrac_ps2float STATIC runtime/ps2float.cpp)
-target_link_libraries(openrac_ps2float PUBLIC openrac_runtime openrac_assets_core)
+target_link_libraries(openrac_ps2float PUBLIC openrac_runtime)
 openrac_warnings(openrac_ps2float)
 
-add_executable(ps2float_test tests/ps2float_test.c)
-target_compile_options(ps2float_test PRIVATE -ffp-contract=off)
-target_link_libraries(ps2float_test PRIVATE openrac_ps2float)
-openrac_warnings(ps2float_test)
-add_test(NAME ps2float COMMAND ps2float_test)
+openrac_add_c_test(ps2float NO_FP_CONTRACT LIBS openrac_ps2float)
 
 # Probe assets and CPU sampling need neither a graphics context nor Embree.
 add_library(openrac_lighting STATIC enhanced/lighting/probes.cpp enhanced/lighting/probe_atlas.cpp enhanced/lighting/probe_regions.cpp)
 target_include_directories(openrac_lighting PUBLIC .)
 openrac_warnings(openrac_lighting)
 foreach(name IN ITEMS probes probe_atlas probe_regions)
-  add_executable(lighting_${name}_test enhanced/tests/lighting/${name}.cpp)
-  target_link_libraries(lighting_${name}_test PRIVATE openrac_lighting)
-  openrac_warnings(lighting_${name}_test)
-  add_test(NAME lighting_${name} COMMAND lighting_${name}_test)
+  openrac_add_test(lighting_${name} SOURCES enhanced/tests/lighting/${name}.cpp
+                                    LIBS openrac_lighting)
   set_tests_properties(lighting_${name} PROPERTIES SKIP_RETURN_CODE 77)
 endforeach()
 include(ProbeBake)
 
-add_executable(joint_matrices_test tests/joint_matrices_test.c)
-target_compile_options(joint_matrices_test PRIVATE -fno-strict-aliasing)
-openrac_warnings(joint_matrices_test)
-add_test(NAME joint_matrices COMMAND joint_matrices_test)
-
-add_executable(particle_allocate_test tests/particle_allocate_test.c)
-openrac_warnings(particle_allocate_test)
-add_test(NAME particle_allocate COMMAND particle_allocate_test)
-
-add_executable(hero_animation_test tests/hero_animation_test.c)
-target_compile_options(hero_animation_test PRIVATE -fno-strict-aliasing -ffp-contract=off)
-openrac_warnings(hero_animation_test)
-add_test(NAME hero_animation COMMAND hero_animation_test)
-
-add_executable(hero_effects_test tests/hero_effects_test.c)
-target_compile_options(hero_effects_test PRIVATE -fno-strict-aliasing -ffp-contract=off)
-openrac_warnings(hero_effects_test)
-add_test(NAME hero_effects COMMAND hero_effects_test)
-
-add_executable(hero_items_test tests/hero_items_test.c)
-target_compile_options(hero_items_test PRIVATE -fno-strict-aliasing -ffp-contract=off)
-openrac_warnings(hero_items_test)
-add_test(NAME hero_items COMMAND hero_items_test)
-
-add_executable(hero_attach_test tests/hero_attach_test.c)
-target_compile_options(hero_attach_test PRIVATE -fno-strict-aliasing -ffp-contract=off)
-openrac_warnings(hero_attach_test)
-add_test(NAME hero_attach COMMAND hero_attach_test)
-
-add_executable(moby_bounds_test tests/moby_bounds_test.c)
-target_compile_options(moby_bounds_test PRIVATE -fno-strict-aliasing -ffp-contract=off)
-openrac_warnings(moby_bounds_test)
-add_test(NAME moby_bounds COMMAND moby_bounds_test)
-
-add_executable(moby_view_test tests/moby_view_test.c)
-target_compile_options(moby_view_test PRIVATE -ffp-contract=off)
-if(UNIX)
-  target_link_libraries(moby_view_test PRIVATE m)
-endif()
-openrac_warnings(moby_view_test)
-add_test(NAME moby_view COMMAND moby_view_test)
-
-add_executable(wide_view_test tests/wide_view_test.c)
-target_compile_options(wide_view_test PRIVATE -ffp-contract=off)
-if(UNIX)
-  target_link_libraries(wide_view_test PRIVATE m)
-endif()
-openrac_warnings(wide_view_test)
-add_test(NAME wide_view COMMAND wide_view_test)
-
-add_executable(hero_manipulators_test tests/hero_manipulators_test.c)
-target_compile_options(hero_manipulators_test PRIVATE -fno-strict-aliasing -ffp-contract=off)
-openrac_warnings(hero_manipulators_test)
-add_test(NAME hero_manipulators COMMAND hero_manipulators_test)
-
-add_executable(map_reveal_test tests/map_reveal_test.c)
-target_compile_options(map_reveal_test PRIVATE -fno-strict-aliasing -ffp-contract=off)
-openrac_warnings(map_reveal_test)
-add_test(NAME map_reveal COMMAND map_reveal_test)
-
-add_executable(moby_lighting_test tests/moby_lighting_test.c)
-target_compile_options(moby_lighting_test PRIVATE -fno-strict-aliasing -ffp-contract=off)
-openrac_warnings(moby_lighting_test)
-add_test(NAME moby_lighting COMMAND moby_lighting_test)
-
-add_executable(particle_update_test tests/particle_update_test.c)
-openrac_warnings(particle_update_test)
-add_test(NAME particle_update COMMAND particle_update_test)
-
-add_executable(scale_matrix_test tests/scale_matrix_test.c)
-openrac_warnings(scale_matrix_test)
-add_test(NAME scale_matrix COMMAND scale_matrix_test)
-
-add_executable(rows_multiply_test tests/rows_multiply_test.c)
-target_compile_options(rows_multiply_test PRIVATE -ffp-contract=off)
-openrac_warnings(rows_multiply_test)
-add_test(NAME rows_multiply COMMAND rows_multiply_test)
-
-add_executable(vendor_draw_test tests/vendor_draw_test.c)
-target_compile_options(vendor_draw_test PRIVATE -fno-strict-aliasing -ffp-contract=off)
-if(UNIX)
-  target_link_libraries(vendor_draw_test PRIVATE m)
-endif()
-openrac_warnings(vendor_draw_test)
-add_test(NAME vendor_draw COMMAND vendor_draw_test)
-
-add_executable(effect_quad_test tests/effect_quad_test.c)
-target_include_directories(effect_quad_test PRIVATE game/common/include runtime/include game/rac1-pal/host)
-target_compile_options(effect_quad_test PRIVATE -fno-strict-aliasing -ffp-contract=off)
-openrac_warnings(effect_quad_test)
-add_test(NAME effect_quad COMMAND effect_quad_test)
+openrac_add_c_test(joint_matrices NO_STRICT_ALIASING)
+openrac_add_c_test(particle_allocate)
+openrac_add_c_test(hero_animation NO_STRICT_ALIASING NO_FP_CONTRACT)
+openrac_add_c_test(hero_effects NO_STRICT_ALIASING NO_FP_CONTRACT)
+openrac_add_c_test(hero_items NO_STRICT_ALIASING NO_FP_CONTRACT)
+openrac_add_c_test(hero_attach NO_STRICT_ALIASING NO_FP_CONTRACT)
+openrac_add_c_test(moby_bounds NO_STRICT_ALIASING NO_FP_CONTRACT)
+openrac_add_c_test(moby_view NO_FP_CONTRACT MATH)
+openrac_add_c_test(wide_view NO_FP_CONTRACT MATH)
+openrac_add_c_test(hero_manipulators NO_STRICT_ALIASING NO_FP_CONTRACT)
+openrac_add_c_test(map_reveal NO_STRICT_ALIASING NO_FP_CONTRACT)
+openrac_add_c_test(moby_lighting NO_STRICT_ALIASING NO_FP_CONTRACT)
+openrac_add_c_test(particle_update)
+openrac_add_c_test(scale_matrix)
+openrac_add_c_test(rows_multiply NO_FP_CONTRACT)
+openrac_add_c_test(vendor_draw NO_STRICT_ALIASING NO_FP_CONTRACT MATH)
+openrac_add_c_test(effect_quad NO_STRICT_ALIASING NO_FP_CONTRACT
+  INCLUDES game/common/include runtime/include game/rac1-pal/host)
 
 # The shared rac1 host C's scene actors, with PAL's table and a stand-in for its prototypes.
-add_executable(scene_actors_test tests/scene_actors_test.c)
-target_include_directories(scene_actors_test PRIVATE tests/rac1_host game/common/include runtime/include
-                                                     game/rac1-pal/host)
-target_compile_options(scene_actors_test PRIVATE -fno-strict-aliasing -fwrapv)
-openrac_warnings(scene_actors_test)
-add_test(NAME scene_actors COMMAND scene_actors_test)
+openrac_add_c_test(scene_actors NO_STRICT_ALIASING WRAPV
+  INCLUDES tests/rac1_host game/common/include runtime/include game/rac1-pal/host)
 
 # The shared rac1 host C's bigger moby pool, with PAL's table and the same stand-in.
-add_executable(moby_pool_test tests/moby_pool_test.c)
-target_include_directories(moby_pool_test PRIVATE tests/rac1_host game/common/include runtime/include
-                                                  game/rac1-pal/host)
-target_compile_options(moby_pool_test PRIVATE -fno-strict-aliasing -fwrapv)
-openrac_warnings(moby_pool_test)
-add_test(NAME moby_pool COMMAND moby_pool_test)
+openrac_add_c_test(moby_pool NO_STRICT_ALIASING WRAPV
+  INCLUDES tests/rac1_host game/common/include runtime/include game/rac1-pal/host)
 
-add_executable(resource_bank_test tests/resource_bank_test.c)
-target_compile_options(resource_bank_test PRIVATE -fno-strict-aliasing)
-openrac_warnings(resource_bank_test)
-add_test(NAME resource_bank COMMAND resource_bank_test)
-
-add_executable(exe_moby_grid_test tests/exe_moby_grid_test.c)
-target_compile_options(exe_moby_grid_test PRIVATE -fno-strict-aliasing)
-openrac_warnings(exe_moby_grid_test)
-add_test(NAME exe_moby_grid COMMAND exe_moby_grid_test)
-
-add_executable(hero_lean_test tests/hero_lean_test.c)
-target_compile_options(hero_lean_test PRIVATE -fno-strict-aliasing -ffp-contract=off)
-if(UNIX)
-  target_link_libraries(hero_lean_test PRIVATE m)
-endif()
-openrac_warnings(hero_lean_test)
-add_test(NAME hero_lean COMMAND hero_lean_test)
-
-add_executable(hero_gait_test tests/hero_gait_test.c)
-target_compile_options(hero_gait_test PRIVATE -fno-strict-aliasing -ffp-contract=off)
-if(UNIX)
-  target_link_libraries(hero_gait_test PRIVATE m)
-endif()
-openrac_warnings(hero_gait_test)
-add_test(NAME hero_gait COMMAND hero_gait_test)
-
-add_executable(hero_heading_test tests/hero_heading_test.c)
-target_compile_options(hero_heading_test PRIVATE -fno-strict-aliasing -ffp-contract=off)
-if(UNIX)
-  target_link_libraries(hero_heading_test PRIVATE m)
-endif()
-openrac_warnings(hero_heading_test)
-add_test(NAME hero_heading COMMAND hero_heading_test)
-
-add_executable(hero_contact_test tests/hero_contact_test.c)
-target_compile_options(hero_contact_test PRIVATE -fno-strict-aliasing -ffp-contract=off)
-if(UNIX)
-  target_link_libraries(hero_contact_test PRIVATE m)
-endif()
-openrac_warnings(hero_contact_test)
-add_test(NAME hero_contact COMMAND hero_contact_test)
-
-add_executable(hero_vertical_test tests/hero_vertical_test.c)
-target_compile_options(hero_vertical_test PRIVATE -fno-strict-aliasing -ffp-contract=off)
-if(UNIX)
-  target_link_libraries(hero_vertical_test PRIVATE m)
-endif()
-openrac_warnings(hero_vertical_test)
-add_test(NAME hero_vertical COMMAND hero_vertical_test)
-
-add_executable(particle53_test tests/particle53_test.c)
-target_compile_options(particle53_test PRIVATE -fno-strict-aliasing -ffp-contract=off)
-if(UNIX)
-  target_link_libraries(particle53_test PRIVATE m)
-endif()
-openrac_warnings(particle53_test)
-add_test(NAME particle53 COMMAND particle53_test)
-
-add_executable(planar_limit_test tests/planar_limit_test.c)
-target_compile_options(planar_limit_test PRIVATE -fno-strict-aliasing -ffp-contract=off)
-if(UNIX)
-  target_link_libraries(planar_limit_test PRIVATE m)
-endif()
-openrac_warnings(planar_limit_test)
-add_test(NAME planar_limit COMMAND planar_limit_test)
-
-add_executable(checkpoint_restore_test tests/checkpoint_restore_test.c)
-target_compile_options(checkpoint_restore_test PRIVATE -fno-strict-aliasing -ffp-contract=off)
-if(UNIX)
-  target_link_libraries(checkpoint_restore_test PRIVATE m)
-endif()
-openrac_warnings(checkpoint_restore_test)
-add_test(NAME checkpoint_restore COMMAND checkpoint_restore_test)
+openrac_add_c_test(resource_bank NO_STRICT_ALIASING)
+openrac_add_c_test(exe_moby_grid NO_STRICT_ALIASING)
+openrac_add_c_test(hero_lean NO_STRICT_ALIASING NO_FP_CONTRACT MATH)
+openrac_add_c_test(hero_gait NO_STRICT_ALIASING NO_FP_CONTRACT MATH)
+openrac_add_c_test(hero_heading NO_STRICT_ALIASING NO_FP_CONTRACT MATH)
+openrac_add_c_test(hero_contact NO_STRICT_ALIASING NO_FP_CONTRACT MATH)
+openrac_add_c_test(hero_vertical NO_STRICT_ALIASING NO_FP_CONTRACT MATH)
+openrac_add_c_test(particle53 NO_STRICT_ALIASING NO_FP_CONTRACT MATH)
+openrac_add_c_test(planar_limit NO_STRICT_ALIASING NO_FP_CONTRACT MATH)
+openrac_add_c_test(checkpoint_restore NO_STRICT_ALIASING NO_FP_CONTRACT MATH)
 
 if(OPENRAC_PORT_WINDOW)
   include(Window)

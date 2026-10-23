@@ -30,15 +30,13 @@ import argparse
 import hashlib
 import json
 import os
-import re
 import shutil
-import struct
 import sys
 from pathlib import Path
 
-import openrac
+from openrac_common import digest, files, games, iso9660, paths
 
-SECTOR = openrac.SECTOR
+SECTOR = iso9660.SECTOR
 
 # Exit codes, numbered as OpenGOAL's extractor numbers the same failures
 # (decompiler/extractor/extractor_util.h, ExtractorErrorCode), so that a
@@ -67,51 +65,22 @@ class ExtractError(Exception):
         return f"error {self.code}: {ERRORS[self.code]}" + (f" ({self.detail})" if self.detail else "")
 
 
-# --- ISO 9660 ---------------------------------------------------------------------
-
-def walk(f, lba: int, size: int, prefix: str = "", depth: int = 0) -> list[tuple[str, int, int]]:
-    """(path, first sector, size) of every file under the directory at LBA."""
-    if depth > 8:
-        raise ExtractError(4020, "directories nested too deep")
-    f.seek(lba * SECTOR)
-    data, i, out = f.read(size), 0, []
-    while i < len(data):
-        n = data[i]
-        if n == 0:
-            i = (i // SECTOR + 1) * SECTOR  # records never cross a sector
-            continue
-        raw = data[i + 33:i + 33 + data[i + 32]]
-        extent, length, flags = struct.unpack_from("<I", data, i + 2)[0], struct.unpack_from("<I", data, i + 10)[0], data[i + 25]
-        i += n
-        if raw in (b"\0", b"\1"):
-            continue  # this directory and its parent
-        name = raw.decode("latin-1").split(";")[0]
-        if not re.fullmatch(r"[A-Za-z0-9_.\-]+", name) or name in (".", ".."):
-            raise ExtractError(4020, f"a file name OpenRAC will not write: {name!r}")
-        if flags & 2:
-            out += walk(f, extent, length, prefix + name + "/", depth + 1)
-        else:
-            out.append((prefix + name, extent, length))
-    return out
-
+# --- The disc ----------------------------------------------------------------------
 
 def files_of(image: Path) -> list[tuple[str, int, int]]:
-    with open(image, "rb") as f:
-        f.seek(16 * SECTOR)
-        pvd = f.read(SECTOR)
-        if len(pvd) < SECTOR or pvd[1:6] != b"CD001":
-            raise ExtractError(4020)
-        lba, size = struct.unpack_from("<I", pvd, 158)[0], struct.unpack_from("<I", pvd, 166)[0]
-        if size > 64 * SECTOR:
-            raise ExtractError(4020, "the root directory is damaged")
-        return walk(f, lba, size)
+    """(path, first sector, size) of every file on IMAGE (iso9660.files), or error 4020 with
+    iso9660's reason when it is not ISO 9660 or its directories cannot be trusted."""
+    try:
+        return iso9660.files(image)
+    except iso9660.IsoError as e:
+        raise ExtractError(4020, e.detail) from e
 
 
 # --- What OpenRAC knows ---------------------------------------------------------------
 
 def builds(game: str | None = None) -> dict[str, tuple[dict, str, dict]]:
     """serial -> (game, version name, version), for GAME or every game."""
-    return {v["serial"]: (g, name, v) for g, name, v in openrac.versions() if game in (None, g["id"])}
+    return {v["serial"]: (g, name, v) for g, name, v in games.versions() if game in (None, g["id"])}
 
 
 def check_image_file(image: Path, minimum: int) -> None:
@@ -126,11 +95,12 @@ def contents_hash(hashes: dict[str, str]) -> str:
     return hashlib.sha256("".join(f"{p}\0{h}\n" for p, h in sorted(hashes.items())).encode()).hexdigest()
 
 
-def validate(game: str, serial: str | None, boot_sha1: str | None, files: dict[str, str],
+def validate(game: str, serial: str | None, boot_sha1: str | None, hashes: dict[str, str],
              boot_sha256: str | None = None) -> tuple[dict, str, dict]:
-    """The known build these files are, or an ExtractError. A build game.json pins by the boot's
-    SHA-256 alone (rac5, recorded from its project's target.json) is checked by that."""
-    if serial is None or serial not in files:
+    """The known build the disc's files are (HASHES: path -> SHA-1), or an ExtractError. A build
+    game.json pins by the boot's SHA-256 alone (rac5, recorded from its project's target.json) is
+    checked by that."""
+    if serial is None or serial not in hashes:
         raise ExtractError(4000)
     known = builds(game)
     if serial not in known:
@@ -148,37 +118,28 @@ def validate(game: str, serial: str | None, boot_sha1: str | None, files: dict[s
     # game.json may list the disc's file count and contents hash once someone
     # with the disc records them (the line print_new_build prints).
     disc = version.get("disc", {})
-    if "files" in disc and disc["files"] != len(files):
-        raise ExtractError(4011, f"{len(files)} files, game.json has {disc['files']}")
-    if "contents" in disc and disc["contents"] != contents_hash(files):
+    if "files" in disc and disc["files"] != len(hashes):
+        raise ExtractError(4011, f"{len(hashes)} files, game.json has {disc['files']}")
+    if "contents" in disc and disc["contents"] != contents_hash(hashes):
         raise ExtractError(4012)
     return g, name, version
 
 
-def print_new_build(serial: str | None, boot_sha1: str | None, files: dict[str, str]) -> None:
+def print_new_build(serial: str | None, boot_sha1: str | None, hashes: dict[str, str]) -> None:
     """What game.json would need to know this build (OpenGOAL's log_potential_new_db_entry)."""
     print("If this is a genuine disc OpenRAC does not know yet, a maintainer can add it to game.json:")
     print(json.dumps({"serial": serial, "boot": {"sha1": boot_sha1},
-                      "disc": {"files": len(files), "contents": contents_hash(files)}}, indent=2))
+                      "disc": {"files": len(hashes), "contents": contents_hash(hashes)}}, indent=2))
 
 
 # --- Steps ------------------------------------------------------------------------------
-
-def link_or_copy(source: Path, dest: Path) -> str:
-    try:
-        os.link(source, dest)
-        return "linked"
-    except OSError:
-        shutil.copyfile(source, dest)
-        return "copied"
-
 
 def extract(image: Path, game: str, proj: Path, minimum: int = MIN_IMAGE_SIZE, boot_only: bool = False) -> dict:
     """Extract and validate IMAGE into PROJ/iso_data/GAME; returns the build info written.
     BOOT_ONLY: of the disc's files only SYSTEM.CNF and the boot executable are written."""
     check_image_file(image, minimum)
     entries = files_of(image)
-    serial = openrac.boot_serial(image)
+    serial = iso9660.boot_serial(image)
     print(f"{image.name}: {len(entries)} files on the disc, boot executable {serial}")
 
     iso_data = proj / "iso_data"
@@ -209,7 +170,7 @@ def extract(image: Path, game: str, proj: Path, minimum: int = MIN_IMAGE_SIZE, b
 
     try:
         boot = temp / serial if serial else None
-        boot_sha256 = hashlib.sha256(boot.read_bytes()).hexdigest() if boot and boot.is_file() else None
+        boot_sha256 = digest.sha256(boot) if boot and boot.is_file() else None
         g, name, version = validate(game, serial, hashes.get(serial or ""), hashes, boot_sha256)
     except ExtractError as e:
         if e.code in (4001, 4002, 4011, 4012):
@@ -220,7 +181,7 @@ def extract(image: Path, game: str, proj: Path, minimum: int = MIN_IMAGE_SIZE, b
 
     # Most of Ratchet & Clank's data is addressed by sector, outside the file
     # system: keep the image beside the files for the decompile step.
-    how = link_or_copy(image, temp / "disc.iso")
+    how = files.link_or_copy(image, temp / "disc.iso", keep_metadata=False)
     print(f"  disc.iso: {how} from {image}")
     info = [{
         "serial": serial,
@@ -245,8 +206,8 @@ def not_yet(step: str) -> None:
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__.split("\n\n")[0])
     parser.add_argument("image", type=Path, help="the image (.iso) of your own disc")
-    parser.add_argument("-g", "--game", required=True, choices=sorted({g["id"] for g in openrac.games()}))
-    parser.add_argument("--proj-path", type=Path, default=openrac.ROOT / "build" / "port")
+    parser.add_argument("-g", "--game", required=True, choices=sorted({g["id"] for g in games.load_all()}))
+    parser.add_argument("--proj-path", type=Path, default=paths.repo_root() / "build" / "port")
     parser.add_argument("-e", "--extract", action="store_true")
     parser.add_argument("--boot-only", action="store_true")
     parser.add_argument("-v", "--validate", action="store_true")

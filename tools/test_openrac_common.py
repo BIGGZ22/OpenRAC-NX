@@ -7,9 +7,10 @@ Two kinds of test. Each helper's own behaviour, with expected values from its do
 (ECMA-119 for the image, hashlib for the digests). And characterisation: the existing copy each
 helper was written from runs on the same synthetic input as the helper, and both must give the
 same result, so a caller moved onto the package later behaves as it did. Those copies are
-imported from where they live today (tools/, port/tools/hostgen, port/tools/versionmap,
-sdk/tools, editor, port/enhanced/tools/probes); once their callers have moved and a copy is
-gone, its comparison goes with it.
+imported from where they live today (port/tools/hostgen, port/tools/versionmap, sdk/tools,
+editor, port/enhanced/tools/probes, and what tools/ keeps: openrac.checksums,
+fcheck_gate.fcheck_commit); once their callers have moved and a copy is gone, its comparison
+goes with it, as tools/' copies went in P1-05.
 """
 import contextlib
 import hashlib
@@ -37,20 +38,14 @@ for folder in ("port/tools/hostgen", "port/tools/versionmap", "sdk/tools", "edit
         sys.path.append(str(ROOT / folder))
 
 import bake_all  # noqa: E402  port/enhanced/tools/probes
-import build_android  # noqa: E402
-import bundle_standalone  # noqa: E402
 import carry_functions  # noqa: E402  port/tools/versionmap
 import disc  # noqa: E402  editor
-import extractor  # noqa: E402
 import fcheck_gate  # noqa: E402
 import gen_binding  # noqa: E402  sdk/tools
 import hostgen  # noqa: E402  port/tools/hostgen
 import no_c  # noqa: E402  port/tools/hostgen
 import openrac  # noqa: E402
-import shared  # noqa: E402
-import sources  # noqa: E402
 import versionmap  # noqa: E402  port/tools/versionmap
-import xmap  # noqa: E402
 
 SECTOR = iso9660.SECTOR
 
@@ -187,7 +182,8 @@ class PathsTests(TempDir):
         self.assertEqual(paths.repo_root(ROOT), ROOT)
 
     def test_matches_the_hand_written_roots(self):
-        for module in (openrac, sources, xmap, versionmap, gen_binding):
+        # tools/*.py take theirs from repo_root since P1-05; these are still written by hand.
+        for module in (versionmap, gen_binding):
             with self.subTest(module=module.__name__):
                 self.assertEqual(paths.repo_root(module.__file__), module.ROOT)
 
@@ -246,32 +242,9 @@ class GamesTests(TempDir):
         self.assertEqual(games.version_dir(RAC8, "pal"), "games/rac8")
         self.assertEqual(games.version_dir(RAC8, "ntsc"), "games/rac8/ntsc")
 
-    def test_matches_tools_openrac(self):
-        with mock.patch.object(openrac, "GAMES", self.games_dir):
-            self.assertEqual(games.load_all(self.dir), openrac.games())
-            self.assertEqual(games.versions(self.dir), openrac.versions())
-        for game, name, _version in games.versions(self.dir):
-            self.assertEqual(games.version_dir(game, name), openrac.vdir(game, name))
-
-    def test_matches_tools_sources(self):
-        with mock.patch.object(sources, "GAMES", self.games_dir), mock.patch.object(sources, "ROOT", self.dir):
-            expected = sources.manifests()
-            for key, (_path, game) in expected.items():
-                name = key.split("/")[1]
-                self.assertEqual(self.dir / games.version_dir(game, name), sources.version_dir(game, name))
-        ours = {f"{g['id']}/{n}": (games.manifest_path(g["id"], self.dir), g)
-                for g, n, v in games.versions(self.dir) if v.get("source")}
-        self.assertEqual(ours, expected)
-
-    def test_matches_tools_xmap_and_versionmap(self):
-        with mock.patch.object(xmap, "GAMES", self.games_dir):
-            expected = xmap.versions()
-        self.assertEqual({f"{g['id']}/{n}": v for g, n, v in games.versions(self.dir) if v.get("xmap")}, expected)
+    def test_matches_versionmap(self):
         with mock.patch.object(versionmap, "ROOT", self.dir):
             self.assertEqual(games.load("rac8", self.dir)["versions"]["ntsc"], versionmap.version("rac8/ntsc"))
-
-    def test_reads_this_checkouts_manifests_as_tools_openrac_does(self):
-        self.assertEqual(games.versions(), openrac.versions())
 
 
 # ---- tables ----
@@ -404,7 +377,6 @@ class DigestTests(TempDir):
         self.assertEqual(digest.sha1(empty), hashlib.sha1(b"").hexdigest())
 
     def test_matches_the_existing_copies(self):
-        self.assertEqual(digest.sha1(self.path), shared.digest(self.path))
         self.assertEqual(digest.sha256(self.path), bake_all.sha256(self.path))
         full = openrac.checksums(self.path, True)
         self.assertEqual((digest.sha1(self.path), digest.sha256(self.path), digest.file_digest(self.path, "md5")),
@@ -432,44 +404,25 @@ class FilesTests(TempDir):
         self.assertEqual((self.dir / "kept.bin").stat().st_mtime, 1_000_000_000)
         self.assertNotEqual((self.dir / "plain.bin").stat().st_mtime, 1_000_000_000)
 
-    def test_link_or_copy_matches_the_extractor_and_place_link(self):
-        for failing in (False, True):
-            with self.subTest(link_fails=failing), contextlib.ExitStack() as stack:
-                if failing:
-                    stack.enter_context(mock.patch("os.link", side_effect=OSError("cross-device link")))
-                ours, theirs, placed = (self.dir / f"{n}-{failing}.bin" for n in ("ours", "extractor", "placed"))
-                self.assertEqual(files.link_or_copy(self.source, ours, keep_metadata=False),
-                                 extractor.link_or_copy(self.source, theirs))
-                self.assertEqual(files.link_or_copy(self.source, self.dir / f"kept-{failing}.bin"),
-                                 openrac.place_link(self.source, placed))
-                self.assertEqual(ours.read_bytes(), theirs.read_bytes())
-                self.assertEqual((self.dir / f"kept-{failing}.bin").stat().st_mtime, placed.stat().st_mtime)
-
-    def test_copy_tree_matches_bundle_standalone(self):
+    def test_copy_tree_keeps_what_keep_accepts(self):
         for name in ("a.py", "test_a.py", "sub/b.py", "sub/c.tsv", "sub/__pycache__/b.pyc", "deep/er/d.py"):
             self.write(f"src/{name}", name)
         keep = lambda rel: not rel.name.startswith("test_") and rel.suffix in (".py", ".pyc", ".tsv")  # noqa: E731
         files.copy_tree(self.dir / "src", self.dir / "ours", keep)
-        bundle_standalone.copy_tree(self.dir / "src", self.dir / "theirs", keep)
-
-        def listing(root: Path) -> list[tuple[str, bytes]]:
-            return sorted((str(p.relative_to(root)), p.read_bytes()) for p in root.rglob("*") if p.is_file())
-        self.assertEqual(listing(self.dir / "ours"), listing(self.dir / "theirs"))
-        self.assertEqual([name for name, _data in listing(self.dir / "ours")],
-                         ["a.py", "deep/er/d.py", "sub/b.py", "sub/c.tsv"])
+        copied = sorted((str(p.relative_to(self.dir / "ours")), p.read_bytes())
+                        for p in (self.dir / "ours").rglob("*") if p.is_file())
+        self.assertEqual(copied, [(name, name.encode()) for name in ("a.py", "deep/er/d.py", "sub/b.py", "sub/c.tsv")])
 
 
 # ---- proc ----
 
 class ProcTests(TempDir):
-    def test_run_echoes_like_build_android(self):
-        command = [Path(sys.executable), "-c", "pass"]
-        ours, theirs = io.StringIO(), io.StringIO()
-        with contextlib.redirect_stdout(ours):
-            proc.run(command, cwd=self.dir, echo=True)
-        with contextlib.redirect_stdout(theirs):
-            build_android.run(command, self.dir)
-        self.assertEqual(ours.getvalue(), theirs.getvalue())
+    def test_run_echoes_the_command_as_strings(self):
+        # As tools/build_android.py's own run did before it moved onto this.
+        out = io.StringIO()
+        with contextlib.redirect_stdout(out):
+            proc.run([Path(sys.executable), "-c", "pass"], cwd=self.dir, echo=True)
+        self.assertEqual(out.getvalue(), f"+ {sys.executable} -c pass\n")
 
     def test_run_checks_the_exit_status(self):
         with self.assertRaises(subprocess.CalledProcessError):
@@ -481,7 +434,7 @@ class ProcTests(TempDir):
         self.assertEqual(done.stdout, "ok �")
 
     @unittest.skipUnless(shutil.which("git"), "git is not installed")
-    def test_git_matches_sources_and_fcheck_gate(self):
+    def test_git_reads_and_fcheck_gates_commit(self):
         repo = self.dir / "repo"
         repo.mkdir()
         # The setup ignores the user's git configuration (signing, hooks); the reads under test do not.
@@ -494,10 +447,8 @@ class ProcTests(TempDir):
         subprocess.run(["git", "-C", str(repo), "add", "."], check=True, env=env)
         subprocess.run(["git", "-C", str(repo), "commit", "-q", "-m", "one"], check=True, env=env)
 
-        self.assertEqual(proc.git(repo, "rev-parse", "HEAD"), sources.git(repo, "rev-parse", "HEAD"))
+        self.assertEqual(len(proc.git(repo, "rev-parse", "HEAD")), 40)
         self.assertEqual(proc.git(repo, "show", "HEAD:tools/fcheck.py", binary=True), b"x = 1\n")
-        self.assertEqual(proc.git(repo, "show", "HEAD:tools/fcheck.py", binary=True),
-                         sources.git(repo, "show", "HEAD:tools/fcheck.py", binary=True))
         with self.assertRaises(subprocess.CalledProcessError):
             proc.git(repo, "rev-parse", "no-such-ref")
 
@@ -553,7 +504,6 @@ class IsoTests(TempDir):
         for image in (blank, no_cnf, no_boot2):
             with self.subTest(image=image.name):
                 self.assertIsNone(iso9660.boot_serial(image))
-                self.assertEqual(iso9660.boot_serial(image), openrac.boot_serial(image))
         with self.assertRaises(iso9660.IsoError) as caught:
             iso9660.files(blank)
         self.assertEqual(caught.exception.detail, "")
@@ -589,26 +539,15 @@ class IsoTests(TempDir):
             iso9660.files(damaged)
         self.assertEqual(caught.exception.detail, "the root directory is damaged")
 
-    def test_matches_tools_openrac(self):
-        self.assertEqual(iso9660.boot_serial(self.image), openrac.boot_serial(self.image))
-        self.assertEqual(iso9660.read(self.image, "SCES_999.99"), openrac.read_boot(self.image, "SCES_999.99"))
-        with open(self.image, "rb") as f:
-            for path in ("SYSTEM.CNF", "system.cnf", "DATA", "DATA/LEVEL0.WAD", "DATA/SUB/DEEP.BIN",
-                         "DATA/EMPTY", "FILE059.BIN", "NOPE", "DATA/NOPE", "NOPE/DEEP.BIN"):
-                with self.subTest(path=path):
-                    self.assertEqual(iso9660.find(f, path), openrac.iso_find(f, path))
-
-    def test_matches_the_extractor(self):
-        self.assertEqual(iso9660.files(self.image), extractor.files_of(self.image))
-        refused = {"blank.iso": None, "space.iso": {"A B.BIN": b"x"}, "deep.iso": self.nested(9)}
-        for name, tree in refused.items():
-            image = self.write(name, bytes(20 * SECTOR) if tree is None else build_image(tree))
-            with self.subTest(image=name):
-                with self.assertRaises(iso9660.IsoError) as ours:
-                    iso9660.files(image)
-                with self.assertRaises(extractor.ExtractError) as theirs:
-                    extractor.files_of(image)
-                self.assertEqual((ours.exception.detail, theirs.exception.code), (theirs.exception.detail, 4020))
+    def test_a_record_cut_short_is_refused(self):
+        # The root's own and parent records are 34 bytes each; end the root 20 bytes into the third.
+        image = bytearray(self.image.read_bytes())
+        struct.pack_into("<I", image, 16 * SECTOR + 156 + 10, 2 * 34 + 20)
+        cut = self.write("cut.iso", bytes(image))
+        for read in (iso9660.files, iso9660.boot_serial):
+            with self.subTest(read=read.__name__), self.assertRaises(iso9660.IsoError) as caught:
+                read(cut)
+            self.assertEqual(caught.exception.detail, "a directory record is cut short")
 
     def test_matches_the_editors_disc_reader(self):
         flat = self.write("flat.iso", build_image({"SYSTEM.CNF": CNF, "SCES_999.99": BOOT, **MANY}))

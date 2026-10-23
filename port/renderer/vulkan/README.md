@@ -31,6 +31,7 @@ The rest is the backend's own, which nothing outside this directory includes:
 | [vkgl_gl.cpp](vkgl_gl.cpp) | The GL functions themselves (state, textures, buffers, vertex arrays, shaders and programs, uniforms, samplers, framebuffers) and their table |
 | [vkgl_present.cpp](vkgl_present.cpp) | The default framebuffer, the swapchain and its present mode, moving on to the next frame, presenting |
 | [vkgl_device.cpp](vkgl_device.cpp) | The instance and the validation layer, the physical and logical device, the pipeline cache on disk, the frames' objects, the dummy resources, the surface, and teardown |
+| [pipeline_cache_file.h](pipeline_cache_file.h), [.cpp](pipeline_cache_file.cpp) | The pipeline cache's file: the driver's data in an envelope with its length and hash, read back only when whole, saved through a temporary file of each save's own and renamed into place |
 | [vma.cpp](vma.cpp) | The Vulkan Memory Allocator's implementation, compiled once |
 
 ## Depends on
@@ -39,7 +40,7 @@ The rest is the backend's own, which nothing outside this directory includes:
 (`gl_world.h`'s calls and enums) and `common` (the log, the statistics, `float_encoding.h`). Below
 them, SDL3 for the window's surface. The third-party libraries it wraps: volk (Vulkan's functions),
 the Vulkan Memory Allocator, and glslang (in `shader_compiler.cpp` only). The CMake target is
-`openrac_vkgl` (`port/cmake/Window.cmake`).
+`openrac_renderer_vulkan` (`port/cmake/Window.cmake`).
 
 ## State and threads
 
@@ -59,6 +60,9 @@ OpenGL and logs why). After that, a failing Vulkan call is logged (`check()`, `v
 failed`) and the work that needed it is skipped; GL errors are recorded for `glGetError` as GL
 would. The GPU-driven path throws `std::runtime_error` when a page's fixed capacity is exceeded.
 With the validation layer on, its messages go to the log and its errors are counted.
+The pipeline cache's file reports a damaged file in its `SavedCache` and a failed save as false
+with a message (`pipeline_cache_file.h`); `vkgl_device.cpp` logs both as warnings, and the run goes
+on building its pipelines afresh.
 
 ## Configuration
 
@@ -69,7 +73,9 @@ GPU-driven references, which [RAC1_GPU_DRIVEN.md](../../../docs/port/RAC1_GPU_DR
 - `OPENRAC_VULKAN_PIPELINE_CACHE` (`vkgl_device.cpp`): where pipelines are cached between runs,
   or off. The cache file is named after a key that hashes this directory's sources
   (`OPENRAC_VK_PIPELINE_KEY`, `port/cmake/Window.cmake`), so a build whose pipeline code changed
-  starts a fresh cache.
+  starts a fresh cache. Programs that save the same file at once (tests run in parallel) each
+  write their own temporary file and rename it into place, and a file that is not one whole save
+  is dropped on reading (`pipeline_cache_file.h`): a damaged cache once drew wrong colours.
 - `OPENRAC_VK_UNIFORM_REUSE_OFF` (`vkgl_internal.h`), `OPENRAC_GPU_DRIVEN_OFF` (`vkgl.cpp`),
   `OPENRAC_GPU_MATERIALS_OFF` (`gpu_materials.inc`): the reference paths the faster ones are
   measured against, as statistics probes.
@@ -86,6 +92,8 @@ CI). Where Vulkan cannot open, the window falls back to OpenGL and they repeat t
   `world_gl_smoke_vulkan`, `viewer_vulkan`: every GL call the renderers make, carried out here.
 - `vulkan_uniform`, `vulkan_uniform_reference`: uniform uploads and descriptor reuse, with the
   reuse on and off (`OPENRAC_VK_UNIFORM_REUSE_OFF`).
+- `pipeline_cache_file`: the cache's file read back whole, a damaged one dropped, and writer threads
+  and writer processes saving one file at once leaving one whole save. It needs no GPU.
 - `early_lighting_vulkan`, `probe_gpu_vulkan`, `hero_shadow_vulkan`, `sun_shadow_vulkan`,
   `sun_shadow_filter_reference_vulkan`, `gtao_vulkan`, `gtao_horizon_vulkan`,
   `enhanced_rendering_vulkan`, `enhanced_rendering_off_vulkan`: the enhanced rendering's passes on

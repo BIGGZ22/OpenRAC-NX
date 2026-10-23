@@ -12,12 +12,12 @@
 #include <stdexcept>
 #include <string_view>
 
+#include "common/json.h"
 #include "common/log.h"
 #include "common/stats.h"
 #include "enhanced/tools/probes/activation.h"
 #include "enhanced/viewer/early_lighting.h"
 #include "renderer/gl.h"
-#include "viewer/json.h"
 #include "viewer_shaders.h"
 
 namespace openrac::viewer {

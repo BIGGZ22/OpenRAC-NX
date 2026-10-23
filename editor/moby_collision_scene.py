@@ -44,6 +44,7 @@ import collision_scene as cs
 from formats import FormatError
 import gltf_read
 import moby_collision as mc
+from util import cross, f32
 
 FORMAT = 1
 ALPHA = 0.55
@@ -118,10 +119,6 @@ def column_major(basis_columns: tuple, origin: tuple) -> list[float]:
 def unit(v: tuple) -> tuple:
     n = math.sqrt(sum(c * c for c in v))
     return tuple(c / n for c in v)
-
-
-def cross(a: tuple, b: tuple) -> tuple:
-    return (a[1] * b[2] - a[2] * b[1], a[2] * b[0] - a[0] * b[2], a[0] * b[1] - a[1] * b[0])
 
 
 def along(axis: tuple) -> tuple:
@@ -330,8 +327,8 @@ def node_primitive(node: dict, sub: dict, joints: list) -> mc.Primitive:
             raise FormatError(f"{node['name']}: a capsule needs rc1_joints, the two joints it runs between")
         p.joints = tuple(pair)
         p.radius = values["radius"] * min(scales[0], scales[2]) * mc.PACKED
-    p.radius, p.height = mc.f32(p.radius), mc.f32(p.height)
-    p.centre = tuple(mc.f32(c) for c in p.centre)
+    p.radius, p.height = f32(p.radius), f32(p.height)
+    p.centre = tuple(f32(c) for c in p.centre)
     return p
 
 

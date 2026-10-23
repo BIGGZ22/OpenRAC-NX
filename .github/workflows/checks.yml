@@ -203,6 +203,38 @@ jobs:
           SDL_VIDEO_DRIVER: offscreen
         run: ctest --preset release
 
+  # The port without a window (the headless preset, no SDL3): the runtime, the
+  # games and their tests. Built here so code that only the window build can
+  # compile (outside the frontend's #ifdef) cannot creep back in unseen.
+  port-headless:
+    runs-on: ubuntu-26.04
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: "3.12"
+      - uses: hendrikmuhs/ccache-action@f09c25b45002a07be2955cbe52e8cee55643f89d # v1.2.24
+        with:
+          key: checks-port-headless
+          max-size: 1G
+      - name: Compilers
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends clang ninja-build
+
+      - name: Build
+        working-directory: port
+        run: |
+          cmake --preset headless
+          cmake --build --preset headless
+
+      - name: Tests
+        working-directory: port
+        run: ctest --preset headless
+
   # Experimental Vulkan lighting and the offline Embree baker. Keep the normal
   # build above so compatibility and enhanced rendering are both exercised.
   port-enhanced:

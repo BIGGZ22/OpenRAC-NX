@@ -77,6 +77,8 @@ from mesh import Mesh
 import pngio
 from pngio import PngError
 from port import FORMAT as LEVELS_FORMAT  # the levels these assets come from
+import util
+from util import sha256
 
 ASSET_FORMAT = 1
 GAME = "rac1"  # the game of levels whose manifests do not say (those written before they did)
@@ -132,10 +134,6 @@ class AssetError(ValueError):
     """Something the export or import refuses, said so a modder can act on it."""
 
 
-def sha256(data: bytes) -> str:
-    return hashlib.sha256(data).hexdigest()
-
-
 def file_hash(path: Path) -> str:
     return sha256(path.read_bytes())
 
@@ -158,10 +156,7 @@ def output_dir(path: Path, replace: bool = False) -> Path:
 
 
 def read_json(path: Path) -> dict:
-    try:
-        return json.loads(path.read_text())
-    except (OSError, json.JSONDecodeError) as exc:
-        raise AssetError(f"cannot read {path}: {exc}") from None
+    return util.read_json(path, lambda p, exc: AssetError(f"cannot read {p}: {exc}"))
 
 
 def level_manifest(levels: Path, level: int) -> dict:

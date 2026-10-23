@@ -13,6 +13,8 @@
 #include <stdexcept>
 #include <thread>
 
+#include "common/joining_thread.h"
+
 #include <embree4/rtcore.h>
 
 namespace openrac::lighting {
@@ -823,7 +825,7 @@ ProbeVolume bake_probes(
     } else {
         // Keep callbacks on the calling thread, including exception handling.
         // Joining on every exit keeps the scene and output alive for workers.
-        std::vector<std::jthread> workers;
+        std::vector<JoiningThread> workers;
         try {
             for (std::uint32_t i = 0; i < thread_count; ++i) {
                 workers.emplace_back(worker);

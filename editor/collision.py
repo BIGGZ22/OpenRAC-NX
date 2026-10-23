@@ -11,7 +11,7 @@ import colorsys
 import math
 import struct
 
-from formats import FormatError, span, unpack
+from formats import FormatError, check, span, unpack
 from mesh import Mesh
 
 CELL = 4
@@ -190,16 +190,11 @@ class Block:
     heroes: list[HeroGroup] | None                      # None: the block has no hero section
 
 
-def _check(ok: bool, message: str) -> None:
-    if not ok:
-        raise FormatError(message)
-
-
 def parse(block: bytes) -> Block:
     """The model of a collision block; write(parse(b)) == b for the layouts on the disc."""
     mesh_at, hero_at = unpack("<II", block)
-    _check(mesh_at == HEADER and not any(block[8:HEADER]), "collision header is not the usual one")
-    _check(not hero_at or mesh_at <= hero_at <= len(block), "collision header is out of range")
+    check(mesh_at == HEADER and not any(block[8:HEADER]), "collision header is not the usual one")
+    check(not hero_at or mesh_at <= hero_at <= len(block), "collision header is out of range")
     mesh = span(block, mesh_at, (hero_at or len(block)) - mesh_at)
     z_base, z_slabs = table(mesh, 0, "H")
     out = Block((z_base, len(z_slabs)), {}, {}, {}, [], [], [], None)
@@ -224,7 +219,7 @@ def parse(block: bytes) -> Block:
                 cell = (x_base + i, y, z)
                 leaf = span(mesh, word >> 8, (word & 0xff) * 16)
                 faces, count, quads = unpack("<HBB", leaf)
-                _check(quads <= faces and 4 + 4 * count + 4 * faces + quads <= len(leaf),
+                check(quads <= faces and 4 + 4 * count + 4 * faces + quads <= len(leaf),
                        f"collision leaf at cell {cell} is inconsistent")
                 centre = tuple((4 * c + 2) * SCALE for c in cell)
                 points = [vertex(w, centre) for w in unpack(f"<{count}I", leaf, 4)]
@@ -233,7 +228,7 @@ def parse(block: bytes) -> Block:
                 for f in range(faces):
                     a, b, c, kind = unpack("<4B", leaf, 4 + 4 * count + 4 * f)
                     corners = (a, b, c, extra[f]) if f < quads else (a, b, c)
-                    _check(max(corners) < count, f"collision face in cell {cell} uses a missing vertex")
+                    check(max(corners) < count, f"collision face in cell {cell} uses a missing vertex")
                     records.append((corners, kind))
                 out.cells[cell] = Leaf(points, records)
                 where.append((word >> 8, 2, cell))
@@ -259,12 +254,12 @@ def encode_leaf(cell: tuple[int, int, int], leaf: Leaf) -> bytes:
     words = []
     for p in leaf.vertices:
         dx, dy, dz = (p[i] - centre[i] for i in range(3))
-        _check(dx % 4 == 0 and dy % 4 == 0, f"cell {cell}: a vertex is off the 1/16 grid")
-        _check(SPAN_XY_LOW <= dx <= SPAN_XY and SPAN_XY_LOW <= dy <= SPAN_XY and SPAN_Z_LOW <= dz <= SPAN_Z,
+        check(dx % 4 == 0 and dy % 4 == 0, f"cell {cell}: a vertex is off the 1/16 grid")
+        check(SPAN_XY_LOW <= dx <= SPAN_XY and SPAN_XY_LOW <= dy <= SPAN_XY and SPAN_Z_LOW <= dz <= SPAN_Z,
                f"cell {cell}: a vertex is more than 32 units from the cell")
         words.append((dx // 4 & 0x3ff) | (dy // 4 & 0x3ff) << 10 | (dz & 0xfff) << 20)
     quads = leaf.quads
-    _check(all(len(c) == 4 for c, _ in leaf.faces[:quads]), f"cell {cell}: quads must come first")
+    check(all(len(c) == 4 for c, _ in leaf.faces[:quads]), f"cell {cell}: quads must come first")
     out = bytearray(struct.pack("<HBB", len(leaf.faces), len(leaf.vertices), quads))
     out += struct.pack(f"<{len(words)}I", *words)
     for corners, kind in leaf.faces:
@@ -295,7 +290,7 @@ def write(model: Block) -> bytes:
     entries = []
     for k in range(z_count):
         offset = slab_at.get(z_base + k, 0)
-        _check(offset // 4 <= 0xffff, "collision: the slab tables do not fit the root's 16-bit entries")
+        check(offset // 4 <= 0xffff, "collision: the slab tables do not fit the root's 16-bit entries")
         entries.append(offset // 4)
     struct.pack_into(f"<hH{z_count}H", mesh, 0, z_base, z_count, *entries)
     for z, offset in slab_at.items():
@@ -308,7 +303,7 @@ def write(model: Block) -> bytes:
         for i in range(count):
             cell = (x_base + i, y, z)
             if cell in leaf_at:
-                _check(leaf_at[cell] < 1 << 24, "collision: the mesh is larger than a cell word can address")
+                check(leaf_at[cell] < 1 << 24, "collision: the mesh is larger than a cell word can address")
                 words.append(leaf_at[cell] << 8 | len(leaves[cell]) // 16)
             else:
                 words.append(0)
@@ -334,31 +329,31 @@ def write(model: Block) -> bytes:
 
 def validate(model: Block) -> None:
     """Raises FormatError for what the game cannot hold: leaf limits, coordinates, the tables."""
-    _check(0 <= model.z[0] and model.z[0] + model.z[1] <= 256 and model.z[1] <= 0xffff,
+    check(0 <= model.z[0] and model.z[0] + model.z[1] <= 256 and model.z[1] <= 0xffff,
            "collision: Z cells outside 0-255 (the game answers queries inside 0-1024 units only)")
     for z, (y_base, count) in model.slabs.items():
-        _check(0 <= y_base and y_base + count <= 256, f"collision: slab {z} has Y cells outside 0-255")
+        check(0 <= y_base and y_base + count <= 256, f"collision: slab {z} has Y cells outside 0-255")
     for key, (x_base, count) in model.rows.items():
-        _check(0 <= x_base and x_base + count <= 256, f"collision: row {key} has X cells outside 0-255")
+        check(0 <= x_base and x_base + count <= 256, f"collision: row {key} has X cells outside 0-255")
     for cell, leaf in model.cells.items():
         x, y, z = cell
-        _check(model.rows.get((z, y), (0, 0))[0] <= x < sum(model.rows.get((z, y), (0, 0))),
+        check(model.rows.get((z, y), (0, 0))[0] <= x < sum(model.rows.get((z, y), (0, 0))),
                f"collision: cell {cell} is not in its row")
-        _check(len(leaf.faces) <= 0xffff, f"collision: cell {cell} has too many faces")  # the disc has empty leaves too
-        _check(len(leaf.vertices) <= 255, f"collision: cell {cell} has {len(leaf.vertices)} vertices, 255 at most: "
+        check(len(leaf.faces) <= 0xffff, f"collision: cell {cell} has too many faces")  # the disc has empty leaves too
+        check(len(leaf.vertices) <= 255, f"collision: cell {cell} has {len(leaf.vertices)} vertices, 255 at most: "
                                           "simplify the mesh there")
-        _check(leaf.quads <= 255, f"collision: cell {cell} has more than 255 quads")
-        _check(leaf.size() <= LEAF_MAX, f"collision: cell {cell} needs {leaf.size()} bytes, {LEAF_MAX} at most")
+        check(leaf.quads <= 255, f"collision: cell {cell} has more than 255 quads")
+        check(leaf.size() <= LEAF_MAX, f"collision: cell {cell} needs {leaf.size()} bytes, {LEAF_MAX} at most")
         for corners, kind in leaf.faces:
-            _check(len(set(corners)) == len(corners) and max(corners) < len(leaf.vertices) and 0 <= kind <= 0xff,
+            check(len(set(corners)) == len(corners) and max(corners) < len(leaf.vertices) and 0 <= kind <= 0xff,
                    f"collision: a face of cell {cell} is malformed")
     for n, g in enumerate(model.heroes or []):
-        _check(0 < len(g.triangles) <= 255 and len(g.vertices) <= 255,
+        check(0 < len(g.triangles) <= 255 and len(g.vertices) <= 255,
                f"collision: hero group {n} has {len(g.triangles)} triangles and {len(g.vertices)} vertices, "
                "255 of each at most")
-        _check(all(0 <= c <= 0xffff for p in g.vertices for c in p) and all(0 <= c <= 0xffff for c in g.sphere),
+        check(all(0 <= c <= 0xffff for p in g.vertices for c in p) and all(0 <= c <= 0xffff for c in g.sphere),
                f"collision: hero group {n} is outside 0-1024 units")
-        _check(all(max(t) < len(g.vertices) for t in g.triangles), f"collision: hero group {n} uses a missing vertex")
+        check(all(max(t) < len(g.vertices) for t in g.triangles), f"collision: hero group {n} uses a missing vertex")
 
 
 # --- Edits: triangles removed and added ----------------------------------------------------------

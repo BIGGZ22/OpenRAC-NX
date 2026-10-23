@@ -16,11 +16,12 @@
 #include <cmath>
 
 #include "assets/bytes.h"
-#include "assets/ps2_float.h"
 #include "assets/world/collision_query.h"
+#include "common/ps2_float.h"
 #include "tests/check.h"
 
 using namespace openrac::assets;
+namespace ps2 = openrac::ps2;
 
 namespace {
 

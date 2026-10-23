@@ -15,11 +15,11 @@
 #include <vector>
 
 #include "check.h"
+#include "common/json.h"
 #include "mod_manifest.h"
 #include "mods.h"
 #include "openrac/guest.h"
 #include "openrac/script_binding.h"
-#include "viewer/json.h"
 
 namespace fs = std::filesystem;
 using namespace openrac;
@@ -103,9 +103,9 @@ mods::Host host(const fs::path& plugins) {
 
 // The state status.json gives a mod, and its reason.
 std::pair<std::string, std::string> status_of(const fs::path& plugins, const std::string& id) {
-    viewer::json::Value v;
+    json::Value v;
     std::string error;
-    if (!viewer::json::parse(read(plugins / "status.json"), v, error)) {
+    if (!json::parse(read(plugins / "status.json"), v, error)) {
         return {"unreadable: " + error, ""};
     }
     for (const auto& m : v["mods"].items()) {

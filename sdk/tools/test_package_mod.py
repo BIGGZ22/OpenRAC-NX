@@ -331,5 +331,32 @@ class ScriptMods(unittest.TestCase):
         self.assertEqual(pm.main(["--check", str(folder / pm.MANIFEST)]), 0)
 
 
+# The test vectors the launcher's and the port's checks load too (sdk/tests/manifests/README.md).
+CASES = Path(__file__).resolve().parent.parent / "tests" / "manifests" / "cases.json"
+
+
+def verdict(case: dict) -> bool:
+    """The SDK's verdict a shared case expects: its own where the three checks disagree."""
+    return case["valid"] if isinstance(case["valid"], bool) else case["valid"]["sdk"]
+
+
+class SharedCases(unittest.TestCase):
+    """The verdicts of sdk/tests/manifests/cases.json, which pin today's rules of all three checks."""
+
+    def setUp(self):
+        self.cases = json.loads(CASES.read_text(encoding="utf-8"))
+
+    def test_ids(self):
+        # The SDK checks an id inside check_manifest only: each goes into GOOD, and only "id:" counts.
+        wrong = [(c["id"], verdict(c)) for c in self.cases["ids"]
+                 if any(e.startswith("id:") for e in pm.check_manifest(changed(id=c["id"]))) == verdict(c)]
+        self.assertEqual(wrong, [], "ids whose verdict is not the expected one (id, expected)")
+
+    def test_manifests(self):
+        wrong = [(c["name"], verdict(c)) for c in self.cases["manifests"]
+                 if (pm.check_manifest(c["manifest"]) == []) != verdict(c)]
+        self.assertEqual(wrong, [], "manifests whose verdict is not the expected one (name, expected)")
+
+
 if __name__ == "__main__":
     unittest.main()

@@ -6,7 +6,8 @@
   // Detailed logs. File names are a contributor's detail: shown with developer tools on.
   import Icon from "$components/Icon.svelte";
   import { api, onAndroid, type ReportEntry } from "$lib/api";
-  import { app, countCrashes, dismissCrashes, guard, saveConfig, toast } from "$lib/app.svelte";
+  import { app, countCrashes, dismissCrashes, guard, saveConfig } from "$lib/app.svelte";
+  import { copyText } from "$lib/clipboard";
   import { DISCORD_URL, ISSUES_URL } from "$lib/links";
   import { headline, when } from "$lib/reports";
 
@@ -67,13 +68,9 @@
   async function copy(e: ReportEntry) {
     const text = await guard(api.reportText(game, e.file));
     if (text === undefined) return;
-    try {
-      await navigator.clipboard.writeText(text);
-      copied = e.file;
-      setTimeout(() => (copied = copied === e.file ? null : copied), 4000);
-    } catch {
-      toast("The report could not be copied: use Save instead.", "error");
-    }
+    if (!(await copyText(text, "The report could not be copied: use Save instead."))) return;
+    copied = e.file;
+    setTimeout(() => (copied = copied === e.file ? null : copied), 4000);
   }
 
   async function save(e: ReportEntry) {
@@ -466,8 +463,10 @@
     color: var(--err);
   }
 
-  button.danger:hover:not(:disabled) {
-    border-color: color-mix(in srgb, var(--err) 45%, transparent);
+  @media (hover: hover) {
+    button.danger:hover:not(:disabled) {
+      border-color: color-mix(in srgb, var(--err) 45%, transparent);
+    }
   }
 
   button.danger-solid {
@@ -477,8 +476,10 @@
     font-weight: 600;
   }
 
-  button.danger-solid:hover:not(:disabled) {
-    filter: brightness(1.08);
+  @media (hover: hover) {
+    button.danger-solid:hover:not(:disabled) {
+      filter: brightness(1.08);
+    }
   }
 
   /* The question before anything is deleted: in the row it is about, under its text. */

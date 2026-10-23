@@ -35,6 +35,10 @@ PARTS = ["README.md", "VERSION", "include", "cmake", "template", "template-scrip
 PARTS += [f"bindings/{p.name}" for p in sorted((SDK / "bindings").glob("*.ids.lock"))]
 # The templates whose sdk.lock pins the SDK they come in.
 TEMPLATES = ("template", "template-script")
+# The files every mod repository shares (MODS.md, sections 10 and 11). template/ holds each one's
+# source; template-script/ carries a byte-identical copy, so either template works as it is in a
+# git checkout. test_package_sdk.py holds the copies to their source.
+SHARED = (".github/workflows/build.yml", "tools/fetch_sdk.py", ".gitattributes")
 EXTRA = {"docs/MODS.md": ROOT / "docs" / "port" / "MODS.md", "LICENSE": SDK / "LICENSE"}
 SKIP = {"__pycache__", ".DS_Store", "build", "dist"}
 DATE = (2026, 1, 1, 0, 0, 0)

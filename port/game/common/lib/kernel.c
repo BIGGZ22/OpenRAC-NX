@@ -465,10 +465,19 @@ void openrac_lib_SetGsCrt(int interlace, int mode, int field) {
     openrac_game_set_video_mode(interlace, mode, field);
 } /* SetGsCrt */
 
-/* GsPutIMR(mask): which GS events interrupt; the port has no GS interrupts. */
+/* GsPutIMR(mask): which GS events interrupt; the port has no GS interrupts,
+ * but keeps the mask for GsGetIMR (0x70), which reads it back: before any
+ * GsPutIMR the 0xFF00 (all masked) that the game's sceGsResetGraph puts at
+ * boot and the console's kernel answers in the title. */
+static uint64_t gs_imr = 0xFF00;
+
 void openrac_lib_GsPutIMR(unsigned int mask) {
-    (void)mask;
+    gs_imr = mask;
 } /* GsPutIMR */
+
+unsigned long long openrac_lib_GsGetIMR(void) {
+    return gs_imr;
+} /* GsGetIMR */
 
 /* ---- The other EE kernel services the game's libraries call ----
  *
@@ -485,6 +494,14 @@ void openrac_lib_Exit(int status) {
     fprintf(stderr, "[game] Exit(%d)\n", status);
     exit(status);
 } /* Exit */
+
+/* ExitThread (0x23): the calling thread ends. crt0 gives it to the main
+ * thread as its return address; the port's one thread is the game, so the
+ * program ends (the console's main never returns). */
+void openrac_lib_ExitThread(void) {
+    fprintf(stderr, "[game] ExitThread\n");
+    exit(0);
+} /* ExitThread */
 
 /* SetAlarm (0xFC): the callback runs once `time` horizontal blanks have
  * passed, from the timer interrupt. The port has no interrupts and treats
@@ -725,3 +742,126 @@ void openrac_lib_SyncDCache(gaddr start, gaddr end) {
 void openrac_lib_InvalidDCache(gaddr start, gaddr end) {
     openrac_lib_SyncDCache(start, end);
 }
+
+/* ---- The system calls the game's libkernel has and nothing in the game makes ----
+ *
+ * klib.o comes whole: every stub of the object is in the program, called or
+ * not. The ones below have no caller (no jal, j or address of them in any
+ * program). The port answers them as the console's kernel answered calls
+ * made on the retail code in an emulator, with arguments of the kinds the
+ * calls the game does make get, where that answer is the port's too, and
+ * otherwise as a port without a kernel can. Numbers and argument layouts
+ * from the open-source ps2sdk's syscallnr.h and kernel.h, as above. */
+
+/* System call 0 (no service in the table). On the console the call did not
+ * come back to the game within 600 frames; the port has no kernel and
+ * answers 0. */
+int openrac_lib_RFU000(void) {
+    return 0;
+} /* RFU000 */
+
+/* ResumeT3IntrDispatch (0x08): the kernel's own resumption of a timer
+ * interrupt's dispatch; the port takes no interrupts. */
+void openrac_lib_ResumeT3IntrDispatch(int id) {
+    (void)id;
+} /* ResumeT3IntrDispatch */
+
+/* Interrupt2Iop (0x0C): raises an interrupt on the IOP, which the port does
+ * not have; the console answers 0. */
+int openrac_lib_Interrupt2Iop(int cause) {
+    (void)cause;
+    return 0;
+} /* Interrupt2Iop */
+
+/* ReleaseAlarm (0xFE; the game's stub makes it in the interrupt form, -0xFE):
+ * an alarm the port has already run (SetAlarm runs its callback at once) is
+ * no longer pending; the console answers 0 for an alarm it does not have. */
+int openrac_lib_ReleaseAlarm(int id) {
+    (void)id;
+    return 0;
+} /* ReleaseAlarm */
+
+/* ReleaseWaitThread (0x2D, iReleaseWaitThread -0x2E): no thread of the port
+ * ever waits, so there is no wait to release: -1, as the console answers for
+ * a thread it does not have. */
+int openrac_lib_ReleaseWaitThread(int id) {
+    (void)id;
+    return -1;
+} /* ReleaseWaitThread */
+
+/* CancelWakeupThread (0x35, iCancelWakeupThread -0x36): the number of
+ * wake-ups the thread had pending, which it gives up: none in the port (a
+ * wake-up reaches its thread at once); the console answers 0 for a thread it
+ * does not have, too. */
+int openrac_lib_CancelWakeupThread(int id) {
+    (void)id;
+    return 0;
+} /* CancelWakeupThread */
+
+/* ResumeThread (0x39, iResumeThread -0x3A): the thread's id, or -1 for a
+ * thread the port does not have (as the console). */
+int openrac_lib_ResumeThread(int id) {
+    return known_thread(id) ? id : -1;
+} /* ResumeThread */
+
+/* SetGsHParam (0x4E): the console's horizontal display parameters (its
+ * OSD screen position); the port places the picture itself. */
+void openrac_lib_SetGsHParam(gaddr a, gaddr b, gaddr c, gaddr d) {
+    (void)a;
+    (void)b;
+    (void)c;
+    (void)d;
+} /* SetGsHParam */
+
+/* SetEventFlag (0x52): event flags, which this kernel reserves; the console
+ * answers 0. */
+int openrac_lib_SetEventFlag(int flag, unsigned int bits) {
+    (void)flag;
+    (void)bits;
+    return 0;
+} /* SetEventFlag */
+
+/* DisableIntcHandler (0x5D) and DisableDmacHandler (0x5F): switch one
+ * handler of a cause or channel off. The port calls every handler it has at
+ * its set points; the console answers with the cause or channel. */
+int openrac_lib_DisableIntcHandler(int cause, int id) {
+    (void)id;
+    return cause;
+} /* DisableIntcHandler */
+
+int openrac_lib_DisableDmacHandler(int channel, int id) {
+    (void)id;
+    return channel;
+} /* DisableDmacHandler */
+
+/* DisableCache (0x62): nothing to switch off (EnableCache, above). */
+int openrac_lib_DisableCache(int which) {
+    (void)which;
+    return 0;
+} /* DisableCache */
+
+/* GetCop0 (0x63, iGetCop0 -0x67): a register of the EE's system control
+ * coprocessor. The port has none; register 15 (PRId) says what processor
+ * this is, which the console answers as 0x2E20 (implementation 0x2E, the
+ * R5900, revision 0x20). */
+unsigned int openrac_lib_GetCop0(int reg) {
+    return reg == 15 ? 0x2E20u : 0u;
+} /* GetCop0 */
+
+/* SetCPUTimerHandler (0x6C) and SetPgifHandler (0x72): handlers for the
+ * COP0 timer and the PS1 mode's interface, which the port has neither of. */
+void openrac_lib_SetCPUTimerHandler(gaddr handler) {
+    (void)handler;
+} /* SetCPUTimerHandler */
+
+void openrac_lib_SetPgifHandler(gaddr handler) {
+    (void)handler;
+} /* SetPgifHandler */
+
+/* _ExecOSD (0x7B): back to the console's browser; the program ends. */
+void openrac_lib__ExecOSD(int argc, gaddr argv) {
+    (void)argc;
+    (void)argv;
+    fprintf(stderr, "[game] ExecOSD\n");
+    exit(0);
+} /* _ExecOSD */

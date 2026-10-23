@@ -66,6 +66,7 @@ from pathlib import Path
 import gameplay as gp
 from formats import FormatError
 from mobys import DECOMPILATION, matrix as euler_matrix, moby_class_names, moby_instances, node_name
+from util import f32
 
 SETTINGS, CAMERAS, SOUNDS = 0x00, 0x08, 0x0C
 PATHS, GRIND_PATHS = 0x70, 0x74
@@ -103,10 +104,6 @@ def owns(key: str) -> bool:
 
 
 # --- bytes -----------------------------------------------------------------------------------------------------
-
-def f32(x: float) -> float:
-    return struct.unpack("<f", struct.pack("<f", x))[0]
-
 
 def start(g: bytes, pointer: int) -> int:
     return gp.offset(g, pointer) if len(g) >= 0x94 else 0

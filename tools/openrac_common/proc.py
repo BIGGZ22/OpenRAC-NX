@@ -8,11 +8,13 @@ Running other programs: a command, and git in a given checkout.
   head = proc.git(checkout, "rev-parse", "HEAD")                # stdout, stripped
   dirty = proc.git(decomp, "status", "--porcelain", check=False)
 
-run is written from tools/build_android.py:66 (echo the command, fail on a non-zero exit) and
-port/tools/hostgen/clangast.py:76 (capture text, replacing what does not decode); git from
-tools/sources.py:53 (check, optionally bytes) and tools/fcheck_gate.py:163 (no check). Both
+run is written from tools/build_android.py's run (echo the command, fail on a non-zero exit)
+and port/tools/hostgen/clangast.py:76 (capture text, replacing what does not decode); git from
+tools/sources.py's git (check, optionally bytes) and tools/fcheck_gate.py's (no check). Both
 take paths as well as strings in a command and pass every argument as a string. Nothing here
-goes through a shell, so no argument is ever split or expanded.
+goes through a shell, so no argument is ever split or expanded. Every git call in tools/*.py
+goes through git (P1-05); a command needing what run does not offer (input, a timeout, output
+to a file, a shell) keeps subprocess.
 """
 import subprocess
 from collections.abc import Mapping, Sequence

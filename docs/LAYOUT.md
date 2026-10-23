@@ -63,13 +63,13 @@ are what readers see.
 | A tool that serves several games or the repository | `tools/` (standard library Python where possible), with tests, using [`tools/openrac_common`](../tools/openrac_common/README.md) for what tools share |
 | A helper two or more Python tools need | `tools/openrac_common/`, with a test beside the others in `tools/test_openrac_common.py` |
 | A file a second game needs unchanged (a library source, a build helper) | a copy in that game, listed with the original in `shared/files.json` ([shared/](../shared/README.md)) |
-| Editor code | `editor/` |
+| Editor code | `editor/`; a helper two or more of its modules need in `editor/util.py` (one that raises `FormatError` in `formats.py`), with a test, until P2-10 moves the editor onto `tools/openrac_common` |
 | A study or decision for the native port | `docs/port/` ([its README](port/README.md)) |
 | The native port's code | `port/` ([its README](../port/README.md)): a game's own part in `port/game/<game>/`, following [its coding conventions](../port/docs/CODING_CONVENTIONS.md) |
 | Restructure work: claiming a package, reporting it | its row in [docs/restructure/PROGRESS.md](restructure/PROGRESS.md) |
 | Launcher code, or a game's actions in the launcher | `launcher/` (a game's actions: `launcher/actions.json`) |
 | A decision or rule for everyone | `docs/policy/`, and `AGENTS.md` and `CONTRIBUTING.md` if it changes how people work |
-| A new game version | `games/<game>/<version>/`, plus its entry in `games/<game>/game.json` |
+| A new game version | `games/<game>/<version>/`, plus its entry in `games/<game>/game.json` (the editor reads a disc's identity from it: boot executable, size, SHA-1, region, disc version) |
 
 ## Names
 

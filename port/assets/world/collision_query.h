@@ -19,7 +19,7 @@
 //
 // The kernels work in "x1024 space" (world * 1024) relative to the centre of
 // the cell under test. With FloatModel::Console every step is the console's
-// truncating arithmetic (assets/ps2_float.h) on the same operands in the same
+// truncating arithmetic (common/ps2_float.h) on the same operands in the same
 // order, so the results match the game's bit for bit as far as that model
 // goes; with FloatModel::Native the same steps run in IEEE floats, as the
 // port's own code computes. Integer steps (cell mapping, the cell walk's list
@@ -42,7 +42,7 @@ namespace openrac::assets {
 
 enum class FloatModel : u8 {
     Native,   // IEEE single precision
-    Console,  // the console's truncating arithmetic (assets/ps2_float.h)
+    Console,  // the console's truncating arithmetic (common/ps2_float.h)
 };
 
 // The kernels' flags argument (the same bits in the line, sphere and capsule).

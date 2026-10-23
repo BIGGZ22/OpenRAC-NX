@@ -78,6 +78,8 @@ import zipfile
 import disc
 import games
 from port import FORMAT
+import util
+from util import sha256
 
 MANIFEST = "openrac-mod.json"
 STATE = "overrides.json"
@@ -391,10 +393,6 @@ def layer_files(root: Path) -> dict[str, Path]:
 
 
 # ---- the other disc --------------------------------------------------------------------------
-
-
-def sha256(data: bytes) -> str:
-    return hashlib.sha256(data).hexdigest()
 
 
 def glb_parts(data: bytes) -> tuple[dict, bytes]:
@@ -799,10 +797,7 @@ def stack(folder: Path | None, out: Path, packed: Path | None = None, levels: Pa
 
 
 def read_json(path: Path) -> dict:
-    try:
-        value = json.loads(Path(path).read_text())
-    except (OSError, json.JSONDecodeError) as exc:
-        raise PackError(f"{path} cannot be read ({exc})") from None
+    value = util.read_json(path, lambda p, exc: PackError(f"{p} cannot be read ({exc})"))
     return value if isinstance(value, dict) else {}
 
 

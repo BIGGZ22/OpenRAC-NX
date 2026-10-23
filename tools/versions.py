@@ -26,8 +26,9 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import mips  # noqa: E402
 import xmap  # noqa: E402
+from openrac_common import paths, tables  # noqa: E402
 
-ROOT = Path(__file__).resolve().parent.parent
+ROOT = paths.repo_root()
 OUT = ROOT / "build/versions"
 R_MIPS_32, R_MIPS_26, R_MIPS_HI16, R_MIPS_LO16, R_MIPS_GPREL16, R_MIPS_LITERAL = 2, 4, 5, 6, 7, 8
 SHT_SYMTAB, SHT_REL, STT_FUNC, STT_SECTION = 2, 9, 2, 3
@@ -320,7 +321,7 @@ def check(src_key: str, dst_key: str, build: Path, boot_only: bool = False, ever
         return next((d[address - a:address - a + size] for a, d in sections if a <= address < a + len(d)), b"")
 
     objects = [line.split()[0] for name in ("core_text.objects", "text.objects")
-               for line in (build / "config" / name).read_text().splitlines() if line.strip() and not line.startswith("#")]
+               for line in (build / "config" / name).read_text().splitlines() if tables.is_data(line)]
     values, owner, outcome, conflicts, placed, pieces = {}, {}, Counter(), [], {}, {}
     for obj_path in objects:
         obj = read_object(build / obj_path)

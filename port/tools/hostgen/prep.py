@@ -41,6 +41,7 @@ from __future__ import annotations
 
 import json
 import re
+import textwrap
 from pathlib import Path
 
 # A C token that can contain the word long without being the keyword.
@@ -595,6 +596,17 @@ _STRINGS_AND_COMMENTS = re.compile(r'"(?:\\.|[^"\\\n])*"|/\*.*?\*/|//[^\n]*', re
 def _named_in(text: str, name: str) -> bool:
     """Whether C text names NAME as an identifier (not inside a string, an asm label, or a comment)."""
     return re.search(r'\b' + re.escape(name) + r'\b', _STRINGS_AND_COMMENTS.sub(" ", text)) is not None
+
+
+def defines(text: str, name: str) -> bool:
+    """Whether C TEXT (an override, as written; indented as a whole or not) has a definition of the
+    function NAME."""
+    return _definition(prepare(textwrap.dedent(text)), name) is not None
+
+
+def has_definition(text: str, name: str) -> bool:
+    """Whether prepared C TEXT defines the function NAME."""
+    return name in text and _definition(text, name) is not None
 
 
 def use_overrides(text: str, overrides: dict[str, str], used: set[str]) -> str:

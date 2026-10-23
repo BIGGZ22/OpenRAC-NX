@@ -47,7 +47,7 @@ export function scope(doc: Document = document): HTMLElement {
   return dialogs.at(-1) ?? doc.body;
 }
 
-export function focusables(root: HTMLElement): HTMLElement[] {
+function focusables(root: HTMLElement): HTMLElement[] {
   return [...root.querySelectorAll<HTMLElement>(FOCUSABLE)].filter(usable);
 }
 
@@ -290,7 +290,7 @@ function usingPad(on: boolean) {
 
 /** A button pressed (`down:accept`) or let go (`up:accept`). A press while held is ignored, so
  *  that a hat seen both as keys and as an axis acts once. */
-export function padEvent(event: string) {
+function padEvent(event: string) {
   const [kind, name] = event.split(":");
   if (!name || !BUTTONS.includes(name)) return;
   const button = name as PadButton;
@@ -312,7 +312,7 @@ export function padEvent(event: string) {
 /** Every held button let go: the launcher lost the window (the game, a picker, a system dialog)
  *  and their ups go elsewhere. Without it the next press of a button held then was ignored, and a
  *  direction held then went on moving the focus. */
-export function releasePad() {
+function releasePad() {
   for (const timer of held.values()) clearTimeout(timer);
   held.clear();
 }

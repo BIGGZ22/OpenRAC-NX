@@ -81,8 +81,8 @@ What the translation reads (`hostgen.json`):
 | `movie.c` | `PlayFmvMovie` (`0x0034EF58`: first sector, size, ...): the shared native player |
 | `print.c` | `printf`, `sprintf`, `kprintf`, `scePrintf`: formatted by the port |
 | `sound.c` | `snd_SendCommandSync` (`0x00132C48`) and `snd_QueueCommandToRing` (`0x00132DF0`): commands the native engine knows, the others answered 0 without an IOP |
-| `trig.c` | the VU0 sine and cosine (`0x00283198`, `0x00283180`), from the microprogram the game loads at `0xC80` |
-| `wad.c` | the WAD decompressor (`0x0029D4D0`) |
+| `trig.c` | the VU0 sine and cosine (`0x00283198`, `0x00283180`), from the microprogram the game loads at `0xC80`: where its constants are, for the shared body ([common/lib/vu0_sine.h](../common/lib/vu0_sine.h)) |
+| `wad.c` | the WAD decompressor (`0x0029D4D0`), through the shared body ([common/lib/wad_routine.h](../common/lib/wad_routine.h)) |
 
 `libraries.tsv` binds 164 entry points to the shared replacements: the
 names in the symbol table, the kernel's system-call wrappers by the number

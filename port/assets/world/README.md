@@ -10,7 +10,7 @@ draws on.
 | File | |
 |---|---|
 | `gameplay.h` | the gameplay file: its 37 sections, level settings (background, fog, the ship), moby instances, class lists, pvar blocks with the loader's moby links and shared data, environment transitions, point lights. The volumes and paths are [disc/volumes.h](../disc/volumes.h)'s |
-| `collision.h`, `collision_query.h` | the level's collision mesh, and the queries the game runs on it (rays, spheres, capsules), in the PS2's arithmetic ([../ps2_float.h](../ps2_float.h)) or the host's |
+| `collision.h`, `collision_query.h` | the level's collision mesh, and the queries the game runs on it (rays, spheres, capsules), in the PS2's arithmetic ([common/ps2_float.h](../../common/ps2_float.h)) or the host's |
 | `occlusion.h` | precomputed visibility: the grid of 4-unit cells and their masks, the octant override, the gameplay mappings and how each terrain fragment, tie and moby resolves to its bit |
 | `cameras.h` | the level's camera records and their parameter blocks |
 | `font.h` | the three bitmap fonts' glyph tables, found in the level program by the call sites that print text |

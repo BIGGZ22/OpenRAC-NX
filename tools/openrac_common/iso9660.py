@@ -14,8 +14,8 @@ sectors, names without their version. No Joliet, no Rock Ridge, no multi-extent 
 interleaving; the discs do not use them. The format is ECMA-119 (documented); the offsets below
 are its fields.
 
-Written from tools/openrac.py:62-106 (iso_find, boot_serial, read_boot) and
-tools/extractor.py:72-107 (walk, files_of, with their limits and errors). editor/disc.py
+Written from tools/openrac.py's iso_find, boot_serial and read_boot and tools/extractor.py's
+walk and files_of (with their limits and errors), which use this since P1-05. editor/disc.py
 (Disc.files, BOOT) reads the same records with its own checks and stays as it is until the
 editor moves onto this module. Never give this a path to a disc in a test: the tests build an
 image of their own.
@@ -78,7 +78,8 @@ def root_directory(f: BinaryIO) -> tuple[int, int] | None:
 
 def records(f: BinaryIO, lba: int, size: int) -> Iterator[tuple[bytes, int, int, int]]:
     """(raw name, first sector, size, flags) of each record of the directory at LBA of SIZE bytes,
-    its own and its parent's included, in the order the disc has them."""
+    its own and its parent's included, in the order the disc has them. Raises IsoError for a
+    record cut short by the end of the directory (or of the image)."""
     f.seek(lba * SECTOR)
     data, at = f.read(size), 0
     while at < len(data):
@@ -87,6 +88,9 @@ def records(f: BinaryIO, lba: int, size: int) -> Iterator[tuple[bytes, int, int,
         if length == 0:
             at = (at // SECTOR + 1) * SECTOR
             continue
+        # Its fixed fields end where its name starts; a damaged image can end inside them.
+        if at + RECORD_NAME > len(data):
+            raise IsoError("a directory record is cut short")
         name = data[at + RECORD_NAME:at + RECORD_NAME + data[at + RECORD_NAME_LENGTH]]
         yield (name, struct.unpack_from("<I", data, at + RECORD_EXTENT)[0],
                struct.unpack_from("<I", data, at + RECORD_LENGTH)[0], data[at + RECORD_FLAGS])

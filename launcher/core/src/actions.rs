@@ -300,6 +300,13 @@ impl ActionFile {
         list.iter().find(|a| a.id == id)
     }
 
+    /// Whether action `id` of `scope` plays a game: a version's action of kind `play`. The
+    /// launcher follows a play for Discord's presence and, on Android, starts it as an activity of
+    /// its own instead of a program. A repository action never plays.
+    pub fn is_play(&self, scope: &Scope, id: &str) -> bool {
+        matches!(scope, Scope::Version(_)) && self.find(scope, id).is_some_and(|a| a.kind == Kind::Play)
+    }
+
     /// Every mistake in the file, checked against the checkout's catalogue:
     /// unknown versions, duplicate ids, unknown placeholders, runnable actions
     /// without a program. Run by the tests, so CI catches them.
@@ -643,6 +650,23 @@ mod tests {
     }
 
     #[test]
+    fn only_a_versions_play_action_plays() {
+        let file = parse(
+            r#"{"format": 1,
+                "repository": [{"id": "play", "label": "P", "kind": "play"}],
+                "versions": {"rac1/pal": [{"id": "play", "label": "Play", "kind": "play"},
+                                          {"id": "build", "label": "Build", "kind": "build"}]}}"#,
+        )
+        .unwrap();
+        let pal = Scope::Version("rac1/pal".into());
+        assert!(file.is_play(&pal, "play"));
+        assert!(!file.is_play(&pal, "build"));
+        assert!(!file.is_play(&pal, "gone"));
+        assert!(!file.is_play(&Scope::Version("rac9/pal".into()), "play"));
+        assert!(!file.is_play(&Scope::Repository, "play"), "a repository action never plays");
+    }
+
+    #[test]
     fn rejects_mistakes() {
         let catalog = crate::catalog::load(&checkout()).unwrap();
         let file = parse(
@@ -672,6 +696,13 @@ mod tests {
 
     #[test]
     fn plans_fill_placeholders_and_report_blockers() {
+        // Play reads the version's settings file (Enhanced graphics): an empty data folder, not
+        // the settings of whoever runs the tests.
+        let home = std::env::temp_dir().join(format!("openrac-plans-{}", std::process::id()));
+        crate::saves::with_data_home(&home, plans_fill_placeholders_and_report_blockers_in_home);
+    }
+
+    fn plans_fill_placeholders_and_report_blockers_in_home() {
         let root = checkout();
         let catalog = crate::catalog::load(&root).unwrap();
         let version = catalog.version("rac1/pal").unwrap();

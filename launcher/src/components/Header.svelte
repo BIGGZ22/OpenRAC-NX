@@ -369,8 +369,10 @@
     border-radius: 999px;
   }
 
-  .site:hover {
-    background: rgb(0 0 0 / 0.1);
+  @media (hover: hover) {
+    .site:hover {
+      background: rgb(0 0 0 / 0.1);
+    }
   }
 
   /* Discord: the site's white button, raised a little off the bar, its mark in the bar's ink. */
@@ -399,16 +401,18 @@
     transition: transform 0.25s cubic-bezier(0.2, 0.8, 0.2, 1);
   }
 
-  .discord:hover {
-    transform: translateY(-1px);
-    background: var(--bar-ink-deep);
-    color: var(--bar-button);
-    box-shadow: 0 6px 16px rgb(0 0 0 / 0.28);
-  }
+  @media (hover: hover) {
+    .discord:hover {
+      transform: translateY(-1px);
+      background: var(--bar-ink-deep);
+      color: var(--bar-button);
+      box-shadow: 0 6px 16px rgb(0 0 0 / 0.28);
+    }
 
-  .discord:hover .mark {
-    transform: rotate(-12deg) scale(1.08);
-    color: var(--gold);
+    .discord:hover .mark {
+      transform: rotate(-12deg) scale(1.08);
+      color: var(--gold);
+    }
   }
 
   .discord:active {
@@ -431,9 +435,11 @@
     transition: transform 0.15s ease;
   }
 
-  .update:hover {
-    transform: translateY(-1px);
-    color: var(--amber);
+  @media (hover: hover) {
+    .update:hover {
+      transform: translateY(-1px);
+      color: var(--amber);
+    }
   }
 
   /* The dot rings a few times when the update shows, then rests: a ring that grows and fades

@@ -53,9 +53,9 @@ the preset says. Standard library only.
 """
 
 import argparse
-import hashlib
 import json
 import os
+import platform
 import shutil
 import stat
 import subprocess
@@ -65,7 +65,9 @@ import time
 import urllib.request
 from pathlib import Path
 
-ROOT = Path(__file__).resolve().parent.parent
+from openrac_common import digest, paths, proc
+
+ROOT = paths.repo_root()
 PORT = ROOT / "port"
 WINDOWS = os.name == "nt"
 DEFAULT_GAME = "rac1-pal"
@@ -112,10 +114,18 @@ EMBREE_OPTIONS = {
     "EMBREE_GEOMETRY_INSTANCE_ARRAY": "OFF",
     "EMBREE_GEOMETRY_GRID": "OFF",
     "EMBREE_GEOMETRY_POINT": "OFF",
-    # x86-64: SSE2 for any machine, AVX and AVX2 for most; Embree picks one at run time. ARM: NEON.
-    # AVX stays on beside AVX2: Embree compiles the 8-wide BVH and its primitives (bvh/bvh.cpp,
-    # BVHN<8>, CurveNi<8>) only into its AVX library, and the AVX2 code refers to them, so without
-    # it the baker does not link on Windows or Linux (kernels/CMakeLists.txt, embree_files).
+    # Embree clears CMAKE_CXX_FLAGS with Clang and GCC unless told not to, which drops the build's
+    # CXXFLAGS: the launcher's Linux builds set -stdlib=libc++ there, and an Embree built against
+    # libstdc++ does not link into their baker. Embree's MSVC settings do not read this option.
+    "EMBREE_IGNORE_CMAKE_CXX_FLAGS": "OFF",
+}
+# x86-64: SSE2 for any machine, AVX and AVX2 for most; Embree picks one at run time. AVX stays on
+# beside AVX2: Embree compiles the 8-wide BVH and its primitives (bvh/bvh.cpp, BVHN<8>, CurveNi<8>)
+# only into its AVX library, and the AVX2 code refers to them, so without it the baker does not link
+# on Windows or Linux (kernels/CMakeLists.txt, embree_files). ARM is given none of these and keeps
+# Embree's own single choice (NEON, or NEON2X on Apple silicon): Embree counts a value given for an
+# x86-64 ISA there too, and refuses a static library of several ISAs with AppleClang.
+EMBREE_X86_ISAS = {
     "EMBREE_ISA_SSE42": "OFF",
     "EMBREE_ISA_AVX": "ON",
     "EMBREE_ISA_AVX512": "OFF",
@@ -158,9 +168,19 @@ def targets(names: list[str], more: list[str] | None = None) -> list[str]:
     return [f"openrac-{name}" for name in names] + ["openrac-extractor"] + list(more or [])
 
 
-def embree_stamp() -> dict:
-    """What an Embree build in EMBREE_DIR is of: a different one is built again."""
-    return {"version": EMBREE_VERSION, "sha256": EMBREE_SHA256, "options": EMBREE_OPTIONS}
+def embree_options(machine: str | None = None) -> dict[str, str]:
+    """The options Embree is configured with on MACHINE (platform.machine(), this one's unless
+    given): EMBREE_OPTIONS, and EMBREE_X86_ISAS on x86-64 only."""
+    machine = (machine or platform.machine()).lower()
+    x86 = machine in ("x86_64", "amd64", "x64", "i386", "i686")
+    return {**EMBREE_OPTIONS, **(EMBREE_X86_ISAS if x86 else {})}
+
+
+def embree_stamp(env: dict[str, str]) -> dict:
+    """What an Embree build in EMBREE_DIR is of, built with ENV: a different one is built again.
+    ENV's CXXFLAGS count, since Embree is compiled with them (EMBREE_OPTIONS)."""
+    return {"version": EMBREE_VERSION, "sha256": EMBREE_SHA256, "options": embree_options(),
+            "cxxflags": env.get("CXXFLAGS", "")}
 
 
 def embree_config(install: Path) -> Path:
@@ -175,13 +195,13 @@ def embree_config(install: Path) -> Path:
 def fetch_embree(dest: Path) -> Path:
     """Embree's source, downloaded once into DEST and checked; the unpacked folder."""
     archive = dest / f"embree-{EMBREE_VERSION}.tar.gz"
-    if not archive.is_file() or hashlib.sha256(archive.read_bytes()).hexdigest() != EMBREE_SHA256:
+    if not archive.is_file() or digest.sha256(archive) != EMBREE_SHA256:
         say(f"downloading Embree {EMBREE_VERSION} ({EMBREE_URL})")
         dest.mkdir(parents=True, exist_ok=True)
         part = archive.with_suffix(".part")
         with urllib.request.urlopen(EMBREE_URL, timeout=120) as response, part.open("wb") as out:
             shutil.copyfileobj(response, out)
-        got = hashlib.sha256(part.read_bytes()).hexdigest()
+        got = digest.sha256(part)
         if got != EMBREE_SHA256:
             part.unlink()
             raise BuildError(f"Embree's source archive has SHA-256 {got}, not {EMBREE_SHA256}")
@@ -205,7 +225,7 @@ def build_embree(cmake: str, env: dict[str, str], compilers: tuple[str, str, str
     install = EMBREE_DIR / "install"
     stamp = EMBREE_DIR / "openrac-embree.json"
     try:
-        if json.loads(stamp.read_text(encoding="utf-8")) == embree_stamp():
+        if json.loads(stamp.read_text(encoding="utf-8")) == embree_stamp(env):
             return embree_config(install)
     except (OSError, ValueError, BuildError):
         pass
@@ -226,7 +246,7 @@ def build_embree(cmake: str, env: dict[str, str], compilers: tuple[str, str, str
     configure = [cmake, "-S", str(source), "-B", str(work), "-G", "Ninja",
                  f"-DCMAKE_INSTALL_PREFIX={install.as_posix()}",
                  *(f"-D{key}={value}" for key, value in tools.items() if value),
-                 *(f"-D{key}={value}" for key, value in EMBREE_OPTIONS.items())]
+                 *(f"-D{key}={value}" for key, value in embree_options().items())]
     for command in (configure, [cmake, "--build", str(work)], [cmake, "--install", str(work)]):
         say("> " + " ".join(f'"{part}"' if " " in part else part for part in command))
         if subprocess.run(command, cwd=EMBREE_DIR, env=env).returncode != 0:
@@ -237,7 +257,7 @@ def build_embree(cmake: str, env: dict[str, str], compilers: tuple[str, str, str
     notices.mkdir(parents=True, exist_ok=True)
     for name in ("LICENSE.txt", "third-party-programs.txt"):
         shutil.copy2(source / name, notices / name)
-    stamp.write_text(json.dumps(embree_stamp(), indent=2) + "\n", encoding="utf-8")
+    stamp.write_text(json.dumps(embree_stamp(env), indent=2) + "\n", encoding="utf-8")
     return embree_config(install)
 
 
@@ -331,12 +351,11 @@ def checkout_version() -> str | None:
 
 def checkout_commit() -> str | None:
     """The checkout's commit, or None outside git."""
-    git = shutil.which("git")
-    if git is None:
+    if shutil.which("git") is None:
         return None
-    done = subprocess.run([git, "-C", str(ROOT), "rev-parse", "HEAD"], capture_output=True, text=True)
-    commit = done.stdout.strip()
-    return commit if done.returncode == 0 and len(commit) == 40 else None
+    # A failed rev-parse prints nothing on standard output.
+    commit = proc.git(ROOT, "rev-parse", "HEAD", check=False)
+    return commit if len(commit) == 40 else None
 
 
 def write_stamp(build: Path, names: list[str]) -> None:

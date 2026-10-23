@@ -9,9 +9,11 @@ Digests of files, read in blocks so a disc image never has to fit in memory.
   digest.file_digest(path, "md5")
 
 Written from port/enhanced/tools/probes/bake_all.py:48 (sha256 in 1 MiB blocks). The other
-copies read the whole file at once (tools/shared.py:34, editor/assets.py:135,
-editor/overrides.py:396) or hash several algorithms in one pass (tools/openrac.py:109,
-checksums); every one of them returns the same hex digest for the same file.
+copies read the whole file at once (editor/assets.py:135, editor/overrides.py:396) or hash
+several algorithms in one pass (tools/openrac.py's checksums, which stays: it reads a disc image
+once for all of them); every one of them returns the same hex digest for the same file.
+tools/shared.py, openrac.py, extractor.py, build_android.py, build_port.py and fcheck_gate.py
+hash their files through it (P1-05).
 """
 import hashlib
 from pathlib import Path

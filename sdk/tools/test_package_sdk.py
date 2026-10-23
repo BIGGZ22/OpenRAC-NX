@@ -46,9 +46,10 @@ class PackageSdk(unittest.TestCase):
     def test_the_templates_share_their_files(self):
         # One workflow and one fetch_sdk.py for every mod repository (MODS.md, sections 10 and 11).
         sdk = package_sdk.SDK
-        for name in (".github/workflows/build.yml", "tools/fetch_sdk.py", ".gitattributes"):
+        for name in package_sdk.SHARED:
             self.assertEqual((sdk / "template" / name).read_bytes(), (sdk / "template-script" / name).read_bytes(),
-                             name)
+                             f"sdk/template-script/{name} is a copy of sdk/template/{name}: change the source, "
+                             "then copy it over")
 
     def test_types_go_in_when_made(self):
         names = set(package_sdk.files())

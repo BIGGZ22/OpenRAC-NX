@@ -358,7 +358,7 @@ export async function prepare(v: VersionView): Promise<boolean> {
  * are there but fail the check are read again, once, and checked again: a player is not left
  * with a button that fails the same way each time.
  */
-export async function prepareLevels(v: VersionView): Promise<boolean> {
+async function prepareLevels(v: VersionView): Promise<boolean> {
   const scope = { kind: "version" as const, key: v.key };
   const fresh = () => freshVersion(v);
   const levels = action(v, "port-levels");

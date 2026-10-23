@@ -73,8 +73,9 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import mips  # noqa: E402
 import xmap  # noqa: E402
+from openrac_common import paths, tables  # noqa: E402
 
-ROOT = Path(__file__).resolve().parent.parent
+ROOT = paths.repo_root()
 PORTS = ROOT / "shared/xmap/ports"
 ADDRESSED = re.compile(r"^(D|FUN|func|jtbl)_(?:L(\d\d)_)?([0-9A-Fa-f]{8})$")
 IDENT = re.compile(r"[A-Za-z_]\w*")
@@ -275,15 +276,13 @@ def catalogue(path: Path) -> tuple[dict, dict]:
     [addresses]} (a level can hold two copies of one function), and (level,
     address) -> name."""
     places, at = {}, {}
-    if path.is_file():
-        for line in path.read_text().splitlines():
-            cols = line.split("\t")
-            if line.startswith("#") or len(cols) < 6:
-                continue
-            for place in cols[5].split(","):
-                level, addr = place.split(":")
-                places.setdefault(cols[0], {}).setdefault(int(level), []).append(int(addr, 16))
-                at[(int(level), int(addr, 16))] = cols[0]
+    for cols in tables.read_tsv(path):
+        if len(cols) < 6:
+            continue
+        for place in cols[5].split(","):
+            level, addr = place.split(":")
+            places.setdefault(cols[0], {}).setdefault(int(level), []).append(int(addr, 16))
+            at[(int(level), int(addr, 16))] = cols[0]
     return places, at
 
 
@@ -659,9 +658,8 @@ def rows(src_key: str, dst_key: str) -> list[dict]:
     path = PORTS / f"{xmap.slug(src_key)}--{xmap.slug(dst_key)}.tsv"
     if not path.is_file():
         raise SystemExit(f"no {path.relative_to(ROOT)}: run python3 tools/xmap.py ports {src_key} {dst_key}")
-    lines = [l for l in path.read_text().splitlines() if l and not l.startswith("#")]
-    head = lines[0].split("\t")
-    return [dict(zip(head, l.split("\t"))) for l in lines[1:]]
+    head, *body = tables.read_tsv(path)
+    return [dict(zip(head, cells)) for cells in body]
 
 
 def functions_under(folder: Path) -> set[str]:

@@ -7,10 +7,11 @@ Where the repository is: the one way a tool finds OpenRAC's top directory.
   root = paths.repo_root()              # from this package's own place
   root = paths.repo_root(__file__)      # from the calling script's place
 
-Today 23 scripts each write `Path(__file__).resolve().parents[N]` with their own N
-(tools/openrac.py:34, port/tools/versionmap/versionmap.py:44, ...), which breaks when a
-script moves. This walks up from a path instead and stops at the first directory that
-holds `games/` and one of the two markers below.
+23 scripts each wrote `Path(__file__).resolve().parents[N]` with their own N, which breaks
+when a script moves. This walks up from a path instead and stops at the first directory that
+holds `games/` and one of the two markers below. tools/*.py take their ROOT from it (P1-05);
+port/tools and editor still count parents (port/tools/versionmap/versionmap.py:44, ...) until
+P2-10.
 """
 from pathlib import Path
 
@@ -19,6 +20,8 @@ CHECKOUT_MARKER = "AGENTS.md"
 
 # The launcher's bundled copy of the tools (tools/bundle_standalone.py) has no AGENTS.md: its top
 # holds games/*/game.json and a STANDALONE note, and the tools in it look for their root there.
+# Accepting it is decided, not a leftover: the copy's tools move onto this package with the rest
+# (P1-05), and the launcher recognises the copy by the same file (launcher/core/src/detect.rs).
 STANDALONE_MARKER = "STANDALONE"
 
 

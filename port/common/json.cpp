@@ -1,14 +1,17 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 // Copyright (c) 2026 the OpenRAC contributors
+//
+// The JSON reader (json.h): one recursive-descent pass over the whole text, which stops at the
+// first error and says what it found and where.
 
-#include "viewer/json.h"
+#include "common/json.h"
 
 #include <cstdlib>
 #include <format>
 #include <fstream>
 #include <sstream>
 
-namespace openrac::viewer::json {
+namespace openrac::json {
 
 namespace {
 
@@ -341,4 +344,4 @@ bool parse_file(const std::string& path, Value& out, std::string& error) {
     return true;
 }
 
-}  // namespace openrac::viewer::json
+}  // namespace openrac::json

@@ -2,12 +2,23 @@
 // Copyright (c) 2026 the OpenRAC contributors
 //
 // Native mods' manifests, the launcher's list and the checks that decide what loads
-// (game/common/mod_manifest.h; docs/port/MODS.md, sections 3 and 5).
+// (game/common/mod_manifest.h; docs/port/MODS.md, sections 3 and 5). Sources: RFC 8259 for the JSON
+// the shared cases are written back to.
+//
+// The shared cases (sdk/tests/manifests/cases.json) pin today's verdicts of parse_manifest and
+// valid_id, which the launcher's and the SDK's checks are held to as well: where the three disagree,
+// the file records each one's verdict and why. They are characterisation tests, written before the
+// restructure, so a refactor of any of the three cannot move a rule unseen.
 
+#include <cstdio>
+#include <filesystem>
+#include <format>
 #include <string>
+#include <string_view>
 #include <vector>
 
 #include "check.h"
+#include "common/json.h"
 #include "mod_manifest.h"
 
 using namespace openrac;
@@ -347,6 +358,129 @@ void platform() {
           || p == "windows-x86_64" || p == "windows-arm64");
 }
 
+// ---- The shared cases ----
+
+// Returns the shared cases' file, found from this file's place in the repository (port/tests/), so
+// the build needs no setting for it.
+std::filesystem::path shared_cases_path() {
+    return std::filesystem::path(__FILE__).parent_path().parent_path().parent_path() / "sdk"
+           / "tests" / "manifests" / "cases.json";
+}
+
+// Returns `text` as a JSON string: the quote, the backslash and the control characters escaped, the
+// other bytes as they are (UTF-8).
+std::string json_string(std::string_view text) {
+    // JSON's control characters are the bytes below a space, which a string may not hold (documented).
+    constexpr unsigned char kFirstPrintable = 0x20;
+    std::string out = "\"";
+    for (const char c : text) {
+        const auto byte = static_cast<unsigned char>(c);
+        // The quote and the backslash take a backslash before them.
+        if (c == '"' || c == '\\') {
+            out += '\\';
+            out += c;
+        } else if (byte < kFirstPrintable) {
+            // A control character is written as \u and its code in four hex digits (documented).
+            out += std::format("\\u{:04x}", byte);
+        } else {
+            out += c;
+        }
+    }
+    return out + "\"";
+}
+
+// Returns `v` written as JSON text again, for parse_manifest, which reads text. Members come out in
+// key order and numbers in their shortest form; neither changes a verdict, since the port's reader
+// keeps members by key and every number as a double.
+std::string json_text(const json::Value& v) {
+    // A container's items and members are joined by commas, with no space.
+    std::string out;
+    switch (v.type()) {
+        case json::Value::Type::Null:  // the literal null
+            return "null";
+        case json::Value::Type::Bool:  // the literal true or false
+            return v.boolean() ? "true" : "false";
+        case json::Value::Type::Number:  // the double's shortest form
+            return std::format("{}", v.number());
+        case json::Value::Type::String:  // quoted and escaped
+            return json_string(v.string());
+        case json::Value::Type::Array:  // each item in turn
+            for (const json::Value& item : v.items()) {
+                out += (out.empty() ? "" : ",") + json_text(item);
+            }
+            return "[" + out + "]";
+        case json::Value::Type::Object:  // each member in key order
+            for (const auto& [key, member] : v.members()) {
+                out += (out.empty() ? "" : ",") + json_string(key) + ":" + json_text(member);
+            }
+            return "{" + out + "}";
+    }
+    return "null";
+}
+
+// Returns the port's verdict a shared case expects: its own where the three checks disagree.
+bool expected(const json::Value& c) {
+    const json::Value& valid = c["valid"];
+    // A verdict all three share is a bool; where they disagree, an object holds each one's.
+    return valid.type() == json::Value::Type::Bool ? valid.boolean() : valid["port"].boolean();
+}
+
+// Returns the shared cases, or null when the file cannot be read (a failed check says so).
+json::Value shared_cases() {
+    json::Value cases;
+    std::string error;
+    const bool read = json::parse_file(shared_cases_path().string(), cases, error);
+    // Say why the file was not read: a missing file and a broken one are fixed differently.
+    if (!read) {
+        std::fprintf(stderr, "%s: %s\n", shared_cases_path().string().c_str(), error.c_str());
+    }
+    CHECK(read);
+    return cases;
+}
+
+// Every shared id gets the verdict the file gives the port.
+void test_shared_ids_keep_their_verdicts() {
+    const json::Value cases = shared_cases();
+    // A list that is missing reads as empty and would check nothing.
+    CHECK(!cases["ids"].items().empty());
+    for (const json::Value& c : cases["ids"].items()) {
+        const bool valid = valid_id(c["id"].string());
+        // Name the id whose verdict moved; the check alone says only that one did.
+        if (valid != expected(c)) {
+            std::fprintf(
+                stderr,
+                "shared id \"%s\": expected %s\n",
+                c["id"].string().c_str(),
+                expected(c) ? "valid" : "invalid"
+            );
+        }
+        CHECK(valid == expected(c));
+    }
+}
+
+// Every shared manifest gets the verdict the file gives the port.
+void test_shared_manifests_keep_their_verdicts() {
+    const json::Value cases = shared_cases();
+    // A list that is missing reads as empty and would check nothing.
+    CHECK(!cases["manifests"].items().empty());
+    for (const json::Value& c : cases["manifests"].items()) {
+        Manifest m;
+        std::string error;
+        const bool valid = parse_manifest(json_text(c["manifest"]), m, error);
+        // Name the case whose verdict moved, with the port's reason when it refused it.
+        if (valid != expected(c)) {
+            std::fprintf(
+                stderr,
+                "shared manifest \"%s\": expected %s (%s)\n",
+                c["name"].string().c_str(),
+                expected(c) ? "valid" : "invalid",
+                valid ? "accepted" : error.c_str()
+            );
+        }
+        CHECK(valid == expected(c));
+    }
+}
+
 }  // namespace
 
 int main() {
@@ -359,5 +493,7 @@ int main() {
     checks();
     scripts();
     platform();
+    test_shared_ids_keep_their_verdicts();
+    test_shared_manifests_keep_their_verdicts();
     return test::result();
 }
