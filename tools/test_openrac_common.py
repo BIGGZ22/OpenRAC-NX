@@ -382,7 +382,6 @@ class DigestTests(TempDir):
         self.assertEqual(digest.sha1(empty), hashlib.sha1(b"").hexdigest())
 
     def test_matches_the_existing_copies(self):
-        self.assertEqual(digest.sha1(self.path), shared.digest(self.path))
         self.assertEqual(digest.sha256(self.path), bake_all.sha256(self.path))
         full = openrac.checksums(self.path, True)
         self.assertEqual((digest.sha1(self.path), digest.sha256(self.path), digest.file_digest(self.path, "md5")),

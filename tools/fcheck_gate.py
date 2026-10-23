@@ -54,7 +54,6 @@ from __future__ import annotations
 import argparse
 import concurrent.futures
 import datetime
-import hashlib
 import os
 import re
 import shutil
@@ -62,7 +61,7 @@ import subprocess
 import sys
 from pathlib import Path
 
-from openrac_common import paths, tables
+from openrac_common import digest, paths, tables
 
 ROOT = paths.repo_root()
 PAL_TABLE = ROOT / "games/rac1/nonmatching/functional.tsv"
@@ -148,7 +147,7 @@ class Verdicts:
 
 
 def csum(path: Path) -> str:
-    return hashlib.sha1(path.read_bytes()).hexdigest()[:12] if path.is_file() else ""
+    return digest.sha1(path)[:12] if path.is_file() else ""
 
 
 # --- Running fcheck ---------------------------------------------------------------

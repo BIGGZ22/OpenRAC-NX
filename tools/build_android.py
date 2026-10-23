@@ -42,7 +42,7 @@ import urllib.request
 import zipfile
 from pathlib import Path
 
-from openrac_common import paths
+from openrac_common import digest, paths
 
 ROOT = paths.repo_root()
 PORT = ROOT / "port"
@@ -86,7 +86,7 @@ def ndk_home() -> Path:
 def download(name: str, sha256: str) -> Path:
     file = f"target-{PYTHON_PACKAGE}-{name}.zip"
     dest = BUILD / "downloads" / file
-    if not dest.is_file() or hashlib.sha256(dest.read_bytes()).hexdigest() != sha256:
+    if not dest.is_file() or digest.sha256(dest) != sha256:
         dest.parent.mkdir(parents=True, exist_ok=True)
         url = f"{PYTHON_MAVEN}/{PYTHON_PACKAGE}/{file}"
         print(f"downloading {url}", flush=True)

@@ -31,7 +31,7 @@ import zlib
 from pathlib import Path
 from urllib.parse import urlencode
 
-from openrac_common import games, paths
+from openrac_common import digest, games, paths
 
 ROOT = paths.repo_root()
 GAMES = ROOT / "games"
@@ -91,7 +91,8 @@ def read_boot(iso: Path, serial: str) -> bytes:
 
 
 def checksums(path: Path, full: bool) -> dict:
-    """size and sha1, plus crc32, md5 and sha256 when FULL."""
+    """size and sha1, plus crc32, md5 and sha256 when FULL, in one pass over the image (digest's
+    helpers read a file once for each)."""
     names = ("sha1", "md5", "sha256") if full else ("sha1",)
     hashes = {n: hashlib.new(n) for n in names}
     crc = 0
@@ -159,7 +160,7 @@ def place_link(source: Path, dest: Path) -> str:
 
 def place_boot(iso: Path, serial: str, want: dict, dest: Path) -> str:
     if dest.exists():
-        return "already there" if checksums(dest, False)["sha1"] == want["sha1"] else "exists, left alone (other contents)"
+        return "already there" if digest.sha1(dest) == want["sha1"] else "exists, left alone (other contents)"
     data = read_boot(iso, serial)
     if hashlib.sha1(data).hexdigest() != want["sha1"]:
         return "not written: the executable in the image does not match game.json"

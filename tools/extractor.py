@@ -37,7 +37,7 @@ import sys
 from pathlib import Path
 
 import openrac
-from openrac_common import games
+from openrac_common import digest, games
 
 SECTOR = openrac.SECTOR
 
@@ -210,7 +210,7 @@ def extract(image: Path, game: str, proj: Path, minimum: int = MIN_IMAGE_SIZE, b
 
     try:
         boot = temp / serial if serial else None
-        boot_sha256 = hashlib.sha256(boot.read_bytes()).hexdigest() if boot and boot.is_file() else None
+        boot_sha256 = digest.sha256(boot) if boot and boot.is_file() else None
         g, name, version = validate(game, serial, hashes.get(serial or ""), hashes, boot_sha256)
     except ExtractError as e:
         if e.code in (4001, 4002, 4011, 4012):
