@@ -85,12 +85,20 @@ GPU driver, shows the model and SoC) and the game's log.
    title world, then a level. Check the picture against the desktop's
    (lighting, the sky, the 2D layer, text), the frame rate and the sound.
 4. **Play, on Adreno.** The same, with the system's driver.
-5. **Controls.** Touch the screen: the on-screen pad shows (sticks, d-pad,
-   face buttons, shoulders, Select, Start) and moves Ratchet; a thumb anywhere
-   in the lower left brings the left stick to it, and a thumb slid from one
-   button to the next presses the next. Connect a
-   Bluetooth or USB controller and press a button: the pad hides and the
-   controller plays.
+5. **Controls.** Touch the screen: the on-screen pad shows (the stick, d-pad,
+   face buttons, shoulders, Select, Start; no right stick) and moves Ratchet;
+   a thumb anywhere in the lower left brings the stick to it, and a thumb slid
+   from one button to the next presses the next. Pushed to a diagonal, the
+   stick runs, not walks. A finger dragged on the right of the screen, away
+   from the buttons, turns the camera, faster for a faster drag, and the
+   camera stops when the finger does. Connect a Bluetooth or USB controller
+   (a DualShock 4 or DualSense too) and press a button: the pad hides and the
+   controller plays; its stick pushed to a diagonal runs as well.
+   In the drawer, Touch controls: Button size changes the controls at once;
+   "Move the controls" leaves the game paused with a bar in the middle, a
+   finger drags a group (the d-pad, the face buttons, a shoulder...), Done
+   keeps it there after the game is started again, "Put them back" and the
+   bar's Reset bring every control home.
 6. **Suspend and resume.** Switch to another app and back, and lock and
    unlock the screen, during a level: the game comes back where it was, with
    no fingers left held.
@@ -118,7 +126,16 @@ GPU driver, shows the model and SoC) and the game's log.
     sends you to allow it to install apps, and back in the launcher
     Android's installer asks to confirm, with no second download. The launcher restarts updated, with
     the games set up as they were.
-12. **The launcher with a controller.** With a controller connected, start
+12. **Mods and Enhanced graphics.** The Mods tab shows one page: Gameplay
+    mods with Enhanced graphics first, Add a mod (a link, or a .zip from the
+    picker), the packs. Switch Enhanced graphics on: "Prepare the enhanced
+    lighting" runs (a few minutes; the log names libopenrac-probe-bake.so's
+    link). Play: the drawer's footer says Vulkan, and its Enhanced graphics
+    card has its switches; the log says the probe bake was loaded. Add
+    lock-strafe from its link (OpenRAC/rac1-mods): it installs and loads.
+    Settings shows no Discord, Compact layout or Godot, and a switch is saved
+    without a Save bar.
+13. **The launcher with a controller.** With a controller connected, start
     the launcher and do not touch the screen: the d-pad and the left stick
     move an amber focus ring between every control (tabs, tiles, buttons,
     menus, settings, dialogs), A presses, B closes a menu or dialog and then
