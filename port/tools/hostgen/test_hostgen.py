@@ -62,16 +62,32 @@ def have_compiler() -> bool:
     return shutil.which("clang") is not None and sys.platform != "win32"
 
 
+def cxx_flags() -> list[str]:
+    """C++20 with <format> (the port's assets): libc++ where the system's own library has none
+    (the port's Linux build takes it the same way)."""
+    for flags in ([], ["-stdlib=libc++"]):
+        probe = subprocess.run(["clang++", "-std=c++20", *flags, "-x", "c++", "-fsyntax-only", "-"],
+                               input="#include <format>\n", capture_output=True, text=True)
+        if probe.returncode == 0:
+            return ["-std=c++20", *flags]
+    return ["-std=c++20"]
+
+
+# The EE's float arithmetic in software (openrac/ps2float.h): its C entry points and their model.
+PS2FLOAT_CXX = [HERE.parent.parent / "runtime" / "ps2float.cpp", HERE.parent.parent / "assets" / "ps2_float.cpp"]
+
+
 @unittest.skipUnless(have_compiler(), "needs Clang on a POSIX host")
 class Translate(unittest.TestCase):
     def run_program(self, files: dict[str, str], places: str = "", config: dict | None = None,
                     extra_files: dict[str, str] | None = None, host_c: str = "",
                     stubs: int = 0, hostgen_args: list[str] | None = None,
-                    cflags: list[str] | None = None) -> list[str]:
+                    cflags: list[str] | None = None, cxx: list[Path] | None = None) -> list[str]:
         """Translates, builds and runs files (name -> C); returns the printed lines.
         config adds to hostgen.json; extra_files are written beside it (tables);
         host_c is linked in (the port's own C); stubs is how many functions are
-        expected to become stubs."""
+        expected to become stubs; cxx are C++ sources of the port linked in (the
+        program is then linked as C++)."""
         with tempfile.TemporaryDirectory() as tmp:
             tmp = Path(tmp)
             src = tmp / "game"
@@ -105,9 +121,19 @@ class Translate(unittest.TestCase):
                 (tmp / "host.c").write_text('#include "openrac/guest.h"\n' + textwrap.dedent(host_c))
                 sources.append(tmp / "host.c")
             exe = tmp / "prog"
+            objects = []
+            flags = cxx_flags() if cxx else []
+            for k, path in enumerate(cxx or []):
+                objects.append(tmp / f"cxx{k}.o")
+                build = subprocess.run(["clang++", *flags, "-O1", "-w", "-I", str(RUNTIME_INCLUDE),
+                                        "-I", str(HERE.parent.parent), "-c", str(path), "-o", str(objects[-1])],
+                                       capture_output=True, text=True)
+                self.assertEqual(build.returncode, 0, build.stderr)
             build = subprocess.run(
-                ["clang", "-std=gnu11", "-O1", "-w", "-fno-strict-aliasing", "-fwrapv", "-fsigned-char",
-                 *(cflags or []), "-I", str(RUNTIME_INCLUDE), "-I", str(out), "-o", str(exe), *map(str, sources)],
+                ["clang++" if cxx else "clang", *(["-x", "c"] if cxx else []), "-std=gnu11", "-O1", "-w",
+                 "-fno-strict-aliasing", "-fwrapv", "-fsigned-char", *(cflags or []),
+                 "-I", str(RUNTIME_INCLUDE), "-I", str(out), "-o", str(exe), *map(str, sources),
+                 *(["-x", "none", *flags[1:], *map(str, objects)] if cxx else [])],
                 capture_output=True, text=True)
             self.assertEqual(build.returncode, 0, build.stderr)
             run = subprocess.run([str(exe)], capture_output=True, text=True, timeout=30)
@@ -894,6 +920,102 @@ class Translate(unittest.TestCase):
             }
         """})
         self.assertEqual(out, ["1", "253", "1", "1", "1", "50"])
+
+    def test_ps2_float_computes_as_the_ee_does(self):
+        # hostgen.json "ps2_float": in the functions it names, float + - * /, compound assignments,
+        # comparisons, a float's truth and the conversions between int and float are the EE FPU's,
+        # through openrac/ps2float.h: results cut, not rounded; the adder's dropped bits; no
+        # infinity (a divide by zero is +-0x7FFFFFFF, an ordinary number in comparisons and
+        # conversions). Functions not named compute as the port does.
+        files = {"a.c": """
+            extern float D_00200000[4];
+            extern int D_00200010[4];
+            int bits(float f) { D_00200000[3] = f; return *(int *)&D_00200000[3]; }
+            void ee(void) {
+                float one = D_00200000[0], small = D_00200000[1], zero = D_00200000[2];
+                float q = one / zero;
+                test_print(bits(one + small));
+                test_print(bits(one - small));
+                test_print(bits(q));
+                test_print(one < q);
+                test_print(!zero);
+                test_print(bits((float)D_00200010[0]));
+                test_print((int)q);
+                test_print((int)-q);
+                D_00200000[3] = one;
+                D_00200000[3] -= small;
+                test_print(*(int *)&D_00200000[3]);
+                one += small;
+                test_print(bits(one));
+            }
+            void host(void) {
+                float one = D_00200000[0], small = D_00200000[1], zero = D_00200000[2];
+                test_print(bits(one + small));
+                test_print(bits(one / zero));
+                test_print(bits((float)D_00200010[0]));
+            }
+            int test_main(void) {
+                *(int *)&D_00200000[1] = 0x33C00000;
+                D_00200000[0] = 1.0f;
+                D_00200000[2] = 0.0f;
+                D_00200010[0] = 16777219;
+                ee();
+                host();
+                return 0;
+            }
+        """}
+        out = self.run_program(files, config={"ps2_float": ["ee", "func_00100000"]}, cxx=PS2FLOAT_CXX)
+        self.assertEqual(out, [str(0x3F800000), str(0x3F7FFFFF), str(0x7FFFFFFF), "1", "1", str(0x4B800001),
+                               "2147483647", "-2147483648", str(0x3F7FFFFF), str(0x3F800000),
+                               str(0x3F800001), str(0x7F7FFFFF), str(0x4B800002)])
+        self.assertIn("openrac_ps2_sub(", self.last_generated)
+        self.assertIn("ps2_float: func_00100000 has no C here to translate", self.last_report["index_problems"])
+
+    def test_ps2_float_comparisons_keep_the_order_of_their_calls(self):
+        # a > b and a >= b with a call on each side: the left one is called first, as the game's
+        # code calls them (FastAbsF(r) > FastAbsF(*v)).
+        out = self.run_program({"a.c": """
+            float tag(int id, float f) { test_print(id); return f; }
+            void ee(void) {
+                test_print(tag(1, 2.0f) > tag(2, 1.0f));
+                test_print(tag(3, 1.0f) >= tag(4, 1.0f));
+                test_print(tag(5, -0.0f) >= tag(6, 0.0f));
+                test_print(tag(7, 1.0f) > tag(8, 2.0f));
+            }
+            int test_main(void) { ee(); return 0; }
+        """}, config={"ps2_float": ["ee"]}, cxx=PS2FLOAT_CXX)
+        self.assertEqual(out, ["1", "2", "1", "3", "4", "1", "5", "6", "1", "7", "8", "0"])
+
+    def test_an_override_runs_in_place_of_matched_c(self):
+        # hostgen.json "overrides": the port's own C for a function the decompilation has as
+        # matching C. Here the matching C takes a colour as an int that its caller passes, and it
+        # passes on, in a 64-bit register (DrawOutlinedRect's: FastTweenColor's zero-extended
+        # result, "returns_64"): as an int the port sign-extended it. The override takes it as a
+        # long and runs in its place; its signature is the one callers are matched to.
+        files = {"a.c": """
+            void sink(int i, unsigned long long colour) { test_print(i); test_print((int)(colour >> 32)); }
+            void draw(int i, int colour) {
+                sink(i, (colour & 0xFF000000) | 4);
+                sink(i + 1, colour);
+            }
+            int make(void);
+            int test_main(void) { draw(0, make()); return 0; }
+        """, "b.c": """
+            unsigned long make(void) { return 0x80123456u; }
+        """}
+        out = self.run_program(files, config={"returns_64": ["make"]})
+        self.assertEqual(out, ["0", "0", "1", "-1"])            # the matching C: sign-extended
+        out = self.run_program(files, config={"returns_64": ["make"], "overrides": "overrides.tsv"}, extra_files={
+            "overrides.tsv": "# name\tfile\ndraw\tmine.c\n",
+            "mine.c": """
+                void draw(int i, unsigned long colour) {
+                    sink(i, (colour & 0xFF000000) | 4);
+                    sink(i + 2, colour);
+                }
+            """})
+        self.assertEqual(out, ["0", "0", "2", "0"])               # the override, all 64 bits
+        self.assertEqual(self.last_report["overrides_used"], ["draw"])
+        self.assertEqual(self.last_report["index_problems"], [])
 
     def test_variable_length_array_of_a_local_length(self):
         # A one-dimensional array whose length is a local goes on the guest stack for its
@@ -1846,6 +1968,48 @@ class Preparation(unittest.TestCase):
         self.assertEqual(lines[5].strip(), "*)&g)->v[i] = -1;")
         self.assertEqual(lines[7], "#define PEEK(p) ((struct { int x; } *)(p))")  # no function: as it was
         self.assertEqual(prep.name_cast_records("int a;\n"), "int a;\n")
+
+    def test_an_override_replaces_a_definition_with_cast_records_ahead(self):
+        # name_cast_records puts the records ahead of the function's first line: the matched
+        # definition is still found, blanked with them, and the override goes at the end.
+        src = prep.name_cast_records("int g;\n"
+                                     "void f(int i)\n"
+                                     "{\n"
+                                     "    ((struct { int v[8]; } *)&g)->v[i] = -1;\n"
+                                     "}\n"
+                                     "void h(void) {}\n")
+        self.assertTrue(src.split("\n")[1].startswith("struct openrac_cast_4_0 "))
+        used: set[str] = set()
+        out = prep.use_overrides(src, {"f": "void f(int i) { g = i; }\n"}, used)
+        self.assertEqual(used, {"f"})
+        self.assertNotIn("v[i] = -1", out)
+        self.assertNotIn("openrac_cast_4_0", out)
+        self.assertIn("void h(void) {}", out)
+        self.assertIn("g = i;", out)
+        self.assertEqual(out.split("\n")[5], "void h(void) {}")  # no line of the file moved
+
+    def test_an_overridden_definition_named_later_keeps_its_prototype(self):
+        # A file that registers the function as a callback after its definition needs a declaration
+        # there: the definition's first line stays as a prototype, on the line it started.
+        src = ("int g;\n"
+               "void f(char *self,\n"
+               "       int n) {\n"
+               "    g = n;\n"
+               "}\n"
+               "void h(void) { register_callback(f); }\n"
+               "void k(int i)\n"
+               "{\n"
+               "}\n")
+        used: set[str] = set()
+        out = prep.use_overrides(src, {"f": "void f(char *self, int n) { g = n + 1; }\n",
+                                       "k": "void k(int i) { g = i; }\n"}, used)
+        lines = out.split("\n")
+        self.assertEqual(lines[1], "void f(char *self, int n);")
+        self.assertEqual(lines[2], "")
+        self.assertEqual(lines[5], "void h(void) { register_callback(f); }")  # no line moved
+        self.assertEqual(lines[6], "")       # k is not named later: blanked as before
+        self.assertIn("g = n + 1;", out)
+        self.assertIn("g = i;", out)
 
     def test_wide_cast_is_named(self):
         """A 128-bit integer as a type name becomes openrac_ti: Clang drops the attribute there."""

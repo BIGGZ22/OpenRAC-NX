@@ -261,6 +261,12 @@ float func_001FA790(float a, float b) {
 /*
  * Two colours mixed, byte by byte: each byte is from * (1 - t) + to * t, cut to an integer and
  * its low eight bits kept. The result fills the register's low 32 bits and leaves the rest zero.
+ * The vector unit's operations one by one (vsubx.w for 1 - t, vitof0, vmulaw into the
+ * accumulator, vmaddx, vftoi0): the sum is cut to an integer, so a last place takes a whole unit
+ * off or on, and the port computes this function in the console's float arithmetic (hostgen.json
+ * "ps2_float"). In the host's, even rounding toward zero, 1 - t keeps bits of t the console's
+ * adder drops: for a small t (a tween's first ticks) every channel came out one below the
+ * starting colour (0x72ABEFF5 for 0x73ACF0F6), and about one call in a hundred with t = k/n.
  */
 unsigned long func_001FA8A8(unsigned from, unsigned to, float t) {
     float keep = 1.0f - t;

@@ -18,7 +18,12 @@ guest.h):
   the definition's parameters the way the EE passes them (integers and
   floats in separate registers); a call through a pointer goes through
   GFN, the table of functions by code address;
-- string literals are copied into game memory once (GSTR).
+- string literals are copied into game memory once (GSTR);
+- in the functions hostgen.json "ps2_float" names, float + - * /, the
+  comparisons, a float's truth and the conversions between int and float
+  are the EE FPU's own arithmetic, computed in software (openrac/ps2float.h:
+  results cut, no infinities, NaNs or denormals), where the host's
+  arithmetic gives a result the game tells apart.
 
 What cannot be written that way (inline assembly other than the three
 quadword helpers, a few rare constructs) makes the function a stub that
@@ -35,6 +40,9 @@ import ctype
 from program import BUILTINS, Program, canon, cname, has_body, symbol_of
 
 VA_NAMES = {"va_list", "__builtin_va_list", "__gnuc_va_list"}
+# The EE's float operations in software (openrac/ps2float.h), by C operator: the functions
+# hostgen.json "ps2_float" names (Unit._ps2).
+PS2_ARITH = {"+": "openrac_ps2_add", "-": "openrac_ps2_sub", "*": "openrac_ps2_mul", "/": "openrac_ps2_div"}
 HW_RANGES = [(0x10000000, 0x12002000)]  # EE registers, VU memory, GS registers
 # Level programs' addresses (rac1: 0x15F000 up, with their data): what a shared level function's
 # globals are relocated in (_shared_level).
@@ -394,6 +402,8 @@ class Unit:
                 if decl.get("storageClass") == "static":
                     statics_protos.append(proto + ";")
                 bodies.append(text)
+        if getattr(self, "uses_ps2", False):
+            out.insert(out.index("#include \"openrac/guest.h\"") + 1, "#include \"openrac/ps2float.h\"")
         return "\n".join(out + [""] + statics_protos + [""] + bodies) + "\n"
 
     def _mine(self, decl: dict) -> bool:
@@ -1249,8 +1259,16 @@ class Unit:
             if isinstance(r, ctype.Base) and "long long" in r.name:
                 return f"(({host})(int32_t)({v}))"  # the EE sign-extends a 32-bit value
             return f"(({host})({v}))"
+        if kind == "FloatingToBoolean" and self.cls(self.ty(child)) == "float" and self._ps2():
+            return f"(!openrac_ps2_eq({v}, 0.0f))"  # every zero is zero (no denormals)
+        if kind == "IntegralToFloating" and tc == "float" and self._ps2_int_source(self.ty(child)) and self._ps2():
+            return f"openrac_ps2_itof((int32_t)({v}))"  # cvt.s.w: cut to 24 bits
         if kind in ("PointerToBoolean", "IntegralToBoolean", "FloatingToBoolean"):
             return f"(({v}) != 0)"
+        if (kind == "FloatingToIntegral" and tc == "int" and self.cls(self.ty(child)) == "float"
+                and self._ps2_int_source(t) and self._ps2()):
+            # cvt.w.s: saturating by the sign, also for an exponent of 255 (a NaN to the host).
+            return f"(({self.host(ctype.strip_quals(t))})openrac_ps2_ftoi({v}))"
         if kind == "FloatingToIntegral" and tc == "int":
             # The EE's own conversion (guest.h): C leaves a value out of the target's range
             # undefined, and the hosts differ there (x86 wraps a negative float into an unsigned
@@ -1473,9 +1491,40 @@ class Unit:
             return self.function_value(n)
         return self.lv(n).text
 
+    def _ps2(self) -> bool:
+        """Whether this function's float arithmetic is the EE's (hostgen.json "ps2_float")."""
+        if self.fn is None or self.fn.name not in getattr(self.program, "ps2_float", ()):
+            return False
+        self.uses_ps2 = True
+        return True
+
+    def _ps2_binary(self, op: str, x: str, y: str) -> str | None:
+        """A float operator as the EE's (openrac/ps2float.h): arithmetic cuts its result,
+        comparisons are of sign and magnitude with every zero equal (c.lt.s, c.le.s, c.eq.s). The
+        operands stay in source order (a > b is gt(a, b), not lt(b, a)): with a call on each side,
+        the left one is made first, as the game's code makes it."""
+        if op in PS2_ARITH:
+            return f"{PS2_ARITH[op]}({x}, {y})"
+        return {"<": f"openrac_ps2_lt({x}, {y})", ">": f"openrac_ps2_gt({x}, {y})",
+                "<=": f"openrac_ps2_le({x}, {y})", ">=": f"openrac_ps2_ge({x}, {y})",
+                "==": f"openrac_ps2_eq({x}, {y})", "!=": f"(!openrac_ps2_eq({x}, {y}))"}.get(op)
+
+    def _ps2_int_source(self, t: ctype.Type) -> bool:
+        """An integer the EE converts to or from a float with cvt.s.w / cvt.w.s: a signed one of
+        32 bits or fewer, or a narrower unsigned one (an unsigned int or a 64-bit integer takes
+        other code: the conversions of guest.h, as in any function)."""
+        r = self.resolve(ctype.strip_quals(t))
+        name = r.name if isinstance(r, ctype.Base) else ""
+        return name.startswith("enum ") or name in (
+            "int", "signed int", "signed", "short", "signed short", "short int", "signed short int",
+            "signed char", "char", "unsigned char", "unsigned short", "unsigned short int", "_Bool",
+            "s8", "s16", "s32", "u8", "u16")
+
     def rv_UnaryOperator(self, n: dict) -> str:
         op = n["opcode"]
         child = _inner(n)[0]
+        if op == "!" and self.cls(self.ty(child)) == "float" and self._ps2():
+            return f"openrac_ps2_eq({self.rv(child)}, 0.0f)"  # every zero is zero (no denormals)
         if op == "&":
             c = _strip_parens(child)
             if c.get("kind") == "DeclRefExpr" and (c["referencedDecl"].get("kind") == "FunctionDecl"
@@ -1527,6 +1576,9 @@ class Unit:
                 return f"((gaddr)({self.rv(a)}) {op} (gaddr)({self.rv(b)}) * {self.pointee_size(ta)})"
             if pb:
                 return f"((gaddr)({self.rv(b)}) + (gaddr)({self.rv(a)}) * {self.pointee_size(tb)})"
+        if (self.cls(self.ty(a)) == "float" and self.cls(self.ty(b)) == "float"
+                and op in (*PS2_ARITH, "<", ">", "<=", ">=", "==", "!=") and self._ps2()):
+            return self._ps2_binary(op, self.rv(a), self.rv(b))
         if op == "/" and self.cls(self.ty(n)) == "float":
             return f"openrac_fdiv({self.rv(a)}, {self.rv(b)})"  # the EE's divide (guest.h)
         return f"({self.rv(a)} {op} {self.rv(b)})"
@@ -1538,6 +1590,12 @@ class Unit:
         ta = self.ty(a)
         if self.cls(ta) == "ptr" and op in ("+=", "-="):
             return f"({lv.text} {op} (gaddr)({self.rv(b)}) * {self.pointee_size(ta)})"
+        if (op[:-1] in PS2_ARITH and self.cls(ta) == "float" and self.cls(self.ty(b)) == "float"
+                and self._ps2()):
+            if lv.addr is not None:  # read and written once, through its address
+                ref = self.gref(ta, "pa_")
+                return f"({{ gaddr pa_ = (gaddr)({lv.addr}); {ref} = {PS2_ARITH[op[:-1]]}({ref}, {self.rv(b)}); }})"
+            return f"({lv.text} = {PS2_ARITH[op[:-1]]}({lv.text}, {self.rv(b)}))"
         if op == "/=" and self.cls(ta) == "float" and self.cls(self.ty(b)) == "float":
             return f"({lv.text} = openrac_fdiv({lv.text}, {self.rv(b)}))"
         return f"({lv.text} {op} {self.rv(b)})"
