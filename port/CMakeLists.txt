@@ -101,6 +101,9 @@ openrac_add_test(env LIBS openrac_common)
 openrac_add_test(frame_pacing INCLUDES .)
 openrac_add_test(settings SOURCES tests/settings_test.cpp game/common/settings.cpp
                           LIBS openrac_common)
+# The launcher's colours for the options drawer (game/common/ui_colors.h).
+openrac_add_test(ui_colors SOURCES tests/ui_colors_test.cpp game/common/ui_colors.cpp
+                           INCLUDES . LIBS openrac_common)
 openrac_add_test(scripted_moby_colour SOURCES enhanced/tests/scripted_moby_colour_test.cpp
                                       INCLUDES .)
 openrac_add_test(pause_options INCLUDES .)
