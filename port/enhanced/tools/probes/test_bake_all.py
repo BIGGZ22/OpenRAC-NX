@@ -13,7 +13,8 @@ class AllLevelBake(unittest.TestCase):
     def setUp(self):
         self.temp = tempfile.TemporaryDirectory()
         self.addCleanup(self.temp.cleanup)
-        self.root = Path(self.temp.name)
+        # bake_all resolves its paths; on macOS the temporary folder's /var is /private/var.
+        self.root = Path(self.temp.name).resolve()
         self.levels = self.root/'exports'
         self.levels.mkdir()
         self.output = self.root/'bakes'
