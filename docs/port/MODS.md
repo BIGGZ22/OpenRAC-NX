@@ -528,6 +528,18 @@ Play passes nothing more: the port reads `plugins.json` from the data folder
 it is given. The Rust side is `core/src/plugins.rs`, with tests on mods made
 in a temporary folder.
 
+Above the installed mods, Ratchet & Clank's panel has one **built-in** entry,
+**Enhanced graphics** (experimental): not a mod in `plugins/`, but the port's
+own enhanced renderer (port/enhanced), shown with a mod's row and page. Its
+switch and settings are keys of the game's settings file
+(`enhanced_rendering`, `probe_lighting`, `enhanced_shadows`, `gtao`,
+`gtao_quality`, `probe_gi_multiplier`, and under Advanced `gtao_strength`,
+`gtao_radius`, `gtao_half_resolution`: [SETTINGS.md](SETTINGS.md)); with it
+on, Play adds `OPENRAC_GL_API=vulkan` and `--probes <data>/probes/<version>`,
+and the page runs and follows the `probe-bake` action that bakes the probes
+from the player's own levels. Purist mode does not turn it off: it is not a
+mod. The Rust side is `core/src/enhanced.rs`.
+
 ## 10. Mods in a git repository
 
 A player pastes a repository's address in the Mods tab (**Add from a

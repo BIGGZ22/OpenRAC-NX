@@ -1,21 +1,42 @@
 # Baked probe lighting
 
-Probe GI needs an enhanced Vulkan build and a valid level bake. Without probes,
-original lighting applies and Enhanced controls are disabled; settings are kept.
-OpenGL and normal builds use original lighting. Core Vulkan optimisations work
-in either build.
+Probe GI needs Vulkan, enhanced rendering switched on at start and a valid
+level bake. Without probes, original lighting applies and Enhanced controls are
+disabled; settings are kept. OpenGL, and enhanced rendering off (the default),
+use original lighting. Core Vulkan optimisations work either way.
 
 ## Build
 
+Every build compiles it in (`OPENRAC_ENHANCED_RENDERING` is ON by default; the
+`enhanced` preset is the release preset under another folder). Switch it on with
+`enhanced_rendering = 1` in the settings file, which the launcher's Mods tab
+(**Enhanced graphics**) writes, or `OPENRAC_ENHANCED=1`; setting
+`OPENRAC_PROBE_GI` also switches it on.
+
+For the offline baker, `python3 tools/build_port.py --probe-baker` builds a
+pinned Embree 4 from source as a static library into `openrac-probe-bake`, with
+no Embree or TBB library beside it; this is what the launcher's installers
+carry. Alternatively set `-DOPENRAC_PROBE_BAKER=ON` and install Embree 4 where
+CMake can find it (Windows then needs its runtime DLLs on PATH). Python tools
+need no extra packages; the game does not need Embree.
+
+## In the launcher
+
+Mods, **Enhanced graphics** turns it on for the disc being played and plays
+with Vulkan. Switched on the first time, and again whenever the levels are read
+from the disc again, it runs the `probe-bake` action:
+
 ```sh
-cd port
-cmake --preset enhanced
-cmake --build --preset enhanced
+python port/enhanced/tools/probes/bake_all.py --levels-dir <levels> \
+  --output-dir <data>/probes/<version> --baker <openrac-probe-bake> --disc <disc> --jobs 0 --update
 ```
 
-For the offline baker, also set `-DOPENRAC_PROBE_BAKER=ON` and install Embree 4
-where CMake can find it. Windows needs its runtime DLLs on PATH. Python tools
-need no extra packages; the game does not need Embree.
+`--jobs 0` bakes one level per CPU thread, as many at once as half the memory
+holds; `--update` keeps each level whose export, levels format, baker and
+options are those of its bake (`openrac-bake.json`) and bakes the others again
+beside it, replacing a bake only once the new one is verified. The game is
+started with `--probes <data>/probes/<version>` and takes `level_NN/sparse.orpg`
+from there; a level without a current bake keeps the original lighting.
 
 ## Bake a level
 

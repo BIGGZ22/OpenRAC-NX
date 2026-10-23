@@ -116,6 +116,19 @@ settings and Remove, and says why it cannot load when it cannot. Changes count
 from the game's next start. **Purist mode** starts the game with none of them.
 Android loads no native mods; its launcher has no Mods tab yet.
 
+**Enhanced graphics** (experimental) is built in, the first row of Gameplay
+mods for Ratchet & Clank (PAL and NTSC-U): bounced light, modern sun and
+Ratchet shadows, and ambient occlusion from the game's Vulkan renderer. Its
+page has the switch, Probe lighting, Modern shadows, Ambient occlusion and its
+quality, the Bounce light slider, and an Advanced fold; each change is saved
+to the game's settings file at once. While it is on, Play uses the Vulkan
+renderer. The bounced light is baked on this computer from your own extracted
+levels, one level per thread, when it is first switched on and again after the
+levels are read from the disc again (**Lighting** on its page shows how far it
+is, with **Prepare lighting**); a level without a bake keeps its original
+lighting. Nothing derived from the game is downloaded
+([port/enhanced/lighting/README.md](../port/enhanced/lighting/README.md#in-the-launcher)).
+
 **Add from a link** takes a GitHub repository or release. The launcher shows
 the mods, their author and whether this computer's game can take them before
 installing anything. A gameplay mod is installed from its release `.zip` only
