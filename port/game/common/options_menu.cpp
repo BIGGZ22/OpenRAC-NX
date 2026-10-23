@@ -26,9 +26,21 @@ namespace openrac::frontend::options_menu {
 namespace {
 
 constexpr const char* kLabels[kRows] = {
-    "Display mode", "Monitor",   "Resolution", "Picture",       "HUD",           "Render scale", "Anti-aliasing",
-    "Texture filter", "VSync",   "Frame rate", "Frame cap",     "Frame counter", "Mute in background",
+    "Display mode",
+    "Monitor",
+    "Resolution",
+    "Picture",
+    "HUD",
+    "Render scale",
+    "Anti-aliasing",
+    "Texture filter",
+    "VSync",
+    "Frame rate",
+    "Frame cap",
+    "Frame counter",
+    "Mute in background",
     "Skip cutscenes",
+
 };
 
 // The "Game fixes" group, after the settings' own rows: its heading, then a row a fix.

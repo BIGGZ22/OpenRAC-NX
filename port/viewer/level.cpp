@@ -9,8 +9,10 @@
 #include <cstdlib>
 #include <cstring>
 #include <format>
+#include <fstream>
 #include <map>
 #include <stb_image.h>
+#include <stdexcept>
 
 #include "common/log.h"
 #include "viewer/json.h"
@@ -105,6 +107,18 @@ int material_index(const cgltf_material* source, const fs::path& base, LevelData
         m.cutout = source->alpha_mode == cgltf_alpha_mode_mask;
         m.metal = source->name != nullptr && std::strncmp(source->name, "metal_", 6) == 0;
         m.blend = source->alpha_mode == cgltf_alpha_mode_blend;
+        const float strength =
+            source->has_emissive_strength ? source->emissive_strength.emissive_strength : 1.0f;
+        for (unsigned c = 0; c < 3; ++c) {
+            m.emission[c] = source->emissive_factor[c] * strength;
+        }
+        const auto* emission = source->emissive_texture.texture;
+        if (emission && emission->image && emission->image->uri) {
+            if (source->emissive_texture.texcoord != 0 || source->emissive_texture.has_transform) {
+                throw std::runtime_error("probe emission requires untransformed TEXCOORD_0");
+            }
+            m.emission_image = image_index(base / emission->image->uri, level);
+        }
         if (source->has_pbr_metallic_roughness) {
             const auto& pbr = source->pbr_metallic_roughness;
             std::copy(pbr.base_color_factor, pbr.base_color_factor + 4, m.colour.begin());
@@ -131,7 +145,8 @@ int material_index(const cgltf_material* source, const fs::path& base, LevelData
     for (std::size_t i = 0; i < level.materials.size(); ++i) {
         const Material& o = level.materials[i];
         if (o.image == m.image && o.cutout == m.cutout && o.blend == m.blend && o.metal == m.metal
-            && o.colour == m.colour) {
+            && o.colour == m.colour && o.emission == m.emission
+            && o.emission_image == m.emission_image) {
             return static_cast<int>(i);
         }
     }
@@ -322,9 +337,22 @@ std::optional<std::uint32_t> load_model(
                 }
             }
             out.index_count = static_cast<std::uint32_t>(level.indices.size()) - out.first_index;
-            out.material = material_index(prim.material, base, level);
+            try {
+                out.material = material_index(prim.material, base, level);
+            } catch (const std::runtime_error& failure) {
+                error = std::format("{}: {}", name, failure.what());
+                cgltf_free(data);
+                return std::nullopt;
+            }
             if (node.name != nullptr && std::strncmp(node.name, "Sky_", 4) == 0) {
                 out.shell = std::atoi(node.name + 4);
+            }
+            if (node.name != nullptr && std::strncmp(node.name, "Terrain_", 8) == 0) {
+                char* end = nullptr;
+                const long fragment = std::strtol(node.name + 8, &end, 10);
+                if (end != node.name + 8 && *end == 0 && fragment >= 0 && fragment < 1000000) {
+                    out.terrain_fragment = static_cast<int>(fragment);
+                }
             }
             model.primitives.push_back(out);
         }
@@ -427,6 +455,24 @@ bool load_level(const fs::path& dir, LevelData& out, std::string& error, const f
         return false;
     }
     out.level = static_cast<int>(manifest["level"].number(-1));
+    // Optional extension: older exports remain readable and draw conservatively.
+    json::Value pvs;
+    std::string pvs_error;
+    if (manifest["game"].string() == "rac1"
+        && json::parse_file((dir / "pvs.json").string(), pvs, pvs_error)
+        && pvs["format"].number() == 1 && pvs["game"].string() == "rac1"
+        && pvs["version"].string() == manifest["version"].string()
+        && pvs["level"].number(-1) == out.level && pvs["grid"].string() == "pvs.bin") {
+        std::ifstream file(dir / "pvs.bin", std::ios::binary | std::ios::ate);
+        const auto size = file.tellg();
+        if (file && size > 0 && size <= 64 * 1024 * 1024) {
+            out.pvs.grid.resize(static_cast<std::size_t>(size));
+            file.seekg(0);
+            if (!file.read(reinterpret_cast<char*>(out.pvs.grid.data()), size)) {
+                out.pvs.grid.clear();
+            }
+        }
+    }
 
     auto model_at = [&](const json::Value& file) -> std::optional<std::uint32_t> {
         if (!file.is_string()) {
@@ -447,6 +493,21 @@ bool load_level(const fs::path& dir, LevelData& out, std::string& error, const f
     }
     const json::Value& sky = manifest["sky"];
     if (sky.is_object()) {
+        if (sky["panorama"].is_string()) {
+            const auto path =
+                override_of(dir / sky["panorama"].string(), out, &out.overridden_images);
+            int width = 0, height = 0, channels = 0;
+            if (auto* pixels = stbi_load(path.string().c_str(), &width, &height, &channels, 4)) {
+                out.sky_panorama = renderer::Rgba8Image(width, height);
+                std::copy_n(
+                    pixels, out.sky_panorama.pixels.size(), out.sky_panorama.pixels.begin()
+                );
+                stbi_image_free(pixels);
+            } else {
+                ++out.missing_images;
+                log::warn("sky panorama {}: {}", path.string(), stbi_failure_reason());
+            }
+        }
         for (std::size_t i = 0; i < 3; ++i) {
             out.background[i] = static_cast<float>(sky["background"][i].number()) / 255.0f;
         }
@@ -464,6 +525,15 @@ bool load_level(const fs::path& dir, LevelData& out, std::string& error, const f
         auto model = model_at(manifest["terrain"]);
         if (!model) {
             return false;
+        }
+        for (auto& primitive : out.models[*model].primitives) {
+            if (primitive.terrain_fragment >= 0) {
+                primitive.occlusion = static_cast<std::uint16_t>(
+                    pvs["terrain"][static_cast<std::size_t>(primitive.terrain_fragment)].number(
+                        Pvs::always
+                    )
+                );
+            }
         }
         out.instances[static_cast<std::size_t>(Layer::Terrain)].push_back(
             {*model, renderer::identity(), {1, 1, 1, 1}}
@@ -538,6 +608,44 @@ bool load_level(const fs::path& dir, LevelData& out, std::string& error, const f
             }
             Instance instance;
             instance.model = cls->second.model;
+            if (layer == Layer::Ties && !edits[key].is_array()
+                && p["occlusion_index"].is_number()) {
+                const auto occlusion_key =
+                    std::to_string(static_cast<int>(p["occlusion_index"].number(-1)));
+                instance.occlusion =
+                    static_cast<std::uint16_t>(pvs["ties"][occlusion_key].number(Pvs::always));
+                const auto placement_index = p["index"].number(-1);
+                if (placement_index >= 0
+                    && placement_index < static_cast<double>(pvs["tie_words"].items().size())) {
+                    instance.occlusion = static_cast<std::uint16_t>(
+                        pvs["tie_words"][static_cast<std::size_t>(placement_index)].number(
+                            Pvs::always
+                        )
+                    );
+                }
+            } else if (layer == Layer::Mobys && !edits[key].is_array()
+                       && p["fields"]["occlusion"].number(1) == 0
+                       && p["fields"]["spawn_id"].is_number() && !cls->second.box) {
+                const auto occlusion_key =
+                    std::to_string(static_cast<int>(p["fields"]["spawn_id"].number(-1)));
+                instance.occlusion =
+                    static_cast<std::uint16_t>(pvs["mobys"][occlusion_key].number(Pvs::always));
+            }
+            instance.stand_in = cls->second.box;
+            if (layer == Layer::Mobys) {
+                // Reviewed initial-state scenery. Both classes can break; no
+                // characters, crates, traffic, rotating signs or platforms.
+                const bool metropolis_scenery = manifest["game"].string() == "rac1"
+                                                && manifest["version"].string() == "ntsc"
+                                                && out.level == 3 && (id == 817 || id == 1827);
+                const bool orxon_lamp = manifest["game"].string() == "rac1"
+                                        && manifest["version"].string() == "ntsc" && out.level == 10
+                                        && id == 1855;
+                const auto& selection =
+                    manifest["classes"]["moby"][std::to_string(id)]["bake_static"];
+                instance.bake_static =
+                    p["bake_static"].boolean(selection.boolean(metropolis_scenery || orxon_lamp));
+            }
             if (!read_matrix(p["matrix"], instance.matrix)) {
                 error = std::format(
                     "{}: {} placement {} has no 4 x 4 matrix",
@@ -562,6 +670,121 @@ bool load_level(const fs::path& dir, LevelData& out, std::string& error, const f
                 }
             }
             out.instances[static_cast<std::size_t>(layer)].push_back(instance);
+        }
+    }
+
+    // Explicit bake radiance overrides keyed by the base texture's relative path.
+    // This is kept outside generated GLBs so an artistic intensity can be tuned.
+    json::Value emission_edits;
+    const auto emission_file = override_of(dir / "probe-emission.json", out, nullptr);
+    if (fs::exists(emission_file)
+        && !json::parse_file(emission_file.string(), emission_edits, error)) {
+        return false;
+    }
+    for (const auto& surface : emission_edits["surfaces"].items()) {
+        const fs::path mesh = fs::path(surface["mesh"].string()).lexically_normal();
+        if (mesh.empty() || mesh.has_root_path() || *mesh.begin() == "..") {
+            error = "bake emission surface mesh must be level-relative";
+            return false;
+        }
+        const auto model = load_model(override_of(dir / mesh, out, nullptr), out, error);
+        if (!model) {
+            return false;
+        }
+        Instance instance;
+        instance.model = *model;
+        out.bake_surfaces.push_back(instance);
+    }
+    for (auto& material : out.materials) {
+        if (material.image < 0) {
+            continue;
+        }
+        // image_paths use resolved source paths; mods retain the same logical name.
+        auto image_path =
+            fs::absolute(fs::path(out.image_paths.at(static_cast<std::size_t>(material.image))))
+                .lexically_normal();
+        const auto mod_relative =
+            out.overrides.empty() ? fs::path{} : image_path.lexically_relative(out.overrides);
+        const auto root = !mod_relative.empty() && *mod_relative.begin() != ".."
+                              ? out.overrides
+                              : fs::absolute(dir).lexically_normal();
+        const auto relative = image_path.lexically_relative(root).generic_string();
+        const auto& edit = emission_edits[relative];
+        if (manifest["game"].string() == "rac1" && manifest["version"].string() == "ntsc") {
+            for (const auto& profile : lighting::kAuthoredEmissions) {
+                if (profile.level == static_cast<unsigned>(out.level)
+                    && profile.texture == relative) {
+                    material.emission.fill(profile.intensity);
+                    material.emission_image = material.image;
+                    material.emission_mask = profile.mask;
+                    material.emission_vertex_colour = profile.vertex_colour;
+                    material.diffuse_scale = profile.diffuse_scale;
+                    // Metropolis already used this definition; invalidate changed built-in profiles only.
+                    if (out.level == 10) {
+                        out.emission_profile_revision = 2;
+                    }
+                    if (out.level == 9) {
+                        out.emission_profile_revision = 1;
+                    }
+                    break;
+                }
+            }
+        }
+        if (!edit.is_object()) {
+            continue;
+        }
+        // The old whole-material brightness bypass is retired. A legacy flag by
+        // itself must not silently turn an ordinary surface into an emitter.
+        const bool legacy_only =
+            edit.members().size() == 1 && !edit["preserve_authored_lighting"].is_null();
+        if (legacy_only) {
+            continue;
+        }
+        const bool radiance_edit = !edit["colour"].is_null() || !edit["intensity"].is_null();
+        if (radiance_edit) {
+            const float intensity = static_cast<float>(edit["intensity"].number(1));
+            for (unsigned c = 0; c < 3; ++c) {
+                const float colour = static_cast<float>(edit["colour"][c].number(1));
+                material.emission[c] = colour * intensity;
+                if (!std::isfinite(material.emission[c]) || colour < 0 || intensity < 0) {
+                    error = "invalid linear radiance in probe-emission.json";
+                    return false;
+                }
+            }
+            material.emission_image = edit["use_base_texture"].boolean(true) ? material.image : -1;
+        }
+        if (!edit["use_base_texture"].is_null()) {
+            material.emission_image = edit["use_base_texture"].boolean() ? material.image : -1;
+        }
+        if (!edit["texture"].is_null()) {
+            const fs::path texture = fs::path(edit["texture"].string()).lexically_normal();
+            if (texture.empty() || texture.has_root_path() || *texture.begin() == "..") {
+                error = "emission texture must be level-relative";
+                return false;
+            }
+            material.emission_image = image_index(dir / texture, out);
+            if (material.emission_image < 0) {
+                error = "missing emission texture in probe-emission.json";
+                return false;
+            }
+        }
+        if (!edit["mask"].is_null()) {
+            const auto name = edit["mask"].string();
+            if (name != "none" && name != "green") {
+                error = "unknown emission mask in probe-emission.json";
+                return false;
+            }
+            material.emission_mask =
+                name == "green" ? lighting::EmissionMask::Green : lighting::EmissionMask::None;
+        }
+        material.emission_vertex_colour =
+            edit["vertex_colour"].boolean(material.emission_vertex_colour);
+        material.diffuse_scale =
+            static_cast<float>(edit["diffuse_scale"].number(material.diffuse_scale));
+        if (!std::isfinite(material.diffuse_scale) || material.diffuse_scale < 0
+            || material.diffuse_scale > 1) {
+            error = "diffuse_scale must be between zero and one";
+            return false;
         }
     }
 
@@ -590,9 +813,24 @@ bool load_level(const fs::path& dir, LevelData& out, std::string& error, const f
         out.bounds_min = out.bounds_max = Vec3{};
     }
     if (out.overridden_models > 0 || out.overridden_images > 0) {
-        log::info("level {}: {} meshes and {} textures from {}", out.level, out.overridden_models,
-                  out.overridden_images, out.overrides.string());
+        log::info(
+            "level {}: {} meshes and {} textures from {}",
+            out.level,
+            out.overridden_models,
+            out.overridden_images,
+            out.overrides.string()
+        );
     }
+    // Authored visibility is not valid after arbitrary geometry/placement edits.
+    if (out.overridden_models || edits["ties"].is_array() || edits["mobys"].is_array()) {
+        out.pvs.grid.clear();
+    }
+    log::info(
+        "level {}: baked PVS {} ({} bytes)",
+        out.level,
+        out.pvs.grid.empty() ? "unavailable" : "loaded",
+        out.pvs.grid.size()
+    );
     return true;
 }
 

@@ -11,6 +11,7 @@
 #include <vector>
 
 #include "check.h"
+#include "game/common/particle_texture_cache.h"
 #include "renderer/texture.h"
 #include "renderer/texture_pool.h"
 
@@ -535,6 +536,133 @@ void inside_and_loaded() {
     CHECK(textures.image(four).texel(1, 0) == rgba(0, 9, 0, 0x80));
 }
 
+void cached_uploads() {
+    TexturePool reference, cached;
+    const gs::Texa texa{0, false, 0x80};
+    const auto sample = tex0(0x342, gs::kPsmct32, 3, 3);
+    auto compare = [&](const gs::Tex0& texture) {
+        const auto a = reference.resolve(texture, texa), b = cached.resolve(texture, texa);
+        CHECK(reference.image(a).pixels == cached.image(b).pixels);
+    };
+    auto send = [&](const ImageUpload& image, bool reused) {
+        reference.upload(image);
+        CHECK(cached.upload_cached(image) == reused);
+        compare(sample);
+    };
+    // Overlapping transfers must keep their sequence even when bytes match.
+    const auto a = upload(0x340, gs::kPsmct32, 64, 32, std::vector<std::uint8_t>(8192, 0x11));
+    const auto b = upload(0x341, gs::kPsmct32, 64, 32, std::vector<std::uint8_t>(8192, 0x55));
+    send(a, false);
+    send(b, false);
+    const auto before = cached.image(cached.resolve(sample, texa)).pixels;
+    send(a, true);
+    CHECK(cached.image(cached.resolve(sample, texa)).pixels != before);
+    send(b, true);
+    send(a, true);
+
+    // Repeated transfers still replace an asset placed at the exact base.
+    Rgba8Image red(8, 8);
+    const auto pa = reference.add(red, AlphaScale::Gs, "placed");
+    const auto pb = cached.add(red, AlphaScale::Gs, "placed");
+    reference.place(a.dbp, pa);
+    cached.place(a.dbp, pb);
+    send(a, true);
+    compare(tex0(a.dbp, gs::kPsmct32, 3, 3));
+    CHECK(cached.resolve(tex0(a.dbp, gs::kPsmct32, 3, 3), texa) != pb);
+
+    // Loaded CLUTs stay loaded until explicitly refreshed; animated palette
+    // changes and identical reuploads must behave like the uncached path.
+    const auto indices = upload(0x280, gs::kPsmt8, 16, 16, std::vector<std::uint8_t>(256, 7));
+    auto palette = upload(0x300, gs::kPsmct32, 16, 16, clut256());
+    const auto indexed = tex0(0x280, gs::kPsmt8, 4, 4, 0x300);
+    send(indices, false);
+    send(palette, false);
+    reference.load_clut(indexed);
+    cached.load_clut(indexed);
+    send(indices, true);
+    send(palette, true);
+    compare(indexed);
+    palette.data[7 * 4] ^= 0xff;
+    send(palette, false);
+    compare(indexed);
+    reference.load_clut(indexed);
+    cached.load_clut(indexed);
+    compare(indexed);
+    send(palette, true);
+    compare(indexed);
+
+    // Every shape/addressing field participates in reuse, not just bytes.
+    auto shape = a;
+    for (unsigned field = 0; field < 6; ++field) {
+        shape = a;
+        switch (field) {
+            case 0:
+                shape.dbw = 2;
+                break;
+            case 1:
+                shape.dpsm = gs::kPsmct16;
+                break;
+            case 2:
+                shape.x = 1;
+                break;
+            case 3:
+                shape.y = 1;
+                break;
+            case 4:
+                shape.width = 32;
+                break;
+            case 5:
+                shape.height = 16;
+                break;
+        }
+        send(shape, false);
+        send(shape, true);
+        send(a, false);
+    }
+}
+
+void particle_pass_cache() {
+    // A pass sees immutable RAM. Equal pixels with different palettes and
+    // equal palettes with different pixels must resolve independently.
+    std::vector<std::uint8_t> memory(8192, 0);
+    memory[1024] = 7;
+    memory[2048] = 11;
+    memory[3072] = 19;
+    unsigned calls = 0;
+    const auto decode = [&](std::uint32_t pixels, std::uint32_t palette) {
+        ++calls;
+        if (!pixels || !palette || pixels + 1024 > memory.size()
+            || palette + 1024 > memory.size()) {
+            return 0u;
+        }
+        return std::uint32_t(
+            hash_bytes(memory.data() + pixels, 1024) ^ hash_bytes(memory.data() + palette, 1024)
+        );
+    };
+    const std::pair<std::uint32_t, std::uint32_t> pairs[] = {
+        {1024, 2048}, {1024, 3072}, {2048, 3072}, {1024, 2048}, {0, 2048}, {0, 2048}, {8000, 2048}
+    };
+    std::uint32_t previous = 0;
+    for (unsigned pass = 0; pass < 3; ++pass) {
+        openrac::game::ParticleTextureCache cache;
+        const unsigned before = calls;
+        std::vector<std::uint32_t> actual;
+        for (const auto& [pixels, palette] : pairs) {
+            actual.push_back(cache.resolve(pixels, palette, decode));
+        }
+        CHECK(calls - before == 5);
+        for (std::size_t i = 0; i < actual.size(); ++i) {
+            CHECK(actual[i] == decode(pairs[i].first, pairs[i].second));
+        }
+        if (pass) {
+            CHECK(actual[0] != previous);
+        }
+        previous = actual[0];
+        // Animated CLUT on pass two; pixels/address reuse on pass three.
+        memory[pass == 0 ? 2048 : 1024] ^= 0x55;
+    }
+}
+
 int main() {
     direct_colour();
     palettes();
@@ -545,5 +673,7 @@ int main() {
     absurd_sizes();
     long_session();
     inside_and_loaded();
+    cached_uploads();
+    particle_pass_cache();
     return openrac::test::result();
 }

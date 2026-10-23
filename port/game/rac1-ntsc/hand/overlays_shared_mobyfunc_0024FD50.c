@@ -24,6 +24,7 @@
  * some of the game's assembly passes values in other registers, which C cannot say.
  */
 #include "types.h"
+extern void openrac_game_moby_colour(unsigned int object, unsigned int colour);
 
 /*
  * Packs three values above the low 32 bits of the 64-bit word at 0x38 of a record: a from bit
@@ -37,5 +38,6 @@ unsigned long FUN_L00_002502f0(char *record, unsigned long a, unsigned long b, u
     value |= b << 40;
     value |= c << 48;
     *word = value;
+    openrac_game_moby_colour((unsigned int)record, (unsigned int)(value >> 32));
     return value;
 }

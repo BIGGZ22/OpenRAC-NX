@@ -25,6 +25,16 @@ as do the grain type names in `port/assets/sound/sound_bank.h`.
 OpenRAC. The launcher lists its own notices in
 [launcher/THIRD_PARTY_NOTICES.md](launcher/THIRD_PARTY_NOTICES.md).
 
+## Embree
+
+The optional offline probe baker (`port/enhanced/lighting/bake.cpp`, enabled with
+`OPENRAC_PROBE_BAKER`) uses [Embree](https://github.com/RenderKit/embree),
+Apache License 2.0, Copyright Intel Corporation. Embree is an external build
+dependency; its source and binaries are not vendored or linked into the game.
+Keep the package's license and notices with any redistribution, including
+those for its bundled dependencies such as oneTBB. The upstream license is
+[LICENSE.txt](https://github.com/RenderKit/embree/blob/v4.4.0/LICENSE.txt).
+
 ## ReRAC
 
 [ReRAC](https://github.com/re-rac/rerac), a native PC port of the US build,

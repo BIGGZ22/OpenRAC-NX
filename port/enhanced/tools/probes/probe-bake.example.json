@@ -1,0 +1,21 @@
+{
+  "version": 1,
+  "sky": "level",
+  "sky_intensity": 1,
+  "sky_weight": 0.7,
+  "sunlight_scale": [1, 1, 1],
+  "terrain_vertex_albedo": true,
+  "light_set": 0,
+  "environment": [0.1, 0.1, 0.1],
+  "rays": 1024,
+  "bounces": 3,
+  "seed": 1,
+  "sparse_spacing": [256, 256, 256],
+  "dense_spacing": [4, 4, 4],
+  "resolution": 6,
+  "ray_bias": 0.002,
+  "distance_exponent": 32,
+  "min_inside_fraction": 0.75,
+  "relocation_iterations": 4,
+  "relocation_max_fraction": 0.45
+}

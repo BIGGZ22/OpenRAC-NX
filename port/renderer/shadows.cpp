@@ -26,6 +26,9 @@ bool ShadowRenderer::init(RenderState&, std::string& error) {
 }
 
 void ShadowRenderer::render(const FrameInput& input, RenderState& state) {
+    if (enhanced_rendering_available() && (input.hero_pixel_shadow || input.sun_pixel_shadow)) {
+        return;
+    }  // modern shadows resolve in mesh.frag
     const auto vertices =
         shadow_volumes(input.shadow_capsules, input.shadow_extrusion, input.shadow_heights);
     if (vertices.empty()) {

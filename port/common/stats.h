@@ -177,6 +177,9 @@ struct GpuHooks {
 void set_gpu_hooks(const GpuHooks& hooks);
 bool gpu_timers();  // hooks are installed
 void gpu_result(std::uint64_t serial, int section, double ms);
+#if defined(OPENRAC_GPU_MARKERS)
+std::string gpu_section_name(std::uint64_t serial, int section);
+#endif
 
 // ---- The dump: one JSON object per frame, one per line (docs/port/DEBUGGING.md) ----
 

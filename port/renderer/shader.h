@@ -39,6 +39,8 @@ public:
         std::string& error
     );
 
+    // Optional compute program; caller checks capabilities before using it.
+    bool build_compute(std::string_view name, std::string_view source, std::string& error);
     void use() const;
 
     // -1 when the program has no such uniform (or the compiler removed it). The driver is asked

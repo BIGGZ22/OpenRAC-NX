@@ -86,8 +86,10 @@ of detail in the class, a draw distance per instance. Mobys: high- and
 low-detail packet counts and a per-class distance table on the scratchpad.
 Occlusion: `BuildOcclVisibility` `func_001F2BC8` and `ParseOcclGrid`
 `func_001F2A38` make a 1,024-bit visibility mask per 4-unit camera cell,
-read by the renderer cores; the occlusion data is not read by the editor
-yet.
+read by the renderer cores. The port exporter preserves this data as
+optional `pvs.json` / `pvs.bin` sidecars. The Vulkan native renderer applies
+the mask to camera terrain, ties and mobys; GL and ES keep their existing
+visibility path. Shadow maps retain independently culled caster lists.
 
 ## 3. The VU1 programs
 

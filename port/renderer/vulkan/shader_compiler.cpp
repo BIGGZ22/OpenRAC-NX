@@ -103,8 +103,14 @@ Stage make_shader(EShLanguage stage, std::string source) {
     glslang::TShader* shader = out.get();
     shader->setStringsWithLengths(&out.text->pointer, &out.text->length, 1);
     shader->setEnvInput(glslang::EShSourceGlsl, stage, glslang::EShClientVulkan, 100);
-    shader->setEnvClient(glslang::EShClientVulkan, glslang::EShTargetVulkan_1_1);
-    shader->setEnvTarget(glslang::EShTargetSpv, glslang::EShTargetSpv_1_3);
+    // Vertex viewport outputs use the Vulkan 1.2 / SPIR-V 1.5 core
+    // capabilities, rather than requiring the older device extension.
+    const bool viewport_output =
+        out.text->source.find("GL_ARB_shader_viewport_layer_array") != std::string::npos;
+    shader->setEnvClient(glslang::EShClientVulkan, viewport_output ? glslang::EShTargetVulkan_1_2
+                                                               : glslang::EShTargetVulkan_1_1);
+    shader->setEnvTarget(glslang::EShTargetSpv, viewport_output ? glslang::EShTargetSpv_1_5
+                                                            : glslang::EShTargetSpv_1_3);
     shader->setEnvInputVulkanRulesRelaxed();
     shader->setGlobalUniformBlockName("gl_DefaultUniformBlock");
     shader->setGlobalUniformSet(0);
@@ -133,16 +139,28 @@ bool check_stage(bool vertex, std::string_view source, std::string& log) {
     return parse(*shader, log);
 }
 
-bool compile_program(std::string_view vertex, std::string_view fragment, CompiledProgram& out, std::string& log) {
+bool check_compute_stage(std::string_view source, std::string& log) {
     initialise();
-    auto vs = make_shader(EShLangVertex, vertex_source(vertex));
-    auto fs = make_shader(EShLangFragment, std::string(fragment));
-    if (!parse(*vs, log) || !parse(*fs, log)) {
-        return false;
-    }
+    auto shader = make_shader(EShLangCompute, std::string(source));
+    return parse(*shader, log);
+}
+
+bool compile_program(std::string_view vertex, std::string_view fragment, CompiledProgram& out, std::string& log,
+                     std::string_view compute) {
+    initialise();
+    Stage vs, fs, cs;
     glslang::TProgram program;
-    program.addShader(vs.get());
-    program.addShader(fs.get());
+    if (compute.empty()) {
+        vs = make_shader(EShLangVertex, vertex_source(vertex));
+        fs = make_shader(EShLangFragment, std::string(fragment));
+        if (!parse(*vs, log) || !parse(*fs, log)) { return false; }
+        program.addShader(vs.get());
+        program.addShader(fs.get());
+    } else {
+        cs = make_shader(EShLangCompute, std::string(compute));
+        if (!parse(*cs, log)) { return false; }
+        program.addShader(cs.get());
+    }
     // Bindings across both stages: a uniform both use has one, the stages' others their own.
     if (!program.link(kMessages)) {
         log += program.getInfoLog();
@@ -150,7 +168,7 @@ bool compile_program(std::string_view vertex, std::string_view fragment, Compile
         return false;
     }
     const std::unique_ptr<glslang::TIoMapper> mapper(glslang::GetGlslIoMapper());
-    glslang::TDefaultGlslIoResolver resolver(*program.getIntermediate(EShLangVertex));
+    glslang::TDefaultGlslIoResolver resolver(*program.getIntermediate(compute.empty() ? EShLangVertex : EShLangCompute));
     if (!program.mapIO(&resolver, mapper.get())) {
         log += program.getInfoLog();
         log += program.getInfoDebugLog();
@@ -165,8 +183,16 @@ bool compile_program(std::string_view vertex, std::string_view fragment, Compile
     options.generateDebugInfo = false;
     options.disableOptimizer = true;
     out = CompiledProgram{};
-    glslang::GlslangToSpv(*program.getIntermediate(EShLangVertex), out.vertex, &logger, &options);
-    glslang::GlslangToSpv(*program.getIntermediate(EShLangFragment), out.fragment, &logger, &options);
+    if (compute.empty()) {
+        glslang::GlslangToSpv(*program.getIntermediate(EShLangVertex), out.vertex, &logger, &options);
+        glslang::GlslangToSpv(*program.getIntermediate(EShLangFragment), out.fragment, &logger, &options);
+    } else {
+        glslang::GlslangToSpv(*program.getIntermediate(EShLangCompute), out.compute, &logger, &options);
+    }
+    for (int i = 0; i < program.getNumBufferBlocks(); ++i) {
+        const auto& b = program.getBufferBlock(i);
+        out.storage.push_back({b.name, b.getBinding(), b.size});
+    }
 
     int default_index = -1;
     for (int i = 0; i < program.getNumUniformBlocks(); ++i) {
@@ -202,7 +228,7 @@ bool compile_program(std::string_view vertex, std::string_view fragment, Compile
         }
         out.uniforms.push_back(std::move(pu));
     }
-    for (int i = 0; i < program.getNumPipeInputs(); ++i) {
+    for (int i = 0; compute.empty() && i < program.getNumPipeInputs(); ++i) {
         const glslang::TObjectReflection& a = program.getPipeInput(i);
         // A matrix takes a location for each column, as GL's attributes do.
         int columns = 1;

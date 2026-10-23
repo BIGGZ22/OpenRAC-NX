@@ -120,7 +120,7 @@ class WriterTests(unittest.TestCase):
             stats = self.export(Path(temp))
             level = Path(temp) / "level_03"
             files = sorted(p.relative_to(level).as_posix() for p in level.rglob("*") if p.is_file())
-            self.assertEqual(files, ["manifest.json", "mobys/moby_7.glb", "placements.json", "shrubs/shrub_6.glb",
+            self.assertEqual(files, ["bake-inputs/gameplay.bin", "manifest.json", "mobys/moby_7.glb", "placements.json", "shrubs/shrub_6.glb",
                                      "sky.glb", "sky.png", "terrain.glb", "textures/moby_0004.png",
                                      "textures/shrub_0002.png", "textures/sky_0000.png",
                                      "textures/terrain_0000.png", "textures/tie_0001.png", "ties/tie_5.glb"])

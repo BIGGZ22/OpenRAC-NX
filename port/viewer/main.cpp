@@ -353,6 +353,14 @@ int run(const Options& options) {
             input.camera.position = game->camera_position;
         }
         input.frame = index;
+        scene.update_probe_regions(input.camera, seconds);
+        input.after_world_depth =
+            scene.compute_probe_selection()
+                ? std::function<void(unsigned, int, int)>([&](unsigned depth, int width, int height
+                                                          ) {
+                      scene.select_visible_probe_regions(depth, input.camera, width, height);
+                  })
+                : std::function<void(unsigned, int, int)>{};
         input.seconds = static_cast<double>(now - start) / 1e9;
         renderer.render(input, {frame.id(), width, height});
         frame.blit_to(0, width, height);

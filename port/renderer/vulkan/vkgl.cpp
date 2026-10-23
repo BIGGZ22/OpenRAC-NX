@@ -12,6 +12,7 @@
 #include <algorithm>
 #include <array>
 #include <atomic>
+#include <bit>
 #include <chrono>
 #include <cstdint>
 #include <cstdio>
@@ -22,16 +23,19 @@
 #include <fstream>
 #include <functional>
 #include <memory>
+#include <regex>
+#include <stdexcept>
 #include <string>
 #include <string_view>
 #include <unordered_map>
 #include <utility>
 #include <vector>
+#include <volk.h>
 
 #include <SDL3/SDL.h>
 #include <SDL3/SDL_vulkan.h>
-#include <volk.h>
 
+#include "common/float_encoding.h"
 #include "common/log.h"
 #include "common/stats.h"
 #include "renderer/gl.h"
@@ -71,9 +75,13 @@ constexpr GLenum kGlDepthStencil = 0x84F9;
 constexpr GLenum kGlRed = 0x1903;
 constexpr GLenum kGlR8 = 0x8229;
 constexpr GLenum kGlRgba16f = 0x881A;
+constexpr GLenum kGlR11fG11fB10f = 0x8C3A;
+constexpr GLenum kGlRg32f = 0x8230;
 constexpr GLenum kGlUnpackRowLength = 0x0CF2;
 constexpr GLenum kGlNearestMipmapLinear = 0x2702;
 constexpr GLenum kGlMirroredRepeat = 0x8370;
+constexpr GLenum kGlIntSamplerBuffer = 0x8DD0;
+constexpr GLenum kGlUnsignedSamplerBuffer = 0x8DD8;
 
 // ---- The device ----
 
@@ -84,7 +92,100 @@ struct Chunk {
     VkDeviceSize size = 0;
 };
 
+// Bounded, fence-owned pages. Growing a frame adds a page rather than moving
+// buffers already referenced by recorded draws. Reuse only after slot retirement.
+constexpr unsigned kGpuPageInstances = 32768, kGpuPageGroups = 4096, kGpuPageDraws = 32768;
+constexpr unsigned kGpuInputBytes = 8u << 20;
+
+constexpr unsigned kMaterialDraws = 32768;
+constexpr unsigned kMaterialWords = 20;
+constexpr unsigned kMaterialBytes = kMaterialWords * sizeof(std::uint32_t);
+
+template <class T, std::size_t N>
+struct ArrayHash {
+    std::size_t operator()(const std::array<T, N>& key) const {
+        std::size_t hash = 1469598103934665603ull;
+        for (auto value : key) {
+            hash = (hash ^ std::size_t(value)) * 1099511628211ull;
+        }
+        return hash;
+    }
+};
+
+struct MaterialPage {
+    Chunk data;
+    VkDescriptorPool pool = VK_NULL_HANDLE;
+    VkDescriptorSet set = VK_NULL_HANDLE;
+    std::unordered_map<std::array<std::uint64_t, 2>, unsigned, ArrayHash<std::uint64_t, 2>>
+        textures;
+    std::unordered_map<std::array<std::uint32_t, kMaterialWords>, unsigned, ArrayHash<std::uint32_t, kMaterialWords>>
+        materials;
+    unsigned draws = 0;
+};
+
+struct GpuPage {
+    Chunk input, output, arguments, readback;
+    std::vector<std::array<std::uint32_t, 4>> groups, commands;
+    std::vector<std::uint32_t> payload;
+    unsigned instances = 0;
+    VkDescriptorSet descriptors = VK_NULL_HANDLE;
+};
+
+struct GpuFrame {
+    std::vector<GpuPage> pages;
+    unsigned used = 0;
+    bool counters = false;
+    std::uint64_t recording = 0, reported = 0;
+};
+
+struct GpuEngine {
+    GpuDrawCounters completed;
+    std::uint64_t counter_floor = 0;
+
+    struct Bindings {
+        VkPipeline pipeline = VK_NULL_HANDLE;
+        VkDescriptorSet descriptors = VK_NULL_HANDLE;
+        VkDescriptorSet materials = VK_NULL_HANDLE;
+        std::uint32_t dynamic_offset = 0, inputs = 0;
+        std::array<VkBuffer, kAttributes> vertices{};
+        std::array<VkDeviceSize, kAttributes> offsets{};
+        VkBuffer index = VK_NULL_HANDLE;
+        VkDeviceSize index_offset = 0;
+        VkIndexType index_type = VK_INDEX_TYPE_UINT32;
+        std::array<int, 4> viewport{}, scissor{};
+        std::array<float, 4> blend{};
+        std::array<std::uint32_t, 3> stencil{};
+        bool operator==(const Bindings&) const = default;
+    };
+
+    Bindings pending_bindings;
+    VkBuffer pending_arguments = VK_NULL_HANDLE;
+    VkDeviceSize pending_offset = 0;
+    unsigned pending_count = 0, pending_material_base = 0;
+    VkDescriptorSetLayout set_layout = VK_NULL_HANDLE;
+    VkPipelineLayout layout = VK_NULL_HANDLE;
+    VkPipeline compact = VK_NULL_HANDLE, arguments = VK_NULL_HANDLE, summary = VK_NULL_HANDLE;
+    bool failed = false, timing_upload = false;
+    std::uint64_t batches = 0, candidates = 0, indirect = 0, indirect_calls = 0, merged = 0;
+    std::array<std::uint64_t, 10> batch_breaks{};
+};
+
 struct Frame {
+    GpuFrame gpu;
+    std::vector<MaterialPage> material_pages;
+    unsigned material_pages_used = 0;
+
+    struct Timing {
+        std::uint64_t serial;
+        int section;
+        std::uint32_t first;
+        bool complete = false, reported = false;
+    };
+
+    VkQueryPool timestamps = VK_NULL_HANDLE;
+    std::uint32_t timestamp_used = 0;
+    int active_timing = -1;
+    std::vector<Timing> timings;
     VkCommandPool pool = VK_NULL_HANDLE;
     VkCommandBuffer upload = VK_NULL_HANDLE;
     VkCommandBuffer main = VK_NULL_HANDLE;
@@ -141,6 +242,7 @@ struct Renderbuffer {
 };
 
 struct Buffer {
+    bool storage = false;  // GPU-written storage must keep one allocation across frames.
     std::vector<std::uint8_t> data;
     std::uint64_t version = 1;
     std::uint64_t changed_frame = 0;
@@ -187,14 +289,36 @@ struct Shader {
     std::string log;
 };
 
+struct DescriptorKeyHash {
+    std::size_t operator()(const std::vector<std::uint64_t>& key) const {
+        std::size_t hash = 0;
+        for (auto value : key) {
+            hash ^= std::hash<std::uint64_t>{}(value) + 0x9e3779b9u + (hash << 6) + (hash >> 2);
+        }
+        return hash;
+    }
+};
+
+bool reuse_uniforms() {
+    static const bool& off = stats::probe(
+        "OPENRAC_VK_UNIFORM_REUSE_OFF",
+        "Profiling reference: upload repeated uniforms and recreate descriptors"
+    );
+    return !off;
+}
+
 struct Program {
     std::vector<GLuint> shaders;
     bool linked = false;
     std::string log;
     std::uint64_t serial = 0;  // a new one each link, for the pipelines' keys
     CompiledProgram compiled;
+    bool gpu_materials = false;
+    unsigned material_start = 0;
     VkShaderModule vertex = VK_NULL_HANDLE;
     VkShaderModule fragment = VK_NULL_HANDLE;
+    VkShaderModule compute = VK_NULL_HANDLE;
+    VkPipeline compute_pipeline = VK_NULL_HANDLE;
     VkDescriptorSetLayout set_layout = VK_NULL_HANDLE;
     VkPipelineLayout layout = VK_NULL_HANDLE;
     std::vector<std::uint8_t> uniforms;  // the default block, std140
@@ -204,6 +328,10 @@ struct Program {
     VkBuffer uniforms_buffer = VK_NULL_HANDLE;
     VkDeviceSize uniforms_offset = 0;
     std::uint64_t uniforms_frame = 0;
+    bool dynamic_uniforms = false;
+    // At most 256 resource combinations per program, valid only this frame.
+    std::unordered_map<std::vector<std::uint64_t>, VkDescriptorSet, DescriptorKeyHash>
+        descriptor_sets;
     std::vector<std::uint64_t> last_key;  // what the last descriptor set held
     VkDescriptorSet last_set = VK_NULL_HANDLE;
     std::uint64_t last_set_frame = 0;
@@ -267,6 +395,8 @@ struct State {
     GLuint uniform_buffer = 0;
     GLuint texture_buffer = 0;
     std::array<GLuint, kUniformBindings> uniform_bindings{};
+    std::array<GLuint, kUniformBindings> storage_bindings{};
+    GLuint storage_buffer = 0;
     GLuint program = 0;
     GLuint draw_framebuffer = 0;
     GLuint read_framebuffer = 0;
@@ -295,6 +425,7 @@ struct Names {
 // measure of whether a path of the renderer should be written for Vulkan itself.
 struct Measures {
     std::uint64_t draws = 0;
+    std::uint64_t native_draws = 0;
     std::uint64_t pipelines = 0;   // made this frame (each a compile on the driver)
     std::uint64_t ring_bytes = 0;  // uploaded through the frame's ring
     std::uint64_t flushes = 0;     // waits for the GPU inside the frame (glReadPixels)
@@ -310,17 +441,25 @@ double seconds_since(Clock::time_point start) {
 }
 
 struct Context {
+    GpuEngine gpu;
+    bool bindless_supported = false;
+    unsigned material_texture_capacity = 0;
+    VkDescriptorSetLayout material_layout = VK_NULL_HANDLE;
+    std::uint64_t material_draws = 0, material_records = 0, material_textures = 0;
     bool open = false;
     Measures measures;
+    SubmissionCounters submission, reported_submission;
     SDL_Window* window = nullptr;
     VkInstance instance = VK_NULL_HANDLE;
     VkDebugUtilsMessengerEXT messenger = VK_NULL_HANDLE;
     VkPhysicalDevice physical = VK_NULL_HANDLE;
     VkPhysicalDeviceProperties properties{};
+    std::uint32_t timestamp_bits = 0;
     VkPhysicalDeviceFeatures features{};
     VkDevice device = VK_NULL_HANDLE;
     std::uint32_t family = 0;
     VkQueue queue = VK_NULL_HANDLE;
+    std::atomic_uint64_t validation_errors = 0;
     VmaAllocator allocator = nullptr;
     VkSurfaceKHR surface = VK_NULL_HANDLE;
     VkSwapchainKHR swapchain = VK_NULL_HANDLE;
@@ -366,10 +505,12 @@ struct Context {
     ImagePtr dummy_image;
     VkBuffer dummy_buffer = VK_NULL_HANDLE;  // zeros, and the default attributes' (0, 0, 0, 1)
     VmaAllocation dummy_allocation = nullptr;
-    VkBufferView dummy_views[3] = {};  // R32UI, RGBA32UI, RGBA32F
+    VkBufferView dummy_views[4] = {};  // R32UI, RGBA32UI, RGBA32F, RGBA32I
 
     std::string device_name, driver_version, api_version, gl_renderer, gl_version;
     bool software = false;
+    bool viewport_index_supported = false;
+    std::vector<std::array<int, 4>> indexed_viewports;
     GLenum error = GL_NO_ERROR;
 };
 
@@ -391,6 +532,27 @@ bool check(VkResult result, const char* what) {
 
 Frame& frame() {
     return g->frames[static_cast<std::size_t>(g->frame)];
+}
+
+Chunk gpu_buffer(VkDeviceSize size, VkBufferUsageFlags usage, bool mapped);
+void material_reset(Frame& f);
+void material_release();
+void gpu_record();
+void gpu_reset(Frame& f);
+void gpu_release();
+void gpu_results(Frame& f);
+
+void gpu_flush_draws() {
+    auto& gpu = g->gpu;
+    if (!gpu.pending_count) {
+        return;
+    }
+    vkCmdDrawIndexedIndirect(
+        frame().main, gpu.pending_arguments, gpu.pending_offset, gpu.pending_count, 20
+    );
+    ++g->measures.native_draws;
+    ++gpu.indirect_calls;
+    gpu.pending_count = 0;
 }
 
 void defer(std::function<void()> f) {
@@ -491,6 +653,7 @@ VkCommandBuffer upload_cmd() {
 }
 
 void end_rendering() {
+    gpu_flush_draws();
     if (g->rendering) {
         vkCmdEndRendering(frame().main);
         g->rendering = false;
@@ -528,12 +691,108 @@ void barrier(VkCommandBuffer cmd, Image& image, VkImageLayout to) {
 
 void begin_buffers() {
     Frame& f = frame();
+    gpu_reset(f);
+    material_reset(f);
     VkCommandBufferBeginInfo begin{VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO};
     begin.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
     vkBeginCommandBuffer(f.upload, &begin);
     vkBeginCommandBuffer(f.main, &begin);
+    if (f.timestamps != VK_NULL_HANDLE && f.timestamp_used == 0) {
+        vkCmdResetQueryPool(f.upload, f.timestamps, 0, 512);
+    }
     g->upload_used = false;
     ++g->recording;
+}
+
+// Native timestamp pairs back the existing non-nesting stats::Scope API.
+// Read only after the frame-slot fence signals; profiling never waits on a
+// query or adds per-pass submissions. Slots also survive readback flushes.
+bool timing_begin(std::uint64_t serial, int section) {
+    if (!g || !g->timestamp_bits) {
+        return false;
+    }
+    gpu_flush_draws();
+    auto& f = frame();
+    if (f.active_timing >= 0 || f.timestamp_used + 2 > 512) {
+        return false;
+    }
+    f.active_timing = static_cast<int>(f.timings.size());
+    f.timings.push_back({serial, section, f.timestamp_used});
+#if defined(OPENRAC_GPU_MARKERS)
+    if (std::getenv("OPENRAC_GPU_MARKERS") && vkCmdBeginDebugUtilsLabelEXT) {
+        const auto name = stats::gpu_section_name(serial, section);
+        VkDebugUtilsLabelEXT label{VK_STRUCTURE_TYPE_DEBUG_UTILS_LABEL_EXT};
+        label.pLabelName = name.c_str();
+        label.color[0] = 0.25f; label.color[1] = 0.6f; label.color[2] = 0.9f; label.color[3] = 1;
+        vkCmdBeginDebugUtilsLabelEXT(g->gpu.timing_upload ? f.upload : f.main, &label);
+    }
+#endif
+    // Bound both ends at command completion. A TOP start followed by a
+    // BOTTOM end includes earlier in-flight work, so adjacent scopes can
+    // overlap and their sum inflates when a pass is split into subpasses.
+    // This measures completion intervals, without serialising the passes.
+    vkCmdWriteTimestamp(
+        g->gpu.timing_upload ? f.upload : f.main,
+        VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT,
+        f.timestamps,
+        f.timestamp_used
+    );
+    f.timestamp_used += 2;
+    return true;
+}
+
+void timing_end() {
+    if (!g) {
+        return;
+    }
+    gpu_flush_draws();
+    auto& f = frame();
+    if (f.active_timing < 0) {
+        return;
+    }
+    auto& timing = f.timings[static_cast<std::size_t>(f.active_timing)];
+    vkCmdWriteTimestamp(
+        g->gpu.timing_upload ? f.upload : f.main,
+        VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT,
+        f.timestamps,
+        timing.first + 1
+    );
+#if defined(OPENRAC_GPU_MARKERS)
+    if (std::getenv("OPENRAC_GPU_MARKERS") && vkCmdEndDebugUtilsLabelEXT) {
+        vkCmdEndDebugUtilsLabelEXT(g->gpu.timing_upload ? f.upload : f.main);
+    }
+#endif
+    timing.complete = true;
+    f.active_timing = -1;
+}
+
+void timing_results(Frame& f) {
+    gpu_results(f);
+    for (auto& timing : f.timings) {
+        if (!timing.complete || timing.reported) {
+            continue;
+        }
+        std::uint64_t values[2]{};
+        if (vkGetQueryPoolResults(
+                g->device,
+                f.timestamps,
+                timing.first,
+                2,
+                sizeof(values),
+                values,
+                sizeof(std::uint64_t),
+                VK_QUERY_RESULT_64_BIT
+            )
+            == VK_SUCCESS) {
+            const auto mask =
+                g->timestamp_bits == 64 ? UINT64_MAX : (std::uint64_t{1} << g->timestamp_bits) - 1;
+            const double ticks = static_cast<double>((values[1] - values[0]) & mask);
+            stats::gpu_result(
+                timing.serial, timing.section, ticks * g->properties.limits.timestampPeriod / 1e6
+            );
+            timing.reported = true;
+        }
+    }
 }
 
 // Ends both command buffers and submits them, `upload` first; `wait` waits for them to finish
@@ -541,12 +800,23 @@ void begin_buffers() {
 void submit(VkSemaphore wait_semaphore, VkSemaphore signal, bool wait) {
     end_rendering();
     Frame& f = frame();
+    gpu_record();
     // What `upload` did is seen by all that `main` does.
     VkMemoryBarrier m{VK_STRUCTURE_TYPE_MEMORY_BARRIER};
     m.srcAccessMask = VK_ACCESS_MEMORY_WRITE_BIT;
     m.dstAccessMask = VK_ACCESS_MEMORY_READ_BIT | VK_ACCESS_MEMORY_WRITE_BIT;
-    vkCmdPipelineBarrier(f.upload, VK_PIPELINE_STAGE_ALL_COMMANDS_BIT, VK_PIPELINE_STAGE_ALL_COMMANDS_BIT, 0, 1, &m, 0,
-                         nullptr, 0, nullptr);
+    vkCmdPipelineBarrier(
+        f.upload,
+        VK_PIPELINE_STAGE_ALL_COMMANDS_BIT,
+        VK_PIPELINE_STAGE_ALL_COMMANDS_BIT,
+        0,
+        1,
+        &m,
+        0,
+        nullptr,
+        0,
+        nullptr
+    );
     vkEndCommandBuffer(f.upload);
     vkEndCommandBuffer(f.main);
     const VkCommandBuffer buffers[] = {f.upload, f.main};
@@ -568,6 +838,7 @@ void submit(VkSemaphore wait_semaphore, VkSemaphore signal, bool wait) {
     f.submitted = true;
     if (wait) {
         vkWaitForFences(g->device, 1, &f.fence, VK_TRUE, UINT64_MAX);
+        timing_results(f);
         vkResetCommandPool(g->device, f.pool, 0);
         begin_buffers();
     }
@@ -609,6 +880,10 @@ Format format_of(GLenum internal) {
         case wgl::GL_RGBA32UI: return {VK_FORMAT_R32G32B32A32_UINT, VK_IMAGE_ASPECT_COLOR_BIT, 16};
         case wgl::GL_RGBA32F: return {VK_FORMAT_R32G32B32A32_SFLOAT, VK_IMAGE_ASPECT_COLOR_BIT, 16};
         case kGlRgba16f: return {VK_FORMAT_R16G16B16A16_SFLOAT, VK_IMAGE_ASPECT_COLOR_BIT, 8};
+        case kGlR11fG11fB10f:
+            return {VK_FORMAT_B10G11R11_UFLOAT_PACK32, VK_IMAGE_ASPECT_COLOR_BIT, 4};
+        case kGlRg32f:
+            return {VK_FORMAT_R32G32_SFLOAT, VK_IMAGE_ASPECT_COLOR_BIT, 8};
         case GL_DEPTH_COMPONENT:
         case GL_DEPTH_COMPONENT24:
         case GL_DEPTH_COMPONENT32F: return {depth_only_format(), VK_IMAGE_ASPECT_DEPTH_BIT, 4};
@@ -712,7 +987,11 @@ VkImageView sample_view(Image& image, int base, int top) {
 // Pixels as the GL call gave them (format, type, the unpack alignment and row length) into the
 // ring, as the image's format lays them out, tightly.
 Slice stage_pixels(const Format& to, int width, int height, GLenum format, GLenum type, const void* pixels) {
+    const bool float_rgba = format == GL_RGBA && type == GL_FLOAT;
     int from_bytes = to.bytes;
+    if (float_rgba) {
+        from_bytes = 16;
+    }
     if (format == GL_RGB && type == GL_UNSIGNED_BYTE) {
         from_bytes = 3;
     }
@@ -729,7 +1008,28 @@ Slice stage_pixels(const Format& to, int width, int height, GLenum format, GLenu
     for (int y = 0; y < height; ++y) {
         const std::uint8_t* in = src + pitch * static_cast<std::size_t>(y);
         std::uint8_t* out = s.data + row * static_cast<std::size_t>(y);
-        if (from_bytes == 3 && to.bytes == 4) {
+        if (float_rgba
+            && (to.vk == VK_FORMAT_B10G11R11_UFLOAT_PACK32 || to.vk == VK_FORMAT_R32G32_SFLOAT
+                || to.vk == VK_FORMAT_R16G16B16A16_SFLOAT)) {
+            for (int x = 0; x < width; ++x) {
+                float rgba[4];
+                std::memcpy(rgba, in + x * 16, sizeof rgba);
+                if (to.vk == VK_FORMAT_B10G11R11_UFLOAT_PACK32) {
+                    const std::uint32_t packed = float_encoding::pack_small_float(rgba[0], 6, false)
+                                                 | (float_encoding::pack_small_float(rgba[1], 6, false) << 11)
+                                                 | (float_encoding::pack_small_float(rgba[2], 5, false) << 22);
+                    std::memcpy(out + x * 4, &packed, sizeof packed);
+                } else if (to.vk == VK_FORMAT_R32G32_SFLOAT) {
+                    std::memcpy(out + x * 8, rgba, sizeof(float) * 2);
+                } else {
+                    std::uint16_t packed[4];
+                    for (unsigned c = 0; c < 4; ++c) {
+                        packed[c] = static_cast<std::uint16_t>(float_encoding::pack_small_float(rgba[c], 10, true));
+                    }
+                    std::memcpy(out + x * 8, packed, sizeof packed);
+                }
+            }
+        } else if (from_bytes == 3 && to.bytes == 4) {
             for (int x = 0; x < width; ++x) {
                 out[x * 4 + 0] = in[x * 3 + 0];
                 out[x * 4 + 1] = in[x * 3 + 1];
@@ -902,11 +1202,12 @@ BufferRef resolve(Buffer& b, bool persistent = true) {
         return {b.gpu, b.gpu_offset, size};
     }
     // Unchanged for a few frames: a copy of its own, which stays where it is.
-    if (persistent && g->frame_count >= b.changed_frame + 3 && size >= 4096) {
+    if (b.storage || (persistent && g->frame_count >= b.changed_frame + 3 && size >= 4096)) {
         VkBufferCreateInfo info{VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO};
         info.size = size;
         info.usage = VK_BUFFER_USAGE_VERTEX_BUFFER_BIT | VK_BUFFER_USAGE_INDEX_BUFFER_BIT
-                     | VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT | VK_BUFFER_USAGE_UNIFORM_TEXEL_BUFFER_BIT;
+                     | VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT | VK_BUFFER_USAGE_UNIFORM_TEXEL_BUFFER_BIT
+                     | VK_BUFFER_USAGE_STORAGE_BUFFER_BIT;
         VmaAllocationCreateInfo alloc{};
         alloc.usage = VMA_MEMORY_USAGE_AUTO_PREFER_DEVICE;
         alloc.flags = VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT | VMA_ALLOCATION_CREATE_MAPPED_BIT;
@@ -942,22 +1243,22 @@ void forget_views(Buffer& b) {
     b.views.clear();
 }
 
-VkBufferView texel_view(GLuint name, GLenum gl_format) {
+VkBufferView texel_view(GLuint name, GLenum gl_format, VkBufferView fallback) {
     VkFormat format = VK_FORMAT_R32_UINT;
     int texel = 4;
-    int dummy = 0;
     if (gl_format == wgl::GL_RGBA32UI) {
         format = VK_FORMAT_R32G32B32A32_UINT;
         texel = 16;
-        dummy = 1;
     } else if (gl_format == wgl::GL_RGBA32F) {
         format = VK_FORMAT_R32G32B32A32_SFLOAT;
         texel = 16;
-        dummy = 2;
+    } else if (gl_format == GL_RGBA8) {
+        // Compute writes packed UNORM bytes; material shaders read RGBA8.
+        format = VK_FORMAT_R8G8B8A8_UNORM;
     }
     Buffer* b = g->buffers.find(name);
     if (b == nullptr || b->data.size() < static_cast<std::size_t>(texel)) {
-        return g->dummy_views[dummy];
+        return fallback;
     }
     if (b->views_frame != g->frame_count) {
         forget_views(*b);
@@ -973,11 +1274,12 @@ VkBufferView texel_view(GLuint name, GLenum gl_format) {
     info.buffer = r.buffer;
     info.format = format;
     info.offset = r.offset;
-    const VkDeviceSize most = static_cast<VkDeviceSize>(g->properties.limits.maxTexelBufferElements) * texel;
+    const VkDeviceSize most =
+        static_cast<VkDeviceSize>(g->properties.limits.maxTexelBufferElements) * texel;
     info.range = std::min<VkDeviceSize>(r.size / texel * texel, most);
     VkBufferView view = VK_NULL_HANDLE;
     if (!check(vkCreateBufferView(g->device, &info, nullptr, &view), "a buffer view")) {
-        return g->dummy_views[dummy];
+        return fallback;
     }
     b->views.push_back({format, r.buffer, r.offset, view});
     return view;
@@ -1078,6 +1380,7 @@ VkRect2D scissor_rect(const Target& t) {
 }
 
 void clear(GLbitfield mask) {
+    gpu_flush_draws();
     const Target t = target_of(g->state.draw_framebuffer);
     const State& s = g->state;
     Clear c;
@@ -1287,6 +1590,7 @@ struct PipelineKey {
     std::uint32_t stencil, stencil_func, front_ops[3], back_ops[3];
     std::uint32_t colour_format, depth_format, samples;
     std::uint32_t inputs;
+    std::uint32_t viewports;
     Input input[kAttributes];
 };
 
@@ -1338,6 +1642,7 @@ VkPipeline pipeline_for(Program& p, GLenum mode, const Target& t, const Input* i
     }
     k.samples = t.samples;
     k.inputs = count;
+    k.viewports = static_cast<std::uint32_t>(std::max<std::size_t>(1, g->indexed_viewports.size()));
     std::memcpy(k.input, inputs, sizeof(Input) * count);
     std::string key(reinterpret_cast<const char*>(&k), sizeof k);
     if (auto it = g->pipelines.find(key); it != g->pipelines.end()) {
@@ -1365,8 +1670,8 @@ VkPipeline pipeline_for(Program& p, GLenum mode, const Target& t, const Input* i
     assembly.topology = static_cast<VkPrimitiveTopology>(k.topology);
     assembly.primitiveRestartEnable = k.restart;
     VkPipelineViewportStateCreateInfo viewport{VK_STRUCTURE_TYPE_PIPELINE_VIEWPORT_STATE_CREATE_INFO};
-    viewport.viewportCount = 1;
-    viewport.scissorCount = 1;
+    viewport.viewportCount = k.viewports;
+    viewport.scissorCount = k.viewports;
     VkPipelineRasterizationStateCreateInfo raster{VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_STATE_CREATE_INFO};
     raster.polygonMode = k.polygon != 0 ? VK_POLYGON_MODE_LINE : VK_POLYGON_MODE_FILL;
     raster.cullMode = k.cull;
@@ -1434,9 +1739,12 @@ VkPipeline pipeline_for(Program& p, GLenum mode, const Target& t, const Input* i
 // ---- Descriptors ----
 
 VkDescriptorPool new_pool() {
-    const VkDescriptorPoolSize sizes[] = {{VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 4096},
-                                          {VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 4096},
-                                          {VK_DESCRIPTOR_TYPE_UNIFORM_TEXEL_BUFFER, 2048}};
+    const VkDescriptorPoolSize sizes[] =
+        {{VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 4096},
+         {VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC, 4096},
+         {VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 4096},
+         {VK_DESCRIPTOR_TYPE_UNIFORM_TEXEL_BUFFER, 2048},
+         {VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 4096}};
     VkDescriptorPoolCreateInfo info{VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO};
     info.maxSets = 2048;
     info.poolSizeCount = static_cast<std::uint32_t>(std::size(sizes));
@@ -1483,11 +1791,19 @@ Sampled sampled(const Program& p, std::size_t i) {
     Sampled out;
     if (u.kind == SamplerKind::Buffer) {
         Texture* t = g->textures.find(s.unit_buffer[static_cast<std::size_t>(unit)]);
-        out.texels = t != nullptr ? texel_view(t->buffer, t->buffer_format) : g->dummy_views[0];
+        // An absent/incomplete texture must still supply a descriptor with
+        // the shader's numeric type, including uniforms behind disabled paths.
+        const auto fallback = g->dummy_views
+                                  [u.gl_type == kGlUnsignedSamplerBuffer ? 0
+                                   : u.gl_type == kGlIntSamplerBuffer    ? 3
+                                                                         : 2];
+        out.texels = t != nullptr ? texel_view(t->buffer, t->buffer_format, fallback) : fallback;
         return out;
     }
-    Texture* t = g->textures.find(u.kind == SamplerKind::Texture2DArray ? s.unit_array[static_cast<std::size_t>(unit)]
-                                                                        : s.unit_2d[static_cast<std::size_t>(unit)]);
+    Texture* t = g->textures.find(
+        u.kind == SamplerKind::Texture2DArray ? s.unit_array[static_cast<std::size_t>(unit)]
+                                              : s.unit_2d[static_cast<std::size_t>(unit)]
+    );
     Image* image = t != nullptr && t->image ? t->image.get() : g->dummy_image.get();
     SamplerParams params = t != nullptr ? t->params : SamplerParams{};
     if (const SamplerParams* own = g->samplers.find(s.unit_sampler[static_cast<std::size_t>(unit)])) {
@@ -1522,22 +1838,35 @@ VkDescriptorSet descriptors(Program& p, const std::vector<Sampled>& samplers) {
         return VK_NULL_HANDLE;
     }
     const CompiledProgram& c = p.compiled;
+    if (p.last_set_frame != g->frame_count) {
+        // Pools and ring allocations retire together after the frame-slot fence.
+        p.descriptor_sets.clear();
+        p.last_set = VK_NULL_HANDLE;
+    }
     if (c.default_binding >= 0 && (p.uniforms_dirty || p.uniforms_frame != g->frame_count)) {
-        const Slice s = ring_copy(p.uniforms.data(), p.uniforms.size());
+        const Slice s = ring_copy(p.uniforms.data(), static_cast<std::size_t>(c.default_size));
         p.uniforms_buffer = s.buffer;
         p.uniforms_offset = s.offset;
         p.uniforms_frame = g->frame_count;
         p.uniforms_dirty = false;
+        ++g->submission.uniform_uploads;
+        g->submission.uniform_upload_bytes += static_cast<std::size_t>(c.default_size);
     }
     std::vector<BufferRef> blocks;
     blocks.reserve(c.blocks.size());
     for (std::size_t i = 0; i < c.blocks.size(); ++i) {
         blocks.push_back(block_buffer(p.block_bindings[i], c.blocks[i].size));
     }
+    for (const auto& block : c.storage) {
+        auto* b = block.binding >= 0 && block.binding < kUniformBindings
+                      ? g->buffers.find(g->state.storage_bindings[block.binding])
+                      : nullptr;
+        blocks.push_back(b ? resolve(*b) : dummy_buffer_ref());
+    }
     std::vector<std::uint64_t> key;
     key.reserve(4 + blocks.size() * 3 + samplers.size() * 3);
     key.push_back(reinterpret_cast<std::uint64_t>(p.uniforms_buffer));
-    key.push_back(p.uniforms_offset);
+    key.push_back(p.dynamic_uniforms ? 0 : p.uniforms_offset);
     for (const BufferRef& b : blocks) {
         key.push_back(reinterpret_cast<std::uint64_t>(b.buffer));
         key.push_back(b.offset);
@@ -1549,7 +1878,17 @@ VkDescriptorSet descriptors(Program& p, const std::vector<Sampled>& samplers) {
         key.push_back(reinterpret_cast<std::uint64_t>(s.texels));
     }
     if (p.last_set != VK_NULL_HANDLE && p.last_set_frame == g->frame_count && key == p.last_key) {
+        ++g->submission.descriptor_reuses;
         return p.last_set;
+    }
+    if (reuse_uniforms()) {
+        const auto found = p.descriptor_sets.find(key);
+        if (found != p.descriptor_sets.end()) {
+            p.last_key = std::move(key);
+            p.last_set = found->second;
+            ++g->submission.descriptor_reuses;
+            return p.last_set;
+        }
     }
     const VkDescriptorSet set = allocate_set(p.set_layout);
     if (set == VK_NULL_HANDLE) {
@@ -1570,16 +1909,31 @@ VkDescriptorSet descriptors(Program& p, const std::vector<Sampled>& samplers) {
         return writes.back();
     };
     if (c.default_binding >= 0) {
-        buffer_infos.push_back({p.uniforms_buffer, p.uniforms_offset, static_cast<VkDeviceSize>(c.default_size)});
-        write(c.default_binding, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER).pBufferInfo = &buffer_infos.back();
+        buffer_infos.push_back(
+            {p.uniforms_buffer,
+             p.dynamic_uniforms ? 0 : p.uniforms_offset,
+             static_cast<VkDeviceSize>(c.default_size)}
+        );
+        write(
+            c.default_binding,
+            p.dynamic_uniforms ? VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC
+                               : VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER
+        )
+            .pBufferInfo = &buffer_infos.back();
     }
     for (std::size_t i = 0; i < c.blocks.size(); ++i) {
         buffer_infos.push_back({blocks[i].buffer, blocks[i].offset, blocks[i].size});
         write(c.blocks[i].binding, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER).pBufferInfo = &buffer_infos.back();
     }
+    for (std::size_t i = 0; i < c.storage.size(); ++i) {
+        const auto& b = blocks[c.blocks.size() + i];
+        buffer_infos.push_back({b.buffer, b.offset, b.size});
+        write(c.storage[i].binding, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER).pBufferInfo =
+            &buffer_infos.back();
+    }
     std::size_t at = 0;
     for (const ProgramUniform& u : c.uniforms) {
-        if (!u.sampler) {
+        if (!u.sampler || u.binding < 0) {
             continue;
         }
         const Sampled& s = samplers[at++];
@@ -1591,10 +1945,73 @@ VkDescriptorSet descriptors(Program& p, const std::vector<Sampled>& samplers) {
         }
     }
     vkUpdateDescriptorSets(g->device, static_cast<std::uint32_t>(writes.size()), writes.data(), 0, nullptr);
+    ++g->submission.descriptor_sets;
+    if (reuse_uniforms() && p.descriptor_sets.size() < 256) {
+        p.descriptor_sets.emplace(key, set);
+    }
     p.last_key = std::move(key);
     p.last_set = set;
     p.last_set_frame = g->frame_count;
     return set;
+}
+
+void OPENRAC_GLAPI dispatch_compute(GLuint x, GLuint y, GLuint z) {
+    auto* p = g->programs.find(g->state.program);
+    if (!p || !p->linked || !p->compute_pipeline || !x || !y || !z) {
+        return;
+    }
+    end_rendering();
+    std::vector<Sampled> samplers;
+    for (std::size_t i = 0; i < p->compiled.uniforms.size(); ++i) {
+        const auto& u = p->compiled.uniforms[i];
+        if (!u.sampler || u.binding < 0) {
+            continue;
+        }
+        auto sm = sampled(*p, i);
+        if (sm.image) {
+            if (sm.image->layout != VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL) {
+                barrier(frame().main, *sm.image, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
+            }
+            sm.image->touched = g->recording;
+        }
+        samplers.push_back(sm);
+    }
+    const auto set = descriptors(*p, samplers);
+    vkCmdBindPipeline(frame().main, VK_PIPELINE_BIND_POINT_COMPUTE, p->compute_pipeline);
+    const auto dynamic_offset = static_cast<std::uint32_t>(p->uniforms_offset);
+    vkCmdBindDescriptorSets(
+        frame().main,
+        VK_PIPELINE_BIND_POINT_COMPUTE,
+        p->layout,
+        0,
+        1,
+        &set,
+        p->dynamic_uniforms ? 1u : 0u,
+        p->dynamic_uniforms ? &dynamic_offset : nullptr
+    );
+    vkCmdDispatch(frame().main, x, y, z);
+    g->bound_pipeline = VK_NULL_HANDLE;
+}
+
+void OPENRAC_GLAPI memory_barrier(GLbitfield) {
+    end_rendering();
+    VkMemoryBarrier b{VK_STRUCTURE_TYPE_MEMORY_BARRIER};
+    b.srcAccessMask =
+        VK_ACCESS_SHADER_WRITE_BIT | VK_ACCESS_UNIFORM_READ_BIT | VK_ACCESS_SHADER_READ_BIT;
+    b.dstAccessMask =
+        VK_ACCESS_SHADER_READ_BIT | VK_ACCESS_SHADER_WRITE_BIT | VK_ACCESS_UNIFORM_READ_BIT;
+    vkCmdPipelineBarrier(
+        frame().main,
+        VK_PIPELINE_STAGE_ALL_COMMANDS_BIT,
+        VK_PIPELINE_STAGE_ALL_COMMANDS_BIT,
+        0,
+        1,
+        &b,
+        0,
+        nullptr,
+        0,
+        nullptr
+    );
 }
 
 // ---- Draws ----
@@ -1608,8 +2025,19 @@ VertexArray& vertex_array() {
     return g_default_vertex_array;
 }
 
-void draw(GLenum mode, GLsizei count, GLsizei instances, bool indexed, GLenum index_type, std::uintptr_t index_offset,
-          GLint first) {
+#include "gpu_materials.inc"
+
+void draw(
+    GLenum mode,
+    GLsizei count,
+    GLsizei instances,
+    bool indexed,
+    GLenum index_type,
+    std::uintptr_t index_offset,
+    GLint first,
+    GpuPage* gpu_page = nullptr,
+    unsigned gpu_command = 0
+) {
     struct Timed {
         Clock::time_point start = Clock::now();
         ~Timed() {
@@ -1632,7 +2060,7 @@ void draw(GLenum mode, GLsizei count, GLsizei instances, bool indexed, GLenum in
     // What it samples, in the layout for sampling: moved before the drawing begins.
     std::vector<Sampled> samplers;
     for (std::size_t i = 0; i < p->compiled.uniforms.size(); ++i) {
-        if (p->compiled.uniforms[i].sampler) {
+        if (p->compiled.uniforms[i].sampler && p->compiled.uniforms[i].binding >= 0) {
             samplers.push_back(sampled(*p, i));
         }
     }
@@ -1675,7 +2103,9 @@ void draw(GLenum mode, GLsizei count, GLsizei instances, bool indexed, GLenum in
             // Small persistent instance buffers corrupt vertex fetches on the
             // AMD Windows driver. Keep instance data in the frame ring; large
             // per-vertex and index buffers can still use persistent storage.
-            const BufferRef r = resolve(*b, attr.divisor == 0);
+            const BufferRef r = gpu_page && attr.divisor
+                                    ? BufferRef{gpu_page->output.buffer, 0, gpu_page->output.size}
+                                    : resolve(*b, attr.divisor == 0);
             const GLsizei stride = attr.stride != 0 ? attr.stride : attr.size * type_bytes(attr.type);
             inputs[n] = {static_cast<std::uint32_t>(a.location), static_cast<std::uint32_t>(format),
                          static_cast<std::uint32_t>(stride), attr.divisor != 0 ? 1u : 0u};
@@ -1698,6 +2128,7 @@ void draw(GLenum mode, GLsizei count, GLsizei instances, bool indexed, GLenum in
     if (pipeline == VK_NULL_HANDLE) {
         return;
     }
+    const auto material = material_binding(*p, t);
     const VkDescriptorSet set = descriptors(*p, samplers);
     BufferRef index{};
     VkIndexType vk_index = VK_INDEX_TYPE_UINT32;
@@ -1730,34 +2161,133 @@ void draw(GLenum mode, GLsizei count, GLsizei instances, bool indexed, GLenum in
 
     ensure_rendering(t);
     VkCommandBuffer cmd = frame().main;
+    GpuEngine::Bindings gpu_bindings;
+    VkDeviceSize argument_offset = VkDeviceSize(kGpuPageGroups + 5 * gpu_command) * 4;
+    if (gpu_page) {
+        gpu_bindings.pipeline = pipeline;
+        gpu_bindings.descriptors = set;
+        gpu_bindings.materials = material.set;
+        gpu_bindings.dynamic_offset = static_cast<std::uint32_t>(p->uniforms_offset);
+        gpu_bindings.inputs = n;
+        std::copy_n(buffers, n, gpu_bindings.vertices.begin());
+        std::copy_n(offsets, n, gpu_bindings.offsets.begin());
+        gpu_bindings.index = index.buffer;
+        gpu_bindings.index_offset = index.offset;
+        gpu_bindings.index_type = vk_index;
+        std::copy_n(s.viewport, 4, gpu_bindings.viewport.begin());
+        const auto sc = scissor_rect(t);
+        gpu_bindings
+            .scissor = {sc.offset.x, sc.offset.y, int(sc.extent.width), int(sc.extent.height)};
+        std::copy_n(s.blend_colour, 4, gpu_bindings.blend.begin());
+        gpu_bindings.stencil =
+            {static_cast<unsigned>(s.stencil_ref), s.stencil_value_mask, s.stencil_write_mask};
+        auto& pending = g->gpu;
+        if (stats::enabled() && pending.pending_count) {
+            const auto& before = pending.pending_bindings;
+            const auto& after = gpu_bindings;
+            const bool reasons[] =
+                {before.pipeline != after.pipeline,
+                 before.descriptors != after.descriptors,
+                 before.dynamic_offset != after.dynamic_offset,
+                 before.vertices != after.vertices || before.offsets != after.offsets,
+                 before.index != after.index || before.index_offset != after.index_offset,
+                 before.materials != after.materials,
+                 before.viewport != after.viewport || before.scissor != after.scissor,
+                 before.blend != after.blend || before.stencil != after.stencil,
+                 pending.pending_arguments != gpu_page->arguments.buffer
+                     || argument_offset != pending.pending_offset + pending.pending_count * 20,
+                 material.set
+                     && material.draw != pending.pending_material_base + pending.pending_count};
+            for (std::size_t i = 0; i < pending.batch_breaks.size(); ++i) {
+                pending.batch_breaks[i] += reasons[i] ? 1u : 0u;
+            }
+        }
+        if (g->features.multiDrawIndirect && pending.pending_count
+            && pending.pending_count < g->properties.limits.maxDrawIndirectCount
+            && pending.pending_arguments == gpu_page->arguments.buffer
+            && argument_offset == pending.pending_offset + pending.pending_count * 20
+            && pending.pending_bindings == gpu_bindings
+            && (!material.set
+                || material.draw == pending.pending_material_base + pending.pending_count)) {
+            ++pending.pending_count;
+            ++pending.merged;
+            return;
+        }
+    }
+    gpu_flush_draws();
     if (pipeline != g->bound_pipeline) {
         vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline);
         g->bound_pipeline = pipeline;
     }
     if (set != VK_NULL_HANDLE) {
-        vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, p->layout, 0, 1, &set, 0, nullptr);
+        const auto dynamic_offset = static_cast<std::uint32_t>(p->uniforms_offset);
+        vkCmdBindDescriptorSets(
+            cmd,
+            VK_PIPELINE_BIND_POINT_GRAPHICS,
+            p->layout,
+            0,
+            1,
+            &set,
+            p->dynamic_uniforms ? 1u : 0u,
+            p->dynamic_uniforms ? &dynamic_offset : nullptr
+        );
+    }
+    if (material.set) {
+        vkCmdBindDescriptorSets(
+            cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, p->layout, 1, 1, &material.set, 0, nullptr
+        );
+        vkCmdPushConstants(cmd, p->layout, VK_SHADER_STAGE_VERTEX_BIT, 0, 4, &material.draw);
     }
     if (n > 0) {
         vkCmdBindVertexBuffers(cmd, 0, n, buffers, offsets);
     }
     VkViewport viewport{static_cast<float>(s.viewport[0]), static_cast<float>(s.viewport[1]),
                         static_cast<float>(s.viewport[2]), static_cast<float>(s.viewport[3]), 0.0f, 1.0f};
-    vkCmdSetViewport(cmd, 0, 1, &viewport);
     const VkRect2D scissor = scissor_rect(t);
-    vkCmdSetScissor(cmd, 0, 1, &scissor);
+    if (g->indexed_viewports.empty()) {
+        vkCmdSetViewport(cmd, 0, 1, &viewport);
+        vkCmdSetScissor(cmd, 0, 1, &scissor);
+    } else {
+        std::vector<VkViewport> viewports;
+        std::vector<VkRect2D> scissors;
+        for (const auto& r : g->indexed_viewports) {
+            viewports.push_back({float(r[0]), float(r[1]), float(r[2]), float(r[3]), 0, 1});
+            scissors.push_back({{r[0], r[1]}, {unsigned(r[2]), unsigned(r[3])}});
+        }
+        vkCmdSetViewport(cmd, 0, static_cast<std::uint32_t>(viewports.size()), viewports.data());
+        vkCmdSetScissor(cmd, 0, static_cast<std::uint32_t>(scissors.size()), scissors.data());
+    }
     vkCmdSetBlendConstants(cmd, s.blend_colour);
     vkCmdSetStencilReference(cmd, VK_STENCIL_FACE_FRONT_AND_BACK, static_cast<std::uint32_t>(s.stencil_ref));
     vkCmdSetStencilCompareMask(cmd, VK_STENCIL_FACE_FRONT_AND_BACK, s.stencil_value_mask);
     vkCmdSetStencilWriteMask(cmd, VK_STENCIL_FACE_FRONT_AND_BACK, s.stencil_write_mask);
     if (indexed) {
         vkCmdBindIndexBuffer(cmd, index.buffer, index.offset, vk_index);
-        vkCmdDrawIndexed(cmd, static_cast<std::uint32_t>(count), static_cast<std::uint32_t>(instances), first_index, 0,
-                         0);
+        if (gpu_page) {
+            g->gpu.pending_bindings = gpu_bindings;
+            g->gpu.pending_arguments = gpu_page->arguments.buffer;
+            g->gpu.pending_offset = argument_offset;
+            g->gpu.pending_count = 1;
+            g->gpu.pending_material_base = material.draw;
+        } else {
+            vkCmdDrawIndexed(
+                cmd,
+                static_cast<std::uint32_t>(count),
+                static_cast<std::uint32_t>(instances),
+                first_index,
+                0,
+                0
+            );
+            ++g->measures.native_draws;
+        }
     } else {
         vkCmdDraw(cmd, static_cast<std::uint32_t>(count), static_cast<std::uint32_t>(instances),
                   static_cast<std::uint32_t>(first), 0);
+        ++g->measures.native_draws;
     }
 }
+
+#include "gpu_draw.inc"
 
 // ---- The GL functions ----
 
@@ -1798,6 +2328,9 @@ void VKGL get_integerv(GLenum name, GLint* data) {
         case GL_NUM_EXTENSIONS: *data = 0; return;
         case GL_MAJOR_VERSION: *data = 4; return;
         case GL_MINOR_VERSION: *data = 1; return;
+        case 0x90DD:
+            *data = kUniformBindings;
+            return;  // GL_MAX_SHADER_STORAGE_BUFFER_BINDINGS
         case kGlUniformBufferOffsetAlignment: *data = static_cast<GLint>(l.minUniformBufferOffsetAlignment); return;
         case kGlMaxCombinedTextureUnits: *data = kUnits; return;
         case kGlMaxTextureBufferSize: *data = static_cast<GLint>(std::min<std::uint32_t>(l.maxTexelBufferElements, 0x7FFFFFFF)); return;
@@ -2221,11 +2754,18 @@ GLuint* buffer_binding(GLenum target) {
         case GL_ELEMENT_ARRAY_BUFFER: return &vertex_array().elements;
         case wgl::GL_UNIFORM_BUFFER: return &s.uniform_buffer;
         case wgl::GL_TEXTURE_BUFFER: return &s.texture_buffer;
+        case GL_SHADER_STORAGE_BUFFER:
+            return &s.storage_buffer;
         default: return nullptr;
     }
 }
 
 void VKGL bind_buffer(GLenum target, GLuint name) {
+    if (target == GL_SHADER_STORAGE_BUFFER) {
+        if (auto* b = g->buffers.find(name)) {
+            b->storage = true;
+        }
+    }
     if (GLuint* b = buffer_binding(target)) {
         *b = name;
     }
@@ -2354,7 +2894,9 @@ void VKGL shader_source(GLuint name, GLsizei count, const GLchar* const* strings
 void VKGL compile_shader(GLuint name) {
     if (Shader* sh = g->shaders.find(name)) {
         sh->log.clear();
-        sh->compiled = check_stage(sh->type == GL_VERTEX_SHADER, sh->source, sh->log);
+        sh->compiled = sh->type == GL_COMPUTE_SHADER
+                           ? check_compute_stage(sh->source, sh->log)
+                           : check_stage(sh->type == GL_VERTEX_SHADER, sh->source, sh->log);
     }
 }
 
@@ -2406,9 +2948,16 @@ void VKGL bind_attrib_location(GLuint, GLuint, const GLchar*) {
 }
 
 void release_program(Program& p) {
-    defer([vertex = p.vertex, fragment = p.fragment, set_layout = p.set_layout, layout = p.layout] {
+    defer([vertex = p.vertex,
+           fragment = p.fragment,
+           compute = p.compute,
+           pipeline = p.compute_pipeline,
+           set_layout = p.set_layout,
+           layout = p.layout] {
         vkDestroyShaderModule(g->device, vertex, nullptr);
         vkDestroyShaderModule(g->device, fragment, nullptr);
+        vkDestroyShaderModule(g->device, compute, nullptr);
+        vkDestroyPipeline(g->device, pipeline, nullptr);
         vkDestroyPipelineLayout(g->device, layout, nullptr);
         vkDestroyDescriptorSetLayout(g->device, set_layout, nullptr);
     });
@@ -2425,6 +2974,8 @@ void release_program(Program& p) {
         }
     }
     p.vertex = p.fragment = VK_NULL_HANDLE;
+    p.compute = VK_NULL_HANDLE;
+    p.compute_pipeline = VK_NULL_HANDLE;
     p.set_layout = VK_NULL_HANDLE;
     p.layout = VK_NULL_HANDLE;
 }
@@ -2443,10 +2994,12 @@ void VKGL link_program(GLuint name) {
     if (p == nullptr) {
         return;
     }
-    std::string vs, fs;
+    std::string vs, fs, cs;
     for (GLuint s : p->shaders) {
         if (Shader* sh = g->shaders.find(s)) {
-            (sh->type == GL_VERTEX_SHADER ? vs : fs) = sh->source;
+            (sh->type == GL_VERTEX_SHADER    ? vs
+             : sh->type == GL_COMPUTE_SHADER ? cs
+                                             : fs) = sh->source;
         }
     }
     if (p->serial != 0) {
@@ -2455,26 +3008,45 @@ void VKGL link_program(GLuint name) {
     p->log.clear();
     p->linked = false;
     p->serial = ++g->program_serial;
-    if (!compile_program(vs, fs, p->compiled, p->log)) {
+    if (!compile_program(vs, fs, p->compiled, p->log, cs)) {
+        return;
+    }
+    if (!material_program(*p, vs, fs)) {
         return;
     }
     const CompiledProgram& c = p->compiled;
-    p->vertex = module_of(c.vertex);
-    p->fragment = module_of(c.fragment);
+    if (!c.compute.empty()) {
+        p->compute = module_of(c.compute);
+    } else {
+        p->vertex = module_of(c.vertex);
+        p->fragment = module_of(c.fragment);
+    }
     std::vector<VkDescriptorSetLayoutBinding> bindings;
     auto add = [&](int binding, VkDescriptorType type) {
         if (binding < 0) {
             return;
         }
-        bindings.push_back({static_cast<std::uint32_t>(binding), type, 1,
-                            VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT, nullptr});
+        bindings.push_back(
+            {static_cast<std::uint32_t>(binding),
+             type,
+             1,
+             VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT
+                 | VK_SHADER_STAGE_COMPUTE_BIT,
+             nullptr}
+        );
     };
-    add(c.default_binding, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER);
+    p->dynamic_uniforms = c.default_binding >= 0 && reuse_uniforms();
+    add(c.default_binding,
+        p->dynamic_uniforms ? VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC
+                            : VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER);
     for (const ProgramBlock& b : c.blocks) {
         add(b.binding, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER);
     }
+    for (const auto& b : c.storage) {
+        add(b.binding, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER);
+    }
     for (const ProgramUniform& u : c.uniforms) {
-        if (u.sampler) {
+        if (u.sampler && u.binding >= 0) {
             add(u.binding, u.kind == SamplerKind::Buffer ? VK_DESCRIPTOR_TYPE_UNIFORM_TEXEL_BUFFER
                                                          : VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER);
         }
@@ -2484,17 +3056,42 @@ void VKGL link_program(GLuint name) {
     set_info.pBindings = bindings.data();
     check(vkCreateDescriptorSetLayout(g->device, &set_info, nullptr, &p->set_layout), "a descriptor set layout");
     VkPipelineLayoutCreateInfo layout_info{VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO};
-    layout_info.setLayoutCount = 1;
-    layout_info.pSetLayouts = &p->set_layout;
+    const VkDescriptorSetLayout layouts[] = {p->set_layout, g->material_layout};
+    const VkPushConstantRange material_push{VK_SHADER_STAGE_VERTEX_BIT, 0, 4};
+    layout_info.setLayoutCount = p->gpu_materials ? 2u : 1u;
+    layout_info.pSetLayouts = layouts;
+    if (p->gpu_materials) {
+        layout_info.pushConstantRangeCount = 1;
+        layout_info.pPushConstantRanges = &material_push;
+    }
     check(vkCreatePipelineLayout(g->device, &layout_info, nullptr, &p->layout), "a pipeline layout");
     // Uniforms start at zero, as GL's do; a relink keeps nothing, as GL's does.
-    p->uniforms.assign(static_cast<std::size_t>(std::max(c.default_size, 0)), 0);
+    p->uniforms.assign(
+        p->gpu_materials ? p->material_start + kMaterialBytes
+                         : static_cast<unsigned>(std::max(c.default_size, 0)),
+        0
+    );
     p->units.assign(c.uniforms.size(), 0);
     p->block_bindings.assign(c.blocks.size(), 0);
     p->uniforms_dirty = true;
     p->last_set = VK_NULL_HANDLE;
     p->last_key.clear();
-    p->linked = p->vertex != VK_NULL_HANDLE && p->fragment != VK_NULL_HANDLE && p->layout != VK_NULL_HANDLE;
+    p->descriptor_sets.clear();
+    if (p->compute) {
+        VkComputePipelineCreateInfo info{VK_STRUCTURE_TYPE_COMPUTE_PIPELINE_CREATE_INFO};
+        info.stage = {VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO};
+        info.stage.stage = VK_SHADER_STAGE_COMPUTE_BIT;
+        info.stage.module = p->compute;
+        info.stage.pName = "main";
+        info.layout = p->layout;
+        check(
+            vkCreateComputePipelines(
+                g->device, VK_NULL_HANDLE, 1, &info, nullptr, &p->compute_pipeline
+            ),
+            "a compute pipeline"
+        );
+    }
+    p->linked = p->layout && ((p->vertex && p->fragment) || p->compute_pipeline);
 }
 
 void VKGL get_program_iv(GLuint name, GLenum what, GLint* out) {
@@ -2584,15 +3181,31 @@ std::uint8_t* uniform_at(GLint location, int count_bytes, const ProgramUniform**
     if (at + static_cast<std::size_t>(count_bytes) > p->uniforms.size()) {
         return nullptr;
     }
-    p->uniforms_dirty = true;
+    if (element >= u.array_size) {
+        return nullptr;
+    }
     return p->uniforms.data() + at;
+}
+
+void write_uniform(std::uint8_t* destination, const void* source, std::size_t bytes) {
+    ++g->submission.uniform_writes;
+    // Compare bytes, preserving signed zero and NaN payloads exactly.
+    if (reuse_uniforms() && std::memcmp(destination, source, bytes) == 0) {
+        ++g->submission.uniform_writes_skipped;
+        return;
+    }
+    std::memcpy(destination, source, bytes);
+    auto* p = g->programs.find(g->state.program);
+    if (!p->gpu_materials || destination < p->uniforms.data() + p->material_start) {
+        p->uniforms_dirty = true;
+    }
 }
 
 void VKGL uniform_1i(GLint location, GLint v) {
     const ProgramUniform* u = nullptr;
     int index = -1;
     if (std::uint8_t* at = uniform_at(location, 4, &u, &index)) {
-        std::memcpy(at, &v, 4);
+        write_uniform(at, &v, 4);
     } else if (u != nullptr && u->sampler) {
         g->programs.find(g->state.program)->units[static_cast<std::size_t>(index)] = v;
     }
@@ -2600,46 +3213,52 @@ void VKGL uniform_1i(GLint location, GLint v) {
 
 void VKGL uniform_1ui(GLint location, GLuint v) {
     if (std::uint8_t* at = uniform_at(location, 4)) {
-        std::memcpy(at, &v, 4);
+        write_uniform(at, &v, 4);
     }
 }
 
 void VKGL uniform_1f(GLint location, GLfloat v) {
     if (std::uint8_t* at = uniform_at(location, 4)) {
-        std::memcpy(at, &v, 4);
+        write_uniform(at, &v, 4);
     }
 }
 
 void VKGL uniform_2f(GLint location, GLfloat a, GLfloat b) {
     const float v[] = {a, b};
     if (std::uint8_t* at = uniform_at(location, 8)) {
-        std::memcpy(at, v, 8);
+        write_uniform(at, v, 8);
     }
 }
 
 void VKGL uniform_3f(GLint location, GLfloat a, GLfloat b, GLfloat c) {
     const float v[] = {a, b, c};
     if (std::uint8_t* at = uniform_at(location, 12)) {
-        std::memcpy(at, v, 12);
+        write_uniform(at, v, 12);
     }
 }
 
 void VKGL uniform_4f(GLint location, GLfloat a, GLfloat b, GLfloat c, GLfloat d) {
     const float v[] = {a, b, c, d};
     if (std::uint8_t* at = uniform_at(location, 16)) {
-        std::memcpy(at, v, 16);
+        write_uniform(at, v, 16);
     }
 }
 
 void VKGL uniform_4fv(GLint location, GLsizei count, const GLfloat* v) {
+    if (location < 0 || count <= 0 || !v) {
+        return;
+    }
     for (GLsizei i = 0; i < count; ++i) {
         if (std::uint8_t* at = uniform_at(location + i, 16)) {
-            std::memcpy(at, v + i * 4, 16);
+            write_uniform(at, v + i * 4, 16);
         }
     }
 }
 
 void VKGL uniform_matrix_4fv(GLint location, GLsizei count, GLboolean transpose, const GLfloat* v) {
+    if (location < 0 || count <= 0 || !v) {
+        return;
+    }
     for (GLsizei i = 0; i < count; ++i) {
         std::uint8_t* at = uniform_at(location + i, 64);
         if (at == nullptr) {
@@ -2647,7 +3266,7 @@ void VKGL uniform_matrix_4fv(GLint location, GLsizei count, GLboolean transpose,
         }
         const GLfloat* m = v + i * 16;
         if (transpose == GL_FALSE) {
-            std::memcpy(at, m, 64);
+            write_uniform(at, m, 64);
         } else {
             float t[16];
             for (int r = 0; r < 4; ++r) {
@@ -2655,7 +3274,7 @@ void VKGL uniform_matrix_4fv(GLint location, GLsizei count, GLboolean transpose,
                     t[c * 4 + r] = m[r * 4 + c];
                 }
             }
-            std::memcpy(at, t, 64);
+            write_uniform(at, t, 64);
         }
     }
 }
@@ -2681,6 +3300,12 @@ void VKGL uniform_block_binding(GLuint program, GLuint block, GLuint binding) {
 }
 
 void VKGL bind_buffer_base(GLenum target, GLuint index, GLuint buffer) {
+    if (target == GL_SHADER_STORAGE_BUFFER && index < kUniformBindings) {
+        g->state.storage_bindings[index] = buffer;
+        if (auto* b = g->buffers.find(buffer)) {
+            b->storage = true;
+        }
+    }
     if (target == wgl::GL_UNIFORM_BUFFER && index < kUniformBindings) {
         g->state.uniform_bindings[index] = buffer;
     }
@@ -2865,8 +3490,70 @@ void VKGL blit_framebuffer(GLint sx0, GLint sy0, GLint sx1, GLint sy1, GLint dx0
         }
         VkCommandBuffer cmd = cmd_for(src, true);
         dst->touched = g->recording;
+        if (src->samples != VK_SAMPLE_COUNT_1_BIT && (aspect & VK_IMAGE_ASPECT_DEPTH_BIT) != 0) {
+            // vkCmdResolveImage is colour-only. Resolve depth/stencil through
+            // dynamic rendering; SAMPLE_ZERO is required by Vulkan 1.2+.
+            if (dst->samples != VK_SAMPLE_COUNT_1_BIT || sx0 != dx0 || sy0 != dy0 || sx1 != dx1
+                || sy1 != dy1 || sx0 < 0 || sy0 < 0 || sx1 <= sx0 || sy1 <= sy0) {
+                fail(0x0502);  // GL_INVALID_OPERATION: unsupported depth resolve region
+                return;
+            }
+            barrier(cmd, *src, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL);
+            barrier(cmd, *dst, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL);
+            VkRenderingAttachmentInfo depth{VK_STRUCTURE_TYPE_RENDERING_ATTACHMENT_INFO};
+            depth.imageView = attachment_view(*src);
+            depth.imageLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
+            depth.resolveMode = VK_RESOLVE_MODE_SAMPLE_ZERO_BIT;
+            depth.resolveImageView = attachment_view(*dst);
+            depth.resolveImageLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
+            depth.loadOp = VK_ATTACHMENT_LOAD_OP_LOAD;
+            depth.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
+            VkRenderingInfo info{VK_STRUCTURE_TYPE_RENDERING_INFO};
+            info.renderArea =
+                {{sx0, sy0},
+                 {static_cast<std::uint32_t>(std::min({sx1, src->width, dst->width}) - sx0),
+                  static_cast<std::uint32_t>(std::min({sy1, src->height, dst->height}) - sy0)}};
+            info.layerCount = 1;
+            info.pDepthAttachment = &depth;
+            if ((aspect & VK_IMAGE_ASPECT_STENCIL_BIT) != 0) {
+                info.pStencilAttachment = &depth;
+            }
+            vkCmdBeginRendering(cmd, &info);
+            vkCmdEndRendering(cmd);
+            return;
+        }
         barrier(cmd, *src, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL);
         barrier(cmd, *dst, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
+        if ((aspect & VK_IMAGE_ASPECT_DEPTH_BIT) != 0 && sx1 - sx0 == dx1 - dx0
+            && sy1 - sy0 == dy1 - dy0 && sx1 > sx0 && sy1 > sy0) {
+            // Depth/stencil formats need not support BLIT_DST. An unscaled
+            // copy has no such requirement; each aspect is copied separately.
+            VkImageCopy copies[2]{};
+            std::uint32_t count = 0;
+            for (const auto bit : {VK_IMAGE_ASPECT_DEPTH_BIT, VK_IMAGE_ASPECT_STENCIL_BIT}) {
+                if ((aspect & bit) == 0) {
+                    continue;
+                }
+                auto& copy = copies[count++];
+                copy.srcSubresource = {static_cast<VkImageAspectFlags>(bit), 0, 0, 1};
+                copy.dstSubresource = copy.srcSubresource;
+                copy.srcOffset = {sx0, sy0, 0};
+                copy.dstOffset = {dx0, dy0, 0};
+                copy.extent = {
+                    static_cast<std::uint32_t>(sx1 - sx0), static_cast<std::uint32_t>(sy1 - sy0), 1
+                };
+            }
+            vkCmdCopyImage(
+                cmd,
+                src->image,
+                VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
+                dst->image,
+                VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+                count,
+                copies
+            );
+            return;
+        }
         if (src->samples != VK_SAMPLE_COUNT_1_BIT) {
             // A multisampled source is resolved: one size, no flip (as GL requires).
             VkImageResolve r{};
@@ -2961,6 +3648,8 @@ const Entry kEntries[] = {
     VKGL_ENTRY(glVertexAttribIPointer, vertex_attrib_i_pointer),
     VKGL_ENTRY(glVertexAttribDivisor, vertex_attrib_divisor),
     VKGL_ENTRY(glDrawArrays, draw_arrays),
+    VKGL_ENTRY(glDispatchCompute, dispatch_compute),
+    VKGL_ENTRY(glMemoryBarrier, memory_barrier),
     VKGL_ENTRY(glDrawArraysInstanced, draw_arrays_instanced),
     VKGL_ENTRY(glDrawElements, draw_elements),
     VKGL_ENTRY(glDrawElementsInstanced, draw_elements_instanced),
@@ -3158,9 +3847,13 @@ void advance() {
         const Clock::time_point start = Clock::now();
         vkWaitForFences(g->device, 1, &f.fence, VK_TRUE, UINT64_MAX);
         g->measures.wait_s += seconds_since(start);
+        timing_results(f);
         f.submitted = false;
     }
     run_deferred(f);
+    f.timings.clear();
+    f.timestamp_used = 0;
+    f.active_timing = -1;
     vkResetCommandPool(g->device, f.pool, 0);
     for (VkDescriptorPool pool : f.pools) {
         vkResetDescriptorPool(g->device, pool, 0);
@@ -3297,6 +3990,7 @@ VKAPI_ATTR VkBool32 VKAPI_CALL on_message(VkDebugUtilsMessageSeverityFlagBitsEXT
                                           VkDebugUtilsMessageTypeFlagsEXT, const VkDebugUtilsMessengerCallbackDataEXT* data,
                                           void*) {
     if (severity >= VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT) {
+        if (g) ++g->validation_errors;
         log::error("vulkan: {}", data->pMessage);
     } else if (severity >= VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT) {
         log::warn("vulkan: {}", data->pMessage);
@@ -3323,8 +4017,12 @@ bool make_instance(const Config& config, bool validation, std::string& error) {
     }
 #endif
     std::vector<const char*> layers;
-    if (validation) {
-        layers.push_back("VK_LAYER_KHRONOS_validation");
+    bool debug_utils = validation;
+    if (validation) layers.push_back("VK_LAYER_KHRONOS_validation");
+#if defined(OPENRAC_GPU_MARKERS)
+    debug_utils |= std::getenv("OPENRAC_GPU_MARKERS") != nullptr;
+#endif
+    if (debug_utils) {
         extensions.push_back(VK_EXT_DEBUG_UTILS_EXTENSION_NAME);
     }
     // A driver that carries out only part of Vulkan (MoltenVK, on Metal) is listed by the loader
@@ -3423,6 +4121,11 @@ bool pick_device(std::string& error) {
         return false;
     }
     vkGetPhysicalDeviceProperties(g->physical, &g->properties);
+    std::uint32_t families = 0;
+    vkGetPhysicalDeviceQueueFamilyProperties(g->physical, &families, nullptr);
+    std::vector<VkQueueFamilyProperties> queues(families);
+    vkGetPhysicalDeviceQueueFamilyProperties(g->physical, &families, queues.data());
+    g->timestamp_bits = queues.at(g->family).timestampValidBits;
     vkGetPhysicalDeviceFeatures(g->physical, &g->features);
     return true;
 }
@@ -3457,7 +4160,26 @@ std::filesystem::path pipeline_cache_file() {
         base = std::filesystem::path(home != nullptr ? home : ".") / ".cache/openrac";
     }
 #endif
-    return base / std::format("vulkan_pipelines_{:04x}_{:04x}.bin", g->properties.vendorID, g->properties.deviceID);
+    return base / std::format(
+               "vulkan_pipelines_{:04x}_{:04x}_{}.bin", g->properties.vendorID, g->properties.deviceID,
+               OPENRAC_VK_PIPELINE_KEY
+           );
+}
+
+// Caches of this device that other builds saved (another key, or none): no longer read.
+void remove_other_pipeline_caches(const std::filesystem::path& path) {
+    const std::string prefix =
+        std::format("vulkan_pipelines_{:04x}_{:04x}", g->properties.vendorID, g->properties.deviceID);
+    if (!path.filename().string().starts_with(prefix)) {
+        return;  // OPENRAC_VULKAN_PIPELINE_CACHE names a file of its own: leave its folder alone
+    }
+    std::error_code ec;
+    for (const auto& entry : std::filesystem::directory_iterator(path.parent_path(), ec)) {
+        const std::string name = entry.path().filename().string();
+        if (entry.path() != path && name.starts_with(prefix) && name.ends_with(".bin")) {
+            std::filesystem::remove(entry.path(), ec);
+        }
+    }
 }
 
 bool make_pipeline_cache() {
@@ -3548,6 +4270,7 @@ void save_pipeline_cache() {
         return;
     }
     log::info("vulkan: saved {} bytes of pipeline cache to {}", size, path.string());
+    remove_other_pipeline_caches(path);
 }
 
 bool make_device(std::string& error) {
@@ -3561,9 +4284,49 @@ bool make_device(std::string& error) {
     features.samplerAnisotropy = g->features.samplerAnisotropy;
     features.shaderClipDistance = g->features.shaderClipDistance;  // the world's clip planes
     features.shaderCullDistance = g->features.shaderCullDistance;
+    features.drawIndirectFirstInstance = g->features.drawIndirectFirstInstance;
+    features.multiDrawIndirect = g->features.multiDrawIndirect;
+    features.multiViewport = g->features.multiViewport;
     g->features = features;
     VkPhysicalDeviceVulkan13Features f13{VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_3_FEATURES};
     f13.dynamicRendering = VK_TRUE;
+    VkPhysicalDeviceVulkan11Features f11{VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_1_FEATURES};
+    VkPhysicalDeviceVulkan12Features f12{VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_2_FEATURES};
+    VkPhysicalDeviceFeatures2 available{VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FEATURES_2};
+    available.pNext = &f11;
+    f11.pNext = &f12;
+    vkGetPhysicalDeviceFeatures2(g->physical, &available);
+    g->viewport_index_supported = features.multiViewport && f12.shaderOutputViewportIndex;
+    g->bindless_supported =
+        f11.shaderDrawParameters && f12.shaderSampledImageArrayNonUniformIndexing
+        && f12.descriptorBindingSampledImageUpdateAfterBind && f12.descriptorBindingPartiallyBound;
+    VkPhysicalDeviceDescriptorIndexingProperties indexing{
+        VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_DESCRIPTOR_INDEXING_PROPERTIES
+    };
+    VkPhysicalDeviceProperties2 properties{VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_PROPERTIES_2};
+    properties.pNext = &indexing;
+    vkGetPhysicalDeviceProperties2(g->physical, &properties);
+    const auto limit = std::min(
+        {indexing.maxPerStageDescriptorUpdateAfterBindSamplers,
+         indexing.maxPerStageDescriptorUpdateAfterBindSampledImages,
+         indexing.maxDescriptorSetUpdateAfterBindSamplers,
+         indexing.maxDescriptorSetUpdateAfterBindSampledImages}
+    );
+    g->material_texture_capacity = limit > 32 ? std::min(1024u, limit - 32u) : 0;
+    g->bindless_supported = g->bindless_supported && g->material_texture_capacity >= 16;
+    f11 = {VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_1_FEATURES};
+    f12 = {VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_2_FEATURES};
+    f12.shaderOutputViewportIndex = g->viewport_index_supported ? VK_TRUE : VK_FALSE;
+    f13.pNext = &f11;
+    f11.pNext = &f12;
+    if (g->bindless_supported) {
+        f11.shaderDrawParameters = VK_TRUE;
+        f12.shaderSampledImageArrayNonUniformIndexing = VK_TRUE;
+        f12.descriptorBindingSampledImageUpdateAfterBind = VK_TRUE;
+        f12.descriptorBindingPartiallyBound = VK_TRUE;
+        f13.pNext = &f11;
+        f11.pNext = &f12;
+    }
     std::vector<const char*> extensions;
     if (g->surface != VK_NULL_HANDLE) {
         extensions.push_back(VK_KHR_SWAPCHAIN_EXTENSION_NAME);
@@ -3624,6 +4387,16 @@ bool make_device(std::string& error) {
 
 bool make_frames() {
     for (Frame& f : g->frames) {
+        if (g->timestamp_bits) {
+            VkQueryPoolCreateInfo queries{VK_STRUCTURE_TYPE_QUERY_POOL_CREATE_INFO};
+            queries.queryType = VK_QUERY_TYPE_TIMESTAMP;
+            queries.queryCount = 512;
+            if (!check(
+                    vkCreateQueryPool(g->device, &queries, nullptr, &f.timestamps), "timestamp pool"
+                )) {
+                return false;
+            }
+        }
         VkCommandPoolCreateInfo pool{VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO};
         pool.flags = VK_COMMAND_POOL_CREATE_TRANSIENT_BIT;
         pool.queueFamilyIndex = g->family;
@@ -3669,8 +4442,12 @@ bool make_dummies() {
     const std::uint32_t one_u[4] = {0, 0, 0, 1};
     std::memcpy(bytes + kDefaultFloat, one_f, sizeof one_f);
     std::memcpy(bytes + kDefaultInteger, one_u, sizeof one_u);
-    const VkFormat formats[3] = {VK_FORMAT_R32_UINT, VK_FORMAT_R32G32B32A32_UINT, VK_FORMAT_R32G32B32A32_SFLOAT};
-    for (int i = 0; i < 3; ++i) {
+    const VkFormat formats[] =
+        {VK_FORMAT_R32_UINT,
+         VK_FORMAT_R32G32B32A32_UINT,
+         VK_FORMAT_R32G32B32A32_SFLOAT,
+         VK_FORMAT_R32G32B32A32_SINT};
+    for (std::size_t i = 0; i < std::size(formats); ++i) {
         VkBufferViewCreateInfo v{VK_STRUCTURE_TYPE_BUFFER_VIEW_CREATE_INFO};
         v.buffer = g->dummy_buffer;
         v.format = formats[i];
@@ -3729,8 +4506,13 @@ void describe_device() {
 void destroy_all() {
     if (g->device != VK_NULL_HANDLE) {
         vkDeviceWaitIdle(g->device);
+        gpu_release();
+        material_release();
         save_pipeline_cache();
         for (Frame& f : g->frames) {
+            // Window teardown can run after the statistics singleton's
+            // destructor. Drain measurements only at live frame-slot reuse,
+            // never call stats from static shutdown.
             run_deferred(f);
         }
         for (auto& [name, t] : g->textures.objects) {
@@ -3773,6 +4555,7 @@ void destroy_all() {
                 vkDestroyDescriptorPool(g->device, pool, nullptr);
             }
             vkDestroyCommandPool(g->device, f.pool, nullptr);
+            vkDestroyQueryPool(g->device, f.timestamps, nullptr);
             vkDestroyFence(g->device, f.fence, nullptr);
             vkDestroySemaphore(g->device, f.acquired, nullptr);
         }
@@ -3859,6 +4642,9 @@ bool open(const Config& config, std::string& error) {
         return false;
     }
     describe_device();
+    if (g->timestamp_bits) {
+        stats::set_gpu_hooks({timing_begin, timing_end, nullptr});
+    }
     // GL's defaults that are not zero.
     g->state.viewport[2] = g->state.scissor[2] = g->default_width;
     g->state.viewport[3] = g->state.scissor[3] = g->default_height;
@@ -3889,6 +4675,59 @@ bool active() {
     return g != nullptr && g->open;
 }
 
+bool gpu_driven_active() {
+    if (!active() || !g->features.drawIndirectFirstInstance) {
+        return false;
+    }
+    static const bool& off = stats::probe(
+        "OPENRAC_GPU_DRIVEN_OFF", "Reference: CPU instance visibility and direct mesh draws"
+    );
+    return !off && gpu_make_engine();
+}
+
+bool indexed_viewports_supported(unsigned count) {
+    return active() && g->viewport_index_supported && count > 0
+           && count <= g->properties.limits.maxViewports && material_enabled();
+}
+
+bool gpu_materials_active() {
+    return active() && material_enabled();
+}
+
+void indexed_viewports(std::span<const std::array<int, 4>> rectangles) {
+    if (!rectangles.empty() && !indexed_viewports_supported(static_cast<unsigned>(rectangles.size()))) {
+        throw std::runtime_error("indexed viewports unavailable");
+    }
+    gpu_flush_draws();
+    g->indexed_viewports.assign(rectangles.begin(), rectangles.end());
+    g->bound_pipeline = VK_NULL_HANDLE;
+}
+
+renderer::GpuInstanceBatch gpu_instances(
+    unsigned source,
+    std::span<const renderer::GpuCullBounds> bounds,
+    const renderer::GpuCullView& view
+) {
+    if (view.plane_count > 6) {
+        throw std::runtime_error("invalid GPU culling plane count");
+    }
+    return gpu_make_batch(source, bounds, view);
+}
+
+bool draw_gpu_instances(renderer::GpuInstanceBatch batch, unsigned first, unsigned count) {
+    return active() && gpu_submit_draw(batch, first, count);
+}
+
+GpuDrawCounters gpu_completed_draws() {
+    return active() && stats::enabled() ? g->gpu.completed : GpuDrawCounters{};
+}
+
+GpuMaterialCounters gpu_material_counters() {
+    return active() ? GpuMaterialCounters{g->bindless_supported, g->material_draws,
+        g->material_records, g->material_textures, g->measures.native_draws}
+        : GpuMaterialCounters{};
+}
+
 Proc get_proc(const char* name) {
     if (name == nullptr) {
         return nullptr;
@@ -3903,8 +4742,58 @@ Proc get_proc(const char* name) {
 
 // The frame's measures, as gauges of the frame the debug tools are measuring.
 void report_measures() {
+    const auto& current = g->submission;
+    const auto& previous = g->reported_submission;
+    stats::gauge("vk_uniform_uploads", double(current.uniform_uploads - previous.uniform_uploads));
+    stats::gauge(
+        "vk_uniform_upload_kb",
+        double(current.uniform_upload_bytes - previous.uniform_upload_bytes) / 1024.0
+    );
+    stats::gauge(
+        "vk_uniform_writes_skipped",
+        double(current.uniform_writes_skipped - previous.uniform_writes_skipped)
+    );
+    stats::gauge("vk_descriptor_sets", double(current.descriptor_sets - previous.descriptor_sets));
+    stats::gauge(
+        "vk_descriptor_reuses", double(current.descriptor_reuses - previous.descriptor_reuses)
+    );
+    g->reported_submission = current;
     Measures& m = g->measures;
     stats::gauge("vk_draws", static_cast<double>(m.draws));
+    stats::gauge("vk_draw_api_calls", double(m.native_draws));
+    stats::gauge("vk_material_draws", double(g->material_draws));
+    stats::gauge("vk_material_records", double(g->material_records));
+    stats::gauge("vk_material_textures", double(g->material_textures));
+    g->material_draws = g->material_records = g->material_textures = 0;
+    stats::gauge("vk_gpu_instance_batches", double(g->gpu.batches));
+    stats::gauge("vk_gpu_instance_candidates", double(g->gpu.candidates));
+    stats::gauge("vk_gpu_indirect_commands", double(g->gpu.indirect));
+    stats::gauge("vk_gpu_indirect_calls", double(g->gpu.indirect_calls));
+    stats::gauge("vk_gpu_indirect_merged", double(g->gpu.merged));
+    const char* break_names[] =
+        {"pipeline",
+         "descriptors",
+         "uniforms",
+         "vertices",
+         "indices",
+         "materials",
+         "viewport",
+         "dynamic",
+         "arguments",
+         "material_gap"};
+    for (std::size_t i = 0; i < g->gpu.batch_breaks.size(); ++i) {
+        stats::gauge(
+            std::string("vk_gpu_batch_break_") + break_names[i], double(g->gpu.batch_breaks[i])
+        );
+    }
+    g->gpu.batch_breaks.fill(0);
+    stats::gauge("vk_gpu_completed_recording", double(g->gpu.completed.recording));
+    stats::gauge("vk_gpu_completed_draws", double(g->gpu.completed.draws));
+    stats::gauge("vk_gpu_completed_triangles", double(g->gpu.completed.triangles));
+    stats::gauge("vk_gpu_completed_visible_instances", double(g->gpu.completed.visible_instances));
+    stats::gauge("vk_gpu_counter_readback_bytes", double(g->gpu.completed.readback_bytes));
+    g->gpu.batches = g->gpu.candidates = g->gpu.indirect = g->gpu.indirect_calls = g->gpu.merged =
+        0;
     stats::gauge("vk_pipelines_made", static_cast<double>(m.pipelines));
     stats::gauge("vk_ring_kb", static_cast<double>(m.ring_bytes) / 1024.0);
     stats::gauge("vk_flushes", static_cast<double>(m.flushes));
@@ -3913,6 +4802,13 @@ void report_measures() {
     stats::gauge("vk_present_ms", m.present_s * 1000.0);
     stats::gauge("vk_wait_ms", m.wait_s * 1000.0);
     m = Measures{};
+}
+
+SubmissionCounters submission_counters() {
+    if (!g) return {};
+    auto counters = g->submission;
+    counters.validation_errors = g->validation_errors.load();
+    return counters;
 }
 
 void present() {

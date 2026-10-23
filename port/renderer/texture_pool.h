@@ -61,6 +61,11 @@ public:
     // base pointer.
     void upload(ImageUpload upload);
 
+    // Same ordering/replacement semantics as upload(). For repeated immutable
+    // frame inputs, reuse identical stored bytes without copying or rehashing.
+    // Returns true when the existing storage was reused.
+    bool upload_cached(const ImageUpload& upload);
+
     // A texture converted ahead of time. `scale` says how its alpha runs;
     // `mipmaps` gives its GL texture a mipmap chain and trilinear filtering
     // (3D geometry), otherwise it has one level, filtered as each draw says (nearest until then;

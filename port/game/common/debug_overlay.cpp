@@ -17,6 +17,10 @@
 #include <cstring>
 #include <filesystem>
 #include <format>
+#include <imgui.h>
+#include <imgui_impl_opengl3.h>
+#include <imgui_impl_sdl3.h>
+#include <imgui_internal.h>  // ImGui::ClearActiveID: a finger that scrolls lets go of what it pressed
 #include <map>
 #include <set>
 #include <string>
@@ -24,21 +28,17 @@
 #include <utility>
 #include <vector>
 
-#include <imgui.h>
-#include <imgui_internal.h>  // ImGui::ClearActiveID: a finger that scrolls lets go of what it pressed
-#include <imgui_impl_opengl3.h>
-#include <imgui_impl_sdl3.h>
-
 #include "common/log.h"
-#include "imgui_gl.h"
 #include "common/stats.h"
 #include "fixes.h"
-#include "options_menu.h"
-#include "settings.h"
+#include "frontend.h"
+#include "imgui_gl.h"
 #include "openrac/game_host.h"
 #include "openrac/guest.h"
+#include "options_menu.h"
 #include "renderer/gl.h"
 #include "renderer/gl_stats.h"
+#include "settings.h"
 #include "viewer/screenshot.h"
 
 // The editor's moby class names (cmake/Games.cmake, from editor/moby_classes.tsv).
@@ -1450,6 +1450,97 @@ void change_setting(int row, int by) {
     s.settings_changed = true;
 }
 
+void gtao_controls() {
+    auto& options = settings::get().gtao_settings;
+    bool changed = false;
+    ImGui::PushItemWidth(dp(170.0f));
+    int quality = static_cast<int>(options.quality);
+    if (ImGui::Combo("Quality", &quality, "Performance\0Quality\0")) {
+        options.quality = static_cast<renderer::GtaoQuality>(quality);
+        changed = true;
+    }
+    if (ImGui::IsItemHovered()) {
+        ImGui::SetTooltip("Performance is faster. Quality gives more accurate contact shading.");
+    }
+    changed |= ImGui::Checkbox("Half resolution", &options.half_resolution);
+    changed |=
+        ImGui::SliderInt("Directions", &options.slices, 1, 12, "%d", ImGuiSliderFlags_AlwaysClamp);
+    changed |= ImGui::SliderInt(
+        "Steps per side", &options.steps, 4, 24, "%d", ImGuiSliderFlags_AlwaysClamp
+    );
+    changed |= ImGui::SliderFloat(
+        "Radius", &options.radius, 0.05f, 8.0f, "%.2f", ImGuiSliderFlags_AlwaysClamp
+    );
+    changed |= ImGui::SliderFloat(
+        "Strength multiplier", &options.strength, 0.0f, 3.0f, "%.2fx", ImGuiSliderFlags_AlwaysClamp
+    );
+    ImGui::PopItemWidth();
+    if (ImGui::Button("Reset GTAO settings")) {
+        options = renderer::GtaoSettings{};
+        changed = true;
+    }
+    if (changed) {
+        settings::save();
+        s.settings_changed = true;
+    }
+}
+
+void enhanced_controls() {
+    auto& graphics = settings::get();
+    const bool available = enhanced_graphics_available();
+    if (!available) {
+        ImGui::TextDisabled("Compatible probe data is required for this level.");
+    }
+    ImGui::BeginDisabled(!available);
+    bool changed = ImGui::Checkbox("Enhanced graphics (F4)", &graphics.enhanced_graphics);
+    ImGui::BeginDisabled(!graphics.enhanced_graphics);
+    changed |= ImGui::Checkbox("Modern shadows", &graphics.enhanced_shadows);
+    changed |= ImGui::Checkbox("Probe lighting", &graphics.probe_lighting);
+    ImGui::BeginDisabled(!graphics.probe_lighting);
+    changed |= ImGui::Checkbox("Probe spheres", &graphics.probe_spheres);
+    if (graphics.probe_spheres) {
+        ImGui::TextDisabled("Cyan: sparse   Green: dense");
+        ImGui::TextDisabled("Gold: relocated   Magenta: invalid");
+    }
+    ImGui::PushItemWidth(dp(170.0f));
+    changed |= ImGui::SliderFloat(
+        "Probe GI multiplier",
+        &graphics.probe_gi_multiplier,
+        0.0f,
+        5.0f,
+        "%.2fx",
+        ImGuiSliderFlags_AlwaysClamp
+    );
+    changed |= ImGui::SliderFloat(
+        "Probe normal bias",
+        &graphics.probe_normal_bias,
+        0.0f,
+        2.0f,
+        "%.2f units",
+        ImGuiSliderFlags_AlwaysClamp
+    );
+    changed |= ImGui::SliderFloat(
+        "Probe view bias",
+        &graphics.probe_view_bias,
+        0.0f,
+        2.0f,
+        "%.2f units",
+        ImGuiSliderFlags_AlwaysClamp
+    );
+    ImGui::PopItemWidth();
+    ImGui::EndDisabled();
+    changed |= ImGui::Checkbox("GTAO", &graphics.gtao);
+    if (ImGui::CollapsingHeader("GTAO settings")) {
+        gtao_controls();
+    }
+    ImGui::EndDisabled();
+    ImGui::EndDisabled();
+    if (changed) {
+        settings::save();
+        s.settings_changed = true;
+    }
+}
+
 // The menus along the window's top, as OpenGOAL has them: on Windows and Linux. macOS has its own
 // menu bar, with the same menus (platform/macos_app.mm).
 #if defined(__APPLE__)
@@ -1501,13 +1592,18 @@ void menu_bar() {
         // Each item moves its setting on, its value beside it, and leaves the menu open.
         ImGui::PushItemFlag(ImGuiItemFlags_AutoClosePopups, false);
         using namespace options_menu;
-        for (const int row : {kAspect, kHud, kRenderScale, kMsaa, kAnisotropy, kFrameRate, kVSync}) {
+        for (const int row :
+             {kAspect, kHud, kRenderScale, kMsaa, kAnisotropy, kFrameRate, kVSync}) {
             const bool shown_for = row != kHud || settings::get().aspect != settings::Aspect::Standard;
             if (ImGui::MenuItem(label(row), value(row).c_str(), false, shown_for)) {
                 change_setting(row, 1);
             }
         }
         ImGui::PopItemFlag();
+        ImGui::EndMenu();
+    }
+    if (gl::enhanced_rendering_available() && ImGui::BeginMenu("Enhanced")) {
+        enhanced_controls();
         ImGui::EndMenu();
     }
     if (ImGui::BeginMenu("Sound")) {
@@ -1903,6 +1999,13 @@ void drawer(const Shown& shown) {
             change_setting(options_menu::kShowFps, 1);
         }
         card_end();
+
+        if (gl::enhanced_rendering_available()) {
+            drawer_section("ENHANCED");
+            card_begin();
+            enhanced_controls();
+            card_end();
+        }
 
         drawer_section("SOUND AND GAME");
         card_begin();

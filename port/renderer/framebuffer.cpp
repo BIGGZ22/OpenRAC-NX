@@ -34,7 +34,9 @@ int FrameBuffer::max_samples() {
     return most;
 }
 
-bool FrameBuffer::create(int width, int height, std::string& error, int samples) {
+bool FrameBuffer::create(
+    int width, int height, std::string& error, int samples, bool texture_depth
+) {
     release();
     m_width = width;
     m_height = height;
@@ -57,8 +59,16 @@ bool FrameBuffer::create(int width, int height, std::string& error, int samples)
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, static_cast<GLint>(GL_CLAMP_TO_EDGE));
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, static_cast<GLint>(GL_CLAMP_TO_EDGE));
 
-    glGenRenderbuffers(1, &m_depth);
-    glBindRenderbuffer(GL_RENDERBUFFER, m_depth);
+    m_texture_depth = texture_depth;
+    if (texture_depth && m_samples != 1) {
+        error = "sampleable depth requires a single-sample target";
+        release();
+        return false;
+    }
+    if (!texture_depth) {
+        glGenRenderbuffers(1, &m_depth);
+        glBindRenderbuffer(GL_RENDERBUFFER, m_depth);
+    }
     glGenFramebuffers(1, &m_framebuffer);
     glBindFramebuffer(GL_FRAMEBUFFER, m_framebuffer);
     // On a tiled GPU with GL_EXT_multisampled_render_to_texture (a phone's) the samples never
@@ -80,12 +90,38 @@ bool FrameBuffer::create(int width, int height, std::string& error, int samples)
         glRenderbufferStorageMultisample(GL_RENDERBUFFER, m_samples, GL_RGBA8, width, height);
         glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_RENDERBUFFER, m_multisample);
     } else {
-        glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH24_STENCIL8, width, height);
+        if (texture_depth) {
+            glGenTextures(1, &m_depth);
+            glBindTexture(GL_TEXTURE_2D, m_depth);
+            glTexImage2D(
+                GL_TEXTURE_2D,
+                0,
+                GL_DEPTH24_STENCIL8,
+                width,
+                height,
+                0,
+                GL_DEPTH_STENCIL,
+                GL_UNSIGNED_INT_24_8,
+                nullptr
+            );
+            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+        } else {
+            glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH24_STENCIL8, width, height);
+        }
         glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, m_colour, 0);
     }
-    glFramebufferRenderbuffer(
-        GL_FRAMEBUFFER, GL_DEPTH_STENCIL_ATTACHMENT, GL_RENDERBUFFER, m_depth
-    );
+    if (texture_depth) {
+        glFramebufferTexture2D(
+            GL_FRAMEBUFFER, GL_DEPTH_STENCIL_ATTACHMENT, GL_TEXTURE_2D, m_depth, 0
+        );
+    } else {
+        glFramebufferRenderbuffer(
+            GL_FRAMEBUFFER, GL_DEPTH_STENCIL_ATTACHMENT, GL_RENDERBUFFER, m_depth
+        );
+    }
     GLenum status = glCheckFramebufferStatus(GL_FRAMEBUFFER);
     if (status == GL_FRAMEBUFFER_COMPLETE && m_samples > 1) {
         glGenFramebuffers(1, &m_resolve);
@@ -121,13 +157,18 @@ void FrameBuffer::release() {
         m_colour = 0;
     }
     if (m_depth != 0) {
-        glDeleteRenderbuffers(1, &m_depth);
+        if (m_texture_depth) {
+            glDeleteTextures(1, &m_depth);
+        } else {
+            glDeleteRenderbuffers(1, &m_depth);
+        }
         m_depth = 0;
     }
     if (m_multisample != 0) {
         glDeleteRenderbuffers(1, &m_multisample);
         m_multisample = 0;
     }
+    m_texture_depth = false;
     m_samples = 1;
     m_implicit = false;
     m_width = 0;

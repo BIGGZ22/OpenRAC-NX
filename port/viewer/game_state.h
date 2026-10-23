@@ -55,10 +55,23 @@ const GameAddresses& rac1_addresses(std::string_view game, int level);
  */
 const GameAddresses& rac1_pal_addresses(std::span<const std::uint8_t> ram);
 
+// Conservative world bound for linearly blended joint poses and model matrices.
+// Either missing endpoint bound, or a singular transform, returns an unknown sphere.
+std::array<float, 4> moby_sphere_envelope(
+    const std::array<float, 4>& from_sphere,
+    const renderer::Mat4& from,
+    const std::array<float, 4>& to_sphere,
+    const renderer::Mat4& to,
+    const renderer::Mat4& drawn
+);
+
 /** A moby as the renderers place it. */
 struct LiveMoby {
     std::uint32_t address = 0;  // the moby in game memory (its animation fields, its class)
     int class_id = 0;
+    std::uint16_t occlusion = 0x7f80;
+    // World centre and radius, in game units; zero radius means unavailable.
+    std::array<float, 4> world_sphere{};
     renderer::Mat4 matrix = renderer::identity();  // game axes, the moby's scale included
 };
 

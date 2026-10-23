@@ -15,6 +15,7 @@
 #include <vector>
 
 #include "check.h"
+#include "enhanced/viewer/probe_lighting.h"
 #include "renderer/framebuffer.h"
 #include "renderer/gl.h"
 #include "renderer/shader.h"
@@ -111,9 +112,25 @@ int main() {
     namespace viewer_src = openrac::viewer::shaders;
     build("direct", renderer_src::direct_vert, renderer_src::direct_frag);
     build("effect", renderer_src::effect_vert, renderer_src::direct_frag);
-    build("mesh", viewer_src::mesh_vert, viewer_src::mesh_frag);
+    const std::string mesh_fragment = openrac::viewer::probe_mesh_fragment();
+    build("mesh", viewer_src::mesh_vert, mesh_fragment.c_str());
+    if (openrac::gl::enhanced_rendering_available()) {
+        build("shadow depth", viewer_src::shadow_depth_vert, viewer_src::hero_shadow_frag);
+        std::string shadow_vertex(viewer_src::shadow_depth_vert),
+            shadow_fragment(viewer_src::hero_shadow_frag);
+        shadow_vertex.insert(shadow_vertex.find('\n') + 1, "#define OPENRAC_SHADOW_SOLID 1\n");
+        shadow_fragment.insert(shadow_fragment.find('\n') + 1, "#define OPENRAC_SHADOW_SOLID 1\n");
+        Shader shadow_solid;
+        CHECK(shadow_solid.build("opaque shadow depth", shadow_vertex, shadow_fragment, why));
+        CHECK(shadow_solid.uniform("view_projection") >= 0);
+        CHECK(shadow_solid.uniform("tex_T0") == -1);
+        CHECK(shadow_solid.uniform("palette_texture") == -1);
+        CHECK(shadow_solid.uniform("skinning") == -1);
+        CHECK(shadow_solid.uniform("material_colour") == -1);
+        shadow_solid.release();
+    }
     // The static layers' opaque pass (viewer/level_renderer.cpp, m_solid).
-    std::string solid(viewer_src::mesh_frag);
+    std::string solid(mesh_fragment);
     solid.insert(solid.find('\n') + 1, "#define OPENRAC_SOLID 1\n");
     build("mesh (solid)", viewer_src::mesh_vert, solid.c_str());
     build("sky", viewer_src::sky_vert, viewer_src::sky_frag);

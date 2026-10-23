@@ -11,8 +11,13 @@
 in vec2 v_uv;
 in vec4 v_colour;
 in vec3 v_normal;
+in vec3 v_world_position;
+in vec4 v_probe_multiplier;
+flat in vec4 v_probe_selector;
 flat in int v_lit;
 flat in int v_glow;
+in vec3 v_script_emission;
+in vec3 v_emission_colour;
 noperspective in float v_fog;
 
 uniform sampler2D tex_T0;
@@ -30,29 +35,219 @@ uniform int effect_pass;
 // shine, blended over the moby (mesh.vert; ALPHA 0x44 as the moby's own).
 uniform int metal_pass;
 uniform vec4 fog_colour;  // FOGCOL; w = 1: fog on
+uniform mat4 view;
+#ifdef OPENRAC_ENHANCED_RENDERING
+uniform int gtao_enabled;
+uniform vec3 material_emission;
+uniform sampler2D emission_texture;
+uniform int emission_mask;
+uniform int emission_vertex_colour;
+uniform float material_diffuse_scale;
+uniform sampler2D gtao_visibility;
+#endif
 
 layout(location = 0) out vec4 out_colour;
 
 // From above and to one side, in game axes (Z up).
 const vec3 kSun = vec3(0.36, 0.48, 0.80);
 
+#ifdef OPENRAC_ENHANCED_RENDERING
+// Match bake_material: repeat wrapping, decode sRGB before bilinear filtering.
+// These level textures are stored as RGBA8 for the original GS colour path.
+vec3 emission_texel(bool authored_tint) {
+    ivec2 size = textureSize(emission_texture, 0);
+    vec2 p = fract(v_uv) * vec2(size) - 0.5;
+    ivec2 at = ivec2(floor(p));
+    vec2 f = fract(p);
+    vec3 result = vec3(0.0);
+    for (int y = 0; y < 2; ++y) {
+        for (int x = 0; x < 2; ++x) {
+            ivec2 q = ((at + ivec2(x, y)) % size + size) % size;
+            float weight = (x == 0 ? 1.0 - f.x : f.x) * (y == 0 ? 1.0 - f.y : f.y);
+            vec3 srgb = texelFetch(emission_texture, q, 0).rgb;
+            if (authored_tint) {
+                srgb = clamp(srgb * v_emission_colour, vec3(0.0), vec3(1.0));
+            }
+            result += probe_linear(srgb) * weight;
+        }
+    }
+    return result;
+}
+
+vec3 surface_emission(vec4 texel) {
+    vec3 emitted = probe_linear(texel.rgb) * v_script_emission;
+    if (any(greaterThan(material_emission, vec3(0.0)))) {
+        vec3 radiance = emission_texel(emission_vertex_colour != 0);
+        float coverage = 1.0;
+        if (emission_mask == 1) {
+            vec3 mask = emission_vertex_colour != 0 ? emission_texel(false) : radiance;
+            float chroma = (mask.g - max(mask.r, mask.b)) / max(mask.g, 1e-5);
+            coverage = smoothstep(0.25, 0.5, chroma);
+        }
+        emitted += material_emission * radiance * coverage;
+    }
+    return emitted;
+}
+
+// probes.glsl is inserted after the version line by probe_mesh_fragment().
+#ifdef OPENRAC_EARLY_LIGHTING
+bool early_surface(
+    vec3 eye_position,
+    vec3 normal_view,
+    out vec4 result,
+    out bool covered,
+    out float hero_visibility
+);
+#endif
+// This replaces RGB only. Alpha tests, fading and blend equations stay in
+// the existing path, as do explicitly unlit, additive, metal and glow passes.
+vec3 probe_surface(vec4 texel, vec3 original) {
+    if (probe_receiver == 0 || v_glow != 0 || probe_effect != 0 || metal_pass != 0
+        || (probe_receiver == 2 && v_probe_selector.w > 1.5)) {
+        return original;
+    }
+    if (probe_mode == 0 && sun_shadow_enabled == 0 && hero_shadow_enabled == 0) {
+        return original;
+    }
+    vec3 geometric = cross(dFdx(v_world_position), dFdy(v_world_position));
+    vec3 n = probe_unit(dot(v_normal, v_normal) > 1e-12 ? v_normal : geometric);
+    if (dot(n, n) < 0.5) {
+        return original;
+    }
+    // These surfaces render double-sided. Orient the shading normal toward
+    // the eye, independently of winding (some terrain normals point inward).
+    vec3 eye_position = (view * vec4(v_world_position, 1.0)).xyz;
+    if (dot(mat3(view) * n, -eye_position) < 0.0) {
+        n = -n;
+    }
+    vec3 plane_normal = probe_unit(dot(geometric, geometric) > 1e-12 ? geometric : n);
+    vec3 gi_normal = plane_normal;
+    if (dot(mat3(view) * gi_normal, -eye_position) < 0.0) {
+        gi_normal = -gi_normal;
+    }
+#ifdef OPENRAC_EARLY_LIGHTING
+    bool cached_coverage;
+    vec4 cached_lighting;
+    float hero_visibility;
+    early_surface(
+        eye_position, mat3(view) * gi_normal, cached_lighting, cached_coverage, hero_visibility
+    );
+    if (!hero_shadow_applies(n)) {
+        hero_visibility = 1.0;
+    }
+    float sun_visibility = cached_lighting.a;
+#else
+    float sun_visibility = sun_shadow_visibility(v_world_position, n, plane_normal);
+    float hero_visibility = hero_shadow_visibility(v_world_position, n);
+#endif
+    float visibility = sun_visibility;
+    if (hero_shadow_airborne == 0) {
+        visibility = min(visibility, hero_visibility);
+    }
+    // Gameplay cue: keep Ratchet's footprint readable inside a world shadow.
+    // Only receivers other than Ratchet get the extra diffuse darkening.
+    float hero_cue = 1.0;
+    if (hero_shadow_receiver == 0) {
+        hero_cue = hero_shadow_airborne != 0
+                       ? mix(0.75, 1.0, hero_visibility)
+                       : 1.0 - 0.15 * (1.0 - sun_visibility) * (1.0 - hero_visibility);
+    }
+    // Without a probe asset, retain the original authored lighting and apply
+    // the same shadow floor. This also covers holes in probe coverage.
+    vec3 emitted = surface_emission(texel);
+    // Legacy prelighting may already contain authored brightness. Preserve that
+    // component while shadowing the remaining diffuse, without adding it twice.
+    vec3 fallback = probe_display(
+        max(probe_linear(original) - emitted, vec3(0.0)) * mix(0.1, 1.0, visibility) * hero_cue
+        + emitted
+    );
+    if (probe_mode == 0) {
+        return fallback;
+    }
+    vec3 indirect;
+    // Probe visibility must use the actual surface plane, rather than an
+    // authored shading normal that can tilt across thin floors or walls.
+    vec3 toward_camera = transpose(mat3(view)) * (-eye_position);
+    vec3 surface_bias = probe_surface_bias(gi_normal, toward_camera);
+#ifdef OPENRAC_EARLY_LIGHTING
+    indirect = cached_lighting.rgb;
+    bool covered = cached_coverage;
+#else
+    bool covered = sample_probe_irradiance(v_world_position, gi_normal, surface_bias, indirect);
+#endif
+    if (probe_mode == 4) {
+        return covered ? vec3(0.0, 1.0, 0.0) : vec3(1.0, 0.0, 1.0);
+    }
+    // Diagnostic views must not silently substitute original lighting:
+    // indirect is black without coverage, while direct is independent of GI.
+    if (!covered && probe_mode == 2) {
+        return vec3(0.0);
+    }
+    if (!covered && probe_mode != 3) {
+        return fallback;
+    }
+    // Artistic GI exposure; keep the bake and direct-light energy unchanged.
+    indirect *= probe_gi_multiplier;
+    // Only opaque diffuse GI receives AO. Blended/effect surfaces do not have
+    // a matching prepass depth; direct light, emission and metal stay intact.
+#ifndef OPENRAC_EARLY_LIGHTING
+    if (gtao_enabled != 0 && translucent_pass == 0 && effect_pass == 0) {
+        ivec2 pixel = clamp(ivec2(gl_FragCoord.xy), ivec2(0), textureSize(gtao_visibility, 0) - 1);
+        indirect *= texelFetch(gtao_visibility, pixel, 0).r;
+    }
+#endif
+    vec4 selector = probe_receiver == 1 ? vec4(0.0) : v_probe_selector;
+    vec3 direct = probe_direct(v_world_position, n, selector, visibility);
+    vec3 illumination = probe_mode == 2
+                            ? indirect / 3.14159265359
+                            : (probe_mode == 3 ? direct : direct + indirect / 3.14159265359);
+    vec3 albedo = probe_linear(texel.rgb) * material_colour.rgb * v_probe_multiplier.rgb;
+    if (probe_terrain_albedo != 0) {
+        // Preserve the GS modulation as an artistic material tint, then decode once.
+        albedo = probe_linear(clamp(texel.rgb * v_colour.rgb * material_colour.rgb, 0.0, 1.0));
+    }
+    if (probe_mode != 2) {
+        illumination *= hero_cue;
+    }
+    // Emission is independent of GI exposure, AO and shadow visibility.
+    return probe_display(
+        albedo * illumination * material_diffuse_scale + (probe_mode == 1 ? emitted : vec3(0.0))
+    );
+}
+
+#else
+vec3 probe_surface(vec4 texel, vec3 original) {
+    return original;
+}
+#endif
+
 void main() {
-#ifdef OPENRAC_SOLID
-    // The opaque pass of the materials without a cutout (the static layers': terrain, ties,
-    // shrubs), what the general shader does for them, with no discard anywhere in the program: a
-    // tiled GPU then keeps its early depth test for these draws (Adreno's LRZ, Mali's forward pixel
-    // kill), which a shader that may discard turns off, so that hidden surfaces cost no shading.
-    vec4 c = texture(tex_T0, v_uv) * v_colour * material_colour;
+#ifdef OPENRAC_OPAQUE_COLOUR
+    if (opaque_solid != 0) {
+#endif
+#if defined(OPENRAC_SOLID) || defined(OPENRAC_OPAQUE_COLOUR)
+    // The static solid variant contains no discard. The Vulkan colour-batch
+    // variant selects this original solid path or the original general path
+    // per draw, preserving their texture/derivative and alpha-test ordering.
+    // It only runs with reused EQUAL depth and depth writes disabled.
+    vec4 texel = texture(tex_T0, v_uv);
+    vec4 c = texel * v_colour * material_colour;
     float light = 1.0;
     if (lighting != 0 && v_lit == 0) {
         light = 0.55 + 0.45 * abs(dot(normalize(v_normal), kSun));
     }
     vec3 rgb = min(c.rgb * light, vec3(1.0));
+    rgb = probe_surface(texel, rgb);
     if (fog_colour.w > 0.5) {
         rgb = mix(fog_colour.rgb, rgb, v_fog);
     }
     out_colour = vec4(rgb, 1.0);
-#else
+#ifdef OPENRAC_OPAQUE_COLOUR
+    return;
+    }
+#endif
+#endif
+#ifndef OPENRAC_SOLID
     if (metal_pass != 0) {
         vec4 m = texture(tex_T0, v_uv) * v_colour;
         vec3 mrgb = min(m.rgb, vec3(1.0));
@@ -65,9 +260,11 @@ void main() {
     if (effect_pass == 0 && v_glow != glow_pass) {
         discard;
     }
-    vec4 c = texture(tex_T0, v_uv) * v_colour * material_colour;
+    vec4 texel = texture(tex_T0, v_uv);
+    vec4 c = texel * v_colour * material_colour;
     if (effect_pass != 0) {
         vec3 e = min(c.rgb, vec3(1.0));
+        e = probe_surface(texel, e);
         if (fog_colour.w > 0.5) {
             e = mix(fog_colour.rgb, e, v_fog);
         }
@@ -88,6 +285,7 @@ void main() {
         light = 0.55 + 0.45 * abs(dot(normalize(v_normal), kSun));
     }
     vec3 rgb = min(c.rgb * light, vec3(1.0));
+    rgb = probe_surface(texel, rgb);
     // The GS's fog, after the texture: RGB only.
     if (fog_colour.w > 0.5) {
         rgb = mix(fog_colour.rgb, rgb, v_fog);

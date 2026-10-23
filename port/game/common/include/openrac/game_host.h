@@ -212,6 +212,8 @@ void openrac_game_store_image(const openrac_game_image* image);
 #define OPENRAC_DRAW_SHRUBS 8u
 #define OPENRAC_DRAW_MOBYS 16u
 void openrac_game_draw(unsigned layers);
+/* Rendering notification only: an explicit gameplay write to a moby's RGB. */
+void openrac_game_moby_colour(gaddr object, unsigned colour);
 
 /* The moby at `moby`'s current pose, for the game's own use: each joint marked in `marks` (128
  * bytes: nonzero for a joint to evaluate, byte 0x7F the joint count) gets its pose matrix, four rows

@@ -383,6 +383,14 @@ bool gpu_timers() {
     return state().gpu.begin != nullptr;
 }
 
+#if defined(OPENRAC_GPU_MARKERS)
+std::string gpu_section_name(std::uint64_t serial, int section) {
+    const auto* f = frame_of(serial);
+    return f && section >= 0 && std::size_t(section) < f->sections.size()
+        ? f->sections[std::size_t(section)].name : std::string{};
+}
+#endif
+
 void gpu_result(std::uint64_t serial, int section, double ms) {
     Frame* f = frame_of(serial);
     if (f == nullptr || section < 0 || static_cast<std::size_t>(section) >= f->sections.size()) {

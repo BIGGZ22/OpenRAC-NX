@@ -31,7 +31,10 @@ public:
     FrameBuffer& operator=(const FrameBuffer&) = delete;
 
     // `samples`: 1 for a plain target; more is held to what the driver offers (max_samples()).
-    bool create(int width, int height, std::string& error, int samples = 1);
+    // texture_depth exposes a sampleable depth/stencil texture (single-sample only).
+    bool create(
+        int width, int height, std::string& error, int samples = 1, bool texture_depth = false
+    );
     void release();
 
     // The framebuffer to draw into.
@@ -43,6 +46,9 @@ public:
 
     // The resolved colour (after resolved(), when the target is multisampled).
     unsigned colour_texture() const { return m_colour; }
+
+    // Zero for the usual renderbuffer-backed depth target.
+    unsigned depth_texture() const { return m_texture_depth ? m_depth : 0; }
 
     int samples() const { return m_samples; }
 
@@ -72,6 +78,7 @@ private:
     unsigned m_framebuffer = 0;
     unsigned m_colour = 0;
     unsigned m_depth = 0;
+    bool m_texture_depth = false;
     unsigned m_resolve = 0;       // the framebuffer holding m_colour, when multisampled
     unsigned m_multisample = 0;   // the multisampled colour buffer
     int m_samples = 1;
