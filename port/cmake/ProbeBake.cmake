@@ -7,14 +7,9 @@ if(OPENRAC_PROBE_BAKER)
   add_library(openrac_probe_bake STATIC enhanced/lighting/bake.cpp)
   target_link_libraries(openrac_probe_bake PUBLIC openrac_lighting PRIVATE embree Threads::Threads)
   openrac_warnings(openrac_probe_bake)
-  add_executable(probe_bake_test enhanced/tests/probe_bake_test.cpp)
-  target_link_libraries(probe_bake_test PRIVATE openrac_probe_bake)
-  openrac_warnings(probe_bake_test)
-  add_test(NAME probe_bake COMMAND probe_bake_test)
-  add_executable(probe_bake_parallel_test enhanced/tests/probe_bake_parallel_test.cpp)
-  target_link_libraries(probe_bake_parallel_test PRIVATE openrac_probe_bake)
-  openrac_warnings(probe_bake_parallel_test)
-  add_test(NAME probe_bake_parallel COMMAND probe_bake_parallel_test)
+  openrac_add_test(probe_bake SOURCES enhanced/tests/probe_bake_test.cpp LIBS openrac_probe_bake)
+  openrac_add_test(probe_bake_parallel SOURCES enhanced/tests/probe_bake_parallel_test.cpp
+                   LIBS openrac_probe_bake)
   if(WIN32)
     # The official binary package keeps Embree and its TBB DLLs together.
     set_tests_properties(probe_bake PROPERTIES
