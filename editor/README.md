@@ -789,6 +789,8 @@ they are not there yet for these games.
 
 The GDScript files follow [`GDSCRIPT_CONVENTIONS.md`](GDSCRIPT_CONVENTIONS.md).
 
+The editor's files carry no licence lines, as the maintainers decided: the editor's MIT [LICENSE](LICENSE) covers every one of them.
+
 | File | Contents |
 |---|---|
 | `extract.py` | Command line and safe output |
