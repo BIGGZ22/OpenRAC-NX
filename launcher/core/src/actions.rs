@@ -389,7 +389,7 @@ impl Action {
             detached: self.detached,
             docs: self.docs.clone(),
             todo: self.todo.clone(),
-            this_platform: self.platforms.is_empty() || self.platforms.contains(&ctx.platform),
+            this_platform: self.runs_on(ctx.platform),
             runnable: blockers.is_empty(),
             blockers,
             done: match &self.makes {
@@ -399,15 +399,30 @@ impl Action {
         }
     }
 
+    /// Whether the action is for `platform`: one of its `platforms`, or any when it lists none.
+    /// Android has neither a shell nor Python, Godot or a compiler: only a play action, which
+    /// starts the game's activity (src-tauri/src/android.rs), runs there unless it names Android.
+    fn runs_on(&self, platform: Platform) -> bool {
+        if self.platforms.is_empty() {
+            platform != Platform::Android || self.kind == Kind::Play
+        } else {
+            self.platforms.contains(&platform)
+        }
+    }
+
     fn blockers(&self, ctx: &Context) -> Vec<String> {
         let mut out = Vec::new();
         if self.state == State::Planned {
             out.push("not connected to the launcher yet".to_string());
             return out;
         }
-        if !self.platforms.is_empty() && !self.platforms.contains(&ctx.platform) {
+        if !self.runs_on(ctx.platform) {
             let names: Vec<_> = self.platforms.iter().map(|p| p.name()).collect();
-            out.push(format!("runs on {} only", names.join(" and ")));
+            out.push(if names.is_empty() {
+                "runs on a computer only".to_string()
+            } else {
+                format!("runs on {} only", names.join(" and "))
+            });
         }
         for need in &self.requires {
             let missing =
@@ -747,6 +762,17 @@ mod tests {
         let view = windows_only.view(&ctx(&ready));
         assert!(!view.this_platform);
         assert_eq!(view.blockers, ["runs on Windows only"]);
+
+        // Android runs a play action and nothing else that lists no platforms (no shell, no Python).
+        let android = Context { platform: Platform::Android, ..ctx(&ready) };
+        let view = action.view(&android);
+        assert!(!view.this_platform && !view.runnable);
+        assert!(view.blockers.contains(&"runs on a computer only".to_string()), "{:?}", view.blockers);
+        let play_here: Action = serde_json::from_str(
+            r#"{"id": "p", "label": "Play", "kind": "play", "state": "unverified", "program": "{artifact}"}"#,
+        )
+        .unwrap();
+        assert!(play_here.view(&android).this_platform);
 
         // {data}: the folder the game was set up in, which the port reads.
         let play: Action = serde_json::from_str(

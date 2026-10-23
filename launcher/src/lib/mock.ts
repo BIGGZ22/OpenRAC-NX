@@ -348,12 +348,19 @@ function status(key: string, v: RawVersion): VersionStatus {
 
 function view(action: RawAction, st: VersionStatus | null): ActionView {
   const state = action.state ?? "planned";
-  const thisPlatform = !action.platforms?.length || action.platforms.includes(platform);
+  // As core/src/actions.rs (runs_on): Android runs only a play action, unless one names it.
+  const thisPlatform = action.platforms?.length
+    ? action.platforms.includes(platform)
+    : platform !== "android" || action.kind === "play";
   const blockers: string[] = [];
   if (state === "planned") {
     blockers.push("not connected to the launcher yet");
   } else {
-    if (!thisPlatform) blockers.push(`runs on ${(action.platforms ?? []).join(" and ")} only`);
+    if (!thisPlatform) {
+      blockers.push(
+        action.platforms?.length ? `runs on ${action.platforms.join(" and ")} only` : "runs on a computer only",
+      );
+    }
     for (const need of action.requires ?? []) {
       const missing: Record<string, boolean> = {
         disc: st?.disc.state !== "found",
