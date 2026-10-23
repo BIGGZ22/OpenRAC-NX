@@ -110,6 +110,7 @@ what to do instead.
 | Tool | What it checks | Where it runs | Fails the build or CI |
 |---|---|---|---|
 | clang-format, [`port/.clang-format`](../.clang-format) | layout (section 5) | your editor; CI on new files and changed lines | new C++ files: yes. Changed lines: reported, not failing yet (24.4) |
+| [`tools/cpp_style.py`](../../tools/cpp_style.py) | clang-format, then the blank lines around control blocks (5.4); with `--comments`, the control blocks with no comment above them (6.2) | you, on the files you touch; CI ("Port conventions"), report only | no: reported, not failing yet (5.6) |
 | [`tools/conventions/check_conventions.py`](../tools/conventions/README.md) | licence lines, tabs, dashes everywhere; on new C++ files: `static` at namespace scope, raw `new`/`delete`/`malloc`/`free`, `using namespace` in headers, `extern "C"` outside contract files, console output outside tests and `main` | CI ("Port conventions"), and you before you commit | yes |
 | clang-tidy, [`port/.clang-tidy`](../.clang-tidy) | naming, ownership, function size, `else` after `return`, missing `override`, nested ternaries, `goto` | you, on the C++ files you touch (it needs a configured build) | not in CI; new code has zero findings |
 | The compiler, `openrac_warnings` (`port/cmake/Warnings.cmake`) | `-Wall -Wextra -Wshadow`, and for C++ `-Wpedantic -Wconversion` | every build | no new warning is accepted in review |
@@ -127,6 +128,10 @@ From the top of OpenRAC:
 # Layout: apply it to each file you change, then check it (prints nothing when clean).
 clang-format -i port/renderer/texture.cpp
 clang-format --dry-run -Werror port/renderer/texture.cpp
+
+# Layout and the blank lines of 5.4 in one pass (--fix writes them; the bare form only checks).
+python3 tools/cpp_style.py --fix port/renderer/texture.cpp
+python3 tools/cpp_style.py port/renderer/texture.cpp
 
 # The countable rules, on every file and on what you added since master.
 python3 port/tools/conventions/check_conventions.py --since origin/master --touched
@@ -247,7 +252,7 @@ about layout, the file wins and this page gets fixed.
 | Wrapped calls | break after `(`; the arguments on one line at the next level, or one per line; `)` alone at the statement's indent |
 | Wrapped expressions | break before the operator; a wrapped ternary starts its lines with `?` and `:` |
 | Pointers | `u8* data`, `const Image& image` |
-| Blank lines | never two in a row, none at the start of a block, one between definitions |
+| Blank lines | never two in a row, none at the start of a block, one between definitions; in a body, one between steps and around every control block (5.4) |
 | Templates | `template <...>` on its own line |
 | Includes | grouped and sorted by the tool (9.5) |
 
@@ -285,10 +290,16 @@ If an expression needs more than three lines, it is doing too much. Give its par
 
 ### 5.4 Blank lines in a body
 
-A body is made of groups: a few lines that do one step. One blank line before each group that
-starts with a comment, after the closing brace of a block (unless `}` or `else` follows), after a
-run of declarations, after each guard clause, and before the final `return` when more than three
-lines come before it. None directly inside `{` or before `}`.
+A body is made of steps: a few lines that do one thing (read the values, check them, do the work,
+return). One blank line between steps, and around every control block (`if`, `for`, `while`,
+`switch`, `do`, `try`): before it, and after its closing brace. Also after a run of declarations
+and before the final `return` when more than three lines come before it. A function of thirty lines
+with no blank line is a wall.
+
+None directly inside `{` or before `}`, none before a `case` label, none between a `}` and the
+`else`, `catch` or `while` that goes on with it. The comment lines right above a block stay with it,
+so the blank line goes above them. clang-format has no option for these blank lines;
+`tools/cpp_style.py --fix` puts them in (5.6).
 
 ```cpp
 std::size_t Mixer::fill(std::span<float> out) {
@@ -326,6 +337,26 @@ constexpr float kQuad[] = {
 This is the only way to turn the tool off. The reason is mandatory, and the directive never covers
 more than one table or any function body.
 
+### 5.6 The layout tool
+
+```sh
+python3 tools/cpp_style.py                  # list the files that would change; exit 1 if any
+python3 tools/cpp_style.py --fix PATH...    # rewrite those files (or the C++ under those folders)
+python3 tools/cpp_style.py --comments PATH  # control blocks with no comment above them (report only)
+python3 tools/cpp_style.py --trees          # the folders it covers
+```
+
+It runs clang-format with [`port/.clang-format`](../.clang-format), then adds the blank lines of
+5.4. It covers the C++ under `port/` and `sdk/`: `.cpp`, `.cc`, `.hpp`, `.inl` and `.h`. It never
+touches `games/`, a game's hand C, generated files, `.c` and `.mm` files (left to clang-format
+itself), or a region fenced with `// clang-format off` (5.5). It never rewraps or rewrites a
+comment. CI runs it as a report on every push and pull request; it does not fail the build yet
+(24.4). `--comments` lists what 6.2 asks for and never fails.
+
+The settings stay as they are. A 120-column limit and an include order that puts the project's
+headers before the standard library's would reformat every file in the port; a change like that is
+a formatting pass of its own (24.4), decided on its own, not a side effect of a layout tool.
+
 ---
 
 ## 6. Comments
@@ -345,9 +376,14 @@ capital letter, full stop. Trailing labels are the exception (6.8).
 
 ### 6.2 Where a comment is required
 
-1. Above every `if`. Above every `else if` and `else` that is not the plain complement of an `if`
-   whose comment explains both; since `} else if (` shares a line, its comment is the first line of
-   its body.
+1. Above every control block: `if`, `for`, `while`, `switch`, `do` and `try`. The comment says what
+   the block checks or does and why, in the reader's terms ("The game frees objects once it starts
+   exiting, so none is touched after that."), not what the syntax does ("If not ready, return.").
+   The one exception is a plain null check of what the line before fetched
+   (`if (!pool) { return; }` after `pool = find_pool();`). Above every `else if` and `else` that is
+   not the plain complement of an `if` whose comment explains both; since `} else if (` shares a
+   line, its comment is the first line of its body. `tools/cpp_style.py --comments` lists the
+   blocks that have none.
 2. Above every `case` and `default`, or trailing on the label when it only names a value.
 3. Above every loop whose exit is not in its header, and every `for (;;)`, saying how it ends.
 4. Above every ternary that decides something.
@@ -478,8 +514,9 @@ One blank line before and after. One to five words. No rulers, no nesting.
 ### 6.10 What a comment never contains
 
 - Code that is switched off.
-- `TODO`, `FIXME`, `XXX`, `HACK`. Work not done is recorded where people look for it: a known
-  problem in [KNOWN_ISSUES.md](../../docs/port/KNOWN_ISSUES.md), restructure work in
+- `FIXME`, `XXX`, `HACK`, or a `TODO` that does not say what is to be done and why it is not done
+  yet. A `TODO` that does say both is allowed, and the work is also recorded where people look for
+  it: a known problem in [KNOWN_ISSUES.md](../../docs/port/KNOWN_ISSUES.md), restructure work in
   [PROGRESS.md](../../docs/restructure/PROGRESS.md), the rest as an issue.
 - A date, a version, an author's name or initials, an issue number. Git knows.
 - Anything from Sony's SDK source, samples or headers, from leaked or NDA material, or any bytes of
@@ -563,7 +600,8 @@ class Image {
 
 ### 7.4 Thread and ownership notes
 
-A member shared between threads names its guard ("Guarded by `m_mutex`." or "Atomic; written by
+A variable at namespace scope (the `g_` pointer of 11.4, a `tls_` variable) has a comment saying
+what it holds and which threads touch it. A member shared between threads names its guard ("Guarded by `m_mutex`." or "Atomic; written by
 the audio thread, read by the game's."). A member or parameter that points at memory it does not
 own says who owns it and how long it lives.
 
@@ -751,10 +789,41 @@ the exception: one `main` and its helpers.
 1. The two licence lines, `//`, the file comment, a blank line.
 2. The file's own header, a blank line, the other includes in groups.
 3. `namespace openrac::<module> {`.
-4. An anonymous namespace holding everything private to the file (constants, types, helper
-   functions, in the order they are used), closed before the first definition.
-5. The definitions, in the order the header declares them.
+4. An anonymous namespace holding everything private to the file, in this order: constants, types,
+   state (11.4), helper functions in the order they are used, then the main logic. It is closed
+   before the first definition.
+5. The definitions, in the order the header declares them: the public entry points come last,
+   after everything private.
 6. `}  // namespace openrac::<module>`.
+
+```cpp
+namespace openrac::audio {
+namespace {
+
+// How many frames one voice mixes per call (measured: the game's mixer block).
+constexpr std::size_t kBlockFrames = 256;
+
+// One playing sound. Only the audio thread touches it.
+struct Voice {
+    std::size_t position = 0;
+};
+
+// Mixes one block of `voice` into `out`. Returns the frames written.
+std::size_t mix_block(Voice& voice, std::span<float> out) {
+    ...
+}
+
+}  // namespace
+
+std::size_t Mixer::fill(std::span<float> out) {
+    ...
+}
+
+}  // namespace openrac::audio
+```
+
+A file of more than 300 lines divides its parts under headings (6.9). A file comment that says
+what the file is for and how it works leads the file (7.1).
 
 Internal linkage is spelled with the anonymous namespace, never `static` at namespace scope. A
 `static` member of a class and a `static` local are fine. A header defines a function only as
@@ -948,7 +1017,8 @@ opening comment, then the result.
 
 ### 12.2 Size
 
-At most 60 lines from `{` to `}`, at most five parameters (more go into a struct), at most three
+Past about 40 lines, look for a step that can be a function of its own with a name that says what
+it does. At most 60 lines from `{` to `}`, at most five parameters (more go into a struct), at most three
 nested levels of `if`, `for`, `while` or `switch`. Past a limit, split on the seams the group
 comments already mark: the comments become function names. The exceptions are a `switch` that
 dispatches, where every case is a label and one statement, and the hot paths of section 21.
@@ -1410,6 +1480,7 @@ line reads yes.
 **Machines**
 
 1. `clang-format --dry-run -Werror` is silent on every file you added, and on the lines you changed?
+   (`tools/cpp_style.py` adds the blank lines of 5.4 and lists the files that still need them.)
 2. `check_conventions.py --since <base> --touched` and `layering.py` report nothing to fix?
 3. clang-tidy reports nothing on the C++ you added or changed?
 4. The build has no new warning, and ctest passes (with the Python tests for the tools you touched)?
@@ -1425,7 +1496,7 @@ line reads yes.
    fewer?
 10. Zero em or en dashes? (`git diff -U0 | perl -CSD -ne 'print if /\x{2014}|\x{2013}/'`)
 11. Zero banned words from 6.7? (`git diff -U0 | grep -niE 'furthermore|moreover|additionally|robust|comprehensive|seamless|simply|basically|ensure|utilize|leverage'`)
-12. Zero comments that restate their line; zero `TODO`, dates or author names?
+12. Zero comments that restate their line; no `TODO` without what and why, no dates or author names?
 13. Every comment you did not break is byte for byte unchanged?
 14. A new module has its README with the sections of 7.7, and the docs that describe what you moved
     are updated?
