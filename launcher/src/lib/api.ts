@@ -105,6 +105,8 @@ export interface Config {
   discordClientId: string | null;
   /** "compact", or "classic": the original design (src/layouts/compact.css). */
   layout: "compact" | "classic";
+  /** The launcher's theme (lib/palettes.ts). */
+  theme: string;
   /** The game writes a detailed log (OPENRAC_LOG=verbose); off keeps logs small. */
   detailedGameLog: boolean;
   /** Windows, Linux and macOS: what the game draws with, OpenGL (the default) or the experimental

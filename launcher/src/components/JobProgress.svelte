@@ -74,7 +74,7 @@
     gap: 8px;
     padding: 12px 16px;
     border-radius: 16px;
-    background: rgb(18 18 26 / 0.72);
+    background: color-mix(in srgb, var(--ink-deep) 72%, transparent);
     border: 1px solid var(--line);
     backdrop-filter: blur(6px);
   }

@@ -166,7 +166,7 @@
     border: none;
     border-radius: 0;
     padding: 0;
-    background: rgb(10 10 16 / 0.75);
+    background: color-mix(in srgb, var(--ink-deep) 75%, transparent);
     backdrop-filter: blur(4px);
     cursor: default;
     animation: dim 0.2s ease-out both;

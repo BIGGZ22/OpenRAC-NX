@@ -18,6 +18,8 @@
   import { app, guardShown, lookForUpdate, saveConfig } from "$lib/app.svelte";
   import { DISCORD_URL, PYTHON_URL, REPO_URL, SITE_URL } from "$lib/links";
   import { PURIST } from "$lib/modsText";
+  import { applyPalette, PALETTES } from "$lib/palettes";
+  import { tablist } from "$lib/tabs";
 
   let { setup = false }: { setup?: boolean } = $props();
 
@@ -37,6 +39,7 @@
     "discsDir",
     "installDir",
     "layout",
+    "theme",
     "discordRpc",
     "purist",
     "checkUpdates",
@@ -122,6 +125,12 @@
         draft.docker ??= d.dockers[0]?.path ?? null;
       }
     });
+  });
+
+  // A theme picked shows at once; left unsaved, the saved one comes back with the page's end.
+  $effect(() => {
+    applyPalette(draft.theme);
+    return () => applyPalette(app.config?.theme);
   });
 
   const changed = $derived(!!app.config && JSON.stringify(edited(draft)) !== JSON.stringify(edited(app.config)));
@@ -357,6 +366,28 @@
 
     <section class="panel">
       <h2>General</h2>
+      <div class="setting theme">
+        <span class="text">
+          <strong id="theme-label">Theme</strong>
+          <small>The launcher's colours. Its accent is the game's.</small>
+        </span>
+        <div class="themes" role="radiogroup" aria-labelledby="theme-label" use:tablist>
+          {#each PALETTES as p (p.id)}
+            <button
+              role="radio"
+              aria-checked={draft.theme === p.id}
+              tabindex={draft.theme === p.id ? 0 : -1}
+              class:on={draft.theme === p.id}
+              onclick={() => (draft.theme = p.id)}
+              ><span
+                class="swatch"
+                style={`--s-ink: ${p.swatch[0]}; --s-panel: ${p.swatch[1]}; --s-text: ${p.swatch[2]}`}
+                aria-hidden="true"><i></i></span
+              >{p.name}</button
+            >
+          {/each}
+        </div>
+      </div>
       <!-- Android has neither: its games are tiles, and no Discord app on the device reads a
            desktop's rich presence. -->
       {#if !onAndroid}
@@ -636,6 +667,61 @@
 
   .note {
     font-size: 0.8125rem;
+  }
+
+  /* The themes: each a small picture of its page, a panel and text on it, and its name. */
+  /* Its name above, the themes in a row under it: five do not fit beside a line of text. */
+  .setting.theme {
+    flex-wrap: wrap;
+    row-gap: 10px;
+  }
+
+  .setting.theme > .text {
+    flex-basis: 100%;
+  }
+
+  .themes {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+
+  .themes button {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 12px 6px 6px;
+    border-radius: 999px;
+    border: 1px solid var(--line-strong);
+    background: var(--panel);
+    color: var(--soft);
+    font-size: 0.8125rem;
+    font-weight: 600;
+    transition:
+      border-color var(--fast) var(--ease),
+      color var(--fast) var(--ease);
+  }
+
+  .themes button.on {
+    border-color: var(--amber);
+    color: var(--text);
+    box-shadow: 0 0 0 1px var(--amber);
+  }
+
+  .swatch {
+    position: relative;
+    width: 26px;
+    height: 26px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, var(--s-ink) 50%, var(--s-panel) 50%);
+    box-shadow: inset 0 0 0 1px rgb(255 255 255 / 0.18);
+  }
+
+  .swatch i {
+    position: absolute;
+    inset: 9px;
+    border-radius: 50%;
+    background: var(--s-text);
   }
 
   /* "Check now", what it found and where it looks, under the update settings. */

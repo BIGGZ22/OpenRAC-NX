@@ -57,7 +57,11 @@
   .shade {
     position: absolute;
     inset: 0;
-    background: radial-gradient(circle at 50% 42%, rgb(10 11 16 / 0.35), rgb(10 11 16 / 0.88) 70%);
+    background: radial-gradient(
+      circle at 50% 42%,
+      color-mix(in srgb, var(--ink-deep) 35%, transparent),
+      color-mix(in srgb, var(--ink-deep) 88%, transparent) 70%
+    );
   }
 
   .middle {

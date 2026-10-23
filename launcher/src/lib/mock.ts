@@ -205,6 +205,7 @@ let config: Config = {
   checkUpdates: true,
   updateChannel: null,
   layout: "compact",
+  theme: new URLSearchParams(typeof location === "undefined" ? "" : location.search).get("theme") ?? "openrac",
   discordClientId: null,
   detailedGameLog: false,
   // ?vulkan: the desktop's Vulkan renderer is chosen (Settings, Advanced).

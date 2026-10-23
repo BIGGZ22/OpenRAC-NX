@@ -8,6 +8,7 @@ import "./layouts/compact.css";
 import App from "./App.svelte";
 import { onAndroid } from "./lib/api";
 import { app } from "./lib/app.svelte";
+import { applyPalette, storedPalette } from "./lib/palettes";
 import { startPad } from "./lib/pad";
 import { startRipples } from "./lib/ripple";
 
@@ -21,6 +22,9 @@ if (onAndroid) {
   document.documentElement.dataset.platform = "android";
   startRipples();
 }
+
+// The theme of the last start, so the first paint has it (App.svelte follows the settings).
+applyPalette(storedPalette());
 
 // A controller drives the whole launcher; B and Back return to the games from any other page.
 startPad(() => {

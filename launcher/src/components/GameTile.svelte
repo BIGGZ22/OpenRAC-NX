@@ -198,7 +198,12 @@
   .shade {
     position: absolute;
     inset: 0;
-    background: linear-gradient(to top, rgb(10 11 16 / 0.94) 0%, rgb(10 11 16 / 0.55) 38%, rgb(10 11 16 / 0.05) 72%);
+    background: linear-gradient(
+      to top,
+      color-mix(in srgb, var(--ink-deep) 94%, transparent) 0%,
+      color-mix(in srgb, var(--ink-deep) 55%, transparent) 38%,
+      color-mix(in srgb, var(--ink-deep) 5%, transparent) 72%
+    );
   }
 
   /* The tile's own click target sits under the foot's button. */

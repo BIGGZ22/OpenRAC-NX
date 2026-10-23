@@ -32,6 +32,14 @@ The site has no status colours; the launcher adds `--ok` (`#8fd694`), `--warn`
 (amber) and `--err` (`#ff8a7a`), used only in pills and messages. The theme is
 dark only, as the site is.
 
+These are the "OpenRAC" theme. The others (Settings → General: Gruvbox, OLED
+black, Nord, Catppuccin Mocha) are in `src/lib/palettes.ts`: each sets the
+page, panel, text, line and status tokens on the root element, never the
+accent (`--amber`, `--gold`, `--brand`, the bar's), which stays the launcher's
+orange or, on Android, the picked game's. So a colour that should follow the
+theme is written with a token, as `color-mix(in srgb, var(--ink-deep) 75%,
+transparent)` for a shade over a picture, not as a fixed `rgb()`.
+
 ## Type
 
 | Token          | Font                   | Use                                                |

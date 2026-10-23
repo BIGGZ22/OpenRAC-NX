@@ -8,6 +8,7 @@
   import { app, openDevelop, refresh, showLaunch, start, updateDiscordPresence, type Page } from "$lib/app.svelte";
   import { preloadArt } from "$lib/media";
   import { reduced } from "$lib/motion";
+  import { applyPalette } from "$lib/palettes";
   import { ACCENT_PROPERTIES, accentProperties } from "$lib/themes";
   import { tick } from "svelte";
   import Game from "./pages/Game.svelte";
@@ -45,6 +46,11 @@
     const style = document.documentElement.style;
     for (const name of ACCENT_PROPERTIES) style.removeProperty(name);
     for (const [name, value] of accentProperties(app.version?.split("/")[0] ?? null)) style.setProperty(name, value);
+  });
+
+  $effect(() => {
+    // The theme (Settings → General); main.ts put the last one on before the settings loaded.
+    if (app.config) applyPalette(app.config.theme);
   });
 
   $effect(() => {
