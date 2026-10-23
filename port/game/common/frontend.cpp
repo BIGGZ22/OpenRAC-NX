@@ -636,17 +636,6 @@ platform::DisplayMode window_mode(settings::DisplayMode mode) {
     }
 }
 
-// The size the frame is drawn at for a picture of box_width x box_height window pixels: the
-// player's render scale of it, held to what a texture can be on any card the port runs on.
-void frame_size(int box_width, int box_height, int& width, int& height) {
-    constexpr int kLargest = 8192;
-    const float scale = static_cast<float>(std::clamp(settings::get().render_scale, 25, 400)) / 100.0f;
-    const float fit = std::min(1.0f, static_cast<float>(kLargest)
-                                         / (scale * static_cast<float>(std::max({box_width, box_height, 1}))));
-    width = std::max(1, static_cast<int>(std::lround(static_cast<float>(box_width) * scale * fit)));
-    height = std::max(1, static_cast<int>(std::lround(static_cast<float>(box_height) * scale * fit)));
-}
-
 // Draws `framebuffer` (width x height) into the window's box, black around it; `flip`: its first
 // row is the top (an uploaded picture) rather than the bottom (a rendered frame).
 void present(unsigned framebuffer, int width, int height, int window_width, int window_height, bool flip,
@@ -1771,38 +1760,15 @@ void slow_frame() {
     }
 }
 
-renderer::Vec3 normalised(renderer::Vec3 v) {
-    const float l = std::sqrt(v[0] * v[0] + v[1] * v[1] + v[2] * v[2]);
-    return l > 0.0f ? renderer::Vec3{v[0] / l, v[1] / l, v[2] / l} : v;
-}
-
-renderer::Vec3 cross(const renderer::Vec3& a, const renderer::Vec3& b) {
-    return {a[1] * b[2] - a[2] * b[1], a[2] * b[0] - a[0] * b[2], a[0] * b[1] - a[1] * b[0]};
-}
-
 // The camera part way from the last tick's to this one's (a cut is not blended).
 viewer::GameState blend_camera(const viewer::GameState& from, const viewer::GameState& to, float t) {
     viewer::GameState c = to;
-    const renderer::Vec3& p0 = from.camera_position;
-    const renderer::Vec3& p1 = to.camera_position;
-    const float d2 = (p1[0] - p0[0]) * (p1[0] - p0[0]) + (p1[1] - p0[1]) * (p1[1] - p0[1])
-                     + (p1[2] - p0[2]) * (p1[2] - p0[2]);
-    const float turn = from.forward[0] * to.forward[0] + from.forward[1] * to.forward[1]
-                       + from.forward[2] * to.forward[2];
-    if (d2 > 64.0f || turn < 0.7f) {
-        return c;
-    }
-    for (int i = 0; i < 3; ++i) {
-        c.camera_position[i] = p0[i] + (p1[i] - p0[i]) * t;
-    }
-    renderer::Vec3 f, u;
-    for (int i = 0; i < 3; ++i) {
-        f[i] = from.forward[i] + (to.forward[i] - from.forward[i]) * t;
-        u[i] = from.up[i] + (to.up[i] - from.up[i]) * t;
-    }
-    c.forward = normalised(f);
-    c.left = normalised(cross(u, c.forward));
-    c.up = cross(c.forward, c.left);
+    const CameraPose pose = blend_pose({from.camera_position, from.forward, from.left, from.up},
+                                       {to.camera_position, to.forward, to.left, to.up}, t);
+    c.camera_position = pose.position;
+    c.forward = pose.forward;
+    c.left = pose.left;
+    c.up = pose.up;
     return c;
 }
 
@@ -1896,7 +1862,7 @@ void draw_kept(bool first) {
     // samples a pixel. It is scaled to the box when it is shown (present).
     int width = 0;
     int height = 0;
-    frame_size(box.width, box.height, width, height);
+    frame_size(box.width, box.height, settings::get().render_scale, width, height);
     // How much of the frame's width the game's 4:3 picture is: all of it, or its middle.
     const float picture_scale = aspect > kTvAspect && box.width > 0 && box.height > 0
         ? std::min(1.0f, kTvAspect * static_cast<float>(box.height) / static_cast<float>(box.width)) : 1.0f;
