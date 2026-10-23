@@ -310,6 +310,13 @@ set_tests_properties(platform PROPERTIES ENVIRONMENT "SDL_AUDIO_DRIVER=dummy")
 
 openrac_add_test(touch_pad LIBS openrac_platform)
 
+# The frontend's pure helpers (game/common/frontend/), built from their own sources: the game
+# programs compile them through cmake/Games.cmake's glob.
+openrac_add_test(frontend_geometry SOURCES tests/frontend_geometry_test.cpp
+                 game/common/frontend/geometry.cpp INCLUDES .)
+openrac_add_test(frontend_pacing SOURCES tests/frontend_pacing_test.cpp
+                 game/common/frontend/pacing.cpp INCLUDES .)
+
 openrac_add_test(touch_overlay SOURCES tests/touch_overlay_test.cpp game/common/touch_overlay.cpp
                  INCLUDES game/common LIBS openrac_renderer openrac_platform)
 set_tests_properties(touch_overlay PROPERTIES SKIP_RETURN_CODE 77)
