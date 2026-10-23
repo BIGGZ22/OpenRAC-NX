@@ -538,6 +538,16 @@ class IsoTests(TempDir):
             iso9660.files(damaged)
         self.assertEqual(caught.exception.detail, "the root directory is damaged")
 
+    def test_a_record_cut_short_is_refused(self):
+        # The root's own and parent records are 34 bytes each; end the root 20 bytes into the third.
+        image = bytearray(self.image.read_bytes())
+        struct.pack_into("<I", image, 16 * SECTOR + 156 + 10, 2 * 34 + 20)
+        cut = self.write("cut.iso", bytes(image))
+        for read in (iso9660.files, iso9660.boot_serial):
+            with self.subTest(read=read.__name__), self.assertRaises(iso9660.IsoError) as caught:
+                read(cut)
+            self.assertEqual(caught.exception.detail, "a directory record is cut short")
+
     def test_matches_the_editors_disc_reader(self):
         flat = self.write("flat.iso", build_image({"SYSTEM.CNF": CNF, "SCES_999.99": BOOT, **MANY}))
         with disc.Disc(flat) as image:
