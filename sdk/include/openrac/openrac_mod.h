@@ -113,10 +113,10 @@ typedef struct openrac_mod_info {
  * and system (openrac/keys.h names them: "KeyW", "Space", "ShiftLeft"). Since 1.2. */
 #define OPENRAC_KEY_COUNT 512
 
-/* The bits of an openrac_input.keys[k] entry. Since 1.2. */
-/* The key is down. */
+/* The key is down: a bit of an openrac_input.keys[k] entry. Since 1.2. */
 #define OPENRAC_KEY_HELD 1u
-/* The key went down since the last tick (a tap shorter than a tick too). */
+/* The key went down since the last tick (a tap shorter than a tick too): a bit of an
+ * openrac_input.keys[k] entry. Since 1.2. */
 #define OPENRAC_KEY_PRESSED 2u
 
 /* The bits of openrac_input.mouse_held and mouse_pressed. Since 1.2. */
@@ -128,10 +128,11 @@ typedef struct openrac_mod_info {
 /* The other side button (X2). */
 #define OPENRAC_MOUSE_FORWARD 16u
 
-/* The devices openrac_api.take_input takes from the port. Since 1.2. */
-/* The port's own keyboard table stops driving pad 0. */
+/* A device of openrac_api.take_input: the port's own keyboard table stops driving pad 0. Since
+ * 1.2. */
 #define OPENRAC_INPUT_KEYBOARD 1u
-/* The mod uses the mouse in play. Reserved: the port has no mouse use of its own in play. */
+/* A device of openrac_api.take_input: the mod uses the mouse in play. Reserved: the port has no
+ * mouse use of its own in play. Since 1.2. */
 #define OPENRAC_INPUT_MOUSE 2u
 
 /* The keyboard and mouse as the port read them for the tick about to run: taken once a tick, after
