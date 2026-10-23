@@ -145,6 +145,7 @@ export const ENHANCED = {
   fallback: "A level without it keeps its original lighting.",
   noLevels: "Get the levels ready on the game's page first.",
   noBaker: "This copy of the game has no lighting baker.",
+  noBakerHere: "Intel Macs ship without the lighting baker: the enhanced graphics keep the original lighting.",
   prepare: "Prepare lighting",
   again: "Prepare again",
   advanced: "Advanced",

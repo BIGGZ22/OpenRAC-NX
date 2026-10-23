@@ -287,7 +287,7 @@
           {#if job}
             {phaseLabel(job)}{bakeProgress?.percent != null ? `, ${Math.round(bakeProgress.percent)} %` : "…"}
           {:else if !bake.available}
-            {bake.levels === 0 ? T.ENHANCED.noLevels : T.ENHANCED.noBaker}
+            {bake.noBakerHere ? T.ENHANCED.noBakerHere : bake.levels === 0 ? T.ENHANCED.noLevels : T.ENHANCED.noBaker}
           {:else if bake.ready >= bake.levels}
             {T.ENHANCED.ready(bake.levels)}
           {:else}
@@ -306,7 +306,7 @@
             {#if bakeProgress?.percent != null}<i style:width={`${bakeProgress.percent}%`}></i>{:else}<i class="moving"
               ></i>{/if}
           </div>
-        {:else if bake.ready < bake.levels}
+        {:else if bake.ready < bake.levels && !bake.noBakerHere}
           <p class="dim small-print">{T.ENHANCED.fallback}</p>
         {/if}
       </div>

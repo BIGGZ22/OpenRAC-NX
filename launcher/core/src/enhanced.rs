@@ -12,7 +12,9 @@
 //! extracted levels by the `probe-bake` action (port/enhanced/tools/probes/bake_all.py --update).
 //! Each baked level records what it was made from (`openrac-bake.json`); a level whose export or
 //! baker changed since counts as not ready and is baked again. A level without a bake keeps the
-//! original lighting.
+//! original lighting. Intel Macs ship without the baker (the maintainers' decision: Embree's static
+//! library cannot be built there, tools/build_port.py), so the entry says that there instead of
+//! offering a bake.
 
 use std::path::{Path, PathBuf};
 
@@ -31,6 +33,12 @@ pub const SWITCH: &str = "enhanced_rendering";
 pub const BAKE_ACTION: &str = "probe-bake";
 /// What each baked level records (bake_all.py, STAMP).
 const STAMP: &str = "openrac-bake.json";
+/// Why an Intel Mac has no bakes, as tools/build_port.py says it when it leaves the baker out.
+pub const NO_BAKER_HERE: &str =
+    "Intel Macs ship without the probe baker: their enhanced graphics keep the original lighting.";
+/// Whether this computer gets the probe baker: every one but an Intel Mac (NO_BAKER_HERE). It is
+/// the launcher's own build that counts, as `platform.machine()` does for build_port.py.
+pub const SHIPS_BAKER: bool = !cfg!(all(target_os = "macos", target_arch = "x86_64"));
 
 /// Whether a version has the entry: the bake planner reads RAC1's levels (PAL and NTSC-U).
 pub fn supported(game: &str, version: &str) -> bool {
@@ -135,6 +143,8 @@ pub struct BakeStatus {
     /// The bake can run: the levels are there and so is the baker; else `why` says what is missing.
     pub available: bool,
     pub why: String,
+    /// This computer gets no baker at all (an Intel Mac, NO_BAKER_HERE): no bake is ever offered.
+    pub no_baker_here: bool,
     pub levels: usize,
     pub ready: usize,
     pub failed: usize,
@@ -147,12 +157,25 @@ fn sha256(path: &Path) -> Option<String> {
 
 /// The bake status of the levels in `levels` against the bakes in `probes`, made by `baker`.
 pub fn bake_status(levels: &Path, probes: &Path, baker: &Path) -> BakeStatus {
+    bake_status_on(levels, probes, baker, SHIPS_BAKER)
+}
+
+/// [`bake_status`] on a computer that gets the baker or not (`ships_baker`, SHIPS_BAKER). Without
+/// it and without a baker, NO_BAKER_HERE is the reason whatever the levels: preparing them would
+/// not make a bake possible.
+fn bake_status_on(levels: &Path, probes: &Path, baker: &Path, ships_baker: bool) -> BakeStatus {
     let mut out = BakeStatus::default();
+    let baker_hash = sha256(baker);
+    if baker_hash.is_none() && !ships_baker {
+        out.no_baker_here = true;
+        out.why = NO_BAKER_HERE.into();
+    }
     let Ok(entries) = std::fs::read_dir(levels) else {
-        out.why = "the levels are not ready yet".into();
+        if !out.no_baker_here {
+            out.why = "the levels are not ready yet".into();
+        }
         return out;
     };
-    let baker_hash = sha256(baker);
     for entry in entries.flatten() {
         let name = entry.file_name().to_string_lossy().into_owned();
         let numbered =
@@ -176,6 +199,9 @@ pub fn bake_status(levels: &Path, probes: &Path, baker: &Path) -> BakeStatus {
         } else if probes.join(format!(".{name}.failed")).is_dir() {
             out.failed += 1;
         }
+    }
+    if out.no_baker_here {
+        return out;
     }
     if out.levels == 0 {
         out.why = "the levels are not ready yet".into();
@@ -374,6 +400,40 @@ mod tests {
         std::fs::write(&baker, "another baker").unwrap();
         assert_eq!(bake_status(&levels, &probes, &baker).ready, 0);
         let _ = std::fs::remove_dir_all(&root);
+    }
+
+    #[test]
+    fn an_intel_mac_says_it_ships_without_the_baker_instead_of_offering_a_bake() {
+        let root = temp("intel");
+        let (levels, probes, baker) = (root.join("levels"), root.join("probes"), root.join("baker"));
+        // Before the levels are ready, and after: the reason stays the missing baker.
+        for ready in [false, true] {
+            if ready {
+                std::fs::create_dir_all(levels.join("level_00")).unwrap();
+                std::fs::write(levels.join("level_00").join("manifest.json"), "level_00").unwrap();
+            }
+            let here = bake_status_on(&levels, &probes, &baker, false);
+            assert!(!here.available && here.no_baker_here, "{here:?}");
+            assert_eq!(here.why, NO_BAKER_HERE);
+            assert_eq!(here.levels, usize::from(ready));
+            // Elsewhere the existing reasons are kept.
+            let elsewhere = bake_status_on(&levels, &probes, &baker, true);
+            assert!(!elsewhere.available && !elsewhere.no_baker_here);
+            let why = if ready { "this build of the game has no probe baker" } else { "the levels are not ready yet" };
+            assert_eq!(elsewhere.why, why);
+        }
+        // A baker that is there anyway (built by hand) is used.
+        std::fs::write(&baker, "baker").unwrap();
+        let built = bake_status_on(&levels, &probes, &baker, false);
+        assert!(built.available && !built.no_baker_here && built.why.is_empty(), "{built:?}");
+        let _ = std::fs::remove_dir_all(&root);
+    }
+
+    #[test]
+    fn the_frontend_reads_whether_this_computer_gets_a_baker() {
+        // launcher/src/lib/api.ts, BakeStatus.noBakerHere.
+        let json = serde_json::to_value(BakeStatus { no_baker_here: true, ..BakeStatus::default() }).unwrap();
+        assert_eq!(json["noBakerHere"], Value::Bool(true));
     }
 
     #[test]

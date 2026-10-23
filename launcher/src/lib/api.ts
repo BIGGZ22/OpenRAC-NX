@@ -383,6 +383,8 @@ export interface BakeStatus {
   /** The bake can run now; else `why` says what is missing. */
   available: boolean;
   why: string;
+  /** This computer gets no baker at all (an Intel Mac): no bake is ever offered. */
+  noBakerHere: boolean;
   levels: number;
   ready: number;
   failed: number;
