@@ -1,0 +1,110 @@
+# The port's module layering, read by layering.py (README.md here); the layers are those of
+# port/docs/CODING_CONVENTIONS.md, section 18. Paths are relative to port/. One row per line,
+# its columns separated by tabs; a line starting with # is a comment.
+#
+#   search	DIR               where a quoted include is looked for after the including file's own
+#                             directory, in the compiler's order (the build's include directories)
+#   skip	PREFIX            directories whose files are not read (they can still be included)
+#   module	PREFIX	NAME      files under PREFIX belong to module NAME; the first matching row wins,
+#                             so a subdirectory comes before its parent. A `*` segment matches one
+#                             directory, and a `*` in NAME takes its name (game/*/ is game/rac1/, ...)
+#   layer	RANK	NAMES     the modules on one layer, separated by spaces; a module includes its
+#                             own files and any module of a lower rank
+#   allow	FROM	NAMES     the modules of FROM's own layer that FROM may include (never a higher one)
+#   except	FILE:LINE	INCLUDE	REASON
+#                             a known violation: that include in FILE breaks the layers until the
+#                             package REASON names removes it. Only remove rows, never add one: a new
+#                             include against the layers is fixed, not listed. The check warns when a
+#                             row no longer occurs or has moved, so the list stays exact.
+#
+# A new module brings its module and layer rows (and allow rows if it needs them) in the commit that
+# creates it (CODING_CONVENTIONS.md, section 19).
+
+# The build's include directories (port/CMakeLists.txt, cmake/Games.cmake).
+search	.
+search	runtime/include
+search	game/common/include
+search	../sdk/include
+
+# Build trees are not the port's source; a game's hand C is the game's C on its way into games/
+# (docs/LAYOUT.md), not host code. The tests that include hand C are still read.
+skip	build/
+skip	game/*/hand/
+
+# The modules (CODING_CONVENTIONS.md, section 9.1). enhanced/tests/ holds test programs, so it is
+# read as tests; enhanced/tools/ (the probe baker) stays with enhanced, whose code it drives.
+module	../sdk/include/	sdk
+module	common/	common
+module	runtime/	runtime
+module	platform/	platform
+module	assets/	assets
+module	audio/	audio
+module	media/	media
+module	renderer/vulkan/	renderer/vulkan
+module	renderer/world/	renderer/world
+module	renderer/	renderer
+module	scene/	scene
+module	enhanced/tests/	tests
+module	enhanced/	enhanced
+module	game/common/	game/common
+module	game/*/	game/*
+module	viewer/	viewer
+module	extract/	extract
+module	android/	android
+module	tools/	tools
+module	tests/	tests
+
+# The layers, lowest first. sdk is the mod SDK's C ABI (sdk/include/openrac), a contract that
+# depends on nothing. scene arrives with P2-02 (from viewer/). game/common is the host program;
+# viewer, extract, tools (hostgen's harness), android (the app's glue) and tests are the programs.
+#
+# viewer/ is a program's directory, so its includes of enhanced/ are allowed today. Its library
+# files (level, level_renderer) are what P2-02 moves to scene/: their includes of enhanced/ become
+# scene -> enhanced there, and P2-02 lists them below until P2-07 inverts them.
+layer	0	sdk common
+layer	1	runtime
+layer	2	platform assets audio media
+layer	3	renderer renderer/vulkan renderer/world
+layer	4	scene
+layer	5	enhanced
+layer	6	game/common
+layer	7	game/*
+layer	8	viewer extract tools android tests
+
+# Edges within a layer. audio plays the sound formats assets reads; media's movies carry PSS audio
+# that assets decodes. The world renderers and the Vulkan backend build on renderer's GL-shaped
+# interface, and the Vulkan backend carries out the world renderers' GL calls too (gl_world.h).
+# The tests cover the programs' code.
+allow	audio	assets
+allow	media	assets
+allow	renderer/world	renderer
+allow	renderer/vulkan	renderer renderer/world
+allow	tests	viewer extract
+
+# Known violations (docs/restructure/PROGRESS.md names the packages).
+# runtime -> assets: the PS2 float semantics sit in assets/; P1-01 moves ps2_float to common/.
+except	runtime/ps2float.cpp:14	assets/ps2_float.h	P1-01 moves ps2_float to common/
+# platform -> renderer/vulkan: the window opens the Vulkan backend itself; no package yet.
+except	platform/window.cpp:23	renderer/vulkan/vkgl.h	no package yet: the renderer should open its backend on the platform's window
+# renderer -> enhanced: the core renderer depends on the experimental layer's GTAO.
+except	renderer/renderer.h:29	enhanced/renderer/gtao.h	P2-07: renderer owns the post-process interface, enhanced registers GTAO
+except	renderer/renderer.h:30	enhanced/renderer/gtao_settings.h	P2-07: renderer owns the post-process interface, enhanced registers GTAO
+# enhanced -> viewer: the JSON library and the level live in the viewer program's directory.
+except	enhanced/tools/probes/activation.cpp:9	viewer/json.h	P1-01 moves json to common/
+except	enhanced/tools/probes/level_scene.cpp:15	viewer/json.h	P1-01 moves json to common/
+except	enhanced/tools/probes/level_scene.h:4	viewer/level.h	P2-02 moves the level to scene/
+except	enhanced/tools/probes/main.cpp:17	viewer/json.h	P1-01 moves json to common/
+except	enhanced/viewer/probe_lighting.cpp:20	viewer/json.h	P1-01 moves json to common/
+except	enhanced/viewer/probe_lighting.h:11	viewer/level.h	P2-02 moves the level to scene/
+# game/common -> viewer: the game program uses the viewer's world drawing, game state and JSON.
+except	game/common/debug_overlay.cpp:42	viewer/screenshot.h	P2-02 moves the screenshot to scene/
+except	game/common/debug_overlay.h:28	viewer/game_state.h	P2-03 moves the game state into rac1's GameProfile
+except	game/common/frontend.cpp:50	viewer/game_state.h	P2-03 moves the game state into rac1's GameProfile
+except	game/common/frontend.cpp:51	viewer/level.h	P2-02 moves the level to scene/
+except	game/common/frontend.cpp:52	viewer/level_renderer.h	P2-02 moves the level renderer to scene/
+except	game/common/frontend.cpp:53	viewer/moby_pose.h	P2-02 moves the moby pose to scene/
+except	game/common/frontend.cpp:54	viewer/moby_shadow.h	P2-02 moves the moby shadow to scene/
+except	game/common/frontend.cpp:55	viewer/screenshot.h	P2-02 moves the screenshot to scene/
+except	game/common/main.cpp:74	viewer/level.h	P2-02 moves the level to scene/
+except	game/common/main.cpp:75	viewer/moby_pose.h	P2-02 moves the moby pose to scene/
+except	game/common/mod_manifest.h:20	viewer/json.h	P1-01 moves json to common/
