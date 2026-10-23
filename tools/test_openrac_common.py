@@ -247,6 +247,15 @@ class BootstrapTests(TempDir):
         self.assertIn(paths.BOOTSTRAP, paths.__doc__)
         self.assertIn(paths.BOOTSTRAP, (ROOT / paths.PACKAGE_DIR / "README.md").read_text(encoding="utf-8"))
 
+    def test_no_module_there_is_named_as_one_of_tools(self):
+        # A module of tools/ beside one of the same name elsewhere is imported by whichever folder
+        # comes first on the path: hostgen's test assembler, named mips.py like tools/mips.py that
+        # versionmap imports, was one (renamed tests/assembler.py in P2-10).
+        ours = {script.stem for script in (ROOT / "tools").glob("*.py")}
+        for folder in BOOTSTRAPPED:
+            for script in sorted((ROOT / folder).rglob("*.py")):
+                self.assertNotIn(script.stem, ours, script.relative_to(ROOT))
+
     def test_every_script_outside_tools_that_imports_the_package_bootstraps_so(self):
         for folder in BOOTSTRAPPED:
             for script in sorted((ROOT / folder).rglob("*.py")):

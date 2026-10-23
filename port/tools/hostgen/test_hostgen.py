@@ -30,7 +30,7 @@ import hostgen  # noqa: E402
 import prep  # noqa: E402
 
 sys.path.insert(0, str(HERE / "tests"))
-import mips  # noqa: E402
+import assembler  # noqa: E402
 
 RUNTIME_INCLUDE = HERE.parent.parent / "runtime" / "include"
 
@@ -2163,12 +2163,12 @@ ASM_CONFIG = {"asm": {"enabled": True, "dirs": ["asm"], "gp": "0x00180000"}}
 @unittest.skipUnless(have_compiler(), "needs Clang on a POSIX host")
 class FromAssembly(unittest.TestCase):
     """C from assembly (asmc.py): a function the test's decompilation has only as assembly (an
-    INCLUDE_ASM stub, with an assembly file tests/mips.py writes the way the setup writes one),
+    INCLUDE_ASM stub, with an assembly file tests/assembler.py writes the way the setup writes one),
     translated, built with the C that calls it, run, and its output checked."""
     run_program = Translate.run_program
 
     def run_asm(self, c: str, functions: dict[str, tuple[int, str]], symbols=None, tables=None) -> list[str]:
-        files = {f"game/asm/{name}.s": mips.assemble(name, start, text, symbols, (tables or {}).get(name))
+        files = {f"game/asm/{name}.s": assembler.assemble(name, start, text, symbols, (tables or {}).get(name))
                  for name, (start, text) in functions.items()}
         return self.run_program({"a.c": c}, config=ASM_CONFIG, extra_files=files)
 
@@ -2344,7 +2344,7 @@ class FromAssembly(unittest.TestCase):
                 jr $31
                 addiu $2, $0, -1
         """
-        labels = mips.label_addresses(0x00100000, source)
+        labels = assembler.label_addresses(0x00100000, source)
         out = self.run_asm(f"""
             extern unsigned int D_00300000[8];
             extern int D_0017FFF0;
@@ -2724,7 +2724,7 @@ class FromAssembly(unittest.TestCase):
         # register, memory at the console's addresses.
         with tempfile.TemporaryDirectory() as tmp:
             out = Path(tmp) / "console"
-            files = {"game/asm/func_00100000.s": mips.assemble("func_00100000", 0x00100000, """
+            files = {"game/asm/func_00100000.s": assembler.assemble("func_00100000", 0x00100000, """
                 addiu $29, $29, -16
                 sq $31, 0($29)
                 jal func_00200000
@@ -2766,7 +2766,7 @@ class Decoding(unittest.TestCase):
                     self.assertEqual(getattr(i, k), v, k)
 
     def test_file_reading(self):
-        text = mips.assemble("func_00100000", 0x00100000, """
+        text = assembler.assemble("func_00100000", 0x00100000, """
             beq $4, $0, end
             nop
         end:

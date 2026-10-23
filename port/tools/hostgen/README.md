@@ -377,6 +377,6 @@ the game's own `memcpy` or `main` never meets the host's.
 | [retail.py](retail.py), [test_retail.py](test_retail.py) | the same instructions from the retail program (the disc image, or the executable and level dumps) |
 | [derived.py](derived.py), [test_derived.py](test_derived.py) | the names a decompilation's build derives: which table is read, and the port's copy written again |
 | [no_c.py](no_c.py), [test_no_c.py](test_no_c.py) | which functions with no C need C: each game's `no_c.tsv` |
-| [tests/mips.py](tests/mips.py) | the tests' small assembler: assembly files written the way the setup writes them |
+| [tests/assembler.py](tests/assembler.py) | the tests' small assembler: assembly files written the way the setup writes them |
 | [test_hostgen.py](test_hostgen.py), [tests/harness.c](tests/harness.c) | small programs in the console's C, translated, built, run and checked |
 | [priority.py](priority.py), [test_priority.py](test_priority.py) | what to backfill first: the weak functions each level program reaches, ranked |

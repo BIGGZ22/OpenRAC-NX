@@ -9,7 +9,7 @@ HERE = Path(__file__).resolve().parent
 sys.path.insert(0, str(HERE / 'tests'))
 import asm
 import asmc
-import mips
+import assembler
 import ctype
 from program import Function, Program, Signature, read_catalogue, prototype
 
@@ -39,7 +39,7 @@ class CatalogueTests(unittest.TestCase):
             p = Program()
             p.returns_64 = {wide}
             for name, (address, body) in bodies.items():
-                (folder / (name + '.s')).write_text(mips.assemble(name, address, body,
+                (folder / (name + '.s')).write_text(assembler.assemble(name, address, body,
                     {wide: 0x100000, consumer: 0x100300}))
                 p.functions[name] = Function(name, Signature(ctype.Base('int'), (), False, False), asm=True)
             p.index_places()
@@ -75,7 +75,7 @@ class CatalogueTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as temp:
             folder = Path(temp)
             name = 'func_00100000'
-            (folder / 'f.s').write_text(mips.assemble(name, 0x100000,
+            (folder / 'f.s').write_text(assembler.assemble(name, 0x100000,
                 'addu $2, $4, $5\njr $31\nnop\n'))
             p = Program()
             f = Function(name, Signature(ctype.Base('int'), (), False, False), asm=True)
@@ -100,7 +100,7 @@ class CatalogueTests(unittest.TestCase):
                     'jal func_00100000\nnop\nld $31, 0($29)\njr $31\naddiu $29, $29, 16\n'),
             }
             for name, (addr, body) in bodies.items():
-                (folder / (name + '.s')).write_text(mips.assemble(name, addr, body,
+                (folder / (name + '.s')).write_text(assembler.assemble(name, addr, body,
                     {'func_00100000': 0x100000}))
             tr = asmc.Translator(p, asm.read_index([folder], lambda _: -1))
             tr.forward_unprototyped = True  # rac4's asm.forward_unprototyped
@@ -123,7 +123,7 @@ class CatalogueTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as temp:
             folder = Path(temp)
             name = 'func_00100000'
-            (folder / 'f.s').write_text(mips.assemble(name, 0x100000,
+            (folder / 'f.s').write_text(assembler.assemble(name, 0x100000,
                 'addu $2, $4, $5\njr $31\nnop\n'))
             p = Program()
             old = Signature(ctype.Base('int'), (), False, False)
@@ -141,7 +141,7 @@ class CatalogueTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as temp:
             folder = Path(temp)
             name = 'func_00100000'
-            (folder / 'f.s').write_text(mips.assemble(name, 0x100000,
+            (folder / 'f.s').write_text(assembler.assemble(name, 0x100000,
                 'addu $2, $4, $5\njr $31\nnop\n'))
             p = Program()
             old = Signature(ctype.Base('int'), (), False, False)
@@ -157,7 +157,7 @@ class CatalogueTests(unittest.TestCase):
             folder = Path(temp)
             caller = 'func_00100000'
             callee = 'func_00100100'
-            (folder / 'f.s').write_text(mips.assemble(caller, 0x100000,
+            (folder / 'f.s').write_text(assembler.assemble(caller, 0x100000,
                 'addiu $29, $29, -16\nsd $31, 0($29)\n'
                 'jal func_00100100\naddiu $7, $0, 1\n'
                 'ld $31, 0($29)\njr $31\naddiu $29, $29, 16\n',
