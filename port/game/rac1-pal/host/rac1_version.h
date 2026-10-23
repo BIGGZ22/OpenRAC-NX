@@ -26,8 +26,9 @@
 /* The pause menu mobys' update at 0x0023B578: the decompilation has C for it (func_0023B578) since the
  * remnant in front of it was split off. */
 #define RAC1_OMIT_game_D_0023B578 1
-/* shrub_class_init: the decompilation's candidate (nonmatching/functional, Lombyte's register_shrub_render_class)
- * is the function, the GS texture registers of the class's packets included. */
+/* shrub_class_init: the decompilation's candidate (nonmatching/functional,
+ * register_shrub_render_class) is the function, the GS texture registers of the
+ * class's packets included. */
 #define RAC1_OMIT_func_00204340 1
 /* The executable's sky tile cull (sky_bsphere_check, SkyBsphereCheck's twin): its candidate is the function. */
 #define RAC1_OMIT_func_0022D7E0 1
