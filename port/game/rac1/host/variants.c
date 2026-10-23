@@ -280,3 +280,35 @@ void func_L02_00299F28(int idx) {
     }
 }
 #endif
+
+/* func_001F9850's (scale_ticks: n * a factor + 0.5, by adda.s and madd.s, then cvt.w.s) two neighbours
+ * in every level's program, which the catalogue folds into it although each reads another factor from
+ * $gp: gp-0x7E9C (0x15EE64) and gp-0x7E98 (0x15EE68, 50/60 in PAL: what level code turns a 60 Hz count
+ * of ticks with). func_001F9850 itself reads gp-0x7EA0 (0x15EE60). */
+int func_L00_001FEE98(int n) {
+    const float half = 0.25f + 0.25f;
+    return openrac_f2i(half + (float)n * GREF(float, RAC1_ADDR(0x0015EE64u)));
+}
+
+int func_L00_001FEED0(int n) {
+    const float half = 0.25f + 0.25f;
+    return openrac_f2i(half + (float)n * GREF(float, RAC1_ADDR(0x0015EE68u)));
+}
+
+/* func_001F9878's (x times the factor at gp-0x7E9C: lwc1 from $gp, mul.s) four neighbours in every
+ * level's program, which the catalogue folds into it although each multiplies by another factor. */
+float func_L00_001FEE50(float x) {
+    return GREF(float, RAC1_ADDR(0x0015EE60u)) * x; /* gp-0x7EA0 */
+}
+
+float func_L00_001FEEC0(float x) {
+    return GREF(float, RAC1_ADDR(0x0015EE68u)) * x; /* gp-0x7E98 */
+}
+
+float func_L00_001FEEF8(float x) {
+    return GREF(float, RAC1_ADDR(0x0015EE6Cu)) * x; /* gp-0x7E94 */
+}
+
+float func_L00_001FEF08(float x) {
+    return GREF(float, RAC1_ADDR(0x0015EE70u)) * x; /* gp-0x7E90 */
+}

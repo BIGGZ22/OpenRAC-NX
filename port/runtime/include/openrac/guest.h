@@ -411,13 +411,24 @@ void openrac_host_caller(int depth, char* text, size_t size);
 /* ---- What the game's own inline assembly did ----
  *
  * The decompilation keeps three quadword helpers as inline assembly
- * (games/rac1/include/common.h): qcopy, qcopy_nc and qzero. */
+ * (games/rac1/include/common.h): qcopy, qcopy_nc and qzero. Their lq and sq
+ * ignore the low four bits of the address, as every quadword load and store
+ * of the EE does: matched C that copies from `&moby->pos.z` (an lq at +0x18,
+ * Moby1259Update) gets the quadword at +0x10, the whole position. That holds
+ * where the layout is the console's (RAM, its aliases, the scratchpad); the
+ * port's own region (locals whose address is taken) is laid out by hostgen,
+ * which may put a quadword local at 8 mod 16 where the console's frame had it
+ * aligned (func_L00_0026A7F8), so an address there is taken as it is. */
+static inline gaddr openrac_quadword_address(gaddr a) {
+    return (a - GUEST_PORT) < GUEST_PORT_SIZE ? a : (a & ~(gaddr)15u);
+}
+
 static inline void openrac_qcopy(gaddr dst, gaddr src) {
-    memmove(G(dst), G(src), 16);
+    memmove(G(openrac_quadword_address(dst)), G(openrac_quadword_address(src)), 16);
 }
 
 static inline void openrac_qzero(gaddr p) {
-    memset(G(p), 0, 16);
+    memset(G(openrac_quadword_address(p)), 0, 16);
 }
 
 #ifdef __cplusplus
