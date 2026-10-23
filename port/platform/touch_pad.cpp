@@ -48,11 +48,6 @@ static_assert(std::size(kGroupNames) == kTouchGroups, "a name for each TouchGrou
 
 }  // namespace
 
-const char* TouchPad::group_name(TouchGroup group) {
-    const auto i = static_cast<std::size_t>(group);
-    return i < kTouchGroups ? kGroupNames[i] : "";
-}
-
 TouchPad::TouchPad() {
     // The left thumb moves Ratchet (the left stick, the d-pad above it); the right one jumps and
     // attacks (the face buttons, all of one size as on the pad) and turns the camera on the

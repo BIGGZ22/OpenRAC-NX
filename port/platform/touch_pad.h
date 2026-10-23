@@ -145,9 +145,6 @@ public:
     // The camera as the fingers turn it: -1..1 across and down, 0 with no finger on it.
     void look(float& x, float& y) const;
 
-    // The group's name in layout(): "stick", "dpad", "face", "l1", ... "menu".
-    static const char* group_name(TouchGroup group);
-
 private:
     enum class Role {
         None,
