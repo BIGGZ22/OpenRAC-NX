@@ -1,9 +1,9 @@
 # common
 
 The bottom layer of the port: what every module may use, and nothing that belongs to one of them.
-The log, the crash report, the statistics, the system's description, a JSON reader, the console's
-float arithmetic, and small helpers. It draws nothing, opens no window and includes no other module
-of the port; a helper only one module uses stays in that module.
+The log, the crash report, the statistics, the environment variables, the system's description, a
+JSON reader, the console's float arithmetic, and small helpers. It draws nothing, opens no window
+and includes no other module of the port; a helper only one module uses stays in that module.
 
 Library `openrac_common`. Each header has a namespace of its own under `openrac` (the table below);
 `joining_thread.h` declares its one type in `openrac` itself.
@@ -15,6 +15,7 @@ Library `openrac_common`. Each header has a namespace of its own under `openrac`
 | [`log.h`](log.h) | `openrac::log`: the port's log, its levels, the session file and the fatal error |
 | [`line_ring.h`](line_ring.h) | `openrac::log::LineRing`: the log's last lines, kept in memory for a crash report |
 | [`crash.h`](crash.h) | `openrac::crash`: the crash report, written from a signal handler, and the game's state it names |
+| [`env.h`](env.h) | `openrac::env`: the table of every `OPENRAC_*` variable the port reads (its kind, what holds when it is unset, what it does) and their typed reads |
 | [`stats.h`](stats.h) | `openrac::stats`: counters, timed sections and frames for the debug overlay, and the environment probes |
 | [`system_info.h`](system_info.h) | `openrac::system_info`: the system, processor and memory a report names |
 | [`build_info.h`](build_info.h) | `openrac::build_info`: OpenRAC's version and the checkout's commit, written at each build |
@@ -39,6 +40,9 @@ compatibility library for the backtrace below API 33).
   a signal handler without allocating or locking. Each thread that runs game code calls
   `crash::prepare_thread()` once.
 - The statistics are called from the thread that runs the game and draws, and from no other.
+- `env` reads every variable of its table once, the first time any is asked for, and keeps the
+  values for the life of the program: any thread may read them. `env::system_variable` reads a
+  variable the port does not own at each call.
 - `json` and `ps2` hold no state: a parsed `json::Value` belongs to its caller, and the float
   functions are pure.
 
@@ -48,11 +52,15 @@ compatibility library for the backtrace below API 33).
 - `log::fatal` writes the crash report and ends the program; it is for what the program cannot go
   on from.
 - The float arithmetic has no failure: a division by zero gives ±`kMax`, as the console's does.
+- `env` has no failure: an unset variable reads as the caller's fallback, and a value that is not a
+  number reads as 0, as `std::strtoll` and `std::strtod` read it.
 
 ## Configuration
 
-`OPENRAC_LOG` sets the log's level (`log.cpp`), and `stats::probe` reads each `OPENRAC_*` switch a
-module declares through it: [docs/port/DEBUGGING.md](../../docs/port/DEBUGGING.md) lists them.
+`env.cpp`'s table lists every `OPENRAC_*` variable the port reads, and
+[docs/port/DEBUGGING.md](../../docs/port/DEBUGGING.md) documents each one; the `env` test holds the
+two to the same list. Within `common`, `OPENRAC_LOG` sets the log's level (`log.cpp`), and
+`stats::probe` reads each `OPENRAC_*` switch a module declares through it.
 
 ## Tests
 
@@ -60,6 +68,7 @@ module declares through it: [docs/port/DEBUGGING.md](../../docs/port/DEBUGGING.m
 |---|---|
 | `log` | the log's sessions and kept runs, its memory of last lines, and the crash report's pieces |
 | `joining_thread` | an owner going, or assigned over, waits for its thread |
+| `env` | each kind of variable reads as the `getenv` calls it replaced read it, the values are read once, and DEBUGGING.md documents the table's variables and no other |
 | `viewer` | the JSON reader's values and its errors (with the viewer's own checks) |
 | `mod_manifest`, `mod_loader`, `mod_scripts` | the mod manifests and status files, read through the JSON reader |
 | `assets_world_collision` | the float model against values the console computes, beside the collision queries that use it |

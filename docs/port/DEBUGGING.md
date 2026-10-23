@@ -250,6 +250,11 @@ section tree follows OpenGOAL's frame profiler.
 
 ## Environment variables: the debugging tools
 
+Every variable on this page has a row in the port's table of them,
+[port/common/env.cpp](../../port/common/env.cpp) (read through `env.h`), with its kind and what
+holds when it is unset. The port's `env` test fails when this page and the table do not name the
+same variables, so a new variable gets a row in both.
+
 | Variable | Value | What it does | Read in |
 | --- | --- | --- | --- |
 | `OPENRAC_OVERLAY` | `1`, or a list of `frame`, `renderer`, `memory`, `mobys`, `game`, `shaders`, `all`, `inspect`, `labels`, `memview`, `wireframe` | Shows the overlay from the start (`0`: not). The section names open those sections; `inspect` selects the hero and opens the moby inspector, `labels` names the mobys in the picture, `memview` opens the memory viewer, `wireframe` draws the frame in lines. | `port/game/common/debug_overlay.cpp` |

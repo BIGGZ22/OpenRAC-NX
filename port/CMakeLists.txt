@@ -72,6 +72,7 @@ add_custom_target(openrac_build_info
   VERBATIM)
 add_library(openrac_common STATIC
   common/crash.cpp
+  common/env.cpp
   common/json.cpp
   common/log.cpp
   common/process.cpp
@@ -96,6 +97,7 @@ openrac_warnings(openrac_common)
 openrac_add_test(log LIBS openrac_common)
 find_package(Threads REQUIRED)
 openrac_add_test(joining_thread LIBS openrac_common Threads::Threads)
+openrac_add_test(env LIBS openrac_common)
 openrac_add_test(frame_pacing INCLUDES .)
 openrac_add_test(settings SOURCES tests/settings_test.cpp game/common/settings.cpp
                           LIBS openrac_common)
