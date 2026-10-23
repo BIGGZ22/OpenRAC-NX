@@ -79,9 +79,9 @@ int openrac_lib_sceGsSyncPath(int mode, unsigned short timeout) {
     return 0;
 }
 
-/* An image transfer, as the game keeps it: a GIF tag, then BITBLTBUF,
- * TRXPOS, TRXREG and TRXDIR as (value, register) pairs, then the GIF tag of
- * the image data. 96 bytes. */
+/* An image load, as the game keeps it: a GIF tag, then BITBLTBUF, TRXPOS,
+ * TRXREG and TRXDIR as (value, register) pairs, then the GIF tag of the image
+ * data. 96 bytes. */
 typedef struct {
     uint64_t tag[2];
     uint64_t bitbltbuf, bitbltbuf_reg;
@@ -91,54 +91,74 @@ typedef struct {
     uint64_t image_tag[2];
 } image_transfer;
 
-static void set_transfer(
-    gaddr at, int dir, short base, short width, short psm, short x, short y, short w, short h
+/* sceGsSetDefLoadImage(transfer, base, width, psm, x, y, w, h): host to GS,
+ * the destination fields. */
+void openrac_lib_sceGsSetDefLoadImage(
+    gaddr transfer, short base, short width, short psm, short x, short y, short w, short h
 ) {
-    image_transfer* t = (image_transfer*)G(at);
-    t->tag[0] = bits(4, 0, 15) | bits(1, 15, 1) | bits(0, 58, 2)
-                | bits(1, 60, 4); /* NLOOP 4, EOP, PACKED, 1 reg */
-    t->tag[1] = 0xE;              /* A+D */
-    if (dir == 0) {               /* host to GS: destination fields */
-        t->bitbltbuf = bits((uint64_t)base, 32, 14) | bits((uint64_t)width, 48, 6)
-                       | bits((uint64_t)psm, 56, 6);
-        t->trxpos = bits((uint64_t)x, 32, 11) | bits((uint64_t)y, 48, 11);
-    } else { /* GS to host: source fields */
-        t->bitbltbuf =
-            bits((uint64_t)base, 0, 14) | bits((uint64_t)width, 16, 6) | bits((uint64_t)psm, 24, 6);
-        t->trxpos = bits((uint64_t)x, 0, 11) | bits((uint64_t)y, 16, 11);
-    }
+    image_transfer* t = (image_transfer*)G(transfer);
+    /* NLOOP 4, PACKED, 1 reg; the IMAGE tag follows in the same packet (retail's
+     * sceGsSetDefLoadImage leaves EOP to it). */
+    t->tag[0] = bits(4, 0, 15) | bits(0, 58, 2) | bits(1, 60, 4);
+    t->tag[1] = 0xE; /* A+D */
+    t->bitbltbuf =
+        bits((uint64_t)base, 32, 14) | bits((uint64_t)width, 48, 6) | bits((uint64_t)psm, 56, 6);
     t->bitbltbuf_reg = 0x50;
+    t->trxpos = bits((uint64_t)x, 32, 11) | bits((uint64_t)y, 48, 11);
     t->trxpos_reg = 0x51;
     t->trxreg = bits((uint64_t)w, 0, 12) | bits((uint64_t)h, 32, 12);
     t->trxreg_reg = 0x52;
-    t->trxdir = (uint64_t)dir;
+    t->trxdir = 0;
     t->trxdir_reg = 0x53;
     /* IMAGE, with the rectangle's size in quadwords as NLOOP: the game also sends a transfer
      * built here in its own display list (the pause menu's frame snapshot, 64 x 64 strips), and
      * the GS then takes exactly that much image data after the tag. */
-    if (dir == 0) {
-        const int bpp = psm == 0x00 ? 32 : psm == 0x01 ? 24 : (psm == 0x02 || psm == 0x0A) ? 16
-                        : psm == 0x13 ? 8 : psm == 0x14 ? 4 : 32;
-        const uint64_t qwords = ((uint64_t)w * (uint64_t)h * (uint64_t)bpp / 8 + 15) / 16;
-        t->image_tag[0] = bits(qwords > 0x7FFF ? 0x7FFF : qwords, 0, 15) | bits(1, 15, 1) | bits(2, 58, 2);
-    } else {
-        t->image_tag[0] = bits(2, 58, 2); /* IMAGE; nothing follows a GS-to-host transfer's tag */
-    }
+    const int bpp = psm == 0x00 ? 32 : psm == 0x01 ? 24 : (psm == 0x02 || psm == 0x0A) ? 16
+                    : psm == 0x13 ? 8 : psm == 0x14 ? 4 : 32;
+    const uint64_t qwords = ((uint64_t)w * (uint64_t)h * (uint64_t)bpp / 8 + 15) / 16;
+    t->image_tag[0] = bits(qwords > 0x7FFF ? 0x7FFF : qwords, 0, 15) | bits(1, 15, 1) | bits(2, 58, 2);
     t->image_tag[1] = 0;
 }
 
-/* sceGsSetDefLoadImage(transfer, base, width, psm, x, y, w, h) */
-void openrac_lib_sceGsSetDefLoadImage(
-    gaddr transfer, short base, short width, short psm, short x, short y, short w, short h
-) {
-    set_transfer(transfer, 0, base, width, psm, x, y, w, h);
-}
+/* A read back, as the game keeps it (sceGsSetDefStoreImage's layout, which is
+ * not a load's): four VIF codes (NOP, MSKPATH3 masking path 3, FLUSHA, DIRECT
+ * of 6 quadwords), a GIF tag (NLOOP 5, EOP, PACKED, A+D), then BITBLTBUF,
+ * TRXPOS, TRXREG, FINISH and TRXDIR as (value, register) pairs. 112 bytes. */
+typedef struct {
+    uint32_t vifcode[4];
+    uint64_t tag[2];
+    uint64_t bitbltbuf, bitbltbuf_reg;
+    uint64_t trxpos, trxpos_reg;
+    uint64_t trxreg, trxreg_reg;
+    uint64_t finish, finish_reg;
+    uint64_t trxdir, trxdir_reg;
+} image_readback;
 
-/* sceGsSetDefStoreImage(transfer, base, width, psm, x, y, w, h) */
-void openrac_lib_sceGsSetDefStoreImage(
+/* sceGsSetDefStoreImage(transfer, base, width, psm, x, y, w, h): the source
+ * fields, each argument sign-extended into its place as the library does it.
+ * Returns the packet's size in quadwords. */
+int openrac_lib_sceGsSetDefStoreImage(
     gaddr transfer, short base, short width, short psm, short x, short y, short w, short h
 ) {
-    set_transfer(transfer, 1, base, width, psm, x, y, w, h);
+    image_readback* t = (image_readback*)G(transfer);
+    t->vifcode[0] = 0;
+    t->vifcode[1] = 0x06008000u; /* MSKPATH3 1 */
+    t->vifcode[2] = 0x13000000u; /* FLUSHA */
+    t->vifcode[3] = 0x50000006u; /* DIRECT 6 */
+    t->tag[0] = bits(5, 0, 15) | bits(1, 15, 1) | bits(1, 60, 4);
+    t->tag[1] = 0xE; /* A+D */
+    t->bitbltbuf = (uint64_t)(int64_t)base | (uint64_t)(int64_t)(int32_t)((uint32_t)(int32_t)width << 16)
+                   | (uint64_t)(int64_t)psm << 24;
+    t->bitbltbuf_reg = 0x50;
+    t->trxpos = (uint64_t)(int64_t)x | (uint64_t)(int64_t)(int32_t)((uint32_t)(int32_t)y << 16);
+    t->trxpos_reg = 0x51;
+    t->trxreg = (uint64_t)(int64_t)w | (uint64_t)(int64_t)h << 32;
+    t->trxreg_reg = 0x52;
+    t->finish = 0;
+    t->finish_reg = 0x61;
+    t->trxdir = 1; /* local to host */
+    t->trxdir_reg = 0x53;
+    return 7;
 }
 
 /* sceGsExecLoadImage(transfer, pixels): to the renderer's textures. */
@@ -159,17 +179,50 @@ int openrac_lib_sceGsExecLoadImage(gaddr transfer, gaddr pixels) {
 
 /* sceGsExecStoreImage(transfer, destination): reading the GS's memory back.
  * The renderer keeps no GS memory; it answers what it can (the frame buffer,
- * which the pause and vendor menus read to draw themselves over). */
+ * which the pause and vendor menus read to draw themselves over). As in the
+ * library, a rectangle whose bytes do not fill whole quadwords has its TRXREG
+ * height rounded up in the packet (to 4 rows at 32 bits, 16 at 24, 8 below),
+ * the console's extra rows being thrown away; the destination gets w x h. */
 int openrac_lib_sceGsExecStoreImage(gaddr transfer, gaddr destination) {
-    const image_transfer* t = (const image_transfer*)G(transfer);
+    image_readback* t = (image_readback*)G(transfer);
     openrac_game_image image;
+    const int w = (int)(t->trxreg & 0xFFF), h = (int)((t->trxreg >> 32) & 0xFFF);
+    const int psm = (int)((t->bitbltbuf >> 24) & 0x3F);
+    int bytes = 0, rows = h;
+    switch (psm) {
+    case 0x00: case 0x30: /* PSMCT32, PSMZ32 */
+        bytes = w * h * 4;
+        rows = (h + 3) & 0x1FFC;
+        break;
+    case 0x01: case 0x31: /* PSMCT24, PSMZ24 */
+        bytes = w * h * 3;
+        rows = (h + 15) & 0x1FF0;
+        break;
+    case 0x02: case 0x0A: case 0x32: case 0x3A: /* PSMCT16, PSMCT16S, PSMZ16, PSMZ16S */
+        bytes = w * h * 2;
+        rows = (h + 7) & ~7;
+        break;
+    case 0x13: case 0x1B: /* PSMT8, PSMT8H */
+        bytes = w * h;
+        rows = (h + 7) & ~7;
+        break;
+    case 0x14: case 0x24: case 0x2C: /* PSMT4, PSMT4HL, PSMT4HH */
+        bytes = (w * h) >> 1;
+        rows = (h + 7) & ~7;
+        break;
+    default:
+        break;
+    }
+    if ((bytes & 0xF) != 0) {
+        t->trxreg = (uint64_t)w | (uint64_t)rows << 32;
+    }
     image.base = (int)(t->bitbltbuf & 0x3FFF);
     image.width_units = (int)((t->bitbltbuf >> 16) & 0x3F);
-    image.psm = (int)((t->bitbltbuf >> 24) & 0x3F);
+    image.psm = psm;
     image.x = (int)(t->trxpos & 0x7FF);
     image.y = (int)((t->trxpos >> 16) & 0x7FF);
-    image.width = (int)(t->trxreg & 0xFFF);
-    image.height = (int)((t->trxreg >> 32) & 0xFFF);
+    image.width = w;
+    image.height = h;
     image.pixels = destination;
     openrac_game_store_image(&image);
     return 0;

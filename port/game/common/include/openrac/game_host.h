@@ -319,6 +319,13 @@ int openrac_game_moby_snapshot(gaddr moby, gaddr dst);
 /* Nonzero: no memory card is inserted in either port (--no-card). */
 extern int openrac_game_no_card;
 
+/* Where the game's memory card library keeps the command sceMcSync reports (a word, 0 while none has
+ * finished) and its result (a word), for the port's (lib/mc.c): its commands finish at once and leave
+ * both there, as the console's library leaves them for its sceMcSync, so that the game's memory holds
+ * the library's state as on the console. Called by the game's host C at start-up (rac1/pal: boot.c,
+ * the addresses in rac1_version.h); without a call they are lib/mc.c's own. */
+void openrac_game_mc_state(gaddr command, gaddr result);
+
 /* --level N: the level a new game starts in (the game's own number), or -1 for the game's own
  * first level. For getting to a level directly, as the behaviour checker's level write does. */
 extern int openrac_game_start_level;
