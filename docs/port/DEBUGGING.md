@@ -314,7 +314,7 @@ These variables are read by `openrac-<game>` at run time. Unless said otherwise,
 | `OPENRAC_WATCH` | `ADDRESS:COUNT[:i],...` | Each frame, logs `COUNT` values (at most 32) from each hexadecimal game `ADDRESS`: floats by default, words with the third field `i`. `COUNT` is decimal. | `port/game/common/main.cpp` |
 | `OPENRAC_TRACE_INPUT` | any (set) | Logs a port's buttons and stick values, at most every 25 frames per port. | `port/game/common/frontend.cpp` |
 | `OPENRAC_TRACE_CD` | any (set) | Prints each disc read (sector count, start sector, destination address) on stderr. | `port/game/common/lib/cdvd.c` |
-| `OPENRAC_TRACE_WAD` | any (set) | Prints each WAD decompression (addresses, first four bytes, output size) on stderr. | `port/game/rac1/host/hand.c` |
+| `OPENRAC_TRACE_WAD` | any (set) | Prints each WAD decompression on stderr: its addresses, first four bytes and output size (rac1), or its addresses, compressed and output sizes (rac2, rac4). | `port/game/rac1/host/hand.c`, `port/game/common/lib/wad_routine.c` |
 | `OPENRAC_TRACE_MISSING` | any (set) | On the first call to each function that has no C, also prints a host stack trace. Without it only the warning is logged. | `port/runtime/guest.cpp` |
 | `OPENRAC_TRACE_RELOCATION` | any (set) | Reports level-code relocation: level addresses with no paired address nearby, searches of the executable's code in a level, and calls and hooks resolved inside level copies. | `port/runtime/guest.cpp` |
 | `OPENRAC_SOUND_LOG` | any (set) | Prints each command the game sends its sound driver, with its first four words and the reply, on stderr. | `port/game/rac1/host/hand.c` |
