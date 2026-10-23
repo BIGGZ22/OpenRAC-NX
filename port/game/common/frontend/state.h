@@ -3,8 +3,8 @@
 //
 // The frontend's shared state: the window, the renderer and the scene the game drew (State, behind
 // `g`), the tick kept for the frames drawn between ticks (Kept), and when frames reach the display
-// (Pacing, `pacing`). frontend.cpp was one file around this state; it moves into frontend/*.cpp
-// concern by concern (PLAN P2-04 and the splits after it), and each piece reaches the state here.
+// (Pacing, `pacing`), and the functions frontend.cpp and frontend/*.cpp call across files. The
+// frontend is cut into files by concern around this one state, and each file reaches it here.
 //
 // Internal to the frontend: only frontend.cpp and frontend/*.cpp include this header. Anything
 // else talks to the window through frontend.h. The state is file-global as it was in frontend.cpp;
@@ -34,6 +34,8 @@
 #include "scene/moby_shadow.h"
 #include "settings.h"
 #include "viewer/game_state.h"
+
+union SDL_Event;
 
 namespace openrac::frontend {
 
@@ -191,5 +193,23 @@ struct Pacing {
 // When frames reach the display, for the window's whole life. Only the thread that opened the
 // window touches it.
 extern Pacing pacing;
+
+// The picture's shape now: the player's setting, for the window as it is (frontend.cpp).
+float picture_aspect(int window_width, int window_height);
+
+// Whether a swap waits for a refresh: the player's vsync setting, unless one frame is drawn a tick
+// (frontend.cpp says why).
+platform::SwapInterval wanted_swap();
+
+// The platform's display mode for the player's setting (frontend.cpp).
+platform::DisplayMode window_mode(settings::DisplayMode mode);
+
+// Puts the player's display settings into effect on the window: the display mode, display and
+// fullscreen size, the picture's shape, the swap's wait (frontend/window.cpp).
+void apply_settings();
+
+// Handles the window's own events and keys, which the game never sees: true when `event` was one
+// of the keys (frontend/window.cpp).
+bool window_key(const SDL_Event& event);
 
 }  // namespace openrac::frontend
