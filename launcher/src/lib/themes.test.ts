@@ -42,8 +42,9 @@ describe("themes", () => {
       return ((hi ?? 0) + 0.05) / ((lo ?? 0) + 0.05);
     };
     for (const [id, a] of Object.entries(ACCENTS)) {
-      for (const bar of [a.barTop, a.barBottom]) {
-        expect(contrast(a.barInkDeep, bar), `${id}: ${a.barInkDeep} on ${bar}`).toBeGreaterThanOrEqual(4.5);
+      const ink = a["--bar-ink-deep"] ?? "";
+      for (const bar of [a["--bar-top"] ?? "", a["--bar-bottom"] ?? ""]) {
+        expect(contrast(ink, bar), `${id}: ${ink} on ${bar}`).toBeGreaterThanOrEqual(4.5);
       }
     }
   });

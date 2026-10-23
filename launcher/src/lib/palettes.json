@@ -1,0 +1,157 @@
+{
+  "_comment": [
+    "The launcher's colours, read by the launcher (palettes.ts, themes.ts) and by its core, which",
+    "hands them to the game for its drawer (core/src/theme.rs, OPENRAC_UI_COLORS). base: app.css's own",
+    "(:root, a test keeps them equal); palettes: the themes of Settings, General; accents: a game's own",
+    "accent, which Android's launcher wears while the game is picked (Ratchet & Clank keeps base's)."
+  ],
+  "base": {
+    "--ink": "#181820",
+    "--ink-deep": "#12121a",
+    "--panel": "#1d1d28",
+    "--panel-hi": "#22222f",
+    "--brand": "#d58a00",
+    "--amber": "#ffb443",
+    "--gold": "#ffd08a",
+    "--soft": "#aab6dc",
+    "--dim": "#8f9ac4",
+    "--line": "rgb(156 161 212 / 0.22)",
+    "--line-strong": "rgb(156 161 212 / 0.35)",
+    "--text": "#e8f0ff",
+    "--bar-top": "#e5a013",
+    "--bar-bottom": "#cd8300",
+    "--bar-ink": "#2a1800",
+    "--bar-ink-deep": "#1b1206",
+    "--err": "#ff8a7a"
+  },
+  "palettes": [
+    {
+      "id": "openrac",
+      "name": "OpenRAC",
+      "colors": {},
+      "swatch": ["#181820", "#22222f", "#e8f0ff"]
+    },
+    {
+      "id": "gruvbox",
+      "name": "Gruvbox",
+      "colors": {
+        "--ink": "#282828",
+        "--ink-deep": "#1d2021",
+        "--panel": "#32302f",
+        "--panel-hi": "#3c3836",
+        "--text": "#fbf1c7",
+        "--body": "#ebdbb2",
+        "--lav": "#83a598",
+        "--soft": "#d5c4a1",
+        "--dim": "#a89984",
+        "--line": "rgb(168 153 132 / 0.22)",
+        "--line-strong": "rgb(168 153 132 / 0.36)",
+        "--line-field": "rgb(168 153 132 / 0.6)",
+        "--ok": "#b8bb26",
+        "--warn": "#fabd2f",
+        "--err": "#fb4934"
+      },
+      "swatch": ["#282828", "#3c3836", "#ebdbb2"]
+    },
+    {
+      "id": "oled",
+      "name": "OLED black",
+      "colors": {
+        "--ink": "#000000",
+        "--ink-deep": "#000000",
+        "--panel": "#0b0b0f",
+        "--panel-hi": "#15151c",
+        "--text": "#f4f6ff",
+        "--body": "#c9cfe4",
+        "--soft": "#a9b2cf",
+        "--dim": "#8a93b4",
+        "--line": "rgb(160 165 200 / 0.22)",
+        "--line-strong": "rgb(160 165 200 / 0.36)",
+        "--line-field": "rgb(160 165 200 / 0.6)"
+      },
+      "swatch": ["#000000", "#15151c", "#f4f6ff"]
+    },
+    {
+      "id": "nord",
+      "name": "Nord",
+      "colors": {
+        "--ink": "#2e3440",
+        "--ink-deep": "#242933",
+        "--panel": "#3b4252",
+        "--panel-hi": "#434c5e",
+        "--text": "#eceff4",
+        "--body": "#e5e9f0",
+        "--lav": "#88c0d0",
+        "--soft": "#d0d6e2",
+        "--dim": "#a7b1c6",
+        "--line": "rgb(216 222 233 / 0.22)",
+        "--line-strong": "rgb(216 222 233 / 0.36)",
+        "--line-field": "rgb(216 222 233 / 0.6)",
+        "--ok": "#a3be8c",
+        "--warn": "#ebcb8b",
+        "--err": "#e8858e"
+      },
+      "swatch": ["#2e3440", "#434c5e", "#eceff4"]
+    },
+    {
+      "id": "mocha",
+      "name": "Catppuccin Mocha",
+      "colors": {
+        "--ink": "#181825",
+        "--ink-deep": "#11111b",
+        "--panel": "#1e1e2e",
+        "--panel-hi": "#29293d",
+        "--text": "#cdd6f4",
+        "--body": "#bac2de",
+        "--lav": "#b4befe",
+        "--soft": "#a6adc8",
+        "--dim": "#9399b2",
+        "--line": "rgb(147 153 178 / 0.22)",
+        "--line-strong": "rgb(147 153 178 / 0.36)",
+        "--line-field": "rgb(147 153 178 / 0.6)",
+        "--ok": "#a6e3a1",
+        "--warn": "#f9e2af",
+        "--err": "#f38ba8"
+      },
+      "swatch": ["#181825", "#29293d", "#cdd6f4"]
+    }
+  ],
+  "accents": {
+    "rac2": {
+      "--bar-top": "#7fcdf5",
+      "--bar-bottom": "#43a3de",
+      "--bar-ink": "#06233a",
+      "--bar-ink-deep": "#03141f",
+      "--amber": "#7fcff5",
+      "--gold": "#c4e8fb",
+      "--brand": "#43a3de"
+    },
+    "rac3": {
+      "--bar-top": "#ffd84a",
+      "--bar-bottom": "#e9b30c",
+      "--bar-ink": "#2a2000",
+      "--bar-ink-deep": "#1c1500",
+      "--amber": "#ffd23f",
+      "--gold": "#ffe9a3",
+      "--brand": "#e9b30c"
+    },
+    "rac4": {
+      "--bar-top": "#f25a5a",
+      "--bar-bottom": "#e23c3c",
+      "--bar-ink": "#2a0606",
+      "--bar-ink-deep": "#1f0303",
+      "--amber": "#ff6b61",
+      "--gold": "#ffb8b2",
+      "--brand": "#e23c3c"
+    },
+    "rac5": {
+      "--bar-top": "#6aa0ff",
+      "--bar-bottom": "#3f78f0",
+      "--bar-ink": "#06173a",
+      "--bar-ink-deep": "#020c24",
+      "--amber": "#7aa8ff",
+      "--gold": "#c2d6ff",
+      "--brand": "#3f78f0"
+    }
+  }
+}
