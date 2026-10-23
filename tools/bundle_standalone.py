@@ -11,6 +11,7 @@ OUT (launcher/src-tauri/resources/openrac for an installer) gets:
 
   STANDALONE                 what this is and what it was made from
   tools/, editor/            the set-up and the level tools, as they are here
+                             (tools/openrac_common with them: they import it)
   port/enhanced/tools/probes the probe baker's Python half (bake_all.py)
   games/*/game.json          the catalogue the launcher lists
   progress/summary.json      how far each decompilation is
@@ -234,6 +235,9 @@ def main() -> int:
     for name in ("openrac.py", "extractor.py"):
         (out / "tools").mkdir(exist_ok=True)
         shutil.copy2(ROOT / "tools" / name, out / "tools" / name)
+    # The helpers they import, found from the copy's own tools/ (they find the copy's root by
+    # the STANDALONE note written below).
+    copy_tree(ROOT / "tools/openrac_common", out / "tools/openrac_common", lambda rel: rel.suffix == ".py")
     copy_tree(ROOT / "editor", out / "editor",
               lambda rel: not rel.name.startswith("test_") and rel.suffix in (".py", ".tsv", ".gd", ""))
     if not args.android:

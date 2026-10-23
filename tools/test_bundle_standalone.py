@@ -136,6 +136,15 @@ class Bundle(unittest.TestCase):
                 self.assertTrue((out / rel).is_file(), rel)
             self.assertFalse(list(out.rglob("test_*.py")))
             json.loads((out / "launcher/actions.json").read_text())
+            # The copy's tools run from it: their helpers are carried, and find the copy's root.
+            self.assertTrue((out / "tools/openrac_common/__init__.py").is_file())
+            for tool in ("openrac.py", "extractor.py"):
+                done = subprocess.run([sys.executable, str(out / "tools" / tool), "--help"], cwd=tmp,
+                                      capture_output=True, text=True)
+                self.assertNotIn("Traceback", done.stderr, tool)
+            root = subprocess.run([sys.executable, "-c", "from openrac_common import paths; print(paths.repo_root())"],
+                                  cwd=out / "tools", capture_output=True, text=True, check=True).stdout.strip()
+            self.assertEqual(Path(root), out.resolve())
 
     def test_games_as_built(self):
         # On macOS a game is its bundle, carried whole; the build folder's link to it is not.
