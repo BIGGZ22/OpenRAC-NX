@@ -85,6 +85,14 @@ jobs:
       - name: C++ layout (report only)
         run: python tools/cpp_style.py --report-only
 
+      # The port's includes against the module layering (port/docs/CODING_CONVENTIONS.md, section
+      # 18): a new include of a higher layer fails; today's violations are the exceptions listed in
+      # port/tools/layering/rules.tsv. Standard-library Python, the whole port on every run.
+      - name: Port layering
+        run: |
+          python -m unittest discover -s port/tools/layering -v
+          python port/tools/layering/layering.py
+
       - name: Generated tables match games/*/game.json and the reports
         run: |
           python tools/openrac.py tables
