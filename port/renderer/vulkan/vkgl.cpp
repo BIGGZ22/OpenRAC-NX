@@ -4160,7 +4160,26 @@ std::filesystem::path pipeline_cache_file() {
         base = std::filesystem::path(home != nullptr ? home : ".") / ".cache/openrac";
     }
 #endif
-    return base / std::format("vulkan_pipelines_{:04x}_{:04x}.bin", g->properties.vendorID, g->properties.deviceID);
+    return base / std::format(
+               "vulkan_pipelines_{:04x}_{:04x}_{}.bin", g->properties.vendorID, g->properties.deviceID,
+               OPENRAC_VK_PIPELINE_KEY
+           );
+}
+
+// Caches of this device that other builds saved (another key, or none): no longer read.
+void remove_other_pipeline_caches(const std::filesystem::path& path) {
+    const std::string prefix =
+        std::format("vulkan_pipelines_{:04x}_{:04x}", g->properties.vendorID, g->properties.deviceID);
+    if (!path.filename().string().starts_with(prefix)) {
+        return;  // OPENRAC_VULKAN_PIPELINE_CACHE names a file of its own: leave its folder alone
+    }
+    std::error_code ec;
+    for (const auto& entry : std::filesystem::directory_iterator(path.parent_path(), ec)) {
+        const std::string name = entry.path().filename().string();
+        if (entry.path() != path && name.starts_with(prefix) && name.ends_with(".bin")) {
+            std::filesystem::remove(entry.path(), ec);
+        }
+    }
 }
 
 bool make_pipeline_cache() {
@@ -4251,6 +4270,7 @@ void save_pipeline_cache() {
         return;
     }
     log::info("vulkan: saved {} bytes of pipeline cache to {}", size, path.string());
+    remove_other_pipeline_caches(path);
 }
 
 bool make_device(std::string& error) {

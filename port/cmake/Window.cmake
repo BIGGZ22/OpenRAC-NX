@@ -77,6 +77,23 @@ if(OPENRAC_VULKAN)
     renderer/vulkan/vma.cpp
   )
   target_link_libraries(openrac_vkgl PUBLIC openrac_common openrac_sdl3 openrac_vulkan PRIVATE openrac_glslang)
+  # The pipeline cache file is named after the code that makes the pipelines, so a build whose
+  # pipelines changed starts a fresh cache: MoltenVK has handed a newer build pipelines an older
+  # build saved (the tests' pictures came out black), although the cache's header matched.
+  set(openrac_vkgl_pipeline_sources
+    "${CMAKE_CURRENT_SOURCE_DIR}/renderer/vulkan/vkgl.cpp"
+    "${CMAKE_CURRENT_SOURCE_DIR}/renderer/vulkan/shader_compiler.cpp"
+    "${CMAKE_CURRENT_SOURCE_DIR}/renderer/vulkan/gpu_draw.inc"
+    "${CMAKE_CURRENT_SOURCE_DIR}/renderer/vulkan/gpu_materials.inc")
+  set(openrac_vkgl_pipeline_text "")
+  foreach(source IN LISTS openrac_vkgl_pipeline_sources)
+    file(SHA256 "${source}" source_hash)
+    string(APPEND openrac_vkgl_pipeline_text "${source_hash}")
+  endforeach()
+  string(SHA256 openrac_vkgl_pipeline_key "${openrac_vkgl_pipeline_text}")
+  string(SUBSTRING "${openrac_vkgl_pipeline_key}" 0 12 openrac_vkgl_pipeline_key)
+  set_property(DIRECTORY APPEND PROPERTY CMAKE_CONFIGURE_DEPENDS ${openrac_vkgl_pipeline_sources})
+  target_compile_definitions(openrac_vkgl PRIVATE OPENRAC_VK_PIPELINE_KEY="${openrac_vkgl_pipeline_key}")
   if(OPENRAC_GPU_MARKERS)
     target_compile_definitions(openrac_vkgl PRIVATE OPENRAC_GPU_MARKERS=1)
   endif()
