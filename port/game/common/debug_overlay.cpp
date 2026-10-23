@@ -2008,7 +2008,7 @@ void drawer_enhanced() {
         if (set.probe_lighting) {
             const float gi = set.probe_gi_multiplier;
             if (const int by = drawer_choice(
-                    "Bounce strength", std::format("{:.1f}x", gi), gi > 0.05f, gi < 4.95f
+                    "Bounce strength", std::format("{:g}x", gi), gi > 0.05f, gi < 4.95f
                 )) {
                 set.probe_gi_multiplier = std::clamp(
                     std::round((gi + 0.25f * static_cast<float>(by)) * 4.0f) / 4.0f, 0.0f, 5.0f
