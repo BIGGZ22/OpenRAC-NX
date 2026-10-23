@@ -52,7 +52,7 @@
         {#if matched}<p class="matched">{matched} matched</p>{/if}
         {#if (app.crashes[game.id]?.recent ?? 0) > 0}
           <p class="crashed">
-            <Icon name="warn" size={13} />Crashed recently: a report is on its page
+            <Icon name="warn" size={13} />Crashed recently<span class="where">: a report is on its page</span>
             <button
               class="x"
               onclick={() => void dismissCrashes(game.id)}
@@ -134,6 +134,11 @@
 
   :global(html[data-platform="android"]) h2 {
     font-size: 1.125rem;
+  }
+
+  /* The compact card says only that it crashed; the button's label and the page say the rest. */
+  :global(html[data-platform="android"]) .crashed .where {
+    display: none;
   }
 
   :global(html[data-platform="android"]) .act {
