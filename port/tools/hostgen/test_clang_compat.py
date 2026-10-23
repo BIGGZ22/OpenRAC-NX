@@ -9,6 +9,7 @@ import shutil
 import subprocess
 import tempfile
 import unittest
+from unittest import mock
 
 import clangast
 import hostgen
@@ -29,6 +30,19 @@ class ClangAliases(unittest.TestCase):
         fn = ast["inner"][0]
         self.assertEqual(fn["type"]["qualType"], "void *(void *, const void *, unsigned int)")
         self.assertEqual([p["type"]["qualType"] for p in fn["inner"]], ["unsigned int", "int *", "my__size_t"])
+
+
+class ClangRunsWithoutACompilerCache(unittest.TestCase):
+    def test_ccache_cannot_answer_for_a_rewritten_prepared_copy(self):
+        # clang on PATH may be ccache's wrapper. Its direct cache keys a file by inode and
+        # second-granular mtime, and hostgen rewrites its prepared copies between checks, so a
+        # hit can report the previous content's verdict (it hid pause.c's conflicting types
+        # from the syntax check, where the AST dump then refused the same file).
+        with mock.patch.object(clangast.subprocess, "run") as run:
+            run.return_value = subprocess.CompletedProcess([], 0, "", "")
+            clangast.run("clang", Path("src/game/pause.c"), Path("/tmp"), ["-fsyntax-only"], False)
+        env = run.call_args.kwargs["env"]
+        self.assertEqual(env.get("CCACHE_DISABLE"), "1")
 
 
 @unittest.skipUnless(shutil.which("clang"), "needs Clang")

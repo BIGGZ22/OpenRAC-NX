@@ -609,8 +609,12 @@ def inherit_results(program: Program) -> list[str]:
         for f in list(program.functions.values()) + list(program.statics.values()):
             if f.unit is None or f.tail is None or f.inherits or canon(f.sig.ret, program.typedefs) != "void":
                 continue
-            if f.symbol in program.wrap or f.symbol in program.host:
-                continue  # the port's own C around it or in its place says what it returns
+            # The port's own C around it (a `wrap` row) or in its place says what it returns. A hook
+            # point (a `hook` row, in program.wrap too) is the game's C under hooks.c's <name>, which
+            # returns what that C returns: rac1's folded colour tween func_L00_00237B70 passes its
+            # callee's colour on to callers that read it.
+            if f.symbol in program.wrap_host or f.symbol in program.host:
+                continue
             sym = program.aliases.get((f.unit, f.tail), f.tail)
             g = program.statics.get((f.unit, sym))
             if g is None:
