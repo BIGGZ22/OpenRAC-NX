@@ -28,6 +28,7 @@
 #include <execinfo.h>
 #endif
 
+#include "common/env.h"
 #include "common/log.h"
 #include "openrac/memory.h"
 
@@ -69,8 +70,7 @@ int g_overlay = OPENRAC_OVERLAY_EXE;
 thread_local gaddr g_unknown_target = 0;
 
 bool strict() {
-    const char* env = std::getenv("OPENRAC_STRICT");
-    return env != nullptr && env[0] == '1';
+    return openrac::env::flag(openrac::env::Var::Strict);
 }
 
 int (*g_overlay_source)(void) = nullptr;
@@ -465,8 +465,7 @@ void openrac_guest_missing(const char* name) {
         }
     }
     // OPENRAC_TRACE_MISSING: the host stack of the first call to each function without C.
-    static const bool trace = std::getenv("OPENRAC_TRACE_MISSING") != nullptr;
-    if (trace) {
+    if (openrac::env::flag(openrac::env::Var::TraceMissing)) {
         void* frames[16];
         warn("first call to {}:", name);
 #if defined(_WIN32)
@@ -1044,8 +1043,7 @@ gaddr relocate_by(const LevelMap& map, gaddr address) {
     auto it = std::upper_bound(map.data.begin(), map.data.end(), std::make_pair(address, INT32_MAX));
     if (it == map.data.begin() || address - std::prev(it)->first > 0x100) {
         // OPENRAC_TRACE_RELOCATION: each level address no paired one is near, once.
-        static const bool trace = std::getenv("OPENRAC_TRACE_RELOCATION") != nullptr;
-        if (trace) {
+        if (openrac::env::flag(openrac::env::Var::TraceRelocation)) {
             static std::map<gaddr, bool> told;
             if (!told[address]) {
                 told[address] = true;
@@ -1134,8 +1132,7 @@ gaddr search_pair(gaddr address, int overlay) {
                 }
             }
         }
-        static const bool trace = std::getenv("OPENRAC_TRACE_RELOCATION") != nullptr;
-        if (trace) {
+        if (openrac::env::flag(openrac::env::Var::TraceRelocation)) {
             info("  {:#x}: formed at {:#x} in the executable, {} matches in the level", address,
                  g_exe_base + static_cast<gaddr>(i * 4), matches);
         }
@@ -1189,8 +1186,7 @@ gaddr openrac_relocate_data(gaddr address) {
         auto s = found.searched.find(address);
         if (s == found.searched.end()) {
             s = found.searched.emplace(address, search_pair(address, overlay)).first;
-            static const bool trace = std::getenv("OPENRAC_TRACE_RELOCATION") != nullptr;
-            if (trace) {
+            if (openrac::env::flag(openrac::env::Var::TraceRelocation)) {
                 warn("executable address {:#x} has no paired address within 0x100 below it in level {}; {}",
                      address, overlay, s->second != 0 ? std::format("found by its code at {:#x}", s->second) : "kept");
             }
@@ -1544,7 +1540,7 @@ gaddr openrac_call_in_copy(int from, gaddr canon, uint32_t size, gaddr self, gad
         }
     }
     found.emplace(key, result);
-    if (std::getenv("OPENRAC_TRACE_RELOCATION") != nullptr) {
+    if (openrac::env::flag(openrac::env::Var::TraceRelocation)) {
         std::fprintf(stderr, "call in copy %08X+%08X: %08X -> %08X\n", canon, self, target, result);
     }
     return result;
@@ -1593,7 +1589,7 @@ gaddr openrac_hook_in_copy(gaddr exe_fn, uint32_t size, int home, gaddr home_fn,
         result = first;
     }
     found.emplace(key, result);
-    if (std::getenv("OPENRAC_TRACE_RELOCATION") != nullptr) {
+    if (openrac::env::flag(openrac::env::Var::TraceRelocation)) {
         std::fprintf(stderr, "hook in copy %08X #%u: %08X -> %08X (level %d)\n", exe_fn, k, stub, result, overlay);
     }
     return result;
@@ -1640,7 +1636,7 @@ gaddr openrac_relocate_level_code(int from, gaddr address) {
                 break;
             }
         }
-        if (std::getenv("OPENRAC_TRACE_RELOCATION") != nullptr) {
+        if (openrac::env::flag(openrac::env::Var::TraceRelocation)) {
             std::fprintf(stderr, "level %d's %08X in level %d: %08X\n", from, address, overlay, twin);
         }
     }

@@ -8,12 +8,12 @@
 
 #include <cfenv>
 #include <cstdint>
-#include <cstdlib>
 #include <mutex>
 #include <set>
 #include <string>
 #include <utility>
 
+#include "common/env.h"
 #include "common/log.h"
 
 #if defined(__x86_64__) || defined(_M_X64) || defined(__i386__) || defined(_M_IX86)
@@ -59,8 +59,7 @@ bool first(const char* function, uint32_t at) {
 }  // namespace
 
 extern "C" void openrac_ee_break(const char* function, uint32_t address) {
-    const char* strict = std::getenv("OPENRAC_STRICT");
-    if (strict != nullptr && strict[0] == '1') {
+    if (openrac::env::flag(openrac::env::Var::Strict)) {
         openrac::log::fatalf("{} reached the trap at {:08X}", function, address);
     }
     if (first(function, address)) {
