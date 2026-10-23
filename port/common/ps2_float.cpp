@@ -4,7 +4,7 @@
 // Adapted from ReRAC (https://github.com/re-rac/rerac), crates/rc-formats/src/tfrag_light.rs
 // (module ps2) and moby_anim.rs (ftoi): ISC License, Copyright (c) 2026 ReRAC contributors.
 //
-// PS2 float arithmetic on bit patterns; see ps2_float.h for what is modelled.
+// The PS2's float arithmetic on bit patterns (ps2_float.h, which says what is modelled).
 
 #include "common/ps2_float.h"
 

@@ -1,5 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 // Copyright (c) 2026 the OpenRAC contributors
+//
+// The JSON reader (json.h): one recursive-descent pass over the whole text, which stops at the
+// first error and says what it found and where.
 
 #include "common/json.h"
 
