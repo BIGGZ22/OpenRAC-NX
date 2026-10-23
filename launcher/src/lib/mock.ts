@@ -21,6 +21,7 @@ import type {
   Detected,
   DifferenceView,
   Differences,
+  EnhancedView,
   GameView,
   JobEvent,
   Library,
@@ -600,6 +601,108 @@ function mockPreview(url: string): RemotePreview {
     ],
   };
 }
+
+/** Enhanced graphics, as core/src/enhanced.rs gives it: seven of nineteen levels baked. */
+const mockEnhanced: EnhancedView = {
+  mod: {
+    id: "enhanced-graphics",
+    name: "Enhanced graphics",
+    version: "Experimental",
+    author: "OpenRAC",
+    description: "Bounced light, modern shadows and ambient occlusion.",
+    homepage: "",
+    license: "GPL-3.0-or-later",
+    enabled: false,
+    state: "off",
+    reason: "",
+    blocked: "",
+    settings: [
+      {
+        key: "probe_lighting",
+        name: "Probe lighting",
+        type: "bool",
+        default: true,
+        value: true,
+        description: "Light that bounces off the world.",
+      },
+      {
+        key: "enhanced_shadows",
+        name: "Modern shadows",
+        type: "bool",
+        default: true,
+        value: true,
+        description: "Sharp sun shadows, and Ratchet's own.",
+      },
+      {
+        key: "gtao",
+        name: "Ambient occlusion",
+        type: "bool",
+        default: false,
+        value: false,
+        description: "Soft shade in corners and under objects.",
+      },
+      {
+        key: "gtao_quality",
+        name: "Occlusion quality",
+        type: "choice",
+        default: "performance",
+        value: "performance",
+        choices: [
+          { value: "performance", name: "Performance" },
+          { value: "quality", name: "Quality" },
+        ],
+      },
+      {
+        key: "probe_gi_multiplier",
+        name: "Bounce light",
+        type: "float",
+        default: 1,
+        value: 1,
+        min: 0,
+        max: 5,
+        step: 0.1,
+        description: "How bright the bounced light is.",
+      },
+      {
+        key: "gtao_strength",
+        name: "Occlusion strength",
+        type: "float",
+        default: 1,
+        value: 1,
+        min: 0,
+        max: 3,
+        step: 0.05,
+        group: "advanced",
+      },
+      {
+        key: "gtao_radius",
+        name: "Occlusion radius",
+        type: "float",
+        default: 1.25,
+        value: 1.25,
+        min: 0.05,
+        max: 8,
+        step: 0.05,
+        group: "advanced",
+      },
+      {
+        key: "gtao_half_resolution",
+        name: "Half-resolution occlusion",
+        type: "bool",
+        default: true,
+        value: true,
+        group: "advanced",
+        description: "Faster; edges a little softer.",
+      },
+    ],
+    hooks: [],
+    sharedHooks: [],
+    native: false,
+    kind: "built-in",
+    path: "",
+  },
+  bake: { available: true, why: "", levels: 19, ready: 7, failed: 0 },
+};
 
 let mockPlugins: PluginView[] = query.has("nomods")
   ? []
@@ -2000,6 +2103,22 @@ export async function mockCall(command: string, args: Record<string, unknown> = 
         mockPacks.splice(Math.max(0, Math.min(mockPacks.length, at + (args.up ? -1 : 1))), 0, pack);
       }
       return delay([...mockPacks]);
+    }
+    case "enhanced_view":
+    case "enhanced_set_enabled":
+    case "enhanced_set_setting": {
+      if (args.game !== "rac1") return delay(null);
+      if (command === "enhanced_set_enabled") mockEnhanced.mod = { ...mockEnhanced.mod, enabled: !!args.enabled };
+      if (command === "enhanced_set_setting") {
+        mockEnhanced.mod = {
+          ...mockEnhanced.mod,
+          settings: mockEnhanced.mod.settings.map((s) => (s.key === args.key ? { ...s, value: args.value } : s)),
+        };
+      }
+      return delay({
+        ...mockEnhanced,
+        mod: { ...mockEnhanced.mod, state: mockEnhanced.mod.enabled ? "ready" : "off" },
+      });
     }
     case "plugins_list":
       return delay(mockPlugins.map((p) => ({ ...p })));

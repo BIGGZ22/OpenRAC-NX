@@ -106,6 +106,7 @@ describe("sharedWith", () => {
 describe("modKind", () => {
   it("marks native code and says scripts run sandboxed", () => {
     expect(modKind("native")).toEqual({ text: "Runs code", tone: "warn" });
+    expect(modKind("built-in")).toEqual({ text: "Experimental", tone: "warn" });
     expect(modKind("script")).toEqual({ text: "Sandboxed script", tone: "ok" });
     expect(modKind("pack").tone).toBe("off");
     expect(modKind("data").text).toBe("Textures and models");

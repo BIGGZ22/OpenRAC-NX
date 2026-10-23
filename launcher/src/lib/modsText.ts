@@ -28,6 +28,7 @@ export const KIND_LABEL = {
   native: { text: "Runs code", tone: "warn" },
   script: { text: "Sandboxed script", tone: "ok" },
   pack: { text: "Textures and models", tone: "off" },
+  builtIn: { text: "Experimental", tone: "warn" },
 } as const satisfies Record<string, Label>;
 
 /** The kinds' tooltips: what each means, for whoever wonders. */
@@ -35,6 +36,7 @@ export const KIND_HINT = {
   native: "A program: it runs on this computer with the game's rights. Install it only from people you trust.",
   script: "Runs in the game's sandbox: it reaches only what the game lets scripts change, never your files.",
   pack: "Data only: it replaces textures, models or levels, and runs nothing.",
+  builtIn: "Part of the game, off unless you turn it on. Still being worked on.",
 } as const satisfies Record<KindKey, string>;
 export type KindKey = keyof typeof KIND_LABEL;
 
@@ -128,6 +130,25 @@ export const GROUP_TITLE = {
   only: "Settings",
   general: "General",
   controls: (name: string) => `${name} controls`,
+} as const;
+
+/** The built-in Enhanced graphics entry (core/src/enhanced.rs; its page is ModPage.svelte's). */
+export const ENHANCED = {
+  id: "enhanced-graphics",
+  vulkan: "Plays with the Vulkan renderer while on.",
+  about:
+    "Light that bounces off the world, sharp sun shadows and Ratchet's own, and soft shade in corners, drawn by the game's Vulkan renderer. The bounced light is baked on this computer from your own levels: once, and again after they are read from your disc again.",
+  lightingTitle: "Lighting",
+  baking: "Preparing the lighting",
+  ready: (n: number) => `Ready for all ${n} levels.`,
+  some: (ready: number, n: number) => `Ready for ${ready} of ${n} levels.`,
+  failed: (n: number) => (n === 1 ? "1 level could not be prepared." : `${n} levels could not be prepared.`),
+  fallback: "A level without it keeps its original lighting.",
+  noLevels: "Get the levels ready on the game's page first.",
+  noBaker: "This copy of the game has no lighting baker.",
+  prepare: "Prepare lighting",
+  again: "Prepare again",
+  advanced: "Advanced",
 } as const;
 
 /** A mod's own page (ModPage.svelte). */

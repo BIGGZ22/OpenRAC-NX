@@ -6,8 +6,12 @@
   // groups them in. Every change saves as it is made (lib/autosave.ts): the line by the presets says
   // Saving… and then Saved; a refused one says why. Escape or Back returns to the list. No folder
   // shows outside About, folded (players share screenshots of this page).
+  // A built-in entry (Enhanced graphics, core/src/enhanced.rs: `builtIn`) has no folder, menu or
+  // source; its page also says how far its lighting bake is, with the way to run it.
   import { onDestroy, onMount, tick } from "svelte";
-  import { ask, type ModSources, type ModUpdate, type PluginPreset, type PluginView } from "$lib/api";
+  import { ask, type BakeStatus, type ModSources, type ModUpdate, type PluginPreset, type PluginView } from "$lib/api";
+  import { phaseLabel, readProgress } from "$lib/progress";
+  import type { Job } from "$lib/queue";
   import { Saver, type SaveState } from "$lib/autosave";
   import { keybindConflicts, sharedBinds } from "$lib/keybinds";
   import { closeMod } from "$lib/modNav.svelte";
@@ -33,6 +37,7 @@
     onfolder,
     onhomepage,
     onremove,
+    builtIn = null,
   }: {
     mod: PluginView;
     source?: ModSources["mods"][string] | null;
@@ -48,7 +53,11 @@
     onfolder: () => void;
     onhomepage: () => void;
     onremove: () => void;
+    /** A built-in entry's bake: its status, the job running it, and the way to start it. */
+    builtIn?: { bake: BakeStatus; job: Job | null; onbake: () => void } | null;
   } = $props();
+
+  const bakeProgress = $derived(builtIn?.job ? readProgress(builtIn.job.actionId, builtIn.job.lines) : null);
 
   // ---- Saving as the player goes ----
 
@@ -110,22 +119,26 @@
   const sourceLabel = (url: string) => url.replace(/^https?:\/\/(www\.)?github\.com\//, "");
   const cannotLoad = $derived(mod.enabled && !purist && (mod.state === "refused" || mod.state === "failed"));
 
-  const menu = $derived<MenuItem[]>([
-    ...(source
-      ? [
-          {
-            label: source.pin ? T.PANEL.letUpdate : T.PANEL.keepVersion,
-            icon: "save" as const,
-            run: () => {
-              onpin(!source.pin);
-            },
-          },
-        ]
-      : []),
-    ...(mod.homepage ? [{ label: T.PANEL.homepage, icon: "external" as const, run: onhomepage }] : []),
-    { label: T.PANEL.openFolder, icon: "folder" as const, run: onfolder },
-    { label: T.PANEL.remove, icon: "trash" as const, danger: true, run: onremove },
-  ]);
+  const menu = $derived<MenuItem[]>(
+    builtIn
+      ? []
+      : [
+          ...(source
+            ? [
+                {
+                  label: source.pin ? T.PANEL.letUpdate : T.PANEL.keepVersion,
+                  icon: "save" as const,
+                  run: () => {
+                    onpin(!source.pin);
+                  },
+                },
+              ]
+            : []),
+          ...(mod.homepage ? [{ label: T.PANEL.homepage, icon: "external" as const, run: onhomepage }] : []),
+          { label: T.PANEL.openFolder, icon: "folder" as const, run: onfolder },
+          { label: T.PANEL.remove, icon: "trash" as const, danger: true, run: onremove },
+        ],
+  );
 
   let heading = $state<HTMLElement | null>(null);
 
@@ -209,7 +222,7 @@
           }}
         />
       </label>
-      <Menu label={T.MOD_PAGE.more(mod.name)} items={menu} />
+      {#if menu.length}<Menu label={T.MOD_PAGE.more(mod.name)} items={menu} />{/if}
     </div>
 
     {#if purist && mod.enabled}
@@ -222,6 +235,9 @@
     {:else if !mod.enabled && mod.settings.length}
       <p class="notice dim"><Icon name="info" size={16} /><span>{T.MOD_PAGE.offNote}</span></p>
     {/if}
+    {#if builtIn}
+      <p class="notice"><Icon name="info" size={16} /><span>{T.ENHANCED.vulkan}</span></p>
+    {/if}
     {#if shared && mod.enabled}
       <p class="notice"><Icon name="info" size={16} /><span>{shared}</span></p>
     {/if}
@@ -229,7 +245,8 @@
     <details class="more about">
       <summary>{T.MOD_PAGE.about}</summary>
       <div class="about-body">
-        {#if mod.description}<p class="long">{mod.description}</p>{/if}
+        {#if builtIn}<p class="long">{T.ENHANCED.about}</p>
+        {:else if mod.description}<p class="long">{mod.description}</p>{/if}
         <dl>
           <dt>{T.MOD_PAGE.aboutKind}</dt>
           <dd>{kind.text}. {modHint(mod.kind)}</dd>
@@ -242,11 +259,13 @@
           {/if}
           {#if mod.license}<dt>{T.PANEL.license}</dt>
             <dd>{mod.license}</dd>{/if}
-          <dt>{T.PANEL.folder}</dt>
-          <dd class="folder">
-            <span class="mono">{mod.path}</span>
-            <button class="small" onclick={onfolder}><Icon name="folder" size={14} />{T.PANEL.openFolder}</button>
-          </dd>
+          {#if !builtIn}
+            <dt>{T.PANEL.folder}</dt>
+            <dd class="folder">
+              <span class="mono">{mod.path}</span>
+              <button class="small" onclick={onfolder}><Icon name="folder" size={14} />{T.PANEL.openFolder}</button>
+            </dd>
+          {/if}
           {#if developer}
             <dt>{T.PANEL.id}</dt>
             <dd><code>{mod.id}</code></dd>
@@ -257,6 +276,47 @@
       </div>
     </details>
   </section>
+
+  {#if builtIn}
+    {@const bake = builtIn.bake}
+    {@const job = builtIn.job}
+    <section class="panel bake" aria-labelledby={`${mod.id}-bake`}>
+      <div class="bake-text">
+        <h3 id={`${mod.id}-bake`}>{T.ENHANCED.lightingTitle}</h3>
+        <p class="muted" role="status">
+          {#if job}
+            {phaseLabel(job)}{bakeProgress?.percent != null ? `, ${Math.round(bakeProgress.percent)} %` : "…"}
+          {:else if !bake.available}
+            {bake.levels === 0 ? T.ENHANCED.noLevels : T.ENHANCED.noBaker}
+          {:else if bake.ready >= bake.levels}
+            {T.ENHANCED.ready(bake.levels)}
+          {:else}
+            {T.ENHANCED.some(bake.ready, bake.levels)}
+            {#if bake.failed}{T.ENHANCED.failed(bake.failed)}{/if}
+          {/if}
+        </p>
+        {#if job}
+          <div
+            class="track"
+            role="progressbar"
+            aria-valuemin={0}
+            aria-valuemax={100}
+            aria-valuenow={bakeProgress?.percent ?? undefined}
+          >
+            {#if bakeProgress?.percent != null}<i style:width={`${bakeProgress.percent}%`}></i>{:else}<i class="moving"
+              ></i>{/if}
+          </div>
+        {:else if bake.ready < bake.levels}
+          <p class="dim small-print">{T.ENHANCED.fallback}</p>
+        {/if}
+      </div>
+      {#if !job && bake.available}
+        <button class:ghost={bake.ready >= bake.levels} onclick={builtIn.onbake}
+          ><Icon name="refresh" size={16} />{bake.ready >= bake.levels ? T.ENHANCED.again : T.ENHANCED.prepare}</button
+        >
+      {/if}
+    </section>
+  {/if}
 
   {#if mod.settings.length}
     <div class="toolbar">
@@ -294,23 +354,44 @@
     {#if failure}<div class="failure"><Reason text={failure} tone="err" role="alert" /></div>{/if}
 
     {#each groups as g (g.id)}
-      <section class="panel group" aria-labelledby={`${mod.id}-g-${g.id}`}>
-        <h3 id={`${mod.id}-g-${g.id}`}>{g.title}</h3>
-        <div class="rows">
-          {#each g.settings as s (s.key)}
-            <ModSetting
-              setting={s}
-              id={`${mod.id}-${s.key}`}
-              saved={savedCount[s.key] ?? 0}
-              conflicts={clashes[s.key] ?? []}
-              clashing={clashes[s.key] ? sharedBinds(shown, s.key) : []}
-              onchange={(value, delay) => {
-                change(s.key, value, delay);
-              }}
-            />
-          {/each}
-        </div>
-      </section>
+      {#if g.id === "advanced"}
+        <!-- Settings few need: folded, closed at first. -->
+        <details class="panel group advanced">
+          <summary><h3 id={`${mod.id}-g-${g.id}`}>{T.ENHANCED.advanced}</h3></summary>
+          <div class="rows">
+            {#each g.settings as s (s.key)}
+              <ModSetting
+                setting={s}
+                id={`${mod.id}-${s.key}`}
+                saved={savedCount[s.key] ?? 0}
+                conflicts={clashes[s.key] ?? []}
+                clashing={clashes[s.key] ? sharedBinds(shown, s.key) : []}
+                onchange={(value, delay) => {
+                  change(s.key, value, delay);
+                }}
+              />
+            {/each}
+          </div>
+        </details>
+      {:else}
+        <section class="panel group" aria-labelledby={`${mod.id}-g-${g.id}`}>
+          <h3 id={`${mod.id}-g-${g.id}`}>{g.title}</h3>
+          <div class="rows">
+            {#each g.settings as s (s.key)}
+              <ModSetting
+                setting={s}
+                id={`${mod.id}-${s.key}`}
+                saved={savedCount[s.key] ?? 0}
+                conflicts={clashes[s.key] ?? []}
+                clashing={clashes[s.key] ? sharedBinds(shown, s.key) : []}
+                onchange={(value, delay) => {
+                  change(s.key, value, delay);
+                }}
+              />
+            {/each}
+          </div>
+        </section>
+      {/if}
     {/each}
   {:else}
     <p class="none">{T.MOD_PAGE.noSettings}</p>
@@ -677,6 +758,90 @@
     margin: 0;
     color: var(--soft);
     font-size: 0.875rem;
+  }
+
+  /* A built-in entry's lighting bake: what it is at, a slim bar while it runs, its button. */
+  .bake {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    gap: 16px;
+  }
+
+  .bake-text {
+    flex: 1 1 0;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+
+  .bake h3,
+  .advanced h3 {
+    font-family: var(--font-sans);
+    font-size: 0.8125rem;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--gold);
+  }
+
+  .bake p {
+    margin: 0;
+    font-size: 0.875rem;
+  }
+
+  .small-print {
+    font-size: 0.8125rem;
+  }
+
+  .track {
+    height: 4px;
+    border-radius: 2px;
+    background: var(--line);
+    overflow: hidden;
+  }
+
+  .track i {
+    display: block;
+    height: 100%;
+    background: var(--amber);
+    transition: width var(--fast) var(--ease);
+  }
+
+  .track i.moving {
+    width: 30%;
+    animation: slide 1.4s var(--ease) infinite;
+  }
+
+  @keyframes slide {
+    from {
+      transform: translateX(-100%);
+    }
+    to {
+      transform: translateX(340%);
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .track i.moving {
+      animation: none;
+      width: 100%;
+      opacity: 0.4;
+    }
+  }
+
+  .advanced > summary {
+    list-style-position: outside;
+    cursor: pointer;
+  }
+
+  .advanced > summary h3 {
+    display: inline;
+  }
+
+  .advanced[open] > summary {
+    margin-bottom: 2px;
   }
 
   @media (max-width: 599px) {

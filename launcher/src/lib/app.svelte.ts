@@ -320,10 +320,34 @@ function handleExit(job: Job) {
   if (job.state === "succeeded" && played && app.stopped && version.startsWith(`${app.stopped.game}/`)) {
     app.stopped = { ...app.stopped, playedSince: true };
   }
+  // The levels were read again and checked: Enhanced graphics' lighting is baked again for them.
+  if (job.state === "succeeded" && version !== null && job.actionId === "port-levels-check") {
+    void bakeAfterLevels(version);
+  }
   settle(job.key, job.state === "succeeded");
   void refresh();
   updateDiscordPresence();
   pump();
+}
+
+/** With Enhanced graphics on (core/src/enhanced.rs), bakes the lighting of the levels whose bake is
+ *  missing or older than their export: the probe-bake action, which keeps the ones still current. */
+async function bakeAfterLevels(key: string) {
+  const [game, name] = key.split("/");
+  if (!game || !name) return;
+  const view = await api.enhancedView(game, name).catch(() => null);
+  const bake = view?.bake;
+  if (!view?.mod.enabled || !bake?.available || bake.ready >= bake.levels) return;
+  const version = app.library?.games.find((g) => g.id === game)?.versions.find((v) => v.key === key);
+  const action = version?.actions.find((a) => a.id === "probe-bake" && a.thisPlatform);
+  const busy = jobs.list.some(
+    (j) =>
+      j.actionId === "probe-bake" &&
+      j.scope.kind === "version" &&
+      j.scope.key === key &&
+      (j.state === "queued" || j.state === "running"),
+  );
+  if (action && !busy) void run({ kind: "version", key }, action);
 }
 
 /** The game ended with an error status or a signal: find its crash report and show the notice. */

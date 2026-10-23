@@ -18,6 +18,8 @@ export function phaseLabel(job: Pick<Job, "actionId" | "state" | "startedAt">, n
       return "Reading the levels from your disc";
     case "port-levels-check":
       return "Checking the levels";
+    case "probe-bake":
+      return "Preparing the enhanced lighting";
     case "play":
     case "play-edited":
       return job.startedAt !== null && now - job.startedAt > STARTING_MS ? "The game is running" : "Starting the game";

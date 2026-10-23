@@ -14,6 +14,7 @@ describe("phaseLabel", () => {
     expect(phaseLabel(job("port-build"))).toBe("Building the game for this computer");
     expect(phaseLabel(job("port-levels"))).toBe("Reading the levels from your disc");
     expect(phaseLabel(job("port-levels-check"))).toBe("Checking the levels");
+    expect(phaseLabel(job("probe-bake"))).toBe("Preparing the enhanced lighting");
   });
 
   it("says the game is starting, then running", () => {
@@ -29,6 +30,11 @@ describe("phaseLabel", () => {
 });
 
 describe("readProgress", () => {
+  it("reads the lighting bake's levels done (bake_all.py)", () => {
+    const p = readProgress("probe-bake", out("[3/19] level_04: baked", "region-002.bake", "sparse.verify"));
+    expect(p.percent).toBeCloseTo(15.79, 1);
+  });
+
   it("reads ninja's [n/m] counter", () => {
     const p = readProgress("port-build", out("[1/4] a", "[1351/2273] Building C object CMakeFiles/x.o"));
     expect(p.percent).toBeCloseTo(59.43, 1);

@@ -376,7 +376,23 @@ export interface PluginPreset {
 
 /** What a gameplay mod is: code the game loads (a library), Luau scripts the game runs sandboxed,
  *  or data only (docs/port/MODS.md, section 11). */
-export type ModKind = "native" | "script" | "data";
+export type ModKind = "native" | "script" | "data" | "built-in";
+
+/** core/src/enhanced.rs: how far a version's probe bakes are (Enhanced graphics). */
+export interface BakeStatus {
+  /** The bake can run now; else `why` says what is missing. */
+  available: boolean;
+  why: string;
+  levels: number;
+  ready: number;
+  failed: number;
+}
+
+/** core/src/enhanced.rs: the Mods tab's built-in Enhanced graphics entry, shown as a mod. */
+export interface EnhancedView {
+  mod: PluginView;
+  bake: BakeStatus;
+}
 
 /** core/src/plugins.rs: a gameplay mod (native or script) as the Mods tab shows it, in load order. */
 export interface PluginView {
@@ -746,6 +762,12 @@ export const api = {
     call<PluginView[]>("plugins_move", { game, version, id, up }),
   pluginsSetSetting: (game: string, version: string, id: string, key: string, value: unknown) =>
     call<PluginView[]>("plugins_set_setting", { game, version, id, key, value }),
+  /** The built-in Enhanced graphics entry of a version (core/src/enhanced.rs); null where it has none. */
+  enhancedView: (game: string, version: string) => call<EnhancedView | null>("enhanced_view", { game, version }),
+  enhancedSetEnabled: (game: string, version: string, enabled: boolean) =>
+    call<EnhancedView | null>("enhanced_set_enabled", { game, version, enabled }),
+  enhancedSetSetting: (game: string, version: string, key: string, value: unknown) =>
+    call<EnhancedView | null>("enhanced_set_setting", { game, version, key, value }),
   pluginsRemove: (game: string, version: string, id: string) =>
     call<PluginView[]>("plugins_remove", { game, version, id }),
   pluginsInstall: (game: string, version: string, path: string) =>

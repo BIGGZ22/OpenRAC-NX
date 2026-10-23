@@ -7,10 +7,21 @@
   // the launcher's one switch, starts the game with none. Every change is written at once to the
   // list the game reads at its next start (plugins.json). A mod installed from a link keeps its
   // source, offers its updates (checked once a day here) and can be kept at its version. No folder
-  // shows here: a mod's is in its page's folded About.
-  import { api, ask, type ModSources, type ModUpdate, type PluginView, type VersionView } from "$lib/api";
+  // shows here: a mod's is in its page's folded About. Above the mods, for a version that has it,
+  // the built-in Enhanced graphics entry (core/src/enhanced.rs): a row and a page as a mod's, its
+  // values in the game's own settings file, and the lighting bake it needs (the probe-bake action),
+  // started when it is first switched on.
+  import {
+    api,
+    ask,
+    type EnhancedView,
+    type ModSources,
+    type ModUpdate,
+    type PluginView,
+    type VersionView,
+  } from "$lib/api";
   import { addMods } from "$lib/addMods";
-  import { app, guardShown, saveConfig } from "$lib/app.svelte";
+  import { app, guardShown, jobs, run, saveConfig } from "$lib/app.svelte";
   import { modBadge, hasSettings } from "$lib/plugins";
   import * as T from "$lib/modsText";
   import { closeMod, modNav, openMod } from "$lib/modNav.svelte";
@@ -47,13 +58,64 @@
   let checking = $state(false);
   let updating = $state<string | null>(null);
 
+  /** The built-in Enhanced graphics entry, for a version that has it. */
+  let enhanced = $state<EnhancedView | null>(null);
+  const isEnhanced = (id: string | null) => id === T.ENHANCED.id;
+
   /** The mod whose page is open, when it is one of this game's. */
-  const page = $derived(mods.find((m) => m.id === modNav.mod) ?? null);
+  const page = $derived(
+    isEnhanced(modNav.mod) && enhanced ? enhanced.mod : (mods.find((m) => m.id === modNav.mod) ?? null),
+  );
+
+  /** The lighting bake running or waiting for this version, if one is. */
+  const bakeJob = $derived(
+    jobs.list.find(
+      (j) =>
+        j.actionId === "probe-bake" &&
+        j.scope.kind === "version" &&
+        j.scope.key === v.key &&
+        (j.state === "queued" || j.state === "running"),
+    ) ?? null,
+  );
+  const bakeAction = $derived(v.actions.find((a) => a.id === "probe-bake" && a.thisPlatform) ?? null);
+
+  async function loadEnhanced() {
+    try {
+      enhanced = await api.enhancedView(v.game, v.name);
+    } catch {
+      enhanced = null;
+    }
+  }
+
+  function bake() {
+    if (bakeAction && !bakeJob) void run({ kind: "version", key: v.key }, bakeAction);
+  }
+
+  async function setEnhanced(on: boolean) {
+    try {
+      enhanced = await api.enhancedSetEnabled(v.game, v.name, on);
+      said = null;
+    } catch (e) {
+      said = { text: message(e), failed: true };
+      return;
+    }
+    // Switched on: the lighting is baked for the levels that have none yet.
+    const b = enhanced?.bake;
+    if (on && b && b.available && b.ready < b.levels) bake();
+  }
+
+  // The bake ended: its status again.
+  let wasBaking = false;
+  $effect(() => {
+    const now = bakeJob !== null;
+    if (wasBaking && !now) void loadEnhanced();
+    wasBaking = now;
+  });
   let loaded = $state(false);
 
   $effect(() => {
     // A mod asked for that is not here (removed, another game's): the list.
-    if (loaded && modNav.mod !== null && !page) closeMod();
+    if (loaded && modNav.mod !== null && !page && !isEnhanced(modNav.mod)) closeMod();
   });
 
   /** The mod whose page was last open: its row takes the focus back. */
@@ -70,6 +132,7 @@
   const message = (e: unknown) => (typeof e === "string" ? e : String(e));
 
   async function load() {
+    void loadEnhanced();
     try {
       mods = await api.pluginsList(v.game, v.name);
       listError = null;
@@ -177,6 +240,10 @@
 
   /** Saves one setting from the mod's page; the list as the core now has it. */
   async function saveSetting(mod: PluginView, key: string, value: unknown) {
+    if (isEnhanced(mod.id)) {
+      enhanced = await api.enhancedSetSetting(v.game, v.name, key, value);
+      return;
+    }
     mods = await api.pluginsSetSetting(v.game, v.name, mod.id, key, value);
   }
 
@@ -199,7 +266,9 @@
     {developer}
     updating={updating === mod.id}
     onsave={(key, value) => saveSetting(mod, key, value)}
-    onenable={(on) => void change(api.pluginsSetEnabled(v.game, v.name, mod.id, on))}
+    onenable={(on) =>
+      void (isEnhanced(mod.id) ? setEnhanced(on) : change(api.pluginsSetEnabled(v.game, v.name, mod.id, on)))}
+    builtIn={isEnhanced(mod.id) && enhanced ? { bake: enhanced.bake, job: bakeJob, onbake: bake } : null}
     onupdate={() => void runUpdate(mod.id)}
     onpin={(pin) => void setPin(mod.id, pin)}
     onfolder={() => {
@@ -229,6 +298,38 @@
     {/if}
 
     {#if said}<Reason text={said.text} tone={said.failed ? "err" : "ok"} role="status" />{/if}
+
+    {#if enhanced}
+      {@const entry = enhanced.mod}
+      {@const badge = modBadge(entry, null, false)}
+      <ul class="built-in">
+        <li class="mod" class:off={!entry.enabled}>
+          <input
+            type="checkbox"
+            role="switch"
+            class="switch"
+            aria-label={T.useAria(entry.name)}
+            checked={entry.enabled}
+            onchange={(e) => void setEnhanced(e.currentTarget.checked)}
+          />
+          <button
+            class="open"
+            id={`open-${entry.id}`}
+            aria-label={T.settingsAria(entry.name)}
+            onclick={() => {
+              openMod(entry.id);
+            }}
+          >
+            <span class="words">
+              <span class="name">{entry.name}</span>
+              <span class="desc">{entry.description}</span>
+            </span>
+            <span class={`badge ${badge.tone}`} title={badge.hint}><span class="dot"></span>{badge.text}</span>
+            <span class="go">{T.PANEL.settings}<Icon name="next" size={16} /></span>
+          </button>
+        </li>
+      </ul>
+    {/if}
 
     {#if listError}
       <Reason text={listError} tone="err" />
@@ -362,6 +463,16 @@
     margin: 0 -10px;
     padding: 0;
     list-style: none;
+  }
+
+  /* The built-in entry: above the installed mods, a rule between them. */
+  ul.built-in {
+    border-bottom: 1px solid var(--line);
+  }
+
+  /* No menu of its own: its row ends where the others' menus start. */
+  ul.built-in .mod {
+    padding-right: 44px;
   }
 
   /* A mod: its switch, then one wide target into its page (name, line, badge, Settings ›), then
