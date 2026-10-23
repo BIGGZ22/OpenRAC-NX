@@ -78,8 +78,10 @@ describe("stylesheets", () => {
   });
 
   it("write hex colours only on :root", () => {
+    // An @property's initial-value is the other place: CSS takes no var() there, so it repeats
+    // :root's value (app.css, the accent's colours).
     const loose = all
-      .filter((r) => !r.path.includes(":root"))
+      .filter((r) => !r.path.includes(":root") && !r.path[0]?.startsWith("@property"))
       .flatMap((r) => r.declarations.filter((d) => /#[0-9a-f]{3,8}\b/i.test(d)).map((d) => `${r.where} ${d}`));
     expect(loose).toEqual([]);
   });
