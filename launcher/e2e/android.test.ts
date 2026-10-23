@@ -98,6 +98,15 @@ describe("Android launcher", () => {
     expect(await page.getByRole("tab", { name: /Level editor/ }).count()).toBe(0);
   });
 
+  it("brings the game page in whole, its band not popping in after it", async () => {
+    await open("version=rac1/pal");
+    const hero = page.locator(".hero");
+    await hero.waitFor();
+    // At once, not after a fly-in of its own: the page's slide carries it.
+    expect(await hero.evaluate((e) => getComputedStyle(e).opacity)).toBe("1");
+    expect(await page.locator(".hero-bg").evaluate((e) => getComputedStyle(e).animationName)).toBe("none");
+  });
+
   it("spins the disc while a game starts", async () => {
     await open("launch&version=rac1/pal");
     await page.locator(".launch .disc").waitFor();

@@ -822,6 +822,12 @@ html[data-nav="back"]::view-transition-new(page) {
   animation-delay: 200ms;
 }
 
+/* Android: the page slides in whole (the view transition above), so its sections and game tiles
+   come with it rather than rising again after it, which showed as each one popping in. */
+html[data-platform="android"] :is(.page > :is(section, .panel, h1), .tile.rise) {
+  animation: none;
+}
+
 /* Android's touch feedback (src/lib/ripple.ts): a wave from the finger, inside the control. */
 .ripples {
   position: absolute;

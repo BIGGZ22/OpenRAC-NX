@@ -33,7 +33,7 @@
   import { pct } from "$lib/format";
   import { SITE_URL } from "$lib/links";
   import { gameArt, hideMissing } from "$lib/media";
-  import { enter } from "$lib/motion";
+  import { arrive } from "$lib/motion";
   import { tick } from "svelte";
   import { fly } from "svelte/transition";
   import { place, when } from "$lib/reports";
@@ -215,7 +215,7 @@
 
         <!-- |global like the rest of the page: a local intro inside {#key} could leave the band at its
              starting opacity when the key changed (switching discs), so the band stayed invisible. -->
-        <section class="hero" aria-label={v.title} in:fly|global={enter()}>
+        <section class="hero" aria-label={v.title} in:fly|global={arrive()}>
           {#if art}
             <div class="hero-backdrop" aria-hidden="true">
               <img src={art} alt="" class="hero-bg" decoding="async" fetchpriority="high" onerror={hideMissing} />
@@ -265,7 +265,7 @@
 
         {#if developer}
           <!-- A contributor's facts about this disc, as chips; the rest is in Develop. -->
-          <div class="chips" aria-label="Developer details" in:fly|global={enter(60)}>
+          <div class="chips" aria-label="Developer details" in:fly|global={arrive(60)}>
             <span class="chip mono">{v.key}</span>
             {#if v.serial}<span class="chip mono">{v.serial}</span>{/if}
             {#if v.progress}<span class="chip mono">{pct(v.progress.percent)} matched</span>{/if}
@@ -279,7 +279,7 @@
         {/if}
         {#if !portReady}
           <!-- Every game has this page; one without a port yet says so, and how far it is. -->
-          <section class="panel coming" aria-labelledby="coming-title" in:fly|global={enter(90)}>
+          <section class="panel coming" aria-labelledby="coming-title" in:fly|global={arrive(90)}>
             <h2 id="coming-title">Not playable yet</h2>
             <p class="muted">
               OpenRAC is rebuilding {v.title} so it runs natively on your computer. Play appears here when it is ready{setUp
@@ -302,7 +302,7 @@
         {/if}
         {#if !!setUp || portReady}
           <!-- Android: the saves alone here; Help folds at the page's foot, as a player seldom needs it. -->
-          <div class="below" class:pair={!!setUp && !onAndroid} in:fly|global={enter(90)}>
+          <div class="below" class:pair={!!setUp && !onAndroid} in:fly|global={arrive(90)}>
             <SaveManagerBlock version={v} />
             {#if setUp && !onAndroid}<ReportsBlock game={v.game} program={choice ? programOf(v.key) : null} />{/if}
           </div>
@@ -313,7 +313,7 @@
           <DifferencesBlock version={v} foldable={onAndroid} />
         {/if}
         {#if setUp && onAndroid}
-          <div in:fly|global={enter(120)}>
+          <div in:fly|global={arrive(120)}>
             <ReportsBlock game={v.game} program={choice ? programOf(v.key) : null} foldable bind:unfolded={helpOpen} />
           </div>
         {/if}
@@ -438,6 +438,12 @@
       opacity: 0;
       transform: scale(1.08);
     }
+  }
+
+  /* Android: the page slides in whole (app.css's view transition); its pictures come with it. */
+  :global(html[data-platform="android"]) .hero-bg,
+  :global(html[data-platform="android"]) .page-ambient-bg img {
+    animation: none;
   }
 
   /* The picture behind the page fades in. */

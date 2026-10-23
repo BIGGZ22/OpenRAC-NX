@@ -4,6 +4,7 @@
 // system's "reduce motion" on, every duration here is 0.
 import { cubicOut } from "svelte/easing";
 import type { FlyParams, SlideParams } from "svelte/transition";
+import { onAndroid } from "./api";
 
 /** The player asked their system for less motion. */
 export const reduced = typeof matchMedia === "function" && matchMedia("(prefers-reduced-motion: reduce)").matches;
@@ -11,6 +12,12 @@ export const reduced = typeof matchMedia === "function" && matchMedia("(prefers-
 /** What comes into view: up from 10 px below, fading in; DELAY staggers what follows. */
 export function enter(delay = 0): FlyParams {
   return { y: 10, opacity: 0, duration: reduced ? 0 : 260, delay: reduced ? 0 : delay, easing: cubicOut };
+}
+
+/** What comes in with its page, staggered as enter(). On Android the page itself slides in (App.svelte's
+ *  view transition), so its parts come with it rather than appearing again after it. */
+export function arrive(delay = 0): FlyParams {
+  return onAndroid ? { duration: 0 } : enter(delay);
 }
 
 /** What unfolds and folds away. */
