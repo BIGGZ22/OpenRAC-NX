@@ -5,13 +5,13 @@
 #include <charconv>
 #include <cmath>
 #include <cstddef>
-#include <cstdlib>
 #include <format>
-#include <memory>
 #include <numeric>
 #include <stdexcept>
+#include <string>
 #include <string_view>
 
+#include "common/env.h"
 #include "common/json.h"
 #include "common/log.h"
 #include "common/stats.h"
@@ -36,23 +36,14 @@ constexpr ProbeTextureFormat kProbeFormats[] = {
 constexpr std::size_t kDenseResidencyBudget = 128ull * 1024 * 1024;
 constexpr unsigned kFirstUnit = 3;
 
-std::string environment(const char* name) {
-#ifdef _WIN32
-    char* raw = nullptr;
-    std::size_t size = 0;
-    if (_dupenv_s(&raw, &size, name) != 0) {
-        return {};
-    }
-    std::unique_ptr<char, decltype(&std::free)> value(raw, &std::free);
-    return value ? std::string(value.get()) : std::string{};
-#else
-    const char* value = std::getenv(name);
-    return value ? std::string(value) : std::string{};
-#endif
+// Returns the value `var` was set to, or the empty string when it is unset: the probe GI's reads
+// take the two alike.
+std::string environment(env::Var var) {
+    return std::string(env::value(var).value_or(std::string_view{}));
 }
 
 unsigned rays_from_environment() {
-    const auto value = environment("OPENRAC_PROBE_RAYS");
+    const auto value = environment(env::Var::ProbeRays);
     if (value.empty()) {
         return 1024;
     }
@@ -371,7 +362,7 @@ void ProbeLighting::load(const LevelData& level) {
     if (!enhanced_rendering_available()) {
         return;
     }
-    auto path = environment("OPENRAC_PROBE_GI");
+    auto path = environment(env::Var::ProbeGi);
     if (path == "0") {
         return;
     }
@@ -383,17 +374,17 @@ void ProbeLighting::load(const LevelData& level) {
     }
     try {
         auto expected = lighting::load_level_bake_profile(level.dir, level.overrides).activation;
-        if (!environment("OPENRAC_PROBE_RAYS").empty()) {
+        if (!environment(env::Var::ProbeRays).empty()) {
             expected.bake.rays_per_probe = rays_from_environment();
         }
-        const auto sky = environment("OPENRAC_PROBE_SKY");
+        const auto sky = environment(env::Var::ProbeSky);
         if (!sky.empty()) {
             if (sky != "level" && sky != "uniform") {
                 throw std::runtime_error("invalid OPENRAC_PROBE_SKY");
             }
             expected.bake.use_level_sky = sky == "level";
         }
-        const auto intensity = environment("OPENRAC_PROBE_SKY_INTENSITY");
+        const auto intensity = environment(env::Var::ProbeSkyIntensity);
         if (!intensity.empty()) {
             std::size_t consumed = 0;
             expected.bake.sky_intensity = std::stof(intensity, &consumed);
@@ -413,11 +404,11 @@ void ProbeLighting::load(const LevelData& level) {
                 log::warn("local probe region {} inactive: {}", file.string(), why.what());
             }
         };
-        const auto dense_path = environment("OPENRAC_PROBE_DENSE");
+        const auto dense_path = environment(env::Var::ProbeDense);
         if (!dense_path.empty() && dense_path != "0") {
             add_region(dense_path);
         }
-        auto manifest_path = environment("OPENRAC_PROBE_REGIONS");
+        auto manifest_path = environment(env::Var::ProbeRegions);
         if (manifest_path.empty()) {
             const auto sidecar = path + ".regions.json";
             if (std::filesystem::is_regular_file(sidecar)) {
@@ -462,7 +453,7 @@ void ProbeLighting::load(const LevelData& level) {
             m_sunlight_scale[1],
             m_sunlight_scale[2]
         );
-        const auto view = environment("OPENRAC_PROBE_VIEW");
+        const auto view = environment(env::Var::ProbeView);
         if (!view.empty()) {
             const std::string_view name(view);
             if (name == "original") {
@@ -479,8 +470,8 @@ void ProbeLighting::load(const LevelData& level) {
                 throw std::runtime_error("unknown OPENRAC_PROBE_VIEW");
             }
         }
-        backlight = environment("OPENRAC_PROBE_BACKLIGHT") == "1";
-        const auto sphere_view = environment("OPENRAC_PROBE_SPHERES");
+        backlight = env::flag(env::Var::ProbeBacklight);
+        const auto sphere_view = environment(env::Var::ProbeSpheres);
         sphere_xray = sphere_view == "xray";
         show_spheres = sphere_view == "1" || sphere_xray;
         environment_spheres = show_spheres;
