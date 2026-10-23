@@ -37,7 +37,7 @@ import sys
 from pathlib import Path
 
 import openrac
-from openrac_common import digest, games
+from openrac_common import digest, files, games
 
 SECTOR = openrac.SECTOR
 
@@ -127,11 +127,12 @@ def contents_hash(hashes: dict[str, str]) -> str:
     return hashlib.sha256("".join(f"{p}\0{h}\n" for p, h in sorted(hashes.items())).encode()).hexdigest()
 
 
-def validate(game: str, serial: str | None, boot_sha1: str | None, files: dict[str, str],
+def validate(game: str, serial: str | None, boot_sha1: str | None, hashes: dict[str, str],
              boot_sha256: str | None = None) -> tuple[dict, str, dict]:
-    """The known build these files are, or an ExtractError. A build game.json pins by the boot's
-    SHA-256 alone (rac5, recorded from its project's target.json) is checked by that."""
-    if serial is None or serial not in files:
+    """The known build the disc's files are (HASHES: path -> SHA-1), or an ExtractError. A build
+    game.json pins by the boot's SHA-256 alone (rac5, recorded from its project's target.json) is
+    checked by that."""
+    if serial is None or serial not in hashes:
         raise ExtractError(4000)
     known = builds(game)
     if serial not in known:
@@ -149,30 +150,21 @@ def validate(game: str, serial: str | None, boot_sha1: str | None, files: dict[s
     # game.json may list the disc's file count and contents hash once someone
     # with the disc records them (the line print_new_build prints).
     disc = version.get("disc", {})
-    if "files" in disc and disc["files"] != len(files):
-        raise ExtractError(4011, f"{len(files)} files, game.json has {disc['files']}")
-    if "contents" in disc and disc["contents"] != contents_hash(files):
+    if "files" in disc and disc["files"] != len(hashes):
+        raise ExtractError(4011, f"{len(hashes)} files, game.json has {disc['files']}")
+    if "contents" in disc and disc["contents"] != contents_hash(hashes):
         raise ExtractError(4012)
     return g, name, version
 
 
-def print_new_build(serial: str | None, boot_sha1: str | None, files: dict[str, str]) -> None:
+def print_new_build(serial: str | None, boot_sha1: str | None, hashes: dict[str, str]) -> None:
     """What game.json would need to know this build (OpenGOAL's log_potential_new_db_entry)."""
     print("If this is a genuine disc OpenRAC does not know yet, a maintainer can add it to game.json:")
     print(json.dumps({"serial": serial, "boot": {"sha1": boot_sha1},
-                      "disc": {"files": len(files), "contents": contents_hash(files)}}, indent=2))
+                      "disc": {"files": len(hashes), "contents": contents_hash(hashes)}}, indent=2))
 
 
 # --- Steps ------------------------------------------------------------------------------
-
-def link_or_copy(source: Path, dest: Path) -> str:
-    try:
-        os.link(source, dest)
-        return "linked"
-    except OSError:
-        shutil.copyfile(source, dest)
-        return "copied"
-
 
 def extract(image: Path, game: str, proj: Path, minimum: int = MIN_IMAGE_SIZE, boot_only: bool = False) -> dict:
     """Extract and validate IMAGE into PROJ/iso_data/GAME; returns the build info written.
@@ -221,7 +213,7 @@ def extract(image: Path, game: str, proj: Path, minimum: int = MIN_IMAGE_SIZE, b
 
     # Most of Ratchet & Clank's data is addressed by sector, outside the file
     # system: keep the image beside the files for the decompile step.
-    how = link_or_copy(image, temp / "disc.iso")
+    how = files.link_or_copy(image, temp / "disc.iso", keep_metadata=False)
     print(f"  disc.iso: {how} from {image}")
     info = [{
         "serial": serial,

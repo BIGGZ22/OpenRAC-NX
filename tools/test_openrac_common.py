@@ -409,31 +409,14 @@ class FilesTests(TempDir):
         self.assertEqual((self.dir / "kept.bin").stat().st_mtime, 1_000_000_000)
         self.assertNotEqual((self.dir / "plain.bin").stat().st_mtime, 1_000_000_000)
 
-    def test_link_or_copy_matches_the_extractor_and_place_link(self):
-        for failing in (False, True):
-            with self.subTest(link_fails=failing), contextlib.ExitStack() as stack:
-                if failing:
-                    stack.enter_context(mock.patch("os.link", side_effect=OSError("cross-device link")))
-                ours, theirs, placed = (self.dir / f"{n}-{failing}.bin" for n in ("ours", "extractor", "placed"))
-                self.assertEqual(files.link_or_copy(self.source, ours, keep_metadata=False),
-                                 extractor.link_or_copy(self.source, theirs))
-                self.assertEqual(files.link_or_copy(self.source, self.dir / f"kept-{failing}.bin"),
-                                 openrac.place_link(self.source, placed))
-                self.assertEqual(ours.read_bytes(), theirs.read_bytes())
-                self.assertEqual((self.dir / f"kept-{failing}.bin").stat().st_mtime, placed.stat().st_mtime)
-
-    def test_copy_tree_matches_bundle_standalone(self):
+    def test_copy_tree_keeps_what_keep_accepts(self):
         for name in ("a.py", "test_a.py", "sub/b.py", "sub/c.tsv", "sub/__pycache__/b.pyc", "deep/er/d.py"):
             self.write(f"src/{name}", name)
         keep = lambda rel: not rel.name.startswith("test_") and rel.suffix in (".py", ".pyc", ".tsv")  # noqa: E731
         files.copy_tree(self.dir / "src", self.dir / "ours", keep)
-        bundle_standalone.copy_tree(self.dir / "src", self.dir / "theirs", keep)
-
-        def listing(root: Path) -> list[tuple[str, bytes]]:
-            return sorted((str(p.relative_to(root)), p.read_bytes()) for p in root.rglob("*") if p.is_file())
-        self.assertEqual(listing(self.dir / "ours"), listing(self.dir / "theirs"))
-        self.assertEqual([name for name, _data in listing(self.dir / "ours")],
-                         ["a.py", "deep/er/d.py", "sub/b.py", "sub/c.tsv"])
+        copied = sorted((str(p.relative_to(self.dir / "ours")), p.read_bytes())
+                        for p in (self.dir / "ours").rglob("*") if p.is_file())
+        self.assertEqual(copied, [(name, name.encode()) for name in ("a.py", "deep/er/d.py", "sub/b.py", "sub/c.tsv")])
 
 
 # ---- proc ----

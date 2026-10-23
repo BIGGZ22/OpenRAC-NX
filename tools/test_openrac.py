@@ -2,10 +2,12 @@
 python3 -m unittest discover -s tools"""
 
 import json
+import os
 import struct
 import tempfile
 import unittest
 from pathlib import Path
+from unittest import mock
 
 import openrac
 from openrac_common import games
@@ -41,6 +43,32 @@ def image(files: dict[str, bytes]) -> bytes:
     for at, data in blobs:
         out[at * SECTOR:at * SECTOR + len(data)] = data
     return bytes(out)
+
+
+class PlaceTests(unittest.TestCase):
+    def setUp(self):
+        tmp = tempfile.TemporaryDirectory()
+        self.addCleanup(tmp.cleanup)
+        self.dir = Path(tmp.name)
+        self.source = self.dir / "disc.iso"
+        self.source.write_bytes(b"image")
+        os.utime(self.source, (1_000_000_000, 1_000_000_000))
+
+    def test_place_link_links_once_and_leaves_other_files_alone(self):
+        dest = self.dir / "a/b/disc.iso"
+        self.assertEqual(openrac.place_link(self.source, dest), "linked")
+        self.assertEqual(dest.stat().st_ino, self.source.stat().st_ino)
+        self.assertEqual(openrac.place_link(self.source, dest), "already there")
+        other = self.dir / "other.iso"
+        other.write_bytes(b"image")
+        self.assertEqual(openrac.place_link(self.source, other), "exists, left alone")
+
+    def test_place_link_copies_with_its_times_when_it_cannot_link(self):
+        dest = self.dir / "copy/disc.iso"
+        with mock.patch("os.link", side_effect=OSError("cross-device link")):
+            self.assertEqual(openrac.place_link(self.source, dest), "copied")
+        self.assertEqual(dest.read_bytes(), b"image")
+        self.assertEqual(dest.stat().st_mtime, 1_000_000_000)
 
 
 class DiscTests(unittest.TestCase):

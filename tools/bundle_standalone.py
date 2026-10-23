@@ -47,7 +47,7 @@ import subprocess
 import sys
 from pathlib import Path
 
-from openrac_common import paths
+from openrac_common import files, paths
 
 ROOT = paths.repo_root()
 
@@ -173,14 +173,6 @@ def player_actions() -> dict:
     return out
 
 
-def copy_tree(source: Path, dest: Path, keep) -> None:
-    for path in sorted(source.rglob("*")):
-        rel = path.relative_to(source)
-        if path.is_file() and "__pycache__" not in rel.parts and keep(rel):
-            (dest / rel).parent.mkdir(parents=True, exist_ok=True)
-            shutil.copy2(path, dest / rel)
-
-
 def strip_debug(path: Path) -> bool:
     """Drops the debug info of an ELF program (Linux), keeping its symbols; whether it did. A
     program of another system, or no strip tool on the PATH, leaves the file as it is."""
@@ -239,12 +231,12 @@ def main() -> int:
         shutil.copy2(ROOT / "tools" / name, out / "tools" / name)
     # The helpers they import, found from the copy's own tools/ (they find the copy's root by
     # the STANDALONE note written below).
-    copy_tree(ROOT / "tools/openrac_common", out / "tools/openrac_common", lambda rel: rel.suffix == ".py")
-    copy_tree(ROOT / "editor", out / "editor",
+    files.copy_tree(ROOT / "tools/openrac_common", out / "tools/openrac_common", lambda rel: rel.suffix == ".py")
+    files.copy_tree(ROOT / "editor", out / "editor",
               lambda rel: not rel.name.startswith("test_") and rel.suffix in (".py", ".tsv", ".gd", ""))
     if not args.android:
         # Android has no Mods tab yet, and so no Enhanced graphics to bake for.
-        copy_tree(ROOT / PROBE_TOOLS, out / PROBE_TOOLS,
+        files.copy_tree(ROOT / PROBE_TOOLS, out / PROBE_TOOLS,
                   lambda rel: not rel.name.startswith("test_") and rel.suffix in (".py", ".json"))
     for manifest in sorted((ROOT / "games").glob("*/game.json")):
         dest = out / manifest.relative_to(ROOT)

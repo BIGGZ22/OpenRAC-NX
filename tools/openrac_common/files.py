@@ -7,8 +7,9 @@ Placing files: a hard link where the file system allows one, and copies of trees
   files.link_or_copy(image, dest)                    # "linked" or "copied"
   files.copy_tree(src, dest, lambda rel: rel.suffix == ".py")
 
-link_or_copy is written from tools/extractor.py:167 and tools/openrac.py:160 (place_link, whose
-checks of an existing DEST stay with its caller); copy_tree from tools/bundle_standalone.py:173.
+link_or_copy is written from the copies tools/extractor.py and tools/openrac.py (place_link,
+whose checks of an existing DEST stay with it) had, and copy_tree from
+tools/bundle_standalone.py's; those three use these since P1-05.
 port/tools/hostgen/prep.py:759 has a copy_tree of the same name that rewrites C as it copies;
 it is a different function and stays where it is.
 """

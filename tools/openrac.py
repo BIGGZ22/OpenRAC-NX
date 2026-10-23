@@ -23,7 +23,6 @@ machine; baserom/ and every placed input are ignored by git.
 import hashlib
 import json
 import os
-import shutil
 import struct
 import subprocess
 import sys
@@ -31,7 +30,7 @@ import zlib
 from pathlib import Path
 from urllib.parse import urlencode
 
-from openrac_common import digest, games, paths
+from openrac_common import digest, files, games, paths
 
 ROOT = paths.repo_root()
 GAMES = ROOT / "games"
@@ -150,12 +149,7 @@ def place_link(source: Path, dest: Path) -> str:
             return "already there"
         return "exists, left alone"
     dest.parent.mkdir(parents=True, exist_ok=True)
-    try:
-        os.link(source, dest)
-        return "linked"
-    except OSError:
-        shutil.copy2(source, dest)
-        return "copied"
+    return files.link_or_copy(source, dest)
 
 
 def place_boot(iso: Path, serial: str, want: dict, dest: Path) -> str:
