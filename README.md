@@ -150,6 +150,12 @@ used. Commits follow Conventional Commits (`feat(rac1/pal): ...`). AI agents
 also follow [AGENTS.md](AGENTS.md). Decisions the group still has to make are
 in [docs/policy/OPEN_QUESTIONS.md](docs/policy/OPEN_QUESTIONS.md).
 
+OpenRAC's own code is being restructured, package by package, on the way to a
+port written in C++ throughout: what is done, who works on what and what is
+free to pick up is in [docs/restructure/PROGRESS.md](docs/restructure/PROGRESS.md).
+The port's code follows its
+[coding conventions](port/docs/CODING_CONVENTIONS.md).
+
 ## Supported discs
 
 Only these releases are supported. `tools/openrac.py discs` checks your images

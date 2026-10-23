@@ -20,6 +20,7 @@ OpenRAC/
 ├── docs/                   knowledge and rules that span the games
 │   ├── policy/             sourcing policy, open questions
 │   ├── port/               the native port: design, studies, order of work
+│   ├── restructure/        the restructure's progress: packages, owners, how to help
 │   ├── engine/             what is known about the engine, across games
 │   ├── toolchains/         which compilers built what
 │   └── workflow/           how matching works in each game
@@ -62,7 +63,8 @@ are what readers see.
 | A file a second game needs unchanged (a library source, a build helper) | a copy in that game, listed with the original in `shared/files.json` ([shared/](../shared/README.md)) |
 | Editor code | `editor/` |
 | A study or decision for the native port | `docs/port/` ([its README](port/README.md)) |
-| The native port's code | `port/` ([its README](../port/README.md)): a game's own part in `port/game/<game>/` |
+| The native port's code | `port/` ([its README](../port/README.md)): a game's own part in `port/game/<game>/`, following [its coding conventions](../port/docs/CODING_CONVENTIONS.md) |
+| Restructure work: claiming a package, reporting it | its row in [docs/restructure/PROGRESS.md](restructure/PROGRESS.md) |
 | Launcher code, or a game's actions in the launcher | `launcher/` (a game's actions: `launcher/actions.json`) |
 | A decision or rule for everyone | `docs/policy/`, and `AGENTS.md` and `CONTRIBUTING.md` if it changes how people work |
 | A new game version | `games/<game>/<version>/`, plus its entry in `games/<game>/game.json` |
