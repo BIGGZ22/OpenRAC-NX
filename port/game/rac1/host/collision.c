@@ -36,36 +36,50 @@
  * primitive hit leaves them untouched). The port has no vector unit, so they hold what the
  * kernels left there (other code using VU0 in between is not modelled).
  */
-#include "rac1.h"
-#include "openrac/ps2float.h"
-
 #include <fenv.h>
-#include <stdio.h>
-#include <stdlib.h>
 #include <float.h>
 #include <math.h>
 #include <stdint.h>
+#include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
+
+#include "openrac/ps2float.h"
+#include "rac1.h"
 
 #pragma STDC FENV_ACCESS ON
 
 /* ---- Where each program keeps what the kernels read (from the PAL kernels' code) ---- */
 
 typedef struct {
-    gaddr out;   /* CollOutput: +0 the level's collision tree, +0x10 query stamp, +0x14 hit log index */
+    gaddr
+        out; /* CollOutput: +0 the level's collision tree, +0x10 query stamp, +0x14 hit log index */
     gaddr mobys; /* the word holding the moby array's address */
-    gaddr grid;  /* the moby grid: 64 x 64 cells {u16 block, s8 count, u8 capacity}, lists at +0x4000 */
-    gaddr hits;  /* the moby hit log, 64 records of 0x40 */
-    gaddr list;  /* coll_sphere_mobys's list of mobys */
-    gaddr hero;  /* the word holding the hero-collision section's address */
+    gaddr
+        grid; /* the moby grid: 64 x 64 cells {u16 block, s8 count, u8 capacity}, lists at +0x4000 */
+    gaddr hits; /* the moby hit log, 64 records of 0x40 */
+    gaddr list; /* coll_sphere_mobys's list of mobys */
+    gaddr hero; /* the word holding the hero-collision section's address */
 } Ctx;
 
 /* Level 0's program (the level kernels name D_L00_00173F40, gp-0x6C68, D_L00_0019BB60, D_L00_00178200,
  * D_L00_00178000 and gp-0x7608; $gp is 0x166D00); in another level, that level's copies of them
  * (OPENRAC_LDATA, guest.h). */
-static const Ctx LEVEL0 = {RAC1_LADDR(00, 0x00173F40u), RAC1_LADDR(00, 0x00160098u), RAC1_LADDR(00, 0x0019BB60u), RAC1_LADDR(00, 0x00178200u), RAC1_LADDR(00, 0x00178000u), RAC1_LADDR(00, 0x0015F6F8u)};
+static const Ctx LEVEL0 =
+    {RAC1_LADDR(00, 0x00173F40u),
+     RAC1_LADDR(00, 0x00160098u),
+     RAC1_LADDR(00, 0x0019BB60u),
+     RAC1_LADDR(00, 0x00178200u),
+     RAC1_LADDR(00, 0x00178000u),
+     RAC1_LADDR(00, 0x0015F6F8u)};
 /* The executable's own copy of the line query (D_00194200, gp-0x6CE8, D_001B7A60, D_001984C0). */
-static const Ctx BOOT = {RAC1_ADDR(0x00194200u), RAC1_ADDR(0x00160018u), RAC1_ADDR(0x001B7A60u), RAC1_ADDR(0x001984C0u), 0, 0};
+static const Ctx BOOT =
+    {RAC1_ADDR(0x00194200u),
+     RAC1_ADDR(0x00160018u),
+     RAC1_ADDR(0x001B7A60u),
+     RAC1_ADDR(0x001984C0u),
+     0,
+     0};
 
 #define U8(a) GREF(uint8_t, (a))
 #define S8(a) GREF(int8_t, (a))
@@ -82,38 +96,71 @@ static inline uint32_t fb(float f) {
     memcpy(&u, &f, 4);
     return u;
 }
+
 static inline float fbits(uint32_t u) {
     float f;
     memcpy(&f, &u, 4);
     return f;
 }
+
 /* The units' add, subtract and multiply: openrac/ps2float.h's (the model of assets/ps2_float.h):
  * the adder cuts the smaller operand to one bit below the larger one's last place (25 or more
  * places below, it is dropped whole) and every result is cut to 24 bits; an exponent of 0 is zero,
  * one of 255 an ordinary number, an overflow saturates. */
-static inline float fadd(float a, float b) { return openrac_ps2_add(a, b); }
-static inline float fsub(float a, float b) { return openrac_ps2_sub(a, b); }
-static inline float fmul(float a, float b) { return openrac_ps2_mul(a, b); }
+static inline float fadd(float a, float b) {
+    return openrac_ps2_add(a, b);
+}
+
+static inline float fsub(float a, float b) {
+    return openrac_ps2_sub(a, b);
+}
+
+static inline float fmul(float a, float b) {
+    return openrac_ps2_mul(a, b);
+}
+
 /* The sign bit, which the kernels test (bltz after qmfc2): -0 counts as negative. */
-static inline int neg(float f) { return (fb(f) >> 31) != 0; }
+static inline int neg(float f) {
+    return (fb(f) >> 31) != 0;
+}
+
 /* The bits as a signed integer above zero (bgtz on the word): positive and not +0. */
-static inline int gtz(float f) { return (int32_t)fb(f) > 0; }
+static inline int gtz(float f) {
+    return (int32_t)fb(f) > 0;
+}
+
 /* vmini / vmax compare sign and magnitude. */
 static inline int32_t fkey(float f) {
     const uint32_t u = fb(f);
     return (u >> 31) ? -(int32_t)(u & 0x7FFFFFFFu) : (int32_t)u;
 }
-static inline float fmin2(float a, float b) { return fkey(b) < fkey(a) ? b : a; }
-static inline float fmax2(float a, float b) { return fkey(b) > fkey(a) ? b : a; }
+
+static inline float fmin2(float a, float b) {
+    return fkey(b) < fkey(a) ? b : a;
+}
+
+static inline float fmax2(float a, float b) {
+    return fkey(b) > fkey(a) ? b : a;
+}
+
 /* vdiv: the truncated quotient; a zero divisor gives the largest number of the quotient's sign. */
-static inline float fdiv(float a, float b) { return openrac_ps2_div(a, b); }
+static inline float fdiv(float a, float b) {
+    return openrac_ps2_div(a, b);
+}
+
 /* vsqrt: the root of the magnitude, truncated (host/hand.c's, as the hand-written vector
  * routines'). */
 float game_openrac_sqrt(float x);
-static inline float fsqrt(float a) { return game_openrac_sqrt(a); }
+
+static inline float fsqrt(float a) {
+    return game_openrac_sqrt(a);
+}
+
 /* vftoi0: truncation toward zero, saturating by the sign (an exponent of 255 too), as the FPU's
  * cvt.w.s. */
-static inline int32_t ftoi0(float f) { return openrac_ps2_ftoi(f); }
+static inline int32_t ftoi0(float f) {
+    return openrac_ps2_ftoi(f);
+}
 
 typedef struct {
     float v[3];
@@ -123,39 +170,56 @@ static inline V3 v3(float x, float y, float z) {
     V3 r = {{x, y, z}};
     return r;
 }
-static inline V3 vld(gaddr a) { return v3(F32(a), F32(a + 4), F32(a + 8)); }
+
+static inline V3 vld(gaddr a) {
+    return v3(F32(a), F32(a + 4), F32(a + 8));
+}
+
 static inline V3 vadd(V3 a, V3 b) {
     return v3(fadd(a.v[0], b.v[0]), fadd(a.v[1], b.v[1]), fadd(a.v[2], b.v[2]));
 }
+
 static inline V3 vsub(V3 a, V3 b) {
     return v3(fsub(a.v[0], b.v[0]), fsub(a.v[1], b.v[1]), fsub(a.v[2], b.v[2]));
 }
+
 static inline V3 vmul(V3 a, V3 b) {
     return v3(fmul(a.v[0], b.v[0]), fmul(a.v[1], b.v[1]), fmul(a.v[2], b.v[2]));
 }
+
 static inline V3 vmuls(V3 a, float s) {
     return v3(fmul(a.v[0], s), fmul(a.v[1], s), fmul(a.v[2], s));
 }
+
 /* a + b * s per lane, the product rounded first. */
 static inline V3 vmadds(V3 a, V3 b, float s) {
-    return v3(fadd(a.v[0], fmul(b.v[0], s)), fadd(a.v[1], fmul(b.v[1], s)),
-              fadd(a.v[2], fmul(b.v[2], s)));
+    return v3(
+        fadd(a.v[0], fmul(b.v[0], s)), fadd(a.v[1], fmul(b.v[1], s)), fadd(a.v[2], fmul(b.v[2], s))
+    );
 }
+
 /* vopmula / vopmsub: a x b, both products rounded before the subtraction. */
 static inline V3 cross(V3 a, V3 b) {
-    return v3(fsub(fmul(a.v[1], b.v[2]), fmul(b.v[1], a.v[2])),
-              fsub(fmul(a.v[2], b.v[0]), fmul(b.v[2], a.v[0])),
-              fsub(fmul(a.v[0], b.v[1]), fmul(b.v[0], a.v[1])));
+    return v3(
+        fsub(fmul(a.v[1], b.v[2]), fmul(b.v[1], a.v[2])),
+        fsub(fmul(a.v[2], b.v[0]), fmul(b.v[2], a.v[0])),
+        fsub(fmul(a.v[0], b.v[1]), fmul(b.v[0], a.v[1]))
+    );
 }
+
 /* (x + y) + z of the products. */
 static inline float dot(V3 a, V3 b) {
     const V3 p = vmul(a, b);
     return fadd(fadd(p.v[0], p.v[1]), p.v[2]);
 }
-static inline V3 vzero(void) { return v3(0.0f, 0.0f, 0.0f); }
+
+static inline V3 vzero(void) {
+    return v3(0.0f, 0.0f, 0.0f);
+}
 
 #define K1024 1024.0f
 #define INV1024 (1.0f / 1024.0f)
+
 /* 0x3F7FDF3B: the sphere and capsule "best distance" shrink. */
 static float best_shrink(void) {
     const uint32_t u = 0x3F7FDF3Bu;
@@ -263,7 +327,8 @@ static void decode_vertices(const Cell* c, const int16_t lo[3], const int16_t hi
     g_vf2w = 0;
     for (int i = 0; i < c->nv; ++i) {
         const uint32_t w = U32(c->leaf + 4 + 4 * (gaddr)i);
-        const int32_t f[3] = {((int32_t)(w << 22)) >> 22, ((int32_t)(w << 12)) >> 22, ((int32_t)w) >> 20};
+        const int32_t f[3] =
+            {((int32_t)(w << 22)) >> 22, ((int32_t)(w << 12)) >> 22, ((int32_t)w) >> 20};
         const int16_t h[3] = {(int16_t)(f[0] << 6), (int16_t)(f[1] << 6), (int16_t)(f[2] << 4)};
         uint32_t code = 0;
         for (int k = 0; k < 3; ++k) {
@@ -303,12 +368,14 @@ static int cell_triangle(const Cell* c, int j, int v[3], int* type) {
  * cannot hold: they saturate) is in no query, rather than in every one (a NaN never compares as
  * outside), as the follow camera's line would otherwise be blocked by it everywhere. */
 static int unbounded(gaddr m) {
-    return !isfinite(F32(m)) || !isfinite(F32(m + 4)) || !isfinite(F32(m + 8)) || !isfinite(F32(m + 0xC));
+    return !isfinite(F32(m)) || !isfinite(F32(m + 4)) || !isfinite(F32(m + 8))
+           || !isfinite(F32(m + 0xC));
 }
 
 /* Query flags 0x80 (type bit 7) and 0x20 (surface id == (flags >> 8) & 0x1F) leave a face out. */
 static inline int face_excluded(uint32_t fl, int ty) {
-    return (fl & 0x80 & (uint32_t)ty) != 0 || ((fl & 0x20) != 0 && (((fl >> 8) ^ (uint32_t)ty) & 0x1F) == 0);
+    return (fl & 0x80 & (uint32_t)ty) != 0
+           || ((fl & 0x20) != 0 && (((fl >> 8) ^ (uint32_t)ty) & 0x1F) == 0);
 }
 
 /* ---- The running best hit ---- */
@@ -340,7 +407,9 @@ static void best_start(Best* b) {
     }
 }
 
-static void record(Best* b, int ty, V3 point, V3 normal, V3 v0, V3 e1, V3 e2, V3 centre, gaddr moby) {
+static void record(
+    Best* b, int ty, V3 point, V3 normal, V3 v0, V3 e1, V3 e2, V3 centre, gaddr moby
+) {
     const V3 v0abs = vadd(v0, centre);
     b->have = 1;
     b->kind = 0x1000 + ty;
@@ -389,7 +458,9 @@ static int64_t new_stamp(gaddr out) {
 
 /* ---- Mobys ---- */
 
-static inline gaddr moby_at(const Ctx* x, unsigned idx) { return U32(x->mobys) + idx * 0x100u; }
+static inline gaddr moby_at(const Ctx* x, unsigned idx) {
+    return U32(x->mobys) + idx * 0x100u;
+}
 
 /* Cell (gx, gy) of the moby grid: its moby indices and how many. */
 static gaddr grid_cell(const Ctx* x, unsigned gx, unsigned gy, int* count) {
@@ -518,6 +589,7 @@ static int moby_face(const MobyColl* c, int n, int i, uint32_t fl, Vert* v, int*
  * disables it (bit i, the first 32) or its mask lacks the query's bit (bit 0 with flag 0x4, bit 1
  * without). Returns the next record to test from *i (0 to start), 0 past the last. */
 #define PRIMS_MAX 0x400
+
 static gaddr next_prim(const MobyColl* c, uint32_t fl, int* i, int* last) {
     if (*i == 0 && ((fl & 0x2) != 0 || S32(c->blob + 4) == 0)) {
         return 0;
@@ -595,10 +667,12 @@ static void moby_joints(const Ctx* x, const MobyColl* c, int count, uint32_t wor
 static inline gaddr joint_addr(int j) {
     return g_joints != 0 && j >= 0 && j < JOINT_SLOT / 0x10 ? g_joints + 0x10 * (gaddr)j : 0;
 }
+
 static inline V3 joint_at(int j) {
     const gaddr a = joint_addr(j);
     return a != 0 ? vld(a) : v3(0.0f, 0.0f, 0.0f);
 }
+
 static inline uint32_t joint_w(int j) {
     const gaddr a = joint_addr(j);
     return a != 0 ? U32(a + 0xC) : 0;
@@ -661,7 +735,9 @@ static int vol_prim(const MobyColl* c, gaddr p, V3 cq, int capsule, V3* cc, floa
 
 /* The closest point of the primitive sphere (cc, rad) to c, its offset from cc and d^2, when r + rad
  * reaches c and d^2 <= best. */
-static int vol_prim_test(V3 c, float r, V3 cc, float rad, float best, V3* pt, V3* off, float* d2out) {
+static int vol_prim_test(
+    V3 c, float r, V3 cc, float rad, float best, V3* pt, V3* off, float* d2out
+) {
     const float rr = fadd(r, rad);
     V3 e = vsub(cc, c);
     const float rr2 = fmul(rr, rr);
@@ -697,8 +773,21 @@ static void prim_best(Best* b, gaddr prim, V3 point, V3 normal, gaddr moby) {
 /* ---- Triangle tests ---- */
 
 /* Line against one triangle: (t, P - v0, N, e1, e2) when the segment crosses it strictly before best. */
-static int line_tri(uint32_t fl, V3 d, V3 a_rel, V3 b_rel, V3 v0, V3 v1, V3 v2, float best_t, float* tq,
-                    V3* pp, V3* nn, V3* e1o, V3* e2o) {
+static int line_tri(
+    uint32_t fl,
+    V3 d,
+    V3 a_rel,
+    V3 b_rel,
+    V3 v0,
+    V3 v1,
+    V3 v2,
+    float best_t,
+    float* tq,
+    V3* pp,
+    V3* nn,
+    V3* e1o,
+    V3* e2o
+) {
     const V3 e1 = vsub(v1, v0);
     const V3 e2 = vsub(v2, v0);
     const V3 n = cross(e2, e1);
@@ -738,7 +827,9 @@ static V3 edge_point(V3 p, V3 a, V3 b) {
 
 /* The sphere / capsule triangle tail: p is the plane projection with squared plane distance d2; the
  * first failing edge test moves it to the closest point of that edge, measured again from `from`. */
-static int closest_on_triangle(V3 p, float d2, V3 from, V3 e1, V3 e2, V3 n, float best, V3* out, float* d2o) {
+static int closest_on_triangle(
+    V3 p, float d2, V3 from, V3 e1, V3 e2, V3 n, float best, V3* out, float* d2o
+) {
     if (neg(fsub(best, d2))) {
         return 0;
     }
@@ -772,8 +863,19 @@ static int closest_on_triangle(V3 p, float d2, V3 from, V3 e1, V3 e2, V3 n, floa
 }
 
 /* Sphere against one triangle: closest point - v0, d^2, N, e1, e2 when d^2 <= best. */
-static int sphere_tri(uint32_t fl, V3 c_rel, V3 v0, V3 v1, V3 v2, float best, V3* pt, float* d2o, V3* no,
-                      V3* e1o, V3* e2o) {
+static int sphere_tri(
+    uint32_t fl,
+    V3 c_rel,
+    V3 v0,
+    V3 v1,
+    V3 v2,
+    float best,
+    V3* pt,
+    float* d2o,
+    V3* no,
+    V3* e1o,
+    V3* e2o
+) {
     const V3 e1 = vsub(v1, v0);
     const V3 e2 = vsub(v2, v0);
     const V3 w = vsub(c_rel, v0);
@@ -802,8 +904,20 @@ static int sphere_tri(uint32_t fl, V3 c_rel, V3 v0, V3 v1, V3 v2, float best, V3
 }
 
 /* Capsule (base c_rel, height h, x1024) against one triangle. */
-static int capsule_tri(uint32_t fl, V3 c_rel, float h, V3 v0, V3 v1, V3 v2, float best, V3* pt, float* d2o,
-                       V3* no, V3* e1o, V3* e2o) {
+static int capsule_tri(
+    uint32_t fl,
+    V3 c_rel,
+    float h,
+    V3 v0,
+    V3 v1,
+    V3 v2,
+    float best,
+    V3* pt,
+    float* d2o,
+    V3* no,
+    V3* e1o,
+    V3* e2o
+) {
     const V3 e1 = vsub(v1, v0);
     const V3 e2 = vsub(v2, v0);
     const V3 bot = vsub(c_rel, v0);
@@ -878,8 +992,8 @@ static int capsule_tri(uint32_t fl, V3 c_rel, float h, V3 v0, V3 v1, V3 v2, floa
 /* ---- CollLine_Fix ---- */
 
 typedef struct {
-    float t;     /* entry parameter */
-    int c[3];    /* cell */
+    float t;  /* entry parameter */
+    int c[3]; /* cell */
 } LineCell;
 
 #define DDA_MAX 256
@@ -895,6 +1009,7 @@ static int in_world_lo(V3 a, V3 b) {
     }
     return 1;
 }
+
 static int in_world_hi(V3 a, V3 b) {
     for (int k = 0; k < 3; ++k) {
         if (!neg(fsub(fmax2(a.v[k], b.v[k]), K1024))) {
@@ -976,7 +1091,9 @@ static int line_cell_list(V3 a1024, V3 b1024) {
     return n;
 }
 
-static void line_world(gaddr mesh, uint32_t fl, V3 a1024, V3 b1024, V3 d, int n, float* best_t, Best* best) {
+static void line_world(
+    gaddr mesh, uint32_t fl, V3 a1024, V3 b1024, V3 d, int n, float* best_t, Best* best
+) {
     for (int i = 0; i < n; ++i) {
         const float t_enter = g_list[i].t;
         const float t_next = i + 1 < n ? g_list[i + 1].t : 1.0f;
@@ -1016,7 +1133,9 @@ static void line_world(gaddr mesh, uint32_t fl, V3 a1024, V3 b1024, V3 d, int n,
             }
             float q;
             V3 p, nrm, e1, e2;
-            if (!line_tri(fl, d, a_rel, b_rel, v0->p, v1->p, v2->p, *best_t, &q, &p, &nrm, &e1, &e2)) {
+            if (!line_tri(
+                    fl, d, a_rel, b_rel, v0->p, v1->p, v2->p, *best_t, &q, &p, &nrm, &e1, &e2
+                )) {
                 continue;
             }
             *best_t = q;
@@ -1036,7 +1155,9 @@ static float entry_root(float wd, float ww, float dd, float rr) {
 }
 
 /* One primitive against the segment: (t, hit, hit - C). */
-static int line_prim(const MobyColl* c, gaddr p, V3 a, V3 b, float best_t, float* to, V3* hit, V3* nrm) {
+static int line_prim(
+    const MobyColl* c, gaddr p, V3 a, V3 b, float best_t, float* to, V3* hit, V3* nrm
+) {
     const int kind = S8(p);
     const float s = c->s;
     V3 cc;
@@ -1092,8 +1213,10 @@ static int line_prim(const MobyColl* c, gaddr p, V3 a, V3 b, float best_t, float
             const float nn = fadd(fadd(n3sq.v[0], n3sq.v[1]), n3sq.v[2]);
             const float s7 = dot(n7, vsub(a, pa));
             const float s8 = dot(n8, vsub(pa, a));
-            const V3 c3 = vmadds(pa, e, fdiv(s7, nn)); /* the axis line's point nearest the segment's line */
-            const V3 c4 = vmadds(a, d, fdiv(s8, nn));  /* the segment's line's point nearest the axis */
+            const V3 c3 =
+                vmadds(pa, e, fdiv(s7, nn)); /* the axis line's point nearest the segment's line */
+            const V3 c4 =
+                vmadds(a, d, fdiv(s8, nn)); /* the segment's line's point nearest the axis */
             const V3 g = vsub(c4, c3);
             const V3 gs = vmul(g, g);
             const float v = fadd(fadd(fadd(fsub(0.0f, rr), gs.v[0]), gs.v[1]), gs.v[2]);
@@ -1137,15 +1260,26 @@ static int line_prim(const MobyColl* c, gaddr p, V3 a, V3 b, float best_t, float
 }
 
 /* The moby pass of CollLine_Fix: the grid cells under the DDA list, (x >> 2, y >> 2) without repeats. */
-static void line_mobys(const Ctx* x, uint32_t stamp, uint32_t fl, V3 a, V3 b, V3 d, int n, gaddr ignore,
-                       float* best_t, Best* best) {
+static void line_mobys(
+    const Ctx* x,
+    uint32_t stamp,
+    uint32_t fl,
+    V3 a,
+    V3 b,
+    V3 d,
+    int n,
+    gaddr ignore,
+    float* best_t,
+    Best* best
+) {
     static unsigned cells[3 * DDA_MAX + 2][2];
     int nc = 0;
     for (int i = 0; i < n; ++i) {
         if (i > 0 && fb(g_list[i].t) == 0x3F800000u) {
             break;
         }
-        const unsigned gx = (unsigned)(g_list[i].c[0] & 0xFF) >> 2, gy = (unsigned)(g_list[i].c[1] & 0xFF) >> 2;
+        const unsigned gx = (unsigned)(g_list[i].c[0] & 0xFF) >> 2,
+                       gy = (unsigned)(g_list[i].c[1] & 0xFF) >> 2;
         if (nc == 0 || cells[nc - 1][0] != gx || cells[nc - 1][1] != gy) {
             cells[nc][0] = gx;
             cells[nc][1] = gy;
@@ -1198,7 +1332,21 @@ static void line_mobys(const Ctx* x, uint32_t stamp, uint32_t fl, V3 a, V3 b, V3
                     }
                     float q;
                     V3 p, nrm, e1, e2;
-                    if (!line_tri(fl, d, a_rel, b_rel, v[0].p, v[1].p, v[2].p, *best_t, &q, &p, &nrm, &e1, &e2)) {
+                    if (!line_tri(
+                            fl,
+                            d,
+                            a_rel,
+                            b_rel,
+                            v[0].p,
+                            v[1].p,
+                            v[2].p,
+                            *best_t,
+                            &q,
+                            &p,
+                            &nrm,
+                            &e1,
+                            &e2
+                        )) {
                         continue;
                     }
                     *best_t = q;
@@ -1345,8 +1493,15 @@ static V3 volume_pushed(const Volume* v, const Best* b, float best) {
 }
 
 /* The moby pass of the sphere and capsule kernels. */
-static void volume_mobys(const Ctx* x, uint32_t stamp, uint32_t fl, const Volume* vol, gaddr ignore,
-                         float* best_d, Best* best) {
+static void volume_mobys(
+    const Ctx* x,
+    uint32_t stamp,
+    uint32_t fl,
+    const Volume* vol,
+    gaddr ignore,
+    float* best_d,
+    Best* best
+) {
     const V3 c = vol->c1024;
     const float r = vol->r1024;
     const float h = vol->h1024;
@@ -1411,11 +1566,33 @@ static void volume_mobys(const Ctx* x, uint32_t stamp, uint32_t fl, const Volume
                         }
                         V3 pt, nrm, e1, e2;
                         float d2;
-                        const int hit = vol->capsule
-                                            ? capsule_tri(fl, c_rel, h, v[0].p, v[1].p, v[2].p, *best_d, &pt, &d2,
-                                                          &nrm, &e1, &e2)
-                                            : sphere_tri(fl, c_rel, v[0].p, v[1].p, v[2].p, *best_d, &pt, &d2, &nrm,
-                                                         &e1, &e2);
+                        const int hit = vol->capsule ? capsule_tri(
+                                                           fl,
+                                                           c_rel,
+                                                           h,
+                                                           v[0].p,
+                                                           v[1].p,
+                                                           v[2].p,
+                                                           *best_d,
+                                                           &pt,
+                                                           &d2,
+                                                           &nrm,
+                                                           &e1,
+                                                           &e2
+                                                       )
+                                                     : sphere_tri(
+                                                           fl,
+                                                           c_rel,
+                                                           v[0].p,
+                                                           v[1].p,
+                                                           v[2].p,
+                                                           *best_d,
+                                                           &pt,
+                                                           &d2,
+                                                           &nrm,
+                                                           &e1,
+                                                           &e2
+                                                       );
                         if (!hit) {
                             continue;
                         }
@@ -1443,8 +1620,9 @@ static void volume_mobys(const Ctx* x, uint32_t stamp, uint32_t fl, const Volume
     }
 }
 
-static int coll_volume(const Ctx* x, float radius, float height, gaddr centre, uint32_t fl, gaddr ignore,
-                       int capsule) {
+static int coll_volume(
+    const Ctx* x, float radius, float height, gaddr centre, uint32_t fl, gaddr ignore, int capsule
+) {
     const int64_t stamp = new_stamp(x->out);
     if (stamp < 0) {
         return 0;
@@ -1485,8 +1663,10 @@ static int coll_volume(const Ctx* x, float radius, float height, gaddr centre, u
                     if (!cell_open(mesh, cell_word(mesh, xx, y, z), &cell)) {
                         continue;
                     }
-                    const V3 cen = v3((float)(xx << 12) + 2048.0f, (float)(y << 12) + 2048.0f,
-                                      (float)(z << 12) + 2048.0f);
+                    const V3 cen =
+                        v3((float)(xx << 12) + 2048.0f,
+                           (float)(y << 12) + 2048.0f,
+                           (float)(z << 12) + 2048.0f);
                     int16_t blo[3], bhi[3];
                     for (int k = 0; k < 3; ++k) {
                         blo[k] = (int16_t)ftoi0(fsub(vol.lo1024.v[k], cen.v[k]));
@@ -1509,10 +1689,33 @@ static int coll_volume(const Ctx* x, float radius, float height, gaddr centre, u
                         }
                         V3 pt, nrm, e1, e2;
                         float d2;
-                        const int hit = capsule ? capsule_tri(fl, c_rel, vol.h1024, v0->p, v1->p, v2->p, best_d, &pt,
-                                                              &d2, &nrm, &e1, &e2)
-                                                : sphere_tri(fl, c_rel, v0->p, v1->p, v2->p, best_d, &pt, &d2, &nrm,
-                                                             &e1, &e2);
+                        const int hit = capsule ? capsule_tri(
+                                                      fl,
+                                                      c_rel,
+                                                      vol.h1024,
+                                                      v0->p,
+                                                      v1->p,
+                                                      v2->p,
+                                                      best_d,
+                                                      &pt,
+                                                      &d2,
+                                                      &nrm,
+                                                      &e1,
+                                                      &e2
+                                                  )
+                                                : sphere_tri(
+                                                      fl,
+                                                      c_rel,
+                                                      v0->p,
+                                                      v1->p,
+                                                      v2->p,
+                                                      best_d,
+                                                      &pt,
+                                                      &d2,
+                                                      &nrm,
+                                                      &e1,
+                                                      &e2
+                                                  );
                         if (!hit) {
                             continue;
                         }
@@ -1537,7 +1740,8 @@ static int coll_volume(const Ctx* x, float radius, float height, gaddr centre, u
 static void trace(int kind, int hit) {
     static int on = -1;
     static unsigned long calls[6], hits[6], total;
-    static const char* names[6] = {"line", "sphere", "capsule", "sphere-mobys", "hero-groups", "boot line"};
+    static const char* names[6] =
+        {"line", "sphere", "capsule", "sphere-mobys", "hero-groups", "boot line"};
     if (on < 0) {
         on = getenv("OPENRAC_COLL_TRACE") != NULL;
     }
@@ -1643,7 +1847,8 @@ int func_L00_001F2BE8(float a0, gaddr a1, int a2, gaddr a3, gaddr a4) {
                 const gaddr list = grid_cell(x, gx, gy, &count);
                 for (int li = 0; li < count; ++li) {
                     const gaddr m = moby_at(x, U16(list + 2 * (gaddr)li));
-                    if (m == a3 || U32(m + 0x9C) == (uint32_t)stamp || U32(m + 0x94) == 0 || unbounded(m)) {
+                    if (m == a3 || U32(m + 0x9C) == (uint32_t)stamp || U32(m + 0x94) == 0
+                        || unbounded(m)) {
                         continue;
                     }
                     const V3 bs = vld(m);
@@ -1671,8 +1876,20 @@ int func_L00_001F2BE8(float a0, gaddr a1, int a2, gaddr a3, gaddr a4) {
                             int ty;
                             V3 pt, nrm, e1, e2;
                             float d2;
-                            if (moby_face(&mc, nv, fi, fl, v, &ty) &&
-                                sphere_tri(fl, c_rel, v[0].p, v[1].p, v[2].p, best, &pt, &d2, &nrm, &e1, &e2)) {
+                            if (moby_face(&mc, nv, fi, fl, v, &ty)
+                                && sphere_tri(
+                                    fl,
+                                    c_rel,
+                                    v[0].p,
+                                    v[1].p,
+                                    v[2].p,
+                                    best,
+                                    &pt,
+                                    &d2,
+                                    &nrm,
+                                    &e1,
+                                    &e2
+                                )) {
                                 hit = 1;
                             }
                         }
@@ -1708,11 +1925,26 @@ int func_L00_001F2BE8(float a0, gaddr a1, int a2, gaddr a3, gaddr a4) {
                 hit_log = getenv("OPENRAC_HIT_LOG") != NULL;
             }
             if (hit_log) {
-                fprintf(stderr, "[debug] hit sphere r %.2f at %.2f %.2f %.2f flags %#x damage %.2f by class %d: %d listed",
-                        (double)a0, (double)F32(a1), (double)F32(a1 + 4), (double)F32(a1 + 8), U32(a4 + 0x14),
-                        (double)F32(a4 + 0x1C), a3 != 0 ? S16(a3 + 0xA6) : -1, (int)((cursor - x->list) >> 2));
+                fprintf(
+                    stderr,
+                    "[debug] hit sphere r %.2f at %.2f %.2f %.2f flags %#x damage %.2f by class "
+                    "%d: %d listed",
+                    (double)a0,
+                    (double)F32(a1),
+                    (double)F32(a1 + 4),
+                    (double)F32(a1 + 8),
+                    U32(a4 + 0x14),
+                    (double)F32(a4 + 0x1C),
+                    a3 != 0 ? S16(a3 + 0xA6) : -1,
+                    (int)((cursor - x->list) >> 2)
+                );
                 for (gaddr at = x->list; at != cursor; at += 4) {
-                    fprintf(stderr, " %d%s", S16(U32(at) + 0xA6), (U16(U32(at) + 0x34) & 0x4000) ? "" : "(no hits)");
+                    fprintf(
+                        stderr,
+                        " %d%s",
+                        S16(U32(at) + 0xA6),
+                        (U16(U32(at) + 0x34) & 0x4000) ? "" : "(no hits)"
+                    );
                 }
                 fprintf(stderr, "\n");
             }
@@ -1786,7 +2018,8 @@ int func_L00_001F34F0(float a0, gaddr a1) {
             g_vf2w = U16(data + 16 * (gaddr)(nv > 0 ? (nv + 1) / 2 : 1) - 2);
             for (int i = 0; i < nv && i < 2048; ++i) {
                 const gaddr vp = data + 8 * (gaddr)i;
-                const int16_t hv[3] = {(int16_t)U16(vp), (int16_t)U16(vp + 2), (int16_t)U16(vp + 4)};
+                const int16_t hv[3] =
+                    {(int16_t)U16(vp), (int16_t)U16(vp + 2), (int16_t)U16(vp + 4)};
                 uint32_t code = 0;
                 for (int k = 0; k < 3; ++k) {
                     const int below = (int16_t)(hv[k] - lo16[k]) < 0;
