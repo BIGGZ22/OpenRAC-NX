@@ -1510,13 +1510,16 @@ void enhanced_controls() {
     ImGui::BeginDisabled(!available);
     bool changed = ImGui::Checkbox("Enhanced graphics (F4)", &graphics.enhanced_graphics);
     ImGui::BeginDisabled(!graphics.enhanced_graphics);
-    const char* texture_filters[] = {
-        settings::name(renderer::TextureFilter::Normal),
-        settings::name(renderer::TextureFilter::EdgeAware)
-    };
+    const char* texture_filters[] =
+        {settings::name(renderer::TextureFilter::Normal),
+         settings::name(renderer::TextureFilter::EdgeAware)};
     int texture_filter = static_cast<int>(graphics.texture_filter);
-    if (ImGui::Combo("Texture filtering", &texture_filter, texture_filters,
-                     static_cast<int>(renderer::TextureFilter::Count))) {
+    if (ImGui::Combo(
+            "Texture filtering",
+            &texture_filter,
+            texture_filters,
+            static_cast<int>(renderer::TextureFilter::Count)
+        )) {
         graphics.texture_filter = static_cast<renderer::TextureFilter>(texture_filter);
         changed = true;
     }

@@ -252,8 +252,13 @@ bool EffectRenderer::apply(std::uint64_t tex0_bits, std::uint64_t tex1_bits, std
     }
     if (texture != m_applied.texture || clamp_bits != m_applied.clamp_bits) {
         const auto wrap = gs::Clamp::decode(clamp_bits);
-        state.textures.bind_upscaled_texture_colours(texture, m_shader, m_texture_filter,
-                                        wrap.wms == gs::Wrap::Repeat, wrap.wmt == gs::Wrap::Repeat);
+        state.textures.bind_upscaled_texture_colours(
+            texture,
+            m_shader,
+            m_texture_filter,
+            wrap.wms == gs::Wrap::Repeat,
+            wrap.wmt == gs::Wrap::Repeat
+        );
     }
     m_applied.texture = texture;
     if (tex1_bits != m_applied.tex1_bits || clamp_bits != m_applied.clamp_bits) {

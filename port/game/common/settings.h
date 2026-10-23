@@ -88,9 +88,10 @@ struct Settings {
     float probe_gi_multiplier = 1.0f;
     float probe_normal_bias = 0.5f;  // receiver offsets in world units
     float probe_view_bias = 0.5f;
-    bool gtao = true;        // ground-truth ambient occlusion when enhanced rendering is enabled
+    bool gtao = true;  // ground-truth ambient occlusion when enhanced rendering is enabled
     renderer::TextureFilter texture_filter = renderer::TextureFilter::EdgeAware;
-    int anisotropy = 0;      // 0: mode default; otherwise 1 (off), 2, 4, 8, 16
+    int anisotropy = 0;  // 0: mode default; otherwise 1 (off), 2, 4, 8, 16
+
     int anisotropy_samples(bool enhanced) const {
         return anisotropy ? anisotropy : enhanced ? 4 : 1;
     }

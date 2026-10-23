@@ -1646,6 +1646,8 @@ bool enhanced_graphics_available() {
     return g && gl::enhanced_rendering_available() && g->scene.probe_data_available();
 }
 
+// ---- Frame drawing ----
+
 void draw_kept(bool first) {
     const auto started = std::chrono::steady_clock::now();
     const float alpha = interpolating() ? alpha_at(next_display(started)) : 1.0f;
@@ -1751,7 +1753,8 @@ void draw_kept(bool first) {
     const auto& graphics = settings::get();
     if (g->renderer) {
         const int anisotropy = graphics.anisotropy_samples(
-            gl::enhanced_rendering_available() && graphics.enhanced_graphics);
+            gl::enhanced_rendering_available() && graphics.enhanced_graphics
+        );
         g->renderer->textures().set_anisotropy(static_cast<float>(anisotropy));
     }
     const bool enhanced = enhanced_graphics_available() && graphics.enhanced_graphics;

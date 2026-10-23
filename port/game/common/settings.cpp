@@ -255,8 +255,11 @@ void load(const std::filesystem::path& file) {
         } else if (key == "texture_filter") {
             known = parse(value, kTextureFilter, s.texture_filter);
         } else if (key == "anisotropy") {
-            if (value == "auto") s.anisotropy = 0;
-            else known = parse_listed(value, kAnisotropies, s.anisotropy);
+            if (value == "auto") {
+                s.anisotropy = 0;
+            } else {
+                known = parse_listed(value, kAnisotropies, s.anisotropy);
+            }
         } else if (key == "vsync") {
             known = parse(value, kVSync, s.vsync);
             has_vsync = has_vsync || known;
@@ -306,12 +309,23 @@ std::string summary() {
     const std::string window = s.window_width > 0 && s.window_height > 0
                                    ? std::format("{}x{}", s.window_width, s.window_height)
                                    : std::string("default size");
-    return std::format("{} ({}, display {}), picture {}, {}% scale, {} sample(s), anisotropy {}, frames {}, vsync {}, "
-                       "volume {}{}{}",
-                       kDisplayMode[static_cast<int>(s.display_mode)], window, s.monitor,
-                       kAspect[static_cast<int>(s.aspect)], s.render_scale, s.msaa, s.anisotropy ? std::to_string(s.anisotropy) : "auto", frame_rate_value(s),
-                       kVSync[static_cast<int>(s.vsync)], s.volume,
-                       s.verbose_log ? ", detailed log" : "", fixes_off());
+    return std::format(
+        "{} ({}, display {}), picture {}, {}% scale, {} sample(s), anisotropy {}, frames {}, vsync "
+        "{}, "
+        "volume {}{}{}",
+        kDisplayMode[static_cast<int>(s.display_mode)],
+        window,
+        s.monitor,
+        kAspect[static_cast<int>(s.aspect)],
+        s.render_scale,
+        s.msaa,
+        s.anisotropy ? std::to_string(s.anisotropy) : "auto",
+        frame_rate_value(s),
+        kVSync[static_cast<int>(s.vsync)],
+        s.volume,
+        s.verbose_log ? ", detailed log" : "",
+        fixes_off()
+    );
 }
 
 void save() {
@@ -450,7 +464,6 @@ const char* name(VSync vsync) {
     constexpr const char* names[] = {"Off", "On", "Adaptive"};
     return names[std::min<int>(static_cast<int>(vsync), 2)];
 }
-
 
 const char* name(renderer::TextureFilter filter) {
     constexpr const char* names[] = {"Normal", "Edge-aware (2x)"};

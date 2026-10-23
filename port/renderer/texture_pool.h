@@ -22,8 +22,8 @@
 
 #pragma once
 
-#include <memory>
 #include <cstdint>
+#include <memory>
 #include <string>
 #include <unordered_map>
 #include <vector>
@@ -120,9 +120,15 @@ public:
 
     // Bind cached RGB on unit 13, keeping the original on unit 0 for alpha.
     // Call after binding a material; restores the material program after a cache miss.
-    void bind_upscaled_texture_colours(TextureHandle texture, const Shader& shader, TextureFilter filter,
-                           bool repeat_s = true, bool repeat_t = true);
+    void bind_upscaled_texture_colours(
+        TextureHandle texture,
+        const Shader& shader,
+        TextureFilter filter,
+        bool repeat_s = true,
+        bool repeat_t = true
+    );
     void set_upscaled_texture_colours(std::unique_ptr<UpscaledTextureColours> source);
+
     bool has_upscaled_texture_colours() const { return m_upscaled_texture_colours != nullptr; }
 
     // Delete every GL texture (before the context goes away).

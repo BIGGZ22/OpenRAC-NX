@@ -30,8 +30,8 @@
 #include "enhanced/renderer/gtao_settings.h"
 #include "renderer/math.h"
 #include "renderer/shadow_volume.h"
-#include "renderer/texture_pool.h"
 #include "renderer/texture_filter.h"
+#include "renderer/texture_pool.h"
 
 namespace openrac::renderer {
 

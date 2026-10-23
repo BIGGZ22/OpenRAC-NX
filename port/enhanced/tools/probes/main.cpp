@@ -16,6 +16,7 @@
 #include "enhanced/tools/probes/activation.h"
 #include "enhanced/tools/probes/batch.h"
 #include "enhanced/tools/probes/level_scene.h"
+#include "enhanced/tools/probes/report.h"
 
 namespace fs = std::filesystem;
 using namespace openrac;

@@ -14,6 +14,7 @@
 
 #include "common/float_encoding.h"
 #include "renderer/gl.h"
+#include "renderer/vulkan/vkgl.h"
 #include "renderer/vulkan/vkgl_internal.h"
 #include "renderer/world/gl_world.h"
 
@@ -534,3 +535,60 @@ VkBufferView texel_view(GLuint name, GLenum gl_format, VkBufferView fallback) {
 }
 
 }  // namespace openrac::vkgl::detail
+
+namespace openrac::vkgl {
+using namespace detail;
+
+// Make compute output visible to subsequent sampled texture reads.
+bool copy_buffer_to_texture(unsigned buffer, unsigned texture, int width, int height) {
+    if (!g || width <= 0 || height <= 0) {
+        return false;
+    }
+    auto* b = g->buffers.find(buffer);
+    auto* t = g->textures.find(texture);
+    const auto bytes = static_cast<VkDeviceSize>(width) * static_cast<VkDeviceSize>(height) * 4;
+    if (!b || !t || !t->image || width <= 0 || height <= 0 || t->image->width != width
+        || t->image->height != height || t->image->format != VK_FORMAT_R8G8B8A8_UNORM
+        || b->data.size() < bytes) {
+        return false;
+    }
+    end_rendering();
+    const BufferRef src = resolve(*b);
+    if (!src.buffer || src.size < bytes) {
+        return false;
+    }
+    VkBufferMemoryBarrier dependency{VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER};
+    dependency.srcAccessMask = VK_ACCESS_SHADER_WRITE_BIT;
+    dependency.dstAccessMask = VK_ACCESS_TRANSFER_READ_BIT;
+    dependency.srcQueueFamilyIndex = dependency.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+    dependency.buffer = src.buffer;
+    dependency.offset = src.offset;
+    dependency.size = bytes;
+    auto cmd = frame().main;
+    vkCmdPipelineBarrier(
+        cmd,
+        VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT,
+        VK_PIPELINE_STAGE_TRANSFER_BIT,
+        0,
+        0,
+        nullptr,
+        1,
+        &dependency,
+        0,
+        nullptr
+    );
+    Image& image = *t->image;
+    barrier(cmd, image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
+    VkBufferImageCopy copy{};
+    copy.bufferOffset = src.offset;
+    copy.imageSubresource = {VK_IMAGE_ASPECT_COLOR_BIT, 0, 0, 1};
+    copy.imageExtent = {static_cast<unsigned>(width), static_cast<unsigned>(height), 1};
+    vkCmdCopyBufferToImage(
+        cmd, src.buffer, image.image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &copy
+    );
+    barrier(cmd, image, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
+    image.touched = g->recording;
+    return true;
+}
+
+}  // namespace openrac::vkgl

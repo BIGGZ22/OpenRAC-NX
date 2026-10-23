@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 // Copyright (c) 2026 the OpenRAC contributors
+//
 // Portable offline integration kernel; no Embree or platform-specific vector types.
 #pragma once
 

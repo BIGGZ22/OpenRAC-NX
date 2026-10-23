@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 // Copyright (c) 2026 the OpenRAC contributors
+//
 // The offline tool's prepared-level batch and shared diagnostics.
 #pragma once
 #include <filesystem>
@@ -30,23 +31,4 @@ void run_probe_batch(
     std::ostream& output
 );
 
-// Shared human-readable transport/grid description for both CLI paths.
-std::string describe_probe_bake(
-    const viewer::LevelData& level,
-    const BakeSceneExport& exported,
-    const ProbeGrid& grid,
-    const BakeSettings& settings,
-    unsigned light_set
-);
-
-// Preserve the original geometric coverage diagnostics under runtime rounding.
-void report_terrain_coverage(
-    const viewer::LevelData& level,
-    const ProbeVolume& volume,
-    const ProbeVolume* coarse,
-    std::ostream& output
-);
-
-// Write through a temporary file, refusing to overwrite either file.
-void write_bake_file(const std::filesystem::path& path, std::span<const std::uint8_t> bytes);
 }  // namespace openrac::lighting

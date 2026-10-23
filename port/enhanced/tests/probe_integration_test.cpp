@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 // Copyright (c) 2026 the OpenRAC contributors
+//
 // Compare portable batched integration with the original scalar directional filter.
 #include <algorithm>
 #include <bit>

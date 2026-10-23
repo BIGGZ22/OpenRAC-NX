@@ -115,7 +115,8 @@ std::string value_of(int row) {
         case kMsaa:
             return s.msaa > 1 ? std::format("{}x", s.msaa) : std::string("Off");
         case kAnisotropy: {
-            const int samples = s.anisotropy_samples(gl::enhanced_rendering_available() && s.enhanced_graphics);
+            const int samples =
+                s.anisotropy_samples(gl::enhanced_rendering_available() && s.enhanced_graphics);
             return samples > 1 ? std::format("Anisotropic {}x", samples) : std::string("Trilinear");
         }
         case kVSync:
@@ -185,10 +186,15 @@ void step_value(int row, int by) {
                              offered(settings::kSampleCounts, renderer::FrameBuffer::max_samples()));
             break;
         case kAnisotropy:
-            s.anisotropy = stepped(settings::kAnisotropies,
-                                   s.anisotropy_samples(gl::enhanced_rendering_available() && s.enhanced_graphics), by,
-                                   offered(settings::kAnisotropies,
-                                           static_cast<int>(renderer::TexturePool::max_anisotropy())));
+            s.anisotropy = stepped(
+                settings::kAnisotropies,
+                s.anisotropy_samples(gl::enhanced_rendering_available() && s.enhanced_graphics),
+                by,
+                offered(
+                    settings::kAnisotropies,
+                    static_cast<int>(renderer::TexturePool::max_anisotropy())
+                )
+            );
             break;
         case kVSync:
             s.vsync = stepped_enum(s.vsync, by);
@@ -471,6 +477,8 @@ struct Made {
 };
 Made m;
 
+// ---- Menu item mapping ----
+
 int count_items(gaddr items, gaddr* camera, gaddr* sound) {
     int count = 0;
     while (count < 16 && GREF(std::int16_t, items + page::kItemBytes * static_cast<gaddr>(count)) != 0) {
@@ -509,6 +517,8 @@ gaddr hint_screen(gaddr options_page, int count) {
     }
     return 0;
 }
+
+// ---- Menu construction ----
 
 void make(gaddr items) {
     gaddr camera = 0, sound = 0;
@@ -579,6 +589,8 @@ void make(gaddr items) {
     m.top = 0;
     (void)count;
 }
+
+// ---- Menu navigation ----
 
 // The hint box's list with Video's hint at Video's place, in place of the game's while ours is shown.
 void hints(gaddr options_page, gaddr game_items) {

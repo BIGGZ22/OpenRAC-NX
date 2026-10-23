@@ -124,9 +124,13 @@ bool Shader::build(
     std::string assembled;
     if (const auto at = fragment.find(marker); at != std::string_view::npos) {
         assembled = fragment;
-        assembled.replace(at, marker.size(), enhanced_rendering_available()
-            ? shaders::upscaled_texture_colours_glsl
-            : "vec4 sample_upscaled_texture_colours(vec2 uv) { return texture(tex_T0, uv); }\n");
+        assembled.replace(
+            at,
+            marker.size(),
+            enhanced_rendering_available()
+                ? shaders::upscaled_texture_colours_glsl
+                : "vec4 sample_upscaled_texture_colours(vec2 uv) { return texture(tex_T0, uv); }\n"
+        );
         fragment = assembled;
     }
     std::string log;
@@ -169,7 +173,9 @@ bool Shader::build(
             glUniform1i(location, unit);
         }
     }
-    glUniform1i(glGetUniformLocation(m_program, "upscaled_texture_colours"), kUpscaledTextureColoursUnit);
+    glUniform1i(
+        glGetUniformLocation(m_program, "upscaled_texture_colours"), kUpscaledTextureColoursUnit
+    );
     return true;
 }
 

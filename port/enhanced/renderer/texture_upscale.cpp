@@ -1,5 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 // Copyright (c) 2026 the OpenRAC contributors
+//
+// Bounded Vulkan colour-reconstruction cache for world textures.
 #include "enhanced/renderer/texture_upscale.h"
 
 #include <algorithm>
@@ -28,24 +30,30 @@ bool TextureUpscaler::reserve(std::size_t bytes, std::uint64_t frame) {
     if (bytes > kCacheBudget) {
         return false;
     }
+
     // Keep recently used colours to avoid rebuilding an oversized working set each frame.
     while (m_cache_bytes + bytes > kCacheBudget) {
         Entry* oldest = nullptr;
+
         for (auto& [source, entry] : m_cache) {
             const bool cached =
                 std::any_of(entry.textures.begin(), entry.textures.end(), [](unsigned id) {
                     return id != 0;
                 });
+
             if (cached && frame - entry.last_used >= renderer::TexturePool::kKeepFrames
                 && (!oldest || entry.last_used < oldest->last_used)) {
                 oldest = &entry;
             }
         }
+
         if (!oldest) {
             return false;
         }
+
         release(*oldest);
     }
+
     return true;
 }
 
@@ -55,33 +63,42 @@ unsigned TextureUpscaler::prepare(
     if (!enhanced_rendering_available() || width <= 1 || height <= 1) {
         return 0;
     }
+
     auto& entry = m_cache[source];
     entry.last_used = frame;
     auto& result = entry.textures[wrap];
+
     if (result) {
         return result;
     }
+
     const auto bytes = byte_size(width, height);
+
     if (!reserve(bytes, frame)) {
         return 0;
     }
+
     std::string error;
     result = create(source, width, height, wrap, error);
+
     if (result) {
         entry.bytes = bytes;
         m_cache_bytes += bytes;
         ++m_cache_builds;
     } else {
         static log::Capped told(1);
+
         if (told()) {
             log::warn("{}; using Normal filtering", error);
         }
     }
+
     return result;
 }
 
 void TextureUpscaler::forget(unsigned source) {
     auto found = m_cache.find(source);
+
     if (found != m_cache.end()) {
         release(found->second);
         m_cache.erase(found);
@@ -95,12 +112,15 @@ unsigned TextureUpscaler::create(
     if (!enhanced_rendering_available()) {
         return 0;
     }
+
     if (!m_shader.id()) {
         if (!m_shader.build_compute("texture upscale", shaders::texture_upscale_comp, error)) {
             return 0;
         }
+
         glGenBuffers(1, &m_buffer);
     }
+
     unsigned result = 0;
     glGenTextures(1, &result);
     glActiveTexture(GL_TEXTURE0);
@@ -130,11 +150,13 @@ unsigned TextureUpscaler::create(
     );
     const bool ok = vkgl::copy_buffer_to_texture(m_buffer, result, width * 2, height * 2);
     glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 0, 0);
+
     if (!ok) {
         glDeleteTextures(1, &result);
         error = "texture upscale output failed";
         return 0;
     }
+
     return result;
 #else
     (void)source;
@@ -150,11 +172,14 @@ void TextureUpscaler::release() {
     for (auto& [source, entry] : m_cache) {
         release(entry);
     }
+
     m_cache.clear();
     m_shader.release();
+
     if (m_buffer) {
         glDeleteBuffers(1, &m_buffer);
     }
+
     m_buffer = 0;
 }
 }  // namespace openrac::enhanced

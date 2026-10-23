@@ -1,5 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 // Copyright (c) 2026 the OpenRAC contributors
+//
+// Own cached colour textures independently of the original texture pool.
 #pragma once
 #include <array>
 #include <cstddef>

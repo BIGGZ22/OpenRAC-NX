@@ -1,5 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 // Copyright (c) 2026 the OpenRAC contributors
+//
+// Optional world-texture colour reconstruction shared by renderer backends.
 #pragma once
 #include <cstdint>
 

@@ -11,8 +11,8 @@
 
 #include "common/log.h"
 #include "common/stats.h"
-#include "enhanced/viewer/hero_shadow.h"
 #include "enhanced/renderer/texture_upscale.h"
+#include "enhanced/viewer/hero_shadow.h"
 #include "enhanced/viewer/shadow_atlas.h"
 #include "renderer/gl.h"
 #include "renderer/world/gl_world.h"
@@ -101,6 +101,8 @@ bool outside(
 }
 
 }  // namespace
+
+// ---- Scene upload ----
 
 bool LevelScene::upload(
     const LevelData& level, renderer::TexturePool& textures, std::string& error
@@ -418,6 +420,8 @@ LevelScene::Group LevelScene::make_group(std::uint32_t model) {
     return g;
 }
 
+// ---- Instance groups ----
+
 // A group's instances, sent to its buffer. `usage`: GL_STATIC_DRAW for the level's own, sent once;
 // GL_STREAM_DRAW for the live ones, sent again every frame (the driver then gives the buffer new
 // storage rather than wait for the frame still drawing from the old one).
@@ -647,6 +651,8 @@ void LevelScene::set_instances(Layer layer, const std::vector<Instance>& instanc
     groups.clear();
     build_groups(layer, instances, true);
 }
+
+// ---- World drawing ----
 
 void LevelScene::draw_mobys(
     const std::vector<Instance>& instances,
@@ -1999,7 +2005,8 @@ void LevelScene::draw_layer(
                     }
                     const renderer::TextureHandle texture =
                         m.image >= 0 ? m_textures[static_cast<std::size_t>(m.image)] : m_white;
-                    state.textures.bind_upscaled_texture_colours(texture, *program, input.texture_filter);
+                    state.textures
+                        .bind_upscaled_texture_colours(texture, *program, input.texture_filter);
                     if (static_cast<int>(m.cutout) != set_cutout) {
                         glUniform1i(cutout, m.cutout ? 1 : 0);
                         set_cutout = static_cast<int>(m.cutout);

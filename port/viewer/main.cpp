@@ -71,7 +71,8 @@ constexpr const char* kUsage =
     "  --camera X,Y,Z,YAW,PITCH   start here (game units; degrees) instead of framing the level\n"
     "  --fullscreen | --borderless\n"
     "  --no-vsync  --no-lighting\n"
-    "  --state FILE         the game's main memory at one frame (32 MB): its camera and live mobys\n";
+    "  --state FILE         the game's main memory at one frame (32 MB): its camera and live "
+    "mobys\n";
 
 bool parse_floats(std::string_view text, float* out, int count) {
     for (int i = 0; i < count; ++i) {
@@ -120,9 +121,13 @@ bool parse(int argc, char** argv, Options& o) {
             }
         } else if (arg == "--texture-filter") {
             const auto value = next();
-            if (value == "normal") o.texture_filter = renderer::TextureFilter::Normal;
-            else if (value == "edge-aware") o.texture_filter = renderer::TextureFilter::EdgeAware;
-            else return false;
+            if (value == "normal") {
+                o.texture_filter = renderer::TextureFilter::Normal;
+            } else if (value == "edge-aware") {
+                o.texture_filter = renderer::TextureFilter::EdgeAware;
+            } else {
+                return false;
+            }
         } else if (arg == "--camera") {
             if (!parse_floats(next(), o.camera, 5)) {
                 return false;
@@ -262,7 +267,8 @@ int run(const Options& options) {
 
     renderer::FrameBuffer frame;
     renderer::FrameInput input;
-    input.texture_filter = gl::enhanced_rendering_available() ? options.texture_filter : renderer::TextureFilter::Normal;
+    input.texture_filter = gl::enhanced_rendering_available() ? options.texture_filter
+                                                              : renderer::TextureFilter::Normal;
     input.clear_colour = {level.background[0], level.background[1], level.background[2], 1.0f};
     viewer::FlyControls controls;
     bool looking = false;

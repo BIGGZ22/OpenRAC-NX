@@ -95,6 +95,8 @@ void TexturePool::clear_placements() {
     m_placed.clear();
 }
 
+// ---- Source uploads ----
+
 void TexturePool::upload(ImageUpload upload) {
     Stored stored;
     const std::uint64_t shape[] = {upload.width, upload.height, upload.dpsm, upload.dbw, upload.x, upload.y};
@@ -385,6 +387,8 @@ const std::string& TexturePool::name(TextureHandle texture) const {
     return m_entries[texture - 1].name;
 }
 
+// ---- GPU textures ----
+
 unsigned TexturePool::gl_texture(TextureHandle texture) {
     Entry& e = m_entries[texture - 1];
     e.last_used = m_frame;
@@ -423,6 +427,8 @@ unsigned TexturePool::gl_texture(TextureHandle texture) {
     }
     return e.gl;
 }
+
+// ---- Optional colour reconstruction ----
 
 void TexturePool::set_upscaled_texture_colours(std::unique_ptr<UpscaledTextureColours> source) {
     if (m_upscaled_texture_colours) {
@@ -486,7 +492,9 @@ void TexturePool::set_anisotropy(float samples) {
 }
 
 void TexturePool::release_gl() {
-    if (m_upscaled_texture_colours) m_upscaled_texture_colours->release();
+    if (m_upscaled_texture_colours) {
+        m_upscaled_texture_colours->release();
+    }
     for (Entry& e : m_entries) {
         if (e.gl != 0) {
             glDeleteTextures(1, &e.gl);
@@ -494,6 +502,8 @@ void TexturePool::release_gl() {
         }
     }
 }
+
+// ---- Texture retirement ----
 
 void TexturePool::end_frame() {
     ++m_frame;
@@ -503,7 +513,9 @@ void TexturePool::end_frame() {
             continue;
         }
         if (e.gl != 0 && gl::loaded()) {
-            if (m_upscaled_texture_colours) m_upscaled_texture_colours->forget(e.gl);
+            if (m_upscaled_texture_colours) {
+                m_upscaled_texture_colours->forget(e.gl);
+            }
             glDeleteTextures(1, &e.gl);
         }
         const auto handle = static_cast<TextureHandle>(i + 1);

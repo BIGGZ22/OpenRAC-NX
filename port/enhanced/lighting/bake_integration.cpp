@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 // Copyright (c) 2026 the OpenRAC contributors
+//
 // Batch independent texels in standard C++ without changing per-texel reduction order.
 #include "enhanced/lighting/bake_integration.h"
 

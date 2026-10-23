@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 // Copyright (c) 2026 the OpenRAC contributors
+//
 // Independent 4x4 CPU reconstruction against the production fragment helper.
 #include <algorithm>
 #include <cmath>
@@ -48,6 +49,7 @@ std::vector<unsigned char> edge_reference(
         return .299 * texel(x, y, 0) + .587 * texel(x, y, 1) + .114 * texel(x, y, 2);
     };
     std::vector<unsigned char> out(std::size_t(n * n * 16));
+
     for (int y = 0; y < n * 2; ++y) {
         for (int x = 0; x < n * 2; ++x) {
             double px = (x + .5) * .5 - .5, py = (y + .5) * .5 - .5;
@@ -60,12 +62,15 @@ std::vector<unsigned char> edge_reference(
             double energy = std::abs(l10 - l00) + std::abs(l11 - l01) + std::abs(l01 - l00)
                             + std::abs(l11 - l10);
             double coherence = std::clamp(magnitude / std::max(energy, .0001), 0.0, 1.0);
+
             for (int c = 0; c < 3; ++c) {
                 double c00 = texel(bx, by, c), c10 = texel(bx + 1, by, c),
                        c01 = texel(bx, by + 1, c), c11 = texel(bx + 1, by + 1, c);
                 double value = std::lerp(std::lerp(c00, c10, fx), std::lerp(c01, c11, fx), fy);
+
                 if (magnitude >= .0001) {
                     double nx = gx / magnitude, ny = gy / magnitude, sum = 0, total = 0;
+
                     for (int j = -1; j <= 2; ++j) {
                         for (int i = -1; i <= 2; ++i) {
                             double dx = i - fx, dy = j - fy;
@@ -83,19 +88,24 @@ std::vector<unsigned char> edge_reference(
                             total += weight;
                         }
                     }
+
                     if (total > .0001) {
                         value = sum / total;
                     }
+
                     value = std::clamp(
                         value, std::min({c00, c10, c01, c11}), std::max({c00, c10, c01, c11})
                     );
                 }
+
                 out[std::size_t((y * n * 2 + x) * 4 + c)] =
                     static_cast<unsigned char>(std::lround(value * 255));
             }
+
             out[std::size_t((y * n * 2 + x) * 4 + 3)] = 255;
         }
     }
+
     return out;
 }
 
@@ -124,23 +134,31 @@ double reference(
 int main() {
     test::GlContext context;
     std::string error;
+
     if (!context.open(error, 1280, 720)) {
         std::puts(error.c_str());
         return test::kSkip;
     }
+
     renderer::Shader shader;
+
     if (!shader.build("live texture filtering", vertex, fragment(), error)) {
         std::puts(error.c_str());
         return 1;
     }
-    CHECK((shader.uniform("upscaled_texture_colours_ready") >= 0) == enhanced_rendering_available());
+
+    CHECK(
+        (shader.uniform("upscaled_texture_colours_ready") >= 0) == enhanced_rendering_available()
+    );
     renderer::TexturePool pool;
     enhanced::TextureUpscaler* upscaler = nullptr;
+
     if (enhanced_rendering_available()) {
         auto source = std::make_unique<enhanced::TextureUpscaler>();
         upscaler = source.get();
         pool.set_upscaled_texture_colours(std::move(source));
     }
+
     CHECK(pool.has_upscaled_texture_colours() == enhanced_rendering_available());
     renderer::TextureHandle source = 0;
     unsigned vao = 0, texture = 0;
@@ -150,6 +168,7 @@ int main() {
     glDisable(GL_DEPTH_TEST);
     glDisable(GL_CULL_FACE);
     std::vector<unsigned char> pixels(8 * 8 * 4);
+
     for (int y = 0; y < 8; ++y) {
         for (int x = 0; x < 8; ++x) {
             for (int c = 0; c < 4; ++c) {
@@ -159,6 +178,7 @@ int main() {
             }
         }
     }
+
     renderer::Rgba8Image source_image(8, 8);
     source_image.pixels = pixels;
     source = pool.add(std::move(source_image), renderer::AlphaScale::Full, "fixture", false, true);
@@ -180,10 +200,12 @@ int main() {
         );
         glDrawArrays(GL_TRIANGLES, 0, 3);
     };
+
     for (int m = 0; m < 2; ++m) {
         draw(m, 64, 64);
         auto out = frame.read_rgba();
         int maximum = 0;
+
         for (int y = 0; y < 64; ++y) {
             for (int x = 0; x < 64; ++x) {
                 for (int c = 0; c < 4; ++c) {
@@ -199,9 +221,11 @@ int main() {
                 }
             }
         }
+
         std::printf("reference %s maximum_error %d/255\n", names[m], maximum);
         CHECK(maximum <= 2);
     }
+
     // A missing/full cache must fall back to original sampling, with no cubic path.
     draw(0, 64, 64);
     const auto fallback_normal = frame.read_rgba();
@@ -217,15 +241,18 @@ int main() {
     frame.release();
     CHECK(frame.create(4, 4, error));
     std::vector<unsigned char> base;
+
     for (int m = 0; m < 2; ++m) {
         draw(m, 4, 4);
         auto out = frame.read_rgba();
+
         if (m == 0) {
             base = out;
         } else {
             CHECK(out == base);
         }
     }
+
     // Exercise the production material shaders, including their real alpha tests.
     frame.release();
     CHECK(frame.create(64, 64, error));
@@ -264,10 +291,12 @@ void main(){
          {"mesh effect", 0, 0, 0, 1},
          {"sky", 0, 0, 0, 0, 1},
          {"world liquid/particle", 0, 0, 0, 0, 2}};
+
     for (const auto& path : cases) {
         renderer::Shader material;
         std::string vs = material_vertex;
         std::string fs = path.kind == 1 ? viewer::shaders::sky_frag : viewer::probe_mesh_fragment();
+
         if (path.kind == 2) {
             fs = renderer::shaders::direct_frag;
             fs.insert(fs.find('\n') + 1, "#define OPENRAC_UPSCALED_TEXTURE_COLOURS 1\n");
@@ -278,11 +307,14 @@ void main(){
                 "v_colour=vec4(128)"
             );
         }
+
         if (!material.build(path.name, vs, fs, error)) {
             std::puts(error.c_str());
             return 1;
         }
+
         std::vector<unsigned char> normal;
+
         for (int mode = 0; mode < 2; ++mode) {
             glBindFramebuffer(GL_FRAMEBUFFER, frame.id());
             glViewport(0, 0, 64, 64);
@@ -291,7 +323,9 @@ void main(){
             glActiveTexture(GL_TEXTURE0);
             glBindTexture(GL_TEXTURE_2D, texture);
             material.use();
-            pool.bind_upscaled_texture_colours(source, material, static_cast<renderer::TextureFilter>(mode));
+            pool.bind_upscaled_texture_colours(
+                source, material, static_cast<renderer::TextureFilter>(mode)
+            );
             glUniform4f(material.uniform("material_colour"), 1, 1, 1, 1);
             glUniform1f(material.uniform("material_diffuse_scale"), 1);
             glUniform1i(material.uniform("cutout"), path.cutout);
@@ -303,22 +337,27 @@ void main(){
             glUniform1f(material.uniform("tex_alpha_scale"), 0.5f);
             glDrawArrays(GL_TRIANGLES, 0, 3);
             auto image = frame.read_rgba();
+
             if (mode == 0) {
                 normal = image;
                 continue;
             }
+
             int changed = 0;
+
             for (std::size_t i = 0; i < image.size(); i += 4) {
                 CHECK(image[i + 3] == normal[i + 3]);
                 changed += image[i] != normal[i] || image[i + 1] != normal[i + 1]
                            || image[i + 2] != normal[i + 2];
             }
+
             CHECK(enhanced_rendering_available() ? changed > 0 : changed == 0);
             std::printf(
                 "material %s %s RGB_changed %d alpha_exact\n", path.name, names[mode], changed
             );
         }
     }
+
     // Repeat/clamp variants must reconstruct their own border neighbourhoods.
     for (unsigned wrap = 0; wrap < 3; ++wrap) {
         repeat_s = (wrap & 1) != 0;
@@ -331,6 +370,7 @@ void main(){
         draw(1, 64, 64);
         const auto out = frame.read_rgba();
         int maximum = 0;
+
         for (int y = 0; y < 64; ++y) {
             for (int x = 0; x < 64; ++x) {
                 for (int c = 0; c < 4; ++c) {
@@ -349,11 +389,14 @@ void main(){
                 }
             }
         }
+
         std::printf("border wrap %u maximum_error %d/255\n", wrap, maximum);
         CHECK(maximum <= 2);
     }
+
     repeat_s = repeat_t = true;
     CHECK((upscaler ? upscaler->cache_builds() : 0) == (enhanced_rendering_available() ? 4u : 0u));
+
     if (upscaler) {
         // Retiring a source must also drop its cached colours before GL can reuse its name.
         upscaler->forget(texture);
@@ -374,11 +417,14 @@ void main(){
         shader.use();
         pool.bind_upscaled_texture_colours(streamed, shader, renderer::TextureFilter::EdgeAware);
         CHECK(upscaler->cache_bytes() == persistent_bytes * 2);
+
         for (unsigned i = 0; i < renderer::TexturePool::kKeepFrames; ++i) {
             pool.end_frame();
         }
+
         CHECK(upscaler->cache_bytes() == persistent_bytes);
     }
+
     CHECK(glGetError() == GL_NO_ERROR);
     pool.release_gl();
     CHECK((upscaler ? upscaler->cache_bytes() : 0) == 0);
