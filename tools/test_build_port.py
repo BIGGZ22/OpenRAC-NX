@@ -148,6 +148,24 @@ class Commands(unittest.TestCase):
         self.assertNotIn("-DOPENRAC_RAC1_PAL_SOURCE=C:/work/rac1-decomp", steps[0])
 
 
+    def test_the_probe_baker_is_kept_and_configured_with_its_embree(self):
+        cache = build_port.parse_cache(CACHE)
+        cache["OPENRAC_PROBE_BAKER"] = "ON"
+        self.assertEqual(build_port.kept_choices(cache)["OPENRAC_PROBE_BAKER"], "ON")
+        defines = {"OPENRAC_PROBE_BAKER": "ON", "embree_DIR": "/b/embree/install/lib/cmake/embree-4.4.1"}
+        steps = build_port.commands("cmake", "release", self.build, ["rac1-pal"], None, {}, defines=defines,
+                                    more=[build_port.BAKER])
+        self.assertIn("-DOPENRAC_PROBE_BAKER=ON", steps[0])
+        self.assertIn("-Dembree_DIR=/b/embree/install/lib/cmake/embree-4.4.1", steps[0])
+        self.assertEqual(steps[-1][-1], "openrac-probe-bake")
+
+    def test_embree_is_pinned_and_built_static_without_tbb(self):
+        self.assertEqual(len(build_port.EMBREE_SHA256), 64)
+        self.assertIn(build_port.EMBREE_VERSION, build_port.EMBREE_URL)
+        self.assertEqual(build_port.EMBREE_OPTIONS["EMBREE_STATIC_LIB"], "ON")
+        self.assertEqual(build_port.EMBREE_OPTIONS["EMBREE_TASKING_SYSTEM"], "INTERNAL")
+
+
 class Stamp(unittest.TestCase):
     def setUp(self):
         self.tmp = tempfile.TemporaryDirectory()
