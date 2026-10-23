@@ -62,7 +62,7 @@ import subprocess
 import sys
 from pathlib import Path
 
-from openrac_common import paths
+from openrac_common import paths, tables
 
 ROOT = paths.repo_root()
 PAL_TABLE = ROOT / "games/rac1/nonmatching/functional.tsv"
@@ -95,11 +95,9 @@ class Backfill:
     def __init__(self, path: Path):
         self.path = path
         self.files: dict[str, str] = {}
-        for line in path.read_text().splitlines():
-            if line.strip() and not line.startswith("#"):
-                c = line.split("\t")
-                if len(c) > 1:
-                    self.files[c[0].strip()] = c[1].strip()
+        for cells in tables.read_tsv(path, strip=True, required=True):
+            if len(cells) > 1:
+                self.files[cells[0]] = cells[1]
 
     def source(self, name: str) -> Path:
         """The C file of a row: relative to the table, or (PAL) to the decompilation."""
@@ -132,11 +130,9 @@ class Verdicts:
     def __init__(self, path: Path, backfill: Backfill):
         self.path, self.backfill = path, backfill
         self.rows: dict[str, Row] = {}
-        if path.is_file():
-            for line in path.read_text().splitlines():
-                if line.strip() and not line.startswith("#"):
-                    r = Row.parse(line)
-                    self.rows[r.name] = r
+        for cells in tables.read_tsv(path, strip=True):
+            r = Row(*cells[:6])
+            self.rows[r.name] = r
 
     def row(self, name: str) -> Row:
         return self.rows.setdefault(name, Row(name))
@@ -194,13 +190,8 @@ def classify(rc: int, output: str) -> tuple[str, str]:
 
 def artefacts(path: Path = PAL_ARTEFACTS) -> dict[str, str]:
     """name -> why a DIFFERS on it is not the C's doing (a # line is a comment)."""
-    out: dict[str, str] = {}
-    if path.is_file():
-        for line in path.read_text().splitlines():
-            if line.strip() and not line.startswith("#"):
-                c = line.split("\t", 1)
-                out[c[0].strip()] = c[1].strip() if len(c) > 1 else ""
-    return out
+    # The reason is the rest of the line, tabs and all.
+    return {cells[0].strip(): "\t".join(cells[1:]).strip() for cells in tables.read_tsv(path)}
 
 
 def waive(name: str, status: str, note: str, known: dict[str, str]) -> tuple[str, str]:
@@ -386,10 +377,8 @@ class Places:
     def __init__(self, decomp: Path):
         self.decomp = decomp
         self.catalogue: dict[str, tuple[int, list[tuple[int, int]]]] = {}
-        cat = decomp / "config/overlays/functions.tsv"
-        for line in cat.read_text().splitlines() if cat.is_file() else []:
-            c = line.split("\t")
-            if line.startswith("#") or len(c) < 6:
+        for c in tables.read_tsv(decomp / "config/overlays/functions.tsv"):
+            if len(c) < 6:
                 continue
             self.catalogue[c[0]] = (int(c[2]), [(int(p[:2]), int(p[3:], 16)) for p in c[5].split(",")])
         self._text: dict[int, tuple[int, bytes]] = {}

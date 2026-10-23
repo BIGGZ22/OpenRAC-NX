@@ -39,7 +39,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import mips  # noqa: E402
-from openrac_common import games, paths  # noqa: E402
+from openrac_common import games, paths, tables  # noqa: E402
 
 ROOT = paths.repo_root()
 INDEX = ROOT / "build/xmap"
@@ -155,8 +155,7 @@ def aliases(version: dict) -> dict[str, str]:
     path = (version["xmap"].get("matched") or {}).get("names")
     out = {}
     if path:
-        for line in (ROOT / path).read_text().splitlines():
-            cells = line.split("\t")
+        for cells in tables.read_tsv(ROOT / path, required=True):
             if len(cells) > 1 and NAME.match(cells[0]) and cells[1] and cells[1] != cells[0]:
                 out[cells[0]] = cells[1]
     return out
