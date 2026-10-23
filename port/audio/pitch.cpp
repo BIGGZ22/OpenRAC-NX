@@ -17,6 +17,7 @@ const std::array<std::uint16_t, 140>& note_pitch_table() {
     static const std::array<std::uint16_t, 140> table = [] {
         std::array<std::uint16_t, 140> t{};
 
+        // The table has the twelve semitone ratios first, then 128 steps of 1/128 semitone.
         for (int k = 0; k < 140; ++k) {
             const double e = k < 12 ? k / 12.0 : (k - 12) / 1536.0;
             t[k] = static_cast<std::uint16_t>(32768.0 * std::pow(2.0, e));
@@ -36,6 +37,7 @@ std::uint16_t note_to_pitch(
     const int n = note + fine_carry - center_note;
     int oct = n / 6;
 
+    // C++ division truncates toward zero, but the octave has to round down for negative notes.
     if (n < 0) {
         --oct;
     }
@@ -43,6 +45,7 @@ std::uint16_t note_to_pitch(
     int fine_index = fine_total - fine_carry * 128;
     const int negative = n < 0 ? -1 : 0;
 
+    // Same rounding again: a negative octave count is moved one lower so the halving below floors.
     if (oct < 0) {
         --oct;
     }
@@ -51,11 +54,14 @@ std::uint16_t note_to_pitch(
     int shift = octave - 2;
     int semitone = n - octave * 12;
 
+    // A semitone below zero (or at zero with a negative fine step) borrows an octave from the
+    // shift.
     if (semitone < 0 || (semitone == 0 && fine_index < 0)) {
         semitone += 12;
         shift = octave - 3;
     }
 
+    // A negative fine step borrows a semitone, so the fine index lands in the table's 0..127 range.
     if (fine_index < 0) {
         semitone = semitone - 1 + fine_carry;
         fine_index += (fine_carry + 1) * 128;
@@ -65,6 +71,7 @@ std::uint16_t note_to_pitch(
                * table[static_cast<std::size_t>(fine_index + 12)])
               / 0x10000;
 
+    // A negative shift lowers the pitch: shift right, rounding to nearest rather than truncating.
     if (shift < 0) {
         ret = (ret + (1 << (-shift - 1))) >> -shift;
     }

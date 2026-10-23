@@ -39,6 +39,8 @@ struct Line {
     void write_advance(float x) {
         buffer[pos] = x;
 
+        // The write position wraps at the end of the line: the buffer is a ring of the delay's
+        // length.
         if (++pos == buffer.size()) {
             pos = 0;
         }
@@ -83,7 +85,9 @@ struct ReverbEffect::Network {
     std::array<float, 2> run(std::array<float, 2> x) {
         std::array<float, 2> out{};
 
+        // The echo and delay modes are a plain feedback delay per channel, not the comb network.
         if (echo) {
+            // Each channel has its own delay line, the right one a little longer than the left.
             for (std::size_t ch = 0; ch < 2; ++ch) {
                 const float y = lines[ch].read();
                 lines[ch].write_advance(x[ch] + y * feedback);
@@ -93,17 +97,20 @@ struct ReverbEffect::Network {
             return out;
         }
 
+        // Reverb modes: every channel runs its four combs and then its two all-passes.
         for (std::size_t ch = 0; ch < 2; ++ch) {
             // Combs 0 and 2 take this side's send, 1 and 3 the other side's
             // (the hardware's same-side and cross-side paths).
             float sum = 0;
 
+            // Four combs per channel, each fed from the same side or the other side per kCombs.
             for (std::size_t k = 0; k < 4; ++k) {
                 sum += combs[ch * 4 + k].run(x[kCombs[k].first == 0 ? ch : 1 - ch]);
             }
 
             float y = sum * kCombOut;
 
+            // The two all-passes in series diffuse the comb sum into a smoother tail.
             for (std::size_t k = 0; k < 2; ++k) {
                 y = allpass[ch * 2 + k].run(y);
             }
@@ -144,6 +151,8 @@ std::optional<ReverbPreset> reverb_preset(ReverbMode mode) {
         return ReverbPreset{{same, cross}, rt60, std::sqrt(1.0f - iir), ap_ms, ap_gain};
     };
 
+    // Each reverb mode is a set of loop lengths and all-pass settings; echo and delay have no
+    // preset.
     switch (mode) {
         case ReverbMode::Room:
             return p(69.3f, 64.0f, 0.78f, 0.855f, {20.8f, 15.2f}, {0.69f, 0.65f});
@@ -173,6 +182,7 @@ std::unique_ptr<ReverbEffect::Network> ReverbEffect::build_network(
 ) {
     auto net = std::make_unique<ReverbEffect::Network>();
 
+    // Echo and delay modes only need two delay lines and a feedback gain, not the reverb network.
     if (mode == ReverbMode::Echo || mode == ReverbMode::Delay) {
         const std::size_t n = echo_delay_samples(delay);
         net->echo = true;
@@ -184,6 +194,8 @@ std::unique_ptr<ReverbEffect::Network> ReverbEffect::build_network(
 
     const std::optional<ReverbPreset> p = reverb_preset(mode);
 
+    // A mode without a preset (off, or an unknown value) builds no network, so the effect stays
+    // idle.
     if (!p) {
         return nullptr;
     }
@@ -194,7 +206,11 @@ std::unique_ptr<ReverbEffect::Network> ReverbEffect::build_network(
         );
     };
 
+    // Both channels get the same comb layout, the right channel's lines longer by the stereo
+    // spread.
     for (std::size_t ch = 0; ch < 2; ++ch) {
+        // One comb per entry of kCombs: the loop it takes its length from and the scale applied to
+        // it.
         for (const auto& [which, scale] : kCombs) {
             const std::size_t n =
                 samples(p->loops_ms[static_cast<std::size_t>(which)] * scale) + ch * kSpread;
@@ -203,7 +219,9 @@ std::unique_ptr<ReverbEffect::Network> ReverbEffect::build_network(
         }
     }
 
+    // Both channels get two all-passes; the right channel's lines are half a spread longer.
     for (std::size_t ch = 0; ch < 2; ++ch) {
+        // The two all-passes of a channel use the preset's first and second delay and gain.
         for (std::size_t k = 0; k < 2; ++k) {
             net->allpass.push_back(
                 Allpass{Line(samples(p->allpass_ms[k]) + ch * (kSpread / 2)), p->allpass_gain[k]}
@@ -226,10 +244,14 @@ void ReverbEffect::set(ReverbMode mode, int depth, std::uint8_t delay, std::uint
     m_delay = delay;
     m_feedback = feedback;
 
+    // A new mode, or a new delay time for an echo, needs fresh delay lines: the old tail is
+    // dropped.
     if (rebuild) {
         m_network = build_network(mode, delay, feedback);
         m_lowpass = {};
     } else if (m_network && m_network->echo) {
+        // Same mode and delay: only an echo's feedback can change, and it can change without a
+        // rebuild.
         m_network->feedback = echo_feedback(mode, feedback);
     }
 
@@ -250,10 +272,12 @@ bool ReverbEffect::active() const {
 }
 
 std::array<int, 2> ReverbEffect::run(std::array<int, 2> send) {
+    // Nothing to do when the effect is off or has no network: the reverb adds silence.
     if (!active()) {
         return {0, 0};
     }
 
+    // A depth glide in progress moves the depth one step per sample until it reaches its target.
     if (m_glide_left > 0) {
         --m_glide_left;
         m_depth = m_glide_left == 0 ? m_target : m_depth + m_step;
@@ -261,6 +285,7 @@ std::array<int, 2> ReverbEffect::run(std::array<int, 2> send) {
 
     std::array<float, 2> x{};
 
+    // The send of each channel is band-limited before it enters the network.
     for (std::size_t ch = 0; ch < 2; ++ch) {
         const auto s = static_cast<float>(send[ch]);
         m_lowpass[ch] = s + (m_lowpass[ch] - s) * kInputPole;
