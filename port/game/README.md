@@ -23,7 +23,7 @@ layer and the renderer.
 |---|---|
 | `hostgen.json` | what the game is and how to read its decompilation (below) |
 | `libraries.tsv` | every library entry point the game calls that the port answers itself: symbol, library, name, port (`host`, `game`, `wrap`, `todo`), notes, optional signature. A `host` row binds the address to the shared replacement of that name ([common/libraries.tsv](common/libraries.tsv)) |
-| `host/*.c` | only if the game needs C of its own: `wrap` functions, its overlay hook. A game's versions share theirs (`"host_shared"`: rac1's in [rac1/host](rac1/README.md)), each with a table of its names and addresses |
+| `host/*.c` | only if the game needs C of its own: `wrap` functions, its overlay hook. A game's versions share theirs (`"host_shared"`: rac1's in [rac1/host](rac1/README.md)), each with a table of its names and addresses. A routine several games have alike keeps one body in `common/lib/` and, in each game's `host/`, a two-line function at the game's address with the game's own facts: the WAD decompressor ([wad_routine.h](common/lib/wad_routine.h)) and the VU0 sine and cosine ([vu0_sine.h](common/lib/vu0_sine.h)) of rac2 and rac4 |
 | `no_c.tsv` | every function hostgen has no C for, or wrote C for from its assembly, and whether the port needs C for it (below) |
 
 `hostgen.json`:
