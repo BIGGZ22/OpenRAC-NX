@@ -1944,6 +1944,90 @@ bool drawer_button(const char* label) {
     return pressed;
 }
 
+// A line of the card open now, small and dim, in place of rows that cannot be used yet.
+void drawer_note(const char* line) {
+    ImGui::Dummy(ImVec2(0.0f, dp(10.0f)));
+    ImGui::SetCursorPosX(ImGui::GetCursorPosX() + dp(16.0f));
+    ImGui::PushStyleColor(ImGuiCol_Text, ImGui::ColorConvertU32ToFloat4(look::kSoft));
+    ImGui::PushTextWrapPos(ImGui::GetCursorPosX() + s.card.width - dp(32.0f));
+    ImGui::TextUnformatted(line);
+    ImGui::PopTextWrapPos();
+    ImGui::PopStyleColor();
+    ImGui::Dummy(ImVec2(0.0f, dp(10.0f)));
+    ++s.card.rows;
+}
+
+// Enhanced graphics (port/enhanced, the launcher's Mods entry) as the drawer's own rows: the
+// switches and the two values a player changes, large enough for a thumb and moved through by a
+// gamepad. The diagnostics (probe spheres, receiver biases, GTAO's directions and steps) are the
+// debug overlay's and the desktop's Enhanced menu's. When the game cannot have it, the card says
+// why and what to do instead of leaving the player to guess.
+void drawer_enhanced() {
+#if defined(OPENRAC_ENHANCED_RENDERING) && OPENRAC_ENHANCED_RENDERING
+    auto& set = settings::get();
+    drawer_section("ENHANCED GRAPHICS");
+    card_begin();
+    if (!gl::enhanced_rendering_enabled()) {
+        drawer_note("Off. Switch it on under Mods in the launcher: bounced light, modern shadows and ambient "
+                    "occlusion, from the game's next start.");
+        card_end();
+        return;
+    }
+    if (!gl::enhanced_rendering_available()) {
+        drawer_note("It needs the Vulkan renderer, and this run draws with OpenGL. Vulkan 1.3 could not start "
+                    "on this device or driver.");
+        card_end();
+        return;
+    }
+    if (!enhanced_graphics_available()) {
+        drawer_note("This level's lighting is not prepared yet. In the launcher, Mods, Enhanced graphics "
+                    "prepares it from your levels; the game shows the original lighting until then.");
+        card_end();
+        return;
+    }
+    bool changed = false;
+    if (drawer_switch("Enhanced graphics", set.enhanced_graphics)) {
+        set.enhanced_graphics = !set.enhanced_graphics;
+        changed = true;
+    }
+    if (set.enhanced_graphics) {
+        if (drawer_switch("Modern shadows", set.enhanced_shadows)) {
+            set.enhanced_shadows = !set.enhanced_shadows;
+            changed = true;
+        }
+        if (drawer_switch("Bounced light", set.probe_lighting)) {
+            set.probe_lighting = !set.probe_lighting;
+            changed = true;
+        }
+        if (set.probe_lighting) {
+            const float gi = set.probe_gi_multiplier;
+            if (const int by = drawer_choice("Bounce strength", std::format("{:.1f}x", gi), gi > 0.05f, gi < 4.95f)) {
+                set.probe_gi_multiplier = std::clamp(std::round((gi + 0.25f * static_cast<float>(by)) * 4.0f) / 4.0f,
+                                                     0.0f, 5.0f);
+                changed = true;
+            }
+        }
+        if (drawer_switch("Ambient occlusion", set.gtao)) {
+            set.gtao = !set.gtao;
+            changed = true;
+        }
+        if (set.gtao) {
+            auto& gtao = set.gtao_settings;
+            const bool quality = gtao.quality == renderer::GtaoQuality::Quality;
+            if (drawer_choice("Occlusion quality", quality ? "Quality" : "Performance", quality, !quality)) {
+                gtao.quality = quality ? renderer::GtaoQuality::Performance : renderer::GtaoQuality::Quality;
+                changed = true;
+            }
+        }
+    }
+    card_end();
+    if (changed) {
+        settings::save();
+        s.settings_changed = true;
+    }
+#endif
+}
+
 void drawer(const Shown& shown) {
     const ImGuiIO& io = ImGui::GetIO();
     const float target = s.drawer_open ? 1.0f : 0.0f;
@@ -2051,12 +2135,7 @@ void drawer(const Shown& shown) {
         }
         card_end();
 
-        if (gl::enhanced_rendering_available()) {
-            drawer_section("ENHANCED");
-            card_begin();
-            enhanced_controls();
-            card_end();
-        }
+        drawer_enhanced();
 
         drawer_section("SOUND AND GAME");
         card_begin();

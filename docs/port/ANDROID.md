@@ -83,7 +83,12 @@ asks for an OpenGL ES 3.2 context instead:
 **Input.** Controllers work as on the desktop: Bluetooth, USB, and the
 built-in pads of handhelds. For touch there is an on-screen pad
 (`platform/touch_pad.h`). It is laid out from the screen edges, stays inside
-the safe area, and its left stick moves to wherever your thumb lands. The
+the safe area, and its left stick moves to wherever your thumb lands. It has
+no right stick: a finger dragged on the right of the screen, away from the
+buttons, turns the camera. Its size and where each part sits are the
+player's (the drawer's Touch controls). A round stick, a gamepad's or the
+touch pad's, is stretched to the DualShock 2's square (`platform/pad.h`), so
+a stick pushed to a diagonal runs. The
 layout is plain data with desktop tests, and it is drawn by a single shader
 (`game/common/touch_overlay.cpp`).
 
@@ -186,7 +191,14 @@ value, B closes). It contains:
 - **Graphics:** picture shape (4:3, 16:10, 16:9, 21:9, 32:9 or the whole
   screen), HUD position, render scale, anti-aliasing, texture filtering,
   frame rate, VSync and the FPS counter.
+- **Enhanced graphics**, when it is on in the launcher (Mods): its switch,
+  modern shadows, bounced light and its strength, ambient occlusion and its
+  quality. When this run cannot have it (it is off, the game fell back to
+  OpenGL ES, or the level's lighting is not prepared yet), the card says so.
 - **Sound and game:** volume and skipping cutscenes.
+- **Touch controls:** the buttons' size, the camera's speed, *Move the
+  controls* (drag them about over the paused game, with a bar to resize them,
+  reset them and finish) and *Put them back*.
 - **Developer tools**, folded away: the debug overlay, pause, a single
   frame step, game speed, a screenshot (saved to the app's
   `files/screenshots`), and the level select in developer mode.
