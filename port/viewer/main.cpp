@@ -31,6 +31,7 @@
 #include <SDL3/SDL.h>
 
 #include "common/log.h"
+#include "enhanced/renderer/texture_upscale.h"
 #include "platform/clock.h"
 #include "platform/window.h"
 #include "renderer/framebuffer.h"
@@ -210,6 +211,7 @@ int run(const Options& options) {
     renderer::Renderer renderer;
     viewer::LevelScene scene;
     scene.lighting = options.lighting;
+    enhanced::install_texture_upscaler(renderer.textures());
     if (!scene.upload(level, renderer.textures(), error)) {
         log::error("{}", error);
         return 1;

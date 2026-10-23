@@ -87,8 +87,8 @@ except	renderer/renderer.h:30	enhanced/renderer/gtao_settings.h	P2-07: renderer 
 # and a level carries its emissive lighting. P2-02 moved these files from the viewer program's
 # directory, where the includes were allowed.
 except	scene/level.h:27	enhanced/lighting/emission.h	P2-39: scene owns the lighting and shadow hooks, enhanced registers with them
-except	scene/level_renderer.cpp:15	enhanced/viewer/hero_shadow.h	P2-39: scene owns the lighting and shadow hooks, enhanced registers with them
-except	scene/level_renderer.cpp:16	enhanced/viewer/shadow_atlas.h	P2-39: scene owns the lighting and shadow hooks, enhanced registers with them
+except	scene/level_renderer.cpp:14	enhanced/viewer/hero_shadow.h	P2-39: scene owns the lighting and shadow hooks, enhanced registers with them
+except	scene/level_renderer.cpp:15	enhanced/viewer/shadow_atlas.h	P2-39: scene owns the lighting and shadow hooks, enhanced registers with them
 except	scene/level_renderer.h:25	enhanced/viewer/early_lighting.h	P2-39: scene owns the lighting and shadow hooks, enhanced registers with them
 except	scene/level_renderer.h:26	enhanced/viewer/probe_lighting.h	P2-39: scene owns the lighting and shadow hooks, enhanced registers with them
 except	scene/level_renderer.h:27	enhanced/viewer/sun_shadow.h	P2-39: scene owns the lighting and shadow hooks, enhanced registers with them
@@ -96,12 +96,12 @@ except	scene/level_renderer.h:27	enhanced/viewer/sun_shadow.h	P2-39: scene owns 
 # the headers viewer/ keeps forwarding to scene/ until P2-37.
 except	game/common/debug_overlay.cpp:45	viewer/screenshot.h	P2-37 includes scene/ directly and removes the forwarder
 except	game/common/debug_overlay.h:28	viewer/game_state.h	P2-03 moves the game state into rac1's GameProfile
-except	game/common/frontend.cpp:57	viewer/game_state.h	P2-03 moves the game state into rac1's GameProfile
+except	game/common/frontend.cpp:58	viewer/game_state.h	P2-03 moves the game state into rac1's GameProfile
 except	game/common/frontend/state.h:36	viewer/game_state.h	P2-03 moves the game state into rac1's GameProfile
-except	game/common/frontend.cpp:58	viewer/level.h	P2-37 includes scene/ directly and removes the forwarder
-except	game/common/frontend.cpp:59	viewer/level_renderer.h	P2-37 includes scene/ directly and removes the forwarder
-except	game/common/frontend.cpp:60	viewer/moby_pose.h	P2-37 includes scene/ directly and removes the forwarder
-except	game/common/frontend.cpp:61	viewer/moby_shadow.h	P2-37 includes scene/ directly and removes the forwarder
-except	game/common/frontend.cpp:62	viewer/screenshot.h	P2-37 includes scene/ directly and removes the forwarder
+except	game/common/frontend.cpp:59	viewer/level.h	P2-37 includes scene/ directly and removes the forwarder
+except	game/common/frontend.cpp:60	viewer/level_renderer.h	P2-37 includes scene/ directly and removes the forwarder
+except	game/common/frontend.cpp:61	viewer/moby_pose.h	P2-37 includes scene/ directly and removes the forwarder
+except	game/common/frontend.cpp:62	viewer/moby_shadow.h	P2-37 includes scene/ directly and removes the forwarder
+except	game/common/frontend.cpp:63	viewer/screenshot.h	P2-37 includes scene/ directly and removes the forwarder
 except	game/common/main.cpp:74	viewer/level.h	P2-37 includes scene/ directly and removes the forwarder
 except	game/common/main.cpp:75	viewer/moby_pose.h	P2-37 includes scene/ directly and removes the forwarder

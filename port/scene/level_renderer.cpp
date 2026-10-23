@@ -11,7 +11,6 @@
 
 #include "common/log.h"
 #include "common/stats.h"
-#include "enhanced/renderer/texture_upscale.h"
 #include "enhanced/viewer/hero_shadow.h"
 #include "enhanced/viewer/shadow_atlas.h"
 #include "renderer/gl.h"
@@ -107,9 +106,6 @@ bool outside(
 bool LevelScene::upload(
     const LevelData& level, renderer::TexturePool& textures, std::string& error
 ) {
-    if (enhanced_rendering_available() && !textures.has_upscaled_texture_colours()) {
-        textures.set_upscaled_texture_colours(std::make_unique<enhanced::TextureUpscaler>());
-    }
     // mesh.frag again with OPENRAC_SOLID, after its version line (which has to stay the first).
     const std::string fragment = probe_mesh_fragment();
     m_early_capable = EarlyLighting::supported();

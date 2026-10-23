@@ -30,6 +30,7 @@
 #include "debug_menu.h"
 #include "debug_overlay.h"
 #include "enhanced/game/scripted_moby_colour.h"
+#include "enhanced/renderer/texture_upscale.h"
 #include "enhanced/viewer/hero_shadow.h"
 #include "fps_counter.h"
 #include "frame_pacing.h"
@@ -658,6 +659,7 @@ void use_level(int number) {
         }
         return;
     }
+    enhanced::install_texture_upscaler(g->renderer->textures());
     if (!g->scene.upload(g->level, g->renderer->textures(), error)) {
         log::error("level {}: {}", wanted, error);
         return;

@@ -16,6 +16,13 @@
 namespace openrac::enhanced {
 using namespace openrac::gl;
 
+void install_texture_upscaler(renderer::TexturePool& textures) {
+    // Applications register enhanced providers; the scene depends only on the pool's interface.
+    if (enhanced_rendering_available() && !textures.has_upscaled_texture_colours()) {
+        textures.set_upscaled_texture_colours(std::make_unique<TextureUpscaler>());
+    }
+}
+
 void TextureUpscaler::release(Entry& entry) {
     for (auto& texture : entry.textures) {
         if (texture) {

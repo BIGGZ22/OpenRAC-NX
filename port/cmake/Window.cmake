@@ -251,8 +251,7 @@ openrac_embed_shaders(openrac_scene_renderer viewer openrac::viewer
   "${CMAKE_CURRENT_SOURCE_DIR}/viewer/shaders/sky.vert"
   "${CMAKE_CURRENT_SOURCE_DIR}/viewer/shaders/sky.frag"
 )
-target_link_libraries(openrac_scene_renderer PUBLIC openrac_scene openrac_renderer
-  openrac_enhanced_textures openrac_probe_scene)
+target_link_libraries(openrac_scene_renderer PUBLIC openrac_scene openrac_renderer openrac_probe_scene)
 if(OPENRAC_VULKAN)
   target_link_libraries(openrac_scene_renderer PRIVATE openrac_renderer_vulkan)
   target_compile_definitions(openrac_scene_renderer PRIVATE OPENRAC_VULKAN=1)
@@ -267,7 +266,7 @@ add_library(openrac_viewer_lib STATIC
   viewer/camera.cpp
   viewer/game_state.cpp
 )
-target_link_libraries(openrac_viewer_lib PUBLIC openrac_scene_renderer)
+target_link_libraries(openrac_viewer_lib PUBLIC openrac_scene_renderer openrac_enhanced_textures)
 openrac_warnings(openrac_viewer_lib)
 
 # Tests are registered through openrac_add_test (cmake/Tests.cmake), which makes the program

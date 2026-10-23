@@ -11,8 +11,12 @@
 
 #include "renderer/shader.h"
 #include "renderer/texture_filter.h"
+#include "renderer/texture_pool.h"
 
 namespace openrac::enhanced {
+// Installs the optional colour provider once, after a supported graphics context is current.
+void install_texture_upscaler(renderer::TexturePool& textures);
+
 // Immutable 2x RGB textures. Original alpha, mipmaps and non-colour uses stay in the pool.
 class TextureUpscaler final : public renderer::UpscaledTextureColours {
 public:
