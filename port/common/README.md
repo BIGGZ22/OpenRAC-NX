@@ -24,6 +24,7 @@ Library `openrac_common`. Each header has a namespace of its own under `openrac`
 | [`float_encoding.h`](float_encoding.h) | `openrac::float_encoding`: IEEE floats packed to the small float formats of half-float metadata and irradiance channels |
 | [`joining_thread.h`](joining_thread.h) | `openrac::JoiningThread`: a thread its owner joins when it goes (`std::jthread` without the stop token) |
 | [`result.h`](result.h) | `openrac::Result<T>` and `openrac::Error`: what a public function that can fail returns, a value or an error message; the port's own `std::expected` (C++23) under its names, `Result<void>` included |
+| [`c_boundary.h`](c_boundary.h) | `openrac::c_boundary`: the wrapper a C entry point written in C++ runs its body through, which stops every exception, reports it and returns the entry point's failure value |
 
 `process.cpp` implements the process's memory and processor time that `stats.h` declares.
 
@@ -53,6 +54,12 @@ compatibility library for the backtrace below API 33).
   [CODING_CONVENTIONS.md](../docs/CODING_CONVENTIONS.md)): `Result<T>` holds the value or an
   `Error` whose message follows section 17.3, and `value()` or `error()` on the wrong side throws
   `std::bad_variant_access`, a mistake of the caller's rather than a way to learn of the failure.
+- `c_boundary::call` keeps exceptions from crossing into C (section 13.4). It knows no reporter
+  above `common`, so the caller names one: the game side passes `openrac_game_crash`
+  (`game_host.h`), which writes the crash report; the host side keeps the default, which logs the
+  report as an error, and goes on with the failure value. The report reads `<where>: <what>`, or
+  `<where>: unknown exception` for a thrown value that is not a `std::exception`, built in a
+  fixed buffer so that a `std::bad_alloc` can still be reported.
 - `json::parse` and `json::parse_file` return `false` and say where in their `std::string& error`.
 - `log::fatal` writes the crash report and ends the program; it is for what the program cannot go
   on from.
@@ -77,6 +84,7 @@ module declares through it.
 | `log` | the log's sessions and kept runs, its memory of last lines, and the crash report's pieces |
 | `joining_thread` | an owner going, or assigned over, waits for its thread |
 | `result` | a value or an error through each accessor, the wrong side throwing, copies and moves (a move-only value included), and `Result<void>` |
+| `c_boundary` | a body that returns passes through unreported; a `std::exception` and a non-standard thrown value are reported and the failure value returned; a void body; a long message cut to the buffer; the default and a null reporter write to the log |
 | `env` | each kind of variable reads as the `getenv` calls it replaced read it, the values are read once, and DEBUGGING.md documents the table's variables and no other |
 | `viewer` | the JSON reader's values and its errors (with the viewer's own checks) |
 | `mod_manifest`, `mod_loader`, `mod_scripts` | the mod manifests and status files, read through the JSON reader |
