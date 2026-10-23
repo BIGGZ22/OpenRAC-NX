@@ -181,8 +181,13 @@ struct Variable {
 // Returns the table's row of `var`.
 [[nodiscard]] const Variable& variable(Var var);
 
+// Returns the variable whose whole name (OPENRAC_ and the rest) is `name`, or nothing when the
+// table has no such variable. For the C entry point (openrac/host_env.h), which names variables by
+// their strings; C++ names them by their Var.
+[[nodiscard]] std::optional<Var> find(std::string_view name);
+
 // Returns the value `var` was set to, or nothing when it is unset. The view stays valid for the
-// life of the program.
+// life of the program, and its data() ends in a NUL, so it can be handed to C as a string.
 [[nodiscard]] std::optional<std::string_view> value(Var var);
 
 // Returns whether the flag `var` is on, by its row's Truth. `var` is a Kind::Flag.

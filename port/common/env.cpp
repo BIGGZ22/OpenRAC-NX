@@ -422,6 +422,15 @@ const Variable& variable(Var var) {
     return kVariables[index(var)];
 }
 
+std::optional<Var> find(std::string_view name) {
+    for (const Variable& row : kVariables) {
+        if (row.name == name) {
+            return row.var;
+        }
+    }
+    return std::nullopt;
+}
+
 std::optional<std::string_view> value(Var var) {
     const std::optional<std::string>& found = snapshot()[index(var)];
 
@@ -430,6 +439,7 @@ std::optional<std::string_view> value(Var var) {
         return std::nullopt;
     }
 
+    // A view of the kept std::string, so its data() ends in a NUL (env.h promises it to C).
     return std::string_view(*found);
 }
 
