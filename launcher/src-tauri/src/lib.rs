@@ -260,19 +260,7 @@ fn run_action(
     let config = state.config.lock().unwrap().clone();
     let inputs = openrac_launcher_core::actions::Inputs { level, path, option };
     let plan = library::plan(&config, &scope, &id, &inputs)?;
-    let is_play = if let Scope::Version(_) = &scope {
-        if let Some(root) = &config.root {
-            if let Ok(file) = openrac_launcher_core::actions::load(root) {
-                file.find(&scope, &id).map(|a| a.kind == openrac_launcher_core::actions::Kind::Play).unwrap_or(false)
-            } else {
-                false
-            }
-        } else {
-            false
-        }
-    } else {
-        false
-    };
+    let is_play = library::is_play(&config, &scope, &id);
 
     if is_play && config.discord_rpc {
         if let Some(root) = &config.root {
