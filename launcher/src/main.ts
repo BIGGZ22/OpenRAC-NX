@@ -8,8 +8,8 @@ import "./layouts/compact.css";
 import App from "./App.svelte";
 import { onAndroid } from "./lib/api";
 import { app } from "./lib/app.svelte";
-import { applyPalette, storedPalette } from "./lib/palettes";
 import { startPad } from "./lib/pad";
+import { applyPalette, storedPalette } from "./lib/palettes";
 import { startRipples } from "./lib/ripple";
 
 const target = document.getElementById("app");

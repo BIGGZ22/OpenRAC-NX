@@ -105,8 +105,9 @@
       );
     -webkit-mask: radial-gradient(circle, transparent 0 9%, black 9.5%);
     mask: radial-gradient(circle, transparent 0 9%, black 9.5%);
+    /* A turn speeding up, then turns at that speed. */
     animation:
-      spin-up 1.2s cubic-bezier(0.4, 0, 1, 1) both,
+      spin 1.2s cubic-bezier(0.4, 0, 1, 1) both,
       spin 0.9s linear 1.2s infinite;
     will-change: transform;
   }
@@ -125,7 +126,7 @@
       transparent 70%
     );
     animation:
-      counter-up 1.2s cubic-bezier(0.4, 0, 1, 1) both,
+      counter 1.2s cubic-bezier(0.4, 0, 1, 1) both,
       counter 0.9s linear 1.2s infinite;
   }
 
@@ -164,24 +165,9 @@
     }
   }
 
-  @keyframes spin-up {
-    from {
-      transform: rotate(0deg);
-    }
-    to {
-      transform: rotate(360deg);
-    }
-  }
-
   @keyframes spin {
     to {
       transform: rotate(360deg);
-    }
-  }
-
-  @keyframes counter-up {
-    to {
-      transform: rotate(-360deg);
     }
   }
 

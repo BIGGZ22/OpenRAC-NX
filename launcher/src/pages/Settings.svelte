@@ -67,9 +67,6 @@
   /** The OpenRAC folder is the first thing on the first run; after it, a player sees it only while
    *  it is missing (an installed launcher carries its own copy), and a contributor in Developer. */
   const rootHere = $derived(!app.info?.standalone && !draft.root);
-  /** Android has no folders to choose: the app keeps its files in one place, which the Files app
-   *  shows (FilesProvider.kt), and its picker copies discs there. */
-  const showFolders = !onAndroid;
   /** The game's Vulkan renderer, on the desktops (on macOS through the MoltenVK its bundle carries);
    *  Android chooses its own in Graphics (GpuDrivers). */
   const desktopRenderer = $derived(
@@ -308,7 +305,9 @@
   {:else}
     <h1>Settings</h1>
 
-    {#if showFolders}
+    <!-- Android has no folders to choose: the app keeps its files in one place, which the Files app
+         shows (FilesProvider.kt, "Your files" below), and its picker copies discs there. -->
+    {#if !onAndroid}
       <section class="panel">
         <h2>Your games</h2>
         {#if rootHere}
@@ -328,28 +327,24 @@
             </p>
           {/if}
         {/if}
-        {#if !onAndroid}
-          <PathField
-            label="Games folder"
-            hint="The folder with your PlayStation 2 disc images (.iso). OpenRAC finds its games in it."
-            folder
-            bind:value={draft.discsDir}
-            detail={draft.developer}
-            check={gamesFolder}
-          />
-          <PathField
-            label="Install folder"
-            hint="Where your games are set up from your discs. A few GB per game."
-            folder
-            bind:value={draft.installDir}
-            detail={draft.developer}
-            check={installFolder}
-          />
-        {/if}
+        <PathField
+          label="Games folder"
+          hint="The folder with your PlayStation 2 disc images (.iso). OpenRAC finds its games in it."
+          folder
+          bind:value={draft.discsDir}
+          detail={draft.developer}
+          check={gamesFolder}
+        />
+        <PathField
+          label="Install folder"
+          hint="Where your games are set up from your discs. A few GB per game."
+          folder
+          bind:value={draft.installDir}
+          detail={draft.developer}
+          check={installFolder}
+        />
       </section>
-    {/if}
-
-    {#if onAndroid}
+    {:else}
       <section class="panel">
         <h2>Your files</h2>
         <div class="setting">
@@ -671,8 +666,8 @@
     font-size: 0.8125rem;
   }
 
-  /* The themes: each a small picture of its page, a panel and text on it, and its name. */
-  /* Its name above, the themes in a row under it: five do not fit beside a line of text. */
+  /* The themes, each a small picture of its page (a panel and text on it) and its name: in a row
+     under the setting's name, as five do not fit beside a line of text. */
   .setting.theme {
     flex-wrap: wrap;
     row-gap: 10px;

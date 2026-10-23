@@ -154,29 +154,23 @@ export const ACCENTS: Record<string, Accent> = {
   },
 };
 
+/** The custom properties an accent sets, and its colour each takes. */
+const ACCENT_SET: [string, keyof Accent][] = [
+  ["--bar-top", "barTop"],
+  ["--bar-bottom", "barBottom"],
+  ["--bar-ink", "barInk"],
+  ["--bar-ink-deep", "barInkDeep"],
+  ["--amber", "amber"],
+  ["--gold", "gold"],
+  ["--brand", "barBottom"],
+];
+
+/** The custom properties accentProperties may set, to take them all off again. */
+export const ACCENT_PROPERTIES = ACCENT_SET.map(([name]) => name);
+
 /** The custom properties a game's accent sets on the page; none for the launcher's own (rac1, or
  *  no game). The warning colour is its own (app.css), so a warning still reads as one. */
 export function accentProperties(game: string | null): [string, string][] {
   const a = game ? ACCENTS[game] : undefined;
-  if (!a) return [];
-  return [
-    ["--bar-top", a.barTop],
-    ["--bar-bottom", a.barBottom],
-    ["--bar-ink", a.barInk],
-    ["--bar-ink-deep", a.barInkDeep],
-    ["--amber", a.amber],
-    ["--gold", a.gold],
-    ["--brand", a.barBottom],
-  ];
+  return a ? ACCENT_SET.map(([name, key]) => [name, a[key]]) : [];
 }
-
-/** The custom properties accentProperties may set, to take them all off again. */
-export const ACCENT_PROPERTIES = [
-  "--bar-top",
-  "--bar-bottom",
-  "--bar-ink",
-  "--bar-ink-deep",
-  "--amber",
-  "--gold",
-  "--brand",
-];
