@@ -203,6 +203,6 @@ See [debugging](DEBUGGING.md) for frame dumps, GPU labels and profiling tools.
 | Scene passes, batching and geometry | [level_renderer.cpp](../../port/viewer/level_renderer.cpp) |
 | GPU instance pages and indirect commands | [gpu_draw.inc](../../port/renderer/vulkan/gpu_draw.inc) |
 | Material tables and texture descriptors | [gpu_materials.inc](../../port/renderer/vulkan/gpu_materials.inc) |
-| Vulkan state and submission | [vkgl.cpp](../../port/renderer/vulkan/vkgl.cpp) |
+| Vulkan state and submission | [vkgl_internal.h](../../port/renderer/vulkan/vkgl_internal.h), [vkgl_commands.cpp](../../port/renderer/vulkan/vkgl_commands.cpp) |
 | Early lighting and surface reconstruction | [early_lighting.cpp](../../port/enhanced/viewer/early_lighting.cpp), [shaders](../../port/enhanced/viewer/shaders/early_lighting.comp) |
 | GTAO evaluation and depth ownership | [gtao.cpp](../../port/enhanced/renderer/gtao.cpp), [compute shader](../../port/enhanced/renderer/shaders/gtao_evaluate.comp) |

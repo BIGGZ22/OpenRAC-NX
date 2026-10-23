@@ -261,7 +261,7 @@ So the custom-driver path is built in three parts:
    `vkGetInstanceProcAddr`. What happened (the driver's name and version, or
    why it was refused) is logged and shown in the launcher. Anywhere else, or
    if loading fails, the system driver is used.
-3. **The Vulkan renderer** (`port/renderer/vulkan/vkgl.cpp`). The renderers
+3. **The Vulkan renderer** (`port/renderer/vulkan/`). The renderers
    only use a small set of OpenGL calls (`renderer/gl.h`,
    `renderer/world/gl_world.h`), and this layer carries out those calls on
    Vulkan 1.3. OpenGL objects become Vulkan objects, shaders are compiled

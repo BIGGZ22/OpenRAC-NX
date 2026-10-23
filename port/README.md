@@ -56,6 +56,7 @@ systems, and core Vulkan performance improvements remain in the core renderer.
 | [game/](game/README.md) | the games, one directory per version (`rac1-pal`, `rac1-ntsc`, `rac2-ntsc`, `rac3-ntsc`, `rac4-ntsc`): each its hostgen configuration and the table of the libraries it calls. [game/common/](game/common) is what they share: the library replacements (disc, memory card, graphics hand-off, kernel, pads, sound) and the program, `openrac-<id>` |
 | [platform/](platform) | the window, input as the console's pad, audio output, timing (SDL3) |
 | [renderer/](renderer) | the renderer: per-subsystem renderers in OpenGOAL's manner, the direct renderer for the 2D path, texture conversion (OpenGL 4.1) |
+| [renderer/vulkan/](renderer/vulkan/README.md) | the renderer's OpenGL calls carried out with Vulkan 1.3, chosen with `OPENRAC_GL_API=vulkan` |
 | [viewer/](viewer) | `openrac-viewer`: a level, extracted from the player's disc by the editor, drawn natively with a free camera |
 | [common/](common) | the log |
 | [tests/](tests) | the runtime's tests |
