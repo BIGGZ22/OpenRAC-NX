@@ -112,9 +112,12 @@ EMBREE_OPTIONS = {
     "EMBREE_GEOMETRY_INSTANCE_ARRAY": "OFF",
     "EMBREE_GEOMETRY_GRID": "OFF",
     "EMBREE_GEOMETRY_POINT": "OFF",
-    # x86-64: SSE2 for any machine, AVX2 for most; Embree picks one at run time. ARM: NEON.
+    # x86-64: SSE2 for any machine, AVX and AVX2 for most; Embree picks one at run time. ARM: NEON.
+    # AVX stays on beside AVX2: Embree compiles the 8-wide BVH and its primitives (bvh/bvh.cpp,
+    # BVHN<8>, CurveNi<8>) only into its AVX library, and the AVX2 code refers to them, so without
+    # it the baker does not link on Windows or Linux (kernels/CMakeLists.txt, embree_files).
     "EMBREE_ISA_SSE42": "OFF",
-    "EMBREE_ISA_AVX": "OFF",
+    "EMBREE_ISA_AVX": "ON",
     "EMBREE_ISA_AVX512": "OFF",
 }
 EMBREE_DIR = PORT / "build" / "embree"
