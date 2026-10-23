@@ -28,6 +28,7 @@ std::string_view texture_table_name(TextureTable table) {
         case TextureTable::Billboard:
             return "billboard";
     }
+
     return "unknown";
 }
 
@@ -37,6 +38,7 @@ std::string LevelTexture::key() const {
             "billboard/{:04}_{}x{}", billboard_class, billboard->width, billboard->height
         );
     }
+
     return std::format(
         "{}/{:03}_{}x{}_t{}",
         texture_table_name(table),
@@ -63,6 +65,7 @@ IndexedImage entry_image(ByteView textures_block, ByteView gs_ram, const CoreTex
     if (!has_pixels(e)) {
         fail("texture entry has no pixels");
     }
+
     const auto w = static_cast<u32>(e.width);
     const auto h = static_cast<u32>(e.height);
     return {
@@ -78,6 +81,7 @@ IndexedImage billboard_image(ByteView gs_ram, const CoreBillboardInfo& b) {
     if (b.texture_block < 0 || b.palette_block < 0 || b.width <= 0 || b.height <= 0) {
         fail("billboard: negative gs_ram block or no size");
     }
+
     const auto w = static_cast<u32>(b.width);
     const auto h = static_cast<u32>(b.height);
     return {
@@ -98,12 +102,15 @@ std::vector<LevelTexture> decode_level_textures(
         {TextureTable::Tie, tables.tie},
         {TextureTable::Shrub, tables.shrub},
     };
+
     for (const auto& [table, entries] : lists) {
         for (std::size_t i = 0; i < entries.size(); ++i) {
             const CoreTextureEntry& e = entries[i];
+
             if (!has_pixels(e)) {
                 continue;
             }
+
             LevelTexture t;
             t.table = table;
             t.index = i;
@@ -112,11 +119,14 @@ std::vector<LevelTexture> decode_level_textures(
             out.push_back(std::move(t));
         }
     }
+
     for (std::size_t i = 0; i < tables.shrub_classes.size(); ++i) {
         const CoreShrubClassEntry& c = tables.shrub_classes[i];
+
         if (c.billboard.width <= 0 || c.billboard.height <= 0) {
             continue;
         }
+
         LevelTexture t;
         t.table = TextureTable::Billboard;
         t.index = i;
@@ -125,6 +135,7 @@ std::vector<LevelTexture> decode_level_textures(
         t.image = billboard_image(gs_ram, c.billboard).decode();
         out.push_back(std::move(t));
     }
+
     return out;
 }
 
@@ -134,21 +145,27 @@ std::vector<IndexedImage> tfrag_mip_images(
     if (!has_pixels(e)) {
         fail("tfrag texture entry has no pixels");
     }
+
     if (e.levels < 1 || e.levels > 4) {
         fail("tfrag texture level count {} outside 1..4", e.levels);
     }
+
     const ByteView clut = gs_ram.sub(block(e.palette), 1024, "texture palette");
     const auto w = static_cast<std::size_t>(e.width);
     const auto h = static_cast<std::size_t>(e.height);
     std::vector<IndexedImage> out;
+
     for (int level = 0; level < e.levels; ++level) {
         const std::size_t lw = w >> level;
         const std::size_t lh = h >> level;
+
         if (lw == 0 || lh == 0) {
             fail("tfrag mip level {} is smaller than one texel", level);
         }
+
         ByteView pixels;
         const auto base = static_cast<std::size_t>(e.data_offset);
+
         if (level == 0) {
             pixels = textures_block.sub(base, lw * lh, "mip 0 pixels");
         } else if (level == 1) {
@@ -160,8 +177,10 @@ std::vector<IndexedImage> tfrag_mip_images(
         } else {
             fail("tfrag mip level {} has no gs_ram block", level);
         }
+
         out.push_back({static_cast<u32>(lw), static_cast<u32>(lh), pixels, clut});
     }
+
     return out;
 }
 
@@ -169,9 +188,11 @@ std::vector<RgbaImage> decode_tfrag_mip_levels(
     ByteView textures_block, ByteView gs_ram, const CoreTextureEntry& e
 ) {
     std::vector<RgbaImage> out;
+
     for (const IndexedImage& image : tfrag_mip_images(textures_block, gs_ram, e)) {
         out.push_back(image.decode());
     }
+
     return out;
 }
 
@@ -179,21 +200,27 @@ std::vector<IndexedImage> billboard_mip_images(ByteView gs_ram, const CoreBillbo
     if (b.width <= 0 || b.height <= 0 || b.palette_block < 0) {
         fail("billboard has no texture");
     }
+
     if (b.levels < 1 || b.levels > 4) {
         fail("billboard level count {} outside 1..4", b.levels);
     }
+
     const ByteView clut = gs_ram.sub(block(b.palette_block), 1024, "billboard palette");
     const s16 blocks[] = {b.texture_block, b.mip1_block, b.mip2_block, b.mip3_block};
     std::vector<IndexedImage> out;
+
     for (int level = 0; level < b.levels; ++level) {
         const std::size_t lw = static_cast<std::size_t>(b.width) >> level;
         const std::size_t lh = static_cast<std::size_t>(b.height) >> level;
+
         if (lw == 0 || lh == 0) {
             fail("billboard mip level {} is smaller than one texel", level);
         }
+
         if (blocks[level] < 0) {
             fail("billboard mip level {} has no gs_ram block", level);
         }
+
         out.push_back(
             {static_cast<u32>(lw),
              static_cast<u32>(lh),
@@ -201,14 +228,17 @@ std::vector<IndexedImage> billboard_mip_images(ByteView gs_ram, const CoreBillbo
              clut}
         );
     }
+
     return out;
 }
 
 std::vector<RgbaImage> decode_billboard_mip_levels(ByteView gs_ram, const CoreBillboardInfo& b) {
     std::vector<RgbaImage> out;
+
     for (const IndexedImage& image : billboard_mip_images(gs_ram, b)) {
         out.push_back(image.decode());
     }
+
     return out;
 }
 

@@ -50,6 +50,7 @@ std::string_view game_name(Game game) {
         case Game::Rac4:
             return "rac4";
     }
+
     return "unknown";
 }
 
@@ -64,6 +65,7 @@ std::string_view game_title(Game game) {
         case Game::Rac4:
             return "Ratchet: Deadlocked";
     }
+
     return "unknown";
 }
 
@@ -76,6 +78,7 @@ std::string_view region_name(Region region) {
         case Region::NtscJ:
             return "NTSC-J";
     }
+
     return "unknown";
 }
 
@@ -89,6 +92,7 @@ const GameVersion* find_version_by_boot(std::string_view serial, std::string_vie
             return &v;
         }
     }
+
     return nullptr;
 }
 
@@ -98,6 +102,7 @@ const GameVersion* find_version(std::string_view id_or_key) {
             return &v;
         }
     }
+
     return nullptr;
 }
 
@@ -108,12 +113,14 @@ bool game_of_serial(std::string_view serial, Game& game) {
             return true;
         }
     }
+
     for (const SerialGame& s : kOtherSerials) {
         if (s.serial == serial) {
             game = s.game;
             return true;
         }
     }
+
     return false;
 }
 

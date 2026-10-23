@@ -51,6 +51,7 @@ struct CoreClassEntry {
         if (slot < 0 || slot >= 16 || textures[static_cast<std::size_t>(slot)] == 0xff) {
             return -1;
         }
+
         return textures[static_cast<std::size_t>(slot)];
     }
 };
@@ -96,9 +97,11 @@ std::vector<T> read_core_table(ByteView index, s32 count, s32 offset, std::strin
     if (count <= 0 || offset <= 0) {
         return {};
     }
+
     if (count > 100'000) {
         fail("{}: implausible count {}", what, count);
     }
+
     return index
         .read_array<T>(static_cast<std::size_t>(offset), static_cast<std::size_t>(count), what);
 }

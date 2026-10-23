@@ -33,17 +33,21 @@ std::optional<RegionTable> RegionTable::from_sectors(std::span<const s32> sector
     if (sectors.empty()) {
         return std::nullopt;
     }
+
     for (std::size_t i = 0; i < sectors.size(); ++i) {
         if (sectors[i] <= 0 || (i > 0 && sectors[i] <= sectors[i - 1])) {
             fail("scene chunk sectors are not strictly increasing");
         }
     }
+
     RegionTable t;
+
     for (std::size_t i = 0; i + 1 < sectors.size(); ++i) {
         t.chunks.push_back(
             {static_cast<u32>(sectors[i]), static_cast<u32>(sectors[i + 1] - sectors[i])}
         );
     }
+
     t.sentinel = static_cast<u32>(sectors.back());
     return t;
 }
@@ -60,6 +64,7 @@ std::optional<std::pair<std::size_t, std::size_t>> RegionTable::chunk_in_file(st
     if (i >= chunks.size()) {
         return std::nullopt;
     }
+
     const ChunkRange& c = chunks[i];
     return std::pair{
         std::size_t{c.sector - first_sector()} * kSector, std::size_t{c.sectors} * kSector
@@ -68,11 +73,13 @@ std::optional<std::pair<std::size_t, std::size_t>> RegionTable::chunk_in_file(st
 
 SceneEntry SceneEntry::from_record(const SceneRecord& r) {
     SceneEntry e;
+
     for (std::size_t i = 0; i < e.speech.size(); ++i) {
         if (r.speech[i] > 0) {
             e.speech[i] = static_cast<u32>(r.speech[i]);
         }
     }
+
     e.ntsc = RegionTable::from_sectors(r.chunk_sectors(false));
     e.pal = RegionTable::from_sectors(r.chunk_sectors(true));
     return e;
@@ -89,29 +96,36 @@ bool SceneEntry::empty() const {
 
 std::vector<SceneEntry> scene_table(const LevelHeader& h) {
     std::vector<SceneEntry> out;
+
     for (const SceneRecord& r : h.scenes) {
         out.push_back(SceneEntry::from_record(r));
     }
+
     return out;
 }
 
 std::vector<ByteView> lump_chunks(ByteView lump) {
     std::vector<ByteView> out;
+
     for (std::size_t i = 0; i < 70; ++i) {
         const s32 off = lump.s32_at(8 * i);
         const s32 size = lump.s32_at(8 * i + 4);
+
         if (size == 0) {
             break;
         }
+
         if (off < 0 || size < 0) {
             fail("scene lump entry {}: offset {} size {}", i, off, size);
         }
+
         out.push_back(lump.sub(
             0x800 + static_cast<std::size_t>(off),
             static_cast<std::size_t>(size),
             "scene lump chunk"
         ));
     }
+
     return out;
 }
 
@@ -122,9 +136,11 @@ ByteView SceneChunk::sequence(const SceneActor& actor) const {
 std::size_t camera_records(s32 end_tick, std::size_t index, SceneRegion region) {
     const s32 tpc = static_cast<s32>(ticks_per_chunk(region));
     const s32 left = end_tick - static_cast<s32>(index) * tpc;
+
     if (left <= 0) {
         fail("scene chunk {} starts at or after the end tick {}", index, end_tick);
     }
+
     return static_cast<std::size_t>(std::min(left, tpc)) + 1;
 }
 
@@ -134,14 +150,17 @@ SceneChunk parse_scene_chunk(std::vector<u8> decompressed, std::size_t index, Sc
     const ByteView b(c.bytes);
     c.header = b.read<ChunkHeader>(0, "scene chunk header");
     const std::size_t n_camera = camera_records(c.header.end_tick, index, region);
+
     if (c.header.camera_offset < 0) {
         fail("scene chunk: negative camera offset");
     }
+
     c.camera = b.read_array<CamRecord>(
         static_cast<std::size_t>(c.header.camera_offset), n_camera, "scene camera table"
     );
     const std::vector<u32> offsets =
         b.read_array<u32>(0x14, c.header.actor_count, "scene actor offsets");
+
     for (const u32 at : offsets) {
         SceneActor a;
         a.offset = at;
@@ -154,9 +173,11 @@ SceneChunk parse_scene_chunk(std::vector<u8> decompressed, std::size_t index, Sc
         // count at +0x12, the frame offsets after it.
         a.frame_count = b.u8_at(std::size_t{a.sequence_offset} + 0x10);
         a.trigger_count = b.u8_at(std::size_t{a.sequence_offset} + 0x12);
+
         if (a.track_offset < 0) {
             fail("scene actor: negative position track offset");
         }
+
         a.frame_offsets =
             b.read_array<u32>(std::size_t{at} + 0x2c, a.frame_count, "scene actor frame offsets");
         a.positions = b.read_array<std::array<f32, 4>>(
@@ -164,39 +185,52 @@ SceneChunk parse_scene_chunk(std::vector<u8> decompressed, std::size_t index, Sc
         );
         c.actors.push_back(std::move(a));
     }
+
     if (c.header.subtitle_offset >= kSubtitleMinOffset) {
         const auto base = static_cast<std::size_t>(c.header.subtitle_offset);
+
         for (std::size_t at = base;; at += 16) {
             const s16 start = b.s16_at(at);
+
             if (start == -1) {
                 break;
             }
+
             b.check(at, 16, "scene subtitle entry");
             Subtitle s;
             s.start = start;
             s.end = b.s16_at(at + 2);
+
             for (std::size_t k = 0; k < kSubtitleLanguages; ++k) {
                 s.text_offsets[k] = b.s16_at(at + 4 + 2 * k);
             }
+
             s.pad = b.s16_at(at + 14);
+
             for (std::size_t k = 0; k < kSubtitleLanguages; ++k) {
                 const s16 o = s.text_offsets[k];
+
                 if (o < 0) {
                     continue;
                 }
+
                 const ByteView t =
                     b.tail(base + static_cast<std::size_t>(o), "scene subtitle text");
                 const void* nul = std::memchr(t.data(), 0, t.size());
+
                 if (!nul) {
                     fail("scene subtitle text without a NUL");
                 }
+
                 s.text[k].assign(
                     reinterpret_cast<const char*>(t.data()), static_cast<const u8*>(nul) - t.data()
                 );
             }
+
             c.subtitles.push_back(std::move(s));
         }
     }
+
     return c;
 }
 
@@ -206,11 +240,14 @@ Scene Scene::load(
     if (k >= header.scenes.size()) {
         fail("no scene record {}", k);
     }
+
     const SceneEntry entry = SceneEntry::from_record(header.scenes[k]);
     const auto& table = entry.region(region);
+
     if (!table) {
         fail("scene {} has no {} chunks", k, scene_region_name(region));
     }
+
     if (region_file.size() < table->file_bytes()) {
         fail(
             "scene {} {}: the region file is {} bytes, the table needs {}",
@@ -220,11 +257,14 @@ Scene Scene::load(
             table->file_bytes()
         );
     }
+
     std::vector<SceneChunk> chunks;
+
     for (std::size_t i = 0; i < table->chunks.size(); ++i) {
         const auto [at, size] = *table->chunk_in_file(i);
         chunks.push_back(parse_scene_chunk(wad_decompress(region_file.sub(at, size)), i, region));
     }
+
     return from_chunks(k, region, std::move(chunks));
 }
 
@@ -232,33 +272,41 @@ Scene Scene::from_chunks(std::size_t index, SceneRegion region, std::vector<Scen
     if (chunks.empty()) {
         fail("scene {}: no chunks", index);
     }
+
     const s32 end = chunks.front().header.end_tick;
     const s32 tpc = static_cast<s32>(ticks_per_chunk(region));
+
     for (const SceneChunk& c : chunks) {
         if (c.header.end_tick != end) {
             fail("scene {}: the chunks disagree on the end tick", index);
         }
     }
+
     if ((end + tpc - 1) / tpc != static_cast<s32>(chunks.size())) {
         fail("scene {}: {} chunks for end tick {}", index, chunks.size(), end);
     }
+
     return {index, region, std::move(chunks)};
 }
 
 Scene Scene::from_lump(ByteView lump, std::size_t index, SceneRegion region) {
     std::vector<SceneChunk> chunks;
     const auto parts = lump_chunks(lump);
+
     for (std::size_t i = 0; i < parts.size(); ++i) {
         chunks.push_back(parse_scene_chunk(wad_decompress(parts[i]), i, region));
     }
+
     return from_chunks(index, region, std::move(chunks));
 }
 
 std::vector<s32> Scene::actor_classes() const {
     std::vector<s32> out;
+
     for (const SceneActor& a : chunks.front().actors) {
         out.push_back(a.klass);
     }
+
     return out;
 }
 
@@ -270,33 +318,41 @@ std::pair<std::size_t, u32> Scene::chunk_at(s32 tick) const {
 
 const CamRecord* Scene::camera_at(s32 tick) const {
     const auto [c, r] = chunk_at(tick);
+
     if (c >= chunks.size() || r >= chunks[c].camera.size()) {
         return nullptr;
     }
+
     return &chunks[c].camera[r];
 }
 
 std::vector<s32> Scene::cut_ticks() const {
     std::vector<s32> out;
+
     for (s32 t = 1; t < end_tick(); ++t) {
         const CamRecord* r = camera_at(t);
+
         if (r && r->is_cut()) {
             out.push_back(t);
         }
     }
+
     return out;
 }
 
 const Subtitle* Scene::subtitle_at(s32 tick) const {
     const auto [c, r] = chunk_at(tick);
+
     if (c >= chunks.size()) {
         return nullptr;
     }
+
     for (const Subtitle& s : chunks[c].subtitles) {
         if (s.covers(tick)) {
             return &s;
         }
     }
+
     return nullptr;
 }
 

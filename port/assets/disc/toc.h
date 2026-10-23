@@ -173,23 +173,29 @@ struct StreamLump {
 template <typename Probe>
 std::vector<StreamLump> level_stream_lumps(const LevelHeader& h, Probe&& probe) {
     std::vector<StreamLump> out;
+
     for (std::size_t i = 0; i < h.bindata.size(); ++i) {
         const SectorByteRange& r = h.bindata[i];
+
         if (r.offset == 0 && r.size == 0) {
             continue;
         }
+
         out.push_back(
             {std::format("bindata/{:03}", i), static_cast<u32>(r.offset), static_cast<u32>(r.size)}
         );
     }
+
     for (std::size_t i = 0; i < h.music.size(); ++i) {
         if (h.music[i] != 0) {
             const u32 s = static_cast<u32>(h.music[i]);
             out.push_back({std::format("music/{:03}", i), s, probe(s)});
         }
     }
+
     for (std::size_t k = 0; k < h.scenes.size(); ++k) {
         const SceneRecord& scene = h.scenes[k];
+
         for (std::size_t lang = 0; lang < kSceneLanguages.size(); ++lang) {
             if (scene.speech[lang] != 0) {
                 const u32 s = static_cast<u32>(scene.speech[lang]);
@@ -198,6 +204,7 @@ std::vector<StreamLump> level_stream_lumps(const LevelHeader& h, Probe&& probe) 
                 );
             }
         }
+
         for (const bool pal : {false, true}) {
             if (const auto run = scene.region_sectors(pal)) {
                 out.push_back(
@@ -208,6 +215,7 @@ std::vector<StreamLump> level_stream_lumps(const LevelHeader& h, Probe&& probe) 
             }
         }
     }
+
     return out;
 }
 

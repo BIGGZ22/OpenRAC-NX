@@ -21,11 +21,13 @@ using ps2::V4;
 std::array<V4, 3> unit_columns(const TieInstance& inst) {
     const auto lengths = tie_column_lengths(inst);
     std::array<V4, 3> out{};
+
     for (std::size_t i = 0; i < 3; ++i) {
         const u32 inv = ps2::div(ps2::kOne, lengths[i]);
         const V4 c = ps2::bits(inst.matrix[i]);
         out[i] = {ps2::mul(c[0], inv), ps2::mul(c[1], inv), ps2::mul(c[2], inv), inv};
     }
+
     return out;
 }
 
@@ -33,27 +35,33 @@ std::array<V4, 3> unit_columns(const TieInstance& inst) {
 
 std::array<u32, 3> tie_column_lengths(const TieInstance& inst) {
     std::array<u32, 3> out{};
+
     for (std::size_t i = 0; i < 3; ++i) {
         const V4 c = ps2::bits(inst.matrix[i]);
         out[i] = ps2::sqrt(ps2::dot3(c, c));
     }
+
     return out;
 }
 
 std::array<f32, 4> tie_instance_centre(const TieClass& tie, const TieInstance& inst) {
     std::array<V4, 4> m{};
+
     for (std::size_t i = 0; i < 4; ++i) {
         m[i] = ps2::bits(inst.matrix[i]);
     }
+
     const V4 b = ps2::bits(tie.header.bsphere);
     // vmulax / vmadday / vmaddaz with the three columns, vmaddw with vf0.
     V4 c{};
+
     for (std::size_t k = 0; k < 4; ++k) {
         const u32 acc = ps2::add(
             ps2::add(ps2::mul(m[0][k], b[0]), ps2::mul(m[1][k], b[1])), ps2::mul(m[2][k], b[2])
         );
         c[k] = ps2::add(acc, ps2::mul(k == 3 ? ps2::kOne : 0u, b[3]));
     }
+
     // The radius: bsphere.w * max(|c0|, |c1|, |c2|) (FPU mul.s; the max is a
     // float compare).
     const auto lengths = tie_column_lengths(inst);
@@ -78,6 +86,7 @@ InstanceLightRegs tie_light_regs(
         return bank.sets[i & 0xf];
     };
     V4 ca, da, cb, db;
+
     if ((select & 0xff00) == 0) {
         const DirLightSet& s = set(select);
         ca = ps2::bits(s.color_a);
@@ -98,23 +107,27 @@ InstanceLightRegs tie_light_regs(
         cb = blend(a.color_b, b.color_b);
         da = blend(a.dir_a, b.dir_a);
         db = blend(a.dir_b, b.dir_b);
+
         // vrsqrt Q, vf0w, |d|^2; vmulq.xyz (w kept).
         for (V4* d : {&da, &db}) {
             const u32 q = ps2::rsqrt(ps2::kOne, ps2::dot3(*d, *d));
             *d = {ps2::mul((*d)[0], q), ps2::mul((*d)[1], q), ps2::mul((*d)[2], q), (*d)[3]};
         }
     }
+
     const u32 wa = ps2::add(0, ca[3]);
     const u32 wb = ps2::add(0, cb[3]);
     ca[3] = 0;
     cb[3] = 0;
 
     MergedPointLight point;
+
     if (points && points->bank != nullptr) {
         point = merge_point_lights(
             ps2::bits(tie_instance_centre(tie, inst)), *points->bank, points->list
         );
     }
+
     V4 dp = point.direction;
     V4 cp = point.color;
     const u32 wp = ps2::add(0, cp[3]);
@@ -127,6 +140,7 @@ InstanceLightRegs tie_light_regs(
     const auto n = unit_columns(inst);
     auto class_space = [&](const V4& d) {
         V4 l{};
+
         for (std::size_t c = 0; c < 3; ++c) {
             auto neg = [&](std::size_t k) {
                 return ps2::sub(0, n[c][k]);
@@ -135,6 +149,7 @@ InstanceLightRegs tie_light_regs(
                 ps2::add(ps2::mul(neg(0), d[0]), ps2::mul(neg(1), d[1])), ps2::mul(neg(2), d[2])
             );
         }
+
         return l;
     };
     const V4 la = class_space(da);
@@ -143,10 +158,12 @@ InstanceLightRegs tie_light_regs(
     InstanceLightRegs regs;
     regs.colors = {ca, cb, cp};
     regs.back = {wa, wb, wp};
+
     // The transpose: vf24 = (La.x, Lb.x, Lp.x, 0), vf25 the y's, vf26 the z's.
     for (std::size_t i = 0; i < 3; ++i) {
         regs.rows[i] = {la[i], lb[i], lp[i], 0};
     }
+
     return regs;
 }
 
@@ -164,10 +181,12 @@ std::array<std::array<u8, 4>, kTieLightSlots> light_tie_instance(
 ) {
     const InstanceLightRegs regs = tie_light_regs(tie, inst, bank, points);
     std::array<std::array<u8, 4>, kTieLightSlots> out{};
+
     for (std::size_t j = 0; j < kTieLightSlots; ++j) {
         const std::array<s16, 4> n = j < tie.normals.size() ? tie.normals[j] : std::array<s16, 4>{};
         out[j] = light_tie_slot(regs, n, inst.ambient_rgbas[j]);
     }
+
     return out;
 }
 

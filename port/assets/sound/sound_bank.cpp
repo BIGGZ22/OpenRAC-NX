@@ -64,9 +64,11 @@ ChildSoundParams Grain::child_sound() const {
     ChildSoundParams p;
     p.volume = grain_field<s32>(data, 0);
     p.pan = grain_field<s32>(data, 4);
+
     for (std::size_t i = 0; i < 4; ++i) {
         p.registers[i] = static_cast<s8>(data[8 + i]);
     }
+
     p.sound_id = grain_field<s32>(data, 12);
     return p;
 }
@@ -86,14 +88,15 @@ s32 Grain::rand_delay_amount() const {
 
 std::optional<std::size_t> SoundBank::extent_at(u32 offset) const {
     const auto it = std::lower_bound(
-        sample_extents.begin(),
-        sample_extents.end(),
-        offset,
-        [](const SampleExtent& e, u32 o) { return e.offset < o; }
+        sample_extents.begin(), sample_extents.end(), offset, [](const SampleExtent& e, u32 o) {
+            return e.offset < o;
+        }
     );
+
     if (it == sample_extents.end() || it->offset != offset) {
         return std::nullopt;
     }
+
     return static_cast<std::size_t>(it - sample_extents.begin());
 }
 
@@ -106,6 +109,7 @@ SoundBank parse_sound_bank(ByteView bytes) {
     SoundBank bank;
     bank.file_type = bytes.u32_at(0);
     const u32 chunk_count = bytes.u32_at(4);
+
     if (bank.file_type != 3 || chunk_count != 2) {
         fail(
             "sound bank: type {}, {} chunks (a 989snd bank is type 3 with 2)",
@@ -113,12 +117,14 @@ SoundBank parse_sound_bank(ByteView bytes) {
             chunk_count
         );
     }
+
     bank.chunks = {
         std::pair{bytes.u32_at(8), bytes.u32_at(12)}, std::pair{bytes.u32_at(16), bytes.u32_at(20)}
     };
     const ByteView block = bytes.sub(bank.chunks[0].first, bank.chunks[0].second, "SFX block");
     bank.samples =
         bytes.sub(bank.chunks[1].first, bank.chunks[1].second, "sample chunk").to_vector();
+
     if (block.size() < 4 || std::memcmp(block.data(), "SBlk", 4) != 0) {
         fail("sound bank: chunk 0 is not an SBlk block");
     }
@@ -137,14 +143,17 @@ SoundBank parse_sound_bank(ByteView bytes) {
     h.vag_data_size = block.u32_at(0x28);
     h.sound_ram_size = block.u32_at(0x2c);
     h.next_block = block.u32_at(0x30);
+
     if (h.version != 1) {
         fail("SBlk version {}: only version 1 (0x28-byte grains) is known", h.version);
     }
+
     if (h.sound_count < 0) {
         fail("SBlk: negative sound count");
     }
 
     bank.sounds.reserve(static_cast<std::size_t>(h.sound_count));
+
     for (std::size_t i = 0; i < static_cast<std::size_t>(h.sound_count); ++i) {
         const std::size_t o = h.first_sound + kSoundRecordSize * i;
         SfxSound s;
@@ -156,6 +165,7 @@ SoundBank parse_sound_bank(ByteView bytes) {
         s.flags = block.u16_at(o + 6);
         s.first_grain_offset = block.u32_at(o + 8);
         s.first_grain = bank.grains.size();
+
         for (std::size_t k = 0; k < s.grain_count; ++k) {
             const std::size_t g = h.first_grain + s.first_grain_offset + kGrainRecordSize * k;
             Grain grain;
@@ -165,21 +175,26 @@ SoundBank parse_sound_bank(ByteView bytes) {
             std::memcpy(grain.data.data(), data.data(), grain.data.size());
             bank.grains.push_back(grain);
         }
+
         bank.sounds.push_back(s);
     }
 
     std::vector<u32> offsets;
+
     for (const Grain& g : bank.grains) {
         if (g.is_tone()) {
             offsets.push_back(g.tone().sample_offset);
         }
     }
+
     std::sort(offsets.begin(), offsets.end());
     offsets.erase(std::unique(offsets.begin(), offsets.end()), offsets.end());
     const ByteView samples(bank.samples);
+
     for (const u32 offset : offsets) {
         bank.sample_extents.push_back(sample_extent(samples, offset));
     }
+
     return bank;
 }
 

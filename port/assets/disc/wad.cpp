@@ -51,14 +51,17 @@ u32 wad_compressed_size(ByteView bytes) {
     if (!is_wad(bytes)) {
         fail("not a WAD stream");
     }
+
     return bytes.u32_at(3);
 }
 
 std::vector<u8> wad_decompress(ByteView bytes) {
     const std::size_t total = wad_compressed_size(bytes);
+
     if (total < kWadHeaderSize || total > bytes.size()) {
         fail("WAD: compressed size {:#x} exceeds the {:#x}-byte buffer", total, bytes.size());
     }
+
     const u8* stream = bytes.data() + kWadHeaderSize;
     const std::size_t end = total - kWadHeaderSize;
     std::size_t ptr = 0;
@@ -69,12 +72,14 @@ std::vector<u8> wad_decompress(ByteView bytes) {
         if (ptr >= end) {
             fail("WAD: read past the end of the stream");
         }
+
         return stream[ptr++];
     };
     auto literals = [&](std::size_t n) {
         if (end - ptr < n) {
             fail("WAD: a literal runs past the end of the stream");
         }
+
         out.insert(out.end(), stream + ptr, stream + ptr + n);
         ptr += n;
     };
@@ -82,8 +87,10 @@ std::vector<u8> wad_decompress(ByteView bytes) {
         if (displacement == 0 || displacement > out.size()) {
             fail("WAD: a match starts before the output");
         }
+
         // Byte by byte: overlapping copies are run-length expansion.
         const std::size_t source = out.size() - displacement;
+
         for (std::size_t i = 0; i < length; ++i) {
             out.push_back(out[source + i]);
         }
@@ -91,43 +98,55 @@ std::vector<u8> wad_decompress(ByteView bytes) {
 
     while (ptr < end) {
         const u8 flag = next();
+
         if (flag < 0x10) {
             const std::size_t n = flag == 0 ? std::size_t{next()} + 18 : std::size_t{flag} + 3;
             literals(n);
+
             if (ptr < end && stream[ptr] < 0x10) {
                 fail("WAD: two literal packets in a row");
             }
+
             continue;
         }
+
         std::size_t length = 0;
         std::size_t displacement = 0;
         u8 little = 0;
+
         if (flag < 0x20) {
             std::size_t ml = flag & 7;
+
             if (ml == 0) {
                 ml = std::size_t{next()} + 7;
             }
+
             const u8 b0 = next();
             const u8 b1 = next();
             const std::size_t a = (flag >> 3) & 1;
             const std::size_t far = std::size_t{b1} * 0x40 + (b0 >> 2);
+
             if (a == 0 && far == 0) {
                 if (ml != 1) {
                     ptr = (ptr + 0xfff) & ~std::size_t{0xfff};  // pad: on at the next 0x1000
                     continue;
                 }
+
                 literals(b0 & 3);  // dummy
                 continue;
             }
+
             // Bit 3 extends the window (the form verified on the NTSC-U disc).
             displacement = 0x4000 * (a + 1) + far;
             length = ml + 2;
             little = b0;
         } else if (flag < 0x40) {
             std::size_t ml = flag & 0x1f;
+
             if (ml == 0) {
                 ml = std::size_t{next()} + 0x1f;
             }
+
             length = ml + 2;
             const u8 b1 = next();
             const u8 b2 = next();
@@ -139,9 +158,11 @@ std::vector<u8> wad_decompress(ByteView bytes) {
             displacement = std::size_t{b1} * 8 + ((flag >> 2) & 7) + 1;
             little = flag;
         }
+
         copy_match(displacement, length);
         literals(little & 3);
     }
+
     return out;
 }
 
@@ -160,19 +181,25 @@ public:
         if (n == 0) {
             return;
         }
+
         if (n <= 3) {
             dummy(at, n);
             return;
         }
+
         bool first = true;
+
         while (n > 0) {
             std::size_t chunk = std::min(n, kMaxLiteral);
+
             if (n - chunk > 0 && n - chunk < 4) {
                 chunk = n - 4;  // leave a run a literal packet can carry
             }
+
             if (!first) {
                 dummy(at, 0);  // literal packets are never adjacent
             }
+
             literal_packet(at, chunk);
             at += chunk;
             n -= chunk;
@@ -185,31 +212,37 @@ public:
         const u8 l = static_cast<u8>(little);
         u8 head[4];
         std::size_t size = 0;
+
         if (length <= kLittleMaxLength && displacement <= kLittleWindow) {
             const std::size_t d = displacement - 1;
             head[size++] = static_cast<u8>(((length - 1) << 5) | ((d & 7) << 2) | l);
             head[size++] = static_cast<u8>(d >> 3);
         } else if (displacement <= kMediumWindow) {
             const std::size_t d = displacement - 1;
+
             if (length <= 33) {
                 head[size++] = static_cast<u8>(0x20 | (length - 2));
             } else {
                 head[size++] = 0x20;
                 head[size++] = static_cast<u8>(length - 33);
             }
+
             head[size++] = static_cast<u8>(((d & 63) << 2) | l);
             head[size++] = static_cast<u8>(d >> 6);
         } else {
             const std::size_t far = displacement - 0x4000;
+
             if (length <= 9) {
                 head[size++] = static_cast<u8>(0x10 | (length - 2));
             } else {
                 head[size++] = 0x10;
                 head[size++] = static_cast<u8>(length - 9);
             }
+
             head[size++] = static_cast<u8>(((far & 63) << 2) | l);
             head[size++] = static_cast<u8>(far >> 6);
         }
+
         packet({head, size}, at, little);
     }
 
@@ -223,12 +256,14 @@ private:
     void literal_packet(std::size_t at, std::size_t n) {
         u8 head[2];
         std::size_t size = 0;
+
         if (n <= 18) {
             head[size++] = static_cast<u8>(n - 3);
         } else {
             head[size++] = 0;
             head[size++] = static_cast<u8>(n - 18);
         }
+
         packet({head, size}, at, n);
     }
 
@@ -242,12 +277,15 @@ private:
     void packet(std::span<const u8> head, std::size_t at, std::size_t trailing) {
         const std::size_t size = head.size() + trailing;
         const std::size_t offset = m_out.size() - kWadHeaderSize;
+
         if (offset % kChunk + size > kChunk - 3) {
             m_out.insert(m_out.end(), {0x12, 0x00, 0x00});
+
             while ((m_out.size() - kWadHeaderSize) % kChunk != 0) {
                 m_out.push_back(kFiller);
             }
         }
+
         m_out.insert(m_out.end(), head.begin(), head.end());
         m_out.insert(m_out.end(), m_data.data() + at, m_data.data() + at + trailing);
     }
@@ -267,9 +305,11 @@ std::vector<Match> find_matches(ByteView data) {
     const u8* d = data.data();
     const std::size_t n = data.size();
     std::vector<Match> matches;
+
     if (n < 3) {
         return matches;
     }
+
     std::vector<s64> head(std::size_t{1} << kHashBits, -1);
     std::vector<s64> prev(n, -1);
     auto hash = [&](std::size_t i) {
@@ -284,42 +324,54 @@ std::vector<Match> find_matches(ByteView data) {
         }
     };
     std::size_t i = 0;
+
     while (i + 3 <= n) {
         std::size_t best = 0;
         std::size_t best_displacement = 0;
         s64 candidate = head[hash(i)];
+
         for (int chain = 0; candidate >= 0 && chain < kChainLimit; ++chain) {
             const std::size_t c = static_cast<std::size_t>(candidate);
             const std::size_t displacement = i - c;
+
             if (displacement > kFarWindow) {
                 break;
             }
+
             const std::size_t limit =
                 std::min(n - i, displacement > kMediumWindow ? kMaxFarMatch : kMaxMatch);
             std::size_t length = 0;
+
             while (length < limit && d[c + length] == d[i + length]) {
                 ++length;
             }
+
             if (length > best) {
                 best = length;
                 best_displacement = displacement;
+
                 if (length == limit) {
                     break;
                 }
             }
+
             candidate = prev[c];
         }
+
         if (best >= 3) {
             matches.push_back({i, best, best_displacement});
+
             for (std::size_t k = 0; k < best; ++k) {
                 insert(i + k);
             }
+
             i += best;
         } else {
             insert(i);
             ++i;
         }
     }
+
     return matches;
 }
 
@@ -329,11 +381,13 @@ std::vector<u8> wad_compress(ByteView data) {
     const std::vector<Match> matches = find_matches(data);
     Encoder e(data);
     e.free_literals(0, matches.empty() ? data.size() : matches.front().at);
+
     for (std::size_t k = 0; k < matches.size(); ++k) {
         const Match& m = matches[k];
         const std::size_t after = m.at + m.length;
         const std::size_t next = k + 1 < matches.size() ? matches[k + 1].at : data.size();
         const std::size_t run = next - after;
+
         if (run <= 3) {
             e.match(m.length, m.displacement, after, run);
         } else {
@@ -341,6 +395,7 @@ std::vector<u8> wad_compress(ByteView data) {
             e.free_literals(after, run);
         }
     }
+
     return e.finish();
 }
 

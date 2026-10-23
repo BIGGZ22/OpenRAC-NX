@@ -110,14 +110,18 @@ public:
         std::size_t offset, std::size_t count, std::string_view what = "array"
     ) const {
         static_assert(std::is_trivially_copyable_v<T>);
+
         if (count != 0 && sizeof(T) > (m_size + 1) / count + 1) {
             fail("{}: {} records of {:#x} bytes cannot fit", what, count, sizeof(T));
         }
+
         check(offset, count * sizeof(T), what);
         std::vector<T> values(count);
+
         if (count != 0) {
             std::memcpy(values.data(), m_data + offset, count * sizeof(T));
         }
+
         return values;
     }
 
@@ -172,9 +176,11 @@ public:
     template <typename T>
     void put_at(std::size_t offset, const T& value) {
         static_assert(std::is_trivially_copyable_v<T>);
+
         if (m_bytes.size() < offset + sizeof(T)) {
             m_bytes.resize(offset + sizeof(T));
         }
+
         std::memcpy(m_bytes.data() + offset, &value, sizeof(T));
     }
 

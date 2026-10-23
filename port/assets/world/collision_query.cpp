@@ -112,6 +112,7 @@ struct NativeMath {
             return std::signbit(a) != std::signbit(b) ? -std::numeric_limits<float>::max()
                                                       : std::numeric_limits<float>::max();
         }
+
         return a / b;
     }
 
@@ -127,12 +128,15 @@ struct NativeMath {
         if (std::isnan(x)) {
             return 0;
         }
+
         if (x >= 2147483648.0f) {
             return std::numeric_limits<s32>::max();
         }
+
         if (x <= -2147483648.0f) {
             return std::numeric_limits<s32>::min();
         }
+
         return static_cast<s32>(x);
     }
 
@@ -150,6 +154,7 @@ struct NativeMath {
         if (std::isnan(t) || t > 1.0f) {
             return 1.0f;
         }
+
         return t > 0.0f ? t : 0.0f;
     }
 
@@ -239,11 +244,13 @@ struct Kernels {
         const std::array<s16, 3>& h, const std::array<s16, 3>& lo, const std::array<s16, 3>& hi
     ) {
         u32 code = 0;
+
         for (std::size_t k = 0; k < 3; ++k) {
             const bool below = static_cast<s16>(h[k] - lo[k]) < 0;
             const bool above = static_cast<s16>(hi[k] - h[k]) < 0;
             code |= (u32{below} | u32{above} << 1) << (8 * k);
         }
+
         return code;
     }
 
@@ -254,6 +261,7 @@ struct Kernels {
     ) {
         std::vector<Vertex> out;
         out.reserve(cell.packed.size());
+
         for (const PackedCollisionVertex& pv : cell.packed) {
             const auto f = pv.fields();
             const std::array<s16, 3> h{
@@ -263,6 +271,7 @@ struct Kernels {
             };
             out.push_back({{M::itof(h[0]), M::itof(h[1]), M::itof(h[2])}, outcode(h, lo, hi)});
         }
+
         return out;
     }
 
@@ -281,13 +290,16 @@ struct Kernels {
             std::min({std::size_t{cell.header.quad_count}, cell.faces.size(), cell.quad_v3.size()});
         std::vector<Triangle> out;
         out.reserve(faces + quads);
+
         for (std::size_t i = 0; i < faces; ++i) {
             out.push_back({cell.faces[i].v, cell.faces[i].type});
         }
+
         for (std::size_t i = 0; i < quads; ++i) {
             const auto& f = cell.faces[i];
             out.push_back({{f.v[0], f.v[2], cell.quad_v3[i]}, f.type});
         }
+
         return out;
     }
 
@@ -331,13 +343,17 @@ struct Kernels {
         CollisionHit hit;
         hit.kind = b.kind;
         hit.point = out3(vmuls(b.point, scale));
+
         if (pushed) {
             hit.pushed_centre = out3(*pushed);
         }
+
         hit.normal = out3(b.normal);
+
         for (std::size_t k = 0; k < 3; ++k) {
             hit.triangle[k] = out3(vmuls(b.tri[k], scale));
         }
+
         hit.best = M::out(best);
         return hit;
     }
@@ -352,10 +368,12 @@ struct Kernels {
             if (M::neg(M::sub(M::min(a[k], b[k]), M::lit(0)))) {
                 return false;
             }
+
             if (!M::neg(M::sub(M::max(a[k], b[k]), M::lit(k1024Bits)))) {
                 return false;
             }
         }
+
         return true;
     }
 
@@ -373,26 +391,32 @@ struct Kernels {
         const Int3 ib{M::ftoi(b1024[0]), M::ftoi(b1024[1]), M::ftoi(b1024[2])};
         Int3 s{};
         Int3 e{};
+
         for (std::size_t k = 0; k < 3; ++k) {
             // psrlw 12: floor(p / 4) for p >= 0.
             s[k] = static_cast<s32>(static_cast<u32>(ia[k]) >> 12);
             e[k] = static_cast<s32>(static_cast<u32>(ib[k]) >> 12);
         }
+
         if (s == e) {
             if (ia == ib) {
                 return std::nullopt;
             }
+
             return std::vector<WalkEntry>{{M::lit(0), s}};
         }
+
         const V3 d = vsub(b1024, a1024);
         std::array<std::vector<F>, 3> lists;
         Int3 dir{};
+
         for (std::size_t k = 0; k < 3; ++k) {
             const F q = M::div(one(), d[k]);  // vdiv Q, vf0w, vf1x
             s32 at = e[k] - s[k] >= 0 ? s[k] : s[k] + 1;
             const s32 end = e[k] - s[k] >= 0 ? e[k] : e[k] + 1;
             const s32 step = e[k] - s[k] >= 0 ? 1 : -1;
             dir[k] = step;
+
             while (at != end) {
                 at += step;
                 // The plane at*4 in x1024 units; t = (plane - a) / d clamped
@@ -401,6 +425,7 @@ struct Kernels {
                 lists[k].push_back(M::clamp01(t));
             }
         }
+
         // Merge on the bits; ties go x, then y, then z.
         const std::size_t total = lists[0].size() + lists[1].size() + lists[2].size();
         std::vector<WalkEntry> out;
@@ -411,20 +436,24 @@ struct Kernels {
         auto head = [&](std::size_t k) {
             return next[k] < lists[k].size() ? lists[k][next[k]] : M::lit(kWalkEndBits);
         };
+
         for (std::size_t n = 0; n < total; ++n) {
             const F x = head(0);
             const F y = head(1);
             const F z = head(2);
             std::size_t k = 0;
+
             if (M::less(y, x)) {
                 k = M::less(z, y) ? 2 : 1;
             } else if (M::less(z, x)) {
                 k = 2;
             }
+
             cell[k] += dir[k];
             out.push_back({head(k), cell});
             ++next[k];
         }
+
         return out;
     }
 
@@ -433,20 +462,27 @@ struct Kernels {
     ) {
         const V3 a = in3(p0);
         const V3 b = in3(p1);
+
         if (!in_world(a, b)) {
             return std::nullopt;
         }
+
         const auto list = walk(vmuls(a, M::lit(k1024Bits)), vmuls(b, M::lit(k1024Bits)));
+
         if (!list) {
             return std::nullopt;
         }
+
         std::vector<CollisionLineCell> out;
+
         for (const WalkEntry& w : *list) {
             if (M::equal(w.t, one())) {
                 break;
             }
+
             out.push_back({M::out(w.t), w.cell});
         }
+
         return out;
     }
 
@@ -476,20 +512,25 @@ struct Kernels {
         const F s0 = dot_x(vsub(v0, a_rel), n);
         const F s1 = dot_x(vsub(v0, b_rel), n);
         const F q = M::div(s0, dn);
+
         if ((flags & 0x10) == 0 && (!M::neg(s0) || !M::pos(s1))) {
             return std::nullopt;
         }
+
         if (M::neg(s0) == M::neg(s1)) {
             return std::nullopt;
         }
+
         const V3 p = vmadds(vsub(a_rel, v0), d, q);
         const F c0 = dot_x(cross(p, e1), n);
         const F c1 = dot_x(cross(e2, p), n);
         const F c2 = dot_x(cross(vsub(p, e1), vsub(e2, e1)), n);
         const F margin = M::sub(best_t, q);
+
         if (M::neg(c0) || M::neg(c1) || M::neg(c2) || !M::pos(margin)) {
             return std::nullopt;
         }
+
         return LineTriangleHit{q, p, n, e1, e2};
     }
 
@@ -505,32 +546,42 @@ struct Kernels {
     ) {
         const V3 a = in3(p0);
         const V3 b = in3(p1);
+
         if (!in_world(a, b)) {
             return std::nullopt;
         }
+
         const V3 a1024 = vmuls(a, M::lit(k1024Bits));
         const V3 b1024 = vmuls(b, M::lit(k1024Bits));
         const auto list = walk(a1024, b1024);
+
         if (!list || (flags & 0x1) != 0) {
             return std::nullopt;
         }
+
         const V3 d = vsub(b1024, a1024);  // vf13
         F best_t = one();                 // vf24.x
         std::optional<Best> best;
+
         for (std::size_t i = 0; i < list->size(); ++i) {
             const F t_enter = (*list)[i].t;
             const Int3 c = (*list)[i].cell;
             const F t_next = i + 1 < list->size() ? (*list)[i + 1].t : one();
+
             if (M::equal(t_enter, one())) {
                 break;
             }
+
             if (best && M::less_equal(best_t, t_enter)) {
                 break;
             }
+
             const CollisionCell* cell = cell_of(mesh, c);
+
             if (!cell) {
                 continue;
             }
+
             // The box of the cell's stretch of segment, integer x1024
             // relative to the centre, widened by one.
             const Int3 ci = centre_int(c);
@@ -538,6 +589,7 @@ struct Kernels {
             const V3 pn = vmadds(a1024, d, t_next);
             std::array<s16, 3> lo{};
             std::array<s16, 3> hi{};
+
             for (std::size_t k = 0; k < 3; ++k) {
                 const s32 enter =
                     static_cast<s32>(static_cast<u32>(M::ftoi(pe[k])) - static_cast<u32>(ci[k]));
@@ -546,28 +598,36 @@ struct Kernels {
                 lo[k] = static_cast<s16>(std::min(enter, leave) - 1);
                 hi[k] = static_cast<s16>(std::max(enter, leave) + 1);
             }
+
             const V3 centre{M::itof(ci[0]), M::itof(ci[1]), M::itof(ci[2])};  // vf16
             const V3 a_rel = vsub(a1024, centre);                             // vf14
             const V3 b_rel = vsub(b1024, centre);                             // vf15
             const auto verts = decode_vertices(*cell, lo, hi);
+
             for (const Triangle& tri : cell_triangles(*cell)) {
                 const Vertex& v0 = verts[tri.v[0]];
                 const Vertex& v1 = verts[tri.v[1]];
                 const Vertex& v2 = verts[tri.v[2]];
+
                 if ((v0.code & v1.code & v2.code) != 0 || excluded(flags, tri.type)) {
                     continue;
                 }
+
                 const auto hit = line_triangle(flags, d, a_rel, b_rel, v0.p, v1.p, v2.p, best_t);
+
                 if (!hit) {
                     continue;
                 }
+
                 best_t = hit->t;
                 best = record(tri.type, hit->p, hit->n, v0.p, hit->e1, hit->e2, centre);
             }
         }
+
         if (!best) {
             return std::nullopt;
         }
+
         return output(*best, best_t, std::nullopt, M::lit(kInv1024Bits));
     }
 
@@ -593,30 +653,38 @@ struct Kernels {
         const V3 c = in3(centre);
         const F r = M::in(radius);
         Volume v{};
+
         for (std::size_t k = 0; k < 3; ++k) {
             v.lo[k] = M::sub(c[k], r);
             v.hi[k] = M::add(c[k], r);
         }
+
         if (height) {
             v.hi[2] = M::add(v.hi[2], M::in(*height));
         }
+
         v.r1024 = M::mul(r, M::lit(k1024Bits));
+
         for (std::size_t k = 0; k < 3; ++k) {
             if (M::neg(M::sub(v.lo[k], M::lit(0)))) {
                 return std::nullopt;
             }
         }
+
         if (!M::pos(r)) {
             return std::nullopt;
         }
+
         for (std::size_t k = 0; k < 3; ++k) {
             if (!M::neg(M::sub(v.hi[k], M::lit(k1024Bits)))) {
                 return std::nullopt;
             }
         }
+
         if (height && !M::pos(M::in(*height))) {
             return std::nullopt;
         }
+
         v.c1024 = vmuls(c, M::lit(k1024Bits));
         v.lo1024 = vmuls(v.lo, M::lit(k1024Bits));
         v.hi1024 = vmuls(v.hi, M::lit(k1024Bits));
@@ -632,33 +700,40 @@ struct Kernels {
     static std::vector<Int3> volume_cells(const Volume& v) {
         Int3 lo{};
         Int3 hi{};
+
         for (std::size_t k = 0; k < 3; ++k) {
             lo[k] = static_cast<s32>(static_cast<u32>(M::ftoi(v.lo[k])) >> 2);
             hi[k] = static_cast<s32>(static_cast<u32>(M::ftoi(v.hi[k])) >> 2);
         }
+
         const F negative_rr = M::sub(M::lit(0), v.rr);  // vf14.y
         std::vector<Int3> out;
+
         for (s32 z = lo[2]; z <= hi[2]; ++z) {
             for (s32 y = lo[1]; y <= hi[1]; ++y) {
                 for (s32 x = lo[0]; x <= hi[0]; ++x) {
                     const Int3 c{x, y, z};
                     V3 p{};
+
                     for (std::size_t k = 0; k < 3; ++k) {
                         const F cmin = M::itof(c[k] * 4096);
                         const F cmax = M::add(cmin, M::lit(k4096Bits));
                         p[k] = M::min(M::max(cmin, v.c1024[k]), cmax);
                     }
+
                     const V3 sq = vmul(vsub(p, v.c1024), vsub(p, v.c1024));
                     const F s = M::add(
                         M::add(M::add(negative_rr, sq[0]), M::mul(one(), sq[1])),
                         M::mul(one(), sq[2])
                     );
+
                     if (M::neg(s)) {
                         out.push_back(c);
                     }
                 }
             }
         }
+
         return out;
     }
 
@@ -673,11 +748,13 @@ struct Kernels {
     // truncated to 16 bits, with no margin.
     static CellFrame cell_frame(const Volume& v, const Int3& c) {
         CellFrame f{};
+
         for (std::size_t k = 0; k < 3; ++k) {
             f.centre[k] = M::add(M::itof(c[k] * 4096), M::lit(k2048Bits));
             f.lo[k] = static_cast<s16>(M::ftoi(M::sub(v.lo1024[k], f.centre[k])));
             f.hi[k] = static_cast<s16>(M::ftoi(M::sub(v.hi1024[k], f.centre[k])));
         }
+
         f.c_rel = vsub(v.c1024, f.centre);
         return f;
     }
@@ -690,15 +767,19 @@ struct Kernels {
         const F q = M::div(v.r1024, M::sqrt(best));
         V3 d = vsub(v.c1024, b.point);
         F k = M::lit(0);
+
         if (capsule) {
             const F up = M::sub(b.point[2], v.c1024[2]);
             k = M::max(M::min(up, v.h1024), M::lit(0));
             d[2] = M::add(d[2], k);
         }
+
         d = vmuls(d, q);
+
         if (capsule) {
             d[2] = M::sub(d[2], k);
         }
+
         return vadd(vmuls(d, M::lit(kInv1024Bits)), vmuls(b.point, M::lit(kInv1024Bits)));
     }
 
@@ -729,11 +810,13 @@ struct Kernels {
         if (M::neg(M::sub(best, d2))) {
             return std::nullopt;
         }
+
         const F c0 = dot_y(cross(p, e1), n);
         const F c1 = dot_y(cross(e2, p), n);
         const F c2 = dot_y(cross(vsub(p, e1), vsub(e2, e1)), n);
         V3 a{};
         V3 b{};
+
         if (M::neg(c0)) {
             a = zero3();
             b = e1;
@@ -746,12 +829,15 @@ struct Kernels {
             a = e1;
             b = e2;
         }
+
         const V3 q = edge_point(p, a, b);
         const V3 diff = vsub(q, from);
         const F d2_edge = dot_x(diff, diff);
+
         if (M::neg(M::sub(best, d2_edge))) {
             return std::nullopt;
         }
+
         return std::pair{q, d2_edge};
     }
 
@@ -771,15 +857,19 @@ struct Kernels {
         const F s = dot_x(w, n);
         const F nn = dot_x(n, n);
         const F q = M::div(s, nn);
+
         if ((flags & 0x10) == 0 && M::neg(s)) {
             return std::nullopt;
         }
+
         const V3 nq = vmuls(n, q);
         const V3 p = vmadds(w, vsub(zero3(), n), q);  // ACC = w; + (-N) * Q
         const auto nearest = nearest_on_triangle(p, plane_distance2(nq), w, e1, e2, n, best);
+
         if (!nearest) {
             return std::nullopt;
         }
+
         return VolumeTriangleHit{nearest->first, nearest->second, n, e1, e2};
     }
 
@@ -796,9 +886,11 @@ struct Kernels {
         const V3 n = cross(e2, e1);
         const F sb = dot_x(bottom, n);
         const F st = dot_x(top, n);
+
         if ((flags & 0x10) == 0 && M::neg(sb) && M::neg(st)) {
             return std::nullopt;
         }
+
         const F nn = dot_x(n, n);
         // The axis point (vf13) and its plane offset N * Q (vf8): 0x213bd8,
         // k = clamp(pz - base.z, 0, h), axis = (base.x, base.y, k + base.z).
@@ -808,6 +900,7 @@ struct Kernels {
             return std::pair{axis, vmuls(n, M::div(dot_x(axis, n), nn))};
         };
         std::pair<V3, V3> axis;
+
         if (M::magnitude_below_one(n[2])) {
             axis = axis_at(M::lit(0));  // a vertical face: the height of v0
         } else {
@@ -816,6 +909,7 @@ struct Kernels {
             const F b2z = M::sub(bottom[2], e2[2]);
             const F t1z = M::sub(top[2], e1[2]);
             const F t2z = M::sub(top[2], e2[2]);
+
             if (!M::neg(bottom[2]) && !M::neg(b1z) && !M::neg(b2z)) {
                 axis = {bottom, vmuls(n, M::div(sb, nn))};
             } else if (M::neg(top[2]) && M::neg(t1z) && M::neg(t2z)) {
@@ -827,6 +921,7 @@ struct Kernels {
                 const F c1 = dot_y(cross(e2, x), n);
                 const F c2 = dot_y(cross(vsub(x, e1), vsub(e2, e1)), n);
                 V3 p = x;
+
                 if (M::neg(c0)) {
                     p = edge_point(x, zero3(), e1);
                 } else if (M::neg(c1)) {
@@ -834,15 +929,19 @@ struct Kernels {
                 } else if (M::neg(c2)) {
                     p = edge_point(x, e1, e2);
                 }
+
                 axis = axis_at(p[2]);
             }
         }
+
         const V3 p = vsub(axis.first, axis.second);
         const auto nearest =
             nearest_on_triangle(p, plane_distance2(axis.second), axis.first, e1, e2, n, best);
+
         if (!nearest) {
             return std::nullopt;
         }
+
         return VolumeTriangleHit{nearest->first, nearest->second, n, e1, e2};
     }
 
@@ -852,36 +951,46 @@ struct Kernels {
         const F shrink = M::lit(kCollisionBestShrinkBits);
         F best_d = M::mul(v.rr, shrink);
         std::optional<Best> best;
+
         if ((flags & 0x1) == 0) {
             for (const Int3& c : volume_cells(v)) {
                 const CollisionCell* cell = cell_of(mesh, c);
+
                 if (!cell) {
                     continue;
                 }
+
                 const CellFrame f = cell_frame(v, c);
                 const auto verts = decode_vertices(*cell, f.lo, f.hi);
+
                 for (const Triangle& tri : cell_triangles(*cell)) {
                     const Vertex& v0 = verts[tri.v[0]];
                     const Vertex& v1 = verts[tri.v[1]];
                     const Vertex& v2 = verts[tri.v[2]];
+
                     if ((v0.code & v1.code & v2.code) != 0 || excluded(flags, tri.type)) {
                         continue;
                     }
+
                     const auto hit =
                         capsule
                             ? capsule_triangle(flags, f.c_rel, v.h1024, v0.p, v1.p, v2.p, best_d)
                             : sphere_triangle(flags, f.c_rel, v0.p, v1.p, v2.p, best_d);
+
                     if (!hit) {
                         continue;
                     }
+
                     best_d = M::mul(hit->d2, shrink);
                     best = record(tri.type, hit->point, hit->n, v0.p, hit->e1, hit->e2, f.centre);
                 }
             }
         }
+
         if (!best) {
             return std::nullopt;
         }
+
         return output(*best, best_d, pushed(v, *best, best_d, capsule), M::lit(kInv1024Bits));
     }
 
@@ -894,17 +1003,21 @@ struct Kernels {
         if (mesh.hero_groups.empty()) {
             return std::nullopt;
         }
+
         const F shrink = M::lit(kCollisionBestShrinkBits);
         const F r64 = M::mul(M::in(radius), M::lit(k64Bits));  // vf30.x
         const V3 c64 = vmuls(in3(centre), M::lit(k64Bits));    // vf31
         std::array<s16, 3> lo{};
         std::array<s16, 3> hi{};
+
         for (std::size_t k = 0; k < 3; ++k) {
             lo[k] = static_cast<s16>(M::ftoi(M::sub(c64[k], r64)));
             hi[k] = static_cast<s16>(M::ftoi(M::add(c64[k], r64)));
         }
+
         F best_d = M::mul(r64, r64);  // vf24.x, not shrunk
         std::optional<Best> best;
+
         for (const HeroCollisionGroup& g : mesh.hero_groups) {
             // The bounding-sphere cull: ((dy^2 - (r + R)^2) + dx^2) + dz^2,
             // kept when negative, or when it and dx^2 are both +0 (the kernel
@@ -916,44 +1029,58 @@ struct Kernels {
             const F cull = M::add(
                 M::add(M::sub(sq[1], M::mul(rr, rr)), M::mul(one(), sq[0])), M::mul(one(), sq[2])
             );
+
             if (!(M::neg(cull) || (M::pos_zero(cull) && M::pos_zero(sq[0])))) {
                 continue;
             }
+
             // Vertices zero-extended, outcodes on their low 16 bits against
             // the query box (no margin, no cell centre).
             std::vector<Vertex> verts;
+
             for (const auto& v : g.vertices) {
                 const std::array<s16, 3> h{
                     static_cast<s16>(v[0]), static_cast<s16>(v[1]), static_cast<s16>(v[2])
                 };
-                verts.push_back({{M::itof(v[0]), M::itof(v[1]), M::itof(v[2])}, outcode(h, lo, hi)}
+                verts.push_back(
+                    {{M::itof(v[0]), M::itof(v[1]), M::itof(v[2])}, outcode(h, lo, hi)}
                 );
             }
+
             const std::size_t count =
                 std::min<std::size_t>(g.triangle_count & 0xff, g.triangles.size());
+
             for (std::size_t t = 0; t < count; ++t) {
                 const auto& idx = g.triangles[t];
+
                 if (idx[0] >= verts.size() || idx[1] >= verts.size() || idx[2] >= verts.size()) {
                     continue;
                 }
+
                 const Vertex& v0 = verts[idx[0]];
                 const Vertex& v1 = verts[idx[1]];
                 const Vertex& v2 = verts[idx[2]];
+
                 if ((v0.code & v1.code & v2.code) != 0) {
                     continue;
                 }
+
                 const auto hit = sphere_triangle(0, c64, v0.p, v1.p, v2.p, best_d);
+
                 if (!hit) {
                     continue;
                 }
+
                 best_d = M::mul(hit->d2, shrink);
                 // The type is the record's pad byte, zero on every level.
                 best = record(0, hit->point, hit->n, v0.p, hit->e1, hit->e2, zero3());
             }
         }
+
         if (!best) {
             return std::nullopt;
         }
+
         const F q = M::div(r64, M::sqrt(best_d));  // vrsqrt Q, vf30.x, vf24.x
         const V3 d = vmuls(vmuls(vsub(c64, best->point), q), M::lit(kInv64Bits));
         const V3 push = vadd(d, vmuls(best->point, M::lit(kInv64Bits)));
@@ -966,6 +1093,7 @@ auto dispatch(FloatModel model, Args&&... args) {
     if (model == FloatModel::Console) {
         return Op<ConsoleMath>::run(std::forward<Args>(args)...);
     }
+
     return Op<NativeMath>::run(std::forward<Args>(args)...);
 }
 
@@ -1029,9 +1157,11 @@ struct VolumeCellsOp {
         const std::array<float, 3>& centre, float radius, std::optional<float> height
     ) {
         const auto v = Kernels<M>::volume(centre, radius, height);
+
         if (!v) {
             return std::nullopt;
         }
+
         return Kernels<M>::volume_cells(*v);
     }
 };
@@ -1050,6 +1180,7 @@ std::optional<u8> CollisionHit::face_type() const {
     if (kind >= 0x1000) {
         return static_cast<u8>(kind & 0xff);
     }
+
     return std::nullopt;
 }
 

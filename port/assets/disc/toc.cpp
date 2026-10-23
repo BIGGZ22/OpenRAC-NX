@@ -116,6 +116,7 @@ const DiscLayout& disc_layout(const GameVersion& version) {
         case Game::Rac4:
             return kUnknown[2];
     }
+
     return kUnknown[2];
 }
 
@@ -127,17 +128,21 @@ std::span<const s32> SceneRecord::chunk_sectors(bool pal_region) const {
 
 std::optional<std::pair<u32, u32>> SceneRecord::region_sectors(bool pal_region) const {
     const std::span<const s32> s = chunk_sectors(pal_region);
+
     if (s.empty()) {
         return std::nullopt;
     }
+
     return std::pair{static_cast<u32>(s.front()), static_cast<u32>(s.back() - s.front()) + 1};
 }
 
 LevelHeader parse_level_header(ByteView bytes) {
     const auto h = bytes.read<LevelHeader>(0, "level header");
+
     if (h.header_size != static_cast<s32>(kRac1LevelHeaderSize)) {
         fail("level header lacks the 0x2434 signature");
     }
+
     return h;
 }
 
@@ -145,21 +150,29 @@ std::vector<std::optional<u32>> level_header_sectors(ByteView toc, const DiscLay
     if (!layout.known) {
         fail("{}", layout.source);
     }
+
     if (toc.s32_at(0) != 1) {
         fail("table of contents: version {} is not 1", toc.s32_at(0));
     }
+
     const s32 size = toc.s32_at(4);
+
     if (size <= 8 || static_cast<std::size_t>(size) > toc.size()) {
         fail("table of contents: implausible header size {:#x}", size);
     }
+
     std::vector<std::optional<u32>> out;
+
     for (u32 i = 0; i < layout.level_table_count; ++i) {
         const s32 s = toc.s32_at(layout.level_table_offset + i * 8);
+
         if (s < 0) {
             fail("table of contents: negative level sector in slot {}", i);
         }
+
         out.push_back(s == 0 ? std::nullopt : std::optional<u32>(static_cast<u32>(s)));
     }
+
     return out;
 }
 
@@ -173,9 +186,11 @@ ProbedSize probe_lump_size(ByteView head) {
         const u32 size = (be >> 24) | ((be >> 8) & 0xff00) | ((be << 8) & 0xff0000) | (be << 24);
         return {0x30 + u64{size}, true};
     }
+
     if (is_wad(head)) {
         return {wad_compressed_size(head), true};
     }
+
     return {2048, false};
 }
 

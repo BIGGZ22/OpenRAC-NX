@@ -240,8 +240,13 @@ struct PoseLayer {
 // whether A and B are consecutive keys of one sequence (a plain lerp, no
 // normalisation). Identity for every joint when a key it needs is missing.
 std::vector<JointMatrix> evaluate_keys(
-    const MobyAnimClass& anim, const MobyFrame* a, const MobyFrame* b, f32 t, bool plain,
-    std::span<const JointModifier> mods = {}, std::span<const PoseLayer> layers = {}
+    const MobyAnimClass& anim,
+    const MobyFrame* a,
+    const MobyFrame* b,
+    f32 t,
+    bool plain,
+    std::span<const JointModifier> mods = {},
+    std::span<const PoseLayer> layers = {}
 );
 
 // The blend snapshot (0x20ede8 / PAL func_0020FC38 with flags 0x300, after ReRAC's moby_anim.rs

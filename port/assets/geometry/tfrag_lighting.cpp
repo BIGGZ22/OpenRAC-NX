@@ -54,6 +54,7 @@ ActiveSet active_set(const LightBank& bank, u16 select) {
         return bank.sets[i & 0xf];
     };
     ActiveSet s{};
+
     if ((select & 0xff00) == 0) {
         const DirLightSet& d = set(select);
         s.ca = ps2::bits(d.color_a);
@@ -78,6 +79,7 @@ ActiveSet active_set(const LightBank& bank, u16 select) {
         s.da = normalise(blend(a.dir_a, b.dir_a));
         s.db = normalise(blend(a.dir_b, b.dir_b));
     }
+
     // vaddw.x / .y vf31 = 0 + colour.w; vsubw.w colour = 1 - 1.
     s.wa = ps2::add(0, s.ca[3]);
     s.wb = ps2::add(0, s.cb[3]);
@@ -127,16 +129,20 @@ std::optional<std::array<u8, 4>> light_tfrag_point(
     const V4 c = ps2::bits(light.color);
     const V4 lp = ps2::bits(light.position);
     std::array<u32, 3> p{};
+
     for (std::size_t k = 0; k < 3; ++k) {
         p[k] = ps2::add(ps2::itof12(s32{local[k]} * 4), base[k]);
     }
+
     const u32 inv_r = ps2::div(ps2::kOne, lp[3]);
     const V4 dv = {ps2::sub(p[0], lp[0]), ps2::sub(p[1], lp[1]), ps2::sub(p[2], lp[2]), 0};
     const u32 dist2 = ps2::dot3(dv, dv);
+
     // vsubx.w vf0, r2, dist2 only sets flags; the sign of w skips the vertex.
     if ((ps2::sub(ps2::mul(lp[3], lp[3]), dist2) & ps2::kSign) != 0) {
         return std::nullopt;
     }
+
     const u32 dist = ps2::sqrt(dist2);
     const u32 falloff = ps2::sub(ps2::kOne, ps2::mul(inv_r, dist));
     const u32 scale = ps2::mul(falloff, ps2::div(ps2::kOne, dist));
@@ -160,35 +166,45 @@ std::vector<TfragRgba> light_tfrag(
     // Header 0x34 >= 0 selects one set for the whole tfrag (no RAC1 NTSC-U
     // level uses it: all are -1).
     const auto single = static_cast<s8>(t.header.dir_lights_one);
+
     for (std::size_t i = 0; i < n; ++i) {
         const TfragLight& l = t.lights[i];
         normals[i] = tfrag_stored_normal(table, l.azimuth, l.elevation);
         const u16 select = single >= 0 ? static_cast<u16>(single & 0xf) : l.light_select;
         rgba[i] = light_with_normal(bank, normals[i], l.color, select);
     }
+
     if (points && points->bank != nullptr) {
         std::array<u32, 3> base{};
+
         for (std::size_t k = 0; k < 3; ++k) {
             base[k] = ps2::itof12(static_cast<s32>(static_cast<u32>(points->origin[k]) << 2));
         }
+
         u32 list = u32{points->list} | 0xf'0000;
+
         while ((list & 0xf) != 0xf) {
             const PointLight& light = (*points->bank)[(list & 0xf) % kPointLightSlots];
             list >>= 4;
+
             for (std::size_t i = 0; i < n; ++i) {
                 std::array<s16, 3> q{};
+
                 if (i < t.positions.size()) {
                     q = {t.positions[i].x, t.positions[i].y, t.positions[i].z};
                 }
+
                 if (const auto lit = light_tfrag_point(light, base, q, normals[i], rgba[i])) {
                     rgba[i] = *lit;
                 }
             }
         }
     }
+
     for (std::size_t i = 0; i < n; ++i) {
         out[i] = {rgba[i][0], rgba[i][1], rgba[i][2], rgba[i][3]};
     }
+
     return out;
 }
 

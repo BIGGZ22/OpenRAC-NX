@@ -13,6 +13,7 @@ namespace openrac::assets::vif {
 std::vector<Code> parse(ByteView list) {
     std::vector<Code> out;
     std::size_t pos = 0;
+
     while (pos + 4 <= list.size()) {
         const u32 word = list.u32_at(pos);
         Code code;
@@ -21,6 +22,7 @@ std::vector<Code> parse(ByteView list) {
         code.imm = static_cast<u16>(word & 0xffff);
         code.offset = pos;
         std::size_t payload = 0;
+
         if (code.is_unpack()) {
             payload = (std::size_t{code.count()} * code.element_size() + 3) & ~std::size_t{3};
         } else {
@@ -43,13 +45,16 @@ std::vector<Code> parse(ByteView list) {
                     break;
             }
         }
+
         if (pos + 4 + payload > list.size()) {
             fail("VIF code {:#x} at {:#x} runs past the end of its list", code.cmd, pos);
         }
+
         code.data = list.sub(pos + 4, payload, "VIF payload");
         out.push_back(code);
         pos += 4 + payload;
     }
+
     return out;
 }
 

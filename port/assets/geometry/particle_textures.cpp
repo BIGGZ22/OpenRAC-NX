@@ -27,40 +27,52 @@ std::optional<std::size_t> PartDefs::start(std::size_t type) const {
     if (type >= offsets.size()) {
         return std::nullopt;
     }
+
     const s32 offset = offsets[type];
     s64 s = 0;
+
     if (offset != 0) {
         s = s64{offset} - header[2];
+
         if (s < 0) {
             return std::nullopt;
         }
     }
+
     if (static_cast<std::size_t>(s) >= blob.size()) {
         return std::nullopt;
     }
+
     return static_cast<std::size_t>(s);
 }
 
 std::optional<u8> PartDefs::first_frame(std::size_t type) const {
     const auto s = start(type);
+
     if (!s) {
         return std::nullopt;
     }
+
     return blob[*s];
 }
 
 std::vector<u8> PartDefs::frames(std::size_t type) const {
     const auto s = start(type);
+
     if (!s) {
         return {};
     }
+
     std::size_t end = blob.size();
+
     for (std::size_t t = 0; t < offsets.size(); ++t) {
         const auto other = start(t);
+
         if (other && *other > *s) {
             end = std::min(end, *other);
         }
     }
+
     return {
         blob.begin() + static_cast<std::ptrdiff_t>(*s),
         blob.begin() + static_cast<std::ptrdiff_t>(end)
@@ -71,17 +83,21 @@ PartDefs parse_part_defs(ByteView index, s32 offset) {
     if (offset <= 0) {
         fail("level has no part_defs");
     }
+
     const auto base = static_cast<std::size_t>(offset);
     PartDefs defs;
     defs.header = index.read<std::array<s32, 4>>(base, "part_defs header");
     const auto [count, texture_count, data_offset, data_size] = defs.header;
     (void)texture_count;
+
     if (count < 0 || count > 0x100) {
         fail("part_defs: implausible count {}", count);
     }
+
     if (data_offset < 0 || data_size < 0) {
         fail("part_defs: negative blob range");
     }
+
     defs.offsets =
         index.read_array<s32>(base + 0x10, static_cast<std::size_t>(count), "part_defs offsets");
     defs.blob = index
@@ -98,6 +114,7 @@ IndexedImage bank_texture_image(ByteView bank, s32 palette, s32 texture, s32 wid
     if (palette < 0 || texture < 0 || width <= 0 || height <= 0) {
         fail("bank texture with a negative offset or no size");
     }
+
     const auto w = static_cast<u32>(width);
     const auto h = static_cast<u32>(height);
     return {
@@ -123,10 +140,13 @@ ParticleTextures parse_particle_textures(
         index, refs.fx_texture_count, refs.fx_texture_offset, "fx_textures"
     );
     out.defs = parse_part_defs(index, refs.part_defs_offset);
+
     for (const PartTextureEntry& e : out.entries) {
-        out.textures.push_back(decode_bank_texture(part_bank, e.palette, e.texture, e.side, e.side)
+        out.textures.push_back(
+            decode_bank_texture(part_bank, e.palette, e.texture, e.side, e.side)
         );
     }
+
     for (const FxTextureEntry& e : out.fx_entries) {
         if (e.present()) {
             out.fx_textures.emplace_back(
@@ -136,6 +156,7 @@ ParticleTextures parse_particle_textures(
             out.fx_textures.emplace_back(std::nullopt);
         }
     }
+
     return out;
 }
 

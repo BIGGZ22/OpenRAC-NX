@@ -148,8 +148,9 @@ struct ShrubAdGifs {
     // The class init's conversion (boot 0x203b08), bit for bit the tfrag
     // rule: `texture_index` is the class entry's textures[tex0.data_lo] (a
     // shrub texture table index), `texture` that entry.
-    ShrubGsRegisters gs_registers(u8 texture_index, const CoreTextureEntry& texture, u32 gs_base)
-        const;
+    ShrubGsRegisters gs_registers(
+        u8 texture_index, const CoreTextureEntry& texture, u32 gs_base
+    ) const;
 };
 
 static_assert(sizeof(ShrubAdGifs) == 0x40);

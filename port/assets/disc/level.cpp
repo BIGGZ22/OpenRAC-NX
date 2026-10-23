@@ -19,9 +19,11 @@ std::vector<T> table(ByteView index, ArrayRange r, std::string_view what) {
     if (r.count <= 0 || r.offset <= 0) {
         return {};
     }
+
     if (r.count > 100000) {
         fail("implausible count {} for {}", r.count, what);
     }
+
     return index
         .read_array<T>(static_cast<std::size_t>(r.offset), static_cast<std::size_t>(r.count), what);
 }
@@ -38,9 +40,11 @@ std::optional<ByteView> LevelCore::block(ByteView data, std::string_view name) c
             if (b.offset > data.size() || b.size > data.size() - b.offset) {
                 return std::nullopt;
             }
+
             return data.sub(b.offset, b.size);
         }
     }
+
     return std::nullopt;
 }
 
@@ -48,6 +52,7 @@ LevelCore parse_level_core(ByteView index, std::size_t data_size) {
     LevelCore core{};
     const auto h = index.read<LevelCoreHeader>(0, "core header");
     core.header = h;
+
     if (h.gadget_count > 0 && h.gadget_offset > 0) {
         core.gadgets = index.read_array<GadgetEntry>(
             static_cast<std::size_t>(h.gadget_offset),
@@ -55,11 +60,13 @@ LevelCore parse_level_core(ByteView index, std::size_t data_size) {
             "gadget table"
         );
     }
+
     if (h.ratchet_seqs > 0) {
         core.ratchet_seqs = index.read_array<s32>(
             static_cast<std::size_t>(h.ratchet_seqs), 256, "ratchet seq table"
         );
     }
+
     core.gs_ram = table<GsRamEntry>(index, h.gs_ram, "gs_ram table");
     core.moby_classes = table<ClassEntry>(index, h.moby_classes, "moby class table");
     core.tie_classes = table<ClassEntry>(index, h.tie_classes, "tie class table");
@@ -78,6 +85,7 @@ LevelCore parse_level_core(ByteView index, std::size_t data_size) {
             bounds.insert(static_cast<std::size_t>(v));
         }
     };
+
     for (const s32 v :
          {h.tfrags,
           h.occlusion,
@@ -88,21 +96,27 @@ LevelCore parse_level_core(ByteView index, std::size_t data_size) {
           h.fx_bank_offset}) {
         add(v);
     }
+
     for (const ClassEntry& e : core.moby_classes) {
         add(e.offset_in_asset_wad);
     }
+
     for (const ClassEntry& e : core.tie_classes) {
         add(e.offset_in_asset_wad);
     }
+
     for (const ShrubClassEntry& e : core.shrub_classes) {
         add(e.base.offset_in_asset_wad);
     }
+
     for (const s32 v : core.ratchet_seqs) {
         add(v);
     }
+
     for (const GadgetEntry& g : core.gadgets) {
         add(g.offset_in_asset_wad);
     }
+
     const std::size_t end = h.assets_decompressed_size > 0
                                 ? static_cast<std::size_t>(h.assets_decompressed_size)
                                 : data_size;
@@ -112,6 +126,7 @@ LevelCore parse_level_core(ByteView index, std::size_t data_size) {
         if (start <= 0) {
             return;
         }
+
         const auto s = static_cast<std::size_t>(start);
         const auto next = bounds.upper_bound(s);
         const std::size_t stop = next == bounds.end() ? end : *next;
@@ -119,6 +134,7 @@ LevelCore parse_level_core(ByteView index, std::size_t data_size) {
     };
     // The tfrags open the data and run to the first of occlusion, sky, collision.
     const s32 tf_end = h.occlusion > 0 ? h.occlusion : h.sky > 0 ? h.sky : h.collision;
+
     if (tf_end > h.tfrags) {
         core.blocks.push_back(
             {"tfrags",
@@ -126,27 +142,34 @@ LevelCore parse_level_core(ByteView index, std::size_t data_size) {
              static_cast<std::size_t>(tf_end - h.tfrags)}
         );
     }
+
     block("occlusion", h.occlusion);
     block("sky", h.sky);
     block("collision", h.collision);
     block("textures", h.textures_base_offset);
     block("part_bank", h.part_bank_offset);
     block("fx_bank", h.fx_bank_offset);
+
     for (const ClassEntry& e : core.moby_classes) {
         block(std::format("moby_class/{:04}", e.o_class), e.offset_in_asset_wad);
     }
+
     for (const ClassEntry& e : core.tie_classes) {
         block(std::format("tie_class/{:04}", e.o_class), e.offset_in_asset_wad);
     }
+
     for (const ShrubClassEntry& e : core.shrub_classes) {
         block(std::format("shrub_class/{:04}", e.base.o_class), e.base.offset_in_asset_wad);
     }
+
     for (std::size_t i = 0; i < core.ratchet_seqs.size(); ++i) {
         block(std::format("ratchet_seq/{:03}", i), core.ratchet_seqs[i]);
     }
+
     for (const GadgetEntry& g : core.gadgets) {
         block(std::format("gadget/{:04}", g.class_number), g.offset_in_asset_wad);
     }
+
     return core;
 }
 
@@ -154,31 +177,40 @@ std::optional<HeightGrid> HeightGrid::parse(const LevelCoreHeader& header, ByteV
     if (header.heightmap_offset <= 0) {
         return std::nullopt;
     }
+
     const auto o = static_cast<std::size_t>(header.heightmap_offset);
+
     if (o > data.size() || data.size() - o < 16) {
         return std::nullopt;
     }
+
     HeightGrid g;
     g.width = data.s32_at(o);
     g.rows = data.s32_at(o + 4);
     g.low = data.f32_at(o + 8);
     g.high = data.f32_at(o + 12);
+
     if (g.width < 0 || g.rows < 0) {
         return std::nullopt;
     }
+
     const u64 n = u64(static_cast<u32>(g.width)) * u64(static_cast<u32>(g.rows));
+
     if (n > data.size() - o - 16) {
         return std::nullopt;
     }
+
     g.cells = data.sub(o + 16, static_cast<std::size_t>(n)).to_vector();
     return g;
 }
 
 std::optional<f32> HeightGrid::height(f32 x, f32 y) const {
     const s64 i = s64{width} * static_cast<s64>(static_cast<s32>(y)) + static_cast<s32>(x);
+
     if (i < 0 || static_cast<u64>(i) >= cells.size()) {
         return std::nullopt;
     }
+
     const f32 c = cells[static_cast<std::size_t>(i)];
     return (high - low) * (1.0f - c / 255.0f) + low;
 }
