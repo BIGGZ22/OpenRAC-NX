@@ -45,7 +45,7 @@ export interface PutOff {
 
 /** Whether the window that offers VERSION opens by itself at a start, after PUT_OFF. */
 export function offerUpdate(version: string, putOff: PutOff | null, now: number): boolean {
-  return !putOff || putOff.version !== version || now - putOff.at >= PUT_OFF_MS;
+  return putOff?.version !== version || now - putOff.at >= PUT_OFF_MS;
 }
 
 const PUT_OFF_KEY = "openrac-update-put-off";

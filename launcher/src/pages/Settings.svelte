@@ -130,7 +130,9 @@
   // A theme picked shows at once; left unsaved, the saved one comes back with the page's end.
   $effect(() => {
     applyPalette(draft.theme);
-    return () => applyPalette(app.config?.theme);
+    return () => {
+      applyPalette(app.config?.theme);
+    };
   });
 
   const changed = $derived(!!app.config && JSON.stringify(edited(draft)) !== JSON.stringify(edited(app.config)));

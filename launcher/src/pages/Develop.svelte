@@ -5,9 +5,7 @@
   // that lead here. Android has no list beside it: the page is for the game picked in Games (its
   // chip at the top right goes back there), with its versions, one per region, and the console in
   // a row of tabs. No checkout there, and only what Android runs (core/src/actions.rs, runs_on).
-  import DevCheckout from "$components/DevCheckout.svelte";
-  import DevConsole from "$components/DevConsole.svelte";
-  import DeveloperPanel from "$components/DeveloperPanel.svelte";
+  import DevView from "$components/DevView.svelte";
   import GameChip from "$components/GameChip.svelte";
   import Icon from "$components/Icon.svelte";
   import SideFrame from "$components/SideFrame.svelte";
@@ -17,11 +15,9 @@
   import { pct } from "$lib/format";
   import { regionLabel, shortTitle, type SideEntry } from "$lib/labels";
   import { gameThumb } from "$lib/media";
-  import { enter } from "$lib/motion";
   import { playerVersion } from "$lib/player.svelte";
   import { tablist } from "$lib/tabs";
   import { themeStyle } from "$lib/themes";
-  import { fly } from "svelte/transition";
 
   const games = $derived(app.library?.games ?? []);
   const pending = $derived(pendingJobs());
@@ -71,24 +67,7 @@
     return (playerVersion(picked) ?? picked.versions[0])?.key ?? "console";
   });
   const selected = $derived(onAndroid ? tab : app.develop);
-
-  const version = $derived(games.flatMap((g) => g.versions).find((v) => v.key === selected) ?? null);
-  const game = $derived(version ? (games.find((g) => g.id === version.game) ?? null) : null);
 </script>
-
-{#snippet view()}
-  {#key selected}
-    <div class="view" in:fly={enter()}>
-      {#if selected === "console"}
-        <DevConsole />
-      {:else if version && game}
-        <DeveloperPanel {game} {version} />
-      {:else}
-        <DevCheckout />
-      {/if}
-    </div>
-  {/key}
-{/snippet}
 
 {#if onAndroid}
   <div class="page" style={picked ? themeStyle(picked.id) : ""}>
@@ -118,7 +97,7 @@
         >
       </div>
     {/if}
-    {@render view()}
+    <DevView {selected} />
   </div>
 {:else}
   <SideFrame>
@@ -127,7 +106,7 @@
     {/snippet}
     <div class="page">
       <h1 class="sr">Develop</h1>
-      {@render view()}
+      <DevView {selected} />
     </div>
   </SideFrame>
 {/if}
@@ -140,12 +119,6 @@
     display: flex;
     flex-direction: column;
     gap: var(--page-gap, 18px);
-  }
-
-  .view {
-    display: flex;
-    flex-direction: column;
-    gap: 18px;
   }
 
   .intro {
