@@ -659,6 +659,7 @@ def write_report(out: Path, reports: list[UnitReport], program: Program, extra: 
         "fixes": {r.unit: r.fixes for r in reports if r.fixes},
         "problems": {r.unit: r.problems for r in reports if r.problems},
         "stubbed": {f.name: f.reason for f in stubbed},
+        "inline_assembly_skipped": {f.name: ", ".join(f.asm_skipped) for f in translated if f.asm_skipped},
         "functions_from_assembly": len(stage.translated),
         "from_assembly": {r.name: r.source for r in stage.translated},
         "assembly_unsupported": dict(sorted(stage.unsupported.items())),
@@ -687,6 +688,8 @@ def write_report(out: Path, reports: list[UnitReport], program: Program, extra: 
         f"| Units read | {summary['units']} |",
         f"| Functions translated | {summary['functions_translated']} |",
         f"| Functions with C that could not be translated (stubs) | {summary['functions_stubbed']} |",
+        f"| ... translated without inline assembly the host does not run | "
+        f"{len(summary['inline_assembly_skipped'])} |",
         f"| Functions translated from assembly (no C yet; asmc.py) | {summary['functions_from_assembly']} |",
         f"| Functions with no C (still assembly, or libraries) | {summary['functions_without_c']} |",
         f"| ... of them another spelling of a function with C, whose calls go there | "
@@ -708,6 +711,19 @@ def write_report(out: Path, reports: list[UnitReport], program: Program, extra: 
         *[f"- {n} x {why}" for why, n in summary["stub_reasons"].items()],
         "",
     ]
+    if summary["inline_assembly_skipped"]:
+        md += [
+            "## Inline assembly the host does not run",
+            "",
+            "These functions are translated with their asm statements skipped (each one an ordering",
+            "barrier): what those instructions compute is missing, and the C after them reads whatever",
+            "their outputs held. Give such a function C of the port's own (an override, or host C).",
+            "",
+            "| Function | Instructions skipped |",
+            "|---|---|",
+            *[f"| {name} | {what} |" for name, what in sorted(summary["inline_assembly_skipped"].items())],
+            "",
+        ]
     if stage.translated or stage.unsupported:
         md += [
             "## Functions with no C, translated from their assembly",
@@ -920,6 +936,17 @@ def main(argv: list[str] | None = None) -> int:
     # The port's own C for hand-written assembly first; a decompilation's
     # candidate for the same function stands aside.
     candidates = {**read_candidates(source, cfg), **read_hand(args.game.parent, cfg)}
+    # A candidate for a function the port writes itself (libraries.tsv host rows, "host_functions")
+    # is not read: the port's version replaces the function, and what the candidate's file defines
+    # besides is dead (rac1/pal's DIntr, func_0011D960, keeps the interrupt enable bit in a global
+    # of its own, which the port's data has no place for). A file that is the candidate of other
+    # functions too stays.
+    replaced = set(cfg.get("host_functions", [])) | set(host_table(args.game.parent, cfg))
+    names_of: dict[int, list[str]] = {}
+    for name, text in candidates.items():
+        names_of.setdefault(id(text), []).append(name)
+    candidates = {name: text for name, text in candidates.items()
+                  if not all(n in replaced for n in names_of[id(text)])}
     # The port's own C for functions the decompilation matches, in place of their definitions.
     overrides = read_overrides(args.game.parent, cfg)
     aliases = read_aliases(source, cfg)
@@ -929,6 +956,11 @@ def main(argv: list[str] | None = None) -> int:
         texts = {id(c): prep.unalias(c, aliases) for c in [*candidates.values(), *overrides.values()]}
         candidates = {name: texts[id(c)] for name, c in candidates.items()}
         overrides = {name: texts[id(c)] for name, c in overrides.items()}
+    # An override whose C defines no function of its name (it spells the definition with a readable
+    # name the decompilation's names.h no longer has) would blank the matched definition and leave
+    # the function to the assembly stage, silently: it stands aside, and the index says so.
+    undefined = sorted(name for name, c in overrides.items() if not prep.defines(c, name))
+    overrides = {name: c for name, c in overrides.items() if name not in undefined}
     used: set[str] = set()
     overridden: set[str] = set()
     drafts = read_drafts(args.game.parent, cfg)
@@ -949,8 +981,13 @@ def main(argv: list[str] | None = None) -> int:
     program.groups = cfg["groups"]
     for table in cfg["symbols"]:
         read_symbols(source / table, program)
+    # Of those that stood aside, the ones with a matched definition (still in the prepared copy).
+    prepared = [p.read_text(errors="replace") for p in root.rglob("*.c")] if undefined else []
+    matched = {name for name in undefined if any(prep.has_definition(text, name) for text in prepared)}
     problems: list[str] = [f"overrides: {name} has no matched definition to replace"
-                           for name in sorted(set(overrides) - overridden)]
+                           for name in sorted((set(overrides) - overridden) | (set(undefined) - matched))]
+    problems += [f"overrides: the C for {name} defines no {name} (a readable name names.h no longer has?); "
+                 "the matched C stays" for name in sorted(matched)]
     if cfg.get("places"):
         read_places(source / cfg["places"], program)
     if cfg.get("split_places"):
@@ -1070,6 +1107,10 @@ def main(argv: list[str] | None = None) -> int:
     if extra["hooks_skipped"]:
         return 1
     extra["index_problems"] = problems
+    # An override that is not used leaves the port running C its table says it replaces: said.
+    for p in problems:
+        if p.startswith("overrides:"):
+            print(f"hostgen: warning: {p}", file=sys.stderr)
     asm_files = asmc.write_files(out, cfg, asm_results, cfg.get("title", cfg.get("name", "")))
     extra["asm"] = asm_stage
     (out / "units.txt").write_text("".join(generated_name(u) + "\n" for u in units)

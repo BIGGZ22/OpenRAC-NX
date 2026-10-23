@@ -10,8 +10,11 @@
  * colour (0x0000000080xxxxxx, the message box's pulse in func_001FBE80), the first call's colour is
  * the register `and` lui's sign-extended 0xFF000000, `ori` 4 (both on all 64 bits), and the other
  * eight pass the register on. As an int the port sign-extended it (0xFFFFFFFF80000004: the GS's Q
- * word all ones). It goes at the end of draw.c, which defines DrawRectOverlay_FiiiiUl above it. */
-void DrawOutlinedRect(int a0, int a1, int a2, int a3, unsigned long a4) {
+ * word all ones). It goes at the end of draw.c, which defines DrawRectOverlay_FiiiiUl above it. It
+ * is defined by its address name: hostgen matches an override to its row by the name it defines, and
+ * a readable name can change with the decompilation's names.h (rac1-decomp's is draw_outlined_rect
+ * since it took the NTSC decomp's names). */
+void func_001F6410(int a0, int a1, int a2, int a3, unsigned long a4) {
     unsigned long color;
     int t0, t1, t2;
     int t_a0m5, t4, t5;
