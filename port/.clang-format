@@ -1,4 +1,4 @@
-# The layout of every C and C++ file under port/. docs/CONVENTIONS.md says
+# The layout of every C and C++ file under port/. docs/CODING_CONVENTIONS.md says
 # why each choice was made; this file is the reference for what the layout is.
 # Formatting only: whitespace, line breaks, braces on bodies, and the order of
 # includes. It never changes what the program does.

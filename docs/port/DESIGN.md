@@ -140,4 +140,5 @@ measurements, the OpenGOAL notes, and its findings about compiling the C
 ([PORTABILITY.md](PORTABILITY.md), section 4). Its C++ coding conventions
 (`runtime/docs/CODING_CONVENTIONS.md` in history) are a starting point for
 the port's own: the layout and comment rules carry over; the rules about
-modelling hardware do not.
+modelling hardware do not. The port's own are
+[port/docs/CODING_CONVENTIONS.md](../../port/docs/CODING_CONVENTIONS.md).

@@ -59,6 +59,8 @@ systems, and core Vulkan performance improvements remain in the core renderer.
 | [viewer/](viewer) | `openrac-viewer`: a level, extracted from the player's disc by the editor, drawn natively with a free camera |
 | [common/](common) | the log |
 | [tests/](tests) | the runtime's tests |
+| [docs/](docs) | the port's [coding conventions](docs/CODING_CONVENTIONS.md) |
+| [tools/conventions/](tools/conventions/README.md) | the conventions' countable rules, checked in CI |
 
 ## How a game is built
 
@@ -195,7 +197,13 @@ committed (no data, code bytes, microcode or media), and the library
 replacements are written from what the game's own code shows and what is
 publicly known of each API, never from Sony's code or documentation.
 Generated C and build output stay in build trees (`port/build/` is ignored).
-The C and C++ layout is [.clang-format](.clang-format); comments say why.
+
+The port's code follows [docs/CODING_CONVENTIONS.md](docs/CODING_CONVENTIONS.md)
+(decided): layout ([.clang-format](.clang-format)), comments and documentation,
+naming, ownership, errors, the C boundary and the module layering.
+[tools/conventions](tools/conventions/README.md) checks what a program can
+count, in CI and before you commit, and [.clang-tidy](.clang-tidy) the naming
+and ownership of the C++ you touch.
 
 The port is built on Linux, macOS and Windows (there with Clang against
 MSVC's libraries); CI builds all of it on Linux and rac1/pal's program on

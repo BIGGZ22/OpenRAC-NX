@@ -31,6 +31,7 @@ the first table; go to a game's documents when you work on that game.
 | [editor/README.md](../editor/README.md) | The Godot level editor: extracting your levels, what it reads, its code |
 | [editor/GDSCRIPT_CONVENTIONS.md](../editor/GDSCRIPT_CONVENTIONS.md) | Style for the editor's GDScript |
 | [port/README.md](port/README.md) | The native port, OpenGOAL's way: no emulation; what is decided and open ([DESIGN.md](port/DESIGN.md)), the order of work ([ROADMAP.md](port/ROADMAP.md)) |
+| [port/docs/CODING_CONVENTIONS.md](../port/docs/CODING_CONVENTIONS.md) | The port's C++ and C conventions (decided): layout, documentation, naming, ownership, errors, the C boundary, layering, tests; what CI checks |
 | [port/WORKFLOW.md](port/WORKFLOW.md) | Helping test and fix the port: from a player's report to a release, and the guides for each step |
 | [port/DECOMP_STATUS.md](port/DECOMP_STATUS.md), [port/PORTABILITY.md](port/PORTABILITY.md) | How much of Ratchet & Clank (PAL) is C a PC could build; what the matching C assumes about the console |
 | [port/RENDERER.md](port/RENDERER.md) | How the game builds a frame, everything it draws, the VU programs, the graphics chip's conventions |
