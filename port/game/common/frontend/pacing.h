@@ -21,20 +21,27 @@ constexpr double kLagTicks = 0.5;
 // what drawing a frame takes, in seconds. `interval`: the display's refresh interval in seconds, 0
 // when the display does not say. `last_swap`: the last swap that waited for a refresh, the clock's
 // epoch when none did. Without an interval or such a swap, the time the frame is drawn by.
-std::chrono::steady_clock::time_point shown_at(std::chrono::steady_clock::time_point now,
-                                               double cost, double interval,
-                                               std::chrono::steady_clock::time_point last_swap);
+std::chrono::steady_clock::time_point shown_at(
+    std::chrono::steady_clock::time_point now,
+    double cost,
+    double interval,
+    std::chrono::steady_clock::time_point last_swap
+);
 
 // How far the scene is from the last tick's to the kept one's at the refresh `display`, from 0 to
 // 1: `tick` is when the kept tick came, `period` the game's tick length, and the scene runs
 // kLagTicks behind.
-float tick_alpha(std::chrono::steady_clock::time_point display,
-                 std::chrono::steady_clock::time_point tick, std::chrono::duration<double> period);
+float tick_alpha(
+    std::chrono::steady_clock::time_point display,
+    std::chrono::steady_clock::time_point tick,
+    std::chrono::duration<double> period
+);
 
 // Whether the frame cap lets a frame start at `now` (within a millisecond: a sleep wakes that
-// coarsely). `cap`: the frames a second it allows, 0 for no cap. `due`: when the cap lets the next
-// frame start (frame_pacing::next_due), the clock's epoch before the first capped frame.
-bool frame_may_start(double cap, std::chrono::steady_clock::time_point due,
-                     std::chrono::steady_clock::time_point now);
+// coarsely). `cap`: the frames a second it allows, 0 or less for none. `due`: when the cap lets the
+// next frame start (frame_pacing::next_due), the clock's epoch before the first capped frame.
+bool frame_may_start(
+    double cap, std::chrono::steady_clock::time_point due, std::chrono::steady_clock::time_point now
+);
 
 }  // namespace openrac::frontend
