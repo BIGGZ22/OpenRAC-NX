@@ -1750,8 +1750,11 @@ void slow_frame() {
 // The camera part way from the last tick's to this one's (a cut is not blended).
 viewer::GameState blend_camera(const viewer::GameState& from, const viewer::GameState& to, float t) {
     viewer::GameState c = to;
-    const CameraPose pose = blend_pose({from.camera_position, from.forward, from.left, from.up},
-                                       {to.camera_position, to.forward, to.left, to.up}, t);
+    const CameraPose pose = blend_pose(
+        {from.camera_position, from.forward, from.left, from.up},
+        {to.camera_position, to.forward, to.left, to.up},
+        t
+    );
     c.camera_position = pose.position;
     c.forward = pose.forward;
     c.left = pose.left;
