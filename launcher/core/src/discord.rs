@@ -283,8 +283,16 @@ impl DiscordIpc {
         }
     }
 
+    /// Shows `status`, and keeps it to show again when the planet or the bolts change. `app_start`
+    /// is when the launcher started: the elapsed time of the statuses outside a game.
     pub fn set_status(&mut self, status: &DiscordStatus, app_start: u64) -> Result<(), String> {
         self.last = Some((status.clone(), app_start));
+        let activity = self.activity(status, app_start);
+        self.update_activity(Some(&activity))
+    }
+
+    /// The activity `status` shows, with the planet and bolts last logged while a game plays.
+    fn activity(&self, status: &DiscordStatus, app_start: u64) -> Activity {
         let activity = match status {
             DiscordStatus::Idle => Activity {
                 details: Some("In Launcher".into()),
@@ -357,9 +365,7 @@ impl DiscordIpc {
                 ..Default::default()
             },
         };
-        let activity = Activity { buttons: buttons(), ..activity };
-
-        self.update_activity(Some(&activity))
+        Activity { buttons: buttons(), ..activity }
     }
 
     pub fn clear(&mut self) -> Result<(), String> {
@@ -643,6 +649,73 @@ mod tests {
             Some(Place { planet: "Level 4".into(), location: None })
         );
         assert_eq!(planet_from_log("rac1", "[info] 4000 frames"), None);
+    }
+
+    /// A client that never looks for Discord's socket: what it would show is read from
+    /// `activity`, so the tests do not depend on a Discord running on the machine.
+    fn offline() -> DiscordIpc {
+        let mut ipc = DiscordIpc::new(DEFAULT_CLIENT_ID);
+        ipc.retry_at = u64::MAX;
+        ipc
+    }
+
+    /// What `ipc` shows now: its last status, with the planet and bolts it has.
+    fn shown(ipc: &DiscordIpc) -> Activity {
+        let (status, app_start) = ipc.last.clone().expect("a status was set");
+        ipc.activity(&status, app_start)
+    }
+
+    fn playing_rac1() -> DiscordStatus {
+        DiscordStatus::PlayingGame {
+            title: "Ratchet & Clank".into(),
+            region: "PAL".into(),
+            game_id: "rac1".into(),
+            start_time: Some(1_700_000_000),
+        }
+    }
+
+    #[test]
+    fn a_play_shows_the_planet_and_bolts_the_game_logs() {
+        let mut ipc = offline();
+        let _ = ipc.set_status(&playing_rac1(), 1_600_000_000);
+        let menus = shown(&ipc);
+        assert_eq!(menus.name.as_deref(), Some("Ratchet & Clank"));
+        assert_eq!(menus.details.as_deref(), Some("In the menus"));
+        assert_eq!(menus.state, None);
+        assert_eq!(menus.timestamps.unwrap().start, Some(1_700_000_000));
+
+        // The lines port/game/common/main.cpp logs, as the play job reads them (common/log.cpp's
+        // "[info] " prefix). Bolts before a planet are kept, not shown.
+        let _ = ipc.on_game_log("rac1", "[info] bolts 1250");
+        assert_eq!(shown(&ipc).state, None);
+        let _ = ipc.on_game_log("rac1", "[info] now playing level 3");
+        let _ = ipc.on_game_log("rac1", "[info] 4000 frames");
+        let kerwan = shown(&ipc);
+        assert_eq!(kerwan.details.as_deref(), Some("Exploring Kerwan · Metropolis"));
+        assert_eq!(kerwan.state.as_deref(), Some("1,250 bolts"));
+        let _ = ipc.on_game_log("rac1", "[info] bolts 1300");
+        assert_eq!(shown(&ipc).state.as_deref(), Some("1,300 bolts"));
+    }
+
+    #[test]
+    fn the_end_of_a_play_shows_the_launcher_and_forgets_the_planet() {
+        let mut ipc = offline();
+        let _ = ipc.set_status(&playing_rac1(), 1_600_000_000);
+        let _ = ipc.on_game_log("rac1", "[info] now playing level 3");
+        let _ = ipc.on_game_log("rac1", "[info] bolts 1250");
+
+        let _ = ipc.set_planet(None);
+        let _ = ipc.set_status(&DiscordStatus::Idle, 1_600_000_000);
+
+        let idle = shown(&ipc);
+        assert_eq!(idle.details.as_deref(), Some("In Launcher"));
+        assert_eq!(idle.timestamps.unwrap().start, Some(1_600_000_000));
+        assert_eq!(ipc.planet, None);
+        assert_eq!(ipc.bolts, None);
+        // The next play starts in the menus, without the last one's planet or bolts.
+        let _ = ipc.set_status(&playing_rac1(), 1_600_000_000);
+        assert_eq!(shown(&ipc).details.as_deref(), Some("In the menus"));
+        assert_eq!(shown(&ipc).state, None);
     }
 
     #[test]
