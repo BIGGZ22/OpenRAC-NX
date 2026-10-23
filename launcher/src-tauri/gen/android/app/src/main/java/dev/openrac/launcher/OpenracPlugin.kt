@@ -33,6 +33,8 @@ import org.json.JSONObject
 class LaunchArgs {
   lateinit var library: String
   var args: Array<String> = arrayOf()
+  /** NAME=value: what the action adds (the detailed log, developer tools, Enhanced graphics). */
+  var env: Array<String> = arrayOf()
 }
 
 @InvokeArg
@@ -328,6 +330,12 @@ class OpenracPlugin(private val activity: Activity) : Plugin(activity) {
     // The renderer: Vulkan's falls back to OpenGL ES by itself where the device has no Vulkan 1.3
     // (port/platform/window.cpp).
     if (renderer() == "vulkan") environment["OPENRAC_GL_API"] = "vulkan"
+    // What the launcher's action adds; Enhanced graphics' OPENRAC_GL_API=vulkan among them, as
+    // only the Vulkan renderer has it.
+    args.env.forEach { entry ->
+      val at = entry.indexOf('=')
+      if (at > 0) environment[entry.substring(0, at)] = entry.substring(at + 1)
+    }
     // Already playing: back to the game as it is, not a second start (unknown which runs, it is
     // the same one). Another game waits for it to end: both run in one process, which ends with
     // its game (GameActivity.onDestroy), so a start now would end with it.

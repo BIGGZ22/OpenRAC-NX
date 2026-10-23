@@ -42,6 +42,27 @@ class BuildAndroidTests(unittest.TestCase):
         (path / "build/cmake/android.toolchain.cmake").write_text("")
         return path
 
+    def test_embree_for_android_is_the_ports_target_with_arms_choice(self):
+        ndk = self.make_ndk(self.dir / "ndk")
+        options = build_android.embree_android_options(ndk)
+        self.assertEqual(options["CMAKE_TOOLCHAIN_FILE"], (ndk / "build/cmake/android.toolchain.cmake").as_posix())
+        self.assertEqual((options["ANDROID_ABI"], options["ANDROID_PLATFORM"], options["ANDROID_STL"]),
+                         ("arm64-v8a", "android-29", "c++_shared"))
+        self.assertEqual(options["EMBREE_STATIC_LIB"], "ON")
+        # No x86 instruction sets: Embree keeps its own NEON on ARM.
+        self.assertNotIn("EMBREE_ISA_AVX", options)
+
+    def test_a_baker_that_does_not_build_is_left_out(self):
+        ndk = self.make_ndk(self.dir / "ndk")
+        failed = build_android.desktop.BuildError("no compiler")
+        with mock.patch.object(build_android, "build_embree", side_effect=failed), \
+                contextlib.redirect_stderr(io.StringIO()) as err:
+            self.assertEqual(build_android.baker_defines(ndk), ["-DOPENRAC_PROBE_BAKER=OFF"])
+        self.assertIn("probe baker is left out", err.getvalue())
+        with mock.patch.object(build_android, "build_embree", return_value=self.dir / "embree"):
+            self.assertEqual(build_android.baker_defines(ndk),
+                             ["-DOPENRAC_PROBE_BAKER=ON", f"-Dembree_DIR={(self.dir / 'embree').as_posix()}"])
+
     def test_ndk_home_from_its_variables_in_order(self):
         first, second = self.make_ndk(self.dir / "one"), self.make_ndk(self.dir / "two")
         env = {name: "" for name in NDK_VARIABLES}

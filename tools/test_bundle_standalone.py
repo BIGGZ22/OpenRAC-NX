@@ -197,7 +197,10 @@ class Bundle(unittest.TestCase):
                 sys.argv = argv
             self.assertTrue((out / "python/lib/python3.13/os.py").is_file())
             self.assertFalse((out / "python/lib/python3.13/test").exists())
-            self.assertFalse((out / "port").exists())
+            # No game program (the APK's libraries); the probe baker's Python half for Enhanced
+            # graphics, whose program is a library of the APK too.
+            self.assertFalse((out / "port/build").exists())
+            self.assertTrue((out / "port/enhanced/tools/probes/bake_all.py").is_file())
             self.assertIn("Android", (out / "STANDALONE").read_text())
 
 

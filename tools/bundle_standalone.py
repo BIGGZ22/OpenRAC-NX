@@ -233,10 +233,10 @@ def main() -> int:
     files.copy_tree(ROOT / "tools/openrac_common", out / "tools/openrac_common", lambda rel: rel.suffix == ".py")
     files.copy_tree(ROOT / "editor", out / "editor",
               lambda rel: not rel.name.startswith("test_") and rel.suffix in (".py", ".tsv", ".gd", ""))
-    if not args.android:
-        # Android has no Mods tab yet, and so no Enhanced graphics to bake for.
-        files.copy_tree(ROOT / PROBE_TOOLS, out / PROBE_TOOLS,
-                  lambda rel: not rel.name.startswith("test_") and rel.suffix in (".py", ".json"))
+    # Enhanced graphics' baker's Python half; on Android its program is the APK's library
+    # (libopenrac-probe-bake.so, tools/build_android.py).
+    files.copy_tree(ROOT / PROBE_TOOLS, out / PROBE_TOOLS,
+                    lambda rel: not rel.name.startswith("test_") and rel.suffix in (".py", ".json"))
     for manifest in sorted((ROOT / "games").glob("*/game.json")):
         dest = out / manifest.relative_to(ROOT)
         dest.parent.mkdir(parents=True, exist_ok=True)

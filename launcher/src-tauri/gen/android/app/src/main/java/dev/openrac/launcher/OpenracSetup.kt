@@ -20,9 +20,9 @@ import java.util.zip.ZipInputStream
  * launcher's Rust side and the programs it runs read.
  *
  * Android runs programs only from the app's native library folder, so the Python and each game's
- * windowless program are libraries there (libopenrac-python.so, libopenrac-<id>-cli.so), linked
- * from where the desktop layout has them: openrac/python/bin/python3 and
- * openrac/port/build/release/openrac-<id>. The folder moves when the app is updated, so the links
+ * windowless program are libraries there (libopenrac-python.so, libopenrac-<id>-cli.so, and
+ * Enhanced graphics' libopenrac-probe-bake.so), linked from where the desktop layout has them:
+ * openrac/python/bin/python3 and openrac/port/build/release/openrac-<id> (-probe-bake). The folder moves when the app is updated, so the links
  * are made again at every start.
  *
  * The copy is unpacked once per install or update, which takes seconds: on a thread of its own,
@@ -86,6 +86,8 @@ object OpenracSetup {
         link(library, File(root, "port/build/release/openrac-$game"))
       }
     }
+    // Enhanced graphics' probe baker (the probe-bake action), when the APK carries it.
+    link(File(libraries, "libopenrac-probe-bake.so"), File(root, "port/build/release/openrac-probe-bake"))
     ready.countDown()
   }
 

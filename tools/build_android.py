@@ -14,7 +14,11 @@ rac1-ntsc when none is named. The steps:
   2. the port with the NDK (port's android-arm64 preset): for each game
      libopenrac-GAME.so (the game's activity loads it) and
      libopenrac-GAME-cli.so (its windowless checks), SDL3, libadrenotools'
-     hooks and libopenrac-python.so
+     hooks and libopenrac-python.so; and Enhanced graphics' probe baker,
+     libopenrac-probe-bake.so, with Embree (the version and SHA-256
+     tools/build_port.py pins) built by the NDK into build/android/embree
+     (--no-probe-baker leaves it out; a baker that does not build is left
+     out with a warning, as on the desktops)
   3. those libraries, the NDK's C++ runtime and Python's, in the launcher's
      Android project (src-tauri/gen/android/app/src/main/jniLibs), and SDL's
      Java beside the game's activity (app/src/main/sdl-java)
@@ -34,14 +38,19 @@ launcher/src-tauri/gen/android is then ready to open). Standard library only.
 
 import argparse
 import hashlib
+import json
 import os
 import shutil
+import subprocess
 import sys
 import urllib.request
 import zipfile
 from pathlib import Path
 
 from openrac_common import digest, paths, proc
+
+# Embree's pinned release and its source, as the desktops build it (tools/build_port.py).
+import build_port as desktop
 
 ROOT = paths.repo_root()
 PORT = ROOT / "port"
@@ -62,6 +71,11 @@ PYTHON_FILES = {
 }
 # libadrenotools' hook libraries, which it loads by path from the app's native library folder.
 ADRENOTOOLS_HOOKS = ("hook_impl", "main_hook", "file_redirect_hook", "gsl_alloc_hook")
+# Enhanced graphics' probe baker, a program named as a library (Android runs programs only from
+# the app's library folder; OpenracSetup.kt links it to port/build/release/openrac-probe-bake),
+# and the Embree it is built with, for Android.
+BAKER = "openrac-probe-bake"
+EMBREE_ANDROID = BUILD / "embree"
 
 
 def ndk_home() -> Path:
@@ -119,16 +133,77 @@ def python() -> tuple[Path, Path]:
     return target, home
 
 
-def build_port(games: list[str], ndk: Path, python_target: Path) -> None:
+def embree_android_options(ndk: Path) -> dict[str, str]:
+    """How Embree is configured for Android: the port's preset's target (arm64-v8a, API 29, the
+    shared C++ runtime) through the NDK's toolchain file, and build_port's Embree options for an
+    ARM machine (Embree's own NEON)."""
+    return {
+        "CMAKE_TOOLCHAIN_FILE": (ndk / "build/cmake/android.toolchain.cmake").as_posix(),
+        "ANDROID_ABI": "arm64-v8a",
+        "ANDROID_PLATFORM": "android-29",
+        "ANDROID_STL": "c++_shared",
+        "CMAKE_BUILD_TYPE": "Release",
+        **desktop.embree_options("aarch64"),
+    }
+
+
+def build_embree(ndk: Path) -> Path:
+    """Embree built for Android and installed in EMBREE_ANDROID (once for its version, options
+    and NDK); its embree_DIR."""
+    install = EMBREE_ANDROID / "install"
+    stamp_file = EMBREE_ANDROID / "openrac-embree.json"
+    options = embree_android_options(ndk)
+    stamp = {"version": desktop.EMBREE_VERSION, "sha256": desktop.EMBREE_SHA256, "options": options}
+    try:
+        if json.loads(stamp_file.read_text(encoding="utf-8")) == stamp:
+            return desktop.embree_config(install)
+    except (OSError, ValueError, desktop.BuildError):
+        pass
+    # The source build_port fetched and checked, shared with the desktop's build.
+    source = desktop.fetch_embree(desktop.EMBREE_DIR)
+    work = EMBREE_ANDROID / "build"
+    for folder in (work, install):
+        shutil.rmtree(folder, ignore_errors=True)
     env = dict(os.environ, ANDROID_NDK_HOME=str(ndk))
-    proc.run(["cmake", "--preset", "android-arm64", f"-DOPENRAC_ANDROID_PYTHON={python_target}"],
+    proc.run(["cmake", "-S", source, "-B", work, "-G", "Ninja", f"-DCMAKE_INSTALL_PREFIX={install.as_posix()}",
+              *(f"-D{key}={value}" for key, value in options.items())], cwd=ROOT, env=env, echo=True)
+    proc.run(["cmake", "--build", work], cwd=ROOT, env=env, echo=True)
+    proc.run(["cmake", "--install", work], cwd=ROOT, env=env, echo=True)
+    notices = install / "licenses" / "embree"
+    notices.mkdir(parents=True, exist_ok=True)
+    for name in ("LICENSE.txt", "third-party-programs.txt"):
+        shutil.copy2(source / name, notices / name)
+    stamp_file.write_text(json.dumps(stamp, indent=2) + "\n", encoding="utf-8")
+    return desktop.embree_config(install)
+
+
+def baker_defines(ndk: Path) -> list[str]:
+    """The port's cache entries for the probe baker, or none (and a warning) when Embree does not
+    build for Android."""
+    try:
+        return ["-DOPENRAC_PROBE_BAKER=ON", f"-Dembree_DIR={build_embree(ndk).as_posix()}"]
+    except (OSError, ValueError, subprocess.CalledProcessError, desktop.BuildError) as e:
+        print(f"warning: the probe baker is left out: {e}", file=sys.stderr, flush=True)
+        return ["-DOPENRAC_PROBE_BAKER=OFF"]
+
+
+def build_port(games: list[str], ndk: Path, python_target: Path, baker: bool = True) -> bool:
+    """The port's libraries for GAMES; whether the probe baker is among them."""
+    env = dict(os.environ, ANDROID_NDK_HOME=str(ndk))
+    defines = baker_defines(ndk) if baker else ["-DOPENRAC_PROBE_BAKER=OFF"]
+    proc.run(["cmake", "--preset", "android-arm64", f"-DOPENRAC_ANDROID_PYTHON={python_target}", *defines],
              cwd=PORT, env=env, echo=True)
     targets = [t for g in games for t in (f"openrac-{g}", f"openrac-{g}-cli")]
     targets += ["openrac-python", "SDL3-shared", *ADRENOTOOLS_HOOKS]
+    with_baker = "-DOPENRAC_PROBE_BAKER=ON" in defines
+    if with_baker:
+        targets.append(BAKER)
     proc.run(["cmake", "--build", PORT_BUILD, "--target", *targets], cwd=PORT, env=env, echo=True)
+    return with_baker
 
 
-def collect_libraries(games: list[str], ndk: Path, python_target: Path, keep_symbols: bool) -> list[str]:
+def collect_libraries(games: list[str], ndk: Path, python_target: Path, keep_symbols: bool,
+                      baker: bool = False) -> list[str]:
     dest = APP / "src/main/jniLibs/arm64-v8a"
     dest.mkdir(parents=True, exist_ok=True)
     # What an earlier run put here; the launcher's own library is Tauri's to place.
@@ -138,6 +213,8 @@ def collect_libraries(games: list[str], ndk: Path, python_target: Path, keep_sym
     wanted = [PORT_BUILD / f"libopenrac-{g}.so" for g in games]
     wanted += [PORT_BUILD / f"libopenrac-{g}-cli.so" for g in games]
     wanted.append(PORT_BUILD / "libopenrac-python.so")
+    if baker:
+        wanted.append(PORT_BUILD / f"lib{BAKER}.so")
     for name in ("SDL3", *ADRENOTOOLS_HOOKS):
         found = sorted(PORT_BUILD.rglob(f"lib{name}.so"))
         if not found:
@@ -168,10 +245,14 @@ def collect_libraries(games: list[str], ndk: Path, python_target: Path, keep_sym
     return names
 
 
-def bundle(python_home: Path) -> Path:
+def bundle(python_home: Path, baker: bool = False) -> Path:
     out = BUILD / "openrac"
     proc.run([sys.executable, ROOT / "tools/bundle_standalone.py", out, "--android", "--python", python_home],
              cwd=ROOT, echo=True)
+    if baker:
+        # The license of what the baker has built in, beside where the launcher finds it, as a
+        # desktop's copy carries it (tools/bundle_standalone.py).
+        shutil.copytree(EMBREE_ANDROID / "install/licenses", out / "port/build/release/licenses", dirs_exist_ok=True)
     assets = APP / "src/main/assets"
     assets.mkdir(parents=True, exist_ok=True)
     archive = assets / "openrac.zip"
@@ -206,16 +287,18 @@ def main() -> int:
     parser.add_argument("--release", action="store_true", help="an unsigned release APK (default: debug)")
     parser.add_argument("--keep-symbols", action="store_true", help="keep the libraries' debug information")
     parser.add_argument("--no-apk", action="store_true", help="stop before Gradle (steps 1 to 4)")
+    parser.add_argument("--no-probe-baker", action="store_true",
+                        help="leave Enhanced graphics' probe baker (and Embree) out")
     args = parser.parse_args()
     for game in args.games:
         if not (PORT / "game" / game / "hostgen.json").is_file():
             sys.exit(f"{game} is not one of the port's games (port/game/<id>/hostgen.json)")
     ndk = ndk_home()
     python_target, python_home = python()
-    build_port(args.games, ndk, python_target)
-    names = collect_libraries(args.games, ndk, python_target, args.keep_symbols)
+    baker = build_port(args.games, ndk, python_target, baker=not args.no_probe_baker)
+    names = collect_libraries(args.games, ndk, python_target, args.keep_symbols, baker)
     print("native libraries:", ", ".join(names))
-    bundle(python_home)
+    bundle(python_home, baker)
     if not args.no_apk:
         build_apk(ndk, args.release, args.keep_symbols)
     return 0

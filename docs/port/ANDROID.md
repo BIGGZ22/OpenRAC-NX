@@ -126,6 +126,13 @@ programs from its native library folder. So the APK carries:
   (`port/android/python_main.c`).
 - **The game without a window** (`libopenrac-<id>-cli.so`), the game built a
   second time as a program, for `--check-levels`.
+- **Enhanced graphics' probe baker** (`libopenrac-probe-bake.so`), with
+  Embree built in by the NDK (the release and SHA-256 `tools/build_port.py`
+  pins), which bakes the bounced light from the player's own levels on the
+  device, as the desktops do (`port/enhanced/tools/probes/bake_all.py`).
+  Playing with Enhanced graphics on starts the game with the Vulkan renderer
+  and those bakes (`--probes`), the environment of the launcher's Play action
+  passed on to the game's activity.
 - **A copy of OpenRAC** (`tools/bundle_standalone.py --android`), stored as
   `assets/openrac.zip`. When the APK changes, `OpenracSetup.kt` unpacks it
   into `files/openrac` on a background thread (into `files/openrac.new`

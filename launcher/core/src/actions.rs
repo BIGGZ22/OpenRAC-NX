@@ -506,8 +506,9 @@ impl Action {
         }
         // The Mods tab's Enhanced graphics (enhanced.rs): with `enhanced_rendering = 1` in the
         // version's settings file the game draws with Vulkan, the one renderer that has it, and
-        // takes the probe bakes made from the player's levels. Off, nothing is added.
-        if self.kind == Kind::Play && matches!(ctx.platform, Platform::Windows | Platform::Linux | Platform::Macos) {
+        // takes the probe bakes made from the player's levels. Off, nothing is added. On Android
+        // too: the game's activity is started with this environment (src-tauri/src/android.rs).
+        if self.kind == Kind::Play {
             if let (Some(v), Ok(data)) = (ctx.version, fill("{data}")) {
                 if crate::enhanced::supported(&v.game, &v.name) {
                     let file = crate::differences::settings_file(&crate::saves::data_home(), &v.game, &v.name);

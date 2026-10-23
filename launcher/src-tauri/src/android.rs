@@ -416,8 +416,9 @@ pub async fn game_window<R: Runtime>(app: AppHandle<R>, stop: bool) -> Result<()
     }
 }
 
-/// Plays: starts the game's activity with the command line a desktop would run. A detached
-/// launch, as the game's window is its own activity.
+/// Plays: starts the game's activity with the command line and the environment a desktop would
+/// run it with (the detailed log, developer tools, Enhanced graphics' Vulkan). A detached launch,
+/// as the game's window is its own activity.
 pub fn launch<R: Runtime>(app: &AppHandle<R>, plan: &Plan) -> Result<Started, String> {
     let library = game_library(plan)?;
     #[cfg(target_os = "android")]
@@ -427,7 +428,11 @@ pub fn launch<R: Runtime>(app: &AppHandle<R>, plan: &Plan) -> Result<Started, St
             .0
             .run_mobile_plugin::<serde_json::Value>(
                 "launchGame",
-                serde_json::json!({ "library": library, "args": plan.args }),
+                serde_json::json!({
+                    "library": library,
+                    "args": plan.args,
+                    "env": plan.env.iter().map(|(k, v)| format!("{k}={v}")).collect::<Vec<_>>(),
+                }),
             )
             .map_err(|e| e.to_string())?;
         let command = std::iter::once(library).chain(plan.args.iter().cloned()).collect::<Vec<_>>().join(" ");
