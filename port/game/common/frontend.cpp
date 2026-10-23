@@ -35,6 +35,7 @@
 #include "frame_pacing.h"
 #include "game/common/frontend/geometry.h"
 #include "game/common/frontend/pacing.h"
+#include "game/common/frontend/state.h"
 #include "game/common/particle_texture_cache.h"
 #include "openrac/game_host.h"
 #include "openrac/guest.h"
@@ -75,6 +76,12 @@ extern const unsigned int openrac_icon_png_size;
 #endif
 
 namespace openrac::frontend {
+
+// The frontend's state (frontend/state.h).
+std::unique_ptr<State> g;
+
+// When frames reach the display (frontend/state.h).
+Pacing pacing;
 
 namespace {
 
@@ -155,133 +162,6 @@ const Shots& shots() {
     }();
     return read;
 }
-
-// One tick's scene, as frame() read it from the game, for the frames drawn until the next tick
-// (between), and the last tick's camera and moby matrices to move them from.
-struct Kept {
-    int level = -3;  // the level the mobys belong to: another one starts over
-    viewer::GameState state, prev_state;
-    bool has_state = false, has_prev_state = false;
-    std::vector<viewer::Instance> live;
-    std::vector<std::uint32_t> addresses;  // each live moby's address, for its last matrix
-    std::unordered_map<std::uint32_t, renderer::Mat4> prev_matrices;
-    std::unordered_map<std::uint32_t, std::array<float, 4>> prev_spheres;
-    std::vector<viewer::LevelScene::JointColumns> palette;
-    std::vector<renderer::ShadowCapsule> shadows, prev_shadows;
-    std::uint32_t shadow_moby = 0, prev_shadow_moby = 0;
-    viewer::MobyShadowState shadow_state, prev_shadow_state;
-    std::optional<bool> hero_airborne;
-    // The last tick's poses, by moby: where its joints start in prev_palette and how many.
-    std::vector<viewer::LevelScene::JointColumns> prev_palette;
-    std::unordered_map<std::uint32_t, std::pair<int, int>> prev_poses;
-    std::vector<int> joints;            // each live moby's joints in `palette` (0 without a pose)
-    std::vector<std::uint8_t> packets;  // the 2D path
-    std::size_t before_world = 0;
-    std::vector<renderer::EffectVertex> strip_vertices;
-    std::vector<renderer::EffectStrip> strips;
-    std::vector<renderer::EffectQuad> effects;
-    std::vector<renderer::ImageUpload> effect_uploads;
-    std::array<renderer::Mat4, 8> sky_shells{};
-    unsigned sky_shell_mask = 0;
-    std::vector<renderer::UiQuad> ui_quads;
-
-    // Mobys the game drew into a texture with a camera of its own (the vendor's screens): each
-    // drawn at its marker in the 2D path (renderer::FrameInput::target_mobys).
-    struct TargetMoby {
-        std::uint32_t address = 0;
-        viewer::Instance instance;
-        viewer::GameState camera;
-    };
-
-    std::vector<TargetMoby> target_mobys;
-    std::uint32_t draws = 0;
-    bool has_camera = false;
-    std::uint64_t frame = 0;
-};
-
-struct State {
-    std::string game;
-    ScriptedMobyColours scripted_moby_colours;
-    std::filesystem::path levels;
-    std::unique_ptr<platform::Platform> sdl;
-    std::unique_ptr<platform::Window> window;
-    platform::Input input;
-    bool capture_wanted = false;  // a mod's asking (capture_mouse)
-    bool keyboard_taken = false;  // a mod took the keyboard (take_keyboard)
-    std::unique_ptr<renderer::Renderer> renderer;
-    renderer::FrameBuffer frame;
-    renderer::FrameBuffer picture;  // show_picture's: a movie frame, a boot still
-    // The last frame the game drew its world in: what its draw buffer still holds on a frame it
-    // draws nothing in (the tick a page menu opens), and so what reading the frame back answers.
-    renderer::FrameBuffer last_world;
-    viewer::LevelData level;
-    viewer::LevelScene scene;
-    int loaded = -2;  // the level whose geometry is uploaded; -2 none
-    std::uint64_t index = 0;
-    // Every image the game sent outside the display list, oldest first, the latest per
-    // rectangle: given again to each renderer made (use_level makes a new one per level).
-    std::vector<renderer::ImageUpload> images;
-    // The camera the game's world renderers drew with this frame (world_drawn), if they ran.
-    std::optional<viewer::GameState> world_camera;
-    // Mobys drawn this frame with a camera of their own (mobys_drawn): address, that camera.
-    std::vector<std::pair<std::uint32_t, viewer::GameState>> moby_cameras;
-    // The world effect quads the game drew since the last frame (effect_quad).
-    std::vector<renderer::EffectQuad> effects;
-    std::vector<renderer::ImageUpload> effect_uploads;  // the quads' textures (EffectQuad::uploads)
-    // The sky shells the game drew since the last frame, with their matrices (sky_shell).
-    std::array<renderer::Mat4, 8> sky_shells{};
-    unsigned sky_shell_mask = 0;
-
-    // The live particles the game drew since the last frame (particle): record, texture source.
-    struct Particle {
-        std::array<std::uint8_t, 0x40> record;
-        std::uint32_t pixels, clut;
-        int log2_side;
-    };
-
-    std::vector<Particle> particles;
-    // The particle textures decoded so far (particle_texture): pixels and palette hash -> pool key,
-    // for the renderer that holds them.
-    std::unordered_map<std::uint64_t, std::uint32_t> particle_textures;
-    const void* particle_textures_for = nullptr;
-    // The sky sprites the game drew since the last frame (sky_sprite): record, TEX0.
-    std::vector<std::pair<std::array<std::uint8_t, 0x20>, std::uint64_t>> sky_sprites;
-    // The 2D layer's quads drawn natively since the last frame (ui_quad), by marker index.
-    std::vector<renderer::UiQuad> ui_quads;
-    // The quads of the last ticks that drew any, by generation: a marker names the generation of
-    // the tick that recorded it (ui_quad), and a list is drawn with that tick's quads (frame).
-    std::uint32_t ui_generation = 0;
-    std::array<std::pair<std::uint32_t, std::vector<renderer::UiQuad>>, 4> ui_kept{};
-    // The last world drawn (last_world): the tick it was drawn on; whether the last tick was a page
-    // menu's with its snapshot; whether this tick's frames go over the last world (draw_kept).
-    std::uint64_t last_world_tick = 0;
-    bool last_tick_menu = false;
-    bool hold_last_world = false;
-    // Ticks in a row on which the game drew no world while its 2D list was a page menu's (the
-    // picture read back, at least kSnapshotBytes): the ticks after the pause menu closes. The
-    // picture they would make is the menu without its framed models, then the dimmed picture
-    // alone; the console keeps showing its last frame meanwhile, and so does the port (frame).
-    int menu_gap_ticks = 0;
-    bool repeat_frame = false;
-    // What the window is in now of the player's settings (apply_settings): the display mode, the
-    // display and the fullscreen size; the picture's shape; the swap's wait as asked and as the
-    // driver took it; whether the sound is held silent (the window lost the keyboard).
-    settings::DisplayMode display_mode = settings::DisplayMode::Windowed;
-    int monitor = 0;
-    int fullscreen_width = 0;
-    int fullscreen_height = 0;
-    settings::Aspect aspect = settings::Aspect::Standard;
-    int aspect_custom_x = 0;
-    int aspect_custom_y = 0;
-    platform::SwapInterval swap_asked = platform::SwapInterval::VSync;
-    platform::SwapInterval swap = platform::SwapInterval::VSync;
-    bool muted = false;
-    // The tick's own frame was left undrawn this many ticks in a row (frame(): the game is late).
-    int skipped = 0;
-    Kept kept;
-};
-
-std::unique_ptr<State> g;
 
 // Where a scripted run is (port/tools/regress): the game mode as frame() last read it, and the
 // window frame at which the player got control (-1 before). Control is a level's game mode 0 (play)
@@ -1615,25 +1495,6 @@ bool show_picture(const std::uint8_t* rgba, int width, int height, float black) 
 
 namespace {
 
-// When frames reach the display, for drawing between ticks (set_tick, between): the tick the kept
-// scene belongs to and the game's tick length; the last swap that waited (a refresh) and the
-// display's refresh interval; what drawing a frame costs before its swap.
-struct Pacing {
-    std::chrono::steady_clock::time_point tick{};
-    std::chrono::duration<double> period{0.02};
-    std::chrono::steady_clock::time_point last_swap{};
-    double interval = 0.0;  // seconds; 0 when the display does not say
-    // The display's refresh rate is to be read again: at start, and whenever the window says its
-    // display or that display's mode changed (window_event), not by asking every so many frames.
-    bool interval_stale = true;
-    double cost = 0.004;                      // seconds
-    std::chrono::duration<double> late{0.0};  // how long after its time the tick came (set_tick)
-    float last_alpha = -1.0f;                 // how far between ticks the last frame was drawn
-    std::chrono::steady_clock::time_point due{};  // when the frame cap lets the next frame start
-    // The kept tick has not been drawn yet (the cap held its own frame back): the next frame drawn
-    // is its first.
-    bool first_pending = false;
-} pacing;
 
 // The cap and refresh share one deadline schedule. A quick presentation return
 // is not proof of a missed VSync: Vulkan queues presentation asynchronously.
