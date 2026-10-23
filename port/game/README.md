@@ -42,6 +42,7 @@ layer and the renderer.
 | `groups` | parts of the tree that are separate programs over the same addresses (rac3's menu, `src/frontbin`, overlay 100) |
 | `overlay_hook` | true if `host/` provides `openrac_game_loaded_overlay` (which level's program is loaded) |
 | `hand`, `drafts` | C for functions the decompilation has as assembly: the port's own (`hand/hand.tsv`), and the decompilation's own drafts (`drafts.tsv`) ([hostgen](../tools/hostgen/README.md#a-games-configuration)) |
+| `overrides` | the port's own C for functions the decompilation has as matching C, where the port has to do otherwise (`hand/overrides.tsv`): it replaces the matched definition in the port only, and the decompilation keeps its match ([hostgen](../tools/hostgen/README.md#a-games-configuration)) |
 | `asm` | C from the assembly the game's setup wrote, for the functions with no C: its directories in the decompilation, `$gp`, whether it is on, and the retail program to read the same instructions from where the files are not (`"retail"`; a player's build reads its disc image) ([hostgen](../tools/hostgen/README.md#functions-with-no-c-c-from-their-assembly)) |
 | `roots` | where hostgen's frontier report starts |
 

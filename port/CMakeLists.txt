@@ -225,6 +225,19 @@ add_test(NAME crate_init COMMAND crate_init_test)
 
 include(Assets)
 
+# The EE FPU's float arithmetic for C (openrac/ps2float.h): the model of assets/ps2_float.h behind C
+# entry points, for the functions hostgen translates with it (hostgen.json "ps2_float") and the
+# port's own C that computes as the console does. The games' library links it (cmake/Games.cmake).
+add_library(openrac_ps2float STATIC runtime/ps2float.cpp)
+target_link_libraries(openrac_ps2float PUBLIC openrac_runtime openrac_assets_core)
+openrac_warnings(openrac_ps2float)
+
+add_executable(ps2float_test tests/ps2float_test.c)
+target_compile_options(ps2float_test PRIVATE -ffp-contract=off)
+target_link_libraries(ps2float_test PRIVATE openrac_ps2float)
+openrac_warnings(ps2float_test)
+add_test(NAME ps2float COMMAND ps2float_test)
+
 # Probe assets and CPU sampling need neither a graphics context nor Embree.
 add_library(openrac_lighting STATIC enhanced/lighting/probes.cpp enhanced/lighting/probe_atlas.cpp enhanced/lighting/probe_regions.cpp)
 target_include_directories(openrac_lighting PUBLIC .)
