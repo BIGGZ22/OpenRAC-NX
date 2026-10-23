@@ -253,10 +253,18 @@ void Input::update() {
                 pad.set(Button::R2, true, r2);
             }
             // Squared as the DualShock 2's (pad.h): a round stick pushed to a diagonal runs.
-            stick_bytes(SDL_GetGamepadAxis(g, SDL_GAMEPAD_AXIS_LEFTX), SDL_GetGamepadAxis(g, SDL_GAMEPAD_AXIS_LEFTY),
-                        pad.left_x, pad.left_y);
-            stick_bytes(SDL_GetGamepadAxis(g, SDL_GAMEPAD_AXIS_RIGHTX),
-                        SDL_GetGamepadAxis(g, SDL_GAMEPAD_AXIS_RIGHTY), pad.right_x, pad.right_y);
+            stick_bytes(
+                SDL_GetGamepadAxis(g, SDL_GAMEPAD_AXIS_LEFTX),
+                SDL_GetGamepadAxis(g, SDL_GAMEPAD_AXIS_LEFTY),
+                pad.left_x,
+                pad.left_y
+            );
+            stick_bytes(
+                SDL_GetGamepadAxis(g, SDL_GAMEPAD_AXIS_RIGHTX),
+                SDL_GetGamepadAxis(g, SDL_GAMEPAD_AXIS_RIGHTY),
+                pad.right_x,
+                pad.right_y
+            );
             // The large motor has a speed, the small one is on or off: they
             // drive SDL's low- and high-frequency rumble. Renewed each frame,
             // so a short duration stops it when the game stops asking.

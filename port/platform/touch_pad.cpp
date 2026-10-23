@@ -39,7 +39,8 @@ std::uint8_t axis_byte(float v) {
     return static_cast<std::uint8_t>(std::lround(127.5f + v * 127.5f));
 }
 
-constexpr const char* kGroupNames[] = {"stick", "dpad", "face", "l1", "l2", "r1", "r2", "select", "start", "menu"};
+constexpr const char* kGroupNames[] =
+    {"stick", "dpad", "face", "l1", "l2", "r1", "r2", "select", "start", "menu"};
 static_assert(std::size(kGroupNames) == kTouchGroups, "a name for each TouchGroup");
 
 }  // namespace
@@ -97,7 +98,9 @@ TouchPad::TouchPad() {
         {Kind::Menu, Button::Cross, G::Menu, 0.0f, 0.0f, 0.036f, 1.0f},
     };
     for (const Item& item : items) {
-        m_controls.push_back(TouchControl{item.kind, item.button, item.group, 0.0f, 0.0f, item.radius, item.stretch});
+        m_controls.push_back(
+            TouchControl{item.kind, item.button, item.group, 0.0f, 0.0f, item.radius, item.stretch}
+        );
         m_members.push_back(Member{item.dx, item.dy, item.radius});
     }
     layout_controls();
@@ -142,11 +145,13 @@ void TouchPad::set_layout(std::string_view text) {
         float dx = 0.0f;
         float dy = 0.0f;
         char after = 0;
-        if (std::sscanf(item.c_str(), " %15s %f %f %c", name, &dx, &dy, &after) == 3 && std::isfinite(dx)
-            && std::isfinite(dy)) {
+        if (std::sscanf(item.c_str(), " %15s %f %f %c", name, &dx, &dy, &after) == 3
+            && std::isfinite(dx) && std::isfinite(dy)) {
             for (std::size_t g = 0; g < kTouchGroups; ++g) {
                 if (std::string_view(name) == kGroupNames[g]) {
-                    m_offsets[g] = {std::clamp(dx, -kMaxOffset, kMaxOffset), std::clamp(dy, -kMaxOffset, kMaxOffset)};
+                    m_offsets[g] =
+                        {std::clamp(dx, -kMaxOffset, kMaxOffset),
+                         std::clamp(dy, -kMaxOffset, kMaxOffset)};
                 }
             }
         }
@@ -160,7 +165,8 @@ std::string TouchPad::layout() const {
     for (std::size_t g = 0; g < kTouchGroups; ++g) {
         const auto [dx, dy] = m_offsets[g];
         if (dx != 0.0f || dy != 0.0f) {
-            text += std::format("{}{} {:.4f} {:.4f}", text.empty() ? "" : ", ", kGroupNames[g], dx, dy);
+            text +=
+                std::format("{}{} {:.4f} {:.4f}", text.empty() ? "" : ", ", kGroupNames[g], dx, dy);
         }
     }
     return text;
@@ -186,9 +192,15 @@ void TouchPad::anchor(TouchGroup group, float& across, float& down) const {
     const auto g = static_cast<std::size_t>(group);
     const Place& p = m_places[g];
     switch (p.from) {
-        case Place::From::Left: across = m_safe_left + p.offset * m_scale; break;
-        case Place::From::Middle: across = m_aspect * 0.5f + p.offset * m_scale; break;
-        case Place::From::Right: across = m_aspect - m_safe_right - p.offset * m_scale; break;
+        case Place::From::Left:
+            across = m_safe_left + p.offset * m_scale;
+            break;
+        case Place::From::Middle:
+            across = m_aspect * 0.5f + p.offset * m_scale;
+            break;
+        case Place::From::Right:
+            across = m_aspect - m_safe_right - p.offset * m_scale;
+            break;
     }
     // Toward the nearer of the top and the bottom as the controls get smaller.
     down = p.y < 0.5f ? p.y * m_scale : 1.0f - (1.0f - p.y) * m_scale;
@@ -321,15 +333,18 @@ void TouchPad::finger_move(std::uint64_t finger, float x, float y) {
     f->y = y;
     if (f->role == Role::Drag) {
         const auto g = static_cast<std::size_t>(f->group);
-        m_offsets[g] = {std::clamp(f->offset[0] + (x - f->from_x) * m_aspect, -kMaxOffset, kMaxOffset),
-                        std::clamp(f->offset[1] + (y - f->from_y), -kMaxOffset, kMaxOffset)};
+        m_offsets[g] =
+            {std::clamp(f->offset[0] + (x - f->from_x) * m_aspect, -kMaxOffset, kMaxOffset),
+             std::clamp(f->offset[1] + (y - f->from_y), -kMaxOffset, kMaxOffset)};
         layout_controls();
     }
 }
 
 void TouchPad::finger_up(std::uint64_t finger) {
     std::erase_if(m_fingers, [finger](const Finger& f) { return f.id == finger; });
-    if (std::none_of(m_fingers.begin(), m_fingers.end(), [](const Finger& f) { return f.role == Role::Look; })) {
+    if (std::none_of(m_fingers.begin(), m_fingers.end(), [](const Finger& f) {
+            return f.role == Role::Look;
+        })) {
         m_look_x = m_look_y = 0.0f;  // the camera stops with the finger lifted
     }
     layout_controls();  // a stick let go goes home
@@ -364,9 +379,9 @@ void TouchPad::idle(std::uint64_t now_ms) {
     }
 
     // The camera: how fast its fingers moved since the last frame, as far as the right stick goes.
-    const float dt =
-        m_last_idle_ms != 0 && now_ms > m_last_idle_ms ? std::min(static_cast<float>(now_ms - m_last_idle_ms) / 1000.0f, 0.1f)
-                                                       : 0.0f;
+    const float dt = m_last_idle_ms != 0 && now_ms > m_last_idle_ms
+                         ? std::min(static_cast<float>(now_ms - m_last_idle_ms) / 1000.0f, 0.1f)
+                         : 0.0f;
     m_last_idle_ms = now_ms;
     float vx = 0.0f;
     float vy = 0.0f;
@@ -418,12 +433,17 @@ bool TouchPad::held(std::size_t index) const {
     }
     return std::any_of(m_fingers.begin(), m_fingers.end(), [&](const Finger& f) {
         switch (f.role) {
-            case Role::Drag: return f.group == c.group;  // lit while it is being moved
-            case Role::Stick: return f.stick == static_cast<int>(index);
-            case Role::Look: return false;
-            case Role::None: break;
+            case Role::Drag:
+                return f.group == c.group;  // lit while it is being moved
+            case Role::Stick:
+                return f.stick == static_cast<int>(index);
+            case Role::Look:
+                return false;
+            case Role::None:
+                break;
         }
-        return c.kind != Kind::LeftStick && !m_editing && distance(c, f.x, f.y) <= c.radius + kButtonReach;
+        return c.kind != Kind::LeftStick && !m_editing
+               && distance(c, f.x, f.y) <= c.radius + kButtonReach;
     });
 }
 

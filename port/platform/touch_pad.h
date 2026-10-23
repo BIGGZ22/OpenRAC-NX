@@ -36,12 +36,28 @@
 namespace openrac::platform {
 
 // The parts of the pad that move together when the player rearranges it.
-enum class TouchGroup { Stick, Dpad, Face, L1, L2, R1, R2, Select, Start, Menu, Count };
+enum class TouchGroup {
+    Stick,
+    Dpad,
+    Face,
+    L1,
+    L2,
+    R1,
+    R2,
+    Select,
+    Start,
+    Menu,
+    Count
+};
 
 inline constexpr std::size_t kTouchGroups = static_cast<std::size_t>(TouchGroup::Count);
 
 struct TouchControl {
-    enum class Kind { LeftStick, Button, Menu };
+    enum class Kind {
+        LeftStick,
+        Button,
+        Menu
+    };
     Kind kind = Kind::Button;
     Button button = Button::Cross;  // for Kind::Button
     TouchGroup group = TouchGroup::Face;
@@ -133,7 +149,12 @@ public:
     static const char* group_name(TouchGroup group);
 
 private:
-    enum class Role { None, Stick, Look, Drag };
+    enum class Role {
+        None,
+        Stick,
+        Look,
+        Drag
+    };
 
     struct Finger {
         std::uint64_t id = 0;
@@ -173,12 +194,14 @@ private:
     void bring_stick(std::size_t index, float x, float y);
 
     std::vector<TouchControl> m_controls;
+
     // Each control's offset from its group's centre and its radius, in window heights at scale 1.
     struct Member {
         float dx = 0.0f;
         float dy = 0.0f;
         float radius = 0.0f;
     };
+
     std::vector<Member> m_members;
     std::array<Place, kTouchGroups> m_places{};
     std::array<std::array<float, 2>, kTouchGroups> m_offsets{};

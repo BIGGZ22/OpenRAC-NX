@@ -92,7 +92,9 @@ void conversions() {
 // A round stick's diagonal reaches the square's corner, as a DualShock 2's does; along an axis,
 // half way, or already square, it stays where it was.
 void squared_sticks() {
-    const auto near = [](float a, float b) { return std::abs(a - b) < 1e-4f; };
+    const auto near = [](float a, float b) {
+        return std::abs(a - b) < 1e-4f;
+    };
     float x = 0.7071f;
     float y = -0.7071f;
     square_stick(x, y);

@@ -167,7 +167,9 @@ int main() {
     camera.idle(1016);
     CHECK(read(camera).right_x == kStickCentre);
     for (int frame = 1; frame <= 10; ++frame) {
-        camera.finger_move(1, 0.6f + 0.01f * static_cast<float>(frame), 0.4f);  // right, 1.25 heights a second
+        camera.finger_move(
+            1, 0.6f + 0.01f * static_cast<float>(frame), 0.4f
+        );  // right, 1.25 heights a second
         camera.idle(1016 + 16 * static_cast<std::uint64_t>(frame));
     }
     pad = read(camera);

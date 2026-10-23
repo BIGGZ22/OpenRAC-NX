@@ -1906,7 +1906,8 @@ int drawer_choice(const char* label, const std::string& value, bool can_lower = 
 
 // A percentage the player picks from `list` (settings.h), as a choice row: true when it changed.
 bool drawer_listed(const char* label, int& value, std::span<const int> list) {
-    const int by = drawer_choice(label, std::format("{}%", value), value > list.front(), value < list.back());
+    const int by =
+        drawer_choice(label, std::format("{}%", value), value > list.front(), value < list.back());
     if (by == 0) {
         return false;
     }
@@ -1967,20 +1968,28 @@ void drawer_enhanced() {
     drawer_section("ENHANCED GRAPHICS");
     card_begin();
     if (!gl::enhanced_rendering_enabled()) {
-        drawer_note("Off. Switch it on under Mods in the launcher: bounced light, modern shadows and ambient "
-                    "occlusion, from the game's next start.");
+        drawer_note(
+            "Off. Switch it on under Mods in the launcher: bounced light, modern shadows and "
+            "ambient "
+            "occlusion, from the game's next start."
+        );
         card_end();
         return;
     }
     if (!gl::enhanced_rendering_available()) {
-        drawer_note("It needs the Vulkan renderer, and this run draws with OpenGL. Vulkan 1.3 could not start "
-                    "on this device or driver.");
+        drawer_note(
+            "It needs the Vulkan renderer, and this run draws with OpenGL. Vulkan 1.3 could not "
+            "start "
+            "on this device or driver."
+        );
         card_end();
         return;
     }
     if (!enhanced_graphics_available()) {
-        drawer_note("This level's lighting is not prepared yet. In the launcher, Mods, Enhanced graphics "
-                    "prepares it from your levels; the game shows the original lighting until then.");
+        drawer_note(
+            "This level's lighting is not prepared yet. In the launcher, Mods, Enhanced graphics "
+            "prepares it from your levels; the game shows the original lighting until then."
+        );
         card_end();
         return;
     }
@@ -2000,9 +2009,12 @@ void drawer_enhanced() {
         }
         if (set.probe_lighting) {
             const float gi = set.probe_gi_multiplier;
-            if (const int by = drawer_choice("Bounce strength", std::format("{:.1f}x", gi), gi > 0.05f, gi < 4.95f)) {
-                set.probe_gi_multiplier = std::clamp(std::round((gi + 0.25f * static_cast<float>(by)) * 4.0f) / 4.0f,
-                                                     0.0f, 5.0f);
+            if (const int by = drawer_choice(
+                    "Bounce strength", std::format("{:.1f}x", gi), gi > 0.05f, gi < 4.95f
+                )) {
+                set.probe_gi_multiplier = std::clamp(
+                    std::round((gi + 0.25f * static_cast<float>(by)) * 4.0f) / 4.0f, 0.0f, 5.0f
+                );
                 changed = true;
             }
         }
@@ -2013,8 +2025,11 @@ void drawer_enhanced() {
         if (set.gtao) {
             auto& gtao = set.gtao_settings;
             const bool quality = gtao.quality == renderer::GtaoQuality::Quality;
-            if (drawer_choice("Occlusion quality", quality ? "Quality" : "Performance", quality, !quality)) {
-                gtao.quality = quality ? renderer::GtaoQuality::Performance : renderer::GtaoQuality::Quality;
+            if (drawer_choice(
+                    "Occlusion quality", quality ? "Quality" : "Performance", quality, !quality
+                )) {
+                gtao.quality =
+                    quality ? renderer::GtaoQuality::Performance : renderer::GtaoQuality::Quality;
                 changed = true;
             }
         }
@@ -2266,8 +2281,12 @@ bool bar_button(const char* label, float width, bool primary = false) {
         list->AddRect(a, b, look::kLineStrong, round);
     }
     const ImVec2 size = ImGui::CalcTextSize(label, nullptr, true);
-    list->AddText(ImVec2((a.x + b.x - size.x) * 0.5f, a.y + (height - size.y) * 0.5f),
-                  primary ? look::kOrangeInk : look::kText, label, ImGui::FindRenderedTextEnd(label));
+    list->AddText(
+        ImVec2((a.x + b.x - size.x) * 0.5f, a.y + (height - size.y) * 0.5f),
+        primary ? look::kOrangeInk : look::kText,
+        label,
+        ImGui::FindRenderedTextEnd(label)
+    );
     return pressed;
 }
 
@@ -2279,8 +2298,13 @@ void touch_edit_bar() {
     const float button = dp(52.0f);
     const float wide = dp(96.0f);
     const float width = button * 2.0f + wide * 3.0f + gap * 4.0f + dp(28.0f);
-    ImGui::SetNextWindowPos(ImVec2(viewport->Pos.x + viewport->Size.x * 0.5f, viewport->Pos.y + viewport->Size.y * 0.42f),
-                            ImGuiCond_Always, ImVec2(0.5f, 0.5f));
+    ImGui::SetNextWindowPos(
+        ImVec2(
+            viewport->Pos.x + viewport->Size.x * 0.5f, viewport->Pos.y + viewport->Size.y * 0.42f
+        ),
+        ImGuiCond_Always,
+        ImVec2(0.5f, 0.5f)
+    );
     ImGui::SetNextWindowSize(ImVec2(width, 0.0f));
     ImGui::PushStyleVar(ImGuiStyleVar_WindowRounding, dp(16.0f));
     ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(dp(14.0f), dp(12.0f)));
@@ -2288,7 +2312,8 @@ void touch_edit_bar() {
     ImGui::PushStyleColor(ImGuiCol_WindowBg, ImGui::ColorConvertU32ToFloat4(look::kPanel));
     ImGui::PushStyleColor(ImGuiCol_Border, ImGui::ColorConvertU32ToFloat4(look::kLine));
     const ImGuiWindowFlags flags = ImGuiWindowFlags_NoDecoration | ImGuiWindowFlags_NoMove
-                                   | ImGuiWindowFlags_NoSavedSettings | ImGuiWindowFlags_AlwaysAutoResize;
+                                   | ImGuiWindowFlags_NoSavedSettings
+                                   | ImGuiWindowFlags_AlwaysAutoResize;
     if (ImGui::Begin("Move the controls", nullptr, flags)) {
         auto& set = settings::get();
         ImGui::PushStyleColor(ImGuiCol_Text, ImGui::ColorConvertU32ToFloat4(look::kSoft));
@@ -2319,7 +2344,8 @@ void touch_edit_bar() {
             settings::save();
         }
         s.bar_min = ImGui::GetWindowPos();
-        s.bar_max = ImVec2(s.bar_min.x + ImGui::GetWindowSize().x, s.bar_min.y + ImGui::GetWindowSize().y);
+        s.bar_max =
+            ImVec2(s.bar_min.x + ImGui::GetWindowSize().x, s.bar_min.y + ImGui::GetWindowSize().y);
     }
     ImGui::End();
     ImGui::PopStyleColor(2);
@@ -2552,7 +2578,8 @@ void draw(const Shown& shown) {
     stats::lap("present");
     s.window = shown.window;
     const bool badge = s.paused || s.stretch != 1.0 || !s.toast.empty() || !s.notice.empty();
-    const bool drawer_out = s.drawer_open || s.drawer_at > 0.0f || s.shot_when_shut || s.touch_editing;
+    const bool drawer_out =
+        s.drawer_open || s.drawer_at > 0.0f || s.shot_when_shut || s.touch_editing;
     if (!(s.visible || menu_bar_shown() || badge || drawer_out || !s.shot_path.empty()) || shown.window == nullptr
         || !initialise(shown.window)) {
         return;
