@@ -9,6 +9,10 @@
 #include <cstring>
 #include <deque>
 #include <memory>
+#include <optional>
+
+#include "common/env.h"
+#include "common/log.h"
 
 namespace openrac::stats {
 
@@ -436,19 +440,41 @@ bool dumping() {
     return state().dump != nullptr;
 }
 
+namespace {
+
+// Returns whether the probe of `variable` starts on: its value read through env.h by its row's
+// Truth. Every probe's variable is a flag read as Truth::Set, on when set to anything, as probe
+// read it when it called getenv itself (stats_test pins both).
+bool starts_on(const char* variable) {
+    const std::optional<env::Var> var = env::find(variable);
+
+    // A probe declared without its row in env.cpp's table, or naming a variable that is not a flag,
+    // starts off; said once, since probe keeps one entry per variable.
+    if (!var || env::variable(*var).kind != env::Kind::Flag) {
+        log::warn("probe {}: not a flag of common/env.cpp's table, off", variable);
+        return false;
+    }
+
+    return env::flag(*var);
+}
+
+}  // namespace
+
 std::vector<Probe*>& probes() {
     static std::vector<Probe*> list;
     return list;
 }
 
 const bool& probe(const char* variable, const char* what) {
+    // A variable has one probe: a second declaration is handed the first one's switch.
     for (Probe* p : probes()) {
+        // The probe of that variable, by name.
         if (std::strcmp(p->variable, variable) == 0) {
             return p->on;
         }
     }
     // Kept for the life of the program: the callers hold references to `on`.
-    Probe* p = new Probe{variable, what, std::getenv(variable) != nullptr};
+    Probe* p = new Probe{variable, what, starts_on(variable)};
     probes().push_back(p);
     return p->on;
 }
