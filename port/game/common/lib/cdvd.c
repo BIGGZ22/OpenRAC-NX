@@ -8,11 +8,11 @@
  * game's polling (sceCdSync) finds it done. */
 #define _FILE_OFFSET_BITS 64
 #include <stdio.h>
-#include <stdlib.h>
 #include <time.h>
 
 #include "openrac/game_host.h"
 #include "openrac/game_lib.h"
+#include "openrac/host_env.h"
 
 #define SECTOR 2048
 #define MAX_PATCHES 64
@@ -115,7 +115,7 @@ int openrac_lib_sceCdRead(unsigned int sector, unsigned int count, gaddr buffer,
     (void)mode;
     FILE* f = open_disc();
     /* OPENRAC_TRACE_CD=1: each read, to see where the game's data lands. */
-    if (getenv("OPENRAC_TRACE_CD") != NULL) {
+    if (openrac_env_string("OPENRAC_TRACE_CD") != NULL) {
         fprintf(stderr, "[debug] CD read %u sectors at %u -> %08x\n", count, sector, (unsigned)buffer);
     }
     if (f == NULL) {

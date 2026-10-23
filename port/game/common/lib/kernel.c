@@ -13,6 +13,7 @@
 #include "openrac/game_host.h"
 #include "openrac/game_lib.h"
 #include "openrac/guest.h"
+#include "openrac/host_env.h"
 
 #include <stdint.h>
 #include <string.h>
@@ -272,7 +273,7 @@ static unsigned int sif_bind_calls;
 static unsigned int sif_rpc_calls;
 
 static int trace_sif(void) {
-    const char* value = getenv("OPENRAC_TRACE_SIF");
+    const char* value = openrac_env_string("OPENRAC_TRACE_SIF");
     return value != NULL && value[0] != '\0';
 }
 

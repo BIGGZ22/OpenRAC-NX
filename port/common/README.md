@@ -71,11 +71,14 @@ compatibility library for the backtrace below API 33).
 
 `env.cpp`'s table lists every `OPENRAC_*` variable the port reads, and
 [docs/port/DEBUGGING.md](../../docs/port/DEBUGGING.md) documents each one; the `env` test holds the
-two to the same list. `runtime/`, `platform/` and `renderer/` (outside `renderer/vulkan/`) read
-their variables through `env.h`; `game/`, `renderer/vulkan/`, `android/` and `enhanced/` still call
-`getenv` and move onto it later (docs/restructure/PROGRESS.md, P2-09). Within `common`,
-`OPENRAC_LOG` sets the log's level (`log.cpp`), and `stats::probe` reads each `OPENRAC_*` switch a
-module declares through it.
+two to the same list. C++ reads its variables through `env.h`; C, which cannot include it
+(section 14.3 of [CODING_CONVENTIONS.md](../docs/CODING_CONVENTIONS.md)), reads them through the
+runtime's C entry point `openrac/host_env.h`, which looks the name up with `env::find` and hands
+back the kept value (`env::value`'s view ends in a NUL for it). The library replacements of
+`game/common/lib` read through it; what still calls `getenv` moves onto the table later
+(docs/restructure/PROGRESS.md): rac1's host C (P2-38), `renderer/vulkan/`, `android/` and
+`mod_scripts.cpp` (P2-20), and within `common`, `log.cpp` for `OPENRAC_LOG`, the log's level, and
+`stats::probe` for each `OPENRAC_*` switch a module declares through it (P2-21).
 
 ## Tests
 
@@ -85,7 +88,8 @@ module declares through it.
 | `joining_thread` | an owner going, or assigned over, waits for its thread |
 | `result` | a value or an error through each accessor, the wrong side throwing, copies and moves (a move-only value included), and `Result<void>` |
 | `c_boundary` | a body that returns passes through unreported; a `std::exception` and a non-standard thrown value are reported and the failure value returned; a void body; a long message cut to the buffer; the default and a null reporter write to the log |
-| `env` | each kind of variable reads as the `getenv` calls it replaced read it, the values are read once, and DEBUGGING.md documents the table's variables and no other |
+| `env` | each kind of variable reads as the `getenv` calls it replaced read it, the values are read once, a variable is found by its whole name, and DEBUGGING.md documents the table's variables and no other |
+| `host_env` | the table read from C through `openrac/host_env.h` (runtime/README.md) |
 | `viewer` | the JSON reader's values and its errors (with the viewer's own checks) |
 | `mod_manifest`, `mod_loader`, `mod_scripts` | the mod manifests and status files, read through the JSON reader |
 | `assets_world_collision` | the float model against values the console computes, beside the collision queries that use it |

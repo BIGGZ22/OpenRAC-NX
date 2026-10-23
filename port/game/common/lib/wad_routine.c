@@ -8,11 +8,11 @@
 
 #include <stdint.h>
 #include <stdio.h>
-#include <stdlib.h>
 #include <string.h>
 
 #include "openrac/game_host.h"
 #include "openrac/guest.h"
+#include "openrac/host_env.h"
 
 /* The EE's segments map the same RAM; the low 29 bits are its physical
  * address (documented). */
@@ -66,7 +66,7 @@ int openrac_wad_routine(int source, int destination, const char* game) {
     }
 
     /* OPENRAC_TRACE_WAD (docs/port/DEBUGGING.md). */
-    if (getenv("OPENRAC_TRACE_WAD")) {
+    if (openrac_env_string("OPENRAC_TRACE_WAD")) {
         fprintf(
             stderr,
             "[debug] %s WAD at %08x: %u -> %u bytes, destination %08x\n",

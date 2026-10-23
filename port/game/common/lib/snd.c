@@ -11,17 +11,17 @@
 #include "openrac/game_host.h"
 #include "openrac/game_lib.h"
 #include "openrac/guest.h"
+#include "openrac/host_env.h"
 #include "openrac/sound_engine.h"
 
 #include <stdio.h>
-#include <stdlib.h>
 
 /* OPENRAC_SOUND_LOG (as the command flush, rac1/host/hand.c): the stops and the still-playing
  * questions, which go to the engine directly rather than through the batch, on stderr too. */
 static int sound_log(void) {
     static int on = -1;
     if (on < 0) {
-        on = getenv("OPENRAC_SOUND_LOG") != NULL;
+        on = openrac_env_string("OPENRAC_SOUND_LOG") != NULL;
     }
     return on;
 }
