@@ -80,6 +80,11 @@ and notes:
 - `port/assets/sound/`, `port/media/`, `port/audio/`: sound banks, VAG, PSS and
   ADPCM from `crates/rc-formats`; the MPEG-2 decoder from `crates/rc-video`;
   the voices, envelope and reverb from `crates/rc-game/src/audio`.
+- `port/renderer/world/`, `port/renderer/shaders/world/`: the world renderers
+  (terrain and tie drawing and their levels of detail, the GS blend and fog
+  state, the draw data the renderers take, the VU float arithmetic they
+  replay), converted to C++ from `crates/rc-engine` and `crates/rc-formats`;
+  the shaders converted to GLSL from `crates/rc-engine/assets/shaders`.
 - `port/extract/`: `openrac-extractor`'s JSON-lines output, crash-safe writes,
   free-space check and decompile step, after `crates/rc-extract`.
 
