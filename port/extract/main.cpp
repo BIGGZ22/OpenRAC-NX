@@ -34,6 +34,7 @@ int usage(const char* problem) {
 int main(int argc, char** argv) {
     openrac::extract::Options options;
     bool json = false;
+
     for (int i = 1; i < argc; ++i) {
         std::string_view arg = argv[i];
         std::string value;
@@ -42,12 +43,15 @@ int main(int argc, char** argv) {
                 value = std::string(arg.substr(name.size() + 1));
                 return true;
             }
+
             if (arg == name && i + 1 < argc) {
                 value = argv[++i];
                 return true;
             }
+
             return false;
         };
+
         if (arg == "-h" || arg == "--help") {
             std::fputs(kUsage, stdout);
             return 0;
@@ -71,13 +75,16 @@ int main(int argc, char** argv) {
             return usage(("unknown argument " + std::string(arg)).c_str());
         }
     }
+
     if (options.image.empty()) {
         return usage("no image named");
     }
+
     if (options.game != "rac1" && options.game != "rac2" && options.game != "rac3"
         && options.game != "rac4") {
         return usage("--game must be rac1, rac2, rac3 or rac4");
     }
+
     openrac::extract::Reporter report(json);
     return openrac::extract::run(options, report);
 }

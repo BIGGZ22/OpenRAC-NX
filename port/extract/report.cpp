@@ -18,14 +18,17 @@ std::string_view stage_name(Stage stage) {
         case Stage::Decompile:
             return "decompile";
     }
+
     return "unknown";
 }
 
 std::string message_of(ErrorCode code, const std::string& detail) {
     std::string text = std::format("error {}: {}", static_cast<int>(code), error_text(code));
+
     if (!detail.empty()) {
         text += std::format(" ({})", detail);
     }
+
     return text;
 }
 
@@ -63,6 +66,7 @@ std::string_view error_text(ErrorCode code) {
         case ErrorCode::CannotRead:
             return "the image could not be read (unreadable, or truncated)";
     }
+
     return "unknown error";
 }
 
@@ -97,10 +101,13 @@ void Reporter::progress(
     if (!m_json) {
         return;  // a person reads the info lines
     }
+
     const auto now = std::chrono::steady_clock::now();
+
     if (done != total && now - m_last_progress < std::chrono::milliseconds(100)) {
         return;
     }
+
     m_last_progress = now;
     line(
         m_out,
@@ -165,6 +172,7 @@ void Reporter::done() {
 
 std::string json_string(std::string_view text) {
     std::string out = "\"";
+
     for (const char c : text) {
         switch (c) {
             case '"':
@@ -190,6 +198,7 @@ std::string json_string(std::string_view text) {
                 }
         }
     }
+
     out += '"';
     return out;
 }
