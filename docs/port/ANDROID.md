@@ -89,14 +89,14 @@ the safe area, and its left stick moves to wherever your thumb lands. Its
 right stick is not drawn: a finger that lands on the right of the screen,
 away from the buttons, holds an invisible stick centred where it landed,
 and the camera turns for as long as it is pushed away from there, as with
-a real stick (`kLookReach`); pushed further, the centre follows the finger. The shoulder buttons sit a little below the top edge,
-clear of the game's health and bolt counters; a test checks that no two
-controls overlap at the usual screen shapes and sizes. Its size and where each part sits are the
+a real stick (`kLookReach`); pushed further, the centre follows the finger.
+The shoulder buttons sit a little below the top edge, clear of the game's
+health and bolt counters; a test checks that no two controls overlap at the
+usual screen shapes and sizes. Its size and where each part sits are the
 player's (the drawer's Touch controls). A round stick, a gamepad's or the
 touch pad's, is stretched to the DualShock 2's square (`platform/pad.h`), so
-a stick pushed to a diagonal runs. The
-layout is plain data with desktop tests, and it is drawn by a single shader
-(`game/common/touch_overlay.cpp`).
+a stick pushed to a diagonal runs. The layout is plain data with desktop
+tests, and it is drawn by a single shader (`game/common/touch_overlay.cpp`).
 
 **Files.** The launcher tells the game where everything is, on the command
 line and in the environment (`--data`, `--levels`, `HOME`, `XDG_DATA_HOME`,
@@ -210,8 +210,10 @@ its own arrangement of the pages:
 - Mods edits the game picked on Games, named at the top right.
 - A game's page keeps Play and the saves at hand; Differences from the
   original and Help (logs and crash reports) are folded, Help at the foot.
-- Pages fade from one to the next (a view transition); with the system's
-  reduced motion they simply change.
+- A page slides in as the last slides away and fades, from below for a tab
+  lower on the rail and from above for one higher (a view transition); its
+  sections come with it. With the system's reduced motion they simply
+  change.
 
 The game is full screen too (`port/platform/window.cpp`). Its on-screen pad
 appears only after you touch the screen, and hides again once you use a

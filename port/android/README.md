@@ -89,9 +89,10 @@ GPU driver, shows the model and SoC) and the game's log.
    face buttons, shoulders, Select, Start; no right stick) and moves Ratchet;
    a thumb anywhere in the lower left brings the stick to it, and a thumb slid
    from one button to the next presses the next. Pushed to a diagonal, the
-   stick runs, not walks. A finger dragged on the right of the screen, away
-   from the buttons, turns the camera, faster for a faster drag, and the
-   camera stops when the finger does. Connect a Bluetooth or USB controller
+   stick runs, not walks. A finger on the right of the screen, away from the
+   buttons, is an invisible right stick centred where it landed: pushed
+   away from there it turns the camera, and keeps turning it while held
+   out, as a real stick does; lifted, the camera stops. Connect a Bluetooth or USB controller
    (a DualShock 4 or DualSense too) and press a button: the pad hides and the
    controller plays; its stick pushed to a diagonal runs as well.
    In the drawer, Touch controls: Button size changes the controls at once;
@@ -151,7 +152,8 @@ GPU driver, shows the model and SoC) and the game's log.
     set-up. Updating from a build that kept its games under shared
     storage's OpenRAC folder moves them into the app on the first start.
 15. **Touch controls and the look.** In a level, L1, L2, R1 and R2 sit below
-    the health and bolt counters, and a short swipe on the right of the
-    screen turns the camera round quickly. On Games, picking another game
-    changes the launcher's colour (rac2 light blue, rac3 yellow, rac4 red,
-    Size Matters blue), and tabs fade from one to the next.
+    the health and bolt counters, and a short push on the right of the
+    screen turns the camera at full speed for as long as it is held. On
+    Games, picking another game changes the launcher's colour (rac2 light
+    blue, rac3 yellow, rac4 red, Size Matters blue), and a page slides in
+    over the last as the tabs change.
