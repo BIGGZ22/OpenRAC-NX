@@ -473,12 +473,56 @@ def _asm_literal(raw: str, at: int) -> str | None:
     return "".join(parts).replace("\\n", "\n").replace("\\t", "\t").replace('\\"', '"')
 
 
+def _asm_constraints(raw: str, at: int) -> dict | None:
+    """The operand constraints of the asm statement that starts at `at` in raw: {"out": [...], "in": [...]},
+    each operand's constraint string in order (Clang's JSON has the operands' expressions, outputs first,
+    but not their constraints), or None when the operands are not plain `[name] "constraint" (expr)`."""
+    m = re.compile(r"\b(?:__asm__|__asm|asm)\b(?:\s*(?:__volatile__|volatile|goto))*\s*\(").match(raw, at)
+    if m is None:
+        return None
+    j = m.end()
+    while True:
+        s = re.compile(r'\s*"(?:[^"\\]|\\.)*"').match(raw, j)
+        if s is None:
+            break
+        j = s.end()
+    lists: list[list[str]] = []
+    for _ in range(2):
+        colon = re.compile(r"\s*:").match(raw, j)
+        if colon is None or raw.startswith("::", colon.end() - 1):
+            break
+        j, ops = colon.end(), []
+        while True:
+            op = re.compile(r'\s*(?:\[\s*\w+\s*\]\s*)?"((?:[^"\\]|\\.)*)"\s*\(').match(raw, j)
+            if op is None:
+                break
+            depth, k = 1, op.end()
+            while k < len(raw) and depth:
+                depth += {"(": 1, ")": -1}.get(raw[k], 0)
+                k += 1
+            if depth:
+                return None
+            ops.append(op.group(1))
+            comma = re.compile(r"\s*,").match(raw, k)
+            j = comma.end() if comma else k
+            if comma is None:
+                break
+        lists.append(ops)
+    if not re.compile(r"\s*[:)]").match(raw, j):
+        return None
+    while len(lists) < 2:
+        lists.append([])
+    return {"out": lists[0], "in": lists[1]}
+
+
 def asm_strings(text: str, ast: dict, rel: str) -> None:
     """Gives each asm statement of the unit's own file its instructions ("asmString"), which
     Clang's JSON leaves out: lower.py tells an ordering barrier (sync) from code it cannot run
     (rac1-decomp's VU0 asm statements, FastVecCross's projection in src/game/drawquad.c), which
-    would otherwise become a barrier as well. A statement in a header, or spelled through a macro,
-    keeps none."""
+    would otherwise become a barrier as well; and its operands' constraints ("asmConstraints"), for
+    an empty one that only hands a value to an output (kputchar's `__asm__("" : "=r"(p) :
+    "0"(0x1000F180))` in src/core/00119D88.c, which hides the address from the optimizer). A
+    statement in a header, or spelled through a macro, keeps none."""
     raw = text.encode("utf-8", errors="surrogateescape")
 
     def walk(node: dict):
@@ -488,6 +532,9 @@ def asm_strings(text: str, ast: dict, rel: str) -> None:
                 found = _asm_literal(raw.decode("latin-1"), begin["offset"])  # offsets count bytes
                 if found is not None:
                     node["asmString"] = found
+                    cons = _asm_constraints(raw.decode("latin-1"), begin["offset"])
+                    if cons is not None:
+                        node["asmConstraints"] = cons
         for c in node.get("inner", []):
             walk(c)
 

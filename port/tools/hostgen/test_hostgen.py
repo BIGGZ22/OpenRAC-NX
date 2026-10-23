@@ -918,6 +918,20 @@ class Translate(unittest.TestCase):
         self.assertEqual(out, ["42"])
         self.assertEqual(self.last_report["inline_assembly_skipped"], {"vu0": "lqc2, vaddw.xyz"})
 
+    def test_an_empty_asm_statement_hands_its_input_to_the_tied_output(self):
+        # kputchar (rac1-decomp src/core/00119D88.c) hides an address from the optimizer with
+        # `__asm__("" : "=r"(p) : "0"(0x1000F180))`: p holds the input after it (it was left unset,
+        # and the store went through whatever p held).
+        out = self.run_program({"a.c": """
+            int hidden(int c) {
+                int p;
+                __asm__("" : "=r"(p) : "0"(c * 3 + 1));
+                return p;
+            }
+            int test_main(void) { test_print(hidden(5)); return 0; }
+        """})
+        self.assertEqual(out, ["16"])
+
     def test_float_to_integer_as_the_ee_converts(self):
         # Out of the target's range C says nothing and the hosts differ (ARM gives 0 for a
         # negative float into an unsigned type): the EE's conversion on every host.

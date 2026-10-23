@@ -963,6 +963,23 @@ class Unit:
             return "GBARRIER();"
         words = text.replace(";", "\n").split("\n")
         ops = [w.strip().split()[0] for w in words if w.strip()]
+        cons = n.get("asmConstraints") or {}
+        if not ops and cons.get("out"):
+            # No instructions, only operands: each output gets the input tied to it ("0" for output 0), the
+            # value the register holds (kputchar's pointer to the SIO's transmit register, hidden this way from
+            # the optimizer). An output tied to none keeps whatever it held, as before, and is reported.
+            kids = _inner(n)
+            outs, ins = kids[:len(cons["out"])], kids[len(cons["out"]):]
+            stmts = ["GBARRIER();"]
+            for k, (c, o) in enumerate(zip(cons["out"], outs)):
+                if c.startswith("+"):
+                    continue
+                tied = [i for i, ic in enumerate(cons["in"]) if ic.strip() == str(k)]
+                if not tied or tied[0] >= len(ins):
+                    self._asm_skipped([f"(output {k} without an input)"])
+                    continue
+                stmts.append(f"({self.lv(o).text} = {self.convert(ins[tied[0]], self.ty(o))});")
+            return " ".join(stmts)
         if not all(op in ("sync", "sync.l", "sync.p", "nop") for op in ops):
             self._asm_skipped(ops)
         return "GBARRIER();"
