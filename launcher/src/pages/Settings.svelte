@@ -125,6 +125,25 @@
   });
 
   const changed = $derived(!!app.config && JSON.stringify(edited(draft)) !== JSON.stringify(edited(app.config)));
+
+  /** Android saves a change by itself, a moment after it is made (a field being typed in is
+   *  saved once the typing stops), with no bar to press: a switch flipped is a setting changed.
+   *  A change that could not be written is not tried again until it changes again. */
+  let unwritten = $state<string | null>(null);
+  $effect(() => {
+    if (!onAndroid || setup || !changed || saving) return;
+    const now = JSON.stringify(edited(draft));
+    if (now === unwritten) return;
+    const timer = setTimeout(() => {
+      void save(false).then(() => {
+        const written = !!app.config && JSON.stringify(edited(app.config)) === now;
+        unwritten = written ? null : now;
+      });
+    }, 600);
+    return () => {
+      clearTimeout(timer);
+    };
+  });
   const tool = (t: "python" | "godot" | "docker") => (path: string) => api.checkTool(t, path);
   const root = (path: string): Promise<Check> => api.checkRoot(path);
   /** The install folder only has to be a place to write; the extractor makes what it needs inside. */
@@ -326,36 +345,38 @@
 
     <section class="panel">
       <h2>General</h2>
-      <label class="setting">
-        <span class="text">
-          <strong>Compact layout</strong>
-          <small>A game's name and its Play button side by side.</small>
-        </span>
-        <input
-          type="checkbox"
-          role="switch"
-          class="switch"
-          checked={draft.layout !== "classic"}
-          onchange={(e) => (draft.layout = e.currentTarget.checked ? "compact" : "classic")}
-        />
-      </label>
-      <label class="setting">
-        <span class="text">
-          <strong>Show in Discord</strong>
-          <small>Your status says when you are playing.</small>
-        </span>
-        <input type="checkbox" role="switch" class="switch" bind:checked={draft.discordRpc} />
-      </label>
+      <!-- Android has neither: its games are tiles, and no Discord app on the device reads a
+           desktop's rich presence. -->
       {#if !onAndroid}
-        <!-- No native mods on Android: they are libraries for the desktops (docs/port/MODS.md). -->
         <label class="setting">
           <span class="text">
-            <strong>{PURIST.title}</strong>
-            <small>{PURIST.settingsLine}</small>
+            <strong>Compact layout</strong>
+            <small>A game's name and its Play button side by side.</small>
           </span>
-          <input type="checkbox" role="switch" class="switch" bind:checked={draft.purist} />
+          <input
+            type="checkbox"
+            role="switch"
+            class="switch"
+            checked={draft.layout !== "classic"}
+            onchange={(e) => (draft.layout = e.currentTarget.checked ? "compact" : "classic")}
+          />
+        </label>
+        <label class="setting">
+          <span class="text">
+            <strong>Show in Discord</strong>
+            <small>Your status says when you are playing.</small>
+          </span>
+          <input type="checkbox" role="switch" class="switch" bind:checked={draft.discordRpc} />
         </label>
       {/if}
+      <!-- Android too: its script mods load there (docs/port/MODS.md), native ones do not. -->
+      <label class="setting">
+        <span class="text">
+          <strong>{PURIST.title}</strong>
+          <small>{PURIST.settingsLine}</small>
+        </span>
+        <input type="checkbox" role="switch" class="switch" bind:checked={draft.purist} />
+      </label>
     </section>
 
     <section class="panel">
@@ -408,7 +429,7 @@
       {/if}
     </section>
 
-    {#if !app.info?.standalone}
+    {#if !app.info?.standalone && !onAndroid}
       <section class="panel">
         <h2>Programs</h2>
         <PathField
@@ -526,7 +547,7 @@
             {/if}
           </div>
         {/if}
-        {#if draft.developer && draft.discordRpc}
+        {#if draft.developer && draft.discordRpc && !onAndroid}
           <div class="field">
             <label for="discord-client-id">Discord application ID</label>
             <input
@@ -558,7 +579,7 @@
   {/if}
 </div>
 
-{#if !setup && changed}
+{#if !setup && changed && !onAndroid}
   <div class="save-bar" role="status">
     <span class="grow">You have unsaved changes.</span>
     <button disabled={saving} onclick={() => (draft = saved())}>Discard</button>
