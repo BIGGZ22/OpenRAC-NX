@@ -102,7 +102,7 @@ opens on the one you used last.
   the page uses. Each disc keeps its own set-up, levels and build; switching
   moves the other aside as `iso_data/<game>@<version>` and never deletes it
   ([core/src/disc_choice.rs](core/src/disc_choice.rs)).
-- **Layout**: Settings → Launcher switches between Compact (the default) and
+- **Layout**: Settings â†’ Launcher switches between Compact (the default) and
   Classic. Compact puts the game's name and its main button side by side
   (`src/layouts/compact.css`).
 
@@ -120,8 +120,8 @@ Android loads no native mods; its launcher has no Mods tab yet.
 mods for Ratchet & Clank (PAL and NTSC-U): bounced light, modern sun and
 Ratchet shadows, and ambient occlusion from the game's Vulkan renderer. Its
 page has the switch, Probe lighting, Modern shadows, Ambient occlusion and its
-quality, the Bounce light slider, and an Advanced fold; each change is saved
-to the game's settings file at once. While it is on, Play uses the Vulkan
+quality, Texture upscaling (Normal or Edge-aware 2x), and an Advanced fold with
+the Bounce light slider. Changes save to the game's settings file at once. While it is on, Play uses the Vulkan
 renderer. The bounced light is baked on this computer from your own extracted
 levels, one level per thread, when it is first switched on and again after the
 levels are read from the disc again (**Lighting** on its page shows how far it
@@ -159,7 +159,7 @@ together first ([editor/MODDING.md](../editor/MODDING.md)).
 
 ## Develop
 
-With **developer tools** on (Settings → Launcher), the app also shows
+With **developer tools** on (Settings â†’ Launcher), the app also shows
 decompilation progress, disc serials, the Tasks tab, save file names and
 sizes, and the checks' details.
 
@@ -210,17 +210,17 @@ known placeholders, and every `docs` path exists. CI runs all of these in
 
 ```
 launcher/
-├── actions.json        what the launcher can run, per version: the file to edit to connect a game
-├── core/               Rust, no window: games, actions, status, set-up, settings, detection, jobs,
-│                       Discord presence (+ tests)
-├── src-tauri/          the desktop app: Tauri commands over core/, window and bundle config, icons
-├── src/                the UI: Svelte 5 + TypeScript
-│   ├── lib/            api.ts (commands and types), mock.ts (browser preview), app state, queue, themes;
-│   │                   the helpers pages share (format, clipboard, jobText, labels), each with its tests
-│   ├── components/     header, game card, action card, progress bar, path field, toasts, icons
-│   └── pages/          Library, Game (player and developer views), Tasks, Settings (also the first run)
-├── public/             the wrench logo and favicon (from openrac-site), game backdrops and previews
-└── docs/               ARCHITECTURE, INTEGRATION, STYLE, RELEASING
+â”œâ”€â”€ actions.json        what the launcher can run, per version: the file to edit to connect a game
+â”œâ”€â”€ core/               Rust, no window: games, actions, status, set-up, settings, detection, jobs,
+â”‚                       Discord presence (+ tests)
+â”œâ”€â”€ src-tauri/          the desktop app: Tauri commands over core/, window and bundle config, icons
+â”œâ”€â”€ src/                the UI: Svelte 5 + TypeScript
+â”‚   â”œâ”€â”€ lib/            api.ts (commands and types), mock.ts (browser preview), app state, queue, themes;
+â”‚   â”‚                   the helpers pages share (format, clipboard, jobText, labels), each with its tests
+â”‚   â”œâ”€â”€ components/     header, game card, action card, progress bar, path field, toasts, icons
+â”‚   â””â”€â”€ pages/          Library, Game (player and developer views), Tasks, Settings (also the first run)
+â”œâ”€â”€ public/             the wrench logo and favicon (from openrac-site), game backdrops and previews
+â””â”€â”€ docs/               ARCHITECTURE, INTEGRATION, STYLE, RELEASING
 ```
 
 ## Files and network
@@ -233,7 +233,7 @@ launcher/
 | **Mods**           | When you add, switch, order, update or remove one: `<data>/plugins/` (each mod's folder, `plugins.json`, and `sources.json` for linked mods, whose downloads it checks and then deletes). A pack's files wait in `.downloads/` until the packs take them.                                                                                                                 |
 | **Logs**           | `openrac-<id>.log` and the five before it, plus `crashes/`, in the game's data folder. The launcher's own log is `launcher.log` beside `launcher.json`, moved to `launcher.1.log` past 1 MB.                                                                                                                                                                              |
 | **Reports**        | `OpenRAC-<report>.zip` in your Downloads folder, only when you press Save report.                                                                                                                                                                                                                                                                                         |
-| **Memory card**    | Backups (`.backup_<time>…` beside the game's folder in the card), restored backups and edited slots, always after a backup of the whole card.                                                                                                                                                                                                                             |
+| **Memory card**    | Backups (`.backup_<time>â€¦` beside the game's folder in the card), restored backups and edited slots, always after a backup of the whole card.                                                                                                                                                                                                                             |
 | **Tool output**    | Whatever the tools it runs write in the checkout (`baserom/` inputs, build output, `assets/godot` for the level editor), all ignored by git.                                                                                                                                                                                                                              |
 | **ByteMatch**      | At start-up: the project list and each mapped project's JSON. This is how the launcher shows current progress; it works without a network from the cached figures.                                                                                                                                                                                                        |
 | **GitHub**         | Only when adding a mod from a link or checking for updates: `api.github.com`, raw files and release downloads.                                                                                                                                                                                                                                                            |

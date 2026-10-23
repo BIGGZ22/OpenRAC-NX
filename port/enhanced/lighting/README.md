@@ -3,7 +3,7 @@
 Probe GI needs Vulkan, enhanced rendering switched on at start and a valid
 level bake. Without probes, original lighting applies and Enhanced controls are
 disabled; settings are kept. OpenGL, and enhanced rendering off (the default),
-use original lighting. Core Vulkan optimisations work either way.
+use original lighting. Core Vulkan optimisations work either way. Interiors can still be too dark.
 
 ## Build
 
@@ -108,38 +108,6 @@ Exports need `bake-inputs/`. Re-extract older exports or pass
 overlay/core inputs or a prepared legacy surface. Keep inputs and bakes local
 and untracked; PAL and NTSC need their own exports.
 
-### Single-level performance
-
-Measure throughput with an uninstrumented baker. For local Tracy captures,
-sample a fixed subset of probes to limit per-ray overhead. Tracy instrumentation
-stays outside the normal build and adds no baker dependency.
-
-Local Novalis comparisons used 32 volumes, 1024 rays per probe and three bounces.
-Each row is a separate experiment; timings should not be compared across rows.
-All comparisons preserved the 32 probe files byte for byte.
-
-| Change | Before → after | Scope |
-| --- | --- | --- |
-| Share prepared level across grids | 159.24 → 62.85 s | Full workflow, automatic threading |
-| Cache region merge candidates | 37.02 → 2.12 s | Region planning only |
-| Reuse primary hits for distance moments | 35.47 → 32.08 s | Native batch, eight workers |
-| Use occlusion queries for visibility | 29.10 → 27.64 s | Native batch, eight workers |
-
-Native batch timings include loading, BVH construction, baking and verification,
-but exclude region planning. The visibility comparison had no emitters; tests
-cover point and area lights. Machine load affects these measurements.
-
-Traversal alpha filtering, four-ray primary packets and high-quality BVH
-construction showed no useful throughput gain. Scalar primary rays and the
-original BVH mode remain. High-quality BVH took 22.93 s either way; construction
-rose from 43.9 to 44.7 ms. Zero-alpha pruning removed no Novalis triangles, so
-its benefit on other levels remains unmeasured.
-
-A Tracy capture sampling one probe in 256 attributed worker time to bounce
-traversal (30%), visibility (21%), material lookup (19%), primary traversal (15%)
-and other work (15%). These are sampled exclusive timings, with profiler
-overhead, rather than whole-process percentages.
-
 ## Level settings
 
 Optional `probe-bake.json` overrides built-in defaults. Include `"version": 1`
@@ -193,29 +161,15 @@ regions for an existing sparse bake, saving the previous list.
 ## Formats and compatibility
 
 Only **file format 3, bake revision 1** is supported. Rebake older data.
-Texels now integrate a regular 2x2 footprint at quarter/three-quarter offsets.
-Irradiance and distance-moment kernels are averaged across its four directions,
-including emission; distance moments are normalised after combining weights.
-Fixed texel/placement directions and the primary-ray pattern are cached per
-baker, resolution and rounding mode and shared across grids. Probe rotations
-and geometry-dependent bounce/emitter directions stay dynamic to preserve
-sampling. This uses small pattern tables rather than storing every probe's
-rotated ray array. Traced-ray counts, texture dimensions and formats are
-unchanged. The settings identity
-rejects earlier centre-sampled bakes, which need rebaking. This increases
-integration work without adding ray traces.
-The broader angular footprint also softens visibility boundaries; it does not
-eliminate the existing thin-wall leakage limitations.
+Each texel integrates a regular 2x2 angular footprint, including emission.
+Irradiance and distance moments combine the four directions before normalising.
+The footprint softens visibility boundaries; thin walls can still leak.
 
-Integration processes four texels together in standard C++ using separate
-component arrays. Compilers can vectorise independent texels without changing
-each texel's ray/subtexel accumulation order. The default distance exponent 32
-uses five double-precision squarings; other exponents retain `pow`. No intrinsics,
-fast-math flags or SIMD dependency are required. The new settings identity
-requires rebaking because squaring can change final moment rounding. Native
-fixtures compare against the original scalar kernel, including general powers,
-emission, partial blocks and runtime rounding. x86 SIMD and ARM64 NEON code
-generation are checked locally; ARM64 execution still needs hardware validation.
+Sampling patterns are cached by resolution and rounding mode across all grids.
+Probe rotations and bounce/emitter directions remain specific to each probe.
+Integration processes four texels together using portable C++, preserving each
+texel's accumulation order. Distance exponent 32 uses repeated squaring; other
+exponents use `pow`. No SIMD library or fast-math flags are required.
 
 Headers contain game/level identity, scene/settings hashes and grid/atlas
 layout. Values are little-endian; texture planes upload without repacking:
@@ -241,6 +195,10 @@ Runtime and bake share emission textures, colours and masks for lamps, energy
 spheres, Orxon ooze/windows and Gaspar lava. `probe-emission.json` overrides
 emission; ordinary prelighting is not emission. Animated liquids are averaged,
 and prepared legacy lava takes priority to avoid double counting.
+
+The offline baker separates scene validation/Embree ownership (`bake_scene.*`),
+materials and sky (`bake_material.*`), transport (`bake_transport.*`), and probe
+workers (`bake.cpp`). `bake_integration.*` contains the portable texel kernel.
 
 The baker derives normals from triangles. Runtime uses camera-facing normals,
 receiver biases and distance moments to limit leaks; thin walls can still leak.
@@ -281,7 +239,7 @@ Native fixtures cover formats, baking, CPU/GPU sampling, regions, shadows,
 GTAO and feature gating. CI checks normal/enhanced builds with synthetic data,
 software Vulkan and Embree.
 
-Design: [GI](../docs/RAC1_PROBE_GI.md),
+Details: [GI](../docs/RAC1_PROBE_GI.md),
 [sun shadows](../docs/RAC1_SUN_SHADOW.md),
 [Ratchet's shadow](../docs/RAC1_HERO_SHADOW.md).
 [NVIDIA RTXGI-DDGI](https://github.com/NVIDIAGameWorks/RTXGI-DDGI) informed

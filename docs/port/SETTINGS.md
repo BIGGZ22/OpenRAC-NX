@@ -266,7 +266,7 @@ Left, with what it costs:
 
 | What | Cost | Why it is left |
 |---|---|---|
-| The terrain is 1,269 of the 2,010 draw calls for 28,000 triangles: one model whose primitives are a few triangles each, by material and tfrag | about 2 ms of the 3.3 ms `submit` on Apple's OpenGL (1.6 µs a call) | Joining them means ordering a model's primitives by material, which changes the order coplanar faces and translucent texels are drawn in. It wants a check of every level's picture, not a blind change |
+| The terrain is 1,269 of the 2,010 draw calls for 28,000 triangles: one model whose primitives are a few triangles each, by material and tfrag | about 2 ms of the 3.3 ms `submit` on Apple's OpenGL (1.6 Âµs a call) | Joining them means ordering a model's primitives by material, which changes the order coplanar faces and translucent texels are drawn in. It wants a check of every level's picture, not a blind change |
 | No culling: every tie, shrub and terrain part of the level is drawn every frame, 1.1 million triangles | most of the 3 ms `gpu` at this size | The game's own visibility is not carried over yet; the world renderers in `renderer/world` replay it and are not the ones drawing |
 | The mobys are drawn in three passes (solid, glow, translucent) and every part is sent in the first two | 81 draw calls here | The glow faces are told apart in the shader, not on the CPU |
 | The frame is read back with `glReadPixels` when the game reads its draw buffer (a page menu opening) and scaled on the CPU | one full frame, once as a menu opens | Not per frame |
