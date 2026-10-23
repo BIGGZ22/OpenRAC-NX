@@ -6,7 +6,7 @@
 #include <fstream>
 #include <stdexcept>
 
-#include "viewer/json.h"
+#include "common/json.h"
 
 namespace openrac::lighting {
 namespace {
@@ -14,25 +14,25 @@ void apply_profile(const std::filesystem::path& path, LevelBakeProfile& profile)
     if (!std::filesystem::exists(path)) {
         return;
     }
-    viewer::json::Value root;
+    json::Value root;
     std::string error;
     const auto fail = [&](const std::string& detail) {
         throw std::runtime_error(path.string() + ": " + detail);
     };
-    if (!viewer::json::parse_file(path.string(), root, error)) {
+    if (!json::parse_file(path.string(), root, error)) {
         fail(error);
     }
     if (!root.is_object() || !root["version"].is_number() || root["version"].number() != 1) {
         fail("expected profile object with version 1");
     }
-    auto number = [&](const viewer::json::Value& value, double minimum, double maximum) {
+    auto number = [&](const json::Value& value, double minimum, double maximum) {
         const auto n = value.number();
         if (!value.is_number() || !std::isfinite(n) || n < minimum || n > maximum) {
             fail("number outside permitted range");
         }
         return static_cast<float>(n);
     };
-    auto integer = [&](const viewer::json::Value& value, unsigned minimum, unsigned maximum) {
+    auto integer = [&](const json::Value& value, unsigned minimum, unsigned maximum) {
         const auto n = value.number();
         if (!value.is_number() || !std::isfinite(n) || std::floor(n) != n || n < minimum
             || n > maximum) {
@@ -40,7 +40,7 @@ void apply_profile(const std::filesystem::path& path, LevelBakeProfile& profile)
         }
         return static_cast<unsigned>(n);
     };
-    auto vector = [&](const viewer::json::Value& value, float minimum) {
+    auto vector = [&](const json::Value& value, float minimum) {
         if (!value.is_array() || value.items().size() != 3) {
             fail("expected three coordinates");
         }
@@ -73,7 +73,7 @@ void apply_profile(const std::filesystem::path& path, LevelBakeProfile& profile)
                 }
             }
         } else if (key == "terrain_vertex_albedo") {
-            if (value.type() != viewer::json::Value::Type::Bool) {
+            if (value.type() != json::Value::Type::Bool) {
                 fail("terrain_vertex_albedo requires a boolean");
             }
             bake.terrain_vertex_albedo = value.boolean();
@@ -151,9 +151,9 @@ ProbeVolume load_level_probes(
         throw std::runtime_error("cannot read probe asset");
     }
     auto volume = expand_linear_maps ? decode_probes(bytes) : decode_gpu_probes(std::move(bytes));
-    viewer::json::Value manifest;
+    json::Value manifest;
     std::string error;
-    if (!viewer::json::parse_file((level.dir / "manifest.json").string(), manifest, error)) {
+    if (!json::parse_file((level.dir / "manifest.json").string(), manifest, error)) {
         throw std::runtime_error(error);
     }
     const auto version = manifest["game"].string() + "-" + manifest["version"].string();

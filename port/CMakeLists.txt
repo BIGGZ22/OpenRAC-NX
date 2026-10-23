@@ -60,7 +60,7 @@ endif()
 
 enable_testing()
 
-# ---- common: the log, crash reports and small helpers, no dependencies ----
+# ---- common: the log, crash reports, the JSON reader and small helpers, no dependencies ----
 # OpenRAC's version and the checkout's commit (common/build_info.h), written at every build and
 # replaced only when they change (cmake/BuildInfo.cmake).
 set(OPENRAC_BUILD_INFO "${CMAKE_BINARY_DIR}/generated/build_info.cpp")
@@ -72,6 +72,7 @@ add_custom_target(openrac_build_info
   VERBATIM)
 add_library(openrac_common STATIC
   common/crash.cpp
+  common/json.cpp
   common/log.cpp
   common/process.cpp
   common/stats.cpp
@@ -135,11 +136,6 @@ openrac_warnings(openrac_runtime)
 openrac_add_test(runtime SOURCES tests/runtime_test.cpp tests/guest_c.c LIBS openrac_runtime)
 
 # ---- native mods (docs/port/MODS.md): manifests, the list, the loader ----
-# The JSON reader the viewer and the mod loader share.
-add_library(openrac_json STATIC viewer/json.cpp)
-target_include_directories(openrac_json PUBLIC .)
-openrac_warnings(openrac_json)
-
 include(Luau)
 add_library(openrac_mods STATIC
   game/common/mod_library.cpp
@@ -148,7 +144,7 @@ add_library(openrac_mods STATIC
   game/common/mods.cpp
 )
 target_include_directories(openrac_mods PUBLIC game/common game/common/include "${PROJECT_SOURCE_DIR}/../sdk/include")
-target_link_libraries(openrac_mods PUBLIC openrac_runtime openrac_json ${CMAKE_DL_LIBS}
+target_link_libraries(openrac_mods PUBLIC openrac_runtime ${CMAKE_DL_LIBS}
                       PRIVATE openrac_luau)
 openrac_warnings(openrac_mods)
 

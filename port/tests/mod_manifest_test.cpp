@@ -18,8 +18,8 @@
 #include <vector>
 
 #include "check.h"
+#include "common/json.h"
 #include "mod_manifest.h"
-#include "viewer/json.h"
 
 using namespace openrac;
 using namespace openrac::mods;
@@ -359,8 +359,6 @@ void platform() {
 }
 
 // ---- The shared cases ----
-
-namespace json = viewer::json;
 
 // Returns the shared cases' file, found from this file's place in the repository (port/tests/), so
 // the build needs no setting for it.

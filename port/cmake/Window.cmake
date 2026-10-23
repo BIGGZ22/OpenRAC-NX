@@ -190,7 +190,7 @@ else()
 endif()
 
 add_library(openrac_level_assets STATIC viewer/level.cpp)
-target_link_libraries(openrac_level_assets PUBLIC openrac_json openrac_renderer openrac_viewer_third_party openrac_assets_geometry)
+target_link_libraries(openrac_level_assets PUBLIC openrac_renderer openrac_viewer_third_party openrac_assets_geometry)
 openrac_warnings(openrac_level_assets)
 
 # Scene conversion/fingerprinting is shared by activation checks and the

@@ -12,7 +12,7 @@
 #include <string_view>
 #include <vector>
 
-namespace openrac::viewer::json {
+namespace openrac::json {
 
 class Value {
 public:
@@ -76,4 +76,4 @@ bool parse(std::string_view text, Value& out, std::string& error);
 // Read and parse a file.
 bool parse_file(const std::string& path, Value& out, std::string& error);
 
-}  // namespace openrac::viewer::json
+}  // namespace openrac::json

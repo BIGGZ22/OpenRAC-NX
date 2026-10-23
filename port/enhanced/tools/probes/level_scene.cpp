@@ -11,8 +11,8 @@
 #include <stdexcept>
 
 #include "assets/disc/wad.h"
+#include "common/json.h"
 #include "enhanced/tools/probes/liquids.h"
-#include "viewer/json.h"
 
 namespace openrac::lighting {
 namespace {
@@ -105,9 +105,9 @@ bool automatic_liquids(const viewer::LevelData& level) {
     if (level.dir.empty() || level.level != 9) {
         return false;
     }
-    viewer::json::Value manifest;
+    json::Value manifest;
     std::string error;
-    if (!viewer::json::parse_file((level.dir / "manifest.json").string(), manifest, error)) {
+    if (!json::parse_file((level.dir / "manifest.json").string(), manifest, error)) {
         throw std::runtime_error(error);
     }
     const auto& source = manifest["bake_inputs"]["liquid"].string();

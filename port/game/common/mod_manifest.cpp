@@ -13,7 +13,6 @@
 #include "openrac/keys.h"
 
 namespace openrac::mods {
-namespace json = viewer::json;
 
 namespace {
 

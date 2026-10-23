@@ -17,7 +17,7 @@
 #include <string_view>
 #include <vector>
 
-#include "viewer/json.h"
+#include "common/json.h"
 
 namespace openrac::mods {
 
@@ -99,15 +99,17 @@ bool script_path(std::string_view path);
 struct ListEntry {
     std::string id;
     bool enabled = true;
-    std::map<std::string, viewer::json::Value> settings;  // key -> its value as written
+    std::map<std::string, json::Value> settings;  // key -> its value as written
 };
 bool parse_list(std::string_view text, std::vector<ListEntry>& out, std::string& error);
 
 // The values a mod gets: each declared setting's from the list where it is of the right type and
 // in range, its default otherwise (a line in `notes` says so).
-std::map<std::string, SettingValue> resolve_settings(const Manifest& manifest,
-                                                     const std::map<std::string, viewer::json::Value>& written,
-                                                     std::vector<std::string>& notes);
+std::map<std::string, SettingValue> resolve_settings(
+    const Manifest& manifest,
+    const std::map<std::string, json::Value>& written,
+    std::vector<std::string>& notes
+);
 
 // This build's platform key: "macos-arm64", "linux-x86_64", "windows-x86_64", ...
 const char* platform_key();

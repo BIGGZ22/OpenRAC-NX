@@ -14,8 +14,8 @@
 #include <stb_image.h>
 #include <stdexcept>
 
+#include "common/json.h"
 #include "common/log.h"
-#include "viewer/json.h"
 
 namespace openrac::viewer {
 

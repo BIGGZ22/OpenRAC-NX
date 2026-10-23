@@ -12,9 +12,9 @@
 #include <stdexcept>
 #include <string_view>
 
+#include "common/json.h"
 #include "enhanced/tools/probes/activation.h"
 #include "enhanced/tools/probes/level_scene.h"
-#include "viewer/json.h"
 
 namespace fs = std::filesystem;
 using namespace openrac;
@@ -343,9 +343,9 @@ int main(int argc, char** argv) {
                 || fs::exists(output.string() + ".tmp"))) {
             throw std::runtime_error("output exists; choose a new bake path");
         }
-        viewer::json::Value manifest;
+        json::Value manifest;
         std::string error;
-        if (!viewer::json::parse_file((directory / "manifest.json").string(), manifest, error)) {
+        if (!json::parse_file((directory / "manifest.json").string(), manifest, error)) {
             throw std::runtime_error(error);
         }
         const std::string game = manifest["game"].string(), version = manifest["version"].string();
