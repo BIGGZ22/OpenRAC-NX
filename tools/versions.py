@@ -26,8 +26,9 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import mips  # noqa: E402
 import xmap  # noqa: E402
+from openrac_common import paths  # noqa: E402
 
-ROOT = Path(__file__).resolve().parent.parent
+ROOT = paths.repo_root()
 OUT = ROOT / "build/versions"
 R_MIPS_32, R_MIPS_26, R_MIPS_HI16, R_MIPS_LO16, R_MIPS_GPREL16, R_MIPS_LITERAL = 2, 4, 5, 6, 7, 8
 SHT_SYMTAB, SHT_REL, STT_FUNC, STT_SECTION = 2, 9, 2, 3

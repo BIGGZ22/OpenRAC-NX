@@ -73,8 +73,9 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import mips  # noqa: E402
 import xmap  # noqa: E402
+from openrac_common import paths  # noqa: E402
 
-ROOT = Path(__file__).resolve().parent.parent
+ROOT = paths.repo_root()
 PORTS = ROOT / "shared/xmap/ports"
 ADDRESSED = re.compile(r"^(D|FUN|func|jtbl)_(?:L(\d\d)_)?([0-9A-Fa-f]{8})$")
 IDENT = re.compile(r"[A-Za-z_]\w*")

@@ -43,7 +43,7 @@ port/game/rac1-ntsc/hand/fcheck.tsv for hand.tsv. Columns:
   note    free text: differing lines, the reason for unchecked
 
 Environment: OPENRAC_ROOT is the OpenRAC checkout that has build/runtime/
-openrac-fcheck and openrac-boot built (default ~/Projects/RAC/OpenRAC);
+openrac-fcheck and openrac-boot built (default: the checkout holding this script);
 OPENRAC_DECOMP is rac1-decomp (default ~/Projects/RAC/rac1-decomp).
 Headless only: fcheck opens no window.
 
@@ -62,7 +62,9 @@ import subprocess
 import sys
 from pathlib import Path
 
-ROOT = Path(__file__).resolve().parent.parent
+from openrac_common import paths
+
+ROOT = paths.repo_root()
 PAL_TABLE = ROOT / "games/rac1/nonmatching/functional.tsv"
 US_TABLE = ROOT / "port/game/rac1-ntsc/hand/hand.tsv"
 # The port's own C for PAL: hostgen places a hand row before a candidate of the same name, so a
@@ -168,7 +170,7 @@ def fcheck_commit(decomp: Path) -> str:
 
 def fcheck_env() -> dict:
     env = dict(os.environ)
-    env.setdefault("OPENRAC_ROOT", str(Path.home() / "Projects/RAC/OpenRAC"))
+    env.setdefault("OPENRAC_ROOT", str(ROOT))
     return env
 
 
@@ -371,7 +373,7 @@ BUILD_TIMEOUT = 1800
 def fcheck_module(decomp: Path):
     """rac1-decomp's tools/fcheck.py as a module (its paths, presses and return-type reading)."""
     import importlib.util
-    os.environ.setdefault("OPENRAC_ROOT", str(Path.home() / "Projects/RAC/OpenRAC"))
+    os.environ.setdefault("OPENRAC_ROOT", str(ROOT))
     spec = importlib.util.spec_from_file_location("rac1_fcheck", decomp / "tools/fcheck.py")
     mod = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(mod)

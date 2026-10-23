@@ -41,8 +41,11 @@ import re
 import sys
 from pathlib import Path
 
-ROOT = Path.cwd()
-sys.path.insert(0, str(ROOT / "tools"))
+# rac1-decomp's top folder, not OpenRAC's, so not openrac_common's repo_root: fcheck_gate.py
+# copies this file alone into rac1-decomp and runs it from rac1-decomp's root in that project's
+# container, where no OpenRAC checkout is. rac1-decomp's tools and baserom are read from here.
+DECOMP = Path.cwd()
+sys.path.insert(0, str(DECOMP / "tools"))
 
 # The game's libc routines (port/game/rac1-pal/libraries.tsv), resident.
 LIBC = {"memcpy": 0x00115248, "memset": 0x001153FC}
@@ -50,7 +53,7 @@ ADDRESSED = re.compile(r"^(D|func|jtbl)_(?:L(\d{2})_)?([0-9A-Fa-f]{8})(?:_\w+)?$
 
 
 def load_fcheck():
-    spec = importlib.util.spec_from_file_location("fcheck", ROOT / "tools/fcheck.py")
+    spec = importlib.util.spec_from_file_location("fcheck", DECOMP / "tools/fcheck.py")
     mod = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(mod)
     return mod
@@ -116,7 +119,7 @@ def exe_bytes(address: int, n: int) -> bytes:
     global _exe
     if _exe is None:
         import struct
-        raw = (ROOT / "baserom/SCES_509.16").read_bytes()
+        raw = (DECOMP / "baserom/SCES_509.16").read_bytes()
         phoff = struct.unpack_from("<I", raw, 0x1C)[0]
         _t, poff, pvaddr = struct.unpack_from("<III", raw, phoff)
         _exe = (pvaddr - poff, raw)
@@ -186,10 +189,10 @@ def scratch_source(name: str):
     """find_stub for a function no source file of rac1-decomp has (a libgcc routine built from
     its own object, a second entry inside another function's assembly): a file of its own with
     the decompilation's common header, the candidate going where its stub would be."""
-    src = ROOT / "build-sn/fcheck/gate/scratch" / f"{name}.c"
+    src = DECOMP / "build-sn/fcheck/gate/scratch" / f"{name}.c"
     src.parent.mkdir(parents=True, exist_ok=True)
     src.write_text('#include "common.h"\n/* the candidate */\n')
-    return "core", src.relative_to(ROOT), 1, 1
+    return "core", src.relative_to(DECOMP), 1, 1
 
 
 def main() -> None:

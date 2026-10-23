@@ -81,7 +81,7 @@ class FilesTests(unittest.TestCase):
         tmp = tempfile.TemporaryDirectory()
         self.addCleanup(tmp.cleanup)
         self.root = Path(tmp.name)
-        for name, value in (("ROOT", self.root), ("_exe", None)):
+        for name, value in (("DECOMP", self.root), ("_exe", None)):
             patcher = mock.patch.object(flb, name, value)
             patcher.start()
             self.addCleanup(patcher.stop)

@@ -42,7 +42,9 @@ import urllib.request
 import zipfile
 from pathlib import Path
 
-ROOT = Path(__file__).resolve().parent.parent
+from openrac_common import paths
+
+ROOT = paths.repo_root()
 PORT = ROOT / "port"
 LAUNCHER = ROOT / "launcher"
 APP = LAUNCHER / "src-tauri/gen/android/app"

@@ -30,7 +30,9 @@ import tarfile
 import time
 from pathlib import Path
 
-ROOT = Path(__file__).resolve().parent.parent
+from openrac_common import paths
+
+ROOT = paths.repo_root()
 GAMES = ROOT / "games"
 
 

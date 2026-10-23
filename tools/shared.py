@@ -22,7 +22,9 @@ import sys
 from collections import defaultdict
 from pathlib import Path
 
-ROOT = Path(__file__).resolve().parent.parent
+from openrac_common import paths
+
+ROOT = paths.repo_root()
 MANIFEST = ROOT / "shared/files.json"
 MIN_SIZE = 300          # bytes: smaller identical files (stand-in headers, .gitkeep) are not worth tracking
 

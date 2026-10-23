@@ -187,7 +187,8 @@ class PathsTests(TempDir):
         self.assertEqual(paths.repo_root(ROOT), ROOT)
 
     def test_matches_the_hand_written_roots(self):
-        for module in (openrac, sources, xmap, versionmap, gen_binding):
+        # tools/*.py take theirs from repo_root since P1-05; these are still written by hand.
+        for module in (versionmap, gen_binding):
             with self.subTest(module=module.__name__):
                 self.assertEqual(paths.repo_root(module.__file__), module.ROOT)
 

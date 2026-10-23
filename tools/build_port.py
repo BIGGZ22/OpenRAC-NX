@@ -66,7 +66,9 @@ import time
 import urllib.request
 from pathlib import Path
 
-ROOT = Path(__file__).resolve().parent.parent
+from openrac_common import paths
+
+ROOT = paths.repo_root()
 PORT = ROOT / "port"
 WINDOWS = os.name == "nt"
 DEFAULT_GAME = "rac1-pal"

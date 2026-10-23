@@ -31,7 +31,9 @@ import zlib
 from pathlib import Path
 from urllib.parse import urlencode
 
-ROOT = Path(__file__).resolve().parent.parent
+from openrac_common import paths
+
+ROOT = paths.repo_root()
 GAMES = ROOT / "games"
 BASEROM = ROOT / "baserom"
 PROGRESS = ROOT / "progress"

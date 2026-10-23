@@ -39,8 +39,9 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import mips  # noqa: E402
+from openrac_common import paths  # noqa: E402
 
-ROOT = Path(__file__).resolve().parent.parent
+ROOT = paths.repo_root()
 GAMES = ROOT / "games"
 INDEX = ROOT / "build/xmap"
 OUT = ROOT / "shared/xmap"
