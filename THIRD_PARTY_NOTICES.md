@@ -27,13 +27,19 @@ OpenRAC. The launcher lists its own notices in
 
 ## Embree
 
-The optional offline probe baker (`port/enhanced/lighting/bake.cpp`, enabled with
-`OPENRAC_PROBE_BAKER`) uses [Embree](https://github.com/RenderKit/embree),
-Apache License 2.0, Copyright Intel Corporation. Embree is an external build
-dependency; its source and binaries are not vendored or linked into the game.
-Keep the package's license and notices with any redistribution, including
-those for its bundled dependencies such as oneTBB. The upstream license is
-[LICENSE.txt](https://github.com/RenderKit/embree/blob/v4.4.0/LICENSE.txt).
+The offline probe baker (`openrac-probe-bake`: `port/enhanced/lighting/bake.cpp`,
+built with `OPENRAC_PROBE_BAKER`) uses [Embree](https://github.com/RenderKit/embree)
+4.4.1, Apache License 2.0, Copyright Intel Corporation. It is never linked into a
+game. `tools/build_port.py --probe-baker` downloads that release's source
+(checked against its SHA-256) and builds it as a static library with Embree's own
+task scheduler, so the baker carries no oneTBB; on ARM it includes SSE2NEON (MIT
+License), which Embree's `third-party-programs.txt` lists. The launcher's
+installers carry this baker, with Embree's `LICENSE.txt` and
+`third-party-programs.txt` beside it in `port/build/release/licenses/embree/`
+([tools/bundle_standalone.py](tools/bundle_standalone.py)). A baker built against
+a system Embree package (CI's `port-enhanced` job) follows that package's
+license and notices, including those of its oneTBB. The upstream license is
+[LICENSE.txt](https://github.com/RenderKit/embree/blob/v4.4.1/LICENSE.txt).
 
 ## ReRAC
 

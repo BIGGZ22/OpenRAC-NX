@@ -215,6 +215,11 @@ def build_embree(cmake: str, env: dict[str, str], compilers: tuple[str, str, str
     for key in ("CMAKE_C_COMPILER", "CMAKE_CXX_COMPILER", "CMAKE_MAKE_PROGRAM"):
         tools[key] = cache.get(key) or tools.get(key) or {"CMAKE_C_COMPILER": "clang",
                                                          "CMAKE_CXX_COMPILER": "clang++"}.get(key, "")
+    if WINDOWS and tools.get("CMAKE_C_COMPILER"):
+        # As for the port (commands): CMake finds no resource compiler beside Clang by itself.
+        rc = Path(tools["CMAKE_C_COMPILER"]).with_name("llvm-rc.exe")
+        if rc.is_file():
+            tools["CMAKE_RC_COMPILER"] = rc.as_posix()
     configure = [cmake, "-S", str(source), "-B", str(work), "-G", "Ninja",
                  f"-DCMAKE_INSTALL_PREFIX={install.as_posix()}",
                  *(f"-D{key}={value}" for key, value in tools.items() if value),
@@ -223,8 +228,21 @@ def build_embree(cmake: str, env: dict[str, str], compilers: tuple[str, str, str
         say("> " + " ".join(f'"{part}"' if " " in part else part for part in command))
         if subprocess.run(command, cwd=EMBREE_DIR, env=env).returncode != 0:
             raise BuildError(f"Embree did not build ({Path(command[0]).name} {command[1]})")
+    # Its license and the notices of what it carries (SSE2NEON on ARM), for whoever passes the
+    # baker on (licenses(), tools/bundle_standalone.py).
+    notices = install / "licenses" / "embree"
+    notices.mkdir(parents=True, exist_ok=True)
+    for name in ("LICENSE.txt", "third-party-programs.txt"):
+        shutil.copy2(source / name, notices / name)
     stamp.write_text(json.dumps(embree_stamp(), indent=2) + "\n", encoding="utf-8")
     return embree_config(install)
+
+
+def copy_licenses(build: Path) -> None:
+    """Embree's license and notices beside the baker built with it: <build>/licenses/embree."""
+    notices = EMBREE_DIR / "install" / "licenses" / "embree"
+    if notices.is_dir():
+        shutil.copytree(notices, build / "licenses" / "embree", dirs_exist_ok=True)
 
 
 def parse_cache(text: str) -> dict[str, str]:
@@ -589,6 +607,7 @@ def main(argv: list[str] | None = None) -> int:
         program = next((build / "apps" / f"openrac-{name}").glob("*.app"), build / f"openrac-{name}{suffix}")
         say(f"built {program.relative_to(ROOT).as_posix()}")
     if BAKER in more:
+        copy_licenses(build)
         say(f"built {(build / (BAKER + suffix)).relative_to(ROOT).as_posix()}")
     return 0
 

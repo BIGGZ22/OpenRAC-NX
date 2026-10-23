@@ -98,3 +98,13 @@ each package's `LICENSE`:
 | Audiowide | Copyright (c) 2012 by Brian J. Bonislawsky DBA Astigmatic (AOETI), with Reserved Font Name "Audiowide" |
 | Orbitron  | Copyright 2018 The Orbitron Project Authors (https://github.com/theleagueof/orbitron)                  |
 | Inter     | Copyright 2016 The Inter Project Authors (https://github.com/rsms/inter)                               |
+
+## Embree, in the carried probe baker
+
+The game copy an installer carries includes `openrac-probe-bake`, the baker of
+the Mods tab's Enhanced graphics, which runs on the player's computer over their
+own extracted levels. It has [Embree](https://github.com/RenderKit/embree) 4.4.1
+built in (Apache License 2.0, Copyright Intel Corporation; on ARM with SSE2NEON,
+MIT License). Embree's `LICENSE.txt` and `third-party-programs.txt` are carried
+beside it, in `port/build/release/licenses/embree/` of the copy; the details are
+in OpenRAC's [THIRD_PARTY_NOTICES.md](../THIRD_PARTY_NOTICES.md#embree).
