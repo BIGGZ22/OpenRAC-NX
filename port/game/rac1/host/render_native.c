@@ -444,15 +444,23 @@ void func_00211808(gaddr a0, gaddr a1) {
 }
 
 #if !RAC1_OMIT(func_L00_00254218)
-/* The level programs' joint pose (hand-written VU0 with scratchpad DMA, 2136 bytes): the moby a0's
- * joints 0 to a1 - 1 posed into the scratchpad, 0x40 bytes a joint, where the collision primitive
- * code (mobyfunc_002649C8.c) reads a joint's row. The port's evaluator, as func_00211808. Not made:
- * retail's copy of the matrices into the buffer at the moby's +0x24, and its use of a2 (0 at every
- * call in the C). Hitting a crate on Kerwan called it. */
+/* The level programs' joint pose (hand-written VU0 with scratchpad DMA, 2136 bytes): poses the moby
+ * a0's joints 0 to a1 - 1, each joint's matrix in the scratchpad at 0x70000000 + 0x40 * joint; with
+ * a2 not below 0 it then packs the joints' positions (each matrix's translation row, model units)
+ * to 0x70000000 + 0x10 * joint, where its callers read them (mobyfunc_002649C8.c's rig_probe_setup
+ * and func_L00_0025BCF8's points on a class's shapes: a sphere on a joint, a capsule between two),
+ * and with a2 above 0 also to the buffer at a2 (the collision kernels' pose cache,
+ * host/collision.c). Hitting a crate on Kerwan called it.
+ *
+ * The port poses the joints with its evaluator, as func_00211808. Not made: the routine's other
+ * scratchpad work (its DMA staging at 0x70003000) and its copy of the matrices into the buffer at
+ * the moby's +0x24. */
 void func_L00_00254218(gaddr a0, short a1, int a2) {
     static gaddr marks;
+    static unsigned char rows[0x7F][16];
+    const gaddr spr = GUEST_SCRATCHPAD;
     int count = a1 > 0x7F ? 0x7F : a1;
-    (void)a2;
+    int j;
     if (count <= 0) {
         return;
     }
@@ -462,6 +470,19 @@ void func_L00_00254218(gaddr a0, short a1, int a2) {
     memset(G(marks), 0, 0x80);
     memset(G(marks), 1, (size_t)count);
     *(uint8_t*)G(marks + 0x7F) = (uint8_t)count;
+    memset(G(spr), 0, (size_t)count * 0x40);
     openrac_game_moby_chain(a0, marks);
+    for (j = 0; j < count; ++j) {
+        memcpy(rows[j], G(spr + (gaddr)j * 0x40 + 0x30), 16);
+    }
+    if (a2 < 0) {
+        return;
+    }
+    for (j = 0; j < count; ++j) {
+        memcpy(G(spr + (gaddr)j * 0x10), rows[j], 16);
+        if (a2 > 0) {
+            memcpy(G((gaddr)a2 + (gaddr)j * 0x10), rows[j], 16);
+        }
+    }
 }
 #endif
