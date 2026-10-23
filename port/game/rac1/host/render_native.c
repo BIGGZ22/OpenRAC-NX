@@ -23,6 +23,7 @@ void func_001F8B6C(void) {
 void func_001F91B8(void) {
 }
 
+#if !RAC1_OMIT(func_00204340)
 /*
  * shrub_class_init: registers a shrub class (a0) under its class number (a4) and slot. What the level
  * loader reads afterwards is kept: the slot tables (class number to slot, slot to class number and to
@@ -61,6 +62,7 @@ void func_00204340(gaddr a0, gaddr a1, gaddr a2, gaddr a3, int a4) {
 
     memcpy(G(OPENRAC_DATA(RAC1_ADDR(0x001D9640u)) + slot * 16), G(a2), 16);
 }
+#endif
 
 /*
  * A marker in the display list, where the game's write pointer (D_00161000) is: a DMA cnt of two
@@ -445,12 +447,14 @@ void func_0022D520(int a0, int a1, int a2, int a3) {
     (void)a3;
 }
 
+#if !RAC1_OMIT(func_0022D7E0)
 /* skyproc.c: a renderer of the console's (the port draws natively) */
 void func_0022D7E0(gaddr a0, int a1, gaddr a2) {
     (void)a0;
     (void)a1;
     (void)a2;
 }
+#endif
 
 /* drawquad_001FD1D8.c: a renderer of the console's (the port draws natively) */
 int func_L00_001FE688(void) {
