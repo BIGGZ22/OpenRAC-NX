@@ -27,7 +27,7 @@ import {
 import { Queue, type Job } from "./queue";
 import { backgroundStatus } from "./progress";
 import { lastLines, PLAY_ACTIONS, unseenRecent, type StopNotice } from "./reports";
-import { checkForUpdate, type UpdateInfo } from "./updates";
+import { checkForUpdate, offerUpdate, readPutOff, type UpdateInfo } from "./updates";
 
 export type Page = "library" | "game" | "mods" | "tasks" | "develop" | "settings";
 
@@ -304,9 +304,17 @@ export async function start() {
   await refresh();
   void syncProgressWeb();
   void adoptGodot();
-  // A new launcher is looked for at start unless the player turned that off (Settings).
+  // A new launcher is looked for at start unless the player turned that off (Settings). One
+  // found opens its window, unless it was put off lately (updates.ts) or a game is running; a
+  // failed look is told only when the player asks (Settings' "Check now").
   if (app.info.version && app.config.checkUpdates) {
-    lookForUpdate().catch(() => undefined); // told only when the player asks (Settings' "Check now")
+    lookForUpdate()
+      .then((found) => {
+        const up = app.update;
+        if (!found || !up || !app.config?.setupComplete || app.game?.running) return;
+        if (offerUpdate(up.version, readPutOff(), Date.now())) app.showUpdateModal = true;
+      })
+      .catch(() => undefined);
   }
 }
 

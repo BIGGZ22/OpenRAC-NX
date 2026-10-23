@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { checkGitHubRelease, isNewerVersion } from "./updates";
+import { checkGitHubRelease, isNewerVersion, offerUpdate, PUT_OFF_MS } from "./updates";
 
 describe("isNewerVersion", () => {
   it("detects major updates", () => {
@@ -65,5 +65,19 @@ describe("checkGitHubRelease", () => {
     );
     expect((await checkGitHubRelease("0.8.3", stable))?.version).toBe("0.8.4");
     expect(await checkGitHubRelease("0.8.4", stable)).toBeNull();
+  });
+});
+
+describe("offerUpdate", () => {
+  const now = 1_800_000_000_000;
+
+  it("opens the window for a version not put off", () => {
+    expect(offerUpdate("0.9.0", null, now)).toBe(true);
+    expect(offerUpdate("0.9.1", { version: "0.9.0", at: now }, now)).toBe(true);
+  });
+
+  it("waits after Later, then asks again", () => {
+    expect(offerUpdate("0.9.0", { version: "0.9.0", at: now - 1000 }, now)).toBe(false);
+    expect(offerUpdate("0.9.0", { version: "0.9.0", at: now - PUT_OFF_MS }, now)).toBe(true);
   });
 });
