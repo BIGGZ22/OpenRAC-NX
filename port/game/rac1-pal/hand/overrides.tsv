@@ -5,3 +5,4 @@
 # slot retail reads before it is written); the decompilation stays as it matches. Each file says why.
 # name	file (relative to this table)
 func_001F6410	matched_outlined_rect.c
+func_L02_002DB810	matched_lock_arc.c
