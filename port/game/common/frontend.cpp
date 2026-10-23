@@ -174,7 +174,7 @@ struct Kept {
     // The last tick's poses, by moby: where its joints start in prev_palette and how many.
     std::vector<viewer::LevelScene::JointColumns> prev_palette;
     std::unordered_map<std::uint32_t, std::pair<int, int>> prev_poses;
-    std::vector<int> joints;  // each live moby's joints in `palette` (0 without a pose)
+    std::vector<int> joints;            // each live moby's joints in `palette` (0 without a pose)
     std::vector<std::uint8_t> packets;  // the 2D path
     std::size_t before_world = 0;
     std::vector<renderer::EffectVertex> strip_vertices;
@@ -184,6 +184,7 @@ struct Kept {
     std::array<renderer::Mat4, 8> sky_shells{};
     unsigned sky_shell_mask = 0;
     std::vector<renderer::UiQuad> ui_quads;
+
     // Mobys the game drew into a texture with a camera of its own (the vendor's screens): each
     // drawn at its marker in the 2D path (renderer::FrameInput::target_mobys).
     struct TargetMoby {
@@ -191,6 +192,7 @@ struct Kept {
         viewer::Instance instance;
         viewer::GameState camera;
     };
+
     std::vector<TargetMoby> target_mobys;
     std::uint32_t draws = 0;
     bool has_camera = false;
@@ -229,12 +231,14 @@ struct State {
     // The sky shells the game drew since the last frame, with their matrices (sky_shell).
     std::array<renderer::Mat4, 8> sky_shells{};
     unsigned sky_shell_mask = 0;
+
     // The live particles the game drew since the last frame (particle): record, texture source.
     struct Particle {
         std::array<std::uint8_t, 0x40> record;
         std::uint32_t pixels, clut;
         int log2_side;
     };
+
     std::vector<Particle> particles;
     // The particle textures decoded so far (particle_texture): pixels and palette hash -> pool key,
     // for the renderer that holds them.
@@ -1622,9 +1626,9 @@ struct Pacing {
     // The display's refresh rate is to be read again: at start, and whenever the window says its
     // display or that display's mode changed (window_event), not by asking every so many frames.
     bool interval_stale = true;
-    double cost = 0.004;  // seconds
+    double cost = 0.004;                      // seconds
     std::chrono::duration<double> late{0.0};  // how long after its time the tick came (set_tick)
-    float last_alpha = -1.0f;  // how far between ticks the last frame was drawn
+    float last_alpha = -1.0f;                 // how far between ticks the last frame was drawn
     std::chrono::steady_clock::time_point due{};  // when the frame cap lets the next frame start
     // The kept tick has not been drawn yet (the cap held its own frame back): the next frame drawn
     // is its first.
@@ -2121,18 +2125,23 @@ void apply_settings() {
     const settings::Settings& s = settings::get();
     if (s.display_mode != g->display_mode || s.monitor != g->monitor
         || (s.display_mode == settings::DisplayMode::Fullscreen
-            && (s.fullscreen_width != g->fullscreen_width || s.fullscreen_height != g->fullscreen_height))) {
-        g->window->set_display_mode(window_mode(s.display_mode), s.fullscreen_width, s.fullscreen_height, s.monitor);
+            && (s.fullscreen_width != g->fullscreen_width
+                || s.fullscreen_height != g->fullscreen_height))) {
+        g->window->set_display_mode(
+            window_mode(s.display_mode), s.fullscreen_width, s.fullscreen_height, s.monitor
+        );
         g->display_mode = s.display_mode;
         g->monitor = s.monitor;
         g->fullscreen_width = s.fullscreen_width;
         g->fullscreen_height = s.fullscreen_height;
         pacing.interval_stale = true;
         // A change of mode may leave the driver's swap interval at its default: asked again below.
-        g->swap_asked = wanted_swap() == platform::SwapInterval::Immediate ? platform::SwapInterval::VSync
-                                                                           : platform::SwapInterval::Immediate;
+        g->swap_asked = wanted_swap() == platform::SwapInterval::Immediate
+                            ? platform::SwapInterval::VSync
+                            : platform::SwapInterval::Immediate;
     }
-    if (s.aspect != g->aspect || s.aspect_custom_x != g->aspect_custom_x || s.aspect_custom_y != g->aspect_custom_y) {
+    if (s.aspect != g->aspect || s.aspect_custom_x != g->aspect_custom_x
+        || s.aspect_custom_y != g->aspect_custom_y) {
         g->aspect = s.aspect;
         g->aspect_custom_x = s.aspect_custom_x;
         g->aspect_custom_y = s.aspect_custom_y;
@@ -2141,7 +2150,11 @@ void apply_settings() {
         int h = 0;
         if (windowed() && s.aspect != settings::Aspect::Window
             && SDL_GetWindowSize(g->window->sdl(), &w, &h) && h > 0) {
-            SDL_SetWindowSize(g->window->sdl(), static_cast<int>(std::lround(static_cast<float>(h) * picture_aspect(w, h))), h);
+            SDL_SetWindowSize(
+                g->window->sdl(),
+                static_cast<int>(std::lround(static_cast<float>(h) * picture_aspect(w, h))),
+                h
+            );
         }
     }
     if (wanted_swap() != g->swap_asked) {
@@ -2165,8 +2178,7 @@ void window_event(const SDL_Event& event) {
             break;
         case SDL_EVENT_WINDOW_RESIZED:
             // Remembered in memory; written with the next setting saved and when the window closes.
-            if (windowed() && event.window.data1 >= 320
-                && event.window.data2 >= 240) {
+            if (windowed() && event.window.data1 >= 320 && event.window.data2 >= 240) {
                 settings::get().window_width = event.window.data1;
                 settings::get().window_height = event.window.data2;
             }
@@ -2197,7 +2209,8 @@ bool window_key(const SDL_Event& event) {
     }
     if (event.key.key == SDLK_F4 && gl::enhanced_rendering_available()) {
         if (!enhanced_graphics_available()) {
-            debug_overlay::notice("Enhanced lighting requires compatible probe data for this level."
+            debug_overlay::notice(
+                "Enhanced lighting requires compatible probe data for this level."
             );
             return true;
         }
