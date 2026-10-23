@@ -10,11 +10,14 @@
 #include <cstring>
 #include <filesystem>
 #include <format>
+#include <optional>
+#include <string>
 #include <string_view>
 #include <vector>
 
 #include <SDL3/SDL.h>
 
+#include "common/env.h"
 #include "common/log.h"
 #include "platform/gpu_driver.h"
 #if defined(OPENRAC_VULKAN)
@@ -78,7 +81,7 @@ __declspec(dllexport) int AmdPowerXpressRequestHighPerformance = 1;
 
 void prefer_discrete_gpu() {
 #if defined(__linux__) || defined(__FreeBSD__)
-    if (const char* gpu = std::getenv("OPENRAC_GPU"); gpu != nullptr && std::string(gpu) == "integrated") {
+    if (env::value(env::Var::Gpu) == "integrated") {
         log::info("graphics card: the system's default (OPENRAC_GPU=integrated)");
         return;
     }
@@ -94,7 +97,7 @@ void prefer_discrete_gpu() {
     }
 
     // If DRI_PRIME is already configured by the user, leave it untouched.
-    if (std::getenv("DRI_PRIME") != nullptr) {
+    if (env::system_variable("DRI_PRIME").has_value()) {
         return;
     }
 
@@ -307,9 +310,9 @@ void Platform::use_offscreen_video() {
 
 bool Platform::display_available() {
 #if defined(__linux__) || defined(__FreeBSD__)
-    const char* x11 = std::getenv("DISPLAY");
-    const char* wayland = std::getenv("WAYLAND_DISPLAY");
-    return (x11 != nullptr && x11[0] != '\0') || (wayland != nullptr && wayland[0] != '\0');
+    const std::optional<std::string> x11 = env::system_variable("DISPLAY");
+    const std::optional<std::string> wayland = env::system_variable("WAYLAND_DISPLAY");
+    return (x11 && !x11->empty()) || (wayland && !wayland->empty());
 #else
     return true;
 #endif
@@ -326,8 +329,7 @@ void Window::set_icon(const unsigned char* rgba, int width, int height) {
 }
 
 GlApi default_gl_api() {
-    if (const char* env = std::getenv("OPENRAC_GL_API"); env != nullptr && env[0] != '\0') {
-        const std::string_view value(env);
+    if (const std::string_view value = env::value(env::Var::GlApi).value_or(""); !value.empty()) {
         if (value == "es" || value == "gles") {
             return GlApi::ES;
         }
@@ -373,13 +375,15 @@ std::filesystem::path program_folder() {
 // for); MoltenVK installed there; SDL's own search.
 bool load_vulkan_library(bool validation, std::string& error) {
     std::vector<std::string> paths;
-    if (const char* env = std::getenv("OPENRAC_VULKAN_LIBRARY"); env != nullptr && env[0] != '\0') {
-        paths.emplace_back(env);
+    const std::string_view library = env::value(env::Var::VulkanLibrary).value_or("");
+    if (!library.empty()) {
+        paths.emplace_back(library);
     }
     const std::string bundled = (program_folder().parent_path() / "Frameworks" / "libMoltenVK.dylib").string();
     std::vector<std::string> folders;
-    if (const char* sdk = std::getenv("VULKAN_SDK"); sdk != nullptr && sdk[0] != '\0') {
-        folders.push_back(std::string(sdk) + "/lib");
+    const std::string sdk = env::system_variable("VULKAN_SDK").value_or("");
+    if (!sdk.empty()) {
+        folders.push_back(sdk + "/lib");
     }
     folders.insert(folders.end(), {"/opt/homebrew/lib", "/usr/local/lib"});
     if (!validation) {
@@ -422,8 +426,8 @@ bool Window::open_vulkan(const WindowConfig& config, std::string& error) {
 #if defined(OPENRAC_VULKAN)
 #if defined(__APPLE__)
     if (custom_vulkan_get_instance_proc_addr() == nullptr) {
-        const char* env = std::getenv("OPENRAC_VULKAN_VALIDATION");
-        if (!load_vulkan_library(config.debug_context || (env != nullptr && env[0] == '1'), error)) {
+        const bool validation = config.debug_context || env::flag(env::Var::VulkanValidation);
+        if (!load_vulkan_library(validation, error)) {
             return false;
         }
         m_vulkan_library = true;
