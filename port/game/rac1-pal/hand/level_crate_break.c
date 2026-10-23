@@ -5,8 +5,8 @@
  * collision (state 3), and with `a1` the sparks and flashes. Not a PS2 match: this is
  * the decompilation's own near miss for the function
  * (nonmatching/shared/func_L00_002D1E68.c, 2656 bytes against retail's 2664, the same
- * calls in the same order), used here until the function is matched, with the one
- * change marked below. ReRAC's break_fx (crates/rc-game/src/moby_update/classes/
+ * calls in the same order), used here until the function is matched, with the changes
+ * marked below. ReRAC's break_fx (crates/rc-game/src/moby_update/classes/
  * crate_.rs, the US release's 0x2eb918) describes the same steps. */
 extern int func_001F9B70(int);
 extern int func_L00_0028EF68_v(int, int, void *, int) __asm__("func_L00_0028EF68");
@@ -67,7 +67,9 @@ void func_L00_002D1E68(void *mv, int a1, int av) {
     float v0[4];
     float v10[4];
     float v20[4];
-    float v30[4];
+    float v30[12];  /* the rotation's three rows (func_001FA1F8 writes 0x30 bytes; retail's frame has
+                     * them at sp+0x30..0x5F): as float[4] the second and third row were v60 and v70,
+                     * which the debris loop overwrites before its next matrix_mul_vec3 */
     float v60[4];
     float v70[4];
     float v80[4];
