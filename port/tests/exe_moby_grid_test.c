@@ -85,7 +85,11 @@ int main(void) {
     reset(); func_0020EA70(objects[0],rect(63,63,63,63));
     CHECK(cell(63,63)[2]==1 && list(63,63)[0]==100);
     func_0020EA70(objects[0],~0u); CHECK(cell(63,63)[3]==0);
-    TRAPS(func_0020EA70(objects[0],rect(0,0,64,0)));
+    /* Column 64 of a row is column 0 of the next, as retail's cell address makes it; column 64 of
+       row 63 is past the table. */
+    reset(); func_0020EA70(objects[0],rect(64,0,64,0)); CHECK(cell(0,1)[2]==1 && list(0,1)[0]==100);
+    func_0020EA70(objects[0],~0u); CHECK(cell(0,1)[2]==0);
+    TRAPS(func_0020EA70(objects[0],rect(0,63,64,63)));
     /* Removal compares the full 32-bit ID against zero-extended pool IDs. */
     reset(); func_0020EA70(objects[0],rect(0,0,0,0));
     *(unsigned int*)(objects[0]+0xAC)=0x10064;

@@ -23,6 +23,7 @@ void func_001F8B6C(void) {
 void func_001F91B8(void) {
 }
 
+#if !RAC1_OMIT(func_00204340)
 /*
  * shrub_class_init: registers a shrub class (a0) under its class number (a4) and slot. What the level
  * loader reads afterwards is kept: the slot tables (class number to slot, slot to class number and to
@@ -61,6 +62,7 @@ void func_00204340(gaddr a0, gaddr a1, gaddr a2, gaddr a3, int a4) {
 
     memcpy(G(OPENRAC_DATA(RAC1_ADDR(0x001D9640u)) + slot * 16), G(a2), 16);
 }
+#endif
 
 /*
  * A marker in the display list, where the game's write pointer (D_00161000) is: a DMA cnt of two
@@ -99,15 +101,30 @@ void func_00212578(int a0, int a1) {
 /*
  * What MobyProc decides for each moby of the list before drawing it, which the game reads back:
  * +0x31, drawn this frame (the moby loop keeps a drawn moby active; vehicles, enemies and effects
- * test it). Its culls, as ReRAC's moby_lod.rs replays them: the bounding sphere (+0x00, x y z r in
- * units of 1/1024) beyond the draw distance (+0x32, s16 units), wholly in front of the near plane,
- * or wholly outside a side plane of the view; a hidden moby (mode bit 0) is not drawn. The side
- * planes are the port's picture's, wider than 4:3 when it is (moby_view.h).
+ * test it). The list runs COUNT mobys of 0x100 bytes from FIRST (a negative count: on to its end),
+ * and ends early at a moby whose state (+0x20) is -1, the list's end marker; a moby with another
+ * negative state (being removed) is passed over, its +0x31 left as it was. Not drawn: a moby whose
+ * group mask (+0x36) has no bit of the current one (the table at D_001940C0, which MobyProc copies
+ * to the scratchpad, at +0x37), a hidden one (mode +0x34 bits 0x81), and, as ReRAC's moby_lod.rs
+ * replays the culls, a bounding sphere (+0x00, x y z r in units of 1/1024) beyond the draw distance
+ * (+0x32, s16 units, at most the global one at D_00160030), wholly in front of the near plane, or
+ * wholly outside a side plane of the view. The side planes are the port's picture's, wider than
+ * 4:3 when it is (moby_view.h).
  */
 static void mark_drawn_mobys(gaddr first, int count) {
-    float cam[3], rows[12];
+    float cam[3], rows[12], view[12];
     memcpy(cam, G(OPENRAC_DATA(RAC1_ADDR(0x00187180u))), sizeof(cam));
-    memcpy(rows, G(OPENRAC_DATA(RAC1_ADDR(0x00187390u))), sizeof(rows));
+    /* The camera's rotation as MobyProc loads it (lqc2 of gCamera's first three rows, 0x187040):
+     * BuildViewMatrices makes them from the forward, side and up rows (z, x, y) of 0x187390, or
+     * from the camera's angles, column by column: forward is column 2, side and up columns 0 and 1
+     * negated. Read back so, they are those rows bit for bit, whichever way the frame made them. */
+    memcpy(view, G(OPENRAC_DATA(RAC1_ADDR(0x00187040u))), sizeof(view));
+    for (int c = 0; c < 3; ++c) {
+        rows[c] = view[c * 4 + 2];
+        rows[4 + c] = -view[c * 4 + 0];
+        rows[8 + c] = -view[c * 4 + 1];
+    }
+    rows[3] = rows[7] = rows[11] = 0.0f;
     float tx, ty;
     memcpy(&tx, G(OPENRAC_DATA(RAC1_ADDR(0x0018CE00u)) + 0xB0), 4);
     memcpy(&ty, G(OPENRAC_DATA(RAC1_ADDR(0x0018CE00u)) + 0xB4), 4);
@@ -124,20 +141,37 @@ static void mark_drawn_mobys(gaddr first, int count) {
         fix = openrac_game_fix("fix_wide_moby_effects");
     }
     const float wider = *fix ? openrac_game_picture_wider() : 1.0f;
-    gaddr end = count < 0 ? GREF(gaddr, OPENRAC_DATA(RAC1_ADDR(0x00160020u))) : first + (gaddr)count * 0x100u;
-    if (end < first || end - first > 0x100u * 4096u) {
-        return;
-    }
-    for (gaddr m = first; m < end; m += 0x100) {
+    const gaddr end = first + (gaddr)count * 0x100u;
+    const int max_distance = GREF(int, OPENRAC_DATA(RAC1_ADDR(0x00160030u)));
+    const uint8_t* groups = G(OPENRAC_DATA(RAC1_ADDR(0x001940C0u)));
+    for (gaddr m = first; count < 0 || m != end; m += 0x100) {
+        if (m - first >= 0x100u * 4096u) {
+            break;
+        }
         uint8_t* b = G(m);
-        float sphere[4];
-        memcpy(sphere, b, sizeof(sphere));
-        const float r = sphere[3] / 1024.0f;
-        const float d[3] = {sphere[0] / 1024.0f - cam[0], sphere[1] / 1024.0f - cam[1], sphere[2] / 1024.0f - cam[2]};
-        const int distance = *(int16_t*)(b + 0x32);
+        const int8_t state = (int8_t)b[0x20];
+        if (state == -1) {
+            break;  // the end marker
+        }
+        if (state < 0) {
+            continue;
+        }
         const uint16_t mode = *(uint16_t*)(b + 0x34);
-        int drawn = (mode & 1) == 0 && b[0x20] != 0xFF;
-        drawn = drawn && moby_in_view(d, rows, r, (float)distance, tx, ty, wider);
+        int drawn = (b[0x36] & groups[b[0x37]]) != 0 && (mode & 0x81) == 0;
+        if (drawn) {
+            float sphere[4];
+            memcpy(sphere, b, sizeof(sphere));
+            const float r = sphere[3] / 1024.0f;
+            const float d[3] =
+                {sphere[0] / 1024.0f - cam[0],
+                 sphere[1] / 1024.0f - cam[1],
+                 sphere[2] / 1024.0f - cam[2]};
+            int distance = *(int16_t*)(b + 0x32);
+            if (distance > max_distance) {
+                distance = max_distance;  // pminw with the global draw distance
+            }
+            drawn = moby_in_view(d, rows, r, (float)distance, tx, ty, wider);
+        }
         b[0x31] = (uint8_t)(drawn ? 1 : 0);
     }
 }
@@ -413,12 +447,14 @@ void func_0022D520(int a0, int a1, int a2, int a3) {
     (void)a3;
 }
 
+#if !RAC1_OMIT(func_0022D7E0)
 /* skyproc.c: a renderer of the console's (the port draws natively) */
 void func_0022D7E0(gaddr a0, int a1, gaddr a2) {
     (void)a0;
     (void)a1;
     (void)a2;
 }
+#endif
 
 /* drawquad_001FD1D8.c: a renderer of the console's (the port draws natively) */
 int func_L00_001FE688(void) {
