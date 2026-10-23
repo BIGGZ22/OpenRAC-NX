@@ -100,7 +100,6 @@ what to do instead.
 | `openrac::Result<T>` in `common/result.h` (13.3) | P2-08 | `bool` and a `std::string& error`, or `std::optional<T>` |
 | The C-boundary wrapper that catches everything (13.4) | P2-08 | a `try` and two `catch` clauses written out, as 13.4 shows |
 | `common/env.h`, the table of `OPENRAC_*` variables (16) | P1-03 | one read per variable, in its module, listed in DEBUGGING.md |
-| `common/json.h` and `common/ps2_float.h` | P1-01 | `viewer/json.h` and `assets/ps2_float.h` |
 | `host::GameProfile`, one per game version (15) | P2-03 (rac1), P3-02 (all) | per-game knowledge in `port/game/<id>/`; nothing new in shared code |
 | The `scene` module and `renderer/ui` (9.1) | P2-02, P2-06 | `viewer/` and `game/common` |
 
