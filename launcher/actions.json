@@ -341,6 +341,34 @@
         "todo": "Run it from the desktop app. The same command from a shell on macOS wrote what the port draws from. --replace: run again, it puts a new export in the old one's place once the new one is whole."
       },
       {
+        "id": "port-levels-visibility",
+        "label": "Add the levels' visibility",
+        "description": "Adds the game's own record of what can be seen from each spot to levels read before OpenRAC kept it, so the game draws only what you can see. A few seconds, from your disc, once.",
+        "kind": "build",
+        "area": "port",
+        "state": "unverified",
+        "program": "{python}",
+        "args": [
+          "editor/occlusion.py",
+          "{disc}",
+          "assets/port/rac1/pal"
+        ],
+        "cwd": ".",
+        "requires": [
+          "disc",
+          "python"
+        ],
+        "makes": "assets/port/rac1/pal/visibility-1.json",
+        "needs": [
+          {
+            "path": "assets/port/rac1/pal/level_99/manifest.json",
+            "from": "the levels (Get the levels ready)"
+          }
+        ],
+        "docs": "port/viewer/README.md",
+        "todo": "Run it from the desktop app. The Vulkan renderer culls with it (docs/port/RENDERER.md); OpenGL keeps its own visibility. editor/extract.py port writes the stamp itself, so a fresh export needs nothing more (2026-10-22)."
+      },
+      {
         "id": "port-levels-check",
         "label": "Check the levels",
         "description": "The game reads every level as it will when you play, without opening its window, and says which it cannot draw. A few seconds. Play waits for it: a level that is missing or cut short would be a black world.",
@@ -927,6 +955,34 @@
         "artifact": "assets/port/rac1/ntsc/level_99/manifest.json",
         "docs": "editor/README.md",
         "todo": "Run it from the desktop app. The same command from a shell on macOS wrote all 21 levels from SCUS_971.99 (2026-10-16). --replace: run again, it puts a new export in the old one's place once the new one is whole."
+      },
+      {
+        "id": "port-levels-visibility",
+        "label": "Add the levels' visibility",
+        "description": "Adds the game's own record of what can be seen from each spot to levels read before OpenRAC kept it, so the game draws only what you can see. A few seconds, from your NTSC-U disc, once.",
+        "kind": "build",
+        "area": "port",
+        "state": "unverified",
+        "program": "{python}",
+        "args": [
+          "editor/occlusion.py",
+          "{disc}",
+          "assets/port/rac1/ntsc"
+        ],
+        "cwd": ".",
+        "requires": [
+          "disc",
+          "python"
+        ],
+        "makes": "assets/port/rac1/ntsc/visibility-1.json",
+        "needs": [
+          {
+            "path": "assets/port/rac1/ntsc/level_99/manifest.json",
+            "from": "the levels (Get the levels ready)"
+          }
+        ],
+        "docs": "port/viewer/README.md",
+        "todo": "Run it from the desktop app. The Vulkan renderer culls with it (docs/port/RENDERER.md); OpenGL keeps its own visibility. editor/extract.py port writes the stamp itself, so a fresh export needs nothing more (2026-10-22)."
       },
       {
         "id": "port-levels-check",

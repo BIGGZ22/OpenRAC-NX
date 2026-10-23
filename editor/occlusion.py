@@ -9,6 +9,15 @@ from pathlib import Path
 from formats import span, unpack
 import games
 
+# Beside the levels when each one has its visibility (or has none to have): the launcher adds it to
+# an export made before it was written (launcher/actions.json, port-levels-visibility). The number
+# goes up when what export_pvs writes changes, so older exports get it again.
+STAMP = "visibility-1.json"
+
+
+def write_stamp(levels: Path) -> None:
+    (levels / STAMP).write_text(json.dumps({"format": 1}) + "\n")
+
 
 def export_pvs(level, directory: Path):
     if games.of(level).game != "rac1" or len(level.gameplay) < 0x90:
@@ -78,3 +87,4 @@ if __name__ == '__main__':
                 raise ValueError(f"export/disc identity mismatch: {directory}")
             export_pvs(load_level(disc, info), directory)
             print(f"PVS: {directory}", flush=True)
+    write_stamp(args.levels)

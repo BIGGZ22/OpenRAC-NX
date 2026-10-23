@@ -6,7 +6,7 @@ import tempfile
 from types import SimpleNamespace
 import unittest
 
-from occlusion import export_pvs
+from occlusion import STAMP, export_pvs, write_stamp
 
 
 class OcclusionTest(unittest.TestCase):
@@ -39,6 +39,16 @@ class OcclusionTest(unittest.TestCase):
             level.block(16)[16 + 0x3d] = 8
             export_pvs(level, path)
             self.assertEqual(json.loads((path / 'pvs.json').read_text())['terrain'], [0x7f80])
+
+    def test_stamp(self):
+        # The launcher waits for this file (actions.json, port-levels-visibility makes it).
+        with tempfile.TemporaryDirectory() as directory:
+            write_stamp(Path(directory))
+            self.assertEqual(json.loads((Path(directory) / STAMP).read_text()), {'format': 1})
+            actions = json.loads((Path(__file__).parent.parent / 'launcher/actions.json').read_text())
+            makes = {a.get('makes') for version in actions['versions'].values() for a in version
+                     if a.get('id') == 'port-levels-visibility'}
+            self.assertTrue(makes and all(m and m.endswith('/' + STAMP) for m in makes), makes)
 
     def test_unsupported_and_missing(self):
         with tempfile.TemporaryDirectory() as directory:

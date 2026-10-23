@@ -316,6 +316,23 @@ function levelsNeeded(levels: ActionView | null, check: ActionView | null): bool
 const freshVersion = (v: VersionView) =>
   app.library?.games.flatMap((g) => g.versions).find((x) => x.key === v.key) ?? v;
 
+/** The versions whose visibility could not be added: not tried again until the launcher starts again. */
+// Not shown, so not reactive.
+// eslint-disable-next-line svelte/prefer-svelte-reactivity
+const noVisibility = new Set<string>();
+
+/**
+ * Levels read before OpenRAC kept the game's record of what each spot can see get it added
+ * (port-levels-visibility: a few seconds, once), so the game draws only what can be seen. Playing
+ * does not need it: when it fails the game draws everything in view, as before.
+ */
+async function addVisibility(v: VersionView): Promise<void> {
+  const add = action(freshVersion(v), "port-levels-visibility");
+  if (!add?.runnable || add.done || noVisibility.has(v.key)) return;
+  if (!(await runChain({ kind: "version", key: v.key }, [add]))) noVisibility.add(v.key);
+  await refresh();
+}
+
 /**
  * Everything playing still needs, in order: the game built for this computer if it is not built
  * yet, then the levels read and checked (prepareLevels). A game already built is not built again
@@ -353,6 +370,7 @@ export async function prepareLevels(v: VersionView): Promise<boolean> {
   }
   if (levels && !levels.done && !(await runChain(scope, [levels]))) return false;
   await refresh();
+  await addVisibility(v);
   let again = action(fresh(), "port-levels-check");
   if (again && (await runChain(scope, [again]))) {
     await refresh();
@@ -414,6 +432,7 @@ async function act(v: VersionView, state: PlayerState): Promise<void> {
     return;
   }
   if (state.kind !== "play") return;
-  const act = action(v, "play");
+  await addVisibility(v);
+  const act = action(freshVersion(v), "play");
   if (act?.runnable) await run(scope, act);
 }

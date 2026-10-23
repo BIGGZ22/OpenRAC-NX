@@ -34,6 +34,7 @@ from godot import SCHEMA as GODOT_SCHEMA, SCRIPTS, LevelWriter, install_addon, w
 from spaceships import add_spaceships
 from level import load_flight, load_level, load_title
 from level import load_wad_level
+from occlusion import write_stamp as write_pvs_stamp
 from lighting import normal_table
 from pack import pack
 from port import PortLevelWriter
@@ -360,6 +361,9 @@ def port(iso: Path, survey: dict, levels: list[int], lod: int, jobs: int, out: P
         except BaseException:
             pool.shutdown(cancel_futures=True)
             raise
+    if game == "rac1":
+        # port.py wrote each level's visibility: the launcher has nothing to add (occlusion.py).
+        write_pvs_stamp(out)
 
 
 def raw_later(source: wads.WadDisc, level_id: int, out: Path) -> None:
