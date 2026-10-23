@@ -247,32 +247,9 @@ class GamesTests(TempDir):
         self.assertEqual(games.version_dir(RAC8, "pal"), "games/rac8")
         self.assertEqual(games.version_dir(RAC8, "ntsc"), "games/rac8/ntsc")
 
-    def test_matches_tools_openrac(self):
-        with mock.patch.object(openrac, "GAMES", self.games_dir):
-            self.assertEqual(games.load_all(self.dir), openrac.games())
-            self.assertEqual(games.versions(self.dir), openrac.versions())
-        for game, name, _version in games.versions(self.dir):
-            self.assertEqual(games.version_dir(game, name), openrac.vdir(game, name))
-
-    def test_matches_tools_sources(self):
-        with mock.patch.object(sources, "GAMES", self.games_dir), mock.patch.object(sources, "ROOT", self.dir):
-            expected = sources.manifests()
-            for key, (_path, game) in expected.items():
-                name = key.split("/")[1]
-                self.assertEqual(self.dir / games.version_dir(game, name), sources.version_dir(game, name))
-        ours = {f"{g['id']}/{n}": (games.manifest_path(g["id"], self.dir), g)
-                for g, n, v in games.versions(self.dir) if v.get("source")}
-        self.assertEqual(ours, expected)
-
-    def test_matches_tools_xmap_and_versionmap(self):
-        with mock.patch.object(xmap, "GAMES", self.games_dir):
-            expected = xmap.versions()
-        self.assertEqual({f"{g['id']}/{n}": v for g, n, v in games.versions(self.dir) if v.get("xmap")}, expected)
+    def test_matches_versionmap(self):
         with mock.patch.object(versionmap, "ROOT", self.dir):
             self.assertEqual(games.load("rac8", self.dir)["versions"]["ntsc"], versionmap.version("rac8/ntsc"))
-
-    def test_reads_this_checkouts_manifests_as_tools_openrac_does(self):
-        self.assertEqual(games.versions(), openrac.versions())
 
 
 # ---- tables ----

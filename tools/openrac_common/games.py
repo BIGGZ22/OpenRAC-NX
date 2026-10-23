@@ -8,11 +8,11 @@ The games' manifests: games/<game>/game.json, read one way.
   for game, name, version in games.versions():  # every version of every game, in game order
       print(game["id"], name, version["serial"], games.version_dir(game, name))
 
-Written from tools/openrac.py:45-57 (vdir, games, versions), the most complete of the five
-readers; the others are tools/sources.py:36 (manifests, version_dir), tools/xmap.py:58
-(versions), port/tools/versionmap/versionmap.py:52 (version) and tools/bundle_standalone.py:243
-(which copies every manifest). A manifest is returned as the parsed JSON, unchanged: its fields
-are described in docs/LAYOUT.md and each game's README, and this module does not check them.
+Written from tools/openrac.py's vdir, games and versions, the most complete of the five readers
+there were. tools/openrac.py, extractor.py, sources.py and xmap.py read the manifests through it
+(P1-05); port/tools/versionmap/versionmap.py:52 (version) keeps its own until P2-10. A manifest
+is returned as the parsed JSON, unchanged: its fields are described in docs/LAYOUT.md and each
+game's README, and this module does not check them.
 """
 import json
 from pathlib import Path

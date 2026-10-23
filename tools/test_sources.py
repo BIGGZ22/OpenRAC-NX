@@ -48,10 +48,9 @@ class SourcesTests(unittest.TestCase):
             path = self.root / "games" / game / "game.json"
             path.parent.mkdir(parents=True)
             path.write_text(json.dumps({"id": game, "versions": versions}), encoding="utf-8")
-        for name, value in (("ROOT", self.root), ("GAMES", self.root / "games")):
-            patcher = mock.patch.object(sources, name, value)
-            patcher.start()
-            self.addCleanup(patcher.stop)
+        patcher = mock.patch.object(sources, "ROOT", self.root)
+        patcher.start()
+        self.addCleanup(patcher.stop)
 
     def test_manifests_lists_the_versions_with_a_source(self):
         found = sources.manifests()

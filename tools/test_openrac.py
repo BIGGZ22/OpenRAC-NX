@@ -8,6 +8,7 @@ import unittest
 from pathlib import Path
 
 import openrac
+from openrac_common import games
 
 SECTOR = openrac.SECTOR
 
@@ -73,7 +74,7 @@ class DiscTests(unittest.TestCase):
 class ManifestTests(unittest.TestCase):
     def test_every_manifest_is_complete(self):
         serials = set()
-        for game, name, version in openrac.versions():
+        for game, name, version in games.versions():
             for key in ("region", "serial", "disc", "boot", "target"):
                 self.assertIn(key, version, f"{game['id']}/{name}")
             # Size and SHA-256 pin a build; the other checksums follow once someone with the disc
@@ -89,7 +90,7 @@ class ManifestTests(unittest.TestCase):
             self.assertNotIn(version["serial"], serials)
             serials.add(version["serial"])
             if version.get("source"):
-                self.assertTrue((openrac.ROOT / openrac.vdir(game, name)).is_dir(), f"{game['id']}/{name}")
+                self.assertTrue((openrac.ROOT / games.version_dir(game, name)).is_dir(), f"{game['id']}/{name}")
                 self.assertRegex(version["source"]["commit"], r"^[0-9a-f]{40}$")
 
 

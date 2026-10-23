@@ -37,6 +37,7 @@ import sys
 from pathlib import Path
 
 import openrac
+from openrac_common import games
 
 SECTOR = openrac.SECTOR
 
@@ -111,7 +112,7 @@ def files_of(image: Path) -> list[tuple[str, int, int]]:
 
 def builds(game: str | None = None) -> dict[str, tuple[dict, str, dict]]:
     """serial -> (game, version name, version), for GAME or every game."""
-    return {v["serial"]: (g, name, v) for g, name, v in openrac.versions() if game in (None, g["id"])}
+    return {v["serial"]: (g, name, v) for g, name, v in games.versions() if game in (None, g["id"])}
 
 
 def check_image_file(image: Path, minimum: int) -> None:
@@ -245,7 +246,7 @@ def not_yet(step: str) -> None:
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__.split("\n\n")[0])
     parser.add_argument("image", type=Path, help="the image (.iso) of your own disc")
-    parser.add_argument("-g", "--game", required=True, choices=sorted({g["id"] for g in openrac.games()}))
+    parser.add_argument("-g", "--game", required=True, choices=sorted({g["id"] for g in games.load_all()}))
     parser.add_argument("--proj-path", type=Path, default=openrac.ROOT / "build" / "port")
     parser.add_argument("-e", "--extract", action="store_true")
     parser.add_argument("--boot-only", action="store_true")

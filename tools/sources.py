@@ -30,21 +30,16 @@ import tarfile
 import time
 from pathlib import Path
 
-from openrac_common import paths
+from openrac_common import games, paths
 
 ROOT = paths.repo_root()
-GAMES = ROOT / "games"
 
 
 def manifests() -> dict[str, tuple[Path, dict]]:
-    """'game/version' -> (its game.json, the whole manifest), for every version with a source."""
-    out = {}
-    for path in sorted(GAMES.glob("*/game.json")):
-        game = json.loads(path.read_text(encoding="utf-8"))
-        for version, info in game["versions"].items():
-            if info.get("source"):
-                out[f"{game['id']}/{version}"] = (path, game)
-    return out
+    """'game/version' -> (its game.json, the whole manifest), for every version with a source.
+    The versions of one game share its manifest, so record() writes back all of it."""
+    return {f"{game['id']}/{version}": (games.manifest_path(game["id"], ROOT), game)
+            for game, version, info in games.versions(ROOT) if info.get("source")}
 
 
 def checkout(key: str, source: dict) -> Path:
@@ -60,7 +55,7 @@ def git(repo: Path, *args: str, binary: bool = False):
 def version_dir(game: dict, version: str) -> Path:
     """Where a version's tree lives: its "dir" in game.json (rac1's PAL tree is games/rac1 itself,
     the merged game), else games/<game>/<version>."""
-    return ROOT / game["versions"][version].get("dir", f"games/{game['id']}/{version}")
+    return ROOT / games.version_dir(game, version)
 
 
 def excluded(path: str, exclude: list[str]) -> bool:

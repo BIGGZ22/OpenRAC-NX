@@ -39,10 +39,9 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import mips  # noqa: E402
-from openrac_common import paths  # noqa: E402
+from openrac_common import games, paths  # noqa: E402
 
 ROOT = paths.repo_root()
-GAMES = ROOT / "games"
 INDEX = ROOT / "build/xmap"
 OUT = ROOT / "shared/xmap"
 CODE_SECTIONS = ("core.text", ".text", "net.text")
@@ -58,13 +57,7 @@ NAME = re.compile(r"^(?:func|FUN)_(?:L(\d+)_)?([0-9A-Fa-f]{8})$")
 
 def versions() -> dict[str, dict]:
     """'game/version' -> its game.json entry, for versions with an "xmap" block."""
-    out = {}
-    for path in sorted(GAMES.glob("*/game.json")):
-        game = json.loads(path.read_text())
-        for name, v in game["versions"].items():
-            if v.get("xmap"):
-                out[f"{game['id']}/{name}"] = v
-    return out
+    return {f"{game['id']}/{name}": v for game, name, v in games.versions(ROOT) if v.get("xmap")}
 
 
 def slug(key: str) -> str:
@@ -433,12 +426,12 @@ def function_table(idx: dict) -> list[int]:
     [functions, bytes]."""
     keys = list(idx)
     there = {k: present(idx[k]) for k in keys}
-    games = {}
+    in_games = {}
     for k in keys:
         for fp in there[k]:
-            games.setdefault(fp, set()).add(k.split("/")[0])
+            in_games.setdefault(fp, set()).add(k.split("/")[0])
     rows = []
-    for fp, where in games.items():
+    for fp, where in in_games.items():
         if len(where) < 2:
             continue
         first = next(k for k in keys if fp in there[k])
