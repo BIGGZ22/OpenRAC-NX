@@ -353,6 +353,10 @@ itself), or a region fenced with `// clang-format off` (5.5). It never rewraps o
 comment. CI runs it as a report on every push and pull request; it does not fail the build yet
 (24.4). `--comments` lists what 6.2 asks for and never fails.
 
+[`port/media/`](../media/) is the worked example: it has been through the tool and carries the file
+comments, doc comments, banners and control-block comments this page asks for. When a rule here is
+unclear, read how it looks there.
+
 The settings stay as they are. A 120-column limit and an include order that puts the project's
 headers before the standard library's would reformat every file in the port; a change like that is
 a formatting pass of its own (24.4), decided on its own, not a side effect of a layout tool.
