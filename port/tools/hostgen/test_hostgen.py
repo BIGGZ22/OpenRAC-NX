@@ -899,6 +899,25 @@ class Translate(unittest.TestCase):
         self.assertEqual(out, ["8", "1", "6"])
         self.assertIn("inline assembly Clang cannot read", self.last_report["stubbed"].values())
 
+    def test_asm_statements_the_host_does_not_run_are_reported(self):
+        # Clang's JSON leaves out an asm statement's text (clangast.asm_strings reads it): a sync or
+        # a nop is a barrier; VU0 code the host does not run stays one too, and the report lists it
+        # (rac1-decomp's func_001F7E98, src/game/drawquad.c).
+        out = self.run_program({"a.c": """
+            int ordered(int x) { __asm__ __volatile__("sync.l"); __asm__ __volatile__("nop"); return x + 1; }
+            float vu0(float *p) {
+                float t;
+                __asm__ __volatile__(
+                    "lqc2 $vf1,0(%1)\\n\\t"
+                    "vaddw.xyz $vf24,$vf0,$vf0w"
+                    : "=f"(t) : "r"(p) : "memory");
+                return t;
+            }
+            int test_main(void) { test_print(ordered(41)); return 0; }
+        """})
+        self.assertEqual(out, ["42"])
+        self.assertEqual(self.last_report["inline_assembly_skipped"], {"vu0": "lqc2, vaddw.xyz"})
+
     def test_float_to_integer_as_the_ee_converts(self):
         # Out of the target's range C says nothing and the hosts differ (ARM gives 0 for a
         # negative float into an unsigned type): the EE's conversion on every host.

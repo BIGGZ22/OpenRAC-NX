@@ -454,6 +454,46 @@ def _bracketed(s: str, at: int) -> int | None:
     return None
 
 
+def _asm_literal(raw: str, at: int) -> str | None:
+    """The instructions of the asm statement that starts at `at` in raw: its first operand, one or
+    more string literals, joined and unescaped (\\n and \\t as such), or None when that is not
+    plain string literals (a macro)."""
+    m = re.compile(r"\b(?:__asm__|__asm|asm)\b(?:\s*(?:__volatile__|volatile|goto))*\s*\(").match(raw, at)
+    if m is None:
+        return None
+    j, parts = m.end(), []
+    while True:
+        s = re.compile(r'\s*"((?:[^"\\]|\\.)*)"').match(raw, j)
+        if s is None:
+            break
+        parts.append(s.group(1))
+        j = s.end()
+    if not parts or not re.compile(r"\s*[:)]").match(raw, j):
+        return None
+    return "".join(parts).replace("\\n", "\n").replace("\\t", "\t").replace('\\"', '"')
+
+
+def asm_strings(text: str, ast: dict, rel: str) -> None:
+    """Gives each asm statement of the unit's own file its instructions ("asmString"), which
+    Clang's JSON leaves out: lower.py tells an ordering barrier (sync) from code it cannot run
+    (rac1-decomp's VU0 asm statements, FastVecCross's projection in src/game/drawquad.c), which
+    would otherwise become a barrier as well. A statement in a header, or spelled through a macro,
+    keeps none."""
+    raw = text.encode("utf-8", errors="surrogateescape")
+
+    def walk(node: dict):
+        if node.get("kind") == "GCCAsmStmt" and "asmString" not in node and node.get("_file", "").endswith(rel):
+            begin = (node.get("range") or {}).get("begin") or {}
+            if "spellingLoc" not in begin and "offset" in begin:
+                found = _asm_literal(raw.decode("latin-1"), begin["offset"])  # offsets count bytes
+                if found is not None:
+                    node["asmString"] = found
+        for c in node.get("inner", []):
+            walk(c)
+
+    walk(ast)
+
+
 def name_vla_lengths(text: str, ast: dict, rel: str) -> tuple[str, list[str]]:
     """A variable-length array whose length is an expression (`char s[*(int *)(d + 4) * 64]`)
     gets that length in a local of its own, computed just before it on the same line:
@@ -514,6 +554,7 @@ def parse_unit(clang: str, root: Path, rel: str, flags: list[str], attempts: int
             ast = json.loads(out.stdout)
             annotate(ast)
             text = path.read_text(encoding="utf-8", errors="surrogateescape")
+            asm_strings(text, ast, rel)
             named, more = name_vla_lengths(text, ast, rel)
             if more:
                 _write(path, named)

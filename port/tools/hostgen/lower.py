@@ -97,6 +97,9 @@ class FnReport:
     # Direct calls whose call site disagrees with the callee's definition (arity, kinds, result):
     # "callee: what differs", for port/tools/hostgen/priority.py.
     mismatches: list = field(default_factory=list)
+    # Instructions of its asm statements that the host does not run (asm_stmt): what they compute is
+    # missing from the translation.
+    asm_skipped: list = field(default_factory=list)
 
 
 @dataclass
@@ -949,11 +952,27 @@ class Unit:
         return [pad + self.rv(n) + ";"]
 
     def asm_stmt(self, n: dict) -> str:
-        text = n.get("asmString", "") or ""
-        first = text.strip().split()[0] if text.strip() else ""
-        if first in ("", "sync", "sync.l", "sync.p"):
+        """An asm statement (its instructions from clangast.asm_strings): an ordering barrier or a
+        nop (sync, sync.l, sync.p, nop: the console's scheduling) is GBARRIER. Other instructions
+        (the VU0's, COP0's, a sqrt.s) are code the host does not run: the statement stays a barrier,
+        as before, and the function's report lists what it skips (report.json
+        "inline_assembly_skipped"), since what those instructions compute is missing from the
+        translation. One whose text hostgen could not read (a header's, a macro's) is a barrier."""
+        text = n.get("asmString")
+        if text is None:
             return "GBARRIER();"
-        raise Unsupported(f"inline assembly ({first})")
+        words = text.replace(";", "\n").split("\n")
+        ops = [w.strip().split()[0] for w in words if w.strip()]
+        if not all(op in ("sync", "sync.l", "sync.p", "nop") for op in ops):
+            self._asm_skipped(ops)
+        return "GBARRIER();"
+
+    def _asm_skipped(self, what: list[str]) -> None:
+        """Notes instructions (or operands) of an asm statement the host does not run in the report of
+        the function being translated."""
+        if self.fn is not None and self.fn.report is not None:
+            skipped = self.fn.report.asm_skipped
+            skipped.extend(w for w in dict.fromkeys(what) if w not in skipped)
 
     def _const(self, n: dict) -> str:
         if "value" in n:

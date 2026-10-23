@@ -659,6 +659,7 @@ def write_report(out: Path, reports: list[UnitReport], program: Program, extra: 
         "fixes": {r.unit: r.fixes for r in reports if r.fixes},
         "problems": {r.unit: r.problems for r in reports if r.problems},
         "stubbed": {f.name: f.reason for f in stubbed},
+        "inline_assembly_skipped": {f.name: ", ".join(f.asm_skipped) for f in translated if f.asm_skipped},
         "functions_from_assembly": len(stage.translated),
         "from_assembly": {r.name: r.source for r in stage.translated},
         "assembly_unsupported": dict(sorted(stage.unsupported.items())),
@@ -687,6 +688,8 @@ def write_report(out: Path, reports: list[UnitReport], program: Program, extra: 
         f"| Units read | {summary['units']} |",
         f"| Functions translated | {summary['functions_translated']} |",
         f"| Functions with C that could not be translated (stubs) | {summary['functions_stubbed']} |",
+        f"| ... translated without inline assembly the host does not run | "
+        f"{len(summary['inline_assembly_skipped'])} |",
         f"| Functions translated from assembly (no C yet; asmc.py) | {summary['functions_from_assembly']} |",
         f"| Functions with no C (still assembly, or libraries) | {summary['functions_without_c']} |",
         f"| ... of them another spelling of a function with C, whose calls go there | "
@@ -708,6 +711,19 @@ def write_report(out: Path, reports: list[UnitReport], program: Program, extra: 
         *[f"- {n} x {why}" for why, n in summary["stub_reasons"].items()],
         "",
     ]
+    if summary["inline_assembly_skipped"]:
+        md += [
+            "## Inline assembly the host does not run",
+            "",
+            "These functions are translated with their asm statements skipped (each one an ordering",
+            "barrier): what those instructions compute is missing, and the C after them reads whatever",
+            "their outputs held. Give such a function C of the port's own (an override, or host C).",
+            "",
+            "| Function | Instructions skipped |",
+            "|---|---|",
+            *[f"| {name} | {what} |" for name, what in sorted(summary["inline_assembly_skipped"].items())],
+            "",
+        ]
     if stage.translated or stage.unsupported:
         md += [
             "## Functions with no C, translated from their assembly",
