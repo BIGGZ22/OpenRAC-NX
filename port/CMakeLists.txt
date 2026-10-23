@@ -60,7 +60,7 @@ endif()
 
 enable_testing()
 
-# ---- common: the log, crash reports, the JSON reader and small helpers, no dependencies ----
+# ---- common: the log, crash reports, JSON, PS2 float arithmetic, helpers; no dependencies ----
 # OpenRAC's version and the checkout's commit (common/build_info.h), written at every build and
 # replaced only when they change (cmake/BuildInfo.cmake).
 set(OPENRAC_BUILD_INFO "${CMAKE_BINARY_DIR}/generated/build_info.cpp")
@@ -75,6 +75,7 @@ add_library(openrac_common STATIC
   common/json.cpp
   common/log.cpp
   common/process.cpp
+  common/ps2_float.cpp
   common/stats.cpp
   common/system_info.cpp
   "${OPENRAC_BUILD_INFO}"
@@ -195,11 +196,11 @@ openrac_add_c_test(crate_init NO_STRICT_ALIASING WRAPV NO_FP_CONTRACT)
 
 include(Assets)
 
-# The EE FPU's float arithmetic for C (openrac/ps2float.h): the model of assets/ps2_float.h behind C
+# The EE FPU's float arithmetic for C (openrac/ps2float.h): the model of common/ps2_float.h behind C
 # entry points, for the functions hostgen translates with it (hostgen.json "ps2_float") and the
 # port's own C that computes as the console does. The games' library links it (cmake/Games.cmake).
 add_library(openrac_ps2float STATIC runtime/ps2float.cpp)
-target_link_libraries(openrac_ps2float PUBLIC openrac_runtime openrac_assets_core)
+target_link_libraries(openrac_ps2float PUBLIC openrac_runtime)
 openrac_warnings(openrac_ps2float)
 
 openrac_add_c_test(ps2float NO_FP_CONTRACT LIBS openrac_ps2float)

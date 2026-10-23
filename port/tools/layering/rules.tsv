@@ -82,8 +82,6 @@ allow	renderer/vulkan	renderer renderer/world
 allow	tests	viewer extract
 
 # Known violations (docs/restructure/PROGRESS.md names the packages).
-# runtime -> assets: the PS2 float semantics sit in assets/; P1-01 moves ps2_float to common/.
-except	runtime/ps2float.cpp:14	assets/ps2_float.h	P1-01 moves ps2_float to common/
 # platform -> renderer/vulkan: the window opens the Vulkan backend itself; no package yet.
 except	platform/window.cpp:23	renderer/vulkan/vkgl.h	no package yet: the renderer should open its backend on the platform's window
 # renderer -> enhanced: the core renderer depends on the experimental layer's GTAO.

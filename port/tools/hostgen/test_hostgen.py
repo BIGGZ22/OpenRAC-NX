@@ -74,7 +74,7 @@ def cxx_flags() -> list[str]:
 
 
 # The EE's float arithmetic in software (openrac/ps2float.h): its C entry points and their model.
-PS2FLOAT_CXX = [HERE.parent.parent / "runtime" / "ps2float.cpp", HERE.parent.parent / "assets" / "ps2_float.cpp"]
+PS2FLOAT_CXX = [HERE.parent.parent / "runtime" / "ps2float.cpp", HERE.parent.parent / "common" / "ps2_float.cpp"]
 
 
 @unittest.skipUnless(have_compiler(), "needs Clang on a POSIX host")

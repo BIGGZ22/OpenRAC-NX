@@ -22,10 +22,16 @@
 
 #include <array>
 #include <bit>
+#include <cstdint>
 
-#include "assets/bytes.h"
+namespace openrac::ps2 {
 
-namespace openrac::assets::ps2 {
+// The bit-pattern types, spelled as the asset readers spell them (assets/bytes.h, a layer above).
+using u32 = std::uint32_t;
+using u64 = std::uint64_t;
+using s32 = std::int32_t;
+using s64 = std::int64_t;
+using f32 = float;
 
 constexpr u32 kSign = 0x8000'0000;
 constexpr u32 kMax = 0x7fff'ffff;
@@ -102,4 +108,4 @@ inline V4 add(const V4& a, const V4& b) {
     return {add(a[0], b[0]), add(a[1], b[1]), add(a[2], b[2]), add(a[3], b[3])};
 }
 
-}  // namespace openrac::assets::ps2
+}  // namespace openrac::ps2

@@ -13,10 +13,12 @@
 
 #include <cmath>
 
+#include "common/ps2_float.h"
 #include "tests/check.h"
 
 using namespace openrac::assets;
 using namespace openrac::assets::rac1;
+namespace ps2 = openrac::ps2;
 
 namespace {
 

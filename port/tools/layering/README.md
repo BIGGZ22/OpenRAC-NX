@@ -112,7 +112,6 @@ restructure package that removes it
 
 | Edge | Includes | Removed by |
 |---|---|---|
-| runtime -> assets | `runtime/ps2float.cpp` includes `assets/ps2_float.h` | P1-01 (ps2_float to `common/`) |
 | platform -> renderer/vulkan | `platform/window.cpp` opens the Vulkan backend | no package yet |
 | renderer -> enhanced | `renderer/renderer.h` includes GTAO's headers | P2-07 (renderer owns the interface, enhanced registers) |
 | enhanced -> viewer | the probe tools and probe lighting include `viewer/level.h` | P2-02 (level) |

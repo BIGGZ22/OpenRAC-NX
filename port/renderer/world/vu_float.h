@@ -6,7 +6,7 @@
 // ISC License, Copyright (c) 2026 ReRAC contributors.
 //
 // The console's float arithmetic for the world renderers: the shared model
-// (assets/ps2_float.h) under the names the renderers use, and the tie
+// (common/ps2_float.h) under the names the renderers use, and the tie
 // shader's integer-only versions of it, kept beside the model so the tests
 // check the GLSL's arithmetic against it.
 
@@ -14,11 +14,9 @@
 
 #include <cstdint>
 
-#include "assets/ps2_float.h"
+#include "common/ps2_float.h"
 
 namespace openrac::renderer::world::vu {
-
-namespace ps2 = assets::ps2;
 
 inline constexpr std::uint32_t kSign = ps2::kSign;
 inline constexpr std::uint32_t kMax = ps2::kMax;

@@ -215,7 +215,7 @@ See 4.3.
   everything.
 - **Where.** `fsqrt` in `port/game/rac1-ntsc/host/collision.c` already takes
   `fabsf`; the same file drops a moby whose bounding sphere is not finite
-  from the queries. `port/assets/ps2_float.h` has the model of the console's
+  from the queries. `port/common/ps2_float.h` has the model of the console's
   float rules for the tools. A `div` by zero in carried C is the other place.
 - **Port today.** Partly: the vector hand code follows the rule; plain C
   from the decomp does not, and nothing clamps. For a jumpy camera, trace

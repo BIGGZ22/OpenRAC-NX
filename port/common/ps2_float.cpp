@@ -6,14 +6,14 @@
 //
 // PS2 float arithmetic on bit patterns; see ps2_float.h for what is modelled.
 
-#include "assets/ps2_float.h"
+#include "common/ps2_float.h"
 
 #include <algorithm>
 #include <cmath>
 #include <cstdint>
 #include <limits>
 
-namespace openrac::assets::ps2 {
+namespace openrac::ps2 {
 
 namespace {
 
@@ -176,4 +176,4 @@ s32 ftoi(u32 x, int n) {
     return static_cast<s32>(v);
 }
 
-}  // namespace openrac::assets::ps2
+}  // namespace openrac::ps2

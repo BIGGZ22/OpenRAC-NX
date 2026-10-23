@@ -14,10 +14,12 @@
 #include "assets/geometry/moby_collision.h"
 #include "assets/geometry/moby_lighting.h"
 #include "assets/geometry/moby_shadow.h"
+#include "common/ps2_float.h"
 #include "tests/check.h"
 
 using namespace openrac::assets;
 using namespace openrac::assets::rac1;
+namespace ps2 = openrac::ps2;
 
 namespace {
 

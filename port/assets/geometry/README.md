@@ -12,8 +12,8 @@ The readers resolve at load what the console's vector units did each frame
 links), so a renderer never replays that machinery. Where the game's
 arithmetic decides a colour or a matrix to the last bit (lighting, the
 animation palette), it runs on a model of the PS2's float unit
-(`../ps2_float.h`: truncating multiply and add, the adder's pre-truncation),
-in the game's order.
+([common/ps2_float.h](../../common/ps2_float.h): truncating multiply and
+add, the adder's pre-truncation), in the game's order.
 
 | File | |
 |---|---|

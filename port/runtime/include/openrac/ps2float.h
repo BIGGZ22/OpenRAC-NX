@@ -4,7 +4,7 @@
  * The EE FPU's single-precision arithmetic in software, for C that has to compute as the console
  * does: functions hostgen translates this way (hostgen.json "ps2_float";
  * port/tools/hostgen/lower.py) and the port's own C (host/, hand/). The model is
- * port/assets/ps2_float.h's: no infinities, NaNs or denormals (an exponent of 0 is zero, one of
+ * port/common/ps2_float.h's: no infinities, NaNs or denormals (an exponent of 0 is zero, one of
  * 255 an ordinary number), every result cut toward zero to 24 bits, the adder drops the smaller
  * operand's bits more than one place below the larger one's last bit before it adds, an overflow
  * saturates to +-0x7FFFFFFF and an underflow is zero.

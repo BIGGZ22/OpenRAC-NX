@@ -76,7 +76,11 @@ and notes:
   `crates/rc-formats` and its specs; their tests from ReRAC's unit tests.
 - `port/assets/world/`: the gameplay file, collision and its queries, occlusion,
   cameras, fonts, the HUD and PIF pictures, built on `crates/rc-formats` and
-  ReRAC's specs; `port/assets/ps2_float.h` and `image.h`, shared by the parts.
+  ReRAC's specs; `port/assets/image.h`, shared by the parts.
+- `port/common/ps2_float.h`: the PS2's float arithmetic the lighting passes,
+  the animation evaluator and the collision queries run on, converted to C++
+  from `crates/rc-formats/src/tfrag_light.rs` (module `ps2`) and
+  `moby_anim.rs` (`ftoi`).
 - `port/assets/sound/`, `port/media/`, `port/audio/`: sound banks, VAG, PSS and
   ADPCM from `crates/rc-formats`; the MPEG-2 decoder from `crates/rc-video`;
   the voices, envelope and reverb from `crates/rc-game/src/audio`.
