@@ -103,6 +103,10 @@ class NewCppTest(unittest.TestCase):
         self.assertEqual(rules(self.check("delete[] boxes;\n")), ["new-delete"])
         self.assertEqual(self.check("int new_size = 0;\n// a new box\n"), [])
 
+    def test_a_name_that_starts_with_delete_is_not_a_delete(self):
+        self.assertEqual(self.check("void delete_textures(int n, const unsigned* names);\n"), [])
+        self.assertEqual(self.check("entries.push_back({glDelete, delete_buffers});\n"), [])
+
     def test_c_allocation(self):
         self.assertEqual(rules(self.check("void* p = malloc(4);\n")), ["malloc-free"])
         self.assertEqual(rules(self.check("std::free(p);\n")), ["malloc-free"])

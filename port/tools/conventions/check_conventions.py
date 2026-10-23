@@ -53,7 +53,7 @@ DASHES = re.compile("[\u2013\u2014]")
 
 STATIC_AT_NAMESPACE = re.compile(r"^static\b(?!_assert)")
 RAW_NEW = re.compile(r"(?<![\w.>])new\b\s*(?:\(|\[|[A-Za-z_:])")
-RAW_DELETE = re.compile(r"(?<!=)(?<!= )\bdelete\s*(?:\[\s*\]\s*)?[A-Za-z_(]")
+RAW_DELETE = re.compile(r"(?<!=)(?<!= )\bdelete\b\s*(?:\[\s*\]\s*)?[A-Za-z_(]")
 C_ALLOCATION = re.compile(r"(?<![\w.>:])(?:std::|::)?(malloc|calloc|realloc|free)\s*\(")
 USING_NAMESPACE = re.compile(r"^\s*using\s+namespace\b")
 # Matched in code whose literals are blanked: `extern "C"` reads `extern ""` there.
