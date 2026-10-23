@@ -8,12 +8,12 @@
 #include <algorithm>
 #include <cstddef>
 #include <cstdint>
-#include <cstdlib>
 #include <cstring>
 #include <functional>
 #include <utility>
 #include <volk.h>
 
+#include "common/env.h"
 #include "common/stats.h"
 #include "renderer/gl.h"
 #include "renderer/vulkan/vkgl_internal.h"
@@ -275,7 +275,7 @@ bool timing_begin(std::uint64_t serial, int section) {
     f.active_timing = static_cast<int>(f.timings.size());
     f.timings.push_back({serial, section, f.timestamp_used});
 #if defined(OPENRAC_GPU_MARKERS)
-    if (std::getenv("OPENRAC_GPU_MARKERS") && vkCmdBeginDebugUtilsLabelEXT) {
+    if (env::flag(env::Var::GpuMarkers) && vkCmdBeginDebugUtilsLabelEXT) {
         const auto name = stats::gpu_section_name(serial, section);
         VkDebugUtilsLabelEXT label{VK_STRUCTURE_TYPE_DEBUG_UTILS_LABEL_EXT};
         label.pLabelName = name.c_str();
@@ -317,7 +317,7 @@ void timing_end() {
         timing.first + 1
     );
 #if defined(OPENRAC_GPU_MARKERS)
-    if (std::getenv("OPENRAC_GPU_MARKERS") && vkCmdEndDebugUtilsLabelEXT) {
+    if (env::flag(env::Var::GpuMarkers) && vkCmdEndDebugUtilsLabelEXT) {
         vkCmdEndDebugUtilsLabelEXT(g->gpu.timing_upload ? f.upload : f.main);
     }
 #endif

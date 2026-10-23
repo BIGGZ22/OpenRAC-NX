@@ -8,11 +8,12 @@
 #include <algorithm>
 #include <cstddef>
 #include <cstdint>
-#include <cstdlib>
 #include <cstring>
 #include <filesystem>
 #include <format>
+#include <optional>
 #include <string>
+#include <string_view>
 #include <system_error>
 #include <utility>
 #include <vector>
@@ -21,6 +22,7 @@
 #include <SDL3/SDL.h>
 #include <SDL3/SDL_vulkan.h>
 
+#include "common/env.h"
 #include "common/log.h"
 #include "renderer/vulkan/pipeline_cache_file.h"
 #include "renderer/vulkan/vkgl_internal.h"
@@ -60,31 +62,32 @@ std::filesystem::path pipeline_cache_file() {
     if (g == nullptr) {
         return {};
     }
-    if (const char* env = std::getenv("OPENRAC_VULKAN_PIPELINE_CACHE"); env != nullptr) {
-        if (std::strcmp(env, "0") == 0 || std::strcmp(env, "off") == 0
-            || std::strcmp(env, "none") == 0) {
+    // 0, off or none keep no cache; the empty string is as if the variable were unset.
+    if (const std::optional<std::string_view> chosen = env::value(env::Var::VulkanPipelineCache)) {
+        if (*chosen == "0" || *chosen == "off" || *chosen == "none") {
             return {};
         }
-        if (env[0] != '\0') {
-            return env;
+        if (!chosen->empty()) {
+            return std::filesystem::path(*chosen);
         }
     }
     std::filesystem::path base;
 #if defined(__APPLE__)
-    const char* home = std::getenv("HOME");
-    base = std::filesystem::path(home != nullptr ? home : ".") / "Library/Caches/OpenRAC";
+    const std::string home = env::system_variable("HOME").value_or(".");
+    base = std::filesystem::path(home) / "Library/Caches/OpenRAC";
 #elif defined(__ANDROID__)
-    const char* home = std::getenv("HOME");
-    base = std::filesystem::path(home != nullptr ? home : ".") / "cache";
+    const std::string home = env::system_variable("HOME").value_or(".");
+    base = std::filesystem::path(home) / "cache";
 #else
-    if (const char* xdg = std::getenv("XDG_CACHE_HOME"); xdg != nullptr && xdg[0] != '\0') {
-        base = std::filesystem::path(xdg) / "openrac";
+    if (const std::optional<std::string> xdg = env::system_variable("XDG_CACHE_HOME");
+        xdg.has_value() && !xdg->empty()) {
+        base = std::filesystem::path(*xdg) / "openrac";
     } else {
-        const char* home = std::getenv("USERPROFILE");
-        if (home == nullptr || home[0] == '\0') {
-            home = std::getenv("HOME");
+        std::optional<std::string> home = env::system_variable("USERPROFILE");
+        if (!home.has_value() || home->empty()) {
+            home = env::system_variable("HOME");
         }
-        base = std::filesystem::path(home != nullptr ? home : ".") / ".cache/openrac";
+        base = std::filesystem::path(home.value_or(".")) / ".cache/openrac";
     }
 #endif
     return base
@@ -244,7 +247,7 @@ bool make_instance(const Config& config, bool validation, std::string& error) {
         layers.push_back("VK_LAYER_KHRONOS_validation");
     }
 #if defined(OPENRAC_GPU_MARKERS)
-    debug_utils |= std::getenv("OPENRAC_GPU_MARKERS") != nullptr;
+    debug_utils |= env::flag(env::Var::GpuMarkers);
 #endif
     if (debug_utils) {
         extensions.push_back(VK_EXT_DEBUG_UTILS_EXTENSION_NAME);

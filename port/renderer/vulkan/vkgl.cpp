@@ -17,7 +17,6 @@
 #include <array>
 #include <chrono>
 #include <cstddef>
-#include <cstdlib>
 #include <span>
 #include <stdexcept>
 #include <string>
@@ -26,6 +25,7 @@
 
 #include <SDL3/SDL.h>
 
+#include "common/env.h"
 #include "common/log.h"
 #include "common/stats.h"
 #include "renderer/gpu_draw.h"
@@ -72,8 +72,7 @@ bool open(const Config& config, std::string& error) {
     g = new Context();
     g->window = config.window;
     g->interval = config.vsync ? 1 : 0;
-    const char* env = std::getenv("OPENRAC_VULKAN_VALIDATION");
-    const bool validation = (config.validation || (env != nullptr && env[0] == '1'))
+    const bool validation = (config.validation || env::flag(env::Var::VulkanValidation))
                             && layer_available("VK_LAYER_KHRONOS_validation");
     bool ok = make_instance(config, validation, error);
     if (ok && config.window != nullptr) {
