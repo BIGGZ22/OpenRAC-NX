@@ -354,6 +354,14 @@ target_compile_options(scene_actors_test PRIVATE -fno-strict-aliasing -fwrapv)
 openrac_warnings(scene_actors_test)
 add_test(NAME scene_actors COMMAND scene_actors_test)
 
+# The shared rac1 host C's bigger moby pool, with PAL's table and the same stand-in.
+add_executable(moby_pool_test tests/moby_pool_test.c)
+target_include_directories(moby_pool_test PRIVATE tests/rac1_host game/common/include runtime/include
+                                                  game/rac1-pal/host)
+target_compile_options(moby_pool_test PRIVATE -fno-strict-aliasing -fwrapv)
+openrac_warnings(moby_pool_test)
+add_test(NAME moby_pool COMMAND moby_pool_test)
+
 add_executable(resource_bank_test tests/resource_bank_test.c)
 target_compile_options(resource_bank_test PRIVATE -fno-strict-aliasing)
 openrac_warnings(resource_bank_test)

@@ -61,7 +61,8 @@ uint32_t openrac_lib_wad_decompress(const uint8_t *src, uint8_t *dst, uint32_t c
 /* WadDecompress (func_0020C468, hand-written): decompresses the WAD stream at src into dst. The
  * retail routine streams through the scratchpad with its DMA channel and returns the size it wrote,
  * which the game's declarations of it do not read; the port decompresses straight from game
- * memory. Its output may run to the end of main memory. */
+ * memory. Its output may run to the end of main memory. The level loader's gameplay header gets its
+ * bigger moby pool here (moby_pool.c). */
 int func_0020C468(int src, int dst) {
     const uint32_t end_of_ram = 0x02000000u;
     const gaddr to = (gaddr)dst;
@@ -72,6 +73,7 @@ int func_0020C468(int src, int dst) {
         fprintf(stderr, "[debug] WAD %08x -> %08x: %02x%02x%02x%02x, %u bytes\n", (unsigned)src,
                 (unsigned)to, in[0], in[1], in[2], in[3], (unsigned)made);
     }
+    rac1_wad_decompressed(to);
     return (int)made;
 }
 

@@ -40,6 +40,10 @@ int rac1_vformat(char *out, size_t size, const char *format, va_list args);
 /* boot.c: a new game straight in `level` from the title, as --level N with OPENRAC_DIRECT. */
 void rac1_start_level(int level);
 
+/* moby_pool.c: a WAD decompressed to `to` (hand.c's WadDecompress, after it wrote it): the gameplay
+ * header's spare moby count raised while the level loader runs. */
+void rac1_wad_decompressed(gaddr to);
+
 /* front_end.c: what the window's menus need of the game (game_host.h). */
 extern const openrac_front_end rac1_front_end;
 

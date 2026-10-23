@@ -14,4 +14,9 @@ int func_0020C468(int a0, int a1);
 gaddr func_0020D348(int a0);
 void func_00204FC0(gaddr a0);
 
+/* moby_pool.c */
+gaddr func_L00_002422D8(int a0);
+gaddr func_L00_002422D8__hooked(int a0);
+gaddr func_0020E6B8(void);
+
 #endif

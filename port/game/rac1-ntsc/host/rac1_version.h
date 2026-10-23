@@ -78,6 +78,18 @@
 #define RAC1_ADDR_0x0018CC20u 0x0018CB20u
 #define RAC1_ADDR_0x00160588u 0x00160488u
 #define RAC1_ADDR_0x0013E130u 0x0013E030u
+/* The level loader (moby_pool.c): PAL's LoadLevelGameplay func_L00_002422D8 is FUN_L00_00241940 here
+ * (the NTSC decomp's src/overlays/shared/world/loaders/load_level_gameplay.c, ported from PAL's;
+ * libraries.tsv pairs the two), a hook point under the wrap; its load state, PAL D_L00_00173F00,
+ * is D_L00_00173E00 here (the same C reads the header from +4 of each). */
+#define func_L00_002422D8 game_FUN_L00_00241940
+#define func_L00_002422D8__hooked game_FUN_L00_00241940__hooked
+#define RAC1_ADDR_L00_0x00173F00u 0x00173E00u
+/* The run list's builder (moby_pool.c) is func_0020E6B8 above (FUN_0020d868); its group member lists
+ * and target pointer table, PAL D_001C7AC0 and D_001C7C80 (the US build's own C of FUN_0020d868
+ * forms these two). */
+#define RAC1_ADDR_0x001C7AC0u 0x001C7740u
+#define RAC1_ADDR_0x001C7C80u 0x001C7900u
 
 /* ---- generated below ---- */
 
