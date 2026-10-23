@@ -13,14 +13,18 @@
 #include <filesystem>
 #include <format>
 #include <fstream>
+#include <limits>
 #include <memory>
 #include <optional>
+#include <string>
+#include <string_view>
 #include <thread>
 #include <unordered_map>
 #include <vector>
 
 #include <SDL3/SDL.h>
 
+#include "common/env.h"
 #include "common/log.h"
 #include "common/stats.h"
 #include "debug_menu.h"
@@ -71,6 +75,84 @@ extern const unsigned int openrac_icon_png_size;
 namespace openrac::frontend {
 
 namespace {
+
+// Returns the value `var` was set to as a string of its own, or nothing when it is unset. For the
+// reads below that hand the value to the C library (a file to open, a script for sscanf), which
+// wants a string that ends in a NUL: env::value's view need not.
+std::optional<std::string> env_string(env::Var var) {
+    const std::optional<std::string_view> found = env::value(var);
+
+    // An unset variable stays nothing, which differs from the empty string.
+    if (!found) {
+        return std::nullopt;
+    }
+
+    return std::string(*found);
+}
+
+// Returns the frame number `var` names, read as std::strtoull reads it, or nothing when it is
+// unset. The frame numbers (OPENRAC_DUMP_RAM, OPENRAC_FX_DUMP, OPENRAC_SHOT_FROM) have always been
+// read so: env::integer reads as std::strtoll, which differs for a negative value past -2^63
+// (strtoull wraps it to a frame number, strtoll holds it to -2^63).
+std::optional<std::uint64_t> env_frame(env::Var var) {
+    const std::optional<std::string> text = env_string(var);
+    if (!text) {
+        return std::nullopt;
+    }
+    return std::strtoull(text->c_str(), nullptr, 10);
+}
+
+// A range of frames, both ends included.
+struct FrameRange {
+    std::uint64_t first = 0;
+    std::uint64_t last = 0;
+
+    // Returns whether `frame` is in the range.
+    [[nodiscard]] bool holds(std::uint64_t frame) const { return frame >= first && frame <= last; }
+};
+
+// Returns the range `var` names, N or N-M, read as std::strtoull reads each end; nothing when it is
+// unset. For OPENRAC_DUMP_DRAWS and OPENRAC_FRAME_LOG.
+std::optional<FrameRange> env_frames(env::Var var) {
+    const std::optional<std::string> text = env_string(var);
+    if (!text) {
+        return std::nullopt;
+    }
+
+    // N alone is the range of one frame.
+    char* end = nullptr;
+    FrameRange range;
+    range.first = std::strtoull(text->c_str(), &end, 10);
+    range.last = *end == '-' ? std::strtoull(end + 1, nullptr, 10) : range.first;
+    return range;
+}
+
+// OPENRAC_SHOT=EVERY:PATH: a PNG of every EVERY-th frame, written to PATH<frame>.png.
+struct Shots {
+    std::uint64_t every = 0;  // 0: no shots (unset, no ':', or EVERY not above 0)
+    std::string prefix;       // PATH, what the frame's number and .png follow
+
+    // Returns whether `frame` is one to take.
+    [[nodiscard]] bool due(std::uint64_t frame) const { return every > 0 && frame % every == 0; }
+};
+
+// Returns OPENRAC_SHOT read, once. EVERY is read as std::atoll read it (std::strtoll), and a
+// negative one wraps to a large period, as it always did.
+const Shots& shots() {
+    static const Shots read = [] {
+        Shots result;
+        const std::optional<std::string_view> value = env::value(env::Var::Shot);
+
+        // Without a ':' there is no path to write to, and no shot.
+        const std::size_t colon = value ? value->find(':') : std::string_view::npos;
+        if (colon != std::string_view::npos) {
+            result.every = static_cast<std::uint64_t>(env::read_integer(value, 10, 0));
+            result.prefix = std::string(value->substr(colon + 1));
+        }
+        return result;
+    }();
+    return read;
+}
 
 // One tick's scene, as frame() read it from the game, for the frames drawn until the next tick
 // (between), and the last tick's camera and moby matrices to move them from.
@@ -308,8 +390,8 @@ std::vector<std::uint8_t> direct_packets(std::span<const std::uint8_t> ram, std:
         }
     }
 
-    if (const char* dump = std::getenv("OPENRAC_DUMP_VIF")) {
-        if (std::FILE* f = std::fopen(dump, "wb")) {
+    if (const std::optional<std::string> dump = env_string(env::Var::DumpVif)) {
+        if (std::FILE* f = std::fopen(dump->c_str(), "wb")) {
             std::fwrite(vif.data(), 1, vif.size(), f);
             std::fclose(f);
         }
@@ -549,7 +631,7 @@ float picture_aspect(int window_width, int window_height) {
 
 // The development switches that keep one frame a tick whatever the settings say.
 bool one_frame_a_tick() {
-    static const bool on = std::getenv("OPENRAC_UNCAPPED") != nullptr || std::getenv("OPENRAC_NO_BLEND") != nullptr;
+    static const bool on = env::flag(env::Var::Uncapped) || env::flag(env::Var::NoBlend);
     return on;
 }
 
@@ -728,9 +810,8 @@ void use_level(int number) {
         "OPENRAC_HERO_SHADOW",
         "Ratchet-only shadow map: sun direction grounded, downward platforming cue airborne"
     );
-    const char* sun_option = std::getenv("OPENRAC_SUN_SHADOWS");
     const bool sun_shadow = enhanced_graphics_available() && wanted >= 0 && wanted < 19
-                            && (!sun_option || std::string_view(sun_option) != "0");
+                            && env::flag(env::Var::SunShadows);
     if (!g->scene.enable_sun_shadow(sun_shadow, error)) {
         log::warn("Cascaded sun shadows unavailable: {}", error);
     }
@@ -1173,11 +1254,11 @@ static bool write_file_if_changed(const std::filesystem::path& path, const void*
 }
 
 static void ensure_linux_desktop_integration(const std::string& game_id) {
-    const char* home = std::getenv("HOME");
-    if (home == nullptr || home[0] == '\0') {
+    const std::optional<std::string> home = env::system_variable("HOME");
+    if (!home || home->empty()) {
         return;
     }
-    const std::filesystem::path home_path = home;
+    const std::filesystem::path home_path = *home;
     const std::filesystem::path icons_base = home_path / ".local/share/icons/hicolor";
     const std::filesystem::path app_dir = home_path / ".local/share/applications";
 
@@ -1296,18 +1377,20 @@ bool open(const std::string& game_id, const std::filesystem::path& levels, std::
     config.fullscreen_height = chosen.fullscreen_height;
     // The game is drawn by a graphics card or not at all: a software rasteriser shows a level at a
     // few frames a second, which looks like a broken port (OPENRAC_SOFTWARE_GL=1: run it anyway).
-    config.software = std::getenv("OPENRAC_SOFTWARE_GL") != nullptr ? platform::SoftwareRenderer::Allow
-                                                                    : platform::SoftwareRenderer::Refuse;
+    config.software = env::flag(env::Var::SoftwareGl) ? platform::SoftwareRenderer::Allow
+                                                      : platform::SoftwareRenderer::Refuse;
     // OPENRAC_HIDDEN=1: the window is made and drawn as always but never shown, for scripted runs
     // that should not open windows on the player's screen (several can run at once).
-    config.hidden = std::getenv("OPENRAC_HIDDEN") != nullptr;
+    config.hidden = env::flag(env::Var::Hidden);
     g->window = platform::Window::open(config, error);
     if (!g->window) {
         return false;
     }
     {
-        const char* developer = std::getenv("OPENRAC_DEVELOPER");
-        platform::install_app_menus(developer != nullptr && developer[0] != '\0' && developer[0] != '0');
+        // A first character other than 0, as this read has always taken it: 00 or 01 is off.
+        const std::string_view developer =
+            env::value(env::Var::Developer).value_or(std::string_view{});
+        platform::install_app_menus(!developer.empty() && developer.front() != '0');
     }
     set_window_icon(*g->window);
     g->swap_asked = wanted_swap();
@@ -1425,9 +1508,9 @@ bool store_image(std::uint32_t base, std::uint32_t width_units, std::uint8_t psm
             }
         }
         // OPENRAC_DUMP_SNAPSHOT=FILE.png: the answer, as the game gets it.
-        if (const char* dump = std::getenv("OPENRAC_DUMP_SNAPSHOT")) {
-            viewer::write_png(dump, kChipWidth, lines, chip);
-            log::info("frame read back at window frame {}, written to {}", g->index, dump);
+        if (const std::optional<std::string> dump = env_string(env::Var::DumpSnapshot)) {
+            viewer::write_png(*dump, kChipWidth, lines, chip);
+            log::info("frame read back at window frame {}, written to {}", g->index, *dump);
         }
     }
     for (int r = 0; r < height; ++r) {
@@ -1535,14 +1618,10 @@ bool show_picture(const std::uint8_t* rgba, int width, int height, float black) 
     int window_height = 0;
     g->window->drawable_size(window_width, window_height);
     const std::uint64_t index = g->index++;
-    if (const char* shot = std::getenv("OPENRAC_SHOT")) {
-        const char* colon = std::strchr(shot, ':');
-        const std::uint64_t every = static_cast<std::uint64_t>(std::atoll(shot));
-        if (colon && every > 0 && index % every == 0) {
-            const std::string path = std::string(colon + 1) + std::to_string(index) + ".png";
-            viewer::write_png(path, width, height, pixels);
-            log::info("frame {} written to {}", index, path);
-        }
+    if (shots().due(index)) {
+        const std::string path = shots().prefix + std::to_string(index) + ".png";
+        viewer::write_png(path, width, height, pixels);
+        log::info("frame {} written to {}", index, path);
     }
     // The picture fills the frame the game's own frames fill; its first row is the top.
     present(g->picture.id(), width, height, window_width, window_height, true);
@@ -1692,9 +1771,13 @@ struct FrameCost {
     std::chrono::steady_clock::time_point mark{};
 
     FrameCost() {
-        if (const char* v = std::getenv("OPENRAC_FRAME_COST")) {
+        if (env::value(env::Var::FrameCost)) {
             on = true;
-            every = std::max(1, std::atoi(v) > 1 ? std::atoi(v) : 200);
+            // Read as std::atoi read it, held to int's range, where atoi's answer was undefined.
+            const std::int64_t asked = std::min<std::int64_t>(
+                env::integer(env::Var::FrameCost, 0), std::numeric_limits<int>::max()
+            );
+            every = asked > 1 ? static_cast<int>(asked) : 200;
         }
     }
 
@@ -1709,10 +1792,7 @@ struct FrameCost {
 // OPENRAC_SLOW_FRAME=MS: every frame drawn takes that much longer, as on a graphics card too slow
 // for the settings, for checking that the game's time does not slow with it.
 void slow_frame() {
-    static const double ms = [] {
-        const char* v = std::getenv("OPENRAC_SLOW_FRAME");
-        return v != nullptr ? std::atof(v) : 0.0;
-    }();
+    static const double ms = env::number(env::Var::SlowFrame, 0.0);
     if (ms > 0.0) {
         std::this_thread::sleep_for(std::chrono::duration<double, std::milli>(ms));
     }
@@ -2093,20 +2173,14 @@ void draw_kept(bool first) {
     static const bool& shot_between = stats::probe("OPENRAC_SHOT_BETWEEN", "OPENRAC_SHOT also writes the frames between ticks");
     static int between_index = 0;
     between_index = first ? 0 : between_index + 1;
-    if (const char* shot = first || shot_between ? std::getenv("OPENRAC_SHOT") : nullptr) {
-        const char* colon = std::strchr(shot, ':');
-        const std::uint64_t every = static_cast<std::uint64_t>(std::atoll(shot));
-        // OPENRAC_SHOT_FROM=FRAME: no shots before that frame.
-        static const std::uint64_t shot_from = [] {
-            const char* v = std::getenv("OPENRAC_SHOT_FROM");
-            return v != nullptr ? std::strtoull(v, nullptr, 10) : 0ull;
-        }();
-        if (colon && every > 0 && input.frame % every == 0 && input.frame >= shot_from) {
-            const std::string path = std::string(colon + 1) + std::to_string(input.frame)
-                                     + (first ? std::string() : "_b" + std::to_string(between_index)) + ".png";
-            viewer::write_png(path, width, height, renderer::read_rgba(shown, width, height));
-            log::info("frame {} written to {}", input.frame, path);
-        }
+    // OPENRAC_SHOT_FROM=FRAME: no shots before that frame.
+    static const std::uint64_t shot_from = env_frame(env::Var::ShotFrom).value_or(0);
+    if ((first || shot_between) && shots().due(input.frame) && input.frame >= shot_from) {
+        const std::string path = shots().prefix + std::to_string(input.frame)
+                                 + (first ? std::string() : "_b" + std::to_string(between_index))
+                                 + ".png";
+        viewer::write_png(path, width, height, renderer::read_rgba(shown, width, height));
+        log::info("frame {} written to {}", input.frame, path);
     }
     slow_frame();
     present(shown, width, height, window_width, window_height, false, aspect);
@@ -2384,10 +2458,10 @@ bool frame(std::span<const std::uint8_t> ram, std::uint32_t chain, std::uint32_t
     // program), m the game mode, cam/fw the camera's position and forward row, hp/hr/hs the hero's
     // position, rotation and state, mb the live mobys, dr the layers the game drew.
     static std::FILE* trace = [] {
-        const char* path = std::getenv("OPENRAC_TRACE");
-        std::FILE* f = path != nullptr && *path != 0 ? std::fopen(path, "w") : nullptr;
-        if (path != nullptr && f == nullptr) {
-            log::warn("OPENRAC_TRACE: cannot write {}", path);
+        const std::optional<std::string> path = env_string(env::Var::Trace);
+        std::FILE* f = path && !path->empty() ? std::fopen(path->c_str(), "w") : nullptr;
+        if (path && f == nullptr) {
+            log::warn("OPENRAC_TRACE: cannot write {}", *path);
         }
         return f;
     }();
@@ -2409,10 +2483,7 @@ bool frame(std::span<const std::uint8_t> ram, std::uint32_t chain, std::uint32_t
         std::fflush(trace);  // a crash keeps every tick before it
     }
     // OPENRAC_CONTROL_FRAMES=N: the run ends N frames after control (a route's length).
-    static const long control_frames = [] {
-        const char* v = std::getenv("OPENRAC_CONTROL_FRAMES");
-        return v != nullptr ? std::atol(v) : -1L;
-    }();
+    static const std::int64_t control_frames = env::integer(env::Var::ControlFrames, -1);
     if (control_frames >= 0 && g_route.control >= 0
         && static_cast<std::int64_t>(g->index) >= g_route.control + control_frames) {
         log::info("{} frames after control: the run ends", control_frames);
@@ -2420,8 +2491,8 @@ bool frame(std::span<const std::uint8_t> ram, std::uint32_t chain, std::uint32_t
     }
 
     // OPENRAC_DUMP_RAM=FRAME: the game's 32 MB of main memory at that frame, to ram_FRAME.bin.
-    static const char* dump_ram = std::getenv("OPENRAC_DUMP_RAM");
-    if (dump_ram != nullptr && g->index == std::strtoull(dump_ram, nullptr, 10)) {
+    static const std::optional<std::uint64_t> dump_ram = env_frame(env::Var::DumpRam);
+    if (dump_ram && g->index == *dump_ram) {
         const std::string path = std::format("ram_{}.bin", g->index);
         if (std::FILE* f = std::fopen(path.c_str(), "wb")) {
             std::fwrite(ram.data(), 1, ram.size(), f);
@@ -2462,8 +2533,8 @@ bool frame(std::span<const std::uint8_t> ram, std::uint32_t chain, std::uint32_t
         log::info("  fog colour {:.0f} {:.0f} {:.0f}, depth {:.0f} to {:.0f}, F {:.0f} to {:.0f}",
                   state.fog_colour[0] * 255, state.fog_colour[1] * 255, state.fog_colour[2] * 255,
                   state.fog_near, state.fog_far, state.fog_near_f, state.fog_far_f);
-        static const char* fx_dump = std::getenv("OPENRAC_FX_DUMP");
-        if (fx_dump != nullptr && g->index >= std::strtoull(fx_dump, nullptr, 10) && g->index < std::strtoull(fx_dump, nullptr, 10) + 100) {
+        static const std::optional<std::uint64_t> fx_dump = env_frame(env::Var::FxDump);
+        if (fx_dump && g->index >= *fx_dump && g->index < *fx_dump + 100) {
             for (const renderer::EffectQuad& e : g->effects) {
                 log::info("    quad {:.1f} {:.1f} {:.1f} {:.2f} | {:.1f} {:.1f} {:.1f} | {:.1f} {:.1f} {:.1f} | {:.1f} {:.1f} {:.1f} rgba {:#x} st {:.2f},{:.2f} {:.2f},{:.2f} tex0 {:#x} alpha {:#x} clamp {:#x}",
                           e.corner[0][0], e.corner[0][1], e.corner[0][2], e.corner[0][3], e.corner[1][0], e.corner[1][1], e.corner[1][2],
@@ -2498,10 +2569,16 @@ bool frame(std::span<const std::uint8_t> ram, std::uint32_t chain, std::uint32_t
     // OPENRAC_MOBY_LOG=N[:RADIUS]: every N ticks, the mobys within RADIUS game units of the hero
     // (default 20) in the log: class, address, state, mode bits, animation, position, the distance,
     // the collision radius and the update function, for seeing what an object is doing.
-    static const char* moby_log = std::getenv("OPENRAC_MOBY_LOG");
-    if (moby_log != nullptr && std::atoi(moby_log) > 0 && g->index % static_cast<std::uint64_t>(std::atoi(moby_log)) == 0) {
-        const char* colon = std::strchr(moby_log, ':');
-        const float radius = colon != nullptr ? static_cast<float>(std::atof(colon + 1)) : 20.0f;
+    static const std::optional<std::string_view> moby_log = env::value(env::Var::MobyLog);
+    // N read as std::atoi read it, held to int's range, where atoi's answer was undefined.
+    static const std::int64_t moby_every =
+        std::min<std::int64_t>(env::read_integer(moby_log, 10, 0), std::numeric_limits<int>::max());
+    if (moby_every > 0 && g->index % static_cast<std::uint64_t>(moby_every) == 0) {
+        const std::size_t colon = moby_log->find(':');
+        const float radius =
+            colon != std::string_view::npos
+                ? static_cast<float>(env::read_number(moby_log->substr(colon + 1), 0.0))
+                : 20.0f;
         const viewer::LiveMoby* hero = nullptr;
         for (const viewer::LiveMoby& m : state.mobys) {
             if (m.class_id == 0) {
@@ -2535,10 +2612,7 @@ bool frame(std::span<const std::uint8_t> ram, std::uint32_t chain, std::uint32_t
     // The live mobys, by class, each in the pose its animation fields give (viewer/moby_pose.h):
     // its joint palette goes to the scene, which skins the class's mesh with it. OPENRAC_ANIM=0
     // draws every moby in its bind pose.
-    static const bool animate = [] {
-        const char* v = std::getenv("OPENRAC_ANIM");
-        return v == nullptr || std::strcmp(v, "0") != 0;
-    }();
+    static const bool animate = env::flag(env::Var::Anim);
     std::vector<viewer::Instance> live;
     std::vector<std::uint32_t> live_addresses;
     std::vector<int> live_joints;
@@ -2831,12 +2905,9 @@ bool frame(std::span<const std::uint8_t> ram, std::uint32_t chain, std::uint32_t
     g->last_tick_menu = k.before_world >= 0x40000;  // the last tick's, read before this one's is kept
     k.frame = g->index++;
     // OPENRAC_DUMP_DRAWS=N or N-M: the frames whose 2D draws are logged.
-    static const char* dump_at = std::getenv("OPENRAC_DUMP_DRAWS");
+    static const std::optional<FrameRange> dump_at = env_frames(env::Var::DumpDraws);
     if (dump_at) {
-        char* end = nullptr;
-        const std::uint64_t first = std::strtoull(dump_at, &end, 10);
-        const std::uint64_t last = *end == '-' ? std::strtoull(end + 1, nullptr, 10) : first;
-        renderer::g_dump_draws = k.frame >= first && k.frame <= last;
+        renderer::g_dump_draws = dump_at->holds(k.frame);
     }
     if (renderer::g_dump_draws) {
         log::info("frame {}: the 2D path's draws", k.frame);
@@ -2943,16 +3014,20 @@ bool frame(std::span<const std::uint8_t> ram, std::uint32_t chain, std::uint32_t
     g->particles.clear();
     g->sky_sprites.clear();
     // OPENRAC_FRAME_LOG=FROM-TO: what each tick in that range drew, in the log.
-    static const char* frame_log = std::getenv("OPENRAC_FRAME_LOG");
-    if (frame_log != nullptr) {
-        char* end = nullptr;
-        const std::uint64_t from = std::strtoull(frame_log, &end, 10);
-        const std::uint64_t to = *end == '-' ? std::strtoull(end + 1, nullptr, 10) : from;
-        if (k.frame >= from && k.frame <= to) {
-            log::info("tick {}: draws {:#x} camera {} 2D bytes {} before world {} quads {} effects {} mobys {}", k.frame,
-                      k.draws, k.has_camera, k.packets.size(), k.before_world, k.ui_quads.size(), k.effects.size(),
-                      k.live.size());
-        }
+    static const std::optional<FrameRange> frame_log = env_frames(env::Var::FrameLog);
+    if (frame_log && frame_log->holds(k.frame)) {
+        log::info(
+            "tick {}: draws {:#x} camera {} 2D bytes {} before world {} quads {} effects {} "
+            "mobys {}",
+            k.frame,
+            k.draws,
+            k.has_camera,
+            k.packets.size(),
+            k.before_world,
+            k.ui_quads.size(),
+            k.effects.size(),
+            k.live.size()
+        );
     }
     // [debug tools] What the game holds this tick, for the overlay and the dump.
     debug_overlay::tick({g->game.c_str(), ram, level, &k.state, k.draws, k.frame, k.packets.size(), k.ui_quads.size(),
@@ -3006,7 +3081,7 @@ void set_tick(std::chrono::steady_clock::time_point tick, std::chrono::duration<
 int ui_quad(const openrac_game_ui_rect& quad) {
     // The 2D layer's quads are drawn natively (on the way off the GS packets); OPENRAC_UI_REPLAY
     // replays the game's packets instead, for comparing.
-    static const bool native = std::getenv("OPENRAC_UI_REPLAY") == nullptr;
+    static const bool native = !env::flag(env::Var::UiReplay);
     if (!g || !native || g->ui_quads.size() >= 0xFFFFFFu) {  // the marker's index is 24 bits
         return -1;
     }
@@ -3224,8 +3299,9 @@ bool pad(int port, std::uint16_t* buttons, std::uint8_t analog[4]) {
     // same counted from the frame what plays became skippable, which is the same tick of the scene in
     // every version (k's window frames fall at other ticks of it in PAL and US); SPERIOD as s, before
     // and after control (the scenes and flights a route starts once the player has control).
-    if (const char* script = port == 0 ? std::getenv("OPENRAC_PRESS") : nullptr) {
-        for (const char* at = script; at && *at;) {
+    static const std::optional<std::string> press = env_string(env::Var::Press);
+    if (port == 0 && press) {
+        for (const char* at = press->c_str(); at && *at;) {
             unsigned long frame = 0, mask = 0, length = 5;
             unsigned int lx = 128, ly = 128, rx = 128, ry = 128;
             const char kind = *at == 'c' || *at == 'k' || *at == 's' || *at == 'S' ? *at : 0;
@@ -3274,7 +3350,7 @@ bool pad(int port, std::uint16_t* buttons, std::uint8_t analog[4]) {
         debug_menu::filter_pad(*buttons, openrac_game_loaded_overlay());
         debug_overlay::pad(*buttons, analog);  // [debug tools]
     }
-    if (std::getenv("OPENRAC_TRACE_INPUT") != nullptr) {
+    if (env::flag(env::Var::TraceInput)) {
         static std::uint64_t last_frame[platform::kPadPorts]{};
         if (g->index >= last_frame[port] + 25) {
             last_frame[port] = g->index;
