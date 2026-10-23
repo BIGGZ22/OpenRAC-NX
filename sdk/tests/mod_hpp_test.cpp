@@ -19,12 +19,12 @@
 namespace {
 
 int g_failures = 0;
-#define CHECK(c)                                                                \
-    do {                                                                        \
-        if (!(c)) {                                                             \
-            std::fprintf(stderr, "%s:%d: CHECK(%s)\n", __FILE__, __LINE__, #c); \
-            ++g_failures;                                                       \
-        }                                                                       \
+#define CHECK(c)                                                                                   \
+    do {                                                                                           \
+        if (!(c)) {                                                                                \
+            std::fprintf(stderr, "%s:%d: CHECK(%s)\n", __FILE__, __LINE__, #c);                    \
+            ++g_failures;                                                                          \
+        }                                                                                          \
     } while (0)
 
 // A hook point that returns something, for the original's result.
@@ -48,6 +48,7 @@ openrac_gaddr g_sp = 0x100;
 void game_set_planar_velocity(float angle) {
     g_game_angles.push_back(angle);
 }
+
 int32_t game_twice(int32_t x) {
     return 2 * x;
 }
@@ -55,64 +56,85 @@ int32_t game_twice(int32_t x) {
 void host_log(openrac_mod*, int level, const char* text) {
     g_log.push_back(std::to_string(level) + " " + text);
 }
+
 void host_fail(openrac_mod*, const char* reason) {
     g_failed = reason;
 }
+
 int host_setting_bool(openrac_mod*, const char* key) {
     return std::strcmp(key, "trace") == 0;
 }
+
 int64_t host_setting_int(openrac_mod*, const char* key) {
     return std::strcmp(key, "count") == 0 ? 42 : 0;
 }
+
 double host_setting_float(openrac_mod*, const char* key) {
     return std::strcmp(key, "scale") == 0 ? 1.5 : 0.0;
 }
+
 const char* host_setting_string(openrac_mod*, const char* key) {
     return std::strcmp(key, "mode") == 0 ? "lock" : "";
 }
-int host_hook(openrac_mod*, const char* name, const char* signature, void* replacement, void** original) {
+
+int host_hook(
+    openrac_mod*, const char* name, const char* signature, void* replacement, void** original
+) {
     auto known = g_slots.find(name);
+
     if (known == g_slots.end()) {
         return OPENRAC_HOOK_UNKNOWN;
     }
+
     const std::string want = std::strcmp(name, "Test_Twice") == 0 ? "i32(i32)" : "void(f32)";
+
     if (want != signature) {
         return OPENRAC_HOOK_SIGNATURE;
     }
+
     *original = known->second;
     known->second = replacement;
     return OPENRAC_HOOK_OK;
 }
+
 int host_on_frame(openrac_mod*, openrac_frame_fn fn, void* user) {
     g_frame_fn = fn;
     g_frame_user = user;
     return 0;
 }
+
 int host_on_pad(openrac_mod*, openrac_pad_fn fn, void* user) {
     g_pad_fn = fn;
     g_pad_user = user;
     return 0;
 }
+
 void* host_function(const char* name) {
     return std::strcmp(name, "func_twice") == 0 ? reinterpret_cast<void*>(&game_twice) : nullptr;
 }
+
 void* host_function_at(openrac_gaddr) {
     return nullptr;
 }
+
 openrac_gaddr host_relocate(openrac_gaddr a) {
     return a + 0x10;
 }
+
 openrac_gaddr host_relocate_level(int level, openrac_gaddr a) {
     return a + static_cast<openrac_gaddr>(level);
 }
+
 int host_loaded_level() {
     return 3;
 }
+
 openrac_gaddr host_stack_push(uint32_t size, openrac_gaddr* saved) {
     *saved = g_sp;
     g_sp -= (size + 15u) & ~15u;
     return g_sp;
 }
+
 void host_stack_pop(openrac_gaddr saved) {
     g_sp = saved;
 }
@@ -120,13 +142,16 @@ void host_stack_pop(openrac_gaddr saved) {
 openrac_input g_input{};
 uint32_t g_taken = 0;
 int g_capture = -1;
+
 const openrac_input* host_input() {
     return &g_input;
 }
+
 int host_take_input(openrac_mod*, uint32_t devices) {
     g_taken |= devices;
     return 0;
 }
+
 void host_capture_mouse(openrac_mod*, int capture) {
     g_capture = capture;
 }
@@ -187,19 +212,24 @@ void load(openrac::Mod& mod) {
 
     // A hook point the port lacks, or one taken twice: an Error, and nothing hooked.
     bool threw = false;
+
     try {
         mod.hook<openrac::rac1::Hero_TurnToHeading>(
-            [](auto original, int32_t m, float a, float d, float l) { original(m, a, d, l); });
+            [](auto original, int32_t m, float a, float d, float l) { original(m, a, d, l); }
+        );
     } catch (const openrac::Error& e) {
         threw = std::string(e.what()).find("no such hook point") != std::string::npos;
     }
+
     CHECK(threw);
     threw = false;
+
     try {
         mod.hook<Test_Twice>([](auto original, int32_t x) { return original(x); });
     } catch (const openrac::Error&) {
         threw = true;
     }
+
     CHECK(threw);
 
     mod.on_frame([] {
@@ -229,12 +259,17 @@ OPENRAC_MOD_CPP("test-cpp", "1.2.3", load)
 
 // A hook point's type by its permanent id is the same type (games/rac1.hpp, hooks::), and asks for
 // the id.
-static_assert(std::is_same_v<openrac::rac1::hooks::player::set_planar_velocity, openrac::rac1::Hero_SetPlanarVelocity>);
-static_assert(std::string_view(openrac::rac1::hooks::moby::bolt::update::id) == "rac1.moby.bolt.update");
+static_assert(std::is_same_v<
+              openrac::rac1::hooks::player::set_planar_velocity,
+              openrac::rac1::Hero_SetPlanarVelocity>);
+static_assert(
+    std::string_view(openrac::rac1::hooks::moby::bolt::update::id) == "rac1.moby.bolt.update"
+);
 static_assert(std::string_view(openrac::detail::hook_id<Test_Twice>()) == "Test_Twice");
 
 int main() {
-    g_slots[openrac::rac1::Hero_SetPlanarVelocity::id] = reinterpret_cast<void*>(&game_set_planar_velocity);
+    g_slots[openrac::rac1::Hero_SetPlanarVelocity::id] =
+        reinterpret_cast<void*>(&game_set_planar_velocity);
     g_slots["Test_Twice"] = reinterpret_cast<void*>(&game_twice);
     openrac_api api = make_api();
     auto* handle = reinterpret_cast<openrac_mod*>(&api);
@@ -249,7 +284,8 @@ int main() {
     CHECK(g_failed.empty());
 
     // The port calls what the slot holds: the lambda, which goes on to the game's function.
-    auto velocity = reinterpret_cast<void (*)(float)>(g_slots[openrac::rac1::Hero_SetPlanarVelocity::id]);
+    auto velocity =
+        reinterpret_cast<void (*)(float)>(g_slots[openrac::rac1::Hero_SetPlanarVelocity::id]);
     velocity(1.0f);
     CHECK(g_game_angles.size() == 1 && g_game_angles[0] == 2.0f);
     auto twice = reinterpret_cast<int32_t (*)(int32_t)>(g_slots["Test_Twice"]);
@@ -260,7 +296,10 @@ int main() {
     g_throw_in_hook = true;
     velocity(7.0f);
     CHECK(g_game_angles.size() == 2 && g_game_angles[1] == 7.0f);
-    CHECK(!g_log.empty() && g_log.back().find("Hero_SetPlanarVelocity: on purpose") != std::string::npos);
+    CHECK(
+        !g_log.empty()
+        && g_log.back().find("Hero_SetPlanarVelocity: on purpose") != std::string::npos
+    );
     CHECK(g_log.back().rfind("3 ", 0) == 0);  // OPENRAC_LOG_ERROR
 
     // Callbacks: an exception in one is logged and returns.
@@ -292,9 +331,11 @@ int main() {
     CHECK(openrac::bind_from_name("WheelDown") == OPENRAC_BIND_WHEEL_DOWN);
     CHECK(openrac::bind_from_name("NoSuchKey") == OPENRAC_BIND_NONE);
     CHECK(openrac::bind_from_name(std::string_view("Space,KeyW").substr(0, 5)) == 44);
+
     for (int i = 0; i < OPENRAC_BIND_NAME_COUNT; ++i) {  // every name goes there and back
         CHECK(openrac::bind_from_name(openrac_bind_names[i].name) == openrac_bind_names[i].bind);
     }
+
     g_input.keys[26] = OPENRAC_KEY_HELD | OPENRAC_KEY_PRESSED;
     g_input.keys[44] = OPENRAC_KEY_PRESSED;  // tapped between two ticks
     g_input.mouse_held = OPENRAC_MOUSE_LEFT;
@@ -306,7 +347,9 @@ int main() {
     g_input.pointer_y = 0.5f;
     g_input.pointer_inside = 1;
     const openrac::Input in = mod.input();
-    CHECK(in.has_pointer() && in.pointer_x() == 0.25f && in.pointer_y() == 0.5f && in.pointer_inside());
+    CHECK(
+        in.has_pointer() && in.pointer_x() == 0.25f && in.pointer_y() == 0.5f && in.pointer_inside()
+    );
     {
         openrac_input old = g_input;  // a port of 1.2: the struct ends before the pointer
         old.size = static_cast<uint32_t>(offsetof(openrac_input, pointer_x));
@@ -325,7 +368,12 @@ int main() {
 
     // A load that throws refuses the mod with the message.
     g_failed.clear();
-    CHECK(openrac::detail::load(&api, handle, [](openrac::Mod&) { throw openrac::Error("not for this disc"); }) == 1);
+    CHECK(
+        openrac::detail::load(
+            &api, handle, [](openrac::Mod&) { throw openrac::Error("not for this disc"); }
+        )
+        == 1
+    );
     CHECK(g_failed == "not for this disc");
     g_failed.clear();
     CHECK(openrac::detail::load(&api, handle, [](openrac::Mod&) { throw 7; }) == 1);
@@ -334,9 +382,16 @@ int main() {
     // A later load of the same library starts afresh: the hook point can be taken again.
     g_slots["Test_Twice"] = reinterpret_cast<void*>(&game_twice);
     g_failed.clear();
-    CHECK(openrac::detail::load(&api, handle, [](openrac::Mod& m) {
-              m.hook<Test_Twice>([](auto original, int32_t x) { return original(x) + 100; });
-          }) == 0);
+    CHECK(
+        openrac::detail::load(
+            &api,
+            handle,
+            [](openrac::Mod& m) {
+                m.hook<Test_Twice>([](auto original, int32_t x) { return original(x) + 100; });
+            }
+        )
+        == 0
+    );
     CHECK(g_failed.empty());
     twice = reinterpret_cast<int32_t (*)(int32_t)>(g_slots["Test_Twice"]);
     CHECK(twice(1) == 102);
@@ -344,5 +399,6 @@ int main() {
     if (g_failures == 0) {
         std::puts("mod_hpp: all passed");
     }
+
     return g_failures == 0 ? 0 : 1;
 }

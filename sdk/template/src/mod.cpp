@@ -1,7 +1,8 @@
 // A mod for OpenRAC's native port, in C++ (sdk/README.md, docs/port/MODS.md). openrac/mod.hpp
 // is the C++ layer over the C interface; openrac/games/rac1.hpp names Ratchet & Clank's hook points.
-#include "openrac/games/rac1.hpp"
 #include "openrac/mod.hpp"
+
+#include "openrac/games/rac1.hpp"
 
 namespace {
 
@@ -10,6 +11,7 @@ void load(openrac::Mod& mod) {
     if (mod.game() != "rac1") {
         throw openrac::Error("this mod is for Ratchet & Clank");
     }
+
     const bool extra = mod.setting<bool>("enabled_extra");
 
     // A hook: the lambda gets the way on (the game's function, or a mod's loaded earlier) first,

@@ -23,7 +23,9 @@ extern "C" {
  * poll, before the tick reads it. */
 #define OPENRAC_RAC1_HOOK_Pad_ProcessReport "Pad_ProcessReport"
 #define OPENRAC_RAC1_SIG_Pad_ProcessReport "void(u32,u32,i32)"
-typedef void (*openrac_rac1_Pad_ProcessReport)(openrac_gaddr pad, openrac_gaddr report, int32_t size);
+typedef void (*openrac_rac1_Pad_ProcessReport)(
+    openrac_gaddr pad, openrac_gaddr report, int32_t size
+);
 
 /* Hero_UpdateMotionInput (func_L00_00211D28): the stick read into the hero, early in his update
  * each tick. */
@@ -35,7 +37,9 @@ typedef void (*openrac_rac1_Hero_UpdateMotionInput)(void);
  * (+0x180). */
 #define OPENRAC_RAC1_HOOK_Hero_TurnToHeading "Hero_TurnToHeading"
 #define OPENRAC_RAC1_SIG_Hero_TurnToHeading "void(i32,f32,f32,f32)"
-typedef void (*openrac_rac1_Hero_TurnToHeading)(int32_t mode, float accel, float damping, float limit);
+typedef void (*openrac_rac1_Hero_TurnToHeading)(
+    int32_t mode, float accel, float damping, float limit
+);
 
 /* Hero_SetPlanarVelocity (func_L00_00212790): the hero's velocity at his ground speed along an
  * angle; an angle above pi means his facing. */
@@ -104,7 +108,9 @@ typedef void (*openrac_rac1_Hero_TakeDamage)(int32_t amount);
  * keep. Read each tick, so a hit may be read more than once. */
 #define OPENRAC_RAC1_HOOK_Moby_GetHitMessage "Moby_GetHitMessage"
 #define OPENRAC_RAC1_SIG_Moby_GetHitMessage "u32(u32,i32,i32)"
-typedef openrac_gaddr (*openrac_rac1_Moby_GetHitMessage)(openrac_gaddr moby, int32_t mask, int32_t keep);
+typedef openrac_gaddr (*openrac_rac1_Moby_GetHitMessage)(
+    openrac_gaddr moby, int32_t mask, int32_t keep
+);
 
 /* Weapon_TakeAmmo (func_L00_00234638, rac1.weapon.take_ammo): takes ammo from an item for a shot
  * (TakeAmmo; -1 the item in hand): 1 when taken, 0 when there is too little. */
@@ -136,8 +142,13 @@ typedef void (*openrac_rac1_Hero_ApproachSpeed)(float up, float down);
 /* Take a hook point by its short name: OPENRAC_RAC1_HOOK(api, mod, Hero_TurnToHeading, my_turn,
  * &s_turn_original). */
 #define OPENRAC_RAC1_HOOK(api, mod, point, replacement, original)                                  \
-    (api)->hook((mod), OPENRAC_RAC1_HOOK_##point, OPENRAC_RAC1_SIG_##point, (void*)(replacement),  \
-                (void**)(original))
+    (api)->hook(                                                                                   \
+        (mod),                                                                                     \
+        OPENRAC_RAC1_HOOK_##point,                                                                 \
+        OPENRAC_RAC1_SIG_##point,                                                                  \
+        (void*)(replacement),                                                                      \
+        (void**)(original)                                                                         \
+    )
 
 #ifdef __cplusplus
 }

@@ -27,7 +27,8 @@ extern "C" {
 #endif
 
 #define OPENRAC_MOD_API_MAJOR 1
-#define OPENRAC_MOD_API_MINOR 3 /* 1.3: the pointer over the game's picture (openrac_input.pointer_*) */
+#define OPENRAC_MOD_API_MINOR                                                                      \
+    3 /* 1.3: the pointer over the game's picture (openrac_input.pointer_*) */
 
 /* The interface a mod is built for, what its openrac_mod_query reports: its manifest's "api" minor,
  * which the SDK's openrac_add_mod passes in, else this header's. A mod for 1.1 built with a newer
@@ -63,29 +64,31 @@ typedef struct openrac_mod openrac_mod;
 
 /* What openrac_mod_query tells the port before it loads the mod. */
 typedef struct openrac_mod_info {
-    uint32_t size;      /* sizeof(openrac_mod_info), set by the port */
-    uint32_t api_major; /* OPENRAC_MOD_API_MAJOR as the mod was built */
-    uint32_t api_minor; /* OPENRAC_MOD_API_MINOR as the mod was built */
-    const char* id;     /* the manifest's id: the port checks they agree */
+    uint32_t size;       /* sizeof(openrac_mod_info), set by the port */
+    uint32_t api_major;  /* OPENRAC_MOD_API_MAJOR as the mod was built */
+    uint32_t api_minor;  /* OPENRAC_MOD_API_MINOR as the mod was built */
+    const char* id;      /* the manifest's id: the port checks they agree */
     const char* version; /* the mod's version, as its manifest's */
 } openrac_mod_info;
 
 /* 1.2: the keyboard and mouse. A key is its USB HID usage, the same on every layout and system
  * (openrac/keys.h names them: "KeyW", "Space", "ShiftLeft"). */
 #define OPENRAC_KEY_COUNT 512
-#define OPENRAC_KEY_HELD 1u    /* openrac_input.keys[k]: the key is down */
-#define OPENRAC_KEY_PRESSED 2u /* it went down since the last tick (a tap shorter than a tick too) */
+#define OPENRAC_KEY_HELD 1u /* openrac_input.keys[k]: the key is down */
+#define OPENRAC_KEY_PRESSED                                                                        \
+    2u /* it went down since the last tick (a tap shorter than a tick too) */
 
 /* openrac_input.mouse_held and mouse_pressed's bits. */
 #define OPENRAC_MOUSE_LEFT 1u
 #define OPENRAC_MOUSE_MIDDLE 2u
 #define OPENRAC_MOUSE_RIGHT 4u
-#define OPENRAC_MOUSE_BACK 8u    /* the side button nearer the wrist (X1) */
+#define OPENRAC_MOUSE_BACK 8u     /* the side button nearer the wrist (X1) */
 #define OPENRAC_MOUSE_FORWARD 16u /* the other side button (X2) */
 
 /* openrac_api.take_input's devices. */
 #define OPENRAC_INPUT_KEYBOARD 1u /* the port's own keyboard table stops driving pad 0 */
-#define OPENRAC_INPUT_MOUSE 2u    /* the mod uses the mouse in play (reserved: the port has no mouse use of its own in play) */
+#define OPENRAC_INPUT_MOUSE                                                                        \
+    2u /* the mod uses the mouse in play (reserved: the port has no mouse use of its own in play) */
 
 /* The keyboard and mouse as the port read them for the tick about to run: taken once a tick, after
  * the window's events and before the game reads its pads (so before the tick's pad reports). */
@@ -93,15 +96,15 @@ typedef struct openrac_input {
     uint32_t size; /* sizeof(openrac_input) as the port was built: a newer port's is larger */
     uint32_t tick; /* counts the ticks: a new value, a new state */
     uint8_t keys[OPENRAC_KEY_COUNT]; /* by HID usage: OPENRAC_KEY_HELD | OPENRAC_KEY_PRESSED */
-    uint32_t mouse_held;    /* OPENRAC_MOUSE_* down now */
-    uint32_t mouse_pressed; /* OPENRAC_MOUSE_* that went down since the last tick */
-    float mouse_dx;         /* the mouse's motion since the last tick, in the system's pixels; */
-    float mouse_dy;         /* raw (no pointer acceleration) while captured; y grows downward */
-    float wheel_x;          /* the wheel since the last tick, in notches: x > 0 to the right, */
-    float wheel_y;          /* y > 0 away from the player (up), whatever the system's scroll direction */
-    uint8_t focused;        /* the game's window has the keyboard; while not, nothing is held */
-    uint8_t captured;       /* the cursor is captured: hidden, kept in the window, motion relative */
-    uint8_t overlay;        /* the port's own overlay or menu has the input now (F3): leave it */
+    uint32_t mouse_held;             /* OPENRAC_MOUSE_* down now */
+    uint32_t mouse_pressed;          /* OPENRAC_MOUSE_* that went down since the last tick */
+    float mouse_dx;   /* the mouse's motion since the last tick, in the system's pixels; */
+    float mouse_dy;   /* raw (no pointer acceleration) while captured; y grows downward */
+    float wheel_x;    /* the wheel since the last tick, in notches: x > 0 to the right, */
+    float wheel_y;    /* y > 0 away from the player (up), whatever the system's scroll direction */
+    uint8_t focused;  /* the game's window has the keyboard; while not, nothing is held */
+    uint8_t captured; /* the cursor is captured: hidden, kept in the window, motion relative */
+    uint8_t overlay;  /* the port's own overlay or menu has the input now (F3): leave it */
     uint8_t reserved;
     /* 1.3 (check size first): where the cursor is over the game's 4:3 picture, 0..1 across and
      * down (outside it below 0 or above 1), as the game's 2D screen of 512 by 416 pixels has it:
@@ -147,8 +150,13 @@ typedef struct openrac_api {
      * function of the hook point's signature. *original is set to what the replacement goes on to:
      * the game's own function, or the replacement of a mod loaded earlier. So the mod loaded last
      * runs first. Only during openrac_mod_load. */
-    int (*hook)(openrac_mod* mod, const char* name, const char* signature, void* replacement,
-                void** original);
+    int (*hook)(
+        openrac_mod* mod,
+        const char* name,
+        const char* signature,
+        void* replacement,
+        void** original
+    );
 
     /* fn(user) after each game tick, in load order. Only during openrac_mod_load. */
     int (*on_frame)(openrac_mod* mod, openrac_frame_fn fn, void* user);
