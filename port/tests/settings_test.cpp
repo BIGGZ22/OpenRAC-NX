@@ -18,6 +18,48 @@ int main() {
     const auto file = folder / "settings.ini";
     settings::load(file);
     CHECK(settings::get().gtao);
+    CHECK(settings::get().texture_filter == renderer::TextureFilter::EdgeAware);
+    CHECK(settings::get().anisotropy == 0);
+    CHECK(settings::get().anisotropy_samples(true) == 4);
+    CHECK(settings::get().anisotropy_samples(false) == 1);
+    // Saving another setting keeps the backend-dependent default automatic.
+    settings::save();
+    settings::load(file);
+    CHECK(settings::get().anisotropy == 0);
+    for (int samples : settings::kAnisotropies) {
+        std::ofstream(file) << "anisotropy = " << samples << "\n";
+        settings::load(file);
+        CHECK(settings::get().anisotropy_samples(true) == samples);
+        CHECK(settings::get().anisotropy_samples(false) == samples);
+        settings::save();
+        settings::load(file);
+        CHECK(settings::get().anisotropy == samples);
+    }
+    for (const char* value : {"auto", "invalid"}) {
+        std::ofstream(file) << "anisotropy = " << value << "\n";
+        settings::load(file);
+        CHECK(settings::get().anisotropy_samples(true) == 4);
+        CHECK(settings::get().anisotropy_samples(false) == 1);
+    }
+
+    for (auto filter : {renderer::TextureFilter::Normal, renderer::TextureFilter::EdgeAware}) {
+        settings::get().texture_filter = filter;
+        settings::save();
+        settings::get().texture_filter = renderer::TextureFilter::Normal;
+        settings::load(file);
+        CHECK(settings::get().texture_filter == filter);
+    }
+    CHECK(std::string(settings::name(renderer::TextureFilter::EdgeAware)) == "Edge-aware (2x)");
+    CHECK(std::string(settings::name(renderer::TextureFilter::Count)) == "Edge-aware (2x)");
+    std::ofstream(file) << "texture_filter = bspline\n";
+    settings::load(file);
+    CHECK(settings::get().texture_filter == renderer::TextureFilter::EdgeAware);
+    std::ofstream(file) << "texture_filter = catmull-rom\n";
+    settings::load(file);
+    CHECK(settings::get().texture_filter == renderer::TextureFilter::EdgeAware);
+    std::ofstream(file) << "texture_filter = unknown\n";
+    settings::load(file);
+    CHECK(settings::get().texture_filter == renderer::TextureFilter::EdgeAware);
     // Enhanced rendering is off until the player turns it on (the launcher's Mods entry).
     CHECK(!settings::get().enhanced_rendering);
     CHECK(settings::get().enhanced_graphics);
@@ -32,6 +74,7 @@ int main() {
     // An old file keeps the defaults for keys it does not contain.
     std::ofstream(file) << "gtao = 1\ngtao_strength = 0.7\n";
     settings::load(file);
+    CHECK(settings::get().texture_filter == renderer::TextureFilter::EdgeAware);
     auto& options = settings::get();
     CHECK(options.enhanced_graphics && options.probe_lighting && options.gtao);
     CHECK(!options.enhanced_rendering);

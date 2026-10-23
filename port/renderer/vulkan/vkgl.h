@@ -88,6 +88,10 @@ struct GpuMaterialCounters {
 
 GpuMaterialCounters gpu_material_counters();
 
+// Copy an RGBA8 compute output to an allocated 2D texture without a readback.
+// Includes compute-write -> transfer-read and image-sampling dependencies.
+bool copy_buffer_to_texture(unsigned buffer, unsigned texture, int width, int height);
+
 // renderer/gl.h's loader: the GL functions by name, null for one this does not carry out.
 using Proc = void (*)();
 Proc get_proc(const char* name);

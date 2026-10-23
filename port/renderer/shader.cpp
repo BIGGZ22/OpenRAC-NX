@@ -8,6 +8,8 @@
 #include <utility>
 
 #include "renderer/gl.h"
+#include "renderer/texture_filter.h"
+#include "renderer_shaders.h"
 
 namespace openrac::renderer {
 
@@ -117,6 +119,16 @@ Shader& Shader::operator=(Shader&& other) noexcept {
 bool Shader::build(
     std::string_view name, std::string_view vertex, std::string_view fragment, std::string& error
 ) {
+    // Share exactly the same RGB-only reconstruction across world shader paths.
+    constexpr std::string_view marker = "// OPENRAC_UPSCALED_TEXTURE_COLOURS_SOURCE";
+    std::string assembled;
+    if (const auto at = fragment.find(marker); at != std::string_view::npos) {
+        assembled = fragment;
+        assembled.replace(at, marker.size(), enhanced_rendering_available()
+            ? shaders::upscaled_texture_colours_glsl
+            : "vec4 sample_upscaled_texture_colours(vec2 uv) { return texture(tex_T0, uv); }\n");
+        fragment = assembled;
+    }
     std::string log;
     const GLuint vs = compile(GL_VERTEX_SHADER, vertex, log);
     if (vs == 0) {
@@ -157,6 +169,7 @@ bool Shader::build(
             glUniform1i(location, unit);
         }
     }
+    glUniform1i(glGetUniformLocation(m_program, "upscaled_texture_colours"), kUpscaledTextureColoursUnit);
     return true;
 }
 

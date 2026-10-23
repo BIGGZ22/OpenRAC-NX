@@ -29,6 +29,7 @@ constexpr const char* kDisplayMode[] = {"windowed", "borderless", "fullscreen"};
 constexpr const char* kAspect[] = {"4:3", "16:10", "16:9", "21:9", "32:9", "window", "custom"};
 constexpr const char* kHud[] = {"centre", "edges"};
 constexpr const char* kGtaoQuality[] = {"performance", "quality"};
+constexpr const char* kTextureFilter[] = {"normal", "edge-aware"};
 constexpr const char* kVSync[] = {"off", "on", "adaptive"};
 
 std::string trimmed(const std::string& s) {
@@ -251,8 +252,11 @@ void load(const std::filesystem::path& file) {
             known = parse_float(value, 0.05f, 8.0f, s.gtao_settings.radius);
         } else if (key == "gtao_strength") {
             known = parse_float(value, 0.0f, 3.0f, s.gtao_settings.strength);
+        } else if (key == "texture_filter") {
+            known = parse(value, kTextureFilter, s.texture_filter);
         } else if (key == "anisotropy") {
-            known = parse_listed(value, kAnisotropies, s.anisotropy);
+            if (value == "auto") s.anisotropy = 0;
+            else known = parse_listed(value, kAnisotropies, s.anisotropy);
         } else if (key == "vsync") {
             known = parse(value, kVSync, s.vsync);
             has_vsync = has_vsync || known;
@@ -305,7 +309,7 @@ std::string summary() {
     return std::format("{} ({}, display {}), picture {}, {}% scale, {} sample(s), anisotropy {}, frames {}, vsync {}, "
                        "volume {}{}{}",
                        kDisplayMode[static_cast<int>(s.display_mode)], window, s.monitor,
-                       kAspect[static_cast<int>(s.aspect)], s.render_scale, s.msaa, s.anisotropy, frame_rate_value(s),
+                       kAspect[static_cast<int>(s.aspect)], s.render_scale, s.msaa, s.anisotropy ? std::to_string(s.anisotropy) : "auto", frame_rate_value(s),
                        kVSync[static_cast<int>(s.vsync)], s.volume,
                        s.verbose_log ? ", detailed log" : "", fixes_off());
 }
@@ -358,7 +362,8 @@ void save() {
         << "gtao_half_resolution = " << (s.gtao_settings.half_resolution ? 1 : 0) << "\n"
         << "gtao_radius = " << s.gtao_settings.radius << "\n"
         << "gtao_strength = " << s.gtao_settings.strength << "\n"
-        << "anisotropy = " << s.anisotropy << "\n"
+        << "texture_filter = " << kTextureFilter[static_cast<int>(s.texture_filter)] << "\n"
+        << "anisotropy = " << (s.anisotropy ? std::to_string(s.anisotropy) : "auto") << "\n"
         << "vsync = " << kVSync[static_cast<int>(s.vsync)] << "\n"
         << "frame_rate = " << frame_rate_value(s) << "\n"
         << "show_fps = " << (s.show_fps ? 1 : 0) << "\n"
@@ -446,6 +451,11 @@ const char* name(VSync vsync) {
     return names[std::min<int>(static_cast<int>(vsync), 2)];
 }
 
+
+const char* name(renderer::TextureFilter filter) {
+    constexpr const char* names[] = {"Normal", "Edge-aware (2x)"};
+    return names[std::clamp(static_cast<int>(filter), 0, static_cast<int>(std::size(names)) - 1)];
+}
 
 std::string frame_rate_name(const Settings& settings) {
     switch (settings.frame_rate) {

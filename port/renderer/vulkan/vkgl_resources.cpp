@@ -452,7 +452,7 @@ BufferRef resolve(Buffer& b, bool persistent) {
         info.size = size;
         info.usage = VK_BUFFER_USAGE_VERTEX_BUFFER_BIT | VK_BUFFER_USAGE_INDEX_BUFFER_BIT
                      | VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT | VK_BUFFER_USAGE_UNIFORM_TEXEL_BUFFER_BIT
-                     | VK_BUFFER_USAGE_STORAGE_BUFFER_BIT;
+                     | VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_SRC_BIT;
         VmaAllocationCreateInfo alloc{};
         alloc.usage = VMA_MEMORY_USAGE_AUTO_PREFER_DEVICE;
         alloc.flags = VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT

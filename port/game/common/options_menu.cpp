@@ -18,6 +18,7 @@
 #include "pause_options.h"
 #include "platform/window.h"
 #include "renderer/framebuffer.h"
+#include "renderer/gl.h"
 #include "renderer/texture_pool.h"
 #include "settings.h"
 
@@ -33,7 +34,7 @@ constexpr const char* kLabels[kRows] = {
     "HUD",
     "Render scale",
     "Anti-aliasing",
-    "Texture filter",
+    "Anisotropic filtering",
     "VSync",
     "Frame rate",
     "Frame cap",
@@ -113,8 +114,10 @@ std::string value_of(int row) {
                                              : std::format("{:.2f}x", static_cast<float>(s.render_scale) / 100.0f);
         case kMsaa:
             return s.msaa > 1 ? std::format("{}x", s.msaa) : std::string("Off");
-        case kAnisotropy:
-            return s.anisotropy > 1 ? std::format("Anisotropic {}x", s.anisotropy) : std::string("Trilinear");
+        case kAnisotropy: {
+            const int samples = s.anisotropy_samples(gl::enhanced_rendering_available() && s.enhanced_graphics);
+            return samples > 1 ? std::format("Anisotropic {}x", samples) : std::string("Trilinear");
+        }
         case kVSync:
             return settings::name(s.vsync);
         case kFrameRate:
@@ -182,7 +185,8 @@ void step_value(int row, int by) {
                              offered(settings::kSampleCounts, renderer::FrameBuffer::max_samples()));
             break;
         case kAnisotropy:
-            s.anisotropy = stepped(settings::kAnisotropies, s.anisotropy, by,
+            s.anisotropy = stepped(settings::kAnisotropies,
+                                   s.anisotropy_samples(gl::enhanced_rendering_available() && s.enhanced_graphics), by,
                                    offered(settings::kAnisotropies,
                                            static_cast<int>(renderer::TexturePool::max_anisotropy())));
             break;

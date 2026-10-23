@@ -12,6 +12,7 @@
 #include "common/log.h"
 #include "common/stats.h"
 #include "enhanced/viewer/hero_shadow.h"
+#include "enhanced/renderer/texture_upscale.h"
 #include "enhanced/viewer/shadow_atlas.h"
 #include "renderer/gl.h"
 #include "renderer/world/gl_world.h"
@@ -104,6 +105,9 @@ bool outside(
 bool LevelScene::upload(
     const LevelData& level, renderer::TexturePool& textures, std::string& error
 ) {
+    if (enhanced_rendering_available() && !textures.has_upscaled_texture_colours()) {
+        textures.set_upscaled_texture_colours(std::make_unique<enhanced::TextureUpscaler>());
+    }
     // mesh.frag again with OPENRAC_SOLID, after its version line (which has to stay the first).
     const std::string fragment = probe_mesh_fragment();
     m_early_capable = EarlyLighting::supported();
@@ -1425,7 +1429,7 @@ void LevelScene::draw_sky(const renderer::FrameInput& input, renderer::RenderSta
             const Material& m = m_materials[static_cast<std::size_t>(p.material)];
             const renderer::TextureHandle texture =
                 m.image >= 0 ? m_textures[static_cast<std::size_t>(m.image)] : m_white;
-            glBindTexture(GL_TEXTURE_2D, state.textures.gl_texture(texture));
+            state.textures.bind_upscaled_texture_colours(texture, m_sky, input.texture_filter);
             // The shell's matrix as the game drew it this tick; its translation is in the game's
             // sky units, the vertices were exported in 1/1024ths of them (editor/sky.py).
             renderer::Mat4 shell = renderer::identity();
@@ -1842,7 +1846,6 @@ void LevelScene::draw_layer(
         {"mobys opaque", "mobys glow", "mobys translucent", "mobys effects", "mobys metal"};
     // The material state the program holds now (flush): none yet.
     int set_material = -1;
-    unsigned set_texture = 0;
     unsigned set_emission_texture = 0;
     int set_cutout = -1;
     decltype(Material::colour) set_colour{};
@@ -1996,11 +1999,7 @@ void LevelScene::draw_layer(
                     }
                     const renderer::TextureHandle texture =
                         m.image >= 0 ? m_textures[static_cast<std::size_t>(m.image)] : m_white;
-                    const unsigned gl_texture = state.textures.gl_texture(texture);
-                    if (gl_texture != set_texture) {
-                        glBindTexture(GL_TEXTURE_2D, gl_texture);
-                        set_texture = gl_texture;
-                    }
+                    state.textures.bind_upscaled_texture_colours(texture, *program, input.texture_filter);
                     if (static_cast<int>(m.cutout) != set_cutout) {
                         glUniform1i(cutout, m.cutout ? 1 : 0);
                         set_cutout = static_cast<int>(m.cutout);

@@ -38,11 +38,19 @@ bool alpha_passes(float a) {
     }
 }
 
+#ifdef OPENRAC_UPSCALED_TEXTURE_COLOURS
+// OPENRAC_UPSCALED_TEXTURE_COLOURS_SOURCE
+#endif
+
 void main() {
     vec4 c = v_colour;
     if (textured != 0) {
         // S/Q, T/Q per pixel, as the chip divides.
+#ifdef OPENRAC_UPSCALED_TEXTURE_COLOURS
+        vec4 t = sample_upscaled_texture_colours(v_stq.xy / v_stq.z) * 255.0;
+#else
         vec4 t = texture(tex_T0, v_stq.xy / v_stq.z) * 255.0;
+#endif
         if (distance_field != 0) {
             // The edge from the distance field, about a pixel wide at any size; inside it, the
             // glyph's own opacity (the font fades its glyphs downwards), in the chip's units.

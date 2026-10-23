@@ -31,6 +31,7 @@
 #include "renderer/math.h"
 #include "renderer/shadow_volume.h"
 #include "renderer/texture_pool.h"
+#include "renderer/texture_filter.h"
 
 namespace openrac::renderer {
 
@@ -111,6 +112,7 @@ inline constexpr std::uint32_t kUiSprite = 2;
 inline constexpr std::uint32_t kUiGlyph = 1;
 
 struct FrameInput {
+    TextureFilter texture_filter = TextureFilter::Normal;
     bool sun_pixel_shadow = false;
     bool hero_pixel_shadow = false;
     bool hero_airborne = false;

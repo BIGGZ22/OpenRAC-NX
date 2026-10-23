@@ -1747,12 +1747,15 @@ void draw_kept(bool first) {
         log::info("frame {}x{} for a picture of {}x{} pixels, {} sample(s) a pixel", g->frame.width(),
                   g->frame.height(), box.width, box.height, g->frame.samples());
     }
-    if (g->renderer) {
-        g->renderer->textures().set_anisotropy(static_cast<float>(settings::get().anisotropy));
-    }
     renderer::FrameInput input;
     const auto& graphics = settings::get();
+    if (g->renderer) {
+        const int anisotropy = graphics.anisotropy_samples(
+            gl::enhanced_rendering_available() && graphics.enhanced_graphics);
+        g->renderer->textures().set_anisotropy(static_cast<float>(anisotropy));
+    }
     const bool enhanced = enhanced_graphics_available() && graphics.enhanced_graphics;
+    input.texture_filter = enhanced ? graphics.texture_filter : renderer::TextureFilter::Normal;
     g->scene.set_probe_lighting(enhanced && graphics.probe_lighting, graphics.probe_gi_multiplier);
     g->scene.set_probe_bias(graphics.probe_normal_bias, graphics.probe_view_bias);
     g->scene.set_probe_spheres(graphics.probe_spheres);

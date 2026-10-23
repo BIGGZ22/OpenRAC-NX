@@ -86,17 +86,29 @@ pub fn settings() -> Vec<SettingSpec> {
         Choice { value: "performance".into(), name: "Performance".into() },
         Choice { value: "quality".into(), name: "Quality".into() },
     ];
+    let mut texture_filter = spec(
+        "texture_filter",
+        "Texture upscaling",
+        "choice",
+        "edge-aware".into(),
+        "Enlarges world textures while keeping edges sharp.",
+    );
+    texture_filter.choices = vec![
+        Choice { value: "normal".into(), name: "Normal".into() },
+        Choice { value: "edge-aware".into(), name: "Edge-aware (2x)".into() },
+    ];
     vec![
         spec("probe_lighting", "Probe lighting", "bool", true.into(), "Light that bounces off the world."),
         spec("enhanced_shadows", "Modern shadows", "bool", true.into(), "Sharp sun shadows, and Ratchet's own."),
         spec("gtao", "Ambient occlusion", "bool", true.into(), "Soft shade in corners and under objects."),
         quality,
-        range(
+        texture_filter,
+        advanced(range(
             spec("probe_gi_multiplier", "Bounce light", "float", 1.0.into(), "How bright the bounced light is."),
             0.0,
             5.0,
             0.1,
-        ),
+        )),
         advanced(range(spec("gtao_strength", "Occlusion strength", "float", 1.0.into(), ""), 0.0, 3.0, 0.05)),
         advanced(range(spec("gtao_radius", "Occlusion radius", "float", 1.25.into(), ""), 0.05, 8.0, 0.05)),
         advanced(spec(
@@ -334,25 +346,33 @@ mod tests {
         assert_eq!(value(&v, "gtao"), Value::Bool(true));
         assert_eq!(value(&v, "probe_lighting"), Value::Bool(true));
         assert_eq!(value(&v, "probe_gi_multiplier"), Value::from(1.0));
+        assert_eq!(value(&v, "texture_filter"), Value::from("edge-aware"));
 
         set_enabled(&home, "rac1", "pal", true).unwrap();
         set_setting(&home, "rac1", "pal", "probe_gi_multiplier", &Value::from(2.5)).unwrap();
         set_setting(&home, "rac1", "pal", "gtao_quality", &Value::from("quality")).unwrap();
         set_setting(&home, "rac1", "pal", "enhanced_shadows", &Value::Bool(false)).unwrap();
+        set_setting(&home, "rac1", "pal", "texture_filter", &Value::from("normal")).unwrap();
         let text = std::fs::read_to_string(&file).unwrap();
         assert!(text.starts_with("msaa = 4\ngtao = 1\n"), "{text}");
-        for line in
-            ["enhanced_rendering = 1", "probe_gi_multiplier = 2.5", "gtao_quality = quality", "enhanced_shadows = 0"]
-        {
+        for line in [
+            "enhanced_rendering = 1",
+            "probe_gi_multiplier = 2.5",
+            "gtao_quality = quality",
+            "enhanced_shadows = 0",
+            "texture_filter = normal",
+        ] {
             assert!(text.lines().any(|l| l == line), "{line} in {text}");
         }
         let v = view(&home, "rac1", "pal", BakeStatus::default());
         assert!(v.entry.enabled);
         assert_eq!(value(&v, "probe_gi_multiplier"), Value::from(2.5));
+        assert_eq!(value(&v, "texture_filter"), Value::from("normal"));
         // Out of the port's range, another type, or not one of the entry's: refused, file kept.
         assert!(set_setting(&home, "rac1", "pal", "probe_gi_multiplier", &Value::from(9.0)).is_err());
         assert!(set_setting(&home, "rac1", "pal", "gtao", &Value::from("yes")).is_err());
         assert!(set_setting(&home, "rac1", "pal", "probe_spheres", &Value::Bool(true)).is_err());
+        assert!(set_setting(&home, "rac1", "pal", "texture_filter", &Value::from("unknown")).is_err());
         assert_eq!(std::fs::read_to_string(&file).unwrap(), text);
         let _ = std::fs::remove_dir_all(&home);
     }

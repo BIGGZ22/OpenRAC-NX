@@ -13,6 +13,7 @@
 #include <string>
 
 #include "enhanced/renderer/gtao_settings.h"
+#include "renderer/texture_filter.h"
 
 namespace openrac::settings {
 
@@ -87,8 +88,12 @@ struct Settings {
     float probe_gi_multiplier = 1.0f;
     float probe_normal_bias = 0.5f;  // receiver offsets in world units
     float probe_view_bias = 0.5f;
-    bool gtao = true;       // ground-truth ambient occlusion when enhanced rendering is enabled
-    int anisotropy = 1;      // the textures' anisotropic filter: 1 (off), 2, 4, 8, 16
+    bool gtao = true;        // ground-truth ambient occlusion when enhanced rendering is enabled
+    renderer::TextureFilter texture_filter = renderer::TextureFilter::EdgeAware;
+    int anisotropy = 0;      // 0: mode default; otherwise 1 (off), 2, 4, 8, 16
+    int anisotropy_samples(bool enhanced) const {
+        return anisotropy ? anisotropy : enhanced ? 4 : 1;
+    }
     VSync vsync = VSync::On;
     FrameRate frame_rate = FrameRate::Display;
     int frame_cap = 60;  // FrameRate::Capped's frames a second
@@ -136,6 +141,7 @@ const char* name(DisplayMode mode);
 const char* name(Aspect aspect);
 const char* name(Hud hud);
 const char* name(VSync vsync);
+const char* name(renderer::TextureFilter filter);
 std::string frame_rate_name(const Settings& settings);
 
 }  // namespace openrac::settings

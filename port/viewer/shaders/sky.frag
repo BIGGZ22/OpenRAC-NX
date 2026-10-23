@@ -12,6 +12,8 @@ uniform sampler2D tex_T0;
 
 layout(location = 0) out vec4 out_colour;
 
+// OPENRAC_UPSCALED_TEXTURE_COLOURS_SOURCE
+
 void main() {
-    out_colour = texture(tex_T0, v_uv) * v_colour;
+    out_colour = sample_upscaled_texture_colours(v_uv) * v_colour;
 }

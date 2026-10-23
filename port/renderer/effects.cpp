@@ -38,7 +38,9 @@ bool EffectRenderer::draws(const EffectStrip& strip) const {
 
 bool EffectRenderer::init(RenderState& state, std::string& error) {
     (void)state;
-    if (!m_shader.build("effect", shaders::effect_vert, shaders::direct_frag, error)) {
+    std::string fragment(shaders::direct_frag);
+    fragment.insert(fragment.find('\n') + 1, "#define OPENRAC_UPSCALED_TEXTURE_COLOURS 1\n");
+    if (!m_shader.build("effect", shaders::effect_vert, fragment, error)) {
         return false;
     }
     m_view_projection = m_shader.uniform("view_projection");
@@ -74,6 +76,7 @@ void EffectRenderer::render(const FrameInput& input, RenderState& state) {
         return;
     }
     m_shader.use();
+    m_texture_filter = input.texture_filter;
     const Mat4 view_projection = multiply(input.camera.projection, input.camera.view);
     glUniformMatrix4fv(m_view_projection, 1, GL_FALSE, view_projection.data());
     glUniform1i(m_fog_enable, 0);
@@ -247,10 +250,12 @@ bool EffectRenderer::apply(std::uint64_t tex0_bits, std::uint64_t tex1_bits, std
                        state.textures.name(texture), texture == state.textures.placeholder() ? " (placeholder)" : "");
         }
     }
-    if (texture != m_applied.texture) {
-        glBindTexture(GL_TEXTURE_2D, state.textures.gl_texture(texture));
-        m_applied.texture = texture;
+    if (texture != m_applied.texture || clamp_bits != m_applied.clamp_bits) {
+        const auto wrap = gs::Clamp::decode(clamp_bits);
+        state.textures.bind_upscaled_texture_colours(texture, m_shader, m_texture_filter,
+                                        wrap.wms == gs::Wrap::Repeat, wrap.wmt == gs::Wrap::Repeat);
     }
+    m_applied.texture = texture;
     if (tex1_bits != m_applied.tex1_bits || clamp_bits != m_applied.clamp_bits) {
         const gs::Tex1 tex1 = gs::Tex1::decode(tex1_bits);
         const gs::Clamp clamp = gs::Clamp::decode(clamp_bits);
