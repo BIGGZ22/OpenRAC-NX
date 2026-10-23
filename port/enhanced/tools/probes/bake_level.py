@@ -82,6 +82,69 @@ def inspection(text):
     return grid, emission, fields['scene_hash']
 
 
+class NativeBatch:
+    """Keep one native scene alive while the Python planner chooses its grids."""
+
+    def __init__(self, command, log_path):
+        self.command = command
+        self.log_path = log_path
+        self.process = None
+        self.log = None
+        self.inspection = ''
+
+    def __enter__(self):
+        self.log = self.log_path.open('x')
+        try:
+            self.process = subprocess.Popen(self.command, stdin=subprocess.PIPE,
+                                            stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
+                                            text=True, bufsize=1)
+            lines = []
+            for line in self.process.stdout:
+                self.log.write(line)
+                self.log.flush()
+                if line.strip() == 'Probe batch ready':
+                    self.inspection = ''.join(lines)
+                    return self
+                lines.append(line)
+            self.process.wait()
+            raise subprocess.CalledProcessError(self.process.returncode or 1, self.command)
+        except BaseException:
+            self.close()
+            raise
+
+    def finish(self, plan):
+        self.process.stdin.write(json.dumps(plan, allow_nan=False)+'\n')
+        self.process.stdin.close()
+        completed = False
+        for line in self.process.stdout:
+            self.log.write(line)
+            self.log.flush()
+            if line.startswith(('Baking ', 'Verified ')):
+                print(line.rstrip(), flush=True)
+            completed |= line.strip() == 'Probe batch complete'
+        result = self.process.wait()
+        if result or not completed:
+            raise subprocess.CalledProcessError(result or 1, self.command)
+
+    def close(self):
+        if self.process is not None:
+            if self.process.poll() is None:
+                self.process.terminate()
+                try:
+                    self.process.wait(timeout=10)
+                except subprocess.TimeoutExpired:
+                    self.process.kill()
+                    self.process.wait()
+            for stream in (self.process.stdin, self.process.stdout):
+                if stream is not None:
+                    stream.close()
+        if self.log is not None:
+            self.log.close()
+
+    def __exit__(self, *_):
+        self.close()
+
+
 def bake_level(level_dir: Path, output_dir: Path, baker: Path, *, disc=None, options=()):
     level_dir, output_dir, baker = level_dir.resolve(), output_dir.resolve(), baker.resolve()
     if output_dir.is_relative_to(level_dir):
@@ -95,49 +158,31 @@ def bake_level(level_dir: Path, output_dir: Path, baker: Path, *, disc=None, opt
     profile = json.loads(subprocess.check_output(common+['--print-profile'], text=True))
     output_dir.mkdir(parents=True)
 
-    def run(name, arguments):
-        print(name, flush=True)
-        log_path = output_dir/(name+'.log')
-        with log_path.open('x') as log:
-            subprocess.run(common+arguments, stdout=log, stderr=subprocess.STDOUT, check=True)
-        return log_path.read_text()
+    command = common + ['--batch-output', str(output_dir)]
+    with NativeBatch(command, output_dir/'batch.log') as native:
+        coarse, emission, source_hash = inspection(native.inspection)
+        if settings.enabled and gameplay is not None:
+            plan = seeds.plan_level(level_dir, coarse, profile, gameplay, settings.planner_options())
+        elif settings.enabled:
+            plan = {'regions': [], 'note': 'No gameplay to seed dense regions from (a scene, not a level of the disc).'}
+        else:
+            plan = {'regions': [], 'note': 'Dense regions disabled by the per-level profile.'}
+        if len(plan['regions']) > settings.max_regions:
+            raise ValueError('planned dense regions exceed the runtime region limit; adjust the level planning settings')
+        plan.update(region_settings=asdict(settings), bake_profile=profile,
+                    scene_hash=source_hash, emission=emission)
+        write_json(output_dir/'seed-plan.json', plan)
+        print(f"Planned {len(plan['regions'])} dense regions", flush=True)
 
-    # Scene conversion resolves shared emission colours/masks and liquid analysis
-    # here, before any grid traces. The same native conversion feeds every bake.
-    coarse, emission, source_hash = inspection(run('scene-emission', ['--inspect']))
-    if settings.enabled and gameplay is not None:
-        plan = seeds.plan_level(level_dir, coarse, profile, gameplay, settings.planner_options())
-    elif settings.enabled:
-        plan = {'regions': [], 'note': 'No gameplay to seed dense regions from (a scene, not a level of the disc).'}
-    else:
-        plan = {'regions': [], 'note': 'Dense regions disabled by the per-level profile.'}
-    if len(plan['regions']) > settings.max_regions:
-        raise ValueError('planned dense regions exceed the runtime region limit; adjust the level planning settings')
-    plan.update(region_settings=asdict(settings), bake_profile=profile,
-                scene_hash=source_hash, emission=emission)
-    write_json(output_dir/'seed-plan.json', plan)
-    print(f"Planned {len(plan['regions'])} dense regions", flush=True)
+        regions = []
+        for region in plan['regions']:
+            spacing = seeds.axis_spacing(region['spacing'])
+            regions.append({'bounds': region['bounds'], 'spacing': spacing,
+                            'max_distance': 1.5*math.sqrt(sum(s*s for s in spacing))})
+        native.finish({'version': 1, 'scene_hash': source_hash, 'regions': regions})
 
     sparse = output_dir/'sparse.orpg'
-    run('sparse.bake', ['--output', str(sparse)])
-    run('sparse.verify', ['--verify', str(sparse), '--game-rounding'])
-    assets = []
-    for i, region in enumerate(plan['regions']):
-        name = f'region-{i:03d}'
-        asset = output_dir/(name+'.orpg')
-        spacing = seeds.axis_spacing(region['spacing'])
-        local = ['--spacing', ','.join(map(str, spacing)),
-                 '--bounds', ','.join(map(str, region['bounds'])),
-                 '--max-distance', str(1.5*math.sqrt(sum(s*s for s in spacing)))]
-        run(name+'.bake', local+['--output', str(asset)])
-        run(name+'.verify', local+['--verify', str(asset), '--game-rounding', '--compare-coarse', str(sparse)])
-        assets.append(asset)
-
-    # Recheck source identity before writing the runtime registration. A failed
-    # bake/verification leaves diagnostic output, never a partially active batch.
-    _, _, final_hash = inspection(run('scene-final', ['--inspect']))
-    if final_hash != source_hash:
-        raise ValueError('source level changed during the bake; no manifest was registered')
+    assets = [output_dir/f'region-{i:03d}.orpg' for i in range(len(plan['regions']))]
     registry = {'regions': [path.name for path in assets]}
     write_json(Path(str(sparse)+'.regions.json'), registry)
     write_json(output_dir/'regions.json', registry)

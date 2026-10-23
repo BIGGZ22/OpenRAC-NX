@@ -1,5 +1,6 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
 import math
+import random
 from pathlib import Path
 import struct
 import tempfile
@@ -138,6 +139,52 @@ class AuthoredSeeds(unittest.TestCase):
 
 
 class MobySeeds(unittest.TestCase):
+    def test_incremental_merges_match_exhaustive_selection(self):
+        # Independent exhaustive selection guards tie order and stale pair scores.
+        def exhaustive(regions, spacing, budget):
+            regions = regions.copy()
+            while True:
+                choices = []
+                for i, a in enumerate(regions):
+                    for j in range(i+1, len(regions)):
+                        b = regions[j]
+                        if any(a['bounds'][k] > b['bounds'][k+3]
+                               or b['bounds'][k] > a['bounds'][k+3] for k in range(3)):
+                            continue
+                        bounds = [min(a['bounds'][k], b['bounds'][k]) for k in range(3)]
+                        bounds += [max(a['bounds'][k+3], b['bounds'][k+3]) for k in range(3)]
+                        count = seeds.probe_count(bounds, spacing)
+                        score = count/(seeds.probe_count(a['bounds'], spacing)
+                                       + seeds.probe_count(b['bounds'], spacing))
+                        if count <= budget and score <= 1.15:
+                            choices.append((score, i, j, bounds))
+                if not choices:
+                    return regions
+                _, i, j, bounds = min(choices)
+                a, b = regions[i], regions.pop(j)
+                regions[i] = {'bounds': bounds,
+                              'source_mobys': sorted(set(a['source_mobys']+b['source_mobys'])),
+                              'source_transitions': sorted(set(a['source_transitions']+b['source_transitions']))}
+
+        rng = random.Random(4701)
+        for spacing in ([4,4,4], [4,4,2]):
+            for budget in (64, 512, 4096):
+                fixtures = [[], [{'bounds': [0,0,0,8,8,8], 'source_mobys': [i],
+                                 'source_transitions': []} for i in range(12)]]
+                for _ in range(20):
+                    boxes = []
+                    for i in range(25):
+                        low = [rng.randrange(-4, 5)*s for s in spacing]
+                        high = [low[a]+rng.randrange(1, 7)*spacing[a] for a in range(3)]
+                        boxes.append({'bounds': low+high, 'source_mobys': [i],
+                                      'source_transitions': [i%3]})
+                    fixtures.append(boxes)
+                for boxes in fixtures:
+                    original = json.dumps(boxes)
+                    self.assertEqual(mobys.merge_regions(boxes, spacing, budget),
+                                     exhaustive(boxes, spacing, budget))
+                    self.assertEqual(json.dumps(boxes), original)
+
     def placement(self, cls, index, position):
         return {'class': cls, 'index': index, 'matrix': [0]*12+position+[1],
                 'fields': {'pvar_index': 0}}

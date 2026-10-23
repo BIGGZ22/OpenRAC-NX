@@ -1,5 +1,6 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
 import json
+import io
 from pathlib import Path
 import subprocess
 import tempfile
@@ -45,23 +46,51 @@ class LevelBake(unittest.TestCase):
         self.failure = None
         self.changed = False
 
-    def run_native(self, command, *, stdout, **kwargs):
+    def run_native(self, command, **kwargs):
         self.calls.append(command)
-        if self.failure and self.failure(command):
-            raise subprocess.CalledProcessError(1, command)
-        if '--inspect' in command:
-            text = INSPECTION
-            if self.changed and sum('--inspect' in call for call in self.calls) > 1:
-                text = text.replace('scene_hash 42', 'scene_hash 99')
-            stdout.write(text)
-        if '--output' in command:
-            Path(command[command.index('--output')+1]).write_bytes(b'fake native output')
+        owner = self
+
+        class Input(io.StringIO):
+            def close(self):
+                if not self.closed and process.returncode is None:
+                    owner.sent_plan = json.loads(self.getvalue())
+                    output = Path(command[command.index('--batch-output')+1])
+                    names = ['sparse'] + [f'region-{i:03d}' for i in range(len(owner.sent_plan['regions']))]
+                    for name in names:
+                        (output/(name+'.orpg')).write_bytes(b'fake native output')
+                    process.returncode = int(bool(owner.failure or owner.changed))
+                super().close()
+
+        class Process:
+            def __init__(self):
+                self.returncode = None
+                self.terminated = False
+                result = ('source level changed\n' if owner.changed else 'verification failed\n') \
+                    if owner.failure or owner.changed else 'Probe batch complete\n'
+                self.stdout = io.StringIO(INSPECTION+'Probe batch ready\n'+result)
+                self.stdin = Input()
+
+            def wait(self, **kwargs):
+                return self.returncode
+
+            def poll(self):
+                return self.returncode
+
+            def terminate(self):
+                self.terminated = True
+                self.returncode = -15
+
+            kill = terminate
+
+        process = Process()
+        self.native = process
+        return process
 
     def bake(self):
         # Exercise real planning/registration and command propagation; only native
         # transport and collision decoding are replaced with synthetic fixtures.
         with patch.object(batch.subprocess, 'check_output', return_value=json.dumps(self.profile)), \
-             patch.object(batch.subprocess, 'run', side_effect=self.run_native), \
+             patch.object(batch.subprocess, 'Popen', side_effect=self.run_native), \
              patch('moby_seeds.Ground.read_triangles', return_value=[
                  [[30, 30, 75], [50, 30, 75], [30, 70, 75]]]):
             return batch.bake_level(self.level, self.output, Path('fake-baker'), options=['--rays', '16'])
@@ -81,19 +110,31 @@ class LevelBake(unittest.TestCase):
         registry = json.loads(Path(str(sparse)+'.regions.json').read_text())
         self.assertEqual(registry['regions'], result['regions'])
         self.assertEqual(len(registry['regions']), len(plan['regions']))
-        pairs = [call for call in self.calls if '--compare-coarse' in call]
-        self.assertEqual(len(pairs), len(plan['regions']))
-        self.assertTrue(all('--game-rounding' in call for call in pairs))
+        self.assertEqual(len(self.calls), 1)
+        self.assertIn('--batch-output', self.calls[0])
+        self.assertEqual(len(self.sent_plan['regions']), len(plan['regions']))
+        self.assertEqual(self.sent_plan['scene_hash'], '42')
+        self.assertTrue(all(len(region['spacing']) == 3 and region['max_distance'] > 0
+                            for region in self.sent_plan['regions']))
         self.assertTrue(all('--rays' in call for call in self.calls))
+        self.assertTrue(self.native.stdin.closed and self.native.stdout.closed)
 
     def test_failed_dense_verification_never_registers_partial_batch(self):
-        self.failure = lambda command: '--compare-coarse' in command
+        self.failure = True
         with self.assertRaises(subprocess.CalledProcessError):
             self.bake()
         self.assertTrue((self.output/'seed-plan.json').exists())
         self.assertFalse((self.output/'regions.json').exists())
         self.assertFalse((self.output/'sparse.orpg.regions.json').exists())
         self.assertFalse((self.output/'bake-result.json').exists())
+
+    def test_planning_failure_terminates_the_prepared_native_process(self):
+        with patch.object(seeds, 'plan_level', side_effect=ValueError('invalid seed plan')):
+            with self.assertRaisesRegex(ValueError, 'invalid seed plan'):
+                self.bake()
+        self.assertTrue(self.native.terminated)
+        self.assertTrue(self.native.stdin.closed and self.native.stdout.closed)
+        self.assertFalse((self.output/'sparse.orpg.regions.json').exists())
 
     def test_cli_forwards_thread_limit(self):
         with patch('sys.argv', ['bake_level.py', '--level-dir', str(self.level),
@@ -104,7 +145,7 @@ class LevelBake(unittest.TestCase):
 
     def test_source_change_never_registers(self):
         self.changed = True
-        with self.assertRaisesRegex(ValueError, 'source level changed'):
+        with self.assertRaises(subprocess.CalledProcessError):
             self.bake()
         self.assertFalse((self.output/'sparse.orpg.regions.json').exists())
 
@@ -113,7 +154,7 @@ class LevelBake(unittest.TestCase):
         (self.level/'bake-inputs/gameplay.bin').unlink()
         sparse = self.bake()
         self.assertEqual(json.loads(Path(str(sparse)+'.regions.json').read_text()), {'regions': []})
-        self.assertFalse(any('--compare-coarse' in call for call in self.calls))
+        self.assertEqual(self.sent_plan['regions'], [])
 
     def test_existing_outputs_and_recursive_sources_rejected(self):
         self.output.mkdir()

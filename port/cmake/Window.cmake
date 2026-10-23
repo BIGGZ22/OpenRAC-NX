@@ -307,7 +307,7 @@ endif()
 # This executable uses only the viewer's CPU level loader; it never opens a
 # window or creates a graphics context. Embree stays out of viewer/game targets.
 if(OPENRAC_PROBE_BAKER)
-  add_executable(openrac-probe-bake enhanced/tools/probes/main.cpp)
+  add_executable(openrac-probe-bake enhanced/tools/probes/main.cpp enhanced/tools/probes/batch.cpp)
   target_link_libraries(openrac-probe-bake PRIVATE openrac_probe_scene openrac_probe_bake)
   openrac_warnings(openrac-probe-bake)
 endif()

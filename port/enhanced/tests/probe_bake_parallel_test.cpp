@@ -47,6 +47,31 @@ BakeScene fixture() {
     }
     return scene;
 }
+
+// Cached tables must respect resolution and rounding changes across repeated volume bakes.
+void test_direction_cache() {
+    BakeScene scene;
+    scene.sky_width = scene.sky_height = 2;
+    scene.sky_radiance = {{1, 0, 0}, {0, 1, 0}, {0, 0, 1}, {.1f, .2f, .3f}};
+    BakeSettings settings;
+    settings.rays_per_probe = 64;
+    settings.bounces = 0;
+    ProbeGrid grid;
+    const int rounding = std::fegetround();
+    ProbeBaker prepared(scene, settings);
+    for (const int mode : {FE_TONEAREST, FE_TOWARDZERO, FE_TONEAREST}) {
+        CHECK(std::fesetround(mode) == 0);
+        bool matches = true;
+        for (const unsigned resolution : {3u, 4u, 6u, 3u}) {
+            grid.map_resolution = resolution;
+            const auto independent = encode_probes(bake_probes(grid, scene, settings, {}, 1));
+            matches &= encode_probes(prepared.bake(grid, {}, 4)) == independent;
+        }
+        CHECK(matches);
+        CHECK(std::fegetround() == mode);
+    }
+    CHECK(std::fesetround(rounding) == 0);
+}
 }  // namespace
 
 int main(int argc, char** argv) {
@@ -107,10 +132,39 @@ int main(int argc, char** argv) {
         }
         std::cout << "serial_seconds " << serial_seconds << " encoded_hash " << hash << '\n';
     } else {
+        test_direction_cache();
+        // A prepared level must produce the same grids and recover after callback cancellation.
+        ProbeBaker prepared(scene, settings);
+        CHECK(encode_probes(prepared.bake(grid, {}, 4)) == encoded);
+        auto local_grid = grid;
+        local_grid.origin = {1, 2, 3};
+        local_grid.dimensions = {2, 3, 2};
+        CHECK(
+            encode_probes(prepared.bake(local_grid, {}, 2))
+            == encode_probes(bake_probes(local_grid, scene, settings, {}, 1))
+        );
+        bool cancelled = false;
+        try {
+            prepared.bake(
+                grid,
+                [](std::size_t done, std::size_t) {
+                    if (done > 0) {
+                        throw std::runtime_error("prepared callback cancelled");
+                    }
+                },
+                4
+            );
+        } catch (const std::runtime_error&) {
+            cancelled = true;
+        }
+        CHECK(cancelled);
+        CHECK(encode_probes(prepared.bake(grid, {}, 4)) == encoded);
         const int rounding = std::fegetround();
         CHECK(std::fesetround(FE_TOWARDZERO) == 0);
         const auto rounded = bake_probes(grid, scene, settings, {}, 1);
         const auto parallel = bake_probes(grid, scene, settings, {}, 4);
+        ProbeBaker rounded_baker(scene, settings);
+        CHECK(encode_probes(rounded_baker.bake(grid, {}, 4)) == encode_probes(rounded));
         CHECK(parallel.irradiance == rounded.irradiance);
         CHECK(parallel.distance_moments == rounded.distance_moments);
         CHECK(encode_probes(parallel) == encode_probes(rounded));

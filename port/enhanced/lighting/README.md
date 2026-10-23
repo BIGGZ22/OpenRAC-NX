@@ -53,9 +53,20 @@ finds emission, plans dense regions, bakes sparse/dense probes and checks the
 batch before registering it. Failures keep logs without registering partial
 results. Existing batches are not overwritten; running games need a restart.
 
+One native process loads and converts the level once, then shares its Embree
+scene across every grid. Each file is read back, checked under runtime rounding
+and compared with the sparse grid before the batch is registered. Source files
+are checked before loading, after planning and after baking; changes abort the
+batch. `batch.log` records diagnostics and each probe file has a `.txt` report.
+
 Outputs include `sparse.orpg`, `region-NNN.orpg`, `sparse.orpg.regions.json`,
 planning reports, logs and `bake-result.json` with format/bake versions.
 `--rays` and `--bounces` set quality for the whole batch.
+
+Dense-region clustering caches eligible pair scores in a priority queue. After
+a merge, only pairs involving the changed region are recalculated. Stable IDs
+preserve the original best-first tie order; generation counters discard stale
+pairs. Region bounds, source assignments and coverage checks remain unchanged.
 
 To bake every exported level in one version, use a fresh output root:
 
@@ -78,10 +89,56 @@ Threads share scene acceleration and preserve output bytes and bake identity.
 threads using synthetic data; it checks equality and prints time without
 launching the game.
 
+Embree uses separate opaque and cutout geometry. Opaque textures with unit
+vertex alpha skip the alpha callback at cutoffs up to 0.5. Other cutouts use
+bilinear alpha filtering inside traversal. Guaranteed zero-alpha textured
+triangles are omitted only when the cutoff is positive. Untextured faces keep
+their existing acceptance rules. Source materials and emitter sampling order
+are preserved.
+
+Sunlight and emitter visibility use occlusion queries that stop at the first
+accepted blocker. Sun rays are unbounded; emitter rays end just before the
+sampled light. Transport and probe placement still use closest hits. Each
+primary ray shares its first hit between GI and distance moments: transport
+stays unbounded, while moments clamp distance to the grid's visibility range
+(normally 1.5 times the cell diagonal).
+
 Exports need `bake-inputs/`. Re-extract older exports or pass
 `--disc <owned-local-disc.iso>` for planning. Gaspar lava also needs exported
 overlay/core inputs or a prepared legacy surface. Keep inputs and bakes local
 and untracked; PAL and NTSC need their own exports.
+
+### Single-level performance
+
+Measure throughput with an uninstrumented baker. For local Tracy captures,
+sample a fixed subset of probes to limit per-ray overhead. Tracy instrumentation
+stays outside the normal build and adds no baker dependency.
+
+Local Novalis comparisons used 32 volumes, 1024 rays per probe and three bounces.
+Each row is a separate experiment; timings should not be compared across rows.
+All comparisons preserved the 32 probe files byte for byte.
+
+| Change | Before → after | Scope |
+| --- | --- | --- |
+| Share prepared level across grids | 159.24 → 62.85 s | Full workflow, automatic threading |
+| Cache region merge candidates | 37.02 → 2.12 s | Region planning only |
+| Reuse primary hits for distance moments | 35.47 → 32.08 s | Native batch, eight workers |
+| Use occlusion queries for visibility | 29.10 → 27.64 s | Native batch, eight workers |
+
+Native batch timings include loading, BVH construction, baking and verification,
+but exclude region planning. The visibility comparison had no emitters; tests
+cover point and area lights. Machine load affects these measurements.
+
+Traversal alpha filtering, four-ray primary packets and high-quality BVH
+construction showed no useful throughput gain. Scalar primary rays and the
+original BVH mode remain. High-quality BVH took 22.93 s either way; construction
+rose from 43.9 to 44.7 ms. Zero-alpha pruning removed no Novalis triangles, so
+its benefit on other levels remains unmeasured.
+
+A Tracy capture sampling one probe in 256 attributed worker time to bounce
+traversal (30%), visibility (21%), material lookup (19%), primary traversal (15%)
+and other work (15%). These are sampled exclusive timings, with profiler
+overhead, rather than whole-process percentages.
 
 ## Level settings
 
@@ -136,6 +193,30 @@ regions for an existing sparse bake, saving the previous list.
 ## Formats and compatibility
 
 Only **file format 3, bake revision 1** is supported. Rebake older data.
+Texels now integrate a regular 2x2 footprint at quarter/three-quarter offsets.
+Irradiance and distance-moment kernels are averaged across its four directions,
+including emission; distance moments are normalised after combining weights.
+Fixed texel/placement directions and the primary-ray pattern are cached per
+baker, resolution and rounding mode and shared across grids. Probe rotations
+and geometry-dependent bounce/emitter directions stay dynamic to preserve
+sampling. This uses small pattern tables rather than storing every probe's
+rotated ray array. Traced-ray counts, texture dimensions and formats are
+unchanged. The settings identity
+rejects earlier centre-sampled bakes, which need rebaking. This increases
+integration work without adding ray traces.
+The broader angular footprint also softens visibility boundaries; it does not
+eliminate the existing thin-wall leakage limitations.
+
+Integration processes four texels together in standard C++ using separate
+component arrays. Compilers can vectorise independent texels without changing
+each texel's ray/subtexel accumulation order. The default distance exponent 32
+uses five double-precision squarings; other exponents retain `pow`. No intrinsics,
+fast-math flags or SIMD dependency are required. The new settings identity
+requires rebaking because squaring can change final moment rounding. Native
+fixtures compare against the original scalar kernel, including general powers,
+emission, partial blocks and runtime rounding. x86 SIMD and ARM64 NEON code
+generation are checked locally; ARM64 execution still needs hardware validation.
+
 Headers contain game/level identity, scene/settings hashes and grid/atlas
 layout. Values are little-endian; texture planes upload without repacking:
 

@@ -1,11 +1,15 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #pragma once
 #include <functional>
+#include <memory>
 
 #include "enhanced/lighting/emission.h"
 #include "enhanced/lighting/probes.h"
 
 namespace openrac::lighting {
+
+// Regular subtexel integration footprint; part of the bake settings identity.
+inline constexpr unsigned kProbeTexelSamplesPerAxis = 2;
 
 struct BakeTriangle {
     // Deliberately no source shading normals: transport derives a geometric
@@ -72,8 +76,8 @@ struct BakeScene {
 struct BakeSettings {
     bool use_level_sky = true;
     float sky_intensity = 1.0f;
-    float sky_weight = 0.7f;         // remaining environment colour comes from the primary light
-    Float3 sunlight_scale{1, 1, 1};  // fixed per-level linear RGB correction, primary sun only
+    float sky_weight = 0.7f;            // remaining environment colour comes from the primary light
+    Float3 sunlight_scale{1, 1, 1};     // fixed per-level linear RGB correction, primary sun only
     bool terrain_vertex_albedo = true;  // preserve authored terrain shading as an artistic tint
     std::uint32_t rays_per_probe = 1024;
     std::uint32_t bounces = 3;
@@ -91,6 +95,29 @@ struct BakeSettings {
 Float3 sample_bake_environment(
     const BakeScene& scene, Float3 direction, const BakeSettings& settings
 );
+
+// Prepared, immutable transport state shared by a level's sparse and dense grids.
+// The source scene must remain unchanged and outlive the baker; each bake has
+// independent output, random seeds, progress and worker lifetime.
+class ProbeBaker {
+public:
+    // Validate the source and build Embree acceleration once; invalid inputs throw.
+    ProbeBaker(const BakeScene& scene, const BakeSettings& settings);
+    ~ProbeBaker();
+    ProbeBaker(const ProbeBaker&) = delete;
+    ProbeBaker& operator=(const ProbeBaker&) = delete;
+
+    // Bake one grid with the prepared settings; invalid grids and tracing failures throw.
+    ProbeVolume bake(
+        const ProbeGrid& grid,
+        const std::function<void(std::size_t, std::size_t)>& progress = {},
+        std::uint32_t thread_count = 0
+    ) const;
+
+private:
+    struct Impl;
+    std::unique_ptr<Impl> m_impl;  // owns acceleration, not the borrowed source scene
+};
 
 // Optional Embree 4 CPU implementation, linked only into offline bake tools.
 // Irradiance includes environment and surface bounce light, excluding the
