@@ -77,8 +77,13 @@ runtime's C entry point `openrac/host_env.h`, which looks the name up with `env:
 back the kept value (`env::value`'s view ends in a NUL for it). The library replacements of
 `game/common/lib` read through it; what still calls `getenv` moves onto the table later
 (docs/restructure/PROGRESS.md): rac1's host C (P2-38), `renderer/vulkan/`, `android/` and
-`mod_scripts.cpp` (P2-20), and within `common`, `log.cpp` for `OPENRAC_LOG`, the log's level
-(P2-21).
+`mod_scripts.cpp` (P2-20).
+
+`log.cpp` reads `OPENRAC_LOG`, the log's level, through `env.h` at the first call that asks the
+level rather than at static initialisation, so that the table's one reading of the environment is
+not taken before `main` (a test sets its variables first). `env.cpp` does not log, so the two do not
+wait on each other. The home folder `log::tidy` hides is read from `HOME` (`USERPROFILE` on
+Windows), which are the system's variables and not the port's, with `getenv`.
 
 `stats::probe` reads each switch a module declares through it from the table: the variable's row,
 found by its name with `env::find`, and its value through `env::flag`. Every probe's row is a flag
