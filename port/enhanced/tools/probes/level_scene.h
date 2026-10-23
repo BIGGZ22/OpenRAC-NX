@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #pragma once
 #include "enhanced/lighting/bake.h"
-#include "viewer/level.h"
+#include "scene/level.h"
 
 namespace openrac::lighting {
 

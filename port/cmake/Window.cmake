@@ -189,7 +189,7 @@ else()
   target_compile_options(openrac_viewer_third_party PRIVATE -w)
 endif()
 
-add_library(openrac_level_assets STATIC viewer/level.cpp)
+add_library(openrac_level_assets STATIC scene/level.cpp)
 target_link_libraries(openrac_level_assets PUBLIC openrac_renderer openrac_viewer_third_party openrac_assets_geometry)
 openrac_warnings(openrac_level_assets)
 
@@ -202,15 +202,15 @@ openrac_warnings(openrac_probe_scene)
 add_library(openrac_viewer_lib STATIC
   viewer/camera.cpp
   viewer/game_state.cpp
-  viewer/level_renderer.cpp
+  scene/level_renderer.cpp
   enhanced/viewer/probe_lighting.cpp
   enhanced/viewer/probe_selection.cpp
   enhanced/viewer/early_lighting.cpp
-  viewer/moby_pose.cpp
-  viewer/moby_shadow.cpp
+  scene/moby_pose.cpp
+  scene/moby_shadow.cpp
   enhanced/viewer/hero_shadow.cpp
   enhanced/viewer/sun_shadow.cpp
-  viewer/screenshot.cpp
+  scene/screenshot.cpp
 )
 openrac_embed_shaders(openrac_viewer_lib viewer openrac::viewer
   "${CMAKE_CURRENT_SOURCE_DIR}/viewer/shaders/mesh.vert"

@@ -14,10 +14,10 @@
 #include "renderer/vulkan/vkgl.h"
 #endif
 #include "renderer/renderer.h"
+#include "scene/level_renderer.h"
 #include "tests/check.h"
 #include "tests/gpu_draw_reference.h"
 #include "tests/renderer_gl_context.h"
-#include "viewer/level_renderer.h"
 
 namespace {
 using namespace openrac;

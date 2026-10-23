@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #pragma once
 #include "enhanced/tests/gpu_probe_fixture.h"
-#include "viewer/level_renderer.h"
+#include "scene/level_renderer.h"
 
 namespace openrac::test {
 // Shadow/AO kernel fixtures still need a valid level probe resource. Keep

@@ -22,8 +22,8 @@
 #include <cstdio>
 #include <cstring>
 #include <filesystem>
-#include <optional>
 #include <format>
+#include <optional>
 #include <string>
 #include <string_view>
 #include <vector>
@@ -36,11 +36,11 @@
 #include "renderer/framebuffer.h"
 #include "renderer/gl.h"
 #include "renderer/renderer.h"
+#include "scene/level.h"
+#include "scene/level_renderer.h"
+#include "scene/screenshot.h"
 #include "viewer/camera.h"
 #include "viewer/game_state.h"
-#include "viewer/level.h"
-#include "viewer/level_renderer.h"
-#include "viewer/screenshot.h"
 
 namespace {
 

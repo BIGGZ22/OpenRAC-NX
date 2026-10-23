@@ -1,16 +1,19 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 // Copyright (c) 2026 the OpenRAC contributors
+//
+// Writing a frame to a PNG, for the viewer's headless checks.
 
-#include "viewer/screenshot.h"
+#pragma once
 
-#include <stb_image_write.h>
+#include <cstdint>
+#include <string>
+#include <vector>
 
 namespace openrac::viewer {
 
+// `rgba` is width x height RGBA bytes, top row first.
 bool write_png(
     const std::string& path, int width, int height, const std::vector<std::uint8_t>& rgba
-) {
-    return stbi_write_png(path.c_str(), width, height, 4, rgba.data(), width * 4) != 0;
-}
+);
 
 }  // namespace openrac::viewer

@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 // Copyright (c) 2026 the OpenRAC contributors
 
-#include "viewer/level_renderer.h"
+#include "scene/level_renderer.h"
 
 #include <algorithm>
 #include <cmath>

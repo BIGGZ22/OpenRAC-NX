@@ -9,10 +9,10 @@
 #include "enhanced/viewer/sun_shadow.h"
 #include "renderer/gl.h"
 #include "renderer/shadows.h"
+#include "scene/level_renderer.h"
 #include "tests/check.h"
 #include "tests/gpu_draw_reference.h"
 #include "tests/renderer_gl_context.h"
-#include "viewer/level_renderer.h"
 #include "viewer_shaders.h"
 using namespace openrac;
 using namespace openrac::gl;

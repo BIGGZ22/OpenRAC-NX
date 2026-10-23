@@ -1,13 +1,13 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 // Copyright (c) 2026 the OpenRAC contributors
-#include "viewer/moby_shadow.h"
+#include "scene/moby_shadow.h"
 
 #include <algorithm>
 #include <cmath>
 #include <cstring>
 
 #include "assets/geometry/moby_shadow.h"
-#include "viewer/moby_pose.h"
+#include "scene/moby_pose.h"
 
 namespace openrac::viewer {
 MobyShadowState moby_shadow_state(
