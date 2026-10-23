@@ -15,14 +15,14 @@ one is left as a .rej file to resolve by hand.
   python3 tools/sources.py import GAME/VERSION [REV] copy REV (default: the checkout's HEAD) into an empty directory
   python3 tools/sources.py sync GAME/VERSION [REV]   apply the diff from the recorded commit to REV
 
-A checkout is looked for at the path in game.json (~ is your home), or
-in $OPENRAC_SOURCE_<GAME>_<VERSION> (e.g. OPENRAC_SOURCE_RAC1_NTSC).
+A checkout is looked for in $OPENRAC_SOURCE_<GAME>_<VERSION> when it is
+set (e.g. OPENRAC_SOURCE_RAC1_NTSC), else at the path in game.json (~ is
+your home): the rule is games.source_checkout in tools/openrac_common.
 After an import or sync, review the result and commit it together with
 the updated game.json.
 """
 import io
 import json
-import os
 import subprocess
 import sys
 import tarfile
@@ -41,11 +41,6 @@ def manifests() -> dict[str, tuple[Path, dict]]:
             for game, version, info in games.versions(ROOT) if info.get("source")}
 
 
-def checkout(key: str, source: dict) -> Path:
-    env = "OPENRAC_SOURCE_" + key.replace("/", "_").upper()
-    return Path(os.environ.get(env) or os.path.expanduser(source["checkout"]))
-
-
 def version_dir(game: dict, version: str) -> Path:
     """Where a version's tree lives: its "dir" in game.json (rac1's PAL tree is games/rac1 itself,
     the merged game), else games/<game>/<version>."""
@@ -60,7 +55,7 @@ def do_import(key: str, rev: str | None) -> None:
     path, game = manifests()[key]
     version = key.split("/")[1]
     source = game["versions"][version]["source"]
-    repo, dest = checkout(key, source), version_dir(game, version)
+    repo, dest = games.source_checkout(game["id"], version, ROOT), version_dir(game, version)
     if dest.exists() and any(p.name != ".gitkeep" for p in dest.iterdir()):
         sys.exit(f"{dest.relative_to(ROOT)} is not empty: use sync")
     commit = proc.git(repo, "rev-parse", rev or "HEAD")
@@ -80,7 +75,7 @@ def do_sync(key: str, rev: str | None) -> None:
     path, game = manifests()[key]
     version = key.split("/")[1]
     source = game["versions"][version]["source"]
-    repo, dest = checkout(key, source), version_dir(game, version)
+    repo, dest = games.source_checkout(game["id"], version, ROOT), version_dir(game, version)
     commit = proc.git(repo, "rev-parse", rev or "HEAD")
     if commit == source["commit"]:
         print(f"{key}: already at {commit[:10]}")
@@ -112,8 +107,9 @@ def record(path: Path, game: dict, version: str, commit: str, repo: Path) -> Non
 
 def do_status() -> None:
     for key, (_, game) in manifests().items():
-        source = game["versions"][key.split("/")[1]]["source"]
-        repo = checkout(key, source)
+        version = key.split("/")[1]
+        source = game["versions"][version]["source"]
+        repo = games.source_checkout(game["id"], version, ROOT)
         if not (repo / ".git").exists():
             print(f"{key}: no checkout at {repo}")
             continue

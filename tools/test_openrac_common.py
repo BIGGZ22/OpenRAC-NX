@@ -246,6 +246,28 @@ class GamesTests(TempDir):
         with mock.patch.object(versionmap, "ROOT", self.dir):
             self.assertEqual(games.load("rac8", self.dir)["versions"]["ntsc"], versionmap.version("rac8/ntsc"))
 
+    def test_source_variable_is_the_game_and_version_in_capitals(self):
+        self.assertEqual(games.source_variable("rac1", "pal"), "OPENRAC_SOURCE_RAC1_PAL")
+
+    def test_source_checkout_is_the_variable_else_game_json(self):
+        with mock.patch.dict(os.environ, {"OPENRAC_SOURCE_RAC8_PAL": "/elsewhere"}):
+            self.assertEqual(games.source_checkout("rac8", "pal", self.dir), Path("/elsewhere"))
+        # Not set, and set but empty, both fall back to game.json's path with ~ expanded.
+        with mock.patch.dict(os.environ, {"OPENRAC_SOURCE_RAC8_PAL": ""}):
+            self.assertEqual(games.source_checkout("rac8", "pal", self.dir), Path(os.path.expanduser("~/x")))
+            del os.environ["OPENRAC_SOURCE_RAC8_PAL"]
+            self.assertEqual(games.source_checkout("rac8", "pal", self.dir), Path(os.path.expanduser("~/x")))
+
+    def test_source_checkout_is_none_without_a_source_even_with_the_variable(self):
+        with mock.patch.dict(os.environ, {"OPENRAC_SOURCE_RAC8_NTSC": "/elsewhere"}):
+            self.assertIsNone(games.source_checkout("rac8", "ntsc", self.dir))
+
+    def test_source_checkout_of_an_unknown_game_or_version_raises(self):
+        with self.assertRaises(FileNotFoundError):
+            games.source_checkout("rac7", "pal", self.dir)
+        with self.assertRaises(KeyError):
+            games.source_checkout("rac9", "pal", self.dir)
+
 
 # ---- tables ----
 

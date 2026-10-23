@@ -34,7 +34,7 @@ inside rac1-decomp's container, from rac1-decomp's root, where neither OpenRAC n
 | Module | What it gives |
 |---|---|
 | `paths` | `repo_root(start=None)`: the top of OpenRAC, the nearest directory above START holding `games/` and `AGENTS.md` (a checkout) or `STANDALONE` (the launcher's bundled copy) |
-| `games` | `load(game)`, `load_all()`, `versions()`, `games_dir()`, `manifest_path(game)`, `version_dir(game, name)`: `games/<game>/game.json` |
+| `games` | `load(game)`, `load_all()`, `versions()`, `games_dir()`, `manifest_path(game)`, `version_dir(game, name)`: `games/<game>/game.json`; `source_checkout(game_id, version_name)`, `source_variable(game_id, version_name)`: where a version's sister project is checked out |
 | `tables` | `read_tsv(path, columns=None, strip=False, required=False)`, `header(path)`, `is_data(line)`, `split_row(line)`: the `.tsv` tables and their comment and header conventions |
 | `digest` | `sha1(path)`, `sha256(path)`, `file_digest(path, algorithm)`: hex digests read in 1 MiB blocks |
 | `files` | `link_or_copy(source, dest, keep_metadata=True)`, `copy_tree(source, dest, keep)` |
@@ -47,6 +47,22 @@ inside rac1-decomp's container, from rac1-decomp's root, where neither OpenRAC n
 script writes. The launcher recognises that copy by the same file (`launcher/core/src/detect.rs`), and
 the copy's tools find their root through `repo_root`. The copy carries this package beside
 `openrac.py` and `extractor.py`, which import it.
+
+### Where the sister checkouts are
+
+A version synced from a matching decomp names that project under `source` in its `game.json`,
+`checkout` included: the path of its local checkout, `~` for the home folder. `games.source_checkout`
+is the one rule every tool follows to find it, decided by the maintainers (P2-30):
+
+1. `$OPENRAC_SOURCE_<GAME>_<VERSION>` (`games.source_variable`; `OPENRAC_SOURCE_RAC1_PAL` for rac1's
+   PAL tree), when it is set and not empty;
+2. else `game.json`'s `checkout`, with `~` expanded;
+3. `None` for a version with no `source`, whatever the environment says.
+
+`game.json` records where the projects' own checkouts are; the variable is for a machine that keeps
+one somewhere else. Nothing checks that the folder exists: each tool says what is missing in its own
+words. `sources.py` (import, sync, status) and `openrac.py` (`progress --fetch` and the reports'
+dates) use it.
 
 Every function takes a `pathlib.Path` or a string for a path. The functions that read the repository
 (`games.*`) take an optional `root`, so a test can point them at a synthetic tree.

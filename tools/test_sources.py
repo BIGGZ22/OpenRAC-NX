@@ -64,11 +64,6 @@ class SourcesTests(unittest.TestCase):
         self.assertEqual(sources.version_dir(found["a/pal"][1], "pal"), self.root / "games/a")
         self.assertEqual(sources.version_dir(found["b/ntsc"][1], "ntsc"), self.root / "games/b/ntsc")
 
-    def test_checkout_is_the_environment_else_the_manifest(self):
-        with mock.patch.dict(os.environ, {"OPENRAC_SOURCE_A_PAL": "/elsewhere"}):
-            self.assertEqual(sources.checkout("a/pal", SOURCE), Path("/elsewhere"))
-        with mock.patch.dict(os.environ, {"OPENRAC_SOURCE_A_PAL": ""}):
-            self.assertEqual(sources.checkout("a/pal", SOURCE), Path(os.path.expanduser("~/src/a-decomp")))
 
     def test_excluded(self):
         self.assertTrue(sources.excluded("asm/x.s", SOURCE["exclude"]))
@@ -113,6 +108,17 @@ class SourcesTests(unittest.TestCase):
         self.assertEqual(out.getvalue(),
                          f"a/pal: a-decomp at {'1' * 10} (2026-01-01); checkout {checkout} is 7 commits past it\n"
                          f"b/ntsc: no checkout at {self.root / 'none'}\n")
+
+    def test_status_looks_where_game_json_says_without_the_variable(self):
+        # The rule itself (games.source_checkout) is tested in test_openrac_common.py; this checks
+        # that status reads this tree's manifests through it. HOME is the temporary tree, so "~"
+        # in game.json's checkout lands there.
+        out = io.StringIO()
+        env = {"HOME": str(self.root), "OPENRAC_SOURCE_A_PAL": "", "OPENRAC_SOURCE_B_NTSC": ""}
+        with mock.patch.dict(os.environ, env), contextlib.redirect_stdout(out):
+            sources.do_status()
+        home = self.root / "src/a-decomp"
+        self.assertEqual(out.getvalue(), f"a/pal: no checkout at {home}\nb/ntsc: no checkout at {home}\n")
 
 
 if __name__ == "__main__":
