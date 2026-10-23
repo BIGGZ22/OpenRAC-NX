@@ -107,6 +107,11 @@ pub fn discs_dir() -> Option<PathBuf> {
     std::env::var_os("OPENRAC_DISCS_DIR").map(PathBuf::from)
 }
 
+/// The install folder: the games' set-up, in the app's files where the Files app shows it.
+pub fn games_dir() -> Option<PathBuf> {
+    std::env::var_os("OPENRAC_GAMES_DIR").map(PathBuf::from)
+}
+
 /// The player picks their disc image with the system's picker; it is copied into the app's own
 /// storage (the extractor links it into place, and Android gives no path to the original), with
 /// `disc-copy` events as it goes; a CHD is unpacked into a plain image instead (core/src/chd.rs).
@@ -297,6 +302,32 @@ pub async fn gpu_driver_remove<R: Runtime>(app: AppHandle<R>, id: String) -> Res
         let _ = (app, id);
         Err(ANDROID_ONLY.into())
     }
+}
+
+/// Shows a folder of the player's files in the system's Files app, through OpenRAC's place there
+/// (FilesProvider.kt): the saves, the settings, the games' set-up, the disc images. A folder outside
+/// those, or none, shows OpenRAC's place itself. What an "Open folder" button does on Android.
+pub fn show_folder<R: Runtime>(app: &AppHandle<R>, path: Option<&str>) -> Result<(), String> {
+    #[cfg(target_os = "android")]
+    {
+        let plugin = app.try_state::<Openrac<R>>().ok_or("the launcher's Android plugin is not loaded")?;
+        plugin
+            .0
+            .run_mobile_plugin::<serde_json::Value>("showFolder", serde_json::json!({ "path": path }))
+            .map(|_| ())
+            .map_err(|e| e.to_string())
+    }
+    #[cfg(not(target_os = "android"))]
+    {
+        let _ = (app, path);
+        Err(ANDROID_ONLY.into())
+    }
+}
+
+/// Settings, "Your files": OpenRAC's place in the Files app.
+#[tauri::command]
+pub fn show_files<R: Runtime>(app: AppHandle<R>) -> Result<(), String> {
+    show_folder(&app, None)
 }
 
 /// Waits until the tools the launcher carries are unpacked (OpenracSetup.kt does that on a thread

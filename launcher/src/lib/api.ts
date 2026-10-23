@@ -724,6 +724,8 @@ export const api = {
   backupSaves: (serial: string, note?: string) => call<SaveBackupInfo>("backup_saves", { serial, note }),
   restoreBackup: (serial: string, backupName: string) => call<null>("restore_backup", { serial, backupName }),
   openSavesFolder: (serial: string) => call<null>("open_saves_folder", { serial }),
+  /** Android: OpenRAC's place in the system's Files app (the saves, settings, games, discs). */
+  showFiles: () => call<null>("show_files"),
   /** A game's session logs and crash reports, the newest first. */
   reportsList: (game: string) => call<ReportEntry[]>("reports_list", { game }),
   /** The newest crash report written since `since` (seconds since 1970). */

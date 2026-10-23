@@ -15,7 +15,7 @@
     type Detected,
     type UpdateChannel,
   } from "$lib/api";
-  import { app, lookForUpdate, saveConfig } from "$lib/app.svelte";
+  import { app, guardShown, lookForUpdate, saveConfig } from "$lib/app.svelte";
   import { DISCORD_URL, PYTHON_URL, REPO_URL, SITE_URL } from "$lib/links";
   import { PURIST } from "$lib/modsText";
 
@@ -64,9 +64,9 @@
   /** The OpenRAC folder is the first thing on the first run; after it, a player sees it only while
    *  it is missing (an installed launcher carries its own copy), and a contributor in Developer. */
   const rootHere = $derived(!app.info?.standalone && !draft.root);
-  /** Android has no folders to choose (its picker copies discs into the app): no panel when it
-   *  would be empty. */
-  const showFolders = $derived(rootHere || !onAndroid || draft.developer);
+  /** Android has no folders to choose: the app keeps its files in one place, which the Files app
+   *  shows (FilesProvider.kt), and its picker copies discs there. */
+  const showFolders = !onAndroid;
   /** The game's Vulkan renderer, on the desktops (on macOS through the MoltenVK its bundle carries);
    *  Android chooses its own in Graphics (GpuDrivers). */
   const desktopRenderer = $derived(
@@ -317,8 +317,7 @@
             </p>
           {/if}
         {/if}
-        <!-- Android's picker gives no folders: the app keeps its own (src-tauri/src/android.rs). -->
-        {#if !onAndroid || draft.developer}
+        {#if !onAndroid}
           <PathField
             label="Games folder"
             hint="The folder with your PlayStation 2 disc images (.iso). OpenRAC finds its games in it."
@@ -340,6 +339,19 @@
     {/if}
 
     {#if onAndroid}
+      <section class="panel">
+        <h2>Your files</h2>
+        <div class="setting">
+          <span class="text">
+            <strong>In the Files app, under OpenRAC</strong>
+            <small>
+              Your saves, settings, games and disc images. Uninstalling asks whether to keep the app's data: keep it,
+              and all of it is back when you install OpenRAC again.
+            </small>
+          </span>
+          <button onclick={() => void guardShown(api.showFiles())}>Open Files</button>
+        </div>
+      </section>
       <GpuDrivers />
     {/if}
 
@@ -508,7 +520,7 @@
         {#if draft.developer}
           <!-- What developer tools add: under the switch, set in from it. -->
           <div class="dev">
-            {#if !rootHere}
+            {#if !rootHere && !onAndroid}
               <PathField
                 label="OpenRAC folder"
                 hint="Your copy of OpenRAC: the folder with games/ and tools/ in it."

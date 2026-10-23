@@ -1235,6 +1235,11 @@ fn ensure_wayland_cursor_fallback() {
 /// system's environment instead of the AppImage's.
 #[cfg_attr(target_os = "linux", allow(unused_variables))]
 fn open_path_with_system(app: &AppHandle, path: &str) -> Result<(), String> {
+    // Android's own file manager shows no app's private folders: the Files app, through OpenRAC's
+    // place in it, does.
+    if Platform::current() == Platform::Android {
+        return android::show_folder(app, Some(path));
+    }
     #[cfg(target_os = "linux")]
     {
         open_with_system(path)
@@ -1350,16 +1355,36 @@ pub fn run() {
             let mut config = config_file.as_deref().map(config::load).unwrap_or_default();
             config.progress_cache = progress_cache(config_file.as_deref());
 
-            // First run / startup: ensure the OpenRAC folder exists in the user's home directory.
-            // On Linux: /home/<user>/OpenRAC
-            // On macOS: /Users/<user>/OpenRAC
-            // On Windows: C:\Users\<user>\OpenRAC
             let home_dir = app.path().home_dir().ok().or_else(detect::home_dir);
-            let openrac_home = home_dir.as_ref().and_then(|h| detect::ensure_openrac_dir_in(h).ok());
+            let local_data = app.path().app_local_data_dir().ok();
+            // Android: the games' set-up, the saves and the settings live in the app's own folders,
+            // the ones the Files app shows (FilesProvider.kt), and nothing is asked at the first
+            // start: the Games page asks for the disc. A set-up from an earlier version (in the
+            // launcher's data folder, or OpenRAC/ in the shared storage) moves into place.
+            let openrac_home = if Platform::current() == Platform::Android {
+                if let Some(games) = android::games_dir() {
+                    let earlier: Vec<PathBuf> = [config.install_dir.clone(), local_data.clone()]
+                        .into_iter()
+                        .chain([home_dir.as_ref().map(|home| home.join("OpenRAC"))])
+                        .flatten()
+                        .collect();
+                    config.install_dir = Some(openrac_launcher_core::install::settle_install_dir(&games, &earlier));
+                }
+                config.setup_complete = true;
+                if let Some(cfg_file) = &config_file {
+                    let _ = config::save(cfg_file, &config);
+                }
+                None
+            } else {
+                // First run / startup: ensure the OpenRAC folder exists in the user's home directory.
+                // On Linux: /home/<user>/OpenRAC
+                // On macOS: /Users/<user>/OpenRAC
+                // On Windows: C:\Users\<user>\OpenRAC
+                home_dir.as_ref().and_then(|h| detect::ensure_openrac_dir_in(h).ok())
+            };
 
             // OpenGOAL asks for an install folder at first start; until the
             // player picks one, games are set up in the user's OpenRAC folder (or launcher's data folder).
-            let local_data = app.path().app_local_data_dir().ok();
             if let Some(openrac_dir) = &openrac_home {
                 if config.install_dir.is_none() || config.install_dir.as_ref() == local_data.as_ref() {
                     if let Some(data) = &local_data {
@@ -1502,6 +1527,7 @@ pub fn run() {
             set_game_fix,
             android::pick_disc,
             android::pick_zip,
+            android::show_files,
             android::gpu_drivers,
             android::gpu_driver_import,
             android::gpu_driver_select,

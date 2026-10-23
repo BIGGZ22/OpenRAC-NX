@@ -62,6 +62,11 @@ class SaveArgs {
 }
 
 @InvokeArg
+class FolderArgs {
+  var path: String? = null
+}
+
+@InvokeArg
 class DriverArgs {
   var id: String? = null
 }
@@ -172,6 +177,18 @@ class OpenracPlugin(private val activity: Activity) : Plugin(activity) {
 
   /** Resolves once the tools the launcher carries are unpacked (OpenracSetup.prepare), with
    *  {error} when they could not be. */
+  /** {path}: shows the folder in the Files app, through OpenRAC's place there (FilesProvider.kt);
+   *  OpenRAC's place itself for a folder outside it, or no path. */
+  @Command
+  fun showFolder(invoke: Invoke) {
+    val path = invoke.parseArgs(FolderArgs::class.java).path
+    if (FilesProvider.show(activity, path?.let(::File))) {
+      invoke.resolve()
+    } else {
+      invoke.reject("this device has no Files app to show the folder in")
+    }
+  }
+
   @Command
   fun toolsReady(invoke: Invoke) {
     Thread {

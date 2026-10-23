@@ -22,7 +22,11 @@
     <!-- A game, for the system's game features and the vendors' game overlays and launchers
          (Game Dashboard, Game Booster, Game Turbo and the like), which list an app by its
          category; isGame is the older flag some of them still read. -->
+    <!-- hasFragileUserData: uninstalling asks whether to keep the app's data, the saves, settings
+         and games in it (FilesProvider.kt), so a reinstall of the same signed APK goes on with
+         them. -->
     <application
+        android:hasFragileUserData="true"
         android:appCategory="game"
         android:isGame="true"
         android:icon="@mipmap/ic_launcher"
@@ -71,6 +75,18 @@
         <receiver
             android:name=".UpdateReceiver"
             android:exported="false" />
+
+        <!-- OpenRAC's files in the system's Files app (FilesProvider.kt). -->
+        <provider
+            android:name=".FilesProvider"
+            android:authorities="${applicationId}.files"
+            android:exported="true"
+            android:grantUriPermissions="true"
+            android:permission="android.permission.MANAGE_DOCUMENTS">
+            <intent-filter>
+                <action android:name="android.content.action.DOCUMENTS_PROVIDER" />
+            </intent-filter>
+        </provider>
 
         <provider
           android:name="androidx.core.content.FileProvider"

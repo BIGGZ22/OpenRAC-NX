@@ -49,6 +49,9 @@ object OpenracSetup {
 
   fun discs(context: Context): File = File(context.filesDir, "discs")
 
+  /** The install folder: each game's set-up from its disc (android.rs games_dir). */
+  fun games(context: Context): File = File(context.filesDir, "games")
+
   fun nativeLibraries(context: Context): File = File(context.applicationInfo.nativeLibraryDir)
 
   /** Sets the environment, then unpacks the carried copy when this APK's differs from the one
@@ -103,6 +106,7 @@ object OpenracSetup {
       "XDG_DATA_HOME" to File(context.filesDir, "share").path,
       "XDG_CONFIG_HOME" to File(context.filesDir, "config").path,
       "OPENRAC_DISCS_DIR" to discs(context).path,
+      "OPENRAC_GAMES_DIR" to games(context).path,
       "OPENRAC_NATIVE_LIBRARY_DIR" to libraries,
       "PYTHONHOME" to File(root, "python").path,
       "PYTHONDONTWRITEBYTECODE" to "1",
