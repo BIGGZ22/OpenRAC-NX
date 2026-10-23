@@ -288,11 +288,11 @@ mod tests {
         let wanted = tmp.join("files").join("games");
         let old = tmp.join("data");
         // Nothing yet: the wanted folder, made on the first set-up.
-        assert_eq!(settle_install_dir(&wanted, &[old.clone()]), wanted);
+        assert_eq!(settle_install_dir(&wanted, std::slice::from_ref(&old)), wanted);
         // A game set up in the launcher's data folder moves, with what it holds.
         std::fs::create_dir_all(old.join("active/rac1/data/iso_data")).unwrap();
         std::fs::write(old.join("active/rac1/data/iso_data/buildinfo.json"), "{}").unwrap();
-        assert_eq!(settle_install_dir(&wanted, &[old.clone()]), wanted);
+        assert_eq!(settle_install_dir(&wanted, std::slice::from_ref(&old)), wanted);
         assert!(wanted.join("active/rac1/data/iso_data/buildinfo.json").is_file());
         assert!(!old.join("active").exists());
         // A set-up in the wanted folder is never replaced by an older one.
