@@ -225,7 +225,7 @@ openrac_warnings(early_lighting_test)
 if(OPENRAC_VULKAN AND OPENRAC_ENHANCED_RENDERING)
   add_test(NAME early_lighting_vulkan COMMAND early_lighting_test)
   set_tests_properties(early_lighting_vulkan PROPERTIES SKIP_RETURN_CODE 77
-    ENVIRONMENT "OPENRAC_GL_API=vulkan;OPENRAC_VULKAN_VALIDATION=1")
+    ENVIRONMENT "OPENRAC_ENHANCED=1;OPENRAC_GL_API=vulkan;OPENRAC_VULKAN_VALIDATION=1")
 endif()
 target_link_libraries(probe_gpu_test PRIVATE openrac_viewer_lib openrac_platform)
 target_include_directories(probe_gpu_test PRIVATE "${CMAKE_CURRENT_BINARY_DIR}/generated")
@@ -233,7 +233,7 @@ openrac_warnings(probe_gpu_test)
 if(OPENRAC_VULKAN AND OPENRAC_ENHANCED_RENDERING)
   add_test(NAME probe_gpu_vulkan COMMAND probe_gpu_test)
   set_tests_properties(probe_gpu_vulkan PROPERTIES SKIP_RETURN_CODE 77
-    ENVIRONMENT "OPENRAC_GL_API=vulkan;OPENRAC_VULKAN_VALIDATION=1")
+    ENVIRONMENT "OPENRAC_ENHANCED=1;OPENRAC_GL_API=vulkan;OPENRAC_VULKAN_VALIDATION=1")
 endif()
 
 add_executable(probe_scene_test enhanced/tests/probe_scene_test.cpp)
@@ -248,7 +248,7 @@ add_test(NAME hero_shadow_cpu COMMAND hero_shadow_test)
 if(OPENRAC_VULKAN AND OPENRAC_ENHANCED_RENDERING)
   add_test(NAME hero_shadow_vulkan COMMAND hero_shadow_test --gpu)
   set_tests_properties(hero_shadow_vulkan PROPERTIES SKIP_RETURN_CODE 77
-    ENVIRONMENT "OPENRAC_GL_API=vulkan;OPENRAC_VULKAN_VALIDATION=1")
+    ENVIRONMENT "OPENRAC_ENHANCED=1;OPENRAC_GL_API=vulkan;OPENRAC_VULKAN_VALIDATION=1")
 endif()
 add_executable(sun_shadow_test enhanced/tests/sun_shadow_test.cpp)
 target_link_libraries(sun_shadow_test PRIVATE openrac_viewer_lib openrac_platform)
@@ -259,9 +259,9 @@ if(OPENRAC_VULKAN AND OPENRAC_ENHANCED_RENDERING)
   add_test(NAME sun_shadow_vulkan COMMAND sun_shadow_test --gpu)
   add_test(NAME sun_shadow_filter_reference_vulkan COMMAND sun_shadow_test --gpu)
   set_tests_properties(sun_shadow_filter_reference_vulkan PROPERTIES SKIP_RETURN_CODE 77
-    ENVIRONMENT "OPENRAC_GL_API=vulkan;OPENRAC_VULKAN_VALIDATION=1;OPENRAC_SHADOW_FILTER_REFERENCE=1")
+    ENVIRONMENT "OPENRAC_ENHANCED=1;OPENRAC_GL_API=vulkan;OPENRAC_VULKAN_VALIDATION=1;OPENRAC_SHADOW_FILTER_REFERENCE=1")
   set_tests_properties(sun_shadow_vulkan PROPERTIES SKIP_RETURN_CODE 77
-    ENVIRONMENT "OPENRAC_GL_API=vulkan;OPENRAC_VULKAN_VALIDATION=1")
+    ENVIRONMENT "OPENRAC_ENHANCED=1;OPENRAC_GL_API=vulkan;OPENRAC_VULKAN_VALIDATION=1")
 endif()
 # This executable uses only the viewer's CPU level loader; it never opens a
 # window or creates a graphics context. Embree stays out of viewer/game targets.
@@ -403,7 +403,7 @@ if(OPENRAC_VULKAN AND OPENRAC_ENHANCED_RENDERING)
   add_test(NAME gtao_vulkan COMMAND gtao_test)
   target_compile_definitions(gtao_test PRIVATE OPENRAC_VULKAN=1)
   set_tests_properties(gtao_vulkan PROPERTIES SKIP_RETURN_CODE 77 ENVIRONMENT
-    "OPENRAC_GL_API=vulkan;OPENRAC_VULKAN_VALIDATION=1")
+    "OPENRAC_ENHANCED=1;OPENRAC_GL_API=vulkan;OPENRAC_VULKAN_VALIDATION=1")
 endif()
 
 # Preserve the original horizon shader as a pixel-exact optimization reference.
@@ -418,20 +418,25 @@ add_test(NAME gtao_horizon_cpu COMMAND gtao_horizon_test --cpu)
 if(OPENRAC_VULKAN AND OPENRAC_ENHANCED_RENDERING)
   add_test(NAME gtao_horizon_vulkan COMMAND gtao_horizon_test)
   set_tests_properties(gtao_horizon_vulkan PROPERTIES SKIP_RETURN_CODE 77 ENVIRONMENT
-    "OPENRAC_GL_API=vulkan;OPENRAC_VULKAN_VALIDATION=1")
+    "OPENRAC_ENHANCED=1;OPENRAC_GL_API=vulkan;OPENRAC_VULKAN_VALIDATION=1")
 endif()
 
-# The disabled feature boundary is tested in both normal and enhanced builds.
+# The feature boundary: OpenGL never has it; Vulkan has it only when it is switched on at start
+# (the `enhanced_rendering` setting, here OPENRAC_ENHANCED). Switched off, a build with it must
+# create nothing of it, so the game draws as a build without it.
 add_executable(enhanced_rendering_test enhanced/tests/enhanced_rendering_test.cpp)
 target_link_libraries(enhanced_rendering_test PRIVATE openrac_viewer_lib openrac_platform)
 openrac_warnings(enhanced_rendering_test)
-add_test(NAME enhanced_rendering_compat COMMAND enhanced_rendering_test)
+add_test(NAME enhanced_rendering_compat COMMAND enhanced_rendering_test --expect-off)
 set_tests_properties(enhanced_rendering_compat PROPERTIES SKIP_RETURN_CODE 77
-  ENVIRONMENT "OPENRAC_GL_API=desktop")
+  ENVIRONMENT "OPENRAC_ENHANCED=1;OPENRAC_GL_API=desktop")
 if(OPENRAC_VULKAN)
-  add_test(NAME enhanced_rendering_vulkan COMMAND enhanced_rendering_test)
+  add_test(NAME enhanced_rendering_off_vulkan COMMAND enhanced_rendering_test --expect-off)
+  set_tests_properties(enhanced_rendering_off_vulkan PROPERTIES SKIP_RETURN_CODE 77
+    ENVIRONMENT "OPENRAC_ENHANCED=0;OPENRAC_GL_API=vulkan;OPENRAC_VULKAN_VALIDATION=1")
+  add_test(NAME enhanced_rendering_vulkan COMMAND enhanced_rendering_test --expect-build)
   set_tests_properties(enhanced_rendering_vulkan PROPERTIES SKIP_RETURN_CODE 77
-    ENVIRONMENT "OPENRAC_GL_API=vulkan;OPENRAC_VULKAN_VALIDATION=1")
+    ENVIRONMENT "OPENRAC_ENHANCED=1;OPENRAC_GL_API=vulkan;OPENRAC_VULKAN_VALIDATION=1")
 endif()
 
 add_executable(bake_liquids_test enhanced/tests/bake_liquids_test.cpp)

@@ -6,7 +6,7 @@
 // (openrac_game, generated from port/game/<id>/hostgen.json).
 //
 //   openrac-<id> --data <install>/active/<game>/data [--cards DIR] [--frames N] [--stop-on-missing]
-//                [--level N] [--skip-movies] [--mods DIR] [--settings FILE] [--plugins FILE] [--no-mods]
+//                [--level N] [--skip-movies] [--mods DIR] [--settings FILE] [--plugins FILE] [--probes DIR] [--no-mods]
 //
 // The data folder is what the extractor made from the player's disc
 // (tools/extractor.py; the launcher's "Set up from your disc"). The program
@@ -67,7 +67,9 @@
 #include "platform/input.h"
 #include "platform/performance_hint.h"
 #include "platform/pump.h"
+#include "enhanced/viewer/probe_lighting.h"
 #include "renderer/direct.h"
+#include "renderer/gl.h"
 #include "renderer/texture.h"
 #include "viewer/level.h"
 #include "viewer/moby_pose.h"
@@ -123,6 +125,7 @@ struct Options {
     fs::path mods;  // levels edited in Godot and packed (editor/pack.py), read in place of the disc's
     fs::path settings;  // the player's settings (settings.h); in OpenRAC's data folder unless given
     fs::path plugins;   // the native mods' list (mods.h): <data>/plugins/plugins.json unless given
+    fs::path probes;    // the player's probe bakes, a level_NN folder each (enhanced rendering)
     bool no_mods = false;  // purist mode: no native mod is loaded (docs/port/MODS.md)
     fs::path debug_dump;  // each frame's measurements, a JSON object a line (docs/port/DEBUGGING.md)
     bool debug_overlay = false;  // the debug overlay shown from the start (F3 shows and hides it)
@@ -148,7 +151,7 @@ std::string program_name() {
 [[noreturn]] void usage(const std::string& why) {
     log::error("{}", why);
     log::error(
-        "usage: {} --data <install>/active/{}/data [--cards DIR] [--frames N] [--stop-on-missing] [--level N] [--skip-movies] [--mods DIR] [--settings FILE] [--plugins FILE] [--no-mods] [--debug-overlay] [--debug-dump FILE]",
+        "usage: {} --data <install>/active/{}/data [--cards DIR] [--frames N] [--stop-on-missing] [--level N] [--skip-movies] [--mods DIR] [--settings FILE] [--plugins FILE] [--probes DIR] [--no-mods] [--debug-overlay] [--debug-dump FILE]",
         program_name(),
         openrac_game.game
     );
@@ -237,6 +240,8 @@ Options parse(int argc, char** argv) {
             o.settings = value();
         } else if (a == "--plugins") {
             o.plugins = value();
+        } else if (a == "--probes") {
+            o.probes = value();
         } else if (a == "--no-mods") {
             o.no_mods = true;
         } else if (a == "--levels") {
@@ -1482,6 +1487,16 @@ int main(int argc, char** argv) {
         if (settings::get().verbose_log && log::level() > log::Level::Verbose) {
             log::set_level(log::Level::Verbose);
             log::info("the settings ask for the detailed log (verbose_log = 1)");
+        }
+        // Enhanced rendering is chosen now, before the window makes its first shader: the
+        // setting (the launcher's Mods entry), else OPENRAC_ENHANCED. Off, none of it is made.
+        if (settings::get().enhanced_rendering) {
+            gl::set_enhanced_rendering(true);
+        }
+        if (gl::enhanced_rendering_enabled()) {
+            viewer::set_probe_root(g_options.probes);
+            log::info("enhanced rendering on (Vulkan only); probe bakes from {}",
+                      g_options.probes.empty() ? std::string("nowhere") : g_options.probes.string());
         }
         fs::path levels = g_options.levels.empty() ? default_levels(g_options.data) : levels_or_flat(g_options.levels);
         if (!frontend::open(openrac_game.id, levels, why)) {

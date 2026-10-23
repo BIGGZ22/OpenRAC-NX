@@ -17,6 +17,8 @@ int main() {
     }
     const auto file = folder / "settings.ini";
     settings::load(file);
+    // Enhanced rendering is off until the player turns it on (the launcher's Mods entry).
+    CHECK(!settings::get().enhanced_rendering);
     CHECK(settings::get().enhanced_graphics);
     CHECK(settings::get().enhanced_shadows);
     CHECK(settings::get().probe_lighting);
@@ -31,8 +33,10 @@ int main() {
     settings::load(file);
     auto& options = settings::get();
     CHECK(options.enhanced_graphics && options.probe_lighting && options.gtao);
+    CHECK(!options.enhanced_rendering);
     CHECK(options.gtao_settings.quality == renderer::GtaoQuality::Performance);
     CHECK(options.enhanced_shadows);
+    options.enhanced_rendering = true;
     options.enhanced_graphics = false;
     options.enhanced_shadows = false;
     options.probe_lighting = false;
@@ -44,6 +48,7 @@ int main() {
     settings::save();
     options = settings::Settings{};
     settings::load(file);
+    CHECK(options.enhanced_rendering);
     CHECK(!options.enhanced_graphics && !options.probe_lighting);
     CHECK(options.probe_spheres);
     CHECK(!options.enhanced_shadows);

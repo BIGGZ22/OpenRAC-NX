@@ -355,11 +355,19 @@ bool loaded();
 // renderer optimisations without changing desktop GL or ES behaviour.
 bool is_vulkan();
 
-// Enhanced rendering is a build opt-in and is supported only by Vulkan.
+// Enhanced rendering (probe GI, modern shadows, GTAO: port/enhanced) is compiled into the desktop
+// builds and chosen when the game starts: the `enhanced_rendering` setting (the launcher's Mods
+// entry), or OPENRAC_ENHANCED=1 (or OPENRAC_PROBE_GI naming a bake) for scripts and tests. It is
+// off by default, and then nothing of it is created: the game draws exactly as a build without it.
+// Choose before the first shader or level is made; it does not change during a session.
+bool enhanced_rendering_enabled();
+void set_enhanced_rendering(bool on);
+
+// Enhanced rendering is chosen at start and supported only by Vulkan.
 // Keep this decision at resource/pass/UI boundaries, not in every draw.
 inline bool enhanced_rendering_available() {
 #if defined(OPENRAC_ENHANCED_RENDERING) && OPENRAC_ENHANCED_RENDERING
-    return is_vulkan();
+    return is_vulkan() && enhanced_rendering_enabled();
 #else
     return false;
 #endif

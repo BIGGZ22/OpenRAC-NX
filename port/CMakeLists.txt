@@ -35,8 +35,11 @@ if(MSVC AND NOT CMAKE_C_COMPILER_ID MATCHES "Clang")
                       "needs __int128 and GNU C extensions that MSVC's C compiler lacks.")
 endif()
 
-# Experimental lighting is opt-in; core Vulkan performance work stays enabled.
-option(OPENRAC_ENHANCED_RENDERING "Enable experimental Vulkan lighting and shadows" OFF)
+# Experimental lighting (port/enhanced) is compiled in and chosen when the game starts: the
+# `enhanced_rendering` setting, which the launcher's Mods entry writes, or OPENRAC_ENHANCED=1. Off
+# by default, so a build with it draws as one without it until a player turns it on (renderer/gl.h).
+# OFF leaves it out altogether.
+option(OPENRAC_ENHANCED_RENDERING "Compile in the experimental Vulkan lighting and shadows (off at run time by default)" ON)
 if(OPENRAC_ENHANCED_RENDERING)
   add_compile_definitions(OPENRAC_ENHANCED_RENDERING=1)
 endif()

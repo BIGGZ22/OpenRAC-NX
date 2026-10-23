@@ -1,5 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include <algorithm>
+#include <filesystem>
+#include <string_view>
 
 #include "enhanced/tests/gpu_probe_fixture.h"
 #include "enhanced/tests/probe_fixture.h"
@@ -11,18 +13,25 @@
 
 using namespace openrac;
 
-int main() {
+// --expect-off: switched off at start (OPENRAC_ENHANCED=0, the setting's default) or on OpenGL,
+// nothing of enhanced rendering may be made, so the game draws as a build without it.
+// --expect-build: switched on, Vulkan has it when the build compiled it in.
+int main(int argc, char** argv) {
+    const bool expect_off = argc > 1 && std::string_view(argv[1]) == "--expect-off";
     test::GlContext context;
     std::string error;
     if (!context.open(error)) {
         return test::kSkip;
     }
 #if defined(OPENRAC_ENHANCED_RENDERING) && OPENRAC_ENHANCED_RENDERING
-    const bool expected = gl::is_vulkan();
+    const bool expected = !expect_off && gl::is_vulkan();
 #else
     const bool expected = false;
 #endif
     CHECK(gl::enhanced_rendering_available() == expected);
+    if (expect_off) {
+        CHECK(!gl::enhanced_rendering_available());
+    }
     if (!expected) {
         // Explicit API requests must not bypass the build/backend boundary.
         auto volume = lighting::ProbeVolume::allocate({});
@@ -68,6 +77,15 @@ int main() {
         level.instances[static_cast<std::size_t>(viewer::Layer::Terrain)].push_back({});
         CHECK(scene.upload(level, renderer.textures(), error));
         CHECK(!scene.probe_data_available());
+        {
+            // A level without a bake under the player's probe folder keeps the original lighting.
+            viewer::set_probe_root(std::filesystem::temp_directory_path() / "openrac-no-probes");
+            level.dir = "level_05";
+            viewer::ProbeLighting unbaked;
+            unbaked.load(level);
+            CHECK(!unbaked.has_data() && !unbaked.active());
+            viewer::set_probe_root({});
+        }
         CHECK(!scene.enable_sun_shadow(true, error));
         CHECK(!scene.enable_hero_shadow(true, error));
         CHECK(renderer.add(

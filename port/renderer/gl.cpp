@@ -130,6 +130,31 @@ bool is_vulkan() {
     return g_vulkan;
 }
 
+namespace {
+// -1 until asked: then the environment's answer, unless set_enhanced_rendering came first.
+int g_enhanced = -1;
+
+bool enhanced_from_environment() {
+    const char* enhanced = std::getenv("OPENRAC_ENHANCED");
+    if (enhanced != nullptr && enhanced[0] != '\0') {
+        return std::string_view(enhanced) == "1";
+    }
+    const char* probes = std::getenv("OPENRAC_PROBE_GI");
+    return probes != nullptr && probes[0] != '\0' && std::string_view(probes) != "0";
+}
+}  // namespace
+
+bool enhanced_rendering_enabled() {
+    if (g_enhanced < 0) {
+        g_enhanced = enhanced_from_environment() ? 1 : 0;
+    }
+    return g_enhanced == 1;
+}
+
+void set_enhanced_rendering(bool on) {
+    g_enhanced = on ? 1 : 0;
+}
+
 bool has_extension(const char* name) {
     return g_extensions.contains(std::string_view(name));
 }

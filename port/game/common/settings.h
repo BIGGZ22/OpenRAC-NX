@@ -77,7 +77,10 @@ struct Settings {
     int render_scale = 100;  // the frame's resolution, as a percentage of the window's picture
     int msaa = 1;            // samples a pixel: 1 (off), 2, 4, 8, 16
     renderer::GtaoSettings gtao_settings;
-    bool enhanced_graphics = true;  // master switch; retains individual feature preferences
+    // Enhanced rendering at all (port/enhanced; the launcher's Mods entry): read at start, Vulkan
+    // only. Off, nothing of it is made and the game draws as a build without it.
+    bool enhanced_rendering = false;
+    bool enhanced_graphics = true;  // F4 within it; retains individual feature preferences
     bool enhanced_shadows = true;   // cascades and Ratchet map; off restores original shadows
     bool probe_lighting = true;     // uses a verified bake when one is loaded
     bool probe_spheres = false;     // diagnostic placement/fade overlay

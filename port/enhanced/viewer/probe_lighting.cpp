@@ -6,6 +6,7 @@
 #include <cmath>
 #include <cstddef>
 #include <cstdlib>
+#include <format>
 #include <memory>
 #include <numeric>
 #include <stdexcept>
@@ -329,12 +330,55 @@ void ProbeLighting::update_regions(
     }
 }
 
+namespace {
+std::filesystem::path& probe_root_storage() {
+    static std::filesystem::path root;
+    return root;
+}
+
+// The level's bake under the probe root: <root>/level_NN/sparse.orpg, NN its folder's name.
+std::string level_bake(const LevelData& level) {
+    const auto& root = probe_root();
+    if (root.empty()) {
+        return {};
+    }
+    auto name = level.dir.filename();
+    if (name.empty()) {
+        name = level.dir.parent_path().filename();
+    }
+    if (name.empty() && level.level >= 0) {
+        name = std::format("level_{:02}", level.level);
+    }
+    const auto sparse = root / name / "sparse.orpg";
+    std::error_code error;
+    if (name.empty() || !std::filesystem::is_regular_file(sparse, error)) {
+        log::info("probe GI: no bake for {} yet; original lighting", name.string());
+        return {};
+    }
+    return sparse.string();
+}
+}  // namespace
+
+void set_probe_root(std::filesystem::path root) {
+    probe_root_storage() = std::move(root);
+}
+
+const std::filesystem::path& probe_root() {
+    return probe_root_storage();
+}
+
 void ProbeLighting::load(const LevelData& level) {
     if (!enhanced_rendering_available()) {
         return;
     }
-    const auto path = environment("OPENRAC_PROBE_GI");
-    if (path.empty() || path == "0") {
+    auto path = environment("OPENRAC_PROBE_GI");
+    if (path == "0") {
+        return;
+    }
+    if (path.empty()) {
+        path = level_bake(level);
+    }
+    if (path.empty()) {
         return;
     }
     try {

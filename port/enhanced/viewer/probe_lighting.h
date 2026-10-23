@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #pragma once
 #include <chrono>
+#include <filesystem>
 
 #include "enhanced/lighting/probe_regions.h"
 #include "enhanced/lighting/probes.h"
@@ -13,6 +14,12 @@ namespace openrac::viewer {
 std::string probe_mesh_fragment();
 std::string probe_early_fragment();
 std::string probe_shader_source(std::string source);
+
+// Where the player's own bakes are (the launcher's `--probes`, bake_all.py's output): one
+// level_NN folder each, holding sparse.orpg. OPENRAC_PROBE_GI, when set, names one bake instead.
+// A level without a bake, or with one that does not match it, keeps the original lighting.
+void set_probe_root(std::filesystem::path root);
+const std::filesystem::path& probe_root();
 
 class ProbeLighting {
 public:
@@ -42,8 +49,8 @@ public:
         }
     }
 
-    // Optional explicit activation through OPENRAC_PROBE_GI. Invalid assets
-    // report why and leave the original lighting active.
+    // Activation through OPENRAC_PROBE_GI, else the level's bake under probe_root(). Missing or
+    // invalid assets report why and leave the original lighting active.
     void load(const LevelData& level);
     void bind(
         const renderer::Shader& shader,

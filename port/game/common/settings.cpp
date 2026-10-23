@@ -221,6 +221,8 @@ void load(const std::filesystem::path& file) {
             known = parse_int(value, 25, 400, s.render_scale);
         } else if (key == "msaa") {
             known = parse_listed(value, kSampleCounts, s.msaa);
+        } else if (key == "enhanced_rendering") {
+            known = parse_bool(value, s.enhanced_rendering);
         } else if (key == "enhanced_graphics") {
             known = parse_bool(value, s.enhanced_graphics);
         } else if (key == "enhanced_shadows") {
@@ -341,6 +343,7 @@ void save() {
         << "hud = " << kHud[static_cast<int>(s.hud)] << "\n"
         << "render_scale = " << s.render_scale << "\n"
         << "msaa = " << s.msaa << "\n"
+        << "enhanced_rendering = " << (s.enhanced_rendering ? 1 : 0) << "\n"
         << "enhanced_graphics = " << (s.enhanced_graphics ? 1 : 0) << "\n"
         << "enhanced_shadows = " << (s.enhanced_shadows ? 1 : 0) << "\n"
         << "probe_lighting = " << (s.probe_lighting ? 1 : 0) << "\n"
