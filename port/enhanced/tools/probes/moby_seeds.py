@@ -8,6 +8,9 @@ from pathlib import Path
 import struct
 import sys
 
+sys.path.insert(1, str(next(p for p in Path(__file__).resolve().parents if (p / "tools/openrac_common").is_dir()) / "tools"))
+from openrac_common import paths  # noqa: E402
+
 
 def whitelist(path: Path) -> dict[int, dict]:
     data = json.loads(path.read_text())
@@ -65,7 +68,7 @@ class Ground:
 
     @staticmethod
     def read_triangles(path: Path):
-        sys.path.insert(0, str(Path(__file__).resolve().parents[4]/'editor'))
+        sys.path.insert(0, str(paths.repo_root(__file__)/'editor'))
         import gltf_read
         doc = gltf_read.read(path)
         triangles = []

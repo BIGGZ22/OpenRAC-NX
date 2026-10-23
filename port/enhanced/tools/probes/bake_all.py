@@ -14,7 +14,6 @@ from __future__ import annotations
 
 import argparse
 from concurrent.futures import ThreadPoolExecutor
-import hashlib
 import json
 import os
 from pathlib import Path
@@ -24,8 +23,11 @@ import subprocess
 import sys
 import threading
 
-import bake_level
-import seed_regions as seeds
+sys.path.insert(1, str(next(p for p in Path(__file__).resolve().parents if (p / "tools/openrac_common").is_dir()) / "tools"))
+from openrac_common import digest  # noqa: E402
+
+import bake_level  # noqa: E402
+import seed_regions as seeds  # noqa: E402
 
 # Each level's record of what its bake was made from (--update compares it).
 STAMP = 'openrac-bake.json'
@@ -45,14 +47,6 @@ def discover_levels(levels_dir: Path):
     return levels
 
 
-def sha256(path: Path) -> str:
-    digest = hashlib.sha256()
-    with path.open('rb') as file:
-        for block in iter(lambda: file.read(1 << 20), b''):
-            digest.update(block)
-    return digest.hexdigest()
-
-
 def bake_options(options) -> list[str]:
     """The options that change a bake, in order (for its stamp)."""
     options, out = list(options), []
@@ -70,7 +64,7 @@ def level_stamp(level: Path, baker_hash: str, options) -> dict:
         levels_format = json.loads(manifest.read_text()).get('format')
     except (ValueError, AttributeError):
         levels_format = None
-    return {'version': 1, 'manifest_sha256': sha256(manifest), 'levels_format': levels_format,
+    return {'version': 1, 'manifest_sha256': digest.sha256(manifest), 'levels_format': levels_format,
             'baker_sha256': baker_hash, 'options': bake_options(options)}
 
 
@@ -145,7 +139,7 @@ def bake_all(levels_dir: Path, output_dir: Path, baker: Path, *, disc=None,
 
     output_dir.mkdir(parents=True, exist_ok=update)
     options = with_threads(options, jobs)
-    baker_hash = sha256(baker) if update else None
+    baker_hash = digest.sha256(baker) if update else None
     report = {'version': 1, 'levels_dir': str(levels_dir), 'levels': [
         {'level': level.name, 'verified': False} for level in levels]}
     lock = threading.Lock()

@@ -8,9 +8,9 @@ Two kinds of test. Each helper's own behaviour, with expected values from its do
 helper was written from runs on the same synthetic input as the helper, and both must give the
 same result, so a caller moved onto the package later behaves as it did. Those copies are
 imported from where they live today (port/tools/hostgen, port/tools/versionmap, sdk/tools,
-editor, port/enhanced/tools/probes, and what tools/ keeps: openrac.checksums,
+editor, and what tools/ keeps: openrac.checksums,
 fcheck_gate.fcheck_commit); once their callers have moved and a copy is gone, its comparison
-goes with it, as tools/' copies went in P1-05.
+goes with it, as tools/' copies went in P1-05 and the probe tools' in P2-10.
 """
 import contextlib
 import hashlib
@@ -32,12 +32,10 @@ ROOT = Path(__file__).resolve().parent.parent
 
 # The existing copies' folders go after tools/ on the path, so a tools/ module of the same name
 # (tools/port.py beside editor/port.py) is the one imported.
-for folder in ("port/tools/hostgen", "port/tools/versionmap", "sdk/tools", "editor",
-               "port/enhanced/tools/probes"):
+for folder in ("port/tools/hostgen", "port/tools/versionmap", "sdk/tools", "editor"):
     if str(ROOT / folder) not in sys.path:
         sys.path.append(str(ROOT / folder))
 
-import bake_all  # noqa: E402  port/enhanced/tools/probes
 import carry_functions  # noqa: E402  port/tools/versionmap
 import disc  # noqa: E402  editor
 import fcheck_gate  # noqa: E402
@@ -206,6 +204,58 @@ class PathsTests(TempDir):
         (self.dir / "x/AGENTS.md").write_text("")
         with self.assertRaises(FileNotFoundError):
             paths.repo_root(self.dir / "x/y")
+
+
+# The folders whose scripts reach the package through paths.BOOTSTRAP (the editor and sdk/tools
+# join them when they move onto it).
+BOOTSTRAPPED = ("port/tools", "port/enhanced/tools/probes")
+
+
+class BootstrapTests(TempDir):
+    """paths.BOOTSTRAP, the line a script outside tools/ runs to find the package, in both kinds
+    of root, and the scripts that write it."""
+
+    def layout(self, name: str, marker: str) -> Path:
+        """A synthetic root NAME holding games/, MARKER and a copy of the package, with a script
+        where the probe tools are that bootstraps and prints its package's and its root's place."""
+        top = self.dir / name
+        (top / "games").mkdir(parents=True)
+        (top / marker).write_text("")
+        shutil.copytree(ROOT / paths.PACKAGE_DIR, top / paths.PACKAGE_DIR,
+                        ignore=shutil.ignore_patterns("__pycache__"))
+        script = top / "port/enhanced/tools/probes/probe.py"
+        script.parent.mkdir(parents=True)
+        script.write_text("import sys\nfrom pathlib import Path\n" + paths.BOOTSTRAP + "\n"
+                          "from openrac_common import paths\n"
+                          "print(Path(paths.__file__).parent)\nprint(paths.repo_root(__file__))\n")
+        return top
+
+    def run_script(self, top: Path) -> list[Path]:
+        done = subprocess.run([sys.executable, "-E", str(top / "port/enhanced/tools/probes/probe.py")],
+                              cwd=self.dir, capture_output=True, text=True)
+        self.assertEqual(done.returncode, 0, done.stderr)
+        return [Path(line) for line in done.stdout.splitlines()]
+
+    def test_finds_the_package_in_a_checkout(self):
+        top = self.layout("checkout", paths.CHECKOUT_MARKER).resolve()
+        self.assertEqual(self.run_script(top), [top / paths.PACKAGE_DIR, top])
+
+    def test_finds_the_package_in_the_launchers_bundled_copy(self):
+        # The copy has no AGENTS.md: the bootstrap finds it by the package, repo_root by STANDALONE.
+        top = self.layout("bundle", paths.STANDALONE_MARKER).resolve()
+        self.assertFalse((top / paths.CHECKOUT_MARKER).exists())
+        self.assertEqual(self.run_script(top), [top / paths.PACKAGE_DIR, top])
+
+    def test_the_documented_line_is_the_constant(self):
+        self.assertIn(paths.BOOTSTRAP, paths.__doc__)
+        self.assertIn(paths.BOOTSTRAP, (ROOT / paths.PACKAGE_DIR / "README.md").read_text(encoding="utf-8"))
+
+    def test_every_script_outside_tools_that_imports_the_package_bootstraps_so(self):
+        for folder in BOOTSTRAPPED:
+            for script in sorted((ROOT / folder).rglob("*.py")):
+                text = script.read_text(encoding="utf-8")
+                if "from openrac_common import" in text or "import openrac_common" in text:
+                    self.assertIn(paths.BOOTSTRAP, text, script.relative_to(ROOT))
 
 
 # ---- games ----
@@ -399,7 +449,6 @@ class DigestTests(TempDir):
         self.assertEqual(digest.sha1(empty), hashlib.sha1(b"").hexdigest())
 
     def test_matches_the_existing_copies(self):
-        self.assertEqual(digest.sha256(self.path), bake_all.sha256(self.path))
         full = openrac.checksums(self.path, True)
         self.assertEqual((digest.sha1(self.path), digest.sha256(self.path), digest.file_digest(self.path, "md5")),
                          (full["sha1"], full["sha256"], full["md5"]))

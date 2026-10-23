@@ -11,15 +11,16 @@ It is not a framework and not a place for one tool's logic: a helper belongs her
 tools need it. It holds no game knowledge beyond the layout of `games/<game>/game.json` and the
 format of a PS2 disc, and no game data.
 
-The tools in `tools/` use it since P1-05; `port/tools` and `editor` move onto it in P2-10
-([PROGRESS.md](../../docs/restructure/PROGRESS.md)). Who uses what today:
+The tools in `tools/` use it since P1-05, the probe tools since P2-10; `editor/` and `sdk/tools/`
+move onto it in their own packages ([PROGRESS.md](../../docs/restructure/PROGRESS.md)). Who uses
+what today:
 
 | Module | Used by |
 |---|---|
-| `paths` | every tool in `tools/` that knows the repository: `openrac`, `extractor`, `sources`, `shared`, `xmap`, `versions`, `port`, `build_port`, `build_android`, `bundle_standalone`, `fcheck_gate` |
+| `paths` | every tool in `tools/` that knows the repository: `openrac`, `extractor`, `sources`, `shared`, `xmap`, `versions`, `port`, `build_port`, `build_android`, `bundle_standalone`, `fcheck_gate`; the probe tools' `seed_regions` and `moby_seeds` |
 | `games` | `openrac`, `extractor`, `sources`, `xmap`; `fcheck_gate` (`source_checkout`) |
 | `tables` | `fcheck_gate`, `port`, `xmap`, `versions` |
-| `digest` | `openrac`, `extractor`, `shared`, `build_port`, `build_android`, `fcheck_gate` |
+| `digest` | `openrac`, `extractor`, `shared`, `build_port`, `build_android`, `fcheck_gate`; the probe tools' `bake_all` and `seed_regions` |
 | `files` | `openrac` (`place_link`), `extractor`, `bundle_standalone` |
 | `proc` | every `git` call in `tools/`; `build_android`'s and `bundle_standalone`'s commands |
 | `iso9660` | `openrac`, `extractor` |
@@ -76,15 +77,34 @@ A script in `tools/` imports it directly, since Python puts the script's folder 
 from openrac_common import games, iso9660
 ```
 
-A script elsewhere puts `tools/` on the path once, from its own place, and imports it the same way:
+A script anywhere else runs one line first, the bootstrap (`paths.BOOTSTRAP`), and then imports it
+the same way:
 
 ```python
-sys.path.insert(0, str(next(p for p in Path(__file__).resolve().parents if (p / "AGENTS.md").is_file()) / "tools"))
+import sys
+from pathlib import Path
+
+sys.path.insert(1, str(next(p for p in Path(__file__).resolve().parents if (p / "tools/openrac_common").is_dir()) / "tools"))
+from openrac_common import paths  # noqa: E402
 ```
 
-That line finds a checkout only. A script the launcher's bundled copy carries (`editor/`) runs where
-there is no `AGENTS.md`, so it needs a marker the copy has as well; P2-10 settles it when the editor
-moves onto this package.
+The rule, decided in P2-10:
+
+- **One line, the same everywhere.** Every script outside `tools/` that imports the package writes
+  the line above verbatim, and nothing else to find it; `tools/test_openrac_common.py` checks each
+  one against `paths.BOOTSTRAP`. A script that only imports its own folder's modules writes no
+  `sys.path` line at all: Python and `unittest discover` already put that folder on the path.
+- **Found by the folder that holds it.** The line walks up to the nearest folder holding
+  `tools/openrac_common`, not to `AGENTS.md`: the launcher's bundled copy (`tools/bundle_standalone.py`)
+  carries the package and the probe tools, but no `AGENTS.md`. Once the package is imported,
+  `paths.repo_root(__file__)` finds the top of either kind of root, by `AGENTS.md` or `STANDALONE`.
+- **Second on the path.** `tools/` goes after the script's own folder, so a module of the script's
+  keeps its name when `tools/` holds one of the same (`editor/port.py` beside `tools/port.py`), and
+  before the installed packages, so a module of `tools/` (`tools/mips.py`, which
+  `port/tools/versionmap` imports) is not shadowed by an installed one.
+
+`port/enhanced/tools/probes` uses it (P2-10); `editor/` and `sdk/tools/` move onto it with their own
+packages.
 
 ## Depends on
 
@@ -122,13 +142,16 @@ directories and a root directory longer than one sector), never read from a disc
 
 - each helper's own behaviour, with expected values from the format (ECMA-119) or from `hashlib`;
 - characterisation: the existing copy each helper was written from runs on the same input, and both
-  must agree. The copies in `tools/` are gone (P1-05) and their comparisons with them; those left
-  are `tools/openrac.py`'s `checksums` and `fcheck_gate.py`'s `fcheck_commit` (which use the
-  package's results), `port/tools/hostgen/{hostgen,no_c}.py`,
-  `port/tools/versionmap/{versionmap,carry_functions}.py`, `sdk/tools/gen_binding.py`,
-  `editor/disc.py` and `port/enhanced/tools/probes/bake_all.py`. The tables are also read from this
-  checkout's own `port/game/*/libraries.tsv` and compared. When a copy is removed by the package
-  that moves its callers, its comparison goes with it.
+  must agree. The copies in `tools/` are gone (P1-05) and the probe tools' (P2-10), and their
+  comparisons with them; those left are `tools/openrac.py`'s `checksums` and `fcheck_gate.py`'s
+  `fcheck_commit` (which use the package's results), `port/tools/hostgen/{hostgen,no_c}.py`,
+  `port/tools/versionmap/{versionmap,carry_functions}.py`, `sdk/tools/gen_binding.py` and
+  `editor/disc.py`. The tables are also read from this checkout's own `port/game/*/libraries.tsv`
+  and compared. When a copy is removed by the package that moves its callers, its comparison goes
+  with it.
+- the bootstrap: `paths.BOOTSTRAP` run from a script in a synthetic checkout and in a synthetic
+  bundled copy (no `AGENTS.md`), and every script outside `tools/` that imports the package
+  checked for the line.
 
 The tools that use the package have their own tests beside it (`test_openrac.py`,
 `test_extractor.py`, `test_sources.py`, `test_build_android.py`, `test_bundle_standalone.py`, ...);

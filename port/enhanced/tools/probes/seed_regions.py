@@ -20,7 +20,10 @@ import subprocess
 import sys
 import tempfile
 
-ROOT = Path(__file__).resolve().parents[4]
+sys.path.insert(1, str(next(p for p in Path(__file__).resolve().parents if (p / "tools/openrac_common").is_dir()) / "tools"))
+from openrac_common import digest, paths  # noqa: E402
+
+ROOT = paths.repo_root(__file__)
 
 
 def transitions(gameplay: bytes) -> list[dict]:
@@ -245,10 +248,10 @@ def plan_level(level_dir: Path, coarse: dict, profile: dict, gameplay: bytes, op
     import moby_seeds
     if not options.no_moby_seeds or (regions and not options.no_geometry_coverage):
         geometry = moby_seeds.Ground.read_triangles(level_dir/'collision.glb')
-        geometry_hash = hashlib.sha256((level_dir/'collision.glb').read_bytes()).hexdigest()
+        geometry_hash = digest.sha256(level_dir/'collision.glb')
     if not options.no_moby_seeds:
         allowed = moby_seeds.whitelist(options.moby_whitelist)
-        whitelist_hash = hashlib.sha256(options.moby_whitelist.read_bytes()).hexdigest()
+        whitelist_hash = digest.sha256(options.moby_whitelist)
         placements = json.loads((level_dir/'placements.json').read_text())
         ground = moby_seeds.Ground(geometry)
         boxes, markers, bad_mobys = moby_seeds.candidates(placements, allowed, ground, gameplay,
