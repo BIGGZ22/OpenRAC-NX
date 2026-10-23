@@ -7,10 +7,10 @@ Two kinds of test. Each helper's own behaviour, with expected values from its do
 (ECMA-119 for the image, hashlib for the digests). And characterisation: the existing copy each
 helper was written from runs on the same synthetic input as the helper, and both must give the
 same result, so a caller moved onto the package later behaves as it did. Those copies are
-imported from where they live today (port/tools/hostgen, port/tools/versionmap, sdk/tools,
-editor, and what tools/ keeps: openrac.checksums,
+imported from where they live today (port/tools/hostgen, sdk/tools, editor, and what tools/
+keeps: openrac.checksums,
 fcheck_gate.fcheck_commit); once their callers have moved and a copy is gone, its comparison
-goes with it, as tools/' copies went in P1-05 and the probe tools' in P2-10.
+goes with it, as tools/' copies went in P1-05 and versionmap's and the probe tools' in P2-10.
 """
 import contextlib
 import hashlib
@@ -32,18 +32,16 @@ ROOT = Path(__file__).resolve().parent.parent
 
 # The existing copies' folders go after tools/ on the path, so a tools/ module of the same name
 # (tools/port.py beside editor/port.py) is the one imported.
-for folder in ("port/tools/hostgen", "port/tools/versionmap", "sdk/tools", "editor"):
+for folder in ("port/tools/hostgen", "sdk/tools", "editor"):
     if str(ROOT / folder) not in sys.path:
         sys.path.append(str(ROOT / folder))
 
-import carry_functions  # noqa: E402  port/tools/versionmap
 import disc  # noqa: E402  editor
 import fcheck_gate  # noqa: E402
 import gen_binding  # noqa: E402  sdk/tools
 import hostgen  # noqa: E402  port/tools/hostgen
 import no_c  # noqa: E402  port/tools/hostgen
 import openrac  # noqa: E402
-import versionmap  # noqa: E402  port/tools/versionmap
 
 SECTOR = iso9660.SECTOR
 
@@ -180,10 +178,9 @@ class PathsTests(TempDir):
         self.assertEqual(paths.repo_root(ROOT), ROOT)
 
     def test_matches_the_hand_written_roots(self):
-        # tools/*.py take theirs from repo_root since P1-05; these are still written by hand.
-        for module in (versionmap, gen_binding):
-            with self.subTest(module=module.__name__):
-                self.assertEqual(paths.repo_root(module.__file__), module.ROOT)
+        # tools/*.py take theirs from repo_root since P1-05, port/tools since P2-10; this one is
+        # still written by hand.
+        self.assertEqual(paths.repo_root(gen_binding.__file__), gen_binding.ROOT)
 
     def test_a_checkout_needs_games_and_agents_md(self):
         (self.dir / "a/games").mkdir(parents=True)
@@ -292,10 +289,6 @@ class GamesTests(TempDir):
         self.assertEqual(games.version_dir(RAC8, "pal"), "games/rac8")
         self.assertEqual(games.version_dir(RAC8, "ntsc"), "games/rac8/ntsc")
 
-    def test_matches_versionmap(self):
-        with mock.patch.object(versionmap, "ROOT", self.dir):
-            self.assertEqual(games.load("rac8", self.dir)["versions"]["ntsc"], versionmap.version("rac8/ntsc"))
-
     def test_source_variable_is_the_game_and_version_in_capitals(self):
         self.assertEqual(games.source_variable("rac1", "pal"), "OPENRAC_SOURCE_RAC1_PAL")
 
@@ -389,11 +382,6 @@ class TablesTests(TempDir):
                          ["symbol", "library", "name", "port", "notes", "signature (optional)"])
         self.assertEqual(tables.header(self.no_c), [])
 
-    def test_matches_carry_functions_read_tsv(self):
-        for path in (self.libraries, self.api, self.no_c, self.dir / "none.tsv"):
-            with self.subTest(path=path.name):
-                self.assertEqual(tables.read_tsv(path), carry_functions.read_tsv(path))
-
     def test_matches_no_c_read_tsv_names(self):
         for column in (0, 1):
             self.assertEqual([row[column] for row in tables.read_tsv(self.libraries, strip=True)],
@@ -422,10 +410,9 @@ class TablesTests(TempDir):
         rows = tables.read_tsv(self.libraries, ["symbol", "library", "name", "port"], strip=True)
         self.assertEqual({"pal": {r["name"]: r["symbol"] for r in rows if r["port"] == "hook"}}, expected)
 
-    def test_reads_this_checkouts_libraries_as_carry_functions_does(self):
+    def test_reads_the_headers_of_this_checkouts_libraries(self):
         for path in sorted((ROOT / "port" / "game").glob("*/libraries.tsv")):
             with self.subTest(path=str(path.relative_to(ROOT))):
-                self.assertEqual(tables.read_tsv(path), carry_functions.read_tsv(path))
                 self.assertEqual(tables.header(path)[:3], ["symbol", "library", "name"]
                                  if path.parent.name != "common" else ["name", "library", "signature"])
 

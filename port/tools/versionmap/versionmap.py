@@ -41,9 +41,12 @@ import sys
 from collections import Counter, defaultdict
 from pathlib import Path
 
-ROOT = Path(__file__).resolve().parents[3]
-sys.path.insert(0, str(ROOT / "tools"))
-import mips  # noqa: E402
+sys.path.insert(1, str(next(p for p in Path(__file__).resolve().parents if (p / "tools/openrac_common").is_dir()) / "tools"))
+from openrac_common import games, paths  # noqa: E402
+
+import mips  # noqa: E402  tools/mips.py, on the path through the line above
+
+ROOT = paths.repo_root(__file__)
 
 CODE_ROOT = Path(os.environ.get("OPENRAC_CODE_ROOT", ROOT))
 CODE_SECTIONS = ("core.text", ".text")
@@ -51,7 +54,7 @@ CODE_SECTIONS = ("core.text", ".text")
 
 def version(key: str) -> dict:
     game, name = key.split("/")
-    return json.loads((ROOT / "games" / game / "game.json").read_text())["versions"][name]
+    return games.load(game, ROOT)["versions"][name]
 
 
 def programs(key: str) -> dict[str, dict[str, tuple[int, bytes]]]:

@@ -3,15 +3,13 @@
 """hostnames.py on a small made-up game: two versions sharing host C, a map, a generated folder."""
 import io
 import json
-import sys
 import tempfile
 import unittest
 from contextlib import redirect_stdout
 from pathlib import Path
 from types import SimpleNamespace
 
-sys.path.insert(0, str(Path(__file__).resolve().parent))
-import hostnames  # noqa: E402
+import hostnames
 
 SHARED = """#include "rac1.h"
 /* func_00100000 in a comment is not used */

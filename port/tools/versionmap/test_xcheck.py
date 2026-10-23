@@ -6,14 +6,12 @@ import io
 import json
 import shutil
 import struct
-import sys
 import tempfile
 import unittest
 from contextlib import redirect_stderr, redirect_stdout
 from pathlib import Path
 
-sys.path.insert(0, str(Path(__file__).resolve().parent))
-import xcheck  # noqa: E402
+import xcheck
 
 BASE = 0x00100000
 NOP, JR_RA = 0x00000000, 0x03E00008

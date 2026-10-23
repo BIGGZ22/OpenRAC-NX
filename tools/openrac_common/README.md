@@ -11,15 +11,15 @@ It is not a framework and not a place for one tool's logic: a helper belongs her
 tools need it. It holds no game knowledge beyond the layout of `games/<game>/game.json` and the
 format of a PS2 disc, and no game data.
 
-The tools in `tools/` use it since P1-05, the probe tools since P2-10; `editor/` and `sdk/tools/`
+The tools in `tools/` use it since P1-05, `port/tools/versionmap` and the probe tools since P2-10; `editor/` and `sdk/tools/`
 move onto it in their own packages ([PROGRESS.md](../../docs/restructure/PROGRESS.md)). Who uses
 what today:
 
 | Module | Used by |
 |---|---|
-| `paths` | every tool in `tools/` that knows the repository: `openrac`, `extractor`, `sources`, `shared`, `xmap`, `versions`, `port`, `build_port`, `build_android`, `bundle_standalone`, `fcheck_gate`; the probe tools' `seed_regions` and `moby_seeds` |
-| `games` | `openrac`, `extractor`, `sources`, `xmap`; `fcheck_gate` (`source_checkout`) |
-| `tables` | `fcheck_gate`, `port`, `xmap`, `versions` |
+| `paths` | every tool in `tools/` that knows the repository: `openrac`, `extractor`, `sources`, `shared`, `xmap`, `versions`, `port`, `build_port`, `build_android`, `bundle_standalone`, `fcheck_gate`; `port/tools/versionmap` (`versionmap`, `carry_functions`, `hostnames`); the probe tools' `seed_regions` and `moby_seeds` |
+| `games` | `openrac`, `extractor`, `sources`, `xmap`; `fcheck_gate` (`source_checkout`); `versionmap` |
+| `tables` | `fcheck_gate`, `port`, `xmap`, `versions`; `carry_functions` |
 | `digest` | `openrac`, `extractor`, `shared`, `build_port`, `build_android`, `fcheck_gate`; the probe tools' `bake_all` and `seed_regions` |
 | `files` | `openrac` (`place_link`), `extractor`, `bundle_standalone` |
 | `proc` | every `git` call in `tools/`; `build_android`'s and `bundle_standalone`'s commands |
@@ -103,7 +103,7 @@ The rule, decided in P2-10:
   before the installed packages, so a module of `tools/` (`tools/mips.py`, which
   `port/tools/versionmap` imports) is not shadowed by an installed one.
 
-`port/enhanced/tools/probes` uses it (P2-10); `editor/` and `sdk/tools/` move onto it with their own
+`port/tools/versionmap` and `port/enhanced/tools/probes` use it (P2-10); `editor/` and `sdk/tools/` move onto it with their own
 packages.
 
 ## Depends on
@@ -142,11 +142,10 @@ directories and a root directory longer than one sector), never read from a disc
 
 - each helper's own behaviour, with expected values from the format (ECMA-119) or from `hashlib`;
 - characterisation: the existing copy each helper was written from runs on the same input, and both
-  must agree. The copies in `tools/` are gone (P1-05) and the probe tools' (P2-10), and their
+  must agree. The copies in `tools/` are gone (P1-05), and versionmap's and the probe tools' (P2-10), and their
   comparisons with them; those left are `tools/openrac.py`'s `checksums` and `fcheck_gate.py`'s
   `fcheck_commit` (which use the package's results), `port/tools/hostgen/{hostgen,no_c}.py`,
-  `port/tools/versionmap/{versionmap,carry_functions}.py`, `sdk/tools/gen_binding.py` and
-  `editor/disc.py`. The tables are also read from this checkout's own `port/game/*/libraries.tsv`
+  `sdk/tools/gen_binding.py` and `editor/disc.py`. The tables are also read from this checkout's own `port/game/*/libraries.tsv`
   and compared. When a copy is removed by the package that moves its callers, its comparison goes
   with it.
 - the bootstrap: `paths.BOOTSTRAP` run from a script in a synthetic checkout and in a synthetic

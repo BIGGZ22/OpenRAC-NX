@@ -5,14 +5,12 @@ The carry runs the source through Clang's preprocessor, so these tests need Clan
 import io
 import json
 import shutil
-import sys
 import tempfile
 import unittest
 from contextlib import redirect_stdout
 from pathlib import Path
 
-sys.path.insert(0, str(Path(__file__).resolve().parent))
-import carry_functions  # noqa: E402
+import carry_functions
 
 HEADER = """typedef int s32;
 typedef struct Thing { s32 a; s32 b; } Thing;
