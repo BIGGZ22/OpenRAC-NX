@@ -211,6 +211,7 @@ func_0011D360	kernel	Copy	host	system call 0x5A
 func_0011D3A8	kernel	GetEntryAddress	host	system call 0x5B
 func_0011D3B8	kernel	SetSyscall	host	system call 0x74
 func_0011D490	kernel	_SetTLBEntry	host	system call 0x56
+func_0011D700	game	tlbtrap	host	libkernl's tlbtrap.o, the TLB/address-error exception handler: nothing installs it and the port takes no exceptions; what it does, in the port's terms (rac1-pal/host/tlbtrap.c)	void (void)
 func_0011DA80	kernel	FindAddress	host	system call 0x83
 func_0011DB98	kernel	SetSyscall	host	system call 0x74
 func_0011DBE8	kernel	SetSyscall	host	system call 0x74
