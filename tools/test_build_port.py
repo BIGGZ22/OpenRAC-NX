@@ -6,6 +6,7 @@ import io
 import tempfile
 import unittest
 from pathlib import Path
+from unittest import mock
 
 import build_port
 
@@ -180,6 +181,32 @@ class Commands(unittest.TestCase):
         # an Embree built with other flags is built again.
         self.assertEqual(build_port.EMBREE_OPTIONS["EMBREE_IGNORE_CMAKE_CXX_FLAGS"], "OFF")
         self.assertNotEqual(build_port.embree_stamp({"CXXFLAGS": "-stdlib=libc++"}), build_port.embree_stamp({}))
+
+
+class ProbeBaker(unittest.TestCase):
+    """--probe-baker: the baker with its Embree, or a warning and no baker."""
+
+    def baker_on(self, system, machine, embree=None):
+        """probe_baker on SYSTEM and MACHINE, with build_embree mocked: its result, what it said,
+        and the mock."""
+        out = io.StringIO()
+        build = mock.Mock(return_value=Path("/b/embree/install/lib/cmake/embree-4.4.1"), side_effect=embree)
+        with mock.patch.object(build_port.platform, "system", return_value=system), \
+                mock.patch.object(build_port.platform, "machine", return_value=machine), \
+                mock.patch.object(build_port, "build_embree", build), \
+                contextlib.redirect_stdout(out), contextlib.redirect_stderr(io.StringIO()):
+            result = build_port.probe_baker("cmake", {}, None, {})
+        return result, out.getvalue(), build
+
+    def test_elsewhere_the_baker_is_built_with_its_embree(self):
+        (defines, more), said, build = self.baker_on("Darwin", "arm64")
+        build.assert_called_once()
+        self.assertEqual(defines, {"OPENRAC_PROBE_BAKER": "ON", "embree_DIR": "/b/embree/install/lib/cmake/embree-4.4.1"})
+        self.assertEqual(more, [build_port.BAKER])
+
+    def test_an_embree_that_fails_leaves_the_baker_out(self):
+        (defines, more), _, _ = self.baker_on("Linux", "x86_64", embree=build_port.BuildError("no network"))
+        self.assertEqual((defines, more), ({"OPENRAC_PROBE_BAKER": "OFF"}, []))
 
 
 class Stamp(unittest.TestCase):
