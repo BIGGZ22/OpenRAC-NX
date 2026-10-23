@@ -72,7 +72,7 @@ the lanes, one at a time.
 | P2-10 | `port/tools` and the probe tools use `openrac_common`, through one bootstrap; versionmap's `mips` clash | | todo | | |
 | P2-11 | `editor/catalogue.py` moves to `sdk/tools/` | P2-32 | todo | | |
 | P2-12 | Launcher TypeScript types generated with ts-rs (proposal, question 5); `mock.ts` typed on them | P2-34 | todo | | |
-| P2-13 | Source folders for the host program's split (`program/`, `frontend/`, `debug/` globbed) | | todo | | |
+| P2-13 | Source folders for the host program's split (`program/`, `frontend/`, `debug/` globbed) | | done | maintainer | [293f4f43](https://github.com/OpenRAC/OpenRAC/commit/293f4f43), and this page |
 | P2-14 | The test stanzas of `Window.cmake`, `ProbeBake.cmake`, `Assets.cmake` onto the helpers | | todo | | |
 | P2-15 | Split `frontend.cpp` 2/5: input | P2-04 | todo | | |
 | P2-16 | Split `frontend.cpp` 3/5: world submission | P2-15 | todo | | |
@@ -283,3 +283,6 @@ Found while doing a package, for another package or the maintainers.
 | PR #40 | `rac1-pal/host/crt0.c` and `tlbtrap.c` describe their one function in the file comment only; section 7.2 wants a doc comment on the function. No ctest covers the new kernel answers, `spr_dma.c` or crt0's .bss loop. A C test on synthetic game memory, as `graph_dma_test` does for `graph.c`, would pin them. | rac1's port tests |
 | PR #41 | hostgen translates an empty asm statement's output only when a bare digit constraint ties it to an input. A `+` output, a `%[name]` tie or a constraint such as `"0r"` is reported and stays a barrier, and none of them has a test. | hostgen |
 | PR #37 | `vu_times` (rac1's `game_fastfunc.c`, PAL and NTSC-U) gives zero for a zero exponent as the vector unit does. An overflow or an exponent-255 operand still gives the host's inf or NaN where the console saturates. | the next ps2float change |
+| P2-13 | Section 19 of the conventions asks for no new globs; `cmake/Games.cmake` now globs `game/common/program/`, `frontend/` and `debug/` into the game programs, as the plan's phase 2 asks so that the splits never edit it. They are a program's source folders, not a module's library target; the page could say so beside the library replacements' glob, or each folder gets a target with listed sources once it is a module. | P2-24 |
+| P2-13 | A rebuild after reconfiguring never prints `ninja: no work to do`: `openrac_build_info` runs at every build, and its commit gains `-dirty` once `port/` has changes, which relinks every program. The proof that a CMake change keeps the build is `ninja -C build/<preset> -t commands` before and after, which must be identical. | the briefs of CMake packages |
+| P2-13 | `mod_loader` was killed (`Subprocess killed`, 0.39 s) once in a full `ctest --preset release` run, and passed alone three times and in a second full run; seen once, not investigated. | the maintainers |
