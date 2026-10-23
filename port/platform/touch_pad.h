@@ -11,9 +11,9 @@
 // A stick is held by the finger that touched inside it, and follows it until it lifts, even
 // outside the circle; the left stick also comes to the thumb that lands anywhere in the lower
 // left of the screen, and goes home when it lifts. A button is held while any finger is on it, so
-// a thumb slid from one to the next presses the next. There is no right stick: a finger that lands
-// on the right half of the screen away from the buttons turns the camera, the right stick pushed
-// as far as the finger moves fast (look()), and still when it stops.
+// a thumb slid from one to the next presses the next. The right stick is not drawn: a finger that
+// lands on the right half of the screen away from the buttons holds an invisible one centred where
+// it landed, and turns the camera for as long as it is pushed away from there (look()).
 //
 // The controls keep their distance from the edges in window heights, whatever the screen's shape,
 // inside its safe area (a camera's notch). The player makes them smaller or larger (set_scale(),
@@ -90,7 +90,8 @@ public:
 
     float scale() const { return m_scale; }
 
-    // How fast the camera turns for a finger's speed (1: the pad's own), held to 0.25..3.
+    // How short a push turns the camera all the way (1: the pad's own; 2 half as far), held to
+    // 0.25..3.
     void set_look_speed(float speed);
 
     // Where the player moved each group, from its own place, in window heights: "dpad 0.02
@@ -130,8 +131,7 @@ public:
 
     void hide() { m_visible = m_editing; }
 
-    // Once a frame, with SDL's clock: puts the pad away when the screen has been left alone, and
-    // turns the camera fingers' movement since the last frame into the right stick.
+    // Once a frame, with SDL's clock: puts the pad away when the screen has been left alone.
     static constexpr std::uint64_t kIdleHideMs = 10000;
     void idle(std::uint64_t now_ms);
 
@@ -162,8 +162,8 @@ private:
         float y = 0.0f;
         Role role = Role::None;
         int stick = -1;  // Role::Stick: the index of the stick control it holds
-        // Role::Look: where it was at the last idle(). Role::Drag: where it landed, and the
-        // group's offset then.
+        // Role::Look: the invisible stick's centre. Role::Drag: where it landed, and the group's
+        // offset then.
         float from_x = 0.0f;
         float from_y = 0.0f;
         TouchGroup group = TouchGroup::Stick;
@@ -190,6 +190,9 @@ private:
     // Puts control `index` at its place.
     void place(std::size_t index);
     void layout_controls();
+    // The camera from look finger `f` (m_look_x, m_look_y), its stick's centre dragged after it
+    // past the stick's reach.
+    void push_look(Finger& f);
     // Brings the left stick under a thumb at (x, y), kept on the screen.
     void bring_stick(std::size_t index, float x, float y);
 
@@ -216,7 +219,6 @@ private:
     // A finger came down since the last idle(): it counts even if it lifted within the frame.
     bool m_touched = false;
     std::uint64_t m_last_touch_ms = 0;
-    std::uint64_t m_last_idle_ms = 0;
     float m_look_x = 0.0f;
     float m_look_y = 0.0f;
     bool m_menu_button = false;

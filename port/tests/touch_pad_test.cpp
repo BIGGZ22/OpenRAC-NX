@@ -155,8 +155,9 @@ int main() {
     CHECK(gap > 0.05f * menu.scale());
     CHECK(select.x < options.x && options.x < start.x);
 
-    // No right stick: a finger on the right of the screen, off the buttons, turns the camera as
-    // fast as it moves, and the camera stands still when the finger does or lifts.
+    // No right stick drawn: a finger on the right of the screen, off the buttons, holds an
+    // invisible one centred where it landed. Pushed, the camera turns for as long as it is held
+    // there, as a stick held over does; it stops when the finger lifts.
     TouchPad camera;
     camera.set_aspect(2.0f);
     for (const TouchControl& c : camera.controls()) {
@@ -166,25 +167,36 @@ int main() {
     camera.finger_down(1, 0.6f, 0.4f);
     camera.idle(1016);
     CHECK(read(camera).right_x == kStickCentre);
-    for (int frame = 1; frame <= 10; ++frame) {
-        camera.finger_move(
-            1, 0.6f + 0.01f * static_cast<float>(frame), 0.4f
-        );  // right, 1.25 heights a second
-        camera.idle(1016 + 16 * static_cast<std::uint64_t>(frame));
+    camera.finger_move(1, 0.6f + 0.002f, 0.4f);  // a tremble: inside the dead zone
+    CHECK(read(camera).right_x == kStickCentre);
+    camera.finger_move(1, 0.6f + 0.06f, 0.4f);  // right, 0.12 heights: all the way
+    for (int frame = 1; frame <= 60; ++frame) {
+        camera.idle(1016 + 16 * static_cast<std::uint64_t>(frame));  // held there a second
     }
     pad = read(camera);
-    CHECK(pad.right_x > 0xE0);
+    CHECK(pad.right_x == 0xFF);
     CHECK(pad.right_y >= 0x7E && pad.right_y <= 0x82);
     CHECK(pad.buttons == Pad{}.buttons);
-    for (int frame = 11; frame <= 30; ++frame) {
-        camera.idle(1016 + 16 * static_cast<std::uint64_t>(frame));  // held still
-    }
-    CHECK(read(camera).right_x == kStickCentre);
-    camera.finger_move(1, 0.75f, 0.35f);
-    camera.idle(1016 + 16 * 31);
+    // Half as far: about half way, past the game's dead zone.
+    camera.finger_move(1, 0.6f + 0.025f, 0.4f);
+    pad = read(camera);
+    CHECK(pad.right_x > 0xA8 && pad.right_x < 0xE8);
+    // Past the edge the centre follows the finger, so that coming back turns the camera the
+    // other way at once.
+    camera.finger_move(1, 0.9f, 0.4f);
+    camera.finger_move(1, 0.84f, 0.4f);
+    CHECK(read(camera).right_x < kStickCentre);
+    camera.finger_move(1, 0.84f, 0.35f);
     CHECK(read(camera).right_y < kStickCentre);
     camera.finger_up(1);
     CHECK(read(camera).right_x == kStickCentre && read(camera).right_y == kStickCentre);
+    // The player's camera speed: twice the speed, half the push for all the way.
+    camera.set_look_speed(2.0f);
+    camera.finger_down(4, 0.6f, 0.4f);
+    camera.finger_move(4, 0.6f + 0.03f, 0.4f);
+    CHECK(read(camera).right_x == 0xFF);
+    camera.finger_up(4);
+    camera.set_look_speed(1.0f);
     // A finger that lands on a button presses it and does not turn the camera, even dragged.
     const TouchControl& triangle = control(camera, TouchControl::Kind::Button, Button::Triangle);
     camera.finger_down(2, triangle.x, triangle.y);

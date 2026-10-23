@@ -20,14 +20,15 @@ constexpr float kStickZoneTop = 0.42f;
 constexpr float kStickZoneRight = 0.42f;
 // Where a finger turns the camera: the right of the screen, from this across, off the buttons.
 constexpr float kLookZoneLeft = 0.5f;
-// The camera: a finger moving this many window heights a second pushes the right stick all the
-// way; slower, as far as its speed (a third of a height a second: an unhurried swipe across the
-// right of the screen turns the camera most of the way round). The push follows the finger within
-// about this many seconds, so the frames between two touch reports do not stop the camera, and
-// starts at kLookFloor, past the game's dead zone, so that a slow drag turns it slowly rather than
-// not at all.
-constexpr float kLookFullSpeed = 0.3f;
-constexpr float kLookFollow = 0.05f;
+// The camera: an invisible stick under the finger that lands there. Pushed this many window
+// heights from where the finger landed, it is pushed all the way (at the pad's own speed; the
+// player's speed shortens or lengthens the push), and it keeps turning the camera as long as the
+// finger stays out there, as a stick held over does. Pushed further, its centre follows the
+// finger, so that a finger coming back turns the camera the other way at once. Within kLookDead
+// of the centre it is still; past it the push starts at kLookFloor, past the game's dead zone, so
+// that a small push turns the camera slowly rather than not at all.
+constexpr float kLookReach = 0.1f;
+constexpr float kLookDead = 0.12f;
 constexpr float kLookFloor = 0.22f;
 // How far the player may move a group from its place, in window heights.
 constexpr float kMaxOffset = 2.0f;
@@ -334,7 +335,9 @@ void TouchPad::finger_move(std::uint64_t finger, float x, float y) {
     }
     f->x = x;
     f->y = y;
-    if (f->role == Role::Drag) {
+    if (f->role == Role::Look) {
+        push_look(*f);
+    } else if (f->role == Role::Drag) {
         const auto g = static_cast<std::size_t>(f->group);
         m_offsets[g] =
             {std::clamp(f->offset[0] + (x - f->from_x) * m_aspect, -kMaxOffset, kMaxOffset),
@@ -345,10 +348,12 @@ void TouchPad::finger_move(std::uint64_t finger, float x, float y) {
 
 void TouchPad::finger_up(std::uint64_t finger) {
     std::erase_if(m_fingers, [finger](const Finger& f) { return f.id == finger; });
-    if (std::none_of(m_fingers.begin(), m_fingers.end(), [](const Finger& f) {
-            return f.role == Role::Look;
-        })) {
-        m_look_x = m_look_y = 0.0f;  // the camera stops with the finger lifted
+    // The camera stops with the finger lifted, or follows another still on it.
+    m_look_x = m_look_y = 0.0f;
+    for (Finger& f : m_fingers) {
+        if (f.role == Role::Look) {
+            push_look(f);
+        }
     }
     layout_controls();  // a stick let go goes home
 }
@@ -380,48 +385,36 @@ void TouchPad::idle(std::uint64_t now_ms) {
     } else if (m_visible && now_ms - m_last_touch_ms >= kIdleHideMs) {
         m_visible = false;
     }
+}
 
-    // The camera: how fast its fingers moved since the last frame, as far as the right stick goes.
-    const float dt = m_last_idle_ms != 0 && now_ms > m_last_idle_ms
-                         ? std::min(static_cast<float>(now_ms - m_last_idle_ms) / 1000.0f, 0.1f)
-                         : 0.0f;
-    m_last_idle_ms = now_ms;
-    float vx = 0.0f;
-    float vy = 0.0f;
-    bool looking = false;
-    for (Finger& f : m_fingers) {
-        if (f.role != Role::Look) {
-            continue;
-        }
-        looking = true;
-        if (dt > 0.0f) {
-            vx += (f.x - f.from_x) * m_aspect / dt;
-            vy += (f.y - f.from_y) / dt;
-        }
-        f.from_x = f.x;
-        f.from_y = f.y;
+void TouchPad::push_look(Finger& f) {
+    // In window heights across and down from the stick's centre, where the finger landed.
+    const float reach = kLookReach / m_look_speed;
+    float dx = (f.x - f.from_x) * m_aspect;
+    float dy = f.y - f.from_y;
+    const float length = std::sqrt(dx * dx + dy * dy);
+    if (length > reach) {
+        // Out past the edge: the centre is dragged after the finger.
+        const float excess = (length - reach) / length;
+        f.from_x += dx * excess / m_aspect;
+        f.from_y += dy * excess;
+        dx -= dx * excess;
+        dy -= dy * excess;
     }
-    if (!looking) {
-        m_look_x = m_look_y = 0.0f;
-        return;
-    }
-    if (dt <= 0.0f) {
-        return;
-    }
-    const float push = m_look_speed / kLookFullSpeed;
-    const float follow = 1.0f - std::exp(-dt / kLookFollow);
-    m_look_x += (vx * push - m_look_x) * follow;
-    m_look_y += (vy * push - m_look_y) * follow;
+    m_look_x = dx / reach;
+    m_look_y = dy / reach;
 }
 
 void TouchPad::look(float& x, float& y) const {
     x = 0.0f;
     y = 0.0f;
     const float length = std::sqrt(m_look_x * m_look_x + m_look_y * m_look_y);
-    if (length < 0.01f) {
+    if (length <= kLookDead) {
         return;
     }
-    const float out = kLookFloor + (1.0f - kLookFloor) * std::min(length, 1.0f);
+    const float out =
+        kLookFloor
+        + (1.0f - kLookFloor) * (std::min(length, 1.0f) - kLookDead) / (1.0f - kLookDead);
     x = m_look_x / length * out;
     y = m_look_y / length * out;
 }

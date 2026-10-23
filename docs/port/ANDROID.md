@@ -85,10 +85,11 @@ asks for an OpenGL ES 3.2 context instead:
 **Input.** Controllers work as on the desktop: Bluetooth, USB, and the
 built-in pads of handhelds. For touch there is an on-screen pad
 (`platform/touch_pad.h`). It is laid out from the screen edges, stays inside
-the safe area, and its left stick moves to wherever your thumb lands. It has
-no right stick: a finger dragged on the right of the screen, away from the
-buttons, turns the camera, a short swipe as far as the stick held over
-(`kLookFullSpeed`). The shoulder buttons sit a little below the top edge,
+the safe area, and its left stick moves to wherever your thumb lands. Its
+right stick is not drawn: a finger that lands on the right of the screen,
+away from the buttons, holds an invisible stick centred where it landed,
+and the camera turns for as long as it is pushed away from there, as with
+a real stick (`kLookReach`); pushed further, the centre follows the finger. The shoulder buttons sit a little below the top edge,
 clear of the game's health and bolt counters; a test checks that no two
 controls overlap at the usual screen shapes and sizes. Its size and where each part sits are the
 player's (the drawer's Touch controls). A round stick, a gamepad's or the
