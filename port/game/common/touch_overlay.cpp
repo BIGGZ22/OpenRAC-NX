@@ -226,13 +226,14 @@ struct State {
     renderer::Shader shader;
     GLuint vao = 0;
     bool failed = false;
-    // How far each control is pressed in, easing toward held or let go (kPressEase), so that a
-    // press and its release move rather than jump; and when the pad was last drawn.
+    // How far each control is pressed in: all the way at once when a finger lands, so that a
+    // press shows in the frame it is made, then easing back out when it lifts (kPressEase); and
+    // when the pad was last drawn.
     std::vector<float> press;
     std::chrono::steady_clock::time_point last{};
 };
 
-// The seconds a press takes to ease most of the way in or out.
+// The seconds a let-go control takes to ease most of the way out.
 constexpr float kPressEase = 0.06f;
 
 State s;
@@ -365,7 +366,7 @@ void draw(platform::TouchPad& touch, int width, int height) {
         box(c.x, c.y, c.radius, c.stretch, 1.2f);
         glUniform3f(s.shader.uniform("tint"), l.r, l.g, l.b);
         float& press = s.press[i];
-        press += ((touch.held(i) ? 1.0f : 0.0f) - press) * ease;
+        press = touch.held(i) ? 1.0f : press - press * ease;
         glUniform1f(s.shader.uniform("held"), press);
         glUniform1i(s.shader.uniform("symbol"), l.symbol);
         glUniform1f(s.shader.uniform("angle"), l.angle);
