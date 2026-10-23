@@ -61,6 +61,7 @@ systems, and core Vulkan performance improvements remain in the core renderer.
 | [tests/](tests) | the runtime's tests |
 | [docs/](docs) | the port's [coding conventions](docs/CODING_CONVENTIONS.md) |
 | [tools/conventions/](tools/conventions/README.md) | the conventions' countable rules, checked in CI |
+| [tools/layering/](tools/layering/README.md) | the modules' layering: no include of a higher layer, today's exceptions listed |
 
 ## How a game is built
 
@@ -202,8 +203,9 @@ The port's code follows [docs/CODING_CONVENTIONS.md](docs/CODING_CONVENTIONS.md)
 (decided): layout ([.clang-format](.clang-format)), comments and documentation,
 naming, ownership, errors, the C boundary and the module layering.
 [tools/conventions](tools/conventions/README.md) checks what a program can
-count, in CI and before you commit, and [.clang-tidy](.clang-tidy) the naming
-and ownership of the C++ you touch.
+count, in CI and before you commit, [tools/layering](tools/layering/README.md)
+that no module includes a higher one, and [.clang-tidy](.clang-tidy) the
+naming and ownership of the C++ you touch.
 
 The port is built on Linux, macOS and Windows (there with Clang against
 MSVC's libraries); CI builds all of it on Linux and rac1/pal's program on

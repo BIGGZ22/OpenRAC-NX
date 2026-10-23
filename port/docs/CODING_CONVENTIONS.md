@@ -101,7 +101,6 @@ what to do instead.
 | The C-boundary wrapper that catches everything (13.4) | P2-08 | a `try` and two `catch` clauses written out, as 13.4 shows |
 | `common/env.h`, the table of `OPENRAC_*` variables (16) | P1-03 | one read per variable, in its module, listed in DEBUGGING.md |
 | `common/json.h` and `common/ps2_float.h` | P1-01 | `viewer/json.h` and `assets/ps2_float.h` |
-| The layering checker (18) | P0-02 | the diagram in section 18, checked by review |
 | `openrac_add_test` and `openrac_add_c_test` (19) | P0-03 | the stanza the neighbouring tests in `port/CMakeLists.txt` use |
 | `host::GameProfile`, one per game version (15) | P2-03 (rac1), P3-02 (all) | per-game knowledge in `port/game/<id>/`; nothing new in shared code |
 | The `scene` module and `renderer/ui` (9.1) | P2-02, P2-06 | `viewer/` and `game/common` |
@@ -116,7 +115,7 @@ what to do instead.
 | [`tools/conventions/check_conventions.py`](../tools/conventions/README.md) | licence lines, tabs, dashes everywhere; on new C++ files: `static` at namespace scope, raw `new`/`delete`/`malloc`/`free`, `using namespace` in headers, `extern "C"` outside contract files, console output outside tests and `main` | CI ("Port conventions"), and you before you commit | yes |
 | clang-tidy, [`port/.clang-tidy`](../.clang-tidy) | naming, ownership, function size, `else` after `return`, missing `override`, nested ternaries, `goto` | you, on the C++ files you touch (it needs a configured build) | not in CI; new code has zero findings |
 | The compiler, `openrac_warnings` (`port/cmake/Warnings.cmake`) | `-Wall -Wextra -Wshadow`, and for C++ `-Wpedantic -Wconversion` | every build | no new warning is accepted in review |
-| The layering checker | includes against the module edges of section 18 | arriving with P0-02 | yes, once it lands |
+| [`tools/layering/layering.py`](../tools/layering/README.md) | includes against the layers and allowed edges of section 18; today's violations are listed exceptions | you before you commit (not in CI yet) | it exits 1 on a new violation; CI does not run it yet |
 | ctest, the Python tests | behaviour | every build, CI | yes |
 
 clang-format is version 21. CI installs 21.1.8 from PyPI (`pip install clang-format==21.1.8`); on
@@ -133,6 +132,9 @@ clang-format --dry-run -Werror port/renderer/texture.cpp
 
 # The countable rules, on every file and on what you added since master.
 python3 port/tools/conventions/check_conventions.py --since origin/master --touched
+
+# The layering: no include of a higher layer (prints nothing but its summary when clean).
+python3 port/tools/layering/layering.py
 
 # Naming and ownership on the C++ you changed (needs port/build/release configured).
 clang-tidy -p port/build/release port/renderer/texture.cpp
@@ -1231,9 +1233,10 @@ common  <  runtime  <  platform, assets, audio, media  <  renderer (gl, vulkan)
 - A third-party library belongs to one module (4.5): SDL3 to `platform` (and the program), the
   graphics APIs to `renderer`, Luau to the host's script mods.
 
-The layering checker (arriving with P0-02, `port/tools/layering/`) reads every include, fails on an
-edge the diagram does not allow, and lists today's violations as known exceptions to be removed, not
-added to.
+The layering checker ([`port/tools/layering/`](../tools/layering/README.md)) reads every include,
+fails on an edge the diagram does not allow, and lists today's violations as known exceptions to be
+removed, not added to. Its `rules.tsv` holds the modules, the layers and the edges allowed within a
+layer.
 
 ---
 
@@ -1408,7 +1411,7 @@ line reads yes.
 **Machines**
 
 1. `clang-format --dry-run -Werror` is silent on every file you added, and on the lines you changed?
-2. `check_conventions.py --since <base> --touched` reports nothing to fix?
+2. `check_conventions.py --since <base> --touched` and `layering.py` report nothing to fix?
 3. clang-tidy reports nothing on the C++ you added or changed?
 4. The build has no new warning, and ctest passes (with the Python tests for the tools you touched)?
 
