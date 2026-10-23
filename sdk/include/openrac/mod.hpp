@@ -72,33 +72,33 @@ enum class LogLevel : int {
 // ref() gives an lvalue where the address is aligned for T.
 class Memory {
 public:
-    explicit Memory(std::uint8_t* base) : base_(base) {}
+    explicit Memory(std::uint8_t* base) : m_base(base) {}
 
     template <class T>
     T read(gaddr address) const {
         static_assert(std::is_trivially_copyable_v<T>, "game memory holds plain values");
         T value;
-        std::memcpy(&value, base_ + address, sizeof value);
+        std::memcpy(&value, m_base + address, sizeof value);
         return value;
     }
 
     template <class T>
     void write(gaddr address, const T& value) const {
         static_assert(std::is_trivially_copyable_v<T>, "game memory holds plain values");
-        std::memcpy(base_ + address, &value, sizeof value);
+        std::memcpy(m_base + address, &value, sizeof value);
     }
 
     template <class T>
     T& ref(gaddr address) const {
-        return *reinterpret_cast<T*>(base_ + address);
+        return *reinterpret_cast<T*>(m_base + address);
     }
 
-    void* pointer(gaddr address) const { return base_ + address; }
+    void* pointer(gaddr address) const { return m_base + address; }
 
-    std::uint8_t* base() const { return base_; }
+    std::uint8_t* base() const { return m_base; }
 
 private:
-    std::uint8_t* base_;
+    std::uint8_t* m_base;
 };
 
 // A bind (openrac/keys.h): a key, a mouse button or a wheel direction, by its name ("KeyW",
@@ -115,43 +115,43 @@ inline std::string_view bind_name(int bind) {
 // port's state, renewed each tick.
 class Input {
 public:
-    explicit Input(const openrac_input* state) : s_(state) {}
+    explicit Input(const openrac_input* state) : m_state(state) {}
 
-    const openrac_input& raw() const { return *s_; }
+    const openrac_input& raw() const { return *m_state; }
 
     // A bind (a key's HID usage, OPENRAC_BIND_*): held now; went down since the last tick.
-    bool held(int bind) const { return openrac_bind_held(s_, bind) != 0; }
+    bool held(int bind) const { return openrac_bind_held(m_state, bind) != 0; }
 
-    bool pressed(int bind) const { return openrac_bind_pressed(s_, bind) != 0; }
+    bool pressed(int bind) const { return openrac_bind_pressed(m_state, bind) != 0; }
 
-    float mouse_dx() const { return s_->mouse_dx; }
+    float mouse_dx() const { return m_state->mouse_dx; }
 
-    float mouse_dy() const { return s_->mouse_dy; }
+    float mouse_dy() const { return m_state->mouse_dy; }
 
-    float wheel_x() const { return s_->wheel_x; }
+    float wheel_x() const { return m_state->wheel_x; }
 
-    float wheel_y() const { return s_->wheel_y; }
+    float wheel_y() const { return m_state->wheel_y; }
 
-    bool focused() const { return s_->focused != 0; }
+    bool focused() const { return m_state->focused != 0; }
 
-    bool captured() const { return s_->captured != 0; }
+    bool captured() const { return m_state->captured != 0; }
 
-    bool overlay() const { return s_->overlay != 0; }
+    bool overlay() const { return m_state->overlay != 0; }
 
-    std::uint32_t tick() const { return s_->tick; }
+    std::uint32_t tick() const { return m_state->tick; }
 
     // Interface 1.3: the cursor over the game's picture, 0..1 (pointer_x() * 512, pointer_y() *
     // 416 is the game's 2D pixel); has_pointer() false on an older port.
-    bool has_pointer() const { return s_->size >= offsetof(openrac_input, reserved2); }
+    bool has_pointer() const { return m_state->size >= offsetof(openrac_input, reserved2); }
 
-    float pointer_x() const { return has_pointer() ? s_->pointer_x : 0.0f; }
+    float pointer_x() const { return has_pointer() ? m_state->pointer_x : 0.0f; }
 
-    float pointer_y() const { return has_pointer() ? s_->pointer_y : 0.0f; }
+    float pointer_y() const { return has_pointer() ? m_state->pointer_y : 0.0f; }
 
-    bool pointer_inside() const { return has_pointer() && s_->pointer_inside != 0; }
+    bool pointer_inside() const { return has_pointer() && m_state->pointer_inside != 0; }
 
 private:
-    const openrac_input* s_;
+    const openrac_input* m_state;
 };
 
 // A hook's way on: the function the replacement goes on to (the game's own, or the replacement of
@@ -164,14 +164,14 @@ class Original<R(A...)> {
 public:
     using fn = R (*)(A...);
 
-    explicit Original(fn f) : fn_(f) {}
+    explicit Original(fn f) : m_fn(f) {}
 
-    R operator()(A... args) const { return fn_(args...); }
+    R operator()(A... args) const { return m_fn(args...); }
 
-    fn get() const { return fn_; }
+    fn get() const { return m_fn; }
 
 private:
-    fn fn_;
+    fn m_fn;
 };
 
 class Mod;
@@ -278,30 +278,30 @@ inline void pad_thunk(void* user, int port, std::uint8_t* report_bytes, int size
 // The mod as the port loaded it: the table, the handle, and what the mod takes of the game.
 class Mod {
 public:
-    Mod(const openrac_api* api, openrac_mod* handle) : api_(api), handle_(handle) {}
+    Mod(const openrac_api* api, openrac_mod* handle) : m_api(api), m_handle(handle) {}
 
     Mod(const Mod&) = delete;
     Mod& operator=(const Mod&) = delete;
 
-    const openrac_api& api() const { return *api_; }
+    const openrac_api& api() const { return *m_api; }
 
-    openrac_mod* handle() const { return handle_; }
+    openrac_mod* handle() const { return m_handle; }
 
-    std::string_view game() const { return api_->game; }
+    std::string_view game() const { return m_api->game; }
 
-    std::string_view version() const { return api_->version; }
+    std::string_view version() const { return m_api->version; }
 
-    std::string_view platform() const { return api_->platform; }
+    std::string_view platform() const { return m_api->platform; }
 
-    std::string_view openrac_version() const { return api_->openrac_version; }
+    std::string_view openrac_version() const { return m_api->openrac_version; }
 
     // The port's interface version: at least what the mod was built for, else it is not loaded.
-    unsigned api_major() const { return api_->api_major; }
+    unsigned api_major() const { return m_api->api_major; }
 
-    unsigned api_minor() const { return api_->api_minor; }
+    unsigned api_minor() const { return m_api->api_minor; }
 
     void log(LogLevel level, const std::string& text) const {
-        api_->log(handle_, static_cast<int>(level), text.c_str());
+        m_api->log(m_handle, static_cast<int>(level), text.c_str());
     }
 
     void debug(const std::string& text) const { log(LogLevel::Debug, text); }
@@ -313,20 +313,20 @@ public:
     void error(const std::string& text) const { log(LogLevel::Error, text); }
 
     // During load: why the mod refuses (throwing an openrac::Error from load does the same).
-    void fail(const std::string& reason) const { api_->fail(handle_, reason.c_str()); }
+    void fail(const std::string& reason) const { m_api->fail(m_handle, reason.c_str()); }
 
     // A setting of the manifest's, as T: bool for "bool"; an integer type for "int"; float or
     // double for "float"; std::string for "choice" and "string".
     template <class T>
     T setting(const char* key) const {
         if constexpr (std::is_same_v<T, bool>) {
-            return api_->setting_bool(handle_, key) != 0;
+            return m_api->setting_bool(m_handle, key) != 0;
         } else if constexpr (std::is_integral_v<T>) {
-            return static_cast<T>(api_->setting_int(handle_, key));
+            return static_cast<T>(m_api->setting_int(m_handle, key));
         } else if constexpr (std::is_floating_point_v<T>) {
-            return static_cast<T>(api_->setting_float(handle_, key));
+            return static_cast<T>(m_api->setting_float(m_handle, key));
         } else if constexpr (std::is_same_v<T, std::string>) {
-            const char* text = api_->setting_string(handle_, key);
+            const char* text = m_api->setting_string(m_handle, key);
             return text != nullptr ? std::string(text) : std::string();
         } else {
             static_assert(
@@ -352,8 +352,8 @@ public:
 
         H::callable() = new typename H::Callable(std::forward<F>(callable));
         void* original = nullptr;
-        const int result = api_->hook(
-            handle_, asked, HookPoint::signature, reinterpret_cast<void*>(&H::thunk), &original
+        const int result = m_api->hook(
+            m_handle, asked, HookPoint::signature, reinterpret_cast<void*>(&H::thunk), &original
         );
 
         if (result != OPENRAC_HOOK_OK) {
@@ -376,9 +376,9 @@ public:
     // callable() after each game tick, in load order. Only during load.
     template <class F>
     void on_frame(F&& callable) {
-        auto& stored = frames_.emplace_back(std::forward<F>(callable));
+        auto& stored = m_frames.emplace_back(std::forward<F>(callable));
 
-        if (api_->on_frame(handle_, &detail::frame_thunk, &stored) != 0) {
+        if (m_api->on_frame(m_handle, &detail::frame_thunk, &stored) != 0) {
             throw Error("on_frame: refused (only during load)");
         }
     }
@@ -386,9 +386,9 @@ public:
     // callable(port, report, size) for each pad report, before the game reads it. Only during load.
     template <class F>
     void on_pad(F&& callable) {
-        auto& stored = pads_.emplace_back(std::forward<F>(callable));
+        auto& stored = m_pads.emplace_back(std::forward<F>(callable));
 
-        if (api_->on_pad(handle_, &detail::pad_thunk, &stored) != 0) {
+        if (m_api->on_pad(m_handle, &detail::pad_thunk, &stored) != 0) {
             throw Error("on_pad: refused (only during load)");
         }
     }
@@ -401,7 +401,7 @@ public:
             std::is_pointer_v<Fn> && std::is_function_v<std::remove_pointer_t<Fn>>,
             "function<Fn>: Fn is a function pointer type"
         );
-        return reinterpret_cast<Fn>(api_->function(name));
+        return reinterpret_cast<Fn>(m_api->function(name));
     }
 
     template <class Fn>
@@ -418,39 +418,39 @@ public:
     // The function at a code address of the level loaded now, as Fn; nullptr when there is none.
     template <class Fn>
     Fn function_at(gaddr address) const {
-        return reinterpret_cast<Fn>(api_->function_at(address));
+        return reinterpret_cast<Fn>(m_api->function_at(address));
     }
 
     // Interface 1.2: the keyboard and mouse. has_input() says whether the port offers them (a
     // mod built for 1.2 is loaded only by a port that does).
     bool has_input() const {
-        return api_->api_minor >= 2
-               && api_->size >= offsetof(openrac_api, capture_mouse) + sizeof(void*);
+        return m_api->api_minor >= 2
+               && m_api->size >= offsetof(openrac_api, capture_mouse) + sizeof(void*);
     }
 
     // The state for the tick about to run.
-    Input input() const { return Input(api_->input()); }
+    Input input() const { return Input(m_api->input()); }
 
     // Takes the keyboard (OPENRAC_INPUT_KEYBOARD) and or the mouse from the port's own use of them
     // in play: the mod presses pad 0's buttons through on_pad. Only during load.
     void take_input(std::uint32_t devices) {
-        if (api_->take_input(handle_, devices) != 0) {
+        if (m_api->take_input(m_handle, devices) != 0) {
             throw Error("take_input: refused (only during load)");
         }
     }
 
     // Asks for the cursor captured (hidden, motion relative) or let go; any time.
-    void capture_mouse(bool capture) const { api_->capture_mouse(handle_, capture ? 1 : 0); }
+    void capture_mouse(bool capture) const { m_api->capture_mouse(m_handle, capture ? 1 : 0); }
 
-    Memory memory() const { return Memory(api_->memory); }
+    Memory memory() const { return Memory(m_api->memory); }
 
-    gaddr relocate(gaddr address) const { return api_->relocate_data(address); }
+    gaddr relocate(gaddr address) const { return m_api->relocate_data(address); }
 
     gaddr relocate_level(int level, gaddr address) const {
-        return api_->relocate_level_data(level, address);
+        return m_api->relocate_level_data(level, address);
     }
 
-    int loaded_level() const { return api_->loaded_level(); }
+    int loaded_level() const { return m_api->loaded_level(); }
 
 private:
     static const char* hook_error(int result) {
@@ -466,31 +466,31 @@ private:
         }
     }
 
-    const openrac_api* api_;
-    openrac_mod* handle_;
+    const openrac_api* m_api;
+    openrac_mod* m_handle;
     // Stable addresses: the port holds pointers to these.
-    std::deque<detail::FrameCallable> frames_;
-    std::deque<detail::PadCallable> pads_;
+    std::deque<detail::FrameCallable> m_frames;
+    std::deque<detail::PadCallable> m_pads;
 };
 
 // Room on the game's stack for a call that takes the address of a local, given back when it goes.
 class StackFrame {
 public:
-    StackFrame(const Mod& mod, std::uint32_t size) : api_(&mod.api()) {
-        address_ = api_->stack_push(size, &saved_);
+    StackFrame(const Mod& mod, std::uint32_t size) : m_api(&mod.api()) {
+        m_address = m_api->stack_push(size, &m_saved);
     }
 
-    ~StackFrame() { api_->stack_pop(saved_); }
+    ~StackFrame() { m_api->stack_pop(m_saved); }
 
     StackFrame(const StackFrame&) = delete;
     StackFrame& operator=(const StackFrame&) = delete;
 
-    gaddr address() const { return address_; }
+    gaddr address() const { return m_address; }
 
 private:
-    const openrac_api* api_;
-    gaddr saved_ = 0;
-    gaddr address_ = 0;
+    const openrac_api* m_api;
+    gaddr m_saved = 0;
+    gaddr m_address = 0;
 };
 
 namespace detail {
