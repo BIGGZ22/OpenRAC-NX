@@ -56,8 +56,9 @@ jobs:
         run: python -m unittest discover -s port/enhanced/tools/probes -v
 
       # The port's countable conventions (port/docs/CODING_CONVENTIONS.md): the rules for every
-      # file, and the new-code rules on what this push or pull request adds. Lines it changes in
-      # older files are reported, not failed (the page, section 24.4). clang-format is pinned.
+      # file, and the new-code rules on what this push or pull request adds. A line it changes that
+      # clang-format would lay out differently fails the step (--strict-touched; the page, section
+      # 24.4), in older files too. clang-format is pinned.
       - name: Port conventions
         env:
           EVENT: ${{ github.event_name }}
@@ -74,7 +75,7 @@ jobs:
           fi
           if [ -n "$base" ]; then
             git fetch --no-tags --depth=1 origin "$base"
-            python port/tools/conventions/check_conventions.py --since "$base" --touched --clang-format clang-format
+            python port/tools/conventions/check_conventions.py --since "$base" --touched --strict-touched --clang-format clang-format
           else
             python port/tools/conventions/check_conventions.py
           fi
