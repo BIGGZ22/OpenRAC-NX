@@ -145,3 +145,38 @@ conflicts and duplicate declarations.
 
 **Where:** changes go to rac1-decomp through its usual PRs, then sync into
 `games/rac1`.
+
+## 4. Put the ReRAC conversion to use (port)
+
+**Goal.** The parts of the port converted from
+[ReRAC](https://github.com/re-rac/rerac) (the disc readers, the extractor, the
+geometry and world data readers, sound, movies and audio, the world renderers)
+are reviewed, tested and built by default, and the sound library already plays
+through `openrac_audio`. What is left is to use the rest of them:
+
+- **Bridge the asset readers to the world renderers.** `port/assets/geometry/`
+  and `port/assets/world/` read a level; `port/renderer/world/draw_data.h` is
+  the render-ready form the world renderers upload. Nothing builds one from
+  the other yet. ReRAC gives RAC1 NTSC-U's `WorldConstants`; a bridge for
+  another game or version supplies its own.
+- **Renderers for the rest of the world.** Terrain (tfrag) and ties have
+  theirs (tested by `world_lod` and `world_gl_smoke`); shrubs, mobys, the sky,
+  particles, water and the HUD have draw data but no renderer yet.
+- **Drive the viewer from the disc.** `openrac-viewer` draws the editor's
+  `port` export ([port/viewer/README.md](../port/viewer/README.md)); it should
+  read the level from the player's disc through the asset readers and draw it
+  with the world renderers.
+- **The launcher on the C++ extractor.** The launcher still runs
+  `tools/extractor.py` (`launcher/core/src/install.rs`) and moves to
+  `openrac-extractor` once the port is packaged with it
+  ([port/extract/README.md](../port/extract/README.md)).
+
+What the sound engine does not do yet (streams through the voices' own
+streaming, reverb on streams, movie sound) is in
+[port/audio/README.md](../port/audio/README.md). Code adapted from ReRAC
+names its source in its header and is credited in
+[THIRD_PARTY_NOTICES.md](../THIRD_PARTY_NOTICES.md).
+
+**Verify:** the port's tests (`ctest --preset release`) after each step; what
+changes the picture, in the maintainers' regression run
+([docs/port/REGRESSION.md](port/REGRESSION.md)).
