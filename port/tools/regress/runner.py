@@ -15,15 +15,18 @@ import json
 import os
 import shutil
 import subprocess
+import sys
 import time
 from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime
 from pathlib import Path
 
-import routes as routes_mod
+sys.path.insert(1, str(next(p for p in Path(__file__).resolve().parents if (p / "tools/openrac_common").is_dir()) / "tools"))
+from openrac_common import paths  # noqa: E402
 
-HERE = Path(__file__).resolve().parent
-REPO = HERE.parents[2]
+import routes as routes_mod  # noqa: E402
+
+REPO = paths.repo_root(__file__)
 
 # Where each version's data and extracted levels are, relative to a checkout (the main checkout's,
 # for a worktree, since game data is outside git).

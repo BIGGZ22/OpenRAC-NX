@@ -25,14 +25,11 @@ import sys
 import time
 from pathlib import Path
 
-HERE = Path(__file__).resolve().parent
-sys.path.insert(0, str(HERE))
-
-import card as card_mod  # noqa: E402
-import compare as compare_mod  # noqa: E402
-import reach as reach_mod  # noqa: E402
-import routes as routes_mod  # noqa: E402
-import runner  # noqa: E402
+import card as card_mod
+import compare as compare_mod
+import reach as reach_mod
+import routes as routes_mod
+import runner
 
 
 def baselines_dir() -> Path:

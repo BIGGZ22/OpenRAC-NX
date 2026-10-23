@@ -10,19 +10,16 @@ from __future__ import annotations
 import json
 import math
 import struct
-import sys
 import tempfile
 import unittest
 from pathlib import Path
 from types import SimpleNamespace
 from unittest.mock import patch
 
-sys.path.insert(0, str(Path(__file__).resolve().parent))
-
-import compare  # noqa: E402
-import reach  # noqa: E402
-import routes  # noqa: E402
-import runner  # noqa: E402
+import compare
+import reach
+import routes
+import runner
 
 
 def tick(f, c, **kw):
