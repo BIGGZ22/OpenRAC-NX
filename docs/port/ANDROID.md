@@ -231,7 +231,10 @@ emulator. It slides in from the left over the paused game when you press:
 
 Its rows are grouped on cards like the launcher's settings, big enough for a
 thumb, and a controller can move through them (left and right change a
-value, B closes). It contains:
+value, B closes). It wears the launcher's theme and the game's accent, which
+the launcher hands it at Play (`OPENRAC_UI_COLORS`), and moves as the
+launcher does: it slides out with the launcher's easing, presses, switches
+and the focus ease in and out, and a flicked list glides on. It contains:
 
 - **Graphics:** picture shape (4:3, 16:10, 16:9, 21:9, 32:9 or the whole
   screen), HUD position, render scale, anti-aliasing, texture filtering,

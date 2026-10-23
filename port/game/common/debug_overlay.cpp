@@ -40,6 +40,7 @@
 #include "renderer/gl.h"
 #include "renderer/gl_stats.h"
 #include "settings.h"
+#include "ui_colors.h"
 #include "viewer/screenshot.h"
 
 // The editor's moby class names (cmake/Games.cmake, from editor/moby_classes.tsv).
@@ -89,6 +90,13 @@ struct Card {
     ImVec2 top;
     float width = 0.0f;
     int rows = 0;
+};
+
+// A window a finger scrolls (drag_scroll): whether the finger down now has dragged it, so that it
+// presses nothing, and how fast it goes on moving once the finger has let go, in pixels a second.
+struct Scroll {
+    bool dragged = false;
+    float velocity = 0.0f;
 };
 
 struct State {
@@ -163,7 +171,7 @@ struct State {
     float drawer_at = 0.0f;      // how far out: 0 shut, 1 open
     bool keep_paused = false;    // the pause the game is left in when it shuts
     bool drawer_focus = false;   // given the keyboard and gamepad when it opens
-    bool drawer_scrolled = false;  // the finger down now has dragged the rows: no row is pressed
+    Scroll drawer_scroll;
     bool shot_when_shut = false;   // a screenshot asked for in it, taken once it is out of the picture
     bool drawer_developer = false;  // its developer tools unfolded
     // The on-screen pad's layout being edited (touch_editing()): Reset asked for, and the box of
@@ -174,7 +182,9 @@ struct State {
     ImVec2 bar_max{};
     Card card;
     bool settings_changed = false;  // a setting changed in the drawer or the menus, not applied yet
-    bool panel_scrolled = false;    // the panel's drag_scroll
+    Scroll panel_scroll;
+    // What eases from one state to the next (tween()), by ImGui's id.
+    std::unordered_map<ImGuiID, float> tweens;
     float ui_scale = 1.0f;         // the screen's density, for rows a thumb can press
     // Fingers on the screen as ImGui's pointer: the first one down, and those the drawer took from
     // the on-screen pad (their moves and lifts are the drawer's too).
@@ -1314,18 +1324,39 @@ bool drawer_possible() {
 }
 
 // A finger dragged up or down the window being drawn scrolls it, and lets go of what it came down
-// on, which is then not pressed. `scrolled`: the finger down now has scrolled.
-void drag_scroll(bool& scrolled) {
+// on, which is then not pressed; let go, the rows glide on (Scroll).
+void drag_scroll(Scroll& scroll) {
+    const ImGuiIO& io = ImGui::GetIO();
     if (ImGui::IsMouseClicked(0)) {
-        scrolled = false;
+        scroll.dragged = false;
+        scroll.velocity = 0.0f;  // a finger that lands stops it
     }
-    if (ImGui::IsWindowHovered(ImGuiHoveredFlags_AllowWhenBlockedByActiveItem) && ImGui::IsMouseDown(0)
-        && (scrolled || std::abs(ImGui::GetMouseDragDelta(0).y) > dp(10.0f))) {
-        if (!scrolled) {
+    if (ImGui::IsWindowHovered(ImGuiHoveredFlags_AllowWhenBlockedByActiveItem)
+        && ImGui::IsMouseDown(0)
+        && (scroll.dragged || std::abs(ImGui::GetMouseDragDelta(0).y) > dp(10.0f))) {
+        if (!scroll.dragged) {
             ImGui::ClearActiveID();
         }
-        scrolled = true;
-        ImGui::SetScrollY(ImGui::GetScrollY() - ImGui::GetIO().MouseDelta.y);
+        scroll.dragged = true;
+        ImGui::SetScrollY(ImGui::GetScrollY() - io.MouseDelta.y);
+        // The finger's speed over the last few frames, which it leaves the rows with.
+        if (io.DeltaTime > 0.0f) {
+            scroll.velocity += (-io.MouseDelta.y / io.DeltaTime - scroll.velocity) * 0.4f;
+        }
+        return;
+    }
+    // Let go: the rows glide on and slow down, as a phone's lists do, until an edge stops them.
+    if (scroll.velocity == 0.0f || ImGui::IsMouseDown(0)) {
+        return;
+    }
+    const float before = ImGui::GetScrollY();
+    ImGui::SetScrollY(
+        std::clamp(before + scroll.velocity * io.DeltaTime, 0.0f, ImGui::GetScrollMaxY())
+    );
+    scroll.velocity *= std::exp(-io.DeltaTime * 4.0f);
+    if (std::abs(scroll.velocity) < dp(20.0f) || (before <= 0.0f && scroll.velocity < 0.0f)
+        || (before >= ImGui::GetScrollMaxY() && scroll.velocity > 0.0f)) {
+        scroll.velocity = 0.0f;
     }
 }
 
@@ -1342,7 +1373,7 @@ void panel(const Shown& shown) {
                                    | (keys ? ImGuiWindowFlags_NoNav : ImGuiWindowFlags_None);
     if (ImGui::Begin("OpenRAC debug", nullptr, flags)) {
         if (!keys) {
-            drag_scroll(s.panel_scrolled);
+            drag_scroll(s.panel_scroll);
         }
         const Averages a = averages();
         const std::string where = s.level >= 0 && s.level < 19 ? kLevelNames[static_cast<std::size_t>(s.level)] : "boot";
@@ -1650,6 +1681,7 @@ void set_drawer(bool open) {
         s.paused = true;
         s.held_frames = 0;
         s.drawer_focus = true;
+        s.drawer_scroll.velocity = 0.0f;  // a flick from the last time does not glide on
     } else {
         s.paused = s.keep_paused;
     }
@@ -1770,24 +1802,68 @@ bool drawer_event(const SDL_Event& e) {
     }
 }
 
-// The launcher's colours (launcher/docs/STYLE.md), so that the drawer looks like the rest of the app.
-namespace look {
-constexpr ImU32 kPanel = IM_COL32(0x1d, 0x1d, 0x28, 250);
-constexpr ImU32 kCard = IM_COL32(0x22, 0x22, 0x2f, 255);
-constexpr ImU32 kPressed = IM_COL32(0x3a, 0x2c, 0x16, 255);
-constexpr ImU32 kLine = IM_COL32(156, 161, 212, 56);
-constexpr ImU32 kLineStrong = IM_COL32(156, 161, 212, 90);
-constexpr ImU32 kOrange = IM_COL32(0xe5, 0xa0, 0x13, 255);  // the launcher's primary buttons
-constexpr ImU32 kOrangePressed = IM_COL32(0xb0, 0x70, 0x00, 255);
-constexpr ImU32 kOrangeInk = IM_COL32(0x2a, 0x18, 0x00, 255);
-constexpr ImU32 kAmber = IM_COL32(0xff, 0xb4, 0x43, 255);
-constexpr ImU32 kGold = IM_COL32(0xff, 0xd0, 0x8a, 255);
-constexpr ImU32 kText = IM_COL32(0xe8, 0xf0, 0xff, 255);
-constexpr ImU32 kSoft = IM_COL32(0xaa, 0xb6, 0xdc, 255);
-constexpr ImU32 kDim = IM_COL32(0x8f, 0x9a, 0xc4, 255);
-constexpr ImU32 kOff = IM_COL32(0x3a, 0x3b, 0x52, 255);
-constexpr ImU32 kErr = IM_COL32(0xff, 0x8a, 0x7a, 255);
-}  // namespace look
+// The launcher's colours: its theme, as the launcher started the game with it (ui_colors.h), so
+// that the drawer looks like the rest of the app (launcher/docs/STYLE.md).
+const ui_colors::Colors& ui() {
+    return ui_colors::launcher();
+}
+
+// A row or button held down: the launcher's accent, faint over the card.
+ImU32 pressed_fill() {
+    return ui_colors::mix(ui().panel_hi, ui().amber, 0.16f);
+}
+
+// The launcher's transitions: what changes (a press, a switch, the focus) eases to its new state
+// over `seconds`, nearly all the way, rather than jumping; `id` is ImGui's, one value each.
+float tween(ImGuiID id, float target, float seconds) {
+    auto [at, made] = s.tweens.try_emplace(id, target);
+    float& v = at->second;
+    if (!made) {
+        v += (target - v) * (1.0f - std::exp(-ImGui::GetIO().DeltaTime * 3.0f / seconds));
+        if (std::abs(target - v) < 0.002f) {
+            v = target;
+        }
+    }
+    return v;
+}
+
+// One of an item's parts that eases on its own (its press, its focus, a switch's knob).
+ImGuiID item_part(const char* part) {
+    return ImHashStr(part, 0, ImGui::GetItemID());
+}
+
+constexpr float kFast = 0.15f;    // --fast
+constexpr float kMedium = 0.28f;  // --medium
+
+// The focus ring a gamepad moves, around the item just drawn, easing in as it arrives.
+void focus_ring(ImDrawList* list, ImVec2 a, ImVec2 b, float round) {
+    const bool focused = ImGui::IsItemFocused() && ImGui::GetIO().NavVisible;
+    const float shown = tween(item_part("focus"), focused ? 1.0f : 0.0f, kFast);
+    if (shown > 0.0f) {
+        list->AddRect(a, b, ui_colors::fade(ui().amber, shown), round, 0, dp(2.0f));
+    }
+}
+
+// The launcher's main button: its gradient, a highlight along the top, its ink; darker while held.
+void primary_fill(ImDrawList* list, ImVec2 a, ImVec2 b, float round, float held) {
+    const int first = list->VtxBuffer.Size;
+    list->AddRectFilled(a, b, IM_COL32_WHITE, round);
+    const ImU32 dark = ui_colors::mix(ui().bar_bottom, ui().ink_deep, 0.18f * held);
+    ImGui::ShadeVertsLinearColorGradientKeepAlpha(
+        list,
+        first,
+        list->VtxBuffer.Size,
+        ImVec2(a.x, a.y),
+        ImVec2(a.x, b.y),
+        ui_colors::mix(ui().bar_top, ui().ink_deep, 0.18f * held),
+        dark
+    );
+    list->AddLine(
+        ImVec2(a.x + round, a.y + 1.0f),
+        ImVec2(b.x - round, a.y + 1.0f),
+        IM_COL32(255, 255, 255, 90)
+    );
+}
 
 // A section's rows on one card, as the launcher's settings have them: the card is drawn under the
 // rows once their height is known, a hairline between each two.
@@ -1802,19 +1878,20 @@ void card_end() {
     ImDrawList* list = ImGui::GetWindowDrawList();
     const ImVec2 end(s.card.top.x + s.card.width, ImGui::GetCursorScreenPos().y);
     list->ChannelsSetCurrent(0);
-    list->AddRectFilled(s.card.top, end, look::kCard, dp(12.0f));
-    list->AddRect(s.card.top, end, look::kLine, dp(12.0f));
+    list->AddRectFilled(s.card.top, end, ui().panel_hi, dp(16.0f));
+    list->AddRect(s.card.top, end, ui().line, dp(16.0f));
     list->ChannelsMerge();
 }
 
-// A section's heading: its name, small, above its card.
+// A section's heading above its card, as the launcher's Settings name theirs: in its accent's gold.
 void drawer_section(const char* title) {
-    ImGui::Dummy(ImVec2(0.0f, dp(16.0f)));
+    ImGui::Dummy(ImVec2(0.0f, dp(18.0f)));
     ImFont* font = ImGui::GetFont();
-    const float size = ImGui::GetFontSize() * 0.85f;
+    const float size = ImGui::GetFontSize() * 1.05f;
     const ImVec2 at = ImGui::GetCursorScreenPos();
-    ImGui::GetWindowDrawList()->AddText(font, size, ImVec2(at.x + dp(6.0f), at.y), look::kDim, title);
-    ImGui::Dummy(ImVec2(0.0f, size + dp(6.0f)));
+    ImGui::GetWindowDrawList()
+        ->AddText(font, size, ImVec2(at.x + dp(4.0f), at.y), ui().gold, title);
+    ImGui::Dummy(ImVec2(0.0f, size + dp(8.0f)));
 }
 
 // A row of the card open now, as high as a thumb: true when it was pressed (a finger that dragged
@@ -1827,25 +1904,26 @@ bool drawer_row(const char* label, ImU32 ink, Right&& right) {
     const float width = ImGui::GetContentRegionAvail().x;
     ImDrawList* list = ImGui::GetWindowDrawList();
     if (s.card.rows++ > 0) {
-        list->AddLine(ImVec2(at.x + dp(16.0f), at.y), ImVec2(at.x + width - dp(16.0f), at.y), look::kLine);
+        list->AddLine(
+            ImVec2(at.x + dp(16.0f), at.y), ImVec2(at.x + width - dp(16.0f), at.y), ui().line
+        );
     }
     ImGui::PushID(label);
     const bool pressed = ImGui::InvisibleButton("row", ImVec2(width, height));
     ImGui::PopID();
     const ImVec2 a(at.x + dp(3.0f), at.y + dp(3.0f));
     const ImVec2 b(at.x + width - dp(3.0f), at.y + height - dp(3.0f));
-    if (ImGui::IsItemActive()) {
-        list->AddRectFilled(a, b, look::kPressed, dp(9.0f));
+    const float held = tween(item_part("held"), ImGui::IsItemActive() ? 1.0f : 0.0f, kFast);
+    if (held > 0.0f) {
+        list->AddRectFilled(a, b, ui_colors::fade(pressed_fill(), held), dp(10.0f));
     }
-    if (ImGui::IsItemFocused() && ImGui::GetIO().NavVisible) {
-        list->AddRect(a, b, look::kAmber, dp(9.0f), 0, dp(2.0f));
-    }
+    focus_ring(list, a, b, dp(10.0f));
     list->AddText(ImVec2(at.x + dp(16.0f), at.y + (height - ImGui::GetFontSize()) * 0.5f), ink, label);
     right(list, ImVec2(at.x + width - dp(16.0f), at.y + height * 0.5f));
     return pressed;
 }
 
-bool drawer_row(const char* label, ImU32 ink = look::kText) {
+bool drawer_row(const char* label, ImU32 ink = ui().text) {
     return drawer_row(label, ink, [](ImDrawList*, ImVec2) {});
 }
 
@@ -1859,32 +1937,45 @@ void arrow(ImDrawList* list, ImVec2 tip, float dx, float dy, ImU32 ink) {
     list->AddPolyline(points, 3, ink, ImDrawFlags_None, dp(2.0f));
 }
 
-// A row that turns something on and off, its switch at the right.
+// A row that turns something on and off, its switch at the right: the launcher's, its knob
+// sliding across and its track filling as it turns on.
 bool drawer_switch(const char* label, bool on) {
-    return drawer_row(label, look::kText, [on](ImDrawList* list, ImVec2 right) {
-        const float h = dp(22.0f);
-        const ImVec2 a(right.x - dp(40.0f), right.y - h * 0.5f);
+    return drawer_row(label, ui().text, [on](ImDrawList* list, ImVec2 right) {
+        const float k = tween(item_part("switch"), on ? 1.0f : 0.0f, kMedium);
+        const float h = dp(26.0f);
+        const ImVec2 a(right.x - dp(46.0f), right.y - h * 0.5f);
         const ImVec2 b(right.x, right.y + h * 0.5f);
-        list->AddRectFilled(a, b, on ? look::kOrange : look::kOff, h * 0.5f);
-        list->AddRect(a, b, look::kLineStrong, h * 0.5f);
-        list->AddCircleFilled(ImVec2(on ? b.x - h * 0.5f : a.x + h * 0.5f, right.y), h * 0.5f - dp(3.0f),
-                              on ? look::kOrangeInk : look::kSoft);
+        list->AddRectFilled(a, b, ui_colors::mix(ui().ink_deep, ui().brand, k), h * 0.5f);
+        list->AddRect(a, b, ui_colors::mix(ui().line_strong, ui().brand, k), h * 0.5f);
+        const float knob = h * 0.5f - dp(4.0f);
+        const float from = a.x + h * 0.5f;
+        const float to = b.x - h * 0.5f;
+        list->AddCircleFilled(
+            ImVec2(from + (to - from) * k, right.y), knob, ui_colors::mix(ui().dim, ui().text, k)
+        );
     });
 }
 
 // A row with its value between two arrows, as a console game's options: -1 or 1 when it was moved
 // back or on. A touch on the value's left part moves it back, anywhere else on; a gamepad's or the
 // keyboard's left and right move it while it has the focus, and A moves it on.
-int drawer_choice(const char* label, const std::string& value, bool can_lower = true, bool can_raise = true) {
+int drawer_choice(
+    const char* label, const std::string& value, bool can_lower = true, bool can_raise = true
+) {
     float back_until = 0.0f;  // a touch left of this moves the value back
-    const bool pressed = drawer_row(label, look::kText, [&](ImDrawList* list, ImVec2 right) {
+    const bool pressed = drawer_row(label, ui().text, [&](ImDrawList* list, ImVec2 right) {
         // The values of every row in one column, centred between its arrows.
         const float column = std::min(s.card.width * 0.48f, dp(168.0f));
         const float left = right.x - column;
-        arrow(list, ImVec2(left, right.y), -1.0f, 0.0f, can_lower ? look::kAmber : look::kOff);
-        arrow(list, ImVec2(right.x, right.y), 1.0f, 0.0f, can_raise ? look::kAmber : look::kOff);
+        const ImU32 off = ui_colors::fade(ui().dim, 0.35f);
+        arrow(list, ImVec2(left, right.y), -1.0f, 0.0f, can_lower ? ui().amber : off);
+        arrow(list, ImVec2(right.x, right.y), 1.0f, 0.0f, can_raise ? ui().amber : off);
         const ImVec2 size = ImGui::CalcTextSize(value.c_str());
-        list->AddText(ImVec2(left + (column - size.x) * 0.5f, right.y - size.y * 0.5f), look::kGold, value.c_str());
+        list->AddText(
+            ImVec2(left + (column - size.x) * 0.5f, right.y - size.y * 0.5f),
+            ui().gold,
+            value.c_str()
+        );
         back_until = left + column * 0.35f;
     });
     int by = 0;
@@ -1893,11 +1984,14 @@ int drawer_choice(const char* label, const std::string& value, bool can_lower = 
     }
     if (ImGui::IsItemFocused()) {
         const auto held = [](ImGuiKey pad, ImGuiKey stick, ImGuiKey key) {
-            return ImGui::IsKeyPressed(pad) || ImGui::IsKeyPressed(stick) || ImGui::IsKeyPressed(key);
+            return ImGui::IsKeyPressed(pad) || ImGui::IsKeyPressed(stick)
+                   || ImGui::IsKeyPressed(key);
         };
         if (held(ImGuiKey_GamepadDpadLeft, ImGuiKey_GamepadLStickLeft, ImGuiKey_LeftArrow)) {
             by = -1;
-        } else if (held(ImGuiKey_GamepadDpadRight, ImGuiKey_GamepadLStickRight, ImGuiKey_RightArrow)) {
+        } else if (held(
+                       ImGuiKey_GamepadDpadRight, ImGuiKey_GamepadLStickRight, ImGuiKey_RightArrow
+                   )) {
             by = 1;
         }
     }
@@ -1934,13 +2028,19 @@ bool drawer_button(const char* label) {
     const bool pressed = ImGui::InvisibleButton(label, ImVec2(b.x - a.x, height));
     ImDrawList* list = ImGui::GetWindowDrawList();
     const float round = dp(12.0f);
-    list->AddRectFilled(a, b, ImGui::IsItemActive() ? look::kOrangePressed : look::kOrange, round);
-    if (ImGui::IsItemFocused() && ImGui::GetIO().NavVisible) {
-        list->AddRect(ImVec2(a.x - dp(3.0f), a.y - dp(3.0f)), ImVec2(b.x + dp(3.0f), b.y + dp(3.0f)), look::kGold,
-                      round + dp(3.0f), 0, dp(2.0f));
-    }
+    primary_fill(
+        list, a, b, round, tween(item_part("held"), ImGui::IsItemActive() ? 1.0f : 0.0f, kFast)
+    );
+    focus_ring(
+        list,
+        ImVec2(a.x - dp(3.0f), a.y - dp(3.0f)),
+        ImVec2(b.x + dp(3.0f), b.y + dp(3.0f)),
+        round + dp(3.0f)
+    );
     const ImVec2 size = ImGui::CalcTextSize(label);
-    list->AddText(ImVec2((a.x + b.x - size.x) * 0.5f, a.y + (height - size.y) * 0.5f), look::kOrangeInk, label);
+    list->AddText(
+        ImVec2((a.x + b.x - size.x) * 0.5f, a.y + (height - size.y) * 0.5f), ui().bar_ink, label
+    );
     return pressed;
 }
 
@@ -1948,7 +2048,7 @@ bool drawer_button(const char* label) {
 void drawer_note(const char* line) {
     ImGui::Dummy(ImVec2(0.0f, dp(10.0f)));
     ImGui::SetCursorPosX(ImGui::GetCursorPosX() + dp(16.0f));
-    ImGui::PushStyleColor(ImGuiCol_Text, ImGui::ColorConvertU32ToFloat4(look::kSoft));
+    ImGui::PushStyleColor(ImGuiCol_Text, ImGui::ColorConvertU32ToFloat4(ui().soft));
     ImGui::PushTextWrapPos(ImGui::GetCursorPosX() + s.card.width - dp(32.0f));
     ImGui::TextUnformatted(line);
     ImGui::PopTextWrapPos();
@@ -1965,7 +2065,7 @@ void drawer_note(const char* line) {
 void drawer_enhanced() {
 #if defined(OPENRAC_ENHANCED_RENDERING) && OPENRAC_ENHANCED_RENDERING
     auto& set = settings::get();
-    drawer_section("ENHANCED GRAPHICS");
+    drawer_section("Enhanced graphics");
     card_begin();
     if (!gl::enhanced_rendering_enabled()) {
         drawer_note(
@@ -2042,8 +2142,9 @@ void drawer_enhanced() {
 
 void drawer(const Shown& shown) {
     const ImGuiIO& io = ImGui::GetIO();
+    // Out in the launcher's --medium, back in a little quicker, as its pages come and go.
     const float target = s.drawer_open ? 1.0f : 0.0f;
-    const float move = io.DeltaTime / 0.18f;  // out or in in under a fifth of a second
+    const float move = io.DeltaTime / (s.drawer_open ? kMedium : 0.2f);
     s.drawer_at = s.drawer_at < target ? std::min(s.drawer_at + move, target) : std::max(s.drawer_at - move, target);
     if (s.drawer_at <= 0.0f) {
         if (s.shot_when_shut) {
@@ -2052,7 +2153,8 @@ void drawer(const Shown& shown) {
         }
         return;
     }
-    const float ease = 1.0f - std::pow(1.0f - s.drawer_at, 3.0f);
+    // The launcher's --ease, cubic-bezier(0.2, 0.8, 0.2, 1): quick out of the edge, settling slowly.
+    const float ease = 1.0f - std::pow(1.0f - s.drawer_at, 4.0f);
     const ImGuiViewport* viewport = ImGui::GetMainViewport();
     // The left of the screen a camera's notch keeps.
     float inset = 0.0f;
@@ -2062,11 +2164,14 @@ void drawer(const Shown& shown) {
     }
     const float width = std::min(viewport->Size.x * 0.6f, dp(360.0f)) + inset;
     const float x = viewport->Pos.x - width * (1.0f - ease);
-    ImGui::GetBackgroundDrawList()->AddRectFilled(viewport->Pos,
-                                                  ImVec2(viewport->Pos.x + viewport->Size.x, viewport->Pos.y + viewport->Size.y),
-                                                  IM_COL32(0x12, 0x12, 0x1a, static_cast<int>(150.0f * ease)));
+    ImGui::GetBackgroundDrawList()->AddRectFilled(
+        viewport->Pos,
+        ImVec2(viewport->Pos.x + viewport->Size.x, viewport->Pos.y + viewport->Size.y),
+        ui_colors::fade(ui().ink_deep, 0.6f * ease)
+    );
     // A touch beside it shuts it, as does the gamepad's B.
-    if (s.drawer_open && ImGui::IsMouseReleased(0) && !s.drawer_scrolled && io.MouseClickedPos[0].x > x + width) {
+    if (s.drawer_open && ImGui::IsMouseReleased(0) && !s.drawer_scroll.dragged
+        && io.MouseClickedPos[0].x > x + width) {
         set_drawer(false);
     }
     if (s.drawer_open && ImGui::IsKeyPressed(ImGuiKey_GamepadFaceRight, false)) {
@@ -2088,18 +2193,18 @@ void drawer(const Shown& shown) {
     ImGui::PushStyleVar(ImGuiStyleVar_ScrollbarSize, dp(4.0f));
     ImGui::PushStyleColor(ImGuiCol_WindowBg, ImVec4(0, 0, 0, 0));
     ImGui::PushStyleColor(ImGuiCol_ScrollbarBg, ImVec4(0, 0, 0, 0));
-    ImGui::PushStyleColor(ImGuiCol_ScrollbarGrab, ImGui::ColorConvertU32ToFloat4(look::kLineStrong));
-    const ImGuiWindowFlags flags = ImGuiWindowFlags_NoDecoration | ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoResize
-                                   | ImGuiWindowFlags_NoSavedSettings;
+    ImGui::PushStyleColor(ImGuiCol_ScrollbarGrab, ImGui::ColorConvertU32ToFloat4(ui().line_strong));
+    const ImGuiWindowFlags flags = ImGuiWindowFlags_NoDecoration | ImGuiWindowFlags_NoMove
+                                   | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoSavedSettings;
     if (ImGui::Begin("OpenRAC options", nullptr, flags)) {
-        drag_scroll(s.drawer_scrolled);
+        drag_scroll(s.drawer_scroll);
         {
             ImDrawList* back = ImGui::GetWindowDrawList();
             const ImVec2 top(x, viewport->Pos.y);
             const ImVec2 bottom(x + width, viewport->Pos.y + viewport->Size.y);
             back->PushClipRect(top, bottom, false);
-            back->AddRectFilled(top, bottom, look::kPanel, dp(16.0f), ImDrawFlags_RoundCornersRight);
-            back->AddRect(top, bottom, look::kLine, dp(16.0f), ImDrawFlags_RoundCornersRight);
+            back->AddRectFilled(top, bottom, ui().panel, dp(16.0f), ImDrawFlags_RoundCornersRight);
+            back->AddRect(top, bottom, ui().line, dp(16.0f), ImDrawFlags_RoundCornersRight);
             back->PopClipRect();
         }
         {
@@ -2107,23 +2212,31 @@ void drawer(const Shown& shown) {
             ImDrawList* front = ImGui::GetForegroundDrawList();
             const ImVec2 top(x, viewport->Pos.y);
             const ImVec2 bottom(x + width, viewport->Pos.y + header);
-            front->AddRectFilled(top, bottom, look::kPanel, dp(16.0f), ImDrawFlags_RoundCornersTopRight);
-            if (ImGui::GetScrollY() > 0.0f) {
-                front->AddLine(ImVec2(top.x, bottom.y), bottom, look::kLine);
+            front->AddRectFilled(
+                top, bottom, ui().panel, dp(16.0f), ImDrawFlags_RoundCornersTopRight
+            );
+            // A hairline under it once rows have scrolled beneath, fading in as they do.
+            const float under = std::min(ImGui::GetScrollY() / dp(24.0f), 1.0f);
+            if (under > 0.0f) {
+                front->AddLine(ImVec2(top.x, bottom.y), bottom, ui_colors::fade(ui().line, under));
             }
             ImFont* font = ImGui::GetFont();
             const float size = ImGui::GetFontSize() * 1.2f;
             const float text_y = top.y + (header - size) * 0.5f;
             const float text_x = top.x + inset + dp(18.0f);
             const float open = font->CalcTextSizeA(size, FLT_MAX, 0.0f, "Open").x;
-            front->AddText(font, size, ImVec2(text_x, text_y), look::kText, "Open");
-            front->AddText(font, size, ImVec2(text_x + open, text_y), look::kAmber, "RAC");
+            front->AddText(font, size, ImVec2(text_x, text_y), ui().text, "Open");
+            front->AddText(font, size, ImVec2(text_x + open, text_y), ui().amber, "RAC");
             const char* state = s.keep_paused ? "Paused" : "Paused while open";
             const ImVec2 state_size = ImGui::CalcTextSize(state);
             const ImVec2 pill_b(bottom.x - dp(16.0f), top.y + header * 0.5f + state_size.y * 0.5f + dp(4.0f));
-            const ImVec2 pill_a(pill_b.x - state_size.x - dp(20.0f), pill_b.y - state_size.y - dp(8.0f));
-            front->AddRectFilled(pill_a, pill_b, look::kOff, (pill_b.y - pill_a.y) * 0.5f);
-            front->AddText(ImVec2(pill_a.x + dp(10.0f), pill_a.y + dp(4.0f)), look::kSoft, state);
+            const ImVec2 pill_a(
+                pill_b.x - state_size.x - dp(20.0f), pill_b.y - state_size.y - dp(8.0f)
+            );
+            // A chip, as the launcher's: its deepest ink, a hairline, soft text.
+            front->AddRectFilled(pill_a, pill_b, ui().ink_deep, (pill_b.y - pill_a.y) * 0.5f);
+            front->AddRect(pill_a, pill_b, ui().line, (pill_b.y - pill_a.y) * 0.5f);
+            front->AddText(ImVec2(pill_a.x + dp(10.0f), pill_a.y + dp(4.0f)), ui().soft, state);
         }
 
         if (drawer_button("Resume")) {
@@ -2131,7 +2244,7 @@ void drawer(const Shown& shown) {
         }
         ImGui::SetItemDefaultFocus();  // where a gamepad starts
 
-        drawer_section("GRAPHICS");
+        drawer_section("Graphics");
         card_begin();
         setting_row(options_menu::kAspect);
         if (settings::get().aspect != settings::Aspect::Standard) {
@@ -2149,7 +2262,7 @@ void drawer(const Shown& shown) {
 
         drawer_enhanced();
 
-        drawer_section("SOUND AND GAME");
+        drawer_section("Sound and game");
         card_begin();
         const int volume = settings::get().volume;
         if (const int by = drawer_choice("Volume", std::format("{}%", volume), volume > 0, volume < 100)) {
@@ -2163,7 +2276,7 @@ void drawer(const Shown& shown) {
 
         // The on-screen pad (platform/touch_pad.h): its size, the camera's speed, and where its
         // controls are, which the player drags about (edit_touch).
-        drawer_section("TOUCH CONTROLS");
+        drawer_section("Touch controls");
         card_begin();
         auto& set = settings::get();
         if (drawer_listed("Button size", set.touch_scale, settings::kTouchScales)) {
@@ -2185,7 +2298,7 @@ void drawer(const Shown& shown) {
         // What the port changes from the console that the player may switch back (fixes.h): on is
         // the port's fix, off the console's behaviour. The launcher's page for the game says more.
         if (fixes::count() > 0) {
-            drawer_section("GAME FIXES");
+            drawer_section("Game fixes");
             card_begin();
             for (int i = 0; i < fixes::count(); ++i) {
                 if (drawer_switch(fixes::fix(i).name, fixes::on(i))) {
@@ -2198,9 +2311,13 @@ void drawer(const Shown& shown) {
         ImGui::Dummy(ImVec2(0.0f, dp(16.0f)));
         card_begin();
         const bool developer = s.drawer_developer;
-        if (drawer_row("Developer tools", look::kText, [developer](ImDrawList* list, ImVec2 right) {
-                arrow(list, ImVec2(right.x - dp(5.0f), right.y + (developer ? -dp(2.5f) : dp(2.5f))), 0.0f,
-                      developer ? -1.0f : 1.0f, look::kSoft);
+        if (drawer_row("Developer tools", ui().text, [developer](ImDrawList* list, ImVec2 right) {
+                // The arrow turns as the section opens.
+                const float k = tween(item_part("open"), developer ? 1.0f : 0.0f, kMedium);
+                const float dy = 1.0f - 2.0f * k;
+                arrow(
+                    list, ImVec2(right.x - dp(5.0f), right.y + dp(2.5f) * dy), 0.0f, dy, ui().soft
+                );
             })) {
             s.drawer_developer = !s.drawer_developer;
         }
@@ -2233,7 +2350,7 @@ void drawer(const Shown& shown) {
 
         ImGui::Dummy(ImVec2(0.0f, dp(16.0f)));
         card_begin();
-        if (drawer_row("Quit game", look::kErr)) {
+        if (drawer_row("Quit game", ui().err)) {
             SDL_Event quit;
             SDL_zero(quit);
             quit.type = SDL_EVENT_QUIT;
@@ -2250,7 +2367,7 @@ void drawer(const Shown& shown) {
                 return std::format("{} · {}", api, name != nullptr ? name : "unknown GPU");
             }();
             ImGui::Dummy(ImVec2(0.0f, dp(14.0f)));
-            ImGui::PushStyleColor(ImGuiCol_Text, ImGui::ColorConvertU32ToFloat4(look::kDim));
+            ImGui::PushStyleColor(ImGuiCol_Text, ImGui::ColorConvertU32ToFloat4(ui().dim));
             ImGui::SetCursorPosX(ImGui::GetCursorPosX() + dp(6.0f));
             ImGui::PushTextWrapPos(0.0f);
             ImGui::TextUnformatted(graphics.c_str());
@@ -2264,7 +2381,7 @@ void drawer(const Shown& shown) {
     ImGui::PopStyleVar(5);
 }
 
-// A button of the editing bar: true when pressed.
+// A button of the editing bar, the launcher's main one or a plain one: true when pressed.
 bool bar_button(const char* label, float width, bool primary = false) {
     const float height = dp(44.0f);
     const ImVec2 a = ImGui::GetCursorScreenPos();
@@ -2272,16 +2389,23 @@ bool bar_button(const char* label, float width, bool primary = false) {
     const bool pressed = ImGui::InvisibleButton(label, ImVec2(width, height));
     ImDrawList* list = ImGui::GetWindowDrawList();
     const float round = dp(12.0f);
-    const ImU32 fill = primary ? (ImGui::IsItemActive() ? look::kOrangePressed : look::kOrange)
-                               : (ImGui::IsItemActive() ? look::kPressed : look::kCard);
-    list->AddRectFilled(a, b, fill, round);
-    if (!primary) {
-        list->AddRect(a, b, look::kLineStrong, round);
+    const float held = tween(item_part("held"), ImGui::IsItemActive() ? 1.0f : 0.0f, kFast);
+    if (primary) {
+        primary_fill(list, a, b, round, held);
+    } else {
+        list->AddRectFilled(a, b, ui_colors::mix(ui().panel_hi, pressed_fill(), held), round);
+        list->AddRect(a, b, ui().line_strong, round);
     }
+    focus_ring(
+        list,
+        ImVec2(a.x - dp(3.0f), a.y - dp(3.0f)),
+        ImVec2(b.x + dp(3.0f), b.y + dp(3.0f)),
+        round + dp(3.0f)
+    );
     const ImVec2 size = ImGui::CalcTextSize(label, nullptr, true);
     list->AddText(
         ImVec2((a.x + b.x - size.x) * 0.5f, a.y + (height - size.y) * 0.5f),
-        primary ? look::kOrangeInk : look::kText,
+        primary ? ui().bar_ink : ui().text,
         label,
         ImGui::FindRenderedTextEnd(label)
     );
@@ -2307,14 +2431,14 @@ void touch_edit_bar() {
     ImGui::PushStyleVar(ImGuiStyleVar_WindowRounding, dp(16.0f));
     ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(dp(14.0f), dp(12.0f)));
     ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, ImVec2(gap, dp(10.0f)));
-    ImGui::PushStyleColor(ImGuiCol_WindowBg, ImGui::ColorConvertU32ToFloat4(look::kPanel));
-    ImGui::PushStyleColor(ImGuiCol_Border, ImGui::ColorConvertU32ToFloat4(look::kLine));
+    ImGui::PushStyleColor(ImGuiCol_WindowBg, ImGui::ColorConvertU32ToFloat4(ui().panel));
+    ImGui::PushStyleColor(ImGuiCol_Border, ImGui::ColorConvertU32ToFloat4(ui().line));
     const ImGuiWindowFlags flags = ImGuiWindowFlags_NoDecoration | ImGuiWindowFlags_NoMove
                                    | ImGuiWindowFlags_NoSavedSettings
                                    | ImGuiWindowFlags_AlwaysAutoResize;
     if (ImGui::Begin("Move the controls", nullptr, flags)) {
         auto& set = settings::get();
-        ImGui::PushStyleColor(ImGuiCol_Text, ImGui::ColorConvertU32ToFloat4(look::kSoft));
+        ImGui::PushStyleColor(ImGuiCol_Text, ImGui::ColorConvertU32ToFloat4(ui().soft));
         ImGui::TextUnformatted("Drag a control to move it. The game is paused.");
         ImGui::PopStyleColor();
         bool resized = false;
