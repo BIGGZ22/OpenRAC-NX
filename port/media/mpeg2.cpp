@@ -116,10 +116,12 @@ struct MacroblockSamples {
         std::size_t y0 = 0;
         std::size_t step = 1;
         std::size_t stride = 8;
+
         if (b < 4) {
             plane = y.data();
             stride = 16;
             x0 = static_cast<std::size_t>(b & 1) * 8;
+
             if (field_dct) {
                 y0 = static_cast<std::size_t>(b >> 1);
                 step = 2;
@@ -129,8 +131,10 @@ struct MacroblockSamples {
         } else {
             plane = b == 4 ? cb.data() : cr.data();
         }
+
         for (std::size_t i = 0; i < 8; ++i) {
             std::uint8_t* row = plane + (y0 + i * step) * stride + x0;
+
             for (std::size_t k = 0; k < 8; ++k) {
                 const int v = block[i * 8 + k] + (intra ? 0 : row[k]);
                 row[k] = static_cast<std::uint8_t>(std::clamp(v, 0, 255));
@@ -148,10 +152,13 @@ void store_macroblock(VideoFrame& frame, std::size_t addr, const MacroblockSampl
     const std::size_t mx = addr % mb_w;
     const std::size_t my = addr / mb_w;
     const std::size_t w = frame.width;
+
     for (std::size_t y = 0; y < 16; ++y) {
         std::copy_n(s.y.data() + y * 16, 16, frame.y.data() + (my * 16 + y) * w + mx * 16);
     }
+
     const std::size_t cw = w / 2;
+
     for (std::size_t y = 0; y < 8; ++y) {
         std::copy_n(s.cb.data() + y * 8, 8, frame.cb.data() + (my * 8 + y) * cw + mx * 8);
         std::copy_n(s.cr.data() + y * 8, 8, frame.cr.data() + (my * 8 + y) * cw + mx * 8);
@@ -184,14 +191,17 @@ void predict(
     const std::size_t hy = static_cast<std::size_t>(mvy & 1);
     const bool inside = ix >= 0 && iy >= 0 && static_cast<std::size_t>(ix) + w + hx <= pw
                         && static_cast<std::size_t>(iy) + h + hy <= ph;
+
     if (inside) {
         for (std::size_t r = 0; r < h; ++r) {
             const std::uint8_t* row = src + off + (static_cast<std::size_t>(iy) + r) * stride
                                       + static_cast<std::size_t>(ix);
             const std::uint8_t* below = row + stride;
             std::uint8_t* d = dst + r * dst_stride;
+
             for (std::size_t k = 0; k < w; ++k) {
                 unsigned v = 0;
+
                 if (hx == 0 && hy == 0) {
                     v = row[k];
                 } else if (hy == 0) {
@@ -201,21 +211,26 @@ void predict(
                 } else {
                     v = (row[k] + row[k + 1] + below[k] + below[k + 1] + 2u) >> 2;
                 }
+
                 d[k] = static_cast<std::uint8_t>(v);
             }
         }
+
         return;
     }
+
     auto at = [&](std::ptrdiff_t xx, std::ptrdiff_t yy) -> unsigned {
         const auto cy = std::clamp<std::ptrdiff_t>(yy, 0, static_cast<std::ptrdiff_t>(ph) - 1);
         const auto cx = std::clamp<std::ptrdiff_t>(xx, 0, static_cast<std::ptrdiff_t>(pw) - 1);
         return src[off + static_cast<std::size_t>(cy) * stride + static_cast<std::size_t>(cx)];
     };
+
     for (std::size_t r = 0; r < h; ++r) {
         for (std::size_t k = 0; k < w; ++k) {
             const std::ptrdiff_t sx = ix + static_cast<std::ptrdiff_t>(k);
             const std::ptrdiff_t sy = iy + static_cast<std::ptrdiff_t>(r);
             unsigned v = 0;
+
             if (hx == 0 && hy == 0) {
                 v = at(sx, sy);
             } else if (hy == 0) {
@@ -225,6 +240,7 @@ void predict(
             } else {
                 v = (at(sx, sy) + at(sx + 1, sy) + at(sx, sy + 1) + at(sx + 1, sy + 1) + 2) >> 2;
             }
+
             dst[r * dst_stride + k] = static_cast<std::uint8_t>(v);
         }
     }
@@ -243,6 +259,7 @@ void predict_direction(
     const std::size_t h = src.height;
     const std::size_t cw = w / 2;
     const std::size_t ch = h / 2;
+
     if (!m.field) {
         const auto& mv = m.mv[0][s];
         predict(out.y.data(), 16, 16, 16, src.y.data(), 0, w, w, h, mx * 16, my * 16, mv[0], mv[1]);
@@ -253,6 +270,7 @@ void predict_direction(
         predict(out.cr.data(), 8, 8, 8, src.cr.data(), 0, cw, cw, ch, mx * 8, my * 8, cx, cy);
         return;
     }
+
     // Field prediction in a frame picture: field r's lines (r, r + 2, ...)
     // from reference field sel[r][s].
     for (std::size_t fr = 0; fr < 2; ++fr) {
@@ -320,6 +338,7 @@ void predict_macroblock(
     const std::size_t mb_w = frame.width / 16;
     const auto mx = static_cast<std::ptrdiff_t>(addr % mb_w);
     const auto my = static_cast<std::ptrdiff_t>(addr / mb_w);
+
     if (fwd && bwd) {
         MacroblockSamples back;
         predict_direction(pred, *fwd, m, 0, mx, my);
@@ -357,40 +376,51 @@ std::array<int, 2> motion_vector(
 ) {
     const Mpeg2VlcTables& t = mpeg2_vlc_tables();
     std::array<int, 2> out{};
+
     for (std::size_t c = 0; c < 2; ++c) {
         const int fc = f_code[c];
+
         if (fc < 1 || fc > 9) {
             error(at, "f_code {}", fc);
         }
+
         const auto magnitude = t.motion_code.decode(r);
+
         if (!magnitude) {
             error(at, "bad motion_code");
         }
+
         const int m = *magnitude;
         const int code = m != 0 && r.bit() ? -m : m;
         const auto r_size = static_cast<unsigned>(fc - 1);
         const int f = 1 << r_size;
         int delta = code;
+
         if (f != 1 && code != 0) {
             const int residual = static_cast<int>(r.read(r_size));
             const int d = (std::abs(code) - 1) * f + residual + 1;
             delta = code < 0 ? -d : d;
         }
+
         const bool halve = field && c == 1;
         const int prediction = halve ? pmv[c] >> 1 : pmv[c];
         const int low = -16 * f;
         const int high = 16 * f - 1;
         const int range = 32 * f;
         int v = prediction + delta;
+
         if (v < low) {
             v += range;
         }
+
         if (v > high) {
             v -= range;
         }
+
         pmv[c] = halve ? v * 2 : v;
         out[c] = v;
     }
+
     return out;
 }
 
@@ -399,21 +429,27 @@ std::optional<std::pair<std::size_t, int>> coefficient(
     BitReader& r, const VlcTable& table, std::size_t at
 ) {
     const auto v = table.decode(r);
+
     if (!v) {
         error(at, "bad DCT coefficient code {:016b}", r.peek(16));
     }
+
     if (*v == kDctEndOfBlock) {
         return std::nullopt;
     }
+
     if (*v == kDctEscape) {
         const std::size_t run = r.read(6);
         const int raw = static_cast<int>(r.read(12));
         const int level = raw >= 2048 ? raw - 4096 : raw;
+
         if (level == 0) {
             error(at, "escape level 0");
         }
+
         return std::pair{run, level};
     }
+
     const std::size_t run = static_cast<std::size_t>(*v >> 8);
     const int level = *v & 0xff;
     return std::pair{run, r.bit() ? -level : level};
@@ -439,15 +475,19 @@ void intra_block(
     const std::size_t comp = b < 4 ? 0 : static_cast<std::size_t>(b - 3);
     const auto size_code =
         comp == 0 ? t.dc_size_luminance.decode(r) : t.dc_size_chrominance.decode(r);
+
     if (!size_code) {
         error(at, "bad dct_dc_size");
     }
+
     const auto size = static_cast<unsigned>(*size_code);
     int diff = 0;
+
     if (size != 0) {
         const int v = static_cast<int>(r.read(size));
         diff = v < (1 << (size - 1)) ? v - (1 << size) + 1 : v;
     }
+
     const int dc = st.dc_pred[comp] + diff;
     st.dc_pred[comp] = dc;
     const int f0 = std::clamp(dc * (8 >> p.dc_precision), -2048, 2047);
@@ -455,17 +495,21 @@ void intra_block(
     int sum = f0;
     const VlcTable& table = p.intra_vlc_format ? t.dct_one : t.dct_zero;
     std::size_t i = 1;
+
     while (const auto c = coefficient(r, table, at)) {
         i += c->first;
+
         if (i >= 64) {
             error(at, "intra block coefficient index past 63");
         }
+
         const std::size_t pos = (*p.scan)[i];
         const int v = std::clamp((c->second * q[pos] * st.qscale) / 16, -2048, 2047);
         block[pos] = v;
         sum += v;
         ++i;
     }
+
     mismatch_control(block, sum);
 }
 
@@ -485,6 +529,7 @@ void non_intra_block(
     const Mpeg2VlcTables& t = mpeg2_vlc_tables();
     int sum = 0;
     std::size_t i = 0;
+
     // The first coefficient: "1s" is (0, +-1).
     if (r.peek(1) == 1) {
         r.skip(1);
@@ -494,17 +539,21 @@ void non_intra_block(
         sum += v;
         i = 1;
     }
+
     while (const auto c = coefficient(r, t.dct_zero, at)) {
         i += c->first;
+
         if (i >= 64) {
             error(at, "non-intra block coefficient index past 63");
         }
+
         const std::size_t pos = scan[i];
         const int v = non_intra_value(c->second, q[pos], qs);
         block[pos] = v;
         sum += v;
         ++i;
     }
+
     mismatch_control(block, sum);
 }
 
@@ -516,6 +565,7 @@ void skipped_macroblock(SliceContext& ctx, SliceState& st, std::size_t addr, std
     const int dc_reset = 1 << (7 + ctx.p.dc_precision);
     st.dc_pred = {dc_reset, dc_reset, dc_reset};
     MacroblockSamples pred;
+
     switch (ctx.p.type) {
         case PictureType::I:
             error(at, "skipped macroblock in an I picture");
@@ -525,9 +575,11 @@ void skipped_macroblock(SliceContext& ctx, SliceState& st, std::size_t addr, std
             break;
         case PictureType::B: {
             const std::int16_t f = st.prev_flags;
+
             if ((f & (kMbForward | kMbBackward)) == 0) {
                 error(at, "skipped B macroblock after an intra macroblock");
             }
+
             Motion m;
             m.mv[0][0] = st.pmv[0][0];
             m.mv[0][1] = st.pmv[0][1];
@@ -542,6 +594,7 @@ void skipped_macroblock(SliceContext& ctx, SliceState& st, std::size_t addr, std
             break;
         }
     }
+
     store_macroblock(ctx.frame, addr, pred);
 }
 
@@ -550,13 +603,16 @@ void macroblock(SliceContext& ctx, SliceState& st, BitReader& r, std::size_t add
     const PictureParams& p = ctx.p;
     const std::size_t at = r.byte_pos();
     const auto type_code = t.macroblock_type[static_cast<int>(p.type)].decode(r);
+
     if (!type_code) {
         error(at, "bad macroblock_type in a {} picture", "IPB"[static_cast<int>(p.type)]);
     }
+
     const std::int16_t flags = *type_code;
     // macroblock_modes(): frame_motion_type and dct_type exist only when
     // frame_pred_frame_dct = 0.
     bool field_motion = false;
+
     if ((flags & (kMbForward | kMbBackward)) && !p.frame_pred_frame_dct) {
         switch (r.read(2)) {
             case 1:
@@ -570,21 +626,28 @@ void macroblock(SliceContext& ctx, SliceState& st, BitReader& r, std::size_t add
                 error(at, "reserved frame_motion_type 0");
         }
     }
+
     const bool field_dct = (flags & (kMbIntra | kMbPattern)) && !p.frame_pred_frame_dct && r.bit();
     ctx.stats.field_motion_macroblocks += field_motion;
     ctx.stats.field_dct_macroblocks += field_dct;
+
     if (flags & kMbQuant) {
         const int code = static_cast<int>(r.read(5));
+
         if (code == 0) {
             error(at, "quantiser_scale_code 0");
         }
+
         st.qscale = qscale(p, code);
     }
+
     const int dc_reset = 1 << (7 + p.dc_precision);
     MacroblockSamples pred;
+
     if (flags & kMbIntra) {
         st.pmv = {};
         st.prev_flags = kMbIntra;
+
         for (int b = 0; b < 6; ++b) {
             Block block{};
             intra_block(r, p, ctx.intra_q, st, b, block);
@@ -592,16 +655,20 @@ void macroblock(SliceContext& ctx, SliceState& st, BitReader& r, std::size_t add
             ++ctx.stats.coded_blocks;
             pred.put_block(b, block, field_dct, true);
         }
+
         store_macroblock(ctx.frame, addr, pred);
         return;
     }
+
     st.dc_pred = {dc_reset, dc_reset, dc_reset};
     Motion motion;
     motion.field = field_motion;
+
     for (std::size_t s = 0; s < 2; ++s) {
         if ((flags & (s == 0 ? kMbForward : kMbBackward)) == 0) {
             continue;
         }
+
         if (field_motion) {
             for (std::size_t fr = 0; fr < 2; ++fr) {
                 motion.sel[fr][s] = r.bit();
@@ -612,30 +679,39 @@ void macroblock(SliceContext& ctx, SliceState& st, BitReader& r, std::size_t add
             st.pmv[1][s] = st.pmv[0][s];
         }
     }
+
     // A P picture's "No MC": forward frame prediction with a zero vector,
     // the predictors reset.
     bool use_forward = (flags & kMbForward) != 0;
     bool use_backward = (flags & kMbBackward) != 0;
+
     if (p.type == PictureType::P) {
         if (!use_forward) {
             st.pmv = {};
             motion = Motion{};
         }
+
         use_forward = true;
         use_backward = false;
     }
+
     st.prev_flags = flags;
     unsigned cbp = 0;
+
     if (flags & kMbPattern) {
         const auto v = t.coded_block_pattern.decode(r);
+
         if (!v) {
             error(at, "bad coded_block_pattern");
         }
+
         if (*v == 0) {
             error(at, "coded_block_pattern 0 (the 4:2:2 code) in 4:2:0");
         }
+
         cbp = static_cast<unsigned>(*v);
     }
+
     predict_macroblock(
         pred,
         ctx.frame,
@@ -644,16 +720,19 @@ void macroblock(SliceContext& ctx, SliceState& st, BitReader& r, std::size_t add
         addr,
         motion
     );
+
     for (int b = 0; b < 6; ++b) {
         if ((cbp & (32u >> b)) == 0) {
             continue;
         }
+
         Block block{};
         non_intra_block(r, *p.scan, ctx.non_intra_q, st.qscale, block, at);
         inverse_dct(block);
         ++ctx.stats.coded_blocks;
         pred.put_block(b, block, field_dct, false);
     }
+
     store_macroblock(ctx.frame, addr, pred);
 }
 
@@ -663,15 +742,19 @@ void decode_slice(SliceContext& ctx, Bytes data, std::size_t sc, std::size_t row
     const std::size_t mb_w = ctx.frame.width / 16;
     BitReader r(data, sc + 4);
     const int code = static_cast<int>(r.read(5));
+
     if (code == 0) {
         error(sc, "quantiser_scale_code 0");
     }
+
     if (r.bit()) {
         r.skip(1 + 7);
+
         while (r.bit()) {
             r.skip(8);
         }
     }
+
     const int dc_reset = 1 << (7 + ctx.p.dc_precision);
     SliceState st;
     st.qscale = qscale(ctx.p, code);
@@ -679,14 +762,18 @@ void decode_slice(SliceContext& ctx, Bytes data, std::size_t sc, std::size_t row
     auto addr = static_cast<std::ptrdiff_t>(row * mb_w) - 1;
     bool first = true;
     const auto count = static_cast<std::ptrdiff_t>(mb_w * ctx.frame.height / 16);
+
     for (;;) {
         const std::size_t at = r.byte_pos();
         std::ptrdiff_t increment = 0;
+
         for (;;) {
             const auto v = t.macroblock_address.decode(r);
+
             if (!v) {
                 error(at, "bad macroblock_address_increment");
             }
+
             if (*v == kMbaEscape) {
                 increment += 33;
             } else if (*v != kMbaStuffing) {
@@ -694,26 +781,34 @@ void decode_slice(SliceContext& ctx, Bytes data, std::size_t sc, std::size_t row
                 break;
             }
         }
+
         if (!first) {
             for (std::ptrdiff_t k = 1; k < increment; ++k) {
                 const std::ptrdiff_t a = addr + k;
+
                 if (a >= count) {
                     error(at, "skipped macroblocks past the picture");
                 }
+
                 skipped_macroblock(ctx, st, static_cast<std::size_t>(a), at);
                 ++ctx.stats.skipped_macroblocks;
             }
         }
+
         first = false;
         addr += increment;
+
         if (addr >= count) {
             error(at, "macroblock address {} past the picture", addr);
         }
+
         macroblock(ctx, st, r, static_cast<std::size_t>(addr));
         ++ctx.stats.macroblocks;
+
         if (r.overrun()) {
             error(r.byte_pos(), "slice data runs past the next start code");
         }
+
         if (r.at_start_code()) {
             break;
         }
@@ -753,18 +848,24 @@ std::optional<VideoSequence> Mpeg2Decoder::sequence() {
             break;
         }
     }
+
     // The sequence extension and user data that follow the header.
     while (m_sequence) {
         const auto sc = next_start_code(m_data, m_pos);
+
         if (!sc) {
             break;
         }
+
         const int code = code_at(*sc);
+
         if (code != 0xb5 && code != 0xb2) {
             break;
         }
+
         step();
     }
+
     return m_sequence;
 }
 
@@ -776,26 +877,32 @@ std::shared_ptr<const VideoFrame> Mpeg2Decoder::next_frame() {
             ++m_stats.frames_out;
             return f;
         }
+
         if (m_ended) {
             return nullptr;
         }
+
         step();
     }
 }
 
 bool Mpeg2Decoder::step() {
     const auto sc = next_start_code(m_data, m_pos);
+
     if (!sc || code_at(*sc) < 0) {
         if (m_held) {
             m_out.push_back(std::move(m_held));
             m_held = nullptr;
         }
+
         m_ended = true;
         m_pos = m_data.size();
         return false;
     }
+
     const int code = code_at(*sc);
     m_pos = *sc + 4;
+
     switch (code) {
         case 0xb3:
             sequence_header(*sc);
@@ -819,10 +926,12 @@ bool Mpeg2Decoder::step() {
                 m_out.push_back(std::move(m_held));
                 m_held = nullptr;
             }
+
             break;
         default:
             break;
     }
+
     return true;
 }
 
@@ -837,21 +946,26 @@ void Mpeg2Decoder::sequence_header(std::size_t sc) {
     r.skip(1 + 10 + 1);
     s.load_intra = r.bit();
     m_intra_matrix = kDefaultIntraMatrix;
+
     if (s.load_intra) {
         for (const std::uint8_t z : kZigZag) {
             m_intra_matrix[z] = static_cast<std::uint8_t>(r.read(8));
         }
     }
+
     s.load_non_intra = r.bit();
     m_non_intra_matrix.fill(16);
+
     if (s.load_non_intra) {
         for (const std::uint8_t z : kZigZag) {
             m_non_intra_matrix[z] = static_cast<std::uint8_t>(r.read(8));
         }
     }
+
     if (r.overrun()) {
         error(sc, "truncated sequence header");
     }
+
     static constexpr std::uint32_t kRates[9][2] = {
         {0, 0},
         {24000, 1001},
@@ -863,15 +977,19 @@ void Mpeg2Decoder::sequence_header(std::size_t sc) {
         {60000, 1001},
         {60, 1},
     };
+
     if (s.frame_rate_code < 1 || s.frame_rate_code > 8) {
         error(sc, "frame_rate_code {}", s.frame_rate_code);
     }
+
     s.fps_num = kRates[s.frame_rate_code][0];
     s.fps_den = kRates[s.frame_rate_code][1];
+
     if (s.width == 0 || s.height == 0 || s.width % 16 != 0 || s.height % 16 != 0 || s.width > 1920
         || s.height > 1152) {
         error(sc, "unsupported picture size {}x{}", s.width, s.height);
     }
+
     if (m_sequence) {
         if (m_sequence->width != s.width || m_sequence->height != s.height) {
             error(
@@ -883,10 +1001,12 @@ void Mpeg2Decoder::sequence_header(std::size_t sc) {
                 s.height
             );
         }
+
         s.profile_level = m_sequence->profile_level;
         s.progressive = m_sequence->progressive;
         s.chroma_format = m_sequence->chroma_format;
     }
+
     m_sequence = s;
     ++m_stats.sequences;
 }
@@ -894,12 +1014,15 @@ void Mpeg2Decoder::sequence_header(std::size_t sc) {
 // Extensions outside a picture: the sequence extension (others are ignored).
 void Mpeg2Decoder::extension(std::size_t sc) {
     BitReader r(m_data, sc + 4);
+
     if (r.read(4) != 1) {
         return;
     }
+
     if (!m_sequence) {
         error(sc, "a sequence extension before a sequence header");
     }
+
     VideoSequence& s = *m_sequence;
     s.profile_level = static_cast<std::uint8_t>(r.read(8));
     s.progressive = r.bit();
@@ -909,12 +1032,15 @@ void Mpeg2Decoder::extension(std::size_t sc) {
     r.skip(12 + 1 + 8 + 1);
     const std::uint32_t n = r.read(2);
     const std::uint32_t d = r.read(5);
+
     if (horizontal_ext != 0 || vertical_ext != 0) {
         error(sc, "the size extension bits are set");
     }
+
     if (s.chroma_format != 1) {
         error(sc, "chroma_format {} (only 4:2:0 is supported)", s.chroma_format);
     }
+
     s.fps_num *= n + 1;
     s.fps_den *= d + 1;
 }
@@ -925,10 +1051,12 @@ std::size_t Mpeg2Decoder::picture(std::size_t sc) {
     if (!m_sequence) {
         error(sc, "a picture before a sequence header");
     }
+
     const VideoSequence seq = *m_sequence;
     BitReader r(m_data, sc + 4);
     const auto temporal_reference = static_cast<std::uint16_t>(r.read(10));
     PictureParams params;
+
     switch (r.read(3)) {
         case 1:
             params.type = PictureType::I;
@@ -942,31 +1070,39 @@ std::size_t Mpeg2Decoder::picture(std::size_t sc) {
         default:
             error(sc, "unsupported picture_coding_type");
     }
+
     // The MPEG-1 fields (vbv_delay, full_pel_*, f_codes) are superseded by
     // the picture coding extension.
     for (auto& fs : params.f_code) {
         fs = {15, 15};
     }
+
     bool have_extension = false;
     std::size_t pos = sc + 4;
     std::size_t first_slice = 0;
+
     // Extensions and user data up to the first slice.
     for (;;) {
         const auto s = next_start_code(m_data, pos);
+
         if (!s || code_at(*s) < 0) {
             error(sc, "a picture without slices");
         }
+
         const int code = code_at(*s);
         pos = *s + 4;
+
         if (code == 0xb5) {
             BitReader e(m_data, *s + 4);
             const std::uint32_t id = e.read(4);
+
             if (id == 8) {
                 for (auto& fs : params.f_code) {
                     for (auto& ft : fs) {
                         ft = static_cast<std::uint8_t>(e.read(4));
                     }
                 }
+
                 params.dc_precision = static_cast<std::uint8_t>(e.read(2));
                 const std::uint32_t structure = e.read(2);
                 const bool top_field_first = e.bit();
@@ -978,17 +1114,21 @@ std::size_t Mpeg2Decoder::picture(std::size_t sc) {
                 e.skip(1);  // repeat_first_field
                 e.skip(1);  // chroma_420_type
                 const bool progressive_frame = e.bit();
+
                 if (structure != 3) {
                     error(
                         *s, "picture_structure {} (only frame pictures are supported)", structure
                     );
                 }
+
                 if (concealment) {
                     error(*s, "concealment motion vectors are not supported");
                 }
+
                 if (params.dc_precision == 3) {
                     error(*s, "intra_dc_precision 11 bits is not allowed at Main Profile");
                 }
+
                 params.frame_pred_frame_dct = frame_pred_frame_dct;
                 params.scan = alternate_scan ? &kAlternateScan : &kZigZag;
                 ++m_stats.dc_precision[params.dc_precision];
@@ -1007,6 +1147,7 @@ std::size_t Mpeg2Decoder::picture(std::size_t sc) {
                         m_intra_matrix[z] = static_cast<std::uint8_t>(e.read(8));
                     }
                 }
+
                 if (e.bit()) {
                     for (const std::uint8_t z : kZigZag) {
                         m_non_intra_matrix[z] = static_cast<std::uint8_t>(e.read(8));
@@ -1020,24 +1161,29 @@ std::size_t Mpeg2Decoder::picture(std::size_t sc) {
             error(*s, "start code {:#x} before the picture's first slice", code);
         }
     }
+
     if (!have_extension) {
         error(sc, "an MPEG-1 picture (no picture coding extension)");
     }
+
     const std::size_t decode_index =
         m_stats.pictures[0] + m_stats.pictures[1] + m_stats.pictures[2] + m_stats.skipped_b;
     const std::size_t w = seq.width;
     const std::size_t h = seq.height;
     std::shared_ptr<const VideoFrame> fwd;
     std::shared_ptr<const VideoFrame> bwd;
+
     if (params.type == PictureType::P) {
         if (!m_refs[1]) {
             error(sc, "a P picture without a reference frame");
         }
+
         fwd = m_refs[1];
     } else if (params.type == PictureType::B) {
         fwd = m_refs[0];
         bwd = m_refs[1];
     }
+
     // Find the end of the slices either way: a skipped B picture still has
     // to be stepped over.
     auto frame = new_frame(w, h, params.type, temporal_reference, decode_index);
@@ -1047,41 +1193,54 @@ std::size_t Mpeg2Decoder::picture(std::size_t sc) {
     };
     std::size_t s = first_slice;
     std::size_t end = 0;
+
     for (;;) {
         const int code = code_at(s);
+
         if (code < 0x01 || code > 0xaf) {
             end = s;
             break;
         }
+
         const std::size_t next = next_start_code(m_data, s + 4).value_or(m_data.size());
+
         if (!skip) {
             const auto row = static_cast<std::size_t>(code - 1);
+
             if (row >= h / 16) {
                 error(s, "slice row {} outside the picture", row);
             }
+
             decode_slice(ctx, Bytes(m_data.data(), next), s, row);
         }
+
         if (next >= m_data.size()) {
             end = m_data.size();
             break;
         }
+
         s = next;
     }
+
     if (skip) {
         ++m_stats.skipped_b;
         return end;
     }
+
     ++m_stats.pictures[static_cast<std::size_t>(params.type)];
+
     if (params.type == PictureType::B) {
         m_out.push_back(std::move(frame));
     } else {
         if (m_held) {
             m_out.push_back(std::move(m_held));
         }
+
         m_held = frame;
         m_refs[0] = std::move(m_refs[1]);
         m_refs[1] = std::move(frame);
     }
+
     return end;
 }
 

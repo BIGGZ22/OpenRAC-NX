@@ -35,9 +35,11 @@ public:
     // Decodes one code; none when the bits match no code (nothing consumed).
     std::optional<std::int16_t> decode(BitReader& reader) const {
         const Entry e = m_table[reader.peek(m_bits)];
+
         if (e.length == 0) {
             return std::nullopt;
         }
+
         reader.skip(e.length);
         return e.value;
     }

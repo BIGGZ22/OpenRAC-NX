@@ -335,33 +335,44 @@ VlcTable::VlcTable(std::span<const VlcCode> codes) {
     };
 
     std::vector<Parsed> parsed;
+
     for (const VlcCode& c : codes) {
         Parsed p{0, 0, c.value};
+
         for (const char ch : c.bits) {
             if (ch == ' ') {
                 continue;
             }
+
             if (ch != '0' && ch != '1') {
                 throw std::logic_error(std::format("bad VLC code \"{}\"", c.bits));
             }
+
             p.code = p.code << 1 | static_cast<std::uint32_t>(ch == '1');
             ++p.length;
         }
+
         if (p.length == 0 || p.length > 16) {
             throw std::logic_error(std::format("bad VLC code \"{}\"", c.bits));
         }
+
         m_bits = std::max(m_bits, p.length);
         parsed.push_back(p);
     }
+
     m_table.assign(std::size_t{1} << m_bits, Entry{});
+
     for (const Parsed& p : parsed) {
         const unsigned shift = m_bits - p.length;
         const std::size_t base = static_cast<std::size_t>(p.code) << shift;
+
         for (std::size_t k = 0; k < (std::size_t{1} << shift); ++k) {
             Entry& e = m_table[base + k];
+
             if (e.length != 0) {
                 throw std::logic_error("overlapping codes in a VLC table");
             }
+
             e = Entry{p.value, static_cast<std::uint8_t>(p.length)};
         }
     }
@@ -369,9 +380,11 @@ VlcTable::VlcTable(std::span<const VlcCode> codes) {
 
 double VlcTable::kraft() const {
     std::size_t used = 0;
+
     for (const Entry& e : m_table) {
         used += e.length != 0;
     }
+
     return static_cast<double>(used) / static_cast<double>(m_table.size());
 }
 
@@ -400,6 +413,7 @@ std::span<const VlcCode> mpeg2_codes(Mpeg2Codes which) {
         case Mpeg2Codes::DctLong:
             return kDctLong;
     }
+
     return {};
 }
 
