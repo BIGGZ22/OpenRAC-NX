@@ -163,6 +163,33 @@ jobs:
           yarn build
           cargo clippy --workspace --all-targets -- -D warnings
 
+  # The Android launcher's pages in a browser (launcher/e2e/): the preview's Android layout, page
+  # by page, so that what Android has (Develop and Mods for the picked game, the start and running
+  # screens, the update's window, the themes) does not regress. About a minute: no Rust, one
+  # browser, one Vite server. On 24.04, which Playwright's install-deps knows.
+  launcher-android:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    defaults:
+      run:
+        shell: bash
+        working-directory: launcher
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: "22"
+          package-manager-cache: false
+      - run: corepack enable
+      - name: The launcher's packages and a headless Chromium
+        run: |
+          yarn install --immutable
+          yarn playwright-core install --with-deps chromium-headless-shell
+      - name: Android pages
+        run: yarn test:android
+
   # The native port (port/): hostgen's tests, then the whole port built with
   # Clang (SDL3 fetched by CMake) and its tests, the OpenGL ones on Mesa's
   # software renderer. The rac1 program is built from games/rac1's C.

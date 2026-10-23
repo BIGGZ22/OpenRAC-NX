@@ -196,6 +196,8 @@ The installers are not signed
 
 ```sh
 yarn verify                                            # svelte-check, ESLint, Prettier, Vitest
+yarn test:android                                      # the Android pages in a browser (e2e/); once before:
+                                                       #   yarn playwright-core install chromium-headless-shell
 cargo test -p openrac-launcher-core                    # the Rust logic; no WebKit needed
 cargo clippy --workspace --all-targets -- -D warnings  # needs Tauri's system libraries
 cargo fmt --all --check

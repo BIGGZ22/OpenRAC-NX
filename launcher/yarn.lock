@@ -1669,6 +1669,7 @@ __metadata:
     eslint: "npm:^10.11.0"
     eslint-plugin-svelte: "npm:^3.23.0"
     globals: "npm:^17.12.0"
+    playwright-core: "npm:1.56.1"
     prettier: "npm:^3.9.9"
     prettier-plugin-svelte: "npm:^4.1.1"
     svelte: "npm:^5.57.2"
@@ -1737,6 +1738,15 @@ __metadata:
   version: 4.0.7
   resolution: "picomatch@npm:4.0.7"
   checksum: 10c0/beb6ae02c43ae44e84883b90830196d9046b1726ead292adcf7f57945e0bb0d992d68563d87e03b484b6f3c9a5c6defda7523477f047d7f0e663f126cc01787f
+  languageName: node
+  linkType: hard
+
+"playwright-core@npm:1.56.1":
+  version: 1.56.1
+  resolution: "playwright-core@npm:1.56.1"
+  bin:
+    playwright-core: cli.js
+  checksum: 10c0/ffd40142b99c68678b387445d5b42f1fee4ab0b65d983058c37f342e5629f9cdbdac0506ea80a0dfd41a8f9f13345bad54e9a8c35826ef66dc765f4eb3db8da7
   languageName: node
   linkType: hard
 
