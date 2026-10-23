@@ -61,12 +61,12 @@
 
   @media (hover: hover) {
     button:hover:not(:disabled) {
-      color: #fff;
+      color: var(--on-game);
     }
   }
 
   button.on {
     background: var(--bd);
-    color: #fff;
+    color: var(--on-game);
   }
 </style>

@@ -25,6 +25,8 @@ section to match.
 | `--text`, `--body`            | `#e8f0ff`, `#c3cdea`              | text (the site's body and prose colours)           |
 | `--bar-top`, `--bar-bottom`   | `#e5a013`, `#cd8300`              | the header bar's gradient, primary buttons         |
 | `--bar-ink`, `--bar-ink-deep` | `#2a1800`, `#1b1206`              | text on the bar; the selected tab                  |
+| `--bar-name`, `--bar-button`  | `#000`, `#fff`                    | the name on the bar; the white Discord button      |
+| `--on-game`                   | `#fff`                            | text on a game's colours or picture                |
 
 The site has no status colours; the launcher adds `--ok` (`#8fd694`), `--warn`
 (amber) and `--err` (`#ff8a7a`), used only in pills and messages. The theme is

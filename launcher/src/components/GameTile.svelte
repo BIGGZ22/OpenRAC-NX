@@ -209,7 +209,7 @@
     font-weight: var(--title-weight);
     font-size: 1.375rem;
     line-height: 1.2;
-    color: #fff;
+    color: var(--on-game);
     text-wrap: balance;
   }
 

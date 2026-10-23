@@ -31,6 +31,9 @@
   /* The name on the bar, and the site's white button on it (Discord). */
   --bar-name: #000;
   --bar-button: #fff;
+  /* Text on a game's own colours or picture: a card's title, the disc switch, a name on Android's
+     game strip. */
+  --on-game: #fff;
   /* A field's edge: 3:1 against the panel, so it is seen as a field. */
   --line-field: rgb(156 161 212 / 0.6);
   /* States. The site has none; these sit with its palette. */

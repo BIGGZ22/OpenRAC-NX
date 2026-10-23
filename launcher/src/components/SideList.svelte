@@ -310,7 +310,7 @@
     line-height: 1.2;
     white-space: nowrap;
     text-overflow: ellipsis;
-    color: #fff;
+    color: var(--on-game);
   }
 
   :global(html[data-platform="android"]) .state {
