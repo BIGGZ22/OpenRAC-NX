@@ -109,7 +109,7 @@ what to do instead.
 
 | Tool | What it checks | Where it runs | Fails the build or CI |
 |---|---|---|---|
-| clang-format, [`port/.clang-format`](../.clang-format) | layout (section 5) | your editor; CI on new files and changed lines | new C++ files: yes. Changed lines: reported, not failing yet (24.4) |
+| clang-format, [`port/.clang-format`](../.clang-format) | layout (section 5) | your editor; CI on new files and changed lines | new C++ files and changed lines: yes (24.4) |
 | [`tools/cpp_style.py`](../../tools/cpp_style.py) | clang-format, then the blank lines around control blocks (5.4); with `--comments`, the control blocks with no comment above them (6.2) | you, on the files you touch; CI ("Port conventions"), report only | no: reported, not failing yet (5.6) |
 | [`tools/conventions/check_conventions.py`](../tools/conventions/README.md) | licence lines, tabs, dashes everywhere; on new C++ files: `static` at namespace scope, raw `new`/`delete`/`malloc`/`free`, `using namespace` in headers, `extern "C"` outside contract files, console output outside tests and `main` | CI ("Port conventions"), and you before you commit | yes |
 | clang-tidy, [`port/.clang-tidy`](../.clang-tidy) | naming, ownership, function size, `else` after `return`, missing `override`, nested ternaries, `goto` | you, on the C++ files you touch (it needs a configured build) | not in CI; new code has zero findings |
@@ -1469,10 +1469,12 @@ maintainers run ([REGRESSION.md](../../docs/port/REGRESSION.md)).
 
 ### 24.4 Changed lines
 
-The rules of this page hold on every line you change. CI reports clang-format's changes on changed
-lines (`check_conventions.py --touched`) without failing yet, so work already in flight can land; it
-becomes a failure once the restructure's phase 1 has landed (PROGRESS.md records the switch). Do not
-reformat the untouched lines around your change: a formatting pass is a commit of its own.
+The rules of this page hold on every line you change. CI fails a push or pull request whose changed
+lines clang-format would lay out differently (`check_conventions.py --touched --strict-touched`),
+in older files too. Before you push, run `port/tools/conventions/check_conventions.py --since
+origin/master --touched --strict-touched` with the pinned clang-format (21.1.8, `pip install
+clang-format==21.1.8`). Do not reformat the untouched lines around your change: a formatting pass is
+a commit of its own.
 
 ---
 
