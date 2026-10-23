@@ -7,8 +7,9 @@
  └───────────────────────────────────────────────────────────┼───────┘
                           invoke("library"), invoke("run_action"), ...
                           events: job-output, job-exit        │
- ┌──────────── src-tauri/src/lib.rs (Tauri commands) ─────────▼───────┐
+ ┌──────────── src-tauri/src/ (Tauri commands) ───────────────▼───────┐
  │ a thin layer: settings file location, events, opener               │
+ │ lib.rs: the commands; android.rs: the Android app's own            │
  └──────────────────────────────┬──────────────────────────────────────┘
  ┌──────────── core/ (openrac-launcher-core, no window) ─▼─────────────┐
  │ catalog ◄─ games/*/game.json, progress/summary.json                 │
@@ -17,6 +18,7 @@
  │ library: all of these for the UI; plan(scope, id) -> command line   │
  │ jobs: child processes, output lines, cancel     detect, config      │
  │ discord: Rich Presence over Discord's local socket                  │
+ │ desktop: Linux menu entries, icons    progress_sync: bytematch.dev  │
  └──────────────────────────────┬──────────────────────────────────────┘
                                 ▼
        the checkout's own tools: tools/extractor.py, tools/openrac.py,
@@ -45,7 +47,7 @@
 5. **Nothing personal or disc-derived is written outside the tools.** Disc
    data is written only by the extractor, into the install folder; the
    launcher's own files are `launcher.json` in the per-user config folder,
-   the progress copy and the Linux desktop files
+   the progress copy and the Linux desktop files (`core/src/desktop.rs`)
    ([README.md](../README.md#what-it-writes-and-what-it-connects-to)).
 6. **No emulation.** Nothing the launcher runs interprets the console's
    code or models its hardware; Play is the native port
@@ -106,12 +108,17 @@ container or compiler goes with it.
 
 ## Commands
 
-All in `src-tauri/src/lib.rs`; types in `core/src` (serde, camelCase) and
-mirrored in `src/lib/api.ts`.
+In `src-tauri/src/lib.rs`, but for the twelve that only the Android app
+implements, which are in `src-tauri/src/android.rs` (marked Android below;
+on a desktop they answer with nothing to do or an error). They call into
+`core/src`, where the logic is (rule 4); the types are there too (serde,
+camelCase) and mirrored in `src/lib/api.ts`.
 
 | Command                                                                                            | Arguments                                                                          | Returns                                                                                                                                                                     |
 | -------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `app_info`                                                                                         |                                                                                    | `{version, platform, configFile}`                                                                                                                                           |
+| `relaunch_app`                                                                                     |                                                                                    | restarts the launcher (after an update installed)                                                                                                                           |
+| `launcher_update_check`                                                                            | `{channel}`                                                                        | a newer launcher on that channel, from Tauri's updater (desktop), or null                                                                                                   |
 | `get_config` / `save_config`                                                                       | `{config}`                                                                         | `Config` (`core/src/config.rs`)                                                                                                                                             |
 | `detect`                                                                                           |                                                                                    | candidates for the checkout, Python, Godot, Docker                                                                                                                          |
 | `check_root`                                                                                       | `{path}`                                                                           | `{ok, version, message}`: is it an OpenRAC checkout                                                                                                                         |
@@ -119,13 +126,17 @@ mirrored in `src/lib/api.ts`.
 | `adopt_godot`                                                                                      |                                                                                    | `Config`, with a Godot that works when none was set or the one set is gone (run at each start)                                                                              |
 | `library`                                                                                          |                                                                                    | `Library` (`core/src/library.rs`)                                                                                                                                           |
 | `install_game`                                                                                     | `{game, image}`                                                                    | the extractor's job, `{id, title, command, detached}`                                                                                                                       |
+| `prepare_disc`                                                                                     | `{image}`                                                                          | the plain image set-up reads: an .iso as it is, a CHD unpacked once into `<install>/discs/<name>.iso` (`core/src/chd.rs`, `disc-copy` events)                               |
 | `uninstall_game`                                                                                   | `{game}`                                                                           | removes the game's `iso_data`, `decompiler_out` and `out`                                                                                                                   |
 | `scan_discs`                                                                                       |                                                                                    | `{found, choices}`: the games folder's discs, and (developers) the games with two to choose from                                                                            |
 | `choose_disc`                                                                                      | `{version}`                                                                        | `Config`, after putting that disc's set-up in place (developers only; below)                                                                                                |
 | `run_action`                                                                                       | `{scope, id, level, path, option}`                                                 | `{id, title, command, detached}`; `level`, `path`, `option` fill `{level}`, `{path}`, `{option}`                                                                            |
+| `open_level_in_godot`                                                                              | `{version, level}`                                                                 | the version's `editor-open` action for that level, started as a job                                                                                                         |
+| `open_output`                                                                                      | `{path}`                                                                           | opens a folder a job wrote (a file: its folder); only the checkout's `assets/` and `build/` and the install folder                                                          |
 | `overrides_list`                                                                                   | `{game}`                                                                           | the game's overrides packs (`core/src/overrides.rs`), in order                                                                                                              |
 | `overrides_set_enabled` / `overrides_move` / `overrides_remove`                                    | `{game, id, enabled}` / `{game, id, up}` / `{game, id}`                            | the packs again, changed                                                                                                                                                    |
 | `plugins_list` / `plugins_set_enabled` / `plugins_move` / `plugins_set_setting` / `plugins_remove` | `{game, version}`, then `{id, enabled}` / `{id, up}` / `{id, key, value}` / `{id}` | the game's gameplay mods (native and script) in load order, as they stand for that disc (`core/src/plugins.rs`, `PluginView`), changed                                      |
+| `enhanced_view` / `enhanced_set_enabled` / `enhanced_set_setting`                                  | `{game, version}`, then `{enabled}` / `{key, value}`                               | the Mods tab's Enhanced graphics entry for that version (`core/src/enhanced.rs`), or null; changed                                                                          |
 | `plugins_install`                                                                                  | `{game, version, path}`                                                            | a .zip or folder added: `{kind: "plugin", id, name, version, replaced, enabled}`, or `{kind: "pack"}` for the page to add as an overrides pack                              |
 | `plugins_status`                                                                                   | `{game}`                                                                           | what the port did with the mods at its last start (`status.json`), or null                                                                                                  |
 | `plugins_preview`                                                                                  | `{game, version, url}`                                                             | what a repository's address holds (`core/src/remote.rs`, `Preview`): each mod, where it comes from, whether it can be installed here and why not                            |
@@ -135,22 +146,29 @@ mirrored in `src/lib/api.ts`.
 | `plugins_sources` / `plugins_set_pin`                                                              | `{game}` / `{game, id, pin}`                                                       | where the mods added from a link came from (`sources.json`); keeps one at its version or lets it update                                                                     |
 | `open_game_folder`                                                                                 | `{game, path}`                                                                     | opens a folder inside the game's set-up folder (an export); refuses anything else                                                                                           |
 | `inspect_saves` / `backup_saves` / `restore_backup`                                                | `{serial}` / `{serial, note}` / `{serial, backupName}`                             | the card's slots and backups; a backup; a restore (refused while the game uses the card)                                                                                    |
+| `open_saves_folder`                                                                                | `{serial}`                                                                         | opens the game's memory card folder, made if it is not there                                                                                                                |
 | `read_save`                                                                                        | `{serial, slot}`                                                                   | one slot for the save editor (`core/src/save_edit.rs`, `SaveView`)                                                                                                          |
 | `write_save`                                                                                       | `{serial, slot, fingerprint, change}`                                              | writes the editor's fields or raw chunks, safely (below); the backup and the slot as it now is                                                                              |
 | `reports_list`                                                                                     | `{game}`                                                                           | the game's session logs and crash reports, newest first (`core/src/reports.rs`)                                                                                             |
 | `latest_crash`                                                                                     | `{game, since}`                                                                    | the newest crash report since a time: after the game stopped                                                                                                                |
 | `report_text` / `report_save`                                                                      | `{game, file}`                                                                     | the text to copy; the .zip saved in Downloads and shown (its path, home as `~`)                                                                                             |
+| `report_delete` / `reports_delete_all`                                                             | `{game, file}` / `{game}`                                                          | deletes one log or crash report; all of them, and says how many went                                                                                                        |
 | `open_reports_folder`                                                                              | `{game, crashes}`                                                                  | opens the game's data folder, or its `crashes/`                                                                                                                             |
 | `differences` / `set_game_fix`                                                                     | `{game, version}` / `{game, version, id, on}`                                      | what the port does otherwise than the PS2 game (`core/src/differences.rs`); a fix switched                                                                                  |
 | `cancel_job`                                                                                       | `{id}`                                                                             |                                                                                                                                                                             |
 | `open_path`                                                                                        | `{path}` relative to the checkout                                                  | opens it with the system; refuses paths outside the checkout                                                                                                                |
 | `open_url`                                                                                         | `{url}`                                                                            | opens an `https://` address in the browser                                                                                                                                  |
-| `sync_progress_from_web`                                                                           |                                                                                    | fetches openrac.dev's progress, writes `progress/summary.json`, returns the catalogue                                                                                       |
+| `sync_progress_from_web`                                                                           |                                                                                    | fetches bytematch.dev's progress (`core/src/progress_sync.rs`), keeps it in the launcher's progress copy (never the checkout's `progress/summary.json`), returns `Library`  |
 | `apply_progress_json`                                                                              | `{json}`                                                                           | the same from JSON the page fetched                                                                                                                                         |
 | `set_discord_status`                                                                               | `{status}`                                                                         | sets Discord Rich Presence (idle, viewing, playing)                                                                                                                         |
 | `pick_disc` (Android)                                                                              |                                                                                    | the system's picker; the image copied into the app (`disc-copy` events), its path or null                                                                                   |
 | `gpu_drivers` (Android)                                                                            |                                                                                    | the GPU driver packages, the one chosen, the device (`OpenracPlugin.kt`)                                                                                                    |
 | `gpu_driver_import` / `_select` / `_remove` (Android)                                              | - / `{id}` (null: the system's) / `{id}`                                           | adds a package's zip; chooses the one the game loads; removes one                                                                                                           |
+| `gpu_renderer_select` (Android)                                                                    | `{renderer}`                                                                       | what the game draws with from its next start: `"vulkan"` or `"gles"`                                                                                                        |
+| `background_status` (Android)                                                                      | `{title, text, percent}`                                                           | the set-up's notification while the launcher is in the background; nulls when the set-up is over                                                                            |
+| `tools_ready` (Android)                                                                            |                                                                                    | waits until the tools the launcher carries are unpacked; an error says why they could not be                                                                                |
+| `update_check` / `update_install` (Android)                                                        | `{channel}` / `{url, signature}`                                                   | a newer launcher on the releases (`core/src/update.rs`), or null; downloads its APK, checks the signature and hands it to Android's installer                               |
+| `game_status` / `game_window` (Android)                                                            | - / `{stop}`                                                                       | `{running, library}`: whether the game runs; brings it back in front, or ends it                                                                                            |
 
 | Event        | Payload                                                    |
 | ------------ | ---------------------------------------------------------- |
@@ -161,8 +179,10 @@ mirrored in `src/lib/api.ts`.
 ### Adding a command
 
 1. The logic in `core/src/<module>.rs`, with a test.
-2. A `#[tauri::command]` in `src-tauri/src/lib.rs` that calls it, and its name
-   in `generate_handler!`. Use `spawn_blocking` for anything that touches the
+2. A `#[tauri::command]` in `src-tauri/src/lib.rs` (`android.rs` for one only
+   the Android app implements) that calls it, and its name in
+   `generate_handler!`. The command only exposes the core: it holds no logic
+   of its own. Use `spawn_blocking` for anything that touches the
    disk or runs a program.
 3. The types and a wrapper in `src/lib/api.ts`.
 4. A case in `src/lib/mock.ts`, so the browser preview keeps working.
@@ -353,8 +373,8 @@ scripted presses and pictures). Never point a test at the player's own card.
 - The content security policy (`tauri.conf.json`) allows only the app's own
   scripts, styles and fonts; the fonts are bundled. The page's own `fetch`
   of openrac.dev is outside that policy's `connect-src`, so the progress is
-  fetched by the Rust side (`sync_progress_from_web`, with `curl`) when the
-  page's attempt fails.
+  fetched by the Rust side (`sync_progress_from_web`, with `curl`:
+  `core/src/progress_sync.rs`) when the page's attempt fails.
 - `actions.json` comes from the user's own checkout, which they already trust
   to build and run. Its arguments are passed as an argument list, and only
   the placeholders in `core/src/actions.rs` (`PLACEHOLDERS`) are filled; the
