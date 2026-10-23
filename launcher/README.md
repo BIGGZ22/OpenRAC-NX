@@ -215,7 +215,8 @@ launcher/
 │                       Discord presence (+ tests)
 ├── src-tauri/          the desktop app: Tauri commands over core/, window and bundle config, icons
 ├── src/                the UI: Svelte 5 + TypeScript
-│   ├── lib/            api.ts (commands and types), mock.ts (browser preview), app state, queue, themes
+│   ├── lib/            api.ts (commands and types), mock.ts (browser preview), app state, queue, themes;
+│   │                   the helpers pages share (format, clipboard, jobText, labels), each with its tests
 │   ├── components/     header, game card, action card, progress bar, path field, toasts, icons
 │   └── pages/          Library, Game (player and developer views), Tasks, Settings (also the first run)
 ├── public/             the wrench logo and favicon (from openrac-site), game backdrops and previews

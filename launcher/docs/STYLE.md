@@ -158,6 +158,10 @@ release, and a new file adds its line there when it is added.
   control would otherwise keep them until the next tap elsewhere. A press
   shows with `:active`, a keyboard's or controller's focus with
   `:focus-visible` or `html[data-input="pad"]`.
+- `src/lib/stylesheets.test.ts` holds `app.css` and every component's
+  `<style>` to two of these rules: no hex colour outside `:root`, no hover
+  style outside `@media (hover: hover)`. It names the file and line of what
+  breaks one.
 - Android follows Android's own patterns, not the desktop's: a navigation rail
   on the left (a bar at the bottom below 600 px wide) in place of the orange
   bar, Material's 24/16 px margins, a ripple under the finger
