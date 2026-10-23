@@ -145,3 +145,9 @@ func_L05_0031AAA8	func_L14_002F2778	14:002F2778
 # no relocation tells them apart. host/variants.c. Each level's callers (Skid's agent, moby class 1283,
 # the challenge NPC) call the second copy, the folded call's place by their own jal.
 func_L00_0029A7D0	func_L02_00299F28	02:00299F28,08:002A2B18,16:00293658
+# func_001F9850 (scale_ticks: n * a factor + 0.5, cut to an integer) has two neighbours in every level's
+# program that the catalogue folds into it although each reads another factor from $gp: gp-0x7E9C
+# (0x15EE64, 1.44) and gp-0x7E98 (0x15EE68, 50/60, which level code turns a 60 Hz count of ticks
+# with); func_001F9850 reads gp-0x7EA0 (0x15EE60, 1.2). rac1/host/variants.c.
+func_001F9850	func_L00_001FEE98	00:001FEE98,01:00220D28,02:0020FE50,03:001F8780,04:001F1880,05:0022DB50,06:00216F30,07:00226C50,08:00211928,09:0021EA48,10:001F2480,11:00230780,12:00221CE8,13:0020A900,14:00212438,15:001F8550,16:001FD680,17:001FBF80,18:00207C00
+func_001F9850	func_L00_001FEED0	00:001FEED0,01:00220D60,02:0020FE88,03:001F87B8,04:001F18B8,05:0022DB88,06:00216F68,07:00226C88,08:00211960,09:0021EA80,10:001F24B8,11:002307B8,12:00221D20,13:0020A938,14:00212470,15:001F8588,16:001FD6B8,17:001FBFB8,18:00207C38
