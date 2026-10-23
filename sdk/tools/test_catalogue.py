@@ -1,4 +1,7 @@
-"""The behaviour catalogue on synthetic inputs: small names.tsv, functions.tsv, C and headers; no disc data."""
+# SPDX-License-Identifier: MIT
+# Copyright (c) 2026 the OpenRAC contributors
+"""Tests of catalogue.py, the behaviour catalogue, on synthetic inputs: small names.tsv, functions.tsv, C and
+headers; no disc data. python3 -m unittest discover -s sdk/tools -p test_catalogue.py"""
 
 import json
 import unittest
