@@ -295,7 +295,7 @@ function(openrac_add_game config)
       target_link_libraries(${target} PRIVATE winmm)
     endif()
     # The window: the renderer draws what the game holds in memory (game/common/frontend.h).
-    if(TARGET openrac_viewer_lib AND TARGET openrac_platform)
+    if(TARGET openrac_scene_renderer AND TARGET openrac_platform)
       target_sources(${target} PRIVATE "${OPENRAC_GAME_DIR}/common/frontend.cpp"
                                        "${OPENRAC_GAME_DIR}/common/debug_menu.cpp"
                                        "${OPENRAC_GAME_DIR}/common/debug_overlay.cpp"
@@ -305,7 +305,10 @@ function(openrac_add_game config)
                                        "${OPENRAC_GAME_DIR}/common/settings.cpp"
                                        "${OPENRAC_GAME_DIR}/common/touch_overlay.cpp"
                                        ${frontend_sources} ${debug_sources})
-      target_link_libraries(${target} PRIVATE openrac_viewer_lib openrac_platform openrac_imgui)
+      # The scene draws the level and the live mobys; the viewer's library holds the game state
+      # until P2-03 moves it into game/rac1.
+      target_link_libraries(${target} PRIVATE openrac_scene_renderer openrac_viewer_lib
+                                              openrac_platform openrac_imgui)
       # The debug overlay's moby class names: the editor's table, as text.
       openrac_moby_class_names(names_cpp)
       target_sources(${target} PRIVATE "${names_cpp}")

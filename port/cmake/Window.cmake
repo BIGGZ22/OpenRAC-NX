@@ -179,8 +179,9 @@ if(world_sources)
   openrac_add_module_tests(world openrac_renderer_world openrac_platform)
 endif()
 
-# ---- the level viewer ----
-# cgltf and stb are compiled once, as C, without the port's warnings.
+# ---- cgltf and stb ----
+# Compiled once, as C, without the port's warnings: the scene reads its GLB meshes and PNG textures
+# with them, and writes its screenshots.
 add_library(openrac_viewer_third_party STATIC viewer/third_party.c)
 target_link_libraries(openrac_viewer_third_party PUBLIC openrac_cgltf openrac_stb)
 if(MSVC AND NOT CMAKE_C_COMPILER_ID MATCHES "Clang")
@@ -189,30 +190,39 @@ else()
   target_compile_options(openrac_viewer_third_party PRIVATE -w)
 endif()
 
-add_library(openrac_level_assets STATIC scene/level.cpp)
-target_link_libraries(openrac_level_assets PUBLIC openrac_renderer openrac_viewer_third_party openrac_assets_geometry)
-openrac_warnings(openrac_level_assets)
+# ---- the scene (scene/README.md) ----
+# A level from the editor's export, the live mobys' poses and shadows read from game memory, and the
+# frames written to PNG: CPU work only, so the probe tools link it without a graphics context.
+add_library(openrac_scene STATIC
+  scene/level.cpp
+  scene/moby_pose.cpp
+  scene/moby_shadow.cpp
+  scene/screenshot.cpp
+)
+target_link_libraries(openrac_scene PUBLIC openrac_renderer openrac_viewer_third_party
+  openrac_assets_geometry)
+openrac_warnings(openrac_scene)
 
 # Scene conversion/fingerprinting is shared by activation checks and the
 # offline tool. It contains no Embree calls and is available in normal builds.
 add_library(openrac_probe_scene STATIC enhanced/tools/probes/level_scene.cpp enhanced/tools/probes/activation.cpp enhanced/tools/probes/liquids.cpp)
-target_link_libraries(openrac_probe_scene PUBLIC openrac_lighting openrac_level_assets openrac_assets_disc)
+target_link_libraries(openrac_probe_scene PUBLIC openrac_lighting openrac_scene openrac_assets_disc)
 openrac_warnings(openrac_probe_scene)
 
-add_library(openrac_viewer_lib STATIC
-  viewer/camera.cpp
-  viewer/game_state.cpp
+# The level renderer and the enhanced renderer's lighting and shadow passes (enhanced/viewer/), one
+# library: the renderer calls the passes, the passes read the level, and both draw with the one set
+# of embedded shaders below. As two static libraries they would link in a cycle, so they stay
+# together until P2-39 gives scene the hooks enhanced registers with: the scene module's one
+# exception to one module, one target (CODING_CONVENTIONS.md, section 9.1).
+add_library(openrac_scene_renderer STATIC
   scene/level_renderer.cpp
   enhanced/viewer/probe_lighting.cpp
   enhanced/viewer/probe_selection.cpp
   enhanced/viewer/early_lighting.cpp
-  scene/moby_pose.cpp
-  scene/moby_shadow.cpp
   enhanced/viewer/hero_shadow.cpp
   enhanced/viewer/sun_shadow.cpp
-  scene/screenshot.cpp
 )
-openrac_embed_shaders(openrac_viewer_lib viewer openrac::viewer
+openrac_embed_shaders(openrac_scene_renderer viewer openrac::viewer
   "${CMAKE_CURRENT_SOURCE_DIR}/viewer/shaders/mesh.vert"
   "${CMAKE_CURRENT_SOURCE_DIR}/viewer/shaders/mesh.frag"
   "${CMAKE_CURRENT_SOURCE_DIR}/enhanced/viewer/shaders/early_lighting.comp"
@@ -228,12 +238,22 @@ openrac_embed_shaders(openrac_viewer_lib viewer openrac::viewer
   "${CMAKE_CURRENT_SOURCE_DIR}/viewer/shaders/sky.vert"
   "${CMAKE_CURRENT_SOURCE_DIR}/viewer/shaders/sky.frag"
 )
-target_link_libraries(openrac_viewer_lib PUBLIC openrac_renderer openrac_viewer_third_party
-  openrac_assets_geometry openrac_probe_scene)
+target_link_libraries(openrac_scene_renderer PUBLIC openrac_scene openrac_renderer openrac_probe_scene)
 if(OPENRAC_VULKAN)
-  target_link_libraries(openrac_viewer_lib PRIVATE openrac_renderer_vulkan)
-  target_compile_definitions(openrac_viewer_lib PRIVATE OPENRAC_VULKAN=1)
+  target_link_libraries(openrac_scene_renderer PRIVATE openrac_renderer_vulkan)
+  target_compile_definitions(openrac_scene_renderer PRIVATE OPENRAC_VULKAN=1)
 endif()
+openrac_warnings(openrac_scene_renderer)
+
+# ---- the level viewer ----
+# The viewer program's own code: its free camera, and what the renderers read of a running game from
+# its memory (game_state.h), which the game programs use too until P2-03 moves it into game/rac1.
+# The programs and the tests that draw a level link this, and the scene with it.
+add_library(openrac_viewer_lib STATIC
+  viewer/camera.cpp
+  viewer/game_state.cpp
+)
+target_link_libraries(openrac_viewer_lib PUBLIC openrac_scene_renderer)
 openrac_warnings(openrac_viewer_lib)
 
 # Tests are registered through openrac_add_test (cmake/Tests.cmake), which makes the program
