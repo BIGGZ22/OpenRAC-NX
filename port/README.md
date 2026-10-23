@@ -57,7 +57,8 @@ systems, and core Vulkan performance improvements remain in the core renderer.
 | [platform/](platform) | the window, input as the console's pad, audio output, timing (SDL3) |
 | [renderer/](renderer) | the renderer: per-subsystem renderers in OpenGOAL's manner, the direct renderer for the 2D path, texture conversion (OpenGL 4.1) |
 | [renderer/vulkan/](renderer/vulkan/README.md) | the renderer's OpenGL calls carried out with Vulkan 1.3, chosen with `OPENRAC_GL_API=vulkan` |
-| [viewer/](viewer) | `openrac-viewer`: a level, extracted from the player's disc by the editor, drawn natively with a free camera |
+| [scene/](scene/README.md) | a level and its live mobys, ready to draw: the editor's level export loaded, the mobys' poses and shadows read from game memory, the level drawn layer by layer through the renderer; the viewer and the game programs draw with it |
+| [viewer/](viewer/README.md) | `openrac-viewer`: a level, extracted from the player's disc by the editor, drawn natively with a free camera |
 | [common/](common/README.md) | what every module may use: the log, the crash report, the statistics, the system's description, a JSON reader, the PS2's float arithmetic, and small helpers (`joining_thread.h`, a thread its owner joins) |
 | [tests/](tests) | the runtime's tests |
 | [docs/](docs) | the port's [coding conventions](docs/CODING_CONVENTIONS.md) |
