@@ -359,6 +359,14 @@ debug key, so each build has to be installed fresh rather than over the
 previous one. `python3 tools/android_keystore.py` makes the key once and
 prints the secrets to add ([RELEASING.md](../../launcher/docs/RELEASING.md)).
 
+A fork's CI builds an app of its own, so that it installs beside the
+project's: outside `OpenRAC/OpenRAC` the APK's package is
+`dev.openrac.launcher.fork_<owner>`, its name on the home screen "OpenRAC
+Fork" and its file `OpenRAC.Launcher.Fork_<version>_android-arm64-debug.apk`
+(`OPENRAC_ANDROID_APPLICATION_ID` and `OPENRAC_ANDROID_APP_LABEL`, read by
+`app/build.gradle.kts`). Its data is its own too. The project's own builds,
+and pull requests to it, keep `dev.openrac.launcher` and "OpenRAC Launcher".
+
 ## What still needs a real device
 
 CI has no phone and no disc, so these are tested by hand (step by step in

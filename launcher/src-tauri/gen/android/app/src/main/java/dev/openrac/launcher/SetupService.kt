@@ -110,7 +110,7 @@ class SetupService : Service() {
   override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
     val percent = intent?.getIntExtra("percent", -1)?.takeIf { it >= 0 }
     val notification = notification(
-      this, intent?.getStringExtra("title") ?: getString(R.string.app_name), intent?.getStringExtra("text") ?: "", percent,
+      this, intent?.getStringExtra("title") ?: applicationInfo.loadLabel(packageManager).toString(), intent?.getStringExtra("text") ?: "", percent,
     )
     try {
       ServiceCompat.startForeground(this, ID, notification, ServiceInfo.FOREGROUND_SERVICE_TYPE_DATA_SYNC)
