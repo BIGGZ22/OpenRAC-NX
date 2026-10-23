@@ -269,5 +269,54 @@ class MobySeeds(unittest.TestCase):
                 seeds.plan_regions([], coarse, spacing=bad)
 
 
+
+class OlderExports(unittest.TestCase):
+    """An export without its gameplay bake input reads the gameplay from the disc."""
+
+    def read(self, level):
+        import sys
+        import types
+
+        class Disc:
+            version = types.SimpleNamespace(key='pal', gameplay='gameplay_pal')
+
+            def __init__(self, path):
+                pass
+
+            def __enter__(self):
+                return self
+
+            def __exit__(self, *exc):
+                return False
+
+            def survey(self):
+                # The disc's own levels: 0 to 18.
+                return {'levels': [{'id': i, 'ranges': {'gameplay_pal': {'lba': 10 + i, 'sectors': 1}}}
+                                   for i in range(19)]}
+
+            def sectors(self, lba, count):
+                return bytes([lba]) * count
+
+        fakes = {'disc': types.SimpleNamespace(Disc=Disc), 'level': types.SimpleNamespace(decoded=lambda b: b)}
+        saved = {name: sys.modules.get(name) for name in fakes}
+        sys.modules.update(fakes)
+        try:
+            manifest = {'game': 'rac1', 'version': 'pal', 'level': level}
+            return seeds.read_gameplay(Path('unused'), manifest, Path('disc.iso'))
+        finally:
+            for name, module in saved.items():
+                if module is None:
+                    sys.modules.pop(name, None)
+                else:
+                    sys.modules[name] = module
+
+    def test_a_level_of_the_disc(self):
+        self.assertEqual(self.read(5), bytes([15]))
+
+    def test_the_title_and_flight_scenes_have_no_gameplay(self):
+        self.assertIsNone(self.read(99))
+        self.assertIsNone(self.read(98))
+
+
 if __name__ == '__main__':
     unittest.main()

@@ -105,8 +105,10 @@ def bake_level(level_dir: Path, output_dir: Path, baker: Path, *, disc=None, opt
     # Scene conversion resolves shared emission colours/masks and liquid analysis
     # here, before any grid traces. The same native conversion feeds every bake.
     coarse, emission, source_hash = inspection(run('scene-emission', ['--inspect']))
-    if settings.enabled:
+    if settings.enabled and gameplay is not None:
         plan = seeds.plan_level(level_dir, coarse, profile, gameplay, settings.planner_options())
+    elif settings.enabled:
+        plan = {'regions': [], 'note': 'No gameplay to seed dense regions from (a scene, not a level of the disc).'}
     else:
         plan = {'regions': [], 'note': 'Dense regions disabled by the per-level profile.'}
     if len(plan['regions']) > settings.max_regions:
