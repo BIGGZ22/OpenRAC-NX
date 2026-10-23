@@ -61,8 +61,8 @@ def programs(key: str) -> dict[str, dict[str, tuple[int, bytes]]]:
     """program -> section -> (address, bytes): the executable's code and data, each level's."""
     out = {}
     for entry in version(key)["xmap"]["code"]:
-        paths = sorted(CODE_ROOT.glob(entry["glob"])) if "glob" in entry else [CODE_ROOT / entry["path"]]
-        for p in paths:
+        found = sorted(CODE_ROOT.glob(entry["glob"])) if "glob" in entry else [CODE_ROOT / entry["path"]]
+        for p in found:
             if not p.exists():
                 continue
             if entry["format"] == "elf":
