@@ -7,7 +7,7 @@ import unittest
 import zlib
 
 from disc import Disc
-from formats import FormatError, Texture, overlay_sections, span, wad
+from formats import FormatError, Texture, check, overlay_sections, span, wad
 
 
 def compressed(payload: bytes) -> bytes:
@@ -23,6 +23,14 @@ def png_chunks(data: bytes) -> dict:
         chunks[kind] = payload
         pos += 12 + size
     return chunks
+
+
+class CheckTests(unittest.TestCase):
+    def test_raises_its_message_unless_the_rule_holds(self):
+        check(True, "unused")
+        with self.assertRaises(FormatError) as caught:
+            check(False, "collision header is not the usual one")
+        self.assertEqual(str(caught.exception), "collision header is not the usual one")
 
 
 class WadTests(unittest.TestCase):

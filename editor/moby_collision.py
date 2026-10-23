@@ -39,7 +39,8 @@ import struct
 import sys
 from pathlib import Path
 
-from formats import FormatError
+from formats import FormatError, check
+from util import f32
 
 HEADER, PRIMITIVE, VERTEX, FACE = 0x10, 0x20, 8, 4
 PACKED = 1024                      # packed units per model unit
@@ -90,11 +91,6 @@ class Blob:
     faces: list[tuple[int, int, int, int]] = field(default_factory=list)
 
 
-def _check(ok: bool, message: str) -> None:
-    if not ok:
-        raise FormatError(message)
-
-
 def unused(kind: int) -> tuple:
     return UNUSED.get(kind, UNKNOWN_UNUSED)
 
@@ -140,12 +136,12 @@ def encode_primitive(p: Primitive) -> bytes:
 
 def extent(data: bytes, at: int = 0) -> int:
     """The bytes of the blob at AT, from its header (it has no size of its own)."""
-    _check(at + HEADER <= len(data), "moby collision: the header is past the data")
+    check(at + HEADER <= len(data), "moby collision: the header is past the data")
     _j0, _j1, prims, faces, verts = struct.unpack_from("<HHiii", data, at)
-    _check(prims >= 0 and faces >= 0 and verts >= 0 and prims % PRIMITIVE == 0 and faces % FACE == 0
+    check(prims >= 0 and faces >= 0 and verts >= 0 and prims % PRIMITIVE == 0 and faces % FACE == 0
            and verts % VERTEX == 0, "moby collision: a part's size is not a whole number of records")
     size = HEADER + prims + faces + verts
-    _check(at + size <= len(data), "moby collision: its parts run past the data")
+    check(at + size <= len(data), "moby collision: its parts run past the data")
     return size
 
 
@@ -212,33 +208,33 @@ def validate(blob: Blob, joint_count: int | None = None) -> None:
     n = len(blob.primitives)
     for i, p in enumerate(blob.primitives):
         what = f"moby collision: primitive {i} ({p.name})"
-        _check(p.kind in KIND_NAMES, f"{what}: kind {p.kind} is not one the game has (1 to 4)")
-        _check(p.end == (i == n - 1), f"{what}: only the last primitive carries the end bit")
-        _check(0 <= p.queries <= 0x7fff, f"{what}: its query mask is 15 bits")
-        _check(0 <= p.tag <= 0xff, f"{what}: byte 1 is a byte")
-        _check(finite(p.radius, p.height, *p.centre), f"{what}: a value is not a finite number")
-        _check(p.radius > 0, f"{what}: its radius must be above 0")
+        check(p.kind in KIND_NAMES, f"{what}: kind {p.kind} is not one the game has (1 to 4)")
+        check(p.end == (i == n - 1), f"{what}: only the last primitive carries the end bit")
+        check(0 <= p.queries <= 0x7fff, f"{what}: its query mask is 15 bits")
+        check(0 <= p.tag <= 0xff, f"{what}: byte 1 is a byte")
+        check(finite(p.radius, p.height, *p.centre), f"{what}: a value is not a finite number")
+        check(p.radius > 0, f"{what}: its radius must be above 0")
         if p.kind == CYLINDER:
-            _check(p.height > 0, f"{what}: its height must be above 0")
+            check(p.height > 0, f"{what}: its height must be above 0")
         wanted = {JOINT_SPHERE: 1, CAPSULE: 2}.get(p.kind, 0)
-        _check(len(p.joints) == wanted, f"{what}: names {len(p.joints)} joints, {wanted} wanted")
+        check(len(p.joints) == wanted, f"{what}: names {len(p.joints)} joints, {wanted} wanted")
         for j in p.joints:
             limit = min(joint_count, MAX_POSED) if joint_count is not None else MAX_POSED
-            _check(0 <= j < limit, f"{what}: joint {j} is not one of the class's {limit} joints")
+            check(0 <= j < limit, f"{what}: joint {j} is not one of the class's {limit} joints")
             for bit, count in ((POSED_QUERIES, blob.posed[0]), (OTHER_QUERIES, blob.posed[1])):
-                _check(not p.queries & bit or j < count,
+                check(not p.queries & bit or j < count,
                        f"{what}: joint {j} is past the {count} joints the header poses for its queries")
     for count in blob.posed:
-        _check(0 <= count <= MAX_POSED and (joint_count is None or count <= max(joint_count, 0)),
+        check(0 <= count <= MAX_POSED and (joint_count is None or count <= max(joint_count, 0)),
                f"moby collision: the header poses {count} joints, more than the class has")
-    _check(len(blob.vertices) <= MAX_VERTICES,
+    check(len(blob.vertices) <= MAX_VERTICES,
            f"moby collision: {len(blob.vertices)} vertices, {MAX_VERTICES} at most (the faces reach the first "
            f"{MAX_INDEXED})")
     for v in blob.vertices:
-        _check(len(v) == 4 and all(S16[0] <= c <= S16[1] for c in v),
+        check(len(v) == 4 and all(S16[0] <= c <= S16[1] for c in v),
                "moby collision: a vertex is outside the 16-bit range (32 model units from the class's origin)")
     for f in blob.faces:
-        _check(len(f) == 4 and len(set(f[:3])) == 3 and max(f[:3]) < min(len(blob.vertices), MAX_INDEXED)
+        check(len(f) == 4 and len(set(f[:3])) == 3 and max(f[:3]) < min(len(blob.vertices), MAX_INDEXED)
                and min(f) >= 0 and f[3] <= 0xff,
                "moby collision: a face names a missing vertex (or one past the 256 its byte indices reach), "
                "repeats one, or has no type byte")
@@ -284,7 +280,7 @@ def bounds(points: list[tuple]) -> tuple[tuple, tuple]:
 
 def packed(p, scale: float = 1.0) -> tuple[int, int, int]:
     q = tuple(round(c * PACKED / scale) for c in p)
-    _check(all(S16[0] <= c <= S16[1] for c in q),
+    check(all(S16[0] <= c <= S16[1] for c in q),
            "moby collision: the mesh reaches past 32 model units from the class's origin, which the "
            "vertices' 16 bits cannot hold; make it smaller or use --mode sphere / cylinder")
     return q
@@ -318,9 +314,9 @@ def generate(tris: list[tuple], mode: str = MESH, surface: int = NO_SURFACE, sca
     "box" the box around them as triangles; "sphere" one sphere around them; "cylinder" one
     upright cylinder around them. SURFACE: the type byte of the faces. The result passes validate()."""
     points = [p for t in tris for p in t]
-    _check(bool(points), "moby collision: the mesh has no triangles")
-    _check(finite(*(c for p in points for c in p)), "moby collision: the mesh has a point that is not a number")
-    _check(0 <= surface <= 0xff, "moby collision: the surface is a type byte, 0 to 255")
+    check(bool(points), "moby collision: the mesh has no triangles")
+    check(finite(*(c for p in points for c in p)), "moby collision: the mesh has a point that is not a number")
+    check(0 <= surface <= 0xff, "moby collision: the surface is a type byte, 0 to 255")
     blob = Blob()
     if mode in (MESH, "box"):
         if mode == "box":
@@ -329,7 +325,7 @@ def generate(tris: list[tuple], mode: str = MESH, surface: int = NO_SURFACE, sca
             quads = ((0, 2, 3, 1), (4, 5, 7, 6), (0, 1, 5, 4), (2, 6, 7, 3), (0, 4, 6, 2), (1, 3, 7, 5))
             tris = [t for a, b, c, d in quads for t in ((corner[a], corner[b], corner[c]), (corner[a], corner[c], corner[d]))]
         merged = cluster([tuple(packed(p, scale) for p in t) for t in tris])
-        _check(bool(merged), "moby collision: the mesh is too thin to keep any triangle")
+        check(bool(merged), "moby collision: the mesh is too thin to keep any triangle")
         with_triangles(blob, [(t, surface) for t in merged])
     elif mode in ("sphere", "cylinder"):
         lo, hi = bounds(points)
@@ -352,10 +348,6 @@ def generate(tris: list[tuple], mode: str = MESH, surface: int = NO_SURFACE, sca
     finish(blob)
     validate(blob)
     return blob
-
-
-def f32(x: float) -> float:
-    return struct.unpack("<f", struct.pack("<f", x))[0]
 
 
 def gltf_points(path: Path) -> list[tuple]:

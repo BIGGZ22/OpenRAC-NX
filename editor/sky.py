@@ -14,6 +14,7 @@ import struct
 from formats import FormatError, Texture, span, unpack
 import games
 from mesh import Mesh
+from util import cross
 
 
 @dataclass
@@ -80,10 +81,6 @@ def sky(data: bytes, fmt: games.Format = games.RAC1) -> Sky:
                 mesh.add_face(None if texture == 0xff else ("sky", texture), (first + c, first + b, first + a))
         result.shells.append(mesh)
     return result
-
-
-def cross(a, b):
-    return (a[1] * b[2] - a[2] * b[1], a[2] * b[0] - a[0] * b[2], a[0] * b[1] - a[1] * b[0])
 
 
 def unit(p):

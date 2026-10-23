@@ -16,7 +16,6 @@ when complete. Never commit or share it: see LEGAL.md.
 
 import argparse
 from concurrent.futures import Executor, ProcessPoolExecutor, ThreadPoolExecutor, as_completed
-import hashlib
 import json
 import os
 from pathlib import Path
@@ -38,6 +37,7 @@ from occlusion import write_stamp as write_pvs_stamp
 from lighting import normal_table
 from pack import pack
 from port import PortLevelWriter
+from util import sha256
 import wads
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -378,7 +378,7 @@ def raw_later(source: wads.WadDisc, level_id: int, out: Path) -> None:
     for name, data in files.items():
         (out / name).parent.mkdir(parents=True, exist_ok=True)
         (out / name).write_bytes(data)
-        manifest["files"].append({"path": name, "bytes": len(data), "sha256": hashlib.sha256(data).hexdigest()})
+        manifest["files"].append({"path": name, "bytes": len(data), "sha256": sha256(data)})
     (out / "manifest.json").write_text(json.dumps(manifest, indent=2) + "\n")
 
 
@@ -423,7 +423,7 @@ def raw(disc: Disc, survey: dict, level_id: int, out: Path) -> None:
     for name, data in files.items():
         (out / name).parent.mkdir(parents=True, exist_ok=True)
         (out / name).write_bytes(data)
-        manifest["files"].append({"path": name, "bytes": len(data), "sha256": hashlib.sha256(data).hexdigest()})
+        manifest["files"].append({"path": name, "bytes": len(data), "sha256": sha256(data)})
     (out / "manifest.json").write_text(json.dumps(manifest, indent=2) + "\n")
 
 
