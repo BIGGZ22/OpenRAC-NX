@@ -12,9 +12,9 @@
 :root[data-layout="compact"] .hero {
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto;
-  grid-template-areas:
-    "title go"
-    "steps steps";
+  /* The steps and a job's strip take rows of their own below (grid-column 1 / -1), only when
+     they are there: an empty row's gap left more room under the band than above it. */
+  grid-template-areas: "title go";
   align-items: center;
   justify-items: start;
   gap: 12px 28px;
@@ -33,6 +33,18 @@
   justify-self: end;
   margin-top: 0;
   max-width: 340px;
+  /* The main button and the menu beside it; what is said under the button is centred under the
+     button, not under the two. */
+  display: grid;
+  grid-template-columns: auto auto;
+  column-gap: 10px;
+  justify-items: center;
+}
+:root[data-layout="compact"] .hero > .go > .go-row {
+  display: contents;
+}
+:root[data-layout="compact"] .hero > .go > :not(.go-row) {
+  grid-column: 1;
 }
 :root[data-layout="compact"] .hero .big {
   font-size: 1.1875rem;
@@ -42,7 +54,7 @@
   font-size: 0.8125rem;
 }
 :root[data-layout="compact"] .hero > .steps {
-  grid-area: steps;
+  grid-column: 1 / -1;
   justify-self: stretch;
   margin: 4px 0 0;
 }
@@ -58,7 +70,7 @@
 @media (max-width: 640px) {
   :root[data-layout="compact"] .hero {
     grid-template-columns: minmax(0, 1fr);
-    grid-template-areas: "title" "go" "steps";
+    grid-template-areas: "title" "go";
     justify-items: center;
   }
   :root[data-layout="compact"] .hero > .go {
