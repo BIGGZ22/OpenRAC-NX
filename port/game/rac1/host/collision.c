@@ -20,14 +20,15 @@
  * the game's memory (PAL addresses below, read from the PAL kernels), write CollOutput, the moby query
  * stamp (+0x9C), the hit records and coll_sphere_mobys's list as the game does, and do their float work
  * in the units' arithmetic (openrac/ps2float.h: rounded toward zero, every add through the
- * adder that cuts the smaller operand to one bit below the larger one's last place first).
+ * adder that cuts the smaller operand to one bit below the larger one's last place first),
+ * reading the moby fields in the kernels' order (a moby the kernel leaves out has nothing more
+ * read).
  *
  * The joint primitives of posed classes (kinds 2 and 4: a sphere on a joint, a capsule between two;
- * most creatures are made of them) take their joints from the pose the port's own evaluator gives the
- * moby now (openrac_game_moby_chain), where the kernels call func_L00_00254218 (hand-written, not in
- * the port) through the 8-entry cache at CollOutput +4/+8/+0xC. So a moby whose matrix is not rebuilt
- * is tested in its pose of now, not the cached one. The scratchpad copies the kernels leave behind are
- * not made.
+ * most creatures are made of them) take their joints through the kernels' 8-entry pose cache at
+ * CollOutput +4/+8/+0xC, as retail does; a miss calls func_L00_00254218 to pose the moby into the
+ * cache, as retail does (the port's is host/render_native.c's, its own evaluator). The scratchpad
+ * copies the kernels leave behind are not made.
  */
 #include "rac1.h"
 #include "openrac/ps2float.h"
@@ -217,6 +218,18 @@ typedef struct {
 
 static Vert g_verts[2048];
 
+/* What the sphere and capsule kernels' register $7 holds when a pose-cache miss stores it (the
+ * entry's second word): the moby grid's address from the start of the moby pass, then, for each
+ * moby with a mesh, the vertex pass's last "above in x" bit (0 or 2, the first vertex of the last
+ * pair) and the face pass's last step: a face's second vertex's outcode word, its surface test
+ * ((flags >> 8 ^ type) & 0x1F), the capsule's top's plane distance (without flag 0x10), 0 past it
+ * (the sphere) or past the plane point (the capsule: the low word of a shifted register), and the x
+ * product of its first edge test (cross(p, e1).x * n.x) past the distance test; the capsule's test
+ * of a primitive between two joints leaves 0. After a pose (func_L00_00254218) it holds that
+ * routine's leftover, a halfword of the moby's animation key as it unpacks it: taken as 0, what it
+ * mostly is. */
+static uint32_t g_r7;
+
 /* The cell's vertices as halfwords (x << 6, y << 6, z << 4) and their outcodes against [lo, hi] with
  * 16-bit wrapping compares (psubh). */
 static void decode_vertices(const Cell* c, const int16_t lo[3], const int16_t hi[3]) {
@@ -331,28 +344,55 @@ static gaddr grid_cell(const Ctx* x, unsigned gx, unsigned gy, int* count) {
 
 typedef struct {
     gaddr m, blob;
+    int joints; /* the joint count the query takes (+0 with flag 0x4, else +2) */
+    int32_t vb; /* the mesh's vertex bytes (+0xC) */
     V3 pos;     /* +0x10 x1024 */
     V3 rows[3]; /* +0xC0, +0xD0, +0xE0 */
     float s;    /* +0x2C */
-    int nprims, nverts, nfaces;
-    gaddr prims, verts, faces;
+    int nverts, nfaces;
+    gaddr verts, faces;
 } MobyColl;
 
-static void moby_coll(gaddr m, MobyColl* c) {
+/* What the kernels read of a moby that passed the bounding-sphere test, first: the class blob's
+ * joint count for the query and its mesh's vertex bytes. A posed class (joints) is left out, before
+ * anything else of it is read, when its vertex bytes equal the "no flag 0x2" bit (`beq`: 0 with
+ * flag 0x2, a mesh-only query and no mesh). */
+static int moby_head(gaddr m, uint32_t fl, MobyColl* c) {
     c->m = m;
     c->blob = U32(m + 0x94);
+    c->joints = U16(c->blob + ((fl & 0x4) ? 0 : 2));
+    c->vb = S32(c->blob + 0xC);
+    return c->joints == 0 || c->vb != ((fl & 0x2) == 0 ? 1 : 0);
+}
+
+/* Then, past the pose cache: the moby's position, rows and scale. */
+static void moby_pose(MobyColl* c) {
+    const gaddr m = c->m;
     c->pos = vmuls(vld(m + 0x10), K1024);
     c->rows[0] = vld(m + 0xC0);
     c->rows[1] = vld(m + 0xD0);
     c->rows[2] = vld(m + 0xE0);
     c->s = F32(m + 0x2C);
-    const int32_t pb = S32(c->blob + 4), fbytes = S32(c->blob + 8), vb = S32(c->blob + 0xC);
-    c->nprims = pb / 0x20;
-    c->nverts = vb / 8;
-    c->nfaces = fbytes / 4;
-    c->prims = c->blob + 0x10;
-    c->verts = c->prims + (gaddr)pb;
-    c->faces = c->verts + (gaddr)vb;
+}
+
+/* With a mesh (vb != 0): where its vertices and faces are (the primitives' bytes, +4, before them;
+ * the face bytes, +8, after them). */
+static void moby_mesh(MobyColl* c) {
+    const int32_t pb = S32(c->blob + 4);
+    c->nverts = c->vb / 8;
+    c->verts = c->blob + 0x10 + (gaddr)pb;
+    c->faces = c->verts + (gaddr)c->vb;
+    c->nfaces = S32(c->blob + 8) / 4;
+}
+
+/* All of it in the order coll_sphere_mobys reads it. */
+static void moby_coll(gaddr m, uint32_t fl, MobyColl* c) {
+    moby_head(m, fl, c);
+    moby_pose(c);
+    c->nverts = c->nfaces = 0;
+    if (c->vb != 0) {
+        moby_mesh(c);
+    }
 }
 
 /* vmulax ACC, r0, v; vmadday ACC, r1, v; vmaddz d, r2, v. */
@@ -384,10 +424,13 @@ static int moby_mesh_verts(const MobyColl* c, V3 lo, V3 hi) {
         g_verts[i].p = p;
         g_verts[i].code = code;
     }
+    if (c->nverts > 0) {
+        g_r7 = g_verts[2 * ((n + 1) / 2 - 1)].code & 2;
+    }
     return n;
 }
 
-/* Face i of the blob, unless culled by its outcodes or the flags. */
+/* Face i of the blob, unless culled by its outcodes or the flags (face_excluded, step by step). */
 static int moby_face(const MobyColl* c, int n, int i, uint32_t fl, Vert* v, int* ty) {
     const gaddr f = c->faces + 4 * (gaddr)i;
     const int a = U8(f), b = U8(f + 1), d = U8(f + 2);
@@ -398,61 +441,103 @@ static int moby_face(const MobyColl* c, int n, int i, uint32_t fl, Vert* v, int*
     v[0] = g_verts[a];
     v[1] = g_verts[b];
     v[2] = g_verts[d];
-    return (v[0].code & v[1].code & v[2].code) == 0 && !face_excluded(fl, *ty);
+    g_r7 = v[1].code;
+    if ((v[0].code & v[1].code & v[2].code) != 0) {
+        return 0;
+    }
+    if ((fl & 0x80 & (uint32_t)*ty) != 0) {
+        return 0;
+    }
+    g_r7 = ((fl >> 8) ^ (uint32_t)*ty) & 0x1F;
+    return (fl & 0x20) == 0 || g_r7 != 0;
 }
 
-/* Whether primitive i is one this query tests (moby +0x98 disables, mask bit 0 with flag 0x4, bit 1
- * without); *last is set on the record that ends the list (mask bit 15). */
-static int prim_active(const MobyColl* c, int i, uint32_t fl, int* last) {
-    const gaddr p = c->prims + 0x20 * (gaddr)i;
-    const int16_t mask = S16(p + 2);
-    *last = mask < 0;
+/* The primitives a query tests (none with flag 0x2 or without primitive bytes, +4): the records
+ * from the blob's +0x10 on, up to the one that ends the list (mask bit 15), each unless moby +0x98
+ * disables it (bit i, the first 32) or its mask lacks the query's bit (bit 0 with flag 0x4, bit 1
+ * without). Returns the next record to test from *i (0 to start), 0 past the last. */
+#define PRIMS_MAX 0x400
+static gaddr next_prim(const MobyColl* c, uint32_t fl, int* i, int* last) {
+    if (*i == 0 && ((fl & 0x2) != 0 || S32(c->blob + 4) == 0)) {
+        return 0;
+    }
     const uint32_t disable = U32(c->m + 0x98);
-    const int off = i < 32 ? (int)((disable >> i) & 1) : 0;
     const int sel = (fl & 0x4) ? 1 : 2;
-    return !off && (sel & mask) != 0;
+    while (!*last && *i < PRIMS_MAX) {
+        const int k = (*i)++;
+        const gaddr p = c->blob + 0x10 + 0x20 * (gaddr)k;
+        const int16_t mask = S16(p + 2);
+        *last = mask < 0;
+        if ((k < 32 && ((disable >> k) & 1) != 0) || (sel & mask) == 0) {
+            continue;
+        }
+        return p;
+    }
+    return 0;
 }
 
-static inline int joint_count(const MobyColl* c, uint32_t fl) { return U16(c->blob + ((fl & 0x4) ? 0 : 2)); }
+/* ---- Joints: the kernels' pose cache ----
+ *
+ * The joints of posed classes come through 8 entries in CollOutput: +4 their buffers (0x800 bytes,
+ * a joint's position in 0x10, model units), +8 the entries ({key, word}), +0xC the entry the next
+ * miss fills. The key is the moby's +0xA8, which its matrix rebuild bumps, so a moby whose matrix
+ * is not rebuilt is tested in the pose it was cached in. A miss poses the moby's first `count`
+ * joints into the entry's buffer (func_L00_00254218 with it); the entry's second word is whatever
+ * the kernel's register $7 holds: the line query's stamp, in the sphere and capsule kernels g_r7.
+ */
+#define JOINT_MAX 0x7F
+#define JOINT_SLOT 0x800
+/* The buffer the kernel reads joints from (its $16): the last moby's with joints, none (zeros)
+ * before. */
+static gaddr g_joints;
 
-/* The joints of the moby being tested, model units: the translation rows of its posed joint matrices
- * (pose_joints). */
-#define JOINT_MAX 128
-static V3 g_joints[JOINT_MAX];
-static int g_joint_count;
-
-/* Poses the first `count` joints of the moby (the blob's count for this kind of query): the port's
- * evaluator writes each marked joint's matrix to the scratchpad, 0x40 bytes a joint, which is put back
- * as it was. */
-static void pose_joints(const MobyColl* c, uint32_t fl) {
-    static gaddr marks;
+/* Poses the first `count` joints of moby m into dest: the kernels' call of func_L00_00254218 (moby,
+ * count, the entry's buffer), which leaves each joint's position in the scratchpad and in dest,
+ * 0x10 bytes a joint (the port's: host/render_native.c, the chain evaluator); the kernel then reads
+ * them there, the same as in dest. The scratchpad is put back as it was (the kernels' scratchpad
+ * copies are not made). */
+static void pose_into(gaddr m, int count, gaddr dest) {
     static uint8_t kept[JOINT_MAX * 0x40];
-    int count = joint_count(c, fl);
-    g_joint_count = 0;
-    if (count <= 0) {
-        return;
+    if (count > JOINT_MAX) {
+        count = JOINT_MAX;
     }
-    if (count > 0x7F) {
-        count = 0x7F;
-    }
-    if (marks == 0) {
-        marks = openrac_guest_static(0x80);
-    }
-    memset(G(marks), 0, 0x80);
-    memset(G(marks), 1, (size_t)count);
-    U8(marks + 0x7F) = (uint8_t)count;
     const gaddr spr = 0x70000000u;
     memcpy(kept, G(spr), (size_t)count * 0x40);
-    memset(G(spr), 0, (size_t)count * 0x40);
-    openrac_game_moby_chain(c->m, marks);
-    for (int j = 0; j < count; ++j) {
-        g_joints[j] = vld(spr + (gaddr)j * 0x40 + 0x30);
-    }
+    func_L00_00254218(m, count, (int)dest);
     memcpy(G(spr), kept, (size_t)count * 0x40);
-    g_joint_count = count;
 }
 
-static inline V3 joint_at(int j) { return j >= 0 && j < g_joint_count ? g_joints[j] : v3(0.0f, 0.0f, 0.0f); }
+/* The moby's joints for a query that tests `count` of them (none: the buffer stays the last one's).
+ */
+static void moby_joints(const Ctx* x, const MobyColl* c, int count, uint32_t word) {
+    if (count == 0) {
+        return;
+    }
+    const uint32_t key = U32(c->m + 0xA8);
+    const gaddr tags = U32(x->out + 8), data = U32(x->out + 4);
+    for (gaddr e = 0; e < 8; ++e) {
+        if (U32(tags + 8 * e) == key) {
+            g_joints = data + JOINT_SLOT * e;
+            return;
+        }
+    }
+    const uint32_t e = U32(x->out + 0xC);
+    U32(x->out + 0xC) = (e + 1) & 7;
+    U32(tags + 8 * e) = key;
+    U32(tags + 8 * e + 4) = word;
+    g_joints = data + JOINT_SLOT * e;
+    pose_into(c->m, count, g_joints);
+    g_r7 = 0;
+}
+
+/* Joint j of the buffer (an index past it reads as zeros, where the kernel would read on). */
+static inline gaddr joint_addr(int j) {
+    return g_joints != 0 && j >= 0 && j < JOINT_SLOT / 0x10 ? g_joints + 0x10 * (gaddr)j : 0;
+}
+static inline V3 joint_at(int j) {
+    const gaddr a = joint_addr(j);
+    return a != 0 ? vld(a) : v3(0.0f, 0.0f, 0.0f);
+}
 
 /* The sphere / capsule kernels' primitive point nearest the query point (a capsule's base) and its
  * radius: kind 1 a sphere, 2 a sphere on a joint, 3 a vertical cylinder, any other a capsule between
@@ -493,6 +578,7 @@ static int vol_prim(const MobyColl* c, gaddr p, V3 cq, int capsule, V3* cc, floa
     }
     /* A capsule query: the closest point in x/y, or the base's height clamped to the segment when
      * the segment is upright (|e.xy|^2 <= 1), the top taken again as e + a. */
+    g_r7 = 0; /* qmfc2 of the upright test, shifted up a word */
     const float wd = fadd(fmul(w.v[0], e.v[0]), fmul(w.v[1], e.v[1]));
     const float ee = fadd(fmul(e.v[0], e.v[0]), fmul(e.v[1], e.v[1]));
     if (!neg(fsub(1.0f, fabsf(ee)))) {
@@ -628,6 +714,7 @@ static int sphere_tri(uint32_t fl, V3 c_rel, V3 v0, V3 v1, V3 v2, float best, V3
     const float s = dot(w, n);
     const float nn = dot(n, n);
     const float q = fdiv(s, nn);
+    g_r7 = 0;
     if ((fl & 0x10) == 0 && neg(s)) {
         return 0;
     }
@@ -635,6 +722,9 @@ static int sphere_tri(uint32_t fl, V3 c_rel, V3 v0, V3 v1, V3 v2, float best, V3
     const V3 p = vmadds(w, vsub(vzero(), n), q);
     const V3 sq = vmul(nq, nq);
     const float d2 = fadd(fadd(sq.v[0], sq.v[1]), sq.v[2]);
+    if (!neg(fsub(best, d2))) {
+        g_r7 = fb(fmul(cross(p, e1).v[0], n.v[0]));
+    }
     if (!closest_on_triangle(p, d2, w, e1, e2, n, best, pt, d2o)) {
         return 0;
     }
@@ -655,8 +745,11 @@ static int capsule_tri(uint32_t fl, V3 c_rel, float h, V3 v0, V3 v1, V3 v2, floa
     const V3 n = cross(e2, e1);
     const float sb = dot(bot, n);
     const float st = dot(top, n);
-    if ((fl & 0x10) == 0 && neg(sb) && neg(st)) {
-        return 0;
+    if ((fl & 0x10) == 0) {
+        g_r7 = fb(st);
+        if (neg(sb) && neg(st)) {
+            return 0;
+        }
     }
     const float nn = dot(n, n);
     V3 axis, nq;
@@ -705,6 +798,7 @@ static int capsule_tri(uint32_t fl, V3 c_rel, float h, V3 v0, V3 v1, V3 v2, floa
     const V3 sq = vmul(nq, nq);
     const float d2 = fadd(fadd(sq.v[0], sq.v[1]), sq.v[2]);
     const V3 p = vsub(axis, nq);
+    g_r7 = neg(fsub(best, d2)) ? 0 : fb(fmul(cross(p, e1).v[0], n.v[0]));
     if (!closest_on_triangle(p, d2, axis, e1, e2, n, best, pt, d2o)) {
         return 0;
     }
@@ -994,12 +1088,13 @@ static void line_mobys(const Ctx* x, uint32_t stamp, uint32_t fl, V3 a, V3 b, V3
             }
             U32(m + 0x9C) = stamp;
             MobyColl c;
-            moby_coll(m, &c);
-            if (joint_count(&c, fl) != 0 && (fl & 0x2) != 0 && c.nverts == 0) {
+            if (!moby_head(m, fl, &c)) {
                 continue;
             }
-            pose_joints(&c, fl);
-            if (c.nverts != 0) {
+            moby_joints(x, &c, c.joints, stamp);
+            moby_pose(&c);
+            if (c.vb != 0) {
+                moby_mesh(&c);
                 const V3 a_rel = vsub(a, c.pos);
                 const V3 b_rel = vsub(b, c.pos);
                 V3 lo, hi;
@@ -1023,23 +1118,13 @@ static void line_mobys(const Ctx* x, uint32_t stamp, uint32_t fl, V3 a, V3 b, V3
                     record(best, ty, p, nrm, v[0].p, e1, e2, c.pos, m);
                 }
             }
-            if (fl & 0x2) {
-                continue;
-            }
-            for (int i = 0; i < c.nprims; ++i) {
-                int last;
-                const int on = prim_active(&c, i, fl, &last);
-                if (on) {
-                    const gaddr p = c.prims + 0x20 * (gaddr)i;
-                    float t2;
-                    V3 hit, nrm;
-                    if (line_prim(&c, p, a, b, *best_t, &t2, &hit, &nrm)) {
-                        *best_t = fadd(0.0f, t2);
-                        prim_best(best, p, hit, nrm, m);
-                    }
-                }
-                if (last) {
-                    break;
+            int i = 0, last = 0;
+            for (gaddr p; (p = next_prim(&c, fl, &i, &last)) != 0;) {
+                float t2;
+                V3 hit, nrm;
+                if (line_prim(&c, p, a, b, *best_t, &t2, &hit, &nrm)) {
+                    *best_t = fadd(0.0f, t2);
+                    prim_best(best, p, hit, nrm, m);
                 }
             }
         }
@@ -1091,6 +1176,7 @@ static int coll_line(const Ctx* x, gaddr pa, gaddr pb, uint32_t fl, gaddr ignore
     for (int k = 0; k < 3; ++k) {
         best.tri[k] = vmuls(vld(x->out + 0x50 + 0x10 * (gaddr)k), K1024);
     }
+    g_joints = 0;
     if ((fl & 0x1) == 0) {
         line_world(U32(x->out), fl, a1024, b1024, d, n, &best_t, &best);
     }
@@ -1174,6 +1260,7 @@ static void volume_mobys(const Ctx* x, uint32_t stamp, uint32_t fl, const Volume
     const float r = vol->r1024;
     const float h = vol->h1024;
     const float shrink = best_shrink();
+    g_r7 = x->grid;
     unsigned lo[2], hi[2];
     for (int k = 0; k < 2; ++k) {
         lo[k] = (uint32_t)ftoi0(vol->lo1024.v[k]) >> 14;
@@ -1208,12 +1295,13 @@ static void volume_mobys(const Ctx* x, uint32_t stamp, uint32_t fl, const Volume
                 }
                 U32(m + 0x9C) = stamp;
                 MobyColl mc;
-                moby_coll(m, &mc);
-                if (joint_count(&mc, fl) != 0 && (fl & 0x2) != 0 && mc.nverts == 0) {
+                if (!moby_head(m, fl, &mc)) {
                     continue;
                 }
-                pose_joints(&mc, fl);
-                if (mc.nverts != 0) {
+                moby_joints(x, &mc, mc.joints, g_r7);
+                moby_pose(&mc);
+                if (mc.vb != 0) {
+                    moby_mesh(&mc);
                     const V3 c_rel = vsub(c, mc.pos);
                     V3 vlo, vhi;
                     for (int k = 0; k < 3; ++k) {
@@ -1244,30 +1332,19 @@ static void volume_mobys(const Ctx* x, uint32_t stamp, uint32_t fl, const Volume
                         record(best, ty, pt, nrm, v[0].p, e1, e2, mc.pos, m);
                     }
                 }
-                if (fl & 0x2) {
-                    continue;
-                }
-                for (int i = 0; i < mc.nprims; ++i) {
-                    int last;
-                    const int on = prim_active(&mc, i, fl, &last);
-                    if (on) {
-                        const gaddr p = mc.prims + 0x20 * (gaddr)i;
-                        V3 cc, pt, off;
-                        float rad, d2;
-                        if (vol_prim(&mc, p, c, vol->capsule, &cc, &rad)) {
-                            V3 from = c;
-                            if (vol->capsule) {
-                                from.v[2] =
-                                    fadd(c.v[2], fmax2(fmin2(fsub(cc.v[2], c.v[2]), h), 0.0f));
-                            }
-                            if (vol_prim_test(from, r, cc, rad, *best_d, &pt, &off, &d2)) {
-                                *best_d = fmul(d2, 1.0f);
-                                prim_best(best, p, pt, off, m);
-                            }
+                int i = 0, last = 0;
+                for (gaddr p; (p = next_prim(&mc, fl, &i, &last)) != 0;) {
+                    V3 cc, pt, off;
+                    float rad, d2;
+                    if (vol_prim(&mc, p, c, vol->capsule, &cc, &rad)) {
+                        V3 from = c;
+                        if (vol->capsule) {
+                            from.v[2] = fadd(c.v[2], fmax2(fmin2(fsub(cc.v[2], c.v[2]), h), 0.0f));
                         }
-                    }
-                    if (last) {
-                        break;
+                        if (vol_prim_test(from, r, cc, rad, *best_d, &pt, &off, &d2)) {
+                            *best_d = fmul(d2, 1.0f);
+                            prim_best(best, p, pt, off, m);
+                        }
                     }
                 }
             }
@@ -1292,6 +1369,7 @@ static int coll_volume(const Ctx* x, float radius, float height, gaddr centre, u
     for (int k = 0; k < 3; ++k) {
         best.tri[k] = vmuls(vld(x->out + 0x50 + 0x10 * (gaddr)k), K1024);
     }
+    g_joints = 0;
     const gaddr mesh = U32(x->out);
     if ((fl & 0x1) == 0) {
         int lo[3], hi[3];
@@ -1454,6 +1532,8 @@ int func_L00_001F2BE8(float a0, gaddr a1, int a2, gaddr a3, gaddr a4) {
     int result = 0;
     const int64_t stamp = new_stamp(x->out);
     Volume vol;
+    g_joints = 0;
+    g_r7 = x->grid;
     if (stamp >= 0 && volume_new(&vol, a1, a0, 0.0f, 0)) {
         const V3 c = vol.c1024;
         const float r = vol.r1024;
@@ -1482,8 +1562,8 @@ int func_L00_001F2BE8(float a0, gaddr a1, int a2, gaddr a3, gaddr a4) {
                     }
                     U32(m + 0x9C) = (uint32_t)stamp;
                     MobyColl mc;
-                    moby_coll(m, &mc);
-                    pose_joints(&mc, fl);
+                    moby_coll(m, fl, &mc);
+                    moby_joints(x, &mc, mc.joints, g_r7);
                     int hit = 0;
                     if (mc.nverts != 0) {
                         const V3 c_rel = vsub(c, mc.pos);
@@ -1504,19 +1584,13 @@ int func_L00_001F2BE8(float a0, gaddr a1, int a2, gaddr a3, gaddr a4) {
                             }
                         }
                     }
-                    for (int i = 0; i < mc.nprims && !hit; ++i) {
-                        int last;
-                        const int on = prim_active(&mc, i, fl, &last);
-                        if (on) {
-                            V3 cc, pt, off;
-                            float rad, d2;
-                            const gaddr p = mc.prims + 0x20 * (gaddr)i;
-                            if (vol_prim(&mc, p, c, 0, &cc, &rad) && vol_prim_test(c, r, cc, rad, best, &pt, &off, &d2)) {
-                                hit = 1;
-                            }
-                        }
-                        if (last) {
-                            break;
+                    int i = 0, last = 0;
+                    for (gaddr p; !hit && (p = next_prim(&mc, fl & ~0x2u, &i, &last)) != 0;) {
+                        V3 cc, pt, off;
+                        float rad, d2;
+                        if (vol_prim(&mc, p, c, 0, &cc, &rad)
+                            && vol_prim_test(c, r, cc, rad, best, &pt, &off, &d2)) {
+                            hit = 1;
                         }
                     }
                     if (hit) {
