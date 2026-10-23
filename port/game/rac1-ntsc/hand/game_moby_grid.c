@@ -80,9 +80,12 @@ static int exe_grid_contains(unsigned int rect, int x, int y) {
 }
 
 static int exe_grid_valid(unsigned int rect) {
+    /* As PAL's copy: retail checks no range, and column 64 of a row is column 0 of the next
+     * (x * 4 + y * 256); only a cell past the table's end (row 64, or column 64 of row 63) is
+     * fatal. */
     return (rect & 0x80000000u) || ((rect & 255) <= ((rect >> 16) & 255)
         && ((rect >> 8) & 255) <= (rect >> 24)
-        && ((rect >> 16) & 255) < 64 && (rect >> 24) < 64);
+        && ((rect >> 16) & 255) <= 64 && (rect >> 24) * 64 + ((rect >> 16) & 255) < 4096);
 }
 
 void FUN_0020dc20(unsigned char* moby, unsigned int next) {
