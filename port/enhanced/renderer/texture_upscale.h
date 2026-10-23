@@ -20,8 +20,9 @@ void install_texture_upscaler(renderer::TexturePool& textures);
 // Immutable 2x RGB textures. Original alpha, mipmaps and non-colour uses stay in the pool.
 class TextureUpscaler final : public renderer::UpscaledTextureColours {
 public:
-    unsigned prepare(unsigned source, int width, int height, unsigned wrap, std::uint64_t frame)
-        override;
+    unsigned prepare(
+        unsigned source, int width, int height, unsigned wrap, std::uint64_t frame
+    ) override;
     void forget(unsigned source) override;
     void release() override;
 

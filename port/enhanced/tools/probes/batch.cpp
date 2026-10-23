@@ -216,7 +216,8 @@ void run_probe_batch(
     }
 
     if (probe_input_hash(level.dir) != options.source_snapshot) {
-        throw std::runtime_error("source level changed during the bake; no manifest was registered"
+        throw std::runtime_error(
+            "source level changed during the bake; no manifest was registered"
         );
     }
 

@@ -230,8 +230,9 @@ void test_sun_visibility() {
     }
 
     const auto lit = bake_probes(grid, scene, settings);
-    CHECK(std::any_of(lit.irradiance.begin(), lit.irradiance.end(), [](auto c) { return c[0] > 0; })
-    );
+    CHECK(std::any_of(lit.irradiance.begin(), lit.irradiance.end(), [](auto c) {
+        return c[0] > 0;
+    }));
     scene.textures.push_back({1, 1, {255, 255, 255, 127}});
 
     for (auto roof : box({-200, -200, 4}, {200, 200, 5})) {
@@ -269,8 +270,9 @@ void test_emitter_visibility(bool area) {
     }
 
     const auto lit = bake_probes(grid, scene, settings);
-    CHECK(std::any_of(lit.irradiance.begin(), lit.irradiance.end(), [](auto c) { return c[0] > 0; })
-    );
+    CHECK(std::any_of(lit.irradiance.begin(), lit.irradiance.end(), [](auto c) {
+        return c[0] > 0;
+    }));
     BakeTriangle blocker{};
     blocker.vertices = {Float3{-10, -10, 3}, Float3{10, -10, 3}, Float3{0, 10, 3}};
     scene.triangles.push_back(blocker);
