@@ -12,6 +12,12 @@
 //! window class names the bundle's identifier (`dev.openrac.launcher`, `dev.openrac.rac1-pal`).
 //! Only one of the two shows in the menu (the other is `NoDisplay`), so nothing is listed twice.
 //!
+//! A game's entries carry the name the port gives its window and its own entries
+//! (`port/cmake/Games.cmake`): the game's title in the catalogue (`games/<game>/game.json`), with
+//! the disc's video standard when the version names one, `Ratchet & Clank (PAL)`. The launcher
+//! knows no game by name (`docs/ARCHITECTURE.md`, rule 1), so both writers agree on every game the
+//! checkout describes.
+//!
 //! [`ensure_launcher`] and [`ensure_games`] read the environment (`$HOME`, `$APPIMAGE`, `$APPDIR`,
 //! the program's own path) and run the cache tools; the work under them takes its folders as
 //! arguments ([`Places`]), so the tests write into a temporary folder and run no program. It is
@@ -19,6 +25,7 @@
 
 use std::path::{Path, PathBuf};
 
+use crate::catalog::Catalog;
 use crate::detect;
 
 /// Where a desktop looks for applications' entries and icons.
@@ -164,16 +171,27 @@ pub fn ensure_launcher(icons: &[Icon]) {
 
 // ---- The games ------------------------------------------------------------------------------
 
-/// The menu's name for the port's game `game_id` (a folder of `port/game/`).
-pub fn game_title(game_id: &str) -> &'static str {
-    match game_id {
-        "rac1-pal" => "Ratchet & Clank (PAL)",
-        "rac1-ntsc" => "Ratchet & Clank (NTSC)",
-        "rac2-ntsc" => "Ratchet & Clank: Going Commando (NTSC)",
-        "rac3-ntsc" => "Ratchet & Clank: Up Your Arsenal (NTSC)",
-        "rac4-ntsc" => "Ratchet: Deadlocked (NTSC)",
-        _ => "Ratchet & Clank",
-    }
+/// The menu's name for a port game the catalogue does not describe (no `games/<game>/game.json`
+/// for its id, or a catalogue that could not be read).
+pub const UNKNOWN_GAME_TITLE: &str = "Ratchet & Clank";
+
+/// The menu's name for the port's game `game_id` (a folder of `port/game/`, `<game>-<version>`),
+/// by the port's own rule (`port/cmake/Games.cmake`): the title of the game `<game>` in `catalog`,
+/// followed by ` (<video>)` when its version `<version>` names the disc's video standard. The
+/// game's title, not the region's (`titles`), as the port's is. [`UNKNOWN_GAME_TITLE`] for a game
+/// the catalogue lacks.
+pub fn game_title(catalog: &Catalog, game_id: &str) -> String {
+    catalog
+        .games
+        .iter()
+        .find_map(|game| {
+            let version = game_id.strip_prefix(game.id.as_str())?.strip_prefix('-')?;
+            Some(match game.videos.get(version) {
+                Some(video) => format!("{} ({video})", game.title),
+                None => game.title.clone(),
+            })
+        })
+        .unwrap_or_else(|| UNKNOWN_GAME_TITLE.to_string())
 }
 
 /// A game's `.desktop` entry: `title` in the menu, the icon `icon`, starting `program`, for the
@@ -189,9 +207,9 @@ pub fn game_entry(title: &str, icon: &str, program: &Path, wm_class: &str, hidde
 /// Writes, into `places`, the icon and the two entries of every game of the checkout `root` that
 /// has an icon (`port/game/<id>/icon.png`): `dev.openrac.<id>` in the menu and `openrac-<id>`
 /// hidden, both starting the release build `port/build/release/openrac-<id>`, so the taskbar
-/// shows the game's icon whether the launcher or the player started it. What it wrote, for
-/// [`refresh`].
-pub fn write_games(places: &Places, root: &Path) -> Changed {
+/// shows the game's icon whether the launcher or the player started it. The entries are named
+/// from `catalog`, the checkout's ([`game_title`]). What it wrote, for [`refresh`].
+pub fn write_games(places: &Places, root: &Path, catalog: &Catalog) -> Changed {
     let _ = std::fs::create_dir_all(&places.applications);
     let mut changed = Changed::default();
     let Ok(entries) = std::fs::read_dir(root.join("port/game")) else { return changed };
@@ -214,21 +232,22 @@ pub fn write_games(places: &Places, root: &Path) -> Changed {
         changed.icons |= write_if_changed(&dir.join(format!("{prog_id}.png")), &bytes);
 
         let program = root.join(format!("port/build/release/openrac-{game_id}"));
-        let title = game_title(&game_id);
+        let title = game_title(catalog, &game_id);
         changed.entries |= write_if_changed(
             &places.applications.join(format!("{app_id}.desktop")),
-            game_entry(title, &app_id, &program, &app_id, false).as_bytes(),
+            game_entry(&title, &app_id, &program, &app_id, false).as_bytes(),
         );
         changed.entries |= write_if_changed(
             &places.applications.join(format!("{prog_id}.desktop")),
-            game_entry(title, &app_id, &program, &prog_id, true).as_bytes(),
+            game_entry(&title, &app_id, &program, &prog_id, true).as_bytes(),
         );
     }
     changed
 }
 
 /// The menu entries and icons of the checkout `root`'s games for this user, kept current (see
-/// [`write_games`]). Not for the copy inside an AppImage: it is mounted afresh at each start, so
+/// [`write_games`]), named from the checkout's catalogue; one that cannot be read names every game
+/// [`UNKNOWN_GAME_TITLE`], it does not stop the entries. Not for the copy inside an AppImage: it is mounted afresh at each start, so
 /// an entry would name a folder that is gone once the launcher exits. Nothing happens without
 /// `$HOME`.
 pub fn ensure_games(root: &Path) {
@@ -236,7 +255,8 @@ pub fn ensure_games(root: &Path) {
         return;
     }
     let Some(places) = Places::from_env() else { return };
-    let changed = write_games(&places, root);
+    let catalog = crate::catalog::load(root).unwrap_or_else(|_| Catalog { games: Vec::new() });
+    let changed = write_games(&places, root, &catalog);
     refresh(&places, changed);
 }
 
@@ -248,6 +268,30 @@ mod tests {
 
     fn read(path: PathBuf) -> String {
         std::fs::read_to_string(&path).unwrap_or_else(|e| panic!("{}: {e}", path.display()))
+    }
+
+    /// A catalogue of made-up games, read from a `games/<game>/game.json` in `root`: `rac9` names
+    /// its PAL disc's video standard and its NTSC one does not; `rac8` titles its PAL version
+    /// apart. Not the real games', so a renamed game cannot break these tests.
+    fn test_catalog(root: &Path) -> Catalog {
+        for (id, manifest) in [
+            (
+                "rac9",
+                r#"{"id": "rac9", "title": "Nine",
+                    "versions": {"pal": {"disc": {"file": "nine.iso", "video": "PAL"}},
+                                 "ntsc": {"disc": {"file": "nine-us.iso"}}}}"#,
+            ),
+            (
+                "rac8",
+                r#"{"id": "rac8", "title": "Eight", "titles": {"pal": "Eight (EU)"},
+                    "versions": {"pal": {"disc": {"file": "eight.iso", "video": "PAL"}}}}"#,
+            ),
+        ] {
+            let dir = root.join("games").join(id);
+            std::fs::create_dir_all(&dir).unwrap();
+            std::fs::write(dir.join("game.json"), manifest).unwrap();
+        }
+        crate::catalog::load(root).unwrap()
     }
 
     #[test]
@@ -332,40 +376,41 @@ mod tests {
     #[test]
     fn each_game_with_an_icon_gets_its_icon_and_two_entries() {
         let root = tempfile::tempdir().unwrap();
-        let game = root.path().join("port/game/rac1-pal");
+        let catalog = test_catalog(root.path());
+        let game = root.path().join("port/game/rac9-pal");
         std::fs::create_dir_all(&game).unwrap();
-        std::fs::write(game.join("icon.png"), b"rac1 icon").unwrap();
+        std::fs::write(game.join("icon.png"), b"rac9 icon").unwrap();
         // A game without an icon, and a file among the games, are passed over.
         std::fs::create_dir_all(root.path().join("port/game/common")).unwrap();
         std::fs::write(root.path().join("port/game/README.md"), b"").unwrap();
 
         let home = tempfile::tempdir().unwrap();
         let places = Places::in_home(home.path());
-        assert_eq!(write_games(&places, root.path()), Changed { icons: true, entries: true });
+        assert_eq!(write_games(&places, root.path(), &catalog), Changed { icons: true, entries: true });
 
         let apps = places.icons.join("512x512/apps");
-        for name in ["dev.openrac.rac1-pal.png", "openrac-rac1-pal.png"] {
-            assert_eq!(std::fs::read(apps.join(name)).unwrap(), b"rac1 icon", "{name}");
+        for name in ["dev.openrac.rac9-pal.png", "openrac-rac9-pal.png"] {
+            assert_eq!(std::fs::read(apps.join(name)).unwrap(), b"rac9 icon", "{name}");
         }
         let mut written: Vec<_> = std::fs::read_dir(&places.applications)
             .unwrap()
             .map(|e| e.unwrap().file_name().to_string_lossy().to_string())
             .collect();
         written.sort();
-        assert_eq!(written, ["dev.openrac.rac1-pal.desktop", "openrac-rac1-pal.desktop"]);
+        assert_eq!(written, ["dev.openrac.rac9-pal.desktop", "openrac-rac9-pal.desktop"]);
 
-        let exec = detect::desktop_exec(&root.path().join("port/build/release/openrac-rac1-pal"));
+        let exec = detect::desktop_exec(&root.path().join("port/build/release/openrac-rac9-pal"));
         let shown = format!(
-            "[Desktop Entry]\nType=Application\nName=Ratchet & Clank (PAL)\n\
-             Comment=Play Ratchet & Clank (PAL) with OpenRAC\nExec={exec}\nIcon=dev.openrac.rac1-pal\n\
-             Terminal=false\nCategories=Game;\nStartupNotify=true\nStartupWMClass=dev.openrac.rac1-pal\n"
+            "[Desktop Entry]\nType=Application\nName=Nine (PAL)\n\
+             Comment=Play Nine (PAL) with OpenRAC\nExec={exec}\nIcon=dev.openrac.rac9-pal\n\
+             Terminal=false\nCategories=Game;\nStartupNotify=true\nStartupWMClass=dev.openrac.rac9-pal\n"
         );
-        assert_eq!(read(places.applications.join("dev.openrac.rac1-pal.desktop")), shown);
-        let hidden = shown.replace("StartupWMClass=dev.openrac.rac1-pal\n", "StartupWMClass=openrac-rac1-pal\n")
+        assert_eq!(read(places.applications.join("dev.openrac.rac9-pal.desktop")), shown);
+        let hidden = shown.replace("StartupWMClass=dev.openrac.rac9-pal\n", "StartupWMClass=openrac-rac9-pal\n")
             + "NoDisplay=true\n";
-        assert_eq!(read(places.applications.join("openrac-rac1-pal.desktop")), hidden);
+        assert_eq!(read(places.applications.join("openrac-rac9-pal.desktop")), hidden);
 
-        assert_eq!(write_games(&places, root.path()), Changed::default());
+        assert_eq!(write_games(&places, root.path(), &catalog), Changed::default());
     }
 
     #[test]
@@ -373,15 +418,31 @@ mod tests {
         let root = tempfile::tempdir().unwrap();
         let home = tempfile::tempdir().unwrap();
         let places = Places::in_home(home.path());
-        assert_eq!(write_games(&places, root.path()), Changed::default());
+        assert_eq!(write_games(&places, root.path(), &test_catalog(root.path())), Changed::default());
         assert!(places.applications.is_dir());
         assert!(!places.icons.exists());
     }
 
     #[test]
-    fn every_game_has_a_title() {
-        assert_eq!(game_title("rac2-ntsc"), "Ratchet & Clank: Going Commando (NTSC)");
-        assert_eq!(game_title("rac4-ntsc"), "Ratchet: Deadlocked (NTSC)");
-        assert_eq!(game_title("rac9-pal"), "Ratchet & Clank");
+    fn a_games_title_is_the_catalogues_with_the_discs_video_standard() {
+        let root = tempfile::tempdir().unwrap();
+        let catalog = test_catalog(root.path());
+        assert_eq!(game_title(&catalog, "rac9-pal"), "Nine (PAL)");
+        // A version whose disc names no video standard: the game's title alone.
+        assert_eq!(game_title(&catalog, "rac9-ntsc"), "Nine");
+        // The game's title, not the region's, as the port's window has it.
+        assert_eq!(game_title(&catalog, "rac8-pal"), "Eight (PAL)");
+        // A version the catalogue lacks still has its game's title, as the port's does.
+        assert_eq!(game_title(&catalog, "rac8-ntsc"), "Eight");
+    }
+
+    #[test]
+    fn a_game_the_catalogue_lacks_gets_the_neutral_title() {
+        let root = tempfile::tempdir().unwrap();
+        let catalog = test_catalog(root.path());
+        for game_id in ["rac7-pal", "rac9", "rac90-pal", "common"] {
+            assert_eq!(game_title(&catalog, game_id), UNKNOWN_GAME_TITLE, "{game_id}");
+        }
+        assert_eq!(game_title(&Catalog { games: Vec::new() }, "rac9-pal"), UNKNOWN_GAME_TITLE);
     }
 }

@@ -26,6 +26,11 @@ pub struct Game {
     pub year: Option<u32>,
     /// Names other regions released the game under (`"pal": "Ratchet: Gladiator"`).
     pub titles: BTreeMap<String, String>,
+    /// The disc's video standard of each version whose game.json names one
+    /// (`versions.<v>.disc.video`, `"pal": "PAL"`), which the game's name carries on the desktop
+    /// (`desktop::game_title`). Kept beside `titles`, keyed the same way; not sent to the UI.
+    #[serde(skip)]
+    pub videos: BTreeMap<String, String>,
     pub versions: Vec<Version>,
 }
 
@@ -248,7 +253,11 @@ fn read_summary(root: &Path, cache: Option<&Path>) -> BTreeMap<String, RawSummar
 
 fn game(raw: RawGame, summary: &BTreeMap<String, RawSummaryRow>) -> Result<Game, String> {
     let mut versions = Vec::new();
+    let mut videos = BTreeMap::new();
     for (name, value) in raw.versions {
+        if let Some(video) = value.pointer("/disc/video").and_then(serde_json::Value::as_str) {
+            videos.insert(name.clone(), video.to_string());
+        }
         let v: RawVersion = serde_json::from_value(value).map_err(|e| format!("version {name}: {e}"))?;
         versions.push({
             let key = format!("{}/{}", raw.id, name);
@@ -275,7 +284,7 @@ fn game(raw: RawGame, summary: &BTreeMap<String, RawSummaryRow>) -> Result<Game,
             }
         });
     }
-    Ok(Game { id: raw.id, title: raw.title, year: raw.year, titles: raw.titles, versions })
+    Ok(Game { id: raw.id, title: raw.title, year: raw.year, titles: raw.titles, videos, versions })
 }
 
 /// One project of bytematch.dev's /api/v1/projects: where it is, the version its figures are for,
