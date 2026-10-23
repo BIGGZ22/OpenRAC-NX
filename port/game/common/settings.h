@@ -97,6 +97,11 @@ struct Settings {
     bool mute_unfocused = false;  // silence while another window has the keyboard
     bool skip_cutscenes = true;   // Start skips an in-game cutscene (without the game's L1 L2 R1 R2 hold)
     int volume = 100;  // of everything the port plays, 0 (nothing at all) to 100 (as mixed)
+    // The on-screen pad (platform/touch_pad.h): its controls' size and the camera's speed, in
+    // percent of the pad's own, and where the player moved its groups (TouchPad::layout()).
+    int touch_scale = 75;
+    int touch_camera = 100;
+    std::string touch_layout;
     bool verbose_log = false;  // the detailed log (as OPENRAC_LOG=verbose): level loads, pad changes, callers
 };
 
@@ -130,6 +135,11 @@ inline constexpr int kFrameCapMax = 1000;
 inline constexpr int kRenderScales[] = {50, 75, 100, 125, 150, 200};
 inline constexpr int kSampleCounts[] = {1, 2, 4, 8, 16};
 inline constexpr int kAnisotropies[] = {1, 2, 4, 8, 16};
+
+// What the drawer offers for the on-screen pad's size and camera speed, in percent; a file may
+// hold any whole number between the first and the last.
+inline constexpr int kTouchScales[] = {50, 60, 70, 75, 80, 90, 100, 110, 125, 150};
+inline constexpr int kTouchCameraSpeeds[] = {25, 50, 75, 100, 125, 150, 200, 250, 300};
 
 // What the options page shows for a value.
 const char* name(DisplayMode mode);

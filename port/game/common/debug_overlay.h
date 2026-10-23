@@ -98,6 +98,14 @@ double tick_stretch();
 bool drawer_available();
 void toggle_drawer();
 
+// The on-screen pad's layout (platform/touch_pad.h): the drawer's Touch controls, "Move the
+// controls", shuts the drawer and leaves the game paused while the player drags the controls
+// about, with a bar in the middle of the screen to make them smaller or larger, put them back and
+// finish (Done, Back). The window hands it to the pad, and saves the layout when it ends.
+bool touch_editing();
+// True once after Reset (the bar's) or "Put them back" (the drawer's): the window puts every
+// control at its own place.
+bool take_touch_reset();
 // True once after the drawer or the menus changed one of the port's settings (saved already): the
 // window applies it (frontend.cpp, apply_settings).
 bool take_settings_changed();

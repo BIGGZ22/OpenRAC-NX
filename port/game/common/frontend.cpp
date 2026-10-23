@@ -1490,6 +1490,29 @@ static void draw_touch_pad(int window_width, int window_height) {
     if (touch.take_menu_press()) {
         debug_overlay::toggle_drawer();
     }
+    // The player's size, camera speed and layout (the drawer's Touch controls). The layout is the
+    // pad's own while it is edited, and written to the settings when that ends.
+    settings::Settings& set = settings::get();
+    static std::string applied_layout;
+    static bool was_editing = false;
+    touch.set_scale(static_cast<float>(set.touch_scale) / 100.0f);
+    touch.set_look_speed(static_cast<float>(set.touch_camera) / 100.0f);
+    const bool editing = debug_overlay::touch_editing();
+    if (debug_overlay::take_touch_reset()) {
+        touch.reset_layout();
+        applied_layout.clear();
+    }
+    if (!editing && !was_editing && set.touch_layout != applied_layout) {
+        touch.set_layout(set.touch_layout);
+        applied_layout = set.touch_layout;
+    }
+    touch.set_editing(editing);
+    if (was_editing && !editing) {
+        set.touch_layout = touch.layout();
+        applied_layout = set.touch_layout;
+        settings::save();
+    }
+    was_editing = editing;
     touch_overlay::draw(touch, window_width, window_height);
 }
 

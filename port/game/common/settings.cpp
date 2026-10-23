@@ -271,6 +271,12 @@ void load(const std::filesystem::path& file) {
             old_strafe = true;
         } else if (key == "volume") {
             known = parse_int(value, 0, 100, s.volume);
+        } else if (key == "touch_scale") {
+            known = parse_int(value, 50, 150, s.touch_scale);
+        } else if (key == "touch_camera") {
+            known = parse_int(value, 25, 300, s.touch_camera);
+        } else if (key == "touch_layout") {
+            s.touch_layout = value;  // TouchPad::set_layout leaves out what it does not know
         } else if (key == "verbose_log") {
             known = parse_bool(value, s.verbose_log);
         } else if (const int fix = fixes::find(key.c_str()); fix >= 0) {
@@ -365,7 +371,12 @@ void save() {
         << "menu_bar = " << (s.menu_bar ? 1 : 0) << "\n"
         << "mute_unfocused = " << (s.mute_unfocused ? 1 : 0) << "\n"
         << "skip_cutscenes = " << (s.skip_cutscenes ? 1 : 0) << "\n"
-        << "volume = " << s.volume << "\n";
+        << "volume = " << s.volume << "\n"
+        << "touch_scale = " << s.touch_scale << "\n"
+        << "touch_camera = " << s.touch_camera << "\n";
+    if (!s.touch_layout.empty()) {
+        out << "touch_layout = " << s.touch_layout << "\n";
+    }
     if (s.verbose_log) {
         out << "verbose_log = 1\n";
     }

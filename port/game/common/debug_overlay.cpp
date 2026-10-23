@@ -165,6 +165,12 @@ struct State {
     bool drawer_scrolled = false;  // the finger down now has dragged the rows: no row is pressed
     bool shot_when_shut = false;   // a screenshot asked for in it, taken once it is out of the picture
     bool drawer_developer = false;  // its developer tools unfolded
+    // The on-screen pad's layout being edited (touch_editing()): Reset asked for, and the box of
+    // the bar in the middle of the screen as last drawn, whose fingers are ImGui's, not the pad's.
+    bool touch_editing = false;
+    bool touch_reset = false;
+    ImVec2 bar_min{};
+    ImVec2 bar_max{};
     Card card;
     bool settings_changed = false;  // a setting changed in the drawer or the menus, not applied yet
     bool panel_scrolled = false;    // the panel's drag_scroll
@@ -1648,6 +1654,37 @@ void set_drawer(bool open) {
     }
 }
 
+// Starts or ends the editing of the on-screen pad's layout: the drawer shuts, and the game stays
+// paused until it ends.
+void edit_touch(bool on) {
+    if (on == s.touch_editing) {
+        return;
+    }
+    if (on) {
+        set_drawer(false);
+        s.keep_paused = s.paused;
+        s.paused = true;
+        s.held_frames = 0;
+        s.bar_min = s.bar_max = ImVec2(0.0f, 0.0f);
+    } else {
+        s.paused = s.keep_paused;
+    }
+    s.touch_editing = on;
+}
+
+// Whether a finger lands on the bar of the layout's editing.
+bool on_edit_bar(const SDL_TouchFingerEvent& f) {
+    SDL_Window* window = SDL_GetWindowFromID(f.windowID);
+    int w = 0;
+    int h = 0;
+    if (!s.touch_editing || window == nullptr || !SDL_GetWindowSize(window, &w, &h)) {
+        return false;
+    }
+    const float x = f.x * static_cast<float>(w);
+    const float y = f.y * static_cast<float>(h);
+    return x >= s.bar_min.x && x <= s.bar_max.x && y >= s.bar_min.y && y <= s.bar_max.y;
+}
+
 // A finger, at its place in the window, as ImGui's pointer.
 void pointer_at(const SDL_TouchFingerEvent& f) {
     SDL_Window* window = SDL_GetWindowFromID(f.windowID);
@@ -1672,14 +1709,15 @@ bool drawer_event(const SDL_Event& e) {
                 return false;
             }
             if (e.type == SDL_EVENT_KEY_DOWN && !e.key.repeat) {
-                set_drawer(!s.drawer_open);
+                // Back ends the layout's editing, as Done does.
+                s.touch_editing ? edit_touch(false) : set_drawer(!s.drawer_open);
             }
             return true;
         case SDL_EVENT_GAMEPAD_BUTTON_DOWN:
             if (e.gbutton.button != SDL_GAMEPAD_BUTTON_GUIDE) {
                 return false;
             }
-            set_drawer(!s.drawer_open);
+            s.touch_editing ? edit_touch(false) : set_drawer(!s.drawer_open);
             return true;
         case SDL_EVENT_MOUSE_MOTION:
             return e.motion.which == SDL_TOUCH_MOUSEID;
@@ -1692,13 +1730,14 @@ bool drawer_event(const SDL_Event& e) {
             if (e.tfinger.touchID == SDL_MOUSE_TOUCHID || !s.initialised) {
                 return false;
             }
-            if (!s.pointer_down && (s.drawer_open || s.visible)) {
+            const bool on_bar = on_edit_bar(e.tfinger);
+            if (!s.pointer_down && (s.drawer_open || s.visible || on_bar)) {
                 s.pointer = e.tfinger.fingerID;
                 s.pointer_down = true;
                 pointer_at(e.tfinger);
                 ImGui::GetIO().AddMouseButtonEvent(0, true);
             }
-            if (!s.drawer_open) {
+            if (!s.drawer_open && !on_bar) {
                 return false;
             }
             s.taken.push_back(e.tfinger.fingerID);
@@ -1864,6 +1903,18 @@ int drawer_choice(const char* label, const std::string& value, bool can_lower = 
     return (by < 0 && !can_lower) || (by > 0 && !can_raise) ? 0 : by;
 }
 
+// The value `by` (-1 or 1) steps from `now` in a list held in order; a value between two of the
+// list's (from the settings file) steps to the nearer one that way.
+template <std::size_t N>
+int next_listed(const int (&list)[N], int now, int by) {
+    if (by > 0) {
+        const int* next = std::upper_bound(std::begin(list), std::end(list), now);
+        return next != std::end(list) ? *next : list[N - 1];
+    }
+    const int* at = std::lower_bound(std::begin(list), std::end(list), now);
+    return at != std::begin(list) ? *(at - 1) : list[0];
+}
+
 // One of the port's settings as a choice row (options_menu.h).
 void setting_row(int row) {
     std::string value = options_menu::value(row);
@@ -2019,6 +2070,33 @@ void drawer(const Shown& shown) {
         }
         card_end();
 
+        // The on-screen pad (platform/touch_pad.h): its size, the camera's speed, and where its
+        // controls are, which the player drags about (edit_touch).
+        drawer_section("TOUCH CONTROLS");
+        card_begin();
+        auto& set = settings::get();
+        if (const int by = drawer_choice("Button size", std::format("{}%", set.touch_scale),
+                                         set.touch_scale > settings::kTouchScales[0],
+                                         set.touch_scale < std::end(settings::kTouchScales)[-1])) {
+            set.touch_scale = next_listed(settings::kTouchScales, set.touch_scale, by);
+            settings::save();
+        }
+        if (const int by = drawer_choice("Camera speed", std::format("{}%", set.touch_camera),
+                                         set.touch_camera > settings::kTouchCameraSpeeds[0],
+                                         set.touch_camera < std::end(settings::kTouchCameraSpeeds)[-1])) {
+            set.touch_camera = next_listed(settings::kTouchCameraSpeeds, set.touch_camera, by);
+            settings::save();
+        }
+        if (drawer_row("Move the controls")) {
+            edit_touch(true);
+        }
+        if (!set.touch_layout.empty() && drawer_row("Put them back")) {
+            set.touch_layout.clear();
+            settings::save();
+            s.touch_reset = true;
+        }
+        card_end();
+
         // What the port changes from the console that the player may switch back (fixes.h): on is
         // the port's fix, off the console's behaviour. The launcher's page for the game says more.
         if (fixes::count() > 0) {
@@ -2101,14 +2179,89 @@ void drawer(const Shown& shown) {
     ImGui::PopStyleVar(5);
 }
 
+// A button of the editing bar: true when pressed.
+bool bar_button(const char* label, float width, bool primary = false) {
+    const float height = dp(44.0f);
+    const ImVec2 a = ImGui::GetCursorScreenPos();
+    const ImVec2 b(a.x + width, a.y + height);
+    const bool pressed = ImGui::InvisibleButton(label, ImVec2(width, height));
+    ImDrawList* list = ImGui::GetWindowDrawList();
+    const float round = dp(12.0f);
+    const ImU32 fill = primary ? (ImGui::IsItemActive() ? look::kOrangePressed : look::kOrange)
+                               : (ImGui::IsItemActive() ? look::kPressed : look::kCard);
+    list->AddRectFilled(a, b, fill, round);
+    if (!primary) {
+        list->AddRect(a, b, look::kLineStrong, round);
+    }
+    const ImVec2 size = ImGui::CalcTextSize(label, nullptr, true);
+    list->AddText(ImVec2((a.x + b.x - size.x) * 0.5f, a.y + (height - size.y) * 0.5f),
+                  primary ? look::kOrangeInk : look::kText, label, ImGui::FindRenderedTextEnd(label));
+    return pressed;
+}
+
+// While the on-screen pad's layout is edited: a bar in the middle of the screen, clear of the
+// controls' places, to make them smaller or larger, put them back, and finish.
+void touch_edit_bar() {
+    const ImGuiViewport* viewport = ImGui::GetMainViewport();
+    const float gap = dp(8.0f);
+    const float button = dp(52.0f);
+    const float wide = dp(96.0f);
+    const float width = button * 2.0f + wide * 3.0f + gap * 4.0f + dp(28.0f);
+    ImGui::SetNextWindowPos(ImVec2(viewport->Pos.x + viewport->Size.x * 0.5f, viewport->Pos.y + viewport->Size.y * 0.42f),
+                            ImGuiCond_Always, ImVec2(0.5f, 0.5f));
+    ImGui::SetNextWindowSize(ImVec2(width, 0.0f));
+    ImGui::PushStyleVar(ImGuiStyleVar_WindowRounding, dp(16.0f));
+    ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(dp(14.0f), dp(12.0f)));
+    ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, ImVec2(gap, dp(10.0f)));
+    ImGui::PushStyleColor(ImGuiCol_WindowBg, ImGui::ColorConvertU32ToFloat4(look::kPanel));
+    ImGui::PushStyleColor(ImGuiCol_Border, ImGui::ColorConvertU32ToFloat4(look::kLine));
+    const ImGuiWindowFlags flags = ImGuiWindowFlags_NoDecoration | ImGuiWindowFlags_NoMove
+                                   | ImGuiWindowFlags_NoSavedSettings | ImGuiWindowFlags_AlwaysAutoResize;
+    if (ImGui::Begin("Move the controls", nullptr, flags)) {
+        auto& set = settings::get();
+        ImGui::PushStyleColor(ImGuiCol_Text, ImGui::ColorConvertU32ToFloat4(look::kSoft));
+        ImGui::TextUnformatted("Drag a control to move it. The game is paused.");
+        ImGui::PopStyleColor();
+        bool resized = false;
+        if (bar_button("-##smaller", button)) {
+            set.touch_scale = next_listed(settings::kTouchScales, set.touch_scale, -1);
+            resized = true;
+        }
+        ImGui::SameLine();
+        const std::string size = std::format("{}%##size", set.touch_scale);
+        bar_button(size.c_str(), wide);
+        ImGui::SameLine();
+        if (bar_button("+##larger", button)) {
+            set.touch_scale = next_listed(settings::kTouchScales, set.touch_scale, 1);
+            resized = true;
+        }
+        ImGui::SameLine();
+        if (bar_button("Reset", wide)) {
+            s.touch_reset = true;
+        }
+        ImGui::SameLine();
+        if (bar_button("Done", wide, true)) {
+            edit_touch(false);
+        }
+        if (resized) {
+            settings::save();
+        }
+        s.bar_min = ImGui::GetWindowPos();
+        s.bar_max = ImVec2(s.bar_min.x + ImGui::GetWindowSize().x, s.bar_min.y + ImGui::GetWindowSize().y);
+    }
+    ImGui::End();
+    ImGui::PopStyleColor(2);
+    ImGui::PopStyleVar(3);
+}
+
 // What the keys of pause and speed have set, said in the picture whether the panel is shown or
 // not: a game standing still or running at a quarter speed with nothing saying why is a puzzle.
 void status_badge() {
     if (!s.toast.empty() && ImGui::GetTime() >= s.toast_until) {
         s.toast.clear();
     }
-    if (s.drawer_at > 0.0f) {
-        return;  // the drawer says it
+    if (s.drawer_at > 0.0f || s.touch_editing) {
+        return;  // the drawer says it, or the bar of the pad's editing
     }
     // With the drawer, without the keys: its rows change them.
     const bool keys = !drawer_possible();
@@ -2152,6 +2305,16 @@ void request() {
 
 bool drawer_available() {
     return drawer_possible();
+}
+
+bool touch_editing() {
+    return s.touch_editing;
+}
+
+bool take_touch_reset() {
+    const bool reset = s.touch_reset;
+    s.touch_reset = false;
+    return reset;
 }
 
 void toggle_drawer() {
@@ -2317,7 +2480,7 @@ void draw(const Shown& shown) {
     stats::lap("present");
     s.window = shown.window;
     const bool badge = s.paused || s.stretch != 1.0 || !s.toast.empty() || !s.notice.empty();
-    const bool drawer_out = s.drawer_open || s.drawer_at > 0.0f || s.shot_when_shut;
+    const bool drawer_out = s.drawer_open || s.drawer_at > 0.0f || s.shot_when_shut || s.touch_editing;
     if (!(s.visible || menu_bar_shown() || badge || drawer_out || !s.shot_path.empty()) || shown.window == nullptr
         || !initialise(shown.window)) {
         return;
@@ -2356,6 +2519,9 @@ void draw(const Shown& shown) {
     }
     if (drawer_possible()) {
         drawer(shown);
+    }
+    if (s.touch_editing) {
+        touch_edit_bar();
     }
     status_badge();
     ImGui::Render();
