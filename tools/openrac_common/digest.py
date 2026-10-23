@@ -1,0 +1,39 @@
+# SPDX-License-Identifier: GPL-3.0-or-later
+# Copyright (c) 2026 the OpenRAC contributors
+"""
+Digests of files, read in blocks so a disc image never has to fit in memory.
+
+  from openrac_common import digest
+  digest.sha1(path)            # hex string, as game.json records a boot executable
+  digest.sha256(path)
+  digest.file_digest(path, "md5")
+
+Written from port/enhanced/tools/probes/bake_all.py:48 (sha256 in 1 MiB blocks). The other
+copies read the whole file at once (tools/shared.py:34, editor/assets.py:135,
+editor/overrides.py:396) or hash several algorithms in one pass (tools/openrac.py:109,
+checksums); every one of them returns the same hex digest for the same file.
+"""
+import hashlib
+from pathlib import Path
+
+# A block of 1 MiB keeps memory flat on a 4 GiB image and costs nothing on a small file.
+BLOCK_BYTES = 1 << 20
+
+
+def file_digest(path: Path | str, algorithm: str) -> str:
+    """The hex digest of the file at PATH by ALGORITHM (any name hashlib.new accepts)."""
+    hasher = hashlib.new(algorithm)
+    with open(path, "rb") as file:
+        for block in iter(lambda: file.read(BLOCK_BYTES), b""):
+            hasher.update(block)
+    return hasher.hexdigest()
+
+
+def sha1(path: Path | str) -> str:
+    """The SHA-1 of the file at PATH, as a hex string."""
+    return file_digest(path, "sha1")
+
+
+def sha256(path: Path | str) -> str:
+    """The SHA-256 of the file at PATH, as a hex string."""
+    return file_digest(path, "sha256")
