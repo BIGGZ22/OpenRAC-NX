@@ -41,6 +41,8 @@ namespace openrac::media {
 // The port's mixer rate.
 inline constexpr std::uint32_t kMovieOutputRate = 48000;
 
+// A movie opened for playback: its audio decoded and resampled to 48 kHz, its video decoder ready
+// for the first frame. Only open() makes one. Move-only: it owns the decoder.
 class Movie {
 public:
     // Demuxes `file` (a whole PSS), decodes the audio of `channel` (channel 0
@@ -48,33 +50,51 @@ public:
     // sequence header. Throws assets::AssetError or VideoError.
     static Movie open(std::span<const std::uint8_t> file, std::uint8_t channel);
 
+    // The video stream's sequence header.
     const VideoSequence& sequence() const { return m_sequence; }
 
+    // The video's frames per second.
     double fps() const { return m_sequence.fps(); }
 
     // The chosen channel's audio at 48 kHz, interleaved left, right; empty
     // when the file has no audio.
     const std::vector<std::int16_t>& audio() const { return m_audio; }
 
+    // The channel the audio was taken from; none when the file has no audio.
     std::optional<std::uint8_t> audio_channel() const { return m_audio_channel; }
 
-    std::uint32_t audio_rate() const { return m_audio_rate; }  // in the file
+    // The audio's sample rate in the file, before it was resampled.
+    std::uint32_t audio_rate() const { return m_audio_rate; }
 
+    // The audio channels the file carries.
     const std::vector<std::uint8_t>& channels() const { return m_channels; }
 
     // The next frame in display order; null at the end.
     std::shared_ptr<const VideoFrame> next_frame() { return m_decoder->next_frame(); }
 
+    // What the video decoder has counted so far (VideoStats, mpeg2.h).
     const VideoStats& video_stats() const { return m_decoder->stats(); }
 
 private:
+    // Only open() builds a movie.
     Movie() = default;
 
+    // Decodes the video stream; owned here.
     std::unique_ptr<Mpeg2Decoder> m_decoder;
+
+    // The sequence header, read when the movie was opened.
     VideoSequence m_sequence;
+
+    // The audio at kMovieOutputRate, interleaved stereo; empty when the file has none.
     std::vector<std::int16_t> m_audio;
+
+    // The channel the audio came from.
     std::optional<std::uint8_t> m_audio_channel;
+
+    // The audio's rate in the file.
     std::uint32_t m_audio_rate = 0;
+
+    // The channels the file carries.
     std::vector<std::uint8_t> m_channels;
 };
 
@@ -83,8 +103,10 @@ private:
 // open and its cursor is atomic.
 class MoviePlayer {
 public:
+    // Takes the movie to play; playback starts at its beginning.
     explicit MoviePlayer(Movie movie) : m_movie(std::move(movie)) {}
 
+    // The movie being played.
     const Movie& movie() const { return m_movie; }
 
     // Copies the next audio into `out` (interleaved stereo, 48 kHz) and
@@ -103,13 +125,24 @@ public:
     // The video has ended (and the last frame is shown).
     bool video_finished() const { return m_video_ended; }
 
+    // True once all the audio has been handed out.
     bool audio_finished() const;
 
 private:
+    // The movie. Its audio is fixed after open, so both threads may read it.
     Movie m_movie;
-    std::atomic<std::size_t> m_audio_cursor{0};  // in frames
+
+    // How many audio frames have been handed out. Atomic: the audio thread advances it in
+    // read_audio() and the game's thread reads it in audio_time().
+    std::atomic<std::size_t> m_audio_cursor{0};
+
+    // The last frame frame_at() returned; touched only by the game's thread.
     std::shared_ptr<const VideoFrame> m_current;
-    std::size_t m_shown = 0;  // frames taken from the decoder
+
+    // How many frames have been taken from the decoder.
+    std::size_t m_shown = 0;
+
+    // True once the decoder has no more frames.
     bool m_video_ended = false;
 };
 

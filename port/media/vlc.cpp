@@ -4,28 +4,45 @@
 // Adapted from ReRAC (https://github.com/re-rac/rerac), crates/rc-video/src/vlc.rs:
 // ISC License, Copyright (c) 2026 ReRAC contributors.
 //
-// The MPEG-2 code tables (vlc.h). The codes are ISO/IEC 13818-2 Annex B's,
-// as the standard prints them.
+// The MPEG-2 code tables (vlc.h). The codes are ISO/IEC 13818-2 Annex B's, as the standard
+// prints them, with the spaces it uses to group the bits.
+//
+// The file has three parts: the tables as data, the constructor that turns a list of codes into
+// a lookup table, and the accessors that hand the tables out. A table is checked as it is built:
+// a typo in a code, or two codes where one is a prefix of the other, throws.
 
 #include "media/vlc.h"
 
 #include <algorithm>
+#include <cstddef>
+#include <cstdint>
 #include <format>
+#include <iterator>
+#include <span>
 #include <stdexcept>
 #include <string>
+#include <vector>
 
 namespace openrac::media {
 
 namespace {
 
+// The longest code in the standard's tables is 16 bits (the long DCT codes of B-14 and B-15).
+constexpr unsigned kMaxCodeBits = 16;
+
+// A run/level pair as a table value: the run in the high byte, the level in the low byte.
 constexpr std::int16_t rl(int run, int level) {
     return static_cast<std::int16_t>(run << 8 | level);
 }
 
-// Table B-14 below is table zero without the sign bits and without the long
-// codes; "11" is (0, 1) except as the first coefficient of a non-intra
-// block, where "1" is (the decoder handles that case). Table B-15 is table
-// one (intra blocks with intra_vlc_format = 1).
+// ---- Code tables ----
+
+// The tables are in the order of the enumeration in vlc.h. B-14 below is table zero without the
+// sign bits and without the long codes; "11" is (0, 1) except as the first coefficient of a
+// non-intra block, where "1" is (the decoder handles that case). B-15 is table one (intra blocks
+// with intra_vlc_format = 1).
+
+// Table B-1: macroblock_address_increment.
 constexpr VlcCode kMacroblockAddress[] = {
     {"1", 1},
     {"011", 2},
@@ -64,11 +81,13 @@ constexpr VlcCode kMacroblockAddress[] = {
     {"0000 0001 111", kMbaStuffing},
 };
 
+// Table B-2: macroblock_type in an I picture.
 constexpr VlcCode kMacroblockTypeI[] = {
     {"1", kMbIntra},
     {"01", kMbIntra | kMbQuant},
 };
 
+// Table B-3: macroblock_type in a P picture.
 constexpr VlcCode kMacroblockTypeP[] = {
     {"1", kMbForward | kMbPattern},
     {"01", kMbPattern},
@@ -79,6 +98,7 @@ constexpr VlcCode kMacroblockTypeP[] = {
     {"0000 01", kMbQuant | kMbIntra},
 };
 
+// Table B-4: macroblock_type in a B picture.
 constexpr VlcCode kMacroblockTypeB[] = {
     {"10", kMbForward | kMbBackward},
     {"11", kMbForward | kMbBackward | kMbPattern},
@@ -93,6 +113,7 @@ constexpr VlcCode kMacroblockTypeB[] = {
     {"0000 01", kMbQuant | kMbIntra},
 };
 
+// Table B-9: coded_block_pattern for 4:2:0.
 constexpr VlcCode kCodedBlockPattern[] = {
     {"111", 60},         {"1101", 4},         {"1100", 8},         {"1011", 16},
     {"1010", 32},        {"1001 1", 12},      {"1001 0", 48},      {"1000 1", 20},
@@ -112,6 +133,7 @@ constexpr VlcCode kCodedBlockPattern[] = {
     {"0000 0010 0", 59}, {"0000 0001 1", 27}, {"0000 0001 0", 39}, {"0000 0000 1", 0},
 };
 
+// Table B-10: the magnitude of motion_code; the sign bit follows it.
 constexpr VlcCode kMotionCode[] = {
     {"1", 0},
     {"01", 1},
@@ -132,6 +154,7 @@ constexpr VlcCode kMotionCode[] = {
     {"0000 0011 00", 16},
 };
 
+// Table B-12: dct_dc_size_luminance.
 constexpr VlcCode kDcSizeLuminance[] = {
     {"100", 0},
     {"00", 1},
@@ -147,6 +170,7 @@ constexpr VlcCode kDcSizeLuminance[] = {
     {"1111 1111 1", 11},
 };
 
+// Table B-13: dct_dc_size_chrominance.
 constexpr VlcCode kDcSizeChrominance[] = {
     {"00", 0},
     {"01", 1},
@@ -162,6 +186,7 @@ constexpr VlcCode kDcSizeChrominance[] = {
     {"1111 1111 11", 11},
 };
 
+// The codes of 14 to 16 bits that B-14 and B-15 have in common.
 constexpr VlcCode kDctLong[] = {
     {"0000 0000 0111 11", rl(0, 16)},   {"0000 0000 0111 10", rl(0, 17)},
     {"0000 0000 0111 01", rl(0, 18)},   {"0000 0000 0111 00", rl(0, 19)},
@@ -189,6 +214,7 @@ constexpr VlcCode kDctLong[] = {
     {"0000 0000 0001 1100", rl(30, 1)}, {"0000 0000 0001 1011", rl(31, 1)},
 };
 
+// Table B-14: DCT coefficients, table zero, without the long codes.
 constexpr VlcCode kDctZero[] = {
     {"10", kDctEndOfBlock},
     {"11", rl(0, 1)},
@@ -257,6 +283,7 @@ constexpr VlcCode kDctZero[] = {
     {"0000 0000 1101 1", rl(26, 1)},
 };
 
+// Table B-15: DCT coefficients, table one, without the long codes.
 constexpr VlcCode kDctOne[] = {
     {"0110", kDctEndOfBlock},
     {"10", rl(0, 1)},
@@ -327,6 +354,8 @@ constexpr VlcCode kDctOne[] = {
 
 }  // namespace
 
+// ---- Building a table ----
+
 VlcTable::VlcTable(std::span<const VlcCode> codes) {
     struct Parsed {
         std::uint32_t code;
@@ -336,14 +365,18 @@ VlcTable::VlcTable(std::span<const VlcCode> codes) {
 
     std::vector<Parsed> parsed;
 
+    // Turn each code from its printed text into its bits and length.
     for (const VlcCode& c : codes) {
         Parsed p{0, 0, c.value};
 
+        // The text is read left to right, so the first digit is the most significant bit.
         for (const char ch : c.bits) {
+            // The standard prints the bits in groups; the spaces mean nothing.
             if (ch == ' ') {
                 continue;
             }
 
+            // Any other character is a typo in the table.
             if (ch != '0' && ch != '1') {
                 throw std::logic_error(std::format("bad VLC code \"{}\"", c.bits));
             }
@@ -352,7 +385,8 @@ VlcTable::VlcTable(std::span<const VlcCode> codes) {
             ++p.length;
         }
 
-        if (p.length == 0 || p.length > 16) {
+        // A code has at least one bit and fits the table's index.
+        if (p.length == 0 || p.length > kMaxCodeBits) {
             throw std::logic_error(std::format("bad VLC code \"{}\"", c.bits));
         }
 
@@ -362,13 +396,16 @@ VlcTable::VlcTable(std::span<const VlcCode> codes) {
 
     m_table.assign(std::size_t{1} << m_bits, Entry{});
 
+    // Fill every entry whose leading bits are this code.
     for (const Parsed& p : parsed) {
         const unsigned shift = m_bits - p.length;
         const std::size_t base = static_cast<std::size_t>(p.code) << shift;
 
+        // The bits after the code can be anything.
         for (std::size_t k = 0; k < (std::size_t{1} << shift); ++k) {
             Entry& e = m_table[base + k];
 
+            // Another code already owns this entry, so one code is a prefix of the other.
             if (e.length != 0) {
                 throw std::logic_error("overlapping codes in a VLC table");
             }
@@ -381,6 +418,7 @@ VlcTable::VlcTable(std::span<const VlcCode> codes) {
 double VlcTable::kraft() const {
     std::size_t used = 0;
 
+    // Count the entries that some code owns.
     for (const Entry& e : m_table) {
         used += e.length != 0;
     }
@@ -388,7 +426,10 @@ double VlcTable::kraft() const {
     return static_cast<double>(used) / static_cast<double>(m_table.size());
 }
 
+// ---- The standard's tables ----
+
 std::span<const VlcCode> mpeg2_codes(Mpeg2Codes which) {
+    // One list for each enumerator; there is no default, so the compiler warns when one is added.
     switch (which) {
         case Mpeg2Codes::MacroblockAddress:
             return kMacroblockAddress;
@@ -414,11 +455,13 @@ std::span<const VlcCode> mpeg2_codes(Mpeg2Codes which) {
             return kDctLong;
     }
 
+    // Not reached for an enumerator of Mpeg2Codes.
     return {};
 }
 
 namespace {
 
+// Returns the codes of `table` followed by the long codes B-14 and B-15 share.
 std::vector<VlcCode> with_long_codes(std::span<const VlcCode> table) {
     std::vector<VlcCode> all(table.begin(), table.end());
     all.insert(all.end(), std::begin(kDctLong), std::end(kDctLong));
@@ -427,6 +470,8 @@ std::vector<VlcCode> with_long_codes(std::span<const VlcCode> table) {
 
 }  // namespace
 
+// Builds the tables on the first call and keeps them. The static is initialised once, even when
+// several threads ask at the same time.
 const Mpeg2VlcTables& mpeg2_vlc_tables() {
     static const Mpeg2VlcTables tables{
         VlcTable(kMacroblockAddress),

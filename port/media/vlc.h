@@ -6,7 +6,8 @@
 //
 // The variable-length code tables of ISO/IEC 13818-2 Annex B (the public
 // MPEG-2 video standard) that the games' movies use, built once into direct
-// lookup tables: one peek of the table's longest code, one lookup.
+// lookup tables: one peek of the table's longest code, one lookup. VlcTable is the generic
+// table; mpeg2_codes() lists the standard's codes and mpeg2_vlc_tables() has them built.
 
 #pragma once
 
@@ -22,8 +23,8 @@ namespace openrac::media {
 
 // One code as the standard prints it ("0000 0101 10"; spaces ignored).
 struct VlcCode {
-    std::string_view bits;
-    std::int16_t value;
+    std::string_view bits;  // The code, most significant bit first.
+    std::int16_t value;     // What it decodes to.
 };
 
 // A prefix code as a lookup table indexed by the next `max_length` bits.
@@ -36,6 +37,7 @@ public:
     std::optional<std::int16_t> decode(BitReader& reader) const {
         const Entry e = m_table[reader.peek(m_bits)];
 
+        // No code starts with these bits: nothing is consumed.
         if (e.length == 0) {
             return std::nullopt;
         }
@@ -44,6 +46,7 @@ public:
         return e.value;
     }
 
+    // The number of bits one lookup peeks: the length of the longest code.
     unsigned max_length() const { return m_bits; }
 
     // The sum of 2^-length over the codes (1 for a complete code).
@@ -55,7 +58,10 @@ private:
         std::uint8_t length = 0;  // 0: no code starts with these bits
     };
 
+    // The length of the longest code, which is also the width of the table's index.
     unsigned m_bits = 1;
+
+    // One entry for each value of the next `m_bits` bits; a code fills every entry it prefixes.
     std::vector<Entry> m_table;
 };
 
@@ -90,8 +96,10 @@ enum class Mpeg2Codes {
     DctLong,            // the 14..16-bit codes common to B-14 and B-15
 };
 
+// The codes of one table of the standard, in the order the standard lists them.
 std::span<const VlcCode> mpeg2_codes(Mpeg2Codes which);
 
+// The tables the decoder uses, built from the codes above.
 struct Mpeg2VlcTables {
     VlcTable macroblock_address;
     VlcTable macroblock_type[3];  // I, P, B
