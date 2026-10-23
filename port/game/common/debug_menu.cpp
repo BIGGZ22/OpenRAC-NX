@@ -5,11 +5,12 @@
 
 #include <array>
 #include <cctype>
-#include <cstdlib>
+#include <cstdint>
 #include <cstring>
 #include <string>
 #include <vector>
 
+#include "common/env.h"
 #include "common/log.h"
 #include "openrac/game_host.h"
 #include "openrac/guest.h"
@@ -38,11 +39,7 @@ int level_count() {
 
 // The launcher's developer mode (OPENRAC_DEVELOPER=1): without it the menus are the game's own.
 bool developer() {
-    static const bool on = [] {
-        const char* v = std::getenv("OPENRAC_DEVELOPER");
-        return v != nullptr && v[0] != '\0' && std::strcmp(v, "0") != 0;
-    }();
-    return on;
+    return env::flag(env::Var::Developer);
 }
 
 // Open only over the boot program (title and main menu), where a new game can be started.
@@ -394,10 +391,8 @@ void filter_pad(std::uint16_t& buttons, int loaded_overlay) {
 }
 
 void update(int loaded_overlay, std::uint64_t frame) {
-    static const long long open_at = [] {
-        const char* v = std::getenv("OPENRAC_DEBUG_MENU");
-        return v != nullptr ? std::atoll(v) : -1ll;
-    }();
+    // Unset, the menu is never opened by script.
+    static const std::int64_t open_at = env::integer(env::Var::DebugMenu, -1);
     static bool opened_by_script = false;
     if (!opened_by_script && open_at >= 0 && frame >= static_cast<std::uint64_t>(open_at)
         && available(loaded_overlay)) {
