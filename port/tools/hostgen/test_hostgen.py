@@ -709,6 +709,24 @@ class Translate(unittest.TestCase):
         self.assertEqual(out, ["42"])
         self.assertEqual(self.last_report["candidates_used"], ["func_00110100"])
 
+    def test_no_candidate_for_a_function_the_port_writes_itself(self):
+        # The port's own C replaces func_00110100 (host_functions): its candidate is not read, nor
+        # the global its file defines besides (rac1/pal's DIntr keeps its enable bit so).
+        out = self.run_program({"a.c": """
+            #define INCLUDE_ASM(dir, name)
+            INCLUDE_ASM("asm", func_00110100);
+            extern int func_00110100(int);
+            int test_main(void) { test_print(func_00110100(2)); return 0; }
+        """}, config={"candidates": "candidates.tsv", "host_functions": HOST_FUNCTIONS + ["func_00110100"]},
+            extra_files={
+                "game/candidates.tsv": "# name\tfile\nfunc_00110100\tcand/func_00110100.c\n",
+                "game/cand/func_00110100.c":
+                    "int enabled = 1;\nint func_00110100(int x) { enabled = 0; return x + 1; }\n",
+            }, host_c="int func_00110100(int x) { return x + 40; }\n")
+        self.assertEqual(out, ["42"])
+        self.assertEqual(self.last_report["candidates_used"], [])
+        self.assertEqual(self.last_report["problems"], {})
+
     def test_a_candidate_steps_aside_for_what_the_file_has_matched(self):
         """One file of the port's own C for two functions; the decompilation has since matched one:
         the copy of that one is left out, or the file would define it twice and not be read."""

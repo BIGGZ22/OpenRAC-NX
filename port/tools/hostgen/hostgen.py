@@ -936,6 +936,17 @@ def main(argv: list[str] | None = None) -> int:
     # The port's own C for hand-written assembly first; a decompilation's
     # candidate for the same function stands aside.
     candidates = {**read_candidates(source, cfg), **read_hand(args.game.parent, cfg)}
+    # A candidate for a function the port writes itself (libraries.tsv host rows, "host_functions")
+    # is not read: the port's version replaces the function, and what the candidate's file defines
+    # besides is dead (rac1/pal's DIntr, func_0011D960, keeps the interrupt enable bit in a global
+    # of its own, which the port's data has no place for). A file that is the candidate of other
+    # functions too stays.
+    replaced = set(cfg.get("host_functions", [])) | set(host_table(args.game.parent, cfg))
+    names_of: dict[int, list[str]] = {}
+    for name, text in candidates.items():
+        names_of.setdefault(id(text), []).append(name)
+    candidates = {name: text for name, text in candidates.items()
+                  if not all(n in replaced for n in names_of[id(text)])}
     # The port's own C for functions the decompilation matches, in place of their definitions.
     overrides = read_overrides(args.game.parent, cfg)
     aliases = read_aliases(source, cfg)
