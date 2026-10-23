@@ -10,6 +10,7 @@
 #pragma once
 
 #include <filesystem>
+#include <span>
 #include <string>
 
 #include "enhanced/renderer/gtao_settings.h"
@@ -140,6 +141,10 @@ inline constexpr int kAnisotropies[] = {1, 2, 4, 8, 16};
 // hold any whole number between the first and the last.
 inline constexpr int kTouchScales[] = {50, 60, 70, 75, 80, 90, 100, 110, 125, 150};
 inline constexpr int kTouchCameraSpeeds[] = {25, 50, 75, 100, 125, 150, 200, 250, 300};
+
+// The value `by` (-1 or 1) steps to from `now` in a list held in order: a value between two of the
+// list's (a file's) steps to the nearer one that way, and the list's ends go no further.
+int step_listed(std::span<const int> list, int now, int by);
 
 // What the options page shows for a value.
 const char* name(DisplayMode mode);

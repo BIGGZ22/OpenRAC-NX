@@ -23,6 +23,7 @@
 #include <imgui_internal.h>  // ImGui::ClearActiveID: a finger that scrolls lets go of what it pressed
 #include <map>
 #include <set>
+#include <span>
 #include <string>
 #include <unordered_map>
 #include <utility>
@@ -1903,16 +1904,14 @@ int drawer_choice(const char* label, const std::string& value, bool can_lower = 
     return (by < 0 && !can_lower) || (by > 0 && !can_raise) ? 0 : by;
 }
 
-// The value `by` (-1 or 1) steps from `now` in a list held in order; a value between two of the
-// list's (from the settings file) steps to the nearer one that way.
-template <std::size_t N>
-int next_listed(const int (&list)[N], int now, int by) {
-    if (by > 0) {
-        const int* next = std::upper_bound(std::begin(list), std::end(list), now);
-        return next != std::end(list) ? *next : list[N - 1];
+// A percentage the player picks from `list` (settings.h), as a choice row: true when it changed.
+bool drawer_listed(const char* label, int& value, std::span<const int> list) {
+    const int by = drawer_choice(label, std::format("{}%", value), value > list.front(), value < list.back());
+    if (by == 0) {
+        return false;
     }
-    const int* at = std::lower_bound(std::begin(list), std::end(list), now);
-    return at != std::begin(list) ? *(at - 1) : list[0];
+    value = settings::step_listed(list, value, by);
+    return true;
 }
 
 // One of the port's settings as a choice row (options_menu.h).
@@ -2154,16 +2153,10 @@ void drawer(const Shown& shown) {
         drawer_section("TOUCH CONTROLS");
         card_begin();
         auto& set = settings::get();
-        if (const int by = drawer_choice("Button size", std::format("{}%", set.touch_scale),
-                                         set.touch_scale > settings::kTouchScales[0],
-                                         set.touch_scale < std::end(settings::kTouchScales)[-1])) {
-            set.touch_scale = next_listed(settings::kTouchScales, set.touch_scale, by);
+        if (drawer_listed("Button size", set.touch_scale, settings::kTouchScales)) {
             settings::save();
         }
-        if (const int by = drawer_choice("Camera speed", std::format("{}%", set.touch_camera),
-                                         set.touch_camera > settings::kTouchCameraSpeeds[0],
-                                         set.touch_camera < std::end(settings::kTouchCameraSpeeds)[-1])) {
-            set.touch_camera = next_listed(settings::kTouchCameraSpeeds, set.touch_camera, by);
+        if (drawer_listed("Camera speed", set.touch_camera, settings::kTouchCameraSpeeds)) {
             settings::save();
         }
         if (drawer_row("Move the controls")) {
@@ -2303,7 +2296,7 @@ void touch_edit_bar() {
         ImGui::PopStyleColor();
         bool resized = false;
         if (bar_button("-##smaller", button)) {
-            set.touch_scale = next_listed(settings::kTouchScales, set.touch_scale, -1);
+            set.touch_scale = settings::step_listed(settings::kTouchScales, set.touch_scale, -1);
             resized = true;
         }
         ImGui::SameLine();
@@ -2311,7 +2304,7 @@ void touch_edit_bar() {
         bar_button(size.c_str(), wide);
         ImGui::SameLine();
         if (bar_button("+##larger", button)) {
-            set.touch_scale = next_listed(settings::kTouchScales, set.touch_scale, 1);
+            set.touch_scale = settings::step_listed(settings::kTouchScales, set.touch_scale, 1);
             resized = true;
         }
         ImGui::SameLine();

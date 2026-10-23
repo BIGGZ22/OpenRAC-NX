@@ -232,6 +232,21 @@ int main() {
     const float gap_y = down.y - up.y;
     edit.set_editing(true);
     CHECK(edit.visible());
+    // It stays shown while the player arranges it (another device used, the screen left alone),
+    // and a finger on the empty right half turns no camera.
+    edit.hide();
+    edit.idle(1000);
+    edit.idle(1000 + 2 * TouchPad::kIdleHideMs);
+    CHECK(edit.visible());
+    edit.finger_down(2, 0.6f, 0.45f);
+    edit.finger_move(2, 0.7f, 0.5f);
+    edit.idle(1000 + 2 * TouchPad::kIdleHideMs + 16);
+    float look_x = 1.0f;
+    float look_y = 1.0f;
+    edit.look(look_x, look_y);
+    CHECK(look_x == 0.0f && look_y == 0.0f);
+    CHECK(read(edit).right_x == Pad{}.right_x);
+    edit.finger_up(2);
     edit.finger_down(1, up.x, up.y);
     CHECK(read(edit).buttons == Pad{}.buttons);
     edit.finger_move(1, up.x + 0.1f, up.y + 0.05f);

@@ -39,8 +39,8 @@ std::uint8_t axis_byte(float v) {
     return static_cast<std::uint8_t>(std::lround(127.5f + v * 127.5f));
 }
 
-constexpr const char* kGroupNames[kTouchGroups] = {"stick", "dpad", "face", "l1", "l2", "r1", "r2",
-                                                   "select", "start", "menu"};
+constexpr const char* kGroupNames[] = {"stick", "dpad", "face", "l1", "l2", "r1", "r2", "select", "start", "menu"};
+static_assert(std::size(kGroupNames) == kTouchGroups, "a name for each TouchGroup");
 
 }  // namespace
 
