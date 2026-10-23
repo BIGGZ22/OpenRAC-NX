@@ -25,9 +25,12 @@ lists each difference and how it was checked on the discs.
 """
 
 from dataclasses import dataclass, field
+from pathlib import Path
 import struct
+import sys
 
-import util
+sys.path.insert(1, str(next(p for p in Path(__file__).resolve().parents if (p / "tools/openrac_common").is_dir()) / "tools"))
+from openrac_common import games as manifests  # noqa: E402  (this module is the editor's games)
 
 
 @dataclass(frozen=True)
@@ -211,7 +214,7 @@ FORMATS = {f.game: f for f in (RAC1, RAC2, RAC3, RAC4)}
 # The discs each game's levels are read from, as games/<game>/game.json lists its versions:
 # Ratchet & Clank's PAL and NTSC-U, the others' NTSC-U. An overrides pack or an asset export names
 # its game and version; a pack's files fit the levels of its own game only.
-VERSIONS = {game: tuple(util.manifest(game)["versions"]) for game in FORMATS}
+VERSIONS = {game: tuple(manifests.load(game)["versions"]) for game in FORMATS}
 
 
 def known(game, version) -> bool:

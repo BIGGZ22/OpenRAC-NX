@@ -28,6 +28,16 @@ class Sha256Tests(unittest.TestCase):
         self.assertIs(assets.sha256, util.sha256)
         self.assertIs(overrides.sha256, util.sha256)
 
+    def test_a_files_digest_is_the_digest_of_its_bytes(self):
+        # assets.py and overrides.py hash a file through openrac_common's digest.sha256 (in blocks),
+        # where they hashed its bytes read whole: the same hex string, including past one block.
+        self.assertIs(assets.digest, overrides.digest)
+        with tempfile.TemporaryDirectory() as folder:
+            for data in (b"", b"openrac", bytes(range(256)) * 4097):
+                path = Path(folder) / "file.bin"
+                path.write_bytes(data)
+                self.assertEqual(assets.digest.sha256(path), util.sha256(data))
+
 
 class ReadJsonTests(unittest.TestCase):
     def setUp(self):
@@ -126,9 +136,8 @@ class DiscIdentityTests(unittest.TestCase):
         self.assertEqual(list(games.VERSIONS["rac1"]), ["pal", "ntsc"])
 
     def test_unknown_games_and_versions(self):
-        self.assertEqual(util.manifest("rac1")["id"], "rac1")
         with self.assertRaises(FileNotFoundError):
-            util.manifest("rac9")
+            util.disc_identity("rac9", "pal")
         with self.assertRaises(KeyError):
             util.disc_identity("rac2", "pal")
 

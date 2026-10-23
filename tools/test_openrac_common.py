@@ -201,9 +201,13 @@ class PathsTests(TempDir):
             paths.repo_root(self.dir / "x/y")
 
 
-# The folders whose scripts reach the package through paths.BOOTSTRAP (the editor and sdk/tools
-# join them when they move onto it).
-BOOTSTRAPPED = ("port/tools", "port/enhanced/tools/probes")
+# The folders whose scripts reach the package through paths.BOOTSTRAP (sdk/tools joins them when it
+# moves onto it). NAMES_CHECKED are those whose modules must not share a name with one of tools/:
+# the editor imports nothing of tools/ but the package, and its port.py keeps its name beside
+# tools/port.py because a script's own folder comes before tools/ on the path
+# (test_the_editor_runs_from_the_launchers_bundled_copy).
+BOOTSTRAPPED = ("port/tools", "port/enhanced/tools/probes", "editor")
+NAMES_CHECKED = ("port/tools", "port/enhanced/tools/probes")
 
 
 class BootstrapTests(TempDir):
@@ -241,6 +245,31 @@ class BootstrapTests(TempDir):
         self.assertFalse((top / paths.CHECKOUT_MARKER).exists())
         self.assertEqual(self.run_script(top), [top / paths.PACKAGE_DIR, top])
 
+    def test_the_editor_runs_from_the_launchers_bundled_copy(self):
+        # The copy carries editor/ beside tools/ (openrac_common and port.py among them) and
+        # games/*/game.json, without AGENTS.md (tools/bundle_standalone.py). Every module of the
+        # editor imports there, takes the package from the copy, and its own port.py comes first.
+        top = self.layout("bundle", paths.STANDALONE_MARKER).resolve()
+        shutil.copytree(ROOT / "editor", top / "editor", ignore=shutil.ignore_patterns("__pycache__"))
+        shutil.copy(ROOT / "tools/port.py", top / "tools/port.py")
+        for manifest in (ROOT / "games").glob("*/game.json"):
+            (top / "games" / manifest.parent.name).mkdir()
+            shutil.copy(manifest, top / "games" / manifest.parent.name / "game.json")
+        script = top / "editor/probe.py"
+        script.write_text(
+            "import importlib\nfrom pathlib import Path\n"
+            "here = Path(__file__).parent\n"
+            "for name in sorted(p.stem for p in here.glob('*.py') if p.stem != 'probe'):\n"
+            "    importlib.import_module(name)\n"
+            "import assets, disc, port, util\n"
+            "print(Path(util.games.__file__).parent)\nprint(Path(assets.digest.__file__).parent)\n"
+            "print(Path(port.__file__))\nprint(disc.PAL.executable)\n")
+        done = subprocess.run([sys.executable, "-E", str(script)], cwd=self.dir, capture_output=True, text=True)
+        self.assertEqual(done.returncode, 0, done.stderr)
+        self.assertEqual(done.stdout.splitlines(), [str(top / paths.PACKAGE_DIR), str(top / paths.PACKAGE_DIR),
+                                                    str(top / "editor/port.py"),
+                                                    games.load("rac1")["versions"]["pal"]["boot"]["file"]])
+
     def test_the_documented_line_is_the_constant(self):
         self.assertIn(paths.BOOTSTRAP, paths.__doc__)
         self.assertIn(paths.BOOTSTRAP, (ROOT / paths.PACKAGE_DIR / "README.md").read_text(encoding="utf-8"))
@@ -250,7 +279,7 @@ class BootstrapTests(TempDir):
         # comes first on the path: hostgen's test assembler, named mips.py like tools/mips.py that
         # versionmap imports, was one (renamed tests/assembler.py in P2-10).
         ours = {script.stem for script in (ROOT / "tools").glob("*.py")}
-        for folder in BOOTSTRAPPED:
+        for folder in NAMES_CHECKED:
             for script in sorted((ROOT / folder).rglob("*.py")):
                 self.assertNotIn(script.stem, ours, script.relative_to(ROOT))
 

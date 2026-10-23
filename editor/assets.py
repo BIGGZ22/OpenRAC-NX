@@ -69,16 +69,19 @@ import struct
 import sys
 import tempfile
 
-import games
-import gltf_read
-from gltf import Gltf
-from gltf_read import GltfError, invert, multiply, point, vector
-from mesh import Mesh
-import pngio
-from pngio import PngError
-from port import FORMAT as LEVELS_FORMAT  # the levels these assets come from
-import util
-from util import sha256
+sys.path.insert(1, str(next(p for p in Path(__file__).resolve().parents if (p / "tools/openrac_common").is_dir()) / "tools"))
+from openrac_common import digest  # noqa: E402
+
+import games  # noqa: E402
+import gltf_read  # noqa: E402
+from gltf import Gltf  # noqa: E402
+from gltf_read import GltfError, invert, multiply, point, vector  # noqa: E402
+from mesh import Mesh  # noqa: E402
+import pngio  # noqa: E402
+from pngio import PngError  # noqa: E402
+from port import FORMAT as LEVELS_FORMAT  # noqa: E402  the levels these assets come from
+import util  # noqa: E402
+from util import sha256  # noqa: E402
 
 ASSET_FORMAT = 1
 GAME = "rac1"  # the game of levels whose manifests do not say (those written before they did)
@@ -132,10 +135,6 @@ asset.json and textures.json record what was exported; leave them as they are.
 
 class AssetError(ValueError):
     """Something the export or import refuses, said so a modder can act on it."""
-
-
-def file_hash(path: Path) -> str:
-    return sha256(path.read_bytes())
 
 
 def slug(text: str) -> str:
@@ -372,7 +371,7 @@ def export_model(export: LevelExport, family: str, class_id: int, entry: dict) -
         "level": export.level, "kind": family, "class": class_id, "name": name,
         "source": entry["mesh"], "source_sha256": sha256(data),
         "scale": scale, "model": f"{stem}.gltf",
-        "files": {f"{stem}.gltf": file_hash(out / f"{stem}.gltf"), f"{stem}.bin": sha256(buffer)},
+        "files": {f"{stem}.gltf": digest.sha256(out / f"{stem}.gltf"), f"{stem}.bin": sha256(buffer)},
         "textures": textures, "skeleton": skeleton,
         # A moby class's model goes to every level whose class has this skeleton; a list of level
         # numbers here keeps it to those.
@@ -410,7 +409,7 @@ def export_terrain(export: LevelExport, level_entry: dict) -> dict | None:
         "format": ASSET_FORMAT, "game": export.game, "version": export.version, "levels_format": LEVELS_FORMAT,
         "level": export.level, "kind": "terrain", "class": None, "name": "terrain",
         "source": rel, "source_sha256": sha256(data), "scale": 1.0, "model": "terrain.gltf",
-        "files": {"terrain.gltf": file_hash(out / "terrain.gltf"), "terrain.bin": sha256(buffer)},
+        "files": {"terrain.gltf": digest.sha256(out / "terrain.gltf"), "terrain.bin": sha256(buffer)},
         "textures": textures, "skeleton": None, "levels": [export.level],
         "fragments": sum(1 for node in document.list("nodes") if "mesh" in node),
         # The file's vertex colours (RGB) times this are the game's: 0.5 in the file is 0x80.
@@ -528,10 +527,10 @@ class LevelsIndex:
     def signature(self, level: int, class_id: int) -> str:
         """A hash of a class model's vertex positions."""
         _, _, document = self.skeleton(level, class_id)
-        digest = hashlib.sha256()
+        hasher = hashlib.sha256()
         for position in original_vertices(document)[0]:
-            digest.update(struct.pack("<3f", *position))
-        return digest.hexdigest()
+            hasher.update(struct.pack("<3f", *position))
+        return hasher.hexdigest()
 
     def by_hash(self) -> dict[str, list[tuple[int, str]]]:
         """A texture's PNG hash -> every (level, name) with that picture."""
@@ -539,7 +538,7 @@ class LevelsIndex:
             self._by_hash = {}
             for level in self.manifests:
                 for path in sorted((self.levels / f"level_{level:02}" / "textures").glob("*.png")):
-                    self._by_hash.setdefault(file_hash(path), []).append((level, path.stem))
+                    self._by_hash.setdefault(digest.sha256(path), []).append((level, path.stem))
         return self._by_hash
 
     def skeleton(self, level: int, class_id: int):
@@ -633,10 +632,10 @@ def edited_model(folder: Path, manifest: dict) -> Path | None:
     exported = folder / manifest["model"]
     files = manifest.get("files", {})
     changed = [p for p in folder.iterdir() if p.suffix.lower() in (".gltf", ".glb") and p.is_file()
-               and not (p.name in files and file_hash(p) == files[p.name])]
+               and not (p.name in files and digest.sha256(p) == files[p.name])]
     bin_name = Path(manifest["model"]).with_suffix(".bin").name
     if not changed and exported.is_file() and (folder / bin_name).is_file() \
-            and file_hash(folder / bin_name) != files.get(bin_name):
+            and digest.sha256(folder / bin_name) != files.get(bin_name):
         changed = [exported]
     if not changed:
         return None
@@ -940,7 +939,7 @@ def import_model(folder: Path, manifest: dict, index: LevelsIndex, edited_textur
     if path is None:
         return
     source = index.levels / f"level_{level:02}" / manifest["source"]
-    if not source.is_file() or file_hash(source) != manifest["source_sha256"]:
+    if not source.is_file() or digest.sha256(source) != manifest["source_sha256"]:
         report.refuse(f"{where}: the levels were read from the disc again since this export and differ; "
                       "export again and redo the edit on the new export")
         return
@@ -1135,7 +1134,7 @@ def import_terrain(folder: Path, manifest: dict, index: LevelsIndex, edited_text
         return
     rel = index.manifests[level].get("terrain")
     source = index.levels / f"level_{level:02}" / (rel or manifest["source"])
-    if not rel or not source.is_file() or file_hash(source) != manifest["source_sha256"]:
+    if not rel or not source.is_file() or digest.sha256(source) != manifest["source_sha256"]:
         report.refuse(f"{where}: the levels were read from the disc again since this export and differ; "
                       "export again and redo the edit on the new export")
         return

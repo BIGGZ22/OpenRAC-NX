@@ -1,6 +1,7 @@
 """The asset export and re-import (assets.py) on synthetic levels written with
 the editor's own writers (godot.LevelWriter): no disc data."""
 
+import hashlib
 import io
 import json
 import math
@@ -147,7 +148,7 @@ class AssetTests(unittest.TestCase):
         self.assertEqual((manifest["kind"], manifest["class"], manifest["name"], manifest["scale"]),
                          ("moby", 0, "ratchet", 0.5))
         self.assertEqual(manifest["source_sha256"],
-                         assets.file_hash(self.levels / "level_00/mobys/moby_0.glb"))
+                         hashlib.sha256((self.levels / "level_00/mobys/moby_0.glb").read_bytes()).hexdigest())
         self.assertEqual(manifest["textures"], {"moby_0003": [4, 2]})
         self.assertEqual(manifest["skeleton"]["joints"], 2)
         textures = json.loads((self.export / "level_00/textures/textures.json").read_text())["textures"]
@@ -392,7 +393,7 @@ class CrossDiscTests(unittest.TestCase):
         root = self.pack(edit)
         manifest = json.loads((root / overrides.MANIFEST).read_text())
         self.assertEqual(manifest["version"], "pal")
-        picture = assets.file_hash(self.pal / "level_00/textures/moby_0003.png")
+        picture = hashlib.sha256((self.pal / "level_00/textures/moby_0003.png").read_bytes()).hexdigest()
         self.assertEqual(manifest["originals"]["level_01/textures/moby_0007.png"],
                          {"sha256": picture, "size": [4, 2], "used_by": [["moby", 0, 0, 1]]})
         model = manifest["originals"]["level_00/mobys/moby_0.glb"]

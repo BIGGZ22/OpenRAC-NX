@@ -797,7 +797,7 @@ The GDScript files follow [`GDSCRIPT_CONVENTIONS.md`](GDSCRIPT_CONVENTIONS.md).
 | `games.py` | What the four games' level formats share and what each changes, for the shared readers; the versions each game's levels are read from (`game.json`) |
 | `level.py` | A level's sections, core blocks and textures (each game's) |
 | `formats.py` | `FormatError` and `check`, bounded reads, WAD decompression, code overlays, textures |
-| `util.py` | The helpers several modules share, one copy each: SHA-256, reading JSON with the caller's own error, 32-bit floats, the cross product, `games/<game>/game.json` and the disc identity in it |
+| `util.py` | The helpers several modules share, one copy each: SHA-256 of bytes, reading JSON with the caller's own error, 32-bit floats, the cross product, the disc identity in `games/<game>/game.json`. What the repository's [`openrac_common`](../tools/openrac_common/README.md) already does (a file's digest, reading a manifest, the ISO 9660 records) the editor takes from there |
 | `terrain.py`, `ties.py`, `shrubs.py`, `sky.py` | Geometry and placements |
 | `collision.py` | The collision block: decoded for display, and read, edited and written back byte-exact |
 | `mobys.py`, `moby_class.py`, `moby_anim.py` | Moby placements, class meshes, skeletons and animations |
