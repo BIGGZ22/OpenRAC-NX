@@ -14,8 +14,8 @@ sectors, names without their version. No Joliet, no Rock Ridge, no multi-extent 
 interleaving; the discs do not use them. The format is ECMA-119 (documented); the offsets below
 are its fields.
 
-Written from tools/openrac.py:62-106 (iso_find, boot_serial, read_boot) and
-tools/extractor.py:72-107 (walk, files_of, with their limits and errors). editor/disc.py
+Written from tools/openrac.py's iso_find, boot_serial and read_boot and tools/extractor.py's
+walk and files_of (with their limits and errors), which use this since P1-05. editor/disc.py
 (Disc.files, BOOT) reads the same records with its own checks and stays as it is until the
 editor moves onto this module. Never give this a path to a disc in a test: the tests build an
 image of their own.

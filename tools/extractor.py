@@ -30,16 +30,13 @@ import argparse
 import hashlib
 import json
 import os
-import re
 import shutil
-import struct
 import sys
 from pathlib import Path
 
-import openrac
-from openrac_common import digest, files, games
+from openrac_common import digest, files, games, iso9660, paths
 
-SECTOR = openrac.SECTOR
+SECTOR = iso9660.SECTOR
 
 # Exit codes, numbered as OpenGOAL's extractor numbers the same failures
 # (decompiler/extractor/extractor_util.h, ExtractorErrorCode), so that a
@@ -68,44 +65,15 @@ class ExtractError(Exception):
         return f"error {self.code}: {ERRORS[self.code]}" + (f" ({self.detail})" if self.detail else "")
 
 
-# --- ISO 9660 ---------------------------------------------------------------------
-
-def walk(f, lba: int, size: int, prefix: str = "", depth: int = 0) -> list[tuple[str, int, int]]:
-    """(path, first sector, size) of every file under the directory at LBA."""
-    if depth > 8:
-        raise ExtractError(4020, "directories nested too deep")
-    f.seek(lba * SECTOR)
-    data, i, out = f.read(size), 0, []
-    while i < len(data):
-        n = data[i]
-        if n == 0:
-            i = (i // SECTOR + 1) * SECTOR  # records never cross a sector
-            continue
-        raw = data[i + 33:i + 33 + data[i + 32]]
-        extent, length, flags = struct.unpack_from("<I", data, i + 2)[0], struct.unpack_from("<I", data, i + 10)[0], data[i + 25]
-        i += n
-        if raw in (b"\0", b"\1"):
-            continue  # this directory and its parent
-        name = raw.decode("latin-1").split(";")[0]
-        if not re.fullmatch(r"[A-Za-z0-9_.\-]+", name) or name in (".", ".."):
-            raise ExtractError(4020, f"a file name OpenRAC will not write: {name!r}")
-        if flags & 2:
-            out += walk(f, extent, length, prefix + name + "/", depth + 1)
-        else:
-            out.append((prefix + name, extent, length))
-    return out
-
+# --- The disc ----------------------------------------------------------------------
 
 def files_of(image: Path) -> list[tuple[str, int, int]]:
-    with open(image, "rb") as f:
-        f.seek(16 * SECTOR)
-        pvd = f.read(SECTOR)
-        if len(pvd) < SECTOR or pvd[1:6] != b"CD001":
-            raise ExtractError(4020)
-        lba, size = struct.unpack_from("<I", pvd, 158)[0], struct.unpack_from("<I", pvd, 166)[0]
-        if size > 64 * SECTOR:
-            raise ExtractError(4020, "the root directory is damaged")
-        return walk(f, lba, size)
+    """(path, first sector, size) of every file on IMAGE (iso9660.files), or error 4020 with
+    iso9660's reason when it is not ISO 9660 or its directories cannot be trusted."""
+    try:
+        return iso9660.files(image)
+    except iso9660.IsoError as e:
+        raise ExtractError(4020, e.detail) from e
 
 
 # --- What OpenRAC knows ---------------------------------------------------------------
@@ -171,7 +139,7 @@ def extract(image: Path, game: str, proj: Path, minimum: int = MIN_IMAGE_SIZE, b
     BOOT_ONLY: of the disc's files only SYSTEM.CNF and the boot executable are written."""
     check_image_file(image, minimum)
     entries = files_of(image)
-    serial = openrac.boot_serial(image)
+    serial = iso9660.boot_serial(image)
     print(f"{image.name}: {len(entries)} files on the disc, boot executable {serial}")
 
     iso_data = proj / "iso_data"
@@ -239,7 +207,7 @@ def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__.split("\n\n")[0])
     parser.add_argument("image", type=Path, help="the image (.iso) of your own disc")
     parser.add_argument("-g", "--game", required=True, choices=sorted({g["id"] for g in games.load_all()}))
-    parser.add_argument("--proj-path", type=Path, default=openrac.ROOT / "build" / "port")
+    parser.add_argument("--proj-path", type=Path, default=paths.repo_root() / "build" / "port")
     parser.add_argument("-e", "--extract", action="store_true")
     parser.add_argument("--boot-only", action="store_true")
     parser.add_argument("-v", "--validate", action="store_true")

@@ -10,9 +10,9 @@ from pathlib import Path
 from unittest import mock
 
 import openrac
-from openrac_common import games
+from openrac_common import games, iso9660
 
-SECTOR = openrac.SECTOR
+SECTOR = iso9660.SECTOR
 
 
 def record(name: bytes, lba: int, size: int, directory: bool = False) -> bytes:
@@ -72,22 +72,24 @@ class PlaceTests(unittest.TestCase):
 
 
 class DiscTests(unittest.TestCase):
+    """The disc readers openrac.py uses (openrac_common.iso9660), on this file's images."""
+
     def test_finds_the_boot_executable(self):
         boot = b"\x7fELF" + bytes(3000)
         with tempfile.TemporaryDirectory() as tmp:
             iso = Path(tmp) / "any name.iso"
             iso.write_bytes(image({"SYSTEM.CNF": b"BOOT2 = cdrom0:\\SCES_509.16;1\r\nVER = 2.00\r\n",
                                    "SCES_509.16": boot}))
-            self.assertEqual(openrac.boot_serial(iso), "SCES_509.16")
-            self.assertEqual(openrac.read_boot(iso, "SCES_509.16"), boot)
+            self.assertEqual(iso9660.boot_serial(iso), "SCES_509.16")
+            self.assertEqual(iso9660.read(iso, "SCES_509.16"), boot)
 
     def test_not_a_ps2_disc(self):
         with tempfile.TemporaryDirectory() as tmp:
             iso = Path(tmp) / "blank.iso"
             iso.write_bytes(bytes(20 * SECTOR))
-            self.assertIsNone(openrac.boot_serial(iso))
+            self.assertIsNone(iso9660.boot_serial(iso))
             iso.write_bytes(image({"README.TXT": b"hello"}))
-            self.assertIsNone(openrac.boot_serial(iso))
+            self.assertIsNone(iso9660.boot_serial(iso))
 
     def test_checksums(self):
         with tempfile.TemporaryDirectory() as tmp:

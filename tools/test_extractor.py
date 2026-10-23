@@ -102,6 +102,16 @@ class ExtractTests(unittest.TestCase):
             extractor.extract(self.iso, "rac9", self.proj)
         self.assertEqual(caught.exception.code, 4041)
 
+    def test_every_refusal_of_the_disc_reader_is_error_4020_with_its_reason(self):
+        self.assertEqual([path for path, _lba, _size in extractor.files_of(self.iso)],
+                         ["SYSTEM.CNF", "SCES_999.99", "IOPRP.IMG"])
+        for data, detail in ((bytes(40 * 2048), ""),
+                             (image({"A B.BIN": b"x"}), "a file name OpenRAC will not write: 'A B.BIN'")):
+            self.iso.write_bytes(data)
+            with self.assertRaises(extractor.ExtractError) as caught:
+                extractor.files_of(self.iso)
+            self.assertEqual((caught.exception.code, caught.exception.detail), (4020, detail))
+
     def test_no_boot_executable(self):
         self.iso.write_bytes(image({"README.TXT": b"hello"}))
         with self.assertRaises(extractor.ExtractError) as caught:

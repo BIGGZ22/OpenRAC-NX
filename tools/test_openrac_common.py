@@ -39,7 +39,6 @@ for folder in ("port/tools/hostgen", "port/tools/versionmap", "sdk/tools", "edit
 import bake_all  # noqa: E402  port/enhanced/tools/probes
 import carry_functions  # noqa: E402  port/tools/versionmap
 import disc  # noqa: E402  editor
-import extractor  # noqa: E402
 import fcheck_gate  # noqa: E402
 import gen_binding  # noqa: E402  sdk/tools
 import hostgen  # noqa: E402  port/tools/hostgen
@@ -504,7 +503,6 @@ class IsoTests(TempDir):
         for image in (blank, no_cnf, no_boot2):
             with self.subTest(image=image.name):
                 self.assertIsNone(iso9660.boot_serial(image))
-                self.assertEqual(iso9660.boot_serial(image), openrac.boot_serial(image))
         with self.assertRaises(iso9660.IsoError) as caught:
             iso9660.files(blank)
         self.assertEqual(caught.exception.detail, "")
@@ -539,27 +537,6 @@ class IsoTests(TempDir):
         with self.assertRaises(iso9660.IsoError) as caught:
             iso9660.files(damaged)
         self.assertEqual(caught.exception.detail, "the root directory is damaged")
-
-    def test_matches_tools_openrac(self):
-        self.assertEqual(iso9660.boot_serial(self.image), openrac.boot_serial(self.image))
-        self.assertEqual(iso9660.read(self.image, "SCES_999.99"), openrac.read_boot(self.image, "SCES_999.99"))
-        with open(self.image, "rb") as f:
-            for path in ("SYSTEM.CNF", "system.cnf", "DATA", "DATA/LEVEL0.WAD", "DATA/SUB/DEEP.BIN",
-                         "DATA/EMPTY", "FILE059.BIN", "NOPE", "DATA/NOPE", "NOPE/DEEP.BIN"):
-                with self.subTest(path=path):
-                    self.assertEqual(iso9660.find(f, path), openrac.iso_find(f, path))
-
-    def test_matches_the_extractor(self):
-        self.assertEqual(iso9660.files(self.image), extractor.files_of(self.image))
-        refused = {"blank.iso": None, "space.iso": {"A B.BIN": b"x"}, "deep.iso": self.nested(9)}
-        for name, tree in refused.items():
-            image = self.write(name, bytes(20 * SECTOR) if tree is None else build_image(tree))
-            with self.subTest(image=name):
-                with self.assertRaises(iso9660.IsoError) as ours:
-                    iso9660.files(image)
-                with self.assertRaises(extractor.ExtractError) as theirs:
-                    extractor.files_of(image)
-                self.assertEqual((ours.exception.detail, theirs.exception.code), (theirs.exception.detail, 4020))
 
     def test_matches_the_editors_disc_reader(self):
         flat = self.write("flat.iso", build_image({"SYSTEM.CNF": CNF, "SCES_999.99": BOOT, **MANY}))
