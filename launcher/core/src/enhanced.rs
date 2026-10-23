@@ -338,7 +338,9 @@ mod tests {
         assert_eq!(play_additions("enhanced_rendering = 0\n", data, "pal"), None);
         let (env, args) = play_additions("enhanced_rendering = 1\n", data, "pal").unwrap();
         assert_eq!(env, vec![("OPENRAC_GL_API".to_string(), "vulkan".to_string())]);
-        assert_eq!(args, vec!["--probes".to_string(), Path::new("/data/rac1/probes/pal").display().to_string()]);
+        // Joined, not spelled out: Windows joins with a backslash.
+        let probes = data.join("probes").join("pal");
+        assert_eq!(args, vec!["--probes".to_string(), probes.display().to_string()]);
     }
 
     #[test]
