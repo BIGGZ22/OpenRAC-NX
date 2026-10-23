@@ -20,7 +20,9 @@ it and test it yourself, see [port/android/README.md](../../port/android/README.
   works the same.
 - The game runs as a separate Android activity, in its own process.
 - You pick a disc image once; the launcher copies it into the app and sets
-  the game up on the device, the same way the desktop launcher does.
+  the game up on the device, the same way the desktop launcher does. There
+  is no folder to choose: everything lives in the app's own storage, which
+  the Files app shows under OpenRAC.
 - A controller works everywhere. Touch controls appear when you touch the
   screen.
 - The launcher updates itself from GitHub releases.
@@ -85,7 +87,10 @@ built-in pads of handhelds. For touch there is an on-screen pad
 (`platform/touch_pad.h`). It is laid out from the screen edges, stays inside
 the safe area, and its left stick moves to wherever your thumb lands. It has
 no right stick: a finger dragged on the right of the screen, away from the
-buttons, turns the camera. Its size and where each part sits are the
+buttons, turns the camera, a short swipe as far as the stick held over
+(`kLookFullSpeed`). The shoulder buttons sit a little below the top edge,
+clear of the game's health and bolt counters; a test checks that no two
+controls overlap at the usual screen shapes and sizes. Its size and where each part sits are the
 player's (the drawer's Touch controls). A round stick, a gamepad's or the
 touch pad's, is stretched to the DualShock 2's square (`platform/pad.h`), so
 a stick pushed to a diagonal runs. The
@@ -96,6 +101,19 @@ layout is plain data with desktop tests, and it is drawn by a single shader
 line and in the environment (`--data`, `--levels`, `HOME`, `XDG_DATA_HOME`,
 all inside the app's own storage). So `main.cpp` needs no Android-specific
 paths.
+
+**Where your files are.** The app keeps everything in its own storage
+(`files/`): the games (`files/games`, the launcher's install folder),
+saves and settings (`files/share/openrac`), disc images, GPU drivers and
+screenshots. A documents provider (`FilesProvider.kt`, authority
+`<package>.files`) shows them in the Files app's sidebar as OpenRAC, with
+the free space, the way Dolphin and Eden do, and Settings has an Open
+Files button. The app sets `hasFragileUserData`, so uninstalling asks
+whether to keep this data; kept, it is all back when the same app (signed
+with the same key) is installed again. An install from before this layout,
+under shared storage's `OpenRAC` or the app's data folder, is moved into
+`files/games` on the first start (`settle_install_dir`), and the first-run
+folder screen is skipped.
 
 **Older Android versions.** Android's C library (bionic) only has
 `backtrace()` from Android 13 (API 33). For Android 10 to 12 a small
@@ -150,6 +168,10 @@ programs from its native library folder. So the APK carries:
 - Android's Python has no process pools (no `sem_open`), so
   `editor/extract.py` runs up to four levels at once in separate Python
   processes (`SubprocessPool`).
+- Preparing the enhanced lighting bakes several levels at once, and on
+  Android each baker may use every CPU thread, the largest levels first,
+  so that the last level to finish does not bake alone on one core
+  (`bake_all.py`). The probes are the same as with any thread count.
 
 **Leaving the app during setup.** You can switch away while it works. A
 foreground service (`SetupService.kt`) keeps it running and shows the
@@ -176,6 +198,19 @@ the same through the Gamepad API):
 | B | closes a menu or dialog, then goes back to the games |
 | LB / RB | switch tabs |
 | Android's Back | same as B; from the games list it leaves the launcher (a running setup keeps going) |
+
+On Android the launcher has a navigation rail (Games, Mods, Settings) and
+its own arrangement of the pages:
+
+- Games shows a compact card per game. The game picked last is ringed,
+  and the whole launcher wears its colour: Ratchet & Clank orange, Going
+  Commando light blue, Up Your Arsenal yellow, Deadlocked red, Size
+  Matters blue (`launcher/src/lib/themes.ts`).
+- Mods edits the game picked on Games, named at the top right.
+- A game's page keeps Play and the saves at hand; Differences from the
+  original and Help (logs and crash reports) are folded, Help at the foot.
+- Pages fade from one to the next (a view transition); with the system's
+  reduced motion they simply change.
 
 The game is full screen too (`port/platform/window.cpp`). Its on-screen pad
 appears only after you touch the screen, and hides again once you use a

@@ -59,7 +59,7 @@ local build installs over a CI build only after `adb uninstall
 dev.openrac.launcher`, or with the variable set higher.
 
 The game writes its own log as on a desktop, in its data folder
-(`files/OpenRAC/active/<game>/data/`); the launcher shows it on the game's
+(`files/games/active/<game>/data/`); the launcher shows it on the game's
 page with the crash reports. `adb shell run-as dev.openrac.launcher ls files`
 lists the app's files on a debug build.
 
@@ -126,7 +126,8 @@ GPU driver, shows the model and SoC) and the game's log.
     sends you to allow it to install apps, and back in the launcher
     Android's installer asks to confirm, with no second download. The launcher restarts updated, with
     the games set up as they were.
-12. **Mods and Enhanced graphics.** The Mods tab shows one page: Gameplay
+12. **Mods and Enhanced graphics.** The Mods tab shows one page for the
+    game picked on Games, named at its top right: Gameplay
     mods with Enhanced graphics first, Add a mod (a link, or a .zip from the
     picker), the packs. Switch Enhanced graphics on: "Prepare the enhanced
     lighting" runs (a few minutes; the log names libopenrac-probe-bake.so's
@@ -142,3 +143,15 @@ GPU driver, shows the model and SoC) and the game's log.
     returns to the games, LB and RB change tabs, and a held direction
     repeats. Add a disc, set a game up and play with the controller alone.
     The system's bars stay hidden, and a tap shows no blue flash.
+14. **Your files.** Open the Files app: its sidebar lists OpenRAC with the
+    free space, and inside it Saves and settings, Games, Disc images, GPU
+    drivers and Screenshots. Settings' Open Files opens it there. Uninstall
+    the app: Android asks whether to keep its data; keep it, install the
+    same build again, and the games, saves and settings are back with no
+    set-up. Updating from a build that kept its games under shared
+    storage's OpenRAC folder moves them into the app on the first start.
+15. **Touch controls and the look.** In a level, L1, L2, R1 and R2 sit below
+    the health and bolt counters, and a short swipe on the right of the
+    screen turns the camera round quickly. On Games, picking another game
+    changes the launcher's colour (rac2 light blue, rac3 yellow, rac4 red,
+    Size Matters blue), and tabs fade from one to the next.
