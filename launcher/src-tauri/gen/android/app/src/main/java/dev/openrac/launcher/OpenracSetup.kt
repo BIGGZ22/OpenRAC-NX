@@ -22,8 +22,8 @@ import java.util.zip.ZipInputStream
  * Android runs programs only from the app's native library folder, so the Python and each game's
  * windowless program are libraries there (libopenrac-python.so, libopenrac-<id>-cli.so, and
  * Enhanced graphics' libopenrac-probe-bake.so), linked from where the desktop layout has them:
- * openrac/python/bin/python3 and openrac/port/build/release/openrac-<id> (-probe-bake). The folder moves when the app is updated, so the links
- * are made again at every start.
+ * openrac/python/bin/python3 and openrac/port/build/release/openrac-<id> (-probe-bake). The
+ * folder moves when the app is updated, so the links are made again at every start.
  *
  * The copy is unpacked once per install or update, which takes seconds: on a thread of its own,
  * while the launcher's page waits for it (`toolsReady`, OpenracPlugin) and says so. It goes into

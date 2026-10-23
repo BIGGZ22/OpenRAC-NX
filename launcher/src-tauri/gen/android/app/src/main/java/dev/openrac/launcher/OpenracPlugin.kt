@@ -175,8 +175,6 @@ class OpenracPlugin(private val activity: Activity) : Plugin(activity) {
 
   // ---- the set-up, in the background ----
 
-  /** Resolves once the tools the launcher carries are unpacked (OpenracSetup.prepare), with
-   *  {error} when they could not be. */
   /** {path}: shows the folder in the Files app, through OpenRAC's place there (FilesProvider.kt);
    *  OpenRAC's place itself for a folder outside it, or no path. */
   @Command
@@ -189,6 +187,8 @@ class OpenracPlugin(private val activity: Activity) : Plugin(activity) {
     }
   }
 
+  /** Resolves once the tools the launcher carries are unpacked (OpenracSetup.prepare), with
+   *  {error} when they could not be. */
   @Command
   fun toolsReady(invoke: Invoke) {
     Thread {

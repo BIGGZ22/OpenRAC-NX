@@ -84,7 +84,7 @@ class FilesProvider : DocumentsProvider() {
           .setDataAndType(DocumentsContract.buildDocumentUri(authority, id), Document.MIME_TYPE_DIR)
       }
       val root = DocumentsContract.buildRootUri(authority, ROOT)
-      tries += Intent(Intent.ACTION_VIEW).setDataAndType(root, DocumentsContract.Root.MIME_TYPE_ITEM)
+      tries += Intent(Intent.ACTION_VIEW).setDataAndType(root, Root.MIME_TYPE_ITEM)
       tries += Intent(Intent.ACTION_VIEW, root)
       tries += Intent("android.provider.action.BROWSE", root)
       // Phones whose Files app answers none of these: the Files app itself.
@@ -145,7 +145,7 @@ class FilesProvider : DocumentsProvider() {
         addFile(cursor, child, "$parentId/${child.name}", null)
       }
     }
-    cursor.setNotificationUri(files.contentResolver, DocumentsContract.buildChildDocumentsUri(authority(files), parentId))
+    cursor.setNotificationUri(files.contentResolver, childrenUri(parentId))
     return cursor
   }
 
@@ -247,8 +247,8 @@ class FilesProvider : DocumentsProvider() {
     }
   }
 
-  private fun changed(parentId: String) {
-    val uri: Uri = DocumentsContract.buildChildDocumentsUri(authority(files), parentId)
-    files.contentResolver.notifyChange(uri, null)
-  }
+  private fun childrenUri(parentId: String): Uri = DocumentsContract.buildChildDocumentsUri(authority(files), parentId)
+
+  /** Tells the Files app to list PARENTID again. */
+  private fun changed(parentId: String) = files.contentResolver.notifyChange(childrenUri(parentId), null)
 }
