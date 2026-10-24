@@ -21,10 +21,13 @@
 
 #include "common/log.h"
 #include "common/stats.h"
+#include "renderer/render_opt.h"
 #include "renderer/vulkan/vkgl.h"
 #include "renderer/vulkan/vkgl_internal.h"
 
 namespace openrac::vkgl::detail {
+
+namespace render_opt = renderer::render_opt;
 
 using namespace openrac::gl;
 
@@ -104,28 +107,34 @@ ImagePtr default_image(const Format& f, int width, int height) {
 }
 
 void swapchain_barrier(VkCommandBuffer cmd, VkImage image, VkImageLayout from, VkImageLayout to) {
+    // The screen's image is only ever written by transfers (a clear, a blit) and then presented.
+    // Out of UNDEFINED it waits for nothing but the acquire, which the submit waits for at the
+    // transfer stage; into PRESENT_SRC nothing of the queue reads it after (the R-08 table).
+    const bool tight = render_opt::enabled(render_opt::Opt::VkTightSync);
+    VkPipelineStageFlags source = VK_PIPELINE_STAGE_ALL_COMMANDS_BIT;
+    VkPipelineStageFlags destination = VK_PIPELINE_STAGE_ALL_COMMANDS_BIT;
     VkImageMemoryBarrier b{VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER};
     b.srcAccessMask = VK_ACCESS_MEMORY_WRITE_BIT;
     b.dstAccessMask = VK_ACCESS_MEMORY_READ_BIT | VK_ACCESS_MEMORY_WRITE_BIT;
+
+    // The narrow form: transfer to transfer, or transfer to the end of the queue's work.
+    if (tight) {
+        const bool fresh = from == VK_IMAGE_LAYOUT_UNDEFINED;
+        const bool shown = to == VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
+        source = VK_PIPELINE_STAGE_TRANSFER_BIT;
+        destination = shown ? VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT : VK_PIPELINE_STAGE_TRANSFER_BIT;
+        b.srcAccessMask = fresh ? VkAccessFlags{0} : VkAccessFlags{VK_ACCESS_TRANSFER_WRITE_BIT};
+        b.dstAccessMask = shown ? VkAccessFlags{0} : VkAccessFlags{VK_ACCESS_TRANSFER_WRITE_BIT};
+    }
+
     b.oldLayout = from;
     b.newLayout = to;
     b.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
     b.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
     b.image = image;
     b.subresourceRange = {VK_IMAGE_ASPECT_COLOR_BIT, 0, 1, 0, 1};
-    vkCmdPipelineBarrier(
-        cmd,
-        VK_PIPELINE_STAGE_ALL_COMMANDS_BIT,
-        VK_PIPELINE_STAGE_ALL_COMMANDS_BIT,
-        0,
-        0,
-        nullptr,
-        0,
-        nullptr,
-        1,
-        &b
-    );
-    count_barrier(VK_PIPELINE_STAGE_ALL_COMMANDS_BIT, VK_PIPELINE_STAGE_ALL_COMMANDS_BIT);
+    vkCmdPipelineBarrier(cmd, source, destination, 0, 0, nullptr, 0, nullptr, 1, &b);
+    count_barrier(source, destination);
 }
 
 // The surface and swapchain made again: back from the background on Android, the window is a new
@@ -474,26 +483,31 @@ bool present_to_screen() {
     }
     end_rendering();
     const VkImage screen = g->swapchain_images[index];
+    const bool composed = composable();
 
-    // The picture straight into the screen when its copy waited and can be composed; else as before.
-    if (composable()) {
-        swapchain_barrier(
-            f.main, screen, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL
-        );
-        compose_into(f.main, screen, g->swapchain_extent);
-    } else {
+    // A copy that cannot go straight to the screen goes into the window first, in `main`.
+    if (!composed) {
         make_present_copy();
-        swapchain_barrier(
-            f.main, screen, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL
-        );
-        copy_default_into(f.main, screen, g->swapchain_extent);
     }
 
-    VkCommandBuffer cmd = f.main;
+    // The copy to the screen in a buffer of its own, so that only it waits for the screen's
+    // image (vk-tight-sync); or at the end of `main`, as before.
+    const VkCommandBuffer own =
+        render_opt::enabled(render_opt::Opt::VkTightSync) ? present_cmd() : VK_NULL_HANDLE;
+    VkCommandBuffer cmd = own != VK_NULL_HANDLE ? own : f.main;
+    swapchain_barrier(cmd, screen, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
+
+    // The picture straight into the screen when its copy waited and can be composed; else as before.
+    if (composed) {
+        compose_into(cmd, screen, g->swapchain_extent);
+    } else {
+        copy_default_into(cmd, screen, g->swapchain_extent);
+    }
+
     swapchain_barrier(
         cmd, screen, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR
     );
-    submit(f.acquired, g->rendered[index], false);
+    submit(f.acquired, g->rendered[index], false, own);
     VkPresentInfoKHR info{VK_STRUCTURE_TYPE_PRESENT_INFO_KHR};
     info.waitSemaphoreCount = 1;
     info.pWaitSemaphores = &g->rendered[index];

@@ -6,6 +6,7 @@
 // and the order between them, GPU timing, submission, and the render target drawing goes to.
 
 #include <algorithm>
+#include <array>
 #include <cstddef>
 #include <cstdint>
 #include <cstring>
@@ -26,6 +27,52 @@ using namespace openrac::gl;
 namespace {
 
 namespace render_opt = renderer::render_opt;
+
+// The stages and accesses of what an image's layout is used for: what a barrier out of the layout
+// waits for, and what a barrier into it makes wait (vk-tight-sync; docs/port/RENDER_PERF.md, "R-08",
+// the table of barriers). A layout the backend does not use waits for everything, as before.
+struct LayoutScope {
+    VkPipelineStageFlags stages;
+    VkAccessFlags accesses;
+};
+
+// The scope of `layout`. The shader stages are the vertex, fragment and compute ones (a texture is
+// sampled by each); a depth image is loaded in the early tests, stored in the late ones and
+// resolved where colour is written.
+LayoutScope scope_of(VkImageLayout layout) {
+    constexpr VkPipelineStageFlags kShaders = VK_PIPELINE_STAGE_VERTEX_SHADER_BIT
+                                              | VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT
+                                              | VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT;
+    constexpr VkPipelineStageFlags kDepthStages = VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT
+                                                  | VK_PIPELINE_STAGE_LATE_FRAGMENT_TESTS_BIT
+                                                  | VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
+    constexpr VkAccessFlags kDepthAccess =
+        VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_READ_BIT | VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT;
+    constexpr VkAccessFlags kColourAccess =
+        VK_ACCESS_COLOR_ATTACHMENT_READ_BIT | VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
+
+    switch (layout) {
+        // Nothing to wait for: the contents are not kept.
+        case VK_IMAGE_LAYOUT_UNDEFINED:
+            return {VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, 0};
+        case VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL:
+            return {VK_PIPELINE_STAGE_TRANSFER_BIT, VK_ACCESS_TRANSFER_READ_BIT};
+        case VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL:
+            return {VK_PIPELINE_STAGE_TRANSFER_BIT, VK_ACCESS_TRANSFER_WRITE_BIT};
+        case VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL:
+            return {kShaders, VK_ACCESS_SHADER_READ_BIT};
+        case VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL:
+            return {VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT, kColourAccess};
+        case VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL:
+            return {kDepthStages, kDepthAccess | VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT};
+        // Any other: everything, the reference path's scope.
+        default:
+            return {
+                VK_PIPELINE_STAGE_ALL_COMMANDS_BIT,
+                VK_ACCESS_MEMORY_READ_BIT | VK_ACCESS_MEMORY_WRITE_BIT
+            };
+    }
+}
 
 // ---- The frame's ring: vertices, indices, uniforms, texels on their way ----
 
@@ -531,28 +578,22 @@ void barrier(VkCommandBuffer cmd, Image& image, VkImageLayout to) {
         make_present_copy();
     }
 
+    // The old layout's use waits; the new one's waits for it. The reference path: everything.
+    const bool tight = render_opt::enabled(render_opt::Opt::VkTightSync);
+    const LayoutScope all = scope_of(VK_IMAGE_LAYOUT_MAX_ENUM);
+    const LayoutScope from = tight ? scope_of(image.layout) : all;
+    const LayoutScope into = tight ? scope_of(to) : all;
     VkImageMemoryBarrier b{VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER};
-    b.srcAccessMask = VK_ACCESS_MEMORY_READ_BIT | VK_ACCESS_MEMORY_WRITE_BIT;
-    b.dstAccessMask = VK_ACCESS_MEMORY_READ_BIT | VK_ACCESS_MEMORY_WRITE_BIT;
+    b.srcAccessMask = from.accesses;
+    b.dstAccessMask = into.accesses;
     b.oldLayout = image.layout;
     b.newLayout = to;
     b.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
     b.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
     b.image = image.image;
     b.subresourceRange = {image.aspect, 0, VK_REMAINING_MIP_LEVELS, 0, 1};
-    vkCmdPipelineBarrier(
-        cmd,
-        VK_PIPELINE_STAGE_ALL_COMMANDS_BIT,
-        VK_PIPELINE_STAGE_ALL_COMMANDS_BIT,
-        0,
-        0,
-        nullptr,
-        0,
-        nullptr,
-        1,
-        &b
-    );
-    count_barrier(VK_PIPELINE_STAGE_ALL_COMMANDS_BIT, VK_PIPELINE_STAGE_ALL_COMMANDS_BIT);
+    vkCmdPipelineBarrier(cmd, from.stages, into.stages, 0, 0, nullptr, 0, nullptr, 1, &b);
+    count_barrier(from.stages, into.stages);
     image.layout = to;
 
     // A copy, blit or upload into the image comes next: what it writes is kept.
@@ -676,45 +717,72 @@ void timing_results(Frame& f) {
     }
 }
 
-void submit(VkSemaphore wait_semaphore, VkSemaphore signal, bool wait) {
+void submit(VkSemaphore wait_semaphore, VkSemaphore signal, bool wait, VkCommandBuffer present) {
     end_rendering();
     Frame& f = frame();
     gpu_record();
-    // What `upload` did is seen by all that `main` does.
+    const bool tight = render_opt::enabled(render_opt::Opt::VkTightSync);
+    // What `upload` did is seen by all that `main` does: its copies and uploads (transfer writes)
+    // and the culling's dispatches (shader writes), read as indirect arguments, vertices and
+    // indices, uniforms, shader reads and the copies of `main` (the R-08 table's row).
     VkMemoryBarrier m{VK_STRUCTURE_TYPE_MEMORY_BARRIER};
+    VkPipelineStageFlags source = VK_PIPELINE_STAGE_ALL_COMMANDS_BIT;
+    VkPipelineStageFlags destination = VK_PIPELINE_STAGE_ALL_COMMANDS_BIT;
     m.srcAccessMask = VK_ACCESS_MEMORY_WRITE_BIT;
     m.dstAccessMask = VK_ACCESS_MEMORY_READ_BIT | VK_ACCESS_MEMORY_WRITE_BIT;
-    vkCmdPipelineBarrier(
-        f.upload,
-        VK_PIPELINE_STAGE_ALL_COMMANDS_BIT,
-        VK_PIPELINE_STAGE_ALL_COMMANDS_BIT,
-        0,
-        1,
-        &m,
-        0,
-        nullptr,
-        0,
-        nullptr
-    );
-    count_barrier(VK_PIPELINE_STAGE_ALL_COMMANDS_BIT, VK_PIPELINE_STAGE_ALL_COMMANDS_BIT);
+
+    // The narrow form of the same order.
+    if (tight) {
+        source = VK_PIPELINE_STAGE_TRANSFER_BIT | VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT;
+        destination = VK_PIPELINE_STAGE_DRAW_INDIRECT_BIT | VK_PIPELINE_STAGE_VERTEX_INPUT_BIT
+                      | VK_PIPELINE_STAGE_VERTEX_SHADER_BIT | VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT
+                      | VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT | VK_PIPELINE_STAGE_TRANSFER_BIT;
+        m.srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT | VK_ACCESS_SHADER_WRITE_BIT;
+        m.dstAccessMask = VK_ACCESS_INDIRECT_COMMAND_READ_BIT | VK_ACCESS_INDEX_READ_BIT
+                          | VK_ACCESS_VERTEX_ATTRIBUTE_READ_BIT | VK_ACCESS_UNIFORM_READ_BIT
+                          | VK_ACCESS_SHADER_READ_BIT | VK_ACCESS_SHADER_WRITE_BIT
+                          | VK_ACCESS_TRANSFER_READ_BIT | VK_ACCESS_TRANSFER_WRITE_BIT;
+    }
+
+    vkCmdPipelineBarrier(f.upload, source, destination, 0, 1, &m, 0, nullptr, 0, nullptr);
+    count_barrier(source, destination);
     vkEndCommandBuffer(f.upload);
     vkEndCommandBuffer(f.main);
     const VkCommandBuffer buffers[] = {f.upload, f.main};
-    VkSubmitInfo info{VK_STRUCTURE_TYPE_SUBMIT_INFO};
-    const VkPipelineStageFlags stage = VK_PIPELINE_STAGE_ALL_COMMANDS_BIT;
+    // Two batches in one submit when the copy to the screen has a buffer of its own: only that
+    // one waits for the screen's image, at the transfer stage where it first touches it.
+    std::array<VkSubmitInfo, 2> batches{};
+    batches[0] = {VK_STRUCTURE_TYPE_SUBMIT_INFO};
+    batches[1] = {VK_STRUCTURE_TYPE_SUBMIT_INFO};
+    batches[0].commandBufferCount = 2;
+    batches[0].pCommandBuffers = buffers;
+    const VkPipelineStageFlags all_stages = VK_PIPELINE_STAGE_ALL_COMMANDS_BIT;
+    const VkPipelineStageFlags transfer = VK_PIPELINE_STAGE_TRANSFER_BIT;
+    VkSubmitInfo& last = present != VK_NULL_HANDLE ? batches[1] : batches[0];
+
+    // The present's own buffer, ended and run after the frame's.
+    if (present != VK_NULL_HANDLE) {
+        vkEndCommandBuffer(present);
+        batches[1].commandBufferCount = 1;
+        batches[1].pCommandBuffers = &present;
+    }
+
+    // The screen's image is waited for by the batch that writes it.
     if (wait_semaphore != VK_NULL_HANDLE) {
-        info.waitSemaphoreCount = 1;
-        info.pWaitSemaphores = &wait_semaphore;
-        info.pWaitDstStageMask = &stage;
+        last.waitSemaphoreCount = 1;
+        last.pWaitSemaphores = &wait_semaphore;
+        last.pWaitDstStageMask = present != VK_NULL_HANDLE ? &transfer : &all_stages;
     }
-    info.commandBufferCount = 2;
-    info.pCommandBuffers = buffers;
+
+    // The batch that ends the frame tells the present it is done.
     if (signal != VK_NULL_HANDLE) {
-        info.signalSemaphoreCount = 1;
-        info.pSignalSemaphores = &signal;
+        last.signalSemaphoreCount = 1;
+        last.pSignalSemaphores = &signal;
     }
+
+    const std::uint32_t count = present != VK_NULL_HANDLE ? 2 : 1;
     vkResetFences(g->device, 1, &f.fence);
-    check(vkQueueSubmit(g->queue, 1, &info, f.fence), "a submit");
+    check(vkQueueSubmit(g->queue, count, batches.data(), f.fence), "a submit");
     ++g->submission.submits;
     f.submitted = true;
     if (wait) {
@@ -723,6 +791,29 @@ void submit(VkSemaphore wait_semaphore, VkSemaphore signal, bool wait) {
         vkResetCommandPool(g->device, f.pool, 0);
         begin_buffers();
     }
+}
+
+VkCommandBuffer present_cmd() {
+    Frame& f = frame();
+
+    // The present's buffer is the frame slot's, made the first time, reset with its pool.
+    if (f.present == VK_NULL_HANDLE) {
+        VkCommandBufferAllocateInfo alloc{VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO};
+        alloc.commandPool = f.pool;
+        alloc.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
+        alloc.commandBufferCount = 1;
+
+        // No buffer: the copy to the screen goes into `main`, as before.
+        if (!check(vkAllocateCommandBuffers(g->device, &alloc, &f.present), "a present buffer")) {
+            f.present = VK_NULL_HANDLE;
+            return VK_NULL_HANDLE;
+        }
+    }
+
+    VkCommandBufferBeginInfo begin{VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO};
+    begin.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
+    vkBeginCommandBuffer(f.present, &begin);
+    return f.present;
 }
 
 void flush_and_wait() {

@@ -399,8 +399,15 @@ void generate_mipmaps(Image& image) {
     }
     // All levels to one layout again: the ones above the last are TRANSFER_SRC, the last DST.
     VkImageMemoryBarrier b{VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER};
+    // The next barrier moves every level on to be sampled, out of TRANSFER_DST: under vk-tight-sync
+    // this one orders the blits before that transfer-stage barrier (the R-08 table).
+    const bool tight = renderer::render_opt::enabled(renderer::render_opt::Opt::VkTightSync);
+    const VkPipelineStageFlags next =
+        tight ? VK_PIPELINE_STAGE_TRANSFER_BIT : VK_PIPELINE_STAGE_ALL_COMMANDS_BIT;
     b.srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT | VK_ACCESS_TRANSFER_READ_BIT;
-    b.dstAccessMask = VK_ACCESS_MEMORY_READ_BIT;
+    b.dstAccessMask =
+        tight ? VkAccessFlags{VK_ACCESS_TRANSFER_READ_BIT | VK_ACCESS_TRANSFER_WRITE_BIT}
+              : VkAccessFlags{VK_ACCESS_MEMORY_READ_BIT};
     b.oldLayout = VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL;
     b.newLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
     b.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
@@ -408,18 +415,9 @@ void generate_mipmaps(Image& image) {
     b.image = image.image;
     b.subresourceRange = {image.aspect, 0, static_cast<std::uint32_t>(image.levels - 1), 0, 1};
     vkCmdPipelineBarrier(
-        cmd,
-        VK_PIPELINE_STAGE_TRANSFER_BIT,
-        VK_PIPELINE_STAGE_ALL_COMMANDS_BIT,
-        0,
-        0,
-        nullptr,
-        0,
-        nullptr,
-        1,
-        &b
+        cmd, VK_PIPELINE_STAGE_TRANSFER_BIT, next, 0, 0, nullptr, 0, nullptr, 1, &b
     );
-    count_barrier(VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_ALL_COMMANDS_BIT);
+    count_barrier(VK_PIPELINE_STAGE_TRANSFER_BIT, next);
     image.layout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
     barrier(cmd, image, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
 }

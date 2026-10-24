@@ -1171,24 +1171,33 @@ void OPENRAC_GLAPI dispatch_compute(GLuint x, GLuint y, GLuint z) {
 
 void OPENRAC_GLAPI memory_barrier(GLbitfield) {
     end_rendering();
+    // Shader writes (compute's, the only shaders that write) before every later use of what they
+    // wrote: shader and uniform reads, vertices and indices, indirect arguments, copies (the R-08
+    // table). The reference path: every stage.
+    const bool tight = renderer::render_opt::enabled(renderer::render_opt::Opt::VkTightSync);
+    const VkPipelineStageFlags shaders = VK_PIPELINE_STAGE_VERTEX_SHADER_BIT
+                                         | VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT
+                                         | VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT;
+    const VkPipelineStageFlags source = tight ? shaders : VK_PIPELINE_STAGE_ALL_COMMANDS_BIT;
+    const VkPipelineStageFlags destination = tight ? shaders | VK_PIPELINE_STAGE_DRAW_INDIRECT_BIT
+                                                         | VK_PIPELINE_STAGE_VERTEX_INPUT_BIT
+                                                         | VK_PIPELINE_STAGE_TRANSFER_BIT
+                                                   : VK_PIPELINE_STAGE_ALL_COMMANDS_BIT;
     VkMemoryBarrier b{VK_STRUCTURE_TYPE_MEMORY_BARRIER};
     b.srcAccessMask =
         VK_ACCESS_SHADER_WRITE_BIT | VK_ACCESS_UNIFORM_READ_BIT | VK_ACCESS_SHADER_READ_BIT;
     b.dstAccessMask =
         VK_ACCESS_SHADER_READ_BIT | VK_ACCESS_SHADER_WRITE_BIT | VK_ACCESS_UNIFORM_READ_BIT;
-    vkCmdPipelineBarrier(
-        frame().main,
-        VK_PIPELINE_STAGE_ALL_COMMANDS_BIT,
-        VK_PIPELINE_STAGE_ALL_COMMANDS_BIT,
-        0,
-        1,
-        &b,
-        0,
-        nullptr,
-        0,
-        nullptr
-    );
-    count_barrier(VK_PIPELINE_STAGE_ALL_COMMANDS_BIT, VK_PIPELINE_STAGE_ALL_COMMANDS_BIT);
+
+    // The narrow form also names the reads the reference path's every-stage scope covered.
+    if (tight) {
+        b.srcAccessMask = VK_ACCESS_SHADER_WRITE_BIT;
+        b.dstAccessMask |= VK_ACCESS_INDIRECT_COMMAND_READ_BIT | VK_ACCESS_VERTEX_ATTRIBUTE_READ_BIT
+                           | VK_ACCESS_INDEX_READ_BIT | VK_ACCESS_TRANSFER_READ_BIT;
+    }
+
+    vkCmdPipelineBarrier(frame().main, source, destination, 0, 1, &b, 0, nullptr, 0, nullptr);
+    count_barrier(source, destination);
 }
 
 }  // namespace openrac::vkgl::detail

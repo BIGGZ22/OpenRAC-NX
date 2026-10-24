@@ -246,6 +246,7 @@ struct Frame {
     VkCommandPool pool = VK_NULL_HANDLE;
     VkCommandBuffer upload = VK_NULL_HANDLE;
     VkCommandBuffer main = VK_NULL_HANDLE;
+    VkCommandBuffer present = VK_NULL_HANDLE;  // The copy to the screen's (present_cmd), if made.
     VkFence fence = VK_NULL_HANDLE;
     VkSemaphore acquired = VK_NULL_HANDLE;
     std::vector<VkDescriptorPool> pools;
@@ -1052,8 +1053,16 @@ void timing_end();
 void timing_results(Frame& f);
 
 // Ends both command buffers and submits them, `upload` first; `wait` waits for them to finish
-// (a read of pixels, glFinish), and the next ones are begun.
-void submit(VkSemaphore wait_semaphore, VkSemaphore signal, bool wait);
+// (a read of pixels, glFinish), and the next ones are begun. With `present` (present_cmd), that
+// buffer is ended and goes in a second batch of the same submit, which alone waits for
+// `wait_semaphore`, at the transfer stage; otherwise the one batch waits for it at every stage.
+void submit(
+    VkSemaphore wait_semaphore, VkSemaphore signal, bool wait, VkCommandBuffer present = nullptr
+);
+
+// The frame slot's command buffer for the copy to the screen, begun (vk-tight-sync), or null when
+// none can be made. Submitted by submit() after the frame's two.
+VkCommandBuffer present_cmd();
 
 // Submits what is recorded and waits for the GPU to finish it (glReadPixels, glFinish).
 void flush_and_wait();
