@@ -54,12 +54,12 @@ logo, or its mark alone (the first letter: the lombax's head and the bowl of
 the "O") where the name has no room. Nothing else is drawn for it. Its box is
 centred on the letters, with the ears rising above, so it sits level beside text.
 
-| Where                            | What                                                                                |
-| -------------------------------- | ----------------------------------------------------------------------------------- |
-| The header bar                   | the whole logo in the bar's ink (`--bar-name`); the head tilts under the pointer    |
-| The bar of a window under 560 px | the mark                                                                            |
-| Android's navigation rail        | the mark in `--amber`, the picked game's accent, as wide as the rail's destinations |
-| The first run's welcome          | the mark in `--amber`, the accent                                                   |
+| Where                            | What                                                                                                                                                                              |
+| -------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| The header bar                   | the whole logo in the bar's ink (`--bar-name`); the head tilts under the pointer. The Launcher tag stands as tall as "RAC"'s capitals, in the same ink, and the tabs are semibold |
+| The bar of a window under 560 px | the mark                                                                                                                                                                          |
+| Android's navigation rail        | the mark in `--amber`, the picked game's accent, 53 px wide; under it the destinations' icons in circles, their strokes and names heavier to match it                             |
+| The first run's welcome          | the mark in `--amber`, the accent                                                                                                                                                 |
 
 A place can give the mark its own colour with `--logo-mark`.
 

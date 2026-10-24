@@ -245,23 +245,33 @@
     }
   }
 
+  /* The tag stands as tall as the logo's capitals, from the top of "RAC" to its foot, in the same
+     ink and nearly its weight. */
   .brand small {
+    display: inline-flex;
+    align-items: center;
+    height: 17px;
     font-family: var(--font-head);
-    font-size: 0.75rem;
-    font-weight: 700;
-    letter-spacing: 0.12em;
+    font-size: 0.6875rem;
+    font-weight: 800;
+    line-height: 1;
+    letter-spacing: 0.1em;
     text-transform: uppercase;
-    color: var(--bar-ink);
-    border: 1px solid rgb(0 0 0 / 0.3);
+    color: var(--bar-name);
+    border: 2px solid var(--bar-name);
     border-radius: 999px;
-    padding: 2px 8px;
-    margin-left: 4px;
+    /* Orbitron's capitals sit high in their line. */
+    padding: 1px 8px 0;
+    margin-left: 6px;
   }
 
   .brand .ver {
-    margin-left: 6px;
-    padding-left: 6px;
-    border-left: 1px solid rgb(0 0 0 / 0.3);
+    align-self: stretch;
+    display: inline-flex;
+    align-items: center;
+    margin-left: 7px;
+    padding-left: 7px;
+    border-left: 2px solid var(--bar-name);
     letter-spacing: 0.06em;
     text-transform: none;
   }
@@ -300,7 +310,8 @@
     border-radius: 999px;
     padding: 7px 15px;
     font-size: 0.9375rem;
-    font-weight: 500;
+    /* Heavier than the page's text, to stand beside the logo's strokes. */
+    font-weight: 600;
     color: var(--bar-ink);
     transition: color var(--medium) var(--ease);
   }
@@ -605,7 +616,7 @@
   }
 
   :global(html[data-platform="android"]) .brand .brand-mark :global(.logo) {
-    width: 56px;
+    width: 53px;
     height: auto;
     animation: none;
   }
@@ -624,7 +635,7 @@
     display: none;
   }
 
-  /* A destination: its icon in a pill that widens out from the middle when it is the open one,
+  /* A destination: its icon in a circle that grows out from the middle when it is the open one,
      and its name under it. */
   :global(html[data-platform="android"]) .tab {
     display: flex;
@@ -635,7 +646,7 @@
     padding: 0;
     border-radius: 0;
     font-size: 0.75rem;
-    font-weight: 600;
+    font-weight: 700;
     color: var(--soft);
   }
 
@@ -644,13 +655,14 @@
     filter: none;
   }
 
+  /* A circle, as round as the logo's "O" above them. */
   .icon {
     position: relative;
     display: grid;
     place-items: center;
-    width: 56px;
-    height: 32px;
-    border-radius: 16px;
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
   }
 
   .icon::before {
@@ -659,15 +671,17 @@
     inset: 0;
     border-radius: inherit;
     background: color-mix(in srgb, var(--amber) 22%, transparent);
-    transform: scaleX(0.4);
+    transform: scale(0.5);
     opacity: 0;
     transition:
       transform var(--medium) var(--ease),
       opacity var(--fast);
   }
 
+  /* Their strokes heavier than the page's icons, to stand under the logo's. */
   .icon :global(svg) {
     position: relative;
+    stroke-width: 2.3;
     transition: transform var(--medium) var(--ease);
   }
 
@@ -687,8 +701,8 @@
   /* A new launcher is out: a dot on Settings, where it is installed from. */
   .badge {
     position: absolute;
-    top: 3px;
-    right: 13px;
+    top: 4px;
+    right: 4px;
     width: 8px;
     height: 8px;
     border-radius: 50%;
@@ -698,8 +712,8 @@
 
   :global(html[data-platform="android"]) .tab .count {
     position: absolute;
-    top: -4px;
-    left: 44px;
+    top: -2px;
+    left: 26px;
     min-width: 18px;
     height: 18px;
     font-size: 0.75rem;
