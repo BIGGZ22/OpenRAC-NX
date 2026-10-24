@@ -1302,6 +1302,7 @@ void LevelScene::prepare_hero_shadow(
     if (m_light_sets.size() == 256) {
         std::copy_n(m_light_sets.data() + 4, 3, direction.data());
     }
+    direction = m_lighting->sunlight_direction(direction);
     const auto projection = hero_shadow_projection(*m_hero_centre, direction, input.hero_airborne);
     m_hero_matrix = projection.matrix;
     m_hero_airborne = input.hero_airborne;
@@ -1392,6 +1393,7 @@ void LevelScene::prepare_sun_shadow(
         }
     }
     try {
+        direction = m_lighting->sunlight_direction(direction);
         m_sun_cascades = sun_cascades(input.camera, direction, low, high);
     } catch (const std::exception&) {
         return;

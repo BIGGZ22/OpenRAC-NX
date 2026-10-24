@@ -90,6 +90,31 @@ void sunlight_bounce_correction() {
     CHECK(sun_bounced);
 }
 
+// An override must match an authored primary direction without rotating secondary fill or moment rays.
+void test_sunlight_direction_override() {
+    BakeScene scene;
+    scene.environment = {};
+    scene.triangles =
+        {{{{{-100, -100, 0}, {100, -100, 0}, {100, 100, 0}}}, {.5f, .5f, .5f}},
+         {{{{-100, -100, 0}, {100, 100, 0}, {-100, 100, 0}}}, {.5f, .5f, .5f}}};
+    // The primary initially travels parallel to the floor; secondary fill shines upward.
+    scene.suns = {{{1, 0, 0}, {1, 2, 3}, true}, {{0, 0, 1}, {.3f, .2f, .1f}, false}};
+    ProbeGrid grid;
+    grid.origin = {0, 0, 2};
+    BakeSettings settings;
+    settings.rays_per_probe = 128;
+    settings.bounces = 1;
+    const auto horizontal = bake_probes(grid, scene, settings);
+    settings.sunlight_direction = Float3{0, 0, -1};
+    const auto overridden = bake_probes(grid, scene, settings);
+    settings.sunlight_direction.reset();
+    scene.suns[0].direction = {0, 0, -1};
+    const auto authored = bake_probes(grid, scene, settings);
+    CHECK(overridden.irradiance == authored.irradiance);
+    CHECK(overridden.irradiance != horizontal.irradiance);
+    CHECK(overridden.distance_moments == horizontal.distance_moments);
+}
+
 // Verify directional sky.
 void directional_sky() {
     BakeScene scene;
@@ -330,6 +355,7 @@ void emissive_transport() {
 int main() {
     authored_terrain_albedo();
     sunlight_bounce_correction();
+    test_sunlight_direction_override();
     directional_sky();
     point_emission();
     emissive_transport();

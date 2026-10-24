@@ -117,6 +117,19 @@ CLI/runtime overrides still win; `--print-profile` shows resolved bake settings.
 Baking never edits the profile. Keep completed-bake profiles as input records,
 and rebake sparse and dense together after scene or setting changes.
 
+`sunlight_direction` optionally overrides primary sunlight with a world-space light travel
+vector, for example `[0, 1, -1]` for downward light travelling toward +Y. Z is height.
+The vector is normalised; zero and nonfinite vectors are rejected. Omit it or use `null` to
+retain authored directions. Runtime direct lighting, cascade shadows, Ratchet's grounded
+shadow and baked sun bounces share the override. Secondary fill and airborne downward shadows
+retain their directions. Changing it requires rebaking the level.
+
+The saved [Novalis NTSC profile](profiles/rac1-ntsc/level_01/probe-bake.json)
+sets sky intensity to 0.5, sky weight to 0.3 and the primary sunlight direction.
+Copy it to the exported `level_01/probe-bake.json` before baking, and keep it
+there when playing with that bake. Saved profiles are not applied automatically.
+They contain lighting settings only; extracted meshes and baked assets stay local.
+
 | Setting | Default |
 | --- | --- |
 | Sparse / dense spacing | 256 / 4 units |
@@ -124,6 +137,7 @@ and rebake sparse and dense together after scene or setting changes.
 | Rays / bounces | 1,024 / 3 |
 | Sky intensity / sky colour weight | 1 / 0.7 |
 | Sunlight RGB scale | `[1, 1, 1]` |
+| Sunlight direction | Authored light sets |
 | Terrain vertex albedo | `true` |
 | Distance exponent / inside fraction | 32 / 0.75 |
 | Relocation | 4 attempts within 45% of minimum spacing |

@@ -28,6 +28,9 @@ class SceneLighting final : public scene::LevelLighting {
 public:
     std::string mesh_fragment(std::string source) const override;
     std::string early_fragment(std::string source) const override;
+    // Resolves the bake profile's primary sunlight direction for direct lighting and shadows.
+    renderer::Vec3 sunlight_direction(renderer::Vec3 authored) const override;
+
     bool early_supported() const override;
 
     void load(const scene::LevelData& level) override;

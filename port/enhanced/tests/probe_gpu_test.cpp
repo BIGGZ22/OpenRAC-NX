@@ -1120,6 +1120,14 @@ void main() {
             CHECK(std::abs(pixels[c] / 255.f - expected[c]) < .008f);
         }
     }
+    // Upward primary light cannot illuminate the upward receiver; fill and point light stay unchanged.
+    glUniform4f(shader.uniform("probe_sunlight_direction"), 0, 0, 1, 1);
+    glUniform1f(shader.uniform("test_visibility"), 1);
+    glDrawArrays(GL_TRIANGLES, 0, 3);
+    const auto overridden = frame.read_rgba();
+    CHECK(std::abs(overridden[0] / 255.f - .2f) < .008f);
+    CHECK(std::abs(overridden[1] / 255.f - .1f) < .008f);
+    CHECK(std::abs(overridden[2] / 255.f - .1f) < .008f);
     CHECK(glGetError() == GL_NO_ERROR);
     glDeleteVertexArrays(1, &vao);
     frame.release();

@@ -204,8 +204,14 @@ int main(int argc, char** argv) {
                       << ",\"distance_exponent\":" << settings.distance_exponent
                       << ",\"min_inside_fraction\":" << settings.min_inside_fraction
                       << ",\"relocation_iterations\":" << settings.relocation_iterations
-                      << ",\"relocation_max_fraction\":" << settings.relocation_max_fraction
-                      << "}\n";
+                      << ",\"relocation_max_fraction\":" << settings.relocation_max_fraction;
+            // Planners retain the optional direction in each completed bake's input record.
+            if (settings.sunlight_direction) {
+                const auto& direction = *settings.sunlight_direction;
+                std::cout << ",\"sunlight_direction\":[" << direction[0] << ',' << direction[1]
+                          << ',' << direction[2] << ']';
+            }
+            std::cout << "}\n";
             return 0;
         }
         if (!batch_output.empty()

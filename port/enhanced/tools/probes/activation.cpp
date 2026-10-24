@@ -10,6 +10,46 @@
 
 namespace openrac::lighting {
 namespace {
+// Normalises the optional world-space travel direction; null restores authored light sets.
+std::optional<Float3> read_sunlight_direction(const json::Value& value) {
+    // A mod can clear a direction inherited from the level profile.
+    if (value.is_null()) {
+        return std::nullopt;
+    }
+
+    // Directions contain exactly three coordinates, with Z as height.
+    if (!value.is_array() || value.items().size() != 3) {
+        throw std::runtime_error("sunlight_direction requires three finite coordinates or null");
+    }
+
+    Float3 direction{};
+
+    for (unsigned axis = 0; axis < direction.size(); ++axis) {
+        const double component = value[axis].number();
+        // Bound components before narrowing and normalising the vector.
+        if (!value[axis].is_number() || !std::isfinite(component) || std::abs(component) > 1e6) {
+            throw std::runtime_error(
+                "sunlight_direction requires finite coordinates within 1000000"
+            );
+        }
+
+        direction[axis] = static_cast<float>(component);
+    }
+
+    const double length = std::hypot(static_cast<double>(direction[0]), direction[1], direction[2]);
+
+    // A zero vector cannot define a sun or shadow projection.
+    if (length <= 0) {
+        throw std::runtime_error("sunlight_direction requires a nonzero vector");
+    }
+
+    for (float& component : direction) {
+        component = static_cast<float>(component / length);
+    }
+
+    return direction;
+}
+
 void apply_profile(const std::filesystem::path& path, LevelBakeProfile& profile) {
     if (!std::filesystem::exists(path)) {
         return;
@@ -72,6 +112,8 @@ void apply_profile(const std::filesystem::path& path, LevelBakeProfile& profile)
                     fail("sunlight_scale must not exceed 4");
                 }
             }
+        } else if (key == "sunlight_direction") {
+            bake.sunlight_direction = read_sunlight_direction(value);
         } else if (key == "terrain_vertex_albedo") {
             if (value.type() != json::Value::Type::Bool) {
                 fail("terrain_vertex_albedo requires a boolean");

@@ -3,6 +3,7 @@
 #pragma once
 #include <functional>
 #include <memory>
+#include <optional>
 
 #include "enhanced/lighting/probes.h"
 #include "scene/emission.h"
@@ -83,6 +84,8 @@ struct BakeSettings {
     float sky_intensity = 1.0f;
     float sky_weight = 0.7f;            // remaining environment colour comes from the primary light
     Float3 sunlight_scale{1, 1, 1};     // fixed per-level linear RGB correction, primary sun only
+    // Optional world-space light travel direction; absent preserves authored primary directions.
+    std::optional<Float3> sunlight_direction;
     bool terrain_vertex_albedo = true;  // preserve authored terrain shading as an artistic tint
     std::uint32_t rays_per_probe = 1024;
     std::uint32_t bounces = 3;

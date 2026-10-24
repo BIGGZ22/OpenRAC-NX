@@ -22,6 +22,11 @@ std::string SceneLighting::early_fragment(std::string source) const {
     return probe_early_fragment(std::move(source));
 }
 
+// Keeps the level renderer's direct-light and shadow direction aligned with the bake profile.
+renderer::Vec3 SceneLighting::sunlight_direction(renderer::Vec3 authored) const {
+    return m_probes.sunlight_direction(authored);
+}
+
 bool SceneLighting::early_supported() const {
     return EarlyLighting::supported();
 }

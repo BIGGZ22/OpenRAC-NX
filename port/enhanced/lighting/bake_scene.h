@@ -46,7 +46,7 @@ struct Scene {
     std::vector<Float3> to_suns;
 
     // Build one acceleration structure; the source must outlive this scene.
-    explicit Scene(const BakeScene& source);
+    explicit Scene(const BakeScene& source, const std::optional<Float3>& sunlight_direction = {});
     // Release the Embree scene and device after all workers have joined.
     ~Scene();
     Scene(const Scene&) = delete;

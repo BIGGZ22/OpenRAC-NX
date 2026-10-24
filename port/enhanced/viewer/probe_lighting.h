@@ -2,6 +2,7 @@
 #pragma once
 #include <chrono>
 #include <filesystem>
+#include <optional>
 
 #include "enhanced/lighting/probe_regions.h"
 #include "enhanced/lighting/probes.h"
@@ -69,6 +70,12 @@ public:
 
     bool active() const { return enabled && has_data() && mode != 0; }
 
+    // Returns the verified level override for enhanced shadows, or the authored travel direction.
+    lighting::Float3 sunlight_direction(lighting::Float3 authored) const {
+        // Original lighting retains the level's unmodified direction.
+        return active() ? m_sunlight_direction.value_or(authored) : authored;
+    }
+
     bool enabled = true;
     float gi_multiplier = 1.0f;
     float normal_bias = 0.5f;
@@ -83,6 +90,8 @@ private:
     std::array<unsigned, 3> m_textures{};
     lighting::ProbeGrid m_grid;
     lighting::Float3 m_sunlight_scale{1, 1, 1};
+    // Loaded only after scene and bake settings verification; cleared on release.
+    std::optional<lighting::Float3> m_sunlight_direction;
     bool m_terrain_vertex_albedo = false;
     std::vector<lighting::ProbeVolume> m_regions;
     std::vector<lighting::ProbeGrid> m_region_grids;

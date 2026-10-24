@@ -246,6 +246,13 @@ std::string describe_probe_bake(
            << settings.seed << "\nscene_hash " << grid.scene_hash << "\nsettings_hash "
            << grid.settings_hash << "\nmap_and_metadata_bytes "
            << grid.probe_count() * (16 + 20 * grid.texels_per_probe()) << '\n';
+    // Retain the direction beside the bake identity for local lighting inspection.
+    if (settings.sunlight_direction) {
+        const auto& direction = *settings.sunlight_direction;
+        report << "sunlight_direction " << direction[0] << ' ' << direction[1] << ' '
+               << direction[2] << '\n';
+    }
+
     report << "relocation_iterations " << settings.relocation_iterations
            << "\nrelocation_max_spacing_fraction " << settings.relocation_max_fraction
            << "\nplacement paired ray-crossing parity; closed shells treated as solids"

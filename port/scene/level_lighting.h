@@ -39,6 +39,9 @@ public:
     // Returns the scene's mesh fragment shader `source` as the early-lit variant draws it.
     virtual std::string early_fragment(std::string source) const = 0;
 
+    // Returns the configured primary sunlight direction, or the authored direction without an override.
+    virtual renderer::Vec3 sunlight_direction(renderer::Vec3 authored) const = 0;
+
     // Returns whether this GPU and build can draw the early lighting at all.
     virtual bool early_supported() const = 0;
 

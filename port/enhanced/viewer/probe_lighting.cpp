@@ -445,6 +445,18 @@ void ProbeLighting::load(const scene::LevelData& level) {
             m_regions.size()
         );
         m_sunlight_scale = expected.bake.sunlight_scale;
+        m_sunlight_direction = expected.bake.sunlight_direction;
+        // Report overrides after verification so a stale bake cannot claim the new direction.
+        if (m_sunlight_direction) {
+            const auto& direction = *m_sunlight_direction;
+            log::info(
+                "enhanced sunlight travel direction: {} {} {}",
+                direction[0],
+                direction[1],
+                direction[2]
+            );
+        }
+
         m_terrain_vertex_albedo = expected.bake.terrain_vertex_albedo;
         log::info(
             "enhanced sunlight RGB scale: {} {} {}",
@@ -526,6 +538,14 @@ void ProbeLighting::bind(
         m_sunlight_scale[2]
     );
     glUniform1f(shader.uniform("probe_normal_bias"), normal_bias);
+    const auto direction = m_sunlight_direction.value_or(lighting::Float3{});
+    glUniform4f(
+        shader.uniform("probe_sunlight_direction"),
+        direction[0],
+        direction[1],
+        direction[2],
+        m_sunlight_direction.has_value() ? 1.0f : 0.0f
+    );
     glUniform1f(shader.uniform("probe_view_bias"), view_bias);
     glUniform1i(shader.uniform("probe_effect"), 0);
     glUniform1i(shader.uniform("probe_backlight"), backlight ? 1 : 0);
@@ -733,6 +753,7 @@ void ProbeLighting::draw_spheres(const renderer::FrameInput& input, renderer::Re
 
 void ProbeLighting::release() {
     m_sunlight_scale = {1, 1, 1};
+    m_sunlight_direction.reset();
     m_terrain_vertex_albedo = false;
     m_selection.release();
     m_full_residency = false;

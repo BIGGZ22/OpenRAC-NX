@@ -4,6 +4,7 @@
   "sky_intensity": 1,
   "sky_weight": 0.7,
   "sunlight_scale": [1, 1, 1],
+  "sunlight_direction": null,
   "terrain_vertex_albedo": true,
   "light_set": 0,
   "environment": [0.1, 0.1, 0.1],

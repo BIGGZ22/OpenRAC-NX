@@ -12,6 +12,8 @@ uniform float probe_resolution;
 uniform int probe_tiles_x;
 uniform float probe_gi_multiplier;
 uniform vec3 probe_sunlight_scale;
+// XYZ is a world-space travel direction; W enables the primary-light override.
+uniform vec4 probe_sunlight_direction;
 uniform int probe_terrain_albedo;
 uniform float probe_normal_bias;
 uniform float probe_view_bias;
@@ -512,6 +514,10 @@ vec3 probe_direct(vec3 p, vec3 n, vec4 selector, float visibility) {
         vec4 colour = mix(light_sets[a + offset], light_sets[b + offset], blend);
         vec3 direction =
             probe_unit(mix(light_sets[a + offset + 1].xyz, light_sets[b + offset + 1].xyz, blend));
+        // All authored primary sets share the override; secondary fill keeps its direction.
+        if (light == 0 && probe_sunlight_direction.w != 0.0) {
+            direction = probe_sunlight_direction.xyz;
+        }
         float d = dot(-direction, n);
         float response = probe_backlight != 0 ? max(d, -abs(colour.w) * d) : max(d, 0.0);
         // Both the primary sun and secondary directional fill retain 10%.

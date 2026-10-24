@@ -387,7 +387,9 @@ struct ProbeBaker::Impl {
     std::mutex direction_mutex;  // protects table creation; workers only read immutable entries
     std::map<std::pair<std::uint32_t, int>, std::unique_ptr<const BakeDirections>> direction_cache;
 
-    Impl(const BakeScene& input, const BakeSettings& options) : settings(options), scene(input) {}
+    Impl(const BakeScene& input, const BakeSettings& options)
+        : settings(options),
+          scene(input, options.sunlight_direction) {}
 
     // Rounding is part of the key so reuse cannot change a later bake's arithmetic results.
     const BakeDirections& directions(std::uint32_t resolution) {
