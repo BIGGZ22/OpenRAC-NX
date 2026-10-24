@@ -270,11 +270,23 @@ int vsync() {
         );
         const auto* ram = runtime::Memory::get().base();
         const std::uint32_t draws = g_reports_draws ? g_draws : ~0u;
+        // A tick of a level on which the game drew nothing between drawn frames (rac1: the tick a
+        // skipped landing ends on, D_0015F6FC set): the console's undrawn back buffer still holds
+        // the last whole frame, and the TV shows it. Drawn with the layers reported (none), the
+        // world was gone and the sea and the ship showed over the sky (a flash). The window keeps
+        // the last picture instead, for at most two such ticks: a loading card or a menu over
+        // black is drawn as it comes.
+        static bool last_drew = false;
+        static int undrawn = 0;
+        const bool keep = g_reports_draws && draws == 0 && last_drew && undrawn < 2
+                          && openrac_game_loaded_overlay() != OPENRAC_OVERLAY_EXE;
+        undrawn = keep ? undrawn + 1 : 0;
+        last_drew = keep || draws != 0;
         g_draws = 0;
 
-        if (!frontend::frame(
-                std::span<const std::uint8_t>(ram, 32u * 1024 * 1024), g_chain, draws
-            )) {
+        if (!keep && !frontend::frame(
+                         std::span<const std::uint8_t>(ram, 32u * 1024 * 1024), g_chain, draws
+                     )) {
             leave();
         }
 

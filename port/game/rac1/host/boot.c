@@ -26,6 +26,7 @@ static int flight_frames;
  * the flight between planets has its own states (ShipTravelTo's 3, and those after it). */
 #define SHIP_STATE RAC1_ADDR(0x0013E150u)
 #define SHIP_TAKE_OFF 0
+#define SHIP_FLIGHT 4
 #define SHIP_LANDING 8
 
 static int in_level(void) {
@@ -250,7 +251,11 @@ void func_00230A90(void) {
  * on), and Start presses Cross instead (skip_buttons), the game's own skip.
  */
 static void skip(void) {
-    if (flight_frames > 0 && !ship_scene()) {
+    /* Only the flight through space (state 4): the same update runs while the ship leaves a planet
+     * (states 3 and 7), where the write ended nothing and only stopped the frame's draw (the
+     * level's dispatch draws nothing while D_0015F6FC is set): with Start held the world was gone,
+     * and pressed again and again it flickered. */
+    if (flight_frames > 0 && !ship_scene() && GREF(int, SHIP_STATE) == SHIP_FLIGHT) {
         /* The flight's own end: its playing flag cleared (the loader waits on it before it unloads
          * the old banks: ReRAC's 0x15ee4a, PAL D_0015EF4A, set to 1 before the loop) and done. */
         GREF(short, RAC1_ADDR(0x0015EF4Au)) = 0;
