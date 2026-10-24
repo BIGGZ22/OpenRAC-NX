@@ -67,6 +67,9 @@ constexpr std::array<Entry, kOptCount> kEntries = {{
     {Opt::PresentTiming, "present-timing",
      "Vulkan presents numbered and waited on, latest-ready mode, the pacer told when they showed",
      false, Tolerance{}},
+    {Opt::VkExtendedDynamicState, "vk-extended-dynamic-state",
+     "cull, front face, depth and stencil state recorded by the draw, not baked into the pipeline",
+     false, Tolerance{}},
 }};
 // clang-format on
 
