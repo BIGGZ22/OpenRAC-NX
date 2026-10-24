@@ -187,6 +187,99 @@ void record_blend_and_stencil(VkCommandBuffer cmd) {
     }
 }
 
+// ---- Binds, recorded when they change ----
+
+// Binds `set` as set 0 of program `p` into `cmd`, with the program's uniform offset when its
+// uniforms are dynamic; left out when `cmd` holds that set at that offset with that layout.
+void record_program_set(VkCommandBuffer cmd, const Program& p, VkDescriptorSet set) {
+    RecordedState& recorded = g->recorded;
+    const auto offset = static_cast<std::uint32_t>(p.uniforms_offset);
+    const std::optional<std::uint32_t> dynamic =
+        p.dynamic_uniforms ? std::optional<std::uint32_t>(offset) : std::nullopt;
+
+    // The set is bound already, at the same offset (use_layout forgot it on a change of layout).
+    if (skip_repeats() && recorded.set == set && recorded.dynamic_offset == dynamic) {
+        return;
+    }
+
+    vkCmdBindDescriptorSets(
+        cmd,
+        VK_PIPELINE_BIND_POINT_GRAPHICS,
+        p.layout,
+        0,
+        1,
+        &set,
+        dynamic ? 1u : 0u,
+        dynamic ? &offset : nullptr
+    );
+    count_command(Command::BindDescriptors);
+    recorded.set = set;
+    recorded.dynamic_offset = dynamic;
+}
+
+// Binds the material pages' `set` as set 1 of `layout` into `cmd` and pushes the material draw's
+// index `draw`, each left out when `cmd` holds it already.
+void record_material(
+    VkCommandBuffer cmd, VkPipelineLayout layout, VkDescriptorSet set, std::uint32_t draw
+) {
+    RecordedState& recorded = g->recorded;
+    const bool skip = skip_repeats();
+
+    // The material set, bound once for the pass's draws of this layout.
+    if (!skip || recorded.material_set != set) {
+        vkCmdBindDescriptorSets(
+            cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, layout, 1, 1, &set, 0, nullptr
+        );
+        count_command(Command::BindDescriptors);
+        recorded.material_set = set;
+    }
+
+    // The draw's index into the material pages, which changes from draw to draw.
+    if (changes(recorded.push_constant, draw, skip)) {
+        vkCmdPushConstants(cmd, layout, VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof draw, &draw);
+        count_command(Command::BindDescriptors);
+    }
+}
+
+// Binds the draw's `count` vertex buffers `buffers` at `offsets` from binding 0 into `cmd`; left
+// out when `cmd` holds the same buffers at the same offsets.
+void record_vertex_buffers(
+    VkCommandBuffer cmd, std::uint32_t count, const VkBuffer* buffers, const VkDeviceSize* offsets
+) {
+    RecordedState& recorded = g->recorded;
+
+    // The same buffers at the same offsets: handles and offsets have no padding to compare.
+    if (skip_repeats() && recorded.vertex_count == count
+        && std::memcmp(buffers, recorded.vertex_buffers.data(), count * sizeof(VkBuffer)) == 0
+        && std::memcmp(offsets, recorded.vertex_offsets.data(), count * sizeof(VkDeviceSize))
+               == 0) {
+        return;
+    }
+
+    vkCmdBindVertexBuffers(cmd, 0, count, buffers, offsets);
+    count_command(Command::BindBuffers);
+    recorded.vertex_count = count;
+    std::copy_n(buffers, count, recorded.vertex_buffers.begin());
+    std::copy_n(offsets, count, recorded.vertex_offsets.begin());
+}
+
+// Binds `index` as the index buffer, of `type`, into `cmd`; left out when `cmd` holds it already.
+void record_index_buffer(VkCommandBuffer cmd, const BufferRef& index, VkIndexType type) {
+    RecordedState& recorded = g->recorded;
+
+    // The same buffer at the same offset with the same index type.
+    if (skip_repeats() && recorded.index_buffer == index.buffer
+        && recorded.index_offset == index.offset && recorded.index_type == type) {
+        return;
+    }
+
+    vkCmdBindIndexBuffer(cmd, index.buffer, index.offset, type);
+    count_command(Command::BindBuffers);
+    recorded.index_buffer = index.buffer;
+    recorded.index_offset = index.offset;
+    recorded.index_type = type;
+}
+
 }  // namespace
 
 // ---- Draws ----
@@ -416,36 +509,28 @@ void draw(
         count_command(Command::BindPipeline);
         g->bound_pipeline = pipeline;
     }
+    // Sets bound with another program's layout are not trusted for this one.
+    g->recorded.use_layout(p->layout);
+
+    // The program's set 0: its uniforms and textures, when it has any.
     if (set != VK_NULL_HANDLE) {
-        const auto dynamic_offset = static_cast<std::uint32_t>(p->uniforms_offset);
-        vkCmdBindDescriptorSets(
-            cmd,
-            VK_PIPELINE_BIND_POINT_GRAPHICS,
-            p->layout,
-            0,
-            1,
-            &set,
-            p->dynamic_uniforms ? 1u : 0u,
-            p->dynamic_uniforms ? &dynamic_offset : nullptr
-        );
-        count_command(Command::BindDescriptors);
+        record_program_set(cmd, *p, set);
     }
+
+    // The material pages and the draw's index into them, on the native material path.
     if (material.set) {
-        vkCmdBindDescriptorSets(
-            cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, p->layout, 1, 1, &material.set, 0, nullptr
-        );
-        vkCmdPushConstants(cmd, p->layout, VK_SHADER_STAGE_VERTEX_BIT, 0, 4, &material.draw);
-        count_command(Command::BindDescriptors, 2);  // the material set and its push constant
+        record_material(cmd, p->layout, material.set, material.draw);
     }
+
+    // The vertex inputs, when the program reads any.
     if (n > 0) {
-        vkCmdBindVertexBuffers(cmd, 0, n, buffers, offsets);
-        count_command(Command::BindBuffers);
+        record_vertex_buffers(cmd, n, buffers, offsets);
     }
+
     record_viewports(cmd, t);
     record_blend_and_stencil(cmd);
     if (indexed) {
-        vkCmdBindIndexBuffer(cmd, index.buffer, index.offset, vk_index);
-        count_command(Command::BindBuffers);
+        record_index_buffer(cmd, index, vk_index);
         if (gpu_page) {
             g->gpu.pending_bindings = gpu_bindings;
             g->gpu.pending_arguments = gpu_page->arguments.buffer;

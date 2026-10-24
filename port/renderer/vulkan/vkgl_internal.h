@@ -507,8 +507,8 @@ inline double seconds_since(Clock::time_point start) {
 // with more indexed viewports than this records them every time.
 inline constexpr std::size_t kTrackedViewports = 16;
 
-// What the frame's main command buffer holds of the state a draw records: the dynamic state last
-// recorded into it, so that a draw records only what differs
+// What the frame's main command buffer holds of the state a draw records: the dynamic state and
+// the graphics binds last recorded into it, so that a draw records only what differs
 // (render_opt's vk-state-skip, docs/port/RENDER_PERF.md, R-03). The pipeline itself is
 // Context::bound_pipeline, which was tracked before.
 //
@@ -533,8 +533,40 @@ struct RecordedState {
     std::optional<std::uint32_t> stencil_compare_mask;  // vkCmdSetStencilCompareMask's value.
     std::optional<std::uint32_t> stencil_write_mask;    // vkCmdSetStencilWriteMask's value.
 
+    // The layout the descriptor sets and the push constant below were recorded with. Binding a
+    // set with another layout may disturb the others, so a change of layout forgets them.
+    VkPipelineLayout layout = VK_NULL_HANDLE;
+    VkDescriptorSet set = VK_NULL_HANDLE;           // Set 0, the program's; null when not known.
+    std::optional<std::uint32_t> dynamic_offset;    // Set 0's dynamic offset, when it has one.
+    VkDescriptorSet material_set = VK_NULL_HANDLE;  // Set 1, the material pages'; null: unknown.
+    std::optional<std::uint32_t> push_constant;     // The material draw's index, pushed.
+
+    // The vertex buffers last bound from binding 0, `vertex_count` of them; 0 when not known.
+    std::uint32_t vertex_count = 0;
+    std::array<VkBuffer, kAttributes> vertex_buffers{};
+    std::array<VkDeviceSize, kAttributes> vertex_offsets{};
+
+    VkBuffer index_buffer = VK_NULL_HANDLE;         // The index buffer bound; null: not known.
+    VkDeviceSize index_offset = 0;                  // Its offset.
+    VkIndexType index_type = VK_INDEX_TYPE_UINT32;  // Its index type.
+
     // Forgets everything: the next draw records all of its state.
     void forget() { *this = RecordedState{}; }
+
+    // Forgets the descriptor sets and the push constant when `to` is not the layout they were
+    // recorded with, and notes `to` as theirs.
+    void use_layout(VkPipelineLayout to) {
+        // The same layout keeps what was bound with it.
+        if (to == layout) {
+            return;
+        }
+
+        set = VK_NULL_HANDLE;
+        dynamic_offset.reset();
+        material_set = VK_NULL_HANDLE;
+        push_constant.reset();
+        layout = to;
+    }
 };
 
 // All of the backend's state, one of it while the backend is open (`g`).
