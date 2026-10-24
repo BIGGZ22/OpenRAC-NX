@@ -126,9 +126,13 @@ retain their directions. Changing it requires rebaking the level.
 
 The saved [Novalis NTSC profile](profiles/rac1-ntsc/level_01/probe-bake.json)
 sets sky intensity to 0.5, sky weight to 0.3 and the primary sunlight direction.
-Copy it to the exported `level_01/probe-bake.json` before baking, and keep it
-there when playing with that bake. Saved profiles are not applied automatically.
-They contain lighting settings only; extracted meshes and baked assets stay local.
+Native level export automatically copies the matching profile from
+`profiles/<game>-<version>/level_NN/probe-bake.json` into the exported level.
+Launcher bundles carry these profiles too. The baker and runtime read
+the exported copy; neither needs the source checkout when using that level.
+Levels without a matching profile use built-in defaults. Re-export to adopt
+tracked profile changes, then rebake.
+Profiles contain lighting settings only; extracted meshes and baked assets stay local.
 
 | Setting | Default |
 | --- | --- |

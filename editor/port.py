@@ -17,6 +17,7 @@ reads in place of the Godot scene:
                        with vertex colours (alpha 0x80 = 1.0, as 0..1)
     sky.png            the sky as a panorama, as for Godot
     textures/*.png     shared by every mesh
+    probe-bake.json    matching authored lighting profile, when one exists
 
 A moby placement's matrix is the instance's own (position, rotation, scale);
 the class scale in the manifest multiplies in when the class mesh is drawn,
@@ -29,6 +30,7 @@ import struct
 from pathlib import Path
 
 from enhanced.bake_inputs import write_bake_inputs
+from enhanced.profiles import write_bake_profile
 from formats import png, unpack
 import games
 from gltf import Gltf
@@ -233,6 +235,7 @@ class PortLevelWriter(LevelWriter):
                     "textures": sorted(f"textures/{name}.png" for name in self.textures),
                     "bounds": self.stats["bounds"], "stats": self.stats}
         bake_inputs = write_bake_inputs(self.level, self.dir)
+        write_bake_profile(self.level, self.dir)
         if bake_inputs:
             manifest["bake_inputs"] = bake_inputs
         if self.fmt.lenient:
