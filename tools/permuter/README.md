@@ -63,7 +63,7 @@ candidate. `--no-asm-passes` leaves out the fence and barrier passes (they put e
 the C, which rac1/pal's matching rules forbid; such a result is a hint to rewrite by hand).
 
 The sister checkouts are found the usual way (`games.source_checkout`): `$OPENRAC_SOURCE_<GAME>_<VERSION>`,
-else game.json's `checkout`. On the Mac today, for example, `OPENRAC_SOURCE_RAC3_NTSC=~/Projects/RAC/rac3-decomp`.
+else game.json's `checkout`, written from the top of OpenRAC (`../rac3-decomp`: cloned beside OpenRAC). Set the variable only for a checkout kept elsewhere.
 
 ### Per game
 

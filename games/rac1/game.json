@@ -35,7 +35,7 @@
         "name": "rac1-decomp",
         "repo": "https://github.com/OpenRAC/rac1-decomp",
         "branch": "main",
-        "checkout": "~/Projects/rac1-decomp",
+        "checkout": "../rac1-decomp",
         "license": "GPL-3.0 (third-party parts keep theirs)",
         "exclude": [
           ".agents",
@@ -173,7 +173,7 @@
         "name": "Lombyte",
         "repo": "https://github.com/lombyte-project/Lombyte",
         "branch": "main",
-        "checkout": "~/Projects/rac1-decomp-ntsc",
+        "checkout": "../rac1-decomp-ntsc",
         "license": "MIT (GPL-2.0 and newlib parts)",
         "exclude": [],
         "commit": "8d22ee2420f43c245f7f25a9bb3df81aa2eb1c3a",

@@ -34,7 +34,7 @@
         "name": "rac2-decomp",
         "repo": "https://github.com/OpenRAC/rac2-gc-decomp",
         "branch": "master",
-        "checkout": "~/Projects/rac2-decomp",
+        "checkout": "../rac2-decomp",
         "license": "GPL-3.0",
         "exclude": [],
         "commit": "8bc9d785bfec96fbc41c608ce625427912813ca5",
