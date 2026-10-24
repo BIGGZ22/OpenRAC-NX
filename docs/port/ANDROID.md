@@ -85,7 +85,7 @@ built-in pads of handhelds. For touch there is an on-screen pad
 (`platform/touch_pad.h`). It is laid out from the screen edges, stays inside
 the safe area, and its left stick moves to wherever your thumb lands. The
 layout is plain data with desktop tests, and it is drawn by a single shader
-(`game/common/touch_overlay.cpp`).
+(`renderer/ui/touch_overlay.cpp`).
 
 **Files.** The launcher tells the game where everything is, on the command
 line and in the environment (`--data`, `--levels`, `HOME`, `XDG_DATA_HOME`,

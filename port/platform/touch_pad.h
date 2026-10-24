@@ -12,7 +12,7 @@
 // left of the screen, and goes home when it lifts. A button is held while any finger is on it, so
 // a thumb slid from one to the next presses the next. The controls keep their distance from the
 // edges in window heights, whatever the screen's shape, inside its safe area (a camera's notch). Nothing here touches SDL or GL:
-// input.cpp feeds it events and the frontend draws controls() (game/common/touch_overlay.h).
+// input.cpp feeds it events and the frontend draws controls() (renderer/ui/touch_overlay.h).
 
 #pragma once
 

@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 // Copyright (c) 2026 the OpenRAC contributors
 
-#include "fps_counter.h"
+#include "renderer/ui/fps_counter.h"
 
 #include <algorithm>
 #include <cstdint>

@@ -299,15 +299,12 @@ function(openrac_add_game config)
       target_sources(${target} PRIVATE "${OPENRAC_GAME_DIR}/common/frontend.cpp"
                                        "${OPENRAC_GAME_DIR}/common/debug_menu.cpp"
                                        "${OPENRAC_GAME_DIR}/common/debug_overlay.cpp"
-                                       "${OPENRAC_GAME_DIR}/common/fps_counter.cpp"
-                                       "${OPENRAC_GAME_DIR}/common/imgui_gl.cpp"
                                        "${OPENRAC_GAME_DIR}/common/options_menu.cpp"
                                        "${OPENRAC_GAME_DIR}/common/settings.cpp"
-                                       "${OPENRAC_GAME_DIR}/common/touch_overlay.cpp"
                                        ${frontend_sources} ${debug_sources})
       # The scene draws the level and the live mobys.
       target_link_libraries(${target} PRIVATE openrac_scene_renderer openrac_viewer_lib
-                                              openrac_platform openrac_imgui)
+                                              openrac_renderer_ui openrac_platform openrac_imgui)
       # What the window reads of the game's memory: the game's profile (game/common/profile.h), the
       # version's own (port/game/<id>/profile.cpp), else the game's, openrac_game_<game>_profile
       # from port/game/<game>/profile.cpp, else the one that reports no game state.

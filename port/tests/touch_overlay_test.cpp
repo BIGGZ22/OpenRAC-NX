@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 // Copyright (c) 2026 the OpenRAC contributors
 //
-// The on-screen pad drawn (game/common/touch_overlay.h) on a real context, desktop GL or ES
+// The on-screen pad drawn (renderer/ui/touch_overlay.h) on a real context, desktop GL or ES
 // (touch_overlay_es): its shader builds, nothing is drawn before the screen is touched, and a held
 // button is drawn brighter than one let go. Skipped (exit 77) where no context can be made.
 
@@ -11,8 +11,8 @@
 
 #include "check.h"
 #include "renderer/gl.h"
+#include "renderer/ui/touch_overlay.h"
 #include "renderer_gl_context.h"
-#include "touch_overlay.h"
 
 namespace {
 

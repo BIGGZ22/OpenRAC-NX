@@ -5,7 +5,7 @@
 // 2014-2025 Omar Cornut) does, with the calls renderer/gl.h has: one program, one vertex array,
 // the font's texture, a scissor per command.
 
-#include "imgui_gl.h"
+#include "renderer/ui/imgui_gl.h"
 
 #include <cstdint>
 

@@ -33,9 +33,9 @@
 #include "common/stats.h"
 #include "debug/overlay.h"
 #include "frontend.h"
-#include "imgui_gl.h"
 #include "renderer/gl.h"
 #include "renderer/gl_stats.h"
+#include "renderer/ui/imgui_gl.h"
 #include "scene/screenshot.h"
 #include "settings.h"
 

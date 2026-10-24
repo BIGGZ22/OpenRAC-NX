@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 // Copyright (c) 2026 the OpenRAC contributors
 //
-// Dear ImGui drawn with the renderer's own GL (game/common/imgui_gl.h), as the Vulkan renderer's
+// Dear ImGui drawn with the renderer's own GL (renderer/ui/imgui_gl.h), as the Vulkan renderer's
 // window draws the debug overlay and the Android drawer: a window's filled background lands where
 // ImGui put it, in its colour, and nothing outside it. Run on OpenGL, ES (imgui_gl_es) and, under
 // OPENRAC_GL_API=vulkan, the Vulkan renderer. Skipped (exit 77) where no context can be made.
@@ -12,8 +12,8 @@
 #include <imgui.h>
 
 #include "check.h"
-#include "imgui_gl.h"
 #include "renderer/gl.h"
+#include "renderer/ui/imgui_gl.h"
 #include "renderer_gl_context.h"
 
 namespace {

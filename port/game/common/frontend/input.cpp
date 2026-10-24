@@ -24,8 +24,8 @@
 #include "game/common/frontend/geometry.h"
 #include "game/common/frontend/state.h"
 #include "openrac/game_host.h"
+#include "renderer/ui/touch_overlay.h"
 #include "settings.h"
-#include "touch_overlay.h"
 
 namespace openrac::frontend {
 
