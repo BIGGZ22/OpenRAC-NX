@@ -103,6 +103,9 @@ endif()
 #   vulkan_buffer   a static GL buffer drawn, rewritten in part, filled again, read through 8-bit
 #                   indices and as a uniform block, frame after frame (tests/vulkan_buffer_test.cpp)
 #   vulkan_present  the one copy to the screen against the two (tests/vulkan_present_test.cpp)
+#   cull_coverage   the zero-coverage cull's CPU reference (renderer/gpu_draw.h) against a software
+#                   rasteriser (tests/cull_coverage_test.cpp); no GPU, so every preset runs it
+openrac_add_test(cull_coverage INCLUDES .)
 if(TARGET openrac_renderer_vulkan)
   openrac_add_test(vulkan_buffer
     LIBS openrac_renderer openrac_platform openrac_renderer_vulkan)
