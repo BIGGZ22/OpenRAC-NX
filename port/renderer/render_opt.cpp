@@ -43,6 +43,9 @@ constexpr std::array<Entry, kOptCount> kEntries = {{
     {Opt::TexturePrepare, "texture-prepare",
      "a level's textures created, uploaded and mipped at its load instead of at their first draw",
      true, Tolerance{}},
+    {Opt::VkDrawCache, "vk-draw-cache",
+     "the Vulkan draw finds its pipeline and descriptor set by fixed keys, with no heap allocation",
+     true, Tolerance{}},
 }};
 // clang-format on
 
