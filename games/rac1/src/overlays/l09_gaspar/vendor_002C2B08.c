@@ -28,7 +28,7 @@ extern float D_L09_0016137C MACRO_ADDR;
 extern float D_L09_00161380 MACRO_ADDR;
 extern float D_L09_00161384 MACRO_ADDR;
 
-/* Adapted from Lombyte (MIT) for PAL by OpenRAC's tools/port.py: src/overlays/l09/gameplay/entities/0021e538.c, FUN_L09_002c1978. */
+/* Adapted from Lombyte (GPL-3.0) for PAL by OpenRAC's tools/port.py: src/overlays/l09/gameplay/entities/0021e538.c, FUN_L09_002c1978. */
 void DrawBackdropShapes(void *data_ptr, void *list_ptr, int count) {
     char *data = data_ptr;
     char *list = list_ptr;
@@ -636,7 +636,7 @@ extern void func_001F9CA0_EBD30(void *, void *, void *) __asm__("func_001F9CA0")
 extern void func_L00_001FF4B0_EBD30(void *, void *, f32) __asm__("func_L00_001FF4B0");
 
 /* Spawns one of four pebble classes at the spawner, scattered sideways off the end of its path.
-   Adapted from Lombyte (MIT) for PAL by OpenRAC's tools/port.py: src/overlays/l09/gameplay/entities/0021e538.c, FUN_L09_002eaa50. */
+   Adapted from Lombyte (GPL-3.0) for PAL by OpenRAC's tools/port.py: src/overlays/l09/gameplay/entities/0021e538.c, FUN_L09_002eaa50. */
 Moby *SpawnPebble(Moby *owner) {
     Moby *m;
     PebbleVars_EBD30 *ovars;
@@ -1153,7 +1153,7 @@ extern void func_L00_00260108_EEF80(struct Moby *, void *, int, float, float) __
 extern void func_L00_0025F4A8(struct Moby *, void *, void *, float, float, int, int, int, float, float, float, float, int, float, int, int, int, int);
 
 /* Level 9 breakable stack: when hit, swaps in the next damaged class (0x512 -> 0x513 -> 0x514), bursts debris and smoke and removes itself once gone.
-   Adapted from Lombyte (MIT) for PAL by OpenRAC's tools/port.py: src/overlays/l09/gameplay/entities/0021e538.c, FUN_L09_002edc30. */
+   Adapted from Lombyte (GPL-3.0) for PAL by OpenRAC's tools/port.py: src/overlays/l09/gameplay/entities/0021e538.c, FUN_L09_002edc30. */
 void BreakableStackUpdate(struct Moby *moby) {
     float center[4];
     float top[4];
@@ -1337,7 +1337,7 @@ extern void func_001F9BC0_F0780(void *) __asm__("func_001F9BC0");
 extern void func_0020D678_F0780(void *) __asm__("func_0020D678");
 
 /* Per-frame update of a tumbling debris moby: moves and spins it under gravity, bounces it off what it hits, and bursts it into two sparks and removes it when its timer runs out or it leaves the area.
-   Adapted from Lombyte (MIT) for PAL by OpenRAC's tools/port.py: src/overlays/l09/gameplay/entities/0021e538.c, FUN_L09_002ef430. */
+   Adapted from Lombyte (GPL-3.0) for PAL by OpenRAC's tools/port.py: src/overlays/l09/gameplay/entities/0021e538.c, FUN_L09_002ef430. */
 void TumblingDebrisUpdate(Moby *moby) {
     float old[4];
     float q[4];
@@ -1457,7 +1457,7 @@ extern void func_L00_001FF4B0(void *, void *, f32);
 extern int func_L00_001F3958(void);
 
 /* The heavier tumbling debris: as FUN_L09_002ef430, inside a 2..1021 box, with eight sparks; on a hit it either slows down or bounces off, shrinking, with a new random spin.
-   Adapted from Lombyte (MIT) for PAL by OpenRAC's tools/port.py: src/overlays/l09/gameplay/entities/0021e538.c, FUN_L09_002ef9b0. */
+   Adapted from Lombyte (GPL-3.0) for PAL by OpenRAC's tools/port.py: src/overlays/l09/gameplay/entities/0021e538.c, FUN_L09_002ef9b0. */
 void HeavyTumblingDebrisUpdate(struct Moby *moby) {
     float old[4];
     float q[4];
@@ -1516,7 +1516,7 @@ void HeavyTumblingDebrisUpdate(struct Moby *moby) {
 extern void func_L00_00251E30_2f10f8(void *) __asm__("func_L00_00251E30");
 typedef unsigned int u128_ee380 __attribute__((mode(TI)));
 extern char *CreateMoby_c(int) __asm__("func_0020D348");
-/* Creates a type-0x144 moby that inherits its owner's colour, position, rotation and timer. Adapted from Lombyte (MIT) for PAL: overlays/l09/unclassified_0021e538.c, FUN_L09_002efda8. */
+/* Creates a type-0x144 moby that inherits its owner's colour, position, rotation and timer. Adapted from Lombyte (GPL-3.0) for PAL: overlays/l09/unclassified_0021e538.c, FUN_L09_002efda8. */
 char *Moby324Spawn(char *owner, void *position, float angle) {
     u128_ee380 pos;
     void *copy = &pos;
@@ -1541,7 +1541,7 @@ char *Moby324Spawn(char *owner, void *position, float angle) {
 extern float func_L00_001FF860(float, float);
 extern float func_001FA850(float, float);
 
-/* Adapted from Lombyte (MIT) for PAL: src/overlays/l09/gameplay/entities/0021e538.c, FUN_L09_002efe48. */
+/* Adapted from Lombyte (GPL-3.0) for PAL: src/overlays/l09/gameplay/entities/0021e538.c, FUN_L09_002efe48. */
 char *Moby417Spawn(void *unused, void *origin, void *direction_v, float lower_radius, float upper_radius) {
     float *direction = direction_v;
     float offset[4];
@@ -1792,7 +1792,7 @@ extern int func_L00_0028EB98(void *, int);
 extern float func_001FA888(int);
 extern void func_L00_002617B0(char *, void *, void *, void *);
 
-// Moves an elevator along its path once its collectable flag is set, easing between nodes. Adapted from Lombyte (MIT) for PAL: src/overlays/l09/gameplay_vendor_003033a0.c, FUN_L09_003033a0.
+// Moves an elevator along its path once its collectable flag is set, easing between nodes. Adapted from Lombyte (GPL-3.0) for PAL: src/overlays/l09/gameplay_vendor_003033a0.c, FUN_L09_003033a0.
 void PathPlatformL09_Update(unsigned char *moby) {
     char *data = *(char **)(moby + 0x78);
     char *hero;
@@ -1982,7 +1982,7 @@ extern s32 func_001F9850_304EE0(s32) __asm__("func_001F9850");
 
 void func_L09_00304EE0_r(Moby *moby, VendorVars_304EE0 *vars, f32 *health) __asm__("func_L09_00304EE0");
 
-/* Adapted from Lombyte (MIT) for PAL by OpenRAC's tools/port.py: src/overlays/l09/gameplay/vendor/003033a0.c, FUN_L09_00303b30. */
+/* Adapted from Lombyte (GPL-3.0) for PAL by OpenRAC's tools/port.py: src/overlays/l09/gameplay/vendor/003033a0.c, FUN_L09_00303b30. */
 void func_L09_00304EE0_r(Moby *moby, VendorVars_304EE0 *vars, f32 *health) {
     VendorHitSource_304EE0 *src;
     Moby *link;
@@ -2124,7 +2124,7 @@ typedef struct {
     s32 link2;
 } VendorVars2_05378;
 
-/* Adapted from Lombyte (MIT) for PAL by OpenRAC's tools/port.py: src/overlays/l09/gameplay/vendor/003033a0.c, FUN_L09_00303fc8. */
+/* Adapted from Lombyte (GPL-3.0) for PAL by OpenRAC's tools/port.py: src/overlays/l09/gameplay/vendor/003033a0.c, FUN_L09_00303fc8. */
 void ApplyHitToHealthTwoLinks(Moby *moby, VendorVars2_05378 *vars, f32 *health) {
     VendorHitSource_05378 *src;
     Moby *link;

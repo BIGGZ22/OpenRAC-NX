@@ -18,7 +18,7 @@ extern u32 D_L00_0015F53C MACRO_ADDR;
 extern s32 D_L00_0015F538 MACRO_ADDR;
 extern u32 D_L00_0015F540 MACRO_ADDR;
 
-/* Adapted from Lombyte (MIT) for PAL by OpenRAC's tools/port.py: src/overlays/shared/rendering_0023f0d8.c, FUN_L00_0023f120. */
+/* Adapted from Lombyte (GPL-3.0) for PAL by OpenRAC's tools/port.py: src/overlays/shared/rendering_0023f0d8.c, FUN_L00_0023f120. */
 void LightTable_Relocate(s32 *p) {
     s32 i, j;
     s32 n;

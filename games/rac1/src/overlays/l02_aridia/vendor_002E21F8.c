@@ -466,7 +466,7 @@ extern void func_L02_0023D600(void);
 extern void func_L02_0023D6E0(void);
 
 /* Three-state controller (data+0x180): 0 waits for its trigger, 1 runs timed effects until released, then moves the moby to its spawn point, sets the two linked mobys' flags and enters state 2.
-   Adapted from Lombyte (MIT) for PAL by OpenRAC's tools/port.py: src/overlays/l02/gameplay/entities/002e0dc0.c, FUN_L02_002e1fb8. */
+   Adapted from Lombyte (GPL-3.0) for PAL by OpenRAC's tools/port.py: src/overlays/l02/gameplay/entities/002e0dc0.c, FUN_L02_002e1fb8. */
 void SkidMcMarxWarpUpdate(char *moby) {
     char *data = *(char **)(moby + 0x78);
     float fx_pos[4] __attribute__((aligned(16)));
@@ -544,7 +544,7 @@ extern void func_L00_0028EBF0(int);
 extern void func_L00_002617B0(void *, void *, void *, void *);
 
 /* Lift platform carried by an animated driver moby: follows the driver's joint 0, waits at an end (3/5) for the hero to step on, then plays the driver's up or down animation (2/4) with its loop sound until it ends.
-   Adapted from Lombyte (MIT) for PAL by OpenRAC's tools/port.py: src/overlays/l02/gameplay/entities/002e0dc0.c, FUN_L02_002e2228. */
+   Adapted from Lombyte (GPL-3.0) for PAL by OpenRAC's tools/port.py: src/overlays/l02/gameplay/entities/002e0dc0.c, FUN_L02_002e2228. */
 void DriverLiftUpdate(struct Moby *moby) {
     char *data = (char *)moby->pvars;
     struct Moby *driver = &D_L02_00160058_E3660[*(int *)(data + 0xA0)];
@@ -665,7 +665,7 @@ extern void func_00202790_2EB480(void *) __asm__("func_00202790");
 void func_L02_002EB480_r(Moby *m) __asm__("func_L02_002EB480");
 
 /* Draws the parts whose clip volumes contain the camera (all of them when the override flag is set).
-   Adapted from Lombyte (MIT) for PAL by OpenRAC's tools/port.py: src/overlays/l02/gameplay/entities/002e0dc0.c, FUN_L02_002ea048. */
+   Adapted from Lombyte (GPL-3.0) for PAL by OpenRAC's tools/port.py: src/overlays/l02/gameplay/entities/002e0dc0.c, FUN_L02_002ea048. */
 void func_L02_002EB480_r(Moby *m) {
     int *d = (int *)m->pvars;
 
@@ -732,7 +732,7 @@ extern u8 *func_L00_00272158_ED358(void *, void *, s32, s32, s32, s32, f32, f32,
 extern void func_L00_00258DB0_ED358(void *, f32, f32) __asm__("func_L00_00258DB0");
 
 /* Shard debris update: drifts along its velocity, sheds particle trails and expires when its timer runs out.
-   Adapted from Lombyte (MIT) for PAL by OpenRAC's tools/port.py: src/overlays/l02/gameplay/vendor/002ebf20.c, FUN_L02_002ebf20. */
+   Adapted from Lombyte (GPL-3.0) for PAL by OpenRAC's tools/port.py: src/overlays/l02/gameplay/vendor/002ebf20.c, FUN_L02_002ebf20. */
 void ShardDebrisUpdate(struct Moby *m) {
     ShardVars_ED358 *v = (ShardVars_ED358 *)m->pvars;
     Vec4f p, back, half, jit;
@@ -784,7 +784,7 @@ extern short D_L02_00161FE0;
 extern short D_L02_00161FE4;
 
 /* Spawns a projectile moby from src at pos, heading along dir, with its lifetime in the moby data.
-   Adapted from Lombyte (MIT) for PAL by OpenRAC's tools/port.py: src/overlays/l02/gameplay/vendor/002ebf20.c, FUN_L02_002ec228. */
+   Adapted from Lombyte (GPL-3.0) for PAL by OpenRAC's tools/port.py: src/overlays/l02/gameplay/vendor/002ebf20.c, FUN_L02_002ec228. */
 char *SpawnAridiaProjectile(char *src, void *pos, float *dir) {
     char *moby;
     char *data;
@@ -1260,7 +1260,7 @@ extern void func_L00_001ED9B0_F9E50(void *, void *, void *) __asm__("func_L00_00
 extern char D_L02_00167300_F9E50[] __asm__("D_L02_00167300");
 
 /* Sets the vendor camera mode; mode 3 also aims it from the hero's position.
-   Adapted from Lombyte (MIT) for PAL by OpenRAC's tools/port.py: src/overlays/l02/gameplay/vendor/002ebf20.c, FUN_L02_002f8a18. */
+   Adapted from Lombyte (GPL-3.0) for PAL by OpenRAC's tools/port.py: src/overlays/l02/gameplay/vendor/002ebf20.c, FUN_L02_002f8a18. */
 void Vendor_SetCameraMode(int mode, int arg) {
     char *g = D_L02_00167300_F9E50;
     char *cam = *(char **)(g + 0x180);

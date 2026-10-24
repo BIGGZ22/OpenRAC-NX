@@ -15,7 +15,7 @@ typedef unsigned int Q_50B88 __attribute__((mode(TI), aligned(16)));
 extern void func_001FA540(void *, void *, void *);
 
 /* Rotates a point (in place) about a unit axis by angle using a Rodrigues-style matrix: skew = cross-product matrix of axis, sin_part = sin*skew, cos_part = (1-cos)*skew^2; cos_part is then reused as the identity matrix.
-   Adapted from Lombyte (MIT) for PAL by OpenRAC's tools/port.py: src/overlays/l03/math/rotations/rotate_point_about_axis.c, FUN_L03_0024fba8. */
+   Adapted from Lombyte (GPL-3.0) for PAL by OpenRAC's tools/port.py: src/overlays/l03/math/rotations/rotate_point_about_axis.c, FUN_L03_0024fba8. */
 void RotatePointAboutAxis(Q_50B88 *axis, Q_50B88 *point, float angle) {
     float axis_v[4] __attribute__((aligned(16)));
     float point_v[4] __attribute__((aligned(16)));

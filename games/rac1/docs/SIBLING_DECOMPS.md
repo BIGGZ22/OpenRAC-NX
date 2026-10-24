@@ -18,7 +18,7 @@ git clone https://github.com/OpenRAC/rac3-uya-decomp ~/Projects/rac3-decomp
 
 ## Lombyte: the same game, US build
 
-[Lombyte](https://github.com/mateuszklysz/Lombyte) (MIT) matches the US
+[Lombyte](https://github.com/mateuszklysz/Lombyte) (GPL-3.0) matches the US
 executable, `SCUS_971.99`. Its code is ours, compiled for another
 region, so a function it has matched is the best starting point we
 have. It keeps one C file per function under `src/`, with names
@@ -90,7 +90,7 @@ A queue packet carrying such a port says so (`wave.py`'s `lombyte_port`).
    - **Types**: `s32`, `u32` and `f32` exist in `include/common.h`.
 3. Declare things the way this file already does. Keep Lombyte's
    control flow and statement order; they are what matched.
-4. Credit it in the candidate's comment ("from Lombyte (MIT), adapted to
+4. Credit it in the candidate's comment ("from Lombyte (GPL-3.0), adapted to
    PAL") and in the commit message. MIT also requires Lombyte's copyright
    and permission notice with any substantial copy: the first port adds a
    `THIRD_PARTY_NOTICES.md` carrying Lombyte's `LICENSE` ("Copyright (c)

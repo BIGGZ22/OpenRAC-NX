@@ -51,7 +51,7 @@ extern int r1_D_00132EA8;
 extern int func_00127508(int, int, int, int);
 
 /* rac1-decomp src/core/00123168.c: func_001233E8 */
-/* sceDmaPutEnv. Adapted from Lombyte (MIT) for PAL. */
+/* sceDmaPutEnv. Adapted from Lombyte (GPL-3.0) for PAL. */
 int func_00127040(void *arg0) {
     sceDmaEnv *env = arg0;
     unsigned int ctrl;

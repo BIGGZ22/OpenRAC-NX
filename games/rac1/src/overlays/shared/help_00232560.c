@@ -463,7 +463,7 @@ extern f32 func_L00_002345B0_33410(void *) __asm__("func_L00_002345B0");
 extern f32 func_L00_002342F8_33410(void *) __asm__("func_L00_002342F8");
 extern s32 func_L00_0025A5D8(f32 *, f32 *, f32, f32, f32);
 
-/* Adapted from Lombyte (MIT) for PAL by OpenRAC's tools/port.py: src/overlays/shared/ui_help_00231d08.c, FUN_L00_00232b90. */
+/* Adapted from Lombyte (GPL-3.0) for PAL by OpenRAC's tools/port.py: src/overlays/shared/ui_help_00231d08.c, FUN_L00_00232b90. */
 f32 Hero_PredictLandingTime(f32 a, f32 b, f32 c) {
     f32 t[4];
     Vec4 v;
@@ -1191,7 +1191,7 @@ extern float func_001FA790(float, float);
 extern f32 D_0015EE70 MACRO_ADDR;
 
 /* The hero on a moving platform: finds the platform the hero stands on or hangs from, tracks the platform's motion between frames (its attach points at 0x310-0x330) and carries the hero (position, facing, ledge-grab point) with it.
-   Adapted from Lombyte (MIT) for PAL by OpenRAC's tools/port.py: src/overlays/shared/gameplay/hero/set_hero_animation.c, FUN_L00_00233f80. */
+   Adapted from Lombyte (GPL-3.0) for PAL by OpenRAC's tools/port.py: src/overlays/shared/gameplay/hero/set_hero_animation.c, FUN_L00_00233f80. */
 void HeroRideMovingPlatform(void) {
     Vec4A v0, v10, v20, v30, v40, v50, v60, v70, v80, v90, vA0;
     float sB0, sB4;
@@ -1365,7 +1365,7 @@ s32 func_001FA8A8(s32, s32, f32);
 void func_0020D960(void *, s32, void *);
 void func_L00_001FFED8(void *, s32, f32);
 
-/* Adapted from Lombyte (MIT) for PAL by OpenRAC's tools/port.py: src/overlays/shared/ui_help_00231d08.c, FUN_L00_00234808. */
+/* Adapted from Lombyte (GPL-3.0) for PAL by OpenRAC's tools/port.py: src/overlays/shared/ui_help_00231d08.c, FUN_L00_00234808. */
 void HeroPulseAttachmentColors(void) {
     char *m0, *m1, *m2;
     f32 k;

@@ -3,7 +3,7 @@
  * UploadMipTexture: sends a texture (a header, then its palette and mip levels) to the GS at the
  * texture allocation cursor and writes its TEX0, MIPTBP1/TEX1 and MIPTBP1 values to regs[0..2].
  * Used for the planet pictures and area captions of the level transition. Adapted from Lombyte
- * (MIT): src/assembly/textbin/fun_00202270.c (US 0x00202270, the same function).
+ * (GPL-3.0): src/assembly/textbin/fun_00202270.c (US 0x00202270, the same function).
  */
 typedef struct {
     u8 pad0[8];

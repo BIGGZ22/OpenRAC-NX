@@ -511,7 +511,7 @@ extern void func_L00_001FF4B0(void *, void *, float);
 extern void func_001F9BD8(void *, void *, void *);
 extern void func_001F9BC0(void *);
 
-/* Adapted from Lombyte (MIT) for PAL by OpenRAC's tools/port.py: src/overlays/shared/gameplay/entities/002d6810.c, FUN_L15_002d79e8. */
+/* Adapted from Lombyte (GPL-3.0) for PAL by OpenRAC's tools/port.py: src/overlays/shared/gameplay/entities/002d6810.c, FUN_L15_002d79e8. */
 void ResetBeamPoints(char *m) {
     char *d = *(char **)(m + 0x78);
     float v[4];
@@ -839,7 +839,7 @@ extern void xform_2d8e48(void *, void *, void *) __asm__("func_001F9EE8");
 extern long tex_2d8e48(int) __asm__("func_001F4868");
 extern float rnd_2d8e48(float, float) __asm__("func_L00_00258C80");
 extern void draw_2d8e48(void *, void *, int) __asm__("func_L00_001FD1D8");
-/* Draw callback: builds a camera-facing matrix from the moby's position and draws two quads, each with a jittered scale. Adapted from Lombyte (MIT) for PAL: overlays/shared/unclassified_002d6810.c, FUN_L15_002d8e48. */
+/* Draw callback: builds a camera-facing matrix from the moby's position and draws two quads, each with a jittered scale. Adapted from Lombyte (GPL-3.0) for PAL: overlays/shared/unclassified_002d6810.c, FUN_L15_002d8e48. */
 void DrawBillboardQuadPair(char *mv) {
     Q2d8e48 quad;
     V2d8e48 mat[4];
@@ -910,7 +910,7 @@ extern void func_0022ED80(int, int, void *);
 extern void func_0020D678(void *);
 extern void func_L07_0029C6A8(void *, float, int, float);
 
-/* Adapted from Lombyte (MIT) for PAL by OpenRAC's tools/port.py: src/overlays/shared/gameplay/entities/002d6810.c, FUN_L15_002e4380. */
+/* Adapted from Lombyte (GPL-3.0) for PAL by OpenRAC's tools/port.py: src/overlays/shared/gameplay/entities/002d6810.c, FUN_L15_002e4380. */
 void Moby934Update(unsigned char *m) {
     char *d = *(char **)(m + 0x78);
     float next[4];

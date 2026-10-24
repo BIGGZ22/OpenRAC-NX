@@ -104,7 +104,7 @@ extern s32 r1_func_00118C80_1C5C0(s32) __asm__("r1_func_00118C80");
 extern void r1_func_0011AD70(void *, s32);
 
 /* rac1-decomp src/core/00119D88.c: func_0011C5C0 */
-/* Adapted from Lombyte (MIT) for PAL by OpenRAC's tools/port.py: src/sdk/library/sceRead.c, sceRead. */
+/* Adapted from Lombyte (GPL-3.0) for PAL by OpenRAC's tools/port.py: src/sdk/library/sceRead.c, sceRead. */
 s32 func_0011E4E0(s32 fd, void *buffer, s32 length)
 {
     struct FsReadRequest *request;

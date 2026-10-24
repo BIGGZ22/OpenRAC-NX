@@ -97,7 +97,7 @@ void func_L17_0021ED38(s32, s32);
 void func_L00_00217570(s32, s32);
 void func_L00_00211338(void *, s32, f32, f32);
 
-/* Adapted from Lombyte (MIT) for PAL by OpenRAC's tools/port.py: src/overlays/l17/ui_help_002020a8.c, FUN_L17_0020dbe8. */
+/* Adapted from Lombyte (GPL-3.0) for PAL by OpenRAC's tools/port.py: src/overlays/l17/ui_help_002020a8.c, FUN_L17_0020dbe8. */
 s32 HeroL17_TryTakeHit(s32 arg) {
     u8 *m;
     T_8 *tbl;

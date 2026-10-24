@@ -192,7 +192,7 @@ extern int func_0012EF48(int);
    finish a CD read (FlushCache, then its callback with the reply word);
    send the next batch when idle; and poll a stop request. Returns
    whether an RPC or a CD read is still in flight. Adapted from Lombyte
-   (MIT) for PAL. */
+   (GPL-3.0) for PAL. */
 int func_0012DDC0(void) {
     int i;
     int idx;
@@ -504,7 +504,7 @@ extern int func_0012E038_s(int *, int) __asm__("func_0012E038");
 /* snd_SendIOPCommandAndWait: copy the command data into the send buffer,
    flush pending commands, wait for the RPC server, call command cmd and
    wait for its reply; the reply's second word is the result. Adapted
-   from Lombyte (MIT) for PAL. */
+   from Lombyte (GPL-3.0) for PAL. */
 int func_0012E688(int cmd, int size, void *arg) {
     unsigned char *data = arg;
     int i;
@@ -556,7 +556,7 @@ extern int func_00116078_p(const char *, ...) __asm__("func_00116078");
 
 /* snd_SendIOPCommandNoWait: sends a bare command at once when nothing is queued or pending; otherwise waits
    for room in the current batch, appends the command and its data, and records the callback for its reply.
-   Adapted from Lombyte (MIT) for PAL: src/audio/rpc/snd_send_iop_command_no_wait.c, snd_send_iop_command_no_wait. */
+   Adapted from Lombyte (GPL-3.0) for PAL: src/audio/rpc/snd_send_iop_command_no_wait.c, snd_send_iop_command_no_wait. */
 void func_0012E820_r(int cmd, int size, unsigned char *data, int cb, long cb_data) __asm__("func_0012E820");
 /* snd_SendIOPCommandNoWait */
 void func_0012E820_r(int cmd, int size, unsigned char *data, int cb, long cb_data) {
@@ -647,7 +647,7 @@ extern s32 sceSifCallRpc_sb(void *, u32, u32, void *, s32, void *, s32, void (*)
    wait until the sound RPC client is idle (complaining and flushing the
    cache while it is not), send the batch (command 0x4D) with its return
    buffer, then flip to the other batch and reset it.
-   Adapted from Lombyte (MIT): src/audio/rpc/snd_send_current_batch.c, snd_send_current_batch. */
+   Adapted from Lombyte (GPL-3.0): src/audio/rpc/snd_send_current_batch.c, snd_send_current_batch. */
 void func_0012EB18(void) {
     s32 next;
 

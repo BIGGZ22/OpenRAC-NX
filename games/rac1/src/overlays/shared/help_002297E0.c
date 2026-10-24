@@ -104,7 +104,7 @@ extern short D_0015EE6C_229B78 __asm__("D_0015EE6C");
 extern float D_0015EE64 MACRO_ADDR;
 extern int D_L00_0015F7BC MACRO_ADDR;
 
-/* Menu/hint update: picks an action for the player from the game block's timers and flags. Adapted from Lombyte (MIT) for PAL: overlays/shared/ui_help_00229010.c, FUN_L00_002293a8. */
+/* Menu/hint update: picks an action for the player from the game block's timers and flags. Adapted from Lombyte (GPL-3.0) for PAL: overlays/shared/ui_help_00229010.c, FUN_L00_002293a8. */
 void HeroChooseAction(void) {
     char *b, *c, *d;
     int n;
@@ -165,7 +165,7 @@ extern int func_L00_00222B80_b(int, int) __asm__("func_L00_00222B80");
 extern int func_L00_00267BA8(int, int, int);
 extern int func_L00_0020DB30(int);
 
-// Tries the crouch-jump style moves in priority order and starts the first whose conditions hold. Adapted from Lombyte (MIT) for PAL: overlays/shared/ui_help_00229010.c, FUN_L00_00229660.
+// Tries the crouch-jump style moves in priority order and starts the first whose conditions hold. Adapted from Lombyte (GPL-3.0) for PAL: overlays/shared/ui_help_00229010.c, FUN_L00_00229660.
 int Hero_TryJumpFromPads(void) {
     char *g = (char *)D_0013E633 + 0xE1D;
     int n, t, k;

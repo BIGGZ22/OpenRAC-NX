@@ -366,7 +366,7 @@ extern short D_L14_00161468;
 extern short D_L14_0016146C;
 extern s32 func_001F9850(s32);
 
-/* Adapted from Lombyte (MIT) for PAL by OpenRAC's tools/port.py: src/overlays/l14/gameplay/entities/002460f8.c, FUN_L14_002ac618. */
+/* Adapted from Lombyte (GPL-3.0) for PAL by OpenRAC's tools/port.py: src/overlays/l14/gameplay/entities/002460f8.c, FUN_L14_002ac618. */
 void Moby8Update(struct Moby *m) {
     char *d = (char *)m->pvars;
     float v[4];
@@ -801,7 +801,7 @@ extern s64 func_001F4868_AEC58(s32) __asm__("func_001F4868");
 extern void func_00234C98(s32, s64);
 extern void func_001F7868(void);
 
-/* Adapted from Lombyte (MIT) for PAL by OpenRAC's tools/port.py: src/overlays/l14/gameplay/entities/002460f8.c, FUN_L14_002ada18. */
+/* Adapted from Lombyte (GPL-3.0) for PAL by OpenRAC's tools/port.py: src/overlays/l14/gameplay/entities/002460f8.c, FUN_L14_002ada18. */
 void Moby8_DrawRing(char *moby) {
     char *d = *(char **)(moby + 0x78);
     struct {
@@ -895,7 +895,7 @@ extern float func_L00_001FF860(float, float);
 extern float func_001F9CE8(void *);
 extern void func_L00_001FD1D8_AEF88(void *, int, int) __asm__("func_L00_001FD1D8");
 
-/* Adapted from Lombyte (MIT) for PAL by OpenRAC's tools/port.py: src/overlays/l14/gameplay/entities/002460f8.c, FUN_L14_002add48. */
+/* Adapted from Lombyte (GPL-3.0) for PAL by OpenRAC's tools/port.py: src/overlays/l14/gameplay/entities/002460f8.c, FUN_L14_002add48. */
 void Moby8_DrawSpinningSprite(char *moby) {
     char *d = *(char **)(moby + 0x78);
     float src[4][4];
@@ -1203,7 +1203,7 @@ extern int * D_L14_001B0F30[];
 extern int func_L00_0025E860_AFA18(int *tab, float *out, int *a, float *b, int c, float d) __asm__("func_L00_0025E860");
 
 /* Moves the moby to the point on its second path that matches how far along its first path it is.
-   Adapted from Lombyte (MIT) for PAL by OpenRAC's tools/port.py: src/overlays/l14/gameplay/entities/002460f8.c, FUN_L14_002ae7d8. */
+   Adapted from Lombyte (GPL-3.0) for PAL by OpenRAC's tools/port.py: src/overlays/l14/gameplay/entities/002460f8.c, FUN_L14_002ae7d8. */
 void Moby8_SyncSecondPath(struct Moby *moby) {
     char *data = (char *)moby->pvars;
     char *seg = (char *)D_L14_001B0F30[*(int *)(data + 0x78)];
@@ -1382,7 +1382,7 @@ char *func_L14_002B0168_B0068(int index, int *ids) __asm__("func_L14_002B0168");
 extern void func_L14_002AEF88_B0068(char *) __asm__("func_L14_002AEF88");
 extern void func_L14_002AEC58_B0068(char *) __asm__("func_L14_002AEC58");
 
-/* Adapted from Lombyte (MIT) for PAL by OpenRAC's tools/port.py: src/overlays/l14/gameplay/entities/002460f8.c, FUN_L14_002aee28. */
+/* Adapted from Lombyte (GPL-3.0) for PAL by OpenRAC's tools/port.py: src/overlays/l14/gameplay/entities/002460f8.c, FUN_L14_002aee28. */
 void Moby8_DrawGroup(struct Moby *moby) {
     char *d = (char *)moby->pvars;
     int i;
@@ -1772,7 +1772,7 @@ extern int func_001F9850_2B5750(int) __asm__("func_001F9850");
 extern float func_001FA888_2B5750(short) __asm__("func_001FA888");
 
 /* Returns 0 unless every object on the list is ready, then wakes the waiting ones and sets their timers.
- * Adapted from Lombyte (MIT) for PAL: overlays/l14/gameplay/entities/002460f8.c, FUN_L14_002b4500. */
+ * Adapted from Lombyte (GPL-3.0) for PAL: overlays/l14/gameplay/entities/002460f8.c, FUN_L14_002b4500. */
 int Group_StartWhenAllReady(int index) {
     short *p = D_L14_001AC2C0_2B5750[index];
     unsigned char *base;
@@ -2444,7 +2444,7 @@ typedef struct {
 } Mover_2B6E80;
 void func_L14_002B6E80_r(Moby *moby) __asm__("func_L14_002B6E80");
 
-/* Picks the mover's active path, puts it on the path's last segment (node, weight, t = 0) and clears its offset vector. Adapted from Lombyte (MIT) for PAL by OpenRAC's tools/port.py: src/overlays/l14/gameplay/entities/002460f8.c, FUN_L14_002b5c30. */
+/* Picks the mover's active path, puts it on the path's last segment (node, weight, t = 0) and clears its offset vector. Adapted from Lombyte (GPL-3.0) for PAL by OpenRAC's tools/port.py: src/overlays/l14/gameplay/entities/002460f8.c, FUN_L14_002b5c30. */
 void func_L14_002B6E80_r(Moby *moby) {
     Mover_2B6E80 *d = (Mover_2B6E80 *)((char *)moby->pvars);
     int *p;
@@ -2482,7 +2482,7 @@ extern float func_L00_001FF860(float, float);
 extern void func_001F9BF0(void *, void *, void *);
 void func_L14_002B6F68_r(Moby *moby) __asm__("func_L14_002B6F68");
 
-/* Resets the mover's path state, puts the moby on the first node of its active path facing the second, and clears its offset vector. Adapted from Lombyte (MIT) for PAL by OpenRAC's tools/port.py: src/overlays/l14/gameplay/entities/002460f8.c, FUN_L14_002b5d18. */
+/* Resets the mover's path state, puts the moby on the first node of its active path facing the second, and clears its offset vector. Adapted from Lombyte (GPL-3.0) for PAL by OpenRAC's tools/port.py: src/overlays/l14/gameplay/entities/002460f8.c, FUN_L14_002b5d18. */
 void func_L14_002B6F68_r(Moby *moby) {
     float f = (*(float *)&D_L14_00161608) * 1.5f;
     char *d = (char *)moby->pvars;
@@ -2530,7 +2530,7 @@ extern float D_L14_0015F660_2B7028[] __asm__("D_L14_0015F660") MACRO_ADDR;
 
 void func_L14_002B7028_r(struct Moby *m) __asm__("func_L14_002B7028");
 
-/* Adapted from Lombyte (MIT) for PAL by OpenRAC's tools/port.py: src/overlays/l14/gameplay/entities/002460f8.c, FUN_L14_002b5dd8. */
+/* Adapted from Lombyte (GPL-3.0) for PAL by OpenRAC's tools/port.py: src/overlays/l14/gameplay/entities/002460f8.c, FUN_L14_002b5dd8. */
 void func_L14_002B7028_r(struct Moby *m) {
     float off[4];
     float pos[4];
@@ -2807,7 +2807,7 @@ void func_L14_002D7AF8(struct Moby *m);
 void func_L14_002D84A8_D7250(struct Moby *m) __asm__("func_L14_002D84A8");
 void func_L14_002D87A0_D7250(struct Moby *m) __asm__("func_L14_002D87A0");
 
-/* Adapted from Lombyte (MIT) for PAL by OpenRAC's tools/port.py: src/overlays/l14/gameplay/entities/002460f8.c, FUN_L14_002d5f40. */
+/* Adapted from Lombyte (GPL-3.0) for PAL by OpenRAC's tools/port.py: src/overlays/l14/gameplay/entities/002460f8.c, FUN_L14_002d5f40. */
 void Moby211Update(struct Moby *m) {
     struct L14RacerVars *d = (struct L14RacerVars *)m->pvars;
     u8 pos[16];
@@ -2969,7 +2969,7 @@ extern int func_L00_0025EFC0_D7880(void *, void *, void *, int *, float *, int, 
 extern void func_L00_00217718(void *, void *, int, int);
 extern void func_L00_0025E860_D7880(void *, void *, void *, void *, int, float) __asm__("func_L00_0025E860");
 
-/* Adapted from Lombyte (MIT) for PAL by OpenRAC's tools/port.py: src/overlays/l14/gameplay/entities/002d6358.c, FUN_L14_002d6570. */
+/* Adapted from Lombyte (GPL-3.0) for PAL by OpenRAC's tools/port.py: src/overlays/l14/gameplay/entities/002d6358.c, FUN_L14_002d6570. */
 void Moby211_SyncHeroOnRail(struct Moby *m) {
     char *list[4];
     float near[4];
@@ -3308,7 +3308,7 @@ extern unsigned long func_001F4868_D8500(s32) __asm__("func_001F4868");
 extern void func_001F9EE8_D8500(void *, void *, void *) __asm__("func_001F9EE8");
 extern void func_L00_001FD1D8_D8500(void *, int, int) __asm__("func_L00_001FD1D8");
 
-/* Adapted from Lombyte (MIT) for PAL: src/overlays/l14/gameplay/entities/002d6358.c, FUN_L14_002d71f0. */
+/* Adapted from Lombyte (GPL-3.0) for PAL: src/overlays/l14/gameplay/entities/002d6358.c, FUN_L14_002d71f0. */
 void Moby211_DrawQuad(struct Moby *m) {
     char *d = (char *)m->pvars;
     Pk_2D8500 pk;

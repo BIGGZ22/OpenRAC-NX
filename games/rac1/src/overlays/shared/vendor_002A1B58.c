@@ -1130,7 +1130,7 @@ typedef struct {
     PathPoint2fa0 pts[1];
 } Path2fa0;
 
-/* Adapted from Lombyte (MIT) for PAL by OpenRAC's tools/port.py: src/overlays/shared/gameplay/vendor/002e22d8.c, FUN_L16_002e2fa0. */
+/* Adapted from Lombyte (GPL-3.0) for PAL by OpenRAC's tools/port.py: src/overlays/shared/gameplay/vendor/002e22d8.c, FUN_L16_002e2fa0. */
 void Path_ComputeHeadings(void *arg) {
     Path2fa0 *path = arg;
     int i;

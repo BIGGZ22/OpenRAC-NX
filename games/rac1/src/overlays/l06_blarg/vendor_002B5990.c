@@ -1209,7 +1209,7 @@ extern float D_L06_001DB320[];
 extern float D_L06_001DB3B0[];
 extern Vec4 D_L06_001DB440_F8200[4][30] __asm__("D_L06_001DB440");
 
-/* Adapted from Lombyte (MIT) for PAL by OpenRAC's tools/port.py: src/overlays/l06/gameplay/entities/002b4770.c, FUN_L06_002f6dd0. */
+/* Adapted from Lombyte (GPL-3.0) for PAL by OpenRAC's tools/port.py: src/overlays/l06/gameplay/entities/002b4770.c, FUN_L06_002f6dd0. */
 void StrandEffectDraw(char *moby) {
     float base_matrix[16];
     float yaw_matrix[16];
@@ -1295,7 +1295,7 @@ extern Vec4 D_L06_001DBBC0[4][30];
 extern void func_L06_002172B0(void *);
 
 /* Spins the moby and animates four 30-point strands: a strand whose timer ran out is rebuilt with a smoothed random drift (each point averages three jitters) and its timer reset; otherwise every inner point moves by its drift.
-   Adapted from Lombyte (MIT) for PAL by OpenRAC's tools/port.py: src/overlays/l06/gameplay/entities/002b4770.c, FUN_L06_002f7000. */
+   Adapted from Lombyte (GPL-3.0) for PAL by OpenRAC's tools/port.py: src/overlays/l06/gameplay/entities/002b4770.c, FUN_L06_002f7000. */
 void StrandEffectUpdate(struct Moby *moby) {
     Vec4 jitter[30];
     float y;
@@ -2885,7 +2885,7 @@ extern void func_00213DE0(struct Moby *, s32, s32, s32);
 extern void func_L00_00262DF0(f32, s32, void *, void *);
 
 /* Circles its centre point on the side away from the hero (at most 45 degrees per step), faces its focus moby, moves while the hero is within 16 units and snaps to the ground.
-   Adapted from Lombyte (MIT) for PAL by OpenRAC's tools/port.py: src/overlays/l06/gameplay/entities/002b4770.c, FUN_L06_002fbc88. */
+   Adapted from Lombyte (GPL-3.0) for PAL by OpenRAC's tools/port.py: src/overlays/l06/gameplay/entities/002b4770.c, FUN_L06_002fbc88. */
 void Circler_UpdateMovement(struct Moby *m) {
     CirclerVars *v = (CirclerVars *)m->pvars;
     struct Moby *focus = v->focus;
@@ -2950,7 +2950,7 @@ extern short D_L06_00161FE4;
 extern short D_L06_00161FE8;
 extern short D_L06_00161FEC;
 
-/* Adapted from Lombyte (MIT) for PAL by OpenRAC's tools/port.py: src/overlays/l06/gameplay/entities/002b4770.c, FUN_L06_002fbfb0. */
+/* Adapted from Lombyte (GPL-3.0) for PAL by OpenRAC's tools/port.py: src/overlays/l06/gameplay/entities/002b4770.c, FUN_L06_002fbfb0. */
 void Moby1054Update(char *moby) {
     char *data = *(char **)(moby + 0x78);
     char *child;

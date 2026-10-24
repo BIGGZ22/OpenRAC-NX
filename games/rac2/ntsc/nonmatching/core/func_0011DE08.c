@@ -1,5 +1,5 @@
 /* sceFsInit, the file-I/O RPC library bring-up in cod/015180: adapted from
-   Lombyte (MIT) src/assembly/sdk/library/sceFsInit.c (its NON_MATCHING body),
+   Lombyte (GPL-3.0) src/assembly/sdk/library/sceFsInit.c (its NON_MATCHING body),
    which is the recovered source for this function. 516 bytes, matching retail
    instruction for instruction - same frame, same six saves in the same 16-byte
    slots, same relocations derived from the retail bytes - except the ORDER of
@@ -17,7 +17,7 @@
 #include "common.h"
 #include "structs.h"
 
-/* sceFsInit: brings up the file-I/O RPC library. Adapted from Lombyte (MIT)
+/* sceFsInit: brings up the file-I/O RPC library. Adapted from Lombyte (GPL-3.0)
  * src/assembly/sdk/library/sceFsInit.c, whose NON_MATCHING body is the
  * recovered source. RAC2 addresses replace Lombyte's (every one of them is
  * Lombyte's minus 0x17F00): D_00140100 is the library's command block,

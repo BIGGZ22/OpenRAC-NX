@@ -49,7 +49,7 @@ extern void func_L02_002DA938(u64, f32, f32, f32, s32);
 
 
 
-/* Adapted from Lombyte (MIT) for PAL by OpenRAC's tools/port.py: src/overlays/shared/gameplay/entities/002a4038.c, FUN_L02_002d93e8. */
+/* Adapted from Lombyte (GPL-3.0) for PAL by OpenRAC's tools/port.py: src/overlays/shared/gameplay/entities/002a4038.c, FUN_L02_002d93e8. */
 void FUN_L02_002d93e8(char *moby) {
     char *data = *(char **)(moby + 0x78);
     int *markers = (int *)(data + 0xb0);

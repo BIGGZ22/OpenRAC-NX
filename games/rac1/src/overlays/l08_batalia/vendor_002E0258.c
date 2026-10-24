@@ -1083,7 +1083,7 @@ extern void func_L00_00260108(void *, void *, s32, f32, f32);
 extern struct Moby *func_L08_002DF758(void *, struct Moby *, void *, f32, f32);
 extern void func_L08_002E35C8(struct Moby *);
 
-/* Adapted from Lombyte (MIT) for PAL by OpenRAC's tools/port.py: src/overlays/l08/gameplay/entities/002deee0.c, FUN_L08_002e24e8. */
+/* Adapted from Lombyte (GPL-3.0) for PAL by OpenRAC's tools/port.py: src/overlays/l08/gameplay/entities/002deee0.c, FUN_L08_002e24e8. */
 void Moby444Update(struct Moby *moby) {
     GunshipVars *vars = (GunshipVars *)moby->pvars;
     SwarmPathFollower *follower;
@@ -2475,7 +2475,7 @@ extern s64 D_L08_0016D110_EA0A8 __asm__("D_L08_0016D110");
 extern s32 func_001F9938_EA0A8(s16 *) __asm__("func_001F9938");
 extern void func_L08_002E9CB0_EA0A8(struct Moby *) __asm__("func_L08_002E9CB0");
 
-/* Adapted from Lombyte (MIT) for PAL by OpenRAC's tools/port.py: src/overlays/l08/gameplay/entities/002deee0.c, FUN_L08_002e8cd0. */
+/* Adapted from Lombyte (GPL-3.0) for PAL by OpenRAC's tools/port.py: src/overlays/l08/gameplay/entities/002deee0.c, FUN_L08_002e8cd0. */
 void Moby462Update(struct Moby *moby) {
     SwarmVars_EA0A8 *vars = (SwarmVars_EA0A8 *)moby->pvars;
     SwarmPathFollower_EA0A8 *follower;
@@ -2705,7 +2705,7 @@ typedef struct {
 } SwarmPart;
 extern s32 func_0022ED80_EAB30(s32, s32, struct Moby *) __asm__("func_0022ED80");
 
-/* Adapted from Lombyte (MIT) for PAL by OpenRAC's tools/port.py: src/overlays/l08/gameplay/entities/002deee0.c, FUN_L08_002e9758. */
+/* Adapted from Lombyte (GPL-3.0) for PAL by OpenRAC's tools/port.py: src/overlays/l08/gameplay/entities/002deee0.c, FUN_L08_002e9758. */
 void LaunchDamagedSwarmPart(struct Moby *moby) {
     int selected = 0;
     char *data = (char *)moby->pvars;

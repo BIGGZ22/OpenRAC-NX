@@ -301,7 +301,7 @@ extern int D_L13_00160058 MACRO_ADDR;
 void func_0020D678(void *obj);
 
 /* Records the classes of the tracked mobys, then removes this moby once too few of them are left.
-   Adapted from Lombyte (MIT) for PAL by OpenRAC's tools/port.py: src/overlays/l13/gameplay/vendor/003058a8.c, FUN_L13_0030be60. */
+   Adapted from Lombyte (GPL-3.0) for PAL by OpenRAC's tools/port.py: src/overlays/l13/gameplay/vendor/003058a8.c, FUN_L13_0030be60. */
 void WatchMobysUpdate(struct Moby *m) {
     int *d = (int *)m->pvars;
     if (m->state == 0) {

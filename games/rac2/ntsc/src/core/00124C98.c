@@ -186,7 +186,7 @@ extern int r1_func_00120FD0();
 
 /* rac1-decomp src/core/001208E8.c: func_00121490 */
 /* libcdvd disk-ready query (the sceCdDiskReady pattern): take the S-command semaphore, bind the 0x8000059A server once, send mode and return the server's status word. Mode 8 reports -1 on failure, every other mode 6.
-   Adapted from Lombyte (MIT) for PAL by OpenRAC's tools/port.py: src/textbin/fun_00121190.c, FUN_00121190. */
+   Adapted from Lombyte (GPL-3.0) for PAL by OpenRAC's tools/port.py: src/textbin/fun_00121190.c, FUN_00121190. */
 s32 func_001250E8(s32 mode) {
     s32 response;
     s32 spin;

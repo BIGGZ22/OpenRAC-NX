@@ -70,7 +70,7 @@ extern short D_L02_0015FA30;
 extern short D_L02_0015FA34;
 
 /* Draws the counter: a stretched bar behind the icon and the count, on whichever side of the screen it sits.
-   Adapted from Lombyte (MIT) for PAL by OpenRAC's tools/port.py: src/overlays/l02/ui/text/0023ccc8.c, FUN_L02_0023cda8. */
+   Adapted from Lombyte (GPL-3.0) for PAL by OpenRAC's tools/port.py: src/overlays/l02/ui/text/0023ccc8.c, FUN_L02_0023cda8. */
 s32 Hud_DrawCounter(HudElem *m) {
     char text[16];
     int x;

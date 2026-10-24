@@ -10,7 +10,7 @@ extern E001f36f8 D_L00_0016A940[];
 extern u8 D_L00_0016A140[];
 void func_L00_001F3AF0(s32, s32, s32, s32);
 
-/* Adapted from Lombyte (MIT) for PAL by OpenRAC's tools/port.py: src/overlays/shared/rendering_debug_001f36f8.c, FUN_L00_001f36f8. */
+/* Adapted from Lombyte (GPL-3.0) for PAL by OpenRAC's tools/port.py: src/overlays/shared/rendering_debug_001f36f8.c, FUN_L00_001f36f8. */
 void FlushDebugLines(void) {
     s32 i;
     E001f36f8 *p;

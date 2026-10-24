@@ -101,7 +101,7 @@ typedef struct {
 } ListOwner_24f0e8;
 extern void func_001F99B0(void *, s32, s32);
 
-/* Adapted from Lombyte (MIT) for PAL by OpenRAC's tools/port.py: src/overlays/shared/gameplay/state/0024eec0.c, FUN_L00_0024f0e8. */
+/* Adapted from Lombyte (GPL-3.0) for PAL by OpenRAC's tools/port.py: src/overlays/shared/gameplay/state/0024eec0.c, FUN_L00_0024f0e8. */
 void List_RemoveAndClearNode(ListOwner_24f0e8 *owner, ListNode_24f0e8 **slot) {
     ListNode_24f0e8 *p;
 
@@ -184,7 +184,7 @@ typedef struct { u8 pad[0x20]; u8 b20, b21, b22, b23; s32 i24; f32 f28; f32 f2c;
 typedef struct { u8 pad[0x51]; u8 b51, b52, b53; } A;
 extern void func_L00_002501C8_50418(void *, void *) __asm__("func_L00_002501C8");
 
-/* Adapted from Lombyte (MIT) for PAL by OpenRAC's tools/port.py: src/overlays/shared/gameplay_state_0024eec0.c, FUN_L00_0024f3e0. */
+/* Adapted from Lombyte (GPL-3.0) for PAL by OpenRAC's tools/port.py: src/overlays/shared/gameplay_state_0024eec0.c, FUN_L00_0024f3e0. */
 void MobyAnim_StartBlend(A *a0, S *a1, s32 a2, s32 a3, s32 a4, s32 a5) {
     a1->b22 = a0->b53;
     a1->b20 = a0->b51;
@@ -195,7 +195,7 @@ void MobyAnim_StartBlend(A *a0, S *a1, s32 a2, s32 a3, s32 a4, s32 a5) {
     a1->f2c = 1.0f / (f32)a4;
     if (a5) func_L00_002501C8_50418(a0, a1);
 }
-/* Adapted from Lombyte (MIT) for PAL: overlays/shared/gameplay/state/0024eec0.c, FUN_L00_0024f440. */
+/* Adapted from Lombyte (GPL-3.0) for PAL: overlays/shared/gameplay/state/0024eec0.c, FUN_L00_0024f440. */
 typedef unsigned long u64_50478p;
 typedef struct {
     char pad0[6];

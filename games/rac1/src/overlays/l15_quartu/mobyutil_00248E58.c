@@ -26,7 +26,7 @@ extern void func_001F9BF0(void *, void *, void *);
 extern f32 func_001F9CE8(void *);
 extern f32 func_L00_001FF860(f32, f32);
 
-/* Adapted from Lombyte (MIT) for PAL by OpenRAC's tools/port.py: src/overlays/l15/math/interpolation/00247e90.c, FUN_L15_00247e90. */
+/* Adapted from Lombyte (GPL-3.0) for PAL by OpenRAC's tools/port.py: src/overlays/l15/math/interpolation/00247e90.c, FUN_L15_00247e90. */
 int MoveMobyWithSphereProbe(struct Moby *obj, u128 *delta, int flags, float step, float radius) {
     Vec4 start;
     Vec4 probe;

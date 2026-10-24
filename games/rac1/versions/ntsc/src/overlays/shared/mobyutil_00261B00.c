@@ -94,7 +94,7 @@ extern void func_L00_001FF4B0_2629E0(Vec4 *, Vec4 *, f32) __asm__("func_L00_001F
 extern void func_001F9BC0_2629E0(Vec4 *) __asm__("func_001F9BC0");
 extern void func_001F9EC0_2629E0(Vec4 *, Vec4 *, Vec4 *) __asm__("func_001F9EC0");
 
-/* Adapted from Lombyte (MIT) for PAL: src/overlays/shared/gameplay/state/00261968.c, FUN_L00_00261968. */
+/* Adapted from Lombyte (GPL-3.0) for PAL: src/overlays/shared/gameplay/state/00261968.c, FUN_L00_00261968. */
 s32 func_L00_002629E0(s32 path_index, Vec4 *start, Vec4 *end) {
     Vec4 direction;
     Vec4 axis;
@@ -219,7 +219,7 @@ extern void func_001F9CA0_62DF0(OvlVec4 *, OvlVec4 *, OvlVec4 *) __asm__("func_0
 extern f32 func_001F9CB8_62DF0(OvlVec4 *) __asm__("func_001F9CB8");
 extern void func_L00_001FF4B0_62DF0(OvlVec4 *, OvlVec4 *, f32) __asm__("func_L00_001FF4B0");
 
-/* Adapted from Lombyte (MIT) for PAL by OpenRAC's tools/port.py: src/overlays/shared/gameplay/state/00261968.c, FUN_L00_00261d78. */
+/* Adapted from Lombyte (GPL-3.0) for PAL by OpenRAC's tools/port.py: src/overlays/shared/gameplay/state/00261968.c, FUN_L00_00261d78. */
 s32 func_L00_00262DF0(f32 distance, s32 path_index, OvlVec4 *point, OvlVec4 *out) {
     OvlVec4 difference;
     OvlVec4 scaled_difference;
@@ -291,7 +291,7 @@ extern void func_001F9CA0_630A8(OvlVec4_630A8 *, OvlVec4_630A8 *, OvlVec4_630A8 
 extern f32 func_001F9CB8_630A8(OvlVec4_630A8 *) __asm__("func_001F9CB8");
 extern void func_L00_001FF4B0_630A8(f32, OvlVec4_630A8 *, OvlVec4_630A8 *) __asm__("func_L00_001FF4B0");
 
-/* Adapted from Lombyte (MIT) for PAL by OpenRAC's tools/port.py: src/overlays/shared/gameplay/state/00261968.c, FUN_L00_00262030. */
+/* Adapted from Lombyte (GPL-3.0) for PAL by OpenRAC's tools/port.py: src/overlays/shared/gameplay/state/00261968.c, FUN_L00_00262030. */
 s32 func_L00_002630A8(f32 distance, s32 path_index, OvlVec4_630A8 *point, OvlVec4_630A8 *out) {
     OvlVec4_630A8 difference;
     OvlVec4_630A8 scaled_difference;
@@ -380,7 +380,7 @@ extern void func_L00_001FF4B0(void *, void *, f32);
 extern void func_001F9BD8(void *, void *, void *);
 
 /* Samples path at distance dist (points spacing apart): stores the segment, the distance into it and the point.
-   Adapted from Lombyte (MIT) for PAL by OpenRAC's tools/port.py: src/overlays/shared/gameplay/state/00261968.c, FUN_L00_00262360. */
+   Adapted from Lombyte (GPL-3.0) for PAL by OpenRAC's tools/port.py: src/overlays/shared/gameplay/state/00261968.c, FUN_L00_00262360. */
 void func_L00_002633D8(PointPath *path, s32 *seg_out, f32 *along, Vec4 *out, f32 dist, f32 spacing) {
     Vec4 tmp;
     s32 seg;
@@ -469,7 +469,7 @@ extern void func_0020D6D0_a(void *) __asm__("func_0020D6D0");
 extern void func_L00_00251E30(void *);
 
 /* Pushes the source object's transforms into an 8-entry ring and replays them into the trailing objects, ending them when all faded.
-   Adapted from Lombyte (MIT) for PAL: src/overlays/shared/gameplay_state_00261968.c, FUN_L00_00262608. */
+   Adapted from Lombyte (GPL-3.0) for PAL: src/overlays/shared/gameplay_state_00261968.c, FUN_L00_00262608. */
 void func_L00_00263680(S_263680 *s, int dec) {
     unsigned char *src;
     unsigned char *o;
@@ -546,7 +546,7 @@ extern void func_L00_0025AFA8(void *a, float *v);
 extern void func_001F9BC0(void *);
 
 /* Eases a moby's per-axis offsets toward zero and applies them and its scale to the held object, resetting when settled.
-   Adapted from Lombyte (MIT) for PAL: src/overlays/shared/gameplay_state_00261968.c, FUN_L00_002628d8. */
+   Adapted from Lombyte (GPL-3.0) for PAL: src/overlays/shared/gameplay_state_00261968.c, FUN_L00_002628d8. */
 void func_L00_00263950(int m, unsigned char *p, int c, float fa, float fb) {
     unsigned char *o = *(unsigned char **)(p + 0x78);
     float f;
@@ -645,7 +645,7 @@ typedef struct {
 } MobySeq;
 
 /* Picks the best auto-aim target moby (kind 5) for a shot from pos along dir: writes yaw/pitch toward it and its aim height, returns the moby or 0.
-   Adapted from Lombyte (MIT) for PAL by OpenRAC's tools/port.py: src/overlays/shared/gameplay/entities/002630b8.c, FUN_L00_002630c8. */
+   Adapted from Lombyte (GPL-3.0) for PAL by OpenRAC's tools/port.py: src/overlays/shared/gameplay/entities/002630b8.c, FUN_L00_002630c8. */
 struct Moby *func_L00_00264140(void *ignore, Vec4 *pos_in, Vec4 *dir_in, f32 *yaw, f32 *pitch,
                               f32 *height, f32 max_angle) {
     Vec4 pos, dir, target, probe;
@@ -727,7 +727,7 @@ extern int func_L00_001EFFF0(void *, void *, int, int, int);
 extern float func_001F9CE8(void *);
 extern void func_L00_00269DB0(char *, int);
 
-/* spawns impact sparks at a point on the ground near the camera. Adapted from Lombyte (MIT) for PAL: overlays/shared/gameplay_entities_002630b8.c, FUN_L00_002634f8. */
+/* spawns impact sparks at a point on the ground near the camera. Adapted from Lombyte (GPL-3.0) for PAL: overlays/shared/gameplay_entities_002630b8.c, FUN_L00_002634f8. */
 void func_L00_00264570(V *v) {
     V t, u, d;
     float k, f;
@@ -822,7 +822,7 @@ extern s32 func_001F9850(s32);
 extern Effect_2637f8 *func_L00_0026DEA0(void *, f32, f32, f32, s32, void *, f32, u32);
 extern u8 D_L00_0015F660_64870[] __asm__("D_L00_0015F660") MACRO_ADDR;
 
-/* Adapted from Lombyte (MIT) for PAL by OpenRAC's tools/port.py: src/overlays/shared/gameplay/entities/002630b8.c, FUN_L00_002637f8. */
+/* Adapted from Lombyte (GPL-3.0) for PAL by OpenRAC's tools/port.py: src/overlays/shared/gameplay/entities/002630b8.c, FUN_L00_002637f8. */
 void func_L00_00264870(u8 *m) {
     Vec4_2634f8 vectors[4];
     Vec4_2634f8 pos;
@@ -904,7 +904,7 @@ void func_L00_00264B40(float x, int a, int b, unsigned char *m) {
         DetachManipulator(a, m);
     }
 }
-/* sets the float at p + 0x70 to x when the byte at 0x15EEB7 is set, else to 1. Adapted from Lombyte (MIT) for PAL: src/overlays/shared/gameplay/entities/002630b8.c, FUN_L00_00263b38. */
+/* sets the float at p + 0x70 to x when the byte at 0x15EEB7 is set, else to 1. Adapted from Lombyte (GPL-3.0) for PAL: src/overlays/shared/gameplay/entities/002630b8.c, FUN_L00_00263b38. */
 void func_L00_00264BB0(char *p, float x) {
     if (*(unsigned char *)0x15EDB7) {
         *(float *)(p + 0x70) = x;
@@ -937,7 +937,7 @@ extern int func_002140B0(int);
 extern int func_001FA898_r(float) __asm__("func_001FA898");
 extern void *func_L00_0026DEA0_c(void *, int, void *, float, float, float, float, int) __asm__("func_L00_0026DEA0");
 
-/* Bursts two rings of sparks (and then three more) from two points with the given velocity. Adapted from Lombyte (MIT) for PAL: overlays/shared/gameplay_entities_002630b8.c, FUN_L00_00263b70. */
+/* Bursts two rings of sparks (and then three more) from two points with the given velocity. Adapted from Lombyte (GPL-3.0) for PAL: overlays/shared/gameplay_entities_002630b8.c, FUN_L00_00263b70. */
 void func_L00_00264BE8(void *p0, void *p1, void *vel, float a, float b) {
     Part *part;
     PartTail *tail;
@@ -993,7 +993,7 @@ extern void *func_L00_00265050(char *src, int cls, float *pos, void *mat, int a8
 extern int func_L00_0025BCF8(void *, int, void *, void *, float);
 extern float func_00214158(void);
 
-/* Spawns a burst of effects on a moby: a fixed set at its own position, then randomly offset ones at points gathered around it. Adapted from Lombyte (MIT) for PAL: overlays/shared/gameplay_entities_002630b8.c, FUN_L00_00263e30. */
+/* Spawns a burst of effects on a moby: a fixed set at its own position, then randomly offset ones at points gathered around it. Adapted from Lombyte (GPL-3.0) for PAL: overlays/shared/gameplay_entities_002630b8.c, FUN_L00_00263e30. */
 void func_L00_00264EA8(char *m, int n, int cnt, int base, int range, int cnt2, int flag) {
     char buf[256] __attribute__((aligned(16)));
     float v[4] __attribute__((aligned(16)));

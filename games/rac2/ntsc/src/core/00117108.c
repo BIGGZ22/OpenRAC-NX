@@ -8,7 +8,7 @@
 
 /* Source: newlib / dlmalloc. */
 
-/* _malloc_trim_r, newlib mallocr.c's malloc_trim, adapted from Lombyte (MIT)
+/* _malloc_trim_r, newlib mallocr.c's malloc_trim, adapted from Lombyte (GPL-3.0)
  * src/sdk/library/malloc_trim_r.c and re-pointed at the RAC2 globals. The unit
  * saves $s0..$s4 and $ra in TImode slots (`sq` in 16-byte slots, descending
  * order), so it is built with the -mastra-quad-saves profile like the rest of

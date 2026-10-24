@@ -26,7 +26,7 @@ that applies: SN GCC 2.95.3 (SN BUILD v1.14) for game code, Sony's EE GCC
 2.9-ee-991111 for SDK objects marked ee29 in config/core_text.objects.
 Both at -O2 -G2.
 
-Functions ported from Lombyte (MIT) are left out unless --include-ported
+Functions ported from Lombyte (GPL-3.0) are left out unless --include-ported
 is given; they carry that project's license notice.
 
 The input column is disassembly of your own retail executable, like
@@ -208,7 +208,7 @@ def main():
     ap.add_argument("--no-comments", action="store_true",
                     help="strip comments from the C")
     ap.add_argument("--include-ported", action="store_true",
-                    help="keep functions adapted from Lombyte (MIT)")
+                    help="keep functions adapted from Lombyte (GPL-3.0)")
     ap.add_argument("--meta", action="store_true",
                     help="add a 'meta' object (name, file, compiler, size)")
     args = ap.parse_args()

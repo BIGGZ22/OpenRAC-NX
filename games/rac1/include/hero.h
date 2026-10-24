@@ -7,7 +7,7 @@
  * trail. One definition for every source file, in place of the private
  * copies candidates carried to land without clashing with their files.
  *
- * Adapted from Lombyte (MIT), the US decompilation:
+ * Adapted from Lombyte (GPL-3.0), the US decompilation:
  * include/rnc/gameplay/hero.h at 42adb529. Its layout and field names come
  * from the matched code it cites; the PAL code is the same structure.
  * Function and data names in the comments are Lombyte's, from the US build.

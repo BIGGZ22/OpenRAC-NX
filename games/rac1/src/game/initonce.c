@@ -153,7 +153,7 @@ extern char D_001E7E40[]; /* "Unsupported language %d\n" */
  * the 16 KB-aligned end of the image, sets up memory slots, loads a
  * palette/font image, and finally maps sceCdGetDiskType's result to the
  * current-language global.
- * Adapted from Lombyte (MIT) for PAL: runtime/startup/init_once.c, init_once. */
+ * Adapted from Lombyte (GPL-3.0) for PAL: runtime/startup/init_once.c, init_once. */
 void InitOnce(void) {
     unsigned char buf[0x800];
     char *seg;

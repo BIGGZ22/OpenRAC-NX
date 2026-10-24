@@ -23,7 +23,7 @@ typedef union {
 } ieee_double_shape_type;
 
 /* rac1-decomp src/core/00116070.c: func_001161B0 */
-/* Adapted from Lombyte (MIT) for PAL by OpenRAC's tools/port.py: src/math/classify_float_bits.c, ClassifyDoubleNaN. */
+/* Adapted from Lombyte (GPL-3.0) for PAL by OpenRAC's tools/port.py: src/math/classify_float_bits.c, ClassifyDoubleNaN. */
 s32 func_001313C8(f64 x) {
     s32 hx;
     s32 lx;

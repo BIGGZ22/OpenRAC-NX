@@ -12,7 +12,7 @@ extern float func_001F9B88(float);
 extern void func_L00_0020BFA8(void);
 extern int func_L12_002407C0(int, int);
 
-/* Level 12 pickup/ability state update. Adapted from Lombyte (MIT) for PAL: src/overlays/l12/ui_help_0022de30.c, FUN_L12_0022de30. */
+/* Level 12 pickup/ability state update. Adapted from Lombyte (GPL-3.0) for PAL: src/overlays/l12/ui_help_0022de30.c, FUN_L12_0022de30. */
 void Hero_ProcessLedgeContact(void) {
     char *g = D_0013E633 + 0xE1D;
     unsigned char saved;
@@ -135,7 +135,7 @@ f32 func_001F9D48(void *, void *);
 f32 func_00214D28_33130(f32, f32, f32 *) __asm__("func_00214D28");
 void func_L00_0025C918_33130(f32 *, f32 *, f32, f32, f32, f32) __asm__("func_L00_0025C918");
 
-/* Adapted from Lombyte (MIT) for PAL by OpenRAC's tools/port.py: src/overlays/l12/ui_help_0022de30.c, FUN_L12_00232b18. */
+/* Adapted from Lombyte (GPL-3.0) for PAL by OpenRAC's tools/port.py: src/overlays/l12/ui_help_0022de30.c, FUN_L12_00232b18. */
 void Hero_UpdateCapsuleSize(void) {
     switch (D_0013F450_33130.b20A4) {
     case 0:
@@ -206,7 +206,7 @@ typedef struct {
 } HS;
 extern HS D_L12_00174340;
 
-/* Adapted from Lombyte (MIT) for PAL by OpenRAC's tools/port.py: src/overlays/l12/ui_help_0022de30.c, FUN_L12_00233e80. */
+/* Adapted from Lombyte (GPL-3.0) for PAL by OpenRAC's tools/port.py: src/overlays/l12/ui_help_0022de30.c, FUN_L12_00233e80. */
 void Hero_ProbeGround(void) {
     Vec4 v0, v10, v20, v30, v40, v50, v60;
     f32 f;

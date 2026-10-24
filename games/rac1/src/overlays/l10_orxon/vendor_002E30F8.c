@@ -1978,7 +1978,7 @@ extern int func_001FA898(float);
 extern int func_001F9908_EAA08(int *) __asm__("func_001F9908");
 
 /* Level 10 door: swings open once the hero enters its clip volume and sets its save bit; starts open when the bit is already set.
-   Adapted from Lombyte (MIT) for PAL by OpenRAC's tools/port.py: src/overlays/l10/gameplay/vendor/002df270.c, FUN_L10_002e9648. */
+   Adapted from Lombyte (GPL-3.0) for PAL by OpenRAC's tools/port.py: src/overlays/l10/gameplay/vendor/002df270.c, FUN_L10_002e9648. */
 void SwingDoorUpdate(struct Moby *moby) {
     DoorVars_e9648 *vars = (DoorVars_e9648 *)moby->pvars;
     unsigned short save_id;

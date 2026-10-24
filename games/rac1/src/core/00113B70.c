@@ -128,7 +128,7 @@ struct malloc_chunk {
         }                                                                      \
     }
 
-/* _free_r (newlib mallocr.c, dlmalloc 2.6.5). Adapted from Lombyte (MIT)
+/* _free_r (newlib mallocr.c, dlmalloc 2.6.5). Adapted from Lombyte (GPL-3.0)
    for PAL. */
 void func_00113B70(struct _reent *ptr, void *mem)
 {

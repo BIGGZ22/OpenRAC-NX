@@ -218,7 +218,7 @@ typedef struct {
 } HS;
 extern HS D_L16_001742C0;
 
-/* Adapted from Lombyte (MIT) for PAL by OpenRAC's tools/port.py: src/overlays/l16/ui_help_002097a0.c, FUN_L16_0020ffb0. */
+/* Adapted from Lombyte (GPL-3.0) for PAL by OpenRAC's tools/port.py: src/overlays/l16/ui_help_002097a0.c, FUN_L16_0020ffb0. */
 void HeroL16_UpdateGroundCollision(void) {
     Vec4 v0, v10, v20, v30, v40, v50, v60;
     f32 f;

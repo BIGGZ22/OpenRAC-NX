@@ -294,7 +294,7 @@ void func_0011D3A0(void *bind, void *data) {
 /* rac1-decomp src/core/00119D88.c: func_0011B2F8 */
       /* WaitSema */
 
-/* sceSifBindRpc. Adapted from Lombyte (MIT) for PAL. */
+/* sceSifBindRpc. Adapted from Lombyte (GPL-3.0) for PAL. */
 int func_0011D450(void *client, int arg1, int arg2) {
     BindClient *arg0 = client;
     int sema_param[6];

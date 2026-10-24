@@ -291,7 +291,7 @@ void TextureScrollUpdate(char *m) {
     }
     }
 }
-/* Adapted from Lombyte (MIT) for PAL by OpenRAC's tools/port.py: src/overlays/shared/unclassified_002a4830.c, FUN_L00_002a4dc8. */
+/* Adapted from Lombyte (GPL-3.0) for PAL by OpenRAC's tools/port.py: src/overlays/shared/unclassified_002a4830.c, FUN_L00_002a4dc8. */
 int FetchAddCounter(int a) { int t = D_L00_00161458; D_L00_00161458 = t + a; return t; }
 extern void *func_0020D348(int oClass);
 extern void func_L00_00251E30(void *);
@@ -383,7 +383,7 @@ extern char D_0013A5E0[];
 typedef struct { unsigned char p0[0x80]; float f80, f84; unsigned char p88[0x98 - 0x88]; float f98; unsigned char p9C[0x2084 - 0x9C]; int i2084; unsigned char p2088[4]; int i208C; unsigned char p2090[0x20A4 - 0x2090]; unsigned char b20A4; } G_pp_t;
 extern G_pp_t G_pp __asm__("D_0013F450");
 
-/* Per-frame update of a pulsing light-beam moby: spawns a child, fades it with distance to the player, draws it and may trigger the player's grab. Adapted from Lombyte (MIT) for PAL: src/overlays/shared/unclassified_002a4830.c, FUN_L00_002a57a8. */
+/* Per-frame update of a pulsing light-beam moby: spawns a child, fades it with distance to the player, draws it and may trigger the player's grab. Adapted from Lombyte (GPL-3.0) for PAL: src/overlays/shared/unclassified_002a4830.c, FUN_L00_002a57a8. */
 void LightBeamUpdate(char *moby) {
     char *p = *(char **)(moby + 0x78);
     char *c;
@@ -893,7 +893,7 @@ extern f32 func_002140F8(f32, f32);
 extern u8 *func_L00_00272F00_A7E10(void *pos, s32 life, f32 size0, f32 size1, s32 color, s32 mode, s32 spin, void *vel, f32 f2) __asm__("func_L00_00272F00");
 
 /* CollectBolt: adds the bolt moby's value (1, or 5 / 20 / 50 for classes 0xE / 0xF / 0x10) to the bolt count, the level's total and its source's stats, shows the bolt counter and spawns two sparkles at the bolt.
-   Adapted from Lombyte (MIT) for PAL by OpenRAC's tools/port.py: src/overlays/shared/gameplay/entities/002a4830.c, FUN_L00_002a6b70. */
+   Adapted from Lombyte (GPL-3.0) for PAL by OpenRAC's tools/port.py: src/overlays/shared/gameplay/entities/002a4830.c, FUN_L00_002a6b70. */
 void CollectBolt(struct Moby *bolt)
 {
     Vec4 vel;
@@ -1107,7 +1107,7 @@ extern void func_L00_001FF4B0_A86D8(void *, void *, float) __asm__("func_L00_001
 extern void func_00215380(void *, void *, float);
 
 /* Spawns a bolt worth `value` (1, 5, 20 or 50) at `pos` with velocity `vel`, coloured like `src`, spinning about vel x (src - pos). flags & 2 sends it toward D_001413D0 (& 0x10 with a random angle). When no moby is free the value goes straight into the bolt count.
-   Adapted from Lombyte (MIT) for PAL by OpenRAC's tools/port.py: src/overlays/shared/gameplay/entities/002a4830.c, FUN_L00_002a7438. */
+   Adapted from Lombyte (GPL-3.0) for PAL by OpenRAC's tools/port.py: src/overlays/shared/gameplay/entities/002a4830.c, FUN_L00_002a7438. */
 struct Moby *SpawnBolt(struct Moby *src, void *pos, void *vel, int flags, int value, int counted)
 {
     f32 dir[4] __attribute__((aligned(16)));
@@ -2068,7 +2068,7 @@ void func_001F9BC0(void *);
 float func_002140F8(float, float);
 void func_L00_00251E30(void *);
 
-/* Adapted from Lombyte (MIT) for PAL by OpenRAC's tools/port.py: src/overlays/shared/unclassified_002a4830.c, FUN_L00_002a9ed0. */
+/* Adapted from Lombyte (GPL-3.0) for PAL by OpenRAC's tools/port.py: src/overlays/shared/unclassified_002a4830.c, FUN_L00_002a9ed0. */
 unsigned char *Moby74Spawn(int owner, q128_2a9ed0 *pos) {
     unsigned char *m = func_0020D348_AB170(0x4A);
     if (m) {
@@ -2135,7 +2135,7 @@ typedef struct {
     Q2 *p2080;
 } P2;
 
-/* Initialises a spawned moby: random spin vector, nearby-count cull of the oldest same-class moby, then a bounce off the floor probe. Adapted from Lombyte (MIT) for PAL: src/overlays/shared/unclassified_002a4830.c, FUN_L00_002aa008. */
+/* Initialises a spawned moby: random spin vector, nearby-count cull of the oldest same-class moby, then a bounce off the floor probe. Adapted from Lombyte (GPL-3.0) for PAL: src/overlays/shared/unclassified_002a4830.c, FUN_L00_002aa008. */
 void InitSpawnedSpinMoby(Vec4 *pos, N2 *self, void *arg) {
     Vec4 d;
     Vec4 t;

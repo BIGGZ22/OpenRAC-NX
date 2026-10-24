@@ -16,7 +16,7 @@ extern void func_L00_0020BFA8(void);
 extern void func_L02_0022BE40(int, int);
 extern void func_L00_00211908(void);
 
-// Updates the pickup/aim flags after a state change, and requests a follow-up state when the target is in range. Adapted from Lombyte (MIT) for PAL: src/overlays/l02/ui_help_0021b698.c, FUN_L02_0021b698.
+// Updates the pickup/aim flags after a state change, and requests a follow-up state when the target is in range. Adapted from Lombyte (GPL-3.0) for PAL: src/overlays/l02/ui_help_0021b698.c, FUN_L02_0021b698.
 void Hero_UpdateStateFlags(void) {
     char *g = (char *)D_0013E633 + 0xE1D;
     int keep = *(unsigned char *)(g + 0x12ED);
@@ -161,7 +161,7 @@ void func_001F9BD8(void *, void *, void *);
 void func_L02_0022BE40(s32, s32);
 void func_L00_00211338(void *, s32, f32, f32);
 
-/* Adapted from Lombyte (MIT) for PAL by OpenRAC's tools/port.py: src/overlays/l02/ui_help_0021b698.c, FUN_L02_0021ff70. */
+/* Adapted from Lombyte (GPL-3.0) for PAL by OpenRAC's tools/port.py: src/overlays/l02/ui_help_0021b698.c, FUN_L02_0021ff70. */
 s32 HeroL02_TryKnockback(s32 arg) {
     u8 *m;
     T_8 *tbl;
@@ -299,7 +299,7 @@ f32 func_001F9D48(void *, void *);
 f32 func_00214D28_20A28(f32, f32, f32 *) __asm__("func_00214D28");
 void func_L00_0025C918_20A28(f32 *, f32 *, f32, f32, f32, f32) __asm__("func_L00_0025C918");
 
-/* Adapted from Lombyte (MIT) for PAL by OpenRAC's tools/port.py: src/overlays/l02/ui_help_0021b698.c, FUN_L02_002203e8. */
+/* Adapted from Lombyte (GPL-3.0) for PAL by OpenRAC's tools/port.py: src/overlays/l02/ui_help_0021b698.c, FUN_L02_002203e8. */
 void Camera_UpdateFollowOffsets(void) {
     switch (D_0013F450_20A28.b20A4) {
     case 0:
@@ -364,7 +364,7 @@ typedef struct {
 } HS;
 extern HS D_L02_001744C0;
 
-/* Adapted from Lombyte (MIT) for PAL by OpenRAC's tools/port.py: src/overlays/l02/ui_help_0021b698.c, FUN_L02_002216a0. */
+/* Adapted from Lombyte (GPL-3.0) for PAL by OpenRAC's tools/port.py: src/overlays/l02/ui_help_0021b698.c, FUN_L02_002216a0. */
 void Hero_UpdateGroundContact(void) {
     Vec4 v0, v10, v20, v30, v40, v50, v60;
     f32 f;

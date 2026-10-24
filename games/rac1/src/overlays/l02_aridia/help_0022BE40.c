@@ -3189,7 +3189,7 @@ extern f32 func_L00_002345B0(void *);
 extern f32 func_L00_002342F8_368E8(void *) __asm__("func_L00_002342F8");
 extern s32 func_L00_0025A5D8(f32 *, f32 *, f32, f32, f32);
 
-/* Adapted from Lombyte (MIT) for PAL by OpenRAC's tools/port.py: src/overlays/l02/ui_help_002360c8.c, FUN_L02_002360c8. */
+/* Adapted from Lombyte (GPL-3.0) for PAL by OpenRAC's tools/port.py: src/overlays/l02/ui_help_002360c8.c, FUN_L02_002360c8. */
 f32 HeroL02_PredictLanding(f32 a, f32 b, f32 c) {
     f32 t[4];
     Vec4 v;

@@ -57,7 +57,7 @@ extern s32_1B4C8 func_0011CD20();
 /* rac1-decomp src/core/00119D88.c: func_0011AE20 */
 /* sceSifInitRpc: once, set up the RPC tables and command handlers, then
    tell the IOP (SIF register 0x80000002) and wait for it. Adapted from
-   Lombyte (MIT) for PAL. */
+   Lombyte (GPL-3.0) for PAL. */
 void func_0011CF78(int mode) {
     int *packet;
 

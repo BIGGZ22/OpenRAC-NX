@@ -78,7 +78,7 @@ extern void func_L08_002EADF0_2EAF48(struct Moby *) __asm__("func_L08_002EADF0")
 
 /* Swarm leader: cruises or circles along its waypoint path with its parts in tow, fires at its target, and in
  * state 0x63 scatters the parts and removes itself.
- * Adapted from Lombyte (MIT) for PAL: overlays/l08/gameplay/entities/002e9b70.c, FUN_L08_002e9b70. */
+ * Adapted from Lombyte (GPL-3.0) for PAL: overlays/l08/gameplay/entities/002e9b70.c, FUN_L08_002e9b70. */
 void SwarmLeaderUpdate(struct Moby *moby) {
     SwarmVars_2EAF48 *vars = (SwarmVars_2EAF48 *)moby->pvars;
     SwarmPathFollower_2EAF48 *follower;
@@ -327,7 +327,7 @@ extern void func_L00_0028F210(s32, s32);
 extern int func_001F9850(int);
 
 /* Swings the gate to its driver's progress, fading a creak in while it moves and out when it stops, and latches its flag once fully open.
-   Adapted from Lombyte (MIT) for PAL by OpenRAC's tools/port.py: src/overlays/l08/gameplay/entities/002e9b70.c, FUN_L08_002ea4c0. */
+   Adapted from Lombyte (GPL-3.0) for PAL by OpenRAC's tools/port.py: src/overlays/l08/gameplay/entities/002e9b70.c, FUN_L08_002ea4c0. */
 void GateSwingUpdate(struct Moby *moby) {
     SwingGateVars *vars = (SwingGateVars *)moby->pvars;
     f32 progress = *(f32 *)D_L08_00160058_2EAF48[vars->driver].pvars;
@@ -548,7 +548,7 @@ extern void func_L00_002592B0(struct Moby *, f32, f32 *, f32, f32, f32);
 extern void func_L00_0025F4A8(char *, void *, char *, f32, f32, s32, s32, s32, f32, f32, f32, f32, s32, f32, s32, s32, s32, u8);
 extern short D_L08_00162000;
 
-/* Adapted from Lombyte (MIT) for PAL by OpenRAC's tools/port.py: src/overlays/l08/gameplay/entities/002e9b70.c, FUN_L08_002f44c0. */
+/* Adapted from Lombyte (GPL-3.0) for PAL by OpenRAC's tools/port.py: src/overlays/l08/gameplay/entities/002e9b70.c, FUN_L08_002f44c0. */
 void Moby621Update(struct Moby *moby)
 {
     SwarmPathFollower *follower = (SwarmPathFollower *)moby->pvars;
@@ -710,7 +710,7 @@ extern f32 func_001FA888_2F8560(s32) __asm__("func_001FA888");
 
 /* Flickering point light: state 0 checks the periods and fills the two flicker rings; then sets the draw scale,
  * fades the intensity with the distance to the camera and creates, updates or frees its point light.
- * Adapted from Lombyte (MIT) for PAL: overlays/l08/gameplay/entities/002e9b70.c, FUN_L08_002f70a0. */
+ * Adapted from Lombyte (GPL-3.0) for PAL: overlays/l08/gameplay/entities/002e9b70.c, FUN_L08_002f70a0. */
 void FlickerLightUpdate(struct Moby *m) {
     FlickerLightVars_2F8560 *d;
     Vec4 pos;

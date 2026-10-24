@@ -42,7 +42,7 @@ extern s32 func_L00_0025E860_F7700(void *, void *, s32 *, f32 *, s32, f32) __asm
 extern f32 func_L00_0025C918_F7700(f32 *value, f32 target, f32 *speed, f32 accel, f32 decel, f32 max) __asm__("func_L00_0025C918");
 
 /* Grind rail: measures its paths once, then while the hero is in control mode 0x10 snaps it to the nearest path point in range and pulls it along, faster on level 1 the more rail is left.
-   Adapted from Lombyte (MIT) for PAL by OpenRAC's tools/port.py: src/overlays/shared/gameplay/entities/002f6328.c, FUN_L01_002f6328. */
+   Adapted from Lombyte (GPL-3.0) for PAL by OpenRAC's tools/port.py: src/overlays/shared/gameplay/entities/002f6328.c, FUN_L01_002f6328. */
 void GrindRailUpdate(struct Moby *m) {
     RailVars_F7700 *d = (RailVars_F7700 *)m->pvars;
     RailPath_F7700 *path;
@@ -391,7 +391,7 @@ extern f32 func_001F9878_F9908(f32) __asm__("func_001F9878");
 extern s32 func_001FA898_F9908(f32) __asm__("func_001FA898");
 extern void func_L00_00251E30_F9908(struct Moby *) __asm__("func_L00_00251E30");
 
-/* Adapted from Lombyte (MIT) for PAL by OpenRAC's tools/port.py: src/overlays/shared/gameplay/entities/002f6328.c, FUN_L01_002f8530. */
+/* Adapted from Lombyte (GPL-3.0) for PAL by OpenRAC's tools/port.py: src/overlays/shared/gameplay/entities/002f6328.c, FUN_L01_002f8530. */
 struct Moby *func_L01_002F9908(Vec4f *pos, Vec4f *vel, s32 oclass, s32 a3, s32 a4,
                               f32 scale, f32 gravity, f32 spin, f32 seconds) {
     u128_F9908 p;
@@ -478,7 +478,7 @@ extern s32 func_L00_00258BC8(s32, s32);
 extern void func_L00_0026DD70(void *, void *, s32, s32, f32, s32);
 
 /* Debris update: falls and spins, bounces off what it hits with a random kick, bursts into 40 sparks once it comes to rest (or its unk10 timer runs out), or fades out over unk28 frames when unk20 is set.
-   Adapted from Lombyte (MIT) for PAL by OpenRAC's tools/port.py: src/overlays/shared/gameplay/entities/002f6328.c, FUN_L01_002f8718. */
+   Adapted from Lombyte (GPL-3.0) for PAL by OpenRAC's tools/port.py: src/overlays/shared/gameplay/entities/002f6328.c, FUN_L01_002f8718. */
 void DebrisMobyUpdate(struct Moby *m) {
     DebrisVars_2f8530 *d = (DebrisVars_2f8530 *)m->pvars;
     Vec4 old;
@@ -918,7 +918,7 @@ extern u32 D_001414DC_015F8 __asm__("D_001414DC");
 extern f32 func_001F9B88_015F8(f32) __asm__("func_001F9B88");
 extern f32 func_00214358_015F8(void *, s32, f32) __asm__("func_00214358");
 
-/* Adapted from Lombyte (MIT) for PAL by OpenRAC's tools/port.py: src/overlays/shared/gameplay/entities/002f6328.c, FUN_L01_00300220. */
+/* Adapted from Lombyte (GPL-3.0) for PAL by OpenRAC's tools/port.py: src/overlays/shared/gameplay/entities/002f6328.c, FUN_L01_00300220. */
 void CheckpointTriggerUpdate(struct Moby *moby) {
     PickupVars_015F8 *vars = (PickupVars_015F8 *)moby->pvars;
     s32 armed = 0;
@@ -1152,7 +1152,7 @@ extern void add_vec_00309078(void *, void *, void *) __asm__("func_001F9BD8");
 extern void save_00309078(int, int) __asm__("func_0020BFC8");
 
 /* Update of the Novalis collectible that starts a short cutscene: spins and bobs at its spawn point until the hero touches it, then plays the pickup camera, marks its flag collected, saves and removes itself.
-   Adapted from Lombyte (MIT) for PAL: src/overlays/shared/gameplay/entities/002f6328.c, FUN_L01_00307ca0. */
+   Adapted from Lombyte (GPL-3.0) for PAL: src/overlays/shared/gameplay/entities/002f6328.c, FUN_L01_00307ca0. */
 void GoldBoltUpdate(Moby *moby) {
     Vars_00309078 *vars = (Vars_00309078 *)moby->pvars;
     Hero *h;
@@ -1882,7 +1882,7 @@ void ResetParentAndChildren(L01Moby *moby) {
         }
     }
 }
-/* Adapted from Lombyte (MIT) for PAL by OpenRAC's tools/port.py: src/overlays/shared/unclassified_002f6328.c, FUN_L01_00309838. */
+/* Adapted from Lombyte (GPL-3.0) for PAL by OpenRAC's tools/port.py: src/overlays/shared/unclassified_002f6328.c, FUN_L01_00309838. */
 void ShowParentAndChildren(char *a) {
     char *p = *(char **)(a + 0x24);
     char **q;
@@ -2047,7 +2047,7 @@ extern void func_001F9CA0(void *, void *, void *);
 extern void func_001F9EE8(void *, void *, void *);
 extern void func_L00_001FD1D8(void *, void *, s32);
 
-/* Adapted from Lombyte (MIT) for PAL by OpenRAC's tools/port.py: src/overlays/shared/gameplay/vendor/0030b618.c, FUN_L01_0030bfa8. */
+/* Adapted from Lombyte (GPL-3.0) for PAL by OpenRAC's tools/port.py: src/overlays/shared/gameplay/vendor/0030b618.c, FUN_L01_0030bfa8. */
 void Moby1510_DrawGlow(char *m) {
     struct {
         GlowQuad_bfa8 quad;
@@ -2175,7 +2175,7 @@ extern f32 D_L01_001672C0_0DD80[] __asm__("D_L01_001672C0");
 extern OvlQuad_0DD80 D_L01_00174360;
 extern OvlQuad_0DD80 D_0013F4D0_0DD80 __asm__("D_0013F4D0");
 
-/* Adapted from Lombyte (MIT) for PAL by OpenRAC's tools/port.py: src/overlays/shared/gameplay/vendor/0030b618.c, FUN_L01_0030c9a8. */
+/* Adapted from Lombyte (GPL-3.0) for PAL by OpenRAC's tools/port.py: src/overlays/shared/gameplay/vendor/0030b618.c, FUN_L01_0030c9a8. */
 void func_L01_0030DD80(char *m) {
     char *e = *(char **)(m + 0x78);
     f32 *pos;
@@ -2339,7 +2339,7 @@ extern Vec4 D_0013F4D0;
 extern void func_L00_00250800_0E9C8b(void *, int, void *) __asm__("func_L00_00250800");
 extern void func_L00_00250800_0E9C8c(void *, int, void *) __asm__("func_L00_00250800");
 
-/* Adapted from Lombyte (MIT) for PAL by OpenRAC's tools/port.py: src/overlays/shared/gameplay_vendor_0030b618.c, FUN_L01_0030d5f0. */
+/* Adapted from Lombyte (GPL-3.0) for PAL by OpenRAC's tools/port.py: src/overlays/shared/gameplay_vendor_0030b618.c, FUN_L01_0030d5f0. */
 void func_L01_0030E9C8(char *moby, char *state) {
     Vec4 v;
     Vec4 q;
@@ -2427,7 +2427,7 @@ extern void func_L00_002592B0_0EC58(struct Moby *, f32 *, f32, f32, f32, f32) __
 extern s32 func_L00_00259B08_0EC58(struct Moby *, Vec4 *, f32, f32, s32, s32) __asm__("func_L00_00259B08");
 extern f32 func_L00_0025F368_0EC58(f32) __asm__("func_L00_0025F368");
 
-/* Adapted from Lombyte (MIT) for PAL by OpenRAC's tools/port.py: src/overlays/shared/gameplay/vendor/0030b618.c, FUN_L01_0030d880. */
+/* Adapted from Lombyte (GPL-3.0) for PAL by OpenRAC's tools/port.py: src/overlays/shared/gameplay/vendor/0030b618.c, FUN_L01_0030d880. */
 void MouseCritter_StepCommand(struct Moby *m, struct HoverVars_0EC58 *p) {
     Vec4 v;
     f32 d;
@@ -3042,7 +3042,7 @@ extern s32 func_001FA898(f32);
 extern s32 func_L00_0025EFC0(void *, void *, void *, s32 *, f32 *, s32, f32, f32, f32);
 
 /* Resets the camera's orbit, focus, spring, view and track from fixed values; for a kind 2 preset it also prepares its two paths once, measuring each point against the path it follows.
-   Adapted from Lombyte (MIT) for PAL by OpenRAC's tools/port.py: src/overlays/shared/gameplay/vendor/0030b618.c, FUN_L01_00314e98. */
+   Adapted from Lombyte (GPL-3.0) for PAL by OpenRAC's tools/port.py: src/overlays/shared/gameplay/vendor/0030b618.c, FUN_L01_00314e98. */
 void Camera_ResetFromPreset(Camera *cam) {
     Vec4 at;
     s32 seg;
@@ -3528,7 +3528,7 @@ extern Vec4 D_0013F4D0_171B8 __asm__("D_0013F4D0");
 extern f32 func_001F9D10(void *, void *);
 extern f32 func_001F9C78(void *, void *);
 
-/* Adapted from Lombyte (MIT) for PAL by OpenRAC's tools/port.py: src/overlays/shared/gameplay/vendor/0030b618.c, FUN_L01_00315de0. */
+/* Adapted from Lombyte (GPL-3.0) for PAL by OpenRAC's tools/port.py: src/overlays/shared/gameplay/vendor/0030b618.c, FUN_L01_00315de0. */
 void Camera_CopyAndApplyPreset(Camera_171B8 *cam) {
     CameraPresetRow_171B8 *rows = D_L01_0015F050_171B8;
     Camera_171B8 *src = D_L01_00167304;
@@ -3603,7 +3603,7 @@ extern CamSlot_00317408 *D_L01_0015F050_00317408 __asm__("D_L01_0015F050") MACRO
 extern CamTarget_00317408 *D_L01_0015F7EC_00317408 __asm__("D_L01_0015F7EC") MACRO_ADDR;
 
 /* Exit function of camera 3: unless the hero is still on this camera's target, sets the camera object's mode to 3, or 5 for kind 3.
-   Adapted from Lombyte (MIT) for PAL: src/overlays/shared/gameplay/vendor/0030b618.c, FUN_L01_00316030. */
+   Adapted from Lombyte (GPL-3.0) for PAL: src/overlays/shared/gameplay/vendor/0030b618.c, FUN_L01_00316030. */
 void Camera3_Exit(CamUser_00317408 *o) {
     CamData_00317408 *d = D_L01_0015F050_00317408[o->slot].data;
 

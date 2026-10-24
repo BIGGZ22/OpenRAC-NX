@@ -37,7 +37,7 @@ extern void func_001F9D20(void *, void *, void *);
 
 
 /* Project opposing world bounds into a floating-point screen rectangle. The first point supplies x/y; subtracting it from the opposite point supplies width/height. Keep the four output stores in retail order because callers may alias outputs.
-   Adapted from Lombyte (MIT) for PAL by OpenRAC's tools/port.py: src/assembly/textbin/fun_00237c80.c, project_graphics_bounds_float. */
+   Adapted from Lombyte (GPL-3.0) for PAL by OpenRAC's tools/port.py: src/assembly/textbin/fun_00237c80.c, project_graphics_bounds_float. */
 void FUN_00237c80(u128_38F98_c237c80 *first, u128_38F98_c237c80 *opposite, f32 *width, f32 *height, f32 *x,
                                    f32 *y) {
     f32 first_projected[4] __attribute__((aligned(16)));

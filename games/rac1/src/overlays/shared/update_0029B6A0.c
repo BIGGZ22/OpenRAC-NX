@@ -64,7 +64,7 @@ extern u8 D_0015EED0[] MACRO_ADDR;
 extern u8 D_0013D5C8[];
 
 /* Builds the vendor list: the stocked items (up to 12, 0xFF-terminated), then every other available item (D_0013D4C0 set, h8 non-zero) not already listed.
-   Adapted from Lombyte (MIT) for PAL by OpenRAC's tools/port.py: src/overlays/shared/gameplay/entities/00295100.c, FUN_L00_0029a400. */
+   Adapted from Lombyte (GPL-3.0) for PAL by OpenRAC's tools/port.py: src/overlays/shared/gameplay/entities/00295100.c, FUN_L00_0029a400. */
 void VendorBuildItemList(s32 skip_unflagged) {
     s32 count, i, j, value, item, k;
 
@@ -365,7 +365,7 @@ extern unsigned char D_0014171B[] NOT_SDA;
 extern char D_L00_00161130;
 
 /* Leaves the vendor screen: releases two handles, resets state, repositions the hero and restores the game state.
-   Adapted from Lombyte (MIT) for PAL: src/overlays/shared/unclassified_00295100.c, FUN_L00_0029ab70. */
+   Adapted from Lombyte (GPL-3.0) for PAL: src/overlays/shared/unclassified_00295100.c, FUN_L00_0029ab70. */
 void VendorExit(int a) {
     Vec4A v;
     Vec4A r;
@@ -1311,7 +1311,7 @@ extern void func_00205220(s32);
 extern void func_00216960(void);
 extern void func_00122598(s32);
 
-/* Adapted from Lombyte (MIT) for PAL by OpenRAC's tools/port.py: src/overlays/shared/gameplay/entities/00295100.c, FUN_L00_0029ad08. */
+/* Adapted from Lombyte (GPL-3.0) for PAL by OpenRAC's tools/port.py: src/overlays/shared/gameplay/entities/00295100.c, FUN_L00_0029ad08. */
 void VendorStartWeaponDemo(void) {
     Vendor_29a6b0 *g;
     VendorMoby_29a6b0 *moby;

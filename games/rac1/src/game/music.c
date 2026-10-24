@@ -861,7 +861,7 @@ extern s32 func_00216C50(s32, s32, s32, s32);
 extern void func_00216F48_17130(void *) __asm__("func_00216F48");
 extern s32 func_00217628(s32, s32, s32);
 
-/* Adapted from Lombyte (MIT) for PAL by OpenRAC's tools/port.py: src/textbin/audio/music/music_update.c, music_update. */
+/* Adapted from Lombyte (GPL-3.0) for PAL by OpenRAC's tools/port.py: src/textbin/audio/music/music_update.c, music_update. */
 void music_Update(void) {
     s8 requested_track;
     s32 fade_volume;

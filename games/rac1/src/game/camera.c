@@ -134,7 +134,7 @@ extern void func_001EC038(void);
 extern void func_001F9A98(void *dst, void *src, s32 size);
 extern s32 func_001FA898(f32 transition_duration);
 
-/* Adapted from Lombyte (MIT) for PAL by OpenRAC's tools/port.py: src/textbin/fun_001ebf10.c, switch_active_camera_record. */
+/* Adapted from Lombyte (GPL-3.0) for PAL by OpenRAC's tools/port.py: src/textbin/fun_001ebf10.c, switch_active_camera_record. */
 /* Switches the active camera to next_camera. The blend comes from the old
    camera's transition_state and the new one's info->blend_kind (1 eased,
    5 orbit, 3 and 6 hand-off); it is installed in gCamera.blend, then the
@@ -676,7 +676,7 @@ typedef struct {
    Steps yaw, pitch and distance (o->yaw, o->pitch, o->dist) toward the target
    orientation, rebuilds the orbit position and rotation and the camera basis
    (gCamera.matrix), and returns 1 once the orbit's frames are used up.
-   Adapted from Lombyte (MIT) for PAL: src/gameplay/camera/fun_001eccd8.c, FUN_001eccd8. */
+   Adapted from Lombyte (GPL-3.0) for PAL: src/gameplay/camera/fun_001eccd8.c, FUN_001eccd8. */
 int Camera_UpdateTowardTarget(Camera *cam, CamBlendOrbit *o) {
     Vec ang;
     Vec fwd;
@@ -918,7 +918,7 @@ extern f32 func_001F9C78(void *a, void *b);
 extern f32 func_001F9CB8(void *a);
 extern void func_001F9DC0(void *out, void *a, f32 len);
 
-/* Adapted from Lombyte (MIT) for PAL by OpenRAC's tools/port.py: src/gameplay/camera/fun_001ed470.c, FUN_001ed470. */
+/* Adapted from Lombyte (GPL-3.0) for PAL by OpenRAC's tools/port.py: src/gameplay/camera/fun_001ed470.c, FUN_001ed470. */
 /* CameraPreUpdate: tracks the hero for gCamera.follow each frame: the
    smoothed up direction (up, springs up_vel toward the hero's gravity
    inverse), the hero movement split along and across up, the z spring (pos,

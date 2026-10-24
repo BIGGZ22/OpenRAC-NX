@@ -259,7 +259,7 @@ typedef struct {
 } HS;
 extern HS D_L05_00174340;
 
-/* Adapted from Lombyte (MIT) for PAL by OpenRAC's tools/port.py: src/overlays/l05/ui_help_00239fc0.c, FUN_L05_002402a8. */
+/* Adapted from Lombyte (GPL-3.0) for PAL by OpenRAC's tools/port.py: src/overlays/l05/ui_help_00239fc0.c, FUN_L05_002402a8. */
 void HeroL05_GroundProbe(void) {
     Vec4 v0, v10, v20, v30, v40, v50, v60;
     f32 f;

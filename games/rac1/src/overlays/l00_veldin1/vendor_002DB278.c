@@ -266,7 +266,7 @@ extern void func_0020D678(void *);
 extern void func_L00_002E2F58(char *);
 
 /* Vendor (level 0) update: walks a path, turns toward the player, attacks and self-destructs.
-   Adapted from Lombyte (MIT) for PAL: overlays/l00/gameplay_vendor_002e0988.c, FUN_L00_002e0b88. */
+   Adapted from Lombyte (GPL-3.0) for PAL: overlays/l00/gameplay_vendor_002e0988.c, FUN_L00_002e0b88. */
 void VendorUpdate(VendMoby *moby) {
     VendVars *vars;
     VendTarget *target;
@@ -528,7 +528,7 @@ typedef struct {
     Vec4 pos;
 } TrollColl;
 
-/* Update for the troll moby: takes hits, picks and tracks its target. Adapted from Lombyte (MIT) for PAL: src/overlays/l00/gameplay_vendor_002e0988.c, FUN_L00_002e1678. */
+/* Update for the troll moby: takes hits, picks and tracks its target. Adapted from Lombyte (GPL-3.0) for PAL: src/overlays/l00/gameplay_vendor_002e0988.c, FUN_L00_002e1678. */
 void Troll_UpdateHitsAndTarget(void *mv) {
     TrollMoby *m = mv;
     TrollVars *vars;
@@ -640,7 +640,7 @@ extern void func_L00_002E3128_2E2F58(void) __asm__("func_L00_002E3128");
 extern float D_L00_0015F660[] MACRO_ADDR;
 
 // spawns a spark: steps the moby's position and emits one fast particle and three slow tails
-// Adapted from Lombyte (MIT) for PAL: overlays/l00/gameplay_vendor_002e0988.c, FUN_L00_002e1aa8.
+// Adapted from Lombyte (GPL-3.0) for PAL: overlays/l00/gameplay_vendor_002e0988.c, FUN_L00_002e1aa8.
 void Troll_EmitSparks(char *m) {
     char *vars;
     char *p;

@@ -65,7 +65,7 @@ extern void func_001F9BD8_D1168(V_2cfcb8 *, V_2cfcb8 *, void *) __asm__("func_00
 extern void func_001F9978(void);
 extern f32 func_001F9D10_D1168(V_2cfcb8 *, V_2cfcb8 *) __asm__("func_001F9D10");
 
-/* Adapted from Lombyte (MIT) for PAL by OpenRAC's tools/port.py: src/overlays/shared/gameplay/entities/veldin_ship.c, FUN_L00_002cfcb8. */
+/* Adapted from Lombyte (GPL-3.0) for PAL by OpenRAC's tools/port.py: src/overlays/shared/gameplay/entities/veldin_ship.c, FUN_L00_002cfcb8. */
 void GroundAttachedUpdate(M_2cfcb8 *moby) {
     V_2cfcb8 probe_top;
     V_2cfcb8 probe_bottom;
@@ -288,7 +288,7 @@ u8 *func_L00_002C6608_2D19E8(u8 *, s32, s32, s32) __asm__("func_L00_002C6608");
 
 void func_L00_002D19E8_r(u8 *a) __asm__("func_L00_002D19E8");
 
-/* Adapted from Lombyte (MIT) for PAL by OpenRAC's tools/port.py: src/overlays/shared/gameplay/entities/002cfcb8.c, FUN_L00_002d0538. */
+/* Adapted from Lombyte (GPL-3.0) for PAL by OpenRAC's tools/port.py: src/overlays/shared/gameplay/entities/002cfcb8.c, FUN_L00_002d0538. */
 void func_L00_002D19E8_r(u8 *a) {
     T_2D19E8 tmp;
     V_2D19E8 v20, v30, v40;
@@ -911,7 +911,7 @@ extern s32 D_L00_0016C990_2d3330[] __asm__("D_L00_0016C990");
 extern void func_0020DAF8_2d3330(M2d1e80 *, s32, s32 *) __asm__("func_0020DAF8");
 extern void func_001F49B0_2d3330(void *, M2d1e80 *) __asm__("func_001F49B0");
 extern void func_L00_002D2E60_2d3330(void) __asm__("func_L00_002D2E60");
-/* Moby update: hides itself and sets its flag while the game mode word is 2 and the state table entry is below 3 or equal to 4. Adapted from Lombyte (MIT) for PAL: overlays/shared/unclassified_002cfcb8.c, FUN_L00_002d1e80. */
+/* Moby update: hides itself and sets its flag while the game mode word is 2 and the state table entry is below 3 or equal to 4. Adapted from Lombyte (GPL-3.0) for PAL: overlays/shared/unclassified_002cfcb8.c, FUN_L00_002d1e80. */
 void func_L00_002D3330(M2d1e80 *m) {
     s32 *v = m->vars;
     if (m->state == 0) { m->state = 1; m->bc = 1; v[0x10] = 0; }
@@ -1058,7 +1058,7 @@ extern char D_0013A5E0[];
 extern char D_0014171B[];
 typedef int u128_D3B20 __attribute__((mode(TI)));
 
-/* Decoy glove update: state machine on moby[0x20], per-object data block at moby[0x78]. Adapted from Lombyte (MIT) for PAL: none. */
+/* Decoy glove update: state machine on moby[0x20], per-object data block at moby[0x78]. Adapted from Lombyte (GPL-3.0) for PAL: none. */
 void DecoyGloveUpdate(unsigned char *moby) {
     extern void func_0020D678(void);
     extern void func_001F9EE8();
@@ -1371,7 +1371,7 @@ extern void enqueue_2D4398(void *, void *) __asm__("func_001F49B0");
 /* Update for a moby that tracks hero.unk2040, the nearest oclass 0x25D moby. It orients itself towards it within
  * the D_L00_00161A20/24 limits (degrees), tints itself by the distance (hero.unk2044) while the 0x20 pad button is
  * held, and at under 1.0 drains the target's count in steps of 5, then removes it.
- * Adapted from Lombyte (MIT) for PAL: overlays/shared/gameplay/entities/002cfcb8.c, FUN_L00_002d2ee8. */
+ * Adapted from Lombyte (GPL-3.0) for PAL: overlays/shared/gameplay/entities/002cfcb8.c, FUN_L00_002d2ee8. */
 void TargetTrackerUpdate(struct Moby *moby) {
     Vars_2D4398 *vars;
     struct Moby *t;
@@ -2276,7 +2276,7 @@ extern float func_001F9FA8(float);
 extern void func_L00_00259868(int, int, float, float, float, int);
 extern float D_0015EE6C MACRO_ADDR;
 
-/* Walks a moby toward a target point: turn to face it, ease its speed, step it along its heading; returns the distance (or 37.0 when a flag is set). Adapted from Lombyte (MIT) for PAL: overlays/shared/unclassified_002cfcb8.c, FUN_L00_002d54c8. */
+/* Walks a moby toward a target point: turn to face it, ease its speed, step it along its heading; returns the distance (or 37.0 when a flag is set). Adapted from Lombyte (GPL-3.0) for PAL: overlays/shared/unclassified_002cfcb8.c, FUN_L00_002d54c8. */
 float WalkTowardPoint(unsigned char *m, float *t, float vel) {
     float vec[4] __attribute__((aligned(16)));
     unsigned char *v;
@@ -2360,7 +2360,7 @@ extern u8 D_0014C150_2D6CE0[][16] __asm__("D_0014C150");
 void func_L00_002D6CE0_r(Moby *m) __asm__("func_L00_002D6CE0");
 
 /* Kills a live moby: marks it in the level's spawn tables, starts its death sound and clears its key out of the shared key table.
-   Adapted from Lombyte (MIT) for PAL by OpenRAC's tools/port.py: src/overlays/shared/gameplay/entities/002cfcb8.c, FUN_L00_002d5830. */
+   Adapted from Lombyte (GPL-3.0) for PAL by OpenRAC's tools/port.py: src/overlays/shared/gameplay/entities/002cfcb8.c, FUN_L00_002d5830. */
 void func_L00_002D6CE0_r(Moby *m) {
     KeyVars_2D6CE0 *v = (KeyVars_2D6CE0 *)m->pvars;
     s32 i;
@@ -2424,7 +2424,7 @@ extern void func_L00_001FF4B0(void *, void *, float);
 extern float func_001FA790(float, float);
 extern short D_L00_00161A60;
 
-/* Steers an object along a path with speed limits. Adapted from Lombyte (MIT) for PAL: src/overlays/shared/unclassified_002cfcb8.c, FUN_L00_002d5988. */
+/* Steers an object along a path with speed limits. Adapted from Lombyte (GPL-3.0) for PAL: src/overlays/shared/unclassified_002cfcb8.c, FUN_L00_002d5988. */
 void Path_SteerWithLimits(Obj_6e38 *o, Path_6e38 *path, s32 p) {
     St_6e38 *st;
     s32 idx;
@@ -2901,7 +2901,7 @@ extern int func_001FA8A8(int, int, float);
 extern int func_001FA898_r(float) __asm__("func_001FA898");
 extern unsigned char *func_L00_00273E08(void *pos, int a1, unsigned char a2, int idx, int flag, int s, int mode, float f);
 
-/* Draws four drifting, colour-cycling sprites around a moby, stepping each one's phase and fade timer. Adapted from Lombyte (MIT) for PAL: overlays/shared/unclassified_002cfcb8.c, FUN_L00_002d6cd0. */
+/* Draws four drifting, colour-cycling sprites around a moby, stepping each one's phase and fade timer. Adapted from Lombyte (GPL-3.0) for PAL: overlays/shared/unclassified_002cfcb8.c, FUN_L00_002d6cd0. */
 void DriftingSprites_Draw(char *o) {
     P_p *p = *(P_p **)(o + 0x78);
     union { ti_p q; float f[4]; } v;
@@ -2988,7 +2988,7 @@ s16 func_001F9850_D83D8(int) __asm__("func_001F9850");
 void func_001F49B0(void *, P *);
 void func_L00_002D8898(void);
 
-/* Adapted from Lombyte (MIT) for PAL by OpenRAC's tools/port.py: src/overlays/shared/unclassified_002cfcb8.c, FUN_L00_002d6f28. */
+/* Adapted from Lombyte (GPL-3.0) for PAL by OpenRAC's tools/port.py: src/overlays/shared/unclassified_002cfcb8.c, FUN_L00_002d6f28. */
 void ParticleFieldUpdate(P *p) {
     Q *q = p->q;
     u8 *tbl;
@@ -3107,7 +3107,7 @@ extern int D_L00_00161444_2D90A0 __asm__("D_L00_00161444") MACRO_ADDR;
 void func_L00_002D90A0_r(P_2D90A0 *m, int i) __asm__("func_L00_002D90A0");
 
 /* Resets particle i of the emitter: random direction, random speeds from the emitter's ranges, and a start delay staggered by index.
-   Adapted from Lombyte (MIT) for PAL by OpenRAC's tools/port.py: src/overlays/shared/gameplay/entities/002cfcb8.c, FUN_L00_002d7bf0. */
+   Adapted from Lombyte (GPL-3.0) for PAL by OpenRAC's tools/port.py: src/overlays/shared/gameplay/entities/002cfcb8.c, FUN_L00_002d7bf0. */
 void func_L00_002D90A0_r(P_2D90A0 *m, int i) {
     char *v = (char *)m->q;
     Vec4f *p;

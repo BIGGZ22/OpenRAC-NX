@@ -95,7 +95,7 @@ extern int r1_func_00118EB0(void);
 
 /* rac1-decomp src/core/0011D0D0.c: func_0011D0D0 */
 /* sceSifResetIop: like sceSifRebootIop (func_0011EED8) but with a caller
-   -supplied argument string and reboot mode. Adapted from Lombyte (MIT)
+   -supplied argument string and reboot mode. Adapted from Lombyte (GPL-3.0)
    for PAL. */
 s32 func_0011ED60(const char *arg, s32 mode) {
     SifDmaData dma;
@@ -140,7 +140,7 @@ int func_0011EEA0(void) {
 
 /* rac1-decomp src/core/0011D0D0.c: func_0011D248 */
 /* sceSifRebootIop: reset the IOP with "rom0:UDNL " + img (at most 80
-   characters). Adapted from Lombyte (MIT) for PAL. */
+   characters). Adapted from Lombyte (GPL-3.0) for PAL. */
 int func_0011EED8(char *img) {
     char *prefix = r1_D_00152A60;
     char param[80];

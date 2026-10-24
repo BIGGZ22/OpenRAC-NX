@@ -586,7 +586,7 @@ void func_00217748(s32);
 void func_L00_00295010(s32, s32, s32, s32);
 void func_00234238(s32, s32, s32, s32, s32);
 
-/* Adapted from Lombyte (MIT) for PAL by OpenRAC's tools/port.py: src/overlays/shared/rendering/00245c28.c, FUN_L00_002468b8. */
+/* Adapted from Lombyte (GPL-3.0) for PAL by OpenRAC's tools/port.py: src/overlays/shared/rendering/00245c28.c, FUN_L00_002468b8. */
 void Map_LoadRenderArchive(void) {
     s32 first_base;
     s32 second_base;

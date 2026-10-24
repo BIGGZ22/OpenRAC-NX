@@ -47,7 +47,7 @@ extern int r1_func_00129690();
 extern void r1_func_00129600();
 
 /* rac1-decomp src/core/0012AC80.c: func_0012C0A0 */
-/* _decodeOrSkipField (libmpeg). Adapted from Lombyte (MIT) for PAL. */
+/* _decodeOrSkipField (libmpeg). Adapted from Lombyte (GPL-3.0) for PAL. */
 int func_0012FEC0(void *handle, int arg1, int arg2)
 {
   struct MpegHandle *arg0 = handle;

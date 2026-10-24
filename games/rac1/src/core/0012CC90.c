@@ -289,7 +289,7 @@ extern u128 D_001331A0[];
 #define IPU_CTRL ((volatile int *)0x10002010)
 #define IPU_IN_FIFO ((volatile u128 *)0x10007010)
 
-/* sceIpuInit: reset the IPU, load its two fixed FIFO command tables, reset again. Adapted from Lombyte (MIT) for PAL: src/sdk/dma/sce_ipu_init.c, sceIpuInit. */
+/* sceIpuInit: reset the IPU, load its two fixed FIFO command tables, reset again. Adapted from Lombyte (GPL-3.0) for PAL: src/sdk/dma/sce_ipu_init.c, sceIpuInit. */
 void func_0012D068(void) {
     func_0012D000(1);
     *IPU_CTRL = 0x40000000;

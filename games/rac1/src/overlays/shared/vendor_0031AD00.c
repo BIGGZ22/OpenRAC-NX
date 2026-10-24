@@ -155,7 +155,7 @@ extern char D_L01_001672C0[];
 extern int func_L00_0028F0B0(int, int, int, int);
 extern void func_L00_0028EBF0(int);
 
-/* Adapted from Lombyte (MIT) for PAL by OpenRAC's tools/port.py: src/overlays/shared/gameplay_vendor_0030b618.c, FUN_L01_0031a078. */
+/* Adapted from Lombyte (GPL-3.0) for PAL by OpenRAC's tools/port.py: src/overlays/shared/gameplay_vendor_0030b618.c, FUN_L01_0031a078. */
 void SndInstConditionalLoopUpdate(int a0) {
     char *p = *(char **)(a0 + 8);
     int n = *(int *)(p + 4);

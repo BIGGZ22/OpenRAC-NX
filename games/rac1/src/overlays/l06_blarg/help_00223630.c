@@ -138,7 +138,7 @@ void func_001F9BD8(void *, void *, void *);
 void func_L06_00235E08(s32, s32);
 void func_L00_00211338(void *, s32, f32, f32);
 
-/* Adapted from Lombyte (MIT) for PAL by OpenRAC's tools/port.py: src/overlays/l06/ui_help_00222fb8.c, FUN_L06_00227e78. */
+/* Adapted from Lombyte (GPL-3.0) for PAL by OpenRAC's tools/port.py: src/overlays/l06/ui_help_00222fb8.c, FUN_L06_00227e78. */
 s32 HeroL06_TryApplyHitKnockback(s32 arg) {
     u8 *m;
     T_8 *tbl;
@@ -391,7 +391,7 @@ typedef struct {
 } HS;
 extern HS D_L06_001746C0;
 
-/* Adapted from Lombyte (MIT) for PAL by OpenRAC's tools/port.py: src/overlays/l06/ui_help_00222fb8.c, FUN_L06_00229650. */
+/* Adapted from Lombyte (GPL-3.0) for PAL by OpenRAC's tools/port.py: src/overlays/l06/ui_help_00222fb8.c, FUN_L06_00229650. */
 void HeroL06_ResetMotionState(void) {
     Vec4 v0, v10, v20, v30, v40, v50, v60;
     f32 f;
@@ -589,7 +589,7 @@ extern int func_L00_0020DB30(int);
 extern void func_L00_00217570(int, int);
 extern int D_0015EE84 MACRO_ADDR;
 
-/* Hopping player movement update by state. Adapted from Lombyte (MIT) for PAL: src/overlays/l06/ui_help_00222fb8.c, FUN_L06_0022b438. */
+/* Hopping player movement update by state. Adapted from Lombyte (GPL-3.0) for PAL: src/overlays/l06/ui_help_00222fb8.c, FUN_L06_0022b438. */
 void HeroL06_UpdateHopMovement(void) {
     Vec4 tmp;
     f32 x;

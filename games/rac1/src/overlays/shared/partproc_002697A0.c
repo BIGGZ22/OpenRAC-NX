@@ -192,7 +192,7 @@ extern void func_001F9BD8(void *, void *, void *);
 extern f32 func_L00_002644E0(Vec4 *);
 extern void func_L00_002688A8_69BE8(FallingParticle *) __asm__("func_L00_002688A8");
 
-/* Adapted from Lombyte (MIT) for PAL by OpenRAC's tools/port.py: src/overlays/shared/rendering/effects/00268900.c, FUN_L00_00268d48. */
+/* Adapted from Lombyte (GPL-3.0) for PAL by OpenRAC's tools/port.py: src/overlays/shared/rendering/effects/00268900.c, FUN_L00_00268d48. */
 void PartType00Update(FallingParticle *p)
 {
     Vec4 step;

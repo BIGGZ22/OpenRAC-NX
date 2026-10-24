@@ -151,7 +151,7 @@ extern s32 func_001F9850(s32);
 extern s32 func_L00_00258BC8(s32, s32);
 
 /* Clears the hero, binds it to the first moby of class 0 (snapped to the ground, its position and yaw copied in, the camera start set from it unless D_L00_00160540), resets the 31 manipulator records and the eight sound voices, and sets the starting hit points and timers. The item ids are read into save[] before and after the clear and never written back.
-   Adapted from Lombyte (MIT) for PAL by OpenRAC's tools/port.py: src/overlays/shared/ui/help/00204c60.c, FUN_L00_00204c60. */
+   Adapted from Lombyte (GPL-3.0) for PAL by OpenRAC's tools/port.py: src/overlays/shared/ui/help/00204c60.c, FUN_L00_00204c60. */
 void HeroInit(void) {
     s32 save[7];
     s32 i;
@@ -271,7 +271,7 @@ int Hero_ResolveAnimId(int a) {
 extern char D_0013F450_056D8[] __asm__("D_0013F450");
 void func_L00_00235790(void);
 
-/* Adapted from Lombyte (MIT) for PAL by OpenRAC's tools/port.py: src/overlays/shared/ui_help_00203b18.c, FUN_L00_002050c0. */
+/* Adapted from Lombyte (GPL-3.0) for PAL by OpenRAC's tools/port.py: src/overlays/shared/ui_help_00203b18.c, FUN_L00_002050c0. */
 void Hero_TakeDamage(s32 n) {
     if (n) {
         char *g = D_0013F450_056D8;
@@ -388,7 +388,7 @@ extern Ent D_L00_0017A780_c[] __asm__("D_L00_0017A780");
 s32 func_L00_00205728_c(s32) __asm__("func_L00_00205728");
 extern void func_0020D9D8_205b50(s32, Ent *) __asm__("func_0020D9D8");
 void func_001F9BC0_c(void *) __asm__("func_001F9BC0");
-/* Per-frame update over the 31-entry table at D_L00_0017A780: runs the type handler for active entries and resets their matrices and scale. Adapted from Lombyte (MIT) for PAL: overlays/shared/ui_help_00203b18.c, FUN_L00_00205538. */
+/* Per-frame update over the 31-entry table at D_L00_0017A780: runs the type handler for active entries and resets their matrices and scale. Adapted from Lombyte (GPL-3.0) for PAL: overlays/shared/ui_help_00203b18.c, FUN_L00_00205538. */
 void UpdateHeldObjectTable(void) {
     s32 i;
     char *tbl = (char *)D_L00_0017A780_c; char *c = tbl + 0x90;
@@ -436,7 +436,7 @@ extern Quad_56a8 D_L00_0017C220[];
 extern s32 D_L00_0017C2C0[];
 extern f32 D_L00_0017C290[];
 
-/* Adapted from Lombyte (MIT) for PAL by OpenRAC's tools/port.py: src/overlays/shared/ui/help/00203b18.c, FUN_L00_002056a8. */
+/* Adapted from Lombyte (GPL-3.0) for PAL by OpenRAC's tools/port.py: src/overlays/shared/ui/help/00203b18.c, FUN_L00_002056a8. */
 void ClampAimLeanAngles(void) {
     u8 *e;
 
@@ -1430,7 +1430,7 @@ extern void func_L00_00251328(void *, int, int, int);
 extern void func_L00_00251358(void *, int *, int *, int *);
 extern u8 D_0013E620[];
 
-/* Adapted from Lombyte (MIT) for PAL by OpenRAC's tools/port.py: src/overlays/shared/ui/help/00203b18.c, FUN_L00_002076a8. */
+/* Adapted from Lombyte (GPL-3.0) for PAL by OpenRAC's tools/port.py: src/overlays/shared/ui/help/00203b18.c, FUN_L00_002076a8. */
 void Hero_UpdateTintFade(void) {
     struct Hero *player = &D_0013F450_07CC0;
     int blink;
@@ -1492,7 +1492,7 @@ void func_001FA218(void *, void *);
 void func_001F9EE8(void *, void *, void *);
 void func_001F9BD8(void *, void *, void *);
 
-/* Adapted from Lombyte (MIT) for PAL by OpenRAC's tools/port.py: src/overlays/shared/ui_help_00203b18.c, FUN_L00_002078a8. */
+/* Adapted from Lombyte (GPL-3.0) for PAL by OpenRAC's tools/port.py: src/overlays/shared/ui_help_00203b18.c, FUN_L00_002078a8. */
 void Hero_BobInStates(void) {
     S13F350_2078a8 *P = &D_0013F450_07EC0;
     Vec4 v;
@@ -1992,7 +1992,7 @@ s32 func_L00_001EFFF0_091D8(Vec4 *, Vec4 *, s32, s32, s32) __asm__("func_L00_001
 f32 func_001F9B98(f32, f32);
 f32 func_001F9B90(f32, f32);
 
-/* Steers the player aim and probes four rays for vertical motion limits. Adapted from Lombyte (MIT) for PAL by OpenRAC's tools/port.py: src/overlays/shared/ui_help_00203b18.c, FUN_L00_00208b60. */
+/* Steers the player aim and probes four rays for vertical motion limits. Adapted from Lombyte (GPL-3.0) for PAL by OpenRAC's tools/port.py: src/overlays/shared/ui_help_00203b18.c, FUN_L00_00208b60. */
 void Hero_SteerAimAndProbe(void) {
     Vec4 v, w, x;
     f32 k, d, a, c, s, h, hi, lo, sc;
@@ -2138,7 +2138,7 @@ void func_001FA540_002090d0(Mtx_002090d0 *, Mtx_002090d0 *, Mtx_002090d0 *) __as
 void func_001F9BF0_002090d0(Vec4A *, Vec4A *, Vec4A *) __asm__("func_001F9BF0");
 void func_001F9BD8_002090d0(Vec4A *, Vec4A *, Vec4A *) __asm__("func_001F9BD8");
 void func_002153E8_002090d0(Mtx_002090d0 *, Vec4A *) __asm__("func_002153E8");
-/* Camera-relative placement: transforms a position through the camera matrix and an offset rotation, then writes the difference back into the camera block. Adapted from Lombyte (MIT) for PAL: overlays/shared/ui_help_00203b18.c, FUN_L00_002090d0. */
+/* Camera-relative placement: transforms a position through the camera matrix and an offset rotation, then writes the difference back into the camera block. Adapted from Lombyte (GPL-3.0) for PAL: overlays/shared/ui_help_00203b18.c, FUN_L00_002090d0. */
 void PlaceRelativeToCamera(float *inf, float x, float y, float z) {
     u128_002090d0 *in = (u128_002090d0 *)inf;
     struct { Vec4A p; Vec4A a; Vec4A b; Vec4A d; Mtx_002090d0 m; Mtx_002090d0 r; Vec4A e; } L_002090d0;
@@ -2293,7 +2293,7 @@ typedef struct {
     short s908;
 } P_t;
 
-// Emits a pair of sparks from the player's position each time the counter passes its limit. Adapted from Lombyte (MIT) for PAL: overlays/shared/ui_help_00203b18.c, FUN_L00_00209638.
+// Emits a pair of sparks from the player's position each time the counter passes its limit. Adapted from Lombyte (GPL-3.0) for PAL: overlays/shared/ui_help_00203b18.c, FUN_L00_00209638.
 void SpawnHeroSideEffects(int seed, int limit) {
     float v[4];
     float pos[4];
@@ -2337,7 +2337,7 @@ extern float func_00214158(void);
 extern int func_L00_00258BC8(int, int);
 extern void func_L00_002703E8(void *, void *, int, int);
 
-/* Every lim calls of the counter, sprays a dust particle at the player's position with a random velocity and resets the counter. Adapted from Lombyte (MIT) for PAL: overlays/shared/ui_help_00203b18.c, FUN_L00_00209848. */
+/* Every lim calls of the counter, sprays a dust particle at the player's position with a random velocity and resets the counter. Adapted from Lombyte (GPL-3.0) for PAL: overlays/shared/ui_help_00203b18.c, FUN_L00_00209848. */
 void SprayDustPeriodically(int n, int lim) {
     P09 *P = (P09 *)(D_0013E633 + 0xE1D);
     if (lim < ++P->h906) {
@@ -2379,7 +2379,7 @@ typedef struct {
 extern P_209a40 D_0013F450_0A0B8 __asm__("D_0013F450");
 extern int func_L00_0026FF20(void *, void *, float, float);
 
-/* Adapted from Lombyte (MIT) for PAL by OpenRAC's tools/port.py: src/overlays/shared/ui_help_00203b18.c, FUN_L00_00209a40. */
+/* Adapted from Lombyte (GPL-3.0) for PAL by OpenRAC's tools/port.py: src/overlays/shared/ui_help_00203b18.c, FUN_L00_00209a40. */
 void SpawnHeroEffectBurst(int n, int mode) {
     float pos[4];
     Vec4 v;
@@ -2433,7 +2433,7 @@ extern void func_L00_00272488_0A320(Vec4 *, f32 *, s32, f32, f32) __asm__("func_
 extern void func_L00_002703E8_0A320(Vec4 *, Vec4 *, s32, s32) __asm__("func_L00_002703E8");
 
 /* Kicks up dust at the hero's feet (hero.height_threshold): with flash set, first a flash at the hero; then `puffs` puffs within 0.3 of the hero and `debris` bits thrown out in random directions. The debris start point adds the x velocity to both x and y, as in the original.
-   Adapted from Lombyte (MIT) for PAL by OpenRAC's tools/port.py: src/overlays/shared/ui/help/00203b18.c, FUN_L00_00209ca8. */
+   Adapted from Lombyte (GPL-3.0) for PAL by OpenRAC's tools/port.py: src/overlays/shared/ui/help/00203b18.c, FUN_L00_00209ca8. */
 void HeroKickUpDust(s32 puffs, s32 debris, s32 flash) {
     Vec4 v;
     Vec4 start;
@@ -2477,7 +2477,7 @@ extern void func_00215C00(void *, float, float, float);
 extern void func_L00_0026A7F8(void *, void *, int, int, int, int, int, int);
 extern float D_0015EE70 MACRO_ADDR;
 
-/* Per-frame spark effect: emits a burst of particles around a saved position while a global timer runs down. Adapted from Lombyte (MIT) for PAL: overlays/shared/ui_help_00203b18.c, FUN_L00_00209ec8. */
+/* Per-frame spark effect: emits a burst of particles around a saved position while a global timer runs down. Adapted from Lombyte (GPL-3.0) for PAL: overlays/shared/ui_help_00203b18.c, FUN_L00_00209ec8. */
 void SparkBurstUpdate(void) {
     V4 v;
     V4 w;
@@ -2533,7 +2533,7 @@ void Hero_SetTiltSpringParams(float a, float b) {
     *(float *)(p + 0xA4) = a;
     *(float *)(p + 0xA8) = b;
 }
-/* From Lombyte (MIT), FUN_L00_0020a240 (PR #66), adapted to PAL. */
+/* From Lombyte (GPL-3.0), FUN_L00_0020a240 (PR #66), adapted to PAL. */
 extern char D_00173F60_alias[] __asm__("D_L00_00173F60");
 extern void func_L00_00233E48(void *, float, float, float);
 extern int func_L00_001EFFF0(void *, void *, int, int, int);
@@ -2869,7 +2869,7 @@ extern s32 func_001F9850_c(s32) __asm__("func_001F9850");
 extern void func_L00_00250800_20b850(void *, s32, void *) __asm__("func_L00_00250800") ;
 extern f32 func_002140F8_20b850(f32, f32) __asm__("func_002140F8") ;
 extern void func_L00_0026ED30_20b850(void *, void *, f32) __asm__("func_L00_0026ED30") ;
-/* Hero movement check: tests the six stick/velocity thresholds against the pad and the state word, then runs the transition tests. Adapted from Lombyte (MIT) for PAL: overlays/shared/ui_help_00203b18.c, FUN_L00_0020b1d8. */
+/* Hero movement check: tests the six stick/velocity thresholds against the pad and the state word, then runs the transition tests. Adapted from Lombyte (GPL-3.0) for PAL: overlays/shared/ui_help_00203b18.c, FUN_L00_0020b1d8. */
 void Hero_CheckMovementThresholds(void) {
     u8 buf[0x10] __attribute__((aligned(16)));
     f32 a, b;
@@ -2929,7 +2929,7 @@ extern void func_001F9EE8_20b5b8(void *, void *, void *) __asm__("func_001F9EE8"
 extern f32 func_L00_001FF860_20b5b8(f32, f32) __asm__("func_L00_001FF860");
 extern f32 func_001FA850_20b5b8(f32, f32) __asm__("func_001FA850");
 extern f32 func_001F9D48_20b5b8(void *, void *) __asm__("func_001F9D48");
-/* Hero ledge-grab check: predicts a position with gravity, probes for a ledge and tests angle and dot thresholds before setting the grab state. Adapted from Lombyte (MIT) for PAL: overlays/shared/ui_help_00203b18.c, FUN_L00_0020b5b8. */
+/* Hero ledge-grab check: predicts a position with gravity, probes for a ledge and tests angle and dot thresholds before setting the grab state. Adapted from Lombyte (GPL-3.0) for PAL: overlays/shared/ui_help_00203b18.c, FUN_L00_0020b5b8. */
 void HeroLedgeGrabCheck(void) {
     Vec4 v, w, z;
     u8 *g;

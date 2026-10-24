@@ -161,7 +161,7 @@ struct Chunk {
     BinFn id;
 };
 
-/* ParseBin: copy each boot-binary chunk to its destination while chunk ids agree; return the id. Adapted from Lombyte (MIT) for PAL: gameplay/state/parse_bin.c, parse_bin. */
+/* ParseBin: copy each boot-binary chunk to its destination while chunk ids agree; return the id. Adapted from Lombyte (GPL-3.0) for PAL: gameplay/state/parse_bin.c, parse_bin. */
 BinFn func_0012DA38(void) {
     unsigned char *p;
     struct Chunk *c;

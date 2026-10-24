@@ -10,7 +10,7 @@ extern float D_0015EE60 MACRO_ADDR;
 extern unsigned char *D_L00_001B24B0;
 
 /* Spawns a type 0x2C particle with position, velocity, colour and scale parameters.
-   Adapted from Lombyte (MIT) for PAL: src/overlays/shared/rendering_002712b8.c, FUN_L00_002712b8. */
+   Adapted from Lombyte (GPL-3.0) for PAL: src/overlays/shared/rendering_002712b8.c, FUN_L00_002712b8. */
 unsigned char *PartType44Spawn(void *pos, float *vec, int s, int a, int col, int n, float x, float y, float z, float w, float pw) {
     unsigned char *m = func_00218928(0x2C);
     if (m) {
@@ -56,7 +56,7 @@ extern void func_001F9C30(void *, void *, float);
 extern unsigned char D_0013E633[] NOT_SDA;
 
 /* Per-frame update of a type 0x2C particle: fade colour, move and rotate its velocity.
-   Adapted from Lombyte (MIT) for PAL: src/overlays/shared/rendering_002712b8.c, FUN_L00_00271450. */
+   Adapted from Lombyte (GPL-3.0) for PAL: src/overlays/shared/rendering_002712b8.c, FUN_L00_00271450. */
 void PartType44Update(unsigned char *p) {
     float v[4];
     Q t[1];
@@ -295,7 +295,7 @@ void func_001F9BD8_72BC0i(void *, void *, void *) __asm__("func_001F9BD8");
 s32 func_001F9938_72BC0g(void *) __asm__("func_001F9938");
 void func_L00_002688A8_72BC0o(void *) __asm__("func_L00_002688A8");
 
-/* Adapted from Lombyte (MIT) for PAL by OpenRAC's tools/port.py: src/overlays/shared/rendering_002712b8.c, FUN_L00_00271d20. */
+/* Adapted from Lombyte (GPL-3.0) for PAL by OpenRAC's tools/port.py: src/overlays/shared/rendering_002712b8.c, FUN_L00_00271d20. */
 void PartType49Update(O00271d20 *o) {
     Vec4 t;
     Vec4 *acc = &o->acc;
@@ -450,7 +450,7 @@ extern int func_L00_001F2BE8(float, void *, int, void *, int);
 extern void func_L00_0025BA50(void *, void *, void *, int, int, int, int, int, float, float, float);
 extern int *D_L00_00178000[];
 
-/* Part type 54 update: advances a particle, fades its color near the end of life and spawns a light effect at its position. Adapted from Lombyte (MIT) for PAL: overlays/shared/rendering_002712b8.c, FUN_L00_00272438. */
+/* Part type 54 update: advances a particle, fades its color near the end of life and spawns a light effect at its position. Adapted from Lombyte (GPL-3.0) for PAL: overlays/shared/rendering_002712b8.c, FUN_L00_00272438. */
 void PartType54Update(unsigned char *m) {
     V54 *pos = (V54 *)(m + 0x10);
     Q54 *q = (Q54 *)(m + 0x20);
@@ -497,7 +497,7 @@ void func_L00_00250800_73478(u8 *, u8 *, void *) __asm__("func_L00_00250800");
 int func_001FA898_73478c(float) __asm__("func_001FA898");
 s32 func_001FA898_73478d(f32) __asm__("func_001FA898");
 
-/* Adapted from Lombyte (MIT) for PAL by OpenRAC's tools/port.py: src/overlays/shared/rendering_002712b8.c, FUN_L00_002725d8. */
+/* Adapted from Lombyte (GPL-3.0) for PAL by OpenRAC's tools/port.py: src/overlays/shared/rendering_002712b8.c, FUN_L00_002725d8. */
 P_2725d8 *PartType55Spawn(u8 *a0, u8 *a1, s32 a2, s32 a3, f32 a4, f32 a5) {
     P_2725d8 *p = func_00218928_73478(0x37);
     a3++;
@@ -532,7 +532,7 @@ extern void func_L00_00250800_273578(void *, s32, void *) __asm__("func_L00_0025
 extern void func_001F9BF0_273578(void *, void *, void *) __asm__("func_001F9BF0");
 extern f32 func_001F9CB8_273578(void *) __asm__("func_001F9CB8");
 extern void func_L00_001FF4B0_273578(void *, void *, f32) __asm__("func_L00_001FF4B0");
-/* Particle update. Adapted from Lombyte (MIT) for PAL: overlays/shared/rendering_002712b8.c, FUN_L00_002726d8. */
+/* Particle update. Adapted from Lombyte (GPL-3.0) for PAL: overlays/shared/rendering_002712b8.c, FUN_L00_002726d8. */
 void PartType55Update(P_2726d8 *p) {
     Q_2726d8 *q = &p->q;
     u128_2726d8 t;
@@ -650,7 +650,7 @@ typedef float V_272bc0[4] __attribute__((aligned(16)));
 typedef struct { char p0[0x88]; float f88; char p1[0x2080 - 0x8C]; int i2080; } P_272bc0;
 extern unsigned char *D_L00_0016022C MACRO_ADDR;
 
-/* part type 58 update: fade in, hold spawning sparks, then fall and fade out. Adapted from Lombyte (MIT) for PAL: overlays/shared/rendering_002712b8.c, FUN_L00_00272bc0. */
+/* part type 58 update: fade in, hold spawning sparks, then fall and fade out. Adapted from Lombyte (GPL-3.0) for PAL: overlays/shared/rendering_002712b8.c, FUN_L00_00272bc0. */
 void PartType58Update(unsigned char *p) {
     V_272bc0 t;
     unsigned char *q;
@@ -770,7 +770,7 @@ typedef struct { char p0[0x80]; float x, y, z; } G_2730e0;
 extern unsigned char *D_L00_001B24D4_p __asm__("D_L00_001B24D4") NOT_SDA;
 extern int func_001FA898_r(float) __asm__("func_001FA898");
 
-/* Spawns an effect record at a position inside the level bounds; Adapted from Lombyte (MIT) for PAL: overlays/shared/rendering_002712b8.c, FUN_L00_002730e0. */
+/* Spawns an effect record at a position inside the level bounds; Adapted from Lombyte (GPL-3.0) for PAL: overlays/shared/rendering_002712b8.c, FUN_L00_002730e0. */
 unsigned char *PartType60Spawn(float *pos, char *vel, int color, unsigned char life, unsigned char b, int mode, float scale)
 {
     unsigned char *m;
@@ -856,7 +856,7 @@ typedef struct {
     E_p e;
 } P_p;
 
-/* Updates a fading, pulsing particle: animates its phase, colour and scale, then orients it. Adapted from Lombyte (MIT) for PAL: src/overlays/shared/rendering_002712b8.c, FUN_L00_00273448. */
+/* Updates a fading, pulsing particle: animates its phase, colour and scale, then orients it. Adapted from Lombyte (GPL-3.0) for PAL: src/overlays/shared/rendering_002712b8.c, FUN_L00_00273448. */
 void PartType61Update(P_p *p) {
     E_p *e;
     float lim;
@@ -1018,7 +1018,7 @@ extern short D_L00_001602E8;
 extern f32 D_0015EE6C MACRO_ADDR;
 extern s32 D_0015EE84 MACRO_ADDR;
 
-/* Adapted from Lombyte (MIT) for PAL by OpenRAC's tools/port.py: src/overlays/shared/rendering/002712b8.c, FUN_L00_00273a68. */
+/* Adapted from Lombyte (GPL-3.0) for PAL by OpenRAC's tools/port.py: src/overlays/shared/rendering/002712b8.c, FUN_L00_00273a68. */
 void PartType64Update(struct EmberParticle *p) {
     struct EmberMotion *m = &p->m;
     Vec4 t;
@@ -1085,7 +1085,7 @@ extern V D_L00_00173F60;
 extern int func_L00_001EFFF0(void *, void *, int, void *, int);
 extern void func_001F9BC0(void *);
 
-/* Particle type 65 update: fall under gravity, bounce off the world, fade the colour and die when spent. Adapted from Lombyte (MIT) for PAL: overlays/shared/rendering_002712b8.c, FUN_L00_00273ee0. */
+/* Particle type 65 update: fall under gravity, bounce off the world, fade the colour and die when spent. Adapted from Lombyte (GPL-3.0) for PAL: overlays/shared/rendering_002712b8.c, FUN_L00_00273ee0. */
 void PartType65Update(unsigned char *o) {
     V out;
     float *c;
@@ -1540,7 +1540,7 @@ extern float D_L00_00160320 MACRO_ADDR;
 extern float func_L00_002644E0(void *);
 extern void func_L00_00264570(void *);
 
-/* Adapted from Lombyte (MIT) for PAL by OpenRAC's tools/port.py: src/overlays/shared/rendering/002712b8.c, FUN_L00_00275320. */
+/* Adapted from Lombyte (GPL-3.0) for PAL by OpenRAC's tools/port.py: src/overlays/shared/rendering/002712b8.c, FUN_L00_00275320. */
 void PartType73Update(O_275320 *o) {
     Vec4 tmp;
     Vec4 t2;
@@ -1694,7 +1694,7 @@ void PartType77Update(char *m) {
 extern unsigned char *func_L00_0025D390(int);
 extern unsigned char *D_L00_001B2538;
 
-/* Spawns a type 78 particle: position, colour, lifetime and mode, with a trailing record of speeds, id and target. Adapted from Lombyte (MIT) for PAL: overlays/shared/rendering_002712b8.c, FUN_L00_00275910. */
+/* Spawns a type 78 particle: position, colour, lifetime and mode, with a trailing record of speeds, id and target. Adapted from Lombyte (GPL-3.0) for PAL: overlays/shared/rendering_002712b8.c, FUN_L00_00275910. */
 unsigned char *PartType78Spawn(void *pos, int s, int col, int mode, int b, float *vec, int h, float x, float y) {
     unsigned char *m = func_00218928(0x4E);
     if (m) {
@@ -1854,7 +1854,7 @@ extern int func_002176C8(int, int, int);
 extern int func_00234158(int arg0, int arg1, int arg2, int arg3);
 
 // loads the 20 table entries from the resident table into the level's slots
-// Adapted from Lombyte (MIT) for PAL: overlays/shared/rendering_002712b8.c, FUN_L00_00276078.
+// Adapted from Lombyte (GPL-3.0) for PAL: overlays/shared/rendering_002712b8.c, FUN_L00_00276078.
 void Stash_SendLoadedEntries(void) {
     int h = D_L00_00173F08;
     int i;

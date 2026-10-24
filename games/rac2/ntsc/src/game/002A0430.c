@@ -13,7 +13,7 @@ void func_002A0430(unsigned int index)
 void func_002A0468(unsigned long long *command_words, unsigned long long upper_field, unsigned long long middle_field, unsigned long long low_field, unsigned long long tail_field);
 
 /* rac1-decomp src/game/mobyfunc.c: func_0020E340 */
-/* Adapted from Lombyte (MIT) for PAL by OpenRAC's tools/port.py: src/rendering/commands/pack_render_command_fields.c, PackRenderCommandFields. */
+/* Adapted from Lombyte (GPL-3.0) for PAL by OpenRAC's tools/port.py: src/rendering/commands/pack_render_command_fields.c, PackRenderCommandFields. */
 void func_002A0468(unsigned long long *command_words, unsigned long long upper_field,
                              unsigned long long middle_field, unsigned long long low_field, unsigned long long tail_field) {
     int command_word_index;

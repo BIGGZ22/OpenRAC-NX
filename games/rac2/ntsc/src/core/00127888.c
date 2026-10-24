@@ -85,7 +85,7 @@ int func_00127888(int fd, void *buf, int nbyte) {
 }
 
 /* rac1-decomp src/core/001236F0.c: func_00123D48 */
-/* sceMcWrite: copies the unaligned lead of the buffer into the request, sends RPC 6. Adapted from Lombyte (MIT) for PAL: src/sdk/storage/memory_card/sce_mc_write.c, sceMcWrite. */
+/* sceMcWrite: copies the unaligned lead of the buffer into the request, sends RPC 6. Adapted from Lombyte (GPL-3.0) for PAL: src/sdk/storage/memory_card/sce_mc_write.c, sceMcWrite. */
 int func_001279A0(int fd, unsigned char *buffer, int size) {
     int rpc_result;
     unsigned int i;

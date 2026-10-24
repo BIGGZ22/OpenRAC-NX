@@ -6,7 +6,7 @@
  * One definition for every source file, in place of the private copies
  * candidates carried to land without clashing with their files.
  *
- * Adapted from Lombyte (MIT), the US decompilation:
+ * Adapted from Lombyte (GPL-3.0), the US decompilation:
  * include/rnc/gameplay/entities/moby.h at 88c78925. Its layout and
  * field names come from the matched code it cites; the PAL code is the
  * same structure. See THIRD_PARTY_NOTICES.md.

@@ -97,7 +97,7 @@ void func_0011CBC0(int arg0) {
 }
 
 /* rac1-decomp src/core/00119D88.c: func_0011AA90 */
-/* Adapted from Lombyte (MIT) for PAL by OpenRAC's tools/port.py: src/sdk/rpc/sce_sif_send_cmd.c, _sceSifSendCmd. */
+/* Adapted from Lombyte (GPL-3.0) for PAL by OpenRAC's tools/port.py: src/sdk/rpc/sce_sif_send_cmd.c, _sceSifSendCmd. */
 s32 func_0011CBE8(u32 packet, s32 mode, SifCmd *cmd, s32 size, u32 src, u32 dst, s32 dst_size) {
     SifDma tags[2];
     s32 num;

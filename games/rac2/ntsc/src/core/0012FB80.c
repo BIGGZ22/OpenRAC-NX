@@ -54,7 +54,7 @@ INCLUDE_ASM("asm/core", func_0012FBF0);
 /* rac1-decomp src/core/0012AC80.c: func_0012BF40 */
 /* _decodeOrSkipFrame (libmpeg): sibling of func_0012FEC0
    (_decodeOrSkipField), for the frame-picture path. Adapted from
-   Lombyte (MIT) for PAL. */
+   Lombyte (GPL-3.0) for PAL. */
 int func_0012FD60(void *arg0, int arg1, int arg2) {
     Wrapper *w = (Wrapper *)arg0;
     Obj40 *p = w->obj;

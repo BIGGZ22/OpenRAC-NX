@@ -400,7 +400,7 @@ extern void func_L00_001FFED8(float *, int, float);
 extern void func_001FA588(float *, float *, float *);
 extern f32 D_0015EE60 MACRO_ADDR;
 
-/* Adapted from Lombyte (MIT) for PAL by OpenRAC's tools/port.py: src/overlays/l04/runtime/dma/002922d0.c, FUN_L04_00292d48. */
+/* Adapted from Lombyte (GPL-3.0) for PAL by OpenRAC's tools/port.py: src/overlays/l04/runtime/dma/002922d0.c, FUN_L04_00292d48. */
 void LegRig_UpdateLegAngles(struct Moby *moby, LegRig_93F08 *rig, int flags) {
     float joint[16];
     float tilt[4];
@@ -696,7 +696,7 @@ extern float func_L04_00242868(int, int);
 extern float func_001F9B88(float);
 extern int func_L04_00293990_96FA8(struct Moby *m, LegRig *rig, float t) __asm__("func_L04_00293990");
 
-/* Adapted from Lombyte (MIT) for PAL by OpenRAC's tools/port.py: src/overlays/l04/runtime/dma/002922d0.c, FUN_L04_00295de8. */
+/* Adapted from Lombyte (GPL-3.0) for PAL by OpenRAC's tools/port.py: src/overlays/l04/runtime/dma/002922d0.c, FUN_L04_00295de8. */
 void LegRig_Init(struct Moby *m, LegRig *rig) {
     int joints[6];
     float mtx[4][4];

@@ -31,7 +31,7 @@ static inline s32 path_next_eb20_9FCF0(PathPoints_eb20_9FCF0 *path, s32 i, s32 d
 }
 struct Moby;
 
-/* Adapted from Lombyte (MIT) for PAL by OpenRAC's tools/port.py: src/overlays/l04/gameplay/entities/0029eb20.c, FUN_L04_0029eb20. */
+/* Adapted from Lombyte (GPL-3.0) for PAL by OpenRAC's tools/port.py: src/overlays/l04/gameplay/entities/0029eb20.c, FUN_L04_0029eb20. */
 s32 Path_AdvanceMoby(struct Moby *m, PathPoints_eb20_9FCF0 *path, s32 i, s32 dir, f32 dist) {
     Vec4 seg;
     Vec4 rel;
@@ -1076,7 +1076,7 @@ extern void func_L00_0028F210_C2F00b(s32 voice, s32 pitch) __asm__("func_L00_002
 struct Moby;
 
 /* Keeps the moby's engine voice playing, easing its volume and pitch toward the animation's levels.
-   Adapted from Lombyte (MIT) for PAL by OpenRAC's tools/port.py: src/overlays/l04/gameplay/entities/0029eb20.c, FUN_L04_002c1b80. */
+   Adapted from Lombyte (GPL-3.0) for PAL by OpenRAC's tools/port.py: src/overlays/l04/gameplay/entities/0029eb20.c, FUN_L04_002c1b80. */
 void func_L04_002C2F00_r(struct Moby *m) __asm__("func_L04_002C2F00");
 void func_L04_002C2F00_r(struct Moby *m) {
     EngineSoundVars_2C2F00 *v = (EngineSoundVars_2C2F00 *)m->pvars;
@@ -2033,7 +2033,7 @@ extern short D_L04_00161944;
 extern short D_L04_0016194C;
 
 /* Lays a trail of smoke puffs from FROM to TO with a burst at each end.
-   Adapted from Lombyte (MIT) for PAL by OpenRAC's tools/port.py: src/overlays/l04/gameplay/entities/0029eb20.c, FUN_L04_002c41e0. */
+   Adapted from Lombyte (GPL-3.0) for PAL by OpenRAC's tools/port.py: src/overlays/l04/gameplay/entities/0029eb20.c, FUN_L04_002c41e0. */
 void SpawnSmokeTrail(void *owner, void *from, void *to, int count, float a, float b) {
     Vec4 step;
     Vec4 at;
@@ -2730,7 +2730,7 @@ extern s32 func_0022ED80_C7BD8(s32, s32, struct Moby *) __asm__("func_0022ED80")
 struct Moby;
 
 /* Follows a linked switch moby (class 0x118): mirrors its position value, loops a sound while it moves, plays a click at either end and swaps class 0x41C back to 0x1B0 when it reaches 1.0.
-   Adapted from Lombyte (MIT) for PAL by OpenRAC's tools/port.py: src/overlays/l04/gameplay/entities/0029eb20.c, FUN_L04_002c6858. */
+   Adapted from Lombyte (GPL-3.0) for PAL by OpenRAC's tools/port.py: src/overlays/l04/gameplay/entities/0029eb20.c, FUN_L04_002c6858. */
 void SwitchFollowerUpdate(struct Moby *m) {
     SwitchFollowerVars_C7BD8 *v = (SwitchFollowerVars_C7BD8 *)m->pvars;
     f32 last = m->anim_time;
@@ -2849,7 +2849,7 @@ extern struct Moby * D_L04_00160058_C7F38 __asm__("D_L04_00160058") MACRO_ADDR;
 extern u8 D_0013E650[];
 
 /* Door update: follows its lever's travel, pushes the lever back while opening, and runs the motor sounds.
-   Adapted from Lombyte (MIT) for PAL by OpenRAC's tools/port.py: src/overlays/l04/gameplay/entities/0029eb20.c, FUN_L04_002c6bb8. */
+   Adapted from Lombyte (GPL-3.0) for PAL by OpenRAC's tools/port.py: src/overlays/l04/gameplay/entities/0029eb20.c, FUN_L04_002c6bb8. */
 void LeverDoorUpdate(struct Moby *m) {
     DoorVars *v = (DoorVars *)m->pvars;
     f32 prev;

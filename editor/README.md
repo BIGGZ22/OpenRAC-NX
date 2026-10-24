@@ -837,7 +837,7 @@ The decoders accept only the layouts found on these discs and raise
   untextured faces, skeletons and animation sequences), and the collision
   block and the meaning of its surface bytes
   ([ASSETS.md](../games/rac1/docs/ASSETS.md#collision)).
-- **[Lombyte](https://github.com/lombyte-project/Lombyte)** (MIT): the moby
+- **[Lombyte](https://github.com/lombyte-project/Lombyte)** (GPL-3.0): the moby
   class names on the labels (`moby_classes.tsv`, see its header).
 - **[OpenGOAL's jak-project](https://github.com/open-goal/jak-project)**,
   whose extractor was the model for extracting from your own disc.

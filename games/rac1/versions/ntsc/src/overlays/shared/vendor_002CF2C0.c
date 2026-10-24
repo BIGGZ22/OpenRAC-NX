@@ -121,7 +121,7 @@ extern s32 func_00215570(void *, s32);
 extern void func_L05_002F6518_F6588(struct Moby *, TriggerVars_2f5200 *, s32, s32) __asm__("func_L05_002F6518");
 extern void func_L05_002F62E8_F6588(s32, TriggerVars_2f5200 *, s32) __asm__("func_L05_002F62E8");
 
-/* Adapted from Lombyte (MIT) for PAL by OpenRAC's tools/port.py: src/overlays/shared/gameplay/entities/002b3840.c, FUN_L05_002f5200. */
+/* Adapted from Lombyte (GPL-3.0) for PAL by OpenRAC's tools/port.py: src/overlays/shared/gameplay/entities/002b3840.c, FUN_L05_002f5200. */
 void func_L05_002F6588(struct Moby *m) {
     TriggerVars_2f5200 *v = (TriggerVars_2f5200 *)m->pvars;
     Vec4 target;
@@ -641,7 +641,7 @@ extern char *func_L05_0031AAA8(void *, int);
 extern void func_L05_0031A718(void *);
 extern char * D_L05_001601AC MACRO_ADDR;
 
-/* Adapted from Lombyte (MIT) for PAL by OpenRAC's tools/port.py: src/overlays/shared/unclassified_002b3840.c, FUN_L05_00319510. */
+/* Adapted from Lombyte (GPL-3.0) for PAL by OpenRAC's tools/port.py: src/overlays/shared/unclassified_002b3840.c, FUN_L05_00319510. */
 void func_L05_0031AA20(void *moby_v)
 {
     char *moby = moby_v;
@@ -935,7 +935,7 @@ extern char *func_L05_0031E670(unsigned char *);
 void func_L05_0031E468(char *m);
 
 /* Mine update: sets its glow, fades it out with camera distance and blows up into debris, smoke and sparks when something touches it.
-   Adapted from Lombyte (MIT) for PAL by OpenRAC's tools/port.py: src/overlays/shared/gameplay/vendor/0031abe0.c, FUN_L05_0031c8e0. */
+   Adapted from Lombyte (GPL-3.0) for PAL by OpenRAC's tools/port.py: src/overlays/shared/gameplay/vendor/0031abe0.c, FUN_L05_0031c8e0. */
 void func_L05_0031DDF0(struct Moby_1DDF0 *moby) {
     struct MineVars_c8e0 *vars = (struct MineVars_c8e0 *)moby->pvars;
     Vec4_1DDF0 tip;
@@ -1121,7 +1121,7 @@ void func_L05_0031E468(char *m) {
 extern char *func_0020D348(int);
 extern void func_L00_00251E30(void *);
 
-/* Adapted from Lombyte (MIT) for PAL by OpenRAC's tools/port.py: src/overlays/shared/gameplay_vendor_0031abe0.c, FUN_L05_0031d160. */
+/* Adapted from Lombyte (GPL-3.0) for PAL by OpenRAC's tools/port.py: src/overlays/shared/gameplay_vendor_0031abe0.c, FUN_L05_0031d160. */
 char *func_L05_0031E670(unsigned char *a0)
 {
     unsigned char *m = (unsigned char *)CreateMoby(0x5EA);
@@ -1340,7 +1340,7 @@ extern void func_001F9BC0_32ABF0(void *) __asm__("func_001F9BC0");
 void func_L05_0032ABF0_r(Camera_32ABF0 *cam) __asm__("func_L05_0032ABF0");
 
 /* Resets the camera from its preset (row cam->preset of D_L05_0015F050): distances, angle limits and damping, cleared velocities, then places it.
-   Adapted from Lombyte (MIT) for PAL by OpenRAC's tools/port.py: src/overlays/shared/gameplay/vendor/0031abe0.c, FUN_L05_003296e0. */
+   Adapted from Lombyte (GPL-3.0) for PAL by OpenRAC's tools/port.py: src/overlays/shared/gameplay/vendor/0031abe0.c, FUN_L05_003296e0. */
 void func_L05_0032ABF0_r(Camera_32ABF0 *cam) {
     CameraPreset_32ABF0 *s = D_L05_0015F050_32ABF0[cam->preset].preset;
     CameraOrbit_32ABF0 *d;

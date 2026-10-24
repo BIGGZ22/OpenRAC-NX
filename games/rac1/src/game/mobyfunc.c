@@ -880,7 +880,7 @@ LINKER_REMNANT("asm/remnants/text", func_0020E330);
 
 void func_0020E340(u64 *command_words, u64 upper_field, u64 middle_field, u64 low_field, u64 tail_field);
 
-/* Adapted from Lombyte (MIT) for PAL by OpenRAC's tools/port.py: src/rendering/commands/pack_render_command_fields.c, PackRenderCommandFields. */
+/* Adapted from Lombyte (GPL-3.0) for PAL by OpenRAC's tools/port.py: src/rendering/commands/pack_render_command_fields.c, PackRenderCommandFields. */
 void func_0020E340(u64 *command_words, u64 upper_field,
                              u64 middle_field, u64 low_field, u64 tail_field) {
     int command_word_index;

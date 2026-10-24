@@ -31,7 +31,7 @@ void func_00130E20(unsigned int chcr) {
 }
 
 /* rac1-decomp src/core/0012CC90.c: func_0012D068 */
-/* sceIpuInit: reset the IPU, load its two fixed FIFO command tables, reset again. Adapted from Lombyte (MIT) for PAL: src/sdk/dma/sce_ipu_init.c, sceIpuInit. */
+/* sceIpuInit: reset the IPU, load its two fixed FIFO command tables, reset again. Adapted from Lombyte (GPL-3.0) for PAL: src/sdk/dma/sce_ipu_init.c, sceIpuInit. */
 void func_00130E88(void) {
     r1_func_0012D000(1);
     *IPU_CTRL = 0x40000000;

@@ -55,7 +55,7 @@ extern void func_L01_0021F9C8_2BA898(s32, s32, s32, s32, s32, s32) __asm__("func
 void func_L01_002BA898_r(s32 count, ScrollLayer_2BA898 *l) __asm__("func_L01_002BA898");
 
 /* Scrolls the UV offsets of count overlay layers (wrapping into [-1, 1]) and, for each one in view, queues its two-texture GS setup and draws it.
-   Adapted from Lombyte (MIT) for PAL by OpenRAC's tools/port.py: src/overlays/l01/gameplay/entities/002b96e0.c, FUN_L01_002b96e0. */
+   Adapted from Lombyte (GPL-3.0) for PAL by OpenRAC's tools/port.py: src/overlays/l01/gameplay/entities/002b96e0.c, FUN_L01_002b96e0. */
 void func_L01_002BA898_r(s32 count, ScrollLayer_2BA898 *l) {
     struct DmaTag_2BA898 *tag;
     u64 *q;
@@ -161,7 +161,7 @@ f32 func_001FA748_BE2C8b(f32 a, f32 b) __asm__("func_001FA748");
 extern void func_001F9BD8_BE2C8c(void *, void *, void *) __asm__("func_001F9BD8");
 extern f32 D_0015EE60_BE2C8b __asm__("D_0015EE60") MACRO_ADDR;
 
-/* Adapted from Lombyte (MIT) for PAL by OpenRAC's tools/port.py: src/overlays/l01/unclassified_002b96e0.c, FUN_L01_002bd100. */
+/* Adapted from Lombyte (GPL-3.0) for PAL by OpenRAC's tools/port.py: src/overlays/l01/unclassified_002b96e0.c, FUN_L01_002bd100. */
 void ParticleEmitterUpdate(EmitterMoby *self) {
     Emitter *v;
     Vec4 out;
@@ -253,7 +253,7 @@ extern int func_L00_00258BC8(int, int);
 extern int func_001F9850(int);
 extern void func_L00_0026DD70(void *, void *, unsigned int, unsigned int, float, int);
 
-/* Spawns three bursts of sparks around a moby with random velocity, colours and size. Adapted from Lombyte (MIT) for PAL: overlays/l01/unclassified_002b96e0.c, FUN_L01_002e6518. */
+/* Spawns three bursts of sparks around a moby with random velocity, colours and size. Adapted from Lombyte (GPL-3.0) for PAL: overlays/l01/unclassified_002b96e0.c, FUN_L01_002e6518. */
 void SpawnSparkBursts(SplashMoby *m, u128 *origin) {
     Vec4 base;
     Vec4 vel;
@@ -335,7 +335,7 @@ extern f32 func_L00_001FF860(f32, f32);
 extern float func_001FA850(float, float);
 
 /* Picks the path node the follower should head for: an ordered path just steps to the next stop; otherwise the nearest node and its two neighbours are scored (distance, or heading change for slow movers) and the best one is written to *idx. Returns nonzero when the pick differs from the nearest node.
-   Adapted from Lombyte (MIT) for PAL by OpenRAC's tools/port.py: src/overlays/l01/gameplay/entities/002b96e0.c, FUN_L01_002e6790. */
+   Adapted from Lombyte (GPL-3.0) for PAL by OpenRAC's tools/port.py: src/overlays/l01/gameplay/entities/002b96e0.c, FUN_L01_002e6790. */
 int PickFollowerPathNode(void *arg, int *idx) {
     PathPickMoby *m = arg;
     PathPickTarget target;
@@ -2044,7 +2044,7 @@ typedef struct {
 extern void func_L00_0025EFC0(PePath_F44F8 *, void *, void *, f32 *, s32 *, s32, f32, f32, f32);
 extern s32 func_L00_0025E860(PePath_F44F8 *, void *, f32 *, s32 *, s32, f32);
 
-/* Adapted from Lombyte (MIT) for PAL by OpenRAC's tools/port.py: src/overlays/l01/gameplay/entities/002b96e0.c, FUN_L01_002f3120. */
+/* Adapted from Lombyte (GPL-3.0) for PAL by OpenRAC's tools/port.py: src/overlays/l01/gameplay/entities/002b96e0.c, FUN_L01_002f3120. */
 void PathCarrierUpdate(Moby *self)
 {
     PathCarrierVars *v;
@@ -2256,7 +2256,7 @@ extern int func_L00_0028EB98(void *moby, int handle);
 extern void func_L00_0028EBF0(int);
 extern s32 func_0022ED80_F5AE8(s32, s32, void *) __asm__("func_0022ED80");
 
-/* Adapted from Lombyte (MIT) for PAL by OpenRAC's tools/port.py: src/overlays/l01/gameplay/entities/002b96e0.c, FUN_L01_002f4710. */
+/* Adapted from Lombyte (GPL-3.0) for PAL by OpenRAC's tools/port.py: src/overlays/l01/gameplay/entities/002b96e0.c, FUN_L01_002f4710. */
 void CrankSliderUpdate(Moby *self)
 {
     struct SliderVars *v;
@@ -2417,7 +2417,7 @@ extern void func_L00_002514B8(void *);
 extern void func_L00_00251E30(void *);
 
 /* Rider carrier: waits for the hero in its clip volume, then follows its path carrying up to eight rider mobys (and steers its camera moby), drops them off one by one at the marked node and removes itself at the end of the path.
-   Adapted from Lombyte (MIT) for PAL by OpenRAC's tools/port.py: src/overlays/l01/gameplay/entities/002b96e0.c, FUN_L01_002f4960. */
+   Adapted from Lombyte (GPL-3.0) for PAL by OpenRAC's tools/port.py: src/overlays/l01/gameplay/entities/002b96e0.c, FUN_L01_002f4960. */
 void RiderCarrierUpdate(CarrierMoby *m) {
     CarrierVars *v;
     CarrierCamVars *cv;
@@ -2579,7 +2579,7 @@ extern f32 func_001FA888(s32);
 extern void func_L01_002F7528(void *);
 void func_001F49B0(void *fn, void *arg);
 
-/* Adapted from Lombyte (MIT) for PAL by OpenRAC's tools/port.py: src/overlays/l01/unclassified_002b96e0.c, FUN_L01_002f6180. */
+/* Adapted from Lombyte (GPL-3.0) for PAL by OpenRAC's tools/port.py: src/overlays/l01/unclassified_002b96e0.c, FUN_L01_002f6180. */
 void ScrollingLayers2Update(void *arg) {
     Vec4 c;
     Vec4 d;
@@ -2645,7 +2645,7 @@ extern float func_001F9CB8(void *);
 extern char *func_L00_0026E940(char *, int, int, int, float);
 extern void func_0022ED80(int, int, int);
 
-/* Spawns a beam moby from an owner, position, direction and colour vectors. Adapted from Lombyte (MIT) for PAL: overlays/l01/unclassified_002b96e0.c, FUN_L01_002f68a0. */
+/* Spawns a beam moby from an owner, position, direction and colour vectors. Adapted from Lombyte (GPL-3.0) for PAL: overlays/l01/unclassified_002b96e0.c, FUN_L01_002f68a0. */
 BeamMoby *SpawnBeam(void *owner, u128_t *pos, u128_t *dir, u128_t *color, int kind) {
     Vec4 p;
     Vec4 d;
@@ -3016,7 +3016,7 @@ extern void func_L00_002594C8_2f9640(void *, void *, void *, s32, f32, f32, f32,
 extern f32 func_001F9D10_2f9640(void *, void *) __asm__("func_001F9D10") ;
 extern void func_L00_001FF4B0_2f9640(void *, void *, f32) __asm__("func_L00_001FF4B0") ;
 extern f32 func_00214440_2f9640(void *, s32) __asm__("func_00214440") ;
-/* Hovering enemy update: springs its position toward a home point on each axis, keeps its distance to the player, and steers toward a target with the shared turn helper. Adapted from Lombyte (MIT) for PAL: overlays/l01/unclassified_002b96e0.c, FUN_L01_002f8268. */
+/* Hovering enemy update: springs its position toward a home point on each axis, keeps its distance to the player, and steers toward a target with the shared turn helper. Adapted from Lombyte (GPL-3.0) for PAL: overlays/l01/unclassified_002b96e0.c, FUN_L01_002f8268. */
 void HoverEnemyUpdate(HoverMoby *m) {
     HoverVars *v;
     HoverPlayer *pl;
@@ -3100,7 +3100,7 @@ extern float func_001F9FA8(float);
 extern void func_L01_002F9908(void *, void *, unsigned int, int, float, float, float, float, int);
 extern char *func_L00_0026CD70(float f, char *a, char *b, int c, int d, int e, int g);
 
-// Emitter update: ticks timers, occasionally bursts a smoke puff and spawns two drifting smoke particles per frame. Adapted from Lombyte (MIT) for PAL: overlays/l01/unclassified_002b96e0.c, FUN_L01_002f8c58.
+// Emitter update: ticks timers, occasionally bursts a smoke puff and spawns two drifting smoke particles per frame. Adapted from Lombyte (GPL-3.0) for PAL: overlays/l01/unclassified_002b96e0.c, FUN_L01_002f8c58.
 void SteamVentUpdate(SteamMoby *m) {
     SteamVars *v;
     SteamColors colors;
@@ -3235,7 +3235,7 @@ extern float func_001F9D48(void *, void *);
 extern int func_0022ED80_2FA458(int, int, void *) __asm__("func_0022ED80");
 
 /* Collapsing platform: sparkles while idle, then drops when the player stands near, and records it as collected.
-   Adapted from Lombyte (MIT) for PAL: overlays/l01/unclassified_002b96e0.c, FUN_L01_002f9080. */
+   Adapted from Lombyte (GPL-3.0) for PAL: overlays/l01/unclassified_002b96e0.c, FUN_L01_002f9080. */
 void CollapsingPlatformUpdate(CapMoby *m) {
     CapVars *v;
     unsigned char *e;
@@ -3370,7 +3370,7 @@ extern float func_001FA888(int);
 extern void func_001F9BF0(void *, void *, void *);
 extern void func_L00_002617B0(char *, void *, void *, void *);
 
-/* Elevator update: waits, then moves the lift between its two stops and carries whatever rides it. Adapted from Lombyte (MIT) for PAL: overlays/l01/unclassified_002b96e0.c, FUN_L01_002f95c0. */
+/* Elevator update: waits, then moves the lift between its two stops and carries whatever rides it. Adapted from Lombyte (GPL-3.0) for PAL: overlays/l01/unclassified_002b96e0.c, FUN_L01_002f95c0. */
 void LiftMoveUpdate(LiftMoby *m) {
     LiftVars *v;
     float old[4] __attribute__((aligned(16)));
