@@ -14,6 +14,7 @@
 #include "enhanced/viewer/hero_shadow.h"
 #include "enhanced/viewer/shadow_atlas.h"
 #include "renderer/gl.h"
+#include "renderer/render_opt.h"
 #include "renderer/world/gl_world.h"
 #include "viewer_shaders.h"
 #if defined(OPENRAC_VULKAN)
@@ -60,6 +61,32 @@ Bucket bucket_of(Layer layer) {
 
 const void* offset(std::size_t bytes) {
     return reinterpret_cast<const void*>(bytes);
+}
+
+// Returns the textures `materials` draw with, in their order: each one's image and emission image,
+// `white` where it has none, as the layer and sky passes pick them (`textures` is by image).
+std::vector<renderer::TextureHandle> material_textures(
+    const std::vector<Material>& materials,
+    const std::vector<renderer::TextureHandle>& textures,
+    renderer::TextureHandle white
+) {
+    const auto of = [&](int image) {
+        // A material without an image, or with one the level does not hold, draws white.
+        return image >= 0 && static_cast<std::size_t>(image) < textures.size()
+                   ? textures[static_cast<std::size_t>(image)]
+                   : white;
+    };
+    std::vector<renderer::TextureHandle> used;
+    used.reserve(materials.size() * 2 + 1);  // two a material, and white
+    used.push_back(white);
+
+    // Two a material: the colour image, then the emission image (white without one).
+    for (const Material& material : materials) {
+        used.push_back(of(material.image));
+        used.push_back(of(material.emission_image));
+    }
+
+    return used;
 }
 
 // The sides of what a camera sees (its view and projection, column-major), as planes a point is
@@ -336,6 +363,23 @@ bool LevelScene::upload(
     glBindVertexArray(0);
     glBindBuffer(GL_ARRAY_BUFFER, 0);
     m_probes.load(level);
+
+    // The materials' textures made now, while the level loads, so that its first frames make
+    // none (texture-prepare, docs/port/RENDER_PERF.md); off, each is made at its first draw.
+    if (renderer::render_opt::enabled(renderer::render_opt::Opt::TexturePrepare)) {
+        constexpr double kMiB = 1024.0 * 1024.0;
+        const renderer::PreparedTextures made =
+            textures.prepare(material_textures(m_materials, m_textures, m_white));
+        log::verbose(
+            "level textures: {} made at the load, {:.1f} MiB uploaded, {:.1f} MiB with mip chains, "
+            "{} batches",
+            made.textures,
+            static_cast<double>(made.staged_bytes) / kMiB,
+            static_cast<double>(made.resident_bytes) / kMiB,
+            made.batches
+        );
+    }
+
     return true;
 }
 
