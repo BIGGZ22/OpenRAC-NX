@@ -224,6 +224,55 @@ std::string megabytes(std::uint64_t bytes);
 // Draws one row of a two-column table: `label`, then `value`. Inside an ImGui table only.
 void row(const char* label, const std::string& value);
 
+// ---- The panel's sections and the windows beside it ----
+
+// Returns the averages of the last second of frames (common/stats.h's history): rates, times per
+// tick and per frame, the GPU's time where it is measured; an empty Averages before the first
+// frame. Defined in debug/frame.cpp.
+Averages averages();
+
+// Draws the frame section: the rates, the frame times' plots and where a frame's time goes, from
+// `a` (averages()) and what the window measured (`shown`). Defined in debug/frame.cpp.
+void frame_section(const Shown& shown, const Averages& a);
+
+// Draws the renderer section: the GPU, the frame's counters and a table of the renderer's passes,
+// each with a switch that hides it (s.hidden). Defined in debug/renderer.cpp.
+void renderer_section(const Shown& shown);
+
+// Measures the game's main memory for the memory map (s.cells, s.used_pages): the pages of each
+// 128 KB cell that hold anything, and which cells changed. Does it at most once each 25 ticks, and
+// not before the tick has given the whole 32 MB. Defined in debug/memory.cpp.
+void scan_ram();
+
+// Draws the memory section: the host's memory, the game's stack and the map of its main memory, a
+// click on which opens the memory viewer there. Defined in debug/memory.cpp.
+void memory_section();
+
+// Draws the memory viewer window (s.memory_viewer), 256 bytes from s.view_address as bytes or as
+// words and floats. Defined in debug/memory.cpp.
+void memory_viewer_window();
+
+// Draws the mobys section: the live mobys, those near the hero or all of them, nearest first; a
+// click on one selects it and opens the inspector. Defined in debug/mobys.cpp.
+void mobys_section();
+
+// Draws the moby inspector window (s.inspector): the selected moby's fields, read from the game's
+// memory. Defined in debug/mobys.cpp.
+void inspector_window();
+
+// Draws the game section: the level, the hero, the camera, the pad, the calls to functions without
+// C, and the probes' switches. Defined in debug/game.cpp.
+void game_section();
+
+// Returns the folder the shaders are read again from: OPENRAC_SHADER_DIR when it is set, otherwise
+// the port folder the build read them from (common/stats.h), empty when none was built in.
+// Defined in debug/shaders.cpp.
+std::string shader_root();
+
+// Draws the shaders section: the GL programs and their state, with a button that reads them all
+// again from shader_root() and one for each. Defined in debug/shaders.cpp.
+void shaders_section();
+
 // Draws one line of text, formatted as std::format does.
 template <typename... Args>
 void text(std::format_string<Args...> fmt, Args&&... args) {
