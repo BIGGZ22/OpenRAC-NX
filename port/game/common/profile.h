@@ -7,9 +7,10 @@
 // asks the profile, and the game's folder answers with its own addresses and layouts.
 //
 // One profile per game version, which picks the version's tables as rac1_version.h does for C. A
-// game's program links one definition of game_profile(); for now every program links rac1's
-// (port/game/rac1/profile.cpp), which reads a game it does not know as PAL, as the frontend did
-// before the profile. The C side of what a game gives the host is openrac/game_host.h.
+// game's program links one definition of game_profile() (cmake/Games.cmake): the game's own, from
+// port/game/<game>/profile.cpp (rac1's for both of its discs), or for a game with none
+// game/common/profile_none.cpp, which reports no game state. The C side of what a game gives the
+// host is openrac/game_host.h.
 
 #pragma once
 

@@ -259,17 +259,23 @@ endif()
 openrac_warnings(openrac_scene_renderer)
 
 # ---- the level viewer ----
-# The viewer program's own code: its free camera, and what the renderers read of a running game from
-# its memory (game/rac1/game_state.h) with rac1's profile, which the game programs read it through
-# (game/common/profile.h). The programs and the tests that draw a level link this, and the scene
-# with it.
+# The viewer program's own code: its free camera. The programs and the tests that draw a level link
+# this, and the scene with it.
 add_library(openrac_viewer_lib STATIC
   viewer/camera.cpp
-  game/rac1/game_state.cpp
-  game/rac1/profile.cpp
 )
 target_link_libraries(openrac_viewer_lib PUBLIC openrac_scene_renderer openrac_enhanced_textures)
 openrac_warnings(openrac_viewer_lib)
+
+# Ratchet & Clank's profile (game/common/profile.h): what the renderers read of the running game
+# from its memory (game/rac1/game_state.h), for rac1's programs (cmake/Games.cmake links it as
+# openrac_game_<game>_profile), the viewer and its tests.
+add_library(openrac_game_rac1_profile STATIC
+  game/rac1/game_state.cpp
+  game/rac1/profile.cpp
+)
+target_link_libraries(openrac_game_rac1_profile PUBLIC openrac_scene_renderer)
+openrac_warnings(openrac_game_rac1_profile)
 
 # Tests are registered through openrac_add_test (cmake/Tests.cmake), which makes the program
 # <subject>_test and the ctest test <subject>; a program that runs under more names gets them with
@@ -329,7 +335,7 @@ if(OPENRAC_PROBE_BAKER)
 endif()
 
 add_executable(openrac-viewer viewer/main.cpp)
-target_link_libraries(openrac-viewer PRIVATE openrac_viewer_lib openrac_platform)
+target_link_libraries(openrac-viewer PRIVATE openrac_viewer_lib openrac_game_rac1_profile openrac_platform)
 openrac_warnings(openrac-viewer)
 if(APPLE)
   include(MacApp)
@@ -393,7 +399,7 @@ if(OPENRAC_VULKAN)
   target_compile_definitions(viewer_test PRIVATE OPENRAC_VULKAN=1)
   target_compile_definitions(sun_shadow_test PRIVATE OPENRAC_VULKAN=1)
 endif()
-target_link_libraries(viewer_test PRIVATE openrac_viewer_lib openrac_platform)
+target_link_libraries(viewer_test PRIVATE openrac_viewer_lib openrac_game_rac1_profile openrac_platform)
 openrac_warnings(viewer_test)
 add_test(NAME viewer COMMAND viewer_test "${CMAKE_CURRENT_BINARY_DIR}/viewer_test_level")
 set_tests_properties(viewer PROPERTIES SKIP_RETURN_CODE 77)
