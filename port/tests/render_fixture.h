@@ -612,8 +612,11 @@ public:
     }
 
     // Uploads `level` again, as a level change does, keeping the renderers and the framebuffer.
+    // The scene is a new one, as the frontend's use_level makes it: its textures are new handles
+    // of the pool, made again (a released scene that uploads again keeps its first handles).
     bool reupload(const viewer::LevelData& level, std::string& error) {
         m_scene.release();
+        m_scene = viewer::LevelScene();
         return m_scene.upload(level, m_renderer.textures(), error)
                && (!m_options.enhanced
                    || (shadow_probe_fixture(m_scene, error)
