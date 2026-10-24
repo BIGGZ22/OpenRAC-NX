@@ -113,6 +113,17 @@ class NewCppTest(unittest.TestCase):
         self.assertEqual(rules(self.check("delete[] boxes;\n")), ["new-delete"])
         self.assertEqual(self.check("int new_size = 0;\n// a new box\n"), [])
 
+    def test_a_listed_allocation_exception_may_replace_operator_new(self):
+        body = "void* operator new(std::size_t size) {\n    return std::malloc(size);\n}\n"
+        self.assertEqual(rules(self.check(body)), ["new-delete", "malloc-free"])
+        found = cc.check_new_cpp("port/tests/render_bench.cpp", LICENCE + body, set())
+        self.assertEqual(found, [])
+
+    def test_every_listed_allocation_exception_names_a_port_file_and_a_reason(self):
+        for path, reason in cc.ALLOCATION_EXCEPTIONS.items():
+            self.assertTrue(cc.in_scope(path), path)
+            self.assertTrue(reason, path)
+
     def test_a_name_that_starts_with_delete_is_not_a_delete(self):
         self.assertEqual(self.check("void delete_textures(int n, const unsigned* names);\n"), [])
         self.assertEqual(self.check("entries.push_back({glDelete, delete_buffers});\n"), [])
