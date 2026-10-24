@@ -79,6 +79,9 @@ constexpr std::array<Entry, kOptCount> kEntries = {{
     {Opt::SpirvDiskCache, "spirv-disk-cache",
      "what glslang made of each program kept on disk, so a warm start and a level load compile none",
      true, Tolerance{}},
+    {Opt::VkPersistentDescriptors, "vk-persistent-descriptors",
+     "descriptor sets of textures, samplers and the frame's ring kept across frames, not made anew",
+     true, Tolerance{}},
 }};
 // clang-format on
 
