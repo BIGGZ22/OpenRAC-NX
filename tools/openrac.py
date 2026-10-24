@@ -327,8 +327,9 @@ def short_title(game: dict, name: str) -> str:
 def progress_box(versions) -> str:
     """The README's compact progress: a table the page's width, one row per version with a
     ByteMatch project: its name, the decompilation project it comes from, and a live
-    bytematch.dev badge of the code it has matched, in the header bar's gold. VERSIONS is
-    games.versions()."""
+    bytematch.dev badge of the code it has matched, in the launcher's amber: light enough that
+    the badge writes its figure in dark text (it has no option for the text's colour). VERSIONS
+    is games.versions()."""
     rows = []
     for game, name, v in versions:
         slug = v.get("bytematch")
@@ -340,7 +341,7 @@ def progress_box(versions) -> str:
         label = "Lombyte Project" if (game["id"], name) == ("rac1", "ntsc") else source.get("name")
         project = f'<a href="{source["repo"]}">{label}</a>' if source.get("repo") else "–"
         query = urlencode({"mode": "shield", "label": "", "measure": "matched_code_percent",
-                           "version": v["serial"], "color": "c99222", "style": "flat-square"})
+                           "version": v["serial"], "color": "ffb443", "style": "flat-square"})
         badge = (f'<a href="https://bytematch.dev/{slug}/{v["serial"]}">'
                  f'<img src="https://bytematch.dev/{slug}.svg?{query.replace("&", "&amp;")}" '
                  f'alt="{title}: code decompiled"></a>')

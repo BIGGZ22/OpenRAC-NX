@@ -185,7 +185,7 @@ class ProgressTests(unittest.TestCase):
         self.assertIn("<td>Going Commando</td>", box)
         self.assertIn('href="https://bytematch.dev/OpenRAC/rac2-decomp/SCUS_972.68"', box)
         self.assertIn('<td><a href="https://github.com/OpenRAC/rac2-gc-decomp">rac2-decomp</a></td>', box)
-        self.assertIn("color=c99222", box)
+        self.assertIn("color=ffb443", box)
         self.assertEqual(box.count("<img "), 2)
 
 if __name__ == "__main__":
