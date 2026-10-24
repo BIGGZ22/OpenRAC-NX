@@ -91,14 +91,14 @@ is planned but not there yet.
 `src/lib/themes.ts` holds each game's `theme` from the site's
 `src/lib/projects.ts`, under OpenRAC's ids:
 
-| OpenRAC | Site         | Title font       |
-| ------- | ------------ | ---------------- |
-| `rac1`  | `rac1`       | Audiowide        |
-| `rac2`  | `gc`         | Orbitron 600     |
-| `rac3`  | `uya`        | Orbitron 600     |
-| `rac4`  | `deadlocked` | Orbitron 700     |
-| `rac5`  | `sm`         | Chakra Petch 600 |
-| `rac6`  | `sac`        | Orbitron 600     |
+| OpenRAC | Site         | Title font   |
+| ------- | ------------ | ------------ |
+| `rac1`  | `rac1`       | Audiowide    |
+| `rac2`  | `gc`         | Orbitron 600 |
+| `rac3`  | `uya`        | Orbitron 600 |
+| `rac4`  | `deadlocked` | Orbitron 700 |
+| `rac5`  | `sm`         | Orbitron 600 |
+| `rac6`  | `sac`        | Orbitron 600 |
 
 `themeStyle(id)` turns a theme into the custom properties the cards use
 (`--box`, `--bd`, `--tx`, `--tx2`, `--from`, `--to`, `--title-font`,
