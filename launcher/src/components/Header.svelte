@@ -172,6 +172,13 @@
 </header>
 
 <style>
+  /* On a desktop the bar writes in the theme's page colour, so the logo and the dark chips match
+     the window under them; Android keeps the picked game's own ink. */
+  :global(html:not([data-platform="android"])) .site-header {
+    --bar-ink-deep: var(--ink-deep);
+    --bar-name: var(--ink-deep);
+  }
+
   .site-header {
     position: relative;
     z-index: 20;

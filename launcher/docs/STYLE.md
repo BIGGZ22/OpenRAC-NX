@@ -11,22 +11,22 @@ section to match.
 `src/app.css`, on `:root`, with the site's names (its `@theme` in
 `src/app/globals.css`):
 
-| Token                         | Value                             | Use                                                |
-| ----------------------------- | --------------------------------- | -------------------------------------------------- |
-| `--ink`                       | `#181820`                         | the page                                           |
-| `--ink-deep`                  | `#12121a`                         | inputs, job output                                 |
-| `--panel`                     | `#1d1d28`                         | panels                                             |
-| `--panel-hi`                  | `#22222f`                         | cards inside panels, buttons                       |
-| `--brand`                     | `#d58a00`                         | section numbers, the selected job                  |
-| `--amber`                     | `#ffb443`                         | links, focus rings, blockers ("needs …"), warnings |
-| `--gold`                      | `#ffd08a`                         | headings                                           |
-| `--lav`, `--soft`, `--dim`    | `#c8d2ff`, `#aab6dc`, `#8f9ac4`   | secondary text, from most to least prominent       |
-| `--line`, `--line-strong`     | `rgb(156 161 212 / .22)`, `/ .35` | borders                                            |
-| `--text`, `--body`            | `#e8f0ff`, `#c3cdea`              | text (the site's body and prose colours)           |
-| `--bar-top`, `--bar-bottom`   | `#e5a013`, `#cd8300`              | the header bar's gradient, primary buttons         |
-| `--bar-ink`, `--bar-ink-deep` | `#2a1800`, `#1b1206`              | text on the bar; the selected tab                  |
-| `--bar-name`                  | `#000`                            | the logo on the bar                                |
-| `--on-game`                   | `#fff`                            | text on a game's colours or picture                |
+| Token                         | Value                             | Use                                                       |
+| ----------------------------- | --------------------------------- | --------------------------------------------------------- |
+| `--ink`                       | `#181820`                         | the page                                                  |
+| `--ink-deep`                  | `#12121a`                         | inputs, job output                                        |
+| `--panel`                     | `#1d1d28`                         | panels                                                    |
+| `--panel-hi`                  | `#22222f`                         | cards inside panels, buttons                              |
+| `--brand`                     | `#d58a00`                         | section numbers, the selected job                         |
+| `--amber`                     | `#ffb443`                         | links, focus rings, blockers ("needs …"), warnings        |
+| `--gold`                      | `#ffd08a`                         | headings                                                  |
+| `--lav`, `--soft`, `--dim`    | `#c8d2ff`, `#aab6dc`, `#8f9ac4`   | secondary text, from most to least prominent              |
+| `--line`, `--line-strong`     | `rgb(156 161 212 / .22)`, `/ .35` | borders                                                   |
+| `--text`, `--body`            | `#e8f0ff`, `#c3cdea`              | text (the site's body and prose colours)                  |
+| `--bar-top`, `--bar-bottom`   | `#e5a013`, `#cd8300`              | the header bar's gradient, primary buttons                |
+| `--bar-ink`, `--bar-ink-deep` | `#2a1800`, `#1b1206`              | text on the bar; the selected tab (desktop: `--ink-deep`) |
+| `--bar-name`                  | `#000`                            | the logo on the bar (desktop: `--ink-deep`)               |
+| `--on-game`                   | `#fff`                            | text on a game's colours or picture                       |
 
 The site has no status colours; the launcher adds `--ok` (`#8fd694`), `--warn`
 (amber) and `--err` (`#ff8a7a`), used only in pills and messages. The theme is
