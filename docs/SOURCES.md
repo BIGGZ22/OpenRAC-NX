@@ -18,6 +18,7 @@ each project.
 | [`games/rac3/ntsc`](../games/rac3/ntsc) | rac3-uya-decomp | https://github.com/OpenRAC/rac3-uya-decomp | main | `bfd8278e8c73` | 2026-10-07 | GPL-3.0 |
 | [`games/rac4/ntsc`](../games/rac4/ntsc) | rac-deadlocked-decomp | https://github.com/OpenRAC/rac-deadlocked-decomp | main | `dedfcd416a1b` | 2026-10-05 | MIT (GPL libgcc, newlib libm) |
 | [`games/rac5/ntsc`](../games/rac5/ntsc) | rac5-sm-decomp | https://github.com/OpenRAC/rac5-sm-decomp | master | `57b025248ac0` | 2026-10-18 | GPL-3.0 |
+| [`games/rac6/ntsc`](../games/rac6/ntsc) | rac-sac-decomp | https://github.com/OpenRAC/rac-sac-decomp | main | `4e38d3d88f62` | 2026-10-21 | GPL-3.0 |
 <!-- sources:end -->
 
 The full commit hashes are in each `games/<game>/game.json` under `source`,
