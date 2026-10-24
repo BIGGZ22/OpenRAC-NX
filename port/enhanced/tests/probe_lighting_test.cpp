@@ -246,7 +246,7 @@ void emissive_transport() {
     const auto direct = bake_probes(grid, scene, settings);
     const unsigned x = 1, y = 1, side = 6;
     const auto at = (y + 1) * side + x + 1;
-    // Small far triangle: E approaches Le * area * cos(receiver) / distanceÃ‚Â².
+    // Small far triangle: E approaches Le * area * cos(receiver) / distance².
     const float expected = 2 * .005f * texel_up_cosine(x, y, grid.map_resolution) / 4;
     CHECK(std::abs(direct.irradiance[at][1] / expected - 1) < .03f);
     CHECK(direct.irradiance[at][0] == 0 && direct.irradiance[at][2] == 0);

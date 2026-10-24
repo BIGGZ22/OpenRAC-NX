@@ -1582,7 +1582,7 @@ function start(scope: Scope, id: string, args: Record<string, unknown> = {}): St
   const command = [action.program ?? "?", ...(action.args ?? [])].join(" ");
   if (action.detached) return { id: 0, title: action.label, command, detached: true, output: null };
 
-  const lines = [`$ ${command}`, "(browser preview: nothing really runs)", "workingÃ¢â‚¬Â¦", ...lastLines(id, args)];
+  const lines = [`$ ${command}`, "(browser preview: nothing really runs)", "working…", ...lastLines(id, args)];
   // The build prints ninja's counter and long paths, as the real one does: to try the progress strip.
   if (id === "port-build") {
     const total = 60;
