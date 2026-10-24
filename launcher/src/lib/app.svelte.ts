@@ -27,7 +27,7 @@ import {
 import { Queue, type Job } from "./queue";
 import { backgroundStatus } from "./progress";
 import { lastLines, PLAY_ACTIONS, unseenRecent, type StopNotice } from "./reports";
-import { checkForUpdate, type UpdateInfo } from "./updates";
+import { checkForUpdate, offerUpdate, readPutOff, type UpdateInfo } from "./updates";
 
 export type Page = "library" | "game" | "mods" | "tasks" | "develop" | "settings";
 
@@ -62,6 +62,12 @@ interface AppState {
   discCopy: DiscCopy | null;
   /** Android: the game running beside the launcher (readGame). */
   game: GameStatus | null;
+  /** Android: a game being started, its spinning disc on the whole screen until the game's
+   *  window is in front (LaunchScreen.svelte). */
+  launching: { game: string; title: string } | null;
+  /** Android: the player put the "game running" screen aside (GameRunning.svelte) to use the
+   *  launcher while the game waits; it comes back with the next start. */
+  runningAside: boolean;
   /** Android: the tools the launcher carries being unpacked, after an install or an update. */
   preparing: boolean;
 }
@@ -85,6 +91,8 @@ export const app = $state<AppState>({
   crashes: {},
   discCopy: null,
   game: null,
+  launching: null,
+  runningAside: false,
   preparing: false,
 });
 
@@ -112,6 +120,18 @@ async function readGameSoon() {
 export async function gameWindow(stop: boolean) {
   await guard(api.gameWindow(stop));
   if (stop) app.game = { running: false, library: null };
+}
+
+/** Android: a game is about to start; its disc spins on the whole screen until the game's window
+ *  covers the launcher, or for kLaunchMs when it does not (a start that failed says why in a toast). */
+const kLaunchMs = 4000;
+let launchTimer: ReturnType<typeof setTimeout> | undefined;
+export function showLaunch(game: string, title: string) {
+  if (!onAndroid) return;
+  app.launching = { game, title };
+  app.runningAside = false;
+  clearTimeout(launchTimer);
+  launchTimer = setTimeout(() => (app.launching = null), kLaunchMs);
 }
 
 /** The time, once a second: what a running job's elapsed time is counted against. One timer for
@@ -262,7 +282,10 @@ export async function start() {
         void readGame();
         // Back in front (from the game, or from Home): is the game still running?
         document.addEventListener("visibilitychange", () => {
-          if (document.visibilityState === "visible") void readGame();
+          if (document.visibilityState !== "visible") return;
+          // Back from the game: its start is over, whatever the disc was doing.
+          app.launching = null;
+          void readGame();
         });
       }
     }
@@ -281,9 +304,17 @@ export async function start() {
   await refresh();
   void syncProgressWeb();
   void adoptGodot();
-  // A new launcher is looked for at start unless the player turned that off (Settings).
+  // A new launcher is looked for at start unless the player turned that off (Settings). One
+  // found opens its window, unless it was put off lately (updates.ts) or a game is running; a
+  // failed look is told only when the player asks (Settings' "Check now").
   if (app.info.version && app.config.checkUpdates) {
-    lookForUpdate().catch(() => undefined); // told only when the player asks (Settings' "Check now")
+    lookForUpdate()
+      .then((found) => {
+        const up = app.update;
+        if (!found || !up || !app.config?.setupComplete || app.game?.running) return;
+        if (offerUpdate(up.version, readPutOff(), Date.now())) app.showUpdateModal = true;
+      })
+      .catch(() => undefined);
   }
 }
 

@@ -171,6 +171,27 @@ fn kept_ones(dir: &Path, game: &str) -> Vec<PathBuf> {
         .unwrap_or_default()
 }
 
+/// The install folder on a system that keeps it in one place of its own (Android: the folder
+/// the Files app shows, OPENRAC_GAMES_DIR). A set-up made before in another folder (`earlier`:
+/// the install folder the settings name, the launcher's data folder) is moved there when it can
+/// be renamed, on one file system; one that cannot stays where it is, and that folder is the
+/// install folder. Nothing is moved over a set-up already in `wanted`.
+pub fn settle_games_dir(wanted: &Path, earlier: &[PathBuf]) -> PathBuf {
+    let active = wanted.join("active");
+    if active.exists() {
+        return wanted.to_path_buf();
+    }
+    for old in earlier.iter().filter(|old| old.as_path() != wanted) {
+        let from = old.join("active");
+        if !from.is_dir() {
+            continue;
+        }
+        let moved = std::fs::create_dir_all(wanted).and_then(|()| std::fs::rename(&from, &active));
+        return if moved.is_ok() { wanted.to_path_buf() } else { old.clone() };
+    }
+    wanted.to_path_buf()
+}
+
 /// The install folder at each start, before anything reads it (src-tauri's `setup`).
 ///
 /// OpenGOAL asks for an install folder at first start; until the player picks one, games are set
@@ -447,5 +468,26 @@ mod tests {
         assert_eq!(player_folder(install, "assets/levels/rac1/pal/../../x"), None);
         assert_eq!(player_folder(install, "assets/godot/rac1/pal"), None);
         assert_eq!(player_folder(install, "editor/README.md"), None);
+    }
+
+    #[test]
+    fn an_earlier_set_up_moves_into_the_wanted_install_folder() {
+        let tmp = std::env::temp_dir().join(format!("openrac-settle-{}", std::process::id()));
+        let _ = std::fs::remove_dir_all(&tmp);
+        let wanted = tmp.join("files").join("games");
+        let old = tmp.join("data");
+        // Nothing yet: the wanted folder, made on the first set-up.
+        assert_eq!(settle_games_dir(&wanted, std::slice::from_ref(&old)), wanted);
+        // A game set up in the launcher's data folder moves, with what it holds.
+        std::fs::create_dir_all(old.join("active/rac1/data/iso_data")).unwrap();
+        std::fs::write(old.join("active/rac1/data/iso_data/buildinfo.json"), "{}").unwrap();
+        assert_eq!(settle_games_dir(&wanted, std::slice::from_ref(&old)), wanted);
+        assert!(wanted.join("active/rac1/data/iso_data/buildinfo.json").is_file());
+        assert!(!old.join("active").exists());
+        // A set-up in the wanted folder is never replaced by an older one.
+        std::fs::create_dir_all(old.join("active/rac2")).unwrap();
+        assert_eq!(settle_games_dir(&wanted, &[old.clone(), wanted.clone()]), wanted);
+        assert!(old.join("active/rac2").is_dir() && !wanted.join("active/rac2").exists());
+        std::fs::remove_dir_all(&tmp).unwrap();
     }
 }

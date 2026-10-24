@@ -235,6 +235,8 @@ export const api = {
   backupSaves: (serial: string, note?: string) => call<SaveBackupInfo>("backup_saves", { serial, note }),
   restoreBackup: (serial: string, backupName: string) => call<null>("restore_backup", { serial, backupName }),
   openSavesFolder: (serial: string) => call<null>("open_saves_folder", { serial }),
+  /** Android: OpenRAC's place in the system's Files app (the saves, settings, games, discs). */
+  showFiles: () => call<null>("show_files"),
   /** A game's session logs and crash reports, the newest first. */
   reportsList: (game: string) => call<ReportEntry[]>("reports_list", { game }),
   /** The newest crash report written since `since` (seconds since 1970). */
@@ -421,6 +423,8 @@ export async function pickFile(title: string): Promise<string | null> {
 /** A picker for an overrides pack's .zip; null when cancelled (in the browser preview, a made-up one). */
 export async function pickZip(title: string): Promise<string | null> {
   if (!inTauri) return "/home/you/Downloads/HD Ratchet.zip";
+  // Android's picker hands over a file, not a path: it is copied into the app's cache first.
+  if (onAndroid) return await call<string | null>("pick_zip");
   const picked = await open({
     directory: false,
     multiple: false,

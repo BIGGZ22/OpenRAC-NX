@@ -392,7 +392,7 @@ impl Action {
             detached: self.detached,
             docs: self.docs.clone(),
             todo: self.todo.clone(),
-            this_platform: self.platforms.is_empty() || self.platforms.contains(&ctx.platform),
+            this_platform: self.runs_on(ctx.platform),
             runnable: blockers.is_empty(),
             blockers,
             done: match &self.makes {
@@ -402,15 +402,30 @@ impl Action {
         }
     }
 
+    /// Whether the action is for `platform`: one of its `platforms`, or any when it lists none.
+    /// Android has neither a shell nor Python, Godot or a compiler: only a play action, which
+    /// starts the game's activity (src-tauri/src/android.rs), runs there unless it names Android.
+    fn runs_on(&self, platform: Platform) -> bool {
+        if self.platforms.is_empty() {
+            platform != Platform::Android || self.kind == Kind::Play
+        } else {
+            self.platforms.contains(&platform)
+        }
+    }
+
     fn blockers(&self, ctx: &Context) -> Vec<String> {
         let mut out = Vec::new();
         if self.state == State::Planned {
             out.push("not connected to the launcher yet".to_string());
             return out;
         }
-        if !self.platforms.is_empty() && !self.platforms.contains(&ctx.platform) {
+        if !self.runs_on(ctx.platform) {
             let names: Vec<_> = self.platforms.iter().map(|p| p.name()).collect();
-            out.push(format!("runs on {} only", names.join(" and ")));
+            out.push(if names.is_empty() {
+                "runs on a computer only".to_string()
+            } else {
+                format!("runs on {} only", names.join(" and "))
+            });
         }
         for need in &self.requires {
             let missing =
@@ -493,6 +508,11 @@ impl Action {
         if self.kind == Kind::Play && ctx.config.developer {
             env.push(("OPENRAC_DEVELOPER".to_string(), "1".to_string()));
         }
+        // Settings, "Theme": the game's options drawer wears the launcher's colours (theme.rs).
+        if self.kind == Kind::Play {
+            let game = ctx.version.map(|v| v.game.as_str());
+            env.push((crate::theme::ENV.to_string(), crate::theme::ui_colors(&ctx.config.theme, game, ctx.platform)));
+        }
         // Settings, "Detailed game logs": the port's verbose log (port/common/log.h).
         if self.kind == Kind::Play && ctx.config.detailed_game_log {
             env.push(("OPENRAC_LOG".to_string(), "verbose".to_string()));
@@ -509,8 +529,9 @@ impl Action {
         }
         // The Mods tab's Enhanced graphics (enhanced.rs): with `enhanced_rendering = 1` in the
         // version's settings file the game draws with Vulkan, the one renderer that has it, and
-        // takes the probe bakes made from the player's levels. Off, nothing is added.
-        if self.kind == Kind::Play && matches!(ctx.platform, Platform::Windows | Platform::Linux | Platform::Macos) {
+        // takes the probe bakes made from the player's levels. Off, nothing is added. On Android
+        // too: the game's activity is started with this environment (src-tauri/src/android.rs).
+        if self.kind == Kind::Play {
             if let (Some(v), Ok(data)) = (ctx.version, fill("{data}")) {
                 if crate::enhanced::supported(&v.game, &v.name) {
                     let file = crate::differences::settings_file(&crate::saves::data_home(), &v.game, &v.name);
@@ -750,6 +771,17 @@ mod tests {
         assert!(!view.this_platform);
         assert_eq!(view.blockers, ["runs on Windows only"]);
 
+        // Android runs a play action and nothing else that lists no platforms (no shell, no Python).
+        let android = Context { platform: Platform::Android, ..ctx(&ready) };
+        let view = action.view(&android);
+        assert!(!view.this_platform && !view.runnable);
+        assert!(view.blockers.contains(&"runs on a computer only".to_string()), "{:?}", view.blockers);
+        let play_here: Action = serde_json::from_str(
+            r#"{"id": "p", "label": "Play", "kind": "play", "state": "unverified", "program": "{artifact}"}"#,
+        )
+        .unwrap();
+        assert!(play_here.view(&android).this_platform);
+
         // {data}: the folder the game was set up in, which the port reads.
         let play: Action = serde_json::from_str(
             r#"{"id": "p", "label": "Play", "kind": "play", "state": "unverified", "program": "{python}",
@@ -784,6 +816,18 @@ mod tests {
         let on_mac = Context { platform: Platform::Macos, ..ctx(&vulkan) };
         let plan = play.plan(&on_mac).unwrap();
         assert!(plan.env.contains(&("OPENRAC_GL_API".to_string(), "vulkan".to_string())), "{:?}", plan.env);
+        // Android keeps its own renderer, unless Enhanced graphics is on: then Vulkan and the
+        // probe bakes, as on the desktops.
+        let on_android = Context { platform: Platform::Android, ..ctx(&vulkan) };
+        assert!(!play.plan(&on_android).unwrap().env.iter().any(|(k, _)| k == "OPENRAC_GL_API"));
+        let file = crate::differences::settings_file(&crate::saves::data_home(), "rac1", "pal");
+        std::fs::create_dir_all(file.parent().unwrap()).unwrap();
+        std::fs::write(&file, format!("{} = 1\n", crate::enhanced::SWITCH)).unwrap();
+        let plan = play.plan(&Context { platform: Platform::Android, ..ctx(&installed) }).unwrap();
+        assert!(plan.env.contains(&("OPENRAC_GL_API".to_string(), "vulkan".to_string())), "{:?}", plan.env);
+        let probes = crate::enhanced::probes_dir(&data, "pal").display().to_string();
+        assert!(plan.args.ends_with(&["--probes".to_string(), probes]), "{:?}", plan.args);
+        std::fs::remove_file(&file).unwrap();
     }
 
     /// `{path}` is a chosen file or folder that is there; `{option}` one of the action's options.

@@ -990,31 +990,47 @@ fn plugins_mod_folders(path: PathBuf) -> Result<Vec<PathBuf>, String> {
 
 /// What the port did with the game's mods at its last start (`status.json`), if it wrote it.
 /// A game's mods from a repository's address (docs/port/MODS.md, section 10): what it holds,
-/// installing one, newer versions, keeping one at its version. Through curl, no git needed.
-fn remote_context<'a>(dir: &'a Path, game: &'a str, version: &'a str) -> remote::Context<'a> {
-    remote::Context {
+/// installing one, newer versions, keeping one at its version. Through curl, no git needed; on
+/// Android, which has no curl, through the Kotlin side's download (android::KotlinFetch).
+fn with_remote<T>(
+    app: &AppHandle,
+    dir: &Path,
+    game: &str,
+    version: &str,
+    work: impl FnOnce(&remote::Context) -> T,
+) -> T {
+    #[cfg(target_os = "android")]
+    let fetch = android::KotlinFetch { app: app.clone() };
+    #[cfg(not(target_os = "android"))]
+    let fetch = {
+        let _ = app;
+        remote::Curl
+    };
+    work(&remote::Context {
         dir,
         game,
         version,
         platform: plugins::platform_key(),
-        fetch: &remote::Curl,
+        fetch: &fetch,
         hosts: remote::Hosts::default(),
-    }
+    })
 }
 
 #[tauri::command]
 async fn plugins_preview(
+    app: AppHandle,
     state: State<'_, AppState>,
     game: String,
     version: String,
     url: String,
 ) -> Result<remote::Preview, String> {
     let g = game.clone();
-    on_plugins(state, &game, move |dir| remote::preview(&remote_context(dir, &g, &version), &url)).await
+    on_plugins(state, &game, move |dir| with_remote(&app, dir, &g, &version, |c| remote::preview(c, &url))).await
 }
 
 #[tauri::command]
 async fn plugins_install_remote(
+    app: AppHandle,
     state: State<'_, AppState>,
     game: String,
     version: String,
@@ -1022,7 +1038,7 @@ async fn plugins_install_remote(
     id: String,
 ) -> Result<remote::RemoteInstalled, String> {
     let g = game.clone();
-    on_plugins(state, &game, move |dir| remote::install(&remote_context(dir, &g, &version), &url, &id)).await
+    on_plugins(state, &game, move |dir| with_remote(&app, dir, &g, &version, |c| remote::install(c, &url, &id))).await
 }
 
 #[derive(serde::Serialize)]
@@ -1034,13 +1050,14 @@ struct UpdateCheck {
 
 #[tauri::command]
 async fn plugins_check_updates(
+    app: AppHandle,
     state: State<'_, AppState>,
     game: String,
     version: String,
 ) -> Result<UpdateCheck, String> {
     let g = game.clone();
     on_plugins(state, &game, move |dir| {
-        let (updates, errors) = remote::check_updates(&remote_context(dir, &g, &version));
+        let (updates, errors) = with_remote(&app, dir, &g, &version, remote::check_updates);
         Ok(UpdateCheck { updates, errors })
     })
     .await
@@ -1048,13 +1065,14 @@ async fn plugins_check_updates(
 
 #[tauri::command]
 async fn plugins_update(
+    app: AppHandle,
     state: State<'_, AppState>,
     game: String,
     version: String,
     id: String,
 ) -> Result<remote::RemoteInstalled, String> {
     let g = game.clone();
-    on_plugins(state, &game, move |dir| remote::update(&remote_context(dir, &g, &version), &id)).await
+    on_plugins(state, &game, move |dir| with_remote(&app, dir, &g, &version, |c| remote::update(c, &id))).await
 }
 
 #[tauri::command]
@@ -1206,6 +1224,11 @@ fn ensure_wayland_cursor_fallback() {
 /// system's environment instead of the AppImage's.
 #[cfg_attr(target_os = "linux", allow(unused_variables))]
 fn open_path_with_system(app: &AppHandle, path: &str) -> Result<(), String> {
+    // Android's own file manager shows no app's private folders: the Files app, through OpenRAC's
+    // place in it, does.
+    if Platform::current() == Platform::Android {
+        return android::show_folder(app, Some(path));
+    }
     #[cfg(target_os = "linux")]
     {
         open_with_system(path)
@@ -1333,6 +1356,8 @@ pub fn run() {
             differences,
             set_game_fix,
             android::pick_disc,
+            android::pick_zip,
+            android::show_files,
             android::gpu_drivers,
             android::gpu_driver_import,
             android::gpu_driver_select,
@@ -1433,11 +1458,31 @@ fn set_up_desktop(app: &tauri::App) {
 }
 
 /// The install folder: ~/OpenRAC, made at first start, with what older launchers set up in the
-/// data folder moved into it (core install.rs).
+/// data folder moved into it (core install.rs). Android keeps the games' set-up, the saves and the
+/// settings in the app's own folders, the ones the Files app shows (FilesProvider.kt), and asks
+/// nothing at the first start (the Games page asks for the disc): a set-up from an earlier version
+/// (in the launcher's data folder, or OpenRAC/ in the shared storage) moves into place.
 fn settle_install_dir(app: &tauri::App, config: &mut Config, config_file: Option<&Path>) {
     let home_dir = app.path().home_dir().ok().or_else(detect::home_dir);
     let local_data = app.path().app_local_data_dir().ok();
-    install::settle_install_dir(config, home_dir.as_deref(), local_data.as_deref(), config_file);
+    if Platform::current() != Platform::Android {
+        install::settle_install_dir(config, home_dir.as_deref(), local_data.as_deref(), config_file);
+        return;
+    }
+    if let Some(games) = android::games_dir() {
+        let earlier: Vec<PathBuf> = [config.install_dir.clone(), local_data.clone()]
+            .into_iter()
+            .chain([home_dir.as_ref().map(|home| home.join("OpenRAC"))])
+            .flatten()
+            .collect();
+        config.install_dir = Some(install::settle_games_dir(&games, &earlier));
+    } else if config.install_dir.is_none() {
+        config.install_dir = local_data;
+    }
+    config.setup_complete = true;
+    if let Some(file) = config_file {
+        let _ = config::save(file, config);
+    }
 }
 
 /// The copy of OpenRAC the launcher carries: what a player plays from (detect::settle).

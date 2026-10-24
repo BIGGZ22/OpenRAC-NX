@@ -1,14 +1,17 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
 # Copyright (c) 2026 the OpenRAC contributors
 #
-# ThinLTO for the builds that players run. Linux with Clang only: other
-# systems and compilers build exactly as before, and the dev presets keep
-# their fast links. Debug info stays whole, so crash reports symbolize.
+# ThinLTO for the builds that players run. Linux and Android with Clang only:
+# other systems and compilers build exactly as before, and the dev presets
+# keep their fast links. Debug info stays whole, so crash reports symbolize.
+# On a handheld whose GPU has time to spare, the frame waits on the processor
+# (the game's code, and the renderer's calls whichever API carries them):
+# there what the compiler gains, OpenGL and Vulkan both gain.
 
-option(OPENRAC_PORT_LTO "ThinLTO for the game programs (Linux, Clang; the standalone preset)" OFF)
+option(OPENRAC_PORT_LTO "ThinLTO for the game programs (Linux and Android, Clang; the standalone and android-arm64 presets)" OFF)
 
 if(OPENRAC_PORT_LTO)
-  if(CMAKE_SYSTEM_NAME STREQUAL "Linux"
+  if(CMAKE_SYSTEM_NAME MATCHES "^(Linux|Android)$"
      AND CMAKE_CXX_COMPILER_ID MATCHES "Clang"
      AND NOT CMAKE_BUILD_TYPE STREQUAL "Debug")
     # The archives hold LLVM bitcode, which only LLVM's own archiver reads for certain: the

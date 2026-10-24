@@ -14,6 +14,7 @@ import {
   run,
   runChain,
   saveConfig,
+  showLaunch,
   toast,
 } from "./app.svelte";
 import { choiceFor, pickVersion } from "./discChoice";
@@ -414,7 +415,6 @@ export async function playerAct(v: VersionView, state: PlayerState): Promise<voi
 }
 
 async function act(v: VersionView, state: PlayerState): Promise<void> {
-  const scope = { kind: "version" as const, key: v.key };
   if (state.kind === "return") {
     await gameWindow(false);
     return;
@@ -425,14 +425,18 @@ async function act(v: VersionView, state: PlayerState): Promise<void> {
   }
   if (state.kind === "build" || state.kind === "levels") {
     // One press gets the game ready (the build, then its levels) and starts it.
-    if (await prepare(v)) {
-      const play = action(freshVersion(v), "play");
-      if (play?.runnable) await run(scope, play);
-    }
+    if (await prepare(v)) await play(v);
     return;
   }
   if (state.kind !== "play") return;
   await addVisibility(v);
-  const act = action(freshVersion(v), "play");
-  if (act?.runnable) await run(scope, act);
+  await play(v);
+}
+
+/** Starts the version, its disc spinning meanwhile on Android (showLaunch). */
+async function play(v: VersionView): Promise<void> {
+  const start = action(freshVersion(v), "play");
+  if (!start?.runnable) return;
+  showLaunch(v.game, v.title);
+  await run({ kind: "version", key: v.key }, start);
 }

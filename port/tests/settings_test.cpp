@@ -145,6 +145,29 @@ int main() {
     std::ofstream(file) << "gtao_quality = unknown\n";
     settings::load(file);
     CHECK(options.gtao_settings.quality == renderer::GtaoQuality::Performance);
+    // The on-screen pad: its size and camera speed within the drawer's lists' ends, and where
+    // the player moved its controls, kept as written (touch_pad.cpp reads it).
+    CHECK(options.touch_scale == 75 && options.touch_camera == 100 && options.touch_layout.empty());
+    std::ofstream(file) << "touch_scale = 49\ntouch_camera = 301\n";
+    settings::load(file);
+    CHECK(options.touch_scale == 75 && options.touch_camera == 100);
+    options.touch_scale = 65;  // between two of the list's: a file may hold it
+    options.touch_camera = 300;
+    options.touch_layout = "dpad 0.0200 -0.0500, face 0.1000 0.0000";
+    settings::save();
+    options = settings::Settings{};
+    settings::load(file);
+    CHECK(options.touch_scale == 65 && options.touch_camera == 300);
+    CHECK(options.touch_layout == "dpad 0.0200 -0.0500, face 0.1000 0.0000");
+    // The drawer's ← and →: to the next of the list, to the nearer one that way from between
+    // two, and no further than the ends.
+    CHECK(settings::step_listed(settings::kTouchScales, 75, 1) == 80);
+    CHECK(settings::step_listed(settings::kTouchScales, 75, -1) == 70);
+    CHECK(settings::step_listed(settings::kTouchScales, 65, 1) == 70);
+    CHECK(settings::step_listed(settings::kTouchScales, 65, -1) == 60);
+    CHECK(settings::step_listed(settings::kTouchScales, 150, 1) == 150);
+    CHECK(settings::step_listed(settings::kTouchScales, 50, -1) == 50);
+    CHECK(settings::step_listed(settings::kTouchCameraSpeeds, 300, 1) == 300);
     // Only this test's file and newly created empty folder are removed.
     std::filesystem::remove(file);
     std::filesystem::remove(folder);

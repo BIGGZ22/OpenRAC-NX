@@ -56,6 +56,7 @@ pub mod reports;
 pub mod save_edit;
 pub mod saves;
 pub mod status;
+pub mod theme;
 pub mod update;
 pub mod webkit;
 pub mod window;

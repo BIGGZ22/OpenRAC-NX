@@ -17,7 +17,7 @@
   import Menu, { type MenuItem } from "$components/Menu.svelte";
   import ReportsBlock from "$components/ReportsBlock.svelte";
   import SaveManagerBlock from "$components/SaveManagerBlock.svelte";
-  import { api, ask, type ActionView, type ReportEntry } from "$lib/api";
+  import { api, ask, onAndroid, type ActionView, type ReportEntry } from "$lib/api";
   import {
     app,
     clock,
@@ -33,7 +33,8 @@
   import { pct } from "$lib/format";
   import { SITE_URL } from "$lib/links";
   import { gameArt, hideMissing } from "$lib/media";
-  import { enter } from "$lib/motion";
+  import { arrive } from "$lib/motion";
+  import { tick } from "svelte";
   import { fly } from "svelte/transition";
   import { place, when } from "$lib/reports";
   import { isBuilt, playerAct, playerState, playerVersion } from "$lib/player.svelte";
@@ -117,8 +118,13 @@
     return `Last played ${day.charAt(0).toLowerCase()}${day.slice(1)} ${place(last)}`;
   });
 
+  /** Android's Help, folded at the page's foot until opened. */
+  let helpOpen = $state(false);
+
   /** The menu's way to the logs: Help, with its logs unfolded. */
-  function showLogs() {
+  async function showLogs() {
+    helpOpen = true;
+    await tick();
     document.getElementById("logs-list")?.setAttribute("open", "");
     const logs = document.getElementById("logs");
     logs?.scrollIntoView({ behavior: "smooth", block: "start" });
@@ -141,18 +147,23 @@
     if (playGodot?.runnable) {
       items.push({ label: "Preview a level in Godot", icon: "play", run: () => void run(scope, playGodot) });
     }
-    if (extract && extract.state !== "planned") {
+    if (extract && extract.state !== "planned" && !onAndroid) {
+      // Android has no Godot: its Mods tab has the mods and packs, not the level editor.
       items.push({ label: "Edit its levels (Mods)", icon: "edit", run: () => (app.page = "mods") });
     }
     if (setUp) {
       items.push({
         label: "Logs and crash reports",
         icon: "book",
-        run: showLogs,
+        run: () => void showLogs(),
       });
     }
-    items.push({ label: "Open the game's folder", icon: "folder", run: () => void guard(api.openPath(dir)) });
-    items.push({ label: "Activity log", icon: "terminal", run: () => (app.page = "tasks") });
+    // Android: the game's files are in the Files app (Settings, Your files), and the activity log
+    // is the rail's running job.
+    if (!onAndroid) {
+      items.push({ label: "Open the game's folder", icon: "folder", run: () => void guard(api.openPath(dir)) });
+      items.push({ label: "Activity log", icon: "terminal", run: () => (app.page = "tasks") });
+    }
     if (setUp) items.push({ label: "Remove the set-up", icon: "trash", danger: true, run: () => void removeSetUp() });
     return items;
   });
@@ -204,7 +215,7 @@
 
         <!-- |global like the rest of the page: a local intro inside {#key} could leave the band at its
              starting opacity when the key changed (switching discs), so the band stayed invisible. -->
-        <section class="hero" aria-label={v.title} in:fly|global={enter()}>
+        <section class="hero" aria-label={v.title} in:fly|global={arrive()}>
           {#if art}
             <div class="hero-backdrop" aria-hidden="true">
               <img src={art} alt="" class="hero-bg" decoding="async" fetchpriority="high" onerror={hideMissing} />
@@ -254,7 +265,7 @@
 
         {#if developer}
           <!-- A contributor's facts about this disc, as chips; the rest is in Develop. -->
-          <div class="chips" aria-label="Developer details" in:fly|global={enter(60)}>
+          <div class="chips" aria-label="Developer details" in:fly|global={arrive(60)}>
             <span class="chip mono">{v.key}</span>
             {#if v.serial}<span class="chip mono">{v.serial}</span>{/if}
             {#if v.progress}<span class="chip mono">{pct(v.progress.percent)} matched</span>{/if}
@@ -268,7 +279,7 @@
         {/if}
         {#if !portReady}
           <!-- Every game has this page; one without a port yet says so, and how far it is. -->
-          <section class="panel coming" aria-labelledby="coming-title" in:fly|global={enter(90)}>
+          <section class="panel coming" aria-labelledby="coming-title" in:fly|global={arrive(90)}>
             <h2 id="coming-title">Not playable yet</h2>
             <p class="muted">
               OpenRAC is rebuilding {v.title} so it runs natively on your computer. Play appears here when it is ready{setUp
@@ -290,14 +301,21 @@
           </section>
         {/if}
         {#if !!setUp || portReady}
-          <div class="below" class:pair={!!setUp} in:fly|global={enter(90)}>
+          <!-- Android: the saves alone here; Help folds at the page's foot, as a player seldom needs it. -->
+          <div class="below" class:pair={!!setUp && !onAndroid} in:fly|global={arrive(90)}>
             <SaveManagerBlock version={v} />
-            {#if setUp}<ReportsBlock game={v.game} program={choice ? programOf(v.key) : null} />{/if}
+            {#if setUp && !onAndroid}<ReportsBlock game={v.game} program={choice ? programOf(v.key) : null} />{/if}
           </div>
         {/if}
         {#if portReady}
-          <!-- What the port does otherwise than the PS2 game; the game fixes switch back. -->
-          <DifferencesBlock version={v} />
+          <!-- What the port does otherwise than the PS2 game; the game fixes switch back. Folded on
+               Android, under a line of what it holds. -->
+          <DifferencesBlock version={v} foldable={onAndroid} />
+        {/if}
+        {#if setUp && onAndroid}
+          <div in:fly|global={arrive(120)}>
+            <ReportsBlock game={v.game} program={choice ? programOf(v.key) : null} foldable bind:unfolded={helpOpen} />
+          </div>
         {/if}
       </div>
     {/key}
@@ -346,7 +364,7 @@
 
   .page {
     position: relative;
-    max-width: 920px;
+    max-width: var(--page-max, 920px);
     margin: 0 auto;
     padding: var(--page-top, 20px) var(--page-x, 28px) var(--page-bottom, 60px);
     display: flex;
@@ -420,6 +438,12 @@
       opacity: 0;
       transform: scale(1.08);
     }
+  }
+
+  /* Android: the page slides in whole (app.css's view transition); its pictures come with it. */
+  :global(html[data-platform="android"]) .hero-bg,
+  :global(html[data-platform="android"]) .page-ambient-bg img {
+    animation: none;
   }
 
   /* The picture behind the page fades in. */

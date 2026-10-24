@@ -15,9 +15,11 @@
     type Detected,
     type UpdateChannel,
   } from "$lib/api";
-  import { app, lookForUpdate, saveConfig } from "$lib/app.svelte";
+  import { app, guardShown, lookForUpdate, saveConfig } from "$lib/app.svelte";
   import { DISCORD_URL, PYTHON_URL, REPO_URL, SITE_URL } from "$lib/links";
   import { PURIST } from "$lib/modsText";
+  import { applyPalette, PALETTES } from "$lib/palettes";
+  import { tablist } from "$lib/tabs";
 
   let { setup = false }: { setup?: boolean } = $props();
 
@@ -37,6 +39,7 @@
     "discsDir",
     "installDir",
     "layout",
+    "theme",
     "discordRpc",
     "purist",
     "checkUpdates",
@@ -64,9 +67,6 @@
   /** The OpenRAC folder is the first thing on the first run; after it, a player sees it only while
    *  it is missing (an installed launcher carries its own copy), and a contributor in Developer. */
   const rootHere = $derived(!app.info?.standalone && !draft.root);
-  /** Android has no folders to choose (its picker copies discs into the app): no panel when it
-   *  would be empty. */
-  const showFolders = $derived(rootHere || !onAndroid || draft.developer);
   /** The game's Vulkan renderer, on the desktops (on macOS through the MoltenVK its bundle carries);
    *  Android chooses its own in Graphics (GpuDrivers). */
   const desktopRenderer = $derived(
@@ -124,7 +124,34 @@
     });
   });
 
+  // A theme picked shows at once; left unsaved, the saved one comes back with the page's end.
+  $effect(() => {
+    applyPalette(draft.theme);
+    return () => {
+      applyPalette(app.config?.theme);
+    };
+  });
+
   const changed = $derived(!!app.config && JSON.stringify(edited(draft)) !== JSON.stringify(edited(app.config)));
+
+  /** Android saves a change by itself, a moment after it is made (a field being typed in is
+   *  saved once the typing stops), with no bar to press: a switch flipped is a setting changed.
+   *  A change that could not be written is not tried again until it changes again. */
+  let unwritten = $state<string | null>(null);
+  $effect(() => {
+    if (!onAndroid || setup || !changed || saving) return;
+    const now = JSON.stringify(edited(draft));
+    if (now === unwritten) return;
+    const timer = setTimeout(() => {
+      void save(false).then(() => {
+        const written = !!app.config && JSON.stringify(edited(app.config)) === now;
+        unwritten = written ? null : now;
+      });
+    }, 600);
+    return () => {
+      clearTimeout(timer);
+    };
+  });
   const tool = (t: "python" | "godot" | "docker") => (path: string) => api.checkTool(t, path);
   const root = (path: string): Promise<Check> => api.checkRoot(path);
   /** The install folder only has to be a place to write; the extractor makes what it needs inside. */
@@ -278,7 +305,9 @@
   {:else}
     <h1>Settings</h1>
 
-    {#if showFolders}
+    <!-- Android has no folders to choose: the app keeps its files in one place, which the Files app
+         shows (FilesProvider.kt, "Your files" below), and its picker copies discs there. -->
+    {#if !onAndroid}
       <section class="panel">
         <h2>Your games</h2>
         {#if rootHere}
@@ -298,64 +327,96 @@
             </p>
           {/if}
         {/if}
-        <!-- Android's picker gives no folders: the app keeps its own (src-tauri/src/android.rs). -->
-        {#if !onAndroid || draft.developer}
-          <PathField
-            label="Games folder"
-            hint="The folder with your PlayStation 2 disc images (.iso). OpenRAC finds its games in it."
-            folder
-            bind:value={draft.discsDir}
-            detail={draft.developer}
-            check={gamesFolder}
-          />
-          <PathField
-            label="Install folder"
-            hint="Where your games are set up from your discs. A few GB per game."
-            folder
-            bind:value={draft.installDir}
-            detail={draft.developer}
-            check={installFolder}
-          />
-        {/if}
+        <PathField
+          label="Games folder"
+          hint="The folder with your PlayStation 2 disc images (.iso). OpenRAC finds its games in it."
+          folder
+          bind:value={draft.discsDir}
+          detail={draft.developer}
+          check={gamesFolder}
+        />
+        <PathField
+          label="Install folder"
+          hint="Where your games are set up from your discs. A few GB per game."
+          folder
+          bind:value={draft.installDir}
+          detail={draft.developer}
+          check={installFolder}
+        />
       </section>
-    {/if}
-
-    {#if onAndroid}
+    {:else}
+      <section class="panel">
+        <h2>Your files</h2>
+        <div class="setting">
+          <span class="text">
+            <strong>In the Files app, under OpenRAC</strong>
+            <small>
+              Your saves, settings, games and disc images. Uninstalling asks whether to keep the app's data: keep it,
+              and all of it is back when you install OpenRAC again.
+            </small>
+          </span>
+          <button onclick={() => void guardShown(api.showFiles())}>Open Files</button>
+        </div>
+      </section>
       <GpuDrivers />
     {/if}
 
     <section class="panel">
       <h2>General</h2>
-      <label class="setting">
+      <div class="setting theme">
         <span class="text">
-          <strong>Compact layout</strong>
-          <small>A game's name and its Play button side by side.</small>
+          <strong id="theme-label">Theme</strong>
+          <small>The launcher's colours. Its accent is the game's.</small>
         </span>
-        <input
-          type="checkbox"
-          role="switch"
-          class="switch"
-          checked={draft.layout !== "classic"}
-          onchange={(e) => (draft.layout = e.currentTarget.checked ? "compact" : "classic")}
-        />
-      </label>
-      <label class="setting">
-        <span class="text">
-          <strong>Show in Discord</strong>
-          <small>Your status says when you are playing.</small>
-        </span>
-        <input type="checkbox" role="switch" class="switch" bind:checked={draft.discordRpc} />
-      </label>
+        <div class="themes" role="radiogroup" aria-labelledby="theme-label" use:tablist>
+          {#each PALETTES as p (p.id)}
+            <button
+              role="radio"
+              aria-checked={draft.theme === p.id}
+              tabindex={draft.theme === p.id ? 0 : -1}
+              class:on={draft.theme === p.id}
+              onclick={() => (draft.theme = p.id)}
+              ><span
+                class="swatch"
+                style={`--s-ink: ${p.swatch[0]}; --s-panel: ${p.swatch[1]}; --s-text: ${p.swatch[2]}`}
+                aria-hidden="true"><i></i></span
+              >{p.name}</button
+            >
+          {/each}
+        </div>
+      </div>
+      <!-- Android has neither: its games are tiles, and no Discord app on the device reads a
+           desktop's rich presence. -->
       {#if !onAndroid}
-        <!-- No native mods on Android: they are libraries for the desktops (docs/port/MODS.md). -->
         <label class="setting">
           <span class="text">
-            <strong>{PURIST.title}</strong>
-            <small>{PURIST.settingsLine}</small>
+            <strong>Compact layout</strong>
+            <small>A game's name and its Play button side by side.</small>
           </span>
-          <input type="checkbox" role="switch" class="switch" bind:checked={draft.purist} />
+          <input
+            type="checkbox"
+            role="switch"
+            class="switch"
+            checked={draft.layout !== "classic"}
+            onchange={(e) => (draft.layout = e.currentTarget.checked ? "compact" : "classic")}
+          />
+        </label>
+        <label class="setting">
+          <span class="text">
+            <strong>Show in Discord</strong>
+            <small>Your status says when you are playing.</small>
+          </span>
+          <input type="checkbox" role="switch" class="switch" bind:checked={draft.discordRpc} />
         </label>
       {/if}
+      <!-- Android too: its script mods load there (docs/port/MODS.md), native ones do not. -->
+      <label class="setting">
+        <span class="text">
+          <strong>{PURIST.title}</strong>
+          <small>{PURIST.settingsLine}</small>
+        </span>
+        <input type="checkbox" role="switch" class="switch" bind:checked={draft.purist} />
+      </label>
     </section>
 
     <section class="panel">
@@ -408,7 +469,7 @@
       {/if}
     </section>
 
-    {#if !app.info?.standalone}
+    {#if !app.info?.standalone && !onAndroid}
       <section class="panel">
         <h2>Programs</h2>
         <PathField
@@ -487,7 +548,7 @@
         {#if draft.developer}
           <!-- What developer tools add: under the switch, set in from it. -->
           <div class="dev">
-            {#if !rootHere}
+            {#if !rootHere && !onAndroid}
               <PathField
                 label="OpenRAC folder"
                 hint="Your copy of OpenRAC: the folder with games/ and tools/ in it."
@@ -526,7 +587,7 @@
             {/if}
           </div>
         {/if}
-        {#if draft.developer && draft.discordRpc}
+        {#if draft.developer && draft.discordRpc && !onAndroid}
           <div class="field">
             <label for="discord-client-id">Discord application ID</label>
             <input
@@ -558,7 +619,7 @@
   {/if}
 </div>
 
-{#if !setup && changed}
+{#if !setup && changed && !onAndroid}
   <div class="save-bar" role="status">
     <span class="grow">You have unsaved changes.</span>
     <button disabled={saving} onclick={() => (draft = saved())}>Discard</button>
@@ -568,7 +629,7 @@
 
 <style>
   .page {
-    max-width: 820px;
+    max-width: var(--page-max, 820px);
     margin: 0 auto;
     /* Room at the bottom for the bar that saves. */
     padding: var(--page-top, 28px) var(--page-x, 28px) calc(var(--page-bottom, 54px) + 56px);
@@ -603,6 +664,61 @@
 
   .note {
     font-size: 0.8125rem;
+  }
+
+  /* The themes, each a small picture of its page (a panel and text on it) and its name: in a row
+     under the setting's name, as five do not fit beside a line of text. */
+  .setting.theme {
+    flex-wrap: wrap;
+    row-gap: 10px;
+  }
+
+  .setting.theme > .text {
+    flex-basis: 100%;
+  }
+
+  .themes {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+
+  .themes button {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 12px 6px 6px;
+    border-radius: 999px;
+    border: 1px solid var(--line-strong);
+    background: var(--panel);
+    color: var(--soft);
+    font-size: 0.8125rem;
+    font-weight: 600;
+    transition:
+      border-color var(--fast) var(--ease),
+      color var(--fast) var(--ease);
+  }
+
+  .themes button.on {
+    border-color: var(--amber);
+    color: var(--text);
+    box-shadow: 0 0 0 1px var(--amber);
+  }
+
+  .swatch {
+    position: relative;
+    width: 26px;
+    height: 26px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, var(--s-ink) 50%, var(--s-panel) 50%);
+    box-shadow: inset 0 0 0 1px rgb(255 255 255 / 0.18);
+  }
+
+  .swatch i {
+    position: absolute;
+    inset: 9px;
+    border-radius: 50%;
+    background: var(--s-text);
   }
 
   /* "Check now", what it found and where it looks, under the update settings. */

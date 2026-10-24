@@ -117,6 +117,11 @@ bool parse_listed(const std::string& value, const int (&list)[N], int& out) {
     return true;
 }
 
+// A whole number from a list's first to its last (any between, not only the list's own).
+bool parse_within(const std::string& value, std::span<const int> list, int& out) {
+    return parse_int(value, list.front(), list.back(), out);
+}
+
 // frame_rate: a name, or a number of frames a second (any within the limits, not only the ones the
 // options page offers: a display's own rate, say).
 bool parse_frame_rate(const std::string& value, Settings& s) {
@@ -278,6 +283,12 @@ void load(const std::filesystem::path& file) {
             old_strafe = true;
         } else if (key == "volume") {
             known = parse_int(value, 0, 100, s.volume);
+        } else if (key == "touch_scale") {
+            known = parse_within(value, kTouchScales, s.touch_scale);
+        } else if (key == "touch_camera") {
+            known = parse_within(value, kTouchCameraSpeeds, s.touch_camera);
+        } else if (key == "touch_layout") {
+            s.touch_layout = value;  // TouchPad::set_layout leaves out what it does not know
         } else if (key == "verbose_log") {
             known = parse_bool(value, s.verbose_log);
         } else if (const int fix = fixes::find(key.c_str()); fix >= 0) {
@@ -384,7 +395,12 @@ void save() {
         << "menu_bar = " << (s.menu_bar ? 1 : 0) << "\n"
         << "mute_unfocused = " << (s.mute_unfocused ? 1 : 0) << "\n"
         << "skip_cutscenes = " << (s.skip_cutscenes ? 1 : 0) << "\n"
-        << "volume = " << s.volume << "\n";
+        << "volume = " << s.volume << "\n"
+        << "touch_scale = " << s.touch_scale << "\n"
+        << "touch_camera = " << s.touch_camera << "\n";
+    if (!s.touch_layout.empty()) {
+        out << "touch_layout = " << s.touch_layout << "\n";
+    }
     if (s.verbose_log) {
         out << "verbose_log = 1\n";
     }
@@ -443,6 +459,15 @@ float aspect_ratio(const Settings& settings, int window_width, int window_height
             break;
     }
     return 4.0f / 3.0f;
+}
+
+int step_listed(std::span<const int> list, int now, int by) {
+    if (by > 0) {
+        const auto next = std::upper_bound(list.begin(), list.end(), now);
+        return next != list.end() ? *next : list.back();
+    }
+    const auto at = std::lower_bound(list.begin(), list.end(), now);
+    return at != list.begin() ? *(at - 1) : list.front();
 }
 
 const char* name(DisplayMode mode) {

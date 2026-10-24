@@ -31,6 +31,21 @@ export function gameArt(game: string): string | null {
   return GAME_ART[game] ?? null;
 }
 
+// The pictures, decoded once and kept (Android's Games tab): a tile that mounts again finds its
+// picture ready, rather than showing its colours for a frame first.
+const kept: HTMLImageElement[] = [];
+
+/** Decodes every game's picture ahead of its first showing; once. */
+export function preloadArt(): void {
+  if (kept.length || typeof Image === "undefined") return;
+  for (const src of Object.values(GAME_ART)) {
+    const img = new Image();
+    img.src = src;
+    img.decode().catch(() => undefined); // a picture that is not there stays out
+    kept.push(img);
+  }
+}
+
 /** For an <img onerror>: a picture that could not be loaded is hidden, so the colours show. */
 export function hideMissing(e: Event): void {
   (e.currentTarget as HTMLElement).style.display = "none";

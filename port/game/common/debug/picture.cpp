@@ -106,8 +106,8 @@ void status_badge() {
     if (!s.toast.empty() && ImGui::GetTime() >= s.toast_until) {
         s.toast.clear();
     }
-    if (s.drawer_at > 0.0f) {
-        return;  // the drawer says it
+    if (s.drawer_at > 0.0f || s.touch_editing) {
+        return;  // the drawer says it, or the bar of the pad's editing
     }
     // With the drawer, without the keys: its rows change them.
     const bool keys = !drawer_possible();

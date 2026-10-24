@@ -1,9 +1,16 @@
 <script lang="ts">
+  import GameRunning from "$components/GameRunning.svelte";
   import Header from "$components/Header.svelte";
+  import LaunchScreen from "$components/LaunchScreen.svelte";
   import Toasts from "$components/Toasts.svelte";
   import UpdateModal from "$components/UpdateModal.svelte";
   import { errorText, onAndroid } from "$lib/api";
-  import { app, openDevelop, refresh, start, updateDiscordPresence, type Page } from "$lib/app.svelte";
+  import { app, openDevelop, refresh, showLaunch, start, updateDiscordPresence, type Page } from "$lib/app.svelte";
+  import { preloadArt } from "$lib/media";
+  import { reduced } from "$lib/motion";
+  import { applyPalette } from "$lib/palettes";
+  import { ACCENT_PROPERTIES, accentProperties } from "$lib/themes";
+  import { tick } from "svelte";
   import Game from "./pages/Game.svelte";
   import Library from "./pages/Library.svelte";
   import Settings from "./pages/Settings.svelte";
@@ -29,17 +36,54 @@
     };
   });
 
+  // Android: the Games tab's pictures ready before it is first shown (media.ts).
+  if (onAndroid) preloadArt();
+
+  $effect(() => {
+    // Android: the launcher's accent is the picked game's own (themes.ts), the colour easing from
+    // one to the next (app.css).
+    if (!onAndroid) return;
+    const style = document.documentElement.style;
+    for (const name of ACCENT_PROPERTIES) style.removeProperty(name);
+    for (const [name, value] of accentProperties(app.version?.split("/")[0] ?? null)) style.setProperty(name, value);
+  });
+
+  $effect(() => {
+    // The theme (Settings → General); main.ts put the last one on before the settings loaded.
+    if (app.config) applyPalette(app.config.theme);
+  });
+
   $effect(() => {
     // The layout (Settings → Appearance): src/layouts/compact.css applies only to "compact".
     document.documentElement.dataset.layout = app.config?.layout ?? "compact";
+  });
+
+  // The page shown. On Android one page gives way to the next in a view transition (app.css): the
+  // one leaving slides away and fades as the next slides in, down the rail's order (a tab below
+  // comes up from below, one above from above); elsewhere, or without the browser's support, it
+  // simply changes.
+  const ORDER: Record<Page, number> = { library: 0, game: 1, mods: 2, tasks: 3, develop: 4, settings: 5 };
+  let page = $state<Page>(app.page);
+  $effect(() => {
+    const next = app.page;
+    if (next === page) return;
+    if (!onAndroid || reduced || !("startViewTransition" in document)) {
+      page = next;
+      return;
+    }
+    document.documentElement.dataset.nav = ORDER[next] >= ORDER[page] ? "forward" : "back";
+    document.startViewTransition(async () => {
+      page = next;
+      await tick();
+    });
   });
 
   // Another page starts at its top, as it arrives (app.css: its sections rise in turn).
   let view = $state<HTMLElement | null>(null);
   let shown: Page | null = null;
   $effect(() => {
-    if (app.page === shown) return;
-    shown = app.page;
+    if (page === shown) return;
+    shown = page;
     view?.scrollTo({ top: 0 });
   });
 
@@ -70,6 +114,11 @@
         else if (page) app.page = page;
         // ?update&modal=update: the update window open on the preview's update (mock.ts).
         if (params.get("modal") === "update") app.showUpdateModal = true;
+        // ?launch: the version's start (Android's spinning disc), as Play shows it.
+        if (params.has("launch") && version) {
+          const game = app.library?.games.find((g) => g.id === version.split("/")[0]);
+          if (game) showLaunch(game.id, game.title);
+        }
       })
       .catch((e: unknown) => {
         // start() says what went wrong itself; this is the last word for anything else.
@@ -100,16 +149,18 @@
     {#if app.config.setupComplete}<Header />{:else if !onAndroid}<Header setup />{/if}
     <main bind:this={view}>
       {#if !app.config.setupComplete}<Settings setup />
-      {:else if app.page === "game"}<Game />
-      {:else if app.page === "mods"}{#await modsPage() then page}<page.default />{/await}
-      {:else if app.page === "tasks"}{#await tasksPage() then page}<page.default />{/await}
-      {:else if app.page === "develop"}{#await developPage() then page}<page.default />{/await}
-      {:else if app.page === "settings"}<Settings />
+      {:else if page === "game"}<Game />
+      {:else if page === "mods"}{#await modsPage() then loaded}<loaded.default />{/await}
+      {:else if page === "tasks"}{#await tasksPage() then loaded}<loaded.default />{/await}
+      {:else if page === "develop"}{#await developPage() then loaded}<loaded.default />{/await}
+      {:else if page === "settings"}<Settings />
       {:else}<Library />
       {/if}
     </main>
   </div>
 {/if}
+<LaunchScreen />
+<GameRunning />
 <Toasts />
 <UpdateModal />
 

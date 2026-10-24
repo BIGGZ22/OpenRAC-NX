@@ -200,26 +200,44 @@ jobs:
           restore-keys: |
             port-${{ matrix.name }}-h
 
+      # The Linux rows' packages, kept from the last run: LLVM and the libraries WebKitGTK pulls
+      # in are a few hundred MB, and the runners' Ubuntu mirror has served them at 40 kB/s,
+      # holding this step for 24 minutes. apt fetches only what has changed since (a stale
+      # package is just downloaded again).
+      - uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        if: matrix.name == 'linux' || matrix.name == 'linux-arm64'
+        with:
+          path: ~/apt-archives/*.deb
+          key: apt-${{ matrix.name }}-${{ matrix.os }}-llvm19
+
       # LLVM 19 from apt.llvm.org (its key checked by fingerprint): Clang, and libc++ to build
       # into the game.
       - name: Compilers and what SDL3 is built against (Linux)
         if: matrix.name == 'linux' || matrix.name == 'linux-arm64'
         run: |
           codename=$(. /etc/os-release && echo "$VERSION_CODENAME")
-          curl -sSfL https://apt.llvm.org/llvm-snapshot.gpg.key | gpg --dearmor > "$RUNNER_TEMP/llvm.gpg"
+          curl -sSfL --retry 5 --connect-timeout 20 --max-time 120 https://apt.llvm.org/llvm-snapshot.gpg.key \
+            | gpg --dearmor > "$RUNNER_TEMP/llvm.gpg"
           gpg --show-keys --with-colons "$RUNNER_TEMP/llvm.gpg" | grep -q '^fpr:*6084F3CF814B57C1CF12EFD515CF4D18AF4F7421:' \
             || { echo "apt.llvm.org's key is not the one expected"; exit 1; }
           sudo install -m 644 "$RUNNER_TEMP/llvm.gpg" /usr/share/keyrings/llvm.gpg
           echo "deb [signed-by=/usr/share/keyrings/llvm.gpg] https://apt.llvm.org/$codename/ llvm-toolchain-$codename-19 main" \
             | sudo tee /etc/apt/sources.list.d/llvm.list
-          sudo apt-get update
-          sudo apt-get install -y --no-install-recommends clang-19 lld-19 llvm-19 libc++-19-dev libc++abi-19-dev \
+          # Packages kept in ~/apt-archives (above); a stalled download is dropped and tried again
+          # rather than waited on.
+          mkdir -p ~/apt-archives/partial
+          apt=(sudo apt-get -o Acquire::Retries=5 -o Acquire::http::Timeout=30 -o Acquire::https::Timeout=30
+            -o Dir::Cache::Archives="$HOME/apt-archives")
+          "${apt[@]}" update
+          "${apt[@]}" install -y --no-install-recommends clang-19 lld-19 llvm-19 libc++-19-dev libc++abi-19-dev \
             ninja-build pkg-config \
             libgl1-mesa-dev libegl1-mesa-dev libx11-dev libxext-dev libxrandr-dev libxcursor-dev libxi-dev \
             libxss-dev libxfixes-dev libwayland-dev wayland-protocols libxkbcommon-dev libdecor-0-dev \
             libasound2-dev libpulse-dev libpipewire-0.3-dev libdbus-1-dev libudev-dev libdrm-dev libgbm-dev \
             libwebkit2gtk-4.1-dev libgtk-3-dev librsvg2-dev libsoup-3.0-dev patchelf rpm file
-          sudo apt-get install -y libfuse2t64 || sudo apt-get install -y libfuse2 || true
+          "${apt[@]}" install -y libfuse2t64 || "${apt[@]}" install -y libfuse2 || true
+          # The cache saves only the packages, readable by the runner (apt's partial folder is _apt's).
+          sudo find ~/apt-archives -maxdepth 1 -name '*.deb' -exec chmod a+r {} +
           sudo ln -sf /usr/bin/clang-19 /usr/local/bin/clang
           sudo ln -sf /usr/bin/clang++-19 /usr/local/bin/clang++
           # CMake reads these when it first configures: libc++ and the compiler's runtime in the game.
@@ -411,6 +429,18 @@ jobs:
           if [ "$NAME" = android ]; then
             export CARGO_PROFILE_DEV_DEBUG=0
           fi
+          # A fork's APK is an app of its own, installed beside the project's: its own package
+          # (dev.openrac.launcher.fork_<owner>, so its own data too) and name (app/build.gradle.kts).
+          # OpenRAC/OpenRAC's own build keeps dev.openrac.launcher and "OpenRAC Launcher".
+          apk_name=OpenRAC.Launcher
+          if [ "$NAME" = android ] && [ "$GITHUB_REPOSITORY" != OpenRAC/OpenRAC ]; then
+            owner=$(printf '%s' "${GITHUB_REPOSITORY%%/*}" | tr 'A-Z' 'a-z' | tr -c 'a-z0-9\n' '_')
+            export OPENRAC_ANDROID_APPLICATION_ID="dev.openrac.launcher.fork_$owner"
+            export OPENRAC_ANDROID_APP_LABEL="OpenRAC Fork"
+            apk_name=OpenRAC.Launcher.Fork
+            echo "a fork's APK: $OPENRAC_ANDROID_APPLICATION_ID, \"$OPENRAC_ANDROID_APP_LABEL\""
+          fi
+          echo "APK_NAME=$apk_name" >> "$GITHUB_ENV"
           if [ "$NAME" = android ] && [ -n "$ANDROID_KEYSTORE" ]; then
             printf '%s' "$ANDROID_KEYSTORE" | base64 -d > "$RUNNER_TEMP/openrac.jks"
             export OPENRAC_ANDROID_KEYSTORE="$RUNNER_TEMP/openrac.jks"
@@ -447,7 +477,7 @@ jobs:
           HAVE_ANDROID_KEY: ${{ secrets.ANDROID_KEYSTORE != '' }}
         run: |
           built=$(ls src-tauri/gen/android/app/build/outputs/apk/*/debug/*.apk | head -1)
-          apk="$(dirname "$built")/OpenRAC.Launcher_${LAUNCHER_VERSION}_android-arm64-debug.apk"
+          apk="$(dirname "$built")/${APK_NAME}_${LAUNCHER_VERSION}_android-arm64-debug.apk"
           mv "$built" "$apk"
           unzip -l "$apk" | grep -E "lib/arm64-v8a/|assets/openrac.zip|classes" | sort -k4
           unzip -p "$apk" 'classes*.dex' | grep -ac "dev/openrac/game/GameActivity"

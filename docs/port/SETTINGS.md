@@ -63,6 +63,9 @@ needs the game started again.
 | Mute in background | `mute_unfocused` | `0`, `1` | Silence while another window has the keyboard |
 | Game fixes: one row each | `fix_...` | `1` (the port's fix), `0` (the console's behaviour) | What the port changes from the console that a player may switch back (section 8). Ratchet & Clank: `fix_wide_moby_effects`, `fix_wide_nanotech_orbs`, `fix_wide_liquids` |
 | (F9, F10) | `volume` | `100`, `0` to `100` | How loud everything the port plays is |
+| Touch controls: Button size | `touch_scale` | `75`, `50` to `150` (percent) | The on-screen pad's size against its own ([touch_pad.h](../../port/platform/touch_pad.h)). Smaller controls sit nearer the screen's edges as well |
+| Touch controls: Camera speed | `touch_camera` | `100`, `25` to `300` (percent) | How short a push of the finger on the right of the screen, from where it landed, turns the camera at full speed: 200 halves the push |
+| Touch controls: Edit layout | `touch_layout` | empty, `GROUP DX DY, ...` | Where the player moved each group of the pad from its own place, in screen heights (`dpad 0.0200 -0.0500, face ...`; the groups are `stick`, `dpad`, `face`, `l1`, `l2`, `r1`, `r2`, `select`, `start`, `menu`). Empty: every control at its place. Written only when something was moved |
 | (the launcher's Detailed logs) | `verbose_log` | `0`, `1` | The detailed log, as `OPENRAC_LOG=verbose` ([DEBUGGING.md](DEBUGGING.md#logs-and-traces)). Written only when on |
 
 **Old files.** A file from before these keys loads as it did: `fullscreen = 1`

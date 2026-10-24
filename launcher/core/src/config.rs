@@ -48,6 +48,9 @@ pub struct Config {
     /// The page layout: "compact" (default) or "classic", the original design (src/layouts/).
     #[ts(type = "\"compact\" | \"classic\"")]
     pub layout: String,
+    /// The launcher's theme (src/lib/palettes.json): "openrac" (default), "gruvbox", "oled", "nord"
+    /// or "mocha". The accent is not a theme's: on Android it is the picked game's.
+    pub theme: String,
     /// The game writes a detailed log (OPENRAC_LOG=verbose): level loads, controller changes,
     /// what the port is missing. Off by default, so a log stays small.
     pub detailed_game_log: bool,
@@ -94,6 +97,7 @@ impl Default for Config {
             update_channel: None,
             discord_client_id: None,
             layout: "compact".into(),
+            theme: "openrac".into(),
             detailed_game_log: false,
             renderer: "opengl".into(),
             purist: false,

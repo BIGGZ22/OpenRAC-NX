@@ -125,6 +125,13 @@ struct Card {
     int rows = 0;        // the rows drawn on it so far
 };
 
+// A window a finger scrolls (drag_scroll): whether the finger down now has dragged it, so that it
+// presses nothing, and how fast it goes on moving once the finger has let go, in pixels a second.
+struct Scroll {
+    bool dragged = false;
+    float velocity = 0.0f;
+};
+
 // Everything the overlay keeps between frames: what the environment asked for, what the last
 // tick gave it, and what its panels, windows, menus and drawer were set to. One exists (s).
 struct State {
@@ -200,13 +207,23 @@ struct State {
     float drawer_at = 0.0f;        // how far out: 0 shut, 1 open
     bool keep_paused = false;      // the pause the game is left in when it shuts
     bool drawer_focus = false;     // given the keyboard and gamepad when it opens
-    bool drawer_scrolled = false;  // the finger down now has dragged the rows: no row is pressed
+    Scroll drawer_scroll;          // the finger's drag over the rows
     bool shot_when_shut =
         false;  // a screenshot asked for in it, taken once it is out of the picture
     bool drawer_developer = false;  // its developer tools unfolded
+    // The on-screen pad's layout being edited (touch_editing()): Reset asked for, the box of the
+    // bar in the middle of the screen as last drawn, whose fingers are ImGui's, not the pad's, and
+    // the lines a dragged group snapped to (set_touch_guides()).
+    bool touch_editing = false;
+    bool touch_reset = false;
+    ImVec2 bar_min{};
+    ImVec2 bar_max{};
+    ImVec2 touch_guides{-1.0f, -1.0f};
     Card card;                      // the card being drawn on
     bool settings_changed = false;  // a setting changed in the drawer or the menus, not applied yet
-    bool panel_scrolled = false;    // the panel's drag_scroll
+    Scroll panel_scroll;            // the panel's drag_scroll
+    // What eases from one state to the next (tween()), by ImGui's id.
+    std::unordered_map<ImGuiID, float> tweens;
     float ui_scale = 1.0f;          // the screen's density, for rows a thumb can press
     // Fingers on the screen as ImGui's pointer: the first one down, and those the drawer took from
     // the on-screen pad (their moves and lifts are the drawer's too).
@@ -346,25 +363,35 @@ std::string shot_name(std::uint64_t tick);
 bool drawer_possible();
 
 // Scrolls the window being drawn when a finger drags up or down it, and lets go of what the finger
-// came down on, which is then not pressed. `scrolled` is true once the finger down now has
-// scrolled. Defined in debug/touch.cpp.
-void drag_scroll(bool& scrolled);
+// came down on, which is then not pressed; let go, the rows glide on and slow down (`scroll`).
+// Defined in debug/touch.cpp.
+void drag_scroll(Scroll& scroll);
 
 // Opens or shuts the drawer. Opening it pauses the game, as an emulator's menu does; shutting it
 // leaves the game as its "Keep paused" row says (paused as before it opened, unless changed there).
 // Defined in debug/touch.cpp.
 void set_drawer(bool open);
 
+// Starts or ends the editing of the on-screen pad's layout (touch_editing()): the drawer shuts,
+// and the game stays paused until it ends. Defined in debug/touch.cpp.
+void edit_touch(bool on);
+
 // Handles the drawer's events: Back and Guide open and shut it; fingers are ImGui's pointer, and
 // those that land while it is open are its own, not the on-screen pad's. Returns true when `e` was
 // the drawer's, which the game then does not see. Defined in debug/touch.cpp.
 bool drawer_event(const SDL_Event& e);
 
-// Slides the drawer towards s.drawer_open, in under a fifth of a second, and draws it as far out
-// as it is (s.drawer_at): the port's settings, the enhanced graphics, the fixes and, unfolded, the
-// developer tools. A touch beside it or the gamepad's B shuts it; once shut, it asks for the
-// screenshot taken in it (s.shot_when_shut). Defined in debug/drawer.cpp.
+// Slides the drawer towards s.drawer_open with the launcher's easing, and draws it as far out as
+// it is (s.drawer_at), in the launcher's colours (ui_colors.h): the port's settings, the enhanced
+// graphics, the touch controls, the fixes and, unfolded, the developer tools. A touch beside it or
+// the gamepad's B shuts it; once shut, it asks for the screenshot taken in it (s.shot_when_shut).
+// Defined in debug/drawer.cpp.
 void drawer(const Shown& shown);
+
+// Draws the bar in the middle of the screen while the on-screen pad's layout is edited, to make
+// the controls smaller or larger, put them back and finish, with the lines a dragged group snapped
+// to. Defined in debug/drawer.cpp.
+void touch_edit_bar();
 
 // Says whether the menu bar can be shown: on Windows and Linux (macOS has its own menu bar, with
 // the same menus), or with OPENRAC_MENU_BAR=1, and never with the drawer. Defined in

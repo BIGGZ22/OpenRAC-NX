@@ -52,7 +52,7 @@
     {/if}
     <div class="tiles">
       {#each lib.games as game, i (game.id)}
-        <GameTile {game} delay={i * 60} />
+        <GameTile {game} delay={i * 60} selected={app.version?.split("/")[0] === game.id} />
       {/each}
     </div>
   {:else}
@@ -62,7 +62,7 @@
 
 <style>
   .page {
-    max-width: 920px;
+    max-width: var(--page-max, 920px);
     margin: 0 auto;
     padding: var(--page-top, 28px) var(--page-x, 28px) var(--page-bottom, 60px);
     display: flex;
@@ -96,6 +96,10 @@
     display: grid;
     grid-template-columns: repeat(2, minmax(0, 1fr));
     gap: 20px;
+  }
+
+  :global(html[data-platform="android"]) .tiles {
+    gap: 14px;
   }
 
   @media (max-width: 640px) {

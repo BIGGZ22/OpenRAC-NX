@@ -7,7 +7,7 @@
   import { api, onAndroid } from "$lib/api";
   import { size } from "$lib/format";
   import { modal } from "$lib/portal";
-  import { installUpdate } from "$lib/updates";
+  import { installUpdate, putOffUpdate } from "$lib/updates";
   import Icon from "./Icon.svelte";
 
   let stage = $state<"idle" | "downloading" | "installing" | "ready" | "failed">("idle");
@@ -48,8 +48,11 @@
     }
   }
 
+  /** "Later": the window does not open by itself again for this version for a while (updates.ts). */
   function close() {
-    if (!busy) app.showUpdateModal = false;
+    if (busy) return;
+    if (app.update) putOffUpdate(app.update.version);
+    app.showUpdateModal = false;
   }
 
   function onkeydown(e: KeyboardEvent) {
@@ -137,7 +140,7 @@
             >
           {/if}
           {#if update.canInstallDirectly}
-            <button class="btn-primary" onclick={() => void install()}
+            <button class="btn-primary" class:invite={stage === "idle"} onclick={() => void install()}
               >{stage === "failed" ? "Try again" : onAndroid ? "Update" : "Update and restart"}</button
             >
           {/if}
@@ -166,7 +169,7 @@
     border: none;
     border-radius: 0;
     padding: 0;
-    background: rgb(10 10 16 / 0.75);
+    background: color-mix(in srgb, var(--ink-deep) 75%, transparent);
     backdrop-filter: blur(4px);
     cursor: default;
     animation: dim 0.2s ease-out both;
@@ -442,5 +445,22 @@
     font-size: 0.8125rem;
     color: var(--dim);
     margin-right: auto;
+  }
+
+  /* Update, the way on: a glow that swells twice as the window opens, then rests. */
+  .btn-primary.invite {
+    animation: invite 1.4s var(--ease) 0.5s 2;
+  }
+
+  @keyframes invite {
+    50% {
+      box-shadow: 0 0 0 7px color-mix(in srgb, var(--amber) 30%, transparent);
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .btn-primary.invite {
+      animation: none;
+    }
   }
 </style>

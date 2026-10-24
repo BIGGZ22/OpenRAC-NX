@@ -33,6 +33,8 @@ import org.json.JSONObject
 class LaunchArgs {
   lateinit var library: String
   var args: Array<String> = arrayOf()
+  /** NAME=value: what the action adds (the detailed log, developer tools, Enhanced graphics). */
+  var env: Array<String> = arrayOf()
 }
 
 @InvokeArg
@@ -48,6 +50,8 @@ class DownloadArgs {
   lateinit var path: String
   // The download downloadProgress reports (the update's APK), not a manifest read beside it.
   var progress: Boolean = false
+  // The media type asked for, when not empty: GitHub's API for a mod's releases (remote.rs).
+  var accept: String = ""
 }
 
 @InvokeArg
@@ -55,6 +59,11 @@ class SaveArgs {
   lateinit var path: String
   lateinit var name: String
   var mime: String = "application/zip"
+}
+
+@InvokeArg
+class FolderArgs {
+  var path: String? = null
 }
 
 @InvokeArg
@@ -166,6 +175,18 @@ class OpenracPlugin(private val activity: Activity) : Plugin(activity) {
 
   // ---- the set-up, in the background ----
 
+  /** {path}: shows the folder in the Files app, through OpenRAC's place there (FilesProvider.kt);
+   *  OpenRAC's place itself for a folder outside it, or no path. */
+  @Command
+  fun showFolder(invoke: Invoke) {
+    val path = invoke.parseArgs(FolderArgs::class.java).path
+    if (FilesProvider.show(activity, path?.let(::File))) {
+      invoke.resolve()
+    } else {
+      invoke.reject("this device has no Files app to show the folder in")
+    }
+  }
+
   /** Resolves once the tools the launcher carries are unpacked (OpenracSetup.prepare), with
    *  {error} when they could not be. */
   @Command
@@ -215,6 +236,10 @@ class OpenracPlugin(private val activity: Activity) : Plugin(activity) {
         connection.connectTimeout = 15_000
         connection.readTimeout = 30_000
         connection.setRequestProperty("User-Agent", "OpenRAC-Launcher")
+        if (args.accept.isNotEmpty()) {
+          connection.setRequestProperty("Accept", args.accept)
+          connection.setRequestProperty("X-GitHub-Api-Version", "2022-11-28")
+        }
         try {
           // Redirects are followed within https only (GitHub's downloads are redirected once).
           if (connection.responseCode != HttpURLConnection.HTTP_OK || connection.url.protocol != "https") {
@@ -328,6 +353,12 @@ class OpenracPlugin(private val activity: Activity) : Plugin(activity) {
     // The renderer: Vulkan's falls back to OpenGL ES by itself where the device has no Vulkan 1.3
     // (port/platform/window.cpp).
     if (renderer() == "vulkan") environment["OPENRAC_GL_API"] = "vulkan"
+    // What the launcher's action adds; Enhanced graphics' OPENRAC_GL_API=vulkan among them, as
+    // only the Vulkan renderer has it.
+    args.env.forEach { entry ->
+      val at = entry.indexOf('=')
+      if (at > 0) environment[entry.substring(0, at)] = entry.substring(at + 1)
+    }
     // Already playing: back to the game as it is, not a second start (unknown which runs, it is
     // the same one). Another game waits for it to end: both run in one process, which ends with
     // its game (GameActivity.onDestroy), so a start now would end with it.

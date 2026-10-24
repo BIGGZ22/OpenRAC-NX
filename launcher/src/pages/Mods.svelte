@@ -16,11 +16,12 @@
   import AddMod from "$components/AddMod.svelte";
   import AssetsPanel from "$components/AssetsPanel.svelte";
   import CommandBox from "$components/CommandBox.svelte";
+  import GameChip from "$components/GameChip.svelte";
   import GamesFrame from "$components/GamesFrame.svelte";
   import Icon from "$components/Icon.svelte";
   import PacksPanel from "$components/PacksPanel.svelte";
   import PluginsPanel from "$components/PluginsPanel.svelte";
-  import { api, pickFile, type ActionView, type GameView, type VersionView } from "$lib/api";
+  import { api, onAndroid, pickFile, type ActionView, type GameView, type VersionView } from "$lib/api";
   import { app, guardShown, jobs, run, runChain, saveConfig, toast } from "$lib/app.svelte";
   import { levelName, levelsOf, type EntryState } from "$lib/labels";
   import { GODOT_URL, SITE_URL } from "$lib/links";
@@ -116,7 +117,14 @@
   const shown = $derived.by(() => {
     const byId = (id: string | null | undefined) => games.find((g) => g.id === id) ?? null;
     const last = byId(app.version?.split("/")[0]);
-    return byId(picked) ?? (last && editable(last) ? last : null) ?? games.find((g) => editable(g)) ?? games[0] ?? null;
+    // Android has no list here: the game is the one picked in Games, whatever it can do.
+    return (
+      byId(picked) ??
+      (last && (onAndroid || editable(last)) ? last : null) ??
+      games.find((g) => editable(g)) ??
+      games[0] ??
+      null
+    );
   });
   const v = $derived(shown ? editable(shown) : null);
   /** The version the game page plays, when it has a port: its gameplay mods need no level editor,
@@ -125,6 +133,9 @@
     const pv = shown ? playerVersion(shown) : null;
     return pv && playable(pv) ? pv : null;
   });
+
+  /** Android's one page of mods (no level editor there): the version they are for. */
+  const mine = $derived(onAndroid ? (v ?? played) : null);
 
   /** The page's tab: My mods, the level editor, or models and textures. */
   type Tab = "mine" | "editor" | "assets";
@@ -230,13 +241,16 @@
   }
 </script>
 
+<!-- Android: no game list; the mods are for the game picked in Games, named at the top right. -->
 <GamesFrame
   label="Mods"
   selected={shown?.id ?? null}
-  onselect={(g) => {
-    if (g.id !== shown?.id) resetMod();
-    picked = g.id;
-  }}
+  onselect={onAndroid
+    ? undefined
+    : (g) => {
+        if (g.id !== shown?.id) resetMod();
+        picked = g.id;
+      }}
   state={modState}
 >
   {#if shown}
@@ -244,9 +258,12 @@
       <div class="page" style={themeStyle(shown.id)} in:fly={enter()}>
         <div class="intro">
           <div class="grow">
-            <h1>{shown.title}</h1>
+            <h1 class:plain={onAndroid}>{onAndroid ? "Mods" : shown.title}</h1>
             {#if v ? !early(v) : played}<p class="muted lead">{PAGE.lead}</p>{/if}
           </div>
+          {#if onAndroid}
+            <GameChip title={shown.title} what="mods" />
+          {/if}
           {#if v}
             <!-- The page's one main action, in the same place on every tab. -->
             <div class="play">
@@ -262,7 +279,17 @@
           {/if}
         </div>
 
-        {#if !v && played}
+        {#if onAndroid && mine}
+          <!-- Android: one page, what a player does there in the order they do it. The mods first,
+               with Enhanced graphics at the top and its switch in its row; adding one, from a link or
+               a .zip the system's picker copies in; then the texture and model packs. No level editor
+               or model export: they need Godot and a desktop. -->
+          <PluginsPanel version={mine} reload={pluginsReload} onpack={() => (reload += 1)} />
+          {#if !onModPage}
+            <AddMod version={mine} links={playable(mine)} onadded={added} />
+            <PacksPanel version={mine} {reload} />
+          {/if}
+        {:else if !v && played}
           <!-- The level editor cannot open it here (an installed launcher without its tools, say), but the
                game plays: its gameplay mods, which load when it is played from its page. -->
           {#if !onModPage}<AddMod version={played} onadded={added} />{/if}
@@ -469,7 +496,7 @@
 
 <style>
   .page {
-    max-width: 960px;
+    max-width: var(--page-max, 960px);
     margin: 0 auto;
     padding: var(--page-top, 24px) var(--page-x, 24px) var(--page-bottom, 48px);
     display: flex;
@@ -494,6 +521,12 @@
     font-family: var(--title-font);
     font-weight: var(--title-weight);
     color: var(--tx);
+  }
+
+  h1.plain {
+    font-family: var(--font-head);
+    font-weight: 600;
+    color: var(--text);
   }
 
   .play {

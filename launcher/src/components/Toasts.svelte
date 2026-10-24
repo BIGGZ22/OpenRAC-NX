@@ -2,8 +2,20 @@
   // What the launcher says for a moment, at the window's corner. Information goes after a few
   // seconds and waits while the pointer or the focus is on it; an error stays until it is
   // dismissed, and is read out at once (an assertive region), not after what is being read.
+  import { onAndroid } from "$lib/api";
   import { app, dismissToast, holdToasts } from "$lib/app.svelte";
+  import { reduced } from "$lib/motion";
+  import { flip } from "svelte/animate";
+  import { cubicOut } from "svelte/easing";
+  import { fade, fly } from "svelte/transition";
   import Icon from "./Icon.svelte";
+
+  // Android: in from below, out by fading, and the others slide into the place one leaves. A
+  // desktop's arrive as they did (app.css .rise) and go at once.
+  const still = reduced || !onAndroid;
+  const into = { y: 16, opacity: 0, duration: still ? 0 : 240, easing: cubicOut };
+  const away = { duration: still ? 0 : 160 };
+  const move = { duration: still ? 0 : 220, easing: cubicOut };
 
   const infos = $derived(app.toasts.filter((t) => t.kind !== "error"));
   const errors = $derived(app.toasts.filter((t) => t.kind === "error"));
@@ -40,7 +52,7 @@
 >
   <div class="list" role="alert">
     {#each errors as t (t.id)}
-      <div class="toast rise error">
+      <div class="toast error" class:rise={!onAndroid} in:fly={into} out:fade={away} animate:flip={move}>
         <Icon name="warn" size={16} />
         <span class="grow">{t.text}</span>
         <button
@@ -55,7 +67,7 @@
   </div>
   <div class="list" role="status" aria-live="polite">
     {#each infos as t (t.id)}
-      <div class="toast rise">
+      <div class="toast" class:rise={!onAndroid} in:fly={into} out:fade={away} animate:flip={move}>
         <Icon name="info" size={16} />
         <span class="grow">{t.text}</span>
         <button
@@ -78,7 +90,8 @@
     display: flex;
     flex-direction: column;
     gap: 8px;
-    z-index: 50;
+    /* Over the full-screen launch and running screens (LaunchScreen, GameRunning). */
+    z-index: 70;
     max-width: 420px;
   }
 
@@ -133,8 +146,21 @@
   }
 
   :global(html[data-platform="android"]) .toast {
+    align-items: center;
     max-width: 560px;
     border-radius: 12px;
     pointer-events: auto;
+  }
+
+  :global(html[data-platform="android"]) .toast > :global(svg) {
+    margin-top: 0;
+  }
+
+  /* Its Dismiss keeps a finger's size (app.css gives small buttons 44 px) without making the toast
+     a line taller than its text: the button reaches over the toast's padding. */
+  :global(html[data-platform="android"]) .toast button {
+    min-height: 40px;
+    min-width: 40px;
+    margin: -10px -4px -10px 0;
   }
 </style>

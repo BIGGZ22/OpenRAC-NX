@@ -2,10 +2,11 @@
 // Copyright (c) 2026 the OpenRAC contributors
 //
 // The on-screen pad (platform/touch_pad.h): fingers on its controls, as SDL reports them, become
-// the pad's buttons and sticks.
+// the pad's buttons, its stick and the camera; the player resizes and moves the controls.
 
 #include <cmath>
 #include <cstdio>
+#include <string>
 
 #include "check.h"
 #include "platform/touch_pad.h"
@@ -55,6 +56,11 @@ int main() {
     CHECK(pad.left_x == 0xFF);
     CHECK(pad.left_y >= 0x7F && pad.left_y <= 0x81);
     CHECK(pad.right_x == kStickCentre);
+    // Pushed to a diagonal, the round stick reaches the corner, as a DualShock 2's does.
+    touch.finger_move(2, left.x + 0.5f, left.y + 0.5f * touch.aspect());
+    pad = read(touch);
+    CHECK(pad.left_x == 0xFF && pad.left_y == 0xFF);
+    touch.finger_move(2, left.x + 0.5f, left.y);
     // A second finger on Square while the stick is held: both count.
     const TouchControl& square = control(touch, TouchControl::Kind::Button, Button::Square);
     touch.finger_down(3, square.x, square.y);
@@ -146,7 +152,184 @@ int main() {
     const TouchControl& select = control(menu, TouchControl::Kind::Button, Button::Select);
     const TouchControl& start = control(menu, TouchControl::Kind::Button, Button::Start);
     const float gap = (start.x - options.x) * menu.aspect() - start.radius * start.stretch - options.radius;
-    CHECK(gap > 0.05f);
+    CHECK(gap > 0.05f * menu.scale());
     CHECK(select.x < options.x && options.x < start.x);
+
+    // No right stick drawn: a finger on the right of the screen, off the buttons, holds an
+    // invisible one centred where it landed. Pushed, the camera turns for as long as it is held
+    // there, as a stick held over does; it stops when the finger lifts.
+    TouchPad camera;
+    camera.set_aspect(2.0f);
+    for (const TouchControl& c : camera.controls()) {
+        CHECK(c.kind != TouchControl::Kind::Button || c.button != Button::R3);
+    }
+    camera.idle(1000);
+    camera.finger_down(1, 0.6f, 0.4f);
+    camera.idle(1016);
+    CHECK(read(camera).right_x == kStickCentre);
+    camera.finger_move(1, 0.6f + 0.002f, 0.4f);  // a tremble: inside the dead zone
+    CHECK(read(camera).right_x == kStickCentre);
+    camera.finger_move(1, 0.6f + 0.06f, 0.4f);  // right, 0.12 heights: all the way
+    for (int frame = 1; frame <= 60; ++frame) {
+        camera.idle(1016 + 16 * static_cast<std::uint64_t>(frame));  // held there a second
+    }
+    pad = read(camera);
+    CHECK(pad.right_x == 0xFF);
+    CHECK(pad.right_y >= 0x7E && pad.right_y <= 0x82);
+    CHECK(pad.buttons == Pad{}.buttons);
+    // Half as far: about half way, past the game's dead zone.
+    camera.finger_move(1, 0.6f + 0.025f, 0.4f);
+    pad = read(camera);
+    CHECK(pad.right_x > 0xA8 && pad.right_x < 0xE8);
+    // Past the edge the centre follows the finger, so that coming back turns the camera the
+    // other way at once.
+    camera.finger_move(1, 0.9f, 0.4f);
+    camera.finger_move(1, 0.84f, 0.4f);
+    CHECK(read(camera).right_x < kStickCentre);
+    camera.finger_move(1, 0.84f, 0.35f);
+    CHECK(read(camera).right_y < kStickCentre);
+    camera.finger_up(1);
+    CHECK(read(camera).right_x == kStickCentre && read(camera).right_y == kStickCentre);
+    // The player's camera speed: twice the speed, half the push for all the way.
+    camera.set_look_speed(2.0f);
+    camera.finger_down(4, 0.6f, 0.4f);
+    camera.finger_move(4, 0.6f + 0.03f, 0.4f);
+    CHECK(read(camera).right_x == 0xFF);
+    camera.finger_up(4);
+    camera.set_look_speed(1.0f);
+    // A finger that lands on a button presses it and does not turn the camera, even dragged.
+    const TouchControl& triangle = control(camera, TouchControl::Kind::Button, Button::Triangle);
+    camera.finger_down(2, triangle.x, triangle.y);
+    camera.idle(2000);
+    camera.finger_move(2, triangle.x - 0.01f, triangle.y);
+    camera.idle(2016);
+    pad = read(camera);
+    CHECK(pad.held(Button::Triangle));
+    CHECK(pad.right_x == kStickCentre);
+    camera.finger_up(2);
+    // The left thumb on the stick and the right one on the camera at once.
+    const TouchControl& walk = control(camera, TouchControl::Kind::LeftStick);
+    camera.finger_down(3, walk.x, walk.y);
+    camera.finger_move(3, walk.x, walk.y - 0.5f);
+    camera.finger_down(4, 0.7f, 0.5f);
+    camera.idle(3000);
+    camera.finger_move(4, 0.7f, 0.55f);
+    camera.idle(3016);
+    pad = read(camera);
+    CHECK(pad.left_y == 0x00);
+    CHECK(pad.right_y > kStickCentre);
+    camera.release_all();
+
+    // No control covers another's, up to the pad's own size and on any screen's shape; the shoulders sit
+    // below the top edge, where the game draws its health and bolts.
+    for (const float aspect : {4.0f / 3.0f, 16.0f / 9.0f, 2.0f, 2.4f}) {
+        for (const float scale : {TouchPad::kMinScale, TouchPad::kDefaultScale, 1.0f}) {
+            TouchPad shape;
+            shape.set_aspect(aspect);
+            shape.set_scale(scale);
+            shape.set_menu_button(true);
+            const auto all = shape.controls();
+            for (std::size_t i = 0; i < all.size(); ++i) {
+                for (std::size_t j = i + 1; j < all.size(); ++j) {
+                    const TouchControl& a = all[i];
+                    const TouchControl& b = all[j];
+                    if (a.group == b.group) {
+                        continue;  // a group's own controls are laid out together
+                    }
+                    const float dx = std::abs(a.x - b.x) * aspect;
+                    const float dy = std::abs(a.y - b.y);
+                    const bool round = a.stretch == 1.0f && b.stretch == 1.0f;
+                    const bool apart = round ? std::hypot(dx, dy) >= a.radius + b.radius
+                                             : dx >= a.radius * a.stretch + b.radius * b.stretch
+                                                   || dy >= a.radius + b.radius;
+                    CHECK(apart);
+                }
+            }
+            const TouchControl& l1 = control(shape, TouchControl::Kind::Button, Button::L1);
+            CHECK(l1.y - l1.radius > 0.08f * scale);
+        }
+    }
+
+    // Smaller controls sit nearer the edges; the default is smaller than the pad's own.
+    TouchPad sized;
+    sized.set_aspect(16.0f / 9.0f);
+    CHECK(sized.scale() == TouchPad::kDefaultScale && TouchPad::kDefaultScale < 1.0f);
+    const TouchControl& face = control(sized, TouchControl::Kind::Button, Button::Cross);
+    const float small_radius = face.radius;
+    const float small_y = face.y;
+    sized.set_scale(1.0f);
+    CHECK(face.radius > small_radius);
+    CHECK(face.y < small_y);  // further up from the bottom edge
+    sized.set_scale(9.0f);
+    CHECK(sized.scale() == TouchPad::kMaxScale);
+    sized.set_scale(0.0f);
+    CHECK(sized.scale() == TouchPad::kMinScale);
+
+    // Editing: a finger drags the group it lands on, the game gets nothing, and the layout is a
+    // line of text that brings it back.
+    TouchPad edit;
+    edit.set_aspect(2.0f);
+    const TouchControl& up = control(edit, TouchControl::Kind::Button, Button::Up);
+    const TouchControl& down = control(edit, TouchControl::Kind::Button, Button::Down);
+    const float up_x = up.x;
+    const float up_y = up.y;
+    const float gap_y = down.y - up.y;
+    edit.set_editing(true);
+    CHECK(edit.visible());
+    // It stays shown while the player arranges it (another device used, the screen left alone),
+    // and a finger on the empty right half turns no camera.
+    edit.hide();
+    edit.idle(1000);
+    edit.idle(1000 + 2 * TouchPad::kIdleHideMs);
+    CHECK(edit.visible());
+    edit.finger_down(2, 0.6f, 0.45f);
+    edit.finger_move(2, 0.7f, 0.5f);
+    edit.idle(1000 + 2 * TouchPad::kIdleHideMs + 16);
+    float look_x = 1.0f;
+    float look_y = 1.0f;
+    edit.look(look_x, look_y);
+    CHECK(look_x == 0.0f && look_y == 0.0f);
+    CHECK(read(edit).right_x == Pad{}.right_x);
+    edit.finger_up(2);
+    edit.finger_down(1, up.x, up.y);
+    CHECK(read(edit).buttons == Pad{}.buttons);
+    edit.finger_move(1, up.x + 0.1f, up.y + 0.05f);
+    CHECK(std::abs(up.x - (up_x + 0.1f)) < 1e-5f && std::abs(up.y - (up_y + 0.05f)) < 1e-5f);
+    CHECK(std::abs(down.y - up.y - gap_y) < 1e-5f);  // the whole d-pad moved
+    CHECK(read(edit).buttons == Pad{}.buttons);
+    edit.finger_up(1);
+    edit.set_editing(false);
+    const std::string text = edit.layout();
+    CHECK(text.starts_with("dpad 0.2000 0.0500"));
+    TouchPad again;
+    again.set_aspect(2.0f);
+    again.set_layout(text);
+    const TouchControl& up_again = control(again, TouchControl::Kind::Button, Button::Up);
+    CHECK(std::abs(up_again.x - up.x) < 1e-4f && std::abs(up_again.y - up.y) < 1e-4f);
+    again.set_layout("dpad nonsense, face 0.1, nothing 1 2, stick 0.01 -0.02");
+    CHECK(again.layout() == "stick 0.0100 -0.0200");
+    again.reset_layout();
+    CHECK(again.layout().empty());
+    CHECK(std::abs(up_again.x - up_x) < 1e-5f);
+
+    // Snapping: a dragged group near another's line, or its own place, lands on it, and the line
+    // is there to show; a little further it goes where the finger takes it.
+    TouchPad snapping;
+    snapping.set_aspect(2.0f);
+    snapping.set_editing(true);
+    const TouchControl& left_stick = control(snapping, TouchControl::Kind::LeftStick);
+    const TouchControl& dpad = control(snapping, TouchControl::Kind::Button, Button::Up);
+    const float dpad_x = dpad.x;
+    const float dpad_y = dpad.y;
+    snapping.finger_down(1, dpad.x, dpad.y);
+    snapping.finger_move(1, left_stick.x + 0.005f, dpad_y);
+    CHECK(std::abs(dpad.x - left_stick.x) < 1e-5f);  // in line with the stick
+    CHECK(std::abs(snapping.guide_x() - left_stick.x) < 1e-5f);
+    snapping.finger_move(1, dpad_x + 0.006f, dpad_y + 0.01f);
+    CHECK(std::abs(dpad.x - dpad_x) < 1e-5f && std::abs(dpad.y - dpad_y) < 1e-5f);  // back home
+    snapping.finger_move(1, dpad_x - 0.04f, dpad_y);
+    CHECK(std::abs(dpad.x - (dpad_x - 0.04f)) < 1e-5f && snapping.guide_x() < 0.0f);
+    snapping.finger_up(1);
+    CHECK(snapping.guide_x() < 0.0f && snapping.guide_y() < 0.0f);
     return openrac::test::result();
 }

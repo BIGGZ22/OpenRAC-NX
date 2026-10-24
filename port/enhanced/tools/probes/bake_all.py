@@ -4,11 +4,13 @@
 
 Uses each level's settings. Outputs contain game data and must stay local.
 --jobs bakes that many levels at once (0: one per CPU thread, as many as half
-the memory holds, each baker taking an equal share of the threads). Without --update a new output root is
-required and previous bakes are preserved. With --update (the launcher's way)
-the root is a cache: a level whose export, levels format, baker and options
-are those of its last verified bake is kept, any other is baked again in a
-folder of its own and put in place only once it is verified.
+the memory holds, each baker taking an equal share of the threads; on Android
+every baker may use every thread, the largest levels first, so that the last
+levels to finish still use the whole CPU). Without --update a new output root
+is required and previous bakes are preserved. With --update (the launcher's
+way) the root is a cache: a level whose export, levels format, baker and
+options are those of its last verified bake is kept, any other is baked again
+in a folder of its own and put in place only once it is verified.
 """
 from __future__ import annotations
 
@@ -33,6 +35,10 @@ import seed_regions as seeds  # noqa: E402
 STAMP = 'openrac-bake.json'
 # Options that change the bake's bytes; --threads does not (bake_level preserves output bytes).
 BAKE_OPTIONS = ('--rays', '--bounces')
+# A phone's levels are baked by few, slow cores, where an equal share of the threads leaves the
+# largest level baking on one core long after the others have finished (the launcher's
+# Python on Android has sys.getandroidapilevel).
+ANDROID = hasattr(sys, 'getandroidapilevel')
 
 
 def discover_levels(levels_dir: Path):
@@ -109,12 +115,25 @@ def automatic_jobs() -> int:
     return jobs
 
 
-def with_threads(options, jobs: int) -> list[str]:
-    """OPTIONS with --threads sharing the CPU between JOBS bakes at once, unless it names one."""
+def with_threads(options, jobs: int, *, share=True) -> list[str]:
+    """OPTIONS with --threads sharing the CPU between JOBS bakes at once, unless it names one.
+    Without SHARE each bake may use every thread (0), and the system shares them out: a level
+    left baking alone still has the whole CPU."""
     options = list(options)
     if jobs > 1 and '--threads' not in options:
-        options += ['--threads', str(max(1, (os.cpu_count() or 1) // jobs))]
+        options += ['--threads', str(max(1, (os.cpu_count() or 1) // jobs) if share else 0)]
     return options
+
+
+def level_size(level: Path) -> int:
+    """The bytes of a level's export: roughly how long it takes to bake."""
+    return sum(path.stat().st_size for path in level.rglob('*') if path.is_file())
+
+
+def largest_first(levels) -> list[int]:
+    """The indices of LEVELS, the largest export first: the longest bakes start first, and the
+    small ones fill in around them."""
+    return sorted(range(len(levels)), key=lambda i: -level_size(levels[i]))
 
 
 def bake_all(levels_dir: Path, output_dir: Path, baker: Path, *, disc=None,
@@ -138,7 +157,7 @@ def bake_all(levels_dir: Path, output_dir: Path, baker: Path, *, disc=None,
         return True
 
     output_dir.mkdir(parents=True, exist_ok=update)
-    options = with_threads(options, jobs)
+    options = with_threads(options, jobs, share=not ANDROID)
     baker_hash = digest.sha256(baker) if update else None
     report = {'version': 1, 'levels_dir': str(levels_dir), 'levels': [
         {'level': level.name, 'verified': False} for level in levels]}
@@ -194,12 +213,13 @@ def bake_all(levels_dir: Path, output_dir: Path, baker: Path, *, disc=None,
         finished(result, 'baked')
 
     save_report()
+    order = largest_first(levels) if ANDROID and jobs > 1 else range(len(levels))
     if jobs == 1:
-        for index in range(len(levels)):
+        for index in order:
             bake(index)
     else:
         with ThreadPoolExecutor(max_workers=jobs) as pool:
-            list(pool.map(bake, range(len(levels))))
+            list(pool.map(bake, order))
 
     passed = sum(result['verified'] for result in report['levels'])
     print(f'Verified {passed}/{len(levels)} levels. Summary: '

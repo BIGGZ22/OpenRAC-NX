@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { DifferenceView } from "./api";
-import { groupDifferences, splitVersion } from "./differences";
+import { differencesSummary, groupDifferences, splitVersion } from "./differences";
 import rac1 from "../../../port/game/rac1/differences.json";
 
 const entry = (id: string, kind: DifferenceView["kind"], on: boolean | null = null): DifferenceView => ({
@@ -19,6 +19,19 @@ describe("groupDifferences", () => {
     const groups = groupDifferences([entry("p", "port"), entry("f", "fix", true), entry("q", "port")]);
     expect(groups.map((g) => g.kind)).toEqual(["fix", "port"]);
     expect(groups[1]?.entries.map((e) => e.id)).toEqual(["p", "q"]);
+  });
+});
+
+describe("differencesSummary", () => {
+  it("counts the fixes that are on, and the rest", () => {
+    const fixes = [entry("a", "fix", true), entry("b", "fix", true), entry("c", "fix", false)];
+    expect(differencesSummary([...fixes, entry("g", "guard"), entry("p", "port")])).toBe(
+      "2 of 3 game fixes on · 2 more changes",
+    );
+    expect(differencesSummary([entry("a", "fix", true)])).toBe("1 game fix on");
+    expect(differencesSummary([entry("a", "fix", null), entry("p", "port")])).toBe("1 game fix on · 1 more change");
+    expect(differencesSummary([entry("p", "port"), entry("q", "port")])).toBe("2 changes");
+    expect(differencesSummary([])).toBe("");
   });
 });
 

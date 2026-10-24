@@ -301,6 +301,7 @@ function(openrac_add_game config)
                                        "${OPENRAC_GAME_DIR}/common/debug_overlay.cpp"
                                        "${OPENRAC_GAME_DIR}/common/options_menu.cpp"
                                        "${OPENRAC_GAME_DIR}/common/settings.cpp"
+                                       "${OPENRAC_GAME_DIR}/common/ui_colors.cpp"
                                        ${frontend_sources} ${debug_sources})
       # The scene draws the level and the live mobys.
       target_link_libraries(${target} PRIVATE openrac_scene_renderer openrac_viewer_lib

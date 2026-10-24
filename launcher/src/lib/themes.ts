@@ -3,6 +3,7 @@
 // names the games by their own ids; OpenRAC by release order:
 //   rac1 = "rac1", rac2 = "gc", rac3 = "uya", rac4 = "deadlocked", rac5 = "sm", rac6 = "sac".
 // Keep the values in step with the site (docs/STYLE.md).
+import palettes from "./palettes.json";
 
 export interface Theme {
   /** The boxes' fill, their border, the main and the second text colour. */
@@ -114,3 +115,20 @@ export function themeStyle(game: string): string {
     `--title-weight: ${t.weight}`,
   ].join("; ");
 }
+
+/** The launcher's accent while a game is the one picked (Android), from palettes.json: its bar
+ *  gradient and the ink on it, its amber (headings, the focus ring, what is on) and gold, in that
+ *  game's colour, as the games' own menus have it: Going Commando's pale blue, Up Your Arsenal's
+ *  yellow, Deadlocked's red, Size Matters' blue. Ratchet & Clank keeps the launcher's own orange
+ *  (app.css). The warning colour is not an accent's (app.css), so a warning still reads as one. */
+export const ACCENTS: Record<string, Record<string, string>> = palettes.accents;
+
+/** The custom properties a game's accent sets on the page; none for the launcher's own (rac1, or
+ *  no game). */
+export function accentProperties(game: string | null): [string, string][] {
+  const a = game ? ACCENTS[game] : undefined;
+  return a ? Object.entries(a) : [];
+}
+
+/** The custom properties accentProperties may set, to take them all off again. */
+export const ACCENT_PROPERTIES = [...new Set(Object.values(ACCENTS).flatMap((a) => Object.keys(a)))];

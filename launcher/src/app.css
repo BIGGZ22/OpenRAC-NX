@@ -38,7 +38,8 @@
   --line-field: rgb(156 161 212 / 0.6);
   /* States. The site has none; these sit with its palette. */
   --ok: #8fd694;
-  --warn: var(--amber);
+  /* Its own amber, not var(--amber): a game's accent (themes.ts) changes that one. */
+  --warn: #ffb443;
   --err: #ff8a7a;
   --info: var(--lav);
 
@@ -60,15 +61,49 @@
   --medium: 0.28s;
   --slow: 0.5s;
 
-  /* A page's margins and the space between its sections (--page-x, --page-top, --page-bottom,
-     --page-gap) are each page's own on a desktop, its fallback values; a narrow window and Android
-     set them below, the same on every page. */
+  /* A page's margins, the space between its sections and its width (--page-x, --page-top,
+     --page-bottom, --page-gap, --page-max) are each page's own on a desktop, its fallback values;
+     a narrow window and Android set them below, the same on every page. */
   /* What the navigation takes of the window: the header bar on top, or on Android the rail on
      the left or the bar at the bottom (Header.svelte). */
   --nav-top: 60px;
   --nav-left: 0px;
   --nav-bottom: 0px;
   color-scheme: dark;
+}
+
+/* The accent's colours as colours, so that they ease from one game's to the next (Android, App.svelte)
+   rather than jump. */
+@property --bar-top {
+  syntax: "<color>";
+  inherits: true;
+  initial-value: #e5a013;
+}
+
+@property --bar-bottom {
+  syntax: "<color>";
+  inherits: true;
+  initial-value: #cd8300;
+}
+
+@property --amber {
+  syntax: "<color>";
+  inherits: true;
+  initial-value: #ffb443;
+}
+
+@property --gold {
+  syntax: "<color>";
+  inherits: true;
+  initial-value: #ffd08a;
+}
+
+html[data-platform="android"] {
+  transition:
+    --bar-top var(--slow) var(--ease),
+    --bar-bottom var(--slow) var(--ease),
+    --amber var(--slow) var(--ease),
+    --gold var(--slow) var(--ease);
 }
 
 @media (max-width: 600px) {
@@ -87,6 +122,9 @@ html[data-platform="android"] {
   --page-top: 20px;
   --page-bottom: 32px;
   --page-gap: 16px;
+  /* One width for every page, so that a page's edge stays put from tab to tab (a desktop's pages
+     each keep their own, the fallback of --page-max). */
+  --page-max: 960px;
   --nav-top: 0px;
   --nav-left: 80px;
 }
@@ -704,6 +742,61 @@ ol.steps select:focus-visible {
   animation: rise 0.6s var(--ease) both;
 }
 
+/* Android: one page gives way to the next (App.svelte's view transition). Only the page moves:
+   the rail stays live, its highlight sliding to the tab pressed. */
+html[data-platform="android"] main {
+  view-transition-name: page;
+}
+
+::view-transition-old(root),
+::view-transition-new(root) {
+  animation: none;
+}
+
+::view-transition-old(page) {
+  animation: page-out 0.2s ease-in both;
+}
+
+::view-transition-new(page) {
+  animation: page-in 0.38s var(--ease) both;
+}
+
+html[data-nav="back"]::view-transition-old(page) {
+  animation-name: page-out-back;
+}
+
+html[data-nav="back"]::view-transition-new(page) {
+  animation-name: page-in-back;
+}
+
+@keyframes page-out {
+  to {
+    opacity: 0;
+    transform: translateY(-28px) scale(0.98);
+  }
+}
+
+@keyframes page-in {
+  from {
+    opacity: 0;
+    transform: translateY(48px);
+  }
+}
+
+@keyframes page-out-back {
+  to {
+    opacity: 0;
+    transform: translateY(28px) scale(0.98);
+  }
+}
+
+@keyframes page-in-back {
+  from {
+    opacity: 0;
+    transform: translateY(-48px);
+  }
+}
+
 /* A page's sections arrive one after another when it opens. */
 .page > :is(section, .panel, h1):not(.rise) {
   animation: rise var(--slow) var(--ease) both;
@@ -727,6 +820,12 @@ ol.steps select:focus-visible {
 
 .page > :nth-child(n + 6) {
   animation-delay: 200ms;
+}
+
+/* Android: the page slides in whole (the view transition above), so its sections and game tiles
+   come with it rather than rising again after it, which showed as each one popping in. */
+html[data-platform="android"] :is(.page > :is(section, .panel, h1), .tile.rise) {
+  animation: none;
 }
 
 /* Android's touch feedback (src/lib/ripple.ts): a wave from the finger, inside the control. */

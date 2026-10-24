@@ -6,8 +6,11 @@
 // pacer on a fake clock, and the audio output on SDL's dummy driver.
 
 #include <array>
+#include <cmath>
 #include <cstdio>
 #include <memory>
+#include <tuple>
+#include <utility>
 #include <vector>
 
 #include <SDL3/SDL.h>
@@ -86,6 +89,67 @@ void conversions() {
     CHECK(key_stick_byte(-1) == 0x00);
     CHECK(key_stick_byte(0) == 0x80);
     CHECK(key_stick_byte(1) == 0xFF);
+}
+
+// A round stick's diagonal reaches the square's corner, as a DualShock 2's does; along an axis,
+// partly pushed, or already square, it stays where it was.
+void squared_sticks() {
+    const auto near = [](float a, float b) {
+        return std::abs(a - b) < 1e-4f;
+    };
+    const auto squared = [](float x, float y) {
+        square_stick(x, y);
+        return std::pair(x, y);
+    };
+    auto [x, y] = squared(0.7071f, -0.7071f);
+    CHECK(near(x, 1.0f) && near(y, -1.0f));
+    std::tie(x, y) = squared(0.5f, 0.0f);
+    CHECK(near(x, 0.5f) && near(y, 0.0f));
+    // Inside 0.8 of the rim, a push and a drift are left as they are.
+    std::tie(x, y) = squared(0.25f, 0.25f);
+    CHECK(near(x, 0.25f) && near(y, 0.25f));
+    std::tie(x, y) = squared(0.55f, 0.55f);
+    CHECK(near(x, 0.55f) && near(y, 0.55f));
+    std::tie(x, y) = squared(0.03f, -0.04f);
+    CHECK(near(x, 0.03f) && near(y, -0.04f));
+    // Between, it eases out towards the corner, the direction kept.
+    std::tie(x, y) = squared(0.6364f, 0.6364f);
+    CHECK(x > 0.6364f && x < 0.9f && near(x, y));
+    std::tie(x, y) = squared(1.0f, 0.5f);
+    CHECK(near(x, 1.0f) && near(y, 0.5f));
+    std::tie(x, y) = squared(0.0f, 0.0f);
+    CHECK(x == 0.0f && y == 0.0f);
+
+    // A gamepad's stick that reports a square (a handheld's) is left as it is once its corner
+    // has shown it so; a round one keeps being stretched; a new gamepad starts afresh.
+    StickGate round;
+    float rx = 0.7071f;
+    float ry = 0.7071f;
+    shape_stick(rx, ry, round);
+    CHECK(!round.square && near(rx, 1.0f) && near(ry, 1.0f));
+    StickGate square;
+    float sx = 1.0f;
+    float sy = 1.0f;
+    shape_stick(sx, sy, square);
+    CHECK(square.square && near(sx, 1.0f) && near(sy, 1.0f));
+    sx = 0.7f;
+    sy = 0.7f;
+    shape_stick(sx, sy, square);
+    CHECK(near(sx, 0.7f) && near(sy, 0.7f));
+
+    StickGate gate;
+    std::uint8_t bx = 0;
+    std::uint8_t by = 0;
+    stick_bytes(0, 0, gate, bx, by);
+    CHECK(bx == 0x80 && by == 0x80);
+    stick_bytes(23170, 23170, gate, bx, by);  // a round stick at 45 degrees, down and right
+    CHECK(bx == 0xFF && by == 0xFF);
+    stick_bytes(-23170, -23170, gate, bx, by);
+    CHECK(bx == 0x00 && by == 0x00);
+    stick_bytes(32767, 0, gate, bx, by);
+    CHECK(bx == 0xFF && by == 0x80);
+    stick_bytes(11585, 11585, gate, bx, by);  // half way: as before the stretch
+    CHECK(bx == 0xAD && by == 0xAD);
 }
 
 void keyboard() {
@@ -175,6 +239,7 @@ int main() {
     pad_bits();
     read_buffer();
     conversions();
+    squared_sticks();
     keyboard();
     pacer();
     audio();

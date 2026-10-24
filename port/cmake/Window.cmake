@@ -363,6 +363,12 @@ if(OPENRAC_PROBE_BAKER)
     enhanced/tools/probes/batch.cpp enhanced/tools/probes/report.cpp)
   target_link_libraries(openrac-probe-bake PRIVATE openrac_probe_scene openrac_probe_bake)
   openrac_warnings(openrac-probe-bake)
+  if(ANDROID)
+    # Android runs programs only from the app's library folder: named like a library, as the
+    # games' -cli programs are (cmake/Games.cmake), finding libc++_shared.so beside it.
+    set_target_properties(openrac-probe-bake PROPERTIES OUTPUT_NAME "libopenrac-probe-bake.so"
+                                                        BUILD_RPATH "\$ORIGIN")
+  endif()
 endif()
 
 add_executable(openrac-viewer viewer/main.cpp)

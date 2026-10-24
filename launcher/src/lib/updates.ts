@@ -33,6 +33,40 @@ export type UpdateProgressCallback = (progress: {
 let activeTauriUpdate: Update | null = null;
 let activeAndroidRelease: AndroidRelease | null = null;
 
+/** "Later" on the update's window puts that version off for this long: the window opens by itself
+ *  again at a start after it, and at once for a newer version. */
+export const PUT_OFF_MS = 3 * 24 * 60 * 60 * 1000;
+
+export interface PutOff {
+  version: string;
+  /** When, in ms since 1970. */
+  at: number;
+}
+
+/** Whether the window that offers VERSION opens by itself at a start, after PUT_OFF. */
+export function offerUpdate(version: string, putOff: PutOff | null, now: number): boolean {
+  return putOff?.version !== version || now - putOff.at >= PUT_OFF_MS;
+}
+
+const PUT_OFF_KEY = "openrac-update-put-off";
+
+export function readPutOff(): PutOff | null {
+  try {
+    const kept = JSON.parse(localStorage.getItem(PUT_OFF_KEY) ?? "null") as PutOff | null;
+    return kept && typeof kept.version === "string" && typeof kept.at === "number" ? kept : null;
+  } catch {
+    return null;
+  }
+}
+
+export function putOffUpdate(version: string, now = Date.now()) {
+  try {
+    localStorage.setItem(PUT_OFF_KEY, JSON.stringify({ version, at: now } satisfies PutOff));
+  } catch {
+    // Storage refused (a private window): the window opens again at the next start.
+  }
+}
+
 /** core/src/update.rs's is_newer: a pre-release is older than its release, and of two
  *  pre-releases of one version the one whose last number is larger is newer (the builds of a
  *  branch, `0.8.0-dev.10` after `0.8.0-dev.9`). */

@@ -21,5 +21,7 @@ export default defineConfig({
   },
   envPrefix: ["VITE_", "TAURI_ENV_"],
   build: { target: "es2023", outDir: "dist", emptyOutDir: true },
-  test: { include: ["src/**/*.test.ts"], environment: "node" },
+  // app.css read as text by the tests (palettes.test.ts, stylesheets.test.ts): Vitest otherwise
+  // hands every stylesheet to them empty.
+  test: { include: ["src/**/*.test.ts"], environment: "node", css: { include: [/app\.css/] } },
 });

@@ -399,6 +399,7 @@ These variables are read by `openrac-<game>` at run time. Unless said otherwise,
 | `OPENRAC_GPU` | `integrated` | Linux: leaves the choice of graphics card to the system. Otherwise the port asks for the discrete card (NVIDIA's PRIME offload when its driver is loaded, else Mesa's `DRI_PRIME` for the card with the most memory) unless `DRI_PRIME` is already set. | `port/platform/window.cpp` |
 | `OPENRAC_GPU_DRIVER_DIR` | folder | Android: the folder of the GPU driver package chosen in the launcher ([ANDROID.md](ANDROID.md)); set by the launcher. | `port/android/gpu_driver.cpp` |
 | `OPENRAC_GPU_DRIVER_LIBRARY` | file name | Android: the package's Vulkan library, in `OPENRAC_GPU_DRIVER_DIR`. Without both, the game uses the system's driver. | `port/android/gpu_driver.cpp` |
+| `OPENRAC_UI_COLORS` | `NAME=#RRGGBB[AA],...` | The launcher's theme for the options drawer, in app.css's names without their dashes (`panel=#1d1d28,amber=#ffb443,...`); set by the launcher from Settings, Theme, and on Android the game's accent (`launcher/core/src/theme.rs`). Unknown names and malformed values keep the launcher's own colours. | `port/game/common/ui_colors.cpp` |
 | `OPENRAC_NATIVE_LIBRARY_DIR` | folder | Android: the app's native library folder, where libadrenotools finds its hook libraries; set by the launcher. | `port/android/gpu_driver.cpp` |
 
 ### Build-time

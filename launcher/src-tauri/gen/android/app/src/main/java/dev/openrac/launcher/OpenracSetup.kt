@@ -20,10 +20,10 @@ import java.util.zip.ZipInputStream
  * launcher's Rust side and the programs it runs read.
  *
  * Android runs programs only from the app's native library folder, so the Python and each game's
- * windowless program are libraries there (libopenrac-python.so, libopenrac-<id>-cli.so), linked
- * from where the desktop layout has them: openrac/python/bin/python3 and
- * openrac/port/build/release/openrac-<id>. The folder moves when the app is updated, so the links
- * are made again at every start.
+ * windowless program are libraries there (libopenrac-python.so, libopenrac-<id>-cli.so, and
+ * Enhanced graphics' libopenrac-probe-bake.so), linked from where the desktop layout has them:
+ * openrac/python/bin/python3 and openrac/port/build/release/openrac-<id> (-probe-bake). The
+ * folder moves when the app is updated, so the links are made again at every start.
  *
  * The copy is unpacked once per install or update, which takes seconds: on a thread of its own,
  * while the launcher's page waits for it (`toolsReady`, OpenracPlugin) and says so. It goes into
@@ -48,6 +48,9 @@ object OpenracSetup {
   fun root(context: Context): File = File(context.filesDir, "openrac")
 
   fun discs(context: Context): File = File(context.filesDir, "discs")
+
+  /** The install folder: each game's set-up from its disc (android.rs games_dir). */
+  fun games(context: Context): File = File(context.filesDir, "games")
 
   fun nativeLibraries(context: Context): File = File(context.applicationInfo.nativeLibraryDir)
 
@@ -86,6 +89,8 @@ object OpenracSetup {
         link(library, File(root, "port/build/release/openrac-$game"))
       }
     }
+    // Enhanced graphics' probe baker (the probe-bake action), when the APK carries it.
+    link(File(libraries, "libopenrac-probe-bake.so"), File(root, "port/build/release/openrac-probe-bake"))
     ready.countDown()
   }
 
@@ -101,6 +106,7 @@ object OpenracSetup {
       "XDG_DATA_HOME" to File(context.filesDir, "share").path,
       "XDG_CONFIG_HOME" to File(context.filesDir, "config").path,
       "OPENRAC_DISCS_DIR" to discs(context).path,
+      "OPENRAC_GAMES_DIR" to games(context).path,
       "OPENRAC_NATIVE_LIBRARY_DIR" to libraries,
       "PYTHONHOME" to File(root, "python").path,
       "PYTHONDONTWRITEBYTECODE" to "1",

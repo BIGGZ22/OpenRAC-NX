@@ -144,6 +144,33 @@ class AllLevelBake(unittest.TestCase):
         with patch('os.cpu_count', return_value=8):
             self.assertEqual(batch.with_threads([], 3), ['--threads', '2'])
             self.assertEqual(batch.with_threads([], 16), ['--threads', '1'])
+            self.assertEqual(batch.with_threads([], 3, share=False), ['--threads', '0'])
+            self.assertEqual(batch.with_threads([], 1, share=False), [])
+
+    def test_android_bakes_the_largest_levels_first_with_every_thread(self):
+        (self.levels/'level_99/big.bin').write_bytes(bytes(4096))
+        (self.levels/'level_02/mid.bin').write_bytes(bytes(1024))
+        self.assertEqual([batch.discover_levels(self.levels)[i].name
+                          for i in batch.largest_first(batch.discover_levels(self.levels))[:2]],
+                         ['level_99', 'level_02'])
+        calls = []
+
+        def bake(level, work, baker, *, disc=None, options=()):
+            calls.append((level.name, list(options)))
+            work.mkdir(parents=True)
+            (work/'sparse.orpg').write_text(level.name)
+            return work/'sparse.orpg'
+
+        with patch.object(batch, 'ANDROID', True), \
+                patch.object(batch.bake_level, 'bake_level', side_effect=bake):
+            self.assertTrue(batch.bake_all(self.levels, self.output, self.baker, jobs=2))
+        # Two at once: the two largest start together, each with every thread.
+        self.assertEqual({name for name, _ in calls[:2]}, {'level_99', 'level_02'})
+        self.assertTrue(all(options == ['--threads', '0'] for _, options in calls))
+        # The report keeps the levels' own order.
+        report = json.loads((self.output/'bake-all-result.json').read_text())
+        self.assertEqual([level['level'] for level in report['levels']],
+                         [level.name for level in batch.discover_levels(self.levels)])
 
     def test_cli_exit_status_and_overrides(self):
         with patch('sys.argv', ['bake_all.py', '--levels-dir', str(self.levels),

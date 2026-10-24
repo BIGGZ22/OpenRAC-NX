@@ -18,5 +18,5 @@
     "types": ["svelte", "vite/client", "vitest/importMeta"],
     "paths": { "$lib/*": ["./src/lib/*"], "$components/*": ["./src/components/*"] }
   },
-  "include": ["src/**/*.ts", "src/**/*.svelte", "*.config.ts", "*.config.js"]
+  "include": ["src/**/*.ts", "src/**/*.svelte", "e2e/**/*.ts", "*.config.ts", "*.config.js"]
 }

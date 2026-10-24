@@ -306,7 +306,7 @@ void panel(const Shown& shown) {
                                    | (keys ? ImGuiWindowFlags_NoNav : ImGuiWindowFlags_None);
     if (ImGui::Begin("OpenRAC debug", nullptr, flags)) {
         if (!keys) {
-            drag_scroll(s.panel_scrolled);
+            drag_scroll(s.panel_scroll);
         }
         const Averages a = averages();
         const std::string where = s.level >= 0 && s.level < 19 ? kLevelNames[static_cast<std::size_t>(s.level)] : "boot";
@@ -440,6 +440,20 @@ void request() {
 
 bool drawer_available() {
     return drawer_possible();
+}
+
+bool touch_editing() {
+    return s.touch_editing;
+}
+
+bool take_touch_reset() {
+    const bool reset = s.touch_reset;
+    s.touch_reset = false;
+    return reset;
+}
+
+void set_touch_guides(float x, float y) {
+    s.touch_guides = ImVec2(x, y);
 }
 
 void toggle_drawer() {
@@ -605,7 +619,8 @@ void draw(const Shown& shown) {
     stats::lap("present");
     s.window = shown.window;
     const bool badge = s.paused || s.stretch != 1.0 || !s.toast.empty() || !s.notice.empty();
-    const bool drawer_out = s.drawer_open || s.drawer_at > 0.0f || s.shot_when_shut;
+    const bool drawer_out =
+        s.drawer_open || s.drawer_at > 0.0f || s.shot_when_shut || s.touch_editing;
     if (!(s.visible || menu_bar_shown() || badge || drawer_out || !s.shot_path.empty()) || shown.window == nullptr
         || !initialise(shown.window)) {
         return;
@@ -644,6 +659,9 @@ void draw(const Shown& shown) {
     }
     if (drawer_possible()) {
         drawer(shown);
+    }
+    if (s.touch_editing) {
+        touch_edit_bar();
     }
     status_badge();
     ImGui::Render();

@@ -151,6 +151,7 @@ enum class Var : std::uint16_t {
     TraceRelocation,
     TraceSif,
     TraceWad,
+    UiColors,
     UiLog,
     UiReplay,
     UiResidual,

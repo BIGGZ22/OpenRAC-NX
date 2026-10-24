@@ -124,6 +124,30 @@ struct Pad {
 // byte. 0 maps to 0x80.
 std::uint8_t stick_byte(std::int16_t axis);
 
+// A stick's two axes (-1..1, positive right or down) as the DualShock 2 gives them. Its sticks
+// reach their corners: pushed fully to a diagonal, both bytes are near 0x00 or 0xFF, and the game
+// counts on it (Ratchet runs only on a stick pushed all the way). A round stick (most gamepads
+// through SDL, the on-screen pad's) reaches about 0.71 on each axis there, and Ratchet walks. So a
+// push near the round gate's rim is stretched out to the square: on the rim the larger axis becomes
+// the length of the push (held to 1), the direction stays. Inside 0.8 of the rim nothing changes,
+// so a partial push and a resting stick's drift are as the gamepad gives them.
+void square_stick(float& x, float& y);
+
+// What one gamepad stick has shown of its gate. A stick that has reported a position well past a
+// circle (a diagonal near the square's corner) is square already, as some handhelds' are: from
+// then on it is left as it reports, unstretched.
+struct StickGate {
+    bool square = false;
+};
+
+// square_stick() for a gamepad's stick, unless `gate` has shown it square (and learning so).
+void shape_stick(float& x, float& y, StickGate& gate);
+
+// A gamepad's stick, both of SDL's axes, to the console's bytes through shape_stick().
+void stick_bytes(
+    std::int16_t x, std::int16_t y, StickGate& gate, std::uint8_t& out_x, std::uint8_t& out_y
+);
+
 // A trigger, 0..32767, to a pressure byte.
 std::uint8_t trigger_byte(std::int16_t axis);
 

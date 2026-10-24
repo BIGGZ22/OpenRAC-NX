@@ -29,7 +29,13 @@ android {
     }
     defaultConfig {
         manifestPlaceholders["usesCleartextTraffic"] = "false"
-        applicationId = "dev.openrac.launcher"
+        // A fork's build is an app of its own (.github/workflows/launcher.yml sets these outside
+        // OpenRAC/OpenRAC), installed beside the project's with its own name and data; the
+        // project's own build keeps the defaults.
+        applicationId = System.getenv("OPENRAC_ANDROID_APPLICATION_ID")?.takeIf { it.isNotEmpty() }
+            ?: "dev.openrac.launcher"
+        manifestPlaceholders["appLabel"] = System.getenv("OPENRAC_ANDROID_APP_LABEL")?.takeIf { it.isNotEmpty() }
+            ?: "OpenRAC Launcher"
         // Android 10: the port's memory (memfd), libadrenotools' driver loading (API 28+) and the
         // APIs the game's activity uses (docs/port/ANDROID.md).
         minSdk = 29
