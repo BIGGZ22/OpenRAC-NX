@@ -23,15 +23,18 @@ struct Options {
     bool keep_going = true;
     bool window = false;
     bool skip_movies = false;  // development probes; not movie-playback validation
-    fs::path levels;  // the extracted levels the window draws (level_00, ...)
-    fs::path mods;  // levels edited in Godot and packed (editor/pack.py), read in place of the disc's
+    fs::path levels;           // the extracted levels the window draws (level_00, ...)
+    fs::path
+        mods;  // levels edited in Godot and packed (editor/pack.py), read in place of the disc's
     fs::path settings;  // the player's settings (settings.h); in OpenRAC's data folder unless given
     fs::path plugins;   // the native mods' list (mods.h): <data>/plugins/plugins.json unless given
     fs::path probes;    // the player's probe bakes, a level_NN folder each (enhanced rendering)
     bool no_mods = false;  // purist mode: no native mod is loaded (docs/port/MODS.md)
-    fs::path debug_dump;  // each frame's measurements, a JSON object a line (docs/port/DEBUGGING.md)
+    fs::path
+        debug_dump;  // each frame's measurements, a JSON object a line (docs/port/DEBUGGING.md)
     bool debug_overlay = false;  // the debug overlay shown from the start (F3 shows and hides it)
-    bool check_levels = false;  // read every extracted level as the window would, say what is wrong, and stop
+    bool check_levels =
+        false;  // read every extracted level as the window would, say what is wrong, and stop
 };
 
 // Returns this program's name, openrac-<id> (openrac-rac1-pal).

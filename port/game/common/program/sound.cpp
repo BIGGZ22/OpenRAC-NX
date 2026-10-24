@@ -43,7 +43,10 @@ void audio_tick() {
     if (!audio_ticked() || !g_window) {
         return;
     }
-    static std::vector<std::int16_t> samples(static_cast<std::size_t>(platform::kAudioRate / tick_rate()) * 2);
+
+    static std::vector<std::int16_t> samples(
+        static_cast<std::size_t>(platform::kAudioRate / tick_rate()) * 2
+    );
     openrac_sound_render(samples.data(), samples.size() / 2);
 #endif
 }
@@ -57,6 +60,7 @@ void open_sound(bool report) {
     std::string why;
     g_sound = platform::AudioOutput::open(why, [](std::span<std::int16_t> samples) {
         openrac_sound_render(samples.data(), samples.size() / 2);
+
         // The player's volume (settings.h): at 0 the output is silence itself.
         if (const float gain = settings::output_gain(); gain < 1.0f) {
             for (std::int16_t& sample : samples) {
@@ -64,6 +68,7 @@ void open_sound(bool report) {
             }
         }
     });
+
     if (!g_sound && report) {
         log::warn("no sound: {}", why);
     }
@@ -73,18 +78,23 @@ void watch_sound() {
     if (!g_window || audio_ticked()) {
         return;
     }
+
     if (!g_sound) {
         if (g_frame >= g_sound_retry_frame) {
             g_sound_retry_frame = g_frame + 300;
             open_sound(false);
+
             if (g_sound) {
                 log::info("sound is back");
             }
         }
+
         return;
     }
+
     std::string why;
     static bool reported = false;
+
     if (!g_sound->watch(why)) {
         if (!reported) {
             log::warn("sound stopped and the device could not be opened again: {}", why);

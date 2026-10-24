@@ -63,15 +63,19 @@ void sample_state() {
     s.frame = g_frame;
     const int level = openrac_game_loaded_overlay();
     s.level = level == OPENRAC_OVERLAY_EXE ? -1 : level;
+
     if (openrac_game_mode != nullptr) {
         s.has_mode = openrac_game_mode(&s.mode) != 0;
     }
+
     if (openrac_game_hero_position != nullptr) {
         s.has_hero = openrac_game_hero_position(s.hero) != 0;
     }
+
     if (openrac_game_camera_position != nullptr) {
         s.has_camera = openrac_game_camera_position(s.camera) != 0;
     }
+
     crash::set_state(s);
 }
 
@@ -88,11 +92,14 @@ void crash_test() {
 
     char kind[16] = {};
     long frame = 0;
+
     if (std::sscanf(test->c_str(), "%15[a-z]:%ld", kind, &frame) < 1 || g_frame != frame) {
         return;
     }
+
     log::warn("OPENRAC_CRASH_TEST: stopping on purpose ({})", kind);
     const std::string k = kind;
+
     if (k == "segv") {
         *static_cast<volatile std::uint32_t*>(G(0x0F000000u)) = 1;
     } else if (k == "host") {
@@ -104,7 +111,9 @@ void crash_test() {
     } else if (k == "fatal") {
         log::fatalf("OPENRAC_CRASH_TEST: a fatal error on purpose");
     } else if (k == "trap") {
-        openrac_game_crash("the game raised a trap (a failed assertion of its own): OPENRAC_CRASH_TEST");
+        openrac_game_crash(
+            "the game raised a trap (a failed assertion of its own): OPENRAC_CRASH_TEST"
+        );
     }
 }
 
@@ -113,6 +122,7 @@ void crash_test() {
 // 600 frames, so a run that crashes still leaves most of it.
 void write_reach() {
     static const std::optional<std::string> path = env_string(env::Var::Reach);
+
     if (path && !path->empty()
         && openrac_guest_write_reach(path->c_str(), openrac_game.id, g_frame) == 0) {
         log::warn("OPENRAC_REACH: cannot write {}", *path);
@@ -140,12 +150,16 @@ void apply_writes() {
         unsigned long frame = 0, address = 0, value = 0, length = 1;
         const bool from_control = *at == 'c';
         const std::int64_t now = from_control ? since : static_cast<std::int64_t>(g_frame);
-        if (std::sscanf(at + (from_control ? 1 : 0), "%lu:%lx:%lx:%lu", &frame, &address, &value, &length) >= 3
+
+        if (std::sscanf(
+                at + (from_control ? 1 : 0), "%lu:%lx:%lx:%lu", &frame, &address, &value, &length
+            ) >= 3
             && now >= 0 && now >= static_cast<std::int64_t>(frame)
             && now < static_cast<std::int64_t>(frame + length)) {
             const std::uint32_t word = static_cast<std::uint32_t>(value);
             std::memcpy(G(static_cast<gaddr>(address)), &word, 4);
         }
+
         at = std::strchr(at, ',');
         at = at ? at + 1 : nullptr;
     }
@@ -157,7 +171,10 @@ std::chrono::microseconds tick_period() {
 #ifdef OPENRAC_FRONTEND
     if (g_window) {
         period = std::chrono::microseconds(
-            std::llround(static_cast<double>(period.count()) * frontend::debug_overlay::tick_stretch()));
+            std::llround(
+                static_cast<double>(period.count()) * frontend::debug_overlay::tick_stretch()
+            )
+        );
     }
 #endif
     return period;
@@ -196,9 +213,11 @@ int vsync() {
     // [debug tools] The game's own code stops here and goes on when this returns: its time is the
     // tick's (common/stats.h). The tick's frame of measurements begins.
     stats::game_yielded();
+
     struct Resume {
         ~Resume() { stats::game_resumed(); }
     } resume;
+
     stats::begin_frame(stats::FrameKind::Tick, static_cast<std::uint64_t>(g_frame));
     g_vsync_since_kick = true;
     apply_writes();
@@ -214,16 +233,24 @@ int vsync() {
         // (not after a long stop, a level loading: the count below starts again from now).
         const bool counted = g_next_frame.time_since_epoch().count() != 0
                              && now <= g_next_frame + std::chrono::milliseconds(100);
-        frontend::set_tick(g_next_frame.time_since_epoch().count() == 0 || now > g_next_frame + period
-                               ? now : g_next_frame, period,
-                           counted && now > g_next_frame ? std::chrono::duration<double>(now - g_next_frame)
-                                                         : std::chrono::duration<double>(0.0));
+        frontend::set_tick(
+            g_next_frame.time_since_epoch().count() == 0 || now > g_next_frame + period
+                ? now
+                : g_next_frame,
+            period,
+            counted && now > g_next_frame ? std::chrono::duration<double>(now - g_next_frame)
+                                          : std::chrono::duration<double>(0.0)
+        );
         const auto* ram = runtime::Memory::get().base();
         const std::uint32_t draws = g_reports_draws ? g_draws : ~0u;
         g_draws = 0;
-        if (!frontend::frame(std::span<const std::uint8_t>(ram, 32u * 1024 * 1024), g_chain, draws)) {
+
+        if (!frontend::frame(
+                std::span<const std::uint8_t>(ram, 32u * 1024 * 1024), g_chain, draws
+            )) {
             leave();
         }
+
         watch_sound();
     }
 #endif
@@ -236,95 +263,126 @@ int vsync() {
     static int shown_level = OPENRAC_OVERLAY_EXE;
     static int shown_bolts = -1;
     static long bolts_frame = 0;
+
     if (const int level = openrac_game_loaded_overlay(); level != shown_level) {
         shown_level = level;
         shown_bolts = -1;
+
         if (level != OPENRAC_OVERLAY_EXE) {
             log::info("now playing level {}", level);
         }
     }
+
     // Its bolts too, when they change, at most every 600 frames: Discord takes few updates.
-    if (shown_level != OPENRAC_OVERLAY_EXE && openrac_game_bolts != nullptr &&
-        (shown_bolts < 0 || g_frame >= bolts_frame + 600)) {
+    if (shown_level != OPENRAC_OVERLAY_EXE && openrac_game_bolts != nullptr
+        && (shown_bolts < 0 || g_frame >= bolts_frame + 600)) {
         if (const int bolts = openrac_game_bolts(); bolts >= 0 && bolts != shown_bolts) {
             shown_bolts = bolts;
             bolts_frame = g_frame;
             log::info("bolts {}", bolts);
         }
     }
+
     if (openrac_game_on_frame != nullptr) {
         openrac_game_on_frame(static_cast<unsigned>(g_frame));
     }
+
     if (g_frame % 600 == 0) {
         write_reach();
     }
+
     if (g_options.frames >= 0 && g_frame >= g_options.frames) {
         std::exit(0);  // finish() runs at exit
     }
+
     using namespace std::chrono;
     const auto now = steady_clock::now();
     // OPENRAC_FPS: the frames per second over each 300 frames, in the log. OPENRAC_UNCAPPED: no wait
     // for the next frame's time (the game then runs as fast as the machine allows: a measure, not a
     // way to play, since the game's tick is its frame).
-    static const bool& fps = stats::probe("OPENRAC_FPS", "the ticks per second over each 300 ticks, in the log");
+    static const bool& fps =
+        stats::probe("OPENRAC_FPS", "the ticks per second over each 300 ticks, in the log");
     static const bool uncapped = env::flag(env::Var::Uncapped);
     static steady_clock::time_point fps_from = now;
     // OPENRAC_WATCH=ADDRESS:COUNT[:i],...: COUNT floats (or words, with i) from each ADDRESS, each
     // frame, in the log.
     static const std::optional<std::string> watch = env_string(env::Var::Watch);
+
     if (watch) {
         std::string line;
+
         for (const char* at = watch->c_str(); at && *at;) {
             unsigned long address = 0, count = 1;
             char kind = 'f';
             std::sscanf(at, "%lx:%lu:%c", &address, &count, &kind);
+
             for (unsigned long i = 0; i < count && i < 32; ++i) {
                 std::uint32_t w;
                 std::memcpy(&w, G(static_cast<gaddr>(address + 4 * i)), 4);
                 float f;
                 std::memcpy(&f, &w, 4);
-                line += kind == 'i' ? std::format(" {}", static_cast<std::int32_t>(w)) : std::format(" {:.4f}", f);
+                line += kind == 'i' ? std::format(" {}", static_cast<std::int32_t>(w))
+                                    : std::format(" {:.4f}", f);
             }
+
             line += " |";
             at = std::strchr(at, ',');
             at = at ? at + 1 : nullptr;
         }
+
         log::info("frame {} watch{}", g_frame, line);
     }
+
     // OPENRAC_GUARD=FRAME:ADDRESS:BYTES[:SKIP]: from FRAME on, the first write (after SKIP) into
     // those bytes of game memory ends the program with the host's stack (runtime::guard_writes), to find who corrupts it.
     static const std::optional<std::string> guard = env_string(env::Var::Guard);
+
     if (guard) {
         unsigned long from = 0, address = 0, bytes = 4, skip = 0;
         std::sscanf(guard->c_str(), "%lu:%lx:%lx:%lu", &from, &address, &bytes, &skip);
+
         if (g_frame >= from) {
-            runtime::guard_writes(static_cast<gaddr>(address), static_cast<std::uint32_t>(bytes),
-                                  static_cast<std::uint32_t>(skip));
+            runtime::guard_writes(
+                static_cast<gaddr>(address),
+                static_cast<std::uint32_t>(bytes),
+                static_cast<std::uint32_t>(skip)
+            );
         }
     }
+
     // OPENRAC_HITCH: each frame that took more than twice the frame time, with how long, in the log.
-    static const bool& hitch = stats::probe("OPENRAC_HITCH", "each tick that took over 1.25 tick times, in the log");
+    static const bool& hitch =
+        stats::probe("OPENRAC_HITCH", "each tick that took over 1.25 tick times, in the log");
     static steady_clock::time_point last = now;
+
     if (hitch) {
         const double ms = duration<double, std::milli>(now - last).count();
+
         if (ms > 1.25 * 1000.0 / tick_rate()) {
             log::info("frame {}: {:.1f} ms", g_frame, ms);
         }
     }
+
     last = now;
+
     if (fps && g_frame % 300 == 0) {
         const double seconds = duration<double>(now - fps_from).count();
+
         if (seconds > 0.0) {
             log::info("frame {}: {:.1f} frames per second", g_frame, 300.0 / seconds);
         }
+
         fps_from = now;
     }
+
     if (uncapped) {
         return static_cast<int>(g_frame & 1);
     }
+
     if (g_next_frame.time_since_epoch().count() == 0 || now > g_next_frame + milliseconds(100)) {
         g_next_frame = now;
     }
+
     const auto period = tick_period();
     g_next_frame += period;
 #ifdef OPENRAC_FRONTEND
@@ -343,7 +401,9 @@ int vsync() {
         std::this_thread::sleep_until(g_next_frame);
     }
 #ifdef OPENRAC_FRONTEND
-    openrac::platform::work_resumed();  // the next tick's work counts from here (performance_hint.h)
+    openrac::platform::
+        work_resumed();  // the next tick's work counts from here (performance_hint.h)
+
     // [debug tools] A paused game stays here, its last tick drawn again (frontend.h, hold).
     if (g_window && !frontend::hold()) {
         leave();

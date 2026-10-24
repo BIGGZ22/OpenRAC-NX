@@ -22,7 +22,9 @@ namespace {
 [[noreturn]] void usage(const std::string& why) {
     log::error("{}", why);
     log::error(
-        "usage: {} --data <install>/active/{}/data [--cards DIR] [--frames N] [--stop-on-missing] [--level N] [--skip-movies] [--mods DIR] [--settings FILE] [--plugins FILE] [--probes DIR] [--no-mods] [--debug-overlay] [--debug-dump FILE]",
+        "usage: {} --data <install>/active/{}/data [--cards DIR] [--frames N] [--stop-on-missing] "
+        "[--level N] [--skip-movies] [--mods DIR] [--settings FILE] [--plugins FILE] [--probes "
+        "DIR] [--no-mods] [--debug-overlay] [--debug-dump FILE]",
         program_name(),
         openrac_game.game
     );
@@ -37,6 +39,7 @@ fs::path data_home() {
     fs::path base = fs::path(home.value_or(".")) / "Library/Application Support/OpenRAC";
 #else
     fs::path base;
+
     if (const std::optional<std::string> xdg = env::system_variable("XDG_DATA_HOME");
         xdg && !xdg->empty()) {
         base = fs::path(*xdg) / "openrac";
@@ -74,13 +77,20 @@ std::string game_version() {
 fs::path levels_or_flat(const fs::path& own) {
     std::error_code ec;
     const fs::path flat = own.parent_path();
-    if (game_version() == "pal" && own.filename() == "pal" && !fs::exists(own / "level_99" / "manifest.json", ec) &&
-        fs::exists(flat / "level_99" / "manifest.json", ec)) {
-        log::warn("levels: reading the ones extracted before each version had a folder, in {} (extract again to "
-                   "move them into {})",
-                   flat.string(), own.string());
+
+    if (game_version() == "pal" && own.filename() == "pal"
+        && !fs::exists(own / "level_99" / "manifest.json", ec)
+        && fs::exists(flat / "level_99" / "manifest.json", ec)) {
+        log::warn(
+            "levels: reading the ones extracted before each version had a folder, in {} (extract "
+            "again to "
+            "move them into {})",
+            flat.string(),
+            own.string()
+        );
         return flat;
     }
+
     return own;
 }
 
@@ -90,14 +100,17 @@ fs::path default_levels(const fs::path& data) {
 
 Options parse(int argc, char** argv) {
     Options o;
+
     for (int i = 1; i < argc; i++) {
         const std::string a = argv[i];
         auto value = [&]() -> std::string {
             if (i + 1 >= argc) {
                 usage("missing value for " + a);
             }
+
             return argv[++i];
         };
+
         if (a == "--data") {
             o.data = value();
         } else if (a == "--cards") {
@@ -140,6 +153,7 @@ Options parse(int argc, char** argv) {
             usage("unknown option " + a);
         }
     }
+
     if (o.data.empty()) {
         if (const std::optional<std::string_view> data = env::value(env::Var::Data)) {
             o.data = *data;
@@ -150,27 +164,35 @@ Options parse(int argc, char** argv) {
             );
         }
     }
+
     if (o.cards.empty()) {
         o.cards = default_cards();
     }
+
     if (o.settings.empty()) {
         o.settings = default_settings();
     }
+
     if (o.plugins.empty()) {
         o.plugins = o.data / "plugins" / "plugins.json";
     }
+
     return o;
 }
 
 std::string command_line(int argc, char** argv) {
     std::string line;
+
     for (int i = 0; i < argc; ++i) {
         std::string a = i == 0 ? program_name() : std::string(argv[i]);
+
         if (a.find_first_of(" \"'") != std::string::npos || a.empty()) {
             a = "\"" + a + "\"";
         }
+
         line += (i == 0 ? "" : " ") + a;
     }
+
     return line;
 }
 
