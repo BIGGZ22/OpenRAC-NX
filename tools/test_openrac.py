@@ -113,7 +113,7 @@ class ManifestTests(unittest.TestCase):
                 self.assertIn(key, version["disc"], f"{game['id']}/{name}")
                 self.assertIn(key, version["boot"], f"{game['id']}/{name}")
             self.assertIn("sha1", version["disc"], f"{game['id']}/{name}")
-            if game["id"] != "rac5":
+            if game["id"] not in ("rac5", "rac6"):
                 for key in ("crc32", "md5", "sha1"):
                     self.assertIn(key, version["disc"], f"{game['id']}/{name}")
                     self.assertIn(key, version["boot"], f"{game['id']}/{name}")

@@ -1,7 +1,7 @@
 // Each game's colours and typeface, from the OpenRAC website's game cards
 // (openrac-site src/lib/projects.ts, `theme` and `fontClass`). The site
 // names the games by their own ids; OpenRAC by release order:
-//   rac1 = "rac1", rac2 = "gc", rac3 = "uya", rac4 = "deadlocked", rac5 = "sm".
+//   rac1 = "rac1", rac2 = "gc", rac3 = "uya", rac4 = "deadlocked", rac5 = "sm", rac6 = "sac".
 // Keep the values in step with the site (docs/STYLE.md).
 
 export interface Theme {
@@ -69,6 +69,16 @@ export const THEMES: Record<string, Theme> = {
     from: "#223342",
     to: "#131d26",
     font: "chakra",
+    weight: 600,
+  },
+  rac6: {
+    box: "#111827",
+    border: "#38bdf8",
+    text: "#f0f9ff",
+    text2: "#38bdf8",
+    from: "#0369a1",
+    to: "#082f49",
+    font: "head",
     weight: 600,
   },
 };

@@ -132,6 +132,12 @@ jobs:
           python -m unittest discover -s tests -v
           python tools/check_repository.py
 
+      - name: rac6 tools and layout
+        working-directory: games/rac6/ntsc
+        run: |
+          python -m unittest discover -s tests -v
+          python tools/check_repository.py
+
   # The desktop launcher (launcher/): its UI checks, and its Rust side, whose tests also check
   # launcher/actions.json against games/*/game.json. On Windows too, where paths join with
   # backslashes, files are checked out with CRLF and the Unix-only tests are left out.

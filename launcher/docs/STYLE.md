@@ -71,6 +71,7 @@ is planned but not there yet.
 | `rac3`  | `uya`        | Orbitron 600     |
 | `rac4`  | `deadlocked` | Orbitron 700     |
 | `rac5`  | `sm`         | Chakra Petch 600 |
+| `rac6`  | `sac`        | Orbitron 600     |
 
 `themeStyle(id)` turns a theme into the custom properties the cards use
 (`--box`, `--bd`, `--tx`, `--tx2`, `--from`, `--to`, `--title-font`,
@@ -81,7 +82,7 @@ orange); the tests fail until every game in `games/` has one.
 ## A game's picture
 
 Each game has a picture (`public/img/<name>-bg.webp`, the site's backdrop
-under the site's name: `rac1`, `gc`, `uya`, `deadlocked`, `size-matters`),
+under the site's name: `rac1`, `gc`, `uya`, `deadlocked`, `size-matters`, `sac`),
 listed in `src/lib/media.ts`. It shows in the game list, under the game's
 band and faintly behind its page. A file that is not there is left out: the
 game's colours show, as on the site.

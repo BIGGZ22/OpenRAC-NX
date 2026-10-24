@@ -5,8 +5,8 @@
     python3 scripts/media.py thumbs
 
 `still` writes a game's picture, public/img/<name>-bg.webp, from the frame at that second of a
-recording of your own play, and its thumbnail. GAME is OpenRAC's id (rac1 to rac5); <name> is the
-site's name for the game (rac1, gc, uya, deadlocked, size-matters), so the files match
+recording of your own play, and its thumbnail. GAME is OpenRAC's id (rac1 to rac6); <name> is the
+site's name for the game (rac1, gc, uya, deadlocked, size-matters, sac), so the files match
 src/lib/media.ts.
 
 `thumbs` makes every game's thumbnail, <name>-thumb.webp, from its picture: the game list shows
@@ -23,7 +23,7 @@ import subprocess
 import sys
 from pathlib import Path
 
-NAMES = {"rac1": "rac1", "rac2": "gc", "rac3": "uya", "rac4": "deadlocked", "rac5": "size-matters"}
+NAMES = {"rac1": "rac1", "rac2": "gc", "rac3": "uya", "rac4": "deadlocked", "rac5": "size-matters", "rac6": "sac"}
 IMG = Path(__file__).resolve().parent.parent / "public" / "img"
 # The game list's picture is 64 by 44: three times that stays sharp on any screen.
 THUMB = (192, 132)
