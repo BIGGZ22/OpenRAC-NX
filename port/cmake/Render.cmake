@@ -76,7 +76,9 @@ if(TARGET openrac_renderer_vulkan AND TARGET openrac_viewer_lib)
     openrac_viewer_lib openrac_platform)
   target_compile_definitions(render_equivalence_test PRIVATE OPENRAC_VULKAN=1)
   openrac_warnings(render_equivalence_test)
+  # No pipeline cache: its frames do not depend on what the user's cache holds, and its many
+  # pipelines do not go into the cache the other tests read while they run beside it.
   add_test(NAME render_equivalence_vulkan COMMAND render_equivalence_test)
   set_tests_properties(render_equivalence_vulkan PROPERTIES SKIP_RETURN_CODE 77 ENVIRONMENT
-    "OPENRAC_GL_API=vulkan;OPENRAC_VULKAN_VALIDATION=1")
+    "OPENRAC_GL_API=vulkan;OPENRAC_VULKAN_VALIDATION=1;OPENRAC_VULKAN_PIPELINE_CACHE=off")
 endif()
