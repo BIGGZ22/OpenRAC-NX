@@ -58,6 +58,7 @@ before and after, and how its frames are shown to be the same.
 | `vk-extended-dynamic-state` | off | none (exact) | Cull, front face, depth and stencil state recorded by the draw as Vulkan 1.3 dynamic state instead of baked into each pipeline; off because the synthetic scene has no program drawn with more than one such state ([R-11](#r-11-fixed-state-as-dynamic-state-shipped-off)). |
 | `moby-pose-in-place` | on | none (exact) | `set_instances` writes the mobys' poses into their groups when they and their order are unchanged, and `set_palette` sends nothing when the joints are unchanged ([R-16](#r-16-mobys-posed-in-place)). |
 | `shadow-atlas-discard` | on | none (exact) | The shadow atlas pass neither loads nor stores its unsampled colour and its stencil ([R-16](#r-16-mobys-posed-in-place), lane RB's note). |
+| `spirv-disk-cache` | on | none (exact) | What glslang made of each program and stage is kept beside the pipeline cache, so a warm start and a level load run no glslang ([R-12](#r-12-spir-v-kept-between-runs)). |
 
 Its tests are `render_opt` (the table, and the parsing of the variable: a name, a list, `all`, an
 unknown name kept apart; it runs in the headless preset too) and `render_opt_environment` (the
@@ -748,6 +749,67 @@ is one), and again by hand with `OPENRAC_GPU_DRIVEN_OFF=1` and `OPENRAC_GPU_MATE
 `vulkan_uniform` gained a case that draws one triangle a pixel five times in one pass with culling
 and the front face toggled between the draws, with the entry on and off, and requires the same
 pixels and the ones each winding gives.
+
+## R-12: SPIR-V kept between runs
+
+**What changed** (`renderer/vulkan/shader_compiler.cpp`, the new `spirv_cache_file.*`, two calls in
+`vkgl_device.cpp`), behind `spirv-disk-cache`:
+
+- The open backend keeps a `SpirvCache`: each program `compile_program` made (its SPIR-V and the
+  reflection the backend reads, encoded field by field) and each stage `check_stage` found to
+  compile. An entry is found by a 64-bit FNV-1a hash of what was compiled (its kind, its sources
+  after the defines were spliced in, and the compiler: glslang's version and the version of the
+  backend's compile options, `kOptionsVersion`, raised with any change to them), and is taken only
+  when a second hash of the same text, read from the other end, and its length match too: a
+  collision of the key cannot hand one shader another's code. A failed compile is never kept.
+- The cache is read when the backend opens, from `<pipeline cache>.spirv` in `cache_file.h`'s
+  envelope (another format or another compiler drops it whole; another build's file goes with its
+  pipeline cache), and written back at close when anything was added, never in a frame. With the
+  pipeline cache off (`OPENRAC_VULKAN_PIPELINE_CACHE=off`) it keeps none. Only sources the port
+  itself compiles are kept.
+
+**The counter.** `vk_shader_compiles` (glslang runs) in the load, per run, of
+`render_bench.py --synthetic --compare-opt spirv-disk-cache` (entry off, then on), the same on both
+machines:
+
+| Setting | glslang runs | `shader_compile_s`, Mac | `shader_compile_s`, box1 |
+|---|---|---|---|
+| warm cache (the second run in one process) | 38 to 0 | 0.03 to 0 | 0.05 to 0 |
+| base, cold | 41 to 36 | 0.08 to 0.07 | 0.16 to 0.18 |
+| enhanced, cold | 72 to 60 | 0.21 to 0.21 | 0.47 to 0.35 |
+| materials off, cold | 18 to 17 | 0.05 to 0.05 | 0.10 to 0.10 |
+
+A warm start runs no glslang. Even a cold run compiles fewer, because one load links some programs
+more than once. **Time, as information** (median of five runs): the warm load takes 139 to 106 ms
+on the Mac and 194 to 141 ms on box1; the first picture is unchanged (Mac 14.0 to 13.9 ms). On the
+synthetic scene glslang's own time is small (R-02's baseline: 0.07 s on the Mac cold); a real
+level's twenty-odd variants of `mesh.frag`, doubled for early lighting, are the maintainers'
+measurement: two runs of the game on one build, comparing `vk_shader_compiles` and
+`shader_compile_s` in `--debug-dump`.
+
+**Equivalence**, in its strongest form here:
+
+- `spirv_cache` (new, no GPU): a vertex and fragment pair, again with a define spliced in, and a
+  compute stage, compiled by glslang, encoded as the cache keeps them and decoded, are the same
+  program word for word and field for field, and compiling again gives the same words; a damaged
+  encoding is no program; a saved cache reads back; a file cut short, with a byte changed or made
+  by another compiler, and an entry whose key matches without its check, give nothing, so the
+  program is compiled afresh.
+- The Vulkan test set run twice in a row on one cache file (the second run's programs all from the
+  cache, a 5.7 MB `.spirv`): every test passed both times on both machines, but
+  `render_opt_vulkan`, whose check that the counters count a compile met a cache with nothing to
+  compile; it now switches the entry (and R-10's pre-warm, which had the same effect on its
+  pipeline count) off for its own draws.
+- `render_equivalence_vulkan` runs with the pipeline cache off, so it keeps no SPIR-V cache and its
+  on-against-off comparison of this entry is trivially equal; it passed on the Mac, with the
+  validation layer and with `OPENRAC_GPU_DRIVEN_OFF=1` and `OPENRAC_GPU_MATERIALS_OFF=1` by hand.
+
+Measured with:
+
+```sh
+python3 port/tools/perf/render_bench.py --synthetic --compare-opt spirv-disk-cache
+OPENRAC_VULKAN_PIPELINE_CACHE=/tmp/warm/pipelines.bin ctest --preset release -R "_vulkan$|vulkan_" -E render_equivalence -j 1   # twice
+```
 
 ## R-13: a level's textures made at its load
 
