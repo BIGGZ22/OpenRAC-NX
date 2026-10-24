@@ -17,6 +17,8 @@
 #                           where Vulkan cannot open)
 #   vulkan_buffer           a static GL buffer's data drawn as GL would through the backend's
 #                           changes to where it keeps it (skipped, 77, where Vulkan cannot open)
+#   vulkan_present          the one copy to the screen against the two it replaces, on stand-ins
+#                           of the screen (skipped, 77, where Vulkan cannot open)
 #
 # Included from port/CMakeLists.txt after cmake/Window.cmake, with or without the window.
 
@@ -91,11 +93,16 @@ endif()
 
 # ---- The backend's own behaviour, pinned for the render packages ----
 #
-#   vulkan_buffer  a static GL buffer drawn, rewritten in part, filled again, read through 8-bit
-#                  indices and as a uniform block, frame after frame (tests/vulkan_buffer_test.cpp)
+#   vulkan_buffer   a static GL buffer drawn, rewritten in part, filled again, read through 8-bit
+#                   indices and as a uniform block, frame after frame (tests/vulkan_buffer_test.cpp)
+#   vulkan_present  the one copy to the screen against the two (tests/vulkan_present_test.cpp)
 if(TARGET openrac_renderer_vulkan)
   openrac_add_test(vulkan_buffer
     LIBS openrac_renderer openrac_platform openrac_renderer_vulkan)
   set_tests_properties(vulkan_buffer PROPERTIES SKIP_RETURN_CODE 77 ENVIRONMENT
+    "OPENRAC_GL_API=vulkan;OPENRAC_VULKAN_VALIDATION=1")
+  openrac_add_test(vulkan_present
+    LIBS openrac_renderer openrac_platform openrac_renderer_vulkan)
+  set_tests_properties(vulkan_present PROPERTIES SKIP_RETURN_CODE 77 ENVIRONMENT
     "OPENRAC_GL_API=vulkan;OPENRAC_VULKAN_VALIDATION=1")
 endif()
