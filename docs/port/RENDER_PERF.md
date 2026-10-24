@@ -44,6 +44,8 @@ before and after, and how its frames are shown to be the same.
 | `registry-selftest` | on | none (exact) | Draws nothing. The entry the registry's own tests and the equivalence harness's switch. |
 | `vk-draw-clock` | on | none (exact) | The Vulkan draw reads the clock for `vk_draw_ms` only while the debug tools measure (R-03). |
 | `vk-state-skip` | on | none (exact) | The Vulkan draw records dynamic state and binds only when they differ from what its command buffer holds (R-03). |
+| `static-buffers-device-local` | on | none (exact) | A static GL buffer of 64 KiB or more gets device memory at its first draw and lets its CPU copy go ([R-05](#r-05-static-buffers-in-device-memory)). |
+| `static-buffers-force-staging` | off | none (exact) | With the entry above, fills that memory by a staging copy even where device memory is mappable, so the tests take that path on every machine ([R-05](#r-05-static-buffers-in-device-memory)). |
 
 Its tests are `render_opt` (the table, and the parsing of the variable: a name, a list, `all`, an
 unknown name kept apart; it runs in the headless preset too) and `render_opt_environment` (the
@@ -443,3 +445,92 @@ OPENRAC_GL_API=vulkan OPENRAC_VULKAN_PIPELINE_CACHE=off OPENRAC_VULKAN_VALIDATIO
 
 On real levels the maintainers' command is
 `python3 port/tools/perf/render_bench.py --level assets/port/rac1/pal/level_12 --compare-opt vk-state-skip`.
+
+## R-05: static buffers in device memory
+
+**What changed.** A GL buffer filled by `glBufferData` with a static usage (`GL_STATIC_DRAW`,
+`_READ`, `_COPY`) and of 64 KiB or more gets a copy of its own at its first draw
+(`vkgl_resources.cpp`, `make_resident`). Before, it went through the frame's ring for three frames
+and then into host-visible memory, which a discrete GPU without resizable BAR reads over the bus
+at each draw. Where the device's largest device-local heap has a mapped memory type (unified
+memory: Apple silicon, integrated GPUs; or resizable BAR), the copy is one mapped allocation
+written in place: device memory already, nothing to copy. Elsewhere it is device-only memory,
+filled by a copy from a staging buffer in the recording's `upload` command buffer, which runs
+before `main` draws and is ordered before it by the barrier at the end of `upload`.
+
+Once the copy exists, the buffer's CPU copy (its mirror) is let go. Every reader of its bytes calls
+`buffer_bytes`, which reads them back first and keeps them from then on:
+
+| Reader | Where | Served by |
+|---|---|---|
+| `glBufferSubData` (the rest of the buffer stays) | `vkgl_gl.cpp` | the read-back; the buffer then leaves the at-once path and takes the three-frame rule, as before |
+| A per-instance attribute, copied into the ring each frame (`persistent = false`) | `resolve` | the read-back |
+| 8-bit indices, widened to 16 bits on the CPU | `vkgl_draw.cpp` | the read-back |
+| A uniform block shorter than its declaration, padded on the CPU (`block_buffer`) | `vkgl_pipelines.cpp` | `glBindBufferBase(GL_UNIFORM_BUFFER)` reads it back and keeps that buffer's mirror for good |
+| The GPU-driven instances' bounds and payload (`gpu_make_batch`) | `gpu_draw.inc` | not needed: those buffers are drawn per instance and never get a copy of their own, so their mirror stays |
+
+The read-back takes the bytes from mapped memory, or from the staging buffer while the copy it
+feeds is not submitted yet, or else with a command buffer of its own: a barrier behind every
+earlier transfer, a copy to a mapped buffer, a submit with its own fence and a wait. It leaves the
+frame's command buffers, GPU-driven pages and descriptor sets as they are, so it may happen in the
+middle of a draw. The backend has no `glGetBufferSubData`, `glMapBuffer` or `glCopyBufferSubData`.
+
+Registry: `static-buffers-device-local` (on); `static-buffers-force-staging` (off) takes the staging
+path on a mappable device too, wherever the device has device-only memory (MoltenVK has).
+
+**The counters.** `openrac_render_bench --warmup 3 --frames 10` (1920x1080, the base setting), the
+load, the three frames after it and the ten measured frames, master at `51188bc3` against R-05; the
+same in all five runs on each machine:
+
+| Counter | Mac before | Mac after | box1 before | box1 after |
+|---|---|---|---|---|
+| `vk_ring_bytes`, three frames after the upload | 73,402,848 | 57,821,184 | 73,402,848 | 57,821,184 |
+| `vk_cpu_mirror_bytes` after those frames | 5,710,008 | 516,120 | 5,710,008 | 516,120 |
+| `vk_buffer_static_bytes_host_visible` added in those three frames | 0 | 5,193,888 | 0 | 0 |
+| the same added in the measured frames (the old three-frame rule) | 5,193,888 | 0 | 5,193,888 | 0 |
+| `vk_ring_bytes`, `vk_submits`, `vk_barriers` per measured frame | 169,984, 1, 10 | the same | 169,984, 1, 10 | the same |
+
+The ring takes 15,581,664 bytes fewer in the first three frames: three copies of the scene's
+5,193,888 bytes of static vertices and indices. The mirror falls by the same 5,193,888 bytes; the
+516,120 left are the dynamic and instance buffers. On box1 (no resizable BAR) the static buffers
+are now in device-only memory: 0 host-visible bytes, against 5,193,888 before. On the Mac
+(unified memory) the same bytes are host-visible before and after, as expected; they arrive
+three frames earlier. The gain is RAM everywhere and bus traffic on a discrete GPU without
+resizable BAR; nothing on Apple GPUs. With Enhanced on the mirror falls from 14,010,556 to
+8,816,668 bytes and the ring by the same 15,581,664. Once the scene has settled the per-frame
+counters are the same as before, so `render_bench.py --synthetic --compare-opt
+static-buffers-force-staging` (and `static-buffers-device-local`) show +0.0 percent on every
+counter of their tables; the table does not list the mirror and host-visible totals, which the
+bench's summary line carries.
+
+Milliseconds, information only (median of five runs, lowest to highest), the picture's CPU time,
+against master at `51188bc3`: Mac 1.93 (1.58 to 2.13) before, 2.09 (1.70 to 2.43) after, with the
+Mac under other load; box1 1.12 (1.11 to 1.13) before, 1.13 (1.12 to 1.28) after. Within the
+spread; the `--compare-opt` runs on box1 agree within 3 percent but for one row (14 percent, its
+own spread).
+
+**Equivalence.** `render_equivalence_vulkan` draws both entries on and off in every scenario,
+Enhanced off and on, the level re-upload included: identical frames (0 pixels differ) on both
+machines. `vulkan_buffer` (new) draws a 128 KiB static vertex buffer and index buffer and reads
+the picture back after the first frames, after `glBufferSubData` in the first frame and later,
+after `glBufferData` again, through 8-bit indices and as a uniform block, under the reference
+path, the change and the staged change; it checks that the change's first frame takes neither
+buffer through the ring and keeps no mirror, and that the staged path puts nothing in host-visible
+memory. Its pixel checks passed before the change. `viewer_vulkan` and the other Vulkan image
+tests pass unchanged, with `OPENRAC_RENDER_OPT_OFF=all` too; on box1 the OpenGL tests ran and
+pass.
+
+Commands:
+
+```sh
+cd port && cmake --preset release && cmake --build --preset release
+ctest --preset release -R "vulkan|viewer|renderer|render_" --output-on-failure
+python3 tools/perf/render_bench.py --synthetic --compare-opt static-buffers-force-staging
+./build/release/openrac_render_bench --warmup 3 --frames 10
+./build/release/openrac_render_bench --warmup 3 --frames 10 --opt-off static-buffers-device-local
+```
+
+On real levels (the maintainers'): `openrac_render_bench --level assets/port/rac1/pal/level_12
+--warmup 3 --frames 10`, with and without `--opt-off static-buffers-device-local`, and the summary
+line's `warmup` counters.
+

@@ -49,7 +49,10 @@ by `open()` and destroyed by `close()`, null while the backend is closed. Only o
 at a time, used from the thread that opened it, as the renderers use GL. The one exception is
 `on_event`, which SDL calls from its event thread when an Android app returns to the foreground; it
 only sets `surface_lost`, which is atomic. Two frames are in flight: each frame slot's objects are
-reused, and its deferred work run, once its fence has signalled. Turning `g` into an object the
+reused, and its deferred work run, once its fence has signalled. A static buffer of 64 KiB or more
+lives in device memory from its first draw and its CPU copy is let go; a reader of its bytes reads
+them back with a command buffer of its own (`buffer_bytes`,
+[RENDER_PERF.md](../../../docs/port/RENDER_PERF.md), "R-05"). Turning `g` into an object the
 backend passes around is P3-03 of the restructure
 ([PROGRESS.md](../../../docs/restructure/PROGRESS.md)).
 
@@ -103,6 +106,9 @@ CI). Where Vulkan cannot open, the window falls back to OpenGL and they repeat t
 - `render_opt_vulkan`: the render counters of `SubmissionCounters` follow a fixed scene's draws
   (every draw a draw command, one submit a frame), printed for the reports of
   [RENDER_PERF.md](../../../docs/port/RENDER_PERF.md).
+- `vulkan_buffer`: a static GL buffer drawn, rewritten in part, filled again, read through 8-bit
+  indices and as a uniform block, frame after frame, under the reference path, device memory and
+  the staging copy (`static-buffers-*`); the mirror let go and nothing through the ring.
 - `pipeline_cache_file`: the cache's file read back whole, a damaged one dropped, and writer threads
   and writer processes saving one file at once leaving one whole save. It needs no GPU.
 - `early_lighting_vulkan`, `probe_gpu_vulkan`, `hero_shadow_vulkan`, `sun_shadow_vulkan`,
