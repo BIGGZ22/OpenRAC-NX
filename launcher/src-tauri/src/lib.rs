@@ -982,6 +982,12 @@ async fn plugins_install(
     on_plugins(state, &game, move |dir| plugins::install(dir, &g, &version, &path)).await
 }
 
+/// The mods a chosen folder holds (one mod, or a repository's checkout of several).
+#[tauri::command]
+fn plugins_mod_folders(path: PathBuf) -> Result<Vec<PathBuf>, String> {
+    plugins::mod_folders(&path)
+}
+
 /// What the port did with the game's mods at its last start (`status.json`), if it wrote it.
 /// A game's mods from a repository's address (docs/port/MODS.md, section 10): what it holds,
 /// installing one, newer versions, keeping one at its version. Through curl, no git needed.
@@ -1306,6 +1312,7 @@ pub fn run() {
             plugins_set_setting,
             plugins_remove,
             plugins_install,
+            plugins_mod_folders,
             plugins_status,
             plugins_preview,
             plugins_install_remote,

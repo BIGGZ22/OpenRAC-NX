@@ -2107,6 +2107,8 @@ export async function mockCall(command: string, args: Record<string, unknown> = 
       s.pin = !!args.pin;
       return delay<ModSources>(structuredClone(mockSources));
     }
+    case "plugins_mod_folders":
+      return delay<string[]>([typeof args.path === "string" ? args.path : ""]);
     case "plugins_install": {
       const path = typeof args.path === "string" ? args.path : "";
       // A name with "pack" in it stands for a data pack, which goes to the overrides.

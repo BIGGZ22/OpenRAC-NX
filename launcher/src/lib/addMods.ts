@@ -27,7 +27,17 @@ const nameOf = (path: string) => path.split(/[\\/]/).at(-1) ?? path;
 export async function addMods(v: VersionView, paths: string[]): Promise<Added> {
   const result: Added = { text: "", failed: false, plugin: false, pack: false };
   const adder = v.actions.find((a) => a.id === "overrides-add" && a.thisPlatform) ?? null;
+  // A folder of several mods (a repository's checkout) is each of its mods.
+  const each: string[] = [];
   for (const path of paths) {
+    try {
+      each.push(...(await api.pluginsModFolders(path)));
+    } catch (e) {
+      return { ...result, text: withName(nameOf(path), typeof e === "string" ? e : String(e)), failed: true };
+    }
+  }
+  let count = 0;
+  for (const path of each) {
     const name = nameOf(path);
     let installed;
     try {
@@ -37,6 +47,7 @@ export async function addMods(v: VersionView, paths: string[]): Promise<Added> {
     }
     if (installed.kind === "plugin") {
       result.plugin = true;
+      count++;
       result.text = installed.replaced
         ? added.replaced(installed.name, installed.version)
         : installed.enabled
@@ -55,5 +66,6 @@ export async function addMods(v: VersionView, paths: string[]): Promise<Added> {
     result.pack = true;
     result.text = added.pack(name);
   }
+  if (count > 1) result.text = added.several(count);
   return result;
 }

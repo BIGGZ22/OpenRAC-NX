@@ -320,6 +320,7 @@ export const added = {
   on: (name: string) => `Added ${name}. It is on from the game's next start.`,
   off: (name: string) => `Added ${name}. It is off: its row says why.`,
   pack: (name: string) => `Added ${name}.`,
+  several: (count: number) => `Added or updated ${count} mods; their settings are kept.`,
   packHereNot: (name: string) => `${name} is a texture and model pack, which cannot be added here yet.`,
   packFailed: (name: string, why: string) => `${name}: ${why.length > 0 ? why : "it could not be added"}`,
 };
