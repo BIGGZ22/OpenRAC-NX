@@ -40,6 +40,9 @@ constexpr std::array<Entry, kOptCount> kEntries = {{
     {Opt::StaticBuffersForceStaging, "static-buffers-force-staging",
      "with static-buffers-device-local: the staging copy into memory the CPU cannot see, always",
      false, Tolerance{}},
+    {Opt::TexturePrepare, "texture-prepare",
+     "a level's textures created, uploaded and mipped at its load instead of at their first draw",
+     true, Tolerance{}},
 }};
 // clang-format on
 

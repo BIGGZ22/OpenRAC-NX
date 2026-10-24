@@ -33,11 +33,11 @@ enum class Opt : std::uint8_t {
     VkStateSkip,       // vk-state-skip: Vulkan state and binds recorded only when they change
     StaticBuffersDeviceLocal,   // static-buffers-device-local
     StaticBuffersForceStaging,  // static-buffers-force-staging
+    TexturePrepare,             // texture-prepare: a level's textures made at its load
 };
 
-// The number of entries: StaticBuffersForceStaging is the last enumerator of Opt.
-inline constexpr std::size_t kOptCount =
-    static_cast<std::size_t>(Opt::StaticBuffersForceStaging) + 1;
+// The number of entries: TexturePrepare is the last enumerator of Opt.
+inline constexpr std::size_t kOptCount = static_cast<std::size_t>(Opt::TexturePrepare) + 1;
 
 // How far the frames an optimisation draws may differ from its reference path's. The default,
 // zero, is byte-identical frames; anything else is a tolerance the maintainers accepted, named in

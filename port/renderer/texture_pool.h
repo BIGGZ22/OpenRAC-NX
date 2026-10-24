@@ -22,8 +22,10 @@
 
 #pragma once
 
+#include <cstddef>
 #include <cstdint>
 #include <memory>
+#include <span>
 #include <string>
 #include <unordered_map>
 #include <vector>
@@ -51,6 +53,14 @@ struct ImageUpload {
 // A converted texture, valid for the life of the pool (or until end_frame()
 // drops it after a long time unused). 0 is never a texture.
 using TextureHandle = std::uint32_t;
+
+// What TexturePool::prepare made, for the log line of a level's load.
+struct PreparedTextures {
+    std::size_t textures = 0;        // GL textures created (those that had one are not counted).
+    std::size_t staged_bytes = 0;    // Their texels as uploaded: the first level, RGBA8.
+    std::size_t resident_bytes = 0;  // What they hold on the GPU, mip chains included.
+    std::size_t batches = 0;         // Runs of uploads with a glFinish between two of them.
+};
 
 class TexturePool {
 public:
@@ -117,6 +127,17 @@ public:
     // The GL texture, created on first use. Filtering and wrapping are set
     // by whoever binds it.
     unsigned gl_texture(TextureHandle texture);
+
+    // Creates the GL textures of `textures` that have none yet, as gl_texture() would at their
+    // first use (the same texels, mip chain and sampler parameters, by the same code), so that
+    // the frames after a level's load make none (docs/port/RENDER_PERF.md, R-13). The uploads go
+    // in batches of at most kPrepareBatchBytes texels, with a glFinish between two batches. A
+    // handle given twice is made once. Leaves no texture bound to unit 0's 2D target.
+    PreparedTextures prepare(std::span<const TextureHandle> textures);
+
+    // The texel bytes prepare() uploads before it waits for the GPU, so that the staging a
+    // driver holds stays bounded: level_01's 607 textures (26 MB as uploaded) are one run.
+    static constexpr std::size_t kPrepareBatchBytes = std::size_t{32} << 20;
 
     // Bind cached RGB on unit 13, keeping the original on unit 0 for alpha.
     // Call after binding a material; restores the material program after a cache miss.
@@ -195,7 +216,8 @@ private:
     };
 
     TextureHandle new_entry();
-    // Creates entry `e`'s GL texture and uploads its texels: the one place a texture is made.
+    // Creates entry `e`'s GL texture and uploads its texels: the one place a texture is made,
+    // for gl_texture() at a first use and for prepare() at a level's load.
     void create_gl(Entry& e);
     TextureHandle convert_upload(const gs::Tex0& tex0, const gs::Texa& texa);
     std::vector<std::uint8_t> texture_raster(const Stored& stored, const gs::Tex0& tex0) const;
