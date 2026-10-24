@@ -423,13 +423,19 @@ enum class CameraPath : std::uint8_t {
     Static,  // still, at the walk's start, looking along it
     Walk,    // from one corner of the level towards the far corner, where the small instances are
     Turn,    // turning on the spot at the level's middle
+    Creep,   // from the walk's start, a hundredth of a unit a tick: under or across a shadow texel
 };
 
-// Returns the camera path named `name` (static, walk, turn), or Walk for another name.
+// Returns the camera path named `name` (static, walk, turn, creep), or Walk for another name.
 inline CameraPath camera_path(std::string_view name) {
-    // The two that are not the default.
+    // The ones that are not the default.
     if (name == "static") {
         return CameraPath::Static;
+    }
+
+    // The shadow cache's case: cascades that stay or move by a texel from one frame to the next.
+    if (name == "creep") {
+        return CameraPath::Creep;
     }
 
     return name == "turn" ? CameraPath::Turn : CameraPath::Walk;
@@ -477,6 +483,12 @@ inline renderer::Camera camera_at(
         const auto along = static_cast<float>(t);
         camera.position =
             {walk.start[0] + span[0] * along, walk.start[1] + span[1] * along, walk.start[2]};
+    } else if (path == CameraPath::Creep) {
+        // A tick's step, about the near cascade's texel at the walk's start (assumed).
+        constexpr float kCreep = 0.01f;
+        const float along = kCreep * static_cast<float>(tick) / std::hypot(span[0], span[1]);
+        camera.position =
+            {walk.start[0] + span[0] * along, walk.start[1] + span[1] * along, walk.start[2]};
     } else if (path == CameraPath::Turn) {
         const auto yaw = static_cast<float>(2.0 * std::numbers::pi * t);
         camera.position =
@@ -503,12 +515,13 @@ struct Scenario {
 
 // The scenarios, the benchmark's default first.
 // clang-format off: one scenario per row.
-inline constexpr std::array<Scenario, 5> kScenarios = {{
+inline constexpr std::array<Scenario, 6> kScenarios = {{
     {"walk", CameraPath::Walk, 0, false},           // the camera walks, the mobys move
     {"static-mobys", CameraPath::Static, 0, false}, // the camera still, the mobys move
     {"turn", CameraPath::Turn, 0, false},           // the camera turns on the spot
     {"between", CameraPath::Walk, 3, false},        // three pictures between ticks, a quarter apart
     {"reupload", CameraPath::Walk, 0, true},        // the level uploaded again halfway
+    {"creep", CameraPath::Creep, 0, false},         // the camera creeping by shadow texels
 }};
 // clang-format on
 

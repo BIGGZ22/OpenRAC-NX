@@ -6,6 +6,7 @@
 #include "common/stats.h"
 #include "enhanced/tests/gpu_probe_fixture.h"
 #include "enhanced/tests/probe_fixture.h"
+#include "enhanced/viewer/shadow_atlas.h"
 #include "enhanced/viewer/sun_shadow.h"
 #include "renderer/gl.h"
 #include "renderer/shadows.h"
@@ -965,10 +966,78 @@ void gpu() {
     target.release();
 }
 
+// Returns the static shadow cache's key of cascade `i` of `cascades` at static generation 1.
+viewer::StaticShadowKey static_key(const viewer::SunCascades& cascades, unsigned i) {
+    viewer::StaticShadowKey key;
+    key.valid = true;
+    key.matrix = cascades.matrices[i];
+    key.planes = cascades.casters[i].planes;
+    key.plane_count = cascades.casters[i].plane_count;
+    key.generation = 1;
+    return key;
+}
+
+// Tests the static shadow cache's keys (R-18): the same camera and sun give the same key, and a
+// change of the sun, of the static layers, of the hero's casters or of a matrix's last bit misses.
+void test_static_shadow_keys() {
+    const auto c = camera(12);
+    const auto a = viewer::sun_cascades(c, {1, 0, -1}, {-100, -100, -10}, {100, 100, 200});
+    const auto b = viewer::sun_cascades(c, {1, 0, -1}, {-100, -100, -10}, {100, 100, 200});
+    const auto sun = viewer::sun_cascades(c, {1, 0.01f, -1}, {-100, -100, -10}, {100, 100, 200});
+
+    // Each cascade against itself and against the changes.
+    for (unsigned i = 0; i < viewer::kSunCascades; ++i) {
+        const auto key = static_key(a, i);
+        CHECK(viewer::same_static_key(key, static_key(b, i)));
+        CHECK(!viewer::same_static_key(key, static_key(sun, i)));
+        CHECK(!viewer::same_static_key(key, viewer::StaticShadowKey{}));
+        auto level = key;
+        ++level.generation;
+        CHECK(!viewer::same_static_key(key, level));
+        auto hero = key;
+        hero.separate_hero = true;
+        CHECK(!viewer::same_static_key(key, hero));
+        auto nudged = key;
+        nudged.matrix[12] = std::nextafter(nudged.matrix[12], 1e30f);
+        CHECK(!viewer::same_static_key(key, nudged));
+    }
+}
+
+// Tests that a camera moved far less than a texel keeps some cascades' snapped matrices but no
+// cascade's caster volume, which follows the camera: why a moving camera misses the static cache.
+void test_static_shadow_keys_follow_the_camera() {
+    const auto still = camera(12);
+    auto moved = camera(12);
+    constexpr float kStep = 1e-4f;  // far under a texel of the nearest cascade
+    moved.position[0] += kStep;
+    moved.view = renderer::look_along(moved.position, {0, 0, -1}, {0, 1, 0});
+    const auto a = viewer::sun_cascades(still, {1, 0, -1}, {-100, -100, -10}, {100, 100, 200});
+    const auto b = viewer::sun_cascades(moved, {1, 0, -1}, {-100, -100, -10}, {100, 100, 200});
+    unsigned same_matrix = 0;
+    unsigned same_key = 0;
+
+    // Each cascade of the two frames.
+    for (unsigned i = 0; i < viewer::kSunCascades; ++i) {
+        same_matrix += a.matrices[i] == b.matrices[i] ? 1u : 0u;
+        same_key += viewer::same_static_key(static_key(a, i), static_key(b, i)) ? 1u : 0u;
+    }
+
+    std::printf(
+        "static shadow keys: %u of 4 matrices and %u of 4 keys kept after a %.4f step\n",
+        same_matrix,
+        same_key,
+        static_cast<double>(kStep)
+    );
+    CHECK(same_matrix > 0);
+    CHECK(same_key == 0);
+}
+
 int main(int argc, char**) {
     test::gpu_draw_reference(true);
     cpu();
     caster_hulls();
+    test_static_shadow_keys();
+    test_static_shadow_keys_follow_the_camera();
     if (argc > 1) {
         test::GlContext context;
         std::string why;
