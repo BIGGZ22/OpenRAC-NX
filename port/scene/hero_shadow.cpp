@@ -1,4 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (c) 2026 the OpenRAC contributors
+//
+// Ratchet's shadow projection and airborne flag of hero_shadow.h.
+
 #include "scene/hero_shadow.h"
 
 #include <cmath>

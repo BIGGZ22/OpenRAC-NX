@@ -1,4 +1,11 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (c) 2026 the OpenRAC contributors
+//
+// Ratchet's shadow map: whether the hero is in the air (read from game memory), and the small
+// orthographic view along the main light that his shadow is drawn from. Pure arithmetic; the
+// level renderer draws the map (level_renderer.cpp, prepare_hero_shadow). Restructure package
+// P2-39a moved it from enhanced/viewer/.
+
 #pragma once
 #include <cstdint>
 #include <optional>

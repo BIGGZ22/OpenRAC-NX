@@ -25,6 +25,9 @@ code (`viewer/camera.h`) keeps `openrac::viewer`.
 | [`pvs.h`](pvs.h) | `Pvs`, rac1's baked camera visibility (`pvs.json`, `pvs.bin`): the grid's lookup of which instances a camera position can see |
 | [`level_renderer.h`](level_renderer.h) | `LevelScene`, a loaded level on the GPU (shared buffers, instanced draws per class and material, skinned live mobys, culling, the enhanced lighting and shadows when they are on), and `LayerRenderer`, one of its layers as a bucket of `renderer::Renderer` |
 | [`moby_pose.h`](moby_pose.h) | `moby_palette` and `moby_pose_matrices`: a live moby's joint matrices, evaluated from its animation fields in game memory as the game's VU0 evaluator did |
+| [`sun_shadow.h`](sun_shadow.h) | `sun_cascades` and `SunCascades`: the sun's four cascades over the camera's view, their snapped matrices and caster volumes; `StaticShadowKey`, what the static shadow cache compares |
+| [`hero_shadow.h`](hero_shadow.h) | `hero_shadow_projection`, the view Ratchet's shadow map is drawn from, and `hero_airborne`, read from game memory |
+| [`shadow_atlas.h`](shadow_atlas.h) | the shadow atlas's size and its rectangles: the four cascades and the hero's map |
 | [`moby_shadow.h`](moby_shadow.h) | `moby_shadow_state` and `moby_shadows`: a moby's stencil shadow (direction, ground slab, fade) and its capsules, from game memory |
 | [`screenshot.h`](screenshot.h) | `write_png`: an RGBA frame written to a PNG file |
 
@@ -40,13 +43,13 @@ code (`viewer/camera.h`) keeps `openrac::viewer`.
 - `enhanced`, above it, which section 18 of
   [CODING_CONVENTIONS.md](../docs/CODING_CONVENTIONS.md) does not allow: `level.h` includes the
   emissive lighting's description, and the level renderer draws the enhanced renderer's probe
-  lighting, early lighting, hero shadow and sun shadows itself (`enhanced/viewer/`). The six
-  includes are known exceptions in [`tools/layering/rules.tsv`](../tools/layering/rules.tsv). The
+  lighting and early lighting itself (`enhanced/viewer/`). The three includes are known exceptions in [`tools/layering/rules.tsv`](../tools/layering/rules.tsv). The
   passes in turn read the level and share the level renderer's embedded shaders
   (`viewer_shaders.h`), so the level renderer and `enhanced/viewer/*.cpp` build as one library,
   `openrac_scene_renderer`: as two static libraries they would link in a cycle. Restructure package
-  P2-39 removes both exceptions: scene owns the lighting and shadow hooks and enhanced registers
-  with them.
+  P2-39b removes both exceptions: scene owns the lighting hook and enhanced registers with it.
+  The shadow arithmetic the level renderer draws with (`sun_shadow.h`, `hero_shadow.h`,
+  `shadow_atlas.h`) is the scene's own since P2-39a.
 
 ## State and threads
 
@@ -95,7 +98,8 @@ switched off with `OPENRAC_RENDER_OPT_OFF`): `texture-prepare`, `gpu-resident-in
 | `viewer`, `viewer_es`, `viewer_vulkan` | a level written by the test loads (meshes, textures, placements, overrides, the baked visibility and its lookup), and draws on OpenGL, OpenGL ES and Vulkan |
 | `renderer_shader`, `renderer_shader_es`, `renderer_shader_es_bare`, `renderer_shader_vulkan` | the level renderer's embedded shaders compile and link on each API, with the ES fallbacks |
 | `probe_scene`, `bake_liquids` | the probe tools turn a `LevelData` into the scene they bake |
-| `hero_shadow_cpu`, `sun_shadow_cpu` and their `_vulkan` forms, `probe_gpu_vulkan`, `early_lighting_vulkan`, `gtao_vulkan`, `enhanced_rendering_compat` | the enhanced passes the level renderer draws, and that a build with them switched off draws as one without |
+| `hero_shadow_cpu`, `sun_shadow_cpu` | the shadow arithmetic: the cascades' split, snapping and caster volumes, the static cache's key, the hero's projection and airborne flag (`tests/sun_shadow_test.cpp`, `tests/hero_shadow_test.cpp`) |
+| `hero_shadow_vulkan`, `sun_shadow_vulkan`, `sun_shadow_filter_reference_vulkan`, `probe_gpu_vulkan`, `early_lighting_vulkan`, `gtao_vulkan`, `enhanced_rendering_compat` | the enhanced passes the level renderer draws, and that a build with them switched off draws as one without |
 | `geometry_moby_animation` | the pose arithmetic `moby_pose.h` runs, against the game's own (in `assets/geometry`) |
 
 `moby_pose.h` and `moby_shadow.h` have no test of their own: what they read of game memory is

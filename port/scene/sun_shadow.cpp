@@ -1,4 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (c) 2026 the OpenRAC contributors
+//
+// The sun's shadow cascades of sun_shadow.h: the split, the snapped matrices, the caster volumes.
+
 #include "scene/sun_shadow.h"
 
 #include <algorithm>

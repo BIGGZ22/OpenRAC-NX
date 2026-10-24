@@ -1,4 +1,12 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (c) 2026 the OpenRAC contributors
+//
+// The sun's shadow cascades: how the camera's view is split into four cascades, each cascade's
+// light-space matrix snapped to its texels, the volume its casters can lie in, and the key the
+// static shadow cache (shadow-static-cache) compares. Pure arithmetic: the level renderer draws
+// the cascades (level_renderer.cpp, prepare_sun_shadow) and the shadow atlas holds them
+// (shadow_atlas.h). Restructure package P2-39a moved it from enhanced/viewer/.
+
 #pragma once
 #include <cstdint>
 #include <cstring>

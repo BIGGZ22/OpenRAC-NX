@@ -1,4 +1,10 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (c) 2026 the OpenRAC contributors
+//
+// The shadow atlas's layout: one depth target holding the four sun cascades and the hero's map,
+// each in a rectangle of its own (level_renderer.cpp, make_shadow_atlas). Restructure package
+// P2-39a moved it from enhanced/viewer/.
+
 #pragma once
 #include <array>
 
