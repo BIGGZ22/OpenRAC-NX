@@ -195,5 +195,174 @@ OPENRAC_GL_API=vulkan OPENRAC_VULKAN_VALIDATION=1 ./build/release/render_opt_tes
 ctest --preset release -R '^(vulkan_uniform|viewer_vulkan|renderer_shader_vulkan|renderer_direct_vulkan|world_gl_smoke_vulkan)$'
 ```
 
-The synthetic benchmark (`openrac_render_bench`, `port/tools/perf/render_bench.py`) and the
-equivalence test come with R-02, which adds the baseline table and the commands for real levels.
+The synthetic benchmark and the equivalence test, with the baseline table and the commands for
+real levels, are R-02's, below.
+
+## The synthetic scene, the benchmark and the equivalence test
+
+Three test programs on one synthetic scene, all in a hidden window: nothing is shown, no picture is
+written, no retail data is read.
+
+**The scene** ([`port/tests/render_fixture.h`](../../port/tests/render_fixture.h)) is built in
+memory from a seed, with no clock: 4,000 static instances (ties and shrubs) whose 70 meshes add up
+to about 1,000,000 triangles, 140 materials (two to a mesh; every tenth a cutout, every
+seventeenth blended), 600 RGBA8 textures of 32 to 256 texels a side with their mip chains, 300 live
+mobys of 46 skinned classes with an 8-joint palette each (one in ten blended), terrain, a sun, and a
+fifth of the static instances small (0.3 units) and 1,200 to 2,400 units past the end of the
+camera's walk, under one pixel there at 1080p. It is drawn through `LevelScene` and the renderer's
+buckets as the frontend's `draw_kept` draws a level: each frame the mobys' palette and instances
+are handed to the scene (`set_palette`, `set_instances`) and the renderer runs. Between two ticks
+the mobys are blended from one tick to the next, as the frontend blends them.
+
+The scenarios (`--scenario`): `walk` (the camera walks corner to corner, the mobys move), `static-mobys`
+(the camera still), `turn` (the camera turns on the spot), `between` (three pictures between two
+ticks, a quarter of a tick apart), `reupload` (the level uploaded again halfway, as a level change
+does). A later package adds a scenario when its change needs one.
+
+**The benchmark**, `openrac_render_bench` ([`port/tests/render_bench.cpp`](../../port/tests/render_bench.cpp)),
+draws a scenario at `--size` (1920x1080 by default) for `--frames` pictures after `--warmup`
+pictures and prints one JSON line per frame (its sections with CPU and GPU milliseconds, its
+counters, every gauge) and a summary line (the picture times' median, 95th percentile and maximum,
+the first picture after the upload, and the counters of the load, the warm-up and the measured
+frames). It counts the heap allocations its drawing thread makes inside each frame's render call
+(`bench_heap_allocs`) by replacing the global `operator new` in that program only. Options:
+`--enhanced on|off` (sun cascades and GTAO), `--gpu-driven on|off`, `--materials on|off`
+(the native material path against the individual one), `--cache cold|warm` (a private pipeline
+cache folder, removed at exit; warm draws the run twice in one process and reports the second),
+`--opt-off LIST`, `--camera`, `--between K`, `--msaa N`, `--tris N`, `--seed N`, and `--level DIR`
+for an extracted level. `render_bench_smoke` runs ten frames of it at 640x360.
+
+**The runner**, [`port/tools/perf/render_bench.py`](../../port/tools/perf/render_bench.py), runs the
+benchmark over a matrix, five times a setting, checks that the counters come out the same in every
+run, and prints the counters per frame, the run totals and the milliseconds (the median of the runs,
+lowest to highest). The reduced matrix (the default) is the base setting (walk, cold cache,
+GPU-driven, materials) and one change of it at a time; `--full` is every combination of Enhanced,
+GPU-driven, materials, cache and camera. Results go to `port/build/render-bench/` (ignored by git).
+`--compare BEFORE AFTER` prints two saved results with a percentage per counter, and
+`--compare-opt NAME` the matrix with registry entry NAME on and off, the table each later
+package's report gives.
+
+**The equivalence test**, `render_equivalence_vulkan`
+([`port/tests/render_equivalence_test.cpp`](../../port/tests/render_equivalence_test.cpp)), draws
+the scene at a tenth of its size at 320 by 180, eight frames a scenario, under the validation layer.
+It first checks that the scene is drawn at all (half the first frame is over the clear colour),
+then draws every scenario twice, Enhanced off and on, and requires identical frames: every later
+proof rests on the driver drawing alike twice. Then each registry entry is drawn on and off in every
+scenario and the frames are compared with the entry's tolerance, byte for byte unless it states one.
+The self-test entry is compared as well, as the harness's check of itself: its reference path is in
+the fixture (`SceneRenderer::selftest_reference_path`). The validation layer must report nothing.
+
+Its own proof: on both machines every scenario drew identical frames twice in both modes. A
+deliberate one-pixel change in the self-test's reference path (a 1 by 1 scissored clear), run and
+then removed before the commit, made the test fail in all ten comparisons, each reporting one pixel
+of 57,600 different.
+
+## The baseline
+
+`python3 port/tools/perf/render_bench.py --synthetic --reduced --sections`, release preset
+(RelWithDebInfo), 1920x1080, 60 measured frames after 10, five runs a setting, on 2026-10-23:
+
+- **Mac**: Apple M5 Max, macOS 27.0, MoltenVK 1.4.2 (Vulkan 1.4.357 in `vulkaninfo`).
+- **box1**: NVIDIA GeForce GTX 1070, driver 580.178.04, Vulkan 1.4.312, Manjaro Linux (kernel 6.18).
+
+The counts are the same on both machines and in every run, except where a device's own choices
+enter: the attachment bytes (MoltenVK's depth format is `D32_SFLOAT_S8_UINT`, 8 bytes a texel;
+NVIDIA's `D24_UNORM_S8_UINT`, 4) and the heap allocations (the C++ libraries differ: libc++ on the
+Mac, libstdc++ on box1). Each counter is compared on one machine, before against after.
+
+Per measured frame, both machines (Mac / box1 where they differ):
+
+| Counter | base (walk, cold) | enhanced | gpu-driven off | materials off |
+|---|---|---|---|---|
+| draw calls (the renderer's) | 1,460 | 2,934 | 1,459.6 | 1,460 |
+| triangles | 1,390,692 | 6,996,294 | 767,778 | 1,390,692 |
+| `vk_cmds_recorded` | 174 | 287 | 17,554.6 | 14,654 |
+| `vk_cmds_draw` | 10 | 16 | 1,459.6 | 1,460 |
+| `vk_cmds_dynamic_state` | 60 | 96 | 8,757.8 | 8,760 |
+| `vk_cmds_bind_descriptors` | 31 | 45 | 4,378.9 | 1,461 |
+| `vk_render_passes` | 1 | 4 | 1 | 1 |
+| `vk_attachment_store_bytes` | 24,883,200 / 16,588,800 | 187,895,808 / 125,263,872 | as base | as base |
+| `vk_barriers`, of them `ALL_COMMANDS` | 10, 5 | 27, 22 | 5, 5 | 10, 5 |
+| `vk_fullscreen_copies` | 0 | 2 | 0 | 0 |
+| `vk_ring_bytes` | 169,984 | 181,096 | 482,102 | 175,504 |
+| `vk_descriptor_sets_allocated`, `vk_descriptor_writes` | 5, 615 | 13, 676 | 4, 612 | 939, 3,755 |
+| `vk_texture_upload_bytes` (the moby palette) | 163,840 | 163,840 | 163,840 | 163,840 |
+| `vk_gpu_payload_bytes` | 2,839,984 | 9,824,307 | 0 | 2,839,984 |
+| `bench_heap_allocs` | 7,103 / 7,118 | 16,191 / 16,231 | 7,102 / 7,117 | 12,787 / 12,802 |
+
+Per run, both machines:
+
+| Counter | base (walk, cold) | enhanced | warm cache | materials off |
+|---|---|---|---|---|
+| pipelines made in the load and warm-up | 7 | 16 | 4 | 6 |
+| pipelines made in the measured frames | 0 | 0 | 0 | 0 |
+| `vk_texture_creations` in the warm-up (each texture twice: its image, then its mip chain) | 1,201 | 1,208 | 1,201 | 1,201 |
+| texel bytes uploaded in the warm-up | 58,949,632 | 58,949,636 | 58,949,632 | 58,949,632 |
+| glslang runs in the load | 38 | 69 | 38 | 15 |
+
+The static camera, the pictures between ticks and the half size give the base's counts, but the
+attachment bytes at half size (a quarter).
+
+Milliseconds, information only (median of five runs, lowest to highest):
+
+| Timing | Mac base | Mac enhanced | box1 base | box1 enhanced |
+|---|---|---|---|---|
+| picture (CPU: the render call and present) | 0.81 (0.79 to 0.82) | 1.86 (1.85 to 1.87) | 1.10 (1.09 to 1.11) | 3.12 (3.12 to 3.17) |
+| first picture after the upload | 71.9 (70.2 to 75.5) | 123.2 (122.9 to 124.3) | 116.0 (115.2 to 116.7) | 190.3 (189.3 to 1,613.9) |
+| the upload | 108.8 (108.0 to 114.5) | 547.6 (542.3 to 578.2) | 185.1 (184.6 to 191.8) | 644.3 (639.1 to 653.5) |
+| glslang in the load, seconds | 0.07 | 0.19 | 0.14 | 0.36 |
+
+On a warm cache the first picture is 43.8 ms on the Mac and 95.0 ms on box1 (cold: 71.9 and 116.0).
+
+GPU time per pass, box1 (median of the first run's frames; a dash where the pass is timed by its
+parts): ties solid 0.092 ms, shrubs 0.091, terrain 0.078, mobys opaque 0.076, mobys glow 0.065,
+GPU instance visibility 0.035; with Enhanced, the depth prepass 0.152, the shadow atlas 0.267,
+early GI and cascades 0.135, world opaque colour 0.112, GTAO 1.30 (depth copy 0.378, horizons
+0.530, filter 0.387). At half size (960x540) the world passes take the same GPU time (ties solid
+0.090 against 0.092, mobys opaque 0.072 against 0.076): on this scene they are bound by vertices,
+not by pixels. The frame wait is 0.001 ms in the base setting and 0.29 ms with Enhanced: the GPU
+keeps up with the CPU except in Enhanced mode on box1. On the Mac the GPU column is only meaningful
+for a pass of its own (the shadow atlas 0.162 ms, GTAO's horizons 0.138 and filter 0.119, the
+culling 0.025): MoltenVK's timestamps inside one render pass read about 0.002 ms whatever the pass
+draws, since a tiled GPU runs a pass's draws together.
+
+CPU time per pass, Mac / box1 (base): mobys 0.357 / 0.640 ms, ties 0.086 / 0.143, shrubs 0.072 /
+0.112, terrain 0.004 / 0.009, GPU instance visibility 0.018 / 0.124.
+
+### Which numbers decide which gate
+
+- **G1** (R-22, R-23, R-24) is not decided by the synthetic scene: it needs the maintainers' E1
+  numbers from a real level (the submit and present share of the game thread's frame). The bench
+  gives the CPU side here: the render call and present take 0.81 ms (Mac) and 1.10 ms (box1) at
+  1,460 draws, far from 6 ms.
+- **G2** (R-20, Hi-Z occlusion) asks for world passes bound by vertices with many instances hidden,
+  or overdraw above two fragments a pixel. The half-size test shows the world passes vertex-bound
+  on box1; how many instances are hidden needs a real level (level_12) and an indoor one, with
+  Enhanced on.
+- **G4** (R-17) is R-16's report: the moby layer's CPU per between-frame. The base gives mobys
+  0.357 ms (Mac) and 0.640 ms (box1) of CPU per picture at 300 mobys, and the `between x3`
+  setting the same per picture; R-16 measures it again.
+- Each firm package's own counter is in the tables above: `vk_cmds_recorded` and its kinds (R-03),
+  `bench_heap_allocs` (R-04), `vk_ring_bytes` and the host-visible bytes (R-05),
+  `vk_attachment_store_bytes` (R-06), `vk_fullscreen_copies` (R-07), `vk_barriers_all_commands`
+  (R-08), the pipelines after the warm-up (R-10, R-11), the glslang runs (R-12), the textures made
+  in the warm-up (R-13), the descriptor sets and writes with materials off (R-14),
+  `vk_gpu_payload_bytes` (R-15).
+
+### The maintainers' commands for real levels
+
+The level is the editor's port export of it (`manifest.json` beside `placements.json`,
+`editor/port.py`); with the release preset built:
+
+```sh
+python3 port/tools/perf/render_bench.py --level assets/port/rac1/pal/level_01 --reduced --sections --label level_01
+python3 port/tools/perf/render_bench.py --level assets/port/rac1/pal/level_12 --reduced --sections --label level_12
+# one setting by hand, as JSON lines
+port/build/release/openrac_render_bench --level assets/port/rac1/pal/level_12 --enhanced on --frames 300
+# a package's entry on and off on a real level
+python3 port/tools/perf/render_bench.py --level assets/port/rac1/pal/level_12 --compare-opt NAME
+```
+
+On a real level the camera walks its bounds from one corner to the other, and the live mobys are
+300 of the level's own classes, each walking a circle the seed places (the game's own mobys need
+the game running, which the benchmark does not).
