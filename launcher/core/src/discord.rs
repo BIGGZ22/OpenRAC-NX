@@ -90,8 +90,11 @@ pub struct ActivityAssets {
     pub small_text: Option<String>,
 }
 
+/// What the page tells Discord it is doing. The page sends camelCase for the variants and for
+/// their fields (`{ "kind": "viewingGame", "gameId": ... }`), so both are renamed:
+/// `rename_all` alone renames only the variants.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
-#[serde(tag = "kind", rename_all = "camelCase")]
+#[serde(tag = "kind", rename_all = "camelCase", rename_all_fields = "camelCase")]
 pub enum DiscordStatus {
     Idle,
     ViewingGame {
@@ -647,6 +650,39 @@ fn read_packet<R: Read>(reader: &mut R) -> std::io::Result<(u32, Vec<u8>)> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn the_status_reads_what_the_page_sends() {
+        // The page's setDiscordStatus (src/lib/api.ts) writes the fields in camelCase.
+        let viewing: DiscordStatus = serde_json::from_str(
+            r#"{"kind":"viewingGame","title":"Ratchet & Clank","region":"PAL","progressPct":42.5,"gameId":"rac1"}"#,
+        )
+        .expect("the page's viewingGame status");
+        assert_eq!(
+            viewing,
+            DiscordStatus::ViewingGame {
+                title: "Ratchet & Clank".into(),
+                region: "PAL".into(),
+                progress_pct: Some(42.5),
+                game_id: "rac1".into(),
+            }
+        );
+
+        let playing: DiscordStatus = serde_json::from_str(
+            r#"{"kind":"playingGame","title":"Ratchet & Clank","region":"PAL","gameId":"rac1","startTime":1700000000}"#,
+        )
+        .expect("the page's playingGame status");
+        assert!(matches!(playing, DiscordStatus::PlayingGame { start_time: Some(1_700_000_000), .. }));
+
+        let working: DiscordStatus = serde_json::from_str(
+            r#"{"kind":"working","task":"Building","title":"Ratchet & Clank","gameId":"rac1","startTime":null}"#,
+        )
+        .expect("the page's working status");
+        assert!(matches!(working, DiscordStatus::Working { start_time: None, .. }));
+
+        let idle: DiscordStatus = serde_json::from_str(r#"{"kind":"idle"}"#).expect("the page's idle status");
+        assert_eq!(idle, DiscordStatus::Idle);
+    }
 
     #[test]
     fn a_reply_that_asks_for_too_much_is_refused() {

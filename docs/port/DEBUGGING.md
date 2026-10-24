@@ -271,7 +271,7 @@ same variables, so a new variable gets a row in both.
 | `OPENRAC_DEBUG_DUMP` | `FILE` | The frame dump, as `--debug-dump FILE`. | `port/game/common/main.cpp` |
 | `OPENRAC_PAUSE_AT` | `TICK[:FRAMES]` | Pauses the game at that window frame; with `FRAMES`, goes on by itself after that many held pictures. | `port/game/common/debug_overlay.cpp` |
 | `OPENRAC_TIME_SCALE` | `X` (1/64 to 1) | The game's speed from the start: `0.25` is quarter speed. | `port/game/common/debug_overlay.cpp` |
-| `OPENRAC_SHADER_DIR` | folder | Where a shader reload reads the files, laid out as `port/`; the build's source tree when unset. | `port/game/common/debug_overlay.cpp` |
+| `OPENRAC_SHADER_DIR` | folder | Where a shader reload reads the files, laid out as `port/`; the build's source tree when unset. | `port/game/common/debug/shaders.cpp` |
 | `OPENRAC_SHADER_RELOAD` | `TICK` | Reloads every shader program at that window frame, with the result in the log. | `port/game/common/debug_overlay.cpp` |
 | `OPENRAC_SCRIPT_BUDGET_MS` | `MS` (a positive number) | The time a script mod may run each time the game calls into it (a hook, a callback, its first run), not counting the game's own code it calls on to; over it, the mod stops ([MODS.md](MODS.md), section 11). Default 2. | `port/game/common/mod_scripts.cpp` |
 

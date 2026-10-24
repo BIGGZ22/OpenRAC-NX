@@ -96,12 +96,12 @@ except	scene/level_renderer.h:27	enhanced/viewer/sun_shadow.h	P2-39: scene owns 
 # the headers viewer/ keeps forwarding to scene/ until P2-37.
 except	game/common/debug_overlay.cpp:45	viewer/screenshot.h	P2-37 includes scene/ directly and removes the forwarder
 except	game/common/debug_overlay.h:28	viewer/game_state.h	P2-03 moves the game state into rac1's GameProfile
-except	game/common/frontend.cpp:58	viewer/game_state.h	P2-03 moves the game state into rac1's GameProfile
+except	game/common/frontend.cpp:57	viewer/game_state.h	P2-03 moves the game state into rac1's GameProfile
 except	game/common/frontend/state.h:36	viewer/game_state.h	P2-03 moves the game state into rac1's GameProfile
-except	game/common/frontend.cpp:59	viewer/level.h	P2-37 includes scene/ directly and removes the forwarder
-except	game/common/frontend.cpp:60	viewer/level_renderer.h	P2-37 includes scene/ directly and removes the forwarder
-except	game/common/frontend.cpp:61	viewer/moby_pose.h	P2-37 includes scene/ directly and removes the forwarder
-except	game/common/frontend.cpp:62	viewer/moby_shadow.h	P2-37 includes scene/ directly and removes the forwarder
-except	game/common/frontend.cpp:63	viewer/screenshot.h	P2-37 includes scene/ directly and removes the forwarder
+except	game/common/frontend.cpp:58	viewer/level.h	P2-37 includes scene/ directly and removes the forwarder
+except	game/common/frontend.cpp:59	viewer/level_renderer.h	P2-37 includes scene/ directly and removes the forwarder
+except	game/common/frontend.cpp:60	viewer/moby_pose.h	P2-37 includes scene/ directly and removes the forwarder
+except	game/common/frontend.cpp:61	viewer/moby_shadow.h	P2-37 includes scene/ directly and removes the forwarder
+except	game/common/frontend.cpp:62	viewer/screenshot.h	P2-37 includes scene/ directly and removes the forwarder
 except	game/common/main.cpp:74	viewer/level.h	P2-37 includes scene/ directly and removes the forwarder
 except	game/common/main.cpp:75	viewer/moby_pose.h	P2-37 includes scene/ directly and removes the forwarder

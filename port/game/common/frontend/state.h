@@ -18,12 +18,14 @@
 #include <filesystem>
 #include <memory>
 #include <optional>
+#include <span>
 #include <string>
 #include <unordered_map>
 #include <utility>
 #include <vector>
 
 #include "enhanced/game/scripted_moby_colour.h"
+#include "openrac/guest.h"
 #include "platform/input.h"
 #include "platform/window.h"
 #include "renderer/framebuffer.h"
@@ -250,5 +252,29 @@ void draw_touch_pad(int window_width, int window_height);
 // Captures the cursor as the mods ask for it, while nothing else has the mouse
 // (frontend/input.cpp).
 void apply_mouse_capture();
+
+// The directional light bank, in the executable's terms (relocated to the loaded program's copy);
+// 0 for a game without one (frontend/world.cpp).
+gaddr light_bank_address();
+
+// The four shadow directions in each version's executable (relocated when read); 0 for a game
+// without them (frontend/world.cpp).
+gaddr shadow_directions_address();
+
+// The hero's state in each version's executable; 0 for a game without one (frontend/world.cpp).
+gaddr hero_state_address();
+
+// Uploads level `number`'s geometry and makes the renderers that draw it. Below 0 the boot program
+// runs: the title world (level 0 where it was not extracted), or at -2 the flight between planets
+// where it was (frontend/world.cpp).
+void use_level(int number);
+
+// The sky sprites the game drew since the last frame, as effect quads seen from `state`'s camera,
+// put first among the frame's effect quads: drawn behind everything (frontend/world.cpp).
+void sky_sprite_quads(const viewer::GameState& state);
+
+// The particles the game drew since the last frame, as effect quads back to front, seen from
+// `state`'s camera; their textures read from `ram` (frontend/world.cpp).
+void particle_quads(std::span<const std::uint8_t> ram, const viewer::GameState& state);
 
 }  // namespace openrac::frontend

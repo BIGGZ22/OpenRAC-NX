@@ -140,11 +140,9 @@ export interface DiscScan {
   choices: DiscChoice[];
 }
 
-/** What the page tells Discord it is doing (core/src/discord.rs, DiscordStatus).
- *
- *  Written by hand, not generated: the Rust enum renames its variants but not their fields, so
- *  it reads `game_id`, `progress_pct` and `start_time` where the page sends the camelCase below
- *  (PROGRESS.md, follow-ups). The page's side is kept until the Rust side is decided. */
+/** What the page tells Discord it is doing (core/src/discord.rs, DiscordStatus, whose fields
+ *  are read in this camelCase since `rename_all_fields`; its test holds the two together).
+ *  Written by hand, not generated yet: generating it is a follow-up in PROGRESS.md. */
 export type DiscordStatus =
   | { kind: "idle" }
   | {
