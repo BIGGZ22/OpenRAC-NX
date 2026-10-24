@@ -25,9 +25,11 @@ u32 big_endian_u32(ByteView bytes, std::size_t offset) {
 }  // namespace
 
 VagFile parse_vag(ByteView bytes) {
+    // A VAG file needs its full header and the "VAGp" magic.
     if (bytes.size() < kVagHeaderSize || std::memcmp(bytes.data(), "VAGp", 4) != 0) {
         fail("not a VAGp file");
     }
+
     VagFile file;
     file.header.version = big_endian_u32(bytes, 0x04);
     file.header.data_size = big_endian_u32(bytes, 0x0c);

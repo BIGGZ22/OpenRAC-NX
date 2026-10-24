@@ -14,7 +14,7 @@ extern s32 D_L02_00161324 MACRO_ADDR;
 extern s32 D_L02_00161328 MACRO_ADDR;
 extern s32 D_L02_0016132C MACRO_ADDR;
 
-/* Adapted from Lombyte (MIT) for PAL by OpenRAC's tools/port.py: src/overlays/shared/unclassified_002a4038.c, FUN_L02_002a4058. */
+/* Adapted from Lombyte (GPL-3.0) for PAL by OpenRAC's tools/port.py: src/overlays/shared/unclassified_002a4038.c, FUN_L02_002a4058. */
 void ScaleTableIntoBuffer(char *arg, int val, float scale) {
     int i;
     float *p;
@@ -308,7 +308,7 @@ extern void func_001F9BD8(void *, void *, void *);
 extern void func_001F9C30(void *, void *, float);
 
 /* Spawn point for the moby: its slot's stored position and rotation, or, with no slot, a point beside it on the side facing the hero.
-   Adapted from Lombyte (MIT) for PAL by OpenRAC's tools/port.py: src/overlays/shared/gameplay/entities/002a4038.c, FUN_L02_002d8910. */
+   Adapted from Lombyte (GPL-3.0) for PAL by OpenRAC's tools/port.py: src/overlays/shared/gameplay/entities/002a4038.c, FUN_L02_002d8910. */
 void GetMobySpawnPoint(float *pos, float *rot, char *moby) {
     V2d8910 v;
     float left;
@@ -1038,7 +1038,7 @@ extern s32 func_001FA898(f32);
 extern s32 func_001F4868(s32);
 typedef unsigned long u64_t;
 
-/* Adapted from Lombyte (MIT) for PAL by OpenRAC's tools/port.py: src/overlays/shared/unclassified_002a4038.c, FUN_L02_002da938. */
+/* Adapted from Lombyte (GPL-3.0) for PAL by OpenRAC's tools/port.py: src/overlays/shared/unclassified_002a4038.c, FUN_L02_002da938. */
 void RingMarker_DrawScroll(void *unused, f32 a, f32 b, f32 c, s32 d) {
     u64_t m[4];
     s32 a4[4];
@@ -1150,7 +1150,7 @@ extern short D_L02_00161B48;
 int func_001F4868(int);
 void func_L02_0020BF88_DC2C0(Q_2dae88 *, int *, int *, u64, int) __asm__("func_L02_0020BF88");
 
-/* Adapted from Lombyte (MIT) for PAL by OpenRAC's tools/port.py: src/overlays/shared/gameplay/entities/002a4038.c, FUN_L02_002dae88. */
+/* Adapted from Lombyte (GPL-3.0) for PAL by OpenRAC's tools/port.py: src/overlays/shared/gameplay/entities/002a4038.c, FUN_L02_002dae88. */
 void RingMarker_DrawQuads(void) {
     Q_2dae88 q;
     int c[4];
@@ -2248,7 +2248,7 @@ typedef struct {
 extern S_2fa6d8 D_L02_00167680_FBB10 __asm__("D_L02_00167680");
 extern void func_L02_002FBB48(void);
 
-/* Adapted from Lombyte (MIT) for PAL by OpenRAC's tools/port.py: src/overlays/shared/gameplay_vendor_002ec308.c, FUN_L02_002fa6d8. */
+/* Adapted from Lombyte (GPL-3.0) for PAL by OpenRAC's tools/port.py: src/overlays/shared/gameplay_vendor_002ec308.c, FUN_L02_002fa6d8. */
 void CamOffsetFx_Reset(void) {
     D_L02_00167680_FBB10.a = 0;
     D_L02_00167680_FBB10.b = 0;
@@ -2352,7 +2352,7 @@ extern int func_L00_00260AB0(void *, int);
 extern int func_L00_00260B68(void *, int);
 extern int func_L00_0025A778(void *, void *, int);
 
-/* Adapted from Lombyte (MIT) for PAL by OpenRAC's tools/port.py: src/overlays/shared/gameplay/vendor/002ec308.c, FUN_L02_002fb648. */
+/* Adapted from Lombyte (GPL-3.0) for PAL by OpenRAC's tools/port.py: src/overlays/shared/gameplay/vendor/002ec308.c, FUN_L02_002fb648. */
 int CameraMoby_IsHeroInTrigger(char *moby) {
     char *special = D_L02_0016755C;
     char *data = *(char **)(D_L02_0015F050 + *(short *)(moby + 0x84) * 32 + 0x1c);

@@ -34,8 +34,10 @@ sit in the class number and the pvars. All 645 have C in the port's build
 
 ## The catalogue for mods
 
-[catalogue.py](catalogue.py) writes, from the source tree alone, what a native mod
-([docs/port/MODS.md](../docs/port/MODS.md)) needs to change a class's behaviour:
+[sdk/tools/catalogue.py](../sdk/tools/catalogue.py), one of the SDK's tools that reads the
+decompilation through this folder's `cparse.py` and `mobys.py`, writes, from the source tree
+alone, what a native mod ([docs/port/MODS.md](../docs/port/MODS.md)) needs to change a class's
+behaviour:
 [sdk/catalogue/rac1/BEHAVIOUR.md](../sdk/catalogue/rac1/BEHAVIOUR.md) to read,
 `classes.json` (the stable table the Luau binding is made from) and `behaviour.json` /
 `behaviour.tsv` beside it for tools. For each class: its update function
@@ -46,9 +48,9 @@ hook status: the hook point, or the `hook` row of `libraries.tsv` that would mak
 the levels that row covers. It ships in the mod SDK's archive.
 
 ```sh
-python3 editor/catalogue.py write        # regenerate sdk/catalogue/rac1/
-python3 editor/catalogue.py check        # exit 1 when it is stale
-python3 editor/catalogue.py show 500     # one class, as JSON
+python3 sdk/tools/catalogue.py write        # regenerate sdk/catalogue/rac1/
+python3 sdk/tools/catalogue.py check        # exit 1 when it is stale
+python3 sdk/tools/catalogue.py show 500     # one class, as JSON
 ```
 
 ## The helpers update functions call

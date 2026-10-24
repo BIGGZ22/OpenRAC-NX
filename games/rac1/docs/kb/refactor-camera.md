@@ -312,7 +312,7 @@ showed.
    in a comment; never add a new one (conventions.md, section 2).
 7. Comments: each function's comment says what it does in field names
    (`gCamera.underwater`, not `D_00187040+0x394`); provenance notes
-   ("Adapted from Lombyte (MIT) ...") stay word for word.
+   ("Adapted from Lombyte (GPL-3.0) ...") stay word for word.
 
 ## 7. Known oddities
 

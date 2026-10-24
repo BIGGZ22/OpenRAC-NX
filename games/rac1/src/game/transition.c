@@ -673,7 +673,7 @@ extern s32 func_00122958_EABE8(void *, u8 *) __asm__("func_00122958");
 /* Loads the space-transition wad to 0x1400000 and unpacks it at the level arena: textures and
    their tables, the three kinds of moby classes, sound and help text tables, the loading image;
    then resets the sequence state and relocates the eight help text tables.
-   Adapted from Lombyte (MIT) for PAL: src/gameplay/state/transition_load_wad.c, transition_load_wad. */
+   Adapted from Lombyte (GPL-3.0) for PAL: src/gameplay/state/transition_load_wad.c, transition_load_wad. */
 void LoadSpaceTransitionWad(void)
 {
   u8 li[0x60];
@@ -984,7 +984,7 @@ extern void func_0022DD68_EB458(void) __asm__("func_0022DD68");
 /* One frame of the space-flight sequence between levels: steps the sequence clock and its
    scene chunks, the movie camera, each actor's animation frame and interpolated position,
    then the intro overlay fades and the mode's own update (pause menu, freeze) and sound.
-   Adapted from Lombyte (MIT) for PAL: src/textbin/fun_001eb0a8.c, update_gameplay_frame. */
+   Adapted from Lombyte (GPL-3.0) for PAL: src/textbin/fun_001eb0a8.c, update_gameplay_frame. */
 void UpdateSpaceFlightSequence(void) {
     Vec4A first_position;
     Vec4A next_position;
@@ -1125,7 +1125,7 @@ extern void func_00236BE0();
 extern s32 func_00238688();
 void func_001EB7C0(s32 *arg0);
 
-/* Adapted from Lombyte (MIT) for PAL by OpenRAC's tools/port.py: src/gameplay/state/transition_default_draw.c, transition_default_draw. */
+/* Adapted from Lombyte (GPL-3.0) for PAL by OpenRAC's tools/port.py: src/gameplay/state/transition_default_draw.c, transition_default_draw. */
 void Transition_DefaultDraw(s32 *arg0)
 {
     s32 n;
@@ -1319,7 +1319,7 @@ extern void reset_graph_BB48(s16, s16, s16, s16) __asm__("func_00121B78");
 extern void set_pal_mode_BB48(void) __asm__("func_001F3890");
 extern void vu1_sync_chain_BB48(s32) __asm__("func_00234AC8");
 
-/* Adapted from Lombyte (MIT): src/gameplay/state/transition_do_transition.c, transition_do_transition. */
+/* Adapted from Lombyte (GPL-3.0): src/gameplay/state/transition_do_transition.c, transition_do_transition. */
 void func_001EBB48(void) {
     WadHeader_BB48 *hdr;
     u8 *p;

@@ -3,12 +3,18 @@
 //! Connects to Discord's local IPC endpoint (`discord-ipc-0` .. `9`): a Unix domain socket on
 //! Linux and macOS, a named pipe (`\\.\pipe\discord-ipc-N`) on Windows, and updates the
 //! activity: in the launcher, working on a game, or playing one.
+//!
+//! A play job's presence is decided here too, so the launcher's `run_action` command only
+//! forwards to it: [`play`] is the status a play job starts with, [`read_game_log`] what a line of
+//! its log changes, and [`DiscordIpc::end_play`] what is shown when it ends.
 
 use std::io::{Read, Write};
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use std::time::{SystemTime, UNIX_EPOCH};
 
 use serde::{Deserialize, Serialize};
+
+use crate::actions::Scope;
 
 /// The connection to Discord: its socket, or on Windows its named pipe opened as a file.
 #[cfg(unix)]
@@ -84,8 +90,11 @@ pub struct ActivityAssets {
     pub small_text: Option<String>,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
-#[serde(tag = "kind", rename_all = "camelCase")]
+/// What the page tells Discord it is doing. The page sends camelCase for the variants and for
+/// their fields (`{ "kind": "viewingGame", "gameId": ... }`), so both are renamed:
+/// `rename_all` alone renames only the variants.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(tag = "kind", rename_all = "camelCase", rename_all_fields = "camelCase")]
 pub enum DiscordStatus {
     Idle,
     ViewingGame {
@@ -265,15 +274,19 @@ impl DiscordIpc {
         self.resend_playing()
     }
 
-    /// A line of the running game's log: its planet or its bolts.
-    pub fn on_game_log(&mut self, game: &str, line: &str) -> Result<(), String> {
-        if let Some(place) = planet_from_log(game, line) {
-            return self.set_planet(Some(place));
+    /// What a line of the running game's log said ([`read_game_log`]): its planet or its bolts.
+    pub fn on_game_log(&mut self, log: GameLog) -> Result<(), String> {
+        match log {
+            GameLog::Place(place) => self.set_planet(Some(place)),
+            GameLog::Bolts(bolts) => self.set_bolts(bolts),
         }
-        match bolts_from_log(line) {
-            Some(bolts) => self.set_bolts(bolts),
-            None => Ok(()),
-        }
+    }
+
+    /// A play job ended: its planet and bolts are forgotten and the launcher is shown again.
+    /// `app_start` is when the launcher started, the idle status's elapsed time.
+    pub fn end_play(&mut self, app_start: u64) -> Result<(), String> {
+        let _ = self.set_planet(None);
+        self.set_status(&DiscordStatus::Idle, app_start)
     }
 
     fn resend_playing(&mut self) -> Result<(), String> {
@@ -283,8 +296,16 @@ impl DiscordIpc {
         }
     }
 
+    /// Shows `status`, and keeps it to show again when the planet or the bolts change. `app_start`
+    /// is when the launcher started: the elapsed time of the statuses outside a game.
     pub fn set_status(&mut self, status: &DiscordStatus, app_start: u64) -> Result<(), String> {
         self.last = Some((status.clone(), app_start));
+        let activity = self.activity(status, app_start);
+        self.update_activity(Some(&activity))
+    }
+
+    /// The activity `status` shows, with the planet and bolts last logged while a game plays.
+    fn activity(&self, status: &DiscordStatus, app_start: u64) -> Activity {
         let activity = match status {
             DiscordStatus::Idle => Activity {
                 details: Some("In Launcher".into()),
@@ -357,9 +378,7 @@ impl DiscordIpc {
                 ..Default::default()
             },
         };
-        let activity = Activity { buttons: buttons(), ..activity };
-
-        self.update_activity(Some(&activity))
+        Activity { buttons: buttons(), ..activity }
     }
 
     pub fn clear(&mut self) -> Result<(), String> {
@@ -390,6 +409,51 @@ pub fn planet_from_log(game: &str, line: &str) -> Option<Place> {
 /// The bolts a running port logs ("bolts N", port/game/common/main.cpp).
 pub fn bolts_from_log(line: &str) -> Option<u32> {
     line.split("] bolts ").nth(1)?.trim().parse().ok()
+}
+
+/// What a line of a running game's log changes in its presence.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum GameLog {
+    /// The game started a level: the place the player is now in.
+    Place(Place),
+    /// The player's bolts.
+    Bolts(u32),
+}
+
+/// What `line` of game `game`'s log changes in its presence ([`planet_from_log`], else
+/// [`bolts_from_log`]); none for any other line, the most of them.
+pub fn read_game_log(game: &str, line: &str) -> Option<GameLog> {
+    planet_from_log(game, line).map(GameLog::Place).or_else(|| bolts_from_log(line).map(GameLog::Bolts))
+}
+
+/// The presence of a play job: its game and the status it starts with.
+#[derive(Debug, Clone, PartialEq)]
+pub struct Play {
+    /// The game's id (`rac1`): the game [`read_game_log`] names the planets of.
+    pub game: String,
+    /// "Playing" the version's title, counting from when the job started.
+    pub status: DiscordStatus,
+}
+
+/// The presence of a play job for `scope` in the checkout at `root`, started at `start_time`
+/// (seconds since the epoch): the version's title, region and game from the catalogue. None for
+/// the repository's scope, a version the catalogue does not have, or a catalogue that cannot be
+/// read: such a job shows no game.
+pub fn play(root: &Path, scope: &Scope, start_time: u64) -> Option<Play> {
+    let Scope::Version(key) = scope else {
+        return None;
+    };
+    let catalog = crate::catalog::load(root).ok()?;
+    let version = catalog.version(key)?;
+    Some(Play {
+        game: version.game.clone(),
+        status: DiscordStatus::PlayingGame {
+            title: version.title.clone(),
+            region: version.region.clone(),
+            game_id: version.game.clone(),
+            start_time: Some(start_time),
+        },
+    })
 }
 
 /// 1250 as "1,250", the way the game writes bolts.
@@ -588,6 +652,39 @@ mod tests {
     use super::*;
 
     #[test]
+    fn the_status_reads_what_the_page_sends() {
+        // The page's setDiscordStatus (src/lib/api.ts) writes the fields in camelCase.
+        let viewing: DiscordStatus = serde_json::from_str(
+            r#"{"kind":"viewingGame","title":"Ratchet & Clank","region":"PAL","progressPct":42.5,"gameId":"rac1"}"#,
+        )
+        .expect("the page's viewingGame status");
+        assert_eq!(
+            viewing,
+            DiscordStatus::ViewingGame {
+                title: "Ratchet & Clank".into(),
+                region: "PAL".into(),
+                progress_pct: Some(42.5),
+                game_id: "rac1".into(),
+            }
+        );
+
+        let playing: DiscordStatus = serde_json::from_str(
+            r#"{"kind":"playingGame","title":"Ratchet & Clank","region":"PAL","gameId":"rac1","startTime":1700000000}"#,
+        )
+        .expect("the page's playingGame status");
+        assert!(matches!(playing, DiscordStatus::PlayingGame { start_time: Some(1_700_000_000), .. }));
+
+        let working: DiscordStatus = serde_json::from_str(
+            r#"{"kind":"working","task":"Building","title":"Ratchet & Clank","gameId":"rac1","startTime":null}"#,
+        )
+        .expect("the page's working status");
+        assert!(matches!(working, DiscordStatus::Working { start_time: None, .. }));
+
+        let idle: DiscordStatus = serde_json::from_str(r#"{"kind":"idle"}"#).expect("the page's idle status");
+        assert_eq!(idle, DiscordStatus::Idle);
+    }
+
+    #[test]
     fn a_reply_that_asks_for_too_much_is_refused() {
         // The length comes from the other side: a reply that asks for four gigabytes is
         // refused before anything is allocated for it.
@@ -643,6 +740,120 @@ mod tests {
             Some(Place { planet: "Level 4".into(), location: None })
         );
         assert_eq!(planet_from_log("rac1", "[info] 4000 frames"), None);
+    }
+
+    /// A client that never looks for Discord's socket: what it would show is read from
+    /// `activity`, so the tests do not depend on a Discord running on the machine.
+    fn offline() -> DiscordIpc {
+        let mut ipc = DiscordIpc::new(DEFAULT_CLIENT_ID);
+        ipc.retry_at = u64::MAX;
+        ipc
+    }
+
+    /// What `ipc` shows now: its last status, with the planet and bolts it has.
+    fn shown(ipc: &DiscordIpc) -> Activity {
+        let (status, app_start) = ipc.last.clone().expect("a status was set");
+        ipc.activity(&status, app_start)
+    }
+
+    /// `line` of rac1's log, as the play job hands it on.
+    fn log(ipc: &mut DiscordIpc, line: &str) {
+        if let Some(log) = read_game_log("rac1", line) {
+            let _ = ipc.on_game_log(log);
+        }
+    }
+
+    fn playing_rac1() -> DiscordStatus {
+        DiscordStatus::PlayingGame {
+            title: "Ratchet & Clank".into(),
+            region: "PAL".into(),
+            game_id: "rac1".into(),
+            start_time: Some(1_700_000_000),
+        }
+    }
+
+    #[test]
+    fn a_play_shows_the_planet_and_bolts_the_game_logs() {
+        let mut ipc = offline();
+        let _ = ipc.set_status(&playing_rac1(), 1_600_000_000);
+        let menus = shown(&ipc);
+        assert_eq!(menus.name.as_deref(), Some("Ratchet & Clank"));
+        assert_eq!(menus.details.as_deref(), Some("In the menus"));
+        assert_eq!(menus.state, None);
+        assert_eq!(menus.timestamps.unwrap().start, Some(1_700_000_000));
+
+        // The lines port/game/common/main.cpp logs, as the play job reads them (common/log.cpp's
+        // "[info] " prefix). Bolts before a planet are kept, not shown.
+        log(&mut ipc, "[info] bolts 1250");
+        assert_eq!(shown(&ipc).state, None);
+        log(&mut ipc, "[info] now playing level 3");
+        log(&mut ipc, "[info] 4000 frames");
+        let kerwan = shown(&ipc);
+        assert_eq!(kerwan.details.as_deref(), Some("Exploring Kerwan · Metropolis"));
+        assert_eq!(kerwan.state.as_deref(), Some("1,250 bolts"));
+        log(&mut ipc, "[info] bolts 1300");
+        assert_eq!(shown(&ipc).state.as_deref(), Some("1,300 bolts"));
+    }
+
+    #[test]
+    fn the_end_of_a_play_shows_the_launcher_and_forgets_the_planet() {
+        let mut ipc = offline();
+        let _ = ipc.set_status(&playing_rac1(), 1_600_000_000);
+        log(&mut ipc, "[info] now playing level 3");
+        log(&mut ipc, "[info] bolts 1250");
+
+        let _ = ipc.end_play(1_600_000_000);
+
+        let idle = shown(&ipc);
+        assert_eq!(idle.details.as_deref(), Some("In Launcher"));
+        assert_eq!(idle.timestamps.unwrap().start, Some(1_600_000_000));
+        assert_eq!(ipc.planet, None);
+        assert_eq!(ipc.bolts, None);
+        // The next play starts in the menus, without the last one's planet or bolts.
+        let _ = ipc.set_status(&playing_rac1(), 1_600_000_000);
+        assert_eq!(shown(&ipc).details.as_deref(), Some("In the menus"));
+        assert_eq!(shown(&ipc).state, None);
+    }
+
+    #[test]
+    fn reads_what_a_log_line_changes() {
+        assert_eq!(
+            read_game_log("rac1", "[info] now playing level 3"),
+            Some(GameLog::Place(Place { planet: "Kerwan".into(), location: Some("Metropolis".into()) }))
+        );
+        assert_eq!(read_game_log("rac1", "[info] bolts 1250"), Some(GameLog::Bolts(1250)));
+        assert_eq!(read_game_log("rac1", "[info] 4000 frames"), None);
+        assert_eq!(read_game_log("rac1", "[info] now playing level x"), None);
+        assert_eq!(read_game_log("rac1", "[warning] bolts unknown"), None);
+    }
+
+    #[test]
+    fn a_play_job_shows_its_versions_title() {
+        let root = crate::testing::checkout();
+        let catalog = crate::catalog::load(&root).unwrap();
+        let version = catalog.version("rac1/pal").unwrap();
+
+        let play = play(&root, &Scope::Version("rac1/pal".into()), 1_700_000_000).unwrap();
+
+        assert_eq!(play.game, "rac1");
+        assert_eq!(
+            play.status,
+            DiscordStatus::PlayingGame {
+                title: version.title.clone(),
+                region: version.region.clone(),
+                game_id: "rac1".into(),
+                start_time: Some(1_700_000_000),
+            }
+        );
+    }
+
+    #[test]
+    fn a_job_outside_the_catalogue_shows_no_game() {
+        let root = crate::testing::checkout();
+        assert_eq!(play(&root, &Scope::Repository, 0), None);
+        assert_eq!(play(&root, &Scope::Version("rac9/pal".into()), 0), None);
+        let empty = tempfile::tempdir().unwrap();
+        assert_eq!(play(empty.path(), &Scope::Version("rac1/pal".into()), 0), None);
     }
 
     #[test]

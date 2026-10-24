@@ -146,7 +146,7 @@ void func_0011BB38(int event, int param, TtyHandlerState *ti) {
 }
 
 /* rac1-decomp src/core/00119868.c: func_00119AA8 */
-/* Adapted from Lombyte (MIT) for PAL by OpenRAC's tools/port.py: src/sdk/debug/sce_tty_write.c, sceTtyWrite. */
+/* Adapted from Lombyte (GPL-3.0) for PAL by OpenRAC's tools/port.py: src/sdk/debug/sce_tty_write.c, sceTtyWrite. */
 s32 func_0011BCD0(s8 *text, s32 text_len) {
     s32 written_count; /* characters consumed -> return value */
     s32 remaining; /* countdown, hits -1 after len+1 tests */

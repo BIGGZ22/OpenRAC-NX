@@ -15,7 +15,7 @@ extern int D_L00_0017E620_234fd0 __asm__("D_L00_0017E620") __attribute__((sectio
 void func_00234238_234fd0(void *, void *, int, int, int) __asm__("func_00234238");
 void func_0020C468_234fd0(void *, int) __asm__("func_0020C468");
 void func_001FF7F0_234fd0(int, int) __asm__("func_001FF7F0");
-/* HUD update. Adapted from Lombyte (MIT) for PAL: overlays/shared/ui_hud_00234fd0.c, FUN_L00_00234fd0. */
+/* HUD update. Adapted from Lombyte (GPL-3.0) for PAL: overlays/shared/ui_hud_00234fd0.c, FUN_L00_00234fd0. */
 void HudBanks_Upload(int mode) {
     G_234fd0 *g = &D_L00_0017E5D8_234fd0;
     int off = D_L00_001BA070_234fd0.off;
@@ -53,7 +53,7 @@ typedef struct { int pad[5]; int a[8]; int b[16]; int c[8]; } T_235310;
 typedef struct { int v; short s; short pad; } E_235310;
 typedef struct { char pad[0x18]; T_235310 *t; char pad2[8]; E_235310 *a; E_235310 *b; } G_235310;
 extern G_235310 D_L00_0017E5D8_235ca0  __asm__("D_L00_0017E5D8") __attribute__((section(".data")));
-/* HUD update. Adapted from Lombyte (MIT) for PAL: overlays/shared/ui_hud_00234fd0.c, FUN_L00_00235310. */
+/* HUD update. Adapted from Lombyte (GPL-3.0) for PAL: overlays/shared/ui_hud_00234fd0.c, FUN_L00_00235310. */
 void HudBank_Release(int n) {
     int d = D_L00_0017E5D8_235ca0.t->c[n];
     int i, j, s, end;
@@ -86,7 +86,7 @@ extern volatile int D_L00_001600A0 MACRO_ADDR;
 extern volatile int D_L00_001600A8 MACRO_ADDR;
 extern short D_L00_0015F808;
 
-/* Adapted from Lombyte (MIT) for PAL by OpenRAC's tools/port.py: src/overlays/shared/ui/hud/00234fd0.c, FUN_L00_00235668. */
+/* Adapted from Lombyte (GPL-3.0) for PAL by OpenRAC's tools/port.py: src/overlays/shared/ui/hud/00234fd0.c, FUN_L00_00235668. */
 void MobyPool_Swap(int state) {
     int oldState = (*(volatile int *)&D_L00_0015F808);
     if (state != oldState) {
@@ -977,7 +977,7 @@ extern short D_L00_0015F80C;
 extern int D_0014171B_i[] __asm__("D_0014171B");
 
 // initializes a quick-select object and fills its 8-entry table from the info table
-// Adapted from Lombyte (MIT) for PAL: overlays/shared/ui_text_002377b8.c, FUN_L00_00237ae8.
+// Adapted from Lombyte (GPL-3.0) for PAL: overlays/shared/ui_text_002377b8.c, FUN_L00_00237ae8.
 void QuickSelectInit(Obj238478 *o) {
     int i, a, b;
     DestElem *d;
@@ -1079,7 +1079,7 @@ extern float func_001FA850(float, float);
 extern float func_001FA7D8(float);
 
 /* Picks slot w74 from the stick angle (or steps it with the 0x1000-0x8000 pad bits), counts hold frames in b71/b70, records the slot's entry when released, and closes when b70 runs out.
-   Adapted from Lombyte (MIT) for PAL by OpenRAC's tools/port.py: src/overlays/shared/ui/text/002377b8.c, FUN_L00_00237ba0. */
+   Adapted from Lombyte (GPL-3.0) for PAL by OpenRAC's tools/port.py: src/overlays/shared/ui/text/002377b8.c, FUN_L00_00237ba0. */
 void QuickSelectUpdate(Obj_38530 *p) {
     float x, y, mag, ang, a, f, r;
     int old, n, s, k, id;
@@ -1386,7 +1386,7 @@ extern int D_L00_0017DD40;
 extern int D_L00_0017DD44;
 extern int D_00141710[];
 
-/* Updates radial HUD selection and fades, closing it when the display fade reaches zero. Adapted from Lombyte (MIT) for PAL by OpenRAC's tools/port.py: src/overlays/shared/ui_text_002377b8.c, FUN_L00_00238b80. */
+/* Updates radial HUD selection and fades, closing it when the display fade reaches zero. Adapted from Lombyte (GPL-3.0) for PAL by OpenRAC's tools/port.py: src/overlays/shared/ui_text_002377b8.c, FUN_L00_00238b80. */
 void RadialSelectUpdate(Obj *o) {
     float x, y, len, ang;
     int old, cur, n, t;
@@ -1900,7 +1900,7 @@ extern void func_L00_0023BAB8_3A788(void *, int, int, int, int, int) __asm__("fu
 extern int func_00116248_3A788() __asm__("func_00116248");
 extern void func_001F6CF8(int, int, int, char *, int);
 
-/* Adapted from Lombyte (MIT) for PAL by OpenRAC's tools/port.py: src/overlays/shared/ui/text/002377b8.c, FUN_L00_00239df8. */
+/* Adapted from Lombyte (GPL-3.0) for PAL by OpenRAC's tools/port.py: src/overlays/shared/ui/text/002377b8.c, FUN_L00_00239df8. */
 int HudBoltsDraw(HudElem_3A788 *m)
 {
     char buf[16];
@@ -2245,7 +2245,7 @@ typedef struct { int a; int b; } H_23ac78;
 extern H_23ac78 D_L00_0017E5D8_23b610  __asm__("D_L00_0017E5D8") __attribute__((section(".data")));
 extern void func_L00_0023B750_23b610(void) __asm__("func_L00_0023B750");
 extern void func_001FFC48_23b610(void *) __asm__("func_001FFC48");
-/* Text/HUD update. Adapted from Lombyte (MIT) for PAL: overlays/shared/ui_text_0023a7a8.c, FUN_L00_0023ac78. */
+/* Text/HUD update. Adapted from Lombyte (GPL-3.0) for PAL: overlays/shared/ui_text_0023a7a8.c, FUN_L00_0023ac78. */
 int HudUpdate(int call) {
     int n = 0;
     E_23ac78 *e;
@@ -2291,7 +2291,7 @@ extern void func_001FFDA0(int, int);
 extern void func_L00_0023D750(void);
 extern int func_L00_0023B140(char *);
 
-/* Shows or hides the weapon HUD element depending on the current weapon. Adapted from Lombyte (MIT) for PAL: overlays/shared/ui_text_002377b8.c, FUN_L00_0023adb8. */
+/* Shows or hides the weapon HUD element depending on the current weapon. Adapted from Lombyte (GPL-3.0) for PAL: overlays/shared/ui_text_002377b8.c, FUN_L00_0023adb8. */
 void HudWeaponShow(void) {
     char *base;
     int w;
@@ -2478,7 +2478,7 @@ extern s32 D_L00_0015F9F4_23D750 SDATA(D_L00_0015F9F4);
 extern s32 D_L00_0015F9F8_23D750 SDATA(D_L00_0015F9F8);
 void func_L00_0023D750_r(O23D750 *p) __asm__("func_L00_0023D750");
 
-/* Steps a HUD element: clamps the shown value to 0..max, then on a random timer ramps its two-stage counter up to the limits or back down. Adapted from Lombyte (MIT) for PAL by OpenRAC's tools/port.py: src/overlays/shared/ui/hud/0023b120.c, FUN_L00_0023cdb8. */
+/* Steps a HUD element: clamps the shown value to 0..max, then on a random timer ramps its two-stage counter up to the limits or back down. Adapted from Lombyte (GPL-3.0) for PAL by OpenRAC's tools/port.py: src/overlays/shared/ui/hud/0023b120.c, FUN_L00_0023cdb8. */
 void func_L00_0023D750_r(O23D750 *p) {
     u8 *c = p->c;
     s32 v = *p->src;

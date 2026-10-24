@@ -516,7 +516,7 @@ s32 func_0022EB08_r(VoiceDefinition_2EB08 *, u32, VoiceMoby_2EB08 *, VoiceVector
 /* Takes a free voice of the sound pool for a definition (26 voices, 30 for the hero, the
    held item and class 0x472), places it at the moby or the given position, drops it when
    it would be inaudible and picks its pitch bend. Returns the voice index or -1.
-   Adapted from Lombyte (MIT) for PAL: src/textbin/fun_0022d7f0.c, allocate_voice_slot. */
+   Adapted from Lombyte (GPL-3.0) for PAL: src/textbin/fun_0022d7f0.c, allocate_voice_slot. */
 s32 func_0022EB08_r(VoiceDefinition_2EB08 *definition, u32 flags, VoiceMoby_2EB08 *moby,
                     VoiceVector_2EB08 *position, s32 volume) {
     s32 volume_offset;
@@ -750,7 +750,7 @@ extern s32 func_0012DDC0_2EFE8() __asm__("func_0012DDC0");
 extern s32 func_0012E4F8();
 extern s32 func_0012EC40_2EFE8() __asm__("func_0012EC40");
 
-/* Adapted from Lombyte (MIT) for PAL by OpenRAC's tools/port.py: src/audio/voices/sound_stop_all_sounds.c, sound_stop_all_sounds. */
+/* Adapted from Lombyte (GPL-3.0) for PAL by OpenRAC's tools/port.py: src/audio/voices/sound_stop_all_sounds.c, sound_stop_all_sounds. */
 void sound_StopAllSounds(void) {
     s32 i;
     SndState *s;

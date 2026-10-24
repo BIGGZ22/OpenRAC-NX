@@ -44,9 +44,11 @@ from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass, field
 from pathlib import Path
 
-HERE = Path(__file__).resolve().parent
-ROOT = HERE.parents[2]
-sys.path.insert(0, str(HERE))
+sys.path.insert(1, str(next(p for p in Path(__file__).resolve().parents if (p / "tools/openrac_common").is_dir()) / "tools"))
+from openrac_common import paths, tables  # noqa: E402
+
+ROOT = paths.repo_root(__file__)
+# hostgen's modules (clangast, program, ...): a folder beside this one, not a package.
 sys.path.insert(0, str(ROOT / "port" / "tools" / "hostgen"))
 from carry import Carrier, carry_c  # noqa: E402
 
@@ -101,16 +103,10 @@ class Gen:
         return [n for n in names or [] if n not in self.no_c]
 
 
-def read_tsv(path: Path) -> list[list[str]]:
-    if not path.is_file():
-        return []
-    return [line.split("\t") for line in path.read_text().splitlines() if line.strip() and not line.startswith("#")]
-
-
 def read_places(path: Path) -> dict[str, tuple[str, int, list[tuple[int, int]]]]:
     """A catalogue (name, kind, size, fingerprint, levels, places): name -> (kind, size, places)."""
     out = {}
-    for cols in read_tsv(path):
+    for cols in tables.read_tsv(path):
         if len(cols) > 5:
             out[cols[0]] = (cols[1], int(cols[2]) if cols[2].isdigit() else 0,
                             [(int(p[:2]), int(p[3:], 16)) for p in cols[5].split(",") if p])
@@ -650,7 +646,7 @@ class Version:
         return self.cfg_path.parent
 
     def hand_rows(self) -> list[list[str]]:
-        return read_tsv(self.dir / self.cfg["hand"]) if self.cfg.get("hand") else []
+        return tables.read_tsv(self.dir / self.cfg["hand"]) if self.cfg.get("hand") else []
 
 
 def load_version(cfg_path: Path, gen: Path) -> Version:
@@ -696,17 +692,17 @@ class Carry:
         self.s_places = read_places(s.source / s.cfg["places"]) if s.cfg.get("places") else {}
         self.t_symbols = read_symbols([t.source / p for p in t.cfg.get("symbols", [])])
         self.s_hand = {r[0]: s.dir / Path(s.cfg["hand"]).parent / r[1] for r in s.hand_rows() if len(r) > 1}
-        self.s_cand = {r[0]: s.source / r[1] for r in read_tsv(s.source / s.cfg.get("candidates", "-"))
+        self.s_cand = {r[0]: s.source / r[1] for r in tables.read_tsv(s.source / s.cfg.get("candidates", "-"))
                        if len(r) > 1} if s.cfg.get("candidates") else {}
         self.s_joined = {}
         joined = s.source / "config/overlays/joined.tsv"
-        for cols in read_tsv(joined):
+        for cols in tables.read_tsv(joined):
             if len(cols) > 1:
                 self.s_joined[cols[1]] = cols[0]
         self.t_host = set(t.cfg.get("host_functions", [])) | set(t.cfg.get("level_hooks", []))
         self.s_host = set(s.cfg.get("host_functions", [])) | set(s.cfg.get("level_hooks", []))
         for v, into in ((t, self.t_host), (s, self.s_host)):
-            for cols in read_tsv(v.dir / v.cfg.get("libraries", "-")):
+            for cols in tables.read_tsv(v.dir / v.cfg.get("libraries", "-")):
                 into.add(cols[0])
         self.t_skip = t.cfg.get("skip", [])
         self.intentional = set()

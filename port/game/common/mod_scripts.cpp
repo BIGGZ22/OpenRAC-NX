@@ -5,24 +5,25 @@
 
 #include "mod_scripts.h"
 
-#include "openrac/keys.h"
-
 #include <algorithm>
 #include <chrono>
 #include <cmath>
-#include <cstdlib>
 #include <cstddef>
+#include <cstdlib>
 #include <cstring>
 #include <format>
 #include <fstream>
 #include <memory>
 #include <sstream>
 
+#include "common/c_boundary.h"
 #include "common/crash.h"
+#include "common/env.h"
 #include "lua.h"
 #include "luacode.h"
 #include "lualib.h"
 #include "openrac/guest.h"
+#include "openrac/keys.h"
 
 namespace fs = std::filesystem;
 
@@ -35,11 +36,9 @@ constexpr std::uint32_t kRamSize = 32u * 1024u * 1024u;  // what read and write 
 using Clock = std::chrono::steady_clock;
 
 double g_budget_ms = [] {
-    if (const char* env = std::getenv("OPENRAC_SCRIPT_BUDGET_MS")) {
-        const double v = std::atof(env);
-        if (v > 0.0) {
-            return v;
-        }
+    const double v = env::number(env::Var::ScriptBudgetMs, 2.0);
+    if (v > 0.0) {
+        return v;
     }
     return 2.0;
 }();
@@ -1005,12 +1004,46 @@ void set_budget_ms(double ms) {
     g_budget_ms = ms;
 }
 
-}  // namespace openrac::mods::scripts
+namespace {
 
-// The runtime's side of every link's function (openrac/script_binding.h).
-extern "C" int openrac_script_dispatch(const openrac_script_point* point, openrac_script_link* link,
-                                       const openrac_script_value* args, openrac_script_value* result) {
-    using namespace openrac::mods::scripts;
+// A link's call under way (Link's args, result and called), put back as it was when a call of the
+// link ends, by any way out, an exception's included: calls nest, and the outer call goes on with
+// its own.
+class SavedCall {
+public:
+    explicit SavedCall(Link& link)
+        : m_link(&link),
+          m_args(link.args),
+          m_result(link.result),
+          m_called(link.called) {}
+
+    ~SavedCall() {
+        m_link->args = m_args;
+        m_link->result = m_result;
+        m_link->called = m_called;
+    }
+
+    SavedCall(const SavedCall&) = delete;
+    SavedCall& operator=(const SavedCall&) = delete;
+    SavedCall(SavedCall&&) = delete;
+    SavedCall& operator=(SavedCall&&) = delete;
+
+private:
+    Link* m_link;
+    const openrac_script_value* m_args;
+    openrac_script_value m_result;
+    bool m_called;
+};
+
+// openrac_script_dispatch's body: runs the script of `link` for one call of its hook point. May
+// throw (a hook point's call, Luau outside a protected call, an allocation); the entry point stops
+// it there.
+int dispatch(
+    const openrac_script_point* point,
+    openrac_script_link* link,
+    const openrac_script_value* args,
+    openrac_script_value* result
+) {
     auto* l = static_cast<Link*>(link->runtime);
     if (l == nullptr || l->state->stopped || l->state->T == nullptr) {
         return 0;
@@ -1018,9 +1051,7 @@ extern "C" int openrac_script_dispatch(const openrac_script_point* point, openra
     State* s = l->state;
     lua_State* T = s->T;
     // Calls nest: what the outer call of this link had is put back after.
-    const openrac_script_value* saved_args = l->args;
-    const openrac_script_value saved_result = l->result;
-    const bool saved_called = l->called;
+    const SavedCall saved(*l);
     l->args = args;
     l->called = false;
     l->result = openrac_script_value{0, 0.0};
@@ -1063,8 +1094,23 @@ extern "C" int openrac_script_dispatch(const openrac_script_point* point, openra
     } else if (l->mode == Link::Mode::Before) {
         point->call(link->original, args, result);
     }
-    l->args = saved_args;
-    l->result = saved_result;
-    l->called = saved_called;
     return handled ? 1 : 0;
+}
+
+}  // namespace
+
+}  // namespace openrac::mods::scripts
+
+// The runtime's side of every link's function (openrac/script_binding.h). An exception from the
+// call is reported to the log, and the link's original is called as it is (0): the contract's
+// value for no script there (CODING_CONVENTIONS.md, section 13.4).
+extern "C" int openrac_script_dispatch(
+    const openrac_script_point* point,
+    openrac_script_link* link,
+    const openrac_script_value* args,
+    openrac_script_value* result
+) {
+    return openrac::c_boundary::call("openrac_script_dispatch", 0, [&] {
+        return openrac::mods::scripts::dispatch(point, link, args, result);
+    });
 }

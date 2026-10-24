@@ -14,10 +14,14 @@ that a program can count.
 Three kinds of rule (CODING_CONVENTIONS.md, "What the machines check"):
 
 - every file in scope: the first line is an SPDX licence line; no tab; no em or en dash;
+  getenv, std::getenv or SDL_getenv reads no OPENRAC_ variable and no name that is not a
+  literal outside common/env.cpp and runtime/host_env.cpp (section 16), except in the files
+  GETENV_EXCEPTIONS names until their package moves the reads;
 - a C++ file added since REF: clang-format reports nothing; the first two lines are the
   `//` licence and copyright lines; no `static` at namespace scope; no raw new, delete,
-  malloc or free; no `using namespace` in a header; `extern "C"` only in a file named for a
-  C contract; no printf family or std::cout outside tests and programs' main files;
+  malloc or free, except in the files ALLOCATION_EXCEPTIONS names; no `using namespace` in a
+  header; `extern "C"` only in a file named for a C contract; no printf family or std::cout
+  outside tests and programs' main files;
 - a C file added since REF: the copyright line and clang-format, reported as advisories.
   The port's C is on its way into games/ and the gate for it is the one above.
 
@@ -61,6 +65,33 @@ EXTERN_C = re.compile(r'\bextern\s+""')
 CONSOLE_OUTPUT = re.compile(
     r"(?<![\w.>:])(?:std::)?(printf|fprintf|puts|fputs)\s*\(|\bstd::(cout|cerr|clog)\b"
 )
+# A call of the C library's or SDL's getenv, up to its first argument; not a member, not fegetenv.
+GETENV_CALL = re.compile(r"(?<![\w.>:])(?:std::|::)?(?:SDL_)?getenv\s*\(\s*")
+
+# The files that read the environment for the port (CODING_CONVENTIONS.md, section 16): the table
+# of OPENRAC_* variables, and the C entry point to it (openrac/host_env.h).
+GETENV_READERS = (
+    "port/common/env.cpp",
+    "port/runtime/host_env.cpp",
+)
+
+# The files that still read OPENRAC_* variables with getenv, each with what moves its reads onto
+# the table. When a package moves a file's reads, it removes the file's entry; an entry whose file
+# reads none any more is reported as stale, a warning, since other work removes reads meanwhile.
+GETENV_EXCEPTIONS = {
+    "port/game/rac1/host/boot.c": "P2-38 reads it through openrac/host_env.h",
+    "port/game/rac1/host/collision.c": "P2-38 reads it through openrac/host_env.h",
+    "port/game/rac1/host/hand.c": "P2-38 reads it through openrac/host_env.h",
+    "port/game/rac1/host/ui2d.c": "P2-38 reads it through openrac/host_env.h",
+    "port/tests/vulkan_uniform_test.cpp": "a test that reads the switch to know what to expect",
+}
+
+
+# The files that may allocate raw memory, each with why it has to: a program that counts the heap
+# replaces operator new and delete, which cannot take their memory from the heap they count.
+ALLOCATION_EXCEPTIONS = {
+    "port/tests/render_bench.cpp": "replaces operator new and delete to count a frame's allocations",
+}
 
 
 @dataclass(frozen=True)
@@ -98,11 +129,13 @@ def is_generated(text):
     return "Do not edit" in head or "do not edit" in head
 
 
-def strip_comments_and_strings(text):
+def strip_comments_and_strings(text, keep_columns=False):
     """Blanks out comments and string and character literals, keeping every newline.
 
     The new-code rules look for words such as `new` and `free`, which prose and messages
-    use too.
+    use too. A literal becomes its two quotes; with `keep_columns`, comments become spaces and a
+    literal keeps its length (its quotes around spaces), so an offset in the result is the same
+    offset in `text`.
     """
     out = []
     n = 0
@@ -114,6 +147,8 @@ def strip_comments_and_strings(text):
         if two == "//":
             end = text.find("\n", n)
             end = length if end < 0 else end
+            if keep_columns:
+                out.append(" " * (end - n))
             n = end
             continue
 
@@ -121,17 +156,26 @@ def strip_comments_and_strings(text):
         if two == "/*":
             end = text.find("*/", n + 2)
             end = length if end < 0 else end + 2
-            out.append("\n" * text.count("\n", n, end))
+            if keep_columns:
+                out.append(re.sub(r"[^\n]", " ", text[n:end]))
+            else:
+                out.append("\n" * text.count("\n", n, end))
             n = end
             continue
 
         # A literal: skip to its closing quote, past escaped characters.
         if text[n] in "\"'":
             quote = text[n]
+            start = n
             n += 1
             while n < length and text[n] != quote and text[n] != "\n":
                 n += 2 if text[n] == "\\" else 1
-            out.append(quote + quote)
+            if keep_columns:
+                # The character that ended it (the quote, or the newline of an unclosed one) stays.
+                end = text[n] if n < length else ""
+                out.append(quote + " " * (min(n, length) - start - 1) + end)
+            else:
+                out.append(quote + quote)
             n += 1
             continue
 
@@ -194,6 +238,71 @@ def check_every_file(path, text):
     return findings
 
 
+def getenv_rule_applies(path):
+    """True when the getenv rule covers `path`: not a reader of the table, nor vendored code."""
+    if path in GETENV_READERS:
+        return False
+
+    # third_party.c and the like compile vendored libraries, which read what they read.
+    return not any(Path(part).stem == "third_party" for part in path.split("/"))
+
+
+def getenv_reads(path, text):
+    """The getenv calls of `text` that read an OPENRAC_ variable, or a name that is not a literal.
+
+    The call is found in the code with comments and literals blanked to spaces, and its literal
+    argument read from `text` at the same offset.
+    """
+    # C reaches the table through its contract (CODING_CONVENTIONS.md, section 14.3).
+    door = "common/env.h" if is_cpp(path, text) else "openrac/host_env.h"
+
+    findings = []
+    code = strip_comments_and_strings(text, keep_columns=True)
+    for call in GETENV_CALL.finditer(code):
+        line = code.count("\n", 0, call.start()) + 1
+        start = call.end()
+
+        # A literal name: only the port's own variables are the table's.
+        if text.startswith('"', start):
+            end = text.find('"', start + 1)
+            name = text[start + 1 : end if end >= 0 else len(text)]
+            if name.startswith("OPENRAC_"):
+                findings.append(Finding(path, line, "getenv", f"read {name} through {door}"))
+            continue
+
+        # A computed name may be one of the port's variables, which only the table reads.
+        message = f"a name that is not a literal: OPENRAC_ variables through {door}"
+        findings.append(Finding(path, line, "getenv", message))
+    return findings
+
+
+def check_getenv(texts, exceptions):
+    """The getenv rule over every file of `texts` (path to text), and the stale `exceptions`.
+
+    A file `exceptions` names keeps its reads; an entry whose file reads none (or is gone) is an
+    advisory, so that the work that moved the reads removes it.
+    """
+    findings = []
+    excused = set()
+    for path, text in sorted(texts.items()):
+        if not getenv_rule_applies(path) or is_generated(text):
+            continue
+        reads = getenv_reads(path, text)
+
+        # A known exception keeps its reads until its package moves them.
+        if path in exceptions:
+            if reads:
+                excused.add(path)
+            continue
+
+        findings += reads
+
+    for path in sorted(set(exceptions) - excused):
+        message = "stale: it reads no OPENRAC_ variable now, drop its GETENV_EXCEPTIONS entry"
+        findings.append(Finding(path, 1, "getenv", message, gating=False))
+    return findings
+
+
 def check_new_cpp(path, text, contract_stems):
     """The rules for a C++ file that did not exist at the base of the change."""
     findings = []
@@ -209,17 +318,18 @@ def check_new_cpp(path, text, contract_stems):
     header = path.endswith(HEADER_SUFFIXES)
     contract_ok = may_define_c_contract(path, contract_stems)
     output_ok = is_program_or_test(path)
+    allocation_ok = path in ALLOCATION_EXCEPTIONS
 
     for number, line in enumerate(code, 1):
         if STATIC_AT_NAMESPACE.match(line):
             findings.append(
                 Finding(path, number, "static", "file-local code goes in an anonymous namespace")
             )
-        if RAW_NEW.search(line) or RAW_DELETE.search(line):
+        if not allocation_ok and (RAW_NEW.search(line) or RAW_DELETE.search(line)):
             findings.append(
                 Finding(path, number, "new-delete", "own it: std::make_unique or a container")
             )
-        if C_ALLOCATION.search(line):
+        if not allocation_ok and C_ALLOCATION.search(line):
             findings.append(
                 Finding(path, number, "malloc-free", "own it: a container or an RAII wrapper")
             )
@@ -363,8 +473,18 @@ def touched_line_findings(root, clang_format, since, paths, gating):
     return findings
 
 
-def run(root, since=None, touched=False, strict_touched=False, clang_format=None):
-    """Checks the tree at `root` and returns the findings."""
+def run(
+    root,
+    since=None,
+    touched=False,
+    strict_touched=False,
+    clang_format=None,
+    getenv_exceptions=GETENV_EXCEPTIONS,
+):
+    """Checks the tree at `root` and returns the findings.
+
+    `getenv_exceptions` maps the files that may still read OPENRAC_ variables with getenv to why.
+    """
     files = [path for path in tracked_files(root) if in_scope(path)]
     texts = {}
     for path in files:
@@ -378,6 +498,7 @@ def run(root, since=None, touched=False, strict_touched=False, clang_format=None
     for path, text in texts.items():
         if not is_generated(text):
             findings += check_every_file(path, text)
+    findings += check_getenv(texts, getenv_exceptions)
 
     if since is None:
         return findings

@@ -1,5 +1,14 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 // Copyright (c) 2026 the OpenRAC contributors
+//
+// The moby animation readers and evaluator (moby_animation.h). The first half reads frames and
+// sequences out of a class blob and steps an AnimState along a sequence (key frames A and B and
+// an interpolation point t between them). The second half evaluates a pose: it fills the joint
+// records that the game keeps on the scratchpad, interpolates the keys, applies pose layers and
+// joint modifiers, builds each joint's matrix after its parent's, and combines it with the bind
+// matrix. The arithmetic goes through the ps2:: helpers on float bit patterns, in the same order
+// as the game's, so the results match bit for bit; the modifier path uses native floats. A
+// snapshot of a pose can also be encoded back into the frame format.
 
 #include "assets/geometry/moby_animation.h"
 
@@ -18,6 +27,7 @@ constexpr u32 kOne = ps2::kOne;
 constexpr u32 kNegOne = ps2::kNegOne;
 // The scratchpad the common_trans parent words point into (0x70000000 +
 // 0x40 * parent), and its joint records (at most 0x70 joints).
+// The scratchpad address the common_trans parent words point into.
 constexpr u32 kScratchpad = 0x7000'0000;
 constexpr std::size_t kRecords = 0x70;
 constexpr V4 kUnitScale = {kOne, kOne, kOne, 0};
@@ -28,20 +38,28 @@ constexpr std::array<V4, 4> kIdentity4 = {
     V4{0, 0, 0, kOne},
 };
 
+// The joint record a parent word names, or nothing for 0 or an address that is not a record.
 std::optional<std::size_t> scratchpad_record(u32 word) {
+    // A record pointer must be on the scratchpad and 0x40-aligned, or it names no joint record.
     if (word < kScratchpad || (word - kScratchpad) % 0x40 != 0) {
         return std::nullopt;
     }
+
     const std::size_t i = (word - kScratchpad) / 0x40;
     return i < kRecords ? std::optional<std::size_t>(i) : std::nullopt;
 }
 
+// Reads and validates the frame at `at`: its header, the quaternion, scale and translation
+// arrays and a copy of the payload. The header's sizes must agree with each other.
 MobyFrame read_frame(ByteView b, std::size_t at) {
     MobyFrame f;
     f.header = b.read<MobyFrameHeader>(at, "moby frame header");
     const std::size_t qb = f.header.quat_bytes;
     const std::size_t to = f.header.trans_offset;
     const std::size_t tc = f.header.trans_count;
+
+    // The quaternion block is whole 8-byte quaternions, and the translations follow it at an
+    // aligned offset.
     if (qb % 8 != 0 || to < qb || (to - qb) % 8 != 0) {
         fail(
             "moby frame at {:#x}: quat bytes {:#x} and translation offset {:#x} disagree",
@@ -50,12 +68,18 @@ MobyFrame read_frame(ByteView b, std::size_t at) {
             to
         );
     }
+
+    // The gap between the two offsets is the scale records, so their count must agree with the
+    // header.
     if ((to - qb) / 8 != f.header.scale_count) {
         fail("moby frame at {:#x}: scale count mismatch", at);
     }
+
+    // The quadword count in the header must cover everything up to the end of the translations.
     if (f.header.qwc != (to + 8 * tc + 15) >> 4) {
         fail("moby frame at {:#x}: qwc mismatch", at);
     }
+
     const ByteView payload = b.sub(at + 0x10, std::size_t{f.header.qwc} * 16, "moby frame payload");
     f.quats = payload.read_array<std::array<s16, 4>>(0, qb / 8, "moby frame quaternions");
     f.scales = payload.read_array<MobyScaleRecord>(qb, (to - qb) / 8, "moby frame scale records");
@@ -64,27 +88,36 @@ MobyFrame read_frame(ByteView b, std::size_t at) {
     return f;
 }
 
+// a * u + b * t on the first `n` lanes; the other lanes are taken from `keep`.
 V4 lanes_lerp(const V4& a, const V4& b, u32 u, u32 t, std::size_t n, const V4& keep) {
     V4 r = keep;
+
+    // Interpolate the first n lanes; the others keep the values of `keep`.
     for (std::size_t k = 0; k < n; ++k) {
         r[k] = ps2::add(ps2::mul(a[k], u), ps2::mul(b[k], t));
     }
+
     return r;
 }
 
 // vmulax ACC, m0, v.x; vmadday ACC, m1, v.y; vmaddz r, m2, v.z (all lanes).
 V4 mat3(const V4& m0, const V4& m1, const V4& m2, const V4& v) {
     V4 r{};
+
+    // The same multiply-add is done on each of the four lanes.
     for (std::size_t k = 0; k < 4; ++k) {
         r[k] =
             ps2::add(ps2::add(ps2::mul(m0[k], v[0]), ps2::mul(m1[k], v[1])), ps2::mul(m2[k], v[2]));
     }
+
     return r;
 }
 
 // ... then vmaddw r, m3, vf0.w.
 V4 mat4_point(const std::array<V4, 4>& m, const V4& v) {
     V4 r{};
+
+    // The same multiply-add is done on each of the four lanes.
     for (std::size_t k = 0; k < 4; ++k) {
         r[k] = ps2::add(
             ps2::add(
@@ -93,9 +126,11 @@ V4 mat4_point(const std::array<V4, 4>& m, const V4& v) {
             ps2::mul(m[3][k], kOne)
         );
     }
+
     return r;
 }
 
+// A stored quaternion as float bit patterns.
 V4 quat_bits(const std::array<s16, 4>& q) {
     // s16 / 32768: exact.
     return {
@@ -106,15 +141,18 @@ V4 quat_bits(const std::array<s16, 4>& q) {
     };
 }
 
+// A float triple as a vector with the given bit pattern in the fourth lane.
 V4 with_w(const std::array<f32, 3>& v, u32 w) {
     return {ps2::bits(v[0]), ps2::bits(v[1]), ps2::bits(v[2]), w};
 }
 
+// The scale of a record as floats.
 std::array<f32, 3> scale_value(const MobyScaleRecord& r) {
     // u16 / 4096: exact.
     return {r.scale[0] / 4096.0f, r.scale[1] / 4096.0f, r.scale[2] / 4096.0f};
 }
 
+// The translation of a record as floats.
 std::array<f32, 3> trans_value(const MobyTransRecord& r) {
     return {
         static_cast<f32>(r.trans[0]), static_cast<f32>(r.trans[1]), static_cast<f32>(r.trans[2])
@@ -123,21 +161,29 @@ std::array<f32, 3> trans_value(const MobyTransRecord& r) {
 
 }  // namespace
 
+// Reads the frame at `offset` of a blob.
 MobyFrame parse_frame(ByteView base, std::size_t offset) {
     return read_frame(base, offset);
 }
 
+// The quaternion of joint `j` from the payload; zero lanes where the payload is short.
 std::array<s16, 4> MobyFrame::quat_at(std::size_t j) const {
     std::array<s16, 4> q{};
+
+    // Each quaternion is four 16-bit lanes.
     for (std::size_t k = 0; k < 4; ++k) {
         const std::size_t o = 8 * j + 2 * k;
+
+        // A short payload leaves the lane at zero instead of reading past it.
         if (o + 2 <= payload.size()) {
             std::memcpy(&q[k], payload.data() + o, 2);
         }
     }
+
     return q;
 }
 
+// Reads a sequence: its header, frame pointers, triggers and every frame.
 MobySequence parse_sequence(ByteView base, std::size_t offset) {
     MobySequence s;
     s.header = base.read<MobySequenceHeader>(offset, "moby sequence header");
@@ -147,46 +193,69 @@ MobySequence parse_sequence(ByteView base, std::size_t offset) {
         offset + 0x1c + 4 * fc, s.header.trigger_count, "moby sequence triggers"
     );
     s.frames.reserve(fc);
+
+    // Each frame pointer is an offset into the class blob.
     for (const u32 p : pointers) {
+        // The pointers are blob offsets, so the top nibble (the console's address segment) must be
+        // clear.
         if (p >> 28 != 0) {
             fail("moby sequence: frame pointer {:#x} has a non-zero top nibble", p);
         }
+
         s.frames.push_back(read_frame(base, p));
     }
+
     return s;
 }
 
+// Reads every sequence of a class, with an empty slot where the pointer is null.
 std::vector<std::optional<MobySequence>> parse_sequences(
     ByteView class_blob, const MobyClass& moby
 ) {
     std::vector<std::optional<MobySequence>> out;
     out.reserve(moby.sequence_pointers.size());
+
+    // One entry per sequence pointer, in order, so that a sequence keeps its number.
     for (const s32 p : moby.sequence_pointers) {
+        // A null pointer means the class has no such sequence.
         if (p <= 0) {
             out.emplace_back();
         } else {
+            // A real pointer points at a sequence in the blob.
             out.emplace_back(parse_sequence(class_blob, static_cast<std::size_t>(p)));
         }
     }
+
     return out;
 }
 
+// The gait records (20 words) of the sequences that have trigger data, with their sequence
+// number.
 std::vector<std::pair<u8, std::array<u32, 20>>> gait_records(
     ByteView class_blob, const MobyClass& moby
 ) {
     std::vector<std::pair<u8, std::array<u32, 20>>> out;
+
+    // Look at each sequence in turn for a gait record.
     for (std::size_t i = 0; i < moby.sequence_pointers.size(); ++i) {
         const s32 p = moby.sequence_pointers[i];
+
+        // Skip the sequences that do not exist.
         if (p <= 0) {
             continue;
         }
+
+        // A bad pointer is skipped, not fatal: see the catch below.
         try {
             const auto h = class_blob.read<MobySequenceHeader>(
                 static_cast<std::size_t>(p), "moby sequence header"
             );
+
+            // A sequence without trigger data has no gait record.
             if (h.trigger_data == 0) {
                 continue;
             }
+
             out.emplace_back(
                 static_cast<u8>(i),
                 class_blob.read<std::array<u32, 20>>(h.trigger_data, "gait record")
@@ -195,138 +264,197 @@ std::vector<std::pair<u8, std::array<u32, 20>>> gait_records(
             // Not every pointer leads to a gait record; skip what does not read.
         }
     }
+
     return out;
 }
 
+// Gathers the skeleton, rest translations and parent words the evaluator needs, per joint.
 MobyAnimClass::MobyAnimClass(const MobyClass& moby, std::vector<std::optional<MobySequence>> seqs)
     : joint_count(moby.header.joint_count),
       sequences(std::move(seqs)) {
     const MobySkeleton& sk = moby.skeleton;
+
+    // Fill the per-joint arrays up to the header's joint count.
     for (std::size_t j = 0; j < joint_count; ++j) {
         skeleton.push_back(j < sk.matrices.size() ? sk.matrices[j] : kIdentityJoint);
+
+        // A joint with no transform record uses the identity and has no parent.
         if (j < sk.trans.size()) {
             rest.push_back(sk.trans[j].vector);
             parent_word.push_back(sk.trans[j].parent_offset | u32{sk.trans[j].seventy} << 16);
         } else {
+            // The class has fewer records than joints, so this joint stays at rest with no parent.
             rest.push_back({});
             parent_word.push_back(0);
         }
     }
 }
 
+// The sequence with this number, or null when there is none.
 const MobySequence* MobyAnimClass::sequence(u8 seq) const {
+    // An unknown or empty sequence has no frames.
     if (seq >= sequences.size() || !sequences[seq]) {
         return nullptr;
     }
+
     return &*sequences[seq];
 }
 
+// A frame of a sequence, or null when the sequence or the frame does not exist.
 const MobyFrame* MobyAnimClass::frame(u8 seq, u8 index) const {
     const MobySequence* s = sequence(seq);
     return s != nullptr && index < s->frames.size() ? &s->frames[index] : nullptr;
 }
 
+// The parent joint of `joint`, or nothing for a root.
 std::optional<std::size_t> MobyAnimClass::parent(std::size_t joint) const {
     return joint < parent_word.size() ? scratchpad_record(parent_word[joint]) : std::nullopt;
 }
 
+// The state of a moby at spawn: running, unless the class is a single still pose.
 AnimState AnimState::spawn(const MobyAnimClass& anim) {
     AnimState s;
+
+    // A class with a single, one-frame sequence is a still pose: it does not advance.
     if (anim.sequences.size() == 1 && anim.sequences[0]
         && anim.sequences[0]->header.frame_count <= 1) {
         s.speed = 0;
         s.skip_advance = (anim.sequences[0]->header.loop_sound & 0x80) != 0;
     }
+
     return s;
 }
 
+// Moves the interpolation point by speed * rate and, when it passes a key, steps the frames the
+// way the game does (forward or backward, with the wrap and step flags in `s.flags`). Returns
+// whether the state could be advanced; false leaves a paused or inconsistent state as it was.
 bool advance(AnimState& s, const MobyAnimClass& anim) {
     const u32 sp = ps2::bits(s.speed);
     u32 r = ps2::bits(s.rate);
     s.flags = 0;
+
+    // A zero rate means the animation is paused.
     if (r == 0) {
         return false;
     }
+
     // Same sequence: adda.s ACC = 0 + t; madd.s t' = ACC + speed * rate.
     // A transition: add.s t' = t + rate.
     u32 t = s.seq_a == s.seq_b ? ps2::add(ps2::add(0, ps2::bits(s.t)), ps2::mul(sp, r))
                                : ps2::add(ps2::bits(s.t), r);
+
+    // A zero speed freezes the animation, though the rate was still used above.
     if (sp == 0) {
         return false;
     }
+
     const auto ti = static_cast<s32>(t);
     // The snap window, a signed compare of the bits: negatives never snap.
     const bool snap = ti >= 0x3f7f'0000 && ti <= 0x3f80'8000;
     const bool stepping = snap || ti > static_cast<s32>(kOne) || ti < 0;
+
+    // Between two keys: only the interpolation point moves.
     if (!stepping) {
         s.t = ps2::to_float(t);
         return true;
     }
+
     const MobySequence* seq = anim.sequence(s.seq_b);
+
+    // The next sequence must exist to know its length and rates.
     if (seq == nullptr) {
         return false;
     }
+
     const s32 fc = seq->header.frame_count;
     const u32 rate_override = ps2::bits(seq->header.rate_override);
     u8 flags = 0;
     auto rate_of = [&](s32 frame) -> std::optional<u32> {
+        // A sequence-wide rate override beats the rate of each key frame.
         if (rate_override != 0) {
             return rate_override;
         }
+
+        // A frame number outside the sequence has no rate.
         if (frame < 0 || static_cast<std::size_t>(frame) >= seq->frames.size()) {
             return std::nullopt;
         }
+
         return ps2::bits(seq->frames[static_cast<std::size_t>(frame)].header.rate);
     };
+
+    // Past the next key (or on the snap window): step forward through the frames.
     if (snap || ti > static_cast<s32>(kOne)) {
+        // Land exactly on the key when inside the snap window.
         if (snap) {
             t = kOne;
         }
+
         // Forward, while t > 1.0 (no snap inside the loop).
+        // Step forward one frame at a time until the interpolation point is back inside 0..1.
         while (true) {
             t = ps2::sub(t, kOne);
             const u8 new_a = s.frame_b;
             s32 new_b = s.frame_b + 1;
+
+            // After a transition, key A now belongs to the new sequence.
             if (s.seq_a != s.seq_b) {
                 s.trigger_count = seq->header.trigger_count;
                 s.seq_a = s.seq_b;
             }
+
             t = ps2::div(t, r);
             flags |= 1;
+
+            // Past the last frame the sequence wraps to its first, and the wrap flag is raised.
             if (fc - new_b <= 0) {
                 new_b = 0;
                 flags |= 2;
             }
+
             // The new key A's own rate (the old B frame), unless overridden.
             const auto next = rate_of(new_a);
+
+            // Without a rate for the new key the step cannot continue.
             if (!next) {
                 return false;
             }
+
             r = *next;
             t = ps2::mul(t, r);
             s.frame_a = new_a;
             s.frame_b = static_cast<u8>(new_b);
             s.rate = ps2::to_float(r);
             s.t = ps2::to_float(t);
+
+            // Stop once the point is no longer past 1.0.
             if (static_cast<s32>(t) <= static_cast<s32>(kOne)) {
                 break;
             }
         }
     } else {
+        // Before the first key (t below zero): step backward through the frames.
         // Backward, while t < 0 (the sign bit: -0.0 counts).
+        // Step back one frame at a time until the point is no longer negative.
         while (true) {
             t = ps2::div(t, r);
             const u8 new_b = s.frame_a;
             s32 new_a = s.frame_a - 1;
             flags |= 1;
+
+            // Before the first frame the sequence wraps to its last, and the wrap flag is raised.
             if (new_a < 0) {
                 new_a = fc - 1;
                 flags |= 2;
             }
+
             const auto next = rate_of(new_a);
+
+            // Without a rate for the new key the step cannot continue.
             if (!next) {
                 return false;
             }
+
             r = *next;
             t = ps2::mul(t, r);
             s.frame_a = static_cast<u8>(new_a);
@@ -334,32 +462,47 @@ bool advance(AnimState& s, const MobyAnimClass& anim) {
             t = ps2::add(t, kOne);
             s.rate = ps2::to_float(r);
             s.t = ps2::to_float(t);
+
+            // Stop once the sign bit is clear, that is, t is no longer negative.
             if ((t & ps2::kSign) == 0) {
                 break;
             }
         }
     }
+
     s.flags = flags;
     return true;
 }
 
+// Jumps to a frame of a sequence without blending. Returns false when the sequence or the frame
+// does not exist.
 bool hard_cut(AnimState& s, const MobyAnimClass& anim, u8 seq, s32 frame) {
     const MobySequence* q = anim.sequence(seq);
+
+    // The sequence must exist to be cut to.
     if (q == nullptr) {
         return false;
     }
+
     const s32 fc = q->header.frame_count;
     const auto a = static_cast<u8>(frame < fc ? frame : fc - 1);
     auto b = static_cast<u8>(a + 1);
+
+    // Key B is the next frame, but never past the last one.
     if (fc - 1 < b) {
         b = static_cast<u8>(fc - 1);
     }
+
+    // A single-frame sequence has B = 0.
     if (fc <= b) {
         b = 0;
     }
+
+    // The frame must exist in the sequence.
     if (a >= q->frames.size()) {
         return false;
     }
+
     s.seq_a = seq;
     s.frame_a = a;
     s.seq_b = seq;
@@ -371,10 +514,14 @@ bool hard_cut(AnimState& s, const MobyAnimClass& anim, u8 seq, s32 frame) {
     return true;
 }
 
+// Whether keys A and B are neighbouring frames of one sequence, which allows a straight lerp.
 bool consecutive(const AnimState& s) {
     return s.seq_a == s.seq_b && s.frame_b == s.frame_a + 1;
 }
 
+// The order in which the game applies the post-chain scales, rebuilt from its linked list of
+// the first and second key's joints (a joint of the second list that the first already named is
+// skipped).
 std::vector<u8> post_scale_list(std::span<const u8> a, std::span<const u8> b) {
     // Each node's link: none, the raw record bits (never followed), or a joint.
     enum class Kind : u8 {
@@ -392,12 +539,16 @@ std::vector<u8> post_scale_list(std::span<const u8> a, std::span<const u8> b) {
     std::array<Link, 256> link{};
     std::optional<u8> last;
     auto set = [&](Link v) {
+        // The first link becomes the list's head; later ones follow the last node.
         if (last) {
             link[*last] = v;
         } else {
+            // There is no node yet, so this link is the head.
             head = v;
         }
     };
+
+    // List the first set of joints, in order.
     for (const u8 j : a) {
         set({Kind::To, j});
         last = j;
@@ -405,25 +556,35 @@ std::vector<u8> post_scale_list(std::span<const u8> a, std::span<const u8> b) {
         // record's bits.
         link[j] = {Kind::Raw, 0};
     }
+
     std::array<bool, 256> b_written{};
+
+    // List the second set, skipping the joints the first loop wrote.
     for (const u8 j : b) {
         const bool was = b_written[j];
         b_written[j] = true;
+
+        // A joint that is already in the list is not linked again.
         if (!was) {
             set({Kind::To, j});
             last = j;
         }
     }
+
     set({Kind::Zero, 0});
     std::vector<u8> out;
     Link cur = head;
+
+    // Follow the links to the end; the bound stops a cycle from running forever.
     while (cur.kind == Kind::To && out.size() <= 512) {
         out.push_back(cur.joint);
         cur = link[cur.joint];
     }
+
     return out;
 }
 
+// The rows of the rotation matrix of a quaternion, with the unit's operation order.
 std::array<V4, 3> quat_rows(const V4& q) {
     using ps2::add;
     using ps2::mul;
@@ -452,61 +613,96 @@ std::array<V4, 3> quat_rows(const V4& q) {
     };
 }
 
+// Lerps two quaternions, flipping b when the dot product is negative (the shorter way round),
+// then normalises.
 V4 nlerp_flip(const V4& a, const V4& b, u32 u, u32 t) {
     using ps2::add;
     using ps2::mul;
     V4 p{};
     V4 nb{};
+
+    // Per lane: the product with b for the dot product and the negated b for the flipped blend.
     for (std::size_t k = 0; k < 4; ++k) {
         p[k] = mul(a[k], b[k]);
         nb[k] = mul(b[k], kNegOne);
     }
+
     const u32 d = add(add(add(p[1], p[0]), mul(kOne, p[2])), mul(kOne, p[3]));
     const V4 q =
         (d & ps2::kSign) == 0 ? lanes_lerp(a, b, u, t, 4, a) : lanes_lerp(a, nb, u, t, 4, a);
     V4 sq{};
+
+    // Square each lane of the blended quaternion for its length.
     for (std::size_t k = 0; k < 4; ++k) {
         sq[k] = mul(q[k], q[k]);
     }
+
     const u32 n = add(add(add(sq[0], sq[1]), mul(kOne, sq[2])), mul(kOne, sq[3]));
     const u32 qq = ps2::rsqrt(kOne, n);
     return {mul(q[0], qq), mul(q[1], qq), mul(q[2], qq), mul(q[3], qq)};
 }
 
+// The joint palette of the state: key A, key B and t come from `s`. A missing key gives identity.
 std::vector<JointMatrix> evaluate(const MobyAnimClass& anim, const AnimState& s) {
     const std::size_t jc = anim.joint_count;
+
+    // A class without joints evaluates to a single identity matrix.
     if (jc == 0) {
         return {kIdentityJoint};
     }
+
     const MobyFrame* fa = anim.frame(s.seq_a, s.frame_a);
+
+    // Without key A there is no pose to evaluate, so every joint stays at identity.
     if (fa == nullptr) {
         return std::vector<JointMatrix>(jc, kIdentityJoint);
     }
+
     const MobyFrame* fb = nullptr;
+
+    // A zero interpolation point means key A alone, so key B is not looked up.
     if (ps2::bits(s.t) != 0) {
         fb = anim.frame(s.seq_b, s.frame_b);
+
+        // A missing key B leaves no pose to interpolate towards.
         if (fb == nullptr) {
             return std::vector<JointMatrix>(jc, kIdentityJoint);
         }
     }
+
     return evaluate_keys(anim, fa, fb, s.t, consecutive(s));
 }
 
+// The joint palette for two keys with an explicit t, plus optional pose layers and joint
+// modifiers. `plain` selects a straight quaternion lerp instead of the flipped, normalised one.
 std::vector<JointMatrix> evaluate_keys(
-    const MobyAnimClass& anim, const MobyFrame* fa, const MobyFrame* fb, f32 t_value, bool plain,
-    std::span<const JointModifier> mods, std::span<const PoseLayer> layers
+    const MobyAnimClass& anim,
+    const MobyFrame* fa,
+    const MobyFrame* fb,
+    f32 t_value,
+    bool plain,
+    std::span<const JointModifier> mods,
+    std::span<const PoseLayer> layers
 ) {
     const std::size_t jc = anim.joint_count;
+
+    // A class without joints evaluates to a single identity matrix.
     if (jc == 0) {
         return {kIdentityJoint};
     }
+
     const u32 t = ps2::bits(t_value);
+
+    // Key A is required, and key B too unless the interpolation point is zero.
     if (fa == nullptr || (t != 0 && fb == nullptr)) {
         return std::vector<JointMatrix>(jc, kIdentityJoint);
     }
+
+    // At t = 0 only key A counts, even if the caller passed a key B.
     if (t == 0) {
         fb = nullptr;
     }
+
     const u32 u = ps2::sub(kOne, t);
     const std::size_t n = std::min(jc, kRecords);
 
@@ -518,95 +714,141 @@ std::vector<JointMatrix> evaluate_keys(
     std::array<V4, 256> post_b;
     post_a.fill(kUnitScale);
     post_b.fill(kUnitScale);
+
+    // Start each joint at its rest pose with unit scale.
     for (std::size_t j = 0; j < n; ++j) {
         const V4 rest = with_w(anim.rest[j], anim.parent_word[j]);
         rec[j] = {kUnitScale, kUnitScale, rest, V4{rest[0], rest[1], rest[2], 0}};
     }
+
     auto valid = [&](std::size_t j) {
         return j < n;
     };
     std::vector<u8> post_list;
 
+    // One key only: no interpolation.
     if (fb == nullptr) {
         // One key (t = 0): no lerp, quaternions as stored.
+        // Sort the scale records into those inherited from the parent and those applied after the
+        // chain.
         for (const MobyScaleRecord& sr : fa->scales) {
             const std::size_t j = sr.joint;
+
+            // An inherited scale goes into the joint's record, a post-chain scale into the list.
             if (sr.inherited()) {
+                // A scale for a joint beyond the records is ignored.
                 if (valid(j)) {
                     rec[j][1] = with_w(scale_value(sr), (u32{sr.joint} | u32{sr.flags} << 8) << 3);
                 }
             } else {
+                // A post-chain scale is applied after the chain, so children do not see it.
                 post_a[j] = with_w(scale_value(sr), 0);
                 post_list.push_back(sr.joint);
             }
         }
+
+        // Overwrite the rest translation of each joint that the key moves.
         for (const MobyTransRecord& tr : fa->trans) {
             const auto j = static_cast<s8>(tr.joint);
+
+            // A negative joint number or one beyond the records is not a joint.
             if (j >= 0 && valid(static_cast<std::size_t>(j))) {
                 V4& slot = rec[static_cast<std::size_t>(j)][2];
                 slot = with_w(trans_value(tr), slot[3]);
             }
         }
+
+        // The quaternions are stored for every joint, in order.
         for (std::size_t j = 0; j < n; ++j) {
             rec[j][0] = quat_bits(fa->quat_at(j));
         }
     } else {
+        // Two keys: read both keys' channels, then interpolate.
         // Two keys: A's channels, then B's.
         std::array<bool, 256> inherited{};
         std::array<bool, 256> translated{};
         std::vector<u8> post_a_order;
         std::vector<u8> post_b_order;
+
+        // Key A's scale records.
         for (const MobyScaleRecord& sr : fa->scales) {
             const std::size_t j = sr.joint;
+
+            // An inherited scale goes into slot 0 and is remembered, a post-chain scale into A's
+            // list.
             if (sr.inherited()) {
+                // A scale for a joint beyond the records is ignored.
                 if (valid(j)) {
                     rec[j][0] = with_w(scale_value(sr), 0);
                     inherited[j] = true;
                 }
             } else {
+                // A post-chain scale is applied after the chain, so children do not see it.
                 post_a[j] = with_w(scale_value(sr), 0);
                 post_a_order.push_back(sr.joint);
             }
         }
+
+        // Key A's translation records.
         for (const MobyTransRecord& tr : fa->trans) {
             const auto j = static_cast<s8>(tr.joint);
+
+            // A negative joint number or one beyond the records is not a joint.
             if (j >= 0 && valid(static_cast<std::size_t>(j))) {
                 V4& slot = rec[static_cast<std::size_t>(j)][2];
                 slot = with_w(trans_value(tr), slot[3]);
                 translated[static_cast<std::size_t>(j)] = true;
             }
         }
+
+        // Key B's scale records.
         for (const MobyScaleRecord& sr : fb->scales) {
             const std::size_t j = sr.joint;
+
+            // An inherited scale goes into slot 1 and is remembered, a post-chain scale into B's
+            // list.
             if (sr.inherited()) {
+                // A scale for a joint beyond the records is ignored.
                 if (valid(j)) {
                     rec[j][1] = with_w(scale_value(sr), 0);
                     inherited[j] = true;
                 }
             } else {
+                // A post-chain scale is applied after the chain, so children do not see it.
                 post_b[j] = with_w(scale_value(sr), 0);
                 post_b_order.push_back(sr.joint);
             }
         }
+
+        // Key B's translation records.
         for (const MobyTransRecord& tr : fb->trans) {
             const auto j = static_cast<s8>(tr.joint);
+
+            // A negative joint number or one beyond the records is not a joint.
             if (j >= 0 && valid(static_cast<std::size_t>(j))) {
                 V4& slot = rec[static_cast<std::size_t>(j)][3];
                 slot = with_w(trans_value(tr), slot[3]);
                 translated[static_cast<std::size_t>(j)] = true;
             }
         }
+
         post_list = post_scale_list(post_a_order, post_b_order);
 
         // Inherited scale into [1] with w = 1; translation into [2], parent kept.
+        // Interpolate only what a key actually set, since the rest value is already in place.
         for (std::size_t j = 0; j < n; ++j) {
+            // Interpolate the inherited scale only if either key has one.
             if (inherited[j]) {
                 rec[j][1] = lanes_lerp(rec[j][0], rec[j][1], u, t, 3, V4{0, 0, 0, kOne});
             }
+
+            // Interpolate the translation only if either key moved the joint.
             if (translated[j]) {
                 rec[j][2] = lanes_lerp(rec[j][2], rec[j][3], u, t, 3, rec[j][2]);
             }
         }
+
+        // Interpolate the quaternions of every joint.
         for (std::size_t j = 0; j < n; ++j) {
             const V4 qa = quat_bits(fa->quat_at(j));
             const V4 qb = quat_bits(fb->quat_at(j));
@@ -617,58 +859,88 @@ std::vector<JointMatrix> evaluate_keys(
     // The pose layers, in list order, over the joints each covers: its own local values (key A, and
     // key B when its t is not 0: the quaternions lerped or nlerped, the inherited scale where a key
     // carries one, the translation from its records or the rest), blended in by its weight.
+    // Each layer blends a second pose into the joints it covers, by its weight.
     for (const PoseLayer& l : layers) {
+        // A layer without a key or with no positive weight changes nothing (this also drops NaN
+        // weights).
         if (l.a == nullptr || !(l.weight > 0.0f)) {
             continue;
         }
+
         const u32 lt = ps2::bits(l.t);
         const MobyFrame* lb = lt != 0 ? l.b : nullptr;
+
+        // A layer that needs a second key but has none is skipped.
         if (lt != 0 && lb == nullptr) {
             continue;
         }
+
         const u32 lu = ps2::sub(kOne, lt);
         const u32 w = ps2::bits(l.weight);
         const u32 uw = ps2::sub(kOne, w);
+
+        // Only the joints the layer lists are touched.
         for (const u8 jj : l.joints) {
             const std::size_t j = jj;
+
+            // A joint beyond the records is ignored.
             if (j >= n) {
                 continue;
             }
+
             const auto find_scale = [&](const MobyFrame& f) -> std::optional<V4> {
+                // Search the key's scale records for this joint's inherited scale.
                 for (const MobyScaleRecord& sr : f.scales) {
+                    // Only an inherited scale counts here.
                     if (sr.joint == j && sr.inherited()) {
                         return with_w(scale_value(sr), 0);
                     }
                 }
+
                 return std::nullopt;
             };
             const auto find_trans = [&](const MobyFrame& f) -> V4 {
+                // Search the key's translation records for this joint.
                 for (const MobyTransRecord& tr : f.trans) {
+                    // A negative joint number is not a joint, so it never matches.
                     if (static_cast<s8>(tr.joint) >= 0 && tr.joint == j) {
                         return with_w(trans_value(tr), 0);
                     }
                 }
+
                 return with_w(anim.rest[j], 0);
             };
             V4 q = quat_bits(l.a->quat_at(j));
             std::optional<V4> sc = find_scale(*l.a);
             V4 tr = find_trans(*l.a);
+
+            // With a second key, the layer's own pose is interpolated between the two keys first.
             if (lb != nullptr) {
                 const V4 qb = quat_bits(lb->quat_at(j));
                 q = l.plain ? lanes_lerp(q, qb, lu, lt, 4, q) : nlerp_flip(q, qb, lu, lt);
                 const std::optional<V4> sb = find_scale(*lb);
+
+                // Interpolate the scale only if both keys have one.
                 if (sc && sb) {
                     sc = lanes_lerp(*sc, *sb, lu, lt, 3, V4{0, 0, 0, 0});
                 } else if (!sc) {
+                    // Only key B has a scale, so the joint takes that one.
                     sc = sb;
                 }
+
                 tr = lanes_lerp(tr, find_trans(*lb), lu, lt, 3, V4{0, 0, 0, 0});
             }
+
             rec[j][0] = nlerp_flip(rec[j][0], q, uw, w);
+
+            // Blend the scale only where the layer has one.
             if (sc) {
                 const V4 cur = rec[j][1][3] != 0 ? rec[j][1] : V4{kOne, kOne, kOne, kOne};
-                rec[j][1] = lanes_lerp(cur, V4{(*sc)[0], (*sc)[1], (*sc)[2], kOne}, uw, w, 3, V4{0, 0, 0, kOne});
+                rec[j][1] = lanes_lerp(
+                    cur, V4{(*sc)[0], (*sc)[1], (*sc)[2], kOne}, uw, w, 3, V4{0, 0, 0, kOne}
+                );
             }
+
             rec[j][2] = lanes_lerp(rec[j][2], tr, uw, w, 3, rec[j][2]);
         }
     }
@@ -677,74 +949,116 @@ std::vector<JointMatrix> evaluate_keys(
     // keys, before the matrices). Native float arithmetic, as ReRAC's apply_modifiers: mode 0
     // composes, any other mode blends toward the node by its weight. A scale applies only where
     // the joint has one (its presence word is kept).
+    // Apply each joint modifier in list order.
     for (const JointModifier& m : mods) {
         const std::size_t j = m.joint;
+
+        // A joint beyond the records is ignored.
         if (j >= n) {
             continue;
         }
-        const auto f = [](u32 bits) { f32 x; std::memcpy(&x, &bits, 4); return x; };
-        const auto b = [](f32 x) { u32 bits; std::memcpy(&bits, &x, 4); return bits; };
-        const std::array<f32, 4> q{f(rec[j][0][0]), f(rec[j][0][1]), f(rec[j][0][2]), f(rec[j][0][3])};
+
+        const auto f = [](u32 bits) {
+            f32 x;
+            std::memcpy(&x, &bits, 4);
+            return x;
+        };
+        const auto b = [](f32 x) {
+            u32 bits;
+            std::memcpy(&bits, &x, 4);
+            return bits;
+        };
+        const std::array<f32, 4> q{
+            f(rec[j][0][0]), f(rec[j][0][1]), f(rec[j][0][2]), f(rec[j][0][3])
+        };
         std::array<f32, 4> nq{};
         std::array<f32, 3> ns{}, nt{};
+
+        // Mode 0 composes the modifier with the pose.
         if (m.mode == 0) {
             const auto& r = m.quat;
-            nq = {q[3] * r[0] + r[3] * q[0] + (q[1] * r[2] - q[2] * r[1]),
-                  q[3] * r[1] + r[3] * q[1] + (q[2] * r[0] - q[0] * r[2]),
-                  q[3] * r[2] + r[3] * q[2] + (q[0] * r[1] - q[1] * r[0]),
-                  q[3] * r[3] - (q[0] * r[0] + q[1] * r[1] + q[2] * r[2])};
+            nq =
+                {q[3] * r[0] + r[3] * q[0] + (q[1] * r[2] - q[2] * r[1]),
+                 q[3] * r[1] + r[3] * q[1] + (q[2] * r[0] - q[0] * r[2]),
+                 q[3] * r[2] + r[3] * q[2] + (q[0] * r[1] - q[1] * r[0]),
+                 q[3] * r[3] - (q[0] * r[0] + q[1] * r[1] + q[2] * r[2])};
+
+            // Scale multiplies and translation adds.
             for (std::size_t k = 0; k < 3; ++k) {
                 ns[k] = f(rec[j][1][k]) * m.scale[k];
                 nt[k] = f(rec[j][2][k]) + m.trans[k];
             }
         } else {
+            // Other modes blend the pose toward the modifier by its weight.
             const f32 w = m.weight;
             const f32 u = 1.0f - w;
             std::array<f32, 4> va{}, vb{};
             f32 d = 0.0f;
+
+            // Weight each quaternion by u or w and sum the lane products to get their dot.
             for (std::size_t k = 0; k < 4; ++k) {
                 va[k] = q[k] * u;
                 vb[k] = m.quat[k] * w;
                 d += va[k] * vb[k];
             }
+
             f32 len = 0.0f;
+
+            // Add or subtract (the shorter way round, by the dot's sign) and sum the squares for
+            // the length.
             for (std::size_t k = 0; k < 4; ++k) {
                 nq[k] = d < 0.0f ? va[k] - vb[k] : va[k] + vb[k];
                 len += nq[k] * nq[k];
             }
+
             len = std::sqrt(len);
+
+            // Normalise, unless the length is zero.
             for (std::size_t k = 0; k < 4 && len > 0.0f; ++k) {
                 nq[k] /= len;
             }
+
+            // Blend the scale and translation by the same weights.
             for (std::size_t k = 0; k < 3; ++k) {
                 ns[k] = f(rec[j][1][k]) * u + m.scale[k] * w;
                 nt[k] = f(rec[j][2][k]) * u + m.trans[k] * w;
             }
         }
+
         rec[j][0] = V4{b(nq[0]), b(nq[1]), b(nq[2]), b(nq[3])};
         rec[j][1] = V4{b(ns[0]), b(ns[1]), b(ns[2]), rec[j][1][3]};
         rec[j][2] = V4{b(nt[0]), b(nt[1]), b(nt[2]), rec[j][2][3]};
     }
 
     // Local matrices and the parent chain, joints in index order.
+    // Build each joint's matrix after its parent's, so the parent chain is ready when needed.
     for (std::size_t j = 0; j < n; ++j) {
         const V4 q = rec[j][0];
         const V4 sc = rec[j][1];
         const V4 tr = rec[j][2];
         std::array<V4, 3> rows = quat_rows(q);
+
+        // A joint with a scale record scales its rotation rows.
         if (sc[3] != 0) {
+            // Scale row i of the rotation by the i-th scale.
             for (std::size_t i = 0; i < 3; ++i) {
+                // Three columns: the rotation is a 3x3 matrix.
                 for (std::size_t c = 0; c < 3; ++c) {
                     rows[i][c] = ps2::mul(rows[i][c], sc[i]);
                 }
             }
         }
+
         std::array<V4, 4> pp = kIdentity4;
+
+        // A parent word of 0 means a root joint.
         if (tr[3] != 0) {
+            // A parent word naming a scratchpad record gives the parent's matrix.
             if (const auto p = scratchpad_record(tr[3])) {
                 pp = rec[*p];
             }
         }
+
         const V4 r3 = {ps2::add(0, tr[0]), ps2::add(0, tr[1]), ps2::add(0, tr[2]), kOne};
         rec[j] = {
             mat3(pp[0], pp[1], pp[2], rows[0]),
@@ -755,14 +1069,21 @@ std::vector<JointMatrix> evaluate_keys(
     }
 
     // Post-scale, after the whole chain: children do not see it.
+    // Apply the post-chain scales now that the chain is done.
     for (const u8 jj : post_list) {
         const std::size_t j = jj;
+
+        // A joint beyond the records is ignored.
         if (!valid(j)) {
             continue;
         }
+
         const V4 sv = t == 0 ? post_a[j] : lanes_lerp(post_a[j], post_b[j], u, t, 3, post_a[j]);
+
         // Row i (of the three axes) by scale i.
+        // Row i of the three axes is scaled by scale i.
         for (std::size_t i = 0; i < 3; ++i) {
+            // Three columns: the rotation is a 3x3 matrix.
             for (std::size_t c = 0; c < 3; ++c) {
                 rec[j][i][c] = ps2::mul(rec[j][i][c], sv[i]);
             }
@@ -772,12 +1093,17 @@ std::vector<JointMatrix> evaluate_keys(
     // The palette: F.r_i = P0 S_i.x + P1 S_i.y + P2 S_i.z; F.r3 adds P3.
     std::vector<JointMatrix> out;
     out.reserve(n);
+
+    // Combine each joint with its bind matrix to get the palette.
     for (std::size_t j = 0; j < n; ++j) {
         const std::array<V4, 4>& p = rec[j];
         std::array<V4, 4> sk{};
+
+        // Read the bind matrix rows as float bit patterns.
         for (std::size_t i = 0; i < 4; ++i) {
             sk[i] = ps2::bits(anim.skeleton[j][i]);
         }
+
         const std::array<V4, 4> f = {
             mat3(p[0], p[1], p[2], sk[0]),
             mat3(p[0], p[1], p[2], sk[1]),
@@ -785,14 +1111,20 @@ std::vector<JointMatrix> evaluate_keys(
             mat4_point(p, sk[3]),
         };
         JointMatrix m{};
+
+        // Convert the four rows back to floats.
         for (std::size_t i = 0; i < 4; ++i) {
             m[i] = ps2::to_floats(f[i]);
         }
+
         out.push_back(m);
     }
+
     return out;
 }
 
+// Encodes the interpolated pose of two keys as a single frame in the stored format, so that it
+// can be read back as a key. Returns nothing when a needed key is missing.
 std::vector<u8> encode_snapshot(
     const MobyAnimClass& anim, const MobyFrame* fa, const MobyFrame* fb, f32 t_f, bool plain
 ) {
@@ -800,110 +1132,173 @@ std::vector<u8> encode_snapshot(
     using ps2::kOne;
     using ps2::mul;
     using ps2::sub;
+
+    // Without key A there is no pose to encode.
     if (fa == nullptr) {
         return {};
     }
+
     const u32 t = ps2::bits(t_f);
+
+    // A second key is needed unless the interpolation point is zero.
     if (t != 0 && fb == nullptr) {
         return {};
     }
+
     constexpr std::size_t kJoints = 256;
     const std::size_t jc = std::min(anim.joint_count, kJoints);
     const V4 unit = {kOne, kOne, kOne, 0};
     std::vector<std::array<V4, 4>> rec(kJoints);
+
+    // Start each joint at its rest pose with unit scale.
     for (std::size_t j = 0; j < jc; ++j) {
         const V4 c = with_w(anim.rest[j], anim.parent_word[j]);
         rec[j] = {unit, unit, c, V4{mul(c[0], kOne), mul(c[1], kOne), mul(c[2], kOne), 0}};
     }
-    const auto flag_word = [](u8 flags) { return static_cast<u32>(flags >> 6) - 1u; };
+
+    const auto flag_word = [](u8 flags) {
+        return static_cast<u32>(flags >> 6) - 1u;
+    };
+    // Marks a slot whose joint a key has listed already (-4 as a float word).
     constexpr u32 kListed = static_cast<u32>(-4);
+
+    // One key only: no interpolation.
     if (t == 0) {
+        // Walk the key's scale records.
         for (const MobyScaleRecord& r : fa->scales) {
             const auto v = scale_value(r);
             rec[r.joint][1] = with_w(v, flag_word(r.flags));
         }
+
+        // Walk the key's translation records.
         for (const MobyTransRecord& r : fa->trans) {
             rec[r.joint][2] = with_w(trans_value(r), rec[r.joint][2][3]);
         }
+
+        // The quaternions are stored for every joint, in order.
         for (std::size_t j = 0; j < jc; ++j) {
             rec[j][0] = quat_bits(fa->quat_at(j));
         }
     } else {
+        // Two keys: lists of the joints each key touches, then interpolate and re-encode.
         const u32 u = sub(kOne, t);
         std::vector<std::size_t> sl, tl;
+
+        // Key A's scale records, remembering which joints they name.
         for (const MobyScaleRecord& r : fa->scales) {
             sl.push_back(r.joint);
             rec[r.joint][1][3] = flag_word(r.flags);
             rec[r.joint][0] = with_w(scale_value(r), kListed);
         }
+
+        // Key A's translation records, remembering which joints they name.
         for (const MobyTransRecord& r : fa->trans) {
             tl.push_back(r.joint);
             rec[r.joint][2] = with_w(trans_value(r), rec[r.joint][2][3]);
             rec[r.joint][3][3] = kListed;
         }
+
+        // Key B's scale records.
         for (const MobyScaleRecord& r : fb->scales) {
+            // A joint that key A already listed is not listed twice.
             if (rec[r.joint][0][3] != kListed) {
                 sl.push_back(r.joint);
             }
+
             rec[r.joint][1] = with_w(scale_value(r), flag_word(r.flags));
         }
+
+        // Key B's translation records.
         for (const MobyTransRecord& r : fb->trans) {
+            // A joint that key A already listed is not listed twice.
             if (rec[r.joint][3][3] != kListed) {
                 tl.push_back(r.joint);
             }
+
             rec[r.joint][3] = with_w(trans_value(r), kOne);
         }
+
         // The pipelined interpolation loops: entry i+1's operands are loaded before entry i is
         // stored; the result keeps the destination slot's w word.
         const auto pass = [&](const std::vector<std::size_t>& list, int a, int b, int dst) {
+            // An empty list has nothing to interpolate.
             if (list.empty()) {
                 return;
             }
+
             V4 va = rec[list[0]][a], vb = rec[list[0]][b];
+
+            // Interpolate each listed joint, three lanes.
             for (std::size_t i = 0; i < list.size(); ++i) {
                 const std::size_t j = list[i];
                 V4 r{};
+
+                // Only xyz are interpolated; w keeps the destination's word.
                 for (int k = 0; k < 3; ++k) {
                     r[k] = add(mul(va[k], u), mul(vb[k], t));
                 }
+
                 const u32 w = rec[j][dst][3];
+
+                // Load the next entry's operands before this one is stored, as the pipelined loop
+                // does.
                 if (i + 1 < list.size()) {
                     va = rec[list[i + 1]][a];
                     vb = rec[list[i + 1]][b];
                 }
+
                 rec[j][dst] = {r[0], r[1], r[2], w};
             }
         };
         pass(sl, 0, 1, 1);
         pass(tl, 2, 3, 2);
+
+        // Interpolate the quaternions of every joint.
         for (std::size_t j = 0; j < jc; ++j) {
             const V4 qa = quat_bits(fa->quat_at(j)), qb = quat_bits(fb->quat_at(j));
             V4 q{};
+
+            // A plain key pair uses a straight lerp.
             if (plain) {
+                // Lerp each lane.
                 for (int k = 0; k < 4; ++k) {
                     q[k] = add(mul(qa[k], u), mul(qb[k], t));
                 }
             } else {
+                // Otherwise the lerp is flipped to the shorter way round and normalised.
                 V4 a{}, b{}, p{};
+
+                // Weight each lane by u or t, and take the lane products for the dot.
                 for (int k = 0; k < 4; ++k) {
                     a[k] = mul(qa[k], u);
                     b[k] = mul(qb[k], t);
                     p[k] = mul(a[k], b[k]);
                 }
+
                 const u32 d = add(add(add(p[1], p[0]), mul(kOne, p[2])), mul(kOne, p[3]));
+
+                // Add or subtract by the sign of the dot product, which picks the shorter way
+                // round.
                 for (int k = 0; k < 4; ++k) {
                     q[k] = (d & ps2::kSign) == 0 ? add(a[k], b[k]) : sub(a[k], b[k]);
                 }
+
                 V4 sq{};
+
+                // Square each lane for the length.
                 for (int k = 0; k < 4; ++k) {
                     sq[k] = mul(q[k], q[k]);
                 }
+
                 const u32 n = add(add(add(sq[0], sq[1]), mul(kOne, sq[2])), mul(kOne, sq[3]));
                 const u32 qq = ps2::rsqrt(kOne, n);
+
+                // Normalise each lane.
                 for (int k = 0; k < 4; ++k) {
                     q[k] = mul(q[k], qq);
                 }
             }
+
             rec[j][0] = q;
         }
     }
@@ -916,37 +1311,60 @@ std::vector<u8> encode_snapshot(
         out.push_back(static_cast<u8>(v));
         out.push_back(static_cast<u8>(v >> 8));
     };
+
+    // Encode every joint's quaternion, scale and translation.
     for (std::size_t j = 0; j < jc; ++j) {
+        // Four 16-bit lanes per quaternion.
         for (int k = 0; k < 4; ++k) {
-            put16(quats, static_cast<u16>(static_cast<s16>(std::clamp(ps2::ftoi(rec[j][0][k], 15), -0x8000, 0x7fff))));
+            put16(
+                quats,
+                static_cast<u16>(
+                    static_cast<s16>(std::clamp(ps2::ftoi(rec[j][0][k], 15), -0x8000, 0x7fff))
+                )
+            );
         }
+
         std::array<u16, 3> sc{};
+
+        // Scale lanes to the 4096 = 1.0 fixed point of the records.
         for (int k = 0; k < 3; ++k) {
             const s32 v = static_cast<s32>(static_cast<u32>(ps2::ftoi(rec[j][1][k], 15)) >> 3);
             sc[k] = static_cast<u16>(std::clamp(v, 0, 0xffff));
         }
+
+        // A scale record is written only if the scale is not 1.0.
         if (sc != std::array<u16, 3>{0x1000, 0x1000, 0x1000}) {
+            // The three scale lanes.
             for (u16 v : sc) {
                 put16(scales, v);
             }
+
             scales.push_back(static_cast<u8>(j));
             scales.push_back(static_cast<u8>((rec[j][1][3] & 0x80) ^ 0x80));
             ++scale_count;
         }
+
         std::array<s16, 3> tv{}, rest{};
+
+        // Translation lanes and the rest translation, as whole numbers, to compare.
         for (int k = 0; k < 3; ++k) {
             tv[k] = static_cast<s16>(ps2::ftoi(rec[j][2][k], 0));
             rest[k] = static_cast<s16>(ps2::ftoi(ps2::bits(anim.rest[j][k]), 0));
         }
+
+        // A translation record is written only if it differs from the rest translation.
         if (tv != rest) {
+            // The three translation lanes.
             for (s16 v : tv) {
                 put16(trans, static_cast<u16>(v));
             }
+
             trans.push_back(static_cast<u8>(j));
             trans.push_back(0);
             ++trans_count;
         }
     }
+
     const std::size_t quat_bytes = 8 * jc;
     const std::size_t qwc = (quat_bytes + 8 * scale_count + 8 * trans_count + 8) >> 4;
     std::vector<u8> out(16, 0);

@@ -9,23 +9,34 @@ namespace openrac::assets {
 
 RgbaImage decode_indexed8(ByteView indices, u32 width, u32 height, ByteView clut, GsAlpha alpha) {
     const std::size_t n = std::size_t{width} * height;
+
+    // Every pixel needs one index byte.
     if (indices.size() < n) {
         fail("indexed image: {} pixels need {} bytes, have {}", n, n, indices.size());
     }
+
+    // A 256-entry RGBA palette is 1024 bytes.
     if (clut.size() < 1024) {
         fail("indexed image: a palette of {} bytes, need 1024", clut.size());
     }
+
     std::array<std::array<u8, 4>, 256> palette{};
+
+    // Resolve the palette's CSM1 order once, so the pixel loop is a plain lookup.
     for (u32 i = 0; i < 256; ++i) {
         const u8* e = clut.data() + clut_index(i) * 4;
         palette[i] = {e[0], e[1], e[2], alpha == GsAlpha::Scaled ? scale_alpha(e[3]) : e[3]};
     }
+
     RgbaImage image{width, height, {}};
     image.rgba.reserve(n * 4);
+
+    // Expand each index into its RGBA pixel.
     for (std::size_t p = 0; p < n; ++p) {
         const auto& c = palette[indices.data()[p]];
         image.rgba.insert(image.rgba.end(), c.begin(), c.end());
     }
+
     return image;
 }
 

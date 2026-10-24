@@ -7,9 +7,12 @@
 #include <cstdlib>
 #include <cstring>
 #include <mutex>
+#include <optional>
 #include <string>
+#include <string_view>
 
 #include "common/crash.h"
+#include "common/env.h"
 #include "common/line_ring.h"
 
 #if defined(__ANDROID__)
@@ -21,15 +24,28 @@ namespace {
 
 namespace fs = std::filesystem;
 
+// Returns the level OPENRAC_LOG names: debug or verbose, and Info for any other value or none.
 Level initial_level() {
-    const char* env = std::getenv("OPENRAC_LOG");
-    if (env != nullptr && std::strcmp(env, "debug") == 0) {
+    const std::optional<std::string_view> named = env::value(env::Var::Log);
+
+    // Each of the two levels below Info is named by its whole word, nothing else.
+    if (named == "debug") {
         return Level::Debug;
     }
-    if (env != nullptr && std::strcmp(env, "verbose") == 0) {
+
+    // Verbose, the level between Debug and Info.
+    if (named == "verbose") {
         return Level::Verbose;
     }
+
     return Level::Info;
+}
+
+// Returns the level the log keeps, read from OPENRAC_LOG at the first call. Read there rather than
+// at static initialisation, so that env's one reading of the environment is not taken before main.
+Level& current_level() {
+    static Level level = initial_level();
+    return level;
 }
 
 std::string find_home() {
@@ -47,7 +63,6 @@ std::string find_home() {
 }
 
 std::mutex g_lock;
-Level g_level = initial_level();
 std::FILE* g_file = nullptr;
 int g_fd = -1;
 std::size_t g_written = 0;
@@ -108,11 +123,11 @@ void to_file(std::string_view line) {
 }  // namespace
 
 void set_level(Level level) {
-    g_level = level;
+    current_level() = level;
 }
 
 Level level() {
-    return g_level;
+    return current_level();
 }
 
 const std::string& home() {

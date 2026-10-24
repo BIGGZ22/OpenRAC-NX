@@ -27,29 +27,6 @@ func_00116D2C	a	padding	none	nothing: no call, jump, branch or address of it	its
 func_00116F9C	a	padding	none	nothing: no call, jump, branch or address of it	its first word is the linker's 0xCDCDCDCD fill (the executable)
 func_001188C0	a	linker remnant	none	nothing: no call, jump, branch or address of it	the decompilation's linker remnants list (what the linker left of a stripped function)
 func_00118A34	a	padding	none	nothing: no call, jump, branch or address of it	its first word is the linker's 0xCDCDCDCD fill (the executable)
-func_00118A40	a	unreachable	none	nothing: no call, jump, branch or address of it	no call, jump, branch, address or data word refers to it in any program (the executable); a system call at 00118A44
-func_00118A70	a	unreachable	none	nothing: no call, jump, branch or address of it	no call, jump, branch, address or data word refers to it in any program (the executable); a system call at 00118A74
-func_00118A80	a	unreachable	none	nothing: no call, jump, branch or address of it	no call, jump, branch, address or data word refers to it in any program (the executable); a system call at 00118A84
-func_00118B30	a	unreachable	none	nothing: no call, jump, branch or address of it	no call, jump, branch, address or data word refers to it in any program (the executable); a system call at 00118B34
-func_00118B40	a	unreachable	none	nothing: no call, jump, branch or address of it	no call, jump, branch, address or data word refers to it in any program (the executable); a system call at 00118B44
-func_00118B90	a	unreachable	none	nothing: no call, jump, branch or address of it	no call, jump, branch, address or data word refers to it in any program (the executable); a system call at 00118B94
-func_00118BB0	a	unreachable	none	nothing: no call, jump, branch or address of it	no call, jump, branch, address or data word refers to it in any program (the executable); a system call at 00118BB4
-func_00118BD0	a	unreachable	none	nothing: no call, jump, branch or address of it	no call, jump, branch, address or data word refers to it in any program (the executable); a system call at 00118BD4
-func_00118C30	a	unreachable	none	nothing: no call, jump, branch or address of it	no call, jump, branch, address or data word refers to it in any program (the executable); a system call at 00118C34
-func_00118C50	a	unreachable	none	nothing: no call, jump, branch or address of it	no call, jump, branch, address or data word refers to it in any program (the executable); a system call at 00118C54
-func_00118CD0	a	unreachable	none	nothing: no call, jump, branch or address of it	no call, jump, branch, address or data word refers to it in any program (the executable); a system call at 00118CD4
-func_00118D00	a	unreachable	none	nothing: no call, jump, branch or address of it	no call, jump, branch, address or data word refers to it in any program (the executable); a system call at 00118D04
-func_00118D10	a	unreachable	none	nothing: no call, jump, branch or address of it	no call, jump, branch, address or data word refers to it in any program (the executable); a system call at 00118D14
-func_00118D20	a	unreachable	none	nothing: no call, jump, branch or address of it	no call, jump, branch, address or data word refers to it in any program (the executable); a system call at 00118D24
-func_00118D30	a	unreachable	none	nothing: no call, jump, branch or address of it	no call, jump, branch, address or data word refers to it in any program (the executable); a system call at 00118D34
-func_00118D40	a	unreachable	none	nothing: no call, jump, branch or address of it	no call, jump, branch, address or data word refers to it in any program (the executable); a system call at 00118D44
-func_00118D50	a	unreachable	none	nothing: no call, jump, branch or address of it	no call, jump, branch, address or data word refers to it in any program (the executable); a system call at 00118D54
-func_00118D70	a	unreachable	none	nothing: no call, jump, branch or address of it	no call, jump, branch, address or data word refers to it in any program (the executable); a system call at 00118D74
-func_00118D90	a	unreachable	none	nothing: no call, jump, branch or address of it	no call, jump, branch, address or data word refers to it in any program (the executable); a system call at 00118D94
-func_00118DB0	a	unreachable	none	nothing: no call, jump, branch or address of it	no call, jump, branch, address or data word refers to it in any program (the executable); a system call at 00118DB4
-func_00118DD0	b	behind host	none	called by func_00122AD8 [host] (the executable)	only functions the port replaces reach it: func_00122AD8; a system call at 00118DD4
-func_00118DF0	a	unreachable	none	nothing: no call, jump, branch or address of it	no call, jump, branch, address or data word refers to it in any program (the executable); a system call at 00118DF4
-func_00118E80	a	unreachable	none	nothing: no call, jump, branch or address of it	no call, jump, branch, address or data word refers to it in any program (the executable); a system call at 00118E84
 func_00119308	a	linker remnant	none	nothing: no call, jump, branch or address of it	the decompilation's linker remnants list (what the linker left of a stripped function)
 func_00119710	a	linker remnant	translated	nothing: no call, jump, branch or address of it	the decompilation's linker remnants list (what the linker left of a stripped function)
 func_00119760	a	linker remnant	translated	nothing: no call, jump, branch or address of it	the decompilation's linker remnants list (what the linker left of a stripped function)
@@ -64,7 +41,6 @@ func_0011CCD0	a	linker remnant	none	nothing: no call, jump, branch or address of
 func_0011D098	a	linker remnant	none	nothing: no call, jump, branch or address of it	the decompilation's linker remnants list (what the linker left of a stripped function)
 func_0011D358	a	linker remnant	none	nothing: no call, jump, branch or address of it	the decompilation's linker remnants list (what the linker left of a stripped function)
 func_0011D6D4	a	padding	none	nothing: no call, jump, branch or address of it	its first word is the linker's 0xCDCDCDCD fill (the executable)
-func_0011D700	a	unreachable	none	nothing: no call, jump, branch or address of it	no call, jump, branch, address or data word refers to it in any program (the executable); COP0 (mfc0) at 0011D7B8
 func_0011DA90	a	linker remnant	translated	nothing: no call, jump, branch or address of it	the decompilation's linker remnants list (what the linker left of a stripped function)
 func_0011DBE4	a	padding	none	nothing: no call, jump, branch or address of it	its first word is the linker's 0xCDCDCDCD fill (the executable)
 func_0011DD64	a	padding	none	nothing: no call, jump, branch or address of it	its first word is the linker's 0xCDCDCDCD fill (the executable)
@@ -77,7 +53,6 @@ func_00120C58	c	needs C	translated	C calls it: func_00120CA0	translated from its
 func_00120D18	a	linker remnant	translated	nothing: no call, jump, branch or address of it	the decompilation's linker remnants list (what the linker left of a stripped function)
 func_0012174C	a	padding	none	nothing: no call, jump, branch or address of it	its first word is the linker's 0xCDCDCDCD fill (the executable)
 func_00121D14	a	padding	none	nothing: no call, jump, branch or address of it	its first word is the linker's 0xCDCDCDCD fill (the executable)
-func_00121DB8	b	behind host	none	called by func_00121DC8 [host] (the executable)	only functions the port replaces reach it: func_00121DC8; a system call at 00121DBC
 func_0012213C	a	padding	none	nothing: no call, jump, branch or address of it	its first word is the linker's 0xCDCDCDCD fill (the executable)
 func_001221FC	a	padding	none	nothing: no call, jump, branch or address of it	its first word is the linker's 0xCDCDCDCD fill (the executable)
 func_001224AC	a	padding	none	nothing: no call, jump, branch or address of it	its first word is the linker's 0xCDCDCDCD fill (the executable)
@@ -111,8 +86,6 @@ func_0012CC6C	a	padding	none	nothing: no call, jump, branch or address of it	its
 func_0012CC8C	a	padding	none	nothing: no call, jump, branch or address of it	its first word is the linker's 0xCDCDCDCD fill (the executable)
 func_0012D3E0	a	linker remnant	none	nothing: no call, jump, branch or address of it	the decompilation's linker remnants list (what the linker left of a stripped function)
 func_0012D440	a	linker remnant	translated	nothing: no call, jump, branch or address of it	the decompilation's linker remnants list (what the linker left of a stripped function)
-func_0012D868	b	host	none	nothing: no call, jump, branch or address of it	the executable's entry (crt0): the port's own start calls the game's main (func_0012DB18) itself
-func_0012DA30	b	behind host	none	address formed by func_0012D868 [host] (the executable)	only functions the port replaces reach it: func_0012D868; a system call at 0012DA34
 func_0012DFA0	a	linker remnant	translated	nothing: no call, jump, branch or address of it	the decompilation's linker remnants list (what the linker left of a stripped function)
 func_0012E058	a	linker remnant	translated	nothing: no call, jump, branch or address of it	the decompilation's linker remnants list (what the linker left of a stripped function)
 func_0012E1B8	a	linker remnant	translated	nothing: no call, jump, branch or address of it	the decompilation's linker remnants list (what the linker left of a stripped function)
@@ -173,8 +146,6 @@ func_00202EF8	a	linker remnant	translated	nothing: no call, jump, branch or addr
 func_00205218	a	linker remnant	translated	nothing: no call, jump, branch or address of it	the decompilation's linker remnants list (what the linker left of a stripped function)
 func_00208858	a	linker remnant	none	nothing: no call, jump, branch or address of it	the decompilation's linker remnants list (what the linker left of a stripped function)
 func_00208D30	a	linker remnant	none	nothing: no call, jump, branch or address of it	the decompilation's linker remnants list (what the linker left of a stripped function)
-func_0020C738	b	behind host	none	called by func_0020C468 [host] (the executable, every level)	only functions the port replaces reach it: func_0020C468; it reads $3, $14 at 0020C738 before writing it: an input outside the argument registers
-func_0020C758	b	behind host	none	called by func_0020C468 [host] (the executable)	only functions the port replaces reach it: func_0020C468; it reads $3 at 0020C758 before writing it: an input outside the argument registers
 func_0020D828	a	linker remnant	translated	nothing: no call, jump, branch or address of it	the decompilation's linker remnants list (what the linker left of a stripped function)
 func_0020D928	a	linker remnant	translated	nothing: no call, jump, branch or address of it	the decompilation's linker remnants list (what the linker left of a stripped function)
 func_0020DC38	a	linker remnant	translated	nothing: no call, jump, branch or address of it	the decompilation's linker remnants list (what the linker left of a stripped function)

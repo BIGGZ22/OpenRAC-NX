@@ -15,7 +15,7 @@ place and is still walked on in its old one, and a new one is walked through.
 
 from formats import FormatError
 from lighting import light_bank, light_shrub_instance, light_tie_instance
-from pack import same, same_value, scene_nodes, scene_transform
+from pack import read_scene_nodes, same, same_value, scene_transform
 from port import FORMAT, placement
 from shrubs import shrub_class_normals, shrub_classes, shrub_instances
 from ties import tie_classes, tie_instances, tie_slot_normals
@@ -95,7 +95,7 @@ def edited(gameplay: bytes, scene: str) -> bool:
     sources = {"ties": tie_instances(gameplay, _Any()), "shrubs": shrub_instances(gameplay, _Any())}
     for key, parent, values in FAMILIES:
         try:
-            _, changes, problems = pack_family(scene_nodes(scene, parent, key[:-1]), sources[key], _Any(), values)
+            _, changes, problems = pack_family(read_scene_nodes(scene, parent, key[:-1]), sources[key], _Any(), values)
         except (FormatError, ValueError):
             return True
         if changes or problems:
@@ -116,7 +116,7 @@ def pack_scenery(level, scene: str) -> tuple[dict | None, list[str], list[str]]:
         originals, classes = sources[key]
         kind = key[:-1]
         try:
-            edited, what, wrong = pack_family(scene_nodes(scene, parent, kind), originals, classes, values)
+            edited, what, wrong = pack_family(read_scene_nodes(scene, parent, kind), originals, classes, values)
         except (FormatError, ValueError) as e:
             problems.append(f"{key}: {e}; not packed")
             continue

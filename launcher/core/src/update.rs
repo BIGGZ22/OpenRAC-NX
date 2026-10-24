@@ -17,7 +17,8 @@ use serde_json::Value;
 pub const ANDROID: &str = "android-aarch64";
 
 /// A newer launcher in the manifest, for one platform.
-#[derive(Clone, Debug, PartialEq, Eq, Serialize)]
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, ts_rs::TS)]
+#[ts(rename = "AndroidRelease")]
 #[serde(rename_all = "camelCase")]
 pub struct Release {
     pub version: String,
@@ -63,7 +64,7 @@ pub fn is_newer(current: &str, latest: &str) -> bool {
 /// Where a launcher looks for its updates, read from its manifest's address (tauri.conf.json's
 /// `plugins.updater.endpoints`, set by the build to the repository that built it: a fork's
 /// launcher reads the fork's releases). Shown on the Settings page, which cannot change it.
-#[derive(Clone, Debug, PartialEq, Eq, Serialize)]
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, ts_rs::TS)]
 #[serde(rename_all = "camelCase")]
 pub struct UpdateSource {
     /// `owner/name` of the GitHub repository; the address itself when it is not one.
@@ -106,7 +107,8 @@ pub fn source(manifest: &str) -> UpdateSource {
 /// development builds (the rolling pre-release `launcher-dev-<branch>` CI keeps current). A switch
 /// takes effect with the first build on the other channel newer than the one installed: neither
 /// Android nor a version number goes back.
-#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize, ts_rs::TS)]
+#[ts(rename = "UpdateChannel")]
 #[serde(rename_all = "lowercase")]
 pub enum Channel {
     Stable,

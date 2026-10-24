@@ -50,7 +50,7 @@ extern void func_001E9730(char *);
 extern char D_L00_001E7C00[];
 extern s32 func_L00_001EE698_EE530(Vec4 *, s32 *, f32) __asm__("func_L00_001EE698");
 
-/* Adapted from Lombyte (MIT) for PAL by OpenRAC's tools/port.py: src/overlays/shared/unclassified_001ee1b0.c, FUN_L00_001ee1b0. */
+/* Adapted from Lombyte (GPL-3.0) for PAL by OpenRAC's tools/port.py: src/overlays/shared/unclassified_001ee1b0.c, FUN_L00_001ee1b0. */
 s32 *FindVolumeInGrid(q128 *v, f32 rad) {
     Vec4 t;
     Vec4 d;
@@ -96,7 +96,7 @@ extern float func_001F9CE8(void *);
 extern float func_001F9CB8(void *);
 extern float func_001F9D10(void *, void *);
 
-/* Adapted from Lombyte (MIT) for PAL by OpenRAC's tools/port.py: src/overlays/shared/unclassified_001ee1b0.c, FUN_L00_001ee318. */
+/* Adapted from Lombyte (GPL-3.0) for PAL by OpenRAC's tools/port.py: src/overlays/shared/unclassified_001ee1b0.c, FUN_L00_001ee318. */
 int IsPointInVolume(Vec4 *pt, int *vol, float rad) {
     Vec4 p;
     Vec4 c;

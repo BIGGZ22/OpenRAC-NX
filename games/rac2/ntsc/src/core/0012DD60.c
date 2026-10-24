@@ -1,7 +1,7 @@
 #include "common.h"
 
 /* _dispRefImageField, the field-picture twin of _dispRefImage: adapted from
-   Lombyte (MIT) src/sdk/library/disprefimagefield.c. The unit saves $s0..$s6
+   Lombyte (GPL-3.0) src/sdk/library/disprefimagefield.c. The unit saves $s0..$s6
    and $ra in 16-byte slots while the stores stay `sd`, the same profile as the
    neighbouring func_0012D808, so it is built with `sdk -O2 -g2 -gstabs`.
    Lombyte's names map to RAC2 as: _getPtsDtsFlags = func_0012DAC0,

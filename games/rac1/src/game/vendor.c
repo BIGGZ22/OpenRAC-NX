@@ -310,7 +310,7 @@ extern f32 func_001FA888(s32);
 #define TRUNC(x) ((s32 (*)(f32))func_001FA898)(x)
 extern u64 func_00200248(s32);
 
-/* Adapted from Lombyte (MIT) for PAL by OpenRAC's tools/port.py: src/assembly/textbin/fun_00238310.c, render_capture_scrolling_text. */
+/* Adapted from Lombyte (GPL-3.0) for PAL by OpenRAC's tools/port.py: src/assembly/textbin/fun_00238310.c, render_capture_scrolling_text. */
 void Vendor_DrawScrollText(char *text, s32 start_x, s32 start_y, f32 scale) {
     s64 texture;
     s32 cursor_x;
@@ -555,7 +555,7 @@ extern struct T239 D_001864D0_t[] __asm__("D_001864D0");
 extern struct P239 D_001E02B0_p[] __asm__("D_001E02B0");
 extern unsigned char D_0013D5C8_b[] __asm__("D_0013D5C8") NOT_SDA;
 
-/* Vendor item panel: draws the selected item's name and description, and for the ammo/alt slots a pulsing price shadow. Adapted from Lombyte (MIT) for PAL: src/ui/menus/fun_002389e0.c, fun_002389e0. */
+/* Vendor item panel: draws the selected item's name and description, and for the ammo/alt slots a pulsing price shadow. Adapted from Lombyte (GPL-3.0) for PAL: src/ui/menus/fun_002389e0.c, fun_002389e0. */
 void VendorDrawItemPanel(void) {
     char buf[0x100];
     int w;
@@ -764,7 +764,7 @@ extern s64 func_001F4868_3A5E0(s32) __asm__("func_001F4868");
 extern f32 func_001FA888(s32);
 extern void func_001F5988(f32, f32, f32, f32, s32, s32, s32, s32, u64, s64);
 
-/* Adapted from Lombyte (MIT) for PAL by OpenRAC's tools/port.py: src/textbin/render_vendor_capture_texture_overlays_pass.c, render_vendor_capture_texture_overlays_pass. */
+/* Adapted from Lombyte (GPL-3.0) for PAL by OpenRAC's tools/port.py: src/textbin/render_vendor_capture_texture_overlays_pass.c, render_vendor_capture_texture_overlays_pass. */
 void func_0023A5E0(s32 pass_index, f32 capture_width,
                                                  f32 capture_height) {
     s32 flash_timer;
@@ -1080,7 +1080,7 @@ extern s32 func_001FA898_3B210(f32) __asm__("func_001FA898");
 extern void func_001F9CA0(f32 *, f32 *, f32 *);
 extern void func_001F9DC0_3B210(f32 *, f32 *, f32) __asm__("func_001F9DC0");
 
-/* Adapted from Lombyte (MIT) for PAL by OpenRAC's tools/port.py: src/textbin/fun_00239f58.c, sample_surface_height_map. */
+/* Adapted from Lombyte (GPL-3.0) for PAL by OpenRAC's tools/port.py: src/textbin/fun_00239f58.c, sample_surface_height_map. */
 s32 SampleSurfaceHeight(f32 *height, f32 *normal, f32 x, f32 y, f32 z) {
     f32 x_tangent[4] __attribute__((aligned(16)));
     f32 y_tangent[4] __attribute__((aligned(16)));

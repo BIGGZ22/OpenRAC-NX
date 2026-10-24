@@ -30,7 +30,7 @@ contains no game data.
   reader, `collision.cpp`). The PAL data has the same layouts; our decoders
   were checked against the PAL disc (see "Mobys", "Moby classes" and
   "Collision").
-- **[Lombyte](https://github.com/mateuszklysz/Lombyte)** (MIT): the moby class
+- **[Lombyte](https://github.com/mateuszklysz/Lombyte)** (GPL-3.0): the moby class
   names the editor shows (`editor/moby_classes.tsv`), which it joins
   from each level's class dispatch table and Wrench's class names.
 - **[Replanetizer](https://github.com/RatchetModding/Replanetizer)** by

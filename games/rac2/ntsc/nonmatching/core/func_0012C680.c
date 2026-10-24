@@ -52,7 +52,7 @@
 /* _peepBit: return the next count bits of the IPU bit stream without
    consuming them, refilling the 32-bit window from the IPU (FDEC) when
    it runs short and nudging the callback while the IPU stays busy.
-   Adapted from Lombyte (MIT) for PAL. */
+   Adapted from Lombyte (GPL-3.0) for PAL. */
 int func_0012C680(void *arg, int count) {
     char *ctx = arg;
     int counter;

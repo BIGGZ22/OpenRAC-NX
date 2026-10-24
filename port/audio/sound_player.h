@@ -34,6 +34,7 @@
 
 namespace openrac::audio {
 
+// Handles are never 0: 0 is what play() and the lookups return for "none".
 using BankHandle = std::uint32_t;
 using SoundHandle = std::uint32_t;
 
@@ -50,6 +51,7 @@ inline constexpr int kFramesPerTick = kOutputRate / kTicksPerSecond;
 inline constexpr std::size_t kVolumeGroups = 16;
 inline constexpr std::int32_t kFullVolume = 0x400;
 
+// How a play starts: the caller's volume, pan, pitch and the sound's four registers.
 struct PlayRequest {
     std::int32_t volume = kVolumeKeep;  // 1024 = the sound's own volume
     std::int32_t pan = kPanReset;       // degrees, or a sentinel
@@ -66,6 +68,8 @@ std::array<std::int16_t, 2> make_volume(int vol1, int pan1, int vol2, int pan2, 
 // A volume scaled by a group's master volume (square law, as the library).
 std::int16_t group_volume(std::int16_t volume, std::int32_t master);
 
+// The player: owns the loaded banks, the playing sounds and the mixer their tones go to. It is not
+// thread-safe: the caller serialises the calls and render().
 class SoundPlayer {
 public:
     SoundPlayer();
@@ -128,17 +132,24 @@ private:
     std::int8_t& reg(Script& s, std::int32_t which);
     void unsupported(const char* what);
 
+    // The 48 voices and the reverb that every sound's tones are keyed onto.
     VoiceMixer m_mixer;
     std::map<BankHandle, std::unique_ptr<Bank>> m_banks;
     std::map<SoundHandle, std::unique_ptr<Script>> m_scripts;
+    // Per voice: which sound owns it and the tone's settings, to recompute volume and pitch.
     std::vector<Slot> m_slots;
+    // The master volume of each group, kFullVolume when never set.
     std::array<std::int32_t, kVolumeGroups> m_master{};
+    // The registers every sound shares (negative selectors of the register grains).
     std::array<std::int8_t, 32> m_global_registers{};
     std::map<std::string, std::uint32_t> m_unsupported;
+    // The next handles to give out, and the script ticks since the start (the age of a sound).
     BankHandle m_next_bank = 1;
     SoundHandle m_next_sound = 1;
     std::uint64_t m_ticks = 0;
+    // State of the deterministic random() below.
     std::uint32_t m_random = 1;
+    // Frames rendered since the last script tick.
     int m_frame_in_tick = 0;
 };
 

@@ -131,6 +131,17 @@ python3 -m unittest discover -s tools     # tools/openrac.py
 python3 -m unittest discover -s editor    # the level editor (synthetic data, no disc)
 ```
 
+The C++ under `port/` and `sdk/` has a layout check (the rules are in
+[port/docs/CODING_CONVENTIONS.md](port/docs/CODING_CONVENTIONS.md), section 5):
+
+```sh
+python3 tools/cpp_style.py [PATH...]          # list the files that would change
+python3 tools/cpp_style.py --fix [PATH...]    # rewrite them: clang-format, then the blank lines around control blocks
+python3 tools/cpp_style.py --comments [PATH...]   # control blocks with no comment above them (report only)
+```
+
+CI runs it as a report for now; it does not fail the build.
+
 Each game has its own: rac2's `python -m unittest discover -s tests`,
 rac1/ntsc's `python3 scripts/test_public_tools.py` (Linux), rac1/pal's build
 audit and `tools/overlay_file_check.py`, rac3's `tools/pr_check.py`.

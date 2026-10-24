@@ -37,7 +37,9 @@ launcher runs on the player's own extracted levels. It needs Embree 4
 its SHA-256 and built as a static library in port/build/embree/, so the
 baker is one program with nothing beside it. A baker that cannot be built
 is said and left out; the game is built all the same. The build folder
-keeps the choice.
+keeps the choice. Intel Macs ship without the baker (Embree's static
+library cannot be built there): the option says so, and their enhanced
+graphics keep the original lighting.
 
 Each build that succeeds leaves openrac-build.json in the folder: the OpenRAC
 version and commit it built, and the games. The launcher compares them with
@@ -132,6 +134,11 @@ EMBREE_X86_ISAS = {
 }
 EMBREE_DIR = PORT / "build" / "embree"
 BAKER = "openrac-probe-bake"
+# Intel Macs ship without the baker (the maintainers' decision): AppleClang builds Embree's static
+# library for one ISA only, and x86-64 needs several (EMBREE_X86_ISAS), so it cannot be built there.
+# A level without a bake keeps the original lighting (port/enhanced/viewer/probe_lighting.cpp), and
+# the launcher says the same (launcher/core/src/enhanced.rs, NO_BAKER_HERE).
+NO_BAKER_HERE = "Intel Macs ship without the probe baker: their enhanced graphics keep the original lighting."
 
 
 class BuildError(Exception):
@@ -168,12 +175,21 @@ def targets(names: list[str], more: list[str] | None = None) -> list[str]:
     return [f"openrac-{name}" for name in names] + ["openrac-extractor"] + list(more or [])
 
 
+def is_x86(machine: str | None = None) -> bool:
+    """Whether MACHINE (platform.machine(), this one's unless given) is an x86 processor."""
+    return (machine or platform.machine()).lower() in ("x86_64", "amd64", "x64", "i386", "i686")
+
+
 def embree_options(machine: str | None = None) -> dict[str, str]:
     """The options Embree is configured with on MACHINE (platform.machine(), this one's unless
     given): EMBREE_OPTIONS, and EMBREE_X86_ISAS on x86-64 only."""
-    machine = (machine or platform.machine()).lower()
-    x86 = machine in ("x86_64", "amd64", "x64", "i386", "i686")
-    return {**EMBREE_OPTIONS, **(EMBREE_X86_ISAS if x86 else {})}
+    return {**EMBREE_OPTIONS, **(EMBREE_X86_ISAS if is_x86(machine) else {})}
+
+
+def ships_baker(system: str | None = None, machine: str | None = None) -> bool:
+    """Whether the probe baker is built for SYSTEM and MACHINE (platform.system() and
+    platform.machine(), this computer's unless given): everywhere but on an Intel Mac (NO_BAKER_HERE)."""
+    return not ((system or platform.system()) == "Darwin" and is_x86(machine))
 
 
 def embree_stamp(env: dict[str, str]) -> dict:
@@ -271,6 +287,22 @@ def copy_licenses(build: Path) -> None:
                 shutil.copy2(folder / name, dest / name)
             return
     raise BuildError("Embree's LICENSE.txt is missing: build it again (delete port/build/embree)")
+
+
+def probe_baker(cmake: str, env: dict[str, str], compilers: tuple[str, str, str] | None,
+                cache: dict[str, str]) -> tuple[dict[str, str], list[str]]:
+    """What --probe-baker adds to the build: its CMake defines and its targets. The baker with
+    its Embree built (build_embree); on an Intel Mac, NO_BAKER_HERE said and no baker; where
+    Embree fails, a warning and no baker. The game is built in every case."""
+    if not ships_baker():
+        say(NO_BAKER_HERE)
+        return {"OPENRAC_PROBE_BAKER": "OFF"}, []
+    try:
+        embree = build_embree(cmake, env, compilers, cache)
+        return {"OPENRAC_PROBE_BAKER": "ON", "embree_DIR": embree.as_posix()}, [BAKER]
+    except (BuildError, OSError) as e:
+        print(f"warning: the probe baker is left out: {e}", file=sys.stderr, flush=True)
+        return {"OPENRAC_PROBE_BAKER": "OFF"}, []
 
 
 def parse_cache(text: str) -> dict[str, str]:
@@ -611,13 +643,8 @@ def main(argv: list[str] | None = None) -> int:
     more = list(args.target)
     defines: dict[str, str] = {}
     if args.probe_baker or cache.get("OPENRAC_PROBE_BAKER") == "ON" or kept.get("OPENRAC_PROBE_BAKER") == "ON":
-        try:
-            defines = {"OPENRAC_PROBE_BAKER": "ON", "embree_DIR": build_embree(str(cmake), env, compilers,
-                                                                                 cache).as_posix()}
-            more.append(BAKER)
-        except (BuildError, OSError) as e:
-            print(f"warning: the probe baker is left out: {e}", file=sys.stderr, flush=True)
-            defines = {"OPENRAC_PROBE_BAKER": "OFF"}
+        defines, baker = probe_baker(str(cmake), env, compilers, cache)
+        more += baker
         kept.pop("OPENRAC_PROBE_BAKER", None)
     for command in commands(str(cmake), args.preset, build, names, source, cache, compilers, python, more,
                             disc, kept, defines):

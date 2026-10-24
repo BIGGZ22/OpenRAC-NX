@@ -221,6 +221,8 @@ vec3 probe_surface(vec4 texel, vec3 original) {
 }
 #endif
 
+// OPENRAC_UPSCALED_TEXTURE_COLOURS_SOURCE
+
 void main() {
 #ifdef OPENRAC_OPAQUE_COLOUR
     if (opaque_solid != 0) {
@@ -230,7 +232,7 @@ void main() {
     // variant selects this original solid path or the original general path
     // per draw, preserving their texture/derivative and alpha-test ordering.
     // It only runs with reused EQUAL depth and depth writes disabled.
-    vec4 texel = texture(tex_T0, v_uv);
+    vec4 texel = sample_upscaled_texture_colours(v_uv);
     vec4 c = texel * v_colour * material_colour;
     float light = 1.0;
     if (lighting != 0 && v_lit == 0) {
@@ -249,7 +251,7 @@ void main() {
 #endif
 #ifndef OPENRAC_SOLID
     if (metal_pass != 0) {
-        vec4 m = texture(tex_T0, v_uv) * v_colour;
+        vec4 m = sample_upscaled_texture_colours(v_uv) * v_colour;
         vec3 mrgb = min(m.rgb, vec3(1.0));
         if (fog_colour.w > 0.5) {
             mrgb = mix(fog_colour.rgb, mrgb, v_fog);
@@ -260,7 +262,7 @@ void main() {
     if (effect_pass == 0 && v_glow != glow_pass) {
         discard;
     }
-    vec4 texel = texture(tex_T0, v_uv);
+    vec4 texel = sample_upscaled_texture_colours(v_uv);
     vec4 c = texel * v_colour * material_colour;
     if (effect_pass != 0) {
         vec3 e = min(c.rgb, vec3(1.0));

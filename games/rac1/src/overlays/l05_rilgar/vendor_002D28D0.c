@@ -1335,7 +1335,7 @@ extern s32 func_L05_003052A8(char *moby, float *goal, float s);
 extern f32 func_L05_003054B0(s32, void *, void *, f32);
 
 /* Walks m toward its next path node, steering `side` radians off the direct heading while FUN_L05_00303e50 reports the way blocked; slows near the goal and arms the stuck timer when it drifts off the path.
-   Adapted from Lombyte (MIT) for PAL by OpenRAC's tools/port.py: src/overlays/l05/gameplay/entities/002d1688.c, FUN_L05_00303b08. */
+   Adapted from Lombyte (GPL-3.0) for PAL by OpenRAC's tools/port.py: src/overlays/l05/gameplay/entities/002d1688.c, FUN_L05_00303b08. */
 void PathWalker_StepTowardNode(struct Moby *m, s32 node, f32 side) {
     PathWalkerVars *v = (PathWalkerVars *)m->pvars;
     Vec4f dir, out, goal;
@@ -1376,7 +1376,7 @@ extern void func_001F9BF0_052A8(float *, float *, float *) __asm__("func_001F9BF
 extern void func_L00_001FF4B0(float *, float *, float);
 extern int func_L00_002629E0(int, float *, float *);
 
-/* Adapted from Lombyte (MIT) for PAL by OpenRAC's tools/port.py: src/overlays/l05/gameplay/entities/002d1688.c, FUN_L05_00303e50. */
+/* Adapted from Lombyte (GPL-3.0) for PAL by OpenRAC's tools/port.py: src/overlays/l05/gameplay/entities/002d1688.c, FUN_L05_00303e50. */
 int PathWalker_ProbeGoal(char *moby, float *goal, float s)
 {
     float v[4];
@@ -1454,7 +1454,7 @@ extern f32 func_001F9CB8_3054B0(PathVec_3054B0 *) __asm__("func_001F9CB8");
 extern void func_L00_001FF4B0_3054B0(PathVec_3054B0 *, PathVec_3054B0 *, f32) __asm__("func_L00_001FF4B0");
 
 /* Pushes a point clear of a path and returns the nearest wall distance.
- * Adapted from the matched func_L00_00262DF0, based on Lombyte (MIT):
+ * Adapted from the matched func_L00_00262DF0, based on Lombyte (GPL-3.0):
  * src/overlays/shared/gameplay/state/00261968.c, FUN_L00_00261d78. */
 f32 PushPointFromPath(s32 path_index, void *input, void *output, f32 distance) {
     PathVec_3054B0 *point = input;
@@ -1835,7 +1835,7 @@ extern short D_L05_00161C34;
 extern short D_L05_00161BB0;
 extern short D_L05_00161BB4;
 
-/* Adapted from Lombyte (MIT) for PAL by OpenRAC's tools/port.py: src/overlays/l05/gameplay/entities/002d1688.c, FUN_L05_00305178. */
+/* Adapted from Lombyte (GPL-3.0) for PAL by OpenRAC's tools/port.py: src/overlays/l05/gameplay/entities/002d1688.c, FUN_L05_00305178. */
 void Extermitank_ProcessHit(char *moby) {
     char *data = *(char **)(moby + 0x78);
     char *first;

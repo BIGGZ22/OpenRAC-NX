@@ -73,6 +73,7 @@ private:
 
     EffectPart m_part = EffectPart::All;
     Shader m_shader;
+    TextureFilter m_texture_filter = TextureFilter::Normal;
     int m_view_projection = -1;
     int m_textured = -1, m_tcc = -1, m_tfx = -1, m_tex_alpha_scale = -1;
     int m_fog_enable = -1, m_alpha_test = -1;

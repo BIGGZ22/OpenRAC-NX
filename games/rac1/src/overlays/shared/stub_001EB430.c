@@ -2,7 +2,7 @@
 #include "common.h"
 #include "include_asm.h"
 
-/* Adapted from Lombyte (MIT) for PAL by OpenRAC's tools/port.py: src/overlays/shared/sdk/debug/001eb0b0.c, FUN_L00_001eb0b0. */
+/* Adapted from Lombyte (GPL-3.0) for PAL by OpenRAC's tools/port.py: src/overlays/shared/sdk/debug/001eb0b0.c, FUN_L00_001eb0b0. */
 void ClearFiveWords(s32 *p) {
     p[0] = 0;
     p[1] = 0;
@@ -20,7 +20,7 @@ extern float func_001FA748(float, float);
 f32 func_001FA748(f32, f32);
 
 /* Copies the five floats of s to d, adding x to the first as a rotation.
-   Adapted from Lombyte (MIT) for PAL by OpenRAC's tools/port.py: src/overlays/shared/sdk/debug/001eb0b0.c, FUN_L00_001eb0c8. */
+   Adapted from Lombyte (GPL-3.0) for PAL by OpenRAC's tools/port.py: src/overlays/shared/sdk/debug/001eb0b0.c, FUN_L00_001eb0c8. */
 void CopyRecordAddRot(f32 *d, f32 *s, f32 x) {
     d[0] = FastAddRots(s[0], x);
     d[1] = s[1];

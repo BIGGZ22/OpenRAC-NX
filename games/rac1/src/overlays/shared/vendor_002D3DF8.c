@@ -555,7 +555,7 @@ void func_001F9BD8(void *, void *, void *);
 void func_001F9EE8(void *, void *, void *);
 void func_L00_001FD1D8(void *, s32, s32);
 
-/* Adapted from Lombyte (MIT) for PAL by OpenRAC's tools/port.py: src/overlays/shared/unclassified_002937a0.c, FUN_L08_002d4108. */
+/* Adapted from Lombyte (GPL-3.0) for PAL by OpenRAC's tools/port.py: src/overlays/shared/unclassified_002937a0.c, FUN_L08_002d4108. */
 void DrawFacingQuad(char *arg) {
     char *data = *(char **)(arg + 0x78);
     Pk_002d4108 pk;
@@ -632,7 +632,7 @@ extern short D_L08_00161DA0;
 extern short D_L08_00161DA4;
 extern short D_L08_00161DA8;
 
-/* Adapted from Lombyte (MIT) for PAL by OpenRAC's tools/port.py: src/overlays/shared/gameplay/entities/002937a0.c, FUN_L08_002e7eb0. */
+/* Adapted from Lombyte (GPL-3.0) for PAL by OpenRAC's tools/port.py: src/overlays/shared/gameplay/entities/002937a0.c, FUN_L08_002e7eb0. */
 char *Moby458Spawn(int owner, float *position, float *rotation, int value) {
     float position_copy[4] __attribute__((aligned(16)));
     float rotation_copy[4] __attribute__((aligned(16)));
@@ -734,7 +734,7 @@ extern short D_L08_00161DAC;
 extern short D_L08_00161DB0;
 extern float D_L08_001746E0[4];
 
-/* Adapted from Lombyte (MIT) for PAL by OpenRAC's tools/port.py: src/overlays/shared/gameplay/entities/002937a0.c, FUN_L08_002e8210. */
+/* Adapted from Lombyte (GPL-3.0) for PAL by OpenRAC's tools/port.py: src/overlays/shared/gameplay/entities/002937a0.c, FUN_L08_002e8210. */
 void Moby458Update(char *moby) {
     char *position_ptr = moby + 0x10;
     char *data = *(char **)(moby + 0x78);
@@ -946,7 +946,7 @@ extern float D_L08_00161EA0_F2838[] __asm__("D_L08_00161EA0") MACRO_ADDR;
 extern float D_L08_00161EA4[] MACRO_ADDR;
 
 /* Advances the X and Y scroll offsets of entry `i` by speed * frame step, wrapping them into [-1, 1].
-   Adapted from Lombyte (MIT) for PAL by OpenRAC's tools/port.py: src/overlays/shared/gameplay/entities/002937a0.c, FUN_L08_002f1378. */
+   Adapted from Lombyte (GPL-3.0) for PAL by OpenRAC's tools/port.py: src/overlays/shared/gameplay/entities/002937a0.c, FUN_L08_002f1378. */
 void AdvanceScrollEntry(int i) {
     float *p;
     p = &D_L08_00161EA0_F2838[i * 2];
@@ -979,7 +979,7 @@ extern short D_L08_00162030;
 extern short D_L08_00162034;
 extern short D_L08_00162038;
 
-/* Adapted from Lombyte (MIT) for PAL by OpenRAC's tools/port.py: src/overlays/shared/unclassified_002937a0.c, FUN_L08_002f5830. */
+/* Adapted from Lombyte (GPL-3.0) for PAL by OpenRAC's tools/port.py: src/overlays/shared/unclassified_002937a0.c, FUN_L08_002f5830. */
 void Moby648Update(char *m) {
     f32 v0[4], v1[4], c[4], d[4], e[16];
     char *v;

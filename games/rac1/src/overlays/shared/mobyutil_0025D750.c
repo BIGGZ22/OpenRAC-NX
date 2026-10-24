@@ -46,7 +46,7 @@ extern void func_L00_0026E438(void *, void *, int);
 
 typedef struct { char *p[7]; short timer; } Slots_265E88;
 
-/* Adapted from Lombyte (MIT) for PAL by OpenRAC's tools/port.py: src/overlays/shared/gameplay/entities/00264e40.c, FUN_L02_00264e70. */
+/* Adapted from Lombyte (GPL-3.0) for PAL by OpenRAC's tools/port.py: src/overlays/shared/gameplay/entities/00264e40.c, FUN_L02_00264e70. */
 void EffectSlots_Fire(char *slots, float *position, float *direction, float distance) {
     float origin[4] __attribute__((aligned(16)));
     float end[4] __attribute__((aligned(16)));

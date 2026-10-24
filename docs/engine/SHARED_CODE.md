@@ -197,7 +197,7 @@ functions matching (1,540 before). They are not applied here, since
 leaves them as a patch beside its results
 (`games/rac1/ntsc/build/port/rac1-pal--rac1-ntsc/exact.patch`). Since
 rac1-decomp moved to the GPL on 2026-10-07, C written there after that date
-can go to Lombyte (MIT) only with its authors' agreement.
+can go to Lombyte (GPL-3.0) only with its authors' agreement.
 
 Fewer pass in this direction, for two reasons worth knowing. Lombyte's
 catalogue gives one name to functions that differ only in a constant, so 37

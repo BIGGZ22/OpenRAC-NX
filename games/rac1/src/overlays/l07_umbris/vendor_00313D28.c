@@ -47,7 +47,7 @@ extern float func_001F9FA8(float);
 extern void func_001F9EC0(void *, void *, void *);
 extern void func_001F9BD8(void *, void *, void *);
 
-/* Adapted from Lombyte (MIT) for PAL by OpenRAC's tools/port.py: src/overlays/l07/gameplay/entities/00312948.c, FUN_L07_00312e70. */
+/* Adapted from Lombyte (GPL-3.0) for PAL by OpenRAC's tools/port.py: src/overlays/l07/gameplay/entities/00312948.c, FUN_L07_00312e70. */
 void DrawSpinningRing(void *mobyp, float radius, int phase, float speed, int color) {
     char *moby = mobyp;
     char *vars = *(char **)(moby + 0x78);
@@ -435,7 +435,7 @@ struct ChaserSpeed_315108 { u8 pad0[0x80]; f32 base; u8 pad84[0x10]; f32 rate; u
 struct ChaserAnim_315108 { u8 pad0[0x58]; f32 speed; };
 float func_L07_00315108_r(struct ChaserAnim_315108 *a, struct ChaserSpeed_315108 *s, float x, float y, float k) __asm__("func_L07_00315108");
 
-/* Sets the chaser's speed from how far x is past y (eased over 50 units, between 0.06 and 0.1 of the frame step) and scales its animation speed to match. Adapted from Lombyte (MIT) for PAL by OpenRAC's tools/port.py: src/overlays/l07/gameplay/entities/00312948.c, FUN_L07_00313d30. */
+/* Sets the chaser's speed from how far x is past y (eased over 50 units, between 0.06 and 0.1 of the frame step) and scales its animation speed to match. Adapted from Lombyte (GPL-3.0) for PAL by OpenRAC's tools/port.py: src/overlays/l07/gameplay/entities/00312948.c, FUN_L07_00313d30. */
 float func_L07_00315108_r(struct ChaserAnim_315108 *a, struct ChaserSpeed_315108 *s, float x, float y, float k)
 {
     float r = D_0015EE60_315108 * 0.06f;
@@ -1656,7 +1656,7 @@ typedef struct {
 extern RopeVec D_L07_0020DEA0[][20];
 
 /* Draws the rope grid as textured quads between neighbouring rows, each row faded by its level.
-   Adapted from Lombyte (MIT) for PAL by OpenRAC's tools/port.py: src/overlays/l07/gameplay/entities/00312948.c, FUN_L07_00317910. */
+   Adapted from Lombyte (GPL-3.0) for PAL by OpenRAC's tools/port.py: src/overlays/l07/gameplay/entities/00312948.c, FUN_L07_00317910. */
 void DrawRopeGrid(void) {
     L07RopeDrawPacket packet;
     float phase;
@@ -1752,7 +1752,7 @@ extern void look_319080(void *, void *, void *, float) __asm__("func_002156E0");
 
 /* Starts the rope when one is pending: lays nine points out from the anchor along the moby's
  * axis, then resets the swing state and, once, clears every entry's link.
- * Adapted from Lombyte (MIT) for PAL: overlays/l07/gameplay/entities/00312948.c, FUN_L07_00317cb0. */
+ * Adapted from Lombyte (GPL-3.0) for PAL: overlays/l07/gameplay/entities/00312948.c, FUN_L07_00317cb0. */
 void StartRopeWhenPending(char *moby, void *anchor) {
     RopeVec_319080 step;
     RopeVec_319080 up;
@@ -2463,7 +2463,7 @@ extern void func_L00_0025A8C0_31AAB0(void *, void *, s32, f32, void *) __asm__("
 extern s32 probe_31AAB0(f32, void *, s32, void *, void *) __asm__("func_L00_001F2BE8");
 
 /* Swooper: holds at its goal, dives at the hero once it sees it and bursts on contact.
- * Adapted from Lombyte (MIT) for PAL: overlays/l07/gameplay/entities/00312948.c, FUN_L07_003196e0. */
+ * Adapted from Lombyte (GPL-3.0) for PAL: overlays/l07/gameplay/entities/00312948.c, FUN_L07_003196e0. */
 void SwooperUpdate(struct Moby *moby) {
     SwooperVars_31AAB0 *vars;
     SwooperSpawnerVars_31AAB0 *spawner_vars;
@@ -2624,7 +2624,7 @@ extern void delete_31B318(void *) __asm__("func_0020D678");
 
 /* Breakable prop: when hit by moby 0x415 in state 8 or 0x452 in state 9 with hit kind 1.000123, scatters its shard
  * count of pieces over its rotated extent, spawns debris and removes itself.
- * Adapted from Lombyte (MIT) for PAL: overlays/l07/gameplay/entities/00312948.c, FUN_L07_00319f48. */
+ * Adapted from Lombyte (GPL-3.0) for PAL: overlays/l07/gameplay/entities/00312948.c, FUN_L07_00319f48. */
 void BreakablePropUpdate(struct Moby *m) {
     BreakableVars_31B318 *v = (BreakableVars_31B318 *)m->pvars;
     MobyHit_31B318 *h;

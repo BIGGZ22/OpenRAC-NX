@@ -443,7 +443,7 @@ extern void func_001FA460_4C558(void *, void *) __asm__("func_001FA460");
 extern void func_001FA540_4C558(void *, void *, void *) __asm__("func_001FA540");
 extern void func_001FA480_4C558(void *, void *) __asm__("func_001FA480");
 
-/* Adapted from Lombyte (MIT) for PAL: src/overlays/shared/ui/help/00237488.c, FUN_L05_0024bdc0. */
+/* Adapted from Lombyte (GPL-3.0) for PAL: src/overlays/shared/ui/help/00237488.c, FUN_L05_0024bdc0. */
 void HeroL05_UpdateCollisionProbes(void) {
     float start[4], end[4], probe[4];
     u128_4C558 moby_rotation[4], rotation[4], combined[4];
@@ -1617,7 +1617,7 @@ int Hero_GetHelpAnimId(void) {
     return r;
 }
 extern struct Hero D_0013F450_2559B8 __asm__("D_0013F450");
-/* 0x52, 0x7D, 0x68 or 0x7E from the hero's +0x884 and +0x8CE. Adapted from Lombyte (MIT) for PAL: src/overlays/shared/ui/help/00237488.c, FUN_L05_002551d0. */
+/* 0x52, 0x7D, 0x68 or 0x7E from the hero's +0x884 and +0x8CE. Adapted from Lombyte (GPL-3.0) for PAL: src/overlays/shared/ui/help/00237488.c, FUN_L05_002551d0. */
 int Hero_SelectAnimIdByFlags(void) {
     struct Hero *p = &D_0013F450_2559B8;
     int f = p->unk8CE;

@@ -24,7 +24,7 @@ void Camera_RunQueuedCallbacks(void) {
 }
 INCLUDE_ASM("asm/overlays", func_L00_001EB564);
 /* Returns the camera slot (gCameraSlotsLvl) whose id is id, or 0 when none.
-   Adapted from Lombyte (MIT) for PAL: src/overlays/shared/gameplay/camera/001eb188.c, FUN_L00_001eb1f8. */
+   Adapted from Lombyte (GPL-3.0) for PAL: src/overlays/shared/gameplay/camera/001eb188.c, FUN_L00_001eb1f8. */
 Camera *FindCameraById(int id) {
     s32 p;
     s32 e;
@@ -56,7 +56,7 @@ float FastAddRots(float, float);
 
 /* Cam_InterpValues for angles: steers vel toward the angle to (the shortest way round, from
    the current angle from), clamps the step to max when max is set, and returns the angle plus vel
-   through FastAddRots. Adapted from Lombyte (MIT) for PAL by OpenRAC's tools/port.py: src/overlays/shared/gameplay/camera/init_camera_system.c, FUN_L00_001eb328. */
+   through FastAddRots. Adapted from Lombyte (GPL-3.0) for PAL by OpenRAC's tools/port.py: src/overlays/shared/gameplay/camera/init_camera_system.c, FUN_L00_001eb328. */
 float Camera_SmoothAngle(float *vel, float from, float to, float stiffness, float damping, float max) {
     float t = func_001FA790_EB6A8(to, from);
     *vel = *vel + (stiffness * t - damping * *vel);
@@ -89,7 +89,7 @@ extern void func_001F9A98(void *, void *, s32);
 extern s32 func_001FA898(f32);
 extern s32 D_0015EE84_EB890 __asm__("D_0015EE84") MACRO_ADDR;
 
-/* Switches the active camera to next_camera: picks the blend from the old camera's transition_state and the new one's info->blend_kind (1 eased, 5 orbit, 3/6 hand-off), then installs it and swaps the state buffers. Level copy of func_001EC2B8. Adapted from Lombyte (MIT) for PAL: src/textbin/fun_001ebf10.c, switch_active_camera_record. */
+/* Switches the active camera to next_camera: picks the blend from the old camera's transition_state and the new one's info->blend_kind (1 eased, 5 orbit, 3/6 hand-off), then installs it and swaps the state buffers. Level copy of func_001EC2B8. Adapted from Lombyte (GPL-3.0) for PAL: src/textbin/fun_001ebf10.c, switch_active_camera_record. */
 void SwitchCamera(Camera *next_camera) {
     Camera *previous_camera;
     CameraInfo *info;
@@ -556,7 +556,7 @@ extern int func_L00_001F10E0_f(void *, int, void *, float) __asm__("func_L00_001
 extern W D_L00_00173F70;
 extern short D_L00_0015F05C;
 
-/* moves the camera position a toward a target in steps, stopping each step on collision. Adapted from Lombyte (MIT) for PAL: overlays/shared/gameplay_camera_001eb188.c, FUN_L00_001ed6a8. */
+/* moves the camera position a toward a target in steps, stopping each step on collision. Adapted from Lombyte (GPL-3.0) for PAL: overlays/shared/gameplay_camera_001eb188.c, FUN_L00_001ed6a8. */
 void MoveCameraToward(float *pos, float r) {
     W d;
     W v;

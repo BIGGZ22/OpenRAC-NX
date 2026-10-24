@@ -37,9 +37,12 @@ TitleLump TitleLump::parse(ByteView lump) {
          kTitleLogoHeight,
          b.sub(base + h(0x21), logo_size, "title logo").to_vector()};
     const std::size_t count = h(0x16);
+
+    // The title world lists a handful of FX textures; a large count means a damaged lump.
     if (count > 256) {
         fail("title world: {} FX textures", count);
     }
+
     t.fx = b.read_array<FxTextureEntry>(h(0x17), count, "FX texture table");
     t.fx_bank = std::min(base + h(0x1a), t.bytes.size());
     return t;
@@ -58,6 +61,8 @@ BootPictures BootPictures::parse(ByteView lump) {
 
 GsImage BootPictures::picture(BootPictureKind kind, bool pal, u32 language) const {
     std::size_t field = 0;
+
+    // Each picture kind has its own field in the lump's header, at a different offset.
     switch (kind) {
         case BootPictureKind::Still:
             field = pal ? 8 : 0;
@@ -69,13 +74,17 @@ GsImage BootPictures::picture(BootPictureKind kind, bool pal, u32 language) cons
             field = 0x40 + 8 * std::size_t{language};
             break;
     }
+
     const ByteView b(m_bytes);
     const std::vector<u8> raw =
         wad_decompress(b.sub(b.u32_at(field), b.u32_at(field + 4), "boot picture"));
     const std::size_t n = std::size_t{kBootPictureWidth} * kBootPictureHeight * 4;
+
+    // The decoded picture must hold a full width by height RGBA image.
     if (raw.size() < n) {
         fail("boot picture: {} bytes", raw.size());
     }
+
     return {
         kBootPictureWidth,
         kBootPictureHeight,
@@ -90,9 +99,12 @@ TitleWorld TitleWorld::parse(ByteView lump) {
         return b.s32_at(4 * i);
     };
     const s32 base = h(1);
+
+    // A base of zero or past the end would send every later offset outside the lump.
     if (base <= 0 || static_cast<std::size_t>(base) > bytes.size()) {
         fail("title world: data base {:#x}", base);
     }
+
     const auto base_u = static_cast<std::size_t>(base);
     const s32 p = static_cast<s32>(kIndexTables);
     auto range = [&](std::size_t n, std::size_t o) {

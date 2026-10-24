@@ -31,7 +31,8 @@ import re
 import sys
 from pathlib import Path
 
-sys.path.insert(0, str(Path(__file__).resolve().parent))
+sys.path.insert(1, str(next(p for p in Path(__file__).resolve().parents if (p / "tools/openrac_common").is_dir()) / "tools"))
+from openrac_common import paths  # noqa: E402
 
 MARK = "/* ---- generated below ---- */"
 NAME = re.compile(r"\b(func_(?:L(\d\d)_)?([0-9A-F]{8})(?:__game|__hooked)?)\b")
@@ -177,8 +178,7 @@ def carrier_of(args):
     from carry import Carrier
     version = Path(args.version)
     cfg = json.loads((version / "hostgen.json").read_text())
-    root = Path(__file__).resolve().parents[3]
-    source = root / cfg["source"]
+    source = paths.repo_root(__file__) / cfg["source"]
     places = source / cfg["places"] if cfg.get("places") else None
     splits = version / cfg["split_places"] if cfg.get("split_places") else None
     return Carrier(Path(args.map), Path(args.gen), source / "src" if source.exists() else None, places, splits)

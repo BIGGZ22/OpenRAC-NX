@@ -23,10 +23,7 @@ import math
 import sys
 from pathlib import Path
 
-HERE = Path(__file__).resolve().parent
-sys.path.insert(0, str(HERE))
-
-import runner  # noqa: E402
+import runner
 
 HERO, VENDOR, SPAWN, GOLD_BOLT, INFOBOT, TELEPORTER = 0, 11, 805, 1134, 750, 1135
 PATH_CLASSES = (SPAWN, GOLD_BOLT, INFOBOT, TELEPORTER, VENDOR)

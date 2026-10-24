@@ -7,10 +7,12 @@ Two kinds of test. Each helper's own behaviour, with expected values from its do
 (ECMA-119 for the image, hashlib for the digests). And characterisation: the existing copy each
 helper was written from runs on the same synthetic input as the helper, and both must give the
 same result, so a caller moved onto the package later behaves as it did. Those copies are
-imported from where they live today (port/tools/hostgen, port/tools/versionmap, sdk/tools,
-editor, port/enhanced/tools/probes, and what tools/ keeps: openrac.checksums,
+imported from where they live today (sdk/tools, and what tools/ keeps: openrac.checksums,
 fcheck_gate.fcheck_commit); once their callers have moved and a copy is gone, its comparison
-goes with it, as tools/' copies went in P1-05.
+goes with it, as tools/' copies went in P1-05, port/tools' and the probe tools' in P2-10 and the
+editor's disc reader in P2-32 (hostgen's readers keep their characterisation in
+port/tools/hostgen/test_tables.py; the editor's reader, now on iso9660, keeps its stricter
+checks' tests in editor/test_disc.py).
 """
 import contextlib
 import hashlib
@@ -30,22 +32,15 @@ from openrac_common import digest, files, games, iso9660, paths, proc, tables
 
 ROOT = Path(__file__).resolve().parent.parent
 
-# The existing copies' folders go after tools/ on the path, so a tools/ module of the same name
-# (tools/port.py beside editor/port.py) is the one imported.
-for folder in ("port/tools/hostgen", "port/tools/versionmap", "sdk/tools", "editor",
-               "port/enhanced/tools/probes"):
+# The existing copies' folder goes after tools/ on the path, so a tools/ module of the same name
+# would be the one imported.
+for folder in ("sdk/tools",):
     if str(ROOT / folder) not in sys.path:
         sys.path.append(str(ROOT / folder))
 
-import bake_all  # noqa: E402  port/enhanced/tools/probes
-import carry_functions  # noqa: E402  port/tools/versionmap
-import disc  # noqa: E402  editor
 import fcheck_gate  # noqa: E402
 import gen_binding  # noqa: E402  sdk/tools
-import hostgen  # noqa: E402  port/tools/hostgen
-import no_c  # noqa: E402  port/tools/hostgen
 import openrac  # noqa: E402
-import versionmap  # noqa: E402  port/tools/versionmap
 
 SECTOR = iso9660.SECTOR
 
@@ -182,10 +177,9 @@ class PathsTests(TempDir):
         self.assertEqual(paths.repo_root(ROOT), ROOT)
 
     def test_matches_the_hand_written_roots(self):
-        # tools/*.py take theirs from repo_root since P1-05; these are still written by hand.
-        for module in (versionmap, gen_binding):
-            with self.subTest(module=module.__name__):
-                self.assertEqual(paths.repo_root(module.__file__), module.ROOT)
+        # tools/*.py take theirs from repo_root since P1-05, port/tools since P2-10; this one is
+        # still written by hand.
+        self.assertEqual(paths.repo_root(gen_binding.__file__), gen_binding.ROOT)
 
     def test_a_checkout_needs_games_and_agents_md(self):
         (self.dir / "a/games").mkdir(parents=True)
@@ -206,6 +200,96 @@ class PathsTests(TempDir):
         (self.dir / "x/AGENTS.md").write_text("")
         with self.assertRaises(FileNotFoundError):
             paths.repo_root(self.dir / "x/y")
+
+
+# The folders whose scripts reach the package through paths.BOOTSTRAP (sdk/tools joins them when it
+# moves onto it). NAMES_CHECKED are those whose modules must not share a name with one of tools/:
+# the editor imports nothing of tools/ but the package, and its port.py keeps its name beside
+# tools/port.py because a script's own folder comes before tools/ on the path
+# (test_the_editor_runs_from_the_launchers_bundled_copy).
+BOOTSTRAPPED = ("port/tools", "port/enhanced/tools/probes", "editor")
+NAMES_CHECKED = ("port/tools", "port/enhanced/tools/probes")
+
+
+class BootstrapTests(TempDir):
+    """paths.BOOTSTRAP, the line a script outside tools/ runs to find the package, in both kinds
+    of root, and the scripts that write it."""
+
+    def layout(self, name: str, marker: str) -> Path:
+        """A synthetic root NAME holding games/, MARKER and a copy of the package, with a script
+        where the probe tools are that bootstraps and prints its package's and its root's place."""
+        top = self.dir / name
+        (top / "games").mkdir(parents=True)
+        (top / marker).write_text("")
+        shutil.copytree(ROOT / paths.PACKAGE_DIR, top / paths.PACKAGE_DIR,
+                        ignore=shutil.ignore_patterns("__pycache__"))
+        script = top / "port/enhanced/tools/probes/probe.py"
+        script.parent.mkdir(parents=True)
+        script.write_text("import sys\nfrom pathlib import Path\n" + paths.BOOTSTRAP + "\n"
+                          "from openrac_common import paths\n"
+                          "print(Path(paths.__file__).parent)\nprint(paths.repo_root(__file__))\n")
+        return top
+
+    def run_script(self, top: Path) -> list[Path]:
+        done = subprocess.run([sys.executable, "-E", str(top / "port/enhanced/tools/probes/probe.py")],
+                              cwd=self.dir, capture_output=True, text=True)
+        self.assertEqual(done.returncode, 0, done.stderr)
+        return [Path(line) for line in done.stdout.splitlines()]
+
+    def test_finds_the_package_in_a_checkout(self):
+        top = self.layout("checkout", paths.CHECKOUT_MARKER).resolve()
+        self.assertEqual(self.run_script(top), [top / paths.PACKAGE_DIR, top])
+
+    def test_finds_the_package_in_the_launchers_bundled_copy(self):
+        # The copy has no AGENTS.md: the bootstrap finds it by the package, repo_root by STANDALONE.
+        top = self.layout("bundle", paths.STANDALONE_MARKER).resolve()
+        self.assertFalse((top / paths.CHECKOUT_MARKER).exists())
+        self.assertEqual(self.run_script(top), [top / paths.PACKAGE_DIR, top])
+
+    def test_the_editor_runs_from_the_launchers_bundled_copy(self):
+        # The copy carries editor/ beside tools/ (openrac_common and port.py among them) and
+        # games/*/game.json, without AGENTS.md (tools/bundle_standalone.py). Every module of the
+        # editor imports there, takes the package from the copy, and its own port.py comes first.
+        top = self.layout("bundle", paths.STANDALONE_MARKER).resolve()
+        shutil.copytree(ROOT / "editor", top / "editor", ignore=shutil.ignore_patterns("__pycache__"))
+        shutil.copy(ROOT / "tools/port.py", top / "tools/port.py")
+        for manifest in (ROOT / "games").glob("*/game.json"):
+            (top / "games" / manifest.parent.name).mkdir()
+            shutil.copy(manifest, top / "games" / manifest.parent.name / "game.json")
+        script = top / "editor/probe.py"
+        script.write_text(
+            "import importlib\nfrom pathlib import Path\n"
+            "here = Path(__file__).parent\n"
+            "for name in sorted(p.stem for p in here.glob('*.py') if p.stem != 'probe'):\n"
+            "    importlib.import_module(name)\n"
+            "import assets, disc, port, util\n"
+            "print(Path(util.games.__file__).parent)\nprint(Path(assets.digest.__file__).parent)\n"
+            "print(Path(port.__file__))\nprint(disc.PAL.executable)\n")
+        done = subprocess.run([sys.executable, "-E", str(script)], cwd=self.dir, capture_output=True, text=True)
+        self.assertEqual(done.returncode, 0, done.stderr)
+        self.assertEqual(done.stdout.splitlines(), [str(top / paths.PACKAGE_DIR), str(top / paths.PACKAGE_DIR),
+                                                    str(top / "editor/port.py"),
+                                                    games.load("rac1")["versions"]["pal"]["boot"]["file"]])
+
+    def test_the_documented_line_is_the_constant(self):
+        self.assertIn(paths.BOOTSTRAP, paths.__doc__)
+        self.assertIn(paths.BOOTSTRAP, (ROOT / paths.PACKAGE_DIR / "README.md").read_text(encoding="utf-8"))
+
+    def test_no_module_there_is_named_as_one_of_tools(self):
+        # A module of tools/ beside one of the same name elsewhere is imported by whichever folder
+        # comes first on the path: hostgen's test assembler, named mips.py like tools/mips.py that
+        # versionmap imports, was one (renamed tests/assembler.py in P2-10).
+        ours = {script.stem for script in (ROOT / "tools").glob("*.py")}
+        for folder in NAMES_CHECKED:
+            for script in sorted((ROOT / folder).rglob("*.py")):
+                self.assertNotIn(script.stem, ours, script.relative_to(ROOT))
+
+    def test_every_script_outside_tools_that_imports_the_package_bootstraps_so(self):
+        for folder in BOOTSTRAPPED:
+            for script in sorted((ROOT / folder).rglob("*.py")):
+                text = script.read_text(encoding="utf-8")
+                if "from openrac_common import" in text or "import openrac_common" in text:
+                    self.assertIn(paths.BOOTSTRAP, text, script.relative_to(ROOT))
 
 
 # ---- games ----
@@ -242,9 +326,44 @@ class GamesTests(TempDir):
         self.assertEqual(games.version_dir(RAC8, "pal"), "games/rac8")
         self.assertEqual(games.version_dir(RAC8, "ntsc"), "games/rac8/ntsc")
 
-    def test_matches_versionmap(self):
-        with mock.patch.object(versionmap, "ROOT", self.dir):
-            self.assertEqual(games.load("rac8", self.dir)["versions"]["ntsc"], versionmap.version("rac8/ntsc"))
+    def test_source_variable_is_the_game_and_version_in_capitals(self):
+        self.assertEqual(games.source_variable("rac1", "pal"), "OPENRAC_SOURCE_RAC1_PAL")
+
+    def test_source_checkout_is_the_variable_else_game_json(self):
+        with mock.patch.dict(os.environ, {"OPENRAC_SOURCE_RAC8_PAL": "/elsewhere"}):
+            self.assertEqual(games.source_checkout("rac8", "pal", self.dir), Path("/elsewhere"))
+        # Not set, and set but empty, both fall back to game.json's path with ~ expanded.
+        with mock.patch.dict(os.environ, {"OPENRAC_SOURCE_RAC8_PAL": ""}):
+            self.assertEqual(games.source_checkout("rac8", "pal", self.dir), Path(os.path.expanduser("~/x")))
+            del os.environ["OPENRAC_SOURCE_RAC8_PAL"]
+            self.assertEqual(games.source_checkout("rac8", "pal", self.dir), Path(os.path.expanduser("~/x")))
+
+    def test_a_relative_checkout_is_written_from_the_top_of_openrac(self):
+        manifest = self.dir / "games/rac8/game.json"
+        data = json.loads(manifest.read_text())
+        data["versions"]["pal"]["source"]["checkout"] = "../rac8-decomp"
+        manifest.write_text(json.dumps(data))
+        with mock.patch.dict(os.environ, {"OPENRAC_SOURCE_RAC8_PAL": ""}):
+            self.assertEqual(games.source_checkout("rac8", "pal", self.dir), (self.dir / "../rac8-decomp").resolve())
+            # The same from any working directory: the path is the manifest's, not the caller's.
+            here = os.getcwd()
+            try:
+                os.chdir(self.dir / "games")
+                self.assertEqual(
+                    games.source_checkout("rac8", "pal", self.dir), (self.dir / "../rac8-decomp").resolve()
+                )
+            finally:
+                os.chdir(here)
+
+    def test_source_checkout_is_none_without_a_source_even_with_the_variable(self):
+        with mock.patch.dict(os.environ, {"OPENRAC_SOURCE_RAC8_NTSC": "/elsewhere"}):
+            self.assertIsNone(games.source_checkout("rac8", "ntsc", self.dir))
+
+    def test_source_checkout_of_an_unknown_game_or_version_raises(self):
+        with self.assertRaises(FileNotFoundError):
+            games.source_checkout("rac7", "pal", self.dir)
+        with self.assertRaises(KeyError):
+            games.source_checkout("rac9", "pal", self.dir)
 
 
 # ---- tables ----
@@ -273,6 +392,8 @@ LIBRARY_API = (
     "memcpy\tlibc\tvoid *memcpy(void *, const void *, size_t)\n"
     "lonely\n"
 )
+# no_c.tsv's columns (port/tools/hostgen/no_c.py, COLUMNS).
+NO_C_COLUMNS = ["name", "class", "kind", "c", "reachable", "evidence"]
 NO_C = (
     "# a comment\n"
     "name\tclass\tkind\tc\treachable\tevidence\n"
@@ -302,7 +423,7 @@ class TablesTests(TempDir):
         self.assertEqual(rows[6], {"symbol": "short", "library": "row", "name": "", "port": ""})
 
     def test_an_uncommented_header_line_is_skipped_with_columns(self):
-        rows = tables.read_tsv(self.no_c, no_c.COLUMNS)
+        rows = tables.read_tsv(self.no_c, NO_C_COLUMNS)
         self.assertEqual([r["name"] for r in rows], ["func_a", "func_b", "func_c", "func_d"])
         self.assertEqual(tables.read_tsv(self.no_c)[0][0], "name")
 
@@ -317,43 +438,15 @@ class TablesTests(TempDir):
                          ["symbol", "library", "name", "port", "notes", "signature (optional)"])
         self.assertEqual(tables.header(self.no_c), [])
 
-    def test_matches_carry_functions_read_tsv(self):
-        for path in (self.libraries, self.api, self.no_c, self.dir / "none.tsv"):
-            with self.subTest(path=path.name):
-                self.assertEqual(tables.read_tsv(path), carry_functions.read_tsv(path))
-
-    def test_matches_no_c_read_tsv_names(self):
-        for column in (0, 1):
-            self.assertEqual([row[column] for row in tables.read_tsv(self.libraries, strip=True)],
-                             no_c.read_tsv_names(self.libraries, column))
-
-    def test_matches_no_c_keep_rows(self):
-        rows = tables.read_tsv(self.no_c)
-        ours = {row[0]: dict(zip(no_c.COLUMNS, row)) for row in rows[1:]
-                if len(row) == len(no_c.COLUMNS) and row[5].startswith("by hand:")}
-        self.assertEqual(ours, no_c.keep_rows(self.no_c))
-
-    def test_matches_hostgen_library_readers(self):
-        cfg = {"libraries": self.libraries.name, "library_api": self.api.name}
-        api = {row[0]: row[2] for row in tables.read_tsv(self.api, strip=True) if len(row) >= 3}
-        self.assertEqual(api, hostgen.library_api(self.dir, cfg))
-        columns = ["symbol", "library", "name", "port", "notes", "signature"]
-        rows = tables.read_tsv(self.libraries, columns, strip=True)
-        host = {r["symbol"]: (r["name"], r["signature"] or api.get(r["name"], "")) for r in rows if r["port"] == "host"}
-        self.assertEqual(host, hostgen.host_table(self.dir, cfg))
-        self.assertEqual({r["symbol"] for r in rows if r["port"] in ("wrap", "hook")}, hostgen.wrapped(self.dir, cfg))
-        self.assertEqual({r["symbol"] for r in rows if r["port"] == "wrap"}, hostgen.wrapped_by_host(self.dir, cfg))
-
     def test_matches_gen_binding_hook_rows(self):
         path = ROOT / "port" / "game" / "rac8-pal" / "libraries.tsv"
         expected = gen_binding.hook_rows("rac8", ["pal"], {path: LIBRARIES})
         rows = tables.read_tsv(self.libraries, ["symbol", "library", "name", "port"], strip=True)
         self.assertEqual({"pal": {r["name"]: r["symbol"] for r in rows if r["port"] == "hook"}}, expected)
 
-    def test_reads_this_checkouts_libraries_as_carry_functions_does(self):
+    def test_reads_the_headers_of_this_checkouts_libraries(self):
         for path in sorted((ROOT / "port" / "game").glob("*/libraries.tsv")):
             with self.subTest(path=str(path.relative_to(ROOT))):
-                self.assertEqual(tables.read_tsv(path), carry_functions.read_tsv(path))
                 self.assertEqual(tables.header(path)[:3], ["symbol", "library", "name"]
                                  if path.parent.name != "common" else ["name", "library", "signature"])
 
@@ -377,7 +470,6 @@ class DigestTests(TempDir):
         self.assertEqual(digest.sha1(empty), hashlib.sha1(b"").hexdigest())
 
     def test_matches_the_existing_copies(self):
-        self.assertEqual(digest.sha256(self.path), bake_all.sha256(self.path))
         full = openrac.checksums(self.path, True)
         self.assertEqual((digest.sha1(self.path), digest.sha256(self.path), digest.file_digest(self.path, "md5")),
                          (full["sha1"], full["sha256"], full["md5"]))
@@ -548,14 +640,6 @@ class IsoTests(TempDir):
             with self.subTest(read=read.__name__), self.assertRaises(iso9660.IsoError) as caught:
                 read(cut)
             self.assertEqual(caught.exception.detail, "a directory record is cut short")
-
-    def test_matches_the_editors_disc_reader(self):
-        flat = self.write("flat.iso", build_image({"SYSTEM.CNF": CNF, "SCES_999.99": BOOT, **MANY}))
-        with disc.Disc(flat) as image:
-            theirs = [(r["name"], r["lba"], r["bytes"]) for r in image.files()]
-            boot = disc.BOOT.search(CNF).group(1).decode()
-        self.assertEqual(iso9660.files(flat), theirs)
-        self.assertEqual(iso9660.boot_serial(flat), boot)
 
 
 if __name__ == "__main__":

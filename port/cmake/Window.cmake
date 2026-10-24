@@ -150,6 +150,7 @@ add_library(openrac_renderer STATIC
   renderer/texture_pool.cpp
 )
 openrac_embed_shaders(openrac_renderer renderer openrac::renderer
+  "${CMAKE_CURRENT_SOURCE_DIR}/renderer/shaders/upscaled_texture_colours.glsl"
   "${CMAKE_CURRENT_SOURCE_DIR}/enhanced/renderer/shaders/gtao.vert"
   "${CMAKE_CURRENT_SOURCE_DIR}/enhanced/renderer/shaders/gtao_common.glsl"
   "${CMAKE_CURRENT_SOURCE_DIR}/enhanced/renderer/shaders/gtao_evaluate.comp"
@@ -163,6 +164,18 @@ openrac_embed_shaders(openrac_renderer renderer openrac::renderer
 )
 target_link_libraries(openrac_renderer PUBLIC openrac_common)
 openrac_warnings(openrac_renderer)
+
+# Optional upscaled texture colours: the normal renderer only owns the provider interface.
+add_library(openrac_enhanced_textures STATIC enhanced/renderer/texture_upscale.cpp)
+openrac_embed_shaders(openrac_enhanced_textures enhanced_texture openrac::enhanced
+  "${CMAKE_CURRENT_SOURCE_DIR}/enhanced/renderer/shaders/texture_upscale.comp")
+target_link_libraries(openrac_enhanced_textures PUBLIC openrac_renderer)
+if(OPENRAC_VULKAN AND OPENRAC_ENHANCED_RENDERING)
+  target_compile_definitions(openrac_enhanced_textures PRIVATE OPENRAC_VULKAN=1)
+  target_link_libraries(openrac_enhanced_textures PRIVATE openrac_renderer_vulkan)
+endif()
+openrac_warnings(openrac_enhanced_textures)
+
 
 # ---- the world's renderers: renderer/world, shaders in renderer/shaders/world ----
 file(GLOB world_sources CONFIGURE_DEPENDS "${CMAKE_CURRENT_SOURCE_DIR}/renderer/world/*.cpp")
@@ -179,8 +192,9 @@ if(world_sources)
   openrac_add_module_tests(world openrac_renderer_world openrac_platform)
 endif()
 
-# ---- the level viewer ----
-# cgltf and stb are compiled once, as C, without the port's warnings.
+# ---- cgltf and stb ----
+# Compiled once, as C, without the port's warnings: the scene reads its GLB meshes and PNG textures
+# with them, and writes its screenshots.
 add_library(openrac_viewer_third_party STATIC viewer/third_party.c)
 target_link_libraries(openrac_viewer_third_party PUBLIC openrac_cgltf openrac_stb)
 if(MSVC AND NOT CMAKE_C_COMPILER_ID MATCHES "Clang")
@@ -189,30 +203,39 @@ else()
   target_compile_options(openrac_viewer_third_party PRIVATE -w)
 endif()
 
-add_library(openrac_level_assets STATIC viewer/level.cpp)
-target_link_libraries(openrac_level_assets PUBLIC openrac_renderer openrac_viewer_third_party openrac_assets_geometry)
-openrac_warnings(openrac_level_assets)
+# ---- the scene (scene/README.md) ----
+# A level from the editor's export, the live mobys' poses and shadows read from game memory, and the
+# frames written to PNG: CPU work only, so the probe tools link it without a graphics context.
+add_library(openrac_scene STATIC
+  scene/level.cpp
+  scene/moby_pose.cpp
+  scene/moby_shadow.cpp
+  scene/screenshot.cpp
+)
+target_link_libraries(openrac_scene PUBLIC openrac_renderer openrac_viewer_third_party
+  openrac_assets_geometry)
+openrac_warnings(openrac_scene)
 
 # Scene conversion/fingerprinting is shared by activation checks and the
 # offline tool. It contains no Embree calls and is available in normal builds.
 add_library(openrac_probe_scene STATIC enhanced/tools/probes/level_scene.cpp enhanced/tools/probes/activation.cpp enhanced/tools/probes/liquids.cpp)
-target_link_libraries(openrac_probe_scene PUBLIC openrac_lighting openrac_level_assets openrac_assets_disc)
+target_link_libraries(openrac_probe_scene PUBLIC openrac_lighting openrac_scene openrac_assets_disc)
 openrac_warnings(openrac_probe_scene)
 
-add_library(openrac_viewer_lib STATIC
-  viewer/camera.cpp
-  viewer/game_state.cpp
-  viewer/level_renderer.cpp
+# The level renderer and the enhanced renderer's lighting and shadow passes (enhanced/viewer/), one
+# library: the renderer calls the passes, the passes read the level, and both draw with the one set
+# of embedded shaders below. As two static libraries they would link in a cycle, so they stay
+# together until P2-39 gives scene the hooks enhanced registers with: the scene module's one
+# exception to one module, one target (CODING_CONVENTIONS.md, section 9.1).
+add_library(openrac_scene_renderer STATIC
+  scene/level_renderer.cpp
   enhanced/viewer/probe_lighting.cpp
   enhanced/viewer/probe_selection.cpp
   enhanced/viewer/early_lighting.cpp
-  viewer/moby_pose.cpp
-  viewer/moby_shadow.cpp
   enhanced/viewer/hero_shadow.cpp
   enhanced/viewer/sun_shadow.cpp
-  viewer/screenshot.cpp
 )
-openrac_embed_shaders(openrac_viewer_lib viewer openrac::viewer
+openrac_embed_shaders(openrac_scene_renderer viewer openrac::viewer
   "${CMAKE_CURRENT_SOURCE_DIR}/viewer/shaders/mesh.vert"
   "${CMAKE_CURRENT_SOURCE_DIR}/viewer/shaders/mesh.frag"
   "${CMAKE_CURRENT_SOURCE_DIR}/enhanced/viewer/shaders/early_lighting.comp"
@@ -228,14 +251,29 @@ openrac_embed_shaders(openrac_viewer_lib viewer openrac::viewer
   "${CMAKE_CURRENT_SOURCE_DIR}/viewer/shaders/sky.vert"
   "${CMAKE_CURRENT_SOURCE_DIR}/viewer/shaders/sky.frag"
 )
-target_link_libraries(openrac_viewer_lib PUBLIC openrac_renderer openrac_viewer_third_party
-  openrac_assets_geometry openrac_probe_scene)
+target_link_libraries(openrac_scene_renderer PUBLIC openrac_scene openrac_renderer openrac_probe_scene)
 if(OPENRAC_VULKAN)
-  target_link_libraries(openrac_viewer_lib PRIVATE openrac_renderer_vulkan)
-  target_compile_definitions(openrac_viewer_lib PRIVATE OPENRAC_VULKAN=1)
+  target_link_libraries(openrac_scene_renderer PRIVATE openrac_renderer_vulkan)
+  target_compile_definitions(openrac_scene_renderer PRIVATE OPENRAC_VULKAN=1)
 endif()
+openrac_warnings(openrac_scene_renderer)
+
+# ---- the level viewer ----
+# The viewer program's own code: its free camera, and what the renderers read of a running game from
+# its memory (game_state.h), which the game programs use too until P2-03 moves it into game/rac1.
+# The programs and the tests that draw a level link this, and the scene with it.
+add_library(openrac_viewer_lib STATIC
+  viewer/camera.cpp
+  viewer/game_state.cpp
+)
+target_link_libraries(openrac_viewer_lib PUBLIC openrac_scene_renderer openrac_enhanced_textures)
 openrac_warnings(openrac_viewer_lib)
 
+# Tests are registered through openrac_add_test (cmake/Tests.cmake), which makes the program
+# <subject>_test and the ctest test <subject>; a program that runs under more names gets them with
+# add_test on its target. The enhanced renderer's programs below stay written out: their tests are
+# named after the renderer they run on (hero_shadow_cpu, gtao_vulkan) and none is named <subject>,
+# or the program has no test at all without Vulkan, which the helper cannot express.
 add_executable(probe_gpu_test enhanced/tests/probe_gpu_test.cpp)
 add_executable(early_lighting_test enhanced/tests/early_lighting_test.cpp)
 target_link_libraries(early_lighting_test PRIVATE openrac_viewer_lib openrac_platform)
@@ -255,10 +293,7 @@ if(OPENRAC_VULKAN AND OPENRAC_ENHANCED_RENDERING)
     ENVIRONMENT "OPENRAC_ENHANCED=1;OPENRAC_GL_API=vulkan;OPENRAC_VULKAN_VALIDATION=1")
 endif()
 
-add_executable(probe_scene_test enhanced/tests/probe_scene_test.cpp)
-target_link_libraries(probe_scene_test PRIVATE openrac_probe_scene)
-openrac_warnings(probe_scene_test)
-add_test(NAME probe_scene COMMAND probe_scene_test)
+openrac_add_test(probe_scene SOURCES enhanced/tests/probe_scene_test.cpp LIBS openrac_probe_scene)
 
 add_executable(hero_shadow_test enhanced/tests/hero_shadow_test.cpp)
 target_link_libraries(hero_shadow_test PRIVATE openrac_viewer_lib openrac_platform)
@@ -285,7 +320,8 @@ endif()
 # This executable uses only the viewer's CPU level loader; it never opens a
 # window or creates a graphics context. Embree stays out of viewer/game targets.
 if(OPENRAC_PROBE_BAKER)
-  add_executable(openrac-probe-bake enhanced/tools/probes/main.cpp)
+  add_executable(openrac-probe-bake enhanced/tools/probes/main.cpp
+    enhanced/tools/probes/batch.cpp enhanced/tools/probes/report.cpp)
   target_link_libraries(openrac-probe-bake PRIVATE openrac_probe_scene openrac_probe_bake)
   openrac_warnings(openrac-probe-bake)
   if(ANDROID)
@@ -309,55 +345,53 @@ endif()
 # Tests that need an OpenGL context create one through SDL's offscreen
 # driver (EGL; Mesa's llvmpipe on a machine without a GPU) and exit with 77,
 # reported as skipped, when none can be made.
-add_executable(platform_test tests/platform_test.cpp)
-target_link_libraries(platform_test PRIVATE openrac_platform)
-openrac_warnings(platform_test)
-add_test(NAME platform COMMAND platform_test)
+openrac_add_test(platform LIBS openrac_platform)
 set_tests_properties(platform PROPERTIES ENVIRONMENT "SDL_AUDIO_DRIVER=dummy")
 
-add_executable(touch_pad_test tests/touch_pad_test.cpp)
-target_link_libraries(touch_pad_test PRIVATE openrac_platform)
-openrac_warnings(touch_pad_test)
-add_test(NAME touch_pad COMMAND touch_pad_test)
+openrac_add_test(touch_pad LIBS openrac_platform)
 
-add_executable(touch_overlay_test tests/touch_overlay_test.cpp game/common/touch_overlay.cpp)
-target_include_directories(touch_overlay_test PRIVATE game/common)
-target_link_libraries(touch_overlay_test PRIVATE openrac_renderer openrac_platform)
-openrac_warnings(touch_overlay_test)
-add_test(NAME touch_overlay COMMAND touch_overlay_test)
+# The frontend's pure helpers (game/common/frontend/), built from their own sources: the game
+# programs compile them through cmake/Games.cmake's glob.
+openrac_add_test(frontend_geometry SOURCES tests/frontend_geometry_test.cpp
+                 game/common/frontend/geometry.cpp INCLUDES .)
+openrac_add_test(frontend_pacing SOURCES tests/frontend_pacing_test.cpp
+                 game/common/frontend/pacing.cpp INCLUDES .)
+
+openrac_add_test(touch_overlay SOURCES tests/touch_overlay_test.cpp game/common/touch_overlay.cpp
+                 INCLUDES game/common LIBS openrac_renderer openrac_platform)
 set_tests_properties(touch_overlay PROPERTIES SKIP_RETURN_CODE 77)
 
-add_executable(imgui_gl_test tests/imgui_gl_test.cpp game/common/imgui_gl.cpp)
-target_include_directories(imgui_gl_test PRIVATE game/common)
-target_link_libraries(imgui_gl_test PRIVATE openrac_renderer openrac_platform openrac_imgui)
-openrac_warnings(imgui_gl_test)
-add_test(NAME imgui_gl COMMAND imgui_gl_test)
+openrac_add_test(imgui_gl SOURCES tests/imgui_gl_test.cpp game/common/imgui_gl.cpp
+                 INCLUDES game/common LIBS openrac_renderer openrac_platform openrac_imgui)
 set_tests_properties(imgui_gl PROPERTIES SKIP_RETURN_CODE 77)
 
-add_executable(renderer_texture_test tests/renderer_texture_test.cpp)
-target_link_libraries(renderer_texture_test PRIVATE openrac_renderer)
-openrac_warnings(renderer_texture_test)
-add_test(NAME renderer_texture COMMAND renderer_texture_test)
+openrac_add_test(renderer_texture LIBS openrac_renderer)
 
-add_executable(renderer_gif_test tests/renderer_gif_test.cpp)
-target_link_libraries(renderer_gif_test PRIVATE openrac_renderer)
-openrac_warnings(renderer_gif_test)
-add_test(NAME renderer_gif COMMAND renderer_gif_test)
+openrac_add_test(renderer_gif LIBS openrac_renderer)
 
-add_executable(renderer_direct_test tests/renderer_direct_test.cpp)
-target_link_libraries(renderer_direct_test PRIVATE openrac_renderer openrac_platform)
-openrac_warnings(renderer_direct_test)
-add_test(NAME renderer_direct COMMAND renderer_direct_test)
+openrac_add_test(renderer_direct LIBS openrac_renderer openrac_platform)
 set_tests_properties(renderer_direct PROPERTIES SKIP_RETURN_CODE 77)
 
-add_executable(renderer_shader_test tests/renderer_shader_test.cpp)
-target_link_libraries(renderer_shader_test PRIVATE openrac_viewer_lib openrac_platform)
+openrac_add_test(texture_filter INCLUDES "${CMAKE_CURRENT_BINARY_DIR}/generated"
+                 LIBS openrac_viewer_lib openrac_platform)
+set_tests_properties(texture_filter PROPERTIES SKIP_RETURN_CODE 77)
+if(OPENRAC_VULKAN)
+  add_test(NAME texture_filter_off_vulkan COMMAND texture_filter_test)
+  set_tests_properties(texture_filter_off_vulkan PROPERTIES SKIP_RETURN_CODE 77 ENVIRONMENT
+    "OPENRAC_GL_API=vulkan;OPENRAC_ENHANCED=0;OPENRAC_VULKAN_VALIDATION=1")
+  if(OPENRAC_ENHANCED_RENDERING)
+    add_test(NAME texture_filter_on_vulkan COMMAND texture_filter_test)
+    set_tests_properties(texture_filter_on_vulkan PROPERTIES SKIP_RETURN_CODE 77 ENVIRONMENT
+      "OPENRAC_GL_API=vulkan;OPENRAC_ENHANCED=1;OPENRAC_VULKAN_VALIDATION=1")
+  endif()
+endif()
+
 # The embedded sources' headers (openrac_embed_shaders) are private to their libraries.
-target_include_directories(renderer_shader_test PRIVATE "${CMAKE_CURRENT_BINARY_DIR}/generated")
-openrac_warnings(renderer_shader_test)
-add_test(NAME renderer_shader COMMAND renderer_shader_test)
+openrac_add_test(renderer_shader INCLUDES "${CMAKE_CURRENT_BINARY_DIR}/generated"
+                 LIBS openrac_viewer_lib openrac_platform)
 set_tests_properties(renderer_shader PROPERTIES SKIP_RETURN_CODE 77)
 
+# Written out: its test passes the program an argument, which openrac_add_test has no option for.
 add_executable(viewer_test tests/viewer_test.cpp)
 if(OPENRAC_VULKAN)
   target_compile_definitions(viewer_test PRIVATE OPENRAC_VULKAN=1)
@@ -396,16 +430,10 @@ set_tests_properties(${openrac_es_bare_tests} PROPERTIES SKIP_RETURN_CODE 77 ENV
 # installed: every GL call the renderers make, carried out on Vulkan (Mesa's lavapipe in CI). Where
 # Vulkan cannot open, the window falls back to OpenGL and these repeat the tests above.
 if(OPENRAC_VULKAN)
-  add_executable(vulkan_uniform_test tests/vulkan_uniform_test.cpp)
-  target_link_libraries(vulkan_uniform_test PRIVATE openrac_renderer openrac_platform openrac_renderer_vulkan)
-  openrac_warnings(vulkan_uniform_test)
-  add_test(NAME vulkan_uniform COMMAND vulkan_uniform_test)
+  openrac_add_test(vulkan_uniform LIBS openrac_renderer openrac_platform openrac_renderer_vulkan)
   # The pipeline cache's file, saved by writers in parallel; no GPU needed.
   find_package(Threads REQUIRED)
-  add_executable(pipeline_cache_file_test tests/pipeline_cache_file_test.cpp)
-  target_link_libraries(pipeline_cache_file_test PRIVATE openrac_renderer_vulkan Threads::Threads)
-  openrac_warnings(pipeline_cache_file_test)
-  add_test(NAME pipeline_cache_file COMMAND pipeline_cache_file_test)
+  openrac_add_test(pipeline_cache_file LIBS openrac_renderer_vulkan Threads::Threads)
   add_test(NAME vulkan_uniform_reference COMMAND vulkan_uniform_test)
   set_tests_properties(vulkan_uniform PROPERTIES SKIP_RETURN_CODE 77 ENVIRONMENT
     "OPENRAC_GL_API=vulkan;OPENRAC_VULKAN_VALIDATION=1")
@@ -470,7 +498,4 @@ if(OPENRAC_VULKAN)
     ENVIRONMENT "OPENRAC_ENHANCED=1;OPENRAC_GL_API=vulkan;OPENRAC_VULKAN_VALIDATION=1")
 endif()
 
-add_executable(bake_liquids_test enhanced/tests/bake_liquids_test.cpp)
-target_link_libraries(bake_liquids_test PRIVATE openrac_probe_scene)
-openrac_warnings(bake_liquids_test)
-add_test(NAME bake_liquids COMMAND bake_liquids_test)
+openrac_add_test(bake_liquids SOURCES enhanced/tests/bake_liquids_test.cpp LIBS openrac_probe_scene)

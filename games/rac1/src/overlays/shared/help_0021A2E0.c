@@ -12,7 +12,7 @@ extern float D_0015EE6C MACRO_ADDR;
 extern float D_L02_0017C438[];
 extern void func_L00_00211F80(int, float);
 
-/* Adapted from Lombyte (MIT) for PAL by OpenRAC's tools/port.py: src/overlays/shared/ui/help/00220b80.c, FUN_L02_00220b80. */
+/* Adapted from Lombyte (GPL-3.0) for PAL by OpenRAC's tools/port.py: src/overlays/shared/ui/help/00220b80.c, FUN_L02_00220b80. */
 void Hero_UpdateSpeedDecay(void) {
     char *x;
     Hero_SetHeadingFromStick(0, 1.0f);
@@ -208,7 +208,7 @@ extern void func_L01_00234970(float);
 extern int func_L00_0020DB30(int);
 extern int func_L00_00217570(int, int);
 
-// Per-state hop velocity update for the player. Adapted from Lombyte (MIT) for PAL: src/overlays/shared/ui_help_00220b80.c, FUN_L02_00223450.
+// Per-state hop velocity update for the player. Adapted from Lombyte (GPL-3.0) for PAL: src/overlays/shared/ui_help_00220b80.c, FUN_L02_00223450.
 void Hero_UpdateHopVelocity(void) {
     Vec4 tmp;
     float x;

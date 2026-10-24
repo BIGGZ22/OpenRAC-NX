@@ -22,16 +22,17 @@ The rest is the backend's own, which nothing outside this directory includes:
 |---|---|
 | [vkgl_internal.h](vkgl_internal.h) | The types, constants and state (`Context`, the one `g`) the files share, and the functions each file offers the others, grouped by the file that defines them |
 | [vkgl.cpp](vkgl.cpp) | `g`, `open`, `close`, `present` and the rest of `vkgl.h` |
-| [vkgl_commands.cpp](vkgl_commands.cpp) | Work deferred to the frame's end, the frame's ring, the two command buffers (`upload`, `main`) and the order between them, GPU timing, submission, render targets and `glClear` |
+| [vkgl_commands.cpp](vkgl_commands.cpp) | Work deferred to the frame's end, the frame's ring, the two command buffers (`upload`, `main`, and `present` for the copy to the screen under `vk-tight-sync`) and the order between them (each barrier's stages: RENDER_PERF.md, "R-08"), GPU timing, submission, render targets, the passes (under `attachment-discard` recorded into a secondary buffer, so that their load and store operations follow `glInvalidateFramebuffer`) and `glClear` |
 | [vkgl_resources.cpp](vkgl_resources.cpp) | Images, views, pixel uploads and mip chains, samplers, buffers on the GPU and their texel views |
 | [vkgl_pipelines.cpp](vkgl_pipelines.cpp) | Vertex formats, fixed-function state, pipelines by key, descriptor sets, `glDispatchCompute` and `glMemoryBarrier` |
 | [vkgl_draw.cpp](vkgl_draw.cpp) | One draw recorded with the current state; includes the two files below |
 | [gpu_materials.inc](gpu_materials.inc) | The native material path: material records and textures indexed by the draw |
 | [gpu_draw.inc](gpu_draw.inc) | GPU-driven instances: culling on the GPU and indirect draws |
 | [vkgl_gl.cpp](vkgl_gl.cpp) | The GL functions themselves (state, textures, buffers, vertex arrays, shaders and programs, uniforms, samplers, framebuffers) and their table |
-| [vkgl_present.cpp](vkgl_present.cpp) | The default framebuffer, the swapchain and its present mode, moving on to the next frame, presenting |
+| [vkgl_present.cpp](vkgl_present.cpp) | The default framebuffer, the swapchain and its present mode, moving on to the next frame, presenting (the picture's waiting copy composed straight into the screen under `present-single-copy`) |
 | [vkgl_device.cpp](vkgl_device.cpp) | The instance and the validation layer, the physical and logical device, the pipeline cache on disk, the frames' objects, the dummy resources, the surface, and teardown |
-| [pipeline_cache_file.h](pipeline_cache_file.h), [.cpp](pipeline_cache_file.cpp) | The pipeline cache's file: the driver's data in an envelope with its length and hash, read back only when whole, saved through a temporary file of each save's own and renamed into place |
+| [cache_file.h](cache_file.h), [.cpp](cache_file.cpp) | The envelope of the backend's cache files: a magic, the data's length and hash, read back only when whole, saved through a temporary file of each save's own and renamed into place |
+| [pipeline_cache_file.h](pipeline_cache_file.h), [.cpp](pipeline_cache_file.cpp) | The pipeline cache's files in that envelope: the driver's data, and the manifest of the keys made, with each key's program identity and age |
 | [vma.cpp](vma.cpp) | The Vulkan Memory Allocator's implementation, compiled once |
 
 ## Depends on
@@ -49,9 +50,35 @@ by `open()` and destroyed by `close()`, null while the backend is closed. Only o
 at a time, used from the thread that opened it, as the renderers use GL. The one exception is
 `on_event`, which SDL calls from its event thread when an Android app returns to the foreground; it
 only sets `surface_lost`, which is atomic. Two frames are in flight: each frame slot's objects are
-reused, and its deferred work run, once its fence has signalled. Turning `g` into an object the
+reused, and its deferred work run, once its fence has signalled. A static buffer of 64 KiB or more
+lives in device memory from its first draw and its CPU copy is let go; a reader of its bytes reads
+them back with a command buffer of its own (`buffer_bytes`,
+[RENDER_PERF.md](../../../docs/port/RENDER_PERF.md), "R-05"). Turning `g` into an object the
 backend passes around is P3-03 of the restructure
-([PROGRESS.md](../../../docs/restructure/PROGRESS.md)).
+([PROGRESS.md](../../../docs/restructure/PROGRESS.md)). While a pass is open under `attachment-discard`, `Frame::main` is that pass's
+secondary command buffer; the pass's end gives the frame's own back (`OpenPass`).
+
+`Context::recorded` (a `RecordedState`) is what the frame's main command buffer holds of a draw's
+state: the viewports, scissors, blend constants and stencil states last set, and the descriptor
+sets with their layout and offset, the push constant, the vertex buffers and the index buffer last
+bound. A draw records only what differs from it (the registry's `vk-state-skip`); the pipeline is
+`Context::bound_pipeline`. It is forgotten at every begin of rendering and of the command buffers,
+so nothing is trusted across passes, and a change of pipeline layout forgets the sets. Code that
+records graphics state or binds into `main` outside `draw()` must forget it too.
+
+The draw finds its pipeline in `Context::pipelines`, a `PipelineTable` (each pipeline once, found
+by a hash of its key's bytes and a compare of the whole key, or by the key as a string on the
+reference path), and its descriptor set in `Program::set_cache`; its temporary arrays are
+`Context::scratch`'s, kept for their capacity, so a draw that finds both allocates nothing (the
+registry's `vk-draw-cache`). A deleted program's pipelines leave the table with it.
+
+One worker thread makes pipelines ahead (`PipelinePrewarm`, R-10): when a program links, the keys
+earlier runs made for it (the manifest, `<cache>.manifest`, `PipelineManifest`) are queued for it,
+and it calls only `vkCreateGraphicsPipelines` into the shared pipeline cache. Its queue, its
+results and the key it is making are guarded by one mutex; the drawing thread takes a key the
+worker has made, waits for one it is making or has queued, and makes the rest itself. A program's
+release waits for its job and takes the rest back; the backend's close stops and joins the worker
+before anything else.
 
 ## Errors
 
@@ -91,9 +118,22 @@ CI). Where Vulkan cannot open, the window falls back to OpenGL and they repeat t
 - `renderer_direct_vulkan`, `renderer_shader_vulkan`, `touch_overlay_vulkan`, `imgui_gl_vulkan`,
   `world_gl_smoke_vulkan`, `viewer_vulkan`: every GL call the renderers make, carried out here.
 - `vulkan_uniform`, `vulkan_uniform_reference`: uniform uploads and descriptor reuse, with the
-  reuse on and off (`OPENRAC_VK_UNIFORM_REUSE_OFF`).
+  reuse on and off (`OPENRAC_VK_UNIFORM_REUSE_OFF`); a state bounce (A, B, A) draws A's pipeline
+  and set again, and deleting one program's pipelines leaves the others' usable.
+- `render_opt_vulkan`: the render counters of `SubmissionCounters` follow a fixed scene's draws
+  (every draw a draw command, one submit a frame), printed for the reports of
+  [RENDER_PERF.md](../../../docs/port/RENDER_PERF.md).
+- `vulkan_present`: the one copy to the screen against the two it replaces, drawn into stand-ins of
+  the screen and compared byte for byte, and a draw after the blit making the copy first.
+- `vulkan_buffer`: a static GL buffer drawn, rewritten in part, filled again, read through 8-bit
+  indices and as a uniform block, frame after frame, under the reference path, device memory and
+  the staging copy (`static-buffers-*`); the mirror let go and nothing through the ring.
 - `pipeline_cache_file`: the cache's file read back whole, a damaged one dropped, and writer threads
-  and writer processes saving one file at once leaving one whole save. It needs no GPU.
+  and writer processes saving one file at once leaving one whole save; the manifest read back, and
+  one of another key size, cut short or of another magic dropped. It needs no GPU.
+- `vulkan_prewarm`: a second run's draws make none of the first run's pipelines (the worker made
+  them), and nothing is made ahead for a program no longer built, with the entry off, or from a
+  damaged manifest.
 - `early_lighting_vulkan`, `probe_gpu_vulkan`, `hero_shadow_vulkan`, `sun_shadow_vulkan`,
   `sun_shadow_filter_reference_vulkan`, `gtao_vulkan`, `gtao_horizon_vulkan`,
   `enhanced_rendering_vulkan`, `enhanced_rendering_off_vulkan`: the enhanced rendering's passes on
@@ -108,3 +148,5 @@ CI). Where Vulkan cannot open, the window falls back to OpenGL and they repeat t
   and the native material path.
 - [docs/port/DEBUGGING.md](../../../docs/port/DEBUGGING.md): the variables above, and the
   counters (`vkgl::submission_counters()`).
+- [docs/port/RENDER_PERF.md](../../../docs/port/RENDER_PERF.md): every render counter and gauge,
+  where it is counted, the timed sections, and the optimisation registry.

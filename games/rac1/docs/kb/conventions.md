@@ -161,7 +161,7 @@ header-tidy notes.)* Small `fNN` data views in `help_*.c` (`S141948`, `Cam`,
 - **Provenance notes are licence credit** (referenced from
   `THIRD_PARTY_NOTICES.md`): never delete or reword them, even in a tidy
   pass. Ported code ends its comment with e.g.
-  `Adapted from Lombyte (MIT) for PAL: src/textbin/world/startlevel.c, startlevel.`
+  `Adapted from Lombyte (GPL-3.0) for PAL: src/textbin/world/startlevel.c, startlevel.`
   or `... for PAL by OpenRAC's tools/port.py: <file>, <name>.`; headers
   (`include/moby.h`, `include/hero.h`) carry the same. Names inside them
   (`FUN_L04_002aee30`) are the source project's US names.

@@ -483,7 +483,7 @@ extern void func_001F75D0_0CDE0(struct TextRegion_0CDE0 *, long, char *,
 /* Map screen icon refresh: picks the level's icon list, centres the map on the hero when
    it is the current level, places the fixed icons (-1..-9) and projects the others to map
    coordinates, then sets each icon's active flag and sizes its label box.
-   Adapted from Lombyte (MIT) for PAL: src/ui/map/update_map_icons.c, update_map_icons. */
+   Adapted from Lombyte (GPL-3.0) for PAL: src/ui/map/update_map_icons.c, update_map_icons. */
 void func_0020CDE0(s32 level, s32 flag) {
     char label_text[128];
     f32 map_x;

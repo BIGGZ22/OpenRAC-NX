@@ -32,23 +32,26 @@ float func_001F9BB0(float x, float lo, float hi) {
     return x;
 }
 
-/* out = a, shortened to the length `longest` when it is longer, in x, y and z; w is
- * a's. The occlusion test's line ends at most 64 units from the listener. */
-void func_001F9E58(float *out, float *a, float longest) {
+/* out = a, shortened to the length `longest` when it is at least that long, in x, y and z; w is
+ * a's. Returns 1 when it shortened a and stored out, else 0 with out untouched, as the
+ * routine's instructions do (the length's bits zero, or longest - length above zero: jr
+ * before the sqc2; as rac1-decomp's nonmatching/functional/func_001F9E58.c). The occlusion
+ * test's line ends at most 64 units from the listener (sound.c, in place: out is a). */
+int func_001F9E58(float *out, float *a, float longest) {
     float x = a[0];
     float y = a[1];
     float z = a[2];
     unsigned w = ((unsigned *)a)[3];
     float length = openrac_sqrt(x * x + y * y + z * z);
+    float scale;
 
-    if (length != 0.0f && length >= longest) {
-        float scale = longest / length;
-        x = x * scale;
-        y = y * scale;
-        z = z * scale;
+    if (length == 0.0f || length < longest) {
+        return 0;
     }
-    out[0] = x;
-    out[1] = y;
-    out[2] = z;
+    scale = longest / length;
+    out[0] = x * scale;
+    out[1] = y * scale;
+    out[2] = z * scale;
     ((unsigned *)out)[3] = w;
+    return 1;
 }

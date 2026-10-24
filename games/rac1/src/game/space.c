@@ -439,7 +439,7 @@ void func_001F7EF8_2F4C8(void *, int, int) __asm__("func_001F7EF8");
    D_001605C0[variant] scales the four corners by the object's brightness
    and the row size, offsets them by the row, the player's matrix and the
    object position, and draws the quad.
-   Adapted from Lombyte (MIT): src/gameplay/fun_0022e1b0.c, FUN_0022e1b0. */
+   Adapted from Lombyte (GPL-3.0): src/gameplay/fun_0022e1b0.c, FUN_0022e1b0. */
 void DrawResidentEffectQuads(unsigned char *m) {
     GeometryQuad_2F4C8 quad;
     QuadOffset_2F4C8 v;
@@ -719,7 +719,7 @@ extern void func_00234AC8(s32);
 extern void func_00234C98_305A0(s32, s64) __asm__("func_00234C98");
 extern struct LevelDisplayState_305A0 D_0013E600_305A0 __asm__("D_0013E600");
 
-/* Adapted from Lombyte (MIT) for PAL by OpenRAC's tools/port.py: src/textbin/render_level_frame.c, render_level_frame. */
+/* Adapted from Lombyte (GPL-3.0) for PAL by OpenRAC's tools/port.py: src/textbin/render_level_frame.c, render_level_frame. */
 void DrawSpaceFlightFrame(void) {
     f32 rotation_angle;
     f32 screen_y;
@@ -794,7 +794,7 @@ extern float D_0015EE6C MACRO_ADDR;
 extern int func_002140B0(int);
 extern char *func_00219780(void *, void *, void *, int, int, int, int, int, int);
 
-/* Spawns six particles around a moby: random velocity and a position taken from the flare corner table, transformed by the moby's matrices. Adapted from Lombyte (MIT) for PAL: src/rendering/effects/fun_0022f5b0.c, FUN_0022f5b0. */
+/* Spawns six particles around a moby: random velocity and a position taken from the flare corner table, transformed by the moby's matrices. Adapted from Lombyte (GPL-3.0) for PAL: src/rendering/effects/fun_0022f5b0.c, FUN_0022f5b0. */
 void SpawnFlareParticles(char *m, float z) {
     float vel[4];
     float vel2[4];
@@ -821,7 +821,7 @@ void SpawnFlareParticles(char *m, float z) {
     }
 }
 
-/* Adapted from Lombyte (MIT): src/gameplay/update_resident_gameplay_state.c. */
+/* Adapted from Lombyte (GPL-3.0): src/gameplay/update_resident_gameplay_state.c. */
 typedef unsigned int u128 __attribute__((mode(TI)));
 
 typedef union {
@@ -2226,7 +2226,7 @@ extern s32 func_00120858_32B90(s32 a0, s32 a1) __asm__("func_00120858");
 extern s32 func_0020C468(s32 source_address, s32 destination_address);
 extern s32 func_002175C8(void *a0, u32 a1, u32 a2);
 
-/* Adapted from Lombyte (MIT) for PAL by OpenRAC's tools/port.py: src/textbin/fun_00231878.c, prepare_loading_slide_textures. */
+/* Adapted from Lombyte (GPL-3.0) for PAL by OpenRAC's tools/port.py: src/textbin/fun_00231878.c, prepare_loading_slide_textures. */
 void func_00232B90(s32 language_index, s32 first_slide, s32 second_slide,
                                     u64 *shared_texture, u64 *first_texture, u64 *second_texture) {
     s32 texture_bases[6];
@@ -2371,7 +2371,7 @@ extern void func_00234AC8(s32);
 extern void func_00234C98_32EF0(s32, u64) __asm__("func_00234C98");
 extern void func_00122598(s32);
 
-/* Adapted from Lombyte (MIT) for PAL by OpenRAC's tools/port.py: src/textbin/play_level_loading_slides.c, play_level_loading_slides. */
+/* Adapted from Lombyte (GPL-3.0) for PAL by OpenRAC's tools/port.py: src/textbin/play_level_loading_slides.c, play_level_loading_slides. */
 void func_00232EF0(s32 language_index, s32 first_slide, s32 second_slide,
                                s32 duration_ticks, s32 preload_level) {
     u64 shared_texture;
@@ -2524,7 +2524,7 @@ extern void func_00228110(void);
 extern int func_00204C60(void);
 extern void func_00234AC8(int);
 
-/* DoSpaceTransition: plays the level-to-level transition (dialogue screens, loading loop) and waits for the load. Adapted from Lombyte (MIT) for PAL: src/gameplay/state/do_space_transition.c, do_space_transition. */
+/* DoSpaceTransition: plays the level-to-level transition (dialogue screens, loading loop) and waits for the load. Adapted from Lombyte (GPL-3.0) for PAL: src/gameplay/state/do_space_transition.c, do_space_transition. */
 void DoSpaceTransition(void) {
     int lvl;
     int ok;
@@ -2727,7 +2727,7 @@ extern float func_001F9C78(void *, void *);
 extern float func_001FA888(int);
 extern void func_0020DAF8(EnvironmentMappedObject *, int, void *);
 
-/* Adapted from Lombyte (MIT) for PAL by OpenRAC's tools/port.py: src/rendering/render_environment_mapped_object.c, render_environment_mapped_object. */
+/* Adapted from Lombyte (GPL-3.0) for PAL by OpenRAC's tools/port.py: src/rendering/render_environment_mapped_object.c, render_environment_mapped_object. */
 void DrawEnvMappedObject(EnvironmentMappedObject *object) {
     Vec4 quad_positions[4];
     int colors[4];

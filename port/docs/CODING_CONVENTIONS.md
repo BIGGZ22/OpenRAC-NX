@@ -70,7 +70,7 @@ count.
 | A game's hand C | `port/game/*/hand/` | not this page: it is the game's C on its way into `games/` ([LAYOUT.md](../../docs/LAYOUT.md)) and keeps the decompilation's style |
 | Generated C | hostgen's output in build trees, `port/game/rac1/script_binding.c` | not this page: change the generator, never the output |
 | The decompilations | `games/` | never edited from port work |
-| Python | `port/tools/` | the repository's Python habits: licence lines, a module docstring with the usage, `unittest` tests beside the tool |
+| Python | `port/tools/` | the repository's Python habits: licence lines (23.1), a module docstring with the usage, `unittest` tests beside the tool |
 | The mod SDK | `sdk/include/` | its own rules ([MODS.md](../../docs/port/MODS.md)): `openrac_mod.h` is a C ABI, `mod.hpp` a C++17 layer compiled into mods |
 
 In C, `static` is how a file-local function is spelled, and the comment forms are C's (6.1). The
@@ -97,11 +97,11 @@ what to do instead.
 
 | Rule | Arriving with | Until then |
 |---|---|---|
-| `openrac::Result<T>` in `common/result.h` (13.3) | P2-08 | `bool` and a `std::string& error`, or `std::optional<T>` |
-| The C-boundary wrapper that catches everything (13.4) | P2-08 | a `try` and two `catch` clauses written out, as 13.4 shows |
-| `common/env.h`, the table of `OPENRAC_*` variables (16) | P1-03 | one read per variable, in its module, listed in DEBUGGING.md |
+| `openrac::Result<T>` in `common/result.h` (13.3) | landed with P2-08 | use it |
+| The C-boundary wrapper that catches everything (13.4) | landed with P2-08: `c_boundary::call` in `common/c_boundary.h` | use it |
+| `common/env.h`, the table of `OPENRAC_*` variables (16) | landed with P1-03; its C entry point, `openrac/host_env.h`, with P2-19 | use it |
 | `host::GameProfile`, one per game version (15) | P2-03 (rac1), P3-02 (all) | per-game knowledge in `port/game/<id>/`; nothing new in shared code |
-| The `scene` module and `renderer/ui` (9.1) | P2-02, P2-06 | `viewer/` and `game/common` |
+| The `scene` module and `renderer/ui` (9.1) | `scene/` landed with P2-02: `openrac_scene`, and `openrac_scene_renderer` as its one exception to 9.1 ([scene/README.md](../scene/README.md)), in the namespace `openrac::viewer` and with forwarding headers left in `viewer/` until P2-37; `renderer/ui` arrives with P2-06 | new scene code in `scene/`; for `renderer/ui`, `viewer/` and `game/common` |
 
 ---
 
@@ -109,8 +109,9 @@ what to do instead.
 
 | Tool | What it checks | Where it runs | Fails the build or CI |
 |---|---|---|---|
-| clang-format, [`port/.clang-format`](../.clang-format) | layout (section 5) | your editor; CI on new files and changed lines | new C++ files: yes. Changed lines: reported, not failing yet (24.4) |
-| [`tools/conventions/check_conventions.py`](../tools/conventions/README.md) | licence lines, tabs, dashes everywhere; on new C++ files: `static` at namespace scope, raw `new`/`delete`/`malloc`/`free`, `using namespace` in headers, `extern "C"` outside contract files, console output outside tests and `main` | CI ("Port conventions"), and you before you commit | yes |
+| clang-format, [`port/.clang-format`](../.clang-format) | layout (section 5) | your editor; CI on new files and changed lines | new C++ files and changed lines: yes (24.4) |
+| [`tools/cpp_style.py`](../../tools/cpp_style.py) | clang-format, then the blank lines around control blocks (5.4); with `--comments`, the control blocks with no comment above them (6.2) | you, on the files you touch; CI ("Port conventions"), report only | no: reported, not failing yet (5.6) |
+| [`tools/conventions/check_conventions.py`](../tools/conventions/README.md) | licence lines, tabs, dashes, and `getenv` of an `OPENRAC_*` variable outside `common/env.cpp` and `runtime/host_env.cpp` (16), everywhere; on new C++ files: `static` at namespace scope, raw `new`/`delete`/`malloc`/`free`, `using namespace` in headers, `extern "C"` outside contract files, console output outside tests and `main` | CI ("Port conventions"), and you before you commit | yes |
 | clang-tidy, [`port/.clang-tidy`](../.clang-tidy) | naming, ownership, function size, `else` after `return`, missing `override`, nested ternaries, `goto` | you, on the C++ files you touch (it needs a configured build) | not in CI; new code has zero findings |
 | The compiler, `openrac_warnings` (`port/cmake/Warnings.cmake`) | `-Wall -Wextra -Wshadow`, and for C++ `-Wpedantic -Wconversion` | every build | no new warning is accepted in review |
 | [`tools/layering/layering.py`](../tools/layering/README.md) | includes against the layers and allowed edges of section 18; today's violations are listed exceptions | you before you commit (not in CI yet) | it exits 1 on a new violation; CI does not run it yet |
@@ -127,6 +128,10 @@ From the top of OpenRAC:
 # Layout: apply it to each file you change, then check it (prints nothing when clean).
 clang-format -i port/renderer/texture.cpp
 clang-format --dry-run -Werror port/renderer/texture.cpp
+
+# Layout and the blank lines of 5.4 in one pass (--fix writes them; the bare form only checks).
+python3 tools/cpp_style.py --fix port/renderer/texture.cpp
+python3 tools/cpp_style.py port/renderer/texture.cpp
 
 # The countable rules, on every file and on what you added since master.
 python3 port/tools/conventions/check_conventions.py --since origin/master --touched
@@ -247,7 +252,7 @@ about layout, the file wins and this page gets fixed.
 | Wrapped calls | break after `(`; the arguments on one line at the next level, or one per line; `)` alone at the statement's indent |
 | Wrapped expressions | break before the operator; a wrapped ternary starts its lines with `?` and `:` |
 | Pointers | `u8* data`, `const Image& image` |
-| Blank lines | never two in a row, none at the start of a block, one between definitions |
+| Blank lines | never two in a row, none at the start of a block, one between definitions; in a body, one between steps and around every control block (5.4) |
 | Templates | `template <...>` on its own line |
 | Includes | grouped and sorted by the tool (9.5) |
 
@@ -285,10 +290,16 @@ If an expression needs more than three lines, it is doing too much. Give its par
 
 ### 5.4 Blank lines in a body
 
-A body is made of groups: a few lines that do one step. One blank line before each group that
-starts with a comment, after the closing brace of a block (unless `}` or `else` follows), after a
-run of declarations, after each guard clause, and before the final `return` when more than three
-lines come before it. None directly inside `{` or before `}`.
+A body is made of steps: a few lines that do one thing (read the values, check them, do the work,
+return). One blank line between steps, and around every control block (`if`, `for`, `while`,
+`switch`, `do`, `try`): before it, and after its closing brace. Also after a run of declarations
+and before the final `return` when more than three lines come before it. A function of thirty lines
+with no blank line is a wall.
+
+None directly inside `{` or before `}`, none before a `case` label, none between a `}` and the
+`else`, `catch` or `while` that goes on with it. The comment lines right above a block stay with it,
+so the blank line goes above them. clang-format has no option for these blank lines;
+`tools/cpp_style.py --fix` puts them in (5.6).
 
 ```cpp
 std::size_t Mixer::fill(std::span<float> out) {
@@ -326,6 +337,30 @@ constexpr float kQuad[] = {
 This is the only way to turn the tool off. The reason is mandatory, and the directive never covers
 more than one table or any function body.
 
+### 5.6 The layout tool
+
+```sh
+python3 tools/cpp_style.py                  # list the files that would change; exit 1 if any
+python3 tools/cpp_style.py --fix PATH...    # rewrite those files (or the C++ under those folders)
+python3 tools/cpp_style.py --comments PATH  # control blocks with no comment above them (report only)
+python3 tools/cpp_style.py --trees          # the folders it covers
+```
+
+It runs clang-format with [`port/.clang-format`](../.clang-format), then adds the blank lines of
+5.4. It covers the C++ under `port/` and `sdk/`: `.cpp`, `.cc`, `.hpp`, `.inl` and `.h`. It never
+touches `games/`, a game's hand C, generated files, `.c` and `.mm` files (left to clang-format
+itself), or a region fenced with `// clang-format off` (5.5). It never rewraps or rewrites a
+comment. CI runs it as a report on every push and pull request; it does not fail the build yet
+(24.4). `--comments` lists what 6.2 asks for and never fails.
+
+[`port/media/`](../media/) is the worked example: it has been through the tool and carries the file
+comments, doc comments, banners and control-block comments this page asks for. When a rule here is
+unclear, read how it looks there.
+
+The settings stay as they are. A 120-column limit and an include order that puts the project's
+headers before the standard library's would reformat every file in the port; a change like that is
+a formatting pass of its own (24.4), decided on its own, not a side effect of a layout tool.
+
 ---
 
 ## 6. Comments
@@ -345,9 +380,14 @@ capital letter, full stop. Trailing labels are the exception (6.8).
 
 ### 6.2 Where a comment is required
 
-1. Above every `if`. Above every `else if` and `else` that is not the plain complement of an `if`
-   whose comment explains both; since `} else if (` shares a line, its comment is the first line of
-   its body.
+1. Above every control block: `if`, `for`, `while`, `switch`, `do` and `try`. The comment says what
+   the block checks or does and why, in the reader's terms ("The game frees objects once it starts
+   exiting, so none is touched after that."), not what the syntax does ("If not ready, return.").
+   The one exception is a plain null check of what the line before fetched
+   (`if (!pool) { return; }` after `pool = find_pool();`). Above every `else if` and `else` that is
+   not the plain complement of an `if` whose comment explains both; since `} else if (` shares a
+   line, its comment is the first line of its body. `tools/cpp_style.py --comments` lists the
+   blocks that have none.
 2. Above every `case` and `default`, or trailing on the label when it only names a value.
 3. Above every loop whose exit is not in its header, and every `for (;;)`, saying how it ends.
 4. Above every ternary that decides something.
@@ -478,8 +518,9 @@ One blank line before and after. One to five words. No rulers, no nesting.
 ### 6.10 What a comment never contains
 
 - Code that is switched off.
-- `TODO`, `FIXME`, `XXX`, `HACK`. Work not done is recorded where people look for it: a known
-  problem in [KNOWN_ISSUES.md](../../docs/port/KNOWN_ISSUES.md), restructure work in
+- `FIXME`, `XXX`, `HACK`, or a `TODO` that does not say what is to be done and why it is not done
+  yet. A `TODO` that does say both is allowed, and the work is also recorded where people look for
+  it: a known problem in [KNOWN_ISSUES.md](../../docs/port/KNOWN_ISSUES.md), restructure work in
   [PROGRESS.md](../../docs/restructure/PROGRESS.md), the rest as an issue.
 - A date, a version, an author's name or initials, an issue number. Git knows.
 - Anything from Sony's SDK source, samples or headers, from leaked or NDA material, or any bytes of
@@ -563,7 +604,8 @@ class Image {
 
 ### 7.4 Thread and ownership notes
 
-A member shared between threads names its guard ("Guarded by `m_mutex`." or "Atomic; written by
+A variable at namespace scope (the `g_` pointer of 11.4, a `tls_` variable) has a comment saying
+what it holds and which threads touch it. A member shared between threads names its guard ("Guarded by `m_mutex`." or "Atomic; written by
 the audio thread, read by the game's."). A member or parameter that points at memory it does not
 own says who owns it and how long it lives.
 
@@ -751,10 +793,41 @@ the exception: one `main` and its helpers.
 1. The two licence lines, `//`, the file comment, a blank line.
 2. The file's own header, a blank line, the other includes in groups.
 3. `namespace openrac::<module> {`.
-4. An anonymous namespace holding everything private to the file (constants, types, helper
-   functions, in the order they are used), closed before the first definition.
-5. The definitions, in the order the header declares them.
+4. An anonymous namespace holding everything private to the file, in this order: constants, types,
+   state (11.4), helper functions in the order they are used, then the main logic. It is closed
+   before the first definition.
+5. The definitions, in the order the header declares them: the public entry points come last,
+   after everything private.
 6. `}  // namespace openrac::<module>`.
+
+```cpp
+namespace openrac::audio {
+namespace {
+
+// How many frames one voice mixes per call (measured: the game's mixer block).
+constexpr std::size_t kBlockFrames = 256;
+
+// One playing sound. Only the audio thread touches it.
+struct Voice {
+    std::size_t position = 0;
+};
+
+// Mixes one block of `voice` into `out`. Returns the frames written.
+std::size_t mix_block(Voice& voice, std::span<float> out) {
+    ...
+}
+
+}  // namespace
+
+std::size_t Mixer::fill(std::span<float> out) {
+    ...
+}
+
+}  // namespace openrac::audio
+```
+
+A file of more than 300 lines divides its parts under headings (6.9). A file comment that says
+what the file is for and how it works leads the file (7.1).
 
 Internal linkage is spelled with the anonymous namespace, never `static` at namespace scope. A
 `static` member of a class and a `static` local are fine. A header defines a function only as
@@ -948,7 +1021,8 @@ opening comment, then the result.
 
 ### 12.2 Size
 
-At most 60 lines from `{` to `}`, at most five parameters (more go into a struct), at most three
+Past about 40 lines, look for a step that can be a function of its own with a name that says what
+it does. At most 60 lines from `{` to `}`, at most five parameters (more go into a struct), at most three
 nested levels of `if`, `for`, `while` or `switch`. Past a limit, split on the seams the group
 comments already mark: the comments become function names. The exceptions are a `switch` that
 dispatches, where every case is a label and one statement, and the hot paths of section 21.
@@ -1110,6 +1184,7 @@ They stay C.
 | `guest.h` | `port/runtime/include/openrac/` | game memory and the calls translated C makes (hostgen writes against it) |
 | `ee.h`, `ee_ops.h` | `port/runtime/include/openrac/` | the EE's registers and operations as translated C uses them |
 | `ps2float.h` | `port/runtime/include/openrac/` | the console's float arithmetic, for translated C |
+| `host_env.h` | `port/runtime/include/openrac/` | the `OPENRAC_*` variables of `common/env.h`'s table, for C (`openrac_env_string`) |
 | `game_host.h` | `port/game/common/include/openrac/` | what a game gives the host program and asks of it (`openrac_front_end`, `openrac_game_crash`) |
 | `game_lib.h` | `port/game/common/include/openrac/` | the library replacements the games call (`libraries.tsv` binds them) |
 | `script_binding.h` | `port/game/common/include/openrac/` | a game's binding for script mods |
@@ -1134,7 +1209,8 @@ them, the rest of the page does.
 ### 14.3 Who implements, who includes
 
 - C++ implements a contract in the file named for it: `guest.cpp` for `guest.h`, `ee.cpp` for
-  `ee.h`, `sound_engine.cpp` for `sound_engine.h`, and `game_host.cpp` for `game_host.h` (P2-08
+  `ee.h`, `host_env.cpp` for `host_env.h` (the C entry point to the table of section 16),
+  `sound_engine.cpp` for `sound_engine.h`, and `game_host.cpp` for `game_host.h` (P2-08
   gathers the host's side of it there from `main.cpp`, which defines `openrac_game_crash` today).
   The library replacements of `game_lib.h` are one file per library in `game/common/lib/`.
   `extern "C"` definitions appear only in those files and in tests. The check in CI holds new files
@@ -1167,12 +1243,20 @@ code adds none.
 
 ## 16. Configuration
 
-- An `OPENRAC_*` environment variable is read through `common/env.h` (arriving with P1-03): one table
-  of name, type, default and one-line description, which a test checks against
-  [DEBUGGING.md](../../docs/port/DEBUGGING.md). Once it lands, `getenv` appears only in
-  `common/env.cpp`.
-- Until then, a new variable is read once, in its module, documented in DEBUGGING.md, and named
-  `OPENRAC_` and what it controls, in upper snake case.
+- An `OPENRAC_*` environment variable is read only through `common/env.h`: one table of name, type,
+  default and one-line description, which a test checks against
+  [DEBUGGING.md](../../docs/port/DEBUGGING.md). C, which cannot include it (14.3), reads the same
+  table only through the contract `openrac/host_env.h` (`openrac_env_string`, the raw value, which
+  each C site tests as its old read did). A variable C reads is a row of the table like any other,
+  not an exception.
+- `getenv` with an `OPENRAC_*` name, or a name that is not a literal, appears only in
+  `common/env.cpp` and in `runtime/host_env.cpp`, the C side of the contract.
+  `check_conventions.py` holds every file to it (section 2); the files that still read a variable
+  with `getenv` are its listed exceptions, each until the package that moves its reads (rac1's host
+  C: P2-38). A variable the port does not own (`DISPLAY`, `VULKAN_SDK`) is read in C++ through
+  `env::system_variable`.
+- A new variable is a row of the table, documented in DEBUGGING.md, and named `OPENRAC_` and what it
+  controls, in upper snake case.
 - A choice a player makes is a setting (the settings module and the launcher), not an environment
   variable. Environment variables are for development, debugging and tests.
 
@@ -1331,7 +1415,10 @@ These come from [AGENTS.md](../../AGENTS.md), [SOURCING.md](../../docs/policy/SO
    `// Copyright (c) 2026 the OpenRAC contributors`. A C file has the same two lines in its comment
    form (`/* SPDX-License-Identifier: GPL-3.0-or-later` then ` * Copyright ...`). Code adapted from
    a permissively licensed project keeps its licence's identifier, says so in the file comment, and
-   is credited in [THIRD_PARTY_NOTICES.md](../../THIRD_PARTY_NOTICES.md).
+   is credited in [THIRD_PARTY_NOTICES.md](../../THIRD_PARTY_NOTICES.md). A Python file of
+   `port/tools/` has the same two lines as `#` comments, after its `#!` line when it has one. The
+   editor's files, Python included, carry no licence lines: the editor's own MIT
+   [LICENSE](../../editor/LICENSE) covers them ([editor/README.md](../../editor/README.md)).
 2. **No game content.** No game code, data or bytes in a source, a test, a log or a comment. A tool
    that reads a game file prints counts, never the content.
 3. **No Sony SDK.** Nothing written from Sony's SDK source, samples or headers, or from leaked or NDA
@@ -1395,10 +1482,12 @@ maintainers run ([REGRESSION.md](../../docs/port/REGRESSION.md)).
 
 ### 24.4 Changed lines
 
-The rules of this page hold on every line you change. CI reports clang-format's changes on changed
-lines (`check_conventions.py --touched`) without failing yet, so work already in flight can land; it
-becomes a failure once the restructure's phase 1 has landed (PROGRESS.md records the switch). Do not
-reformat the untouched lines around your change: a formatting pass is a commit of its own.
+The rules of this page hold on every line you change. CI fails a push or pull request whose changed
+lines clang-format would lay out differently (`check_conventions.py --touched --strict-touched`),
+in older files too. Before you push, run `port/tools/conventions/check_conventions.py --since
+origin/master --touched --strict-touched` with the pinned clang-format (21.1.8, `pip install
+clang-format==21.1.8`). Do not reformat the untouched lines around your change: a formatting pass is
+a commit of its own.
 
 ---
 
@@ -1410,6 +1499,7 @@ line reads yes.
 **Machines**
 
 1. `clang-format --dry-run -Werror` is silent on every file you added, and on the lines you changed?
+   (`tools/cpp_style.py` adds the blank lines of 5.4 and lists the files that still need them.)
 2. `check_conventions.py --since <base> --touched` and `layering.py` report nothing to fix?
 3. clang-tidy reports nothing on the C++ you added or changed?
 4. The build has no new warning, and ctest passes (with the Python tests for the tools you touched)?
@@ -1425,7 +1515,7 @@ line reads yes.
    fewer?
 10. Zero em or en dashes? (`git diff -U0 | perl -CSD -ne 'print if /\x{2014}|\x{2013}/'`)
 11. Zero banned words from 6.7? (`git diff -U0 | grep -niE 'furthermore|moreover|additionally|robust|comprehensive|seamless|simply|basically|ensure|utilize|leverage'`)
-12. Zero comments that restate their line; zero `TODO`, dates or author names?
+12. Zero comments that restate their line; no `TODO` without what and why, no dates or author names?
 13. Every comment you did not break is byte for byte unchanged?
 14. A new module has its README with the sections of 7.7, and the docs that describe what you moved
     are updated?

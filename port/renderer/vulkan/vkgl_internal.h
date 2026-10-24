@@ -11,13 +11,19 @@
 
 #pragma once
 
+#include <algorithm>
 #include <array>
 #include <atomic>
 #include <chrono>
+#include <condition_variable>
 #include <cstddef>
 #include <cstdint>
+#include <deque>
+#include <filesystem>
 #include <functional>
 #include <memory>
+#include <mutex>
+#include <optional>
 #include <span>
 #include <string>
 #include <unordered_map>
@@ -27,6 +33,7 @@
 
 #include <SDL3/SDL.h>
 
+#include "common/joining_thread.h"
 #include "common/log.h"
 #include "common/stats.h"
 #include "renderer/gl.h"
@@ -96,6 +103,8 @@ inline constexpr GLenum kGlNearestMipmapLinear = 0x2702;
 inline constexpr GLenum kGlMirroredRepeat = 0x8370;
 inline constexpr GLenum kGlIntSamplerBuffer = 0x8DD0;
 inline constexpr GLenum kGlUnsignedSamplerBuffer = 0x8DD8;
+inline constexpr GLenum kGlStaticRead = 0x88E5;
+inline constexpr GLenum kGlStaticCopy = 0x88E6;
 
 // ---- The device ----
 
@@ -163,6 +172,26 @@ struct GpuFrame {
     unsigned used = 0;
     bool counters = false;
     std::uint64_t recording = 0, reported = 0;
+    // The resident instance buffer this recording's culling reads (GpuResident), null until a
+    // batch of it is made; a later upload of another one waits for the next recording.
+    VkBuffer resident = VK_NULL_HANDLE;
+};
+
+// The static instances registered once (gpu_register_instances, gpu-resident-instances in
+// docs/port/RENDER_PERF.md): each instance's bounds and data in the culling's own layout, kept in
+// device memory, so that a view's batch of them carries only its planes, PVS and a group record.
+struct GpuResident {
+    // One registered GL instance buffer: where its instances are in `words`.
+    struct Group {
+        std::uint32_t first = 0;    // Its first instance's first word in `words`.
+        std::uint32_t count = 0;    // Its instances.
+        std::uint64_t version = 0;  // The buffer's version when registered: another is stale.
+    };
+
+    std::unordered_map<unsigned, Group> groups;  // By GL buffer name.
+    std::vector<std::uint32_t> words;  // Per instance, 8 words of bounds then 30 of its data.
+    Chunk buffer;                      // `words` in device memory; empty until a batch needs it.
+    bool dirty = false;                // `words` changed since `buffer` was made.
 };
 
 // The GPU-driven engine (gpu_draw.inc): the culling pipelines, the indirect draws merged while
@@ -197,6 +226,7 @@ struct GpuEngine {
     bool failed = false, timing_upload = false;
     std::uint64_t batches = 0, candidates = 0, indirect = 0, indirect_calls = 0, merged = 0;
     std::array<std::uint64_t, 10> batch_breaks{};
+    GpuResident resident;  // The registered static instances, until the level releases them.
 };
 
 // The state of one frame slot: its command pool and two command buffers, its fence and
@@ -221,6 +251,7 @@ struct Frame {
     VkCommandPool pool = VK_NULL_HANDLE;
     VkCommandBuffer upload = VK_NULL_HANDLE;
     VkCommandBuffer main = VK_NULL_HANDLE;
+    VkCommandBuffer present = VK_NULL_HANDLE;  // The copy to the screen's (present_cmd), if made.
     VkFence fence = VK_NULL_HANDLE;
     VkSemaphore acquired = VK_NULL_HANDLE;
     std::vector<VkDescriptorPool> pools;
@@ -230,6 +261,10 @@ struct Frame {
     VkDeviceSize chunk_used = 0;
     std::vector<std::function<void()>> deferred;
     bool submitted = false;  // the fence will be signalled
+    // Secondary command buffers the passes of attachment-discard are recorded into, from `pool`;
+    // the first `secondary_at` are this recording's.
+    std::vector<VkCommandBuffer> secondaries;
+    std::size_t secondary_at = 0;
 };
 
 // A Vulkan image, its memory, views and the layout it was last left in. Owned through ImagePtr.
@@ -244,6 +279,9 @@ struct Image {
     VkSampleCountFlagBits samples = VK_SAMPLE_COUNT_1_BIT;
     VkImageLayout layout = VK_IMAGE_LAYOUT_UNDEFINED;
     std::uint64_t touched = 0;  // the recording that last used it in `main`
+    // The aspects whose contents glInvalidateFramebuffer let go and nothing wrote since: the next
+    // pass on the image does not load them (attachment-discard, docs/port/RENDER_PERF.md "R-06").
+    VkImageAspectFlags discarded = 0;
     VkImageView attachment = VK_NULL_HANDLE;
     std::vector<std::pair<std::uint32_t, VkImageView>>
         views;  // (base | top << 16) -> view for sampling
@@ -282,9 +320,22 @@ struct Renderbuffer {
 
 // A GL buffer: the data as GL was given it, the version that changes with each write, where that
 // version is on the GPU, and the texel views made of it this frame.
+//
+// `data` is the CPU's copy (the mirror). A static buffer that has a copy of its own in device
+// memory lets it go (static-buffers-device-local, docs/port/RENDER_PERF.md "R-05"); a reader of
+// its bytes calls buffer_bytes, which reads them back from `own`. The GPU-driven instances
+// (gpu_make_batch) read `data` directly: their buffers are drawn per instance and never given a
+// copy of their own, so their mirror stays.
 struct Buffer {
     bool storage = false;  // GPU-written storage must keep one allocation across frames.
     std::vector<std::uint8_t> data;
+    std::size_t size = 0;       // The bytes GL gave it, which `data` holds unless it was let go.
+    bool static_hint = false;   // Filled with a GL_STATIC_* usage: drawn often, written seldom.
+    bool rewritten = false;     // glBufferSubData wrote into it since its glBufferData.
+    bool keep_mirror = false;   // Read as a uniform block or by the CPU: `data` is kept.
+    bool mirror_freed = false;  // `data` was let go; `own` holds this version.
+    std::uint8_t* staged = nullptr;      // The staging copy that fills `own`, while it is alive.
+    std::uint64_t staged_recording = 0;  // The recording whose `upload` copies `staged` into `own`.
     std::uint64_t version = 1;
     std::uint64_t changed_frame = 0;
     // Where this version is on the GPU: a frame's ring (valid during that recording), or a copy
@@ -296,6 +347,7 @@ struct Buffer {
     VkBuffer own = VK_NULL_HANDLE;
     VmaAllocation own_allocation = nullptr;
     std::uint64_t own_version = 0;
+    std::uint8_t* own_mapped = nullptr;  // Where the host sees `own`; null in device-only memory.
 
     struct View {
         VkFormat format;
@@ -356,6 +408,68 @@ inline bool reuse_uniforms() {
     return !off;
 }
 
+// The descriptor sets one program made this frame, by key, for vk-draw-cache: the reference path's
+// Program::descriptor_sets without its heap allocations. The keys' words sit one after another in
+// one array and a fixed table of slots indexes them, so clear() keeps every array's capacity and a
+// program's steady state allocates nothing. Holds at most kCapacity sets, as the reference does.
+struct DescriptorCache {
+    // The sets it holds at most, the reference path's limit; past it a set is made each time.
+    static constexpr std::size_t kCapacity = 256;
+
+    // Its slots: a power of two, twice kCapacity, so a probe meets a free slot soon.
+    static constexpr std::size_t kSlots = 2 * kCapacity;
+
+    // One set and where its key is in `words`.
+    struct Item {
+        std::uint64_t hash = 0;                // hash_words of its key.
+        std::uint32_t at = 0;                  // Its key's first word in `words`.
+        std::uint32_t size = 0;                // Its key's words.
+        VkDescriptorSet set = VK_NULL_HANDLE;  // The set.
+    };
+
+    std::vector<std::uint64_t> words;           // Every key's words, in the order they were added.
+    std::vector<Item> items;                    // Every set, in the order they were added.
+    std::array<std::uint16_t, kSlots> slots{};  // 0 a free slot, n the item n - 1; linear probing.
+
+    // Forgets every set (the frame's pools are reset with the frame), keeping the capacity.
+    void clear();
+
+    // Returns the set made for `key`, whose hash_words is `hash`, or null. The whole key decides.
+    [[nodiscard]] VkDescriptorSet find(
+        std::span<const std::uint64_t> key, std::uint64_t hash
+    ) const;
+
+    // Adds `set` for `key`, of hash `hash`, unless kCapacity sets are held already.
+    void insert(std::span<const std::uint64_t> key, std::uint64_t hash, VkDescriptorSet set);
+};
+
+// A range of a buffer on the GPU that a draw binds.
+struct BufferRef {
+    VkBuffer buffer = VK_NULL_HANDLE;
+    VkDeviceSize offset = 0;
+    VkDeviceSize size = 0;
+};
+
+// What a sampler uniform reads now: its image (null for a buffer texture) and the descriptor.
+struct Sampled {
+    Image* image = nullptr;
+    VkImageView view = VK_NULL_HANDLE;
+    VkSampler sampler = VK_NULL_HANDLE;
+    VkBufferView texels = VK_NULL_HANDLE;
+};
+
+// The arrays a draw and descriptors() fill afresh each time, kept in the Context so that their
+// capacity stays and a draw allocates nothing once they have grown (vk-draw-cache). Each user
+// clears what it uses first; none is used by two functions at once.
+struct DrawScratch {
+    std::vector<Sampled> samplers;                     // The draw's sampled textures.
+    std::vector<BufferRef> blocks;                     // descriptors(): the blocks it binds.
+    std::vector<std::uint64_t> key;                    // descriptors(): the set's key.
+    std::vector<VkWriteDescriptorSet> writes;          // descriptors(): a new set's writes.
+    std::vector<VkDescriptorBufferInfo> buffer_infos;  // descriptors(): what the writes point at.
+    std::vector<VkDescriptorImageInfo> image_infos;    // descriptors(): what the writes point at.
+};
+
 // A GL program: its shaders, the compiled SPIR-V and what it declares (shader_compiler.h), its
 // shader modules and layouts, the default uniform block, and the descriptor sets made this frame.
 struct Program {
@@ -363,6 +477,9 @@ struct Program {
     bool linked = false;
     std::string log;
     std::uint64_t serial = 0;  // a new one each link, for the pipelines' keys
+    // What the program is across runs, for the pipeline manifest: a hash of its SPIR-V and of
+    // what its layout depends on (pipeline_identity); 0 for a compute program or before a link.
+    std::uint64_t identity = 0;
     CompiledProgram compiled;
     bool gpu_materials = false;
     unsigned material_start = 0;
@@ -383,6 +500,7 @@ struct Program {
     // At most 256 resource combinations per program, valid only this frame.
     std::unordered_map<std::vector<std::uint64_t>, VkDescriptorSet, DescriptorKeyHash>
         descriptor_sets;
+    DescriptorCache set_cache;            // The same sets as descriptor_sets, for vk-draw-cache.
     std::vector<std::uint64_t> last_key;  // what the last descriptor set held
     VkDescriptorSet last_set = VK_NULL_HANDLE;
     std::uint64_t last_set_frame = 0;
@@ -394,6 +512,36 @@ struct Framebuffer {
     GLuint colour_renderbuffer = 0;
     GLuint depth_texture = 0;
     GLuint depth_renderbuffer = 0;
+};
+
+// What a pass of attachment-discard has to know when it ends, which is when its load and store
+// operations are chosen (vkgl_commands.cpp): its draws go into a secondary command buffer
+// meanwhile, and `main` points at it.
+struct OpenPass {
+    bool deferred = false;  // This pass is recorded into a secondary command buffer.
+    VkCommandBuffer primary = VK_NULL_HANDLE;  // The frame's `main`, given back at the end.
+    bool clear_colour = false;                 // The pass began with a clear of its colour,
+    bool clear_depth = false;                  // of its depth,
+    bool clear_stencil = false;                // and of its stencil.
+    VkClearColorValue colour_value{};          // The clear values as they were at its begin.
+    VkClearDepthStencilValue depth_value{};
+    // The aspects glInvalidateFramebuffer let go since the pass's last draw or clear: not stored.
+    VkImageAspectFlags drop_colour = 0;
+    VkImageAspectFlags drop_depth = 0;
+    // vk_cmds_recorded when the pass began: the same at its end means its buffer holds nothing.
+    std::uint64_t commands_at_begin = 0;
+};
+
+// A copy into the default framebuffer that waits for present() (present-single-copy,
+// docs/port/RENDER_PERF.md "R-07"): the frame's picture, blitted into a box of the default
+// framebuffer whose rest was cleared to `clear`. present_to_screen makes it one blit into the
+// screen; anything else that touches the default framebuffer or the picture makes it first.
+struct PendingPresent {
+    bool pending = false;
+    ImagePtr source;       // The picture, kept until the copy is made.
+    VkImageBlit region{};  // From the picture into the default framebuffer.
+    VkFilter filter = VK_FILTER_NEAREST;
+    VkClearColorValue clear{};  // The default framebuffer's colour around the box.
 };
 
 // What a draw or a clear draws into.
@@ -481,6 +629,17 @@ struct Names {
     }
 };
 
+// Which memory a static buffer's copy of its own goes into, worked out once from the device's
+// memory types (static_memory_of, vkgl_resources.cpp).
+struct StaticMemory {
+    bool known = false;  // Worked out yet.
+    // Memory both device-local and mapped by the host lies on the largest device-local heap:
+    // unified memory (Apple silicon, an integrated GPU) or a discrete GPU with resizable BAR.
+    // One mapped allocation is then device memory; nothing needs copying.
+    bool mappable = false;
+    std::uint32_t device_only_types = 0;  // The memory types device-local and not host-visible.
+};
+
 // What the layer cost in a frame, given to the debug tools (common/stats.h) at present(): the
 // measure of whether a path of the renderer should be written for Vulkan itself.
 struct Measures {
@@ -502,6 +661,209 @@ inline double seconds_since(Clock::time_point start) {
     return std::chrono::duration<double>(Clock::now() - start).count();
 }
 
+// ---- Pipelines by key ----
+
+// One vertex input of a pipeline's key: location, format, stride and whether it is per instance.
+struct Input {
+    std::uint32_t location, format, stride, instanced;
+};
+
+// Everything a pipeline bakes in, as plain numbers: the cache's key. pipeline_for zeroes it whole
+// before it fills it, so its bytes (padding included) are the key: it is compared and hashed as
+// bytes. Trivially copyable, with no padding between its 8-byte words.
+struct PipelineKey {
+    std::uint64_t program;
+    std::uint32_t topology, restart, polygon, cull, front;
+    std::uint32_t blend, src_rgb, dst_rgb, src_a, dst_a, equation, colour_mask;
+    std::uint32_t depth_test, depth_write, depth_func;
+    std::uint32_t stencil, stencil_func, front_ops[3], back_ops[3];
+    std::uint32_t colour_format, depth_format, samples;
+    std::uint32_t inputs;
+    std::uint32_t viewports;
+    Input input[kAttributes];
+};
+
+static_assert(sizeof(PipelineKey) % sizeof(std::uint64_t) == 0, "PipelineKey hashes as words");
+
+// Returns the 64-bit hash of `key`'s bytes: FNV-1a over its 8-byte words, then mixed, so that its
+// low bits pick a slot of PipelineTable. Equal keys hash alike; a lookup still compares the key.
+std::uint64_t hash_key(const PipelineKey& key);
+
+// Returns the same hash of `words`, for DescriptorCache's keys.
+std::uint64_t hash_words(std::span<const std::uint64_t> words);
+
+// The graphics pipelines made so far, one per key, and two ways to find them: by the key's hash
+// in a flat table of slots that compares the whole key on a hit (vk-draw-cache), or by the key's
+// bytes as a std::string (the reference path, as the backend looked them up before R-04). Both
+// indexes name the same entries, so the two paths find the same pipelines.
+//
+// Owned by the Context; the pipelines themselves are destroyed by whoever erases them (a deleted
+// program, vkgl_gl.cpp) or by the backend's close (vkgl_device.cpp). Only the thread that draws
+// uses it.
+class PipelineTable {
+public:
+    using Entry = std::pair<PipelineKey, VkPipeline>;  // A key and the pipeline made for it.
+
+    // Returns the pipeline made for `key`, whose hash_key is `hash`, or null when none was.
+    // Hot path: one slot probe or a few, and one compare of the key; no allocation.
+    [[nodiscard]] const VkPipeline* find(const PipelineKey& key, std::uint64_t hash) const;
+
+    // Returns the pipeline made for the key whose bytes are `key`, or null: the reference path.
+    [[nodiscard]] const VkPipeline* find_reference(const std::string& key) const;
+
+    // Adds `pipeline` for `key`, whose hash_key is `hash`. The key must not be in the table yet.
+    void insert(const PipelineKey& key, std::uint64_t hash, VkPipeline pipeline);
+
+    // Removes every pipeline whose key names program `serial`, handing each to `retire`.
+    template <typename Retire>
+    void erase_program(std::uint64_t serial, Retire retire) {
+        // The program's entries to the back, whole (remove_if would leave the back unspecified).
+        const auto ends =
+            std::stable_partition(m_entries.begin(), m_entries.end(), [serial](const Entry& e) {
+                return e.first.program != serial;
+            });
+
+        // Each erased pipeline, before its entry goes.
+        for (auto it = ends; it != m_entries.end(); ++it) {
+            retire(it->second);
+        }
+
+        m_entries.erase(ends, m_entries.end());
+        rebuild();
+    }
+
+    // The entries, for destroying every pipeline at close.
+    [[nodiscard]] std::vector<Entry>::iterator begin() { return m_entries.begin(); }
+
+    [[nodiscard]] std::vector<Entry>::iterator end() { return m_entries.end(); }
+
+private:
+    // Puts entry `index`, of hash `hash`, into a free slot. The slots must have room.
+    void place(std::size_t index, std::uint64_t hash);
+
+    // Makes both indexes again from the entries, the slots at least twice the entries' count.
+    void rebuild();
+
+    std::vector<Entry> m_entries;         // Every pipeline, in the order they were made.
+    std::vector<std::uint64_t> m_hashes;  // Each entry's hash_key, at the entry's index.
+    // Open addressing over a power of two: 0 is a free slot, n the entry n - 1. Probed linearly.
+    std::vector<std::uint32_t> m_slots;
+    std::unordered_map<std::string, std::size_t> m_reference;  // Key bytes to entry index.
+};
+
+// ---- Pipelines made ahead: the manifest and the pre-warm worker (R-10) ----
+
+// One pipeline the pre-warm worker is to make: its key, with the program's serial, and the
+// program's modules and layout, which stay alive until prewarm_forget has run for its serial.
+struct PrewarmJob {
+    PipelineKey key{};                         // The key, its `program` the program's serial.
+    VkShaderModule vertex = VK_NULL_HANDLE;    // The program's vertex stage.
+    VkShaderModule fragment = VK_NULL_HANDLE;  // The program's fragment stage.
+    VkPipelineLayout layout = VK_NULL_HANDLE;  // The program's layout.
+};
+
+// The pre-warm worker and what passes between it and the thread that draws
+// (pipeline-prewarm, docs/port/RENDER_PERF.md, R-10).
+//
+// The worker only takes jobs from `queue`, calls vkCreateGraphicsPipelines into the shared
+// VkPipelineCache, and puts what it made into `ready`. The thread that draws queues the jobs at
+// a program's link, and when a draw needs a key that is queued or being made it waits for it
+// (moving it to the front) instead of making it a second time, then moves `ready` into
+// Context::pipelines. Everything here but `worker` is guarded by `mutex`.
+struct PipelinePrewarm {
+    std::mutex mutex;                   // Guards the members below.
+    std::condition_variable changed;    // Notified when a job is queued or done, and at stop.
+    std::deque<PrewarmJob> queue;       // Jobs not begun, the next first.
+    std::optional<PipelineKey> making;  // The key the worker is making now, if any.
+    std::vector<std::pair<PipelineKey, VkPipeline>> ready;  // Made, not yet in the table.
+    std::uint64_t made = 0;  // Pipelines the worker has made since the backend opened.
+    bool stop = false;       // Set at close: the worker returns.
+    bool started = false;    // The worker has been started.
+    JoiningThread worker;    // The worker, started with the first job.
+};
+
+// One key of the manifest as the backend keeps it: the key with its program's identity in
+// `program`, and the runs since a run made or used it.
+struct ManifestKey {
+    PipelineKey key{};      // The key; `program` is the program's identity, not a serial.
+    std::uint32_t age = 0;  // Runs since this key's pipeline was made or used; 0 for this run's.
+};
+
+// The pipeline manifest of this run: the keys read from the file at open, aged by one, and every
+// key made since, so that a program linked again in this run is warmed too. Saved at close.
+// Only the thread that draws uses it.
+struct PipelineManifest {
+    std::filesystem::path path;     // The file beside the pipeline cache; empty: none is kept.
+    std::vector<ManifestKey> keys;  // Every key, in the order they were added.
+    std::unordered_map<std::string, std::size_t> index;  // Key bytes to its place in `keys`.
+};
+
+// The viewports (and scissors) a draw can set at once, which RecordedState can remember; a draw
+// with more indexed viewports than this records them every time.
+inline constexpr std::size_t kTrackedViewports = 16;
+
+// What the frame's main command buffer holds of the state a draw records: the dynamic state and
+// the graphics binds last recorded into it, so that a draw records only what differs
+// (render_opt's vk-state-skip, docs/port/RENDER_PERF.md, R-03). The pipeline itself is
+// Context::bound_pipeline, which was tracked before.
+//
+// Vulkan keeps dynamic state and binds for the life of a command buffer, across draws and
+// pipeline binds; a new command buffer starts with none. The tracker is cleared (forget()) at
+// every begin of rendering and every begin of the command buffers, which is more often than
+// Vulkan needs: a draw always follows a begin of rendering, so nothing recorded in another pass
+// or another command buffer is ever trusted. Only the thread that draws touches it.
+struct RecordedState {
+    // The viewports last set from viewport 0, `viewport_count` of them; 0 when nothing is known.
+    std::uint32_t viewport_count = 0;
+    std::array<VkViewport, kTrackedViewports> viewports{};
+
+    // The scissors last set from scissor 0, `scissor_count` of them; 0 when nothing is known.
+    std::uint32_t scissor_count = 0;
+    std::array<VkRect2D, kTrackedViewports> scissors{};
+
+    // The blend constants last set, as their bits: a float compare would take -0 for +0.
+    std::optional<std::array<std::uint32_t, 4>> blend_bits;
+
+    std::optional<std::uint32_t> stencil_reference;     // vkCmdSetStencilReference's value.
+    std::optional<std::uint32_t> stencil_compare_mask;  // vkCmdSetStencilCompareMask's value.
+    std::optional<std::uint32_t> stencil_write_mask;    // vkCmdSetStencilWriteMask's value.
+
+    // The layout the descriptor sets and the push constant below were recorded with. Binding a
+    // set with another layout may disturb the others, so a change of layout forgets them.
+    VkPipelineLayout layout = VK_NULL_HANDLE;
+    VkDescriptorSet set = VK_NULL_HANDLE;           // Set 0, the program's; null when not known.
+    std::optional<std::uint32_t> dynamic_offset;    // Set 0's dynamic offset, when it has one.
+    VkDescriptorSet material_set = VK_NULL_HANDLE;  // Set 1, the material pages'; null: unknown.
+    std::optional<std::uint32_t> push_constant;     // The material draw's index, pushed.
+
+    // The vertex buffers last bound from binding 0, `vertex_count` of them; 0 when not known.
+    std::uint32_t vertex_count = 0;
+    std::array<VkBuffer, kAttributes> vertex_buffers{};
+    std::array<VkDeviceSize, kAttributes> vertex_offsets{};
+
+    VkBuffer index_buffer = VK_NULL_HANDLE;         // The index buffer bound; null: not known.
+    VkDeviceSize index_offset = 0;                  // Its offset.
+    VkIndexType index_type = VK_INDEX_TYPE_UINT32;  // Its index type.
+
+    // Forgets everything: the next draw records all of its state.
+    void forget() { *this = RecordedState{}; }
+
+    // Forgets the descriptor sets and the push constant when `to` is not the layout they were
+    // recorded with, and notes `to` as theirs.
+    void use_layout(VkPipelineLayout to) {
+        // The same layout keeps what was bound with it.
+        if (to == layout) {
+            return;
+        }
+
+        set = VK_NULL_HANDLE;
+        dynamic_offset.reset();
+        material_set = VK_NULL_HANDLE;
+        push_constant.reset();
+        layout = to;
+    }
+};
+
 // All of the backend's state, one of it while the backend is open (`g`).
 struct Context {
     GpuEngine gpu;
@@ -512,6 +874,9 @@ struct Context {
     bool open = false;
     Measures measures;
     SubmissionCounters submission, reported_submission;
+    SubmissionCounters published;  // The render counters as the last frame's gauges left them.
+    // The frames_presented at which begin_pipeline_warmup's warm-up ends; never, until it is called.
+    std::uint64_t warmup_end = UINT64_MAX;
     SDL_Window* window = nullptr;
     VkInstance instance = VK_NULL_HANDLE;
     VkDebugUtilsMessengerEXT messenger = VK_NULL_HANDLE;
@@ -537,6 +902,7 @@ struct Context {
     int interval = 1;  // -1 adaptive, 0 immediate, 1 vsync
     VkFormat depth_format = VK_FORMAT_UNDEFINED;
     VkPipelineCache pipeline_cache = VK_NULL_HANDLE;
+    StaticMemory static_memory;  // Where a static buffer's own copy goes (vkgl_resources.cpp).
 
     std::array<Frame, kFrames> frames;
     int frame = 0;
@@ -549,7 +915,11 @@ struct Context {
 
     bool rendering = false;
     Target rendering_target;
+    OpenPass pass;                 // The pass `main` renders in, while `rendering`.
+    PendingPresent present_copy;   // The copy to the default framebuffer that waits, if any.
+    bool poison_discards = false;  // test_poison_discards (vkgl.h): discarded data made garbage.
     VkPipeline bound_pipeline = VK_NULL_HANDLE;
+    RecordedState recorded;  // What the main command buffer holds of a draw's state (R-03).
 
     State state;
     Names<Texture> textures;
@@ -562,7 +932,11 @@ struct Context {
     Names<Program> programs;
     std::uint64_t program_serial = 0;
 
-    std::unordered_map<std::string, VkPipeline> pipelines;
+    PipelineTable pipelines;           // Every graphics pipeline, by key (pipeline_for).
+    PipelineManifest manifest;         // The keys to make ahead, by program identity (R-10).
+    PipelinePrewarm prewarm;           // The worker that makes them (R-10).
+    DrawScratch scratch;               // The draw's temporaries, kept for their capacity (R-04).
+    bool byte_indices_logged = false;  // The 8-bit index emulation has been reported once.
     std::vector<std::pair<std::uint64_t, VkSampler>> vk_samplers;  // by a packed key
 
     ImagePtr dummy_image;
@@ -602,6 +976,64 @@ inline Frame& frame() {
     return g->frames[static_cast<std::size_t>(g->frame)];
 }
 
+// ---- The render counters (SubmissionCounters, docs/port/RENDER_PERF.md) ----
+//
+// Hot path: each is an add or two on `g->submission`, with no clock, no allocation and no test of
+// stats::enabled(), so a draw may call them as often as it records. present() publishes the totals
+// once per frame (publish_counters, vkgl_present.cpp), the one place that tests stats::enabled().
+
+// Counts `count` recorded commands of `kind`.
+inline void count_command(Command kind, std::uint64_t count = 1) {
+    g->submission.commands[static_cast<std::size_t>(kind)] += count;
+}
+
+// Counts one vkCmdPipelineBarrier that waits on `source` stages for `destination` stages.
+inline void count_barrier(VkPipelineStageFlags source, VkPipelineStageFlags destination) {
+    count_command(Command::Barrier);
+    ++g->submission.barriers;
+
+    // A barrier on every stage, which waits for more than the work it orders needs.
+    if (((source | destination) & VK_PIPELINE_STAGE_ALL_COMMANDS_BIT) != 0) {
+        ++g->submission.barriers_all_commands;
+    }
+}
+
+// Counts one copy, blit or resolve into a region `width` by `height` texels: a full-screen copy
+// as well when that is the default framebuffer's size or the screen's.
+inline void count_copy(std::uint32_t width, std::uint32_t height) {
+    count_command(Command::Copy);
+    const bool frame_sized = static_cast<int>(width) == g->default_width
+                             && static_cast<int>(height) == g->default_height;
+    const bool screen_sized =
+        width == g->swapchain_extent.width && height == g->swapchain_extent.height;
+
+    // The whole picture read and written again, the costliest copy on a tiled GPU.
+    if (frame_sized || screen_sized) {
+        ++g->submission.fullscreen_copies;
+    }
+}
+
+// Counts the beginning of one render pass (vkCmdBeginRendering); its end is a count_command.
+inline void count_render_pass() {
+    count_command(Command::RenderPass);
+    ++g->submission.render_passes;
+}
+
+// Counts a graphics or compute pipeline just made, after the warm-up as well when it has passed.
+inline void count_pipeline() {
+    ++g->submission.pipelines_created;
+
+    // Made once the warm-up begin_pipeline_warmup started was over: a hitch a warm cache avoids.
+    if (g->submission.frames_presented >= g->warmup_end) {
+        ++g->submission.pipelines_created_after_warmup;
+    }
+}
+
+// Counts what one attachment of a pass moves between memory and the GPU: `image`'s texel bytes
+// over `area` and its samples, read in when `load` and written back when `store`. Defined in
+// vkgl_commands.cpp, beside the passes it counts.
+void count_attachment(const Image& image, VkExtent2D area, bool load, bool store);
+
 // ---- Types the files hand each other ----
 
 // A piece of a frame's ring: the buffer, the offset into it, and where the host writes it.
@@ -618,28 +1050,8 @@ struct Format {
     int bytes = 4;  // a texel's
 };
 
-// A range of a buffer on the GPU that a draw binds.
-struct BufferRef {
-    VkBuffer buffer = VK_NULL_HANDLE;
-    VkDeviceSize offset = 0;
-    VkDeviceSize size = 0;
-};
-
 inline constexpr VkDeviceSize kDefaultFloat = 256;    // in the dummy buffer: (0, 0, 0, 1) as floats
 inline constexpr VkDeviceSize kDefaultInteger = 272;  // and as integers
-
-// One vertex input of a pipeline's key: location, format, stride and whether it is per instance.
-struct Input {
-    std::uint32_t location, format, stride, instanced;
-};
-
-// What a sampler uniform reads now: its image (null for a buffer texture) and the descriptor.
-struct Sampled {
-    Image* image = nullptr;
-    VkImageView view = VK_NULL_HANDLE;
-    VkSampler sampler = VK_NULL_HANDLE;
-    VkBufferView texels = VK_NULL_HANDLE;
-};
 
 // ---- Defined in vkgl_commands.cpp ----
 
@@ -698,8 +1110,16 @@ void timing_end();
 void timing_results(Frame& f);
 
 // Ends both command buffers and submits them, `upload` first; `wait` waits for them to finish
-// (a read of pixels, glFinish), and the next ones are begun.
-void submit(VkSemaphore wait_semaphore, VkSemaphore signal, bool wait);
+// (a read of pixels, glFinish), and the next ones are begun. With `present` (present_cmd), that
+// buffer is ended and goes in a second batch of the same submit, which alone waits for
+// `wait_semaphore`, at the transfer stage; otherwise the one batch waits for it at every stage.
+void submit(
+    VkSemaphore wait_semaphore, VkSemaphore signal, bool wait, VkCommandBuffer present = nullptr
+);
+
+// The frame slot's command buffer for the copy to the screen, begun (vk-tight-sync), or null when
+// none can be made. Submitted by submit() after the frame's two.
+VkCommandBuffer present_cmd();
 
 // Submits what is recorded and waits for the GPU to finish it (glReadPixels, glFinish).
 void flush_and_wait();
@@ -714,6 +1134,15 @@ void ensure_rendering(const Target& t);
 // scissor test.
 VkRect2D scissor_rect(const Target& t);
 
+// glInvalidateFramebuffer carried out on `t`: `colour` and the depth image's `depth` aspects are
+// let go. In the pass that renders into them, they are not stored at its end unless a draw or a
+// clear comes first; otherwise the next pass on them does not load them.
+void discard_attachments(const Target& t, bool colour, VkImageAspectFlags depth);
+
+// Ends the open pass without recording it when it is a pass into the default framebuffer that
+// only clears its colour and holds nothing yet; true then, with that colour in `clear`.
+bool drop_clear_pass(VkClearColorValue& clear);
+
 // glClear: clears the buffers in `mask` that the write masks leave writable, inside the scissor
 // box. A clear of the whole target becomes the load operation of the rendering pass it begins.
 void clear(GLbitfield mask);
@@ -725,6 +1154,10 @@ Format format_of(GLenum internal);
 
 // True for the depth formats that have a stencil part.
 bool has_stencil(VkFormat f);
+
+// The bytes one texel of `f` takes, for the attachment counters (count_attachment); 4 for a
+// format the backend does not make, which is only the screen's.
+int texel_bytes(VkFormat f);
 
 // Makes a 2D image of `levels` levels and `samples` samples that can be copied to and from,
 // sampled when single-sampled, and drawn into when the format allows. Null when Vulkan fails
@@ -773,10 +1206,15 @@ VkSampler sampler_for(const SamplerParams& p, bool integer);
 BufferRef dummy_buffer_ref();
 
 // Where buffer `b`'s current data is on the GPU: its own copy once it has stayed the same for
-// a few frames (or at once for GPU-written storage), else a copy in this frame's ring made once
-// per version. With `persistent` false only storage gets its own copy. The dummy buffer when
-// `b` is empty.
+// a few frames (or at once for GPU-written storage, and for a static buffer of 64 KiB or more
+// under static-buffers-device-local), else a copy in this frame's ring made once per version.
+// With `persistent` false only storage gets its own copy. The dummy buffer when `b` is empty.
 BufferRef resolve(Buffer& b, bool persistent = true);
+
+// Buffer `b`'s bytes on the CPU: its mirror, read back from its own copy first when it was let
+// go, and kept from then on. The read-back of device-only memory submits a command buffer of its
+// own and waits for it, leaving the frame's recording as it is.
+const std::vector<std::uint8_t>& buffer_bytes(Buffer& b);
 
 // Drops the texel views made of `b`, destroyed once the frame is done with them (defer).
 void forget_views(Buffer& b);
@@ -784,6 +1222,34 @@ void forget_views(Buffer& b);
 // A texel view of buffer `name` as `gl_format` (RGBA32UI, RGBA32F, RGBA8, otherwise R32UI),
 // kept for this frame; `fallback` when the buffer is missing or too small.
 VkBufferView texel_view(GLuint name, GLenum gl_format, VkBufferView fallback);
+
+// ---- Defined in vkgl_pipelines.cpp: pipelines made ahead (R-10) ----
+
+// Returns program `p`'s identity across runs: a hash of its SPIR-V stages and of whether it uses
+// the material pages and dynamic uniforms, which decide its layout.
+std::uint64_t pipeline_identity(const Program& p);
+
+// Reads the manifest saved beside the pipeline cache file `cache`, aging each key by a run.
+// Nothing with `cache` empty or pipeline-prewarm off; a damaged manifest is logged and dropped.
+void load_pipeline_manifest(const std::filesystem::path& cache);
+
+// Saves the manifest beside the pipeline cache file it was read for, leaving out keys no run has
+// used for kManifestMaxAge runs and keeping at most kManifestKeys. Nothing with pipeline-prewarm
+// off. Call after stop_pipeline_prewarm.
+void save_pipeline_manifest();
+
+// Notes program `p`'s identity and queues the manifest's keys of that identity for the pre-warm
+// worker, which it starts if it is not running. For glLinkProgram, once `p` is linked.
+void prewarm_program(Program& p);
+
+// Takes back the pre-warm's jobs of program `serial` and waits for the one being made, then
+// destroys what the worker made for it that no draw took. For a program's release, before its
+// modules and layout go.
+void prewarm_forget(std::uint64_t serial);
+
+// Stops the pre-warm worker and waits for it, and destroys the pipelines it made that no draw
+// took. For the backend's close, before the programs are released.
+void stop_pipeline_prewarm();
 
 // ---- Defined in vkgl_pipelines.cpp ----
 
@@ -814,7 +1280,11 @@ Sampled sampled(const Program& p, std::size_t i);
 // The descriptor set with program `p`'s uniform blocks, default uniforms and `samplers` for
 // this draw, reused while the same resources are bound this frame. VK_NULL_HANDLE for a
 // program that binds nothing.
-VkDescriptorSet descriptors(Program& p, const std::vector<Sampled>& samplers);
+//
+// Hot path: with vk-draw-cache its temporaries are Context::scratch's and its sets
+// Program::set_cache, so a draw that finds its set allocates nothing; off, the reference path
+// builds them as vectors and keys Program::descriptor_sets by a copy of the key.
+VkDescriptorSet descriptors(Program& p, std::span<const Sampled> samplers);
 
 // glDispatchCompute: runs the current program's compute pipeline outside a rendering pass.
 void OPENRAC_GLAPI dispatch_compute(GLuint x, GLuint y, GLuint z);
@@ -877,6 +1347,14 @@ renderer::GpuInstanceBatch gpu_make_batch(
     const renderer::GpuCullView& view
 );
 
+// gpu_register_instances (vkgl.h) carried out: the instances of vertex buffer `buffer` with
+// `bounds` appended to the resident words. False when GPU-driven drawing is off.
+bool gpu_register(unsigned buffer, std::span<const renderer::GpuCullBounds> bounds);
+
+// gpu_release_instances (vkgl.h) carried out: every registration forgotten, the device copy let
+// go once the frames that read it have retired.
+void gpu_release_resident();
+
 // draw_gpu_instances (vkgl.h) carried out: `count` indices from `first` for each instance of
 // `batch` the culling keeps. False for a batch of another recording, or nothing to draw.
 bool gpu_submit_draw(renderer::GpuInstanceBatch batch, unsigned first, unsigned count);
@@ -891,6 +1369,10 @@ void gpu_results(Frame& f);
 void gpu_release();
 
 // ---- Defined in vkgl_gl.cpp ----
+
+// Records the copy into the default framebuffer that waited (PendingPresent): its clear, then the
+// blit, as glBlitFramebuffer would have recorded them. Nothing when none waits.
+void make_present_copy();
 
 // Lets go of buffer `b`'s GPU copy and texel views, destroyed once the frame is done with them.
 void destroy_buffer(Buffer& b);
@@ -914,6 +1396,11 @@ VkPresentModeKHR present_mode();
 // Makes the swapchain anew for the surface at its current size, once the device is idle. True
 // with no surface (no window).
 bool make_swapchain();
+
+// Publishes the render counters as the frame's vk_* gauges, the frame's own work for counts and
+// bytes, the totals for the pipelines and compiles, while the debug tools measure; counts the
+// frame as presented in any case. Called by present(), once per frame, before advance().
+void publish_counters();
 
 // The next frame: its slot's last use waited for, its leftovers freed, its buffers begun.
 void advance();

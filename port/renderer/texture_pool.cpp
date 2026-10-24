@@ -16,10 +16,37 @@
 #include "common/env.h"
 #include "common/log.h"
 #include "renderer/gl.h"
+#include "renderer/shader.h"
 
 namespace openrac::renderer {
 
 using namespace openrac::gl;
+
+namespace {
+
+// The bytes of an RGBA8 image of `width` by `height` texels.
+std::size_t texel_bytes(int width, int height) {
+    constexpr std::size_t kRgba8Bytes = 4;
+    return static_cast<std::size_t>(std::max(width, 0))
+           * static_cast<std::size_t>(std::max(height, 0)) * kRgba8Bytes;
+}
+
+// The bytes of an RGBA8 image with its whole mip chain, each level half the one above down to one
+// texel, as glGenerateMipmap makes it.
+std::size_t chain_bytes(int width, int height) {
+    std::size_t bytes = texel_bytes(width, height);
+
+    // One level a turn, until both sides are a texel.
+    while (width > 1 || height > 1) {
+        width = std::max(width / 2, 1);
+        height = std::max(height / 2, 1);
+        bytes += texel_bytes(width, height);
+    }
+
+    return bytes;
+}
+
+}  // namespace
 
 std::uint64_t hash_bytes(const std::uint8_t* data, std::size_t size) {
     std::uint64_t h = 0xcbf29ce484222325ull;
@@ -93,6 +120,8 @@ void TexturePool::place(std::uint32_t tbp, TextureHandle texture) {
 void TexturePool::clear_placements() {
     m_placed.clear();
 }
+
+// ---- Source uploads ----
 
 void TexturePool::upload(ImageUpload upload) {
     Stored stored;
@@ -384,43 +413,134 @@ const std::string& TexturePool::name(TextureHandle texture) const {
     return m_entries[texture - 1].name;
 }
 
+// ---- GPU textures ----
+
 unsigned TexturePool::gl_texture(TextureHandle texture) {
     Entry& e = m_entries[texture - 1];
     e.last_used = m_frame;
+
+    // The first use of a texture prepare() did not make: it is made now, inside the frame.
     if (e.gl == 0) {
-        glGenTextures(1, &e.gl);
-        glBindTexture(GL_TEXTURE_2D, e.gl);
-        glPixelStorei(GL_UNPACK_ALIGNMENT, 4);
-        glTexImage2D(
-            GL_TEXTURE_2D,
-            0,
-            static_cast<GLint>(GL_RGBA8),
-            e.image.width,
-            e.image.height,
-            0,
-            GL_RGBA,
-            GL_UNSIGNED_BYTE,
-            e.image.pixels.data()
-        );
-        if (e.mipmaps) {
-            glGenerateMipmap(GL_TEXTURE_2D);
-            glTexParameteri(
-                GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, static_cast<GLint>(GL_LINEAR_MIPMAP_LINEAR)
-            );
-            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, static_cast<GLint>(GL_LINEAR));
-            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, static_cast<GLint>(GL_REPEAT));
-            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, static_cast<GLint>(GL_REPEAT));
-            if (m_anisotropy > 1.0f) {
-                glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MAX_ANISOTROPY, m_anisotropy);
-            }
-        } else {
-            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAX_LEVEL, 0);
-            const GLint filter = static_cast<GLint>(e.linear ? GL_LINEAR : GL_NEAREST);
-            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, filter);
-            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, filter);
-        }
+        create_gl(e);
     }
+
     return e.gl;
+}
+
+PreparedTextures TexturePool::prepare(std::span<const TextureHandle> textures) {
+    PreparedTextures made;
+    std::size_t batch_bytes = 0;
+
+    // Each texture in the order given; one already on the GPU (or given twice) is left alone.
+    for (const TextureHandle texture : textures) {
+        // 0 is never a texture (texture_pool.h).
+        if (texture == 0) {
+            continue;
+        }
+
+        Entry& e = m_entries[texture - 1];
+
+        // Made already: by a draw, or earlier in this list.
+        if (e.gl != 0) {
+            continue;
+        }
+
+        const std::size_t bytes = texel_bytes(e.image.width, e.image.height);
+
+        // The batch is full: the GPU takes it before more is staged (one larger texture alone
+        // is a batch of its own).
+        if (batch_bytes > 0 && batch_bytes + bytes > kPrepareBatchBytes) {
+            glFinish();
+            batch_bytes = 0;
+        }
+
+        // A new batch begins with this texture.
+        if (batch_bytes == 0) {
+            ++made.batches;
+        }
+
+        create_gl(e);
+        batch_bytes += bytes;
+        ++made.textures;
+        made.staged_bytes += bytes;
+        made.resident_bytes += e.mipmaps ? chain_bytes(e.image.width, e.image.height) : bytes;
+    }
+
+    glBindTexture(GL_TEXTURE_2D, 0);
+    return made;
+}
+
+void TexturePool::create_gl(Entry& e) {
+    glGenTextures(1, &e.gl);
+    glBindTexture(GL_TEXTURE_2D, e.gl);
+    glPixelStorei(GL_UNPACK_ALIGNMENT, 4);  // rows of whole RGBA8 texels, four bytes each
+    glTexImage2D(
+        GL_TEXTURE_2D,
+        0,
+        static_cast<GLint>(GL_RGBA8),
+        e.image.width,
+        e.image.height,
+        0,
+        GL_RGBA,
+        GL_UNSIGNED_BYTE,
+        e.image.pixels.data()
+    );
+
+    // 3D geometry's: a mip chain, sampled trilinear and repeated (add()).
+    if (e.mipmaps) {
+        glGenerateMipmap(GL_TEXTURE_2D);
+        glTexParameteri(
+            GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, static_cast<GLint>(GL_LINEAR_MIPMAP_LINEAR)
+        );
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, static_cast<GLint>(GL_LINEAR));
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, static_cast<GLint>(GL_REPEAT));
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, static_cast<GLint>(GL_REPEAT));
+
+        // 1 is no anisotropic filter, which a driver without the extension also has.
+        if (m_anisotropy > 1.0f) {
+            glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MAX_ANISOTROPY, m_anisotropy);
+        }
+    } else {
+        // One level, nearest or bilinear as add() said, until a draw sets its own filter.
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAX_LEVEL, 0);
+        const GLint filter = static_cast<GLint>(e.linear ? GL_LINEAR : GL_NEAREST);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, filter);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, filter);
+    }
+}
+
+// ---- Optional colour reconstruction ----
+
+void TexturePool::set_upscaled_texture_colours(std::unique_ptr<UpscaledTextureColours> source) {
+    if (m_upscaled_texture_colours) {
+        m_upscaled_texture_colours->release();
+    }
+    m_upscaled_texture_colours = std::move(source);
+}
+
+void TexturePool::bind_upscaled_texture_colours(
+    TextureHandle texture, const Shader& shader, TextureFilter filter, bool repeat_s, bool repeat_t
+) {
+    glActiveTexture(GL_TEXTURE0);
+    const unsigned source = gl_texture(texture);
+    if (!m_upscaled_texture_colours) {
+        glBindTexture(GL_TEXTURE_2D, source);
+        glUniform1i(shader.uniform("upscaled_texture_colours_ready"), 0);
+        return;
+    }
+    const unsigned wrap = (repeat_s ? 1u : 0u) | (repeat_t ? 2u : 0u);
+    const auto& image = m_entries[texture - 1].image;
+    const unsigned cached =
+        filter != TextureFilter::Normal && !m_entries[texture - 1].field
+            ? m_upscaled_texture_colours->prepare(source, image.width, image.height, wrap, m_frame)
+            : 0;
+    // Cache creation uses its compute program. Restore the material before its uniforms.
+    shader.use();
+    glActiveTexture(GL_TEXTURE0 + kUpscaledTextureColoursUnit);
+    glBindTexture(GL_TEXTURE_2D, cached ? cached : source);
+    glActiveTexture(GL_TEXTURE0);
+    glBindTexture(GL_TEXTURE_2D, source);
+    glUniform1i(shader.uniform("upscaled_texture_colours_ready"), cached != 0);
 }
 
 float TexturePool::max_anisotropy() {
@@ -453,6 +573,9 @@ void TexturePool::set_anisotropy(float samples) {
 }
 
 void TexturePool::release_gl() {
+    if (m_upscaled_texture_colours) {
+        m_upscaled_texture_colours->release();
+    }
     for (Entry& e : m_entries) {
         if (e.gl != 0) {
             glDeleteTextures(1, &e.gl);
@@ -460,6 +583,8 @@ void TexturePool::release_gl() {
         }
     }
 }
+
+// ---- Texture retirement ----
 
 void TexturePool::end_frame() {
     ++m_frame;
@@ -469,6 +594,9 @@ void TexturePool::end_frame() {
             continue;
         }
         if (e.gl != 0 && gl::loaded()) {
+            if (m_upscaled_texture_colours) {
+                m_upscaled_texture_colours->forget(e.gl);
+            }
             glDeleteTextures(1, &e.gl);
         }
         const auto handle = static_cast<TextureHandle>(i + 1);

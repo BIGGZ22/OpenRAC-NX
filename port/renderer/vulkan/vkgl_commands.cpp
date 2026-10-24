@@ -6,16 +6,18 @@
 // and the order between them, GPU timing, submission, and the render target drawing goes to.
 
 #include <algorithm>
+#include <array>
 #include <cstddef>
 #include <cstdint>
-#include <cstdlib>
 #include <cstring>
 #include <functional>
 #include <utility>
 #include <volk.h>
 
+#include "common/env.h"
 #include "common/stats.h"
 #include "renderer/gl.h"
+#include "renderer/render_opt.h"
 #include "renderer/vulkan/vkgl_internal.h"
 
 namespace openrac::vkgl::detail {
@@ -23,6 +25,54 @@ namespace openrac::vkgl::detail {
 using namespace openrac::gl;
 
 namespace {
+
+namespace render_opt = renderer::render_opt;
+
+// The stages and accesses of what an image's layout is used for: what a barrier out of the layout
+// waits for, and what a barrier into it makes wait (vk-tight-sync; docs/port/RENDER_PERF.md, "R-08",
+// the table of barriers). A layout the backend does not use waits for everything, as before.
+struct LayoutScope {
+    VkPipelineStageFlags stages;
+    VkAccessFlags accesses;
+};
+
+// The scope of `layout`. The shader stages are the vertex, fragment and compute ones (a texture is
+// sampled by each); a depth image is loaded in the early tests, stored in the late ones and
+// resolved where colour is written.
+LayoutScope scope_of(VkImageLayout layout) {
+    constexpr VkPipelineStageFlags kShaders = VK_PIPELINE_STAGE_VERTEX_SHADER_BIT
+                                              | VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT
+                                              | VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT;
+    constexpr VkPipelineStageFlags kDepthStages = VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT
+                                                  | VK_PIPELINE_STAGE_LATE_FRAGMENT_TESTS_BIT
+                                                  | VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
+    constexpr VkAccessFlags kDepthAccess =
+        VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_READ_BIT | VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT;
+    constexpr VkAccessFlags kColourAccess =
+        VK_ACCESS_COLOR_ATTACHMENT_READ_BIT | VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
+
+    switch (layout) {
+        // Nothing to wait for: the contents are not kept.
+        case VK_IMAGE_LAYOUT_UNDEFINED:
+            return {VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, 0};
+        case VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL:
+            return {VK_PIPELINE_STAGE_TRANSFER_BIT, VK_ACCESS_TRANSFER_READ_BIT};
+        case VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL:
+            return {VK_PIPELINE_STAGE_TRANSFER_BIT, VK_ACCESS_TRANSFER_WRITE_BIT};
+        case VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL:
+            return {kShaders, VK_ACCESS_SHADER_READ_BIT};
+        case VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL:
+            return {VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT, kColourAccess};
+        case VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL:
+            return {kDepthStages, kDepthAccess | VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT};
+        // Any other: everything, the reference path's scope.
+        default:
+            return {
+                VK_PIPELINE_STAGE_ALL_COMMANDS_BIT,
+                VK_ACCESS_MEMORY_READ_BIT | VK_ACCESS_MEMORY_WRITE_BIT
+            };
+    }
+}
 
 // ---- The frame's ring: vertices, indices, uniforms, texels on their way ----
 
@@ -79,8 +129,124 @@ struct Clear {
     bool colour = false, depth = false, stencil = false;
 };
 
-void begin_rendering(const Target& t, const Clear& clear) {
-    end_rendering();
+// The garbage test_poison_discards writes over discarded data: every colour channel at its top,
+// depth at the near plane and a stencil pattern, none of them what a pass of the port clears to.
+constexpr VkClearColorValue kPoisonColour = {{1.0f, 1.0f, 1.0f, 1.0f}};
+constexpr VkClearDepthStencilValue kPoisonDepth = {0.0f, 0xA5};
+
+// Overwrites the `aspects` of `image` with the poison, outside any pass, in `main` (the order of
+// the reads a later pass makes). Only for test_poison_discards.
+void poison(Image& image, VkImageAspectFlags aspects) {
+    VkCommandBuffer cmd = cmd_for(&image, true);
+    barrier(cmd, image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
+    const VkImageSubresourceRange range = {aspects, 0, VK_REMAINING_MIP_LEVELS, 0, 1};
+
+    // A colour image, or the depth and stencil one.
+    if ((aspects & VK_IMAGE_ASPECT_COLOR_BIT) != 0) {
+        vkCmdClearColorImage(
+            cmd, image.image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, &kPoisonColour, 1, &range
+        );
+    } else {
+        vkCmdClearDepthStencilImage(
+            cmd, image.image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, &kPoisonDepth, 1, &range
+        );
+    }
+
+    count_command(Command::Copy);
+}
+
+// Notes that `aspects` of `image` hold nothing worth keeping, and with the poison on, makes them
+// garbage at once. Called once the pass that drew into them has ended, or outside any pass.
+void mark_discarded(Image& image, VkImageAspectFlags aspects) {
+    // Nothing let go: the image keeps what it holds.
+    if (aspects == 0) {
+        return;
+    }
+
+    // The poison's clear moves the image to a transfer layout, which barrier counts as a write.
+    if (g->poison_discards) {
+        poison(image, aspects);
+    }
+
+    image.discarded |= aspects;
+}
+
+// The load operation of one aspect of an attachment: a clear the pass began with, nothing for
+// contents that were let go (the poison's clear under test_poison_discards), else a load.
+VkAttachmentLoadOp load_op(const Image& image, VkImageAspectFlags aspect, bool cleared) {
+    // The clear the pass began with comes first: it overwrites whatever was there.
+    if (cleared) {
+        return VK_ATTACHMENT_LOAD_OP_CLEAR;
+    }
+
+    // Let go: no load, or under test the poison, so that a pass that reads it differs.
+    if ((image.discarded & aspect) != 0) {
+        return g->poison_discards ? VK_ATTACHMENT_LOAD_OP_CLEAR : VK_ATTACHMENT_LOAD_OP_DONT_CARE;
+    }
+
+    return VK_ATTACHMENT_LOAD_OP_LOAD;
+}
+
+// The secondary command buffer for this recording's next deferred pass into `t`, begun to
+// continue a pass of `t`'s formats and samples. Allocated from the frame's pool the first time.
+VkCommandBuffer secondary_for(const Target& t) {
+    Frame& f = frame();
+
+    // A buffer of an earlier recording of this slot, reset with the pool, or a new one.
+    if (f.secondary_at == f.secondaries.size()) {
+        VkCommandBufferAllocateInfo alloc{VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO};
+        alloc.commandPool = f.pool;
+        alloc.level = VK_COMMAND_BUFFER_LEVEL_SECONDARY;
+        alloc.commandBufferCount = 1;
+        VkCommandBuffer made = VK_NULL_HANDLE;
+
+        // No secondary buffer: the caller records the pass directly.
+        if (!check(vkAllocateCommandBuffers(g->device, &alloc, &made), "a secondary buffer")) {
+            return VK_NULL_HANDLE;
+        }
+
+        f.secondaries.push_back(made);
+    }
+
+    VkCommandBuffer cmd = f.secondaries[f.secondary_at++];
+    const VkFormat colour = t.colour != nullptr ? t.colour->format : VK_FORMAT_UNDEFINED;
+    VkCommandBufferInheritanceRenderingInfo rendering{
+        VK_STRUCTURE_TYPE_COMMAND_BUFFER_INHERITANCE_RENDERING_INFO
+    };
+    rendering.colorAttachmentCount = t.colour != nullptr ? 1 : 0;
+    rendering.pColorAttachmentFormats = &colour;
+    rendering.depthAttachmentFormat = t.depth != nullptr ? t.depth->format : VK_FORMAT_UNDEFINED;
+    rendering.stencilAttachmentFormat =
+        t.depth != nullptr && has_stencil(t.depth->format) ? t.depth->format : VK_FORMAT_UNDEFINED;
+    rendering.rasterizationSamples = t.samples;
+    VkCommandBufferInheritanceInfo inheritance{VK_STRUCTURE_TYPE_COMMAND_BUFFER_INHERITANCE_INFO};
+    inheritance.pNext = &rendering;
+    VkCommandBufferBeginInfo begin{VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO};
+    begin.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT
+                  | VK_COMMAND_BUFFER_USAGE_RENDER_PASS_CONTINUE_BIT;
+    begin.pInheritanceInfo = &inheritance;
+    vkBeginCommandBuffer(cmd, &begin);
+    return cmd;
+}
+
+// Moves `t`'s attachments into their layouts for drawing, in `cmd` before the pass.
+void attachment_barriers(VkCommandBuffer cmd, const Target& t) {
+    // The colour image, also when it is in that layout already: an earlier pass's writes are done.
+    if (t.colour != nullptr) {
+        t.colour->touched = g->recording;
+        barrier(cmd, *t.colour, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL);
+    }
+
+    // The depth and stencil image.
+    if (t.depth != nullptr) {
+        t.depth->touched = g->recording;
+        barrier(cmd, *t.depth, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL);
+    }
+}
+
+// Begins rendering into `t` as recording goes, the reference path: every attachment stored, and
+// loaded unless `clear` clears it.
+void begin_direct(const Target& t, const Clear& clear) {
     VkCommandBuffer cmd = frame().main;
     VkRenderingAttachmentInfo colour{VK_STRUCTURE_TYPE_RENDERING_ATTACHMENT_INFO};
     VkRenderingAttachmentInfo depth{VK_STRUCTURE_TYPE_RENDERING_ATTACHMENT_INFO};
@@ -90,10 +256,9 @@ void begin_rendering(const Target& t, const Clear& clear) {
         {{0, 0}, {static_cast<std::uint32_t>(t.width), static_cast<std::uint32_t>(t.height)}};
     info.layerCount = 1;
     const State& s = g->state;
+    const VkExtent2D area = info.renderArea.extent;
+    attachment_barriers(cmd, t);
     if (t.colour != nullptr) {
-        t.colour->touched = g->recording;
-        // Also when it is in that layout already: what an earlier pass wrote is then done.
-        barrier(cmd, *t.colour, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL);
         colour.imageView = attachment_view(*t.colour);
         colour.imageLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
         colour.loadOp = clear.colour ? VK_ATTACHMENT_LOAD_OP_CLEAR : VK_ATTACHMENT_LOAD_OP_LOAD;
@@ -101,10 +266,9 @@ void begin_rendering(const Target& t, const Clear& clear) {
         std::memcpy(colour.clearValue.color.float32, s.clear_colour, sizeof s.clear_colour);
         info.colorAttachmentCount = 1;
         info.pColorAttachments = &colour;
+        count_attachment(*t.colour, area, !clear.colour, true);
     }
     if (t.depth != nullptr) {
-        t.depth->touched = g->recording;
-        barrier(cmd, *t.depth, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL);
         depth.imageView = attachment_view(*t.depth);
         depth.imageLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
         depth.loadOp = clear.depth ? VK_ATTACHMENT_LOAD_OP_CLEAR : VK_ATTACHMENT_LOAD_OP_LOAD;
@@ -118,14 +282,181 @@ void begin_rendering(const Target& t, const Clear& clear) {
                 clear.stencil ? VK_ATTACHMENT_LOAD_OP_CLEAR : VK_ATTACHMENT_LOAD_OP_LOAD;
             info.pStencilAttachment = &stencil;
         }
+        // One image holds both aspects: read in when either is kept.
+        const bool kept = !clear.depth || (has_stencil(t.depth->format) && !clear.stencil);
+        count_attachment(*t.depth, area, kept, true);
     }
     vkCmdBeginRendering(cmd, &info);
+    count_render_pass();
+    g->pass = OpenPass{};
+}
+
+// Begins a pass into `t` whose load and store operations wait for its end (attachment-discard):
+// the barriers go into `main` now, and `main` points at a secondary buffer until end_rendering.
+// False when no secondary buffer can be had, and nothing is begun.
+bool begin_deferred(const Target& t, const Clear& clear) {
+    const VkCommandBuffer secondary = secondary_for(t);
+
+    // No buffer to defer into: the pass is recorded directly.
+    if (secondary == VK_NULL_HANDLE) {
+        return false;
+    }
+
+    Frame& f = frame();
+    const State& s = g->state;
+    attachment_barriers(f.main, t);
+    OpenPass& pass = g->pass;
+    pass = OpenPass{};
+    pass.deferred = true;
+    pass.primary = f.main;
+    pass.clear_colour = clear.colour;
+    pass.clear_depth = clear.depth;
+    pass.clear_stencil = clear.stencil;
+    std::memcpy(pass.colour_value.float32, s.clear_colour, sizeof s.clear_colour);
+    pass.depth_value = {s.clear_depth, static_cast<std::uint32_t>(s.clear_stencil)};
+    pass.commands_at_begin = commands_recorded(g->submission);
+    f.main = secondary;
+    return true;
+}
+
+// The store operation of an aspect the open pass may have let go (`dropped`).
+VkAttachmentStoreOp store_op(VkImageAspectFlags dropped, VkImageAspectFlags aspect) {
+    return (dropped & aspect) != 0 ? VK_ATTACHMENT_STORE_OP_DONT_CARE
+                                   : VK_ATTACHMENT_STORE_OP_STORE;
+}
+
+// Ends the deferred pass into `t`: begins it in the frame's `main` with its operations chosen
+// now (a let-go aspect not stored, a discarded one not loaded), runs its secondary buffer and
+// ends it. The images then know which of their aspects hold nothing.
+void end_deferred(const Target& t) {
+    Frame& f = frame();
+    OpenPass& pass = g->pass;
+    const VkCommandBuffer secondary = f.main;
+    vkEndCommandBuffer(secondary);
+    f.main = pass.primary;
+    VkRenderingAttachmentInfo colour{VK_STRUCTURE_TYPE_RENDERING_ATTACHMENT_INFO};
+    VkRenderingAttachmentInfo depth{VK_STRUCTURE_TYPE_RENDERING_ATTACHMENT_INFO};
+    VkRenderingAttachmentInfo stencil{VK_STRUCTURE_TYPE_RENDERING_ATTACHMENT_INFO};
+    VkRenderingInfo info{VK_STRUCTURE_TYPE_RENDERING_INFO};
+    info.flags = VK_RENDERING_CONTENTS_SECONDARY_COMMAND_BUFFERS_BIT;
+    info.renderArea =
+        {{0, 0}, {static_cast<std::uint32_t>(t.width), static_cast<std::uint32_t>(t.height)}};
+    info.layerCount = 1;
+    const VkExtent2D area = info.renderArea.extent;
+
+    // The colour attachment: cleared, not loaded or loaded; stored unless let go.
+    if (t.colour != nullptr) {
+        colour.imageView = attachment_view(*t.colour);
+        colour.imageLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+        colour.loadOp = load_op(*t.colour, VK_IMAGE_ASPECT_COLOR_BIT, pass.clear_colour);
+        colour.storeOp = store_op(pass.drop_colour, VK_IMAGE_ASPECT_COLOR_BIT);
+        // A pass's own clear keeps its value; a load of let-go data under test is the poison.
+        colour.clearValue.color =
+            pass.clear_colour || !g->poison_discards ? pass.colour_value : kPoisonColour;
+        info.colorAttachmentCount = 1;
+        info.pColorAttachments = &colour;
+        count_attachment(
+            *t.colour,
+            area,
+            colour.loadOp == VK_ATTACHMENT_LOAD_OP_LOAD,
+            colour.storeOp == VK_ATTACHMENT_STORE_OP_STORE
+        );
+    }
+
+    // The depth and stencil image: each aspect's operations of its own, counted once.
+    if (t.depth != nullptr) {
+        depth.imageView = attachment_view(*t.depth);
+        depth.imageLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
+        depth.loadOp = load_op(*t.depth, VK_IMAGE_ASPECT_DEPTH_BIT, pass.clear_depth);
+        depth.storeOp = store_op(pass.drop_depth, VK_IMAGE_ASPECT_DEPTH_BIT);
+        depth.clearValue.depthStencil = pass.depth_value;
+
+        // A load of let-go depth under test is cleared to the poison rather than to the value.
+        if (g->poison_discards && !pass.clear_depth) {
+            depth.clearValue.depthStencil.depth = kPoisonDepth.depth;
+        }
+
+        info.pDepthAttachment = &depth;
+        bool loaded = depth.loadOp == VK_ATTACHMENT_LOAD_OP_LOAD;
+        bool stored = depth.storeOp == VK_ATTACHMENT_STORE_OP_STORE;
+
+        // The stencil aspect of the same image.
+        if (has_stencil(t.depth->format)) {
+            stencil = depth;
+            stencil.loadOp = load_op(*t.depth, VK_IMAGE_ASPECT_STENCIL_BIT, pass.clear_stencil);
+            stencil.storeOp = store_op(pass.drop_depth, VK_IMAGE_ASPECT_STENCIL_BIT);
+
+            // The same for let-go stencil.
+            if (g->poison_discards && !pass.clear_stencil) {
+                stencil.clearValue.depthStencil.stencil = kPoisonDepth.stencil;
+            }
+
+            info.pStencilAttachment = &stencil;
+            loaded = loaded || stencil.loadOp == VK_ATTACHMENT_LOAD_OP_LOAD;
+            stored = stored || stencil.storeOp == VK_ATTACHMENT_STORE_OP_STORE;
+        }
+
+        // One image holds both aspects: read in when either is loaded, written when either is.
+        count_attachment(*t.depth, area, loaded, stored);
+    }
+
+    vkCmdBeginRendering(f.main, &info);
+    count_render_pass();
+    vkCmdExecuteCommands(f.main, 1, &secondary);
+    count_command(Command::Other);
+    vkCmdEndRendering(f.main);
+    count_command(Command::RenderPass);
+    const OpenPass ended = pass;
+    pass = OpenPass{};
+
+    // What the pass wrote is whole again; what it let go holds nothing (or the poison).
+    if (t.colour != nullptr) {
+        t.colour->discarded = 0;
+        mark_discarded(*t.colour, ended.drop_colour);
+    }
+
+    // The same for the depth and stencil image.
+    if (t.depth != nullptr) {
+        t.depth->discarded = 0;
+        mark_discarded(*t.depth, ended.drop_depth);
+    }
+}
+
+void begin_rendering(const Target& t, const Clear& clear) {
+    end_rendering();
+
+    // The operations chosen at the pass's end, or as it begins (the reference path).
+    if (!render_opt::enabled(render_opt::Opt::AttachmentDiscard) || !begin_deferred(t, clear)) {
+        begin_direct(t, clear);
+    }
+
     g->rendering = true;
     g->rendering_target = t;
     g->bound_pipeline = VK_NULL_HANDLE;
+
+    // A new pass trusts nothing recorded before it (RecordedState): more than Vulkan asks.
+    g->recorded.forget();
 }
 
 }  // namespace
+
+// ---- The render counters ----
+
+void count_attachment(const Image& image, VkExtent2D area, bool load, bool store) {
+    const std::uint64_t bytes = std::uint64_t{area.width} * area.height
+                                * static_cast<std::uint64_t>(texel_bytes(image.format))
+                                * static_cast<std::uint64_t>(image.samples);
+
+    // Kept from before the pass: read from memory into the GPU's attachment storage.
+    if (load) {
+        g->submission.attachment_load_bytes += bytes;
+    }
+
+    // Kept after the pass: written back to memory.
+    if (store) {
+        g->submission.attachment_store_bytes += bytes;
+    }
+}
 
 void gpu_flush_draws() {
     auto& gpu = g->gpu;
@@ -135,6 +466,7 @@ void gpu_flush_draws() {
     vkCmdDrawIndexedIndirect(
         frame().main, gpu.pending_arguments, gpu.pending_offset, gpu.pending_count, 20
     );
+    count_command(Command::Draw);
     ++g->measures.native_draws;
     ++gpu.indirect_calls;
     gpu.pending_count = 0;
@@ -176,6 +508,7 @@ Slice ring(VkDeviceSize size) {
             if (at + size <= c.size) {
                 f.chunk_used = at + size;
                 g->measures.ring_bytes += size;
+                g->submission.ring_bytes += size;
                 return {c.buffer, at, c.mapped + at};
             }
             ++f.chunk_at;
@@ -206,9 +539,20 @@ VkCommandBuffer upload_cmd() {
 void end_rendering() {
     gpu_flush_draws();
     if (g->rendering) {
-        vkCmdEndRendering(frame().main);
+        // Not rendering from here on: the poison of a deferred pass's end records outside it.
         g->rendering = false;
         g->bound_pipeline = VK_NULL_HANDLE;
+
+        // A deferred pass ends with its operations chosen; a direct one as it was begun.
+        if (g->pass.deferred) {
+            end_deferred(g->rendering_target);
+
+            // A secondary buffer leaves the state of the buffer that ran it undefined.
+            g->recorded.forget();
+        } else {
+            vkCmdEndRendering(frame().main);
+            count_command(Command::RenderPass);
+        }
     }
 }
 
@@ -224,28 +568,38 @@ VkCommandBuffer cmd_for(Image* image, bool force_main) {
 }
 
 void barrier(VkCommandBuffer cmd, Image& image, VkImageLayout to) {
+    const PendingPresent& waiting = g->present_copy;
+    const bool reads_only = to == VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL
+                            || to == VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+
+    // The default framebuffer used, or the picture written: the copy that waits comes first.
+    if (waiting.pending
+        && (&image == g->default_colour.get() || (&image == waiting.source.get() && !reads_only))) {
+        make_present_copy();
+    }
+
+    // The old layout's use waits; the new one's waits for it. The reference path: everything.
+    const bool tight = render_opt::enabled(render_opt::Opt::VkTightSync);
+    const LayoutScope all = scope_of(VK_IMAGE_LAYOUT_MAX_ENUM);
+    const LayoutScope from = tight ? scope_of(image.layout) : all;
+    const LayoutScope into = tight ? scope_of(to) : all;
     VkImageMemoryBarrier b{VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER};
-    b.srcAccessMask = VK_ACCESS_MEMORY_READ_BIT | VK_ACCESS_MEMORY_WRITE_BIT;
-    b.dstAccessMask = VK_ACCESS_MEMORY_READ_BIT | VK_ACCESS_MEMORY_WRITE_BIT;
+    b.srcAccessMask = from.accesses;
+    b.dstAccessMask = into.accesses;
     b.oldLayout = image.layout;
     b.newLayout = to;
     b.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
     b.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
     b.image = image.image;
     b.subresourceRange = {image.aspect, 0, VK_REMAINING_MIP_LEVELS, 0, 1};
-    vkCmdPipelineBarrier(
-        cmd,
-        VK_PIPELINE_STAGE_ALL_COMMANDS_BIT,
-        VK_PIPELINE_STAGE_ALL_COMMANDS_BIT,
-        0,
-        0,
-        nullptr,
-        0,
-        nullptr,
-        1,
-        &b
-    );
+    vkCmdPipelineBarrier(cmd, from.stages, into.stages, 0, 0, nullptr, 0, nullptr, 1, &b);
+    count_barrier(from.stages, into.stages);
     image.layout = to;
+
+    // A copy, blit or upload into the image comes next: what it writes is kept.
+    if (to == VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL) {
+        image.discarded = 0;
+    }
 }
 
 void begin_buffers() {
@@ -258,9 +612,14 @@ void begin_buffers() {
     vkBeginCommandBuffer(f.main, &begin);
     if (f.timestamps != VK_NULL_HANDLE && f.timestamp_used == 0) {
         vkCmdResetQueryPool(f.upload, f.timestamps, 0, 512);
+        count_command(Command::Query);
     }
     g->upload_used = false;
+    f.secondary_at = 0;
     ++g->recording;
+
+    // A command buffer begun afresh holds no dynamic state and no binds.
+    g->recorded.forget();
 }
 
 bool timing_begin(std::uint64_t serial, int section) {
@@ -275,7 +634,7 @@ bool timing_begin(std::uint64_t serial, int section) {
     f.active_timing = static_cast<int>(f.timings.size());
     f.timings.push_back({serial, section, f.timestamp_used});
 #if defined(OPENRAC_GPU_MARKERS)
-    if (std::getenv("OPENRAC_GPU_MARKERS") && vkCmdBeginDebugUtilsLabelEXT) {
+    if (env::flag(env::Var::GpuMarkers) && vkCmdBeginDebugUtilsLabelEXT) {
         const auto name = stats::gpu_section_name(serial, section);
         VkDebugUtilsLabelEXT label{VK_STRUCTURE_TYPE_DEBUG_UTILS_LABEL_EXT};
         label.pLabelName = name.c_str();
@@ -284,6 +643,7 @@ bool timing_begin(std::uint64_t serial, int section) {
         label.color[2] = 0.9f;
         label.color[3] = 1;
         vkCmdBeginDebugUtilsLabelEXT(g->gpu.timing_upload ? f.upload : f.main, &label);
+        count_command(Command::Other);
     }
 #endif
     // Bound both ends at command completion. A TOP start followed by a
@@ -296,6 +656,7 @@ bool timing_begin(std::uint64_t serial, int section) {
         f.timestamps,
         f.timestamp_used
     );
+    count_command(Command::Query);
     f.timestamp_used += 2;
     return true;
 }
@@ -316,9 +677,11 @@ void timing_end() {
         f.timestamps,
         timing.first + 1
     );
+    count_command(Command::Query);
 #if defined(OPENRAC_GPU_MARKERS)
-    if (std::getenv("OPENRAC_GPU_MARKERS") && vkCmdEndDebugUtilsLabelEXT) {
+    if (env::flag(env::Var::GpuMarkers) && vkCmdEndDebugUtilsLabelEXT) {
         vkCmdEndDebugUtilsLabelEXT(g->gpu.timing_upload ? f.upload : f.main);
+        count_command(Command::Other);
     }
 #endif
     timing.complete = true;
@@ -354,44 +717,73 @@ void timing_results(Frame& f) {
     }
 }
 
-void submit(VkSemaphore wait_semaphore, VkSemaphore signal, bool wait) {
+void submit(VkSemaphore wait_semaphore, VkSemaphore signal, bool wait, VkCommandBuffer present) {
     end_rendering();
     Frame& f = frame();
     gpu_record();
-    // What `upload` did is seen by all that `main` does.
+    const bool tight = render_opt::enabled(render_opt::Opt::VkTightSync);
+    // What `upload` did is seen by all that `main` does: its copies and uploads (transfer writes)
+    // and the culling's dispatches (shader writes), read as indirect arguments, vertices and
+    // indices, uniforms, shader reads and the copies of `main` (the R-08 table's row).
     VkMemoryBarrier m{VK_STRUCTURE_TYPE_MEMORY_BARRIER};
+    VkPipelineStageFlags source = VK_PIPELINE_STAGE_ALL_COMMANDS_BIT;
+    VkPipelineStageFlags destination = VK_PIPELINE_STAGE_ALL_COMMANDS_BIT;
     m.srcAccessMask = VK_ACCESS_MEMORY_WRITE_BIT;
     m.dstAccessMask = VK_ACCESS_MEMORY_READ_BIT | VK_ACCESS_MEMORY_WRITE_BIT;
-    vkCmdPipelineBarrier(
-        f.upload,
-        VK_PIPELINE_STAGE_ALL_COMMANDS_BIT,
-        VK_PIPELINE_STAGE_ALL_COMMANDS_BIT,
-        0,
-        1,
-        &m,
-        0,
-        nullptr,
-        0,
-        nullptr
-    );
+
+    // The narrow form of the same order.
+    if (tight) {
+        source = VK_PIPELINE_STAGE_TRANSFER_BIT | VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT;
+        destination = VK_PIPELINE_STAGE_DRAW_INDIRECT_BIT | VK_PIPELINE_STAGE_VERTEX_INPUT_BIT
+                      | VK_PIPELINE_STAGE_VERTEX_SHADER_BIT | VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT
+                      | VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT | VK_PIPELINE_STAGE_TRANSFER_BIT;
+        m.srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT | VK_ACCESS_SHADER_WRITE_BIT;
+        m.dstAccessMask = VK_ACCESS_INDIRECT_COMMAND_READ_BIT | VK_ACCESS_INDEX_READ_BIT
+                          | VK_ACCESS_VERTEX_ATTRIBUTE_READ_BIT | VK_ACCESS_UNIFORM_READ_BIT
+                          | VK_ACCESS_SHADER_READ_BIT | VK_ACCESS_SHADER_WRITE_BIT
+                          | VK_ACCESS_TRANSFER_READ_BIT | VK_ACCESS_TRANSFER_WRITE_BIT;
+    }
+
+    vkCmdPipelineBarrier(f.upload, source, destination, 0, 1, &m, 0, nullptr, 0, nullptr);
+    count_barrier(source, destination);
     vkEndCommandBuffer(f.upload);
     vkEndCommandBuffer(f.main);
     const VkCommandBuffer buffers[] = {f.upload, f.main};
-    VkSubmitInfo info{VK_STRUCTURE_TYPE_SUBMIT_INFO};
-    const VkPipelineStageFlags stage = VK_PIPELINE_STAGE_ALL_COMMANDS_BIT;
+    // Two batches in one submit when the copy to the screen has a buffer of its own: only that
+    // one waits for the screen's image, at the transfer stage where it first touches it.
+    std::array<VkSubmitInfo, 2> batches{};
+    batches[0] = {VK_STRUCTURE_TYPE_SUBMIT_INFO};
+    batches[1] = {VK_STRUCTURE_TYPE_SUBMIT_INFO};
+    batches[0].commandBufferCount = 2;
+    batches[0].pCommandBuffers = buffers;
+    const VkPipelineStageFlags all_stages = VK_PIPELINE_STAGE_ALL_COMMANDS_BIT;
+    const VkPipelineStageFlags transfer = VK_PIPELINE_STAGE_TRANSFER_BIT;
+    VkSubmitInfo& last = present != VK_NULL_HANDLE ? batches[1] : batches[0];
+
+    // The present's own buffer, ended and run after the frame's.
+    if (present != VK_NULL_HANDLE) {
+        vkEndCommandBuffer(present);
+        batches[1].commandBufferCount = 1;
+        batches[1].pCommandBuffers = &present;
+    }
+
+    // The screen's image is waited for by the batch that writes it.
     if (wait_semaphore != VK_NULL_HANDLE) {
-        info.waitSemaphoreCount = 1;
-        info.pWaitSemaphores = &wait_semaphore;
-        info.pWaitDstStageMask = &stage;
+        last.waitSemaphoreCount = 1;
+        last.pWaitSemaphores = &wait_semaphore;
+        last.pWaitDstStageMask = present != VK_NULL_HANDLE ? &transfer : &all_stages;
     }
-    info.commandBufferCount = 2;
-    info.pCommandBuffers = buffers;
+
+    // The batch that ends the frame tells the present it is done.
     if (signal != VK_NULL_HANDLE) {
-        info.signalSemaphoreCount = 1;
-        info.pSignalSemaphores = &signal;
+        last.signalSemaphoreCount = 1;
+        last.pSignalSemaphores = &signal;
     }
+
+    const std::uint32_t count = present != VK_NULL_HANDLE ? 2 : 1;
     vkResetFences(g->device, 1, &f.fence);
-    check(vkQueueSubmit(g->queue, 1, &info, f.fence), "a submit");
+    check(vkQueueSubmit(g->queue, count, batches.data(), f.fence), "a submit");
+    ++g->submission.submits;
     f.submitted = true;
     if (wait) {
         vkWaitForFences(g->device, 1, &f.fence, VK_TRUE, UINT64_MAX);
@@ -399,6 +791,29 @@ void submit(VkSemaphore wait_semaphore, VkSemaphore signal, bool wait) {
         vkResetCommandPool(g->device, f.pool, 0);
         begin_buffers();
     }
+}
+
+VkCommandBuffer present_cmd() {
+    Frame& f = frame();
+
+    // The present's buffer is the frame slot's, made the first time, reset with its pool.
+    if (f.present == VK_NULL_HANDLE) {
+        VkCommandBufferAllocateInfo alloc{VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO};
+        alloc.commandPool = f.pool;
+        alloc.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
+        alloc.commandBufferCount = 1;
+
+        // No buffer: the copy to the screen goes into `main`, as before.
+        if (!check(vkAllocateCommandBuffers(g->device, &alloc, &f.present), "a present buffer")) {
+            f.present = VK_NULL_HANDLE;
+            return VK_NULL_HANDLE;
+        }
+    }
+
+    VkCommandBufferBeginInfo begin{VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO};
+    begin.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
+    vkBeginCommandBuffer(f.present, &begin);
+    return f.present;
 }
 
 void flush_and_wait() {
@@ -428,6 +843,58 @@ Target target_of(GLuint name) {
 void ensure_rendering(const Target& t) {
     if (!g->rendering || !(g->rendering_target == t)) {
         begin_rendering(t, Clear{});
+    }
+
+    // A draw or a clear after glInvalidateFramebuffer: what it writes is kept.
+    g->pass.drop_colour = 0;
+    g->pass.drop_depth = 0;
+}
+
+bool drop_clear_pass(VkClearColorValue& clear) {
+    const OpenPass& pass = g->pass;
+    const bool clear_only = pass.clear_colour && !pass.clear_depth && !pass.clear_stencil;
+
+    // Only a deferred pass into the default framebuffer that cleared its colour and holds nothing.
+    if (!g->rendering || !pass.deferred || g->rendering_target.colour != g->default_colour.get()
+        || !clear_only || commands_recorded(g->submission) != pass.commands_at_begin) {
+        return false;
+    }
+
+    Frame& f = frame();
+    vkEndCommandBuffer(f.main);
+    f.main = pass.primary;
+    clear = pass.colour_value;
+    g->pass = OpenPass{};
+    g->rendering = false;
+    g->bound_pipeline = VK_NULL_HANDLE;
+    g->recorded.forget();
+    return true;
+}
+
+void discard_attachments(const Target& t, bool colour, VkImageAspectFlags depth) {
+    const bool open = g->rendering && g->pass.deferred;
+
+    // The colour image: not stored by the open pass on it, or not loaded by the next one.
+    if (t.colour != nullptr && colour) {
+        // The pass drawing into it lets it go at its end; any other is done with it already.
+        if (open && g->rendering_target.colour == t.colour) {
+            g->pass.drop_colour |= VK_IMAGE_ASPECT_COLOR_BIT;
+        } else {
+            mark_discarded(*t.colour, VK_IMAGE_ASPECT_COLOR_BIT);
+        }
+    }
+
+    const VkImageAspectFlags aspects =
+        t.depth != nullptr ? depth & t.depth->aspect : VkImageAspectFlags{0};
+
+    // The depth and stencil image, the aspects it has of those asked.
+    if (aspects != 0) {
+        // The same choice as for the colour image.
+        if (open && g->rendering_target.depth == t.depth) {
+            g->pass.drop_depth |= aspects;
+        } else {
+            mark_discarded(*t.depth, aspects);
+        }
     }
 }
 
@@ -485,6 +952,21 @@ void clear(GLbitfield mask) {
     }
     VkClearRect r{rect, 0, 1};
     vkCmdClearAttachments(frame().main, n, attachments, 1, &r);
+    count_command(Command::Other);
 }
 
 }  // namespace openrac::vkgl::detail
+
+namespace openrac::vkgl {
+
+bool test_poison_discards(bool on) {
+    // No context: nothing to poison.
+    if (detail::g == nullptr) {
+        return false;
+    }
+
+    detail::g->poison_discards = on;
+    return true;
+}
+
+}  // namespace openrac::vkgl

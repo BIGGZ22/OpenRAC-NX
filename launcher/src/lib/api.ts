@@ -10,6 +10,53 @@ import { listen, type UnlistenFn } from "@tauri-apps/api/event";
 import { confirm, open } from "@tauri-apps/plugin-dialog";
 import { REPO_URL } from "./links";
 import type { BackgroundStatus } from "./progress";
+import type { ActionArea } from "./generated/ActionArea";
+import type { ActionKind } from "./generated/ActionKind";
+import type { ActionState } from "./generated/ActionState";
+import type { ActionView } from "./generated/ActionView";
+import type { AndroidRelease } from "./generated/AndroidRelease";
+import type { BakeStatus } from "./generated/BakeStatus";
+import type { Candidate } from "./generated/Candidate";
+import type { Check } from "./generated/Check";
+import type { Config } from "./generated/Config";
+import type { Detected } from "./generated/Detected";
+import type { DifferenceKind } from "./generated/DifferenceKind";
+import type { DifferenceView } from "./generated/DifferenceView";
+import type { Differences } from "./generated/Differences";
+import type { DiscChoice } from "./generated/DiscChoice";
+import type { DiscState } from "./generated/DiscState";
+import type { EnhancedView } from "./generated/EnhancedView";
+import type { FoundDisc } from "./generated/FoundDisc";
+import type { GameSaveStatus } from "./generated/GameSaveStatus";
+import type { GameView } from "./generated/GameView";
+import type { JobEvent } from "./generated/JobEvent";
+import type { Library } from "./generated/Library";
+import type { ModSources } from "./generated/ModSources";
+import type { ModUpdate } from "./generated/ModUpdate";
+import type { Nanotech } from "./generated/Nanotech";
+import type { PackView } from "./generated/PackView";
+import type { Platform } from "./generated/Platform";
+import type { PluginInstalled } from "./generated/PluginInstalled";
+import type { PluginPreset } from "./generated/PluginPreset";
+import type { PluginSetting } from "./generated/PluginSetting";
+import type { PluginStatus } from "./generated/PluginStatus";
+import type { PluginView } from "./generated/PluginView";
+import type { RawPatch } from "./generated/RawPatch";
+import type { RemoteInstalled } from "./generated/RemoteInstalled";
+import type { RemoteMod } from "./generated/RemoteMod";
+import type { RemotePreview } from "./generated/RemotePreview";
+import type { ReportEntry } from "./generated/ReportEntry";
+import type { SaveBackupInfo } from "./generated/SaveBackupInfo";
+import type { SaveChange } from "./generated/SaveChange";
+import type { SaveFields } from "./generated/SaveFields";
+import type { SaveView } from "./generated/SaveView";
+import type { Scope } from "./generated/Scope";
+import type { Started } from "./generated/Started";
+import type { Tool } from "./generated/Tool";
+import type { UpdateChannel } from "./generated/UpdateChannel";
+import type { UpdateSource } from "./generated/UpdateSource";
+import type { VersionView } from "./generated/VersionView";
+import type { WriteResult } from "./generated/WriteResult";
 
 export const inTauri = typeof window !== "undefined" && "__TAURI_INTERNALS__" in window;
 
@@ -22,11 +69,57 @@ export const onAndroid =
     ? /android/i.test(navigator.userAgent)
     : typeof location !== "undefined" && new URLSearchParams(location.search).has("android"));
 
-// ---- types: the serde output of core/src (camelCase) ------------------------------
+export type { ActionArea };
+export type { ActionKind };
+export type { ActionState };
+export type { ActionView };
+export type { AndroidRelease };
+export type { BakeStatus };
+export type { Candidate };
+export type { Check };
+export type { Config };
+export type { Detected };
+export type { DifferenceKind };
+export type { DifferenceView };
+export type { Differences };
+export type { DiscChoice };
+export type { DiscState };
+export type { EnhancedView };
+export type { FoundDisc };
+export type { GameSaveStatus };
+export type { GameView };
+export type { JobEvent };
+export type { Library };
+export type { ModSources };
+export type { ModUpdate };
+export type { Nanotech };
+export type { PackView };
+export type { PluginPreset };
+export type { PluginSetting };
+export type { PluginView };
+export type { RawPatch };
+export type { RemoteMod };
+export type { RemotePreview };
+export type { ReportEntry };
+export type { SaveBackupInfo };
+export type { SaveChange };
+export type { SaveFields };
+export type { SaveView };
+export type { Scope };
+export type { Started };
+export type { UpdateChannel };
+export type { UpdateSource };
+export type { VersionView };
 
-export type Platform = "linux" | "macos" | "windows" | "android";
-export type Tool = "python" | "godot" | "docker";
+// ---- types ------------------------------------------------------------------------
+//
+// The types of what the Tauri commands send and take are generated from the Rust types in core/src
+// (ts-rs, `cargo test -p openrac-launcher-core --test generated_types`; docs/ARCHITECTURE.md, "The
+// page's types") and live in ./generated/, never edited by hand. They are re-exported from here
+// so the rest of the page imports every type from "./api". What is written out below is what the
+// generator does not reach: the types of src-tauri's own commands, and what the page sends.
 
+/** What the app says about itself (src-tauri/src/lib.rs, AppInfo). */
 export interface AppInfo {
   version: string;
   platform: Platform;
@@ -40,136 +133,16 @@ export interface AppInfo {
   updateChannels: Record<UpdateChannel, UpdateSource>;
 }
 
-/** core/src/update.rs, Channel: the releases, or the newest development build. */
-export type UpdateChannel = "stable" | "dev";
-
-/** core/src/update.rs: the releases a launcher updates from. */
-export interface UpdateSource {
-  /** `owner/name` of the GitHub repository (the manifest's address when it is not one). */
-  repository: string;
-  /** The release it reads: null for the latest, else its tag (a branch's `launcher-dev-<branch>`). */
-  channel: string | null;
-  manifest: string;
-  /** That release's page, or the releases'. */
-  page: string;
-}
-
-/** core/src/discs.rs: a disc image in the games folder that is a game OpenRAC knows. */
-export interface FoundDisc {
-  path: string;
-  serial: string;
-  game: string;
-  /** `rac1/pal`. */
-  version: string;
-  title: string;
-  region: string;
-}
-
-/** core/src/disc_choice.rs: a game with more than one of its discs found, for a developer. */
-export interface DiscChoice {
-  game: string;
-  /** The versions found (`rac1/pal`, `rac1/ntsc`). */
-  versions: string[];
-  /** The one the game's page plays. */
-  chosen: string;
-}
-
-/** The games folder looked through (scan_discs). */
+/** The games folder looked through (scan_discs, src-tauri/src/lib.rs). */
 export interface DiscScan {
   found: FoundDisc[];
   /** Only with developer tools on: the games whose disc can be switched. */
   choices: DiscChoice[];
 }
 
-/** core/src/config.rs */
-export interface Config {
-  root: string | null;
-  python: string | null;
-  godot: string | null;
-  docker: string | null;
-  /** Where games are set up from the player's discs (OpenGOAL's install folder). */
-  installDir: string | null;
-  /** The player's folder of PlayStation 2 disc images, looked through for the games OpenRAC knows. */
-  discsDir: string | null;
-  /** Show what contributors use (builds, checks, progress); off, a player's three steps. */
-  developer: boolean;
-  /** The save editor shows every field of a save, raw bytes included (for debugging). */
-  saveEditorAdvanced: boolean;
-  setupComplete: boolean;
-  lastVersion: string | null;
-  discordRpc: boolean;
-  /** Look for a new launcher at start (Settings). */
-  checkUpdates: boolean;
-  /** The builds it updates to; null: the channel it was built from (updateChannelOf). */
-  updateChannel: UpdateChannel | null;
-  discordClientId: string | null;
-  /** "compact", or "classic": the original design (src/layouts/compact.css). */
-  layout: "compact" | "classic";
-  /** The launcher's theme (lib/palettes.ts). */
-  theme: string;
-  /** The game writes a detailed log (OPENRAC_LOG=verbose); off keeps logs small. */
-  detailedGameLog: boolean;
-  /** Windows, Linux and macOS: what the game draws with, OpenGL (the default) or the experimental
-   *  Vulkan renderer (OPENRAC_GL_API=vulkan). Android keeps its own choice (Renderer, gpuRendererSelect). */
-  renderer: DesktopRenderer;
-  /** Purist mode: the game loads no native mods (`--no-mods`), whatever is switched on in Mods. */
-  purist: boolean;
-  /** Per game, the time (seconds since 1970) of the newest crash report the player dismissed. */
-  crashesSeen: Record<string, number>;
-  /** Developers only: the version each game with two discs found plays (`rac1` -> `rac1/ntsc`). */
-  discChoice: Record<string, string>;
-}
-
-/** What the port does otherwise than the PS2 game (core/src/differences.rs,
- *  port/game/<game>/differences.json): a fix the player may switch back to the console's
- *  behaviour, a guard that keeps the game from crashing where the console carried on, or a
- *  difference that comes with being a PC program. */
-export type DifferenceKind = "fix" | "guard" | "port";
-
-export interface DifferenceView {
-  id: string;
-  kind: DifferenceKind;
-  name: string;
-  /** What the PS2 game does. */
-  original: string;
-  /** What the port does, and why. */
-  port: string;
-  /** Where it is in the code or the history: a contributor's detail. */
-  refs: string[];
-  /** A fix's key in the port's settings file, and its default (on: the port's fix). */
-  setting: { key: string; default: boolean } | null;
-  /** A fix's value now; null for anything else. */
-  on: boolean | null;
-}
-
-/** One version's differences: those that apply to its disc. */
-export interface Differences {
-  game: string;
-  version: string;
-  /** The port's settings file the fixes are kept in. */
-  settingsFile: string;
-  entries: DifferenceView[];
-}
-
-/** One of a game's logs or crash reports (core/src/reports.rs). */
-export interface ReportEntry {
-  kind: "crash" | "session";
-  /** Its path in the game's data folder: `crashes/crash-....txt`, `openrac-rac1-pal.log`. */
-  file: string;
-  program: string | null;
-  /** When it happened (a crash) or began (a session), seconds since 1970. */
-  time: number;
-  /** How long the session ran, in seconds. */
-  duration: number | null;
-  /** A crash's reason, in the port's words: for the Details. */
-  reason: string | null;
-  level: number | null;
-  planet: string | null;
-  crashed: boolean;
-  session: string | null;
-  size: number;
-}
-
+/** What the page tells Discord it is doing (core/src/discord.rs, DiscordStatus, whose fields
+ *  are read in this camelCase since `rename_all_fields`; its test holds the two together).
+ *  Written by hand, not generated yet: generating it is a follow-up in PROGRESS.md. */
 export type DiscordStatus =
   | { kind: "idle" }
   | {
@@ -195,136 +168,6 @@ export type DiscordStatus =
       startTime?: number | null;
     };
 
-export interface Candidate {
-  path: string;
-  source: string;
-}
-
-/** core/src/detect.rs */
-export interface Detected {
-  roots: Candidate[];
-  pythons: Candidate[];
-  godots: Candidate[];
-  dockers: Candidate[];
-}
-
-export interface Check {
-  ok: boolean;
-  version: string | null;
-  message: string;
-}
-
-/** core/src/actions.rs */
-/** What an action works on: the decompilation, the PC port, or the level editor. */
-export type ActionArea = "decomp" | "port" | "editor";
-export type ActionKind = "setup" | "build" | "check" | "play" | "edit";
-export type ActionState = "connected" | "unverified" | "planned";
-export type Scope = { kind: "repository" } | { kind: "version"; key: string };
-
-export interface ActionView {
-  id: string;
-  label: string;
-  description: string;
-  kind: ActionKind;
-  area: ActionArea;
-  state: ActionState;
-  detached: boolean;
-  docs: string | null;
-  todo: string | null;
-  thisPlatform: boolean;
-  runnable: boolean;
-  blockers: string[];
-  /** Its artifact exists: a step that makes one has been done. */
-  done: boolean;
-}
-
-/** core/src/catalog.rs */
-export interface FileSpec {
-  file: string;
-  size: number | null;
-  sha1: string | null;
-}
-
-export interface Input {
-  from: string;
-  path: string;
-  target: string | null;
-}
-
-export interface Source {
-  name: string;
-  repo: string;
-  license: string | null;
-  commit: string | null;
-  date: string | null;
-}
-
-export interface Progress {
-  matchedCode: number;
-  totalCode: number;
-  matchedFunctions: number | null;
-  totalFunctions: number | null;
-  fuzzyPercent: number | null;
-  percent: number;
-  date: string | null;
-  note: string | null;
-  /** Functional C: does what retail does without matching its bytes; never counted as matched. */
-  functional?: { functions: number; code: number; percent: number } | null;
-}
-
-/** core/src/status.rs */
-export type DiscState = "found" | "mismatch" | "missing" | "unknown";
-
-export interface VersionStatus {
-  disc: { state: DiscState; path: string | null; expected: string | null; message: string };
-  boot: { path: string; present: boolean; message: string } | null;
-  inputs: { from: string; path: string; present: boolean; message: string }[];
-  inputsReady: boolean;
-}
-
-/** core/src/library.rs: a version, its status and its actions. */
-export interface VersionView {
-  key: string;
-  game: string;
-  name: string;
-  title: string;
-  region: string;
-  serial: string;
-  dir: string;
-  disc: FileSpec | null;
-  boot: FileSpec | null;
-  inputs: Input[];
-  target: string | null;
-  setup: string | null;
-  buildHost: string | null;
-  readme: string | null;
-  source: Source | null;
-  progress: Progress | null;
-  status: VersionStatus;
-  actions: ActionView[];
-  /** Built, but by an older OpenRAC than the checkout holds now (an update): rebuilt from scratch
-   *  (port-rebuild) before it is played. */
-  portOutdated: boolean;
-}
-
-export interface GameView {
-  id: string;
-  title: string;
-  year: number | null;
-  /** How far the game is set up from the player's disc. */
-  install: InstallState | null;
-  versions: VersionView[];
-}
-
-export interface Library {
-  root: string;
-  platform: Platform;
-  toolchains: boolean;
-  repository: ActionView[];
-  games: GameView[];
-  actionsError: string | null;
-}
-
 /** What a run gives an action besides its name: `{level}`, `{path}`, `{option}`. */
 export interface RunInputs {
   level?: number;
@@ -332,343 +175,9 @@ export interface RunInputs {
   option?: string;
 }
 
-/** core/src/overrides.rs: an overrides pack (replacement textures and models). */
-export interface PackView {
-  id: string;
-  name: string;
-  author: string;
-  description: string;
-  enabled: boolean;
-  levels: number;
-  textures: number;
-  models: number;
-  levelFiles: number;
-}
-
-/** core/src/plugins.rs: a setting a native mod declares in its manifest (docs/port/MODS.md). */
-export interface PluginSetting {
-  key: string;
-  name: string;
-  type: "bool" | "int" | "float" | "choice" | "string" | "keybind";
-  default: unknown;
-  description?: string;
-  min?: number;
-  max?: number;
-  step?: number;
-  choices?: { value: string; name: string }[];
-  maxLength?: number;
-  /** A keybind's most binds, 1 or 2 (2 when absent): its value is that many bind names of
-   *  sdk/include/openrac/keys.h, comma-separated ("KeyW,ArrowUp"; "" for none). */
-  binds?: number;
-  /** A keybind's group: keybinds of one group on the same input conflict. */
-  group?: string;
-  /** A keybind's: the mod's other keybinds of its group that share one of its inputs (the core's
-   *  answer when the list was read). */
-  conflicts?: string[];
-  /** The value now: the player's, or the default. */
-  value: unknown;
-}
-
-/** core/src/plugins.rs: a set of setting values a mod offers as one button (lib/presets.ts). */
-export interface PluginPreset {
-  id: string;
-  name: string;
-  values: Record<string, unknown>;
-}
-
 /** What a gameplay mod is: code the game loads (a library), Luau scripts the game runs sandboxed,
  *  or data only (docs/port/MODS.md, section 11). */
-export type ModKind = "native" | "script" | "data" | "built-in";
-
-/** core/src/enhanced.rs: how far a version's probe bakes are (Enhanced graphics). */
-export interface BakeStatus {
-  /** The bake can run now; else `why` says what is missing. */
-  available: boolean;
-  why: string;
-  levels: number;
-  ready: number;
-  failed: number;
-}
-
-/** core/src/enhanced.rs: the Mods tab's built-in Enhanced graphics entry, shown as a mod. */
-export interface EnhancedView {
-  mod: PluginView;
-  bake: BakeStatus;
-}
-
-/** core/src/plugins.rs: a gameplay mod (native or script) as the Mods tab shows it, in load order. */
-export interface PluginView {
-  id: string;
-  name: string;
-  version: string;
-  author: string;
-  description: string;
-  homepage: string;
-  license: string;
-  enabled: boolean;
-  /** ready: on, nothing against it; off; refused: it cannot load (reason); failed: the port did
-   *  not load it at its last start (reason). */
-  state: "ready" | "off" | "refused" | "failed";
-  reason: string;
-  /** Off, and could not be switched on as things are: why. */
-  blocked: string;
-  settings: PluginSetting[];
-  /** Presets of its settings the mod offers. */
-  presets?: PluginPreset[];
-  hooks: string[];
-  sharedHooks: { hook: string; with: string[] }[];
-  /** It carries code (a library), not only data. */
-  native: boolean;
-  /** native, script or data. */
-  kind: ModKind;
-  /** The installed folder. */
-  path: string;
-}
-
-/** core/src/plugins.rs: what adding a .zip or a folder came to. */
-export type PluginInstalled =
-  { kind: "plugin"; id: string; name: string; version: string; replaced: boolean; enabled: boolean } | { kind: "pack" };
-
-/** core/src/remote.rs: one mod a repository holds, shown before it is installed (docs/port/MODS.md, section 10). */
-export interface RemoteMod {
-  id: string;
-  name: string;
-  version: string;
-  author: string;
-  description: string;
-  homepage: string;
-  /** Its folder in the repository, "" for the top. */
-  path: string;
-  /** "native": code the game loads; "script": Luau the game runs sandboxed; "pack": textures, models, levels. */
-  kind: "native" | "script" | "pack";
-  games: Record<string, string[]>;
-  api: string | null;
-  compatible: boolean;
-  why: string | null;
-  /** The release asset that would be installed, and its release. */
-  asset: string | null;
-  tag: string | null;
-  /** The version installed now, if it is. */
-  installed: string | null;
-}
-
-/** core/src/remote.rs: what a repository's address holds. */
-export interface RemotePreview {
-  url: string;
-  /** "owner/repo", or the address. */
-  label: string;
-  host: "github" | "git";
-  owner: string;
-  reference: string;
-  commit: string | null;
-  mods: RemoteMod[];
-  note: string | null;
-}
-
-/** core/src/remote.rs: what installing from an address came to. */
-export type RemoteInstalled =
-  | { kind: "plugin"; id: string; name: string; version: string; replaced: boolean; enabled: boolean }
-  | { kind: "pack"; id: string; version: string; path: string };
-
-/** core/src/remote.rs: where an installed mod came from (sources.json). */
-export interface ModSource {
-  url: string;
-  path: string;
-  version: string;
-  tag: string | null;
-  commit: string | null;
-  kind: string;
-  pin: boolean;
-}
-
-export interface ModSources {
-  format: number;
-  mods: Record<string, ModSource>;
-}
-
-/** core/src/remote.rs: a newer version of an installed mod. */
-export interface ModUpdate {
-  id: string;
-  installed: string;
-  available: string;
-  tag: string | null;
-  commit: string | null;
-}
-
-/** core/src/plugins.rs: what the port did with the game's mods at its last start. */
-export interface PluginStatus {
-  time: string;
-  version: string;
-  purist: boolean;
-  mods: { id: string; version: string; state: string; reason: string; hooks: string[] }[];
-  hookPoints: string[];
-}
-
-/** core/src/jobs.rs */
-export interface Started {
-  /** 0 for a detached launch (the game, Godot), which has no job. */
-  id: number;
-  title: string;
-  command: string;
-  detached: boolean;
-  /** The folder the action writes in (its `output` in actions.json), when it names one. */
-  output: string | null;
-}
-
-export type JobEvent =
-  | { type: "output"; id: number; stream: "stdout" | "stderr"; line: string }
-  /** `outputs`: the folders the job wrote (the tool's `openrac-output:` lines, else the action's
-   *  `output`), for "Open folder" (api.openOutput). */
-  | { type: "exit"; id: number; code: number | null; cancelled: boolean; outputs: string[] };
-
-/** core/src/install.rs: a game set up from the player's disc, OpenGOAL's way. */
-export interface BuildInfo {
-  serial: string;
-  /** The version the disc is, `rac1/pal`. */
-  version: string;
-  elfSha1: string;
-  files: number;
-  image: string;
-}
-
-export interface InstallState {
-  /** `<install folder>/active/<game>/data`. */
-  dir: string;
-  /** The disc was extracted and validated: which build it is. */
-  extracted: BuildInfo | null;
-  decompiled: boolean;
-  compiled: boolean;
-}
-
-export interface SaveSlotInfo {
-  slotIndex: number;
-  filename: string;
-  path: string;
-  size: number;
-  exists: boolean;
-  isEmpty: boolean;
-  bolts: number | null;
-  planetId: number | null;
-  planetName: string | null;
-  timestamp: string | null;
-  modifiedMillis: number | null;
-  /** The save editor can open it. */
-  editable: boolean;
-}
-
-// ---- the save editor (core/src/save_edit.rs) ---------------------------------------
-
-export type Nanotech = "standard" | "premium" | "ultra";
-
-export interface ItemState {
-  id: number;
-  owned: boolean;
-  /** Ammo, for an item that has it. */
-  ammo: number | null;
-  /** The gold version, for an item that has one. */
-  gold: boolean | null;
-}
-
-export interface PlanetState {
-  id: number;
-  unlocked: boolean;
-  /** One per gold bolt on the planet. */
-  goldBolts: boolean[];
-}
-
-/** What the editor changes; sent back whole. */
-export interface SaveFields {
-  /** The planet the save loads on, a level number. */
-  planet: number;
-  bolts: number;
-  nanotech: Nanotech;
-  items: ItemState[];
-  planets: PlanetState[];
-  skillPoints: boolean[];
-}
-
-export interface ItemInfo {
-  id: number;
-  name: string;
-  kind: "weapon" | "gadget";
-  maxAmmo: number | null;
-  hasGold: boolean;
-}
-
-export interface PlanetInfo {
-  id: number;
-  name: string;
-  location: string;
-  /** A ship destination the player may lock or unlock. */
-  canUnlock: boolean;
-  /** The save can be moved there in the default mode. */
-  canLand: boolean;
-}
-
-/** One chunk of the file, for the advanced editor. */
-export interface ChunkView {
-  /** `null`: the global section; else the planet's level number. */
-  section: number | null;
-  id: number;
-  size: number;
-  name: string;
-  /** Its meaning is decoded; otherwise raw bytes only. */
-  known: boolean;
-  hex: string;
-}
-
-export interface RawPatch {
-  section: number | null;
-  id: number;
-  hex: string;
-}
-
-/** What a write changes: the default mode's fields, or raw chunks (advanced mode). */
-export type SaveChange = { kind: "fields"; fields: SaveFields } | { kind: "raw"; chunks: RawPatch[] };
-
-export interface SaveView {
-  serial: string;
-  slot: number;
-  /** The file as read; a write is refused if it changed since. */
-  fingerprint: string;
-  planetName: string | null;
-  savedAt: string | null;
-  fields: SaveFields;
-  items: ItemInfo[];
-  planets: PlanetInfo[];
-  /** Every level, 0..18. */
-  levels: PlanetInfo[];
-  maxBolts: number;
-  chunks: ChunkView[];
-  /** Time played as the game counts it, in seconds. */
-  playedSeconds: number;
-  /** The 30 skill points' names from the game's text, in save order; empty when not readable. */
-  skillNames: string[];
-}
-
-export interface WriteResult {
-  backup: SaveBackupInfo;
-  view: SaveView;
-}
-
-export interface SaveBackupInfo {
-  name: string;
-  path: string;
-  /** What it is called, for people ("before the last boss"); null when taken without a note. */
-  note: string | null;
-  createdMillis: number;
-  totalSize: number;
-}
-
-export interface GameSaveStatus {
-  serial: string;
-  memcardDir: string;
-  exists: boolean;
-  gameFolderName: string | null;
-  title: string | null;
-  slots: SaveSlotInfo[];
-  backups: SaveBackupInfo[];
-}
+export type ModKind = PluginView["kind"];
 
 // ---- calls ------------------------------------------------------------------------
 
@@ -832,15 +341,6 @@ export function updateChannelOf(info: AppInfo, config: Config | null): UpdateCha
   return config?.updateChannel ?? (info.updates.channel ? "dev" : "stable");
 }
 
-/** A newer Android launcher on the releases (core/src/update.rs). */
-export interface AndroidRelease {
-  version: string;
-  notes: string;
-  date: string;
-  url: string;
-  signature: string;
-}
-
 /** A GPU driver package the Android launcher keeps (OpenracPlugin.kt): its meta.json. */
 export interface GpuDriver {
   id: string;
@@ -863,8 +363,6 @@ export interface GameStatus {
 }
 
 export type Renderer = "gles" | "vulkan";
-/** Config.renderer, on Windows, Linux and macOS. */
-export type DesktopRenderer = "opengl" | "vulkan";
 
 export interface GpuDrivers {
   drivers: GpuDriver[];

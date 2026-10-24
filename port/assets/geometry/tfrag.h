@@ -293,6 +293,8 @@ struct TfragLodLink {
     bool operator==(const TfragLodLink&) const = default;
 };
 
+// One parsed tfrag: its headers and every array the VIF lists carry, kept as the game lays them
+// out so a renderer can draw any LOD and morph between them.
 struct Tfrag {
     TfragHeader header;
     TfragVuHeader vu;
@@ -367,6 +369,7 @@ struct TfragTriangle {
     bool operator==(const TfragTriangle&) const = default;
 };
 
+// Reads the 0x10-byte header at the start of a tfrags block.
 TfragBlockHeader parse_tfrag_block_header(ByteView block);
 
 // Every tfrag of a tfrags block (the core data's "tfrags" block).

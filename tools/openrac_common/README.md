@@ -11,17 +11,18 @@ It is not a framework and not a place for one tool's logic: a helper belongs her
 tools need it. It holds no game knowledge beyond the layout of `games/<game>/game.json` and the
 format of a PS2 disc, and no game data.
 
-The tools in `tools/` use it since P1-05; `port/tools` and `editor` move onto it in P2-10
+The tools in `tools/` use it since P1-05, `port/tools` (hostgen, versionmap, regress) and the probe
+tools since P2-10; `editor/` and `sdk/tools/` move onto it in their own packages
 ([PROGRESS.md](../../docs/restructure/PROGRESS.md)). Who uses what today:
 
 | Module | Used by |
 |---|---|
-| `paths` | every tool in `tools/` that knows the repository: `openrac`, `extractor`, `sources`, `shared`, `xmap`, `versions`, `port`, `build_port`, `build_android`, `bundle_standalone`, `fcheck_gate` |
-| `games` | `openrac`, `extractor`, `sources`, `xmap` |
-| `tables` | `fcheck_gate`, `port`, `xmap`, `versions` |
-| `digest` | `openrac`, `extractor`, `shared`, `build_port`, `build_android`, `fcheck_gate` |
+| `paths` | every tool in `tools/` that knows the repository: `openrac`, `extractor`, `sources`, `shared`, `xmap`, `versions`, `port`, `permuter`, `build_port`, `build_android`, `bundle_standalone`, `fcheck_gate`; `port/tools`: hostgen's `retail` and `priority`, versionmap's `versionmap`, `carry_functions` and `hostnames`, regress's `runner`; the probe tools' `seed_regions` and `moby_seeds` |
+| `games` | `openrac`, `extractor`, `sources`, `xmap`, `permuter` (`source_checkout`); `fcheck_gate` (`source_checkout`); `versionmap` |
+| `tables` | `fcheck_gate`, `port`, `xmap`, `versions`, `permuter`; hostgen's `hostgen` and `no_c`, versionmap's `carry_functions` |
+| `digest` | `openrac`, `extractor`, `shared`, `build_port`, `build_android`, `fcheck_gate`; the probe tools' `bake_all` and `seed_regions` |
 | `files` | `openrac` (`place_link`), `extractor`, `bundle_standalone` |
-| `proc` | every `git` call in `tools/`; `build_android`'s and `bundle_standalone`'s commands |
+| `proc` | every `git` call in `tools/` (`permuter` fetching decomp-permuter included); `build_android`'s and `bundle_standalone`'s commands |
 | `iso9660` | `openrac`, `extractor` |
 
 Two places in `tools/` keep their own code on purpose. `fcheck_level_build.py` runs copied alone
@@ -34,7 +35,7 @@ inside rac1-decomp's container, from rac1-decomp's root, where neither OpenRAC n
 | Module | What it gives |
 |---|---|
 | `paths` | `repo_root(start=None)`: the top of OpenRAC, the nearest directory above START holding `games/` and `AGENTS.md` (a checkout) or `STANDALONE` (the launcher's bundled copy) |
-| `games` | `load(game)`, `load_all()`, `versions()`, `games_dir()`, `manifest_path(game)`, `version_dir(game, name)`: `games/<game>/game.json` |
+| `games` | `load(game)`, `load_all()`, `versions()`, `games_dir()`, `manifest_path(game)`, `version_dir(game, name)`: `games/<game>/game.json`; `source_checkout(game_id, version_name)`, `source_variable(game_id, version_name)`: where a version's sister project is checked out |
 | `tables` | `read_tsv(path, columns=None, strip=False, required=False)`, `header(path)`, `is_data(line)`, `split_row(line)`: the `.tsv` tables and their comment and header conventions |
 | `digest` | `sha1(path)`, `sha256(path)`, `file_digest(path, algorithm)`: hex digests read in 1 MiB blocks |
 | `files` | `link_or_copy(source, dest, keep_metadata=True)`, `copy_tree(source, dest, keep)` |
@@ -48,6 +49,23 @@ script writes. The launcher recognises that copy by the same file (`launcher/cor
 the copy's tools find their root through `repo_root`. The copy carries this package beside
 `openrac.py` and `extractor.py`, which import it.
 
+### Where the sister checkouts are
+
+A version synced from a matching decomp names that project under `source` in its `game.json`,
+`checkout` included: the path of its local checkout, `~` for the home folder. `games.source_checkout`
+is the one rule every tool follows to find it, decided by the maintainers (P2-30):
+
+1. `$OPENRAC_SOURCE_<GAME>_<VERSION>` (`games.source_variable`; `OPENRAC_SOURCE_RAC1_PAL` for rac1's
+   PAL tree), when it is set and not empty;
+2. else `game.json`'s `checkout`, with `~` expanded;
+3. `None` for a version with no `source`, whatever the environment says.
+
+`game.json` records where the projects' own checkouts are; the variable is for a machine that keeps
+one somewhere else. Nothing checks that the folder exists: each tool says what is missing in its own
+words. `sources.py` (import, sync, status) and `openrac.py` (`progress --fetch` and the reports'
+dates) use it; `fcheck_gate.py` uses it for rac1-decomp, behind its own `OPENRAC_DECOMP`, which
+still wins when set.
+
 Every function takes a `pathlib.Path` or a string for a path. The functions that read the repository
 (`games.*`) take an optional `root`, so a test can point them at a synthetic tree.
 
@@ -59,15 +77,34 @@ A script in `tools/` imports it directly, since Python puts the script's folder 
 from openrac_common import games, iso9660
 ```
 
-A script elsewhere puts `tools/` on the path once, from its own place, and imports it the same way:
+A script anywhere else runs one line first, the bootstrap (`paths.BOOTSTRAP`), and then imports it
+the same way:
 
 ```python
-sys.path.insert(0, str(next(p for p in Path(__file__).resolve().parents if (p / "AGENTS.md").is_file()) / "tools"))
+import sys
+from pathlib import Path
+
+sys.path.insert(1, str(next(p for p in Path(__file__).resolve().parents if (p / "tools/openrac_common").is_dir()) / "tools"))
+from openrac_common import paths  # noqa: E402
 ```
 
-That line finds a checkout only. A script the launcher's bundled copy carries (`editor/`) runs where
-there is no `AGENTS.md`, so it needs a marker the copy has as well; P2-10 settles it when the editor
-moves onto this package.
+The rule, decided in P2-10:
+
+- **One line, the same everywhere.** Every script outside `tools/` that imports the package writes
+  the line above verbatim, and nothing else to find it; `tools/test_openrac_common.py` checks each
+  one against `paths.BOOTSTRAP`. A script that only imports its own folder's modules writes no
+  `sys.path` line at all: Python and `unittest discover` already put that folder on the path.
+- **Found by the folder that holds it.** The line walks up to the nearest folder holding
+  `tools/openrac_common`, not to `AGENTS.md`: the launcher's bundled copy (`tools/bundle_standalone.py`)
+  carries the package and the probe tools, but no `AGENTS.md`. Once the package is imported,
+  `paths.repo_root(__file__)` finds the top of either kind of root, by `AGENTS.md` or `STANDALONE`.
+- **Second on the path.** `tools/` goes after the script's own folder, so a module of the script's
+  keeps its name when `tools/` holds one of the same (`editor/port.py` beside `tools/port.py`), and
+  before the installed packages, so a module of `tools/` (`tools/mips.py`, which
+  `port/tools/versionmap` imports) is not shadowed by an installed one.
+
+`port/tools/hostgen`, `versionmap`, `regress` and `port/enhanced/tools/probes` use it (P2-10); `editor/` and `sdk/tools/` move onto it with their own
+packages.
 
 ## Depends on
 
@@ -105,13 +142,16 @@ directories and a root directory longer than one sector), never read from a disc
 
 - each helper's own behaviour, with expected values from the format (ECMA-119) or from `hashlib`;
 - characterisation: the existing copy each helper was written from runs on the same input, and both
-  must agree. The copies in `tools/` are gone (P1-05) and their comparisons with them; those left
-  are `tools/openrac.py`'s `checksums` and `fcheck_gate.py`'s `fcheck_commit` (which use the
-  package's results), `port/tools/hostgen/{hostgen,no_c}.py`,
-  `port/tools/versionmap/{versionmap,carry_functions}.py`, `sdk/tools/gen_binding.py`,
-  `editor/disc.py` and `port/enhanced/tools/probes/bake_all.py`. The tables are also read from this
-  checkout's own `port/game/*/libraries.tsv` and compared. When a copy is removed by the package
-  that moves its callers, its comparison goes with it.
+  must agree. The copies in `tools/` are gone (P1-05), and those in `port/tools` and the probe
+  tools (P2-10), and their comparisons with them; those left are `tools/openrac.py`'s `checksums`
+  and `fcheck_gate.py`'s `fcheck_commit` (which use the package's results),
+  `sdk/tools/gen_binding.py` and `editor/disc.py`. hostgen's readers keep their characterisation
+  in `port/tools/hostgen/test_tables.py`, with the values the old readers gave written out. This
+  checkout's own `port/game/*/libraries.tsv` are read too, for their headers. When a copy is
+  removed by the package that moves its callers, its comparison goes with it.
+- the bootstrap: `paths.BOOTSTRAP` run from a script in a synthetic checkout and in a synthetic
+  bundled copy (no `AGENTS.md`), and every script outside `tools/` that imports the package
+  checked for the line.
 
 The tools that use the package have their own tests beside it (`test_openrac.py`,
 `test_extractor.py`, `test_sources.py`, `test_build_android.py`, `test_bundle_standalone.py`, ...);

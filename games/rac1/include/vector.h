@@ -8,7 +8,7 @@
  * private copies candidates carried to land without clashing with their
  * files.
  *
- * Adapted from Lombyte (MIT), the US decompilation:
+ * Adapted from Lombyte (GPL-3.0), the US decompilation:
  * include/rnc/math/vector.h at 42adb529. See THIRD_PARTY_NOTICES.md.
  */
 

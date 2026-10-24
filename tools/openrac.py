@@ -172,27 +172,13 @@ def setup(only: list[str]) -> None:
 
 # --- Progress -------------------------------------------------------------------
 
-def source_checkout(version: dict) -> Path | None:
-    """Where the version's sister project is checked out: $OPENRAC_SOURCE_<GAME>_<VERSION> when set
-    (as tools/sources.py reads it), else the path its game.json names."""
-    source = version.get("source")
-    if not source:
-        return None
-    for game, name, other in games.versions():
-        if other == version:
-            env = os.environ.get(f"OPENRAC_SOURCE_{game['id']}_{name}".upper())
-            if env:
-                return Path(env)
-    return Path(os.path.expanduser(source["checkout"]))
-
-
 def fetch_reports() -> None:
     """Copy reports that a sister project publishes outside its tree (progress.fetch)."""
     for game, name, version in games.versions():
         fetch = version.get("progress", {}).get("fetch")
         if not fetch:
             continue
-        repo = source_checkout(version)
+        repo = games.source_checkout(game["id"], name)
         key = f"{game['id']}/{name}"
         try:
             # The fetch shows what git says when it fails; the reads keep it.
@@ -211,9 +197,11 @@ def fetch_reports() -> None:
         print(f"{key}: report from {fetch['branch']} at {commit[0]} ({commit[1]})")
 
 
-def measure(version: dict) -> dict | None:
+def measure(version: dict, checkout: Path | None = None) -> dict | None:
     """The version's code progress from its own report, in one shape:
-    matched/total code bytes, matched/total functions (when counted), fuzzy %, and the date."""
+    matched/total code bytes, matched/total functions (when counted), fuzzy %, and the date.
+    CHECKOUT is the version's sister checkout (games.source_checkout), where the report's date is
+    looked up first; without it, OpenRAC's history alone dates the report."""
     progress = version.get("progress")
     if not progress:
         return None
@@ -226,18 +214,18 @@ def measure(version: dict) -> dict | None:
         out = {"matched_code": int(m.get("matched_code", 0)), "total_code": int(m["total_code"]),
                "matched_functions": m.get("matched_functions"), "total_functions": m.get("total_functions"),
                "fuzzy_percent": round(float(m.get("fuzzy_match_percent", 0)), 2)}
-        out["date"] = report.get("openrac_source", {}).get("date") or report_date(version, path)
+        out["date"] = report.get("openrac_source", {}).get("date") or report_date(version, path, checkout)
     else:
         raise SystemExit(f"{progress['report']}: unknown progress format {progress['format']}")
     out["percent"] = round(100.0 * out["matched_code"] / out["total_code"], 2) if out["total_code"] else 0.0
     return out
 
 
-def report_date(version: dict, path: Path) -> str:
-    """When the report last changed: in its sister project's history when the checkout is
-    there and the file came from it, else in OpenRAC's."""
+def report_date(version: dict, path: Path, checkout: Path | None) -> str:
+    """When the report last changed: in its sister project's history when CHECKOUT is there and
+    the file came from it, else in OpenRAC's."""
     source = version.get("source")
-    for repo, rel in ((source_checkout(version), None), (ROOT, path)):
+    for repo, rel in ((checkout, None), (ROOT, path)):
         if repo is None or not (repo / ".git").exists():
             continue
         if rel is None:
@@ -259,7 +247,7 @@ def progress(fetch: bool) -> None:
     rows, summary = [], {}
     for game, name, version in games.versions():
         key = f"{game['id']}/{name}"
-        m = measure(version)
+        m = measure(version, games.source_checkout(game["id"], name))
         if m is not None:
             # A version with no report yet has no row: the launcher reads each row's progress as
             # figures, and one null made it read none of the file (launcher/core/src/catalog.rs).
@@ -326,7 +314,7 @@ def tables() -> None:
     """Rewrite every <!-- NAME:begin --> ... <!-- NAME:end --> block in README.md and
     baserom/README.md with the table of that name."""
     summary = PROGRESS / "summary.json"
-    rows = [(g, n, v, measure(v)) for g, n, v in games.versions()]
+    rows = [(g, n, v, measure(v, games.source_checkout(g["id"], n))) for g, n, v in games.versions()]
     made = {"games": game_table(), "discs": disc_table(), "boot": boot_table(), "sources": source_table(),
             "progress": render(rows, dates=False, badges=True) if summary.exists() else None}
     for doc in (ROOT / "README.md", BASEROM / "README.md", GAMES / "README.md", ROOT / "docs/SOURCES.md"):

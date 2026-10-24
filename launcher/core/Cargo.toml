@@ -13,6 +13,8 @@ serde.workspace = true
 serde_json = { workspace = true, features = ["preserve_order"] }
 # Mods from a repository's release (remote.rs): the assets' SHA-256 against SHA256SUMS.
 sha2 = "0.10"
+# TypeScript types of what the page receives (tests/generated_types.rs); `no-serde-warnings`: serde's `alias` has no TypeScript meaning.
+ts-rs = { version = "12", features = ["no-serde-warnings"] }
 # Mods added as a .zip (plugins.rs): reading, deflate through flate2's Rust back end.
 zip = { version = "7.2", default-features = false, features = ["deflate-flate2"] }
 

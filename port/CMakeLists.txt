@@ -98,6 +98,9 @@ openrac_add_test(log LIBS openrac_common)
 find_package(Threads REQUIRED)
 openrac_add_test(joining_thread LIBS openrac_common Threads::Threads)
 openrac_add_test(env LIBS openrac_common)
+openrac_add_test(stats LIBS openrac_common)
+openrac_add_test(result INCLUDES .)
+openrac_add_test(c_boundary LIBS openrac_common)
 openrac_add_test(frame_pacing INCLUDES .)
 openrac_add_test(settings SOURCES tests/settings_test.cpp game/common/settings.cpp
                           LIBS openrac_common)
@@ -130,6 +133,7 @@ add_library(openrac_runtime STATIC
   runtime/ee.cpp
   runtime/elf.cpp
   runtime/guest.cpp
+  runtime/host_env.cpp
   runtime/memory.cpp
 )
 target_include_directories(openrac_runtime PUBLIC runtime/include)
@@ -140,6 +144,8 @@ endif()
 openrac_warnings(openrac_runtime)
 
 openrac_add_test(runtime SOURCES tests/runtime_test.cpp tests/guest_c.c LIBS openrac_runtime)
+# The C entry point to the OPENRAC_* table (openrac/host_env.h), from C.
+openrac_add_c_test(host_env LIBS openrac_runtime)
 
 # ---- native mods (docs/port/MODS.md): manifests, the list, the loader ----
 include(Luau)
@@ -181,6 +187,10 @@ target_compile_definitions(mod_scripts_test PRIVATE "OPENRAC_TEST_MOD_A=\"$<TARG
 add_dependencies(mod_scripts_test mod_loader_test_a)
 openrac_warnings(mod_scripts_test)
 add_test(NAME mod_scripts COMMAND mod_scripts_test)
+
+# The script runtime's C entry point stops an exception at the C boundary (common/c_boundary.h): a
+# script mod on a hook point of the test's own whose call throws, reported to the log.
+openrac_add_test(mod_boundary LIBS openrac_mods)
 
 # The bindings the generator writes are what their tables give, and the tables' hook points the
 # hook rows of every disc's libraries.tsv.
@@ -262,6 +272,7 @@ openrac_add_c_test(checkpoint_restore NO_STRICT_ALIASING NO_FP_CONTRACT MATH)
 if(OPENRAC_PORT_WINDOW)
   include(Window)
 endif()
+include(Render)
 
 # ---- the games, from their decompilations (port/game/*/hostgen.json) ----
 if(OPENRAC_PORT_GAMES)

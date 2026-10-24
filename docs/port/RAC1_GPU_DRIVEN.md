@@ -33,6 +33,17 @@ Upload-command-buffer compute precedes graphics with shader-write dependencies
 for indirect/vertex reads. Readback flushes start a new recording and invalidate
 old batch handles. Pages are reused after retirement.
 
+Static instances (terrain, ties, shrubs) are registered once at the level's
+upload (`gpu_register_instances`): their bounds and instance data, in the
+candidates' layout, live in one device-local buffer, and a view's batch of a
+registered group writes only the view (58 words) and a group record whose first
+word carries the resident bit; the cull shader reads that group's candidates
+from a fourth storage binding. Each recording binds one resident copy; a change
+of it waits for the next recording, and an old copy is destroyed only after the
+frame slot that last bound it retires. The level's release forgets every
+registration. The moby layer, regrouped each frame, keeps the payload copy
+(registry entry `gpu-resident-instances`, [RENDER_PERF.md](RENDER_PERF.md), R-15).
+
 ## Shared materials
 
 Bindless mesh, cutout-depth and alpha-shadow shaders use material records and
@@ -121,6 +132,8 @@ need startup or scene reload.
 | `OPENRAC_SHADOW_GATHER_OFF=1` | Scalar shadow texel fetches |
 | `OPENRAC_SUN_RECEIVER_CULL_OFF=1` | Square cascade culling |
 | `OPENRAC_EARLY_LIGHTING_OFF=1` | Full-resolution fragment lighting |
+| `OPENRAC_RENDER_OPT_OFF=gpu-resident-instances` | Static instances copied into each view's page every frame |
+| `shadow-static-cache` (registry, off by default) | With it on: a sun cascade's static casters copied from a cache while its key is unchanged |
 
 `OPENRAC_SUN_TIMING_DETAIL=1` enables per-layer shadow timings; normally the
 four complete-map timers include clears.

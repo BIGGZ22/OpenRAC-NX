@@ -20,7 +20,7 @@ const DEPTH: usize = 2;
 const MOST: usize = 2000;
 
 /// A disc image of a game OpenRAC knows.
-#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, ts_rs::TS)]
 #[serde(rename_all = "camelCase")]
 pub struct FoundDisc {
     pub path: PathBuf,

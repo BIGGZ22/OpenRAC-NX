@@ -789,6 +789,8 @@ they are not there yet for these games.
 
 The GDScript files follow [`GDSCRIPT_CONVENTIONS.md`](GDSCRIPT_CONVENTIONS.md).
 
+The editor's files carry no licence lines, as the maintainers decided: the editor's MIT [LICENSE](LICENSE) covers every one of them.
+
 | File | Contents |
 |---|---|
 | `extract.py` | Command line and safe output |
@@ -797,7 +799,7 @@ The GDScript files follow [`GDSCRIPT_CONVENTIONS.md`](GDSCRIPT_CONVENTIONS.md).
 | `games.py` | What the four games' level formats share and what each changes, for the shared readers; the versions each game's levels are read from (`game.json`) |
 | `level.py` | A level's sections, core blocks and textures (each game's) |
 | `formats.py` | `FormatError` and `check`, bounded reads, WAD decompression, code overlays, textures |
-| `util.py` | The helpers several modules share, one copy each: SHA-256, reading JSON with the caller's own error, 32-bit floats, the cross product, `games/<game>/game.json` and the disc identity in it |
+| `util.py` | The helpers several modules share, one copy each: SHA-256 of bytes, reading JSON with the caller's own error, 32-bit floats, the cross product, the disc identity in `games/<game>/game.json`. What the repository's [`openrac_common`](../tools/openrac_common/README.md) already does (a file's digest, reading a manifest, the ISO 9660 records) the editor takes from there |
 | `terrain.py`, `ties.py`, `shrubs.py`, `sky.py` | Geometry and placements |
 | `collision.py` | The collision block: decoded for display, and read, edited and written back byte-exact |
 | `mobys.py`, `moby_class.py`, `moby_anim.py` | Moby placements, class meshes, skeletons and animations |
@@ -835,7 +837,7 @@ The decoders accept only the layouts found on these discs and raise
   untextured faces, skeletons and animation sequences), and the collision
   block and the meaning of its surface bytes
   ([ASSETS.md](../games/rac1/docs/ASSETS.md#collision)).
-- **[Lombyte](https://github.com/lombyte-project/Lombyte)** (MIT): the moby
+- **[Lombyte](https://github.com/lombyte-project/Lombyte)** (GPL-3.0): the moby
   class names on the labels (`moby_classes.tsv`, see its header).
 - **[OpenGOAL's jak-project](https://github.com/open-goal/jak-project)**,
   whose extractor was the model for extracting from your own disc.

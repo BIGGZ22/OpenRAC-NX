@@ -45,7 +45,7 @@
         "name": "rac-deadlocked-decomp",
         "repo": "https://github.com/OpenRAC/rac-deadlocked-decomp",
         "branch": "main",
-        "checkout": "~/Projects/rac4-decomp",
+        "checkout": "../rac4-decomp",
         "license": "MIT (GPL libgcc, newlib libm)",
         "exclude": [],
         "commit": "dedfcd416a1b8e195978df6b038e0d4cd927f4b7",

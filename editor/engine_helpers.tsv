@@ -1,5 +1,5 @@
 # The engine helpers moby update functions call most: the C functions the behaviour catalogue
-# (catalogue.py) marks as engine helpers rather than hook-after candidates, and what each does.
+# (sdk/tools/catalogue.py) marks as engine helpers rather than hook-after candidates, and what each does.
 # kind: func = a call, data = a global. Names are the decompilation's (games/rac1/include/names.h,
 # config/names.tsv) where it has one; meanings come from reading the C and from ReRAC (ISC)
 # docs/plan/moby_update_catalogue.md.

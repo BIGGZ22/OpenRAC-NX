@@ -35,7 +35,7 @@ extern void func_0012C788(void *, int);
 extern int func_0012C878(void *, int);
 
 /* rac1-decomp src/core/00125630.c: func_001286E8 */
-/* _ipuVdec (libmpeg). Adapted from Lombyte (MIT) for PAL. */
+/* _ipuVdec (libmpeg). Adapted from Lombyte (GPL-3.0) for PAL. */
 short func_0012C508(int arg0, int tbl) {
     MpegVdec *d = (MpegVdec *)arg0;
     int i;

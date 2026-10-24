@@ -106,6 +106,7 @@ void Voice::key_on_stream(
 }
 
 void Voice::queue_part(StreamPart part) {
+    // Parts queued on a voice that is not a stream have nowhere to play, so they are ignored.
     if (m_streaming) {
         m_queue.push_back(std::move(part));
     }
@@ -116,9 +117,11 @@ const std::vector<std::uint8_t>* Voice::source() const {
 }
 
 std::size_t Voice::stream_remaining() const {
+    // Nothing is left to play on a voice that is not streaming or has no part loaded.
     if (!m_streaming || !m_part.data) {
         return 0;
     }
+
     const std::size_t frames = m_part.data->size() / assets::kAdpcmFrameBytes;
     const std::size_t left = frames > m_part_frame ? frames - m_part_frame : 0;
     const std::size_t in_block = m_counter >> 12;
@@ -128,14 +131,19 @@ std::size_t Voice::stream_remaining() const {
 
 void Voice::load_block() {
     const std::vector<std::uint8_t>* data = source();
+
+    // Silence rather than an out-of-range read when the address is past the end of the data.
     if (data == nullptr || m_address + assets::kAdpcmFrameBytes > data->size()) {
         // Past the data (a malformed sample): silence.
         m_envelope.stop();
         return;
     }
+
     const std::uint8_t* frame = data->data() + m_address;
     m_flags = frame[1];
     m_block = assets::decode_adpcm_frame(frame, m_history);
+
+    // A loop-start flag marks where a loop jumps back to, so the voice remembers the address.
     if (m_flags & assets::kAdpcmFlagLoopStart) {
         m_loop_address = m_address;
     }
@@ -143,21 +151,31 @@ void Voice::load_block() {
 
 void Voice::next_block() {
     m_previous = {m_block[25], m_block[26], m_block[27]};
+
+    // The end flag says this was the last block of the sound or stream part.
     if (m_flags & assets::kAdpcmFlagEnd) {
+        // A sound in memory ends or loops here; a stream goes on to its next queued part.
         if (!m_streaming) {
             m_address = m_loop_address;
+
+            // Without the repeat flag the voice stops at the end instead of looping.
             if ((m_flags & assets::kAdpcmFlagRepeat) == 0) {
                 m_envelope.stop();
                 return;
             }
         } else {
+            // A stream moves to the next part that was queued, and the loop address restarts in
+            // that part.
             if (!m_queue.empty()) {
                 m_part = std::move(m_queue.front());
                 m_queue.pop_front();
             } else if (!m_part.looped) {
+                // With nothing queued a stream part either repeats itself (looped) or ends the
+                // voice.
                 m_envelope.stop();
                 return;
             }
+
             m_address = 0;
             m_loop_address = 0;
             m_part_frame = 0;
@@ -166,13 +184,16 @@ void Voice::next_block() {
         m_address += assets::kAdpcmFrameBytes;
         ++m_part_frame;
     }
+
     load_block();
 }
 
 std::pair<int, int> Voice::run() {
+    // A stopped or held voice outputs silence and does not advance.
     if (m_envelope.phase() == EnvelopePhase::Stopped || m_held) {
         return {0, 0};
     }
+
     const auto index = static_cast<int>(m_counter >> 12);
     auto at = [this](int k) -> int {
         return k >= 0 ? m_block[static_cast<std::size_t>(k)]
@@ -188,13 +209,20 @@ std::pair<int, int> Voice::run() {
     const int left = static_cast<std::int16_t>((sample * level(m_volume[0])) >> 15);
     const int right = static_cast<std::int16_t>((sample * level(m_volume[1])) >> 15);
     m_counter += std::min<std::uint16_t>(m_pitch, 0x3fff);
+
+    // A step can cross more than one block at a high pitch, so decode until the position is within
+    // the current block.
     while ((m_counter >> 12) >= assets::kAdpcmFrameSamples) {
         m_counter -= static_cast<std::uint32_t>(assets::kAdpcmFrameSamples) << 12;
         next_block();
+
+        // Stop early when the end of the sound stopped the voice: the rest of the step has nothing
+        // to play.
         if (m_envelope.phase() == EnvelopePhase::Stopped) {
             break;
         }
     }
+
     m_envelope.run();
     return {left, right};
 }
@@ -208,20 +236,28 @@ std::array<std::int16_t, 2> VoiceMixer::mix(std::array<int, 2> extra) {
     std::int64_t left = extra[0];
     std::int64_t right = extra[1];
     std::array<int, 2> send{};
+
+    // Every voice runs every sample, so the ones that are stopped cost almost nothing but still
+    // advance.
     for (Voice& v : m_voices) {
         const auto [a, b] = v.run();
         left += a;
         right += b;
+
+        // Voices flagged for reverb also feed the reverb send, before the master volume.
         if (v.reverb()) {
             send[0] += a;
             send[1] += b;
         }
     }
+
+    // The reverb is added only when an effect is set, so that unused effects cost nothing.
     if (m_reverb.active()) {
         const auto wet = m_reverb.run(send);
         left += wet[0];
         right += wet[1];
     }
+
     return {master_out(left, m_master[0]), master_out(right, m_master[1])};
 }
 

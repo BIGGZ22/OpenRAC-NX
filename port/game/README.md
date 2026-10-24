@@ -17,6 +17,16 @@ Everything else is shared: game memory and the guest contract
 the library replacements and the program ([common](common)), the platform
 layer and the renderer.
 
+The program in `common/` is being split into three folders, which the build
+takes every `.cpp` file from ([Games.cmake](../cmake/Games.cmake)), so a
+split adds no line to it. They are empty until their splits land:
+
+| Folder | |
+|---|---|
+| `common/program/` | the program itself, in every game's program, with a window or without: `main`, its options, vsync, the host side of `game_host.h` (from `main.cpp`) |
+| `common/frontend/` | the window, built only with one: the window, frame pacing, interpolation, world submission, input (from `frontend.cpp`) |
+| `common/debug/` | the debug overlay's parts, built only with a window (from `debug_overlay.cpp`): `overlay.h`, which only the overlay's files include, with its state and the helpers its panels share (defined in `overlay.cpp`), and a file for each of the panel's sections and the windows beside them: `frame.cpp`, `renderer.cpp`, `memory.cpp` (with the memory viewer), `mobys.cpp` (with the moby inspector), `game.cpp`, `shaders.cpp` |
+
 ## What a game is
 
 | File | |

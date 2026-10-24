@@ -27,16 +27,34 @@ fullscreen; Escape quits. Options: `--size WxH`, `--camera X,Y,Z,YAW,PITCH`
 Headless check: `--screenshot out.png --frames N` draws N frames in a hidden
 window (SDL's offscreen driver when there is no display) and writes the last.
 
+## What is here
+
+The program and what only it and the game programs use; the level and its drawing are the scene
+module's ([scene/README.md](../scene/README.md)), which the game programs draw with too.
+
+| File | |
+|---|---|
+| `main.cpp` | the program: options, the window, the free camera's controls, the frame loop |
+| `camera.h` | the free camera |
+| `game_state.h` | what the renderers read of a running game from its memory (the camera, the live mobys); the game programs use it too, until P2-03 moves it into `game/rac1` |
+| `third_party.c` | cgltf and stb, compiled once as C (`openrac_viewer_third_party`), for the scene |
+| `shaders/` | the level renderer's shaders, embedded into `openrac_scene_renderer` |
+| `level.h`, `level_renderer.h`, `moby_pose.h`, `moby_shadow.h`, `pvs.h`, `screenshot.h` | one-line forwarders to the same headers in `scene/`, kept while `game/common` still includes them here; P2-37 removes them |
+
+The library `openrac_viewer_lib` is `camera.cpp` and `game_state.cpp`; it links the scene, so the
+program and the tests that draw a level link it alone.
+
 ## How it draws
 
-Each layer is a `BucketRenderer` of the port's `Renderer`, in the game's
+The scene module draws the level ([scene/README.md](../scene/README.md)). Each layer is a
+`BucketRenderer` of the port's `Renderer`, in the game's
 order: the sky's shells around the camera (rotation only, blended in order
 over the level's background colour, no depth), then terrain, ties, shrubs
 and mobys, instanced per class, with reversed depth (cleared to 0, GEQUAL)
 and in the game's axes (Z up). Textures go through the renderer's texture
 pool. A moby is its class mesh in the bind pose, scaled by the class scale
 times its placement; a class without a mesh is a box coloured by class. In
-the native port the live mobys are posed: each frame `moby_pose.h` evaluates
+the native port the live mobys are posed: each frame [`moby_pose.h`](../scene/moby_pose.h) evaluates
 a moby's joint palette from its animation fields in game memory (the two keys
 it points at, the blend between them, its class's skeleton), as the game's
 VU0 evaluator did, and the vertex shader skins the class mesh with it (the

@@ -10,6 +10,7 @@ enable_testing()
 add_executable(mod_hpp_test mod_hpp_test.cpp)
 target_include_directories(mod_hpp_test PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/../include")
 set_target_properties(mod_hpp_test PROPERTIES CXX_STANDARD 17 CXX_STANDARD_REQUIRED ON CXX_EXTENSIONS OFF)
+# Warnings are errors, so a header that warns fails the test: the layer is compiled into every mod.
 if(MSVC)
   target_compile_options(mod_hpp_test PRIVATE /W4 /EHsc)
 else()

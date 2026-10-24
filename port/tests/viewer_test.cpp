@@ -25,10 +25,10 @@
 #include "renderer/framebuffer.h"
 #include "renderer/renderer.h"
 #include "renderer_gl_context.h"
+#include "scene/level.h"
+#include "scene/level_renderer.h"
 #include "viewer/camera.h"
 #include "viewer/game_state.h"
-#include "viewer/level.h"
-#include "viewer/level_renderer.h"
 
 namespace {
 

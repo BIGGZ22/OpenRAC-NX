@@ -52,7 +52,7 @@ extern void func_L00_00260958(void *, f32);
 extern void func_L00_00272488(void *, int, int, float, float);
 
 /* Flies the moby along its path toward the current node, turning and banking toward it, steps the node at each arrival and now and then drops a puff. Returns nonzero once it has run off the end of the path.
-   Adapted from Lombyte (MIT) for PAL by OpenRAC's tools/port.py: src/overlays/l09/gameplay/vendor/003033a0.c, FUN_L09_0030a298. */
+   Adapted from Lombyte (GPL-3.0) for PAL by OpenRAC's tools/port.py: src/overlays/l09/gameplay/vendor/003033a0.c, FUN_L09_0030a298. */
 int LinkedRiser_StepAlongPath(struct Moby *moby) {
     PathFlyerVars *vars = (PathFlyerVars *)moby->pvars;
     PathNodes *path;

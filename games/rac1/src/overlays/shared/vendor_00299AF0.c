@@ -22,7 +22,7 @@ extern unsigned char *func_L00_00273E08(void *, int, unsigned char, int, int, in
 extern int func_001FA898(float);
 extern char D_L10_001672C0[];
 
-/* Adapted from Lombyte (MIT) for PAL by OpenRAC's tools/port.py: src/overlays/shared/unclassified_00298940.c, FUN_L10_00298940. */
+/* Adapted from Lombyte (GPL-3.0) for PAL by OpenRAC's tools/port.py: src/overlays/shared/unclassified_00298940.c, FUN_L10_00298940. */
 void DriftingSprites_DrawL10(char *m) {
     L10SpriteData_298940 *p = *(L10SpriteData_298940 **)(m + 0x78);
     float d[4] __attribute__((aligned(16)));
@@ -131,7 +131,7 @@ extern void func_L00_00260108(void *, void *, int, float, float);
 extern void func_L00_0028EF68(int, int, void *, int);
 extern void func_0020D678(void *);
 
-/* Adapted from Lombyte (MIT) for PAL by OpenRAC's tools/port.py: src/overlays/shared/gameplay/entities/00298940.c, FUN_L10_002cc2e8. */
+/* Adapted from Lombyte (GPL-3.0) for PAL by OpenRAC's tools/port.py: src/overlays/shared/gameplay/entities/00298940.c, FUN_L10_002cc2e8. */
 void Moby819Update(char *m) {
     Shot_cc2e8 *d = *(Shot_cc2e8 **)(m + 0x78);
     float pos0[4] __attribute__((aligned(16)));
@@ -431,7 +431,7 @@ void Moby1378Draw(unsigned char *m) {
 }
 extern char * D_L10_0015F050 MACRO_ADDR;
 
-/* Adapted from Lombyte (MIT) for PAL by OpenRAC's tools/port.py: src/overlays/shared/gameplay_vendor_002e3de8.c, FUN_L10_002f5a50. */
+/* Adapted from Lombyte (GPL-3.0) for PAL by OpenRAC's tools/port.py: src/overlays/shared/gameplay_vendor_002e3de8.c, FUN_L10_002f5a50. */
 void Trigger_Arm(int i) {
     unsigned char *q;
     q = *(unsigned char **)(D_L10_0015F050 + i * 0x20 + 0x1C);
@@ -444,7 +444,7 @@ extern int func_L00_00260AB0(void *, int);
 extern int func_L00_00260B68(float *, int);
 extern int func_L00_0025A778(float *, float *, int);
 
-/* Adapted from Lombyte (MIT) for PAL by OpenRAC's tools/port.py: src/overlays/shared/gameplay_vendor_002e3de8.c, FUN_L10_002f5a78. */
+/* Adapted from Lombyte (GPL-3.0) for PAL by OpenRAC's tools/port.py: src/overlays/shared/gameplay_vendor_002e3de8.c, FUN_L10_002f5a78. */
 int Trigger_IsHeroInside(char *moby, char *unused)
 {
     unsigned char *e = *(unsigned char **)(D_L10_0015F050 + *(short *)(moby + 0x84) * 32 + 0x1C);

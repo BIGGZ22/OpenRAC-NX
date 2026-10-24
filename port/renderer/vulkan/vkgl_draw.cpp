@@ -24,6 +24,7 @@
 #include "common/stats.h"
 #include "renderer/gl.h"
 #include "renderer/gpu_draw.h"
+#include "renderer/render_opt.h"
 #include "renderer/vulkan/shader_compiler.h"
 #include "renderer/vulkan/vkgl_internal.h"
 
@@ -36,6 +37,248 @@ namespace {
 // ---- Draws ----
 
 VertexArray g_default_vertex_array;  // vertex array 0
+
+// ---- Dynamic state, recorded when it changes ----
+
+// Returns whether a draw leaves out the state its command buffer holds already (vk-state-skip).
+// Off, every draw records all of it, as before; the tracker is kept up to date either way.
+bool skip_repeats() {
+    return renderer::render_opt::enabled(renderer::render_opt::Opt::VkStateSkip);
+}
+
+// Records the GL viewport and scissor, or a pass's indexed viewports with their scissors, one
+// command each, into `cmd` without RecordedState: for more viewports than it can remember.
+void record_viewports_untracked(VkCommandBuffer cmd) {
+    std::vector<VkViewport> viewports;
+    std::vector<VkRect2D> scissors;
+
+    // Each indexed viewport is its own scissor too.
+    for (const auto& r : g->indexed_viewports) {
+        const auto x = static_cast<float>(r[0]);
+        const auto y = static_cast<float>(r[1]);
+        const auto width = static_cast<float>(r[2]);
+        const auto height = static_cast<float>(r[3]);
+        viewports.push_back({x, y, width, height, 0.0f, 1.0f});
+        scissors.push_back(
+            {{r[0], r[1]}, {static_cast<std::uint32_t>(r[2]), static_cast<std::uint32_t>(r[3])}}
+        );
+    }
+
+    vkCmdSetViewport(cmd, 0, static_cast<std::uint32_t>(viewports.size()), viewports.data());
+    vkCmdSetScissor(cmd, 0, static_cast<std::uint32_t>(scissors.size()), scissors.data());
+    count_command(Command::DynamicState, 2);  // the viewports and the scissors
+    g->recorded.viewport_count = 0;
+    g->recorded.scissor_count = 0;
+}
+
+// Records into `cmd` the viewports and scissors a draw into `t` uses: the GL viewport and the
+// scissor clipped to `t`, or the indexed viewports a pass set, each its own scissor. Each of the
+// two commands is left out when it would set what `cmd` holds.
+void record_viewports(VkCommandBuffer cmd, const Target& t) {
+    const std::size_t count = std::max<std::size_t>(1, g->indexed_viewports.size());
+
+    // A draw into more viewports than the tracker holds is recorded in full.
+    if (count > kTrackedViewports) {
+        record_viewports_untracked(cmd);
+        return;
+    }
+
+    const State& s = g->state;
+    std::array<VkViewport, kTrackedViewports> viewports{};
+    std::array<VkRect2D, kTrackedViewports> scissors{};
+
+    // The GL viewport and scissor, unless a pass drew into indexed viewports, each its own scissor.
+    if (g->indexed_viewports.empty()) {
+        viewports[0] =
+            {static_cast<float>(s.viewport[0]),
+             static_cast<float>(s.viewport[1]),
+             static_cast<float>(s.viewport[2]),
+             static_cast<float>(s.viewport[3]),
+             0.0f,
+             1.0f};
+        scissors[0] = scissor_rect(t);
+    } else {
+        // Each of the pass's viewports.
+        for (std::size_t n = 0; n < count; ++n) {
+            const auto& r = g->indexed_viewports[n];
+            viewports[n] =
+                {static_cast<float>(r[0]),
+                 static_cast<float>(r[1]),
+                 static_cast<float>(r[2]),
+                 static_cast<float>(r[3]),
+                 0.0f,
+                 1.0f};
+            scissors[n] = {
+                {r[0], r[1]}, {static_cast<std::uint32_t>(r[2]), static_cast<std::uint32_t>(r[3])}
+            };
+        }
+    }
+
+    RecordedState& recorded = g->recorded;
+    const auto n = static_cast<std::uint32_t>(count);
+    const bool skip = skip_repeats();
+
+    // VkViewport and VkRect2D have no padding, so equal bytes are equal state.
+    if (!skip || recorded.viewport_count != n
+        || std::memcmp(viewports.data(), recorded.viewports.data(), count * sizeof(VkViewport))
+               != 0) {
+        vkCmdSetViewport(cmd, 0, n, viewports.data());
+        count_command(Command::DynamicState);
+        recorded.viewport_count = n;
+        recorded.viewports = viewports;
+    }
+
+    // The scissors, apart: a 2D draw often moves the scissor and keeps the viewport.
+    if (!skip || recorded.scissor_count != n
+        || std::memcmp(scissors.data(), recorded.scissors.data(), count * sizeof(VkRect2D)) != 0) {
+        vkCmdSetScissor(cmd, 0, n, scissors.data());
+        count_command(Command::DynamicState);
+        recorded.scissor_count = n;
+        recorded.scissors = scissors;
+    }
+}
+
+// Records `value` into `known` and returns true when it differs from what `known` holds, or
+// when vk-state-skip is off; false when the command that sets it can be left out.
+template <typename Value>
+bool changes(std::optional<Value>& known, const Value& value, bool skip) {
+    // The command buffer holds this value already.
+    if (skip && known == value) {
+        return false;
+    }
+
+    known = value;
+    return true;
+}
+
+// Records into `cmd` the blend constants and the three stencil states of the GL state, each
+// command left out when it would set what `cmd` holds.
+void record_blend_and_stencil(VkCommandBuffer cmd) {
+    const State& s = g->state;
+    RecordedState& recorded = g->recorded;
+    const bool skip = skip_repeats();
+    std::array<std::uint32_t, 4> blend_bits{};
+    std::memcpy(blend_bits.data(), s.blend_colour, sizeof blend_bits);
+
+    // The blend constants, by their bits.
+    if (changes(recorded.blend_bits, blend_bits, skip)) {
+        vkCmdSetBlendConstants(cmd, s.blend_colour);
+        count_command(Command::DynamicState);
+    }
+
+    const auto reference = static_cast<std::uint32_t>(s.stencil_ref);
+
+    // The stencil reference, compare mask and write mask, one command each, for both faces.
+    if (changes(recorded.stencil_reference, reference, skip)) {
+        vkCmdSetStencilReference(cmd, VK_STENCIL_FACE_FRONT_AND_BACK, reference);
+        count_command(Command::DynamicState);
+    }
+
+    // The compare mask.
+    if (changes(recorded.stencil_compare_mask, s.stencil_value_mask, skip)) {
+        vkCmdSetStencilCompareMask(cmd, VK_STENCIL_FACE_FRONT_AND_BACK, s.stencil_value_mask);
+        count_command(Command::DynamicState);
+    }
+
+    // The write mask.
+    if (changes(recorded.stencil_write_mask, s.stencil_write_mask, skip)) {
+        vkCmdSetStencilWriteMask(cmd, VK_STENCIL_FACE_FRONT_AND_BACK, s.stencil_write_mask);
+        count_command(Command::DynamicState);
+    }
+}
+
+// ---- Binds, recorded when they change ----
+
+// Binds `set` as set 0 of program `p` into `cmd`, with the program's uniform offset when its
+// uniforms are dynamic; left out when `cmd` holds that set at that offset with that layout.
+void record_program_set(VkCommandBuffer cmd, const Program& p, VkDescriptorSet set) {
+    RecordedState& recorded = g->recorded;
+    const auto offset = static_cast<std::uint32_t>(p.uniforms_offset);
+    const std::optional<std::uint32_t> dynamic =
+        p.dynamic_uniforms ? std::optional<std::uint32_t>(offset) : std::nullopt;
+
+    // The set is bound already, at the same offset (use_layout forgot it on a change of layout).
+    if (skip_repeats() && recorded.set == set && recorded.dynamic_offset == dynamic) {
+        return;
+    }
+
+    vkCmdBindDescriptorSets(
+        cmd,
+        VK_PIPELINE_BIND_POINT_GRAPHICS,
+        p.layout,
+        0,
+        1,
+        &set,
+        dynamic ? 1u : 0u,
+        dynamic ? &offset : nullptr
+    );
+    count_command(Command::BindDescriptors);
+    recorded.set = set;
+    recorded.dynamic_offset = dynamic;
+}
+
+// Binds the material pages' `set` as set 1 of `layout` into `cmd` and pushes the material draw's
+// index `draw`, each left out when `cmd` holds it already.
+void record_material(
+    VkCommandBuffer cmd, VkPipelineLayout layout, VkDescriptorSet set, std::uint32_t draw
+) {
+    RecordedState& recorded = g->recorded;
+    const bool skip = skip_repeats();
+
+    // The material set, bound once for the pass's draws of this layout.
+    if (!skip || recorded.material_set != set) {
+        vkCmdBindDescriptorSets(
+            cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, layout, 1, 1, &set, 0, nullptr
+        );
+        count_command(Command::BindDescriptors);
+        recorded.material_set = set;
+    }
+
+    // The draw's index into the material pages, which changes from draw to draw.
+    if (changes(recorded.push_constant, draw, skip)) {
+        vkCmdPushConstants(cmd, layout, VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof draw, &draw);
+        count_command(Command::BindDescriptors);
+    }
+}
+
+// Binds the draw's `count` vertex buffers `buffers` at `offsets` from binding 0 into `cmd`; left
+// out when `cmd` holds the same buffers at the same offsets.
+void record_vertex_buffers(
+    VkCommandBuffer cmd, std::uint32_t count, const VkBuffer* buffers, const VkDeviceSize* offsets
+) {
+    RecordedState& recorded = g->recorded;
+
+    // The same buffers at the same offsets: handles and offsets have no padding to compare.
+    if (skip_repeats() && recorded.vertex_count == count
+        && std::memcmp(buffers, recorded.vertex_buffers.data(), count * sizeof(VkBuffer)) == 0
+        && std::memcmp(offsets, recorded.vertex_offsets.data(), count * sizeof(VkDeviceSize))
+               == 0) {
+        return;
+    }
+
+    vkCmdBindVertexBuffers(cmd, 0, count, buffers, offsets);
+    count_command(Command::BindBuffers);
+    recorded.vertex_count = count;
+    std::copy_n(buffers, count, recorded.vertex_buffers.begin());
+    std::copy_n(offsets, count, recorded.vertex_offsets.begin());
+}
+
+// Binds `index` as the index buffer, of `type`, into `cmd`; left out when `cmd` holds it already.
+void record_index_buffer(VkCommandBuffer cmd, const BufferRef& index, VkIndexType type) {
+    RecordedState& recorded = g->recorded;
+
+    // The same buffer at the same offset with the same index type.
+    if (skip_repeats() && recorded.index_buffer == index.buffer
+        && recorded.index_offset == index.offset && recorded.index_type == type) {
+        return;
+    }
+
+    vkCmdBindIndexBuffer(cmd, index.buffer, index.offset, type);
+    count_command(Command::BindBuffers);
+    recorded.index_buffer = index.buffer;
+    recorded.index_offset = index.offset;
+    recorded.index_type = type;
+}
 
 }  // namespace
 
@@ -61,11 +304,22 @@ void draw(
     GpuPage* gpu_page,
     unsigned gpu_command
 ) {
+    // The draw's count, and its time for the vk_draw_ms gauge. The two clock reads are taken only
+    // while the debug tools measure (vk-draw-clock): the gauge is published only then.
     struct Timed {
-        Clock::time_point start = Clock::now();
+        // Whether this draw is timed: always on the reference path.
+        bool on = !renderer::render_opt::enabled(renderer::render_opt::Opt::VkDrawClock)
+                  || stats::enabled();
+
+        // When the draw began; unread when it is not timed.
+        Clock::time_point start = on ? Clock::now() : Clock::time_point{};
 
         ~Timed() {
-            g->measures.draw_s += seconds_since(start);
+            // An untimed draw adds nothing to draw_s, which stays 0 for an unmeasured frame.
+            if (on) {
+                g->measures.draw_s += seconds_since(start);
+            }
+
             ++g->measures.draws;
         }
     } timed;
@@ -82,13 +336,22 @@ void draw(
     if (s.viewport[2] <= 0 || s.viewport[3] <= 0) {
         return;
     }
-    // What it samples, in the layout for sampling: moved before the drawing begins.
-    std::vector<Sampled> samplers;
+    // What it samples, in the layout for sampling: moved before the drawing begins. The list is
+    // the Context's, kept for its capacity (vk-draw-cache), or a vector of the draw's own.
+    std::vector<Sampled> own_samplers;
+    std::vector<Sampled>& samplers =
+        renderer::render_opt::enabled(renderer::render_opt::Opt::VkDrawCache) ? g->scratch.samplers
+                                                                              : own_samplers;
+    samplers.clear();
+
+    // Each sampler uniform the compiler gave a binding.
     for (std::size_t i = 0; i < p->compiled.uniforms.size(); ++i) {
+        // A sampler with a binding: what its unit holds now.
         if (p->compiled.uniforms[i].sampler && p->compiled.uniforms[i].binding >= 0) {
             samplers.push_back(sampled(*p, i));
         }
     }
+
     for (Sampled& sm : samplers) {
         Image* image = sm.image;
         if (image != nullptr && (image == t.colour || image == t.depth)) {
@@ -169,18 +432,26 @@ void draw(
     std::uint32_t first_index = 0;
     if (indexed) {
         Buffer* eb = g->buffers.find(va.elements);
-        if (eb == nullptr || eb->data.empty()) {
+        if (eb == nullptr || eb->size == 0) {
             return;
         }
         if (index_type == GL_UNSIGNED_BYTE) {
-            // Vulkan's 8-bit indices are an extension: made 16-bit.
-            const std::size_t from = std::min<std::size_t>(index_offset, eb->data.size());
+            // No renderer draws 8-bit indices (REPORT C6): said once if one ever does, so the
+            // emulation below can go when nothing has said it.
+            if (!g->byte_indices_logged) {
+                log::warn("vulkan: a draw with 8-bit indices, which the backend makes 16-bit");
+                g->byte_indices_logged = true;
+            }
+
+            // Vulkan's 8-bit indices are an extension: made 16-bit, from the CPU's copy.
+            const std::vector<std::uint8_t>& bytes = buffer_bytes(*eb);
+            const std::size_t from = std::min<std::size_t>(index_offset, bytes.size());
             const std::size_t have =
-                std::min<std::size_t>(static_cast<std::size_t>(count), eb->data.size() - from);
+                std::min<std::size_t>(static_cast<std::size_t>(count), bytes.size() - from);
             Slice sl = ring(static_cast<VkDeviceSize>(have * 2));
             auto* out = reinterpret_cast<std::uint16_t*>(sl.data);
             for (std::size_t i = 0; i < have; ++i) {
-                const std::uint8_t v = eb->data[from + i];
+                const std::uint8_t v = bytes[from + i];
                 out[i] = v == 0xFF ? 0xFFFF : v;
             }
             index = {sl.buffer, sl.offset, have * 2};
@@ -252,60 +523,31 @@ void draw(
     gpu_flush_draws();
     if (pipeline != g->bound_pipeline) {
         vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline);
+        count_command(Command::BindPipeline);
         g->bound_pipeline = pipeline;
     }
+    // Sets bound with another program's layout are not trusted for this one.
+    g->recorded.use_layout(p->layout);
+
+    // The program's set 0: its uniforms and textures, when it has any.
     if (set != VK_NULL_HANDLE) {
-        const auto dynamic_offset = static_cast<std::uint32_t>(p->uniforms_offset);
-        vkCmdBindDescriptorSets(
-            cmd,
-            VK_PIPELINE_BIND_POINT_GRAPHICS,
-            p->layout,
-            0,
-            1,
-            &set,
-            p->dynamic_uniforms ? 1u : 0u,
-            p->dynamic_uniforms ? &dynamic_offset : nullptr
-        );
+        record_program_set(cmd, *p, set);
     }
+
+    // The material pages and the draw's index into them, on the native material path.
     if (material.set) {
-        vkCmdBindDescriptorSets(
-            cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, p->layout, 1, 1, &material.set, 0, nullptr
-        );
-        vkCmdPushConstants(cmd, p->layout, VK_SHADER_STAGE_VERTEX_BIT, 0, 4, &material.draw);
+        record_material(cmd, p->layout, material.set, material.draw);
     }
+
+    // The vertex inputs, when the program reads any.
     if (n > 0) {
-        vkCmdBindVertexBuffers(cmd, 0, n, buffers, offsets);
+        record_vertex_buffers(cmd, n, buffers, offsets);
     }
-    VkViewport viewport{
-        static_cast<float>(s.viewport[0]),
-        static_cast<float>(s.viewport[1]),
-        static_cast<float>(s.viewport[2]),
-        static_cast<float>(s.viewport[3]),
-        0.0f,
-        1.0f
-    };
-    const VkRect2D scissor = scissor_rect(t);
-    if (g->indexed_viewports.empty()) {
-        vkCmdSetViewport(cmd, 0, 1, &viewport);
-        vkCmdSetScissor(cmd, 0, 1, &scissor);
-    } else {
-        std::vector<VkViewport> viewports;
-        std::vector<VkRect2D> scissors;
-        for (const auto& r : g->indexed_viewports) {
-            viewports.push_back({float(r[0]), float(r[1]), float(r[2]), float(r[3]), 0, 1});
-            scissors.push_back({{r[0], r[1]}, {unsigned(r[2]), unsigned(r[3])}});
-        }
-        vkCmdSetViewport(cmd, 0, static_cast<std::uint32_t>(viewports.size()), viewports.data());
-        vkCmdSetScissor(cmd, 0, static_cast<std::uint32_t>(scissors.size()), scissors.data());
-    }
-    vkCmdSetBlendConstants(cmd, s.blend_colour);
-    vkCmdSetStencilReference(
-        cmd, VK_STENCIL_FACE_FRONT_AND_BACK, static_cast<std::uint32_t>(s.stencil_ref)
-    );
-    vkCmdSetStencilCompareMask(cmd, VK_STENCIL_FACE_FRONT_AND_BACK, s.stencil_value_mask);
-    vkCmdSetStencilWriteMask(cmd, VK_STENCIL_FACE_FRONT_AND_BACK, s.stencil_write_mask);
+
+    record_viewports(cmd, t);
+    record_blend_and_stencil(cmd);
     if (indexed) {
-        vkCmdBindIndexBuffer(cmd, index.buffer, index.offset, vk_index);
+        record_index_buffer(cmd, index, vk_index);
         if (gpu_page) {
             g->gpu.pending_bindings = gpu_bindings;
             g->gpu.pending_arguments = gpu_page->arguments.buffer;
@@ -321,6 +563,7 @@ void draw(
                 0,
                 0
             );
+            count_command(Command::Draw);
             ++g->measures.native_draws;
         }
     } else {
@@ -331,6 +574,7 @@ void draw(
             static_cast<std::uint32_t>(first),
             0
         );
+        count_command(Command::Draw);
         ++g->measures.native_draws;
     }
 }

@@ -2,7 +2,7 @@
  "format": 1,
  "game": "rac1",
  "disc": "pal",
- "generated_by": "editor/catalogue.py",
+ "generated_by": "sdk/tools/catalogue.py",
  "moby": {"struct":"Moby","size":256,"class_field":{"name":"oclass","offset":166,"type":"s16"},"update_field":{"name":"update","offset":116,"type":"void*"},"pvars_field":{"name":"pvars","offset":120,"type":"u8*"}},
  "levels": ["Veldin","Novalis","Aridia","Kerwan","Eudora","Rilgar","Blarg Station","Umbris","Batalia","Gaspar","Orxon","Pokitaru","Hoven","Gemlik Base","Oltanis","Quartu","Kalebo III","Drek's Fleet","Veldin (the return)"],
  "counts": {"classes":1167,"class_roles":1167,"update_functions":645,"shared_update_functions":78,"update_functions_by_source":{"candidate":6,"decomp":639},"update_functions_in_port":645,"update_functions_by_hook_status":{"hook_point":637,"needs_hook_row":8},"classes_with_named_class":563,"classes_with_pvar_struct":226,"pvar_structs":151,"helpers":1244},

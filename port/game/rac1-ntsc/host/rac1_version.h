@@ -212,6 +212,12 @@
 #define func_L00_001F34F0 game_FUN_L00_001f3170
 #define func_L00_001FD1D8 func_L00_001FD228
 #define func_L00_001FE688 func_L00_001FE6D8
+#define func_L00_001FEE50 func_L00_001FEEA0
+#define func_L00_001FEE98 func_L00_001FEEE8
+#define func_L00_001FEEC0 func_L00_001FEF10
+#define func_L00_001FEED0 func_L00_001FEF20
+#define func_L00_001FEEF8 func_L00_001FEF48
+#define func_L00_001FEF08 func_L00_001FEF58
 #define func_L00_00200290 game_FUN_001fa728
 #define func_L00_00200290__game game_FUN_001fa728__game
 #define func_L00_00201300 func_L00_00201350
@@ -265,6 +271,11 @@
 #define RAC1_ADDR_0x0015EDA8u 0x0015ECA8u
 #define RAC1_ADDR_0x0015EDB0u 0x0015ECB0u
 #define RAC1_ADDR_0x0015EDC0u 0x0015ECC0u
+#define RAC1_ADDR_0x0015EE60u 0x0015ED60u /* gp-0x7EA0, as PAL's; not checked against the US code */
+#define RAC1_ADDR_0x0015EE64u 0x0015ED64u /* gp-0x7E9C, as PAL's; not checked against the US code */
+#define RAC1_ADDR_0x0015EE68u 0x0015ED68u /* gp-0x7E98, as PAL's; not checked against the US code */
+#define RAC1_ADDR_0x0015EE6Cu 0x0015ED6Cu /* gp-0x7E94, as PAL's; not checked against the US code */
+#define RAC1_ADDR_0x0015EE70u 0x0015ED70u /* gp-0x7E90, as PAL's; not checked against the US code */
 #define RAC1_ADDR_0x0015EE80u 0x0015ED80u
 #define RAC1_ADDR_0x0015EE84u 0x0015ED84u
 #define RAC1_ADDR_0x0015EE98u 0x0015ED98u
@@ -277,7 +288,7 @@
 #define RAC1_ADDR_0x0015F6E8u 0x0015F604u
 #define RAC1_ADDR_0x0015F6FCu 0x0015F618u
 #define RAC1_ADDR_0x00160018u 0x0015FF18u
-#define RAC1_ADDR_0x00160020u 0x0015FF20u
+#define RAC1_ADDR_0x00160030u 0x0015FF30u /* hand/functional/FUN_001e9b10.c reads it there */
 #define RAC1_ADDR_0x0016044Cu 0x0016034Cu
 #define RAC1_ADDR_0x001604CCu 0x001603CCu
 #define RAC1_ADDR_0x0016055Cu 0x0016045Cu
@@ -296,6 +307,7 @@
 #define RAC1_ADDR_0x0018E240u 0x0018E140u
 #define RAC1_ADDR_0x0018E340u 0x0018E240u
 #define RAC1_ADDR_0x00193400u 0x00193300u
+#define RAC1_ADDR_0x001940C0u 0x00193FC0u /* the NTSC decomp's occl_visibility */
 #define RAC1_ADDR_0x00194200u 0x00194100u
 #define RAC1_ADDR_0x001984C0u 0x001983C0u
 #define RAC1_ADDR_0x00199C60u 0x00199B60u

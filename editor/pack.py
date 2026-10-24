@@ -65,10 +65,10 @@ def f32(x: float) -> bytes:
 
 
 def scene_mobys(text: str) -> list[dict]:
-    return scene_nodes(text, "Mobys", "moby")
+    return read_scene_nodes(text, "Mobys", "moby")
 
 
-def scene_nodes(text: str, parent: str, kind: str) -> list[dict]:
+def read_scene_nodes(text: str, parent: str, kind: str) -> list[dict]:
     """The nodes of a level scene under Game/PARENT (Mobys, Ties, Shrubs): name, class id (of a
     KIND class scene: moby, tie, shrub), the 12 floats of its transform (basis rows, then
     origin) and its rc1_* metadata."""

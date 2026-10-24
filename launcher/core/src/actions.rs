@@ -107,7 +107,8 @@ pub struct Action {
 }
 
 /// What an action works on. A game has two builds, and the launcher keeps them apart.
-#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Serialize, Deserialize, ts_rs::TS)]
+#[ts(rename = "ActionArea")]
 #[serde(rename_all = "camelCase")]
 pub enum Area {
     /// The decompilation: the original program rebuilt and compared with the disc.
@@ -119,7 +120,8 @@ pub enum Area {
     Editor,
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, ts_rs::TS)]
+#[ts(rename = "ActionKind")]
 #[serde(rename_all = "camelCase")]
 pub enum Kind {
     /// Getting the inputs in place: discs, extracted files, toolchains.
@@ -136,7 +138,8 @@ pub enum Kind {
 
 /// How far an action is wired up. The launcher shows all three; it runs
 /// `connected` and `unverified` ones, the latter with a warning.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Default, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default, Serialize, Deserialize, ts_rs::TS)]
+#[ts(rename = "ActionState")]
 #[serde(rename_all = "camelCase")]
 pub enum State {
     /// Run from the launcher end to end, on the platforms listed.
@@ -148,7 +151,7 @@ pub enum State {
     Planned,
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, ts_rs::TS)]
 #[serde(rename_all = "camelCase")]
 pub enum Platform {
     Linux,
@@ -206,7 +209,7 @@ pub struct Need {
 }
 
 /// Where an action belongs: the checkout, or one version.
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, ts_rs::TS)]
 #[serde(rename_all = "camelCase", tag = "kind", content = "key")]
 pub enum Scope {
     Repository,
@@ -214,7 +217,7 @@ pub enum Scope {
 }
 
 /// What the UI shows for an action: the action, and whether it can run now.
-#[derive(Debug, Clone, Serialize)]
+#[derive(Debug, Clone, Serialize, ts_rs::TS)]
 #[serde(rename_all = "camelCase")]
 pub struct ActionView {
     pub id: String,

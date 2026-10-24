@@ -3,6 +3,13 @@
 // Included inside vkgl_draw.cpp: native instance work shares its frame-slot owners.
 constexpr unsigned kGpuSummaryAt = kGpuPageGroups + 5 * kGpuPageDraws;
 constexpr unsigned kGpuSummaryWords = 4;
+// A group record whose first word has this bit reads its candidates from the resident words
+// (binding 3, GpuResident) at the rest of that word, not from the page's payload.
+constexpr std::uint32_t kGpuResidentBit = 0x80000000u;
+// A candidate's words: eight of bounds and visibility, then thirty of instance data.
+constexpr unsigned kGpuCandidateWords = 38;
+// A view's words in the payload: six planes of four, 32 of PVS, the plane count and the flags.
+constexpr unsigned kGpuViewWords = 58;
 // Input words: a four-word header, four-word group records, then candidates
 // containing eight bound/visibility words and thirty instance words. Output
 // arguments reserve kGpuPageGroups count words before five-word indexed draws.
@@ -17,6 +24,13 @@ layout(std430, binding = 1) writeonly buffer OutputWords {
 layout(std430, binding = 2) buffer DrawWords {
     uint args[];
 };
+layout(std430, binding = 3) readonly buffer ResidentWords {
+    uint res[];
+};
+// Word `at` of a candidate: from the resident words for a resident group, else the page's.
+uint candidate(bool resident, uint at) {
+    return resident ? res[at] : src[at];
+}
 shared uint prefix[64];
 shared uint total;
 #ifdef SUMMARIZE
@@ -74,6 +88,8 @@ void main() {
     uint record = 4 + group * 4;
     uint begin = src[record], outputBase = src[record + 1], count = src[record + 2],
          view = src[record + 3];
+    bool resident = (begin & 0x80000000u) != 0u;
+    begin &= 0x7fffffffu;
     if (lane == 0) {
         total = 0;
     }
@@ -82,7 +98,7 @@ void main() {
         uint index = chunk + lane, base = begin + index * 38;
         bool visible = index < count;
         if (visible) {
-            uint flags = src[base + 7], word = src[base + 6];
+            uint flags = candidate(resident, base + 7), word = candidate(resident, base + 6);
             if ((flags & 2) == 0 || (src[view + 57] & 2) == 0) {
                 uint byte = word >> 8, bit = word & 255;
                 if ((src[view + 57] & 1) != 0 && byte < 128 && bit != 0 && (bit & (bit - 1)) == 0) {
@@ -91,14 +107,14 @@ void main() {
                 }
                 if (visible && (flags & 1) != 0) {
                     vec3 low = vec3(
-                        uintBitsToFloat(src[base]),
-                        uintBitsToFloat(src[base + 1]),
-                        uintBitsToFloat(src[base + 2])
+                        uintBitsToFloat(candidate(resident, base + 0)),
+                        uintBitsToFloat(candidate(resident, base + 1)),
+                        uintBitsToFloat(candidate(resident, base + 2))
                     );
                     vec3 high = vec3(
-                        uintBitsToFloat(src[base + 3]),
-                        uintBitsToFloat(src[base + 4]),
-                        uintBitsToFloat(src[base + 5])
+                        uintBitsToFloat(candidate(resident, base + 3)),
+                        uintBitsToFloat(candidate(resident, base + 4)),
+                        uintBitsToFloat(candidate(resident, base + 5))
                     );
                     for (uint plane = 0; plane < src[view + 56]; ++plane) {
                         vec4 p = uintBitsToFloat(uvec4(
@@ -127,7 +143,7 @@ void main() {
         if (visible) {
             uint target = (outputBase + total + prefix[lane] - 1) * 30;
             for (uint w = 0; w < 30; ++w) {
-                dst[target + w] = src[base + 8 + w];
+                dst[target + w] = candidate(resident, base + 8 + w);
             }
         }
         barrier();
@@ -152,13 +168,14 @@ bool gpu_make_engine() {
         return true;
     }
     engine.failed = true;
-    VkDescriptorSetLayoutBinding bindings[3]{};
-    for (unsigned i = 0; i < 3; ++i) {
+    // The page's input, output and arguments, and the resident words.
+    VkDescriptorSetLayoutBinding bindings[4]{};
+    for (unsigned i = 0; i < 4; ++i) {
         bindings[i] =
             {i, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 1, VK_SHADER_STAGE_COMPUTE_BIT, nullptr};
     }
     VkDescriptorSetLayoutCreateInfo sets{VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO};
-    sets.bindingCount = 3;
+    sets.bindingCount = 4;
     sets.pBindings = bindings;
     if (!check(
             vkCreateDescriptorSetLayout(g->device, &sets, nullptr, &engine.set_layout),
@@ -212,6 +229,7 @@ bool gpu_make_engine() {
             vkCreateComputePipelines(g->device, g->pipeline_cache, 1, &pipeline, nullptr, result),
             "GPU instance pipeline"
         );
+        count_pipeline();
         vkDestroyShaderModule(g->device, module, nullptr);
         if (!ok) {
             return false;
@@ -280,6 +298,7 @@ void gpu_reset(Frame& f) {
     f.gpu.used = 0;
     f.gpu.recording = 0;
     f.gpu.counters = false;
+    f.gpu.resident = VK_NULL_HANDLE;
     for (auto& page : f.gpu.pages) {
         page.groups.clear();
         page.commands.clear();
@@ -289,28 +308,22 @@ void gpu_reset(Frame& f) {
     }
 }
 
-renderer::GpuInstanceBatch gpu_make_batch(
-    unsigned buffer,
-    std::span<const renderer::GpuCullBounds> bounds,
-    const renderer::GpuCullView& view
-) {
-    if (!gpu_driven_active() || bounds.empty()) {
-        return {};
-    }
-    auto* source = g->buffers.find(buffer);
-    const auto count = static_cast<unsigned>(bounds.size());
-    if (!source || count > kGpuPageInstances || source->data.size() != bounds.size() * 120) {
-        throw std::runtime_error("invalid GPU instance source");
-    }
+// Returns the page a batch of `count` instances and `words` payload words goes into: the
+// recording's last page, or a new one when that is full (a page referenced by recorded draws is
+// never grown or moved).
+GpuPage& gpu_page_for(unsigned count, unsigned words) {
     auto& work = frame().gpu;
+    // The page's header, group records, commands and summary are 4 words each beside the payload.
     auto fits = [&](const GpuPage& page) {
         return page.instances + count <= kGpuPageInstances && page.groups.size() < kGpuPageGroups
-               && (page.payload.size() + 58 + count * 38 + 4 * (page.groups.size() + 1)
-                   + 4 * kGpuPageDraws + 4)
-                          * 4
+               && (page.payload.size() + words + 4 * (page.groups.size() + 1) + 4 * kGpuPageDraws
+                   + 4) * 4
                       <= kGpuInputBytes;
     };
+
+    // The last page is full, or there is none yet in this recording.
     if (!work.used || !fits(work.pages[work.used - 1])) {
+        // Every page of the slot is in use: one more, kept for the slot's later recordings.
         if (work.used == work.pages.size()) {
             work.pages.emplace_back();
             auto& page = work.pages.back();
@@ -327,15 +340,147 @@ renderer::GpuInstanceBatch gpu_make_batch(
                 false
             );
         }
+
         ++work.used;
     }
-    auto& page = work.pages[work.used - 1];
+
+    return work.pages[work.used - 1];
+}
+
+// Appends `view` to `page`'s payload, as the culling reads it (kGpuViewWords words); returns
+// the word where it starts.
+unsigned gpu_write_view(GpuPage& page, const renderer::GpuCullView& view) {
+    constexpr unsigned kPvsAt = 24;  // after the six planes of four words
     const auto view_at = static_cast<unsigned>(page.payload.size());
-    page.payload.resize(page.payload.size() + 58);
-    std::memcpy(page.payload.data() + view_at, view.planes.data(), 96);
-    std::memcpy(page.payload.data() + view_at + 24, view.pvs.data(), 128);
-    page.payload[view_at + 56] = view.plane_count;
-    page.payload[view_at + 57] = (view.use_pvs ? 1u : 0u) | (view.bypass_ui ? 2u : 0u);
+    page.payload.resize(page.payload.size() + kGpuViewWords);
+    std::memcpy(page.payload.data() + view_at, view.planes.data(), sizeof(view.planes));
+    std::memcpy(page.payload.data() + view_at + kPvsAt, view.pvs.data(), sizeof(view.pvs));
+    page.payload[view_at + kGpuViewWords - 2] = view.plane_count;
+    page.payload[view_at + kGpuViewWords - 1] =
+        (view.use_pvs ? 1u : 0u) | (view.bypass_ui ? 2u : 0u);
+    return view_at;
+}
+
+// Makes sure this recording's culling can read the resident words from device memory: when they
+// changed since their last copy, a new copy is staged through the ring into the upload command
+// buffer, and the old one goes when the frames that read it have retired. False when this
+// recording already reads an older copy (its pages bind one resident buffer).
+bool gpu_resident_ready() {
+    auto& resident = g->gpu.resident;
+    auto& work = frame().gpu;
+
+    // Changed since the copy: a new one, unless this recording's pages read the old one.
+    if (resident.dirty) {
+        // The batches already made this recording read the old copy: the rest take the payload.
+        if (work.resident != VK_NULL_HANDLE) {
+            return false;
+        }
+
+        const VkDeviceSize bytes = VkDeviceSize(resident.words.size()) * 4;
+        const Slice staged = ring_copy(resident.words.data(), bytes);
+
+        // No staging: the per-frame copy draws this frame, and the upload is tried again.
+        if (staged.data == nullptr) {
+            return false;
+        }
+
+        Chunk copy = gpu_buffer(
+            bytes, VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT, false
+        );
+        const VkCommandBuffer cmd = upload_cmd();
+        const VkBufferCopy region{staged.offset, 0, bytes};
+        vkCmdCopyBuffer(cmd, staged.buffer, copy.buffer, 1, &region);
+        count_command(Command::Copy);
+        // The culling dispatches, recorded later into the same command buffer, read the copy.
+        VkMemoryBarrier written{VK_STRUCTURE_TYPE_MEMORY_BARRIER};
+        written.srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
+        written.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
+        vkCmdPipelineBarrier(
+            cmd,
+            VK_PIPELINE_STAGE_TRANSFER_BIT,
+            VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT,
+            0,
+            1,
+            &written,
+            0,
+            nullptr,
+            0,
+            nullptr
+        );
+        count_barrier(VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT);
+
+        // An older copy is read by frames still in flight: it goes when this slot retires.
+        if (resident.buffer.buffer != VK_NULL_HANDLE) {
+            defer([old = resident.buffer] {
+                vmaDestroyBuffer(g->allocator, old.buffer, old.allocation);
+            });
+        }
+
+        resident.buffer = copy;
+        resident.dirty = false;
+    }
+
+    work.resident = resident.buffer.buffer;
+    return true;
+}
+
+// A batch of the registered instances of buffer `name` against `view`: only the view and a group
+// record go into the page. Empty when the buffer is not registered, was written since, holds
+// another count, or the resident words cannot be read this recording: the caller copies then.
+renderer::GpuInstanceBatch gpu_resident_batch(
+    unsigned name, const Buffer& source, unsigned count, const renderer::GpuCullView& view
+) {
+    const auto& groups = g->gpu.resident.groups;
+    const auto found = groups.find(name);
+
+    // Not registered, or not as it is now.
+    if (found == groups.end() || found->second.version != source.version
+        || found->second.count != count) {
+        return {};
+    }
+
+    // Its words are not readable this recording.
+    if (!gpu_resident_ready()) {
+        return {};
+    }
+
+    auto& page = gpu_page_for(count, kGpuViewWords);
+    const unsigned view_at = gpu_write_view(page, view);
+    const auto group = static_cast<unsigned>(page.groups.size());
+    page.groups.push_back({found->second.first | kGpuResidentBit, page.instances, count, view_at});
+    page.instances += count;
+    // Only the view is written into the page's payload, in its 32-bit words.
+    g->submission.gpu_payload_bytes += std::uint64_t{kGpuViewWords} * 4;
+    ++g->gpu.batches;
+    g->gpu.candidates += count;
+    return {g->recording, frame().gpu.used - 1, group};
+}
+
+renderer::GpuInstanceBatch gpu_make_batch(
+    unsigned buffer,
+    std::span<const renderer::GpuCullBounds> bounds,
+    const renderer::GpuCullView& view
+) {
+    if (!gpu_driven_active() || bounds.empty()) {
+        return {};
+    }
+    auto* source = g->buffers.find(buffer);
+    const auto count = static_cast<unsigned>(bounds.size());
+    if (!source || count > kGpuPageInstances || source->data.size() != bounds.size() * 120) {
+        throw std::runtime_error("invalid GPU instance source");
+    }
+
+    // Registered static instances: the view and a group record only (gpu-resident-instances).
+    if (renderer::render_opt::enabled(renderer::render_opt::Opt::GpuResidentInstances)) {
+        // The resident path took it; otherwise the instances are copied below, as before.
+        if (const auto batch = gpu_resident_batch(buffer, *source, count, view)) {
+            return batch;
+        }
+    }
+
+    auto& work = frame().gpu;
+    auto& page = gpu_page_for(count, kGpuViewWords + count * kGpuCandidateWords);
+    const unsigned view_at = gpu_write_view(page, view);
     const auto first = static_cast<unsigned>(page.payload.size());
     page.payload.resize(page.payload.size() + count * 38);
     for (unsigned i = 0; i < count; ++i) {
@@ -345,9 +490,65 @@ renderer::GpuInstanceBatch gpu_make_batch(
     const auto group = static_cast<unsigned>(page.groups.size());
     page.groups.push_back({first, page.instances, count, view_at});
     page.instances += count;
+    // The view and the instances written into the page's payload, in its 32-bit words.
+    g->submission.gpu_payload_bytes += std::uint64_t{page.payload.size() - view_at} * 4;
     ++g->gpu.batches;
     g->gpu.candidates += count;
     return {g->recording, work.used - 1, group};
+}
+
+bool gpu_register(unsigned buffer, std::span<const renderer::GpuCullBounds> bounds) {
+    // Nothing culls on the GPU, or nothing to register.
+    if (!gpu_driven_active() || bounds.empty()) {
+        return false;
+    }
+
+    const Buffer* source = g->buffers.find(buffer);
+    const auto count = static_cast<unsigned>(bounds.size());
+
+    // A batch of it must fit a page, and the buffer must hold one instance per bound.
+    if (source == nullptr || count > kGpuPageInstances
+        || source->data.size() != bounds.size() * sizeof(std::uint32_t) * 30) {
+        return false;
+    }
+
+    auto& resident = g->gpu.resident;
+    const std::size_t first = resident.words.size();
+
+    // The culling names a resident word with 31 bits.
+    if (first + std::size_t{count} * kGpuCandidateWords >= kGpuResidentBit) {
+        return false;
+    }
+
+    resident.words.resize(first + std::size_t{count} * kGpuCandidateWords);
+
+    // Each instance as a candidate of the payload is laid out: its bounds, then its data.
+    for (unsigned i = 0; i < count; ++i) {
+        std::uint32_t* at = resident.words.data() + first + std::size_t{i} * kGpuCandidateWords;
+        std::memcpy(at, &bounds[i], sizeof(bounds[i]));
+        std::memcpy(
+            at + sizeof(bounds[i]) / 4,
+            source->data.data() + std::size_t{i} * 120,
+            (kGpuCandidateWords - sizeof(bounds[i]) / 4) * 4
+        );
+    }
+
+    resident.groups[buffer] = {static_cast<std::uint32_t>(first), count, source->version};
+    resident.dirty = true;
+    return true;
+}
+
+void gpu_release_resident() {
+    auto& resident = g->gpu.resident;
+
+    // The copy may be read by frames in flight: it goes when the recording slot retires.
+    if (resident.buffer.buffer != VK_NULL_HANDLE) {
+        defer([old = resident.buffer] {
+            vmaDestroyBuffer(g->allocator, old.buffer, old.allocation);
+        });
+    }
+
+    resident = GpuResident{};
 }
 
 bool gpu_submit_draw(renderer::GpuInstanceBatch batch, unsigned first, unsigned count) {
@@ -411,22 +612,36 @@ void gpu_record() {
             input[3] = 0;
             for (unsigned n = 0; n < groups; ++n) {
                 auto group = page.groups[n];
-                group[0] += payload_at;
+
+                // A resident group's candidates are in the resident words, not after the commands.
+                if ((group[0] & kGpuResidentBit) == 0) {
+                    group[0] += payload_at;
+                }
+
                 group[3] += payload_at;
                 std::memcpy(input + 4 + n * 4, group.data(), 16);
             }
             std::memcpy(input + command_at, page.commands.data(), commands * 16);
             std::memcpy(input + payload_at, page.payload.data(), page.payload.size() * 4);
+            // The header, groups, commands and payload just written into the mapped page.
+            g->submission.gpu_payload_bytes +=
+                std::uint64_t{payload_at} * 4 + page.payload.size() * 4;
             page.descriptors = allocate_set(g->gpu.set_layout);
             if (!page.descriptors) {
                 throw std::runtime_error("cannot allocate GPU draw descriptors");
             }
-            VkDescriptorBufferInfo buffers[3] =
+            // Binding 3, the resident words, is the input page again where none are read.
+            const VkDescriptorBufferInfo resident =
+                work.resident != VK_NULL_HANDLE
+                    ? VkDescriptorBufferInfo{work.resident, 0, VK_WHOLE_SIZE}
+                    : VkDescriptorBufferInfo{page.input.buffer, 0, page.input.size};
+            VkDescriptorBufferInfo buffers[4] =
                 {{page.input.buffer, 0, page.input.size},
                  {page.output.buffer, 0, page.output.size},
-                 {page.arguments.buffer, 0, page.arguments.size}};
-            VkWriteDescriptorSet writes[3]{};
-            for (unsigned n = 0; n < 3; ++n) {
+                 {page.arguments.buffer, 0, page.arguments.size},
+                 resident};
+            VkWriteDescriptorSet writes[4]{};
+            for (unsigned n = 0; n < 4; ++n) {
                 writes[n] = {VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET};
                 writes[n].dstSet = page.descriptors;
                 writes[n].dstBinding = n;
@@ -434,7 +649,8 @@ void gpu_record() {
                 writes[n].descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
                 writes[n].pBufferInfo = &buffers[n];
             }
-            vkUpdateDescriptorSets(g->device, 3, writes, 0, nullptr);
+            vkUpdateDescriptorSets(g->device, 4, writes, 0, nullptr);
+            g->submission.descriptor_writes += std::size(writes);
             vkCmdBindDescriptorSets(
                 cmd,
                 VK_PIPELINE_BIND_POINT_COMPUTE,
@@ -445,8 +661,11 @@ void gpu_record() {
                 0,
                 nullptr
             );
+            count_command(Command::BindDescriptors);
             vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_COMPUTE, g->gpu.compact);
+            count_command(Command::BindPipeline);
             vkCmdDispatch(cmd, groups, 1, 1);
+            count_command(Command::Dispatch);
             VkMemoryBarrier barrier{VK_STRUCTURE_TYPE_MEMORY_BARRIER};
             barrier.srcAccessMask = VK_ACCESS_SHADER_WRITE_BIT;
             barrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT | VK_ACCESS_SHADER_WRITE_BIT;
@@ -462,8 +681,13 @@ void gpu_record() {
                 0,
                 nullptr
             );
+            count_barrier(
+                VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT
+            );
             vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_COMPUTE, g->gpu.arguments);
+            count_command(Command::BindPipeline);
             vkCmdDispatch(cmd, (commands + 63) / 64, 1, 1);
+            count_command(Command::Dispatch);
             if (work.counters) {
                 if (!page.readback.buffer) {
                     page.readback = gpu_counter_readback();
@@ -480,8 +704,13 @@ void gpu_record() {
                     0,
                     nullptr
                 );
+                count_barrier(
+                    VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT
+                );
                 vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_COMPUTE, g->gpu.summary);
+                count_command(Command::BindPipeline);
                 vkCmdDispatch(cmd, 1, 1, 1);
+                count_command(Command::Dispatch);
                 VkBufferMemoryBarrier copy{VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER};
                 copy.srcAccessMask = VK_ACCESS_SHADER_WRITE_BIT;
                 copy.dstAccessMask = VK_ACCESS_TRANSFER_READ_BIT;
@@ -501,8 +730,10 @@ void gpu_record() {
                     0,
                     nullptr
                 );
+                count_barrier(VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT);
                 const VkBufferCopy region{kGpuSummaryAt * 4, 0, kGpuSummaryWords * 4};
                 vkCmdCopyBuffer(cmd, page.arguments.buffer, page.readback.buffer, 1, &region);
+                count_command(Command::Copy);
                 copy.srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
                 copy.dstAccessMask = VK_ACCESS_HOST_READ_BIT;
                 copy.buffer = page.readback.buffer;
@@ -519,6 +750,7 @@ void gpu_record() {
                     0,
                     nullptr
                 );
+                count_barrier(VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_HOST_BIT);
                 ++g->submission.gpu_counter_dispatches;
                 ++g->submission.gpu_counter_copies;
             }
@@ -538,6 +770,10 @@ void gpu_record() {
             nullptr,
             0,
             nullptr
+        );
+        count_barrier(
+            VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT,
+            VK_PIPELINE_STAGE_DRAW_INDIRECT_BIT | VK_PIPELINE_STAGE_VERTEX_INPUT_BIT
         );
     }
     g->gpu.timing_upload = false;
@@ -592,6 +828,12 @@ void gpu_release() {
         }
         slot.gpu.pages.clear();
     }
+    if (g->gpu.resident.buffer.buffer) {
+        vmaDestroyBuffer(
+            g->allocator, g->gpu.resident.buffer.buffer, g->gpu.resident.buffer.allocation
+        );
+    }
+    g->gpu.resident = GpuResident{};
     vkDestroyPipeline(g->device, g->gpu.compact, nullptr);
     vkDestroyPipeline(g->device, g->gpu.arguments, nullptr);
     vkDestroyPipeline(g->device, g->gpu.summary, nullptr);

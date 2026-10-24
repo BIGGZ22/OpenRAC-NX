@@ -39,7 +39,7 @@ void DriftParticleEmit(char *m) {
 extern char D_0013F450[];
 extern u8 * D_L00_00160098_E1790 __asm__("D_L00_00160098") MACRO_ADDR;
 
-/* Adapted from Lombyte (MIT) for PAL by OpenRAC's tools/port.py: src/overlays/shared/gameplay/vendor/002df730.c, FUN_L00_002e02e0. */
+/* Adapted from Lombyte (GPL-3.0) for PAL by OpenRAC's tools/port.py: src/overlays/shared/gameplay/vendor/002df730.c, FUN_L00_002e02e0. */
 s32 func_L00_002E1790(void) {
     char *base;
     u8 *tbl;
@@ -113,7 +113,7 @@ extern void func_L00_00203F20(s32, s32);
 extern void func_L00_002512D8(s32);
 extern void func_0020BFC8(s32, s32);
 
-/* Adapted from Lombyte (MIT) for PAL by OpenRAC's tools/port.py: src/overlays/shared/gameplay_vendor_002df730.c, FUN_L00_002e03a0. */
+/* Adapted from Lombyte (GPL-3.0) for PAL by OpenRAC's tools/port.py: src/overlays/shared/gameplay_vendor_002df730.c, FUN_L00_002e03a0. */
 void Moby1290Update(M_2e03a0_2e03a0 *m) {
     P_2e03a0_2e03a0 *p = m->p;
     char *g;
@@ -189,7 +189,7 @@ typedef struct {
     float c[4];
 } FxData;
 
-/* Scrolls the four hue values of a moby's effect and spawns a coloured streak for each. Adapted from Lombyte (MIT) for PAL: src/overlays/shared/gameplay_vendor_002df730.c, FUN_L00_002e0788. */
+/* Scrolls the four hue values of a moby's effect and spawns a coloured streak for each. Adapted from Lombyte (GPL-3.0) for PAL: src/overlays/shared/gameplay_vendor_002df730.c, FUN_L00_002e0788. */
 void HueStreakFxUpdate(char *p) {
     float v[8];
     FxData *m = *(FxData **)(p + 0x78);
@@ -238,7 +238,7 @@ extern s32_2e1f28 D_L00_00161D38[] MACRO_ADDR;
 extern s32_2e1f28 D_L00_00161D48[] MACRO_ADDR;
 extern s32_2e1f28 D_L00_00161D58[] MACRO_ADDR;
 
-/* Adapted from Lombyte (MIT) for PAL by OpenRAC's tools/port.py: src/overlays/shared/gameplay_vendor_002df730.c, FUN_L00_002e1f28. */
+/* Adapted from Lombyte (GPL-3.0) for PAL by OpenRAC's tools/port.py: src/overlays/shared/gameplay_vendor_002df730.c, FUN_L00_002e1f28. */
 s32_2e1f28 EffectSlot_Alloc(s32_2e1f28 id, s32_2e1f28 a, s32_2e1f28 b) {
     s32_2e1f28 i, j;
     for (i = 0; i < 3; i++) {
@@ -753,7 +753,7 @@ void func_001F9EE8(void *, void *, void *);
 void func_001F9BD8(void *, void *, void *);
 void func_L00_001FD1D8(void *, s32, s32);
 
-/* Adapted from Lombyte (MIT) for PAL by OpenRAC's tools/port.py: src/overlays/shared/gameplay_vendor_002df730.c, FUN_L00_002e3388. */
+/* Adapted from Lombyte (GPL-3.0) for PAL by OpenRAC's tools/port.py: src/overlays/shared/gameplay_vendor_002df730.c, FUN_L00_002e3388. */
 void EffectSlot_DrawPane(s32 unused, s32 idx) {
     Q_e3388 q;
     f32 a[4] __attribute__((aligned(16)));
@@ -846,7 +846,7 @@ extern void func_00215CA8(int *, float, int, void *, float *, int);
 extern int func_002140B0(int);
 extern void func_00213DE0(void *, int, int, int);
 
-/* Path-following moby update: start a run along its path in state 0, then step along the path each frame and pick an animation when the flag is set. Adapted from Lombyte (MIT) for PAL: overlays/shared/gameplay_vendor_002df730.c, FUN_L00_002e3a88. */
+/* Path-following moby update: start a run along its path in state 0, then step along the path each frame and pick an animation when the flag is set. Adapted from Lombyte (GPL-3.0) for PAL: overlays/shared/gameplay_vendor_002df730.c, FUN_L00_002e3a88. */
 void PathFollowMobyUpdate(unsigned char *m) {
     D_2e *d = *(D_2e **)(m + 0x78);
     int *p = D_L00_001B0830[d->path];
@@ -1005,7 +1005,7 @@ extern void func_001F9BD8(void *, void *, void *);
 extern int D_L00_001601B4 MACRO_ADDR;
 extern char D_L00_00173F70[];
 
-/* Computes two adjusted points from a moby's lookup entry and its direction vector; returns 1 on success. Adapted from Lombyte (MIT) for PAL: overlays/shared/gameplay_vendor_002df730.c, FUN_L00_002e4180. */
+/* Computes two adjusted points from a moby's lookup entry and its direction vector; returns 1 on success. Adapted from Lombyte (GPL-3.0) for PAL: overlays/shared/gameplay_vendor_002df730.c, FUN_L00_002e4180. */
 int func_L00_002E5630(VQ *p, float r) {
     VQ a;
     VQ d;
@@ -1832,7 +1832,7 @@ void FollowCameraUpdate(char *m) {
         }
     }
 }
-/* Adapted from Lombyte (MIT) for PAL: overlays/shared/gameplay/vendor/002e5e38.c, follow_camera_approach (FUN_L00_002e5e38). */
+/* Adapted from Lombyte (GPL-3.0) for PAL: overlays/shared/gameplay/vendor/002e5e38.c, follow_camera_approach (FUN_L00_002e5e38). */
 extern float D_L00_0015F044_2E72E8 __asm__("D_L00_0015F044") MACRO_ADDR;
 extern unsigned char D_L00_001690C0_2E72E8[] __asm__("D_L00_001690C0") NOT_SDA;
 extern int D_L00_0015F060_2E72E8 __asm__("D_L00_0015F060") MACRO_ADDR;
@@ -2245,7 +2245,7 @@ extern char D_0013F6E0_E80A8[] __asm__("D_0013F6E0");
 extern void func_001F9BF0_E80A8(void *, void *, void *) __asm__("func_001F9BF0");
 
 /* Resets the camera rig state from the moby position when idle.
-   Adapted from Lombyte (MIT) for PAL by OpenRAC's tools/port.py: src/overlays/shared/gameplay/vendor/002e5e38.c, FUN_L00_002e6bf8. */
+   Adapted from Lombyte (GPL-3.0) for PAL by OpenRAC's tools/port.py: src/overlays/shared/gameplay/vendor/002e5e38.c, FUN_L00_002e6bf8. */
 void Cam_ResetRigFromMoby(char *m) {
     float dn[4];
     float t[4];
@@ -2590,7 +2590,7 @@ float func_001F9B88(float);
 short func_001F9850_E85E8(int) __asm__("func_001F9850");
 void func_001F9C30(void *, void *, float);
 
-/* Adapted from Lombyte (MIT) for PAL by OpenRAC's tools/port.py: src/overlays/shared/gameplay_vendor_002df730.c, FUN_L00_002e7138. */
+/* Adapted from Lombyte (GPL-3.0) for PAL by OpenRAC's tools/port.py: src/overlays/shared/gameplay_vendor_002df730.c, FUN_L00_002e7138. */
 int func_L00_002E85E8(unsigned char *m, void *b, int c, int d)
 {
     unsigned char *q = *(unsigned char **)(m + 0x70);
@@ -2662,7 +2662,7 @@ extern s32 func_L00_002E5630_E87C8(Vec4 *, f32) __asm__("func_L00_002E5630");
 extern s32 func_L00_001F10E0_E87C8(Vec4 *, f32, s32, s32) __asm__("func_L00_001F10E0");
 extern s32 func_L00_002E85E8_E87C8(O002e7318 *, Vec4 *, s32, s32) __asm__("func_L00_002E85E8");
 
-/* Adapted from Lombyte (MIT) for PAL by OpenRAC's tools/port.py: src/overlays/shared/gameplay/vendor/002e5e38.c, FUN_L00_002e7318. */
+/* Adapted from Lombyte (GPL-3.0) for PAL by OpenRAC's tools/port.py: src/overlays/shared/gameplay/vendor/002e5e38.c, FUN_L00_002e7318. */
 s32 func_L00_002E87C8(O002e7318 *o) {
     Vec4 pos;
     Vec4 tmp;
@@ -3111,12 +3111,12 @@ fin:
         } while (--k != 0);
     }
 }
-/* Empty function that only reserves 0x50 bytes of stack. Adapted from Lombyte (MIT), FUN_L00_002e8378; the volatile buffer is what keeps the frame. */
+/* Empty function that only reserves 0x50 bytes of stack. Adapted from Lombyte (GPL-3.0), FUN_L00_002e8378; the volatile buffer is what keeps the frame. */
 void Cam_DebugDump(int a) { volatile char buf[0x50]; }
 typedef struct { u8 pad[0x220]; s32 cur; } Owner_2E9838;
 typedef struct { u8 pad[0x70]; Owner_2E9838 *p; u8 pad2[0x86 - 0x74]; s16 f86; } Vendor_2E9838;
 extern Vendor_2E9838 *D_L00_00166F00_2E9838 __asm__("D_L00_00166F00");
-/* -1 when the vendor's +0x86 is set, else 1 after clearing its owner's +0x220 when that equals id, else 0. Adapted from Lombyte (MIT) for PAL: src/overlays/shared/gameplay/vendor/002df730.c, FUN_L00_002e8388. */
+/* -1 when the vendor's +0x86 is set, else 1 after clearing its owner's +0x220 when that equals id, else 0. Adapted from Lombyte (GPL-3.0) for PAL: src/overlays/shared/gameplay/vendor/002df730.c, FUN_L00_002e8388. */
 s32 Cam_ReleaseLock(s32 id) {
     Vendor_2E9838 *t = D_L00_00166F00_2E9838;
     if (t->f86 != 0) {
@@ -3215,7 +3215,7 @@ void func_L00_002E9968(float x, float y) {
 extern char *D_L00_001690C0;
 
 /* Sets the follow camera's offset (relative to its current one if add) and scale, unless the camera is locked.
-   Adapted from Lombyte (MIT) for PAL: src/overlays/shared/gameplay/vendor/002df730.c, FUN_L00_002e84f0. */
+   Adapted from Lombyte (GPL-3.0) for PAL: src/overlays/shared/gameplay/vendor/002df730.c, FUN_L00_002e84f0. */
 void Cam_SetEyeOffset(int add, float a, float b) {
     char *p = D_L00_00166F00;
     if (*(short *)(p + 0x86) == 0) {
@@ -3229,7 +3229,7 @@ void Cam_SetEyeOffset(int add, float a, float b) {
         }
     }
 }
-/* From Lombyte (MIT), FUN_L00_002e8534 (PR #66), adapted to PAL. */
+/* From Lombyte (GPL-3.0), FUN_L00_002e8534 (PR #66), adapted to PAL. */
 void func_L00_002E99E4(void *u, char *p, float a) { *(volatile float *)(p + 0xB4) = a; }
 /* Sets the float at +0x1CC of the hero camera's state buffer while the current camera's id is 0. */
 void func_L00_002E99F0(float value) {
@@ -3388,7 +3388,7 @@ extern int func_001F9850_2E9E60(int) __asm__("func_001F9850");
 
 void func_L00_002E9E60_r(char *o, float *a, float *b) __asm__("func_L00_002E9E60");
 
-/* Adapted from Lombyte (MIT) for PAL by OpenRAC's tools/port.py: src/overlays/shared/gameplay/vendor/002e89b0.c, FUN_L00_002e89b0. */
+/* Adapted from Lombyte (GPL-3.0) for PAL by OpenRAC's tools/port.py: src/overlays/shared/gameplay/vendor/002e89b0.c, FUN_L00_002e89b0. */
 void func_L00_002E9E60_r(char *o, float *a, float *b) {
     S_2E9E60 *s = (S_2E9E60 *)(*(char **)(o + 0x70) + 0x1A8);
     G_2E9E60 *g;
@@ -3447,7 +3447,7 @@ extern short D_L00_00161D90;
 extern short D_L00_00161D8C;
 extern short D_L00_00161D94;
 
-/* steers the hero heading and pitch towards a stick input. Adapted from Lombyte (MIT) for PAL: overlays/shared/gameplay_vendor_002df730.c, FUN_L00_002e8bb8. */
+/* steers the hero heading and pitch towards a stick input. Adapted from Lombyte (GPL-3.0) for PAL: overlays/shared/gameplay_vendor_002df730.c, FUN_L00_002e8bb8. */
 void Cam_SteerHeadingFromStick(int mi, float a, float b) {
     char *m = (char *)mi;
     char *d = *(char **)(m + 0x70);

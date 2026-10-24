@@ -30,6 +30,7 @@
 
 namespace openrac::assets::rac1 {
 
+// One instance's lit colours (RGBA bytes), indexed by a vertex's normal index.
 using ShrubPalette = std::array<std::array<u8, 4>, kShrubNormals>;
 
 // The ambient word the loader stores in the matrix block's col0.w: b << 16 |
@@ -37,6 +38,7 @@ using ShrubPalette = std::array<std::array<u8, 4>, kShrubNormals>;
 // above 255 spills into the next byte; the disc's are 0..255).
 u32 shrub_packed_ambient(const ShrubInstance& instance);
 
+// The lengths of the matrix's three axis columns, as float bits.
 std::array<u32, 3> shrub_column_lengths(const ShrubInstance& instance);
 
 // The instance's world bounding sphere as the loader stores it: M3x3 * class
@@ -45,11 +47,15 @@ std::array<u32, 3> shrub_column_lengths(const ShrubInstance& instance);
 // `scale` world units, as Wrench's builder assumes.
 std::array<f32, 4> shrub_instance_centre(const ShrubClass& shrub, const ShrubInstance& instance);
 
+// Point lights for one instance: the slot bank and the run-time record's nibble list (0xffff =
+// none, the load-time value).
 struct ShrubPointLights {
     const PointLightBank* bank = nullptr;
     u16 list = 0xffff;
 };
 
+// The VU0 registers LightShrubs sets up before lighting a class's normals: the shared light
+// registers plus the instance's ambient.
 struct ShrubLightRegs {
     InstanceLightRegs lights;
     ps2::V4 ambient{};  // vf31: 65536 + c / 128 per lane, alpha lane 0x80
@@ -57,6 +63,8 @@ struct ShrubLightRegs {
     bool operator==(const ShrubLightRegs&) const = default;
 };
 
+// The EE half of LightShrubs for one instance: light set select and blend, the point-light merge
+// and the rotation of the light directions into class space.
 ShrubLightRegs shrub_light_regs(
     const ShrubClass& shrub,
     const ShrubInstance& instance,
@@ -64,6 +72,7 @@ ShrubLightRegs shrub_light_regs(
     const std::optional<ShrubPointLights>& points = std::nullopt
 );
 
+// One class normal lit with the instance's registers (RGB <= 243, alpha 0x80).
 std::array<u8, 4> light_shrub_normal(const ShrubLightRegs& regs, const std::array<s16, 4>& normal);
 
 // LightShrubs for one instance: the 24 palette colours by normal index (0x80
@@ -82,10 +91,13 @@ std::array<u8, 3> shrub_average_colour(const ShrubPalette& palette);
 
 // --- Where VU1 program 56467 reads a vertex's colour
 
-constexpr u16 kShrubVu1Qwc = 0x400;  // VU1 data memory; addresses wrap
+// The size of VU1 data memory in quadwords; addresses wrap at this value.
+constexpr u16 kShrubVu1Qwc = 0x400;
 // The two instance buffers (ShrubProc alternates them per MSCALF batch).
 constexpr std::array<u16, 2> kShrubVu1InstanceBuffers = {0xee, 0x17b};
-constexpr u16 kShrubVu1SlotQwc = 0x1c;  // 4 matrix columns + 24 palette entries
+// The size of one instance slot in quadwords: 4 matrix columns + 24 palette entries.
+constexpr u16 kShrubVu1SlotQwc = 0x1c;
+// The number of instance slots in one buffer, so how many instances one batch holds.
 constexpr std::size_t kShrubVu1Batch = 5;
 
 // The palette base of instance k of a batch in the buffer at `buffer`:
@@ -117,6 +129,7 @@ struct ShrubVu1Data {
     bool operator==(const ShrubVu1Data&) const = default;
 };
 
+// Says what `address` holds: which buffer, slot and entry when it is inside an instance slot.
 ShrubVu1Data shrub_vu1_data(u16 address);
 
 }  // namespace openrac::assets::rac1

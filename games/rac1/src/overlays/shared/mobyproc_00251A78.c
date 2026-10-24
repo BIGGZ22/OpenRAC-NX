@@ -128,7 +128,7 @@ extern int func_001FA898(float);
 extern float func_001F9D10(void *, void *);
 extern void func_L00_00261B00(void *, int, int, int, int);
 
-/* Adapted from Lombyte (MIT) for PAL by OpenRAC's tools/port.py: src/overlays/shared/unclassified_00250df8.c, FUN_L00_00257470. */
+/* Adapted from Lombyte (GPL-3.0) for PAL by OpenRAC's tools/port.py: src/overlays/shared/unclassified_00250df8.c, FUN_L00_00257470. */
 void SetDeathBits(unsigned char *m, int flags, int arg) {
     float amt;
     int lvl;

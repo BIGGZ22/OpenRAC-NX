@@ -88,7 +88,7 @@ void Camera_BuildFollowMatrix(char *m) {
 }
 extern void func_L00_002EB280(char *m);
 
-/* clears the 7 words of the state block, calls the helper, clears halfword 0x7E. Adapted from Lombyte (MIT) for PAL: overlays/shared/gameplay_vendor_002e9010.c, FUN_L00_002e9ef0. */
+/* clears the 7 words of the state block, calls the helper, clears halfword 0x7E. Adapted from Lombyte (GPL-3.0) for PAL: overlays/shared/gameplay_vendor_002e9010.c, FUN_L00_002e9ef0. */
 void func_L00_002EB3A0(p)
     char *p;
 {
@@ -125,7 +125,7 @@ float func_001FA748(float, float);
 float func_001FA790(float, float);
 int func_L00_001F10E0(void *, int, void *, float);
 
-/* Adapted from Lombyte (MIT) for PAL by OpenRAC's tools/port.py: src/overlays/shared/gameplay_vendor_002e9010.c, FUN_L00_002e9f38. */
+/* Adapted from Lombyte (GPL-3.0) for PAL by OpenRAC's tools/port.py: src/overlays/shared/gameplay_vendor_002e9010.c, FUN_L00_002e9f38. */
 void CameraType4Update(u8 *o) {
     V up;
     V side;
@@ -209,7 +209,7 @@ extern f32 func_001F9CB8_2eb938(void *) __asm__("func_001F9CB8");
 extern void func_L00_001ED600_2eb938(void) __asm__("func_L00_001ED600");
 extern void func_001F9908_2eb938(void *) __asm__("func_001F9908");
 #define P D_0013F450_2eb938
-/* Camera-mode transition update for an InitCamera moby: counts frames while the player and the other camera are in an allowed state, and eases the camera (0.07 / 0.14 rad) toward the target. Adapted from Lombyte (MIT) for PAL: overlays/shared/gameplay_vendor_002e9010.c, FUN_L00_002ea488. */
+/* Camera-mode transition update for an InitCamera moby: counts frames while the player and the other camera are in an allowed state, and eases the camera (0.07 / 0.14 rad) toward the target. Adapted from Lombyte (GPL-3.0) for PAL: overlays/shared/gameplay_vendor_002e9010.c, FUN_L00_002ea488. */
 int Camera_TransitionUpdate(u8 *m, char *a1) {
     Q_2eb938 *q;
     char *o;
@@ -380,7 +380,7 @@ extern V_2ebf50 D_0013F4D0_2ebf50 __asm__("D_0013F4D0") NOT_SDA;
 u8 *func_L00_001EB578_2ebf50(s32) __asm__("func_L00_001EB578");
 void func_L00_001EB890_2ebf50(u8 *) __asm__("func_L00_001EB890");
 void func_L00_001ED9B0_2ebf50(void *, V_2ebf50 *, V_2ebf50 *) __asm__("func_L00_001ED9B0");
-/* Camera script setup: fills the type-5 moby from two positions, a mode (2 or 3) and two values. Adapted from Lombyte (MIT) for PAL: overlays/shared/gameplay_vendor_002e9010.c, FUN_L00_002eaaa0. The helper at +0xFC takes a third argument (the camera vector). */
+/* Camera script setup: fills the type-5 moby from two positions, a mode (2 or 3) and two values. Adapted from Lombyte (GPL-3.0) for PAL: overlays/shared/gameplay_vendor_002e9010.c, FUN_L00_002eaaa0. The helper at +0xFC takes a third argument (the camera vector). */
 void CameraScript(V_2ebf50 *pa, V_2ebf50 *pb, s32 mode, s32 w, s32 x) {
     u8 *m = func_L00_001EB578_2ebf50(5);
     V_2ebf50 a, b, c, d;
@@ -600,7 +600,7 @@ void Camera_SetTargetAndOffset(char *a, void *b, void *c, float f) {
     Vec_ZeroXYZ(p + 0x90);
     Camera_OrientFromTarget(a);
 }
-/* From Lombyte (MIT), FUN_L00_002eb3b0 (PR #66), adapted to PAL. */
+/* From Lombyte (GPL-3.0), FUN_L00_002eb3b0 (PR #66), adapted to PAL. */
 
 void Camera_ResetTuning(void *arg) {
     char *p = arg;
@@ -666,7 +666,7 @@ extern float D_L00_00161EA4;
 extern char D_L00_00166D80_c[] __asm__("D_L00_00166D80") NOT_SDA;
 
 // steps a follow-camera object toward a target moby, easing its angle and position or snapping to a goal
-// Adapted from Lombyte (MIT) for PAL: overlays/shared/gameplay_vendor_002e9010.c, FUN_L00_002eb648.
+// Adapted from Lombyte (GPL-3.0) for PAL: overlays/shared/gameplay_vendor_002e9010.c, FUN_L00_002eb648.
 int Camera_PlaceBehindMoby(char *a, char *t) {
     u128 v[1];
     u128 w[1];
@@ -988,7 +988,7 @@ extern s32 func_L00_00260AB0(void *, s32);
 extern s32 func_L00_00260B68_EDC98(void *, s32) __asm__("func_L00_00260B68");
 extern s32 func_L00_0025A778(void *, void *, s32);
 
-/* Adapted from Lombyte (MIT) for PAL by OpenRAC's tools/port.py: src/overlays/shared/gameplay_vendor_002e9010.c, FUN_L00_002ec7e8. */
+/* Adapted from Lombyte (GPL-3.0) for PAL by OpenRAC's tools/port.py: src/overlays/shared/gameplay_vendor_002e9010.c, FUN_L00_002ec7e8. */
 s32 Camera_IsHeroInTriggerVolume(A_2ec7e8 *a) {
     O_2ec7e8 *o;
     s32 v17 = 0;
@@ -1526,7 +1526,7 @@ s32 func_002140B0(s32);
 s32 func_001F9850(s32);
 void func_L00_0028EBF0(s32);
 
-/* Adapted from Lombyte (MIT) for PAL by OpenRAC's tools/port.py: src/overlays/shared/gameplay_vendor_002e9010.c, FUN_L00_002ed950. */
+/* Adapted from Lombyte (GPL-3.0) for PAL by OpenRAC's tools/port.py: src/overlays/shared/gameplay_vendor_002e9010.c, FUN_L00_002ed950. */
 void SndInstSphereUpdate(u8 *m) {
     S_2ed950 *s = *(S_2ed950 **)(m + 8);
     f32 d, r;

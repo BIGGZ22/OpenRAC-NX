@@ -8,12 +8,14 @@ Digests of files, read in blocks so a disc image never has to fit in memory.
   digest.sha256(path)
   digest.file_digest(path, "md5")
 
-Written from port/enhanced/tools/probes/bake_all.py:48 (sha256 in 1 MiB blocks). The other
-copies read the whole file at once (editor/assets.py:135, editor/overrides.py:396) or hash
-several algorithms in one pass (tools/openrac.py's checksums, which stays: it reads a disc image
-once for all of them); every one of them returns the same hex digest for the same file.
-tools/shared.py, openrac.py, extractor.py, build_android.py, build_port.py and fcheck_gate.py
-hash their files through it (P1-05).
+Written from the probe tools' bake_all.py (sha256 in 1 MiB blocks). The other copies read the
+whole file at once (editor/assets.py's file_hash and overrides.py's hashes of the textures'
+files) or hash several algorithms in one pass (tools/openrac.py's checksums, which stays: it
+reads a disc image once for all of them); every one of them returns the same hex digest for the
+same file. tools/shared.py, openrac.py, extractor.py, build_android.py, build_port.py and
+fcheck_gate.py hash their files through it (P1-05), the probe tools (P2-10), and the editor's
+assets.py and overrides.py (P2-32); the editor's util.sha256 stays its own, since it hashes
+bytes already in memory, not a file.
 """
 import hashlib
 from pathlib import Path

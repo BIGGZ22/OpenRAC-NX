@@ -512,7 +512,7 @@ int UpdateMapZoomAndPan(void) {
     return 0;
 }
 
-/* Adapted from Lombyte (MIT): src/assembly/textbin/ui/map/draw_map_overlay.c. */
+/* Adapted from Lombyte (GPL-3.0): src/assembly/textbin/ui/map/draw_map_overlay.c. */
 struct DmaTag_205E70 { u32 tag, addr, vif0, vif1; };
 struct TagPtr_205E70 { struct DmaTag_205E70 *p; };
 typedef struct { s32 flags; u8 pad4[12]; } MapIdFlags_205E70;

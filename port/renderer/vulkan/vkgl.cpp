@@ -17,7 +17,6 @@
 #include <array>
 #include <chrono>
 #include <cstddef>
-#include <cstdlib>
 #include <span>
 #include <stdexcept>
 #include <string>
@@ -26,6 +25,7 @@
 
 #include <SDL3/SDL.h>
 
+#include "common/env.h"
 #include "common/log.h"
 #include "common/stats.h"
 #include "renderer/gpu_draw.h"
@@ -72,8 +72,7 @@ bool open(const Config& config, std::string& error) {
     g = new Context();
     g->window = config.window;
     g->interval = config.vsync ? 1 : 0;
-    const char* env = std::getenv("OPENRAC_VULKAN_VALIDATION");
-    const bool validation = (config.validation || (env != nullptr && env[0] == '1'))
+    const bool validation = (config.validation || env::flag(env::Var::VulkanValidation))
                             && layer_available("VK_LAYER_KHRONOS_validation");
     bool ok = make_instance(config, validation, error);
     if (ok && config.window != nullptr) {
@@ -184,6 +183,19 @@ bool draw_gpu_instances(renderer::GpuInstanceBatch batch, unsigned first, unsign
     return active() && gpu_submit_draw(batch, first, count);
 }
 
+bool gpu_register_instances(unsigned source, std::span<const renderer::GpuCullBounds> bounds) {
+    return active() && gpu_register(source, bounds);
+}
+
+void gpu_release_instances() {
+    // A context already closed let its buffers go with it (gpu_release).
+    if (!active()) {
+        return;
+    }
+
+    gpu_release_resident();
+}
+
 GpuDrawCounters gpu_completed_draws() {
     return active() && stats::enabled() ? g->gpu.completed : GpuDrawCounters{};
 }
@@ -287,6 +299,7 @@ void present() {
     }
     g->measures.present_s += seconds_since(start);
     report_measures();
+    publish_counters();
     advance();
     // A window of another size: the default framebuffer follows, as a GL window's does.
     if (g->window != nullptr) {

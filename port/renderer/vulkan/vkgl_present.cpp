@@ -2,14 +2,17 @@
 // Copyright (c) 2026 the OpenRAC contributors
 //
 // The screen (vkgl_internal.h): the default framebuffer, the swapchain and its present mode, moving
-// on to the next frame, a new surface when the old one went, and copying a finished frame to the
-// window.
+// on to the next frame, a new surface when the old one went, copying a finished frame to the
+// window, and the render counters published as the frame's gauges.
 
 #include <algorithm>
+#include <array>
 #include <chrono>
+#include <cstddef>
 #include <cstdint>
 #include <functional>
 #include <string>
+#include <string_view>
 #include <utility>
 #include <vector>
 #include <volk.h>
@@ -17,13 +20,84 @@
 #include <SDL3/SDL.h>
 
 #include "common/log.h"
+#include "common/stats.h"
+#include "renderer/render_opt.h"
+#include "renderer/vulkan/vkgl.h"
 #include "renderer/vulkan/vkgl_internal.h"
 
 namespace openrac::vkgl::detail {
 
+namespace render_opt = renderer::render_opt;
+
 using namespace openrac::gl;
 
 namespace {
+
+// ---- The render counters ----
+
+// How a render counter's gauge reads it: the part the frame added, or the total so far (the
+// cumulative counts, and the bytes held now for the mirror of GL's buffers).
+enum class Span : std::uint8_t {
+    Frame,
+    Total,
+};
+
+// One render counter published as a gauge (docs/port/RENDER_PERF.md, "The counters").
+struct Gauge {
+    std::string_view name;                      // The gauge's name, vk_ and the counter's.
+    std::uint64_t SubmissionCounters::* value;  // The counter it reads.
+    Span span;                                  // Whether it shows the frame's part or the total.
+};
+
+// The render counters other than the commands, in the order of SubmissionCounters.
+// clang-format off: one gauge per row.
+constexpr auto kGauges = std::to_array<Gauge>({
+    {"vk_pipelines_created", &SubmissionCounters::pipelines_created, Span::Total},
+    {"vk_pipelines_created_after_warmup", &SubmissionCounters::pipelines_created_after_warmup,
+     Span::Total},
+    {"vk_descriptor_sets_allocated", &SubmissionCounters::descriptor_sets_allocated, Span::Frame},
+    {"vk_descriptor_writes", &SubmissionCounters::descriptor_writes, Span::Frame},
+    {"vk_render_passes", &SubmissionCounters::render_passes, Span::Frame},
+    {"vk_attachment_load_bytes", &SubmissionCounters::attachment_load_bytes, Span::Frame},
+    {"vk_attachment_store_bytes", &SubmissionCounters::attachment_store_bytes, Span::Frame},
+    {"vk_barriers", &SubmissionCounters::barriers, Span::Frame},
+    {"vk_barriers_all_commands", &SubmissionCounters::barriers_all_commands, Span::Frame},
+    {"vk_submits", &SubmissionCounters::submits, Span::Frame},
+    {"vk_frames_presented", &SubmissionCounters::frames_presented, Span::Total},
+    {"vk_fullscreen_copies", &SubmissionCounters::fullscreen_copies, Span::Frame},
+    {"vk_ring_bytes", &SubmissionCounters::ring_bytes, Span::Frame},
+    {"vk_texture_creations", &SubmissionCounters::texture_creations, Span::Frame},
+    {"vk_texture_upload_bytes", &SubmissionCounters::texture_upload_bytes, Span::Frame},
+    {"vk_buffer_static_bytes_host_visible", &SubmissionCounters::buffer_static_bytes_host_visible,
+     Span::Total},
+    {"vk_cpu_mirror_bytes", &SubmissionCounters::cpu_mirror_bytes, Span::Total},
+    {"vk_gpu_payload_bytes", &SubmissionCounters::gpu_payload_bytes, Span::Frame},
+    {"vk_shader_compiles", &SubmissionCounters::shader_compiles, Span::Total},
+});
+// clang-format on
+
+// The gauge of each kind of command, in the order of Command.
+constexpr std::array<std::string_view, kCommandKinds> kCommandGauges = {
+    "vk_cmds_bind_pipeline",
+    "vk_cmds_bind_descriptors",
+    "vk_cmds_bind_buffers",
+    "vk_cmds_dynamic_state",
+    "vk_cmds_draw",
+    "vk_cmds_barrier",
+    "vk_cmds_copy",
+    "vk_cmds_dispatch",
+    "vk_cmds_render_pass",
+    "vk_cmds_query",
+    "vk_cmds_other",
+};
+
+// Returns the value of `gauge` from the counters `now`, given those of the frame before.
+double gauge_value(
+    const Gauge& gauge, const SubmissionCounters& now, const SubmissionCounters& before
+) {
+    const std::uint64_t total = now.*gauge.value;
+    return static_cast<double>(gauge.span == Span::Total ? total : total - before.*gauge.value);
+}
 
 // ---- The device, the screen and the frames ----
 
@@ -33,27 +107,34 @@ ImagePtr default_image(const Format& f, int width, int height) {
 }
 
 void swapchain_barrier(VkCommandBuffer cmd, VkImage image, VkImageLayout from, VkImageLayout to) {
+    // The screen's image is only ever written by transfers (a clear, a blit) and then presented.
+    // Out of UNDEFINED it waits for nothing but the acquire, which the submit waits for at the
+    // transfer stage; into PRESENT_SRC nothing of the queue reads it after (the R-08 table).
+    const bool tight = render_opt::enabled(render_opt::Opt::VkTightSync);
+    VkPipelineStageFlags source = VK_PIPELINE_STAGE_ALL_COMMANDS_BIT;
+    VkPipelineStageFlags destination = VK_PIPELINE_STAGE_ALL_COMMANDS_BIT;
     VkImageMemoryBarrier b{VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER};
     b.srcAccessMask = VK_ACCESS_MEMORY_WRITE_BIT;
     b.dstAccessMask = VK_ACCESS_MEMORY_READ_BIT | VK_ACCESS_MEMORY_WRITE_BIT;
+
+    // The narrow form: transfer to transfer, or transfer to the end of the queue's work.
+    if (tight) {
+        const bool fresh = from == VK_IMAGE_LAYOUT_UNDEFINED;
+        const bool shown = to == VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
+        source = VK_PIPELINE_STAGE_TRANSFER_BIT;
+        destination = shown ? VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT : VK_PIPELINE_STAGE_TRANSFER_BIT;
+        b.srcAccessMask = fresh ? VkAccessFlags{0} : VkAccessFlags{VK_ACCESS_TRANSFER_WRITE_BIT};
+        b.dstAccessMask = shown ? VkAccessFlags{0} : VkAccessFlags{VK_ACCESS_TRANSFER_WRITE_BIT};
+    }
+
     b.oldLayout = from;
     b.newLayout = to;
     b.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
     b.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
     b.image = image;
     b.subresourceRange = {VK_IMAGE_ASPECT_COLOR_BIT, 0, 1, 0, 1};
-    vkCmdPipelineBarrier(
-        cmd,
-        VK_PIPELINE_STAGE_ALL_COMMANDS_BIT,
-        VK_PIPELINE_STAGE_ALL_COMMANDS_BIT,
-        0,
-        0,
-        nullptr,
-        0,
-        nullptr,
-        1,
-        &b
-    );
+    vkCmdPipelineBarrier(cmd, source, destination, 0, 0, nullptr, 0, nullptr, 1, &b);
+    count_barrier(source, destination);
 }
 
 // The surface and swapchain made again: back from the background on Android, the window is a new
@@ -226,10 +307,44 @@ bool make_swapchain() {
     return true;
 }
 
+void publish_counters() {
+    ++g->submission.frames_presented;
+    const SubmissionCounters& now = g->submission;
+
+    // Nobody is measuring: the next frame that is measured shows only its own part.
+    if (!stats::enabled()) {
+        g->published = now;
+        return;
+    }
+
+    const SubmissionCounters& before = g->published;
+
+    // The counts and bytes, each as its row of the table says.
+    for (const Gauge& gauge : kGauges) {
+        stats::gauge(gauge.name, gauge_value(gauge, now, before));
+    }
+
+    stats::gauge(
+        "vk_cmds_recorded", static_cast<double>(commands_recorded(now) - commands_recorded(before))
+    );
+
+    // The frame's commands of each kind.
+    for (std::size_t kind = 0; kind < kCommandKinds; ++kind) {
+        stats::gauge(
+            kCommandGauges[kind], static_cast<double>(now.commands[kind] - before.commands[kind])
+        );
+    }
+
+    stats::gauge("shader_compile_s", now.shader_compile_s);
+    stats::gauge("vk_gpu_timestamps", g->timestamp_bits != 0 ? 1.0 : 0.0);
+    g->published = now;
+}
+
 void advance() {
     g->frame = (g->frame + 1) % kFrames;
     Frame& f = frame();
     if (f.submitted) {
+        const stats::Scope wait("vulkan frame wait");
         const Clock::time_point start = Clock::now();
         vkWaitForFences(g->device, 1, &f.fence, VK_TRUE, UINT64_MAX);
         g->measures.wait_s += seconds_since(start);
@@ -249,9 +364,96 @@ void advance() {
     f.chunk_used = 0;
     ++g->frame_count;
     begin_buffers();
+
+    // A copy that waited for a screen there was not (no window, or none shown): made now, so the
+    // default framebuffer holds what glBlitFramebuffer put there, as before.
+    make_present_copy();
 }
 
+namespace {
+
+// True when the screen's format holds what the default framebuffer's does, eight unsigned bits a
+// channel without sRGB encoding, so that a blit into either rounds the same.
+bool same_numbers_as_default(VkFormat screen) {
+    return screen == VK_FORMAT_B8G8R8A8_UNORM || screen == VK_FORMAT_R8G8B8A8_UNORM;
+}
+
+// True when the copy that waits (PendingPresent) can go straight into a screen of the swapchain's
+// size and format: the two-step path's second copy is then 1:1 and NEAREST, so one blit is exact.
+bool composable() {
+    const Image& colour = *g->default_colour;
+    const VkExtent2D screen = g->swapchain_extent;
+    return g->present_copy.pending && same_numbers_as_default(g->swapchain_format)
+           && colour.width == static_cast<int>(screen.width)
+           && colour.height == static_cast<int>(screen.height);
+}
+
+// Records the copy that waits straight into `screen` (`extent`, in TRANSFER_DST_OPTIMAL): the
+// clear colour over all of it, then the picture's blit with its destination turned upside down, as
+// the default framebuffer's copy to the screen turns it (vkgl.h, "Rows").
+void compose_into(VkCommandBuffer cmd, VkImage screen, VkExtent2D extent) {
+    PendingPresent waiting = std::move(g->present_copy);
+    g->present_copy = PendingPresent{};
+    const VkImageSubresourceRange range = {VK_IMAGE_ASPECT_COLOR_BIT, 0, 1, 0, 1};
+    vkCmdClearColorImage(
+        cmd, screen, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, &waiting.clear, 1, &range
+    );
+    count_command(Command::Copy);
+    barrier(cmd, *waiting.source, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL);
+    // The clear's writes done before the blit's, which overlap them.
+    swapchain_barrier(
+        cmd, screen, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL
+    );
+    VkImageBlit blit = waiting.region;
+    const auto height = static_cast<std::int32_t>(extent.height);
+    blit.dstOffsets[0].y = height - blit.dstOffsets[0].y;
+    blit.dstOffsets[1].y = height - blit.dstOffsets[1].y;
+    vkCmdBlitImage(
+        cmd,
+        waiting.source->image,
+        VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
+        screen,
+        VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+        1,
+        &blit,
+        waiting.filter
+    );
+    count_copy(
+        static_cast<std::uint32_t>(std::abs(blit.dstOffsets[1].x - blit.dstOffsets[0].x)),
+        static_cast<std::uint32_t>(std::abs(blit.dstOffsets[1].y - blit.dstOffsets[0].y))
+    );
+}
+
+// Records the default framebuffer's copy into `screen` (`extent`, in TRANSFER_DST_OPTIMAL),
+// turned the right way up: row 0 of the picture is the bottom of the screen, as in GL.
+void copy_default_into(VkCommandBuffer cmd, VkImage screen, VkExtent2D extent) {
+    Image& colour = *g->default_colour;
+    barrier(cmd, colour, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL);
+    VkImageBlit blit{};
+    blit.srcSubresource = {VK_IMAGE_ASPECT_COLOR_BIT, 0, 0, 1};
+    blit.srcOffsets[1] = {colour.width, colour.height, 1};
+    blit.dstSubresource = {VK_IMAGE_ASPECT_COLOR_BIT, 0, 0, 1};
+    blit.dstOffsets[0] = {0, static_cast<std::int32_t>(extent.height), 0};
+    blit.dstOffsets[1] = {static_cast<std::int32_t>(extent.width), 0, 1};
+    const bool same = colour.width == static_cast<int>(extent.width)
+                      && colour.height == static_cast<int>(extent.height);
+    vkCmdBlitImage(
+        cmd,
+        colour.image,
+        VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
+        screen,
+        VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+        1,
+        &blit,
+        same ? VK_FILTER_NEAREST : VK_FILTER_LINEAR
+    );
+    count_copy(extent.width, extent.height);
+}
+
+}  // namespace
+
 bool present_to_screen() {
+    const stats::Scope pass("vulkan present");
     if (g->surface_lost && !renew_surface()) {
         return false;
     }
@@ -280,34 +482,32 @@ bool present_to_screen() {
         return false;
     }
     end_rendering();
-    VkCommandBuffer cmd = f.main;
-    Image& colour = *g->default_colour;
-    barrier(cmd, colour, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL);
     const VkImage screen = g->swapchain_images[index];
+    const bool composed = composable();
+
+    // A copy that cannot go straight to the screen goes into the window first, in `main`.
+    if (!composed) {
+        make_present_copy();
+    }
+
+    // The copy to the screen in a buffer of its own, so that only it waits for the screen's
+    // image (vk-tight-sync); or at the end of `main`, as before.
+    const VkCommandBuffer own =
+        render_opt::enabled(render_opt::Opt::VkTightSync) ? present_cmd() : VK_NULL_HANDLE;
+    VkCommandBuffer cmd = own != VK_NULL_HANDLE ? own : f.main;
     swapchain_barrier(cmd, screen, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
-    // Turned the right way up: row 0 of the picture is the bottom of the screen, as in GL.
-    VkImageBlit blit{};
-    blit.srcSubresource = {VK_IMAGE_ASPECT_COLOR_BIT, 0, 0, 1};
-    blit.srcOffsets[1] = {colour.width, colour.height, 1};
-    blit.dstSubresource = {VK_IMAGE_ASPECT_COLOR_BIT, 0, 0, 1};
-    blit.dstOffsets[0] = {0, static_cast<std::int32_t>(g->swapchain_extent.height), 0};
-    blit.dstOffsets[1] = {static_cast<std::int32_t>(g->swapchain_extent.width), 0, 1};
-    const bool same = colour.width == static_cast<int>(g->swapchain_extent.width)
-                      && colour.height == static_cast<int>(g->swapchain_extent.height);
-    vkCmdBlitImage(
-        cmd,
-        colour.image,
-        VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
-        screen,
-        VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
-        1,
-        &blit,
-        same ? VK_FILTER_NEAREST : VK_FILTER_LINEAR
-    );
+
+    // The picture straight into the screen when its copy waited and can be composed; else as before.
+    if (composed) {
+        compose_into(cmd, screen, g->swapchain_extent);
+    } else {
+        copy_default_into(cmd, screen, g->swapchain_extent);
+    }
+
     swapchain_barrier(
         cmd, screen, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR
     );
-    submit(f.acquired, g->rendered[index], false);
+    submit(f.acquired, g->rendered[index], false, own);
     VkPresentInfoKHR info{VK_STRUCTURE_TYPE_PRESENT_INFO_KHR};
     info.waitSemaphoreCount = 1;
     info.pWaitSemaphores = &g->rendered[index];
@@ -331,3 +531,87 @@ bool present_to_screen() {
 }
 
 }  // namespace openrac::vkgl::detail
+
+namespace openrac::vkgl {
+
+namespace {
+
+// Reads `image` back (four bytes a texel, rows as stored) into `out`, waiting for the GPU.
+bool read_back(detail::Image& image, std::vector<std::uint8_t>& out) {
+    using namespace detail;
+    const auto bytes = static_cast<VkDeviceSize>(image.width) * image.height * 4;
+    VkBufferCreateInfo info{VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO};
+    info.size = bytes;
+    info.usage = VK_BUFFER_USAGE_TRANSFER_DST_BIT;
+    VmaAllocationCreateInfo alloc{};
+    alloc.usage = VMA_MEMORY_USAGE_AUTO;
+    alloc.flags = VMA_ALLOCATION_CREATE_HOST_ACCESS_RANDOM_BIT | VMA_ALLOCATION_CREATE_MAPPED_BIT;
+    VkBuffer buffer = VK_NULL_HANDLE;
+    VmaAllocation allocation = nullptr;
+    VmaAllocationInfo got{};
+
+    // No buffer to read into.
+    if (!check(
+            vmaCreateBuffer(g->allocator, &info, &alloc, &buffer, &allocation, &got), "a read-back"
+        )) {
+        return false;
+    }
+
+    VkCommandBuffer cmd = cmd_for(&image, true);
+    barrier(cmd, image, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL);
+    VkBufferImageCopy copy{};
+    copy.imageSubresource = {VK_IMAGE_ASPECT_COLOR_BIT, 0, 0, 1};
+    copy.imageExtent =
+        {static_cast<std::uint32_t>(image.width), static_cast<std::uint32_t>(image.height), 1};
+    vkCmdCopyImageToBuffer(
+        cmd, image.image, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, buffer, 1, &copy
+    );
+    count_command(Command::Copy);
+    flush_and_wait();
+    vmaInvalidateAllocation(g->allocator, allocation, 0, VK_WHOLE_SIZE);
+    const auto* from = static_cast<const std::uint8_t*>(got.pMappedData);
+    out.assign(from, from + bytes);
+    vmaDestroyBuffer(g->allocator, buffer, allocation);
+    return true;
+}
+
+}  // namespace
+
+bool test_present_paths(std::vector<std::uint8_t>& single, std::vector<std::uint8_t>& two_step) {
+    using namespace detail;
+
+    // Only a copy that waits can be drawn both ways.
+    if (g == nullptr || !g->present_copy.pending) {
+        return false;
+    }
+
+    end_rendering();
+    const Format screen_format{VK_FORMAT_B8G8R8A8_UNORM, VK_IMAGE_ASPECT_COLOR_BIT, 4};
+    const int width = g->default_width;
+    const int height = g->default_height;
+    const ImagePtr composed = make_image(screen_format, width, height, 1, VK_SAMPLE_COUNT_1_BIT);
+    const ImagePtr copied = make_image(screen_format, width, height, 1, VK_SAMPLE_COUNT_1_BIT);
+
+    // No stand-in images: nothing to compare.
+    if (!composed || !copied) {
+        return false;
+    }
+
+    const VkExtent2D extent{static_cast<std::uint32_t>(width), static_cast<std::uint32_t>(height)};
+    const PendingPresent waiting = g->present_copy;
+    VkCommandBuffer cmd = cmd_for(composed.get(), true);
+    barrier(cmd, *composed, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
+    compose_into(cmd, composed->image, extent);
+    // The same copy again, the two-step way: into the default framebuffer, then into the image.
+    g->present_copy = waiting;
+    make_present_copy();
+    cmd = cmd_for(copied.get(), true);
+    barrier(cmd, *copied, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
+    copy_default_into(cmd, copied->image, extent);
+    const bool read = read_back(*composed, single) && read_back(*copied, two_step);
+    retire(composed);
+    retire(copied);
+    return read;
+}
+
+}  // namespace openrac::vkgl

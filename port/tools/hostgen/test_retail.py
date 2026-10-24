@@ -5,7 +5,7 @@ reads besides glabel functions (a function spimdisasm took for data, an entry wi
 
     python3 -m unittest port/tools/hostgen/test_retail.py
 
-The bytes are the tests' own (tests/mips.py assembles them); the ones that translate and run a
+The bytes are the tests' own (tests/assembler.py assembles them); the ones that translate and run a
 program need Clang, as test_hostgen.py's do.
 """
 from __future__ import annotations
@@ -18,11 +18,10 @@ import unittest
 from pathlib import Path
 
 HERE = Path(__file__).resolve().parent
-sys.path.insert(0, str(HERE))
 sys.path.insert(0, str(HERE / "tests"))
 
 import asm  # noqa: E402
-import mips  # noqa: E402
+import assembler  # noqa: E402
 import retail  # noqa: E402
 
 JUMP_TABLE = """
@@ -92,8 +91,8 @@ class Pairs(unittest.TestCase):
         return retail.RetailCode(r, {-1: starts}, r.low)
 
     def test_relocations_and_jump_table_as_the_assembly_says(self):
-        text = mips.assemble("func_00100000", 0x00100000, JUMP_TABLE, SYMBOLS)
-        labels = mips.label_addresses(0x00100000, JUMP_TABLE)
+        text = assembler.assemble("func_00100000", 0x00100000, JUMP_TABLE, SYMBOLS)
+        labels = assembler.label_addresses(0x00100000, JUMP_TABLE)
         words = words_of(text)
         table = [labels["case0"], labels["case1"], labels["case2"]]
         r = program({0x00100000: words, 0x00300000: table + [0, 41]})
@@ -117,7 +116,7 @@ class Pairs(unittest.TestCase):
             jr $31
             lw $2, %lo(D_00300040)($3)
         """
-        words = words_of(mips.assemble("func_00100000", 0x00100000, source, {"D_00300040": 0x00300040}))
+        words = words_of(assembler.assemble("func_00100000", 0x00100000, source, {"D_00300040": 0x00300040}))
         code = self.code(program({0x00100000: words}), {0x00100000: "func_00100000"})
         self.assertEqual(code.get((-1, 0x00100004))[0].reloc, ("hi", "D_00300040", 0))
 
@@ -127,7 +126,7 @@ class Pairs(unittest.TestCase):
             jr $31
             addiu $4, $4, %lo(func_00100100)
         """
-        words = words_of(mips.assemble("func_00100000", 0x00100000, source, {"func_00100100": 0x00100100}))
+        words = words_of(assembler.assemble("func_00100000", 0x00100000, source, {"func_00100100": 0x00100100}))
         r = program({0x00100000: words, 0x00100100: [0x03E00008, 0]})
         code = self.code(r, {0x00100000: "func_00100000", 0x00100100: "func_00100100"})
         self.assertEqual(code.get((-1, 0x00100000))[0].reloc, ("hi", "func_00100100", 0))
@@ -163,7 +162,7 @@ class AssemblyFiles(unittest.TestCase):
         self.assertEqual([l.word for l in block.lines], [0x03E00008, 0])
 
     def test_an_entry_with_no_label(self):
-        text = mips.assemble("func_00100000", 0x00100000, "addiu $2, $0, 1\njr $31\nnop\n")
+        text = assembler.assemble("func_00100000", 0x00100000, "addiu $2, $0, 1\njr $31\nnop\n")
         with tempfile.TemporaryDirectory() as tmp:
             (Path(tmp) / "func_00100000.s").write_text(text)
             index = asm.read_index([Path(tmp)], lambda name: -1)
@@ -188,7 +187,7 @@ class FromRetail(unittest.TestCase):
 
     def run_both(self, c: str, start: int, source: str, data: dict[int, list[int]]) -> tuple[list[str], list[str]]:
         t = test_hostgen.FromAssembly("run_asm")
-        text = mips.assemble("func_00100000", start, source, SYMBOLS,
+        text = assembler.assemble("func_00100000", start, source, SYMBOLS,
                              {"jtbl_00300000": ["case0", "case1", "case2"]})
         from_files = t.run_program({"a.c": c}, config=test_hostgen.ASM_CONFIG,
                                    extra_files={"game/asm/func_00100000.s": text})
@@ -206,7 +205,7 @@ class FromRetail(unittest.TestCase):
         return from_files, from_bytes
 
     def test_jump_table_and_globals(self):
-        labels = mips.label_addresses(0x00100000, JUMP_TABLE)
+        labels = assembler.label_addresses(0x00100000, JUMP_TABLE)
         c = f"""
             extern unsigned int D_00300000[8];
             extern int D_0017FFF0;
@@ -295,7 +294,7 @@ class CallsThroughRegisters(unittest.TestCase):
         """
         symbols = {"func_00200000": 0x00200000, "func_00200100": 0x00200100}
         t = test_hostgen.FromAssembly("run_asm")
-        files = {"game/asm/func_00100000.s": mips.assemble("func_00100000", 0x00100000, source, symbols)}
+        files = {"game/asm/func_00100000.s": assembler.assemble("func_00100000", 0x00100000, source, symbols)}
         want = ["1.500", "7", "1.500", "3", "9"]
         for flags in ([], ["-DOPENRAC_REGS_THUNKS=1"]):
             with self.subTest(flags=flags):

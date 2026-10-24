@@ -8,7 +8,7 @@
 #include "enhanced/viewer/probe_selection.h"
 #include "renderer/renderer.h"
 #include "renderer/shader.h"
-#include "viewer/level.h"
+#include "scene/level.h"
 
 namespace openrac::viewer {
 std::string probe_mesh_fragment();

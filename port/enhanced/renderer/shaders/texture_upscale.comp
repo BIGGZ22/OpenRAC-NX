@@ -1,0 +1,63 @@
+#version 430 core
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Vulkan-only texture preprocessing kernel.
+// An elliptical Lanczos-2 kernel follows the local luminance edge. The local
+// colour bounds prevent ringing; alpha is never consumed by the world sampler.
+uniform sampler2D tex_T0;
+uniform int wrap_mode; // bit 0/1: repeat S/T, otherwise clamp
+ivec2 source_at(ivec2 p) {
+  ivec2 n = textureSize(tex_T0, 0);
+  return ivec2((wrap_mode & 1) != 0 ? ((p.x % n.x) + n.x) % n.x : clamp(p.x, 0, n.x-1),
+               (wrap_mode & 2) != 0 ? ((p.y % n.y) + n.y) % n.y : clamp(p.y, 0, n.y-1));
+}
+vec3 source_rgb(ivec2 p) { return texelFetch(tex_T0, source_at(p), 0).rgb; }
+float luma(vec3 c) { return dot(c, vec3(0.299, 0.587, 0.114)); }
+float lanczos2(float r) {
+  if (r >= 2.0) return 0.0;
+  if (r < 0.0001) return 1.0;
+  const float pi = 3.14159265359;
+  return sin(pi*r) * sin(0.5*pi*r) / (0.5*pi*pi*r*r);
+}
+vec3 edge_colour(ivec2 destination) {
+  vec2 p = (vec2(destination) + 0.5) * 0.5 - 0.5;
+  ivec2 b = ivec2(floor(p));
+  vec2 f = fract(p);
+  vec3 c00 = source_rgb(b), c10 = source_rgb(b+ivec2(1,0));
+  vec3 c01 = source_rgb(b+ivec2(0,1)), c11 = source_rgb(b+ivec2(1,1));
+  vec3 linear_rgb = mix(mix(c00,c10,f.x),mix(c01,c11,f.x),f.y);
+  // Average central differences across the containing source cell, rather
+  // than selecting a direction from a single noisy pair of texels.
+  vec2 gradient = vec2(luma(c10-c00+c11-c01), luma(c01-c00+c11-c10));
+  float energy = abs(luma(c10-c00)) + abs(luma(c11-c01)) +
+                 abs(luma(c01-c00)) + abs(luma(c11-c10));
+  float magnitude = length(gradient);
+  if (magnitude < 0.0001) return linear_rgb;
+  float coherence = clamp(magnitude / max(energy, 0.0001), 0.0, 1.0);
+  vec2 normal = gradient / magnitude;
+  vec2 tangent = vec2(-normal.y,normal.x);
+  float stretch = mix(1.0, 1.5, coherence);
+  float narrow = mix(1.0, 0.75, coherence);
+  vec3 sum = vec3(0.0);
+  float total = 0.0;
+  for (int y=-1; y<=2; ++y) {
+    for (int x=-1; x<=2; ++x) {
+      vec2 offset = vec2(x,y)-f;
+      float radius = length(vec2(dot(offset,tangent)/stretch,dot(offset,normal)/narrow));
+      float weight = lanczos2(radius);
+      sum += source_rgb(b+ivec2(x,y)) * weight;
+      total += weight;
+    }
+  }
+  vec3 lo = min(min(c00,c10),min(c01,c11));
+  vec3 hi = max(max(c00,c10),max(c01,c11));
+  return clamp(total > 0.0001 ? sum/total : linear_rgb, lo, hi);
+}
+
+layout(local_size_x = 8, local_size_y = 8) in;
+layout(std430, binding = 0) writeonly buffer Output { uint pixels[]; };
+void main() {
+  ivec2 p = ivec2(gl_GlobalInvocationID.xy);
+  ivec2 size = textureSize(tex_T0, 0) * 2;
+  if (any(greaterThanEqual(p, size))) return;
+  pixels[p.y * size.x + p.x] = packUnorm4x8(vec4(edge_colour(p), 1.0));
+}

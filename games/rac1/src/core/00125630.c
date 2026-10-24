@@ -382,7 +382,7 @@ extern void func_0012C430_25880(struct MpegDecoder *d, char *fmt, int code) __as
 extern void func_001275C0_25880(struct MpegDecoder *d, int dmv[2][2], int *dmvector, int mvx, int mvy) __asm__("func_001275C0");
 extern void func_00125F88(struct MpegDecoder *d, struct MpegRefImage *ref, int sfield, int dfield, int yofs, int h, int bx, int by, int dx, int dy, int fieldpred, int avg);
 
-/* Adapted from Lombyte (MIT) for PAL by OpenRAC's tools/port.py: src/sdk/library/_getAllRefs.c, _getAllRefs. */
+/* Adapted from Lombyte (GPL-3.0) for PAL by OpenRAC's tools/port.py: src/sdk/library/_getAllRefs.c, _getAllRefs. */
 void func_00125880(struct MpegDecoder *d, int bx, int by, int mb_type, int motion_type,
                  int pmv[2][2][2], int mvfs[2][2], int *dmvector) {
     int dmv[2][2];
@@ -598,7 +598,7 @@ extern void func_0012C468(void *, void *);
 #define D_ENABLER  ((volatile unsigned int *)0x1000F520)
 #define D_ENABLEW  ((volatile unsigned int *)0x1000F590)
 
-/* _waitBdecOut (libmpeg). Adapted from Lombyte (MIT) for PAL. */
+/* _waitBdecOut (libmpeg). Adapted from Lombyte (GPL-3.0) for PAL. */
 int func_001273A0(void *arg0) {
     MpegDec *d = arg0;
     int cb1[8];
@@ -1029,7 +1029,7 @@ typedef struct {
     int unk848;
 } MbDec;
 
-/* Decodes one macroblock's modes and motion vectors through the IPU VLC engine (libmpeg _decMB0). Adapted from Lombyte (MIT) for PAL: sdk/library/_decMB0.c, _decMB0. */
+/* Decodes one macroblock's modes and motion vectors through the IPU VLC engine (libmpeg _decMB0). Adapted from Lombyte (GPL-3.0) for PAL: sdk/library/_decMB0.c, _decMB0. */
 int func_00127D40(void *arg0, int *arg1, int *arg2, int *arg3, void *arg4, void *arg5, void *arg6) {
     MbDec *d = arg0;
     int *mb = arg4;
@@ -1304,7 +1304,7 @@ typedef struct {
 #define IPU_BP   ((volatile unsigned int *)0x10002020)
 #define IPU_TOP  ((unsigned long *)0x10002030)
 
-/* _ipuVdec (libmpeg). Adapted from Lombyte (MIT) for PAL. */
+/* _ipuVdec (libmpeg). Adapted from Lombyte (GPL-3.0) for PAL. */
 short func_001286E8(int arg0, int tbl) {
     MpegVdec *d = (MpegVdec *)arg0;
     int i;
@@ -1397,7 +1397,7 @@ short func_001286E8(int arg0, int tbl) {
 /* _peepBit: return the next count bits of the IPU bit stream without
    consuming them, refilling the 32-bit window from the IPU (FDEC) when
    it runs short and nudging the callback while the IPU stays busy.
-   Adapted from Lombyte (MIT) for PAL. */
+   Adapted from Lombyte (GPL-3.0) for PAL. */
 int func_00128860(void *arg, int count) {
     char *ctx = arg;
     int counter;
@@ -1659,7 +1659,7 @@ typedef struct {
    the four f_codes, intra DC precision, q_scale_type, intra VLC format
    and alternate scan straight into IPU_CTRL (0x10002010), the rest into
    the decoder state; the composite display fields are skipped. Adapted
-   from Lombyte (MIT) for PAL. */
+   from Lombyte (GPL-3.0) for PAL. */
 void func_00128F90(void *arg) {
     PicExt *arg0 = arg;
     int temp_2_35;
@@ -2119,7 +2119,7 @@ struct Cpr8Pic {
 
 /* _cpr8 (libmpeg): copy a decoded picture to its destination with two
    chained DMA transfers per row, per field (two fields when +0xE0 gives
-   an interlaced width). Adapted from Lombyte (MIT) for PAL; its
+   an interlaced width). Adapted from Lombyte (GPL-3.0) for PAL; its
    goto-shaped control flow is what matches. */
 void func_001299E8(struct Cpr8Mpeg *arg0, struct Cpr8Pic *arg1) {
     struct Cpr8Mpeg *m;

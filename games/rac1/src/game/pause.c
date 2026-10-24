@@ -210,7 +210,7 @@ extern struct S D_00187040_19C08 __asm__("D_00187040");
 extern s32 D_001873A0;
 extern s32 D_001873B0;
 
-/* Adapted from Lombyte (MIT) for PAL by OpenRAC's tools/port.py: src/rendering/fun_00218d10.c, FUN_00218d10. */
+/* Adapted from Lombyte (GPL-3.0) for PAL by OpenRAC's tools/port.py: src/rendering/fun_00218d10.c, FUN_00218d10. */
 void Menu_SetupPanelView(void) {
     D_00187040_19C08.f140 = 256.0f;
     D_00187040_19C08.f148 = 64.0f;
@@ -445,7 +445,7 @@ void func_00226D50_19E90() __asm__("func_00226D50");
 /* Opens the pause menu: makes the start page current, sets up the menu camera vectors and the
    texture and help text buffers behind the two stream buffers, then creates the fourteen menu
    mobys and starts each on its page animation.
-   Adapted from Lombyte (MIT) for PAL: src/rendering/fun_00218f98.c, FUN_00218f98. */
+   Adapted from Lombyte (GPL-3.0) for PAL: src/rendering/fun_00218f98.c, FUN_00218f98. */
 void Pause_Open(void) {
     s32 i;
     s32 a, b, c, d;
@@ -698,7 +698,7 @@ extern void func_0021A0B0_1A1A0(void) __asm__("func_0021A0B0");
 /* Pause menu update: counts the update, closes down in state 0x14, opens the menu in
    states 0 and 0x2D, then runs the page switch (leave handlers, the mobys' page animations,
    enter handlers after the timer), every screen's update and the focus hand-over.
-   Adapted from Lombyte (MIT) for PAL: src/ui/menus/fun_002192a8.c, FUN_002192a8. */
+   Adapted from Lombyte (GPL-3.0) for PAL: src/ui/menus/fun_002192a8.c, FUN_002192a8. */
 void Pause_Update(void) {
     s32 i;
     s32 j;
@@ -1708,7 +1708,7 @@ extern s32 func_0022ED80_1BB90(s32, s32, s32) __asm__("func_0022ED80");
 /* Text list screen update: runs each entry's highlight fade timer, then for the focused
    list the pad: close, back, confirm (the selected entry's action: open a page, freeze the
    game for a prompt, close with a value, pick a level or language) and up/down selection.
-   Adapted from Lombyte (MIT) for PAL: src/ui/menus/fun_0021abf8.c, update_menu_entry_actions. */
+   Adapted from Lombyte (GPL-3.0) for PAL: src/ui/menus/fun_0021abf8.c, update_menu_entry_actions. */
 s32 Pause_TextListUpdate(struct MenuScreen_1BB90 *menu) {
     s32 focused;
     s32 entry_index;
@@ -1906,7 +1906,7 @@ extern void func_001F6668_1C1B0(s32, s32, long, char *, s32, s32, u8 *) __asm__(
 extern char *func_001FE540_1C1B0(s32) __asm__("func_001FE540");
 extern s32 func_0021C6C0(s32, s32, s32);
 
-/* Adapted from Lombyte (MIT) for PAL by OpenRAC's tools/port.py: src/textbin/render_localized_ui_entry_list.c, render_localized_ui_entry_list. */
+/* Adapted from Lombyte (GPL-3.0) for PAL by OpenRAC's tools/port.py: src/textbin/render_localized_ui_entry_list.c, render_localized_ui_entry_list. */
 s32 DrawMenuItemList(MenuDescriptor *menu) {
     s32 focused;
     u8 *glyphs;
@@ -2213,7 +2213,7 @@ extern Hero_C840 hero_C840 __asm__("D_0013F450");
 extern s32 item_count_C840(s32) __asm__("func_001E97E8");
 extern s32 play_menu_sound_C840() __asm__("func_0022ED80");
 
-/* Adapted from Lombyte (MIT): src/ui/menus/update_menu_grid_selection.c, update_menu_grid_selection. */
+/* Adapted from Lombyte (GPL-3.0): src/ui/menus/update_menu_grid_selection.c, update_menu_grid_selection. */
 s32 func_0021C840(MenuScreen_C840 *grid) {
     s32 column_count;
     s32 row_count;
@@ -2653,7 +2653,7 @@ extern void func_0022ED80_1CE60() __asm__("func_0022ED80");
 /* Map screen of the pause menu: pad input (close, back, the mission page, warp to the shown
    level, previous/next visited level), then decodes the shown level's map into its textures
    when it changed and keeps the next map streaming into a free slot.
-   Adapted from Lombyte (MIT) for PAL: src/ui/map/draw_map_screen.c, draw_map_screen. */
+   Adapted from Lombyte (GPL-3.0) for PAL: src/ui/map/draw_map_screen.c, draw_map_screen. */
 s32 DrawMapScreen(struct MenuScreen_1CE60 *screen) {
     s32 prev;
     s32 idx;
@@ -2878,7 +2878,7 @@ extern PadG D_0013CA40_g __asm__("D_0013CA40");
 extern LevelG D_001A01F0_lv __asm__("D_001A01F0");
 extern unsigned char D_0013DE48[];
 
-/* Pause slot-select tick. Adapted from Lombyte (MIT) for PAL: src/ui/menus/fun_0021c4c0.c, FUN_0021c4c0. */
+/* Pause slot-select tick. Adapted from Lombyte (GPL-3.0) for PAL: src/ui/menus/fun_0021c4c0.c, FUN_0021c4c0. */
 int LevelSelectMenu_Update(struct Menu *m) {
     int old;
     int i;
@@ -3203,7 +3203,7 @@ void func_0012E380_1DB30(s32 menu) __asm__("func_0012E380");
 /* Sound options page input: close and back, up/down over the three rows, left/right change
    the sound or music volume by 3 (0..0x400) and push the new levels to the mixer groups,
    confirm on the third row toggles mono/stereo.
-   Adapted from Lombyte (MIT) for PAL: src/textbin/ui/menus/audio/sound_options_menu.c, sound_options_menu. */
+   Adapted from Lombyte (GPL-3.0) for PAL: src/textbin/ui/menus/audio/sound_options_menu.c, sound_options_menu. */
 s32 Pause_SoundOptionsInput(struct SoundMenu_1DB30 *menu) {
     s32 previous_selection;
     s32 *sound_volume_ptr;
@@ -3295,7 +3295,7 @@ extern void func_00201640_1DE08(s32, s32, s32, s32, u64, s32) __asm__("func_0020
 
 /* Draws the sound options page: the sound and music volume rows, each a right-aligned label
    and a slider bar, then the playback mode row; the selected row's label is yellow.
-   Adapted from Lombyte (MIT) for PAL: src/textbin/ui/menus/audio/draw_sound_menu.c, draw_sound_menu. */
+   Adapted from Lombyte (GPL-3.0) for PAL: src/textbin/ui/menus/audio/draw_sound_menu.c, draw_sound_menu. */
 s32 DrawSoundMenu(SoundMenu_1DE08 *menu) {
     s32 center_x;
     s32 row_height;
@@ -3539,7 +3539,7 @@ typedef struct {
     short s[12];
 } MenuBox;
 
-/* Draws a pause-menu list (rows of text with optional subtext, cursor highlight, scrolling). Adapted from Lombyte (MIT) for PAL: ui/menus/fun_0021d4a8.c, FUN_0021d4a8. */
+/* Draws a pause-menu list (rows of text with optional subtext, cursor highlight, scrolling). Adapted from Lombyte (GPL-3.0) for PAL: ui/menus/fun_0021d4a8.c, FUN_0021d4a8. */
 int Pause_DrawList(Menu *menu) {
     int size;
     int kind;
@@ -3719,7 +3719,7 @@ extern void func_00201640_1E950(s32, s32, s32, s32, u64, s32) __asm__("func_0020
 extern s32 func_00234C98_1E950(s32, s64) __asm__("func_00234C98");
 s32 func_0021E950(MenuItemGrid *grid);
 
-/* Adapted from Lombyte (MIT) for PAL by OpenRAC's tools/port.py: src/ui/menus/fun_0021d948.c, draw_menu_item_grid. */
+/* Adapted from Lombyte (GPL-3.0) for PAL by OpenRAC's tools/port.py: src/ui/menus/fun_0021d948.c, draw_menu_item_grid. */
 s32 Pause_DrawItemGrid(MenuItemGrid *grid) {
     Font *font;
     MenuGridCell *cell;
@@ -4300,7 +4300,7 @@ extern void func_00213D28(struct Moby *, s32, s32);
 extern struct Moby *func_00226720_1F238(s32) __asm__("func_00226720");
 extern struct Moby *func_002267C0_1F238(struct Moby *) __asm__("func_002267C0");
 
-/* Adapted from Lombyte (MIT) for PAL by OpenRAC's tools/port.py: src/textbin/fun_0021e230.c, update_item_preview_binding. */
+/* Adapted from Lombyte (GPL-3.0) for PAL by OpenRAC's tools/port.py: src/textbin/fun_0021e230.c, update_item_preview_binding. */
 s32 ItemPreview_UpdateBinding(struct ItemPreviewBinding_1F238 *preview) {
     struct MenuScreen *grid;
     struct Moby *moby;
@@ -4507,7 +4507,7 @@ extern f32 func_001F9F90(f32);
 extern f32 func_001F9FA8(f32);
 
 /* Position the selected item relative to the preview camera. Owner flag bit 0 selects alternate_x; otherwise use normal_x. Rotate the side and forward offsets in the X/Y plane after adding the unrotated placement position.
-   Adapted from Lombyte (MIT) for PAL by OpenRAC's tools/port.py: src/textbin/update_item_preview_transform.c, update_item_preview_transform. */
+   Adapted from Lombyte (GPL-3.0) for PAL by OpenRAC's tools/port.py: src/textbin/update_item_preview_transform.c, update_item_preview_transform. */
 void Pause_PlaceItemPreview(struct ItemPreviewMoby *moby) {
     struct ItemPreviewBinding *preview = moby->preview_vars->owner;
     s32 item_index = moby->preview_vars->item_index;
@@ -4719,7 +4719,7 @@ static inline int divide_coordinate(s32 a, int n) {
     return a / n;
 }
 
-/* Adapted from Lombyte (MIT) for PAL by OpenRAC's tools/port.py: src/textbin/ui/menus/inventory/draw_items_menu.c, draw_items_menu. */
+/* Adapted from Lombyte (GPL-3.0) for PAL by OpenRAC's tools/port.py: src/textbin/ui/menus/inventory/draw_items_menu.c, draw_items_menu. */
 s32 DrawItemsMenu(ItemsMenu *menu) {
     char text_buffer[0x80];
     char *hyphen;
@@ -5363,7 +5363,7 @@ extern s32 func_002270B0_209A0(s32) __asm__("func_002270B0");
 
 /* Resource stream screen update for a single buffer: picks the entry from the screen's flags,
    streams it in, unpacks it and binds the image it holds as the map screen's first texture.
-   Adapted from Lombyte (MIT) for PAL: src/ui/menus/fun_0021f990.c, FUN_0021f990. */
+   Adapted from Lombyte (GPL-3.0) for PAL: src/ui/menus/fun_0021f990.c, FUN_0021f990. */
 s32 StreamScreenSingle_Update(struct MenuScreen_209A0 *stream) {
     s32 flags;
     s32 idx;
@@ -5732,7 +5732,7 @@ extern s32 func_002270B0_20DF0() __asm__("func_002270B0");
 /* Resource stream screen update: picks the entry to show from the screen's flags (fixed, the
    focus list or grid selection, the save slot's level, a timed cycle, the language), then runs
    the two-buffer read state machine that streams it in and unpacks it.
-   Adapted from Lombyte (MIT) for PAL: src/textbin/fun_0021fdc8.c, update_menu_resource_stream. */
+   Adapted from Lombyte (GPL-3.0) for PAL: src/textbin/fun_0021fdc8.c, update_menu_resource_stream. */
 s32 StreamScreen_Update(struct MenuScreen_20DF0 *stream) {
     LanguageResourceOffsets_20DF0 language_offsets;
     s32 *completed_buffer_slot;
@@ -6427,7 +6427,7 @@ extern char *func_001FE540_22070(s32) __asm__("func_001FE540");
 extern void func_001F7560_22070(FontWindow *, u64, char *, s32) __asm__("func_001F7560");
 extern void func_001F68E8_22070(s32, s32, u64, char *, s32) __asm__("func_001F68E8");
 
-/* Adapted from Lombyte (MIT) for PAL by OpenRAC's tools/port.py: src/textbin/ui/menus/draw_cheats_menu.c, draw_cheats_menu. */
+/* Adapted from Lombyte (GPL-3.0) for PAL by OpenRAC's tools/port.py: src/textbin/ui/menus/draw_cheats_menu.c, draw_cheats_menu. */
 s32 DrawCheatsMenu(struct CheatsMenu *menu) {
     FontWindow text_window;
     s16 window_fields[12];
@@ -6577,7 +6577,7 @@ int RowList_PadInput(char *arg0) {
 struct OptItem { int text; unsigned char *value; int names[4]; };
 struct OptMenu { unsigned char pad0[0x20]; int x; int height; unsigned char pad28[0xC]; struct OptItem *items; int selected; };
 
-/* Draws an options menu: each item's label at left, its current value's name at right, selected one highlighted. Adapted from Lombyte (MIT) for PAL: src/ui/menus/fun_00221460.c, FUN_00221460. */
+/* Draws an options menu: each item's label at left, its current value's name at right, selected one highlighted. Adapted from Lombyte (GPL-3.0) for PAL: src/ui/menus/fun_00221460.c, FUN_00221460. */
 int Pause_DrawOptionsMenu(struct OptMenu *m) {
     struct OptItem *p;
     struct OptItem *it;
@@ -7481,7 +7481,7 @@ extern void func_001F6668_23B40(s32, s32, u64, char *, s32, s64, u8 *) __asm__("
 /* Draws the three completion counters page (n of 40, n of 10, n of 30): measures the three
    lines to pick the regular or the narrow font, then a centred title and each line with its
    tick mark when complete.
-   Adapted from Lombyte (MIT) for PAL: src/textbin/ui/menus/draw_localized_three_option_menu.c, draw_localized_three_option_menu. */
+   Adapted from Lombyte (GPL-3.0) for PAL: src/textbin/ui/menus/draw_localized_three_option_menu.c, draw_localized_three_option_menu. */
 s32 DrawEndScreenMenuMaybe(struct ThreeOptionMenu_23B40 *menu) {
     char text_buffer[0x50];
     s32 font_texture_index;
@@ -8161,7 +8161,7 @@ extern s32 func_00116248_24C30(char *, const char *, ...) __asm__("func_00116248
 
 /* Draws the five save slots of the memory card page: the cursor frame around the selected
    one once the card is idle, then per slot "empty" or play time, gold bolts, bolts and date.
-   Adapted from Lombyte (MIT) for PAL: src/ui/menus/draw_save_slot_list.c, draw_save_slot_list. */
+   Adapted from Lombyte (GPL-3.0) for PAL: src/ui/menus/draw_save_slot_list.c, draw_save_slot_list. */
 s32 Pause_DrawSaveSlots(SaveMenu_24C30 *menu) {
     char text[0x50];
     SaveSlot_24C30 *slot;
@@ -8277,7 +8277,7 @@ extern s64 func_001F4868_250B8(s32) __asm__("func_001F4868");
 extern void func_001F5800_250B8(s32, s32, s32, s32, s32, s32, s32, s32, s64, s64) __asm__("func_001F5800");
 void func_002250B8(struct MenuPanelOwner *owner);
 
-/* Adapted from Lombyte (MIT) for PAL by OpenRAC's tools/port.py: src/ui/menus/fun_00223e28.c, draw_menu_flashing_panel. */
+/* Adapted from Lombyte (GPL-3.0) for PAL by OpenRAC's tools/port.py: src/ui/menus/fun_00223e28.c, draw_menu_flashing_panel. */
 void DrawMenuFlashingPanel(struct MenuPanelOwner *owner) {
     struct MenuFlashingPanel *panel;
     s32 x;
@@ -8560,7 +8560,7 @@ extern void func_00226250();
 extern void func_00226380();
 extern void func_00226410();
 
-/* Adapted from Lombyte (MIT) for PAL by OpenRAC's tools/port.py: src/textbin/gameplay/gadgets/load_hand_gadget.c, load_hand_gadget. */
+/* Adapted from Lombyte (GPL-3.0) for PAL by OpenRAC's tools/port.py: src/textbin/gameplay/gadgets/load_hand_gadget.c, load_hand_gadget. */
 s32 LoadHandGadget(HandGadgetState *hand) {
     Moby *moby;
     s32 previous_selected_class;
@@ -8950,7 +8950,7 @@ typedef struct {
     f32 cached_vector[4];
 } PauseMoby_260A8;
 
-/* Adapted from Lombyte (MIT) for PAL by OpenRAC's tools/port.py: src/textbin/fun_00224e18.c, update_menu_preview_pose_and_attachments. */
+/* Adapted from Lombyte (GPL-3.0) for PAL by OpenRAC's tools/port.py: src/textbin/fun_00224e18.c, update_menu_preview_pose_and_attachments. */
 void FeetItemUpdate(void *preview) {
     PauseMoby_260A8 *moby = preview;
     char **preview_vars = moby->vars;
@@ -9094,7 +9094,7 @@ extern void func_0020E3D0_26410(void *) __asm__("func_0020E3D0");
 extern f32 func_00214D88(f32 *, f32 *, f32, f32, f32, f32);
 void func_00226410(struct AmmoPreviewMoby *moby);
 
-/* Adapted from Lombyte (MIT) for PAL by OpenRAC's tools/port.py: src/ui/menus/item_preview/update_ammo_preview_transform.c, update_ammo_preview_transform. */
+/* Adapted from Lombyte (GPL-3.0) for PAL by OpenRAC's tools/port.py: src/ui/menus/item_preview/update_ammo_preview_transform.c, update_ammo_preview_transform. */
 void AmmoPreviewUpdate(struct AmmoPreviewMoby *moby) {
     f32 offset[4];
     f32 rotation_basis[12];
@@ -9298,7 +9298,7 @@ extern void func_00213DE0(void *, s32, s32, s32);
 extern s32 func_00216960(void);
 extern int func_00217628(int, int, int);
 
-/* Adapted from Lombyte (MIT) for PAL by OpenRAC's tools/port.py: src/assembly/textbin/fun_002256e8.c, update_streamed_moby_animation. */
+/* Adapted from Lombyte (GPL-3.0) for PAL by OpenRAC's tools/port.py: src/assembly/textbin/fun_002256e8.c, update_streamed_moby_animation. */
 s32 func_00226978(MobyAnimationStream_26978 *stream) {
     extern s16 D_001517D8[];
     extern int func_00227068(int);
@@ -9905,7 +9905,7 @@ extern u8 D_001D5D58_27A70[] __asm__("D_001D5D58");
 extern PreviewAnimationStreamState D_001D5F70_27A70 __asm__("D_001D5F70");
 void func_00227A70(void);
 
-/* Adapted from Lombyte (MIT) for PAL by OpenRAC's tools/port.py: src/ui/menus/item_preview/clear_preview_resource_bindings.c, clear_preview_resource_bindings. */
+/* Adapted from Lombyte (GPL-3.0) for PAL by OpenRAC's tools/port.py: src/ui/menus/item_preview/clear_preview_resource_bindings.c, clear_preview_resource_bindings. */
 void ItemPreview_ClearBindings(void) {
     register s32 class_slot;
     register s32 class_resource_address;
@@ -9953,7 +9953,7 @@ extern s32 func_00234238_27B00() __asm__("func_00234238");
    The class slot table's address is one `la` in retail (lui/addiu back to back), hence its
    MACRO_ADDR declaration; it is also what orders the loop index before the binding pointer.
    The guard tests the index (zero there): with `count > 0` the index lives twice as long.
-   Adapted from Lombyte (MIT) for PAL: src/ui/menus/fun_00226848.c, load_preview_resource_bindings. */
+   Adapted from Lombyte (GPL-3.0) for PAL: src/ui/menus/fun_00226848.c, load_preview_resource_bindings. */
 void ItemPreview_StreamBindings(s32 first_resource, s32 resource_count) {
     s32 count;
     s32 *class_resource_slot;
@@ -10112,7 +10112,7 @@ extern void func_0012D818_27DB0(u8 *clock) __asm__("func_0012D818");
    D_001D5F20; a quick-select entry is cleared when its item is gone), restores two flags and
    the counter + 1, re-reads the clock, and for slot >= 0 records the slot in the card state.
    PAL keeps two more 12-byte blocks (D_0015EEB0, D_0015EEC0).
-   Adapted from Lombyte (MIT) for PAL: src/textbin/fun_00226b08.c, FUN_00226b08. */
+   Adapted from Lombyte (GPL-3.0) for PAL: src/textbin/fun_00226b08.c, FUN_00226b08. */
 void ResetGameKeepingProgress(s32 slot) {
     s32 saved;
     u32 count;
@@ -10286,7 +10286,7 @@ typedef union {
     f32 v[4];
 } PauseVec_282D0;
 
-/* Adapted from Lombyte (MIT) for PAL by OpenRAC's tools/port.py: src/ui/menus/fun_00226fb8.c, FUN_00226fb8. */
+/* Adapted from Lombyte (GPL-3.0) for PAL by OpenRAC's tools/port.py: src/ui/menus/fun_00226fb8.c, FUN_00226fb8. */
 void BuildBasisFromDirection(PauseVec_282D0 *dir, f32 scale) {
     PauseVec_282D0 d;
     f32 *v = d.v;
@@ -10453,7 +10453,7 @@ extern struct DisplayDims_28690 D_00151880_28690 __asm__("D_00151880");
 extern s32 *D_00161000_28690 __asm__("D_00161000") MACRO_ADDR;
 
 /* Appends a DMA packet that clears the screen in 32-pixel-wide sprite strips of the given colour.
-   Adapted from Lombyte (MIT) for PAL by OpenRAC's tools/port.py: src/textbin/fun_00227378.c, append_fullscreen_clear_strips. */
+   Adapted from Lombyte (GPL-3.0) for PAL by OpenRAC's tools/port.py: src/textbin/fun_00227378.c, append_fullscreen_clear_strips. */
 void ClearScreenColor(s64 color) {
     s32 *base;
     s64 *commands;
@@ -10553,7 +10553,7 @@ extern void func_00228458(s32, s32, s32);
 extern void func_00234C98_28860(s32, s64) __asm__("func_00234C98");
 extern void func_00228690(s64);
 
-/* Adapted from Lombyte (MIT) for PAL by OpenRAC's tools/port.py: src/textbin/fun_00227548.c, submit_graphics_setup_command_stream. */
+/* Adapted from Lombyte (GPL-3.0) for PAL by OpenRAC's tools/port.py: src/textbin/fun_00227548.c, submit_graphics_setup_command_stream. */
 void SubmitGraphicsSetupStream(u8 *command_stream) {
     f32 first_vector[4];
     f32 second_vector[4];

@@ -82,6 +82,7 @@ func_00121930	cdvd	sceCdGetError	host
 func_001219C8	cdvd	sceCdBreak	host
 func_00121A80	cdvd	sceCdReadClock	host
 func_00121B78	graph	sceGsResetGraph	host	the renderer's video mode
+func_00121DB8	graph	_GetGsDxDyOffset	host	system call 0x80: no screen position adjustment (only libgraph's sceGsSetDefDispEnv calls it, the port's own)
 func_00121DC8	graph	sceGsSetDefDispEnv	host
 func_00122140	graph	sceGsPutDispEnv	host	the renderer's display state
 func_001222C8	graph	sceGsSetDefDrawEnv	game
@@ -163,6 +164,8 @@ func_0012F248	989snd	snd_StartMovieSound	host
 func_0012F288	989snd	snd_UpdateMovieADPCM	host
 func_0012F2B8	989snd	snd_GetMovieNAX	host
 func_0012F2E0	989snd	snd_GetDopplerPitchMod	host
+func_0012D868	game	_start	host	crt0, the program's entry point: the port starts at main and never enters it; what crt0 does, in the port's terms (rac1-pal/host/crt0.c)	void (void)
+func_0012DA30	kernel	ExitThread	host	system call 0x23: crt0's return address for the main thread, which never returns; the program ends
 func_0012DA38	boot	ParseBin	wrap	copies a level's program in: from then on, level code addresses mean that level's functions
 func_001F4630	draw	SetupGifPaging	wrap	sets the four draw flags at 0x18A3D0 retail has on before its first frame (nothing in the game's code stores them by name)
 func_00209DC0	memcard	NewGameInit	wrap	a new game starts in level 0; with --level N it starts in level N instead (rac1/host/boot.c)
@@ -170,6 +173,8 @@ func_0012F348	wad	wad_GetSectors	game
 func_0012F3F8	wad	load_disc_sectors_into_global_buffer	game
 func_0012F4A8	wad	read_file_entry_with_retry	game
 func_0020C468	game	WadDecompress	host	the WAD decompressor (hand-written assembly), answered with the asset readers' own; returns the size it made	int (int, int)
+func_0020C738	game	func_0020C738	host	WadDecompress's toSPR window (hand-written, inputs in $v1/$t3/$t6): MADR and SADR as arguments, the other half as its result; the port does the transfer (host/spr_dma.c); nothing in the port calls it	unsigned int (unsigned int, unsigned int)
+func_0020C758	game	func_0020C758	host	WadDecompress's wait for its toSPR window: the port's transfers are done when they start (host/spr_dma.c); nothing in the port calls it	void (void)
 func_001F7560	game	FontPrintWindow (mode 1)	host	the decompilation keeps GetEffectTex's 64-bit TEX0 in an int (matching C: on the console the register keeps all 64 bits); the port's passes it whole, and the colour as the caller's register holds it	void (unsigned int, long long, unsigned int, int)
 func_001F75D0	game	FontPrintWindow (mode 2)	host	as func_001F7560, the small font	void (unsigned int, long long, unsigned int, int)
 func_00118A50	kernel	SetGsCrt	host	system call 0x02
@@ -178,6 +183,7 @@ func_00118AF0	kernel	DisableIntc	host	system call 0x15
 func_00118B00	kernel	EnableDmac	host	system call 0x16
 func_00118B10	kernel	DisableDmac	host	system call 0x17
 func_00118DE0	kernel	GsPutIMR	host	system call 0x71
+func_00118DD0	kernel	GsGetIMR	host	system call 0x70: the mask GsPutIMR set (only libgraph's sceGsExecStoreImage calls it, the port's own)
 func_00118A60	kernel	Exit	host	system call 0x04 (KExit)
 func_00118AC0	kernel	AddDmacHandler2	host	system call 0x12, the handler takes an argument (libmpeg's colour conversion)
 func_00118B20	kernel	SetAlarm	host	system call 0xFC; the callback runs at once
@@ -207,6 +213,7 @@ func_0011D360	kernel	Copy	host	system call 0x5A
 func_0011D3A8	kernel	GetEntryAddress	host	system call 0x5B
 func_0011D3B8	kernel	SetSyscall	host	system call 0x74
 func_0011D490	kernel	_SetTLBEntry	host	system call 0x56
+func_0011D700	game	tlbtrap	host	libkernl's tlbtrap.o, the TLB/address-error exception handler: nothing installs it and the port takes no exceptions; what it does, in the port's terms (rac1-pal/host/tlbtrap.c)	void (void)
 func_0011DA80	kernel	FindAddress	host	system call 0x83
 func_0011DB98	kernel	SetSyscall	host	system call 0x74
 func_0011DBE8	kernel	SetSyscall	host	system call 0x74
@@ -215,10 +222,30 @@ func_0011DC40	kernel	GetEntryAddress	host	system call 0x5B
 func_0011DDD0	kernel	SetSyscall	host	system call 0x74
 func_0011DDE0	kernel	Copy	host	system call 0x5A
 func_0011DE28	kernel	GetEntryAddress	host	system call 0x5B
+func_00118A40	kernel	RFU000	host	system call 0 (no service; nothing calls it)
+func_00118A70	kernel	ResumeT3IntrDispatch	host	system call 0x08 (nothing calls it)
+func_00118A80	kernel	Interrupt2Iop	host	system call 0x0C (nothing calls it)
+func_00118B30	kernel	EnableIntc	host	system call -0x1A (_iEnableIntc): the same in the port (nothing calls it)
+func_00118B40	kernel	ReleaseAlarm	host	system call -0xFE (ReleaseAlarm's 0xFE in the interrupt form; nothing calls it)
+func_00118B90	kernel	TerminateThread	host	system call -0x26 (iTerminateThread): the same in the port (nothing calls it)
+func_00118BB0	kernel	ChangeThreadPriority	host	system call -0x2A (iChangeThreadPriority): the same in the port (nothing calls it)
+func_00118BD0	kernel	ReleaseWaitThread	host	system call -0x2E (iReleaseWaitThread; nothing calls it)
+func_00118C30	kernel	CancelWakeupThread	host	system call -0x36 (iCancelWakeupThread; nothing calls it)
+func_00118C50	kernel	ResumeThread	host	system call -0x3A (iResumeThread; nothing calls it)
+func_00118CD0	kernel	PollSema	host	system call -0x46 (iPollSema): the same in the port (nothing calls it)
+func_00118D00	kernel	SetGsHParam	host	system call 0x4E (nothing calls it)
+func_00118D10	kernel	SetEventFlag	host	system call 0x52 (nothing calls it)
+func_00118D20	kernel	_SetTLBEntry	host	system call 0x56 (nothing calls this copy)
+func_00118D40	kernel	DisableIntcHandler	host	system call 0x5D (nothing calls it)
+func_00118D50	kernel	DisableDmacHandler	host	system call 0x5F (nothing calls it)
+func_00118D70	kernel	DisableCache	host	system call 0x62 (nothing calls it)
+func_00118D90	kernel	GetCop0	host	system call -0x67 (iGetCop0; nothing calls it)
+func_00118DB0	kernel	SetCPUTimerHandler	host	system call 0x6C (nothing calls it)
+func_00118DF0	kernel	SetPgifHandler	host	system call 0x72 (nothing calls it)
+func_00118E80	kernel	_ExecOSD	host	system call 0x7B: the program ends (nothing calls it)
 func_001F7EF8	game	func_001F7EF8	host	the port's own (rac1/host/render_native.c); its signature decides the prototype	void (unsigned int, int, int)
 func_001F8B6C	game	func_001F8B6C	host	the port's own (rac1/host/render_native.c); its signature decides the prototype	void (void)
 func_001F91B8	game	func_001F91B8	host	the port's own (rac1/host/render_native.c); its signature decides the prototype	void (void)
-func_00204340	game	func_00204340	host	the port's own (rac1/host/render_native.c); its signature decides the prototype	void (unsigned int, unsigned int, unsigned int, unsigned int, int)
 func_00212258	game	func_00212258	host	the port's own (rac1/host/render_native.c); its signature decides the prototype	void (int)
 func_00212508	game	func_00212508	host	the port's own (rac1/host/render_native.c); its signature decides the prototype	void (void)
 func_00212578	game	func_00212578	host	the port's own (rac1/host/render_native.c); its signature decides the prototype	void (int, int)
@@ -256,7 +283,6 @@ func_001F856C	game	func_001F856C	host	the port's own (rac1/host/render_native.c)
 func_0022D2AC	game	func_0022D2AC	host	the port's own (rac1/host/render_native.c); its signature decides the prototype	int (int, int, int, int)
 func_0022D3F8	game	func_0022D3F8	host	the port's own (rac1/host/render_native.c); its signature decides the prototype	void (int, int, int, int)
 func_0022D520	game	func_0022D520	host	the port's own (rac1/host/render_native.c); its signature decides the prototype	void (int, int, int, int)
-func_0022D7E0	game	func_0022D7E0	host	the port's own (rac1/host/render_native.c); its signature decides the prototype	void (unsigned int, int, unsigned int)
 func_L00_001FD1D8	game	func_L00_001FD1D8	host	the port's own (rac1/host/render_native.c); its signature decides the prototype	void (unsigned int, unsigned int, int)
 func_L00_001FE688	game	func_L00_001FE688	host	the port's own (rac1/host/render_native.c); its signature decides the prototype	int (void)
 func_L00_0028D958	game	func_L00_0028D958	host	the port's own (rac1/host/render_native.c); its signature decides the prototype	int (void)
@@ -326,6 +352,12 @@ func_L08_002DB448	game	func_L08_002DB448	host	a place the catalogue folds into a
 func_L14_003047D8	game	func_L14_003047D8	host	a place the catalogue folds into another function although its code differs (split_places.tsv, rac1/host/variants.c)	void (void)
 func_L18_002FC168	game	func_L18_002FC168	host	a place the catalogue folds into another function although its code differs (split_places.tsv, rac1/host/variants.c)	void (void)
 func_L02_00299F28	game	func_L02_00299F28	host	a place the catalogue folds into another function although its code differs (split_places.tsv, rac1/host/variants.c)	void (int)
+func_L00_001FEE98	game	func_L00_001FEE98	host	a place the catalogue folds into another function although its code differs (split_places.tsv, rac1/host/variants.c)	int (int)
+func_L00_001FEED0	game	func_L00_001FEED0	host	a place the catalogue folds into another function although its code differs (split_places.tsv, rac1/host/variants.c)	int (int)
+func_L00_001FEE50	game	func_L00_001FEE50	host	a place the catalogue folds into another function although its code differs (split_places.tsv, rac1/host/variants.c)	float (float)
+func_L00_001FEEC0	game	func_L00_001FEEC0	host	a place the catalogue folds into another function although its code differs (split_places.tsv, rac1/host/variants.c)	float (float)
+func_L00_001FEEF8	game	func_L00_001FEEF8	host	a place the catalogue folds into another function although its code differs (split_places.tsv, rac1/host/variants.c)	float (float)
+func_L00_001FEF08	game	func_L00_001FEF08	host	a place the catalogue folds into another function although its code differs (split_places.tsv, rac1/host/variants.c)	float (float)
 func_002181F0	pad	Pad_ProcessReport	hook	the pad's report into its state, each poll: a hook point for mods (docs/port/MODS.md; the lock-strafe mod takes it); the game's C with none	void (unsigned int, unsigned int, int)
 func_L00_00211D28	hero	Hero_UpdateMotionInput	hook	the stick into the hero, early in his update: a hook point for mods (docs/port/MODS.md; the lock-strafe mod takes it); the game's C with none	void (void)
 func_L00_002124E8	hero	Hero_TurnToHeading	hook	eases the facing toward the move yaw: a hook point for mods (docs/port/MODS.md; the lock-strafe mod takes it); the game's C with none	void (int, float, float, float)

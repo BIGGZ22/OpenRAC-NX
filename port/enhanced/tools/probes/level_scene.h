@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #pragma once
 #include "enhanced/lighting/bake.h"
-#include "viewer/level.h"
+#include "scene/level.h"
 
 namespace openrac::lighting {
 
@@ -46,5 +46,9 @@ ProbeGrid bounded_probe_grid(
     unsigned resolution
 );
 std::uint64_t probe_bake_settings_hash(const ProbeGrid& grid, const BakeSettings& settings);
+
+// Fingerprint canonical source files before loading and after a persistent batch.
+// This guards preparation against concurrent edits without rebuilding transport geometry.
+std::uint64_t probe_input_hash(const std::filesystem::path& directory);
 
 }  // namespace openrac::lighting

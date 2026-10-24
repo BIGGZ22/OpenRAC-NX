@@ -1,0 +1,20 @@
+{
+ "name": "rac2/ntsc",
+ "about": "Going Commando, NTSC-U (SCUS_972.68), rac2-decomp: a copy of the function's file with the candidate in place goes through the game's own C chain (the SN cpp, cc1 and as, 32-bit Linux programs in build/compiler/tools) in a container of rac2-decomp's Linux image, with the file's flags from tools/build.py's flags_for (config/cflags.txt). tools/check.py, which only reads src/, is the checker: the candidate is put in the source file for the length of the check and the file restored after.",
+ "checkout": ["rac2", "ntsc"],
+ "env": {"RAC2_IMAGE": "rac2-linux", "RAC2_PERMUTER_CONTAINER": "openrac-permuter-rac2",
+         "RAC2_LINUX": "docker exec -i openrac-permuter-rac2"},
+ "start": [["sh", "-c", "docker start {RAC2_PERMUTER_CONTAINER} >/dev/null 2>&1 || docker run -d --init --platform linux/amd64 --name {RAC2_PERMUTER_CONTAINER} -v {checkout}:{checkout} -v {cache}:{cache} {RAC2_IMAGE} sleep infinity"]],
+ "python": ["/opt/homebrew/bin/python3", "python3"],
+ "sources": ["src/**/*.c", "nonmatching/**/*.c"],
+ "asm": ["build/boot/asm/*.s", "build/[0-9]*/asm/*.s"],
+ "rename": {"sub": ["^func_(?:L\\d+_)?", "f_"]},
+ "word_order": "le-bytes",
+ "cpp": ["gcc", "-E", "-P", "-DPERMUTER", "-I", "{checkout}/include", "-I", "{srcdir}"],
+ "flags": ["{python}", "-c", "import sys; sys.path.insert(0, 'tools'); import build, pathlib; print(build.flags_for(pathlib.Path(sys.argv[1]).resolve()))", "{source}"],
+ "compile": [["docker", "exec", "{RAC2_PERMUTER_CONTAINER}", "bash", "-c", "set -e; cd {tmp}; C={checkout}/build/compiler/tools; $C/cpp -I$C/include -I{checkout}/include -I{srcdir} {spliced} > x.i; $C/cc1 -quiet {flags} x.i -o x.s; $C/as -o {out} x.s"]],
+ "check": ["{python}", "tools/check.py", "{func}"],
+ "check_in_place": true,
+ "exact": "^{func}: ([1-9][0-9]*) of \\1 places match",
+ "notes": "A file whose flags select the SDK compiler (sdk...) or pass -Wa, options is not covered: the base then fails to compile and says so. build/<program>/asm comes from rac2-decomp's own setup."
+}

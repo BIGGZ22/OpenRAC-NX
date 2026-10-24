@@ -190,7 +190,7 @@ extern void func_00233308_E99D8(void) __asm__("func_00233308");
    the level load.
    The slot stores are in this order on purpose: the last store through each table, the last
    one of the bank value and the two globals are what the scheduler moves to the front.
-   Adapted from Lombyte (MIT) for PAL: src/textbin/world/startlevel.c, startlevel. */
+   Adapted from Lombyte (GPL-3.0) for PAL: src/textbin/world/startlevel.c, startlevel. */
 void GameBootSequence(void) {
     LevelHeader_E99D8 *hdr;
     LevelChunk_E99D8 *tbl;

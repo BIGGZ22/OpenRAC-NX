@@ -12,7 +12,9 @@
 //! extracted levels by the `probe-bake` action (port/enhanced/tools/probes/bake_all.py --update).
 //! Each baked level records what it was made from (`openrac-bake.json`); a level whose export or
 //! baker changed since counts as not ready and is baked again. A level without a bake keeps the
-//! original lighting.
+//! original lighting. Intel Macs ship without the baker (the maintainers' decision: Embree's static
+//! library cannot be built there, tools/build_port.py), so the entry says that there instead of
+//! offering a bake.
 
 use std::path::{Path, PathBuf};
 
@@ -31,6 +33,12 @@ pub const SWITCH: &str = "enhanced_rendering";
 pub const BAKE_ACTION: &str = "probe-bake";
 /// What each baked level records (bake_all.py, STAMP).
 const STAMP: &str = "openrac-bake.json";
+/// Why an Intel Mac has no bakes, as tools/build_port.py says it when it leaves the baker out.
+pub const NO_BAKER_HERE: &str =
+    "Intel Macs ship without the probe baker: their enhanced graphics keep the original lighting.";
+/// Whether this computer gets the probe baker: every one but an Intel Mac (NO_BAKER_HERE). It is
+/// the launcher's own build that counts, as `platform.machine()` does for build_port.py.
+pub const SHIPS_BAKER: bool = !cfg!(all(target_os = "macos", target_arch = "x86_64"));
 
 /// Whether a version has the entry: the bake planner reads RAC1's levels (PAL and NTSC-U).
 pub fn supported(game: &str, version: &str) -> bool {
@@ -78,17 +86,29 @@ pub fn settings() -> Vec<SettingSpec> {
         Choice { value: "performance".into(), name: "Performance".into() },
         Choice { value: "quality".into(), name: "Quality".into() },
     ];
+    let mut texture_filter = spec(
+        "texture_filter",
+        "Texture upscaling",
+        "choice",
+        "edge-aware".into(),
+        "Enlarges world textures while keeping edges sharp.",
+    );
+    texture_filter.choices = vec![
+        Choice { value: "normal".into(), name: "Normal".into() },
+        Choice { value: "edge-aware".into(), name: "Edge-aware (2x)".into() },
+    ];
     vec![
         spec("probe_lighting", "Probe lighting", "bool", true.into(), "Light that bounces off the world."),
         spec("enhanced_shadows", "Modern shadows", "bool", true.into(), "Sharp sun shadows, and Ratchet's own."),
-        spec("gtao", "Ambient occlusion", "bool", false.into(), "Soft shade in corners and under objects."),
+        spec("gtao", "Ambient occlusion", "bool", true.into(), "Soft shade in corners and under objects."),
         quality,
-        range(
+        texture_filter,
+        advanced(range(
             spec("probe_gi_multiplier", "Bounce light", "float", 1.0.into(), "How bright the bounced light is."),
             0.0,
             5.0,
             0.1,
-        ),
+        )),
         advanced(range(spec("gtao_strength", "Occlusion strength", "float", 1.0.into(), ""), 0.0, 3.0, 0.05)),
         advanced(range(spec("gtao_radius", "Occlusion radius", "float", 1.25.into(), ""), 0.05, 8.0, 0.05)),
         advanced(spec(
@@ -129,12 +149,14 @@ fn written(value: &Value) -> String {
 
 /// How far the version's probe bakes are: its exported levels, the ones whose bake is current,
 /// and the ones whose last bake failed.
-#[derive(Debug, Clone, Default, Serialize, PartialEq, Eq)]
+#[derive(Debug, Clone, Default, Serialize, PartialEq, Eq, ts_rs::TS)]
 #[serde(rename_all = "camelCase")]
 pub struct BakeStatus {
     /// The bake can run: the levels are there and so is the baker; else `why` says what is missing.
     pub available: bool,
     pub why: String,
+    /// This computer gets no baker at all (an Intel Mac, NO_BAKER_HERE): no bake is ever offered.
+    pub no_baker_here: bool,
     pub levels: usize,
     pub ready: usize,
     pub failed: usize,
@@ -147,12 +169,25 @@ fn sha256(path: &Path) -> Option<String> {
 
 /// The bake status of the levels in `levels` against the bakes in `probes`, made by `baker`.
 pub fn bake_status(levels: &Path, probes: &Path, baker: &Path) -> BakeStatus {
+    bake_status_on(levels, probes, baker, SHIPS_BAKER)
+}
+
+/// [`bake_status`] on a computer that gets the baker or not (`ships_baker`, SHIPS_BAKER). Without
+/// it and without a baker, NO_BAKER_HERE is the reason whatever the levels: preparing them would
+/// not make a bake possible.
+fn bake_status_on(levels: &Path, probes: &Path, baker: &Path, ships_baker: bool) -> BakeStatus {
     let mut out = BakeStatus::default();
+    let baker_hash = sha256(baker);
+    if baker_hash.is_none() && !ships_baker {
+        out.no_baker_here = true;
+        out.why = NO_BAKER_HERE.into();
+    }
     let Ok(entries) = std::fs::read_dir(levels) else {
-        out.why = "the levels are not ready yet".into();
+        if !out.no_baker_here {
+            out.why = "the levels are not ready yet".into();
+        }
         return out;
     };
-    let baker_hash = sha256(baker);
     for entry in entries.flatten() {
         let name = entry.file_name().to_string_lossy().into_owned();
         let numbered =
@@ -176,6 +211,9 @@ pub fn bake_status(levels: &Path, probes: &Path, baker: &Path) -> BakeStatus {
         } else if probes.join(format!(".{name}.failed")).is_dir() {
             out.failed += 1;
         }
+    }
+    if out.no_baker_here {
+        return out;
     }
     if out.levels == 0 {
         out.why = "the levels are not ready yet".into();
@@ -209,7 +247,7 @@ pub fn version_bake_status(config: &crate::config::Config, key: &str) -> BakeSta
 }
 
 /// The entry as the Mods tab shows it: a mod's row and page, with the bake's status beside it.
-#[derive(Debug, Clone, Serialize, PartialEq)]
+#[derive(Debug, Clone, Serialize, PartialEq, ts_rs::TS)]
 #[serde(rename_all = "camelCase")]
 pub struct EnhancedView {
     #[serde(rename = "mod")]
@@ -308,25 +346,33 @@ mod tests {
         assert_eq!(value(&v, "gtao"), Value::Bool(true));
         assert_eq!(value(&v, "probe_lighting"), Value::Bool(true));
         assert_eq!(value(&v, "probe_gi_multiplier"), Value::from(1.0));
+        assert_eq!(value(&v, "texture_filter"), Value::from("edge-aware"));
 
         set_enabled(&home, "rac1", "pal", true).unwrap();
         set_setting(&home, "rac1", "pal", "probe_gi_multiplier", &Value::from(2.5)).unwrap();
         set_setting(&home, "rac1", "pal", "gtao_quality", &Value::from("quality")).unwrap();
         set_setting(&home, "rac1", "pal", "enhanced_shadows", &Value::Bool(false)).unwrap();
+        set_setting(&home, "rac1", "pal", "texture_filter", &Value::from("normal")).unwrap();
         let text = std::fs::read_to_string(&file).unwrap();
         assert!(text.starts_with("msaa = 4\ngtao = 1\n"), "{text}");
-        for line in
-            ["enhanced_rendering = 1", "probe_gi_multiplier = 2.5", "gtao_quality = quality", "enhanced_shadows = 0"]
-        {
+        for line in [
+            "enhanced_rendering = 1",
+            "probe_gi_multiplier = 2.5",
+            "gtao_quality = quality",
+            "enhanced_shadows = 0",
+            "texture_filter = normal",
+        ] {
             assert!(text.lines().any(|l| l == line), "{line} in {text}");
         }
         let v = view(&home, "rac1", "pal", BakeStatus::default());
         assert!(v.entry.enabled);
         assert_eq!(value(&v, "probe_gi_multiplier"), Value::from(2.5));
+        assert_eq!(value(&v, "texture_filter"), Value::from("normal"));
         // Out of the port's range, another type, or not one of the entry's: refused, file kept.
         assert!(set_setting(&home, "rac1", "pal", "probe_gi_multiplier", &Value::from(9.0)).is_err());
         assert!(set_setting(&home, "rac1", "pal", "gtao", &Value::from("yes")).is_err());
         assert!(set_setting(&home, "rac1", "pal", "probe_spheres", &Value::Bool(true)).is_err());
+        assert!(set_setting(&home, "rac1", "pal", "texture_filter", &Value::from("unknown")).is_err());
         assert_eq!(std::fs::read_to_string(&file).unwrap(), text);
         let _ = std::fs::remove_dir_all(&home);
     }
@@ -374,6 +420,40 @@ mod tests {
         std::fs::write(&baker, "another baker").unwrap();
         assert_eq!(bake_status(&levels, &probes, &baker).ready, 0);
         let _ = std::fs::remove_dir_all(&root);
+    }
+
+    #[test]
+    fn an_intel_mac_says_it_ships_without_the_baker_instead_of_offering_a_bake() {
+        let root = temp("intel");
+        let (levels, probes, baker) = (root.join("levels"), root.join("probes"), root.join("baker"));
+        // Before the levels are ready, and after: the reason stays the missing baker.
+        for ready in [false, true] {
+            if ready {
+                std::fs::create_dir_all(levels.join("level_00")).unwrap();
+                std::fs::write(levels.join("level_00").join("manifest.json"), "level_00").unwrap();
+            }
+            let here = bake_status_on(&levels, &probes, &baker, false);
+            assert!(!here.available && here.no_baker_here, "{here:?}");
+            assert_eq!(here.why, NO_BAKER_HERE);
+            assert_eq!(here.levels, usize::from(ready));
+            // Elsewhere the existing reasons are kept.
+            let elsewhere = bake_status_on(&levels, &probes, &baker, true);
+            assert!(!elsewhere.available && !elsewhere.no_baker_here);
+            let why = if ready { "this build of the game has no probe baker" } else { "the levels are not ready yet" };
+            assert_eq!(elsewhere.why, why);
+        }
+        // A baker that is there anyway (built by hand) is used.
+        std::fs::write(&baker, "baker").unwrap();
+        let built = bake_status_on(&levels, &probes, &baker, false);
+        assert!(built.available && !built.no_baker_here && built.why.is_empty(), "{built:?}");
+        let _ = std::fs::remove_dir_all(&root);
+    }
+
+    #[test]
+    fn the_frontend_reads_whether_this_computer_gets_a_baker() {
+        // launcher/src/lib/api.ts, BakeStatus.noBakerHere.
+        let json = serde_json::to_value(BakeStatus { no_baker_here: true, ..BakeStatus::default() }).unwrap();
+        assert_eq!(json["noBakerHere"], Value::Bool(true));
     }
 
     #[test]

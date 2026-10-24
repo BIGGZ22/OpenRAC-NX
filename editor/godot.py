@@ -339,7 +339,7 @@ class LevelWriter:
             # Ratchet & Clank's levels: tiles and hero walls the packer reads back (collision_scene.py).
             manifest = collision_scene.export(self.dir, block)
             self.stats["collision"]["hero_triangles"] = sum(h["triangles"] for h in manifest["hero_walls"].values())
-            collision_scene.scene_nodes(self.scene, self.res, manifest)
+            collision_scene.add_collision_nodes(self.scene, self.res, manifest)
             return
         gltf = Gltf()
         gltf.node("Collision", gltf.coloured(collision_mesh(data), gltf.overlay("collision", COLLISION_ALPHA)))
@@ -467,7 +467,7 @@ class LevelWriter:
         scale, = unpack("<f", core, start + 0x24)
 
         def add(scene) -> None:
-            stats = moby_collision_scene.scene_nodes(scene, blob, joints, scale, class_id, self.dir, self.res)
+            stats = moby_collision_scene.add_class_collision_nodes(scene, blob, joints, scale, class_id, self.dir, self.res)
             totals["classes"] += 1 if blob is not None else 0
             totals["primitives"] += stats["primitives"]
             totals["triangles"] += stats["triangles"]

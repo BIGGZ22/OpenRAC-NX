@@ -1,175 +1,133 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 // Copyright (c) 2026 the OpenRAC contributors
 //
-// The pipeline cache's file on disk (pipeline_cache_file.h): the envelope, the read that checks it,
-// and the save through a temporary file of its own.
+// The pipeline cache's files (pipeline_cache_file.h): the driver's data and the manifest, each in
+// cache_file.h's envelope under a magic of its own.
 //
-// The envelope is 24 bytes before the driver's data: the magic `ORVKPC01` (OpenRAC Vulkan pipeline
-// cache, format 1), the data's length and its 64-bit FNV-1a hash, both little-endian.
+// The manifest's data is little-endian: its format, its key size and its count as 32-bit numbers,
+// then each entry as its program (64 bits), its age (32 bits) and its key's bytes.
 
 #include "renderer/vulkan/pipeline_cache_file.h"
 
-#include <algorithm>
-#include <array>
 #include <climits>
-#include <cstdint>
 #include <format>
-#include <fstream>
-#include <functional>
-#include <ios>
-#include <random>
-#include <system_error>
-#include <thread>
 
 namespace openrac::vkgl {
 
 namespace {
 
-// The envelope's first bytes: what this file is, and which format of it.
-constexpr std::array<char, 8> kMagic{'O', 'R', 'V', 'K', 'P', 'C', '0', '1'};
+// The pipeline cache's magic: OpenRAC Vulkan pipeline cache, format 1.
+constexpr CacheMagic kCacheMagic{'O', 'R', 'V', 'K', 'P', 'C', '0', '1'};
 
-// The size of each of the envelope's two numbers, the data's length and its hash.
-constexpr std::size_t kFieldBytes = sizeof(std::uint64_t);
+// The manifest's magic: OpenRAC Vulkan pipeline manifest. Its data says its format.
+constexpr CacheMagic kManifestMagic{'O', 'R', 'V', 'K', 'P', 'M', 'A', 'N'};
 
-// Where the envelope's numbers are, and its length: the magic, the length, the hash.
-constexpr std::size_t kLengthAt = kMagic.size();
-constexpr std::size_t kHashAt = kLengthAt + kFieldBytes;
-constexpr std::size_t kEnvelopeBytes = kHashAt + kFieldBytes;
+// The bytes of the manifest's header (format, key size, count) and of an entry's numbers.
+constexpr std::size_t kHeaderBytes = 3 * sizeof(std::uint32_t);
+constexpr std::size_t kEntryNumberBytes = sizeof(std::uint64_t) + sizeof(std::uint32_t);
 
-// The largest file read. A driver's cache of the port's pipelines is far smaller (assumed), so a
-// larger file is not one of these, and is not read into memory.
-constexpr std::uintmax_t kLargestFileBytes = std::uintmax_t{256} << 20U;  // 256 MiB
-
-// The 64-bit FNV-1a hash's offset basis and prime (documented: the FNV reference).
-constexpr std::uint64_t kFnvOffset = 0xcbf29ce484222325ULL;
-constexpr std::uint64_t kFnvPrime = 0x100000001b3ULL;
-
-// Returns the 64-bit FNV-1a hash of `data`.
-std::uint64_t fnv1a(std::span<const char> data) {
-    std::uint64_t hash = kFnvOffset;
-    for (const char byte : data) {
-        hash = (hash ^ std::uint64_t{static_cast<unsigned char>(byte)}) * kFnvPrime;
-    }
-    return hash;
-}
-
-// Writes `value` little-endian into the kFieldBytes bytes at `out`: byte n holds bits 8n to 8n+7.
-void put_u64(char* out, std::uint64_t value) {
-    for (std::size_t n = 0; n < kFieldBytes; ++n) {
-        out[n] = static_cast<char>(static_cast<unsigned char>(value >> (CHAR_BIT * n)));
+// Appends the `bytes` low bytes of `value` to `out`, little-endian.
+void put(std::vector<char>& out, std::uint64_t value, std::size_t bytes) {
+    // Byte n holds bits 8n to 8n+7.
+    for (std::size_t n = 0; n < bytes; ++n) {
+        out.push_back(static_cast<char>(static_cast<unsigned char>(value >> (CHAR_BIT * n))));
     }
 }
 
-// Returns the little-endian value of the kFieldBytes bytes at `in`.
-std::uint64_t get_u64(const char* in) {
+// Returns the little-endian value of the `bytes` bytes at `in`.
+std::uint64_t get(const char* in, std::size_t bytes) {
     std::uint64_t value = 0;
-    for (std::size_t n = 0; n < kFieldBytes; ++n) {
+
+    // Byte n holds bits 8n to 8n+7.
+    for (std::size_t n = 0; n < bytes; ++n) {
         value |= std::uint64_t{static_cast<unsigned char>(in[n])} << (CHAR_BIT * n);
     }
+
     return value;
-}
-
-// Returns a name beside `path` that no other save uses at the same time: a random 64-bit number
-// from the system, with the calling thread's id mixed in, as `<file>.<hex>.tmp`.
-std::filesystem::path temporary_beside(const std::filesystem::path& path) {
-    std::random_device device;
-    // random_device gives 32 bits at a time: two make the 64.
-    const std::uint64_t random = (std::uint64_t{device()} << 32U) ^ std::uint64_t{device()};
-    const std::uint64_t thread = std::hash<std::thread::id>{}(std::this_thread::get_id());
-    std::filesystem::path temporary = path;
-    temporary += std::format(".{:016x}.tmp", random ^ thread);
-    return temporary;
-}
-
-// Writes the envelope and `data` to `path`, created afresh. False when any byte is not written.
-bool write_file(const std::filesystem::path& path, std::span<const char> data) {
-    std::array<char, kEnvelopeBytes> envelope{};
-    std::copy(kMagic.begin(), kMagic.end(), envelope.begin());
-    put_u64(envelope.data() + kLengthAt, data.size());
-    put_u64(envelope.data() + kHashAt, fnv1a(data));
-
-    std::ofstream out(path, std::ios::binary | std::ios::trunc);
-    out.write(envelope.data(), static_cast<std::streamsize>(envelope.size()));
-    out.write(data.data(), static_cast<std::streamsize>(data.size()));
-    out.close();
-    return !out.fail();
 }
 
 }  // namespace
 
 SavedCache read_pipeline_cache(const std::filesystem::path& path) {
-    // Opened first and measured through the open file: a save renamed over `path` meanwhile is
-    // another file, and cannot change the length or bytes this read sees.
-    std::ifstream in(path, std::ios::binary | std::ios::ate);
-    const std::streamoff size = in.is_open() ? std::streamoff{in.tellg()} : -1;
-
-    // No file (or no access to it) is the first run's case.
-    if (size < 0) {
-        return {};
-    }
-
-    // Too short for the envelope, or larger than any cache: not a file this code wrote.
-    if (static_cast<std::uintmax_t>(size) < kEnvelopeBytes
-        || static_cast<std::uintmax_t>(size) > kLargestFileBytes) {
-        return {SavedCacheState::Damaged, {}};
-    }
-
-    std::vector<char> bytes(static_cast<std::size_t>(size));
-    in.seekg(0);
-    in.read(bytes.data(), static_cast<std::streamsize>(bytes.size()));
-
-    // A read error on a file that opened: treated as no file, so it is neither used nor reported.
-    if (!in) {
-        return {};
-    }
-
-    const std::span<const char> data(bytes.data() + kEnvelopeBytes, bytes.size() - kEnvelopeBytes);
-    const bool magic = std::equal(kMagic.begin(), kMagic.end(), bytes.begin());
-    const bool length = get_u64(bytes.data() + kLengthAt) == data.size();
-
-    // Another format, or a save cut short or mixed from two writers: its hash tells.
-    if (!magic || !length || get_u64(bytes.data() + kHashAt) != fnv1a(data)) {
-        return {SavedCacheState::Damaged, {}};
-    }
-
-    return {SavedCacheState::Intact, std::vector<char>(data.begin(), data.end())};
+    return read_cache_file(path, kCacheMagic);
 }
 
 bool write_pipeline_cache(
     const std::filesystem::path& path, std::span<const char> data, std::string& error
 ) {
-    std::error_code ec;
-    std::filesystem::create_directories(path.parent_path(), ec);
+    return write_cache_file(path, kCacheMagic, data, error);
+}
 
-    // Without its folder there is nowhere to save; the next run builds its pipelines again.
-    if (ec) {
-        error =
-            std::format("cannot make the folder {}: {}", path.parent_path().string(), ec.message());
-        return false;
+SavedManifest read_pipeline_manifest(const std::filesystem::path& path, std::size_t key_bytes) {
+    CacheFile file = read_cache_file(path, kManifestMagic);
+
+    // No file, or not a whole one.
+    if (file.state != CacheFileState::Intact) {
+        return {file.state, {}};
     }
 
-    // Written whole under a name of its own first, so no reader or other writer sees it half done.
-    const std::filesystem::path temporary = temporary_beside(path);
+    const std::vector<char>& data = file.data;
 
-    // A full disk or a folder without write access: nothing may be left behind.
-    if (!write_file(temporary, data)) {
-        std::filesystem::remove(temporary, ec);
-        error = std::format("cannot write {}", temporary.string());
-        return false;
+    // Too short for its header: not a manifest this code wrote.
+    if (data.size() < kHeaderBytes) {
+        return {CacheFileState::Damaged, {}};
     }
 
-    std::filesystem::rename(temporary, path, ec);
+    const std::uint64_t format = get(data.data(), sizeof(std::uint32_t));
+    const std::uint64_t size = get(data.data() + sizeof(std::uint32_t), sizeof(std::uint32_t));
+    const std::uint64_t count = get(data.data() + 2 * sizeof(std::uint32_t), sizeof(std::uint32_t));
+    const std::size_t entry_bytes = kEntryNumberBytes + key_bytes;
 
-    // On Windows a reader holding `path` open refuses the rename; that save is lost, not the file.
-    if (ec) {
-        const std::string reason = ec.message();
-        std::filesystem::remove(temporary, ec);
-        error =
-            std::format("cannot rename {} to {}: {}", temporary.string(), path.string(), reason);
-        return false;
+    // Another format or another key: written by another build, so none of its keys is this one's.
+    if (format != kManifestFormat || size != key_bytes
+        || data.size() != kHeaderBytes + count * entry_bytes) {
+        return {CacheFileState::Damaged, {}};
     }
 
-    return true;
+    SavedManifest manifest{CacheFileState::Intact, {}};
+    manifest.entries.reserve(count);
+
+    // Each entry: its program, its age, its key.
+    for (std::size_t at = kHeaderBytes; at < data.size(); at += entry_bytes) {
+        ManifestEntry& entry = manifest.entries.emplace_back();
+        entry.program = get(data.data() + at, sizeof(std::uint64_t));
+        entry.age = static_cast<std::uint32_t>(
+            get(data.data() + at + sizeof(std::uint64_t), sizeof(std::uint32_t))
+        );
+        const char* key = data.data() + at + kEntryNumberBytes;
+        entry.key.assign(key, key + key_bytes);
+    }
+
+    return manifest;
+}
+
+bool write_pipeline_manifest(
+    const std::filesystem::path& path,
+    std::span<const ManifestEntry> entries,
+    std::size_t key_bytes,
+    std::string& error
+) {
+    std::vector<char> data;
+    data.reserve(kHeaderBytes + entries.size() * (kEntryNumberBytes + key_bytes));
+    put(data, kManifestFormat, sizeof(std::uint32_t));
+    put(data, key_bytes, sizeof(std::uint32_t));
+    put(data, entries.size(), sizeof(std::uint32_t));
+
+    // Each entry: its program, its age, its key.
+    for (const ManifestEntry& entry : entries) {
+        // A key of another size would make the file unreadable.
+        if (entry.key.size() != key_bytes) {
+            error =
+                std::format("a key of {} bytes in a manifest of {}", entry.key.size(), key_bytes);
+            return false;
+        }
+
+        put(data, entry.program, sizeof(std::uint64_t));
+        put(data, entry.age, sizeof(std::uint32_t));
+        data.insert(data.end(), entry.key.begin(), entry.key.end());
+    }
+
+    return write_cache_file(path, kManifestMagic, data, error);
 }
 
 }  // namespace openrac::vkgl

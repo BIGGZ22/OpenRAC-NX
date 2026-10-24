@@ -437,7 +437,7 @@ extern char * r1_D_L10_0015F050 MACRO_ADDR;
 extern char *r1_D_L10_0015F050 MACRO_ADDR;
 
 /* rac1-decomp src/overlays/shared/vendor_00299AF0.c: func_L10_002F6E10 */
-/* Adapted from Lombyte (MIT) for PAL by OpenRAC's tools/port.py: src/overlays/shared/gameplay_vendor_002e3de8.c, FUN_L10_002f5a50. */
+/* Adapted from Lombyte (GPL-3.0) for PAL by OpenRAC's tools/port.py: src/overlays/shared/gameplay_vendor_002e3de8.c, FUN_L10_002f5a50. */
 void func_L00_00429020(int i) {
     unsigned char *q;
     q = *(unsigned char **)(r1_D_L10_0015F050 + i * 0x20 + 0x1C);

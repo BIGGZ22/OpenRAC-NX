@@ -3,7 +3,7 @@
 Probe GI needs Vulkan, enhanced rendering switched on at start and a valid
 level bake. Without probes, original lighting applies and Enhanced controls are
 disabled; settings are kept. OpenGL, and enhanced rendering off (the default),
-use original lighting. Core Vulkan optimisations work either way.
+use original lighting. Core Vulkan optimisations work either way. Interiors can still be too dark.
 
 ## Build
 
@@ -53,9 +53,20 @@ finds emission, plans dense regions, bakes sparse/dense probes and checks the
 batch before registering it. Failures keep logs without registering partial
 results. Existing batches are not overwritten; running games need a restart.
 
+One native process loads and converts the level once, then shares its Embree
+scene across every grid. Each file is read back, checked under runtime rounding
+and compared with the sparse grid before the batch is registered. Source files
+are checked before loading, after planning and after baking; changes abort the
+batch. `batch.log` records diagnostics and each probe file has a `.txt` report.
+
 Outputs include `sparse.orpg`, `region-NNN.orpg`, `sparse.orpg.regions.json`,
 planning reports, logs and `bake-result.json` with format/bake versions.
 `--rays` and `--bounces` set quality for the whole batch.
+
+Dense-region clustering caches eligible pair scores in a priority queue. After
+a merge, only pairs involving the changed region are recalculated. Stable IDs
+preserve the original best-first tie order; generation counters discard stale
+pairs. Region bounds, source assignments and coverage checks remain unchanged.
 
 To bake every exported level in one version, use a fresh output root:
 
@@ -77,6 +88,20 @@ Threads share scene acceleration and preserve output bytes and bake identity.
 `probe_bake_parallel_test --benchmark` compares one, two, four and automatic
 threads using synthetic data; it checks equality and prints time without
 launching the game.
+
+Embree uses separate opaque and cutout geometry. Opaque textures with unit
+vertex alpha skip the alpha callback at cutoffs up to 0.5. Other cutouts use
+bilinear alpha filtering inside traversal. Guaranteed zero-alpha textured
+triangles are omitted only when the cutoff is positive. Untextured faces keep
+their existing acceptance rules. Source materials and emitter sampling order
+are preserved.
+
+Sunlight and emitter visibility use occlusion queries that stop at the first
+accepted blocker. Sun rays are unbounded; emitter rays end just before the
+sampled light. Transport and probe placement still use closest hits. Each
+primary ray shares its first hit between GI and distance moments: transport
+stays unbounded, while moments clamp distance to the grid's visibility range
+(normally 1.5 times the cell diagonal).
 
 Exports need `bake-inputs/`. Re-extract older exports or pass
 `--disc <owned-local-disc.iso>` for planning. Gaspar lava also needs exported
@@ -136,6 +161,16 @@ regions for an existing sparse bake, saving the previous list.
 ## Formats and compatibility
 
 Only **file format 3, bake revision 1** is supported. Rebake older data.
+Each texel integrates a regular 2x2 angular footprint, including emission.
+Irradiance and distance moments combine the four directions before normalising.
+The footprint softens visibility boundaries; thin walls can still leak.
+
+Sampling patterns are cached by resolution and rounding mode across all grids.
+Probe rotations and bounce/emitter directions remain specific to each probe.
+Integration processes four texels together using portable C++, preserving each
+texel's accumulation order. Distance exponent 32 uses repeated squaring; other
+exponents use `pow`. No SIMD library or fast-math flags are required.
+
 Headers contain game/level identity, scene/settings hashes and grid/atlas
 layout. Values are little-endian; texture planes upload without repacking:
 
@@ -160,6 +195,10 @@ Runtime and bake share emission textures, colours and masks for lamps, energy
 spheres, Orxon ooze/windows and Gaspar lava. `probe-emission.json` overrides
 emission; ordinary prelighting is not emission. Animated liquids are averaged,
 and prepared legacy lava takes priority to avoid double counting.
+
+The offline baker separates scene validation/Embree ownership (`bake_scene.*`),
+materials and sky (`bake_material.*`), transport (`bake_transport.*`), and probe
+workers (`bake.cpp`). `bake_integration.*` contains the portable texel kernel.
 
 The baker derives normals from triangles. Runtime uses camera-facing normals,
 receiver biases and distance moments to limit leaks; thin walls can still leak.
@@ -200,7 +239,7 @@ Native fixtures cover formats, baking, CPU/GPU sampling, regions, shadows,
 GTAO and feature gating. CI checks normal/enhanced builds with synthetic data,
 software Vulkan and Embree.
 
-Design: [GI](../docs/RAC1_PROBE_GI.md),
+Details: [GI](../docs/RAC1_PROBE_GI.md),
 [sun shadows](../docs/RAC1_SUN_SHADOW.md),
 [Ratchet's shadow](../docs/RAC1_HERO_SHADOW.md).
 [NVIDIA RTXGI-DDGI](https://github.com/NVIDIAGameWorks/RTXGI-DDGI) informed

@@ -29,7 +29,7 @@ extern void func_001F9BD8_EBD00(void *, void *, void *) __asm__("func_001F9BD8")
 extern int func_001FA898_EBD00(float) __asm__("func_001FA898");
 extern void func_L00_001FD1D8_EBD00(void *, int, int) __asm__("func_L00_001FD1D8");
 
-/* Adapted from Lombyte (MIT) for PAL: src/overlays/l13/gameplay/entities/002ea8c8.c, FUN_L13_002ea8c8. */
+/* Adapted from Lombyte (GPL-3.0) for PAL: src/overlays/l13/gameplay/entities/002ea8c8.c, FUN_L13_002ea8c8. */
 void BeamQuadsDraw(struct Moby *moby) {
     char *vars = (char *)moby->pvars;
     struct GeometryQuad_EBD00 quad;
@@ -1568,7 +1568,7 @@ extern char *func_0020D348_306D40(int) __asm__("func_0020D348");
 extern void func_L00_00250800_306D40(void *, int, void *) __asm__("func_L00_00250800");
 extern void func_L00_00251E30_306D40(void *) __asm__("func_L00_00251E30");
 
-/* Adapted from Lombyte (MIT) for PAL by OpenRAC's tools/port.py: src/overlays/l13/gameplay/vendor/003058a8.c, FUN_L13_003058a8. */
+/* Adapted from Lombyte (GPL-3.0) for PAL by OpenRAC's tools/port.py: src/overlays/l13/gameplay/vendor/003058a8.c, FUN_L13_003058a8. */
 char *Moby1233Spawn(struct Moby *src, short cls) {
     char *m = func_0020D348_306D40(0x4D1);
     char *d;
@@ -3080,7 +3080,7 @@ extern int func_L01_00276680(float, void *);
 extern void func_L13_0030B918(void);
 extern void func_L13_0030B940(int);
 
-/* Adapted from Lombyte (MIT) for PAL by OpenRAC's tools/port.py: src/overlays/l13/gameplay/vendor/003058a8.c, FUN_L13_00309e88. */
+/* Adapted from Lombyte (GPL-3.0) for PAL by OpenRAC's tools/port.py: src/overlays/l13/gameplay/vendor/003058a8.c, FUN_L13_00309e88. */
 void BobbingLights_Update(struct Moby *moby) {
     Bob_9e88 *b;
     float f;

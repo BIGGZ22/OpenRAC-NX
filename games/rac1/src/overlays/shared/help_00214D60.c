@@ -38,7 +38,7 @@ extern int func_L00_0020DB30(int);
 extern int D_0015EE84 MACRO_ADDR;
 
 /* Per-state horizontal velocity and turn updates for the hero's movement states: func_L12_00236270
- * (help_002284A8.c, adapted from Lombyte (MIT), FUN_L12_00235c08) instruction for instruction, plus the
+ * (help_002284A8.c, adapted from Lombyte (GPL-3.0), FUN_L12_00235c08) instruction for instruction, plus the
  * state 0x4C arm. Lombyte's own version is FUN_L00_00214658. */
 void HeroMoveStateVelocity(void) {
     Vec4 tmp;
@@ -211,7 +211,7 @@ extern struct { f32 f[0xB68 / 4]; } D_L00_0017A780_15738 __asm__("D_L00_0017A780
 extern void func_001F9EE8(void *, void *, void *);
 extern void func_L00_0020A858(f32, f32);
 
-/* Adapted from Lombyte (MIT) for PAL by OpenRAC's tools/port.py: src/overlays/shared/ui/help/00214658.c, FUN_L00_00214fe8. */
+/* Adapted from Lombyte (GPL-3.0) for PAL by OpenRAC's tools/port.py: src/overlays/shared/ui/help/00214658.c, FUN_L00_00214fe8. */
 void Hero_SetTiltJoints(void) {
     HopVec_214658 vec;
     f32 *v = vec.f;
@@ -277,7 +277,7 @@ extern f32 func_001F9FA8(f32);
 extern f32 func_001F9F90(f32);
 extern f32 func_001FA748(f32, f32);
 
-/* Adapted from Lombyte (MIT) for PAL by OpenRAC's tools/port.py: src/overlays/shared/ui/help/00215340.c, FUN_L00_00215340. */
+/* Adapted from Lombyte (GPL-3.0) for PAL by OpenRAC's tools/port.py: src/overlays/shared/ui/help/00215340.c, FUN_L00_00215340. */
 void Hero_SetLeanJoints(void) {
     f32 v, nv, k, a, s, ang;
     f32 w, nw;
@@ -399,7 +399,7 @@ extern float D_0015EE6C MACRO_ADDR;
 #define X2(o) (*(float *)(x2 + (o)))
 #define X3(o) (*(float *)(x3 + (o)))
 
-/* Sets the camera lean/offset terms from the pad input for the glide, spin and hover states. Adapted from Lombyte (MIT) for PAL: overlays/shared/ui_help_00214658.c, FUN_L00_00215b68. */
+/* Sets the camera lean/offset terms from the pad input for the glide, spin and hover states. Adapted from Lombyte (GPL-3.0) for PAL: overlays/shared/ui_help_00214658.c, FUN_L00_00215b68. */
 void CameraLeanFromPad(void) {
     char *g = D_0013E633 + 0xE1D;
     char *x;
@@ -488,7 +488,7 @@ extern u8 D_0015EEB0_16648[] __asm__("D_0015EEB0") MACRO_ADDR;
 extern f32 func_001F9B88(f32);
 
 /* In hero state 2, sets the lean values from motion.unk188 (clamped to +-1.4); needs the moby in item slot 3.
-   Adapted from Lombyte (MIT) for PAL by OpenRAC's tools/port.py: src/overlays/shared/ui/help/00214658.c, FUN_L00_00215ef8. */
+   Adapted from Lombyte (GPL-3.0) for PAL by OpenRAC's tools/port.py: src/overlays/shared/ui/help/00214658.c, FUN_L00_00215ef8. */
 void Hero_SetItemLean(void)
 {
     struct Hero *h = &D_0013F450_15A90;
@@ -555,7 +555,7 @@ typedef struct { V_c r[4]; } M_c;
 typedef int Q_c __attribute__((mode(TI)));
 typedef struct { Q_c q[4]; } QM_c;
 
-/* builds the camera rotation matrix m that looks along v, with pitch smoothing. Adapted from Lombyte (MIT) for PAL: src/overlays/shared/ui_help_00214658.c, FUN_L00_00216130. */
+/* builds the camera rotation matrix m that looks along v, with pitch smoothing. Adapted from Lombyte (GPL-3.0) for PAL: src/overlays/shared/ui_help_00214658.c, FUN_L00_00216130. */
 void CameraLookAtMatrix(V_c *v, M_c *m, void *p, float a, float b, float c) {
     M_c m0;
     M_c m1;
@@ -620,7 +620,7 @@ extern float D_0015EE64 MACRO_ADDR;
 extern void func_001F9C30(void *, void *, float);
 extern int func_001F9850(int);
 
-/* builds the three view vectors and applies the camera offset to the moby. Adapted from Lombyte (MIT) for PAL: src/overlays/shared/ui_help_00214658.c, FUN_L00_002163f0. */
+/* builds the three view vectors and applies the camera offset to the moby. Adapted from Lombyte (GPL-3.0) for PAL: src/overlays/shared/ui_help_00214658.c, FUN_L00_002163f0. */
 void BuildCameraViewVectors(void) {
     unsigned char *g = (unsigned char *)D_0013E633 + 0xE1D;
     unsigned char *h;
@@ -767,7 +767,7 @@ extern void func_001F9C30(void *, void *, f32);
 extern void func_L00_002129D0(s32);
 extern f32 func_001F9B88(f32);
 
-/* Adapted from Lombyte (MIT) for PAL by OpenRAC's tools/port.py: src/overlays/shared/ui_help_00214658.c, FUN_L00_002167d0. */
+/* Adapted from Lombyte (GPL-3.0) for PAL by OpenRAC's tools/port.py: src/overlays/shared/ui_help_00214658.c, FUN_L00_002167d0. */
 void Hero_ApplyStickVelocity(void) {
     G_167d0 *m;
     H *q;
@@ -1033,7 +1033,7 @@ int func_L00_001EFFF0(void *, void *, int, void *, int);
 float func_L00_002345B0(void *);
 void func_L00_002144A0(float);
 
-/* Adapted from Lombyte (MIT) for PAL by OpenRAC's tools/port.py: src/overlays/shared/ui_help_00214658.c, FUN_L00_00217118. */
+/* Adapted from Lombyte (GPL-3.0) for PAL by OpenRAC's tools/port.py: src/overlays/shared/ui_help_00214658.c, FUN_L00_00217118. */
 void Hero_EdgeBrake(float a, float b)
 {
     q_217118 t[1];
@@ -1114,7 +1114,7 @@ extern float func_001F9F90(float);
 extern float func_001F9FA8(float);
 extern void func_L00_0026A7F8(void *, void *, int, int, int, int, int, int);
 
-/* Adapted from Lombyte (MIT) for PAL by OpenRAC's tools/port.py: src/overlays/shared/ui_help_00214658.c, FUN_L00_00217450. */
+/* Adapted from Lombyte (GPL-3.0) for PAL by OpenRAC's tools/port.py: src/overlays/shared/ui_help_00214658.c, FUN_L00_00217450. */
 void Hero_SpawnParticleBurst(void) {
     Vec4 pos[1];
     Vec4 out;
@@ -1174,7 +1174,7 @@ extern void func_L00_002635A0(char *, int, int);
 extern void func_00213DE0(void *, s32, s32, s32);
 
 /* Launches the equipped gadget moby: aims it at its target (or along the camera), builds its orientation matrix and starts its animation/sound.
-   Adapted from Lombyte (MIT) for PAL by OpenRAC's tools/port.py: src/overlays/shared/ui/help/00214658.c, FUN_L00_00217658. */
+   Adapted from Lombyte (GPL-3.0) for PAL by OpenRAC's tools/port.py: src/overlays/shared/ui/help/00214658.c, FUN_L00_00217658. */
 void LaunchGadgetMoby(void) {
     f32 dir[4];
     f32 delta[4];

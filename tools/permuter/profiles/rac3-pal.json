@@ -1,0 +1,16 @@
+{
+ "name": "rac3/pal",
+ "about": "Up Your Arsenal, PAL (SCES-524.56), rac3-decomp's primary release: tools/check.py compiles the candidate in the full build's context with the function's own flags (config/<target>/localdecomp_flags.txt, then text_parts.txt) and keeps the object. The program is $UYA_TARGET: frontbin (the default), boot_elf or i5bootn; the levels are not covered yet.",
+ "checkout": ["rac3", "ntsc"],
+ "env": {"UYA_TOOLCHAIN": "~/Projects/RAC/rac3-toolchains/eegcc_2.95.3_sn_v1.36",
+         "UYA_RUNNER": "~/Projects/RAC/rac3-toolchains/wibo", "UYA_TARGET": "frontbin"},
+ "python": ["~/Projects/RAC/rac3-venv/bin/python", "python3"],
+ "sources": ["src/{UYA_TARGET}/**/*.c", "nonmatching/{UYA_TARGET}/**/*.c"],
+ "asm": ["asm/{UYA_TARGET}/nonmatchings/**/{func}.s", "asm/nonmatchings/**/{func}.s"],
+ "prelude": "#include \"common.h\"\n",
+ "word_order": "le-bytes",
+ "cpp": ["gcc", "-E", "-P", "-DM2CTX", "-DPERMUTER", "-I", "{checkout}/include", "-I", "{checkout}"],
+ "compile": [["{python}", "tools/check.py", "{snippet}", "{func}", "--quiet", "--keep-object", "{out}"]],
+ "exact": "^{func}: MATCH",
+ "notes": "check.py's MATCH is both the compile's verdict and the checker's: no second run."
+}

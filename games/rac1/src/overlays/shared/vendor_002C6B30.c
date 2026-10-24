@@ -92,7 +92,7 @@ extern void func_L09_002C73D0_2C6B30(struct Moby *) __asm__("func_L09_002C73D0")
 
 /* Update of the oClass 52 moby: follows its target at a hover height above the hero, with a voice while it moves,
  * and bursts or is removed in its last states.
- * Adapted from Lombyte (MIT) for PAL: overlays/shared/gameplay/entities/002c5990.c, FUN_L09_002c5990. */
+ * Adapted from Lombyte (GPL-3.0) for PAL: overlays/shared/gameplay/entities/002c5990.c, FUN_L09_002c5990. */
 void Moby52Update(struct Moby *moby) {
     Moby52Vars_2C6B30 *vars = (Moby52Vars_2C6B30 *)moby->pvars;
     struct Moby *target;
@@ -975,7 +975,7 @@ extern f32 func_001F9D10_08F58(Vec4 *, Vec4 *) __asm__("func_001F9D10");
 extern u8 *func_L00_0026E940_08F58(f32, struct Moby *, u32, s32, s32) __asm__("func_L00_0026E940");
 extern void func_L00_00251E30_08F58(struct Moby *) __asm__("func_L00_00251E30");
 
-/* Adapted from Lombyte (MIT) for PAL by OpenRAC's tools/port.py: src/overlays/shared/gameplay/vendor/00307ba8.c, FUN_L09_00307ba8. */
+/* Adapted from Lombyte (GPL-3.0) for PAL by OpenRAC's tools/port.py: src/overlays/shared/gameplay/vendor/00307ba8.c, FUN_L09_00307ba8. */
 struct Moby *SpawnEnemyShot(void *owner, Vec4 *pos, Vec4 *vel, s32 life) {
     Vec4 p;
     Vec4 v;
@@ -1062,7 +1062,7 @@ extern void func_L00_0025F4A8_09118(void *, void *, void *, f32, f32, s32, s32, 
 extern s32 func_L00_001F2BE8_09118(f32, void *, s32, void *, void *) __asm__("func_L00_001F2BE8");
 
 /* Update of the shot FUN_L09_00307ba8 spawns (cf. FUN_L04_002af058): moves along vel, plays its sound once it starts moving away from the hero within 3 units, dies outside the level box, and on a hit (probing along the line from the hero until the timer runs out) bursts into five sparks and a flash, damages around the hit and is removed.
-   Adapted from Lombyte (MIT) for PAL by OpenRAC's tools/port.py: src/overlays/shared/gameplay/vendor/00307ba8.c, FUN_L09_00307d68. */
+   Adapted from Lombyte (GPL-3.0) for PAL by OpenRAC's tools/port.py: src/overlays/shared/gameplay/vendor/00307ba8.c, FUN_L09_00307d68. */
 void EnemyShotUpdate(struct Moby *m)
 {
     Vec4 old;
@@ -1147,7 +1147,7 @@ extern void func_001E9730_BB28(char *, s32, s32) __asm__("func_001E9730");
 extern char D_L09_00209570_BB28[] __asm__("D_L09_00209570");
 extern s32 D_L09_0015F6B0_BB28 __asm__("D_L09_0015F6B0") MACRO_ADDR;
 
-/* Adapted from Lombyte (MIT) for PAL: src/overlays/shared/gameplay/vendor/00307ba8.c, FUN_L09_0030a778. */
+/* Adapted from Lombyte (GPL-3.0) for PAL: src/overlays/shared/gameplay/vendor/00307ba8.c, FUN_L09_0030a778. */
 struct Moby *Moby_SpawnChildFromOwner(struct Moby *owner, Vec4 *pos)
 {
     struct Moby *m;
@@ -1577,7 +1577,7 @@ static inline void bubble_bounce(struct Moby *moby, BubbleVars *vars) {
     }
 }
 
-/* Adapted from Lombyte (MIT) for PAL by OpenRAC's tools/port.py: src/overlays/shared/gameplay/vendor/00307ba8.c, FUN_L09_0030b3b0. */
+/* Adapted from Lombyte (GPL-3.0) for PAL by OpenRAC's tools/port.py: src/overlays/shared/gameplay/vendor/00307ba8.c, FUN_L09_0030b3b0. */
 void Moby1886Update(struct Moby *moby) {
     BubbleVars *vars = (BubbleVars *)moby->pvars;
     Vec4 prev;

@@ -46,6 +46,7 @@ inline constexpr s32 kWrenchClass = 71;
 // glove types).
 inline constexpr std::size_t kHandJointList = 0;
 
+// One gadget: its table entry, the unpacked class data and the class parsed from it.
 struct GadgetClass {
     CoreGadgetEntry entry;
     std::vector<u8> blob;  // the unpacked class (its pointers are relative to it)

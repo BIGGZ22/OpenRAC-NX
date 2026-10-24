@@ -8,11 +8,12 @@
 #include <algorithm>
 #include <cstddef>
 #include <cstdint>
-#include <cstdlib>
 #include <cstring>
 #include <filesystem>
 #include <format>
+#include <optional>
 #include <string>
+#include <string_view>
 #include <system_error>
 #include <utility>
 #include <vector>
@@ -21,6 +22,7 @@
 #include <SDL3/SDL.h>
 #include <SDL3/SDL_vulkan.h>
 
+#include "common/env.h"
 #include "common/log.h"
 #include "renderer/vulkan/pipeline_cache_file.h"
 #include "renderer/vulkan/vkgl_internal.h"
@@ -60,31 +62,32 @@ std::filesystem::path pipeline_cache_file() {
     if (g == nullptr) {
         return {};
     }
-    if (const char* env = std::getenv("OPENRAC_VULKAN_PIPELINE_CACHE"); env != nullptr) {
-        if (std::strcmp(env, "0") == 0 || std::strcmp(env, "off") == 0
-            || std::strcmp(env, "none") == 0) {
+    // 0, off or none keep no cache; the empty string is as if the variable were unset.
+    if (const std::optional<std::string_view> chosen = env::value(env::Var::VulkanPipelineCache)) {
+        if (*chosen == "0" || *chosen == "off" || *chosen == "none") {
             return {};
         }
-        if (env[0] != '\0') {
-            return env;
+        if (!chosen->empty()) {
+            return std::filesystem::path(*chosen);
         }
     }
     std::filesystem::path base;
 #if defined(__APPLE__)
-    const char* home = std::getenv("HOME");
-    base = std::filesystem::path(home != nullptr ? home : ".") / "Library/Caches/OpenRAC";
+    const std::string home = env::system_variable("HOME").value_or(".");
+    base = std::filesystem::path(home) / "Library/Caches/OpenRAC";
 #elif defined(__ANDROID__)
-    const char* home = std::getenv("HOME");
-    base = std::filesystem::path(home != nullptr ? home : ".") / "cache";
+    const std::string home = env::system_variable("HOME").value_or(".");
+    base = std::filesystem::path(home) / "cache";
 #else
-    if (const char* xdg = std::getenv("XDG_CACHE_HOME"); xdg != nullptr && xdg[0] != '\0') {
-        base = std::filesystem::path(xdg) / "openrac";
+    if (const std::optional<std::string> xdg = env::system_variable("XDG_CACHE_HOME");
+        xdg.has_value() && !xdg->empty()) {
+        base = std::filesystem::path(*xdg) / "openrac";
     } else {
-        const char* home = std::getenv("USERPROFILE");
-        if (home == nullptr || home[0] == '\0') {
-            home = std::getenv("HOME");
+        std::optional<std::string> home = env::system_variable("USERPROFILE");
+        if (!home.has_value() || home->empty()) {
+            home = env::system_variable("HOME");
         }
-        base = std::filesystem::path(home != nullptr ? home : ".") / ".cache/openrac";
+        base = std::filesystem::path(home.value_or(".")) / ".cache/openrac";
     }
 #endif
     return base
@@ -107,7 +110,11 @@ void remove_other_pipeline_caches(const std::filesystem::path& path) {
     std::error_code ec;
     for (const auto& entry : std::filesystem::directory_iterator(path.parent_path(), ec)) {
         const std::string name = entry.path().filename().string();
-        if (entry.path() != path && name.starts_with(prefix) && name.ends_with(".bin")) {
+        const bool cache_file = name.ends_with(".bin") || name.ends_with(".bin.manifest");
+
+        // Another build's cache, or the manifest beside it; this build's manifest stays.
+        if (entry.path() != path && entry.path().string() != path.string() + ".manifest"
+            && name.starts_with(prefix) && cache_file) {
             std::filesystem::remove(entry.path(), ec);
         }
     }
@@ -172,6 +179,8 @@ bool make_pipeline_cache() {
             path.string()
         );
     }
+    // The keys of the pipelines earlier runs made, for the pre-warm (R-10).
+    load_pipeline_manifest(path);
     return true;
 }
 
@@ -244,7 +253,7 @@ bool make_instance(const Config& config, bool validation, std::string& error) {
         layers.push_back("VK_LAYER_KHRONOS_validation");
     }
 #if defined(OPENRAC_GPU_MARKERS)
-    debug_utils |= std::getenv("OPENRAC_GPU_MARKERS") != nullptr;
+    debug_utils |= env::flag(env::Var::GpuMarkers);
 #endif
     if (debug_utils) {
         extensions.push_back(VK_EXT_DEBUG_UTILS_EXTENSION_NAME);
@@ -352,6 +361,18 @@ bool pick_device(std::string& error) {
     std::vector<VkQueueFamilyProperties> queues(families);
     vkGetPhysicalDeviceQueueFamilyProperties(g->physical, &families, queues.data());
     g->timestamp_bits = queues.at(g->family).timestampValidBits;
+
+    // Whether the debug tools' GPU timers can work on this queue (the vk_gpu_timestamps gauge).
+    if (g->timestamp_bits != 0) {
+        log::info(
+            "vulkan: gpu timestamps: yes ({} valid bits, {} ns a tick)",
+            g->timestamp_bits,
+            g->properties.limits.timestampPeriod
+        );
+    } else {
+        log::info("vulkan: gpu timestamps: no (the queue keeps no timestamp bits)");
+    }
+
     vkGetPhysicalDeviceFeatures(g->physical, &g->features);
     return true;
 }
@@ -599,9 +620,12 @@ void describe_device() {
 
 void destroy_all() {
     if (g->device != VK_NULL_HANDLE) {
+        // The pre-warm worker stops first: it uses the programs' modules and the cache.
+        stop_pipeline_prewarm();
         vkDeviceWaitIdle(g->device);
         gpu_release();
         material_release();
+        save_pipeline_manifest();
         save_pipeline_cache();
         for (Frame& f : g->frames) {
             // Window teardown can run after the statistics singleton's

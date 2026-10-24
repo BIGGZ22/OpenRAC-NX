@@ -30,7 +30,7 @@ extern float AbsoluteFloat(float input) __asm__("func_001F9B88");
 extern void project_to_screen(f32 *, void *) __asm__("func_001F2418");
 extern s64 get_effect_texture(s32) __asm__("func_001F4868");
 extern void draw_textured_quad(s32, s32, s32, s32, s32, s32, s32, s32, s64, s64) __asm__("func_001F5800");
-/* Lens flare: projects the flare moby to the screen and fills the per-element alpha, texture, colour, distance and scale tables. Adapted from Lombyte (MIT) for PAL: rendering/effects/fun_001edc50.c, FUN_001edc50. */
+/* Lens flare: projects the flare moby to the screen and fills the per-element alpha, texture, colour, distance and scale tables. Adapted from Lombyte (GPL-3.0) for PAL: rendering/effects/fun_001edc50.c, FUN_001edc50. */
 void LensFlareUpdate(void) {
     f32 scr[4];
     f32 ctr[4];
@@ -271,7 +271,7 @@ extern FogPreset D_0015F584 MACRO_ADDR;
 extern s32 func_00213A78(void *, f32 *, s32 *);
 extern s32 func_001FA898(f32);
 
-/* Adapted from Lombyte (MIT) for PAL by OpenRAC's tools/port.py: src/textbin/update_camera_environment_from_regions.c,
+/* Adapted from Lombyte (GPL-3.0) for PAL by OpenRAC's tools/port.py: src/textbin/update_camera_environment_from_regions.c,
  * update_camera_environment_from_regions; the fog preset written as the struct src/game/draw.c reads. */
 void Camera_UpdateEnvironment(void *position) {
     f32 blend;

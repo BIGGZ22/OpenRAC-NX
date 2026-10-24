@@ -56,8 +56,9 @@ jobs:
         run: python -m unittest discover -s port/enhanced/tools/probes -v
 
       # The port's countable conventions (port/docs/CODING_CONVENTIONS.md): the rules for every
-      # file, and the new-code rules on what this push or pull request adds. Lines it changes in
-      # older files are reported, not failed (the page, section 24.4). clang-format is pinned.
+      # file, and the new-code rules on what this push or pull request adds. A line it changes that
+      # clang-format would lay out differently fails the step (--strict-touched; the page, section
+      # 24.4), in older files too. clang-format is pinned.
       - name: Port conventions
         env:
           EVENT: ${{ github.event_name }}
@@ -74,10 +75,24 @@ jobs:
           fi
           if [ -n "$base" ]; then
             git fetch --no-tags --depth=1 origin "$base"
-            python port/tools/conventions/check_conventions.py --since "$base" --touched --clang-format clang-format
+            python port/tools/conventions/check_conventions.py --since "$base" --touched --strict-touched --clang-format clang-format
           else
             python port/tools/conventions/check_conventions.py
           fi
+
+      # The layout of the C++ under port/ and sdk/ (port/docs/CODING_CONVENTIONS.md, section 5.6):
+      # clang-format and the blank lines around control blocks. Report only for now: the step
+      # lists what would change and never fails the build. clang-format comes from the step above.
+      - name: C++ layout (report only)
+        run: python tools/cpp_style.py --report-only
+
+      # The port's includes against the module layering (port/docs/CODING_CONVENTIONS.md, section
+      # 18): a new include of a higher layer fails; today's violations are the exceptions listed in
+      # port/tools/layering/rules.tsv. Standard-library Python, the whole port on every run.
+      - name: Port layering
+        run: |
+          python -m unittest discover -s port/tools/layering -v
+          python port/tools/layering/layering.py
 
       - name: Generated tables match games/*/game.json and the reports
         run: |

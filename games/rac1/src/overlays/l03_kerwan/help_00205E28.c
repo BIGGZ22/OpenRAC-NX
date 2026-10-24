@@ -20,7 +20,7 @@ extern f32 func_001F9D10(void *, void *);
 extern f32 func_001F9D48(void *, void *);
 extern s32 func_L00_0025EFC0(void *, void *, void *, s32 *, f32 *, s32, f32, f32, f32);
 
-/* Adapted from Lombyte (MIT) for PAL by OpenRAC's tools/port.py: src/overlays/l03/gameplay/hero/00205830.c, FUN_L03_00205830. */
+/* Adapted from Lombyte (GPL-3.0) for PAL by OpenRAC's tools/port.py: src/overlays/l03/gameplay/hero/00205830.c, FUN_L03_00205830. */
 s32 func_L03_00205E28(Vec4 *from, s32 **outOwner, Vec4 *to, s32 *outI, f32 *outF, s32 *outKind,
                      s32 *skip, s32 *only) {
     Vec4 pos;

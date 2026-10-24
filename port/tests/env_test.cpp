@@ -11,6 +11,7 @@
 #include <cstdint>
 #include <cstdio>
 #include <cstdlib>
+#include <cstring>
 #include <exception>
 #include <filesystem>
 #include <fstream>
@@ -93,6 +94,7 @@ void test_the_values_are_read_once_at_the_first_read() {
     CHECK(env::integer(Var::DumpTexture, -1) == 0x1A);
     CHECK(env::number(Var::ScriptBudgetMs, kNumberFallback) == 2.5);
     CHECK(env::value(Var::GlApi) == "vulkan");
+    CHECK(std::strcmp(env::value(Var::GlApi)->data(), "vulkan") == 0);  // ends in a NUL, for C
     CHECK(!env::flag(Var::TraceMissing));
     CHECK(!env::value(Var::TraceMissing).has_value());
     CHECK(env::integer(Var::ShotFrom, kIntegerFallback) == kIntegerFallback);
@@ -283,6 +285,7 @@ void test_the_table_is_in_order_and_complete() {
     for (const env::Variable& row : env::all()) {
         CHECK(static_cast<std::size_t>(row.var) == place);
         CHECK(&env::variable(row.var) == &row);
+        CHECK(env::find(row.name) == row.var);
         CHECK(is_variable_name(row.name));
         CHECK(previous < row.name);
         CHECK((row.kind == Kind::Flag) == (row.truth != Truth::NotAFlag));
@@ -293,6 +296,12 @@ void test_the_table_is_in_order_and_complete() {
         ++place;
     }
     CHECK(place == static_cast<std::size_t>(Var::Write) + 1);
+
+    // find takes the whole name, exactly.
+    CHECK(!env::find("OPENRAC_NOT_A_VARIABLE").has_value());
+    CHECK(!env::find("TRACE_CD").has_value());
+    CHECK(!env::find("openrac_trace_cd").has_value());
+    CHECK(!env::find("").has_value());
 }
 
 // Returns DEBUGGING.md, found from this file's place in the repository (port/tests/).

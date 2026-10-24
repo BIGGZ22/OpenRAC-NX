@@ -6,6 +6,7 @@ import io
 import tempfile
 import unittest
 from pathlib import Path
+from unittest import mock
 
 import build_port
 
@@ -180,6 +181,79 @@ class Commands(unittest.TestCase):
         # an Embree built with other flags is built again.
         self.assertEqual(build_port.EMBREE_OPTIONS["EMBREE_IGNORE_CMAKE_CXX_FLAGS"], "OFF")
         self.assertNotEqual(build_port.embree_stamp({"CXXFLAGS": "-stdlib=libc++"}), build_port.embree_stamp({}))
+
+
+class ProbeBaker(unittest.TestCase):
+    """--probe-baker: the baker with its Embree, except on an Intel Mac, which ships without it."""
+
+    def test_only_an_intel_mac_ships_without_the_baker(self):
+        self.assertFalse(build_port.ships_baker("Darwin", "x86_64"))
+        self.assertTrue(build_port.ships_baker("Darwin", "arm64"))
+        for system in ("Linux", "Windows"):
+            for machine in ("x86_64", "AMD64", "aarch64"):
+                self.assertTrue(build_port.ships_baker(system, machine), (system, machine))
+
+    def test_this_computer_is_read_when_none_is_given(self):
+        with mock.patch.object(build_port.platform, "system", return_value="Darwin"), \
+                mock.patch.object(build_port.platform, "machine", return_value="x86_64"):
+            self.assertFalse(build_port.ships_baker())
+        with mock.patch.object(build_port.platform, "system", return_value="Darwin"), \
+                mock.patch.object(build_port.platform, "machine", return_value="arm64"):
+            self.assertTrue(build_port.ships_baker())
+
+    def baker_on(self, system, machine, embree=None):
+        """probe_baker on SYSTEM and MACHINE, with build_embree mocked: its result, what it said,
+        and the mock."""
+        out = io.StringIO()
+        build = mock.Mock(return_value=Path("/b/embree/install/lib/cmake/embree-4.4.1"), side_effect=embree)
+        with mock.patch.object(build_port.platform, "system", return_value=system), \
+                mock.patch.object(build_port.platform, "machine", return_value=machine), \
+                mock.patch.object(build_port, "build_embree", build), \
+                contextlib.redirect_stdout(out), contextlib.redirect_stderr(io.StringIO()):
+            result = build_port.probe_baker("cmake", {}, None, {})
+        return result, out.getvalue(), build
+
+    def test_an_intel_mac_neither_downloads_nor_builds_embree_and_says_why(self):
+        (defines, more), said, build = self.baker_on("Darwin", "x86_64")
+        build.assert_not_called()
+        self.assertEqual((defines, more), ({"OPENRAC_PROBE_BAKER": "OFF"}, []))
+        self.assertEqual(said.strip(), build_port.NO_BAKER_HERE)
+
+    def test_elsewhere_the_baker_is_built_with_its_embree(self):
+        (defines, more), said, build = self.baker_on("Darwin", "arm64")
+        build.assert_called_once()
+        self.assertEqual(defines, {"OPENRAC_PROBE_BAKER": "ON", "embree_DIR": "/b/embree/install/lib/cmake/embree-4.4.1"})
+        self.assertEqual(more, [build_port.BAKER])
+        self.assertNotIn(build_port.NO_BAKER_HERE, said)
+
+    def test_an_embree_that_fails_leaves_the_baker_out(self):
+        (defines, more), _, _ = self.baker_on("Linux", "x86_64", embree=build_port.BuildError("no network"))
+        self.assertEqual((defines, more), ({"OPENRAC_PROBE_BAKER": "OFF"}, []))
+
+    def test_an_intel_mac_builds_the_rest_and_succeeds(self):
+        # The whole command line, its tools mocked: the game and the extractor are configured and
+        # built without the baker, and the build exits 0.
+        run = mock.Mock(return_value=mock.Mock(returncode=0))
+        build = mock.Mock()
+        out = io.StringIO()
+        with mock.patch.object(build_port.platform, "system", return_value="Darwin"), \
+                mock.patch.object(build_port.platform, "machine", return_value="x86_64"), \
+                mock.patch.object(build_port, "read_cache", return_value={}), \
+                mock.patch.object(build_port, "prepare", return_value=({}, Path("cmake"), None)), \
+                mock.patch.object(build_port, "build_embree", build), \
+                mock.patch.object(build_port, "write_stamp"), \
+                mock.patch.object(build_port.subprocess, "run", run), \
+                contextlib.redirect_stdout(out), contextlib.redirect_stderr(io.StringIO()):
+            status = build_port.main(["rac1-pal", "--probe-baker"])
+        self.assertEqual(status, 0)
+        build.assert_not_called()
+        self.assertIn(build_port.NO_BAKER_HERE, out.getvalue())
+        commands = [call.args[0] for call in run.call_args_list]
+        self.assertIn("-DOPENRAC_PROBE_BAKER=OFF", commands[0])
+        built = commands[-1]
+        self.assertIn("openrac-rac1-pal", built)
+        self.assertIn("openrac-extractor", built)
+        self.assertNotIn(build_port.BAKER, built)
 
 
 class Stamp(unittest.TestCase):

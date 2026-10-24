@@ -235,6 +235,9 @@ constexpr std::array<Variable, kVariableCount> kVariables = {{
     {Var::Reach, "OPENRAC_REACH",
      Kind::Path, Truth::NotAFlag, "none",
      "the functions without C this run reached, written to that file"},
+    {Var::RenderOptOff, "OPENRAC_RENDER_OPT_OFF",
+     Kind::Text, Truth::NotAFlag, "none",
+     "NAME,NAME or all: render optimisations of renderer/render_opt.h switched off, for comparing"},
     {Var::RoundNearest, "OPENRAC_ROUND_NEAREST",
      Kind::Flag, Truth::Set, "off",
      "the game's thread keeps the host's rounding to nearest, to compare"},
@@ -425,6 +428,15 @@ const Variable& variable(Var var) {
     return kVariables[index(var)];
 }
 
+std::optional<Var> find(std::string_view name) {
+    for (const Variable& row : kVariables) {
+        if (row.name == name) {
+            return row.var;
+        }
+    }
+    return std::nullopt;
+}
+
 std::optional<std::string_view> value(Var var) {
     const std::optional<std::string>& found = snapshot()[index(var)];
 
@@ -433,6 +445,7 @@ std::optional<std::string_view> value(Var var) {
         return std::nullopt;
     }
 
+    // A view of the kept std::string, so its data() ends in a NUL (env.h promises it to C).
     return std::string_view(*found);
 }
 

@@ -16,7 +16,7 @@ extern Rec D_L06_0017A340[];
 extern char D_0013F450_1D6B8[] __asm__("D_0013F450");
 extern int func_L00_0020DB30(int);
 
-/* Adapted from Lombyte (MIT) for PAL by OpenRAC's tools/port.py: src/overlays/shared/ui/help/0021d0a0.c, FUN_L06_0021d0a0. */
+/* Adapted from Lombyte (GPL-3.0) for PAL by OpenRAC's tools/port.py: src/overlays/shared/ui/help/0021d0a0.c, FUN_L06_0021d0a0. */
 int Hero_GetModuleAnimId(int a) {
     char *g = (char *)D_0013F450_1D6B8;
     switch (*(unsigned char *)(g + 0x20A4)) {
@@ -342,7 +342,7 @@ extern void func_L00_00207220(void);
 extern void func_L00_00232EA8(void);
 extern void func_L06_00235E08(int, int);
 
-/* Adapted from Lombyte (MIT) for PAL by OpenRAC's tools/port.py: src/overlays/shared/ui_help_0021d0a0.c, FUN_L06_00227cf8. */
+/* Adapted from Lombyte (GPL-3.0) for PAL by OpenRAC's tools/port.py: src/overlays/shared/ui_help_0021d0a0.c, FUN_L06_00227cf8. */
 void Hero_EndObjectControl(void) {
     unsigned char *g = D_0013F450;
     unsigned char *m;
@@ -520,7 +520,7 @@ extern s32 func_L00_001F1D20(void *, s32, f32, s32, f32);
 extern s32 func_L00_001F34F0(void *, f32);
 extern void func_L00_001FF4B0(void *, void *, f32);
 
-/* Adapted from Lombyte (MIT) for PAL by OpenRAC's tools/port.py: src/overlays/shared/ui/help/0021d0a0.c, FUN_L06_0022a1d0. */
+/* Adapted from Lombyte (GPL-3.0) for PAL by OpenRAC's tools/port.py: src/overlays/shared/ui/help/0021d0a0.c, FUN_L06_0022a1d0. */
 s32 HeroL06_ResolveCollisionStep(s32 mode) {
     Vec4 old;
     Vec4 v;
@@ -631,7 +631,7 @@ extern void func_L00_002222F0(void);
 extern void func_L00_00233EE0(void *, f32, f32, f32);
 extern void func_L00_00211908(void);
 
-/* Adapted from Lombyte (MIT) for PAL by OpenRAC's tools/port.py: src/overlays/shared/ui/help/0021d0a0.c, FUN_L06_002348d0. */
+/* Adapted from Lombyte (GPL-3.0) for PAL by OpenRAC's tools/port.py: src/overlays/shared/ui/help/0021d0a0.c, FUN_L06_002348d0. */
 void HeroL06_UpdateTimers(void) {
     Vec4 sum;
     Vec4 d;
@@ -792,7 +792,7 @@ extern s32 func_L00_001EFFF0(void *, void *, s32, s32, s32);
 extern f32 func_L00_002345B0(void *);
 extern s32 func_L00_0025A5D8(f32 *, f32 *, f32, f32, f32);
 
-/* Adapted from Lombyte (MIT) for PAL by OpenRAC's tools/port.py: src/overlays/shared/ui_help_00242950.c, FUN_L06_00242950. */
+/* Adapted from Lombyte (GPL-3.0) for PAL by OpenRAC's tools/port.py: src/overlays/shared/ui_help_00242950.c, FUN_L06_00242950. */
 f32 HeroL06_PredictLanding(f32 a, f32 b, f32 c) {
     f32 t[4];
     Vec4 v;

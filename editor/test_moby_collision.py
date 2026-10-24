@@ -248,7 +248,7 @@ class SceneTest(unittest.TestCase):
         files = {}
 
         def add(scene):
-            files.update(mcs.scene_nodes(scene, blob, positions, 0.5, class_id, level_dir, "res://levels/level_03")["files"])
+            files.update(mcs.add_class_collision_nodes(scene, blob, positions, 0.5, class_id, level_dir, "res://levels/level_03")["files"])
         path = level_dir / "mobys" / f"moby_{class_id}.tscn"
         write_marker(path, class_id, f"{class_id} crate", None, "crate", None, add)
         mcs.write_manifest(level_dir, {class_id: f"mobys/moby_{class_id}.tscn"}, files)

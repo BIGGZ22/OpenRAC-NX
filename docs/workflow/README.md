@@ -430,7 +430,7 @@ best starting point for the other.
   flags and found that they do not carry over: treat them as hints to test on
   one function at a time.
 - **Provenance.** On PAL, the comment above a port ends with
-  `Adapted from Lombyte (MIT) for PAL: <its file under src/>, <its name>.`,
+  `Adapted from Lombyte (GPL-3.0) for PAL: <its file under src/>, <its name>.`,
   and [THIRD_PARTY_NOTICES.md](../../games/rac1/THIRD_PARTY_NOTICES.md)
   lists each port. On Lombyte, a ported file's first line reads
   `Ported from rac1-decomp, the PAL decompilation (<file>, <function>)`
@@ -497,12 +497,14 @@ already does.
   break the build, and rac2's `doctor.py` tells a newcomer what their machine
   can do. rac1/pal's `gen_progress_report.py --check` and Lombyte's
   `make check` need no game data.
-- **Share permuter setups.** rac1/pal ([PERMUTER.md](../../games/rac1/docs/PERMUTER.md),
-  plus `tools/permute.py` for exhaustive reordering) and rac3
-  ([permuter.md](../../games/rac3/ntsc/docs/permuter.md), plus `regalloc.py`
-  for allocation ties) both wire decomp-permuter to their real compile
-  pipelines. Lombyte lists "guided C mutation search" in its recovery ladder
-  but has no public tool for it.
+- **Share permuter setups.** Done in [`tools/permuter`](../../tools/permuter/README.md): one
+  native engine (rac3's, with its aligned scorer and its fence and barrier passes) and a profile
+  for each of rac1/pal, rac2, rac3 PAL and US, and rac4 US and PAL, compiling a candidate the way
+  that game's checker does, so that score 0 is the checker's EXACT; plus a queue runner for the
+  build machines. The per-game glue stays in each project ([PERMUTER.md](../../games/rac1/docs/PERMUTER.md),
+  [permuter.md](../../games/rac3/ntsc/docs/permuter.md)), as do rac1/pal's `tools/permute.py`
+  (exhaustive reordering) and rac3's `regalloc.py` and `fence_search.py`. Lombyte lists "guided C
+  mutation search" in its recovery ladder but has no public tool for it.
 - **Make flags and padding explicit.** rac3's `text_parts.txt` keeps every
   flag override single-function, Lombyte's `ROUTE_EXCEPTIONS` may only shrink,
   and rac1/pal has not mapped its per-file flags yet. rac3 also adds retail's

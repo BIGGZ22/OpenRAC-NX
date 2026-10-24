@@ -6,6 +6,7 @@
 // the rest of the backend; and get_proc (vkgl.h), which hands the table its entries by name.
 
 #include <algorithm>
+#include <array>
 #include <cmath>
 #include <cstddef>
 #include <cstdint>
@@ -18,6 +19,7 @@
 #include <volk.h>
 
 #include "renderer/gl.h"
+#include "renderer/render_opt.h"
 #include "renderer/vulkan/shader_compiler.h"
 #include "renderer/vulkan/vkgl.h"
 #include "renderer/vulkan/vkgl_internal.h"
@@ -301,6 +303,7 @@ read_pixels(GLint x, GLint y, GLsizei w, GLsizei h, GLenum format, GLenum type, 
     vkCmdCopyImageToBuffer(
         cmd, image->image, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, buffer, 1, &copy
     );
+    count_copy(copy.imageExtent.width, copy.imageExtent.height);
     flush_and_wait();
     vmaInvalidateAllocation(g->allocator, allocation, 0, VK_WHOLE_SIZE);
     // Rows come as GL gives them, from the bottom: the same rows (vkgl.h, "Rows").
@@ -372,6 +375,7 @@ void VKGL copy_tex_sub_image(
             1,
             &copy
         );
+        count_copy(copy.extent.width, copy.extent.height);
     } else {
         VkImageBlit blit{};
         blit.srcSubresource = copy.srcSubresource;
@@ -390,6 +394,7 @@ void VKGL copy_tex_sub_image(
             &blit,
             VK_FILTER_NEAREST
         );
+        count_copy(copy.extent.width, copy.extent.height);
     }
 }
 
@@ -598,6 +603,7 @@ void VKGL delete_buffers(GLsizei n, const GLuint* names) {
     for (GLsizei i = 0; i < n; ++i) {
         auto it = g->buffers.objects.find(names[i]);
         if (it != g->buffers.objects.end()) {
+            g->submission.cpu_mirror_bytes -= it->second.data.size();
             destroy_buffer(it->second);
             g->buffers.objects.erase(it);
         }
@@ -638,13 +644,25 @@ void changed(Buffer& b) {
     b.changed_frame = g->frame_count;
 }
 
-void VKGL buffer_data(GLenum target, GLsizeiptr size, const void* data, GLenum) {
+// True for GL's static usages (GL_STATIC_DRAW, _READ, _COPY): filled once, drawn many times.
+bool is_static_usage(GLenum usage) {
+    return usage == GL_STATIC_DRAW || usage == kGlStaticRead || usage == kGlStaticCopy;
+}
+
+void VKGL buffer_data(GLenum target, GLsizeiptr size, const void* data, GLenum usage) {
     GLuint* binding = buffer_binding(target);
     Buffer* b = binding != nullptr ? g->buffers.find(*binding) : nullptr;
     if (b == nullptr || size < 0) {
         return;
     }
+    g->submission.cpu_mirror_bytes -= b->data.size();
     b->data.assign(static_cast<std::size_t>(size), 0);
+    g->submission.cpu_mirror_bytes += b->data.size();
+    b->size = b->data.size();
+    b->static_hint = is_static_usage(usage);
+    b->rewritten = false;
+    b->mirror_freed = false;
+    b->staged = nullptr;
     if (data != nullptr && size > 0) {
         std::memcpy(b->data.data(), data, static_cast<std::size_t>(size));
     }
@@ -655,10 +673,14 @@ void VKGL buffer_sub_data(GLenum target, GLintptr offset, GLsizeiptr size, const
     GLuint* binding = buffer_binding(target);
     Buffer* b = binding != nullptr ? g->buffers.find(*binding) : nullptr;
     if (b == nullptr || offset < 0 || size <= 0
-        || static_cast<std::size_t>(offset + size) > b->data.size()) {
+        || static_cast<std::size_t>(offset + size) > b->size) {
         return;
     }
+
+    // The rest of the buffer stays as it was: its mirror is read back first if it was let go.
+    buffer_bytes(*b);
     std::memcpy(b->data.data() + offset, data, static_cast<std::size_t>(size));
+    b->rewritten = true;
     changed(*b);
 }
 
@@ -932,8 +954,12 @@ void VKGL link_program(GLuint name) {
             ),
             "a compute pipeline"
         );
+        count_pipeline();
     }
     p->linked = p->layout && ((p->vertex && p->fragment) || p->compute_pipeline);
+
+    // Its pipelines of earlier runs are made on the pre-warm worker before its first draw.
+    prewarm_program(*p);
 }
 
 void VKGL get_program_iv(GLuint name, GLenum what, GLint* out) {
@@ -1156,6 +1182,12 @@ void VKGL bind_buffer_base(GLenum target, GLuint index, GLuint buffer) {
     }
     if (target == wgl::GL_UNIFORM_BUFFER && index < kUniformBindings) {
         g->state.uniform_bindings[index] = buffer;
+
+        // A uniform block's bytes are read on the CPU when it is shorter than the block.
+        if (Buffer* b = g->buffers.find(buffer)) {
+            buffer_bytes(*b);
+            b->keep_mirror = true;
+        }
     }
     if (GLuint* b = buffer_binding(target)) {
         *b = buffer;
@@ -1335,6 +1367,119 @@ void VKGL renderbuffer_storage(GLenum target, GLenum format, GLsizei w, GLsizei 
     renderbuffer_storage_multisample(target, 0, format, w, h);
 }
 
+// GL's names of the default framebuffer's buffers in glInvalidateFramebuffer (OpenGL ES 3.0).
+constexpr GLenum kGlColour = 0x1800;   // GL_COLOR
+constexpr GLenum kGlDepth = 0x1801;    // GL_DEPTH
+constexpr GLenum kGlStencil = 0x1802;  // GL_STENCIL
+
+void VKGL invalidate_framebuffer(GLenum target, GLsizei count, const GLenum* attachments) {
+    // The reference path: nothing is let go, as before the call existed here.
+    if (!renderer::render_opt::enabled(renderer::render_opt::Opt::AttachmentDiscard)
+        || attachments == nullptr) {
+        return;
+    }
+
+    const GLuint name =
+        target == GL_READ_FRAMEBUFFER ? g->state.read_framebuffer : g->state.draw_framebuffer;
+    bool colour = false;
+    VkImageAspectFlags depth = 0;
+
+    // Each buffer named, in the default framebuffer's names or a framebuffer object's.
+    for (GLsizei n = 0; n < count; ++n) {
+        const GLenum attachment = attachments[n];
+
+        // Colour 0 is the only colour attachment the backend draws into.
+        if (attachment == (name == 0 ? kGlColour : GL_COLOR_ATTACHMENT0)) {
+            colour = true;
+        }
+
+        // Depth, stencil, or both at once (a framebuffer object's name for the pair).
+        if (attachment == (name == 0 ? kGlDepth : GL_DEPTH_ATTACHMENT)
+            || (name != 0 && attachment == GL_DEPTH_STENCIL_ATTACHMENT)) {
+            depth |= VK_IMAGE_ASPECT_DEPTH_BIT;
+        }
+
+        // The stencil aspect, alone or with depth.
+        if (attachment == (name == 0 ? kGlStencil : GL_STENCIL_ATTACHMENT)
+            || (name != 0 && attachment == GL_DEPTH_STENCIL_ATTACHMENT)) {
+            depth |= VK_IMAGE_ASPECT_STENCIL_BIT;
+        }
+    }
+
+    discard_attachments(target_of(name), colour, depth);
+}
+
+// The rectangles of glBlitFramebuffer's `r` (source x0, y0, x1, y1, then the destination's) as a
+// Vulkan blit of `aspect` from `src` into `dst`, each clamped to its image. False when either is
+// empty, and nothing is to be copied.
+bool blit_region(
+    const Image& src,
+    const Image& dst,
+    VkImageAspectFlags aspect,
+    const std::array<GLint, 8>& r,
+    VkImageBlit& b
+) {
+    b.srcSubresource = {aspect, 0, 0, 1};
+    b.srcOffsets[0] = {std::clamp(r[0], 0, src.width), std::clamp(r[1], 0, src.height), 0};
+    b.srcOffsets[1] = {std::clamp(r[2], 0, src.width), std::clamp(r[3], 0, src.height), 1};
+    b.dstSubresource = {aspect, 0, 0, 1};
+    b.dstOffsets[0] = {std::clamp(r[4], 0, dst.width), std::clamp(r[5], 0, dst.height), 0};
+    b.dstOffsets[1] = {std::clamp(r[6], 0, dst.width), std::clamp(r[7], 0, dst.height), 1};
+    return b.srcOffsets[0].x != b.srcOffsets[1].x && b.srcOffsets[0].y != b.srcOffsets[1].y
+           && b.dstOffsets[0].x != b.dstOffsets[1].x && b.dstOffsets[0].y != b.dstOffsets[1].y;
+}
+
+// The owner of the colour image framebuffer `name` reads from: its texture's or renderbuffer's.
+// Null for the default framebuffer and for one with no colour.
+ImagePtr colour_owner(GLuint name) {
+    const Framebuffer* fb = g->framebuffers.find(name);
+
+    // The default framebuffer's image is the backend's own, never a picture that is presented.
+    if (fb == nullptr) {
+        return nullptr;
+    }
+
+    // A texture first, as target_of looks.
+    if (Texture* t = g->textures.find(fb->colour_texture); t != nullptr && t->image) {
+        return t->image;
+    }
+
+    Renderbuffer* r = g->renderbuffers.find(fb->colour_renderbuffer);
+    return r != nullptr ? r->image : nullptr;
+}
+
+// Holds back glBlitFramebuffer's colour copy of a picture into the default framebuffer when the
+// pass before it only cleared that framebuffer (present-single-copy): the copy then waits for
+// present_to_screen (PendingPresent). False, with nothing changed, when it cannot wait.
+bool hold_present_copy(const std::array<GLint, 8>& r, GLenum filter) {
+    const ImagePtr source = colour_owner(g->state.read_framebuffer);
+    Image* dst = g->default_colour.get();
+    VkImageBlit region{};
+
+    // A single-sampled picture into the default framebuffer, as the frontend's present() copies.
+    if (!renderer::render_opt::enabled(renderer::render_opt::Opt::PresentSingleCopy)
+        || g->present_copy.pending || !source || source->samples != VK_SAMPLE_COUNT_1_BIT
+        || dst == nullptr || g->state.draw_framebuffer != 0
+        || !blit_region(*source, *dst, VK_IMAGE_ASPECT_COLOR_BIT, r, region)) {
+        return false;
+    }
+
+    VkClearColorValue clear{};
+
+    // The rest of the default framebuffer must be one known colour: the pass before only cleared it.
+    if (!drop_clear_pass(clear)) {
+        return false;
+    }
+
+    PendingPresent& waiting = g->present_copy;
+    waiting.pending = true;
+    waiting.source = source;
+    waiting.region = region;
+    waiting.filter = filter == GL_LINEAR ? VK_FILTER_LINEAR : VK_FILTER_NEAREST;
+    waiting.clear = clear;
+    return true;
+}
+
 void VKGL blit_framebuffer(
     GLint sx0,
     GLint sy0,
@@ -1365,6 +1510,8 @@ void VKGL blit_framebuffer(
             }
             barrier(cmd, *src, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL);
             barrier(cmd, *dst, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL);
+            // The resolve writes all of the destination: what it held before is not needed.
+            dst->discarded = 0;
             VkRenderingAttachmentInfo depth{VK_STRUCTURE_TYPE_RENDERING_ATTACHMENT_INFO};
             depth.imageView = attachment_view(*src);
             depth.imageLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
@@ -1385,6 +1532,10 @@ void VKGL blit_framebuffer(
             }
             vkCmdBeginRendering(cmd, &info);
             vkCmdEndRendering(cmd);
+            count_render_pass();
+            count_command(Command::RenderPass);
+            count_attachment(*src, info.renderArea.extent, true, true);
+            count_attachment(*dst, info.renderArea.extent, false, true);
             return;
         }
         barrier(cmd, *src, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL);
@@ -1417,6 +1568,7 @@ void VKGL blit_framebuffer(
                 count,
                 copies
             );
+            count_copy(copies[0].extent.width, copies[0].extent.height);
             return;
         }
         if (src->samples != VK_SAMPLE_COUNT_1_BIT) {
@@ -1445,17 +1597,11 @@ void VKGL blit_framebuffer(
                 1,
                 &r
             );
+            count_copy(r.extent.width, r.extent.height);
             return;
         }
         VkImageBlit b{};
-        b.srcSubresource = {aspect, 0, 0, 1};
-        b.srcOffsets[0] = {std::clamp(sx0, 0, src->width), std::clamp(sy0, 0, src->height), 0};
-        b.srcOffsets[1] = {std::clamp(sx1, 0, src->width), std::clamp(sy1, 0, src->height), 1};
-        b.dstSubresource = {aspect, 0, 0, 1};
-        b.dstOffsets[0] = {std::clamp(dx0, 0, dst->width), std::clamp(dy0, 0, dst->height), 0};
-        b.dstOffsets[1] = {std::clamp(dx1, 0, dst->width), std::clamp(dy1, 0, dst->height), 1};
-        if (b.srcOffsets[0].x == b.srcOffsets[1].x || b.srcOffsets[0].y == b.srcOffsets[1].y
-            || b.dstOffsets[0].x == b.dstOffsets[1].x || b.dstOffsets[0].y == b.dstOffsets[1].y) {
+        if (!blit_region(*src, *dst, aspect, {sx0, sy0, sx1, sy1, dx0, dy0, dx1, dy1}, b)) {
             return;
         }
         vkCmdBlitImage(
@@ -1468,7 +1614,18 @@ void VKGL blit_framebuffer(
             &b,
             f
         );
+        count_copy(
+            static_cast<std::uint32_t>(std::abs(b.dstOffsets[1].x - b.dstOffsets[0].x)),
+            static_cast<std::uint32_t>(std::abs(b.dstOffsets[1].y - b.dstOffsets[0].y))
+        );
     };
+    const std::array<GLint, 8> rects = {sx0, sy0, sx1, sy1, dx0, dy0, dx1, dy1};
+
+    // The picture copied to the window with nothing else asked: it can wait for the present.
+    if (mask == GL_COLOR_BUFFER_BIT && hold_present_copy(rects, filter)) {
+        return;
+    }
+
     if ((mask & GL_COLOR_BUFFER_BIT) != 0) {
         blit_one(
             from.colour,
@@ -1592,12 +1749,55 @@ const Entry kEntries[] = {
     VKGL_ENTRY(glRenderbufferStorage, renderbuffer_storage),
     VKGL_ENTRY(glRenderbufferStorageMultisample, renderbuffer_storage_multisample),
     VKGL_ENTRY(glBlitFramebuffer, blit_framebuffer),
+    VKGL_ENTRY(glInvalidateFramebuffer, invalidate_framebuffer),
 };
 #undef VKGL_ENTRY
 
 }  // namespace
 
 // ---- The GL functions ----
+
+void make_present_copy() {
+    PendingPresent waiting = std::move(g->present_copy);
+    g->present_copy = PendingPresent{};
+
+    // Nothing waits.
+    if (!waiting.pending) {
+        return;
+    }
+
+    Image& dst = *g->default_colour;
+    Image& src = *waiting.source;
+    VkCommandBuffer cmd = cmd_for(&src, true);
+    dst.touched = g->recording;
+    const VkImageSubresourceRange range = {VK_IMAGE_ASPECT_COLOR_BIT, 0, 1, 0, 1};
+    barrier(cmd, dst, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
+    vkCmdClearColorImage(
+        cmd, dst.image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, &waiting.clear, 1, &range
+    );
+    count_command(Command::Copy);
+    barrier(cmd, src, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL);
+    // The clear's writes done before the blit's, which overlap them.
+    barrier(cmd, dst, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
+    vkCmdBlitImage(
+        cmd,
+        src.image,
+        VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
+        dst.image,
+        VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+        1,
+        &waiting.region,
+        waiting.filter
+    );
+    count_copy(
+        static_cast<std::uint32_t>(
+            std::abs(waiting.region.dstOffsets[1].x - waiting.region.dstOffsets[0].x)
+        ),
+        static_cast<std::uint32_t>(
+            std::abs(waiting.region.dstOffsets[1].y - waiting.region.dstOffsets[0].y)
+        )
+    );
+}
 
 void destroy_buffer(Buffer& b) {
     forget_views(b);
@@ -1607,11 +1807,14 @@ void destroy_buffer(Buffer& b) {
         });
     }
     b.own = VK_NULL_HANDLE;
+    b.own_mapped = nullptr;
 }
 
 // ---- Shaders and programs ----
 
 void release_program(Program& p) {
+    // No pre-warm job may use its modules or layout once they are handed to defer.
+    prewarm_forget(p.serial);
     defer([vertex = p.vertex,
            fragment = p.fragment,
            compute = p.compute,
@@ -1626,17 +1829,11 @@ void release_program(Program& p) {
         vkDestroyDescriptorSetLayout(g->device, set_layout, nullptr);
     });
     // Its pipelines go with it.
-    const std::uint64_t serial = p.serial;
-    for (auto it = g->pipelines.begin(); it != g->pipelines.end();) {
-        std::uint64_t key_serial = 0;
-        std::memcpy(&key_serial, it->first.data(), sizeof key_serial);
-        if (key_serial == serial) {
-            defer([pipeline = it->second] { vkDestroyPipeline(g->device, pipeline, nullptr); });
-            it = g->pipelines.erase(it);
-        } else {
-            ++it;
-        }
-    }
+    // Called by erase_program, on this thread, for each pipeline of the program: destroyed once
+    // the frames that may still draw with it are done.
+    g->pipelines.erase_program(p.serial, [](VkPipeline pipeline) {
+        defer([pipeline] { vkDestroyPipeline(g->device, pipeline, nullptr); });
+    });
     p.vertex = p.fragment = VK_NULL_HANDLE;
     p.compute = VK_NULL_HANDLE;
     p.compute_pipeline = VK_NULL_HANDLE;

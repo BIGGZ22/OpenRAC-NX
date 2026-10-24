@@ -1,19 +1,10 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 // Copyright (c) 2026 the OpenRAC contributors
 //
-// Writing a frame to a PNG, for the viewer's headless checks.
+// Forwards to scene/screenshot.h (writing a frame to a PNG), where the scene module now keeps it.
+// game/common still includes this path, because another lane owns its files while the restructure's
+// lanes run; P2-37 points it at scene/ and removes this file.
 
 #pragma once
 
-#include <cstdint>
-#include <string>
-#include <vector>
-
-namespace openrac::viewer {
-
-// `rgba` is width x height RGBA bytes, top row first.
-bool write_png(
-    const std::string& path, int width, int height, const std::vector<std::uint8_t>& rgba
-);
-
-}  // namespace openrac::viewer
+#include "scene/screenshot.h"

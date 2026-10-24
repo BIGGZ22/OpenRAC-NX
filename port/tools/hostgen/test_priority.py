@@ -4,13 +4,11 @@
 """
 import json
 import struct
-import sys
 import tempfile
 import unittest
 from pathlib import Path
 
-sys.path.insert(0, str(Path(__file__).resolve().parent))
-import priority  # noqa: E402
+import priority
 
 LOW = 0x15F000
 

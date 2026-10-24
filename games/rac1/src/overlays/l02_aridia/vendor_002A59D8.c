@@ -1065,7 +1065,7 @@ extern void func_L00_0025E4B0(void *m, short *p);
 extern void func_L00_0025E590(void *, void *);
 
 /* Path-following enemy: respawns at its home point on request, takes hits (dies and drops to the
-   ground), then follows its path and retargets the hero when it strays. Adapted from Lombyte (MIT) for PAL: src/overlays/l02/gameplay/entities/002400c8.c, FUN_L02_002d5c88. */
+   ground), then follows its path and retargets the hero when it strays. Adapted from Lombyte (GPL-3.0) for PAL: src/overlays/l02/gameplay/entities/002400c8.c, FUN_L02_002d5c88. */
 void PathEnemy_HitAndRespawn(unsigned char *moby) {
     Vars_2D70C0 *d = *(Vars_2D70C0 **)(moby + 0x78);
     char *h;
@@ -1647,7 +1647,7 @@ typedef struct {
 } Vars85b8;
 
 /* Hit reaction: takes damage, flinches or dies (knocked away from the hero), then retargets.
-   Adapted from Lombyte (MIT) for PAL by OpenRAC's tools/port.py: src/overlays/l02/gameplay/entities/002400c8.c, FUN_L02_002d85b8. */
+   Adapted from Lombyte (GPL-3.0) for PAL by OpenRAC's tools/port.py: src/overlays/l02/gameplay/entities/002400c8.c, FUN_L02_002d85b8. */
 void Moby612TakeHit(void *arg) {
     char *moby = arg;
     Vars85b8 *d = *(Vars85b8 **)(moby + 0x78);
@@ -2928,7 +2928,7 @@ extern u8 D_0014C150[][16];
 extern void func_L00_001FFED8(void *, int, float);
 
 /* Turns the moby from its spawn rotation to the goal angles once it is triggered (unkBC).
-   Adapted from Lombyte (MIT) for PAL by OpenRAC's tools/port.py: src/overlays/l02/gameplay/entities/002400c8.c, FUN_L02_002df948. */
+   Adapted from Lombyte (GPL-3.0) for PAL by OpenRAC's tools/port.py: src/overlays/l02/gameplay/entities/002400c8.c, FUN_L02_002df948. */
 void TurnMobyToGoalAngles(struct Moby *m) {
     Vec4 qx;
     Vec4 qy;

@@ -24,8 +24,7 @@ import re
 import sys
 from pathlib import Path
 
-sys.path.insert(0, str(Path(__file__).resolve().parent))
-from versionmap import Map  # noqa: E402
+from versionmap import Map
 
 SOURCE_NAME = re.compile(r"\bfunc_(?:L(\d\d)_)?([0-9A-F]{8})(?=__game\b|\b)")
 ENTRY = re.compile(r"\{0x([0-9A-F]{8})u, \(openrac_host_fn\)(\w+), \"(\w+)\"\}")

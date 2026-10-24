@@ -196,7 +196,7 @@ extern void func_001E9730_93EB8(void *, int) __asm__("func_001E9730");
 extern void func_0020D678_293EB8(void *) __asm__("func_0020D678");
 
 /* Drags each linked car to follow the train after it moved, then flags the coupling moby; with no cars it reports and deletes the train.
-   Adapted from Lombyte (MIT) for PAL by OpenRAC's tools/port.py: src/overlays/l03/gameplay/entities/00292578.c, FUN_L03_00292d10. */
+   Adapted from Lombyte (GPL-3.0) for PAL by OpenRAC's tools/port.py: src/overlays/l03/gameplay/entities/00292578.c, FUN_L03_00292d10. */
 void TrainDragCars(struct Moby *moby) {
     float old_pos[4];
     float old_rot[4];
@@ -989,7 +989,7 @@ extern void spawn_debris_0029E498(char *, int, float *, void *, int, int, float,
 void func_L03_0029ED60(char *moby);
 
 /* Wreck reaction for the Kerwan train and turret classes: when hit by a qualifying attack it bursts into the class debris, starts the shake/smoke effects and arms the respawn countdown (0x14A); once that runs out the moby is hidden again unless the caller keeps it, and switches its update to the car update.
-   Adapted from Lombyte (MIT) for PAL: src/overlays/l03/gameplay/entities/00292578.c, FUN_L03_0029d2e0. */
+   Adapted from Lombyte (GPL-3.0) for PAL: src/overlays/l03/gameplay/entities/00292578.c, FUN_L03_0029d2e0. */
 void TrainWreckReaction(char *moby, void *vel_in, int flag) {
     float spot[4];
     float vel[4];
@@ -1113,7 +1113,7 @@ extern void func_L03_0029DA60_9ED60(char *, char *) __asm__("func_L03_0029DA60")
 extern void func_001E9730_9ED60(void *, int, int) __asm__("func_001E9730");
 
 /* Train car update: keeps the cars of a group in step (stops them all when none can move), and on its first frame snaps to the nearest path node and sets up the spline; then runs along the path spline, steering, banking and spawning its hit/smoke effects; state 2 waits without a path, 3 waits a timer.
-   Adapted from Lombyte (MIT) for PAL by OpenRAC's tools/port.py: src/overlays/l03/gameplay/entities/00292578.c, FUN_L03_0029dba8. */
+   Adapted from Lombyte (GPL-3.0) for PAL by OpenRAC's tools/port.py: src/overlays/l03/gameplay/entities/00292578.c, FUN_L03_0029dba8. */
 void TrainCarUpdate(char *moby) {
     float zero[4];
     float old_rot[4];
@@ -1316,7 +1316,7 @@ void func_L00_00251E30_2BC038(char *) __asm__("func_L00_00251E30");
 char *func_L03_002BC038_r(Moby *parent, int unused, int color, int a3, int a4, float f, float scale) __asm__("func_L03_002BC038");
 
 /* Spawns a child effect (moby 0xEB) on the parent: copies its position and rotation, then sets the colour, timers and scale.
-   Adapted from Lombyte (MIT) for PAL by OpenRAC's tools/port.py: src/overlays/l03/gameplay/entities/00292578.c, FUN_L03_002bad40. */
+   Adapted from Lombyte (GPL-3.0) for PAL by OpenRAC's tools/port.py: src/overlays/l03/gameplay/entities/00292578.c, FUN_L03_002bad40. */
 char *func_L03_002BC038_r(Moby *parent, int unused, int color, int a3, int a4, float f, float scale) {
     char *m = func_0020D348_2BC038(0xEB);
     if (m) {
@@ -1448,7 +1448,7 @@ extern void func_00213DE0(void *, int, int, int);
 extern void func_L00_00265050_C6F80(char *, int, float *, void *, int, int, float, float *, float *, float *) __asm__("func_L00_00265050");
 
 /* Kerwan enemy update: waits at home, walks its path or chases the target picked by FUN_L03_0024e830 (its partner moby data->0x248 is a class 0x23E), attacks in range, returns home, dies (states 8, 9, 21).
-   Adapted from Lombyte (MIT) for PAL by OpenRAC's tools/port.py: src/overlays/l03/gameplay/entities/00292578.c, FUN_L03_002c5bb8. */
+   Adapted from Lombyte (GPL-3.0) for PAL by OpenRAC's tools/port.py: src/overlays/l03/gameplay/entities/00292578.c, FUN_L03_002c5bb8. */
 void Moby573Update(char *moby) {
     Tgt2c5bb8 tgt;
     float dir[4];
@@ -2840,7 +2840,7 @@ extern void func_L00_0025E590_2CA970(void *, void *) __asm__("func_L00_0025E590"
 
 void func_L03_002CA970_r(Moby *m) __asm__("func_L03_002CA970");
 
-/* Adapted from Lombyte (MIT) for PAL by OpenRAC's tools/port.py: src/overlays/l03/gameplay/entities/00292578.c, FUN_L03_002c95a8. */
+/* Adapted from Lombyte (GPL-3.0) for PAL by OpenRAC's tools/port.py: src/overlays/l03/gameplay/entities/00292578.c, FUN_L03_002c95a8. */
 void func_L03_002CA970_r(Moby *m) {
     float vec[4];
     int kind;
@@ -3093,7 +3093,7 @@ extern int func_L00_00260D30_2CB068(char *, char *, float) __asm__("func_L00_002
 void func_L03_002CB068_r(Moby *m) __asm__("func_L03_002CB068");
 
 /* Picks the path node to head for next: walks the path ring from the start and keeps the node best aligned with the target direction, else the one nearest the target (but at least 16 units away).
-   Adapted from Lombyte (MIT) for PAL by OpenRAC's tools/port.py: src/overlays/l03/gameplay/entities/00292578.c, FUN_L03_002c9ca0. */
+   Adapted from Lombyte (GPL-3.0) for PAL by OpenRAC's tools/port.py: src/overlays/l03/gameplay/entities/00292578.c, FUN_L03_002c9ca0. */
 void func_L03_002CB068_r(Moby *m) {
     Tgt2C8398_2CB068 target;
     float near[4];

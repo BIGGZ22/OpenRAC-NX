@@ -15,7 +15,7 @@ extern void func_001F9C48(float scale, void *out, void *joint);
 extern void func_L00_00254218(void *moby, short joint, int flags);
 
 /* Joint positions in scratchpad, 16 bytes each.
-   Adapted from Lombyte (MIT) for PAL by OpenRAC's tools/port.py: src/overlays/shared/gameplay/state/00263a28.c, FUN_L01_00263a28. */
+   Adapted from Lombyte (GPL-3.0) for PAL by OpenRAC's tools/port.py: src/overlays/shared/gameplay/state/00263a28.c, FUN_L01_00263a28. */
 int func_L01_002649D8(char *moby, int index, unsigned int *type, float *result,
                       float *radius, float *distance)
 {

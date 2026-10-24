@@ -178,7 +178,7 @@ void func_00119F38(double v) {
 /* _printf: the SDK libc formatter behind printf/sprintf: walks fmt, takes
    each argument from the 8-byte slots at ap and writes characters through
    the output hook at D_0012FD00, with interrupts held off around it.
-   Adapted from Lombyte (MIT): src/sdk/debug/printf_impl.c, _printf. */
+   Adapted from Lombyte (GPL-3.0): src/sdk/debug/printf_impl.c, _printf. */
 
 extern s32 DIntr_A0A0(void) __asm__("func_0011D960");
 extern s32 EnableInterrupts_A0A0(void) __asm__("func_0011D9A8");
@@ -597,7 +597,7 @@ extern void func_0011AD70(void *addr, s32 size);
 extern s32 func_00118E20();
 extern s32 func_00118E30();
 
-/* Adapted from Lombyte (MIT) for PAL by OpenRAC's tools/port.py: src/sdk/rpc/sce_sif_send_cmd.c, _sceSifSendCmd. */
+/* Adapted from Lombyte (GPL-3.0) for PAL by OpenRAC's tools/port.py: src/sdk/rpc/sce_sif_send_cmd.c, _sceSifSendCmd. */
 s32 func_0011AA90(u32 packet, s32 mode, SifCmd *cmd, s32 size, u32 src, u32 dst, s32 dst_size) {
     SifDma tags[2];
     s32 num;
@@ -707,7 +707,7 @@ extern void func_0011B198(void *, void *);
 
 /* sceSifInitRpc: once, set up the RPC tables and command handlers, then
    tell the IOP (SIF register 0x80000002) and wait for it. Adapted from
-   Lombyte (MIT) for PAL. */
+   Lombyte (GPL-3.0) for PAL. */
 void func_0011AE20(int mode) {
     int *packet;
 
@@ -1005,7 +1005,7 @@ extern int func_00118C70(void *);   /* CreateSema */
 extern void func_00118C80(int);     /* DeleteSema */
 extern int func_00118CB0(int);      /* WaitSema */
 
-/* sceSifBindRpc. Adapted from Lombyte (MIT) for PAL. */
+/* sceSifBindRpc. Adapted from Lombyte (GPL-3.0) for PAL. */
 int func_0011B2F8(void *client, int arg1, int arg2) {
     BindClient *arg0 = client;
     int sema_param[6];
@@ -1139,7 +1139,7 @@ extern s32_1B4C8 func_0011B090_1B4C8() __asm__("func_0011B090");
 extern s32_1B4C8 func_0011ABC8();
 extern s32_1B4C8 func_0011AD70_1B4C8() __asm__("func_0011AD70");
 
-/* Adapted from Lombyte (MIT) for PAL by OpenRAC's tools/port.py: src/sdk/rpc/sce_sif_call_rpc.c, sceSifCallRpc. */
+/* Adapted from Lombyte (GPL-3.0) for PAL by OpenRAC's tools/port.py: src/sdk/rpc/sce_sif_call_rpc.c, sceSifCallRpc. */
 s32_1B4C8 func_0011B4C8_r(struct SifRpcClient_1B4C8 *client, s32_1B4C8 rpc_number, s32_1B4C8 mode, s32_1B4C8 send_buf, s32_1B4C8 send_size,
                           s32_1B4C8 recv_buf, s32_1B4C8 recv_size, s32_1B4C8 end_func, s32_1B4C8 end_data) __asm__("func_0011B4C8");
 s32_1B4C8 func_0011B4C8_r(struct SifRpcClient_1B4C8 *client, s32_1B4C8 rpc_number, s32_1B4C8 mode, s32_1B4C8 send_buf, s32_1B4C8 send_size,
@@ -1623,7 +1623,7 @@ extern struct SifFileSlot *func_0011B770_1BF80(void) __asm__("func_0011B770");
 extern s32 func_0011BCB0(void);
 extern s32 func_0011B4C8(void *, s32, s32, void *, s32, void *, s32, void *, void *);
 
-/* Adapted from Lombyte (MIT) for PAL by OpenRAC's tools/port.py: src/sdk/library/sceopen.c, sceOpen. */
+/* Adapted from Lombyte (GPL-3.0) for PAL by OpenRAC's tools/port.py: src/sdk/library/sceopen.c, sceOpen. */
 s32 func_0011BF80(const u8 *path, s32 flags, ...)
 {
     struct SemaphoreParameters semaphore_parameters;
@@ -1731,7 +1731,7 @@ extern int func_00118CB0(int);
 extern int func_0011B4C8();
 extern int func_0011BC40_arg(int) __asm__("func_0011BC40");
 
-/* sceClose: close a SIF file handle, adapted from Lombyte (MIT) for PAL. */
+/* sceClose: close a SIF file handle, adapted from Lombyte (GPL-3.0) for PAL. */
 int func_0011C208(unsigned int fd) {
     CloseSema sema;
     int result;
@@ -1811,7 +1811,7 @@ extern s32 func_0011BC70_1C388(void) __asm__("func_0011BC70");
 extern s32 func_00118C70_1C388(struct SemaphoreParameters2 *) __asm__("func_00118C70");
 extern s32 func_00118C80_1C388(s32) __asm__("func_00118C80");
 
-/* Adapted from Lombyte (MIT) for PAL by OpenRAC's tools/port.py: src/sdk/library/sce_lseek.c, sceLseek. */
+/* Adapted from Lombyte (GPL-3.0) for PAL by OpenRAC's tools/port.py: src/sdk/library/sce_lseek.c, sceLseek. */
 s32 func_0011C388(s32 fd, s32 offset, s32 origin)
 {
     struct FsSeekRequest *request;
@@ -1898,7 +1898,7 @@ extern s32 func_00118C70_1C5C0(struct SemaphoreParameters2 *) __asm__("func_0011
 extern s32 func_00118C80_1C5C0(s32) __asm__("func_00118C80");
 extern void func_0011AD70(void *, s32);
 
-/* Adapted from Lombyte (MIT) for PAL by OpenRAC's tools/port.py: src/sdk/library/sceRead.c, sceRead. */
+/* Adapted from Lombyte (GPL-3.0) for PAL by OpenRAC's tools/port.py: src/sdk/library/sceRead.c, sceRead. */
 s32 func_0011C5C0(s32 fd, void *buffer, s32 length)
 {
     struct FsReadRequest *request;
@@ -1992,7 +1992,7 @@ extern s32 func_00118CB0(s32);
 extern void func_0011AD70(void *, s32);
 extern s32 func_0011B4C8(void *, s32, s32, void *, s32, void *, s32, void *, void *);
 
-/* Adapted from Lombyte (MIT) for PAL by OpenRAC's tools/port.py: src/sdk/library/scewrite.c, sceWrite. */
+/* Adapted from Lombyte (GPL-3.0) for PAL by OpenRAC's tools/port.py: src/sdk/library/scewrite.c, sceWrite. */
 s32 func_0011C820(s32 fd, u8 *buffer, s32 length)
 {
     struct FsWriteRequest *request;

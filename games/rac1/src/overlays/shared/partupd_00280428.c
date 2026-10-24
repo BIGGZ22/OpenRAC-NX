@@ -71,7 +71,7 @@ extern char *func_00218928_86530(int) __asm__("func_00218928");
 extern int func_001FA898(float);
 
 /* Allocates a type 0x29 particle and fills it from the arguments; kind 0xFF derives the frame from flags and picks one of two blend modes.
-   Adapted from Lombyte (MIT) for PAL by OpenRAC's tools/port.py: src/overlays/shared/rendering/0027f660.c, FUN_L01_00285768. */
+   Adapted from Lombyte (GPL-3.0) for PAL by OpenRAC's tools/port.py: src/overlays/shared/rendering/0027f660.c, FUN_L01_00285768. */
 char *PartType41Spawn(float scale, void *pos, int a, int idx, int b, unsigned char flags, short h, unsigned char kind) {
     char *r = func_00218928_86530(0x29);
     if (r != 0) {
@@ -205,7 +205,7 @@ typedef struct {
     float e[1][4];
 } List_8C3A8;
 
-/* Adapted from Lombyte (MIT) for PAL by OpenRAC's tools/port.py: src/overlays/shared/rendering_0027f660.c, FUN_L01_0028b5e0. */
+/* Adapted from Lombyte (GPL-3.0) for PAL by OpenRAC's tools/port.py: src/overlays/shared/rendering_0027f660.c, FUN_L01_0028b5e0. */
 int FindClosestPointPair(char *a0, List_8C3A8 *list, char *pt, char *out) {
     int idx0 = -1;
     int idx1 = -1;
@@ -364,7 +364,7 @@ int func_L01_0028C5F0_8C958(T_28b828 *a, int b) __asm__("func_L01_0028C5F0");
 void func_L01_0028C690(void *out, int *l, int idx, float a, float b);
 void func_L01_0028C848(float t, void *out, void *p1, void *p2, void *p3, void *p4);
 
-/* Adapted from Lombyte (MIT) for PAL by OpenRAC's tools/port.py: src/overlays/shared/rendering/0027f660.c, FUN_L01_0028bb90. */
+/* Adapted from Lombyte (GPL-3.0) for PAL by OpenRAC's tools/port.py: src/overlays/shared/rendering/0027f660.c, FUN_L01_0028bb90. */
 float TracePathWithParticles(float a, float b, T_28b828 *path, int particles, void *moby) {
     OvlVec4 previousTangent;
     OvlVec4 nextTangent;

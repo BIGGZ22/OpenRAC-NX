@@ -85,7 +85,7 @@ typedef union {
     } parts;
 } ieee_double_shape_type;
 
-/* Adapted from Lombyte (MIT) for PAL by OpenRAC's tools/port.py: src/runtime/newlib/double_is_not_nan.c, double_is_not_nan. */
+/* Adapted from Lombyte (GPL-3.0) for PAL by OpenRAC's tools/port.py: src/runtime/newlib/double_is_not_nan.c, double_is_not_nan. */
 s32 func_00116168(f64 x) {
     s32 hx;
     s32 lx;
@@ -103,7 +103,7 @@ s32 func_00116168(f64 x) {
 }
 
 
-/* Adapted from Lombyte (MIT) for PAL by OpenRAC's tools/port.py: src/math/classify_float_bits.c, ClassifyDoubleNaN. */
+/* Adapted from Lombyte (GPL-3.0) for PAL by OpenRAC's tools/port.py: src/math/classify_float_bits.c, ClassifyDoubleNaN. */
 s32 func_001161B0(f64 x) {
     s32 hx;
     s32 lx;

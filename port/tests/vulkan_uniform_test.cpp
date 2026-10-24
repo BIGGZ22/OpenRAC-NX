@@ -2,6 +2,8 @@
 #include <array>
 #include <chrono>
 #include <cmath>
+#include <cstddef>
+#include <cstdint>
 #include <cstdio>
 #include <cstdlib>
 #include <string>
@@ -84,6 +86,256 @@ void main() {
     glDeleteBuffers(1, &buffer);
     glDeleteTextures(3, textures.data());
     glDeleteVertexArrays(1, &vao);
+    CHECK(glGetError() == GL_NO_ERROR);
+}
+
+// ---- Pipelines and descriptor sets by state (R-04, vk-draw-cache) ----
+
+// The states the state-bounce test draws with: each changes one input of a draw's pipeline or of
+// its descriptor set from the base state.
+enum class Bounce {
+    BlendFactor,      // the blend's destination factor
+    DepthFunc,        // the depth test's function
+    AttributeFormat,  // the format of the tint attribute
+    BoundTexture,     // the texture on unit 0
+};
+
+// What the state-bounce test draws with: a program that shows its texture times its tint, two
+// textures and two tint buffers of different formats, and a 3 by 1 target with depth.
+struct BounceFixture {
+    renderer::Shader shader;
+    renderer::FrameBuffer target;
+    unsigned vao = 0;
+    std::array<unsigned, 2> textures{};  // White, then blue.
+    unsigned byte_tints = 0;             // White as normalised bytes, three vertices.
+    unsigned float_tints = 0;            // Green as floats, three vertices.
+};
+
+// Sets the base state, then `which`'s state A (`second` false) or B (`second` true).
+void set_bounce_state(const BounceFixture& fixture, Bounce which, bool second) {
+    glBlendFuncSeparate(GL_ONE, GL_ZERO, GL_ONE, GL_ZERO);
+    glDepthFunc(GL_ALWAYS);
+    glBindBuffer(GL_ARRAY_BUFFER, fixture.byte_tints);
+    glVertexAttribPointer(1, 4, GL_UNSIGNED_BYTE, GL_TRUE, 0, nullptr);
+    glActiveTexture(GL_TEXTURE0);
+    glBindTexture(GL_TEXTURE_2D, fixture.textures[0]);
+
+    // State B of each kind; A is the base.
+    if (!second) {
+        return;
+    }
+
+    switch (which) {
+        // Keeps the clear colour instead of writing the draw's.
+        case Bounce::BlendFactor:
+            glBlendFuncSeparate(GL_ZERO, GL_ONE, GL_ZERO, GL_ONE);
+            break;
+        // Fails every fragment, so the clear colour stays.
+        case Bounce::DepthFunc:
+            glDepthFunc(GL_NEVER);
+            break;
+        // Green floats instead of white bytes: another vertex format, so another pipeline.
+        case Bounce::AttributeFormat:
+            glBindBuffer(GL_ARRAY_BUFFER, fixture.float_tints);
+            glVertexAttribPointer(1, 4, GL_FLOAT, GL_FALSE, 0, nullptr);
+            break;
+        // The blue texture: another descriptor set.
+        case Bounce::BoundTexture:
+            glBindTexture(GL_TEXTURE_2D, fixture.textures[1]);
+            break;
+    }
+}
+
+// Makes the state-bounce fixture's program, textures, buffers and target. False when one fails.
+bool make_bounce_fixture(BounceFixture& fixture, std::string& error) {
+    const bool built = fixture.shader.build(
+        "pipeline and descriptor cache fixture",
+        R"(#version 410 core
+layout(location = 1) in vec4 tint;
+out vec4 v_tint;
+void main() {
+    vec2 p = vec2((gl_VertexID << 1) & 2, gl_VertexID & 2);
+    v_tint = tint;
+    gl_Position = vec4(p * 2.0 - 1.0, 0, 1);
+}
+)",
+        R"(#version 410 core
+uniform sampler2D picture;
+in vec4 v_tint;
+layout(location = 0) out vec4 result;
+void main() {
+    result = texture(picture, vec2(0.5)) * v_tint;
+}
+)",
+        error
+    );
+
+    // A program or target that cannot be made leaves nothing to draw.
+    if (!built || !fixture.target.create(3, 1, error)) {
+        return false;
+    }
+
+    // One texel each: white, then blue.
+    constexpr std::array<std::array<unsigned char, 4>, 2> kTexels = {{
+        {255, 255, 255, 255},
+        {0, 0, 255, 255},
+    }};
+    glGenTextures(2, fixture.textures.data());
+
+    // Each texture, sampled without filtering.
+    for (std::size_t n = 0; n < kTexels.size(); ++n) {
+        glBindTexture(GL_TEXTURE_2D, fixture.textures[n]);
+        glTexImage2D(
+            GL_TEXTURE_2D, 0, GL_RGBA8, 1, 1, 0, GL_RGBA, GL_UNSIGNED_BYTE, kTexels[n].data()
+        );
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+    }
+
+    // The tint of the triangle's three vertices, in two formats.
+    constexpr std::array<unsigned char, 12> kByteTints =
+        {255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255};
+    constexpr std::array<float, 12> kFloatTints = {0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1};
+    glGenBuffers(1, &fixture.byte_tints);
+    glBindBuffer(GL_ARRAY_BUFFER, fixture.byte_tints);
+    glBufferData(GL_ARRAY_BUFFER, sizeof kByteTints, kByteTints.data(), GL_STATIC_DRAW);
+    glGenBuffers(1, &fixture.float_tints);
+    glBindBuffer(GL_ARRAY_BUFFER, fixture.float_tints);
+    glBufferData(GL_ARRAY_BUFFER, sizeof kFloatTints, kFloatTints.data(), GL_STATIC_DRAW);
+    glGenVertexArrays(1, &fixture.vao);
+    glBindVertexArray(fixture.vao);
+    glEnableVertexAttribArray(1);
+    return true;
+}
+
+// Draws the fixture's triangle into pixel `x` of its target.
+void draw_bounce_pixel(int x) {
+    glViewport(x, 0, 1, 1);
+    glDrawArrays(GL_TRIANGLES, 0, 3);
+}
+
+// Tests that two states differing in one input give different pipelines or descriptor sets, and
+// that after a bounce A, B, A with no draw between, the draw is A's again: pixel 0 is drawn with
+// A, pixel 1 with B, pixel 2 after the bounce, and pixel 2 must be pixel 0, not pixel 1. The
+// third draw also makes no pipeline: A's is found, not a new one or B's.
+void test_a_state_bounce_draws_the_first_state_again(BounceFixture& fixture, Bounce which) {
+    glBindFramebuffer(GL_FRAMEBUFFER, fixture.target.id());
+    glBindVertexArray(fixture.vao);
+    glEnable(GL_DEPTH_TEST);
+    glEnable(GL_BLEND);
+    glDisable(GL_CULL_FACE);
+    glDisable(GL_SCISSOR_TEST);
+    glDepthMask(GL_TRUE);
+    glClearColor(0.25f, 0.25f, 0.25f, 1.0f);
+    glClearDepth(0.5);
+    glViewport(0, 0, 3, 1);
+    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+    fixture.shader.use();
+    glUniform1i(fixture.shader.uniform("picture"), 0);
+    set_bounce_state(fixture, which, false);
+    draw_bounce_pixel(0);
+    set_bounce_state(fixture, which, true);
+    draw_bounce_pixel(1);
+    set_bounce_state(fixture, which, false);
+    set_bounce_state(fixture, which, true);
+    set_bounce_state(fixture, which, false);
+    const auto before = vkgl::submission_counters();
+    draw_bounce_pixel(2);
+    const auto after = vkgl::submission_counters();
+    const std::vector<std::uint8_t> pixels = fixture.target.read_rgba();
+    constexpr std::size_t kChannels = 4;
+
+    CHECK(after.pipelines_created == before.pipelines_created);
+    CHECK(pixels.size() == 3 * kChannels);
+
+    // A target that did not read back has no pixels to compare.
+    if (pixels.size() != 3 * kChannels) {
+        return;
+    }
+
+    const auto pixel = [&pixels](std::size_t x) {
+        return std::vector<std::uint8_t>(
+            pixels.begin() + static_cast<std::ptrdiff_t>(x * kChannels),
+            pixels.begin() + static_cast<std::ptrdiff_t>((x + 1) * kChannels)
+        );
+    };
+    CHECK(pixel(0) != pixel(1));
+    CHECK(pixel(2) == pixel(0));
+}
+
+// Draws one triangle with a program made for it into the fixture's target, so that its pipeline
+// is made before the fixture's, and returns the program.
+renderer::Shader draw_with_an_earlier_program(const BounceFixture& fixture, std::string& error) {
+    renderer::Shader earlier;
+    CHECK(earlier.build(
+        "a program deleted while others' pipelines stay",
+        R"(#version 410 core
+void main() {
+    vec2 p = vec2((gl_VertexID << 1) & 2, gl_VertexID & 2);
+    gl_Position = vec4(p * 2.0 - 1.0, 0, 1);
+}
+)",
+        R"(#version 410 core
+layout(location = 0) out vec4 result;
+void main() {
+    result = vec4(1.0, 0.0, 1.0, 1.0);
+}
+)",
+        error
+    ));
+    glBindFramebuffer(GL_FRAMEBUFFER, fixture.target.id());
+    glBindVertexArray(fixture.vao);
+    glDisable(GL_DEPTH_TEST);
+    glDisable(GL_BLEND);
+    earlier.use();
+    draw_bounce_pixel(0);
+    return earlier;
+}
+
+// Runs the state-bounce test for each kind of state, on a fixture of its own. A program whose
+// pipeline was made before the fixture's is deleted halfway: its pipelines go, and the fixture's,
+// made after it, must stay usable (the validation layer reports a destroyed one).
+void test_state_bounces() {
+    BounceFixture fixture;
+    std::string error;
+    const bool made = make_bounce_fixture(fixture, error);
+    CHECK(made);
+
+    // Without the fixture there is nothing to draw.
+    if (!made) {
+        std::printf("%s\n", error.c_str());
+        return;
+    }
+
+    renderer::Shader earlier = draw_with_an_earlier_program(fixture, error);
+    constexpr std::array<Bounce, 4> kBounces =
+        {Bounce::BlendFactor, Bounce::DepthFunc, Bounce::AttributeFormat, Bounce::BoundTexture};
+
+    // Each kind of state.
+    for (const Bounce which : kBounces) {
+        test_a_state_bounce_draws_the_first_state_again(fixture, which);
+    }
+
+    earlier.release();
+
+    // The frames that end before the deleted program's pipelines are destroyed: a frame slot's
+    // deferred work runs when the slot comes round again, and the backend has two.
+    constexpr int kFramesUntilDestroyed = 3;
+
+    // Each of those frames ended.
+    for (int frame = 0; frame < kFramesUntilDestroyed; ++frame) {
+        vkgl::present();
+    }
+
+    // Each kind of state again, with the fixture's pipelines as they were made.
+    for (const Bounce which : kBounces) {
+        test_a_state_bounce_draws_the_first_state_again(fixture, which);
+    }
+
+    glDeleteTextures(2, fixture.textures.data());
+    glDeleteBuffers(1, &fixture.byte_tints);
+    glDeleteBuffers(1, &fixture.float_tints);
+    glDeleteVertexArrays(1, &fixture.vao);
     CHECK(glGetError() == GL_NO_ERROR);
 }
 
@@ -327,5 +579,6 @@ void main() {
     glDeleteTextures(2, textures.data());
     glDeleteVertexArrays(1, &vao);
     texel_buffer_fallbacks();
+    test_state_bounces();
     return test::result();
 }

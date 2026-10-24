@@ -367,7 +367,7 @@ extern void func_0022CEB8();
 extern void func_00234C98_2C188(s32, u64) __asm__("func_00234C98");
 extern s32 func_001160D8();
 
-/* Adapted from Lombyte (MIT) for PAL by OpenRAC's tools/port.py: src/rendering/sky/update_sky_effects.c, update_sky_effects. */
+/* Adapted from Lombyte (GPL-3.0) for PAL by OpenRAC's tools/port.py: src/rendering/sky/update_sky_effects.c, update_sky_effects. */
 void SkyLevelGeneric___maybe(void) {
     f32 trig_product;
     f32 elevation;
@@ -503,7 +503,7 @@ extern void func_0022C7E0(void);
 extern void func_0022C870(void);
 extern void func_00234C98_2C5A0(s32, s64) __asm__("func_00234C98");
 
-/* Adapted from Lombyte (MIT) for PAL by OpenRAC's tools/port.py: src/rendering/sky/draw_sky_shells.c, draw_sky_shells. */
+/* Adapted from Lombyte (GPL-3.0) for PAL by OpenRAC's tools/port.py: src/rendering/sky/draw_sky_shells.c, draw_sky_shells. */
 void DrawSkyShells(void) {
     f32 rotation_angles[4];
     f32 shell_scale;
@@ -715,7 +715,7 @@ extern void func_0020C230_2CA00(void) __asm__("func_0020C230");
 extern s32 func_0022D2AC_2CA00(s32, s32, s32, s32) __asm__("func_0022D2AC");
 extern void func_0022D520_2CA00(s32, s32, s32, s32) __asm__("func_0022D520");
 
-/* Adapted from Lombyte (MIT) for PAL by OpenRAC's tools/port.py: src/rendering/sky/sky_draw_shell_textured.c, sky_draw_shell_textured. */
+/* Adapted from Lombyte (GPL-3.0) for PAL by OpenRAC's tools/port.py: src/rendering/sky/sky_draw_shell_textured.c, sky_draw_shell_textured. */
 void func_0022CA00_r(struct Shell_2CA00 *shell) __asm__("func_0022CA00");
 /* SkyDrawShellTextured */
 void func_0022CA00_r(struct Shell_2CA00 *shell) {
@@ -808,7 +808,7 @@ extern s32 func_0022D2AC_2CC40(s32, s32, s32, s32) __asm__("func_0022D2AC");
 extern void func_0022D3F8_2CC40(s32, s32, s32, s32) __asm__("func_0022D3F8");
 extern s32 func_00234C98_2CC40(s32, s64) __asm__("func_00234C98");
 
-/* Adapted from Lombyte (MIT) for PAL by OpenRAC's tools/port.py: src/rendering/sky/sky_draw_shell_gouraud.c, sky_draw_shell_gouraud. */
+/* Adapted from Lombyte (GPL-3.0) for PAL by OpenRAC's tools/port.py: src/rendering/sky/sky_draw_shell_gouraud.c, sky_draw_shell_gouraud. */
 void func_0022CC40_r(struct Shell_2CC40 *shell) __asm__("func_0022CC40");
 /* SkyDrawShellGouraud */
 void func_0022CC40_r(struct Shell_2CC40 *shell) {

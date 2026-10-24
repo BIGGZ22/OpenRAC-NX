@@ -110,7 +110,7 @@ extern void func_L00_001FF4B0(void *, void *, float);
 extern void func_001F9EC0(void *, void *, void *);
 extern int func_0022ED80(int, int, int);
 
-/* Adapted from Lombyte (MIT) for PAL by OpenRAC's tools/port.py: src/overlays/l07/gameplay/entities/0030cd20.c, FUN_L07_0031a9e8. */
+/* Adapted from Lombyte (GPL-3.0) for PAL by OpenRAC's tools/port.py: src/overlays/l07/gameplay/entities/0030cd20.c, FUN_L07_0031a9e8. */
 void MovingMobyL07_Update(struct Moby *moby) {
     struct L07MovingVars *vars = (struct L07MovingVars *)moby->pvars;
     struct Moby *target;

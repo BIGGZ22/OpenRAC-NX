@@ -50,7 +50,7 @@ void UploadImageStrip(int a, int b, int n) {
     }
 }
 LINKER_REMNANT("asm/overlays", func_L00_002A2668);
-/* classifies a point against wrapped ranges and bounds; returns a bitmask. Adapted from Lombyte (MIT) for PAL: src/overlays/shared/runtime_dma_002a13d8.c, FUN_L00_002a13f0. */
+/* classifies a point against wrapped ranges and bounds; returns a bitmask. Adapted from Lombyte (GPL-3.0) for PAL: src/overlays/shared/runtime_dma_002a13d8.c, FUN_L00_002a13f0. */
 struct WalkAnim;
 int GetFootPhaseMask(struct WalkAnim *anim, float v) {
     int bit = 1;

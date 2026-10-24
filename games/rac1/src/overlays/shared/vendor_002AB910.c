@@ -933,7 +933,7 @@ typedef struct M_d {
     V_d *v;
 } M_d;
 
-/* updates a decaying moby: spins down its position fields and fades it out. Adapted from Lombyte (MIT) for PAL: overlays/shared/unclassified_002aa670.c, FUN_L00_002acad8. */
+/* updates a decaying moby: spins down its position fields and fades it out. Adapted from Lombyte (GPL-3.0) for PAL: overlays/shared/unclassified_002aa670.c, FUN_L00_002acad8. */
 void SpinFadeOutUpdate(M_d *m) {
     V_d *v = m->v;
     float a, b;
@@ -1033,7 +1033,7 @@ typedef union {
     float f[4];
 } V2AE110 __attribute__((aligned(16)));
 
-/* Spawns a type-0x79 moby with random spin axes and speeds, owned by the given object, at pos. Adapted from Lombyte (MIT) for PAL: overlays/shared/unclassified_002aa670.c, FUN_L00_002ace70. */
+/* Spawns a type-0x79 moby with random spin axes and speeds, owned by the given object, at pos. Adapted from Lombyte (GPL-3.0) for PAL: overlays/shared/unclassified_002aa670.c, FUN_L00_002ace70. */
 char *SpawnHeroBomb(int owner, void *pos) {
     char *m = spawn_79(0x79);
     if (m) {
@@ -1878,7 +1878,7 @@ typedef struct { float x0, x4, x8, xc; float x10, x14; short x18, x1a; float x1c
 extern C_2af5b8 D_L00_00161508;
 extern void func_L00_0026A7F8(void *, void *, int, int, int, int, int, int);
 
-// Per-frame update of a falling spark moby: emits a burst particle, moves, fades and dies when out of bounds. Adapted from Lombyte (MIT) for PAL: overlays/shared/unclassified_002aa670.c, FUN_L00_002af5b8.
+// Per-frame update of a falling spark moby: emits a burst particle, moves, fades and dies when out of bounds. Adapted from Lombyte (GPL-3.0) for PAL: overlays/shared/unclassified_002aa670.c, FUN_L00_002af5b8.
 void FallingSparkUpdate(unsigned char *m) {
     W_2af5b8 *w = *(W_2af5b8 **)(m + 0x78);
     C_2af5b8 c;
@@ -1927,7 +1927,7 @@ extern float func_L00_00258C80(float, float);
 typedef struct { unsigned char *o; float f4; float f8; short hc; short he; float p10[4]; int i20; float f24; float f28; } V;
 
 /* Spawns a particle moby of the given type owned by owner, with random spin and size.
-   Adapted from Lombyte (MIT) for PAL: src/overlays/shared/unclassified_002aa670.c, FUN_L00_002af8b0. */
+   Adapted from Lombyte (GPL-3.0) for PAL: src/overlays/shared/unclassified_002aa670.c, FUN_L00_002af8b0. */
 unsigned char *SpawnSpinningParticleMoby(unsigned char *owner, void *vel, void *pos, void *rot, int type, int n, float lo, float hi) {
     unsigned char *m = (unsigned char *)CreateMoby(type);
     if (m) {
@@ -2043,7 +2043,7 @@ extern char D_L00_00173F60[];
 extern short D_L00_001B0AF0[];
 
 // spawns an effect moby (class 0x99) at pos, tied to an owner and a target, and aims its starting state
-// Adapted from Lombyte (MIT) for PAL: overlays/shared/unclassified_002aa670.c, FUN_L00_002afc70.
+// Adapted from Lombyte (GPL-3.0) for PAL: overlays/shared/unclassified_002aa670.c, FUN_L00_002afc70.
 unsigned char *SpawnMissile(unsigned char *a, Vec4 *pos, unsigned char *tgt, float f12, float f13, float f14, float f15, float f16) {
     Vec4 tmp;
     unsigned char *m;
@@ -2165,7 +2165,7 @@ extern s32 func_L00_001EFFF0_B1290(void *, void *, s32, char *, void *) __asm__(
 extern s32 func_L00_0025D390_B1290(char *) __asm__("func_L00_0025D390");
 extern s32 func_L00_002608F0(char *);
 
-/* Adapted from Lombyte (MIT) for PAL by OpenRAC's tools/port.py: src/overlays/shared/unclassified_002aa670.c, FUN_L00_002affa8. */
+/* Adapted from Lombyte (GPL-3.0) for PAL by OpenRAC's tools/port.py: src/overlays/shared/unclassified_002aa670.c, FUN_L00_002affa8. */
 void FindMissileTarget(char *self, O *out, char *skip) {
     Vec4 v;
     Vec4 lv;
@@ -2666,7 +2666,7 @@ int fr_2b1af0(int) __asm__("func_001F9850");
 int rndi_2b1af0(int, int) __asm__("func_L00_00258BC8");
 void smoke_2b1af0(void *, void *, int, int, int, int, float, float, float, float, float) __asm__("func_L00_00272158");
 void spark_2b1af0(void *, void *, int, int, int, int, float) __asm__("func_L00_0026DA50");
-/* Moby update. Adapted from Lombyte (MIT) for PAL: overlays/shared/unclassified_002aa670.c, FUN_L00_002b1af0. */
+/* Moby update. Adapted from Lombyte (GPL-3.0) for PAL: overlays/shared/unclassified_002aa670.c, FUN_L00_002b1af0. */
 void EmitMuzzleSmoke(unsigned char *o) {
     V_2b1af0 b;
     V_2b1af0 a;
@@ -2728,7 +2728,7 @@ void func_002156E0(void *, void *, void *, float);
 int func_001FA898(float);
 int func_002140B0(int);
 
-/* Adapted from Lombyte (MIT) for PAL by OpenRAC's tools/port.py: src/overlays/shared/gameplay/entities/002aa670.c, FUN_L00_002b1de0. */
+/* Adapted from Lombyte (GPL-3.0) for PAL by OpenRAC's tools/port.py: src/overlays/shared/gameplay/entities/002aa670.c, FUN_L00_002b1de0. */
 void EmitMuzzleBurst(unsigned char *o) {
     V_2b1af0_B30C8 c;
     V_2b1af0_B30C8 a;

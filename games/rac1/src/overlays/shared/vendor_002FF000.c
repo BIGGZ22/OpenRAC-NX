@@ -100,7 +100,7 @@ extern void func_L01_0026E8E0(MoveCtl *);
 extern void func_L06_002FFF70();
 extern void func_L06_00300530_FF000(struct Moby *) __asm__("func_L06_00300530");
 
-/* Adapted from Lombyte (MIT) for PAL by OpenRAC's tools/port.py: src/overlays/shared/gameplay/entities/002fdbd0.c, FUN_L06_002fdbd0. */
+/* Adapted from Lombyte (GPL-3.0) for PAL by OpenRAC's tools/port.py: src/overlays/shared/gameplay/entities/002fdbd0.c, FUN_L06_002fdbd0. */
 void Moby1068Update(struct Moby *moby) {
     Moby1068Vars *vars = (Moby1068Vars *)moby->pvars;
     struct Moby *target;
@@ -748,7 +748,7 @@ extern u32 func_001FA8A8_00AB0(f32, s32, s32) __asm__("func_001FA8A8");
 extern void func_L00_001FD1D8(void *, void *, s32);
 
 /* Draws the beam as 15 textured quads between consecutive points of the moby's point list (data + 0x230), each twice: once with the odd corners pulled toward the centre (data + 0x210) and once raised by 0.25.
-   Adapted from Lombyte (MIT) for PAL by OpenRAC's tools/port.py: src/overlays/shared/gameplay/entities/002fdbd0.c, FUN_L06_002ff680. */
+   Adapted from Lombyte (GPL-3.0) for PAL by OpenRAC's tools/port.py: src/overlays/shared/gameplay/entities/002fdbd0.c, FUN_L06_002ff680. */
 void DrawBeam(char *moby) {
     char *data = *(char **)(moby + 0x78);
     QuadPacket_f680 pk[2];
@@ -1026,7 +1026,7 @@ struct LockVars_p {
     float f10;
 };
 
-/* Adapted from Lombyte (MIT) for PAL by OpenRAC's tools/port.py: src/overlays/shared/gameplay/vendor/00307578.c, FUN_L06_00307d30. */
+/* Adapted from Lombyte (GPL-3.0) for PAL by OpenRAC's tools/port.py: src/overlays/shared/gameplay/vendor/00307578.c, FUN_L06_00307d30. */
 void Moby1302Update(char *moby) {
     struct LockVars_p *data = *(struct LockVars_p **)(moby + 0x78);
     float pos[4];
@@ -1197,7 +1197,7 @@ void Moby1898Update(char *m) {
 }
 typedef int uq_b __attribute__((mode(TI)));
 
-/* Adapted from Lombyte (MIT) for PAL by OpenRAC's tools/port.py: src/overlays/shared/gameplay_vendor_00307578.c, FUN_L06_0030bef8. */
+/* Adapted from Lombyte (GPL-3.0) for PAL by OpenRAC's tools/port.py: src/overlays/shared/gameplay_vendor_00307578.c, FUN_L06_0030bef8. */
 void SpawnMoby1898(char *src, int a1, int a2, int a3) {
     uq_b v;
     char *vp = (char *)&v;
@@ -1226,7 +1226,7 @@ extern s32 D_L06_001624B0_FF000 SDATA(D_L06_001624B0);
 extern s32 D_L06_001624B4_FF000 SDATA(D_L06_001624B4);
 extern s32 D_L06_001624B8_FF000 SDATA(D_L06_001624B8);
 
-/* Adapted from Lombyte (MIT) for PAL: src/overlays/shared/gameplay/vendor/00307578.c, FUN_L06_0030bfa8. */
+/* Adapted from Lombyte (GPL-3.0) for PAL: src/overlays/shared/gameplay/vendor/00307578.c, FUN_L06_0030bfa8. */
 void Moby1898Draw(char *moby) {
     float *d = *(float **)(moby + 0x78);
     Vec4f pos;

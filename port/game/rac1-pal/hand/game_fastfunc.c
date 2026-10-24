@@ -44,6 +44,11 @@ static __inline__ void put(float *out, float x, float y, float z, unsigned w) {
     ((unsigned *)out)[3] = w;
 }
 
+/* The quadword an address lies in: lq, sq, lqc2 and sqc2 ignore the address's low four bits. */
+static __inline__ void *quad(void *p) {
+    return (void *)((unsigned)p & ~0xFu);
+}
+
 /* out = (0, 0, 1, 0): the unit vector $vf0 rotated one field to the left. (vmr32) */
 void func_001F9BC8(float *out) {
     put(out, 0.0f, 0.0f, 1.0f, 0);
@@ -155,16 +160,39 @@ void func_001F9DC0(float *out, float *a, float length) {
     put(out, x, y, z, bits_of(a, 3));
 }
 
+/*
+ * One product of the vector unit's multiplier: a factor with exponent 0 is zero and makes the
+ * product zero (with the sign of the two) whatever the other factor is, for the console's floats
+ * have no infinity or NaN (an exponent of 255 is an ordinary number); the host's 0 * NaN is a NaN.
+ * Such bit patterns sit in lanes no routine computes: the capsule query stores its push-out's w as
+ * a mesh vertex word it loaded (0xFFFFFF01, a -255), the hero's position takes that quadword whole,
+ * and func_L00_0024FF10 (HeroSyncMoby) multiplies (position - moby position) by a rotation whose
+ * fourth row is zero: 0 there on the console, here a NaN in the hero's collision primitive, which
+ * the camera's sphere query then hit (Oltanis: the camera, the stick's heading and the hero NaN).
+ */
+static __inline__ float vu_times(float a, float b) {
+    union {
+        float f;
+        unsigned u;
+    } p;
+    unsigned ua = bits_of(&a, 0), ub = bits_of(&b, 0);
+    if ((ua & 0x7F800000u) == 0 || (ub & 0x7F800000u) == 0) {
+        p.u = (ua ^ ub) & 0x80000000u;
+        return p.f;
+    }
+    return a * b;
+}
+
 /* out = m * v for a matrix of four columns and all four fields of v. (vmulax, vmadday, vmaddaz, vmaddw) */
 void func_001F9EE8(float *out, float *v, float *m) {
     float x = v[0], y = v[1], z = v[2], w = v[3];
     float r[4];
     int i;
     for (i = 0; i < 4; i++) {
-        float sum = m[i] * x;
-        sum = sum + m[4 + i] * y;
-        sum = sum + m[8 + i] * z;
-        r[i] = sum + m[12 + i] * w;
+        float sum = vu_times(m[i], x);
+        sum = sum + vu_times(m[4 + i], y);
+        sum = sum + vu_times(m[8 + i], z);
+        r[i] = sum + vu_times(m[12 + i], w);
     }
     out[0] = r[0];
     out[1] = r[1];
@@ -179,10 +207,10 @@ void func_001F9EC0(float *out, float *v, float *m) {
     float r[4];
     int i;
     for (i = 0; i < 4; i++) {
-        float sum = m[i] * x;
-        sum = sum + m[4 + i] * y;
-        sum = sum + m[8 + i] * z;
-        r[i] = sum + last[i] * w;
+        float sum = vu_times(m[i], x);
+        sum = sum + vu_times(m[4 + i], y);
+        sum = sum + vu_times(m[8 + i], z);
+        r[i] = sum + vu_times(last[i], w);
     }
     out[0] = r[0];
     out[1] = r[1];
@@ -195,8 +223,9 @@ float func_001F9B50(float x) {
     return 0.0f + openrac_sqrt(x);
 }
 
-/* Clears 16 bytes. (sq $0) */
-void func_001F9BC0(unsigned *p) {
+/* Clears the 16 bytes of the quadword p lies in. (sq $0: the address's low four bits are ignored) */
+void func_001F9BC0(unsigned *p_) {
+    unsigned *p = quad(p_);
     p[0] = 0;
     p[1] = 0;
     p[2] = 0;
@@ -221,8 +250,21 @@ int func_001F9850(int n) {
     return (int)(half + (float)n * D_0015EE60);
 }
 
-/* x cut to an integer. (cvt.w.s) */
+/* x cut to an integer. (cvt.w.s) The EE saturates what is out of range, 2^31 or more to 0x7FFFFFFF and
+ * -2^31 or less to 0x80000000 (its floats have no infinity or NaN); C leaves that undefined, and x86
+ * gives 0x80000000 for both. A host overflow, FLT_MAX for a divide by zero (openrac_fdiv) times a scale,
+ * came out as the most negative number there: is_value_within_interpolated_window (func_00215B18) rounds
+ * an animation step's length through here, which for the rate of a blend over 0 ticks is that. */
 int func_001FA898(float x) {
+    if (x >= 2147483648.0f) {
+        return 0x7FFFFFFF;
+    }
+    if (x < -2147483648.0f) {
+        return (int)0x80000000u;
+    }
+    if (x != x) {
+        return 0x7FFFFFFF;  /* a host NaN, which no EE value is: taken as the largest */
+    }
     return (int)x;
 }
 
@@ -405,9 +447,11 @@ void func_001F99B0(int *dst, int value, int bytes) {
     } while (bytes > 0);
 }
 
-/* FastMemZero16: clears 16 bytes at least once, then until the byte count is used up. */
+/* FastMemZero16: clears 16 bytes at least once, then until the byte count is used up. Each sq
+ * stores the quadword the address lies in, so a destination off a 16-byte boundary is cleared from
+ * the boundary below it (callers pass 8-aligned buffers too). */
 void func_001F99D8(void *dst_, int bytes) {
-    int *dst = dst_;
+    int *dst = quad(dst_);
     do {
         dst[0] = 0;
         dst[1] = 0;
@@ -418,10 +462,11 @@ void func_001F99D8(void *dst_, int bytes) {
     } while (bytes > 0);
 }
 
-/* FastMemCopy: copies 16 bytes at least once, then until the byte count is used up. */
+/* FastMemCopy: copies 16 bytes at least once, then until the byte count is used up (lq and sq, so
+ * both addresses are taken down to their quadword's). */
 void func_001F9A98(void *to, void *from, int bytes) {
-    int *dst = to;
-    int *src = from;
+    int *dst = quad(to);
+    int *src = quad(from);
     do {
         int a = src[0], b = src[1], c = src[2], d = src[3];
         dst[0] = a;
@@ -434,8 +479,9 @@ void func_001F9A98(void *to, void *from, int bytes) {
     } while (bytes > 0);
 }
 
-/* FastMemOr16: dst = a | b, 16 bytes at a time, at least once. */
-void func_001F9AC0(int *dst, int *a, int *b, int bytes) {
+/* FastMemOr16: dst = a | b, 16 bytes at a time, at least once (on quadwords, as FastMemCopy). */
+void func_001F9AC0(int *dst_, int *a_, int *b_, int bytes) {
+    int *dst = quad(dst_), *a = quad(a_), *b = quad(b_);
     do {
         int x = a[0] | b[0], y = a[1] | b[1], z = a[2] | b[2], w = a[3] | b[3];
         dst[0] = x;
@@ -611,10 +657,9 @@ void func_001F9E10(float *out, float *v, float len) {
     ((unsigned *)out)[3] = w;
 }
 
-/* The rotation of the quaternion q (x, y, z, w) as three matrix rows; out's fourth row is left
- * as it was. (Two products of q with 2q, then the usual sums; the rows' w are 0.) */
-void func_001FA648(void *q_, void *out_) {
-    float *q = q_, *out = out_;
+/* The rotation of the quaternion q (x, y, z, w) as three matrix rows, the rows' w 0. (Two
+ * products of q with 2q, then the usual sums, in the vector unit's order.) */
+static void quat_rows(float *q, float *out) {
     const float x = q[0], y = q[1], z = q[2], w = q[3];
     const float x2 = x + x, y2 = y + y, z2 = z + z;
     const float wx = x2 * w, wy = y2 * w, wz = z2 * w;
@@ -634,33 +679,53 @@ void func_001FA648(void *q_, void *out_) {
     out[11] = 0.0f;
 }
 
-/* The quaternion t of the way from a to b, the short way round (b negated when a and b point
- * apart), normalised: out = (a (1 - t) +- b t) / |a (1 - t) +- b t|. (VU0 macro mode in retail.) */
+/* The quaternion's rotation as three matrix rows; out's fourth row is left as it was. */
+void func_001FA648(void *q_, void *out_) {
+    quat_rows(q_, out_);
+}
+
+/*
+ * The quaternion t of the way from a to b, the short way round (b negated when a and b point
+ * apart), normalised: out = (a (1 - t) +- b t) / |a (1 - t) +- b t|. (VU0 macro mode in retail:
+ * the sums go through the accumulator, y + x first; the way round is the sign bit of the dot
+ * product, so -0 counts as apart; vrsqrt makes the scale in one step.)
+ */
 void func_001FA5C8(void *out_, void *a_, void *b_, float t) {
     float *out = out_, *a = a_, *b = b_;
     const float s = 1.0f - t;
-    float p[4], q[4], v[4];
-    float dot = 0.0f, len = 0.0f;
+    float p[4], q[4], v[4], d[4], sq[4];
+    float dot, len, scale;
     int i;
     for (i = 0; i < 4; i++) {
         p[i] = a[i] * s;
         q[i] = b[i] * t;
-        dot += p[i] * q[i];
     }
     for (i = 0; i < 4; i++) {
-        v[i] = dot >= 0.0f ? p[i] + q[i] : p[i] - q[i];
-        len += v[i] * v[i];
+        v[i] = p[i] + q[i];
+        d[i] = p[i] * q[i];
+        sq[i] = v[i] * v[i];
     }
-    len = 1.0f / sqrtf(len);
+    dot = d[1] + d[0];
+    dot = dot + 1.0f * d[2];
+    dot = dot + 1.0f * d[3];
+    if (negative(dot)) {
+        for (i = 0; i < 4; i++) {
+            v[i] = p[i] - q[i];
+            sq[i] = v[i] * v[i];
+        }
+    }
+    len = sq[0] + sq[1];
+    len = len + 1.0f * sq[2];
+    len = len + 1.0f * sq[3];
+    scale = openrac_rsqrt(1.0f, len);
     for (i = 0; i < 4; i++) {
-        out[i] = v[i] * len;
+        out[i] = v[i] * scale;
     }
 }
 
-/* func_001FA648's full matrix: the quaternion's rotation in the first three rows and (0, 0, 0, 1)
- * in the fourth. */
+/* func_001FA648's rows, and (0, 0, 0, 1) as the fourth: its own copy of the routine, not a call. */
 void func_001FA6C0(float *q, float *out) {
-    func_001FA648(q, out);
+    quat_rows(q, out);
     out[12] = 0.0f;
     out[13] = 0.0f;
     out[14] = 0.0f;

@@ -163,7 +163,7 @@ void func_L00_002AAE80(void);
 void func_001F9BC0(void *);
 void func_L00_00211338(void *, s32, f32, f32);
 
-/* Adapted from Lombyte (MIT) for PAL by OpenRAC's tools/port.py: src/overlays/l15/ui_help_002044c8.c, FUN_L15_00208e10. */
+/* Adapted from Lombyte (GPL-3.0) for PAL by OpenRAC's tools/port.py: src/overlays/l15/ui_help_002044c8.c, FUN_L15_00208e10. */
 s32 HeroL15_TryTakeHit(s32 arg) {
     u8 *m;
     T_210ce8 *tbl;

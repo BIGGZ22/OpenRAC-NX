@@ -136,7 +136,7 @@ struct SifLoadCmd {
     int unk4;
 };
 #define SIFCMD ((struct SifLoadCmd *) D_00158300)
-/* _sceSifLoadModuleBuffer. Adapted from Lombyte (MIT) for PAL. */
+/* _sceSifLoadModuleBuffer. Adapted from Lombyte (GPL-3.0) for PAL. */
 int func_0011CE70(int arg0, int arg1, int arg2, void *out) {
     int *arg3 = out;
     int var_2_18;

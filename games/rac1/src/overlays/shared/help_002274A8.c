@@ -278,7 +278,7 @@ extern void func_L00_002078E0_293D0(void) __asm__("func_L00_002078E0");
 extern void func_L00_00207948_293D0(struct Moby *, struct Moby *) __asm__("func_L00_00207948");
 
 /* Blinks the hero's moby colour for the first 30 frames of states 0x80 and 0x82 (and of state 0x76 for 20 frames in levels 15 and 17), then, when the equipped item is a gold weapon, runs FUN_L00_00207330 on its moby.
-   Adapted from Lombyte (MIT) for PAL by OpenRAC's tools/port.py: src/overlays/shared/ui/help/00226f10.c, FUN_L01_00228e38. */
+   Adapted from Lombyte (GPL-3.0) for PAL by OpenRAC's tools/port.py: src/overlays/shared/ui/help/00226f10.c, FUN_L01_00228e38. */
 void HeroUpdateBlink(void)
 {
     /* three scalars, not an array: an int[3] changes the stack layout */
@@ -583,7 +583,7 @@ extern f32 func_001FA748_2DE30(f32, f32) __asm__("func_001FA748");
 extern f32 func_001FA850_2DE30(f32, f32) __asm__("func_001FA850");
 
 /* Ledge probe, FUN_L00_0020c758 without its hero.unk20A4 == 1 variant: steps forward from `pos` along the hero's yaw looking for a flat top (normal within 20 degrees of up, not material 9 or 12) at least 1.8 above the floor and not above pos + up, then for the wall under it. Returns 1 when the hero (facing `*dir`) faces that wall within 65 degrees and the ledge edge is found within 2.4 units along it. Constants live in locals because retail loads each one once.
-   Adapted from Lombyte (MIT) for PAL by OpenRAC's tools/port.py: src/overlays/shared/ui/help/00226f10.c, FUN_L01_0022d838. */
+   Adapted from Lombyte (GPL-3.0) for PAL by OpenRAC's tools/port.py: src/overlays/shared/ui/help/00226f10.c, FUN_L01_0022d838. */
 int HeroFindLedgeTop(Vec4 *pos, f32 *dir)
 {
     Vec4 probe, top, low, wall, edge;
@@ -819,7 +819,7 @@ void func_L01_0023D688(s32, s32);
 void func_L00_00217570(s32, s32);
 void func_L00_00211338(void *, s32, f32, f32);
 
-/* Adapted from Lombyte (MIT) for PAL by OpenRAC's tools/port.py: src/overlays/shared/ui_help_00226f10.c, FUN_L01_00231580. */
+/* Adapted from Lombyte (GPL-3.0) for PAL by OpenRAC's tools/port.py: src/overlays/shared/ui_help_00226f10.c, FUN_L01_00231580. */
 s32 HeroL01_TryTakeHit(s32 arg) {
     u8 *m;
     T_8 *tbl;
@@ -988,7 +988,7 @@ f32 func_001F9D48(void *, void *);
 f32 func_00214D28(f32, f32, f32 *);
 void func_L00_0025C918(f32 *, f32 *, f32, f32, f32, f32);
 
-/* Adapted from Lombyte (MIT) for PAL by OpenRAC's tools/port.py: src/overlays/shared/ui_help_00226f10.c, FUN_L01_00231ae0. */
+/* Adapted from Lombyte (GPL-3.0) for PAL by OpenRAC's tools/port.py: src/overlays/shared/ui_help_00226f10.c, FUN_L01_00231ae0. */
 void HeroSetCollisionSize(void) {
     switch (D_0013F450_2320F8.b20A4) {
     case 0:
@@ -1027,7 +1027,7 @@ extern float D_0015EE6C MACRO_ADDR;
 extern float D_L01_0017C2B8[];
 extern void func_L00_00211F80(int, float);
 
-/* Adapted from Lombyte (MIT) for PAL by OpenRAC's tools/port.py: src/overlays/shared/ui/help/00226f10.c, FUN_L01_00232290. */
+/* Adapted from Lombyte (GPL-3.0) for PAL by OpenRAC's tools/port.py: src/overlays/shared/ui/help/00226f10.c, FUN_L01_00232290. */
 void HeroSpeedFromTable(void) {
     char *x;
     Hero_SetHeadingFromStick(0, 1.0f);
@@ -1218,7 +1218,7 @@ typedef struct {
 } HS;
 extern HS D_L01_00174340_333D8 __asm__("D_L01_00174340");
 
-/* Adapted from Lombyte (MIT) for PAL by OpenRAC's tools/port.py: src/overlays/shared/ui_help_00226f10.c, FUN_L01_00232dc0. */
+/* Adapted from Lombyte (GPL-3.0) for PAL by OpenRAC's tools/port.py: src/overlays/shared/ui_help_00226f10.c, FUN_L01_00232dc0. */
 void HeroGroundProbe(void) {
     Vec4 v0, v10, v20, v30, v40, v50, v60;
     f32 f;
@@ -1580,7 +1580,7 @@ extern void func_L00_002222F0(void);
 extern void func_L00_00233EE0(void *, f32, f32, f32);
 extern void func_L00_00211908(void);
 
-/* Adapted from Lombyte (MIT) for PAL by OpenRAC's tools/port.py: src/overlays/shared/ui/help/00226f10.c, FUN_L01_0023c710. */
+/* Adapted from Lombyte (GPL-3.0) for PAL by OpenRAC's tools/port.py: src/overlays/shared/ui/help/00226f10.c, FUN_L01_0023c710. */
 void HeroTickTimers(void) {
     Vec4 sum;
     Vec4 d;
@@ -1778,7 +1778,7 @@ void HeroHideMoby(void) {
 }
 extern unsigned char D_0013E633_490F8b[] __asm__("D_0013E633");
 
-/* Adapted from Lombyte (MIT) for PAL by OpenRAC's tools/port.py: src/overlays/shared/ui_help_00226f10.c, FUN_L01_00248900. */
+/* Adapted from Lombyte (GPL-3.0) for PAL by OpenRAC's tools/port.py: src/overlays/shared/ui_help_00226f10.c, FUN_L01_00248900. */
 void HeroShowMoby(void) {
     *(unsigned short *)((char *)(*(char **)(D_0013E633_490F8b + 0x2E9D)) + 0x34) &= ~1;
 }

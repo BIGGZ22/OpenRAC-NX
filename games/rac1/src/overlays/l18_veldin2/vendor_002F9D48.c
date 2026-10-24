@@ -470,7 +470,7 @@ extern void func_001F9CA0(void *, void *, void *);
 extern void func_001F9EE8(void *, void *, void *);
 extern void func_L00_001FD1D8(void *, void *, int);
 
-/* Adapted from Lombyte (MIT) for PAL by OpenRAC's tools/port.py: src/overlays/l18/gameplay/vendor/002f88e8.c, FUN_L18_002f9c20. */
+/* Adapted from Lombyte (GPL-3.0) for PAL by OpenRAC's tools/port.py: src/overlays/l18/gameplay/vendor/002f88e8.c, FUN_L18_002f9c20. */
 void Moby1563_DrawQuad(struct Moby *m) {
     Pk_9c20 pk;
     float mat[4][4];
@@ -544,7 +544,7 @@ extern short D_L18_001625A8;
 extern short D_L18_001625AC;
 extern float D_L18_001DFE90[4][4];
 
-/* Adapted from Lombyte (MIT) for PAL by OpenRAC's tools/port.py: src/overlays/l18/gameplay/vendor/002f88e8.c, FUN_L18_002f9eb8. */
+/* Adapted from Lombyte (GPL-3.0) for PAL by OpenRAC's tools/port.py: src/overlays/l18/gameplay/vendor/002f88e8.c, FUN_L18_002f9eb8. */
 void Moby1563_DrawQuadAlt(struct Moby *m) {
     Pk_9c20_FB318 pk;
     float mat[4][4];
@@ -1184,7 +1184,7 @@ extern float func_L00_0025BC48(void *, void *, float, float, int);
 extern float func_L00_00258C80(float, float);
 
 /* Launches the first idle (state 8) class-0x772 moby of group `group` from `from` towards `to` at `speed`. Returns 1 when one was launched.
-   Adapted from Lombyte (MIT) for PAL by OpenRAC's tools/port.py: src/overlays/l18/gameplay/vendor/002f88e8.c, FUN_L18_002fc668. */
+   Adapted from Lombyte (GPL-3.0) for PAL by OpenRAC's tools/port.py: src/overlays/l18/gameplay/vendor/002f88e8.c, FUN_L18_002fc668. */
 int LaunchMoby1906(int group, void *from, void *to, float speed) {
     unsigned short *p = (unsigned short *)D_L18_001AC540_FDB28[group];
     struct Moby *table;
@@ -1262,7 +1262,7 @@ extern void func_L00_001FD1D8_2FDD20(void *, void *, int) __asm__("func_L00_001F
 
 void func_L18_002FDD20_r(struct Moby *m) __asm__("func_L18_002FDD20");
 
-/* Adapted from Lombyte (MIT) for PAL by OpenRAC's tools/port.py: src/overlays/l18/gameplay/vendor/002f88e8.c, FUN_L18_002fc860. */
+/* Adapted from Lombyte (GPL-3.0) for PAL by OpenRAC's tools/port.py: src/overlays/l18/gameplay/vendor/002f88e8.c, FUN_L18_002fc860. */
 void func_L18_002FDD20_r(struct Moby *m) {
     char *d = (char *)m->pvars;
     Pk_2FDD20 pk;

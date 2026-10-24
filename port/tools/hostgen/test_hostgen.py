@@ -21,7 +21,6 @@ import unittest
 from pathlib import Path
 
 HERE = Path(__file__).resolve().parent
-sys.path.insert(0, str(HERE))
 
 import asm  # noqa: E402
 import clangast  # noqa: E402
@@ -30,7 +29,7 @@ import hostgen  # noqa: E402
 import prep  # noqa: E402
 
 sys.path.insert(0, str(HERE / "tests"))
-import mips  # noqa: E402
+import assembler  # noqa: E402
 
 RUNTIME_INCLUDE = HERE.parent.parent / "runtime" / "include"
 
@@ -709,6 +708,24 @@ class Translate(unittest.TestCase):
         self.assertEqual(out, ["42"])
         self.assertEqual(self.last_report["candidates_used"], ["func_00110100"])
 
+    def test_no_candidate_for_a_function_the_port_writes_itself(self):
+        # The port's own C replaces func_00110100 (host_functions): its candidate is not read, nor
+        # the global its file defines besides (rac1/pal's DIntr keeps its enable bit so).
+        out = self.run_program({"a.c": """
+            #define INCLUDE_ASM(dir, name)
+            INCLUDE_ASM("asm", func_00110100);
+            extern int func_00110100(int);
+            int test_main(void) { test_print(func_00110100(2)); return 0; }
+        """}, config={"candidates": "candidates.tsv", "host_functions": HOST_FUNCTIONS + ["func_00110100"]},
+            extra_files={
+                "game/candidates.tsv": "# name\tfile\nfunc_00110100\tcand/func_00110100.c\n",
+                "game/cand/func_00110100.c":
+                    "int enabled = 1;\nint func_00110100(int x) { enabled = 0; return x + 1; }\n",
+            }, host_c="int func_00110100(int x) { return x + 40; }\n")
+        self.assertEqual(out, ["42"])
+        self.assertEqual(self.last_report["candidates_used"], [])
+        self.assertEqual(self.last_report["problems"], {})
+
     def test_a_candidate_steps_aside_for_what_the_file_has_matched(self):
         """One file of the port's own C for two functions; the decompilation has since matched one:
         the copy of that one is left out, or the file would define it twice and not be read."""
@@ -899,6 +916,39 @@ class Translate(unittest.TestCase):
         self.assertEqual(out, ["8", "1", "6"])
         self.assertIn("inline assembly Clang cannot read", self.last_report["stubbed"].values())
 
+    def test_asm_statements_the_host_does_not_run_are_reported(self):
+        # Clang's JSON leaves out an asm statement's text (clangast.asm_strings reads it): a sync or
+        # a nop is a barrier; VU0 code the host does not run stays one too, and the report lists it
+        # (rac1-decomp's func_001F7E98, src/game/drawquad.c).
+        out = self.run_program({"a.c": """
+            int ordered(int x) { __asm__ __volatile__("sync.l"); __asm__ __volatile__("nop"); return x + 1; }
+            float vu0(float *p) {
+                float t;
+                __asm__ __volatile__(
+                    "lqc2 $vf1,0(%1)\\n\\t"
+                    "vaddw.xyz $vf24,$vf0,$vf0w"
+                    : "=f"(t) : "r"(p) : "memory");
+                return t;
+            }
+            int test_main(void) { test_print(ordered(41)); return 0; }
+        """})
+        self.assertEqual(out, ["42"])
+        self.assertEqual(self.last_report["inline_assembly_skipped"], {"vu0": "lqc2, vaddw.xyz"})
+
+    def test_an_empty_asm_statement_hands_its_input_to_the_tied_output(self):
+        # kputchar (rac1-decomp src/core/00119D88.c) hides an address from the optimizer with
+        # `__asm__("" : "=r"(p) : "0"(0x1000F180))`: p holds the input after it (it was left unset,
+        # and the store went through whatever p held).
+        out = self.run_program({"a.c": """
+            int hidden(int c) {
+                int p;
+                __asm__("" : "=r"(p) : "0"(c * 3 + 1));
+                return p;
+            }
+            int test_main(void) { test_print(hidden(5)); return 0; }
+        """})
+        self.assertEqual(out, ["16"])
+
     def test_float_to_integer_as_the_ee_converts(self):
         # Out of the target's range C says nothing and the hosts differ (ARM gives 0 for a
         # negative float into an unsigned type): the EE's conversion on every host.
@@ -1016,6 +1066,22 @@ class Translate(unittest.TestCase):
         self.assertEqual(out, ["0", "0", "2", "0"])               # the override, all 64 bits
         self.assertEqual(self.last_report["overrides_used"], ["draw"])
         self.assertEqual(self.last_report["index_problems"], [])
+
+    def test_an_override_that_defines_another_name_stands_aside(self):
+        # An override whose C spells its definition with a name that is not the function's (a
+        # readable name the decompilation's names.h dropped) defines another function: the matched
+        # C stays, and the index says so, instead of the function going to the assembly stage.
+        out = self.run_program({"a.c": """
+            int draw(int i) { return i + 1; }
+            int test_main(void) { test_print(draw(1)); return 0; }
+        """}, config={"overrides": "overrides.tsv"}, extra_files={
+            "overrides.tsv": "# name\tfile\ndraw\tmine.c\n",
+            "mine.c": "int DrawOld(int i) { return i + 2; }\n"})
+        self.assertEqual(out, ["2"])                              # the matched C
+        self.assertEqual(self.last_report["overrides_used"], [])
+        self.assertEqual(self.last_report["index_problems"],
+                         ["overrides: the C for draw defines no draw (a readable name names.h no longer has?); "
+                          "the matched C stays"])
 
     def test_variable_length_array_of_a_local_length(self):
         # A one-dimensional array whose length is a local goes on the guest stack for its
@@ -1695,6 +1761,33 @@ class Places(unittest.TestCase):
             self.assertIn("0x082F9418u", text)
             self.assertIn("0x0828E068u", text)
 
+    def test_a_static_helpers_folded_calls_are_its_callers(self):
+        # rac1/pal's func_L03_00251AC8 (matched) takes its particles' lifetimes from game_frames(n), a
+        # static inline helper calling func_001F9850, whose places in a level's program are different
+        # tick scales. The console's compiler inlined the helper: each of its calls is a jal in the
+        # caller's code, the caller's next call of the folded function. Each call site gets a copy of
+        # the helper with the caller's address and that k (a helper's helper too); translated alone,
+        # the helper had no address, and every call took the place nearest 0.
+        with tempfile.TemporaryDirectory() as tmp:
+            out = self.generate(Path(tmp),
+                "extern int func_00100000(int);\n"
+                "static int frames(int n) { return func_00100000(n); }\n"
+                "static int pair(int a, int b) { return frames(a) + frames(b); }\n"
+                "static int twice(int n) { return n * 2; }\n"
+                "int func_L03_00300000(int n) { return func_00100000(n) + pair(n, 2) + frames(3) + twice(n); }\n"
+                "int unplaced(int n) { return frames(n); }\n",
+                "func_00100000\texe\t40\tfp\t2\t03:00200000,03:00200038\n"
+                "func_L03_00300000\tlevel\t96\tfp2\t1\t03:00300000\n",
+                {"relocate": [0x15F000, 0x500000]})
+            text = (out / "a.c").read_text()
+            self.assertEqual(sorted(re.findall(r"0x00300000u, 96u, (\d+)\)", text)), ["0", "1", "2", "3"])
+            self.assertIn("game_pair__in_func_L03_00300000_0(", text)
+            self.assertIn("game_frames__in_func_L03_00300000_3(", text)   # pair's two, then its own
+            self.assertIn("game_twice(", text)                             # no folded call: as it is
+            self.assertNotIn("game_twice__in_", text)
+            self.assertIn("0u, 0u, 0)", text)                              # the helper itself, for unplaced
+            self.assertRegex(text, r"int game_unplaced\(int n\)\s*\{\s*return \(int\)\(\(\(int\)\(game_frames\(")
+
     def test_a_larger_function_placed_twice_in_a_level_calls_its_copys_own_callee(self):
         # rac1's func_L02_002D75F8 (76 bytes) is two of Eudora's circular saw hooks: 04:002C53B0
         # calls the grab (func_L00_002DCDA8 there), 04:002C5400 the placing. Each copy's call goes
@@ -2069,12 +2162,12 @@ ASM_CONFIG = {"asm": {"enabled": True, "dirs": ["asm"], "gp": "0x00180000"}}
 @unittest.skipUnless(have_compiler(), "needs Clang on a POSIX host")
 class FromAssembly(unittest.TestCase):
     """C from assembly (asmc.py): a function the test's decompilation has only as assembly (an
-    INCLUDE_ASM stub, with an assembly file tests/mips.py writes the way the setup writes one),
+    INCLUDE_ASM stub, with an assembly file tests/assembler.py writes the way the setup writes one),
     translated, built with the C that calls it, run, and its output checked."""
     run_program = Translate.run_program
 
     def run_asm(self, c: str, functions: dict[str, tuple[int, str]], symbols=None, tables=None) -> list[str]:
-        files = {f"game/asm/{name}.s": mips.assemble(name, start, text, symbols, (tables or {}).get(name))
+        files = {f"game/asm/{name}.s": assembler.assemble(name, start, text, symbols, (tables or {}).get(name))
                  for name, (start, text) in functions.items()}
         return self.run_program({"a.c": c}, config=ASM_CONFIG, extra_files=files)
 
@@ -2250,7 +2343,7 @@ class FromAssembly(unittest.TestCase):
                 jr $31
                 addiu $2, $0, -1
         """
-        labels = mips.label_addresses(0x00100000, source)
+        labels = assembler.label_addresses(0x00100000, source)
         out = self.run_asm(f"""
             extern unsigned int D_00300000[8];
             extern int D_0017FFF0;
@@ -2630,7 +2723,7 @@ class FromAssembly(unittest.TestCase):
         # register, memory at the console's addresses.
         with tempfile.TemporaryDirectory() as tmp:
             out = Path(tmp) / "console"
-            files = {"game/asm/func_00100000.s": mips.assemble("func_00100000", 0x00100000, """
+            files = {"game/asm/func_00100000.s": assembler.assemble("func_00100000", 0x00100000, """
                 addiu $29, $29, -16
                 sq $31, 0($29)
                 jal func_00200000
@@ -2672,7 +2765,7 @@ class Decoding(unittest.TestCase):
                     self.assertEqual(getattr(i, k), v, k)
 
     def test_file_reading(self):
-        text = mips.assemble("func_00100000", 0x00100000, """
+        text = assembler.assemble("func_00100000", 0x00100000, """
             beq $4, $0, end
             nop
         end:

@@ -96,7 +96,7 @@ over ([SIBLING_DECOMPS.md](SIBLING_DECOMPS.md), "Porting a function"):
 - `s8`..`s64`, `u8`..`u64`, `f32`, `f64` exist in `include/common.h`;
   `u128` does not: declare it as under "Codegen" (128-bit copies).
 - The comment above the function must end with
-  `Adapted from Lombyte (MIT) for PAL: <its file under src/>, <its name>.`
+  `Adapted from Lombyte (GPL-3.0) for PAL: <its file under src/>, <its name>.`
   The lead lists every port in THIRD_PARTY_NOTICES.md.
 - If it doesn't match with our compiler within the budget, stop as
   usual and say in NOTES.md how far it got: Lombyte builds some files

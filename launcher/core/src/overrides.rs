@@ -45,7 +45,7 @@ struct State {
 }
 
 /// A pack as the Mods page shows it.
-#[derive(Debug, Clone, Serialize, PartialEq, Eq)]
+#[derive(Debug, Clone, Serialize, PartialEq, Eq, ts_rs::TS)]
 #[serde(rename_all = "camelCase")]
 pub struct PackView {
     pub id: String,

@@ -1,6 +1,7 @@
 """A small reader for the C the decompilation is written in: tokens and struct layouts, enough
-for the behaviour catalogue (catalogue.py) and the pvar fields of the level editor (gamedata.py)
-to know each struct's fields, offsets and types. It is not a C compiler.
+for the behaviour catalogue (sdk/tools/catalogue.py, which imports it from this folder) and the
+pvar fields of the level editor (gamedata.py) to know each struct's fields, offsets and types. It is
+not a C compiler.
 """
 
 import re

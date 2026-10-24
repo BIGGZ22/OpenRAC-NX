@@ -14,7 +14,7 @@ extern s32 func_001F9850(s32);
 extern void func_L00_00236610(void *);
 extern s32 D_L05_0015FBB4 MACRO_ADDR;
 
-/* Adapted from Lombyte (MIT) for PAL by OpenRAC's tools/port.py: src/overlays/shared/ui/text/00262ae8.c, FUN_L05_00262ae8. */
+/* Adapted from Lombyte (GPL-3.0) for PAL by OpenRAC's tools/port.py: src/overlays/shared/ui/text/00262ae8.c, FUN_L05_00262ae8. */
 void HudCounter_Reset(HudElemX *e) {
     s32 i;
     s32 *p;
@@ -514,7 +514,7 @@ extern int func_001F6600_002670A0(char *, int) __asm__("func_001F6600");
 extern void func_L00_001FB7F8_002670A0(int x, int y, u64 color, char *text, int len) __asm__("func_L00_001FB7F8");
 
 /* Draws the race timer HUD: the lap count line when laps are shown, then the time split into minutes, seconds and hundredths; returns the element's width.
-   Adapted from Lombyte (MIT) for PAL: src/overlays/shared/ui/hud/002661a0.c, FUN_L05_00266710. */
+   Adapted from Lombyte (GPL-3.0) for PAL: src/overlays/shared/ui/hud/002661a0.c, FUN_L05_00266710. */
 int RaceTimerHudDraw(HudElem_002670A0 *e) {
     char buf[64];
     int y0, y1, y2;

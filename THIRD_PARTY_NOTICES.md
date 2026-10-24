@@ -41,6 +41,17 @@ a system Embree package (CI's `port-enhanced` job) follows that package's
 license and notices, including those of its oneTBB. The upstream license is
 [LICENSE.txt](https://github.com/RenderKit/embree/blob/v4.4.1/LICENSE.txt).
 
+## decomp-permuter and rac3-decomp's permuter tools
+
+[`tools/permuter`](tools/permuter/README.md) drives
+[decomp-permuter](https://github.com/simonlindholm/decomp-permuter) (MIT, Copyright (c) 2019 Simon
+Lindholm and contributors), fetched at a pinned commit into a cache, never copied into OpenRAC. Its
+two patches, `tools/permuter/patches/*.patch`, change decomp-permuter's own files and are under its
+MIT license; they are rac3-decomp's `tools/decomp-permuter-asm-passes.patch` and
+`tools/decomp-permuter-aligned-scorer.patch`, rebased on the pin. `tools/permuter/engine.py` and
+`tools/permuter/score.py` are adapted from rac3-decomp's `tools/permuter_engine.py` and
+`tools/permuter_scorer.py` (GPL-3.0, like `games/rac3/ntsc`).
+
 ## ReRAC
 
 [ReRAC](https://github.com/re-rac/rerac), a native PC port of the US build,

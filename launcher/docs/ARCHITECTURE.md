@@ -112,7 +112,7 @@ In `src-tauri/src/lib.rs`, but for the twelve that only the Android app
 implements, which are in `src-tauri/src/android.rs` (marked Android below;
 on a desktop they answer with nothing to do or an error). They call into
 `core/src`, where the logic is (rule 4); the types are there too (serde,
-camelCase) and mirrored in `src/lib/api.ts`.
+camelCase) and generated from there into `src/lib/generated/` (below).
 
 | Command                                                                                            | Arguments                                                                          | Returns                                                                                                                                                                     |
 | -------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -184,10 +184,51 @@ camelCase) and mirrored in `src/lib/api.ts`.
    `generate_handler!`. The command only exposes the core: it holds no logic
    of its own. Use `spawn_blocking` for anything that touches the
    disk or runs a program.
-3. The types and a wrapper in `src/lib/api.ts`.
+3. `ts_rs::TS` on each new type the command sends or takes, the type added to
+   the roots in `core/tests/generated_types.rs`, the files regenerated
+   (below), and a wrapper in `src/lib/api.ts`.
 4. A case in `src/lib/mock.ts`, so the browser preview keeps working.
 5. If the page needs a new permission (a plugin), add it to
    `src-tauri/capabilities/default.json`, and only that one.
+
+### The page's types
+
+The TypeScript types of everything the commands send or take, and of the job
+events, are generated from the Rust types in `core/src` with
+[ts-rs](https://github.com/Aleph-Alpha/ts-rs) and live in
+`src/lib/generated/`, one file per type. Nobody edits them. They are a
+proposal, not a settled choice: the maintainers have not picked a generator
+(restructure PROGRESS, question 5).
+
+- **Derive.** A type the page receives derives `ts_rs::TS` beside its serde
+  derives; ts-rs reads `rename_all`, `tag`, `flatten` and `skip`, so the
+  TypeScript follows the JSON serde writes. Where Rust is looser than the page
+  needs (a `String` that holds one of a few words), a `#[ts(type = "...")]` on
+  the field says the words; where serde leaves a field out when it is empty
+  (`skip_serializing_if`), `#[ts(optional)]` makes it optional. A type that
+  would clash with another module's name gets a `#[ts(rename = "...")]`
+  (`Kind` in `actions.rs` is `ActionKind`). A `serde_json::Value` is `unknown`.
+- **Roots.** `core/tests/generated_types.rs` lists the types the commands
+  send or take; what they contain is generated with them. It sets the one
+  option ts-rs needs: integers past 2^53 become `number`, not `bigint`
+  (no id, size or time here is that large).
+- **Regenerate** after changing such a type:
+  `OPENRAC_UPDATE_TYPES=1 cargo test -p openrac-launcher-core --test generated_types`,
+  and commit the files.
+- **Checked in, and why.** The page is checked and built (`yarn verify`,
+  `yarn build`) without Rust, so the files are committed. The same test,
+  run by `cargo test -p openrac-launcher-core` (CI's launcher job), fails when a
+  committed file differs from what the Rust types generate now, or is no
+  longer generated.
+- **Not generated.** The types of commands that live in `src-tauri` (`AppInfo`,
+  `DiscScan`, the Android commands' and the updater's) are written in
+  `api.ts`: `src-tauri` is a thin layer and does not own the types a test in
+  `core` could reach. `DiscordStatus` is written there too, because the Rust
+  enum reads `game_id`, `progress_pct` and `start_time` where the page sends
+  camelCase (restructure PROGRESS, follow-ups).
+- **Using them.** `api.ts` re-exports the generated types the page names, so
+  components import every type from `lib/api`; `mock.ts` imports them from
+  `generated/` and types its answers on them.
 
 ### The two views
 

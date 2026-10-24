@@ -55,7 +55,7 @@ typedef struct {
 extern void func_0012C008(int *, int, int, int, int);
 
 /* rac1-decomp src/core/00125630.c: func_00127D40 */
-/* Decodes one macroblock's modes and motion vectors through the IPU VLC engine (libmpeg _decMB0). Adapted from Lombyte (MIT) for PAL: sdk/library/_decMB0.c, _decMB0. */
+/* Decodes one macroblock's modes and motion vectors through the IPU VLC engine (libmpeg _decMB0). Adapted from Lombyte (GPL-3.0) for PAL: sdk/library/_decMB0.c, _decMB0. */
 int func_0012BB60(void *arg0, int *arg1, int *arg2, int *arg3, void *arg4, void *arg5, void *arg6) {
     MbDec *d = arg0;
     int *mb = arg4;

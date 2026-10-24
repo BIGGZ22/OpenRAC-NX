@@ -31,7 +31,7 @@
  * temporary, or any measured lever that makes local-alloc pick $t9 over $t8
  * for the `d` copy. Compiling this file alone reproduces the diff above.
  *
- * Adapted from Lombyte (MIT), src/assembly/sdk/library/_getRef0.c, commit
+ * Adapted from Lombyte (GPL-3.0), src/assembly/sdk/library/_getRef0.c, commit
  * 5ccfa1fb314e9cb43f6ff9a43249523e1c4a5310, sha256
  * 15078783b09fd6987da0fbab1668ab41e16449c7a2c318a1b0707b60a1b0bab4. Offsets
  * re-measured against RAC2's own accesses: mc 0x590, cur 0x810, work 0x81C,

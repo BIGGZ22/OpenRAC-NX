@@ -1,10 +1,13 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
 # Copyright (c) 2026 the OpenRAC contributors
-"""Tests for tools/fcheck_gate.py: the verdict files joined to the backfill tables, and fcheck's exit codes."""
+"""Tests for tools/fcheck_gate.py: the verdict files joined to the backfill tables, fcheck's exit codes,
+and where rac1-decomp is looked for."""
+import os
 import sys
 import tempfile
 import unittest
 from pathlib import Path
+from unittest import mock
 
 HERE = Path(__file__).resolve().parent
 sys.path.insert(0, str(HERE))
@@ -104,6 +107,28 @@ class GateTests(unittest.TestCase):
         rows = [g.Row("a", "same"), g.Row("b", "differs"), g.Row("c")]
         self.assertEqual(g.summary(rows), "3 rows: 1 same, 1 differs, 0 unchecked, 0 no-states, 0 not-executable, 1 no verdict")
 
+
+
+class DecompRootTests(unittest.TestCase):
+    """OPENRAC_DECOMP when set, else games.source_checkout for rac1/pal (this checkout's game.json)."""
+
+    def test_openrac_decomp_wins(self):
+        env = {"OPENRAC_DECOMP": "/decomp", "OPENRAC_SOURCE_RAC1_PAL": "/source"}
+        with mock.patch.dict(os.environ, env):
+            self.assertEqual(g.decomp_root(), Path("/decomp"))
+
+    def test_else_the_sister_checkout_variable(self):
+        env = {"OPENRAC_DECOMP": "", "OPENRAC_SOURCE_RAC1_PAL": "/source"}
+        with mock.patch.dict(os.environ, env):
+            self.assertEqual(g.decomp_root(), Path("/source"))
+
+    def test_else_game_json(self):
+        with mock.patch.dict(os.environ):
+            os.environ.pop("OPENRAC_DECOMP", None)
+            os.environ.pop("OPENRAC_SOURCE_RAC1_PAL", None)
+            # game.json writes it from the top of OpenRAC ("../rac1-decomp").
+            checkout = g.games.load("rac1", g.ROOT)["versions"]["pal"]["source"]["checkout"]
+            self.assertEqual(g.decomp_root(), (Path(g.ROOT) / os.path.expanduser(checkout)).resolve())
 
 if __name__ == "__main__":
     unittest.main()

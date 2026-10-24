@@ -81,7 +81,7 @@ int func_0012F070(void *arg0) {
 
 /* rac1-decomp src/core/0012AC80.c: func_0012B2C0 */
 /* Parse one MPEG-2 PES packet header from the bit stream into hdr (libmpeg _PES_packet).
-   Adapted from Lombyte (MIT) for PAL: src/sdk/library/_PES_packet.c, _PES_packet. */
+   Adapted from Lombyte (GPL-3.0) for PAL: src/sdk/library/_PES_packet.c, _PES_packet. */
 int func_0012F0E0(int arg0, struct PES_BS *bs, struct PES_HDR *hdr) {
     struct PES_TBL tbl;
     int ctx;

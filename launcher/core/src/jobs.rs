@@ -14,7 +14,8 @@ use serde::Serialize;
 
 use crate::actions::Plan;
 
-#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, ts_rs::TS)]
+#[ts(rename = "JobEvent")]
 #[serde(rename_all = "camelCase", tag = "type")]
 pub enum Event {
     Output {
@@ -35,7 +36,8 @@ pub enum Event {
 /// The start of a line on which a tool names a folder it wrote (editor/extract.py, assets.py).
 pub const OUTPUT_LINE: &str = "openrac-output: ";
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, ts_rs::TS)]
+#[ts(rename = "JobStream")]
 #[serde(rename_all = "camelCase")]
 pub enum Stream {
     Stdout,
@@ -47,7 +49,7 @@ pub enum Stream {
 /// behind (a daemon, a watcher) does not hold the queue up for ever.
 const OUTPUT_GRACE: Duration = Duration::from_secs(3);
 
-#[derive(Debug, Clone, Serialize)]
+#[derive(Debug, Clone, Serialize, ts_rs::TS)]
 #[serde(rename_all = "camelCase")]
 pub struct Started {
     /// 0 for a detached launch, which has no job.

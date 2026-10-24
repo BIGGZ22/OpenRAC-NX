@@ -7,9 +7,9 @@
 #include "enhanced/tests/probe_fixture.h"
 #include "enhanced/viewer/hero_shadow.h"
 #include "renderer/gl.h"
+#include "scene/level_renderer.h"
 #include "tests/check.h"
 #include "tests/renderer_gl_context.h"
-#include "viewer/level_renderer.h"
 
 using namespace openrac;
 using namespace openrac::gl;

@@ -22,6 +22,15 @@ off-camera casters, with 32 units of live-object padding. Unsubmitted mobys
 cannot cast. Vulkan batches maps in a shared atlas; the framebuffer API still
 allocates colour alongside sampleable depth.
 
+A static shadow cache can keep the cascades' static casters between frames
+(registry entry `shadow-static-cache`, off by default): a second depth target in
+the atlas's layout, redrawn per cascade only when its key changes (the snapped
+matrix, the caster volume, the hero setting, the static layers' generation),
+copied into the atlas before the mobys are drawn over it. The caster volume
+follows the camera, so only a still camera hits, and on both measured GPUs the
+copy costs more than the draws it saves
+([RENDER_PERF.md](../../../docs/port/RENDER_PERF.md), R-18).
+
 ## Receiving shadows
 
 Tent filtering uses reverse-Z comparisons, receiver-plane depth correction,

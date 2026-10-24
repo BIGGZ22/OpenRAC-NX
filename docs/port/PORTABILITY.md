@@ -207,3 +207,24 @@ also needs:
    frame's sync points become the renderer's, disc reads become file reads
    of the extracted assets, the memory card becomes save files, 989snd is
    replaced at its API, the pad library reads SDL.
+
+## 7. Platform notes
+
+What one platform ships differently from the others, and why.
+
+- **Intel Macs ship without the probe baker** (decided by the maintainers).
+  The baker, `openrac-probe-bake`, links Embree 4 as a static library
+  ([port/enhanced/lighting](../../port/enhanced/lighting/README.md)), and
+  with AppleClang Embree's static library takes a single ISA, while x86-64
+  needs several (SSE2, AVX, AVX2: `EMBREE_X86_ISAS` in
+  `tools/build_port.py`), so it cannot be built on an Intel Mac. There,
+  `tools/build_port.py --probe-baker` neither downloads nor builds Embree:
+  it says so in one sentence and builds the game and the extractor, a
+  successful build. The launcher's Enhanced graphics say the same instead of
+  offering a bake (`launcher/core/src/enhanced.rs`, `NO_BAKER_HERE`). The
+  enhanced graphics there keep the original lighting: the port lights a level
+  without a bake the way the game does
+  (`port/enhanced/viewer/probe_lighting.cpp`).
+  Apple silicon Macs, Windows and Linux build the baker. Each side reads the
+  machine it runs as: `platform.machine()` for the build, the launcher's own
+  target for the launcher.

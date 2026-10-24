@@ -26,10 +26,16 @@ pub struct Game {
     pub year: Option<u32>,
     /// Names other regions released the game under (`"pal": "Ratchet: Gladiator"`).
     pub titles: BTreeMap<String, String>,
+    /// The disc's video standard of each version whose game.json names one
+    /// (`versions.<v>.disc.video`, `"pal": "PAL"`), which the game's name carries on the desktop
+    /// (`desktop::game_title`). Kept beside `titles`, keyed the same way; not sent to the UI.
+    #[serde(skip)]
+    pub videos: BTreeMap<String, String>,
     pub versions: Vec<Version>,
 }
 
-#[derive(Debug, Clone, Serialize)]
+#[derive(Debug, Clone, Serialize, ts_rs::TS)]
+#[ts(rename = "CatalogVersion")]
 #[serde(rename_all = "camelCase")]
 pub struct Version {
     /// `rac1/pal`: the key used everywhere (progress, actions, commit scopes).
@@ -60,7 +66,7 @@ pub struct Version {
 }
 
 /// A file game.json describes by name and checksums (the disc image, the boot executable).
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, ts_rs::TS)]
 #[serde(rename_all = "camelCase")]
 pub struct FileSpec {
     pub file: String,
@@ -72,7 +78,8 @@ pub struct FileSpec {
 
 /// One input `openrac.py setup` places: `from` is `disc`, `boot`,
 /// `toolchains` or `link` (then `target` names what it links to).
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, ts_rs::TS)]
+#[ts(rename = "VersionInput")]
 #[serde(rename_all = "camelCase")]
 pub struct Input {
     pub from: String,
@@ -81,7 +88,8 @@ pub struct Input {
     pub target: Option<String>,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, ts_rs::TS)]
+#[ts(rename = "VersionSource")]
 #[serde(rename_all = "camelCase")]
 pub struct Source {
     pub name: String,
@@ -95,7 +103,8 @@ pub struct Source {
 }
 
 /// One row of progress/summary.json (snake_case on disk, camelCase to the UI).
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, ts_rs::TS)]
+#[ts(rename_all = "camelCase")]
 #[serde(rename_all(serialize = "camelCase", deserialize = "snake_case"))]
 pub struct Progress {
     pub matched_code: u64,
@@ -115,7 +124,8 @@ pub struct Progress {
 }
 
 /// How much of the code has functional C (not matched; ByteMatch shows it under the Code bar).
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, ts_rs::TS)]
+#[ts(rename_all = "camelCase")]
 #[serde(rename_all(serialize = "camelCase", deserialize = "snake_case"))]
 pub struct FunctionalProgress {
     pub functions: u64,
@@ -248,7 +258,11 @@ fn read_summary(root: &Path, cache: Option<&Path>) -> BTreeMap<String, RawSummar
 
 fn game(raw: RawGame, summary: &BTreeMap<String, RawSummaryRow>) -> Result<Game, String> {
     let mut versions = Vec::new();
+    let mut videos = BTreeMap::new();
     for (name, value) in raw.versions {
+        if let Some(video) = value.pointer("/disc/video").and_then(serde_json::Value::as_str) {
+            videos.insert(name.clone(), video.to_string());
+        }
         let v: RawVersion = serde_json::from_value(value).map_err(|e| format!("version {name}: {e}"))?;
         versions.push({
             let key = format!("{}/{}", raw.id, name);
@@ -275,7 +289,7 @@ fn game(raw: RawGame, summary: &BTreeMap<String, RawSummaryRow>) -> Result<Game,
             }
         });
     }
-    Ok(Game { id: raw.id, title: raw.title, year: raw.year, titles: raw.titles, versions })
+    Ok(Game { id: raw.id, title: raw.title, year: raw.year, titles: raw.titles, videos, versions })
 }
 
 /// One project of bytematch.dev's /api/v1/projects: where it is, the version its figures are for,

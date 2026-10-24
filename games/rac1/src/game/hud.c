@@ -261,7 +261,7 @@ extern void func_001FF7F0(s32 bank, s32 base);
 extern void func_00201348_FF958(u32 data, s32 dbp, s32 psm, s32 wlog, s32 hlog, s32 immediate) __asm__("func_00201348");
 
 /* Uploads the image pages of one HUD bank to GS memory, from the depth buffer address up, and records each page's block offset. Bank 0's pages are linked first when the bank file is not linked yet.
-   Adapted from Lombyte (MIT) for PAL by OpenRAC's tools/port.py: src/ui/hud/hud_send_resident_bank.c, hud_send_resident_bank. */
+   Adapted from Lombyte (GPL-3.0) for PAL by OpenRAC's tools/port.py: src/ui/hud/hud_send_resident_bank.c, hud_send_resident_bank. */
 void Hud_SendResidentBank(s32 bank, s32 base, s32 immediate) {
     struct HudTexCounts *counts;
     s32 address;
@@ -667,7 +667,7 @@ extern struct FrameTextureTables_00248 D_0019A4E8_00248 __asm__("D_0019A4E8");
 
 /* GetFrameTex: returns the TEX0 word of a HUD frame, allocating GS blocks for its palette and image pages
    and queueing their uploads the first time.
-   Adapted from Lombyte (MIT) for PAL by OpenRAC's tools/port.py: src/textbin/gameplay/animation/get_frame_texture.c, get_frame_texture. */
+   Adapted from Lombyte (GPL-3.0) for PAL by OpenRAC's tools/port.py: src/textbin/gameplay/animation/get_frame_texture.c, get_frame_texture. */
 u64 func_00200248_r(s32 frame_id) __asm__("func_00200248");
 /* GetFrameTex(int) */
 u64 func_00200248_r(s32 frame_id) {
@@ -1059,7 +1059,7 @@ typedef struct {
     int depth;
 } HudDepthView;
 
-/* HUD sprite packet with explicit UV corners, adapted from Lombyte (MIT). */
+/* HUD sprite packet with explicit UV corners, adapted from Lombyte (GPL-3.0). */
 void func_00201190(int tex, int x0, int y0, int x1, int y1,
                    int u0, int v0, int u1, int v1, int alpha) {
     int *base;
@@ -1312,7 +1312,7 @@ extern s32 func_001F6FD8_01A38(s32, s32, u64, s32, s32) __asm__("func_001F6FD8")
 extern void func_00201960(s32, s32, s32, s32, s32);
 void func_00201A38(s32 x, s32 y, s32 color, s32 text);
 
-/* Adapted from Lombyte (MIT) for PAL by OpenRAC's tools/port.py: src/textbin/ui/frames/draw_framed_text.c, draw_framed_text. */
+/* Adapted from Lombyte (GPL-3.0) for PAL by OpenRAC's tools/port.py: src/textbin/ui/frames/draw_framed_text.c, draw_framed_text. */
 void DrawFramedText(s32 x, s32 y, s32 color, s32 text) {
     s32 alpha = (s32)color >> 24;
     s32 text_left;
@@ -1343,7 +1343,7 @@ extern s32 D_0015EE80 MACRO_ADDR;
 extern s32 D_0015EF84 MACRO_ADDR;
 void func_00201AF0(u32 image_address);
 
-/* Adapted from Lombyte (MIT) for PAL by OpenRAC's tools/port.py: src/textbin/draw_boot_image.c, draw_boot_image. */
+/* Adapted from Lombyte (GPL-3.0) for PAL by OpenRAC's tools/port.py: src/textbin/draw_boot_image.c, draw_boot_image. */
 void draw_bootImage(u32 image_address) {
     struct DmaTag *tag;
     struct DmaTag *next;
