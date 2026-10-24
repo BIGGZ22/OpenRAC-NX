@@ -1060,6 +1060,13 @@ void LevelScene::draw_shadow_atlas(renderer::RenderState& state) {
         m_sun_ready && renderer::render_opt::enabled(renderer::render_opt::Opt::ShadowStaticCache);
     unsigned rerendered = m_sun_ready ? kSunCascades : 0;
 
+    // Nothing samples the atlas's colour or reads its stencil: neither is loaded or written back
+    // (shadow-atlas-discard; the depth is cleared with the stencil so it is not loaded either).
+    const bool discard =
+        glInvalidateFramebuffer != nullptr
+        && renderer::render_opt::enabled(renderer::render_opt::Opt::ShadowAtlasDiscard);
+    const GLenum unread[] = {GL_COLOR_ATTACHMENT0, GL_STENCIL_ATTACHMENT};
+
     // The static casters come from the cache, the atlas holding its copy; otherwise it is cleared.
     if (cache) {
         rerendered = draw_cached_cascades(state);
@@ -1068,7 +1075,14 @@ void LevelScene::draw_shadow_atlas(renderer::RenderState& state) {
         m_static_keys = {};
         begin_shadow_target(m_shadow_atlas->id());
         glClearDepth(0);
-        glClear(GL_DEPTH_BUFFER_BIT);
+
+        // The colour let go before the pass, the stencil cleared with the depth: nothing loaded.
+        if (discard) {
+            glInvalidateFramebuffer(GL_FRAMEBUFFER, 1, unread);
+            glClear(GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
+        } else {
+            glClear(GL_DEPTH_BUFFER_BIT);
+        }
     }
 
     vkgl::indexed_viewports(kShadowAtlasRects);
@@ -1094,6 +1108,12 @@ void LevelScene::draw_shadow_atlas(renderer::RenderState& state) {
     vkgl::indexed_viewports({});
     glBindVertexArray(0);
     glColorMask(GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE);
+
+    // Only the depth is sampled: the colour and the stencil are not written back.
+    if (discard) {
+        glInvalidateFramebuffer(GL_FRAMEBUFFER, 2, unread);
+    }
+
     glBindFramebuffer(GL_FRAMEBUFFER, state.target.framebuffer);
     glViewport(0, 0, state.target.width, state.target.height);
     // What the atlas cost this frame, cache or not, for RENDER_PERF.md's R-18 comparison.
