@@ -28,6 +28,12 @@ constexpr std::array<Entry, kOptCount> kEntries = {{
     {Opt::RegistrySelftest, "registry-selftest",
      "draws nothing: the entry the registry's and the equivalence harness's tests switch",
      true, Tolerance{}},
+    {Opt::VkDrawClock, "vk-draw-clock",
+     "the Vulkan draw takes its two clock reads only while the debug tools measure",
+     true, Tolerance{}},
+    {Opt::VkStateSkip, "vk-state-skip",
+     "Vulkan dynamic state and binds recorded only when they differ from the last recorded",
+     true, Tolerance{}},
 }};
 // clang-format on
 

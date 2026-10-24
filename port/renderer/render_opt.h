@@ -29,10 +29,12 @@ namespace openrac::renderer::render_opt {
 // The optimisations, one per entry of the table, in its order.
 enum class Opt : std::uint8_t {
     RegistrySelftest,  // registry-selftest: no drawing; the tests' own entry
+    VkDrawClock,       // vk-draw-clock: the Vulkan draw reads the clock only while measured
+    VkStateSkip,       // vk-state-skip: Vulkan state and binds recorded only when they change
 };
 
-// The number of entries: RegistrySelftest is the last enumerator of Opt.
-inline constexpr std::size_t kOptCount = static_cast<std::size_t>(Opt::RegistrySelftest) + 1;
+// The number of entries: VkStateSkip is the last enumerator of Opt.
+inline constexpr std::size_t kOptCount = static_cast<std::size_t>(Opt::VkStateSkip) + 1;
 
 // How far the frames an optimisation draws may differ from its reference path's. The default,
 // zero, is byte-identical frames; anything else is a tolerance the maintainers accepted, named in
