@@ -325,7 +325,7 @@ def short_title(game: dict, name: str) -> str:
 
 
 def progress_box(versions) -> str:
-    """The README's compact progress: a small centred table, one row per version with a ByteMatch
+    """The README's compact progress: a small table, in line with the text, one row per version with a ByteMatch
     project, its name and a live bytematch.dev badge of the code it has matched, in the header
     bar's gold. VERSIONS is games.versions()."""
     rows = []
@@ -340,9 +340,9 @@ def progress_box(versions) -> str:
                  f'<img src="https://bytematch.dev/{slug}.svg?{query.replace("&", "&amp;")}" '
                  f'alt="{title}: code decompiled"></a>')
         rows.append(f'  <tr><td>{title.replace("&", "&amp;")}</td><td align="right">{badge}</td></tr>')
-    return ('<div align="center">\n<table>\n'
+    return ('<table>\n'
             '  <tr><th align="left">Game</th><th align="right">Code decompiled</th></tr>\n'
-            + "\n".join(rows) + "\n</table>\n</div>\n")
+            + "\n".join(rows) + "\n</table>\n")
 
 
 def tables() -> None:
