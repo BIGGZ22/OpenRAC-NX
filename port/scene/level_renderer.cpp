@@ -1848,6 +1848,7 @@ void LevelScene::draw_layer(
         {"mobys opaque", "mobys glow", "mobys translucent", "mobys effects", "mobys metal"};
     // The material state the program holds now (flush): none yet.
     int set_material = -1;
+    renderer::TextureHandle set_texture = 0;  // bound on unit 0 (and its colours) for `program`
     unsigned set_emission_texture = 0;
     int set_cutout = -1;
     decltype(Material::colour) set_colour{};
@@ -1903,6 +1904,7 @@ void LevelScene::draw_layer(
             program = &wanted;
             program_depth_matched = depth_matched;
             set_material = -1;
+            set_texture = 0;
             set_cutout = -1;
             colour_set = false;
         }
@@ -2001,8 +2003,13 @@ void LevelScene::draw_layer(
                     }
                     const renderer::TextureHandle texture =
                         m.image >= 0 ? m_textures[static_cast<std::size_t>(m.image)] : m_white;
-                    state.textures
-                        .bind_upscaled_texture_colours(texture, *program, input.texture_filter);
+                    // Materials share textures: rebinding one the program already samples costs
+                    // driver calls for nothing.
+                    if (texture != set_texture) {
+                        state.textures
+                            .bind_upscaled_texture_colours(texture, *program, input.texture_filter);
+                        set_texture = texture;
+                    }
                     if (static_cast<int>(m.cutout) != set_cutout) {
                         glUniform1i(cutout, m.cutout ? 1 : 0);
                         set_cutout = static_cast<int>(m.cutout);
