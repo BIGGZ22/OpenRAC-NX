@@ -53,6 +53,14 @@ reused, and its deferred work run, once its fence has signalled. Turning `g` int
 backend passes around is P3-03 of the restructure
 ([PROGRESS.md](../../../docs/restructure/PROGRESS.md)).
 
+`Context::recorded` (a `RecordedState`) is what the frame's main command buffer holds of a draw's
+state: the viewports, scissors, blend constants and stencil states last set, and the descriptor
+sets with their layout and offset, the push constant, the vertex buffers and the index buffer last
+bound. A draw records only what differs from it (the registry's `vk-state-skip`); the pipeline is
+`Context::bound_pipeline`. It is forgotten at every begin of rendering and of the command buffers,
+so nothing is trusted across passes, and a change of pipeline layout forgets the sets. Code that
+records graphics state or binds into `main` outside `draw()` must forget it too.
+
 ## Errors
 
 `open()` returns false with a message when Vulkan cannot start (the window then falls back to

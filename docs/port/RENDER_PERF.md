@@ -42,6 +42,8 @@ before and after, and how its frames are shown to be the same.
 | Name | Default | Tolerance | What it does |
 |---|---|---|---|
 | `registry-selftest` | on | none (exact) | Draws nothing. The entry the registry's own tests and the equivalence harness's switch. |
+| `vk-draw-clock` | on | none (exact) | The Vulkan draw reads the clock for `vk_draw_ms` only while the debug tools measure (R-03). |
+| `vk-state-skip` | on | none (exact) | The Vulkan draw records dynamic state and binds only when they differ from what its command buffer holds (R-03). |
 
 Its tests are `render_opt` (the table, and the parsing of the variable: a name, a list, `all`, an
 unknown name kept apart; it runs in the headless preset too) and `render_opt_environment` (the
@@ -366,3 +368,78 @@ python3 port/tools/perf/render_bench.py --level assets/port/rac1/pal/level_12 --
 On a real level the camera walks its bounds from one corner to the other, and the live mobys are
 300 of the level's own classes, each walking a circle the seed places (the game's own mobys need
 the game running, which the benchmark does not).
+
+## R-03: no clock per draw, state and binds recorded when they change
+
+**What changed** (`renderer/vulkan/vkgl_draw.cpp`, `vkgl_internal.h`, `vkgl_commands.cpp`):
+
+- `vk-draw-clock`. Every draw read `Clock::now()` twice for `measures.draw_s`. Its only readers are
+  the gauges `vk_draw_ms` and `vk_draw_us_each`, published only while `stats::enabled()`, so the
+  clock is now read only then; `vk_draws` still counts every draw. The `OPENRAC_FRAME_COST` line
+  does not show `draw_s` and is unchanged.
+- `vk-state-skip`. Every draw that was not merged into an indirect batch recorded six dynamic-state
+  commands (viewport, scissor, blend constants, stencil reference, compare and write masks) and
+  bound its descriptor set, the material set and its push constant, its vertex buffers and its
+  index buffer, whether or not the command buffer held them. `Context::recorded`, a
+  `RecordedState`, remembers what was last recorded into the frame's main command buffer, and a
+  draw records only the commands whose values differ (compared by their bytes, so the blend
+  constants' -0 and +0 stay apart). Vulkan keeps that state for the life of a command buffer; the
+  tracker is forgotten at every begin of rendering and every begin of the command buffers, which
+  is more often than Vulkan needs, and a change of pipeline layout forgets the sets and the push
+  constant. The pipeline was tracked already (`Context::bound_pipeline`).
+- The `OPENRAC_GPU_MARKERS` read in the timed scopes (REPORT C4) already goes through
+  `common/env.h` since P2-20, and is compiled only with `-DOPENRAC_GPU_MARKERS=ON`; nothing changed
+  there.
+
+**The counter**, per measured frame of `render_bench.py --synthetic --compare-opt vk-state-skip`
+(the entry off, then on), 1920x1080, five runs a setting. The counts are the same on the Mac and on
+box1, and in every run:
+
+| Setting | `vk_cmds_recorded` | `vk_cmds_dynamic_state` | `vk_cmds_bind_descriptors` |
+|---|---|---|---|
+| base (walk, cold; also warm, static, between, half size) | 174 to 98 (-43.7%) | 60 to 6 (-90.0%) | 31 to 27 (-12.9%) |
+| enhanced | 287 to 194 (-32.4%) | 96 to 24 (-75.0%) | 45 to 44 (-2.2%) |
+| gpu-driven off | 17,554.6 to 3,293.1 (-81.2%) | 8,757.8 to 6 (-99.9%) | 4,378.9 to 1,475.6 (-66.3%) |
+| materials off | 14,654 to 2,982 (-79.7%) | 8,760 to 6 (-99.9%) | 1,461 to 1,461 (0%) |
+
+Draw commands, draw calls, triangles, render passes, barriers, submits, ring bytes, descriptor sets
+and writes, and pipelines are the same with the entry on and off. With materials off every draw
+has a descriptor set of its own (one per texture binding), so its binds stay: that is R-14's.
+`bench_heap_allocs` is unchanged (the per-draw allocations are R-04's). `vk-draw-clock` changes no
+counter.
+
+**Milliseconds, as information** (the picture's CPU time, median of five runs, entry off to on):
+
+| Setting | Mac | box1 |
+|---|---|---|
+| base | 0.81 to 0.82 | 1.09 to 1.06 |
+| enhanced | 1.95 to 1.99 | 3.23 to 3.31 |
+| gpu-driven off | 1.28 to 0.93 (-27%) | 1.69 to 1.17 (-31%) |
+| materials off | 1.32 to 1.11 (-16%) | 1.64 to 1.28 (-22%) |
+
+Where the GPU-driven batches already merge the draws (base, enhanced) the difference is in the
+noise; on the per-draw paths a quarter of the picture's CPU time goes. `vk-draw-clock` on against
+off is within the noise on both machines (Mac within 1%, box1 between -11% and +14% on pictures of
+about 1.1 ms).
+
+**Equivalence.** `render_equivalence_vulkan` compares both entries on and off in every scenario,
+Enhanced off and on, byte for byte, under the validation layer: identical, no validation message,
+on both machines, and again with `OPENRAC_GPU_DRIVEN_OFF=1` and with `OPENRAC_GPU_MATERIALS_OFF=1`
+(run by hand, the per-draw paths where the tracker skips most). The tracker's risk is a wrong
+viewport, scissor or stencil state in some draw; the image tests that exercise those passed
+unchanged with the entries on and with `OPENRAC_RENDER_OPT_OFF=all`: `vulkan_uniform`,
+`renderer_direct_vulkan` (2D, scissor-heavy), `sun_shadow_vulkan` (indexed viewports) and the
+rest of the Vulkan set. The fixture gained no scenario: the per-draw modes above are its scene
+with thousands of state changes a frame.
+
+Measured with:
+
+```sh
+python3 port/tools/perf/render_bench.py --synthetic --compare-opt vk-state-skip
+python3 port/tools/perf/render_bench.py --synthetic --compare-opt vk-draw-clock
+OPENRAC_GL_API=vulkan OPENRAC_VULKAN_PIPELINE_CACHE=off OPENRAC_VULKAN_VALIDATION=1 \
+  OPENRAC_GPU_DRIVEN_OFF=1 ./port/build/release/render_equivalence_test
+```
+
+On real levels the maintainers' command is
+`python3 port/tools/perf/render_bench.py --level assets/port/rac1/pal/level_12 --compare-opt vk-state-skip`.
