@@ -428,6 +428,8 @@ void particle(
     g->particles.push_back(p);
 }
 
+namespace {
+
 // A particle texture's pool key: its 32 x 32 PSMT8 pixels and its 16 x 16 CSM1 palette (both in game
 // memory) decoded to RGBA once, in the chip's alpha units (0x80 = opaque), and placed at a key of its
 // own, kept while the renderer lives. Earlier the pixels and palette went through the pool as
@@ -472,6 +474,8 @@ std::uint32_t particle_texture(
     g->particle_textures.emplace(id, key);
     return key;
 }
+
+}  // namespace
 
 // The frame's particles as effect quads, as the game's VU1 sprite program draws them (ReRAC's
 // particle notes, docs/plan/particles.md section 7; ISC License, Copyright (c) 2026 ReRAC
