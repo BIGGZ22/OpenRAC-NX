@@ -847,10 +847,11 @@ std::optional<std::uint32_t> marker_generation(std::span<const std::uint8_t> pac
     return std::nullopt;
 }
 
-bool frame(std::span<const std::uint8_t> ram, std::uint32_t chain, std::uint32_t draws) {
-    if (!g) {
-        return true;
-    }
+namespace {
+
+// Reads the window's events: the game's input from them, the window's own keys, the overlay's
+// and the debug menu's, then the settings their menus changed. False once the window was closed.
+bool read_window_events() {
     SDL_Event event;
     while (platform::poll_event(event)) {
         if (event.type == SDL_EVENT_QUIT) {
@@ -872,11 +873,12 @@ bool frame(std::span<const std::uint8_t> ram, std::uint32_t chain, std::uint32_t
         apply_settings();
     }
     debug_menu::update(openrac_game_loaded_overlay(), g->index);
+    return true;
+}
 
-    // The level program loaded now (-1: the boot program, title and menus), as the port knows it.
-    const int level = openrac_game_loaded_overlay();
-    const viewer::GameAddresses& a =
-        viewer::rac1_addresses(g->game, level);
+// Uses the world the game draws now: the level loaded (`level`, -1 the boot program), or one of
+// the boot program's worlds.
+void use_world(std::span<const std::uint8_t> ram, int level) {
     // The boot program's worlds: the flight between planets (game mode 6), else the title world.
     // A flight between planets also plays inside a planet's program. The game draws it by the ship's
     // state (dispatch_game_state_update): the planet in the take-off (0), the landing (8) and while
@@ -893,15 +895,10 @@ bool frame(std::span<const std::uint8_t> ram, std::uint32_t chain, std::uint32_t
         }
     }
     use_level(world);
-    viewer::GameState state = viewer::read_game_state(ram, a);
-    // The world is drawn from the camera the game's world renderers used, not from whatever the
-    // camera globals hold at the end of the frame (the page menu sets its own camera, at
-    // (256, 256, 64) facing +x, to draw its frame objects, as ReRAC notes).
-    // A tick on which the world renderers did not run but mobys were drawn with a camera of their
-    // own (a page menu's frame objects): only those are drawn, as the game drew no others (the
-    // pause page skips the Goodies frame while it has none).
-    const bool world_ran = g->world_camera.has_value();
-    const bool only_own_camera = !world_ran && !g->moby_cameras.empty();
+}
+
+// Puts the camera the game's world renderers drew with this tick into `state`, if they ran.
+void take_world_camera(viewer::GameState& state) {
     if (g->world_camera) {
         state.camera_position = g->world_camera->camera_position;
         state.forward = g->world_camera->forward;
@@ -916,7 +913,11 @@ bool frame(std::span<const std::uint8_t> ram, std::uint32_t chain, std::uint32_t
         state.fog_far_f = g->world_camera->fog_far_f;
         g->world_camera.reset();
     }
+}
 
+// Logs the camera this tick is drawn from (OPENRAC_CAM_LOG). `world_ran`: the game's world
+// renderers ran this tick.
+void log_camera(const viewer::GameState& state, bool world_ran) {
     // OPENRAC_CAM_LOG: the camera each frame is drawn from (position, forward, up), in the log.
     static const bool& cam_log = stats::probe("OPENRAC_CAM_LOG", "the camera each tick is drawn from, in the log");
     if (cam_log) {
@@ -924,28 +925,35 @@ bool frame(std::span<const std::uint8_t> ram, std::uint32_t chain, std::uint32_t
                   state.camera_position[0], state.camera_position[1], state.camera_position[2], state.forward[0],
                   state.forward[1], state.forward[2], state.up[0], state.up[1], state.up[2], world_ran ? 1 : 0);
     }
+}
+
+// Reads where a scripted run is (g_route): the level, the game mode and when the player got
+// control.
+void follow_route(std::span<const std::uint8_t> ram, int level) {
     // The game mode (the loaded level's copy, or the boot program's word) and control (Route).
-    {
-        std::uint32_t mode = 0;
-        const bool in_level = level >= 0 && level < 19;
-        if (!(in_level && openrac_game_mode != nullptr && openrac_game_mode(&mode) != 0)) {
-            mode = game_mode_address() != 0 ? word_at(ram, game_mode_address()) : 0;
-        }
-        g_route.level = in_level ? level : -1;
-        g_route.mode = static_cast<int>(mode);
-        if (!skippable()) {
-            g_route.skippable_from = -1;
-        } else if (g_route.skippable_from < 0) {
-            g_route.skippable_from = static_cast<std::int64_t>(g->index);
-        }
-        if (g_route.control < 0) {
-            g_route.streak = in_level && mode == 0 ? g_route.streak + 1 : 0;
-            if (g_route.streak >= kControlHold) {
-                g_route.control = static_cast<std::int64_t>(g->index);
-                log::info("control at frame {} (level {})", g->index, level);
-            }
+    std::uint32_t mode = 0;
+    const bool in_level = level >= 0 && level < 19;
+    if (!(in_level && openrac_game_mode != nullptr && openrac_game_mode(&mode) != 0)) {
+        mode = game_mode_address() != 0 ? word_at(ram, game_mode_address()) : 0;
+    }
+    g_route.level = in_level ? level : -1;
+    g_route.mode = static_cast<int>(mode);
+    if (!skippable()) {
+        g_route.skippable_from = -1;
+    } else if (g_route.skippable_from < 0) {
+        g_route.skippable_from = static_cast<std::int64_t>(g->index);
+    }
+    if (g_route.control < 0) {
+        g_route.streak = in_level && mode == 0 ? g_route.streak + 1 : 0;
+        if (g_route.streak >= kControlHold) {
+            g_route.control = static_cast<std::int64_t>(g->index);
+            log::info("control at frame {} (level {})", g->index, level);
         }
     }
+}
+
+// Writes this tick's line of OPENRAC_TRACE. `draws`: the layers the game drew (frame()).
+void trace_tick(const viewer::GameState& state, std::uint32_t draws) {
     // OPENRAC_TRACE=FILE: one JSON line a tick, for port/tools/regress (docs/port/REGRESSION.md):
     // f the window frame, c frames since control (null before), lv the level (-1 the boot
     // program), m the game mode, cam/fw the camera's position and forward row, hp/hr/hs the hero's
@@ -975,14 +983,22 @@ bool frame(std::span<const std::uint8_t> ram, std::uint32_t chain, std::uint32_t
         std::fputs(line.c_str(), trace);
         std::fflush(trace);  // a crash keeps every tick before it
     }
+}
+
+// Whether a scripted run is over: OPENRAC_CONTROL_FRAMES frames after control.
+bool run_over() {
     // OPENRAC_CONTROL_FRAMES=N: the run ends N frames after control (a route's length).
     static const std::int64_t control_frames = env::integer(env::Var::ControlFrames, -1);
     if (control_frames >= 0 && g_route.control >= 0
         && static_cast<std::int64_t>(g->index) >= g_route.control + control_frames) {
         log::info("{} frames after control: the run ends", control_frames);
-        return false;
+        return true;
     }
+    return false;
+}
 
+// Writes the game's main memory at the frame OPENRAC_DUMP_RAM names.
+void dump_ram(std::span<const std::uint8_t> ram) {
     // OPENRAC_DUMP_RAM=FRAME: the game's 32 MB of main memory at that frame, to ram_FRAME.bin.
     static const std::optional<std::uint64_t> dump_ram = env_frame(env::Var::DumpRam);
     if (dump_ram && g->index == *dump_ram) {
@@ -993,72 +1009,155 @@ bool frame(std::span<const std::uint8_t> ram, std::uint32_t chain, std::uint32_t
             log::info("main memory written to {}", path);
         }
     }
+}
 
-    // OPENRAC_DEBUG: the game's state each 100 frames, for bring-up.
-    static const bool& debug = stats::probe("OPENRAC_DEBUG", "the game's state each 100 ticks, in the log");
-    if (debug && g->index % 100 == 0) {
+// Logs the game's state for bring-up (OPENRAC_DEBUG, each 100 ticks): the level, the camera, the
+// front end's words and the pad, the fog, the effects, the sky and the particles drawn.
+void log_tick_state(
+    std::span<const std::uint8_t> ram,
+    const viewer::GameState& state,
+    int level,
+    std::uint32_t draws
+) {
+    log::info(
+        "frame {}: level {}, camera {:.1f} {:.1f} {:.1f}, forward {:.2f} {:.2f} {:.2f}, "
+        "fov {:.3f}, {} mobys, layers drawn {:#x}",
+        g->index,
+        level,
+        state.camera_position[0],
+        state.camera_position[1],
+        state.camera_position[2],
+        state.forward[0],
+        state.forward[1],
+        state.forward[2],
+        state.tan_half_fov_y,
+        state.mobys.size(),
+        draws
+    );
+    if (const openrac_front_end* fe = openrac_game_front_end) {
+        // The first pad's block: +0x100 the sticks, +0x194 its socket, +0x198 its state,
+        // +0x1A0 the buttons held, +0x1A4 the raw word.
+        // The level's own game mode (openrac_game_mode: rac1's level copy of its mode word, 6 in
+        // the ship's landing, 2 in a cutscene, 0 in play), or -1 outside a level.
+        std::uint32_t level_mode = 0xFFFFFFFFu;
+        if (openrac_game_mode == nullptr || openrac_game_mode(&level_mode) == 0) {
+            level_mode = 0xFFFFFFFFu;
+        }
         log::info(
-            "frame {}: level {}, camera {:.1f} {:.1f} {:.1f}, forward {:.2f} {:.2f} {:.2f}, fov {:.3f}, {} mobys, layers drawn {:#x}",
-            g->index, level, state.camera_position[0], state.camera_position[1],
-            state.camera_position[2], state.forward[0], state.forward[1], state.forward[2],
-            state.tan_half_fov_y, state.mobys.size(), draws
+            "  mode {} level mode {} dialog kind {} step {} level word {} title exit {} pad {:#x}",
+            static_cast<int>(word_at(ram, fe->game_mode)),
+            static_cast<int>(level_mode),
+            static_cast<int>(word_at(ram, fe->dialog)),
+            static_cast<int>(word_at(ram, fe->dialog + 0x1C)),
+            static_cast<int>(word_at(ram, fe->level)),
+            static_cast<int>(word_at(ram, fe->title_exit)),
+            word_at(ram, fe->pad + 0x1A4)
         );
-        if (const openrac_front_end* fe = openrac_game_front_end) {
-            // The first pad's block: +0x100 the sticks, +0x194 its socket, +0x198 its state,
-            // +0x1A0 the buttons held, +0x1A4 the raw word.
-            // The level's own game mode (openrac_game_mode: rac1's level copy of its mode word, 6 in
-            // the ship's landing, 2 in a cutscene, 0 in play), or -1 outside a level.
-            std::uint32_t level_mode = 0xFFFFFFFFu;
-            if (openrac_game_mode == nullptr || openrac_game_mode(&level_mode) == 0) {
-                level_mode = 0xFFFFFFFFu;
-            }
-            log::info("  mode {} level mode {} dialog kind {} step {} level word {} title exit {} pad {:#x}",
-                      static_cast<int>(word_at(ram, fe->game_mode)), static_cast<int>(level_mode),
-                      static_cast<int>(word_at(ram, fe->dialog)),
-                      static_cast<int>(word_at(ram, fe->dialog + 0x1C)), static_cast<int>(word_at(ram, fe->level)),
-                      static_cast<int>(word_at(ram, fe->title_exit)), word_at(ram, fe->pad + 0x1A4));
-            float axes[4]{};
-            std::memcpy(axes, ram.data() + fe->pad + 0x100, sizeof axes);
-            log::info("  pad socket {} state {} held {:#x}, right {:.3f} {:.3f}, left {:.3f} {:.3f}",
-                      word_at(ram, fe->pad + 0x194), word_at(ram, fe->pad + 0x198), word_at(ram, fe->pad + 0x1A0),
-                      axes[0], axes[1], axes[2], axes[3]);
-        }
-        log::info("  fog colour {:.0f} {:.0f} {:.0f}, depth {:.0f} to {:.0f}, F {:.0f} to {:.0f}",
-                  state.fog_colour[0] * 255, state.fog_colour[1] * 255, state.fog_colour[2] * 255,
-                  state.fog_near, state.fog_far, state.fog_near_f, state.fog_far_f);
-        static const std::optional<std::uint64_t> fx_dump = env_frame(env::Var::FxDump);
-        if (fx_dump && g->index >= *fx_dump && g->index < *fx_dump + 100) {
-            for (const renderer::EffectQuad& e : g->effects) {
-                log::info("    quad {:.1f} {:.1f} {:.1f} {:.2f} | {:.1f} {:.1f} {:.1f} | {:.1f} {:.1f} {:.1f} | {:.1f} {:.1f} {:.1f} rgba {:#x} st {:.2f},{:.2f} {:.2f},{:.2f} tex0 {:#x} alpha {:#x} clamp {:#x}",
-                          e.corner[0][0], e.corner[0][1], e.corner[0][2], e.corner[0][3], e.corner[1][0], e.corner[1][1], e.corner[1][2],
-                          e.corner[2][0], e.corner[2][1], e.corner[2][2], e.corner[3][0], e.corner[3][1], e.corner[3][2],
-                          e.rgba[0], e.st[0][0], e.st[0][1], e.st[3][0], e.st[3][1], e.tex0, e.alpha, e.clamp);
-            }
-        }
-        if (!g->sky_sprites.empty()) {
-            const auto& [r, tex0] = g->sky_sprites.front();
-            float size;
-            std::memcpy(&size, r.data() + 0x1C, 4);
-            log::info("  {} sky sprites; the first RGBA {:#x} size {:.3f} TEX0 {:#x} ALPHA {:#x}", g->sky_sprites.size(),
-                      r[4] | r[5] << 8 | r[6] << 16 | static_cast<std::uint32_t>(r[7]) << 24, size, tex0, r[3]);
-        }
-        if (!g->particles.empty()) {
-            int kinds[4] = {0, 0, 0, 0};
-            for (const State::Particle& p : g->particles) {
-                kinds[p.record[1] & 3]++;
-            }
-            log::info("  {} particles (sprites {}, flat {}, lines {}, ribbons {})", g->particles.size(), kinds[0],
-                      kinds[1], kinds[2], kinds[3]);
-        }
-        if (!g->effects.empty()) {
-            const renderer::EffectQuad& e = g->effects.front();
-            log::info("  {} effect quads; the first at {:.1f} {:.1f} {:.1f}, TEX0 {:#x}, ALPHA {:#x}, RGBA {:#x}",
-                      g->effects.size(), e.corner[0][0], e.corner[0][1], e.corner[0][2], e.tex0, e.alpha, e.rgba[0]);
-        }
-        log::info("  load stage {:#x} retries {} snd state {:#x}", word_at(ram, 0x0015EF48),
-                  word_at(ram, 0x0015EFBC), word_at(ram, word_at(ram, 0x001517D0) + 8) & 0xFFFF);
+        float axes[4]{};
+        std::memcpy(axes, ram.data() + fe->pad + 0x100, sizeof axes);
+        log::info(
+            "  pad socket {} state {} held {:#x}, right {:.3f} {:.3f}, left {:.3f} {:.3f}",
+            word_at(ram, fe->pad + 0x194),
+            word_at(ram, fe->pad + 0x198),
+            word_at(ram, fe->pad + 0x1A0),
+            axes[0],
+            axes[1],
+            axes[2],
+            axes[3]
+        );
     }
+    log::info(
+        "  fog colour {:.0f} {:.0f} {:.0f}, depth {:.0f} to {:.0f}, F {:.0f} to {:.0f}",
+        state.fog_colour[0] * 255,
+        state.fog_colour[1] * 255,
+        state.fog_colour[2] * 255,
+        state.fog_near,
+        state.fog_far,
+        state.fog_near_f,
+        state.fog_far_f
+    );
+    static const std::optional<std::uint64_t> fx_dump = env_frame(env::Var::FxDump);
+    if (fx_dump && g->index >= *fx_dump && g->index < *fx_dump + 100) {
+        for (const renderer::EffectQuad& e : g->effects) {
+            log::info(
+                "    quad {:.1f} {:.1f} {:.1f} {:.2f} | {:.1f} {:.1f} {:.1f} | "
+                "{:.1f} {:.1f} {:.1f} | {:.1f} {:.1f} {:.1f} rgba {:#x} "
+                "st {:.2f},{:.2f} {:.2f},{:.2f} tex0 {:#x} alpha {:#x} clamp {:#x}",
+                e.corner[0][0],
+                e.corner[0][1],
+                e.corner[0][2],
+                e.corner[0][3],
+                e.corner[1][0],
+                e.corner[1][1],
+                e.corner[1][2],
+                e.corner[2][0],
+                e.corner[2][1],
+                e.corner[2][2],
+                e.corner[3][0],
+                e.corner[3][1],
+                e.corner[3][2],
+                e.rgba[0],
+                e.st[0][0],
+                e.st[0][1],
+                e.st[3][0],
+                e.st[3][1],
+                e.tex0,
+                e.alpha,
+                e.clamp
+            );
+        }
+    }
+    if (!g->sky_sprites.empty()) {
+        const auto& [r, tex0] = g->sky_sprites.front();
+        float size;
+        std::memcpy(&size, r.data() + 0x1C, 4);
+        log::info(
+            "  {} sky sprites; the first RGBA {:#x} size {:.3f} TEX0 {:#x} ALPHA {:#x}",
+            g->sky_sprites.size(),
+            r[4] | r[5] << 8 | r[6] << 16 | static_cast<std::uint32_t>(r[7]) << 24,
+            size,
+            tex0,
+            r[3]
+        );
+    }
+    if (!g->particles.empty()) {
+        int kinds[4] = {0, 0, 0, 0};
+        for (const State::Particle& p : g->particles) {
+            kinds[p.record[1] & 3]++;
+        }
+        log::info(
+            "  {} particles (sprites {}, flat {}, lines {}, ribbons {})",
+            g->particles.size(),
+            kinds[0],
+            kinds[1],
+            kinds[2],
+            kinds[3]
+        );
+    }
+    if (!g->effects.empty()) {
+        const renderer::EffectQuad& e = g->effects.front();
+        log::info(
+            "  {} effect quads; the first at {:.1f} {:.1f} {:.1f}, "
+            "TEX0 {:#x}, ALPHA {:#x}, RGBA {:#x}",
+            g->effects.size(),
+            e.corner[0][0],
+            e.corner[0][1],
+            e.corner[0][2],
+            e.tex0,
+            e.alpha,
+            e.rgba[0]
+        );
+    }
+    log::info(
+        "  load stage {:#x} retries {} snd state {:#x}",
+        word_at(ram, 0x0015EF48),
+        word_at(ram, 0x0015EFBC),
+        word_at(ram, word_at(ram, 0x001517D0) + 8) & 0xFFFF
+    );
+}
 
+// Logs the mobys near the hero (OPENRAC_MOBY_LOG).
+void log_mobys_near_hero(std::span<const std::uint8_t> ram, const viewer::GameState& state) {
     // OPENRAC_MOBY_LOG=N[:RADIUS]: every N ticks, the mobys within RADIUS game units of the hero
     // (default 20) in the log: class, address, state, mode bits, animation, position, the distance,
     // the collision radius and the update function, for seeing what an object is doing.
@@ -1101,7 +1200,33 @@ bool frame(std::span<const std::uint8_t> ram, std::uint32_t chain, std::uint32_t
                       word_at(ram, m.address + 0x78), b[0x30], b[0x31], static_cast<unsigned>(b[0x32] | b[0x33] << 8));
         }
     }
+}
 
+// The live mobys of one tick, as pose_mobys reads them for keep_tick: each one drawn and its
+// address and joints, the joint palette they index, the hero's shadow, and the mobys the game
+// drew into a texture.
+struct TickMobys {
+    std::vector<viewer::Instance> live;
+    std::vector<std::uint32_t> addresses;
+    std::vector<int> joints;
+    std::vector<viewer::LevelScene::JointColumns> palette;
+    std::vector<renderer::ShadowCapsule> shadows;
+    std::uint32_t shadow_moby = 0;
+    viewer::MobyShadowState shadow_state;
+    std::vector<Kept::TargetMoby> target_mobys;
+};
+
+// Reads the live mobys this tick: which are drawn, how (blend, light, colour, the camera they
+// were drawn with) and in what pose, and the hero's shadow. Mobys the game drew but did not list
+// are added to `state`. `world_ran`, `only_own_camera`: the world renderers ran this tick, and
+// only mobys with a camera of their own were drawn without them; `debug`: OPENRAC_DEBUG.
+TickMobys pose_mobys(
+    std::span<const std::uint8_t> ram,
+    viewer::GameState& state,
+    bool world_ran,
+    bool only_own_camera,
+    bool debug
+) {
     // The live mobys, by class, each in the pose its animation fields give (viewer/moby_pose.h):
     // its joint palette goes to the scene, which skins the class's mesh with it. OPENRAC_ANIM=0
     // draws every moby in its bind pose.
@@ -1334,6 +1459,20 @@ bool frame(std::span<const std::uint8_t> ram, std::uint32_t chain, std::uint32_t
         live_addresses.push_back(m.address);
     }
     g->moby_cameras.clear();
+    return {
+        std::move(live),
+        std::move(live_addresses),
+        std::move(live_joints),
+        std::move(palette),
+        std::move(shadows),
+        shadow_moby,
+        shadow_state,
+        std::move(target_mobys)
+    };
+}
+
+// Gives the scene this tick's fog and the lights as the game holds them.
+void light_scene(std::span<const std::uint8_t> ram, const viewer::GameState& state) {
     g->scene.set_fog(state.fog_colour, state.fog_near, state.fog_far, state.fog_near_f,
                      state.fog_far_f);
     // The light bank as the game holds it now (16 sets of 0x40 bytes; the executable's, each
@@ -1352,6 +1491,16 @@ bool frame(std::span<const std::uint8_t> ram, std::uint32_t chain, std::uint32_t
             }
         }
     }
+}
+
+// Keeps this tick's scene for the frames drawn until the next one (Kept), the last tick's as
+// where they move from, and counts the tick.
+void keep_tick(
+    std::span<const std::uint8_t> ram,
+    const viewer::GameState& state,
+    std::uint32_t draws,
+    TickMobys&& mobys
+) {
     // What this tick drew, kept for the frames drawn until the next one (between): the scene
     // then moves from the last tick's camera and mobys to this one's.
     Kept& k = g->kept;
@@ -1379,24 +1528,37 @@ bool frame(std::span<const std::uint8_t> ram, std::uint32_t chain, std::uint32_t
     k.prev_palette = std::move(k.palette);
     k.prev_shadows = std::move(k.shadows);
     k.prev_shadow_moby = k.shadow_moby;
-    k.shadows = std::move(shadows);
-    k.shadow_moby = shadow_moby;
+    k.shadows = std::move(mobys.shadows);
+    k.shadow_moby = mobys.shadow_moby;
     k.prev_shadow_state = k.shadow_state;
-    k.shadow_state = shadow_state;
+    k.shadow_state = mobys.shadow_state;
     k.hero_airborne = hero_state_address() != 0
                           ? viewer::hero_airborne(ram, OPENRAC_DATA(hero_state_address()))
                           : std::nullopt;
     k.state = state;
     k.has_state = true;
-    k.live = std::move(live);
-    k.target_mobys = std::move(target_mobys);
-    k.addresses = std::move(live_addresses);
-    k.joints = std::move(live_joints);
-    k.palette = std::move(palette);
+    k.live = std::move(mobys.live);
+    k.target_mobys = std::move(mobys.target_mobys);
+    k.addresses = std::move(mobys.addresses);
+    k.joints = std::move(mobys.joints);
+    k.palette = std::move(mobys.palette);
     k.draws = draws;
     k.has_camera = state.forward[0] != 0.0f || state.forward[1] != 0.0f || state.forward[2] != 0.0f;
     g->last_tick_menu = k.before_world >= 0x40000;  // the last tick's, read before this one's is kept
     k.frame = g->index++;
+}
+
+// Keeps this tick's 2D path (the display list's direct GIF data, from `chain` where the game
+// sends it so, else the list `a` names) and where its world goes in it. Returns the native quads
+// its markers name, if they are still kept.
+const std::vector<renderer::UiQuad>* keep_2d_path(
+    std::span<const std::uint8_t> ram,
+    std::uint32_t chain,
+    const viewer::GameAddresses& a,
+    int level,
+    bool debug
+) {
+    Kept& k = g->kept;
     // OPENRAC_DUMP_DRAWS=N or N-M: the frames whose 2D draws are logged.
     static const std::optional<FrameRange> dump_at = env_frames(env::Var::DumpDraws);
     if (dump_at) {
@@ -1466,6 +1628,12 @@ bool frame(std::span<const std::uint8_t> ram, std::uint32_t chain, std::uint32_t
         before_world = first_offscreen;
     }
     k.before_world = level >= 0 && level < 19 ? std::min(before_world, k.packets.size()) : 0;
+    return named_quads;
+}
+
+// Decides whether the last frame stands for this tick's (a page menu's gap, a list not finished).
+void choose_repeat_frame(bool debug) {
+    Kept& k = g->kept;
     const bool menu_gap = (k.draws & 0x1Fu) == 0 && k.before_world >= 0x40000;
     g->menu_gap_ticks = menu_gap ? g->menu_gap_ticks + 1 : 0;
     // A tick that draws its world with no 2D list at all (the first tick of the vendor's fly-in,
@@ -1486,6 +1654,16 @@ bool frame(std::span<const std::uint8_t> ram, std::uint32_t chain, std::uint32_t
         log::info("  {} strips ({} vertices, {} without their texture's upload), the first TEX0 {:#x} ALPHA {:#x}",
                   k.strips.size(), k.strip_vertices.size(), bare, k.strips.front().tex0, k.strips.front().alpha);
     }
+}
+
+// Keeps the world effects, the sky and the particles the game drew this tick, and the native
+// quads its 2D list names (`named_quads`, keep_2d_path), and clears what was gathered.
+void keep_effects(
+    std::span<const std::uint8_t> ram,
+    const viewer::GameState& state,
+    const std::vector<renderer::UiQuad>* named_quads
+) {
+    Kept& k = g->kept;
     sky_sprite_quads(state);
     particle_quads(ram, state);
     k.effects = std::move(g->effects);
@@ -1506,6 +1684,11 @@ bool frame(std::span<const std::uint8_t> ram, std::uint32_t chain, std::uint32_t
     g->effect_uploads.clear();
     g->particles.clear();
     g->sky_sprites.clear();
+}
+
+// Reports what this tick drew: in the log (OPENRAC_FRAME_LOG) and to the debug overlay.
+void report_tick(std::span<const std::uint8_t> ram, int level) {
+    Kept& k = g->kept;
     // OPENRAC_FRAME_LOG=FROM-TO: what each tick in that range drew, in the log.
     static const std::optional<FrameRange> frame_log = env_frames(env::Var::FrameLog);
     if (frame_log && frame_log->holds(k.frame)) {
@@ -1525,6 +1708,10 @@ bool frame(std::span<const std::uint8_t> ram, std::uint32_t chain, std::uint32_t
     // [debug tools] What the game holds this tick, for the overlay and the dump.
     debug_overlay::tick({g->game.c_str(), ram, level, &k.state, k.draws, k.frame, k.packets.size(), k.ui_quads.size(),
                          k.effects.size(), k.strips.size(), k.live.size()});
+}
+
+// Whether the tick's own frame is left out because the tick came late. Counts and warns.
+bool leave_late_frame() {
     // The tick's own frame (when frames are drawn between ticks, part way from the last tick's
     // scene, by the refresh it is shown at). A tick that comes more than a tick late (set_tick: the
     // machine draws frames slower than the game ticks) is not drawn, so that drawing never slows
@@ -1552,15 +1739,75 @@ bool frame(std::span<const std::uint8_t> ram, std::uint32_t chain, std::uint32_t
         return true;
     }
     g->skipped = 0;
+    return false;
+}
+
+// Draws the tick's own frame, or leaves it to between when the frame cap holds it back.
+void draw_tick_frame() {
     // The frame cap may hold the tick's own frame back: the tick is never made to wait for it. The
     // frame is then drawn between ticks, when it is due (between), or not at all when the next
     // tick comes first (a cap under the game's tick rate).
     if (!frame_due(std::chrono::steady_clock::now())) {
         pacing.first_pending = true;
-        return true;
+        return;
     }
     pacing.first_pending = false;
     draw_kept(true);
+}
+
+}  // namespace
+
+bool frame(std::span<const std::uint8_t> ram, std::uint32_t chain, std::uint32_t draws) {
+    if (!g) {
+        return true;
+    }
+    // The window was closed.
+    if (!read_window_events()) {
+        return false;
+    }
+
+    // The level program loaded now (-1: the boot program, title and menus), as the port knows it.
+    const int level = openrac_game_loaded_overlay();
+    const viewer::GameAddresses& a = viewer::rac1_addresses(g->game, level);
+    use_world(ram, level);
+    viewer::GameState state = viewer::read_game_state(ram, a);
+    // The world is drawn from the camera the game's world renderers used, not from whatever the
+    // camera globals hold at the end of the frame (the page menu sets its own camera, at
+    // (256, 256, 64) facing +x, to draw its frame objects, as ReRAC notes).
+    // A tick on which the world renderers did not run but mobys were drawn with a camera of their
+    // own (a page menu's frame objects): only those are drawn, as the game drew no others (the
+    // pause page skips the Goodies frame while it has none).
+    const bool world_ran = g->world_camera.has_value();
+    const bool only_own_camera = !world_ran && !g->moby_cameras.empty();
+    take_world_camera(state);
+    log_camera(state, world_ran);
+    follow_route(ram, level);
+    trace_tick(state, draws);
+    // The run's frames are done.
+    if (run_over()) {
+        return false;
+    }
+    dump_ram(ram);
+
+    // OPENRAC_DEBUG: the game's state each 100 frames, for bring-up.
+    static const bool& debug =
+        stats::probe("OPENRAC_DEBUG", "the game's state each 100 ticks, in the log");
+    if (debug && g->index % 100 == 0) {
+        log_tick_state(ram, state, level, draws);
+    }
+    log_mobys_near_hero(ram, state);
+    TickMobys mobys = pose_mobys(ram, state, world_ran, only_own_camera, debug);
+    light_scene(ram, state);
+    keep_tick(ram, state, draws, std::move(mobys));
+    const std::vector<renderer::UiQuad>* named_quads = keep_2d_path(ram, chain, a, level, debug);
+    choose_repeat_frame(debug);
+    keep_effects(ram, state, named_quads);
+    report_tick(ram, level);
+    // The tick came late: its frame is left out.
+    if (leave_late_frame()) {
+        return true;
+    }
+    draw_tick_frame();
     return true;
 }
 
