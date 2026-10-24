@@ -374,7 +374,7 @@ struct McWriteReq {
 extern struct McClient D_00159B00_c __asm__("D_00159B00");
 extern struct McWriteReq D_00159B80_r __asm__("D_00159B80");
 
-/* sceMcWrite: copies the unaligned lead of the buffer into the request, sends RPC 6. Adapted from Lombyte (MIT) for PAL: src/sdk/storage/memory_card/sce_mc_write.c, sceMcWrite. */
+/* sceMcWrite: copies the unaligned lead of the buffer into the request, sends RPC 6. Adapted from Lombyte (GPL-3.0) for PAL: src/sdk/storage/memory_card/sce_mc_write.c, sceMcWrite. */
 int func_00123D48(int fd, unsigned char *buffer, int size) {
     int rpc_result;
     unsigned int i;

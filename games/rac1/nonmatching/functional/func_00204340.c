@@ -87,7 +87,7 @@ extern u64 D_0019E640[0x30];
 extern s32 func_001FA898(f32);
 extern s32 func_001F9968(s32);
 
-/* Adapted from Lombyte (MIT) for PAL by OpenRAC's tools/port.py: src/assembly/textbin/fun_00203b08.c, register_shrub_render_class. */
+/* Adapted from Lombyte (GPL-3.0) for PAL by OpenRAC's tools/port.py: src/assembly/textbin/fun_00203b08.c, register_shrub_render_class. */
 void func_00204340(ShrubRenderClass_04340 *render_class,
                                  ResidentRenderTextureDefinition_04340 *textures, u128_04340 *material_map,
                                  ShrubMipTextureDefinition_04340 *mip_texture, s32 class_id) {

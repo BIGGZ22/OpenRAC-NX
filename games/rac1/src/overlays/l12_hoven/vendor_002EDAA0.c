@@ -251,7 +251,7 @@ extern void func_L00_0025F4A8(void *, void *, void *, float, float, int, int, in
 extern void func_L00_00260108(void *, void *, int, float, float);
 
 /* Level 12 shot: flies with a smoke trail, damages the first moby it hits other than its owner, then pops.
-   Adapted from Lombyte (MIT) for PAL by OpenRAC's tools/port.py: src/overlays/l12/gameplay/entities/002ec720.c, FUN_L12_002ece00. */
+   Adapted from Lombyte (GPL-3.0) for PAL by OpenRAC's tools/port.py: src/overlays/l12/gameplay/entities/002ec720.c, FUN_L12_002ece00. */
 extern int D_0015EE84_e __asm__("D_0015EE84") MACRO_ADDR;
 /* Update of the level 12 shot. */
 void HovenShotUpdate(struct Moby *moby) {
@@ -757,7 +757,7 @@ typedef struct {
 } Data_303370;
 
 /* Raises the timer while one of the ten targets is in the view cone, otherwise counts it down.
-   Adapted from Lombyte (MIT) for PAL by OpenRAC's tools/port.py: src/overlays/l12/gameplay/vendor/003028c8.c, FUN_L12_00303370. */
+   Adapted from Lombyte (GPL-3.0) for PAL by OpenRAC's tools/port.py: src/overlays/l12/gameplay/vendor/003028c8.c, FUN_L12_00303370. */
 void UpdateViewConeTimer(void *moby) {
     Data_303370 *data = (Data_303370 *)((struct Moby *)moby)->pvars;
     int found = 0;
@@ -1405,7 +1405,7 @@ typedef struct {
 extern struct Moby * D_L12_00174358;
 
 /* A homing mine: rises, then steers toward the point ahead and blows up near it or on contact.
-   Adapted from Lombyte (MIT) for PAL by OpenRAC's tools/port.py: src/overlays/l12/gameplay/vendor/003028c8.c, FUN_L12_00304e00. */
+   Adapted from Lombyte (GPL-3.0) for PAL by OpenRAC's tools/port.py: src/overlays/l12/gameplay/vendor/003028c8.c, FUN_L12_00304e00. */
 void HovenHomingMineUpdate(struct Moby *moby) {
     Data_304e00 *data = (Data_304e00 *)moby->pvars;
     s32 *damage = data->damage;
@@ -1815,7 +1815,7 @@ extern f32 D_0015EE70 MACRO_ADDR;
 extern char * D_L12_00160058_07730 __asm__("D_L12_00160058") MACRO_ADDR;
 extern int D_L12_001FB948[];
 
-/* Adapted from Lombyte (MIT) for PAL by OpenRAC's tools/port.py: src/overlays/l12/gameplay/vendor/003028c8.c, FUN_L12_00306350. */
+/* Adapted from Lombyte (GPL-3.0) for PAL by OpenRAC's tools/port.py: src/overlays/l12/gameplay/vendor/003028c8.c, FUN_L12_00306350. */
 void StartSlotPieceMotion(struct Moby *moby, int slot) {
     char *data = (char *)moby->pvars;
     struct Moby *selected;
@@ -2371,7 +2371,7 @@ extern void func_L00_0028EBF0(int);
 extern void func_L12_00309730(void);
 
 /* Pvars: d[0] is the moby to watch, d[1] the voice slot held for this moby.
-   Adapted from Lombyte (MIT) for PAL by OpenRAC's tools/port.py: src/overlays/l12/gameplay/vendor/003028c8.c, FUN_L12_003081b0. */
+   Adapted from Lombyte (GPL-3.0) for PAL by OpenRAC's tools/port.py: src/overlays/l12/gameplay/vendor/003028c8.c, FUN_L12_003081b0. */
 void Moby1345Update(struct Moby *m) {
     int st = m->state;
     int vis;
@@ -2570,7 +2570,7 @@ typedef struct {
     short h32;
 } M_bff0;
 
-/* Adapted from Lombyte (MIT) for PAL by OpenRAC's tools/port.py: src/overlays/l12/gameplay/vendor/003028c8.c, FUN_L12_0030bff0. */
+/* Adapted from Lombyte (GPL-3.0) for PAL by OpenRAC's tools/port.py: src/overlays/l12/gameplay/vendor/003028c8.c, FUN_L12_0030bff0. */
 void Moby1901Update(M_bff0 *m) {
     int i;
     switch (m->state) {

@@ -421,7 +421,7 @@ extern f32 D_0015EE70 MACRO_ADDR;
 extern void func_L04_00293530(void *, char *);
 extern void func_L04_00293578(void *, char *);
 
-/* Adapted from Lombyte (MIT) for PAL by OpenRAC's tools/port.py: src/overlays/l04/gameplay/entities/002ca420.c, FUN_L04_002d1418. */
+/* Adapted from Lombyte (GPL-3.0) for PAL by OpenRAC's tools/port.py: src/overlays/l04/gameplay/entities/002ca420.c, FUN_L04_002d1418. */
 void WBMoby_InitData(void *m) {
     char *d = *(char **)(m + 0x78);
     char *p = d + 0x160;
@@ -1532,7 +1532,7 @@ extern void func_001E9730_002E2DF0(char *, int) __asm__("func_001E9730");
 extern void func_0020BFC8_002E2DF0(int, int) __asm__("func_0020BFC8");
 
 /* Warp portal: spins, opens once the hero is near, then warps to the exit moby.
-   Adapted from Lombyte (MIT) for PAL: src/overlays/l04/gameplay/entities/002ca420.c, FUN_L04_002e1a10. */
+   Adapted from Lombyte (GPL-3.0) for PAL: src/overlays/l04/gameplay/entities/002ca420.c, FUN_L04_002e1a10. */
 void WarpPortalUpdate(Moby *moby) {
     PortalVars_002E2DF0 *vars = (PortalVars_002E2DF0 *)moby->pvars;
     Exit_002E2DF0 *exit;
@@ -1597,7 +1597,7 @@ extern unsigned char *func_L00_00273E08(void *, int, unsigned char, int, int, in
 extern int func_001FA898(float);
 extern int D_L04_0015F6A8 MACRO_ADDR;
 
-/* Adapted from Lombyte (MIT) for PAL by OpenRAC's tools/port.py: src/overlays/l04/unclassified_002ca420.c, FUN_L04_002e1d00. */
+/* Adapted from Lombyte (GPL-3.0) for PAL by OpenRAC's tools/port.py: src/overlays/l04/unclassified_002ca420.c, FUN_L04_002e1d00. */
 void SparkleSpritesDraw(char *m) {
     L10SpriteData_298940 *p = *(L10SpriteData_298940 **)(m + 0x78);
     float d[4] __attribute__((aligned(16)));
@@ -2058,7 +2058,7 @@ struct L04MissionState {
 extern struct L04MissionState D_L04_0016CA60;
 extern void func_L00_00264870(int);
 
-/* Adapted from Lombyte (MIT) for PAL by OpenRAC's tools/port.py: src/overlays/l04/gameplay/vendor/002e3078.c, FUN_L04_002e53a0. */
+/* Adapted from Lombyte (GPL-3.0) for PAL by OpenRAC's tools/port.py: src/overlays/l04/gameplay/vendor/002e3078.c, FUN_L04_002e53a0. */
 void SparksTriggerL04_Update(struct Moby *m) {
     switch (m->state) {
     case 0:

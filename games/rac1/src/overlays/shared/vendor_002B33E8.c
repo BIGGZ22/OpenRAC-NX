@@ -647,7 +647,7 @@ extern s32 func_002140B0(s32);
 extern u8 *func_L00_0026DEA0(V4 *, f32, f32, f32, f32, s32, V4 *, u32);
 extern short D_L00_0015F6B0_B4F40b SDATA(D_L00_0015F6B0);
 
-/* Adapted from Lombyte (MIT) for PAL by OpenRAC's tools/port.py: src/overlays/shared/unclassified_002b2100.c, FUN_L00_002b3c50. */
+/* Adapted from Lombyte (GPL-3.0) for PAL by OpenRAC's tools/port.py: src/overlays/shared/unclassified_002b2100.c, FUN_L00_002b3c50. */
 void Moby_SpawnTrailParticles(X *x) {
     V4 l0;
     V4 a;
@@ -756,7 +756,7 @@ extern void func_L00_002B4918_4198(void) __asm__("func_L00_002B4918");
 extern s32 func_L00_0020DB30_4198(s32) __asm__("func_L00_0020DB30");
 extern void func_0020D678_4198(void *) __asm__("func_0020D678");
 extern void func_L00_002B4F40_4198(void *) __asm__("func_L00_002B4F40");
-/* Multi-state update for a timed object: random delays from func_001F9850 pace the stages, which adjust the step and scale fields of its private block and call the shared callback. Adapted from Lombyte (MIT) for PAL: overlays/shared/unclassified_002b2100.c, FUN_L00_002b4198. */
+/* Multi-state update for a timed object: random delays from func_001F9850 pace the stages, which adjust the step and scale fields of its private block and call the shared callback. Adapted from Lombyte (GPL-3.0) for PAL: overlays/shared/unclassified_002b2100.c, FUN_L00_002b4198. */
 void Moby167Update(void *p) {
     O_4198 *o = (O_4198 *)p;
     V_4198 *v = o->v;
@@ -867,7 +867,7 @@ extern float func_001FA888(int);
 extern int func_L00_001EFFF0(void *, void *, int, int, int);
 extern unsigned char *func_L00_0025D390(void *);
 
-// Finds the best-aimed target moby in the global list for a given yaw and pitch, refining them. Adapted from Lombyte (MIT) for PAL: overlays/shared/unclassified_002b2100.c, FUN_L00_002b46a8.
+// Finds the best-aimed target moby in the global list for a given yaw and pitch, refining them. Adapted from Lombyte (GPL-3.0) for PAL: overlays/shared/unclassified_002b2100.c, FUN_L00_002b46a8.
 unsigned char *Aim_RefineTarget(int ign, Vec4 *from, float *yaw, float *pitch) {
     Vec4 src;
     Vec4 tp;
@@ -1318,7 +1318,7 @@ void func_L00_0025E210_2b58d8(void *) __asm__("func_L00_0025E210");
 int func_0022ED80_2b58d8(int, int, void *) __asm__("func_0022ED80");
 int func_L00_001EFFF0_2b58d8(void *, void *, int, void *, int) __asm__("func_L00_001EFFF0");
 void func_00216028_2b58d8(int, int) __asm__("func_00216028");
-/* Creates the type-0xAC moby: links it to its owner and a spawn position, fills its private data, sets up two child objects and probes the line to the owner. Adapted from Lombyte (MIT) for PAL: overlays/shared/unclassified_002b2100.c, FUN_L00_002b58d8. Declared with the callers' (void *, void *, float, float) -> int prototype. */
+/* Creates the type-0xAC moby: links it to its owner and a spawn position, fills its private data, sets up two child objects and probes the line to the owner. Adapted from Lombyte (GPL-3.0) for PAL: overlays/shared/unclassified_002b2100.c, FUN_L00_002b58d8. Declared with the callers' (void *, void *, float, float) -> int prototype. */
 int VisibombMissileSpawn(void *a_, void *pos_, float fa, float fb)
 {
     unsigned char *m = func_0020D348_2b58d8(0xAC);
@@ -1405,7 +1405,7 @@ extern float D_0015EE60 MACRO_ADDR;
 typedef unsigned int u128_t __attribute__((mode(TI), aligned(16)));
 typedef struct { u128_t r[4]; } M_t;
 
-// Steers the held object's pose: eases a field toward 0.45, spins it, and rebuilds its matrix and position from the parent. Adapted from Lombyte (MIT) for PAL: overlays/shared/unclassified_002b2100.c, FUN_L00_002b5ba0.
+// Steers the held object's pose: eases a field toward 0.45, spins it, and rebuilds its matrix and position from the parent. Adapted from Lombyte (GPL-3.0) for PAL: overlays/shared/unclassified_002b2100.c, FUN_L00_002b5ba0.
 void HeldObject_UpdatePose(unsigned char *m, unsigned char *o) {
     M_t a, b, c;
     Vec4 k, r;
@@ -1890,7 +1890,7 @@ extern s32 D_0015EE84 MACRO_ADDR;
 extern s32 D_0015EFA4 MACRO_ADDR;
 extern short D_L00_0015F6B0_B8208b SDATA(D_L00_0015F6B0);
 
-/* Adapted from Lombyte (MIT) for PAL by OpenRAC's tools/port.py: src/overlays/shared/unclassified_002b2100.c, FUN_L00_002b6f10. */
+/* Adapted from Lombyte (GPL-3.0) for PAL by OpenRAC's tools/port.py: src/overlays/shared/unclassified_002b2100.c, FUN_L00_002b6f10. */
 void Moby175Update(Moby *m)
 {
     Vars *o;
@@ -2118,7 +2118,7 @@ void func_L00_0028EBF0(int);
 int func_001F9850(int);
 void func_L00_00203F20(int, int);
 
-/* Adapted from Lombyte (MIT) for PAL by OpenRAC's tools/port.py: src/overlays/shared/unclassified_002b2100.c, FUN_L00_002b8230. */
+/* Adapted from Lombyte (GPL-3.0) for PAL by OpenRAC's tools/port.py: src/overlays/shared/unclassified_002b2100.c, FUN_L00_002b8230. */
 void func_L00_002B9528(unsigned char *m)
 {
     unsigned char *v = *(unsigned char **)(m + 0x78);
@@ -2253,7 +2253,7 @@ typedef struct {
     s32 *slots;
 } ListSlots8;
 
-/* Adapted from Lombyte (MIT) for PAL by OpenRAC's tools/port.py: src/overlays/shared/gameplay/entities/002b2100.c, FUN_L00_002b8798. */
+/* Adapted from Lombyte (GPL-3.0) for PAL by OpenRAC's tools/port.py: src/overlays/shared/gameplay/entities/002b2100.c, FUN_L00_002b8798. */
 void SlotList_Add(ListSlots8 *list, s32 val) {
     s32 *p = list->slots;
     s32 i = 0;
@@ -2604,7 +2604,7 @@ extern V2b9310 D_L00_001DBB90[];
 extern int D_L00_001DBCD0[];
 
 /* Starts the beam when one is pending: lays 19 points from the moby toward its target and resets the segment state.
-   Adapted from Lombyte (MIT) for PAL by OpenRAC's tools/port.py: src/overlays/shared/gameplay/entities/002b2100.c, FUN_L00_002b9310. */
+   Adapted from Lombyte (GPL-3.0) for PAL by OpenRAC's tools/port.py: src/overlays/shared/gameplay/entities/002b2100.c, FUN_L00_002b9310. */
 void StartBeamWhenPending(char *moby) {
     V2b9310 d;
     V2b9310 step;

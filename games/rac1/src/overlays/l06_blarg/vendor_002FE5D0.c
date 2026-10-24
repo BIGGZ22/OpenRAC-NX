@@ -40,7 +40,7 @@ extern void func_001F9EC0(void *, void *, void *);
 extern float func_001F9C78(void *, void *);
 extern void func_L00_001FD1D8(void *, void *, int);
 
-/* Adapted from Lombyte (MIT) for PAL by OpenRAC's tools/port.py: src/overlays/l06/gameplay/entities/002fd1a0.c, FUN_L06_002fd1a0. */
+/* Adapted from Lombyte (GPL-3.0) for PAL by OpenRAC's tools/port.py: src/overlays/l06/gameplay/entities/002fd1a0.c, FUN_L06_002fd1a0. */
 void EffectQuad_DrawVariantA(void) {
     Packet_2fd1a0 first, second;
     float matrix[4][4] __attribute__((aligned(16)));
@@ -133,7 +133,7 @@ extern void func_001F9EC0(void *, void *, void *);
 extern float func_001F9C78(void *, void *);
 extern void func_L00_001FD1D8(void *, void *, int);
 
-/* Adapted from Lombyte (MIT) for PAL by OpenRAC's tools/port.py: src/overlays/l06/gameplay/entities/002fd1a0.c, FUN_L06_002fd460. */
+/* Adapted from Lombyte (GPL-3.0) for PAL by OpenRAC's tools/port.py: src/overlays/l06/gameplay/entities/002fd1a0.c, FUN_L06_002fd460. */
 void EffectQuad_DrawVariantB(void) {
     Packet_2fd460 first, second;
     float matrix[4][4] __attribute__((aligned(16)));
@@ -234,7 +234,7 @@ extern void func_001F9EC0(void *, void *, void *);
 extern float func_001F9C78(void *, void *);
 extern void func_L00_001FD1D8(void *, void *, int);
 
-/* Adapted from Lombyte (MIT) for PAL by OpenRAC's tools/port.py: src/overlays/l06/gameplay/entities/002fd1a0.c, FUN_L06_002fd748. */
+/* Adapted from Lombyte (GPL-3.0) for PAL by OpenRAC's tools/port.py: src/overlays/l06/gameplay/entities/002fd1a0.c, FUN_L06_002fd748. */
 void EffectQuad_DrawVariantC(void) {
     Packet_2fd748 first, second;
     float matrix[4][4] __attribute__((aligned(16)));
@@ -658,7 +658,7 @@ extern UV3003f0 D_L06_001F3C00[];
 extern long func_001F4868_01848(int) __asm__("func_001F4868");
 
 /* Draws the 64 quads of the backdrop mesh, each corner scaled from the shared vertex table.
-   Adapted from Lombyte (MIT) for PAL by OpenRAC's tools/port.py: src/overlays/l06/gameplay/entities/002fd1a0.c, FUN_L06_003003f0. */
+   Adapted from Lombyte (GPL-3.0) for PAL by OpenRAC's tools/port.py: src/overlays/l06/gameplay/entities/002fd1a0.c, FUN_L06_003003f0. */
 void DrawBackdropMesh(void) {
     Q3003f0 quad;
     B3003f0 buf;
@@ -701,7 +701,7 @@ extern FRow_l06 D_L06_001F7B00[];
 extern float D_L06_001F8800[][2];
 extern short D_L06_001F8200[][4][2];
 
-/* Adapted from Lombyte (MIT) for PAL by OpenRAC's tools/port.py: src/overlays/l06/gameplay/entities/002fd1a0.c, FUN_L06_00300720. */
+/* Adapted from Lombyte (GPL-3.0) for PAL by OpenRAC's tools/port.py: src/overlays/l06/gameplay/entities/002fd1a0.c, FUN_L06_00300720. */
 void EffectQuad_DrawSingle(void) {
     FRow_l06 m[4];
     int colors[4];
@@ -1943,7 +1943,7 @@ extern int func_001FA898(float);
 extern u8 *func_00219780(void *, void *, void *, int, int, int, int, int, int);
 
 /* Breaks the linked pieces apart: pushes each one out from their middle (smaller pieces faster), spins it and sheds dust.
-   Adapted from Lombyte (MIT) for PAL by OpenRAC's tools/port.py: src/overlays/l06/gameplay/entities/002fd1a0.c, FUN_L06_00303b68. */
+   Adapted from Lombyte (GPL-3.0) for PAL by OpenRAC's tools/port.py: src/overlays/l06/gameplay/entities/002fd1a0.c, FUN_L06_00303b68. */
 void ScatterLinkedPieces(struct Moby *moby) {
     char *vars = (char *)moby->pvars;
     float center[4];
@@ -2230,7 +2230,7 @@ void Moby_AdvanceFromState1(char *arg) {
         Moby_PlaySound(0, 0, arg);
     }
 }
-/* 2 for a moby in state 7, 1 above state 3, else 0. Adapted from Lombyte (MIT) for PAL: src/overlays/l06/gameplay/entities/002fd1a0.c, FUN_L06_003047f8. */
+/* 2 for a moby in state 7, 1 above state 3, else 0. Adapted from Lombyte (GPL-3.0) for PAL: src/overlays/l06/gameplay/entities/002fd1a0.c, FUN_L06_003047f8. */
 s32 GetMobyStateClass(const u8 *moby) {
     u32 state = moby[0x20];
 
@@ -2573,7 +2573,7 @@ extern int func_L00_00203F20(int, int);
 extern int func_L01_0026EFB8(int, int);
 
 /* Level 6 help hints: shows the help messages for the area and records how often and when each was due.
-   Adapted from Lombyte (MIT) for PAL by OpenRAC's tools/port.py: src/overlays/l06/gameplay/vendor/003083b0.c, FUN_L06_003083b0. */
+   Adapted from Lombyte (GPL-3.0) for PAL by OpenRAC's tools/port.py: src/overlays/l06/gameplay/vendor/003083b0.c, FUN_L06_003083b0. */
 void Level6_UpdateHelpHints(struct Moby *moby) {
     int *vars = (int *)moby->pvars;
     struct Moby *m;
@@ -2876,7 +2876,7 @@ extern void func_L01_00279790(void *);
 void func_0020D678_0B248(struct Obj *obj) __asm__("func_0020D678");
 extern void func_L00_00251E30(void *);
 
-/* Adapted from Lombyte (MIT) for PAL by OpenRAC's tools/port.py: src/overlays/l06/gameplay_vendor_003083b0.c, FUN_L06_00309e08. */
+/* Adapted from Lombyte (GPL-3.0) for PAL by OpenRAC's tools/port.py: src/overlays/l06/gameplay_vendor_003083b0.c, FUN_L06_00309e08. */
 void BreakOnHitBlargUpdate(char *self) {
     int flag = 0;
     char *o = MobyGetHitMessage(self, 0x10000, 0);

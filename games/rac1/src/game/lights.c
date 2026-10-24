@@ -147,7 +147,7 @@ extern LtObj20 *D_001604D8_o __asm__("D_001604D8") MACRO_ADDR;
 extern int func_001F9D78(void *, void *);
 extern void func_001F9C48(void *, void *, float);
 
-/* CreatePointLight: lists which objects of the three lists the light's sphere touches and records the light's index in their packed nibble field. Adapted from Lombyte (MIT) for PAL: src/rendering/create_point_light.c, create_point_light. */
+/* CreatePointLight: lists which objects of the three lists the light's sphere touches and records the light's index in their packed nibble field. Adapted from Lombyte (GPL-3.0) for PAL: src/rendering/create_point_light.c, create_point_light. */
 void CreatePointLight(int i) {
     LtSlot *slot;
     LtDef *def;

@@ -71,7 +71,7 @@ extern void func_L00_00245FE0(int, int);
 extern void func_00205220(int);
 extern int func_00122598(int);
 extern void func_00216960(void);
-// Puts the hero into ship mode: clears the ship records, flags the matching mobys and picks the ship's start sound and camera set. Adapted from Lombyte (MIT) for PAL: src/overlays/shared/gameplay_space_0028e8a0.c, FUN_L00_0028e9c8.
+// Puts the hero into ship mode: clears the ship records, flags the matching mobys and picks the ship's start sound and camera set. Adapted from Lombyte (GPL-3.0) for PAL: src/overlays/shared/gameplay_space_0028e8a0.c, FUN_L00_0028e9c8.
 void EnterShipMode(int a) {
     O_28e9c8 *o;
     S_171b *z;
@@ -172,7 +172,7 @@ extern int D_L00_0015F6A4 MACRO_ADDR;
 extern short D_L00_00160630;
 extern int func_0020BFC8(int, int);
 
-/* start a ship-travel transition to the given destination, setting up the flight path and timing Adapted from Lombyte (MIT) for PAL: overlays/shared/gameplay_space_0028e8a0.c, FUN_L00_0028ed58. */
+/* start a ship-travel transition to the given destination, setting up the flight path and timing Adapted from Lombyte (GPL-3.0) for PAL: overlays/shared/gameplay_space_0028e8a0.c, FUN_L00_0028ed58. */
 void ShipTravelTo(int dest) {
     char *g = D_0013DE6E + 0x2C2;
     char *h;
@@ -221,7 +221,7 @@ extern u8 D_0013D4F8[];
 void func_002348B8(void);
 void func_L00_0028FCA0(s32);
 
-/* Adapted from Lombyte (MIT) for PAL by OpenRAC's tools/port.py: src/overlays/shared/gameplay_space_0028e8a0.c, FUN_L00_0028eed0. */
+/* Adapted from Lombyte (GPL-3.0) for PAL by OpenRAC's tools/port.py: src/overlays/shared/gameplay_space_0028e8a0.c, FUN_L00_0028eed0. */
 /* Camera-follow update. Exact once the file declares D_L00_0016128C as a 4-byte MACRO_ADDR int: a `short` declaration of the same symbol makes the assembler use $gp for
  * every access to it. Joined to its trailing fragment (config/overlays/joined.tsv). */
 void Ship_BeginMapFlight(void) {
@@ -271,7 +271,7 @@ int func_002140B0(int);
 float func_001FA888(int);
 void func_L00_001FD1D8(void *, void *, int);
 
-/* Adapted from Lombyte (MIT) for PAL by OpenRAC's tools/port.py: src/overlays/shared/gameplay_space_0028e8a0.c, FUN_L00_0028efc8. */
+/* Adapted from Lombyte (GPL-3.0) for PAL by OpenRAC's tools/port.py: src/overlays/shared/gameplay_space_0028e8a0.c, FUN_L00_0028efc8. */
 void Ship_DrawBillboards(unsigned char *m) {
     Q_28efc8 quad;
     V_28efc8 v;

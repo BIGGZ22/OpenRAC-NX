@@ -169,7 +169,7 @@ extern float func_L00_001FF860(float, float);
 extern int func_L00_001F10E0_l(void *, float, int, void *) __asm__("func_L00_001F10E0");
 extern float func_001F9D48_f(void *, void *) __asm__("func_001F9D48");
 
-/* Moves pos toward to while keeping it over the ground and out of walls; returns 0 if it was snapped back. Adapted from Lombyte (MIT) for PAL: overlays/shared/math_interpolation_00257ef0.c, FUN_L00_00258490. */
+/* Moves pos toward to while keeping it over the ground and out of walls; returns 0 if it was snapped back. Adapted from Lombyte (GPL-3.0) for PAL: overlays/shared/math_interpolation_00257ef0.c, FUN_L00_00258490. */
 int MoveKeepingOverGround(void *ign, Vec4 *to, Vec4 *pos, int flags, float h, float r, float lim, float slope) {
     Vec4 d;
     Vec4 n;
@@ -371,7 +371,7 @@ extern void func_001F9C30(void *, void *, f32);
 extern s32 func_L00_00259B08_59B88(void *, void *, f32, s32, f32, s32) __asm__("func_L00_00259B08");
 extern f32 func_00214358_59B88(void *, s32, f32) __asm__("func_00214358");
 
-/* Adapted from Lombyte (MIT) for PAL by OpenRAC's tools/port.py: src/overlays/shared/math_interpolation_00257ef0.c, FUN_L00_00258b50. */
+/* Adapted from Lombyte (GPL-3.0) for PAL by OpenRAC's tools/port.py: src/overlays/shared/math_interpolation_00257ef0.c, FUN_L00_00258b50. */
 s32 MobySteerToward(Obj *m, Ctl *c, void *v, Vec4 *out, f32 f) {
     Vec4 save;
     Vec4 d;
@@ -510,7 +510,7 @@ extern char * D_L00_00160098_5A208 __asm__("D_L00_00160098") MACRO_ADDR;
 int func_L00_0025A2F0(char **, char *);
 
 /* Looks up table entry idx and makes it current; the flag test reads the current entry back, as the original did.
-   Adapted from Lombyte (MIT) for PAL by OpenRAC's tools/port.py: src/overlays/shared/math/interpolation/00257ef0.c, FUN_L00_002591d0. */
+   Adapted from Lombyte (GPL-3.0) for PAL by OpenRAC's tools/port.py: src/overlays/shared/math/interpolation/00257ef0.c, FUN_L00_002591d0. */
 int GroupMobyIter_Start(char **out, int idx, int a, int b) {
     unsigned short *v;
     char *e;
@@ -675,7 +675,7 @@ int IsPointInPolygon(float *p, float *v, int n) {
     return r;
 }
 LINKER_REMNANT("asm/overlays", func_L00_0025A848);
-/* From Lombyte (MIT), FUN_L00_00259830 (PR #66), adapted to PAL. */
+/* From Lombyte (GPL-3.0), FUN_L00_00259830 (PR #66), adapted to PAL. */
 int Moby_HasLinkedRecord(char *a) {
     char *p = *(char **)(a + 0x94);
     if (p && *(int *)(p + 8)) return 1;
@@ -701,7 +701,7 @@ f32 func_001F9F90(f32 radians);
 f32 func_001F9FA8(f32 radians);
 extern int func_L00_001F2BE8(void *, float, int, void *, void *);
 
-/* Adapted from Lombyte (MIT) for PAL by OpenRAC's tools/port.py: src/overlays/shared/gameplay/entities/00259710.c, FUN_L00_002598b0. */
+/* Adapted from Lombyte (GPL-3.0) for PAL by OpenRAC's tools/port.py: src/overlays/shared/gameplay/entities/00259710.c, FUN_L00_002598b0. */
 int MobySphereHitDirectional(void *moby, void *position, int c, float d, float e, float f, int g, int h, int i) {
     float direction[4] __attribute__((aligned(16)));
     char descriptor[0x30] __attribute__((aligned(16)));
@@ -725,7 +725,7 @@ extern void func_L00_00250800(void *, int, void *);
 extern int func_L00_0025A8E8(void *, void *, int, float, float, float, int, int, int);
 
 /* Calls FUN_L00_002598b0 at a moby point; the f13 argument is ignored and c is passed again as a float.
-   Adapted from Lombyte (MIT) for PAL by OpenRAC's tools/port.py: src/overlays/shared/gameplay/entities/00259710.c, FUN_L00_002599e8. */
+   Adapted from Lombyte (GPL-3.0) for PAL by OpenRAC's tools/port.py: src/overlays/shared/gameplay/entities/00259710.c, FUN_L00_002599e8. */
 int MobySphereHitAtPoint(void *moby, int point, int c, float d, float unused, float f, int g, int h, int i) {
     float position[4] __attribute__((aligned(16)));
     Moby_GetJointWorldPos(moby, point, position);
@@ -737,7 +737,7 @@ typedef struct { u128_t a; u128_t b; int x, y; unsigned char b0, b1; unsigned sh
 
 extern T_t D_T_00178200[] __asm__("D_L00_00178200");
 
-/* Records a timed effect entry for a moby unless a fresher one of its own is still live. Adapted from Lombyte (MIT) for PAL: overlays/shared/gameplay_entities_00259710.c, FUN_L00_00259a88. */
+/* Records a timed effect entry for a moby unless a fresher one of its own is still live. Adapted from Lombyte (GPL-3.0) for PAL: overlays/shared/gameplay_entities_00259710.c, FUN_L00_00259a88. */
 void PostHitMessageFromRecord(unsigned char *m, L_t *src) {
     L_t l;
     int i = D_L00_00173F40[5];
@@ -798,7 +798,7 @@ void PostHitMessage(char *m, float t, int a, int b, void *pos, void *vel) {
 extern char D_L00_0015F660[] MACRO_ADDR;
 extern void func_L00_0025AC00_5AD38(unsigned char *, int, int, void *, void *, float) __asm__("func_L00_0025AC00");
 
-/* Adapted from Lombyte (MIT) for PAL by OpenRAC's tools/port.py: src/overlays/shared/gameplay_entities_0024c7f0.c, FUN_L10_0024c7f0. */
+/* Adapted from Lombyte (GPL-3.0) for PAL by OpenRAC's tools/port.py: src/overlays/shared/gameplay_entities_0024c7f0.c, FUN_L10_0024c7f0. */
 void PostHitMessageAtPoint(unsigned char *m, int x, int y, void *p, float f) {
     func_L00_0025AC00_5AD38(m, x, y, p, D_L00_0015F660, f);
 }
@@ -847,7 +847,7 @@ struct Ent { float a[4]; float b[4]; };
 extern struct Ent D_L00_0016E180[];
 extern float D_L00_00173F80[];
 
-/* Records a shadow-like entry for the moby at its ground height, scaled by arg. Adapted from Lombyte (MIT) for PAL: overlays/shared/gameplay_entities_00259710.c, FUN_L00_00259fe8. */
+/* Records a shadow-like entry for the moby at its ground height, scaled by arg. Adapted from Lombyte (GPL-3.0) for PAL: overlays/shared/gameplay_entities_00259710.c, FUN_L00_00259fe8. */
 void RecordMobyShadow(unsigned char *m, float s) {
     float h;
     float v;
@@ -895,7 +895,7 @@ void SetGroundHeightBand(char *o) {
 static inline unsigned char load_u8_0025B478(unsigned char *p) {
     return *p;
 }
-/* Returns the hit record linked from the moby's byte 0xA4 when its flags match mask; unlinks it otherwise unless keep is set. Adapted from Lombyte (MIT) for PAL: overlays/shared/gameplay/entities/00259710.c, FUN_L00_0025a420. */
+/* Returns the hit record linked from the moby's byte 0xA4 when its flags match mask; unlinks it otherwise unless keep is set. Adapted from Lombyte (GPL-3.0) for PAL: overlays/shared/gameplay/entities/00259710.c, FUN_L00_0025a420. */
 T_t *MobyGetHitMessage(unsigned char *m, int mask, int keep) {
     T_t *e;
     unsigned char *a = m + 0xA4;
@@ -945,7 +945,7 @@ extern Q_25a478 *func_L00_0025D390_q(void *) __asm__("func_L00_0025D390");
 extern int func_001F9938(void *);
 extern void func_L00_001FF500(float *, float *, float);
 
-/* Picks a moby's animation/reaction index from its state and input flags. Adapted from Lombyte (MIT) for PAL: src/overlays/shared/gameplay_entities_00259710.c, FUN_L00_0025a478. */
+/* Picks a moby's animation/reaction index from its state and input flags. Adapted from Lombyte (GPL-3.0) for PAL: src/overlays/shared/gameplay_entities_00259710.c, FUN_L00_0025a478. */
 int ComputeHitResponse(O_25a478 *obj, P_25a478 *p, Q_25a478 *q, unsigned int flags, int *out, float *fp, int *kp, int idx) {
     Vec4 v;
     Vec4 t;
@@ -1105,7 +1105,7 @@ typedef struct {
     int i30;
 } Msg25BA50;
 
-/* Sends a message to every moby in a list except one, each carrying the angle from pos to it and a velocity along that angle. Adapted from Lombyte (MIT) for PAL: overlays/shared/gameplay_entities_00259710.c, FUN_L00_0025a9f8. */
+/* Sends a message to every moby in a list except one, each carrying the angle from pos to it and a velocity along that angle. Adapted from Lombyte (GPL-3.0) for PAL: overlays/shared/gameplay_entities_00259710.c, FUN_L00_0025a9f8. */
 void SendRadialMessageToMobys(char *self, Q4 *pos, char **list, int n, char *skip, int k, int c0, int c1, float f, float spd, float z) {
     struct {
         Q4 p;
@@ -1133,7 +1133,7 @@ void SendRadialMessageToMobys(char *self, Q4 *pos, char **list, int n, char *ski
         PostHitMessageFromRecord(list[i], &l.m);
     }
 }
-/* From Lombyte (MIT), FUN_L00_0025ab48 (PR #66), adapted to PAL. */
+/* From Lombyte (GPL-3.0), FUN_L00_0025ab48 (PR #66), adapted to PAL. */
 typedef struct { float f[4]; } __attribute__((aligned(16))) Q25BBA0;
 
 void HeadingFromVector(Q25BBA0 *v, float *ang, float *s1, float *s2) {
@@ -1300,7 +1300,7 @@ float StepAngleToward(float *p, int n, float x, float y) {
     *p = FastAddRots(*p, r);
     return cb90_alt(x, n, *p);
 }
-/* Spring a wrapped angle *P (rate *V) toward target X; returns the remaining angle difference. Adapted from Lombyte (MIT) for PAL: overlays/shared/unclassified_0025bb38.c, FUN_L00_0025bc98. */
+/* Spring a wrapped angle *P (rate *V) toward target X; returns the remaining angle difference. Adapted from Lombyte (GPL-3.0) for PAL: overlays/shared/unclassified_0025bb38.c, FUN_L00_0025bc98. */
 float SpringAngle(float *p, float *v, int n, float x, float b, float c, float d) {
     float r;
     if (n == 2) {
@@ -1683,7 +1683,7 @@ typedef struct {
 } S;
 extern u8 D_001414D0[];
 
-/* Adapted from Lombyte (MIT) for PAL by OpenRAC's tools/port.py: src/overlays/shared/gameplay/entities/0025d1b8.c, FUN_L00_0025d1b8. */
+/* Adapted from Lombyte (GPL-3.0) for PAL by OpenRAC's tools/port.py: src/overlays/shared/gameplay/entities/0025d1b8.c, FUN_L00_0025d1b8. */
 void func_L00_0025E210(S *p, s64 v) {
     v = (*(S **)&D_001414D0[0])->v;
     p->v = v;
@@ -1692,7 +1692,7 @@ extern void func_001F9BF0_25e290(void *, void *, void *) __asm__("func_001F9BF0"
 extern f32 func_001F9B88_25e290(f32) __asm__("func_001F9B88");
 extern void func_001F9C30_25e290(void *, void *, f32) __asm__("func_001F9C30");
 extern void func_001F9BD8_25e290(void *, void *, void *) __asm__("func_001F9BD8");
-/* Per-component adjustment of v against src: for each of the three components of v that is negative it recomputes v through the vector helpers. Adapted from Lombyte (MIT) for PAL: overlays/shared/math_rotations_0025d238.c, FUN_L00_0025d238. */
+/* Per-component adjustment of v against src: for each of the three components of v that is negative it recomputes v through the vector helpers. Adapted from Lombyte (GPL-3.0) for PAL: overlays/shared/math_rotations_0025d238.c, FUN_L00_0025d238. */
 void Vec4_AdjustNegativeComponents(Vec4 *src, Vec4 *v) {
     Vec4 t0, t1;
     f32 *pv, *p0, *p1;
@@ -1932,7 +1932,7 @@ extern float func_001F9D48_f(void *, void *) __asm__("func_001F9D48");
 extern void func_L00_0025C710(void *, void *, void *, float);
 extern float func_L00_0025EAC8_f(void *, void *, float) __asm__("func_L00_0025EAC8");
 
-/* Nearest point on the segment a-b to p (clamped), returned with the distance result. Adapted from Lombyte (MIT) for PAL: overlays/shared/math_rotations_0025d238.c, FUN_L00_0025dcd8. */
+/* Nearest point on the segment a-b to p (clamped), returned with the distance result. Adapted from Lombyte (GPL-3.0) for PAL: overlays/shared/math_rotations_0025d238.c, FUN_L00_0025dcd8. */
 float NearestPointOnSegment(u128_ED30 *out, u128_ED30 *p, u128_ED30 *a, u128_ED30 *b, float r) {
     u128_ED30 d[2];
     u128_ED30 c[1];
@@ -1988,7 +1988,7 @@ float func_L00_0025ED30(OvlQuad *out, OvlQuad *p, OvlQuad *a, OvlQuad *b, float 
 extern f32 func_L00_0025EAC8_5EFC0(void *, void *, f32) __asm__("func_L00_0025EAC8");
 extern s32 func_L00_0025E860_5EFC0(s32 *, OvlQuad *, s32 *, f32 *, f32, s32) __asm__("func_L00_0025E860");
 
-/* Adapted from Lombyte (MIT) for PAL by OpenRAC's tools/port.py: src/overlays/shared/math/rotations/0025d238.c, FUN_L00_0025df68. */
+/* Adapted from Lombyte (GPL-3.0) for PAL by OpenRAC's tools/port.py: src/overlays/shared/math/rotations/0025d238.c, FUN_L00_0025df68. */
 s32 func_L00_0025EFC0(s32 *path, OvlQuad *point, OvlQuad *nearest,
                        s32 *segment, f32 *fraction, s32 wrap,
                        f32 limit, f32 step, f32 height_tolerance) {
@@ -2084,7 +2084,7 @@ s32 func_L00_0025EFC0(s32 *path, OvlQuad *point, OvlQuad *nearest,
 LINKER_REMNANT("asm/overlays", func_L00_0025F360);
 extern f32 func_L00_002001D8(void *, f32);
 
-/* Adapted from Lombyte (MIT) for PAL by OpenRAC's tools/port.py: src/overlays/shared/math_rotations_0025d238.c, FUN_L00_0025e310. */
+/* Adapted from Lombyte (GPL-3.0) for PAL by OpenRAC's tools/port.py: src/overlays/shared/math_rotations_0025d238.c, FUN_L00_0025e310. */
 f32 WrapAngle(f32 a) {
     f32 out;
     f32 x;
@@ -2504,7 +2504,7 @@ void MobyList_AddUnique(int a, short *list, short max) {
 }
 extern s32 D_L00_00160098 MACRO_ADDR;
 
-/* Adapted from Lombyte (MIT) for PAL by OpenRAC's tools/port.py: src/overlays/shared/math/rotations/0025d238.c, FUN_L00_0025f800. */
+/* Adapted from Lombyte (GPL-3.0) for PAL by OpenRAC's tools/port.py: src/overlays/shared/math/rotations/0025d238.c, FUN_L00_0025f800. */
 void MobyList_Remove(s32 p, s16 *a) {
     s32 i;
     for (i = 1; i <= a[0]; i++) {
@@ -2528,7 +2528,7 @@ typedef struct {
 extern s16 D_L00_001B0AF0[];
 extern u8 * D_L00_00160098_608F0 __asm__("D_L00_00160098") MACRO_ADDR;
 
-/* Adapted from Lombyte (MIT) for PAL by OpenRAC's tools/port.py: src/overlays/shared/math/rotations/0025d238.c, FUN_L00_0025f878. */
+/* Adapted from Lombyte (GPL-3.0) for PAL by OpenRAC's tools/port.py: src/overlays/shared/math/rotations/0025d238.c, FUN_L00_0025f878. */
 M25f878 *FindMobyByPvarId(s32 id) {
     s32 i;
     for (i = 1; i <= D_L00_001B0AF0[0]; i++) {
@@ -2586,7 +2586,7 @@ extern short D_L00_001B0BB0[];
 extern char * D_L00_001DD450[];
 extern float func_001F9D48_60D30(void *, void *) __asm__("func_001F9D48");
 
-/* Adapted from Lombyte (MIT) for PAL by OpenRAC's tools/port.py: src/overlays/shared/rendering_view_0025fcb8.c, FUN_L00_0025fcb8. */
+/* Adapted from Lombyte (GPL-3.0) for PAL by OpenRAC's tools/port.py: src/overlays/shared/rendering_view_0025fcb8.c, FUN_L00_0025fcb8. */
 int FindNearestTargetMoby(char *a, char *o, float best) {
     char *g = D_0013F450;
     char *m;
@@ -2848,7 +2848,7 @@ void CarryRiders(char *a, Vx *b, void *c, void *d) {
     MatrixToEuler(&t2, a);
     qcopy(a + 0x10, b);
 }
-/* From Lombyte (MIT), FUN_L00_002607d0 (PR #66), adapted to PAL. */
+/* From Lombyte (GPL-3.0), FUN_L00_002607d0 (PR #66), adapted to PAL. */
 extern unsigned char D_0013DE48[];
 extern int D_0013D618[];
 extern int D_0015EE84 MACRO_ADDR;

@@ -467,7 +467,7 @@ void MusicTimeRemainingCallback(int arg0, long arg1) {
 
 LINKER_REMNANT("asm/remnants/text", func_00217AD0);
 
-/* Adapted from Lombyte (MIT): src/ui/menus/fun_00216c48.c. */
+/* Adapted from Lombyte (GPL-3.0): src/ui/menus/fun_00216c48.c. */
 
 typedef struct {
     s32 unk0;

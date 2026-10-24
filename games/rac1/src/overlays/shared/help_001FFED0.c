@@ -283,7 +283,7 @@ f32 func_001F9D48(void *, void *);
 f32 func_00214D28(f32, f32, f32 *);
 void func_L00_0025C918(f32 *, f32 *, f32, f32, f32, f32);
 
-/* Adapted from Lombyte (MIT) for PAL by OpenRAC's tools/port.py: src/overlays/shared/ui_help_001ff938.c, FUN_L15_00209450. */
+/* Adapted from Lombyte (GPL-3.0) for PAL by OpenRAC's tools/port.py: src/overlays/shared/ui_help_001ff938.c, FUN_L15_00209450. */
 void HeroL15_UpdateMoveBlendTargets(void) {
     switch (D_0013F450.b20A4) {
     case 0:
@@ -512,7 +512,7 @@ typedef struct {
 } HS;
 extern HS D_L15_001744C0_0ADD8 __asm__("D_L15_001744C0");
 
-/* Adapted from Lombyte (MIT) for PAL by OpenRAC's tools/port.py: src/overlays/shared/ui_help_001fe778.c, FUN_L15_0020a7a0. */
+/* Adapted from Lombyte (GPL-3.0) for PAL by OpenRAC's tools/port.py: src/overlays/shared/ui_help_001fe778.c, FUN_L15_0020a7a0. */
 void HeroL15_ResetMotionState(void) {
     Vec4 v0, v10, v20, v30, v40, v50, v60;
     f32 f;
@@ -712,7 +712,7 @@ extern void func_L00_00233EE0(void *, f32, f32, f32);
 extern void func_L00_00211908(void);
 
 /* Per-frame hero upkeep: tick the hero timers, spawn the respawn marker, track sinking, and set the camera follow target. Clone of FUN_L00_002215c8 without the case-1 camera tuning.
-   Adapted from Lombyte (MIT) for PAL by OpenRAC's tools/port.py: src/overlays/shared/ui/help/001ff938.c, FUN_L15_00215e58. */
+   Adapted from Lombyte (GPL-3.0) for PAL by OpenRAC's tools/port.py: src/overlays/shared/ui/help/001ff938.c, FUN_L15_00215e58. */
 void HeroFrameUpkeep(void) {
     Vec4 sum;
     Vec4 d;

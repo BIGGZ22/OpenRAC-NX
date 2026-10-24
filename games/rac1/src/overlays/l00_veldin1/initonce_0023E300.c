@@ -136,7 +136,7 @@ extern void func_L00_0023E4C8();
 extern float D_0015EE6C MACRO_ADDR;
 extern VeldinLevelState D_L00_0016C960;
 
-/* per-frame Veldin hook: queues callbacks and spawns particles by game state. Adapted from Lombyte (MIT) for PAL: overlays/l00/unclassified_0023d968.c, FUN_L00_0023e268. */
+/* per-frame Veldin hook: queues callbacks and spawns particles by game state. Adapted from Lombyte (GPL-3.0) for PAL: overlays/l00/unclassified_0023d968.c, FUN_L00_0023e268. */
 void Veldin_PerFrameHook(void) {
     VeldinMoby *m;
     VeldinMoby *mb;

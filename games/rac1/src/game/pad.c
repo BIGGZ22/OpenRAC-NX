@@ -332,7 +332,7 @@ void func_002181F0_r(PadState *p, u8 *buf, s32 len) __asm__("func_002181F0");
    and the twelve pressure values, the left/right mirror option, stick directions as buttons,
    pressed/released edges, the two input-lock modes, a stick flick detector over the last
    30 frames, and key repeat.
-   Adapted from Lombyte (MIT) for PAL: src/input/pad/process_pad_input.c, process_pad_input. */
+   Adapted from Lombyte (GPL-3.0) for PAL: src/input/pad/process_pad_input.c, process_pad_input. */
 void func_002181F0_r(PadState *p, u8 *buf, s32 len) {
     float v[2];
     s32 i, j, k;

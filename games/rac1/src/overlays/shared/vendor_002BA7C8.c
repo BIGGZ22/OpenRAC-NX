@@ -202,7 +202,7 @@ extern short D_L00_00161718;
 extern short D_L00_0016171C;
 extern char D_0013E633[];
 
-// Builds and draws two layered glow quads around a moby. Adapted from Lombyte (MIT) for PAL: overlays/shared/unclassified_002b94d0.c, FUN_L00_002bb0b0.
+// Builds and draws two layered glow quads around a moby. Adapted from Lombyte (GPL-3.0) for PAL: overlays/shared/unclassified_002b94d0.c, FUN_L00_002bb0b0.
 void DrawMobyGlowQuads(void *mv) {
     Q_2bb0b0 quad;
     V_2bb0b0 mat[4];
@@ -1426,7 +1426,7 @@ float func_001F9C78(void *, void *);
 void func_L00_001FD1D8(void *, void *, int);
 
 /* scrolls the two texture-offset accumulators and draws the 10x20 band of textured quads between the D_L00_001DC060/001DC1A0 rings, skipping back-facing ones.
-   Adapted from Lombyte (MIT) for PAL by OpenRAC's tools/port.py: src/overlays/shared/gameplay/entities/002b94d0.c, FUN_L00_002bdc50. */
+   Adapted from Lombyte (GPL-3.0) for PAL by OpenRAC's tools/port.py: src/overlays/shared/gameplay/entities/002b94d0.c, FUN_L00_002bdc50. */
 void DrawTexturedBand(void *o) {
     Quad quad;
     Vec4 d1, d2, n, e;
@@ -1692,7 +1692,7 @@ typedef struct {
     long unk70, tex, unk80, unk88;
 } Q_t;
 
-// Draws a textured quad twice (first tinted, then white) from a moby's orientation. Adapted from Lombyte (MIT) for PAL: overlays/shared/unclassified_002b94d0.c, FUN_L00_002be890.
+// Draws a textured quad twice (first tinted, then white) from a moby's orientation. Adapted from Lombyte (GPL-3.0) for PAL: overlays/shared/unclassified_002b94d0.c, FUN_L00_002be890.
 void DrawMobyQuadTintedWhite(void *mv) {
     char *m = mv;
     Q_t quad;
@@ -1805,7 +1805,7 @@ typedef struct { char pad[0x24]; SubS *sub; } TopS;
 typedef struct { char pad[0x18]; TopS *o18; char pad2[0xC]; float f28; } S173F40;
 extern S173F40 D_L00_00173F40_s __asm__("D_L00_00173F40") NOT_SDA;
 
-/* Probe below a point and return the ground height offset, or zero when nothing is hit. Adapted from Lombyte (MIT) for PAL: overlays/shared/unclassified_002b94d0.c, FUN_L00_002bec80. */
+/* Probe below a point and return the ground height offset, or zero when nothing is hit. Adapted from Lombyte (GPL-3.0) for PAL: overlays/shared/unclassified_002b94d0.c, FUN_L00_002bec80. */
 float Ground_ProbeHeightBelow(Vx *a, void *b) {
     Vx v1;
     Vx v2;
@@ -1846,7 +1846,7 @@ extern float func_001FA850(float, float);
 extern float func_001F9B88(float);
 extern int func_L00_001EFFF0_C0098(void *, void *, int, void *, int) __asm__("func_L00_001EFFF0");
 
-/* Adapted from Lombyte (MIT) for PAL by OpenRAC's tools/port.py: src/overlays/shared/gameplay/entities/002b94d0.c, FUN_L00_002bed90. */
+/* Adapted from Lombyte (GPL-3.0) for PAL by OpenRAC's tools/port.py: src/overlays/shared/gameplay/entities/002b94d0.c, FUN_L00_002bed90. */
 char *Aim_PickBestTarget(char *self, float *position, float *angles, int unused, int mode) {
     char *candidate;
     char *best = 0;
@@ -1932,7 +1932,7 @@ extern f32 func_001F9D10(void *, void *);
 extern s32 func_L00_001EFFF0_C0358(void *, void *, s32, void *, s32) __asm__("func_L00_001EFFF0");
 extern f32 func_L00_002BFF88_C0358(void *, void *) __asm__("func_L00_002BFF88");
 
-/* Adapted from Lombyte (MIT) for PAL by OpenRAC's tools/port.py: src/overlays/shared/unclassified_002b94d0.c, FUN_L00_002bf050. */
+/* Adapted from Lombyte (GPL-3.0) for PAL by OpenRAC's tools/port.py: src/overlays/shared/unclassified_002b94d0.c, FUN_L00_002bf050. */
 /* Exact match: tools/ps2eeas_nops.py keeps the hazard nop after the label the branch lands on. */
 f32 Aim_SweepBestAngle(Mob *m, Vec4 *pos, f32 *tgt, f32 *out, f32 ang, f32 arc, f32 step, f32 h, f32 r2, f32 r1) {
     Vec4 v0;
@@ -2102,7 +2102,7 @@ extern float func_L00_0025BC48(void *, void *, int, float, float);
 extern float D_0015EE6C MACRO_ADDR;
 
 /* Updates a homing state block o from target m: turn rate, heading, and a speed clamped to seven times a global.
-   Adapted from Lombyte (MIT) for PAL: src/overlays/shared/unclassified_002b94d0.c, FUN_L00_002bf8b0. */
+   Adapted from Lombyte (GPL-3.0) for PAL: src/overlays/shared/unclassified_002b94d0.c, FUN_L00_002bf8b0. */
 void UpdateHomingState(unsigned char *m, unsigned char *o, void *src) {
     float s, t, r, lim;
 #define F2BF(p, x) (*(float *)((p) + (x)))

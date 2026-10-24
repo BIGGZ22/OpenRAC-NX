@@ -38,7 +38,7 @@ extern float func_0020D830(Moby *);
    scripted rate table (D_L00_0017BEF0[unkAA0]), moves to the next frame of the sequence each time it passes 1.0
    (wrapping, or jumping as unkAB0/unkAB4/unkAB8 request), fires the sequence's sound triggers crossed this frame,
    keeps the moby's looping sound (sound_slot) in step with unk7C, and records the distance moved (anim_frame, unkAAC).
-   Adapted from Lombyte (MIT) for PAL: src/overlays/shared/ui/help/00232670.c, FUN_L00_00232670. */
+   Adapted from Lombyte (GPL-3.0) for PAL: src/overlays/shared/ui/help/00232670.c, FUN_L00_00232670. */
 void func_L00_00232EF0(void) {
     Moby *m = ((Hero *)D_0013F450)->moby;
     s32 same;

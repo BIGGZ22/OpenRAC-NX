@@ -138,7 +138,7 @@ extern int func_001F9908(int *);
 extern int func_001F9850(int);
 extern float func_001FA748(float, float);
 
-/* Oscillating spinner: swings its angle between -1 and 1 and turns the moby to match. Adapted from Lombyte (MIT) for PAL: overlays/l01/unclassified_002f9810.c, FUN_L01_002f9bf0. */
+/* Oscillating spinner: swings its angle between -1 and 1 and turns the moby to match. Adapted from Lombyte (GPL-3.0) for PAL: overlays/l01/unclassified_002f9810.c, FUN_L01_002f9bf0. */
 void OscillatingSpinnerUpdate(SwayMoby *m) {
     SwayVars *v;
     CollQuery q;
@@ -231,7 +231,7 @@ extern f32 D_0015EE6C_FB158b __asm__("D_0015EE6C") MACRO_ADDR;
 void *func_L00_0025B478_FB158c(void *, s32, s32) __asm__("func_L00_0025B478");
 void func_0020D678_FB158d(void *) __asm__("func_0020D678");
 
-/* Adapted from Lombyte (MIT) for PAL by OpenRAC's tools/port.py: src/overlays/l01/unclassified_002f9810.c, FUN_L01_002f9d80. */
+/* Adapted from Lombyte (GPL-3.0) for PAL by OpenRAC's tools/port.py: src/overlays/l01/unclassified_002f9810.c, FUN_L01_002f9d80. */
 void ProjectileBreakableUpdate(BurstMoby *self) {
     BurstTarget *t;
     BurstColors colors;
@@ -278,7 +278,7 @@ extern char *func_L00_0026E940(char *, int, int, int, float);
 extern void func_L00_00251E30(void *, int);
 
 /* Spawns a beam moby (0x2D2) from owner between two points, colored, with random rotation and two glow sprites.
-   Adapted from Lombyte (MIT) for PAL: src/overlays/l01/unclassified_002f9810.c, FUN_L01_002fa068. */
+   Adapted from Lombyte (GPL-3.0) for PAL: src/overlays/l01/unclassified_002f9810.c, FUN_L01_002fa068. */
 char *SpawnBeamMoby(int owner, void *pos, void *target, int color) {
     Vy p;
     Vy t;
@@ -341,7 +341,7 @@ extern s32 func_001F9850_2FB588(s32) __asm__("func_001F9850");
 /* Explosion burst at `where`: three particles in random colours from two six-colour palettes, two
  * func_L00_002ADBB0 effects on `moby`, its sound unless the moby is dying (state 0xFD/0xFE), and a light flash of
  * brightness `light` (negative: 13).
- * Adapted from Lombyte (MIT) for PAL: overlays/l01/gameplay/entities/002f9810.c, FUN_L01_002fa1b0. */
+ * Adapted from Lombyte (GPL-3.0) for PAL: overlays/l01/gameplay/entities/002f9810.c, FUN_L01_002fa1b0. */
 void func_L01_002FB588_r(struct Moby *moby, u128_2FB588 *where, s32 sound, f32 scale, f32 light) __asm__("func_L01_002FB588");
 void func_L01_002FB588_r(struct Moby *moby, u128_2FB588 *where, s32 sound, f32 scale, f32 light) {
     Vec4 pos;
@@ -430,7 +430,7 @@ extern void func_0020D678(void *);
 extern void func_L01_002FB588(void *, void *, int, float, float);
 extern int func_L00_001F2BE8_2FB898(float, void *, int, void *, void *) __asm__("func_L00_001F2BE8");
 
-/* Per-frame update of a falling drop: integrates its velocity, tests it against the world and spawns its impact effect. Adapted from Lombyte (MIT) for PAL: overlays/l01/unclassified_002f9810.c, FUN_L01_002fa4c0. */
+/* Per-frame update of a falling drop: integrates its velocity, tests it against the world and spawns its impact effect. Adapted from Lombyte (GPL-3.0) for PAL: overlays/l01/unclassified_002f9810.c, FUN_L01_002fa4c0. */
 void FallingDropUpdate(DropMoby *m) {
     DropVars *v;
     Vec4 *pos;
@@ -888,7 +888,7 @@ extern unsigned char D_0014171B[] NOT_SDA;
 extern unsigned char D_0013E633_u[] __asm__("D_0013E633") NOT_SDA;
 
 // hinged bridge: swings with a sound while triggered and poses the bridge moby from its pivot
-// Adapted from Lombyte (MIT) for PAL: overlays/l01/unclassified_002f9810.c, FUN_L01_002fb8a8.
+// Adapted from Lombyte (GPL-3.0) for PAL: overlays/l01/unclassified_002f9810.c, FUN_L01_002fb8a8.
 void HingedBridgeUpdate(char *self) {
     char *v;
     Vec4 arm;
@@ -1156,7 +1156,7 @@ extern void *func_L00_00265050(char *src, int cls, float *pos, void *mat, int a8
 extern void func_L01_00279E10(void *, int);
 extern float D_L01_0015F660[] MACRO_ADDR;
 
-/* Update for a breakable pot: waits for its hit flag, then shatters into four sparks. Adapted from Lombyte (MIT) for PAL: overlays/l01/unclassified_002f9810.c, FUN_L01_002fd9a0. */
+/* Update for a breakable pot: waits for its hit flag, then shatters into four sparks. Adapted from Lombyte (GPL-3.0) for PAL: overlays/l01/unclassified_002f9810.c, FUN_L01_002fd9a0. */
 void BreakablePotUpdate(char *m) {
     char *hit;
     int flag;
@@ -1224,7 +1224,7 @@ extern void func_L01_002FFF00(void *);
 extern int func_001F49B0_FFF30(void (*)(void), void *) __asm__("func_001F49B0");
 
 /* On first use, lowers and ripples the layers' vertices; every frame, pulses their glow and queues FUN_L01_002feb28.
-   Adapted from Lombyte (MIT) for PAL by OpenRAC's tools/port.py: src/overlays/l01/gameplay/entities/002f9810.c, FUN_L01_002feb58. */
+   Adapted from Lombyte (GPL-3.0) for PAL by OpenRAC's tools/port.py: src/overlays/l01/gameplay/entities/002f9810.c, FUN_L01_002feb58. */
 void PulsingMeshUpdate(void *arg) {
     s32 i;
     s32 g;
@@ -1292,7 +1292,7 @@ extern float func_001F9B88(float);
 extern float func_001F9F90(float);
 extern float func_001F9FA8(float);
 
-/* Sliding door update: opens when the player is near, closes when far, and offsets the door along its heading by the open amount. Adapted from Lombyte (MIT) for PAL: overlays/l01/unclassified_002f9810.c, FUN_L01_002fed68. */
+/* Sliding door update: opens when the player is near, closes when far, and offsets the door along its heading by the open amount. Adapted from Lombyte (GPL-3.0) for PAL: overlays/l01/unclassified_002f9810.c, FUN_L01_002fed68. */
 void SlidingDoorUpdate(HoverMoby *m) {
     HoverVars *v;
     V *player;
@@ -1430,7 +1430,7 @@ typedef union {
     float f[4];
 } V300F00 __attribute__((aligned(16)));
 
-/* Smoke emitter: keeps its sound alive and spawns two puffs of particles per frame. Adapted from Lombyte (MIT) for PAL: overlays/l01/unclassified_002f9810.c, FUN_L01_002ffb28. */
+/* Smoke emitter: keeps its sound alive and spawns two puffs of particles per frame. Adapted from Lombyte (GPL-3.0) for PAL: overlays/l01/unclassified_002f9810.c, FUN_L01_002ffb28. */
 void SmokeEmitterUpdate(char *self) {
     int *v;
     V300F00 pos;
@@ -1563,7 +1563,7 @@ extern f32 func_001FA748_303590(f32, f32) __asm__("func_001FA748") ;
 extern void func_L00_0025D5B0_303590(void *, void *, s32, s32, s32, f32) __asm__("func_L00_0025D5B0") ;
 extern short D_L01_00161F20_303590 __asm__("D_L01_00161F20") ;
 extern PlayerPosView D_0013F450_303590 __asm__("D_0013F450") ;
-/* Enemy-spawner update: state 0 arms it, state 1 spawns one child toward the player while under the count limit and aims its AI path. func_L00_0025D5B0 takes the angle as its last argument. Adapted from Lombyte (MIT) for PAL: overlays/l01/unclassified_002f9810.c, FUN_L01_003021b8. */
+/* Enemy-spawner update: state 0 arms it, state 1 spawns one child toward the player while under the count limit and aims its AI path. func_L00_0025D5B0 takes the angle as its last argument. Adapted from Lombyte (GPL-3.0) for PAL: overlays/l01/unclassified_002f9810.c, FUN_L01_003021b8. */
 void EnemySpawnerUpdate(SpawnerMoby *m) {
     SpawnerVars *v = m->pvars;
     SpawnerMoby *n;
@@ -1941,7 +1941,7 @@ extern int func_001F9850(int);
 
 typedef struct { int w[4]; } __attribute__((aligned(16))) Quad;
 
-/* spawn a debris moby on src, scaled, moving along dir with random spin and lifetime. Adapted from Lombyte (MIT) for PAL: src/overlays/l01/gameplay_vendor_00309bf8.c, FUN_L01_0030be70. */
+/* spawn a debris moby on src, scaled, moving along dir with random spin and lifetime. Adapted from Lombyte (GPL-3.0) for PAL: src/overlays/l01/gameplay_vendor_00309bf8.c, FUN_L01_0030be70. */
 char *SpawnDebrisMoby(char *src, void *dir, float scale) {
     char *m;
     char *v;
@@ -2210,7 +2210,7 @@ typedef struct {
 } ScrollMoby;
 extern f32 D_0015EE7C MACRO_ADDR;
 
-/* Adapted from Lombyte (MIT) for PAL by OpenRAC's tools/port.py: src/overlays/l01/gameplay/vendor/00309bf8.c, FUN_L01_0030f208. */
+/* Adapted from Lombyte (GPL-3.0) for PAL by OpenRAC's tools/port.py: src/overlays/l01/gameplay/vendor/00309bf8.c, FUN_L01_0030f208. */
 void Moby1848Update(ScrollMoby *m) {
     f32 d;
 

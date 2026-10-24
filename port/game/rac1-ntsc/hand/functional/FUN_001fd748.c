@@ -101,7 +101,7 @@ static inline s32 map_availability_FDF78_c1fd748(s32 level_index) {
 
 
 
-/* Adapted from Lombyte (MIT) for PAL by OpenRAC's tools/port.py: src/assembly/textbin/fun_001fd748.c, draw_level_selection_map. */
+/* Adapted from Lombyte (GPL-3.0) for PAL by OpenRAC's tools/port.py: src/assembly/textbin/fun_001fd748.c, draw_level_selection_map. */
 void FUN_001fd748(s32 left, s32 right, s32 top, s32 bottom) {
     f32 label_direction[4];
     s32 level_index;

@@ -1278,7 +1278,7 @@ extern void func_L00_0025A8C0(void *, void *, int, float, void *);
 void func_L15_0029BFF8(char *moby);
 void func_L15_0029C168(char *moby);
 
-/* Adapted from Lombyte (MIT) for PAL by OpenRAC's tools/port.py: src/overlays/shared/gameplay/entities/00278fd8.c, FUN_L15_0029ac30. */
+/* Adapted from Lombyte (GPL-3.0) for PAL by OpenRAC's tools/port.py: src/overlays/shared/gameplay/entities/00278fd8.c, FUN_L15_0029ac30. */
 void ProjectileUpdate(unsigned char *m) {
     char *d = *(char **)(m + 0x78);
     float next[4];
@@ -2514,7 +2514,7 @@ extern u8 D_0013E650[];
 extern void func_L00_0028EBF0(s32);
 
 /* Marks the moby as killed in the level's spawn tables and releases the voice slot it still owns.
-   Adapted from Lombyte (MIT) for PAL by OpenRAC's tools/port.py: src/overlays/shared/gameplay/entities/00278fd8.c, FUN_L15_002a35d8. */
+   Adapted from Lombyte (GPL-3.0) for PAL by OpenRAC's tools/port.py: src/overlays/shared/gameplay/entities/00278fd8.c, FUN_L15_002a35d8. */
 void Moby_MarkKilled(int addr) {
     struct Moby *m = (struct Moby *)addr;
     s32 slot;
@@ -3516,7 +3516,7 @@ extern f32 func_001F9B88(f32);
 extern f32 func_001F9F90(f32);
 extern f32 func_001F9FA8(f32);
 
-/* Adapted from Lombyte (MIT) for PAL by OpenRAC's tools/port.py: src/overlays/shared/gameplay/entities/00278fd8.c, FUN_L15_002bddb0. */
+/* Adapted from Lombyte (GPL-3.0) for PAL by OpenRAC's tools/port.py: src/overlays/shared/gameplay/entities/00278fd8.c, FUN_L15_002bddb0. */
 void MovingMobyUpdate(struct Moby *moby) {
     MovingMobyVars *vars = (MovingMobyVars *)moby->pvars;
     Vec4 offset;

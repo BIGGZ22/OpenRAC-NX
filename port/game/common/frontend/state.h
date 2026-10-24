@@ -221,8 +221,39 @@ struct Route {
 // Where a scripted run is, as frame() last read it (frontend.cpp).
 extern Route g_route;
 
+// OPENRAC_SHOT=EVERY:PATH: a PNG of every EVERY-th frame, written to PATH<frame>.png.
+struct Shots {
+    std::uint64_t every = 0;  // 0: no shots (unset, no ':', or EVERY not above 0)
+    std::string prefix;       // PATH, what the frame's number and .png follow
+
+    // Returns whether `frame` is one to take.
+    [[nodiscard]] bool due(std::uint64_t frame) const { return every > 0 && frame % every == 0; }
+};
+
 // Whether Start would skip what is playing now (frontend.cpp).
 bool skippable();
+
+// Returns the frame number `var` names, read as std::strtoull reads it, or nothing when it is
+// unset (frontend.cpp).
+std::optional<std::uint64_t> env_frame(env::Var var);
+
+// Returns OPENRAC_SHOT read, once (frontend.cpp).
+const Shots& shots();
+
+// Whether a development switch keeps one frame a tick whatever the settings say (frontend.cpp).
+bool one_frame_a_tick();
+
+// Draws `framebuffer` (width x height) into the window's box for a picture of shape `aspect`, black
+// around it; `flip`: its first row is the top (frontend.cpp).
+void present(
+    unsigned framebuffer,
+    int width,
+    int height,
+    int window_width,
+    int window_height,
+    bool flip,
+    float aspect
+);
 
 // Returns the value `var` was set to as a string of its own, or nothing when it is unset
 // (frontend.cpp).
@@ -276,5 +307,14 @@ void sky_sprite_quads(const viewer::GameState& state);
 // The particles the game drew since the last frame, as effect quads back to front, seen from
 // `state`'s camera; their textures read from `ram` (frontend/world.cpp).
 void particle_quads(std::span<const std::uint8_t> ram, const viewer::GameState& state);
+
+// Whether the frame cap lets a frame start now (frontend/interpolation.cpp).
+bool frame_due(std::chrono::steady_clock::time_point now);
+
+// Draws the kept tick, the camera and mobys part way from the last tick's to its own (as far as
+// the refresh it will be shown at is between them, when frames are drawn between ticks), and shows
+// it. `first`: the tick's own frame (shots, the frame read back by store_image)
+// (frontend/interpolation.cpp).
+void draw_kept(bool first);
 
 }  // namespace openrac::frontend

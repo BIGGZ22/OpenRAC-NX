@@ -69,7 +69,7 @@ extern void func_L00_00214520(float);
 extern void func_L00_00217570(int, int);
 extern int D_0015EE84 MACRO_ADDR;
 
-/* Hopping player movement update by state. Adapted from Lombyte (MIT) for PAL: src/overlays/shared/ui_help_00227f10.c, FUN_L12_00235c08. */
+/* Hopping player movement update by state. Adapted from Lombyte (GPL-3.0) for PAL: src/overlays/shared/ui_help_00227f10.c, FUN_L12_00235c08. */
 void Hero_UpdateHopMovement(void) {
     Vec4 tmp;
     f32 x;

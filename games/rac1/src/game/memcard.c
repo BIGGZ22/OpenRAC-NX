@@ -257,7 +257,7 @@ void RestoreGameFromStream(void) {
     D_0015EE84_m = 0;
 }
 
-/* Adapted from Lombyte (MIT): src/storage/memory_card/memcard_update_state.c; PAL directory validation reconstructed from assembly. */
+/* Adapted from Lombyte (GPL-3.0): src/storage/memory_card/memcard_update_state.c; PAL directory validation reconstructed from assembly. */
 typedef struct { u8 pad0[16]; u32 size; u8 pad14[12]; char name[32]; } McDirEntry_209E68;
 extern McDirEntry_209E68 mc_directory[] __asm__("D_001A0980");
 extern char D_0013D315[], D_0013D335[], D_0013D355[], D_0015FF58[], D_0015FF60[];
@@ -1505,7 +1505,7 @@ struct SaveHeader {
 
 /* memcard_PrepData: pack the save blocks (id, size, data, 4-aligned) after
    an 8-byte header, end with an id -1 record, checksum it. Adapted from
-   Lombyte (MIT) for PAL. */
+   Lombyte (GPL-3.0) for PAL. */
 int memcard_PrepData(void *dst, int slot, int *table) {
     struct SaveHeader *out = dst;
     struct SaveBlock *blk = table;
@@ -1604,7 +1604,7 @@ extern int func_001151B4(const void *, const void *, int); /* memcmp */
    marking each entry 1 (same size), -1 (block shorter) or -2 (longer),
    and count blocks with no entry, a wrong total and entries left
    unrestored as errors, stored in the current card slot. Adapted from
-   Lombyte (MIT) for PAL. */
+   Lombyte (GPL-3.0) for PAL. */
 int memcard_RestoreData(void *src, int slot, int *table) {
     unsigned char *buf = src;
     struct RestoreEntry *tbl = (struct RestoreEntry *)table;

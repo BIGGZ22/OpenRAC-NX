@@ -13,7 +13,7 @@ extern float func_001FA888(int);
 extern float func_001F9F90(float);
 extern float func_001F9FA8(float);
 
-/* Fills the sky particle list: entries from a up are dim specks, the first a are coloured sparks with random direction and speed. Adapted from Lombyte (MIT) for PAL: overlays/shared/unclassified_00288ec0.c, FUN_L00_00288ec0. */
+/* Fills the sky particle list: entries from a up are dim specks, the first a are coloured sparks with random direction and speed. Adapted from Lombyte (GPL-3.0) for PAL: overlays/shared/unclassified_00288ec0.c, FUN_L00_00288ec0. */
 void SkyInitParticles(int a, int b) {
     int i;
     E *e;
@@ -81,7 +81,7 @@ extern float func_001F9FA8(float);
 extern float func_001F9B88(float);
 extern int func_001160D8(void);
 
-/* Steps each shrub sparkle entry: type 0 spins and scales a direction, type 1 randomises a colour. Adapted from Lombyte (MIT) for PAL: overlays/shared/unclassified_00288ec0.c, FUN_L00_00289108. */
+/* Steps each shrub sparkle entry: type 0 spins and scales a direction, type 1 randomises a colour. Adapted from Lombyte (GPL-3.0) for PAL: overlays/shared/unclassified_00288ec0.c, FUN_L00_00289108. */
 void StepSkySparkles(void) {
     int i;
     for (i = 0; i < D_L00_001605DC_g->n; i++) {
@@ -168,7 +168,7 @@ typedef struct {
 } SkyData;
 #define SKY ((SkyData *)D_L00_001605DC)
 
-/* Initialises and animates the star field of the sky. Adapted from Lombyte (MIT) for PAL: src/overlays/shared/unclassified_00288ec0.c, FUN_L00_002895a0. */
+/* Initialises and animates the star field of the sky. Adapted from Lombyte (GPL-3.0) for PAL: src/overlays/shared/unclassified_00288ec0.c, FUN_L00_002895a0. */
 void SkyStarFieldUpdate(void) {
     int i, j;
     SkyStar *s;
@@ -282,7 +282,7 @@ void func_0022CEB8(void);
 void func_00234C98(int, long);
 void func_L00_001FFA40(void *, void *);
 
-/* Adapted from Lombyte (MIT) for PAL by OpenRAC's tools/port.py: src/overlays/shared/unclassified_00288ec0.c, FUN_L00_00289bd8. */
+/* Adapted from Lombyte (GPL-3.0) for PAL by OpenRAC's tools/port.py: src/overlays/shared/unclassified_00288ec0.c, FUN_L00_00289bd8. */
 void SkyShellsSparkleTwo(void) {
     float v[4] __attribute__((aligned(16)));
     func_001FA190(D_L00_001BDB70);
@@ -336,7 +336,7 @@ extern f32 func_001F9F90(f32);
 extern f32 func_001F9FA8(f32);
 extern void func_00234C98_8AF90(s32, u64) __asm__("func_00234C98");
 
-/* Initializes and steps three types of sky particles before drawing the sky layer. Adapted from Lombyte (MIT) for PAL by OpenRAC's tools/port.py: src/overlays/shared/unclassified_00288ec0.c, FUN_L00_00289cb8. */
+/* Initializes and steps three types of sky particles before drawing the sky layer. Adapted from Lombyte (GPL-3.0) for PAL by OpenRAC's tools/port.py: src/overlays/shared/unclassified_00288ec0.c, FUN_L00_00289cb8. */
 void SkyParticlesUpdate(void) {
     Part *p;
     Part *p2;
@@ -474,7 +474,7 @@ void func_0022CEB8(void);
 void func_00234C98(int, long);
 void func_L00_001FFA40(void *, void *);
 
-/* Adapted from Lombyte (MIT) for PAL by OpenRAC's tools/port.py: src/overlays/shared/unclassified_00288ec0.c, FUN_L00_0028a208. */
+/* Adapted from Lombyte (GPL-3.0) for PAL by OpenRAC's tools/port.py: src/overlays/shared/unclassified_00288ec0.c, FUN_L00_0028a208. */
 void SkyShellsSparkleThree(void) {
     float v[4] __attribute__((aligned(16)));
     func_001FA190(D_L00_001BDB70);
@@ -496,7 +496,7 @@ extern s32 D_L00_0015F6B0 MACRO_ADDR;
 void func_0022C9A8(s32);
 void func_L00_001FFA40(void *, void *);
 
-/* Adapted from Lombyte (MIT) for PAL by OpenRAC's tools/port.py: src/overlays/shared/unclassified_00288ec0.c, FUN_L00_0028a2f0. */
+/* Adapted from Lombyte (GPL-3.0) for PAL by OpenRAC's tools/port.py: src/overlays/shared/unclassified_00288ec0.c, FUN_L00_0028a2f0. */
 void SkyShellsRotateOne(void) {
     Vec4 t;
     *(s16 *)(D_L00_001605DC_8B5C8 + 4) = 0;
@@ -533,7 +533,7 @@ void DrawSkyShellsExtra(void) {
 typedef int T28a480_q __attribute__((mode(TI)));
 extern int D_L00_0015F6B0_8B758b __asm__("D_L00_0015F6B0") MACRO_ADDR;
 
-/* Adapted from Lombyte (MIT) for PAL by OpenRAC's tools/port.py: src/overlays/shared/unclassified_00288ec0.c, FUN_L00_0028a480. */
+/* Adapted from Lombyte (GPL-3.0) for PAL by OpenRAC's tools/port.py: src/overlays/shared/unclassified_00288ec0.c, FUN_L00_0028a480. */
 void SkyShellsRotateByIndex(void)
 {
     T28a480_q v[1];
@@ -611,7 +611,7 @@ void func_001FA190();
 void func_0022C9A8();
 void func_L00_001FFA40(void *, void *);
 
-/* Adapted from Lombyte (MIT) for PAL by OpenRAC's tools/port.py: src/overlays/shared/unclassified_00288ec0.c, FUN_L00_0028a998. */
+/* Adapted from Lombyte (GPL-3.0) for PAL by OpenRAC's tools/port.py: src/overlays/shared/unclassified_00288ec0.c, FUN_L00_0028a998. */
 void SkyShellsRotatePair(void) {
     float v[4] __attribute__((aligned(16)));
     func_001FA190(D_L00_001BDB70);
@@ -715,7 +715,7 @@ void func_001FA190();
 void func_0022C9A8();
 void func_L00_001FFA40(void *, void *);
 
-/* Adapted from Lombyte (MIT) for PAL by OpenRAC's tools/port.py: src/overlays/shared/unclassified_00288ec0.c, FUN_L00_0028b080. */
+/* Adapted from Lombyte (GPL-3.0) for PAL by OpenRAC's tools/port.py: src/overlays/shared/unclassified_00288ec0.c, FUN_L00_0028b080. */
 void SkyShellsSevenLayer(void) {
     float v[4] __attribute__((aligned(16)));
     *(short *)(D_L00_001605DC + 4) = 0;
@@ -744,7 +744,7 @@ void func_001F9BC0_28b1a0(void *) __asm__("func_001F9BC0");
 void func_L00_001FFA40_28b1a0(void *, void *) __asm__("func_L00_001FFA40");
 void func_001F9C48_28b1a0(void *, void *, float) __asm__("func_001F9C48");
 void func_0022C9A8_28b1a0(int) __asm__("func_0022C9A8");
-/* Per-entry update of a table of up to five entries (a switch on the index): each entry gets its own tilt, scale and turn speed, and its matrix is rebuilt every frame. Adapted from Lombyte (MIT) for PAL: overlays/shared/unclassified_00288ec0.c, FUN_L00_0028b1a0. */
+/* Per-entry update of a table of up to five entries (a switch on the index): each entry gets its own tilt, scale and turn speed, and its matrix is rebuilt every frame. Adapted from Lombyte (GPL-3.0) for PAL: overlays/shared/unclassified_00288ec0.c, FUN_L00_0028b1a0. */
 void SkyShellsEntryUpdate(void)
 {
     float v[4] __attribute__((aligned(16)));

@@ -99,7 +99,7 @@ extern char r1_D_00158080[];
 extern int r1_func_0011B4C8();
 
 /* rac1-decomp src/core/00119D88.c: func_0011BF80 */
-/* Adapted from Lombyte (MIT) for PAL by OpenRAC's tools/port.py: src/sdk/library/sceopen.c, sceOpen. */
+/* Adapted from Lombyte (GPL-3.0) for PAL by OpenRAC's tools/port.py: src/sdk/library/sceopen.c, sceOpen. */
 s32 func_0011E0D8(const u8 *path, s32 flags, ...)
 {
     struct SemaphoreParameters semaphore_parameters;

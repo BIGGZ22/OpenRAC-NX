@@ -4,7 +4,7 @@
  * engine behind "%o %x %d %u %e %f %s %c" with the optional "%0N" width and
  * the l/h modifiers.
  *
- * Transcribed from Lombyte (MIT) src/assembly/sdk/debug/printf_impl.c, which
+ * Transcribed from Lombyte (GPL-3.0) src/assembly/sdk/debug/printf_impl.c, which
  * keeps the same body under its NON_MATCHING branch. This candidate is close
  * but NOT exact: tools/check.py func_0011C1F8 --diff reports
  *   `boot: 1512 bytes, expected 1516`
@@ -29,7 +29,7 @@
  * nothing useful. kprintf (0x11F828's neighbour) and scePrintf both call it;
  * it is the engine behind the "%o %x %d %u %e %f %s %c" set.
  *
- * Transcribed from Lombyte (MIT) src/assembly/sdk/debug/printf_impl.c,
+ * Transcribed from Lombyte (GPL-3.0) src/assembly/sdk/debug/printf_impl.c,
  * sha256 e0e1d4cc7ff0e56cc2b5d22ee8be2cf5c26ce3d2f3ffa4a9a6a0f5ef5ce4b3c1
  * (upstream keeps the body under its NON_MATCHING branch). Confirmed against
  * RAC2's own bytes: the va_list advances by 8 per ARG (`addiu $s3,$s3,0x8`,

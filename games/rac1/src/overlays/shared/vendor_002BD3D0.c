@@ -83,7 +83,7 @@ typedef int u128_8670 __attribute__((mode(TI)));
 extern char *func_0020D348(int);
 extern void func_L00_00251E30(void *);
 
-/* Adapted from Lombyte (MIT) for PAL by OpenRAC's tools/port.py: src/overlays/shared/gameplay_vendor_00308670.c, FUN_L12_00308670. */
+/* Adapted from Lombyte (GPL-3.0) for PAL by OpenRAC's tools/port.py: src/overlays/shared/gameplay_vendor_00308670.c, FUN_L12_00308670. */
 char *SpawnMoby55B(char *a0)
 {
     unsigned char *m = (unsigned char *)CreateMoby(0x55B);
@@ -131,7 +131,7 @@ typedef struct {
     f32 unk74; /* 0x74: -1 on launch */
 } LobbedVars;
 
-/* Adapted from Lombyte (MIT) for PAL by OpenRAC's tools/port.py: src/overlays/shared/gameplay/vendor/00308670.c, FUN_L12_00308708. */
+/* Adapted from Lombyte (GPL-3.0) for PAL by OpenRAC's tools/port.py: src/overlays/shared/gameplay/vendor/00308670.c, FUN_L12_00308708. */
 void LobbedMoby_Launch(void *unused, struct Moby *m) {
     LobbedVars *d = (LobbedVars *)m->pvars;
     float dir[4];

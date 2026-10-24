@@ -57,7 +57,7 @@ extern int r1_func_0011B4C8();
 extern int r1_func_0011BC40_arg(int) __asm__("func_0011DD98");
 
 /* rac1-decomp src/core/00119D88.c: func_0011C208 */
-/* sceClose: close a SIF file handle, adapted from Lombyte (MIT) for PAL. */
+/* sceClose: close a SIF file handle, adapted from Lombyte (GPL-3.0) for PAL. */
 int func_0011E360(unsigned int fd) {
     CloseSema sema;
     int result;

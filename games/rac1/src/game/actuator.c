@@ -26,7 +26,7 @@ extern f32 func_001FA888(s32);
 extern s32 func_001FA898(f32);
 extern f32 func_001F9F90(f32);
 
-/* Adapted from Lombyte (MIT) for PAL by OpenRAC's tools/port.py: src/overlays/shared/start_001eaa08.c, FUN_L00_001eaa08. */
+/* Adapted from Lombyte (GPL-3.0) for PAL by OpenRAC's tools/port.py: src/overlays/shared/start_001eaa08.c, FUN_L00_001eaa08. */
 s32 actuator_CalcPower(s32 *p1)
 {
     s32 aa[3][4];

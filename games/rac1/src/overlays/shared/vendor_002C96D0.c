@@ -21,7 +21,7 @@ typedef struct {
     float v[4];
 } __attribute__((aligned(16))) Q4;
 
-/* Places a moby at a spot: copies the vector in, transforms it, and if the move is blocked pushes it back out along the stored normal. Adapted from Lombyte (MIT) for PAL: overlays/shared/unclassified_002bffa8.c, FUN_L00_002c82f0. */
+/* Places a moby at a spot: copies the vector in, transforms it, and if the move is blocked pushes it back out along the stored normal. Adapted from Lombyte (GPL-3.0) for PAL: overlays/shared/unclassified_002bffa8.c, FUN_L00_002c82f0. */
 void PlaceMobyAtSpot(Q4 *a, char *m, Q4 *c) {
     char *q = *(char **)(m + 0x78);
     char *P;
@@ -104,7 +104,7 @@ extern unsigned char *func_L00_0025D390_C9820(int) __asm__("func_L00_0025D390");
 extern s32 func_L00_001F3958_2C9820(void) __asm__("func_L00_001F3958");
 
 /* Predicts where a thrown moby lands: steps the velocity (with gravity) from its start until collision_line_2c8440 hits ground (or a moby other than the hero and the holder), for up to `timer` steps. Stores the landing point and normal in vars and pulls the point 5% toward D_L00_00166DC0_2c8440. mode 0 needs a live hit moby; mode 1 starts from the hero's hand. Returns 1 on a hit.
-   Adapted from Lombyte (MIT) for PAL by OpenRAC's tools/port.py: src/overlays/shared/gameplay/entities/002c8440.c, FUN_L00_002c8440. */
+   Adapted from Lombyte (GPL-3.0) for PAL by OpenRAC's tools/port.py: src/overlays/shared/gameplay/entities/002c8440.c, FUN_L00_002c8440. */
 s32 ThrownObject_TracePathCopy(ThrowVars_2c8440_2C9820 *v, struct Moby *m, s32 mode)
 {
     Vec4 d, e, a, q, w;
@@ -1511,7 +1511,7 @@ extern unsigned char D_0013E633_2CD3B8[] __asm__("D_0013E633");
 
 typedef struct { float pad[4]; float v10; float v14; int pad2; int r1c; float f20; int i24; float f28; float f2c; } DD;
 
-/* Spawns a debris moby with randomized spin and velocity. Adapted from Lombyte (MIT) for PAL: src/overlays/shared/unclassified_002c8440.c, FUN_L00_002cbf68. */
+/* Spawns a debris moby with randomized spin and velocity. Adapted from Lombyte (GPL-3.0) for PAL: src/overlays/shared/unclassified_002c8440.c, FUN_L00_002cbf68. */
 char *SpawnMoby428(int unused, float *pos, float *vel) {
     char *m = func_0020D348_2CD3B8(0x1AC);
     if (m) {
@@ -1910,7 +1910,7 @@ extern void func_L00_0025F4A8_alt(void *, void *, void *, float, float, int, int
 extern float D_0015EE60 MACRO_ADDR;
 extern float D_0015EE6C MACRO_ADDR;
 
-/* Spawns a type-0x1C9 projectile moby at a position, aimed at an optional target; returns it, or 0 if it was launched at once. Adapted from Lombyte (MIT) for PAL: overlays/shared/unclassified_002c8440.c, FUN_L00_002ccee0. */
+/* Spawns a type-0x1C9 projectile moby at a position, aimed at an optional target; returns it, or 0 if it was launched at once. Adapted from Lombyte (GPL-3.0) for PAL: overlays/shared/unclassified_002c8440.c, FUN_L00_002ccee0. */
 unsigned char *SpawnMoby457(int a, V4 *pos, unsigned char *tgt, float f12, float f13, float f14) {
     V4 w;
     V4 s;
@@ -2227,7 +2227,7 @@ int func_001F9850(int);
 void func_001F9BD8(void *, void *, void *);
 unsigned char *func_L00_002CF6A0(unsigned char *, void *);
 
-/* Adapted from Lombyte (MIT) for PAL by OpenRAC's tools/port.py: src/overlays/shared/unclassified_002c8440.c, FUN_L00_002cdcc0. */
+/* Adapted from Lombyte (GPL-3.0) for PAL by OpenRAC's tools/port.py: src/overlays/shared/unclassified_002c8440.c, FUN_L00_002cdcc0. */
 void Hero_SpawnSlotProjectiles(void) {
     P_2cdcc0 *p = &D_0013F450;
     S_2cdcc0 *s;
@@ -2363,7 +2363,7 @@ extern float func_001F9D48_2CF6A0(void *, void *) __asm__("func_001F9D48");
 char *func_L00_002CF6A0_r(int a, void *pos) __asm__("func_L00_002CF6A0");
 
 /* Spawns moby 0x1DF at pos, aims it at the player and puts it in the first free of six slots.
-   Adapted from Lombyte (MIT) for PAL by OpenRAC's tools/port.py: src/overlays/shared/gameplay/entities/002c8440.c, FUN_L00_002ce1f0. */
+   Adapted from Lombyte (GPL-3.0) for PAL by OpenRAC's tools/port.py: src/overlays/shared/gameplay/entities/002c8440.c, FUN_L00_002ce1f0. */
 char *func_L00_002CF6A0_r(int a, void *pos) {
     char *m = func_0020D348_2CF6A0(0x1DF);
     char *v;
@@ -2490,7 +2490,7 @@ extern int func_L00_0025A208(struct Moby **, int, int, int);
 extern int func_L00_0025A2F0(struct Moby **, struct Moby *, int, int);
 extern float func_001F9D48(void *, void *);
 
-/* Adapted from Lombyte (MIT) for PAL by OpenRAC's tools/port.py: src/overlays/shared/gameplay/entities/002c8440.c, FUN_L00_002cf218. */
+/* Adapted from Lombyte (GPL-3.0) for PAL by OpenRAC's tools/port.py: src/overlays/shared/gameplay/entities/002c8440.c, FUN_L00_002cf218. */
 void CrateUpdate(struct Moby *moby) {
     Burst burst;
     Vec4f at;

@@ -205,7 +205,7 @@ extern s32 func_00209048(s32, s32, s32, s32, s32, s32);
 extern f32 func_001F9D48_07408(union RegionVector *, union RegionVector *) __asm__("func_001F9D48");
 s32 func_00207408(s32 projected_x, s32 projected_y, f32 x, f32 y, f32 z);
 
-/* Adapted from Lombyte (MIT) for PAL by OpenRAC's tools/port.py: src/textbin/fun_00206bd8.c, passes_projected_region_callback_0. */
+/* Adapted from Lombyte (GPL-3.0) for PAL by OpenRAC's tools/port.py: src/textbin/fun_00206bd8.c, passes_projected_region_callback_0. */
 s32 func_00207408(s32 projected_x, s32 projected_y, f32 x, f32 y, f32 z) {
     s32 special_state;
 
@@ -692,7 +692,7 @@ extern int D_0015EE84 MACRO_ADDR;
 
 /* Read a sector into arg0 from the open file (D_001A01F0 slot state) or
    clear it when none is open, and track the largest read per slot in
-   D_0013D668. Adapted from Lombyte (MIT) for PAL. */
+   D_0013D668. Adapted from Lombyte (GPL-3.0) for PAL. */
 void func_00208338(int arg0) {
     int n;
 

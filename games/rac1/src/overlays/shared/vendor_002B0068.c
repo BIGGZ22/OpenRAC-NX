@@ -25,7 +25,7 @@ extern void func_L00_0026E940_B0068(struct Moby *, int color, int life, int, flo
 extern void func_L00_00251E30_B0068(void *) __asm__("func_L00_00251E30");
 extern float D_0015EE6C_B0068 __asm__("D_0015EE6C") MACRO_ADDR;
 
-/* Adapted from Lombyte (MIT) for PAL by OpenRAC's tools/port.py: src/overlays/shared/gameplay/entities/002aee30.c, FUN_L04_002aee30. */
+/* Adapted from Lombyte (GPL-3.0) for PAL by OpenRAC's tools/port.py: src/overlays/shared/gameplay/entities/002aee30.c, FUN_L04_002aee30. */
 struct Moby *SpawnShotMoby(struct Moby *owner, void *pos, void *dir, int life)
 {
     struct Moby *m;
@@ -117,7 +117,7 @@ extern s32 func_L00_00258BC8(s32, s32);
 extern void func_L00_0026EBC0(void *, void *, u32, s32, f32);
 
 /* Update of the class 0xB8 shot (spawned by FUN_L04_002aee30): moves along its direction, plays its sound once it starts moving away from the hero within 3 units, dies off the arena, and on a hit (probing for its owner's targets until the timer runs out) bursts into five sparks and is removed.
-   Adapted from Lombyte (MIT) for PAL by OpenRAC's tools/port.py: src/overlays/shared/gameplay/entities/002aee30.c, FUN_L04_002af058. */
+   Adapted from Lombyte (GPL-3.0) for PAL by OpenRAC's tools/port.py: src/overlays/shared/gameplay/entities/002aee30.c, FUN_L04_002af058. */
 void Moby184ShotUpdate(struct Moby *m)
 {
     Vec4 old;

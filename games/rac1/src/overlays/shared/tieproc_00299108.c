@@ -31,7 +31,7 @@ extern int D_L00_0015F678 MACRO_ADDR;
 extern int D_0015EF28 MACRO_ADDR;
 int func_001F9850(int);
 
-/* Adapted from Lombyte (MIT) for PAL by OpenRAC's tools/port.py: src/overlays/shared/unclassified_00295100.c, FUN_L00_00297e70. */
+/* Adapted from Lombyte (GPL-3.0) for PAL by OpenRAC's tools/port.py: src/overlays/shared/unclassified_00295100.c, FUN_L00_00297e70. */
 void UpdateFrameCounters(void) {
     if (D_0013CA40.busy != 0 || D_0013CA40.c != 0.0f || D_0013CA40.d != 0.0f || D_0013CA40.a != 0.0f || D_0013CA40.b != 0.0f) {
         (*(int *)&D_L00_001610B0) = 0;
@@ -117,7 +117,7 @@ extern void func_0020DE20(void);
 extern int func_L00_0023B610_r(int) __asm__("func_L00_0023B610");
 extern void func_001FE6C0(void);
 
-/* per-frame update of the in-level game: pause and cutscene triggers, then the subsystem updates. Adapted from Lombyte (MIT) for PAL: src/overlays/shared/unclassified_00295100.c, FUN_L00_00297f78. */
+/* per-frame update of the in-level game: pause and cutscene triggers, then the subsystem updates. Adapted from Lombyte (GPL-3.0) for PAL: src/overlays/shared/unclassified_00295100.c, FUN_L00_00297f78. */
 void LevelFrameUpdate(void) {
     int lvl, area, noctl, special;
     unsigned char *r;
@@ -668,7 +668,7 @@ extern void func_L00_002353B8(void *);
 extern void func_L00_00207A48(void *);
 
 /* Per-frame update while the cutscene in D_L00_0016C860 plays: runs the debug-gated subsystem updates, fades, advances the frame counters and either finishes the cutscene (end frame reached or skipped) or steps each of its mobys between two keyframes.
-   Adapted from Lombyte (MIT) for PAL by OpenRAC's tools/port.py: src/overlays/shared/gameplay/entities/00295100.c, FUN_L00_00298f90. */
+   Adapted from Lombyte (GPL-3.0) for PAL by OpenRAC's tools/port.py: src/overlays/shared/gameplay/entities/00295100.c, FUN_L00_00298f90. */
 void CutsceneModeUpdate(void) {
     VendorCutscene *cs;
     VendorMoby *m;
@@ -810,7 +810,7 @@ typedef struct {
 } G7;
 extern G7 D_00137C80_q __asm__("D_00137C80");
 
-/* Plays the movie of table entry i (set chosen by a flag). Adapted from Lombyte (MIT) for PAL: overlays/shared/unclassified_00295100.c, FUN_L00_002994f8. */
+/* Plays the movie of table entry i (set chosen by a flag). Adapted from Lombyte (GPL-3.0) for PAL: overlays/shared/unclassified_00295100.c, FUN_L00_002994f8. */
 void PlayMovieEntry(int i) {
     int a, b;
     if (i < 0) return;
@@ -829,7 +829,7 @@ typedef struct {
 } G7_29A8D0;
 extern G7_29A8D0 D_00137C80_q_29A8D0 __asm__("D_00137C80");
 
-/* Plays the movie of table entry i (set chosen by a flag). Adapted from Lombyte (MIT) for PAL: overlays/shared/unclassified_00295100.c, FUN_L00_00299560. */
+/* Plays the movie of table entry i (set chosen by a flag). Adapted from Lombyte (GPL-3.0) for PAL: overlays/shared/unclassified_00295100.c, FUN_L00_00299560. */
 void PlayMovieEntryWithMode(int i) {
     int a, b;
     if (i < 0) return;

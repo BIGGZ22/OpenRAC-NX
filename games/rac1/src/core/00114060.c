@@ -39,7 +39,7 @@ extern void func_00113968(void);
  * WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE.
  */
 
-/* newlib's __sfvwrite, from its own source. Adapted from Lombyte (MIT)
+/* newlib's __sfvwrite, from its own source. Adapted from Lombyte (GPL-3.0)
    for PAL. */
 /* newlib's FILE and uio, as __sfvwrite uses them. */
 struct __sbuf_fvw {

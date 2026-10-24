@@ -276,7 +276,7 @@ extern unsigned char D_00153530[];
 extern unsigned char D_00153540[];
 extern sceDmaEnv D_00159AD8;
 
-/* sceDmaPutEnv. Adapted from Lombyte (MIT) for PAL. */
+/* sceDmaPutEnv. Adapted from Lombyte (GPL-3.0) for PAL. */
 int func_001233E8(void *arg0) {
     sceDmaEnv *env = arg0;
     unsigned int ctrl;

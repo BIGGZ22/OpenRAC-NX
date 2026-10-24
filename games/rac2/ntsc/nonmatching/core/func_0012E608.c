@@ -1,4 +1,4 @@
-/* _csc_storeRefImage, from Lombyte (MIT) src/assembly/sdk/dma/csc_store_ref_image.c
+/* _csc_storeRefImage, from Lombyte (GPL-3.0) src/assembly/sdk/dma/csc_store_ref_image.c
    (its NON_MATCHING body is the recovered source; see the header comment in the
    body for the name mapping). Every instruction matches retail - the same frame,
    the same six saves in 16-byte slots, the same `mult rd,rs,rt` for
@@ -32,7 +32,7 @@
    to $v0) and leave both slots at 656/648. */
 #include "common.h"
 
-/* _csc_storeRefImage: adapted from Lombyte (MIT)
+/* _csc_storeRefImage: adapted from Lombyte (GPL-3.0)
    src/assembly/sdk/dma/csc_store_ref_image.c, whose NON_MATCHING body is the
    recovered source. Queues the IPU's colour-space conversion for one reference
    image and runs the CSC while D3 (fromIPU) drains: if the picture needs more

@@ -785,7 +785,7 @@ typedef struct {
 } SceneG;
 extern SceneG D_00187040_g __asm__("D_00187040");
 
-/* Builds the view matrices in the camera block from the rotation set up in D_00187390 or the three rotation angles, then copies the result to D_0018D080. Adapted from Lombyte (MIT) for PAL: src/rendering/view/fun_001f2260.c, FUN_001f2260. */
+/* Builds the view matrices in the camera block from the rotation set up in D_00187390 or the three rotation angles, then copies the result to D_0018D080. Adapted from Lombyte (GPL-3.0) for PAL: src/rendering/view/fun_001f2260.c, FUN_001f2260. */
 void BuildViewMatrices(void) {
     float m[4][4];
     SceneG *g;
@@ -972,7 +972,7 @@ extern char *D_0015F730 MACRO_ADDR;
 extern float *D_0015F724 MACRO_ADDR;
 
 /* Build the occlusion visibility bitmap for the camera's grid cell.
-   Adapted from Lombyte (MIT) for PAL: src/rendering/build_occlusion_visibility.c, build_occlusion_visibility. */
+   Adapted from Lombyte (GPL-3.0) for PAL: src/rendering/build_occlusion_visibility.c, build_occlusion_visibility. */
 void BuildOcclVisibility(void) {
     float scale = 0.25f;
     int x, y, z;
@@ -1463,7 +1463,7 @@ extern void func_001FB470(void);
 extern int func_00122630(GsLoadImage *, s16, s16, s16, s16, s16, s16, s16);
 extern int func_00122958(GsLoadImage *, unsigned char *);
 
-/* Adapted from Lombyte (MIT): src/video/display/set_pal_mode.c, set_pal_mode. */
+/* Adapted from Lombyte (GPL-3.0): src/video/display/set_pal_mode.c, set_pal_mode. */
 void func_001F3890(void) {
     GsLoadImage image;
     int n;
@@ -1697,7 +1697,7 @@ extern void func_0022B8F8(void *);
 extern void func_00229D48(void);
 extern void func_0020DD48(void);
 
-/* Draws the whole frame: each world layer's DMA chain in order, then the fades and the per-layer profiler bars. Adapted from Lombyte (MIT) for PAL: rendering/draw_debug_profiler.c, draw_debug_profiler. */
+/* Draws the whole frame: each world layer's DMA chain in order, then the fades and the per-layer profiler bars. Adapted from Lombyte (GPL-3.0) for PAL: rendering/draw_debug_profiler.c, draw_debug_profiler. */
 void DrawDebugProfiler(void) {
     float t;
     float div;
@@ -2066,7 +2066,7 @@ extern s32 gs_texture_allocation_cursor_et __asm__("D_0015EF74") MACRO_ADDR;
    call for a slot allocates its CLUT and texels from the GS texture cursor,
    builds and caches the word, and, while fewer than 64 uploads are
    pending, queues the slot's CLUT and pixels for upload.
-   Adapted from Lombyte (MIT): src/rendering/effects/get_effect_texture.c, get_effect_texture. */
+   Adapted from Lombyte (GPL-3.0): src/rendering/effects/get_effect_texture.c, get_effect_texture. */
 u64 func_001F4868_r(s32 index) __asm__("func_001F4868");
 
 /* GetEffectTex with its real 64-bit return: builds and returns the GS TEX0 word for an effect texture. */
@@ -2467,7 +2467,7 @@ extern void func_001F5650(int, int, int, int, unsigned long);
 /* Fills the screen in vertical stripes: an optional full-screen colour
    first, then alternating stripes of widths step0/step1 in colours
    color0/color1, each with its own GS register 0x42 blend word when set.
-   Adapted from Lombyte (MIT) for PAL. */
+   Adapted from Lombyte (GPL-3.0) for PAL. */
 void DrawScreenEffect(void) {
     int i;
     short w;
@@ -2779,7 +2779,7 @@ extern f32 func_001F9F90(f32);
 extern f32 func_001F9FA8(f32);
 extern s32 func_001FA898(f32);
 
-/* Adapted from Lombyte (MIT) for PAL by OpenRAC's tools/port.py: src/rendering/append_rotated_sprite_quad.c, append_rotated_sprite_quad. */
+/* Adapted from Lombyte (GPL-3.0) for PAL by OpenRAC's tools/port.py: src/rendering/append_rotated_sprite_quad.c, append_rotated_sprite_quad. */
 void func_001F5E60(f32 center_x, f32 center_y, f32 quad_width, f32 quad_height,
                                 f32 angle, s32 texture_width, s32 texture_height,
                                 s64 texture_tex0, s64 z_and_fog, s32 color, u8 flip_u, u8 flip_v,
@@ -3028,7 +3028,7 @@ extern void func_001F5800_F6668(s32, s32, s32, s32, s32, s32, s32, s32, s64, s64
 
 /* FontPrint: draws a string glyph by glyph; bytes 8..15 switch the colour, 0x80..0xA7 add an accent glyph,
    bytes below 0x20 are 24-pixel grey button glyphs.
-   Adapted from Lombyte (MIT) for PAL by OpenRAC's tools/port.py: src/ui/text/font_print.c, font_print. */
+   Adapted from Lombyte (GPL-3.0) for PAL by OpenRAC's tools/port.py: src/ui/text/font_print.c, font_print. */
 void func_001F6668_r(s32 x, s32 y, u64 color, u8 *text, s32 character_limit, s64 texture,
                       struct Glyph_F6668 *glyphs) __asm__("func_001F6668");
 void func_001F6668_r(s32 x, s32 y, u64 color, u8 *text, s32 character_limit, s64 texture,
@@ -3123,7 +3123,7 @@ extern f32 func_001FA888(s32);
 extern void func_001F5BB8_F69F0(f32, f32, f32, f32, s32, s32, s32, s32, u64, s64) __asm__("func_001F5BB8");
 void func_001F69F0(u64 color, u8 *s, f32 x, s32 n, s64 tex, struct Glyph *g, f32 y, f32 scale);
 
-/* Adapted from Lombyte (MIT) for PAL by OpenRAC's tools/port.py: src/audio/music/process_bgm_display_text_event.c, process_bgm_display_text_event. */
+/* Adapted from Lombyte (GPL-3.0) for PAL by OpenRAC's tools/port.py: src/audio/music/process_bgm_display_text_event.c, process_bgm_display_text_event. */
 void Font_DrawString(u64 color, u8 *str, f32 x, s32 n, s64 tex, struct Glyph *g, f32 y, f32 scale) {
     u8 *s;
     s32 i;

@@ -362,7 +362,7 @@ extern struct Moby * D_L15_00160058_A4D88 __asm__("D_L15_00160058") MACRO_ADDR;
 extern f32 D_L15_0016157C_A4D88 SDATA(D_L15_0016157C);
 extern f32 D_L15_00161580_A4D88 SDATA(D_L15_00161580);
 
-/* Adapted from Lombyte (MIT) for PAL by OpenRAC's tools/port.py: src/overlays/l15/gameplay/entities/0029aff0.c, FUN_L15_002a3ba8. */
+/* Adapted from Lombyte (GPL-3.0) for PAL by OpenRAC's tools/port.py: src/overlays/l15/gameplay/entities/0029aff0.c, FUN_L15_002a3ba8. */
 void ClipVolumeDoorUpdate(struct Moby *moby) {
     DoorVars *vars = (DoorVars *)moby->pvars;
     s32 open = 0;
@@ -1100,7 +1100,7 @@ extern void func_001F9BF0(void *, void *, void *);
 extern float func_L00_001FF860(float, float);
 
 /* Flocking step toward goal (cf. FUN_L15_002cf110): separates from live same-class mobys within 10 units and keeps ~15 units off the goal while another moby is closer to it (~10 otherwise); writes the steering point to out and returns the heading to follow.
-   Adapted from Lombyte (MIT) for PAL by OpenRAC's tools/port.py: src/overlays/l15/gameplay/entities/0029aff0.c, FUN_L15_002c52b8. */
+   Adapted from Lombyte (GPL-3.0) for PAL by OpenRAC's tools/port.py: src/overlays/l15/gameplay/entities/0029aff0.c, FUN_L15_002c52b8. */
 float FlockStepToGoal(struct Moby *m, float *out, Goal_52b8 goal) {
     float tmp[4];
     float dist;
@@ -3013,7 +3013,7 @@ char *Moby1428Spawn(char *pos, char *vec) {
 extern int D_L15_001AC140[];
 extern int D_L15_00160058_ED318 __asm__("D_L15_00160058") MACRO_ADDR;
 
-/* Adapted from Lombyte (MIT) for PAL by OpenRAC's tools/port.py: src/overlays/l15/gameplay/vendor/002e73c0.c, FUN_L15_002ebf28. */
+/* Adapted from Lombyte (GPL-3.0) for PAL by OpenRAC's tools/port.py: src/overlays/l15/gameplay/vendor/002e73c0.c, FUN_L15_002ebf28. */
 void SetMobyGroupVisible(int idx, int show) {
     short *p = (short *)D_L15_001AC140[idx];
     if (p == 0)

@@ -37,7 +37,7 @@ extern unsigned char * D_L07_001B24F4;
 extern float D_0015EE60 MACRO_ADDR;
 extern float D_L07_00166EC0[];
 
-/* Adapted from Lombyte (MIT) for PAL by OpenRAC's tools/port.py: src/overlays/shared/rendering/0029a2a0.c, FUN_L07_0029b8d8. */
+/* Adapted from Lombyte (GPL-3.0) for PAL by OpenRAC's tools/port.py: src/overlays/shared/rendering/0029a2a0.c, FUN_L07_0029b8d8. */
 unsigned char *SpawnMobyAttachedParticle(void *m, short index, float amount, float factor) {
     float v[4];
     float t[4];

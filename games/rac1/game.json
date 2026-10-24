@@ -131,7 +131,7 @@
             "long long"
           ]
         ],
-        "credit": "Adapted from rac1-decomp (MIT), the PAL decompilation, by OpenRAC's tools/port.py: {file}, {name}.",
+        "credit": "Adapted from rac1-decomp (GPL-3.0), the PAL decompilation, by OpenRAC's tools/port.py: {file}, {name}.",
         "allow": {
           "func_00116168": [
             "do/while (0)"
@@ -174,7 +174,7 @@
         "repo": "https://github.com/lombyte-project/Lombyte",
         "branch": "main",
         "checkout": "../rac1-decomp-ntsc",
-        "license": "MIT (GPL-2.0 and newlib parts)",
+        "license": "GPL-3.0 (GPL-2.0 and newlib parts keep theirs)",
         "exclude": [],
         "commit": "8d22ee2420f43c245f7f25a9bb3df81aa2eb1c3a",
         "date": "2026-10-20",
@@ -254,7 +254,7 @@
           "vs64": "volatile s64",
           "vu64": "volatile u64"
         },
-        "credit": "Adapted from Lombyte (MIT) for PAL by OpenRAC's tools/port.py: {file}, {name}.",
+        "credit": "Adapted from Lombyte (GPL-3.0) for PAL by OpenRAC's tools/port.py: {file}, {name}.",
         "phrases": [
           [
             "\\blong\\s+long\\b",

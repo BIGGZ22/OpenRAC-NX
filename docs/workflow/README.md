@@ -430,7 +430,7 @@ best starting point for the other.
   flags and found that they do not carry over: treat them as hints to test on
   one function at a time.
 - **Provenance.** On PAL, the comment above a port ends with
-  `Adapted from Lombyte (MIT) for PAL: <its file under src/>, <its name>.`,
+  `Adapted from Lombyte (GPL-3.0) for PAL: <its file under src/>, <its name>.`,
   and [THIRD_PARTY_NOTICES.md](../../games/rac1/THIRD_PARTY_NOTICES.md)
   lists each port. On Lombyte, a ported file's first line reads
   `Ported from rac1-decomp, the PAL decompilation (<file>, <function>)`

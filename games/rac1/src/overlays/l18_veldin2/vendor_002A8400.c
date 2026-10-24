@@ -216,7 +216,7 @@ extern short D_L18_001619F0;
 extern void func_L00_00251328(void *, int, int, int);
 extern void func_0022ED80(int, int, int);
 
-/* Adapted from Lombyte (MIT) for PAL by OpenRAC's tools/port.py: src/overlays/l18/gameplay/entities/002a7220.c, FUN_L18_002d5348. */
+/* Adapted from Lombyte (GPL-3.0) for PAL by OpenRAC's tools/port.py: src/overlays/l18/gameplay/entities/002a7220.c, FUN_L18_002d5348. */
 char *Moby564Spawn(float *pos, float *dir, float *target, float a, float b, int frames, int kind) {
     char *moby = func_0020D348_D6738(0x234);
     if (moby != 0) {
@@ -551,7 +551,7 @@ extern void func_L00_0025F4A8_2D7310(void *, void *, void *, float, float, int, 
 
 void func_L18_002D7310_r(unsigned char *m) __asm__("func_L18_002D7310");
 
-/* Adapted from Lombyte (MIT) for PAL by OpenRAC's tools/port.py: src/overlays/l18/gameplay/entities/002a7220.c, FUN_L18_002d5f20. */
+/* Adapted from Lombyte (GPL-3.0) for PAL by OpenRAC's tools/port.py: src/overlays/l18/gameplay/entities/002a7220.c, FUN_L18_002d5f20. */
 void func_L18_002D7310_r(unsigned char *m) {
     char *d = *(char **)(m + 0x78);
     char *g;
@@ -589,7 +589,7 @@ struct Manip_D74F8;
 struct GifEntry_D74F8;
 extern int func_L00_002DCDA8_D74F8(void *) __asm__("func_L00_002DCDA8");
 
-/* Adapted from Lombyte (MIT) for PAL by OpenRAC's tools/port.py: src/overlays/l18/gameplay/entities/002a7220.c, FUN_L18_002d6108. */
+/* Adapted from Lombyte (GPL-3.0) for PAL by OpenRAC's tools/port.py: src/overlays/l18/gameplay/entities/002a7220.c, FUN_L18_002d6108. */
 extern int func_L00_002DCDA8_D74F8_pos(void *, void *, void *) __asm__("func_L00_002DCDA8");
 int Moby_StepStunState(struct Moby *m, void *pos, void *target) {
     char *d = (char *)m->pvars;
@@ -685,7 +685,7 @@ extern PathLink * D_L18_0015F7EC MACRO_ADDR;
 extern s32 D_L18_0015F7F0 MACRO_ADDR;
 extern char * D_L18_0016016C MACRO_ADDR;
 
-/* Adapted from Lombyte (MIT) for PAL by OpenRAC's tools/port.py: src/overlays/l18/gameplay/entities/002a7220.c, FUN_L18_002d62e8. */
+/* Adapted from Lombyte (GPL-3.0) for PAL by OpenRAC's tools/port.py: src/overlays/l18/gameplay/entities/002a7220.c, FUN_L18_002d62e8. */
 void PathJunctionUpdate(struct Moby *moby) {
     PathJunctionVars *vars = (PathJunctionVars *)moby->pvars;
     s32 n;
@@ -1009,7 +1009,7 @@ extern void func_L00_0028EBF0(s32);
 extern int func_L00_00203F20(int, int);
 extern int func_0022ED80_D8F10(int, int, int) __asm__("func_0022ED80");
 
-/* Adapted from Lombyte (MIT) for PAL by OpenRAC's tools/port.py: src/overlays/l18/gameplay/entities/002a7220.c, FUN_L18_002d7b20. */
+/* Adapted from Lombyte (GPL-3.0) for PAL by OpenRAC's tools/port.py: src/overlays/l18/gameplay/entities/002a7220.c, FUN_L18_002d7b20. */
 void TimedLiftUpdate(struct Moby *moby) {
     char *data = (char *)moby->pvars;
     int index;
@@ -1234,7 +1234,7 @@ extern int func_L00_00258BC8(int, int);
 extern float func_00214158(void);
 extern int func_0022ED80_D96B0(int, int, struct Moby *) __asm__("func_0022ED80");
 
-/* Adapted from Lombyte (MIT) for PAL by OpenRAC's tools/port.py: src/overlays/l18/gameplay/entities/002a7220.c, FUN_L18_002d82c0. */
+/* Adapted from Lombyte (GPL-3.0) for PAL by OpenRAC's tools/port.py: src/overlays/l18/gameplay/entities/002a7220.c, FUN_L18_002d82c0. */
 void SinkingPlatformUpdate(struct Moby *moby) {
     char *data;
     float delta[4] __attribute__((aligned(16)));
@@ -1673,7 +1673,7 @@ extern void func_001FA1F8_CE10(void *, void *) __asm__("func_001FA1F8");
 extern void func_L00_001FD1D8_CE10(void *, void *, int) __asm__("func_L00_001FD1D8");
 extern void func_001FA4F0_CE10(void *, void *, void *) __asm__("func_001FA4F0");
 
-/* Adapted from Lombyte (MIT) for PAL: src/overlays/l18/gameplay/entities/002a7220.c, FUN_L18_002dba20. */
+/* Adapted from Lombyte (GPL-3.0) for PAL: src/overlays/l18/gameplay/entities/002a7220.c, FUN_L18_002dba20. */
 void Moby624Draw(void *moby_v) {
     M_CE10 *moby = moby_v;
     Q_CE10 q[4];
@@ -1926,7 +1926,7 @@ extern int func_001FA898_D8A8(float) __asm__("func_001FA898");
 extern void func_001F9BC0_D8A8(void *) __asm__("func_001F9BC0");
 extern void func_001FA1F8_D8A8(void *, void *) __asm__("func_001FA1F8");
 
-/* Adapted from Lombyte (MIT) for PAL: src/overlays/l18/gameplay/entities/002a7220.c, FUN_L18_002dc4b8. */
+/* Adapted from Lombyte (GPL-3.0) for PAL: src/overlays/l18/gameplay/entities/002a7220.c, FUN_L18_002dc4b8. */
 void Moby628Draw(void *moby_v) {
     char *moby = moby_v;
     Q_D8A8 quad[4];
@@ -2639,7 +2639,7 @@ extern void func_001F9BC0_2EC0C8(void *) __asm__("func_001F9BC0");
 
 void func_L18_002EC0C8_r(struct Moby *m) __asm__("func_L18_002EC0C8");
 
-/* Adapted from Lombyte (MIT) for PAL by OpenRAC's tools/port.py: src/overlays/l18/gameplay/entities/002a7220.c, FUN_L18_002eacd8. */
+/* Adapted from Lombyte (GPL-3.0) for PAL by OpenRAC's tools/port.py: src/overlays/l18/gameplay/entities/002a7220.c, FUN_L18_002eacd8. */
 void func_L18_002EC0C8_r(struct Moby *m) {
     char *d = (char *)m->pvars;
     float v[4];
@@ -3065,7 +3065,7 @@ void Moby1355Update(char *moby) {
     }
 }
 /* Hands pos to every class 0x54B moby of the group that waits in state 1 and points it at moby: 0 if one took it, 1 if none.
-   Adapted from Lombyte (MIT) for PAL: src/overlays/l18/gameplay/vendor/002efb88.c, FUN_L18_002f0030. */
+   Adapted from Lombyte (GPL-3.0) for PAL: src/overlays/l18/gameplay/vendor/002efb88.c, FUN_L18_002f0030. */
 int Moby1355_AssignTarget(char *moby, int group, float *pos) {
     short *p = (short *)D_L18_001AC540[group];
     int idle;

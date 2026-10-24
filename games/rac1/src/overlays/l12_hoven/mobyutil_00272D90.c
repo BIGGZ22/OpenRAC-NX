@@ -10,7 +10,7 @@ extern f32 func_001F9FA8(f32);
 extern s32 func_L00_00259B88(void *, void *, void *, void *, f32);
 
 /* steers the moby toward a point 100 units ahead along its heading.
-   Adapted from Lombyte (MIT) for PAL by OpenRAC's tools/port.py: src/overlays/l12/math/interpolation/00271dd8.c, FUN_L12_00271dd8. */
+   Adapted from Lombyte (GPL-3.0) for PAL by OpenRAC's tools/port.py: src/overlays/l12/math/interpolation/00271dd8.c, FUN_L12_00271dd8. */
 s32 SteerAheadOfHeading(struct Moby *m, void *ctl) {
     Vec4 ahead;
     Vec4 out;

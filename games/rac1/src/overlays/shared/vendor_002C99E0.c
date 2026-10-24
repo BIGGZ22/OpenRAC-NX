@@ -17,7 +17,7 @@ extern int func_001F9850(int);
 extern int func_00116248(void *, void *);
 extern void func_0020D678(void *);
 
-/* Adapted from Lombyte (MIT) for PAL by OpenRAC's tools/port.py: src/overlays/shared/unclassified_002c8830.c, FUN_L11_002cb790. */
+/* Adapted from Lombyte (GPL-3.0) for PAL by OpenRAC's tools/port.py: src/overlays/shared/unclassified_002c8830.c, FUN_L11_002cb790. */
 void Moby37Update(char *a0)
 {
     if (FastVecDist(a0 + 0x10, gHeroPos) < 2.0f) {
@@ -154,7 +154,7 @@ static inline void copy_xyz_089d0(float *dst, float *src) {
 }
 
 /* Homing missile: eases its scale, re-picks a target every sixth frame, turns toward it within a cone and flies on; on impact it bursts into five sparks, otherwise it shrinks away once its timer runs out.
-   Adapted from Lombyte (MIT) for PAL by OpenRAC's tools/port.py: src/overlays/shared/gameplay/entities/002c8830.c, FUN_L11_003089d0. */
+   Adapted from Lombyte (GPL-3.0) for PAL by OpenRAC's tools/port.py: src/overlays/shared/gameplay/entities/002c8830.c, FUN_L11_003089d0. */
 void func_L11_00309DA0(struct Moby *moby) {
     MissileVars_089d0 *vars = (MissileVars_089d0 *)moby->pvars;
     float old[4];
@@ -976,7 +976,7 @@ extern u128_ad0 D_L11_00160960;
 extern u128_ad0 D_L11_00160970;
 extern int D_0013E600[];
 
-/* Adapted from Lombyte (MIT) for PAL by OpenRAC's tools/port.py: src/overlays/shared/gameplay/vendor/0030e690.c, FUN_L11_00310ad0. */
+/* Adapted from Lombyte (GPL-3.0) for PAL by OpenRAC's tools/port.py: src/overlays/shared/gameplay/vendor/0030e690.c, FUN_L11_00310ad0. */
 void Hud_DrawPointList(short *pts, int n, float x0, float y0, unsigned int col, unsigned long prim, float scale) {
     int q = (n + 1) / 2 + 3;
     unsigned long *o;

@@ -2296,7 +2296,7 @@ extern f32 func_00214D28_2F7F00(f32 *, f32, f32) __asm__("func_00214D28");
 
 /* Steers the boss around its node on the far side from the hero (at most 10 degrees per step), faster the closer
  * the hero is, and eases it to the node's height.
- * Adapted from Lombyte (MIT) for PAL: overlays/l18/gameplay/vendor/002efb88.c, FUN_L18_002f6aa0. */
+ * Adapted from Lombyte (GPL-3.0) for PAL: overlays/l18/gameplay/vendor/002efb88.c, FUN_L18_002f6aa0. */
 void func_L18_002F7F00_r(Moby *moby) __asm__("func_L18_002F7F00");
 void func_L18_002F7F00_r(Moby *moby) {
     BossCircleVars_2F7F00 *v = (BossCircleVars_2F7F00 *)moby->pvars;

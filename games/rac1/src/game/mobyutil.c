@@ -822,7 +822,7 @@ struct M2c_temp3 {
 extern void func_001F9DC0_14F78(f32 *, f32 *, f32) __asm__("func_001F9DC0");
 void func_00214F78(f32 *arg0);
 
-/* Adapted from Lombyte (MIT) for PAL by OpenRAC's tools/port.py: src/math/vectors/normalize_vector_triplet.c, normalize_vector_triplet. */
+/* Adapted from Lombyte (GPL-3.0) for PAL by OpenRAC's tools/port.py: src/math/vectors/normalize_vector_triplet.c, normalize_vector_triplet. */
 void normalize_vector_triplet(f32 *arg0) {
     struct M2c_temp3 scratch;
     f32 *base;

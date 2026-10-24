@@ -15,7 +15,7 @@ extern void func_L00_0028A3E0(void);
 extern void func_L00_001FFA40(void *, void *);
 void func_0022C9A8(s32 arg0);
 
-/* Adapted from Lombyte (MIT) for PAL by OpenRAC's tools/port.py: src/overlays/l00/unclassified_0023d968.c, FUN_L00_00289330. */
+/* Adapted from Lombyte (GPL-3.0) for PAL by OpenRAC's tools/port.py: src/overlays/l00/unclassified_0023d968.c, FUN_L00_00289330. */
 void DrawVeldinSky(void) {
     Vec4 rot;
 

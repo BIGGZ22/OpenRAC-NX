@@ -176,7 +176,7 @@ extern s32 func_L00_002629E0_77FD8(s32, OvlVec4 *, OvlVec4 *) __asm__("func_L00_
 s32 func_L01_00277A38_77FD8(s32 *ids, s32 n, f32 radius, s32 path_index, OvlVec4 *pos) __asm__("func_L01_00277A38");
 extern f32 func_001F9D48_77FD8(OvlVec4 *, OvlVec4 *) __asm__("func_001F9D48");
 
-/* Adapted from Lombyte (MIT) for PAL by OpenRAC's tools/port.py: src/overlays/shared/gameplay/state/00276a48.c, FUN_L01_00276fe8. */
+/* Adapted from Lombyte (GPL-3.0) for PAL by OpenRAC's tools/port.py: src/overlays/shared/gameplay/state/00276a48.c, FUN_L01_00276fe8. */
 s32 func_L01_00277FD8(s32 *ids, s32 n, s32 path_index, f32 radius,
                        OvlVec4 *pos, OvlVec4 *target, OvlVec4 *out) {
     OvlVec4 side;

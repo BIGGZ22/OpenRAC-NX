@@ -101,7 +101,7 @@ extern void func_0011AD70(void *p, s32 size);
 extern u32 func_00118E20(SifDmaData *dma, s32 count);
 
 /* sceSifResetIop: like sceSifRebootIop (func_0011D248) but with a caller
-   -supplied argument string and reboot mode. Adapted from Lombyte (MIT)
+   -supplied argument string and reboot mode. Adapted from Lombyte (GPL-3.0)
    for PAL. */
 s32 func_0011D0D0(const char *arg, s32 mode) {
     SifDmaData dma;
@@ -152,7 +152,7 @@ extern void func_0011AE20(int);
 extern void func_0011AFC0(void);
 
 /* sceSifRebootIop: reset the IOP with "rom0:UDNL " + img (at most 80
-   characters). Adapted from Lombyte (MIT) for PAL. */
+   characters). Adapted from Lombyte (GPL-3.0) for PAL. */
 int func_0011D248(char *img) {
     char *prefix = D_00152A60;
     char param[80];

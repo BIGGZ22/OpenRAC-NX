@@ -553,7 +553,7 @@ extern void func_L00_0025E210_30C320(struct Moby *) __asm__("func_L00_0025E210")
 extern struct AnimTimer_30C320 *func_L00_0025D390_30C320(struct Moby *) __asm__("func_L00_0025D390");
 
 /* resets a spawned moby from its class defaults and restarts its animation.
-   Adapted from Lombyte (MIT) for PAL by OpenRAC's tools/port.py: src/overlays/l07/gameplay/entities/002cd2b0.c, FUN_L07_0030af40. */
+   Adapted from Lombyte (GPL-3.0) for PAL by OpenRAC's tools/port.py: src/overlays/l07/gameplay/entities/002cd2b0.c, FUN_L07_0030af40. */
 void ResetMobyFromClassDefaults(struct Moby *m) {
     struct SpawnClassView_30C320 *cls;
     struct AnimTimer_30C320 *t;
@@ -798,7 +798,7 @@ extern void func_0020D678(void *);
 extern Vec4 D_L07_00173F60;
 extern char D_L07_00173F80[];
 
-/* Bolt update: flies on, sparks out at the end of its range, bursts on impact, removes it out of bounds. Adapted from Lombyte (MIT) for PAL: src/overlays/l07/gameplay/entities/002cd2b0.c, FUN_L07_0030b6a8. */
+/* Bolt update: flies on, sparks out at the end of its range, bursts on impact, removes it out of bounds. Adapted from Lombyte (GPL-3.0) for PAL: src/overlays/l07/gameplay/entities/002cd2b0.c, FUN_L07_0030b6a8. */
 void BoltProjectileUpdate(Moby *m) {
     BoltVars_30CA88 *v = (BoltVars_30CA88 *)((void *)m->pvars);
     Vec4 old;
@@ -905,7 +905,7 @@ extern char D_L07_00166EC0[];
 extern float D_0015EE70 MACRO_ADDR;
 
 /* Debris update: moves and spins it, bursts it on impact, removes it out of bounds.
-   Adapted from Lombyte (MIT) for PAL by OpenRAC's tools/port.py: src/overlays/l07/gameplay/entities/002cd2b0.c, FUN_L07_0030bbc8. */
+   Adapted from Lombyte (GPL-3.0) for PAL by OpenRAC's tools/port.py: src/overlays/l07/gameplay/entities/002cd2b0.c, FUN_L07_0030bbc8. */
 void GravityDebrisUpdate(struct Moby *m) {
     Vec4f *pos = &m->pos;
     DebrisVars_0CFA8 *d = (DebrisVars_0CFA8 *)m->pvars;
@@ -1905,7 +1905,7 @@ extern void func_L00_0025BBA0_30FB00(Vec4f *, f32 *, f32 *, f32 *) __asm__("func
 extern void func_L00_0025D5B0_30FB00(f32, void *, LaunchParams_30FB00 *, s32, s32, s32) __asm__("func_L00_0025D5B0");
 void func_L07_0030FB00_r(void *moby, LaunchParams_30FB00 *l, Vec4f *dir) __asm__("func_L07_0030FB00");
 
-/* Fills a launch-parameter block (gravity, spin, bounce and size constants), aims it along dir and launches the moby with it. Adapted from Lombyte (MIT) for PAL by OpenRAC's tools/port.py: src/overlays/l07/gameplay/entities/002cd2b0.c, FUN_L07_0030e720. */
+/* Fills a launch-parameter block (gravity, spin, bounce and size constants), aims it along dir and launches the moby with it. Adapted from Lombyte (GPL-3.0) for PAL by OpenRAC's tools/port.py: src/overlays/l07/gameplay/entities/002cd2b0.c, FUN_L07_0030e720. */
 void func_L07_0030FB00_r(void *moby, LaunchParams_30FB00 *l, Vec4f *dir) {
     Vec4f d;
     f32 ang;
@@ -1955,7 +1955,7 @@ extern void func_L00_0025BBA0_30FC38(Vec4f *, f32 *, f32 *, f32 *) __asm__("func
 extern void func_L00_0025D5B0_30FC38(f32, void *, LaunchParams_30FC38 *, s32, s32, s32) __asm__("func_L00_0025D5B0");
 void func_L07_0030FC38_r(void *moby, LaunchParams_30FC38 *l, Vec4f *dir) __asm__("func_L07_0030FC38");
 
-/* Fills a launch-parameter block (gravity, spin, bounce and size constants), aims it along dir and launches the moby with it. Adapted from Lombyte (MIT) for PAL by OpenRAC's tools/port.py: src/overlays/l07/gameplay/entities/002cd2b0.c, FUN_L07_0030e858. */
+/* Fills a launch-parameter block (gravity, spin, bounce and size constants), aims it along dir and launches the moby with it. Adapted from Lombyte (GPL-3.0) for PAL by OpenRAC's tools/port.py: src/overlays/l07/gameplay/entities/002cd2b0.c, FUN_L07_0030e858. */
 void func_L07_0030FC38_r(void *moby, LaunchParams_30FC38 *l, Vec4f *dir) {
     Vec4f d;
     f32 ang;
@@ -2181,7 +2181,7 @@ extern float func_001FA748(float, float);
 extern int func_L00_0025A778(void *, void *, int);
 extern int func_L00_001EFFF0_102C8(void *, void *, int, struct Moby *, int) __asm__("func_L00_001EFFF0");
 
-/* Adapted from Lombyte (MIT) for PAL by OpenRAC's tools/port.py: src/overlays/l07/gameplay/entities/002cd2b0.c, FUN_L07_0030eee8. */
+/* Adapted from Lombyte (GPL-3.0) for PAL by OpenRAC's tools/port.py: src/overlays/l07/gameplay/entities/002cd2b0.c, FUN_L07_0030eee8. */
 void Walker_ChooseHeading(struct Moby *moby, struct WalkerData *data) {
     float probe[4];
     float angle;
@@ -2269,7 +2269,7 @@ extern float func_0020D830(void *);
 extern int func_L00_001F2BE8(void *, float, int, void *, void *);
 
 /* In the given state and animation, when the walker is within range, pushes it along its velocity; a hit on the target bounces it back up and switches to the next state.
-   Adapted from Lombyte (MIT) for PAL by OpenRAC's tools/port.py: src/overlays/l07/gameplay/entities/002cd2b0.c, FUN_L07_0030f308. */
+   Adapted from Lombyte (GPL-3.0) for PAL by OpenRAC's tools/port.py: src/overlays/l07/gameplay/entities/002cd2b0.c, FUN_L07_0030f308. */
 void func_L07_003106E8(char *moby, char *obj, int state, int anim, int seq, int frame, int next, int id,
                       float lo, float hi, float len, float scale, float radius) {
     float v[4];

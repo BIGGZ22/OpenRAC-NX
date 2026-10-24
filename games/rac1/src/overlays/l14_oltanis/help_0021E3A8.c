@@ -122,7 +122,7 @@ void func_001F9BD8(void *, void *, void *);
 void func_L14_002306C8(s32, s32);
 void func_L00_00211338(void *, s32, f32, f32);
 
-/* Adapted from Lombyte (MIT) for PAL by OpenRAC's tools/port.py: src/overlays/l14/ui_help_0021dd30.c, FUN_L14_00222aa8. */
+/* Adapted from Lombyte (GPL-3.0) for PAL by OpenRAC's tools/port.py: src/overlays/l14/ui_help_0021dd30.c, FUN_L14_00222aa8. */
 s32 Hero_TryApplyHitKnockback(s32 arg) {
     u8 *m;
     T_8 *tbl;
@@ -263,7 +263,7 @@ f32 func_001F9D48(void *, void *);
 f32 func_00214D28_235D0(f32, f32, f32 *) __asm__("func_00214D28");
 void func_L00_0025C918_235D0(f32 *, f32 *, f32, f32, f32, f32) __asm__("func_L00_0025C918");
 
-/* Adapted from Lombyte (MIT) for PAL by OpenRAC's tools/port.py: src/overlays/l14/ui_help_0021dd30.c, FUN_L14_00222f38. */
+/* Adapted from Lombyte (GPL-3.0) for PAL by OpenRAC's tools/port.py: src/overlays/l14/ui_help_0021dd30.c, FUN_L14_00222f38. */
 void HeroL14_UpdateMoveBlendTargets(void) {
     switch (D_0013F450_235D0.b20A4) {
     case 0:

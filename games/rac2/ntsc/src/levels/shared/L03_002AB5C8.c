@@ -56,7 +56,7 @@ INCLUDE_ASM("asm/levels", func_L03_002B8D10);
 INCLUDE_ASM("asm/levels", func_L03_002BC430);
 
 /* rac1-decomp src/overlays/shared/camera_001FC308.c: func_L02_001FC308 */
-/* Adapted from Lombyte (MIT) for PAL by OpenRAC's tools/port.py: src/overlays/shared/gameplay/camera/001fc008.c, FUN_L02_001fc008. */
+/* Adapted from Lombyte (GPL-3.0) for PAL by OpenRAC's tools/port.py: src/overlays/shared/gameplay/camera/001fc008.c, FUN_L02_001fc008. */
 void func_L03_002D84F0(int x) {
     int i;
 

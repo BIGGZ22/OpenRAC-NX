@@ -463,7 +463,7 @@ extern S_r0043AC40 r1_D_L02_00167680;
 extern void r1_func_L02_002FBB48();
 
 /* rac1-decomp src/overlays/shared/vendor_002A5218.c: func_L02_002FBB10 */
-/* Adapted from Lombyte (MIT) for PAL by OpenRAC's tools/port.py: src/overlays/shared/gameplay_vendor_002ec308.c, FUN_L02_002fa6d8. */
+/* Adapted from Lombyte (GPL-3.0) for PAL by OpenRAC's tools/port.py: src/overlays/shared/gameplay_vendor_002ec308.c, FUN_L02_002fa6d8. */
 void func_L03_0043AC40(void) {
     r1_D_L02_00167680_FBB10.a = 0;
     r1_D_L02_00167680_FBB10.b = 0;

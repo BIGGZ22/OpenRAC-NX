@@ -867,7 +867,7 @@ extern void func_L14_00306A88_06890(struct Moby *) __asm__("func_L14_00306A88");
 extern void func_L14_00306B08_06890(struct Moby *) __asm__("func_L14_00306B08");
 
 /* Moby that unlocks once: skips straight to done if this level already recorded it, otherwise waits for its trigger moby to reach state 2, records the unlock in the level's bit sets and runs a countdown.
-   Adapted from Lombyte (MIT) for PAL by OpenRAC's tools/port.py: src/overlays/l14/gameplay/vendor/00300e00.c, FUN_L14_00305408. */
+   Adapted from Lombyte (GPL-3.0) for PAL by OpenRAC's tools/port.py: src/overlays/l14/gameplay/vendor/00300e00.c, FUN_L14_00305408. */
 void TriggeredUnlockUpdate(unsigned char *moby) {
     int *d = *(int **)(moby + 0x78);
     short id;
@@ -934,7 +934,7 @@ extern float func_001FA888(int);
 extern float func_L00_00258E58(float, float, float, float, float);
 
 /* Per-frame update: slides each listed part toward a rest height by a factor from the moby's animation value.
-   Adapted from Lombyte (MIT) for PAL by OpenRAC's tools/port.py: src/overlays/l14/gameplay/vendor/00300e00.c, FUN_L14_00305680. */
+   Adapted from Lombyte (GPL-3.0) for PAL by OpenRAC's tools/port.py: src/overlays/l14/gameplay/vendor/00300e00.c, FUN_L14_00305680. */
 void SlideListedPartsUpdate(char *moby) {
     int *d = *(int **)(moby + 0x78);
     short *p = (short *)D_L14_001AC2C0[d[0]];
@@ -984,7 +984,7 @@ extern void func_L00_00264DB8_06BE0(s32, s32) __asm__("func_L00_00264DB8");
 extern void func_L00_00203F20_06BE0(s32, s32) __asm__("func_L00_00203F20");
 extern f32 func_00214D28_06BE0(f32 *, f32, f32) __asm__("func_00214D28");
 
-/* Adapted from Lombyte (MIT) for PAL: src/overlays/l14/gameplay/vendor/00300e00.c, FUN_L14_00305758. */
+/* Adapted from Lombyte (GPL-3.0) for PAL: src/overlays/l14/gameplay/vendor/00300e00.c, FUN_L14_00305758. */
 void CollectiblePickupUpdate(struct Moby *moby) {
     u8 *o = (u8 *)moby;
     u8 *d = (u8 *)moby->pvars;
@@ -1273,7 +1273,7 @@ char *SpawnMoby1396(char *owner)
     }
     return moby;
 }
-/* steps the moby from state 0 to 1 and 2 to 3, setting its pvars. Adapted from Lombyte (MIT) for PAL: src/overlays/l14/gameplay/vendor/00300e00.c, FUN_L14_003061d8. */
+/* steps the moby from state 0 to 1 and 2 to 3, setting its pvars. Adapted from Lombyte (GPL-3.0) for PAL: src/overlays/l14/gameplay/vendor/00300e00.c, FUN_L14_003061d8. */
 void Moby1397Update(void *arg) {
     char *moby = arg;
     char *d;
@@ -1318,7 +1318,7 @@ extern char * D_L14_001B0F30[];
 extern f32 func_00214158(void);
 extern f32 func_001F9FA8(f32);
 
-/* Adapted from Lombyte (MIT) for PAL by OpenRAC's tools/port.py: src/overlays/l14/gameplay/vendor/00300e00.c, FUN_L14_00306b78. */
+/* Adapted from Lombyte (GPL-3.0) for PAL by OpenRAC's tools/port.py: src/overlays/l14/gameplay/vendor/00300e00.c, FUN_L14_00306b78. */
 void StepOnSwitchUpdate(struct Moby *moby) {
     s32 *d = (s32 *)moby->pvars;
     s16 id;
@@ -1699,7 +1699,7 @@ extern f32 func_L00_0025C918(f32 *, f32 *, f32, f32, f32, f32);
 extern float func_001F9B88(float input);
 extern f32 func_001F9CE8(void *);
 
-/* Adapted from Lombyte (MIT) for PAL by OpenRAC's tools/port.py: src/overlays/l14/gameplay/vendor/00300e00.c, FUN_L14_00307620. */
+/* Adapted from Lombyte (GPL-3.0) for PAL by OpenRAC's tools/port.py: src/overlays/l14/gameplay/vendor/00300e00.c, FUN_L14_00307620. */
 int BlargInterceptor_FollowPath(struct Moby *moby) {
     float pos[4];
     float delta[4];
@@ -2056,7 +2056,7 @@ extern void func_001F9C30(void *, void *, float);
 extern void func_001F9CA0(void *, void *, void *);
 extern s32 func_001F9938(s16 *);
 
-/* Adapted from Lombyte (MIT) for PAL by OpenRAC's tools/port.py: src/overlays/l14/gameplay/vendor/00300e00.c, FUN_L14_00315290. */
+/* Adapted from Lombyte (GPL-3.0) for PAL by OpenRAC's tools/port.py: src/overlays/l14/gameplay/vendor/00300e00.c, FUN_L14_00315290. */
 void CameraPathRunUpdate(struct UpdateCam *cam) {
     float dir[4];
     float t[4];
@@ -2198,7 +2198,7 @@ int CamRecord_CheckConditions(char *a, char *b) {
 }
 /* Starts the vendor camera: measures the three camera paths of the slot record into the length tables,
  * resets the camera's blend state, loads the default angles and aims the camera at the hero.
- * Adapted from Lombyte (MIT): src/overlays/l14/gameplay/entities/morphoray.c, FUN_L14_003159d8. */
+ * Adapted from Lombyte (GPL-3.0): src/overlays/l14/gameplay/entities/morphoray.c, FUN_L14_003159d8. */
 extern char *D_L14_0015F050_16E60 __asm__("D_L14_0015F050") MACRO_ADDR;
 extern char *D_L14_0015F7EC_16E60 __asm__("D_L14_0015F7EC") MACRO_ADDR;
 /* the third path read goes through a volatile alias (retail reloads the zone table there) */

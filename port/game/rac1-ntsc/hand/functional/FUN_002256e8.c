@@ -113,7 +113,7 @@ extern s32 func_00225DD8(u8 *);
 
 
 
-/* Adapted from Lombyte (MIT) for PAL by OpenRAC's tools/port.py: src/assembly/textbin/fun_002256e8.c, update_streamed_moby_animation. */
+/* Adapted from Lombyte (GPL-3.0) for PAL by OpenRAC's tools/port.py: src/assembly/textbin/fun_002256e8.c, update_streamed_moby_animation. */
 s32 FUN_002256e8(MobyAnimationStream_26978_c2256e8 *stream) {
     StreamedAnimationMoby_26978_c2256e8 *moby;
     AnimationTableHeader_26978_c2256e8 *header;

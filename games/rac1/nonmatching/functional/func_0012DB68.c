@@ -34,7 +34,7 @@ extern s32 func_0011B2F8(struct SifClientDataStartSound *, u32, s32);
 extern s32 func_00116078_2DB68(const char *, ...) __asm__("func_00116078");
 extern s32 func_0012E688(s32, s32, void *);
 
-/* Adapted from Lombyte (MIT) for PAL by OpenRAC's tools/port.py: src/textbin/audio/snd_start_sound_system.c, snd_start_sound_system. */
+/* Adapted from Lombyte (GPL-3.0) for PAL by OpenRAC's tools/port.py: src/textbin/audio/snd_start_sound_system.c, snd_start_sound_system. */
 s32 func_0012DB68(void) {
     s32 bind_result;
     s32 command_arg;

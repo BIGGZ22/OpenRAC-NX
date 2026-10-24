@@ -133,7 +133,7 @@ int func_001256D8(CdClock *out) {
 /* rac1-decomp src/core/00121750.c: func_00121B78 */
   /* SetGsCrt */
 
-/* sceGsResetGraph. Adapted from Lombyte (MIT) for PAL. */
+/* sceGsResetGraph. Adapted from Lombyte (GPL-3.0) for PAL. */
 void func_001257D0(short mode, short inter, short out, short ff) {
     sceGsGParam *gp;
 

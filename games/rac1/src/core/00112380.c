@@ -47,7 +47,7 @@ do {                                                                          \
 } while (0)
 
 /* _calloc_r (newlib): allocate, then zero the chunk's usable size.
-   Adapted from Lombyte (MIT) for PAL. */
+   Adapted from Lombyte (GPL-3.0) for PAL. */
 void *func_001123A8(void *ptr, unsigned int n, unsigned int elem_size) {
     unsigned int sz = n * elem_size;
     void *mem;

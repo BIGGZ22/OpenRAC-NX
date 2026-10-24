@@ -330,7 +330,7 @@ extern void func_L00_002617B0(void *, void *, void *, void *);
 extern u8 * D_L07_00160058 MACRO_ADDR;
 extern f32 D_0015EE6C MACRO_ADDR;
 
-/* Adapted from Lombyte (MIT) for PAL by OpenRAC's tools/port.py: src/overlays/shared/gameplay/entities/002b1e48.c, FUN_L07_0031aee0. */
+/* Adapted from Lombyte (GPL-3.0) for PAL by OpenRAC's tools/port.py: src/overlays/shared/gameplay/entities/002b1e48.c, FUN_L07_0031aee0. */
 void func_L07_0031C2B0(u8 *moby)
 {
     u8 *data = *(u8 **)(moby + 0x78);

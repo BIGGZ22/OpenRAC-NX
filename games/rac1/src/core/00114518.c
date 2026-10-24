@@ -238,7 +238,7 @@ extern struct malloc_chunk D_0012F890;
 typedef struct malloc_chunk *mchunkptr;
 typedef struct malloc_chunk *mbinptr;
 
-/* Adapted from Lombyte (MIT) for PAL by OpenRAC's tools/port.py: src/sdk/library/malloc_r.c, _malloc_r. */
+/* Adapted from Lombyte (GPL-3.0) for PAL by OpenRAC's tools/port.py: src/sdk/library/malloc_r.c, _malloc_r. */
 void *func_00114920(struct _reent *ptr, u32 bytes)
 {
   mchunkptr victim;

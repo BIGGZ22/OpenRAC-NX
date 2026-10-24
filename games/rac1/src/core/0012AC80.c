@@ -147,7 +147,7 @@ extern struct TypeEntry_12AC80 D_00132FD8_12AC80[] __asm__("D_00132FD8");
 /* _type2id (libmpeg): for a type below 10, the 64-bit stream key
    D_00132FD8[type].id with value shifted into the field its mask selects
    (0, 24 or 32 bits up); 0 for any other type.
-   Adapted from Lombyte (MIT): src/sdk/library/type2id.c, _type2id. */
+   Adapted from Lombyte (GPL-3.0): src/sdk/library/type2id.c, _type2id. */
 long func_0012AC80(int id, int value) {
     u64 result = 0;
     s32 shift = 0;
@@ -224,7 +224,7 @@ extern u8 *func_0012AC50(SysBit *bs, s32 pos);
 extern s32 func_0012B100_2AD10(SysBit *bs, PackHdr *pack) __asm__("func_0012B100");
 extern s32 func_0012B2C0_2AD10(MpegSys *sys, SysBit *bs, PesHdr *pes) __asm__("func_0012B2C0");
 
-/* Adapted from Lombyte (MIT) for PAL by OpenRAC's tools/port.py: src/sdk/dma/sce_mpeg_demux_pss_ring.c, sceMpegDemuxPssRing. */
+/* Adapted from Lombyte (GPL-3.0) for PAL by OpenRAC's tools/port.py: src/sdk/dma/sce_mpeg_demux_pss_ring.c, sceMpegDemuxPssRing. */
 int func_0012AD10(sceMpeg *mp, u8 *start, int size, u8 *bufstart, int bufsize) {
     SysBit bs;
     PssHdr hdr;
@@ -436,7 +436,7 @@ struct PES_TBL {
 } __attribute__((packed));
 
 /* Parse one MPEG-2 PES packet header from the bit stream into hdr (libmpeg _PES_packet).
-   Adapted from Lombyte (MIT) for PAL: src/sdk/library/_PES_packet.c, _PES_packet. */
+   Adapted from Lombyte (GPL-3.0) for PAL: src/sdk/library/_PES_packet.c, _PES_packet. */
 int func_0012B2C0(int arg0, struct PES_BS *bs, struct PES_HDR *hdr) {
     struct PES_TBL tbl;
     int ctx;
@@ -1002,7 +1002,7 @@ extern void func_00129600(void *, int, int);
 
 /* _decodeOrSkipFrame (libmpeg): sibling of func_0012C0A0
    (_decodeOrSkipField), for the frame-picture path. Adapted from
-   Lombyte (MIT) for PAL. */
+   Lombyte (GPL-3.0) for PAL. */
 int func_0012BF40(void *arg0, int arg1, int arg2) {
     Wrapper *w = (Wrapper *)arg0;
     Obj40 *p = w->obj;
@@ -1082,7 +1082,7 @@ struct MpegHandle
 extern int func_00129530();
 extern int func_00129690();
 extern void func_00129600();
-/* _decodeOrSkipField (libmpeg). Adapted from Lombyte (MIT) for PAL. */
+/* _decodeOrSkipField (libmpeg). Adapted from Lombyte (GPL-3.0) for PAL. */
 int func_0012C0A0(void *handle, int arg1, int arg2)
 {
   struct MpegHandle *arg0 = handle;
@@ -1190,7 +1190,7 @@ extern char D_00153BB8[];
    second field is still pending, else display the last reference picture
    (whole frame when the picture structure is 3, else its two fields) as
    frame count - 1; then clear the pending-field flag.
-   Adapted from Lombyte (MIT): src/sdk/library/_lastFrame.c, _lastFrame. */
+   Adapted from Lombyte (GPL-3.0): src/sdk/library/_lastFrame.c, _lastFrame. */
 typedef struct {
     u8 pad0[0x118];
     s32 frame_count;         /* 0x118 */
@@ -1436,7 +1436,7 @@ void func_0012C8B0(unsigned int *o0, unsigned int *o1, unsigned int *o2, unsigne
    matrix load starts, then with the IPU idle and reset, DMA the matrix
    at addr to IPU_TO (tag 4 qwords, chcr 0x101) with interrupts held
    off, send command cmd and wait, and report type 3. Adapted from
-   Lombyte (MIT) for PAL. */
+   Lombyte (GPL-3.0) for PAL. */
 void func_0012C990(void *arg, int cmd, int addr) {
     char *mp = arg;
     int cb[8];

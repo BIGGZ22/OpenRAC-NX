@@ -226,7 +226,7 @@ extern s32 func_00118C70_120B28(struct SemaParam_120B28 *) __asm__("func_00118C7
 /* cmd_sem_init: unless both command semaphores already exist, create them
    (count 1, max 1) and the completion semaphore (count 0) through
    func_00118C70 (CreateSema), then clear D_001313F0.
-   Adapted from Lombyte (MIT): src/sdk/library/cmd_sem_init.c, cmd_sem_init. */
+   Adapted from Lombyte (GPL-3.0): src/sdk/library/cmd_sem_init.c, cmd_sem_init. */
 void func_00120B28(void) {
     struct SemaParam_120B28 sema;
 
@@ -539,7 +539,7 @@ extern void func_0011AD70();
 extern s32 func_0011B4C8();
 
 /* libcdvd disk-ready query (the sceCdDiskReady pattern): take the S-command semaphore, bind the 0x8000059A server once, send mode and return the server's status word. Mode 8 reports -1 on failure, every other mode 6.
-   Adapted from Lombyte (MIT) for PAL by OpenRAC's tools/port.py: src/textbin/fun_00121190.c, FUN_00121190. */
+   Adapted from Lombyte (GPL-3.0) for PAL by OpenRAC's tools/port.py: src/textbin/fun_00121190.c, FUN_00121190. */
 s32 func_00121490(s32 mode) {
     s32 response;
     s32 spin;

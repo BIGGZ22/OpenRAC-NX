@@ -134,7 +134,7 @@ extern f32 func_001FA888(s32);
 extern s32 func_001FA898(f32);
 extern void func_00234C98(s32, u64);
 
-/* Adapted from Lombyte (MIT) for PAL by OpenRAC's tools/port.py: src/textbin/append_billboard_batch.c, append_billboard_batch. */
+/* Adapted from Lombyte (GPL-3.0) for PAL by OpenRAC's tools/port.py: src/textbin/append_billboard_batch.c, append_billboard_batch. */
 void DrawBillboardBatch(void) {
     Vec4f projected_position;
     Vec4f clip_position;

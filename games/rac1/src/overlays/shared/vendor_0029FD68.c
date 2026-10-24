@@ -192,7 +192,7 @@ extern void func_0020E180(int, int);
 extern void func_001F5800(int, int, int, int, int, int, int, int, long, long);
 extern long D_0015EFD0 MACRO_ADDR;
 
-/* Draws a screen-space rectangle from five joints of a moby: builds a box from its joint vectors, projects it and draws the rectangle. Adapted from Lombyte (MIT) for PAL: overlays/shared/unclassified_0029f990.c, FUN_L00_0029fcd0. */
+/* Draws a screen-space rectangle from five joints of a moby: builds a box from its joint vectors, projects it and draws the rectangle. Adapted from Lombyte (GPL-3.0) for PAL: overlays/shared/unclassified_0029f990.c, FUN_L00_0029fcd0. */
 void DrawMobyJointRect(void *m) {
     q2A d1[1];
     q2A d2[1];
@@ -397,7 +397,7 @@ extern void func_0020DD48_2A1540(void) __asm__("func_0020DD48");
 
 /* Vendor screen frame: on the first frame sets up the camera rows, the two preview mobys and the stream read; then
  * draws the vendor mobys, the capture pass and the HUD.
- * Adapted from Lombyte (MIT) for PAL: overlays/shared/gameplay/entities/0029f990.c, FUN_L00_002a02b0. */
+ * Adapted from Lombyte (GPL-3.0) for PAL: overlays/shared/gameplay/entities/0029f990.c, FUN_L00_002a02b0. */
 void Vendor_RenderScreen(void) {
     A02b0_obj_2A1540 *e;
     A02b0_tab_2A1540 *g;

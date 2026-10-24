@@ -11,7 +11,7 @@ Writes only gitignored files under config/us/overlays/ (docs/overlays.md):
 
 Every level is checked against config/overlays/us/level-NN.json and a pinned
 SHA-256 before anything is written. Nothing from the disc goes into Git.
-Methods from rac1-decomp tools/overlay_dump.py and overlay_asm.py (MIT).
+Methods from rac1-decomp tools/overlay_dump.py and overlay_asm.py (GPL-3.0).
 """
 from __future__ import annotations
 

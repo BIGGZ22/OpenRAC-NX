@@ -886,7 +886,7 @@ extern void func_L00_0025E590_E4838(struct Moby *, void *) __asm__("func_L00_002
 extern void func_L12_002E43A8(struct Moby *);
 
 /* Damage and alert step of the l12 troll: refreshes its speed while alerted, now and then calls for help behind itself, and takes hits (dying, or staggering back).
-   Adapted from Lombyte (MIT) for PAL by OpenRAC's tools/port.py: src/overlays/l12/gameplay/entities/002bf140.c, FUN_L12_002e3528. */
+   Adapted from Lombyte (GPL-3.0) for PAL by OpenRAC's tools/port.py: src/overlays/l12/gameplay/entities/002bf140.c, FUN_L12_002e3528. */
 void TrollDamageAndAlert(struct Moby *moby) {
     TrollVars_e3528 *vars = (TrollVars_e3528 *)moby->pvars;
     Vec4 v;
@@ -1004,7 +1004,7 @@ extern float func_001FA850(float, float);
 extern void func_00214D28(void *, float, float);
 extern float func_L00_0025CCF0(float *, float, float *, int, float, float, float);
 
-/* Adapted from Lombyte (MIT) for PAL by OpenRAC's tools/port.py: src/overlays/l12/gameplay/entities/002bf140.c, FUN_L12_002e3c08. */
+/* Adapted from Lombyte (GPL-3.0) for PAL by OpenRAC's tools/port.py: src/overlays/l12/gameplay/entities/002bf140.c, FUN_L12_002e3c08. */
 void Moby240SteerToward(char *m, float *ang, void *target, int unused, int brake) {
     char *d = *(char **)(m + 0x78);
     float v[4];
@@ -2192,7 +2192,7 @@ extern char * D_L12_001B0C30[];
 extern void func_L00_0025CE58(void *, void *, float, float, float, float);
 extern void func_L12_00272D90(void *, void *);
 
-/* Adapted from Lombyte (MIT) for PAL by OpenRAC's tools/port.py: src/overlays/l12/gameplay/entities/002bf140.c, FUN_L12_002e8808. */
+/* Adapted from Lombyte (GPL-3.0) for PAL by OpenRAC's tools/port.py: src/overlays/l12/gameplay/entities/002bf140.c, FUN_L12_002e8808. */
 void HovenEnemyTurnToward(struct Moby *moby, float *target, float max_angle, float approach_speed) {
     char *data = (char *)moby->pvars;
     float distance;
@@ -2757,7 +2757,7 @@ typedef struct { char pad[0x48]; float rz; } M_af68;
 typedef struct { float x, y, z, w; } N_af68;
 
 /* Follows a path: steers toward the current node, slows to a stop near the end, returns 1 once stopped.
-   Adapted from Lombyte (MIT) for PAL by OpenRAC's tools/port.py: src/overlays/l12/gameplay/entities/002bf140.c, FUN_L12_002eaf68. */
+   Adapted from Lombyte (GPL-3.0) for PAL by OpenRAC's tools/port.py: src/overlays/l12/gameplay/entities/002bf140.c, FUN_L12_002eaf68. */
 int FollowPath(struct Moby *m, int idx) {
     char *path = D_L12_001B0C30[idx];
     char *d = (char *)m->pvars;

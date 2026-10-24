@@ -23,7 +23,7 @@ extern char * D_001414D0;
 extern float D_0015EE6C MACRO_ADDR;
 extern unsigned char *func_L06_003020B8(char *, float *, float *);
 
-/* Adapted from Lombyte (MIT) for PAL by OpenRAC's tools/port.py: src/overlays/shared/gameplay/entities/00297d10.c, FUN_L06_002d8178. */
+/* Adapted from Lombyte (GPL-3.0) for PAL by OpenRAC's tools/port.py: src/overlays/shared/gameplay/entities/00297d10.c, FUN_L06_002d8178. */
 void SpawnBreakBurst(void *moby_ptr, void *target_ptr) {
     int i;
     int j;
@@ -115,7 +115,7 @@ extern float func_001F9FA8_D9970b(float) __asm__("func_001F9FA8");
 extern int func_001FA8A8_D9970b(int, int, float) __asm__("func_001FA8A8");
 extern char *func_L00_0025B478_D9970b(void *, int, int) __asm__("func_L00_0025B478");
 
-/* Adapted from Lombyte (MIT) for PAL by OpenRAC's tools/port.py: src/overlays/shared/unclassified_00297d10.c, FUN_L06_002d85a0. */
+/* Adapted from Lombyte (GPL-3.0) for PAL by OpenRAC's tools/port.py: src/overlays/shared/unclassified_00297d10.c, FUN_L06_002d85a0. */
 void Moby302Update(unsigned char *moby) {
     char *p = func_L00_0025B478_D9970b(moby, 0x10000, 0);
     float tmp[4];
@@ -717,7 +717,7 @@ extern struct MobyHit *func_L00_0025B478_EA920(void *, int, int) __asm__("func_L
 extern void func_0020D678_EA920(struct Moby *) __asm__("func_0020D678");
 extern struct Moby * D_001414D0_EA920 __asm__("D_001414D0");
 
-/* Adapted from Lombyte (MIT) for PAL by OpenRAC's tools/port.py: src/overlays/shared/gameplay/entities/00297d10.c, FUN_L06_002e94f0. */
+/* Adapted from Lombyte (GPL-3.0) for PAL by OpenRAC's tools/port.py: src/overlays/shared/gameplay/entities/00297d10.c, FUN_L06_002e94f0. */
 void RespawnMobyUpdate(struct Moby *moby) {
     struct RespawnVars *vars;
     struct MobyHit *hit;
@@ -869,7 +869,7 @@ extern void func_L00_00262DF0(float, int, void *, void *);
 extern char D_L06_001746E0[];
 extern char D_L06_001746F0[];
 
-/* Adapted from Lombyte (MIT) for PAL: src/overlays/shared/gameplay/entities/00297d10.c, FUN_L06_002e9b60. */
+/* Adapted from Lombyte (GPL-3.0) for PAL: src/overlays/shared/gameplay/entities/00297d10.c, FUN_L06_002e9b60. */
 void MoveMobyColliding(void *moby, void *out, int follow_path, float scale, float threshold) {
     float start[4];
     float end[4];
@@ -910,7 +910,7 @@ extern void func_L00_002B0B98(void *, void *, void *, void *, int, int, float, f
 extern f32 D_L06_0015F660[] MACRO_ADDR;
 
 /* Bursts 4 then 8 particles up from the moby, then removes the moby stored at vars+0x20C.
-   Adapted from Lombyte (MIT) for PAL by OpenRAC's tools/port.py: src/overlays/shared/gameplay/entities/00297d10.c, FUN_L06_002e9f30. */
+   Adapted from Lombyte (GPL-3.0) for PAL by OpenRAC's tools/port.py: src/overlays/shared/gameplay/entities/00297d10.c, FUN_L06_002e9f30. */
 void SpawnDeathParticlesAndRemove(struct Moby *moby) {
     float origin[4];
     float vel[4];
@@ -987,7 +987,7 @@ extern char *func_00219780_2EB5C8(void *, void *, void *, int, int, int, int, in
 
 /* Throws D_L06_00161CA8 bursts of sparks from around the moby: each burst gets a random heading, speed and rise on
  * top of a push along dir, and spawns D_L06_00161CAC sparks with random sizes, colours and lifetimes.
- * Adapted from Lombyte (MIT) for PAL: overlays/shared/gameplay/entities/00297d10.c, FUN_L06_002ea198. */
+ * Adapted from Lombyte (GPL-3.0) for PAL: overlays/shared/gameplay/entities/00297d10.c, FUN_L06_002ea198. */
 void SpawnRandomSparkBursts(struct Moby *moby, Vec4 *dir) {
     Vec4 pos;
     Vec4 vel;
@@ -1087,7 +1087,7 @@ extern int func_L00_002DCDA8_EBA10(void *) __asm__("func_L00_002DCDA8");
 void func_00213DE0_EBA10(MobyAnim_EBA10 *arg0, int arg1, int arg2, int arg3) __asm__("func_00213DE0");
 
 /* Grabbed check: while FUN_L00_002db8f8 holds the moby, park it in state 0x10 (remembering the state it came from) unless it is in a state that cannot be grabbed; once released, drop it back to state 8.
-   Adapted from Lombyte (MIT) for PAL by OpenRAC's tools/port.py: src/overlays/shared/gameplay/entities/00297d10.c, FUN_L06_002ea5e0. */
+   Adapted from Lombyte (GPL-3.0) for PAL by OpenRAC's tools/port.py: src/overlays/shared/gameplay/entities/00297d10.c, FUN_L06_002ea5e0. */
 extern int func_L00_002DCDA8_EBA10_3(void *, void *, void *) __asm__("func_L00_002DCDA8");
 int MobyGrabbedCheck(struct Moby *moby, void *position, void *target) {
     int r = func_L00_002DCDA8_EBA10_3(moby, position, target);
@@ -1134,7 +1134,7 @@ int CarriedMoby_PlaceState16(unsigned char *moby, void *v, void *t, float h) {
 }
 extern s32 func_L00_002DD2D0(void *);
 
-/* Adapted from Lombyte (MIT) for PAL by OpenRAC's tools/port.py: src/overlays/shared/unclassified_00297d10.c, FUN_L06_002ea7c8. */
+/* Adapted from Lombyte (GPL-3.0) for PAL by OpenRAC's tools/port.py: src/overlays/shared/unclassified_00297d10.c, FUN_L06_002ea7c8. */
 s32 CarriedMoby_ReleaseToState16(unsigned char *p) {
     u8 t;
     s32 r;
@@ -2255,7 +2255,7 @@ extern float func_001F9D48_3D40(void *, void *) __asm__("func_001F9D48");
 extern float func_001F9B88_3D40(float) __asm__("func_001F9B88");
 extern int D_L06_001AC500_3D40[] __asm__("D_L06_001AC500");
 
-/* Adapted from Lombyte (MIT) for PAL: src/overlays/shared/gameplay/entities/00297d10.c, FUN_L06_002f2910. */
+/* Adapted from Lombyte (GPL-3.0) for PAL: src/overlays/shared/gameplay/entities/00297d10.c, FUN_L06_002f2910. */
 void Gadgebot_FindTarget(void *moby_arg) {
     GbMoby_3D40 *moby = moby_arg;
     GbVars_3D40 *d = moby->vars;
@@ -2445,7 +2445,7 @@ typedef struct {
 int func_L06_002F4720_r(char *moby, int flag) __asm__("func_L06_002F4720");
 
 /* Runs the candidate check func_L06_002F4058 over the moby's candidate list (or the global default list when it has none); returns the output of the first accepted candidate.
-   Adapted from Lombyte (MIT) for PAL by OpenRAC's tools/port.py: src/overlays/shared/gameplay/entities/00297d10.c, FUN_L06_002f32f0. */
+   Adapted from Lombyte (GPL-3.0) for PAL by OpenRAC's tools/port.py: src/overlays/shared/gameplay/entities/00297d10.c, FUN_L06_002f32f0. */
 int func_L06_002F4720_r(char *moby, int flag)
 {
     char **moby_ref;
@@ -2507,7 +2507,7 @@ extern char * D_L06_001DB1B0_F4908[] __asm__("D_L06_001DB1B0");
 extern char * D_L06_001AC500_F4908[] __asm__("D_L06_001AC500");
 
 /* Picks the best target for moby among this frame's live class-0x359 mobys and the hero (current is the target it has now), and stores it in *current.
-   Adapted from Lombyte (MIT) for PAL by OpenRAC's tools/port.py: src/overlays/shared/gameplay/entities/00297d10.c, FUN_L06_002f34d8. */
+   Adapted from Lombyte (GPL-3.0) for PAL by OpenRAC's tools/port.py: src/overlays/shared/gameplay/entities/00297d10.c, FUN_L06_002f34d8. */
 void PickBestTarget(char *moby, char **current, f32 range) {
     Best_2f34d8_F4908 best;
     char *m;
@@ -2545,7 +2545,7 @@ extern void func_0022ED80_F4A70(int, int, void *) __asm__("func_0022ED80");
 void func_L06_002F4A70_r(unsigned char *moby) __asm__("func_L06_002F4A70");
 
 /* Looks for a target (query 0x330001); if its owner is a different hostile, sets up the aim/attack data and enters state 9.
-   Adapted from Lombyte (MIT) for PAL by OpenRAC's tools/port.py: src/overlays/shared/gameplay/entities/00297d10.c, FUN_L06_002f3640. */
+   Adapted from Lombyte (GPL-3.0) for PAL by OpenRAC's tools/port.py: src/overlays/shared/gameplay/entities/00297d10.c, FUN_L06_002f3640. */
 void func_L06_002F4A70_r(unsigned char *moby) {
     char *state = *(char **)(moby + 0x78);
     if (moby[0x20] != 9 && moby[0x52] != 2 && moby[0x53] != 2) {
@@ -2610,7 +2610,7 @@ extern void func_L00_00250800(void *, int, void *);
 extern void func_001F49B0_F4CF8(void *, void *) __asm__("func_001F49B0");
 extern void func_L06_002F4C00_F4CF8(void *) __asm__("func_L06_002F4C00");
 
-/* Adapted from Lombyte (MIT) for PAL by OpenRAC's tools/port.py: src/overlays/shared/unclassified_00297d10.c, FUN_L06_002f38c8. */
+/* Adapted from Lombyte (GPL-3.0) for PAL by OpenRAC's tools/port.py: src/overlays/shared/unclassified_00297d10.c, FUN_L06_002f38c8. */
 void Gadgebot_DrawGlow(char *obj)
 {
     char *d;

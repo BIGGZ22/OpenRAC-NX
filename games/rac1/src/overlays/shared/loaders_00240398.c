@@ -2152,7 +2152,7 @@ extern s32 func_00217628_45B88(void *, s32, s32) __asm__("func_00217628");
 extern void func_00217748(s32);
 
 /* streams entry i of the current sector list into the loader buffer.
-   Adapted from Lombyte (MIT) for PAL by OpenRAC's tools/port.py: src/overlays/shared/world/loaders/00240348.c, FUN_L00_002451b8. */
+   Adapted from Lombyte (GPL-3.0) for PAL by OpenRAC's tools/port.py: src/overlays/shared/world/loaders/00240348.c, FUN_L00_002451b8. */
 s32 StreamSectorListEntry(s32 i) {
     u8 *buf = D_L00_0016C960_45B88.buf;
     s32 start;
@@ -2228,7 +2228,7 @@ void func_00217628_45FE0b(void *, s32, s32) __asm__("func_00217628");
 void func_00217748_45FE0b(s32) __asm__("func_00217748");
 void func_001F4E08_45FE0b(s32) __asm__("func_001F4E08");
 
-/* Adapted from Lombyte (MIT) for PAL by OpenRAC's tools/port.py: src/overlays/shared/world_animation_002454c8.c, FUN_L00_00245610. */
+/* Adapted from Lombyte (GPL-3.0) for PAL by OpenRAC's tools/port.py: src/overlays/shared/world_animation_002454c8.c, FUN_L00_00245610. */
 void LoadAnimTable(s32 i, s32 p) {
     s32 n;
     s32 *e;

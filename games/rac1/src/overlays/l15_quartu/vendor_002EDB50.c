@@ -551,7 +551,7 @@ struct L15MissionState {
 extern struct L15MissionState D_L15_0016CEE0;
 extern void func_L00_00264870(int);
 
-/* Adapted from Lombyte (MIT) for PAL by OpenRAC's tools/port.py: src/overlays/l15/gameplay/vendor/002e73c0.c, FUN_L15_002edb20. */
+/* Adapted from Lombyte (GPL-3.0) for PAL by OpenRAC's tools/port.py: src/overlays/l15/gameplay/vendor/002e73c0.c, FUN_L15_002edb20. */
 void BossSlotEffectUpdate(struct Moby *m) {
     switch (m->state) {
     case 0:
@@ -877,7 +877,7 @@ extern void func_L00_002E99A0_2F9D38(int, float, float) __asm__("func_L00_002E99
 void func_L15_002F9D38_r(char *m) __asm__("func_L15_002F9D38");
 
 /* Runs the aim timer while the player holds the target in view; spins the target once aimed.
-   Adapted from Lombyte (MIT) for PAL by OpenRAC's tools/port.py: src/overlays/l15/gameplay/vendor/002e73c0.c, FUN_L15_002f88e8. */
+   Adapted from Lombyte (GPL-3.0) for PAL by OpenRAC's tools/port.py: src/overlays/l15/gameplay/vendor/002e73c0.c, FUN_L15_002f88e8. */
 void func_L15_002F9D38_r(char *m) {
     char *s = *(char **)(D_L15_0015F050_2F9D38 + *(short *)(m + 0x84) * 32 + 0x1C);
     char *o = D_L15_0016016C_2F9D38 + (*(int *)(s + 0x48) << 7);
