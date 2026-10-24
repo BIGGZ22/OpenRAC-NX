@@ -3,7 +3,8 @@
 //
 // Tests that the render optimisations change no pixel (ctest render_equivalence_vulkan): for
 // each scenario of render_fixture.h (the camera walking, the camera still with the mobys moving,
-// pictures between ticks, the level uploaded again halfway, Enhanced on and off) it first draws
+// pictures between ticks, the level uploaded again halfway, mobys entering and leaving at ticks,
+// Enhanced on and off) it first draws
 // the frames twice with the same settings and requires identical frames, since every later proof
 // rests on the driver drawing alike twice. Then, for each entry of the optimisation registry
 // (renderer/render_opt.h), it draws the frames with the entry on and with it off and compares
@@ -23,6 +24,7 @@
 #include <cstdio>
 #include <cstdlib>
 #include <string>
+#include <utility>
 #include <vector>
 
 #include "common/env.h"
@@ -88,11 +90,14 @@ Frames draw_run(
 
         const render::Picture shown = render::picture(index, scenario.between);
         const double tick = static_cast<double>(shown.tick - 1) + shown.alpha;
-        scene.draw(
-            render::camera_at(walk, scenario.camera, tick, ticks, aspect),
-            render::mobys_at(level, size, shown),
-            index
-        );
+        render::MobyFrame mobys = render::mobys_at(level, size, shown);
+
+        // A churn scenario: mobys enter and leave at each tick (render_fixture.h, churned).
+        if (scenario.churn) {
+            mobys = render::churned(std::move(mobys), shown.tick);
+        }
+
+        scene.draw(render::camera_at(walk, scenario.camera, tick, ticks, aspect), mobys, index);
         frames.push_back(scene.read_rgba());
         openrac::vkgl::present();
     }

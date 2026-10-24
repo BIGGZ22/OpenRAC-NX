@@ -511,17 +511,21 @@ struct Scenario {
     CameraPath camera;      // The camera's path over the run.
     int between;    // Pictures drawn between two ticks (alpha in steps of 1 / (between + 1)).
     bool reupload;  // The level uploaded again halfway through the run.
+    // Mobys enter and leave at each tick (every seventh, a different seventh each tick), and stay
+    // between ticks: the per-tick regrouping against the in-place rewrite between ticks (R-16).
+    bool churn = false;
 };
 
 // The scenarios, the benchmark's default first.
 // clang-format off: one scenario per row.
-inline constexpr std::array<Scenario, 6> kScenarios = {{
+inline constexpr std::array<Scenario, 7> kScenarios = {{
     {"walk", CameraPath::Walk, 0, false},           // the camera walks, the mobys move
     {"static-mobys", CameraPath::Static, 0, false}, // the camera still, the mobys move
     {"turn", CameraPath::Turn, 0, false},           // the camera turns on the spot
     {"between", CameraPath::Walk, 3, false},        // three pictures between ticks, a quarter apart
     {"reupload", CameraPath::Walk, 0, true},        // the level uploaded again halfway
     {"creep", CameraPath::Creep, 0, false},         // the camera creeping by shadow texels
+    {"churn", CameraPath::Walk, 3, false, true},    // between ticks, mobys entering and leaving
 }};
 // clang-format on
 
@@ -549,6 +553,26 @@ inline Picture picture(std::uint64_t index, int between) {
     out.alpha = static_cast<float>(step + 1) / static_cast<float>(per_tick);
     out.between = step + 1 != per_tick;
     return out;
+}
+
+// Returns `mobys` without the ones a churn scenario leaves out at `tick`: every seventh, starting
+// at a place the tick moves on, so that membership changes at each tick and not between them.
+inline MobyFrame churned(MobyFrame mobys, std::uint64_t tick) {
+    constexpr std::uint64_t kEvery = 7;  // a seventh of the mobys away at each tick
+    std::size_t kept = 0;
+
+    // Each instance, kept in its order unless this tick leaves it out.
+    for (std::size_t n = 0; n < mobys.instances.size(); ++n) {
+        // Left out this tick.
+        if ((n + tick) % kEvery == 0) {
+            continue;
+        }
+
+        mobys.instances[kept++] = mobys.instances[n];
+    }
+
+    mobys.instances.resize(kept);
+    return mobys;
 }
 
 // Returns the mobys of `level` at `shown`: its tick's state, or for a picture between two ticks
