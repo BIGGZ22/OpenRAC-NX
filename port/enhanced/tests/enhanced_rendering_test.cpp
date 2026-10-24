@@ -3,6 +3,7 @@
 #include <filesystem>
 #include <string_view>
 
+#include "enhanced/renderer/gtao.h"
 #include "enhanced/tests/gpu_probe_fixture.h"
 #include "enhanced/tests/probe_fixture.h"
 #include "enhanced/viewer/early_lighting.h"
@@ -57,6 +58,7 @@ int main(int argc, char** argv) {
         CHECK(!probes.upload(lighting::ProbeVolume::allocate({}), error)
         );  // No runtime conversion fallback.
         renderer::Renderer renderer;
+        renderer.set_ambient_occlusion(std::make_unique<renderer::Gtao>());
         scene::LevelScene scene;
         scene::LevelData level;
         for (const auto& p :

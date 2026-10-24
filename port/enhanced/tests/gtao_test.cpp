@@ -60,6 +60,7 @@ scene::LevelData corner(bool wall) {
 void check_scene(bool wall, int samples, renderer::GtaoQuality quality) {
     auto level = corner(wall);
     renderer::Renderer renderer;
+    renderer.set_ambient_occlusion(std::make_unique<renderer::Gtao>());
     scene::LevelScene scene;
     std::string error;
     CHECK(scene.upload(level, renderer.textures(), error));
@@ -219,6 +220,7 @@ void indirect_lighting(int samples, bool glow = false, bool cutout = false, bool
         level.instances[static_cast<std::size_t>(scene::Layer::Mobys)].push_back(instance);
     }
     renderer::Renderer renderer;
+    renderer.set_ambient_occlusion(std::make_unique<renderer::Gtao>());
     scene::LevelScene scene;
     std::string error;
     CHECK(scene.upload(level, renderer.textures(), error));
@@ -375,6 +377,7 @@ void scripted_glow_depth() {
     scene::Instance instance;
     instance.moby_light[3] = -1;  // Explicit gameplay colour, still a lit moby.
     renderer::Renderer renderer;
+    renderer.set_ambient_occlusion(std::make_unique<renderer::Gtao>());
     scene::LevelScene scene;
     std::string error;
     CHECK(scene.upload(level, renderer.textures(), error));
@@ -489,6 +492,7 @@ void optimized_paths(int samples) {
     ui.matrix = renderer::translation({-2, 0, 1});
     level.instances[static_cast<std::size_t>(scene::Layer::Mobys)].push_back(ui);
     renderer::Renderer renderer;
+    renderer.set_ambient_occlusion(std::make_unique<renderer::Gtao>());
     scene::LevelScene scene;
     std::string error;
     CHECK(scene.upload(level, renderer.textures(), error));

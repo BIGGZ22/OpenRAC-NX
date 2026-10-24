@@ -33,6 +33,7 @@
 #include <string_view>
 #include <vector>
 
+#include "enhanced/renderer/gtao.h"
 #include "enhanced/tests/probe_fixture.h"
 #include "renderer/framebuffer.h"
 #include "renderer/gl.h"
@@ -609,7 +610,9 @@ struct DrawOptions {
 // Neither copied nor moved: the renderers it adds hold references to its scene.
 class SceneRenderer {
 public:
-    SceneRenderer() = default;
+    // The renderer gets GTAO as the frontend's does, for `DrawOptions::enhanced`.
+    SceneRenderer() { m_renderer.set_ambient_occlusion(std::make_unique<renderer::Gtao>()); }
+
     SceneRenderer(const SceneRenderer&) = delete;
     SceneRenderer& operator=(const SceneRenderer&) = delete;
 

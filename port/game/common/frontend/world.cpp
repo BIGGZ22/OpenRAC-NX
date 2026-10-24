@@ -27,6 +27,7 @@
 #include "common/log.h"
 #include "common/stats.h"
 #include "debug_overlay.h"
+#include "enhanced/renderer/gtao.h"
 #include "enhanced/renderer/texture_upscale.h"
 #include "frontend.h"
 #include "game/common/frontend/geometry.h"
@@ -85,6 +86,8 @@ void use_level(int number) {
     const bool fresh = !g->renderer;
     if (fresh) {
         g->renderer = std::make_unique<renderer::Renderer>();
+        // The enhanced renderer's ambient occlusion, drawn when the player's settings ask for it.
+        g->renderer->set_ambient_occlusion(std::make_unique<renderer::Gtao>());
         for (const renderer::ImageUpload& image : g->images) {
             g->renderer->textures().upload(image);
         }

@@ -3,6 +3,7 @@
 #include <cmath>
 
 #include "enhanced/lighting/probes.h"
+#include "enhanced/renderer/gtao.h"
 #include "enhanced/tests/gpu_probe_fixture.h"
 #include "enhanced/viewer/probe_lighting.h"
 #include "renderer/framebuffer.h"
@@ -306,6 +307,7 @@ void material_path(
     }
     level.instances[static_cast<std::size_t>(layer)].push_back(instance);
     renderer::Renderer renderer;
+    renderer.set_ambient_occlusion(std::make_unique<renderer::Gtao>());
     scene::LevelScene scene;
     std::string error;
     CHECK(scene.upload(level, renderer.textures(), error));
@@ -856,6 +858,7 @@ void camera_facing_normals() {
             level.models.push_back(model);
             level.instances[static_cast<std::size_t>(scene::Layer::Terrain)].push_back({});
             renderer::Renderer renderer;
+            renderer.set_ambient_occlusion(std::make_unique<renderer::Gtao>());
             scene::LevelScene scene;
             std::string error;
             CHECK(scene.upload(level, renderer.textures(), error));
