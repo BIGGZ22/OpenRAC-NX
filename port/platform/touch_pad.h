@@ -101,8 +101,7 @@ public:
     void reset_layout();
 
     // While editing, a finger drags the group it lands on and the game gets nothing; the pad stays
-    // shown. A dragged group snaps to the lines it comes near (snap()), so that groups can be set
-    // in line; one placed just off a line is not near enough to snap.
+    // shown. A dragged group snaps into line with what it comes near (snap()).
     void set_editing(bool on);
 
     bool editing() const { return m_editing; }
