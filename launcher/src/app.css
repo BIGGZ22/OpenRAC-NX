@@ -922,13 +922,16 @@ html[data-platform="android"] * {
   backdrop-filter: none !important;
 }
 
-/* An app's controls are not text to select: a long press does nothing, as in Android's own apps.
-   What is text (fields, paths, logs) still is. */
-html[data-platform="android"] body {
+/* An app's controls are not text to select: a drag or a long press over a button or a label
+   selects nothing, as in a desktop app or Android's own. What is text to copy (fields, paths,
+   logs) still is, unless it is on a button. */
+body {
+  -webkit-user-select: none;
   user-select: none;
 }
 
-html[data-platform="android"] :is(input, textarea, pre, code, .mono, .selectable) {
+:is(input, textarea, pre, code, .mono, .selectable):not(button, button *) {
+  -webkit-user-select: text;
   user-select: text;
 }
 
