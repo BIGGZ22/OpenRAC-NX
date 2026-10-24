@@ -103,6 +103,15 @@
 #define RAC1_TYPE_func_00209CE8_save gaddr
 #define RAC1_ADDR_0x0015EE88u 0x0015ED88u
 #define RAC1_ADDR_0x0015EEE8u 0x0015EDE8u
+/* Gaspar's copy of AmbientStreamL07Update (variants.c): PAL 09:002F0B48 is 09:002EF7F8 here (the
+ * catalogue's places of FUN_L07_002f8058), draw_level09_textured_surfaces PAL func_L09_002F0AA0 is
+ * FUN_L09_002ef750 and its grid record PAL D_L09_001FCA00 is D_L09_001FC740 (the NTSC decomp's
+ * asteroid.c), ScaleTableIntoBuffer PAL func_L02_002A5238 is FUN_L02_002a4058
+ * (timed_activation_pads.c). */
+#define func_L09_002F0B48 func_L09_002EF7F8
+#define func_L02_002A5238 game_FUN_L02_002a4058
+#define RAC1_ADDR_L09_0x001FCA00u 0x001FC740u
+#define RAC1_ADDR_L09_0x002F0AA0u 0x002EF750u
 
 /* ---- generated below ---- */
 

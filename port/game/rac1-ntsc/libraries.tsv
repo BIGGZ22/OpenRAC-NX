@@ -274,6 +274,7 @@ FUN_0022b690	draw	SkyDrawShell	wrap	the shell's matrix (D_001D96E0, built by the
 func_L00_002852C0	game	func_L00_002852C0	host	a place the catalogue folds into another function although its code differs (split_places.tsv, rac1/host/variants.c); PAL func_L00_00286598	void (void)
 func_L03_002DC990	game	func_L03_002DC990	host	a place the catalogue folds into another function although its code differs (split_places.tsv, rac1/host/variants.c); PAL func_L03_002DDD58	void (void)
 func_L07_002F8038	game	func_L07_002F8038	host	a place the catalogue folds into another function although its code differs (split_places.tsv, rac1/host/variants.c); PAL func_L07_002F9418	void (void)
+func_L09_002EF7F8	game	func_L09_002EF7F8	host	a place the catalogue folds into another function although its code differs (split_places.tsv, rac1/host/variants.c): Gaspar's lava draw registration; PAL func_L09_002F0B48	void (unsigned int)
 func_L07_0030D420	game	func_L07_0030D420	host	a place the catalogue folds into another function although its code differs (split_places.tsv, rac1/host/variants.c); PAL func_L07_0030E800	void (void)
 func_L08_002DA0D0	game	func_L08_002DA0D0	host	a place the catalogue folds into another function although its code differs (split_places.tsv, rac1/host/variants.c); PAL func_L08_002DB448	void (void)
 func_L14_00303350	game	func_L14_00303350	host	a place the catalogue folds into another function although its code differs (split_places.tsv, rac1/host/variants.c); PAL func_L14_003047D8	void (void)
