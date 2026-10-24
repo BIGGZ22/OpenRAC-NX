@@ -82,7 +82,6 @@ allow	tests	viewer extract
 except	platform/window.cpp:26	renderer/vulkan/vkgl.h	no package yet: the renderer should open its backend on the platform's window
 # renderer -> enhanced: the core renderer depends on the experimental layer's GTAO.
 except	renderer/renderer.h:29	enhanced/renderer/gtao.h	P2-07: renderer owns the post-process interface, enhanced registers GTAO
-except	renderer/renderer.h:30	enhanced/renderer/gtao_settings.h	P2-07: renderer owns the post-process interface, enhanced registers GTAO
 # scene -> enhanced: the level renderer draws the enhanced renderer's lighting and shadows itself,
 # and a level carries its emissive lighting. P2-02 moved these files from the viewer program's
 # directory, where the includes were allowed.

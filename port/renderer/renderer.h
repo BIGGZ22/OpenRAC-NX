@@ -27,7 +27,7 @@
 #include <vector>
 
 #include "enhanced/renderer/gtao.h"
-#include "enhanced/renderer/gtao_settings.h"
+#include "renderer/gtao_settings.h"
 #include "renderer/math.h"
 #include "renderer/shadow_volume.h"
 #include "renderer/texture_filter.h"

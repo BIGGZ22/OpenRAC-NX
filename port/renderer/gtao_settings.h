@@ -1,5 +1,11 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 // Copyright (c) 2026 the OpenRAC contributors
+//
+// The settings of the ambient occlusion pass (enhanced/renderer/gtao.h): the frame carries them
+// (FrameInput::gtao_settings), the player's settings keep them (game/common/settings.h). The
+// renderer owns the type so that neither it nor the settings include enhanced/; restructure package
+// P2-07 moved it from enhanced/renderer/.
+
 #pragma once
 
 namespace openrac::renderer {

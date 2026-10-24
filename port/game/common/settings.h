@@ -12,7 +12,7 @@
 #include <filesystem>
 #include <string>
 
-#include "enhanced/renderer/gtao_settings.h"
+#include "renderer/gtao_settings.h"
 #include "renderer/texture_filter.h"
 
 namespace openrac::settings {
