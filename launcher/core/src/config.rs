@@ -7,7 +7,7 @@ use std::path::{Path, PathBuf};
 
 use serde::{Deserialize, Serialize};
 
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, ts_rs::TS)]
 #[serde(rename_all = "camelCase", default)]
 pub struct Config {
     /// The OpenRAC checkout (holds games/, tools/ and baserom/).
@@ -46,6 +46,7 @@ pub struct Config {
     /// Custom Discord application ID (optional).
     pub discord_client_id: Option<String>,
     /// The page layout: "compact" (default) or "classic", the original design (src/layouts/).
+    #[ts(type = "\"compact\" | \"classic\"")]
     pub layout: String,
     /// The game writes a detailed log (OPENRAC_LOG=verbose): level loads, controller changes,
     /// what the port is missing. Off by default, so a log stays small.
@@ -55,6 +56,7 @@ pub struct Config {
     /// MoltenVK its bundle carries). Where Vulkan cannot start, the game draws with OpenGL
     /// (port/platform/window.cpp). Not used on Android, which keeps its own choice
     /// (src-tauri/src/android.rs).
+    #[ts(type = "\"opengl\" | \"vulkan\"")]
     pub renderer: String,
     /// Purist mode: the game loads no native mods (`--no-mods`, docs/port/MODS.md), whatever the
     /// Mods tab has switched on. Off by default.

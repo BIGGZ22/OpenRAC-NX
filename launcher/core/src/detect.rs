@@ -12,7 +12,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::is_openrac_root;
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, ts_rs::TS)]
 #[serde(rename_all = "camelCase")]
 pub enum Tool {
     Python,
@@ -20,7 +20,7 @@ pub enum Tool {
     Docker,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, ts_rs::TS)]
 #[serde(rename_all = "camelCase")]
 pub struct Candidate {
     pub path: PathBuf,
@@ -28,7 +28,7 @@ pub struct Candidate {
     pub source: String,
 }
 
-#[derive(Debug, Clone, Default, Serialize)]
+#[derive(Debug, Clone, Default, Serialize, ts_rs::TS)]
 #[serde(rename_all = "camelCase")]
 pub struct Detected {
     pub roots: Vec<Candidate>,
@@ -37,7 +37,7 @@ pub struct Detected {
     pub dockers: Vec<Candidate>,
 }
 
-#[derive(Debug, Clone, Serialize)]
+#[derive(Debug, Clone, Serialize, ts_rs::TS)]
 #[serde(rename_all = "camelCase")]
 pub struct Check {
     pub ok: bool,

@@ -12,7 +12,7 @@ use crate::install::{self, InstallState};
 use crate::port_build;
 use crate::status::{self, DiscState, VersionStatus};
 
-#[derive(Debug, Clone, Serialize)]
+#[derive(Debug, Clone, Serialize, ts_rs::TS)]
 #[serde(rename_all = "camelCase")]
 pub struct Library {
     pub root: PathBuf,
@@ -26,7 +26,7 @@ pub struct Library {
     pub actions_error: Option<String>,
 }
 
-#[derive(Debug, Clone, Serialize)]
+#[derive(Debug, Clone, Serialize, ts_rs::TS)]
 #[serde(rename_all = "camelCase")]
 pub struct GameView {
     pub id: String,
@@ -38,7 +38,7 @@ pub struct GameView {
     pub versions: Vec<VersionView>,
 }
 
-#[derive(Debug, Clone, Serialize)]
+#[derive(Debug, Clone, Serialize, ts_rs::TS)]
 #[serde(rename_all = "camelCase")]
 pub struct VersionView {
     #[serde(flatten)]

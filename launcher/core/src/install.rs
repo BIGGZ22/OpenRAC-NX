@@ -23,7 +23,7 @@ use crate::actions::Plan;
 use crate::config::Config;
 
 /// What `tools/extractor.py` writes to `iso_data/<game>/buildinfo.json` (one entry).
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, ts_rs::TS)]
 #[serde(rename_all = "camelCase")]
 pub struct BuildInfo {
     pub serial: String,
@@ -36,7 +36,7 @@ pub struct BuildInfo {
 }
 
 /// How far a game's set-up got.
-#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, ts_rs::TS)]
 #[serde(rename_all = "camelCase")]
 pub struct InstallState {
     /// `<install dir>/active/<game>/data`.

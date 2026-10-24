@@ -22,7 +22,8 @@ use std::path::{Path, PathBuf};
 /// The lists built into the launcher, by game: what a launcher without a checkout shows.
 const BUILT_IN: &[(&str, &str)] = &[("rac1", include_str!("../../../port/game/rac1/differences.json"))];
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, ts_rs::TS)]
+#[ts(rename = "DifferenceKind")]
 #[serde(rename_all = "lowercase")]
 pub enum Kind {
     /// The port's fix of something the console does, which the player may switch back.
@@ -34,7 +35,7 @@ pub enum Kind {
 }
 
 /// A fix's setting in the port's settings file.
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, ts_rs::TS)]
 pub struct FixSetting {
     pub key: String,
     /// On is the port's fix; off the console's behaviour.
@@ -63,7 +64,7 @@ pub struct DifferenceFile {
 }
 
 /// An entry as a game's page shows it, with a fix's value now.
-#[derive(Debug, Clone, Serialize)]
+#[derive(Debug, Clone, Serialize, ts_rs::TS)]
 #[serde(rename_all = "camelCase")]
 pub struct DifferenceView {
     pub id: String,
@@ -78,7 +79,7 @@ pub struct DifferenceView {
 }
 
 /// A version's differences: those that apply to its disc, in the file's order.
-#[derive(Debug, Clone, Serialize)]
+#[derive(Debug, Clone, Serialize, ts_rs::TS)]
 #[serde(rename_all = "camelCase")]
 pub struct Differences {
     pub game: String,

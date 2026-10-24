@@ -13,7 +13,7 @@ use serde::Serialize;
 use crate::catalog::Version;
 use crate::under;
 
-#[derive(Debug, Clone, Serialize)]
+#[derive(Debug, Clone, Serialize, ts_rs::TS)]
 #[serde(rename_all = "camelCase")]
 pub struct VersionStatus {
     pub disc: DiscStatus,
@@ -24,7 +24,7 @@ pub struct VersionStatus {
     pub inputs_ready: bool,
 }
 
-#[derive(Debug, Clone, Serialize)]
+#[derive(Debug, Clone, Serialize, ts_rs::TS)]
 #[serde(rename_all = "camelCase")]
 pub struct DiscStatus {
     pub state: DiscState,
@@ -35,7 +35,7 @@ pub struct DiscStatus {
     pub message: String,
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, ts_rs::TS)]
 #[serde(rename_all = "camelCase")]
 pub enum DiscState {
     /// An image of the right size is in baserom/ (or placed in the game);
@@ -48,7 +48,7 @@ pub enum DiscState {
     Unknown,
 }
 
-#[derive(Debug, Clone, Serialize)]
+#[derive(Debug, Clone, Serialize, ts_rs::TS)]
 #[serde(rename_all = "camelCase")]
 pub struct FileStatus {
     pub path: String,
@@ -56,7 +56,7 @@ pub struct FileStatus {
     pub message: String,
 }
 
-#[derive(Debug, Clone, Serialize)]
+#[derive(Debug, Clone, Serialize, ts_rs::TS)]
 #[serde(rename_all = "camelCase")]
 pub struct InputStatus {
     /// `disc`, `boot`, `toolchains` or `link`, as in game.json.

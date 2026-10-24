@@ -13,7 +13,7 @@ use std::time::UNIX_EPOCH;
 
 use serde::Serialize;
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, ts_rs::TS)]
 #[serde(rename_all = "camelCase")]
 pub enum ReportKind {
     Crash,
@@ -21,7 +21,7 @@ pub enum ReportKind {
 }
 
 /// One file of the list.
-#[derive(Debug, Clone, PartialEq, Serialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, ts_rs::TS)]
 #[serde(rename_all = "camelCase")]
 pub struct ReportEntry {
     pub kind: ReportKind,
