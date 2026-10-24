@@ -29,7 +29,7 @@ The rest is the backend's own, which nothing outside this directory includes:
 | [gpu_materials.inc](gpu_materials.inc) | The native material path: material records and textures indexed by the draw |
 | [gpu_draw.inc](gpu_draw.inc) | GPU-driven instances: culling on the GPU and indirect draws |
 | [vkgl_gl.cpp](vkgl_gl.cpp) | The GL functions themselves (state, textures, buffers, vertex arrays, shaders and programs, uniforms, samplers, framebuffers) and their table |
-| [vkgl_present.cpp](vkgl_present.cpp) | The default framebuffer, the swapchain and its present mode, moving on to the next frame, presenting |
+| [vkgl_present.cpp](vkgl_present.cpp) | The default framebuffer, the swapchain and its present mode, moving on to the next frame, presenting (the picture's waiting copy composed straight into the screen under `present-single-copy`) |
 | [vkgl_device.cpp](vkgl_device.cpp) | The instance and the validation layer, the physical and logical device, the pipeline cache on disk, the frames' objects, the dummy resources, the surface, and teardown |
 | [pipeline_cache_file.h](pipeline_cache_file.h), [.cpp](pipeline_cache_file.cpp) | The pipeline cache's file: the driver's data in an envelope with its length and hash, read back only when whole, saved through a temporary file of each save's own and renamed into place |
 | [vma.cpp](vma.cpp) | The Vulkan Memory Allocator's implementation, compiled once |
@@ -114,6 +114,8 @@ CI). Where Vulkan cannot open, the window falls back to OpenGL and they repeat t
 - `render_opt_vulkan`: the render counters of `SubmissionCounters` follow a fixed scene's draws
   (every draw a draw command, one submit a frame), printed for the reports of
   [RENDER_PERF.md](../../../docs/port/RENDER_PERF.md).
+- `vulkan_present`: the one copy to the screen against the two it replaces, drawn into stand-ins of
+  the screen and compared byte for byte, and a draw after the blit making the copy first.
 - `vulkan_buffer`: a static GL buffer drawn, rewritten in part, filled again, read through 8-bit
   indices and as a uniform block, frame after frame, under the reference path, device memory and
   the staging copy (`static-buffers-*`); the mirror let go and nothing through the ring.

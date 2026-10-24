@@ -51,6 +51,7 @@ before and after, and how its frames are shown to be the same.
 | `attachment-discard` | on | none (exact) | A Vulkan pass neither stores an attachment `glInvalidateFramebuffer` let go nor has the next pass load it ([R-06](#r-06-attachments-a-pass-does-not-keep)). |
 | `gpu-resident-instances` | on | none (exact) | Static instances are registered in device memory at the level's upload; a view's GPU-driven batch of them sends only its planes, PVS and a group record ([R-15](#r-15-static-instances-resident-on-the-gpu)). |
 | `shadow-static-cache` | off | none (exact) | A sun cascade's static casters are kept in a cache target and copied into the shadow atlas while the cascade's key is unchanged; only the mobys are drawn over them. Off: the copy costs more GPU time than it saves on both measured machines ([R-18](#r-18-a-static-shadow-cache-shipped-off)). |
+| `present-single-copy` | on | none (exact) | The frontend's blit of the picture into the window waits and becomes one blit into the screen, where nothing else touches the window first ([R-07](#r-07-one-copy-to-the-screen)). |
 
 Its tests are `render_opt` (the table, and the parsing of the variable: a name, a list, `all`, an
 unknown name kept apart; it runs in the headless preset too) and `render_opt_environment` (the
@@ -959,3 +960,61 @@ OPENRAC_GL_API=vulkan port/build/release/openrac_render_bench --enhanced on --sc
 OPENRAC_GL_API=vulkan port/build/release/openrac_render_bench --enhanced on --scenario walk --frames 60 --warmup 10
 # the "off" rows: the same with --opt-off shadow-static-cache
 ```
+## R-07: one copy to the screen
+
+**What changed.** The frontend's `present()` (`game/common/frontend.cpp`, not edited) clears the
+window black and blits the frame's picture into a box of it; the Vulkan backend then copied the
+window, an image of its own, into the swapchain image, flipped. Two full-screen reads and writes
+of the picture each frame. Under `present-single-copy` the blit into the default framebuffer waits
+(`PendingPresent`, `vkgl_gl.cpp`'s `hold_present_copy`) when the pass before it into that
+framebuffer only cleared its colour and holds nothing yet: that pass is dropped unrecorded and its
+clear colour kept. `present_to_screen` then clears the swapchain image to that colour and blits the
+picture into it with the box turned upside down (`compose_into`). The composition is exact when
+the second copy was 1:1 and NEAREST and both images hold the same numbers, so it is used when the
+swapchain is the window's size and its format is `B8G8R8A8_UNORM` or `R8G8B8A8_UNORM` (the
+window's is `R8G8B8A8_UNORM`).
+
+Everything else makes the waiting copy first, as `glBlitFramebuffer` would have recorded it (a
+clear, then the blit; `make_present_copy`), and carries on as before:
+
+| What comes after the blit | Where it is caught |
+|---|---|
+| A draw or a clear into the window (ImGui, the debug overlay, the touch overlay, the FPS counter's blit) | the window's image barrier as its pass begins (`barrier()` in `vkgl_commands.cpp`) |
+| `glReadPixels` of the window, a copy or blit from it or into it | the same barrier, to a transfer layout |
+| A draw, a clear, an upload or a blit into the picture | the picture's barrier to any layout but a read |
+| A frame that ends with no screen shown (no window, a minimised one, a lost surface) | `advance()`, as the next frame begins |
+| A screen of another size or format | `present_to_screen`, before its copy |
+
+The waiting copy needs a pass that can be dropped, which only `attachment-discard`'s deferred
+passes are (R-06): with that entry off, the copy never waits. The picture's image is held by the
+waiting copy, so a picture made again before the present stays alive until then.
+
+**The counters.** `vk_fullscreen_copies` counts the copy to the screen, which exists only where
+the window has a swapchain: none of the headless tests or the benchmark's hidden window has one,
+so a normal frame's 2 to 1 (the box's blit, when it fills the window, and the window's copy, now
+one blit) is the maintainers' to see, and with an overlay drawn after the blit the frame stays at 2
+(the waiting copy is made first). On the synthetic scene's benchmark every counter is unchanged,
+on and off (`render_bench.py --synthetic --compare-opt present-single-copy`, Mac and box1): it
+presents nothing to a screen. `vulkan_present` prints the copies of one frame, on and off: 0 and
+0 on both machines, for the same reason. The picture's CPU time on that bench, as information:
+Mac within 1.5 percent either way, box1 within the spread of its runs. The bytes a frame no longer copies are the window's: 8,294,400 at
+1080p (one read and one write of an RGBA8 image).
+
+**Equivalence.** The headless default framebuffer has no swapchain and `glReadPixels` reads it:
+`renderer_direct_vulkan`, `imgui_gl_vulkan` and `touch_overlay_vulkan`, which draw into it after
+blits, pass unchanged. `vulkan_present` (new) has the backend draw the copy that waits into two
+`B8G8R8A8` stand-ins of the screen, the single way and the two-step way, and compares them byte for
+byte: a picture of four flat colours scaled into an inset box, flipped with LINEAR and not flipped
+with NEAREST; then an overlay drawn into the window after the blit makes the copy at once, and the
+window reads back as it does with the entry off. `render_equivalence_vulkan` compares the entry on
+and off in every scenario: identical on the Mac and on box1 (its scenarios present nothing to a
+screen, so this shows that the entry changes nothing else).
+
+The real swapchain path is covered only by this stand-in and by a maintainer's look at the window:
+the letterbox bars black, the picture the right way up, the overlays (F3, the pause menu, the touch
+controls) drawn over it, a window resized and moved between displays of other scales, and
+fullscreen.
+
+**Not done: the MSAA resolve inside its pass** (the brief's part 2, `msaa-resolve-in-pass`). It is
+left for a package of its own: [PROGRESS.md](../restructure/PROGRESS.md)'s follow-ups say what it
+needs.
