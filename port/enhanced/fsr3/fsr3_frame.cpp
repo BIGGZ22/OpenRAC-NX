@@ -6,6 +6,7 @@
 #include <cmath>
 
 #include "common/log.h"
+#include "common/stats.h"
 #include "enhanced/fsr3/fsr3_internal.h"
 #include "renderer/gl.h"
 #include "scene/level_renderer.h"
@@ -14,6 +15,7 @@ namespace openrac::enhanced {
 using namespace openrac::gl;
 
 void Fsr3::State::build_velocities() {
+    const stats::Scope timing("FSR velocity setup");
     velocities.clear();
 
     // Map by stable identity, never by draw order; disappearing objects cannot shift another object's history.
@@ -55,6 +57,7 @@ void Fsr3::State::build_velocities() {
 }
 
 void Fsr3::State::save_palette() {
+    const stats::Scope timing("FSR palette history", stats::kGpu);
     // The vertex shader uses four texels per matrix, with 256 matrices per row.
     constexpr std::size_t kMatricesPerRow = 256;
     const std::size_t rows =
@@ -80,6 +83,7 @@ void Fsr3::State::save_palette() {
 }
 
 void Fsr3::State::capture_opaque(const renderer::RenderTarget& target) {
+    const stats::Scope timing("FSR opaque copy", stats::kGpu);
     glBindFramebuffer(GL_READ_FRAMEBUFFER, target.framebuffer);
     glBindFramebuffer(GL_DRAW_FRAMEBUFFER, opaque.framebuffer());
     glBlitFramebuffer(
@@ -98,6 +102,7 @@ void Fsr3::State::capture_opaque(const renderer::RenderTarget& target) {
 }
 
 void Fsr3::State::draw_camera_motion() {
+    const stats::Scope timing("FSR camera motion", stats::kGpu);
     // Fullscreen passes use no mesh input, depth test, blending or stencil mask.
     if (!vao) {
         glGenVertexArrays(1, &vao);
@@ -148,12 +153,22 @@ void Fsr3::State::draw_motion() {
     );
     glEnable(GL_DEPTH_TEST);
     glDepthFunc(GL_GEQUAL);
-    scene->draw_motion(object_motion, velocities, view, *textures);
+    {
+        const stats::Scope timing("FSR object motion", stats::kGpu);
+        static const bool& individual = stats::probe(
+            "OPENRAC_FSR_MOTION_BATCH_OFF", "Reference: individual object-motion draws"
+        );
+        // The reference uses identical pose history, depth and material coverage.
+        const auto submission =
+            individual ? scene::MotionSubmission::Individual : scene::MotionSubmission::Batched;
+        scene->draw_motion(object_motion, velocities, view, *textures, submission);
+    }
     glDisable(GL_DEPTH_TEST);
     glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_STENCIL_ATTACHMENT, GL_TEXTURE_2D, 0, 0);
 }
 
 void Fsr3::State::draw_reactive() {
+    const stats::Scope timing("FSR reactive mask", stats::kGpu);
     // A renderer without a particle bucket has no intervening colour changes.
     if (!has_opaque) {
         capture_opaque({world.id(), world.width(), world.height()});
@@ -174,6 +189,7 @@ void Fsr3::State::draw_reactive() {
 }
 
 void Fsr3::State::resolve(renderer::RenderTarget& target) {
+    const stats::Scope timing("FSR frame resolve");
     draw_motion();
     draw_reactive();
     std::string error;
@@ -184,7 +200,10 @@ void Fsr3::State::resolve(renderer::RenderTarget& target) {
         reactive.texture(),
         output_texture
     };
-    const bool resolved = sdk.dispatch(inputs, dispatch, error);
+    const bool resolved = [&] {
+        const stats::Scope upscaler("FSR upscaler", stats::kGpu);
+        return sdk.dispatch(inputs, dispatch, error);
+    }();
 
     // A rejected dispatch still presents a complete world and full-resolution HUD, then stops retrying.
     if (!resolved) {

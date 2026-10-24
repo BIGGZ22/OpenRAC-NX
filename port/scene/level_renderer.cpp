@@ -1796,6 +1796,11 @@ void LevelScene::release() {
     // The registered static instances go with the level (once the frames reading them retire).
     vkgl::gpu_release_instances();
 #endif
+    m_motion_records.release();
+    m_motion_records_ready = false;
+    m_motion_words.data().clear();
+    m_motion_batches.clear();
+    m_motion_groups.clear();
     for (auto& map : m_sun_maps) {
         release_target(map);
     }

@@ -10,6 +10,12 @@
 #include "renderer/math.h"
 
 namespace openrac::scene {
+// Individual draws provide a correctness and timing reference for pose-buffer batching.
+enum class MotionSubmission {
+    Batched,
+    Individual
+};
+
 // A rigid or skinned object at the current and previous displayed frame.
 struct MotionInstance {
     std::uint32_t model = 0;              // Scene model index.

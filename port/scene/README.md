@@ -30,6 +30,7 @@ package P2-39b).
 | [`moby_pose.h`](moby_pose.h) | `moby_palette` and `moby_pose_matrices`: a live moby's joint matrices, evaluated from its animation fields in game memory as the game's VU0 evaluator did |
 | [`sun_shadow.h`](sun_shadow.h) | `sun_cascades` and `SunCascades`: the sun's four cascades over the camera's view, their snapped matrices and caster volumes; `StaticShadowKey`, what the static shadow cache compares |
 | [`hero_shadow.h`](hero_shadow.h) | `hero_shadow_projection`, the view Ratchet's shadow map is drawn from, and `hero_airborne`, read from game memory |
+| [`motion.h`](motion.h) | Current and previous displayed poses supplied to `LevelScene::draw_motion`, including batched rigid and skinned motion |
 | [`shadow_atlas.h`](shadow_atlas.h) | the shadow atlas's size and its rectangles: the four cascades and the hero's map |
 | [`moby_shadow.h`](moby_shadow.h) | `moby_shadow_state` and `moby_shadows`: a moby's stencil shadow (direction, ground slab, fade) and its capsules, from game memory |
 | [`screenshot.h`](screenshot.h) | `write_png`: an RGBA frame written to a PNG file |
@@ -56,8 +57,9 @@ package P2-39b).
 
 - A `LevelData` belongs to its caller; loading holds no state between calls.
 - A `LevelScene` owns its GPU objects (buffers, textures in the caller's `renderer::TexturePool`,
-  programs, and the lighting registered with it). It is created, uploaded, drawn and released on the
-  thread that holds the graphics context, the program's main thread.
+  programs, and the lighting registered with it). One graphics owner creates, uploads, draws and
+  releases it. The game frontend can hand exclusive recording ownership to its optional Vulkan
+  worker, then waits for completion before resource changes, UI and presentation.
 - The pose and shadow functions are pure: they read the game memory they are handed and return
   values. The game programs call them from the thread that draws.
 - Between two calls of `set_instances` for the mobys a `LevelScene` keeps where each moby went

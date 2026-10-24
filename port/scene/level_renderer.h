@@ -27,6 +27,7 @@
 #include "renderer/gpu_draw.h"
 #include "renderer/renderer.h"
 #include "renderer/shader.h"
+#include "renderer/world/gpu.h"
 #include "scene/level.h"
 #include "scene/level_lighting.h"
 #include "scene/motion.h"
@@ -95,7 +96,8 @@ public:
         const renderer::Shader& shader,
         std::span<const MotionInstance> instances,
         const MotionView& view,
-        renderer::TexturePool& textures
+        renderer::TexturePool& textures,
+        MotionSubmission submission = MotionSubmission::Batched
     );
 
     // Draws these mobys now, as the moby layer draws its own, into what is bound (the game's
@@ -202,6 +204,24 @@ public:
     }
 
 private:
+    // One consecutive run of compatible motion instances, preserving draw order.
+    struct MotionBatch {
+        std::uint32_t model = 0;  // Shared geometry and material runs.
+        unsigned group = 0;       // Current moby geometry VAO.
+        int first = 0;            // First nine-texel pose record.
+        int count = 0;            // Instances submitted together.
+    };
+
+    // Builds stable pose records and batches; multi-material models retain instance-major order.
+    void prepare_motion_batches(std::span<const MotionInstance> instances);
+    // Draws the prepared pose-buffer batches using existing geometry and alpha textures.
+    void draw_motion_batches(const renderer::Shader& shader, renderer::TexturePool& textures);
+    renderer::world::RecordBuffer
+        m_motion_records;                       // Owned current/previous poses and opacity flags.
+    renderer::world::Words m_motion_words;      // Reused CPU packing storage.
+    std::vector<MotionBatch> m_motion_batches;  // Consecutive compatible instance runs.
+    std::vector<unsigned> m_motion_groups;      // Model-to-VAO lookup rebuilt for the live layer.
+    bool m_motion_records_ready = false;        // Includes the reference path's empty record.
     // Draws one temporal object using the existing geometry VAO and current joint palette.
     void draw_motion_instance(
         const renderer::Shader& shader,
@@ -210,7 +230,10 @@ private:
     );
     // Applies original alpha coverage to each material run of a temporal object.
     void draw_motion_materials(
-        const renderer::Shader& shader, std::uint32_t model, renderer::TexturePool& textures
+        const renderer::Shader& shader,
+        std::uint32_t model,
+        renderer::TexturePool& textures,
+        int instances = 1
     );
     struct CasterBounds {
         renderer::Vec3 low{}, high{};

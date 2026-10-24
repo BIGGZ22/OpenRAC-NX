@@ -17,6 +17,10 @@ uniform mat4 previous_model;
 uniform vec2 palettes;
 uniform float reactive;
 uniform int exclude_glow;
+uniform float instance_alpha;
+uniform int motion_instances;
+uniform int motion_first;
+uniform usamplerBuffer tex_T3;
 uniform sampler2D tex_T1;
 uniform sampler2D tex_T2;
 out vec2 v_uv;
@@ -24,6 +28,8 @@ out float v_alpha;
 out vec4 v_current;
 out vec4 v_previous;
 flat out int v_glow;
+flat out float v_instance_alpha;
+flat out float v_reactive;
 // Palettes store four columns per joint, packed into rows of 1024 texels.
 mat4 joint_matrix(sampler2D source, int index) {
     int texel = index * 4;
@@ -45,14 +51,38 @@ vec4 posed(sampler2D source, int base) {
     return p;
 }
 void main() {
-    vec4 world = current_model * posed(tex_T1, int(palettes.x));
+    mat4 current = current_model;
+    mat4 previous = previous_model;
+    vec2 joints_at = palettes;
+    float reject_history = reactive;
+    int glow = exclude_glow;
+    v_instance_alpha = instance_alpha;
+    if (motion_instances != 0) {
+        // Each record holds eight matrix columns and one opacity/palette/flag texel.
+        int at = (motion_first + gl_InstanceID) * 9;
+        current = mat4(uintBitsToFloat(texelFetch(tex_T3, at)),
+                       uintBitsToFloat(texelFetch(tex_T3, at + 1)),
+                       uintBitsToFloat(texelFetch(tex_T3, at + 2)),
+                       uintBitsToFloat(texelFetch(tex_T3, at + 3)));
+        previous = mat4(uintBitsToFloat(texelFetch(tex_T3, at + 4)),
+                        uintBitsToFloat(texelFetch(tex_T3, at + 5)),
+                        uintBitsToFloat(texelFetch(tex_T3, at + 6)),
+                        uintBitsToFloat(texelFetch(tex_T3, at + 7)));
+        uvec4 parameters = texelFetch(tex_T3, at + 8);
+        joints_at = uintBitsToFloat(parameters.xy);
+        v_instance_alpha = uintBitsToFloat(parameters.z);
+        reject_history = float(parameters.w & 1u);
+        glow = int((parameters.w >> 1u) & 1u);
+    }
+    v_reactive = reject_history;
+    vec4 world = current * posed(tex_T1, int(joints_at.x));
     gl_Position = raster * world;
     v_current = current_view * world;
     // Newly visible objects have no previous joint range and must never fetch from it.
-    vec4 previous_world = reactive > 0.5 ? world
-        : previous_model * posed(tex_T2, int(palettes.y));
+    vec4 previous_world = reject_history > 0.5 ? world
+        : previous * posed(tex_T2, int(joints_at.y));
     v_previous = previous_view * previous_world;
     v_uv = uv;
     v_alpha = colour.a;
-    v_glow = exclude_glow != 0 && light_slot < -1.5 ? 1 : 0;
+    v_glow = glow != 0 && light_slot < -1.5 ? 1 : 0;
 }
