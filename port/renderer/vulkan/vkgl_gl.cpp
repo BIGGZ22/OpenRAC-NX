@@ -957,6 +957,9 @@ void VKGL link_program(GLuint name) {
         count_pipeline();
     }
     p->linked = p->layout && ((p->vertex && p->fragment) || p->compute_pipeline);
+
+    // Its pipelines of earlier runs are made on the pre-warm worker before its first draw.
+    prewarm_program(*p);
 }
 
 void VKGL get_program_iv(GLuint name, GLenum what, GLint* out) {
@@ -1810,6 +1813,8 @@ void destroy_buffer(Buffer& b) {
 // ---- Shaders and programs ----
 
 void release_program(Program& p) {
+    // No pre-warm job may use its modules or layout once they are handed to defer.
+    prewarm_forget(p.serial);
     defer([vertex = p.vertex,
            fragment = p.fragment,
            compute = p.compute,

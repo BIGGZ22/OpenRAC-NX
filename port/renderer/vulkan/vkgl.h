@@ -204,6 +204,11 @@ bool test_poison_discards(bool on);
 // when no copy waits.
 bool test_present_paths(std::vector<std::uint8_t>& single, std::vector<std::uint8_t>& two_step);
 
+// Waits until the pre-warm worker has made every pipeline queued for it (R-10, pipeline-prewarm)
+// and returns how many it has made since the backend opened; 0 at once while it is closed. For
+// the tests, which then draw and count the pipelines the drawing thread had to make itself.
+std::uint64_t wait_for_pipeline_prewarm();
+
 // Shows the default framebuffer and starts the next frame.
 void present();
 

@@ -112,4 +112,11 @@ if(TARGET openrac_renderer_vulkan)
     LIBS openrac_renderer openrac_platform openrac_renderer_vulkan)
   set_tests_properties(vulkan_present PROPERTIES SKIP_RETURN_CODE 77 ENVIRONMENT
     "OPENRAC_GL_API=vulkan;OPENRAC_VULKAN_VALIDATION=1")
+  # vulkan_prewarm  a run's pipelines made again on the pre-warm worker in the next run, a damaged
+  #                 manifest and one of a program no longer built ignored
+  #                 (tests/vulkan_prewarm_test.cpp); its pipeline cache and manifest are its own
+  openrac_add_test(vulkan_prewarm
+    LIBS openrac_renderer openrac_platform openrac_renderer_vulkan)
+  set_tests_properties(vulkan_prewarm PROPERTIES SKIP_RETURN_CODE 77 ENVIRONMENT
+    "OPENRAC_GL_API=vulkan;OPENRAC_VULKAN_VALIDATION=1")
 endif()

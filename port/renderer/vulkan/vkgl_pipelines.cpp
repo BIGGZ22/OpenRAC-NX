@@ -3,14 +3,20 @@
 //
 // Pipelines and descriptor sets (vkgl_internal.h): GL's vertex formats and fixed-function state as
 // Vulkan pipelines, made once for each key and kept in the pipeline cache; the descriptor sets that
-// bind a program's textures and blocks; glDispatchCompute and glMemoryBarrier; and the warm-up
-// after which a pipeline made counts as a hitch (vkgl.h, begin_pipeline_warmup).
+// bind a program's textures and blocks; glDispatchCompute and glMemoryBarrier; the warm-up after
+// which a pipeline made counts as a hitch (vkgl.h, begin_pipeline_warmup); and the pre-warm, which
+// makes a run's pipelines again in the next run on a worker thread, from the manifest of the keys
+// made (R-10). The worker's thread runs only create_graphics_pipeline and run_prewarm_worker.
 
 #include <algorithm>
 #include <array>
 #include <cstddef>
 #include <cstdint>
 #include <cstring>
+#include <deque>
+#include <filesystem>
+#include <mutex>
+#include <optional>
 #include <span>
 #include <string>
 #include <utility>
@@ -19,6 +25,7 @@
 
 #include "renderer/gl.h"
 #include "renderer/render_opt.h"
+#include "renderer/vulkan/pipeline_cache_file.h"
 #include "renderer/vulkan/shader_compiler.h"
 #include "renderer/vulkan/vkgl_internal.h"
 #include "renderer/world/gl_world.h"
@@ -520,6 +527,533 @@ int input_kind(std::uint32_t gl_type) {
     }
 }
 
+// ---- Pipelines made ahead (R-10) ----
+
+namespace {
+
+// The keys the manifest holds at most; past it a new key is not added (assumed far above a run's
+// few hundred pipelines).
+constexpr std::size_t kManifestKeys = 4096;
+
+// The runs a key stays in the manifest without being made or used: a program that is no longer
+// built (its shaders changed) leaves the manifest after so many runs.
+constexpr std::uint32_t kManifestMaxAge = 8;
+
+// The largest sample count a key may name (VK_SAMPLE_COUNT_64_BIT).
+constexpr std::uint32_t kMostSamples = 64;
+
+// Returns whether the pre-warm is on (pipeline-prewarm); off, every pipeline is made at its draw.
+bool prewarm_enabled() {
+    return renderer::render_opt::enabled(renderer::render_opt::Opt::PipelinePrewarm);
+}
+
+// Returns `key`'s bytes, the manifest's index of it.
+std::string key_bytes(const PipelineKey& key) {
+    return std::string(reinterpret_cast<const char*>(&key), sizeof key);
+}
+
+// Returns whether `a` and `b` are the same key, byte for byte.
+bool same_key(const PipelineKey& a, const PipelineKey& b) {
+    return std::memcmp(&a, &b, sizeof a) == 0;
+}
+
+// Returns whether a key read from a manifest is one this device could make: its inputs, its
+// viewports and its samples in range. A whole file can still hold a key of another device.
+bool plausible_key(const PipelineKey& key) {
+    const bool samples =
+        key.samples != 0 && key.samples <= kMostSamples && (key.samples & (key.samples - 1)) == 0;
+    return key.inputs <= static_cast<std::uint32_t>(kAttributes) && key.viewports >= 1
+           && key.viewports <= g->properties.limits.maxViewports && samples
+           && key.topology <= VK_PRIMITIVE_TOPOLOGY_PATCH_LIST;
+}
+
+// Makes the graphics pipeline of key `k` with the stages `vertex_module` and `fragment_module`
+// and `layout`, through the shared pipeline cache; null when the driver refuses it. It reads only
+// its arguments and the device, so the pre-warm worker calls it as the thread that draws does:
+// whether the pass has colour and stencil comes from the key's formats (VK_FORMAT_UNDEFINED, 0,
+// for none). Counts nothing: the caller does.
+VkPipeline create_graphics_pipeline(
+    const PipelineKey& k,
+    VkShaderModule vertex_module,
+    VkShaderModule fragment_module,
+    VkPipelineLayout layout
+) {
+    const bool colour = k.colour_format != VK_FORMAT_UNDEFINED;
+    const auto depth_format = static_cast<VkFormat>(k.depth_format);
+    VkPipelineShaderStageCreateInfo stages[2]{};
+    stages[0] =
+        {VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO,
+         nullptr,
+         0,
+         VK_SHADER_STAGE_VERTEX_BIT,
+         vertex_module,
+         "main",
+         nullptr};
+    stages[1] =
+        {VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO,
+         nullptr,
+         0,
+         VK_SHADER_STAGE_FRAGMENT_BIT,
+         fragment_module,
+         "main",
+         nullptr};
+    VkVertexInputBindingDescription bindings[kAttributes]{};
+    VkVertexInputAttributeDescription attributes[kAttributes]{};
+    for (std::uint32_t i = 0; i < k.inputs; ++i) {
+        bindings[i] = {
+            i,
+            k.input[i].stride,
+            k.input[i].instanced != 0 ? VK_VERTEX_INPUT_RATE_INSTANCE : VK_VERTEX_INPUT_RATE_VERTEX
+        };
+        attributes[i] = {k.input[i].location, i, static_cast<VkFormat>(k.input[i].format), 0};
+    }
+    VkPipelineVertexInputStateCreateInfo vertex{
+        VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO
+    };
+    vertex.vertexBindingDescriptionCount = k.inputs;
+    vertex.pVertexBindingDescriptions = bindings;
+    vertex.vertexAttributeDescriptionCount = k.inputs;
+    vertex.pVertexAttributeDescriptions = attributes;
+    VkPipelineInputAssemblyStateCreateInfo assembly{
+        VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO
+    };
+    assembly.topology = static_cast<VkPrimitiveTopology>(k.topology);
+    assembly.primitiveRestartEnable = k.restart;
+    VkPipelineViewportStateCreateInfo viewport{
+        VK_STRUCTURE_TYPE_PIPELINE_VIEWPORT_STATE_CREATE_INFO
+    };
+    viewport.viewportCount = k.viewports;
+    viewport.scissorCount = k.viewports;
+    VkPipelineRasterizationStateCreateInfo raster{
+        VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_STATE_CREATE_INFO
+    };
+    raster.polygonMode = k.polygon != 0 ? VK_POLYGON_MODE_LINE : VK_POLYGON_MODE_FILL;
+    raster.cullMode = k.cull;
+    raster.frontFace = static_cast<VkFrontFace>(k.front);
+    raster.lineWidth = 1.0f;
+    VkPipelineMultisampleStateCreateInfo multisample{
+        VK_STRUCTURE_TYPE_PIPELINE_MULTISAMPLE_STATE_CREATE_INFO
+    };
+    multisample.rasterizationSamples = static_cast<VkSampleCountFlagBits>(k.samples);
+    VkPipelineDepthStencilStateCreateInfo depth{
+        VK_STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO
+    };
+    depth.depthTestEnable = k.depth_test;
+    depth.depthWriteEnable = k.depth_write;
+    depth.depthCompareOp =
+        k.depth_test != 0 ? static_cast<VkCompareOp>(k.depth_func) : VK_COMPARE_OP_ALWAYS;
+    depth.stencilTestEnable = k.stencil;
+    depth.front =
+        {static_cast<VkStencilOp>(k.front_ops[0]),
+         static_cast<VkStencilOp>(k.front_ops[1]),
+         static_cast<VkStencilOp>(k.front_ops[2]),
+         static_cast<VkCompareOp>(k.stencil_func),
+         0,
+         0,
+         0};
+    depth.back =
+        {static_cast<VkStencilOp>(k.back_ops[0]),
+         static_cast<VkStencilOp>(k.back_ops[1]),
+         static_cast<VkStencilOp>(k.back_ops[2]),
+         static_cast<VkCompareOp>(k.stencil_func),
+         0,
+         0,
+         0};
+    depth.maxDepthBounds = 1.0f;
+    VkPipelineColorBlendAttachmentState blend{};
+    blend.blendEnable = k.blend;
+    blend.srcColorBlendFactor = static_cast<VkBlendFactor>(k.src_rgb);
+    blend.dstColorBlendFactor = static_cast<VkBlendFactor>(k.dst_rgb);
+    blend.colorBlendOp = static_cast<VkBlendOp>(k.equation);
+    blend.srcAlphaBlendFactor = static_cast<VkBlendFactor>(k.src_a);
+    blend.dstAlphaBlendFactor = static_cast<VkBlendFactor>(k.dst_a);
+    blend.alphaBlendOp = static_cast<VkBlendOp>(k.equation);
+    blend.colorWriteMask = k.colour_mask;
+    VkPipelineColorBlendStateCreateInfo blending{
+        VK_STRUCTURE_TYPE_PIPELINE_COLOR_BLEND_STATE_CREATE_INFO
+    };
+    blending.attachmentCount = colour ? 1 : 0;
+    blending.pAttachments = &blend;
+    const VkDynamicState dynamic_states[] =
+        {VK_DYNAMIC_STATE_VIEWPORT,
+         VK_DYNAMIC_STATE_SCISSOR,
+         VK_DYNAMIC_STATE_BLEND_CONSTANTS,
+         VK_DYNAMIC_STATE_STENCIL_REFERENCE,
+         VK_DYNAMIC_STATE_STENCIL_COMPARE_MASK,
+         VK_DYNAMIC_STATE_STENCIL_WRITE_MASK};
+    VkPipelineDynamicStateCreateInfo dynamic{VK_STRUCTURE_TYPE_PIPELINE_DYNAMIC_STATE_CREATE_INFO};
+    dynamic.dynamicStateCount = static_cast<std::uint32_t>(std::size(dynamic_states));
+    dynamic.pDynamicStates = dynamic_states;
+    const VkFormat colour_format = static_cast<VkFormat>(k.colour_format);
+    VkPipelineRenderingCreateInfo rendering{VK_STRUCTURE_TYPE_PIPELINE_RENDERING_CREATE_INFO};
+    rendering.colorAttachmentCount = colour ? 1 : 0;
+    rendering.pColorAttachmentFormats = &colour_format;
+    rendering.depthAttachmentFormat = static_cast<VkFormat>(k.depth_format);
+    rendering.stencilAttachmentFormat =
+        has_stencil(depth_format) ? depth_format : VK_FORMAT_UNDEFINED;
+    VkGraphicsPipelineCreateInfo info{VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO};
+    info.pNext = &rendering;
+    info.stageCount = 2;
+    info.pStages = stages;
+    info.pVertexInputState = &vertex;
+    info.pInputAssemblyState = &assembly;
+    info.pViewportState = &viewport;
+    info.pRasterizationState = &raster;
+    info.pMultisampleState = &multisample;
+    info.pDepthStencilState = &depth;
+    info.pColorBlendState = &blending;
+    info.pDynamicState = &dynamic;
+    info.layout = layout;
+    VkPipeline pipeline = VK_NULL_HANDLE;
+
+    // A pipeline the driver refuses is null: its draws are skipped, as before a cache existed.
+    if (!check(
+            vkCreateGraphicsPipelines(g->device, g->pipeline_cache, 1, &info, nullptr, &pipeline),
+            "a pipeline"
+        )) {
+        pipeline = VK_NULL_HANDLE;
+    }
+
+    return pipeline;
+}
+
+// Moves what the worker made into Context::pipelines. A key already there (made by a draw while
+// the entry was off) keeps its pipeline, and the worker's is destroyed: no command used it.
+// `w.mutex` must be held.
+void take_ready(PipelinePrewarm& w) {
+    // Each pipeline made; a null one (refused by the driver) is left for the draw to make.
+    for (const auto& [key, pipeline] : w.ready) {
+        // Refused: the draw makes it, and logs the refusal again.
+        if (pipeline == VK_NULL_HANDLE) {
+            continue;
+        }
+
+        const std::uint64_t hash = hash_key(key);
+
+        // A draw made it first.
+        if (g->pipelines.find(key, hash) != nullptr) {
+            vkDestroyPipeline(g->device, pipeline, nullptr);
+            continue;
+        }
+
+        g->pipelines.insert(key, hash, pipeline);
+    }
+
+    w.ready.clear();
+}
+
+// Moves the job of key `k` to the front of `queue`. False when no job has that key.
+bool move_to_front(std::deque<PrewarmJob>& queue, const PipelineKey& k) {
+    const auto found =
+        std::ranges::find_if(queue, [&k](const PrewarmJob& job) { return same_key(job.key, k); });
+
+    // Not queued.
+    if (found == queue.end()) {
+        return false;
+    }
+
+    // Already next.
+    if (found == queue.begin()) {
+        return true;
+    }
+
+    PrewarmJob job = *found;
+    queue.erase(found);
+    queue.push_front(job);
+    return true;
+}
+
+// Returns the pipeline of key `k` (whose hash_key is `hash`) if the pre-warm made it, waiting for
+// it when it is queued or being made; nothing when the pre-warm has no such key or is off, and
+// the draw makes it. Hot path: one lock and three tests once the worker has nothing left.
+std::optional<VkPipeline> prewarm_take(const PipelineKey& k, std::uint64_t hash) {
+    // Off: every pipeline is made by its draw.
+    if (!prewarm_enabled()) {
+        return std::nullopt;
+    }
+
+    PipelinePrewarm& w = g->prewarm;
+    std::unique_lock lock(w.mutex);
+
+    // Ends when the key is in the table, or is neither queued nor being made.
+    for (;;) {
+        take_ready(w);
+
+        // Made by the worker.
+        if (const VkPipeline* made = g->pipelines.find(k, hash)) {
+            return *made;
+        }
+
+        const bool queued = move_to_front(w.queue, k);
+        const bool making = w.making.has_value() && same_key(*w.making, k);
+
+        // Not the pre-warm's: the draw makes it.
+        if (!queued && !making) {
+            return std::nullopt;
+        }
+
+        // Waiting costs at most the job being made: this key is the next one.
+        w.changed.wait(lock);
+    }
+}
+
+// Adds key `k` of program `p` to the manifest, as made by this run, unless the program has no
+// identity or the manifest is full; a key already there becomes this run's again.
+void record_manifest_key(const Program& p, const PipelineKey& k) {
+    // A compute program, or one linked before the manifest knew it.
+    if (p.identity == 0) {
+        return;
+    }
+
+    PipelineManifest& manifest = g->manifest;
+    ManifestKey entry{k, 0};
+    entry.key.program = p.identity;
+    std::string bytes = key_bytes(entry.key);
+
+    // Known: made again this run.
+    if (const auto found = manifest.index.find(bytes); found != manifest.index.end()) {
+        manifest.keys[found->second].age = 0;
+        return;
+    }
+
+    // Full: older keys are not pushed out by a run's new ones.
+    if (manifest.keys.size() >= kManifestKeys) {
+        return;
+    }
+
+    manifest.index.emplace(std::move(bytes), manifest.keys.size());
+    manifest.keys.push_back(entry);
+}
+
+// The pre-warm worker: makes each queued job's pipeline, in order, until stop is set. Runs on its
+// own thread (PipelinePrewarm::worker) and touches nothing but `w` and the device.
+void run_prewarm_worker(PipelinePrewarm& w) {
+    std::unique_lock lock(w.mutex);
+
+    // Ends when stop_pipeline_prewarm sets stop.
+    for (;;) {
+        w.changed.wait(lock, [&w] { return w.stop || !w.queue.empty(); });
+
+        // Closing: what is still queued is not made.
+        if (w.stop) {
+            return;
+        }
+
+        const PrewarmJob job = w.queue.front();
+        w.queue.pop_front();
+        w.making = job.key;
+
+        // The pipeline is made without the lock, so a draw may queue, find or wait meanwhile.
+        lock.unlock();
+        const VkPipeline pipeline =
+            create_graphics_pipeline(job.key, job.vertex, job.fragment, job.layout);
+        lock.lock();
+
+        w.ready.emplace_back(job.key, pipeline);
+        ++w.made;
+        w.making.reset();
+        w.changed.notify_all();
+    }
+}
+
+}  // namespace
+
+std::uint64_t pipeline_identity(const Program& p) {
+    const CompiledProgram& c = p.compiled;
+
+    // Returns the hash of one stage's SPIR-V words, two to each 64-bit word, and their count.
+    const auto stage_hash = [](const std::vector<std::uint32_t>& words) {
+        std::uint64_t hash = kFnvBasis;
+
+        // Each pair of words as one, the odd last one alone.
+        for (std::size_t n = 0; n < words.size(); n += 2) {
+            const std::uint64_t high = n + 1 < words.size() ? words[n + 1] : 0;
+            hash = (hash ^ (words[n] | (high << 32U))) * kFnvPrime;
+        }
+
+        return hash ^ words.size();
+    };
+
+    // The layout follows the material pages and the dynamic uniforms, so they are part of it.
+    const std::uint64_t layout = (p.gpu_materials ? 1U : 0U) | (p.dynamic_uniforms ? 2U : 0U);
+    const std::array<std::uint64_t, 3> parts =
+        {stage_hash(c.vertex), stage_hash(c.fragment), layout};
+    const std::uint64_t identity = hash_words(parts);
+
+    // 0 means no identity: a program that hashes to it takes the next value.
+    return identity != 0 ? identity : 1;
+}
+
+void prewarm_program(Program& p) {
+    const bool graphics = p.linked && p.vertex != VK_NULL_HANDLE && p.fragment != VK_NULL_HANDLE;
+    p.identity = graphics ? pipeline_identity(p) : 0;
+
+    // A compute program has no graphics pipelines; off, nothing is made ahead.
+    if (p.identity == 0 || !prewarm_enabled()) {
+        return;
+    }
+
+    PipelinePrewarm& w = g->prewarm;
+    std::lock_guard lock(w.mutex);
+    const std::size_t queued = w.queue.size();
+
+    // Each key of this program in the manifest, as a job for this link's serial.
+    for (ManifestKey& entry : g->manifest.keys) {
+        // Another program's key.
+        if (entry.key.program != p.identity) {
+            continue;
+        }
+
+        PrewarmJob job{entry.key, p.vertex, p.fragment, p.layout};
+        job.key.program = p.serial;
+        w.queue.push_back(job);
+        entry.age = 0;
+    }
+
+    // Nothing of this program was made in an earlier run.
+    if (w.queue.size() == queued) {
+        return;
+    }
+
+    // The first jobs start the worker; it lives until the backend closes.
+    if (!w.started) {
+        // The worker's body, on its own thread until stop_pipeline_prewarm.
+        w.worker = JoiningThread([&w] { run_prewarm_worker(w); });
+        w.started = true;
+    }
+
+    w.changed.notify_all();
+}
+
+void prewarm_forget(std::uint64_t serial) {
+    PipelinePrewarm& w = g->prewarm;
+    std::unique_lock lock(w.mutex);
+    std::erase_if(w.queue, [serial](const PrewarmJob& job) { return job.key.program == serial; });
+
+    // The program's modules must outlive the job that uses them.
+    w.changed.wait(lock, [&w, serial] {
+        return !w.making.has_value() || w.making->program != serial;
+    });
+
+    // What was made for it and never drawn with: no command buffer holds it.
+    std::erase_if(w.ready, [serial](const std::pair<PipelineKey, VkPipeline>& done) {
+        // Another program's pipeline stays.
+        if (done.first.program != serial) {
+            return false;
+        }
+
+        vkDestroyPipeline(g->device, done.second, nullptr);
+        return true;
+    });
+}
+
+void stop_pipeline_prewarm() {
+    PipelinePrewarm& w = g->prewarm;
+
+    // The worker stops after the job it is making, if any.
+    {
+        std::lock_guard lock(w.mutex);
+        w.stop = true;
+        w.queue.clear();
+        w.changed.notify_all();
+    }
+
+    w.worker.join();
+
+    // Made, never drawn with.
+    for (const auto& [key, pipeline] : w.ready) {
+        vkDestroyPipeline(g->device, pipeline, nullptr);
+    }
+
+    w.ready.clear();
+
+    // A run that made pipelines ahead says how many.
+    if (w.made != 0) {
+        log::info("vulkan: {} pipelines made ahead on the pre-warm worker", w.made);
+    }
+}
+
+void load_pipeline_manifest(const std::filesystem::path& cache) {
+    PipelineManifest& manifest = g->manifest;
+    manifest.path.clear();
+
+    // No cache file, so no manifest beside it; or the pre-warm is off.
+    if (cache.empty() || !prewarm_enabled()) {
+        return;
+    }
+
+    manifest.path = cache;
+    manifest.path += ".manifest";
+    const SavedManifest saved = read_pipeline_manifest(manifest.path, sizeof(PipelineKey));
+
+    // The first run: no manifest yet.
+    if (saved.state == SavedCacheState::Missing) {
+        return;
+    }
+
+    // A manifest of another build, or a damaged one: the next save replaces it.
+    if (saved.state == SavedCacheState::Damaged) {
+        log::warn(
+            "vulkan: pipeline manifest {} is damaged or stale, dropped", manifest.path.string()
+        );
+        return;
+    }
+
+    // Each key, a run older, unless a key cannot be this device's.
+    for (const ManifestEntry& entry : saved.entries) {
+        ManifestKey key{};
+        std::memcpy(&key.key, entry.key.data(), sizeof key.key);
+        key.key.program = entry.program;
+        key.age = entry.age + 1;
+        std::string bytes = key_bytes(key.key);
+
+        // Out of range for this device, or a repeat.
+        if (!plausible_key(key.key) || manifest.index.contains(bytes)
+            || manifest.keys.size() >= kManifestKeys) {
+            continue;
+        }
+
+        manifest.index.emplace(std::move(bytes), manifest.keys.size());
+        manifest.keys.push_back(key);
+    }
+
+    log::info(
+        "vulkan: {} pipeline keys read from {}", manifest.keys.size(), manifest.path.string()
+    );
+}
+
+void save_pipeline_manifest() {
+    const PipelineManifest& manifest = g->manifest;
+
+    // No file to keep, or the pre-warm is off and the manifest stays as it was.
+    if (manifest.path.empty() || !prewarm_enabled()) {
+        return;
+    }
+
+    std::vector<ManifestEntry> entries;
+    entries.reserve(manifest.keys.size());
+
+    // Each key some run made or used in the last kManifestMaxAge runs.
+    for (const ManifestKey& key : manifest.keys) {
+        // A program not built for that long: its shaders changed, or its level is gone.
+        if (key.age > kManifestMaxAge) {
+            continue;
+        }
+
+        const auto* bytes = reinterpret_cast<const char*>(&key.key);
+        entries.push_back(
+            {key.key.program, key.age, std::vector<char>(bytes, bytes + sizeof key.key)}
+        );
+    }
+
+    std::string error;
+
+    // Saved like the cache: whole, through a file of its own.
+    if (!write_pipeline_manifest(manifest.path, entries, sizeof(PipelineKey), error)) {
+        log::warn("vulkan: could not save the pipeline manifest: {}", error);
+    }
+}
+
 VkPipeline pipeline_for(
     Program& p, GLenum mode, const Target& t, const Input* inputs, std::uint32_t count
 ) {
@@ -589,139 +1123,15 @@ VkPipeline pipeline_for(
         return *made;
     }
 
-    VkPipelineShaderStageCreateInfo stages[2]{};
-    stages[0] =
-        {VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO,
-         nullptr,
-         0,
-         VK_SHADER_STAGE_VERTEX_BIT,
-         p.vertex,
-         "main",
-         nullptr};
-    stages[1] =
-        {VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO,
-         nullptr,
-         0,
-         VK_SHADER_STAGE_FRAGMENT_BIT,
-         p.fragment,
-         "main",
-         nullptr};
-    VkVertexInputBindingDescription bindings[kAttributes]{};
-    VkVertexInputAttributeDescription attributes[kAttributes]{};
-    for (std::uint32_t i = 0; i < count; ++i) {
-        bindings[i] = {
-            i,
-            inputs[i].stride,
-            inputs[i].instanced != 0 ? VK_VERTEX_INPUT_RATE_INSTANCE : VK_VERTEX_INPUT_RATE_VERTEX
-        };
-        attributes[i] = {inputs[i].location, i, static_cast<VkFormat>(inputs[i].format), 0};
+    // Made ahead by the pre-warm worker, or being made: taken from it rather than made again.
+    if (const std::optional<VkPipeline> warmed = prewarm_take(k, hash)) {
+        return *warmed;
     }
-    VkPipelineVertexInputStateCreateInfo vertex{
-        VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO
-    };
-    vertex.vertexBindingDescriptionCount = count;
-    vertex.pVertexBindingDescriptions = bindings;
-    vertex.vertexAttributeDescriptionCount = count;
-    vertex.pVertexAttributeDescriptions = attributes;
-    VkPipelineInputAssemblyStateCreateInfo assembly{
-        VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO
-    };
-    assembly.topology = static_cast<VkPrimitiveTopology>(k.topology);
-    assembly.primitiveRestartEnable = k.restart;
-    VkPipelineViewportStateCreateInfo viewport{
-        VK_STRUCTURE_TYPE_PIPELINE_VIEWPORT_STATE_CREATE_INFO
-    };
-    viewport.viewportCount = k.viewports;
-    viewport.scissorCount = k.viewports;
-    VkPipelineRasterizationStateCreateInfo raster{
-        VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_STATE_CREATE_INFO
-    };
-    raster.polygonMode = k.polygon != 0 ? VK_POLYGON_MODE_LINE : VK_POLYGON_MODE_FILL;
-    raster.cullMode = k.cull;
-    raster.frontFace = static_cast<VkFrontFace>(k.front);
-    raster.lineWidth = 1.0f;
-    VkPipelineMultisampleStateCreateInfo multisample{
-        VK_STRUCTURE_TYPE_PIPELINE_MULTISAMPLE_STATE_CREATE_INFO
-    };
-    multisample.rasterizationSamples = t.samples;
-    VkPipelineDepthStencilStateCreateInfo depth{
-        VK_STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO
-    };
-    depth.depthTestEnable = k.depth_test;
-    depth.depthWriteEnable = k.depth_write;
-    depth.depthCompareOp =
-        k.depth_test != 0 ? static_cast<VkCompareOp>(k.depth_func) : VK_COMPARE_OP_ALWAYS;
-    depth.stencilTestEnable = k.stencil;
-    depth.front =
-        {static_cast<VkStencilOp>(k.front_ops[0]),
-         static_cast<VkStencilOp>(k.front_ops[1]),
-         static_cast<VkStencilOp>(k.front_ops[2]),
-         static_cast<VkCompareOp>(k.stencil_func),
-         0,
-         0,
-         0};
-    depth.back =
-        {static_cast<VkStencilOp>(k.back_ops[0]),
-         static_cast<VkStencilOp>(k.back_ops[1]),
-         static_cast<VkStencilOp>(k.back_ops[2]),
-         static_cast<VkCompareOp>(k.stencil_func),
-         0,
-         0,
-         0};
-    depth.maxDepthBounds = 1.0f;
-    VkPipelineColorBlendAttachmentState blend{};
-    blend.blendEnable = k.blend;
-    blend.srcColorBlendFactor = static_cast<VkBlendFactor>(k.src_rgb);
-    blend.dstColorBlendFactor = static_cast<VkBlendFactor>(k.dst_rgb);
-    blend.colorBlendOp = static_cast<VkBlendOp>(k.equation);
-    blend.srcAlphaBlendFactor = static_cast<VkBlendFactor>(k.src_a);
-    blend.dstAlphaBlendFactor = static_cast<VkBlendFactor>(k.dst_a);
-    blend.alphaBlendOp = static_cast<VkBlendOp>(k.equation);
-    blend.colorWriteMask = k.colour_mask;
-    VkPipelineColorBlendStateCreateInfo blending{
-        VK_STRUCTURE_TYPE_PIPELINE_COLOR_BLEND_STATE_CREATE_INFO
-    };
-    blending.attachmentCount = t.colour != nullptr ? 1 : 0;
-    blending.pAttachments = &blend;
-    const VkDynamicState dynamic_states[] =
-        {VK_DYNAMIC_STATE_VIEWPORT,
-         VK_DYNAMIC_STATE_SCISSOR,
-         VK_DYNAMIC_STATE_BLEND_CONSTANTS,
-         VK_DYNAMIC_STATE_STENCIL_REFERENCE,
-         VK_DYNAMIC_STATE_STENCIL_COMPARE_MASK,
-         VK_DYNAMIC_STATE_STENCIL_WRITE_MASK};
-    VkPipelineDynamicStateCreateInfo dynamic{VK_STRUCTURE_TYPE_PIPELINE_DYNAMIC_STATE_CREATE_INFO};
-    dynamic.dynamicStateCount = static_cast<std::uint32_t>(std::size(dynamic_states));
-    dynamic.pDynamicStates = dynamic_states;
-    const VkFormat colour_format = static_cast<VkFormat>(k.colour_format);
-    VkPipelineRenderingCreateInfo rendering{VK_STRUCTURE_TYPE_PIPELINE_RENDERING_CREATE_INFO};
-    rendering.colorAttachmentCount = t.colour != nullptr ? 1 : 0;
-    rendering.pColorAttachmentFormats = &colour_format;
-    rendering.depthAttachmentFormat = static_cast<VkFormat>(k.depth_format);
-    rendering.stencilAttachmentFormat =
-        t.depth != nullptr && has_stencil(t.depth->format) ? t.depth->format : VK_FORMAT_UNDEFINED;
-    VkGraphicsPipelineCreateInfo info{VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO};
-    info.pNext = &rendering;
-    info.stageCount = 2;
-    info.pStages = stages;
-    info.pVertexInputState = &vertex;
-    info.pInputAssemblyState = &assembly;
-    info.pViewportState = &viewport;
-    info.pRasterizationState = &raster;
-    info.pMultisampleState = &multisample;
-    info.pDepthStencilState = &depth;
-    info.pColorBlendState = &blending;
-    info.pDynamicState = &dynamic;
-    info.layout = p.layout;
-    VkPipeline pipeline = VK_NULL_HANDLE;
+
+    const VkPipeline pipeline = create_graphics_pipeline(k, p.vertex, p.fragment, p.layout);
     ++g->measures.pipelines;
     count_pipeline();
-    if (!check(
-            vkCreateGraphicsPipelines(g->device, g->pipeline_cache, 1, &info, nullptr, &pipeline),
-            "a pipeline"
-        )) {
-        pipeline = VK_NULL_HANDLE;
-    }
+    record_manifest_key(p, k);
     g->pipelines.insert(k, hash, pipeline);
     return pipeline;
 }
@@ -1211,6 +1621,18 @@ void begin_pipeline_warmup(std::uint32_t frames) {
     }
 
     detail::g->warmup_end = detail::g->submission.frames_presented + frames;
+}
+
+std::uint64_t wait_for_pipeline_prewarm() {
+    // Closed: no worker.
+    if (detail::g == nullptr) {
+        return 0;
+    }
+
+    detail::PipelinePrewarm& w = detail::g->prewarm;
+    std::unique_lock lock(w.mutex);
+    w.changed.wait(lock, [&w] { return w.queue.empty() && !w.making.has_value(); });
+    return w.made;
 }
 
 }  // namespace openrac::vkgl

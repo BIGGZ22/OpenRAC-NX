@@ -110,7 +110,11 @@ void remove_other_pipeline_caches(const std::filesystem::path& path) {
     std::error_code ec;
     for (const auto& entry : std::filesystem::directory_iterator(path.parent_path(), ec)) {
         const std::string name = entry.path().filename().string();
-        if (entry.path() != path && name.starts_with(prefix) && name.ends_with(".bin")) {
+        const bool cache_file = name.ends_with(".bin") || name.ends_with(".bin.manifest");
+
+        // Another build's cache, or the manifest beside it; this build's manifest stays.
+        if (entry.path() != path && entry.path().string() != path.string() + ".manifest"
+            && name.starts_with(prefix) && cache_file) {
             std::filesystem::remove(entry.path(), ec);
         }
     }
@@ -175,6 +179,8 @@ bool make_pipeline_cache() {
             path.string()
         );
     }
+    // The keys of the pipelines earlier runs made, for the pre-warm (R-10).
+    load_pipeline_manifest(path);
     return true;
 }
 
@@ -614,9 +620,12 @@ void describe_device() {
 
 void destroy_all() {
     if (g->device != VK_NULL_HANDLE) {
+        // The pre-warm worker stops first: it uses the programs' modules and the cache.
+        stop_pipeline_prewarm();
         vkDeviceWaitIdle(g->device);
         gpu_release();
         material_release();
+        save_pipeline_manifest();
         save_pipeline_cache();
         for (Frame& f : g->frames) {
             // Window teardown can run after the statistics singleton's

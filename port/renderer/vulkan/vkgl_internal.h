@@ -15,10 +15,14 @@
 #include <array>
 #include <atomic>
 #include <chrono>
+#include <condition_variable>
 #include <cstddef>
 #include <cstdint>
+#include <deque>
+#include <filesystem>
 #include <functional>
 #include <memory>
+#include <mutex>
 #include <optional>
 #include <span>
 #include <string>
@@ -29,6 +33,7 @@
 
 #include <SDL3/SDL.h>
 
+#include "common/joining_thread.h"
 #include "common/log.h"
 #include "common/stats.h"
 #include "renderer/gl.h"
@@ -472,6 +477,9 @@ struct Program {
     bool linked = false;
     std::string log;
     std::uint64_t serial = 0;  // a new one each link, for the pipelines' keys
+    // What the program is across runs, for the pipeline manifest: a hash of its SPIR-V and of
+    // what its layout depends on (pipeline_identity); 0 for a compute program or before a link.
+    std::uint64_t identity = 0;
     CompiledProgram compiled;
     bool gpu_materials = false;
     unsigned material_start = 0;
@@ -743,6 +751,53 @@ private:
     std::unordered_map<std::string, std::size_t> m_reference;  // Key bytes to entry index.
 };
 
+// ---- Pipelines made ahead: the manifest and the pre-warm worker (R-10) ----
+
+// One pipeline the pre-warm worker is to make: its key, with the program's serial, and the
+// program's modules and layout, which stay alive until prewarm_forget has run for its serial.
+struct PrewarmJob {
+    PipelineKey key{};                         // The key, its `program` the program's serial.
+    VkShaderModule vertex = VK_NULL_HANDLE;    // The program's vertex stage.
+    VkShaderModule fragment = VK_NULL_HANDLE;  // The program's fragment stage.
+    VkPipelineLayout layout = VK_NULL_HANDLE;  // The program's layout.
+};
+
+// The pre-warm worker and what passes between it and the thread that draws
+// (pipeline-prewarm, docs/port/RENDER_PERF.md, R-10).
+//
+// The worker only takes jobs from `queue`, calls vkCreateGraphicsPipelines into the shared
+// VkPipelineCache, and puts what it made into `ready`. The thread that draws queues the jobs at
+// a program's link, and when a draw needs a key that is queued or being made it waits for it
+// (moving it to the front) instead of making it a second time, then moves `ready` into
+// Context::pipelines. Everything here but `worker` is guarded by `mutex`.
+struct PipelinePrewarm {
+    std::mutex mutex;                   // Guards the members below.
+    std::condition_variable changed;    // Notified when a job is queued or done, and at stop.
+    std::deque<PrewarmJob> queue;       // Jobs not begun, the next first.
+    std::optional<PipelineKey> making;  // The key the worker is making now, if any.
+    std::vector<std::pair<PipelineKey, VkPipeline>> ready;  // Made, not yet in the table.
+    std::uint64_t made = 0;  // Pipelines the worker has made since the backend opened.
+    bool stop = false;       // Set at close: the worker returns.
+    bool started = false;    // The worker has been started.
+    JoiningThread worker;    // The worker, started with the first job.
+};
+
+// One key of the manifest as the backend keeps it: the key with its program's identity in
+// `program`, and the runs since a run made or used it.
+struct ManifestKey {
+    PipelineKey key{};      // The key; `program` is the program's identity, not a serial.
+    std::uint32_t age = 0;  // Runs since this key's pipeline was made or used; 0 for this run's.
+};
+
+// The pipeline manifest of this run: the keys read from the file at open, aged by one, and every
+// key made since, so that a program linked again in this run is warmed too. Saved at close.
+// Only the thread that draws uses it.
+struct PipelineManifest {
+    std::filesystem::path path;     // The file beside the pipeline cache; empty: none is kept.
+    std::vector<ManifestKey> keys;  // Every key, in the order they were added.
+    std::unordered_map<std::string, std::size_t> index;  // Key bytes to its place in `keys`.
+};
+
 // The viewports (and scissors) a draw can set at once, which RecordedState can remember; a draw
 // with more indexed viewports than this records them every time.
 inline constexpr std::size_t kTrackedViewports = 16;
@@ -878,6 +933,8 @@ struct Context {
     std::uint64_t program_serial = 0;
 
     PipelineTable pipelines;           // Every graphics pipeline, by key (pipeline_for).
+    PipelineManifest manifest;         // The keys to make ahead, by program identity (R-10).
+    PipelinePrewarm prewarm;           // The worker that makes them (R-10).
     DrawScratch scratch;               // The draw's temporaries, kept for their capacity (R-04).
     bool byte_indices_logged = false;  // The 8-bit index emulation has been reported once.
     std::vector<std::pair<std::uint64_t, VkSampler>> vk_samplers;  // by a packed key
@@ -1165,6 +1222,34 @@ void forget_views(Buffer& b);
 // A texel view of buffer `name` as `gl_format` (RGBA32UI, RGBA32F, RGBA8, otherwise R32UI),
 // kept for this frame; `fallback` when the buffer is missing or too small.
 VkBufferView texel_view(GLuint name, GLenum gl_format, VkBufferView fallback);
+
+// ---- Defined in vkgl_pipelines.cpp: pipelines made ahead (R-10) ----
+
+// Returns program `p`'s identity across runs: a hash of its SPIR-V stages and of whether it uses
+// the material pages and dynamic uniforms, which decide its layout.
+std::uint64_t pipeline_identity(const Program& p);
+
+// Reads the manifest saved beside the pipeline cache file `cache`, aging each key by a run.
+// Nothing with `cache` empty or pipeline-prewarm off; a damaged manifest is logged and dropped.
+void load_pipeline_manifest(const std::filesystem::path& cache);
+
+// Saves the manifest beside the pipeline cache file it was read for, leaving out keys no run has
+// used for kManifestMaxAge runs and keeping at most kManifestKeys. Nothing with pipeline-prewarm
+// off. Call after stop_pipeline_prewarm.
+void save_pipeline_manifest();
+
+// Notes program `p`'s identity and queues the manifest's keys of that identity for the pre-warm
+// worker, which it starts if it is not running. For glLinkProgram, once `p` is linked.
+void prewarm_program(Program& p);
+
+// Takes back the pre-warm's jobs of program `serial` and waits for the one being made, then
+// destroys what the worker made for it that no draw took. For a program's release, before its
+// modules and layout go.
+void prewarm_forget(std::uint64_t serial);
+
+// Stops the pre-warm worker and waits for it, and destroys the pipelines it made that no draw
+// took. For the backend's close, before the programs are released.
+void stop_pipeline_prewarm();
 
 // ---- Defined in vkgl_pipelines.cpp ----
 
