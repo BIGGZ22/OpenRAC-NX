@@ -43,7 +43,7 @@ OpenRAC brings the PlayStation 2 Ratchet & Clank games to PC as real native game
 ## Play
 
 1. [Download the launcher](https://github.com/OpenRAC/OpenRAC/releases/latest) and install it.
-2. Open it and pick the folder with your disc images (`.iso`).
+2. Open it and pick the folder with your disc images (`.iso` or `.chd`).
 3. Press **Play**.
 
 The launcher sets your games up for you. Nothing else to install, and no game is ever downloaded.
