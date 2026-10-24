@@ -316,6 +316,7 @@ function(openrac_add_game config)
       else()
         target_sources(${target} PRIVATE "${OPENRAC_GAME_DIR}/common/profile_none.cpp")
       endif()
+      target_link_libraries(${target} PRIVATE Threads::Threads)
       # The debug overlay's moby class names: the editor's table, as text.
       openrac_moby_class_names(names_cpp)
       target_sources(${target} PRIVATE "${names_cpp}")

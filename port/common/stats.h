@@ -18,7 +18,9 @@
 //
 // Counters are always on (an add each). Sections, gauges and the frame history only work while
 // enabled() (the overlay is shown or a dump is open); otherwise each costs one test of a bool.
-// Everything is called from the thread that runs the game and draws.
+// Frame history, counters and section stacks have one owner at a time. The game thread begins a
+// frame, transfers measurement ownership with its render job, and drains that job before reading
+// or closing the frame. Game timing fields remain game-thread-only; probe registration is locked.
 
 #pragma once
 

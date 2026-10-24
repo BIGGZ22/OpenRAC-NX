@@ -106,6 +106,7 @@ constexpr std::array<Variable, kVariableCount> kVariables = {{
     {Var::FsrMotionBatchOff, "OPENRAC_FSR_MOTION_BATCH_OFF",
      Kind::Flag, Truth::Set, "off",
      "profiling reference: individual object-motion draws instead of pose-buffer batches"},
+
     {Var::FxDump, "OPENRAC_FX_DUMP",
      Kind::Integer, Truth::NotAFlag, "none",
      "with OPENRAC_DEBUG, each effect quad of the 100 frames from this one, in the log"},
@@ -241,6 +242,9 @@ constexpr std::array<Variable, kVariableCount> kVariables = {{
     {Var::RenderOptOff, "OPENRAC_RENDER_OPT_OFF",
      Kind::Text, Truth::NotAFlag, "none",
      "NAME,NAME or all: render optimisations of renderer/render_opt.h switched off, for comparing"},
+    {Var::RenderThread, "OPENRAC_RENDER_THREAD",
+     Kind::Flag, Truth::Set, "off",
+     "experimental: record the Vulkan world on a bounded render worker"},
     {Var::RoundNearest, "OPENRAC_ROUND_NEAREST",
      Kind::Flag, Truth::Set, "off",
      "the game's thread keeps the host's rounding to nearest, to compare"},

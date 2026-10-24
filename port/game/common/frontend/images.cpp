@@ -63,7 +63,9 @@ void upload_image(
         return old.dbp == base && old.dpsm == psm && old.x == x && old.y == y && old.width == width
                && old.height == height;
     });
-    if (g->renderer) {
+    if (render_pending()) {
+        g->pending_images.push_back(image);
+    } else if (g->renderer) {
         g->renderer->textures().upload(image);
     }
     g->images.push_back(std::move(image));
@@ -79,6 +81,10 @@ bool store_image(
     int height,
     std::span<std::uint8_t> out
 ) {
+    // Readbacks must see the completed snapshot, including its retained world image.
+    if (!finish_render()) {
+        return false;
+    }
     int fx = 0;
     int fy = 0;
     // The draw buffer as the game left it: the last frame with its world in.

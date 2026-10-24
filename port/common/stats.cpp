@@ -10,6 +10,7 @@
 #include <cstring>
 #include <deque>
 #include <memory>
+#include <mutex>
 #include <optional>
 
 #include "common/env.h"
@@ -38,6 +39,7 @@ struct OpenSection {
 constexpr std::uint64_t kDumpWait = 16;
 
 struct State {
+    std::mutex probes_mutex;  // Guards lazy probe registration across game and render threads.
     // Each consumer can stop without disabling the others' measurements.
     std::array<bool, static_cast<std::size_t>(Client::Count)> clients{};
     // The frames, a ring by serial; frames[serial % kHistory]. `open`: the one being filled.
@@ -469,6 +471,7 @@ std::vector<Probe*>& probes() {
 }
 
 const bool& probe(const char* variable, const char* what) {
+    const std::lock_guard lock(state().probes_mutex);
     // A variable has one probe: a second declaration is handed the first one's switch.
     for (Probe* p : probes()) {
         // The probe of that variable, by name.
