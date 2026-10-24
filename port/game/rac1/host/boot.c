@@ -216,6 +216,25 @@ static int hero(float position[3], float rotation[3], int32_t *state) {
     return 1;
 }
 
+/*
+ * initialize_level_runtime: a flight out of a level starts. It cuts its scene's two chunk buffers
+ * from the ends of the display list's buffers: the list's size (D_0016100C, its copy of the loaded
+ * level) less 0x60000 is where they start, and the list keeps what is before. The pause menu shrinks
+ * the list to 0x60000 (or 0x30000) for its own buffers and its close puts the level's size back
+ * (CalculateDmaTransferAddress, state 0x14), but loading a save from the pause's Load page leaves
+ * through the load (it fades out and the flight starts) without that close. The size then gave
+ * the chunks no room of their own: they started where the list does, the list's packets were
+ * written over the scene's animation tables, and the flight read one as a pointer (a fault at
+ * 0x50000010, camera at 429 -11 95: loading in a level, players' crashes on Hoven). With the
+ * pause's size still there, the level's size is put back first, as the close would have.
+ */
+void func_00232278(void) {
+    if (GREF(int, OPENRAC_DATA(RAC1_ADDR(0x0016100Cu))) <= 0x60000) {
+        func_002348B8();
+    }
+    func_00232278__game();
+}
+
 /* The flight's update (func_00230A90), once a frame of the transition's flight loop (space.c). */
 void func_00230A90(void) {
     flight_frames = 2;

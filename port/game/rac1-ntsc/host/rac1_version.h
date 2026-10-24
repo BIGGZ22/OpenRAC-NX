@@ -112,6 +112,14 @@
 #define func_L02_002A5238 game_FUN_L02_002a4058
 #define RAC1_ADDR_L09_0x001FCA00u 0x001FC740u
 #define RAC1_ADDR_L09_0x002F0AA0u 0x002EF750u
+/* A flight out of a level (boot.c): PAL initialize_level_runtime func_00232278 is FUN_00230f60
+ * here, CalculateDmaTransferAddress PAL func_002348B8 keeps its name, and the display list's size,
+ * PAL D_0016100C, is current_vu_chain D_00160F0C (the NTSC decomp's initialize_level_runtime.c,
+ * calculate_dma_transfer_address.c, render_globals.h). */
+#define func_00232278 game_FUN_00230f60
+#define func_00232278__game game_FUN_00230f60__game
+#define func_002348B8 game_CalculateDmaTransferAddress
+#define RAC1_ADDR_0x0016100Cu 0x00160F0Cu
 
 /* ---- generated below ---- */
 
