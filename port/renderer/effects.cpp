@@ -250,7 +250,11 @@ bool EffectRenderer::apply(std::uint64_t tex0_bits, std::uint64_t tex1_bits, std
                        state.textures.name(texture), texture == state.textures.placeholder() ? " (placeholder)" : "");
         }
     }
-    if (texture != m_applied.texture || clamp_bits != m_applied.clamp_bits) {
+    // The filter and the wrap are the bound texture's own state (glTexParameteri): set again for
+    // each texture bound, not only when the bits change. A second texture with the same bits kept
+    // the filter it had: the sea's second layer was magnified pixel by pixel (Pokitaru).
+    const bool rebound = texture != m_applied.texture || clamp_bits != m_applied.clamp_bits;
+    if (rebound) {
         const auto wrap = gs::Clamp::decode(clamp_bits);
         state.textures.bind_upscaled_texture_colours(
             texture,
@@ -261,7 +265,7 @@ bool EffectRenderer::apply(std::uint64_t tex0_bits, std::uint64_t tex1_bits, std
         );
     }
     m_applied.texture = texture;
-    if (tex1_bits != m_applied.tex1_bits || clamp_bits != m_applied.clamp_bits) {
+    if (rebound || tex1_bits != m_applied.tex1_bits) {
         const gs::Tex1 tex1 = gs::Tex1::decode(tex1_bits);
         const gs::Clamp clamp = gs::Clamp::decode(clamp_bits);
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, static_cast<GLint>(tex1.mmag ? GL_LINEAR : GL_NEAREST));
