@@ -23,6 +23,11 @@ a renderer that draws its kind of thing on the GPU.
 Shaders are in `shaders/` and compiled into the library
 ([cmake/Window.cmake](../cmake/Window.cmake)).
 
+`ui/` is a library of its own, `openrac_renderer_ui` ([ui/README.md](ui/README.md)): what the game
+programs draw over the game's picture with this GL (ImGui's draw lists on the Vulkan renderer's
+window, the on-screen pad, the frame-rate counter, the debug menu's picture), kept apart so that
+the renderer needs neither ImGui nor the platform's touch pad.
+
 ## Conventions (RENDERER.md, section 5)
 
 - **Reversed depth**: the depth buffer is cleared to 0 and tested GEQUAL; the
