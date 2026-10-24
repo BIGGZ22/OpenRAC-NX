@@ -54,6 +54,7 @@ before and after, and how its frames are shown to be the same.
 | `present-single-copy` | on | none (exact) | The frontend's blit of the picture into the window waits and becomes one blit into the screen, where nothing else touches the window first ([R-07](#r-07-one-copy-to-the-screen)). |
 | `vk-tight-sync` | on | none (exact) | Vulkan barriers name the stages and accesses they order, and only the copy to the screen waits for the swapchain image ([R-08](#r-08-barriers-that-name-their-stages)). |
 | `pipeline-prewarm` | on | none (exact) | The pipelines earlier runs made are made again on a worker thread once their program links, from a manifest beside the pipeline cache ([R-10](#r-10-pipelines-made-ahead-on-a-worker)). |
+| `present-timing` | off | none (exact) | Vulkan presents numbered and waited on, so the backend can say when one reached the screen; the FIFO latest-ready mode for the uncapped mode without tearing ([R-09](#r-09-presentation-timing)). |
 
 Its tests are `render_opt` (the table, and the parsing of the variable: a name, a list, `all`, an
 unknown name kept apart; it runs in the headless preset too) and `render_opt_environment` (the
@@ -1236,3 +1237,57 @@ OPENRAC_GL_API=vulkan port/build/release/openrac_render_bench --frames 60 --warm
 On real levels (the maintainers', with the patch applied):
 `port/build/release/openrac_render_bench --level assets/port/rac1/pal/level_12 --enhanced on --frames 300`,
 with and without `--opt-off cull-zero-coverage`, reading the `vk_gpu_completed_*` gauges.
+## R-09: presentation timing
+
+**What changed** (the backend; the frontend's use of it is not done, below):
+
+- The device is given `VK_KHR_present_id` and `VK_KHR_present_wait` where it offers them and the
+  backend has a window, and the FIFO latest-ready present mode (`VK_KHR_` or `VK_EXT_
+  present_mode_fifo_latest_ready`). The log says which it got (`vulkan: present ids yes, present
+  waits yes, latest-ready mode no`). `vkgl::Config` has `present_id`, `present_wait` and
+  `fifo_latest_ready`, all on, so that a test can open the device without each.
+- Under `present-timing` each present carries an id, counted from 1 for each swapchain.
+  `vkgl::present_timing()` (`vkgl.h`) says whether the device and swapchain support it and when
+  the most recent present was seen finished, on the steady clock; it polls the wait with no
+  timeout and never blocks. `vkgl::wait_for_present(timeout)` waits at most that long, for a caller
+  that sleeps anyway (the frame pacer). The time is when the backend saw the present finished, so
+  it is late by at most the time between the poll and the refresh; a pacer that waits on it in its
+  sleep sees it within the wait's own latency.
+- The uncapped mode without tearing (swap interval 0) on a screen without `IMMEDIATE` takes FIFO
+  latest-ready before `MAILBOX`; `IMMEDIATE` stays first, and the other intervals are as before.
+- The wait in `vkAcquireNextImageKHR` is measured each frame. `present()` publishes the gauges
+  `acquire_wait_s`, `present_wait_supported` and `present_time_known` while the debug tools
+  measure.
+
+`present-timing` is off by default: it changes when frames are shown, not what they show, and
+whether that is smoother is for the maintainers to measure. With it off nothing is numbered and
+the present modes are as before; the extensions are still asked of the device, which changes
+nothing a frame does.
+
+**Counters.** None of the draw counters moves; this package is not about them. The gauges exist
+and read 0 on both machines in the tests, whose hidden windows have no surface, so no device there
+is given the extensions. `render_equivalence_vulkan` draws the entry on and off in every scenario:
+identical on the Mac and box1.
+
+**The frontend's use of it is not done.** The pacing (`game/common/frontend/interpolation.cpp`,
+`swapped`) would take the visible time as its display phase where it is known, in place of
+nothing (it keeps no phase on Vulkan today and paces by the shared deadline), with the cost EMA as
+before. `game/common` does not include or link the Vulkan backend: it sees the renderer only
+through `renderer/gl.h` and `platform/window.h`, so the time has to reach it through one of them
+(a `platform::Window` call that asks the backend, say), which is outside this package's paths.
+[PROGRESS.md](../restructure/PROGRESS.md)'s follow-ups record it with the pure function and test
+it needs.
+
+**Tests.** `vulkan_present_timing` (new) opens the backend five times, with the three extensions
+allowed, each switched off in turn and none, presents three frames each time, asks for the timing
+after each (nothing known, and asking never blocks) and closes: passes on the Mac and box1 under
+the validation layer.
+
+**What the maintainers measure.** With a window on a 60, 144 and 240 Hz display, the game run on
+Vulkan with `OPENRAC_PACING=1` logs each frame shown, its time, its alpha, its kind, the refresh
+interval and the draw cost: once as is and once with the entry switched on (a build where
+`present-timing` defaults on, or a test hook; `OPENRAC_RENDER_OPT_OFF` only switches entries
+off), read the spread of the frame-to-frame times and of the alphas at a steady camera, and the F3
+overlay's `present_wait_supported`, `present_time_known` and `acquire_wait_s`. A smaller spread with
+the entry on is the gain; no number is claimed here.
+

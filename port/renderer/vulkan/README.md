@@ -12,7 +12,8 @@ Vulkan's is the comment at the top of [vkgl.h](vkgl.h).
 
 - [vkgl.h](vkgl.h): `openrac::vkgl`, the backend as the window and the frontend see it: `open` and
   `close`, `get_proc` (the GL functions by name, for `renderer/gl.h`'s table), `present`, the swap
-  interval, the GPU-driven instance calls and the counters the debug tools read.
+  interval, the GPU-driven instance calls, the presents' timing (`present_timing`,
+  `wait_for_present`) and the counters the debug tools read.
 - [shader_compiler.h](shader_compiler.h): GLSL made into SPIR-V with glslang, with what an OpenGL
   program would answer about its uniforms and blocks.
 
@@ -123,6 +124,8 @@ CI). Where Vulkan cannot open, the window falls back to OpenGL and they repeat t
 - `render_opt_vulkan`: the render counters of `SubmissionCounters` follow a fixed scene's draws
   (every draw a draw command, one submit a frame), printed for the reports of
   [RENDER_PERF.md](../../../docs/port/RENDER_PERF.md).
+- `vulkan_present_timing`: the device opened with each presentation extension switched off
+  (`vkgl::Config`), and presenting.
 - `vulkan_present`: the one copy to the screen against the two it replaces, drawn into stand-ins of
   the screen and compared byte for byte, and a draw after the blit making the copy first.
 - `vulkan_buffer`: a static GL buffer drawn, rewritten in part, filled again, read through 8-bit
