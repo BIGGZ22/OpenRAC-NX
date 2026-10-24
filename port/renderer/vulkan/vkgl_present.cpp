@@ -335,6 +335,7 @@ void advance() {
     g->frame = (g->frame + 1) % kFrames;
     Frame& f = frame();
     if (f.submitted) {
+        const stats::Scope wait("vulkan frame wait");
         const Clock::time_point start = Clock::now();
         vkWaitForFences(g->device, 1, &f.fence, VK_TRUE, UINT64_MAX);
         g->measures.wait_s += seconds_since(start);
@@ -357,6 +358,7 @@ void advance() {
 }
 
 bool present_to_screen() {
+    const stats::Scope pass("vulkan present");
     if (g->surface_lost && !renew_surface()) {
         return false;
     }

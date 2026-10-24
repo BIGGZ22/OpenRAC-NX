@@ -103,3 +103,36 @@ The gauges the backend published before (`vk_draws`, `vk_draw_api_calls`, `vk_pi
 64 by 64 default framebuffer of a hidden window) and checks that the counters follow: every draw is
 a recorded draw command, the commands recorded are at least the draws, and each frame without a
 read-back is one submit. It prints the counters, as the section on R-01 below quotes them.
+
+## Time per pass
+
+Every pass the frame runs is a `stats::Scope` ([common/stats.h](../../port/common/stats.h)): CPU
+time always, GPU time as well (`stats::kGpu`) where the backend has timestamp queries. Each
+timed section is a row of the F3 overlay and of each frame in `--debug-dump`. The milliseconds
+inform; on a shared machine they are noise beside the counters.
+
+When a context opens, the Vulkan backend reads its queue's `timestampValidBits` and the device's
+`timestampPeriod` and logs one line, `vulkan: gpu timestamps: yes (64 valid bits, 1 ns a tick)` or
+`vulkan: gpu timestamps: no (...)`; the gauge `vk_gpu_timestamps` is 1 or 0 each frame. With no
+timestamps the GPU columns stay empty and the CPU columns are still there.
+
+The sections, by where they are taken:
+
+| Where | Sections | GPU time |
+|---|---|---|
+| The frontend (`game/common/frontend.cpp`) | `render`, `swap` | no |
+| `Renderer::render` (`renderer/renderer.cpp`) | `frame clear`, `world depth prepass`, `probe coverage selection`, `world opaque colour`, one per bucket renderer (its name), `texture retire` | the prepass, selection and opaque colour, and each renderer that does not time itself; `frame clear` and `texture retire` are CPU work |
+| GTAO (`enhanced/renderer/gtao.cpp`) | `gtao`, `GTAO depth copy`, `GTAO horizons`, `GTAO filter` | yes, but `gtao` |
+| Early lighting (`enhanced/viewer/early_lighting.cpp`) | `early GI and cascades` | yes |
+| `LevelScene` (`scene/level_renderer.cpp`) | `shadow atlas`, `sun0 map` to `sun3 map`, `Ratchet shadow`, `shadow clear`, `sky colour`, one per layer | yes, as `OPENRAC_SUN_TIMING_DETAIL` chooses for the cascades |
+| The GPU-driven culling (`renderer/vulkan/gpu_draw.inc`) | `GPU instance visibility` | yes |
+| The Vulkan present (`renderer/vulkan/vkgl_present.cpp`) | `vulkan present` (acquire, the copy to the screen, submit, present), `vulkan frame wait` (the fence of the frame two back) | no |
+
+`frame clear`, `texture retire`, `vulkan present` and `vulkan frame wait` came with R-01; the rest
+were there. Not timed on their own yet, because their files belong to other packages:
+`LevelScene::upload` (a level's upload, at the level's load), and `LevelScene::set_palette` and
+`set_instances` with its `build_groups` (the moby joint palette and instance groups, which the
+frontend's `draw_kept` hands the scene before its `render` section opens), so no section holds their
+time. `LevelScene::prepare_shadows` (the cascades' culling on the CPU) runs inside the pass that
+calls it and is counted in that pass's time. PROGRESS.md's follow-ups list them for the scene's
+packages.

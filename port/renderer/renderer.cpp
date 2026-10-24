@@ -97,21 +97,30 @@ bool Renderer::add_game_renderers(std::string& error) {
 }
 
 void Renderer::render(const FrameInput& input, const RenderTarget& target) {
-    glBindFramebuffer(GL_FRAMEBUFFER, target.framebuffer);
-    glViewport(0, 0, target.width, target.height);
-    glDisable(GL_SCISSOR_TEST);
-    glColorMask(GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE);
-    glDepthMask(GL_TRUE);
-    glClearColor(
-        input.clear_colour[0], input.clear_colour[1], input.clear_colour[2], input.clear_colour[3]
-    );
-    // Reversed depth: nothing is in front of 0, and the tests are GEQUAL.
-    glClearDepth(0.0);
-    glClear(
-        (input.keep_colour ? 0 : GL_COLOR_BUFFER_BIT) | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT
-    );
-    glEnable(GL_DEPTH_TEST);
-    glDepthFunc(GL_GEQUAL);
+    // [debug tools] The frame's target set and cleared, timed on the CPU only: on Vulkan the clear
+    // is recorded with the first pass that draws.
+    {
+        const stats::Scope clear("frame clear");
+        glBindFramebuffer(GL_FRAMEBUFFER, target.framebuffer);
+        glViewport(0, 0, target.width, target.height);
+        glDisable(GL_SCISSOR_TEST);
+        glColorMask(GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE);
+        glDepthMask(GL_TRUE);
+        glClearColor(
+            input.clear_colour[0],
+            input.clear_colour[1],
+            input.clear_colour[2],
+            input.clear_colour[3]
+        );
+        // Reversed depth: nothing is in front of 0, and the tests are GEQUAL.
+        glClearDepth(0.0);
+        glClear(
+            (input.keep_colour ? 0 : GL_COLOR_BUFFER_BIT) | GL_DEPTH_BUFFER_BIT
+            | GL_STENCIL_BUFFER_BIT
+        );
+        glEnable(GL_DEPTH_TEST);
+        glDepthFunc(GL_GEQUAL);
+    }
 
     RenderState state{m_textures, target, {}};
     const bool enhanced_available =
@@ -311,6 +320,8 @@ void Renderer::render(const FrameInput& input, const RenderTarget& target) {
     }
     stats::gauge("opaque colour batching", opaque_done ? 1 : 0);
     m_stats = state.stats;
+    // [debug tools] The textures no pass drew with for a while let go, which walks every entry.
+    const stats::Scope retire("texture retire");
     m_textures.end_frame();
 }
 
