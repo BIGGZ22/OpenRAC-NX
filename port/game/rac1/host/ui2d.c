@@ -9,12 +9,13 @@
  * display list gets a marker in its place, so the window draws it where it came.
  * OPENRAC_UI_LOG: each distinct caller and texture of DrawTexturedQuad, once, in the log.
  */
-#include "rac1.h"
-
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+
+#include "openrac/host_env.h"
+#include "rac1.h"
 
 /* The screen offset the game adds to every 2D position (D_0013E600 +0x10/+0x14), and the HUD
  * arena (D_0019A4E8): +0xC the depth its sprites are drawn at, +0x20/+0x24 its texture tables. */
@@ -46,14 +47,14 @@ static void log_caller(const char* what, unsigned long long tex, int w, int h) {
  * when the 2D layer is replayed, and the caller sends the game's own packet. */
 /* OPENRAC_UI_SKIP=NAME,...: those routines send their own packets (bisecting). */
 static int skipped(const char* name) {
-    const char* list = getenv("OPENRAC_UI_SKIP");
+    const char* list = openrac_env_string("OPENRAC_UI_SKIP");
     return list != NULL && strstr(list, name) != NULL;
 }
 
 static int emit(openrac_game_ui_rect* q) {
     static int log = -1;
     if (log < 0) {
-        log = getenv("OPENRAC_UI_LOG") != NULL;
+        log = openrac_env_string("OPENRAC_UI_LOG") != NULL;
     }
     if (log) {
         log_caller("emit ", q->tex0, (int)(q->x[3] - q->x[0]) / 16, (int)(q->y[3] - q->y[0]) / 16);
@@ -124,7 +125,7 @@ void func_001F5800(int x, int y, int w, int h, int u, int v, int uw, int vh,
     }
     static int log = -1;
     if (log < 0) {
-        log = getenv("OPENRAC_UI_LOG") != NULL;
+        log = openrac_env_string("OPENRAC_UI_LOG") != NULL;
     }
     if (log) {
         log_caller("quad ", tex, w, h);
