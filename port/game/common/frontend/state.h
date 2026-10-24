@@ -245,8 +245,15 @@ bool one_frame_a_tick();
 
 // Draws `framebuffer` (width x height) into the window's box for a picture of shape `aspect`, black
 // around it; `flip`: its first row is the top (frontend.cpp).
-void present(unsigned framebuffer, int width, int height, int window_width, int window_height, bool flip,
-             float aspect);
+void present(
+    unsigned framebuffer,
+    int width,
+    int height,
+    int window_width,
+    int window_height,
+    bool flip,
+    float aspect
+);
 
 // Returns the value `var` was set to as a string of its own, or nothing when it is unset
 // (frontend.cpp).

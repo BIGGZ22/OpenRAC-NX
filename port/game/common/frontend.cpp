@@ -97,7 +97,6 @@ std::optional<std::string> env_string(env::Var var) {
     return std::string(*found);
 }
 
-
 // Returns the frame number `var` names, read as std::strtoull reads it, or nothing when it is
 // unset. The frame numbers (OPENRAC_DUMP_RAM, OPENRAC_FX_DUMP, OPENRAC_SHOT_FROM) have always been
 // read so: env::integer reads as std::strtoll, which differs for a negative value past -2^63
