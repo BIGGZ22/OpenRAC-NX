@@ -19,6 +19,8 @@
 namespace openrac::program {
 namespace {
 
+// Logs `why` and the usage line, and ends the program with exit code 64 (EX_USAGE, the usage
+// error of BSD's sysexits.h).
 [[noreturn]] void usage(const std::string& why) {
     log::error("{}", why);
     log::error(

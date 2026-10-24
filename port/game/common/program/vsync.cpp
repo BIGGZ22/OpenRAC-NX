@@ -43,6 +43,8 @@
 namespace openrac::program {
 namespace {
 
+// ---- Each frame's helpers ----
+
 // Returns the value `var` was set to as a string of its own, or nothing when it is unset. For the
 // reads below that hand the value to the C library (a script for sscanf, a file to write), which
 // wants a string that ends in a NUL: env::value's view need not.
@@ -182,6 +184,8 @@ std::chrono::microseconds tick_period() {
 
 }  // namespace
 
+// ---- The clock and the end ----
+
 int tick_rate() {
     return 60;
 }
@@ -208,6 +212,8 @@ void finish() {
 #endif
 }
 #endif
+
+// ---- The vertical blank ----
 
 int vsync() {
     // [debug tools] The game's own code stops here and goes on when this returns: its time is the
@@ -297,9 +303,9 @@ int vsync() {
 
     using namespace std::chrono;
     const auto now = steady_clock::now();
-    // OPENRAC_FPS: the frames per second over each 300 frames, in the log. OPENRAC_UNCAPPED: no wait
-    // for the next frame's time (the game then runs as fast as the machine allows: a measure, not a
-    // way to play, since the game's tick is its frame).
+    // OPENRAC_FPS: the frames per second over each 300 frames, in the log. OPENRAC_UNCAPPED: no
+    // wait for the next frame's time (the game then runs as fast as the machine allows: a measure,
+    // not a way to play, since the game's tick is its frame).
     static const bool& fps =
         stats::probe("OPENRAC_FPS", "the ticks per second over each 300 ticks, in the log");
     static const bool uncapped = env::flag(env::Var::Uncapped);
@@ -334,15 +340,16 @@ int vsync() {
     }
 
     // OPENRAC_GUARD=FRAME:ADDRESS:BYTES[:SKIP]: from FRAME on, the first write (after SKIP) into
-    // those bytes of game memory ends the program with the host's stack (runtime::guard_writes), to find who corrupts it.
+    // those bytes of game memory ends the program with the host's stack (runtime::guard_writes), to
+    // find who corrupts it.
     static const std::optional<std::string> guard = env_string(env::Var::Guard);
 
     if (guard) {
         unsigned long from = 0, address = 0, bytes = 4, skip = 0;
         std::sscanf(guard->c_str(), "%lu:%lx:%lx:%lu", &from, &address, &bytes, &skip);
 
-        // The guard is set from frame FROM on. g_frame counts up from 0, so the cast keeps its value
-        // and the comparison is the one the implicit conversion made.
+        // The guard is set from frame FROM on. g_frame counts up from 0, so the cast keeps its
+        // value and the comparison is the one the implicit conversion made.
         if (static_cast<unsigned long>(g_frame) >= from) {
             runtime::guard_writes(
                 static_cast<gaddr>(address),
@@ -352,7 +359,7 @@ int vsync() {
         }
     }
 
-    // OPENRAC_HITCH: each frame that took more than twice the frame time, with how long, in the log.
+    // OPENRAC_HITCH: each frame that took over 1.25 frame times, with how long, in the log.
     static const bool& hitch =
         stats::probe("OPENRAC_HITCH", "each tick that took over 1.25 tick times, in the log");
     static steady_clock::time_point hitch_from = now;

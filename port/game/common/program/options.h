@@ -54,7 +54,8 @@ fs::path default_levels(const fs::path& data);
 
 // Reads the command line into Options, with the defaults where an option is not given. Prints the
 // usage and ends the program (exit code 64) on an unknown option, a missing value, or no data
-// folder. --no-card and --level set game_host.h's openrac_game_no_card and openrac_game_start_level.
+// folder. --no-card and --level set game_host.h's openrac_game_no_card and
+// openrac_game_start_level.
 Options parse(int argc, char** argv);
 
 // The command line as it was typed, quoted where needed, with the home folder as ~.

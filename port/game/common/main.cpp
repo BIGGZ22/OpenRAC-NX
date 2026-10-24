@@ -2,11 +2,12 @@
 // Copyright (c) 2026 the OpenRAC contributors
 //
 // openrac-<game>: one of the games, native. Every game's program is this
-// file, linked with that game's translated C and its description
+// file and those of program/, linked with that game's translated C and its description
 // (openrac_game, generated from port/game/<id>/hostgen.json).
 //
 //   openrac-<id> --data <install>/active/<game>/data [--cards DIR] [--frames N] [--stop-on-missing]
-//                [--level N] [--skip-movies] [--mods DIR] [--settings FILE] [--plugins FILE] [--probes DIR] [--no-mods]
+//                [--level N] [--skip-movies] [--mods DIR] [--settings FILE] [--plugins FILE]
+//                [--probes DIR] [--no-mods]
 //
 // The data folder is what the extractor made from the player's disc
 // (tools/extractor.py; the launcher's "Set up from your disc"). The program
@@ -23,6 +24,12 @@
 // A function that has no C yet (still assembly in the decompilation, or a
 // library not replaced yet) is logged and returns, and the game carries on;
 // --stop-on-missing stops at the first one instead and says which, for checks.
+//
+// This file is the program's start: the command line read, the session's log opened, the
+// executable loaded, the window and the sound opened, the mods loaded, the game's main run. The
+// rest is in program/: options (the command line and default paths), vsync (each frame's end),
+// sound, movie, levels (the level programs, --check-levels) and game_host (game_host.h's host
+// side), with program.h for what they share.
 
 #include <chrono>
 #include <cstdint>

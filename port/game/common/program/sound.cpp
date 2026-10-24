@@ -29,6 +29,7 @@ namespace {
 
 // The game's sounds (openrac/sound_engine.h), rendered on the output's thread.
 std::unique_ptr<platform::AudioOutput> g_sound;
+// The frame from which watch_sound next tries to open a device that could not be opened.
 long g_sound_retry_frame = 0;
 
 }  // namespace

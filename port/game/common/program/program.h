@@ -1,13 +1,15 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 // Copyright (c) 2026 the OpenRAC contributors
 //
-// What the files of a game's program share, and nothing outside the program includes: main.cpp's
-// state that the host side of game_host.h (program/game_host.cpp) reads and writes, and the two
-// long bodies of game_host.h's entry points that main.cpp still holds.
+// What the files of a game's program (main.cpp and program/) share, and nothing outside the
+// program includes: the program's state, which main.cpp defines, and the functions one file calls
+// in another. Each function is defined in the file named for its subject: vsync.cpp (vsync,
+// tick_rate, finish, leave), movie.cpp, sound.cpp and levels.cpp. options.h declares the command
+// line's Options and its parser.
 //
-// The state is file-global, as it was inside main.cpp: the split of main.cpp into program/ gathers
-// it into state of its own (CODING_CONVENTIONS.md, sections 11.4 and 24). Only the game's thread,
-// the one that runs the game's main, reads or writes it.
+// The state is file-global, as it was inside main.cpp; it is to become an object passed to what
+// needs it (CODING_CONVENTIONS.md, sections 11.4 and 24). main sets it up before the game runs;
+// after that only the game's thread, the one that runs the game's main, reads or writes it.
 
 #pragma once
 
@@ -81,8 +83,8 @@ void finish();
 #endif
 
 // OPENRAC_AUDIO_TICKED=1: no sound device. The game's sounds advance by one tick's samples each
-// tick (rendered and dropped), and streams are read when they start, so every answer the game
-// gets back from the sound engine (a voice's state, a stream's position) lands on the same tick, however
+// tick (rendered and dropped), and streams are read when they start, so every answer the game gets
+// back from the sound engine (a voice's state, a stream's position) lands on the same tick, however
 // fast the machine runs it: port/tools/regress's runs repeat. A device pulls at the real clock's
 // rate, which an uncapped run outpaces by a varying amount.
 bool audio_ticked();
@@ -117,12 +119,12 @@ void load_level_program(int level);
 
 #ifdef OPENRAC_FRONTEND
 // --check-levels: every level the window draws from (level_00 to level_18, the flight world 98 and
-// the title's 99) is read as the window reads it, without a window. A level that cannot be read,
-// or that has nothing to draw, is named with the reason; when all are whole, `verified-<format>.json`
-// (the extracted levels' format, viewer::kManifestFormat) is written beside them, which the launcher
-// asks for before it offers Play. A game started over levels that are missing or cut short shows
-// its HUD over a black world and says nothing else; levels of an older format fail the check (their
-// manifests are refused), so the launcher reads them from the disc again.
+// the title's 99) is read as the window reads it, without a window. A level that cannot be read, or
+// that has nothing to draw, is named with the reason; when all are whole, `verified-<format>.json`
+// (the extracted levels' format, viewer::kManifestFormat) is written beside them, which the
+// launcher asks for before it offers Play. A game started over levels that are missing or cut short
+// shows its HUD over a black world and says nothing else; levels of an older format fail the check
+// (their manifests are refused), so the launcher reads them from the disc again.
 int check_levels(const fs::path& levels);
 #endif
 

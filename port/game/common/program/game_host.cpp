@@ -9,8 +9,8 @@
 //
 // The state these share with the rest of the program (the frame count, the display list sent, the
 // window's presence) is main.cpp's, through program/program.h. The two long bodies, the vertical
-// blank's and the movie player's, are main.cpp's too (program::vsync, program::play_movie), until
-// the split of main.cpp moves them on; the entry points here call them.
+// blank's and the movie player's, are program/vsync.cpp's and program/movie.cpp's (program::vsync,
+// program::play_movie); the entry points here call them.
 //
 // The definitions sit inside openrac::program so that they name the port's modules as the rest of
 // the program does. A function with C linkage is one function whatever namespace declares it, so
