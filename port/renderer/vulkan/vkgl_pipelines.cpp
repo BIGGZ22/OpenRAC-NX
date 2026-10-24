@@ -7,6 +7,7 @@
 // after which a pipeline made counts as a hitch (vkgl.h, begin_pipeline_warmup).
 
 #include <algorithm>
+#include <array>
 #include <cstddef>
 #include <cstdint>
 #include <cstring>
@@ -16,6 +17,7 @@
 #include <volk.h>
 
 #include "renderer/gl.h"
+#include "renderer/render_opt.h"
 #include "renderer/vulkan/shader_compiler.h"
 #include "renderer/vulkan/vkgl_internal.h"
 #include "renderer/world/gl_world.h"
@@ -139,19 +141,6 @@ VkPrimitiveTopology topology_of(GLenum mode) {
     }
 }
 
-// Everything a pipeline bakes in, as plain numbers: the cache's key.
-struct PipelineKey {
-    std::uint64_t program;
-    std::uint32_t topology, restart, polygon, cull, front;
-    std::uint32_t blend, src_rgb, dst_rgb, src_a, dst_a, equation, colour_mask;
-    std::uint32_t depth_test, depth_write, depth_func;
-    std::uint32_t stencil, stencil_func, front_ops[3], back_ops[3];
-    std::uint32_t colour_format, depth_format, samples;
-    std::uint32_t inputs;
-    std::uint32_t viewports;
-    Input input[kAttributes];
-};
-
 // ---- Descriptors ----
 
 VkDescriptorPool new_pool() {
@@ -189,6 +178,127 @@ BufferRef block_buffer(GLuint binding, int size) {
 }
 
 }  // namespace
+
+// ---- Pipelines by key ----
+
+namespace {
+
+// FNV-1a's 64-bit offset basis and prime (documented: the FNV hash's specification).
+constexpr std::uint64_t kFnvBasis = 0xcbf29ce484222325u;
+constexpr std::uint64_t kFnvPrime = 0x100000001b3u;
+
+// The finaliser of SplitMix64 (documented: Steele, Lea and Flood's SplitMix), which spreads FNV's
+// weak low bits over the whole word before they pick a slot.
+constexpr std::uint64_t kMixFirst = 0xbf58476d1ce4e5b9u;
+constexpr std::uint64_t kMixSecond = 0x94d049bb133111ebu;
+constexpr int kMixShiftFirst = 30;
+constexpr int kMixShiftSecond = 27;
+constexpr int kMixShiftLast = 31;
+
+// The slots PipelineTable starts with, a power of two.
+constexpr std::size_t kFirstSlots = 64;
+
+}  // namespace
+
+std::uint64_t hash_key(const PipelineKey& key) {
+    constexpr std::size_t kWords = sizeof(PipelineKey) / sizeof(std::uint64_t);
+    std::array<std::uint64_t, kWords> words{};
+    std::memcpy(words.data(), &key, sizeof key);
+    std::uint64_t hash = kFnvBasis;
+
+    // FNV-1a a word at a time rather than a byte: the key is about 380 bytes, read once a draw.
+    for (const std::uint64_t word : words) {
+        hash = (hash ^ word) * kFnvPrime;
+    }
+
+    hash = (hash ^ (hash >> kMixShiftFirst)) * kMixFirst;
+    hash = (hash ^ (hash >> kMixShiftSecond)) * kMixSecond;
+    return hash ^ (hash >> kMixShiftLast);
+}
+
+const VkPipeline* PipelineTable::find(const PipelineKey& key, std::uint64_t hash) const {
+    // Nothing made yet.
+    if (m_slots.empty()) {
+        return nullptr;
+    }
+
+    const std::size_t mask = m_slots.size() - 1;
+
+    // Linear probing from the hash's slot; a free slot ends the search, and the table is never
+    // more than half full, so one is always reached.
+    for (std::size_t at = hash & mask;; at = (at + 1) & mask) {
+        const std::uint32_t slot = m_slots[at];
+
+        // A free slot: the key was never added.
+        if (slot == 0) {
+            return nullptr;
+        }
+
+        const std::size_t index = slot - 1;
+
+        // A hash match is only a candidate: the whole key decides, so a collision never returns
+        // another key's pipeline.
+        if (m_hashes[index] == hash
+            && std::memcmp(&m_entries[index].first, &key, sizeof key) == 0) {
+            return &m_entries[index].second;
+        }
+    }
+}
+
+const VkPipeline* PipelineTable::find_reference(const std::string& key) const {
+    const auto found = m_reference.find(key);
+    return found != m_reference.end() ? &m_entries[found->second].second : nullptr;
+}
+
+void PipelineTable::insert(const PipelineKey& key, std::uint64_t hash, VkPipeline pipeline) {
+    m_entries.emplace_back(key, pipeline);
+    m_hashes.push_back(hash);
+
+    // The slots are kept at least twice the entries, so a probe meets a free slot soon.
+    if (m_entries.size() * 2 > m_slots.size()) {
+        rebuild();
+        return;
+    }
+
+    const std::size_t index = m_entries.size() - 1;
+    place(index, hash);
+    m_reference.emplace(
+        std::string(reinterpret_cast<const char*>(&m_entries[index].first), sizeof key), index
+    );
+}
+
+void PipelineTable::place(std::size_t index, std::uint64_t hash) {
+    const std::size_t mask = m_slots.size() - 1;
+    std::size_t at = hash & mask;
+
+    // The first free slot from the hash's.
+    while (m_slots[at] != 0) {
+        at = (at + 1) & mask;
+    }
+
+    m_slots[at] = static_cast<std::uint32_t>(index + 1);
+}
+
+void PipelineTable::rebuild() {
+    std::size_t slots = kFirstSlots;
+
+    // The smallest power of two at least twice the entries.
+    while (slots < m_entries.size() * 2) {
+        slots *= 2;
+    }
+
+    m_slots.assign(slots, 0);
+    m_hashes.resize(m_entries.size());
+    m_reference.clear();
+
+    // Each entry into both indexes again.
+    for (std::size_t index = 0; index < m_entries.size(); ++index) {
+        const PipelineKey& key = m_entries[index].first;
+        m_hashes[index] = hash_key(key);
+        place(index, m_hashes[index]);
+        m_reference.emplace(std::string(reinterpret_cast<const char*>(&key), sizeof key), index);
+    }
+}
 
 // ---- Pipelines ----
 
@@ -400,9 +510,20 @@ VkPipeline pipeline_for(
     k.inputs = count;
     k.viewports = static_cast<std::uint32_t>(std::max<std::size_t>(1, g->indexed_viewports.size()));
     std::memcpy(k.input, inputs, sizeof(Input) * count);
-    std::string key(reinterpret_cast<const char*>(&k), sizeof k);
-    if (auto it = g->pipelines.find(key); it != g->pipelines.end()) {
-        return it->second;
+    const std::uint64_t hash = hash_key(k);
+
+    // A key made before: by its hash and a compare of the whole key (vk-draw-cache), or by its
+    // bytes as a string, which allocates for every draw (the reference path).
+    if (renderer::render_opt::enabled(renderer::render_opt::Opt::VkDrawCache)) {
+        // Found by its hash.
+        if (const VkPipeline* made = g->pipelines.find(k, hash)) {
+            return *made;
+        }
+    } else if (const VkPipeline* made = g->pipelines.find_reference(
+                   std::string(reinterpret_cast<const char*>(&k), sizeof k)
+               )) {
+        // Found by its bytes.
+        return *made;
     }
 
     VkPipelineShaderStageCreateInfo stages[2]{};
@@ -538,7 +659,7 @@ VkPipeline pipeline_for(
         )) {
         pipeline = VK_NULL_HANDLE;
     }
-    g->pipelines.emplace(std::move(key), pipeline);
+    g->pipelines.insert(k, hash, pipeline);
     return pipeline;
 }
 

@@ -1664,17 +1664,11 @@ void release_program(Program& p) {
         vkDestroyDescriptorSetLayout(g->device, set_layout, nullptr);
     });
     // Its pipelines go with it.
-    const std::uint64_t serial = p.serial;
-    for (auto it = g->pipelines.begin(); it != g->pipelines.end();) {
-        std::uint64_t key_serial = 0;
-        std::memcpy(&key_serial, it->first.data(), sizeof key_serial);
-        if (key_serial == serial) {
-            defer([pipeline = it->second] { vkDestroyPipeline(g->device, pipeline, nullptr); });
-            it = g->pipelines.erase(it);
-        } else {
-            ++it;
-        }
-    }
+    // Called by erase_program, on this thread, for each pipeline of the program: destroyed once
+    // the frames that may still draw with it are done.
+    g->pipelines.erase_program(p.serial, [](VkPipeline pipeline) {
+        defer([pipeline] { vkDestroyPipeline(g->device, pipeline, nullptr); });
+    });
     p.vertex = p.fragment = VK_NULL_HANDLE;
     p.compute = VK_NULL_HANDLE;
     p.compute_pipeline = VK_NULL_HANDLE;

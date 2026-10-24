@@ -11,6 +11,7 @@
 
 #pragma once
 
+#include <algorithm>
 #include <array>
 #include <atomic>
 #include <chrono>
@@ -530,6 +531,93 @@ inline double seconds_since(Clock::time_point start) {
     return std::chrono::duration<double>(Clock::now() - start).count();
 }
 
+// ---- Pipelines by key ----
+
+// One vertex input of a pipeline's key: location, format, stride and whether it is per instance.
+struct Input {
+    std::uint32_t location, format, stride, instanced;
+};
+
+// Everything a pipeline bakes in, as plain numbers: the cache's key. pipeline_for zeroes it whole
+// before it fills it, so its bytes (padding included) are the key: it is compared and hashed as
+// bytes. Trivially copyable, with no padding between its 8-byte words.
+struct PipelineKey {
+    std::uint64_t program;
+    std::uint32_t topology, restart, polygon, cull, front;
+    std::uint32_t blend, src_rgb, dst_rgb, src_a, dst_a, equation, colour_mask;
+    std::uint32_t depth_test, depth_write, depth_func;
+    std::uint32_t stencil, stencil_func, front_ops[3], back_ops[3];
+    std::uint32_t colour_format, depth_format, samples;
+    std::uint32_t inputs;
+    std::uint32_t viewports;
+    Input input[kAttributes];
+};
+
+static_assert(sizeof(PipelineKey) % sizeof(std::uint64_t) == 0, "PipelineKey hashes as words");
+
+// Returns the 64-bit hash of `key`'s bytes: FNV-1a over its 8-byte words, then mixed, so that its
+// low bits pick a slot of PipelineTable. Equal keys hash alike; a lookup still compares the key.
+std::uint64_t hash_key(const PipelineKey& key);
+
+// The graphics pipelines made so far, one per key, and two ways to find them: by the key's hash
+// in a flat table of slots that compares the whole key on a hit (vk-draw-cache), or by the key's
+// bytes as a std::string (the reference path, as the backend looked them up before R-04). Both
+// indexes name the same entries, so the two paths find the same pipelines.
+//
+// Owned by the Context; the pipelines themselves are destroyed by whoever erases them (a deleted
+// program, vkgl_gl.cpp) or by the backend's close (vkgl_device.cpp). Only the thread that draws
+// uses it.
+class PipelineTable {
+public:
+    using Entry = std::pair<PipelineKey, VkPipeline>;  // A key and the pipeline made for it.
+
+    // Returns the pipeline made for `key`, whose hash_key is `hash`, or null when none was.
+    // Hot path: one slot probe or a few, and one compare of the key; no allocation.
+    [[nodiscard]] const VkPipeline* find(const PipelineKey& key, std::uint64_t hash) const;
+
+    // Returns the pipeline made for the key whose bytes are `key`, or null: the reference path.
+    [[nodiscard]] const VkPipeline* find_reference(const std::string& key) const;
+
+    // Adds `pipeline` for `key`, whose hash_key is `hash`. The key must not be in the table yet.
+    void insert(const PipelineKey& key, std::uint64_t hash, VkPipeline pipeline);
+
+    // Removes every pipeline whose key names program `serial`, handing each to `retire`.
+    template <typename Retire>
+    void erase_program(std::uint64_t serial, Retire retire) {
+        // The program's entries to the back, whole (remove_if would leave the back unspecified).
+        const auto ends =
+            std::stable_partition(m_entries.begin(), m_entries.end(), [serial](const Entry& e) {
+                return e.first.program != serial;
+            });
+
+        // Each erased pipeline, before its entry goes.
+        for (auto it = ends; it != m_entries.end(); ++it) {
+            retire(it->second);
+        }
+
+        m_entries.erase(ends, m_entries.end());
+        rebuild();
+    }
+
+    // The entries, for destroying every pipeline at close.
+    [[nodiscard]] std::vector<Entry>::iterator begin() { return m_entries.begin(); }
+
+    [[nodiscard]] std::vector<Entry>::iterator end() { return m_entries.end(); }
+
+private:
+    // Puts entry `index`, of hash `hash`, into a free slot. The slots must have room.
+    void place(std::size_t index, std::uint64_t hash);
+
+    // Makes both indexes again from the entries, the slots at least twice the entries' count.
+    void rebuild();
+
+    std::vector<Entry> m_entries;         // Every pipeline, in the order they were made.
+    std::vector<std::uint64_t> m_hashes;  // Each entry's hash_key, at the entry's index.
+    // Open addressing over a power of two: 0 is a free slot, n the entry n - 1. Probed linearly.
+    std::vector<std::uint32_t> m_slots;
+    std::unordered_map<std::string, std::size_t> m_reference;  // Key bytes to entry index.
+};
+
 // The viewports (and scissors) a draw can set at once, which RecordedState can remember; a draw
 // with more indexed viewports than this records them every time.
 inline constexpr std::size_t kTrackedViewports = 16;
@@ -661,7 +749,7 @@ struct Context {
     Names<Program> programs;
     std::uint64_t program_serial = 0;
 
-    std::unordered_map<std::string, VkPipeline> pipelines;
+    PipelineTable pipelines;  // Every graphics pipeline, by key (pipeline_for).
     std::vector<std::pair<std::uint64_t, VkSampler>> vk_samplers;  // by a packed key
 
     ImagePtr dummy_image;
@@ -784,11 +872,6 @@ struct BufferRef {
 
 inline constexpr VkDeviceSize kDefaultFloat = 256;    // in the dummy buffer: (0, 0, 0, 1) as floats
 inline constexpr VkDeviceSize kDefaultInteger = 272;  // and as integers
-
-// One vertex input of a pipeline's key: location, format, stride and whether it is per instance.
-struct Input {
-    std::uint32_t location, format, stride, instanced;
-};
 
 // What a sampler uniform reads now: its image (null for a buffer texture) and the descriptor.
 struct Sampled {
