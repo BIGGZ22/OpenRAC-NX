@@ -207,10 +207,10 @@ release, and a new file adds its line there when it is added.
 
 ## Keeping in step with the site
 
-| When the site changes                           | Change                                                                                                                            |
-| ----------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------- |
-| `src/app/globals.css` `@theme` colours or fonts | `src/app.css` `:root`, the tables above                                                                                           |
-| `src/lib/projects.ts` themes                    | `src/lib/themes.ts`                                                                                                               |
-| `src/components/Header.tsx`, `Progress.tsx`     | `Header.svelte`, `SideList.svelte`, `GamePlayer.svelte`                                                                           |
-| `src/app/icon.png`, `apple-icon.png`            | `public/`, and `npx tauri icon <1024 px png> -o src-tauri/icons` (then delete the `android/`, `ios/` and `Square*` files it adds) |
-| `DISCORD_URL`                                   | `src/lib/links.ts`                                                                                                                |
+| When the site changes                           | Change                                                                  |
+| ----------------------------------------------- | ----------------------------------------------------------------------- |
+| `src/app/globals.css` `@theme` colours or fonts | `src/app.css` `:root`, the tables above                                 |
+| `src/lib/projects.ts` themes                    | `src/lib/themes.ts`                                                     |
+| `src/components/Header.tsx`, `Progress.tsx`     | `Header.svelte`, `SideList.svelte`, `GamePlayer.svelte`                 |
+| `src/app/icon.png`, `apple-icon.png`            | nothing: the app icons are the logo's mark (see THIRD_PARTY_NOTICES.md) |
+| `DISCORD_URL`                                   | `src/lib/links.ts`                                                      |

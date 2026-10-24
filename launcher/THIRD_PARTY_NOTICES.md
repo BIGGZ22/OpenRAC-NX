@@ -10,13 +10,14 @@ and `Cargo.lock`.
 The colours, type, header bar, game cards and progress bar follow
 [OpenRAC/openrac-site](https://github.com/OpenRAC/openrac-site) (`src/app/globals.css`,
 `src/components/Header.tsx`, `src/components/Progress.tsx`, `src/lib/projects.ts`).
-`public/wrench.webp` is the site's `public/wrench.webp`; `public/icon.png` is its
-`src/app/icon.png`; the app icons in `src-tauri/icons/` are made from its
-`src/app/apple-icon.png` with `tauri icon`. The Android icons
-(`src-tauri/gen/android/app/src/main/res/mipmap-*`) are `yarn tauri icon
-src-tauri/icons/android.json -o <dir>`'s `android/` folder: the same icon,
-and for Android's adaptive icon `android-foreground.png`, that icon at 64% on
-its own orange so that the system's mask never cuts the wrench.
+`public/wrench.webp` is the site's `public/wrench.webp`. The app icons are
+OpenRAC's own: the logo's mark (`src/components/Logo.svelte`) in `--ink-deep` on
+the bar's orange, drawn at 1024 px and made into `src-tauri/icons/` and
+`public/icon.png` with `tauri icon`; `icon.icns` is `make_macos_icon.py`'s. The
+Android icons (`src-tauri/gen/android/app/src/main/res/mipmap-*`) are `yarn tauri
+icon src-tauri/icons/android.json -o <dir>`'s `android/` folder: the same icon,
+and for Android's adaptive icon `android-foreground.png`, the mark at 55% on
+the orange so that the system's mask never cuts it.
 
 ```
 MIT License
