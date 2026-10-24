@@ -81,6 +81,10 @@ worker has made, waits for one it is making or has queued, and makes the rest it
 release waits for its job and takes the rest back; the backend's close stops and joins the worker
 before anything else.
 
+With `vk-extended-dynamic-state` on (off by default, R-11), the cull, front face, depth and
+stencil state (`FixedState`) leaves the pipeline's key and the draw records it as Vulkan 1.3
+dynamic state, through the same tracker.
+
 ## Errors
 
 `open()` returns false with a message when Vulkan cannot start (the window then falls back to
@@ -120,7 +124,8 @@ CI). Where Vulkan cannot open, the window falls back to OpenGL and they repeat t
   `world_gl_smoke_vulkan`, `viewer_vulkan`: every GL call the renderers make, carried out here.
 - `vulkan_uniform`, `vulkan_uniform_reference`: uniform uploads and descriptor reuse, with the
   reuse on and off (`OPENRAC_VK_UNIFORM_REUSE_OFF`); a state bounce (A, B, A) draws A's pipeline
-  and set again, and deleting one program's pipelines leaves the others' usable.
+  and set again, deleting one program's pipelines leaves the others' usable, and cull and front
+  face toggled in one pass draw alike as dynamic and as baked state.
 - `render_opt_vulkan`: the render counters of `SubmissionCounters` follow a fixed scene's draws
   (every draw a draw command, one submit a frame), printed for the reports of
   [RENDER_PERF.md](../../../docs/port/RENDER_PERF.md).

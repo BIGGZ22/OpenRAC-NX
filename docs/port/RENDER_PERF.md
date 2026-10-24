@@ -55,6 +55,7 @@ before and after, and how its frames are shown to be the same.
 | `vk-tight-sync` | on | none (exact) | Vulkan barriers name the stages and accesses they order, and only the copy to the screen waits for the swapchain image ([R-08](#r-08-barriers-that-name-their-stages)). |
 | `pipeline-prewarm` | on | none (exact) | The pipelines earlier runs made are made again on a worker thread once their program links, from a manifest beside the pipeline cache ([R-10](#r-10-pipelines-made-ahead-on-a-worker)). |
 | `present-timing` | off | none (exact) | Vulkan presents numbered and waited on, so the backend can say when one reached the screen; the FIFO latest-ready mode for the uncapped mode without tearing ([R-09](#r-09-presentation-timing)). |
+| `vk-extended-dynamic-state` | off | none (exact) | Cull, front face, depth and stencil state recorded by the draw as Vulkan 1.3 dynamic state instead of baked into each pipeline; off because the synthetic scene has no program drawn with more than one such state ([R-11](#r-11-fixed-state-as-dynamic-state-shipped-off)). |
 
 Its tests are `render_opt` (the table, and the parsing of the variable: a name, a list, `all`, an
 unknown name kept apart; it runs in the headless preset too) and `render_opt_environment` (the
@@ -698,6 +699,53 @@ On real levels the maintainers' commands are two runs of the game on the same bu
 writes the manifest), or
 `python3 port/tools/perf/render_bench.py --level assets/port/rac1/pal/level_12 --compare-opt pipeline-prewarm`
 (its warm-cache setting).
+
+## R-11: fixed state as dynamic state, shipped off
+
+**What changed** (`renderer/vulkan/vkgl_pipelines.cpp`, `vkgl_draw.cpp`, `vkgl_internal.h`,
+`vkgl_device.cpp`, `pipeline_cache_file.h`), behind `vk-extended-dynamic-state`, which ships
+**off**:
+
+- `PipelineKey` holds the cull mode, front face, depth test, depth write, depth compare, stencil
+  test and stencil ops as one `FixedState`, which `fixed_state()` computes from the GL state for
+  both paths, and says whether that state is dynamic. With the entry on, on a device of Vulkan 1.3
+  (whose core extended dynamic state needs no feature: `vulkaninfo` gives the Mac's MoltenVK device
+  API 1.4.357 with `extendedDynamicState = true`, box1's NVIDIA device 1.4.312 with the same), the
+  key holds none of it, the pipeline declares the seven EDS1 states dynamic, and the draw records
+  them through R-03's tracker, each command left out when the command buffer holds its value. A
+  pipeline that bakes the state, bound after one that does not, makes the tracker forget it. Blend
+  state, the vertex stride, primitive restart and the topology stay baked (MoltenVK's caveats on
+  EDS2 and EDS3). The GPU-driven batches compare the fixed state before they merge two draws.
+- The manifest's format is 2 (the key changed), so an R-10 manifest is dropped once.
+
+**The counter.** `vk_pipelines_created` on a cold cache, per run, entry off to on, the same on both
+machines:
+
+| Setting | Pipelines (load and warm-up) | `vk_cmds_dynamic_state` per frame | `vk_cmds_recorded` per frame |
+|---|---|---|---|
+| base | 7 to 7 | 6 to 18 | 99 to 111 |
+| enhanced | 16 to 16 | 24 to 57 | 198 to 231 |
+| gpu-driven off | 4 to 4 | 6 to 18 | 3,294 to 3,306 |
+| materials off | 6 to 6 | 6 to 18 | 2,983 to 2,995 |
+
+No program of the synthetic scene is drawn with two different cull, depth or stencil states, so
+the key had no such multiplicity to remove; the draws then record the state as commands too. As
+the brief says for that case, the entry ships off. The per-program split of the keys was not
+measured (the benchmark reports totals). A real level, whose shadow and depth-prepass passes may
+draw one program with several depth states, is the maintainers' run:
+`python3 port/tools/perf/render_bench.py --level assets/port/rac1/pal/level_12 --compare-opt vk-extended-dynamic-state`.
+If it lowers the pipelines there, the entry's default can change in one line of `render_opt.cpp`.
+
+**Time, as information.** The first picture after the upload and the picture time are within the
+noise with the entry on and off on both machines (cold base: Mac 19.5 to 20.7 ms, box1 24.0 to
+24.3 ms; picture Mac 0.717 to 0.712 ms, box1 0.981 to 1.004 ms).
+
+**Equivalence.** `render_equivalence_vulkan` compares the entry on and off in every scenario,
+Enhanced off and on: identical on both machines, no validation message (a dynamic state left unset
+is one), and again by hand with `OPENRAC_GPU_DRIVEN_OFF=1` and `OPENRAC_GPU_MATERIALS_OFF=1`.
+`vulkan_uniform` gained a case that draws one triangle a pixel five times in one pass with culling
+and the front face toggled between the draws, with the entry on and off, and requires the same
+pixels and the ones each winding gives.
 
 ## R-13: a level's textures made at its load
 
