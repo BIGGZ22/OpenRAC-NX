@@ -110,11 +110,14 @@ void remove_other_pipeline_caches(const std::filesystem::path& path) {
     std::error_code ec;
     for (const auto& entry : std::filesystem::directory_iterator(path.parent_path(), ec)) {
         const std::string name = entry.path().filename().string();
-        const bool cache_file = name.ends_with(".bin") || name.ends_with(".bin.manifest");
+        const bool cache_file = name.ends_with(".bin") || name.ends_with(".bin.manifest")
+                                || name.ends_with(".bin.spirv");
+        const bool ours = entry.path() == path
+                          || entry.path().string() == path.string() + ".manifest"
+                          || entry.path().string() == path.string() + ".spirv";
 
-        // Another build's cache, or the manifest beside it; this build's manifest stays.
-        if (entry.path() != path && entry.path().string() != path.string() + ".manifest"
-            && name.starts_with(prefix) && cache_file) {
+        // Another build's cache, or the manifest or SPIR-V beside it; this build's stay.
+        if (!ours && name.starts_with(prefix) && cache_file) {
             std::filesystem::remove(entry.path(), ec);
         }
     }
@@ -181,6 +184,17 @@ bool make_pipeline_cache() {
     }
     // The keys of the pipelines earlier runs made, for the pre-warm (R-10).
     load_pipeline_manifest(path);
+    // What glslang made in earlier runs (R-12), beside the cache; none with the cache off.
+    std::filesystem::path spirv = path;
+    spirv += path.empty() ? "" : ".spirv";
+
+    // A damaged file, or one of another compiler, is replaced at close.
+    if (g->spirv_cache.open(spirv, spirv_compiler_version()) == CacheFileState::Damaged) {
+        log::info(
+            "vulkan: SPIR-V cache {} is damaged or stale, starting a fresh one", spirv.string()
+        );
+    }
+
     return true;
 }
 
@@ -739,6 +753,13 @@ void destroy_all() {
         material_release();
         save_pipeline_manifest();
         save_pipeline_cache();
+        std::string spirv_error;
+
+        // The SPIR-V compiled this run, kept for the next.
+        if (!g->spirv_cache.save(spirv_error)) {
+            log::warn("vulkan: could not save the SPIR-V cache: {}", spirv_error);
+        }
+
         for (Frame& f : g->frames) {
             // Window teardown can run after the statistics singleton's
             // destructor. Drain measurements only at live frame-slot reuse,

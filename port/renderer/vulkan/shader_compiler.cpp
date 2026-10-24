@@ -3,19 +3,28 @@
 //
 // The shader compiler (shader_compiler.h): GLSL to SPIR-V with glslang, and the reflection that
 // lays out a program's uniforms, blocks and inputs. Each compile counts in the open context's
-// render counters (shader_compiles, shader_compile_s; docs/port/RENDER_PERF.md).
+// render counters (shader_compiles, shader_compile_s; docs/port/RENDER_PERF.md). With
+// spirv-disk-cache, a program or stage compiled before (this run or an earlier one, the open
+// context's SpirvCache) is taken from the cache and glslang does not run (R-12).
 
 #include "renderer/vulkan/shader_compiler.h"
 
+#include <array>
+#include <cstdint>
+#include <format>
 #include <memory>
 #include <mutex>
 #include <regex>
+#include <string>
 
+#include "renderer/render_opt.h"
+#include "renderer/vulkan/spirv_cache_file.h"
 #include "renderer/vulkan/vkgl_internal.h"
 
 #include <SPIRV/GlslangToSpv.h>
 #include <glslang/Public/ResourceLimits.h>
 #include <glslang/Public/ShaderLang.h>
+#include <glslang/build_info.h>
 // After the public headers it needs: the GLSL resolver, which gives a uniform both stages use one
 // binding (the default mapper numbers each stage's from zero).
 #include <glslang/MachineIndependent/localintermediate.h>
@@ -159,9 +168,8 @@ bool parse(glslang::TShader& shader, std::string& log) {
     return true;
 }
 
-}  // namespace
-
-bool check_stage(bool vertex, std::string_view source, std::string& log) {
+// check_stage without the cache: glslang parses the stage.
+bool check_stage_fresh(bool vertex, std::string_view source, std::string& log) {
     const CompileCount counted;
     initialise();
     const EShLanguage stage = vertex ? EShLangVertex : EShLangFragment;
@@ -169,15 +177,22 @@ bool check_stage(bool vertex, std::string_view source, std::string& log) {
     return parse(*shader, log);
 }
 
-bool check_compute_stage(std::string_view source, std::string& log) {
+// check_compute_stage without the cache.
+bool check_compute_stage_fresh(std::string_view source, std::string& log) {
     const CompileCount counted;
     initialise();
     auto shader = make_shader(EShLangCompute, std::string(source));
     return parse(*shader, log);
 }
 
-bool compile_program(std::string_view vertex, std::string_view fragment, CompiledProgram& out, std::string& log,
-                     std::string_view compute) {
+// compile_program without the cache: glslang parses, links, maps and reflects the program.
+bool compile_program_fresh(
+    std::string_view vertex,
+    std::string_view fragment,
+    CompiledProgram& out,
+    std::string& log,
+    std::string_view compute
+) {
     const CompileCount counted;
     initialise();
     Stage vs, fs, cs;
@@ -277,6 +292,174 @@ bool compile_program(std::string_view vertex, std::string_view fragment, Compile
         }
     }
     return true;
+}
+
+// ---- The SPIR-V cache (R-12) ----
+
+// What the compiler is, for the cache: glslang's version and the version of the options above.
+// Raise kOptionsVersion with any change to make_shader, vertex_source or the SPIR-V options: a
+// cache made by other options is then dropped whole.
+constexpr int kOptionsVersion = 1;
+
+// FNV-1a's 64-bit offset basis and prime (documented: the FNV hash's specification).
+constexpr std::uint64_t kFnvBasis = 0xcbf29ce484222325u;
+constexpr std::uint64_t kFnvPrime = 0x100000001b3u;
+
+// Returns glslang's version and kOptionsVersion as one text.
+std::string compiler_version() {
+    return std::format(
+        "glslang {}.{}.{}{} options {}",
+        GLSLANG_VERSION_MAJOR,
+        GLSLANG_VERSION_MINOR,
+        GLSLANG_VERSION_PATCH,
+        GLSLANG_VERSION_FLAVOR,
+        kOptionsVersion
+    );
+}
+
+// What a cache entry is found and checked by: the text compiled (its kind, its sources and the
+// compiler) hashed forwards for the key and backwards for the check, and its length.
+struct CacheText {
+    std::uint64_t key = kFnvBasis;    // FNV-1a over the text, first byte first.
+    std::uint64_t check = kFnvBasis;  // FNV-1a over the text, last byte first.
+    std::uint64_t length = 0;         // The text's bytes.
+};
+
+// Returns the CacheText of `kind` and `parts`, each part followed by a NUL so that two splits of
+// the same characters differ.
+template <std::size_t Parts>
+CacheText cache_text(std::string_view kind, const std::array<std::string_view, Parts>& parts) {
+    std::string text = compiler_version();
+    text += '\0';
+    text += kind;
+    text += '\0';
+
+    // Each source, ended by a NUL.
+    for (const std::string_view part : parts) {
+        text += part;
+        text += '\0';
+    }
+
+    CacheText out;
+    out.length = text.size();
+
+    // The two hashes, from either end.
+    for (std::size_t n = 0; n < text.size(); ++n) {
+        out.key = (out.key ^ static_cast<unsigned char>(text[n])) * kFnvPrime;
+        out.check = (out.check ^ static_cast<unsigned char>(text[text.size() - 1 - n])) * kFnvPrime;
+    }
+
+    return out;
+}
+
+// Returns the open context's SPIR-V cache when the cache is on and kept; null otherwise.
+SpirvCache* spirv_cache() {
+    // Without a context, or with the entry off, every compile runs glslang.
+    if (detail::g == nullptr
+        || !renderer::render_opt::enabled(renderer::render_opt::Opt::SpirvDiskCache)) {
+        return nullptr;
+    }
+
+    SpirvCache& cache = detail::g->spirv_cache;
+    return cache.active() ? &cache : nullptr;
+}
+
+// Returns whether the stage of `kind` and `source` compiled before: a kept stage is one that did,
+// so its log was empty of errors and nothing is left to say.
+bool stage_cached(std::string_view kind, std::string_view source) {
+    const SpirvCache* cache = spirv_cache();
+
+    // No cache: the stage is compiled.
+    if (cache == nullptr) {
+        return false;
+    }
+
+    const CacheText text = cache_text<1>(kind, {source});
+    return cache->find(text.key, text.check, text.length) != nullptr;
+}
+
+// Keeps that the stage of `kind` and `source` compiled.
+void keep_stage(std::string_view kind, std::string_view source) {
+    SpirvCache* cache = spirv_cache();
+
+    // No cache to keep it in.
+    if (cache == nullptr) {
+        return;
+    }
+
+    const CacheText text = cache_text<1>(kind, {source});
+    cache->insert({text.key, text.check, text.length, {}});
+}
+
+}  // namespace
+
+std::string spirv_compiler_version() {
+    return compiler_version();
+}
+
+bool check_stage(bool vertex, std::string_view source, std::string& log) {
+    const std::string_view kind = vertex ? "vertex stage" : "fragment stage";
+
+    // Compiled before: it compiles.
+    if (stage_cached(kind, source)) {
+        return true;
+    }
+
+    const bool ok = check_stage_fresh(vertex, source, log);
+
+    // Only a stage that compiled is kept; a failure is compiled again for its log.
+    if (ok) {
+        keep_stage(kind, source);
+    }
+
+    return ok;
+}
+
+bool check_compute_stage(std::string_view source, std::string& log) {
+    constexpr std::string_view kKind = "compute stage";
+
+    // Compiled before: it compiles.
+    if (stage_cached(kKind, source)) {
+        return true;
+    }
+
+    const bool ok = check_compute_stage_fresh(source, log);
+
+    // Only a stage that compiled is kept.
+    if (ok) {
+        keep_stage(kKind, source);
+    }
+
+    return ok;
+}
+
+bool compile_program(
+    std::string_view vertex,
+    std::string_view fragment,
+    CompiledProgram& out,
+    std::string& log,
+    std::string_view compute
+) {
+    SpirvCache* cache = spirv_cache();
+    const CacheText text = cache_text<3>("program", {vertex, fragment, compute});
+
+    // Compiled before, and its encoding whole: glslang does not run.
+    if (cache != nullptr) {
+        // The kept program, unless its bytes are not one (it is then compiled and replaced).
+        if (const std::vector<char>* kept = cache->find(text.key, text.check, text.length);
+            kept != nullptr && decode_program(*kept, out)) {
+            return true;
+        }
+    }
+
+    const bool ok = compile_program_fresh(vertex, fragment, out, log, compute);
+
+    // Kept for the next link of the same program, here or in a later run.
+    if (ok && cache != nullptr) {
+        cache->insert({text.key, text.check, text.length, encode_program(out)});
+    }
+
+    return ok;
 }
 
 }  // namespace openrac::vkgl

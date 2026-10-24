@@ -39,6 +39,7 @@
 #include "renderer/gl.h"
 #include "renderer/gpu_draw.h"
 #include "renderer/vulkan/shader_compiler.h"
+#include "renderer/vulkan/spirv_cache_file.h"
 #include "renderer/vulkan/vkgl.h"
 #include "renderer/world/gl_world.h"
 
@@ -972,6 +973,7 @@ struct Context {
     PipelineTable pipelines;           // Every graphics pipeline, by key (pipeline_for).
     PipelineManifest manifest;         // The keys to make ahead, by program identity (R-10).
     PipelinePrewarm prewarm;           // The worker that makes them (R-10).
+    SpirvCache spirv_cache;            // What glslang made, kept between runs (R-12).
     DrawScratch scratch;               // The draw's temporaries, kept for their capacity (R-04).
     bool byte_indices_logged = false;  // The 8-bit index emulation has been reported once.
     std::vector<std::pair<std::uint64_t, VkSampler>> vk_samplers;  // by a packed key
