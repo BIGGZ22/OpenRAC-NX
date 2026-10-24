@@ -43,8 +43,9 @@ using SavedCache = CacheFile;
 );
 
 // The manifest's format: read only when the file's is this one. A change of what a key holds
-// (R-11 takes fields out of it) raises it, and an older manifest is then dropped whole.
-inline constexpr std::uint32_t kManifestFormat = 1;
+// raises it, and an older manifest is then dropped whole: 2 since R-11 put the fixed state in a
+// struct of its own and added whether it is dynamic.
+inline constexpr std::uint32_t kManifestFormat = 2;
 
 // One pipeline of the manifest: its program's identity, how many runs have passed since one made
 // or used it, and its key's bytes, as the backend's PipelineKey lays them out.

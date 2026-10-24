@@ -628,8 +628,8 @@ VkPipeline create_graphics_pipeline(
         VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_STATE_CREATE_INFO
     };
     raster.polygonMode = k.polygon != 0 ? VK_POLYGON_MODE_LINE : VK_POLYGON_MODE_FILL;
-    raster.cullMode = k.cull;
-    raster.frontFace = static_cast<VkFrontFace>(k.front);
+    raster.cullMode = k.fixed.cull;
+    raster.frontFace = static_cast<VkFrontFace>(k.fixed.front);
     raster.lineWidth = 1.0f;
     VkPipelineMultisampleStateCreateInfo multisample{
         VK_STRUCTURE_TYPE_PIPELINE_MULTISAMPLE_STATE_CREATE_INFO
@@ -638,24 +638,24 @@ VkPipeline create_graphics_pipeline(
     VkPipelineDepthStencilStateCreateInfo depth{
         VK_STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO
     };
-    depth.depthTestEnable = k.depth_test;
-    depth.depthWriteEnable = k.depth_write;
-    depth.depthCompareOp =
-        k.depth_test != 0 ? static_cast<VkCompareOp>(k.depth_func) : VK_COMPARE_OP_ALWAYS;
-    depth.stencilTestEnable = k.stencil;
+    depth.depthTestEnable = k.fixed.depth_test;
+    depth.depthWriteEnable = k.fixed.depth_write;
+    depth.depthCompareOp = k.fixed.depth_test != 0 ? static_cast<VkCompareOp>(k.fixed.depth_func)
+                                                   : VK_COMPARE_OP_ALWAYS;
+    depth.stencilTestEnable = k.fixed.stencil;
     depth.front =
-        {static_cast<VkStencilOp>(k.front_ops[0]),
-         static_cast<VkStencilOp>(k.front_ops[1]),
-         static_cast<VkStencilOp>(k.front_ops[2]),
-         static_cast<VkCompareOp>(k.stencil_func),
+        {static_cast<VkStencilOp>(k.fixed.front_ops[0]),
+         static_cast<VkStencilOp>(k.fixed.front_ops[1]),
+         static_cast<VkStencilOp>(k.fixed.front_ops[2]),
+         static_cast<VkCompareOp>(k.fixed.stencil_func),
          0,
          0,
          0};
     depth.back =
-        {static_cast<VkStencilOp>(k.back_ops[0]),
-         static_cast<VkStencilOp>(k.back_ops[1]),
-         static_cast<VkStencilOp>(k.back_ops[2]),
-         static_cast<VkCompareOp>(k.stencil_func),
+        {static_cast<VkStencilOp>(k.fixed.back_ops[0]),
+         static_cast<VkStencilOp>(k.fixed.back_ops[1]),
+         static_cast<VkStencilOp>(k.fixed.back_ops[2]),
+         static_cast<VkCompareOp>(k.fixed.stencil_func),
          0,
          0,
          0};
@@ -674,15 +674,27 @@ VkPipeline create_graphics_pipeline(
     };
     blending.attachmentCount = colour ? 1 : 0;
     blending.pAttachments = &blend;
+    // The first six are dynamic in every pipeline; the rest only where the key says the fixed
+    // state is (R-11): Vulkan 1.3's core extended dynamic state, the items MoltenVK takes in full.
     const VkDynamicState dynamic_states[] =
         {VK_DYNAMIC_STATE_VIEWPORT,
          VK_DYNAMIC_STATE_SCISSOR,
          VK_DYNAMIC_STATE_BLEND_CONSTANTS,
          VK_DYNAMIC_STATE_STENCIL_REFERENCE,
          VK_DYNAMIC_STATE_STENCIL_COMPARE_MASK,
-         VK_DYNAMIC_STATE_STENCIL_WRITE_MASK};
+         VK_DYNAMIC_STATE_STENCIL_WRITE_MASK,
+         VK_DYNAMIC_STATE_CULL_MODE,
+         VK_DYNAMIC_STATE_FRONT_FACE,
+         VK_DYNAMIC_STATE_DEPTH_TEST_ENABLE,
+         VK_DYNAMIC_STATE_DEPTH_WRITE_ENABLE,
+         VK_DYNAMIC_STATE_DEPTH_COMPARE_OP,
+         VK_DYNAMIC_STATE_STENCIL_TEST_ENABLE,
+         VK_DYNAMIC_STATE_STENCIL_OP};
+    constexpr std::uint32_t kAlwaysDynamic = 6;
     VkPipelineDynamicStateCreateInfo dynamic{VK_STRUCTURE_TYPE_PIPELINE_DYNAMIC_STATE_CREATE_INFO};
-    dynamic.dynamicStateCount = static_cast<std::uint32_t>(std::size(dynamic_states));
+    dynamic.dynamicStateCount = k.dynamic_fixed != 0
+                                    ? static_cast<std::uint32_t>(std::size(dynamic_states))
+                                    : kAlwaysDynamic;
     dynamic.pDynamicStates = dynamic_states;
     const VkFormat colour_format = static_cast<VkFormat>(k.colour_format);
     VkPipelineRenderingCreateInfo rendering{VK_STRUCTURE_TYPE_PIPELINE_RENDERING_CREATE_INFO};
@@ -1054,6 +1066,47 @@ void save_pipeline_manifest() {
     }
 }
 
+bool fixed_state_dynamic() {
+    return g->extended_dynamic_state
+           && renderer::render_opt::enabled(renderer::render_opt::Opt::VkExtendedDynamicState);
+}
+
+FixedState fixed_state(const Target& t) {
+    const State& s = g->state;
+    FixedState f{};
+    f.cull = !s.cull                            ? VK_CULL_MODE_NONE
+             : s.cull_face == GL_FRONT          ? VK_CULL_MODE_FRONT_BIT
+             : s.cull_face == GL_FRONT_AND_BACK ? VK_CULL_MODE_FRONT_AND_BACK
+                                                : VK_CULL_MODE_BACK_BIT;
+    // The same rows as OpenGL's, counted from the other side: what GL calls counter-clockwise,
+    // Vulkan's sign of the area calls clockwise.
+    f.front = s.front_face == GL_CCW ? VK_FRONT_FACE_CLOCKWISE : VK_FRONT_FACE_COUNTER_CLOCKWISE;
+
+    // No depth attachment: no depth or stencil test.
+    if (t.depth == nullptr) {
+        return f;
+    }
+
+    // GL writes depth only while it tests it.
+    f.depth_test = s.depth_test ? 1 : 0;
+    f.depth_write = s.depth_test && s.depth_mask ? 1 : 0;
+    f.depth_func = s.depth_test ? compare_op(s.depth_func) : 0;
+
+    // The stencil test, where the target has stencil.
+    if (s.stencil_test && has_stencil(t.depth->format)) {
+        f.stencil = 1;
+        f.stencil_func = compare_op(s.stencil_func);
+        f.front_ops[0] = stencil_op(s.stencil_front.sfail);
+        f.front_ops[1] = stencil_op(s.stencil_front.dppass);
+        f.front_ops[2] = stencil_op(s.stencil_front.dpfail);
+        f.back_ops[0] = stencil_op(s.stencil_back.sfail);
+        f.back_ops[1] = stencil_op(s.stencil_back.dppass);
+        f.back_ops[2] = stencil_op(s.stencil_back.dpfail);
+    }
+
+    return f;
+}
+
 VkPipeline pipeline_for(
     Program& p, GLenum mode, const Target& t, const Input* inputs, std::uint32_t count
 ) {
@@ -1066,13 +1119,13 @@ VkPipeline pipeline_for(
         mode == GL_LINE_STRIP || mode == GL_TRIANGLE_STRIP || mode == GL_TRIANGLE_FAN;
     k.restart = s.primitive_restart && strip ? 1 : 0;
     k.polygon = s.polygon_mode == GL_LINE && g->features.fillModeNonSolid ? 1 : 0;
-    k.cull = !s.cull                            ? VK_CULL_MODE_NONE
-             : s.cull_face == GL_FRONT          ? VK_CULL_MODE_FRONT_BIT
-             : s.cull_face == GL_FRONT_AND_BACK ? VK_CULL_MODE_FRONT_AND_BACK
-                                                : VK_CULL_MODE_BACK_BIT;
-    // The same rows as OpenGL's, counted from the other side: what GL calls counter-clockwise,
-    // Vulkan's sign of the area calls clockwise.
-    k.front = s.front_face == GL_CCW ? VK_FRONT_FACE_CLOCKWISE : VK_FRONT_FACE_COUNTER_CLOCKWISE;
+    k.dynamic_fixed = fixed_state_dynamic() ? 1 : 0;
+
+    // Baked into the pipeline, unless the draw records it as dynamic state (R-11).
+    if (k.dynamic_fixed == 0) {
+        k.fixed = fixed_state(t);
+    }
+
     if (t.colour != nullptr) {
         k.blend = s.blend ? 1 : 0;
         if (s.blend) {
@@ -1088,20 +1141,6 @@ VkPipeline pipeline_for(
     }
     if (t.depth != nullptr) {
         k.depth_format = t.depth->format;
-        // GL writes depth only while it tests it.
-        k.depth_test = s.depth_test ? 1 : 0;
-        k.depth_write = s.depth_test && s.depth_mask ? 1 : 0;
-        k.depth_func = s.depth_test ? compare_op(s.depth_func) : 0;
-        if (s.stencil_test && has_stencil(t.depth->format)) {
-            k.stencil = 1;
-            k.stencil_func = compare_op(s.stencil_func);
-            k.front_ops[0] = stencil_op(s.stencil_front.sfail);
-            k.front_ops[1] = stencil_op(s.stencil_front.dppass);
-            k.front_ops[2] = stencil_op(s.stencil_front.dpfail);
-            k.back_ops[0] = stencil_op(s.stencil_back.sfail);
-            k.back_ops[1] = stencil_op(s.stencil_back.dppass);
-            k.back_ops[2] = stencil_op(s.stencil_back.dpfail);
-        }
     }
     k.samples = t.samples;
     k.inputs = count;

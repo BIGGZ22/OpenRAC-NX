@@ -498,6 +498,9 @@ bool make_device(std::string& error) {
     f11.pNext = &f12;
     vkGetPhysicalDeviceFeatures2(g->physical, &available);
     g->viewport_index_supported = features.multiViewport && f12.shaderOutputViewportIndex;
+    // Vulkan 1.3 made extended dynamic state core, with no feature to ask for (documented: the
+    // Vulkan 1.3 promotion of VK_EXT_extended_dynamic_state); the device was chosen for 1.3.
+    g->extended_dynamic_state = g->properties.apiVersion >= VK_API_VERSION_1_3;
     g->bindless_supported =
         f11.shaderDrawParameters && f12.shaderSampledImageArrayNonUniformIndexing
         && f12.descriptorBindingSampledImageUpdateAfterBind && f12.descriptorBindingPartiallyBound;

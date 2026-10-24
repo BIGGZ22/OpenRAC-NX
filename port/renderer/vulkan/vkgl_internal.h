@@ -194,6 +194,23 @@ struct GpuResident {
     bool dirty = false;                // `words` changed since `buffer` was made.
 };
 
+// The cull, front face, depth and stencil state of a draw, as Vulkan's numbers: what a pipeline
+// bakes in, or what extended dynamic state lets a draw record (fixed_state, vkgl_pipelines.cpp).
+// Plain numbers, so that it is compared and copied as bytes.
+struct FixedState {
+    std::uint32_t cull;          // VkCullModeFlags.
+    std::uint32_t front;         // VkFrontFace.
+    std::uint32_t depth_test;    // 1 when the depth test is on.
+    std::uint32_t depth_write;   // 1 when depth is written (GL writes it only while it tests).
+    std::uint32_t depth_func;    // VkCompareOp while the test is on, else 0.
+    std::uint32_t stencil;       // 1 when the stencil test is on and the target has stencil.
+    std::uint32_t stencil_func;  // VkCompareOp of both faces' stencil test.
+    std::uint32_t front_ops[3];  // VkStencilOp: fail, depth pass, depth fail, front faces.
+    std::uint32_t back_ops[3];   // The same for back faces.
+
+    bool operator==(const FixedState&) const = default;
+};
+
 // The GPU-driven engine (gpu_draw.inc): the culling pipelines, the indirect draws merged while
 // they share their bindings, and the counters.
 struct GpuEngine {
@@ -213,6 +230,7 @@ struct GpuEngine {
         std::array<int, 4> viewport{}, scissor{};
         std::array<float, 4> blend{};
         std::array<std::uint32_t, 3> stencil{};
+        FixedState fixed{};  // The fixed state recorded as dynamic state; zero when it is baked.
         bool operator==(const Bindings&) const = default;
     };
 
@@ -673,13 +691,16 @@ struct Input {
 // bytes. Trivially copyable, with no padding between its 8-byte words.
 struct PipelineKey {
     std::uint64_t program;
-    std::uint32_t topology, restart, polygon, cull, front;
+    std::uint32_t topology, restart, polygon;
+    // The rasteriser's cull and depth and stencil state; all 0 in the key when `dynamic_fixed`,
+    // where a draw records it instead (vk-extended-dynamic-state, R-11).
+    FixedState fixed;
     std::uint32_t blend, src_rgb, dst_rgb, src_a, dst_a, equation, colour_mask;
-    std::uint32_t depth_test, depth_write, depth_func;
-    std::uint32_t stencil, stencil_func, front_ops[3], back_ops[3];
     std::uint32_t colour_format, depth_format, samples;
     std::uint32_t inputs;
     std::uint32_t viewports;
+    std::uint32_t dynamic_fixed;  // 1: `fixed` is dynamic state of the pipeline (R-11).
+    std::uint32_t unused;         // Zero; keeps the key a whole number of 8-byte words.
     Input input[kAttributes];
 };
 
@@ -828,6 +849,11 @@ struct RecordedState {
     std::optional<std::uint32_t> stencil_compare_mask;  // vkCmdSetStencilCompareMask's value.
     std::optional<std::uint32_t> stencil_write_mask;    // vkCmdSetStencilWriteMask's value.
 
+    // Whether the pipeline bound takes the fixed state as dynamic state (R-11); nothing when
+    // unknown. A pipeline that bakes it overrides what was recorded, so a change forgets `fixed`.
+    std::optional<bool> fixed_dynamic;
+    std::optional<FixedState> fixed;  // The fixed state last recorded as dynamic state.
+
     // The layout the descriptor sets and the push constant below were recorded with. Binding a
     // set with another layout may disturb the others, so a change of layout forgets them.
     VkPipelineLayout layout = VK_NULL_HANDLE;
@@ -958,6 +984,9 @@ struct Context {
     std::string device_name, driver_version, api_version, gl_renderer, gl_version;
     bool software = false;
     bool viewport_index_supported = false;
+    // The device takes cull, front face, depth and stencil state as dynamic state (Vulkan 1.3's
+    // core extended dynamic state), so pipelines need not bake them (R-11).
+    bool extended_dynamic_state = false;
     std::vector<std::array<int, 4>> indexed_viewports;
     GLenum error = GL_NO_ERROR;
 };
@@ -1233,6 +1262,16 @@ void forget_views(Buffer& b);
 // A texel view of buffer `name` as `gl_format` (RGBA32UI, RGBA32F, RGBA8, otherwise R32UI),
 // kept for this frame; `fallback` when the buffer is missing or too small.
 VkBufferView texel_view(GLuint name, GLenum gl_format, VkBufferView fallback);
+
+// ---- Defined in vkgl_pipelines.cpp: the fixed state (R-11) ----
+
+// Returns whether pipelines take the cull, front face, depth and stencil state as dynamic state:
+// the device has extended dynamic state and vk-extended-dynamic-state is on. A draw asks it once.
+bool fixed_state_dynamic();
+
+// Returns the cull, front face, depth and stencil state of a draw into `t` with the GL state now:
+// what pipeline_for bakes into the key, or what the draw records as dynamic state.
+FixedState fixed_state(const Target& t);
 
 // ---- Defined in vkgl_pipelines.cpp: pipelines made ahead (R-10) ----
 

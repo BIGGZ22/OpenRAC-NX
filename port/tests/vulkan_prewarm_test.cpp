@@ -35,7 +35,8 @@ namespace render_opt = openrac::renderer::render_opt;
 using namespace openrac::gl;
 namespace vkgl = openrac::vkgl;
 
-// The states each run draws with, each its own pipeline: blend off, blend on, the depth test.
+// The states each run draws with, each its own pipeline: blend off, blend on, and a colour mask
+// (each baked into the pipeline whether or not the depth and cull state is dynamic, R-11).
 constexpr int kStates = 3;
 
 // The size of the picture drawn into.
@@ -69,16 +70,16 @@ void draw_states(const openrac::renderer::FrameBuffer& target) {
     glViewport(0, 0, kSide, kSide);
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-    // Each state, from the base: blend and depth test off.
+    // Each state, from the base: blend off, every channel written.
     for (int state = 0; state < kStates; ++state) {
         glDisable(GL_BLEND);
-        glDisable(GL_DEPTH_TEST);
+        glColorMask(GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE);
 
-        // State 1 blends, state 2 tests depth; state 0 is the base.
+        // State 1 blends, state 2 leaves alpha alone; state 0 is the base.
         if (state == 1) {
             glEnable(GL_BLEND);
         } else if (state == 2) {
-            glEnable(GL_DEPTH_TEST);
+            glColorMask(GL_TRUE, GL_TRUE, GL_TRUE, GL_FALSE);
         }
 
         glDrawArrays(GL_TRIANGLES, 0, 3);
