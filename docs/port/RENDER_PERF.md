@@ -1162,3 +1162,77 @@ VK_VALIDATION_FEATURE_ENABLE_SYNCHRONIZATION_VALIDATION_EXT`) on the Mac, with n
 and no validation error reported; box1 has no validation layer installed (`vulkaninfo` lists
 none), so there the tests ran without it and the table is the review, and (b) `render_equivalence_vulkan` draws the entry on and off in every
 scenario: identical frames. The table above is the review that a reader repeats line by line.
+
+## R-19: the zero-coverage cull, measured and not landed
+
+The CPU reference of the test and its test landed; the cull in the GPU culling did not, because
+its frames are not byte-identical on MoltenVK. Its code (the cull shader's test, the view's matrix
+and viewport, the camera and shadow views filling them in, a registry entry
+`cull-zero-coverage`) is kept as a patch outside the repository for the maintainers
+(`~/RACSwarm/api-agents/restructure/R-19-zero-coverage-gpu.patch`, three commits on top of
+`ca9bf0d5`); the numbers below are that patch's.
+
+**What landed** (`renderer/gpu_draw.h`, `tests/cull_coverage_test.cpp`, `cmake/Render.cmake`):
+
+- The argument. An instance's triangles lie inside its bounds. With all eight corners in front of
+  the eye (clip w above 1e-6) the projection keeps them inside the convex hull of the projected
+  corners, so inside their rectangle in the view's pixels. With one sample a pixel the samples are
+  the pixel centres (k + 0.5); widened by 1/8 pixel for the vertex snapping (Vulkan guarantees at
+  least a sixteenth) and the projection's float error, a rectangle that holds no centre on one axis
+  lights nothing, so dropping the instance changes no pixel. Bounds reaching behind the eye and
+  multisampled views (samples may sit anywhere in a pixel) are kept; the GPU-driven path draws only
+  triangle lists (`gpu_submit_draw`), and the UI bypass and the transparent order would be
+  unchanged (the test comes after the PVS and plane tests; the ordered compaction drops without
+  reordering).
+- `covers_a_sample` in `gpu_draw.h` is the CPU reference, and `GpuCullView` carries what it needs
+  (`coverage`, `clip`, `viewport`, `samples`; nothing fills them in yet, and the payload is
+  unchanged).
+- `cull_coverage` (new, every preset, no GPU): of 20,000 random bounds of a hundredth to two pixels
+  over a 1080p picture, 3,442 are dropped, and a software rasteriser (pixel centres, edges
+  included) lights no centre with any of 6 random triangles inside each.
+
+**What the patch does**: the cull shader's `coversSample` makes the reference's operations in the
+same order after the PVS and plane tests; a view's payload grows from 58 to 79 words (the clip
+matrix, the viewport, a flag); the camera's view gets the frame's view-projection and the target's
+size (none on a multisampled target), each shadow map its matrix and its atlas rectangle or own
+target; vkgl leaves the test out when the bound target has more than one sample.
+
+**The counters** (per frame, mean of 60 measured frames of the walk at 1080p, the same on the Mac
+and box1 and in every run: the decisions are the compute shader's, the same on both devices):
+
+| Setting | `vk_gpu_completed_visible_instances` | `vk_gpu_completed_triangles` | `vk_gpu_completed_draws` |
+|---|---|---|---|
+| Enhanced off, MSAA 1 | 6,184.6 to 4,649.7 (-24.8%) | 782,988 to 576,074 (-26.4%) | 1,459.7 to 1,426.6 |
+| Enhanced on (camera and four cascades), MSAA 1 | 9,274.5 to 7,002.8 (-24.5%) | 2,002,775 to 1,610,382 (-19.6%) | 2,378.2 to 2,324.4 |
+| MSAA 4, Enhanced off and on | unchanged | unchanged | unchanged |
+
+That is the fixture's mix (a fifth of its static instances sub-pixel at the walk's end), not a
+level's: on real levels expect a few percent of instances, more in the far cascades. Picture CPU
+time (information, median of 60 frames): Mac 0.679 to 0.691 ms, box1 0.970 to 0.985 ms (base);
+Enhanced Mac 1.556 to 1.546, box1 3.774 to 3.608.
+
+**Equivalence: exact on box1, not on the Mac.** With the patch, `render_equivalence_vulkan`
+compares the entry on against off in all twelve scenarios under the validation layer. On box1 (NVIDIA) every frame is
+byte-identical. On the Mac (MoltenVK) most scenarios differ by 1 to 10 pixels of 57,600 (worst
+channel 4 base, up to 27 with Enhanced), the same with the cull applied to the static camera layers
+only, and the same at a margin of 3/8 pixel; at 1/2 pixel nothing differs, because at that margin
+every rectangle holds a centre and nothing is culled. The CPU reference finds no culled bounds with
+a lit centre, and the two devices cull the same instances, so on Apple's GPU fragments are made at
+positions the argument does not allow (a rasteriser whose effective sample positions are about half
+a pixel from the centres the Vulkan specification gives). The brief counts such a failure as a bug
+in the argument, not a tolerance to widen. A default-off entry would still fail
+`render_equivalence_vulkan` on every Mac (the test switches each entry on), so the GPU part is not
+landed until the MoltenVK behaviour is understood (follow-up in PROGRESS.md).
+
+Measured with:
+
+```sh
+./port/build/release/cull_coverage_test
+OPENRAC_GL_API=vulkan OPENRAC_VULKAN_PIPELINE_CACHE=off OPENRAC_VULKAN_VALIDATION=1 ./port/build/release/render_equivalence_test
+# the counters, with the patch applied, per setting
+OPENRAC_GL_API=vulkan port/build/release/openrac_render_bench --frames 60 --warmup 10 --camera walk --msaa 1 [--enhanced on] [--opt-off cull-zero-coverage]
+```
+
+On real levels (the maintainers', with the patch applied):
+`port/build/release/openrac_render_bench --level assets/port/rac1/pal/level_12 --enhanced on --frames 300`,
+with and without `--opt-off cull-zero-coverage`, reading the `vk_gpu_completed_*` gauges.

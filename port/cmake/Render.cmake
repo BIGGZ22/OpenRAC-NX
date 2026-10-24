@@ -19,6 +19,8 @@
 #                           changes to where it keeps it (skipped, 77, where Vulkan cannot open)
 #   vulkan_present          the one copy to the screen against the two it replaces, on stand-ins
 #                           of the screen (skipped, 77, where Vulkan cannot open)
+#   cull_coverage           the zero-coverage cull's CPU reference against a software rasteriser,
+#                           everywhere
 #
 # Included from port/CMakeLists.txt after cmake/Window.cmake, with or without the window.
 
