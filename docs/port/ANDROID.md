@@ -206,9 +206,8 @@ easing. The cards:
   shadows, bounced light and its strength, ambient occlusion and its quality.
   When this run cannot have it, the card says why.
 - **Sound and game:** volume and skipping cutscenes.
-- **Touch controls:** button size, camera speed, *Put them back*, and *Move
-  the controls*: drag them over the paused game, with a bar to resize, reset
-  and finish. A dragged group snaps to a nearby line (its own place, the
+- **Touch controls:** button size, camera speed and *Move the controls*:
+  drag them over the paused game, with a bar to resize, reset and finish. A dragged group snaps to a nearby line (its own place, the
   middle, another group or its mirror image), and the line is shown.
 - **Developer tools**, folded: the debug overlay, pause, a frame step, game
   speed, a screenshot (to `files/screenshots`) and, in developer mode, the

@@ -95,7 +95,7 @@ game's log.
      group (d-pad, face buttons, a shoulder...): near another group's line,
      the middle or its own place it snaps, with an accent line across the
      screen, and a little further off it follows the finger. Done keeps it
-     after a restart; *Put them back* and the bar's Reset bring it all home.
+     after a restart, and the bar's Reset brings it all home.
 5. **A controller.** Connect one (Bluetooth or USB, a DualShock 4 or DualSense
    too) and press a button: the pad hides and the controller plays. A diagonal
    runs.

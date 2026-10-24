@@ -527,11 +527,6 @@ void drawer(const Shown& shown) {
         if (drawer_row("Move the controls")) {
             edit_touch(true);
         }
-        if (!set.touch_layout.empty() && drawer_row("Put them back")) {
-            set.touch_layout.clear();
-            settings::save();
-            s.touch_reset = true;
-        }
         card_end();
 
         // What the port changes from the console that the player may switch back (fixes.h): on is

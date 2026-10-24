@@ -103,8 +103,7 @@ void toggle_drawer();
 // about, with a bar in the middle of the screen to make them smaller or larger, put them back and
 // finish (Done, Back). The window hands it to the pad, and saves the layout when it ends.
 bool touch_editing();
-// True once after Reset (the bar's) or "Put them back" (the drawer's): the window puts every
-// control at its own place.
+// True once after the bar's Reset: the window puts every control at its own place.
 bool take_touch_reset();
 // The lines a dragged group of the pad has snapped to (TouchPad::guide_x, guide_y), drawn across
 // the screen while editing: 0..1 of the width and of the height, below 0 for none.
