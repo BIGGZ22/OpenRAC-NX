@@ -15,6 +15,8 @@
 #   render_opt_environment  the variable read and applied, as this file sets it
 #   render_opt_vulkan       the Vulkan backend's render counters follow the draws (skipped, 77,
 #                           where Vulkan cannot open)
+#   vulkan_buffer           a static GL buffer's data drawn as GL would through the backend's
+#                           changes to where it keeps it (skipped, 77, where Vulkan cannot open)
 #
 # Included from port/CMakeLists.txt after cmake/Window.cmake, with or without the window.
 
@@ -85,4 +87,15 @@ if(TARGET openrac_renderer_vulkan AND TARGET openrac_viewer_lib)
   add_test(NAME render_equivalence_vulkan COMMAND render_equivalence_test)
   set_tests_properties(render_equivalence_vulkan PROPERTIES SKIP_RETURN_CODE 77 ENVIRONMENT
     "OPENRAC_GL_API=vulkan;OPENRAC_VULKAN_VALIDATION=1;OPENRAC_VULKAN_PIPELINE_CACHE=off")
+endif()
+
+# ---- The backend's own behaviour, pinned for the render packages ----
+#
+#   vulkan_buffer  a static GL buffer drawn, rewritten in part, filled again, read through 8-bit
+#                  indices and as a uniform block, frame after frame (tests/vulkan_buffer_test.cpp)
+if(TARGET openrac_renderer_vulkan)
+  openrac_add_test(vulkan_buffer
+    LIBS openrac_renderer openrac_platform openrac_renderer_vulkan)
+  set_tests_properties(vulkan_buffer PROPERTIES SKIP_RETURN_CODE 77 ENVIRONMENT
+    "OPENRAC_GL_API=vulkan;OPENRAC_VULKAN_VALIDATION=1")
 endif()
