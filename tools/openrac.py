@@ -336,13 +336,9 @@ def progress_box(versions) -> str:
             continue
         title = short_title(game, name)
         source = v.get("source") or {}
-        # The NTSC decomp is named only so, never by its author's handle or address (AGENTS.md).
-        if game["id"] == "rac1" and name == "ntsc":
-            project = "the NTSC decomp"
-        elif source.get("repo"):
-            project = f'<a href="{source["repo"]}">{source["name"]}</a>'
-        else:
-            project = "–"
+        # The NTSC decomp goes by that name (AGENTS.md), linked to its repository.
+        label = "the NTSC decomp" if (game["id"], name) == ("rac1", "ntsc") else source.get("name")
+        project = f'<a href="{source["repo"]}">{label}</a>' if source.get("repo") else "–"
         query = urlencode({"mode": "shield", "label": "", "measure": "matched_code_percent",
                            "version": v["serial"], "color": "c99222", "style": "flat-square"})
         badge = (f'<a href="https://bytematch.dev/{slug}/{v["serial"]}">'
