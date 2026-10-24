@@ -6,7 +6,6 @@
 #include "common/stats.h"
 #include "enhanced/tests/gpu_probe_fixture.h"
 #include "enhanced/tests/probe_fixture.h"
-#include "enhanced/viewer/shadow_atlas.h"
 #include "enhanced/viewer/sun_shadow.h"
 #include "renderer/gl.h"
 #include "renderer/shadows.h"

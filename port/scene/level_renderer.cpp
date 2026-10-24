@@ -941,7 +941,7 @@ unsigned LevelScene::draw_cached_cascades(renderer::RenderState& state) {
         m_static_keys = {};
     }
 
-    // Each cascade's key: what its static casters depend on (shadow_atlas.h).
+    // Each cascade's key: what its static casters depend on (sun_shadow.h).
     for (unsigned i = 0; i < kSunCascades; ++i) {
         const auto& volume = m_sun_cascades.casters[i];
         keys[i].valid = true;

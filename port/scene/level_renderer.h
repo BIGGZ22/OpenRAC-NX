@@ -24,7 +24,6 @@
 
 #include "enhanced/viewer/early_lighting.h"
 #include "enhanced/viewer/probe_lighting.h"
-#include "enhanced/viewer/shadow_atlas.h"
 #include "enhanced/viewer/sun_shadow.h"
 #include "renderer/framebuffer.h"
 #include "renderer/gpu_draw.h"

@@ -889,7 +889,7 @@ On real levels the maintainers' command is
 
 ## R-18: a static shadow cache, shipped off
 
-**What changed** (`scene/level_renderer.*`, `enhanced/viewer/shadow_atlas.h`,
+**What changed** (`scene/level_renderer.*`, `enhanced/viewer/sun_shadow.h`,
 `tests/render_fixture.h`, `enhanced/tests/sun_shadow_test.cpp`):
 
 - `shadow-static-cache`. With Enhanced graphics the shadow atlas (3072 by 3072) is cleared and every
