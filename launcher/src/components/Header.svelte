@@ -66,9 +66,7 @@
     <div class="brand" title={app.info?.version ? `OpenRAC Launcher ${app.info.version}` : undefined}>
       <Logo height={40} />
       <span class="brand-mark"><Logo mark height={44} label="" /></span>
-      <small
-        >Launcher{#if app.info?.version}<span class="ver">{app.info.version}</span>{/if}</small
-      >
+      {#if app.info?.version}<small class="ver">{app.info.version}</small>{/if}
     </div>
   {:else}
     <button
@@ -79,11 +77,9 @@
     >
       <Logo height={40} />
       <span class="brand-mark"><Logo mark height={44} label="" /></span>
-      <!-- The launcher's version beside its name, on every page (also in the tooltip, for a narrow
-           window that hides the tag). -->
-      <small
-        >Launcher{#if app.info?.version}<span class="ver">{app.info.version}</span>{/if}</small
-      >
+      <!-- The launcher's version beside the logo, on every page (also in the tooltip, for a phone's
+           width, which shows the mark alone). -->
+      {#if app.info?.version}<small class="ver">{app.info.version}</small>{/if}
     </button>
   {/if}
 
@@ -151,19 +147,26 @@
     {/if}
     {#if !inTauri}<span class="preview">Browser preview</span>{/if}
     {#if !onAndroid}
-      <button class="site" onclick={() => void api.openUrl(SITE_URL)} aria-label="openrac.dev" title="openrac.dev"
-        ><Icon name="external" size={14} /><span class="label">openrac.dev</span></button
-      >
-      <!-- The community: Discord's mark, which tilts like the lombax's head. -->
-      <button class="discord" onclick={() => void api.openUrl(DISCORD_URL)} aria-label="Join the OpenRAC Discord">
-        <svg class="mark" viewBox="0 0 24 24" width="18" height="18" aria-hidden="true">
-          <path
-            d="M20.317 4.37a19.791 19.791 0 0 0-4.885-1.515.074.074 0 0 0-.079.037c-.21.375-.444.864-.608 1.25a18.27 18.27 0 0 0-5.487 0 12.64 12.64 0 0 0-.617-1.25.077.077 0 0 0-.079-.037A19.736 19.736 0 0 0 3.677 4.37a.07.07 0 0 0-.032.027C.533 9.046-.32 13.58.099 18.057a.082.082 0 0 0 .031.057 19.9 19.9 0 0 0 5.993 3.03.078.078 0 0 0 .084-.028 14.09 14.09 0 0 0 1.226-1.994.076.076 0 0 0-.041-.106 13.107 13.107 0 0 1-1.872-.892.077.077 0 0 1-.008-.128 10.2 10.2 0 0 0 .372-.292.074.074 0 0 1 .077-.01c3.928 1.793 8.18 1.793 12.062 0a.074.074 0 0 1 .078.01c.12.098.246.198.373.292a.077.077 0 0 1-.006.127 12.299 12.299 0 0 1-1.873.892.077.077 0 0 0-.041.107c.36.698.772 1.362 1.225 1.993a.076.076 0 0 0 .084.028 19.839 19.839 0 0 0 6.002-3.03.077.077 0 0 0 .032-.054c.5-5.177-.838-9.674-3.549-13.66a.061.061 0 0 0-.031-.03zM8.02 15.33c-1.183 0-2.157-1.085-2.157-2.419 0-1.333.956-2.419 2.157-2.419 1.21 0 2.176 1.096 2.157 2.42 0 1.333-.956 2.418-2.157 2.418zm7.975 0c-1.183 0-2.157-1.085-2.157-2.419 0-1.333.955-2.419 2.157-2.419 1.21 0 2.176 1.096 2.157 2.42 0 1.333-.946 2.418-2.157 2.418z"
-            fill="currentColor"
-          />
-        </svg>
-        <span class="label">Discord</span>
-      </button>
+      <!-- Where OpenRAC lives: the site and the community, two marks in one capsule of the selected
+           tab's dark brown. Discord's mark tilts as the lombax's head does. -->
+      <div class="links">
+        <button class="site" onclick={() => void api.openUrl(SITE_URL)} aria-label="openrac.dev" title="openrac.dev"
+          ><Icon name="globe" size={18} /></button
+        >
+        <button
+          class="discord"
+          onclick={() => void api.openUrl(DISCORD_URL)}
+          aria-label="Join the OpenRAC Discord"
+          title="Discord"
+        >
+          <svg class="mark" viewBox="0 0 24 24" width="18" height="18" aria-hidden="true">
+            <path
+              d="M20.317 4.37a19.791 19.791 0 0 0-4.885-1.515.074.074 0 0 0-.079.037c-.21.375-.444.864-.608 1.25a18.27 18.27 0 0 0-5.487 0 12.64 12.64 0 0 0-.617-1.25.077.077 0 0 0-.079-.037A19.736 19.736 0 0 0 3.677 4.37a.07.07 0 0 0-.032.027C.533 9.046-.32 13.58.099 18.057a.082.082 0 0 0 .031.057 19.9 19.9 0 0 0 5.993 3.03.078.078 0 0 0 .084-.028 14.09 14.09 0 0 0 1.226-1.994.076.076 0 0 0-.041-.106 13.107 13.107 0 0 1-1.872-.892.077.077 0 0 1-.008-.128 10.2 10.2 0 0 0 .372-.292.074.074 0 0 1 .077-.01c3.928 1.793 8.18 1.793 12.062 0a.074.074 0 0 1 .078.01c.12.098.246.198.373.292a.077.077 0 0 1-.006.127 12.299 12.299 0 0 1-1.873.892.077.077 0 0 0-.041.107c.36.698.772 1.362 1.225 1.993a.076.076 0 0 0 .084.028 19.839 19.839 0 0 0 6.002-3.03.077.077 0 0 0 .032-.054c.5-5.177-.838-9.674-3.549-13.66a.061.061 0 0 0-.031-.03zM8.02 15.33c-1.183 0-2.157-1.085-2.157-2.419 0-1.333.956-2.419 2.157-2.419 1.21 0 2.176 1.096 2.157 2.42 0 1.333-.956 2.418-2.157 2.418zm7.975 0c-1.183 0-2.157-1.085-2.157-2.419 0-1.333.955-2.419 2.157-2.419 1.21 0 2.176 1.096 2.157 2.42 0 1.333-.946 2.418-2.157 2.418z"
+              fill="currentColor"
+            />
+          </svg>
+        </button>
+      </div>
     {/if}
   </div>
 </header>
@@ -245,40 +248,21 @@
     }
   }
 
-  /* The bar's controls share one look, the tabs': a pill in a shade of the bar's ink, which turns
-     the selected tab's dark brown and amber under the pointer. The tag beside the logo is the same
-     shade, smaller, its version in the dark brown and gold of the selected tab. */
-  .brand small {
-    display: inline-flex;
-    align-items: center;
-    gap: 8px;
-    height: 26px;
-    padding: 0 3px 0 10px;
-    margin-left: 6px;
-    border-radius: 999px;
-    background: rgb(0 0 0 / 0.12);
-    font-family: var(--font-head);
-    font-size: 0.6875rem;
-    font-weight: 800;
-    line-height: 1;
-    letter-spacing: 0.1em;
-    text-transform: uppercase;
-    color: var(--bar-ink-deep);
-  }
-
+  /* The version beside the logo, as tall as the capitals of "RAC" and level with them (the logo's
+     box is centred on its letters: Logo.svelte), in the selected tab's dark brown and gold. */
   .brand .ver {
     display: inline-flex;
     align-items: center;
-    height: 20px;
-    padding: 0 8px;
+    height: 17px;
+    padding: 0 7px;
+    margin-left: 2px;
     border-radius: 999px;
     background: var(--bar-ink-deep);
     color: var(--gold);
-    font-family: var(--font-sans);
-    font-size: 0.75rem;
+    font-size: 0.6875rem;
     font-weight: 700;
-    letter-spacing: 0.02em;
-    text-transform: none;
+    line-height: 1;
+    font-variant-numeric: tabular-nums;
   }
 
   nav {
@@ -381,37 +365,42 @@
     color: var(--bar-ink-deep);
   }
 
-  /* The site and Discord: the tabs' height and shade, with their marks. */
-  .site,
-  .discord {
+  /* A capsule as tall as the tabs, in the selected tab's dark brown, its marks in gold that turn
+     amber on a lighter round under the pointer. */
+  .links {
     display: inline-flex;
     align-items: center;
-    gap: 7px;
+    gap: 2px;
     height: 34px;
-    padding: 0 14px 0 12px;
+    padding: 0 3px;
     border-radius: 999px;
-    background: rgb(0 0 0 / 0.12);
-    font-size: 0.875rem;
-    font-weight: 600;
-    color: var(--bar-ink-deep);
+    background: var(--bar-ink-deep);
+  }
+
+  .site,
+  .discord {
+    display: grid;
+    place-items: center;
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    color: var(--gold);
     transition:
       background var(--fast) var(--ease),
       color var(--fast) var(--ease);
   }
 
   .discord .mark {
-    flex: none;
     transition: transform var(--medium) var(--ease);
   }
 
   @media (hover: hover) {
     .site:hover,
     .discord:hover {
-      background: var(--bar-ink-deep);
+      background: rgb(255 255 255 / 0.1);
       color: var(--amber);
     }
 
-    /* Discord's mark tilts as the lombax's head does. */
     .discord:hover .mark {
       transform: rotate(-12deg) scale(1.08);
     }
@@ -419,7 +408,7 @@
 
   .site:active,
   .discord:active {
-    background: var(--bar-ink-deep);
+    background: rgb(255 255 255 / 0.1);
     color: var(--amber);
   }
 
@@ -480,38 +469,27 @@
     margin-left: -4px;
   }
 
-  /* The version tag beside the name gives way first (it is in the tooltip and in Settings). */
   @media (max-width: 1240px) {
     header,
     .site-header {
       gap: 18px;
     }
 
-    .brand small,
     .preview {
       display: none;
     }
   }
 
   /* Down to the window's smallest (960 px), with developer tools, a job and an update all showing:
-     the site link and Discord keep their marks, the update its word, the job less of its name. */
+     the update keeps its word, the job less of its name. */
   @media (max-width: 1180px) {
     header,
     .site-header {
       gap: 14px;
     }
 
-    .site .label,
-    .discord .label,
     .update .label {
       display: none;
-    }
-
-    .site,
-    .discord {
-      width: 34px;
-      padding: 0;
-      justify-content: center;
     }
 
     .job {
@@ -519,16 +497,10 @@
     }
   }
 
-  /* A narrow window keeps the tabs: the site link and the tag give way first. */
+  /* A narrow window keeps the tabs. */
   @media (max-width: 900px) {
     .site-header {
       gap: 12px;
-    }
-
-    .brand small,
-    .site,
-    .preview {
-      display: none;
     }
 
     .job {
@@ -536,11 +508,12 @@
     }
   }
 
-  /* A phone held upright: the logo's mark stands for the name, Discord and the running task give
-     way, and the tabs scroll if they still do not fit. */
+  /* A phone held upright: the logo's mark stands for the name, the version (in the tooltip), the
+     links and the running task give way, and the tabs scroll if they still do not fit. */
   @media (max-width: 560px) {
     .brand > :global(.logo),
-    .discord,
+    .brand .ver,
+    .links,
     .job {
       display: none;
     }
@@ -595,7 +568,7 @@
   }
 
   :global(html[data-platform="android"]) .brand > :global(.logo),
-  :global(html[data-platform="android"]) .brand small {
+  :global(html[data-platform="android"]) .brand .ver {
     display: none;
   }
 

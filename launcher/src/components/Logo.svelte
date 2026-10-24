@@ -15,10 +15,10 @@
     "M12390 4594 c-94 -15 -153 -29 -210 -51 -204 -81 -351 -245 -421 -473 -21 -65 -24 -96 -24 -225 1 -128 4 -161 24 -225 53 -171 152 -305 291 -395 135 -87 273 -124 467 -125 128 0 230 17 323 54 72 29 207 125 202 145 -1 7 1 10 6 7 5 -3 22 8 38 25 33 35 41 23 -100 143 l-89 75 -61 -51 c-108 -91 -212 -124 -351 -115 -44 3 -102 13 -130 22 -113 37 -211 130 -256 244 -31 79 -39 263 -14 346 25 87 57 144 112 199 160 161 464 166 633 9 l60 -55 105 98 c58 54 105 104 105 110 0 14 -86 88 -150 131 -63 42 -171 83 -260 99 -69 12 -240 17 -300 8z",
   ];
   /** The whole logo, or the mark alone (where the name has no room). Each box is centred on the
-   *  letters (the "O" and "RAC" share a middle, y 383), not on all the logo draws: the lombax's ears
+   *  letters (the capitals of "RAC", y 320 to 455), not on all the logo draws: the lombax's ears
    *  rise above it (overflow, below), so that the logo sits level beside text and buttons rather
    *  than low, as a box around the ears would set it. */
-  const VIEW = { full: "62 216 1253 334", mark: "62 216 415 334" };
+  const VIEW = { full: "62 220 1253 334", mark: "62 220 415 334" };
 </script>
 
 <script lang="ts">
