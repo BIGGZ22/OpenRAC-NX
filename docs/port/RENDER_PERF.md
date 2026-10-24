@@ -52,6 +52,7 @@ before and after, and how its frames are shown to be the same.
 | `gpu-resident-instances` | on | none (exact) | Static instances are registered in device memory at the level's upload; a view's GPU-driven batch of them sends only its planes, PVS and a group record ([R-15](#r-15-static-instances-resident-on-the-gpu)). |
 | `shadow-static-cache` | off | none (exact) | A sun cascade's static casters are kept in a cache target and copied into the shadow atlas while the cascade's key is unchanged; only the mobys are drawn over them. Off: the copy costs more GPU time than it saves on both measured machines ([R-18](#r-18-a-static-shadow-cache-shipped-off)). |
 | `present-single-copy` | on | none (exact) | The frontend's blit of the picture into the window waits and becomes one blit into the screen, where nothing else touches the window first ([R-07](#r-07-one-copy-to-the-screen)). |
+| `vk-tight-sync` | on | none (exact) | Vulkan barriers name the stages and accesses they order, and only the copy to the screen waits for the swapchain image ([R-08](#r-08-barriers-that-name-their-stages)). |
 
 Its tests are `render_opt` (the table, and the parsing of the variable: a name, a list, `all`, an
 unknown name kept apart; it runs in the headless preset too) and `render_opt_environment` (the
@@ -1018,3 +1019,70 @@ fullscreen.
 **Not done: the MSAA resolve inside its pass** (the brief's part 2, `msaa-resolve-in-pass`). It is
 left for a package of its own: [PROGRESS.md](../restructure/PROGRESS.md)'s follow-ups say what it
 needs.
+
+## R-08: barriers that name their stages
+
+**What changed.** Five barriers waited on and for every stage (`ALL_COMMANDS`), and the frame's
+one submit waited for the swapchain image at `ALL_COMMANDS`, so the uploads, the culling dispatches
+and all of the frame's rendering waited for the presentation engine, though only the copy to the
+screen needs its image. Under `vk-tight-sync` each barrier names the stages and accesses it orders,
+and the copy to the screen goes into a command buffer of its own (`present_cmd`), submitted as a
+second batch of the same `vkQueueSubmit`; that batch alone waits for the acquire, at the transfer
+stage where it first touches the image. One submit a frame still: a second `vkQueueSubmit` was not
+needed, so its cost on MoltenVK does not arise. The barriers stay core Vulkan 1.0
+(`vkCmdPipelineBarrier`): the narrower masks need nothing of synchronization2, which the device
+does not enable, so no device needs the old path for want of a feature.
+
+**Every barrier** (`vk-tight-sync` on; off, each is `ALL_COMMANDS` to `ALL_COMMANDS` with memory
+read and write, as before, but the mip chain's, which was transfer to `ALL_COMMANDS`):
+
+| Where | Source stages and accesses | Destination stages and accesses | Resource | What it orders |
+|---|---|---|---|---|
+| `barrier()` out of and into a layout (`vkgl_commands.cpp`, `scope_of`), every image transition | the old layout's use: `UNDEFINED` top of pipe, nothing; `TRANSFER_SRC` transfer read; `TRANSFER_DST` transfer write; `SHADER_READ_ONLY` the vertex, fragment and compute shaders' reads; `COLOR_ATTACHMENT` colour output read and write; `DEPTH_STENCIL_ATTACHMENT` early and late tests and colour output, depth read and write and colour write | the new layout's use, the same table | one image, all its levels | the earlier use of the image (a copy, a sampling, a pass's loads, stores and resolves) before its next one, and the layout change between them; a pass into the same layout again still waits for the last pass's writes |
+| End of `upload` (`submit`) | transfer and compute shader; transfer write, shader write | draw indirect, vertex input, vertex, fragment and compute shaders, transfer; indirect, index, vertex attribute, uniform and shader reads, shader write, transfer read and write | memory | `upload`'s copies (texture uploads, mip chains, R-05's staging copies) and the culling's dispatches before `main`'s indirect draws, vertex and index fetches, uniform and texel reads, compute and copies |
+| `swapchain_barrier`, `UNDEFINED` to `TRANSFER_DST` (`vkgl_present.cpp`) | transfer; nothing | transfer; transfer write | the swapchain image | the acquire (waited for at the transfer stage) before the clear or blit into the image |
+| `swapchain_barrier`, `TRANSFER_DST` to itself | transfer; transfer write | transfer; transfer write | the swapchain image (or a stand-in) | R-07's clear before the blit that overlaps it |
+| `swapchain_barrier`, `TRANSFER_DST` to `PRESENT_SRC` | transfer; transfer write | bottom of pipe; nothing | the swapchain image | the copy before the present, which the batch's signal semaphore orders for the presentation engine |
+| `generate_mipmaps`' last barrier (`vkgl_resources.cpp`) | transfer; transfer read and write | transfer; transfer read and write | the levels above the last | the chain's blits before the `barrier()` that follows at once and moves every level to be sampled, out of `TRANSFER_DST` at the transfer stage |
+| `glMemoryBarrier` (`vkgl_pipelines.cpp`) | vertex, fragment and compute shaders; shader write | the same shaders, draw indirect, vertex input, transfer; shader and uniform reads, shader write, indirect, vertex attribute, index and transfer reads | memory | compute's writes before whatever reads them next: a shader, a draw's buffers, a copy into an image |
+
+The other barriers were narrow already and are unchanged: the GPU-driven culling's
+(`gpu_draw.inc`), `copy_buffer_to_texture`'s and R-05's read-back. `grep ALL_COMMANDS
+port/renderer/vulkan/*.cpp` finds the reference paths only (`vk-tight-sync` off) and one
+case of `scope_of` that no layout the backend uses reaches.
+
+**The counters.** `openrac_render_bench --warmup 3 --frames 10` (1920x1080), per measured frame, off
+/ on:
+
+| Setting | `vk_barriers` | `vk_barriers_all_commands` | `vk_submits` | `vk_cmds_recorded` | picture CPU ms (information) |
+|---|---|---|---|---|---|
+| Enhanced off, before (master) | 10 | 5 | 1 | 99 | 0.77 |
+| Enhanced off, R-08 | 10 | 0 | 1 | 99 | 0.77 |
+| Enhanced off, R-08 with the entry off | 10 | 5 | 1 | 99 | 0.76 |
+| Enhanced on, before | 27 | 22 | 1 | 198 | 1.77 |
+| Enhanced on, R-08 | 27 | 0 | 1 | 198 | 1.78 |
+| Enhanced on, R-08 with the entry off | 27 | 22 | 1 | 198 | 1.77 |
+
+On the Mac; the counts are the same on box1 (R-02's baseline gives box1 the same 5 and 22, and
+the barriers do not depend on the device), where the benchmark could not run once the logged-in
+session it draws in had ended. `render_bench.py --synthetic --compare-opt vk-tight-sync` on the
+Mac: `vk_barriers_all_commands` -100 percent in every setting, every other counter +0.0 percent,
+the picture's CPU time within 2.3 percent either way.
+
+`vk_submits` stays 1 a frame: the copy to the screen, where there is one, is a second batch of the
+same submit. The real gain, the GPU no longer idle at the start of a frame waiting for the
+presentation engine and up to a frame less latency in the vsync modes, cannot be counted headless.
+
+The maintainers measure it: with RenderDoc on box1 (or Xcode's Metal System Trace on the Mac),
+capture a few frames of the game on level_12 at vsync on, once as is and once with
+`OPENRAC_RENDER_OPT_OFF=vk-tight-sync`, and read the time between the queue's wait on the acquire
+semaphore and the first dispatch or draw of the frame (RenderDoc's Timeline and its event list;
+in Xcode, the gap before the first compute encoder of the frame's command buffer). With the entry
+on, the frame's work starts before the acquire completes and only the last blit waits.
+
+**Equivalence.** A synchronisation change is not proven by images alone: (a) the Vulkan tests ran
+with the validation layer and its synchronisation validation (`VK_LAYER_ENABLES=
+VK_VALIDATION_FEATURE_ENABLE_SYNCHRONIZATION_VALIDATION_EXT`) on the Mac, with no `SYNC-HAZARD`
+and no validation error reported; box1 has no validation layer installed (`vulkaninfo` lists
+none), so there the tests ran without it and the table is the review, and (b) `render_equivalence_vulkan` draws the entry on and off in every
+scenario: identical frames. The table above is the review that a reader repeats line by line.
