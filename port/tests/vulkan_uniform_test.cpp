@@ -442,6 +442,102 @@ void main() {
     CHECK(glGetError() == GL_NO_ERROR);
 }
 
+// ---- Descriptor sets that outlive the frame (R-14, vk-persistent-descriptors) ----
+
+// Makes a 1 by 1 texture of `texel` and returns its name.
+unsigned one_texel_texture(const std::array<unsigned char, 4>& texel) {
+    unsigned texture = 0;
+    glGenTextures(1, &texture);
+    glBindTexture(GL_TEXTURE_2D, texture);
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, 1, 1, 0, GL_RGBA, GL_UNSIGNED_BYTE, texel.data());
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+    return texture;
+}
+
+// Draws `texture` into the 1 by 1 `target` with `shader` and returns the pixel.
+std::vector<std::uint8_t> draw_texture(
+    const renderer::FrameBuffer& target,
+    const renderer::Shader& shader,
+    unsigned vao,
+    unsigned texture
+) {
+    glBindFramebuffer(GL_FRAMEBUFFER, target.id());
+    glBindVertexArray(vao);
+    glDisable(GL_DEPTH_TEST);
+    glDisable(GL_BLEND);
+    glDisable(GL_CULL_FACE);
+    glViewport(0, 0, 1, 1);
+    shader.use();
+    glActiveTexture(GL_TEXTURE0);
+    glBindTexture(GL_TEXTURE_2D, texture);
+    glUniform1i(shader.uniform("picture"), 0);
+    glDrawArrays(GL_TRIANGLES, 0, 3);
+    return target.read_rgba();
+}
+
+// Tests that a texture deleted and replaced by a new one, which may get the same Vulkan handles,
+// never draws through the old texture's descriptor set: each round draws texture A, lets frames
+// pass so that A's image and views are destroyed, makes texture B of another colour and draws it,
+// and requires B's colour.
+void test_a_deleted_texture_s_set_is_never_drawn_again() {
+    renderer::Shader shader;
+    std::string error;
+    CHECK(shader.build(
+        "deleted texture fixture",
+        R"(#version 410 core
+void main() {
+    vec2 p = vec2((gl_VertexID << 1) & 2, gl_VertexID & 2);
+    gl_Position = vec4(p * 2.0 - 1.0, 0, 1);
+}
+)",
+        R"(#version 410 core
+uniform sampler2D picture;
+layout(location = 0) out vec4 result;
+void main() {
+    result = texture(picture, vec2(0.5));
+}
+)",
+        error
+    ));
+    renderer::FrameBuffer target;
+    CHECK(target.create(1, 1, error));
+    unsigned vao = 0;
+    glGenVertexArrays(1, &vao);
+    constexpr std::array<unsigned char, 4> kRed = {255, 0, 0, 255};
+    constexpr std::array<unsigned char, 4> kBlue = {0, 0, 255, 255};
+
+    // The rounds give the driver several chances to hand out a handle again.
+    constexpr int kRounds = 8;
+
+    // The frames that end before a deleted texture's image is destroyed: a frame slot's deferred
+    // work runs when the slot comes round again, and the backend has two.
+    constexpr int kFramesUntilDestroyed = 3;
+
+    // Each round: A drawn, A deleted and destroyed, B made and drawn.
+    for (int round = 0; round < kRounds; ++round) {
+        const unsigned first = one_texel_texture(kRed);
+        const std::vector<std::uint8_t> red = draw_texture(target, shader, vao, first);
+        CHECK(red.size() == 4 && red[0] == 255 && red[2] == 0);
+        vkgl::present();
+        glDeleteTextures(1, &first);
+
+        // The frames after which A's image and views are gone.
+        for (int frame = 0; frame < kFramesUntilDestroyed; ++frame) {
+            vkgl::present();
+        }
+
+        const unsigned second = one_texel_texture(kBlue);
+        const std::vector<std::uint8_t> blue = draw_texture(target, shader, vao, second);
+        CHECK(blue.size() == 4 && blue[0] == 0 && blue[2] == 255);
+        vkgl::present();
+        glDeleteTextures(1, &second);
+    }
+
+    glDeleteVertexArrays(1, &vao);
+    CHECK(glGetError() == GL_NO_ERROR);
+}
+
 int main() {
     test::GlContext context;
     std::string error;
@@ -684,5 +780,6 @@ void main() {
     texel_buffer_fallbacks();
     test_state_bounces();
     test_cull_and_front_face_toggled_in_one_pass();
+    test_a_deleted_texture_s_set_is_never_drawn_again();
     return test::result();
 }
