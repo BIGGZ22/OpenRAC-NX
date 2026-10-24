@@ -44,8 +44,8 @@ enum class Opt : std::uint8_t {
     PresentTiming,         // present-timing
     // vk-extended-dynamic-state: cull, front face, depth and stencil not in the pipeline's key
     VkExtendedDynamicState,
-    MobyPoseInPlace,       // moby-pose-in-place: mobys regrouped per tick, posed in place
-    ShadowAtlasDiscard,    // shadow-atlas-discard: the atlas's colour and stencil not kept
+    MobyPoseInPlace,     // moby-pose-in-place: mobys regrouped per tick, posed in place
+    ShadowAtlasDiscard,  // shadow-atlas-discard: the atlas's colour and stencil not kept
 };
 
 // The number of entries: ShadowAtlasDiscard is the last enumerator of Opt.
