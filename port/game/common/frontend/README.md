@@ -49,7 +49,8 @@ the game. Shutdown finishes and joins the worker before releasing graphics owner
 
 ## Configuration
 
-`OPENRAC_RENDER_THREAD=1` enables the experimental worker. The default remains synchronous. Graphics
+Vulkan uses the render worker by default. `OPENRAC_RENDER_THREAD=0` selects synchronous rendering
+for debugging and comparisons; OpenGL always stays synchronous. Graphics
 settings are copied with each snapshot; player-facing settings are unchanged. `render snapshot ms`
 and `render thread wait ms` in the debug dump measure snapshot preparation and producer wait.
 `render preparation ms` measures the next tick's CPU camera/object/pose capture before that wait;
