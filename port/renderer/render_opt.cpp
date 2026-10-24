@@ -34,6 +34,12 @@ constexpr std::array<Entry, kOptCount> kEntries = {{
     {Opt::VkStateSkip, "vk-state-skip",
      "Vulkan dynamic state and binds recorded only when they differ from the last recorded",
      true, Tolerance{}},
+    {Opt::StaticBuffersDeviceLocal, "static-buffers-device-local",
+     "a static GL buffer of 64 KiB or more goes into device memory at once, and its CPU copy goes",
+     true, Tolerance{}},
+    {Opt::StaticBuffersForceStaging, "static-buffers-force-staging",
+     "with static-buffers-device-local: the staging copy into memory the CPU cannot see, always",
+     false, Tolerance{}},
 }};
 // clang-format on
 
