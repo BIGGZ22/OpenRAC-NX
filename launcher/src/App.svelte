@@ -7,10 +7,9 @@
   import { errorText, onAndroid } from "$lib/api";
   import { app, openDevelop, refresh, showLaunch, start, updateDiscordPresence, type Page } from "$lib/app.svelte";
   import { preloadArt } from "$lib/media";
-  import { reduced } from "$lib/motion";
+  import { slide, slides } from "$lib/motion";
   import { applyPalette } from "$lib/palettes";
   import { ACCENT_PROPERTIES, accentProperties } from "$lib/themes";
-  import { tick } from "svelte";
   import Game from "./pages/Game.svelte";
   import Library from "./pages/Library.svelte";
   import Settings from "./pages/Settings.svelte";
@@ -58,24 +57,27 @@
     document.documentElement.dataset.layout = app.config?.layout ?? "compact";
   });
 
-  // The page shown. On Android one page gives way to the next in a view transition (app.css): the
-  // one leaving slides away and fades as the next slides in, down the rail's order (a tab below
-  // comes up from below, one above from above); elsewhere, or without the browser's support, it
-  // simply changes.
+  // The page shown. One page gives way to the next in a slide (motion.ts, app.css): the one leaving
+  // fades away as the next comes in, in the order of the tabs (from the right for a tab further
+  // along the bar; on Android from below for one further down the rail).
   const ORDER: Record<Page, number> = { library: 0, game: 1, mods: 2, tasks: 3, develop: 4, settings: 5 };
   let page = $state<Page>(app.page);
   $effect(() => {
     const next = app.page;
     if (next === page) return;
-    if (!onAndroid || reduced || !("startViewTransition" in document)) {
-      page = next;
-      return;
-    }
-    document.documentElement.dataset.nav = ORDER[next] >= ORDER[page] ? "forward" : "back";
-    document.startViewTransition(async () => {
-      page = next;
-      await tick();
-    });
+    // On a desktop the Games tab and a game's page are one tab: the game list opens the game in place.
+    const sameTab = !onAndroid && Math.max(ORDER[next], ORDER[page]) <= ORDER.game;
+    if (sameTab) page = next;
+    else
+      slide(
+        () => {
+          page = next;
+        },
+        ORDER[next] >= ORDER[page] ? "forward" : "back",
+      );
+  });
+  $effect(() => {
+    if (slides) document.documentElement.dataset.motion = "slides";
   });
 
   // Another page starts at its top, as it arrives (app.css: its sections rise in turn).

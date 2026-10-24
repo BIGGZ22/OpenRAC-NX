@@ -28,7 +28,7 @@
   import { EDITOR, GAME_LIST, PAGE } from "$lib/modsText";
   import { foundDisc, playerVersion, setUp } from "$lib/player.svelte";
   import type { Job } from "$lib/queue";
-  import { enter } from "$lib/motion";
+  import { arrive, enter } from "$lib/motion";
   import { followHistory, modFromAddress, modNav, openMod, resetMod } from "$lib/modNav.svelte";
   import { hidePaths } from "$lib/paths";
   import { onMount } from "svelte";
@@ -255,7 +255,7 @@
 >
   {#if shown}
     {#key shown.id}
-      <div class="page" style={themeStyle(shown.id)} in:fly={enter()}>
+      <div class="page" style={themeStyle(shown.id)} in:fly={arrive()}>
         <div class="intro">
           <div class="grow">
             <h1 class:plain={onAndroid}>{onAndroid ? "Mods" : shown.title}</h1>

@@ -440,9 +440,9 @@
     }
   }
 
-  /* Android: the page slides in whole (app.css's view transition); its pictures come with it. */
-  :global(html[data-platform="android"]) .hero-bg,
-  :global(html[data-platform="android"]) .page-ambient-bg img {
+  /* Where the page slides in whole (app.css's view transition), its pictures come with it. */
+  :global(html[data-motion="slides"]) .hero-bg,
+  :global(html[data-motion="slides"]) .page-ambient-bg img {
     animation: none;
   }
 

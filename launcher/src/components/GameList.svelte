@@ -7,6 +7,7 @@
   import type { GameView } from "$lib/api";
   import { app, openVersion } from "$lib/app.svelte";
   import { gameThumb } from "$lib/media";
+  import { slide } from "$lib/motion";
   import { playerState, playerVersion } from "$lib/player.svelte";
   import { themeStyle } from "$lib/themes";
   import type { EntryState, SideEntry } from "$lib/labels";
@@ -48,15 +49,31 @@
     })),
   );
 
-  function pick(key: string) {
-    const game = games.find((g) => g.id === key);
-    if (!game) return;
+  function open(game: GameView) {
     if (onselect) {
       onselect(game);
       return;
     }
     const v = playerVersion(game);
     if (v) openVersion(v.key);
+  }
+
+  /** The page slides to the game picked: up from below for one further down the list. */
+  function pick(key: string) {
+    const to = games.findIndex((g) => g.id === key);
+    const game = games[to];
+    if (!game) return;
+    if (key === opened) {
+      open(game);
+      return;
+    }
+    const from = games.findIndex((g) => g.id === opened);
+    slide(
+      () => {
+        open(game);
+      },
+      to >= from ? "down" : "up",
+    );
   }
 </script>
 

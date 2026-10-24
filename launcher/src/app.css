@@ -741,15 +741,57 @@ ol.steps select:focus-visible {
   animation: rise 0.6s var(--ease) both;
 }
 
-/* Android: one page gives way to the next (App.svelte's view transition). Only the page moves:
-   the rail stays live, its highlight sliding to the tab pressed. */
-html[data-platform="android"] main {
+/* One page, or the game on it, gives way to the next (motion.ts's slide). Only the page moves:
+   the bar or the rail stays live, its highlight sliding to the tab pressed, and so does the game
+   list beside the page (SideFrame), unless the next page has none. */
+main {
   view-transition-name: page;
 }
 
 ::view-transition-old(root),
-::view-transition-new(root) {
+::view-transition-new(root),
+::view-transition-group(side),
+::view-transition-image-pair(side),
+::view-transition-old(side),
+::view-transition-new(side) {
   animation: none;
+}
+
+::view-transition-old(side):only-child {
+  animation: page-fade 0.2s ease-in both;
+}
+
+::view-transition-new(side):only-child {
+  animation: page-fade 0.3s var(--ease) reverse both;
+}
+
+/* Which way: the tabs of the bar go sideways, those of Android's rail and the games of the list
+   up and down. */
+html[data-nav="forward"] {
+  --page-in: 48px 0;
+  --page-out: -28px 0;
+}
+
+html[data-nav="back"] {
+  --page-in: -48px 0;
+  --page-out: 28px 0;
+}
+
+html[data-platform="android"][data-nav="forward"],
+html[data-nav="down"] {
+  --page-in: 0 48px;
+  --page-out: 0 -28px;
+}
+
+html[data-platform="android"][data-nav="back"],
+html[data-nav="up"] {
+  --page-in: 0 -48px;
+  --page-out: 0 28px;
+}
+
+html[data-nav="down"],
+html[data-nav="up"] {
+  --page-in-time: 0.32s;
 }
 
 ::view-transition-old(page) {
@@ -757,42 +799,27 @@ html[data-platform="android"] main {
 }
 
 ::view-transition-new(page) {
-  animation: page-in 0.38s var(--ease) both;
-}
-
-html[data-nav="back"]::view-transition-old(page) {
-  animation-name: page-out-back;
-}
-
-html[data-nav="back"]::view-transition-new(page) {
-  animation-name: page-in-back;
+  animation: page-in var(--page-in-time, 0.38s) var(--ease) both;
 }
 
 @keyframes page-out {
   to {
     opacity: 0;
-    transform: translateY(-28px) scale(0.98);
+    translate: var(--page-out, 0);
+    scale: 0.98;
   }
 }
 
 @keyframes page-in {
   from {
     opacity: 0;
-    transform: translateY(48px);
+    translate: var(--page-in, 0);
   }
 }
 
-@keyframes page-out-back {
+@keyframes page-fade {
   to {
     opacity: 0;
-    transform: translateY(28px) scale(0.98);
-  }
-}
-
-@keyframes page-in-back {
-  from {
-    opacity: 0;
-    transform: translateY(-48px);
   }
 }
 
@@ -821,9 +848,9 @@ html[data-nav="back"]::view-transition-new(page) {
   animation-delay: 200ms;
 }
 
-/* Android: the page slides in whole (the view transition above), so its sections and game tiles
-   come with it rather than rising again after it, which showed as each one popping in. */
-html[data-platform="android"] :is(.page > :is(section, .panel, h1), .tile.rise) {
+/* Where the page slides in whole (the view transition above), its sections and game tiles come
+   with it rather than rising again after it, which showed as each one popping in. */
+html[data-motion="slides"] :is(.page > :is(section, .panel, h1), .tile.rise) {
   animation: none;
 }
 

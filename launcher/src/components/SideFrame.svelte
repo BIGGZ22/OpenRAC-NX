@@ -31,6 +31,11 @@
     min-width: 0;
   }
 
+  /* The list stays put while the page beside it slides (app.css). */
+  :global(html:not([data-platform="android"])) aside {
+    view-transition-name: side;
+  }
+
   @media (max-width: 1000px) {
     .frame {
       grid-template-columns: 76px minmax(0, 1fr);
