@@ -295,12 +295,12 @@ catalogue itself, shipped in the SDK archive:
   tier) and tools: per class, its update functions with their hook names
   (`Moby_<Class>_Update`, aliases of the ids), status and signature, the classes
   sharing each, and its pvar fields (name, offset, type, meaning). Its format is
-  documented in [editor/catalogue.py](../../editor/catalogue.py) and changes only
+  documented in [sdk/tools/catalogue.py](../../sdk/tools/catalogue.py) and changes only
   with its `format` number;
 - `sdk/catalogue/rac1/behaviour.json` (everything, may grow), `behaviour.tsv`, and
   [BEHAVIOUR.md](../../sdk/catalogue/rac1/BEHAVIOUR.md) to read.
 
-`python3 editor/catalogue.py write` regenerates them; `check` fails when stale.
+`python3 sdk/tools/catalogue.py write` regenerates them; `check` fails when stale.
 
 Hook points are added as mods need them; adding one changes nothing for a
 game without mods. Which exist is the game header in the SDK, and the port
@@ -743,9 +743,9 @@ the table gives, or when the table's hook points (with the catalogue's) are not
 exactly the `hook` rows of every disc's `libraries.tsv`: a hook point added
 there needs its line in the table, and the other way round.
 
-**The behaviour catalogue** (the level editor's,
+**The behaviour catalogue** (the SDK's,
 [sdk/catalogue/rac1/classes.json](../../sdk/catalogue/rac1/classes.json),
-format 1 of [editor/catalogue.py](../../editor/catalogue.py)) is the
+format 1 of [sdk/tools/catalogue.py](../../sdk/tools/catalogue.py)) is the
 generator's other input, and experimental (section 4). From it:
 
 - **hook points**: each update function, but those `catalogue_exclude` names

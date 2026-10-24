@@ -1,10 +1,14 @@
+#!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
+# Copyright (c) 2026 the OpenRAC contributors
 """The moby behaviour catalogue for the mod SDK (experimental: names follow the decompilation and will
 change in the C++ refactor; the hook names are the stable handle): for each Ratchet & Clank (PAL) moby class, the
 function that updates it, what its pvars hold, and how a native mod can take that function.
 
-    catalogue.py write           # regenerate sdk/catalogue/rac1/
-    catalogue.py check           # exit 1 when those files are stale
-    catalogue.py show <class>    # one class's entry, as JSON, on stdout
+    python3 sdk/tools/catalogue.py write           # regenerate sdk/catalogue/rac1/
+    python3 sdk/tools/catalogue.py check           # exit 1 when those files are stale
+    python3 sdk/tools/catalogue.py show <class>    # one class's entry, as JSON, on stdout
+    python3 -m unittest discover -s sdk/tools -p test_catalogue.py
 
 Writes, in sdk/catalogue/rac1/ (shipped with the mod SDK, sdk/tools/package_sdk.py):
 
@@ -23,10 +27,18 @@ include/moby_pvars.h for the typed pvars), the port's tables for the PAL and NTS
 no_c.tsv; port/game/rac1-ntsc/libraries.tsv), the SDK's game header
 (sdk/include/openrac/games/rac1.h), editor/moby_classes.tsv and editor/engine_helpers.tsv.
 
+It lives with the SDK because it writes the SDK's files, but it reads the decompilation's C and
+the class table through the level editor's modules: cparse (Types, strip) and mobys (CLASS_NAMES,
+DECOMPILATION, LEVEL_NAMES, c_definitions, names_h_symbols, update_roles). So sdk/tools depends on
+editor/, in this one direction and in this module only: the rest of sdk/tools stands alone, and
+nothing in editor/ imports from sdk/. The repository's root is found through openrac_common's
+bootstrap (tools/openrac_common/paths.py), and editor/ goes on the import path ahead of tools/, as
+it is when the editor's own scripts run (tools/port.py would otherwise shadow editor/port.py).
+
 classes.json, format 1, the stable contract. Fields are only added within a format; one that
 changes meaning or goes raises the format. One class per line:
 
-    {"format": 1, "game": "rac1", "disc": "pal", "generated_by": "editor/catalogue.py",
+    {"format": 1, "game": "rac1", "disc": "pal", "generated_by": "sdk/tools/catalogue.py",
      "moby": {"struct": "Moby", "size": 256,
               "class_field": {"name": "oclass", "offset": 166, "type": "s16"},   # filter a shared hook on it
               "update_field": {...}, "pvars_field": {...}},                     # +0x74, +0x78
@@ -51,7 +63,7 @@ replacement for one class checks the class field and calls the original for the 
 
 behaviour.json, format 1 (everything, for tools; may grow):
 
-    {"format": 1, "game": "rac1", "disc": "pal", "generated_by": "editor/catalogue.py",
+    {"format": 1, "game": "rac1", "disc": "pal", "generated_by": "sdk/tools/catalogue.py",
      "moby": {"size", "class_field", "update_field", "pvars_field"},   # {name, offset, type}
      "levels": ["Veldin", ...],                      # level number -> name
      "counts": {...},
@@ -91,13 +103,17 @@ from collections import Counter
 from dataclasses import dataclass, field
 from pathlib import Path
 
-sys.path.insert(0, str(Path(__file__).parent))
+sys.path.insert(1, str(next(p for p in Path(__file__).resolve().parents if (p / "tools/openrac_common").is_dir()) / "tools"))
+from openrac_common import paths  # noqa: E402
 
-from cparse import Types, strip
-from mobys import CLASS_NAMES, DECOMPILATION, LEVEL_NAMES, c_definitions, names_h_symbols, update_roles
+REPO = paths.repo_root(__file__)
+# The level editor's folder: its cparse and mobys modules, and its moby_classes.tsv and engine_helpers.tsv.
+EDITOR = REPO / "editor"
+sys.path.insert(1, str(EDITOR))
 
-HERE = Path(__file__).parent
-REPO = HERE.parent
+from cparse import Types, strip  # noqa: E402
+from mobys import CLASS_NAMES, DECOMPILATION, LEVEL_NAMES, c_definitions, names_h_symbols, update_roles  # noqa: E402
+
 PAL = REPO / "port" / "game" / "rac1-pal"
 NTSC = REPO / "port" / "game" / "rac1-ntsc"
 SDK_HEADER = REPO / "sdk" / "include" / "openrac" / "games" / "rac1.h"
@@ -166,7 +182,7 @@ def load() -> Inputs:
     extra = [(p, _read(REPO / p)) for p in sorted(set(candidates.values()) | set(hand.values()))]
     no_c = {cols[0]: cols[3].strip() for cols in _table(_read(PAL / "no_c.tsv")) if len(cols) >= 4 and cols[0] != "name"}
     api = {}
-    for cols in _table(_read(HERE / "engine_helpers.tsv")):
+    for cols in _table(_read(EDITOR / "engine_helpers.tsv")):
         if len(cols) >= 3 and cols[0] == "func":
             api[cols[1]] = cols[2]
     names = {int(cols[0]): cols[1] for cols in _table(_read(CLASS_NAMES)) if len(cols) >= 2}
@@ -511,7 +527,7 @@ def build(inp: Inputs) -> dict:
               "classes_with_named_class": sum(1 for c in class_list if c["name"]),
               "classes_with_pvar_struct": sum(1 for c in class_list if c["pvars"]),
               "pvar_structs": len(structs), "helpers": len(helpers)}
-    return {"format": 1, "game": "rac1", "disc": "pal", "generated_by": "editor/catalogue.py",
+    return {"format": 1, "game": "rac1", "disc": "pal", "generated_by": "sdk/tools/catalogue.py",
             "moby": {"struct": "Moby", "size": moby.size if moby else None, "class_field": moby_field("oclass"),
                      "update_field": moby_field("update"), "pvars_field": moby_field("pvars")},
             "levels": list(LEVEL_NAMES), "counts": counts, "hook_points": dict(sorted(hook_points.items())),
@@ -641,7 +657,7 @@ def render_json(cat: dict) -> str:
 
 def render_tsv(cat: dict) -> str:
     lines = ["# The moby behaviour catalogue of Ratchet & Clank (PAL), one row per class and update function.",
-             "# Generated by editor/catalogue.py from the source tree; do not edit. behaviour.json has the rest.",
+             "# Generated by sdk/tools/catalogue.py from the source tree; do not edit. behaviour.json has the rest.",
              "# levels: where the class is updated by that function; classes_sharing: how many classes that function serves.",
              "\t".join(TSV_COLUMNS)]
     for c in cat["classes"]:
@@ -669,8 +685,8 @@ def render_md(cat: dict) -> str:
     out = [
         "# Ratchet & Clank (PAL): the moby behaviour catalogue",
         "",
-        "Generated by [editor/catalogue.py](../../../editor/catalogue.py) from the source tree (the",
-        "decompilation and the port's tables, never the disc); do not edit. `python3 editor/catalogue.py write`",
+        "Generated by [sdk/tools/catalogue.py](../../tools/catalogue.py) from the source tree (the",
+        "decompilation and the port's tables, never the disc); do not edit. `python3 sdk/tools/catalogue.py write`",
         "regenerates it, `check` says whether it is stale. The same facts for tools are",
         "[behaviour.json](behaviour.json) (its format is in the generator's docstring) and, one row per class,",
         "[behaviour.tsv](behaviour.tsv).",
@@ -877,7 +893,7 @@ def main(argv=None) -> int:
         elif not path.is_file() or path.read_text() != text:
             stale.append(_rel(path))
     if stale:
-        print("stale: " + ", ".join(stale) + " (python3 editor/catalogue.py write)", file=sys.stderr)
+        print("stale: " + ", ".join(stale) + " (python3 sdk/tools/catalogue.py write)", file=sys.stderr)
         return 1
     return 0
 

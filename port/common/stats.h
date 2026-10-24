@@ -193,6 +193,9 @@ bool dumping();
 // so the overlay can show them and turn them on and off while the game runs:
 //
 //     static const bool& cam_log = stats::probe("OPENRAC_CAM_LOG", "the camera of each tick, in the log");
+//
+// The variable is a flag of common/env.h's table, read through env::flag; each probe's row reads
+// as Truth::Set. A name the table does not hold as a flag starts off, with a warning in the log.
 
 struct Probe {
     const char* variable;

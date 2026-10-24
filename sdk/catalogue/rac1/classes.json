@@ -2,7 +2,7 @@
  "format": 1,
  "game": "rac1",
  "disc": "pal",
- "generated_by": "editor/catalogue.py",
+ "generated_by": "sdk/tools/catalogue.py",
  "moby": {"struct":"Moby","size":256,"class_field":{"name":"oclass","offset":166,"type":"s16"},"update_field":{"name":"update","offset":116,"type":"void*"},"pvars_field":{"name":"pvars","offset":120,"type":"u8*"}},
  "classes": [
   {"id":6,"name":null,"levels":[13],"updates":[{"function":"func_L13_002B2020","name":"ClipVolumeTriggerUpdate","levels":[13],"hook":"Moby_Class6_Update","hook_status":"available","signature":"void(u32)","gets_moby":true,"shared_with":[]}],"pvars":[]},

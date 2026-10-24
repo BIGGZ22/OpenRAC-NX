@@ -338,6 +338,23 @@ class GamesTests(TempDir):
             del os.environ["OPENRAC_SOURCE_RAC8_PAL"]
             self.assertEqual(games.source_checkout("rac8", "pal", self.dir), Path(os.path.expanduser("~/x")))
 
+    def test_a_relative_checkout_is_written_from_the_top_of_openrac(self):
+        manifest = self.dir / "games/rac8/game.json"
+        data = json.loads(manifest.read_text())
+        data["versions"]["pal"]["source"]["checkout"] = "../rac8-decomp"
+        manifest.write_text(json.dumps(data))
+        with mock.patch.dict(os.environ, {"OPENRAC_SOURCE_RAC8_PAL": ""}):
+            self.assertEqual(games.source_checkout("rac8", "pal", self.dir), (self.dir / "../rac8-decomp").resolve())
+            # The same from any working directory: the path is the manifest's, not the caller's.
+            here = os.getcwd()
+            try:
+                os.chdir(self.dir / "games")
+                self.assertEqual(
+                    games.source_checkout("rac8", "pal", self.dir), (self.dir / "../rac8-decomp").resolve()
+                )
+            finally:
+                os.chdir(here)
+
     def test_source_checkout_is_none_without_a_source_even_with_the_variable(self):
         with mock.patch.dict(os.environ, {"OPENRAC_SOURCE_RAC8_NTSC": "/elsewhere"}):
             self.assertIsNone(games.source_checkout("rac8", "ntsc", self.dir))

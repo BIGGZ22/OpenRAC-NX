@@ -69,12 +69,22 @@ def source_checkout(game_id: str, version_name: str, root: Path | str | None = N
     its game.json names no source project.
 
     The rule, decided by the maintainers: the variable source_variable names, when it is set and not
-    empty, else the "checkout" path of the version's "source" in game.json, with ~ expanded to the
-    home folder. game.json says where the project's own checkouts are; the variable is for a machine
-    that keeps one elsewhere. Neither is checked to exist: the caller says what is missing. Raises
-    FileNotFoundError for a game OpenRAC does not have and KeyError for a version it does not have."""
+    empty, else the "checkout" path of the version's "source" in game.json. game.json writes it
+    relative to the top of OpenRAC ("../rac1-decomp": the sister project cloned beside OpenRAC), so
+    it holds on every machine whatever the folder above is called; ~ is expanded too. The variable
+    is for a machine that keeps the project elsewhere. Neither is checked to exist: the caller says
+    what is missing. Raises FileNotFoundError for a game OpenRAC does not have and KeyError for a
+    version it does not have."""
     source = load(game_id, root)["versions"][version_name].get("source")
     if not source:
         return None
     override = os.environ.get(source_variable(game_id, version_name))
-    return Path(override or os.path.expanduser(source["checkout"]))
+
+    # The variable wins; it is taken as given.
+    if override:
+        return Path(override)
+
+    # A relative path in game.json is written from the top of OpenRAC, not from where the tool runs.
+    checkout = Path(os.path.expanduser(source["checkout"]))
+    top = Path(root) if root is not None else repo_root()
+    return checkout if checkout.is_absolute() else (top / checkout).resolve()

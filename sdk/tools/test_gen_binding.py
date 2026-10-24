@@ -17,7 +17,7 @@ SIX = ["Pad_ProcessReport", "Hero_UpdateMotionInput", "Hero_TurnToHeading", "Her
 
 
 def catalogue(classes):
-    """A classes.json (editor/catalogue.py's format 1) of these classes."""
+    """A classes.json (sdk/tools/catalogue.py's format 1) of these classes."""
     return {"format": 1, "game": "t", "disc": "one",
             "moby": {"struct": "Moby", "size": 256, "class_field": {"name": "oclass", "offset": 166, "type": "s16"},
                      "update_field": {"name": "update", "offset": 116, "type": "void*"},

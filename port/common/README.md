@@ -77,8 +77,19 @@ runtime's C entry point `openrac/host_env.h`, which looks the name up with `env:
 back the kept value (`env::value`'s view ends in a NUL for it). The library replacements of
 `game/common/lib` read through it; what still calls `getenv` moves onto the table later
 (docs/restructure/PROGRESS.md): rac1's host C (P2-38), `renderer/vulkan/`, `android/` and
-`mod_scripts.cpp` (P2-20), and within `common`, `log.cpp` for `OPENRAC_LOG`, the log's level, and
-`stats::probe` for each `OPENRAC_*` switch a module declares through it (P2-21).
+`mod_scripts.cpp` (P2-20).
+
+`log.cpp` reads `OPENRAC_LOG`, the log's level, through `env.h` at the first call that asks the
+level rather than at static initialisation, so that the table's one reading of the environment is
+not taken before `main` (a test sets its variables first). `env.cpp` does not log, so the two do not
+wait on each other. The home folder `log::tidy` hides is read from `HOME` (`USERPROFILE` on
+Windows), which are the system's variables and not the port's, with `getenv`.
+
+`stats::probe` reads each switch a module declares through it from the table: the variable's row,
+found by its name with `env::find`, and its value through `env::flag`. Every probe's row is a flag
+read as `Truth::Set`, on when set to anything, as `probe` read it when it called `getenv`, which the
+`stats` test pins; a name the table does not hold as a flag starts off, with a warning in the log.
+The overlay then turns each probe on and off while the game runs, without touching the table.
 
 ## Tests
 
@@ -89,6 +100,7 @@ back the kept value (`env::value`'s view ends in a NUL for it). The library repl
 | `result` | a value or an error through each accessor, the wrong side throwing, copies and moves (a move-only value included), and `Result<void>` |
 | `c_boundary` | a body that returns passes through unreported; a `std::exception` and a non-standard thrown value are reported and the failure value returned; a void body; a long message cut to the buffer; the default and a null reporter write to the log |
 | `env` | each kind of variable reads as the `getenv` calls it replaced read it, the values are read once, a variable is found by its whole name, and DEBUGGING.md documents the table's variables and no other |
+| `stats` | a probe is on when its variable is set, whatever the value, and off when it is unset; a variable has one probe, which keeps its first description; the list switches a probe for its callers; every probed variable is a flag of the table read as set, and a name that is no flag of it starts off |
 | `host_env` | the table read from C through `openrac/host_env.h` (runtime/README.md) |
 | `viewer` | the JSON reader's values and its errors (with the viewer's own checks) |
 | `mod_manifest`, `mod_loader`, `mod_scripts` | the mod manifests and status files, read through the JSON reader |

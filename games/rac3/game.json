@@ -34,7 +34,7 @@
         "name": "rac3-uya-decomp",
         "repo": "https://github.com/OpenRAC/rac3-uya-decomp",
         "branch": "main",
-        "checkout": "~/Projects/rac3-decomp",
+        "checkout": "../rac3-decomp",
         "license": "GPL-3.0",
         "exclude": [
           "localdecomp/server.py.bak_0926"

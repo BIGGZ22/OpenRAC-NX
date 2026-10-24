@@ -37,6 +37,11 @@
 
 union SDL_Event;
 
+// The environment's variables (common/env.h), named here only for env_string's declaration.
+namespace openrac::env {
+enum class Var : std::uint16_t;
+}  // namespace openrac::env
+
 namespace openrac::frontend {
 
 // One tick's scene, as frame() read it from the game, for the frames drawn until the next tick
@@ -194,6 +199,33 @@ struct Pacing {
 // window touches it.
 extern Pacing pacing;
 
+// Where a scripted run is (port/tools/regress): the game mode as frame() last read it, and the
+// window frame at which the player got control (-1 before). Control is a level's game mode 0 (play)
+// held for kControlHold ticks in a row: a level's program can show mode 0 for a few ticks between
+// loading and its arrival scene, and those are no control.
+constexpr int kControlHold = 30;
+
+struct Route {
+    int level = -1;
+    int mode = -1;
+    int streak = 0;
+    std::int64_t control = -1;
+    // The window frame at which what plays now became skippable (-1 while nothing can be skipped):
+    // OPENRAC_PRESS's s entries count from it, so a skip falls on the same tick of a scene in every
+    // version, wherever the scene starts in window frames.
+    std::int64_t skippable_from = -1;
+};
+
+// Where a scripted run is, as frame() last read it (frontend.cpp).
+extern Route g_route;
+
+// Whether Start would skip what is playing now (frontend.cpp).
+bool skippable();
+
+// Returns the value `var` was set to as a string of its own, or nothing when it is unset
+// (frontend.cpp).
+std::optional<std::string> env_string(env::Var var);
+
 // The picture's shape now: the player's setting, for the window as it is (frontend.cpp).
 float picture_aspect(int window_width, int window_height);
 
@@ -211,5 +243,12 @@ void apply_settings();
 // Handles the window's own events and keys, which the game never sees: true when `event` was one
 // of the keys (frontend/window.cpp).
 bool window_key(const SDL_Event& event);
+
+// Draws the on-screen pad over the frame, inside the screen's safe area (frontend/input.cpp).
+void draw_touch_pad(int window_width, int window_height);
+
+// Captures the cursor as the mods ask for it, while nothing else has the mouse
+// (frontend/input.cpp).
+void apply_mouse_capture();
 
 }  // namespace openrac::frontend

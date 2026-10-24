@@ -70,7 +70,7 @@ count.
 | A game's hand C | `port/game/*/hand/` | not this page: it is the game's C on its way into `games/` ([LAYOUT.md](../../docs/LAYOUT.md)) and keeps the decompilation's style |
 | Generated C | hostgen's output in build trees, `port/game/rac1/script_binding.c` | not this page: change the generator, never the output |
 | The decompilations | `games/` | never edited from port work |
-| Python | `port/tools/` | the repository's Python habits: licence lines, a module docstring with the usage, `unittest` tests beside the tool |
+| Python | `port/tools/` | the repository's Python habits: licence lines (23.1), a module docstring with the usage, `unittest` tests beside the tool |
 | The mod SDK | `sdk/include/` | its own rules ([MODS.md](../../docs/port/MODS.md)): `openrac_mod.h` is a C ABI, `mod.hpp` a C++17 layer compiled into mods |
 
 In C, `static` is how a file-local function is spelled, and the comment forms are C's (6.1). The
@@ -97,11 +97,11 @@ what to do instead.
 
 | Rule | Arriving with | Until then |
 |---|---|---|
-| `openrac::Result<T>` in `common/result.h` (13.3) | P2-08 | `bool` and a `std::string& error`, or `std::optional<T>` |
-| The C-boundary wrapper that catches everything (13.4) | P2-08 | a `try` and two `catch` clauses written out, as 13.4 shows |
-| `common/env.h`, the table of `OPENRAC_*` variables (16) | P1-03 | one read per variable, in its module, listed in DEBUGGING.md |
+| `openrac::Result<T>` in `common/result.h` (13.3) | landed with P2-08 | use it |
+| The C-boundary wrapper that catches everything (13.4) | landed with P2-08: `c_boundary::call` in `common/c_boundary.h` | use it |
+| `common/env.h`, the table of `OPENRAC_*` variables (16) | landed with P1-03; its C entry point, `openrac/host_env.h`, with P2-19 | use it |
 | `host::GameProfile`, one per game version (15) | P2-03 (rac1), P3-02 (all) | per-game knowledge in `port/game/<id>/`; nothing new in shared code |
-| The `scene` module and `renderer/ui` (9.1) | P2-02, P2-06 | `viewer/` and `game/common` |
+| The `scene` module and `renderer/ui` (9.1) | `scene/` landed with P2-02: `openrac_scene`, and `openrac_scene_renderer` as its one exception to 9.1 ([scene/README.md](../scene/README.md)), in the namespace `openrac::viewer` and with forwarding headers left in `viewer/` until P2-37; `renderer/ui` arrives with P2-06 | new scene code in `scene/`; for `renderer/ui`, `viewer/` and `game/common` |
 
 ---
 
@@ -111,7 +111,7 @@ what to do instead.
 |---|---|---|---|
 | clang-format, [`port/.clang-format`](../.clang-format) | layout (section 5) | your editor; CI on new files and changed lines | new C++ files and changed lines: yes (24.4) |
 | [`tools/cpp_style.py`](../../tools/cpp_style.py) | clang-format, then the blank lines around control blocks (5.4); with `--comments`, the control blocks with no comment above them (6.2) | you, on the files you touch; CI ("Port conventions"), report only | no: reported, not failing yet (5.6) |
-| [`tools/conventions/check_conventions.py`](../tools/conventions/README.md) | licence lines, tabs, dashes everywhere; on new C++ files: `static` at namespace scope, raw `new`/`delete`/`malloc`/`free`, `using namespace` in headers, `extern "C"` outside contract files, console output outside tests and `main` | CI ("Port conventions"), and you before you commit | yes |
+| [`tools/conventions/check_conventions.py`](../tools/conventions/README.md) | licence lines, tabs, dashes, and `getenv` of an `OPENRAC_*` variable outside `common/env.cpp` and `runtime/host_env.cpp` (16), everywhere; on new C++ files: `static` at namespace scope, raw `new`/`delete`/`malloc`/`free`, `using namespace` in headers, `extern "C"` outside contract files, console output outside tests and `main` | CI ("Port conventions"), and you before you commit | yes |
 | clang-tidy, [`port/.clang-tidy`](../.clang-tidy) | naming, ownership, function size, `else` after `return`, missing `override`, nested ternaries, `goto` | you, on the C++ files you touch (it needs a configured build) | not in CI; new code has zero findings |
 | The compiler, `openrac_warnings` (`port/cmake/Warnings.cmake`) | `-Wall -Wextra -Wshadow`, and for C++ `-Wpedantic -Wconversion` | every build | no new warning is accepted in review |
 | [`tools/layering/layering.py`](../tools/layering/README.md) | includes against the layers and allowed edges of section 18; today's violations are listed exceptions | you before you commit (not in CI yet) | it exits 1 on a new violation; CI does not run it yet |
@@ -1184,6 +1184,7 @@ They stay C.
 | `guest.h` | `port/runtime/include/openrac/` | game memory and the calls translated C makes (hostgen writes against it) |
 | `ee.h`, `ee_ops.h` | `port/runtime/include/openrac/` | the EE's registers and operations as translated C uses them |
 | `ps2float.h` | `port/runtime/include/openrac/` | the console's float arithmetic, for translated C |
+| `host_env.h` | `port/runtime/include/openrac/` | the `OPENRAC_*` variables of `common/env.h`'s table, for C (`openrac_env_string`) |
 | `game_host.h` | `port/game/common/include/openrac/` | what a game gives the host program and asks of it (`openrac_front_end`, `openrac_game_crash`) |
 | `game_lib.h` | `port/game/common/include/openrac/` | the library replacements the games call (`libraries.tsv` binds them) |
 | `script_binding.h` | `port/game/common/include/openrac/` | a game's binding for script mods |
@@ -1208,7 +1209,8 @@ them, the rest of the page does.
 ### 14.3 Who implements, who includes
 
 - C++ implements a contract in the file named for it: `guest.cpp` for `guest.h`, `ee.cpp` for
-  `ee.h`, `sound_engine.cpp` for `sound_engine.h`, and `game_host.cpp` for `game_host.h` (P2-08
+  `ee.h`, `host_env.cpp` for `host_env.h` (the C entry point to the table of section 16),
+  `sound_engine.cpp` for `sound_engine.h`, and `game_host.cpp` for `game_host.h` (P2-08
   gathers the host's side of it there from `main.cpp`, which defines `openrac_game_crash` today).
   The library replacements of `game_lib.h` are one file per library in `game/common/lib/`.
   `extern "C"` definitions appear only in those files and in tests. The check in CI holds new files
@@ -1241,12 +1243,20 @@ code adds none.
 
 ## 16. Configuration
 
-- An `OPENRAC_*` environment variable is read through `common/env.h` (arriving with P1-03): one table
-  of name, type, default and one-line description, which a test checks against
-  [DEBUGGING.md](../../docs/port/DEBUGGING.md). Once it lands, `getenv` appears only in
-  `common/env.cpp`.
-- Until then, a new variable is read once, in its module, documented in DEBUGGING.md, and named
-  `OPENRAC_` and what it controls, in upper snake case.
+- An `OPENRAC_*` environment variable is read only through `common/env.h`: one table of name, type,
+  default and one-line description, which a test checks against
+  [DEBUGGING.md](../../docs/port/DEBUGGING.md). C, which cannot include it (14.3), reads the same
+  table only through the contract `openrac/host_env.h` (`openrac_env_string`, the raw value, which
+  each C site tests as its old read did). A variable C reads is a row of the table like any other,
+  not an exception.
+- `getenv` with an `OPENRAC_*` name, or a name that is not a literal, appears only in
+  `common/env.cpp` and in `runtime/host_env.cpp`, the C side of the contract.
+  `check_conventions.py` holds every file to it (section 2); the files that still read a variable
+  with `getenv` are its listed exceptions, each until the package that moves its reads (rac1's host
+  C: P2-38). A variable the port does not own (`DISPLAY`, `VULKAN_SDK`) is read in C++ through
+  `env::system_variable`.
+- A new variable is a row of the table, documented in DEBUGGING.md, and named `OPENRAC_` and what it
+  controls, in upper snake case.
 - A choice a player makes is a setting (the settings module and the launcher), not an environment
   variable. Environment variables are for development, debugging and tests.
 
@@ -1405,7 +1415,10 @@ These come from [AGENTS.md](../../AGENTS.md), [SOURCING.md](../../docs/policy/SO
    `// Copyright (c) 2026 the OpenRAC contributors`. A C file has the same two lines in its comment
    form (`/* SPDX-License-Identifier: GPL-3.0-or-later` then ` * Copyright ...`). Code adapted from
    a permissively licensed project keeps its licence's identifier, says so in the file comment, and
-   is credited in [THIRD_PARTY_NOTICES.md](../../THIRD_PARTY_NOTICES.md).
+   is credited in [THIRD_PARTY_NOTICES.md](../../THIRD_PARTY_NOTICES.md). A Python file of
+   `port/tools/` has the same two lines as `#` comments, after its `#!` line when it has one. The
+   editor's files, Python included, carry no licence lines: the editor's own MIT
+   [LICENSE](../../editor/LICENSE) covers them ([editor/README.md](../../editor/README.md)).
 2. **No game content.** No game code, data or bytes in a source, a test, a log or a comment. A tool
    that reads a game file prints counts, never the content.
 3. **No Sony SDK.** Nothing written from Sony's SDK source, samples or headers, or from leaked or NDA

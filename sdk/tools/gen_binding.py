@@ -30,7 +30,7 @@ when an id of the lock is no longer produced. So ids are never removed or reused
 names a hook point by an old name still binds after the decompilation renames it.
 
 **Catalogue hook points.** Each update function of the behaviour catalogue
-(sdk/catalogue/<game>/classes.json, editor/catalogue.py) is a hook point, but those the table's
+(sdk/catalogue/<game>/classes.json, sdk/tools/catalogue.py) is a hook point, but those the table's
 "catalogue_exclude" leaves out with a reason. Its id is `<game>.moby.<name>.update`, `<name>` the
 function's name without its `Update` when it ends so (`BlargTurretUpdate`:
 `rac1.moby.blarg_turret.update`), else the class name of its lowest class, else
@@ -66,7 +66,7 @@ KINDS = {
     "f32": ("float", "OPENRAC_SV_F32", "f", "number"),
 }
 FIELD_KINDS = {"i8", "u8", "i16", "u16", "i32", "u32", "f32"}
-# The catalogue's pvar types (editor/catalogue.py: the decompilation's) as field kinds.
+# The catalogue's pvar types (sdk/tools/catalogue.py: the decompilation's) as field kinds.
 CATALOGUE_TYPES = {"s8": "i8", "u8": "u8", "s16": "i16", "u16": "u16", "s32": "i32", "u32": "u32", "f32": "f32"}
 # Vector types the decompilation gives pvars: their float lanes.
 VECTORS = {"Vec4": "xyzw", "Vec4f": "xyzw", "Vec4A": "xyzw"}

@@ -98,6 +98,7 @@ openrac_add_test(log LIBS openrac_common)
 find_package(Threads REQUIRED)
 openrac_add_test(joining_thread LIBS openrac_common Threads::Threads)
 openrac_add_test(env LIBS openrac_common)
+openrac_add_test(stats LIBS openrac_common)
 openrac_add_test(result INCLUDES .)
 openrac_add_test(c_boundary LIBS openrac_common)
 openrac_add_test(frame_pacing INCLUDES .)
@@ -183,6 +184,10 @@ target_compile_definitions(mod_scripts_test PRIVATE "OPENRAC_TEST_MOD_A=\"$<TARG
 add_dependencies(mod_scripts_test mod_loader_test_a)
 openrac_warnings(mod_scripts_test)
 add_test(NAME mod_scripts COMMAND mod_scripts_test)
+
+# The script runtime's C entry point stops an exception at the C boundary (common/c_boundary.h): a
+# script mod on a hook point of the test's own whose call throws, reported to the log.
+openrac_add_test(mod_boundary LIBS openrac_mods)
 
 # The bindings the generator writes are what their tables give, and the tables' hook points the
 # hook rows of every disc's libraries.tsv.

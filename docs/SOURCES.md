@@ -95,8 +95,9 @@ python3 tools/sources.py status            # how far each checkout is past its r
 python3 tools/sources.py sync rac1/ntsc    # apply the checkout's new commits to games/rac1/ntsc
 ```
 
-A checkout is looked for at the path in `game.json` (for example
-`~/Projects/rac1-decomp-ntsc`), or in `$OPENRAC_SOURCE_RAC1_NTSC`. A hunk
+A checkout is looked for at the path in `game.json`, written from the top of
+OpenRAC (for example `../rac1-decomp-ntsc`: the project cloned beside OpenRAC),
+or in `$OPENRAC_SOURCE_RAC1_NTSC` when it lives elsewhere. A hunk
 that touches a line changed here is left as a `.rej` file to resolve by hand.
 After syncing rac2/ntsc, write the port's copy of the names its build derives
 again from a build of that commit

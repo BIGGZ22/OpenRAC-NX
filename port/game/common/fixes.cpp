@@ -5,6 +5,7 @@
 
 #include <cstring>
 
+#include "common/c_boundary.h"
 #include "common/log.h"
 
 namespace openrac::fixes {
@@ -76,14 +77,29 @@ const unsigned char* flag(int index) {
 
 }  // namespace openrac::fixes
 
-// game_host.h: a fix's flag by its key. A key the table does not have (a fix of another disc, or a
-// typing mistake) is the port's behaviour, always on, and said once in the log.
-extern "C" const unsigned char* openrac_game_fix(const char* key) {
-    static const unsigned char kAlwaysOn = 1;
+namespace {
+
+// The flag of a key this disc's list does not have: the port's behaviour, always on.
+constexpr unsigned char kAlwaysOn = 1;
+
+// openrac_game_fix's body. A key the table does not have (a fix of another disc, or a typing
+// mistake) is said once in the log.
+const unsigned char* flag_by_key(const char* key) {
     const int index = openrac::fixes::find(key);
     if (index < 0) {
         openrac::log::warn("game fix {} is not in this disc's list of differences: always on", key ? key : "(none)");
         return &kAlwaysOn;
     }
     return openrac::fixes::flag(index);
+}
+
+}  // namespace
+
+// game_host.h: a fix's flag by its key; always on for a key the table does not have. An exception
+// is reported to the log and reads as such a key, always on: the caller reads the flag at once, so
+// it gets no null (CODING_CONVENTIONS.md, section 13.4).
+extern "C" const unsigned char* openrac_game_fix(const char* key) {
+    return openrac::c_boundary::call("openrac_game_fix", &kAlwaysOn, [&] {
+        return flag_by_key(key);
+    });
 }

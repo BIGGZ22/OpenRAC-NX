@@ -11,7 +11,9 @@
 //! ```
 //!
 //! The install directory is chosen in Settings; by default it is the
-//! launcher's per-user data folder. Nothing goes into the OpenRAC checkout.
+//! `OpenRAC` folder in the user's home, and the launcher's per-user data
+//! folder where that folder cannot be made ([`settle_install_dir`]). Nothing
+//! goes into the OpenRAC checkout.
 
 use std::path::{Path, PathBuf};
 
@@ -169,6 +171,48 @@ fn kept_ones(dir: &Path, game: &str) -> Vec<PathBuf> {
         .unwrap_or_default()
 }
 
+/// The install folder at each start, before anything reads it (src-tauri's `setup`).
+///
+/// OpenGOAL asks for an install folder at first start; until the player picks one, games are set
+/// up in the `OpenRAC` folder of `home` (`/home/<user>/OpenRAC`, `/Users/<user>/OpenRAC`,
+/// `C:\Users\<user>\OpenRAC`), made here when it is missing. Launchers before that folder kept them
+/// in `local_data`, the launcher's per-user data folder: a config that still names it, or names
+/// none, is moved to the `OpenRAC` folder, its `active/` renamed there when the `OpenRAC` folder
+/// has none yet, and the config saved to `config_file`. A folder the player chose is left as it is.
+/// When the `OpenRAC` folder cannot be made (no home, a home that cannot be written), a config
+/// naming no folder takes `local_data`, unsaved, as launchers did before.
+///
+/// Nothing here fails: a rename or a save that does not go through leaves the files where they are
+/// and the config in memory pointing at the `OpenRAC` folder, as at every start since.
+pub fn settle_install_dir(
+    config: &mut Config,
+    home: Option<&Path>,
+    local_data: Option<&Path>,
+    config_file: Option<&Path>,
+) {
+    let openrac_home = home.and_then(|home| crate::detect::ensure_openrac_dir_in(home).ok());
+    let Some(openrac_dir) = openrac_home else {
+        if config.install_dir.is_none() {
+            config.install_dir = local_data.map(Path::to_path_buf);
+        }
+        return;
+    };
+    if config.install_dir.is_some() && config.install_dir.as_deref() != local_data {
+        return;
+    }
+    if let Some(data) = local_data {
+        let old_active = data.join("active");
+        let new_active = openrac_dir.join("active");
+        if old_active.exists() && !new_active.exists() {
+            let _ = std::fs::rename(&old_active, &new_active);
+        }
+    }
+    config.install_dir = Some(openrac_dir);
+    if let Some(file) = config_file {
+        let _ = crate::config::save(file, config);
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -243,6 +287,150 @@ mod tests {
         assert_eq!(plan.cwd, PathBuf::from("/openrac"));
         assert!(plan_extract(&Config::default(), Path::new("/data"), "rac1", &image).is_err());
         assert!(plan_extract(&config, Path::new("/data"), "rac 1", &image).is_err());
+    }
+
+    /// A home, a launcher data folder and a config file path in one temporary folder.
+    struct Start {
+        _dir: tempfile::TempDir,
+        home: PathBuf,
+        data: PathBuf,
+        file: PathBuf,
+    }
+
+    impl Start {
+        fn new() -> Start {
+            let dir = tempfile::tempdir().unwrap();
+            let home = dir.path().join("home");
+            let data = dir.path().join("data");
+            std::fs::create_dir_all(&home).unwrap();
+            std::fs::create_dir_all(&data).unwrap();
+            let file = dir.path().join("config").join("launcher.json");
+            Start { home, data, file, _dir: dir }
+        }
+
+        fn openrac(&self) -> PathBuf {
+            self.home.join("OpenRAC")
+        }
+
+        fn settle(&self, config: &mut Config) {
+            settle_install_dir(config, Some(&self.home), Some(&self.data), Some(&self.file));
+        }
+    }
+
+    /// A game set up in `install`, as the extractor leaves it: its disc image under `iso_data`.
+    fn set_up_game(install: &Path) {
+        let marker = data_dir(install, "rac1").join("iso_data").join("rac1").join("disc.iso");
+        std::fs::create_dir_all(marker.parent().unwrap()).unwrap();
+        std::fs::write(&marker, b"image").unwrap();
+    }
+
+    /// Whether [`set_up_game`]'s game is set up in `install`.
+    fn set_up_game_is_in(install: &Path) -> bool {
+        data_dir(install, "rac1").join("iso_data").join("rac1").join("disc.iso").is_file()
+    }
+
+    #[test]
+    fn a_fresh_start_makes_the_openrac_folder_the_install_folder() {
+        let start = Start::new();
+        let mut config = Config::default();
+        start.settle(&mut config);
+        assert!(start.openrac().is_dir());
+        assert_eq!(config.install_dir, Some(start.openrac()));
+        assert_eq!(crate::config::load(&start.file).install_dir, Some(start.openrac()), "saved");
+    }
+
+    #[test]
+    fn the_data_folders_games_move_into_the_openrac_folder() {
+        let start = Start::new();
+        set_up_game(&start.data);
+        let mut config = Config { install_dir: Some(start.data.clone()), ..Config::default() };
+        start.settle(&mut config);
+        assert!(!start.data.join("active").exists());
+        assert!(set_up_game_is_in(&start.openrac()));
+        assert_eq!(config.install_dir, Some(start.openrac()));
+        assert_eq!(crate::config::load(&start.file).install_dir, Some(start.openrac()));
+    }
+
+    #[test]
+    fn an_install_folder_already_moved_is_left_as_it_is() {
+        let start = Start::new();
+        std::fs::create_dir_all(start.openrac()).unwrap();
+        set_up_game(&start.openrac());
+        let mut config = Config { install_dir: Some(start.openrac()), ..Config::default() };
+        start.settle(&mut config);
+        assert_eq!(config.install_dir, Some(start.openrac()));
+        assert!(set_up_game_is_in(&start.openrac()));
+        assert!(!start.file.exists(), "nothing to save");
+    }
+
+    #[test]
+    fn games_in_both_folders_stay_where_they_are() {
+        let start = Start::new();
+        set_up_game(&start.data);
+        set_up_game(&start.openrac());
+        let mut config = Config::default();
+        start.settle(&mut config);
+        assert!(set_up_game_is_in(&start.data), "the OpenRAC folder's active/ is never replaced");
+        assert!(set_up_game_is_in(&start.openrac()));
+        assert_eq!(config.install_dir, Some(start.openrac()));
+        assert_eq!(crate::config::load(&start.file).install_dir, Some(start.openrac()));
+    }
+
+    #[test]
+    fn a_folder_the_player_chose_is_kept() {
+        let start = Start::new();
+        set_up_game(&start.data);
+        let chosen = start.home.join("Games");
+        let mut config = Config { install_dir: Some(chosen.clone()), ..Config::default() };
+        start.settle(&mut config);
+        assert_eq!(config.install_dir, Some(chosen));
+        assert!(set_up_game_is_in(&start.data));
+        assert!(start.openrac().is_dir(), "the OpenRAC folder is made all the same");
+        assert!(!start.file.exists());
+    }
+
+    #[test]
+    fn without_an_openrac_folder_the_data_folder_is_the_install_folder() {
+        let start = Start::new();
+        // A home that is a file: the OpenRAC folder cannot be made in it, on any system.
+        let home = start.home.join("not a folder");
+        std::fs::write(&home, b"").unwrap();
+        let mut config = Config::default();
+        settle_install_dir(&mut config, Some(&home), Some(&start.data), Some(&start.file));
+        assert_eq!(config.install_dir, Some(start.data.clone()));
+        assert!(!start.file.exists(), "not saved");
+
+        let mut config = Config::default();
+        settle_install_dir(&mut config, None, Some(&start.data), Some(&start.file));
+        assert_eq!(config.install_dir, Some(start.data.clone()));
+
+        let chosen = start.home.join("Games");
+        let mut config = Config { install_dir: Some(chosen.clone()), ..Config::default() };
+        settle_install_dir(&mut config, None, Some(&start.data), Some(&start.file));
+        assert_eq!(config.install_dir, Some(chosen));
+        assert!(!start.file.exists());
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn a_rename_that_fails_still_points_at_the_openrac_folder() {
+        use std::os::unix::fs::PermissionsExt;
+        let start = Start::new();
+        set_up_game(&start.data);
+        let mode = |m| std::fs::Permissions::from_mode(m);
+        std::fs::set_permissions(&start.data, mode(0o555)).unwrap();
+        // Someone who writes anywhere (root) renames all the same: nothing to see then.
+        let writable = std::fs::write(start.data.join("probe"), b"").is_ok();
+        let mut config = Config::default();
+        start.settle(&mut config);
+        std::fs::set_permissions(&start.data, mode(0o755)).unwrap();
+        if writable {
+            return;
+        }
+        assert!(set_up_game_is_in(&start.data), "left where it was");
+        assert!(!start.openrac().join("active").exists());
+        assert_eq!(config.install_dir, Some(start.openrac()));
+        assert_eq!(crate::config::load(&start.file).install_dir, Some(start.openrac()));
     }
 
     #[test]

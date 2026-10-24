@@ -1,0 +1,17 @@
+{
+ "name": "rac3/us",
+ "about": "Up Your Arsenal, NTSC-U (SCUS-973.53): the PAL C checked at its NTSC-U twin (config/us/map.tsv), as check.py --version us does: tools/check.py compiles the candidate in the full build's context with the function's own flags (config/<target>/localdecomp_flags.txt, then text_parts.txt) and keeps the object. The program is $UYA_TARGET: frontbin (the default), boot_elf or i5bootn; the levels are not covered yet.",
+ "checkout": ["rac3", "ntsc"],
+ "env": {"UYA_TOOLCHAIN": "~/Projects/RAC/rac3-toolchains/eegcc_2.95.3_sn_v1.36",
+         "UYA_RUNNER": "~/Projects/RAC/rac3-toolchains/wibo", "UYA_TARGET": "frontbin"},
+ "python": ["~/Projects/RAC/rac3-venv/bin/python", "python3"],
+ "sources": ["src/{UYA_TARGET}/**/*.c", "nonmatching/{UYA_TARGET}/**/*.c"],
+ "asm": ["asm/us/{UYA_TARGET}/*_text/{func}.s"],
+ "rename": {"table": "config/us/map.tsv", "from": 0, "to": 2, "where": {"1": "{UYA_TARGET}"}},
+ "prelude": "#include \"common.h\"\n",
+ "word_order": "word",
+ "cpp": ["gcc", "-E", "-P", "-DM2CTX", "-DPERMUTER", "-I", "{checkout}/include", "-I", "{checkout}"],
+ "compile": [["{python}", "tools/check.py", "{snippet}", "{func}", "--quiet", "--keep-object", "{out}", "--version", "us"]],
+ "exact": "^{func}: MATCH",
+ "notes": "check.py's MATCH is both the compile's verdict and the checker's: no second run."
+}

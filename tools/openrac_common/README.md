@@ -17,12 +17,12 @@ tools since P2-10; `editor/` and `sdk/tools/` move onto it in their own packages
 
 | Module | Used by |
 |---|---|
-| `paths` | every tool in `tools/` that knows the repository: `openrac`, `extractor`, `sources`, `shared`, `xmap`, `versions`, `port`, `build_port`, `build_android`, `bundle_standalone`, `fcheck_gate`; `port/tools`: hostgen's `retail` and `priority`, versionmap's `versionmap`, `carry_functions` and `hostnames`, regress's `runner`; the probe tools' `seed_regions` and `moby_seeds` |
-| `games` | `openrac`, `extractor`, `sources`, `xmap`; `fcheck_gate` (`source_checkout`); `versionmap` |
-| `tables` | `fcheck_gate`, `port`, `xmap`, `versions`; hostgen's `hostgen` and `no_c`, versionmap's `carry_functions` |
+| `paths` | every tool in `tools/` that knows the repository: `openrac`, `extractor`, `sources`, `shared`, `xmap`, `versions`, `port`, `permuter`, `build_port`, `build_android`, `bundle_standalone`, `fcheck_gate`; `port/tools`: hostgen's `retail` and `priority`, versionmap's `versionmap`, `carry_functions` and `hostnames`, regress's `runner`; the probe tools' `seed_regions` and `moby_seeds` |
+| `games` | `openrac`, `extractor`, `sources`, `xmap`, `permuter` (`source_checkout`); `fcheck_gate` (`source_checkout`); `versionmap` |
+| `tables` | `fcheck_gate`, `port`, `xmap`, `versions`, `permuter`; hostgen's `hostgen` and `no_c`, versionmap's `carry_functions` |
 | `digest` | `openrac`, `extractor`, `shared`, `build_port`, `build_android`, `fcheck_gate`; the probe tools' `bake_all` and `seed_regions` |
 | `files` | `openrac` (`place_link`), `extractor`, `bundle_standalone` |
-| `proc` | every `git` call in `tools/`; `build_android`'s and `bundle_standalone`'s commands |
+| `proc` | every `git` call in `tools/` (`permuter` fetching decomp-permuter included); `build_android`'s and `bundle_standalone`'s commands |
 | `iso9660` | `openrac`, `extractor` |
 
 Two places in `tools/` keep their own code on purpose. `fcheck_level_build.py` runs copied alone
