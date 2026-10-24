@@ -153,19 +153,17 @@ def keep_rows(path: Path) -> dict[str, dict]:
             if len(row) == len(COLUMNS) and row[5].startswith("by hand:")}
 
 
-def classify(cfg: dict, gen: Path, source: Path, asm_source: Path, memory: retail.Retail,
-             kept: dict[str, dict]) -> list[dict]:
+def load_report(gen: Path) -> dict:
+    """hostgen's report.json under GEN; stops when it predates the places no_c needs."""
     report = json.loads((gen / "report.json").read_text())
     if "without_c_places" not in report:
         raise SystemExit("no_c: report.json has no without_c_places; build again with this hostgen")
-    places = report["without_c_places"]
-    translated = set(report.get("from_assembly", {}))
-    unsupported = report.get("assembly_unsupported", {})
-    no_asm = set(report.get("without_c_or_assembly", []))
-    host = host_names(cfg)
-    lists = decomp_lists(source)
-    progs = read_functions_c(gen / "functions.c")
-    stubs = {n for n, p in places.items() if n not in translated}
+    return report
+
+
+def program_maps(progs: dict[int, dict[int, str]], memory: retail.Retail) -> tuple[dict, dict]:
+    """For each program (-1 the executable, n level n): its {address: name}, and its sorted addresses.
+    A level's program is its own functions over the executable's below `low`."""
     low = memory.low
 
     def prog_map(level: int) -> dict[int, str]:
@@ -174,43 +172,57 @@ def classify(cfg: dict, gen: Path, source: Path, asm_source: Path, memory: retai
         return {**{a: n for a, n in progs.get(-1, {}).items() if a < low}, **progs.get(level, {})}
 
     maps = {lv: prog_map(lv) for lv in sorted(set(progs) | set(memory.levels) | {-1})}
-    starts = {lv: sorted(m) for lv, m in maps.items()}
+    return maps, {lv: sorted(m) for lv, m in maps.items()}
 
-    def owner(level: int, addr: int) -> str | None:
-        s = starts[level]
-        i = bisect.bisect_right(s, addr) - 1
-        return maps[level][s[i]] if i >= 0 else None
 
-    refs = {lv: scan(memory, lv, progs) for lv in maps}
+def owner_of(maps: dict, starts: dict, level: int, addr: int) -> str | None:
+    """The function of program LEVEL that contains ADDR."""
+    s = starts[level]
+    i = bisect.bisect_right(s, addr) - 1
+    return maps[level][s[i]] if i >= 0 else None
 
-    # The assembly: each function's instructions, for its size and its first word.
+
+def function_sizes(cfg: dict, asm_source: Path) -> dict[str, int]:
+    """The assembly's size of each function, in bytes."""
     a_cfg = cfg.get("asm") or {}
     index = asm.read_index([asm_source / d for d in a_cfg.get("dirs", [])], lambda n: _overlay_of(cfg, n))
-    sizes: dict[str, int] = {b.name: 4 * len(b.lines) for b in index.blocks}
+    return {b.name: 4 * len(b.lines) for b in index.blocks}
 
-    calls_in_c = collections.defaultdict(set)
+
+def callers_in_c(report: dict) -> dict[str, set[str]]:
+    """Callee -> the functions whose C calls it, from hostgen's call graph."""
+    calls = collections.defaultdict(set)
     for caller, callees in report.get("call_graph", {}).items():
         for callee in callees:
-            calls_in_c[callee].add(caller)
+            calls[callee].add(caller)
+    return calls
 
+
+def add_entry_to_host(host: dict[str, str], cfg: dict, memory: retail.Retail, exe_map: dict[int, str]) -> None:
+    """The executable's entry (crt0) is the port's own start: a host function."""
     entry = memory.entry
-    exe_map = maps.get(-1, {})
     if entry in exe_map and exe_map[entry] not in host:
         host[exe_map[entry]] = ("the executable's entry (crt0): the port's own start calls the game's main "
                                 f"({cfg.get('entry', 'hostgen.json entry')}) itself")
 
-    def status(name: str | None) -> str:
-        if name is None:
-            return "no function"
-        if name in host:
-            return "host"
-        if name in translated:
-            return "translated"
-        if name in stubs:
-            return "no C"
-        return "C"
 
-    rows = []
+def status_of(name: str | None, host: dict[str, str], translated: set[str], stubs: set[str]) -> str:
+    """How the program has the function now: host, translated (from assembly), no C (a stub) or C."""
+    if name is None:
+        return "no function"
+    if name in host:
+        return "host"
+    if name in translated:
+        return "translated"
+    if name in stubs:
+        return "no C"
+    return "C"
+
+
+def find_references(places: dict, refs: dict, memory: retail.Retail, owner, sizes: dict[str, int]) -> dict[str, dict]:
+    """For each function with no C: what refers to it in every program it is in (kind ->
+    {(level, from, owner, part)}), the first words of its places and its size."""
+    low = memory.low
     info: dict[str, dict] = {}
     for name in sorted(places):
         p = places[name]
@@ -232,127 +244,167 @@ def classify(cfg: dict, gen: Path, source: Path, asm_source: Path, memory: retai
                 own = owner(level, frm) if kind != "data" else None
                 found[kind].add((level, frm, own, part))
         info[name] = {"found": found, "first_words": first_words, "size": size}
+    return info
 
-    def callers_of(name: str) -> set:
-        found = info[name]["found"]
-        return {o for k in ("jal", "j", "address") for _lv, _frm, o, _p in found.get(k, ())} | calls_in_c.get(name, set())
 
-    def behind_host(name: str) -> bool:
-        cs = callers_of(name)
-        return bool(cs) and all(status(c) == "host" for c in cs) and not info[name]["found"].get("data")
+def callers_of(name: str, info: dict[str, dict], calls_in_c: dict[str, set[str]]) -> set:
+    found = info[name]["found"]
+    return {o for k in ("jal", "j", "address") for _lv, _frm, o, _p in found.get(k, ())} | calls_in_c.get(name, set())
 
-    def piece_root(name: str, seen: set) -> tuple[str, str] | None:
-        """For a function reached only by the branches and jumps of other functions' code, the
-        function with C (or the host's) whose code it is part of, and how."""
-        if name in seen:
-            return None
-        seen = seen | {name}
-        f = info.get(name)
-        if f is None:
-            return None
-        found = f["found"]
-        # A judgement kept by hand (an address-like word that is not one) is not a reference.
-        if found.get("jal") or (found.get("address") or found.get("data")) and name not in kept \
-                or calls_in_c.get(name):
-            return None
-        owners = {o for k in ("branch", "j") for _lv, _frm, o, _p in found.get(k, ())}
-        if not owners:
-            return None
-        roots = set()
-        for o in owners:
-            st = status(o)
-            if st in ("C", "host", "translated"):
-                roots.add((o, st))
-            elif st == "no C" and o in info:
-                r = piece_root(o, seen)
-                if r is None and behind_host(o):
-                    r = (o, "host")
-                if r is None:
-                    return None
-                roots.add(r)
-            else:
+
+def behind_host(name: str, info: dict[str, dict], calls_in_c: dict[str, set[str]], status) -> bool:
+    cs = callers_of(name, info, calls_in_c)
+    return bool(cs) and all(status(c) == "host" for c in cs) and not info[name]["found"].get("data")
+
+
+def piece_root(name: str, seen: set, info: dict[str, dict], calls_in_c: dict[str, set[str]],
+               kept: dict[str, dict], status) -> tuple[str, str] | None:
+    """For a function reached only by the branches and jumps of other functions' code, the
+    function with C (or the host's) whose code it is part of, and how."""
+    if name in seen:
+        return None
+    seen = seen | {name}
+    f = info.get(name)
+    if f is None:
+        return None
+    found = f["found"]
+    # A judgement kept by hand (an address-like word that is not one) is not a reference.
+    if found.get("jal") or (found.get("address") or found.get("data")) and name not in kept \
+            or calls_in_c.get(name):
+        return None
+    owners = {o for k in ("branch", "j") for _lv, _frm, o, _p in found.get(k, ())}
+    if not owners:
+        return None
+    roots = set()
+    for o in owners:
+        st = status(o)
+        if st in ("C", "host", "translated"):
+            roots.add((o, st))
+        elif st == "no C" and o in info:
+            r = piece_root(o, seen, info, calls_in_c, kept, status)
+            if r is None and behind_host(o, info, calls_in_c, status):
+                r = (o, "host")
+            if r is None:
                 return None
-        return sorted(roots)[0] if roots else None
+            roots.add(r)
+        else:
+            return None
+    return sorted(roots)[0] if roots else None
 
+
+def describe_references(found: dict, kind: str, status, limit: int = 3) -> str:
+    """Who refers to the function in the way KIND, up to LIMIT of them, with the levels."""
+    items = sorted(found.get(kind, ()))
+    owners = collections.OrderedDict()
+    for lv, frm, own, part in items:
+        key = own if kind != "data" else part
+        owners.setdefault(key, set()).add(lv)
+    bits = []
+    for key, lvs in list(owners.items())[:limit]:
+        if kind == "data":
+            lv0 = sorted(lvs)[0]
+            frm = min(frm for lv, frm, own, part in items if part == key and lv == lv0)
+            bits.append(f"{key} {frm:08X} ({_levels_text(sorted(lvs))})")
+        else:
+            bits.append(f"{key} [{status(key)}] ({_levels_text(sorted(lvs))})")
+    more = len(owners) - limit
+    return ", ".join(bits) + (f" and {more} more" if more > 0 else "")
+
+
+def reachability(name: str, p: dict, found: dict, calls_in_c: dict[str, set[str]], status) -> str:
+    """How the program can reach the function, in words (the table's "reachable" column)."""
+    reach_bits = []
+    for kind, label in (("jal", "called by"), ("j", "jumped to by"), ("address", "address formed by"),
+                        ("data", "address held in data at"), ("branch", "branched to by")):
+        if found.get(kind):
+            reach_bits.append(f"{label} {describe_references(found, kind, status)}")
+    if calls_in_c.get(name):
+        cs = sorted(calls_in_c[name])
+        reach_bits.append("C calls it: " + ", ".join(cs[:3]) + (f" and {len(cs) - 3} more" if len(cs) > 3 else ""))
+    reachable = "; ".join(reach_bits) if reach_bits else "nothing: no call, jump, branch or address of it"
+    if not p["places"]:
+        reachable = "; ".join(reach_bits) if reach_bits else "nothing: no C calls it, and it has no address"
+    return reachable
+
+
+def class_of(name: str, p: dict, f: dict, why: str, c_now: str, where: str, lists: dict[str, set[str]],
+             host: dict[str, str], calls_in_c: dict[str, set[str]], info: dict[str, dict],
+             kept: dict[str, dict], status) -> dict:
+    """The class (a, b, c), the kind and the evidence of one function, as row fields."""
+    found = f["found"]
+    callers = callers_of(name, info, calls_in_c)
+    root = piece_root(name, set(), info, calls_in_c, kept, status)
+    hand_or_asm = "hand-written" if name in lists["handwritten"] else ""
+    if "other_spelling" in p:
+        return dict(cls="a", kind="other spelling",
+                    evidence=f"the same function as {p['other_spelling']}, which has C: calls to this name go there")
+    if name in host:
+        return dict(cls="b", kind="host", evidence=host[name])
+    if name in lists["remnant"] and not callers:
+        return dict(cls="a", kind="linker remnant",
+                    evidence="the decompilation's linker remnants list (what the linker left of a stripped function)")
+    if name in lists["joined"] and not callers and not found.get("data"):
+        return dict(cls="a", kind="piece", evidence="config/overlays/joined.tsv: a piece of the function before it")
+    if not p["places"] and name in HOST_LIBC:
+        return dict(cls="b", kind="host",
+                    evidence="the C library's own name: hostgen writes calls to it as the host compiler's (lower.py)")
+    if not p["places"] and not calls_in_c.get(name):
+        return dict(cls="a", kind="declared only",
+                    evidence="declared by the decompilation, defined nowhere, and no C calls it or takes its address")
+    if not p["places"]:
+        return dict(cls="c", kind="no address",
+                    evidence="C calls it by a name with no address" + (f" ({why})" if why else ""))
+    if f["first_words"] == {FILL} and not callers and not found.get("data"):
+        return dict(cls="a", kind="padding", evidence=f"its first word is the linker's 0xCDCDCDCD fill ({where})")
+    if root is not None:
+        o, st = root
+        return dict(cls="a" if st != "host" else "b", kind="piece",
+                    evidence=f"only the branches and jumps of {o} [{st}] reach it: part of that function's code"
+                             + (f"; {why}" if why else ""))
+    if not found and not callers:
+        return dict(cls="a", kind="unreachable",
+                    evidence=f"no call, jump, branch, address or data word refers to it in any program ({where})"
+                             + (f"; {why}" if why else ""))
+    if behind_host(name, info, calls_in_c, status):
+        return dict(cls="b", kind="behind host",
+                    evidence="only functions the port replaces reach it: " + ", ".join(sorted(callers)[:4])
+                             + (f"; {why}" if why else ""))
+    return dict(cls="c", kind="needs C", evidence=(hand_or_asm + "; " if hand_or_asm else "")
+                + (why or "translated from its assembly" if c_now == "translated" else why or "no assembly"))
+
+
+def classify(cfg: dict, gen: Path, source: Path, asm_source: Path, memory: retail.Retail,
+             kept: dict[str, dict]) -> list[dict]:
+    report = load_report(gen)
+    places = report["without_c_places"]
+    translated = set(report.get("from_assembly", {}))
+    unsupported = report.get("assembly_unsupported", {})
+    no_asm = set(report.get("without_c_or_assembly", []))
+    host = host_names(cfg)
+    lists = decomp_lists(source)
+    progs = read_functions_c(gen / "functions.c")
+    stubs = {n for n, p in places.items() if n not in translated}
+
+    maps, starts = program_maps(progs, memory)
+    refs = {lv: scan(memory, lv, progs) for lv in maps}
+    sizes = function_sizes(cfg, asm_source)
+    calls_in_c = callers_in_c(report)
+    add_entry_to_host(host, cfg, memory, maps.get(-1, {}))
+
+    def status(name: str | None) -> str:
+        return status_of(name, host, translated, stubs)
+
+    info = find_references(places, refs, memory, lambda level, addr: owner_of(maps, starts, level, addr), sizes)
+
+    rows = []
     for name in sorted(places):
         p = places[name]
-        f = info[name]
-        found = f["found"]
+        found = info[name]["found"]
         why = unsupported.get(name, "no assembly here" if name in no_asm else "")
         c_now = "translated" if name in translated else "none"
-        levels = sorted({lv for lv, _ in p["places"]})
-        where = _levels_text(levels)
-
-        def describe(kind: str, limit: int = 3) -> str:
-            items = sorted(found.get(kind, ()))
-            owners = collections.OrderedDict()
-            for lv, frm, own, part in items:
-                key = own if kind != "data" else part
-                owners.setdefault(key, set()).add(lv)
-            bits = []
-            for key, lvs in list(owners.items())[:limit]:
-                if kind == "data":
-                    lv0 = sorted(lvs)[0]
-                    frm = min(frm for lv, frm, own, part in items if part == key and lv == lv0)
-                    bits.append(f"{key} {frm:08X} ({_levels_text(sorted(lvs))})")
-                else:
-                    bits.append(f"{key} [{status(key)}] ({_levels_text(sorted(lvs))})")
-            more = len(owners) - limit
-            return ", ".join(bits) + (f" and {more} more" if more > 0 else "")
-
-        reach_bits = []
-        for kind, label in (("jal", "called by"), ("j", "jumped to by"), ("address", "address formed by"),
-                            ("data", "address held in data at"), ("branch", "branched to by")):
-            if found.get(kind):
-                reach_bits.append(f"{label} {describe(kind)}")
-        if calls_in_c.get(name):
-            cs = sorted(calls_in_c[name])
-            reach_bits.append("C calls it: " + ", ".join(cs[:3]) + (f" and {len(cs) - 3} more" if len(cs) > 3 else ""))
-        reachable = "; ".join(reach_bits) if reach_bits else "nothing: no call, jump, branch or address of it"
-        if not p["places"]:
-            reachable = "; ".join(reach_bits) if reach_bits else "nothing: no C calls it, and it has no address"
-
-        row = {"name": name, "c": c_now, "reachable": reachable}
-        callers = callers_of(name)
-        root = piece_root(name, set())
-        hand_or_asm = "hand-written" if name in lists["handwritten"] else ""
-        if "other_spelling" in p:
-            row.update(cls="a", kind="other spelling",
-                       evidence=f"the same function as {p['other_spelling']}, which has C: calls to this name go there")
-        elif name in host:
-            row.update(cls="b", kind="host", evidence=host[name])
-        elif name in lists["remnant"] and not callers:
-            row.update(cls="a", kind="linker remnant",
-                       evidence="the decompilation's linker remnants list (what the linker left of a stripped function)")
-        elif name in lists["joined"] and not callers and not found.get("data"):
-            row.update(cls="a", kind="piece", evidence="config/overlays/joined.tsv: a piece of the function before it")
-        elif not p["places"] and name in HOST_LIBC:
-            row.update(cls="b", kind="host",
-                       evidence="the C library's own name: hostgen writes calls to it as the host compiler's (lower.py)")
-        elif not p["places"] and not calls_in_c.get(name):
-            row.update(cls="a", kind="declared only",
-                       evidence="declared by the decompilation, defined nowhere, and no C calls it or takes its address")
-        elif not p["places"]:
-            row.update(cls="c", kind="no address",
-                       evidence="C calls it by a name with no address" + (f" ({why})" if why else ""))
-        elif f["first_words"] == {FILL} and not callers and not found.get("data"):
-            row.update(cls="a", kind="padding", evidence=f"its first word is the linker's 0xCDCDCDCD fill ({where})")
-        elif root is not None:
-            o, st = root
-            row.update(cls="a" if st != "host" else "b", kind="piece",
-                       evidence=f"only the branches and jumps of {o} [{st}] reach it: part of that function's code"
-                                + (f"; {why}" if why else ""))
-        elif not found and not callers:
-            row.update(cls="a", kind="unreachable",
-                       evidence=f"no call, jump, branch, address or data word refers to it in any program ({where})"
-                                + (f"; {why}" if why else ""))
-        elif behind_host(name):
-            row.update(cls="b", kind="behind host",
-                       evidence="only functions the port replaces reach it: " + ", ".join(sorted(callers)[:4])
-                                + (f"; {why}" if why else ""))
-        else:
-            row.update(cls="c", kind="needs C", evidence=(hand_or_asm + "; " if hand_or_asm else "")
-                       + (why or "translated from its assembly" if c_now == "translated" else why or "no assembly"))
+        where = _levels_text(sorted({lv for lv, _ in p["places"]}))
+        row = {"name": name, "c": c_now, "reachable": reachability(name, p, found, calls_in_c, status)}
+        row.update(class_of(name, p, info[name], why, c_now, where, lists, host, calls_in_c, info, kept, status))
         if name in kept:
             k = kept[name]
             row.update(cls=k["class"], kind=k["kind"], evidence=k["evidence"])
