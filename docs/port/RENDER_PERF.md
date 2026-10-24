@@ -59,6 +59,7 @@ before and after, and how its frames are shown to be the same.
 | `moby-pose-in-place` | on | none (exact) | `set_instances` writes the mobys' poses into their groups when they and their order are unchanged, and `set_palette` sends nothing when the joints are unchanged ([R-16](#r-16-mobys-posed-in-place)). |
 | `shadow-atlas-discard` | on | none (exact) | The shadow atlas pass neither loads nor stores its unsampled colour and its stencil ([R-16](#r-16-mobys-posed-in-place), lane RB's note). |
 | `spirv-disk-cache` | on | none (exact) | What glslang made of each program and stage is kept beside the pipeline cache, so a warm start and a level load run no glslang ([R-12](#r-12-spir-v-kept-between-runs)). |
+| `vk-persistent-descriptors` | on | none (exact) | On the path without bindless materials, a descriptor set binding only textures, samplers and the frame's ring is kept across frames instead of made each frame ([R-14](#r-14-descriptor-sets-kept-across-frames)). |
 
 Its tests are `render_opt` (the table, and the parsing of the variable: a name, a list, `all`, an
 unknown name kept apart; it runs in the headless preset too) and `render_opt_environment` (the
@@ -810,6 +811,66 @@ Measured with:
 python3 port/tools/perf/render_bench.py --synthetic --compare-opt spirv-disk-cache
 OPENRAC_VULKAN_PIPELINE_CACHE=/tmp/warm/pipelines.bin ctest --preset release -R "_vulkan$|vulkan_" -E render_equivalence -j 1   # twice
 ```
+
+## R-14: descriptor sets kept across frames
+
+**What changed** (`renderer/vulkan/vkgl_pipelines.cpp`, `vkgl_internal.h`, `vkgl_resources.cpp`,
+one loop in `vkgl_device.cpp`), behind `vk-persistent-descriptors`. Where the bindless material
+path is off (older GPUs, Intel Macs, some Android devices; here `--materials off`), every texture
+binding of every frame was a `vkAllocateDescriptorSets` and a `vkUpdateDescriptorSets`, because a
+program's sets were dropped at each new frame: their key named the frame's ring. The uniforms are
+a dynamic uniform buffer, so the ring's part of the key is one of its chunks, which live as long as
+the backend.
+
+- A set whose buffers are all ring chunks or the dummy buffer, and whose texel views are the dummy
+  ones, is kept in `PersistentSets`, from pools that free one set at a time, under its per-frame
+  key plus the program's serial (new at each link) and each sampled image's serial.
+- `Image::serial` is new, given by `make_image` and never reused. A texture deleted and replaced,
+  whose views may get the old Vulkan handles, therefore never finds the old set; that set is never
+  bound again and leaves when evicted.
+- At 4,096 sets the one bound longest ago, if no frame in flight may bind it, is freed (a bounded
+  LRU in place of the per-frame cap of 256). A set naming a GL buffer or a texture buffer, whose
+  handle may be given out again, is made each frame as before.
+- Push descriptors (`VK_KHR_push_descriptor`) were the brief's alternative; they still write every
+  descriptor at every draw, so `vk_descriptor_writes` would not fall, and kept sets were chosen.
+
+**The counters**, per measured frame, entry off to on, 1920x1080; the counts are the same on the
+Mac and box1:
+
+| Setting | `vk_descriptor_sets_allocated` | `vk_descriptor_writes` | `vk_descriptor_reuses` (Mac) |
+|---|---|---|---|
+| materials off, Enhanced off | 939 to 1 | 3,756 to 4 | 522 to 1,460 |
+| materials off, Enhanced on | 1,688 to 1,198 | 16,864 to 14,923 | 1,249 to 1,739 |
+| base (materials on) | 5 to 1 | 616 to 604 | 1,456 to 1,460 |
+
+With Enhanced the sets that stay are those of the passes that bind a GL uniform or storage buffer
+(the probes' and the cascades' blocks), which may die with their handles reused, so they are made
+each frame as before. `vk_cmds_bind_descriptors` and `bench_heap_allocs` are unchanged.
+
+**Time, as information** (the picture's CPU time, median of five runs, off to on): materials off,
+Enhanced off, Mac 0.88 to 0.81 ms, box1 1.107 to 1.044 ms; with Enhanced Mac 2.15 to 2.15, box1
+3.111 to 3.089; base unchanged on both.
+
+**Equivalence.** `render_equivalence_vulkan` compares the entry on and off in every scenario,
+Enhanced off and on, byte for byte, in the default configuration and by hand with
+`OPENRAC_GPU_MATERIALS_OFF=1` (the path the entry acts on) and `OPENRAC_GPU_DRIVEN_OFF=1`:
+identical on both machines, no validation message. `vulkan_uniform` gained the case this design
+risks, written before the change: eight rounds of a texture drawn, deleted and destroyed, and a
+texture of another colour made and drawn, each requiring the new colour. `vulkan_uniform` and
+`vulkan_uniform_reference` (`OPENRAC_VK_UNIFORM_REUSE_OFF`) pass; `vulkan_uniform`'s count of
+sets made in a frame now allows a later round to find its sets kept.
+
+Measured with:
+
+```sh
+python3 port/tools/perf/render_bench.py --synthetic --compare-opt vk-persistent-descriptors
+./port/build/release/openrac_render_bench --materials off --opt-off vk-persistent-descriptors
+OPENRAC_GL_API=vulkan OPENRAC_VULKAN_PIPELINE_CACHE=off OPENRAC_VULKAN_VALIDATION=1 \
+  OPENRAC_GPU_MATERIALS_OFF=1 ./port/build/release/render_equivalence_test
+```
+
+On a real level, on a device without bindless or with `OPENRAC_GPU_MATERIALS_OFF=1`:
+`python3 port/tools/perf/render_bench.py --level assets/port/rac1/pal/level_12 --compare-opt vk-persistent-descriptors`.
 
 ## R-13: a level's textures made at its load
 

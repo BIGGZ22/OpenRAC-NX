@@ -87,6 +87,11 @@ program or stage compiled before from it, by a hash of its kind, sources and com
 second hash and the length, and glslang runs only for the rest. It is read at open and written at
 close, beside the pipeline cache, and off when the pipeline cache is.
 
+`Context::persistent_sets` keeps, from frame to frame, the descriptor sets that bind only
+textures, samplers and the ring (R-14, `vk-persistent-descriptors`), keyed by the program's serial
+and each image's `Image::serial`, which is never reused, so a set of a deleted texture is never
+found again; the least recently bound are freed past 4,096.
+
 With `vk-extended-dynamic-state` on (off by default, R-11), the cull, front face, depth and
 stencil state (`FixedState`) leaves the pipeline's key and the draw records it as Vulkan 1.3
 dynamic state, through the same tracker.
@@ -131,7 +136,8 @@ CI). Where Vulkan cannot open, the window falls back to OpenGL and they repeat t
 - `vulkan_uniform`, `vulkan_uniform_reference`: uniform uploads and descriptor reuse, with the
   reuse on and off (`OPENRAC_VK_UNIFORM_REUSE_OFF`); a state bounce (A, B, A) draws A's pipeline
   and set again, deleting one program's pipelines leaves the others' usable, and cull and front
-  face toggled in one pass draw alike as dynamic and as baked state.
+  face toggled in one pass draw alike as dynamic and as baked state, and a texture deleted and
+  replaced never draws through the old one's set.
 - `render_opt_vulkan`: the render counters of `SubmissionCounters` follow a fixed scene's draws
   (every draw a draw command, one submit a frame), printed for the reports of
   [RENDER_PERF.md](../../../docs/port/RENDER_PERF.md).
