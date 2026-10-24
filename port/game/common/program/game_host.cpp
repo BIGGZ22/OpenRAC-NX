@@ -48,7 +48,9 @@
 namespace openrac::program {
 namespace {
 
+#ifdef OPENRAC_FRONTEND
 // [verbose log] The first pad's buttons each time they change, and its sticks when one moves far.
+// Compiled with the window only: without one, no pad is read.
 void log_pad(int port, const uint16_t* buttons, const uint8_t analog[4]) {
     static uint16_t last = 0xFFFF;
     static uint8_t last_analog[4] = {0x80, 0x80, 0x80, 0x80};
@@ -79,6 +81,7 @@ void log_pad(int port, const uint16_t* buttons, const uint8_t analog[4]) {
         analog[3]
     );
 }
+#endif
 
 // The pad's report as the pad library builds it (lib/pad.c's scePad2Read: buttons, the sticks,
 // twelve pressures), through the mods' callbacks, back into buttons and sticks: for the port's own
