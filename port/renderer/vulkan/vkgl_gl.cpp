@@ -1820,6 +1820,9 @@ void destroy_buffer(Buffer& b) {
 void release_program(Program& p) {
     // No pre-warm job may use its modules or layout once they are handed to defer.
     prewarm_forget(p.serial);
+    // Relinking and deletion retire every pipeline referenced by the program's fast lookup.
+    p.last_pipeline = VK_NULL_HANDLE;
+    p.last_pipeline_key.clear();
     defer([vertex = p.vertex,
            fragment = p.fragment,
            compute = p.compute,

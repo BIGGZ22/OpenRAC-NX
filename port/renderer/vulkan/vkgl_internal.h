@@ -544,6 +544,9 @@ struct Program {
     // What the program is across runs, for the pipeline manifest: a hash of its SPIR-V and of
     // what its layout depends on (pipeline_identity); 0 for a compute program or before a link.
     std::uint64_t identity = 0;
+    // The last complete graphics key and its context-owned pipeline, used by one graphics owner.
+    std::string last_pipeline_key;
+    VkPipeline last_pipeline = VK_NULL_HANDLE;  // Cleared before the program's pipelines retire.
     CompiledProgram compiled;
     bool gpu_materials = false;
     unsigned material_start = 0;

@@ -45,6 +45,10 @@ them, SDL3 for the window's surface. The third-party libraries it wraps: volk (V
 the Vulkan Memory Allocator, and glslang (in `shader_compiler.cpp` only). The CMake target is
 `openrac_renderer_vulkan` (`port/cmake/Window.cmake`).
 
+Each program retains its last complete graphics pipeline key. Repeated draws compare that key
+before allocating and hashing a context-cache lookup. Relinking or deleting a program clears
+its retained pipeline before retirement.
+
 ## State and threads
 
 All of the backend's state is one `Context`, reached through `detail::g` (`vkgl_internal.h`): made

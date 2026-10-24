@@ -1,4 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (c) 2026 the OpenRAC contributors
+//
+// Checks Vulkan uniform snapshots, typed buffer fallbacks and pipeline state through GPU pixels.
 #include <array>
 #include <chrono>
 #include <cmath>
@@ -20,6 +23,101 @@
 using namespace openrac;
 using namespace openrac::gl;
 namespace wgl = openrac::renderer::world::gl;
+
+namespace {
+
+// Checks a rendered RGBA8 pixel's red channel within one quantisation step.
+void check_red_pixel(const renderer::FrameBuffer& target, int expected) {
+    const auto pixels = target.read_rgba();
+    CHECK(pixels.size() == 4);
+
+    // A missing RGBA pixel has already failed the size check.
+    if (pixels.size() != 4) {
+        return;
+    }
+
+    CHECK(std::abs(static_cast<int>(pixels[0]) - expected) <= 1);
+}
+
+// Checks that changing the depth comparison cannot reuse the preceding draw's pipeline.
+// The caller owns the bound full-screen shader, vertex array and target for this test.
+void test_pipeline_depth_state(const renderer::FrameBuffer& target) {
+    glEnable(GL_DEPTH_TEST);
+    glDepthMask(GL_TRUE);
+    glClearDepth(0);
+
+    // The triangle's midpoint depth passes GREATER and fails LESS against a zero clear depth.
+    for (const GLenum comparison : {GL_LESS, GL_GREATER, GL_LESS, GL_GREATER}) {
+        glDepthFunc(comparison);
+        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+        glDrawArrays(GL_TRIANGLES, 0, 3);
+        // A failed depth comparison must leave the black clear colour untouched.
+        const int expected = comparison == GL_GREATER ? 255 : 0;
+        check_red_pixel(target, expected);
+    }
+
+    glDisable(GL_DEPTH_TEST);
+}
+
+// Checks that alternating blend state selects the correct pipeline for the same shader and inputs.
+void test_pipeline_blend_state(const renderer::FrameBuffer& target) {
+    glBlendFuncSeparate(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA, GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+
+    // Half-alpha red over black must alternate between half and full red without changing programs.
+    for (const bool blend : {true, false, true, false}) {
+        // Exercise both cache hits and state changes on the program's last pipeline.
+        if (blend) {
+            glEnable(GL_BLEND);
+        } else {
+            glDisable(GL_BLEND);
+        }
+
+        glClear(GL_COLOR_BUFFER_BIT);
+        glDrawArrays(GL_TRIANGLES, 0, 3);
+        // RGBA8 rounds half intensity to its nearest integer.
+        const int expected = blend ? 128 : 255;
+        check_red_pixel(target, expected);
+    }
+
+    glDisable(GL_BLEND);
+}
+
+// Draws an authored half-alpha triangle to verify pipeline state changes through actual GPU pixels.
+// Borrows `vertex_array`, owned by main until both state checks complete.
+void test_pipeline_state_changes(unsigned vertex_array) {
+    renderer::Shader shader;
+    std::string error;
+    CHECK(shader.build(
+        "pipeline state changes",
+        R"(#version 410 core
+void main() {
+    vec2 p = vec2((gl_VertexID << 1) & 2, gl_VertexID & 2);
+    gl_Position = vec4(p * 2.0 - 1.0, 0, 1);
+}
+)",
+        R"(#version 410 core
+layout(location = 0) out vec4 result;
+void main() { result = vec4(1, 0, 0, 0.5); }
+)",
+        error
+    ));
+    renderer::FrameBuffer target;
+    CHECK(target.create(1, 1, error));
+    glBindVertexArray(vertex_array);
+    glBindFramebuffer(GL_FRAMEBUFFER, target.id());
+    glViewport(0, 0, 1, 1);
+    glDisable(GL_SCISSOR_TEST);
+    glDisable(GL_CULL_FACE);
+    glDisable(GL_BLEND);
+    glColorMask(GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE);
+    glClearColor(0, 0, 0, 1);
+    shader.use();
+    test_pipeline_depth_state(target);
+    test_pipeline_blend_state(target);
+    CHECK(glGetError() == GL_NO_ERROR);
+}
+
+}  // namespace
 
 void texel_buffer_fallbacks() {
     renderer::Shader shader;
@@ -780,6 +878,7 @@ void main() {
         }
     }
     CHECK(glGetError() == GL_NO_ERROR);
+    test_pipeline_state_changes(vao);
     glDeleteTextures(2, textures.data());
     glDeleteVertexArrays(1, &vao);
     texel_buffer_fallbacks();
