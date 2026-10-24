@@ -16,7 +16,7 @@
 #include "renderer/world/gl_world.h"
 #include "scene/hero_shadow.h"
 #include "scene/shadow_atlas.h"
-#include "viewer_shaders.h"
+#include "scene_shaders.h"
 #if defined(OPENRAC_VULKAN)
 #include "renderer/vulkan/vkgl.h"
 #endif

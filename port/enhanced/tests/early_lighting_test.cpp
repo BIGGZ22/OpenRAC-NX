@@ -7,12 +7,12 @@
 #include "enhanced/tests/gpu_probe_fixture.h"
 #include "enhanced/viewer/early_lighting.h"
 #include "enhanced/viewer/probe_lighting.h"
+#include "enhanced_viewer_shaders.h"
 #include "renderer/framebuffer.h"
 #include "renderer/gl.h"
 #include "renderer/world/gl_world.h"
 #include "tests/check.h"
 #include "tests/renderer_gl_context.h"
-#include "viewer_shaders.h"
 using namespace openrac;
 using namespace openrac::gl;
 
@@ -113,7 +113,7 @@ void check() {
     CHECK(fill.build("early lighting fixture depth", vertex, depth_fragment, error));
     std::string source = lighting::probe_shader_source(fragment);
     // Common uniforms are already declared above for the reference path.
-    std::string reconstruction = scene::shaders::early_lighting_glsl;
+    std::string reconstruction = lighting::shaders::early_lighting_glsl;
     for (const char* line : {"uniform mat4 early_projection;\n", "uniform vec2 early_extent;\n"}) {
         reconstruction.erase(reconstruction.find(line), std::char_traits<char>::length(line));
     }

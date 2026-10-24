@@ -7,12 +7,12 @@
 #include "enhanced/tests/gpu_probe_fixture.h"
 #include "enhanced/viewer/probe_lighting.h"
 #include "enhanced/viewer/scene_lighting.h"
+#include "enhanced_viewer_shaders.h"
 #include "renderer/framebuffer.h"
 #include "renderer/gl.h"
 #include "scene/level_renderer.h"
 #include "tests/check.h"
 #include "tests/renderer_gl_context.h"
-#include "viewer_shaders.h"
 using namespace openrac;
 using namespace openrac::gl;
 
@@ -578,7 +578,7 @@ void compute_regions(renderer::Shader&, renderer::FrameBuffer&, unsigned vao) {
         return;
     }
     std::string fragment = "#version 410 core\n";
-    fragment += scene::shaders::probes_glsl;
+    fragment += lighting::shaders::probes_glsl;
     fragment += R"glsl(uniform sampler2D receiver_depth;
 uniform mat4 test_clip;
 uniform vec2 test_extent;
@@ -1077,7 +1077,8 @@ void sphere_overlay() {
 void sunlight_rgb_correction() {
     renderer::Shader shader;
     std::string error;
-    const auto source = std::string("#version 410 core\n") + scene::shaders::probes_glsl + R"glsl(
+    const auto source =
+        std::string("#version 410 core\n") + lighting::shaders::probes_glsl + R"glsl(
 uniform float test_visibility;
 layout(location = 0) out vec4 result;
 void main() {
@@ -1221,7 +1222,7 @@ int main() {
     }
     compact_texture_uploads();
     std::string fragment = "#version 410 core\n";
-    fragment += scene::shaders::probes_glsl;
+    fragment += lighting::shaders::probes_glsl;
     fragment += R"glsl(uniform vec4 positions[8];
 uniform vec4 normals[8];
 uniform int camera_biased;

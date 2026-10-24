@@ -3,9 +3,9 @@
 
 #include "common/stats.h"
 #include "enhanced/viewer/probe_lighting.h"
+#include "enhanced_viewer_shaders.h"
 #include "renderer/gl.h"
 #include "renderer/world/gl_world.h"
-#include "viewer_shaders.h"
 
 namespace openrac::lighting {
 using namespace openrac::gl;
@@ -39,7 +39,7 @@ bool EarlyLighting::render(
         return false;
     }
     if (!m_compute.id()) {
-        std::string source = scene::shaders::early_lighting_comp;
+        std::string source = shaders::early_lighting_comp;
         source = probe_shader_source(std::move(source));
         source.insert(
             source.find('\n') + 1, "#define OPENRAC_PROBE_PIXEL early_pixel\nivec2 early_pixel;\n"

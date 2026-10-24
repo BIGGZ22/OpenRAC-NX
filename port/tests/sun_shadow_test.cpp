@@ -7,6 +7,7 @@
 #include "enhanced/tests/gpu_probe_fixture.h"
 #include "enhanced/tests/probe_fixture.h"
 #include "enhanced/viewer/scene_lighting.h"
+#include "enhanced_viewer_shaders.h"
 #include "renderer/gl.h"
 #include "renderer/shadows.h"
 #include "scene/level_renderer.h"
@@ -14,7 +15,6 @@
 #include "tests/check.h"
 #include "tests/gpu_draw_reference.h"
 #include "tests/renderer_gl_context.h"
-#include "viewer_shaders.h"
 using namespace openrac;
 using namespace openrac::gl;
 
@@ -176,7 +176,7 @@ void main() {
     gl_Position = vec4(p * 2.0 - 1.0, 0.0, 1.0);
 }
 )glsl";
-    const std::string fragment = std::string("#version 410 core\n") + scene::shaders::probes_glsl
+    const std::string fragment = std::string("#version 410 core\n") + lighting::shaders::probes_glsl
                                  + R"glsl(layout(location = 0) out vec4 out_colour;
 uniform int filter_mode;
 void main() {
@@ -251,8 +251,8 @@ void main() {
     gl_Position = vec4(p * 2.0 - 1.0, 0, 1);
 }
 )";
-    auto fragment =
-        std::string("#version 410 core\n") + scene::shaders::probes_glsl + R"(uniform int test_kind;
+    auto fragment = std::string("#version 410 core\n") + lighting::shaders::probes_glsl
+                    + R"(uniform int test_kind;
 uniform int tent_kernel;
 uniform vec2 test_slope;
 layout(location = 0) out vec4 result;

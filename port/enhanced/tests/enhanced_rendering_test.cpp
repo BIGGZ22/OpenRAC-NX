@@ -10,9 +10,9 @@
 #include "enhanced/viewer/probe_lighting.h"
 #include "enhanced/viewer/scene_lighting.h"
 #include "scene/level_renderer.h"
+#include "scene_shaders.h"
 #include "tests/check.h"
 #include "tests/renderer_gl_context.h"
-#include "viewer_shaders.h"
 
 using namespace openrac;
 

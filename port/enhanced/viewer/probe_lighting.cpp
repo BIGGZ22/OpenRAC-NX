@@ -17,8 +17,8 @@
 #include "common/stats.h"
 #include "enhanced/tools/probes/activation.h"
 #include "enhanced/viewer/early_lighting.h"
+#include "enhanced_viewer_shaders.h"
 #include "renderer/gl.h"
-#include "viewer_shaders.h"
 
 namespace openrac::lighting {
 using namespace openrac::gl;
@@ -61,7 +61,7 @@ std::string probe_shader_source(std::string source) {
     if (!enhanced_rendering_available()) {
         return source;
     }
-    source.insert(source.find('\n') + 1, scene::shaders::probes_glsl);
+    source.insert(source.find('\n') + 1, shaders::probes_glsl);
     static const bool& gather_off = stats::probe(
         "OPENRAC_SHADOW_GATHER_OFF", "Reference: 16 individual shadow texel fetches (reload level)"
     );
@@ -93,7 +93,7 @@ std::string probe_early_fragment(std::string source) {
     if (!enhanced_rendering_available()) {
         return probe_mesh_fragment(std::move(source));
     }
-    source += scene::shaders::early_lighting_glsl;
+    source += shaders::early_lighting_glsl;
     source.insert(source.find('\n') + 1, "#define OPENRAC_EARLY_LIGHTING 1\n");
     return probe_shader_source(std::move(source));
 }
@@ -598,8 +598,8 @@ void ProbeLighting::draw_spheres(const renderer::FrameInput& input, renderer::Re
         std::string error;
         if (!m_sphere_shader.build(
                 "probe placement spheres",
-                scene::shaders::probe_spheres_vert,
-                scene::shaders::probe_spheres_frag,
+                shaders::probe_spheres_vert,
+                shaders::probe_spheres_frag,
                 error
             )) {
             log::warn("probe spheres disabled: {}", error);

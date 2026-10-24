@@ -4,9 +4,9 @@
 #include <vector>
 
 #include "common/stats.h"
+#include "enhanced_viewer_shaders.h"
 #include "renderer/gl.h"
 #include "renderer/world/gl_world.h"
-#include "viewer_shaders.h"
 
 namespace openrac::lighting {
 using namespace openrac::gl;
@@ -64,9 +64,7 @@ bool ProbeSelection::prepare(
         || offsets.size() != grids.size()) {
         return false;
     }
-    if (!m_cull.build_compute(
-            "tiled probe-volume culling", scene::shaders::probe_selection_comp, error
-        )) {
+    if (!m_cull.build_compute("tiled probe-volume culling", shaders::probe_selection_comp, error)) {
         return false;
     }
     m_count = static_cast<unsigned>(grids.size());

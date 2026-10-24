@@ -239,40 +239,54 @@ add_library(openrac_probe_scene STATIC enhanced/tools/probes/level_scene.cpp enh
 target_link_libraries(openrac_probe_scene PUBLIC openrac_lighting openrac_scene openrac_assets_disc)
 openrac_warnings(openrac_probe_scene)
 
-# The level renderer and the enhanced renderer's lighting and shadow passes (enhanced/viewer/), one
-# library: the renderer calls the passes, the passes read the level, and both draw with the one set
-# of embedded shaders below. As two static libraries they would link in a cycle, so they stay
-# together until P2-39 gives scene the hooks enhanced registers with: the scene module's one
-# exception to one module, one target (CODING_CONVENTIONS.md, section 9.1).
+# The level renderer: the scene's GPU half, with the scene's embedded shaders (scene_shaders.h). It
+# calls the lighting a program registers through scene/level_lighting.h, so it links nothing of
+# enhanced/; the scene module's two libraries are its CPU half (openrac_scene, which the probe tools
+# link without a graphics context) and this.
 add_library(openrac_scene_renderer STATIC
   scene/level_renderer.cpp
-  enhanced/viewer/probe_lighting.cpp
-  enhanced/viewer/probe_selection.cpp
-  enhanced/viewer/scene_lighting.cpp
-  enhanced/viewer/early_lighting.cpp
 )
-openrac_embed_shaders(openrac_scene_renderer viewer openrac::scene
+openrac_embed_shaders(openrac_scene_renderer scene openrac::scene
   "${CMAKE_CURRENT_SOURCE_DIR}/viewer/shaders/mesh.vert"
   "${CMAKE_CURRENT_SOURCE_DIR}/viewer/shaders/mesh.frag"
-  "${CMAKE_CURRENT_SOURCE_DIR}/enhanced/viewer/shaders/early_lighting.comp"
-  "${CMAKE_CURRENT_SOURCE_DIR}/enhanced/viewer/shaders/probe_selection.comp"
-  "${CMAKE_CURRENT_SOURCE_DIR}/enhanced/viewer/shaders/early_lighting.glsl"
   "${CMAKE_CURRENT_SOURCE_DIR}/viewer/shaders/mesh_depth.vert"
   "${CMAKE_CURRENT_SOURCE_DIR}/viewer/shaders/mesh_depth.frag"
-  "${CMAKE_CURRENT_SOURCE_DIR}/enhanced/lighting/probes.glsl"
-  "${CMAKE_CURRENT_SOURCE_DIR}/enhanced/viewer/shaders/probe_spheres.vert"
-  "${CMAKE_CURRENT_SOURCE_DIR}/enhanced/viewer/shaders/probe_spheres.frag"
   "${CMAKE_CURRENT_SOURCE_DIR}/viewer/shaders/hero_shadow.frag"
   "${CMAKE_CURRENT_SOURCE_DIR}/viewer/shaders/shadow_depth.vert"
   "${CMAKE_CURRENT_SOURCE_DIR}/viewer/shaders/sky.vert"
   "${CMAKE_CURRENT_SOURCE_DIR}/viewer/shaders/sky.frag"
 )
-target_link_libraries(openrac_scene_renderer PUBLIC openrac_scene openrac_renderer openrac_probe_scene)
+target_link_libraries(openrac_scene_renderer PUBLIC openrac_scene openrac_renderer)
 if(OPENRAC_VULKAN)
   target_link_libraries(openrac_scene_renderer PRIVATE openrac_renderer_vulkan)
   target_compile_definitions(openrac_scene_renderer PRIVATE OPENRAC_VULKAN=1)
 endif()
 openrac_warnings(openrac_scene_renderer)
+
+# The enhanced renderer's lighting of a level (enhanced/viewer/): the probe lighting, the probe
+# selection and the early lighting, registered with the scene's lighting hook (scene_lighting.h),
+# with their embedded shaders (enhanced_viewer_shaders.h). Above the scene: it links the scene
+# renderer, never the other way round.
+add_library(openrac_enhanced_viewer STATIC
+  enhanced/viewer/early_lighting.cpp
+  enhanced/viewer/probe_lighting.cpp
+  enhanced/viewer/probe_selection.cpp
+  enhanced/viewer/scene_lighting.cpp
+)
+openrac_embed_shaders(openrac_enhanced_viewer enhanced_viewer openrac::lighting
+  "${CMAKE_CURRENT_SOURCE_DIR}/enhanced/viewer/shaders/early_lighting.comp"
+  "${CMAKE_CURRENT_SOURCE_DIR}/enhanced/viewer/shaders/probe_selection.comp"
+  "${CMAKE_CURRENT_SOURCE_DIR}/enhanced/viewer/shaders/early_lighting.glsl"
+  "${CMAKE_CURRENT_SOURCE_DIR}/enhanced/lighting/probes.glsl"
+  "${CMAKE_CURRENT_SOURCE_DIR}/enhanced/viewer/shaders/probe_spheres.vert"
+  "${CMAKE_CURRENT_SOURCE_DIR}/enhanced/viewer/shaders/probe_spheres.frag"
+)
+target_link_libraries(openrac_enhanced_viewer PUBLIC openrac_scene_renderer openrac_probe_scene)
+if(OPENRAC_VULKAN)
+  target_link_libraries(openrac_enhanced_viewer PRIVATE openrac_renderer_vulkan)
+  target_compile_definitions(openrac_enhanced_viewer PRIVATE OPENRAC_VULKAN=1)
+endif()
+openrac_warnings(openrac_enhanced_viewer)
 
 # ---- the level viewer ----
 # The viewer program's own code: its free camera. The programs and the tests that draw a level link
@@ -280,7 +294,8 @@ openrac_warnings(openrac_scene_renderer)
 add_library(openrac_viewer_lib STATIC
   viewer/camera.cpp
 )
-target_link_libraries(openrac_viewer_lib PUBLIC openrac_scene_renderer openrac_enhanced_textures)
+target_link_libraries(openrac_viewer_lib PUBLIC openrac_scene_renderer openrac_enhanced_viewer
+  openrac_enhanced_textures)
 openrac_warnings(openrac_viewer_lib)
 
 # Ratchet & Clank's profile (game/common/profile.h): what the renderers read of the running game
