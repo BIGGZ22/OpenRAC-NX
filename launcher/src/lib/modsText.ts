@@ -99,6 +99,8 @@ export const ADD = {
 export const PANEL = {
   title: "Gameplay mods",
   checkUpdates: "Check for updates",
+  updateAll: (count: number) => `Update all (${count})`,
+  updateRow: "Update",
   empty: "No gameplay mods yet. Paste a mod's link above, or choose its file.",
   settings: "Settings",
   details: "Details",
@@ -121,7 +123,7 @@ export const PANEL = {
 /** The badge on a mod's row besides its state and kind (lib/plugins.ts, modBadge). */
 export const BADGE = {
   update: (version: string) => `Update ${version}`,
-  updateHint: "A newer version is out: update it from the mod's menu (⋯) or its page.",
+  updateHint: "A newer version is out: update it with its Update button.",
 } as const;
 
 /** The sections of a mod's page (lib/plugins.ts, settingGroups). */
@@ -298,6 +300,10 @@ export function updatesFound(count: number, errors: string[]): string {
   return found + (errors.length ? ` Not checked: ${errors.join("; ")}` : "");
 }
 
+export function updatedAll(done: number, failed: number): string {
+  const ok = `Updated ${done} ${done === 1 ? "mod" : "mods"}; their settings are kept.`;
+  return failed ? `${ok} ${failed} could not be updated: open each for why.` : ok;
+}
 export const updated = (name: string, version: string) => `Updated ${name} to ${version}; its settings are kept.`;
 
 /** A mod installed from a link: replaced, on, or off (its row says why). */

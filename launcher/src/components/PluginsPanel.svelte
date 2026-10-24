@@ -198,6 +198,19 @@
     await load();
   }
 
+  /** Every update the last check found, one after another (a pinned mod has none). */
+  async function updateAll() {
+    const ids = Object.keys(updates).filter((id) => !sources[id]?.pin);
+    let failed = 0;
+    for (const id of ids) {
+      await runUpdate(id);
+      if (said?.failed) failed++;
+    }
+    said = { text: T.updatedAll(ids.length - failed, failed), failed: failed > 0 };
+  }
+
+  const pending = $derived(Object.keys(updates).filter((id) => !sources[id]?.pin).length);
+
   async function setPin(id: string, pin: boolean) {
     try {
       sources = (await api.pluginsSetPin(v.game, id, pin)).mods;
@@ -283,6 +296,11 @@
     <div class="head">
       <h2>{T.PANEL.title}</h2>
       {#if hasSources}
+        {#if pending > 1}
+          <button class="small" disabled={checking || updating !== null} onclick={() => void updateAll()}
+            ><Icon name="refresh" size={14} />{T.PANEL.updateAll(pending)}</button
+          >
+        {/if}
         <button class="small ghost" disabled={checking} onclick={() => void checkUpdates()}
           >{#if checking}<span class="spinner"></span>{:else}<Icon name="refresh" size={14} />{/if}{T.PANEL
             .checkUpdates}</button
@@ -370,6 +388,16 @@
                 >{hasSettings(mod) ? T.PANEL.settings : T.PANEL.details}<Icon name="next" size={16} /></span
               >
             </button>
+            {#if update}
+              <button
+                class="small update"
+                disabled={updating !== null}
+                aria-label={T.MOD_PAGE.update(update)}
+                onclick={() => void runUpdate(mod.id)}
+                >{#if updating === mod.id}<span class="spinner"></span>{:else}<Icon name="refresh" size={14} />{/if}{T
+                  .PANEL.updateRow}</button
+              >
+            {/if}
             <Menu
               label={T.moreAria(mod.name)}
               items={[
@@ -437,6 +465,10 @@
     display: flex;
     flex-direction: column;
     gap: 10px;
+  }
+
+  .update {
+    flex: none;
   }
 
   .head {

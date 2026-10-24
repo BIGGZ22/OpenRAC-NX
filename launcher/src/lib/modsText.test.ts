@@ -19,6 +19,7 @@ import {
   rangeText,
   sharesWith,
   updatesFound,
+  updatedAll,
   type Label,
 } from "./modsText";
 
@@ -61,6 +62,9 @@ describe("the page's words", () => {
 describe("the sentences", () => {
   it("count updates and name what was not checked", () => {
     expect(updatesFound(0, [])).toBe("Every mod from a link is up to date.");
+    expect(updatedAll(2, 0)).toBe("Updated 2 mods; their settings are kept.");
+    expect(updatedAll(1, 1)).toBe("Updated 1 mod; their settings are kept. 1 could not be updated: open each for why.");
+    expect(PANEL.updateAll(3)).toBe("Update all (3)");
     expect(updatesFound(1, [])).toBe("1 update found.");
     expect(updatesFound(2, ["a: down"])).toBe("2 updates found. Not checked: a: down");
   });
