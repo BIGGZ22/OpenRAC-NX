@@ -423,18 +423,19 @@ void draw(
     std::uint32_t first_index = 0;
     if (indexed) {
         Buffer* eb = g->buffers.find(va.elements);
-        if (eb == nullptr || eb->data.empty()) {
+        if (eb == nullptr || eb->size == 0) {
             return;
         }
         if (index_type == GL_UNSIGNED_BYTE) {
-            // Vulkan's 8-bit indices are an extension: made 16-bit.
-            const std::size_t from = std::min<std::size_t>(index_offset, eb->data.size());
+            // Vulkan's 8-bit indices are an extension: made 16-bit, from the CPU's copy.
+            const std::vector<std::uint8_t>& bytes = buffer_bytes(*eb);
+            const std::size_t from = std::min<std::size_t>(index_offset, bytes.size());
             const std::size_t have =
-                std::min<std::size_t>(static_cast<std::size_t>(count), eb->data.size() - from);
+                std::min<std::size_t>(static_cast<std::size_t>(count), bytes.size() - from);
             Slice sl = ring(static_cast<VkDeviceSize>(have * 2));
             auto* out = reinterpret_cast<std::uint16_t*>(sl.data);
             for (std::size_t i = 0; i < have; ++i) {
-                const std::uint8_t v = eb->data[from + i];
+                const std::uint8_t v = bytes[from + i];
                 out[i] = v == 0xFF ? 0xFFFF : v;
             }
             index = {sl.buffer, sl.offset, have * 2};

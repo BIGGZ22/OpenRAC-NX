@@ -642,7 +642,12 @@ void changed(Buffer& b) {
     b.changed_frame = g->frame_count;
 }
 
-void VKGL buffer_data(GLenum target, GLsizeiptr size, const void* data, GLenum) {
+// True for GL's static usages (GL_STATIC_DRAW, _READ, _COPY): filled once, drawn many times.
+bool is_static_usage(GLenum usage) {
+    return usage == GL_STATIC_DRAW || usage == kGlStaticRead || usage == kGlStaticCopy;
+}
+
+void VKGL buffer_data(GLenum target, GLsizeiptr size, const void* data, GLenum usage) {
     GLuint* binding = buffer_binding(target);
     Buffer* b = binding != nullptr ? g->buffers.find(*binding) : nullptr;
     if (b == nullptr || size < 0) {
@@ -651,6 +656,11 @@ void VKGL buffer_data(GLenum target, GLsizeiptr size, const void* data, GLenum) 
     g->submission.cpu_mirror_bytes -= b->data.size();
     b->data.assign(static_cast<std::size_t>(size), 0);
     g->submission.cpu_mirror_bytes += b->data.size();
+    b->size = b->data.size();
+    b->static_hint = is_static_usage(usage);
+    b->rewritten = false;
+    b->mirror_freed = false;
+    b->staged = nullptr;
     if (data != nullptr && size > 0) {
         std::memcpy(b->data.data(), data, static_cast<std::size_t>(size));
     }
@@ -661,10 +671,14 @@ void VKGL buffer_sub_data(GLenum target, GLintptr offset, GLsizeiptr size, const
     GLuint* binding = buffer_binding(target);
     Buffer* b = binding != nullptr ? g->buffers.find(*binding) : nullptr;
     if (b == nullptr || offset < 0 || size <= 0
-        || static_cast<std::size_t>(offset + size) > b->data.size()) {
+        || static_cast<std::size_t>(offset + size) > b->size) {
         return;
     }
+
+    // The rest of the buffer stays as it was: its mirror is read back first if it was let go.
+    buffer_bytes(*b);
     std::memcpy(b->data.data() + offset, data, static_cast<std::size_t>(size));
+    b->rewritten = true;
     changed(*b);
 }
 
@@ -1163,6 +1177,12 @@ void VKGL bind_buffer_base(GLenum target, GLuint index, GLuint buffer) {
     }
     if (target == wgl::GL_UNIFORM_BUFFER && index < kUniformBindings) {
         g->state.uniform_bindings[index] = buffer;
+
+        // A uniform block's bytes are read on the CPU when it is shorter than the block.
+        if (Buffer* b = g->buffers.find(buffer)) {
+            buffer_bytes(*b);
+            b->keep_mirror = true;
+        }
     }
     if (GLuint* b = buffer_binding(target)) {
         *b = buffer;
@@ -1624,6 +1644,7 @@ void destroy_buffer(Buffer& b) {
         });
     }
     b.own = VK_NULL_HANDLE;
+    b.own_mapped = nullptr;
 }
 
 // ---- Shaders and programs ----

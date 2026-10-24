@@ -97,6 +97,8 @@ inline constexpr GLenum kGlNearestMipmapLinear = 0x2702;
 inline constexpr GLenum kGlMirroredRepeat = 0x8370;
 inline constexpr GLenum kGlIntSamplerBuffer = 0x8DD0;
 inline constexpr GLenum kGlUnsignedSamplerBuffer = 0x8DD8;
+inline constexpr GLenum kGlStaticRead = 0x88E5;
+inline constexpr GLenum kGlStaticCopy = 0x88E6;
 
 // ---- The device ----
 
@@ -283,9 +285,22 @@ struct Renderbuffer {
 
 // A GL buffer: the data as GL was given it, the version that changes with each write, where that
 // version is on the GPU, and the texel views made of it this frame.
+//
+// `data` is the CPU's copy (the mirror). A static buffer that has a copy of its own in device
+// memory lets it go (static-buffers-device-local, docs/port/RENDER_PERF.md "R-05"); a reader of
+// its bytes calls buffer_bytes, which reads them back from `own`. The GPU-driven instances
+// (gpu_make_batch) read `data` directly: their buffers are drawn per instance and never given a
+// copy of their own, so their mirror stays.
 struct Buffer {
     bool storage = false;  // GPU-written storage must keep one allocation across frames.
     std::vector<std::uint8_t> data;
+    std::size_t size = 0;       // The bytes GL gave it, which `data` holds unless it was let go.
+    bool static_hint = false;   // Filled with a GL_STATIC_* usage: drawn often, written seldom.
+    bool rewritten = false;     // glBufferSubData wrote into it since its glBufferData.
+    bool keep_mirror = false;   // Read as a uniform block or by the CPU: `data` is kept.
+    bool mirror_freed = false;  // `data` was let go; `own` holds this version.
+    std::uint8_t* staged = nullptr;      // The staging copy that fills `own`, while it is alive.
+    std::uint64_t staged_recording = 0;  // The recording whose `upload` copies `staged` into `own`.
     std::uint64_t version = 1;
     std::uint64_t changed_frame = 0;
     // Where this version is on the GPU: a frame's ring (valid during that recording), or a copy
@@ -297,6 +312,7 @@ struct Buffer {
     VkBuffer own = VK_NULL_HANDLE;
     VmaAllocation own_allocation = nullptr;
     std::uint64_t own_version = 0;
+    std::uint8_t* own_mapped = nullptr;  // Where the host sees `own`; null in device-only memory.
 
     struct View {
         VkFormat format;
@@ -482,6 +498,17 @@ struct Names {
     }
 };
 
+// Which memory a static buffer's copy of its own goes into, worked out once from the device's
+// memory types (static_memory_of, vkgl_resources.cpp).
+struct StaticMemory {
+    bool known = false;  // Worked out yet.
+    // Memory both device-local and mapped by the host lies on the largest device-local heap:
+    // unified memory (Apple silicon, an integrated GPU) or a discrete GPU with resizable BAR.
+    // One mapped allocation is then device memory; nothing needs copying.
+    bool mappable = false;
+    std::uint32_t device_only_types = 0;  // The memory types device-local and not host-visible.
+};
+
 // What the layer cost in a frame, given to the debug tools (common/stats.h) at present(): the
 // measure of whether a path of the renderer should be written for Vulkan itself.
 struct Measures {
@@ -607,6 +634,7 @@ struct Context {
     int interval = 1;  // -1 adaptive, 0 immediate, 1 vsync
     VkFormat depth_format = VK_FORMAT_UNDEFINED;
     VkPipelineCache pipeline_cache = VK_NULL_HANDLE;
+    StaticMemory static_memory;  // Where a static buffer's own copy goes (vkgl_resources.cpp).
 
     std::array<Frame, kFrames> frames;
     int frame = 0;
@@ -906,10 +934,15 @@ VkSampler sampler_for(const SamplerParams& p, bool integer);
 BufferRef dummy_buffer_ref();
 
 // Where buffer `b`'s current data is on the GPU: its own copy once it has stayed the same for
-// a few frames (or at once for GPU-written storage), else a copy in this frame's ring made once
-// per version. With `persistent` false only storage gets its own copy. The dummy buffer when
-// `b` is empty.
+// a few frames (or at once for GPU-written storage, and for a static buffer of 64 KiB or more
+// under static-buffers-device-local), else a copy in this frame's ring made once per version.
+// With `persistent` false only storage gets its own copy. The dummy buffer when `b` is empty.
 BufferRef resolve(Buffer& b, bool persistent = true);
+
+// Buffer `b`'s bytes on the CPU: its mirror, read back from its own copy first when it was let
+// go, and kept from then on. The read-back of device-only memory submits a command buffer of its
+// own and waits for it, leaving the frame's recording as it is.
+const std::vector<std::uint8_t>& buffer_bytes(Buffer& b);
 
 // Drops the texel views made of `b`, destroyed once the frame is done with them (defer).
 void forget_views(Buffer& b);

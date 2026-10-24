@@ -4,15 +4,16 @@
 // Pins what the Vulkan backend does with a GL buffer that a renderer fills once and draws for
 // many frames (renderer/vulkan/vkgl_resources.cpp, resolve; vkgl_gl.cpp, the buffer functions),
 // for the change that moves such buffers into device memory and frees their CPU copy
-// (docs/port/RENDER_PERF.md, "R-05"). It passes before that change and after it.
+// (docs/port/RENDER_PERF.md, "R-05"). Its pixel checks passed before that change and pass after.
 //
 // One buffer of kBufferBytes, filled with glBufferData(GL_STATIC_DRAW), holds a tint at offset 0,
 // a full-screen triangle's positions and its vertices' colour; another holds 32-bit and 8-bit
 // indices. Each check draws, reads the picture's middle pixel back with glReadPixels (the one
 // read-back the backend has) and compares it with the colour it wrote: after the buffer has been
 // drawn for a few frames, after glBufferSubData rewrites a part of it, after glBufferData fills it
-// again, through 8-bit indices, and as a uniform block. The expected pixels are the colours'
-// channels times 255, which kColour and its kin choose to be whole numbers.
+// again, through 8-bit indices, and as a uniform block. They run under the reference path, the
+// change, and the change through a staging copy (kSettings), whose counters are checked too. The
+// expected pixels are the colours' channels times 255, which kColour and its kin make whole.
 //
 // Skipped (77) where Vulkan cannot open.
 
@@ -26,6 +27,7 @@
 #include <vector>
 
 #include "renderer/gl.h"
+#include "renderer/render_opt.h"
 #include "renderer/shader.h"
 #include "renderer/vulkan/vkgl.h"
 #include "renderer/world/gl_world.h"
@@ -260,6 +262,79 @@ void test_a_static_buffer_is_a_uniform_block_later(
     delete_buffers(scene);
 }
 
+// Tests that glBufferSubData in a static buffer's first frame, after a draw from it, is drawn by
+// the next draw: the rewrite reads the staging copy that this frame's upload has not run yet.
+void test_a_part_written_in_its_first_frame_is_drawn(
+    openrac::test::GlContext& context, Scene& scene
+) {
+    make_buffers(scene);
+    glClear(GL_COLOR_BUFFER_BIT);
+    scene.coloured.use();
+    glDrawElements(GL_TRIANGLES, 3, GL_UNSIGNED_INT, nullptr);
+    const std::vector<std::uint8_t> rewritten = vertex_bytes(kRewritten);
+    glBindBuffer(GL_ARRAY_BUFFER, scene.vertices);
+    glBufferSubData(
+        GL_ARRAY_BUFFER,
+        static_cast<GLintptr>(kColourOffset),
+        3 * sizeof(kRewritten),
+        rewritten.data() + kColourOffset
+    );
+    CHECK(draw_frame(context, scene.coloured, GL_UNSIGNED_INT) == pixel_of(kRewritten));
+    CHECK(settle(context, scene.coloured, kRewritten));
+    delete_buffers(scene);
+}
+
+// ---- Where the backend keeps the buffers (docs/port/RENDER_PERF.md, "R-05") ----
+
+// The registry's switches one run of the checks above draws under.
+struct Setting {
+    const char* name;   // For the failure messages.
+    bool device_local;  // static-buffers-device-local.
+    bool staging;       // static-buffers-force-staging.
+};
+
+// The reference path, the change, and the change through a staging copy on every machine.
+constexpr std::array<Setting, 3> kSettings = {{
+    {"reference", false, false},
+    {"device-local", true, false},
+    {"device-local, staged", true, true},
+}};
+
+// Tests what `setting` does with the two buffers' bytes in their first frame: under the change
+// neither goes through the ring and both mirrors are let go; staged, neither is in memory the CPU
+// sees. Under the reference path the first frame copies both into the ring and keeps both.
+void test_where_the_first_frame_keeps_them(
+    openrac::test::GlContext& context, Scene& scene, const Setting& setting
+) {
+    namespace vkgl = openrac::vkgl;
+    const vkgl::SubmissionCounters before = vkgl::submission_counters();
+    make_buffers(scene);
+    const vkgl::SubmissionCounters filled = vkgl::submission_counters();
+    CHECK(filled.cpu_mirror_bytes - before.cpu_mirror_bytes == 2 * kBufferBytes);
+    CHECK(draw_frame(context, scene.coloured, GL_UNSIGNED_INT) == pixel_of(kColour));
+    const vkgl::SubmissionCounters drawn = vkgl::submission_counters();
+    const std::uint64_t ring = drawn.ring_bytes - filled.ring_bytes;
+    const std::uint64_t mirror = drawn.cpu_mirror_bytes - before.cpu_mirror_bytes;
+    const std::uint64_t visible =
+        drawn.buffer_static_bytes_host_visible - before.buffer_static_bytes_host_visible;
+
+    // The change: no buffer through the ring, no mirror; the reference: both, as before.
+    if (setting.device_local) {
+        CHECK(ring < kBufferBytes);
+        CHECK(mirror == 0);
+    } else {
+        CHECK(ring >= 2 * kBufferBytes);
+        CHECK(mirror == 2 * kBufferBytes);
+    }
+
+    // Staged: in device memory the CPU cannot see, wherever the device offers such memory.
+    if (setting.staging) {
+        CHECK(visible == 0);
+    }
+
+    delete_buffers(scene);
+}
+
 // Builds `scene`'s two programs, the tinted one's block at kTintBinding. False with `error` set.
 bool build_shaders(Scene& scene, std::string& error) {
     // Either program failing to build leaves nothing to draw with.
@@ -292,11 +367,23 @@ int main() {
     glViewport(0, 0, kSide, kSide);
     glDisable(GL_DEPTH_TEST);
     glDisable(GL_BLEND);
-    test_a_static_buffer_draws_its_data(context, scene);
-    test_a_part_written_later_is_drawn(context, scene);
-    test_buffer_data_again_replaces_it(context, scene);
-    test_byte_indices_are_read_later(context, scene);
-    test_a_static_buffer_is_a_uniform_block_later(context, scene);
+    namespace render_opt = openrac::renderer::render_opt;
+
+    // Every check under each setting, so that each path is drawn and compared with GL's result.
+    for (const Setting& setting : kSettings) {
+        std::printf("setting: %s\n", setting.name);
+        render_opt::set(render_opt::Opt::StaticBuffersDeviceLocal, setting.device_local);
+        render_opt::set(render_opt::Opt::StaticBuffersForceStaging, setting.staging);
+        test_where_the_first_frame_keeps_them(context, scene, setting);
+        test_a_static_buffer_draws_its_data(context, scene);
+        test_a_part_written_in_its_first_frame_is_drawn(context, scene);
+        test_a_part_written_later_is_drawn(context, scene);
+        test_buffer_data_again_replaces_it(context, scene);
+        test_byte_indices_are_read_later(context, scene);
+        test_a_static_buffer_is_a_uniform_block_later(context, scene);
+    }
+
+    render_opt::reset();
     CHECK(vkgl::submission_counters().validation_errors == 0);
     return openrac::test::result();
 }
