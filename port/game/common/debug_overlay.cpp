@@ -33,6 +33,7 @@
 #include "common/env.h"
 #include "common/log.h"
 #include "common/stats.h"
+#include "debug/overlay.h"
 #include "fixes.h"
 #include "frontend.h"
 #include "imgui_gl.h"
@@ -44,244 +45,9 @@
 #include "settings.h"
 #include "viewer/screenshot.h"
 
-// The editor's moby class names (cmake/Games.cmake, from editor/moby_classes.tsv).
-extern const char* const openrac_moby_class_names;
-
 namespace openrac::frontend::debug_overlay {
 
 namespace {
-
-constexpr std::uint32_t kRamSize = 32u * 1024 * 1024;
-constexpr std::uint32_t kMobySize = 0x100;
-
-// The sections of the panel, as OPENRAC_OVERLAY names them.
-enum Section : std::size_t { kFrame, kRenderer, kMemory, kMobys, kGame, kShaders, kSectionCount };
-constexpr std::array<const char*, kSectionCount> kSectionNames = {"frame", "renderer", "memory",
-                                                                 "mobys", "game", "shaders"};
-
-constexpr std::array<const char*, 19> kLevelNames = {
-    "Veldin", "Novalis", "Aridia", "Kerwan", "Eudora", "Rilgar", "Blarg Station", "Umbris", "Batalia", "Gaspar",
-    "Orxon", "Pokitaru", "Hoven", "Gemlik Base", "Oltanis", "Quartu", "Kalebo III", "Drek's Fleet", "Veldin (final)"};
-
-// The pad's buttons by bit (active low in the report).
-constexpr std::array<const char*, 16> kButtonNames = {"select", "L3", "R3", "start", "up", "right", "down", "left",
-                                                      "L2", "R2", "L1", "R1", "triangle", "circle", "cross", "square"};
-
-// The main memory map: one cell per 128 KB.
-constexpr std::uint32_t kCellBytes = 128 * 1024;
-constexpr std::size_t kCells = kRamSize / kCellBytes;
-
-struct RamCell {
-    std::uint16_t used_pages = 0;  // of 32 (4 KB each) holding anything but zero
-    std::uint64_t sum = 0;
-    bool changed = false;
-};
-
-// A scripted key or click (OPENRAC_KEYS).
-struct ScriptedInput {
-    std::uint64_t frame = 0;  // the window frame it happens at
-    int held = 0;             // and that many held pictures later, while paused there
-    SDL_Keycode key = 0;      // 0: a click
-    float x = 0.0f, y = 0.0f;
-    bool done = false;
-};
-
-// The card a section of the drawer's rows is drawn on (card_begin).
-struct Card {
-    ImVec2 top;
-    float width = 0.0f;
-    int rows = 0;
-};
-
-struct State {
-    std::vector<ScriptedInput> script;
-    SDL_Window* window = nullptr;  // as last drawn into
-    int held_pictures = 0;         // pictures of the tick held now
-    bool wanted = false;      // shown from the start
-    bool configured = false;  // the environment was read
-    bool visible = false;
-    bool initialised = false;  // the ImGui context exists
-    bool gl_subset = false;    // drawn with the renderer's GL (imgui_gl.h): the window's is Vulkan's
-    std::array<bool, kSectionCount> open_at_start = {true, false, false, false, false, false};
-
-    // The last tick, as the window gave it.
-    std::string game;
-    std::span<const std::uint8_t> ram;
-    int level = -1;
-    viewer::GameState state;
-    std::uint32_t draws = 0;
-    std::uint64_t tick = 0;
-    Tick counts;
-    std::uint16_t buttons = 0xFFFF;
-    std::uint8_t analog[4] = {128, 128, 128, 128};
-
-    // Pause, step, slow motion.
-    bool paused = false;
-    bool step = false;
-    double stretch = 1.0;
-    long long pause_at = -1;
-    long long reload_at = -1;  // OPENRAC_SHADER_RELOAD: the tick to read the shaders again at
-    int held_frames = 0;  // frames to hold before going on by itself (a scripted pause); 0: for good
-
-    // The renderer's passes hidden here, by name; wireframe.
-    std::set<std::string> hidden;
-    bool wireframe = false;
-    bool wireframe_set = false;
-
-    // Mobys.
-    std::uint32_t selected = 0;  // address; 0 none
-    bool follow_hero = false;    // "inspect": the hero is selected, whichever moby he is now
-    bool inspector = false;
-    bool labels = false;
-    bool near_hero = true;
-    float radius = 30.0f;
-    bool pick = false;  // a click in the game's picture selects the nearest moby
-
-    // Memory.
-    bool memory_viewer = false;
-    std::uint32_t view_address = 0x00100000;
-    bool view_words = false;
-    std::array<RamCell, kCells> cells{};
-    std::uint64_t scanned_at = ~0ull;
-    std::uint32_t used_pages = 0;
-
-    // Screenshots of the window, with the overlay.
-    std::string shot_path;        // write the next frame there
-    std::uint64_t shot_every = 0;  // OPENRAC_OVERLAY_SHOT=N:PREFIX
-    std::string shot_prefix;
-    std::uint64_t shot_from = 0;
-    int shots = 0;
-
-    std::string message;  // what the last action said (a reload, a file written)
-    std::string notice;   // kept in the picture until cleared (debug_overlay::notice)
-    std::string toast;    // the same for an action taken with the panel hidden, shown a moment
-    double toast_until = 0.0;
-    bool alt_alone = false;  // Alt went down and no other key since: its release toggles the menus
-    bool developer = false;  // the launcher's developer tools (OPENRAC_DEVELOPER): the level select
-    std::string dump_path = "openrac_frames.jsonl";
-
-    // The drawer (drawer_available()).
-    bool drawer_open = false;
-    float drawer_at = 0.0f;      // how far out: 0 shut, 1 open
-    bool keep_paused = false;    // the pause the game is left in when it shuts
-    bool drawer_focus = false;   // given the keyboard and gamepad when it opens
-    bool drawer_scrolled = false;  // the finger down now has dragged the rows: no row is pressed
-    bool shot_when_shut = false;   // a screenshot asked for in it, taken once it is out of the picture
-    bool drawer_developer = false;  // its developer tools unfolded
-    Card card;
-    bool settings_changed = false;  // a setting changed in the drawer or the menus, not applied yet
-    bool panel_scrolled = false;    // the panel's drag_scroll
-    float ui_scale = 1.0f;         // the screen's density, for rows a thumb can press
-    // Fingers on the screen as ImGui's pointer: the first one down, and those the drawer took from
-    // the on-screen pad (their moves and lifts are the drawer's too).
-    SDL_FingerID pointer = 0;
-    bool pointer_down = false;
-    std::vector<SDL_FingerID> taken;
-
-    // The processor's load, measured each half second.
-    double cpu_seconds = 0.0;
-    double cpu_wall = 0.0;
-    double cpu_load = 0.0;
-};
-
-State s;
-
-// A length in the overlay's units: pixels on a desktop's screen, more on a dense one.
-float dp(float v) {
-    return v * s.ui_scale;
-}
-
-template <typename... Args>
-void text(std::format_string<Args...> fmt, Args&&... args) {
-    ImGui::TextUnformatted(std::format(fmt, std::forward<Args>(args)...).c_str());
-}
-
-template <typename... Args>
-void text_coloured(const ImVec4& colour, std::format_string<Args...> fmt, Args&&... args) {
-    ImGui::PushStyleColor(ImGuiCol_Text, colour);
-    ImGui::TextUnformatted(std::format(fmt, std::forward<Args>(args)...).c_str());
-    ImGui::PopStyleColor();
-}
-
-const ImVec4 kRed{1.0f, 0.35f, 0.3f, 1.0f};
-const ImVec4 kGreen{0.45f, 0.9f, 0.45f, 1.0f};
-const ImVec4 kDim{0.6f, 0.6f, 0.65f, 1.0f};
-const ImVec4 kYellow{1.0f, 0.9f, 0.35f, 1.0f};
-
-// ---- Reading the game's memory ----
-
-bool in_ram(std::uint32_t address, std::uint32_t size) {
-    address &= 0x01FFFFFF;
-    return static_cast<std::size_t>(address) + size <= s.ram.size();
-}
-
-template <typename T>
-T read(std::uint32_t address) {
-    T value{};
-    address &= 0x01FFFFFF;
-    if (static_cast<std::size_t>(address) + sizeof(T) <= s.ram.size()) {
-        std::memcpy(&value, s.ram.data() + address, sizeof(T));
-    }
-    return value;
-}
-
-const std::unordered_map<int, std::string>& class_names() {
-    static const std::unordered_map<int, std::string> names = [] {
-        std::unordered_map<int, std::string> map;
-        const char* at = openrac_moby_class_names;
-        while (at != nullptr && *at != '\0') {
-            const char* end = std::strchr(at, '\n');
-            const std::string line(at, end != nullptr ? static_cast<std::size_t>(end - at) : std::strlen(at));
-            const std::size_t tab = line.find('\t');
-            if (!line.empty() && line[0] != '#' && tab != std::string::npos) {
-                map[std::atoi(line.c_str())] = line.substr(tab + 1);
-            }
-            at = end != nullptr ? end + 1 : nullptr;
-        }
-        return map;
-    }();
-    return names;
-}
-
-std::string class_name(int id) {
-    const auto found = class_names().find(id);
-    return found != class_names().end() ? found->second : std::string();
-}
-
-std::string function_name(std::uint32_t address) {
-    if (address == 0) {
-        return "none";
-    }
-    const char* name = openrac_guest_function_name(address);
-    return name != nullptr ? std::format("{:#x} {}", address, name) : std::format("{:#x} (no C)", address);
-}
-
-const viewer::LiveMoby* hero() {
-    for (const viewer::LiveMoby& m : s.state.mobys) {
-        if (m.class_id == 0) {
-            return &m;
-        }
-    }
-    return nullptr;
-}
-
-const viewer::LiveMoby* selected_moby() {
-    for (const viewer::LiveMoby& m : s.state.mobys) {
-        if (m.address == s.selected) {
-            return &m;
-        }
-    }
-    return nullptr;
-}
-
-float distance(const viewer::LiveMoby& a, const viewer::LiveMoby& b) {
-    const float dx = a.matrix[12] - b.matrix[12], dy = a.matrix[13] - b.matrix[13], dz = a.matrix[14] - b.matrix[14];
-    return std::sqrt(dx * dx + dy * dy + dz * dz);
-}
-
-std::string megabytes(std::uint64_t bytes) {
-    return std::format("{:.1f} MB", static_cast<double>(bytes) / (1024.0 * 1024.0));
-}
 
 // ---- The environment ----
 
@@ -536,16 +302,6 @@ void run_script(std::uint64_t frame, int held) {
 
 // ---- Averages over the frame history ----
 
-struct Averages {
-    int frames = 0, ticks = 0;
-    double frame_ms = 0.0, worst_ms = 0.0;
-    double fps = 0.0, tps = 0.0;
-    double game_ms = 0.0, scene_ms = 0.0, wait_ms = 0.0;                         // per tick
-    double prepare_ms = 0.0, render_ms = 0.0, present_ms = 0.0, overlay_ms = 0.0, swap_ms = 0.0;  // per frame
-    double gpu_ms = -1.0;
-    int gpu_frames = 0;
-};
-
 Averages averages() {
     Averages a;
     const stats::Frame* newest = stats::history(0);
@@ -598,14 +354,6 @@ Averages averages() {
         a.gpu_ms = gpu / a.gpu_frames;
     }
     return a;
-}
-
-void row(const char* label, const std::string& value) {
-    ImGui::TableNextRow();
-    ImGui::TableNextColumn();
-    ImGui::TextUnformatted(label);
-    ImGui::TableNextColumn();
-    ImGui::TextUnformatted(value.c_str());
 }
 
 // ---- The sections ----
