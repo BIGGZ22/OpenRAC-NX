@@ -90,8 +90,10 @@ bool load(GetProcAddress get, std::string& missing) {
         }
     }
 
+    // ES's optional functions, and those the Vulkan backend carries out (glInvalidateFramebuffer):
+    // a desktop context's loader may hand out a pointer for one it does not have.
 #define OPENRAC_GL_LOAD_OPTIONAL(ret, name, params)                                                \
-    name = g_api == Api::ES ? reinterpret_cast<PFN_##name>(get(#name)) : nullptr;
+    name = g_api == Api::ES || g_vulkan ? reinterpret_cast<PFN_##name>(get(#name)) : nullptr;
     OPENRAC_GL_ES_OPTIONAL_FUNCTIONS(OPENRAC_GL_LOAD_OPTIONAL)
 #undef OPENRAC_GL_LOAD_OPTIONAL
     if (!has_extension("GL_EXT_multisampled_render_to_texture")) {

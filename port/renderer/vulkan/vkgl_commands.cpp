@@ -16,6 +16,7 @@
 #include "common/env.h"
 #include "common/stats.h"
 #include "renderer/gl.h"
+#include "renderer/render_opt.h"
 #include "renderer/vulkan/vkgl_internal.h"
 
 namespace openrac::vkgl::detail {
@@ -23,6 +24,8 @@ namespace openrac::vkgl::detail {
 using namespace openrac::gl;
 
 namespace {
+
+namespace render_opt = renderer::render_opt;
 
 // ---- The frame's ring: vertices, indices, uniforms, texels on their way ----
 
@@ -79,8 +82,124 @@ struct Clear {
     bool colour = false, depth = false, stencil = false;
 };
 
-void begin_rendering(const Target& t, const Clear& clear) {
-    end_rendering();
+// The garbage test_poison_discards writes over discarded data: every colour channel at its top,
+// depth at the near plane and a stencil pattern, none of them what a pass of the port clears to.
+constexpr VkClearColorValue kPoisonColour = {{1.0f, 1.0f, 1.0f, 1.0f}};
+constexpr VkClearDepthStencilValue kPoisonDepth = {0.0f, 0xA5};
+
+// Overwrites the `aspects` of `image` with the poison, outside any pass, in `main` (the order of
+// the reads a later pass makes). Only for test_poison_discards.
+void poison(Image& image, VkImageAspectFlags aspects) {
+    VkCommandBuffer cmd = cmd_for(&image, true);
+    barrier(cmd, image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
+    const VkImageSubresourceRange range = {aspects, 0, VK_REMAINING_MIP_LEVELS, 0, 1};
+
+    // A colour image, or the depth and stencil one.
+    if ((aspects & VK_IMAGE_ASPECT_COLOR_BIT) != 0) {
+        vkCmdClearColorImage(
+            cmd, image.image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, &kPoisonColour, 1, &range
+        );
+    } else {
+        vkCmdClearDepthStencilImage(
+            cmd, image.image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, &kPoisonDepth, 1, &range
+        );
+    }
+
+    count_command(Command::Copy);
+}
+
+// Notes that `aspects` of `image` hold nothing worth keeping, and with the poison on, makes them
+// garbage at once. Called once the pass that drew into them has ended, or outside any pass.
+void mark_discarded(Image& image, VkImageAspectFlags aspects) {
+    // Nothing let go: the image keeps what it holds.
+    if (aspects == 0) {
+        return;
+    }
+
+    // The poison's clear moves the image to a transfer layout, which barrier counts as a write.
+    if (g->poison_discards) {
+        poison(image, aspects);
+    }
+
+    image.discarded |= aspects;
+}
+
+// The load operation of one aspect of an attachment: a clear the pass began with, nothing for
+// contents that were let go (the poison's clear under test_poison_discards), else a load.
+VkAttachmentLoadOp load_op(const Image& image, VkImageAspectFlags aspect, bool cleared) {
+    // The clear the pass began with comes first: it overwrites whatever was there.
+    if (cleared) {
+        return VK_ATTACHMENT_LOAD_OP_CLEAR;
+    }
+
+    // Let go: no load, or under test the poison, so that a pass that reads it differs.
+    if ((image.discarded & aspect) != 0) {
+        return g->poison_discards ? VK_ATTACHMENT_LOAD_OP_CLEAR : VK_ATTACHMENT_LOAD_OP_DONT_CARE;
+    }
+
+    return VK_ATTACHMENT_LOAD_OP_LOAD;
+}
+
+// The secondary command buffer for this recording's next deferred pass into `t`, begun to
+// continue a pass of `t`'s formats and samples. Allocated from the frame's pool the first time.
+VkCommandBuffer secondary_for(const Target& t) {
+    Frame& f = frame();
+
+    // A buffer of an earlier recording of this slot, reset with the pool, or a new one.
+    if (f.secondary_at == f.secondaries.size()) {
+        VkCommandBufferAllocateInfo alloc{VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO};
+        alloc.commandPool = f.pool;
+        alloc.level = VK_COMMAND_BUFFER_LEVEL_SECONDARY;
+        alloc.commandBufferCount = 1;
+        VkCommandBuffer made = VK_NULL_HANDLE;
+
+        // No secondary buffer: the caller records the pass directly.
+        if (!check(vkAllocateCommandBuffers(g->device, &alloc, &made), "a secondary buffer")) {
+            return VK_NULL_HANDLE;
+        }
+
+        f.secondaries.push_back(made);
+    }
+
+    VkCommandBuffer cmd = f.secondaries[f.secondary_at++];
+    const VkFormat colour = t.colour != nullptr ? t.colour->format : VK_FORMAT_UNDEFINED;
+    VkCommandBufferInheritanceRenderingInfo rendering{
+        VK_STRUCTURE_TYPE_COMMAND_BUFFER_INHERITANCE_RENDERING_INFO
+    };
+    rendering.colorAttachmentCount = t.colour != nullptr ? 1 : 0;
+    rendering.pColorAttachmentFormats = &colour;
+    rendering.depthAttachmentFormat = t.depth != nullptr ? t.depth->format : VK_FORMAT_UNDEFINED;
+    rendering.stencilAttachmentFormat =
+        t.depth != nullptr && has_stencil(t.depth->format) ? t.depth->format : VK_FORMAT_UNDEFINED;
+    rendering.rasterizationSamples = t.samples;
+    VkCommandBufferInheritanceInfo inheritance{VK_STRUCTURE_TYPE_COMMAND_BUFFER_INHERITANCE_INFO};
+    inheritance.pNext = &rendering;
+    VkCommandBufferBeginInfo begin{VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO};
+    begin.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT
+                  | VK_COMMAND_BUFFER_USAGE_RENDER_PASS_CONTINUE_BIT;
+    begin.pInheritanceInfo = &inheritance;
+    vkBeginCommandBuffer(cmd, &begin);
+    return cmd;
+}
+
+// Moves `t`'s attachments into their layouts for drawing, in `cmd` before the pass.
+void attachment_barriers(VkCommandBuffer cmd, const Target& t) {
+    // The colour image, also when it is in that layout already: an earlier pass's writes are done.
+    if (t.colour != nullptr) {
+        t.colour->touched = g->recording;
+        barrier(cmd, *t.colour, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL);
+    }
+
+    // The depth and stencil image.
+    if (t.depth != nullptr) {
+        t.depth->touched = g->recording;
+        barrier(cmd, *t.depth, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL);
+    }
+}
+
+// Begins rendering into `t` as recording goes, the reference path: every attachment stored, and
+// loaded unless `clear` clears it.
+void begin_direct(const Target& t, const Clear& clear) {
     VkCommandBuffer cmd = frame().main;
     VkRenderingAttachmentInfo colour{VK_STRUCTURE_TYPE_RENDERING_ATTACHMENT_INFO};
     VkRenderingAttachmentInfo depth{VK_STRUCTURE_TYPE_RENDERING_ATTACHMENT_INFO};
@@ -91,10 +210,8 @@ void begin_rendering(const Target& t, const Clear& clear) {
     info.layerCount = 1;
     const State& s = g->state;
     const VkExtent2D area = info.renderArea.extent;
+    attachment_barriers(cmd, t);
     if (t.colour != nullptr) {
-        t.colour->touched = g->recording;
-        // Also when it is in that layout already: what an earlier pass wrote is then done.
-        barrier(cmd, *t.colour, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL);
         colour.imageView = attachment_view(*t.colour);
         colour.imageLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
         colour.loadOp = clear.colour ? VK_ATTACHMENT_LOAD_OP_CLEAR : VK_ATTACHMENT_LOAD_OP_LOAD;
@@ -105,8 +222,6 @@ void begin_rendering(const Target& t, const Clear& clear) {
         count_attachment(*t.colour, area, !clear.colour, true);
     }
     if (t.depth != nullptr) {
-        t.depth->touched = g->recording;
-        barrier(cmd, *t.depth, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL);
         depth.imageView = attachment_view(*t.depth);
         depth.imageLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
         depth.loadOp = clear.depth ? VK_ATTACHMENT_LOAD_OP_CLEAR : VK_ATTACHMENT_LOAD_OP_LOAD;
@@ -126,6 +241,147 @@ void begin_rendering(const Target& t, const Clear& clear) {
     }
     vkCmdBeginRendering(cmd, &info);
     count_render_pass();
+    g->pass = OpenPass{};
+}
+
+// Begins a pass into `t` whose load and store operations wait for its end (attachment-discard):
+// the barriers go into `main` now, and `main` points at a secondary buffer until end_rendering.
+// False when no secondary buffer can be had, and nothing is begun.
+bool begin_deferred(const Target& t, const Clear& clear) {
+    const VkCommandBuffer secondary = secondary_for(t);
+
+    // No buffer to defer into: the pass is recorded directly.
+    if (secondary == VK_NULL_HANDLE) {
+        return false;
+    }
+
+    Frame& f = frame();
+    const State& s = g->state;
+    attachment_barriers(f.main, t);
+    OpenPass& pass = g->pass;
+    pass = OpenPass{};
+    pass.deferred = true;
+    pass.primary = f.main;
+    pass.clear_colour = clear.colour;
+    pass.clear_depth = clear.depth;
+    pass.clear_stencil = clear.stencil;
+    std::memcpy(pass.colour_value.float32, s.clear_colour, sizeof s.clear_colour);
+    pass.depth_value = {s.clear_depth, static_cast<std::uint32_t>(s.clear_stencil)};
+    f.main = secondary;
+    return true;
+}
+
+// The store operation of an aspect the open pass may have let go (`dropped`).
+VkAttachmentStoreOp store_op(VkImageAspectFlags dropped, VkImageAspectFlags aspect) {
+    return (dropped & aspect) != 0 ? VK_ATTACHMENT_STORE_OP_DONT_CARE
+                                   : VK_ATTACHMENT_STORE_OP_STORE;
+}
+
+// Ends the deferred pass into `t`: begins it in the frame's `main` with its operations chosen
+// now (a let-go aspect not stored, a discarded one not loaded), runs its secondary buffer and
+// ends it. The images then know which of their aspects hold nothing.
+void end_deferred(const Target& t) {
+    Frame& f = frame();
+    OpenPass& pass = g->pass;
+    const VkCommandBuffer secondary = f.main;
+    vkEndCommandBuffer(secondary);
+    f.main = pass.primary;
+    VkRenderingAttachmentInfo colour{VK_STRUCTURE_TYPE_RENDERING_ATTACHMENT_INFO};
+    VkRenderingAttachmentInfo depth{VK_STRUCTURE_TYPE_RENDERING_ATTACHMENT_INFO};
+    VkRenderingAttachmentInfo stencil{VK_STRUCTURE_TYPE_RENDERING_ATTACHMENT_INFO};
+    VkRenderingInfo info{VK_STRUCTURE_TYPE_RENDERING_INFO};
+    info.flags = VK_RENDERING_CONTENTS_SECONDARY_COMMAND_BUFFERS_BIT;
+    info.renderArea =
+        {{0, 0}, {static_cast<std::uint32_t>(t.width), static_cast<std::uint32_t>(t.height)}};
+    info.layerCount = 1;
+    const VkExtent2D area = info.renderArea.extent;
+
+    // The colour attachment: cleared, not loaded or loaded; stored unless let go.
+    if (t.colour != nullptr) {
+        colour.imageView = attachment_view(*t.colour);
+        colour.imageLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+        colour.loadOp = load_op(*t.colour, VK_IMAGE_ASPECT_COLOR_BIT, pass.clear_colour);
+        colour.storeOp = store_op(pass.drop_colour, VK_IMAGE_ASPECT_COLOR_BIT);
+        // A pass's own clear keeps its value; a load of let-go data under test is the poison.
+        colour.clearValue.color =
+            pass.clear_colour || !g->poison_discards ? pass.colour_value : kPoisonColour;
+        info.colorAttachmentCount = 1;
+        info.pColorAttachments = &colour;
+        count_attachment(
+            *t.colour,
+            area,
+            colour.loadOp == VK_ATTACHMENT_LOAD_OP_LOAD,
+            colour.storeOp == VK_ATTACHMENT_STORE_OP_STORE
+        );
+    }
+
+    // The depth and stencil image: each aspect's operations of its own, counted once.
+    if (t.depth != nullptr) {
+        depth.imageView = attachment_view(*t.depth);
+        depth.imageLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
+        depth.loadOp = load_op(*t.depth, VK_IMAGE_ASPECT_DEPTH_BIT, pass.clear_depth);
+        depth.storeOp = store_op(pass.drop_depth, VK_IMAGE_ASPECT_DEPTH_BIT);
+        depth.clearValue.depthStencil = pass.depth_value;
+
+        // A load of let-go depth under test is cleared to the poison rather than to the value.
+        if (g->poison_discards && !pass.clear_depth) {
+            depth.clearValue.depthStencil.depth = kPoisonDepth.depth;
+        }
+
+        info.pDepthAttachment = &depth;
+        bool loaded = depth.loadOp == VK_ATTACHMENT_LOAD_OP_LOAD;
+        bool stored = depth.storeOp == VK_ATTACHMENT_STORE_OP_STORE;
+
+        // The stencil aspect of the same image.
+        if (has_stencil(t.depth->format)) {
+            stencil = depth;
+            stencil.loadOp = load_op(*t.depth, VK_IMAGE_ASPECT_STENCIL_BIT, pass.clear_stencil);
+            stencil.storeOp = store_op(pass.drop_depth, VK_IMAGE_ASPECT_STENCIL_BIT);
+
+            // The same for let-go stencil.
+            if (g->poison_discards && !pass.clear_stencil) {
+                stencil.clearValue.depthStencil.stencil = kPoisonDepth.stencil;
+            }
+
+            info.pStencilAttachment = &stencil;
+            loaded = loaded || stencil.loadOp == VK_ATTACHMENT_LOAD_OP_LOAD;
+            stored = stored || stencil.storeOp == VK_ATTACHMENT_STORE_OP_STORE;
+        }
+
+        // One image holds both aspects: read in when either is loaded, written when either is.
+        count_attachment(*t.depth, area, loaded, stored);
+    }
+
+    vkCmdBeginRendering(f.main, &info);
+    count_render_pass();
+    vkCmdExecuteCommands(f.main, 1, &secondary);
+    count_command(Command::Other);
+    vkCmdEndRendering(f.main);
+    count_command(Command::RenderPass);
+    const OpenPass ended = pass;
+    pass = OpenPass{};
+
+    // What the pass wrote is whole again; what it let go holds nothing (or the poison).
+    if (t.colour != nullptr) {
+        t.colour->discarded = 0;
+        mark_discarded(*t.colour, ended.drop_colour);
+    }
+
+    // The same for the depth and stencil image.
+    if (t.depth != nullptr) {
+        t.depth->discarded = 0;
+        mark_discarded(*t.depth, ended.drop_depth);
+    }
+}
+
+void begin_rendering(const Target& t, const Clear& clear) {
+    end_rendering();
+
+    // The operations chosen at the pass's end, or as it begins (the reference path).
+    if (!render_opt::enabled(render_opt::Opt::AttachmentDiscard) || !begin_deferred(t, clear)) {
+        begin_direct(t, clear);
+    }
+
     g->rendering = true;
     g->rendering_target = t;
     g->bound_pipeline = VK_NULL_HANDLE;
@@ -235,10 +491,20 @@ VkCommandBuffer upload_cmd() {
 void end_rendering() {
     gpu_flush_draws();
     if (g->rendering) {
-        vkCmdEndRendering(frame().main);
-        count_command(Command::RenderPass);
+        // Not rendering from here on: the poison of a deferred pass's end records outside it.
         g->rendering = false;
         g->bound_pipeline = VK_NULL_HANDLE;
+
+        // A deferred pass ends with its operations chosen; a direct one as it was begun.
+        if (g->pass.deferred) {
+            end_deferred(g->rendering_target);
+
+            // A secondary buffer leaves the state of the buffer that ran it undefined.
+            g->recorded.forget();
+        } else {
+            vkCmdEndRendering(frame().main);
+            count_command(Command::RenderPass);
+        }
     }
 }
 
@@ -277,6 +543,11 @@ void barrier(VkCommandBuffer cmd, Image& image, VkImageLayout to) {
     );
     count_barrier(VK_PIPELINE_STAGE_ALL_COMMANDS_BIT, VK_PIPELINE_STAGE_ALL_COMMANDS_BIT);
     image.layout = to;
+
+    // A copy, blit or upload into the image comes next: what it writes is kept.
+    if (to == VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL) {
+        image.discarded = 0;
+    }
 }
 
 void begin_buffers() {
@@ -292,6 +563,7 @@ void begin_buffers() {
         count_command(Command::Query);
     }
     g->upload_used = false;
+    f.secondary_at = 0;
     ++g->recording;
 
     // A command buffer begun afresh holds no dynamic state and no binds.
@@ -470,6 +742,37 @@ void ensure_rendering(const Target& t) {
     if (!g->rendering || !(g->rendering_target == t)) {
         begin_rendering(t, Clear{});
     }
+
+    // A draw or a clear after glInvalidateFramebuffer: what it writes is kept.
+    g->pass.drop_colour = 0;
+    g->pass.drop_depth = 0;
+}
+
+void discard_attachments(const Target& t, bool colour, VkImageAspectFlags depth) {
+    const bool open = g->rendering && g->pass.deferred;
+
+    // The colour image: not stored by the open pass on it, or not loaded by the next one.
+    if (t.colour != nullptr && colour) {
+        // The pass drawing into it lets it go at its end; any other is done with it already.
+        if (open && g->rendering_target.colour == t.colour) {
+            g->pass.drop_colour |= VK_IMAGE_ASPECT_COLOR_BIT;
+        } else {
+            mark_discarded(*t.colour, VK_IMAGE_ASPECT_COLOR_BIT);
+        }
+    }
+
+    const VkImageAspectFlags aspects =
+        t.depth != nullptr ? depth & t.depth->aspect : VkImageAspectFlags{0};
+
+    // The depth and stencil image, the aspects it has of those asked.
+    if (aspects != 0) {
+        // The same choice as for the colour image.
+        if (open && g->rendering_target.depth == t.depth) {
+            g->pass.drop_depth |= aspects;
+        } else {
+            mark_discarded(*t.depth, aspects);
+        }
+    }
 }
 
 VkRect2D scissor_rect(const Target& t) {
@@ -530,3 +833,17 @@ void clear(GLbitfield mask) {
 }
 
 }  // namespace openrac::vkgl::detail
+
+namespace openrac::vkgl {
+
+bool test_poison_discards(bool on) {
+    // No context: nothing to poison.
+    if (detail::g == nullptr) {
+        return false;
+    }
+
+    detail::g->poison_discards = on;
+    return true;
+}
+
+}  // namespace openrac::vkgl

@@ -234,6 +234,10 @@ struct Frame {
     VkDeviceSize chunk_used = 0;
     std::vector<std::function<void()>> deferred;
     bool submitted = false;  // the fence will be signalled
+    // Secondary command buffers the passes of attachment-discard are recorded into, from `pool`;
+    // the first `secondary_at` are this recording's.
+    std::vector<VkCommandBuffer> secondaries;
+    std::size_t secondary_at = 0;
 };
 
 // A Vulkan image, its memory, views and the layout it was last left in. Owned through ImagePtr.
@@ -248,6 +252,9 @@ struct Image {
     VkSampleCountFlagBits samples = VK_SAMPLE_COUNT_1_BIT;
     VkImageLayout layout = VK_IMAGE_LAYOUT_UNDEFINED;
     std::uint64_t touched = 0;  // the recording that last used it in `main`
+    // The aspects whose contents glInvalidateFramebuffer let go and nothing wrote since: the next
+    // pass on the image does not load them (attachment-discard, docs/port/RENDER_PERF.md "R-06").
+    VkImageAspectFlags discarded = 0;
     VkImageView attachment = VK_NULL_HANDLE;
     std::vector<std::pair<std::uint32_t, VkImageView>>
         views;  // (base | top << 16) -> view for sampling
@@ -475,6 +482,22 @@ struct Framebuffer {
     GLuint colour_renderbuffer = 0;
     GLuint depth_texture = 0;
     GLuint depth_renderbuffer = 0;
+};
+
+// What a pass of attachment-discard has to know when it ends, which is when its load and store
+// operations are chosen (vkgl_commands.cpp): its draws go into a secondary command buffer
+// meanwhile, and `main` points at it.
+struct OpenPass {
+    bool deferred = false;  // This pass is recorded into a secondary command buffer.
+    VkCommandBuffer primary = VK_NULL_HANDLE;  // The frame's `main`, given back at the end.
+    bool clear_colour = false;                 // The pass began with a clear of its colour,
+    bool clear_depth = false;                  // of its depth,
+    bool clear_stencil = false;                // and of its stencil.
+    VkClearColorValue colour_value{};          // The clear values as they were at its begin.
+    VkClearDepthStencilValue depth_value{};
+    // The aspects glInvalidateFramebuffer let go since the pass's last draw or clear: not stored.
+    VkImageAspectFlags drop_colour = 0;
+    VkImageAspectFlags drop_depth = 0;
 };
 
 // What a draw or a clear draws into.
@@ -801,6 +824,8 @@ struct Context {
 
     bool rendering = false;
     Target rendering_target;
+    OpenPass pass;                 // The pass `main` renders in, while `rendering`.
+    bool poison_discards = false;  // test_poison_discards (vkgl.h): discarded data made garbage.
     VkPipeline bound_pipeline = VK_NULL_HANDLE;
     RecordedState recorded;  // What the main command buffer holds of a draw's state (R-03).
 
@@ -1006,6 +1031,11 @@ void ensure_rendering(const Target& t);
 // The part of `t` drawing may touch: the scissor box clamped to `t`, or all of `t` without the
 // scissor test.
 VkRect2D scissor_rect(const Target& t);
+
+// glInvalidateFramebuffer carried out on `t`: `colour` and the depth image's `depth` aspects are
+// let go. In the pass that renders into them, they are not stored at its end unless a draw or a
+// clear comes first; otherwise the next pass on them does not load them.
+void discard_attachments(const Target& t, bool colour, VkImageAspectFlags depth);
 
 // glClear: clears the buffers in `mask` that the write masks leave writable, inside the scissor
 // box. A clear of the whole target becomes the load operation of the rendering pass it begins.

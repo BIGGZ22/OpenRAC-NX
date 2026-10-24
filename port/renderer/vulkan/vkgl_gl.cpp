@@ -18,6 +18,7 @@
 #include <volk.h>
 
 #include "renderer/gl.h"
+#include "renderer/render_opt.h"
 #include "renderer/vulkan/shader_compiler.h"
 #include "renderer/vulkan/vkgl.h"
 #include "renderer/vulkan/vkgl_internal.h"
@@ -1362,6 +1363,48 @@ void VKGL renderbuffer_storage(GLenum target, GLenum format, GLsizei w, GLsizei 
     renderbuffer_storage_multisample(target, 0, format, w, h);
 }
 
+// GL's names of the default framebuffer's buffers in glInvalidateFramebuffer (OpenGL ES 3.0).
+constexpr GLenum kGlColour = 0x1800;   // GL_COLOR
+constexpr GLenum kGlDepth = 0x1801;    // GL_DEPTH
+constexpr GLenum kGlStencil = 0x1802;  // GL_STENCIL
+
+void VKGL invalidate_framebuffer(GLenum target, GLsizei count, const GLenum* attachments) {
+    // The reference path: nothing is let go, as before the call existed here.
+    if (!renderer::render_opt::enabled(renderer::render_opt::Opt::AttachmentDiscard)
+        || attachments == nullptr) {
+        return;
+    }
+
+    const GLuint name =
+        target == GL_READ_FRAMEBUFFER ? g->state.read_framebuffer : g->state.draw_framebuffer;
+    bool colour = false;
+    VkImageAspectFlags depth = 0;
+
+    // Each buffer named, in the default framebuffer's names or a framebuffer object's.
+    for (GLsizei n = 0; n < count; ++n) {
+        const GLenum attachment = attachments[n];
+
+        // Colour 0 is the only colour attachment the backend draws into.
+        if (attachment == (name == 0 ? kGlColour : GL_COLOR_ATTACHMENT0)) {
+            colour = true;
+        }
+
+        // Depth, stencil, or both at once (a framebuffer object's name for the pair).
+        if (attachment == (name == 0 ? kGlDepth : GL_DEPTH_ATTACHMENT)
+            || (name != 0 && attachment == GL_DEPTH_STENCIL_ATTACHMENT)) {
+            depth |= VK_IMAGE_ASPECT_DEPTH_BIT;
+        }
+
+        // The stencil aspect, alone or with depth.
+        if (attachment == (name == 0 ? kGlStencil : GL_STENCIL_ATTACHMENT)
+            || (name != 0 && attachment == GL_DEPTH_STENCIL_ATTACHMENT)) {
+            depth |= VK_IMAGE_ASPECT_STENCIL_BIT;
+        }
+    }
+
+    discard_attachments(target_of(name), colour, depth);
+}
+
 void VKGL blit_framebuffer(
     GLint sx0,
     GLint sy0,
@@ -1392,6 +1435,8 @@ void VKGL blit_framebuffer(
             }
             barrier(cmd, *src, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL);
             barrier(cmd, *dst, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL);
+            // The resolve writes all of the destination: what it held before is not needed.
+            dst->discarded = 0;
             VkRenderingAttachmentInfo depth{VK_STRUCTURE_TYPE_RENDERING_ATTACHMENT_INFO};
             depth.imageView = attachment_view(*src);
             depth.imageLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
@@ -1629,6 +1674,7 @@ const Entry kEntries[] = {
     VKGL_ENTRY(glRenderbufferStorage, renderbuffer_storage),
     VKGL_ENTRY(glRenderbufferStorageMultisample, renderbuffer_storage_multisample),
     VKGL_ENTRY(glBlitFramebuffer, blit_framebuffer),
+    VKGL_ENTRY(glInvalidateFramebuffer, invalidate_framebuffer),
 };
 #undef VKGL_ENTRY
 

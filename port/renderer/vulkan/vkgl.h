@@ -179,6 +179,11 @@ inline std::uint64_t commands_recorded(const SubmissionCounters& counters) {
 // Until the first call no pipeline counts there.
 void begin_pipeline_warmup(std::uint32_t frames);
 
+// For the tests: with `on`, an attachment glInvalidateFramebuffer let go is overwritten with
+// garbage (colour 1.0 in every channel, depth 0, stencil 0xA5) instead of being left undefined, so
+// that a later read of it shows in the picture. False when no context is open.
+bool test_poison_discards(bool on);
+
 // Shows the default framebuffer and starts the next frame.
 void present();
 
