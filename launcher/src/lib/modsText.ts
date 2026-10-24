@@ -161,7 +161,7 @@ export const MOD_PAGE = {
   about: "About this mod",
   aboutKind: "What it runs",
   presets: "Presets",
-  resetAll: "Reset all",
+  resetAll: "Reset to defaults",
   resetAllConfirm: (name: string) => `Put every setting of ${name} back to its default?`,
   resetAllDone: "Every setting is back to its default.",
   noSettings: "This mod has nothing to set: switch it on and play.",

@@ -120,8 +120,9 @@ Android loads no native mods; its launcher has no Mods tab yet.
 mods for Ratchet & Clank (PAL and NTSC-U): bounced light, modern sun and
 Ratchet shadows, and ambient occlusion from the game's Vulkan renderer. Its
 page has the switch, Probe lighting, Modern shadows, Ambient occlusion and its
-quality, the Bounce light slider, and an Advanced fold; each change is saved
-to the game's settings file at once. While it is on, Play uses the Vulkan
+quality, Texture upscaling (Normal or Edge-aware 2x), and an Advanced fold
+with the Bounce light slider; each change is saved to the game's settings file
+at once. While it is on, Play uses the Vulkan
 renderer. The bounced light is baked on this computer from your own extracted
 levels, one level per thread, when it is first switched on and again after the
 levels are read from the disc again (**Lighting** on its page shows how far it

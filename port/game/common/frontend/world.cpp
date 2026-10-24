@@ -28,6 +28,7 @@
 #include "common/log.h"
 #include "common/stats.h"
 #include "debug_overlay.h"
+#include "enhanced/renderer/texture_upscale.h"
 #include "frontend.h"
 #include "game/common/frontend/geometry.h"
 #include "game/common/frontend/state.h"
@@ -167,6 +168,7 @@ void use_level(int number) {
         }
         return;
     }
+    enhanced::install_texture_upscaler(g->renderer->textures());
     if (!g->scene.upload(g->level, g->renderer->textures(), error)) {
         log::error("level {}: {}", wanted, error);
         return;

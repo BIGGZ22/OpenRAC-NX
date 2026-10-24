@@ -101,6 +101,8 @@ bool outside(
 
 }  // namespace
 
+// ---- Scene upload ----
+
 bool LevelScene::upload(
     const LevelData& level, renderer::TexturePool& textures, std::string& error
 ) {
@@ -414,6 +416,8 @@ LevelScene::Group LevelScene::make_group(std::uint32_t model) {
     return g;
 }
 
+// ---- Instance groups ----
+
 // A group's instances, sent to its buffer. `usage`: GL_STATIC_DRAW for the level's own, sent once;
 // GL_STREAM_DRAW for the live ones, sent again every frame (the driver then gives the buffer new
 // storage rather than wait for the frame still drawing from the old one).
@@ -643,6 +647,8 @@ void LevelScene::set_instances(Layer layer, const std::vector<Instance>& instanc
     groups.clear();
     build_groups(layer, instances, true);
 }
+
+// ---- World drawing ----
 
 void LevelScene::draw_mobys(
     const std::vector<Instance>& instances,
@@ -1425,7 +1431,7 @@ void LevelScene::draw_sky(const renderer::FrameInput& input, renderer::RenderSta
             const Material& m = m_materials[static_cast<std::size_t>(p.material)];
             const renderer::TextureHandle texture =
                 m.image >= 0 ? m_textures[static_cast<std::size_t>(m.image)] : m_white;
-            glBindTexture(GL_TEXTURE_2D, state.textures.gl_texture(texture));
+            state.textures.bind_upscaled_texture_colours(texture, m_sky, input.texture_filter);
             // The shell's matrix as the game drew it this tick; its translation is in the game's
             // sky units, the vertices were exported in 1/1024ths of them (editor/sky.py).
             renderer::Mat4 shell = renderer::identity();
@@ -1842,7 +1848,7 @@ void LevelScene::draw_layer(
         {"mobys opaque", "mobys glow", "mobys translucent", "mobys effects", "mobys metal"};
     // The material state the program holds now (flush): none yet.
     int set_material = -1;
-    unsigned set_texture = 0;
+    renderer::TextureHandle set_texture = 0;  // bound on unit 0 (and its colours) for `program`
     unsigned set_emission_texture = 0;
     int set_cutout = -1;
     decltype(Material::colour) set_colour{};
@@ -1898,6 +1904,7 @@ void LevelScene::draw_layer(
             program = &wanted;
             program_depth_matched = depth_matched;
             set_material = -1;
+            set_texture = 0;
             set_cutout = -1;
             colour_set = false;
         }
@@ -1996,10 +2003,12 @@ void LevelScene::draw_layer(
                     }
                     const renderer::TextureHandle texture =
                         m.image >= 0 ? m_textures[static_cast<std::size_t>(m.image)] : m_white;
-                    const unsigned gl_texture = state.textures.gl_texture(texture);
-                    if (gl_texture != set_texture) {
-                        glBindTexture(GL_TEXTURE_2D, gl_texture);
-                        set_texture = gl_texture;
+                    // Materials share textures: rebinding one the program already samples costs
+                    // driver calls for nothing.
+                    if (texture != set_texture) {
+                        state.textures
+                            .bind_upscaled_texture_colours(texture, *program, input.texture_filter);
+                        set_texture = texture;
                     }
                     if (static_cast<int>(m.cutout) != set_cutout) {
                         glUniform1i(cutout, m.cutout ? 1 : 0);

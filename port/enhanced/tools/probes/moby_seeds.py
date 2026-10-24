@@ -2,6 +2,7 @@
 """Offline gameplay markers; these never add movable objects to bake geometry."""
 from __future__ import annotations
 
+import heapq
 import json
 import math
 from pathlib import Path
@@ -175,30 +176,7 @@ def combine(authored, mobys, coarse, spacing, budget):
             skipped.append({**box, 'reason': 'outside sparse grid or no usable extent'})
             continue
         regions.append({**box, 'bounds': bounds})
-    # Best-first merging is deterministic and favours tight clusters first.
-    while True:
-        best = None
-        for i, a in enumerate(regions):
-            for j in range(i+1, len(regions)):
-                b = regions[j]
-                if any(a['bounds'][k] > b['bounds'][k+3] or b['bounds'][k] > a['bounds'][k+3] for k in range(3)):
-                    continue
-                merged = [min(a['bounds'][k], b['bounds'][k]) for k in range(3)]
-                merged += [max(a['bounds'][k+3], b['bounds'][k+3]) for k in range(3)]
-                count = probe_count(merged, spacing)
-                score = count/(probe_count(a['bounds'], spacing)+probe_count(b['bounds'], spacing))
-                if count > budget or score > 1.15:
-                    continue
-                candidate = (score, i, j, merged)
-                if best is None or candidate[:3] < best[:3]:
-                    best = candidate
-        if best is None:
-            break
-        _, i, j, bounds = best
-        a, b = regions[i], regions.pop(j)
-        regions[i] = {'bounds': bounds,
-                      'source_mobys': sorted(set(a['source_mobys']+b['source_mobys'])),
-                      'source_transitions': sorted(set(a['source_transitions']+b['source_transitions']))}
+    regions = merge_regions(regions, spacing, budget)
     out = []
     for r in regions:
         for bounds in split_bounds(r['bounds'], spacing, budget):
@@ -206,3 +184,54 @@ def combine(authored, mobys, coarse, spacing, budget):
                         'probe_count': probe_count(bounds, spacing)})
     out.sort(key=lambda r: r['bounds'])
     return out, skipped
+
+
+def merge_regions(regions, spacing, budget):
+    """Keep unchanged pair scores instead of rescanning every pair per merge."""
+    from seed_regions import probe_count
+
+    # The original algorithm retains the earlier box and removes the later one.
+    # Stable IDs therefore have the same tie order as its shrinking list indices.
+    active = dict(enumerate(regions))
+    generations = [0] * len(regions)
+    counts = [probe_count(r['bounds'], spacing) for r in regions]
+    pairs = []
+
+    def candidate(i, j):
+        a, b = active[i]['bounds'], active[j]['bounds']
+        if any(a[k] > b[k+3] or b[k] > a[k+3] for k in range(3)):
+            return None
+        bounds = [min(a[k], b[k]) for k in range(3)]
+        bounds += [max(a[k+3], b[k+3]) for k in range(3)]
+        count = probe_count(bounds, spacing)
+        score = count / (counts[i] + counts[j])
+        if count > budget or score > 1.15:
+            return None
+        return score, i, j, generations[i], generations[j], bounds, count
+
+    for i in active:
+        for j in range(i+1, len(regions)):
+            pair = candidate(i, j)
+            if pair is not None:
+                pairs.append(pair)
+    heapq.heapify(pairs)
+    while pairs:
+        _, i, j, generation_i, generation_j, bounds, count = heapq.heappop(pairs)
+        if (i not in active or j not in active
+                or generations[i] != generation_i or generations[j] != generation_j):
+            continue
+        a, b = active[i], active.pop(j)
+        active[i] = {'bounds': bounds,
+                     'source_mobys': sorted(set(a['source_mobys']+b['source_mobys'])),
+                     'source_transitions': sorted(set(a['source_transitions']+b['source_transitions']))}
+        generations[i] += 1
+        counts[i] = count
+        # Only pairs touching the changed box need new scores. Generation checks
+        # discard its old heap entries, including pairs with a removed box.
+        for other in active:
+            if other == i:
+                continue
+            pair = candidate(min(i, other), max(i, other))
+            if pair is not None:
+                heapq.heappush(pairs, pair)
+    return list(active.values())

@@ -31,6 +31,7 @@
 #include <SDL3/SDL.h>
 
 #include "common/log.h"
+#include "enhanced/renderer/texture_upscale.h"
 #include "platform/clock.h"
 #include "platform/window.h"
 #include "renderer/framebuffer.h"
@@ -55,6 +56,7 @@ struct Options {
     platform::DisplayMode mode = platform::DisplayMode::Windowed;
     bool vsync = true;
     bool lighting = true;
+    renderer::TextureFilter texture_filter = renderer::TextureFilter::EdgeAware;
     bool camera_given = false;
     float camera[5] = {};  // x, y, z, yaw and pitch in degrees
     std::filesystem::path state;  // a 32 MB memory picture of the running game
@@ -66,10 +68,12 @@ constexpr const char* kUsage =
     "  --screenshot FILE    draw --frames frames without showing a window, write the last as PNG\n"
     "  --frames N           frames to draw before the screenshot (default 1)\n"
     "  --size WxH           window or screenshot size (default 1280x720)\n"
+    "  --texture-filter MODE  normal or edge-aware (default; Vulkan only)\n"
     "  --camera X,Y,Z,YAW,PITCH   start here (game units; degrees) instead of framing the level\n"
     "  --fullscreen | --borderless\n"
     "  --no-vsync  --no-lighting\n"
-    "  --state FILE         the game's main memory at one frame (32 MB): its camera and live mobys\n";
+    "  --state FILE         the game's main memory at one frame (32 MB): its camera and live "
+    "mobys\n";
 
 bool parse_floats(std::string_view text, float* out, int count) {
     for (int i = 0; i < count; ++i) {
@@ -114,6 +118,15 @@ bool parse(int argc, char** argv, Options& o) {
                 || std::from_chars(v.data() + x + 1, v.data() + v.size(), o.height).ec
                        != std::errc()
                 || o.width < 16 || o.height < 16) {
+                return false;
+            }
+        } else if (arg == "--texture-filter") {
+            const auto value = next();
+            if (value == "normal") {
+                o.texture_filter = renderer::TextureFilter::Normal;
+            } else if (value == "edge-aware") {
+                o.texture_filter = renderer::TextureFilter::EdgeAware;
+            } else {
                 return false;
             }
         } else if (arg == "--camera") {
@@ -198,6 +211,7 @@ int run(const Options& options) {
     renderer::Renderer renderer;
     viewer::LevelScene scene;
     scene.lighting = options.lighting;
+    enhanced::install_texture_upscaler(renderer.textures());
     if (!scene.upload(level, renderer.textures(), error)) {
         log::error("{}", error);
         return 1;
@@ -255,6 +269,8 @@ int run(const Options& options) {
 
     renderer::FrameBuffer frame;
     renderer::FrameInput input;
+    input.texture_filter = gl::enhanced_rendering_available() ? options.texture_filter
+                                                              : renderer::TextureFilter::Normal;
     input.clear_colour = {level.background[0], level.background[1], level.background[2], 1.0f};
     viewer::FlyControls controls;
     bool looking = false;

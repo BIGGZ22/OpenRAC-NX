@@ -16,6 +16,7 @@
 #include "common/env.h"
 #include "common/log.h"
 #include "renderer/gl.h"
+#include "renderer/shader.h"
 
 namespace openrac::renderer {
 
@@ -93,6 +94,8 @@ void TexturePool::place(std::uint32_t tbp, TextureHandle texture) {
 void TexturePool::clear_placements() {
     m_placed.clear();
 }
+
+// ---- Source uploads ----
 
 void TexturePool::upload(ImageUpload upload) {
     Stored stored;
@@ -384,6 +387,8 @@ const std::string& TexturePool::name(TextureHandle texture) const {
     return m_entries[texture - 1].name;
 }
 
+// ---- GPU textures ----
+
 unsigned TexturePool::gl_texture(TextureHandle texture) {
     Entry& e = m_entries[texture - 1];
     e.last_used = m_frame;
@@ -423,6 +428,40 @@ unsigned TexturePool::gl_texture(TextureHandle texture) {
     return e.gl;
 }
 
+// ---- Optional colour reconstruction ----
+
+void TexturePool::set_upscaled_texture_colours(std::unique_ptr<UpscaledTextureColours> source) {
+    if (m_upscaled_texture_colours) {
+        m_upscaled_texture_colours->release();
+    }
+    m_upscaled_texture_colours = std::move(source);
+}
+
+void TexturePool::bind_upscaled_texture_colours(
+    TextureHandle texture, const Shader& shader, TextureFilter filter, bool repeat_s, bool repeat_t
+) {
+    glActiveTexture(GL_TEXTURE0);
+    const unsigned source = gl_texture(texture);
+    if (!m_upscaled_texture_colours) {
+        glBindTexture(GL_TEXTURE_2D, source);
+        glUniform1i(shader.uniform("upscaled_texture_colours_ready"), 0);
+        return;
+    }
+    const unsigned wrap = (repeat_s ? 1u : 0u) | (repeat_t ? 2u : 0u);
+    const auto& image = m_entries[texture - 1].image;
+    const unsigned cached =
+        filter != TextureFilter::Normal && !m_entries[texture - 1].field
+            ? m_upscaled_texture_colours->prepare(source, image.width, image.height, wrap, m_frame)
+            : 0;
+    // Cache creation uses its compute program. Restore the material before its uniforms.
+    shader.use();
+    glActiveTexture(GL_TEXTURE0 + kUpscaledTextureColoursUnit);
+    glBindTexture(GL_TEXTURE_2D, cached ? cached : source);
+    glActiveTexture(GL_TEXTURE0);
+    glBindTexture(GL_TEXTURE_2D, source);
+    glUniform1i(shader.uniform("upscaled_texture_colours_ready"), cached != 0);
+}
+
 float TexturePool::max_anisotropy() {
     // The filter is an extension every desktop driver has (core since OpenGL 4.6); one without it
     // answers the query with an error and leaves the value alone.
@@ -453,6 +492,9 @@ void TexturePool::set_anisotropy(float samples) {
 }
 
 void TexturePool::release_gl() {
+    if (m_upscaled_texture_colours) {
+        m_upscaled_texture_colours->release();
+    }
     for (Entry& e : m_entries) {
         if (e.gl != 0) {
             glDeleteTextures(1, &e.gl);
@@ -460,6 +502,8 @@ void TexturePool::release_gl() {
         }
     }
 }
+
+// ---- Texture retirement ----
 
 void TexturePool::end_frame() {
     ++m_frame;
@@ -469,6 +513,9 @@ void TexturePool::end_frame() {
             continue;
         }
         if (e.gl != 0 && gl::loaded()) {
+            if (m_upscaled_texture_colours) {
+                m_upscaled_texture_colours->forget(e.gl);
+            }
             glDeleteTextures(1, &e.gl);
         }
         const auto handle = static_cast<TextureHandle>(i + 1);

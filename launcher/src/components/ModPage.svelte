@@ -347,7 +347,7 @@
           <Icon name="check" size={15} />{T.SAVE.idle}
         {/if}
       </div>
-      <button class="small ghost reset-all" disabled={!changed.length} onclick={() => void resetAll()}
+      <button class="small reset-all" disabled={!changed.length} onclick={() => void resetAll()}
         ><Icon name="reset" size={14} />{T.MOD_PAGE.resetAll}</button
       >
     </div>
@@ -672,7 +672,7 @@
     font-size: 0.75rem;
   }
 
-  /* Presets on the left, the saving line and Reset all on the right. */
+  /* Presets on the left, the saving line and Reset to defaults on the right. */
   .toolbar {
     display: flex;
     flex-direction: row;

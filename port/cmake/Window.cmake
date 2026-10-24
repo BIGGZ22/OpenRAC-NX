@@ -150,6 +150,7 @@ add_library(openrac_renderer STATIC
   renderer/texture_pool.cpp
 )
 openrac_embed_shaders(openrac_renderer renderer openrac::renderer
+  "${CMAKE_CURRENT_SOURCE_DIR}/renderer/shaders/upscaled_texture_colours.glsl"
   "${CMAKE_CURRENT_SOURCE_DIR}/enhanced/renderer/shaders/gtao.vert"
   "${CMAKE_CURRENT_SOURCE_DIR}/enhanced/renderer/shaders/gtao_common.glsl"
   "${CMAKE_CURRENT_SOURCE_DIR}/enhanced/renderer/shaders/gtao_evaluate.comp"
@@ -163,6 +164,18 @@ openrac_embed_shaders(openrac_renderer renderer openrac::renderer
 )
 target_link_libraries(openrac_renderer PUBLIC openrac_common)
 openrac_warnings(openrac_renderer)
+
+# Optional upscaled texture colours: the normal renderer only owns the provider interface.
+add_library(openrac_enhanced_textures STATIC enhanced/renderer/texture_upscale.cpp)
+openrac_embed_shaders(openrac_enhanced_textures enhanced_texture openrac::enhanced
+  "${CMAKE_CURRENT_SOURCE_DIR}/enhanced/renderer/shaders/texture_upscale.comp")
+target_link_libraries(openrac_enhanced_textures PUBLIC openrac_renderer)
+if(OPENRAC_VULKAN AND OPENRAC_ENHANCED_RENDERING)
+  target_compile_definitions(openrac_enhanced_textures PRIVATE OPENRAC_VULKAN=1)
+  target_link_libraries(openrac_enhanced_textures PRIVATE openrac_renderer_vulkan)
+endif()
+openrac_warnings(openrac_enhanced_textures)
+
 
 # ---- the world's renderers: renderer/world, shaders in renderer/shaders/world ----
 file(GLOB world_sources CONFIGURE_DEPENDS "${CMAKE_CURRENT_SOURCE_DIR}/renderer/world/*.cpp")
@@ -253,7 +266,7 @@ add_library(openrac_viewer_lib STATIC
   viewer/camera.cpp
   viewer/game_state.cpp
 )
-target_link_libraries(openrac_viewer_lib PUBLIC openrac_scene_renderer)
+target_link_libraries(openrac_viewer_lib PUBLIC openrac_scene_renderer openrac_enhanced_textures)
 openrac_warnings(openrac_viewer_lib)
 
 # Tests are registered through openrac_add_test (cmake/Tests.cmake), which makes the program
@@ -307,7 +320,8 @@ endif()
 # This executable uses only the viewer's CPU level loader; it never opens a
 # window or creates a graphics context. Embree stays out of viewer/game targets.
 if(OPENRAC_PROBE_BAKER)
-  add_executable(openrac-probe-bake enhanced/tools/probes/main.cpp)
+  add_executable(openrac-probe-bake enhanced/tools/probes/main.cpp
+    enhanced/tools/probes/batch.cpp enhanced/tools/probes/report.cpp)
   target_link_libraries(openrac-probe-bake PRIVATE openrac_probe_scene openrac_probe_bake)
   openrac_warnings(openrac-probe-bake)
 endif()
@@ -351,6 +365,20 @@ openrac_add_test(renderer_gif LIBS openrac_renderer)
 
 openrac_add_test(renderer_direct LIBS openrac_renderer openrac_platform)
 set_tests_properties(renderer_direct PROPERTIES SKIP_RETURN_CODE 77)
+
+openrac_add_test(texture_filter INCLUDES "${CMAKE_CURRENT_BINARY_DIR}/generated"
+                 LIBS openrac_viewer_lib openrac_platform)
+set_tests_properties(texture_filter PROPERTIES SKIP_RETURN_CODE 77)
+if(OPENRAC_VULKAN)
+  add_test(NAME texture_filter_off_vulkan COMMAND texture_filter_test)
+  set_tests_properties(texture_filter_off_vulkan PROPERTIES SKIP_RETURN_CODE 77 ENVIRONMENT
+    "OPENRAC_GL_API=vulkan;OPENRAC_ENHANCED=0;OPENRAC_VULKAN_VALIDATION=1")
+  if(OPENRAC_ENHANCED_RENDERING)
+    add_test(NAME texture_filter_on_vulkan COMMAND texture_filter_test)
+    set_tests_properties(texture_filter_on_vulkan PROPERTIES SKIP_RETURN_CODE 77 ENVIRONMENT
+      "OPENRAC_GL_API=vulkan;OPENRAC_ENHANCED=1;OPENRAC_VULKAN_VALIDATION=1")
+  endif()
+endif()
 
 # The embedded sources' headers (openrac_embed_shaders) are private to their libraries.
 openrac_add_test(renderer_shader INCLUDES "${CMAKE_CURRENT_BINARY_DIR}/generated"

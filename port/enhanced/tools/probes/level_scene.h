@@ -47,4 +47,8 @@ ProbeGrid bounded_probe_grid(
 );
 std::uint64_t probe_bake_settings_hash(const ProbeGrid& grid, const BakeSettings& settings);
 
+// Fingerprint canonical source files before loading and after a persistent batch.
+// This guards preparation against concurrent edits without rebuilding transport geometry.
+std::uint64_t probe_input_hash(const std::filesystem::path& directory);
+
 }  // namespace openrac::lighting

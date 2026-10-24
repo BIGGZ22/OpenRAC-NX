@@ -153,6 +153,12 @@ std::vector<std::uint8_t> liquid_input(const std::filesystem::path& path) {
 }
 }  // namespace
 
+std::uint64_t probe_input_hash(const std::filesystem::path& directory) {
+    Hash hash;
+    source_files(hash, directory, "base");
+    return hash.value;
+}
+
 BakeSceneExport export_probe_scene(
     const viewer::LevelData& level, unsigned light_set, Float3 environment, bool analyze_liquids
 ) {
@@ -566,7 +572,8 @@ ProbeGrid bounded_probe_grid(
 
 std::uint64_t probe_bake_settings_hash(const ProbeGrid& grid, const BakeSettings& settings) {
     Hash hash;
-    hash.u32(0x42414b09);
+    hash.u32(0x42414b0b);  // Portable integration's exponent-32 squaring changes moment rounding.
+    hash.u32(kProbeTexelSamplesPerAxis);
     hash.u32(settings.use_level_sky ? 1u : 0u);
     hash.f32(settings.sky_intensity);
     hash.f32(settings.sky_weight);
