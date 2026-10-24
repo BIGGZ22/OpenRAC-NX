@@ -360,6 +360,7 @@ bool LevelScene::upload(
     for (std::size_t layer = 0; layer < kLayerCount; ++layer) {
         build_groups(static_cast<Layer>(layer), level.instances[layer], false);
     }
+    m_moby_layout.valid = false;
     ++m_static_generation;
     glBindVertexArray(0);
     glBindBuffer(GL_ARRAY_BUFFER, 0);
@@ -477,6 +478,51 @@ void LevelScene::fill_group(Group& g, const std::vector<InstanceData>& list, uns
     );
 }
 
+// Returns whether every instance of `instances` is opaque and lit as scenery, so that the opaque
+// shadow shader (no texture, no discard) may draw the group's opaque faces.
+bool LevelScene::solid_shadow_instances(const std::vector<InstanceData>& instances) {
+    return std::all_of(instances.begin(), instances.end(), [](const InstanceData& data) {
+        return std::isfinite(data.tint[3]) && data.tint[3] >= 1.0f && data.moby_light[3] <= 0.5f;
+    });
+}
+
+// Returns OPENRAC_MOBY_SPHERE_CULL_OFF's switch: animated mobys left unbounded.
+bool LevelScene::moby_sphere_culling_off() {
+    static const bool& off = stats::probe(
+        "OPENRAC_MOBY_SPHERE_CULL_OFF",
+        "Profiling reference: leave animated mobys unbounded (next upload)"
+    );
+    return off;
+}
+
+// Returns whether the palette texture's texels `sent` (`texels` of them) are `matrices` followed
+// by zeros, bit for bit: what set_palette would send again.
+bool LevelScene::same_palette(
+    const std::vector<JointColumns>& matrices,
+    const std::vector<JointColumns>& sent,
+    std::size_t texels
+) {
+    // Another size: another texture's worth.
+    if (sent.size() != texels || matrices.size() > texels) {
+        return false;
+    }
+
+    const std::size_t bytes = matrices.size() * sizeof(JointColumns);
+
+    // The joints themselves.
+    if (std::memcmp(matrices.data(), sent.data(), bytes) != 0) {
+        return false;
+    }
+
+    // The rest of the last row, zeros when it was sent.
+    const JointColumns zero{};
+    return std::all_of(
+        sent.begin() + static_cast<std::ptrdiff_t>(matrices.size()),
+        sent.end(),
+        [&](const JointColumns& texel) { return std::memcmp(&texel, &zero, sizeof(zero)) == 0; }
+    );
+}
+
 // Returns the key build_groups groups `instance` by: its class model, its blend and whether it
 // casts the hero's shadow, in that order of significance.
 std::uint32_t LevelScene::group_key(const Instance& instance) {
@@ -567,10 +613,7 @@ void LevelScene::build_groups(Layer layer, const std::vector<Instance>& instance
         group.spheres.clear();
         group.occlusion.clear();
     }
-    static const bool& sphere_off = stats::probe(
-        "OPENRAC_MOBY_SPHERE_CULL_OFF",
-        "Profiling reference: leave animated mobys unbounded (next upload)"
-    );
+    const bool sphere_off = moby_sphere_culling_off();
     std::size_t used = 0;
     m_group_of_key.clear();
 
@@ -615,14 +658,7 @@ void LevelScene::build_groups(Layer layer, const std::vector<Instance>& instance
         g.hero_shadow_caster = (m_grouping[i].key & 1) != 0;
         fill_group(g, m_grouping[i].instances, live ? GL_STREAM_DRAW : GL_STATIC_DRAW);
         g.cpu_instances = m_grouping[i].instances;
-        g.shadow_solid_instances = std::all_of(
-            g.cpu_instances.begin(),
-            g.cpu_instances.end(),
-            [](const InstanceData& data) {
-                return std::isfinite(data.tint[3]) && data.tint[3] >= 1.0f
-                       && data.moby_light[3] <= 0.5f;
-            }
-        );
+        g.shadow_solid_instances = solid_shadow_instances(g.cpu_instances);
         g.camera_valid = false;
         g.pvs_valid = false;
         g.occlusion = m_grouping[i].occlusion;
@@ -732,6 +768,14 @@ void LevelScene::set_instances(Layer layer, const std::vector<Instance>& instanc
         ++m_static_generation;
     }
 
+    // The same mobys in the same order as the last time (between two ticks, or a tick that changed
+    // no membership): their poses are written into the groups they are in (moby-pose-in-place).
+    if (layer == Layer::Mobys
+        && renderer::render_opt::enabled(renderer::render_opt::Opt::MobyPoseInPlace)
+        && rewrite_mobys(instances)) {
+        return;
+    }
+
     auto& groups = m_groups[static_cast<std::size_t>(layer)];
     auto& idle = m_idle[static_cast<std::size_t>(layer)];
     idle.insert(
@@ -739,6 +783,95 @@ void LevelScene::set_instances(Layer layer, const std::vector<Instance>& instanc
     );
     groups.clear();
     build_groups(layer, instances, true);
+
+    // The moby groups as build_groups made them: where each instance went, for the next call.
+    if (layer == Layer::Mobys) {
+        remember_mobys(instances);
+    }
+}
+
+void LevelScene::remember_mobys(const std::vector<Instance>& instances) {
+    auto& layout = m_moby_layout;
+    const auto& groups = m_groups[static_cast<std::size_t>(Layer::Mobys)];
+    layout.keys.resize(instances.size());
+    layout.group.resize(instances.size());
+    layout.slot.resize(instances.size());
+    layout.spheres.resize(instances.size());
+    layout.filled.assign(groups.size(), 0);
+    layout.sphere_off = moby_sphere_culling_off();
+
+    // Each instance's group, by its key (build_groups' lists are the groups, in order), and its
+    // place in it, in the order build_groups appended it.
+    for (std::size_t n = 0; n < instances.size(); ++n) {
+        const std::uint32_t key = group_key(instances[n]);
+        const std::size_t group = m_group_of_key.at(key);
+        layout.keys[n] = key;
+        layout.group[n] = static_cast<std::uint32_t>(group);
+        layout.slot[n] = layout.filled[group]++;
+        layout.spheres[n] = instances[n].world_sphere;
+    }
+
+    layout.valid = true;
+}
+
+bool LevelScene::rewrite_mobys(const std::vector<Instance>& instances) {
+    auto& layout = m_moby_layout;
+    auto& groups = m_groups[static_cast<std::size_t>(Layer::Mobys)];
+
+    // No layout, one of another count of mobys, or bounds made with the sphere switch otherwise
+    // (OPENRAC_MOBY_SPHERE_CULL_OFF changed since): they are grouped again.
+    if (!layout.valid || instances.size() != layout.keys.size()
+        || layout.filled.size() != groups.size()
+        || layout.sphere_off != moby_sphere_culling_off()) {
+        return false;
+    }
+
+    // A moby of another class, blend or shadow role at a place: the membership changed.
+    for (std::size_t n = 0; n < instances.size(); ++n) {
+        // Another key at this place: grouped again.
+        if (group_key(instances[n]) != layout.keys[n]) {
+            return false;
+        }
+    }
+
+    const bool native_gpu_bounds = gl::is_vulkan();
+
+    // Each moby's attributes into its place; its bounds again only when its pose or sphere moved.
+    for (std::size_t n = 0; n < instances.size(); ++n) {
+        Group& g = groups[layout.group[n]];
+        const std::uint32_t slot = layout.slot[n];
+        const InstanceData data = instance_data(instances[n]);
+        const auto& sphere = instances[n].world_sphere;
+        const bool moved =
+            std::memcmp(&g.cpu_instances[slot], &data, sizeof(data)) != 0
+            || std::memcmp(layout.spheres[n].data(), sphere.data(), sizeof(sphere)) != 0;
+        g.cpu_instances[slot] = data;
+        g.occlusion[slot] = instances[n].occlusion;
+
+        // The same pose and sphere give the same bounds as before.
+        if (moved) {
+            g.caster_bounds[slot] =
+                instance_bounds(m_models[g.model], data, sphere, layout.sphere_off);
+            layout.spheres[n] = sphere;
+        }
+
+        // The GPU's form also carries the PVS word, which may change with the same pose.
+        if (native_gpu_bounds) {
+            g.gpu_bounds[slot] = gpu_cull_bounds(g.caster_bounds[slot], data, g.occlusion[slot]);
+        }
+    }
+
+    // Each group's instances sent, and what build_groups derives from them made again.
+    for (Group& g : groups) {
+        fill_group(g, g.cpu_instances, GL_STREAM_DRAW);
+        g.shadow_solid_instances = solid_shadow_instances(g.cpu_instances);
+        g.camera_valid = false;
+        g.pvs_valid = false;
+    }
+
+    glBindVertexArray(0);
+    glBindBuffer(GL_ARRAY_BUFFER, 0);
+    return true;
 }
 
 // ---- World drawing ----
@@ -774,6 +907,14 @@ void LevelScene::set_palette(const std::vector<JointColumns>& matrices) {
     // Whole rows: the matrices, then zeros to the end of the last row.
     constexpr std::size_t per_row = kPaletteWidth / 4;
     const std::size_t rows = (matrices.size() + per_row - 1) / per_row;
+
+    // The texture holds these joints already, bit for bit (a still palette): nothing is sent.
+    if (renderer::render_opt::enabled(renderer::render_opt::Opt::MobyPoseInPlace)
+        && rows <= m_palette_rows && same_palette(matrices, m_palette_data, rows * per_row)) {
+        glBindTexture(GL_TEXTURE_2D, 0);
+        return;
+    }
+
     m_palette_data.assign(rows * per_row, JointColumns{});
     std::copy(matrices.begin(), matrices.end(), m_palette_data.begin());
     glBindTexture(GL_TEXTURE_2D, m_palette);
@@ -1596,6 +1737,7 @@ void LevelScene::release() {
     m_shadow_atlas_active = false;
     m_static_shadow.reset();
     m_static_keys = {};
+    m_moby_layout.valid = false;
     for (auto& bucket : m_shadow_draws) {
         bucket.clear();
     }

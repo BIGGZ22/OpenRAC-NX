@@ -274,6 +274,18 @@ private:
     static renderer::GpuCullBounds gpu_cull_bounds(
         const CasterBounds& bounds, const InstanceData& data, std::uint16_t occlusion
     );
+    static bool solid_shadow_instances(const std::vector<InstanceData>& instances);
+    static bool moby_sphere_culling_off();
+    static bool same_palette(
+        const std::vector<JointColumns>& matrices,
+        const std::vector<JointColumns>& sent,
+        std::size_t texels
+    );
+    // set_instances' in-place path for the mobys (moby-pose-in-place, RENDER_PERF.md R-16):
+    // remember_mobys notes where build_groups put each moby, rewrite_mobys writes the next call's
+    // poses there when the mobys and their order are the same, and returns false when they are not.
+    void remember_mobys(const std::vector<Instance>& instances);
+    bool rewrite_mobys(const std::vector<Instance>& instances);
     renderer::GpuInstanceBatch gpu_batch(const Group& group, const renderer::GpuCullView& view);
     void submit_instances(
         renderer::GpuInstanceBatch batch, unsigned first, unsigned count, int instances
@@ -325,6 +337,20 @@ private:
     std::vector<InstanceGroup> m_grouping;
     // Each key's list in m_grouping during a build_groups call, for a lookup by hash.
     std::unordered_map<std::uint32_t, std::size_t> m_group_of_key;
+
+    // Where set_instances' last regrouping put each moby (rewrite_mobys): its key, its group of
+    // m_groups[Mobys] and its place there, the sphere its bounds came from, and each group's count.
+    struct MobyLayout {
+        std::vector<std::uint32_t> keys;
+        std::vector<std::uint32_t> group;
+        std::vector<std::uint32_t> slot;
+        std::vector<std::array<float, 4>> spheres;
+        std::vector<std::uint32_t> filled;
+        bool sphere_off = false;  // OPENRAC_MOBY_SPHERE_CULL_OFF when the groups were made.
+        bool valid = false;       // False until a regrouping, and after an upload or release.
+    };
+
+    MobyLayout m_moby_layout;
     std::size_t m_palette_rows = 0;  // the palette texture's height now
     unsigned m_vertices = 0;
     unsigned m_indices = 0;
