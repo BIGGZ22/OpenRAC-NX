@@ -205,21 +205,21 @@ folder for the last export, `api.openOutput`) and Import your edits
 
 ## Android
 
-On Android the tab is one page, no tabs (Mods.svelte, `mine`): Gameplay mods
-first, with Enhanced graphics at their top and its switch in its row (it
-bakes the lighting on the device: tools/build_android.py carries the probe
-baker); Add a mod from a link or a `.zip`; then the texture and model packs.
-The level editor and Models and textures need Godot and a desktop, and are
-left out, as is the game page's "Edit its levels".
+On Android the tab is one page with no tabs (Mods.svelte, `mine`): Gameplay
+mods, with Enhanced graphics and its switch first; Add a mod; then the
+texture and model packs. The level editor, Models and textures, and the game
+page's "Edit its levels" need Godot and a desktop, so they are left out.
 
-- **From a link:** Android has no `curl`, so the core's fetches go through the
-  Kotlin side's `download`, the one the launcher's updates use
-  (`android::KotlinFetch`, lib.rs `with_remote`).
-- **A .zip:** the system's picker hands over a file, not a path; `pick_zip`
-  copies it into the app's cache (`mod-imports/`) and installs from there.
-  There is no folder button and no drop.
+- **Enhanced graphics** bakes the lighting on the device, with the probe
+  baker `tools/build_android.py` puts in the APK.
+- **From a link:** Android has no `curl`, so the core fetches through the
+  Kotlin `download` the launcher's updates use (`android::KotlinFetch`,
+  `with_remote` in lib.rs).
+- **From a .zip:** the picker hands over a file, not a path, so `pick_zip`
+  copies it into the cache (`mod-imports/`) first. There is no folder button
+  and no drop.
 - Native mods show as not for this platform; script mods load. Purist mode is
-  in Settings as on the desktops.
+  in Settings, as on the desktops.
 
 ## Developer view
 

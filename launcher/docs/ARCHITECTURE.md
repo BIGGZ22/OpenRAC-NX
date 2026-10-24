@@ -256,10 +256,10 @@ game's two builds are never side by side: "PC port" (`port`), "Decompilation"
 (`decomp`, the default, with the progress), "Level editor" (`editor`: its
 checks; editing is under Mods), then the files and the facts of the version.
 Develop's list shows each version's progress, and "This checkout"
-(`components/DevCheckout.svelte`) the checkout's own actions.
-On Android, Develop has no list: its page is for the game picked in Games (a
-chip at the top right, as on Mods), with that game's versions and the console
-as tabs, and no checkout. Mods, Activity, Develop and the save editor load the first time they are opened
+(`components/DevCheckout.svelte`) the checkout's own actions. On Android,
+Develop has no list and no checkout: it shows the game picked in Games (named
+by a chip, as on Mods), with its versions and the console as tabs. Mods,
+Activity, Develop and the save editor load the first time they are opened
 (`App.svelte`); motion is in `lib/motion.ts` and stops with the system's
 reduced-motion setting. A version whose `play` or `editor-extract` is `planned`
 shows as "not playable yet" or "cannot open this game yet" to a player. A
