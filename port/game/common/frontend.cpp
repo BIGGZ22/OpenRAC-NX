@@ -1507,6 +1507,7 @@ static void draw_touch_pad(int window_width, int window_height) {
         applied_layout = set.touch_layout;
     }
     touch.set_editing(editing);
+    debug_overlay::set_touch_guides(touch.guide_x(), touch.guide_y());
     if (was_editing && !editing) {
         set.touch_layout = touch.layout();
         applied_layout = set.touch_layout;

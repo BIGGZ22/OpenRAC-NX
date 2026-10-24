@@ -97,9 +97,12 @@ GPU driver, shows the model and SoC) and the game's log.
    controller plays; its stick pushed to a diagonal runs as well.
    In the drawer, Touch controls: Button size changes the controls at once;
    "Move the controls" leaves the game paused with a bar in the middle, a
-   finger drags a group (the d-pad, the face buttons, a shoulder...), Done
-   keeps it there after the game is started again, "Put them back" and the
-   bar's Reset bring every control home.
+   finger drags a group (the d-pad, the face buttons, a shoulder...), and
+   near another group's line (or the middle, or its own place) it snaps into
+   line with an accent line across the screen, while a little further off it
+   goes where the finger takes it; Done keeps it there after the game is
+   started again, "Put them back" and the bar's Reset bring every control
+   home.
 6. **Suspend and resume.** Switch to another app and back, and lock and
    unlock the screen, during a level: the game comes back where it was, with
    no fingers left held.

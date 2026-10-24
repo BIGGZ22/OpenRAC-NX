@@ -180,6 +180,7 @@ struct State {
     bool touch_reset = false;
     ImVec2 bar_min{};
     ImVec2 bar_max{};
+    ImVec2 touch_guides{-1.0f, -1.0f};  // set_touch_guides()
     Card card;
     bool settings_changed = false;  // a setting changed in the drawer or the menus, not applied yet
     Scroll panel_scroll;
@@ -2436,6 +2437,27 @@ void touch_edit_bar() {
     const ImGuiWindowFlags flags = ImGuiWindowFlags_NoDecoration | ImGuiWindowFlags_NoMove
                                    | ImGuiWindowFlags_NoSavedSettings
                                    | ImGuiWindowFlags_AlwaysAutoResize;
+    // The lines the dragged group snapped to, in the accent, under the bar.
+    ImDrawList* guides = ImGui::GetBackgroundDrawList();
+    const ImU32 guide = ui_colors::fade(ui().amber, 0.7f);
+    if (s.touch_guides.x >= 0.0f) {
+        const float x = viewport->Pos.x + viewport->Size.x * s.touch_guides.x;
+        guides->AddLine(
+            ImVec2(x, viewport->Pos.y),
+            ImVec2(x, viewport->Pos.y + viewport->Size.y),
+            guide,
+            dp(1.5f)
+        );
+    }
+    if (s.touch_guides.y >= 0.0f) {
+        const float y = viewport->Pos.y + viewport->Size.y * s.touch_guides.y;
+        guides->AddLine(
+            ImVec2(viewport->Pos.x, y),
+            ImVec2(viewport->Pos.x + viewport->Size.x, y),
+            guide,
+            dp(1.5f)
+        );
+    }
     if (ImGui::Begin("Move the controls", nullptr, flags)) {
         auto& set = settings::get();
         ImGui::PushStyleColor(ImGuiCol_Text, ImGui::ColorConvertU32ToFloat4(ui().soft));
@@ -2535,6 +2557,10 @@ bool take_touch_reset() {
     const bool reset = s.touch_reset;
     s.touch_reset = false;
     return reset;
+}
+
+void set_touch_guides(float x, float y) {
+    s.touch_guides = ImVec2(x, y);
 }
 
 void toggle_drawer() {

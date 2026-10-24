@@ -34,6 +34,8 @@ constexpr float kLookFloor = 0.22f;
 constexpr float kMaxOffset = 2.0f;
 // A group's centre keeps this far inside the window.
 constexpr float kInside = 0.04f;
+// How near a line a dragged group's centre snaps to it, in window heights.
+constexpr float kSnap = 0.025f;
 
 using Kind = TouchControl::Kind;
 
@@ -183,6 +185,7 @@ void TouchPad::set_editing(bool on) {
     }
     m_editing = on;
     m_fingers.clear();  // a finger that came down as one thing is not the other's
+    m_guide_x = m_guide_y = -1.0f;
     m_look_x = m_look_y = 0.0f;
     m_visible = m_visible || on;
     layout_controls();
@@ -206,6 +209,49 @@ void TouchPad::anchor(TouchGroup group, float& across, float& down) const {
     down = p.y < 0.5f ? p.y * m_scale : 1.0f - (1.0f - p.y) * m_scale;
     across = std::clamp(across + m_offsets[g][0], kInside, std::max(kInside, m_aspect - kInside));
     down = std::clamp(down + m_offsets[g][1], kInside, 1.0f - kInside);
+}
+
+void TouchPad::snap(TouchGroup group) {
+    const auto g = static_cast<std::size_t>(group);
+    float across = 0.0f;
+    float down = 0.0f;
+    anchor(group, across, down);
+    float to_x = across;
+    float to_y = down;
+    float best_x = kSnap;
+    float best_y = kSnap;
+    const auto near = [](float at, float line, float& best, float& to) {
+        if (std::abs(line - at) < best) {
+            best = std::abs(line - at);
+            to = line;
+        }
+    };
+    // Where it was first placed.
+    const std::array<float, 2> moved = m_offsets[g];
+    m_offsets[g] = {};
+    float home_x = 0.0f;
+    float home_y = 0.0f;
+    anchor(group, home_x, home_y);
+    m_offsets[g] = moved;
+    near(across, home_x, best_x, to_x);
+    near(down, home_y, best_y, to_y);
+    near(across, m_aspect * 0.5f, best_x, to_x);
+    for (std::size_t o = 0; o < kTouchGroups; ++o) {
+        if (o == g || (static_cast<TouchGroup>(o) == TouchGroup::Menu && !m_menu_button)) {
+            continue;
+        }
+        float other_x = 0.0f;
+        float other_y = 0.0f;
+        anchor(static_cast<TouchGroup>(o), other_x, other_y);
+        near(across, other_x, best_x, to_x);
+        near(across, m_aspect - other_x, best_x, to_x);
+        near(down, other_y, best_y, to_y);
+    }
+    m_offsets[g] =
+        {std::clamp(moved[0] + to_x - across, -kMaxOffset, kMaxOffset),
+         std::clamp(moved[1] + to_y - down, -kMaxOffset, kMaxOffset)};
+    m_guide_x = best_x < kSnap ? to_x / m_aspect : -1.0f;
+    m_guide_y = best_y < kSnap ? to_y : -1.0f;
 }
 
 void TouchPad::place(std::size_t index) {
@@ -338,12 +384,14 @@ void TouchPad::finger_move(std::uint64_t finger, float x, float y) {
         m_offsets[g] =
             {std::clamp(f->offset[0] + (x - f->from_x) * m_aspect, -kMaxOffset, kMaxOffset),
              std::clamp(f->offset[1] + (y - f->from_y), -kMaxOffset, kMaxOffset)};
+        snap(f->group);
         layout_controls();
     }
 }
 
 void TouchPad::finger_up(std::uint64_t finger) {
     std::erase_if(m_fingers, [finger](const Finger& f) { return f.id == finger; });
+    m_guide_x = m_guide_y = -1.0f;
     // The camera stops with the finger lifted, or follows another still on it.
     m_look_x = m_look_y = 0.0f;
     for (Finger& f : m_fingers) {
@@ -356,6 +404,7 @@ void TouchPad::finger_up(std::uint64_t finger) {
 
 void TouchPad::release_all() {
     m_fingers.clear();
+    m_guide_x = m_guide_y = -1.0f;
     m_look_x = m_look_y = 0.0f;
     layout_controls();
 }

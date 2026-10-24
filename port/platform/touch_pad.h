@@ -101,10 +101,17 @@ public:
     void reset_layout();
 
     // While editing, a finger drags the group it lands on and the game gets nothing; the pad stays
-    // shown.
+    // shown. A dragged group snaps to the lines it comes near (snap()), so that groups can be set
+    // in line; one placed just off a line is not near enough to snap.
     void set_editing(bool on);
 
     bool editing() const { return m_editing; }
+
+    // The lines the group being dragged has snapped to, for the editing screen to show: across
+    // (0..1 of the window's width) and down (0..1 of its height); below 0, none.
+    float guide_x() const { return m_guide_x; }
+
+    float guide_y() const { return m_guide_y; }
 
     void finger_down(std::uint64_t finger, float x, float y);
     void finger_move(std::uint64_t finger, float x, float y);
@@ -190,6 +197,10 @@ private:
     // The camera from look finger `f` (m_look_x, m_look_y), its stick's centre dragged after it
     // past the stick's reach.
     void push_look(Finger& f);
+    // Moves dragged group `group` onto the nearest line within kSnap of its centre, across and down
+    // apart: where it was first placed, the window's middle, another group's centre, or the mirror
+    // of another's across the middle (L1 opposite R1).
+    void snap(TouchGroup group);
     // Brings the left stick under a thumb at (x, y), kept on the screen.
     void bring_stick(std::size_t index, float x, float y);
 
@@ -216,6 +227,8 @@ private:
     float m_aspect = 16.0f / 9.0f;
     bool m_visible = false;
     bool m_editing = false;
+    float m_guide_x = -1.0f;
+    float m_guide_y = -1.0f;
     // A finger came down since the last idle(): it counts even if it lifted within the frame.
     bool m_touched = false;
     std::uint64_t m_last_touch_ms = 0;

@@ -246,7 +246,9 @@ and the focus ease in and out, and a flicked list glides on. It contains:
 - **Sound and game:** volume and skipping cutscenes.
 - **Touch controls:** the buttons' size, the camera's speed, *Move the
   controls* (drag them about over the paused game, with a bar to resize them,
-  reset them and finish) and *Put them back*.
+  reset them and finish; a group dragged near another's line, the middle, the
+  mirror of another across it or its own place snaps onto it, the line shown)
+  and *Put them back*.
 - **Developer tools**, folded away: the debug overlay, pause, a single
   frame step, game speed, a screenshot (saved to the app's
   `files/screenshots`), and the level select in developer mode.

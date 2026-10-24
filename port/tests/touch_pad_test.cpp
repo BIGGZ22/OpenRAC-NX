@@ -311,5 +311,25 @@ int main() {
     again.reset_layout();
     CHECK(again.layout().empty());
     CHECK(std::abs(up_again.x - up_x) < 1e-5f);
+
+    // Snapping: a dragged group near another's line, or its own place, lands on it, and the line
+    // is there to show; a little further it goes where the finger takes it.
+    TouchPad snapping;
+    snapping.set_aspect(2.0f);
+    snapping.set_editing(true);
+    const TouchControl& left_stick = control(snapping, TouchControl::Kind::LeftStick);
+    const TouchControl& dpad = control(snapping, TouchControl::Kind::Button, Button::Up);
+    const float dpad_x = dpad.x;
+    const float dpad_y = dpad.y;
+    snapping.finger_down(1, dpad.x, dpad.y);
+    snapping.finger_move(1, left_stick.x + 0.005f, dpad_y);
+    CHECK(std::abs(dpad.x - left_stick.x) < 1e-5f);  // in line with the stick
+    CHECK(std::abs(snapping.guide_x() - left_stick.x) < 1e-5f);
+    snapping.finger_move(1, dpad_x + 0.006f, dpad_y + 0.01f);
+    CHECK(std::abs(dpad.x - dpad_x) < 1e-5f && std::abs(dpad.y - dpad_y) < 1e-5f);  // back home
+    snapping.finger_move(1, dpad_x - 0.04f, dpad_y);
+    CHECK(std::abs(dpad.x - (dpad_x - 0.04f)) < 1e-5f && snapping.guide_x() < 0.0f);
+    snapping.finger_up(1);
+    CHECK(snapping.guide_x() < 0.0f && snapping.guide_y() < 0.0f);
     return openrac::test::result();
 }

@@ -106,6 +106,9 @@ bool touch_editing();
 // True once after Reset (the bar's) or "Put them back" (the drawer's): the window puts every
 // control at its own place.
 bool take_touch_reset();
+// The lines a dragged group of the pad has snapped to (TouchPad::guide_x, guide_y), drawn across
+// the screen while editing: 0..1 of the width and of the height, below 0 for none.
+void set_touch_guides(float x, float y);
 // True once after the drawer or the menus changed one of the port's settings (saved already): the
 // window applies it (frontend.cpp, apply_settings).
 bool take_settings_changed();
