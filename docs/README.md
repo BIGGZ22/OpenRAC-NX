@@ -7,7 +7,8 @@ the first table; go to a game's documents when you work on that game.
 
 | Document | For |
 |---|---|
-| [README.md](../README.md) | What OpenRAC is, progress, getting started, supported discs and checksums |
+| [README.md](../README.md) | What OpenRAC is, how to play, progress |
+| [DEVELOPING.md](DEVELOPING.md) | Working from a checkout: the launcher from source, setting up the decompilations, the port, the level editor by hand |
 | [CONTRIBUTING.md](../CONTRIBUTING.md) | Ground rules, the commit convention, pull requests, tests |
 | [AGENTS.md](../AGENTS.md) and [CLAUDE.md](../CLAUDE.md) | Rules for AI agents |
 | [LAYOUT.md](LAYOUT.md) | How the repository is organised, and where a new file goes |
@@ -16,7 +17,7 @@ the first table; go to a game's documents when you work on that game.
 | [TODO.md](TODO.md) | Larger work that is scoped and decided but not started, ready to pick up |
 | [port/KNOWN_ISSUES.md](port/KNOWN_ISSUES.md) | Bugs that are understood and guarded but not properly fixed yet |
 | [SOURCES.md](SOURCES.md) | Where each game's code came from, what changed on import, how to sync |
-| [baserom/README.md](../baserom/README.md), [toolchains/README.md](../toolchains/README.md) | Setting up your discs and compilers |
+| [baserom/README.md](../baserom/README.md), [toolchains/README.md](../toolchains/README.md) | Setting up your discs and compilers; the supported discs and their checksums |
 
 ## Across the games
 

@@ -12,7 +12,7 @@ the frontend and 20 levels are relocatable modules in the SNR2 `.REL` format
 [ntsc/docs/BOOT-SYMBOLS.md](ntsc/docs/BOOT-SYMBOLS.md)).
 
 Disc checksums are in [game.json](game.json) and the
-[README's table](../../README.md#supported-discs).
+[table in baserom/README.md](../../baserom/README.md#disc-images).
 
 ## What "matched" means here
 
