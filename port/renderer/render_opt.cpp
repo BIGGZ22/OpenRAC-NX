@@ -46,6 +46,9 @@ constexpr std::array<Entry, kOptCount> kEntries = {{
     {Opt::VkDrawCache, "vk-draw-cache",
      "the Vulkan draw finds its pipeline and descriptor set by fixed keys, with no heap allocation",
      true, Tolerance{}},
+    {Opt::AttachmentDiscard, "attachment-discard",
+     "Vulkan passes neither store what glInvalidateFramebuffer lets go nor load it after",
+     true, Tolerance{}},
 }};
 // clang-format on
 

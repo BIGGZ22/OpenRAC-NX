@@ -35,10 +35,11 @@ enum class Opt : std::uint8_t {
     StaticBuffersForceStaging,  // static-buffers-force-staging
     TexturePrepare,             // texture-prepare: a level's textures made at its load
     VkDrawCache,  // vk-draw-cache: Vulkan pipelines and descriptor sets found without allocating
+    AttachmentDiscard,  // attachment-discard
 };
 
-// The number of entries: VkDrawCache is the last enumerator of Opt.
-inline constexpr std::size_t kOptCount = static_cast<std::size_t>(Opt::VkDrawCache) + 1;
+// The number of entries: AttachmentDiscard is the last enumerator of Opt.
+inline constexpr std::size_t kOptCount = static_cast<std::size_t>(Opt::AttachmentDiscard) + 1;
 
 // How far the frames an optimisation draws may differ from its reference path's. The default,
 // zero, is byte-identical frames; anything else is a tolerance the maintainers accepted, named in
