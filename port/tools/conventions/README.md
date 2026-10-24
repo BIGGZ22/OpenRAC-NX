@@ -60,6 +60,15 @@ its entry in the same commit series. An entry whose file reads none any more,
 or is gone, is printed as a stale advisory rather than a failure, since other
 work removes reads meanwhile. Never add an entry for new code.
 
+## Raw allocation
+
+New C++ owns its memory through containers and `std::make_unique` (section 11
+of the conventions), so `new`, `delete`, `malloc` and `free` fail a new file.
+`ALLOCATION_EXCEPTIONS` names the files that cannot do otherwise, each with
+why: `tests/render_bench.cpp` replaces the global `operator new` and `delete`
+to count a frame's allocations, and takes their memory from the C library,
+since it cannot take it from the heap it counts.
+
 ## clang-format
 
 The format rules run the clang-format it finds: `--clang-format BIN`, else

@@ -19,8 +19,9 @@ Three kinds of rule (CODING_CONVENTIONS.md, "What the machines check"):
   GETENV_EXCEPTIONS names until their package moves the reads;
 - a C++ file added since REF: clang-format reports nothing; the first two lines are the
   `//` licence and copyright lines; no `static` at namespace scope; no raw new, delete,
-  malloc or free; no `using namespace` in a header; `extern "C"` only in a file named for a
-  C contract; no printf family or std::cout outside tests and programs' main files;
+  malloc or free, except in the files ALLOCATION_EXCEPTIONS names; no `using namespace` in a
+  header; `extern "C"` only in a file named for a C contract; no printf family or std::cout
+  outside tests and programs' main files;
 - a C file added since REF: the copyright line and clang-format, reported as advisories.
   The port's C is on its way into games/ and the gate for it is the one above.
 
@@ -83,6 +84,13 @@ GETENV_EXCEPTIONS = {
     "port/game/rac1/host/hand.c": "P2-38 reads it through openrac/host_env.h",
     "port/game/rac1/host/ui2d.c": "P2-38 reads it through openrac/host_env.h",
     "port/tests/vulkan_uniform_test.cpp": "a test that reads the switch to know what to expect",
+}
+
+
+# The files that may allocate raw memory, each with why it has to: a program that counts the heap
+# replaces operator new and delete, which cannot take their memory from the heap they count.
+ALLOCATION_EXCEPTIONS = {
+    "port/tests/render_bench.cpp": "replaces operator new and delete to count a frame's allocations",
 }
 
 
@@ -310,17 +318,18 @@ def check_new_cpp(path, text, contract_stems):
     header = path.endswith(HEADER_SUFFIXES)
     contract_ok = may_define_c_contract(path, contract_stems)
     output_ok = is_program_or_test(path)
+    allocation_ok = path in ALLOCATION_EXCEPTIONS
 
     for number, line in enumerate(code, 1):
         if STATIC_AT_NAMESPACE.match(line):
             findings.append(
                 Finding(path, number, "static", "file-local code goes in an anonymous namespace")
             )
-        if RAW_NEW.search(line) or RAW_DELETE.search(line):
+        if not allocation_ok and (RAW_NEW.search(line) or RAW_DELETE.search(line)):
             findings.append(
                 Finding(path, number, "new-delete", "own it: std::make_unique or a container")
             )
-        if C_ALLOCATION.search(line):
+        if not allocation_ok and C_ALLOCATION.search(line):
             findings.append(
                 Finding(path, number, "malloc-free", "own it: a container or an RAII wrapper")
             )
