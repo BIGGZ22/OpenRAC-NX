@@ -519,6 +519,20 @@ struct OpenPass {
     // The aspects glInvalidateFramebuffer let go since the pass's last draw or clear: not stored.
     VkImageAspectFlags drop_colour = 0;
     VkImageAspectFlags drop_depth = 0;
+    // vk_cmds_recorded when the pass began: the same at its end means its buffer holds nothing.
+    std::uint64_t commands_at_begin = 0;
+};
+
+// A copy into the default framebuffer that waits for present() (present-single-copy,
+// docs/port/RENDER_PERF.md "R-07"): the frame's picture, blitted into a box of the default
+// framebuffer whose rest was cleared to `clear`. present_to_screen makes it one blit into the
+// screen; anything else that touches the default framebuffer or the picture makes it first.
+struct PendingPresent {
+    bool pending = false;
+    ImagePtr source;       // The picture, kept until the copy is made.
+    VkImageBlit region{};  // From the picture into the default framebuffer.
+    VkFilter filter = VK_FILTER_NEAREST;
+    VkClearColorValue clear{};  // The default framebuffer's colour around the box.
 };
 
 // What a draw or a clear draws into.
@@ -846,6 +860,7 @@ struct Context {
     bool rendering = false;
     Target rendering_target;
     OpenPass pass;                 // The pass `main` renders in, while `rendering`.
+    PendingPresent present_copy;   // The copy to the default framebuffer that waits, if any.
     bool poison_discards = false;  // test_poison_discards (vkgl.h): discarded data made garbage.
     VkPipeline bound_pipeline = VK_NULL_HANDLE;
     RecordedState recorded;  // What the main command buffer holds of a draw's state (R-03).
@@ -1058,6 +1073,10 @@ VkRect2D scissor_rect(const Target& t);
 // clear comes first; otherwise the next pass on them does not load them.
 void discard_attachments(const Target& t, bool colour, VkImageAspectFlags depth);
 
+// Ends the open pass without recording it when it is a pass into the default framebuffer that
+// only clears its colour and holds nothing yet; true then, with that colour in `clear`.
+bool drop_clear_pass(VkClearColorValue& clear);
+
 // glClear: clears the buffers in `mask` that the write masks leave writable, inside the scissor
 // box. A clear of the whole target becomes the load operation of the rendering pass it begins.
 void clear(GLbitfield mask);
@@ -1256,6 +1275,10 @@ void gpu_results(Frame& f);
 void gpu_release();
 
 // ---- Defined in vkgl_gl.cpp ----
+
+// Records the copy into the default framebuffer that waited (PendingPresent): its clear, then the
+// blit, as glBlitFramebuffer would have recorded them. Nothing when none waits.
+void make_present_copy();
 
 // Lets go of buffer `b`'s GPU copy and texel views, destroyed once the frame is done with them.
 void destroy_buffer(Buffer& b);

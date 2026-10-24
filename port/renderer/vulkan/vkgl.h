@@ -30,6 +30,7 @@
 #include <cstdint>
 #include <span>
 #include <string>
+#include <vector>
 
 #include "renderer/gpu_draw.h"
 
@@ -195,6 +196,13 @@ void begin_pipeline_warmup(std::uint32_t frames);
 // garbage (colour 1.0 in every channel, depth 0, stencil 0xA5) instead of being left undefined, so
 // that a later read of it shows in the picture. False when no context is open.
 bool test_poison_discards(bool on);
+
+// For the tests: draws the copy into the default framebuffer that waits for the present
+// (present-single-copy) into two stand-ins of the screen, B8G8R8A8 at the default framebuffer's
+// size: `single` the one blit the present makes, `two_step` the copy into the default
+// framebuffer and its copy to the screen. The copy is made in the default framebuffer too. False
+// when no copy waits.
+bool test_present_paths(std::vector<std::uint8_t>& single, std::vector<std::uint8_t>& two_step);
 
 // Shows the default framebuffer and starts the next frame.
 void present();

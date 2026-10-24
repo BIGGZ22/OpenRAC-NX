@@ -267,6 +267,7 @@ bool begin_deferred(const Target& t, const Clear& clear) {
     pass.clear_stencil = clear.stencil;
     std::memcpy(pass.colour_value.float32, s.clear_colour, sizeof s.clear_colour);
     pass.depth_value = {s.clear_depth, static_cast<std::uint32_t>(s.clear_stencil)};
+    pass.commands_at_begin = commands_recorded(g->submission);
     f.main = secondary;
     return true;
 }
@@ -520,6 +521,16 @@ VkCommandBuffer cmd_for(Image* image, bool force_main) {
 }
 
 void barrier(VkCommandBuffer cmd, Image& image, VkImageLayout to) {
+    const PendingPresent& waiting = g->present_copy;
+    const bool reads_only = to == VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL
+                            || to == VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+
+    // The default framebuffer used, or the picture written: the copy that waits comes first.
+    if (waiting.pending
+        && (&image == g->default_colour.get() || (&image == waiting.source.get() && !reads_only))) {
+        make_present_copy();
+    }
+
     VkImageMemoryBarrier b{VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER};
     b.srcAccessMask = VK_ACCESS_MEMORY_READ_BIT | VK_ACCESS_MEMORY_WRITE_BIT;
     b.dstAccessMask = VK_ACCESS_MEMORY_READ_BIT | VK_ACCESS_MEMORY_WRITE_BIT;
@@ -746,6 +757,27 @@ void ensure_rendering(const Target& t) {
     // A draw or a clear after glInvalidateFramebuffer: what it writes is kept.
     g->pass.drop_colour = 0;
     g->pass.drop_depth = 0;
+}
+
+bool drop_clear_pass(VkClearColorValue& clear) {
+    const OpenPass& pass = g->pass;
+    const bool clear_only = pass.clear_colour && !pass.clear_depth && !pass.clear_stencil;
+
+    // Only a deferred pass into the default framebuffer that cleared its colour and holds nothing.
+    if (!g->rendering || !pass.deferred || g->rendering_target.colour != g->default_colour.get()
+        || !clear_only || commands_recorded(g->submission) != pass.commands_at_begin) {
+        return false;
+    }
+
+    Frame& f = frame();
+    vkEndCommandBuffer(f.main);
+    f.main = pass.primary;
+    clear = pass.colour_value;
+    g->pass = OpenPass{};
+    g->rendering = false;
+    g->bound_pipeline = VK_NULL_HANDLE;
+    g->recorded.forget();
+    return true;
 }
 
 void discard_attachments(const Target& t, bool colour, VkImageAspectFlags depth) {

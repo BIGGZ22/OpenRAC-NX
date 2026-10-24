@@ -6,6 +6,7 @@
 // the rest of the backend; and get_proc (vkgl.h), which hands the table its entries by name.
 
 #include <algorithm>
+#include <array>
 #include <cmath>
 #include <cstddef>
 #include <cstdint>
@@ -1405,6 +1406,77 @@ void VKGL invalidate_framebuffer(GLenum target, GLsizei count, const GLenum* att
     discard_attachments(target_of(name), colour, depth);
 }
 
+// The rectangles of glBlitFramebuffer's `r` (source x0, y0, x1, y1, then the destination's) as a
+// Vulkan blit of `aspect` from `src` into `dst`, each clamped to its image. False when either is
+// empty, and nothing is to be copied.
+bool blit_region(
+    const Image& src,
+    const Image& dst,
+    VkImageAspectFlags aspect,
+    const std::array<GLint, 8>& r,
+    VkImageBlit& b
+) {
+    b.srcSubresource = {aspect, 0, 0, 1};
+    b.srcOffsets[0] = {std::clamp(r[0], 0, src.width), std::clamp(r[1], 0, src.height), 0};
+    b.srcOffsets[1] = {std::clamp(r[2], 0, src.width), std::clamp(r[3], 0, src.height), 1};
+    b.dstSubresource = {aspect, 0, 0, 1};
+    b.dstOffsets[0] = {std::clamp(r[4], 0, dst.width), std::clamp(r[5], 0, dst.height), 0};
+    b.dstOffsets[1] = {std::clamp(r[6], 0, dst.width), std::clamp(r[7], 0, dst.height), 1};
+    return b.srcOffsets[0].x != b.srcOffsets[1].x && b.srcOffsets[0].y != b.srcOffsets[1].y
+           && b.dstOffsets[0].x != b.dstOffsets[1].x && b.dstOffsets[0].y != b.dstOffsets[1].y;
+}
+
+// The owner of the colour image framebuffer `name` reads from: its texture's or renderbuffer's.
+// Null for the default framebuffer and for one with no colour.
+ImagePtr colour_owner(GLuint name) {
+    const Framebuffer* fb = g->framebuffers.find(name);
+
+    // The default framebuffer's image is the backend's own, never a picture that is presented.
+    if (fb == nullptr) {
+        return nullptr;
+    }
+
+    // A texture first, as target_of looks.
+    if (Texture* t = g->textures.find(fb->colour_texture); t != nullptr && t->image) {
+        return t->image;
+    }
+
+    Renderbuffer* r = g->renderbuffers.find(fb->colour_renderbuffer);
+    return r != nullptr ? r->image : nullptr;
+}
+
+// Holds back glBlitFramebuffer's colour copy of a picture into the default framebuffer when the
+// pass before it only cleared that framebuffer (present-single-copy): the copy then waits for
+// present_to_screen (PendingPresent). False, with nothing changed, when it cannot wait.
+bool hold_present_copy(const std::array<GLint, 8>& r, GLenum filter) {
+    const ImagePtr source = colour_owner(g->state.read_framebuffer);
+    Image* dst = g->default_colour.get();
+    VkImageBlit region{};
+
+    // A single-sampled picture into the default framebuffer, as the frontend's present() copies.
+    if (!renderer::render_opt::enabled(renderer::render_opt::Opt::PresentSingleCopy)
+        || g->present_copy.pending || !source || source->samples != VK_SAMPLE_COUNT_1_BIT
+        || dst == nullptr || g->state.draw_framebuffer != 0
+        || !blit_region(*source, *dst, VK_IMAGE_ASPECT_COLOR_BIT, r, region)) {
+        return false;
+    }
+
+    VkClearColorValue clear{};
+
+    // The rest of the default framebuffer must be one known colour: the pass before only cleared it.
+    if (!drop_clear_pass(clear)) {
+        return false;
+    }
+
+    PendingPresent& waiting = g->present_copy;
+    waiting.pending = true;
+    waiting.source = source;
+    waiting.region = region;
+    waiting.filter = filter == GL_LINEAR ? VK_FILTER_LINEAR : VK_FILTER_NEAREST;
+    waiting.clear = clear;
+    return true;
+}
+
 void VKGL blit_framebuffer(
     GLint sx0,
     GLint sy0,
@@ -1526,14 +1598,7 @@ void VKGL blit_framebuffer(
             return;
         }
         VkImageBlit b{};
-        b.srcSubresource = {aspect, 0, 0, 1};
-        b.srcOffsets[0] = {std::clamp(sx0, 0, src->width), std::clamp(sy0, 0, src->height), 0};
-        b.srcOffsets[1] = {std::clamp(sx1, 0, src->width), std::clamp(sy1, 0, src->height), 1};
-        b.dstSubresource = {aspect, 0, 0, 1};
-        b.dstOffsets[0] = {std::clamp(dx0, 0, dst->width), std::clamp(dy0, 0, dst->height), 0};
-        b.dstOffsets[1] = {std::clamp(dx1, 0, dst->width), std::clamp(dy1, 0, dst->height), 1};
-        if (b.srcOffsets[0].x == b.srcOffsets[1].x || b.srcOffsets[0].y == b.srcOffsets[1].y
-            || b.dstOffsets[0].x == b.dstOffsets[1].x || b.dstOffsets[0].y == b.dstOffsets[1].y) {
+        if (!blit_region(*src, *dst, aspect, {sx0, sy0, sx1, sy1, dx0, dy0, dx1, dy1}, b)) {
             return;
         }
         vkCmdBlitImage(
@@ -1551,6 +1616,13 @@ void VKGL blit_framebuffer(
             static_cast<std::uint32_t>(std::abs(b.dstOffsets[1].y - b.dstOffsets[0].y))
         );
     };
+    const std::array<GLint, 8> rects = {sx0, sy0, sx1, sy1, dx0, dy0, dx1, dy1};
+
+    // The picture copied to the window with nothing else asked: it can wait for the present.
+    if (mask == GL_COLOR_BUFFER_BIT && hold_present_copy(rects, filter)) {
+        return;
+    }
+
     if ((mask & GL_COLOR_BUFFER_BIT) != 0) {
         blit_one(
             from.colour,
@@ -1681,6 +1753,48 @@ const Entry kEntries[] = {
 }  // namespace
 
 // ---- The GL functions ----
+
+void make_present_copy() {
+    PendingPresent waiting = std::move(g->present_copy);
+    g->present_copy = PendingPresent{};
+
+    // Nothing waits.
+    if (!waiting.pending) {
+        return;
+    }
+
+    Image& dst = *g->default_colour;
+    Image& src = *waiting.source;
+    VkCommandBuffer cmd = cmd_for(&src, true);
+    dst.touched = g->recording;
+    const VkImageSubresourceRange range = {VK_IMAGE_ASPECT_COLOR_BIT, 0, 1, 0, 1};
+    barrier(cmd, dst, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
+    vkCmdClearColorImage(
+        cmd, dst.image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, &waiting.clear, 1, &range
+    );
+    count_command(Command::Copy);
+    barrier(cmd, src, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL);
+    // The clear's writes done before the blit's, which overlap them.
+    barrier(cmd, dst, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
+    vkCmdBlitImage(
+        cmd,
+        src.image,
+        VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
+        dst.image,
+        VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+        1,
+        &waiting.region,
+        waiting.filter
+    );
+    count_copy(
+        static_cast<std::uint32_t>(
+            std::abs(waiting.region.dstOffsets[1].x - waiting.region.dstOffsets[0].x)
+        ),
+        static_cast<std::uint32_t>(
+            std::abs(waiting.region.dstOffsets[1].y - waiting.region.dstOffsets[0].y)
+        )
+    );
+}
 
 void destroy_buffer(Buffer& b) {
     forget_views(b);
