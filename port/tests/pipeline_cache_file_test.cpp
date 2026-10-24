@@ -1,9 +1,11 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 // Copyright (c) 2026 the OpenRAC contributors
 //
-// The Vulkan pipeline cache's file (renderer/vulkan/pipeline_cache_file.h): a save reads back
-// whole, a damaged file is dropped, and writers saving the same file at once, as threads and as
-// processes, leave a whole save of one of them and nothing else. The payloads are made up: each
+// The Vulkan pipeline cache's files (renderer/vulkan/pipeline_cache_file.h, in cache_file.h's
+// envelope): a save reads back whole, a damaged file is dropped, and writers saving the same file
+// at once, as threads and as processes, leave a whole save of one of them and nothing else; the
+// pipeline manifest reads back its entries, and one of another key size, cut short or holding a
+// key of the wrong size is dropped or refused. The payloads are made up: each
 // writer's is a length and a byte pattern derived from its number, so a reader can tell whose
 // save it got and whether it is whole.
 //
@@ -13,6 +15,7 @@
 #include <atomic>
 #include <charconv>
 #include <cstddef>
+#include <cstdint>
 #include <cstdio>
 #include <cstdlib>
 #include <exception>
@@ -34,9 +37,12 @@
 namespace {
 
 namespace fs = std::filesystem;
+using openrac::vkgl::ManifestEntry;
 using openrac::vkgl::read_pipeline_cache;
+using openrac::vkgl::read_pipeline_manifest;
 using openrac::vkgl::SavedCacheState;
 using openrac::vkgl::write_pipeline_cache;
+using openrac::vkgl::write_pipeline_manifest;
 
 // The writers of each parallel test, and the saves each makes.
 constexpr int kWriters = 8;
@@ -242,6 +248,75 @@ int run_writer(const char* file, std::string_view writer) {
     }
 }
 
+// ---- The pipeline manifest ----
+
+// The key size of the manifest tests: any size will do, the backend's is its PipelineKey's.
+constexpr std::size_t kManifestKeyBytes = 24;
+
+// Returns entry `n` of the manifest tests: its program, age and key bytes derived from `n`.
+ManifestEntry manifest_entry(int n) {
+    ManifestEntry entry;
+    entry.program = 0x1000 + static_cast<std::uint64_t>(n);
+    entry.age = static_cast<std::uint32_t>(n);
+    entry.key.resize(kManifestKeyBytes);
+
+    // Each byte its entry and its index mixed, so two entries' keys differ.
+    for (std::size_t at = 0; at < entry.key.size(); ++at) {
+        entry.key[at] = static_cast<char>(static_cast<unsigned char>(at * 13 + n * 5));
+    }
+
+    return entry;
+}
+
+// Tests that a manifest reads back the entries saved, in their order, and a missing one as such.
+void test_a_manifest_reads_back_its_entries() {
+    const fs::path folder = fresh_folder();
+    const fs::path file = folder / "cache.bin.manifest";
+    CHECK(read_pipeline_manifest(file, kManifestKeyBytes).state == SavedCacheState::Missing);
+
+    const std::vector<ManifestEntry> saved =
+        {manifest_entry(0), manifest_entry(1), manifest_entry(7)};
+    std::string error;
+    CHECK(write_pipeline_manifest(file, saved, kManifestKeyBytes, error));
+    const auto read = read_pipeline_manifest(file, kManifestKeyBytes);
+    CHECK(read.state == SavedCacheState::Intact);
+    CHECK(read.entries.size() == saved.size());
+
+    // Each entry as it was saved.
+    for (std::size_t n = 0; n < saved.size() && n < read.entries.size(); ++n) {
+        CHECK(read.entries[n].program == saved[n].program);
+        CHECK(read.entries[n].age == saved[n].age);
+        CHECK(read.entries[n].key == saved[n].key);
+    }
+
+    fs::remove_all(folder);
+}
+
+// Tests that a manifest of another key size (another build's keys) or cut short is dropped, and
+// that an entry whose key is of the wrong size is not saved.
+void test_a_manifest_of_another_build_or_damaged_is_dropped() {
+    const fs::path folder = fresh_folder();
+    const fs::path file = folder / "cache.bin.manifest";
+    const std::vector<ManifestEntry> saved = {manifest_entry(2), manifest_entry(3)};
+    std::string error;
+    CHECK(write_pipeline_manifest(file, saved, kManifestKeyBytes, error));
+    CHECK(read_pipeline_manifest(file, kManifestKeyBytes + 8).state == SavedCacheState::Damaged);
+
+    // Cut short by one byte: the envelope tells.
+    fs::resize_file(file, fs::file_size(file) - 1);
+    CHECK(read_pipeline_manifest(file, kManifestKeyBytes).state == SavedCacheState::Damaged);
+
+    // A pipeline cache is not a manifest: another magic.
+    CHECK(write_pipeline_cache(file, payload(0), error));
+    CHECK(read_pipeline_manifest(file, kManifestKeyBytes).state == SavedCacheState::Damaged);
+
+    ManifestEntry short_key = manifest_entry(4);
+    short_key.key.pop_back();
+    const std::vector<ManifestEntry> wrong = {short_key};
+    CHECK(!write_pipeline_manifest(file, wrong, kManifestKeyBytes, error));
+    fs::remove_all(folder);
+}
+
 // Runs the tests in the order they are written; false when one threw.
 bool run_tests(const char* program) {
     try {
@@ -249,6 +324,8 @@ bool run_tests(const char* program) {
         test_a_damaged_file_is_dropped_and_replaced();
         test_writer_threads_leave_one_whole_save();
         test_writer_processes_leave_one_whole_save(program);
+        test_a_manifest_reads_back_its_entries();
+        test_a_manifest_of_another_build_or_damaged_is_dropped();
         return true;
     } catch (const std::exception& failure) {
         std::fprintf(stderr, "pipeline_cache_file: %s\n", failure.what());

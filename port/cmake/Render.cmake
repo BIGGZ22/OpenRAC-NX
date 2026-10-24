@@ -28,6 +28,13 @@ add_library(openrac_render_opt STATIC renderer/render_opt.cpp)
 target_link_libraries(openrac_render_opt PUBLIC openrac_common)
 openrac_warnings(openrac_render_opt)
 
+# The envelope of the Vulkan backend's cache files (renderer/vulkan/cache_file.h), which the
+# pipeline cache and its manifest share (R-10). Added here so that cmake/Window.cmake, which makes
+# the target, is left to its own lane.
+if(TARGET openrac_renderer_vulkan)
+  target_sources(openrac_renderer_vulkan PRIVATE renderer/vulkan/cache_file.cpp)
+endif()
+
 # The renderers whose draw code asks the registry.
 foreach(renderer openrac_renderer openrac_renderer_vulkan)
   if(TARGET ${renderer})
