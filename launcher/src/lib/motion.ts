@@ -15,7 +15,7 @@ export const slides = !reduced && typeof document !== "undefined" && "startViewT
 
 /** Which way a slide goes: to a tab further along the bar (or down the rail on Android) or back,
  *  or to a game further down the game list or up it. */
-export type Way = "forward" | "back" | "down" | "up";
+type Way = "forward" | "back" | "down" | "up";
 
 /** The slide under way, if any. */
 let sliding: ViewTransition | null = null;

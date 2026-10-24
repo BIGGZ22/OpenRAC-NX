@@ -18,20 +18,19 @@
    *  letters (the capitals of "RAC", y 320 to 455), not on all the logo draws: the lombax's ears
    *  rise above it (overflow, below), so that the logo sits level beside text and buttons rather
    *  than low, as a box around the ears would set it. */
-  const VIEW = { full: "62 220 1253 334", mark: "62 220 415 334" };
+  const VIEW = { full: [62, 220, 1253, 334], mark: [62, 220, 415, 334] } as const;
 </script>
 
 <script lang="ts">
-  // In the current colour; the mark in --logo-mark when it is set, so that a place can give it the
-  // accent (the picked game's on Android) and the name its text colour.
+  // Drawn in the current colour.
   let { mark = false, height = 32, label = "OpenRAC" }: { mark?: boolean; height?: number; label?: string } = $props();
   const view = $derived(mark ? VIEW.mark : VIEW.full);
-  const width = $derived(Math.round((height * Number(view.split(" ")[2])) / Number(view.split(" ")[3])));
+  const width = $derived(Math.round((height * view[2]) / view[3]));
 </script>
 
 <svg
   class="logo"
-  viewBox={view}
+  viewBox={view.join(" ")}
   {width}
   {height}
   role={label ? "img" : undefined}
@@ -39,11 +38,11 @@
   aria-hidden={label ? undefined : "true"}
 >
   <g transform="translate(0 768) scale(0.1 -0.1)">
-    <g class="mark">
+    <g>
       {#each MARK as d (d)}<path {d} />{/each}
     </g>
     {#if !mark}
-      <g class="name">
+      <g>
         {#each NAME as d (d)}<path {d} />{/each}
       </g>
     {/if}
@@ -56,9 +55,5 @@
     flex: none;
     overflow: visible;
     fill: currentColor;
-  }
-
-  .mark {
-    fill: var(--logo-mark, currentColor);
   }
 </style>
