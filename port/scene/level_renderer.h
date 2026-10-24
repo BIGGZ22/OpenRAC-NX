@@ -20,6 +20,7 @@
 #include <array>
 #include <memory>
 #include <string>
+#include <unordered_map>
 #include <vector>
 
 #include "enhanced/viewer/early_lighting.h"
@@ -261,6 +262,18 @@ private:
     Group make_group(std::uint32_t model);
     void fill_group(Group& g, const std::vector<InstanceData>& list, unsigned usage);
     void build_groups(Layer layer, const std::vector<Instance>& instances, bool live);
+    // build_groups' parts, also for set_instances' in-place path (level_renderer.cpp says more).
+    static std::uint32_t group_key(const Instance& instance);
+    static InstanceData instance_data(const Instance& instance);
+    static CasterBounds instance_bounds(
+        const Model& shape,
+        const InstanceData& data,
+        const std::array<float, 4>& sphere,
+        bool sphere_off
+    );
+    static renderer::GpuCullBounds gpu_cull_bounds(
+        const CasterBounds& bounds, const InstanceData& data, std::uint16_t occlusion
+    );
     renderer::GpuInstanceBatch gpu_batch(const Group& group, const renderer::GpuCullView& view);
     void submit_instances(
         renderer::GpuInstanceBatch batch, unsigned first, unsigned count, int instances
@@ -310,6 +323,8 @@ private:
     };
 
     std::vector<InstanceGroup> m_grouping;
+    // Each key's list in m_grouping during a build_groups call, for a lookup by hash.
+    std::unordered_map<std::uint32_t, std::size_t> m_group_of_key;
     std::size_t m_palette_rows = 0;  // the palette texture's height now
     unsigned m_vertices = 0;
     unsigned m_indices = 0;

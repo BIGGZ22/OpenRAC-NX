@@ -89,9 +89,9 @@ except	renderer/renderer.h:30	enhanced/renderer/gtao_settings.h	P2-07: renderer 
 except	scene/level.h:27	enhanced/lighting/emission.h	P2-39: scene owns the lighting and shadow hooks, enhanced registers with them
 except	scene/level_renderer.cpp:14	enhanced/viewer/hero_shadow.h	P2-39: scene owns the lighting and shadow hooks, enhanced registers with them
 except	scene/level_renderer.cpp:15	enhanced/viewer/shadow_atlas.h	P2-39: scene owns the lighting and shadow hooks, enhanced registers with them
-except	scene/level_renderer.h:25	enhanced/viewer/early_lighting.h	P2-39: scene owns the lighting and shadow hooks, enhanced registers with them
-except	scene/level_renderer.h:26	enhanced/viewer/probe_lighting.h	P2-39: scene owns the lighting and shadow hooks, enhanced registers with them
-except	scene/level_renderer.h:27	enhanced/viewer/sun_shadow.h	P2-39: scene owns the lighting and shadow hooks, enhanced registers with them
+except	scene/level_renderer.h:26	enhanced/viewer/early_lighting.h	P2-39: scene owns the lighting and shadow hooks, enhanced registers with them
+except	scene/level_renderer.h:27	enhanced/viewer/probe_lighting.h	P2-39: scene owns the lighting and shadow hooks, enhanced registers with them
+except	scene/level_renderer.h:28	enhanced/viewer/sun_shadow.h	P2-39: scene owns the lighting and shadow hooks, enhanced registers with them
 # game/common -> viewer: the game program uses the viewer's game state, and reaches the scene through
 # the headers viewer/ keeps forwarding to scene/ until P2-37.
 except	game/common/debug_overlay.cpp:45	viewer/screenshot.h	P2-37 includes scene/ directly and removes the forwarder

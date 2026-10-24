@@ -477,6 +477,88 @@ void LevelScene::fill_group(Group& g, const std::vector<InstanceData>& list, uns
     );
 }
 
+// Returns the key build_groups groups `instance` by: its class model, its blend and whether it
+// casts the hero's shadow, in that order of significance.
+std::uint32_t LevelScene::group_key(const Instance& instance) {
+    return instance.model << 3 | (static_cast<std::uint32_t>(instance.blend & 3) << 1)
+           | (instance.hero_shadow_caster ? 1u : 0u);
+}
+
+// Returns `instance` as the vertex shader's per-instance attributes take it.
+LevelScene::InstanceData LevelScene::instance_data(const Instance& instance) {
+    InstanceData data{};
+    std::copy(instance.matrix.begin(), instance.matrix.end(), data.matrix);
+    std::copy(instance.tint.begin(), instance.tint.end(), data.tint);
+    data.palette = static_cast<float>(instance.palette);
+    data.lights = static_cast<float>(instance.lights);
+    std::copy(instance.moby_light.begin(), instance.moby_light.end(), data.moby_light);
+    std::copy(instance.moby_ambient.begin(), instance.moby_ambient.end(), data.moby_ambient);
+    return data;
+}
+
+// Returns the world bounds of one instance of `shape` with `data`: the shape's box through the
+// instance's matrix for a rigid mesh, its world `sphere` for an animated one (unless `sphere_off`),
+// padded; invalid (unbounded) when either cannot be trusted.
+LevelScene::CasterBounds LevelScene::instance_bounds(
+    const Model& shape,
+    const InstanceData& data,
+    const std::array<float, 4>& sphere,
+    bool sphere_off
+) {
+    CasterBounds bounds;
+    bounds.low.fill(3e38f);
+    bounds.high.fill(-3e38f);
+    bounds.valid = data.palette < 0 && shape.min[0] <= shape.max[0];
+    renderer::Mat4 matrix;
+    std::copy_n(data.matrix, 16, matrix.begin());
+    bounds.valid &= matrix[3] == 0 && matrix[7] == 0 && matrix[11] == 0 && matrix[15] == 1;
+    for (int corner = 0; corner < 8 && bounds.valid; ++corner) {
+        const auto p = renderer::transform_point(
+            matrix,
+            {(corner & 1) ? shape.max[0] : shape.min[0],
+             (corner & 2) ? shape.max[1] : shape.min[1],
+             (corner & 4) ? shape.max[2] : shape.min[2]}
+        );
+        for (int k = 0; k < 3; ++k) {
+            bounds.valid &= std::isfinite(p[k]) && shape.min[k] <= shape.max[k];
+            bounds.low[k] = std::min(bounds.low[k], p[k]);
+            bounds.high[k] = std::max(bounds.high[k], p[k]);
+        }
+    }
+    if (data.palette >= 0 && !sphere_off && data.moby_light[3] <= 1.5f) {
+        bounds.valid = sphere[3] > 0 && std::all_of(sphere.begin(), sphere.end(), [](float x) {
+                           return std::isfinite(x);
+                       });
+        for (int k = 0; k < 3 && bounds.valid; ++k) {
+            bounds.low[k] = sphere[k] - sphere[3];
+            bounds.high[k] = sphere[k] + sphere[3];
+            bounds.valid &= std::isfinite(bounds.low[k]) && std::isfinite(bounds.high[k]);
+        }
+    }
+    if (bounds.valid) {
+        for (int k = 0; k < 3; ++k) {
+            const float pad =
+                .001f + 1e-6f * std::max(std::abs(bounds.low[k]), std::abs(bounds.high[k]));
+            bounds.low[k] -= pad;
+            bounds.high[k] += pad;
+        }
+    }
+    return bounds;
+}
+
+// Returns `bounds` as the GPU culling takes them, with the instance's PVS word and its flags
+// (valid box, UI layer).
+renderer::GpuCullBounds LevelScene::gpu_cull_bounds(
+    const CasterBounds& bounds, const InstanceData& data, std::uint16_t occlusion
+) {
+    return {
+        bounds.low,
+        bounds.high,
+        occlusion,
+        (bounds.valid ? 1u : 0u) | (data.moby_light[3] > 1.5f ? 2u : 0u)
+    };
+}
+
 void LevelScene::build_groups(Layer layer, const std::vector<Instance>& instances, bool live) {
     // Instances grouped by class model and blend (Instance::blend), in first-seen order. The lists
     // are kept between calls (a live layer is grouped again every frame).
@@ -490,28 +572,23 @@ void LevelScene::build_groups(Layer layer, const std::vector<Instance>& instance
         "Profiling reference: leave animated mobys unbounded (next upload)"
     );
     std::size_t used = 0;
+    m_group_of_key.clear();
+
+    // Each instance into the list of its key, a new list for a key not seen yet (first-seen order).
     for (const Instance& instance : instances) {
-        const std::uint32_t key = instance.model << 3
-                                  | (static_cast<std::uint32_t>(instance.blend & 3) << 1)
-                                  | (instance.hero_shadow_caster ? 1u : 0u);
-        std::size_t at = 0;
-        while (at < used && m_grouping[at].key != key) {
-            ++at;
-        }
-        if (at == used) {
+        const std::uint32_t key = group_key(instance);
+        const auto [found, fresh] = m_group_of_key.try_emplace(key, used);
+        const std::size_t at = found->second;
+
+        // A key not seen yet this call: the next list, made the first time it is needed.
+        if (fresh) {
             if (used == m_grouping.size()) {
                 m_grouping.emplace_back();
             }
             m_grouping[used++].key = key;
         }
-        InstanceData data{};
-        std::copy(instance.matrix.begin(), instance.matrix.end(), data.matrix);
-        std::copy(instance.tint.begin(), instance.tint.end(), data.tint);
-        data.palette = static_cast<float>(instance.palette);
-        data.lights = static_cast<float>(instance.lights);
-        std::copy(instance.moby_light.begin(), instance.moby_light.end(), data.moby_light);
-        std::copy(instance.moby_ambient.begin(), instance.moby_ambient.end(), data.moby_ambient);
-        m_grouping[at].instances.push_back(data);
+
+        m_grouping[at].instances.push_back(instance_data(instance));
         m_grouping[at].spheres.push_back(instance.world_sphere);
         m_grouping[at].occlusion.push_back(instance.occlusion);
     }
@@ -560,56 +637,12 @@ void LevelScene::build_groups(Layer layer, const std::vector<Instance>& instance
         // game's current world sphere, never their bind-pose box. Missing or
         // malformed spheres remain unbounded. Refresh on every instance upload.
         for (std::size_t n = 0; n < g.cpu_instances.size(); ++n) {
-            const auto& data = g.cpu_instances[n];
-            CasterBounds bounds;
-            const auto& shape = m_models[model];
-            bounds.low.fill(3e38f);
-            bounds.high.fill(-3e38f);
-            bounds.valid = data.palette < 0 && shape.min[0] <= shape.max[0];
-            renderer::Mat4 matrix;
-            std::copy_n(data.matrix, 16, matrix.begin());
-            bounds.valid &= matrix[3] == 0 && matrix[7] == 0 && matrix[11] == 0 && matrix[15] == 1;
-            for (int corner = 0; corner < 8 && bounds.valid; ++corner) {
-                const auto p = renderer::transform_point(
-                    matrix,
-                    {(corner & 1) ? shape.max[0] : shape.min[0],
-                     (corner & 2) ? shape.max[1] : shape.min[1],
-                     (corner & 4) ? shape.max[2] : shape.min[2]}
-                );
-                for (int k = 0; k < 3; ++k) {
-                    bounds.valid &= std::isfinite(p[k]) && shape.min[k] <= shape.max[k];
-                    bounds.low[k] = std::min(bounds.low[k], p[k]);
-                    bounds.high[k] = std::max(bounds.high[k], p[k]);
-                }
-            }
-            if (data.palette >= 0 && !sphere_off && data.moby_light[3] <= 1.5f) {
-                const auto& sphere = m_grouping[i].spheres[n];
-                bounds.valid =
-                    sphere[3] > 0 && std::all_of(sphere.begin(), sphere.end(), [](float x) {
-                        return std::isfinite(x);
-                    });
-                for (int k = 0; k < 3 && bounds.valid; ++k) {
-                    bounds.low[k] = sphere[k] - sphere[3];
-                    bounds.high[k] = sphere[k] + sphere[3];
-                    bounds.valid &= std::isfinite(bounds.low[k]) && std::isfinite(bounds.high[k]);
-                }
-            }
-            if (bounds.valid) {
-                for (int k = 0; k < 3; ++k) {
-                    const float pad =
-                        .001f + 1e-6f * std::max(std::abs(bounds.low[k]), std::abs(bounds.high[k]));
-                    bounds.low[k] -= pad;
-                    bounds.high[k] += pad;
-                }
-            }
+            const CasterBounds bounds = instance_bounds(
+                m_models[model], g.cpu_instances[n], m_grouping[i].spheres[n], sphere_off
+            );
             g.caster_bounds.push_back(bounds);
             if (native_gpu_bounds) {
-                g.gpu_bounds.push_back(
-                    {bounds.low,
-                     bounds.high,
-                     g.occlusion[n],
-                     (bounds.valid ? 1u : 0u) | (data.moby_light[3] > 1.5f ? 2u : 0u)}
-                );
+                g.gpu_bounds.push_back(gpu_cull_bounds(bounds, g.cpu_instances[n], g.occlusion[n]));
             }
         }
         // Aggregate the same conservative bounds used by per-instance tests.
