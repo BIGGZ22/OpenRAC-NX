@@ -41,10 +41,11 @@ enum class Opt : std::uint8_t {
     PresentSingleCopy,     // present-single-copy
     VkTightSync,           // vk-tight-sync
     PipelinePrewarm,       // pipeline-prewarm: a run's pipelines made again ahead, on a worker
+    PresentTiming,         // present-timing
 };
 
-// The number of entries: PipelinePrewarm is the last enumerator of Opt.
-inline constexpr std::size_t kOptCount = static_cast<std::size_t>(Opt::PipelinePrewarm) + 1;
+// The number of entries: PresentTiming is the last enumerator of Opt.
+inline constexpr std::size_t kOptCount = static_cast<std::size_t>(Opt::PresentTiming) + 1;
 
 // How far the frames an optimisation draws may differ from its reference path's. The default,
 // zero, is byte-identical frames; anything else is a tolerance the maintainers accepted, named in

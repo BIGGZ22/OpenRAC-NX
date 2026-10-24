@@ -64,6 +64,9 @@ constexpr std::array<Entry, kOptCount> kEntries = {{
     {Opt::PipelinePrewarm, "pipeline-prewarm",
      "the pipelines of earlier runs made again on a worker once their program links, not at a draw",
      true, Tolerance{}},
+    {Opt::PresentTiming, "present-timing",
+     "Vulkan presents numbered and waited on, latest-ready mode, the pacer told when they showed",
+     false, Tolerance{}},
 }};
 // clang-format on
 
