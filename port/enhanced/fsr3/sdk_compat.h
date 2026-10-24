@@ -15,7 +15,10 @@
 #include <cstring>
 #include <cwchar>
 #include <iterator>
+#include <locale>
 #include <volk.h>
+
+#include <FidelityFX/host/ffx_util.h>
 
 #if !defined(_WIN32)
 // Matches the SDK's bounded diagnostic-name copies without depending on a Windows CRT.
@@ -52,4 +55,10 @@ inline int strcpy_s(char* destination, std::size_t capacity, const char* source)
 
 // The SDK uses its Windows spelling for compile-time array lengths.
 #define _countof(array) std::size(array)
+
+// Formats SDK breadcrumb numbers within the supplied destination capacity.
+template <typename... Args>
+int sprintf_s(char* destination, std::size_t capacity, const char* format, Args... args) {
+    return std::snprintf(destination, capacity, format, args...);
+}
 #endif

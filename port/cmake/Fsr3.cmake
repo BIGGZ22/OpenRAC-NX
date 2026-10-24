@@ -26,7 +26,7 @@ execute_process(
 set_property(DIRECTORY APPEND PROPERTY CMAKE_CONFIGURE_DEPENDS
   "${CMAKE_CURRENT_SOURCE_DIR}/enhanced/fsr3/prepare_sdk.py")
 
-set(sdk_includes "${sdk}/include" "${sdk}/src/shared"
+set(sdk_includes "${generated}" "${sdk}/include" "${sdk}/src/shared"
   "${sdk}/src/components/fsr3upscaler" "${sdk}/src/backends/shared")
 
 # Original GLSL is compiled through the renderer's existing glslang dependency, not an extra SDK toolchain.

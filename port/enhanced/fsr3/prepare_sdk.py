@@ -1,6 +1,6 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
 # Copyright (c) 2026 the OpenRAC contributors
-"""Prepare pinned AMD shader sources and the Vulkan memory-selection fix for CMake."""
+"""Prepare pinned AMD shaders and Vulkan portability fixes for CMake."""
 
 import argparse
 from pathlib import Path
@@ -16,6 +16,16 @@ def write_changed(path, text):
 def prepare(source, output):
     """Embed original GLSL and allow SDK device-local allocations on unified-memory GPUs."""
     output.mkdir(parents=True, exist_ok=True)
+    # Linux and macOS use four-byte wchar_t, enlarging the SDK's private resource-name arrays.
+    host = output / 'FidelityFX/host'
+    host.mkdir(parents=True, exist_ok=True)
+    context = (source / 'sdk/include/FidelityFX/host/ffx_fsr3upscaler.h').read_text(
+        encoding='utf-8-sig')
+    context = context.replace(
+        '#define FFX_FSR3UPSCALER_CONTEXT_SIZE (FFX_SDK_DEFAULT_CONTEXT_SIZE)',
+        '#define FFX_FSR3UPSCALER_CONTEXT_SIZE '
+        '(FFX_SDK_DEFAULT_CONTEXT_SIZE * (sizeof(wchar_t) / sizeof(uint16_t)))')
+    write_changed(host / 'ffx_fsr3upscaler.h', context)
     gpu = source / 'sdk/include/FidelityFX/gpu'
     shaders = source / 'sdk/src/backends/vk/shaders/fsr3upscaler'
     files = list(gpu.glob('*.h'))

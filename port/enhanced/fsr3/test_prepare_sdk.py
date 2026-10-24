@@ -21,6 +21,13 @@ class PrepareSdkTest(unittest.TestCase):
         self.output = self.root / "output"
         self.gpu = self.source / "sdk/include/FidelityFX/gpu"
         self.gpu.mkdir(parents=True)
+        context = self.source / 'sdk/include/FidelityFX/host/ffx_fsr3upscaler.h'
+        context.parent.mkdir(parents=True)
+        context.write_text(
+            '// Synthetic context fixture.\n'
+            '#define FFX_FSR3UPSCALER_CONTEXT_SIZE (FFX_SDK_DEFAULT_CONTEXT_SIZE)\n',
+            encoding='utf-8',
+        )
         backend = self.source / "sdk/src/backends/vk/ffx_vk.cpp"
         backend.parent.mkdir(parents=True)
         backend.write_text(
@@ -44,12 +51,18 @@ class PrepareSdkTest(unittest.TestCase):
     def test_unchanged_preparation_does_not_rewrite_generated_files(self):
         (self.gpu / "fixture.h").write_text("// fixture\n", encoding="utf-8")
         prepare_sdk.prepare(self.source, self.output)
-        before = {path.name: (path.read_bytes(), path.stat().st_mtime_ns)
-                  for path in self.output.iterdir()}
+        before = {path.relative_to(self.output): (path.read_bytes(), path.stat().st_mtime_ns)
+                  for path in self.output.rglob('*') if path.is_file()}
         prepare_sdk.prepare(self.source, self.output)
-        after = {path.name: (path.read_bytes(), path.stat().st_mtime_ns)
-                 for path in self.output.iterdir()}
+        after = {path.relative_to(self.output): (path.read_bytes(), path.stat().st_mtime_ns)
+                 for path in self.output.rglob('*') if path.is_file()}
         self.assertEqual(before, after)
+
+    def test_context_storage_accounts_for_native_wide_character_size(self):
+        prepare_sdk.prepare(self.source, self.output)
+        context = (self.output / 'FidelityFX/host/ffx_fsr3upscaler.h').read_text(encoding='utf-8')
+        self.assertIn('sizeof(wchar_t) / sizeof(uint16_t)', context)
+        self.assertTrue(context.startswith('// Synthetic context fixture.'))
 
     def test_raw_string_collision_is_rejected(self):
         (self.gpu / "fixture.h").write_text(')fsrsdk"', encoding="utf-8")

@@ -23,6 +23,9 @@ not needed at runtime.
 the core memory-requirements entry point, unified-memory allocation requiring all requested flags,
 the FP16 luma-history image declaration, and the unused frame-generation swapchain callback.
 AMD licence notices remain in generated sources.
+The generated upscaler header also sizes context storage for the platform's wide characters;
+the SDK and its callers use this same header. `sdk_compat.h` supplies missing standard includes
+and bounded diagnostic formatting on non-Windows platforms.
 
 ## State and threads
 
