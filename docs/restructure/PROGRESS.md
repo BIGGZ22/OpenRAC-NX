@@ -94,7 +94,7 @@ the lanes, one at a time.
 | P2-32 | The editor uses `openrac_common`; `scene_nodes` renamed; one `unit()` | P2-10 | done | lane 3 | [d84e252b](https://github.com/OpenRAC/OpenRAC/commit/d84e252b), [e16ab5f4](https://github.com/OpenRAC/OpenRAC/commit/e16ab5f4), [41e48354](https://github.com/OpenRAC/OpenRAC/commit/41e48354), [b9b55dce](https://github.com/OpenRAC/OpenRAC/commit/b9b55dce), [990bbc38](https://github.com/OpenRAC/OpenRAC/commit/990bbc38), [c41aba03](https://github.com/OpenRAC/OpenRAC/commit/c41aba03), and this page |
 | P2-33 | Launcher: Discord glue moves into the core | | done | lane 3 | [aa8baae4](https://github.com/OpenRAC/OpenRAC/commit/aa8baae4), [b592e7d9](https://github.com/OpenRAC/OpenRAC/commit/b592e7d9), and this page |
 | P2-34 | Launcher: first-start install move into the core; `run()` split | P2-33 | done | lane 3 | [616e907f](https://github.com/OpenRAC/OpenRAC/commit/616e907f), [97598c55](https://github.com/OpenRAC/OpenRAC/commit/97598c55), and this page |
-| P2-35 | hostgen `main` and no_c `classify` in named steps | P2-10 | todo | | |
+| P2-35 | hostgen `main` and no_c `classify` in named steps | P2-10 | done | maintainer | [c71ced89](https://github.com/OpenRAC/OpenRAC/commit/c71ced89), [f9412cae](https://github.com/OpenRAC/OpenRAC/commit/f9412cae), [ccd78ccf](https://github.com/OpenRAC/OpenRAC/commit/ccd78ccf), and this page |
 | P2-36 | The frontend's rac1 addresses and game-id branches move into the profile | P2-03 | todo | | |
 | P2-37 | `game/common` includes `scene/` directly; `openrac::scene`; forwarders removed | P2-02, P2-05, P2-18, P2-27 | todo | | |
 | P2-38 | rac1 host C reads through the C entry point | P2-19, the level loader, the rac1 sync | todo | | |
