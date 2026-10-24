@@ -33,12 +33,48 @@ namespace {
     std::exit(64);
 }
 
+#if defined(_WIN32)
+// Before 2026-10-24 Windows had the folder of the other systems: HOME's .local/share/openrac, and
+// with no HOME (the usual case there) the one under the folder the game was started in, which
+// the launcher's Play does not keep the same. That folder's cards and settings are copied into
+// the new one, the files the new one has kept, and the old folder renamed so they come over once.
+void move_old_data_home(const fs::path& base) {
+    const std::optional<std::string> home = env::system_variable("HOME");
+    const fs::path old = fs::path(home.value_or(".")) / ".local/share/openrac";
+    std::error_code error;
+    if (!fs::is_directory(old, error) || fs::equivalent(old, base, error)) {
+        return;
+    }
+    fs::create_directories(base, error);
+    fs::copy(old, base, fs::copy_options::recursive | fs::copy_options::skip_existing, error);
+    if (error) {
+        log::warn("the cards and settings in {} could not be copied to {}: {}", old.string(),
+                  base.string(), error.message());
+        return;
+    }
+    fs::rename(old, fs::path(old).concat(".moved"), error);
+    log::info("the cards and settings in {} are now in {}", old.string(), base.string());
+}
+#endif
+
 // OpenRAC's folder in the player's data home, as the launcher finds it
 // (launcher/core/src/saves.rs, get_memcard_dir).
 fs::path data_home() {
 #if defined(__APPLE__)
     const std::optional<std::string> home = env::system_variable("HOME");
     fs::path base = fs::path(home.value_or(".")) / "Library/Application Support/OpenRAC";
+#elif defined(_WIN32)
+    // %LOCALAPPDATA%\openrac: the same folder whatever folder the game is started in.
+    fs::path base;
+    if (const std::optional<std::string> local = env::system_variable("LOCALAPPDATA");
+        local && !local->empty()) {
+        base = fs::path(*local) / "openrac";
+    } else {
+        const std::optional<std::string> profile = env::system_variable("USERPROFILE");
+        base = fs::path(profile.value_or(".")) / "AppData/Local/openrac";
+    }
+    static const bool moved = (move_old_data_home(base), true);
+    (void)moved;
 #else
     fs::path base;
 

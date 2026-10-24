@@ -5,6 +5,7 @@
 //!
 //! The PC runtime answers memory card requests from a directory on the host:
 //! - macOS: `~/Library/Application Support/OpenRAC/memcard/<SERIAL>`
+//! - Windows: `%LOCALAPPDATA%\openrac\memcard\<SERIAL>`
 //! - Linux/other: `~/.local/share/openrac/memcard/<SERIAL>` (or `$XDG_DATA_HOME/openrac/memcard/<SERIAL>`)
 //!
 //! Inside each game's serial folder, the PS2 memory card folder (e.g. `BESCES-50916RATCHET`)
@@ -92,6 +93,16 @@ pub fn data_home() -> PathBuf {
     }
     if cfg!(target_os = "macos") {
         return dirs_home().join("Library/Application Support/OpenRAC");
+    }
+    // Windows: %LOCALAPPDATA%\openrac, whatever folder the game was started in (the game moves
+    // what it kept before under that folder's .local/share there).
+    if cfg!(windows) {
+        if let Some(local) = std::env::var_os("LOCALAPPDATA").filter(|v| !v.is_empty()) {
+            return PathBuf::from(local).join("openrac");
+        }
+        if let Some(profile) = crate::detect::home_dir() {
+            return profile.join("AppData").join("Local").join("openrac");
+        }
     }
     std::env::var_os("XDG_DATA_HOME")
         .filter(|xdg| !xdg.is_empty())
