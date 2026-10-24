@@ -341,7 +341,9 @@ int vsync() {
         unsigned long from = 0, address = 0, bytes = 4, skip = 0;
         std::sscanf(guard->c_str(), "%lu:%lx:%lx:%lu", &from, &address, &bytes, &skip);
 
-        if (g_frame >= from) {
+        // The guard is set from frame FROM on. g_frame counts up from 0, so the cast keeps its value
+        // and the comparison is the one the implicit conversion made.
+        if (static_cast<unsigned long>(g_frame) >= from) {
             runtime::guard_writes(
                 static_cast<gaddr>(address),
                 static_cast<std::uint32_t>(bytes),
@@ -353,17 +355,17 @@ int vsync() {
     // OPENRAC_HITCH: each frame that took more than twice the frame time, with how long, in the log.
     static const bool& hitch =
         stats::probe("OPENRAC_HITCH", "each tick that took over 1.25 tick times, in the log");
-    static steady_clock::time_point last = now;
+    static steady_clock::time_point hitch_from = now;
 
     if (hitch) {
-        const double ms = duration<double, std::milli>(now - last).count();
+        const double ms = duration<double, std::milli>(now - hitch_from).count();
 
         if (ms > 1.25 * 1000.0 / tick_rate()) {
             log::info("frame {}: {:.1f} ms", g_frame, ms);
         }
     }
 
-    last = now;
+    hitch_from = now;
 
     if (fps && g_frame % 300 == 0) {
         const double seconds = duration<double>(now - fps_from).count();
