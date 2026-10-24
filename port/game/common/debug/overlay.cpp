@@ -22,7 +22,6 @@ namespace openrac::frontend::debug_overlay {
 
 State s;
 
-// A length in the overlay's units: pixels on a desktop's screen, more on a dense one.
 float dp(float v) {
     return v * s.ui_scale;
 }

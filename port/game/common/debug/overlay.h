@@ -35,6 +35,8 @@
 
 namespace openrac::frontend::debug_overlay {
 
+// The game's main memory, 32 MB, and one moby's bytes in it (the size of
+// the game's moby struct).
 constexpr std::uint32_t kRamSize = 32u * 1024 * 1024;
 constexpr std::uint32_t kMobySize = 0x100;
 
@@ -43,6 +45,7 @@ enum Section : std::size_t { kFrame, kRenderer, kMemory, kMobys, kGame, kShaders
 constexpr std::array<const char*, kSectionCount> kSectionNames = {"frame", "renderer", "memory",
                                                                  "mobys", "game", "shaders"};
 
+// Ratchet & Clank's levels by level number, 0 to 18 (the game section's level line).
 constexpr std::array<const char*, 19> kLevelNames = {
     "Veldin", "Novalis", "Aridia", "Kerwan", "Eudora", "Rilgar", "Blarg Station", "Umbris", "Batalia", "Gaspar",
     "Orxon", "Pokitaru", "Hoven", "Gemlik Base", "Oltanis", "Quartu", "Kalebo III", "Drek's Fleet", "Veldin (final)"};
@@ -55,10 +58,11 @@ constexpr std::array<const char*, 16> kButtonNames = {"select", "L3", "R3", "sta
 constexpr std::uint32_t kCellBytes = 128 * 1024;
 constexpr std::size_t kCells = kRamSize / kCellBytes;
 
+// One cell of the memory map (scan_ram): how much of it holds data, and whether it changed.
 struct RamCell {
     std::uint16_t used_pages = 0;  // of 32 (4 KB each) holding anything but zero
-    std::uint64_t sum = 0;
-    bool changed = false;
+    std::uint64_t sum = 0;         // a checksum of its bytes at the last scan
+    bool changed = false;          // the checksum differs from the scan before
 };
 
 // A scripted key or click (OPENRAC_KEYS).
@@ -66,24 +70,27 @@ struct ScriptedInput {
     std::uint64_t frame = 0;  // the window frame it happens at
     int held = 0;             // and that many held pictures later, while paused there
     SDL_Keycode key = 0;      // 0: a click
-    float x = 0.0f, y = 0.0f;
-    bool done = false;
+    float x = 0.0f;           // a click's place in the window, in ImGui's coordinates
+    float y = 0.0f;
+    bool done = false;        // put in the event queue already
 };
 
 // The card a section of the drawer's rows is drawn on (card_begin).
 struct Card {
-    ImVec2 top;
-    float width = 0.0f;
-    int rows = 0;
+    ImVec2 top;          // its top left corner, in the window
+    float width = 0.0f;  // its width in pixels
+    int rows = 0;        // the rows drawn on it so far
 };
 
+// Everything the overlay keeps between frames: what the environment asked for, what the last
+// tick gave it, and what its panels, windows, menus and drawer were set to. One exists (s).
 struct State {
-    std::vector<ScriptedInput> script;
+    std::vector<ScriptedInput> script;  // OPENRAC_KEYS, in order
     SDL_Window* window = nullptr;  // as last drawn into
     int held_pictures = 0;         // pictures of the tick held now
     bool wanted = false;      // shown from the start
     bool configured = false;  // the environment was read
-    bool visible = false;
+    bool visible = false;     // the panel is shown (F3)
     bool initialised = false;  // the ImGui context exists
     bool gl_subset = false;    // drawn with the renderer's GL (imgui_gl.h): the window's is Vulkan's
     std::array<bool, kSectionCount> open_at_start = {true, false, false, false, false, false};
@@ -100,59 +107,59 @@ struct State {
     std::uint8_t analog[4] = {128, 128, 128, 128};
 
     // Pause, step, slow motion.
-    bool paused = false;
-    bool step = false;
-    double stretch = 1.0;
-    long long pause_at = -1;
+    bool paused = false;       // the game is held: no tick runs
+    bool step = false;         // one tick to run while paused
+    double stretch = 1.0;      // a tick lasts this many of the game's (slow motion: 1 to 64)
+    long long pause_at = -1;   // OPENRAC_PAUSE_AT: the tick to pause at; -1 none
     long long reload_at = -1;  // OPENRAC_SHADER_RELOAD: the tick to read the shaders again at
     int held_frames = 0;  // frames to hold before going on by itself (a scripted pause); 0: for good
 
     // The renderer's passes hidden here, by name; wireframe.
-    std::set<std::string> hidden;
-    bool wireframe = false;
-    bool wireframe_set = false;
+    std::set<std::string> hidden;  // the passes' names (OPENRAC_HIDE_PASSES and the switches)
+    bool wireframe = false;        // the world drawn as lines
+    bool wireframe_set = false;    // GL's polygon mode is lines now, to be put back after the frame
 
     // Mobys.
     std::uint32_t selected = 0;  // address; 0 none
     bool follow_hero = false;    // "inspect": the hero is selected, whichever moby he is now
-    bool inspector = false;
-    bool labels = false;
-    bool near_hero = true;
-    float radius = 30.0f;
+    bool inspector = false;    // the moby inspector window is open
+    bool labels = false;       // the mobys' classes written in the picture
+    bool near_hero = true;     // the list holds only the mobys within `radius` of the hero
+    float radius = 30.0f;      // in the game's units
     bool pick = false;  // a click in the game's picture selects the nearest moby
 
     // Memory.
-    bool memory_viewer = false;
-    std::uint32_t view_address = 0x00100000;
-    bool view_words = false;
-    std::array<RamCell, kCells> cells{};
-    std::uint64_t scanned_at = ~0ull;
-    std::uint32_t used_pages = 0;
+    bool memory_viewer = false;               // the memory viewer window is open
+    std::uint32_t view_address = 0x00100000;  // the first address it shows
+    bool view_words = false;                  // it shows words and floats, not bytes
+    std::array<RamCell, kCells> cells{};      // the memory map, as scan_ram last measured it
+    std::uint64_t scanned_at = ~0ull;         // the tick of that scan, divided by 25; ~0 never
+    std::uint32_t used_pages = 0;             // the 4 KB pages holding data, in all the cells
 
     // Screenshots of the window, with the overlay.
     std::string shot_path;        // write the next frame there
     std::uint64_t shot_every = 0;  // OPENRAC_OVERLAY_SHOT=N:PREFIX
-    std::string shot_prefix;
-    std::uint64_t shot_from = 0;
-    int shots = 0;
+    std::string shot_prefix;       // the start of their file names
+    std::uint64_t shot_from = 0;   // OPENRAC_SHOT_FROM: the first tick written
+    int shots = 0;                 // written so far (at most 10,000)
 
     std::string message;  // what the last action said (a reload, a file written)
     std::string notice;   // kept in the picture until cleared (debug_overlay::notice)
     std::string toast;    // the same for an action taken with the panel hidden, shown a moment
-    double toast_until = 0.0;
+    double toast_until = 0.0;  // the ImGui time the toast goes at
     bool alt_alone = false;  // Alt went down and no other key since: its release toggles the menus
     bool developer = false;  // the launcher's developer tools (OPENRAC_DEVELOPER): the level select
-    std::string dump_path = "openrac_frames.jsonl";
+    std::string dump_path = "openrac_frames.jsonl";  // where the frames' measurements are written
 
     // The drawer (drawer_available()).
-    bool drawer_open = false;
+    bool drawer_open = false;    // open, or opening
     float drawer_at = 0.0f;      // how far out: 0 shut, 1 open
     bool keep_paused = false;    // the pause the game is left in when it shuts
     bool drawer_focus = false;   // given the keyboard and gamepad when it opens
     bool drawer_scrolled = false;  // the finger down now has dragged the rows: no row is pressed
     bool shot_when_shut = false;   // a screenshot asked for in it, taken once it is out of the picture
     bool drawer_developer = false;  // its developer tools unfolded
-    Card card;
+    Card card;                      // the card being drawn on
     bool settings_changed = false;  // a setting changed in the drawer or the menus, not applied yet
     bool panel_scrolled = false;    // the panel's drag_scroll
     float ui_scale = 1.0f;         // the screen's density, for rows a thumb can press
@@ -163,23 +170,25 @@ struct State {
     std::vector<SDL_FingerID> taken;
 
     // The processor's load, measured each half second.
-    double cpu_seconds = 0.0;
-    double cpu_wall = 0.0;
-    double cpu_load = 0.0;
+    double cpu_seconds = 0.0;  // the process's processor time at the last measure, in seconds
+    double cpu_wall = 0.0;     // the frame's start then (common/stats.h's clock)
+    double cpu_load = 0.0;     // the load between the last two: 1 is one core busy
 };
 
 // The overlay's state: what the last tick gave it and what its panels and windows were set to.
 // Defined in debug/overlay.cpp; only the window's thread touches it.
 extern State s;
 
+// The last second of frames, averaged (averages()): how many there were, their rates, and where
+// their time went. Times are in milliseconds, per tick or per frame as marked.
 struct Averages {
-    int frames = 0, ticks = 0;
-    double frame_ms = 0.0, worst_ms = 0.0;
-    double fps = 0.0, tps = 0.0;
+    int frames = 0, ticks = 0;              // the frames in the second, and the ticks among them
+    double frame_ms = 0.0, worst_ms = 0.0;  // a frame's interval: the average, the longest
+    double fps = 0.0, tps = 0.0;            // frames and ticks a second
     double game_ms = 0.0, scene_ms = 0.0, wait_ms = 0.0;                         // per tick
     double prepare_ms = 0.0, render_ms = 0.0, present_ms = 0.0, overlay_ms = 0.0, swap_ms = 0.0;  // per frame
-    double gpu_ms = -1.0;
-    int gpu_frames = 0;
+    double gpu_ms = -1.0;  // per frame, over the frames whose GPU times are back; -1 none
+    int gpu_frames = 0;    // those frames
 };
 
 // The colours of the panels' text: a warning, a good result, a note, a selection.
