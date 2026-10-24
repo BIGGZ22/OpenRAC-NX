@@ -9,7 +9,7 @@
 #include <span>
 #include <vector>
 
-namespace openrac::viewer {
+namespace openrac::scene {
 
 // RAC1's sparse baked camera grid; see docs/engine/formats/OCCLUSION.md.
 // No previous-cell state: unsupported camera positions conservatively show everything.
@@ -99,4 +99,4 @@ struct Pvs {
     }
 };
 
-}  // namespace openrac::viewer
+}  // namespace openrac::scene

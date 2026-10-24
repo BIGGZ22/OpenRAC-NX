@@ -25,7 +25,7 @@ struct BakeSceneExport {
 // Format 3 has no terrain light selector, so the initial experiment explicitly
 // selects one light set instead of summing every set in the level.
 BakeSceneExport export_probe_scene(
-    const viewer::LevelData& level,
+    const scene::LevelData& level,
     unsigned light_set,
     Float3 environment,
     bool analyze_liquids = true

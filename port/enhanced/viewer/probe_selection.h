@@ -4,7 +4,7 @@
 #include "renderer/renderer.h"
 #include "renderer/shader.h"
 
-namespace openrac::viewer {
+namespace openrac::scene {
 // Compute writes complete per-tile candidate masks. Fragments consume the
 // same GPU buffer through a texture-buffer view, without selection readback.
 class ProbeSelection {
@@ -40,4 +40,4 @@ private:
     unsigned m_count = 0;
     bool m_started = false;
 };
-}  // namespace openrac::viewer
+}  // namespace openrac::scene

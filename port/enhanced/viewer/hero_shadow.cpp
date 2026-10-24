@@ -5,7 +5,7 @@
 #include <cstring>
 #include <stdexcept>
 
-namespace openrac::viewer {
+namespace openrac::scene {
 std::optional<bool> hero_airborne(std::span<const std::uint8_t> ram, std::uint32_t hero) {
     // Collision/ground-probe update clears air_frames on landing and
     // increments it while off the ground, including a zero-speed jump apex.
@@ -52,4 +52,4 @@ HeroShadowProjection hero_shadow_projection(
     result.matrix = multiply(projection, view);
     return result;
 }
-}  // namespace openrac::viewer
+}  // namespace openrac::scene

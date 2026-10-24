@@ -111,9 +111,9 @@ void check() {
     std::string error;
     renderer::Shader fill, sample;
     CHECK(fill.build("early lighting fixture depth", vertex, depth_fragment, error));
-    std::string source = viewer::probe_shader_source(fragment);
+    std::string source = scene::probe_shader_source(fragment);
     // Common uniforms are already declared above for the reference path.
-    std::string reconstruction = viewer::shaders::early_lighting_glsl;
+    std::string reconstruction = scene::shaders::early_lighting_glsl;
     for (const char* line : {"uniform mat4 early_projection;\n", "uniform vec2 early_extent;\n"}) {
         reconstruction.erase(reconstruction.find(line), std::char_traits<char>::length(line));
     }
@@ -122,7 +122,7 @@ void check() {
     if (!error.empty()) {
         std::fprintf(stderr, "%s\n", error.c_str());
     }
-    viewer::ProbeLighting probes;
+    scene::ProbeLighting probes;
     lighting::ProbeGrid grid;
     grid.origin = {-16, -16, -.025f};
     grid.spacing = {32, 32, .05f};
@@ -159,7 +159,7 @@ void check() {
     glActiveTexture(GL_TEXTURE0);
     float ao_strength = 0;
     int hero_mode = 0;
-    viewer::EarlyLighting early;
+    scene::EarlyLighting early;
     renderer::TexturePool textures;
     unsigned vao = 0;
     glGenVertexArrays(1, &vao);
@@ -168,7 +168,7 @@ void check() {
     input.camera.position = {0, 0, 8};
     input.camera.view = renderer::look_along(input.camera.position, {0, 0, -1}, {0, 1, 0});
     const auto bind = [&](const renderer::Shader& shader, bool shadows) {
-        probes.bind(shader, viewer::Layer::Terrain, true, &input.camera);
+        probes.bind(shader, scene::Layer::Terrain, true, &input.camera);
         glUniform1i(shader.uniform("early_ao_enabled"), ao_strength > 0 ? 1 : 0);
         glUniform1i(shader.uniform("early_ao"), 18);
         glUniform1i(shader.uniform("early_ao_scale"), 2);
@@ -411,7 +411,7 @@ int main() {
         std::puts(why.c_str());
         return test::kSkip;
     }
-    if (!viewer::EarlyLighting::supported()) {
+    if (!scene::EarlyLighting::supported()) {
         return test::kSkip;
     }
     check();

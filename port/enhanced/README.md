@@ -10,13 +10,13 @@ Start with the [lighting guide](lighting/README.md) for builds, bakes and contro
 | --- | --- |
 | `lighting/` | Probe data, sampling, emission and transport |
 | `renderer/` | GTAO, cached texture upscaling and shaders |
-| `viewer/` | Probe selection, early lighting and shadows |
+| `viewer/` | Probe selection, early lighting and shadows, built with the level renderer into `openrac_scene_renderer`, in its namespace `openrac::scene` ([scene/README.md](../scene/README.md)) |
 | `game/` | Authored brightness tracking |
 | `tools/probes/` | Offline baker and bake tools |
 | `tests/`, `docs/` | Tests and feature documentation |
 
 Shared integration and core Vulkan optimisations stay in `port/renderer/` and
-`port/viewer/`. Editor bake inputs live in `editor/enhanced/`.
+`port/scene/`. Editor bake inputs live in `editor/enhanced/`.
 
 Texture upscaling and its 64 MiB cache live in `renderer/texture_upscale.*`.
 The normal texture pool accepts an optional `UpscaledTextureColours` provider; it

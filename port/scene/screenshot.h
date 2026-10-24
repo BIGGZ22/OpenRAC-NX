@@ -9,11 +9,11 @@
 #include <string>
 #include <vector>
 
-namespace openrac::viewer {
+namespace openrac::scene {
 
 // `rgba` is width x height RGBA bytes, top row first.
 bool write_png(
     const std::string& path, int width, int height, const std::vector<std::uint8_t>& rgba
 );
 
-}  // namespace openrac::viewer
+}  // namespace openrac::scene

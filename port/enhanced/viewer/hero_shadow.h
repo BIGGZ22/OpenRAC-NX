@@ -6,7 +6,7 @@
 
 #include "renderer/math.h"
 
-namespace openrac::viewer {
+namespace openrac::scene {
 struct HeroShadowProjection {
     renderer::Mat4 matrix = renderer::identity();
     renderer::Vec3 direction{0, 0, -1};  // light travel direction
@@ -18,4 +18,4 @@ std::optional<bool> hero_airborne(std::span<const std::uint8_t> ram, std::uint32
 HeroShadowProjection hero_shadow_projection(
     renderer::Vec3 centre, renderer::Vec3 main_direction, bool airborne
 );
-}  // namespace openrac::viewer
+}  // namespace openrac::scene

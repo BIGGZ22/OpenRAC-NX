@@ -12,8 +12,10 @@ programs read through the game's profile (`game/common/profile.h`).
 
 Libraries `openrac_scene` (the CPU side: the level's loading, the poses, the shadows, the PNG) and
 `openrac_scene_renderer` (the level renderer, together with the enhanced renderer's passes it calls;
-see Depends on). The files came from `viewer/` (restructure package P2-02) and keep its namespace,
-`openrac::viewer`, until P2-37 renames it `openrac::scene`. Every user includes them from `scene/`.
+see Depends on), in the namespace `openrac::scene`. The files came from `viewer/` (restructure
+packages P2-02 and P2-37). The enhanced passes built into `openrac_scene_renderer`
+(`enhanced/viewer/`) share the namespace while they share the library; the viewer program's own
+code (`viewer/camera.h`) keeps `openrac::viewer`.
 
 ## Interface
 

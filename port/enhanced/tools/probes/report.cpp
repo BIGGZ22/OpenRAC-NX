@@ -20,7 +20,7 @@ namespace openrac::lighting {
 // authored normals/positions to expose coverage hidden by fallback. These are
 // view-independent samples, without the fragment shader's camera-facing flip.
 void report_terrain_coverage(
-    const viewer::LevelData& level,
+    const scene::LevelData& level,
     const ProbeVolume& volume,
     const ProbeVolume* coarse,
     std::ostream& output
@@ -36,7 +36,7 @@ void report_terrain_coverage(
     std::size_t coarse_covered = 0, combined_covered = 0, compared = 0;
     double difference_squared = 0, reference_squared = 0;
 
-    for (const auto& instance : level.instances[static_cast<std::size_t>(viewer::Layer::Terrain)]) {
+    for (const auto& instance : level.instances[static_cast<std::size_t>(scene::Layer::Terrain)]) {
         const auto& m = instance.matrix;
         const Float3 a{m[0], m[1], m[2]}, b{m[4], m[5], m[6]}, c{m[8], m[9], m[10]};
         const auto ca = renderer::cross(b, c), cb = renderer::cross(c, a),
@@ -187,7 +187,7 @@ void write_bake_file(const fs::path& path, std::span<const std::uint8_t> bytes) 
 
 // Describe the same transport inputs for standalone and persistent bakes.
 std::string describe_probe_bake(
-    const viewer::LevelData& level,
+    const scene::LevelData& level,
     const BakeSceneExport& exported,
     const ProbeGrid& grid,
     const BakeSettings& settings,

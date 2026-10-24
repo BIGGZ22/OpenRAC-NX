@@ -10,7 +10,7 @@
 #include "renderer/shader.h"
 #include "scene/level.h"
 
-namespace openrac::viewer {
+namespace openrac::scene {
 std::string probe_mesh_fragment();
 std::string probe_early_fragment();
 std::string probe_shader_source(std::string source);
@@ -108,4 +108,4 @@ private:
     renderer::Shader m_sphere_shader;
     unsigned m_sphere_vao = 0, m_sphere_buffer = 0, m_sphere_indices = 0;
 };
-}  // namespace openrac::viewer
+}  // namespace openrac::scene

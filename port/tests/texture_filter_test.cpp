@@ -295,7 +295,7 @@ void main(){
     for (const auto& path : cases) {
         renderer::Shader material;
         std::string vs = material_vertex;
-        std::string fs = path.kind == 1 ? viewer::shaders::sky_frag : viewer::probe_mesh_fragment();
+        std::string fs = path.kind == 1 ? scene::shaders::sky_frag : scene::probe_mesh_fragment();
 
         if (path.kind == 2) {
             fs = renderer::shaders::direct_frag;

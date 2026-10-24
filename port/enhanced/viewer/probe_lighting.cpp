@@ -20,7 +20,7 @@
 #include "renderer/gl.h"
 #include "viewer_shaders.h"
 
-namespace openrac::viewer {
+namespace openrac::scene {
 using namespace openrac::gl;
 
 namespace {
@@ -766,4 +766,4 @@ void ProbeLighting::release() {
     m_camera_started = false;
     m_region_time = {};
 }
-}  // namespace openrac::viewer
+}  // namespace openrac::scene

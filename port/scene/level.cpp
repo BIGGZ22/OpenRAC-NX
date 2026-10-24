@@ -17,7 +17,7 @@
 #include "common/json.h"
 #include "common/log.h"
 
-namespace openrac::viewer {
+namespace openrac::scene {
 
 namespace fs = std::filesystem;
 
@@ -834,4 +834,4 @@ bool load_level(const fs::path& dir, LevelData& out, std::string& error, const f
     return true;
 }
 
-}  // namespace openrac::viewer
+}  // namespace openrac::scene

@@ -138,7 +138,7 @@ int main() {
         manifest << R"({"game":"rac1","version":"ntsc","level":9,
           "bake_inputs":{"liquid":"rac1-ntsc-gaspar-v1"}})";
     }
-    viewer::LevelData level;
+    scene::LevelData level;
     level.dir = root;
     level.level = 9;
     level.light_sets.resize(256);
@@ -149,12 +149,12 @@ int main() {
     level.vertices[1].position[0] = 1;
     level.vertices[2].position[1] = 1;
     level.indices = {0, 1, 2};
-    viewer::Model model;
+    scene::Model model;
     model.primitives.push_back({0, 3, 0, -1});
     level.models.push_back(model);
-    viewer::Instance instance;
+    scene::Instance instance;
     instance.matrix = renderer::identity();
-    level.instances[std::size_t(viewer::Layer::Terrain)].push_back(instance);
+    level.instances[std::size_t(scene::Layer::Terrain)].push_back(instance);
     const auto baked = lighting::export_probe_scene(level, 0, {});
     const auto identity = lighting::export_probe_scene(level, 0, {}, false);
     CHECK(baked.automatic_liquid_triangles == 98 && baked.scene.triangles.size() == 99);

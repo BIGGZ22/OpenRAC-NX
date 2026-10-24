@@ -117,7 +117,7 @@ void load_level_program(int level) {
 
 #ifdef OPENRAC_FRONTEND
 int check_levels(const fs::path& levels) {
-    const fs::path stamp = levels / std::format("verified-{}.json", viewer::kManifestFormat);
+    const fs::path stamp = levels / std::format("verified-{}.json", scene::kManifestFormat);
     std::error_code ignored;
     fs::remove(stamp, ignored);
     fs::remove(levels / "verified.json", ignored);  // the stamp before formats were named
@@ -134,10 +134,10 @@ int check_levels(const fs::path& levels) {
 
     for (const int id : ids) {
         const fs::path dir = levels / std::format("level_{:02d}", id);
-        viewer::LevelData level;
+        scene::LevelData level;
         std::string error;
 
-        if (!viewer::load_level(dir, level, error)) {
+        if (!scene::load_level(dir, level, error)) {
             log::error("level {:02d}: {}", id, error);
             ++bad;
             newer += error.find("newer than this game") != std::string::npos;
@@ -197,7 +197,7 @@ int check_levels(const fs::path& levels) {
     if (std::FILE* f = std::fopen(stamp.string().c_str(), "wb")) {
         const std::string text = std::format(
             "{{\"format\": {}, \"levels\": {}, \"program\": \"{}\"}}\n",
-            viewer::kManifestFormat,
+            scene::kManifestFormat,
             ids.size(),
             program_name()
         );

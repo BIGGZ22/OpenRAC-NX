@@ -32,7 +32,7 @@
 #include "renderer/shader.h"
 #include "scene/level.h"
 
-namespace openrac::viewer {
+namespace openrac::scene {
 
 class LevelScene {
 public:
@@ -452,4 +452,4 @@ private:
     Layer m_layer;
 };
 
-}  // namespace openrac::viewer
+}  // namespace openrac::scene

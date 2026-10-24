@@ -845,13 +845,13 @@ void log_mobys_near_hero(std::span<const std::uint8_t> ram, const host::GameStat
 // address and joints, the joint palette they index, the hero's shadow, and the mobys the game
 // drew into a texture.
 struct TickMobys {
-    std::vector<viewer::Instance> live;
+    std::vector<scene::Instance> live;
     std::vector<std::uint32_t> addresses;
     std::vector<int> joints;
-    std::vector<viewer::LevelScene::JointColumns> palette;
+    std::vector<scene::LevelScene::JointColumns> palette;
     std::vector<renderer::ShadowCapsule> shadows;
     std::uint32_t shadow_moby = 0;
-    viewer::MobyShadowState shadow_state;
+    scene::MobyShadowState shadow_state;
     std::vector<Kept::TargetMoby> target_mobys;
 };
 
@@ -870,13 +870,13 @@ TickMobys pose_mobys(
     // its joint palette goes to the scene, which skins the class's mesh with it. OPENRAC_ANIM=0
     // draws every moby in its bind pose.
     static const bool animate = env::flag(env::Var::Anim);
-    std::vector<viewer::Instance> live;
+    std::vector<scene::Instance> live;
     std::vector<std::uint32_t> live_addresses;
     std::vector<int> live_joints;
-    std::vector<viewer::LevelScene::JointColumns> palette;
+    std::vector<scene::LevelScene::JointColumns> palette;
     std::vector<renderer::ShadowCapsule> shadows;
     std::uint32_t shadow_moby = 0;
-    viewer::MobyShadowState shadow_state;
+    scene::MobyShadowState shadow_state;
     std::vector<Kept::TargetMoby> target_mobys;
     // Mobys the game drew into a texture, and the ones it drew that are not in its list. The game
     // renders some mobys into a target the 2D layer then copies onto the screen: the vendor's item
@@ -961,10 +961,10 @@ TickMobys pose_mobys(
         if (cls == g->level.moby_classes.end()) {
             continue;
         }
-        viewer::Instance instance{cls->second.first, m.matrix, {1, 1, 1, 1}};
+        scene::Instance instance{cls->second.first, m.matrix, {1, 1, 1, 1}};
         instance.occlusion = m.occlusion;
         if (extra || into_texture.contains(m.address)) {
-            instance.occlusion = viewer::Pvs::always;
+            instance.occlusion = scene::Pvs::always;
         }
         // Authored bounds do not cover debug stand-ins or replacement meshes.
         if (!cls->second.second && g->level.overridden_models == 0) {
@@ -1032,7 +1032,7 @@ TickMobys pose_mobys(
             }
             if (address == m.address) {
                 instance.world_sphere = {};  // this object belongs to another camera's space
-                instance.occlusion = viewer::Pvs::always;
+                instance.occlusion = scene::Pvs::always;
             }
             if (address == m.address
                 && (camera.camera_position != state.camera_position
@@ -1046,7 +1046,7 @@ TickMobys pose_mobys(
         const int joints = g->level.models[instance.model].joints;
         if (debug && g->index % 100 == 0 && m.class_id == 0) {
             // The hero, for bring-up: where he is and what his animation fields and pose say.
-            const auto pose = viewer::moby_palette(ram, m.address);
+            const auto pose = scene::moby_palette(ram, m.address);
             const std::uint8_t* b = ram.data() + m.address;
             float t = 0.0f;
             std::memcpy(&t, b + 0x54, 4);
@@ -1078,13 +1078,13 @@ TickMobys pose_mobys(
             );
         }
         if (animate && joints > 0) {
-            const auto pose = viewer::moby_palette(ram, m.address);
+            const auto pose = scene::moby_palette(ram, m.address);
             if (!pose.empty()) {
                 instance.palette = static_cast<int>(palette.size());
                 for (int j = 0; j < joints; ++j) {
                     // Columns: the images of the axes, then the translation, which the palette
                     // has in packed units (the mesh is in packed units / 1024).
-                    viewer::LevelScene::JointColumns c{
+                    scene::LevelScene::JointColumns c{
                         1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1
                     };
                     if (static_cast<std::size_t>(j) < pose.size()) {
@@ -1117,9 +1117,9 @@ TickMobys pose_mobys(
             && m.class_id == 0 && !extra && instance.moby_light[3] < 1.5f
             && instance.tint[3] > 0.0f) {
             const auto directions = OPENRAC_DATA(g->profile->shadow_directions());
-            shadow_state = viewer::moby_shadow_state(ram, m.address, directions, state.view());
+            shadow_state = scene::moby_shadow_state(ram, m.address, directions, state.view());
             if (shadow_state.enabled) {
-                shadows = viewer::moby_shadows(ram, m.address, m.matrix, shadow_state.scale);
+                shadows = scene::moby_shadows(ram, m.address, m.matrix, shadow_state.scale);
                 shadow_moby = m.address;
             }
             if (debug && g->index % 100 == 0) {
@@ -1217,7 +1217,7 @@ void keep_tick(
     k.prev_shadow_state = k.shadow_state;
     k.shadow_state = mobys.shadow_state;
     k.hero_airborne = g->profile->hero_state() != 0
-                          ? viewer::hero_airborne(ram, OPENRAC_DATA(g->profile->hero_state()))
+                          ? scene::hero_airborne(ram, OPENRAC_DATA(g->profile->hero_state()))
                           : std::nullopt;
     k.state = state;
     k.has_state = true;

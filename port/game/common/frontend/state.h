@@ -52,17 +52,17 @@ struct Kept {
     int level = -3;  // the level the mobys belong to: another one starts over
     host::GameState state, prev_state;
     bool has_state = false, has_prev_state = false;
-    std::vector<viewer::Instance> live;
+    std::vector<scene::Instance> live;
     std::vector<std::uint32_t> addresses;  // each live moby's address, for its last matrix
     std::unordered_map<std::uint32_t, renderer::Mat4> prev_matrices;
     std::unordered_map<std::uint32_t, std::array<float, 4>> prev_spheres;
-    std::vector<viewer::LevelScene::JointColumns> palette;
+    std::vector<scene::LevelScene::JointColumns> palette;
     std::vector<renderer::ShadowCapsule> shadows, prev_shadows;
     std::uint32_t shadow_moby = 0, prev_shadow_moby = 0;
-    viewer::MobyShadowState shadow_state, prev_shadow_state;
+    scene::MobyShadowState shadow_state, prev_shadow_state;
     std::optional<bool> hero_airborne;
     // The last tick's poses, by moby: where its joints start in prev_palette and how many.
-    std::vector<viewer::LevelScene::JointColumns> prev_palette;
+    std::vector<scene::LevelScene::JointColumns> prev_palette;
     std::unordered_map<std::uint32_t, std::pair<int, int>> prev_poses;
     std::vector<int> joints;            // each live moby's joints in `palette` (0 without a pose)
     std::vector<std::uint8_t> packets;  // the 2D path
@@ -79,7 +79,7 @@ struct Kept {
     // drawn at its marker in the 2D path (renderer::FrameInput::target_mobys).
     struct TargetMoby {
         std::uint32_t address = 0;
-        viewer::Instance instance;
+        scene::Instance instance;
         host::GameState camera;
     };
 
@@ -109,8 +109,8 @@ struct State {
     // The last frame the game drew its world in: what its draw buffer still holds on a frame it
     // draws nothing in (the tick a page menu opens), and so what reading the frame back answers.
     renderer::FrameBuffer last_world;
-    viewer::LevelData level;
-    viewer::LevelScene scene;
+    scene::LevelData level;
+    scene::LevelScene scene;
     int loaded = -2;  // the level whose geometry is uploaded; -2 none
     std::uint64_t index = 0;
     // Every image the game sent outside the display list, oldest first, the latest per

@@ -27,7 +27,7 @@ renderer::Camera camera(float height) {
 
 void cpu() {
     const auto c = camera(12);
-    const auto cascades = viewer::sun_cascades(c, {1, 0, -1}, {-100, -100, -10}, {100, 100, 200});
+    const auto cascades = scene::sun_cascades(c, {1, 0, -1}, {-100, -100, -10}, {100, 100, 200});
     CHECK(std::abs(cascades.near_distance - .1f) < 1e-4f);
     CHECK(std::abs(cascades.ends.back() - 256) < 1e-3f);
     CHECK(cascades.ends[0] < 12);  // reserve the first cascade for nearby receivers
@@ -61,8 +61,7 @@ void cpu() {
     auto moved = c;
     moved.position[1] += .00001f;
     moved.view = renderer::look_along(moved.position, {0, 0, -1}, {0, 1, 0});
-    const auto snapped =
-        viewer::sun_cascades(moved, {1, 0, -1}, {-100, -100, -10}, {100, 100, 200});
+    const auto snapped = scene::sun_cascades(moved, {1, 0, -1}, {-100, -100, -10}, {100, 100, 200});
     for (unsigned i = 0; i < 4; ++i) {
         CHECK(std::abs(cascades.matrices[i][12] - snapped.matrices[i][12]) < 1e-6f);
         CHECK(std::abs(cascades.matrices[i][13] - snapped.matrices[i][13]) < 1e-6f);
@@ -73,7 +72,7 @@ void cpu() {
     CHECK(upstream[2] > near[2]);  // reverse Z, including off-camera casters
     bool rejected = false;
     try {
-        viewer::sun_cascades(c, {0, 0, 0}, {}, {}, 256);
+        scene::sun_cascades(c, {0, 0, 0}, {}, {}, 256);
     } catch (const std::exception&) {
         rejected = true;
     }
@@ -95,8 +94,8 @@ void caster_hulls() {
             c.view = renderer::look_along(c.position, {.3f, .7f, -.6f}, {0, 0, 1});
             c.projection = renderer::perspective_reversed(1.1f, aspect, .1f, 512);
             const auto cascades =
-                viewer::sun_cascades(c, direction, {-500, -500, -100}, {500, 500, 300});
-            for (unsigned i = 0; i < viewer::kSunCascades; ++i) {
+                scene::sun_cascades(c, direction, {-500, -500, -100}, {500, 500, 300});
+            for (unsigned i = 0; i < scene::kSunCascades; ++i) {
                 const auto& volume = cascades.casters[i];
                 CHECK(volume.plane_count >= 3 && volume.plane_count <= 6);
                 const auto& matrix = cascades.matrices[i];
@@ -105,7 +104,7 @@ void caster_hulls() {
                     / std::sqrt(
                         matrix[0] * matrix[0] + matrix[4] * matrix[4] + matrix[8] * matrix[8]
                     );
-                const float texel = 2 * radius / viewer::kSunResolutions[i];
+                const float texel = 2 * radius / scene::kSunResolutions[i];
                 const float previous = i ? cascades.ends[i - 1] : cascades.near_distance;
                 const float start =
                     i ? previous
@@ -176,7 +175,7 @@ void main() {
     gl_Position = vec4(p * 2.0 - 1.0, 0.0, 1.0);
 }
 )glsl";
-    const std::string fragment = std::string("#version 410 core\n") + viewer::shaders::probes_glsl
+    const std::string fragment = std::string("#version 410 core\n") + scene::shaders::probes_glsl
                                  + R"glsl(layout(location = 0) out vec4 out_colour;
 uniform int filter_mode;
 void main() {
@@ -251,8 +250,8 @@ void main() {
     gl_Position = vec4(p * 2.0 - 1.0, 0, 1);
 }
 )";
-    auto fragment = std::string("#version 410 core\n") + viewer::shaders::probes_glsl
-                    + R"(uniform int test_kind;
+    auto fragment =
+        std::string("#version 410 core\n") + scene::shaders::probes_glsl + R"(uniform int test_kind;
 uniform int tent_kernel;
 uniform vec2 test_slope;
 layout(location = 0) out vec4 result;
@@ -365,7 +364,7 @@ void main() {
 }
 
 void gpu() {
-    viewer::LevelData level;
+    scene::LevelData level;
     level.light_sets.resize(256);
     level.light_sets[0] = .6f;  // red sun
     level.light_sets[9] = .4f;  // green directional fill
@@ -381,7 +380,7 @@ void gpu() {
          {3, 3, 8},
          {-3, 3, 8}};
     for (auto p : points) {
-        viewer::Vertex v{};
+        scene::Vertex v{};
         std::copy(p.begin(), p.end(), v.position);
         v.normal[2] = 1;
         v.light_slot = -1;
@@ -393,7 +392,7 @@ void gpu() {
     }
     level.indices = {0, 1, 2, 0, 2, 3, 4, 5, 6, 4, 6, 7};
     level.materials.push_back({});
-    viewer::Model plane, block;
+    scene::Model plane, block;
     plane.primitives.push_back({0, 6, 0});
     plane.min = {-300, -300, 0};
     plane.max = {300, 300, 0};
@@ -401,8 +400,8 @@ void gpu() {
     block.min = {-3, -3, 8};
     block.max = {3, 3, 8};
     level.models = {plane, block};
-    level.instances[static_cast<std::size_t>(viewer::Layer::Terrain)].push_back({});
-    viewer::Instance caster;
+    level.instances[static_cast<std::size_t>(scene::Layer::Terrain)].push_back({});
+    scene::Instance caster;
     caster.model = 1;
     caster.occlusion = 1;
     // Mark this caster hidden in every camera cell used by the fixture.
@@ -425,10 +424,10 @@ void gpu() {
     put_pvs(160, 0);
     put_pvs(162, 1);
     put_pvs(164, 0);
-    CHECK(!viewer::Pvs::visible(level.pvs.select({0, 0, 12}), caster.occlusion));
-    level.instances[static_cast<std::size_t>(viewer::Layer::Ties)].push_back(caster);
+    CHECK(!scene::Pvs::visible(level.pvs.select({0, 0, 12}), caster.occlusion));
+    level.instances[static_cast<std::size_t>(scene::Layer::Ties)].push_back(caster);
     renderer::Renderer renderer;
-    viewer::LevelScene scene;
+    scene::LevelScene scene;
     std::string error;
     if (!scene.upload(level, renderer.textures(), error)) {
         std::fprintf(stderr, "scene upload: %s\n", error.c_str());
@@ -450,7 +449,7 @@ void gpu() {
     CHECK(test::shadow_probe_fixture(scene, error));
     CHECK(scene.enable_sun_shadow(true, error));
     CHECK(
-        renderer.add(std::make_unique<viewer::LayerRenderer>(scene, viewer::Layer::Terrain), error)
+        renderer.add(std::make_unique<scene::LayerRenderer>(scene, scene::Layer::Terrain), error)
     );
     CHECK(renderer.init(error));
     // Keep the tested shadow interior several half-resolution samples wide,
@@ -498,7 +497,7 @@ void gpu() {
     // A receiver in each cascade: verify actual depth sampling and 0.1 floor
     // independently for red primary and green fill, in linear light.
     const auto cascade_ends =
-        viewer::sun_cascades(camera(12), {1, 0, -1}, {-300, -300, 0}, {300, 300, 8}).ends;
+        scene::sun_cascades(camera(12), {1, 0, -1}, {-300, -300, 0}, {300, 300, 8}).ends;
     // The first near interval is too small for the 8-unit-high fixture caster,
     // so test it near its far end, and sample the remaining interval midpoints.
     for (float height :
@@ -541,7 +540,7 @@ void gpu() {
     // Blending at each split cannot introduce a dark/light seam on a fully
     // shadowed receiver. The final cascade fades smoothly toward unshadowed.
     const auto splits =
-        viewer::sun_cascades(camera(12), {1, 0, -1}, {-300, -300, 0}, {300, 300, 8}).ends;
+        scene::sun_cascades(camera(12), {1, 0, -1}, {-300, -300, 0}, {300, 300, 8}).ends;
     for (unsigned cascade = 0; cascade < 3; ++cascade) {
         for (float delta : {-.01f, .01f}) {
             const float height = splits[cascade] + delta;
@@ -587,7 +586,7 @@ void gpu() {
     scene.set_probe_view(3);
     // An off-camera caster above/behind the camera still shadows the origin.
     caster.matrix = renderer::translation({-30, 0, 22});
-    scene.set_instances(viewer::Layer::Ties, {caster});
+    scene.set_instances(scene::Layer::Ties, {caster});
     renderer.render(input, rt);
     const auto offscreen = target.read_rgba();
     CHECK(linear(offscreen[(middle * size + middle) * 4]) < .06f);
@@ -595,7 +594,7 @@ void gpu() {
         // These copies include space inside the square maps but outside the
         // receiver footprints. Prove actual work is removed without changing
         // either CPU-reference or GPU-driven shadow pixels.
-        std::vector<viewer::Instance> field{caster};
+        std::vector<scene::Instance> field{caster};
         for (int x = -120; x <= 120; x += 30) {
             for (int y = -120; y <= 120; y += 30) {
                 auto copy = caster;
@@ -603,7 +602,7 @@ void gpu() {
                 field.push_back(copy);
             }
         }
-        scene.set_instances(viewer::Layer::Ties, field);
+        scene.set_instances(scene::Layer::Ties, field);
         receiver_reference(true);
         renderer.render(input, rt);
         const auto square = target.read_rgba();
@@ -629,7 +628,7 @@ void gpu() {
         }
         CHECK(false);
     };
-    std::vector<viewer::Instance> spread{caster};
+    std::vector<scene::Instance> spread{caster};
     for (int i = 0; i < 20; ++i) {
         auto distant = caster;
         distant.matrix = renderer::multiply(
@@ -638,7 +637,7 @@ void gpu() {
         );
         spread.push_back(distant);
     }
-    scene.set_instances(viewer::Layer::Ties, spread);
+    scene.set_instances(scene::Layer::Ties, spread);
     culling_reference(true);
     renderer.render(input, rt);
     const auto group_reference = target.read_rgba();
@@ -656,7 +655,7 @@ void gpu() {
     // The colour instance buffer is independent of shadow compaction. Draw
     // the same class normally and compare both culling paths again.
     auto* ties_colour =
-        renderer.add(std::make_unique<viewer::LayerRenderer>(scene, viewer::Layer::Ties), error);
+        renderer.add(std::make_unique<scene::LayerRenderer>(scene, scene::Layer::Ties), error);
     CHECK(ties_colour);
     culling_reference(true);
     renderer.render(input, rt);
@@ -669,7 +668,7 @@ void gpu() {
     for (auto& instance : spread) {
         instance.matrix = renderer::translation({10000, 10000, 0});
     }
-    scene.set_instances(viewer::Layer::Ties, spread);
+    scene.set_instances(scene::Layer::Ties, spread);
     renderer.render(input, rt);
     for (const auto& counts : scene.sun_culling()) {
         CHECK(counts.compacted_groups == 0);
@@ -680,7 +679,7 @@ void gpu() {
     animated.matrix = renderer::translation({10000, 10000, 0});
     animated.palette = 0;
     scene.set_palette({renderer::translation({-10030, -10000, 22})});
-    scene.set_instances(viewer::Layer::Mobys, {animated});
+    scene.set_instances(scene::Layer::Mobys, {animated});
     culling_reference(true);
     renderer.render(input, rt);
     const auto posed_reference = target.read_rgba();
@@ -698,7 +697,7 @@ void gpu() {
     auto remote = animated;
     remote.matrix = renderer::translation({20000, 20000, 0});
     remote.world_sphere = {9970, 10000, 22, 8};
-    scene.set_instances(viewer::Layer::Mobys, {animated, remote});
+    scene.set_instances(scene::Layer::Mobys, {animated, remote});
     culling_reference(true);
     renderer.render(input, rt);
     const auto sphere_reference = target.read_rgba();
@@ -712,18 +711,18 @@ void gpu() {
         CHECK(counts.rejected >= 1);
         CHECK(counts.unbounded == 0);
     }
-    scene.set_instances(viewer::Layer::Mobys, {remote});
+    scene.set_instances(scene::Layer::Mobys, {remote});
     renderer.render(input, rt);
     CHECK(linear(target.read_rgba()[(middle * size + middle) * 4]) > .3f);
-    scene.set_instances(viewer::Layer::Mobys, {});
-    scene.set_instances(viewer::Layer::Ties, {caster});
+    scene.set_instances(scene::Layer::Mobys, {});
+    scene.set_instances(scene::Layer::Ties, {caster});
     // Disabling the modern route restores the unshadowed result.
     input.sun_pixel_shadow = false;
     renderer.render(input, rt);
     CHECK(linear(target.read_rgba()[(middle * size + middle) * 4]) > .3f);
     // Alpha-tested depth casting and the route without a probe asset.
     scene.release();
-    viewer::Material transparent;
+    scene::Material transparent;
     transparent.colour[3] = 0;
     transparent.cutout = true;
     level.materials.push_back(transparent);
@@ -761,10 +760,10 @@ void gpu() {
             level.vertices[5].colour[3] = 0.25f;
             level.models[1].primitives = {{6, 3, 0}, {9, 3, 0}};
         }
-        auto& placement = level.instances[static_cast<std::size_t>(viewer::Layer::Ties)][0];
+        auto& placement = level.instances[static_cast<std::size_t>(scene::Layer::Ties)][0];
         placement.tint[3] = mode == 1 ? 0.25f : mode == 5 ? 0.5f : 1.0f;
         if (mode == 2) {
-            level.materials[1] = viewer::Material{};
+            level.materials[1] = scene::Material{};
             level.materials[1].cutout = true;
             level.materials[1].image = 0;
             level.models[1].primitives[0].material = 1;
@@ -821,14 +820,14 @@ void gpu() {
 #if defined(OPENRAC_VULKAN)
         scene.release();
         level.models.resize(2);
-        level.materials[0] = viewer::Material{};
-        level.materials[1] = viewer::Material{};
+        level.materials[0] = scene::Material{};
+        level.materials[1] = scene::Material{};
         level.materials[1].cutout = true;
         level.materials[1].image = 0;
         for (unsigned i = 4; i < 8; ++i) {
             level.vertices[i].colour[3] = 1;
         }
-        auto& casters = level.instances[static_cast<std::size_t>(viewer::Layer::Ties)];
+        auto& casters = level.instances[static_cast<std::size_t>(scene::Layer::Ties)];
         casters.clear();
         // Alternate opaque/cutout ranges in many distinct model groups. All
         // use the shared geometry and GPU instance page, but model-order
@@ -902,8 +901,8 @@ void gpu() {
         // Share the opaque colour rounds across enabled static layers. Keep
         // both alpha-tested and blended texels, and compare against the old
         // layer order using exactly the same depth prepass and GPU culling.
-        renderer.add(std::make_unique<viewer::LayerRenderer>(scene, viewer::Layer::Shrubs), error);
-        auto& shrubs = level.instances[static_cast<std::size_t>(viewer::Layer::Shrubs)];
+        renderer.add(std::make_unique<scene::LayerRenderer>(scene, scene::Layer::Shrubs), error);
+        auto& shrubs = level.instances[static_cast<std::size_t>(scene::Layer::Shrubs)];
         shrubs.assign(casters.begin() + 12, casters.end());
         casters.resize(12);
         // The first layer is entirely solid, so its opaque work can join
@@ -966,8 +965,8 @@ void gpu() {
 }
 
 // Returns the static shadow cache's key of cascade `i` of `cascades` at static generation 1.
-viewer::StaticShadowKey static_key(const viewer::SunCascades& cascades, unsigned i) {
-    viewer::StaticShadowKey key;
+scene::StaticShadowKey static_key(const scene::SunCascades& cascades, unsigned i) {
+    scene::StaticShadowKey key;
     key.valid = true;
     key.matrix = cascades.matrices[i];
     key.planes = cascades.casters[i].planes;
@@ -980,25 +979,25 @@ viewer::StaticShadowKey static_key(const viewer::SunCascades& cascades, unsigned
 // change of the sun, of the static layers, of the hero's casters or of a matrix's last bit misses.
 void test_static_shadow_keys() {
     const auto c = camera(12);
-    const auto a = viewer::sun_cascades(c, {1, 0, -1}, {-100, -100, -10}, {100, 100, 200});
-    const auto b = viewer::sun_cascades(c, {1, 0, -1}, {-100, -100, -10}, {100, 100, 200});
-    const auto sun = viewer::sun_cascades(c, {1, 0.01f, -1}, {-100, -100, -10}, {100, 100, 200});
+    const auto a = scene::sun_cascades(c, {1, 0, -1}, {-100, -100, -10}, {100, 100, 200});
+    const auto b = scene::sun_cascades(c, {1, 0, -1}, {-100, -100, -10}, {100, 100, 200});
+    const auto sun = scene::sun_cascades(c, {1, 0.01f, -1}, {-100, -100, -10}, {100, 100, 200});
 
     // Each cascade against itself and against the changes.
-    for (unsigned i = 0; i < viewer::kSunCascades; ++i) {
+    for (unsigned i = 0; i < scene::kSunCascades; ++i) {
         const auto key = static_key(a, i);
-        CHECK(viewer::same_static_key(key, static_key(b, i)));
-        CHECK(!viewer::same_static_key(key, static_key(sun, i)));
-        CHECK(!viewer::same_static_key(key, viewer::StaticShadowKey{}));
+        CHECK(scene::same_static_key(key, static_key(b, i)));
+        CHECK(!scene::same_static_key(key, static_key(sun, i)));
+        CHECK(!scene::same_static_key(key, scene::StaticShadowKey{}));
         auto level = key;
         ++level.generation;
-        CHECK(!viewer::same_static_key(key, level));
+        CHECK(!scene::same_static_key(key, level));
         auto hero = key;
         hero.separate_hero = true;
-        CHECK(!viewer::same_static_key(key, hero));
+        CHECK(!scene::same_static_key(key, hero));
         auto nudged = key;
         nudged.matrix[12] = std::nextafter(nudged.matrix[12], 1e30f);
-        CHECK(!viewer::same_static_key(key, nudged));
+        CHECK(!scene::same_static_key(key, nudged));
     }
 }
 
@@ -1010,15 +1009,15 @@ void test_static_shadow_keys_follow_the_camera() {
     constexpr float kStep = 1e-4f;  // far under a texel of the nearest cascade
     moved.position[0] += kStep;
     moved.view = renderer::look_along(moved.position, {0, 0, -1}, {0, 1, 0});
-    const auto a = viewer::sun_cascades(still, {1, 0, -1}, {-100, -100, -10}, {100, 100, 200});
-    const auto b = viewer::sun_cascades(moved, {1, 0, -1}, {-100, -100, -10}, {100, 100, 200});
+    const auto a = scene::sun_cascades(still, {1, 0, -1}, {-100, -100, -10}, {100, 100, 200});
+    const auto b = scene::sun_cascades(moved, {1, 0, -1}, {-100, -100, -10}, {100, 100, 200});
     unsigned same_matrix = 0;
     unsigned same_key = 0;
 
     // Each cascade of the two frames.
-    for (unsigned i = 0; i < viewer::kSunCascades; ++i) {
+    for (unsigned i = 0; i < scene::kSunCascades; ++i) {
         same_matrix += a.matrices[i] == b.matrices[i] ? 1u : 0u;
-        same_key += viewer::same_static_key(static_key(a, i), static_key(b, i)) ? 1u : 0u;
+        same_key += scene::same_static_key(static_key(a, i), static_key(b, i)) ? 1u : 0u;
     }
 
     std::printf(

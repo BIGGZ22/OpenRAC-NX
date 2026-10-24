@@ -5,7 +5,7 @@
 
 #include <stb_image_write.h>
 
-namespace openrac::viewer {
+namespace openrac::scene {
 
 bool write_png(
     const std::string& path, int width, int height, const std::vector<std::uint8_t>& rgba
@@ -13,4 +13,4 @@ bool write_png(
     return stbi_write_png(path.c_str(), width, height, 4, rgba.data(), width * 4) != 0;
 }
 
-}  // namespace openrac::viewer
+}  // namespace openrac::scene

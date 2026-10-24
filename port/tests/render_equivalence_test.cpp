@@ -62,7 +62,7 @@ render::SceneSize test_size() {
 // Draws `scenario` over `level` (`enhanced` on or off) and returns its frames, read back one by
 // one. Empty with `error` when the scene cannot be made.
 Frames draw_run(
-    const openrac::viewer::LevelData& level,
+    const openrac::scene::LevelData& level,
     const render::SceneSize& size,
     const render::Scenario& scenario,
     bool enhanced,
@@ -184,7 +184,7 @@ double drawn_share(const std::vector<std::uint8_t>& frame) {
 // Tests that the walk's first frame shows the scene: a frame of nothing but the clear colour would
 // be the same with any entry on or off, and prove nothing.
 void test_the_scene_is_drawn(
-    const openrac::viewer::LevelData& level, const render::SceneSize& size
+    const openrac::scene::LevelData& level, const render::SceneSize& size
 ) {
     constexpr double kLeast = 0.05;  // of the pixels: the ground alone covers more
     std::string error;
@@ -198,7 +198,7 @@ void test_the_scene_is_drawn(
 // Tests that `scenario` draws the same frames twice; reports the noise floor when it does not.
 // Returns false when it does not, since no comparison can rest on it then.
 bool test_the_driver_draws_alike_twice(
-    const openrac::viewer::LevelData& level,
+    const openrac::scene::LevelData& level,
     const render::SceneSize& size,
     const render::Scenario& scenario,
     bool enhanced
@@ -225,7 +225,7 @@ bool test_the_driver_draws_alike_twice(
 
 // Tests that `entry` changes no frame of `scenario` beyond its tolerance, on against off.
 void test_an_entry_changes_no_frame(
-    const openrac::viewer::LevelData& level,
+    const openrac::scene::LevelData& level,
     const render::SceneSize& size,
     const render::Scenario& scenario,
     bool enhanced,
@@ -255,7 +255,7 @@ void test_an_entry_changes_no_frame(
 // poison on (vkgl::test_poison_discards), every discarded attachment holds garbage instead of
 // being left undefined, so a pass that reads one draws other frames than attachment-discard off.
 void test_no_pass_reads_what_it_discards(
-    const openrac::viewer::LevelData& level,
+    const openrac::scene::LevelData& level,
     const render::SceneSize& size,
     const render::Scenario& scenario,
     bool enhanced
@@ -301,7 +301,7 @@ int main() {
     }
 
     const render::SceneSize size = test_size();
-    const openrac::viewer::LevelData level = render::make_level(size);
+    const openrac::scene::LevelData level = render::make_level(size);
     std::vector<bool> modes{false};
     openrac::gl::set_enhanced_rendering(true);
 

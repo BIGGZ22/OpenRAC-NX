@@ -29,7 +29,7 @@
 #include "renderer/texture.h"
 #include "scene/pvs.h"
 
-namespace openrac::viewer {
+namespace openrac::scene {
 
 using renderer::Mat4;
 using renderer::Vec3;
@@ -192,4 +192,4 @@ std::optional<std::uint32_t> load_model(
 // a moby class without a mesh.
 std::uint32_t add_box_model(LevelData& level);
 
-}  // namespace openrac::viewer
+}  // namespace openrac::scene

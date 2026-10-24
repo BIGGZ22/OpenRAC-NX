@@ -122,7 +122,7 @@ inline int rings_for(std::uint64_t triangles) {
 // band of rings, with the materials from `first_material` on. A skinned model (`joints` above 0)
 // weights each band to the joint of its height, so its palette bends it. Returns the model's index.
 inline std::uint32_t add_sphere(
-    viewer::LevelData& level, int rings, int parts, int first_material, int joints
+    scene::LevelData& level, int rings, int parts, int first_material, int joints
 ) {
     const int segments = rings * 2;
     const auto first_vertex = static_cast<std::uint32_t>(level.vertices.size());
@@ -137,7 +137,7 @@ inline std::uint32_t add_sphere(
         for (int segment = 0; segment <= segments; ++segment) {
             const float u = static_cast<float>(segment) / static_cast<float>(segments);
             const float azimuth = 2.0f * std::numbers::pi_v<float> * u;
-            viewer::Vertex vertex{};
+            scene::Vertex vertex{};
             vertex.normal[0] = std::sin(polar) * std::cos(azimuth);
             vertex.normal[1] = std::sin(polar) * std::sin(azimuth);
             vertex.normal[2] = -std::cos(polar);
@@ -153,7 +153,7 @@ inline std::uint32_t add_sphere(
         }
     }
 
-    viewer::Model model;
+    scene::Model model;
     model.name = "synthetic";
     model.min = {-1.0f, -1.0f, 0.0f};
     model.max = {1.0f, 1.0f, 2.0f};
@@ -161,7 +161,7 @@ inline std::uint32_t add_sphere(
 
     // The bands, each a primitive of its own material: two triangles a quad of the grid.
     for (int part = 0; part < parts; ++part) {
-        viewer::Primitive primitive;
+        scene::Primitive primitive;
         primitive.first_index = static_cast<std::uint32_t>(level.indices.size());
         primitive.material = first_material + part;
 
@@ -188,7 +188,7 @@ inline std::uint32_t add_sphere(
 
 // Appends one RGBA8 image of `side` texels a side, a pattern of `random`'s colours, opaque unless
 // `holes` (a cutout material's: every eighth texel clear).
-inline void add_image(viewer::LevelData& level, int side, Random& random, bool holes) {
+inline void add_image(scene::LevelData& level, int side, Random& random, bool holes) {
     renderer::Rgba8Image image(side, side);
     const std::array<std::uint8_t, 3> base = {
         static_cast<std::uint8_t>(random.below(256)),
@@ -221,8 +221,8 @@ inline void add_image(viewer::LevelData& level, int side, Random& random, bool h
 
 // Returns the level the size `size` asks for: terrain, the static instances, the moby classes
 // (their instances are live, set each frame: moby_tick), the textures and a sun.
-inline viewer::LevelData make_level(const SceneSize& size) {
-    viewer::LevelData level;
+inline scene::LevelData make_level(const SceneSize& size) {
+    scene::LevelData level;
     Random random(size.seed);
     level.level = 1;
     level.dir = "synthetic";
@@ -240,7 +240,7 @@ inline viewer::LevelData make_level(const SceneSize& size) {
 
     // Each material on its texture.
     for (int n = 0; n < all_materials; ++n) {
-        viewer::Material material;
+        scene::Material material;
         material.image = size.textures > 0 ? n % size.textures : -1;
         material.cutout = n < size.materials && n % 10 == 3;
         material.blend = n < size.materials && n % 17 == 5;
@@ -249,7 +249,7 @@ inline viewer::LevelData make_level(const SceneSize& size) {
 
     // The terrain: one sphere flattened under the level, about a twentieth of the triangles.
     const std::uint32_t terrain = add_sphere(level, rings_for(size.triangles / 20), 2, 0, 0);
-    viewer::Instance ground;
+    scene::Instance ground;
     ground.model = terrain;
     ground.matrix = renderer::multiply(
         renderer::translation({0.0f, 0.0f, -2.0f}),
@@ -258,7 +258,7 @@ inline viewer::LevelData make_level(const SceneSize& size) {
             renderer::Mat4{1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0.001f, 0, 0, 0, 0, 1}
         )
     );
-    level.instances[static_cast<std::size_t>(viewer::Layer::Terrain)].push_back(ground);
+    level.instances[static_cast<std::size_t>(scene::Layer::Terrain)].push_back(ground);
 
     // The static meshes, two materials each, from half to one and a half times the mean size.
     const int meshes = std::max(1, size.materials / 2);
@@ -279,7 +279,7 @@ inline viewer::LevelData make_level(const SceneSize& size) {
     // The static instances: ties and shrubs over the level, and the far share small and ahead of
     // the camera's walk (camera_at), past where it ends.
     for (int n = 0; n < size.static_instances; ++n) {
-        viewer::Instance instance;
+        scene::Instance instance;
         instance.model = static_models[static_cast<std::size_t>(random.below(meshes))];
         const bool far = static_cast<double>(n) < size.far_share * size.static_instances;
         const float along = far ? random.uniform(1200.0f, 2400.0f) : 0.0f;
@@ -296,7 +296,7 @@ inline viewer::LevelData make_level(const SceneSize& size) {
             renderer::translation(position),
             renderer::multiply(rotation_z(random.uniform(0.0f, 6.2832f)), renderer::scale(scale))
         );
-        const auto layer = n % 5 < 3 ? viewer::Layer::Ties : viewer::Layer::Shrubs;
+        const auto layer = n % 5 < 3 ? scene::Layer::Ties : scene::Layer::Shrubs;
         level.instances[static_cast<std::size_t>(layer)].push_back(instance);
     }
 
@@ -331,14 +331,14 @@ inline viewer::LevelData make_level(const SceneSize& size) {
 // What the scene is handed for its live mobys in one frame: their instances and the joint palette
 // they index (LevelScene::set_instances, set_palette).
 struct MobyFrame {
-    std::vector<viewer::Instance> instances;                // The moby layer's instances.
-    std::vector<viewer::LevelScene::JointColumns> palette;  // Every moby's joints, in order.
+    std::vector<scene::Instance> instances;                // The moby layer's instances.
+    std::vector<scene::LevelScene::JointColumns> palette;  // Every moby's joints, in order.
 };
 
 // Returns the mobys of `level` at `tick` (a fraction of a tick between two): each walks a circle of
 // its own and bends its joints, one in ten blended at half alpha. The same tick gives the same
 // state, so a frame's mobys depend on its tick alone.
-inline MobyFrame moby_tick(const viewer::LevelData& level, const SceneSize& size, double tick) {
+inline MobyFrame moby_tick(const scene::LevelData& level, const SceneSize& size, double tick) {
     MobyFrame frame;
     const auto classes = static_cast<int>(level.moby_classes.size());
 
@@ -358,7 +358,7 @@ inline MobyFrame moby_tick(const viewer::LevelData& level, const SceneSize& size
         const float radius = random.uniform(2.0f, 12.0f);
         const float phase = random.uniform(0.0f, 6.2832f);
         const auto angle = static_cast<float>(seconds * 0.8) + phase;
-        viewer::Instance instance;
+        scene::Instance instance;
         instance.model = level.moby_classes.at(cls).first;
         instance.matrix = renderer::multiply(
             renderer::translation(
@@ -449,7 +449,7 @@ struct Walk {
 };
 
 // Returns the walk over `level`'s bounds.
-inline Walk walk_over(const viewer::LevelData& level) {
+inline Walk walk_over(const scene::LevelData& level) {
     constexpr float kInset = 0.05f;      // of the bounds, at each end
     constexpr float kEyeHeight = 30.0f;  // game units above the bounds' middle height
     const renderer::Vec3& low = level.bounds_min;
@@ -578,7 +578,7 @@ inline MobyFrame churned(MobyFrame mobys, std::uint64_t tick) {
 // Returns the mobys of `level` at `shown`: its tick's state, or for a picture between two ticks
 // the two ticks' states blended (blend_mobys), as the frontend blends them.
 inline MobyFrame mobys_at(
-    const viewer::LevelData& level, const SceneSize& size, const Picture& shown
+    const scene::LevelData& level, const SceneSize& size, const Picture& shown
 ) {
     MobyFrame now = moby_tick(level, size, static_cast<double>(shown.tick));
 
@@ -618,7 +618,7 @@ public:
 
     // Uploads `level` and makes the framebuffer `options` asks for. False with `error` when the
     // scene, a renderer or the framebuffer cannot be made, or enhanced was asked and is not here.
-    bool open(const viewer::LevelData& level, const DrawOptions& options, std::string& error) {
+    bool open(const scene::LevelData& level, const DrawOptions& options, std::string& error) {
         m_options = options;
 
         // The level's meshes, textures and shaders.
@@ -633,9 +633,9 @@ public:
         }
 
         // The five layers, in the game's order, as the frontend adds them.
-        for (std::size_t layer = 0; layer < viewer::kLayerCount; ++layer) {
+        for (std::size_t layer = 0; layer < scene::kLayerCount; ++layer) {
             auto bucket =
-                std::make_unique<viewer::LayerRenderer>(m_scene, static_cast<viewer::Layer>(layer));
+                std::make_unique<scene::LayerRenderer>(m_scene, static_cast<scene::Layer>(layer));
 
             // A renderer that cannot be added leaves the scene incomplete.
             if (m_renderer.add(std::move(bucket), error) == nullptr) {
@@ -651,9 +651,9 @@ public:
     // Uploads `level` again, as a level change does, keeping the renderers and the framebuffer.
     // The scene is a new one, as the frontend's use_level makes it: its textures are new handles
     // of the pool, made again (a released scene that uploads again keeps its first handles).
-    bool reupload(const viewer::LevelData& level, std::string& error) {
+    bool reupload(const scene::LevelData& level, std::string& error) {
         m_scene.release();
-        m_scene = viewer::LevelScene();
+        m_scene = scene::LevelScene();
         return m_scene.upload(level, m_renderer.textures(), error)
                && (!m_options.enhanced
                    || (shadow_probe_fixture(m_scene, error)
@@ -664,7 +664,7 @@ public:
     // and instances handed to the scene, then the renderer's passes into the framebuffer.
     void draw(const renderer::Camera& camera, const MobyFrame& mobys, std::uint64_t frame) {
         m_scene.set_palette(mobys.palette);
-        m_scene.set_instances(viewer::Layer::Mobys, mobys.instances);
+        m_scene.set_instances(scene::Layer::Mobys, mobys.instances);
         renderer::FrameInput input;
         input.camera = camera;
         input.clear_colour = {0.3f, 0.4f, 0.6f, 1.0f};
@@ -710,7 +710,7 @@ private:
     }
 
     renderer::Renderer m_renderer;  // Its texture pool holds the scene's textures.
-    viewer::LevelScene m_scene;     // Released before m_renderer, which it draws through.
+    scene::LevelScene m_scene;      // Released before m_renderer, which it draws through.
     renderer::FrameBuffer m_frame;  // The picture.
     DrawOptions m_options;          // As open() was given them.
     bool m_open = false;            // True between open() and release().

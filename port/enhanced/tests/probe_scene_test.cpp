@@ -14,7 +14,7 @@ using namespace openrac;
 using namespace openrac::lighting;
 
 int main() {
-    viewer::LevelData level;
+    scene::LevelData level;
     level.level = 3;
     level.light_sets.resize(256);
     level.light_sets[0] = 1;
@@ -22,7 +22,7 @@ int main() {
     level.light_sets[2] = 0.25f;
     level.light_sets[6] = -1;
     level.materials.push_back({});
-    viewer::Vertex a{}, b{}, c{};
+    scene::Vertex a{}, b{}, c{};
     b.position[0] = 1;
     c.position[1] = 1;
     a.colour[0] = 100;
@@ -30,16 +30,16 @@ int main() {
     c.colour[2] = 98;  // prelit data must not become albedo
     level.vertices = {a, b, c};
     level.indices = {0, 1, 2};
-    viewer::Model model;
+    scene::Model model;
     model.primitives.push_back({0, 3, 0, -1});
     level.models.push_back(model);
-    viewer::Instance instance;
+    scene::Instance instance;
     instance.matrix = renderer::translation({10, 20, 30});
-    level.instances[static_cast<std::size_t>(viewer::Layer::Terrain)].push_back(instance);
+    level.instances[static_cast<std::size_t>(scene::Layer::Terrain)].push_back(instance);
     instance.matrix = renderer::translation({40, 50, 60});
-    level.instances[static_cast<std::size_t>(viewer::Layer::Ties)].push_back(instance);
+    level.instances[static_cast<std::size_t>(scene::Layer::Ties)].push_back(instance);
     instance.matrix = renderer::translation({100, 200, 300});
-    level.instances[static_cast<std::size_t>(viewer::Layer::Mobys)].push_back(instance);
+    level.instances[static_cast<std::size_t>(scene::Layer::Mobys)].push_back(instance);
     auto exported = export_probe_scene(level, 0, {0.1f, 0.1f, 0.1f});
     CHECK(exported.scene.triangles.size() == 2);
     CHECK((exported.scene.triangles[0].vertices[0] == Float3{10, 20, 30}));
@@ -49,13 +49,13 @@ int main() {
     {
         auto liquid = level;
         liquid.bake_surfaces.push_back(
-            liquid.instances[static_cast<std::size_t>(viewer::Layer::Terrain)][0]
+            liquid.instances[static_cast<std::size_t>(scene::Layer::Terrain)][0]
         );
         const auto lava = export_probe_scene(liquid, 0, {.1f, .1f, .1f});
         CHECK(lava.surface_instances == 1);
         CHECK(lava.scene.triangles.size() == exported.scene.triangles.size() + 1);
         CHECK(lava.scene_hash != exported.scene_hash);
-        for (unsigned layer = 0; layer < viewer::kLayerCount; ++layer) {
+        for (unsigned layer = 0; layer < scene::kLayerCount; ++layer) {
             CHECK(liquid.instances[layer].size() == level.instances[layer].size());
         }
     }
@@ -98,7 +98,7 @@ int main() {
     CHECK((exported.bounds_max == Float3{100, 200, 300}));
     {
         auto props = level;
-        auto& prop = props.instances[static_cast<std::size_t>(viewer::Layer::Mobys)][0];
+        auto& prop = props.instances[static_cast<std::size_t>(scene::Layer::Mobys)][0];
         prop.bake_static = true;
         prop.tint = {.5f, 1, 1, 1};
         for (auto& v : props.vertices) {

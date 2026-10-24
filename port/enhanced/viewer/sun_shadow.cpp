@@ -5,7 +5,7 @@
 #include <cmath>
 #include <stdexcept>
 
-namespace openrac::viewer {
+namespace openrac::scene {
 namespace {
 using namespace renderer;
 
@@ -217,4 +217,4 @@ SunCascades sun_cascades(
     }
     return result;
 }
-}  // namespace openrac::viewer
+}  // namespace openrac::scene

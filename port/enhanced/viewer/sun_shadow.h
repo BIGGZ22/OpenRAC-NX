@@ -5,7 +5,7 @@
 
 #include "renderer/renderer.h"
 
-namespace openrac::viewer {
+namespace openrac::scene {
 inline constexpr unsigned kSunCascades = 4;
 inline constexpr int kSunResolution = 1024;
 inline constexpr std::array<int, kSunCascades> kSunResolutions{2048, 1024, 1024, 1024};
@@ -57,4 +57,4 @@ inline bool same_static_key(const StaticShadowKey& a, const StaticShadowKey& b) 
            && std::memcmp(a.matrix.data(), b.matrix.data(), sizeof(a.matrix)) == 0
            && std::memcmp(a.planes.data(), b.planes.data(), sizeof(a.planes)) == 0;
 }
-}  // namespace openrac::viewer
+}  // namespace openrac::scene

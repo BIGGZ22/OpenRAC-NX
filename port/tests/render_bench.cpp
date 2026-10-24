@@ -553,7 +553,7 @@ double ms_since(std::chrono::steady_clock::time_point start) {
 // when the scene cannot be made.
 bool run(
     openrac::test::GlContext& context,
-    const openrac::viewer::LevelData& level,
+    const openrac::scene::LevelData& level,
     const render::SceneSize& size,
     const Options& options,
     bool print,
@@ -698,7 +698,7 @@ bool switch_off(std::string_view list, std::string& error) {
 }
 
 // Returns the level to draw: the synthetic one of `size`, or the extracted one `options` names.
-std::optional<openrac::viewer::LevelData> level_for(
+std::optional<openrac::scene::LevelData> level_for(
     const Options& options, const render::SceneSize& size, std::string& error
 ) {
     // The synthetic scene, unless a level was named.
@@ -706,10 +706,10 @@ std::optional<openrac::viewer::LevelData> level_for(
         return render::make_level(size);
     }
 
-    openrac::viewer::LevelData level;
+    openrac::scene::LevelData level;
 
     // An extracted level the maintainers point at (docs/port/RENDER_PERF.md, their commands).
-    if (!openrac::viewer::load_level(options.level, level, error)) {
+    if (!openrac::scene::load_level(options.level, level, error)) {
         return std::nullopt;
     }
 
@@ -755,7 +755,7 @@ int main(int argc, char** argv) {
     render::SceneSize size;
     size.seed = options.seed;
     size.triangles = options.triangles.value_or(size.triangles);
-    const std::optional<openrac::viewer::LevelData> level = level_for(options, size, error);
+    const std::optional<openrac::scene::LevelData> level = level_for(options, size, error);
 
     // A level that cannot be read is a failure, not a skip.
     if (!level) {

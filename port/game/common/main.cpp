@@ -338,7 +338,7 @@ int main(int argc, char** argv) {
             gl::set_enhanced_rendering(true);
         }
         if (gl::enhanced_rendering_enabled()) {
-            viewer::set_probe_root(g_options.probes);
+            scene::set_probe_root(g_options.probes);
             log::info("enhanced rendering on (Vulkan only); probe bakes from {}",
                       g_options.probes.empty() ? std::string("nowhere") : g_options.probes.string());
         }

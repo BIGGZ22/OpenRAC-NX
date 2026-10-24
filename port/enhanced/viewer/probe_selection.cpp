@@ -8,7 +8,7 @@
 #include "renderer/world/gl_world.h"
 #include "viewer_shaders.h"
 
-namespace openrac::viewer {
+namespace openrac::scene {
 using namespace openrac::gl;
 namespace wgl = renderer::world::gl;
 
@@ -158,4 +158,4 @@ void ProbeSelection::release() {
     m_count = 0;
     m_started = false;
 }
-}  // namespace openrac::viewer
+}  // namespace openrac::scene

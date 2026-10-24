@@ -92,8 +92,8 @@ void use_level(int number) {
         g->renderer->clear_renderers();
     }
     g->scene.release();
-    g->scene = viewer::LevelScene();
-    g->level = viewer::LevelData();
+    g->scene = scene::LevelScene();
+    g->level = scene::LevelData();
     std::string error;
     const auto dir = g->levels / std::format("level_{:02d}", wanted);
     // An edited level's scenery (--mods): the editor's pack writes it beside its gameplay file.
@@ -108,7 +108,7 @@ void use_level(int number) {
     // read: their whole picture is the 2D path, both its parts, and nothing is missing to tell the
     // player about.
     const bool has_levels = g->profile->has_levels();
-    if (!has_levels && !viewer::load_level(dir, g->level, error, edited)) {
+    if (!has_levels && !scene::load_level(dir, g->level, error, edited)) {
         log::info(
             "level {}: no scenery for this game yet ({}); the 2D path is drawn alone", wanted, error
         );
@@ -125,7 +125,7 @@ void use_level(int number) {
         }
         return;
     }
-    if (has_levels && !viewer::load_level(dir, g->level, error, edited)) {
+    if (has_levels && !scene::load_level(dir, g->level, error, edited)) {
         log::warn("level {}: {} (extract it with editor/extract.py port)", wanted, error);
         // Said in the picture: the game goes on, its HUD over a black world, and a player takes
         // that for the game being broken.
@@ -172,22 +172,22 @@ void use_level(int number) {
         )) {
         log::warn("Ratchet shadow map unavailable: {}", error);
     }
-    for (std::size_t layer = 0; layer < viewer::kLayerCount; ++layer) {
+    for (std::size_t layer = 0; layer < scene::kLayerCount; ++layer) {
         // The caster is drawn after its shadow, so its proxy cannot darken
         // Ratchet himself. Opaque scenery has already filled the depth buffer.
         if (g->profile->shadow_directions() != 0
-            && layer == static_cast<std::size_t>(viewer::Layer::Mobys)) {
+            && layer == static_cast<std::size_t>(scene::Layer::Mobys)) {
             if (g->renderer->add(std::make_unique<renderer::ShadowRenderer>(), error) == nullptr) {
                 log::error("shadow renderer: {}", error);
             }
         }
         g->renderer->add(
-            std::make_unique<viewer::LayerRenderer>(g->scene, static_cast<viewer::Layer>(layer)),
+            std::make_unique<scene::LayerRenderer>(g->scene, static_cast<scene::Layer>(layer)),
             error
         );
         // The liquids (the seas and lava the game draws solid) after the ties, where retail's draw
         // callback list 3 draws them, before the shrubs and mobys (renderer/effects.h).
-        if (static_cast<viewer::Layer>(layer) == viewer::Layer::Ties
+        if (static_cast<scene::Layer>(layer) == scene::Layer::Ties
             && g->renderer->add(
                    std::make_unique<renderer::EffectRenderer>(
                        "liquids", renderer::EffectPart::Liquids, renderer::Bucket::Ties
@@ -208,7 +208,7 @@ void use_level(int number) {
         g->renderer->init(error);
     }
     // The sky's textures at pool keys of their own (kSkyTextureKey + number), for its sprites.
-    const auto sky = viewer::load_sky_textures(dir);
+    const auto sky = scene::load_sky_textures(dir);
     for (std::size_t i = 0; i < sky.size(); ++i) {
         if (sky[i].width > 0) {
             const renderer::TextureHandle h = g->renderer->textures().add(

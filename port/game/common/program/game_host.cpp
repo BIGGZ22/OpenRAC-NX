@@ -412,7 +412,7 @@ void openrac_game_moby_chain(gaddr moby, gaddr marks) {
 #ifdef OPENRAC_FRONTEND
         const auto* ram = runtime::Memory::get().base();
         const auto pose =
-            viewer::moby_pose_matrices(std::span<const std::uint8_t>(ram, 32u * 1024 * 1024), moby);
+            scene::moby_pose_matrices(std::span<const std::uint8_t>(ram, 32u * 1024 * 1024), moby);
         const auto* mark = static_cast<const std::uint8_t*>(G(marks));
         const std::size_t count = std::min<std::size_t>(mark[0x7F], pose.size());
 

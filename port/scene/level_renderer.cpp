@@ -21,7 +21,7 @@
 #include "renderer/vulkan/vkgl.h"
 #endif
 
-namespace openrac::viewer {
+namespace openrac::scene {
 
 using namespace openrac::gl;
 using renderer::Bucket;
@@ -2588,4 +2588,4 @@ void LayerRenderer::render_depth(const renderer::FrameInput& input, renderer::Re
     }
 }
 
-}  // namespace openrac::viewer
+}  // namespace openrac::scene

@@ -133,7 +133,7 @@ LevelBakeProfile load_level_bake_profile(
 
 ProbeVolume load_level_probes(
     const std::filesystem::path& path,
-    const viewer::LevelData& level,
+    const scene::LevelData& level,
     const ProbeActivation& expected,
     bool expand_linear_maps
 ) {

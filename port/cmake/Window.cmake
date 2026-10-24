@@ -235,7 +235,7 @@ add_library(openrac_scene_renderer STATIC
   enhanced/viewer/hero_shadow.cpp
   enhanced/viewer/sun_shadow.cpp
 )
-openrac_embed_shaders(openrac_scene_renderer viewer openrac::viewer
+openrac_embed_shaders(openrac_scene_renderer viewer openrac::scene
   "${CMAKE_CURRENT_SOURCE_DIR}/viewer/shaders/mesh.vert"
   "${CMAKE_CURRENT_SOURCE_DIR}/viewer/shaders/mesh.frag"
   "${CMAKE_CURRENT_SOURCE_DIR}/enhanced/viewer/shaders/early_lighting.comp"

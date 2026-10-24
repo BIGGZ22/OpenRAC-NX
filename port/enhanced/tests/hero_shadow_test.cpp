@@ -16,23 +16,23 @@ using namespace openrac::gl;
 
 void cpu() {
     std::vector<std::uint8_t> ram(0x1000);
-    CHECK(!viewer::hero_airborne(ram, 0));
-    CHECK(!viewer::hero_airborne(ram, 0xf00));
-    CHECK(viewer::hero_airborne(ram, 0x100) == false);
+    CHECK(!scene::hero_airborne(ram, 0));
+    CHECK(!scene::hero_airborne(ram, 0xf00));
+    CHECK(scene::hero_airborne(ram, 0x100) == false);
     // A special ground-moby hit must not select the airborne projection.
     ram[0x100 + 0x30a] = 1;
-    CHECK(viewer::hero_airborne(ram, 0x100) == false);
+    CHECK(scene::hero_airborne(ram, 0x100) == false);
     ram[0x100 + 0x30a] = 0;
     ram[0x100 + 0x30e] = 22;
-    CHECK(viewer::hero_airborne(ram, 0x100) == true);
+    CHECK(scene::hero_airborne(ram, 0x100) == true);
     // Zero vertical velocity at the apex must remain airborne.
     std::fill(ram.begin() + 0x100 + 0xe0, ram.begin() + 0x100 + 0xf0, 0);
-    CHECK(viewer::hero_airborne(ram, 0x100) == true);
+    CHECK(scene::hero_airborne(ram, 0x100) == true);
     ram[0x100 + 0x30e] = 0;
-    CHECK(viewer::hero_airborne(ram, 0x100) == false);  // landing
-    CHECK(!viewer::hero_airborne(std::span(ram).first(0x40f), 0x100));
-    const auto ground = viewer::hero_shadow_projection({0, 0, 2}, {1, 0, -1}, false);
-    const auto air = viewer::hero_shadow_projection({0, 0, 2}, {1, 0, -1}, true);
+    CHECK(scene::hero_airborne(ram, 0x100) == false);  // landing
+    CHECK(!scene::hero_airborne(std::span(ram).first(0x40f), 0x100));
+    const auto ground = scene::hero_shadow_projection({0, 0, 2}, {1, 0, -1}, false);
+    const auto air = scene::hero_shadow_projection({0, 0, 2}, {1, 0, -1}, true);
     CHECK(ground.direction[0] > 0.7f && ground.direction[2] < -0.7f);
     CHECK((air.direction == renderer::Vec3{0, 0, -1}));
     const auto projected = renderer::transform_point(ground.matrix, {2, 0, 0});
@@ -45,7 +45,7 @@ void cpu() {
 }
 
 void gpu(bool perspective = false) {
-    viewer::LevelData level;
+    scene::LevelData level;
     level.light_sets.resize(256);
     level.light_sets[0] = level.light_sets[1] = level.light_sets[2] = 1;
     level.light_sets[4] = 1;
@@ -54,7 +54,7 @@ void gpu(bool perspective = false) {
         {-4, -4, 0}, {4, -4, 0}, {4, 4, 0}, {-4, 4, 0}, {-.5f, -.5f, 2}, {.5f, -.5f, 2}, {0, .5f, 2}
     };
     for (const auto& p : points) {
-        viewer::Vertex vertex{};
+        scene::Vertex vertex{};
         std::copy(p.begin(), p.end(), vertex.position);
         vertex.normal[2] = 1;
         for (float& c : vertex.colour) {
@@ -66,22 +66,22 @@ void gpu(bool perspective = false) {
     }
     level.indices = {0, 1, 2, 0, 2, 3, 4, 5, 6};
     level.materials.push_back({});
-    viewer::Model plane, hero_model;
+    scene::Model plane, hero_model;
     plane.primitives.push_back({0, 6, 0});
     hero_model.primitives.push_back({6, 3, 0});
     hero_model.joints = 1;
     level.models = {plane, hero_model};
-    level.instances[static_cast<std::size_t>(viewer::Layer::Terrain)].push_back({});
-    viewer::Instance hero, other;
+    level.instances[static_cast<std::size_t>(scene::Layer::Terrain)].push_back({});
+    scene::Instance hero, other;
     hero.model = other.model = 1;
     hero.hero_shadow_caster = true;
     hero.moby_light[3] = 1;
     other.matrix = renderer::translation({-2, 0, 0});
-    viewer::LevelScene scene;
+    scene::LevelScene scene;
     renderer::Renderer renderer;
     std::string error;
     CHECK(scene.upload(level, renderer.textures(), error));
-    scene.set_instances(viewer::Layer::Mobys, {hero, other});
+    scene.set_instances(scene::Layer::Mobys, {hero, other});
     lighting::ProbeGrid grid;
     grid.origin = {-8, -8, -8};
     grid.spacing = {16, 16, 16};
@@ -96,7 +96,7 @@ void gpu(bool perspective = false) {
     CHECK(test::shadow_probe_fixture(scene, error));
     CHECK(scene.enable_hero_shadow(true, error));
     CHECK(
-        renderer.add(std::make_unique<viewer::LayerRenderer>(scene, viewer::Layer::Terrain), error)
+        renderer.add(std::make_unique<scene::LayerRenderer>(scene, scene::Layer::Terrain), error)
     );
     CHECK(renderer.init(error));
     renderer::FrameBuffer frame;
@@ -136,7 +136,7 @@ void gpu(bool perspective = false) {
     // The depth pass must use the same skinned pose as the visible hero.
     hero.palette = 0;
     scene.set_palette({renderer::translation({1, 0, 0})});
-    scene.set_instances(viewer::Layer::Mobys, {hero, other});
+    scene.set_instances(scene::Layer::Mobys, {hero, other});
     renderer.render(input, {frame.id(), 64, 64});
     airborne = frame.read_rgba();
     CHECK(pixel(40, airborne) + 10 < pixel(40, original));
@@ -146,7 +146,7 @@ void gpu(bool perspective = false) {
     hero.palette = -1;
     auto blocker = other;
     blocker.matrix = renderer::translation({-4, 0, 4});
-    scene.set_instances(viewer::Layer::Mobys, {hero, blocker});
+    scene.set_instances(scene::Layer::Mobys, {hero, blocker});
     CHECK(test::shadow_probe_fixture(scene, error));
     CHECK(scene.enable_sun_shadow(true, error));
     input.sun_pixel_shadow = true;
@@ -174,14 +174,14 @@ void gpu(bool perspective = false) {
     transparent.set_texel(0, 0, 0x00ffffffu);
     level.images.push_back(transparent);
     level.image_paths.push_back("fixture/transparent.png");
-    viewer::Material alpha;
+    scene::Material alpha;
     alpha.image = 0;
     alpha.cutout = true;
     level.materials.push_back(alpha);
     level.models[1].primitives[0].material = 1;
     hero.palette = -1;
     CHECK(scene.upload(level, renderer.textures(), error));
-    scene.set_instances(viewer::Layer::Mobys, {hero, other});
+    scene.set_instances(scene::Layer::Mobys, {hero, other});
     CHECK(scene.set_probe_volume(openrac::test::gpu_probes(probes), error));
     CHECK(test::shadow_probe_fixture(scene, error));
     CHECK(scene.enable_hero_shadow(true, error));

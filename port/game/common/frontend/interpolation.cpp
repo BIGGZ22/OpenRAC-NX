@@ -239,7 +239,7 @@ void draw_kept(bool first) {
     const host::GameState state =
         k.has_prev_state && alpha < 1.0f ? blend_camera(k.prev_state, k.state, alpha) : k.state;
     if (!g->level.models.empty()) {
-        std::vector<viewer::Instance> live = k.live;
+        std::vector<scene::Instance> live = k.live;
         if (alpha < 1.0f) {
             for (std::size_t i = 0; i < live.size() && i < k.addresses.size(); ++i) {
                 auto it = k.prev_matrices.find(k.addresses[i]);
@@ -261,7 +261,7 @@ void draw_kept(bool first) {
         if (alpha < 1.0f && !k.prev_poses.empty()) {
             // The poses too: each joint part way from the last tick's to this one's, for a moby
             // that is the same thing moving (its matrix was blended) with the same skeleton.
-            std::vector<viewer::LevelScene::JointColumns> palette = k.palette;
+            std::vector<scene::LevelScene::JointColumns> palette = k.palette;
             for (std::size_t i = 0;
                  i < live.size() && i < k.addresses.size() && i < k.joints.size();
                  ++i) {
@@ -275,10 +275,10 @@ void draw_kept(bool first) {
                     || static_cast<std::size_t>(first + count) > palette.size()) {
                     continue;
                 }
-                const viewer::LevelScene::JointColumns* from =
+                const scene::LevelScene::JointColumns* from =
                     k.prev_palette.data() + pose->second.first;
                 for (int j = 0; j < count; ++j) {
-                    viewer::LevelScene::JointColumns& to =
+                    scene::LevelScene::JointColumns& to =
                         palette[static_cast<std::size_t>(first + j)];
                     for (std::size_t c = 0; c < to.size(); ++c) {
                         to[c] = from[j][c] + (to[c] - from[j][c]) * alpha;
@@ -289,7 +289,7 @@ void draw_kept(bool first) {
         } else {
             g->scene.set_palette(k.palette);
         }
-        g->scene.set_instances(viewer::Layer::Mobys, live);
+        g->scene.set_instances(scene::Layer::Mobys, live);
     }
 
     if (frame_cost.on) {
@@ -464,7 +464,7 @@ void draw_kept(bool first) {
                              bool clear_depth) {
         const std::uint32_t first = static_cast<std::uint32_t>(marker);
         const std::uint32_t count = static_cast<std::uint32_t>(marker >> 32) & 0xFFu;
-        std::vector<viewer::Instance> instances;
+        std::vector<scene::Instance> instances;
         const host::GameState* camera = nullptr;
         for (const Kept::TargetMoby& t : k.target_mobys) {
             if (t.address >= first && t.address < first + count * 0x100u) {
@@ -569,7 +569,7 @@ void draw_kept(bool first) {
         const std::string path = shots().prefix + std::to_string(input.frame)
                                  + (first ? std::string() : "_b" + std::to_string(between_index))
                                  + ".png";
-        viewer::write_png(path, width, height, renderer::read_rgba(shown, width, height));
+        scene::write_png(path, width, height, renderer::read_rgba(shown, width, height));
         log::info("frame {} written to {}", input.frame, path);
     }
     slow_frame();

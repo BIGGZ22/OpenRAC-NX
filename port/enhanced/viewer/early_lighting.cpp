@@ -7,7 +7,7 @@
 #include "renderer/world/gl_world.h"
 #include "viewer_shaders.h"
 
-namespace openrac::viewer {
+namespace openrac::scene {
 using namespace openrac::gl;
 namespace wgl = renderer::world::gl;
 
@@ -138,4 +138,4 @@ void EarlyLighting::release() {
     m_ready = false;
     m_failed = false;
 }
-}  // namespace openrac::viewer
+}  // namespace openrac::scene

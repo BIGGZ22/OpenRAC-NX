@@ -6,7 +6,7 @@
 namespace openrac::test {
 // Shadow/AO kernel fixtures still need a valid level probe resource. Keep
 // sampling off for tests comparing authored lighting rather than diffuse GI.
-inline bool shadow_probe_fixture(viewer::LevelScene& scene, std::string& error) {
+inline bool shadow_probe_fixture(scene::LevelScene& scene, std::string& error) {
     if (scene.probe_data_available()) {
         return true;
     }

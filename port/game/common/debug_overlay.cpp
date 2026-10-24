@@ -398,7 +398,7 @@ bool write_window(const std::string& path, int width, int height) {
     for (std::size_t i = 3; i < flipped.size(); i += 4) {
         flipped[i] = 0xFF;
     }
-    if (viewer::write_png(path, width, height, flipped)) {
+    if (scene::write_png(path, width, height, flipped)) {
         s.message = "window written to " + path;
         log::info("{}", s.message);
         return true;
