@@ -336,8 +336,8 @@ def progress_box(versions) -> str:
             continue
         title = short_title(game, name)
         source = v.get("source") or {}
-        # The NTSC decomp goes by that name (AGENTS.md), linked to its repository.
-        label = "the NTSC decomp" if (game["id"], name) == ("rac1", "ntsc") else source.get("name")
+        # The NTSC decomp is shown as its project, at the workspace owner's request.
+        label = "Lombyte Project" if (game["id"], name) == ("rac1", "ntsc") else source.get("name")
         project = f'<a href="{source["repo"]}">{label}</a>' if source.get("repo") else "–"
         query = urlencode({"mode": "shield", "label": "", "measure": "matched_code_percent",
                            "version": v["serial"], "color": "c99222", "style": "flat-square"})
