@@ -15,6 +15,12 @@ Start with the [lighting guide](lighting/README.md) for builds, bakes and contro
 | `tools/probes/` | Offline baker and bake tools |
 | `tests/`, `docs/` | Tests and feature documentation |
 
+GTAO (`renderer/gtao.h`) is the renderer's ambient occlusion hook
+(`port/renderer/ambient_occlusion.h`): the game programs register it with the
+renderer they create (`game/common/frontend/world.cpp`), and its settings type
+is the renderer's (`port/renderer/gtao_settings.h`). Its source still builds
+inside `openrac_renderer`, with its shaders.
+
 Shared integration and core Vulkan optimisations stay in `port/renderer/` and
 `port/scene/`. Editor bake inputs live in `editor/enhanced/`.
 
