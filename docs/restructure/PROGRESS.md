@@ -99,7 +99,7 @@ the lanes, one at a time.
 | P2-36 | The frontend's rac1 addresses and game-id branches move into the profile | P2-03 | done | maintainer | [04c87055](https://github.com/OpenRAC/OpenRAC/commit/04c87055), and this page |
 | P2-37 | `game/common` includes `scene/` directly; `openrac::scene`; forwarders removed | P2-02, P2-05, P2-18, P2-27 | done | maintainer | [5d2c8d87](https://github.com/OpenRAC/OpenRAC/commit/5d2c8d87), [252e9620](https://github.com/OpenRAC/OpenRAC/commit/252e9620), [a505cfe2](https://github.com/OpenRAC/OpenRAC/commit/a505cfe2), and this page |
 | P2-38 | rac1 host C reads through the C entry point | P2-19, the level loader, the rac1 sync | done | maintainer | [493981b3](https://github.com/OpenRAC/OpenRAC/commit/493981b3), [5aa9fc31](https://github.com/OpenRAC/OpenRAC/commit/5aa9fc31), and this page |
-| P2-39 | `scene` stops including `enhanced/`: lighting and shadow hooks | P2-07 | stopped (scope) | maintainers: see Follow-ups | |
+| P2-39 | `scene` stops including `enhanced/`: lighting and shadow hooks. Cut in two by the maintainers' decision: P2-39a, the shadow arithmetic (`sun_shadow`, `hero_shadow`, `shadow_atlas`, their two shaders and the CPU shadow tests) moved into `scene/`, done; P2-39b, the lighting hook, the emissions table into the scene's level data, `enhanced/viewer`'s own namespace and the target split, in progress | P2-07 | a done, b in progress | maintainer | P2-39a: [71e2461d](https://github.com/OpenRAC/OpenRAC/commit/71e2461d), [3bd87e8b](https://github.com/OpenRAC/OpenRAC/commit/3bd87e8b), and this page |
 
 ## Phase R: what drawing costs
 
