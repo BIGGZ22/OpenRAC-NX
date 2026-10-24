@@ -980,7 +980,7 @@ void trace_tick(const viewer::GameState& state, std::uint32_t draws) {
             line += std::format(",\"hp\":{},\"hr\":{},\"hs\":{}", vec(hp), vec(hr), hs);
         }
         line += std::format(",\"mb\":{},\"dr\":{}}}\n", state.mobys.size(), draws);
-        std::fputs(line.c_str(), trace);
+        std::fwrite(line.data(), 1, line.size(), trace);
         std::fflush(trace);  // a crash keeps every tick before it
     }
 }
