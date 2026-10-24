@@ -9,6 +9,7 @@
 #include "enhanced/renderer/gtao.h"
 #include "enhanced/tests/gpu_probe_fixture.h"
 #include "enhanced/tests/probe_fixture.h"
+#include "enhanced/viewer/scene_lighting.h"
 #include "renderer/gl.h"
 #if defined(OPENRAC_VULKAN)
 #include "renderer/vulkan/vkgl.h"
@@ -62,6 +63,7 @@ void check_scene(bool wall, int samples, renderer::GtaoQuality quality) {
     renderer::Renderer renderer;
     renderer.set_ambient_occlusion(std::make_unique<renderer::Gtao>());
     scene::LevelScene scene;
+    lighting::use_scene_lighting(scene);
     std::string error;
     CHECK(scene.upload(level, renderer.textures(), error));
     CHECK(test::shadow_probe_fixture(scene, error));
@@ -222,6 +224,7 @@ void indirect_lighting(int samples, bool glow = false, bool cutout = false, bool
     renderer::Renderer renderer;
     renderer.set_ambient_occlusion(std::make_unique<renderer::Gtao>());
     scene::LevelScene scene;
+    lighting::use_scene_lighting(scene);
     std::string error;
     CHECK(scene.upload(level, renderer.textures(), error));
     if (shadows) {
@@ -248,7 +251,9 @@ void indirect_lighting(int samples, bool glow = false, bool cutout = false, bool
     for (auto& e : volume.irradiance) {
         e = {0, std::numbers::pi_v<float> * .25f, 0};
     }
-    CHECK(scene.set_probe_volume(openrac::test::gpu_probes(volume), error));
+    CHECK(
+        lighting::scene_lighting(scene)->set_probe_volume(openrac::test::gpu_probes(volume), error)
+    );
     std::array<float, 64> points{};
     points[2] = .5f;
     points[4] = 2;
@@ -379,6 +384,7 @@ void scripted_glow_depth() {
     renderer::Renderer renderer;
     renderer.set_ambient_occlusion(std::make_unique<renderer::Gtao>());
     scene::LevelScene scene;
+    lighting::use_scene_lighting(scene);
     std::string error;
     CHECK(scene.upload(level, renderer.textures(), error));
     renderer::FrameBuffer target;
@@ -494,6 +500,7 @@ void optimized_paths(int samples) {
     renderer::Renderer renderer;
     renderer.set_ambient_occlusion(std::make_unique<renderer::Gtao>());
     scene::LevelScene scene;
+    lighting::use_scene_lighting(scene);
     std::string error;
     CHECK(scene.upload(level, renderer.textures(), error));
     scene.set_palette({renderer::identity(), renderer::translation({.3f, .1f, .5f})});
@@ -508,7 +515,9 @@ void optimized_paths(int samples) {
     for (auto& e : volume.irradiance) {
         e = {1, 1, 1};
     }
-    CHECK(scene.set_probe_volume(openrac::test::gpu_probes(volume), error));
+    CHECK(
+        lighting::scene_lighting(scene)->set_probe_volume(openrac::test::gpu_probes(volume), error)
+    );
     auto switch_reference = [](const char* variable, bool off) {
         for (auto* probe : stats::probes()) {
             if (std::strcmp(probe->variable, variable) == 0) {

@@ -32,6 +32,7 @@
 
 #include "common/log.h"
 #include "enhanced/renderer/texture_upscale.h"
+#include "enhanced/viewer/scene_lighting.h"
 #include "game/rac1/game_state.h"
 #include "platform/clock.h"
 #include "platform/window.h"
@@ -210,6 +211,7 @@ int run(const Options& options) {
 
     renderer::Renderer renderer;
     scene::LevelScene scene;
+    lighting::use_scene_lighting(scene);
     scene.lighting = options.lighting;
     enhanced::install_texture_upscaler(renderer.textures());
     if (!scene.upload(level, renderer.textures(), error)) {

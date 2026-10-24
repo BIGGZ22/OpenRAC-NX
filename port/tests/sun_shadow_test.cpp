@@ -6,6 +6,7 @@
 #include "common/stats.h"
 #include "enhanced/tests/gpu_probe_fixture.h"
 #include "enhanced/tests/probe_fixture.h"
+#include "enhanced/viewer/scene_lighting.h"
 #include "renderer/gl.h"
 #include "renderer/shadows.h"
 #include "scene/level_renderer.h"
@@ -428,6 +429,7 @@ void gpu() {
     level.instances[static_cast<std::size_t>(scene::Layer::Ties)].push_back(caster);
     renderer::Renderer renderer;
     scene::LevelScene scene;
+    lighting::use_scene_lighting(scene);
     std::string error;
     if (!scene.upload(level, renderer.textures(), error)) {
         std::fprintf(stderr, "scene upload: %s\n", error.c_str());
@@ -444,7 +446,9 @@ void gpu() {
     for (auto& e : probes.irradiance) {
         e.fill(.2f * std::numbers::pi_v<float>);
     }
-    CHECK(scene.set_probe_volume(openrac::test::gpu_probes(probes), error));
+    CHECK(
+        lighting::scene_lighting(scene)->set_probe_volume(openrac::test::gpu_probes(probes), error)
+    );
     scene.set_probe_view(3);
     CHECK(test::shadow_probe_fixture(scene, error));
     CHECK(scene.enable_sun_shadow(true, error));

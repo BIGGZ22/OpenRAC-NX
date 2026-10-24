@@ -80,8 +80,3 @@ allow	tests	viewer extract
 # Known violations (docs/restructure/PROGRESS.md names the packages).
 # platform -> renderer/vulkan: the window opens the Vulkan backend itself; no package yet.
 except	platform/window.cpp:26	renderer/vulkan/vkgl.h	no package yet: the renderer should open its backend on the platform's window
-# scene -> enhanced: the level renderer draws the enhanced renderer's lighting and shadows itself,
-# and a level carries its emissive lighting. P2-02 moved these files from the viewer program's
-# directory, where the includes were allowed.
-except	scene/level_renderer.h:26	enhanced/viewer/early_lighting.h	P2-39: scene owns the lighting and shadow hooks, enhanced registers with them
-except	scene/level_renderer.h:27	enhanced/viewer/probe_lighting.h	P2-39: scene owns the lighting and shadow hooks, enhanced registers with them

@@ -146,8 +146,10 @@ bool LevelScene::upload(
     const LevelData& level, renderer::TexturePool& textures, std::string& error
 ) {
     // mesh.frag again with OPENRAC_SOLID, after its version line (which has to stay the first).
-    const std::string fragment = lighting::probe_mesh_fragment();
-    m_early_capable = lighting::EarlyLighting::supported();
+    // The registered lighting puts its GLSL into the mesh shader; without it the scene's own.
+    const std::string fragment = m_lighting ? m_lighting->mesh_fragment(shaders::mesh_frag)
+                                            : std::string(shaders::mesh_frag);
+    m_early_capable = m_lighting && m_lighting->early_supported();
     std::string solid(fragment);
     solid.insert(solid.find('\n') + 1, "#define OPENRAC_SOLID 1\n");
     if (!m_mesh.build("mesh", shaders::mesh_vert, fragment, error)
@@ -156,7 +158,7 @@ bool LevelScene::upload(
         return false;
     }
     if (m_early_capable) {
-        std::string early = lighting::probe_early_fragment(), early_solid(early);
+        std::string early = m_lighting->early_fragment(shaders::mesh_frag), early_solid(early);
         early_solid.insert(early_solid.find('\n') + 1, "#define OPENRAC_SOLID 1\n");
         if (!m_early_mesh.build("early lit mesh", shaders::mesh_vert, early, error)
             || !m_early_solid.build("early lit solid", shaders::mesh_vert, early_solid, error)) {
@@ -185,7 +187,7 @@ bool LevelScene::upload(
                 && !m_early_colour_opaque.build(
                     "early opaque colour batch",
                     shaders::mesh_vert,
-                    opaque_source(lighting::probe_early_fragment()),
+                    opaque_source(m_lighting->early_fragment(shaders::mesh_frag)),
                     error
                 ))) {
             return false;
@@ -227,7 +229,7 @@ bool LevelScene::upload(
                     && !m_early_colour_specialised[variant].build(
                         std::string("early ") + names[variant],
                         vertex,
-                        specialise(lighting::probe_early_fragment()),
+                        specialise(m_lighting->early_fragment(shaders::mesh_frag)),
                         error
                     ))) {
                 return false;
@@ -381,7 +383,10 @@ bool LevelScene::upload(
     ++m_static_generation;
     glBindVertexArray(0);
     glBindBuffer(GL_ARRAY_BUFFER, 0);
-    m_probes.load(level);
+    // The level's probe bake, found and uploaded by the registered lighting.
+    if (m_lighting) {
+        m_lighting->load(level);
+    }
 
     // The materials' textures made now, while the level loads, so that its first frames make
     // none (texture-prepare, docs/port/RENDER_PERF.md); off, each is made at its first draw.
@@ -1290,7 +1295,7 @@ void LevelScene::prepare_hero_shadow(
 ) {
     m_hero_ready = false;
     if (!probe_data_available() || !m_hero_enabled || !input.hero_pixel_shadow || !m_hero_centre
-        || m_probes.mode == 2 || m_probes.mode == 4) {
+        || m_lighting->mode() == 2 || m_lighting->mode() == 4) {
         return;
     }
     renderer::Vec3 direction{0, 0, -1};
@@ -1367,8 +1372,8 @@ void LevelScene::prepare_sun_shadow(
 ) {
     m_sun_ready = false;
     m_sun_culling = {};
-    if (!probe_data_available() || !m_sun_enabled || !input.sun_pixel_shadow || m_probes.mode == 2
-        || m_probes.mode == 4) {
+    if (!probe_data_available() || !m_sun_enabled || !input.sun_pixel_shadow
+        || m_lighting->mode() == 2 || m_lighting->mode() == 4) {
         return;
     }
     renderer::Vec3 direction{0, 0, -1}, low{3e38f, 3e38f, 3e38f}, high{-3e38f, -3e38f, -3e38f};
@@ -1786,8 +1791,10 @@ void LevelScene::release() {
     m_hero_enabled = m_hero_ready = false;
     m_hero_logged_airborne.reset();
     m_hero_centre.reset();
-    m_probes.release();
-    m_early_lighting.release();
+    // Only registered lighting has GL objects to free.
+    if (m_lighting) {
+        m_lighting->release();
+    }
     m_early_capable = false;
     if (m_palette != 0) {
         glDeleteTextures(1, &m_palette);
@@ -1909,9 +1916,9 @@ void LevelScene::draw_sky(const renderer::FrameInput& input, renderer::RenderSta
 }
 
 bool LevelScene::needs_early_lighting(const renderer::FrameInput& input) const {
-    return probe_data_available() && m_early_capable && lighting::EarlyLighting::supported()
-           && m_probes.mode != 4
-           && (m_probes.active() || (m_sun_enabled && input.sun_pixel_shadow)
+    return probe_data_available() && m_early_capable && m_lighting->early_supported()
+           && m_lighting->mode() != 4
+           && (m_lighting->active() || (m_sun_enabled && input.sun_pixel_shadow)
                || (m_hero_enabled && input.hero_pixel_shadow));
 }
 
@@ -1990,26 +1997,29 @@ void LevelScene::render_early_lighting(
     prepare_shadows(input, state);
     state.world_shadows_prepared = true;
     std::string error;
-    state.early_lighting = m_early_lighting.render(
-        depth,
-        input,
-        state.target,
-        [&](const renderer::Shader& shader) {
-            m_probes.bind(shader, Layer::Terrain, true, &input.camera);
-            bind_sun_shadow(shader, input.camera);
-            bind_hero_shadow(shader);
-            glUniform1i(shader.uniform("early_ao_enabled"), state.gtao_raw != 0 ? 1 : 0);
-            glUniform1i(shader.uniform("early_ao"), 18);
-            glUniform1i(shader.uniform("early_ao_scale"), state.gtao_scale);
-            glUniform1f(
-                shader.uniform("early_ao_strength"), std::clamp(state.gtao_strength, 0.0f, 3.0f)
-            );
-            glActiveTexture(GL_TEXTURE0 + 18);
-            glBindTexture(renderer::world::gl::GL_TEXTURE_BUFFER, state.gtao_raw);
-            glActiveTexture(GL_TEXTURE0);
-        },
-        error
-    );
+    // Drawn only where it is needed (needs_early_lighting), which takes registered lighting.
+    state.early_lighting =
+        m_lighting
+        && m_lighting->render_early(
+            depth,
+            input,
+            state.target,
+            [&](const renderer::Shader& shader) {
+                m_lighting->bind(shader, Layer::Terrain, true, &input.camera, true);
+                bind_sun_shadow(shader, input.camera);
+                bind_hero_shadow(shader);
+                glUniform1i(shader.uniform("early_ao_enabled"), state.gtao_raw != 0 ? 1 : 0);
+                glUniform1i(shader.uniform("early_ao"), 18);
+                glUniform1i(shader.uniform("early_ao_scale"), state.gtao_scale);
+                glUniform1f(
+                    shader.uniform("early_ao_strength"), std::clamp(state.gtao_strength, 0.0f, 3.0f)
+                );
+                glActiveTexture(GL_TEXTURE0 + 18);
+                glBindTexture(renderer::world::gl::GL_TEXTURE_BUFFER, state.gtao_raw);
+                glActiveTexture(GL_TEXTURE0);
+            },
+            error
+        );
     stats::gauge("early lighting active", state.early_lighting ? 1 : 0);
     if (!error.empty()) {
         log::warn("early lighting: {}", error);
@@ -2258,9 +2268,17 @@ void LevelScene::draw_layer(
         }
         glUniform4fv(shader.uniform("probe_point_position"), 8, point_positions.data());
         glUniform4fv(shader.uniform("probe_point_colour"), 8, point_colours.data());
-        m_probes.bind(shader, layer, m_hero_enabled || m_sun_enabled, &input.camera, depth_matched);
+        // The registered lighting's uniforms; without it the shader keeps the game's lighting.
+        if (m_lighting) {
+            m_lighting->bind(
+                shader, layer, m_hero_enabled || m_sun_enabled, &input.camera, depth_matched
+            );
+        }
         bind_sun_shadow(shader, input.camera);
-        m_early_lighting.bind(shader, input, state);
+        // The early lighting's result, where registered lighting drew one.
+        if (m_lighting) {
+            m_lighting->bind_early(shader, input, state);
+        }
         bind_hero_shadow(shader);
         glUniform4f(shader.uniform("fog_colour"), m_fog_colour[0], m_fog_colour[1], m_fog_colour[2],
                     m_fog_colour[3]);
@@ -2328,8 +2346,8 @@ void LevelScene::draw_layer(
         if (mobys && !state.depth_prepass && state.opaque_colour_phase < 0) {
             layer_pass.emplace(moby_pass_names[pass], stats::kGpu);
         }
-        const bool early = !state.depth_prepass && (mobys ? pass == 0 : pass <= 1)
-                           && m_early_lighting.matches(input, state);
+        const bool early = !state.depth_prepass && (mobys ? pass == 0 : pass <= 1) && m_lighting
+                           && m_lighting->early_matches(input, state);
         const bool batch_shader = colour_batch && state.opaque_colour_phase >= 0;
         static const bool& specialisation_off = stats::probe(
             "OPENRAC_OPAQUE_SPECIALISE_OFF", "Reference: unspecialised mesh colour shaders"

@@ -29,6 +29,7 @@
 #include "debug_overlay.h"
 #include "enhanced/renderer/gtao.h"
 #include "enhanced/renderer/texture_upscale.h"
+#include "enhanced/viewer/scene_lighting.h"
 #include "frontend.h"
 #include "game/common/frontend/geometry.h"
 #include "game/common/frontend/state.h"
@@ -96,6 +97,8 @@ void use_level(int number) {
     }
     g->scene.release();
     g->scene = scene::LevelScene();
+    // The enhanced renderer's probe and early lighting, drawn when the player's settings ask.
+    lighting::use_scene_lighting(g->scene);
     g->level = scene::LevelData();
     std::string error;
     const auto dir = g->levels / std::format("level_{:02d}", wanted);

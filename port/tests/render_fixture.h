@@ -35,6 +35,7 @@
 
 #include "enhanced/renderer/gtao.h"
 #include "enhanced/tests/probe_fixture.h"
+#include "enhanced/viewer/scene_lighting.h"
 #include "renderer/framebuffer.h"
 #include "renderer/gl.h"
 #include "renderer/math.h"
@@ -610,8 +611,11 @@ struct DrawOptions {
 // Neither copied nor moved: the renderers it adds hold references to its scene.
 class SceneRenderer {
 public:
-    // The renderer gets GTAO as the frontend's does, for `DrawOptions::enhanced`.
-    SceneRenderer() { m_renderer.set_ambient_occlusion(std::make_unique<renderer::Gtao>()); }
+    // The renderer gets GTAO and the scene the enhanced lighting, as the frontend's do.
+    SceneRenderer() {
+        m_renderer.set_ambient_occlusion(std::make_unique<renderer::Gtao>());
+        lighting::use_scene_lighting(m_scene);
+    }
 
     SceneRenderer(const SceneRenderer&) = delete;
     SceneRenderer& operator=(const SceneRenderer&) = delete;
@@ -657,6 +661,7 @@ public:
     bool reupload(const scene::LevelData& level, std::string& error) {
         m_scene.release();
         m_scene = scene::LevelScene();
+        lighting::use_scene_lighting(m_scene);
         return m_scene.upload(level, m_renderer.textures(), error)
                && (!m_options.enhanced
                    || (shadow_probe_fixture(m_scene, error)

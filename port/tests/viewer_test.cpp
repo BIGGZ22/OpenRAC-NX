@@ -21,6 +21,7 @@
 
 #include "check.h"
 #include "common/json.h"
+#include "enhanced/viewer/scene_lighting.h"
 #include "game/rac1/game_state.h"
 #include "gpu_draw_reference.h"
 #include "renderer/framebuffer.h"
@@ -387,6 +388,7 @@ int draw(scene::LevelData& level) {
     }
     renderer::Renderer renderer;
     scene::LevelScene scene;
+    lighting::use_scene_lighting(scene);
     std::string error;
     CHECK(scene.upload(level, renderer.textures(), error));
     for (std::size_t layer = 0; layer < scene::kLayerCount; ++layer) {

@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #pragma once
 #include "enhanced/tests/gpu_probe_fixture.h"
+#include "enhanced/viewer/scene_lighting.h"
 #include "scene/level_renderer.h"
 
 namespace openrac::test {
@@ -17,7 +18,8 @@ inline bool shadow_probe_fixture(scene::LevelScene& scene, std::string& error) {
     for (auto& p : volume.probes) {
         p.valid = true;
     }
-    if (!scene.set_probe_volume(openrac::test::gpu_probes(volume), error)) {
+    if (!lighting::scene_lighting(scene)
+             ->set_probe_volume(openrac::test::gpu_probes(volume), error)) {
         return false;
     }
     scene.set_probe_view(0);

@@ -248,6 +248,7 @@ add_library(openrac_scene_renderer STATIC
   scene/level_renderer.cpp
   enhanced/viewer/probe_lighting.cpp
   enhanced/viewer/probe_selection.cpp
+  enhanced/viewer/scene_lighting.cpp
   enhanced/viewer/early_lighting.cpp
 )
 openrac_embed_shaders(openrac_scene_renderer viewer openrac::scene
@@ -500,6 +501,7 @@ endif()
 # create nothing of it, so the game draws as a build without it.
 add_executable(enhanced_rendering_test enhanced/tests/enhanced_rendering_test.cpp)
 target_link_libraries(enhanced_rendering_test PRIVATE openrac_viewer_lib openrac_platform)
+target_include_directories(enhanced_rendering_test PRIVATE "${CMAKE_CURRENT_BINARY_DIR}/generated")
 openrac_warnings(enhanced_rendering_test)
 add_test(NAME enhanced_rendering_compat COMMAND enhanced_rendering_test --expect-off)
 set_tests_properties(enhanced_rendering_compat PROPERTIES SKIP_RETURN_CODE 77

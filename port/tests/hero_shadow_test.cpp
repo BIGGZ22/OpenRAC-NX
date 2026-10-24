@@ -5,6 +5,7 @@
 
 #include "enhanced/tests/gpu_probe_fixture.h"
 #include "enhanced/tests/probe_fixture.h"
+#include "enhanced/viewer/scene_lighting.h"
 #include "renderer/gl.h"
 #include "scene/hero_shadow.h"
 #include "scene/level_renderer.h"
@@ -78,6 +79,7 @@ void gpu(bool perspective = false) {
     hero.moby_light[3] = 1;
     other.matrix = renderer::translation({-2, 0, 0});
     scene::LevelScene scene;
+    lighting::use_scene_lighting(scene);
     renderer::Renderer renderer;
     std::string error;
     CHECK(scene.upload(level, renderer.textures(), error));
@@ -92,7 +94,9 @@ void gpu(bool perspective = false) {
     for (auto& e : probes.irradiance) {
         e.fill(0.2f * std::numbers::pi_v<float>);
     }
-    CHECK(scene.set_probe_volume(openrac::test::gpu_probes(probes), error));
+    CHECK(
+        lighting::scene_lighting(scene)->set_probe_volume(openrac::test::gpu_probes(probes), error)
+    );
     CHECK(test::shadow_probe_fixture(scene, error));
     CHECK(scene.enable_hero_shadow(true, error));
     CHECK(
@@ -182,7 +186,9 @@ void gpu(bool perspective = false) {
     hero.palette = -1;
     CHECK(scene.upload(level, renderer.textures(), error));
     scene.set_instances(scene::Layer::Mobys, {hero, other});
-    CHECK(scene.set_probe_volume(openrac::test::gpu_probes(probes), error));
+    CHECK(
+        lighting::scene_lighting(scene)->set_probe_volume(openrac::test::gpu_probes(probes), error)
+    );
     CHECK(test::shadow_probe_fixture(scene, error));
     CHECK(scene.enable_hero_shadow(true, error));
     renderer.render(input, {frame.id(), 64, 64});

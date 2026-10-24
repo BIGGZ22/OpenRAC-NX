@@ -85,15 +85,14 @@ std::string probe_shader_source(std::string source) {
     return source;
 }
 
-std::string probe_mesh_fragment() {
-    return probe_shader_source(scene::shaders::mesh_frag);
+std::string probe_mesh_fragment(std::string source) {
+    return probe_shader_source(std::move(source));
 }
 
-std::string probe_early_fragment() {
+std::string probe_early_fragment(std::string source) {
     if (!enhanced_rendering_available()) {
-        return probe_mesh_fragment();
+        return probe_mesh_fragment(std::move(source));
     }
-    std::string source = scene::shaders::mesh_frag;
     source += scene::shaders::early_lighting_glsl;
     source.insert(source.find('\n') + 1, "#define OPENRAC_EARLY_LIGHTING 1\n");
     return probe_shader_source(std::move(source));

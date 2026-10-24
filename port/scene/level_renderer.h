@@ -23,13 +23,12 @@
 #include <unordered_map>
 #include <vector>
 
-#include "enhanced/viewer/early_lighting.h"
-#include "enhanced/viewer/probe_lighting.h"
 #include "renderer/framebuffer.h"
 #include "renderer/gpu_draw.h"
 #include "renderer/renderer.h"
 #include "renderer/shader.h"
 #include "scene/level.h"
+#include "scene/level_lighting.h"
 #include "scene/sun_shadow.h"
 
 namespace openrac::scene {
@@ -43,7 +42,16 @@ public:
     void draw_layer(Layer layer, const renderer::FrameInput& input, renderer::RenderState& state);
     bool needs_early_lighting(const renderer::FrameInput& input) const;
 
-    bool probe_data_available() const { return m_probes.has_data(); }
+    // Registers the level's probe and early lighting (scene/level_lighting.h), replacing what it
+    // had; without one the scene lights as the game does. Before upload.
+    void set_level_lighting(std::unique_ptr<LevelLighting> lighting) {
+        m_lighting = std::move(lighting);
+    }
+
+    // The registered lighting, or null.
+    LevelLighting* level_lighting() const { return m_lighting.get(); }
+
+    bool probe_data_available() const { return m_lighting && m_lighting->has_data(); }
 
     void render_early_lighting(
         unsigned depth, const renderer::FrameInput& input, renderer::RenderState& state
@@ -97,69 +105,68 @@ public:
 
     bool lighting = true;
 
-    bool probes_active() const { return m_probes.active(); }
+    bool probes_active() const { return m_lighting && m_lighting->active(); }
 
-    bool compute_probe_selection() const { return m_probes.compute_selection(); }
+    bool compute_probe_selection() const { return m_lighting && m_lighting->compute_selection(); }
 
     void select_visible_probe_regions(
         unsigned depth, const renderer::Camera& camera, int width, int height
     ) {
-        m_probes.select_visible_regions(depth, camera, width, height);
+        // Without registered lighting there are no probe regions to choose.
+        if (m_lighting) {
+            m_lighting->select_visible_regions(depth, camera, width, height);
+        }
     }
 
     void set_probe_lighting(bool enabled, float multiplier) {
-        m_probes.enabled = enabled;
-        m_probes.gi_multiplier = multiplier;
+        // Without registered lighting there is no probe lighting to switch.
+        if (m_lighting) {
+            m_lighting->set_lighting(enabled, multiplier);
+        }
     }
 
     void set_probe_bias(float normal, float view) {
-        m_probes.normal_bias = normal;
-        m_probes.view_bias = view;
+        // Without registered lighting there are no probe lookups to bias.
+        if (m_lighting) {
+            m_lighting->set_bias(normal, view);
+        }
     }
 
     void set_probe_spheres(bool shown) {
-        m_probes.show_spheres = shown || m_probes.environment_spheres;
+        // Without registered lighting there are no probes to show.
+        if (m_lighting) {
+            m_lighting->set_spheres(shown);
+        }
     }
 
     void update_probe_regions(const renderer::Camera& camera, float seconds = -1) {
-        const auto clip = renderer::multiply(camera.projection, camera.view);
-        m_probes.update_regions(camera.position, seconds, &clip);
-    }
-
-    bool set_probe_regions(
-        const lighting::ProbeVolume& volume,
-        std::vector<lighting::ProbeVolume> regions,
-        std::string& error
-    ) {
-        return m_probes.upload_regions(volume, std::move(regions), error);
+        // Without registered lighting there are no probe regions to stream.
+        if (m_lighting) {
+            m_lighting->update_regions(camera, seconds);
+        }
     }
 
     renderer::AoLighting ao_lighting() const {
-        if (!m_probes.active() || m_probes.mode == 0) {
+        if (!probes_active() || m_lighting->mode() == 0) {
             return renderer::AoLighting::Legacy;
         }
-        return m_probes.mode == 1 || m_probes.mode == 2 ? renderer::AoLighting::Indirect
-                                                        : renderer::AoLighting::Unoccluded;
+        const int mode = m_lighting->mode();
+        return mode == 1 || mode == 2 ? renderer::AoLighting::Indirect
+                                      : renderer::AoLighting::Unoccluded;
     }
 
     void set_probe_view(int view) {
-        if (view >= 0 && view <= 4) {
-            m_probes.mode = view;
+        // The five probe views (LevelLighting::mode), and lighting registered to show them.
+        if (m_lighting && view >= 0 && view <= 4) {
+            m_lighting->set_mode(view);
         }
     }
 
     void draw_probe_spheres(const renderer::FrameInput& input, renderer::RenderState& state) {
-        m_probes.draw_spheres(input, state);
-    }
-
-    // In-memory providers must verify scene/version identity before calling.
-    // File-based activation performs those checks through ProbeLighting::load.
-    bool set_probe_volume(
-        const lighting::ProbeVolume& volume,
-        std::string& error,
-        const lighting::ProbeVolume* dense = nullptr
-    ) {
-        return m_probes.upload(volume, error, dense);
+        // Without registered lighting there are no probes to draw.
+        if (m_lighting) {
+            m_lighting->draw_spheres(input, state);
+        }
     }
 
     // Eight point lights after the 16 directional sets: colour, position/radius.
@@ -358,8 +365,7 @@ private:
     unsigned m_lights = 0;            // RGBA8 texture, the ties' lit colours
     std::vector<float> m_light_sets;  // the level's 16 directional light sets (LevelData)
     std::array<float, 64> m_point_lights{};
-    lighting::ProbeLighting m_probes;
-    lighting::EarlyLighting m_early_lighting;
+    std::unique_ptr<LevelLighting> m_lighting;  // The probe and early lighting; null: none.
     bool m_early_capable = false;
     void bind_hero_shadow(const renderer::Shader& shader) const;
     void bind_shadow_atlas(const renderer::Shader& shader) const;

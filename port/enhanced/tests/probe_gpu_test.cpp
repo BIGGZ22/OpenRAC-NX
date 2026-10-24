@@ -6,6 +6,7 @@
 #include "enhanced/renderer/gtao.h"
 #include "enhanced/tests/gpu_probe_fixture.h"
 #include "enhanced/viewer/probe_lighting.h"
+#include "enhanced/viewer/scene_lighting.h"
 #include "renderer/framebuffer.h"
 #include "renderer/gl.h"
 #include "scene/level_renderer.h"
@@ -309,6 +310,7 @@ void material_path(
     renderer::Renderer renderer;
     renderer.set_ambient_occlusion(std::make_unique<renderer::Gtao>());
     scene::LevelScene scene;
+    lighting::use_scene_lighting(scene);
     std::string error;
     CHECK(scene.upload(level, renderer.textures(), error));
     scene.set_probe_lighting(true, 1.2f);  // explicit intensity for this fixture
@@ -336,7 +338,9 @@ void material_path(
     for (auto& e : volume.irradiance) {
         e = {3.14159265f, 3.14159265f, 3.14159265f};
     }
-    CHECK(scene.set_probe_volume(openrac::test::gpu_probes(volume), error));
+    CHECK(
+        lighting::scene_lighting(scene)->set_probe_volume(openrac::test::gpu_probes(volume), error)
+    );
     if (indirect) {
         scene.set_probe_view(2);
     }
@@ -349,7 +353,10 @@ void material_path(
         for (auto& e : volume.irradiance) {
             e = {};
         }
-        CHECK(scene.set_probe_volume(openrac::test::gpu_probes(volume), error));
+        CHECK(
+            lighting::scene_lighting(scene)
+                ->set_probe_volume(openrac::test::gpu_probes(volume), error)
+        );
         for (float multiplier : {0.f, 5.f}) {
             scene.set_probe_lighting(true, multiplier);
             input.gtao = true;
@@ -365,7 +372,10 @@ void material_path(
         for (auto& e : volume.irradiance) {
             e = {};
         }
-        CHECK(scene.set_probe_volume(openrac::test::gpu_probes(volume), error));
+        CHECK(
+            lighting::scene_lighting(scene)
+                ->set_probe_volume(openrac::test::gpu_probes(volume), error)
+        );
         std::vector<std::uint8_t> isolated;
         for (float multiplier : {0.0f, 5.0f}) {
             scene.set_probe_lighting(true, multiplier);
@@ -451,7 +461,10 @@ void material_path(
         for (auto& e : volume.irradiance) {
             e = {0, 0, 0};
         }
-        CHECK(scene.set_probe_volume(openrac::test::gpu_probes(volume), error));
+        CHECK(
+            lighting::scene_lighting(scene)
+                ->set_probe_volume(openrac::test::gpu_probes(volume), error)
+        );
         std::array<float, 64> points{};
         points[0] = points[1] = points[2] = 1;
         points[6] = 1;
@@ -481,9 +494,11 @@ void material_path(
         for (auto& m : local.distance_moments) {
             m = {1024, 1024 * 1024};
         }
-        CHECK(scene.set_probe_regions(
-            openrac::test::gpu_probes(volume), {openrac::test::gpu_probes(local)}, error
-        ));
+        CHECK(
+            lighting::scene_lighting(scene)->set_probe_regions(
+                openrac::test::gpu_probes(volume), {openrac::test::gpu_probes(local)}, error
+            )
+        );
         CHECK(scene.compute_probe_selection());
         scene.update_probe_regions(input.camera, 1);
         input.after_world_depth = [&](unsigned depth, int width, int height) {
@@ -860,6 +875,7 @@ void camera_facing_normals() {
             renderer::Renderer renderer;
             renderer.set_ambient_occlusion(std::make_unique<renderer::Gtao>());
             scene::LevelScene scene;
+            lighting::use_scene_lighting(scene);
             std::string error;
             CHECK(scene.upload(level, renderer.textures(), error));
             CHECK(renderer.add(
@@ -891,7 +907,10 @@ void camera_facing_normals() {
                 }
             }
             lighting::update_probe_gutters(volume);
-            CHECK(scene.set_probe_volume(openrac::test::gpu_probes(volume), error));
+            CHECK(
+                lighting::scene_lighting(scene)
+                    ->set_probe_volume(openrac::test::gpu_probes(volume), error)
+            );
             for (bool below : {false, true}) {
                 renderer::FrameInput input;
                 input.camera.view = renderer::identity();

@@ -10,6 +10,7 @@
 
 #include "check.h"
 #include "enhanced/renderer/texture_upscale.h"
+#include "enhanced/viewer/probe_lighting.h"
 #include "renderer/framebuffer.h"
 #include "renderer/shader.h"
 #include "renderer/texture_pool.h"
@@ -295,8 +296,8 @@ void main(){
     for (const auto& path : cases) {
         renderer::Shader material;
         std::string vs = material_vertex;
-        std::string fs =
-            path.kind == 1 ? scene::shaders::sky_frag : lighting::probe_mesh_fragment();
+        std::string fs = path.kind == 1 ? scene::shaders::sky_frag
+                                        : lighting::probe_mesh_fragment(scene::shaders::mesh_frag);
 
         if (path.kind == 2) {
             fs = renderer::shaders::direct_frag;

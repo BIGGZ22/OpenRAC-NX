@@ -8,9 +8,11 @@
 #include "enhanced/tests/probe_fixture.h"
 #include "enhanced/viewer/early_lighting.h"
 #include "enhanced/viewer/probe_lighting.h"
+#include "enhanced/viewer/scene_lighting.h"
 #include "scene/level_renderer.h"
 #include "tests/check.h"
 #include "tests/renderer_gl_context.h"
+#include "viewer_shaders.h"
 
 using namespace openrac;
 
@@ -41,6 +43,7 @@ int main(int argc, char** argv) {
         CHECK(!probes.active());
         CHECK(!probes.compute_selection());
         scene::LevelScene scene;
+        lighting::use_scene_lighting(scene);
         CHECK(!scene.enable_sun_shadow(true, error));
         CHECK(!scene.enable_hero_shadow(true, error));
         CHECK(!scene.sun_shadow_enabled() && !scene.hero_shadow_enabled());
@@ -49,7 +52,7 @@ int main(int argc, char** argv) {
         CHECK(!ao.render({}, {}));
         CHECK(ao.visibility_texture() == 0 && ao.depth_texture() == 0);
         // No atlas/shadow source is injected into the compatibility shader.
-        const auto fragment = lighting::probe_mesh_fragment();
+        const auto fragment = lighting::probe_mesh_fragment(scene::shaders::mesh_frag);
         CHECK(fragment.find("uniform sampler2D probe_irradiance") == std::string::npos);
         CHECK(fragment.find("uniform sampler2D sun_shadow_map0") == std::string::npos);
     }
@@ -60,6 +63,7 @@ int main(int argc, char** argv) {
         renderer::Renderer renderer;
         renderer.set_ambient_occlusion(std::make_unique<renderer::Gtao>());
         scene::LevelScene scene;
+        lighting::use_scene_lighting(scene);
         scene::LevelData level;
         for (const auto& p :
              {renderer::Vec3{-1, -1, 0}, renderer::Vec3{1, -1, 0}, renderer::Vec3{0, 1, 0}}) {
