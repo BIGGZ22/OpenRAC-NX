@@ -255,6 +255,11 @@ void print_counters(
 // without a read-back is one submit; skipped (77) without Vulkan.
 int test_the_vulkan_counters_follow_the_draws() {
     namespace vkgl = openrac::vkgl;
+    // The shader below is compiled by glslang and its pipeline made by the draw, not taken from
+    // the SPIR-V cache or the pre-warm an earlier run left (R-12, R-10): the counters then have a
+    // compile and a pipeline to count.
+    render_opt::set(Opt::SpirvDiskCache, false);
+    render_opt::set(Opt::PipelinePrewarm, false);
     openrac::test::GlContext context;
     std::string error;
 
