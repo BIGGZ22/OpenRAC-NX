@@ -66,6 +66,10 @@ if(TARGET openrac_renderer_vulkan AND TARGET openrac_viewer_lib)
     openrac_viewer_lib openrac_platform)
   target_compile_definitions(openrac_render_bench PRIVATE OPENRAC_VULKAN=1)
   openrac_warnings(openrac_render_bench)
+  # A build of the test programs alone (the *_test targets, as CI's Fedora job builds them) builds
+  # the benchmark too, which render_bench_smoke runs.
+  add_custom_target(render_bench_test)
+  add_dependencies(render_bench_test openrac_render_bench)
   add_test(NAME render_bench_smoke
            COMMAND openrac_render_bench --frames 10 --warmup 2 --size 640x360)
   set_tests_properties(render_bench_smoke PROPERTIES SKIP_RETURN_CODE 77 ENVIRONMENT
