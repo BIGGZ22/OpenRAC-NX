@@ -310,12 +310,41 @@ def source_table() -> str:
     return "\n".join(out) + "\n"
 
 
+def strip_label(game: dict, name: str) -> str:
+    """A game's name in the README's strip of badges: its title without the series ("Going
+    Commando"), and the version ("PAL") when the game has more than one."""
+    title = game["title"]
+    for series in ("Ratchet & Clank: ", "Ratchet: "):
+        title = title.removeprefix(series)
+    return f"{title} {name.upper()}" if len(game["versions"]) > 1 else title
+
+
+def badge_strip(versions) -> str:
+    """One small live bytematch.dev badge per version with a ByteMatch project, the code it has
+    matched in the bar's gold on its dark brown: the README's compact progress. VERSIONS is
+    games.versions()."""
+    badges = []
+    for game, name, v in versions:
+        slug = v.get("bytematch")
+        if not slug:
+            continue
+        label = strip_label(game, name)
+        query = urlencode({"mode": "shield", "label": label, "measure": "matched_code_percent",
+                           "version": v["serial"], "color": "c99222", "labelColor": "1b1206",
+                           "style": "flat-square"})
+        badges.append(f'  <a href="https://bytematch.dev/{slug}/{v["serial"]}">'
+                      f'<img src="https://bytematch.dev/{slug}.svg?{query.replace("&", "&amp;")}" '
+                      f'alt="{label}: code matched"></a>')
+    return '<p align="center">\n' + "\n".join(badges) + "\n</p>\n"
+
+
 def tables() -> None:
     """Rewrite every <!-- NAME:begin --> ... <!-- NAME:end --> block in README.md and
     baserom/README.md with the table of that name."""
     summary = PROGRESS / "summary.json"
     rows = [(g, n, v, measure(v, games.source_checkout(g["id"], n))) for g, n, v in games.versions()]
     made = {"games": game_table(), "discs": disc_table(), "boot": boot_table(), "sources": source_table(),
+            "badges": badge_strip(games.versions()),
             "progress": render(rows, dates=False, badges=True) if summary.exists() else None}
     for doc in (ROOT / "README.md", BASEROM / "README.md", GAMES / "README.md", ROOT / "docs/SOURCES.md"):
         if not doc.exists():

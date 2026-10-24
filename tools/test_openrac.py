@@ -170,6 +170,20 @@ class ProgressTests(unittest.TestCase):
         self.assertIn("label=Code&measure=matched_code_percent&version=SCUS_976.15", table)
         self.assertIn("| – | – |", table)
 
+    def test_badge_strip_names_each_version_shortly(self):
+        rac1 = {"id": "rac1", "title": "Ratchet & Clank", "versions": {"pal": {}, "ntsc": {}}}
+        rac2 = {"id": "rac2", "title": "Ratchet & Clank: Going Commando", "versions": {"ntsc": {}}}
+        strip = openrac.badge_strip([
+            (rac1, "pal", {"serial": "SCES_509.16", "bytematch": "OpenRAC/rac1-decomp"}),
+            (rac2, "ntsc", {"serial": "SCUS_972.68", "bytematch": "OpenRAC/rac2-decomp"}),
+            (rac2, "ntsc", {"serial": "SCUS_000.00"}),
+        ])
+        self.assertIn('alt="Ratchet & Clank PAL: code matched"', strip)
+        self.assertIn('alt="Going Commando: code matched"', strip)
+        self.assertIn('href="https://bytematch.dev/OpenRAC/rac2-decomp/SCUS_972.68"', strip)
+        self.assertIn("color=c99222&amp;labelColor=1b1206", strip)
+        self.assertEqual(strip.count("<img "), 2)
+
 
 if __name__ == "__main__":
     unittest.main()
