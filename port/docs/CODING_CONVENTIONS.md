@@ -70,7 +70,7 @@ count.
 | A game's hand C | `port/game/*/hand/` | not this page: it is the game's C on its way into `games/` ([LAYOUT.md](../../docs/LAYOUT.md)) and keeps the decompilation's style |
 | Generated C | hostgen's output in build trees, `port/game/rac1/script_binding.c` | not this page: change the generator, never the output |
 | The decompilations | `games/` | never edited from port work |
-| Python | `port/tools/` | the repository's Python habits: licence lines, a module docstring with the usage, `unittest` tests beside the tool |
+| Python | `port/tools/` | the repository's Python habits: licence lines (23.1), a module docstring with the usage, `unittest` tests beside the tool |
 | The mod SDK | `sdk/include/` | its own rules ([MODS.md](../../docs/port/MODS.md)): `openrac_mod.h` is a C ABI, `mod.hpp` a C++17 layer compiled into mods |
 
 In C, `static` is how a file-local function is spelled, and the comment forms are C's (6.1). The
@@ -1415,7 +1415,10 @@ These come from [AGENTS.md](../../AGENTS.md), [SOURCING.md](../../docs/policy/SO
    `// Copyright (c) 2026 the OpenRAC contributors`. A C file has the same two lines in its comment
    form (`/* SPDX-License-Identifier: GPL-3.0-or-later` then ` * Copyright ...`). Code adapted from
    a permissively licensed project keeps its licence's identifier, says so in the file comment, and
-   is credited in [THIRD_PARTY_NOTICES.md](../../THIRD_PARTY_NOTICES.md).
+   is credited in [THIRD_PARTY_NOTICES.md](../../THIRD_PARTY_NOTICES.md). A Python file of
+   `port/tools/` has the same two lines as `#` comments, after its `#!` line when it has one. The
+   editor's files, Python included, carry no licence lines: the editor's own MIT
+   [LICENSE](../../editor/LICENSE) covers them ([editor/README.md](../../editor/README.md)).
 2. **No game content.** No game code, data or bytes in a source, a test, a log or a comment. A tool
    that reads a game file prints counts, never the content.
 3. **No Sony SDK.** Nothing written from Sony's SDK source, samples or headers, or from leaked or NDA
