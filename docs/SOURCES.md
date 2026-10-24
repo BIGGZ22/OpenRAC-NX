@@ -73,8 +73,12 @@ Everything else is exactly as it was at that commit.
   rule in its own LEGAL.md, CONTRIBUTING.md and AGENTS.md.
 
 **rac6/ntsc**
-- Nothing changed: imported as the project's commit, whole. It already states the sourcing
-  rule in its own LEGAL.md, CONTRIBUTING.md and AGENTS.md.
+- Imported as the project's commit, whole; it states the sourcing rule in its own LEGAL.md,
+  CONTRIBUTING.md and AGENTS.md.
+- `config/toolchain.json` names the sibling workspace's compiler depot by its relative path
+  (`tools/compilers/...`), without a local drive path.
+- `THIRD_PARTY_NOTICES.md` credits GCC's `fp-bit.c` and `libgcc2.c` (GPL-2.0-or-later with
+  the libgcc exception) for the runtime-library bodies in `src/levels/bodies/`.
 
 **rac4/ntsc**
 - In `src/game/00473A88.c`, the five members of the local struct are named by
