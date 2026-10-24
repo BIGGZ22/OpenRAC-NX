@@ -1,6 +1,6 @@
 <script lang="ts">
   // The website's sticky orange bar (openrac-site src/components/Header.tsx):
-  // the OpenRAC logo in the bar's ink, round tabs, a white Discord button.
+  // the OpenRAC logo in the bar's ink, and round pills in a shade of it: the tabs, the site, Discord.
   // On Android the same places are a navigation rail on the left, or a bar at the bottom when
   // the window is narrow, as Android's own apps have them (Material's navigation rail and bar).
   import { api, inTauri, onAndroid } from "$lib/api";
@@ -154,7 +154,7 @@
       <button class="site" onclick={() => void api.openUrl(SITE_URL)} aria-label="openrac.dev" title="openrac.dev"
         ><Icon name="external" size={14} /><span class="label">openrac.dev</span></button
       >
-      <!-- The community: the site's white button, with Discord's mark, which tilts like the wrench. -->
+      <!-- The community: Discord's mark, which tilts like the lombax's head. -->
       <button class="discord" onclick={() => void api.openUrl(DISCORD_URL)} aria-label="Join the OpenRAC Discord">
         <svg class="mark" viewBox="0 0 24 24" width="18" height="18" aria-hidden="true">
           <path
@@ -245,34 +245,39 @@
     }
   }
 
-  /* The tag stands as tall as the logo's capitals, from the top of "RAC" to its foot, in the same
-     ink and nearly its weight. */
+  /* The bar's controls share one look, the tabs': a pill in a shade of the bar's ink, which turns
+     the selected tab's dark brown and amber under the pointer. The tag beside the logo is the same
+     shade, smaller, its version in the dark brown and gold of the selected tab. */
   .brand small {
     display: inline-flex;
     align-items: center;
-    height: 17px;
+    gap: 8px;
+    height: 26px;
+    padding: 0 3px 0 10px;
+    margin-left: 6px;
+    border-radius: 999px;
+    background: rgb(0 0 0 / 0.12);
     font-family: var(--font-head);
     font-size: 0.6875rem;
     font-weight: 800;
     line-height: 1;
     letter-spacing: 0.1em;
     text-transform: uppercase;
-    color: var(--bar-name);
-    border: 2px solid var(--bar-name);
-    border-radius: 999px;
-    /* Orbitron's capitals sit high in their line. */
-    padding: 1px 8px 0;
-    margin-left: 6px;
+    color: var(--bar-ink-deep);
   }
 
   .brand .ver {
-    align-self: stretch;
     display: inline-flex;
     align-items: center;
-    margin-left: 7px;
-    padding-left: 7px;
-    border-left: 2px solid var(--bar-name);
-    letter-spacing: 0.06em;
+    height: 20px;
+    padding: 0 8px;
+    border-radius: 999px;
+    background: var(--bar-ink-deep);
+    color: var(--gold);
+    font-family: var(--font-sans);
+    font-size: 0.75rem;
+    font-weight: 700;
+    letter-spacing: 0.02em;
     text-transform: none;
   }
 
@@ -365,74 +370,57 @@
   }
 
   .preview {
-    font-size: 0.75rem;
-    font-weight: 700;
-    color: var(--bar-ink);
-    border: 1px dashed rgb(0 0 0 / 0.4);
-    border-radius: 999px;
-    padding: 3px 10px;
-  }
-
-  .site {
     display: inline-flex;
     align-items: center;
-    gap: 6px;
-    font-size: 0.875rem;
-    font-weight: 600;
-    color: var(--bar-ink);
-    padding: 7px 10px;
+    height: 26px;
+    padding: 0 10px;
     border-radius: 999px;
+    background: rgb(0 0 0 / 0.12);
+    font-size: 0.75rem;
+    font-weight: 700;
+    color: var(--bar-ink-deep);
   }
 
-  @media (hover: hover) {
-    .site:hover {
-      background: rgb(0 0 0 / 0.1);
-    }
-  }
-
-  /* Discord: the site's white button, raised a little off the bar, its mark in the bar's ink. */
+  /* The site and Discord: the tabs' height and shade, with their marks. */
+  .site,
   .discord {
     display: inline-flex;
     align-items: center;
-    gap: 8px;
-    font-size: 0.875rem;
-    font-weight: 700;
-    background: var(--bar-button);
-    color: var(--bar-ink-deep);
-    border: 1px solid rgb(0 0 0 / 0.12);
+    gap: 7px;
+    height: 34px;
+    padding: 0 14px 0 12px;
     border-radius: 999px;
-    padding: 6px 16px 6px 12px;
-    box-shadow:
-      0 2px 0 rgb(0 0 0 / 0.18),
-      inset 0 -2px 0 rgb(0 0 0 / 0.06);
+    background: rgb(0 0 0 / 0.12);
+    font-size: 0.875rem;
+    font-weight: 600;
+    color: var(--bar-ink-deep);
     transition:
-      transform 0.15s ease,
-      box-shadow 0.15s ease,
-      background 0.15s ease;
+      background var(--fast) var(--ease),
+      color var(--fast) var(--ease);
   }
 
   .discord .mark {
     flex: none;
-    transition: transform 0.25s cubic-bezier(0.2, 0.8, 0.2, 1);
+    transition: transform var(--medium) var(--ease);
   }
 
   @media (hover: hover) {
+    .site:hover,
     .discord:hover {
-      transform: translateY(-1px);
       background: var(--bar-ink-deep);
-      color: var(--bar-button);
-      box-shadow: 0 6px 16px rgb(0 0 0 / 0.28);
+      color: var(--amber);
     }
 
+    /* Discord's mark tilts as the lombax's head does. */
     .discord:hover .mark {
       transform: rotate(-12deg) scale(1.08);
-      color: var(--gold);
     }
   }
 
+  .site:active,
   .discord:active {
-    transform: translateY(1px);
-    box-shadow: 0 1px 0 rgb(0 0 0 / 0.2);
+    background: var(--bar-ink-deep);
+    color: var(--amber);
   }
 
   /* An update: the selected tab's dark brown and gold, with a dot that pulses. */
@@ -521,7 +509,9 @@
 
     .site,
     .discord {
-      padding: 7px 9px;
+      width: 34px;
+      padding: 0;
+      justify-content: center;
     }
 
     .job {

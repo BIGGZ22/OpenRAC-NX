@@ -28,9 +28,8 @@
   --bar-bottom: #cd8300;
   --bar-ink: #2a1800;
   --bar-ink-deep: #1b1206;
-  /* The name on the bar, and the site's white button on it (Discord). */
+  /* The logo on the bar. */
   --bar-name: #000;
-  --bar-button: #fff;
   /* Text on a game's own colours or picture: a card's title, the disc switch, a name on Android's
      game strip. */
   --on-game: #fff;
