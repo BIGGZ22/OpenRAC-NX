@@ -176,13 +176,15 @@ class ProgressTests(unittest.TestCase):
         rac6 = {"id": "rac6", "title": "Ratchet & Clank: Secret Agent Clank", "versions": {"ntsc": {}}}
         box = openrac.progress_box([
             (rac1, "pal", {"serial": "SCES_509.16", "bytematch": "OpenRAC/rac1-decomp"}),
-            (rac2, "ntsc", {"serial": "SCUS_972.68", "bytematch": "OpenRAC/rac2-decomp"}),
+            (rac2, "ntsc", {"serial": "SCUS_972.68", "bytematch": "OpenRAC/rac2-decomp",
+                            "source": {"name": "rac2-decomp", "repo": "https://github.com/OpenRAC/rac2-gc-decomp"}}),
             (rac2, "ntsc", {"serial": "SCUS_000.00"}),
             (rac6, "ntsc", {"serial": "SCUS_976.23", "bytematch": "OpenRAC/rac-sac-decomp"}),
         ])
         self.assertIn("<td>Ratchet &amp; Clank (PAL)</td>", box)
         self.assertIn("<td>Going Commando</td>", box)
         self.assertIn('href="https://bytematch.dev/OpenRAC/rac2-decomp/SCUS_972.68"', box)
+        self.assertIn('<td><a href="https://github.com/OpenRAC/rac2-gc-decomp">rac2-decomp</a></td>', box)
         self.assertIn("color=c99222", box)
         self.assertEqual(box.count("<img "), 2)
 

@@ -325,23 +325,36 @@ def short_title(game: dict, name: str) -> str:
 
 
 def progress_box(versions) -> str:
-    """The README's compact progress: a small table, in line with the text, one row per version with a ByteMatch
-    project, its name and a live bytematch.dev badge of the code it has matched, in the header
-    bar's gold. VERSIONS is games.versions()."""
+    """The README's compact progress: a table the page's width, one row per version with a
+    ByteMatch project: its name, the decompilation project it comes from, and a live
+    bytematch.dev badge of the code it has matched, in the header bar's gold. VERSIONS is
+    games.versions()."""
     rows = []
     for game, name, v in versions:
         slug = v.get("bytematch")
         if not slug or v["serial"] in PROGRESS_HIDDEN:
             continue
         title = short_title(game, name)
+        source = v.get("source") or {}
+        # The NTSC decomp is named only so, never by its author's handle or address (AGENTS.md).
+        if game["id"] == "rac1" and name == "ntsc":
+            project = "the NTSC decomp"
+        elif source.get("repo"):
+            project = f'<a href="{source["repo"]}">{source["name"]}</a>'
+        else:
+            project = "–"
         query = urlencode({"mode": "shield", "label": "", "measure": "matched_code_percent",
                            "version": v["serial"], "color": "c99222", "style": "flat-square"})
         badge = (f'<a href="https://bytematch.dev/{slug}/{v["serial"]}">'
                  f'<img src="https://bytematch.dev/{slug}.svg?{query.replace("&", "&amp;")}" '
                  f'alt="{title}: code decompiled"></a>')
-        rows.append(f'  <tr><td>{title.replace("&", "&amp;")}</td><td align="right">{badge}</td></tr>')
+        rows.append(f'  <tr><td>{title.replace("&", "&amp;")}</td><td>{project}</td>'
+                    f'<td align="right">{badge}</td></tr>')
+    # GitHub sizes a table to its content, whatever its own width says: the columns' widths make
+    # it as wide as the README's column.
     return ('<table>\n'
-            '  <tr><th align="left">Game</th><th align="right">Code decompiled</th></tr>\n'
+            '  <tr><th align="left" width="260">Game</th><th align="left" width="270">Project</th>'
+            '<th align="right" width="190">Code decompiled</th></tr>\n'
             + "\n".join(rows) + "\n</table>\n")
 
 
