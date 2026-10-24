@@ -11,11 +11,11 @@
 
 #include "common/log.h"
 #include "common/stats.h"
-#include "enhanced/viewer/hero_shadow.h"
-#include "enhanced/viewer/shadow_atlas.h"
 #include "renderer/gl.h"
 #include "renderer/render_opt.h"
 #include "renderer/world/gl_world.h"
+#include "scene/hero_shadow.h"
+#include "scene/shadow_atlas.h"
 #include "viewer_shaders.h"
 #if defined(OPENRAC_VULKAN)
 #include "renderer/vulkan/vkgl.h"

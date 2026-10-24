@@ -6,10 +6,10 @@
 #include "common/stats.h"
 #include "enhanced/tests/gpu_probe_fixture.h"
 #include "enhanced/tests/probe_fixture.h"
-#include "enhanced/viewer/sun_shadow.h"
 #include "renderer/gl.h"
 #include "renderer/shadows.h"
 #include "scene/level_renderer.h"
+#include "scene/sun_shadow.h"
 #include "tests/check.h"
 #include "tests/gpu_draw_reference.h"
 #include "tests/renderer_gl_context.h"
@@ -913,7 +913,9 @@ void gpu() {
         CHECK(scene.upload(level, renderer.textures(), error));
         CHECK(test::shadow_probe_fixture(scene, error));
         CHECK(scene.enable_sun_shadow(true, error));
-        input.after_world_depth = [](unsigned depth, int, int) { CHECK(depth != 0); };
+        input.after_world_depth = [](unsigned depth, int, int) {
+            CHECK(depth != 0);
+        };
         CHECK(scene.batches_opaque_colour());
         stats::set_enabled(stats::Client::Overlay, true);
         stats::begin_frame(stats::FrameKind::Tick, 0);
@@ -947,9 +949,11 @@ void gpu() {
         const auto combined_calls = vkgl::gpu_material_counters().native_draws - combined_before;
         vkgl::present();
         set_probe("OPENRAC_OPAQUE_SPECIALISE_OFF", false);
-        std::printf("opaque shaders: %llu combined, %llu specialised native calls; identical pixels\n",
-                    static_cast<unsigned long long>(combined_calls),
-                    static_cast<unsigned long long>(colour_batch_calls));
+        std::printf(
+            "opaque shaders: %llu combined, %llu specialised native calls; identical pixels\n",
+            static_cast<unsigned long long>(combined_calls),
+            static_cast<unsigned long long>(colour_batch_calls)
+        );
         std::printf(
             "opaque colour: %llu -> %llu native calls, identical pixels and triangles\n",
             static_cast<unsigned long long>(colour_reference_calls),

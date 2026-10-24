@@ -222,10 +222,12 @@ endif()
 # A level from the editor's export, the live mobys' poses and shadows read from game memory, and the
 # frames written to PNG: CPU work only, so the probe tools link it without a graphics context.
 add_library(openrac_scene STATIC
+  scene/hero_shadow.cpp
   scene/level.cpp
   scene/moby_pose.cpp
   scene/moby_shadow.cpp
   scene/screenshot.cpp
+  scene/sun_shadow.cpp
 )
 target_link_libraries(openrac_scene PUBLIC openrac_renderer openrac_viewer_third_party
   openrac_assets_geometry)
@@ -247,8 +249,6 @@ add_library(openrac_scene_renderer STATIC
   enhanced/viewer/probe_lighting.cpp
   enhanced/viewer/probe_selection.cpp
   enhanced/viewer/early_lighting.cpp
-  enhanced/viewer/hero_shadow.cpp
-  enhanced/viewer/sun_shadow.cpp
 )
 openrac_embed_shaders(openrac_scene_renderer viewer openrac::scene
   "${CMAKE_CURRENT_SOURCE_DIR}/viewer/shaders/mesh.vert"
@@ -261,8 +261,8 @@ openrac_embed_shaders(openrac_scene_renderer viewer openrac::scene
   "${CMAKE_CURRENT_SOURCE_DIR}/enhanced/lighting/probes.glsl"
   "${CMAKE_CURRENT_SOURCE_DIR}/enhanced/viewer/shaders/probe_spheres.vert"
   "${CMAKE_CURRENT_SOURCE_DIR}/enhanced/viewer/shaders/probe_spheres.frag"
-  "${CMAKE_CURRENT_SOURCE_DIR}/enhanced/viewer/shaders/hero_shadow.frag"
-  "${CMAKE_CURRENT_SOURCE_DIR}/enhanced/viewer/shaders/shadow_depth.vert"
+  "${CMAKE_CURRENT_SOURCE_DIR}/viewer/shaders/hero_shadow.frag"
+  "${CMAKE_CURRENT_SOURCE_DIR}/viewer/shaders/shadow_depth.vert"
   "${CMAKE_CURRENT_SOURCE_DIR}/viewer/shaders/sky.vert"
   "${CMAKE_CURRENT_SOURCE_DIR}/viewer/shaders/sky.frag"
 )
@@ -318,7 +318,7 @@ endif()
 
 openrac_add_test(probe_scene SOURCES enhanced/tests/probe_scene_test.cpp LIBS openrac_probe_scene)
 
-add_executable(hero_shadow_test enhanced/tests/hero_shadow_test.cpp)
+add_executable(hero_shadow_test tests/hero_shadow_test.cpp)
 target_link_libraries(hero_shadow_test PRIVATE openrac_viewer_lib openrac_platform)
 openrac_warnings(hero_shadow_test)
 add_test(NAME hero_shadow_cpu COMMAND hero_shadow_test)
@@ -327,7 +327,7 @@ if(OPENRAC_VULKAN AND OPENRAC_ENHANCED_RENDERING)
   set_tests_properties(hero_shadow_vulkan PROPERTIES SKIP_RETURN_CODE 77
     ENVIRONMENT "OPENRAC_ENHANCED=1;OPENRAC_GL_API=vulkan;OPENRAC_VULKAN_VALIDATION=1")
 endif()
-add_executable(sun_shadow_test enhanced/tests/sun_shadow_test.cpp)
+add_executable(sun_shadow_test tests/sun_shadow_test.cpp)
 target_link_libraries(sun_shadow_test PRIVATE openrac_viewer_lib openrac_platform)
 target_include_directories(sun_shadow_test PRIVATE "${CMAKE_CURRENT_BINARY_DIR}/generated")
 openrac_warnings(sun_shadow_test)

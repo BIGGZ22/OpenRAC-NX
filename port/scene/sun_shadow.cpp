@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-#include "enhanced/viewer/sun_shadow.h"
+#include "scene/sun_shadow.h"
 
 #include <algorithm>
 #include <cmath>
