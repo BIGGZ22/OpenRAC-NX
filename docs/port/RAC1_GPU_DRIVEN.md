@@ -213,7 +213,7 @@ See [debugging](DEBUGGING.md) for frame dumps, GPU labels and profiling tools.
 
 | System | Main source |
 | --- | --- |
-| Scene passes, batching and geometry | [level_renderer.cpp](../../port/viewer/level_renderer.cpp) |
+| Scene passes, batching and geometry | [level_renderer.cpp](../../port/scene/level_renderer.cpp) |
 | GPU instance pages and indirect commands | [gpu_draw.inc](../../port/renderer/vulkan/gpu_draw.inc) |
 | Material tables and texture descriptors | [gpu_materials.inc](../../port/renderer/vulkan/gpu_materials.inc) |
 | Vulkan state and submission | [vkgl_internal.h](../../port/renderer/vulkan/vkgl_internal.h), [vkgl_commands.cpp](../../port/renderer/vulkan/vkgl_commands.cpp) |

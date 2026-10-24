@@ -129,7 +129,7 @@ int main() {
         CHECK(shadow_solid.uniform("material_colour") == -1);
         shadow_solid.release();
     }
-    // The static layers' opaque pass (viewer/level_renderer.cpp, m_solid).
+    // The static layers' opaque pass (scene/level_renderer.cpp, m_solid).
     std::string solid(mesh_fragment);
     solid.insert(solid.find('\n') + 1, "#define OPENRAC_SOLID 1\n");
     build("mesh (solid)", viewer_src::mesh_vert, solid.c_str());
