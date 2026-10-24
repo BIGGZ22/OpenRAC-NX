@@ -187,7 +187,7 @@
       <div class="page" style={themeStyle(v.game)}>
         {#if art}
           <div class="page-ambient-bg" aria-hidden="true">
-            <img src={art} alt="" decoding="async" onerror={hideMissing} />
+            <img src={art} alt="" decoding="sync" onerror={hideMissing} />
           </div>
         {/if}
 
@@ -218,7 +218,7 @@
         <section class="hero" aria-label={v.title} in:fly|global={arrive()}>
           {#if art}
             <div class="hero-backdrop" aria-hidden="true">
-              <img src={art} alt="" class="hero-bg" decoding="async" fetchpriority="high" onerror={hideMissing} />
+              <img src={art} alt="" class="hero-bg" decoding="sync" fetchpriority="high" onerror={hideMissing} />
               <div class="hero-overlay"></div>
             </div>
           {/if}

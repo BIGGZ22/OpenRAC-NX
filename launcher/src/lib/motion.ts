@@ -27,7 +27,19 @@ export function slide(change: () => void, way: Way) {
   document.startViewTransition(async () => {
     change();
     await tick();
+    await pictures();
   });
+}
+
+/** Waits, briefly, for the pictures of the page coming in: the slide shows the page as it is when
+ *  this settles, and a picture still loading would pop in after the page had slid in without it. */
+function pictures(): Promise<void> {
+  const pending = [...document.querySelectorAll("main img")].filter(
+    (img): img is HTMLImageElement => img instanceof HTMLImageElement && !img.complete,
+  );
+  if (!pending.length) return Promise.resolve();
+  const loaded = Promise.all(pending.map((img) => img.decode().catch(() => undefined)));
+  return Promise.race([loaded, new Promise((done) => setTimeout(done, 120))]).then(() => undefined);
 }
 
 /** What comes into view: up from 10 px below, fading in; DELAY staggers what follows. */

@@ -5,7 +5,7 @@
   import { app, dismissCrashes, openVersion } from "$lib/app.svelte";
   import { pct } from "$lib/format";
   import { regionLabel } from "$lib/labels";
-  import { gameArt, hideMissing } from "$lib/media";
+  import { gameTileArt, hideMissing } from "$lib/media";
   import { playerAct, playerState, playerVersion } from "$lib/player.svelte";
   import { themeStyle } from "$lib/themes";
   import Icon from "./Icon.svelte";
@@ -15,7 +15,7 @@
 
   // The game's still picture (media.ts), zoomed in a little while the tile has the pointer or the
   // focus; without one, the tile shows the game's colours.
-  const art = $derived(gameArt(game.id));
+  const art = $derived(gameTileArt(game.id));
   const v = $derived(playerVersion(game));
   const next = $derived(v ? playerState(game, v) : null);
   /** The tile offers the next step itself only when there is one to take. */

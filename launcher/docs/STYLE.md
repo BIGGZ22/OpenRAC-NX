@@ -115,11 +115,14 @@ band and faintly behind its page. A file that is not there is left out: the
 game's colours show, as on the site.
 
 The site serves its backdrops from its server, not its repository, so a new
-one is copied from there.
+one is copied from there, and scaled to 1920 wide when it is wider: the band
+is never wider than that on screen, and a 3840 picture took long enough to
+decode that the page slid in without it and showed it a moment later.
 The game list shows each picture 64 × 44 from a thumbnail,
 `<name>-thumb.webp` (192 × 132, a few KB), so that it does not decode every
-game's full picture: `python3 scripts/media.py thumbs` makes them again after
-a picture is added or replaced. `python3 scripts/media.py still RECORDING GAME
+game's full picture; Android's game tiles show `<name>-tile.webp`, the picture
+1280 wide, for the same reason. `python3 scripts/media.py thumbs` makes both
+again after a picture is added or replaced. `python3 scripts/media.py still RECORDING GAME
 --at S` writes a picture and its thumbnail from a frame of a recording of
 your own play.
 

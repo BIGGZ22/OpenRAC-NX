@@ -9,8 +9,9 @@ recording of your own play, and its thumbnail. GAME is OpenRAC's id (rac1 to rac
 site's name for the game (rac1, gc, uya, deadlocked, size-matters, sac), so the files match
 src/lib/media.ts.
 
-`thumbs` makes every game's thumbnail, <name>-thumb.webp, from its picture: the game list shows
-the pictures 64 by 44, and a thumbnail is a few KB to decode where a picture is several MB.
+`thumbs` makes every game's thumbnail, <name>-thumb.webp, and its tile picture, <name>-tile.webp,
+from its picture: the game list shows the pictures 64 by 44 and Android's Games tab a few hundred
+pixels wide, and a picture up to 3840 wide decodes to tens of MB where those take one or two.
 Run it after a picture is added or replaced.
 
 Record the game yourself, from your own disc: docs/STYLE.md says what to write in
@@ -27,6 +28,8 @@ NAMES = {"rac1": "rac1", "rac2": "gc", "rac3": "uya", "rac4": "deadlocked", "rac
 IMG = Path(__file__).resolve().parent.parent / "public" / "img"
 # The game list's picture is 64 by 44: three times that stays sharp on any screen.
 THUMB = (192, 132)
+# Android's game tiles are at most about 900 pixels wide on the screen: 1280 stays sharp there.
+TILE_WIDTH = 1280
 
 
 def still_args(recording: Path, out: Path, at: float, width: int) -> list[str]:
@@ -51,11 +54,22 @@ def thumb_args(picture: Path, out: Path) -> list[str]:
     ]  # fmt: skip
 
 
+def tile_args(picture: Path, out: Path) -> list[str]:
+    """ffmpeg's arguments for a tile picture: the whole picture, TILE_WIDTH wide (never wider)."""
+    return [
+        "ffmpeg", "-hide_banner", "-loglevel", "error", "-y", "-i", str(picture),
+        "-vf", f"scale='min({TILE_WIDTH},iw)':-2:flags=lanczos",
+        "-frames:v", "1", "-c:v", "libwebp", "-quality", "82",
+        str(out),
+    ]  # fmt: skip
+
+
 def thumb(img: Path, name: str) -> Path | None:
-    """Writes NAME's thumbnail from its picture; None when there is no picture yet."""
+    """Writes NAME's thumbnail and tile picture from its picture; None when there is no picture yet."""
     picture = img / f"{name}-bg.webp"
     if not picture.is_file():
         return None
+    subprocess.run(tile_args(picture, img / f"{name}-tile.webp"), check=True)
     out = img / f"{name}-thumb.webp"
     subprocess.run(thumb_args(picture, out), check=True)
     return out
