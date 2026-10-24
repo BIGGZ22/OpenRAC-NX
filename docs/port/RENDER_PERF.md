@@ -136,3 +136,64 @@ frontend's `draw_kept` hands the scene before its `render` section opens), so no
 time. `LevelScene::prepare_shadows` (the cascades' culling on the CPU) runs inside the pass that
 calls it and is counted in that pass's time. PROGRESS.md's follow-ups list them for the scene's
 packages.
+
+## R-01: the counters, the timers and the registry
+
+**What changed.** The registry (`renderer/render_opt.h`, the entry `registry-selftest`), the
+counters of `vkgl::SubmissionCounters` and their gauges, the four CPU sections above and the
+timestamp line. No draw, submit or image changes: every count is an add beside the call it counts,
+and the gauges are written only while the debug tools measure.
+
+**Equivalence.** Nothing draws differently, so the proof is the existing image tests passing
+unchanged: on the Mac every Vulkan test of the release preset (`viewer_vulkan`, whose fixtures
+compare CPU and GPU frames byte for byte with their draw and triangle counts, `vulkan_uniform`,
+`vulkan_uniform_reference`, `renderer_*_vulkan`, `sun_shadow_*`, `hero_shadow_vulkan`, `gtao_*`,
+`early_lighting_vulkan`, `probe_gpu_vulkan`, `enhanced_rendering_*`), and the same again with
+`OPENRAC_RENDER_OPT_OFF=all`; on box1 the whole release preset, the OpenGL tests included (they
+skip on the Mac, which has no GL context in an agent's session).
+
+**The counters on `render_opt_vulkan`'s scene** (six triangles a frame, three frames, 64 by 64).
+Before R-01 none of these existed; the older gauges are unchanged. The counts are the same on both
+machines; the attachment bytes differ because each device has its own depth format
+(`VK_FORMAT_D32_SFLOAT_S8_UINT`, 8 bytes, on MoltenVK; `VK_FORMAT_D24_UNORM_S8_UINT`, 4 bytes, on
+the NVIDIA driver), so a counter is compared on one machine, before against after.
+
+| Counter | Mac (M5 Max, MoltenVK 1.4.2, macOS 27.0) | box1 (GTX 1070, NVIDIA 580.178.04, Vulkan 1.4.312, Manjaro) |
+|---|---|---|
+| `vk_cmds_recorded` | 165 | 165 |
+| `vk_cmds_draw` | 18 | 18 |
+| `vk_cmds_dynamic_state` | 108 | 108 |
+| `vk_cmds_bind_descriptors` | 18 | 18 |
+| `vk_cmds_bind_pipeline` | 3 | 3 |
+| `vk_cmds_barrier` | 9 | 9 |
+| `vk_cmds_render_pass` | 6 | 6 |
+| `vk_cmds_query` | 3 | 3 |
+| `vk_render_passes` | 3 | 3 |
+| `vk_attachment_load_bytes` | 98,304 | 49,152 |
+| `vk_attachment_store_bytes` | 147,456 | 98,304 |
+| `vk_barriers`, of them `ALL_COMMANDS` | 9, 9 | 9, 9 |
+| `vk_submits` | 3 | 3 |
+| `vk_descriptor_sets_allocated`, `vk_descriptor_writes` | 3, 0 | 3, 0 |
+| `vk_pipelines_created` (total) | 1 | 1 |
+| `vk_texture_creations` (total: the dummy image, the default colour and depth) | 3 | 3 |
+| `vk_shader_compiles` (total) | 3 | 3 |
+
+Already visible: of 165 commands for 18 draws, 108 are dynamic state set again before every draw
+(six a draw) and 18 descriptor binds of an unchanged set, which is what R-03 removes.
+
+**Milliseconds, as information.** The five image tests `vulkan_uniform`, `viewer_vulkan`,
+`renderer_shader_vulkan`, `renderer_direct_vulkan` and `world_gl_smoke_vulkan`, one after another,
+five runs each (the first run on the Mac starts with a cold pipeline cache): on the Mac 0.93 s
+before and 0.93 s after (median; 0.91 to 2.05 and 0.91 to 1.95), on box1 1.46 s before and 1.44 s
+after (1.45 to 1.49 and 1.43 to 1.45). No change beyond the noise.
+
+Measured with:
+
+```sh
+cd port && cmake --preset release && cmake --build --preset release
+OPENRAC_GL_API=vulkan OPENRAC_VULKAN_VALIDATION=1 ./build/release/render_opt_test --vulkan
+ctest --preset release -R '^(vulkan_uniform|viewer_vulkan|renderer_shader_vulkan|renderer_direct_vulkan|world_gl_smoke_vulkan)$'
+```
+
+The synthetic benchmark (`openrac_render_bench`, `port/tools/perf/render_bench.py`) and the
+equivalence test come with R-02, which adds the baseline table and the commands for real levels.

@@ -17,6 +17,7 @@ a renderer that draws its kind of thing on the GPU.
 | `gs.h` | the GS registers and the GIF tag as fields (public hardware documentation) | `common/dma/gs.h` |
 | `subsystems.h` | placeholders for terrain (tfrag), ties, shrubs, mobys, sky and particles, each documenting what it must draw | `TFragment`, `Tie3`, `Shrub`, `Merc2`, `Sky`, `Sprite3` |
 | `gl.h` | the GL functions used, loaded through the context's loader; no generated loader | glad |
+| `render_opt.h` | the optimisation registry: every render optimisation by name, its default and its tolerance, switched off with `OPENRAC_RENDER_OPT_OFF` to compare it with its reference path; its own library, `openrac_render_opt` ([cmake/Render.cmake](../cmake/Render.cmake)), so that it builds without a window ([docs/port/RENDER_PERF.md](../../docs/port/RENDER_PERF.md)) | |
 | `shader.h`, `framebuffer.h`, `math.h` | GLSL programs (`#version 410 core`, samplers `tex_T<n>` bound to unit n), off-screen targets, column-major matrices with a reversed-depth projection | `Shader`, `FramebufferTexturePair` |
 
 Shaders are in `shaders/` and compiled into the library
@@ -61,6 +62,7 @@ bits are), DATE, dithering. The hand-off from the game (which bytes reach
 ## Tests
 
 `renderer_texture` (conversions, layout, pool), `renderer_gif` (the
-interpreter) run anywhere; `renderer_direct` draws packets into a framebuffer
+interpreter), `render_opt` and `render_opt_environment` (the registry's table and
+`OPENRAC_RENDER_OPT_OFF`) run anywhere; `renderer_direct` draws packets into a framebuffer
 and checks pixels, through SDL's offscreen driver (Mesa's llvmpipe without a
 GPU), and reports itself skipped when no OpenGL 4.1 context can be made.
