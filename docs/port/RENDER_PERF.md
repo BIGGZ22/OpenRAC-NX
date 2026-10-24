@@ -56,6 +56,8 @@ before and after, and how its frames are shown to be the same.
 | `pipeline-prewarm` | on | none (exact) | The pipelines earlier runs made are made again on a worker thread once their program links, from a manifest beside the pipeline cache ([R-10](#r-10-pipelines-made-ahead-on-a-worker)). |
 | `present-timing` | off | none (exact) | Vulkan presents numbered and waited on, so the backend can say when one reached the screen; the FIFO latest-ready mode for the uncapped mode without tearing ([R-09](#r-09-presentation-timing)). |
 | `vk-extended-dynamic-state` | off | none (exact) | Cull, front face, depth and stencil state recorded by the draw as Vulkan 1.3 dynamic state instead of baked into each pipeline; off because the synthetic scene has no program drawn with more than one such state ([R-11](#r-11-fixed-state-as-dynamic-state-shipped-off)). |
+| `moby-pose-in-place` | on | none (exact) | `set_instances` writes the mobys' poses into their groups when they and their order are unchanged, and `set_palette` sends nothing when the joints are unchanged ([R-16](#r-16-mobys-posed-in-place)). |
+| `shadow-atlas-discard` | on | none (exact) | The shadow atlas pass neither loads nor stores its unsampled colour and its stencil ([R-16](#r-16-mobys-posed-in-place), lane RB's note). |
 
 Its tests are `render_opt` (the table, and the parsing of the variable: a name, a list, `all`, an
 unknown name kept apart; it runs in the headless preset too) and `render_opt_environment` (the
@@ -1339,3 +1341,97 @@ off), read the spread of the frame-to-frame times and of the alphas at a steady 
 overlay's `present_wait_supported`, `present_time_known` and `acquire_wait_s`. A smaller spread with
 the entry on is the gain; no number is claimed here.
 
+
+## R-16: mobys posed in place
+
+**What changed** (`scene/level_renderer.*`, `tests/render_fixture.h`,
+`tests/render_equivalence_test.cpp`, `port/tools/layering/rules.tsv`):
+
+- `moby-pose-in-place`. Every frame the frontend's `draw_kept` hands the scene the live mobys
+  (`set_instances`), and every frame the moby groups went to the idle list and `build_groups`
+  regrouped them all: a list per key found by a linear search, a copy of each group's instances,
+  bounds for every instance, the buffers sent. Between two ticks, and at a tick that changes no
+  membership, the mobys and their order are the same, so the groups are too. `set_instances` now
+  remembers where `build_groups` put each moby (`remember_mobys`: its key, group, place and the
+  sphere its bounds came from); a call with the same keys in the same order (and the same
+  `OPENRAC_MOBY_SPHERE_CULL_OFF`) writes each moby's attributes into its place (`rewrite_mobys`),
+  recomputes its bounds only when its pose or sphere changed, refreshes its GPU bounds and sends
+  each group's buffer from that storage. Any other call, a membership change among them, regroups
+  as before; the order of groups and of instances inside them is `build_groups`' by construction
+  (the in-place path never reorders). `build_groups` itself finds a key's list through a hash map
+  now (a refactor commit: the same lists). `set_palette` sends nothing when the texture holds the
+  same joints bit for bit. The blend of poses (`blend_matrix`) is untouched, and the frontend's
+  `draw_kept` needed no change: the scene detects the unchanged layout itself, so no per-tick call
+  was added.
+- `moby instances`, `layer instances` and `moby palette` are CPU sections now (R-01's follow-up).
+- `shadow-atlas-discard` (lane RB's note, R-06's follow-up). The 3072 by 3072 shadow atlas pass
+  loaded and stored an RGBA8 colour attachment nothing samples, and loaded its whole depth image
+  because only the depth was cleared. With the entry on the pass lets the colour go before it
+  (`glInvalidateFramebuffer`), clears the stencil with the depth, and lets the colour and the
+  stencil go after it; only the sampled depth is stored. Put here rather than in R-18, which had
+  landed already.
+- A leak found on the way: `renderer::FrameBuffer` frees its GL objects only in `release()`, and
+  `LevelScene` let its shadow atlas, sun maps, hero map and static shadow cache go with a plain
+  reset, so each level release kept them on the GPU (about 650 MB an Enhanced scene in the
+  equivalence test, which ran box1's 8 GB out of device memory). `release_target` releases them
+  first; the test's GPU memory now stays at about 280 MB.
+- The fixture gained the scenario `churn` (three pictures between ticks; a seventh of the mobys left
+  out at each tick, a different seventh each tick, none between), the case the in-place path must
+  hand back to the regrouping; the equivalence test applies it.
+
+**The counters**, `render_bench.py --synthetic --compare-opt moby-pose-in-place` (entry off, then
+on), 1920x1080, five runs a setting, every counter the same in every run:
+
+| Setting | `bench_heap_allocs` per frame, Mac | box1 |
+|---|---|---|
+| base (walk, cold), between x3, warm cache, static camera, half size | 1,304 to 1,235 (-69) | not taken (box1's GPU was held by another lane's run) |
+| enhanced, three pictures between ticks | 2,337 to 2,268 (-69) | 2,383 to 2,314 (-69) |
+| materials off | 102 to 33 (-69) | not taken |
+
+The 69 allocations a frame were the moby layer's (the whole frame's difference: every other
+counter is +0.0 percent); with the entry on the in-place path makes none once its vectors have their
+size. The bytes sent for the mobys are the same (each group's buffer is sent whole, as before:
+`glBufferData` keeps the GL driver's orphaning, which a partial write would lose); what goes is the
+second copy, the regrouping and the bounds of unmoved mobys.
+
+`shadow-atlas-discard`, per Enhanced frame (60 measured frames, five runs):
+
+| Counter | Mac (MoltenVK, 8-byte depth) | box1 (NVIDIA, 4-byte depth) |
+|---|---|---|
+| `vk_attachment_load_bytes` | 163,013,000 to 49,766,400 (-69.5%) | 108,675,000 to 33,177,600 (-69.5%) |
+| `vk_attachment_store_bytes` | 171,307,000 to 133,558,000 (-22.0%) | 116,969,000 to 79,220,700 (-32.3%) |
+
+**Milliseconds, as information** (Enhanced on, three pictures between ticks, median of five runs,
+lowest to highest; entry off to on):
+
+| Timing | Mac | box1 |
+|---|---|---|
+| `moby instances` (CPU) | 0.0144 (0.0125 to 0.0230) to 0.0056 (0.0053 to 0.0062) | 0.0228 (0.0225 to 0.0232) to 0.0120 (0.0118 to 0.0122) |
+| `moby palette` (CPU) | 0.0059 to 0.0060 | 0.0201 to 0.0201 |
+| `shadow atlas` (GPU), `shadow-atlas-discard` | 0.0877 (0.0860 to 0.0881) to 0.0708 (0.0702 to 0.0754) | 0.2662 (0.2657 to 0.2673) to 0.2678 (0.2673 to 0.2683) |
+| the picture (CPU) | 1.57 to 1.61 | 3.07 to 3.07 |
+
+The moby layer's CPU cost on this scene (300 mobys of 46 classes) was already small: 0.014 ms
+(Mac) and 0.023 ms (box1) a between-frame, now 0.006 and 0.012. That is far under G4's 0.1 ms, so
+on the synthetic scene R-17's gate stays closed; the maintainers' machine and a real level decide
+it. On the tiled Apple GPU the atlas pass is a fifth faster without the colour and stencil traffic;
+on the discrete NVIDIA GPU it is the same.
+
+**Equivalence.** `render_equivalence_vulkan` compares both entries on against off in every
+scenario, the new `churn` (membership changing at ticks) and `between` (rewrites between ticks)
+included, translucent mobys (one in ten) among them, Enhanced off and on, byte for byte under the
+validation layer: identical, no validation message, on the Mac and box1. The whole release preset
+passes on the Mac (`gtao_vulkan`, whose test changes `OPENRAC_MOBY_SPHERE_CULL_OFF` between two
+`set_instances` of the same mobys, found that the switch must force a regrouping; it does), the
+headless preset too. The change reaches the GL path through the scene: `viewer` and `viewer_es`
+are the tests to run on a machine with a GL context.
+
+Measured with:
+
+```sh
+python3 port/tools/perf/render_bench.py --synthetic --compare-opt moby-pose-in-place
+OPENRAC_GL_API=vulkan port/build/release/openrac_render_bench --frames 60 --warmup 10 --enhanced on --between 3 [--opt-off moby-pose-in-place|shadow-atlas-discard]
+```
+
+On real levels: `python3 port/tools/perf/render_bench.py --level assets/port/rac1/pal/level_12 --compare-opt moby-pose-in-place`
+(the `moby instances` section with `--sections`), and the same with `shadow-atlas-discard`.
