@@ -51,14 +51,15 @@ the two equal.
 `src/assets/openrac-logo.svg` is the logo; `src/components/Logo.svelte` draws
 its paths unchanged, in the current colour, cut to one of two views: the whole
 logo, or its mark alone (the first letter: the lombax's head and the bowl of
-the "O") where the name has no room. Nothing else is drawn for it.
+the "O") where the name has no room. Nothing else is drawn for it. Its box is
+centred on the letters, with the ears rising above, so it sits level beside text.
 
-| Where                            | What                                                                                   |
-| -------------------------------- | -------------------------------------------------------------------------------------- |
-| The header bar                   | the whole logo in the bar's ink (`--bar-name`); the head tilts under the pointer       |
-| The bar of a window under 560 px | the mark                                                                               |
-| Android's navigation rail        | the mark in `--bar-ink-deep` on a tile of the bar's gradient: the picked game's accent |
-| The first run's welcome          | the mark in `--amber`, the accent                                                      |
+| Where                            | What                                                                                |
+| -------------------------------- | ----------------------------------------------------------------------------------- |
+| The header bar                   | the whole logo in the bar's ink (`--bar-name`); the head tilts under the pointer    |
+| The bar of a window under 560 px | the mark                                                                            |
+| Android's navigation rail        | the mark in `--amber`, the picked game's accent, as wide as the rail's destinations |
+| The first run's welcome          | the mark in `--amber`, the accent                                                   |
 
 A place can give the mark its own colour with `--logo-mark`.
 

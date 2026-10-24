@@ -64,8 +64,8 @@
   <!-- The first run: the name, not yet a way back to the games. -->
   {#if setup}
     <div class="brand" title={app.info?.version ? `OpenRAC Launcher ${app.info.version}` : undefined}>
-      <Logo height={36} />
-      <span class="brand-mark"><Logo mark height={36} label="" /></span>
+      <Logo height={40} />
+      <span class="brand-mark"><Logo mark height={44} label="" /></span>
       <small
         >Launcher{#if app.info?.version}<span class="ver">{app.info.version}</span>{/if}</small
       >
@@ -77,8 +77,8 @@
       aria-label="OpenRAC: your games"
       title={app.info?.version ? `OpenRAC Launcher ${app.info.version}` : undefined}
     >
-      <Logo height={36} />
-      <span class="brand-mark"><Logo mark height={36} label="" /></span>
+      <Logo height={40} />
+      <span class="brand-mark"><Logo mark height={44} label="" /></span>
       <!-- The launcher's version beside its name, on every page (also in the tooltip, for a narrow
            window that hides the tag). -->
       <small
@@ -584,16 +584,13 @@
     overflow-y: auto;
   }
 
-  /* The logo's mark on the bar's colour, the picked game's accent: the rail has no room for the
-     name. */
+  /* The logo's mark in the picked game's accent, as wide as the rail's destinations: the rail has
+     no room for the name. */
   :global(html[data-platform="android"]) .brand {
     flex: none;
     justify-content: center;
-    width: 48px;
-    height: 48px;
-    border-radius: 14px;
-    background: linear-gradient(to bottom, var(--bar-top), var(--bar-bottom));
-    box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.35);
+    width: 56px;
+    padding-top: 6px;
   }
 
   :global(html[data-platform="android"]) .brand > :global(.logo),
@@ -604,11 +601,11 @@
   /* It stays still there: the logo of an app, not a control that plays. */
   :global(html[data-platform="android"]) .brand .brand-mark {
     display: contents;
-    color: var(--bar-ink-deep);
+    color: var(--amber);
   }
 
   :global(html[data-platform="android"]) .brand .brand-mark :global(.logo) {
-    width: 40px;
+    width: 56px;
     height: auto;
     animation: none;
   }

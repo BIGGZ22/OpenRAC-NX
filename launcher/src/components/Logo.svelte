@@ -14,8 +14,11 @@
     "M10960 4506 c-113 -39 -210 -74 -216 -78 -7 -4 -22 -34 -34 -65 -38 -96 -498 -1171 -515 -1203 l-16 -30 174 0 173 0 31 73 c16 39 43 105 59 144 l29 73 176 0 175 0 56 130 55 130 -101 2 c-56 2 -132 3 -171 3 -57 0 -69 3 -67 15 8 42 208 529 216 527 6 -2 58 -122 117 -268 103 -256 184 -454 287 -704 l50 -120 168 -2 c93 -1 158 2 144 6 -21 7 -22 9 -8 16 9 4 23 3 29 -1 8 -5 10 -2 7 7 -3 8 -50 115 -103 239 -53 124 -123 286 -155 360 -32 74 -104 241 -160 370 -57 129 -122 282 -146 339 -24 57 -45 105 -46 107 -2 1 -95 -30 -208 -70z",
     "M12390 4594 c-94 -15 -153 -29 -210 -51 -204 -81 -351 -245 -421 -473 -21 -65 -24 -96 -24 -225 1 -128 4 -161 24 -225 53 -171 152 -305 291 -395 135 -87 273 -124 467 -125 128 0 230 17 323 54 72 29 207 125 202 145 -1 7 1 10 6 7 5 -3 22 8 38 25 33 35 41 23 -100 143 l-89 75 -61 -51 c-108 -91 -212 -124 -351 -115 -44 3 -102 13 -130 22 -113 37 -211 130 -256 244 -31 79 -39 263 -14 346 25 87 57 144 112 199 160 161 464 166 633 9 l60 -55 105 98 c58 54 105 104 105 110 0 14 -86 88 -150 131 -63 42 -171 83 -260 99 -69 12 -240 17 -300 8z",
   ];
-  /** Each one cut to what it draws: the whole logo, or the mark alone (where the name has no room). */
-  const VIEW = { full: "62 173 1253 334", mark: "62 173 415 334" };
+  /** The whole logo, or the mark alone (where the name has no room). Each box is centred on the
+   *  letters (the "O" and "RAC" share a middle, y 383), not on all the logo draws: the lombax's ears
+   *  rise above it (overflow, below), so that the logo sits level beside text and buttons rather
+   *  than low, as a box around the ears would set it. */
+  const VIEW = { full: "62 216 1253 334", mark: "62 216 415 334" };
 </script>
 
 <script lang="ts">
@@ -51,6 +54,7 @@
   .logo {
     display: block;
     flex: none;
+    overflow: visible;
     fill: currentColor;
   }
 
