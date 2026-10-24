@@ -1,0 +1,131 @@
+#!/usr/bin/env python3
+"""Qualify the assembly baseline of the SNR2 modules.
+
+The assembly baseline is the first step of the complete-program gate: the
+candidate code interval of a module is rendered as R5900 assembly, assembled
+with the SN assembler, linked, and compared with the retail bytes of the
+interval.  A module whose interval rebuilds byte for byte has a *baseline*:
+every later C body is measured against a code region that is known to be the
+retail code.
+
+The rendered assembly is a retail listing: it is written under the private
+workspace and never published.  The catalogue holds metadata only.
+
+Usage:
+    python3 tools/assembly_baseline.py --modules <private dir> \
+        --assembler <Ps2EeAs.exe> --linker <ld.exe> [--write]
+"""
+
+from __future__ import annotations
+
+import argparse
+import csv
+import hashlib
+import struct
+import sys
+from pathlib import Path
+
+ROOT = Path(__file__).resolve().parent.parent
+sys.path.insert(0, str(ROOT / "tools"))
+
+from r5900_assembly import (ASSEMBLER_SHA256, LINKER_SHA256, check_tool,  # noqa: E402
+                            render_assembly, run_tool)
+from rel import HEADER, RELOCATION, iter_packed_relocations, unpack_relocation  # noqa: E402
+
+CATALOGUE = ROOT / "config/levels/assembly_baseline.tsv"
+CODE_START = 0x80
+WORD = struct.Struct("<I")
+FIELDS = ["module", "start", "end_exclusive", "interval_bytes", "sha256",
+          "exact", "assembled_bytes"]
+
+
+def code_end_from_relocations(data: bytes) -> int:
+    """End of the candidate code interval, from the jump relocations."""
+    header = HEADER.unpack_from(data)
+    sites: set[int] = set()
+    for index in range(header[2]):
+        site, kind, _symbol, _addend = unpack_relocation(
+            data, header[1] + index * RELOCATION.size)
+        if kind == 4:
+            sites.add(site)
+    sites.update(row.site for row in iter_packed_relocations(data, header[13], header[1])
+                 if row.kind == 2)
+    if not sites:
+        raise ValueError("module has no measured jump relocation site")
+    return (max(sites) + 8 + 0x7F) & ~0x7F
+
+
+def build(module: str, data: bytes, output: Path, assembler: Path,
+          linker: Path) -> tuple[str, int, str, bool, int]:
+    """Rebuild the code interval of a module and compare it with the retail."""
+    from elf import inspect_elf
+
+    end = code_end_from_relocations(data)
+    size = end - CODE_START
+    words = struct.unpack_from("<" + "I" * (size // 4), data, CODE_START)
+    assembly, _stats = render_assembly(words, CODE_START, end)
+
+    folder = output / module.replace(".REL", "").lower()
+    folder.mkdir(parents=True, exist_ok=True)
+    (folder / "module.s").write_text(assembly, encoding="ascii", newline="\n")
+    (folder / "module.ld").write_text(
+        f"T_ZERO = 0;\nSECTIONS {{ . = 0x{CODE_START:08X}; .text : {{ *(.text) }} }}\n",
+        encoding="ascii", newline="\n")
+    run_tool([str(assembler), "-o", "module.o", "module.s"], folder, folder / "as.log")
+    run_tool([str(linker), "-T", "module.ld", "-o", "module.elf", "module.o"],
+             folder, folder / "ld.log")
+
+    linked = (folder / "module.elf").read_bytes()
+    section = next(item for item in inspect_elf(folder / "module.elf")["sections"]
+                   if item["name"] == ".text")
+    actual = linked[section["file_offset"]:section["file_offset"] + section["size"]]
+    reference = data[CODE_START:end]
+    exact = actual == reference and len(actual) == size
+    return (f"0x{CODE_START:08X}", end, hashlib.sha256(reference).hexdigest(),
+            exact, len(actual))
+
+
+def main() -> int:
+    parser = argparse.ArgumentParser(description=__doc__,
+                                     formatter_class=argparse.RawDescriptionHelpFormatter)
+    parser.add_argument("--modules", type=Path, required=True,
+                        help="directory of the extracted SNR2 modules")
+    parser.add_argument("--assembler", type=Path, required=True)
+    parser.add_argument("--linker", type=Path, required=True)
+    parser.add_argument("--output", type=Path, default=Path("/tmp/rac-sac-baseline"))
+    parser.add_argument("--write", action="store_true",
+                        help="write the tracked catalogue")
+    args = parser.parse_args()
+
+    check_tool(args.assembler, ASSEMBLER_SHA256)
+    check_tool(args.linker, LINKER_SHA256)
+
+    rows: list[list[str]] = []
+    failures = 0
+    for path in sorted(args.modules.glob("*.REL")):
+        data = path.read_bytes()
+        start, end, digest, exact, assembled = build(
+            path.name, data, args.output, args.assembler, args.linker)
+        rows.append([path.name, start, f"0x{end:08X}", str(end - CODE_START), digest,
+                     "yes" if exact else "no", str(assembled)])
+        if not exact:
+            failures += 1
+        print(f"{path.name:16s} {end - CODE_START:8d} bytes  "
+              f"{'EXACT' if exact else 'DIFFERENT'}  ({assembled} assembled)",
+              flush=True)
+
+    content = "\n".join(["# Generated by tools/assembly_baseline.py; the code "
+                          "interval of each module rebuilds byte for byte.",
+                          "\t".join(FIELDS)] + ["\t".join(row) for row in rows]) + "\n"
+    if args.write:
+        CATALOGUE.parent.mkdir(parents=True, exist_ok=True)
+        CATALOGUE.write_text(content, encoding="utf-8", newline="\n")
+    elif not CATALOGUE.is_file() or CATALOGUE.read_text(encoding="utf-8") != content:
+        raise ValueError("the assembly baseline catalogue is missing or stale; "
+                         "run with --write")
+    print(f"{len(rows) - failures}/{len(rows)} module(s) rebuild exactly")
+    return 1 if failures else 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

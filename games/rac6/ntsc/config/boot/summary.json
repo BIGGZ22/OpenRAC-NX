@@ -1,0 +1,20 @@
+{
+  "status": "candidate_inventory_only",
+  "executable": "SCUS_976.23",
+  "sha256": "1341f13c11e54e57748e963a5d49c28a571c4b87f98998687e1b1741c39f7911",
+  "text_address": "0x00100000",
+  "text_bytes": 650932,
+  "entry_intervals": 3821,
+  "call_targets": 1665,
+  "data_pointers": 3620,
+  "returns": 3699,
+  "boundary_status_counts": {
+    "bounded_candidate": 3214,
+    "no_return": 593,
+    "nonzero_tail": 14
+  },
+  "bounded_candidate_body_bytes": 563872,
+  "named_symbols": 0,
+  "name_note": "The boot executable carries no symbol table: the candidates are measured, not named.",
+  "overall_percent": null
+}

@@ -1,0 +1,209 @@
+{
+  "status": "candidate_inventory_only",
+  "module_count": 31,
+  "candidate_code_bytes_by_placement": 69483520,
+  "entry_intervals": 409233,
+  "boundary_status_counts": {
+    "bounded_candidate": 323138,
+    "external_interior_target": 30,
+    "no_return": 78197,
+    "nonzero_tail": 185,
+    "pointer_only": 7683
+  },
+  "bounded_candidate_body_bytes_by_placement": 64714676,
+  "raw_exact_distinct_candidate_bytes": 56468108,
+  "raw_exact_multi_placement_groups": 8742,
+  "relocation_masked_candidate_bytes": 6628908,
+  "masked_multi_placement_leads": 11068,
+  "mask_warning": "Masked relocation targets may refer to different code or data; these are leads, not proved shared functions or a progress denominator.",
+  "overall_percent": null,
+  "bytematch_ready": false,
+  "modules": [
+    {
+      "module": "FE.REL",
+      "candidate_code_bytes": 983040,
+      "candidate_intervals": 7005,
+      "bounded_candidates": 5360
+    },
+    {
+      "module": "LEVEL1.REL",
+      "candidate_code_bytes": 2412672,
+      "candidate_intervals": 14024,
+      "bounded_candidates": 11080
+    },
+    {
+      "module": "LEVEL10.REL",
+      "candidate_code_bytes": 2419456,
+      "candidate_intervals": 14171,
+      "bounded_candidates": 11203
+    },
+    {
+      "module": "LEVEL11.REL",
+      "candidate_code_bytes": 2513792,
+      "candidate_intervals": 14259,
+      "bounded_candidates": 11296
+    },
+    {
+      "module": "LEVEL13.REL",
+      "candidate_code_bytes": 2359296,
+      "candidate_intervals": 13800,
+      "bounded_candidates": 10896
+    },
+    {
+      "module": "LEVEL14.REL",
+      "candidate_code_bytes": 2582528,
+      "candidate_intervals": 14120,
+      "bounded_candidates": 10908
+    },
+    {
+      "module": "LEVEL15.REL",
+      "candidate_code_bytes": 2338048,
+      "candidate_intervals": 13773,
+      "bounded_candidates": 10847
+    },
+    {
+      "module": "LEVEL16.REL",
+      "candidate_code_bytes": 2456064,
+      "candidate_intervals": 14248,
+      "bounded_candidates": 11257
+    },
+    {
+      "module": "LEVEL17.REL",
+      "candidate_code_bytes": 1949056,
+      "candidate_intervals": 12214,
+      "bounded_candidates": 9727
+    },
+    {
+      "module": "LEVEL18.REL",
+      "candidate_code_bytes": 2054528,
+      "candidate_intervals": 12778,
+      "bounded_candidates": 10182
+    },
+    {
+      "module": "LEVEL19.REL",
+      "candidate_code_bytes": 2461440,
+      "candidate_intervals": 14294,
+      "bounded_candidates": 11325
+    },
+    {
+      "module": "LEVEL2.REL",
+      "candidate_code_bytes": 2046208,
+      "candidate_intervals": 12561,
+      "bounded_candidates": 9937
+    },
+    {
+      "module": "LEVEL20.REL",
+      "candidate_code_bytes": 2000000,
+      "candidate_intervals": 12524,
+      "bounded_candidates": 9987
+    },
+    {
+      "module": "LEVEL21.REL",
+      "candidate_code_bytes": 2551552,
+      "candidate_intervals": 14104,
+      "bounded_candidates": 10888
+    },
+    {
+      "module": "LEVEL22.REL",
+      "candidate_code_bytes": 2480768,
+      "candidate_intervals": 14222,
+      "bounded_candidates": 11246
+    },
+    {
+      "module": "LEVEL23.REL",
+      "candidate_code_bytes": 2023808,
+      "candidate_intervals": 12602,
+      "bounded_candidates": 10038
+    },
+    {
+      "module": "LEVEL24.REL",
+      "candidate_code_bytes": 2109824,
+      "candidate_intervals": 12627,
+      "bounded_candidates": 10148
+    },
+    {
+      "module": "LEVEL25.REL",
+      "candidate_code_bytes": 2602240,
+      "candidate_intervals": 14196,
+      "bounded_candidates": 10961
+    },
+    {
+      "module": "LEVEL26.REL",
+      "candidate_code_bytes": 1987584,
+      "candidate_intervals": 12262,
+      "bounded_candidates": 9743
+    },
+    {
+      "module": "LEVEL27.REL",
+      "candidate_code_bytes": 2019840,
+      "candidate_intervals": 12543,
+      "bounded_candidates": 9993
+    },
+    {
+      "module": "LEVEL28.REL",
+      "candidate_code_bytes": 1992704,
+      "candidate_intervals": 12585,
+      "bounded_candidates": 10041
+    },
+    {
+      "module": "LEVEL29.REL",
+      "candidate_code_bytes": 2488576,
+      "candidate_intervals": 14231,
+      "bounded_candidates": 11271
+    },
+    {
+      "module": "LEVEL3.REL",
+      "candidate_code_bytes": 2582016,
+      "candidate_intervals": 14150,
+      "bounded_candidates": 10923
+    },
+    {
+      "module": "LEVEL30.REL",
+      "candidate_code_bytes": 2353664,
+      "candidate_intervals": 13637,
+      "bounded_candidates": 10847
+    },
+    {
+      "module": "LEVEL31.REL",
+      "candidate_code_bytes": 2268416,
+      "candidate_intervals": 13386,
+      "bounded_candidates": 10606
+    },
+    {
+      "module": "LEVEL32.REL",
+      "candidate_code_bytes": 2098560,
+      "candidate_intervals": 12605,
+      "bounded_candidates": 10128
+    },
+    {
+      "module": "LEVEL4.REL",
+      "candidate_code_bytes": 2534400,
+      "candidate_intervals": 14450,
+      "bounded_candidates": 11457
+    },
+    {
+      "module": "LEVEL5.REL",
+      "candidate_code_bytes": 1985920,
+      "candidate_intervals": 12203,
+      "bounded_candidates": 9687
+    },
+    {
+      "module": "LEVEL7.REL",
+      "candidate_code_bytes": 2345088,
+      "candidate_intervals": 13518,
+      "bounded_candidates": 10686
+    },
+    {
+      "module": "LEVEL8.REL",
+      "candidate_code_bytes": 1907840,
+      "candidate_intervals": 12015,
+      "bounded_candidates": 9561
+    },
+    {
+      "module": "LEVEL9.REL",
+      "candidate_code_bytes": 2574592,
+      "candidate_intervals": 14126,
+      "bounded_candidates": 10909
+    }
+  ]
+}
