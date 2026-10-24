@@ -9,7 +9,7 @@ namespace openrac::lighting {
 // same GPU buffer through a texture-buffer view, without selection readback.
 class ProbeSelection {
 public:
-    static constexpr unsigned capacity = 128, tile_size = 16;
+    static constexpr unsigned capacity = 512, selected_capacity = 128, tile_size = 16;
     static bool supported();
     bool prepare(
         std::span<const lighting::ProbeGrid> grids,
@@ -32,8 +32,11 @@ public:
 
 private:
     renderer::Shader m_cull;
-    mutable std::array<unsigned, 2> m_buffers{};
-    mutable unsigned m_mask_texture = 0;
+    mutable std::array<unsigned, 3> m_buffers{};
+    mutable unsigned m_mask_texture = 0, m_secondary_texture = 0;
+    mutable renderer::Mat4 m_secondary_clip = renderer::identity();
+    mutable std::array<float, 3> m_secondary_position{};
+    mutable bool m_secondary_valid = false;
     int m_width = 0, m_height = 0;
     renderer::Mat4 m_clip = renderer::identity();
     void ensure_buffers() const;

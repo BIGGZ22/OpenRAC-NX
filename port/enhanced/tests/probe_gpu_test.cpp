@@ -687,8 +687,15 @@ void main() {
                 glActiveTexture(GL_TEXTURE0);
                 glBindTexture(GL_TEXTURE_2D, depth);
                 glTexSubImage2D(
-                    GL_TEXTURE_2D, 0, 0, 0, width, height,
-                    GL_DEPTH_COMPONENT, GL_FLOAT, depths.data()
+                    GL_TEXTURE_2D,
+                    0,
+                    0,
+                    0,
+                    width,
+                    height,
+                    GL_DEPTH_COMPONENT,
+                    GL_FLOAT,
+                    depths.data()
                 );
             };
             replace_depth(0);
@@ -724,6 +731,139 @@ void main() {
     CHECK(glGetError() == GL_NO_ERROR);
     probes.release();
     shader.release();
+    glDeleteTextures(1, &depth);
+}
+
+// Borrows fixture resources while checking primary and secondary GPU lookup tables.
+struct RegionLookup {
+    lighting::ProbeSelection& selection;            // Selector under test.
+    renderer::Shader& shader;                       // Lookup readback shader.
+    renderer::FrameBuffer& target;                  // Owns readback pixels.
+    unsigned vao;                                   // Borrowed fullscreen vertex array.
+    const std::vector<lighting::ProbeGrid>& grids;  // Authored region bounds.
+
+    // Checks GPU ordering against an independent CPU bounds-distance sort.
+    void check(const renderer::Camera& view, bool masks = false) {
+        glBindFramebuffer(GL_FRAMEBUFFER, target.id());
+        glViewport(0, 0, 133, 1);
+        shader.use();
+        selection.bind(shader, &view, false);
+        glUniform1i(shader.uniform("read_masks"), masks ? 1 : 0);
+        glDisable(GL_DEPTH_TEST);
+        glDisable(GL_BLEND);
+        glDisable(GL_CULL_FACE);
+        glBindVertexArray(vao);
+        glDrawArrays(GL_TRIANGLES, 0, 3);
+        const auto pixels = target.read_rgba();
+        std::vector<std::pair<float, unsigned>> expected;
+        for (unsigned i = 0; i < grids.size(); ++i) {
+            if (grids[i].origin[0] + view.view[12] > 1.0f
+                || grids[i].origin[0] + 0.001f + view.view[12] < -1.0f) {
+                continue;
+            }
+            float delta =
+                view.position[0]
+                - std::clamp(view.position[0], grids[i].origin[0], grids[i].origin[0] + 0.001f);
+            expected.emplace_back(delta * delta, i);
+        }
+        std::sort(expected.begin(), expected.end());
+        const auto count = static_cast<unsigned>(std::min<std::size_t>(128, expected.size()));
+        CHECK(pixels[0] == count && pixels[1] == 0);
+        for (unsigned slot = 0; slot < count; ++slot) {
+            unsigned id =
+                pixels[std::size_t{slot + 1} * 4] + 256u * pixels[std::size_t{slot + 1} * 4 + 1];
+            CHECK(id == expected[slot].second);
+        }
+        // All four mask words must include every selected region, including bit 127.
+        if (masks) {
+            CHECK(
+                std::all_of(pixels.begin() + std::ptrdiff_t{129} * 4, pixels.end(), [](auto byte) {
+                    return byte == 255;
+                })
+            );
+        }
+    }
+};
+
+// Builds the texture-buffer readback program used by the region-order fixture.
+void build_region_lookup(renderer::Shader& shader, std::string& error) {
+    CHECK(shader.build(
+        "nearest region lookup",
+        vertex,
+        R"glsl(#version 410 core
+uniform usamplerBuffer probe_region_masks;
+uniform int read_masks;
+layout(location=0) out vec4 result;
+void main() {
+    int slot = int(gl_FragCoord.x);
+    uint value = slot < 129 || read_masks != 0 ? texelFetch(probe_region_masks, slot).r : 0u;
+    result = vec4(float(value & 255u), float((value >> 8u) & 255u),
+                  float((value >> 16u) & 255u), float(value >> 24u)) / 255.0;
+}
+)glsl",
+        error
+    ));
+}
+
+// Includes a distance tie and a nearby off-frustum region in a full resident atlas.
+std::vector<lighting::ProbeGrid> closest_region_grids() {
+    std::vector<lighting::ProbeGrid> grids(512);
+    for (unsigned i = 0; i < grids.size(); ++i) {
+        grids[i].origin = {float(511 - i) * 0.001f, -0.1f, -0.1f};
+        grids[i].spacing = {0.001f, 0.2f, 0.2f};
+        grids[i].dimensions = {2, 2, 2};
+    }
+    grids[510].origin[0] = 0;  // Equal distance must keep the smaller ID first.
+    grids[509].origin[0] = 2;  // Off-frustum, even when closest to the camera.
+    return grids;
+}
+
+// Read the actual GPU lookup through the same texture-buffer view as lighting.
+void closest_regions(unsigned vao) {
+    if (!lighting::ProbeSelection::supported()) {
+        return;
+    }
+    auto grids = closest_region_grids();
+    std::vector<unsigned> offsets(grids.size());
+    for (unsigned i = 0; i < offsets.size(); ++i) {
+        offsets[i] = i * 64;
+    }
+    lighting::ProbeSelection selection;
+    std::string error;
+    CHECK(selection.prepare(grids, offsets, error));
+    renderer::Shader shader;
+    build_region_lookup(shader, error);
+    unsigned depth = 0;
+    glGenTextures(1, &depth);
+    glActiveTexture(GL_TEXTURE0);
+    glBindTexture(GL_TEXTURE_2D, depth);
+    float d = 0.5f;
+    glTexImage2D(
+        GL_TEXTURE_2D, 0, GL_DEPTH_COMPONENT32F, 1, 1, 0, GL_DEPTH_COMPONENT, GL_FLOAT, &d
+    );
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+    renderer::FrameBuffer target;
+    CHECK(target.create(133, 1, error));
+    renderer::Camera camera;
+    RegionLookup lookup{selection, shader, target, vao, grids};
+    selection.dispatch(depth, camera, 1, 1);
+    lookup.check(camera, true);  // All four words, including bit 127, must be set.
+    auto secondary = camera;
+    secondary.position[0] = 2;
+    secondary.view[12] = 0.01f;
+    lookup.check(secondary);
+    lookup.check(camera);  // Secondary selection must preserve the primary lookup.
+    auto offscreen = camera;
+    offscreen.view[12] = 4;
+    lookup.check(offscreen);  // No visible regions must produce count zero.
+    camera.position[0] = 0.3f;
+    selection.dispatch(depth, camera, 1, 1);
+    lookup.check(camera);
+    CHECK(glGetError() == GL_NO_ERROR);
+    selection.release();
+    shader.release();
+    target.release();
     glDeleteTextures(1, &depth);
 }
 
@@ -779,7 +919,7 @@ void camera_regions(renderer::Shader& shader, renderer::FrameBuffer& frame, unsi
             }
         }
         if (variant == 3) {
-            regions.resize(129, regions.back());  // Force two-slot streaming fallback.
+            regions.resize(513, regions.back());  // Force two-slot streaming fallback.
         }
         lighting::ProbeLighting probes;
         std::string error;
@@ -1398,6 +1538,7 @@ void main() {
     check(coarse, shader, frame, vao);  // disables the preceding local uniforms
     camera_regions(shader, frame, vao);
     compute_regions(shader, frame, vao);
+    closest_regions(vao);
     glDeleteVertexArrays(1, &vao);
     shader.release();
     reference.release();

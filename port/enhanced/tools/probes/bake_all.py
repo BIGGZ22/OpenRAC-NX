@@ -15,6 +15,7 @@ in a folder of its own and put in place only once it is verified.
 from __future__ import annotations
 
 import argparse
+import hashlib
 from concurrent.futures import ThreadPoolExecutor
 import json
 import os
@@ -62,15 +63,29 @@ def bake_options(options) -> list[str]:
     return out
 
 
+def planner_hash() -> str:
+    digest = hashlib.sha256()
+    directory = Path(__file__).parent
+    paths = list(directory.glob('*.py'))+[directory/'moby_seed_whitelist.json']
+    for path in sorted(paths):
+        if not path.name.startswith('test_'):
+            digest.update(path.name.encode())
+            digest.update(path.read_bytes())
+    return digest.hexdigest()
+
+
 def level_stamp(level: Path, baker_hash: str, options) -> dict:
     """What a level's bake is made from: its export's manifest (which carries the levels
-    format), the native baker and the options that change the result."""
+    format), the native baker, planner, per-level settings and options that change the result."""
     manifest = level/'manifest.json'
     try:
         levels_format = json.loads(manifest.read_text()).get('format')
     except (ValueError, AttributeError):
         levels_format = None
-    return {'version': 1, 'manifest_sha256': digest.sha256(manifest), 'levels_format': levels_format,
+    return {'version': 2, 'planner_sha256': planner_hash(),
+            'region_settings_sha256': digest.sha256(level/'probe-regions.json') if (level/'probe-regions.json').exists() else None,
+            'profile_sha256': digest.sha256(level/'probe-bake.json') if (level/'probe-bake.json').exists() else None,
+            'manifest_sha256': digest.sha256(manifest), 'levels_format': levels_format,
             'baker_sha256': baker_hash, 'options': bake_options(options)}
 
 

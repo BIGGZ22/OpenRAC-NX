@@ -24,7 +24,18 @@ void main() {
     v_normal = vec3(sin(polar) * cos(azimuth), sin(polar) * sin(azimuth), cos(polar));
     v_colour = status_colour;
     v_opacity = region_opacity;
-    if (probe_gpu_selection == 1 && region_id >= 0) {
+    int selected_slot = -1;
+    if (probe_gpu_selection != 0 && region_id >= 0) {
+        int count = int(texelFetch(probe_region_masks, 0).r);
+        for (int slot = 0; slot < count; ++slot) {
+            if (int(texelFetch(probe_region_masks, 1 + slot).r) == region_id) {
+                selected_slot = slot;
+                break;
+            }
+        }
+        if (selected_slot < 0) v_opacity = 0.0;
+    }
+    if (probe_gpu_selection == 1 && region_id >= 0 && selected_slot >= 0) {
         vec4 centre = view_projection * vec4(centre_radius.xyz, 1);
         ivec2 pixel = ivec2((centre.xy / centre.w * 0.5 + 0.5) * probe_tile_extent);
         v_opacity = 0.0;
@@ -35,10 +46,10 @@ void main() {
             uint bits =
                 texelFetch(
                     probe_region_masks,
-                    (tile.y * tiles_x + tile.x) * ((probe_region_count + 31) / 32) + region_id / 32
+                    129 + (tile.y * tiles_x + tile.x) * 4 + selected_slot / 32
                 )
                     .r;
-            v_opacity = (bits & (1u << uint(region_id % 32))) != 0u ? region_opacity : 0.0;
+            v_opacity = (bits & (1u << uint(selected_slot % 32))) != 0u ? region_opacity : 0.0;
         }
     }
     gl_Position = view_projection * vec4(centre_radius.xyz + v_normal * centre_radius.w, 1.0);

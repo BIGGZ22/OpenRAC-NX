@@ -256,18 +256,25 @@ def plan_level(level_dir: Path, coarse: dict, profile: dict, gameplay: bytes, op
         ground = moby_seeds.Ground(geometry)
         boxes, markers, bad_mobys = moby_seeds.candidates(placements, allowed, ground, gameplay,
                                                        coarse['game_version'], manifest['level'], spacing[2])
-        regions, clipped = moby_seeds.combine(regions, boxes, coarse, spacing, options.max_probes)
+        regions, clipped = moby_seeds.combine(
+            regions, boxes, coarse, spacing, options.max_probes,
+            preserve_height=not options.no_geometry_coverage)
         skipped += bad_mobys+clipped
     if regions and not options.no_geometry_coverage:
         from surface_coverage import extend_regions
         regions, coverage = extend_regions(regions, geometry, coarse, spacing, options.max_probes,
                                             options.geometry_max_rise, options.geometry_padding)
+    # Match the runtime's padded atlas accounting (64 probe tiles per row).
+    capacity = sum(math.ceil(region['probe_count']/64)*64 for region in regions)
+    resident_bytes = capacity*(12*(profile.get('resolution', 6)+2)**2+8)
     report = {'level': manifest['level'], 'game_version': coarse['game_version'],
               'source': 'authored environment transitions (lighting bit 0) and whitelisted initial moby placements',
               'gameplay_sha256': hashlib.sha256(gameplay).hexdigest(),
               'bake_profile': profile, 'authored_count': len(records), 'moby_whitelist_sha256': whitelist_hash,
               'moby_seeds': markers, 'regions': regions, 'skipped': skipped,
               'geometry_coverage': coverage,
+              'dense_resident_bytes': resident_bytes,
+              'dense_residency_budget_exceeded': resident_bytes > 128*1024*1024,
               'geometry_sha256': geometry_hash,
               'note': 'Light-bank IDs are seed evidence; bake transport uses the sparse bake lighting inputs.'}
     return report

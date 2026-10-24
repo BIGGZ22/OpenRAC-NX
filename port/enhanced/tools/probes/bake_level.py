@@ -25,7 +25,7 @@ class RegionSettings:
     padding: float = 8
     vertical_padding: float = 4
     max_probes: int = 4096
-    max_regions: int = 128
+    max_regions: int = 512
     no_geometry_coverage: bool = False
     geometry_max_rise: float = 32
     geometry_padding: float = 3
@@ -52,8 +52,8 @@ class RegionSettings:
                 raise ValueError(f'{key} must not be negative')
         if not isinstance(settings.max_probes, int) or settings.max_probes < 64:
             raise ValueError('max_probes must be an integer of at least 64')
-        if not isinstance(settings.max_regions, int) or not 1 <= settings.max_regions <= 128:
-            raise ValueError('max_regions must be between 1 and 128')
+        if not isinstance(settings.max_regions, int) or not 1 <= settings.max_regions <= 512:
+            raise ValueError('max_regions must be between 1 and 512')
         if settings.geometry_max_rise <= 0:
             raise ValueError('geometry_max_rise must be positive')
         return settings

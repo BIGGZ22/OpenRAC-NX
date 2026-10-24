@@ -173,12 +173,25 @@ LevelBakeProfile load_level_bake_profile(
     return profile;
 }
 
-ProbeVolume load_level_probes(
-    const std::filesystem::path& path,
-    const scene::LevelData& level,
-    const ProbeActivation& expected,
-    bool expand_linear_maps
-) {
+ProbeAssetLoader::ProbeAssetLoader(const scene::LevelData& level, const ProbeActivation& expected)
+    : m_level(level.level),
+      m_bake(expected.bake) {
+    json::Value manifest;
+    std::string error;
+    if (!json::parse_file((level.dir / "manifest.json").string(), manifest, error)) {
+        throw std::runtime_error(error);
+    }
+    m_version = manifest["game"].string() + "-" + manifest["version"].string();
+    if ((m_version != "rac1-pal" && m_version != "rac1-ntsc") || m_level < 0) {
+        throw std::runtime_error("probe game version or level does not match loaded scene");
+    }
+    m_scene_hash =
+        export_probe_scene(level, expected.light_set, expected.environment, false).scene_hash;
+}
+
+ProbeVolume ProbeAssetLoader::load(
+    const std::filesystem::path& path, bool expand_linear_maps
+) const {
     std::ifstream input(path, std::ios::binary | std::ios::ate);
     if (!input) {
         throw std::runtime_error("cannot open probe asset");
@@ -193,27 +206,28 @@ ProbeVolume load_level_probes(
         throw std::runtime_error("cannot read probe asset");
     }
     auto volume = expand_linear_maps ? decode_probes(bytes) : decode_gpu_probes(std::move(bytes));
-    json::Value manifest;
-    std::string error;
-    if (!json::parse_file((level.dir / "manifest.json").string(), manifest, error)) {
-        throw std::runtime_error(error);
-    }
-    const auto version = manifest["game"].string() + "-" + manifest["version"].string();
-    if ((version != "rac1-pal" && version != "rac1-ntsc") || volume.grid.game_version != version
-        || level.level < 0 || volume.grid.level != static_cast<std::uint32_t>(level.level)) {
+    if (volume.grid.game_version != m_version
+        || volume.grid.level != static_cast<std::uint32_t>(m_level)) {
         throw std::runtime_error("probe game version or level does not match loaded scene");
     }
-    if (volume.grid.settings_hash != probe_bake_settings_hash(volume.grid, expected.bake)) {
+    if (volume.grid.settings_hash != probe_bake_settings_hash(volume.grid, m_bake)) {
         throw std::runtime_error(
             "probe bake settings differ; check OPENRAC_PROBE_RAYS and rebake if needed"
         );
     }
-    const auto exported =
-        export_probe_scene(level, expected.light_set, expected.environment, false);
-    if (volume.grid.scene_hash != exported.scene_hash) {
+    if (volume.grid.scene_hash != m_scene_hash) {
         throw std::runtime_error("stale probe scene or different lighting inputs; rebake this level"
         );
     }
     return volume;
+}
+
+ProbeVolume load_level_probes(
+    const std::filesystem::path& path,
+    const scene::LevelData& level,
+    const ProbeActivation& expected,
+    bool expand_linear_maps
+) {
+    return ProbeAssetLoader(level, expected).load(path, expand_linear_maps);
 }
 }  // namespace openrac::lighting

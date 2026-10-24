@@ -312,6 +312,7 @@ int main() {
         "environment":[0.1,0.2,0.3],"sparse_spacing":[64,64,64],
         "dense_spacing":[4,4,2],"resolution":6,"light_set":2,"sunlight_scale":[0.4,0.7,1.2],
         "sunlight_direction":[0,3,-4]})");
+
     auto profile = load_level_bake_profile(root);
     CHECK(profile.activation.bake.sky_intensity == 0.75f);
     CHECK(profile.activation.bake.sky_weight == 0.3f);
@@ -414,6 +415,29 @@ int main() {
         CHECK(denied);
     };
     CHECK(load_level_probes(asset, level, expected).grid.scene_hash == volume.grid.scene_hash);
+    {
+        const ProbeAssetLoader session(level, expected);
+        CHECK(session.load(asset).grid.scene_hash == volume.grid.scene_hash);
+        auto stale = volume;
+        stale.grid.scene_hash ^= 1;
+        const auto stale_bytes = encode_probes(stale);
+        {
+            std::ofstream output(asset, std::ios::binary);
+            output.write(reinterpret_cast<const char*>(stale_bytes.data()), stale_bytes.size());
+        }
+        bool denied = false;
+        try {
+            session.load(asset);
+        } catch (const std::runtime_error&) {
+            denied = true;
+        }
+        CHECK(denied);
+        {
+            std::ofstream output(asset, std::ios::binary);
+            output.write(reinterpret_cast<const char*>(bytes.data()), bytes.size());
+        }
+        CHECK(session.load(asset).grid.scene_hash == volume.grid.scene_hash);
+    }
     level.emission_profile_revision = 1;
     refuses(expected);
     level.emission_profile_revision = 0;

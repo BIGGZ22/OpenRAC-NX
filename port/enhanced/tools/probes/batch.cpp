@@ -71,7 +71,7 @@ std::vector<BatchJob> batch_jobs(
 ) {
     json::Value plan;
     std::string error;
-    constexpr std::size_t kMaximumRegions = 128;  // runtime dense-region limit
+    constexpr std::size_t kMaximumRegions = 512;  // runtime dense-region limit
 
     if (!json::parse(options.plan, plan, error) || plan["version"].number() != 1
         || plan["scene_hash"].string() != std::to_string(exported.scene_hash)

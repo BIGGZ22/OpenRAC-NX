@@ -392,11 +392,12 @@ void ProbeLighting::load(const scene::LevelData& level) {
                 throw std::runtime_error("invalid OPENRAC_PROBE_SKY_INTENSITY");
             }
         }
-        const auto volume = lighting::load_level_probes(path, level, expected);
+        const lighting::ProbeAssetLoader loader(level, expected);
+        const auto volume = loader.load(path);
         std::vector<lighting::ProbeVolume> regions;
         const auto add_region = [&](const std::filesystem::path& file) {
             try {
-                auto region = lighting::load_level_probes(file, level, expected);
+                auto region = loader.load(file);
                 lighting::validate_probe_pair(volume, region);
                 regions.push_back(std::move(region));
             } catch (const std::exception& why) {

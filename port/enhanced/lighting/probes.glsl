@@ -28,7 +28,7 @@ uniform vec2 probe_tile_extent;
 uniform usamplerBuffer probe_region_masks;
 
 layout(std140) uniform ProbeRegions {
-    vec4 probe_regions[384];
+    vec4 probe_regions[1536];
 };
 
 uniform int probe_mode;      // 0 original, 1 combined, 2 indirect, 3 direct, 4 coverage
@@ -189,7 +189,7 @@ uint probe_candidate_word(ivec2 pixel, int word) {
     int tiles_x = (int(probe_tile_extent.x) + 15) / 16;
     return texelFetch(
                probe_region_masks,
-               (tile.y * tiles_x + tile.x) * ((probe_region_count + 31) / 32) + word
+               129 + (tile.y * tiles_x + tile.x) * 4 + word
     )
         .r;
 }
@@ -197,29 +197,31 @@ uint probe_candidate_word(ivec2 pixel, int word) {
 ivec2 probe_choose_regions(vec3 p) {
     ivec2 best = ivec2(-1);
     vec2 scores = vec2(0);
-    for (int word = 0; word < (probe_region_count + 31) / 32; ++word) {
+    int count = int(texelFetch(probe_region_masks, 0).r);
+    for (int word = 0; word < (count + 31) / 32; ++word) {
 #ifdef OPENRAC_PROBE_PIXEL
         uint bits = probe_candidate_word(OPENRAC_PROBE_PIXEL, word);
 #else
         uint bits = probe_candidate_word(ivec2(gl_FragCoord.xy), word);
 #endif
         while (bits != 0u) {
-            int id = word * 32 + findLSB(bits);
+            int slot = word * 32 + findLSB(bits);
             bits &= bits - 1u;
-            if (id >= probe_region_count) {
+            if (slot >= count) {
                 continue;
             }
+            int id = int(texelFetch(probe_region_masks, 1 + slot).r);
             vec3 step = probe_regions[id * 3 + 1].xyz;
             vec3 c = (p - probe_regions[id * 3].xyz) / step;
             vec3 edge = min(c, probe_regions[id * 3 + 2].xyz - 1.0 - c);
             float influence = smoothstep(0.0, 1.0, min(edge.x, min(edge.y, edge.z)));
             float score = influence / (step.x * step.y * step.z);
-            if (score > scores.x) {
+            if (score > scores.x || (score > 0.0 && score == scores.x && id < best.x)) {
                 best.y = best.x;
                 scores.y = scores.x;
                 best.x = id;
                 scores.x = score;
-            } else if (score > scores.y) {
+            } else if (score > scores.y || (score > 0.0 && score == scores.y && id < best.y)) {
                 best.y = id;
                 scores.y = score;
             }
