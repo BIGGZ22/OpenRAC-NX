@@ -436,6 +436,13 @@ void draw(
             return;
         }
         if (index_type == GL_UNSIGNED_BYTE) {
+            // No renderer draws 8-bit indices (REPORT C6): said once if one ever does, so the
+            // emulation below can go when nothing has said it.
+            if (!g->byte_indices_logged) {
+                log::warn("vulkan: a draw with 8-bit indices, which the backend makes 16-bit");
+                g->byte_indices_logged = true;
+            }
+
             // Vulkan's 8-bit indices are an extension: made 16-bit, from the CPU's copy.
             const std::vector<std::uint8_t>& bytes = buffer_bytes(*eb);
             const std::size_t from = std::min<std::size_t>(index_offset, bytes.size());

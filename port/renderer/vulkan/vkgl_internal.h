@@ -817,6 +817,7 @@ struct Context {
 
     PipelineTable pipelines;           // Every graphics pipeline, by key (pipeline_for).
     DrawScratch scratch;               // The draw's temporaries, kept for their capacity (R-04).
+    bool byte_indices_logged = false;  // The 8-bit index emulation has been reported once.
     std::vector<std::pair<std::uint64_t, VkSampler>> vk_samplers;  // by a packed key
 
     ImagePtr dummy_image;
