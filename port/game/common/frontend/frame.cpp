@@ -79,7 +79,6 @@ std::optional<FrameRange> env_frames(env::Var var) {
     return range;
 }
 
-
 std::uint32_t word_at(std::span<const std::uint8_t> ram, std::uint32_t at) {
     std::uint32_t w = 0;
     at &= 0x01FFFFFF;
@@ -96,13 +95,16 @@ std::uint32_t word_at(std::span<const std::uint8_t> ram, std::uint32_t at) {
  * VU1 (UNPACK, MPG and the rest) are stepped over by their sizes: what VU1 draws, the world, has
  * renderers of its own.
  */
-std::vector<std::uint8_t> direct_packets(std::span<const std::uint8_t> ram, std::uint32_t chain,
-                                         std::vector<renderer::EffectVertex>* strip_vertices = nullptr,
-                                         std::vector<renderer::EffectStrip>* strips = nullptr,
-                                         std::vector<renderer::ImageUpload>* uploads = nullptr,
-                                         std::size_t* before_world = nullptr,
-                                         std::size_t* first_offscreen = nullptr,
-                                         std::size_t* world_marker = nullptr) {
+std::vector<std::uint8_t> direct_packets(
+    std::span<const std::uint8_t> ram,
+    std::uint32_t chain,
+    std::vector<renderer::EffectVertex>* strip_vertices = nullptr,
+    std::vector<renderer::EffectStrip>* strips = nullptr,
+    std::vector<renderer::ImageUpload>* uploads = nullptr,
+    std::size_t* before_world = nullptr,
+    std::size_t* first_offscreen = nullptr,
+    std::size_t* world_marker = nullptr
+) {
     std::vector<std::uint8_t> vif;
     std::uint32_t tag_at = chain & 0x01FFFFF0;
     std::uint32_t stack[2] = {0, 0};
@@ -199,8 +201,12 @@ std::vector<std::uint8_t> direct_packets(std::span<const std::uint8_t> ram, std:
         image.dpsm = static_cast<std::uint8_t>((reg_bitbltbuf >> 56) & 0x3F);
         image.width = static_cast<std::uint32_t>(reg_trxreg & 0xFFF);
         image.height = static_cast<std::uint32_t>((reg_trxreg >> 32) & 0xFFF);
-        const std::uint32_t bits = image.dpsm == 0x00 ? 32 : image.dpsm == 0x01 ? 24 : image.dpsm == 0x02 || image.dpsm == 0x0A ? 16
-                                   : image.dpsm == 0x13 ? 8 : image.dpsm == 0x14 ? 4 : 32;
+        const std::uint32_t bits = image.dpsm == 0x00                         ? 32
+                                   : image.dpsm == 0x01                       ? 24
+                                   : image.dpsm == 0x02 || image.dpsm == 0x0A ? 16
+                                   : image.dpsm == 0x13                       ? 8
+                                   : image.dpsm == 0x14                       ? 4
+                                                                              : 32;
         filling_bytes = static_cast<std::size_t>(image.width) * image.height * bits / 8;
         renderer::ImageUpload& slot = images[image.dbp];
         slot = std::move(image);
@@ -226,7 +232,9 @@ std::vector<std::uint8_t> direct_packets(std::span<const std::uint8_t> ram, std:
             p += 16;
             const std::uint32_t nloop = static_cast<std::uint32_t>(lo & 0x7FFF);
             const std::uint32_t flg = static_cast<std::uint32_t>((lo >> 58) & 3);
-            const std::uint32_t nreg = static_cast<std::uint32_t>((lo >> 60) & 0xF) == 0 ? 16 : static_cast<std::uint32_t>((lo >> 60) & 0xF);
+            const std::uint32_t nreg = static_cast<std::uint32_t>((lo >> 60) & 0xF) == 0
+                                           ? 16
+                                           : static_cast<std::uint32_t>((lo >> 60) & 0xF);
             if (flg == 0) {
                 for (std::uint32_t i = 0; i < nloop * nreg && p + 16 <= size; ++i, p += 16) {
                     if (((hi >> (4 * (i % nreg))) & 0xF) != 0xE) {
@@ -236,13 +244,29 @@ std::vector<std::uint8_t> direct_packets(std::span<const std::uint8_t> ram, std:
                     std::memcpy(&value, d + p, 8);
                     std::memcpy(&address, d + p + 8, 8);
                     switch (address & 0xFF) {
-                        case 0x50: reg_bitbltbuf = value; break;
-                        case 0x52: reg_trxreg = value; break;
-                        case 0x53: if ((value & 3) == 0) { start_image(); } break;
-                        case 0x06: reg_tex0 = value; break;
-                        case 0x08: reg_clamp = value; break;
-                        case 0x14: reg_tex1 = value; break;
-                        case 0x42: reg_alpha = value; break;
+                        case 0x50:
+                            reg_bitbltbuf = value;
+                            break;
+                        case 0x52:
+                            reg_trxreg = value;
+                            break;
+                        case 0x53:
+                            if ((value & 3) == 0) {
+                                start_image();
+                            }
+                            break;
+                        case 0x06:
+                            reg_tex0 = value;
+                            break;
+                        case 0x08:
+                            reg_clamp = value;
+                            break;
+                        case 0x14:
+                            reg_tex1 = value;
+                            break;
+                        case 0x42:
+                            reg_alpha = value;
+                            break;
                         case 0x4C:
                         case 0x4D:
                             // A FRAME away from the draw buffer (page 0) and the display buffer (page
@@ -252,7 +276,8 @@ std::vector<std::uint8_t> direct_packets(std::span<const std::uint8_t> ram, std:
                                 *first_offscreen = direct_at;
                             }
                             break;
-                        default: break;
+                        default:
+                            break;
                     }
                 }
             } else if (flg == 1) {
@@ -301,12 +326,16 @@ std::vector<std::uint8_t> direct_packets(std::span<const std::uint8_t> ram, std:
                 std::uint64_t value, address;
                 std::memcpy(&value, vif.data() + at + 16, 8);
                 std::memcpy(&address, vif.data() + at + 24, 8);
-                if ((address & 0xFF) == 0x7F && (value >> 48) == renderer::GifInterpreter::kWorldMarker) {
+                if ((address & 0xFF) == 0x7F
+                    && (value >> 48) == renderer::GifInterpreter::kWorldMarker) {
                     *world_marker = direct_at;
                 }
             }
-            gif.insert(gif.end(), reinterpret_cast<const std::uint8_t*>(head),
-                       reinterpret_cast<const std::uint8_t*>(head) + sizeof(head));
+            gif.insert(
+                gif.end(),
+                reinterpret_cast<const std::uint8_t*>(head),
+                reinterpret_cast<const std::uint8_t*>(head) + sizeof(head)
+            );
             gif.insert(gif.end(), vif.data() + at, vif.data() + at + size);
             if (strips != nullptr) {
                 track_direct(vif.data() + at, size);
@@ -329,17 +358,20 @@ std::vector<std::uint8_t> direct_packets(std::span<const std::uint8_t> ram, std:
                     strip_tag = ((tag >> 47) & 7) == 4 && (tag & 0x7FFF) >= 3;
                     strip_count = static_cast<std::uint32_t>(tag & 0x7FFF);
                     strip_st = strip_rgba = strip_xyz = nullptr;
-                } else if (strip_tag && address == 1 && vn == 1 && vl == 0 && count == strip_count) {
+                } else if (strip_tag && address == 1 && vn == 1 && vl == 0
+                           && count == strip_count) {
                     strip_st = data;
-                } else if (strip_tag && address == 2 && vn == 3 && vl == 2 && count == strip_count) {
+                } else if (strip_tag && address == 2 && vn == 3 && vl == 2
+                           && count == strip_count) {
                     strip_rgba = data;
-                } else if (strip_tag && address == 3 && vn == 2 && vl == 0 && count == strip_count) {
+                } else if (strip_tag && address == 3 && vn == 2 && vl == 0
+                           && count == strip_count) {
                     strip_xyz = data;
                 }
             }
             at += size;
-        } else if ((command == 0x14 || command == 0x15 || command == 0x17) && before_world != nullptr
-                   && *before_world == SIZE_MAX) {
+        } else if ((command == 0x14 || command == 0x15 || command == 0x17)
+                   && before_world != nullptr && *before_world == SIZE_MAX) {
             // The first VU1 program the frame starts: the 2D data so far comes before the world.
             *before_world = gif.size();
         }
@@ -380,7 +412,6 @@ std::vector<std::uint8_t> direct_packets(std::span<const std::uint8_t> ram, std:
     }
     return gif;
 }
-
 
 // The inverse of a view matrix (a rotation and a translation, column-major).
 renderer::Mat4 rigid_inverse(const renderer::Mat4& m) {
@@ -490,11 +521,23 @@ void take_world_camera(viewer::GameState& state) {
 // renderers ran this tick.
 void log_camera(const viewer::GameState& state, bool world_ran) {
     // OPENRAC_CAM_LOG: the camera each frame is drawn from (position, forward, up), in the log.
-    static const bool& cam_log = stats::probe("OPENRAC_CAM_LOG", "the camera each tick is drawn from, in the log");
+    static const bool& cam_log =
+        stats::probe("OPENRAC_CAM_LOG", "the camera each tick is drawn from, in the log");
     if (cam_log) {
-        log::info("cam {} {:.3f} {:.3f} {:.3f} f {:.4f} {:.4f} {:.4f} u {:.4f} {:.4f} {:.4f} world {}", g->index,
-                  state.camera_position[0], state.camera_position[1], state.camera_position[2], state.forward[0],
-                  state.forward[1], state.forward[2], state.up[0], state.up[1], state.up[2], world_ran ? 1 : 0);
+        log::info(
+            "cam {} {:.3f} {:.3f} {:.3f} f {:.4f} {:.4f} {:.4f} u {:.4f} {:.4f} {:.4f} world {}",
+            g->index,
+            state.camera_position[0],
+            state.camera_position[1],
+            state.camera_position[2],
+            state.forward[0],
+            state.forward[1],
+            state.forward[2],
+            state.up[0],
+            state.up[1],
+            state.up[2],
+            world_ran ? 1 : 0
+        );
     }
 }
 
@@ -538,13 +581,23 @@ void trace_tick(const viewer::GameState& state, std::uint32_t draws) {
         return f;
     }();
     if (trace != nullptr) {
-        const auto num = [](float v) { return std::isfinite(v) ? std::format("{:.4f}", v) : std::string("null"); };
-        const auto vec = [&](const float* v) { return std::format("[{},{},{}]", num(v[0]), num(v[1]), num(v[2])); };
-        std::string line = std::format("{{\"f\":{},\"c\":{},\"lv\":{},\"m\":{},\"cam\":{},\"fw\":{}", g->index,
-                                       g_route.control < 0 ? std::string("null")
-                                                           : std::to_string(static_cast<std::int64_t>(g->index) - g_route.control),
-                                       g_route.level, g_route.mode, vec(state.camera_position.data()),
-                                       vec(state.forward.data()));
+        const auto num = [](float v) {
+            return std::isfinite(v) ? std::format("{:.4f}", v) : std::string("null");
+        };
+        const auto vec = [&](const float* v) {
+            return std::format("[{},{},{}]", num(v[0]), num(v[1]), num(v[2]));
+        };
+        std::string line = std::format(
+            "{{\"f\":{},\"c\":{},\"lv\":{},\"m\":{},\"cam\":{},\"fw\":{}",
+            g->index,
+            g_route.control < 0
+                ? std::string("null")
+                : std::to_string(static_cast<std::int64_t>(g->index) - g_route.control),
+            g_route.level,
+            g_route.mode,
+            vec(state.camera_position.data()),
+            vec(state.forward.data())
+        );
         float hp[3]{}, hr[3]{};
         std::int32_t hs = 0;
         if (openrac_game_hero != nullptr && openrac_game_hero(hp, hr, &hs) != 0) {
@@ -764,11 +817,29 @@ void log_mobys_near_hero(std::span<const std::uint8_t> ram, const viewer::GameSt
             float t = 0.0f;
             std::memcpy(sphere, b, sizeof sphere);
             std::memcpy(&t, b + 0x54, 4);
-            log::info("moby {} class {} at {:#x}: state {} mode {:#06x} seq {} frame {} t {:.2f} pos {:.2f} {:.2f} {:.2f} "
-                      "dist {:.2f} radius {:.2f} update {:#x} pvars {:#x} draw {} {} {:#x}",
-                      g->index, m.class_id, m.address, b[0x20], static_cast<unsigned>(b[0x34] | b[0x35] << 8), b[0x52],
-                      b[0x50], t, m.matrix[12], m.matrix[13], m.matrix[14], d, sphere[3], word_at(ram, m.address + 0x74),
-                      word_at(ram, m.address + 0x78), b[0x30], b[0x31], static_cast<unsigned>(b[0x32] | b[0x33] << 8));
+            log::info(
+                "moby {} class {} at {:#x}: state {} mode {:#06x} seq {} frame {} t {:.2f} "
+                "pos {:.2f} {:.2f} {:.2f} dist {:.2f} radius {:.2f} "
+                "update {:#x} pvars {:#x} draw {} {} {:#x}",
+                g->index,
+                m.class_id,
+                m.address,
+                b[0x20],
+                static_cast<unsigned>(b[0x34] | b[0x35] << 8),
+                b[0x52],
+                b[0x50],
+                t,
+                m.matrix[12],
+                m.matrix[13],
+                m.matrix[14],
+                d,
+                sphere[3],
+                word_at(ram, m.address + 0x74),
+                word_at(ram, m.address + 0x78),
+                b[0x30],
+                b[0x31],
+                static_cast<unsigned>(b[0x32] | b[0x33] << 8)
+            );
         }
     }
 }
@@ -825,11 +896,15 @@ TickMobys pose_mobys(
     std::array<float, 2> frame_focal{};
     {
         const auto drawn = [&](std::uint32_t address) {
-            return std::any_of(state.mobys.begin(), state.mobys.end(),
-                               [&](const viewer::LiveMoby& m) { return m.address == address; });
+            return std::any_of(
+                state.mobys.begin(), state.mobys.end(), [&](const viewer::LiveMoby& m) {
+                    return m.address == address;
+                }
+            );
         };
         float zoom = world_ran ? state.tan_half_fov_x : 0.0f;
-        frame_focal = world_ran ? std::array<float, 2>{state.focal_x, state.focal_y} : std::array<float, 2>{};
+        frame_focal =
+            world_ran ? std::array<float, 2>{state.focal_x, state.focal_y} : std::array<float, 2>{};
         for (const auto& [address, camera] : g->moby_cameras) {
             if (zoom == 0.0f || camera.tan_half_fov_x < zoom) {
                 zoom = camera.tan_half_fov_x;
@@ -858,7 +933,8 @@ TickMobys pose_mobys(
         // A draw distance (+0x32) of 0: MobyProc's distance test never passes, so the game never draws
         // it. Volumes and blockers the levels place as mobys (Veldin's grey box behind the start, the
         // walls of Kalebo III's landing) are such: untextured, they showed as solid grey walls.
-        if (!extra && m.address + 0x34 <= ram.size() && (ram[m.address + 0x32] | ram[m.address + 0x33]) == 0) {
+        if (!extra && m.address + 0x34 <= ram.size()
+            && (ram[m.address + 0x32] | ram[m.address + 0x33]) == 0) {
             continue;
         }
         // Beyond its draw distance, or wholly behind the eye: MobyProc does not draw it
@@ -868,14 +944,20 @@ TickMobys pose_mobys(
         // sky in cyan. A moby the game draws with a camera of its own (the menus', the vendor's) is
         // not the world camera's to cull.
         if (!extra && world_ran && m.address + 0x34 <= ram.size()
-            && std::none_of(g->moby_cameras.begin(), g->moby_cameras.end(),
-                            [&](const auto& c) { return c.first == m.address; })
-            && viewer::moby_beyond_draw_distance(ram.data() + m.address, state.camera_position, state.forward)) {
+            && std::none_of(
+                g->moby_cameras.begin(),
+                g->moby_cameras.end(),
+                [&](const auto& c) { return c.first == m.address; }
+            )
+            && viewer::moby_beyond_draw_distance(
+                ram.data() + m.address, state.camera_position, state.forward
+            )) {
             continue;
         }
         if (only_own_camera
-            && std::none_of(g->moby_cameras.begin(), g->moby_cameras.end(),
-                            [&](const auto& c) { return c.first == m.address; })) {
+            && std::none_of(g->moby_cameras.begin(), g->moby_cameras.end(), [&](const auto& c) {
+                   return c.first == m.address;
+               })) {
             continue;
         }
         auto cls = g->level.moby_classes.find(m.class_id);
@@ -915,13 +997,20 @@ TickMobys pose_mobys(
         // MobyProc reads them to light it.
         if (!g->level.light_sets.empty() && m.address + 0x100 <= ram.size()) {
             const std::uint8_t* b = ram.data() + m.address;
-            instance.moby_light = {static_cast<float>(b[0x38]), static_cast<float>(b[0x39]),
-                                   static_cast<float>(b[0x3A]) / 256.0f, 1.0f};
+            instance.moby_light =
+                {static_cast<float>(b[0x38]),
+                 static_cast<float>(b[0x39]),
+                 static_cast<float>(b[0x3A]) / 256.0f,
+                 1.0f};
             // w: with mode bit 0x10, 1 + its glow word's RGB (+0x90), which MobyProc's glow list
             // draws its glow packets in; 0 without (a 24-bit integer is exact in a float).
-            const std::uint32_t glow = static_cast<std::uint32_t>(b[0x90] | b[0x91] << 8 | b[0x92] << 16);
-            instance.moby_ambient = {b[0x3C] / 128.0f, b[0x3D] / 128.0f, b[0x3E] / 128.0f,
-                                     (b[0x34] & 0x10) != 0 ? static_cast<float>(glow) + 1.0f : 0.0f};
+            const std::uint32_t glow =
+                static_cast<std::uint32_t>(b[0x90] | b[0x91] << 8 | b[0x92] << 16);
+            instance.moby_ambient =
+                {b[0x3C] / 128.0f,
+                 b[0x3D] / 128.0f,
+                 b[0x3E] / 128.0f,
+                 (b[0x34] & 0x10) != 0 ? static_cast<float>(glow) + 1.0f : 0.0f};
         }
         // Preserve explicit gameplay colour writes while that RGB is still
         // current. Countdown crates restore their saved colour between flashes;
@@ -949,7 +1038,8 @@ TickMobys pose_mobys(
                 instance.occlusion = viewer::Pvs::always;
             }
             if (address == m.address
-                && (camera.camera_position != state.camera_position || camera.forward != state.forward)) {
+                && (camera.camera_position != state.camera_position
+                    || camera.forward != state.forward)) {
                 instance.matrix = renderer::multiply(
                     rigid_inverse(state.view()), renderer::multiply(camera.view(), instance.matrix)
                 );
@@ -971,11 +1061,24 @@ TickMobys pose_mobys(
                     }
                 }
             }
-            log::info("  hero at {:#x}: position {:.2f} {:.2f} {:.2f}, scale {:.3f}, keys {}:{} -> {}:{} t {:.3f}, "
-                      "{} joints posed ({} in the mesh), {}, mode {:#x}",
-                      m.address, m.matrix[12], m.matrix[13], m.matrix[14], m.matrix[0], b[0x52], b[0x50],
-                      b[0x53], b[0x51], t, pose.size(), joints, finite ? "finite" : "NOT finite",
-                      static_cast<unsigned>(b[0x34] | b[0x35] << 8));
+            log::info(
+                "  hero at {:#x}: position {:.2f} {:.2f} {:.2f}, scale {:.3f}, "
+                "keys {}:{} -> {}:{} t {:.3f}, {} joints posed ({} in the mesh), {}, mode {:#x}",
+                m.address,
+                m.matrix[12],
+                m.matrix[13],
+                m.matrix[14],
+                m.matrix[0],
+                b[0x52],
+                b[0x50],
+                b[0x53],
+                b[0x51],
+                t,
+                pose.size(),
+                joints,
+                finite ? "finite" : "NOT finite",
+                static_cast<unsigned>(b[0x34] | b[0x35] << 8)
+            );
         }
         if (animate && joints > 0) {
             const auto pose = viewer::moby_palette(ram, m.address);
@@ -984,7 +1087,9 @@ TickMobys pose_mobys(
                 for (int j = 0; j < joints; ++j) {
                     // Columns: the images of the axes, then the translation, which the palette
                     // has in packed units (the mesh is in packed units / 1024).
-                    viewer::LevelScene::JointColumns c{1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1};
+                    viewer::LevelScene::JointColumns c{
+                        1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1
+                    };
                     if (static_cast<std::size_t>(j) < pose.size()) {
                         const auto& f = pose[static_cast<std::size_t>(j)];
                         for (int i = 0; i < 3; ++i) {
@@ -1012,18 +1117,28 @@ TickMobys pose_mobys(
                                       && instance.moby_light[3] < 1.5f && instance.tint[3] > 0;
         live_joints.push_back(instance.palette >= 0 ? joints : 0);
         if (shadow_directions_address() != 0 && g->loaded >= 0 && g->loaded < 19 && animate
-            && m.class_id == 0 && !extra && instance.moby_light[3] < 1.5f && instance.tint[3] > 0.0f) {
+            && m.class_id == 0 && !extra && instance.moby_light[3] < 1.5f
+            && instance.tint[3] > 0.0f) {
             const auto directions = OPENRAC_DATA(shadow_directions_address());
             shadow_state = viewer::moby_shadow_state(ram, m.address, directions, state.view());
             if (shadow_state.enabled) {
                 shadows = viewer::moby_shadows(ram, m.address, m.matrix, shadow_state.scale);
                 shadow_moby = m.address;
             }
-            if (debug && g->index%100 == 0) {
-                log::info("Ratchet shadow: {} proxies, slot {}, table {:#x}, extrusion {:.2f} {:.2f} {:.2f}, slab {:.3f}..{:.3f}, scale {:.3f}",
-                          shadows.size(), shadow_state.direction_index, directions,
-                          shadow_state.extrusion[0], shadow_state.extrusion[1], shadow_state.extrusion[2],
-                          shadow_state.heights[0], shadow_state.heights[1], shadow_state.scale);
+            if (debug && g->index % 100 == 0) {
+                log::info(
+                    "Ratchet shadow: {} proxies, slot {}, table {:#x}, "
+                    "extrusion {:.2f} {:.2f} {:.2f}, slab {:.3f}..{:.3f}, scale {:.3f}",
+                    shadows.size(),
+                    shadow_state.direction_index,
+                    directions,
+                    shadow_state.extrusion[0],
+                    shadow_state.extrusion[1],
+                    shadow_state.extrusion[2],
+                    shadow_state.heights[0],
+                    shadow_state.heights[1],
+                    shadow_state.scale
+                );
             }
         }
         live.push_back(instance);
@@ -1044,8 +1159,9 @@ TickMobys pose_mobys(
 
 // Gives the scene this tick's fog and the lights as the game holds them.
 void light_scene(std::span<const std::uint8_t> ram, const viewer::GameState& state) {
-    g->scene.set_fog(state.fog_colour, state.fog_near, state.fog_far, state.fog_near_f,
-                     state.fog_far_f);
+    g->scene.set_fog(
+        state.fog_colour, state.fog_near, state.fog_far, state.fog_near_f, state.fog_far_f
+    );
     // The light bank as the game holds it now (16 sets of 0x40 bytes; the executable's, each
     // level's copy elsewhere): the level loader fills it from the gameplay file, and the game changes
     // sets at run time (the page menus write set 14 for their frame mobys, fog zones the hero's).
@@ -1115,7 +1231,8 @@ void keep_tick(
     k.palette = std::move(mobys.palette);
     k.draws = draws;
     k.has_camera = state.forward[0] != 0.0f || state.forward[1] != 0.0f || state.forward[2] != 0.0f;
-    g->last_tick_menu = k.before_world >= 0x40000;  // the last tick's, read before this one's is kept
+    g->last_tick_menu =
+        k.before_world >= 0x40000;  // the last tick's, read before this one's is kept
     k.frame = g->index++;
 }
 
@@ -1149,9 +1266,16 @@ const std::vector<renderer::UiQuad>* keep_2d_path(
     std::size_t before_world = SIZE_MAX;
     std::size_t first_offscreen = SIZE_MAX;
     std::size_t world_marker = SIZE_MAX;
-    std::vector<std::uint8_t> packets = direct_packets(ram, shown, &strip_vertices, &strips,
-                                                       &g->effect_uploads, &before_world, &first_offscreen,
-                                                       &world_marker);
+    std::vector<std::uint8_t> packets = direct_packets(
+        ram,
+        shown,
+        &strip_vertices,
+        &strips,
+        &g->effect_uploads,
+        &before_world,
+        &first_offscreen,
+        &world_marker
+    );
     // The markers in a list index the quads of the tick that built it, and the list shown is the
     // one the last tick built (the game builds the next while this one is sent), one tick behind
     // the quads just recorded; FadeToBlack sends an old list again. Drawn with this tick's quads, a
@@ -1173,8 +1297,12 @@ const std::vector<renderer::UiQuad>* keep_2d_path(
             }
         }
         if (debug && !named_quads) {
-            log::info("frame {}: the 2D list names the quads of generation {}, no longer kept; the last ones stand in",
-                      g->index, *named);
+            log::info(
+                "frame {}: the 2D list names the quads of generation {}, no longer kept; the last "
+                "ones stand in",
+                g->index,
+                *named
+            );
         }
     }
     k.strip_vertices = std::move(strip_vertices);
@@ -1214,16 +1342,26 @@ void choose_repeat_frame(bool debug) {
     const bool unfinished = k.has_camera && (k.draws & 0x1Fu) != 0 && k.packets.empty();
     g->repeat_frame = ((menu_gap && g->menu_gap_ticks <= 3) || unfinished) && g->frame.id() != 0;
     if (g->repeat_frame && debug) {
-        log::info("frame {}: {}; the last frame stands", g->index,
-                  unfinished ? "a world without its 2D list" : "no world under a page menu's list");
+        log::info(
+            "frame {}: {}; the last frame stands",
+            g->index,
+            unfinished ? "a world without its 2D list" : "no world under a page menu's list"
+        );
     }
     if (debug && k.frame % 100 == 0 && !k.strips.empty()) {
         int bare = 0;
         for (const auto& st : k.strips) {
             bare += st.upload_count == 0 ? 1 : 0;
         }
-        log::info("  {} strips ({} vertices, {} without their texture's upload), the first TEX0 {:#x} ALPHA {:#x}",
-                  k.strips.size(), k.strip_vertices.size(), bare, k.strips.front().tex0, k.strips.front().alpha);
+        log::info(
+            "  {} strips ({} vertices, {} without their texture's upload), the first TEX0 {:#x} "
+            "ALPHA {:#x}",
+            k.strips.size(),
+            k.strip_vertices.size(),
+            bare,
+            k.strips.front().tex0,
+            k.strips.front().alpha
+        );
     }
 }
 
@@ -1277,8 +1415,19 @@ void report_tick(std::span<const std::uint8_t> ram, int level) {
         );
     }
     // [debug tools] What the game holds this tick, for the overlay and the dump.
-    debug_overlay::tick({g->game.c_str(), ram, level, &k.state, k.draws, k.frame, k.packets.size(), k.ui_quads.size(),
-                         k.effects.size(), k.strips.size(), k.live.size()});
+    debug_overlay::tick(
+        {g->game.c_str(),
+         ram,
+         level,
+         &k.state,
+         k.draws,
+         k.frame,
+         k.packets.size(),
+         k.ui_quads.size(),
+         k.effects.size(),
+         k.strips.size(),
+         k.live.size()}
+    );
 }
 
 // Whether the tick's own frame is left out because the tick came late. Counts and warns.
@@ -1296,15 +1445,21 @@ bool leave_late_frame() {
     static int said = 0;
     if (++ticks >= 100) {
         if (left_out >= 25 && said++ < 3) {
-            log::warn("a frame takes longer to draw ({:.1f} ms) than a game tick lasts ({:.1f} ms): {} of the last "
-                      "{} ticks' frames were left out to keep the game's speed. A lower render scale or fewer "
-                      "samples a pixel would help.",
-                      pacing.cost * 1000.0, pacing.period.count() * 1000.0, left_out, ticks);
+            log::warn(
+                "a frame takes longer to draw ({:.1f} ms) than a game tick lasts ({:.1f} ms): "
+                "{} of the last {} ticks' frames were left out to keep the game's speed. "
+                "A lower render scale or fewer samples a pixel would help.",
+                pacing.cost * 1000.0,
+                pacing.period.count() * 1000.0,
+                left_out,
+                ticks
+            );
         }
         ticks = 0;
         left_out = 0;
     }
-    if (pacing.late > pacing.period && g->skipped < kMostSkipped && g->kept.has_camera && g->index > 1) {
+    if (pacing.late > pacing.period && g->skipped < kMostSkipped && g->kept.has_camera
+        && g->index > 1) {
         ++g->skipped;
         ++left_out;
         return true;
