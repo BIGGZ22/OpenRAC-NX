@@ -56,6 +56,46 @@ namespace openrac::frontend {
 
 namespace {
 
+// OPENRAC_FRAME_COST=N: every N frames drawn (default 200), in the log, what a frame cost on
+// average and where: `scene` (the tick's mobys and poses moved between ticks and sent to their
+// buffers, on the CPU), `submit` (the renderers' OpenGL calls, on the CPU), `gpu` (the wait for the
+// graphics card to finish them: this switch calls glFinish after each frame, so that the card's
+// time is not counted into a later call; it lowers the frame rate a little) and `show` (the
+// frame scaled to the window, and the swap). With the draw calls and triangles of the last frame.
+// frame_cost is the one; only the thread that opened the window touches it.
+struct FrameCost {
+    bool on = false;
+    int every = 200;
+    int frames = 0;
+    double scene = 0.0, submit = 0.0, gpu = 0.0, show = 0.0;
+    std::chrono::steady_clock::time_point mark{};
+
+    FrameCost() {
+        if (env::value(env::Var::FrameCost)) {
+            on = true;
+            // Read as std::atoi read it, held to int's range, where atoi's answer was undefined.
+            const std::int64_t asked = std::min<std::int64_t>(
+                env::integer(env::Var::FrameCost, 0), std::numeric_limits<int>::max()
+            );
+            every = asked > 1 ? static_cast<int>(asked) : 200;
+        }
+    }
+
+    // The seconds since the last call, added to `part`.
+    void lap(double& part) {
+        const auto now = std::chrono::steady_clock::now();
+        part += std::chrono::duration<double>(now - mark).count();
+        mark = now;
+    }
+} frame_cost;
+
+// [debug tools] The picture being drawn is a paused game's (hold). Only the thread that opened the
+// window touches it.
+bool g_held = false;
+
+// Returns the frames a second the frames between ticks are held to (the player's cap, or the
+// display's rate), 0 for no limit and with one frame a tick.
+//
 // The cap and refresh share one deadline schedule. A quick presentation return
 // is not proof of a missed VSync: Vulkan queues presentation asynchronously.
 double frame_cap() {
@@ -87,6 +127,9 @@ float alpha_at(std::chrono::steady_clock::time_point display) {
     return tick_alpha(display, pacing.tick, pacing.period);
 }
 
+// Swaps the window's buffers for the frame begun at `started`, and keeps what the swap tells the
+// pacing: what a frame costs, the display's refresh interval when it is to be read again, the
+// last swap that waited for a refresh, and when the frame cap lets the next frame start.
 void swapped(std::chrono::steady_clock::time_point started) {
     using namespace std::chrono;
     const auto before = steady_clock::now();
@@ -132,47 +175,6 @@ void swapped(std::chrono::steady_clock::time_point started) {
     platform::work_resumed();
 }
 
-}  // namespace
-
-// Whether the frame cap lets a frame start now (within a millisecond: a sleep wakes that coarsely).
-bool frame_due(std::chrono::steady_clock::time_point now) {
-    return frame_may_start(frame_cap(), pacing.due, now);
-}
-
-namespace {
-
-// OPENRAC_FRAME_COST=N: every N frames drawn (default 200), in the log, what a frame cost on
-// average and where: `scene` (the tick's mobys and poses moved between ticks and sent to their
-// buffers, on the CPU), `submit` (the renderers' OpenGL calls, on the CPU), `gpu` (the wait for the
-// graphics card to finish them: this switch calls glFinish after each frame, so that the card's
-// time is not counted into a later call; it lowers the frame rate a little) and `show` (the
-// frame scaled to the window, and the swap). With the draw calls and triangles of the last frame.
-struct FrameCost {
-    bool on = false;
-    int every = 200;
-    int frames = 0;
-    double scene = 0.0, submit = 0.0, gpu = 0.0, show = 0.0;
-    std::chrono::steady_clock::time_point mark{};
-
-    FrameCost() {
-        if (env::value(env::Var::FrameCost)) {
-            on = true;
-            // Read as std::atoi read it, held to int's range, where atoi's answer was undefined.
-            const std::int64_t asked = std::min<std::int64_t>(
-                env::integer(env::Var::FrameCost, 0), std::numeric_limits<int>::max()
-            );
-            every = asked > 1 ? static_cast<int>(asked) : 200;
-        }
-    }
-
-    // The seconds since the last call, added to `part`.
-    void lap(double& part) {
-        const auto now = std::chrono::steady_clock::now();
-        part += std::chrono::duration<double>(now - mark).count();
-        mark = now;
-    }
-} frame_cost;
-
 // OPENRAC_SLOW_FRAME=MS: every frame drawn takes that much longer, as on a graphics card too slow
 // for the settings, for checking that the game's time does not slow with it.
 void slow_frame() {
@@ -199,13 +201,15 @@ viewer::GameState blend_camera(
     return c;
 }
 
-// [debug tools] The picture being drawn is a paused game's (hold).
-bool g_held = false;
-
 }  // namespace
 
-// Draws the kept tick, the camera and mobys `alpha` of the way from the last tick's to its own,
-// and shows it. `first`: the tick's own frame (shots, the frame read back by store_image).
+// Whether the frame cap lets a frame start now (within a millisecond: a sleep wakes that coarsely).
+bool frame_due(std::chrono::steady_clock::time_point now) {
+    return frame_may_start(frame_cap(), pacing.due, now);
+}
+
+// ---- The kept tick ----
+
 bool enhanced_graphics_available() {
     return g && gl::enhanced_rendering_available() && g->scene.probe_data_available();
 }
@@ -619,6 +623,8 @@ void draw_kept(bool first) {
         }
     }
 }
+
+// ---- Between ticks ----
 
 void set_tick(
     std::chrono::steady_clock::time_point tick,

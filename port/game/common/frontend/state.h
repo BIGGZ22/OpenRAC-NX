@@ -311,8 +311,10 @@ void particle_quads(std::span<const std::uint8_t> ram, const viewer::GameState& 
 // Whether the frame cap lets a frame start now (frontend/interpolation.cpp).
 bool frame_due(std::chrono::steady_clock::time_point now);
 
-// Draws the kept tick, the camera and mobys part way from the last tick's to its own, and shows
-// it. `first`: the tick's own frame (frontend/interpolation.cpp).
+// Draws the kept tick, the camera and mobys part way from the last tick's to its own (as far as
+// the refresh it will be shown at is between them, when frames are drawn between ticks), and shows
+// it. `first`: the tick's own frame (shots, the frame read back by store_image)
+// (frontend/interpolation.cpp).
 void draw_kept(bool first);
 
 }  // namespace openrac::frontend
