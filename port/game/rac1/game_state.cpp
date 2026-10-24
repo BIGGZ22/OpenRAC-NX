@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 // Copyright (c) 2026 the OpenRAC contributors
 
-#include "viewer/game_state.h"
+#include "game/rac1/game_state.h"
 
 #include <algorithm>
 #include <cmath>

@@ -32,6 +32,7 @@
 
 #include "common/log.h"
 #include "enhanced/renderer/texture_upscale.h"
+#include "game/rac1/game_state.h"
 #include "platform/clock.h"
 #include "platform/window.h"
 #include "renderer/framebuffer.h"
@@ -41,7 +42,6 @@
 #include "scene/level_renderer.h"
 #include "scene/screenshot.h"
 #include "viewer/camera.h"
-#include "viewer/game_state.h"
 
 namespace {
 

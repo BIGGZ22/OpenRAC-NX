@@ -6,7 +6,7 @@
 //
 // Only built where the window libraries are (port/cmake/Window.cmake); the program runs without a
 // window otherwise. What a game's memory means (where its camera and objects are) is the game's:
-// so far Ratchet & Clank (PAL), through viewer/game_state.h, with each level's geometry from the
+// so far Ratchet & Clank (PAL), through game/rac1/game_state.h, with each level's geometry from the
 // extractor's port export (editor/port.py).
 
 #pragma once

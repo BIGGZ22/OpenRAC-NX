@@ -13,8 +13,8 @@
 // that calls debug_overlay.h's functions, is the only one that reads or writes it.
 //
 // The viewer's types (viewer::GameState, viewer::LiveMoby) come through debug_overlay.h: its
-// include of viewer/game_state.h is the layering's listed exception (rules.tsv, until P2-03), and
-// the overlay's other files reach them through it rather than adding includes of their own.
+// include of game/rac1/game_state.h is the layering's listed exception (rules.tsv, until P2-03),
+// and the overlay's other files reach them through it rather than adding includes of their own.
 
 #pragma once
 

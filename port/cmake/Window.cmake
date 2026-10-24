@@ -260,11 +260,11 @@ openrac_warnings(openrac_scene_renderer)
 
 # ---- the level viewer ----
 # The viewer program's own code: its free camera, and what the renderers read of a running game from
-# its memory (game_state.h), which the game programs use too until P2-03 moves it into game/rac1.
+# its memory (game/rac1/game_state.h, compiled here until P2-03 reads it through rac1's profile).
 # The programs and the tests that draw a level link this, and the scene with it.
 add_library(openrac_viewer_lib STATIC
   viewer/camera.cpp
-  viewer/game_state.cpp
+  game/rac1/game_state.cpp
 )
 target_link_libraries(openrac_viewer_lib PUBLIC openrac_scene_renderer openrac_enhanced_textures)
 openrac_warnings(openrac_viewer_lib)

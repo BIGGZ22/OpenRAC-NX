@@ -21,6 +21,7 @@
 
 #include "check.h"
 #include "common/json.h"
+#include "game/rac1/game_state.h"
 #include "gpu_draw_reference.h"
 #include "renderer/framebuffer.h"
 #include "renderer/renderer.h"
@@ -28,7 +29,6 @@
 #include "scene/level.h"
 #include "scene/level_renderer.h"
 #include "viewer/camera.h"
-#include "viewer/game_state.h"
 
 namespace {
 

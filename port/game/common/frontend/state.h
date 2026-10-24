@@ -25,6 +25,7 @@
 #include <vector>
 
 #include "enhanced/game/scripted_moby_colour.h"
+#include "game/rac1/game_state.h"
 #include "openrac/guest.h"
 #include "platform/input.h"
 #include "platform/window.h"
@@ -35,7 +36,6 @@
 #include "scene/level_renderer.h"
 #include "scene/moby_shadow.h"
 #include "settings.h"
-#include "viewer/game_state.h"
 
 union SDL_Event;
 

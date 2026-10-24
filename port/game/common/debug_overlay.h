@@ -23,9 +23,9 @@
 
 #include <SDL3/SDL.h>
 
+#include "game/rac1/game_state.h"
 #include "renderer/math.h"
 #include "renderer/renderer.h"
-#include "viewer/game_state.h"
 
 namespace openrac::frontend::debug_overlay {
 
