@@ -10,6 +10,7 @@
 #include <vector>
 
 #include "renderer/framebuffer.h"
+#include "renderer/render_opt.h"
 #include "renderer/shader.h"
 #include "renderer/vulkan/vkgl.h"
 #include "renderer/world/gl_world.h"
@@ -339,6 +340,108 @@ void test_state_bounces() {
     CHECK(glGetError() == GL_NO_ERROR);
 }
 
+// ---- The fixed state as dynamic state (R-11, vk-extended-dynamic-state) ----
+
+// The cull and front-face states the fixed-state test draws, one a pixel, in one pass: each
+// pixel's triangle winds counter-clockwise, as GL counts it.
+struct CullCase {
+    bool cull = false;           // GL_CULL_FACE on.
+    GLenum cull_face = GL_BACK;  // Which faces it culls.
+    GLenum front = GL_CCW;       // Which winding is the front.
+};
+
+// Draws the fixed-state test's cases into `target`, one a pixel, cull and front face toggled
+// between the draws with no pass between them, and returns the pixels.
+std::vector<std::uint8_t> draw_cull_cases(
+    const renderer::FrameBuffer& target, const renderer::Shader& shader, unsigned vao
+) {
+    // clang-format off: one case per row: whether it culls, what, and the front winding.
+    constexpr std::array<CullCase, 5> kCases = {{
+        {false, GL_BACK, GL_CCW},  // drawn
+        {true, GL_BACK, GL_CCW},   // drawn: its front faces the viewer
+        {true, GL_BACK, GL_CW},    // culled: its back faces the viewer
+        {true, GL_FRONT, GL_CCW},  // culled: its front is culled
+        {true, GL_FRONT, GL_CW},   // drawn
+    }};
+    // clang-format on
+    glBindFramebuffer(GL_FRAMEBUFFER, target.id());
+    glBindVertexArray(vao);
+    glDisable(GL_DEPTH_TEST);
+    glDisable(GL_BLEND);
+    glViewport(0, 0, static_cast<int>(kCases.size()), 1);
+    glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
+    glClear(GL_COLOR_BUFFER_BIT);
+    shader.use();
+
+    // Each case into its pixel.
+    for (std::size_t n = 0; n < kCases.size(); ++n) {
+        const CullCase& c = kCases[n];
+
+        // Culling on or off for this case.
+        if (c.cull) {
+            glEnable(GL_CULL_FACE);
+        } else {
+            glDisable(GL_CULL_FACE);
+        }
+
+        glCullFace(c.cull_face);
+        glFrontFace(c.front);
+        glViewport(static_cast<int>(n), 0, 1, 1);
+        glDrawArrays(GL_TRIANGLES, 0, 3);
+    }
+
+    glDisable(GL_CULL_FACE);
+    glFrontFace(GL_CCW);
+    return target.read_rgba();
+}
+
+// Tests that cull and front face toggled between draws in one pass draw the same pixels with the
+// fixed state as dynamic state as with it baked into each pipeline, and the pixels each case's
+// winding and culling give.
+void test_cull_and_front_face_toggled_in_one_pass() {
+    renderer::Shader shader;
+    std::string error;
+    CHECK(shader.build(
+        "fixed-state fixture",
+        R"(#version 410 core
+void main() {
+    vec2 p = vec2((gl_VertexID << 1) & 2, gl_VertexID & 2);
+    gl_Position = vec4(p * 2.0 - 1.0, 0, 1);
+}
+)",
+        R"(#version 410 core
+layout(location = 0) out vec4 result;
+void main() {
+    result = vec4(1.0, 1.0, 1.0, 1.0);
+}
+)",
+        error
+    ));
+    renderer::FrameBuffer target;
+    CHECK(target.create(5, 1, error));
+    unsigned vao = 0;
+    glGenVertexArrays(1, &vao);
+    namespace render_opt = renderer::render_opt;
+    const bool began = render_opt::enabled(render_opt::Opt::VkExtendedDynamicState);
+    render_opt::set(render_opt::Opt::VkExtendedDynamicState, true);
+    const std::vector<std::uint8_t> dynamic = draw_cull_cases(target, shader, vao);
+    render_opt::set(render_opt::Opt::VkExtendedDynamicState, false);
+    const std::vector<std::uint8_t> baked = draw_cull_cases(target, shader, vao);
+    render_opt::set(render_opt::Opt::VkExtendedDynamicState, began);
+    constexpr std::size_t kChannels = 4;
+    constexpr std::array<bool, 5> kDrawn = {true, true, false, false, true};
+    CHECK(dynamic == baked);
+    CHECK(dynamic.size() == kDrawn.size() * kChannels);
+
+    // Each pixel white where its case draws and black where it culls.
+    for (std::size_t n = 0; n < kDrawn.size() && dynamic.size() == kDrawn.size() * kChannels; ++n) {
+        CHECK((dynamic[n * kChannels] == 255) == kDrawn[n]);
+    }
+
+    glDeleteVertexArrays(1, &vao);
+    CHECK(glGetError() == GL_NO_ERROR);
+}
+
 int main() {
     test::GlContext context;
     std::string error;
@@ -580,5 +683,6 @@ void main() {
     glDeleteVertexArrays(1, &vao);
     texel_buffer_fallbacks();
     test_state_bounces();
+    test_cull_and_front_face_toggled_in_one_pass();
     return test::result();
 }
