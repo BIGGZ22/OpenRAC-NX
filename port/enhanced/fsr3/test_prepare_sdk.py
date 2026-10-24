@@ -10,6 +10,17 @@ from pathlib import Path
 import prepare_sdk
 
 
+# The scratch layout of the backend: six arrays sized twice, then mapped from the context's end.
+SCRATCH = "".join(
+    f"uint32_t {name}ArraySize = FFX_ALIGN_UP(count * sizeof(T), sizeof(uint32_t));\n"
+    for name in ("gpuJobDesc", "resourceView", "stagingRingBuffer", "pipeline", "resource",
+                 "context") * 2
+) + (
+    "return FFX_ALIGN_UP(sizeof(BackendContext_VK) + extensionPropArraySize, 8);\n"
+    "uint8_t* pMem = (uint8_t*)((BackendContext_VK*)(backendContext + 1));\n"
+)
+
+
 class PrepareSdkTest(unittest.TestCase):
     """Synthetic source files exercise preparation without requiring the downloaded SDK."""
 
@@ -35,7 +46,7 @@ class PrepareSdkTest(unittest.TestCase):
             "VkBufferUsageFlags fixture;\n"
             'const char* symbol = "vkGetBufferMemoryRequirements2KHR";\n'
             "backendInterface->fpSwapChainConfigureFrameGeneration = "
-            "ffxSetFrameGenerationConfigToSwapchainVK;\n",
+            "ffxSetFrameGenerationConfigToSwapchainVK;\n" + SCRATCH,
             encoding="utf-8",
         )
 
@@ -63,6 +74,21 @@ class PrepareSdkTest(unittest.TestCase):
         context = (self.output / 'FidelityFX/host/ffx_fsr3upscaler.h').read_text(encoding='utf-8')
         self.assertIn('sizeof(wchar_t) / sizeof(uint16_t)', context)
         self.assertTrue(context.startswith('// Synthetic context fixture.'))
+
+    def test_scratch_arrays_are_aligned_for_their_types(self):
+        prepare_sdk.prepare(self.source, self.output)
+        backend = (self.output / "ffx_vk.cpp").read_text(encoding="utf-8")
+        self.assertNotIn("sizeof(uint32_t))", backend)
+        self.assertEqual(backend.count(", 64);"), 12)
+        self.assertIn("FFX_ALIGN_UP((uintptr_t)(backendContext + 1), (uintptr_t)64)", backend)
+        self.assertIn("sizeof(BackendContext_VK) + 64 + extensionPropArraySize", backend)
+
+    def test_an_unexpected_scratch_layout_is_rejected(self):
+        backend = self.source / "sdk/src/backends/vk/ffx_vk.cpp"
+        backend.write_text(backend.read_text(encoding="utf-8").replace("pMem", "memory"),
+                           encoding="utf-8")
+        with self.assertRaisesRegex(ValueError, "scratch layout"):
+            prepare_sdk.prepare(self.source, self.output)
 
     def test_raw_string_collision_is_rejected(self):
         (self.gpu / "fixture.h").write_text(')fsrsdk"', encoding="utf-8")

@@ -3,6 +3,7 @@
 """Prepare pinned AMD shaders and Vulkan portability fixes for CMake."""
 
 import argparse
+import re
 from pathlib import Path
 
 
@@ -11,6 +12,34 @@ def write_changed(path, text):
     data = text.encode('utf-8')
     if not path.exists() or path.read_bytes() != data:
         path.write_bytes(data)
+
+
+# The backend's scratch arrays, each rounded to this many bytes, and their base aligned to it.
+SCRATCH_ALIGNMENT = 64
+
+
+def align_scratch(backend):
+    """Align the Vulkan backend's scratch arrays for their types on every platform.
+
+    The SDK rounds each array of its scratch memory to four bytes only. Its EffectContext is
+    alignas(32), and with a four-byte wchar_t (Linux, macOS) the arrays before it end off that
+    alignment, so the compiler's aligned vector stores into it fault. Each array size is rounded to
+    SCRATCH_ALIGNMENT, the first array starts at an address aligned to it, and the size the SDK
+    asks for keeps room for that start.
+    """
+    sizes = re.compile(r'(ArraySize\s*=\s*FFX_ALIGN_UP\(.*), sizeof\(uint32_t\)\);')
+    backend, count = sizes.subn(rf'\1, {SCRATCH_ALIGNMENT});', backend)
+    start = 'uint8_t* pMem = (uint8_t*)((BackendContext_VK*)(backendContext + 1));'
+    total = 'return FFX_ALIGN_UP(sizeof(BackendContext_VK) + extensionPropArraySize'
+    # Both the size query and the pointer mapping list the six arrays; the SDK must not drift.
+    if count != 12 or backend.count(start) != 1 or backend.count(total) != 1:
+        raise ValueError('the pinned SDK\'s scratch layout is not the expected one')
+    backend = backend.replace(start, (
+        'uint8_t* pMem = (uint8_t*)FFX_ALIGN_UP('
+        f'(uintptr_t)(backendContext + 1), (uintptr_t){SCRATCH_ALIGNMENT});'))
+    return backend.replace(total, (
+        f'return FFX_ALIGN_UP(sizeof(BackendContext_VK) + {SCRATCH_ALIGNMENT} '
+        '+ extensionPropArraySize'))
 
 
 def prepare(source, output):
@@ -94,6 +123,7 @@ uint32_t findMemoryTypeIndex(VkPhysicalDevice device, VkMemoryRequirements requi
 }
 '''
     backend = backend[:start] + replacement + backend[end:]
+    backend = align_scratch(backend)
     # The temporal-only build has no frame-generation swapchain implementation.
     backend = backend.replace(
         'backendInterface->fpSwapChainConfigureFrameGeneration = ffxSetFrameGenerationConfigToSwapchainVK;',
