@@ -630,6 +630,16 @@ void LevelScene::build_groups(Layer layer, const std::vector<Instance>& instance
             }
             g.bounded = g.count > 0;
         }
+
+#if defined(OPENRAC_VULKAN)
+        // A static group's instances never change after the upload: registered once, a view's
+        // GPU batch of them sends only the view (gpu-resident-instances, RENDER_PERF.md).
+        if (!live && native_gpu_bounds
+            && renderer::render_opt::enabled(renderer::render_opt::Opt::GpuResidentInstances)) {
+            vkgl::gpu_register_instances(g.instances, g.gpu_bounds);
+        }
+#endif
+
         groups.push_back(std::move(g));
     }
     glBindVertexArray(0);
@@ -1360,6 +1370,10 @@ void LevelScene::draw_shadow_map(
 }
 
 void LevelScene::release() {
+#if defined(OPENRAC_VULKAN)
+    // The registered static instances go with the level (once the frames reading them retire).
+    vkgl::gpu_release_instances();
+#endif
     for (auto& map : m_sun_maps) {
         map.reset();
     }
