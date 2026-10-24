@@ -881,6 +881,10 @@ VkBufferView texel_view(GLuint name, GLenum gl_format, VkBufferView fallback) {
 namespace openrac::vkgl {
 using namespace detail;
 
+bool device_only_memory() {
+    return g != nullptr && static_memory_of().device_only_types != 0;
+}
+
 // Make compute output visible to subsequent sampled texture reads.
 bool copy_buffer_to_texture(unsigned buffer, unsigned texture, int width, int height) {
     if (!g || width <= 0 || height <= 0) {

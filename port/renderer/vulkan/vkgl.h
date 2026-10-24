@@ -192,4 +192,9 @@ const std::string& driver_version();
 const std::string& api_version();
 bool software();
 
+// True when the open device has memory that is device-local and not host-visible, where a static
+// buffer's staged copy goes (docs/port/RENDER_PERF.md, "R-05"). False with no context, and on a
+// driver whose every memory type the host sees (lavapipe, some integrated GPUs).
+bool device_only_memory();
+
 }  // namespace openrac::vkgl

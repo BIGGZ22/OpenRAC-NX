@@ -327,9 +327,9 @@ void test_where_the_first_frame_keeps_them(
         CHECK(mirror == 2 * kBufferBytes);
     }
 
-    // Staged: in device memory the CPU cannot see. A driver that draws on the CPU (lavapipe in CI)
-    // has none: every memory type is host-visible, and the copy is mapped memory there too.
-    if (setting.staging && !vkgl::software()) {
+    // Staged: in device memory the CPU cannot see, where the device has such memory. Where every
+    // memory type is host-visible (lavapipe in CI) the copy is mapped memory there too.
+    if (setting.staging && vkgl::device_only_memory()) {
         CHECK(visible == 0);
     }
 
