@@ -24,6 +24,7 @@
 
 #include "enhanced/viewer/early_lighting.h"
 #include "enhanced/viewer/probe_lighting.h"
+#include "enhanced/viewer/shadow_atlas.h"
 #include "enhanced/viewer/sun_shadow.h"
 #include "renderer/framebuffer.h"
 #include "renderer/gpu_draw.h"
@@ -232,6 +233,19 @@ private:
     void prepare_shadows(const renderer::FrameInput& input, renderer::RenderState& state);
     bool make_shadow_atlas(std::string& error);
     void draw_shadow_atlas(renderer::RenderState& state);
+    // Which casters a shadow map draws: all of them, or, for the static shadow cache (R-18), the
+    // static layers (terrain, ties, shrubs) into the cache or the mobys over a copy of it.
+    enum class ShadowCasters : std::uint8_t {
+        All,
+        Static,
+        Dynamic,
+    };
+    // Draws the sun cascades whose static casters changed into the static shadow cache, copies
+    // the cache into the atlas and draws the dynamic casters over it; returns the cascades it drew
+    // into the cache (shadow-static-cache, docs/port/RENDER_PERF.md, R-18).
+    unsigned draw_cached_cascades(renderer::RenderState& state);
+    // Binds `framebuffer`, the atlas or the cache, for depth-only shadow drawing over all of it.
+    void begin_shadow_target(unsigned framebuffer);
     void report_sun_culling() const;
     void draw_shadow_map(
         unsigned target,
@@ -242,7 +256,8 @@ private:
         renderer::RenderState& state,
         unsigned cascade = kSunCascades,
         int atlas_view = -1,
-        bool flush_atlas = false
+        bool flush_atlas = false,
+        ShadowCasters casters = ShadowCasters::All
     );
     Group make_group(std::uint32_t model);
     void fill_group(Group& g, const std::vector<InstanceData>& list, unsigned usage);
@@ -327,6 +342,12 @@ private:
     std::unique_ptr<renderer::FrameBuffer> m_shadow_atlas;
     bool m_shadow_atlas_active = false;
     std::array<renderer::Mat4, 5> m_shadow_view_projection;
+    // The sun cascades' static casters, in the atlas's layout, kept between frames, and what each
+    // cascade's rectangle was drawn for (shadow-static-cache, R-18).
+    std::unique_ptr<renderer::FrameBuffer> m_static_shadow;
+    std::array<StaticShadowKey, kSunCascades> m_static_keys{};
+    // Bumped whenever the static layers' instances change (an upload, set_instances of one).
+    std::uint64_t m_static_generation = 1;
 
     struct ShadowDraw {
         unsigned vao;
