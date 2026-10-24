@@ -29,6 +29,7 @@
 #include "renderer/shader.h"
 #include "scene/level.h"
 #include "scene/level_lighting.h"
+#include "scene/motion.h"
 #include "scene/sun_shadow.h"
 
 namespace openrac::scene {
@@ -87,6 +88,14 @@ public:
 
     // Replaces a layer's instances (live mobys, each frame).
     void set_instances(Layer layer, const std::vector<Instance>& instances);
+
+    // Draws depth-tested rigid and skinned velocities into the caller's target, without changing history.
+    void draw_motion(
+        const renderer::Shader& shader,
+        std::span<const MotionInstance> instances,
+        const MotionView& view,
+        renderer::TexturePool& textures
+    );
 
     // Draws these mobys now, as the moby layer draws its own, into what is bound (the game's
     // render to a texture: the vendor's screens); the layer's own instances are kept.
@@ -192,6 +201,16 @@ public:
     }
 
 private:
+    // Draws one temporal object using the existing geometry VAO and current joint palette.
+    void draw_motion_instance(
+        const renderer::Shader& shader,
+        const MotionInstance& instance,
+        renderer::TexturePool& textures
+    );
+    // Applies original alpha coverage to each material run of a temporal object.
+    void draw_motion_materials(
+        const renderer::Shader& shader, std::uint32_t model, renderer::TexturePool& textures
+    );
     struct CasterBounds {
         renderer::Vec3 low{}, high{};
         bool valid = false;

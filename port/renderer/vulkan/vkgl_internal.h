@@ -292,6 +292,7 @@ struct Image {
     VkImage image = VK_NULL_HANDLE;
     VmaAllocation allocation = nullptr;
     VkFormat format = VK_FORMAT_UNDEFINED;
+    VkImageUsageFlags usage = 0;  // Validated before lending an image to a native compute writer.
     VkImageAspectFlags aspect = VK_IMAGE_ASPECT_COLOR_BIT;
     int width = 0;
     int height = 0;
@@ -1251,7 +1252,12 @@ int texel_bytes(VkFormat f);
 // sampled when single-sampled, and drawn into when the format allows. Null when Vulkan fails
 // (logged). The image goes with its last owner.
 ImagePtr make_image(
-    const Format& format, int width, int height, int levels, VkSampleCountFlagBits samples
+    const Format& format,
+    int width,
+    int height,
+    int levels,
+    VkSampleCountFlagBits samples,
+    VkImageUsageFlags extra_usage = 0
 );
 
 // The view of level 0 that draws into the image, made the first time it is asked for.

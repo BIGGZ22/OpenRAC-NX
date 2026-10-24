@@ -16,6 +16,7 @@
 #include <chrono>
 #include <cmath>
 #include <cstdint>
+#include <cstdlib>
 #include <functional>
 #include <limits>
 #include <memory>
@@ -236,10 +237,32 @@ void draw_kept(bool first) {
         );
     }
     Kept& k = g->kept;
+    const bool temporal_wanted =
+        enhanced_graphics_available() && settings::get().enhanced_graphics
+        && settings::get().temporal_quality != renderer::TemporalQuality::Off
+        && enhanced::Fsr3::available() && k.has_camera && (k.draws & 0x1Fu) != 0;
+
+    // SDK and pose history are absent when enhanced reconstruction is not in use.
+    if (temporal_wanted && !g->temporal) {
+        g->temporal = std::make_unique<enhanced::Fsr3>();
+        // Register after GL statistics initialise, so SDK owners retire before their exit-time destruction.
+        std::atexit([] {
+            // A manually closed frontend has already released this owner.
+            if (g) {
+                g->temporal.reset();
+            }
+        });
+    } else if (!temporal_wanted && g->temporal) {
+        g->temporal->reset();
+    }
     const host::GameState state =
         k.has_prev_state && alpha < 1.0f ? blend_camera(k.prev_state, k.state, alpha) : k.state;
     if (!g->level.models.empty()) {
         std::vector<scene::Instance> live = k.live;
+        // Game addresses provide stable live identities across grouping and interpolated display frames.
+        for (std::size_t n = 0; n < live.size() && n < k.addresses.size(); ++n) {
+            live[n].temporal_id = k.addresses[n];
+        }
         if (alpha < 1.0f) {
             for (std::size_t i = 0; i < live.size() && i < k.addresses.size(); ++i) {
                 auto it = k.prev_matrices.find(k.addresses[i]);
@@ -286,8 +309,14 @@ void draw_kept(bool first) {
                 }
             }
             g->scene.set_palette(palette);
+            if (temporal_wanted) {
+                g->temporal->set_scene(live, palette);
+            }
         } else {
             g->scene.set_palette(k.palette);
+            if (temporal_wanted) {
+                g->temporal->set_scene(live, k.palette);
+            }
         }
         g->scene.set_instances(scene::Layer::Mobys, live);
     }
@@ -314,7 +343,10 @@ void draw_kept(bool first) {
               )
             : 1.0f;
     std::string error;
-    const int samples = std::clamp(settings::get().msaa, 1, renderer::FrameBuffer::max_samples());
+    // Temporal reconstruction supplies antialiasing; keep the saved MSAA preference for native rendering.
+    const int samples =
+        temporal_wanted ? 1
+                        : std::clamp(settings::get().msaa, 1, renderer::FrameBuffer::max_samples());
     const bool sampleable_depth =
         samples == 1 && enhanced_graphics_available() && settings::get().enhanced_graphics;
     if (box.width > 0 && box.height > 0
@@ -543,6 +575,20 @@ void draw_kept(bool first) {
         target.resolve_framebuffer = g->frame.resolve_target();
         target.resolves_itself = g->frame.resolves_itself();
         target.wide_2d = picture_scale < 1.0f && settings::get().hud == settings::Hud::Edges;
+        // Loading/menu snapshots bypass history; active world frames resolve before the final HUD bucket.
+        if (temporal_wanted && !input.keep_colour) {
+            std::string temporal_error;
+            const enhanced::TemporalFrame temporal{
+                input, target, g->frame, g->scene, g->renderer->textures(), k.level
+            };
+            const bool active = g->temporal->begin(
+                temporal, graphics.temporal_quality, graphics.temporal_sharpness, temporal_error
+            );
+
+            if (!active && !temporal_error.empty()) {
+                log::error("{}", temporal_error);
+            }
+        }
         g->renderer->render(input, target);
     }
     if (frame_cost.on) {

@@ -18,6 +18,7 @@
 #include <string>
 
 #include "renderer/render_opt.h"
+#include "renderer/vulkan/shader_compiler_internal.h"
 #include "renderer/vulkan/spirv_cache_file.h"
 #include "renderer/vulkan/vkgl_internal.h"
 
@@ -31,6 +32,15 @@
 #include <glslang/MachineIndependent/iomapper.h>
 
 namespace openrac::vkgl {
+namespace compiler_detail {
+
+void initialise() {
+    static std::once_flag once;
+    std::call_once(once, [] { glslang::InitializeProcess(); });
+}
+
+}  // namespace compiler_detail
+
 namespace {
 
 // The GL_* types reflection answers with (glDefineType), the samplers among them.
@@ -101,11 +111,6 @@ private:
     detail::Clock::time_point m_start = detail::Clock::now();  // When the compile began.
 };
 
-void initialise() {
-    static std::once_flag once;
-    std::call_once(once, [] { glslang::InitializeProcess(); });
-}
-
 // The vertex stage's depth from OpenGL's clip space (-w..w) to Vulkan's (0..w), after the
 // shader's own main(), which may set its points' size over the default.
 std::string vertex_source(std::string_view source) {
@@ -157,10 +162,10 @@ Stage make_shader(EShLanguage stage, std::string source) {
     return out;
 }
 
-constexpr EShMessages kMessages = static_cast<EShMessages>(EShMsgSpvRules | EShMsgVulkanRules);
-
 bool parse(glslang::TShader& shader, std::string& log) {
-    if (!shader.parse(GetDefaultResources(), 410, ECoreProfile, false, false, kMessages)) {
+    if (!shader.parse(
+            GetDefaultResources(), 410, ECoreProfile, false, false, compiler_detail::kMessages
+        )) {
         log += shader.getInfoLog();
         log += shader.getInfoDebugLog();
         return false;
@@ -171,7 +176,7 @@ bool parse(glslang::TShader& shader, std::string& log) {
 // check_stage without the cache: glslang parses the stage.
 bool check_stage_fresh(bool vertex, std::string_view source, std::string& log) {
     const CompileCount counted;
-    initialise();
+    compiler_detail::initialise();
     const EShLanguage stage = vertex ? EShLangVertex : EShLangFragment;
     auto shader = make_shader(stage, vertex ? vertex_source(source) : std::string(source));
     return parse(*shader, log);
@@ -180,7 +185,7 @@ bool check_stage_fresh(bool vertex, std::string_view source, std::string& log) {
 // check_compute_stage without the cache.
 bool check_compute_stage_fresh(std::string_view source, std::string& log) {
     const CompileCount counted;
-    initialise();
+    compiler_detail::initialise();
     auto shader = make_shader(EShLangCompute, std::string(source));
     return parse(*shader, log);
 }
@@ -194,7 +199,7 @@ bool compile_program_fresh(
     std::string_view compute
 ) {
     const CompileCount counted;
-    initialise();
+    compiler_detail::initialise();
     Stage vs, fs, cs;
     glslang::TProgram program;
     if (compute.empty()) {
@@ -209,7 +214,7 @@ bool compile_program_fresh(
         program.addShader(cs.get());
     }
     // Bindings across both stages: a uniform both use has one, the stages' others their own.
-    if (!program.link(kMessages)) {
+    if (!program.link(compiler_detail::kMessages)) {
         log += program.getInfoLog();
         log += program.getInfoDebugLog();
         return false;

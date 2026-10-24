@@ -72,6 +72,8 @@ endif()
 # window opens for OPENRAC_GL_API=vulkan.
 if(OPENRAC_VULKAN)
   add_library(openrac_renderer_vulkan STATIC
+    renderer/vulkan/native_compute.cpp
+    renderer/vulkan/native_shader_compiler.cpp
     renderer/vulkan/pipeline_cache_file.cpp
     renderer/vulkan/shader_compiler.cpp
     renderer/vulkan/vkgl.cpp
@@ -100,6 +102,8 @@ if(OPENRAC_VULKAN)
     "${CMAKE_CURRENT_SOURCE_DIR}/renderer/vulkan/vkgl_present.cpp"
     "${CMAKE_CURRENT_SOURCE_DIR}/renderer/vulkan/vkgl_resources.cpp"
     "${CMAKE_CURRENT_SOURCE_DIR}/renderer/vulkan/shader_compiler.cpp"
+    "${CMAKE_CURRENT_SOURCE_DIR}/renderer/vulkan/native_shader_compiler.cpp"
+    "${CMAKE_CURRENT_SOURCE_DIR}/renderer/vulkan/shader_compiler_internal.h"
     "${CMAKE_CURRENT_SOURCE_DIR}/renderer/vulkan/gpu_draw.inc"
     "${CMAKE_CURRENT_SOURCE_DIR}/renderer/vulkan/gpu_materials.inc")
   set(openrac_renderer_vulkan_pipeline_text "")
@@ -245,6 +249,7 @@ openrac_warnings(openrac_probe_scene)
 # link without a graphics context) and this.
 add_library(openrac_scene_renderer STATIC
   scene/level_renderer.cpp
+  scene/motion.cpp
 )
 openrac_embed_shaders(openrac_scene_renderer scene openrac::scene
   "${CMAKE_CURRENT_SOURCE_DIR}/viewer/shaders/mesh.vert"
@@ -256,7 +261,7 @@ openrac_embed_shaders(openrac_scene_renderer scene openrac::scene
   "${CMAKE_CURRENT_SOURCE_DIR}/viewer/shaders/sky.vert"
   "${CMAKE_CURRENT_SOURCE_DIR}/viewer/shaders/sky.frag"
 )
-target_link_libraries(openrac_scene_renderer PUBLIC openrac_scene openrac_renderer)
+target_link_libraries(openrac_scene_renderer PUBLIC openrac_scene openrac_renderer openrac_renderer_world)
 if(OPENRAC_VULKAN)
   target_link_libraries(openrac_scene_renderer PRIVATE openrac_renderer_vulkan)
   target_compile_definitions(openrac_scene_renderer PRIVATE OPENRAC_VULKAN=1)
@@ -537,3 +542,5 @@ if(OPENRAC_VULKAN)
 endif()
 
 openrac_add_test(bake_liquids SOURCES enhanced/tests/bake_liquids_test.cpp LIBS openrac_probe_scene)
+
+include(Fsr3)

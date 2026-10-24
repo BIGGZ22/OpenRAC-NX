@@ -107,6 +107,7 @@ struct Instance {
     // Game-maintained animated bound, already in world units; zero radius is unknown.
     std::array<float, 4> world_sphere{};
     std::uint16_t occlusion = Pvs::always;
+    std::uint64_t temporal_id = 0;  // Stable live-object identity; zero has no temporal history.
 };
 
 // What the viewer draws, in the game's order.

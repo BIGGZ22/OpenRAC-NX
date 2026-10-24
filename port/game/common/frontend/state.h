@@ -24,6 +24,7 @@
 #include <utility>
 #include <vector>
 
+#include "enhanced/fsr3/fsr3.h"
 #include "enhanced/game/scripted_moby_colour.h"
 #include "game/common/profile.h"
 #include "openrac/guest.h"
@@ -104,6 +105,8 @@ struct State {
     bool capture_wanted = false;  // a mod's asking (capture_mouse)
     bool keyboard_taken = false;  // a mod took the keyboard (take_keyboard)
     std::unique_ptr<renderer::Renderer> renderer;
+    std::unique_ptr<enhanced::Fsr3>
+        temporal;  // Optional enhanced upscaler, released before the window.
     renderer::FrameBuffer frame;
     renderer::FrameBuffer picture;  // show_picture's: a movie frame, a boot still
     // The last frame the game drew its world in: what its draw buffer still holds on a frame it

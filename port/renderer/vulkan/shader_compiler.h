@@ -16,6 +16,7 @@
 #pragma once
 
 #include <cstdint>
+#include <functional>
 #include <string>
 #include <string_view>
 #include <vector>
@@ -81,6 +82,38 @@ bool compile_program(
     CompiledProgram& out,
     std::string& log,
     std::string_view compute = {}
+);
+
+// Explicit Vulkan descriptor classes, without GL uniform remapping.
+enum class NativeBindingKind : std::uint8_t {
+    Constants,
+    SampledImage,
+    StorageImage,
+    Sampler,
+};
+
+// One reflected native descriptor; names and counts come from the linked shader.
+struct NativeShaderBinding {
+    std::string name;        // Resource name, without an array suffix.
+    NativeBindingKind kind;  // Vulkan descriptor class.
+    unsigned binding;        // Explicit binding in descriptor set zero.
+    unsigned count;          // Array length, or one for a scalar resource.
+};
+
+// Native compute bytecode and descriptor layout, owned by the calling subsystem.
+struct NativeComputeShader {
+    std::vector<std::uint32_t> code;            // SPIR-V for Vulkan 1.1.
+    std::vector<NativeShaderBinding> bindings;  // Linked active resources.
+};
+
+// Compiles explicit Vulkan GLSL without rewriting bindings, depth or uniforms.
+// Include views must remain valid until this call returns; missing includes return an empty view.
+[[nodiscard]] bool compile_native_compute(
+    std::string_view source,
+    std::string_view definitions,
+    const std::function<std::string_view(std::string_view)>& include,
+    NativeComputeShader& out,
+    std::string& error
 );
 
 }  // namespace openrac::vkgl

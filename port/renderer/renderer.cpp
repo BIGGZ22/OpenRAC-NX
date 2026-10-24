@@ -98,7 +98,8 @@ bool Renderer::add_game_renderers(std::string& error) {
            && add(std::make_unique<DirectRenderer>("hud", Bucket::Hud), error) != nullptr;
 }
 
-void Renderer::render(const FrameInput& input, const RenderTarget& target) {
+void Renderer::render(const FrameInput& input, const RenderTarget& source) {
+    RenderTarget target = source;
     // [debug tools] The frame's target set and cleared, timed on the CPU only: on Vulkan the clear
     // is recorded with the first pass that draws.
     {
@@ -247,6 +248,7 @@ void Renderer::render(const FrameInput& input, const RenderTarget& target) {
     bool ao_applied = false;
     bool prepass_done = false;
     bool opaque_done = false;
+    bool particles_started = false;
     std::vector<bool> opaque_prepared(m_renderers.size());
     const bool batch_opaque =
         std::any_of(m_renderers.begin(), m_renderers.end(), [](const auto& r) {
@@ -298,6 +300,26 @@ void Renderer::render(const FrameInput& input, const RenderTarget& target) {
             }
             ao_applied = true;
         }
+        // Opaque colour is retained once, even when the particle bucket is empty or disabled.
+        if (!particles_started && bucket == Bucket::Particles && input.on_before_particles) {
+            input.on_before_particles(target);
+            particles_started = true;
+            glBindFramebuffer(GL_FRAMEBUFFER, target.framebuffer);
+            glViewport(0, 0, target.width, target.height);
+        }
+
+        // Temporal reconstruction finishes before any HUD geometry uses display-resolution coordinates.
+        if (i == hud && input.on_resolve_world) {
+            input.on_resolve_world(target);
+            state.target = target;
+            glBindFramebuffer(GL_FRAMEBUFFER, target.framebuffer);
+            glViewport(0, 0, target.width, target.height);
+            glDisable(GL_SCISSOR_TEST);
+            glDepthMask(GL_TRUE);
+            glClearDepth(0);
+            glClear(GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
+        }
+
         if (i == hud && input.before_hud) {
             input.before_hud();
             glBindFramebuffer(GL_FRAMEBUFFER, target.framebuffer);

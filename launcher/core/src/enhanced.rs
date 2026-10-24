@@ -97,12 +97,28 @@ pub fn settings() -> Vec<SettingSpec> {
         Choice { value: "normal".into(), name: "Normal".into() },
         Choice { value: "edge-aware".into(), name: "Edge-aware (2x)".into() },
     ];
+    let mut temporal = spec(
+        "temporal_quality",
+        "FSR temporal upscaling",
+        "choice",
+        "quality".into(),
+        "Reconstructs a lower-resolution world image. The HUD stays at full resolution.",
+    );
+    temporal.choices = vec![
+        Choice { value: "off".into(), name: "Off".into() },
+        Choice { value: "native-aa".into(), name: "Native AA".into() },
+        Choice { value: "quality".into(), name: "Quality".into() },
+        Choice { value: "balanced".into(), name: "Balanced".into() },
+        Choice { value: "performance".into(), name: "Performance".into() },
+    ];
     vec![
         spec("probe_lighting", "Probe lighting", "bool", true.into(), "Light that bounces off the world."),
         spec("enhanced_shadows", "Modern shadows", "bool", true.into(), "Sharp sun shadows, and Ratchet's own."),
         spec("gtao", "Ambient occlusion", "bool", true.into(), "Soft shade in corners and under objects."),
         quality,
         texture_filter,
+        temporal,
+        advanced(range(spec("temporal_sharpness", "FSR sharpening", "float", 0.2.into(), ""), 0.0, 1.0, 0.05)),
         advanced(range(
             spec("probe_gi_multiplier", "Bounce light", "float", 1.0.into(), "How bright the bounced light is."),
             0.0,
@@ -347,6 +363,8 @@ mod tests {
         assert_eq!(value(&v, "probe_lighting"), Value::Bool(true));
         assert_eq!(value(&v, "probe_gi_multiplier"), Value::from(1.0));
         assert_eq!(value(&v, "texture_filter"), Value::from("edge-aware"));
+        assert_eq!(value(&v, "temporal_quality"), Value::from("quality"));
+        assert_eq!(value(&v, "temporal_sharpness"), Value::from(0.2));
 
         set_enabled(&home, "rac1", "pal", true).unwrap();
         set_setting(&home, "rac1", "pal", "probe_gi_multiplier", &Value::from(2.5)).unwrap();

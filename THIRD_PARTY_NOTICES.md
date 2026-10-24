@@ -175,22 +175,44 @@ The port ([port/](port/README.md)) builds with these libraries. CMake fetches
 each at a pinned version ([port/cmake/Dependencies.cmake](port/cmake/Dependencies.cmake),
 [port/cmake/Luau.cmake](port/cmake/Luau.cmake)); none is copied into OpenRAC.
 
-| Library | Version | License | Used by |
-|---|---|---|---|
-| [SDL](https://github.com/libsdl-org/SDL) | 3.2.24 | zlib | the platform layer: window, OpenGL context, input, audio |
-| [cgltf](https://github.com/jkuhlmann/cgltf) | 1.15 | MIT | the level viewer: reading the editor's glTF meshes |
-| [stb_image](https://github.com/nothings/stb) | commit 2c980bb | MIT or public domain | the level viewer: reading textures (PNG) |
-| [Dear ImGui](https://github.com/ocornut/imgui) | 1.91.9b | MIT | the games' debug overlay ([docs/port/DEBUGGING.md](docs/port/DEBUGGING.md)) |
-| [Luau](https://github.com/luau-lang/luau) | 0.741 (commit 2d88f9b) | MIT | script mods: its virtual machine and compiler ([docs/port/MODS.md](docs/port/MODS.md), section 11; [port/cmake/Luau.cmake](port/cmake/Luau.cmake)) |
-| [Vulkan-Headers](https://github.com/KhronosGroup/Vulkan-Headers) | vulkan-sdk-1.4.350.1 | Apache-2.0 or MIT | the Vulkan renderer |
-| [volk](https://github.com/zeux/volk) | vulkan-sdk-1.4.350.1 | MIT | the Vulkan renderer: the Vulkan loader, opened at run time |
-| [Vulkan Memory Allocator](https://github.com/GPUOpen-LibrariesAndSDKs/VulkanMemoryAllocator) | 3.3.0 | MIT | the Vulkan renderer: its memory |
-| [glslang](https://github.com/KhronosGroup/glslang) | vulkan-sdk-1.4.350.1 | BSD-3-Clause and others (its LICENSE.txt) | the Vulkan renderer: compiling its shaders |
-| [MoltenVK](https://github.com/KhronosGroup/MoltenVK) | 1.4.2 (Homebrew's `molten-vk`, or the Vulkan SDK's) | Apache-2.0 | the Vulkan renderer on macOS: Vulkan on Metal. Not fetched: its library is taken from the build machine and carried in each game's application bundle (`Contents/Frameworks/libMoltenVK.dylib`, its license in `Contents/Resources/MoltenVK-LICENSE.txt`; [port/cmake/MacApp.cmake](port/cmake/MacApp.cmake)) |
+| Library                                                                                                                        | Version                                             | License                                   | Used by                                                                                                                                                                                                                                                                                                       |
+| ------------------------------------------------------------------------------------------------------------------------------ | --------------------------------------------------- | ----------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| [SDL](https://github.com/libsdl-org/SDL)                                                                                       | 3.2.24                                              | zlib                                      | the platform layer: window, OpenGL context, input, audio                                                                                                                                                                                                                                                      |
+| [cgltf](https://github.com/jkuhlmann/cgltf)                                                                                    | 1.15                                                | MIT                                       | the level viewer: reading the editor's glTF meshes                                                                                                                                                                                                                                                            |
+| [stb_image](https://github.com/nothings/stb)                                                                                   | commit 2c980bb                                      | MIT or public domain                      | the level viewer: reading textures (PNG)                                                                                                                                                                                                                                                                      |
+| [Dear ImGui](https://github.com/ocornut/imgui)                                                                                 | 1.91.9b                                             | MIT                                       | the games' debug overlay ([docs/port/DEBUGGING.md](docs/port/DEBUGGING.md))                                                                                                                                                                                                                                   |
+| [Luau](https://github.com/luau-lang/luau)                                                                                      | 0.741 (commit 2d88f9b)                              | MIT                                       | script mods: its virtual machine and compiler ([docs/port/MODS.md](docs/port/MODS.md), section 11; [port/cmake/Luau.cmake](port/cmake/Luau.cmake))                                                                                                                                                            |
+| [Vulkan-Headers](https://github.com/KhronosGroup/Vulkan-Headers)                                                               | vulkan-sdk-1.4.350.1                                | Apache-2.0 or MIT                         | the Vulkan renderer                                                                                                                                                                                                                                                                                           |
+| [volk](https://github.com/zeux/volk)                                                                                           | vulkan-sdk-1.4.350.1                                | MIT                                       | the Vulkan renderer: the Vulkan loader, opened at run time                                                                                                                                                                                                                                                    |
+| [Vulkan Memory Allocator](https://github.com/GPUOpen-LibrariesAndSDKs/VulkanMemoryAllocator)                                   | 3.3.0                                               | MIT                                       | the Vulkan renderer: its memory                                                                                                                                                                                                                                                                               |
+| [glslang](https://github.com/KhronosGroup/glslang)                                                                             | vulkan-sdk-1.4.350.1                                | BSD-3-Clause and others (its LICENSE.txt) | the Vulkan renderer: compiling its shaders                                                                                                                                                                                                                                                                    |
+| [AMD FidelityFX SDK](https://github.com/GPUOpen-LibrariesAndSDKs/FidelityFX-SDK/tree/c6efa6bf7f2027b3ec94f28578bb5965eabb9e55) | 1.1.4, FSR 3.1.4                                    | MIT                                       | enhanced Vulkan temporal upscaling; original GLSL, upscaler host code and Vulkan backend, prepared by `port/enhanced/fsr3/prepare_sdk.py`                                                                                                                                                                     |
+| [MoltenVK](https://github.com/KhronosGroup/MoltenVK)                                                                           | 1.4.2 (Homebrew's `molten-vk`, or the Vulkan SDK's) | Apache-2.0                                | the Vulkan renderer on macOS: Vulkan on Metal. Not fetched: its library is taken from the build machine and carried in each game's application bundle (`Contents/Frameworks/libMoltenVK.dylib`, its license in `Contents/Resources/MoltenVK-LICENSE.txt`; [port/cmake/MacApp.cmake](port/cmake/MacApp.cmake)) |
+
+### AMD FidelityFX SDK licence
+
+Copyright (C) 2024 Advanced Micro Devices, Inc.
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in
+all copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+THE SOFTWARE.
 
 The renderer's conventions (colour 0x80 as 1.0, reversed depth, the double
 draw for alpha-test fail modes, textures identified by the game's base
 pointer) follow OpenGOAL's renderer as
 [docs/port/OPENGOAL_NOTES.md](docs/port/OPENGOAL_NOTES.md) describes it; no
 code from OpenGOAL or from any emulator is in the port.
-

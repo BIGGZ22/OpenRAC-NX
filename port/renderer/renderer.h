@@ -112,6 +112,8 @@ inline constexpr std::uint32_t kUiSprite = 2;
 
 inline constexpr std::uint32_t kUiGlyph = 1;
 
+struct RenderTarget;
+
 struct FrameInput {
     TextureFilter texture_filter = TextureFilter::Normal;
     bool sun_pixel_shadow = false;
@@ -157,6 +159,10 @@ struct FrameInput {
     // Called with the target as drawn before the HUD's renderer (the world, without the 2D over
     // it): what a copy of the frame the game reads back should hold.
     std::function<void()> before_hud;
+    // Captures opaque world colour before particles change it, for temporal reactive masks.
+    std::function<void(const RenderTarget&)> on_before_particles;
+    // Resolves the world before the HUD, replacing its target with a display-resolution target.
+    std::function<void(RenderTarget&)> on_resolve_world;
     // Resolved world depth, before world colour: GPU probe selection.
     std::function<void(unsigned, int, int)> after_world_depth;
     std::uint64_t frame = 0;

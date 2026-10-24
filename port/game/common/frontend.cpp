@@ -487,6 +487,8 @@ void close() {
         renderer::ui::fps_counter::release();
         renderer::ui::touch_overlay::release();
         debug_menu::release();
+        // Temporal histories reference the target and scene, so retire them before either owner.
+        g->temporal.reset();
         g->frame.release();
         g->picture.release();
         g->last_world.release();

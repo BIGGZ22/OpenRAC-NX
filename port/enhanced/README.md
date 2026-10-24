@@ -1,6 +1,6 @@
 # Enhanced rendering
 
-Probe GI, modern shadows, GTAO and edge-aware texture upscaling run through
+Probe GI, modern shadows, GTAO, FSR temporal upscaling and edge-aware texture upscaling run through
 Vulkan when enhanced rendering is enabled. With it off, or on OpenGL, the game
 uses original lighting. Embree is needed only for offline baking.
 
@@ -10,6 +10,7 @@ Start with the [lighting guide](lighting/README.md) for builds, bakes and contro
 | --- | --- |
 | `lighting/` | Probe data, sampling, emission and transport |
 | `renderer/` | GTAO, cached texture upscaling and shaders |
+| `fsr3/` | Temporal world reconstruction, motion and reactive masks |
 | `viewer/` | Probe lighting, probe selection and early lighting of a level, library `openrac_enhanced_viewer`, namespace `openrac::lighting`; `scene_lighting.h` registers them with the scene's lighting hook ([scene/README.md](../scene/README.md)) |
 | `game/` | Authored brightness tracking |
 | `tools/probes/` | Offline baker and bake tools |

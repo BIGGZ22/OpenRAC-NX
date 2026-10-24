@@ -257,6 +257,10 @@ void load(const std::filesystem::path& file) {
             known = parse_float(value, 0.05f, 8.0f, s.gtao_settings.radius);
         } else if (key == "gtao_strength") {
             known = parse_float(value, 0.0f, 3.0f, s.gtao_settings.strength);
+        } else if (key == "temporal_quality") {
+            known = parse(value, renderer::kTemporalKeys, s.temporal_quality);
+        } else if (key == "temporal_sharpness") {
+            known = parse_float(value, 0.0f, 1.0f, s.temporal_sharpness);
         } else if (key == "texture_filter") {
             known = parse(value, kTextureFilter, s.texture_filter);
         } else if (key == "anisotropy") {
@@ -388,6 +392,9 @@ void save() {
         << "gtao_radius = " << s.gtao_settings.radius << "\n"
         << "gtao_strength = " << s.gtao_settings.strength << "\n"
         << "texture_filter = " << kTextureFilter[static_cast<int>(s.texture_filter)] << "\n"
+        << "temporal_quality = " << renderer::kTemporalKeys[static_cast<int>(s.temporal_quality)]
+        << "\n"
+        << "temporal_sharpness = " << s.temporal_sharpness << "\n"
         << "anisotropy = " << (s.anisotropy ? std::to_string(s.anisotropy) : "auto") << "\n"
         << "vsync = " << kVSync[static_cast<int>(s.vsync)] << "\n"
         << "frame_rate = " << frame_rate_value(s) << "\n"
