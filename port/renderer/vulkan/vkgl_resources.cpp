@@ -616,6 +616,7 @@ bool copy_buffer_to_texture(unsigned buffer, unsigned texture, int width, int he
         0,
         nullptr
     );
+    count_barrier(VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT);
     Image& image = *t->image;
     barrier(cmd, image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
     VkBufferImageCopy copy{};
@@ -625,6 +626,7 @@ bool copy_buffer_to_texture(unsigned buffer, unsigned texture, int width, int he
     vkCmdCopyBufferToImage(
         cmd, src.buffer, image.image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &copy
     );
+    count_copy(static_cast<std::uint32_t>(width), static_cast<std::uint32_t>(height));
     barrier(cmd, image, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
     image.touched = g->recording;
     return true;
