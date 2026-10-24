@@ -55,6 +55,9 @@ constexpr std::array<Entry, kOptCount> kEntries = {{
     {Opt::ShadowStaticCache, "shadow-static-cache",
      "a sun cascade's static casters drawn again only when its key changes, else copied",
      false, Tolerance{}},
+    {Opt::PresentSingleCopy, "present-single-copy",
+     "the picture's copy into the window and the window's into the screen become one blit",
+     true, Tolerance{}},
 }};
 // clang-format on
 
