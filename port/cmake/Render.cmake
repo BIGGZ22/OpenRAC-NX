@@ -48,3 +48,22 @@ endif()
 add_test(NAME render_opt_environment COMMAND render_opt_test --environment)
 set_tests_properties(render_opt_environment PROPERTIES ENVIRONMENT
   "OPENRAC_RENDER_OPT_OFF=registry-selftest,no-such-optimisation")
+
+# ---- The equivalence harness (tests/render_fixture.h's synthetic scene) ----
+#
+#   render_equivalence_vulkan  every registry entry on against off, frame by frame
+#
+# It draws on the Vulkan renderer through the scene's renderer, so it exists where both do; it
+# exits 77 (skipped) where Vulkan cannot open. The equivalence test is written out rather than
+# made by openrac_add_test, whose test takes the program's name (PROGRESS.md's follow-ups ask
+# cmake/Tests.cmake for a NAME option).
+if(TARGET openrac_renderer_vulkan AND TARGET openrac_viewer_lib)
+  add_executable(render_equivalence_test tests/render_equivalence_test.cpp)
+  target_link_libraries(render_equivalence_test PRIVATE
+    openrac_viewer_lib openrac_platform)
+  target_compile_definitions(render_equivalence_test PRIVATE OPENRAC_VULKAN=1)
+  openrac_warnings(render_equivalence_test)
+  add_test(NAME render_equivalence_vulkan COMMAND render_equivalence_test)
+  set_tests_properties(render_equivalence_vulkan PROPERTIES SKIP_RETURN_CODE 77 ENVIRONMENT
+    "OPENRAC_GL_API=vulkan;OPENRAC_VULKAN_VALIDATION=1")
+endif()
