@@ -21,7 +21,7 @@ namespace {
 // picture was drawn with.
 struct Projector {
     renderer::Mat4 clip_from_world;  // the camera's projection times its view
-    float x, y, width, height;  // the picture, in ImGui's coordinates (top left origin)
+    float x, y, width, height;       // the picture, in ImGui's coordinates (top left origin)
 
     // Sets `out` to where the world point (wx, wy, wz) is in the window. Returns false, leaving
     // `out` alone, for a point behind the camera or outside the picture.
