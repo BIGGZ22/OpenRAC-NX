@@ -40,6 +40,9 @@ int rac1_vformat(char *out, size_t size, const char *format, va_list args);
 /* boot.c: a new game straight in `level` from the title, as --level N with OPENRAC_DIRECT. */
 void rac1_start_level(int level);
 
+/* options.c: once a frame, the game's options the port remembers between runs. */
+void rac1_options_frame(void);
+
 /* moby_pool.c: a WAD decompressed to `to` (hand.c's WadDecompress, after it wrote it): the gameplay
  * header's spare moby count raised while the level loader runs. */
 void rac1_wad_decompressed(gaddr to);

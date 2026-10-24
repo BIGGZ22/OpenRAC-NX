@@ -127,6 +127,7 @@ static void direct_start(unsigned frame) {
     }
     static unsigned title_from = 0;
     (void)frame;
+    rac1_options_frame();
     if (done) {
         return;
     }

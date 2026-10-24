@@ -65,6 +65,13 @@ extern const char* openrac_game_card_dir;
  * 3 Spanish, 4 German, 5 Italian. */
 extern int openrac_game_language;
 
+/* An option the game keeps in its own memory, which a console forgets at power off (rac1: the
+ * language and the Sound page), remembered between runs in the port's settings (key game_*): its
+ * value, or `fallback` while none is remembered; and remember one (the file is written when it
+ * changed). "game_language" is the console's language above, which the port starts with. */
+int openrac_game_option(const char* key, int fallback);
+void openrac_game_set_option(const char* key, int value);
+
 /* ---- Provided by the program, called by the replacements ---- */
 
 /* The game finished a frame and waits for vsync (sceGsSyncV): present what

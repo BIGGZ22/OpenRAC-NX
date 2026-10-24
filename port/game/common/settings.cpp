@@ -12,6 +12,7 @@
 #include <fstream>
 #include <system_error>
 
+#include "common/c_boundary.h"
 #include "common/log.h"
 #include "fixes.h"
 
@@ -303,6 +304,12 @@ void load(const std::filesystem::path& file) {
             s.touch_layout = value;  // TouchPad::set_layout leaves out what it does not know
         } else if (key == "verbose_log") {
             known = parse_bool(value, s.verbose_log);
+        } else if (key.starts_with("game_")) {
+            int number = 0;
+            known = parse_int(value, -1000000, 1000000, number);
+            if (known) {
+                s.game_options[key] = number;
+            }
         } else if (const int fix = fixes::find(key.c_str()); fix >= 0) {
             // A game fix (fixes.h): on is the port's, off the console's behaviour.
             bool on = true;
@@ -418,6 +425,9 @@ void save() {
     }
     if (s.verbose_log) {
         out << "verbose_log = 1\n";
+    }
+    for (const auto& [key, value] : s.game_options) {
+        out << key << " = " << value << "\n";
     }
     if (fixes::count() > 0) {
         out << "# Game fixes: 1 the port's, 0 the console's behaviour (Options, Game fixes)\n";
@@ -537,3 +547,24 @@ std::string frame_rate_name(const Settings& settings) {
 }
 
 }  // namespace openrac::settings
+
+// game_host.h: an option the game keeps itself, remembered between runs. The file is written when
+// one changes; the game sets them seldom (its menus, a loaded save).
+extern "C" int openrac_game_option(const char* key, int fallback) {
+    return openrac::c_boundary::call("openrac_game_option", fallback, [&] {
+        const auto& options = openrac::settings::get().game_options;
+        const auto it = options.find(key);
+        return it != options.end() ? it->second : fallback;
+    });
+}
+
+extern "C" void openrac_game_set_option(const char* key, int value) {
+    openrac::c_boundary::call("openrac_game_set_option", [&] {
+        auto& options = openrac::settings::get().game_options;
+        const auto [it, added] = options.try_emplace(key, value);
+        if (added || it->second != value) {
+            it->second = value;
+            openrac::settings::save();
+        }
+    });
+}

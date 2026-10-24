@@ -90,6 +90,19 @@
  * forms these two). */
 #define RAC1_ADDR_0x001C7AC0u 0x001C7740u
 #define RAC1_ADDR_0x001C7C80u 0x001C7900u
+/* The game's options the port remembers (options.c): PAL memcard_RestoreGame func_00209CE8 is
+ * FUN_00209298 here and initialize_gameplay_sound_system func_0022DBE8 is FUN_0022c8d0 (the NTSC
+ * decomp's memcard_restore_game.c and initialize_gameplay_sound_system.c); the language, PAL
+ * D_0015EE88, and the playback mode, music and sound volumes, PAL D_0015EEE8..EEF0, are its
+ * game_language and playback_mode, music_volume, sound_volume (include/rnc/globals.h,
+ * gameplay/state/options.h). */
+#define func_00209CE8 game_FUN_00209298
+#define func_00209CE8__game game_FUN_00209298__game
+#define func_0022DBE8 game_FUN_0022c8d0
+#define func_0022DBE8__game game_FUN_0022c8d0__game
+#define RAC1_TYPE_func_00209CE8_save gaddr
+#define RAC1_ADDR_0x0015EE88u 0x0015ED88u
+#define RAC1_ADDR_0x0015EEE8u 0x0015EDE8u
 
 /* ---- generated below ---- */
 

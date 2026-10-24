@@ -165,6 +165,8 @@ snd_get_doppler_pitch_mod	989snd	snd_GetDopplerPitchMod	host	PAL func_0012F2E0
 FUN_0012d8f8	boot	ParseBin	wrap	copies a level's program in: from then on, level code addresses mean that level's functions; PAL func_0012DA38
 FUN_001f4280	draw	SetupGifPaging	wrap	sets the four draw flags at 0x18A3D0 retail has on before its first frame (nothing in the game's code stores them by name); PAL func_001F4630
 FUN_00209370	memcard	NewGameInit	wrap	a new game starts in level 0; with --level N it starts in level N instead (rac1/host/boot.c); PAL func_00209DC0, paired as near
+FUN_00209298	memcard	memcard_RestoreGame	wrap	a loaded save: the language and the Sound page stay the player's, which the port remembers between runs (rac1/host/options.c); PAL func_00209CE8
+FUN_0022c8d0	sound	initialize_gameplay_sound_system	wrap	the sound's start: the Sound page the port remembers goes in first (rac1/host/options.c); PAL func_0022DBE8
 FUN_0012f208	wad	wad_GetSectors	game	PAL func_0012F348
 FUN_0012f2b8	wad	load_disc_sectors_into_global_buffer	game	PAL func_0012F3F8
 FUN_0012f368	wad	read_file_entry_with_retry	game	PAL func_0012F4A8
