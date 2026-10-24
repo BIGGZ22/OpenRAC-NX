@@ -45,6 +45,7 @@ class ShrubTests(unittest.TestCase):
     def test_triangle_list_scale_texture_and_padding(self):
         for padded in (False, True):
             mesh = shrub_mesh(fixture(padded=padded), bytes((5,)), "shrub_42")
+            self.assertEqual(mesh.normals, [(0, 0, 1)] * 3)
             self.assertEqual(mesh.positions, [(0, 0, 0), (2, 0, 0), (0, 2, 0)])
             self.assertEqual(mesh.faces, {("shrub", 5): [(0, 1, 2)]})
 

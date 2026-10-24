@@ -7,6 +7,7 @@
 #include <memory>
 #include <utility>
 
+#include "common/log.h"
 #include "common/stats.h"
 #include "renderer/direct.h"
 #include "renderer/gl.h"
@@ -65,6 +66,55 @@ unsigned readable(const RenderTarget& target) {
 }
 
 Renderer::~Renderer() = default;
+
+bool Renderer::begin_surface_prepass(RenderState& state) {
+    const RenderTarget& target = state.target;
+    GLint samples = 1;
+    glGetIntegerv(GL_SAMPLES, &samples);
+    samples = std::max(1, samples);
+    std::string error;
+
+    // Matching sample counts preserve the colour rounds' per-sample depth coverage.
+    if ((!m_surface_prepass.id() || m_surface_prepass.width() != target.width
+         || m_surface_prepass.height() != target.height || m_surface_prepass.samples() != samples)
+        && !m_surface_prepass.create(target.width, target.height, error, samples, samples == 1)) {
+        log::warn("surface normals: {}", error);
+        glBindFramebuffer(GL_FRAMEBUFFER, target.framebuffer);
+        return false;
+    }
+
+    glBindFramebuffer(GL_FRAMEBUFFER, m_surface_prepass.id());
+    glColorMask(GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE);
+    // Alpha zero marks background or unusable authored normals.
+    glClearColor(0, 0, 0, 0);
+    glClear(GL_COLOR_BUFFER_BIT);
+    state.target.normal_texture = m_surface_prepass.colour_texture();
+    // Single-sample compute passes borrow depth directly instead of making another copy.
+    if (samples == 1) {
+        state.target.depth_texture = m_surface_prepass.depth_texture();
+    }
+    return true;
+}
+
+void Renderer::finish_surface_prepass(const RenderTarget& target) {
+    glBindFramebuffer(GL_READ_FRAMEBUFFER, m_surface_prepass.id());
+    glBindFramebuffer(GL_DRAW_FRAMEBUFFER, target.framebuffer);
+    glBlitFramebuffer(
+        0,
+        0,
+        target.width,
+        target.height,
+        0,
+        0,
+        target.width,
+        target.height,
+        GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT,
+        GL_NEAREST
+    );
+    // Resolve the normal colour independently of the existing sky and background.
+    m_surface_prepass.resolved();
+    glBindFramebuffer(GL_FRAMEBUFFER, target.framebuffer);
+}
 
 bool Renderer::init(std::string& error) {
     RenderState state{m_textures, {}, {}};
@@ -145,8 +195,8 @@ void Renderer::render(const FrameInput& input, const RenderTarget& source) {
         std::any_of(m_renderers.begin(), m_renderers.end(), [&](const auto& r) {
             return r->enabled && r->needs_early_lighting(input);
         });
-    const bool prepass_needed = early_lighting || input.after_world_depth
-                                || (gtao && needs_indirect_ao && input.gtao_settings.strength > 0);
+    const bool prepass_needed =
+        early_lighting || input.after_world_depth || (gtao && input.gtao_settings.strength > 0);
     static const bool& discard_prepass = stats::probe(
         "OPENRAC_DEPTH_REUSE_OFF",
         "Profiling reference: discard GTAO prepass depth before world colour"
@@ -156,11 +206,12 @@ void Renderer::render(const FrameInput& input, const RenderTarget& source) {
         // exclusively to the world and remains intact through its colour passes.
         glBindFramebuffer(GL_FRAMEBUFFER, target.framebuffer);
         glViewport(0, 0, target.width, target.height);
+        const bool surface_prepass = (early_lighting || gtao) && begin_surface_prepass(state);
         glDepthMask(GL_TRUE);
         glClearDepth(0);
         glClear(GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
         state.depth_prepass = true;
-        glColorMask(GL_FALSE, GL_FALSE, GL_FALSE, GL_FALSE);
+        glColorMask(surface_prepass, surface_prepass, surface_prepass, surface_prepass);
         {
             const stats::Scope depth("world depth prepass", stats::kGpu);
             for (const auto& r : m_renderers) {
@@ -170,11 +221,21 @@ void Renderer::render(const FrameInput& input, const RenderTarget& source) {
             }
         }
         state.depth_prepass = false;
+        // Reuse the prepass depth without overwriting previously drawn sky or background.
+        if (surface_prepass) {
+            finish_surface_prepass(target);
+        }
+        glClearColor(
+            input.clear_colour[0],
+            input.clear_colour[1],
+            input.clear_colour[2],
+            input.clear_colour[3]
+        );
         state.reuse_prepass_depth = true;
         glColorMask(GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE);
-        unsigned resolved_depth = 0;
+        unsigned resolved_depth = surface_prepass ? m_surface_prepass.depth_texture() : 0;
         if (gtao && needs_indirect_ao
-            && m_ambient_occlusion->render(input, target, false, early_lighting)) {
+            && m_ambient_occlusion->render(input, state.target, false, early_lighting)) {
             if (early_lighting) {
                 state.gtao_raw = m_ambient_occlusion->raw_texture();
                 state.gtao_scale = input.gtao_settings.half_resolution ? 2 : 1;
@@ -294,7 +355,8 @@ void Renderer::render(const FrameInput& input, const RenderTarget& source) {
         }
         state.opaque_colour_batched = opaque_prepared[i];
         if (ao_before != 0 && i == ao_before) {
-            if (!scoped_ao && gtao && m_ambient_occlusion->render(input, target, true, false)) {
+            if (!scoped_ao && gtao
+                && m_ambient_occlusion->render(input, state.target, true, false)) {
                 state.stats.draw_calls += 1;
                 state.stats.triangles += 1;
             }
@@ -333,7 +395,7 @@ void Renderer::render(const FrameInput& input, const RenderTarget& source) {
         }
     }
     if (!scoped_ao && !ao_applied && ao_before != 0 && gtao
-        && m_ambient_occlusion->render(input, target, true, false)) {
+        && m_ambient_occlusion->render(input, state.target, true, false)) {
         state.stats.draw_calls += 1;
         state.stats.triangles += 1;
     }
@@ -360,6 +422,7 @@ void Renderer::clear_renderers() {
 }
 
 void Renderer::release() {
+    m_surface_prepass.release();
     m_selection_depth.release();
     // Only a registered ambient occlusion has GL objects to free.
     if (m_ambient_occlusion != nullptr) {

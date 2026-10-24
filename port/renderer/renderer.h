@@ -193,6 +193,8 @@ struct RenderTarget {
     // Optional single-sample depth texture attached to this framebuffer.
     // Borrowed for read-only compute/offscreen passes; zero keeps copy/resolve paths.
     unsigned depth_texture = 0;
+    // Borrowed resolved view-space smooth normals from the depth/normal prepass, or zero.
+    unsigned normal_texture = 0;
 };
 
 // The framebuffer to read `target` from (glReadPixels, glCopyTexSubImage2D, a scaled blit): the
@@ -326,7 +328,13 @@ public:
 
 private:
     std::unique_ptr<AmbientOcclusion> m_ambient_occlusion;  // Null until one is registered.
+    // Starts normal-writing depth with matching samples; allocation failure logs and returns false.
+    [[nodiscard]] bool begin_surface_prepass(RenderState& state);
+    // Resolves normals and copies depth back, preserving the existing background colour.
+    void finish_surface_prepass(const RenderTarget& target);
     FrameBuffer m_selection_depth;
+    // Owns smooth normals and matching depth; allocated only for enhanced lighting or AO.
+    FrameBuffer m_surface_prepass;
     TexturePool m_textures;
     std::vector<std::unique_ptr<BucketRenderer>> m_renderers;
     FrameStats m_stats;

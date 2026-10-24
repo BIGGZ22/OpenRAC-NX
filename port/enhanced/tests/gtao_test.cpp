@@ -113,7 +113,8 @@ void check_scene(bool wall, int samples, renderer::GtaoQuality quality) {
             CHECK(direct.read_rgba() == ao);
             direct.release();
         }
-        CHECK(renderer.last_stats().draw_calls == 2);
+        // Legacy colour now shares a depth/normal prepass before its colour and AO composite draws.
+        CHECK(renderer.last_stats().draw_calls == 3);
         int darkened = 0;
         for (std::size_t i = 0; i < plain.size(); i += 4) {
             CHECK(

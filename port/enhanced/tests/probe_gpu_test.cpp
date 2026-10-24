@@ -858,9 +858,7 @@ void camera_facing_normals() {
                 scene::Vertex v{};
                 std::copy(p.begin(), p.end(), v.position);
                 v.normal[2] = sign;
-                if (sign == 0) {
-                    v.normal[0] = 1;  // bad tangent normal must not steer GI through the plane
-                }
+                // A missing authored normal uses the geometric fallback in the mesh shader.
                 v.colour[3] = 1;
                 v.light_slot = -1;
                 level.vertices.push_back(v);

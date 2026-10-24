@@ -63,6 +63,9 @@ void VKGL get_integerv(GLenum name, GLint* data) {
         case GL_MAX_TEXTURE_SIZE:
             *data = static_cast<GLint>(l.maxImageDimension2D);
             return;
+        case GL_SAMPLES:
+            *data = static_cast<GLint>(target_of(g->state.draw_framebuffer).samples);
+            return;
         case GL_MAX_SAMPLES: {
             const VkSampleCountFlags counts =
                 l.framebufferColorSampleCounts & l.framebufferDepthSampleCounts;
@@ -1500,7 +1503,9 @@ void VKGL blit_framebuffer(
         }
         VkCommandBuffer cmd = cmd_for(src, true);
         dst->touched = g->recording;
-        if (src->samples != VK_SAMPLE_COUNT_1_BIT && (aspect & VK_IMAGE_ASPECT_DEPTH_BIT) != 0) {
+        // Matching multisample depth targets use the unscaled image-copy path below.
+        if (src->samples != dst->samples && src->samples != VK_SAMPLE_COUNT_1_BIT
+            && (aspect & VK_IMAGE_ASPECT_DEPTH_BIT) != 0) {
             // vkCmdResolveImage is colour-only. Resolve depth/stencil through
             // dynamic rendering; SAMPLE_ZERO is required by Vulkan 1.2+.
             if (dst->samples != VK_SAMPLE_COUNT_1_BIT || sx0 != dx0 || sy0 != dy0 || sx1 != dx1

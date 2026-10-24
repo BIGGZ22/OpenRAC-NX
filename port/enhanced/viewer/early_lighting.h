@@ -9,7 +9,8 @@
 namespace openrac::lighting {
 // One RGBA8 texel per 2x2 screen pixels: log-encoded irradiance RGB and
 // linear cascade visibility A. The 8-byte guide stores surface identity and
-// Ratchet shadow visibility in its remaining bits.
+// Ratchet shadow visibility in its remaining bits. Smooth normals are borrowed from the
+// depth/normal prepass; compute never derives them from depth neighbours.
 class EarlyLighting {
 public:
     static bool supported();

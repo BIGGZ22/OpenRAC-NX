@@ -153,6 +153,8 @@ inline constexpr GLenum GL_TEXTURE_MAX_LEVEL = 0x813D;
 inline constexpr GLenum GL_TEXTURE_MAX_ANISOTROPY = 0x84FE;
 inline constexpr GLenum GL_MAX_TEXTURE_MAX_ANISOTROPY = 0x84FF;
 inline constexpr GLenum GL_MAX_SAMPLES = 0x8D57;
+// Sample count of the currently bound draw framebuffer.
+inline constexpr GLenum GL_SAMPLES = 0x80A9;
 inline constexpr GLenum GL_NEAREST = 0x2600;
 inline constexpr GLenum GL_LINEAR = 0x2601;
 inline constexpr GLenum GL_LINEAR_MIPMAP_LINEAR = 0x2703;

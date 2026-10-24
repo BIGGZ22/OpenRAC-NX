@@ -11,7 +11,7 @@ import struct
 
 from formats import FormatError, span, unpack
 import lighting
-from mesh import Mesh
+from mesh import Mesh, spherical_normal
 
 FRAGMENT_SIZE = 0x40
 # VIF UNPACK element sizes: V3-16, V4-32, V4-16, V4-8.
@@ -228,22 +228,29 @@ def fragment(data: bytes, table_offset: int, header: bytes, lod: int, name: str,
     if not all(math.isfinite(x) for x in sphere) or sphere[3] < 0:
         raise FormatError("invalid terrain bounding sphere")
     mesh = Mesh(name)
+    normal_records = []
     colours = None
     if lights is not None:
         # One light record per position (common, LOD-01, LOD-0), after the origin quadword.
         light_offset, = unpack("<H", header, 0x30)
         records = span(data, start + light_offset + 0x10, header[0x3c] * 8)
+        # Keep unknown later-game light layouts on the existing unlit path.
+        normal_records = list(struct.iter_unpack("<HBBHH", records))
         single = struct.unpack("<b", header[0x34:0x35])[0]
         colours = lighting.light_records(records, single, *lights)
         if len(colours) < len(positions):
             raise FormatError("terrain light records do not cover the positions")
         mesh.colours = []
+        mesh.normals = []
     for s, t, _parent, position in infos:
         if position < 0 or position % 2 or position // 2 >= len(positions):
             raise FormatError("invalid terrain vertex reference")
         mesh.positions.append(tuple((origin[j] + positions[position // 2][j]) / 1024 for j in range(3)))
         # Negative coordinates are halved, as in Wrench; not yet traced in VU code.
         mesh.uvs.append((s / (8192 if s < 0 else 4096), t / (8192 if t < 0 else 4096)))
+        if mesh.normals is not None:
+            _, azimuth, elevation, _, _ = normal_records[position // 2]
+            mesh.normals.append(spherical_normal(azimuth, elevation))
         if colours is not None:
             mesh.colours.append(tuple(c / 128 for c in colours[position // 2]))
     for material, face in strip_faces(indices, strips, materials):

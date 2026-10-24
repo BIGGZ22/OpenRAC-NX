@@ -11,6 +11,7 @@
 #include "renderer/framebuffer.h"
 #include "renderer/gl.h"
 #include "renderer/world/gl_world.h"
+#include "renderer_shaders.h"
 #include "tests/check.h"
 #include "tests/renderer_gl_context.h"
 using namespace openrac;
@@ -46,7 +47,13 @@ void main() {
     }
     vec4 clip = projection * vec4(0, 0, -distance, 1);
     gl_FragDepth = clip.z / clip.w * 0.5 + 0.5;
-    colour = vec4(0);
+    vec3 normal = vec3(0, 0, 1);
+    if (fixture == 5 || fixture == 6) {
+        // Tilt only the shading normals; the depth remains a flat plane.
+        normal = normalize(vec3((x / 37.0 - 0.5) * 1.2, 0, 1));
+        if (fixture == 6) normal = -normal;
+    }
+    colour = fixture == 7 ? vec4(0) : vec4(normal * 0.5 + 0.5, 1);
 }
 )glsl";
 constexpr auto fragment = R"glsl(#version 410 core
@@ -83,11 +90,12 @@ void main() {
         )
         * distance;
     mat3 inverse_view = transpose(mat3(view));
-    vec3 world = inverse_view * (eye - view[3].xyz), normal = inverse_view * vec3(0, 0, 1);
+    vec3 normal_view = smooth_normal_at(pixel, -eye);
+    vec3 world = inverse_view * (eye - view[3].xyz), normal = inverse_view * normal_view;
     vec4 light = vec4(0);
     bool covered = false;
     float hero_visibility = 1.0;
-    bool hit = use_cache != 0 && early_surface(eye, vec3(0, 0, 1), light, covered, hero_visibility);
+    bool hit = use_cache != 0 && early_surface(eye, normal_view, light, covered, hero_visibility);
     if (show_hits != 0) {
         colour = vec4(hit ? 1 : 0, covered ? 1 : 0, 0, 1);
         return;
@@ -107,11 +115,36 @@ void main() {
 }
 )glsl";
 
+// Gives the fixture direction-dependent irradiance so flat reconstructed normals cannot pass.
+void set_directional_irradiance(lighting::ProbeVolume& volume) {
+    const auto& grid = volume.grid;
+    for (std::size_t i = 0; i < volume.probes.size(); ++i) {
+        // Directional irradiance exposes a regression to depth-derived flat normals.
+        for (unsigned y = 0; y < grid.map_resolution; ++y) {
+            for (unsigned x = 0; x < grid.map_resolution; ++x) {
+                const auto n = lighting::oct_decode(
+                    {(static_cast<float>(x) + .5f) / static_cast<float>(grid.map_resolution),
+                     (static_cast<float>(y) + .5f) / static_cast<float>(grid.map_resolution)}
+                );
+                const float factor = .4f + .6f * std::max(0.0f, (n[0] + n[2]) * .70710678f);
+                const auto base =
+                    i / 9 < 2 ? lighting::Float3{.25f, 1, 3} : lighting::Float3{3, 1, .25f};
+                volume.irradiance
+                    [i * grid.texels_per_probe()
+                     + (static_cast<std::size_t>(y) + 1) * (grid.map_resolution + 2) + x + 1] =
+                    {base[0] * factor, base[1] * factor, base[2] * factor};
+            }
+        }
+    }
+}
+
+// Compares cached and reference lighting across receiver edges, smooth normals, AO and shadow states.
 void check() {
     std::string error;
     renderer::Shader fill, sample;
     CHECK(fill.build("early lighting fixture depth", vertex, depth_fragment, error));
     std::string source = lighting::probe_shader_source(fragment);
+    source.insert(source.find('\n') + 1, renderer::shaders::surface_normal_glsl);
     // Common uniforms are already declared above for the reference path.
     std::string reconstruction = lighting::shaders::early_lighting_glsl;
     for (const char* line : {"uniform mat4 early_projection;\n", "uniform vec2 early_extent;\n"}) {
@@ -131,10 +164,8 @@ void check() {
     for (auto& p : volume.probes) {
         p.valid = true;
     }
-    for (std::size_t i = 0; i < volume.irradiance.size(); ++i) {
-        const auto z = i / grid.texels_per_probe() / 9;
-        volume.irradiance[i] = z < 2 ? lighting::Float3{.25f, 1, 3} : lighting::Float3{3, 1, .25f};
-    }
+    set_directional_irradiance(volume);
+    lighting::update_probe_gutters(volume);
     for (auto& m : volume.distance_moments) {
         m = {1024, 1024 * 1024};
     }
@@ -206,8 +237,13 @@ void check() {
         CHECK(depth.create(width, height, error, 1, true));
         CHECK(output.create(width, height, error));
         renderer::RenderState state{textures, {output.id(), width, height}, {}};
-        for (int fixture = 0; fixture < 5; ++fixture) {
+        state.target.normal_texture = depth.colour_texture();
+        for (int fixture = 0; fixture < 8; ++fixture) {
             for (bool shadows : {false, true}) {
+                // Tilted fixtures isolate GI; the original fixtures retain shadow-edge equivalence checks.
+                if (fixture >= 5 && shadows) {
+                    continue;
+                }
                 ++input.frame;
                 glBindFramebuffer(GL_FRAMEBUFFER, shadow.id());
                 glDepthMask(GL_TRUE);
@@ -265,6 +301,10 @@ void check() {
                     );
                     glUniform2f(sample.uniform("early_extent"), float(width), float(height));
                     glUniform1i(sample.uniform("source_depth"), 0);
+                    glUniform1i(sample.uniform("surface_normals"), 19);
+                    glUniform1i(sample.uniform("surface_normals_enabled"), 1);
+                    glActiveTexture(GL_TEXTURE0 + 19);
+                    glBindTexture(GL_TEXTURE_2D, depth.colour_texture());
                     glActiveTexture(GL_TEXTURE0);
                     glBindTexture(GL_TEXTURE_2D, depth.depth_texture());
                     glBindVertexArray(vao);

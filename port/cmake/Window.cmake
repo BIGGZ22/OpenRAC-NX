@@ -154,6 +154,7 @@ add_library(openrac_renderer STATIC
   renderer/texture_pool.cpp
 )
 openrac_embed_shaders(openrac_renderer renderer openrac::renderer
+  "${CMAKE_CURRENT_SOURCE_DIR}/renderer/shaders/surface_normal.glsl"
   "${CMAKE_CURRENT_SOURCE_DIR}/renderer/shaders/upscaled_texture_colours.glsl"
   "${CMAKE_CURRENT_SOURCE_DIR}/enhanced/renderer/shaders/gtao.vert"
   "${CMAKE_CURRENT_SOURCE_DIR}/enhanced/renderer/shaders/gtao_common.glsl"
@@ -320,6 +321,10 @@ openrac_warnings(openrac_game_rac1_profile)
 # or the program has no test at all without Vulkan, which the helper cannot express.
 add_executable(probe_gpu_test enhanced/tests/probe_gpu_test.cpp)
 add_executable(early_lighting_test enhanced/tests/early_lighting_test.cpp)
+openrac_add_test(surface_normals SOURCES enhanced/tests/surface_normals_test.cpp
+  LIBS openrac_viewer_lib openrac_platform)
+set_tests_properties(surface_normals PROPERTIES SKIP_RETURN_CODE 77 ENVIRONMENT
+  "OPENRAC_GL_API=vulkan;OPENRAC_ENHANCED=1")
 target_link_libraries(early_lighting_test PRIVATE openrac_viewer_lib openrac_platform)
 target_include_directories(early_lighting_test PRIVATE "${CMAKE_CURRENT_BINARY_DIR}/generated")
 openrac_warnings(early_lighting_test)
@@ -514,6 +519,7 @@ add_executable(gtao_horizon_test enhanced/tests/gtao_horizon_test.cpp)
 target_link_libraries(gtao_horizon_test PRIVATE openrac_renderer openrac_platform)
 target_include_directories(gtao_horizon_test PRIVATE "${CMAKE_CURRENT_BINARY_DIR}/generated")
 openrac_embed_shaders(gtao_horizon_test gtao_reference openrac::test::gtao_reference
+  "${CMAKE_CURRENT_SOURCE_DIR}/enhanced/tests/shaders/gtao_normals_reference.glsl"
   "${CMAKE_CURRENT_SOURCE_DIR}/enhanced/tests/shaders/gtao_horizons_reference.frag"
   "${CMAKE_CURRENT_SOURCE_DIR}/enhanced/tests/shaders/gtao_horizons_candidates.comp")
 openrac_warnings(gtao_horizon_test)

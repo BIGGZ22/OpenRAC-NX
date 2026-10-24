@@ -25,6 +25,8 @@ bool Gtao::prepare(int width, int height, int scale, bool visibility, bool copy_
     if (m_vao == 0) {
         std::string evaluate(shaders::gtao_evaluate_comp);
         std::string composite(shaders::gtao_composite_frag);
+        evaluate.insert(evaluate.find('\n') + 1, shaders::surface_normal_glsl);
+        composite.insert(composite.find('\n') + 1, shaders::surface_normal_glsl);
         evaluate.insert(evaluate.find('\n') + 1, shaders::gtao_common_glsl);
         composite.insert(composite.find('\n') + 1, shaders::gtao_common_glsl);
         std::string performance = evaluate;
@@ -129,12 +131,19 @@ bool Gtao::render(
     glBindVertexArray(m_vao);
     glActiveTexture(GL_TEXTURE0);
     glBindTexture(GL_TEXTURE_2D, m_sampled_depth);
+    glActiveTexture(GL_TEXTURE0 + 2);
+    glBindTexture(GL_TEXTURE_2D, target.normal_texture);
+    glActiveTexture(GL_TEXTURE0);
     glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 11, m_ao_buffer);
     {
         const stats::Scope horizons("GTAO horizons", stats::kGpu);
         Shader& evaluate = options.quality == GtaoQuality::Performance
                                ? m_evaluate_performance : m_evaluate;
         evaluate.use();
+        glUniform1i(evaluate.uniform("surface_normals"), 2);
+        glUniform1i(
+            evaluate.uniform("surface_normals_enabled"), target.normal_texture != 0 ? 1 : 0
+        );
         glUniform1i(evaluate.uniform("tex_T0"), 0);
         glUniformMatrix4fv(evaluate.uniform("projection"), 1, GL_FALSE, p.data());
         glUniform1f(evaluate.uniform("radius"), std::clamp(options.radius, 0.05f, 8.0f));
@@ -154,6 +163,10 @@ bool Gtao::render(
         {
             const stats::Scope filter("GTAO filter", stats::kGpu);
             m_composite.use();
+            glUniform1i(m_composite.uniform("surface_normals"), 2);
+            glUniform1i(
+                m_composite.uniform("surface_normals_enabled"), target.normal_texture != 0 ? 1 : 0
+            );
             glUniformMatrix4fv(m_composite.uniform("projection"), 1, GL_FALSE, p.data());
             glUniform1i(m_composite.uniform("evaluation_scale"), scale);
             glUniform1f(m_composite.uniform("strength"), std::clamp(options.strength, 0.0f, 3.0f));

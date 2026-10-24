@@ -13,7 +13,7 @@ void main() {
         return;
     }
     vec3 centre = position_at(pixel, depth);
-    vec3 normal = normal_at(pixel, centre);
+    vec3 normal = smooth_normal_at(pixel, -centre);
     if (dot(normal, normal) < 0.1) {
         result = vec4(1);
         return;

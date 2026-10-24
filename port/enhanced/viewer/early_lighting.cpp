@@ -6,6 +6,7 @@
 #include "enhanced_viewer_shaders.h"
 #include "renderer/gl.h"
 #include "renderer/world/gl_world.h"
+#include "renderer_shaders.h"
 
 namespace openrac::lighting {
 using namespace openrac::gl;
@@ -41,6 +42,7 @@ bool EarlyLighting::render(
     if (!m_compute.id()) {
         std::string source = shaders::early_lighting_comp;
         source = probe_shader_source(std::move(source));
+        source.insert(source.find('\n') + 1, renderer::shaders::surface_normal_glsl);
         source.insert(
             source.find('\n') + 1, "#define OPENRAC_PROBE_PIXEL early_pixel\nivec2 early_pixel;\n"
         );
@@ -68,6 +70,11 @@ bool EarlyLighting::render(
     glActiveTexture(GL_TEXTURE0);
     glBindTexture(GL_TEXTURE_2D, depth);
     glUniform1i(m_compute.uniform("early_depth"), 0);
+    glUniform1i(m_compute.uniform("surface_normals"), 19);
+    glUniform1i(m_compute.uniform("surface_normals_enabled"), target.normal_texture != 0 ? 1 : 0);
+    glActiveTexture(GL_TEXTURE0 + 19);
+    glBindTexture(GL_TEXTURE_2D, target.normal_texture);
+    glActiveTexture(GL_TEXTURE0);
     glUniformMatrix4fv(
         m_compute.uniform("early_projection"), 1, GL_FALSE, input.camera.projection.data()
     );

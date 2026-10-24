@@ -35,3 +35,18 @@ Texture upscaling and its 64 MiB cache live in `renderer/texture_upscale.*`.
 The normal texture pool accepts an optional `UpscaledTextureColours` provider; it
 keeps original alpha/mip sampling and notifies the provider when source textures
 are retired. Only the enhanced texture library depends on the Vulkan copy helper.
+
+Enhanced world rendering writes smooth view-space normals during the shared depth prepass.
+Early GI and GTAO read those normals directly; depth supplies receiver positions and horizon
+samples, not reconstructed normals. Mesh colour passes read the early GI/shadow cache and
+retain smooth normals for direct lighting. Skinning, nonuniform scaling and camera-facing
+orientation agree across the passes. Invalid normals use a neutral fallback.
+
+The prepass uses RGBA8 normals (four bytes per render pixel), with matching depth and MSAA
+coverage. It preserves the existing sky/background and reuses depth for world colour.
+Original rendering and OpenGL retain the minimal depth-only path. Probe formats and bake transport
+are unchanged.
+
+Level exports preserve authored normals for terrain, ties, shrubs and mobys. Older exports
+flattened terrain and static meshes, so re-extract those levels to restore smooth shading.
+Changed mesh files require a matching probe bake under the existing source-fingerprint checks.

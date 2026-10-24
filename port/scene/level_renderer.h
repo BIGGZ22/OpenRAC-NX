@@ -401,6 +401,8 @@ private:
     // mesh.frag's opaque path alone, without discard (the static layers' opaque pass; draw_layer).
     renderer::Shader m_solid;
     renderer::Shader m_depth, m_depth_solid;
+    renderer::Shader m_surface_depth;        // Smooth-normal prepass with alpha testing.
+    renderer::Shader m_surface_depth_solid;  // Smooth-normal prepass for opaque static geometry.
     renderer::Shader m_sky;
     std::unique_ptr<renderer::FrameBuffer> m_hero_map;
     renderer::Shader m_hero_depth, m_shadow_solid;

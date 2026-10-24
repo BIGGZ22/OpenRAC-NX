@@ -257,6 +257,21 @@ bool LevelScene::upload(
         || !m_depth_solid.build("mesh depth solid", depth_vertex, depth_fragment, error)) {
         return false;
     }
+    // Compatibility rendering retains the minimal depth-only shaders.
+    if (gl::enhanced_rendering_available()) {
+        const std::string define = "#define OPENRAC_DEPTH_NORMALS 1\n";
+        std::string vertex(shaders::mesh_depth_vert);
+        std::string fragment(shaders::mesh_depth_frag);
+        vertex.insert(vertex.find('\n') + 1, define);
+        fragment.insert(fragment.find('\n') + 1, define);
+        depth_vertex.insert(depth_vertex.find('\n') + 1, define);
+        depth_fragment.insert(depth_fragment.find('\n') + 1, define);
+        if (!m_surface_depth.build("mesh surface depth", vertex, fragment, error)
+            || !m_surface_depth_solid
+                    .build("mesh solid surface depth", depth_vertex, depth_fragment, error)) {
+            return false;
+        }
+    }
     m_models = level.models;
     m_materials = level.materials;
     m_light_sets = level.light_sets;
@@ -1808,6 +1823,8 @@ void LevelScene::release() {
     if (m_lighting) {
         m_lighting->release();
     }
+    m_surface_depth.release();
+    m_surface_depth_solid.release();
     m_early_capable = false;
     if (m_palette != 0) {
         glDeleteTextures(1, &m_palette);
@@ -2253,6 +2270,7 @@ void LevelScene::draw_layer(
         glUniformMatrix4fv(shader.uniform("view_projection"), 1, GL_FALSE, view_projection.data());
         glUniform1f(shader.uniform("picture_scale"), state.target.picture_scale_x);
         if (state.depth_prepass) {
+            glUniformMatrix4fv(shader.uniform("view"), 1, GL_FALSE, input.camera.view.data());
             glUniform1i(shader.uniform("skinning"), palettes ? 1 : 0);
             glUniform1i(shader.uniform("palette_texture"), static_cast<GLint>(kPaletteUnit));
             glUniform1i(shader.uniform("light_texture"), static_cast<GLint>(kLightUnit));
@@ -2370,13 +2388,33 @@ void LevelScene::draw_layer(
         const auto& specialised = early ? m_early_colour_specialised : m_colour_specialised;
         const bool static_translucent = !state.depth_prepass && !mobys && pass == 2
                                         && m_static_translucent.id() && !specialisation_off;
-        const renderer::Shader& wanted = static_translucent ? m_static_translucent
-                                         : batch_shader && !specialisation_off
-                                         ? specialised[variant]
-                                         : batch_shader ? (early ? m_early_colour_opaque : m_colour_opaque)
-                                         : state.depth_prepass ? (solid ? m_depth_solid : m_depth)
-                                         : early       ? (solid ? m_early_solid : m_early_mesh)
-                                                       : (solid ? m_solid : m_mesh);
+        const renderer::Shader* selected = &m_mesh;
+        // Both depth variants retain identical positions and alpha coverage.
+        if (state.depth_prepass) {
+            // Early lighting and AO request smooth normals alongside depth.
+            if (state.target.normal_texture != 0) {
+                selected = solid ? &m_surface_depth_solid : &m_surface_depth;
+            } else {
+                selected = solid ? &m_depth_solid : &m_depth;
+            }
+        } else if (static_translucent) {
+            // Static blended packets omit moby-only vertex work.
+            selected = &m_static_translucent;
+        } else if (batch_shader && !specialisation_off) {
+            // Opaque variants specialise alpha handling for each geometry kind.
+            selected = &specialised[variant];
+        } else if (batch_shader) {
+            // The reference batch keeps dynamic alpha handling.
+            selected = early ? &m_early_colour_opaque : &m_colour_opaque;
+        } else if (early) {
+            // Opaque colour consumes the cached compute lighting.
+            selected = solid ? &m_early_solid : &m_early_mesh;
+        } else {
+            // Blended surfaces and unsupported early passes retain fragment lighting.
+            selected = solid ? &m_solid : &m_mesh;
+        }
+
+        const renderer::Shader& wanted = *selected;
         const bool depth_matched = mobys ? pass == 0 : pass <= 1;
         if (program != &wanted || program_depth_matched != depth_matched) {
             use(wanted, depth_matched);

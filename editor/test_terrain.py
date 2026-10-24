@@ -2,9 +2,12 @@
 
 import struct
 import unittest
+from unittest import mock
 
 from formats import FormatError
+from gltf import Gltf
 from terrain import packets, strip_faces, terrain
+from test_godot import attribute
 
 
 def command(code, immediate=0, data=b"", count=0):
@@ -82,6 +85,29 @@ def fine_fixture(*, empty=False, migration=False):
 
 
 class TerrainTests(unittest.TestCase):
+    def test_authored_normals_follow_positions_across_uv_seams(self):
+        data = fixture()
+        offset = len(data) - 128
+        struct.pack_into("<H", data, 64 + 0x30, offset)
+        data[64 + 0x3c] = 4
+        angles = [(0, 32), (32, 32), (64, 32), (96, 32)]
+        data += bytes(16) + b"".join(struct.pack("<HBBHH", 0, a, e, 0, 0) for a, e in angles)
+        with mock.patch("terrain.lighting.light_records", return_value=[(128, 128, 128, 128)] * 4):
+            mesh, = terrain(data, 2, lights=([], []))
+        self.assertEqual(len(mesh.normals), len(mesh.positions))
+        self.assertEqual(mesh.normals[0], mesh.normals[4])
+        self.assertNotEqual(mesh.normals[0], mesh.normals[1])
+        for normal in mesh.normals:
+            self.assertAlmostEqual(sum(component * component for component in normal), 1)
+        self.assertAlmostEqual(mesh.normals[0][2], 2 ** -0.5)
+        writer = Gltf()
+        writer.mesh(mesh, {("terrain", 0): 0})
+        primitive = writer.doc["meshes"][0]["primitives"][0]
+        exported = attribute(writer.doc, writer.buffer, primitive["attributes"]["NORMAL"])
+        self.assertEqual(len(exported), 4)
+        self.assertIn("indices", primitive)
+        self.assertAlmostEqual(exported[0][2], 2 ** -0.5)
+
     def test_fine_positions_uvs_and_faces(self):
         for migration in (False, True):
             mesh, = terrain(fine_fixture(migration=migration), 0)

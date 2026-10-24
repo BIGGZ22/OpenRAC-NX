@@ -36,6 +36,20 @@ def fixture():
 
 
 class TieTests(unittest.TestCase):
+    def test_authored_slot_normals_are_retained(self):
+        data = fixture()
+        offset = len(data)
+        struct.pack_into("<I", data, 0x0c, offset)
+        data += bytes(64 * 8)
+        for slot in range(64):
+            struct.pack_into("<4h", data, offset + slot * 8, 0, 19660, 26213, 0)
+        struct.pack_into("<4h", data, offset + 3 * 8, 32767, 0, 0, 0)
+        mesh = tie_mesh(data, REMAP, "tie")
+        self.assertEqual(len(mesh.normals), len(mesh.positions))
+        self.assertEqual(mesh.normals[1], (1, 0, 0))
+        self.assertAlmostEqual(mesh.normals[0][1], .6, places=4)
+        self.assertAlmostEqual(mesh.normals[0][2], .8, places=4)
+
     def test_gs_order_material_change_and_repeated_vertex(self):
         mesh = tie_mesh(fixture(), REMAP, "tie_42")
         self.assertEqual(mesh.positions, [(0, 0, 0), (2, 0, 0), (0, 2, 0), (0, 0, 0), (2, 2, 0), (0, 0, 2)])
