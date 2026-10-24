@@ -167,6 +167,26 @@ struct GpuFrame {
     unsigned used = 0;
     bool counters = false;
     std::uint64_t recording = 0, reported = 0;
+    // The resident instance buffer this recording's culling reads (GpuResident), null until a
+    // batch of it is made; a later upload of another one waits for the next recording.
+    VkBuffer resident = VK_NULL_HANDLE;
+};
+
+// The static instances registered once (gpu_register_instances, gpu-resident-instances in
+// docs/port/RENDER_PERF.md): each instance's bounds and data in the culling's own layout, kept in
+// device memory, so that a view's batch of them carries only its planes, PVS and a group record.
+struct GpuResident {
+    // One registered GL instance buffer: where its instances are in `words`.
+    struct Group {
+        std::uint32_t first = 0;    // Its first instance's first word in `words`.
+        std::uint32_t count = 0;    // Its instances.
+        std::uint64_t version = 0;  // The buffer's version when registered: another is stale.
+    };
+
+    std::unordered_map<unsigned, Group> groups;  // By GL buffer name.
+    std::vector<std::uint32_t> words;  // Per instance, 8 words of bounds then 30 of its data.
+    Chunk buffer;                      // `words` in device memory; empty until a batch needs it.
+    bool dirty = false;                // `words` changed since `buffer` was made.
 };
 
 // The GPU-driven engine (gpu_draw.inc): the culling pipelines, the indirect draws merged while
@@ -201,6 +221,7 @@ struct GpuEngine {
     bool failed = false, timing_upload = false;
     std::uint64_t batches = 0, candidates = 0, indirect = 0, indirect_calls = 0, merged = 0;
     std::array<std::uint64_t, 10> batch_breaks{};
+    GpuResident resident;  // The registered static instances, until the level releases them.
 };
 
 // The state of one frame slot: its command pool and two command buffers, its fence and
@@ -1212,6 +1233,14 @@ renderer::GpuInstanceBatch gpu_make_batch(
     std::span<const renderer::GpuCullBounds> bounds,
     const renderer::GpuCullView& view
 );
+
+// gpu_register_instances (vkgl.h) carried out: the instances of vertex buffer `buffer` with
+// `bounds` appended to the resident words. False when GPU-driven drawing is off.
+bool gpu_register(unsigned buffer, std::span<const renderer::GpuCullBounds> bounds);
+
+// gpu_release_instances (vkgl.h) carried out: every registration forgotten, the device copy let
+// go once the frames that read it have retired.
+void gpu_release_resident();
 
 // draw_gpu_instances (vkgl.h) carried out: `count` indices from `first` for each instance of
 // `batch` the culling keeps. False for a batch of another recording, or nothing to draw.

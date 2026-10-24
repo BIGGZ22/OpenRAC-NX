@@ -74,6 +74,18 @@ bool draw_gpu_instances(
     renderer::GpuInstanceBatch batch, unsigned first_index, unsigned index_count
 );
 
+// Registers the instances of a static instance buffer once, with their culling bounds: while the
+// buffer is unchanged and gpu-resident-instances is on, gpu_instances of it sends the GPU only the
+// view and a group record, and the culling reads the instances from device memory
+// (docs/port/RENDER_PERF.md, R-15). False when GPU-driven drawing is off or the sizes disagree.
+bool gpu_register_instances(
+    unsigned instance_buffer, std::span<const renderer::GpuCullBounds> bounds
+);
+
+// Forgets every registration (a level's release). The device copy goes once every frame that
+// reads it has retired.
+void gpu_release_instances();
+
 struct GpuDrawCounters {
     std::uint64_t recording = 0, draws = 0, triangles = 0, visible_instances = 0;
     std::uint64_t readback_bytes = 0;

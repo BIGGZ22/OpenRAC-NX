@@ -49,6 +49,9 @@ constexpr std::array<Entry, kOptCount> kEntries = {{
     {Opt::AttachmentDiscard, "attachment-discard",
      "Vulkan passes neither store what glInvalidateFramebuffer lets go nor load it after",
      true, Tolerance{}},
+    {Opt::GpuResidentInstances, "gpu-resident-instances",
+     "static instances kept in device memory: a view's GPU batch sends planes, PVS and a group",
+     true, Tolerance{}},
 }};
 // clang-format on
 

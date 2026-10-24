@@ -183,6 +183,19 @@ bool draw_gpu_instances(renderer::GpuInstanceBatch batch, unsigned first, unsign
     return active() && gpu_submit_draw(batch, first, count);
 }
 
+bool gpu_register_instances(unsigned source, std::span<const renderer::GpuCullBounds> bounds) {
+    return active() && gpu_register(source, bounds);
+}
+
+void gpu_release_instances() {
+    // A context already closed let its buffers go with it (gpu_release).
+    if (!active()) {
+        return;
+    }
+
+    gpu_release_resident();
+}
+
 GpuDrawCounters gpu_completed_draws() {
     return active() && stats::enabled() ? g->gpu.completed : GpuDrawCounters{};
 }
