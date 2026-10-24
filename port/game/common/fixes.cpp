@@ -5,6 +5,7 @@
 
 #include <cstring>
 
+#include "common/c_boundary.h"
 #include "common/log.h"
 
 namespace openrac::fixes {
@@ -94,7 +95,11 @@ const unsigned char* flag_by_key(const char* key) {
 
 }  // namespace
 
-// game_host.h: a fix's flag by its key; always on for a key the table does not have.
+// game_host.h: a fix's flag by its key; always on for a key the table does not have. An exception
+// is reported to the log and reads as such a key, always on: the caller reads the flag at once, so
+// it gets no null (CODING_CONVENTIONS.md, section 13.4).
 extern "C" const unsigned char* openrac_game_fix(const char* key) {
-    return flag_by_key(key);
+    return openrac::c_boundary::call("openrac_game_fix", &kAlwaysOn, [&] {
+        return flag_by_key(key);
+    });
 }

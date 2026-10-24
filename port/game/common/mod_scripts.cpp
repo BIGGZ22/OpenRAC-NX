@@ -16,6 +16,7 @@
 #include <memory>
 #include <sstream>
 
+#include "common/c_boundary.h"
 #include "common/crash.h"
 #include "common/env.h"
 #include "lua.h"
@@ -1034,7 +1035,9 @@ private:
     bool m_called;
 };
 
-// openrac_script_dispatch's body: runs the script of `link` for one call of its hook point.
+// openrac_script_dispatch's body: runs the script of `link` for one call of its hook point. May
+// throw (a hook point's call, Luau outside a protected call, an allocation); the entry point stops
+// it there.
 int dispatch(
     const openrac_script_point* point,
     openrac_script_link* link,
@@ -1098,12 +1101,16 @@ int dispatch(
 
 }  // namespace openrac::mods::scripts
 
-// The runtime's side of every link's function (openrac/script_binding.h).
+// The runtime's side of every link's function (openrac/script_binding.h). An exception from the
+// call is reported to the log, and the link's original is called as it is (0): the contract's
+// value for no script there (CODING_CONVENTIONS.md, section 13.4).
 extern "C" int openrac_script_dispatch(
     const openrac_script_point* point,
     openrac_script_link* link,
     const openrac_script_value* args,
     openrac_script_value* result
 ) {
-    return openrac::mods::scripts::dispatch(point, link, args, result);
+    return openrac::c_boundary::call("openrac_script_dispatch", 0, [&] {
+        return openrac::mods::scripts::dispatch(point, link, args, result);
+    });
 }

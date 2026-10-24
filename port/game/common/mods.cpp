@@ -12,6 +12,7 @@
 #include <sstream>
 #include <vector>
 
+#include "common/c_boundary.h"
 #include "common/crash.h"
 #include "common/log.h"
 #include "mod_library.h"
@@ -66,11 +67,15 @@ const char* permanent_hook_id(const openrac_script_binding* binding, const char*
 
 }  // namespace
 
-// A hook point's permanent id from any of its names (openrac/script_binding.h).
+// A hook point's permanent id from any of its names (openrac/script_binding.h). An exception is
+// reported to the log and gives `name` back, the contract's answer for a name with no alias
+// (CODING_CONVENTIONS.md, section 13.4).
 extern "C" const char* openrac_script_hook_id(
     const openrac_script_binding* binding, const char* name
 ) {
-    return permanent_hook_id(binding, name);
+    return c_boundary::call("openrac_script_hook_id", name, [&] {
+        return permanent_hook_id(binding, name);
+    });
 }
 
 namespace openrac::mods {
