@@ -61,6 +61,9 @@ constexpr std::array<Entry, kOptCount> kEntries = {{
     {Opt::VkTightSync, "vk-tight-sync",
      "Vulkan barriers name the stages they order, and only the copy to the screen waits for it",
      true, Tolerance{}},
+    {Opt::PipelinePrewarm, "pipeline-prewarm",
+     "the pipelines of earlier runs made again on a worker once their program links, not at a draw",
+     true, Tolerance{}},
 }};
 // clang-format on
 

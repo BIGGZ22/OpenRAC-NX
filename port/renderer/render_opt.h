@@ -40,10 +40,11 @@ enum class Opt : std::uint8_t {
     ShadowStaticCache,     // shadow-static-cache: static shadow casters kept between frames
     PresentSingleCopy,     // present-single-copy
     VkTightSync,           // vk-tight-sync
+    PipelinePrewarm,       // pipeline-prewarm: a run's pipelines made again ahead, on a worker
 };
 
-// The number of entries: VkTightSync is the last enumerator of Opt.
-inline constexpr std::size_t kOptCount = static_cast<std::size_t>(Opt::VkTightSync) + 1;
+// The number of entries: PipelinePrewarm is the last enumerator of Opt.
+inline constexpr std::size_t kOptCount = static_cast<std::size_t>(Opt::PipelinePrewarm) + 1;
 
 // How far the frames an optimisation draws may differ from its reference path's. The default,
 // zero, is byte-identical frames; anything else is a tolerance the maintainers accepted, named in
