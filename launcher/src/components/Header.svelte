@@ -1,6 +1,6 @@
 <script lang="ts">
   // The website's sticky orange bar (openrac-site src/components/Header.tsx):
-  // the wrench, "OpenRAC" in Audiowide, round tabs, a white Discord button.
+  // the OpenRAC logo in the bar's ink, round tabs, a white Discord button.
   // On Android the same places are a navigation rail on the left, or a bar at the bottom when
   // the window is narrow, as Android's own apps have them (Material's navigation rail and bar).
   import { api, inTauri, onAndroid } from "$lib/api";
@@ -8,6 +8,7 @@
   import { DISCORD_URL, SITE_URL } from "$lib/links";
   import { untrack } from "svelte";
   import Icon, { type IconName } from "./Icon.svelte";
+  import Logo from "./Logo.svelte";
 
   /** The first run: the bar with the name only, nothing to go to yet. */
   let { setup = false }: { setup?: boolean } = $props();
@@ -63,8 +64,8 @@
   <!-- The first run: the name, not yet a way back to the games. -->
   {#if setup}
     <div class="brand" title={app.info?.version ? `OpenRAC Launcher ${app.info.version}` : undefined}>
-      <img src="/wrench.webp" alt="" width="40" height="40" />
-      <span>Open<b>RAC</b></span>
+      <Logo height={36} />
+      <span class="brand-mark"><Logo mark height={36} label="" /></span>
       <small
         >Launcher{#if app.info?.version}<span class="ver">{app.info.version}</span>{/if}</small
       >
@@ -76,8 +77,8 @@
       aria-label="OpenRAC: your games"
       title={app.info?.version ? `OpenRAC Launcher ${app.info.version}` : undefined}
     >
-      <img src="/wrench.webp" alt="" width="40" height="40" />
-      <span>Open<b>RAC</b></span>
+      <Logo height={36} />
+      <span class="brand-mark"><Logo mark height={36} label="" /></span>
       <!-- The launcher's version beside its name, on every page (also in the tooltip, for a narrow
            window that hides the tag). -->
       <small
@@ -201,44 +202,46 @@
     outline-offset: 2px;
   }
 
+  /* The logo in the bar's ink: the accent is the bar itself. */
   .brand {
     display: inline-flex;
     align-items: center;
     flex-shrink: 0;
     gap: 8px;
-    font-family: var(--font-brand);
-    font-size: 1.625rem;
-    font-weight: 400;
     color: var(--bar-name);
   }
 
-  .brand b {
-    font-weight: 400;
+  /* Its mark alone, for a window too narrow for the name (below). */
+  .brand .brand-mark {
+    display: none;
   }
 
-  /* The wrench turns in when the launcher opens, and again under the pointer or a press (not on
-     Android, below). */
-  .brand img {
-    width: 40px;
-    height: 40px;
+  /* The logo comes in when the launcher opens, and the lombax tilts its head under the pointer or
+     a press (not on Android, below). */
+  .brand :global(.logo) {
+    animation: logo-in 0.7s var(--ease) both;
+  }
+
+  .brand :global(.logo .mark) {
+    transform-box: fill-box;
+    transform-origin: 50% 70%;
     transition: transform var(--slow) var(--ease);
-    animation: wrench-in 0.9s var(--ease) both;
   }
 
-  .brand:active img {
-    transform: rotate(-25deg) scale(1.1);
+  .brand:active :global(.logo .mark) {
+    transform: rotate(-10deg);
   }
 
   @media (hover: hover) {
-    .brand:hover img {
-      transform: rotate(-25deg) scale(1.1);
+    .brand:hover :global(.logo .mark) {
+      transform: rotate(-10deg);
     }
   }
 
-  @keyframes wrench-in {
+  @keyframes logo-in {
     from {
       opacity: 0;
-      transform: rotate(-120deg) scale(0.6);
+      transform: translateX(-8px);
     }
   }
 
@@ -532,13 +535,17 @@
     }
   }
 
-  /* A phone held upright: the wrench stands for the name, Discord and the running task give way,
-     and the tabs scroll if they still do not fit. */
+  /* A phone held upright: the logo's mark stands for the name, Discord and the running task give
+     way, and the tabs scroll if they still do not fit. */
   @media (max-width: 560px) {
-    .brand span,
+    .brand > :global(.logo),
     .discord,
     .job {
       display: none;
+    }
+
+    .brand .brand-mark {
+      display: contents;
     }
 
     nav {
@@ -577,7 +584,8 @@
     overflow-y: auto;
   }
 
-  /* The wrench on the bar's orange, as the app's icon has it. */
+  /* The logo's mark on the bar's colour, the picked game's accent: the rail has no room for the
+     name. */
   :global(html[data-platform="android"]) .brand {
     flex: none;
     justify-content: center;
@@ -588,17 +596,26 @@
     box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.35);
   }
 
-  /* It stays still there: the logo of an app, not a control that plays. */
-  :global(html[data-platform="android"]) .brand img {
-    width: 34px;
-    height: 34px;
-    animation: none;
-    transform: none;
-    transition: none;
+  :global(html[data-platform="android"]) .brand > :global(.logo),
+  :global(html[data-platform="android"]) .brand small {
+    display: none;
   }
 
-  :global(html[data-platform="android"]) .brand :is(span, small) {
-    display: none;
+  /* It stays still there: the logo of an app, not a control that plays. */
+  :global(html[data-platform="android"]) .brand .brand-mark {
+    display: contents;
+    color: var(--bar-ink-deep);
+  }
+
+  :global(html[data-platform="android"]) .brand .brand-mark :global(.logo) {
+    width: 40px;
+    height: auto;
+    animation: none;
+  }
+
+  :global(html[data-platform="android"]) .brand .brand-mark :global(.logo .mark) {
+    transform: none;
+    transition: none;
   }
 
   :global(html[data-platform="android"]) nav {

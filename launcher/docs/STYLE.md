@@ -1,7 +1,7 @@
 # The launcher's look
 
 The launcher looks like [openrac.dev](https://openrac.dev): the same dark ink
-background, orange header bar, wrench, type and per-game cards. Everything
+background, orange header bar, type and per-game cards, with the OpenRAC logo. Everything
 here comes from [OpenRAC/openrac-site](https://github.com/OpenRAC/openrac-site)
 at commit `2964d72`; when the site changes, change the files in the last
 section to match.
@@ -46,6 +46,22 @@ The game's options drawer wears the same colours: Play passes them in
 `palettes.json` repeats app.css's own colours under `base`, and a test keeps
 the two equal.
 
+## Logo
+
+`src/assets/openrac-logo.svg` is the logo; `src/components/Logo.svelte` draws
+its paths unchanged, in the current colour, cut to one of two views: the whole
+logo, or its mark alone (the first letter: the lombax's head and the bowl of
+the "O") where the name has no room. Nothing else is drawn for it.
+
+| Where                            | What                                                                                   |
+| -------------------------------- | -------------------------------------------------------------------------------------- |
+| The header bar                   | the whole logo in the bar's ink (`--bar-name`); the head tilts under the pointer       |
+| The bar of a window under 560 px | the mark                                                                               |
+| Android's navigation rail        | the mark in `--bar-ink-deep` on a tile of the bar's gradient: the picked game's accent |
+| The first run's welcome          | the mark in `--amber`, the accent                                                      |
+
+A place can give the mark its own colour with `--logo-mark`.
+
 ## Type
 
 | Token          | Font                   | Use                                                |
@@ -63,7 +79,7 @@ The fonts are bundled from npm (`@fontsource/audiowide`,
 
 | Site                                                                                                                                                                                                                                         | Launcher                                                                                                                                           |
 | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `Header.tsx`: the sticky orange bar, the wrench that tilts on hover, "Open**RAC**" in Audiowide, round tabs (selected: dark brown with amber text), the white Discord button                                                                 | `src/components/Header.svelte`                                                                                                                     |
+| `Header.tsx`: the sticky orange bar, the logo in the bar's ink (the launcher's own, below), round tabs (selected: dark brown with amber text), the white Discord button                                                                      | `src/components/Header.svelte`                                                                                                                     |
 | `Progress.tsx`: a game's card, a gradient from its `from` to its `to` colour, boxes with a thick border in its `border` colour, the "Progress / 59,32 %" pair, the bar with a light sweeping across it, the "… of … code bytes matched" line | `src/components/GameTile.svelte` (smaller), the band in `src/pages/GamePlayer.svelte`, `src/components/ProgressBar.svelte` and `.bar` in `app.css` |
 | `globals.css`: section numbers that count up (`01`, `02`, …), the `rise` and `sweep` animations, reduced motion                                                                                                                              | `.sec-num`, `.sections`, `.rise`, `.bar` in `app.css`                                                                                              |
 | Numbers: two decimals with a decimal comma (`59,32 %`), bytes grouped with narrow spaces                                                                                                                                                     | `src/lib/format.ts`                                                                                                                                |
@@ -194,10 +210,10 @@ release, and a new file adds its line there when it is added.
 
 ## Keeping in step with the site
 
-| When the site changes                                      | Change                                                                                                                            |
-| ---------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------- |
-| `src/app/globals.css` `@theme` colours or fonts            | `src/app.css` `:root`, the tables above                                                                                           |
-| `src/lib/projects.ts` themes                               | `src/lib/themes.ts`                                                                                                               |
-| `src/components/Header.tsx`, `Progress.tsx`                | `Header.svelte`, `SideList.svelte`, `GamePlayer.svelte`                                                                           |
-| `public/wrench.webp`, `src/app/icon.png`, `apple-icon.png` | `public/`, and `npx tauri icon <1024 px png> -o src-tauri/icons` (then delete the `android/`, `ios/` and `Square*` files it adds) |
-| `DISCORD_URL`                                              | `src/lib/links.ts`                                                                                                                |
+| When the site changes                           | Change                                                                                                                            |
+| ----------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------- |
+| `src/app/globals.css` `@theme` colours or fonts | `src/app.css` `:root`, the tables above                                                                                           |
+| `src/lib/projects.ts` themes                    | `src/lib/themes.ts`                                                                                                               |
+| `src/components/Header.tsx`, `Progress.tsx`     | `Header.svelte`, `SideList.svelte`, `GamePlayer.svelte`                                                                           |
+| `src/app/icon.png`, `apple-icon.png`            | `public/`, and `npx tauri icon <1024 px png> -o src-tauri/icons` (then delete the `android/`, `ios/` and `Square*` files it adds) |
+| `DISCORD_URL`                                   | `src/lib/links.ts`                                                                                                                |

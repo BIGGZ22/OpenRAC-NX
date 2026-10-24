@@ -223,7 +223,7 @@ launcher/
 │   │                   the helpers pages share (format, clipboard, jobText, labels), each with its tests
 │   ├── components/     header, game card, action card, progress bar, path field, toasts, icons
 │   └── pages/          Library, Game (player and developer views), Tasks, Settings (also the first run)
-├── public/             the wrench logo and favicon (from openrac-site), game backdrops and previews
+├── public/             the favicon (from openrac-site), game backdrops and previews
 └── docs/               ARCHITECTURE, INTEGRATION, STYLE, RELEASING
 ```
 

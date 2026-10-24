@@ -4,6 +4,7 @@
   // that saves them stays in view at the bottom of the window. With `setup`,
   // the first-run screen: one question (the games folder), and what was found by itself, folded.
   import GpuDrivers from "$components/GpuDrivers.svelte";
+  import Logo from "$components/Logo.svelte";
   import PathField from "$components/PathField.svelte";
   import {
     api,
@@ -209,7 +210,7 @@
 <div class="page">
   {#if setup}
     <section class="welcome rise">
-      <img src="/wrench.webp" alt="" width="72" height="72" />
+      <Logo mark height={72} label="" />
       <div>
         <h1>Welcome to OpenRAC</h1>
         <p class="muted">Play the Ratchet &amp; Clank games natively, with your own discs.</p>
@@ -682,8 +683,15 @@
     align-items: center;
     padding: 24px;
     border-radius: 30px;
-    background: radial-gradient(80% 90% at 80% 0, rgb(213 138 0 / 0.28), transparent 70%), var(--panel);
+    background:
+      radial-gradient(80% 90% at 80% 0, color-mix(in srgb, var(--brand) 28%, transparent), transparent 70%),
+      var(--panel);
     border: 1px solid var(--line);
+  }
+
+  /* The logo's mark in the accent, beside the welcome that names it. */
+  .welcome :global(.logo) {
+    color: var(--amber);
   }
 
   .welcome h1 {
