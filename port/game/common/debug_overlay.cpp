@@ -13,7 +13,6 @@
 
 #include <algorithm>
 #include <array>
-#include <cfloat>
 #include <cmath>
 #include <cstdio>
 #include <cstdlib>
@@ -23,13 +22,9 @@
 #include <imgui.h>
 #include <imgui_impl_opengl3.h>
 #include <imgui_impl_sdl3.h>
-#include <imgui_internal.h>  // ImGui::ClearActiveID: a finger that scrolls lets go of what it pressed
-#include <map>
 #include <optional>
-#include <set>
 #include <string>
 #include <string_view>
-#include <unordered_map>
 #include <utility>
 #include <vector>
 
@@ -37,12 +32,8 @@
 #include "common/log.h"
 #include "common/stats.h"
 #include "debug/overlay.h"
-#include "fixes.h"
 #include "frontend.h"
 #include "imgui_gl.h"
-#include "openrac/game_host.h"
-#include "openrac/guest.h"
-#include "options_menu.h"
 #include "renderer/gl.h"
 #include "renderer/gl_stats.h"
 #include "settings.h"
