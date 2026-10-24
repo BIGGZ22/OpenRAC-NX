@@ -148,7 +148,7 @@
     {#if !inTauri}<span class="preview">Browser preview</span>{/if}
     {#if !onAndroid}
       <!-- Where OpenRAC lives: the site and the community, two marks in one capsule of the selected
-           tab's dark brown. Discord's mark tilts as the lombax's head does. -->
+           tab's dark brown. -->
       <div class="links">
         <button class="site" onclick={() => void api.openUrl(SITE_URL)} aria-label="openrac.dev" title="openrac.dev"
           ><Icon name="globe" size={18} /></button
@@ -227,26 +227,10 @@
     display: none;
   }
 
-  /* The logo comes in when the launcher opens, and the lombax tilts its head under the pointer or
-     a press (not on Android, below). */
+  /* The logo comes in when the launcher opens (not on Android, below), and then holds still: its
+     mark is the "O" of the name, so it cannot move on its own. */
   .brand :global(.logo) {
     animation: logo-in 0.7s var(--ease) both;
-  }
-
-  .brand :global(.logo .mark) {
-    transform-box: fill-box;
-    transform-origin: 50% 70%;
-    transition: transform var(--slow) var(--ease);
-  }
-
-  .brand:active :global(.logo .mark) {
-    transform: rotate(-10deg);
-  }
-
-  @media (hover: hover) {
-    .brand:hover :global(.logo .mark) {
-      transform: rotate(-10deg);
-    }
   }
 
   @keyframes logo-in {
@@ -590,11 +574,6 @@
     width: 53px;
     height: auto;
     animation: none;
-  }
-
-  :global(html[data-platform="android"]) .brand .brand-mark :global(.logo .mark) {
-    transform: none;
-    transition: none;
   }
 
   :global(html[data-platform="android"]) nav {
