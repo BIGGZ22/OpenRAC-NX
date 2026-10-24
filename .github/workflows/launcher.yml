@@ -578,7 +578,10 @@ jobs:
           for f in "${files[@]}"; do [ "$(basename "$f")" = latest.json ] || installers+=("$f"); done
           gh release upload "$channel" --clobber "${installers[@]}"
           gh release upload "$channel" --clobber installers/latest.json
-          keep=$(for f in "${files[@]}"; do basename "$f"; done)
+          # GitHub stores an asset's name with its spaces as dots ("OpenRAC Launcher_…" becomes
+          # "OpenRAC.Launcher_…"): compare the names as it lists them, or this deletes the
+          # installers it has just uploaded.
+          keep=$(for f in "${files[@]}"; do basename "$f" | tr ' ' '.'; done)
           gh release view "$channel" --json assets --jq '.assets[].name' | while IFS= read -r name; do
             grep -qxF "$name" <<< "$keep" || gh release delete-asset "$channel" "$name" --yes
           done
