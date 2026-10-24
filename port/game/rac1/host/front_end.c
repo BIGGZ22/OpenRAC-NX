@@ -7,6 +7,7 @@
  * options_menu.cpp), and the words the window reads. boot.c installs it. One table for every disc: the addresses are
  * games/rac1's, each version's through its rac1_version.h.
  */
+#include "hero_attachments.h"
 #include "rac1.h"
 
 static const char* const level_names[19] = {
@@ -21,6 +22,13 @@ static const int16_t planet_texts[19] = {20190, 20173, 20174, 20175, 20176, 2017
 
 static void menu_sound(int sound, gaddr moby) {
     func_0022ED80(0, sound, moby);
+}
+
+/* HeroAttachState is resident and uses the same slot layout in PAL and NTSC (level_hero_attach.c). */
+static unsigned hero_shadow_casters(gaddr* addresses, unsigned capacity) {
+    return openrac_rac1_hero_attachments(
+        openrac_guest_base, GUEST_RAM_SIZE, RAC1_ADDR(0x0013F450u), addresses, capacity
+    );
 }
 
 const openrac_front_end rac1_front_end = {
@@ -51,4 +59,5 @@ const openrac_front_end rac1_front_end = {
     .dialog = RAC1_ADDR(0x00193400u),
     .title_exit = RAC1_ADDR(0x0015F690u),
     .ship_state = RAC1_ADDR(0x0013E150u),
+    .hero_shadow_casters = hero_shadow_casters,
 };

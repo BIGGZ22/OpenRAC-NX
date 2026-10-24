@@ -786,6 +786,14 @@ void LevelScene::set_instances(Layer layer, const std::vector<Instance>& instanc
                 break;
             }
         }
+        // The body remains the projection anchor even when equipment is submitted first.
+        for (const auto& instance : instances) {
+            if (instance.hero_shadow_anchor && instance.hero_shadow_caster) {
+                m_hero_centre =
+                    renderer::Vec3{instance.matrix[12], instance.matrix[13], instance.matrix[14]};
+                break;
+            }
+        }
     }
     // Static instances set again: the static shadow cache's cascades no longer hold them.
     if (layer != Layer::Mobys) {
@@ -1296,6 +1304,7 @@ void LevelScene::prepare_hero_shadow(
     m_hero_ready = false;
     if (!probe_data_available() || !m_hero_enabled || !input.hero_pixel_shadow || !m_hero_centre
         || m_lighting->mode() == 2 || m_lighting->mode() == 4) {
+        m_hero_transition = {};
         return;
     }
     renderer::Vec3 direction{0, 0, -1};
@@ -1303,7 +1312,8 @@ void LevelScene::prepare_hero_shadow(
         std::copy_n(m_light_sets.data() + 4, 3, direction.data());
     }
     direction = m_lighting->sunlight_direction(direction);
-    const auto projection = hero_shadow_projection(*m_hero_centre, direction, input.hero_airborne);
+    const float blend = hero_shadow_blend(input.hero_airborne, input.seconds, m_hero_transition);
+    const auto projection = hero_shadow_projection(*m_hero_centre, direction, blend);
     m_hero_matrix = projection.matrix;
     m_hero_airborne = input.hero_airborne;
     if (!m_hero_logged_airborne || *m_hero_logged_airborne != m_hero_airborne) {
@@ -1792,6 +1802,7 @@ void LevelScene::release() {
     m_shadow_solid_primitives.clear();
     m_hero_enabled = m_hero_ready = false;
     m_hero_logged_airborne.reset();
+    m_hero_transition = {};
     m_hero_centre.reset();
     // Only registered lighting has GL objects to free.
     if (m_lighting) {
@@ -1947,6 +1958,7 @@ void LevelScene::bind_hero_shadow(const renderer::Shader& shader) const {
     glUniform1i(shader.uniform("hero_shadow_enabled"), m_hero_ready ? 1 : 0);
     bind_shadow_atlas(shader);
     glUniform1i(shader.uniform("hero_shadow_airborne"), m_hero_airborne ? 1 : 0);
+    glUniform1f(shader.uniform("hero_shadow_air_blend"), m_hero_transition.value);
     glUniform1i(shader.uniform("hero_shadow_map"), 6);
     glUniformMatrix4fv(shader.uniform("hero_shadow_matrix"), 1, GL_FALSE, m_hero_matrix.data());
     if (m_hero_ready) {

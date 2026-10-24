@@ -161,6 +161,9 @@ typedef struct openrac_front_end {
     gaddr ship_state; /* the ship's sequence word: 4 the flight through space (the flight world),
                          others drawn on the planet (0 take-off, 8 landing, 3 and 7 leaving it);
                          0 for a game without one */
+    /* Writes the hero body first, then currently attached equipment mobys, up to capacity.
+     * Returns the count written; zero or NULL means no readable shadow rig this frame. */
+    unsigned (*hero_shadow_casters)(gaddr* addresses, unsigned capacity);
 } openrac_front_end;
 
 extern const openrac_front_end* openrac_game_front_end;

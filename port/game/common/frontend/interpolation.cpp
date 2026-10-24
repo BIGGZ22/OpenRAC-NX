@@ -475,6 +475,8 @@ void draw_kept(bool first) {
     // Mesh shaders apply AO to indirect lighting before direct light is added.
     input.gtao = enhanced && graphics.gtao && has_camera && (k.draws & 0x1Fu) != 0;
     input.frame = k.frame;
+    // Shadow direction easing follows display time rather than the number of rendered frames.
+    input.seconds = std::chrono::duration<double>(started.time_since_epoch()).count();
     input.strip_vertices = k.strip_vertices;
     input.strips = k.strips;
     input.direct_before_world = std::span<const std::uint8_t>(k.packets).first(k.before_world);

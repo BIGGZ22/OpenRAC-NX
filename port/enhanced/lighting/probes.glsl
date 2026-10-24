@@ -39,6 +39,8 @@ uniform sampler2D hero_shadow_map;
 uniform mat4 hero_shadow_matrix;
 uniform int hero_shadow_enabled;
 uniform int hero_shadow_airborne;
+// Transition progress fades the platforming cue and delays rig self-shadowing until grounded.
+uniform float hero_shadow_air_blend;
 uniform int hero_shadow_receiver;
 uniform sampler2D sun_shadow_map0;
 uniform sampler2D sun_shadow_map1;
@@ -424,7 +426,8 @@ float shadow_pcf_kernel(sampler2D map, vec3 p, float bias, vec2 slope, bool tent
 
 bool hero_shadow_applies(vec3 n) {
     return hero_shadow_enabled != 0
-           && (hero_shadow_airborne == 0 || (hero_shadow_receiver == 0 && n.z >= 0.1));
+           && ((hero_shadow_airborne == 0 && hero_shadow_air_blend <= 0.0)
+               || (hero_shadow_receiver == 0 && n.z >= 0.1));
 }
 
 // Resolve visibility independently of the receiving object. Early lighting

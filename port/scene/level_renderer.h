@@ -30,6 +30,7 @@
 #include "scene/level.h"
 #include "scene/level_lighting.h"
 #include "scene/motion.h"
+#include "scene/shadow_transition.h"
 #include "scene/sun_shadow.h"
 
 namespace openrac::scene {
@@ -427,6 +428,7 @@ private:
     renderer::Mat4 m_hero_matrix = renderer::identity();
     std::optional<renderer::Vec3> m_hero_centre;
     bool m_hero_enabled = false, m_hero_ready = false, m_hero_airborne = false;
+    ShadowTransition m_hero_transition;  // Shared ease-out for projection and overlap darkening.
     std::optional<bool> m_hero_logged_airborne;
     std::array<std::unique_ptr<renderer::FrameBuffer>, kSunCascades> m_sun_maps;
     SunCascades m_sun_cascades;

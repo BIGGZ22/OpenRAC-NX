@@ -99,7 +99,7 @@ struct Instance {
     // How a live moby is blended, as MobyProc picks it (the explosions' flashes and fireballs,
     // a pickup fading in): 0 drawn as it is, 1 blended at its alpha (tint's w), 2 added.
     int blend = 0;
-    bool hero_shadow_caster = false;  // live Ratchet only; separate from world sun casters
+    bool hero_shadow_caster = false;  // live hero and attached equipment; excluded from sun casters
     // Explicit initial-state bake selection, never inferred from lack of a skeleton.
     // Destructible scenery can retain baked lighting after it is removed.
     bool bake_static = false;
@@ -107,7 +107,8 @@ struct Instance {
     // Game-maintained animated bound, already in world units; zero radius is unknown.
     std::array<float, 4> world_sphere{};
     std::uint16_t occlusion = Pvs::always;
-    std::uint64_t temporal_id = 0;  // Stable live-object identity; zero has no temporal history.
+    std::uint64_t temporal_id = 0;    // Stable live-object identity; zero has no temporal history.
+    bool hero_shadow_anchor = false;  // Body transform centres the shared map, never an attachment.
 };
 
 // What the viewer draws, in the game's order.

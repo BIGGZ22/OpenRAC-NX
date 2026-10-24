@@ -140,17 +140,12 @@ vec3 probe_surface(vec4 texel, vec3 original) {
     float sun_visibility = sun_shadow_visibility(v_world_position, n, plane_normal);
     float hero_visibility = hero_shadow_visibility(v_world_position, n);
 #endif
-    float visibility = sun_visibility;
-    if (hero_shadow_airborne == 0) {
-        visibility = min(visibility, hero_visibility);
-    }
-    // Gameplay cue: keep Ratchet's footprint readable inside a world shadow.
-    // Only receivers other than Ratchet get the extra diffuse darkening.
+    // Either projection casts a normal shadow in sunlight, including beyond cascade coverage.
+    float visibility = min(sun_visibility, hero_visibility);
+    // Only the airborne footprint adds a platforming cue inside existing cascade shade.
     float hero_cue = 1.0;
     if (hero_shadow_receiver == 0) {
-        hero_cue = hero_shadow_airborne != 0
-                       ? mix(0.75, 1.0, hero_visibility)
-                       : 1.0 - 0.15 * (1.0 - sun_visibility) * (1.0 - hero_visibility);
+        hero_cue = 1.0 - 0.45 * hero_shadow_air_blend * (1.0 - sun_visibility) * (1.0 - hero_visibility);
     }
     // Without a probe asset, retain the original authored lighting and apply
     // the same shadow floor. This also covers holes in probe coverage.
