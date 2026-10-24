@@ -10,7 +10,7 @@ Start with the [lighting guide](lighting/README.md) for builds, bakes and contro
 | --- | --- |
 | `lighting/` | Probe data, sampling, emission and transport |
 | `renderer/` | GTAO, cached texture upscaling and shaders |
-| `viewer/` | Probe lighting, probe selection and early lighting, built with the level renderer into `openrac_scene_renderer`, in its namespace `openrac::scene` ([scene/README.md](../scene/README.md)) |
+| `viewer/` | Probe lighting, probe selection and early lighting of a level, library `openrac_enhanced_viewer`, namespace `openrac::lighting`; `scene_lighting.h` registers them with the scene's lighting hook ([scene/README.md](../scene/README.md)) |
 | `game/` | Authored brightness tracking |
 | `tools/probes/` | Offline baker and bake tools |
 | `tests/`, `docs/` | Tests and feature documentation |
@@ -20,6 +20,12 @@ GTAO (`renderer/gtao.h`) is the renderer's ambient occlusion hook
 renderer they create (`game/common/frontend/world.cpp`), and its settings type
 is the renderer's (`port/renderer/gtao_settings.h`). Its source still builds
 inside `openrac_renderer`, with its shaders.
+
+The probe and early lighting of a level (`viewer/scene_lighting.h`) is the
+scene's lighting hook (`port/scene/level_lighting.h`): whoever makes a
+`LevelScene` registers it with `lighting::use_scene_lighting`. The materials
+that emit (`kAuthoredEmissions`) are the scene's level data
+(`port/scene/emission.h`), which the baker reads too.
 
 Shared integration and core Vulkan optimisations stay in `port/renderer/` and
 `port/scene/`. Editor bake inputs live in `editor/enhanced/`.

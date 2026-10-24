@@ -113,7 +113,6 @@ restructure package that removes it
 | Edge | Includes | Removed by |
 |---|---|---|
 | platform -> renderer/vulkan | `platform/window.cpp` opens the Vulkan backend | no package yet |
-| scene -> enhanced | `scene/level.h` includes the emissive lighting's description; the level renderer draws the enhanced renderer's probe lighting, early lighting and shadows itself | P2-39 (scene owns the lighting and shadow hooks, enhanced registers with them) |
 
 The list only shrinks. A new include against the layers fails the check and
 is fixed in the change that adds it: move the code to the right module, or
