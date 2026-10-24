@@ -394,11 +394,12 @@ fn updates_dir<R: Runtime>(app: &AppHandle<R>) -> Result<PathBuf, String> {
 pub async fn update_check<R: Runtime>(
     app: AppHandle<R>,
     channel: Option<update::Channel>,
+    branch: Option<String>,
 ) -> Result<Option<update::Release>, String> {
     #[cfg(target_os = "android")]
     {
-        // CHANNEL or the player's (Settings), the one it was built from by default.
-        let endpoint = crate::chosen_update_source(&app, channel).manifest;
+        // CHANNEL and BRANCH or the player's (Settings), the one it was built from by default.
+        let endpoint = crate::chosen_update_source(&app, channel, branch).manifest;
         let manifest = updates_dir(&app)?.join("latest.json");
         let _: serde_json::Value =
             kotlin(&app, "download", serde_json::json!({ "url": endpoint, "path": manifest })).await.map_err(|e| {
@@ -414,7 +415,7 @@ pub async fn update_check<R: Runtime>(
     }
     #[cfg(not(target_os = "android"))]
     {
-        let _ = (app, channel);
+        let _ = (app, channel, branch);
         Err(ANDROID_ONLY.into())
     }
 }

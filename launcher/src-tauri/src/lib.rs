@@ -77,16 +77,22 @@ fn update_source<R: tauri::Runtime>(app: &tauri::AppHandle<R>) -> openrac_launch
     openrac_launcher_core::update::source(&endpoint)
 }
 
-/// Where the launcher looks for its updates: CHANNEL (the Settings page's, before it is saved), else
-/// the one the player chose, else the one it was built from.
+/// Where the launcher looks for its updates: CHANNEL and a fork's BRANCH (the Settings page's,
+/// before they are saved), else the ones the player chose, else the one it was built from.
 fn chosen_update_source<R: tauri::Runtime>(
     app: &tauri::AppHandle<R>,
     channel: Option<openrac_launcher_core::update::Channel>,
+    branch: Option<String>,
 ) -> openrac_launcher_core::update::UpdateSource {
     let built = update_source(app);
-    let chosen =
-        channel.or_else(|| app.try_state::<AppState>().and_then(|state| state.config.lock().unwrap().update_channel));
-    built.on(chosen.unwrap_or(built.kind()))
+    let (channel, branch) = match channel {
+        Some(channel) => (Some(channel), branch),
+        None => app.try_state::<AppState>().map_or((None, None), |state| {
+            let config = state.config.lock().unwrap();
+            (config.update_channel, config.update_branch.clone())
+        }),
+    };
+    built.chosen(channel.unwrap_or(built.kind()), branch.as_deref())
 }
 
 #[tauri::command]
@@ -113,11 +119,12 @@ fn app_info(app: AppHandle, state: State<'_, AppState>) -> AppInfo {
 async fn launcher_update_check(
     webview: tauri::Webview,
     channel: Option<openrac_launcher_core::update::Channel>,
+    branch: Option<String>,
 ) -> Result<Option<serde_json::Value>, String> {
     #[cfg(desktop)]
     {
         use tauri_plugin_updater::UpdaterExt;
-        let source = chosen_update_source(webview.app_handle(), channel);
+        let source = chosen_update_source(webview.app_handle(), channel, branch);
         let url = tauri::Url::parse(&source.manifest).map_err(|e| format!("{}: {e}", source.manifest))?;
         let updater =
             webview.updater_builder().endpoints(vec![url]).and_then(|b| b.build()).map_err(|e| e.to_string())?;
@@ -137,7 +144,7 @@ async fn launcher_update_check(
     }
     #[cfg(not(desktop))]
     {
-        let _ = (webview, channel);
+        let _ = (webview, channel, branch);
         Err("on Android the launcher updates through update_check".into())
     }
 }

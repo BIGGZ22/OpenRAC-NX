@@ -162,19 +162,27 @@ let gpu: GpuDrivers = {
   device: { model: "Google Pixel (preview)", api: 35, soc: "Qualcomm SM8650", gpu: "adreno" },
 };
 
-// The launcher's update channels (core/src/update.rs): a release's build, and master's development builds.
+// The launcher's update channels (core/src/update.rs): a release's build, and master's development
+// builds. ?fork: a fork's launcher (someone/OpenRAC), which may follow any of its branches.
+const REPOSITORY = new URLSearchParams(typeof location === "undefined" ? "" : location.search).has("fork")
+  ? "someone/OpenRAC"
+  : "OpenRAC/OpenRAC";
 const STABLE = {
-  repository: "OpenRAC/OpenRAC",
+  repository: REPOSITORY,
+  fork: REPOSITORY !== "OpenRAC/OpenRAC",
   channel: null,
-  manifest: "https://github.com/OpenRAC/OpenRAC/releases/latest/download/latest.json",
-  page: "https://github.com/OpenRAC/OpenRAC/releases",
+  manifest: `https://github.com/${REPOSITORY}/releases/latest/download/latest.json`,
+  page: `https://github.com/${REPOSITORY}/releases`,
 };
 const DEV = {
-  repository: "OpenRAC/OpenRAC",
+  ...STABLE,
   channel: "launcher-dev-master",
-  manifest: "https://github.com/OpenRAC/OpenRAC/releases/download/launcher-dev-master/latest.json",
-  page: "https://github.com/OpenRAC/OpenRAC/releases/tag/launcher-dev-master",
+  manifest: `https://github.com/${REPOSITORY}/releases/download/launcher-dev-master/latest.json`,
+  page: `https://github.com/${REPOSITORY}/releases/tag/launcher-dev-master`,
 };
+
+/** A fork's branches with development builds, as the preview has them (updates.ts, devBranches). */
+export const MOCK_DEV_BRANCHES = ["master", "feature-launcher-logo", "fix-pad-navigation"];
 
 let config: Config = {
   // ?setup: a first start where no OpenRAC folder was found, so the welcome screen asks for one.
@@ -202,6 +210,7 @@ let config: Config = {
   discordRpc: true,
   checkUpdates: true,
   updateChannel: null,
+  updateBranch: null,
   layout: "compact",
   theme: new URLSearchParams(typeof location === "undefined" ? "" : location.search).get("theme") ?? "openrac",
   discordClientId: null,

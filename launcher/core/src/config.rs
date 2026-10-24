@@ -43,6 +43,9 @@ pub struct Config {
     /// Which builds the launcher updates to (update::Channel): the releases, or the newest
     /// development build. Unset: the one it was built from (a release's build, the releases).
     pub update_channel: Option<crate::update::Channel>,
+    /// A fork's launcher only: the branch whose development builds the development channel follows
+    /// (update::UpdateSource::chosen). Unset: the one it was built from, or the default branch.
+    pub update_branch: Option<String>,
     /// Custom Discord application ID (optional).
     pub discord_client_id: Option<String>,
     /// The page layout: "compact" (default) or "classic", the original design (src/layouts/).
@@ -95,6 +98,7 @@ impl Default for Config {
             discord_rpc: true,
             check_updates: true,
             update_channel: None,
+            update_branch: None,
             discord_client_id: None,
             layout: "compact".into(),
             theme: "openrac".into(),

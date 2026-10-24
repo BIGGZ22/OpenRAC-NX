@@ -1,4 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { devTag, updateSourceOf, type AppInfo, type Config } from "./api";
 import { checkGitHubRelease, isNewerVersion, offerUpdate, PUT_OFF_MS } from "./updates";
 
 describe("isNewerVersion", () => {
@@ -33,7 +34,7 @@ describe("isNewerVersion", () => {
 });
 
 describe("checkGitHubRelease", () => {
-  const source = { repository: "someone/OpenRAC", channel: "launcher-dev-main", manifest: "", page: "" };
+  const source = { repository: "someone/OpenRAC", fork: true, channel: "launcher-dev-main", manifest: "", page: "" };
   afterEach(() => vi.unstubAllGlobals());
 
   it("says so when nothing is published where the launcher looks", async () => {
@@ -52,7 +53,7 @@ describe("checkGitHubRelease", () => {
   });
 
   it("passes over a latest release that is not the launcher's", async () => {
-    const stable = { repository: "someone/OpenRAC", channel: null, manifest: "", page: "" };
+    const stable = { repository: "someone/OpenRAC", fork: true, channel: null, manifest: "", page: "" };
     const sdk = JSON.stringify({ tag_name: "sdk-v1.0.1", name: "Mod SDK 1.0.1" });
     const list = JSON.stringify([
       { tag_name: "sdk-v1.0.1", name: "Mod SDK 1.0.1" },
@@ -65,6 +66,38 @@ describe("checkGitHubRelease", () => {
     );
     expect((await checkGitHubRelease("0.8.3", stable))?.version).toBe("0.8.4");
     expect(await checkGitHubRelease("0.8.4", stable)).toBeNull();
+  });
+});
+
+describe("updateSourceOf", () => {
+  const sources = (repository: string) => {
+    const releases = `https://github.com/${repository}/releases`;
+    const stable = { repository, fork: repository !== "OpenRAC/OpenRAC", channel: null, manifest: "", page: releases };
+    const dev = { ...stable, channel: "launcher-dev-master", page: `${releases}/tag/launcher-dev-master` };
+    return { updates: stable, updateChannels: { stable, dev } } as unknown as AppInfo;
+  };
+  const config = (updateChannel: "stable" | "dev", updateBranch: string | null) =>
+    ({ updateChannel, updateBranch }) as Config;
+
+  it("names a branch's tag as CI does", () => {
+    expect(devTag("feature/x y")).toBe("launcher-dev-feature-x-y");
+    expect(devTag("fix-1.2_a")).toBe("launcher-dev-fix-1.2_a");
+  });
+
+  it("follows the branch a fork's player named", () => {
+    const fork = sources("someone/OpenRAC");
+    const branch = updateSourceOf(fork, config("dev", " feature/x "));
+    expect(branch.channel).toBe("launcher-dev-feature-x");
+    expect(branch.manifest).toBe(
+      "https://github.com/someone/OpenRAC/releases/download/launcher-dev-feature-x/latest.json",
+    );
+    expect(updateSourceOf(fork, config("dev", ""))).toBe(fork.updateChannels.dev);
+    expect(updateSourceOf(fork, config("stable", "feature/x"))).toBe(fork.updateChannels.stable);
+  });
+
+  it("keeps OpenRAC's own launcher on its own branch", () => {
+    const upstream = sources("OpenRAC/OpenRAC");
+    expect(updateSourceOf(upstream, config("dev", "feature/x"))).toBe(upstream.updateChannels.dev);
   });
 });
 

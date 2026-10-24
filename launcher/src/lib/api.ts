@@ -321,9 +321,11 @@ export const api = {
   /** Back to the running game, or (`stop`) end it. */
   gameWindow: (stop: boolean) => call<null>("game_window", { stop }),
   /** Android: a newer launcher on the releases, or null (desktops use Tauri's updater). */
-  updateCheck: (channel: UpdateChannel) => call<AndroidRelease | null>("update_check", { channel }),
+  updateCheck: (channel: UpdateChannel, branch: string | null) =>
+    call<AndroidRelease | null>("update_check", { channel, branch }),
   /** A desktop: Tauri's updater asked at the channel's manifest; its update, or null. */
-  launcherUpdateCheck: (channel: UpdateChannel) => call<LauncherUpdate | null>("launcher_update_check", { channel }),
+  launcherUpdateCheck: (channel: UpdateChannel, branch: string | null) =>
+    call<LauncherUpdate | null>("launcher_update_check", { channel, branch }),
   /** Android: downloads the release's APK, checks its signature, opens Android's installer. */
   updateInstall: (url: string, signature: string) => call<null>("update_install", { url, signature }),
 };
@@ -341,6 +343,33 @@ export interface LauncherUpdate {
 /** The channel a launcher updates on: the player's choice, or the one it was built from. */
 export function updateChannelOf(info: AppInfo, config: Config | null): UpdateChannel {
   return config?.updateChannel ?? (info.updates.channel ? "dev" : "stable");
+}
+
+/** The tag of BRANCH's rolling development release (core/src/update.rs, dev_tag). */
+export function devTag(branch: string): string {
+  return `launcher-dev-${branch.replace(/[^A-Za-z0-9._-]/g, "-")}`;
+}
+
+/** The branch a fork's player named for its development builds (Settings), or null for none. */
+export function updateBranchOf(config: Config | null): string | null {
+  const branch = config?.updateBranch?.trim() ?? "";
+  return branch === "" ? null : branch;
+}
+
+/** Where a launcher looks for its updates (core/src/update.rs, UpdateSource::chosen): its channel,
+ *  and on a fork's development channel the builds of the branch the player named. */
+export function updateSourceOf(info: AppInfo, config: Config | null): UpdateSource {
+  const channel = updateChannelOf(info, config);
+  const source = info.updateChannels[channel];
+  const branch = updateBranchOf(config);
+  if (channel !== "dev" || !source.fork || branch === null) return source;
+  const tag = devTag(branch);
+  return {
+    ...source,
+    channel: tag,
+    manifest: `https://github.com/${source.repository}/releases/download/${tag}/latest.json`,
+    page: `https://github.com/${source.repository}/releases/tag/${tag}`,
+  };
 }
 
 /** A GPU driver package the Android launcher keeps (OpenracPlugin.kt): its meta.json. */

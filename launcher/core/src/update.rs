@@ -63,12 +63,16 @@ pub fn is_newer(current: &str, latest: &str) -> bool {
 
 /// Where a launcher looks for its updates, read from its manifest's address (tauri.conf.json's
 /// `plugins.updater.endpoints`, set by the build to the repository that built it: a fork's
-/// launcher reads the fork's releases). Shown on the Settings page, which cannot change it.
+/// launcher reads the fork's releases). Shown on the Settings page, which cannot change it (a
+/// fork's chooses the branch of its development builds there: UpdateSource::chosen).
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, ts_rs::TS)]
 #[serde(rename_all = "camelCase")]
 pub struct UpdateSource {
     /// `owner/name` of the GitHub repository; the address itself when it is not one.
     pub repository: String,
+    /// A GitHub repository other than OpenRAC's own (UPSTREAM): a fork, whose player may follow
+    /// any of its branches.
+    pub fork: bool,
     /// The release it reads: None for the repository's latest, else that release's tag (a
     /// branch's rolling `launcher-dev-<branch>`).
     pub channel: Option<String>,
@@ -78,9 +82,23 @@ pub struct UpdateSource {
     pub page: String,
 }
 
+/// The repository OpenRAC's own launchers are built from; a launcher built anywhere else is a fork's.
+pub const UPSTREAM: &str = "OpenRAC/OpenRAC";
+
+/// The tag of BRANCH's rolling development release, as CI names it (launcher.yml: every character
+/// but a letter, a digit, `.`, `_` and `-` becomes `-`, so `feature/x` is `launcher-dev-feature-x`).
+pub fn dev_tag(branch: &str) -> String {
+    let name: String = branch
+        .chars()
+        .map(|c| if c.is_ascii_alphanumeric() || matches!(c, '.' | '_' | '-') { c } else { '-' })
+        .collect();
+    format!("launcher-dev-{name}")
+}
+
 pub fn source(manifest: &str) -> UpdateSource {
     let unknown = || UpdateSource {
         repository: manifest.to_string(),
+        fork: false,
         channel: None,
         manifest: manifest.to_string(),
         page: manifest.to_string(),
@@ -100,7 +118,8 @@ pub fn source(manifest: &str) -> UpdateSource {
         Some(tag) => format!("https://github.com/{repository}/releases/tag/{tag}"),
         None => format!("https://github.com/{repository}/releases"),
     };
-    UpdateSource { repository, channel, manifest: manifest.to_string(), page }
+    let fork = !repository.eq_ignore_ascii_case(UPSTREAM);
+    UpdateSource { repository, fork, channel, manifest: manifest.to_string(), page }
 }
 
 /// The builds a launcher updates to, chosen on the Settings page: the repository's releases, or its
@@ -139,9 +158,22 @@ impl UpdateSource {
         let repository = &self.repository;
         match channel {
             Channel::Stable => source(&format!("https://github.com/{repository}/releases/latest/download/latest.json")),
-            Channel::Dev => source(&format!(
-                "https://github.com/{repository}/releases/download/launcher-dev-{DEV_BRANCH}/latest.json"
-            )),
+            Channel::Dev => self.on_branch(DEV_BRANCH),
+        }
+    }
+
+    /// The development builds of BRANCH in the same repository.
+    pub fn on_branch(&self, branch: &str) -> UpdateSource {
+        let tag = dev_tag(branch);
+        source(&format!("https://github.com/{}/releases/download/{tag}/latest.json", self.repository))
+    }
+
+    /// Where the player's choice points: `channel`, and on a fork's development channel the builds
+    /// of BRANCH when one is named (Settings). OpenRAC's own launcher follows only its own branch.
+    pub fn chosen(&self, channel: Channel, branch: Option<&str>) -> UpdateSource {
+        match branch.map(str::trim).filter(|b| !b.is_empty()) {
+            Some(branch) if channel == Channel::Dev && self.fork => self.on_branch(branch),
+            _ => self.on(channel),
         }
     }
 }
@@ -234,6 +266,26 @@ mod tests {
         let other = source("https://example.org/latest.json");
         assert_eq!(other.on(Channel::Dev), other);
         assert_eq!(serde_json::to_string(&Channel::Dev).unwrap(), "\"dev\"");
+    }
+
+    #[test]
+    fn follows_a_forks_branch() {
+        let fork = source("https://github.com/someone/OpenRAC/releases/latest/download/latest.json");
+        let upstream = source("https://github.com/OpenRAC/OpenRAC/releases/latest/download/latest.json");
+        assert!(fork.fork && !upstream.fork && !source("https://example.org/latest.json").fork);
+        assert_eq!(dev_tag("feature/x y"), "launcher-dev-feature-x-y");
+        assert_eq!(dev_tag("fix-1.2_a"), "launcher-dev-fix-1.2_a");
+        let branch = fork.chosen(Channel::Dev, Some(" feature/x "));
+        assert_eq!(
+            branch.manifest,
+            "https://github.com/someone/OpenRAC/releases/download/launcher-dev-feature-x/latest.json"
+        );
+        assert_eq!(branch.channel.as_deref(), Some("launcher-dev-feature-x"));
+        // No branch named: the one it was built from; the releases take no branch.
+        assert_eq!(fork.chosen(Channel::Dev, Some("")), fork.on(Channel::Dev));
+        assert_eq!(fork.chosen(Channel::Stable, Some("feature/x")), fork);
+        // OpenRAC's own launcher follows its own branch whatever is named.
+        assert_eq!(upstream.chosen(Channel::Dev, Some("feature/x")), upstream.on(Channel::Dev));
     }
 
     #[test]
