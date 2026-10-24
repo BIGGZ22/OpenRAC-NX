@@ -22,7 +22,7 @@
   import PacksPanel from "$components/PacksPanel.svelte";
   import PluginsPanel from "$components/PluginsPanel.svelte";
   import { api, onAndroid, pickFile, type ActionView, type GameView, type VersionView } from "$lib/api";
-  import { app, guardShown, jobs, run, runChain, saveConfig, toast } from "$lib/app.svelte";
+  import { app, guardShown, jobs, openVersion, run, runChain, saveConfig, toast } from "$lib/app.svelte";
   import { levelName, levelsOf, type EntryState } from "$lib/labels";
   import { GODOT_URL, SITE_URL } from "$lib/links";
   import { EDITOR, GAME_LIST, PAGE } from "$lib/modsText";
@@ -270,10 +270,16 @@
               <button class="primary" disabled={!play?.runnable} onclick={() => void playModded(v)}
                 ><Icon name="play" size={16} />{PAGE.play}</button
               >
-              {#if !play?.runnable}
-                <span class="dim why-not"
-                  >{!play && early(v) ? PAGE.playEarly : !play ? PAGE.playMissing : PAGE.playBuild}</span
+              {#if play && !play.runnable}
+                <!-- Built on the game's page: the way there. -->
+                <button
+                  class="link why-not"
+                  onclick={() => {
+                    openVersion(v.key);
+                  }}>{PAGE.playBuild}</button
                 >
+              {:else if !play}
+                <span class="dim why-not">{early(v) ? PAGE.playEarly : PAGE.playMissing}</span>
               {/if}
             </div>
           {/if}
@@ -529,11 +535,13 @@
     color: var(--text);
   }
 
+  /* The button, and under it, centred on it, why it cannot play yet. */
   .play {
     display: flex;
     flex-direction: column;
-    align-items: flex-end;
-    gap: 6px;
+    align-items: stretch;
+    gap: 8px;
+    text-align: center;
   }
 
   .play button {
@@ -544,6 +552,10 @@
 
   .why-not {
     font-size: 0.8125rem;
+  }
+
+  button.why-not {
+    align-self: center;
   }
 
   .none {
