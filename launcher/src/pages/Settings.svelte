@@ -489,8 +489,8 @@
               {#each branches as branch (branch)}<option value={branch}></option>{/each}
             </datalist>
             <p class="dim note">
-              The development builds of this branch of <span class="mono">{app.info.updateChannels.dev.repository}</span
-              >. A build installs only when it is newer than the one you have.
+              Development builds of this branch of <span class="mono">{app.info.updateChannels.dev.repository}</span>;
+              only a build newer than yours installs.
             </p>
           </div>
         {/if}
