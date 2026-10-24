@@ -21,6 +21,8 @@
 #                           of the screen (skipped, 77, where Vulkan cannot open)
 #   cull_coverage           the zero-coverage cull's CPU reference against a software rasteriser,
 #                           everywhere
+#   vulkan_present_timing   the device opened with each presentation extension switched off, and
+#                           presenting (skipped, 77, where Vulkan cannot open)
 #
 # Included from port/CMakeLists.txt after cmake/Window.cmake, with or without the window.
 
@@ -108,6 +110,7 @@ endif()
 #   cull_coverage   the zero-coverage cull's CPU reference (renderer/gpu_draw.h) against a software
 #                   rasteriser (tests/cull_coverage_test.cpp); no GPU, so every preset runs it
 openrac_add_test(cull_coverage INCLUDES .)
+#   vulkan_present_timing  the presentation extensions switched off one by one
 if(TARGET openrac_renderer_vulkan)
   openrac_add_test(vulkan_buffer
     LIBS openrac_renderer openrac_platform openrac_renderer_vulkan)
@@ -123,5 +126,9 @@ if(TARGET openrac_renderer_vulkan)
   openrac_add_test(vulkan_prewarm
     LIBS openrac_renderer openrac_platform openrac_renderer_vulkan)
   set_tests_properties(vulkan_prewarm PROPERTIES SKIP_RETURN_CODE 77 ENVIRONMENT
+    "OPENRAC_GL_API=vulkan;OPENRAC_VULKAN_VALIDATION=1")
+  openrac_add_test(vulkan_present_timing
+    LIBS openrac_renderer openrac_platform openrac_renderer_vulkan)
+  set_tests_properties(vulkan_present_timing PROPERTIES SKIP_RETURN_CODE 77 ENVIRONMENT
     "OPENRAC_GL_API=vulkan;OPENRAC_VULKAN_VALIDATION=1")
 endif()
