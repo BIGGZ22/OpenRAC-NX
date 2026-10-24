@@ -9,7 +9,9 @@
 // (renderer/render_opt.h), it draws the frames with the entry on and with it off and compares
 // them with the entry's tolerance: byte for byte unless the entry says otherwise. The registry's
 // self-test entry is compared as well, as the harness's check of itself (its reference path is
-// in render_fixture.h). Under OPENRAC_VULKAN_VALIDATION the validation layer must report nothing.
+// in render_fixture.h). Every scenario is drawn once more with the backend's discarded attachments
+// overwritten with garbage (vkgl::test_poison_discards): a pass that read what
+// glInvalidateFramebuffer let go would then draw other frames. Under OPENRAC_VULKAN_VALIDATION the validation layer must report nothing.
 //
 // The frames are compared in memory; nothing is written out. A scene a tenth of the benchmark's,
 // at 320 by 180, keeps the run short under the validation layer. Skipped (77) without Vulkan.
@@ -244,6 +246,36 @@ void test_an_entry_changes_no_frame(
     CHECK(equivalent);
 }
 
+// Tests that no pass of `scenario` reads what glInvalidateFramebuffer let go: with the backend's
+// poison on (vkgl::test_poison_discards), every discarded attachment holds garbage instead of
+// being left undefined, so a pass that reads one draws other frames than attachment-discard off.
+void test_no_pass_reads_what_it_discards(
+    const openrac::viewer::LevelData& level,
+    const render::SceneSize& size,
+    const render::Scenario& scenario,
+    bool enhanced
+) {
+    std::string error;
+    CHECK(openrac::vkgl::test_poison_discards(true));
+    const Frames poisoned = draw_run(level, size, scenario, enhanced, error);
+    openrac::vkgl::test_poison_discards(false);
+    render_opt::set(render_opt::Opt::AttachmentDiscard, false);
+    const Frames kept = draw_run(level, size, scenario, enhanced, error);
+    render_opt::reset();
+    const Difference difference = compare(poisoned, kept);
+    const bool equivalent = !poisoned.empty() && within(difference, render_opt::Tolerance{});
+    std::printf(
+        "%s%s: discarded attachments poisoned against kept, %s (worst frame %.6f of its pixels, "
+        "channel by %d)\n",
+        std::string(scenario.name).c_str(),
+        enhanced ? " (enhanced)" : "",
+        equivalent ? "identical" : "DIFFERENT",
+        difference.worst_fraction,
+        difference.worst_channel
+    );
+    CHECK(equivalent);
+}
+
 // Chooses Enhanced rendering on or off for the runs that follow. A run makes its scene and its
 // renderers afresh, so their shaders are built for the choice (renderer/gl.h asks for it before
 // the first shader is made, which holds for each run).
@@ -304,6 +336,8 @@ int main() {
             for (const render_opt::Entry& entry : render_opt::entries()) {
                 test_an_entry_changes_no_frame(level, size, scenario, enhanced, entry);
             }
+
+            test_no_pass_reads_what_it_discards(level, size, scenario, enhanced);
         }
     }
 
