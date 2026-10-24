@@ -82,7 +82,7 @@
       onchange={(e) => (value = e.currentTarget.value.trim() || null)}
     />
     <button class="small" onclick={() => void browse()}><Icon name="folder" size={14} />Browse</button>
-    {#if value}<button class="ghost small" onclick={() => (value = null)} aria-label={`Clear ${label}`}
+    {#if value}<button class="small" onclick={() => (value = null)} aria-label={`Clear ${label}`}
         ><Icon name="x" size={14} /></button
       >{/if}
   </div>
