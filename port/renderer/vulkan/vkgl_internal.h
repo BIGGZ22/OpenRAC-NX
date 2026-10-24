@@ -374,6 +374,68 @@ inline bool reuse_uniforms() {
     return !off;
 }
 
+// The descriptor sets one program made this frame, by key, for vk-draw-cache: the reference path's
+// Program::descriptor_sets without its heap allocations. The keys' words sit one after another in
+// one array and a fixed table of slots indexes them, so clear() keeps every array's capacity and a
+// program's steady state allocates nothing. Holds at most kCapacity sets, as the reference does.
+struct DescriptorCache {
+    // The sets it holds at most, the reference path's limit; past it a set is made each time.
+    static constexpr std::size_t kCapacity = 256;
+
+    // Its slots: a power of two, twice kCapacity, so a probe meets a free slot soon.
+    static constexpr std::size_t kSlots = 2 * kCapacity;
+
+    // One set and where its key is in `words`.
+    struct Item {
+        std::uint64_t hash = 0;                // hash_words of its key.
+        std::uint32_t at = 0;                  // Its key's first word in `words`.
+        std::uint32_t size = 0;                // Its key's words.
+        VkDescriptorSet set = VK_NULL_HANDLE;  // The set.
+    };
+
+    std::vector<std::uint64_t> words;           // Every key's words, in the order they were added.
+    std::vector<Item> items;                    // Every set, in the order they were added.
+    std::array<std::uint16_t, kSlots> slots{};  // 0 a free slot, n the item n - 1; linear probing.
+
+    // Forgets every set (the frame's pools are reset with the frame), keeping the capacity.
+    void clear();
+
+    // Returns the set made for `key`, whose hash_words is `hash`, or null. The whole key decides.
+    [[nodiscard]] VkDescriptorSet find(
+        std::span<const std::uint64_t> key, std::uint64_t hash
+    ) const;
+
+    // Adds `set` for `key`, of hash `hash`, unless kCapacity sets are held already.
+    void insert(std::span<const std::uint64_t> key, std::uint64_t hash, VkDescriptorSet set);
+};
+
+// A range of a buffer on the GPU that a draw binds.
+struct BufferRef {
+    VkBuffer buffer = VK_NULL_HANDLE;
+    VkDeviceSize offset = 0;
+    VkDeviceSize size = 0;
+};
+
+// What a sampler uniform reads now: its image (null for a buffer texture) and the descriptor.
+struct Sampled {
+    Image* image = nullptr;
+    VkImageView view = VK_NULL_HANDLE;
+    VkSampler sampler = VK_NULL_HANDLE;
+    VkBufferView texels = VK_NULL_HANDLE;
+};
+
+// The arrays a draw and descriptors() fill afresh each time, kept in the Context so that their
+// capacity stays and a draw allocates nothing once they have grown (vk-draw-cache). Each user
+// clears what it uses first; none is used by two functions at once.
+struct DrawScratch {
+    std::vector<Sampled> samplers;                     // The draw's sampled textures.
+    std::vector<BufferRef> blocks;                     // descriptors(): the blocks it binds.
+    std::vector<std::uint64_t> key;                    // descriptors(): the set's key.
+    std::vector<VkWriteDescriptorSet> writes;          // descriptors(): a new set's writes.
+    std::vector<VkDescriptorBufferInfo> buffer_infos;  // descriptors(): what the writes point at.
+    std::vector<VkDescriptorImageInfo> image_infos;    // descriptors(): what the writes point at.
+};
+
 // A GL program: its shaders, the compiled SPIR-V and what it declares (shader_compiler.h), its
 // shader modules and layouts, the default uniform block, and the descriptor sets made this frame.
 struct Program {
@@ -401,6 +463,7 @@ struct Program {
     // At most 256 resource combinations per program, valid only this frame.
     std::unordered_map<std::vector<std::uint64_t>, VkDescriptorSet, DescriptorKeyHash>
         descriptor_sets;
+    DescriptorCache set_cache;            // The same sets as descriptor_sets, for vk-draw-cache.
     std::vector<std::uint64_t> last_key;  // what the last descriptor set held
     VkDescriptorSet last_set = VK_NULL_HANDLE;
     std::uint64_t last_set_frame = 0;
@@ -558,6 +621,9 @@ static_assert(sizeof(PipelineKey) % sizeof(std::uint64_t) == 0, "PipelineKey has
 // Returns the 64-bit hash of `key`'s bytes: FNV-1a over its 8-byte words, then mixed, so that its
 // low bits pick a slot of PipelineTable. Equal keys hash alike; a lookup still compares the key.
 std::uint64_t hash_key(const PipelineKey& key);
+
+// Returns the same hash of `words`, for DescriptorCache's keys.
+std::uint64_t hash_words(std::span<const std::uint64_t> words);
 
 // The graphics pipelines made so far, one per key, and two ways to find them: by the key's hash
 // in a flat table of slots that compares the whole key on a hit (vk-draw-cache), or by the key's
@@ -749,7 +815,8 @@ struct Context {
     Names<Program> programs;
     std::uint64_t program_serial = 0;
 
-    PipelineTable pipelines;  // Every graphics pipeline, by key (pipeline_for).
+    PipelineTable pipelines;           // Every graphics pipeline, by key (pipeline_for).
+    DrawScratch scratch;               // The draw's temporaries, kept for their capacity (R-04).
     std::vector<std::pair<std::uint64_t, VkSampler>> vk_samplers;  // by a packed key
 
     ImagePtr dummy_image;
@@ -863,23 +930,8 @@ struct Format {
     int bytes = 4;  // a texel's
 };
 
-// A range of a buffer on the GPU that a draw binds.
-struct BufferRef {
-    VkBuffer buffer = VK_NULL_HANDLE;
-    VkDeviceSize offset = 0;
-    VkDeviceSize size = 0;
-};
-
 inline constexpr VkDeviceSize kDefaultFloat = 256;    // in the dummy buffer: (0, 0, 0, 1) as floats
 inline constexpr VkDeviceSize kDefaultInteger = 272;  // and as integers
-
-// What a sampler uniform reads now: its image (null for a buffer texture) and the descriptor.
-struct Sampled {
-    Image* image = nullptr;
-    VkImageView view = VK_NULL_HANDLE;
-    VkSampler sampler = VK_NULL_HANDLE;
-    VkBufferView texels = VK_NULL_HANDLE;
-};
 
 // ---- Defined in vkgl_commands.cpp ----
 
@@ -1063,7 +1115,11 @@ Sampled sampled(const Program& p, std::size_t i);
 // The descriptor set with program `p`'s uniform blocks, default uniforms and `samplers` for
 // this draw, reused while the same resources are bound this frame. VK_NULL_HANDLE for a
 // program that binds nothing.
-VkDescriptorSet descriptors(Program& p, const std::vector<Sampled>& samplers);
+//
+// Hot path: with vk-draw-cache its temporaries are Context::scratch's and its sets
+// Program::set_cache, so a draw that finds its set allocates nothing; off, the reference path
+// builds them as vectors and keys Program::descriptor_sets by a copy of the key.
+VkDescriptorSet descriptors(Program& p, std::span<const Sampled> samplers);
 
 // glDispatchCompute: runs the current program's compute pipeline outside a rendering pass.
 void OPENRAC_GLAPI dispatch_compute(GLuint x, GLuint y, GLuint z);

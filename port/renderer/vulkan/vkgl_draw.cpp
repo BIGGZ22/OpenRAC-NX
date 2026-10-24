@@ -336,13 +336,22 @@ void draw(
     if (s.viewport[2] <= 0 || s.viewport[3] <= 0) {
         return;
     }
-    // What it samples, in the layout for sampling: moved before the drawing begins.
-    std::vector<Sampled> samplers;
+    // What it samples, in the layout for sampling: moved before the drawing begins. The list is
+    // the Context's, kept for its capacity (vk-draw-cache), or a vector of the draw's own.
+    std::vector<Sampled> own_samplers;
+    std::vector<Sampled>& samplers =
+        renderer::render_opt::enabled(renderer::render_opt::Opt::VkDrawCache) ? g->scratch.samplers
+                                                                              : own_samplers;
+    samplers.clear();
+
+    // Each sampler uniform the compiler gave a binding.
     for (std::size_t i = 0; i < p->compiled.uniforms.size(); ++i) {
+        // A sampler with a binding: what its unit holds now.
         if (p->compiled.uniforms[i].sampler && p->compiled.uniforms[i].binding >= 0) {
             samplers.push_back(sampled(*p, i));
         }
     }
+
     for (Sampled& sm : samplers) {
         Image* image = sm.image;
         if (image != nullptr && (image == t.colour || image == t.depth)) {
