@@ -38,20 +38,25 @@ bool in_ram(std::uint32_t address, std::uint32_t size) {
     return static_cast<std::size_t>(address) + size <= s.ram.size();
 }
 
-
 const std::unordered_map<int, std::string>& class_names() {
     static const std::unordered_map<int, std::string> names = [] {
         std::unordered_map<int, std::string> map;
         const char* at = openrac_moby_class_names;
+
         while (at != nullptr && *at != '\0') {
             const char* end = std::strchr(at, '\n');
-            const std::string line(at, end != nullptr ? static_cast<std::size_t>(end - at) : std::strlen(at));
+            const std::string line(
+                at, end != nullptr ? static_cast<std::size_t>(end - at) : std::strlen(at)
+            );
             const std::size_t tab = line.find('\t');
+
             if (!line.empty() && line[0] != '#' && tab != std::string::npos) {
                 map[std::atoi(line.c_str())] = line.substr(tab + 1);
             }
+
             at = end != nullptr ? end + 1 : nullptr;
         }
+
         return map;
     }();
     return names;
@@ -66,8 +71,10 @@ std::string function_name(std::uint32_t address) {
     if (address == 0) {
         return "none";
     }
+
     const char* name = openrac_guest_function_name(address);
-    return name != nullptr ? std::format("{:#x} {}", address, name) : std::format("{:#x} (no C)", address);
+    return name != nullptr ? std::format("{:#x} {}", address, name)
+                           : std::format("{:#x} (no C)", address);
 }
 
 const viewer::LiveMoby* hero() {
@@ -76,6 +83,7 @@ const viewer::LiveMoby* hero() {
             return &m;
         }
     }
+
     return nullptr;
 }
 
@@ -85,11 +93,13 @@ const viewer::LiveMoby* selected_moby() {
             return &m;
         }
     }
+
     return nullptr;
 }
 
 float distance(const viewer::LiveMoby& a, const viewer::LiveMoby& b) {
-    const float dx = a.matrix[12] - b.matrix[12], dy = a.matrix[13] - b.matrix[13], dz = a.matrix[14] - b.matrix[14];
+    const float dx = a.matrix[12] - b.matrix[12], dy = a.matrix[13] - b.matrix[13],
+                dz = a.matrix[14] - b.matrix[14];
     return std::sqrt(dx * dx + dy * dy + dz * dz);
 }
 
