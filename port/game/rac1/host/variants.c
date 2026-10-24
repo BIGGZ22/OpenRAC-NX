@@ -259,6 +259,25 @@ void func_L08_002DB448(void) { func_L03_00292AC0(RAC1_LADDR(08, 0x001D7320u)); }
 void func_L14_003047D8(void) { func_L03_00292AC0(RAC1_LADDR(14, 0x001E9FA0u)); }
 void func_L18_002FC168(void) { func_L18_00282F48(RAC1_LADDR(18, 0x001DFED0u)); }
 
+/* AmbientStreamL07Update's copy in Gaspar (09:002F0B48, which the catalogue folds into level 7's
+ * func_L07_002F9438): the same moby update on level 9's own addresses. Its first tick scales the
+ * lava grid's colours (ScaleTableIntoBuffer on 0x1FCA00, the record draw_level09_textured_surfaces
+ * draws), each later one puts draw_level09_textured_surfaces (func_L09_002F0AA0: the lava's strips
+ * and grid) in draw callback list 3. Run as level 7's C, Gaspar registered level 7's callback and
+ * scaled level 7's address in its own data, and the lava was never drawn (only the sky showed). */
+void func_L09_002F0B48(gaddr moby) {
+    switch (GREF(uint8_t, moby + 0x20u)) {
+        case 0:
+            GREF(uint8_t, moby + 0x20u) = 1;
+            GREF(uint8_t, moby + 0x30u) = 0xFF;
+            func_L02_002A5238(RAC1_LADDR(09, 0x001FCA00u), 0x80, 1.0f);
+            break;
+        case 1:
+            func_L02_0020A690(RAC1_LADDR(09, 0x002F0AA0u), moby);
+            break;
+    }
+}
+
 #if !RAC1_OMIT(func_L02_00299F28)
 /* PlayMovieEntryIfIdle's (func_L00_0029A7D0) second copy in levels 2, 8 and 16 (the first one there
  * is level 0's): the same code on another table of D_00137C80, its sector/size pairs at +0x19F8 (the

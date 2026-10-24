@@ -1445,6 +1445,22 @@ void report_tick(std::span<const std::uint8_t> ram, int level) {
     );
 }
 
+// Whether a tick's 2D path sends the chip an image (an A+D write of TRXDIR 0, host to chip): the
+// texture exists in the window only when that frame is drawn, as the 2D path's interpreter keeps
+// the image it carries (GifInterpreter::image_data). The game sends many once (rac1: the Galactic
+// Map's and the mission page's planet picture), so left out, it was never seen and the picture
+// stayed empty or half drawn. A false match only keeps a frame that could have been left out.
+bool sends_image(std::span<const std::uint8_t> packets) {
+    for (std::size_t at = 0; at + 16 <= packets.size(); at += 16) {
+        std::uint64_t value = 0;
+        std::memcpy(&value, packets.data() + at, 8);
+        if (packets[at + 8] == renderer::gs::kTrxdir && (value & 3) == 0) {
+            return true;
+        }
+    }
+    return false;
+}
+
 // Whether the tick's own frame is left out because the tick came late. Counts and warns.
 bool leave_late_frame() {
     // The tick's own frame (when frames are drawn between ticks, part way from the last tick's
@@ -1474,7 +1490,7 @@ bool leave_late_frame() {
         left_out = 0;
     }
     if (pacing.late > pacing.period && g->skipped < kMostSkipped && g->kept->has_camera
-        && g->index > 1) {
+        && g->index > 1 && !sends_image(g->kept->packets)) {
         ++g->skipped;
         ++left_out;
         return true;

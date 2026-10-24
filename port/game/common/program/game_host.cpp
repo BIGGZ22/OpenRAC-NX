@@ -136,6 +136,16 @@ extern "C" void game_openrac_game_moby_colour(unsigned object, unsigned colour) 
     });
 }
 
+#ifndef OPENRAC_FRONTEND
+// game_host.h: a program without a window has no settings file (settings.cpp is the window's),
+// so it remembers no option between runs.
+int openrac_game_option(const char* /*key*/, int fallback) {
+    return fallback;
+}
+
+void openrac_game_set_option(const char* /*key*/, int /*value*/) {}
+#endif
+
 void openrac_game_draw(unsigned layers) {
     c_boundary::call("openrac_game_draw", [&] {
         g_draws |= layers;

@@ -328,6 +328,8 @@ int main(int argc, char** argv) {
         std::string why;
         settings::load(g_options.settings);
         log::header("settings  " + settings::summary(), false);
+        // The language the game last had (game_host.h): what the console's setting says at start.
+        openrac_game_language = std::clamp(openrac_game_option("game_language", 1), 1, 5);
         if (settings::get().verbose_log && log::level() > log::Level::Verbose) {
             log::set_level(log::Level::Verbose);
             log::info("the settings ask for the detailed log (verbose_log = 1)");

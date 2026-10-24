@@ -10,6 +10,7 @@
 #pragma once
 
 #include <filesystem>
+#include <map>
 #include <span>
 #include <string>
 
@@ -118,6 +119,9 @@ struct Settings {
     int touch_camera = 100;
     std::string touch_layout;
     bool verbose_log = false;  // the detailed log (as OPENRAC_LOG=verbose): level loads, pad changes, callers
+    // Options the game keeps in its own memory, which a console forgets at power off (keys
+    // game_*; game_host.h, openrac_game_option): the port remembers them between runs.
+    std::map<std::string, int> game_options;
 };
 
 // The settings in use.

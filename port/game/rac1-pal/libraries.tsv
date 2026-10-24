@@ -169,6 +169,8 @@ func_0012DA30	kernel	ExitThread	host	system call 0x23: crt0's return address for
 func_0012DA38	boot	ParseBin	wrap	copies a level's program in: from then on, level code addresses mean that level's functions
 func_001F4630	draw	SetupGifPaging	wrap	sets the four draw flags at 0x18A3D0 retail has on before its first frame (nothing in the game's code stores them by name)
 func_00209DC0	memcard	NewGameInit	wrap	a new game starts in level 0; with --level N it starts in level N instead (rac1/host/boot.c)
+func_00209CE8	memcard	memcard_RestoreGame	wrap	a loaded save: the language and the Sound page stay the player's, which the port remembers between runs (rac1/host/options.c)
+func_0022DBE8	sound	initialize_gameplay_sound_system	wrap	the sound's start: the Sound page the port remembers goes in first (rac1/host/options.c)
 func_0012F348	wad	wad_GetSectors	game
 func_0012F3F8	wad	load_disc_sectors_into_global_buffer	game
 func_0012F4A8	wad	read_file_entry_with_retry	game
@@ -299,6 +301,7 @@ func_00116078	game	func_00116078	host	the port's own (rac1/host/hand.c); its sig
 func_0011A690	game	func_0011A690	host	kprintf, the kernel library's debug print: formatted by the port, to the log (rac1-pal/host/kprintf.c)	void (unsigned int, ...)
 func_0011A6C8	game	func_0011A6C8	host	scePrintf, the same through the debugger's console (rac1-pal/host/kprintf.c)	int (unsigned int, ...)
 func_00230A90	space	FlightUpdate	wrap	the flight between planets, each of its frames: marks the flight as playing for the Start skip (rac1/host/boot.c)	void (void)
+func_00232278	space	initialize_level_runtime	wrap	a flight out of a level: with the pause menu's display list size still set (a save loaded from the pause), the level's size is put back first, as the pause's close does (rac1/host/boot.c)	void (void)
 func_0022C9A8	draw	SkyDrawShell	wrap	the shell's matrix (D_001D9A70, built by the sky code before each shell) goes to the window, which draws the shells natively (rac1/host/render_native.c)	void (int)
 func_00201AF0	draw	draw_bootImage	wrap	the picture shown while a level loads goes into the frame buffer by an image transfer, which the 2D path keeps only as a texture: the port also draws it there (rac1/host/boot_picture.c)
 func_001F7680	draw	func_001F7680	wrap	the boot loop's screen-high picture goes into the frame buffer by an image transfer, which the 2D path keeps only as a texture: the port also draws it there (rac1/host/boot_picture.c)
@@ -351,6 +354,7 @@ func_L07_0030E800	game	func_L07_0030E800	host	a place the catalogue folds into a
 func_L08_002DB448	game	func_L08_002DB448	host	a place the catalogue folds into another function although its code differs (split_places.tsv, rac1/host/variants.c)	void (void)
 func_L14_003047D8	game	func_L14_003047D8	host	a place the catalogue folds into another function although its code differs (split_places.tsv, rac1/host/variants.c)	void (void)
 func_L18_002FC168	game	func_L18_002FC168	host	a place the catalogue folds into another function although its code differs (split_places.tsv, rac1/host/variants.c)	void (void)
+func_L09_002F0B48	game	func_L09_002F0B48	host	a place the catalogue folds into another function although its code differs (split_places.tsv, rac1/host/variants.c): Gaspar's lava draw registration	void (unsigned int)
 func_L02_00299F28	game	func_L02_00299F28	host	a place the catalogue folds into another function although its code differs (split_places.tsv, rac1/host/variants.c)	void (int)
 func_L00_001FEE98	game	func_L00_001FEE98	host	a place the catalogue folds into another function although its code differs (split_places.tsv, rac1/host/variants.c)	int (int)
 func_L00_001FEED0	game	func_L00_001FEED0	host	a place the catalogue folds into another function although its code differs (split_places.tsv, rac1/host/variants.c)	int (int)
