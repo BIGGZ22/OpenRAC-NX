@@ -63,6 +63,18 @@ const void* offset(std::size_t bytes) {
     return reinterpret_cast<const void*>(bytes);
 }
 
+// Lets `target` and its GL objects go: a FrameBuffer frees them only in release() (its destructor
+// runs where the context may be gone), so a reset alone would keep them on the GPU.
+void release_target(std::unique_ptr<renderer::FrameBuffer>& target) {
+    // Nothing made yet.
+    if (!target) {
+        return;
+    }
+
+    target->release();
+    target.reset();
+}
+
 // Returns the textures `materials` draw with, in their order: each one's image and emission image,
 // `white` where it has none, as the layer and sky passes pick them (`textures` is by image).
 std::vector<renderer::TextureHandle> material_textures(
@@ -997,9 +1009,9 @@ bool LevelScene::make_shadow_atlas(std::string& error) {
     }
     // The reference targets are recreated on demand if the user switches
     // paths; retaining both sets would waste shadow-map storage every frame.
-    m_hero_map.reset();
+    release_target(m_hero_map);
     for (auto& map : m_sun_maps) {
-        map.reset();
+        release_target(map);
     }
     return true;
 }
@@ -1026,8 +1038,8 @@ void LevelScene::prepare_shadows(const renderer::FrameInput& input, renderer::Re
     }
 #endif
     if (!m_shadow_atlas_active) {
-        m_shadow_atlas.reset();
-        m_static_shadow.reset();
+        release_target(m_shadow_atlas);
+        release_target(m_static_shadow);
         m_static_keys = {};
     }
     prepare_hero_shadow(input, state);
@@ -1071,7 +1083,7 @@ void LevelScene::draw_shadow_atlas(renderer::RenderState& state) {
     if (cache) {
         rerendered = draw_cached_cascades(state);
     } else {
-        m_static_shadow.reset();
+        release_target(m_static_shadow);
         m_static_keys = {};
         begin_shadow_target(m_shadow_atlas->id());
         glClearDepth(0);
@@ -1169,7 +1181,7 @@ unsigned LevelScene::draw_cached_cascades(renderer::RenderState& state) {
             // No memory for it: the atlas draws every caster, as with the entry off.
             if (!m_static_shadow->create(kShadowAtlasSize, kShadowAtlasSize, error, 1, true)) {
                 log::warn("static shadow cache unavailable: {}", error);
-                m_static_shadow.reset();
+                release_target(m_static_shadow);
                 begin_shadow_target(m_shadow_atlas->id());
                 glClearDepth(0);
                 glClear(GL_DEPTH_BUFFER_BIT);
@@ -1744,7 +1756,7 @@ void LevelScene::release() {
     vkgl::gpu_release_instances();
 #endif
     for (auto& map : m_sun_maps) {
-        map.reset();
+        release_target(map);
     }
     m_sun_enabled = m_sun_ready = false;
     glDeleteVertexArrays(1, &m_shadow_compact.vao);
@@ -1752,14 +1764,14 @@ void LevelScene::release() {
     m_shadow_compact = {};
     m_shadow_survivors.clear();
     m_sun_culling = {};
-    m_hero_map.reset();
+    release_target(m_hero_map);
     m_hero_depth.release();
     m_shadow_solid.release();
     m_atlas_depth.release();
     m_atlas_solid.release();
-    m_shadow_atlas.reset();
+    release_target(m_shadow_atlas);
     m_shadow_atlas_active = false;
-    m_static_shadow.reset();
+    release_target(m_static_shadow);
     m_static_keys = {};
     m_moby_layout.valid = false;
     for (auto& bucket : m_shadow_draws) {

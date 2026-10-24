@@ -54,6 +54,11 @@ the same name forwarding to each one, for `game/common`.
   thread that holds the graphics context, the program's main thread.
 - The pose and shadow functions are pure: they read the game memory they are handed and return
   values. The game programs call them from the thread that draws.
+- Between two calls of `set_instances` for the mobys a `LevelScene` keeps where each moby went
+  (its group and place): a call with the same mobys in the same order writes their poses there
+  instead of regrouping them (`moby-pose-in-place`). It also keeps a static shadow cache when
+  `shadow-static-cache` is on, and the registered static instances of the GPU culling
+  (`gpu-resident-instances`), all let go by `release`.
 
 ## Errors
 
@@ -75,6 +80,11 @@ The level renderer reads its profiling and reference switches through `stats::pr
 and `OPENRAC_SUN_TIMING_DETAIL`. [docs/port/DEBUGGING.md](../../docs/port/DEBUGGING.md) documents
 each one. The enhanced lighting and shadows follow the `enhanced_rendering` setting
 ([enhanced/lighting/README.md](../enhanced/lighting/README.md)).
+
+Its render optimisations are entries of the optimisation registry (`renderer/render_opt.h`,
+switched off with `OPENRAC_RENDER_OPT_OFF`): `texture-prepare`, `gpu-resident-instances`,
+`shadow-static-cache` (off by default), `moby-pose-in-place` and `shadow-atlas-discard`
+([docs/port/RENDER_PERF.md](../../docs/port/RENDER_PERF.md)).
 
 ## Tests
 
