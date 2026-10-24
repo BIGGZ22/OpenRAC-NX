@@ -1,10 +1,13 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 // Copyright (c) 2026 the OpenRAC contributors
 //
-// The debug overlay (debug_overlay.h). Its frame-time window, with its plot, its pause and its
-// single step, follows OpenGOAL's (game/graphics/opengl_renderer/debug_gui.cpp, FrameTimeRecorder;
-// ISC License, Copyright (c) 2020-2026 OpenGOAL Team), and the per-pass table its profiler's
-// (Profiler.cpp): name, time, draw calls, triangles.
+// The debug overlay (debug_overlay.h): what the environment asks of it, its initialisation, the
+// scripted keys, the panel, the window's screenshots and the entry points, which draw the rest from
+// debug/ (debug/overlay.h). Its frame-time window, with its plot, its pause and its single step,
+// follows OpenGOAL's (game/graphics/opengl_renderer/debug_gui.cpp, FrameTimeRecorder; ISC License,
+// Copyright (c) 2020-2026 OpenGOAL Team), and the per-pass table its profiler's (Profiler.cpp):
+// name, time, draw calls, triangles; the panel's sections are in debug/frame.cpp and
+// debug/renderer.cpp.
 
 #include "debug_overlay.h"
 

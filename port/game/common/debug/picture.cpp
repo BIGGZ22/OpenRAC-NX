@@ -17,10 +17,14 @@ namespace openrac::frontend::debug_overlay {
 
 namespace {
 
+// Takes a point of the game's world to the picture's place in the window, with the camera the
+// picture was drawn with.
 struct Projector {
-    renderer::Mat4 clip_from_world;
+    renderer::Mat4 clip_from_world;  // the camera's projection times its view
     float x, y, width, height;  // the picture, in ImGui's coordinates (top left origin)
 
+    // Sets `out` to where the world point (wx, wy, wz) is in the window. Returns false, leaving
+    // `out` alone, for a point behind the camera or outside the picture.
     bool project(float wx, float wy, float wz, ImVec2& out) const {
         const renderer::Mat4& m = clip_from_world;
         const float cx = m[0] * wx + m[4] * wy + m[8] * wz + m[12];

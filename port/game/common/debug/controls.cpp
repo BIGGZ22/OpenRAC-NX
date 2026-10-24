@@ -15,6 +15,8 @@ namespace openrac::frontend::debug_overlay {
 
 namespace {
 
+// Draws GTAO's controls: its quality, its resolution, its directions and steps, its radius and
+// strength, and a button that resets them. A change is saved and marked for the window to apply.
 void gtao_controls() {
     auto& options = settings::get().gtao_settings;
     bool changed = false;

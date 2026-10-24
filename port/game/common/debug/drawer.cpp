@@ -52,6 +52,7 @@ void card_begin() {
     s.card = {ImGui::GetCursorScreenPos(), ImGui::GetContentRegionAvail().x, 0};
 }
 
+// Ends the card card_begin() began: draws it under its rows, now that their height is known.
 void card_end() {
     ImDrawList* list = ImGui::GetWindowDrawList();
     const ImVec2 end(s.card.top.x + s.card.width, ImGui::GetCursorScreenPos().y);
@@ -104,6 +105,7 @@ bool drawer_row(const char* label, ImU32 ink, Right&& right) {
     return pressed;
 }
 
+// A row of the card open now with nothing at its right: true when it was pressed.
 bool drawer_row(const char* label, ImU32 ink = look::kText) {
     return drawer_row(label, ink, [](ImDrawList*, ImVec2) {});
 }
