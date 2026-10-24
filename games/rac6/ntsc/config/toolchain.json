@@ -38,7 +38,7 @@
     {
       "id": "prodg2952+gnu-as",
       "scope": "the boot executable",
-      "provenance": "SN ProDG 'ProDG for PlayStation 2' ee-gcc 2.95.2, from the compiler depot of the sibling workspace (D:/RAC1/work/lombyte-depot/tools/compilers/ee-gcc-2.95.2).  External binary: pinned by hash, never rebuilt here and never committed.",
+      "provenance": "SN ProDG 'ProDG for PlayStation 2' ee-gcc 2.95.2, from the compiler depot of the sibling workspace (tools/compilers/ee-gcc-2.95.2).  External binary: pinned by hash, never rebuilt here and never committed.",
       "toolchain": {
         "cpp_sha256": "f7db993de8745339ec71cf10d5fe9e7772d75e79a037e97809ed5e34ea3150c3",
         "cc1_sha256": "2aaf3d22ce5c3508ecba15f16b06737713263e6aee289ca1e43d3ff9c17d964f"
@@ -57,7 +57,7 @@
     {
       "id": "sdk991111",
       "scope": "the boot executable",
-      "provenance": "Sony EE-GCC 2.9-ee-991111-01, from the compiler depot of the sibling workspace (D:/RAC1/work/lombyte-depot/tools/compilers/ee-gcc2.9-991111-01).  External binary: pinned by hash, never rebuilt here and never committed.",
+      "provenance": "Sony EE-GCC 2.9-ee-991111-01, from the compiler depot of the sibling workspace (tools/compilers/ee-gcc2.9-991111-01).  External binary: pinned by hash, never rebuilt here and never committed.",
       "toolchain": {
         "cpp_sha256": "e0ea7124f31ef407e73417ce545bec8d1ab961bdae61ae41e9483de5a52585f4",
         "cc1_sha256": "425aebdd48ba66227672ee8e520b826164ff26b26f10eefbaeeb523f68afa9bc"
