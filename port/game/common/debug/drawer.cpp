@@ -493,8 +493,10 @@ void drawer(const Shown& shown) {
         setting_row(options_menu::kAnisotropy);
         setting_row(options_menu::kFrameRate);
         setting_row(options_menu::kVSync);
-        if (drawer_switch("Frame counter", settings::get().show_fps)) {
-            change_setting(options_menu::kShowFps, 1);
+        if (const int by = drawer_choice(
+                "Frame counter", settings::name(settings::get().show_fps), true, true
+            )) {
+            change_setting(options_menu::kShowFps, by);
         }
         card_end();
 

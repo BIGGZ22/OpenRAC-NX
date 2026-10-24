@@ -102,6 +102,7 @@ openrac_add_test(stats LIBS openrac_common)
 openrac_add_test(result INCLUDES .)
 openrac_add_test(c_boundary LIBS openrac_common)
 openrac_add_test(frame_pacing INCLUDES .)
+openrac_add_test(frame_counter INCLUDES .)
 openrac_add_test(settings SOURCES tests/settings_test.cpp game/common/settings.cpp
                           LIBS openrac_common)
 # The launcher's colours for the options drawer (game/common/ui_colors.h).

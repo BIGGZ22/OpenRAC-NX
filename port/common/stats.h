@@ -63,9 +63,15 @@ inline bool enabled() {
     return g_enabled;
 }
 
-enum class Client : std::uint8_t { Overlay, Dump };
+// Independent consumers of the profiler's measurements.
+enum class Client : std::uint8_t {
+    Overlay,
+    Dump,
+    FrameCounter,
+    Count
+};
 
-// The overlay and the dump each ask for the measurements; they are taken while either does.
+// The overlay, dump and detailed frame counter request measurements independently.
 void set_enabled(Client client, bool on);
 
 // ---- Sections: timed parts of a frame ----

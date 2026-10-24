@@ -3,6 +3,7 @@
 
 #include "common/stats.h"
 
+#include <algorithm>
 #include <chrono>
 #include <cstdio>
 #include <cstdlib>
@@ -37,7 +38,8 @@ struct OpenSection {
 constexpr std::uint64_t kDumpWait = 16;
 
 struct State {
-    bool clients[2] = {false, false};
+    // Each consumer can stop without disabling the others' measurements.
+    std::array<bool, static_cast<std::size_t>(Client::Count)> clients{};
     // The frames, a ring by serial; frames[serial % kHistory]. `open`: the one being filled.
     std::vector<Frame> frames = std::vector<Frame>(kHistory);
     std::uint64_t next_serial = 0;  // the serial the next frame gets
@@ -205,7 +207,8 @@ const char* frame_kind_name(FrameKind kind) {
 void set_enabled(Client client, bool on) {
     State& s = state();
     s.clients[static_cast<std::size_t>(client)] = on;
-    const bool enabled = s.clients[0] || s.clients[1];
+    const bool enabled =
+        std::any_of(s.clients.begin(), s.clients.end(), [](bool active) { return active; });
     if (!enabled && g_enabled) {
         close_open(Clock::now());
         s.stack.clear();

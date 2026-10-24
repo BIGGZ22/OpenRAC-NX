@@ -135,13 +135,12 @@ void swapped(std::chrono::steady_clock::time_point started) {
     using namespace std::chrono;
     const auto before = steady_clock::now();
     platform::frame_work_done();
+    const auto swap_started = steady_clock::now();
     g->window->swap();
     const auto after = steady_clock::now();
     const double cost = duration<double>(before - started).count();
     pacing.cost = 0.8 * pacing.cost + 0.2 * cost;
-    if (settings::get().show_fps) {
-        renderer::ui::fps_counter::frame_drawn(after, cost);
-    }
+    renderer::ui::fps_counter::frame_drawn(after, duration<double>(after - swap_started).count(), settings::get().show_fps);
     if (pacing.interval_stale) {
         const float rate = g->window->refresh_rate();
         pacing.interval = rate > 20.0f ? 1.0 / rate : 0.0;
@@ -602,7 +601,7 @@ void draw_kept(bool first) {
     // with the port's own overlays over it.
     const unsigned shown = g->frame.resolved();
     debug_menu::draw(shown, width, height);
-    if (settings::get().show_fps) {
+    if (settings::get().show_fps != settings::FrameCounter::Off) {
         renderer::ui::fps_counter::draw(shown, width, height);
     }
     // OPENRAC_SHOT=FRAME:FILE.png writes that frame (for checking without looking at the screen);

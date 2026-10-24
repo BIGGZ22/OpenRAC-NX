@@ -28,6 +28,34 @@ void test_temporal_settings(const std::filesystem::path& file) {
     CHECK(settings::get().temporal_quality == renderer::TemporalQuality::Quality);
     CHECK(settings::get().temporal_sharpness == .2f);
 }
+
+// Persists all counter modes, wraps both directions and accepts existing boolean settings.
+void test_frame_counter_modes(const std::filesystem::path& file) {
+    namespace settings = openrac::settings;
+    using settings::FrameCounter;
+    settings::get().show_fps = FrameCounter::Off;
+    for (const auto expected : {FrameCounter::Basic, FrameCounter::Timings, FrameCounter::Off}) {
+        settings::step_frame_counter(1);
+        CHECK(settings::get().show_fps == expected);
+        settings::save();
+        settings::load(file);
+        CHECK(settings::get().show_fps == expected);
+    }
+    settings::step_frame_counter(-1);
+    CHECK(settings::get().show_fps == FrameCounter::Timings);
+    CHECK(std::string(settings::name(FrameCounter::Timings)) == "CPU / GPU");
+    for (const char* value : {"1", "on", "true", "yes"}) {
+        std::ofstream(file) << "show_fps = " << value << "\n";
+        settings::load(file);
+        CHECK(settings::get().show_fps == FrameCounter::Basic);
+    }
+    for (const char* value : {"0", "off", "3", "-1", "invalid"}) {
+        std::ofstream(file) << "show_fps = " << value << "\n";
+        settings::load(file);
+        CHECK(settings::get().show_fps == FrameCounter::Off);
+    }
+}
+
 }  // namespace
 
 int main() {
@@ -43,6 +71,7 @@ int main() {
     CHECK(settings::get().gtao);
     CHECK(settings::get().temporal_quality == renderer::TemporalQuality::Quality);
     test_temporal_settings(file);
+    test_frame_counter_modes(file);
     CHECK(settings::get().texture_filter == renderer::TextureFilter::EdgeAware);
     CHECK(settings::get().anisotropy == 0);
     CHECK(settings::get().anisotropy_samples(true) == 4);

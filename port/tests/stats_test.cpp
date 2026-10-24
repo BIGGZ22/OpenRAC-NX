@@ -186,9 +186,24 @@ void test_a_name_that_is_no_flag_of_the_table_starts_off() {
     CHECK(!stats::probe("OPENRAC_SHOT_FROM", "a variable of another kind"));
 }
 
+// Counter measurements remain independent of overlay and dump ownership.
+void test_frame_counter_measurements_have_their_own_client() {
+    stats::set_enabled(stats::Client::FrameCounter, true);
+    CHECK(stats::enabled());
+    stats::set_enabled(stats::Client::Overlay, true);
+    stats::set_enabled(stats::Client::FrameCounter, false);
+    CHECK(stats::enabled());
+    stats::set_enabled(stats::Client::Dump, true);
+    stats::set_enabled(stats::Client::Overlay, false);
+    CHECK(stats::enabled());
+    stats::set_enabled(stats::Client::Dump, false);
+    CHECK(!stats::enabled());
+}
+
 }  // namespace
 
 int main() {
+    test_frame_counter_measurements_have_their_own_client();
     set_the_variables();
     test_a_set_switch_is_on_whatever_its_value();
     test_an_unset_switch_is_off();
