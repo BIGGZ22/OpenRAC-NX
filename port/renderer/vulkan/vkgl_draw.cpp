@@ -24,6 +24,7 @@
 #include "common/stats.h"
 #include "renderer/gl.h"
 #include "renderer/gpu_draw.h"
+#include "renderer/render_opt.h"
 #include "renderer/vulkan/shader_compiler.h"
 #include "renderer/vulkan/vkgl_internal.h"
 
@@ -61,11 +62,22 @@ void draw(
     GpuPage* gpu_page,
     unsigned gpu_command
 ) {
+    // The draw's count, and its time for the vk_draw_ms gauge. The two clock reads are taken only
+    // while the debug tools measure (vk-draw-clock): the gauge is published only then.
     struct Timed {
-        Clock::time_point start = Clock::now();
+        // Whether this draw is timed: always on the reference path.
+        bool on = !renderer::render_opt::enabled(renderer::render_opt::Opt::VkDrawClock)
+                  || stats::enabled();
+
+        // When the draw began; unread when it is not timed.
+        Clock::time_point start = on ? Clock::now() : Clock::time_point{};
 
         ~Timed() {
-            g->measures.draw_s += seconds_since(start);
+            // An untimed draw adds nothing to draw_s, which stays 0 for an unmeasured frame.
+            if (on) {
+                g->measures.draw_s += seconds_since(start);
+            }
+
             ++g->measures.draws;
         }
     } timed;
