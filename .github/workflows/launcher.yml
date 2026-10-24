@@ -452,6 +452,17 @@ jobs:
           yarn install --immutable
           # $TAURI is the row's own words: split on purpose.
           yarn tauri $TAURI --config "$config"
+          # tauri build binds each update's signature to the package's version (X.Y.Z), and the
+          # updater refuses an update whose latest.json announces another: a desktop build of a
+          # branch is announced as X.Y.Z-dev.<run> (the dev-release job), so its signatures are
+          # made again for that version.
+          if [ "$create_updater" = true ] && [ -n "${OPENRAC_LAUNCHER_BUILD:-}" ]; then
+            find target -path '*/bundle/*' -name '*.sig' -print0 | while IFS= read -r -d '' sig; do
+              rm "$sig"
+              env -u TAURI_SIGNING_PRIVATE_KEY yarn tauri signer sign -f "$RUNNER_TEMP/updater.key" \
+                -p "${TAURI_SIGNING_PRIVATE_KEY_PASSWORD:-}" --app-version "$base-$OPENRAC_LAUNCHER_BUILD" "${sig%.sig}"
+            done
+          fi
 
       # Its file is named as the one built on Ubuntu is: "fc44" tells them apart on a release,
       # which takes one file of a name.
