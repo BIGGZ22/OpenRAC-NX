@@ -1090,8 +1090,13 @@ static int check_levels(const fs::path& levels) {
         return 1;
     }
     if (std::FILE* f = std::fopen(stamp.string().c_str(), "wb")) {
-        std::fprintf(f, "{\"format\": %d, \"levels\": %zu, \"program\": \"%s\"}\n", viewer::kManifestFormat, ids.size(),
-                     program_name().c_str());
+        const std::string text = std::format(
+            "{{\"format\": {}, \"levels\": {}, \"program\": \"{}\"}}\n",
+            viewer::kManifestFormat,
+            ids.size(),
+            program_name()
+        );
+        std::fwrite(text.data(), 1, text.size(), f);
         std::fclose(f);
     } else {
         log::error("cannot write {}", stamp.string());
