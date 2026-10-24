@@ -31,7 +31,8 @@ The rest is the backend's own, which nothing outside this directory includes:
 | [vkgl_gl.cpp](vkgl_gl.cpp) | The GL functions themselves (state, textures, buffers, vertex arrays, shaders and programs, uniforms, samplers, framebuffers) and their table |
 | [vkgl_present.cpp](vkgl_present.cpp) | The default framebuffer, the swapchain and its present mode, moving on to the next frame, presenting (the picture's waiting copy composed straight into the screen under `present-single-copy`) |
 | [vkgl_device.cpp](vkgl_device.cpp) | The instance and the validation layer, the physical and logical device, the pipeline cache on disk, the frames' objects, the dummy resources, the surface, and teardown |
-| [pipeline_cache_file.h](pipeline_cache_file.h), [.cpp](pipeline_cache_file.cpp) | The pipeline cache's file: the driver's data in an envelope with its length and hash, read back only when whole, saved through a temporary file of each save's own and renamed into place |
+| [cache_file.h](cache_file.h), [.cpp](cache_file.cpp) | The envelope of the backend's cache files: a magic, the data's length and hash, read back only when whole, saved through a temporary file of each save's own and renamed into place |
+| [pipeline_cache_file.h](pipeline_cache_file.h), [.cpp](pipeline_cache_file.cpp) | The pipeline cache's files in that envelope: the driver's data, and the manifest of the keys made, with each key's program identity and age |
 | [vma.cpp](vma.cpp) | The Vulkan Memory Allocator's implementation, compiled once |
 
 ## Depends on
@@ -70,6 +71,14 @@ by a hash of its key's bytes and a compare of the whole key, or by the key as a 
 reference path), and its descriptor set in `Program::set_cache`; its temporary arrays are
 `Context::scratch`'s, kept for their capacity, so a draw that finds both allocates nothing (the
 registry's `vk-draw-cache`). A deleted program's pipelines leave the table with it.
+
+One worker thread makes pipelines ahead (`PipelinePrewarm`, R-10): when a program links, the keys
+earlier runs made for it (the manifest, `<cache>.manifest`, `PipelineManifest`) are queued for it,
+and it calls only `vkCreateGraphicsPipelines` into the shared pipeline cache. Its queue, its
+results and the key it is making are guarded by one mutex; the drawing thread takes a key the
+worker has made, waits for one it is making or has queued, and makes the rest itself. A program's
+release waits for its job and takes the rest back; the backend's close stops and joins the worker
+before anything else.
 
 ## Errors
 
@@ -120,7 +129,11 @@ CI). Where Vulkan cannot open, the window falls back to OpenGL and they repeat t
   indices and as a uniform block, frame after frame, under the reference path, device memory and
   the staging copy (`static-buffers-*`); the mirror let go and nothing through the ring.
 - `pipeline_cache_file`: the cache's file read back whole, a damaged one dropped, and writer threads
-  and writer processes saving one file at once leaving one whole save. It needs no GPU.
+  and writer processes saving one file at once leaving one whole save; the manifest read back, and
+  one of another key size, cut short or of another magic dropped. It needs no GPU.
+- `vulkan_prewarm`: a second run's draws make none of the first run's pipelines (the worker made
+  them), and nothing is made ahead for a program no longer built, with the entry off, or from a
+  damaged manifest.
 - `early_lighting_vulkan`, `probe_gpu_vulkan`, `hero_shadow_vulkan`, `sun_shadow_vulkan`,
   `sun_shadow_filter_reference_vulkan`, `gtao_vulkan`, `gtao_horizon_vulkan`,
   `enhanced_rendering_vulkan`, `enhanced_rendering_off_vulkan`: the enhanced rendering's passes on

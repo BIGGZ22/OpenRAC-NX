@@ -53,6 +53,7 @@ before and after, and how its frames are shown to be the same.
 | `shadow-static-cache` | off | none (exact) | A sun cascade's static casters are kept in a cache target and copied into the shadow atlas while the cascade's key is unchanged; only the mobys are drawn over them. Off: the copy costs more GPU time than it saves on both measured machines ([R-18](#r-18-a-static-shadow-cache-shipped-off)). |
 | `present-single-copy` | on | none (exact) | The frontend's blit of the picture into the window waits and becomes one blit into the screen, where nothing else touches the window first ([R-07](#r-07-one-copy-to-the-screen)). |
 | `vk-tight-sync` | on | none (exact) | Vulkan barriers name the stages and accesses they order, and only the copy to the screen waits for the swapchain image ([R-08](#r-08-barriers-that-name-their-stages)). |
+| `pipeline-prewarm` | on | none (exact) | The pipelines earlier runs made are made again on a worker thread once their program links, from a manifest beside the pipeline cache ([R-10](#r-10-pipelines-made-ahead-on-a-worker)). |
 
 Its tests are `render_opt` (the table, and the parsing of the variable: a name, a list, `all`, an
 unknown name kept apart; it runs in the headless preset too) and `render_opt_environment` (the
@@ -621,6 +622,81 @@ python3 tools/perf/render_bench.py --synthetic --compare-opt static-buffers-forc
 On real levels (the maintainers'): `openrac_render_bench --level assets/port/rac1/pal/level_12
 --warmup 3 --frames 10`, with and without `--opt-off static-buffers-device-local`, and the summary
 line's `warmup` counters.
+
+## R-10: pipelines made ahead on a worker
+
+**What changed** (`renderer/vulkan/vkgl_pipelines.cpp`, `vkgl_internal.h`, `vkgl_device.cpp`,
+`pipeline_cache_file.*`, the new `cache_file.*`), behind `pipeline-prewarm`:
+
+- **The manifest.** Every pipeline key the drawing thread makes is recorded with its program's
+  identity: a hash of its SPIR-V stages and of whether it uses the material pages and dynamic
+  uniforms (its layout), so the same shaders with the same defines are the same program in the
+  next run whatever their GL names. At close the manifest is saved beside the pipeline cache
+  (`<cache>.manifest`), in the envelope the cache uses, now one helper for both
+  (`cache_file.h`: magic, length, FNV-1a hash, a temporary file and a rename). Its data says its
+  format (`kManifestFormat`, which R-11 raises) and its key size, so another build's manifest is
+  dropped whole. Each key carries the runs since one made or used it; a key unused for eight runs
+  (a program no longer built) leaves the manifest, which holds at most 4,096 keys. Another build's
+  manifest is removed with its cache.
+- **The worker.** When a program links, the manifest's keys of its identity are queued for a
+  worker thread (`PipelinePrewarm`, a `JoiningThread` the backend stops and joins first at close).
+  It calls only `vkCreateGraphicsPipelines`, into the shared `VkPipelineCache` (internally
+  synchronised), through `create_graphics_pipeline`, the creation split out of `pipeline_for`, so
+  both threads make the same pipeline from the same key. A draw that needs a key the worker has
+  made takes it into `Context::pipelines`; a key still queued is moved to the front and waited
+  for, and one being made is waited for, so no key is made twice (a wait is never longer than the
+  drawing thread's own compile would have been, plus the one job ahead of it); any other key is
+  made as before. Nothing is skipped and no other pipeline stands in. A program's release takes
+  its jobs back and waits for the one being made before its modules go.
+- The trigger is the program's link, so the hooks are in `vkgl_gl.cpp` (`link_program`,
+  `release_program`, one call each), and the tests wait for the worker through
+  `vkgl::wait_for_pipeline_prewarm()` (`vkgl.h`): both outside the package's listed files, for the
+  maintainers to note.
+
+**The counter.** On the synthetic scene `vk_pipelines_created_after_warmup` is 0 before and after
+in every setting: the warm-up of ten pictures already holds every first use. What the pre-warm
+moves is the pipelines the drawing thread makes in the load and the warm-up, per run, of
+`render_bench.py --synthetic --compare-opt pipeline-prewarm` (the entry off, then on; five runs):
+
+| Setting | Mac | box1 |
+|---|---|---|
+| warm cache (the run drawn twice in one process; the second reported) | 4 to 0 | 4 to 0 |
+| base, cold (a new process with no cache and no manifest) | 7 to 7 | 7 to 7 |
+| enhanced, cold | 16 to 16 | 16 to 16 |
+
+A first run on a new machine (cold) has nothing to make ahead, and says so. In the warm run the
+four pipelines of the programs linked again are made on the worker. Every other counter is the
+same with the entry on and off. `vulkan_prewarm` covers a new process: a first run draws three
+states of a program and closes, and the second run's draws make none of the three.
+
+**Time, as information** (the first picture after the upload, median of five runs, off to on):
+warm cache Mac 14.5 to 13.7 ms, box1 6.7 to 6.7 ms; cold base Mac 22.4 to 22.5, box1 30.4 to
+30.6; the upload itself is unchanged (Mac 142.6 to 142.3 ms warm). On the synthetic scene the
+saving is small because the pipeline cache already makes the warm compiles cheap; a real level
+with its tens of programs is the maintainers' measurement (below).
+
+**Equivalence.** `render_equivalence_vulkan` compares the entry on and off in every scenario,
+Enhanced off and on, byte for byte: identical on both machines, no validation message, and again
+by hand with `OPENRAC_GPU_DRIVEN_OFF=1` and `OPENRAC_GPU_MATERIALS_OFF=1`. The pipelines are made
+by the same function from the same keys. `vulkan_prewarm` (new) checks the second run, a run of
+another program (nothing made ahead), the entry switched off (nothing made ahead) and a damaged
+manifest (dropped, the draws make their own); it passed ten runs in a row on both machines.
+`pipeline_cache_file` gained the manifest's checks (read back; another key size, cut short or
+another magic dropped; a key of the wrong size not saved). Built with `-fsanitize=thread` on the
+Mac, `vulkan_prewarm_test`, `vulkan_uniform_test`, `render_opt_test --vulkan` and
+`pipeline_cache_file_test` ran with no ThreadSanitizer report.
+
+Measured with:
+
+```sh
+python3 port/tools/perf/render_bench.py --synthetic --compare-opt pipeline-prewarm
+ctest --preset release -R '^vulkan_prewarm$' --repeat until-fail:10
+```
+
+On real levels the maintainers' commands are two runs of the game on the same build (the first
+writes the manifest), or
+`python3 port/tools/perf/render_bench.py --level assets/port/rac1/pal/level_12 --compare-opt pipeline-prewarm`
+(its warm-cache setting).
 
 ## R-13: a level's textures made at its load
 
