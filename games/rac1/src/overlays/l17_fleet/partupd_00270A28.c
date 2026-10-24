@@ -14,7 +14,7 @@ unsigned char *SpawnTrailParticle(char *parent, void *pos, float *vec) {
     int r = random_integer_below(5);
     unsigned char a = scale_ticks(r + 2);
     unsigned char b = random_integer_below(0xFF);
-    unsigned char *p = func_00218928(0x4F);
+    unsigned char *p = create_part(0x4F);
     if (p != 0) {
         char *d = (char *)p + 0x20;
         qcopy(p + 0x10, pos);
@@ -50,7 +50,7 @@ unsigned char *SpawnFadingParticle(char *pos, int mode, int step) {
     else
         n = 0xF - step;
     if (n >= 0) {
-        p = func_00218928(0x50);
+        p = create_part(0x50);
         if (p != 0) {
             qcopy(p + 0x10, pos);
             p[9] = func_001FA898_r(1.0f) + 0x70;

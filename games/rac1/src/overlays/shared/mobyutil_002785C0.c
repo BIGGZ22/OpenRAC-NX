@@ -4,7 +4,7 @@
 
 extern int func_001160D8(void);
 
-float RandomSquaredFalloff(float scale)
+float scale_by_one_minus_random_squared(float scale)
 {
     int x = (func_001160D8() >> 16) & 0xFFF;
     float t = (float)x;
@@ -22,7 +22,7 @@ extern float func_001F9FA8(float);
 void RandomRadialOffset(float *out, float scale)
 {
     float angle = random_angle_radians();
-    float magnitude = RandomSquaredFalloff(scale);
+    float magnitude = scale_by_one_minus_random_squared(scale);
     clear_u64_value(out);
     out[0] = FastCos(angle) * magnitude;
     out[1] = FastSin(angle) * magnitude;

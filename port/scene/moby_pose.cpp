@@ -6,7 +6,7 @@
 #include <cstring>
 #include <optional>
 
-namespace openrac::viewer {
+namespace openrac::scene {
 
 namespace rac1 = assets::rac1;
 
@@ -186,4 +186,4 @@ std::vector<rac1::JointMatrix> evaluate_moby(std::span<const std::uint8_t> ram, 
 
 }  // namespace
 
-}  // namespace openrac::viewer
+}  // namespace openrac::scene

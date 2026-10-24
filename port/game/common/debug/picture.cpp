@@ -59,12 +59,12 @@ void picture_marks(const Shown& shown) {
     // The box counts rows from the window's bottom, as OpenGL does; it is centred, so the same.
     p.y = static_cast<float>(shown.window_height - shown.box_y - shown.box_height) / scale;
     ImDrawList* draw = ImGui::GetBackgroundDrawList();
-    const viewer::LiveMoby* h = hero();
+    const host::LiveMoby* h = hero();
     const bool clicked =
         s.pick && ImGui::IsMouseClicked(ImGuiMouseButton_Left) && !io.WantCaptureMouse;
     float best = 40.0f * 40.0f;
     std::uint32_t picked = 0;
-    for (const viewer::LiveMoby& m : s.state.mobys) {
+    for (const host::LiveMoby& m : s.state.mobys) {
         ImVec2 at;
         if (!p.project(m.matrix[12], m.matrix[13], m.matrix[14], at)) {
             continue;

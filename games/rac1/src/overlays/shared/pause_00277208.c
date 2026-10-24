@@ -133,7 +133,7 @@ extern Moby_277208 *func_00226720(int);
 extern void func_00213D28(void *, int, int);
 extern void func_L00_002E0AE8(void);
 
-void func_L00_00277208(void) {
+void initialize_pause_menu(void) {
     Menu_277208 *m = &(*(Menu_277208 *)D_L00_001BA070);
     int *page;
     int queued = 0;
@@ -189,7 +189,7 @@ void func_L00_00277208(void) {
         if (st == 11 || st == 15) {
             queued = 1;
             (*(Snd_277208 *)D_L00_001842F0).unk224 = (*(Menu_277208 *)D_L00_001BA070).unkE4;
-            func_0020C7A0();
+            update_mission_list();
         }
         (*(Menu_277208 *)D_L00_001BA070).queued = 0;
         (*(Menu_277208 *)D_L00_001BA070).queuedState = 0;
@@ -197,7 +197,7 @@ void func_L00_00277208(void) {
 
     {
         char *r = (char *)D_L00_00180350;
-        func_001F9C30(r, &D_L00_00160340, 1.0f);
+        FastVecScale(r, &D_L00_00160340, 1.0f);
         qcopy(r - 0x10, &D_L00_00160350);
         r += 0x20;
         qzero(r);
@@ -216,10 +216,10 @@ void func_L00_00277208(void) {
         ((Cam_277208 *)D_L00_0016CB40)->i22C = 0;
         ((Cam_277208 *)D_L00_0016CB40)->i218 = 0;
     }
-    func_001F3140();
-    func_00219C08();
-    func_001F2608();
-    func_00234AC8(1);
+    UpdateViewContext();
+    reset_active_camera_position_and_basis();
+    BuildViewMatrices();
+    VU1_syncChain(1);
     func_00122598(0);
     D_L00_0015F4F8 = D_L00_0015F4F8 + 1;
 
@@ -236,7 +236,7 @@ void func_L00_00277208(void) {
         (*(Menu_277208 *)D_L00_001BA070).unk108 = c;
         (*(Menu_277208 *)D_L00_001BA070).unk10C = d;
         (*(Menu_277208 *)D_L00_001BA070).unk100 = d;
-        func_00226D50(0);
+        initialize_menu_stream_buffers(0);
     } else {
         int a, b, c, d, e, f;
         a = D_L00_00173F00.f4 + 0x60000;
@@ -254,21 +254,21 @@ void func_L00_00277208(void) {
         (*(Menu_277208 *)D_L00_001BA070).unk108 = c;
         (*(Menu_277208 *)D_L00_001BA070).unk10C = d;
         (*(Menu_277208 *)D_L00_001BA070).unk100 = f;
-        func_00226D50(1);
+        initialize_menu_stream_buffers(1);
     }
     *(int *)&D_L00_0015F658 = 0x2000;
-    func_002348E8();
+    VU1_initChain();
 
     if ((*(Menu_277208 *)D_L00_001BA070).state == 11 || (*(Menu_277208 *)D_L00_001BA070).state == 15) {
-        func_L00_002472D0();
+        initialize_render_archive_transfer();
     }
-    func_L00_00235CA0(0);
+    apply_group_entry_adjustment(0);
     if ((*(Menu_277208 *)D_L00_001BA070).state == 11 || (*(Menu_277208 *)D_L00_001BA070).state == 15 || (*(Menu_277208 *)D_L00_001BA070).state == 0x12) {
-        func_L00_00235960(1);
+        decompress_and_relocate_selected_groups(1);
     } else {
-        func_L00_00235960(0);
+        decompress_and_relocate_selected_groups(0);
     }
-    func_L00_002A21A8((*(Menu_277208 *)D_L00_001BA070).unk10, D_0015EF84, *(int *)((char *)D_0013E15A + 0x4AA) << 11);
+    DownloadFrameBuffer((*(Menu_277208 *)D_L00_001BA070).unk10, D_0015EF84, *(int *)((char *)D_0013E15A + 0x4AA) << 11);
     t = D_0015EF78;
     (*(Menu_277208 *)D_L00_001BA070).unk18 = t;
     if ((*(Menu_277208 *)D_L00_001BA070).state == 11 || (*(Menu_277208 *)D_L00_001BA070).state == 15) {
@@ -291,7 +291,7 @@ void func_L00_00277208(void) {
             p--;
         }
     }
-    func_L00_00235FF8(1);
+    select_moby_context(1);
     (*(Menu_277208 *)D_L00_001BA070).unkCC = ((Cnt_277208 *)D_L00_00197680[0])->bC;
     ((Cnt_277208 *)D_L00_00197680[0])->bC += 0x1C;
     for (n = 0; n < 4; n++) {
@@ -300,13 +300,13 @@ void func_L00_00277208(void) {
 
     if ((*(Menu_277208 *)D_L00_001BA070).page != 0) {
         for (i = 0; i < 14; i++) {
-            Moby_277208 *o = func_00226720(0x472);
+            Moby_277208 *o = create_menu_preview_moby(0x472);
             ((Moby_277208 **)D_L00_001BA220)[i] = o;
             if (o != 0) {
                 char *mtx;
                 o->flags &= 0xFFFD;
-                ((Moby_277208 **)D_L00_001BA220)[i]->update = (void *)func_L00_002E0AE8;
-                mtx = D_L00_00166D80;
+                ((Moby_277208 **)D_L00_001BA220)[i]->update = (void *)QuadMoby_Update;
+                mtx = player_camera;
                 ((Moby_277208 **)D_L00_001BA220)[i]->x = *(float *)(mtx + 0x140);
                 ((Moby_277208 **)D_L00_001BA220)[i]->y = *(float *)(mtx + 0x144);
                 ((Moby_277208 **)D_L00_001BA220)[i]->z = *(float *)(mtx + 0x148);
@@ -314,7 +314,7 @@ void func_L00_00277208(void) {
                 ((Moby_277208 **)D_L00_001BA220)[i]->r44 = 0;
                 ((Moby_277208 **)D_L00_001BA220)[i]->r48 = 0;
                 k = ((struct { int ids[14]; } *)(*(Menu_277208 *)D_L00_001BA070).page)->ids[i];
-                func_00213D28(((Moby_277208 **)D_L00_001BA220)[i], k, ((Moby_277208 **)D_L00_001BA220)[i]->cls->anims[k]->b10 - 1);
+                MobySetAnimation(((Moby_277208 **)D_L00_001BA220)[i], k, ((Moby_277208 **)D_L00_001BA220)[i]->cls->anims[k]->b10 - 1);
             }
         }
     }
@@ -344,7 +344,7 @@ extern void func_L00_0023A690(void);
 extern void func_L00_0023A788(void);
 
 /* PageMenuClose: closes the pause menu. */
-void PauseMenu_Close(void) {
+void close_pause_menu(void) {
     int i;
     int value;
     int handle;
@@ -396,24 +396,24 @@ void PauseMenu_Close(void) {
             *(int *)&D_0015EF78 = *(int *)(state + 0x18);
             Hud_SendResidentBank(0, value, 0);
         }
-        HudBank_Release(2);
+        apply_group_entry_adjustment(2);
         if (*(int *)(*(char **)(table + 0x18) + 0x80) != 0) {
-            HudBank_Release(3);
+            apply_group_entry_adjustment(3);
         }
         if (*(int *)(*(char **)(table + 0x18) + 0x84) != 0) {
-            HudBank_Release(4);
+            apply_group_entry_adjustment(4);
         }
         {
             int k;
             for (k = 0; k < 14; k++) {
-                D_L00_001BA220[k] = DeleteMenuMoby(D_L00_001BA220[k]);
+                D_L00_001BA220[k] = func_002267C0(D_L00_001BA220[k]);
             }
         }
-        handle = Hud_RegisterHealthBank();
-        Hud_ExtendBankTime(handle, scale_ticks(0xB4));
+        handle = show_health_hud();
+        hud_keep_visible(handle, scale_ticks(0xB4));
         handle = queue_animation_update(2, 0x754E, HudBoltsInit, HudBoltsUpdate,
                                HudBoltsDraw, &gBolts, 9999999);
-        Hud_ExtendBankTime(handle, scale_ticks(0xB4));
+        hud_keep_visible(handle, scale_ticks(0xB4));
         {
             char *s = D_L00_001BA070;
             *(int *)s = 0x14;
@@ -552,7 +552,7 @@ extern void func_L00_002777C0(void);
 
 // Page-menu (pause/map/planet-select) per-frame update: state machine over the menu pages.
 // Adapted from Lombyte (GPL-3.0) for PAL: src/overlays/shared/audio_voices_00276368.c, FUN_L00_00276bd0.
-void PauseMenu_Update(void) {
+void update_pause_menu(void) {
     Own *u8p;
     Mth *m;
     NO *obj;
@@ -571,7 +571,7 @@ void PauseMenu_Update(void) {
     if (GS.unk148 != 0) {
         GS.unk148 = GS.unk148 - 1;
     }
-    q = D_0013D390;
+    q = memory_card_state;
     if (*(int *)(q + 0xDC) < 3 && *(int *)(q + 0xE4) < 0) {
         GS.unk154 = GS.unk154 + 1;
     } else {
@@ -596,14 +596,14 @@ void PauseMenu_Update(void) {
             return;
         }
         *(int *)&D_L00_0015F658 = 0x1E000;
-        VuChain_SetLevelOffset();
+        calculate_dma_transfer_address();
         qcopy(D_L00_00166EC0, &GS.v40);
         qcopy(D_L00_00166EC0 + 4, &GS.v50);
         D_L00_0016CBF0 = GS.unkE8;
-        MobyPool_Swap(0);
+        select_moby_context(0);
         if (GS.unk140 != 0) {
             *(int *)&D_L00_001600CC = -1;
-            LoadMobyClassResources(GS.unk140, GS.unk144);
+            select_world_object_resource_tables(GS.unk140, GS.unk144);
         }
         UpdateFog();
         D_L00_0015F6BC = 1;
@@ -614,28 +614,28 @@ void PauseMenu_Update(void) {
         if (GS.unkC == 2) {
             char *w = D_L00_001842F0;
             STUB_printf(D_L00_001E9530, *(int *)(w + 0x224));
-            ShipTravelTo(*(int *)(w + 0x224));
+            prepare_target_level_transition(*(int *)(w + 0x224));
         } else if (GS.unkC == 3) {
             tmp = D_0015EFD8;
             D_0015EFD8 = 2;
             GS.unk130 = tmp;
             FadeToBlack(scale_ticks(0x10));
             D_L00_0015F6A8 = 0;
-            PlayMovieEntryIfIdle((int)GS.unkE4);
+            start_indexed_disc_stream((int)GS.unkE4);
         } else if (GS.unkC == 4) {
             tmp = D_0015EFD8;
             D_0015EFD8 = 1;
             GS.unk130 = tmp;
             FadeToBlack(scale_ticks(0x10));
             D_L00_0015F6A8 = 0;
-            PlayMovieEntryWithMode((int)GS.unkE4);
+            queue_movie_with_game_language((int)GS.unkE4);
         } else if (GS.unkC == 6) {
             tmp = D_0015EFD8;
             D_0015EFD8 = 1;
             GS.unk130 = tmp;
             FadeToBlack(scale_ticks(0x10));
             D_L00_0015F6A8 = 0;
-            PlayMovieEntry((int)GS.unkE4);
+            queue_language_zero_movie((int)GS.unkE4);
         } else if (GS.unkC == 5) {
             tmp = D_0015EFD8;
             D_0015EFD8 = 1;
@@ -648,7 +648,7 @@ void PauseMenu_Update(void) {
             GS.unk130 = tmp;
             FadeToBlack(scale_ticks(0x10));
             D_L00_0015F6A8 = 0;
-            EnterSlideshowMode();
+            start_slideshow();
         } else {
             D_L00_0015F6A8 = 0;
         }
@@ -663,13 +663,13 @@ void PauseMenu_Update(void) {
     v = GS.state;
     if (v == 0 || v == 0xA || v == 0xE || v == 0x11 || v == 0x21 || v == 0x2D ||
         v == 0x23) {
-        func_L00_00277208();
+        initialize_pause_menu();
     }
     if ((D_0015EFB4_m & 1) && !(*(int *)&D_L00_0015F6AC < 8)) {
-        Freeze_Enter(3, GS.owner, 0);
+        mode_freeze_init(3, GS.owner, 0);
         return;
     }
-    PauseCheatEntry();
+    process_unlock_code_input();
     if (GS.state == 1) {
         GS.unk14 = (GS.unk14 < 1) ? 0 : GS.unk14 - 1;
         if (GS.unk14 == 0) {
@@ -748,10 +748,10 @@ L2:
             }
         }
     }
-    func_00213C78();
+    update_visible_resident_objects();
     sound_update();
     if (GS.unkC != 0) {
-        PauseMenu_Close();
+        close_pause_menu();
     }
 }
 typedef int u128 __attribute__((mode(TI)));
@@ -802,8 +802,8 @@ typedef struct PageMobyData {
 } PageMobyData;
 
 /* draws the pause menu pages: lays out each page moby's screen rect, then renders each page's texture */
-void PauseMenu_DrawPages(int arg0) {
-    u128 c[4];
+void draw_pause_menu_pages(int transfer_only) {
+    u128 corners[4];
     u128 pad[5];
     u128 box[2];
     struct {
@@ -812,18 +812,18 @@ void PauseMenu_DrawPages(int arg0) {
         int x;
         int y;
     } rect;
-    char **pp;
+    char **page_objects;
     int i;
     int k;
     int j;
-    int n;
+    int flashing_panel_index;
     int pass;
     int flags;
 
-    framebuf_appendLargeSetup();
-    pp = 0;
-    UploadImageStrip(PM.unk10, D_0015EF84, *(int *)((char *)D_0013E15A + 0x4AA) << 11);
-    if (arg0 != 0) {
+    append_gif_transfer_packet();
+    page_objects = 0;
+    append_draw_buffer_upload_packets(PM.unk10, D_0015EF84, *(int *)((char *)D_0013E15A + 0x4AA) << 11);
+    if (transfer_only != 0) {
         return;
     }
     ResetGsRegisters();
@@ -841,55 +841,55 @@ void PauseMenu_DrawPages(int arg0) {
         }
     }
     if (PM.owner != 0) {
-        pp = (char **)(PM.owner + 0x44);
+        page_objects = (char **)(PM.owner + 0x44);
     }
     for (k = 0; k < 14; k++) {
-        PageMobyData *d;
+        PageMobyData *page_data;
         if (D_L00_001BA220[k] == 0 || D_L00_001B2740[k] == 0) {
             continue;
         }
         if (k == 6 && PM.unkD8 == 0) {
             continue;
         }
-        d = *(PageMobyData **)((char *)D_L00_001BA220[k] + 0x78);
-        qcopy(&c[0], d);
-        qcopy(&c[1], &d->row[1]);
-        qcopy(&c[2], &d->row[2]);
-        qcopy(&c[3], &d->row[3]);
-        box[0] = c[0];
-        box[1] = c[3];
-        func_00238D90(&box[0], &box[1], &rect.w, &rect.h, &rect.x, &rect.y);
+        page_data = *(PageMobyData **)((char *)D_L00_001BA220[k] + 0x78);
+        qcopy(&corners[0], page_data);
+        qcopy(&corners[1], &page_data->row[1]);
+        qcopy(&corners[2], &page_data->row[2]);
+        qcopy(&corners[3], &page_data->row[3]);
+        box[0] = corners[0];
+        box[1] = corners[3];
+        project_graphics_bounds(&box[0], &box[1], &rect.w, &rect.h, &rect.x, &rect.y);
         flags = rect.w;
         rect.x++;
         rect.y++;
-        if (pp != 0 && pp[k] != 0) {
-            *(int *)(pp[k] + 0x20) = flags;
-            *(int *)(pp[k] + 0x24) = rect.h;
-            *(int *)(pp[k] + 0x18) = rect.x;
-            *(int *)(pp[k] + 0x1C) = rect.y;
+        if (page_objects != 0 && page_objects[k] != 0) {
+            *(int *)(page_objects[k] + 0x20) = flags;
+            *(int *)(page_objects[k] + 0x24) = rect.h;
+            *(int *)(page_objects[k] + 0x18) = rect.x;
+            *(int *)(page_objects[k] + 0x1C) = rect.y;
         }
-        d->x = rect.x;
-        d->y = rect.y;
-        d->w = rect.w;
-        d->h = rect.h;
+        page_data->x = rect.x;
+        page_data->y = rect.y;
+        page_data->w = rect.w;
+        page_data->h = rect.h;
         func_00201640(rect.x + 1, rect.y + 1, rect.x + rect.w - 1, rect.y + rect.h - 1, D_L00_00160330, 0);
     }
     for (pass = 0; pass < 2; pass++) {
         HEnt **mobys = D_L00_001BA220;
         for (j = 0; j < 14; j++) {
-            char *m = (char *)mobys[j];
-            int pw, ph, px, py;
-            int tw, th, su, sv;
-            int r, u, v, u1, v1;
-            char *d;
-            if (m == 0 || pp == 0 || pp[j] == 0) {
+            char *moby = (char *)mobys[j];
+            PageMobyData *vars;
+            int width, height, x, y;
+            int width_log2, height_log2, target_width, target_height;
+            int draw_result, u_start, v_start, u_end, v_end;
+            if (moby == 0 || page_objects == 0 || page_objects[j] == 0) {
                 continue;
             }
-            flags = *(int *)(pp[j] + 0x10);
+            flags = *(int *)(page_objects[j] + 0x10);
             if (flags & 4) {
                 continue;
             }
-            if (D_L00_001B2740[j] == 0 || *(int *)(pp[j] + 4) == 0) {
+            if (D_L00_001B2740[j] == 0 || *(int *)(page_objects[j] + 4) == 0) {
                 continue;
             }
             if (j == 6 && PM.unkD8 == 0) {
@@ -902,72 +902,72 @@ void PauseMenu_DrawPages(int arg0) {
                 continue;
             }
             if (flags & 1) {
-                (*(int (**)(char *))(pp[j] + 4))(pp[j]);
+                (*(int (**)(char *))(page_objects[j] + 4))(page_objects[j]);
                 continue;
             }
-            d = *(char **)(m + 0x78);
-            px = *(int *)(d + 0x50);
-            py = *(int *)(d + 0x54);
-            pw = *(int *)(d + 0x58);
-            ph = *(int *)(d + 0x5C);
-            tw = 7;
-            while ((1 << tw) < pw) {
-                tw++;
+            vars = *(PageMobyData **)(moby + 0x78);
+            x = vars->x;
+            y = vars->y;
+            width = vars->w;
+            height = vars->h;
+            width_log2 = 7;
+            while ((1 << width_log2) < width) {
+                width_log2++;
             }
-            th = 7;
-            while ((1 << th) < ph) {
-                th++;
+            height_log2 = 7;
+            while ((1 << height_log2) < height) {
+                height_log2++;
             }
-            while (tw + th >= 18) {
-                th--;
+            while (width_log2 + height_log2 >= 18) {
+                height_log2--;
             }
-            Framebuf_SetupRenderTarget(tw, th, pass != 0, 1.0f);
-            su = 1 << tw;
-            sv = 1 << th;
-            func_002017C8(0, 0, su, sv, D_L00_00160330, 0, 0);
-            r = (*(int (**)(char *))(pp[j] + 4))(pp[j]);
-            BeginDrawFrame();
+            configure_graphics_render_target_and_projection(width_log2, height_log2, pass != 0, 1.0f);
+            target_width = 1 << width_log2;
+            target_height = 1 << height_log2;
+            draw_hud_rect_depth(0, 0, target_width, target_height, D_L00_00160330, 0, 0);
+            draw_result = (*(int (**)(char *))(page_objects[j] + 4))(page_objects[j]);
+            begin_draw_frame();
             VU1_addGSregister(0x42, 0x8000000064L);
             VU1_addGSregister(0x47, 0x43);
-            if (r & 1) {
+            if (draw_result & 1) {
                 continue;
             }
-            u = 0;
-            u1 = su;
-            v = 0;
-            v1 = sv;
-            if (r & 2) {
-                u1 = pw;
-                v1 = ph;
-            } else if (r & 8) {
-                u = (u1 - pw) / 2;
-                v = (v1 - ph) / 2;
-                u1 -= u;
-                v1 -= v;
-                if (u < 0) {
-                    u = 0;
+            u_start = 0;
+            u_end = target_width;
+            v_start = 0;
+            v_end = target_height;
+            if (draw_result & 2) {
+                u_end = width;
+                v_end = height;
+            } else if (draw_result & 8) {
+                u_start = (u_end - width) / 2;
+                v_start = (v_end - height) / 2;
+                u_end -= u_start;
+                v_end -= v_start;
+                if (u_start < 0) {
+                    u_start = 0;
                 }
-                if (v < 0) {
-                    v = 0;
+                if (v_start < 0) {
+                    v_start = 0;
                 }
-                if (u1 > su) {
-                    u1 = su;
+                if (u_end > target_width) {
+                    u_end = target_width;
                 }
-                if (v1 > sv) {
-                    v1 = sv;
+                if (v_end > target_height) {
+                    v_end = target_height;
                 }
-            } else if (r & 4) {
-                if (pw < ph) {
-                    u = u1 / 2 - (pw * u1) / (ph * 2);
-                    u1 -= u;
+            } else if (draw_result & 4) {
+                if (width < height) {
+                    u_start = u_end / 2 - (width * u_end) / (height * 2);
+                    u_end -= u_start;
                 } else {
-                    v = v1 / 2 - (ph * v1) / (pw * 2);
-                    v1 -= v;
+                    v_start = v_end / 2 - (height * v_end) / (width * 2);
+                    v_end -= v_start;
                 }
-            } else if (!(r & 0x10)) {
+            } else if (!(draw_result & 0x10)) {
                 continue;
             }
-            DrawTexturedQuad(px, py, pw, ph, u, v, u1 - u, v1 - v, 0x80808080L, D_0015EFD0);
+            DrawTexturedQuad(x, y, width, height, u_start, v_start, u_end - u_start, v_end - v_start, 0x80808080L, D_0015EFD0);
         }
         if (pass == 0) {
             RestoreMobyClassDists();
@@ -977,9 +977,9 @@ void PauseMenu_DrawPages(int arg0) {
         }
     }
     SetupGifPaging(0);
-    for (n = 0; n < 14; n++) {
-        if (D_L00_001B2740[n] != 0 && (n != 6 || PM.unkD8 != 0)) {
-            DrawMenuFlashingPanel((int)D_L00_001BA220[n]);
+    for (flashing_panel_index = 0; flashing_panel_index < 14; flashing_panel_index++) {
+        if (D_L00_001B2740[flashing_panel_index] != 0 && (flashing_panel_index != 6 || PM.unkD8 != 0)) {
+            draw_menu_flashing_panel((int)D_L00_001BA220[flashing_panel_index]);
         }
     }
     DoGifPaging();
@@ -1157,7 +1157,7 @@ extern unsigned char D_0013D50F[];
 extern char D_0013D355[];
 
 /* Cheat-code entry on the pause screen. */
-void PauseCheatEntry(void) {
+void process_unlock_code_input(void) {
     char *pad = (char *)D_0013A5E0 + 0x2460;
     int lim0, lim;
     int va, vb, vc;
@@ -1198,15 +1198,15 @@ void PauseCheatEntry(void) {
         vb = code - 0x37;
         vc = code - 0x3d;
         if (code < 0x25) {
-            (D_0013D50F + 0xB9)[code] = 1;
-            (gHavePersuader + 5)[code] = 1;
+            (menu_item_enabled_115 + 0xB9)[code] = 1;
+            (discount_purchase_pricing + 5)[code] = 1;
         } else if ((unsigned)(code - 0x25) < 0x12) {
-            UnlockPlanet(va);
+            unlock_planet(va);
         } else if ((unsigned)vb < 6) {
             char *p3 = D_0013D355 + 0x13B;
             p3[vb] = 1;
         } else if ((unsigned)vc < 0x1e) {
-            unsigned char *q = D_0013D50F + 1 + vc;
+            unsigned char *q = menu_item_enabled_115 + 1 + vc;
             if (!*q) {
                 *q = 1;
                 PlayBankSound(1, 0, 0);
@@ -1223,14 +1223,14 @@ extern void func_001E9768(void *);
 extern char D_L00_00166D80[];
 
 /* sets up a pause-menu helper moby in front of the camera */
-int PauseMenu_SetupHelperMoby(char *h) {
+int enter_streamed_moby_screen(char *h) {
     char *m;
     int r;
     m = func_00226720_a(0x7A5);
     *(int *)(h + 0x34) = 0;
     if (m != 0) {
         char *d;
-        char *g = gCameraLvl;
+        char *g = player_camera;
         *(char **)(h + 0x44) = m;
         *(short *)(m + 0x34) = 0;
         *(float *)(m + 0x10) = *(float *)(g + 0x140) + 2.2f;
@@ -1245,7 +1245,7 @@ int PauseMenu_SetupHelperMoby(char *h) {
     } else {
         *(int *)(h + 0x34) = 3;
     }
-    r = ClaimStreamBinding(1);
+    r = acquire_menu_stream_buffer(1);
     *(int *)(h + 0x3C) = r;
     if (r == 0) {
         *(int *)(h + 0x34) = 3;
@@ -1326,17 +1326,17 @@ extern BoltSource_286068 D_0014D690[][64];
 
 /* the bolt tally slot of moby uid in level lvl: scanning down from slot 63, the first slot that
    holds uid (stored as uid + 1) or is free, which it claims; -1 when there is none or uid < 0 */
-int BoltTally_FindSlot(int lvl, int uid) {
+int find_or_assign_bolt_source_slot(int lvl, int uid) {
     int k = -1;
 
     if (uid >= 0) {
         uid++;
         k = 63;
-        while (k >= 0 && D_0014D690[lvl][k].uid != uid && D_0014D690[lvl][k].uid != 0) {
+        while (k >= 0 && bolt_source_stats[lvl][k].uid != uid && bolt_source_stats[lvl][k].uid != 0) {
             k--;
         }
         if (k >= 0) {
-            D_0014D690[lvl][k].uid = uid;
+            bolt_source_stats[lvl][k].uid = uid;
         }
     }
     return k;
@@ -1360,7 +1360,7 @@ extern unsigned char D_0013E633 NOT_SDA;
 extern int D_0015EE84_m __asm__("D_0015EE84") MACRO_ADDR;
 
 /* Seeds the pause-menu snapshot: copies the header, marks valid entries in the bitmasks, fills the state record. Adapted from Lombyte (GPL-3.0) for PAL: overlays/shared/gameplay_state_00284e50.c, FUN_L00_00284e50. */
-void PauseMenu_SeedSnapshot(void *a0, void *a1)
+void jet_reset_camera(void *a0, void *a1)
 {
     unsigned char *src;
     int i;
@@ -1374,7 +1374,7 @@ void PauseMenu_SeedSnapshot(void *a0, void *a1)
         if ((unsigned char)v == 0) continue;
         if ((unsigned char)v != 1 && D_0014C150[lvl][(unsigned char)v - 2] != 0xFF) continue;
         D_L00_001BB610.f[i] = v;
-        D_0014C290[lvl][i >> 5] |= 1 << (i & 0x1F);
+        level_moby_killed[lvl][i >> 5] |= 1 << (i & 0x1F);
         D_L00_001BA860[i >> 5] |= 1 << (i & 0x1F);
     }
     g = (char *)D_L00_001BB5C0;
@@ -1417,7 +1417,7 @@ extern void func_L00_001ED600(void);
 extern void func_00216270(void);
 
 /* loads the saved pause-menu state block into the game globals */
-void PauseMenu_LoadSnapshot(void) {
+void restore_or_clear_level_state(void) {
     char *p = (char *)D_L00_001BB5C0;
     unsigned char *g;
     unsigned char *b;
@@ -1452,7 +1452,7 @@ void PauseMenu_LoadSnapshot(void) {
         s = 0x1A3;
         break;
     default:
-        func_001F9978();
+        raise_kernel_trap();
     }
     for (i = 0; (e = (char *)D_L00_00160098 + (i << 8)) < (char *)D_L00_0016009C; i++) {
         if (*(short *)(e + 0xA6) == s) {
@@ -1467,7 +1467,7 @@ done:
         func_L00_00251E30(*(void **)(h + 0x2080));
         func_001FA1F8(*(char **)(h + 0x2080) + 0xC0, h + 0x90);
     }
-    CameraResetBehindHero();
+    init_camera_system();
     register_audio_stream_callback();
 }
 extern unsigned char *D_L00_00160098 MACRO_ADDR;
@@ -1486,7 +1486,7 @@ typedef struct { int off; int pad; unsigned short len; short kind; short a; shor
 extern int func_L00_00286498(int, int);
 
 /* Applies a patch table to the matching records. */
-void Moby_ApplyPatchTable(int *h) {
+void restore_moby_state_entries(int *h) {
     int i;
 
     for (i = 0; i < *h; i++) {

@@ -1,0 +1,14 @@
+# Functions with the same code in PAL v2.00 and NTSC-U, matched on one side only (tools/version_sync.py ntsc).
+# to the NTSC decomp: our C builds the NTSC-U bytes and the NTSC decomp has not matched it (a pull request
+# there); from the NTSC decomp: matched there, not here. Names, places and directions only.
+# name	direction	NTSC decomp name	NTSC-U place
+func_00216C50	to the NTSC decomp	music_transition	boot:00215E00
+func_0022FDC0	from the NTSC decomp	update_level_gameplay_frame	boot:0022EAA8
+func_00238D90	from the NTSC decomp	project_graphics_bounds	boot:00237A78
+func_00238F98	from the NTSC decomp	project_graphics_bounds_float	boot:00237C80
+func_L00_002BF380	to the NTSC decomp	FUN_L00_002be078	00:002BE078
+func_L00_002C12B0	from the NTSC decomp	FUN_L00_002bffa8	00:002BFFA8
+func_L00_002D8898	from the NTSC decomp	FUN_L00_002d73e8	00:002D73E8
+func_L01_002F6540	from the NTSC decomp	FUN_L01_002f5168	01:002F5168
+func_L05_0030F358	to the NTSC decomp	FUN_L05_0030de90	05:0030DE90
+func_L10_002DE018	to the NTSC decomp	FUN_L10_002dcc58	10:002DCC58

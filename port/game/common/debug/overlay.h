@@ -12,9 +12,9 @@
 // to what needs it (CODING_CONVENTIONS.md, sections 11.4 and 24). The window's thread, the one
 // that calls debug_overlay.h's functions, is the only one that reads or writes it.
 //
-// The viewer's types (viewer::GameState, viewer::LiveMoby) come through debug_overlay.h: its
-// include of viewer/game_state.h is the layering's listed exception (rules.tsv, until P2-03), and
-// the overlay's other files reach them through it rather than adding includes of their own.
+// The game's state (host::GameState, host::LiveMoby: game/common/profile.h) comes through
+// debug_overlay.h, and the overlay's other files reach it through that include rather than adding
+// includes of their own.
 
 #pragma once
 
@@ -149,7 +149,7 @@ struct State {
     std::string game;
     std::span<const std::uint8_t> ram;
     int level = -1;
-    viewer::GameState state;
+    host::GameState state;
     std::uint32_t draws = 0;
     std::uint64_t tick = 0;
     Tick counts;
@@ -281,14 +281,14 @@ std::string function_name(std::uint32_t address);
 
 // Returns the hero's moby (class 0) among the last tick's live mobys, or nullptr when there is none.
 // The pointer lives until the next tick.
-const viewer::LiveMoby* hero();
+const host::LiveMoby* hero();
 
 // Returns the selected moby (s.selected) among the last tick's live mobys, or nullptr when none is
 // selected or it is gone. The pointer lives until the next tick.
-const viewer::LiveMoby* selected_moby();
+const host::LiveMoby* selected_moby();
 
 // Returns the distance between the positions of mobys `a` and `b`, in the game's units.
-float distance(const viewer::LiveMoby& a, const viewer::LiveMoby& b);
+float distance(const host::LiveMoby& a, const host::LiveMoby& b);
 
 // Returns `bytes` as megabytes with one decimal ("12.3 MB").
 std::string megabytes(std::uint64_t bytes);

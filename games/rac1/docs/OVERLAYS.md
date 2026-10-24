@@ -138,8 +138,9 @@ resident and is shared by every level.
    `src/overlays/`. In `progress/report.json` the shared code is one unit
    ("Shared level code", category `common`) and each level is one
    unit named after it ("Level 04: Eudora", categories `levels` and
-   `level_NN`), so each distinct function counts once. decomp.dev lays
-   its treemap out in report order with no border around a group: one
+   `level_NN`), so each distinct function counts once. decomp.dev, which
+   published the report first, laid its treemap out in report order with
+   no border around a group: one
    unit per level makes each level one box, and the shared files sit
    side by side. The executable's units and categories
    stay as they are; the report's totals cover everything, so its
@@ -198,11 +199,55 @@ words, with the class's name from `editor/moby_classes.tsv` (OpenRAC's top level
 The names stay `func_LNN_XXXXXXXX` everywhere else: a role is a hint for
 the worker, and the oClass numbers are RaC1's own.
 
-Four table pointers are not a catalogued function start: 0x10 into the
-24-byte func_L00_002EDB58 (InitCamera_7 in levels 0, 1 and 8) and 8 into
-the 16-byte func_L08_002DB438 (UpdateMoby_324 in level 8). Each is two
-small functions the split joined; the next catalogue run can use the
-table pointers as split points.
+All dispatch-table pointers now identify a catalogued function start.
+The four previously interior pointers (InitCamera_7 in levels 0, 1 and 8,
+and UpdateMoby_324 in level 8) are corrected below.
+
+### PAL v2 boundary corrections, 2026-10-23
+
+`tools/overlay_boundary_fixes.py --check` checks all 27 affected retail
+placements, references and preceding returns. Catalogue generation applies
+the same corrections; the existing remnant rule remains unchanged.
+
+The same post-split pass rejoins four functions whose shared prefixes the
+initial fingerprint pass splits off, at level 0's `0x24BBB0` (56 bytes),
+`0x24BF98` (72), `0x24BFE0` (68) and `0x25D3C0` (48). Each joined range is the
+same code as an executable function (`func_002095E8`, `func_002099D0`,
+`func_00209A18` and `func_00215078`), so, like any such function, its 19
+placements are catalogued under that function (kind `exe`) and built from its
+C; the check verifies that identity against the executable. The tracked
+`config/overlays/matched_boundaries.json` records those 76 addresses, exact code
+sizes, retail SHA-256 values and the executable counterpart. The correction removes only their absorbed
+prefix occurrences; independent copies and the two unproven joins remain split.
+Variants are computed after these corrections, from the final function ranges,
+so removed tails cannot remain variant names or parents.
+
+- `func_L00_001EB1A4` began on the preceding remnant's alignment nop.
+  Its 19 copies now begin four bytes later as the 4-byte
+  `func_L00_001EB1A8`. The erroneous join to `func_L00_001EB194` is removed.
+- `func_L06_00216EE4` was four copies of the linker's `0xCDCDCDCD`
+  alignment fill after `jr $31; nop`. It is excluded from the function
+  catalogue; the original dump keeps the fill.
+- `func_L08_002DB438` is a 4-byte stripped epilogue word plus alignment.
+  The `jr $31; nop` at `0x2DB440` is a separate empty UpdateMoby_324,
+  pointed to by `vtbl` at `0x1FCE50`. It is a further placement of the
+  existing exact empty function `func_001E9768`, not a new C function.
+
+- `func_L00_002EDB58` was two stripped store-word slots followed by
+  InitCamera_7 at offset `+0x10`, referenced by `camvtbl` in levels 0, 1
+  and 8. The 12-byte remnant entry excludes its final alignment nop;
+  the independent eight-byte return-zero function is three additional
+  placements of the existing exact `func_001E97C8` in `src/game/stub.c`.
+
+The unique non-executable-code denominator decreases by 32 bytes: four
+bytes of misplaced alignment, four bytes of fill, and twelve bytes from
+the split L08 entry (four alignment bytes and an eight-byte function
+already counted elsewhere), plus twelve from InitCamera_7 (four final
+alignment bytes and the eight-byte return-zero function already counted
+elsewhere). No newly reconstructed C bytes are claimed by these
+corrections. Catalogue placement bytes decrease by 112; that
+metric follows the existing four-byte empty-function catalogue entry,
+while the actual compiled empty function remains eight bytes.
 
 ## Joined functions (`config/overlays/joined.tsv`)
 

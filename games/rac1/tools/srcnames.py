@@ -20,7 +20,9 @@ def _table():
     names = dict(re.findall(r"(?m)^#define\s+(\w+)\s+(func_(?:L\d\d_)?[0-9A-Fa-f]{8})\s*$", text))
     if not names:
         return None, names
-    token = re.compile(r"\b(" + "|".join(re.escape(n) for n in sorted(names, key=len, reverse=True)) + r")\b")
+    # All keys above are whole \w+ tokens. Scanning tokens once avoids trying
+    # thousands of alternatives at every word in every source file.
+    token = re.compile(r"\b\w+\b")
     return token, names
 
 
@@ -29,7 +31,7 @@ def canon(text: str) -> str:
     token, names = _table()
     if token is None:
         return text
-    return token.sub(lambda m: names[m.group(1)], text)
+    return token.sub(lambda m: names.get(m.group(0), m.group(0)), text)
 
 
 def read_c(path, **kw) -> str:

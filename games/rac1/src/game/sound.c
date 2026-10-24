@@ -257,10 +257,10 @@ extern int func_001EFE10_a(void *, void *, int, int, int) __asm__("func_001EFE10
 /* Jitter the vector at arg0 between 0.5 and 6.0, fold in the reference
    frame at D_00187180, and if the emitter accepts it, re-derive it from
    D_00194220, damp to 3/4 and fold the frame in again. */
-void Sound_PickOcclusionOrigin(void *arg0) {
-    RandomSphericalOffset(arg0, 0.5f, 6.0f);
+void clamp_voice_position_to_collision(void *arg0) {
+    random_spherical_offset(arg0, 0.5f, 6.0f);
     func_001F9BD8_a(arg0, arg0, D_00187180_a);
-    if (func_001EFE10_a(D_00187180_a, arg0, 0x82, D_0013E6BC, 0) != 0) {
+    if (func_001EFE10_a(D_00187180_a, arg0, 0x82, sound_probe_ignore, 0) != 0) {
         func_001F9BF0_a(arg0, D_00194220, D_00187180_a);
         func_001F9C30_a(arg0, arg0, 0.75f);
         func_001F9BD8_a(arg0, arg0, D_00187180_a);
@@ -275,13 +275,13 @@ extern void func_001EFE10(void *, void *, int, int, int);
 /* Aim the vector from the frame at D_00187180 toward arg0+0x20, scaled to
    3/4 and 64, and return the line test from arg1 to its end. The int
    return keeps retail's argument order for func_001F9BD8. */
-int Sound_LineTest(void *arg0, void *arg1) {
+int test_voice_occlusion(void *arg0, void *arg1) {
     float v[4];
 
-    FastVecSub(v, (char *)arg0 + 0x20, D_00187180);
+    FastVecSub(v, (char *)arg0 + 0x20, camera_position);
     FastVecScale(v, v, 0.75f);
     func_001F9E58(v, v, 64.0f);
-    FastVecAdd(v, v, D_00187180);
+    FastVecAdd(v, v, camera_position);
     return func_001EFE10_a(arg1, v, 0x82, *(int *)((char *)arg0 + 0x18), 0);
 }
 
@@ -293,17 +293,25 @@ extern int func_001FA898_i(float) __asm__("func_001FA898");
    chain setting one `r` with a single return; early returns let jump.c
    move the last arm's return block to the end. It returns int, and its
    one caller here uses a void alias. */
-int sound_GetFade(void *arg0, float x, float lo, float hi) {
-    char *s = (char *)arg0;
+struct VoiceVolumeDefinition {
+    u8 pad_00[0x8];
+    s32 far_volume;               /* 0x08 */
+    s32 near_volume;              /* 0x0C */
+    u8 pad_10[0x9];
+    u8 attenuation_flags;         /* 0x19: bit 0 selects the squared falloff */
+};
+
+int calculate_voice_distance_volume(void *arg0, float x, float lo, float hi) {
+    struct VoiceVolumeDefinition *definition = (struct VoiceVolumeDefinition *)arg0;
     int r;
-    if (*(unsigned char *)(s + 0x19) & 1) {
-        if (x <= lo) r = *(int *)(s + 0xC);
-        else if (hi <= x) r = *(int *)(s + 0x8);
-        else r = *(int *)(s + 0x8) + func_001FA898_i((hi - x) * (hi - x) * IntToFloat(*(int *)(s + 0xC) - *(int *)(s + 0x8)) / ((hi - lo) * (hi - lo)));
+    if (definition->attenuation_flags & 1) {
+        if (x <= lo) r = definition->near_volume;
+        else if (hi <= x) r = definition->far_volume;
+        else r = definition->far_volume + func_001FA898_i((hi - x) * (hi - x) * IntToFloat(definition->near_volume - definition->far_volume) / ((hi - lo) * (hi - lo)));
     } else {
-        if (x <= lo) r = *(int *)(s + 0xC);
-        else if (hi <= x) r = *(int *)(s + 0x8);
-        else r = *(int *)(s + 0x8) + func_001FA898_i((hi - x) * IntToFloat(*(int *)(s + 0xC) - *(int *)(s + 0x8)) / (hi - lo));
+        if (x <= lo) r = definition->near_volume;
+        else if (hi <= x) r = definition->far_volume;
+        else r = definition->far_volume + func_001FA898_i((hi - x) * IntToFloat(definition->near_volume - definition->far_volume) / (hi - lo));
     }
     return r;
 }
@@ -314,9 +322,9 @@ extern float func_001F9D10(int, void *);
    declaring it int would move its next temporary to $v1. */
 extern void func_0022DA10_v(void *, float, float, float) __asm__("func_0022DA10");
 
-void Sound_ApplyDistanceFade(void *arg0, int arg1) {
+void calculate_voice_volume(void *arg0, int arg1) {
     char *s = (char *)arg0;
-    float v = FastVecDist(arg1, D_00187180);
+    float v = FastVecDist(arg1, camera_position);
     float *p = *(float **)(s + 0x8);
     func_0022DA10_v(p, v, p[0], p[1]);
 }
@@ -330,13 +338,13 @@ extern void func_001FA898(float);
    arg2, and steer by its heading: atan2 of the xy part, negated and
    converted from radians to degrees (180 * 1/pi), scaled by how far the
    projection runs past 1.0, clamped to 0..1. arg0 is unused. */
-void Sound_ComputePan(void *arg0, void *arg1, void *arg2) {
+void calculate_voice_pan(void *arg0, void *arg1, void *arg2) {
     float v[4];
     float t;
 
     func_001F9BF0_a(v, arg1, D_00187180_a);
     func_001F9EE8(v, v, arg2);
-    t = func_001F9BB0(func_001F9CE8(v) - 1.0f, 0.0f, 1.0f);
+    t = clamp_float(func_001F9CE8(v) - 1.0f, 0.0f, 1.0f);
     truncate_float_to_s32(-func_001FA058_a(v[0], v[1]) * 180.0f * t * 0.31830987f);
 }
 
@@ -365,7 +373,7 @@ extern void func_0012E3F8(int, int, int);
 extern void func_0012E348(int, int);
 extern void func_002161E0(void);
 
-void Sound_InitState(void) {
+void initialize_gameplay_sound_system(void) {
     s32 i;
     s32 p;
     s32 end;
@@ -384,7 +392,7 @@ void Sound_InitState(void) {
         p += 0x70;
     } while (p < end);
     func_0012DB68();
-    func_0012E380(gStereo == 0);
+    func_0012E380(playback_mode == 0);
     func_0012E3C0(0, 1);
     func_0012F0E8(2, 4);
     func_0012E3F8(1, 0x18, 0x2F);
@@ -392,12 +400,12 @@ void Sound_InitState(void) {
     func_0012E3F8(4, 0x18, 0x2F);
     v = D_0015EEF0;
     ((SndState_2DBE8 *)D_0013E650)->vol[0] = (v * 8) / 10;
-    ((SndState_2DBE8 *)D_0013E650)->vol[1] = D_0015EEEC;
+    ((SndState_2DBE8 *)D_0013E650)->vol[1] = music_volume;
     ((SndState_2DBE8 *)D_0013E650)->vol[2] = (v * 8) / 10;
     ((SndState_2DBE8 *)D_0013E650)->vol[3] = (v * 7) / 10;
     ((SndState_2DBE8 *)D_0013E650)->vol[4] = (v * 7) / 10;
     ((SndState_2DBE8 *)D_0013E650)->vol[5] = v;
-    Music_Reset();
+    reset_music();
     func_0012E348(0, ((SndState_2DBE8 *)D_0013E650)->vol[0]);
     func_0012E348(1, ((SndState_2DBE8 *)D_0013E650)->vol[1]);
     func_0012E348(2, ((SndState_2DBE8 *)D_0013E650)->vol[2]);
@@ -406,7 +414,476 @@ void Sound_InitState(void) {
     func_0012E348(5, ((SndState_2DBE8 *)D_0013E650)->vol[5]);
 }
 
-INCLUDE_ASM("asm/nonmatchings/text", func_0022DD68); /* sound_update */
+typedef unsigned int u128_DD68 __attribute__((mode(TI), aligned(16)));
+typedef union {
+    u128_DD68 q;
+    f32 f[4];
+} VoiceVector_DD68;
+
+typedef struct {
+    u8 pad00[0x18];
+    u8 source_state;
+    u8 attenuation_flags;
+    s16 sound_index;
+    s32 bank_handle;
+} VoiceDefinition_DD68;
+
+typedef struct {
+    u8 pad00[0x10];
+    VoiceVector_DD68 position;
+    u8 state;
+    u8 pad21[0x9F];
+    VoiceVector_DD68 rotation;
+} VoiceMoby_DD68;
+
+typedef struct {
+    u32 handle;                         /* 0x00 */
+    u8 state;                           /* 0x04 */
+    u8 flags;                           /* 0x05 */
+    u8 pad06[2];
+    VoiceDefinition_DD68 *definition;   /* 0x08 */
+    s32 pad0C;
+    s32 volume;                         /* 0x10 */
+    s32 pitch_bend;                     /* 0x14 */
+    VoiceMoby_DD68 *moby;               /* 0x18 */
+    s32 owner_context;                  /* 0x1C */
+    VoiceVector_DD68 position;          /* 0x20 */
+    VoiceVector_DD68 position_offset;   /* 0x30 */
+    u32 occlusion_history_position;     /* 0x40 */
+    u8 occlusion_history[36];           /* 0x44 */
+    u8 pad68[8];
+} VoiceSlot_DD68;
+
+typedef struct {
+    VoiceVector_DD68 listener_history[4];   /* 0x000 */
+    s32 listener_history_position;          /* 0x040 */
+    s32 pad44;
+    s32 group_0_volume;                     /* 0x048 */
+    s32 group_1_volume;
+    s32 group_2_volume;
+    s32 group_3_volume;
+    s32 group_4_volume;
+    s32 group_5_volume;
+    s32 pad60;
+    s32 reverb_depth;                       /* 0x064 */
+    u8 reverb_type;
+    u8 reverb_delay;
+    u8 reverb_feedback;
+    u8 reverb_commands;
+    s32 pending_commands;                   /* 0x06C */
+    VoiceSlot_DD68 voices[30];              /* 0x070 */
+    s32 padD90[2];
+    s32 occlusion_frame;                    /* 0xD98 */
+    s32 padD9C;
+    VoiceVector_DD68 occlusion_samples[6];  /* 0xDA0 */
+} VoiceRuntimeState_DD68;
+
+extern VoiceRuntimeState_DD68 voice_pool_DD68 __asm__("D_0013E650");
+extern f32 water_level_DD68[] __asm__("D_0013F740");
+extern s32 use_alt_fog_DD68[] __asm__("D_001873D4");
+extern u8 camera_position_DD68[] __asm__("D_00187180");
+extern char camera_rows_DD68[] __asm__("D_00187390");
+extern s32 game_mode_DD68 __asm__("D_0015F6E8") MACRO_ADDR;
+extern s32 boot_level_active_DD68 __asm__("D_0015F6C8") MACRO_ADDR;
+extern s32 world_update_time_DD68 __asm__("D_0015F6F0") MACRO_ADDR;
+extern f32 frame_time_DD68 __asm__("D_0015EE6C") MACRO_ADDR;
+
+extern s32 FastCountChars_DD68(u8 *, s32) __asm__("func_001F9F60");
+extern int snd_GetDopplerPitchMod_DD68(int) __asm__("func_0012F2E0");
+extern void FastMemSet_DD68(void *, s32, s32) __asm__("func_001F99B0");
+extern void snd_ReadGlobalTableEntry_DD68(void) __asm__("func_0012EC30");
+extern s32 snd_FlushSoundCommands_DD68(void) __asm__("func_0012DDC0");
+extern void snd_SetMasterVolume_DD68(s32, s32) __asm__("func_0012E348");
+extern void snd_PlaySoundVolPanPMPB_DD68() __asm__("func_0012E448");
+extern void snd_StopSound_DD68(s32) __asm__("func_0012E4A8");
+extern void snd_SoundIsStillPlaying_DD68() __asm__("func_0012E588");
+extern void snd_SetSoundParams_DD68() __asm__("func_0012E600");
+extern void snd_ResetStateAndFlush_DD68() __asm__("func_0012EC40");
+extern void snd_SetReverbEx_DD68(s32, s32, s32, s32, s32) __asm__("func_0012F0A8");
+extern void snd_AutoReverb_DD68(s32, s32, s32, s32) __asm__("func_0012F120");
+extern void FastVecAdd_DD68(void *, void *, void *) __asm__("func_001F9BD8");
+extern void FastVecSub_DD68(void *, void *, void *) __asm__("func_001F9BF0");
+extern void FastVecScale_DD68(void *, void *, f32) __asm__("func_001F9C30");
+extern f32 FastVecDot_DD68(void *, void *) __asm__("func_001F9C78");
+extern f32 FastVecLength_DD68(void *) __asm__("func_001F9CB8");
+extern void FastVecNormalize_DD68(void *, void *, f32) __asm__("func_001F9DC0");
+extern void FastVecTransform_DD68(void *, void *, void *) __asm__("func_001F9EC0");
+extern void FastMatTranspose_DD68(void *, void *) __asm__("func_001FA4A0");
+extern f32 IntToFloat_DD68(s32) __asm__("func_001FA888");
+extern s32 truncate_float_to_s32_DD68(f32) __asm__("func_001FA898");
+extern void music_Update_DD68() __asm__("func_00217130");
+extern void Sound_PickOcclusionOrigin_DD68(void *) __asm__("func_0022D8C0");
+extern u8 Sound_LineTest_DD68(VoiceSlot_DD68 *, void *) __asm__("func_0022D970");
+extern s32 Sound_ApplyDistanceFade_DD68(VoiceSlot_DD68 *, VoiceVector_DD68 *) __asm__("func_0022DB00");
+extern s32 Sound_ComputePan_DD68(VoiceSlot_DD68 *, VoiceVector_DD68 *, void *) __asm__("func_0022DB48");
+extern void Sound_StoreHandleAdvance_DD68() __asm__("func_0022F0A8");
+extern void Sound_StoreHandleReset_DD68() __asm__("func_0022F0F0");
+
+/* sound_update: once per frame. Flushes the sound commands and the reverb request, measures the listener's
+   velocity from its last four camera positions and sets the group volumes; then for each voice works out its
+   radial velocity, distance volume and occlusion (a 36-sample history per voice), and starts, updates or stops
+   its sound. Ends with the music update and the command flush. Returns 0; callees.h has it as void, hence the
+   alias.
+   Adapted from Lombyte (GPL-3.0) for PAL: src/audio/voices/sound_update.c, sound_update (FUN_0022ca50). Two of its
+   loops are written plainly here: the occlusion-history copy as history[offset + i] = history[offset], and the
+   sample clamp with a counter of its own. With Lombyte's byte-index local for the copy, the second voice loop is
+   short enough at the first loop pass (192 insns against 208) that the voice_flags address giv is reduced there
+   rather than in the rerun, and two spill slots (sp+0x22C/0x230) swap. */
+s32 func_0022DD68_r(void) __asm__("func_0022DD68");
+s32 func_0022DD68_r(void) {
+    VoiceSlot_DD68 *voices;
+    VoiceVector_DD68 listener_occlusion_position;
+    VoiceVector_DD68 listener_velocity;
+    VoiceVector_DD68 relative_velocity;
+    s32 flags[30];
+    s32 voice_volumes[30];
+    f32 radial_velocities[30];
+    VoiceVector_DD68 direction;
+    VoiceVector_DD68 listener_matrix[4];
+    s32 slot_index;
+    s32 underwater;
+    s32 *voice_flags;
+    s32 *volumes;
+    VoiceMoby_DD68 *moby;
+    f32 water_height;
+    s32 history_index;
+    s32 divisor;
+    s32 current_index;
+    s32 previous_history_index;
+    s32 listener_sample_count;
+    s32 group_volume;
+    s32 history_offset;
+    s32 sample_index;
+    s32 repeat_index;
+    s32 owner_removed;
+    s32 distance_volume;
+    s32 occluded_samples;
+    s32 parameter_mask;
+    s32 pan;
+    s32 pitch_modifier;
+    s32 pitch_bend;
+    s32 handle;
+    s32 command_flags;
+
+    underwater = use_alt_fog_DD68[0];
+    water_height = 0.0f;
+    if (underwater != 0) {
+        water_height = water_level_DD68[0];
+    }
+    snd_FlushSoundCommands_DD68();
+
+    if (voice_pool_DD68.reverb_commands & 8) {
+        snd_SetReverbEx_DD68(2, 0, 0, 0, 0);
+    } else if (voice_pool_DD68.reverb_commands & 0x13) {
+        snd_SetReverbEx_DD68(2, voice_pool_DD68.reverb_type, voice_pool_DD68.reverb_depth,
+                             voice_pool_DD68.reverb_delay, voice_pool_DD68.reverb_feedback);
+    } else if (voice_pool_DD68.reverb_commands & 4) {
+        snd_AutoReverb_DD68(2, voice_pool_DD68.reverb_depth, 0xC, 3);
+    }
+    voice_pool_DD68.reverb_commands = 0;
+
+    if ((game_mode_DD68 == 0 || game_mode_DD68 == 2) && boot_level_active_DD68 == 0) {
+        Sound_PickOcclusionOrigin_DD68(&listener_occlusion_position);
+    }
+
+    qzero(&listener_velocity);
+    history_index = voice_pool_DD68.listener_history_position + 1;
+    history_index %= 4;
+    voice_pool_DD68.listener_history_position = history_index;
+    qcopy(&voice_pool_DD68.listener_history[history_index], camera_position_DD68);
+
+    listener_sample_count = 0;
+    divisor = 18;
+    current_index = history_index;
+    previous_history_index = (current_index + 3) % 4;
+    if (previous_history_index != current_index) {
+        do {
+            FastVecSub_DD68(&relative_velocity, &voice_pool_DD68.listener_history[current_index],
+                            &voice_pool_DD68.listener_history[previous_history_index]);
+            if (!(FastVecLength_DD68(&relative_velocity) < frame_time_DD68 * 60.0f)) {
+                break;
+            }
+            listener_sample_count++;
+            FastVecAdd_DD68(&listener_velocity, &listener_velocity, &relative_velocity);
+            current_index = previous_history_index;
+            previous_history_index = (current_index + 3) % 4;
+        } while (previous_history_index != voice_pool_DD68.listener_history_position);
+    }
+    if (listener_sample_count >= 2) {
+        FastVecScale_DD68(&listener_velocity, &listener_velocity,
+                          1.0f / IntToFloat_DD68(listener_sample_count));
+    }
+
+    if (game_mode_DD68 == 2) {
+        snd_SetMasterVolume_DD68(1, 0);
+        snd_SetMasterVolume_DD68(0, voice_pool_DD68.group_0_volume / 2);
+        snd_SetMasterVolume_DD68(3, voice_pool_DD68.group_3_volume / 2);
+    } else {
+        group_volume = voice_pool_DD68.group_1_volume;
+        if (underwater) {
+            group_volume = group_volume * 3 / 5;
+        }
+        snd_SetMasterVolume_DD68(1, group_volume);
+        snd_SetMasterVolume_DD68(0, voice_pool_DD68.group_0_volume);
+        snd_SetMasterVolume_DD68(3, voice_pool_DD68.group_3_volume);
+    }
+    snd_SetMasterVolume_DD68(2, voice_pool_DD68.group_2_volume);
+    snd_SetMasterVolume_DD68(4, voice_pool_DD68.group_4_volume);
+    snd_SetMasterVolume_DD68(5, voice_pool_DD68.group_5_volume);
+
+    voice_flags = flags;
+    volumes = voice_volumes;
+    FastMemSet_DD68(voice_flags, 0, 0x78);
+    FastMemSet_DD68(volumes, 0, 0x78);
+    FastMemSet_DD68(radial_velocities, 0, 0x78);
+
+    for (slot_index = 0; slot_index < 30; slot_index++) {
+        {
+            s32 state = voice_pool_DD68.voices[slot_index].state;
+            if (state != 7) {
+                if (voice_pool_DD68.voices[slot_index].handle == 0) {
+                    continue;
+                }
+                if (voice_pool_DD68.voices[slot_index].handle == -1) {
+                    continue;
+                }
+            }
+        }
+        moby = voice_pool_DD68.voices[slot_index].moby;
+        owner_removed = 0;
+        /* Fakematch: the goto pair keeps retail's branch order for the two removal states. */
+        if (moby != 0) {
+            u8 owner_state = moby->state;
+            if (owner_state == 0xFE)
+                goto owner_removed_label;
+            if (owner_state != 0xFD)
+                goto owner_checked_label;
+        owner_removed_label:
+            owner_removed = 1;
+        owner_checked_label:;
+        }
+        if (owner_removed) {
+            voice_pool_DD68.voices[slot_index].moby = 0;
+        }
+        {
+            s32 state = voice_pool_DD68.voices[slot_index].state;
+            if (state == 4 ||
+                (state != 6 && owner_removed &&
+                 voice_pool_DD68.voices[slot_index].definition->source_state != 0)) {
+                voice_flags[slot_index] = 0x20;
+                continue;
+            }
+        }
+        if (game_mode_DD68 != 0 && game_mode_DD68 != 2 && game_mode_DD68 != 6) {
+            s32 state = voice_pool_DD68.voices[slot_index].state;
+            if (state != 7) {
+                voice_flags[slot_index] = 0x10;
+                continue;
+            }
+        }
+
+        if (voice_pool_DD68.voices[slot_index].moby != 0 &&
+            !(voice_pool_DD68.voices[slot_index].flags & 8)) {
+            if (voice_pool_DD68.voices[slot_index].flags & 0x40) {
+                FastVecTransform_DD68(&direction, &voice_pool_DD68.voices[slot_index].position_offset,
+                                      &moby->rotation);
+                FastVecAdd_DD68(&direction, &direction, &moby->position);
+                FastVecSub_DD68(&relative_velocity, &direction,
+                                &voice_pool_DD68.voices[slot_index].position);
+                qcopy(&voice_pool_DD68.voices[slot_index].position, &direction);
+            } else {
+                voice_pool_DD68.voices[slot_index].position.f[2] -= 1.0f;
+                FastVecSub_DD68(&relative_velocity,
+                                &voice_pool_DD68.voices[slot_index].moby->position,
+                                    &voice_pool_DD68.voices[slot_index].position);
+                qcopy(&voice_pool_DD68.voices[slot_index].position,
+                      &voice_pool_DD68.voices[slot_index].moby->position);
+                voice_pool_DD68.voices[slot_index].position.f[2] += 1.0f;
+            }
+        } else {
+            qzero(&relative_velocity);
+        }
+        FastVecSub_DD68(&relative_velocity, &relative_velocity, &listener_velocity);
+        FastVecSub_DD68(&direction, camera_position_DD68, &voice_pool_DD68.voices[slot_index].position);
+        FastVecNormalize_DD68(&direction, &direction, 1.0f);
+        radial_velocities[slot_index] = FastVecDot_DD68(&direction, &relative_velocity);
+
+        if (!(voice_pool_DD68.voices[slot_index].flags & 0x10)) {
+            distance_volume = Sound_ApplyDistanceFade_DD68(&voice_pool_DD68.voices[slot_index],
+                                                           &voice_pool_DD68.voices[slot_index].position);
+            volumes[slot_index] = distance_volume * voice_pool_DD68.voices[slot_index].volume / 1024;
+            if (!(voice_pool_DD68.voices[slot_index].definition->attenuation_flags & 2)) {
+                voice_flags[slot_index] |= 8;
+            }
+        } else {
+            distance_volume = 0x400;
+            voice_volumes[slot_index] = voice_pool_DD68.voices[slot_index].volume;
+        }
+        if (underwater && !(voice_pool_DD68.voices[slot_index].definition->attenuation_flags & 4) &&
+            water_height < voice_pool_DD68.voices[slot_index].position.f[2]) {
+            volumes[slot_index] /= 2;
+        }
+        voice_flags[slot_index] |= 1;
+        if (distance_volume < 0x20 && voice_volumes[slot_index] < 0x20 &&
+            (voice_pool_DD68.voices[slot_index].flags & 4)) {
+            voice_flags[slot_index] = 0x20;
+            continue;
+        }
+        {
+            s32 voice_flags_byte = voice_pool_DD68.voices[slot_index].flags;
+            /* Fakematch: the xor test gives retail's xori/andi flag test. */
+            if ((voice_flags_byte ^ 1) & 1) {
+                voice_flags[slot_index] |= 2;
+                if (!(voice_pool_DD68.voices[slot_index].flags & 0x20)) {
+                    voice_flags[slot_index] |= 4;
+                }
+            }
+        }
+    }
+
+    voices = voice_pool_DD68.voices;
+    for (slot_index = 0; slot_index < 30; slot_index++) {
+        if (!(voice_flags[slot_index] & 8)) {
+            continue;
+        }
+        {
+            s32 state = voice_pool_DD68.voices[slot_index].state;
+            if (state == 7) {
+                if ((game_mode_DD68 != 0 && game_mode_DD68 != 2) || boot_level_active_DD68 != 0) {
+                    continue;
+                }
+                occluded_samples = 0;
+                if (world_update_time_DD68 != voice_pool_DD68.occlusion_frame) {
+                    {
+                        s32 i;
+                        for (i = 0; i < 6; i++) {
+                            Sound_PickOcclusionOrigin_DD68(&voice_pool_DD68.occlusion_samples[i]);
+                        }
+                    }
+                    voice_pool_DD68.occlusion_frame = world_update_time_DD68;
+                }
+                for (history_offset = 0, sample_index = 0; history_offset < 36;
+                     history_offset += 6, sample_index++) {
+                    voice_pool_DD68.voices[slot_index].occlusion_history[history_offset] =
+                        Sound_LineTest_DD68(&voice_pool_DD68.voices[slot_index],
+                                            &voice_pool_DD68.occlusion_samples[sample_index]);
+                    for (repeat_index = 1; repeat_index < 6; repeat_index++) {
+                        voice_pool_DD68.voices[slot_index].occlusion_history[history_offset + repeat_index] =
+                            voice_pool_DD68.voices[slot_index].occlusion_history[history_offset];
+                    }
+                    if (voice_pool_DD68.voices[slot_index].occlusion_history[history_offset]) {
+                        occluded_samples += 6;
+                    }
+                }
+                if (occluded_samples >= 36) {
+                    voice_volumes[slot_index] = 0;
+                } else if (occluded_samples >= 19) {
+                    voice_volumes[slot_index] = (36 - occluded_samples) * voice_volumes[slot_index] / divisor;
+                }
+            } else {
+                if ((game_mode_DD68 == 0 || game_mode_DD68 == 2) && boot_level_active_DD68 == 0) {
+                    voice_pool_DD68.voices[slot_index].occlusion_history_position =
+                        (voice_pool_DD68.voices[slot_index].occlusion_history_position + 1) % 36;
+                    /* Active sources test every other frame; other voices every fourth. */
+                    {
+                        s32 test_now = (slot_index ^ world_update_time_DD68) & 1;
+                        if (!(voice_pool_DD68.voices[slot_index].flags & 4)) {
+                            test_now = (slot_index & 3) == (world_update_time_DD68 & 3);
+                        }
+                        if (test_now) {
+                            voice_pool_DD68.voices[slot_index].occlusion_history
+                                [voice_pool_DD68.voices[slot_index].occlusion_history_position] =
+                                Sound_LineTest_DD68(&voice_pool_DD68.voices[slot_index],
+                                                    &listener_occlusion_position);
+                        } else {
+                            voice_pool_DD68.voices[slot_index].occlusion_history
+                                [voice_pool_DD68.voices[slot_index].occlusion_history_position] =
+                                voice_pool_DD68.voices[slot_index].occlusion_history
+                                    [(voice_pool_DD68.voices[slot_index].occlusion_history_position + 35) % 36];
+                        }
+                    }
+                }
+                {
+                    s32 occluded =
+                        FastCountChars_DD68(voices[slot_index].occlusion_history, 36);
+                    if (occluded >= 36) {
+                        voice_volumes[slot_index] = 0;
+                    } else if (occluded >= 19) {
+                        voice_volumes[slot_index] = (36 - occluded) * voice_volumes[slot_index] / divisor;
+                    }
+                }
+            }
+        }
+    }
+
+    FastMatTranspose_DD68(listener_matrix, camera_rows_DD68);
+    for (slot_index = 0; slot_index < 30; slot_index++) {
+        command_flags = voice_flags[slot_index];
+        if (command_flags == 0) {
+            continue;
+        }
+        handle = voice_pool_DD68.voices[slot_index].handle;
+        voice_pool_DD68.voices[slot_index].handle = -1;
+        if (command_flags & 0x20) {
+            {
+                s32 state = voice_pool_DD68.voices[slot_index].state;
+                if (state == 7) {
+                    voice_pool_DD68.voices[slot_index].moby = 0;
+                    voice_pool_DD68.voices[slot_index].owner_context = 0;
+                    voice_pool_DD68.voices[slot_index].state = 0;
+                } else {
+                    snd_StopSound_DD68(handle);
+                    voice_pool_DD68.voices[slot_index].state = 6;
+                    snd_SoundIsStillPlaying_DD68(handle, Sound_StoreHandleReset_DD68,
+                                                 &voice_pool_DD68.voices[slot_index]);
+                }
+            }
+        } else if (command_flags & 0x10) {
+            snd_SoundIsStillPlaying_DD68(handle, Sound_StoreHandleReset_DD68,
+                                         &voice_pool_DD68.voices[slot_index]);
+        } else {
+            pitch_bend = voice_pool_DD68.voices[slot_index].pitch_bend;
+            parameter_mask = pitch_bend ? 0x11 : 1;
+            pan = 0;
+            pitch_modifier = 0;
+            if (command_flags & 2) {
+                pan = Sound_ComputePan_DD68(&voice_pool_DD68.voices[slot_index],
+                                            &voice_pool_DD68.voices[slot_index].position, listener_matrix);
+                parameter_mask |= 6;
+            }
+            if (voice_flags[slot_index] & 4) {
+                parameter_mask |= 8;
+                pitch_modifier = snd_GetDopplerPitchMod_DD68(
+                    truncate_float_to_s32_DD68(radial_velocities[slot_index] * 300.0f));
+            }
+            if (underwater && !(voice_pool_DD68.voices[slot_index].definition->attenuation_flags & 8)) {
+                parameter_mask |= 8;
+                pitch_modifier -= 0x5F4;
+            }
+            {
+                s32 state = voice_pool_DD68.voices[slot_index].state;
+                if (state != 7) {
+                    snd_SetSoundParams_DD68(handle, parameter_mask, voice_volumes[slot_index], pan,
+                                            pitch_modifier, pitch_bend, Sound_StoreHandleReset_DD68,
+                                            &voice_pool_DD68.voices[slot_index]);
+                } else {
+                    voice_pool_DD68.voices[slot_index].state = 1;
+                    snd_PlaySoundVolPanPMPB_DD68(voice_pool_DD68.voices[slot_index].definition->bank_handle,
+                                                 voice_pool_DD68.voices[slot_index].definition->sound_index,
+                                                voice_volumes[slot_index], pan, pitch_modifier, pitch_bend,
+                                                Sound_StoreHandleAdvance_DD68, &voice_pool_DD68.voices[slot_index]);
+                }
+            }
+        }
+    }
+
+    music_Update_DD68();
+    snd_ResetStateAndFlush_DD68();
+    snd_FlushSoundCommands_DD68();
+    snd_ReadGlobalTableEntry_DD68();
+    voice_pool_DD68.pending_commands = 0;
+    return 0;
+}
 
 extern void func_00120F30(int);
 extern int func_0012E060(void *, int);
@@ -419,7 +896,7 @@ extern void func_0012E2E8(void);
    *next* call. That callee, func_0012EE70 (snd_StreamSafeCheckCDIdle),
    returns int: a value call resets $v0's readers, which lets the
    capture sink into its slot. */
-int sound_loadBankByLocation(void *arg0) {
+int load_audio_bank_by_location(void *arg0) {
     char *base = D_0013E650;
     int r = 0;
 
@@ -660,7 +1137,7 @@ int Moby_PlaySound(int idx, int arg1, int arg2) {
     if (idx >= *(unsigned char *)(p + 0xD)) {
         return -1;
     }
-    h = func_0022EB08(tbl + idx * 32, arg1, arg2, 0, 0x400);
+    h = allocate_voice_slot(tbl + idx * 32, arg1, arg2, 0, 0x400);
     if (h >= 0) {
         char *rec = D_0013E650 + h * 0x70;
         *(int *)(rec + 0x88) = arg2;
@@ -677,7 +1154,7 @@ int PlayBankSound(int idx, int arg1, int arg2) {
     if (idx >= D_0015F694) {
         return -1;
     }
-    h = func_0022EB08(D_0015F714 + idx * 32, arg1, arg2, 0, 0x400);
+    h = allocate_voice_slot(level_sound_defs + idx * 32, arg1, arg2, 0, 0x400);
     if (h >= 0) {
         char *rec = D_0013E650 + h * 0x70;
         *(int *)(rec + 0x88) = arg2;
@@ -688,20 +1165,29 @@ int PlayBankSound(int idx, int arg1, int arg2) {
 
 extern int D_0015F710 MACRO_ADDR;
 
-int PlayGroupSound(int rel, int arg1, int arg2) {
-    int idx = rel + D_0015F694;
-    int h;
+struct VoiceGroupEntryWindow {
+    u8 pad_00[0x7E];
+    s16 linked_index;          /* 0x7E */
+    u8 pad_80[0x8];
+    s32 owner;                 /* 0x88 */
+};
 
-    if (idx >= D_0015F710) {
+int allocate_voice_for_group_entry(int group_entry_index, int flags, int owner) {
+    int entry_index;
+    int slot_index;
+    struct VoiceGroupEntryWindow *slot;
+
+    entry_index = group_entry_index + D_0015F694;
+    if (entry_index >= level_sound_def_count) {
         return -1;
     }
-    h = func_0022EB08(D_0015F714 + idx * 32, arg1, arg2, 0, 0x400);
-    if (h >= 0) {
-        char *rec = D_0013E650 + h * 0x70;
-        *(int *)(rec + 0x88) = arg2;
-        *(short *)(rec + 0x7E) = idx;
+    slot_index = allocate_voice_slot(level_sound_defs + entry_index * 32, flags, owner, 0, 0x400);
+    if (slot_index >= 0) {
+        slot = (struct VoiceGroupEntryWindow *)(D_0013E650 + slot_index * 0x70);
+        slot->owner = owner;
+        slot->linked_index = entry_index;
     }
-    return h;
+    return slot_index;
 }
 
 LINKER_REMNANT("asm/remnants/text", func_0022EF50);
@@ -709,6 +1195,18 @@ LINKER_REMNANT("asm/remnants/text", func_0022EF50);
 static inline char *SndSys(void) {
     return D_0013E650;
 }
+
+typedef struct VoiceRequest {
+    u8 pad_00[4];
+    void (*fn)(struct VoiceRequest *);
+    u8 pad_08[0x88];
+} VoiceRequest;
+
+typedef struct VoiceRequestTable {
+    u8 pad_000[0xD90];
+    s32 count;
+    VoiceRequest *handlers;
+} VoiceRequestTable;
 
 /*
  * Calls each entry's +4 callback in the sound system's 0x90-byte entry
@@ -719,13 +1217,14 @@ static inline char *SndSys(void) {
  * `i * 0x90 + (int)table` (not an offset variable) gives the
  * offset-first addu.
  */
-void SoundRunEntryCallbacks(void) {
-    int i;
-    for (i = 0; i < *(int *)(SndSys() + 0xD90); i++) {
-        char *e = (char *)(i * 0x90 + *(int *)(SndSys() + 0xD94));
-        void (*fn)(char *) = *(void (**)(char *))(e + 4);
-        if (fn != 0) {
-            fn(e);
+void enqueue_voice_request(void) {
+    s32 i;
+
+    for (i = 0; i < ((VoiceRequestTable *)SndSys())->count; i++) {
+        VoiceRequest *handler = (VoiceRequest *)(i * 0x90 + (s32)((VoiceRequestTable *)SndSys())->handlers);
+
+        if (handler->fn != 0) {
+            handler->fn(handler);
         }
     }
 }
@@ -784,7 +1283,7 @@ void SoundBank_StoreHandle(int arg0, long arg1) {
     }
 }
 
-void Sound_StoreHandleAdvance(int arg0, long arg1) {
+void voice_start_callback(int arg0, long arg1) {
     unsigned char *p = (unsigned char *)(int)arg1;
     if (p != 0) {
         *(int *)p = arg0;
@@ -800,7 +1299,7 @@ void Sound_StoreHandleAdvance(int arg0, long arg1) {
     }
 }
 
-void Sound_StoreHandleReset(int arg0, long arg1) {
+void voice_update_callback(int arg0, long arg1) {
     int *p = (int *)(int)arg1;
     if (p != 0) {
         *p = arg0;

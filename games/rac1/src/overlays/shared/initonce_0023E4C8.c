@@ -167,7 +167,7 @@ extern int fr_23e008(int) __asm__("func_001F9850");
 extern unsigned char *emit_23e008(float *, int, float, float, float, int, int, int, void *) __asm__("func_L00_00272F00");
 extern int rf_23e008(float) __asm__("func_001FA898");
 /* Spawns a burst of directed particles with randomised speeds from the frame time. Adapted from Lombyte (GPL-3.0) for PAL: overlays/shared/unclassified_0023db30.c, FUN_L00_0023e008. */
-void GlowParticlesSpawn(void *p)
+void emit_moby_particle_pairs(void *p)
 {
     ti_23e008 dir[1];
     ti_23e008 old[1];
@@ -268,8 +268,8 @@ extern void func_002027C0(int);
 extern unsigned char D_L00_001803C0[];
 extern unsigned char D_L00_001805C0[];
 
-/* FreePointLight: detaches point light index and clears its slots. */
-void FreePointLight(int index)
+/* light_off_67e8: detaches point light index and clears its slots. */
+void light_off_67e8(int index)
 {
     DetachPointLight(index);
     FastMemZero16(D_L00_001803C0 + index * 0x20, 0x20);

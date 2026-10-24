@@ -26,8 +26,9 @@
 #include <string>
 #include <vector>
 
-#include "enhanced/renderer/gtao.h"
-#include "enhanced/renderer/gtao_settings.h"
+#include "renderer/ambient_occlusion.h"
+#include "renderer/framebuffer.h"
+#include "renderer/gtao_settings.h"
 #include "renderer/math.h"
 #include "renderer/shadow_volume.h"
 #include "renderer/texture_filter.h"
@@ -310,10 +311,15 @@ public:
 
     std::span<const std::unique_ptr<BucketRenderer>> renderers() const { return m_renderers; }
 
+    // Registers the frame's ambient occlusion (renderer/ambient_occlusion.h), run when a frame asks
+    // for it (FrameInput::gtao) and an enabled renderer has the enhanced lighting. Without one, a
+    // frame that asks draws none. The game programs register the enhanced renderer's GTAO.
+    void set_ambient_occlusion(std::unique_ptr<AmbientOcclusion> ambient_occlusion);
+
     const FrameStats& last_stats() const { return m_stats; }
 
 private:
-    Gtao m_gtao;
+    std::unique_ptr<AmbientOcclusion> m_ambient_occlusion;  // Null until one is registered.
     FrameBuffer m_selection_depth;
     TexturePool m_textures;
     std::vector<std::unique_ptr<BucketRenderer>> m_renderers;

@@ -6,7 +6,7 @@
 extern StashBlock D_L00_001C1668[];
 extern int func_00118E20(void *buf, int flag);
 // Starts a DMA transfer of size*16 bytes at offset*16 into a slot; -3 bad slot, -1 out of range.
-int Stash_FetchSlot(int arg, unsigned int slot, int off, int size) {
+int send_dma_to_stash_slot(int arg, unsigned int slot, int off, int size) {
     int req[4];
     int lim;
     if (slot >= 0x40) return -3;

@@ -198,7 +198,7 @@ Where a change goes matters as much as the change ([LAYOUT.md](../LAYOUT.md)):
 | Something the console's hardware or libraries did | The engine: `port/runtime`, `port/renderer`, `port/viewer`, `port/game/common`, shared by every game and version; data-driven per game where they differ, never forked |
 | A routine the port must answer itself (drawing, a hook) | A `wrap` or `host` row in `port/game/<id>/libraries.tsv` with its host C in `port/game/<id>/host/` |
 | Two routines the catalogue folded into one | `port/game/<id>/split_places.tsv` |
-| What the level export writes | `editor/` (the port's levels come from `editor/extract.py port`). A change the port relies on bumps the export format: `editor/port.py FORMAT`, `port/viewer/level.h kManifestFormat`, the `verified-<format>.json` stamp in `launcher/actions.json` and `tools/bundle_standalone.py`, and the test fixtures, in one commit. Players' levels are then read again once |
+| What the level export writes | `editor/` (the port's levels come from `editor/extract.py port`). A change the port relies on bumps the export format: `editor/port.py FORMAT`, `port/scene/level.h kManifestFormat`, the `verified-<format>.json` stamp in `launcher/actions.json` and `tools/bundle_standalone.py`, and the test fixtures, in one commit. Players' levels are then read again once |
 | What the launcher runs | `launcher/actions.json` (`tools/bundle_standalone.py` derives an installer's actions from it) |
 
 `port/game/<id>/` is meant to shrink: prefer the game's C when the fix is

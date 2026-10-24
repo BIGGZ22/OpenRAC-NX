@@ -48,6 +48,7 @@ design and the order of work are in [docs/port](docs/port/README.md).
 | Ratchet & Clank: Up Your Arsenal | SCUS_973.53 ([`games/rac3/ntsc`](games/rac3/ntsc)) | [![Code](https://bytematch.dev/OpenRAC/rac3-decomp.svg?mode=shield&label=Code&measure=matched_code_percent&version=SCUS_973.53)](https://bytematch.dev/OpenRAC/rac3-decomp/SCUS_973.53) | [![Functions](https://bytematch.dev/OpenRAC/rac3-decomp.svg?mode=shield&label=Functions&measure=matched_functions&version=SCUS_973.53)](https://bytematch.dev/OpenRAC/rac3-decomp/SCUS_973.53) | [![Fuzzy](https://bytematch.dev/OpenRAC/rac3-decomp.svg?mode=shield&label=Fuzzy&measure=fuzzy_match_percent&version=SCUS_973.53)](https://bytematch.dev/OpenRAC/rac3-decomp/SCUS_973.53) |
 | Ratchet: Deadlocked | SCUS_974.65 ([`games/rac4/ntsc`](games/rac4/ntsc)) | [![Code](https://bytematch.dev/OpenRAC/rac4-decomp.svg?mode=shield&label=Code&measure=matched_code_percent&version=SCUS_974.65)](https://bytematch.dev/OpenRAC/rac4-decomp/SCUS_974.65) | [![Functions](https://bytematch.dev/OpenRAC/rac4-decomp.svg?mode=shield&label=Functions&measure=matched_functions&version=SCUS_974.65)](https://bytematch.dev/OpenRAC/rac4-decomp/SCUS_974.65) | [![Fuzzy](https://bytematch.dev/OpenRAC/rac4-decomp.svg?mode=shield&label=Fuzzy&measure=fuzzy_match_percent&version=SCUS_974.65)](https://bytematch.dev/OpenRAC/rac4-decomp/SCUS_974.65) |
 | Ratchet & Clank: Size Matters | SCUS_976.15 ([`games/rac5/ntsc`](games/rac5/ntsc)) | [![Code](https://bytematch.dev/OpenRAC/rac5-sm-decomp.svg?mode=shield&label=Code&measure=matched_code_percent&version=SCUS_976.15)](https://bytematch.dev/OpenRAC/rac5-sm-decomp/SCUS_976.15) | – | – |
+| Ratchet & Clank: Secret Agent Clank | SCUS_976.23 ([`games/rac6/ntsc`](games/rac6/ntsc)) | [![Code](https://bytematch.dev/OpenRAC/rac-sac-decomp.svg?mode=shield&label=Code&measure=matched_code_percent&version=SCUS_976.23)](https://bytematch.dev/OpenRAC/rac-sac-decomp/SCUS_976.23) | – | – |
 <!-- progress:end -->
 
 Each project measures its own scope, so compare percentages within a game, not
@@ -67,6 +68,7 @@ function and fuzzy figures are live badges from
 | Ratchet & Clank: Up Your Arsenal (2004) | NTSC-U (North America) `SCUS_973.53` | [`games/rac3/ntsc`](games/rac3/ntsc) | Three programs extracted from the disc with Wrench, each rebuilt byte for byte: frontbin.elf (the frontend and menu program), boot_elf.elf (the main executable) and i5bootn.elf (the launcher); the level programs are counted for progress. | Windows with SN ee-gcc 2.95.3 v1.36 (and Sony 2.9-ee-991111 for library ranges); macOS (wibo-macos, natively) and Linux through tools/build.py with wibo |
 | Ratchet: Deadlocked (2005) | NTSC-U (North America) `SCUS_974.65` | [`games/rac4/ntsc`](games/rac4/ntsc) | The game image packed inside the boot executable SCUS_974.65 (core, network and resident level code: 8,027 functions) and the 47 level overlays (24 campaign, 23 multiplayer), compared function by function; there is no linked image yet. | macOS or Linux through Docker (rac1/pal's linux/386 image with Wine); SN ProDG toolchain you supply |
 | Ratchet & Clank: Size Matters (2008) | NTSC-U (North America) `SCUS_976.15` | [`games/rac5/ntsc`](games/rac5/ntsc) | The PlayStation 2 port: the boot executable SCUS_976.15 (an ELF with 1,803 named symbols) and the frontend and 20 level modules in the SNR2 .REL format. Functions are accepted one by one through private whole-program gates; there is no qualified compiler or game-wide percentage yet. | Python 3.12 for the tools, on any system; no qualified compiler yet |
+| Ratchet & Clank: Secret Agent Clank (2009) | NTSC-U (North America) `SCUS_976.23` | [`games/rac6/ntsc`](games/rac6/ntsc) | The PlayStation 2 port: the boot executable SCUS_976.23 and 31 level modules in the SNR2 .REL format. Functions are proved by wave at placement level; there is no qualified compiler or game-wide percentage yet. | Python 3.12 for the tools, on any system; no qualified compiler yet |
 <!-- games:end -->
 
 Each version is a self-contained project that you build and work on from its
@@ -171,6 +173,7 @@ against them; images are recognised by content, not by file name.
 | Ratchet & Clank: Up Your Arsenal | NTSC-U (North America), disc v1.00 | `SCUS_973.53` | 4,379,377,664 | `2b9b91f7` | `ba9f2b38c7346e7b6e5b8e87717d5893` | `b080139c5a94688ef9472b78d5f5585a756d1ee4` | `d2bb15c7c5b2205db868713fc0362c2b10e87751ca5bcc4e96c1e244a8c42444` |
 | Ratchet: Deadlocked | NTSC-U (North America), disc v1.00 | `SCUS_974.65` | 4,356,898,816 | `66eb35f4` | `c1e1992076becc7de5aa70ef1de8bcd0` | `a85482348f741d848dd2ff4e4c3ba7c2c40f431d` | `dda48512e9b7609f69a49146ab239c4ebda7f13cf3d06397f19f6f3ce155a42b` |
 | Ratchet & Clank: Size Matters | NTSC-U (North America), disc v1.00 | `SCUS_976.15` | 1,744,764,928 | – | – | `61b9cf7f46b8fc318daa2b98cfc53301654775d6` | `ceae10a40d916eb78134c21cfe3d939a5c5d0a682a9382e1586df3274be7c7dc` |
+| Ratchet & Clank: Secret Agent Clank | NTSC-U (North America), disc v1.00 | `SCUS_976.23` | 4,268,916,736 | – | – | `6f4a37c8157e3e1214abed01406cbfce42e22cc6` | `128abfa2fb8eb4dc253513d3beb9029dfb8698966ecc7b8266230e8739b8e908` |
 <!-- discs:end -->
 
 The boot executable inside each:
@@ -185,6 +188,7 @@ The boot executable inside each:
 | Ratchet & Clank: Up Your Arsenal | NTSC-U (North America) | `SCUS_973.53` | 771,008 | `01affd24` | `c6075c4a296f656648bc9f64f4f1b09b` | `601012bb03ef1213ad1253baebae8a071b8a7df7` | `200068cb4186715521cdc1c20bc6c5a88054d0da54aa336ffdb2022633351c7d` |
 | Ratchet: Deadlocked | NTSC-U (North America) | `SCUS_974.65` | 1,692,216 | `eebbaace` | `9e33838c3939099d614963063544df3e` | `aa91b1c3b9b1a244320c47580b77342ef9856e95` | `2f305ab0ed47f148f599ef8769a534adf4080307aa11ab26a7966dedec897ed6` |
 | Ratchet & Clank: Size Matters | NTSC-U (North America) | `SCUS_976.15` | 856,120 | – | – | – | `d8f1794a5b4f6bd7f70ca62ae11fb790d1c300c2a877ef1aef4c1855fd6575ac` |
+| Ratchet & Clank: Secret Agent Clank | NTSC-U (North America) | `SCUS_976.23` | 1,104,076 | – | – | – | `1341f13c11e54e57748e963a5d49c28a571c4b87f98998687e1b1741c39f7911` |
 <!-- boot:end -->
 
 ## Credits and licensing

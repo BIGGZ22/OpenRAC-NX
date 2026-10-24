@@ -127,7 +127,7 @@ extern void func_00216EF0_2465F8(int) __asm__("func_00216EF0");
 /* Level main loop (shared by every level): clears the level's work area, sets up the level and counts the visit
    and play time of the planet, then runs one frame per pass, dispatching on the game mode, until the level asks to
    quit. */
-void LevelMainLoop(void) {
+void run_level_main_loop(void) {
     int i;
     int v;
     int quit;
@@ -384,16 +384,16 @@ void Map_LoadData(void) {
     D_L00_001842F0[0x89] = v > 18 ? 0 : v;
     { int i;
     for (i = 0; i < 19; i++) {
-        float a = D_L00_00182910[i * 8], b = D_L00_00182910[i * 8 + 1], c = D_L00_00182910[i * 8 + 2], dd = D_L00_00182910[i * 8 + 3];
-        float ee = D_L00_00182910[i * 8 + 4], f = D_L00_00182910[i * 8 + 5], gg = D_L00_00182910[i * 8 + 6], h = D_L00_00182910[i * 8 + 7];
+        float a = map_points[i * 8], b = map_points[i * 8 + 1], c = map_points[i * 8 + 2], dd = map_points[i * 8 + 3];
+        float ee = map_points[i * 8 + 4], f = map_points[i * 8 + 5], gg = map_points[i * 8 + 6], h = map_points[i * 8 + 7];
         float p = (ee - gg) / (a - c);
         float r = (f - h) / (b - dd);
-        D_L00_00182B70[i * 4 + 1] = p;
-        D_L00_00182B70[i * 4 + 3] = r;
-        D_L00_00182B70[i * 4] = ee - p * a;
-        D_L00_00182B70[i * 4 + 2] = f - r * b;
+        map_coefficients[i * 4 + 1] = p;
+        map_coefficients[i * 4 + 3] = r;
+        map_coefficients[i * 4] = ee - p * a;
+        map_coefficients[i * 4 + 2] = f - r * b;
     } }
-    pp = (unsigned char *)D_0013D50F + 0xB9;
+    pp = (unsigned char *)menu_item_enabled_115 + 0xB9;
     if (pp[0x21] != 0) {
         D_L00_001842F0[0x8C] = 1;
         e = (int *)(D_00137C80 + 0x8B8) + D_L00_001842F0[0x89] * 2;
@@ -404,7 +404,7 @@ void Map_LoadData(void) {
     if (e[1] != 0) {
         gl = D_L00_001842F0;
         gl[10] = 1;
-        heap_tag = (int)D_L00_0015FEC0;
+        heap_tag = (int)render_archive_source_file;
         archive_base = D_L00_00173F08;
         archive = (int *)((int)archive_base + 0x9A800);
         scratch = e[1] << 7;
@@ -427,13 +427,13 @@ void Map_LoadData(void) {
             D_L00_001842F0[13 + i * 4] = -1;
             D_L00_001842F0[14 + i * 4] = D_L00_001842F0[2] + i * 0x200;
         }
-        w = Hud_HeapAlloc(0x8000, 0, D_L00_0015FEC0, 0x2FC);
+        w = Hud_HeapAlloc(0x8000, 0, render_archive_source_file, 0x2FC);
         level_data = D_0014171B + 0x8A5 + D_L00_001842F0[0x89] * 0x800;
         D_L00_001842F0[3] = w;
         if (level_data[0] != 0) {
-            UnpackOcclusionMap((void *)D_L00_001842F0[3], level_data, D_L00_001842F0[5]);
+            load_map_chunk((void *)D_L00_001842F0[3], level_data, D_L00_001842F0[5]);
         } else {
-            DecodeMapMask((int *)D_L00_001842F0[3], (unsigned char *)D_L00_001842F0[0], (short *)D_L00_001842F0[1]);
+            decode_map_mask((int *)D_L00_001842F0[3], (unsigned char *)D_L00_001842F0[0], (short *)D_L00_001842F0[1]);
         }
         lim = 256.0f;
         for (y = 0; y < 32; y++) {
@@ -587,7 +587,7 @@ void func_L00_00295010(s32, s32, s32, s32);
 void func_00234238(s32, s32, s32, s32, s32);
 
 /* Adapted from Lombyte (GPL-3.0) for PAL by OpenRAC's tools/port.py: src/overlays/shared/rendering/00245c28.c, FUN_L00_002468b8. */
-void Map_LoadRenderArchive(void) {
+void initialize_render_archive_transfer(void) {
     s32 first_base;
     s32 second_base;
     s32 buffer;
@@ -596,7 +596,7 @@ void Map_LoadRenderArchive(void) {
     RenderArchiveState *state = &D_L00_001842F0;
 
     Profile_Mark();
-    Map_RefreshIcons(state->archive_index, 1);
+    update_map_icons(state->archive_index, 1);
     first_base = D_L00_001BA070.first_base;
     second_base = D_L00_001BA070.second_base;
     buffer = first_base + 0x9a800;
@@ -620,10 +620,10 @@ void Map_LoadRenderArchive(void) {
             bytes = D_00137C80.render_archives[archive_index].size << 7;
             start_audio_stream_read(buffer, D_00137C80.render_archives[archive_index].sector,
                          D_00137C80.render_archives[archive_index].size);
-            UpdateAudioStreamUntilIdle(1);
+            update_audio_stream_until_idle(1);
             state->loaded = 1;
             state->transfer_bytes = bytes;
-            Stash_FetchSlot(state->buffer, state->file_handle, 0, bytes);
+            send_dma_to_stash_slot(state->buffer, state->file_handle, 0, bytes);
             state->level_slot = D_0015EE84 + 0x100;
             state->last_transfer_bytes = bytes;
             state->active = 1;
@@ -632,7 +632,7 @@ void Map_LoadRenderArchive(void) {
         }
         if (D_L00_001842F0.file_handle != -1) {
             D_L00_001842F0.last_transfer_bytes = D_L00_001842F0.transfer_bytes;
-            Stash_ReceiveData(D_L00_001842F0.buffer, D_L00_001842F0.file_handle, 0, D_L00_001842F0.transfer_bytes, 0);
+            stash_receive_data(D_L00_001842F0.buffer, D_L00_001842F0.file_handle, 0, D_L00_001842F0.transfer_bytes, 0);
             D_L00_001842F0.level_slot = gHaveMapOMatic != 0 ? D_0015EE84 + 0x100 : D_0015EE84;
             D_L00_001842F0.active = 1;
             D_L00_001842F0.load_state = -2;

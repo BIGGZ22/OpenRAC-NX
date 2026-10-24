@@ -11,17 +11,17 @@
 
 #include "common/log.h"
 #include "common/stats.h"
-#include "enhanced/viewer/hero_shadow.h"
-#include "enhanced/viewer/shadow_atlas.h"
 #include "renderer/gl.h"
 #include "renderer/render_opt.h"
 #include "renderer/world/gl_world.h"
-#include "viewer_shaders.h"
+#include "scene/hero_shadow.h"
+#include "scene/shadow_atlas.h"
+#include "scene_shaders.h"
 #if defined(OPENRAC_VULKAN)
 #include "renderer/vulkan/vkgl.h"
 #endif
 
-namespace openrac::viewer {
+namespace openrac::scene {
 
 using namespace openrac::gl;
 using renderer::Bucket;
@@ -61,6 +61,18 @@ Bucket bucket_of(Layer layer) {
 
 const void* offset(std::size_t bytes) {
     return reinterpret_cast<const void*>(bytes);
+}
+
+// Lets `target` and its GL objects go: a FrameBuffer frees them only in release() (its destructor
+// runs where the context may be gone), so a reset alone would keep them on the GPU.
+void release_target(std::unique_ptr<renderer::FrameBuffer>& target) {
+    // Nothing made yet.
+    if (!target) {
+        return;
+    }
+
+    target->release();
+    target.reset();
 }
 
 // Returns the textures `materials` draw with, in their order: each one's image and emission image,
@@ -134,8 +146,10 @@ bool LevelScene::upload(
     const LevelData& level, renderer::TexturePool& textures, std::string& error
 ) {
     // mesh.frag again with OPENRAC_SOLID, after its version line (which has to stay the first).
-    const std::string fragment = probe_mesh_fragment();
-    m_early_capable = EarlyLighting::supported();
+    // The registered lighting puts its GLSL into the mesh shader; without it the scene's own.
+    const std::string fragment = m_lighting ? m_lighting->mesh_fragment(shaders::mesh_frag)
+                                            : std::string(shaders::mesh_frag);
+    m_early_capable = m_lighting && m_lighting->early_supported();
     std::string solid(fragment);
     solid.insert(solid.find('\n') + 1, "#define OPENRAC_SOLID 1\n");
     if (!m_mesh.build("mesh", shaders::mesh_vert, fragment, error)
@@ -144,7 +158,7 @@ bool LevelScene::upload(
         return false;
     }
     if (m_early_capable) {
-        std::string early = probe_early_fragment(), early_solid(early);
+        std::string early = m_lighting->early_fragment(shaders::mesh_frag), early_solid(early);
         early_solid.insert(early_solid.find('\n') + 1, "#define OPENRAC_SOLID 1\n");
         if (!m_early_mesh.build("early lit mesh", shaders::mesh_vert, early, error)
             || !m_early_solid.build("early lit solid", shaders::mesh_vert, early_solid, error)) {
@@ -167,13 +181,14 @@ bool LevelScene::upload(
             );
             return source;
         };
-        if (!m_colour_opaque.build(
-                "opaque colour batch", shaders::mesh_vert, opaque_source(fragment), error
-            )
+        if (!m_colour_opaque
+                 .build("opaque colour batch", shaders::mesh_vert, opaque_source(fragment), error)
             || (m_early_capable
                 && !m_early_colour_opaque.build(
-                    "early opaque colour batch", shaders::mesh_vert,
-                    opaque_source(probe_early_fragment()), error
+                    "early opaque colour batch",
+                    shaders::mesh_vert,
+                    opaque_source(m_lighting->early_fragment(shaders::mesh_frag)),
+                    error
                 ))) {
             return false;
         }
@@ -208,11 +223,15 @@ bool LevelScene::upload(
                 return source;
             };
             const char* names[] = {"solid static colour", "alpha static colour", "opaque moby colour"};
-            if (!m_colour_specialised[variant].build(
-                    names[variant], vertex, specialise(fragment), error)
-                || (m_early_capable && !m_early_colour_specialised[variant].build(
-                    std::string("early ") + names[variant], vertex,
-                    specialise(probe_early_fragment()), error))) {
+            if (!m_colour_specialised[variant]
+                     .build(names[variant], vertex, specialise(fragment), error)
+                || (m_early_capable
+                    && !m_early_colour_specialised[variant].build(
+                        std::string("early ") + names[variant],
+                        vertex,
+                        specialise(m_lighting->early_fragment(shaders::mesh_frag)),
+                        error
+                    ))) {
                 return false;
             }
         }
@@ -360,10 +379,14 @@ bool LevelScene::upload(
     for (std::size_t layer = 0; layer < kLayerCount; ++layer) {
         build_groups(static_cast<Layer>(layer), level.instances[layer], false);
     }
+    m_moby_layout.valid = false;
     ++m_static_generation;
     glBindVertexArray(0);
     glBindBuffer(GL_ARRAY_BUFFER, 0);
-    m_probes.load(level);
+    // The level's probe bake, found and uploaded by the registered lighting.
+    if (m_lighting) {
+        m_lighting->load(level);
+    }
 
     // The materials' textures made now, while the level loads, so that its first frames make
     // none (texture-prepare, docs/port/RENDER_PERF.md); off, each is made at its first draw.
@@ -477,6 +500,133 @@ void LevelScene::fill_group(Group& g, const std::vector<InstanceData>& list, uns
     );
 }
 
+// Returns whether every instance of `instances` is opaque and lit as scenery, so that the opaque
+// shadow shader (no texture, no discard) may draw the group's opaque faces.
+bool LevelScene::solid_shadow_instances(const std::vector<InstanceData>& instances) {
+    return std::all_of(instances.begin(), instances.end(), [](const InstanceData& data) {
+        return std::isfinite(data.tint[3]) && data.tint[3] >= 1.0f && data.moby_light[3] <= 0.5f;
+    });
+}
+
+// Returns OPENRAC_MOBY_SPHERE_CULL_OFF's switch: animated mobys left unbounded.
+bool LevelScene::moby_sphere_culling_off() {
+    static const bool& off = stats::probe(
+        "OPENRAC_MOBY_SPHERE_CULL_OFF",
+        "Profiling reference: leave animated mobys unbounded (next upload)"
+    );
+    return off;
+}
+
+// Returns whether the palette texture's texels `sent` (`texels` of them) are `matrices` followed
+// by zeros, bit for bit: what set_palette would send again.
+bool LevelScene::same_palette(
+    const std::vector<JointColumns>& matrices,
+    const std::vector<JointColumns>& sent,
+    std::size_t texels
+) {
+    // Another size: another texture's worth.
+    if (sent.size() != texels || matrices.size() > texels) {
+        return false;
+    }
+
+    const std::size_t bytes = matrices.size() * sizeof(JointColumns);
+
+    // The joints themselves.
+    if (std::memcmp(matrices.data(), sent.data(), bytes) != 0) {
+        return false;
+    }
+
+    // The rest of the last row, zeros when it was sent.
+    const JointColumns zero{};
+    return std::all_of(
+        sent.begin() + static_cast<std::ptrdiff_t>(matrices.size()),
+        sent.end(),
+        [&](const JointColumns& texel) { return std::memcmp(&texel, &zero, sizeof(zero)) == 0; }
+    );
+}
+
+// Returns the key build_groups groups `instance` by: its class model, its blend and whether it
+// casts the hero's shadow, in that order of significance.
+std::uint32_t LevelScene::group_key(const Instance& instance) {
+    return instance.model << 3 | (static_cast<std::uint32_t>(instance.blend & 3) << 1)
+           | (instance.hero_shadow_caster ? 1u : 0u);
+}
+
+// Returns `instance` as the vertex shader's per-instance attributes take it.
+LevelScene::InstanceData LevelScene::instance_data(const Instance& instance) {
+    InstanceData data{};
+    std::copy(instance.matrix.begin(), instance.matrix.end(), data.matrix);
+    std::copy(instance.tint.begin(), instance.tint.end(), data.tint);
+    data.palette = static_cast<float>(instance.palette);
+    data.lights = static_cast<float>(instance.lights);
+    std::copy(instance.moby_light.begin(), instance.moby_light.end(), data.moby_light);
+    std::copy(instance.moby_ambient.begin(), instance.moby_ambient.end(), data.moby_ambient);
+    return data;
+}
+
+// Returns the world bounds of one instance of `shape` with `data`: the shape's box through the
+// instance's matrix for a rigid mesh, its world `sphere` for an animated one (unless `sphere_off`),
+// padded; invalid (unbounded) when either cannot be trusted.
+LevelScene::CasterBounds LevelScene::instance_bounds(
+    const Model& shape,
+    const InstanceData& data,
+    const std::array<float, 4>& sphere,
+    bool sphere_off
+) {
+    CasterBounds bounds;
+    bounds.low.fill(3e38f);
+    bounds.high.fill(-3e38f);
+    bounds.valid = data.palette < 0 && shape.min[0] <= shape.max[0];
+    renderer::Mat4 matrix;
+    std::copy_n(data.matrix, 16, matrix.begin());
+    bounds.valid &= matrix[3] == 0 && matrix[7] == 0 && matrix[11] == 0 && matrix[15] == 1;
+    for (int corner = 0; corner < 8 && bounds.valid; ++corner) {
+        const auto p = renderer::transform_point(
+            matrix,
+            {(corner & 1) ? shape.max[0] : shape.min[0],
+             (corner & 2) ? shape.max[1] : shape.min[1],
+             (corner & 4) ? shape.max[2] : shape.min[2]}
+        );
+        for (int k = 0; k < 3; ++k) {
+            bounds.valid &= std::isfinite(p[k]) && shape.min[k] <= shape.max[k];
+            bounds.low[k] = std::min(bounds.low[k], p[k]);
+            bounds.high[k] = std::max(bounds.high[k], p[k]);
+        }
+    }
+    if (data.palette >= 0 && !sphere_off && data.moby_light[3] <= 1.5f) {
+        bounds.valid = sphere[3] > 0 && std::all_of(sphere.begin(), sphere.end(), [](float x) {
+                           return std::isfinite(x);
+                       });
+        for (int k = 0; k < 3 && bounds.valid; ++k) {
+            bounds.low[k] = sphere[k] - sphere[3];
+            bounds.high[k] = sphere[k] + sphere[3];
+            bounds.valid &= std::isfinite(bounds.low[k]) && std::isfinite(bounds.high[k]);
+        }
+    }
+    if (bounds.valid) {
+        for (int k = 0; k < 3; ++k) {
+            const float pad =
+                .001f + 1e-6f * std::max(std::abs(bounds.low[k]), std::abs(bounds.high[k]));
+            bounds.low[k] -= pad;
+            bounds.high[k] += pad;
+        }
+    }
+    return bounds;
+}
+
+// Returns `bounds` as the GPU culling takes them, with the instance's PVS word and its flags
+// (valid box, UI layer).
+renderer::GpuCullBounds LevelScene::gpu_cull_bounds(
+    const CasterBounds& bounds, const InstanceData& data, std::uint16_t occlusion
+) {
+    return {
+        bounds.low,
+        bounds.high,
+        occlusion,
+        (bounds.valid ? 1u : 0u) | (data.moby_light[3] > 1.5f ? 2u : 0u)
+    };
+}
+
 void LevelScene::build_groups(Layer layer, const std::vector<Instance>& instances, bool live) {
     // Instances grouped by class model and blend (Instance::blend), in first-seen order. The lists
     // are kept between calls (a live layer is grouped again every frame).
@@ -485,33 +635,25 @@ void LevelScene::build_groups(Layer layer, const std::vector<Instance>& instance
         group.spheres.clear();
         group.occlusion.clear();
     }
-    static const bool& sphere_off = stats::probe(
-        "OPENRAC_MOBY_SPHERE_CULL_OFF",
-        "Profiling reference: leave animated mobys unbounded (next upload)"
-    );
+    const bool sphere_off = moby_sphere_culling_off();
     std::size_t used = 0;
+    m_group_of_key.clear();
+
+    // Each instance into the list of its key, a new list for a key not seen yet (first-seen order).
     for (const Instance& instance : instances) {
-        const std::uint32_t key = instance.model << 3
-                                  | (static_cast<std::uint32_t>(instance.blend & 3) << 1)
-                                  | (instance.hero_shadow_caster ? 1u : 0u);
-        std::size_t at = 0;
-        while (at < used && m_grouping[at].key != key) {
-            ++at;
-        }
-        if (at == used) {
+        const std::uint32_t key = group_key(instance);
+        const auto [found, fresh] = m_group_of_key.try_emplace(key, used);
+        const std::size_t at = found->second;
+
+        // A key not seen yet this call: the next list, made the first time it is needed.
+        if (fresh) {
             if (used == m_grouping.size()) {
                 m_grouping.emplace_back();
             }
             m_grouping[used++].key = key;
         }
-        InstanceData data{};
-        std::copy(instance.matrix.begin(), instance.matrix.end(), data.matrix);
-        std::copy(instance.tint.begin(), instance.tint.end(), data.tint);
-        data.palette = static_cast<float>(instance.palette);
-        data.lights = static_cast<float>(instance.lights);
-        std::copy(instance.moby_light.begin(), instance.moby_light.end(), data.moby_light);
-        std::copy(instance.moby_ambient.begin(), instance.moby_ambient.end(), data.moby_ambient);
-        m_grouping[at].instances.push_back(data);
+
+        m_grouping[at].instances.push_back(instance_data(instance));
         m_grouping[at].spheres.push_back(instance.world_sphere);
         m_grouping[at].occlusion.push_back(instance.occlusion);
     }
@@ -538,14 +680,7 @@ void LevelScene::build_groups(Layer layer, const std::vector<Instance>& instance
         g.hero_shadow_caster = (m_grouping[i].key & 1) != 0;
         fill_group(g, m_grouping[i].instances, live ? GL_STREAM_DRAW : GL_STATIC_DRAW);
         g.cpu_instances = m_grouping[i].instances;
-        g.shadow_solid_instances = std::all_of(
-            g.cpu_instances.begin(),
-            g.cpu_instances.end(),
-            [](const InstanceData& data) {
-                return std::isfinite(data.tint[3]) && data.tint[3] >= 1.0f
-                       && data.moby_light[3] <= 0.5f;
-            }
-        );
+        g.shadow_solid_instances = solid_shadow_instances(g.cpu_instances);
         g.camera_valid = false;
         g.pvs_valid = false;
         g.occlusion = m_grouping[i].occlusion;
@@ -560,56 +695,12 @@ void LevelScene::build_groups(Layer layer, const std::vector<Instance>& instance
         // game's current world sphere, never their bind-pose box. Missing or
         // malformed spheres remain unbounded. Refresh on every instance upload.
         for (std::size_t n = 0; n < g.cpu_instances.size(); ++n) {
-            const auto& data = g.cpu_instances[n];
-            CasterBounds bounds;
-            const auto& shape = m_models[model];
-            bounds.low.fill(3e38f);
-            bounds.high.fill(-3e38f);
-            bounds.valid = data.palette < 0 && shape.min[0] <= shape.max[0];
-            renderer::Mat4 matrix;
-            std::copy_n(data.matrix, 16, matrix.begin());
-            bounds.valid &= matrix[3] == 0 && matrix[7] == 0 && matrix[11] == 0 && matrix[15] == 1;
-            for (int corner = 0; corner < 8 && bounds.valid; ++corner) {
-                const auto p = renderer::transform_point(
-                    matrix,
-                    {(corner & 1) ? shape.max[0] : shape.min[0],
-                     (corner & 2) ? shape.max[1] : shape.min[1],
-                     (corner & 4) ? shape.max[2] : shape.min[2]}
-                );
-                for (int k = 0; k < 3; ++k) {
-                    bounds.valid &= std::isfinite(p[k]) && shape.min[k] <= shape.max[k];
-                    bounds.low[k] = std::min(bounds.low[k], p[k]);
-                    bounds.high[k] = std::max(bounds.high[k], p[k]);
-                }
-            }
-            if (data.palette >= 0 && !sphere_off && data.moby_light[3] <= 1.5f) {
-                const auto& sphere = m_grouping[i].spheres[n];
-                bounds.valid =
-                    sphere[3] > 0 && std::all_of(sphere.begin(), sphere.end(), [](float x) {
-                        return std::isfinite(x);
-                    });
-                for (int k = 0; k < 3 && bounds.valid; ++k) {
-                    bounds.low[k] = sphere[k] - sphere[3];
-                    bounds.high[k] = sphere[k] + sphere[3];
-                    bounds.valid &= std::isfinite(bounds.low[k]) && std::isfinite(bounds.high[k]);
-                }
-            }
-            if (bounds.valid) {
-                for (int k = 0; k < 3; ++k) {
-                    const float pad =
-                        .001f + 1e-6f * std::max(std::abs(bounds.low[k]), std::abs(bounds.high[k]));
-                    bounds.low[k] -= pad;
-                    bounds.high[k] += pad;
-                }
-            }
+            const CasterBounds bounds = instance_bounds(
+                m_models[model], g.cpu_instances[n], m_grouping[i].spheres[n], sphere_off
+            );
             g.caster_bounds.push_back(bounds);
             if (native_gpu_bounds) {
-                g.gpu_bounds.push_back(
-                    {bounds.low,
-                     bounds.high,
-                     g.occlusion[n],
-                     (bounds.valid ? 1u : 0u) | (data.moby_light[3] > 1.5f ? 2u : 0u)}
-                );
+                g.gpu_bounds.push_back(gpu_cull_bounds(bounds, g.cpu_instances[n], g.occlusion[n]));
             }
         }
         // Aggregate the same conservative bounds used by per-instance tests.
@@ -683,6 +774,8 @@ void LevelScene::submit_instances(
 }
 
 void LevelScene::set_instances(Layer layer, const std::vector<Instance>& instances) {
+    // The CPU time of handing the scene a layer's instances (the moby layer's, every frame).
+    const stats::Scope pass(layer == Layer::Mobys ? "moby instances" : "layer instances");
     if (layer == Layer::Mobys) {
         m_hero_centre.reset();
         for (const auto& instance : instances) {
@@ -699,6 +792,14 @@ void LevelScene::set_instances(Layer layer, const std::vector<Instance>& instanc
         ++m_static_generation;
     }
 
+    // The same mobys in the same order as the last time (between two ticks, or a tick that changed
+    // no membership): their poses are written into the groups they are in (moby-pose-in-place).
+    if (layer == Layer::Mobys
+        && renderer::render_opt::enabled(renderer::render_opt::Opt::MobyPoseInPlace)
+        && rewrite_mobys(instances)) {
+        return;
+    }
+
     auto& groups = m_groups[static_cast<std::size_t>(layer)];
     auto& idle = m_idle[static_cast<std::size_t>(layer)];
     idle.insert(
@@ -706,6 +807,95 @@ void LevelScene::set_instances(Layer layer, const std::vector<Instance>& instanc
     );
     groups.clear();
     build_groups(layer, instances, true);
+
+    // The moby groups as build_groups made them: where each instance went, for the next call.
+    if (layer == Layer::Mobys) {
+        remember_mobys(instances);
+    }
+}
+
+void LevelScene::remember_mobys(const std::vector<Instance>& instances) {
+    auto& layout = m_moby_layout;
+    const auto& groups = m_groups[static_cast<std::size_t>(Layer::Mobys)];
+    layout.keys.resize(instances.size());
+    layout.group.resize(instances.size());
+    layout.slot.resize(instances.size());
+    layout.spheres.resize(instances.size());
+    layout.filled.assign(groups.size(), 0);
+    layout.sphere_off = moby_sphere_culling_off();
+
+    // Each instance's group, by its key (build_groups' lists are the groups, in order), and its
+    // place in it, in the order build_groups appended it.
+    for (std::size_t n = 0; n < instances.size(); ++n) {
+        const std::uint32_t key = group_key(instances[n]);
+        const std::size_t group = m_group_of_key.at(key);
+        layout.keys[n] = key;
+        layout.group[n] = static_cast<std::uint32_t>(group);
+        layout.slot[n] = layout.filled[group]++;
+        layout.spheres[n] = instances[n].world_sphere;
+    }
+
+    layout.valid = true;
+}
+
+bool LevelScene::rewrite_mobys(const std::vector<Instance>& instances) {
+    auto& layout = m_moby_layout;
+    auto& groups = m_groups[static_cast<std::size_t>(Layer::Mobys)];
+
+    // No layout, one of another count of mobys, or bounds made with the sphere switch otherwise
+    // (OPENRAC_MOBY_SPHERE_CULL_OFF changed since): they are grouped again.
+    if (!layout.valid || instances.size() != layout.keys.size()
+        || layout.filled.size() != groups.size()
+        || layout.sphere_off != moby_sphere_culling_off()) {
+        return false;
+    }
+
+    // A moby of another class, blend or shadow role at a place: the membership changed.
+    for (std::size_t n = 0; n < instances.size(); ++n) {
+        // Another key at this place: grouped again.
+        if (group_key(instances[n]) != layout.keys[n]) {
+            return false;
+        }
+    }
+
+    const bool native_gpu_bounds = gl::is_vulkan();
+
+    // Each moby's attributes into its place; its bounds again only when its pose or sphere moved.
+    for (std::size_t n = 0; n < instances.size(); ++n) {
+        Group& g = groups[layout.group[n]];
+        const std::uint32_t slot = layout.slot[n];
+        const InstanceData data = instance_data(instances[n]);
+        const auto& sphere = instances[n].world_sphere;
+        const bool moved =
+            std::memcmp(&g.cpu_instances[slot], &data, sizeof(data)) != 0
+            || std::memcmp(layout.spheres[n].data(), sphere.data(), sizeof(sphere)) != 0;
+        g.cpu_instances[slot] = data;
+        g.occlusion[slot] = instances[n].occlusion;
+
+        // The same pose and sphere give the same bounds as before.
+        if (moved) {
+            g.caster_bounds[slot] =
+                instance_bounds(m_models[g.model], data, sphere, layout.sphere_off);
+            layout.spheres[n] = sphere;
+        }
+
+        // The GPU's form also carries the PVS word, which may change with the same pose.
+        if (native_gpu_bounds) {
+            g.gpu_bounds[slot] = gpu_cull_bounds(g.caster_bounds[slot], data, g.occlusion[slot]);
+        }
+    }
+
+    // Each group's instances sent, and what build_groups derives from them made again.
+    for (Group& g : groups) {
+        fill_group(g, g.cpu_instances, GL_STREAM_DRAW);
+        g.shadow_solid_instances = solid_shadow_instances(g.cpu_instances);
+        g.camera_valid = false;
+        g.pvs_valid = false;
+    }
+
+    glBindVertexArray(0);
+    glBindBuffer(GL_ARRAY_BUFFER, 0);
+    return true;
 }
 
 // ---- World drawing ----
@@ -728,6 +918,8 @@ void LevelScene::draw_mobys(
 }
 
 void LevelScene::set_palette(const std::vector<JointColumns>& matrices) {
+    // The CPU time of the joint palette's upload, every frame the mobys move.
+    const stats::Scope pass("moby palette");
     if (matrices.empty()) {
         return;
     }
@@ -741,6 +933,14 @@ void LevelScene::set_palette(const std::vector<JointColumns>& matrices) {
     // Whole rows: the matrices, then zeros to the end of the last row.
     constexpr std::size_t per_row = kPaletteWidth / 4;
     const std::size_t rows = (matrices.size() + per_row - 1) / per_row;
+
+    // The texture holds these joints already, bit for bit (a still palette): nothing is sent.
+    if (renderer::render_opt::enabled(renderer::render_opt::Opt::MobyPoseInPlace)
+        && rows <= m_palette_rows && same_palette(matrices, m_palette_data, rows * per_row)) {
+        glBindTexture(GL_TEXTURE_2D, 0);
+        return;
+    }
+
     m_palette_data.assign(rows * per_row, JointColumns{});
     std::copy(matrices.begin(), matrices.end(), m_palette_data.begin());
     glBindTexture(GL_TEXTURE_2D, m_palette);
@@ -819,9 +1019,9 @@ bool LevelScene::make_shadow_atlas(std::string& error) {
     }
     // The reference targets are recreated on demand if the user switches
     // paths; retaining both sets would waste shadow-map storage every frame.
-    m_hero_map.reset();
+    release_target(m_hero_map);
     for (auto& map : m_sun_maps) {
-        map.reset();
+        release_target(map);
     }
     return true;
 }
@@ -848,8 +1048,8 @@ void LevelScene::prepare_shadows(const renderer::FrameInput& input, renderer::Re
     }
 #endif
     if (!m_shadow_atlas_active) {
-        m_shadow_atlas.reset();
-        m_static_shadow.reset();
+        release_target(m_shadow_atlas);
+        release_target(m_static_shadow);
         m_static_keys = {};
     }
     prepare_hero_shadow(input, state);
@@ -882,15 +1082,29 @@ void LevelScene::draw_shadow_atlas(renderer::RenderState& state) {
         m_sun_ready && renderer::render_opt::enabled(renderer::render_opt::Opt::ShadowStaticCache);
     unsigned rerendered = m_sun_ready ? kSunCascades : 0;
 
+    // Nothing samples the atlas's colour or reads its stencil: neither is loaded or written back
+    // (shadow-atlas-discard; the depth is cleared with the stencil so it is not loaded either).
+    const bool discard =
+        glInvalidateFramebuffer != nullptr
+        && renderer::render_opt::enabled(renderer::render_opt::Opt::ShadowAtlasDiscard);
+    const GLenum unread[] = {GL_COLOR_ATTACHMENT0, GL_STENCIL_ATTACHMENT};
+
     // The static casters come from the cache, the atlas holding its copy; otherwise it is cleared.
     if (cache) {
         rerendered = draw_cached_cascades(state);
     } else {
-        m_static_shadow.reset();
+        release_target(m_static_shadow);
         m_static_keys = {};
         begin_shadow_target(m_shadow_atlas->id());
         glClearDepth(0);
-        glClear(GL_DEPTH_BUFFER_BIT);
+
+        // The colour let go before the pass, the stencil cleared with the depth: nothing loaded.
+        if (discard) {
+            glInvalidateFramebuffer(GL_FRAMEBUFFER, 1, unread);
+            glClear(GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
+        } else {
+            glClear(GL_DEPTH_BUFFER_BIT);
+        }
     }
 
     vkgl::indexed_viewports(kShadowAtlasRects);
@@ -916,6 +1130,12 @@ void LevelScene::draw_shadow_atlas(renderer::RenderState& state) {
     vkgl::indexed_viewports({});
     glBindVertexArray(0);
     glColorMask(GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE);
+
+    // Only the depth is sampled: the colour and the stencil are not written back.
+    if (discard) {
+        glInvalidateFramebuffer(GL_FRAMEBUFFER, 2, unread);
+    }
+
     glBindFramebuffer(GL_FRAMEBUFFER, state.target.framebuffer);
     glViewport(0, 0, state.target.width, state.target.height);
     // What the atlas cost this frame, cache or not, for RENDER_PERF.md's R-18 comparison.
@@ -971,7 +1191,7 @@ unsigned LevelScene::draw_cached_cascades(renderer::RenderState& state) {
             // No memory for it: the atlas draws every caster, as with the entry off.
             if (!m_static_shadow->create(kShadowAtlasSize, kShadowAtlasSize, error, 1, true)) {
                 log::warn("static shadow cache unavailable: {}", error);
-                m_static_shadow.reset();
+                release_target(m_static_shadow);
                 begin_shadow_target(m_shadow_atlas->id());
                 glClearDepth(0);
                 glClear(GL_DEPTH_BUFFER_BIT);
@@ -1075,7 +1295,7 @@ void LevelScene::prepare_hero_shadow(
 ) {
     m_hero_ready = false;
     if (!probe_data_available() || !m_hero_enabled || !input.hero_pixel_shadow || !m_hero_centre
-        || m_probes.mode == 2 || m_probes.mode == 4) {
+        || m_lighting->mode() == 2 || m_lighting->mode() == 4) {
         return;
     }
     renderer::Vec3 direction{0, 0, -1};
@@ -1152,8 +1372,8 @@ void LevelScene::prepare_sun_shadow(
 ) {
     m_sun_ready = false;
     m_sun_culling = {};
-    if (!probe_data_available() || !m_sun_enabled || !input.sun_pixel_shadow || m_probes.mode == 2
-        || m_probes.mode == 4) {
+    if (!probe_data_available() || !m_sun_enabled || !input.sun_pixel_shadow
+        || m_lighting->mode() == 2 || m_lighting->mode() == 4) {
         return;
     }
     renderer::Vec3 direction{0, 0, -1}, low{3e38f, 3e38f, 3e38f}, high{-3e38f, -3e38f, -3e38f};
@@ -1546,7 +1766,7 @@ void LevelScene::release() {
     vkgl::gpu_release_instances();
 #endif
     for (auto& map : m_sun_maps) {
-        map.reset();
+        release_target(map);
     }
     m_sun_enabled = m_sun_ready = false;
     glDeleteVertexArrays(1, &m_shadow_compact.vao);
@@ -1554,15 +1774,16 @@ void LevelScene::release() {
     m_shadow_compact = {};
     m_shadow_survivors.clear();
     m_sun_culling = {};
-    m_hero_map.reset();
+    release_target(m_hero_map);
     m_hero_depth.release();
     m_shadow_solid.release();
     m_atlas_depth.release();
     m_atlas_solid.release();
-    m_shadow_atlas.reset();
+    release_target(m_shadow_atlas);
     m_shadow_atlas_active = false;
-    m_static_shadow.reset();
+    release_target(m_static_shadow);
     m_static_keys = {};
+    m_moby_layout.valid = false;
     for (auto& bucket : m_shadow_draws) {
         bucket.clear();
     }
@@ -1570,8 +1791,10 @@ void LevelScene::release() {
     m_hero_enabled = m_hero_ready = false;
     m_hero_logged_airborne.reset();
     m_hero_centre.reset();
-    m_probes.release();
-    m_early_lighting.release();
+    // Only registered lighting has GL objects to free.
+    if (m_lighting) {
+        m_lighting->release();
+    }
     m_early_capable = false;
     if (m_palette != 0) {
         glDeleteTextures(1, &m_palette);
@@ -1693,9 +1916,9 @@ void LevelScene::draw_sky(const renderer::FrameInput& input, renderer::RenderSta
 }
 
 bool LevelScene::needs_early_lighting(const renderer::FrameInput& input) const {
-    return probe_data_available() && m_early_capable && EarlyLighting::supported()
-           && m_probes.mode != 4
-           && (m_probes.active() || (m_sun_enabled && input.sun_pixel_shadow)
+    return probe_data_available() && m_early_capable && m_lighting->early_supported()
+           && m_lighting->mode() != 4
+           && (m_lighting->active() || (m_sun_enabled && input.sun_pixel_shadow)
                || (m_hero_enabled && input.hero_pixel_shadow));
 }
 
@@ -1774,26 +1997,29 @@ void LevelScene::render_early_lighting(
     prepare_shadows(input, state);
     state.world_shadows_prepared = true;
     std::string error;
-    state.early_lighting = m_early_lighting.render(
-        depth,
-        input,
-        state.target,
-        [&](const renderer::Shader& shader) {
-            m_probes.bind(shader, Layer::Terrain, true, &input.camera);
-            bind_sun_shadow(shader, input.camera);
-            bind_hero_shadow(shader);
-            glUniform1i(shader.uniform("early_ao_enabled"), state.gtao_raw != 0 ? 1 : 0);
-            glUniform1i(shader.uniform("early_ao"), 18);
-            glUniform1i(shader.uniform("early_ao_scale"), state.gtao_scale);
-            glUniform1f(
-                shader.uniform("early_ao_strength"), std::clamp(state.gtao_strength, 0.0f, 3.0f)
-            );
-            glActiveTexture(GL_TEXTURE0 + 18);
-            glBindTexture(renderer::world::gl::GL_TEXTURE_BUFFER, state.gtao_raw);
-            glActiveTexture(GL_TEXTURE0);
-        },
-        error
-    );
+    // Drawn only where it is needed (needs_early_lighting), which takes registered lighting.
+    state.early_lighting =
+        m_lighting
+        && m_lighting->render_early(
+            depth,
+            input,
+            state.target,
+            [&](const renderer::Shader& shader) {
+                m_lighting->bind(shader, Layer::Terrain, true, &input.camera, true);
+                bind_sun_shadow(shader, input.camera);
+                bind_hero_shadow(shader);
+                glUniform1i(shader.uniform("early_ao_enabled"), state.gtao_raw != 0 ? 1 : 0);
+                glUniform1i(shader.uniform("early_ao"), 18);
+                glUniform1i(shader.uniform("early_ao_scale"), state.gtao_scale);
+                glUniform1f(
+                    shader.uniform("early_ao_strength"), std::clamp(state.gtao_strength, 0.0f, 3.0f)
+                );
+                glActiveTexture(GL_TEXTURE0 + 18);
+                glBindTexture(renderer::world::gl::GL_TEXTURE_BUFFER, state.gtao_raw);
+                glActiveTexture(GL_TEXTURE0);
+            },
+            error
+        );
     stats::gauge("early lighting active", state.early_lighting ? 1 : 0);
     if (!error.empty()) {
         log::warn("early lighting: {}", error);
@@ -2042,9 +2268,17 @@ void LevelScene::draw_layer(
         }
         glUniform4fv(shader.uniform("probe_point_position"), 8, point_positions.data());
         glUniform4fv(shader.uniform("probe_point_colour"), 8, point_colours.data());
-        m_probes.bind(shader, layer, m_hero_enabled || m_sun_enabled, &input.camera, depth_matched);
+        // The registered lighting's uniforms; without it the shader keeps the game's lighting.
+        if (m_lighting) {
+            m_lighting->bind(
+                shader, layer, m_hero_enabled || m_sun_enabled, &input.camera, depth_matched
+            );
+        }
         bind_sun_shadow(shader, input.camera);
-        m_early_lighting.bind(shader, input, state);
+        // The early lighting's result, where registered lighting drew one.
+        if (m_lighting) {
+            m_lighting->bind_early(shader, input, state);
+        }
         bind_hero_shadow(shader);
         glUniform4f(shader.uniform("fog_colour"), m_fog_colour[0], m_fog_colour[1], m_fog_colour[2],
                     m_fog_colour[3]);
@@ -2112,8 +2346,8 @@ void LevelScene::draw_layer(
         if (mobys && !state.depth_prepass && state.opaque_colour_phase < 0) {
             layer_pass.emplace(moby_pass_names[pass], stats::kGpu);
         }
-        const bool early = !state.depth_prepass && (mobys ? pass == 0 : pass <= 1)
-                           && m_early_lighting.matches(input, state);
+        const bool early = !state.depth_prepass && (mobys ? pass == 0 : pass <= 1) && m_lighting
+                           && m_lighting->early_matches(input, state);
         const bool batch_shader = colour_batch && state.opaque_colour_phase >= 0;
         static const bool& specialisation_off = stats::probe(
             "OPENRAC_OPAQUE_SPECIALISE_OFF", "Reference: unspecialised mesh colour shaders"
@@ -2377,4 +2611,4 @@ void LayerRenderer::render_depth(const renderer::FrameInput& input, renderer::Re
     }
 }
 
-}  // namespace openrac::viewer
+}  // namespace openrac::scene

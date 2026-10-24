@@ -13,7 +13,7 @@
 namespace openrac::lighting {
 // Shared human-readable transport/grid description for both CLI paths.
 std::string describe_probe_bake(
-    const viewer::LevelData& level,
+    const scene::LevelData& level,
     const BakeSceneExport& exported,
     const ProbeGrid& grid,
     const BakeSettings& settings,
@@ -22,7 +22,7 @@ std::string describe_probe_bake(
 
 // Preserve the original geometric coverage diagnostics under runtime rounding.
 void report_terrain_coverage(
-    const viewer::LevelData& level,
+    const scene::LevelData& level,
     const ProbeVolume& volume,
     const ProbeVolume* coarse,
     std::ostream& output

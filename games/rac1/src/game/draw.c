@@ -22,8 +22,8 @@ extern DispatchRec D_001E8F80[];
 extern int D_0018A3B0[];
 
 /* Resets the texture DMA state words to 1. */
-void draw_resetTextureDmaState(void) {
-    int *p = D_0018A3B0;
+void clear_dma_queue_entry(void) {
+    int *p = draw_config;
     int val = 1;
     int i = 0x13;
     p = (int *)((char *)p + 0x4C);
@@ -51,15 +51,15 @@ extern int func_00116248();
    D_0015F100 string pool past the copy. Indexing the table at every
    store gives retail's two addu forms; a `DrawTextRec *` local folds
    them into one register and comes out 12 bytes short. */
-void Text_Queue(int x, int y, int color, char *str) {
-    int n = *(int *)&D_0015F104;
+void print_debug_text(int x, int y, int color, char *str) {
+    int n = *(int *)&font_text_slot_index;
 
-    D_0018AC00[n].x = x;
-    D_0018AC00[n].y = y;
-    D_0018AC00[n].color = color;
-    D_0018AC00[n].str = *(char **)&D_0015F100;
-    *(int *)&D_0015F104 = n + 1;
-    *(char **)&D_0015F100 += func_00116248(*(char **)&D_0015F100, D_0015F108, str) + 1;
+    font_text_slots[n].x = x;
+    font_text_slots[n].y = y;
+    font_text_slots[n].color = color;
+    font_text_slots[n].str = *(char **)&font_text_cursor;
+    *(int *)&font_text_slot_index = n + 1;
+    *(char **)&font_text_cursor += func_00116248(*(char **)&font_text_cursor, font_text_format, str) + 1;
 }
 
 LINKER_REMNANT("asm/remnants/text", func_001F0FF0);
@@ -72,7 +72,7 @@ extern int D_00189EC0[];
    func_001F0F78. Returns the adjusted x. `idx = ch` followed by the
    out-of-range override gives retail's sltiu 0x60 + movn; the reverse
    (default first, then `if (ch < 0x60)`) becomes sltu + movz. */
-int Text_QueueCentered(int x, int y, int color, char *str) {
+int func_001F0FF8(int x, int y, int color, char *str) {
     int w = 0;
     unsigned char *p = (unsigned char *)str;
 
@@ -82,10 +82,10 @@ int Text_QueueCentered(int x, int y, int color, char *str) {
         if (ch >= 0x60) {
             idx = 0x20;
         }
-        w += D_00189EC0[idx];
+        w += font_char_widths[idx];
     }
     x -= w >> 1;
-    Text_Queue(x, y, color, str);
+    print_debug_text(x, y, color, str);
     return x;
 }
 
@@ -208,155 +208,155 @@ extern int func_0011C208(int);
 void func_001F10C8(void) {
     Tbl1088 t;
 
-    ((int (*)(void))func_0022DD68)();
+    ((int (*)(void))sound_update)();
     if (D_0013CA40.pressed & 0x500) {
-        D_0015F6E8 = D_0018C418.uA4;
-        func_001FB448(D_0018CE00[0x8F], D_0018CE00[0x90], D_0018CE00[0x91]);
-        D_0018C418.bF8 = 0x6E;
-        D_0018C418.bF9 = 0x6E;
-        D_0018C418.x94 = (int)D_00187040.pos[0] >> 2;
-        D_0018C418.y98 = (int)D_00187040.pos[1] >> 2;
-        D_0018C418.z9C = (int)D_00187040.pos[2] >> 2;
+        D_0015F6E8 = occl_cam_state.uA4;
+        SetBackgroundColor(view_context[0x8F], view_context[0x90], view_context[0x91]);
+        occl_cam_state.bF8 = 0x6E;
+        occl_cam_state.bF9 = 0x6E;
+        occl_cam_state.x94 = (int)gCamera.pos[0] >> 2;
+        occl_cam_state.y98 = (int)gCamera.pos[1] >> 2;
+        occl_cam_state.z9C = (int)gCamera.pos[2] >> 2;
         return;
     } else {
         t = D_001E7AC0;
 
         if (D_0013CA40.pressed & 0x2000) {
-            int p = ++D_0018C418.page;
+            int p = ++occl_cam_state.page;
             if (p == 3) {
-                D_0018C418.page = 0;
+                occl_cam_state.page = 0;
             } else if (p == 6) {
-                D_0018C418.page = 3;
+                occl_cam_state.page = 3;
             }
         } else if (D_0013CA40.pressed & 0x8000) {
-            int p = --D_0018C418.page;
+            int p = --occl_cam_state.page;
             if (p < 0) {
-                D_0018C418.page = 2;
+                occl_cam_state.page = 2;
             } else if (p == 2) {
-                D_0018C418.page = 5;
+                occl_cam_state.page = 5;
             }
         }
 
-        if ((D_0013CA40.pressed & 0x1000) && --D_0018C418.cursor < 0) {
-            if (D_0018C418.page >= 3) {
-                D_0018C418.page = (D_0018C418.page + 3) % 6;
+        if ((D_0013CA40.pressed & 0x1000) && --occl_cam_state.cursor < 0) {
+            if (occl_cam_state.page >= 3) {
+                occl_cam_state.page = (occl_cam_state.page + 3) % 6;
             }
-            D_0018C418.cursor = t.v[D_0018C418.page] - 1;
+            occl_cam_state.cursor = t.v[occl_cam_state.page] - 1;
         } else if (D_0013CA40.pressed & 0x4000) {
-            if (++D_0018C418.cursor >= t.v[D_0018C418.page]) {
-                if (D_0018C418.page < 3) {
-                    D_0018C418.page = (D_0018C418.page + 9) % 6;
+            if (++occl_cam_state.cursor >= t.v[occl_cam_state.page]) {
+                if (occl_cam_state.page < 3) {
+                    occl_cam_state.page = (occl_cam_state.page + 9) % 6;
                 }
-                D_0018C418.cursor = 0;
+                occl_cam_state.cursor = 0;
             }
         }
 
-        if (D_0018C418.cursor >= t.v[D_0018C418.page]) {
-            D_0018C418.cursor = t.v[D_0018C418.page] - 1;
+        if (occl_cam_state.cursor >= t.v[occl_cam_state.page]) {
+            occl_cam_state.cursor = t.v[occl_cam_state.page] - 1;
         }
     }
 
-    switch (D_0018C418.page) {
+    switch (occl_cam_state.page) {
     case 0:
         if (D_0013CA40.pressed & 0x40) {
-            int bit = 1 << D_0018C418.cursor;
-            D_0018C418.flags8 ^= bit;
+            int bit = 1 << occl_cam_state.cursor;
+            occl_cam_state.flags8 ^= bit;
             if (bit == 0x10) {
-                if (D_0018C418.flags8 & 0x10) {
-                    D_0018C418.flags8 = bit;
+                if (occl_cam_state.flags8 & 0x10) {
+                    occl_cam_state.flags8 = bit;
                 } else {
-                    D_0018C418.flags8 = 0xF;
+                    occl_cam_state.flags8 = 0xF;
                 }
             }
         }
         break;
     case 1:
-        switch (D_0018C418.cursor) {
+        switch (occl_cam_state.cursor) {
         case 0:
             if (D_0013CA40.pressed & 0x50) {
                 if (D_0013CA40.pressed & 0x40) {
-                    if (++D_0018C418.a14 >= 4) {
-                        D_0018C418.a14 = 0;
+                    if (++occl_cam_state.a14 >= 4) {
+                        occl_cam_state.a14 = 0;
                     }
                 }
                 if (D_0013CA40.pressed & 0x10) {
-                    if (--D_0018C418.a14 < 0) {
-                        D_0018C418.a14 = 3;
+                    if (--occl_cam_state.a14 < 0) {
+                        occl_cam_state.a14 = 3;
                     }
                 }
-                switch (D_0018C418.a14) {
+                switch (occl_cam_state.a14) {
                 case 0:
-                    D_0018C418.flags8 = 0xF;
+                    occl_cam_state.flags8 = 0xF;
                     break;
                 case 1:
-                    D_0018C418.flags8 = 0;
+                    occl_cam_state.flags8 = 0;
                     break;
                 case 2: {
                     float v[4];
-                    D_0018C418.flags8 = 0;
-                    func_001F9BF0(v, D_0013F450.pos, D_00187040.pos);
-                    D_0018C418.f8C = func_001F9CE8(v);
-                    D_0018C418.f88 = func_001FA790(func_001FA058(v[0], v[1]), D_00187040.rot[2]);
-                    D_0018C418.f90 = D_0013F450.pos[2] - D_00187040.pos[2];
-                    D_0018C418.f84 = func_001FA790(D_0013F450.rot[2], D_00187040.rot[2]);
+                    occl_cam_state.flags8 = 0;
+                    FastVecSub(v, D_0013F450.pos, gCamera.pos);
+                    occl_cam_state.f8C = func_001F9CE8(v);
+                    occl_cam_state.f88 = FastSubRots(func_001FA058(v[0], v[1]), gCamera.rot[2]);
+                    occl_cam_state.f90 = D_0013F450.pos[2] - gCamera.pos[2];
+                    occl_cam_state.f84 = FastSubRots(D_0013F450.rot[2], gCamera.rot[2]);
                     break;
                 }
                 case 3:
-                    D_0018C418.flags8 = 6;
+                    occl_cam_state.flags8 = 6;
                     break;
                 }
             }
             break;
         case 1:
             if (D_0013CA40.pressed & 0x40) {
-                if (++D_0018C418.a18 >= 8) {
-                    D_0018C418.a18 = 0;
+                if (++occl_cam_state.a18 >= 8) {
+                    occl_cam_state.a18 = 0;
                 }
             }
             if (D_0013CA40.pressed & 0x10) {
-                if (--D_0018C418.a18 < 0) {
-                    D_0018C418.a18 = 7;
+                if (--occl_cam_state.a18 < 0) {
+                    occl_cam_state.a18 = 7;
                 }
             }
             break;
         case 2:
             if (D_0015F720 == 0) {
-                D_0018C418.a1C = 0;
+                occl_cam_state.a1C = 0;
                 break;
             }
             if (D_0013CA40.pressed & 0x40) {
-                if (++D_0018C418.a1C >= 3) {
-                    D_0018C418.a1C = 0;
+                if (++occl_cam_state.a1C >= 3) {
+                    occl_cam_state.a1C = 0;
                 }
             }
             if (D_0013CA40.pressed & 0x10) {
-                if (--D_0018C418.a1C < 0) {
-                    D_0018C418.a1C = 2;
+                if (--occl_cam_state.a1C < 0) {
+                    occl_cam_state.a1C = 2;
                 }
             }
             break;
         case 3:
             if (D_0013CA40.pressed & 0x50) {
-                D_0018C418.a20 = !D_0018C418.a20;
+                occl_cam_state.a20 = !occl_cam_state.a20;
             }
             break;
         case 4:
             if (D_0013CA40.pressed & 0x50) {
-                D_0018C418.a24 = !D_0018C418.a24;
+                occl_cam_state.a24 = !occl_cam_state.a24;
             }
             break;
         case 5:
             if (D_0013CA40.pressed & 0x50) {
-                if ((D_0018C418.a28 = !D_0018C418.a28) != 0) {
+                if ((occl_cam_state.a28 = !occl_cam_state.a28) != 0) {
                     D_00160FC0 = 65536.0f;
                     D_00161070 = 64.0f;
-                    D_001604E4 = 40.0f;
+                    occl_fog_density_set = 40.0f;
                     D_00160030 = 0x40;
                     D_001601BC = 0x40000;
                 } else {
                     D_00160FC0 = 512000.0f;
                     D_00161070 = 720.0f;
-                    D_001604E4 = 500.0f;
+                    occl_fog_density_set = 500.0f;
                     D_00160030 = 500;
                     D_001601BC = 0x1F4000;
                 }
@@ -364,75 +364,75 @@ void func_001F10C8(void) {
             break;
         case 6:
             if (D_0013CA40.pressed & 0x40) {
-                if (++D_0018C418.a2C >= 3) {
-                    D_0018C418.a2C = 0;
+                if (++occl_cam_state.a2C >= 3) {
+                    occl_cam_state.a2C = 0;
                 }
             }
             if (D_0013CA40.pressed & 0x10) {
-                if (--D_0018C418.a2C < 0) {
-                    D_0018C418.a2C = 2;
+                if (--occl_cam_state.a2C < 0) {
+                    occl_cam_state.a2C = 2;
                 }
             }
             break;
         case 7:
             if (D_0013CA40.pressed & 0x50) {
-                D_0018C418.a30 = !D_0018C418.a30;
+                occl_cam_state.a30 = !occl_cam_state.a30;
             }
             break;
         case 8:
             if (D_0013CA40.pressed & 0x50) {
-                if ((D_0018C418.a34 = !D_0018C418.a34) != 0) {
-                    float *ctx = (float *)D_0018CE00;
-                    ctx[0x80] = func_001FA888(D_00151880[0xA8]) * 0.125f;
-                    ctx[0x81] = func_001FA888(D_00151880[0xA9]) * 0.125f;
+                if ((occl_cam_state.a34 = !occl_cam_state.a34) != 0) {
+                    float *ctx = (float *)view_context;
+                    ctx[0x80] = IntToFloat(D_00151880[0xA8]) * 0.125f;
+                    ctx[0x81] = IntToFloat(D_00151880[0xA9]) * 0.125f;
                 } else {
-                    float *ctx = (float *)D_0018CE00;
-                    ctx[0x80] = func_001FA888(D_00151880[0xA8]) * 0.5f;
-                    ctx[0x81] = func_001FA888(D_00151880[0xA9]) * 0.5f;
+                    float *ctx = (float *)view_context;
+                    ctx[0x80] = IntToFloat(D_00151880[0xA8]) * 0.5f;
+                    ctx[0x81] = IntToFloat(D_00151880[0xA9]) * 0.5f;
                 }
                 {
-                    float *v = (float *)D_0018CE00;
+                    float *v = (float *)view_context;
                     v[0x82] = v[0x80] * 4.0f;
                     v[0x83] = v[0x81] * 4.0f;
                 }
-                func_001F3140();
+                UpdateViewContext();
             }
             break;
         case 9:
             if (D_0013CA40.pressed & 0x50) {
                 if (D_0013CA40.pressed & 0x40) {
-                    D_0018C418.a38++;
-                    while (D_0018C418.a38 == 0x24) {
-                        D_0018C418.a38 = -1;
+                    occl_cam_state.a38++;
+                    while (occl_cam_state.a38 == 0x24) {
+                        occl_cam_state.a38 = -1;
                     }
                 } else {
-                    D_0018C418.a38--;
-                    while (D_0018C418.a38 < -1) {
-                        D_0018C418.a38 = 0x23;
+                    occl_cam_state.a38--;
+                    while (occl_cam_state.a38 < -1) {
+                        occl_cam_state.a38 = 0x23;
                     }
                 }
             }
-            if (D_0018C418.a38 >= 0) {
-                D_0018C418.uA4 = 2;
+            if (occl_cam_state.a38 >= 0) {
+                occl_cam_state.uA4 = 2;
             } else {
-                D_0018C418.uA4 = 0;
+                occl_cam_state.uA4 = 0;
             }
             break;
         case 10:
             if (D_0013CA40.pressed & 0x50) {
                 if (D_0013CA40.pressed & 0x40) {
-                    D_0018C418.a3C++;
-                    while (D_0018C418.a3C == 0x10) {
-                        D_0018C418.a3C = 0;
+                    occl_cam_state.a3C++;
+                    while (occl_cam_state.a3C == 0x10) {
+                        occl_cam_state.a3C = 0;
                     }
                 } else {
-                    D_0018C418.a3C--;
-                    while (D_0018C418.a3C < 0) {
-                        D_0018C418.a3C = 0xF;
+                    occl_cam_state.a3C--;
+                    while (occl_cam_state.a3C < 0) {
+                        occl_cam_state.a3C = 0xF;
                     }
                 }
             } else if (D_0013CA40.pressed & 0x20) {
-                int i = D_0018C418.a3C;
+                int i = occl_cam_state.a3C;
                 unsigned char *e = &D_0014C150[i + D_0015EE84 * 16];
                 *e = (*e == 0) ? 0xFF : 0;
                 D_0015FCC8[i] = *e;
@@ -442,18 +442,18 @@ void func_001F10C8(void) {
         break;
     case 2:
         if (D_0013CA40.pressed & 0x40) {
-            D_0018C418.flags4 ^= 1 << D_0018C418.cursor;
+            occl_cam_state.flags4 ^= 1 << occl_cam_state.cursor;
         }
         break;
     case 3: {
         int max = 999999;
         int *val;
-        if (D_0018C418.cursor < 13) {
-            unsigned char k = ((unsigned char *)&D_0015F110)[D_0018C418.cursor];
-            max = ((Item1088 *)(k * sizeof(Item1088) + (unsigned int)D_001E02B0))->max;
-            val = &D_0013D530[k];
+        if (occl_cam_state.cursor < 13) {
+            unsigned char k = ((unsigned char *)&D_0015F110)[occl_cam_state.cursor];
+            max = ((Item1088 *)(k * sizeof(Item1088) + (unsigned int)vendor_item_prices))->max;
+            val = &weapon_ammo_counts[k];
         } else {
-            val = &D_0015EE98;
+            val = &gBolts;
         }
         if (D_0013CA40.held & 8) {
             if (D_0013CA40.pressed & 0x40) {
@@ -491,13 +491,13 @@ void func_001F10C8(void) {
             *val = max;
         }
         if (D_0013CA40.pressed & 0x10) {
-            D_0013E620[((unsigned char *)&D_0015F110)[D_0018C418.cursor]]++;
+            D_0013E620[((unsigned char *)&D_0015F110)[occl_cam_state.cursor]]++;
         }
         if (D_0013CA40.pressed & 0x80) {
-            D_0013E620[((unsigned char *)&D_0015F110)[D_0018C418.cursor]]--;
+            D_0013E620[((unsigned char *)&D_0015F110)[occl_cam_state.cursor]]--;
         }
         {
-            unsigned char k = ((unsigned char *)&D_0015F110)[D_0018C418.cursor];
+            unsigned char k = ((unsigned char *)&D_0015F110)[occl_cam_state.cursor];
             unsigned char *c = &D_0013E620[k];
             Gadget1088 *g = &D_001864D0[k];
             if (g->cap < *c) {
@@ -507,92 +507,92 @@ void func_001F10C8(void) {
         return;
     }
     case 4:
-        if (D_0018C418.cursor == 0) {
+        if (occl_cam_state.cursor == 0) {
             if ((D_0013CA40.held & 0x40) || (D_0013CA40.pressed & 8)) {
-                D_0015F588 += 1024.0f;
+                fog_near_distance += 1024.0f;
             }
             if ((D_0013CA40.held & 0x10) || (D_0013CA40.pressed & 4)) {
-                D_0015F588 -= 1024.0f;
+                fog_near_distance -= 1024.0f;
             }
-            if (D_0015F588 > D_0015F58C) {
-                D_0015F588 = D_0015F58C;
-            } else if (D_0015F588 < 0.0f) {
-                D_0015F588 = 0.0f;
+            if (fog_near_distance > fog_far_distance) {
+                fog_near_distance = fog_far_distance;
+            } else if (fog_near_distance < 0.0f) {
+                fog_near_distance = 0.0f;
             }
         }
-        if (D_0018C418.cursor == 2) {
+        if (occl_cam_state.cursor == 2) {
             if ((D_0013CA40.held & 0x40) || (D_0013CA40.pressed & 8)) {
-                D_0015F58C += 1024.0f;
+                fog_far_distance += 1024.0f;
             }
             if ((D_0013CA40.held & 0x10) || (D_0013CA40.pressed & 4)) {
-                D_0015F58C -= 1024.0f;
+                fog_far_distance -= 1024.0f;
             }
-            if (524288.0f < D_0015F58C) {
-                D_0015F58C = 524288.0f;
-            } else if (D_0015F58C < D_0015F588) {
-                D_0015F58C = D_0015F588;
+            if (524288.0f < fog_far_distance) {
+                fog_far_distance = 524288.0f;
+            } else if (fog_far_distance < fog_near_distance) {
+                fog_far_distance = fog_near_distance;
             }
         }
-        if (D_0018C418.cursor == 1) {
+        if (occl_cam_state.cursor == 1) {
             if ((D_0013CA40.held & 0x40) || (D_0013CA40.pressed & 8)) {
-                D_0015F590 -= 2.55f;
+                fog_near_intensity -= 2.55f;
             }
             if ((D_0013CA40.held & 0x10) || (D_0013CA40.pressed & 4)) {
-                D_0015F590 += 2.55f;
+                fog_near_intensity += 2.55f;
             }
-            if (255.0f < D_0015F590) {
-                D_0015F590 = 255.0f;
-            } else if (D_0015F590 < 0.0f) {
-                D_0015F590 = 0.0f;
+            if (255.0f < fog_near_intensity) {
+                fog_near_intensity = 255.0f;
+            } else if (fog_near_intensity < 0.0f) {
+                fog_near_intensity = 0.0f;
             }
         }
-        if (D_0018C418.cursor == 3) {
+        if (occl_cam_state.cursor == 3) {
             if ((D_0013CA40.held & 0x40) || (D_0013CA40.pressed & 8)) {
-                D_0015F594 -= 2.55f;
+                fog_far_intensity -= 2.55f;
             }
             if ((D_0013CA40.held & 0x10) || (D_0013CA40.pressed & 4)) {
-                D_0015F594 += 2.55f;
+                fog_far_intensity += 2.55f;
             }
-            if (255.0f < D_0015F594) {
-                D_0015F594 = 255.0f;
-            } else if (D_0015F594 < 0.0f) {
-                D_0015F594 = 0.0f;
-            }
-        }
-        if (D_0018C418.cursor == 4) {
-            if (D_0015F584.r < 0xFF && ((D_0013CA40.held & 0x40) || (D_0013CA40.pressed & 8))) {
-                D_0015F584.r++;
-            }
-            if (D_0015F584.r != 0 && ((D_0013CA40.held & 0x10) || (D_0013CA40.pressed & 4))) {
-                D_0015F584.r--;
+            if (255.0f < fog_far_intensity) {
+                fog_far_intensity = 255.0f;
+            } else if (fog_far_intensity < 0.0f) {
+                fog_far_intensity = 0.0f;
             }
         }
-        if (D_0018C418.cursor == 5) {
-            if (D_0015F585[0] < 0xFF && ((D_0013CA40.held & 0x40) || (D_0013CA40.pressed & 8))) {
-                D_0015F585[0]++;
+        if (occl_cam_state.cursor == 4) {
+            if (fog_color_red.r < 0xFF && ((D_0013CA40.held & 0x40) || (D_0013CA40.pressed & 8))) {
+                fog_color_red.r++;
             }
-            if (D_0015F585[0] != 0 && ((D_0013CA40.held & 0x10) || (D_0013CA40.pressed & 4))) {
-                D_0015F585[0]--;
-            }
-        }
-        if (D_0018C418.cursor == 6) {
-            if (D_0015F586[0] < 0xFF && ((D_0013CA40.held & 0x40) || (D_0013CA40.pressed & 8))) {
-                D_0015F586[0]++;
-            }
-            if (D_0015F586[0] != 0 && ((D_0013CA40.held & 0x10) || (D_0013CA40.pressed & 4))) {
-                D_0015F586[0]--;
+            if (fog_color_red.r != 0 && ((D_0013CA40.held & 0x10) || (D_0013CA40.pressed & 4))) {
+                fog_color_red.r--;
             }
         }
-        ((void (*)(void))func_001F2930)();
+        if (occl_cam_state.cursor == 5) {
+            if (fog_color_green[0] < 0xFF && ((D_0013CA40.held & 0x40) || (D_0013CA40.pressed & 8))) {
+                fog_color_green[0]++;
+            }
+            if (fog_color_green[0] != 0 && ((D_0013CA40.held & 0x10) || (D_0013CA40.pressed & 4))) {
+                fog_color_green[0]--;
+            }
+        }
+        if (occl_cam_state.cursor == 6) {
+            if (fog_color_blue[0] < 0xFF && ((D_0013CA40.held & 0x40) || (D_0013CA40.pressed & 8))) {
+                fog_color_blue[0]++;
+            }
+            if (fog_color_blue[0] != 0 && ((D_0013CA40.held & 0x10) || (D_0013CA40.pressed & 4))) {
+                fog_color_blue[0]--;
+            }
+        }
+        ((void (*)(void))UpdateFog)();
         return;
     case 5:
-        if (D_0018C418.cursor == 0 && (D_0013CA40.pressed & 0x50)) {
-            D_0018C418.aF0 = !D_0018C418.aF0;
+        if (occl_cam_state.cursor == 0 && (D_0013CA40.pressed & 0x50)) {
+            occl_cam_state.aF0 = !occl_cam_state.aF0;
         }
-        if (D_0018C418.cursor == 1 && (D_0013CA40.pressed & 0x50)) {
-            D_0018C418.aF4 = !D_0018C418.aF4;
+        if (occl_cam_state.cursor == 1 && (D_0013CA40.pressed & 0x50)) {
+            occl_cam_state.aF4 = !occl_cam_state.aF4;
         }
-        if (D_0018C418.cursor == 2 && (D_0013CA40.pressed & 0xF0)) {
+        if (occl_cam_state.cursor == 2 && (D_0013CA40.pressed & 0xF0)) {
             extern char D_0015F120;
             char *fmt = D_001E7AD8;
             char *dev = &D_0015F120;
@@ -601,9 +601,9 @@ void func_001F10C8(void) {
             found = 0;
             for (i = 0; i < D_0015F734; i++) {
                 float *p = D_001941E0 + i;
-                if (p[0] < D_00187040.pos[0] + 0.5f && D_00187040.pos[0] - 0.5f < p[0]
-                    && p[1] < D_00187040.pos[1] + 0.5f && D_00187040.pos[1] - 0.5f < p[1]
-                    && p[2] < D_00187040.pos[2] + 0.5f && D_00187040.pos[2] - 0.5f < p[2]) {
+                if (p[0] < gCamera.pos[0] + 0.5f && gCamera.pos[0] - 0.5f < p[0]
+                    && p[1] < gCamera.pos[1] + 0.5f && gCamera.pos[1] - 0.5f < p[1]
+                    && p[2] < gCamera.pos[2] + 0.5f && gCamera.pos[2] - 0.5f < p[2]) {
                     found = 1;
                     break;
                 }
@@ -618,23 +618,23 @@ void func_001F10C8(void) {
                 int fd, size;
 
                 func_00116248(path, dev, fmt, D_0015EE84, D_001E7AF8, D_0015F130);
-                func_00116248(line, D_001E7B10, func_00120778(D_00187040.pos[0]),
-                              func_00120778(D_00187040.pos[1]), func_00120778(D_00187040.pos[2]));
+                func_00116248(line, D_001E7B10, func_00120778(gCamera.pos[0]),
+                              func_00120778(gCamera.pos[1]), func_00120778(gCamera.pos[2]));
                 fd = func_0011BF80(path, 0x303);
                 if (fd >= 0) {
                     func_0011C388(fd, 0, 2);
                     func_0011C820(fd, line, func_00116810(line));
                     func_0011C208(fd);
-                    D_0018C418.bF9 = 0x79;
+                    occl_cam_state.bF9 = 0x79;
                 }
                 samples = D_001941E0;
                 func_00116248(path, dev, fmt, D_0015EE84, D_0015F138, D_0015F130);
                 fd = func_0011BF80(path, 0x303);
                 if (fd >= 0) {
                     func_0011C388(fd, 0, 2);
-                    func_0011C820(fd, &D_00187040.pos[0], 4);
-                    func_0011C820(fd, &D_00187040.pos[1], 4);
-                    func_0011C820(fd, &D_00187040.pos[2], 4);
+                    func_0011C820(fd, &gCamera.pos[0], 4);
+                    func_0011C820(fd, &gCamera.pos[1], 4);
+                    func_0011C820(fd, &gCamera.pos[2], 4);
                     func_0011C388(fd, 0, 0);
                     size = func_0011C388(fd, 0, 2);
                     if (size <= 0x100000) {
@@ -648,21 +648,21 @@ void func_001F10C8(void) {
                 }
             }
         }
-        if (D_0018C418.cursor == 3 && (D_0013CA40.pressed & 0xF0)) {
+        if (occl_cam_state.cursor == 3 && (D_0013CA40.pressed & 0xF0)) {
             extern char D_0015F120[];
             char path[64];
             char line[64];
             int fd;
 
             func_00116248(path, D_0015F120, D_001E7AD8, D_0015EE84, D_001E7AF8, D_0015F130);
-            func_00116248(line, D_001E7B30, func_00120778(D_00187040.pos[0]),
-                          func_00120778(D_00187040.pos[1]), func_00120778(D_00187040.pos[2]));
+            func_00116248(line, D_001E7B30, func_00120778(gCamera.pos[0]),
+                          func_00120778(gCamera.pos[1]), func_00120778(gCamera.pos[2]));
             fd = func_0011BF80(path, 0x303);
             if (fd >= 0) {
                 func_0011C388(fd, 0, 2);
                 func_0011C820(fd, line, func_00116810(line));
                 func_0011C208(fd);
-                D_0018C418.bF8 = 0x79;
+                occl_cam_state.bF8 = 0x79;
             }
         }
         break;
@@ -693,7 +693,7 @@ typedef struct {
 /* Projects camera-space point a1 through the camera matrix, divides by
    depth (D_0018D010 / w) and scales to x16 screen units. func_002346C0
    in tfragfunc.c builds the same matrix. */
-void projectWorldPoint(Vec3f *a0, float *a1) {
+void func_001F2418(Vec3f *a0, float *a1) {
     float m[4][4];
     float m2[4][4];
     float v[4];
@@ -750,7 +750,7 @@ extern volatile int D_00160FE0_v __asm__("D_00160FE0") MACRO_ADDR;
    func_002350A8's delay slot, where the plain MACRO_ADDR store would go.
    The two stores that do sit in delay slots (D_00161000, D_0015EF78) are
    MACRO_ADDR and come out $gp-relative there. */
-void ResetVideoPipeline(void) {
+void reset_graphics(void) {
     int flag;
     int pal;
 
@@ -795,10 +795,10 @@ void BuildViewMatrices(void) {
     float b;
     float c;
 
-    if (D_0018C42C == 0) {
-        qcopy(m[0], D_00187390);
-        qcopy(m[1], D_00187390 + 0x10);
-        qcopy(m[2], D_00187390 + 0x20);
+    if (camera_position_publication_suppressed == 0) {
+        qcopy(m[0], camera_rows);
+        qcopy(m[1], camera_rows + 0x10);
+        qcopy(m[2], camera_rows + 0x20);
     } else {
         func_00125358(m[0]);
         func_001254A0(m[0], m[0], D_00187040_g.f[0x150 / 4]);
@@ -842,16 +842,16 @@ void BuildViewMatrices(void) {
     g->f[0xB4 / 4] += g->f[0xBC / 4] * b;
     g->f[0xB8 / 4] += g->f[0xBC / 4] * c;
     sce_vu0_mul_matrix(&g->f[0xC0 / 4], x + 0x80, g);
-    func_001F9C48(&g->f[0x100 / 4], x + 0x80, xf[0x1C0 / 4]);
-    func_001F9C48(&g->f[0x110 / 4], x + 0x90, xf[0x1C0 / 4]);
+    scale_vector(&g->f[0x100 / 4], x + 0x80, xf[0x1C0 / 4]);
+    scale_vector(&g->f[0x110 / 4], x + 0x90, xf[0x1C0 / 4]);
     qcopy(&g->f[0x120 / 4], x + 0xA0);
     qcopy(&g->f[0x130 / 4], x + 0xB0);
     sce_vu0_mul_matrix(&g->f[0x100 / 4], &g->f[0x100 / 4], g);
-    qcopy(D_0018D080, g);
-    qcopy(D_0018D080 + 0x10, &g->f[0x10 / 4]);
-    qcopy(D_0018D080 + 0x20, &g->f[0x20 / 4]);
-    FastVecScale(D_0018D080 + 0x30, &g->f[0x140 / 4], 1024.0f);
-    *(float *)(D_0018D080 + 0x3C) = 1024.0f;
+    qcopy(sky_view_mtx, g);
+    qcopy(sky_view_mtx + 0x10, &g->f[0x10 / 4]);
+    qcopy(sky_view_mtx + 0x20, &g->f[0x20 / 4]);
+    FastVecScale(sky_view_mtx + 0x30, &g->f[0x140 / 4], 1024.0f);
+    *(float *)(sky_view_mtx + 0x3C) = 1024.0f;
 }
 
 extern int D_001873D4;
@@ -870,27 +870,27 @@ extern void func_001F3140(void);
    retail reads each field with the one-register macro, and the mode
    word's store fits the branch delay slot ($gp-relative there). */
 void UpdateFog(void) {
-    if (D_001873D4 != 0) {
-        D_0018CE00[0x8C] = D_001611C4.r;
-        D_0018CE00[0x8D] = D_001611C4.g;
-        D_0018CE00[0x8E] = D_001611C4.b;
-        *(float *)&D_0018CE00[0x86] = D_001611C4.f[0];
-        *(float *)&D_0018CE00[0x87] = D_001611C4.f[1];
-        *(float *)&D_0018CE00[0x8A] = D_001611C4.f[2];
-        *(float *)&D_0018CE00[0x8B] = D_001611C4.f[3];
+    if (use_alt_fog != 0) {
+        view_context[0x8C] = D_001611C4.r;
+        view_context[0x8D] = D_001611C4.g;
+        view_context[0x8E] = D_001611C4.b;
+        *(float *)&view_context[0x86] = D_001611C4.f[0];
+        *(float *)&view_context[0x87] = D_001611C4.f[1];
+        *(float *)&view_context[0x8A] = D_001611C4.f[2];
+        *(float *)&view_context[0x8B] = D_001611C4.f[3];
         D_001601BC = 0x40000;
     } else {
-        D_0018CE00[0x8C] = D_0015F584.r;
-        D_0018CE00[0x8D] = D_0015F584.g;
-        D_0018CE00[0x8E] = D_0015F584.b;
-        *(float *)&D_0018CE00[0x86] = D_0015F584.f[0];
-        *(float *)&D_0018CE00[0x87] = D_0015F584.f[1];
-        *(float *)&D_0018CE00[0x8A] = D_0015F584.f[2];
-        *(float *)&D_0018CE00[0x8B] = D_0015F584.f[3];
+        view_context[0x8C] = fog_color_red.r;
+        view_context[0x8D] = fog_color_red.g;
+        view_context[0x8E] = fog_color_red.b;
+        *(float *)&view_context[0x86] = fog_color_red.f[0];
+        *(float *)&view_context[0x87] = fog_color_red.f[1];
+        *(float *)&view_context[0x8A] = fog_color_red.f[2];
+        *(float *)&view_context[0x8B] = fog_color_red.f[3];
         D_001601BC = 0x1F4000;
     }
     UpdateViewContext();
-    D_0015F598 = 0;
+    level_fog_mode = 0;
 }
 __asm__(".section .text\n\tnop\n");
 
@@ -986,11 +986,11 @@ void BuildOcclVisibility(void) {
     z = func_001FA898_r(D_00187040_cam.focus[2] * scale);
     vis = (char *)ParseOcclGrid(x, y, z);
     if (vis != 0) {
-        D_0015F72C = 0;
-        FastMemCopy(D_001940C0, vis, 0x80);
-        D_0015F730 = vis;
+        occl_invalid_grid = 0;
+        FastMemCopy(occl_visibility, vis, 0x80);
+        occl_previous_grid = vis;
     } else {
-        D_0015F72C = 1;
+        occl_invalid_grid = 1;
         if (D_0015F728 == 0) {
             gx = (char *)GetOcclGridFromPair(x - 1, y, z, x + 1, y, z,
                                        D_00187040_cam.focus[0] * scale - IntToFloat(x));
@@ -999,51 +999,51 @@ void BuildOcclVisibility(void) {
             gz = (char *)GetOcclGridFromPair(x, y, z - 1, x, y, z + 1,
                                        D_00187040_cam.focus[2] * scale - IntToFloat(z));
             if (gx != 0 || gy != 0 || gz != 0) {
-                FastMemZero16(D_00194140, 0x80);
+                FastMemZero16(occl_visibility_merged, 0x80);
                 if (gx != 0) {
-                    FastMemOr16(D_00194140, D_00194140, gx, 0x80);
+                    fast_mem_or16(occl_visibility_merged, occl_visibility_merged, gx, 0x80);
                 }
                 if (gy != 0) {
-                    FastMemOr16(D_00194140, D_00194140, gy, 0x80);
+                    fast_mem_or16(occl_visibility_merged, occl_visibility_merged, gy, 0x80);
                 }
                 if (gz != 0) {
-                    FastMemOr16(D_00194140, D_00194140, gz, 0x80);
+                    fast_mem_or16(occl_visibility_merged, occl_visibility_merged, gz, 0x80);
                 }
-                vis = D_00194140;
-                D_0015F730 = vis;
-                FastMemCopy(D_001940C0, vis, 0x80);
+                vis = occl_visibility_merged;
+                occl_previous_grid = vis;
+                FastMemCopy(occl_visibility, vis, 0x80);
             }
         }
         if (vis == 0) {
             switch (D_0015F728) {
             case 0:
-                if (D_0018C42C == 0 && D_0015F730 != 0) {
-                    FastMemCopy(D_001940C0, D_0015F730, 0x80);
+                if (camera_position_publication_suppressed == 0 && occl_previous_grid != 0) {
+                    FastMemCopy(occl_visibility, occl_previous_grid, 0x80);
                 } else {
-                    FastMemSet(D_001940C0, -1, 0x80);
+                    FastMemSet(occl_visibility, -1, 0x80);
                 }
                 break;
             case 1:
-                FastMemSet(D_001940C0, -1, 0x80);
+                FastMemSet(occl_visibility, -1, 0x80);
                 break;
             case 2:
-                p = D_0015F724;
+                p = occl_oct;
                 if (p != 0) {
                     bx = 0.0f < D_00187040_cam.focus[0] - p[0];
                     by = 0.0f < D_00187040_cam.focus[1] - p[1];
                     bz = 0.0f < D_00187040_cam.focus[2] - p[2];
-                    FastMemCopy(D_001940C0, (char *)p + ((bz + by * 2 + bx * 4) * 0x80 + 0x10), 0x80);
-                } else if (D_0018C42C == 0 && D_0015F730 != 0) {
-                    FastMemCopy(D_001940C0, D_0015F730, 0x80);
+                    FastMemCopy(occl_visibility, (char *)p + ((bz + by * 2 + bx * 4) * 0x80 + 0x10), 0x80);
+                } else if (camera_position_publication_suppressed == 0 && occl_previous_grid != 0) {
+                    FastMemCopy(occl_visibility, occl_previous_grid, 0x80);
                 } else {
-                    FastMemSet(D_001940C0, -1, 0x80);
+                    FastMemSet(occl_visibility, -1, 0x80);
                 }
                 break;
             }
         }
     }
     {
-        unsigned char *vb = (unsigned char *)D_001940C0;
+        unsigned char *vb = (unsigned char *)occl_visibility;
         vb[0x7F] |= 0x80;
     }
 }
@@ -1057,9 +1057,9 @@ extern int D_0018C434 NOT_SDA;
 
 /* UpdateOcclusion(void) */
 void UpdateOcclusion(void) {
-    int state = D_0018C434;
+    int state = occl_update;
     if (state == 0) {
-        FastMemSet(D_001940C0, -1, 0x80);
+        FastMemSet(occl_visibility, -1, 0x80);
     } else if (state == 2) {
         BuildOcclVisibility();
     }
@@ -1069,7 +1069,7 @@ extern short D_00151880[];
 extern int D_0013E600[];
 extern float func_001FA888(int);
 
-/* InitViewContext: the same set-up as SetScreenSize (func_001F3760) for
+/* InitViewContext: the same set-up as configure_graphics_projection (func_001F3760) for
    the display's size, D_00151880[0xA8]/[0xA9], with fixed extras. The
    GS viewport record D_0013E600 gets width, height, their halves and the
    four <<4 edges around the 0x800 centre. The draw context D_0018CE00
@@ -1081,7 +1081,7 @@ extern float func_001FA888(int);
    memory for the second conversion. */
 void InitViewContext(void) {
     short *res = D_00151880;
-    float *ctx = (float *)D_0018CE00;
+    float *ctx = (float *)view_context;
     short w = res[0xA8];
     short h = res[0xA9];
     int hw = w >> 1;
@@ -1284,9 +1284,9 @@ void UpdateViewContext(void) {
     view->proj[14] = -2.0f * projection_near_clip * far_clip /
                      (projection_near_clip * (far_clip - projection_near_clip)) * depth_scale;
     view->proj[15] = 0;
-    func_001F9A00(view->proj2, view->proj, 0x40);
+    copy_memory_aligned(view->proj2, view->proj, 0x40);
     view->proj2[11] = 1.0f / view->near_clip;
-    func_001F9A00(view->proj3, view->proj2, 0x40);
+    copy_memory_aligned(view->proj3, view->proj2, 0x40);
     view->proj3[0] /= view->scr_x;
     view->proj3[5] /= view->scr_y;
     view->proj3[10] /= depth_scale;
@@ -1370,8 +1370,8 @@ extern float func_001FA888(int);
    The context is reached through one local pointer, which keeps its
    full address in $s0 as retail does (indexing the global directly
    folds +0xB0 into the base and spends $a0 on the %hi). */
-void SetScreenSize(int w, int h, float a2, float a3, float a4, float a5, float a6) {
-    float *ctx = (float *)D_0018CE00;
+void configure_graphics_projection(int w, int h, float a2, float a3, float a4, float a5, float a6) {
+    float *ctx = (float *)view_context;
     int hw = w >> 1;
     int hh = h >> 1;
     float fh;
@@ -1464,7 +1464,7 @@ extern int func_00122630(GsLoadImage *, s16, s16, s16, s16, s16, s16, s16);
 extern int func_00122958(GsLoadImage *, unsigned char *);
 
 /* Adapted from Lombyte (GPL-3.0): src/video/display/set_pal_mode.c, set_pal_mode. */
-void func_001F3890(void) {
+void SetPalMode(void) {
     GsLoadImage image;
     int n;
     int i;
@@ -1479,13 +1479,13 @@ void func_001F3890(void) {
         D_0015EF88 = 0x1E0000;
         D_0015EF80 = 0;
         D_0015EF8C = 0x2C0000;
-        func_001FAB40(0x200, 0x1C0, 0x200, 0x200, 4, 0);
+        SetupFS_AA_buffer(0x200, 0x1C0, 0x200, 0x200, 4, 0);
     } else {
         D_0015EF84 = 0xE0000;
         D_0015EF88 = 0x1B0000;
         D_0015EF80 = 0;
         D_0015EF8C = 0x280000;
-        func_001FAB40(0x200, 0x1A0, 0x200, 0x1C0, 0, 0);
+        SetupFS_AA_buffer(0x200, 0x1A0, 0x200, 0x1C0, 0, 0);
     }
     w = fs_aa_buffer_3890.display_width;
     screen_extent_3890.width = w;
@@ -1513,12 +1513,12 @@ void func_001F3890(void) {
     draw_env_3890.scissor2 = scissor;
     masked_depth_reg_3890 = zbuf | ((u64)0x8000 << 17);
     func_00118D80(0);
-    func_001FB498();
-    func_001FB530();
+    PutDrawBufferLarge();
+    append_gif_transfer_packet();
     func_00118D80(0);
     func_00120858(0, 0);
-    func_001FB470();
-    func_001F99B0(clear_buf_3890, 0, 0x1000);
+    PutDispBuffer();
+    FastMemSet(clear_buf_3890, 0, 0x1000);
     n = (fs_aa_buffer_3890.storage_width * fs_aa_buffer_3890.storage_height) >> 10;
     for (i = 0; i < n; i++) {
         func_00122630(&image, i << 4, 1, 0, 0, 0, 32, 32);
@@ -1554,22 +1554,22 @@ extern int D_0016129C MACRO_ADDR;
 
 /* ResetDrawGlobals: clears the draw-callback counts and related draw counters. */
 void ResetDrawGlobals(void) {
-    D_0015F564 = 0;
-    D_0015F56C = 0;
-    D_0015F570 = 0;
-    D_0015F568 = 0;
-    D_0015F574 = 0;
+    draw_callback_count = 0;
+    draw_callback3_count = 0;
+    draw_callback4_count = 0;
+    draw_callback2_count = 0;
+    effect_quad_count = 0;
     D_0015F430 = 0;
     D_0015F434 = 0;
     D_0015F544 = 0;
     D_0015F548 = 0;
-    *(int *)&D_0015F44C = 0;
+    *(int *)&screen_overlay_enabled = 0;
     *(int *)&D_0015F460 = 0;
-    *(int *)&D_0015F470 = 0;
+    *(int *)&occl_debug_overlay_enabled = 0;
     D_0015F728 = 0;
-    D_00161290 = 0;
-    D_00161294 = 0;
-    D_00161298 = 0;
+    surface_height_tiles = 0;
+    occl_cell_table = 0;
+    occl_cell_count = 0;
     D_0016129C = 0;
 }
 
@@ -1581,17 +1581,17 @@ extern char D_0013D010[];
 /* ResetGsRegisters(void) */
 void ResetGsRegisters(void) {
     D_00161000[0] = 0x30000013;
-    D_00161000[1] = (int)D_0013D0C0;
+    D_00161000[1] = (int)reset_gs_regs_fixed;
     D_00161000[2] = 0;
     D_00161000[3] = 0x50000013;
     D_00161000 += 4;
     D_00161000[0] = 0x3000000B;
-    D_00161000[1] = (int)D_0013D010;
+    D_00161000[1] = (int)draw_environment;
     D_00161000[2] = 0;
     D_00161000[3] = 0x5000000B;
     D_00161000 += 4;
-    VU1_addGSregister(0x3D, (long)D_0018CE00[0x8C] | ((long)D_0018CE00[0x8D] << 8) |
-                        ((long)D_0018CE00[0x8E] << 16));
+    VU1_addGSregister(0x3D, (long)view_context[0x8C] | ((long)view_context[0x8D] << 8) |
+                        ((long)view_context[0x8E] << 16));
 }
 
 extern long D_00151888[3];
@@ -1603,11 +1603,11 @@ extern long D_00151888[3];
 void ResetGsRegistersPr(void) {
     *(volatile long *)0x120000E0 = 0;
     *(volatile long *)0x12000000 = 0xFFA1;
-    *(volatile long *)0x12000020 = D_00151888[0];
-    *(volatile long *)0x12000070 = D_00151888[1];
-    *(volatile long *)0x12000090 = D_00151888[1];
-    *(volatile long *)0x12000080 = D_00151888[2];
-    *(volatile long *)0x120000A0 = D_00151888[2];
+    *(volatile long *)0x12000020 = gs_display_settings[0];
+    *(volatile long *)0x12000070 = gs_display_settings[1];
+    *(volatile long *)0x12000090 = gs_display_settings[1];
+    *(volatile long *)0x12000080 = gs_display_settings[2];
+    *(volatile long *)0x120000A0 = gs_display_settings[2];
     *(volatile long *)0x120000D0 = 0;
 }
 
@@ -1702,19 +1702,19 @@ void DrawDebugProfiler(void) {
     float t;
     float div;
 
-    if (D_0016055C == 0 || *(short *)(D_0016055C + 4) != 0 || ((D_0015F534_f ^ 1) & 1) || D_0018A3B0[2] == 0 ||
+    if (level_sky_effect_data == 0 || *(short *)(level_sky_effect_data + 4) != 0 || ((D_0015F534_f ^ 1) & 1) || draw_config[2] == 0 ||
         D_0018C44C[0] != 0) {
-        framebuf_appendLargeSetup();
+        append_gif_transfer_packet();
     }
     BuildViewMatrices();
-    AnimSlot_ReleaseStale();
+    prune_moby_references();
     UpdateOcclusion();
     ResetGsRegisters();
-    D_0015F704 = -1;
+    font_state = -1;
     func_001F2558_a(D_0015F480, 0xF);
     func_001F2560_a(D_0015F480, 0xF);
-    if (D_0016055C != 0 && (D_0015F534_f & 1)) {
-        if (D_0018A3B0[2] != 0) {
+    if (level_sky_effect_data != 0 && (D_0015F534_f & 1)) {
+        if (draw_config[2] != 0) {
             Transition_DrawSky();
         }
         func_001F2560_a(D_0015F490, 0xE);
@@ -1723,7 +1723,7 @@ void DrawDebugProfiler(void) {
     if (D_0015F534_f & 2) {
         DrawTfrag();
     }
-    Vif1ChainCmd(0x02010000);
+    append_dma_tag(0x02010000);
     if (D_0015F534_f & 4) {
         if (D_0015EE80 != 0) {
             DrawTies_2();
@@ -1731,11 +1731,11 @@ void DrawDebugProfiler(void) {
             DrawTies_1();
         }
     }
-    Vif1ChainCmd(0x02020000);
-    if (D_0018A3B0[0x34 / 4] != 0 && D_0015F56C != 0) {
-        Dma_AppendRefDirect3();
+    append_dma_tag(0x02020000);
+    if (draw_config[0x34 / 4] != 0 && draw_callback3_count != 0) {
+        vu1_gs_regs_alt();
         SetupGifPaging(1);
-        ExecuteDrawCallbacks3();
+        dispatch_callback_list_2();
         DoGifPaging();
         VU1_gsRegsNormal();
     }
@@ -1744,92 +1744,92 @@ void DrawDebugProfiler(void) {
     if (D_0015F534_f & 8) {
         DrawShrubs();
     }
-    Vif1ChainCmd(0x02040000);
-    if (D_0018A3B0[0x44 / 4] != 0 && *(int *)&D_0015F470 != 0) {
-        draw_fogged_fullscreen_sprite((char *)&D_0015F470);
+    append_dma_tag(0x02040000);
+    if (draw_config[0x44 / 4] != 0 && *(int *)&occl_debug_overlay_enabled != 0) {
+        draw_fogged_fullscreen_sprite((char *)&occl_debug_overlay_enabled);
     }
     if (D_0015F534_f & 0x20) {
         SetupGifPaging(1);
-        DrawOptionalExtraPass();
+        draw_debug_font();
         DoGifPaging();
     }
-    if (D_0018A3B0[0x34 / 4] != 0 && D_0015F570 != 0) {
-        Dma_AppendRefDirect3();
+    if (draw_config[0x34 / 4] != 0 && draw_callback4_count != 0) {
+        vu1_gs_regs_alt();
         SetupGifPaging(1);
-        ExecuteDrawCallbacks4();
+        dispatch_callback_list_3();
         DoGifPaging();
         VU1_gsRegsNormal();
     }
     if (D_0015F534_f & 0x10) {
         DrawMobys();
     }
-    Vif1ChainCmd(0x02080000);
+    append_dma_tag(0x02080000);
     SetupGifPaging(0);
-    if ((D_0015F534_f & 0x20) && D_0018A3B0[0x30 / 4] != 0 && D_0015F704 != 6) {
+    if ((D_0015F534_f & 0x20) && draw_config[0x30 / 4] != 0 && font_state != 6) {
         VU1_addDataRef(D_0010FAA0, D_0010FA90);
-        D_0015F704 = 6;
+        font_state = 6;
     }
     func_001F2560_a(D_0015F4B0, 4);
     func_001F2558_a(D_0015F4B0, 4);
     if (D_0015F534_f & 0x20) {
-        Dma_AppendRefDirect3();
-        if (D_0018A3B0[0x34 / 4] != 0) {
-            if (D_0015F564 != 0) {
-                ExecuteDrawCallbacks();
+        vu1_gs_regs_alt();
+        if (draw_config[0x34 / 4] != 0) {
+            if (draw_callback_count != 0) {
+                dispatch_callback_list_1();
             }
             VU1_addGSregister(0x42, 0x8000000048L);
-            LensFlareUpdate();
-            Dma_AppendRefDirect3();
-            DrawLightQuads();
+            draw_lens_flare();
+            vu1_gs_regs_alt();
+            draw_light_quads();
         }
         func_001F2558_a(D_0015F4C0, 6);
         func_001F2560_a(D_0015F4C0, 6);
-        if (D_0018A3B0[0x38 / 4] != 0) {
+        if (draw_config[0x38 / 4] != 0) {
             VU1_addGSregister(8, 5);
-            Dma_AppendRefDirect3();
+            vu1_gs_regs_alt();
             func_00118D80(0);
             PartProc();
-            D_0015F704 = 8;
+            font_state = 8;
         }
         func_001F2558_a(D_0015F4D0, 8);
         func_001F2560_a(D_0015F4D0, 8);
-        if (D_0018A3B0[0x3C / 4] != 0) {
-            if (D_0015F568 != 0) {
-                Dma_AppendRefDirect3();
-                ExecuteDrawCallbacks2();
+        if (draw_config[0x3C / 4] != 0) {
+            if (draw_callback2_count != 0) {
+                vu1_gs_regs_alt();
+                dispatch_callback_list_4();
             }
             if (D_0015F6E8 == 0) {
-                DrawBillboardBatch();
+                append_billboard_batch();
             }
             VU1_addGSregister(0x42, 0x8000000044L);
-            DrawQueuedGlows();
+            render_queued_rotated_sprites();
         }
         func_001F2558_a(D_0015F4E0, 6);
         func_001F2560_a(D_0015F4E0, 6);
     }
-    if (D_0018A3B0[0x48 / 4] != 0) {
+    if (draw_config[0x48 / 4] != 0) {
         AA_BlurPass();
     }
     func_001F2560_a(D_0015F4F0, 0xF);
-    Dma_AppendRefDirect3();
+    vu1_gs_regs_alt();
     if (D_0015F534_f & 0x10000) {
         DebugProfiler_Hook();
     }
-    if ((D_0015F534_f & 0x80) && D_0018A3B0[0x40 / 4] != 0) {
-        HudDraw();
-        Help_Draw();
-        DrawLetterboxBars();
+    if ((D_0015F534_f & 0x80) && draw_config[0x40 / 4] != 0) {
+        update_hud();
+        draw_help();
+        draw_letterbox_bars();
     }
     if (D_0015F6E8 == 2 && D_0015EF40_F3D78[0] != 0) {
-        DrawSubtitles();
+        draw_subtitles();
     }
     func_001F2560_a(D_0015F4F8, 0xE);
     func_001F2558_a(D_0015F4F8, 0xE);
     DoGifPaging();
     if (D_0015F534_f & 0x40) {
-        if (D_0018A3B0[0x44 / 4] != 0) {
+        if (draw_config[0x44 / 4] != 0) {
             VU1_addGSregister(0x42, 0x8000000044L);
-            if (D_001873D4 != 0) {
+            if (use_alt_fog != 0) {
                 emit_rgba_draw_packet(D_001611C0_F3D78[0], D_001611C1_F3D78[0], D_001611C2_F3D78[0], D_001611C3_F3D78[0]);
             }
             if (gFade > 0.0f) {
@@ -1844,8 +1844,8 @@ void DrawDebugProfiler(void) {
                 }
                 emit_rgba_draw_packet(0xFF, 0xFF, 0xFF, func_001FA898_r(D_0015F540 * 128.0f));
             }
-            if (*(int *)&D_0015F44C != 0 && *(int *)&D_0015F450 != 0) {
-                DrawScreenEffect();
+            if (*(int *)&screen_overlay_enabled != 0 && *(int *)&screen_color_effect_now != 0) {
+                draw_screen_effect();
             }
         }
         func_001F2560_a(D_0015F500, 0xA);
@@ -1857,7 +1857,7 @@ void DrawDebugProfiler(void) {
     VU1_syncChain(2);
     func_001F2558_a(D_0015F510, 0x11);
     if (D_0015F534_f & 2) {
-        if (D_0018A3B0[0x10 / 4] != 0) {
+        if (draw_config[0x10 / 4] != 0) {
             LightTfrags(D_001E1600);
             PatchTfragGifs();
         }
@@ -1866,12 +1866,12 @@ void DrawDebugProfiler(void) {
     VU1_syncChain(4);
     func_001F2558_a(D_0015F510, 0x11);
     if (D_0015F534_f & 4) {
-        if (D_0018A3B0[0x18 / 4] != 0) {
+        if (draw_config[0x18 / 4] != 0) {
             if (D_0015EE80 != 0) {
-                LightTieBuffers();
+                register_entity_render_resources();
                 copy_render_buffer_pair();
             } else {
-                LightTies(D_001E3500);
+                LightTies(tie_light_data);
                 PatchTieGifs();
             }
         }
@@ -1880,16 +1880,16 @@ void DrawDebugProfiler(void) {
     VU1_syncChain(8);
     func_001F2558_a(D_0015F510, 0x11);
     if (D_0015F534_f & 8) {
-        if (D_0018A3B0[0x20 / 4] != 0) {
+        if (draw_config[0x20 / 4] != 0) {
             LightShrubs(D_001D9240);
-            PatchShrubGifs();
+            patch_shrub_gifs();
         }
         func_001F2558_a(D_001E7BB8, 7);
     }
     VU1_syncChain(0x10);
     func_001F2558_a(D_0015F510, 0x11);
     if (D_0015F534_f & 0x10) {
-        if (D_0018A3B0[0x28 / 4] != 0) {
+        if (draw_config[0x28 / 4] != 0) {
             PatchMobyGifs();
         }
         func_001F2558_a(D_0015F528, 3);
@@ -1905,9 +1905,9 @@ extern void func_001F3D78(void);
 
 /* D_0015F6FC is read through a MACRO_ADDR alias: retail's one-register
    lui $2 / lw $2 (an older note filed it as an allocator question). */
-void drawNormalFrame(void) {
+void prepare_debug_profiler_render(void) {
     if (D_0015F6FC_m == 0) {
-        framebuf_appendLargeSetup();
+        append_gif_transfer_packet();
         *(int *)&D_0015F534 = 0x7F;
         DrawDebugProfiler();
     }
@@ -1956,8 +1956,8 @@ void SetupGifPaging(int arg0) {
     {
         int k;
 
-        for (k = 0; k < D_0015F55C; k++) {
-            D_0018D540[k].unk0 = 0;
+        for (k = 0; k < effect_tex_cnt; k++) {
+            effect_texture_definitions[k].unk0 = 0;
         }
     }
     if (arg0 == 0) {
@@ -2138,53 +2138,53 @@ extern void *D_0018E340[];
 
 /* AddDrawCallback: appends fn(arg) to the first draw-callback list. */
 void AddDrawCallback(DrawCallback fn, void *arg) {
-    int count = D_0015F564;
+    int count = draw_callback_count;
     if (count < 0x40) {
-        D_0018DC40[count] = fn;
-        D_0018DD40[count] = arg;
-        D_0015F564 = count + 1;
+        draw_callback_funcs[count] = fn;
+        draw_callback_args[count] = arg;
+        draw_callback_count = count + 1;
     }
 }
 
-/* ExecuteDrawCallbacks: calls every callback in the first list. */
-void ExecuteDrawCallbacks(void) {
+/* dispatch_callback_list_1: calls every callback in the first list. */
+void dispatch_callback_list_1(void) {
     int i;
-    for (i = 0; i < D_0015F564; i++) {
-        D_0018DC40[i](D_0018DD40[i]);
+    for (i = 0; i < draw_callback_count; i++) {
+        draw_callback_funcs[i](draw_callback_args[i]);
     }
 }
 
 /* Calls every callback in the second draw-callback list. */
-void ExecuteDrawCallbacks3(void) {
+void dispatch_callback_list_2(void) {
     int i;
-    for (i = 0; i < D_0015F56C; i++) {
-        D_0018E040[i](D_0018E140[i]);
+    for (i = 0; i < draw_callback3_count; i++) {
+        D_0018E040[i](draw_callback3_args[i]);
     }
 }
 
 /* Calls every callback in the third draw-callback list. */
-void ExecuteDrawCallbacks4(void) {
+void dispatch_callback_list_3(void) {
     int i;
-    for (i = 0; i < D_0015F570; i++) {
-        D_0018E240[i](D_0018E340[i]);
+    for (i = 0; i < draw_callback4_count; i++) {
+        D_0018E240[i](draw_callback4_args[i]);
     }
 }
 
 /* Appends fn(arg) to the fourth draw-callback list. */
 void enqueue_callback_list_4(DrawCallback fn, void *arg) {
-    int count = D_0015F568;
+    int count = draw_callback2_count;
     if (count < 0x40) {
-        D_0018DE40[count] = fn;
-        D_0018DF40[count] = arg;
-        D_0015F568 = count + 1;
+        draw_callback2_funcs[count] = fn;
+        draw_callback2_args[count] = arg;
+        draw_callback2_count = count + 1;
     }
 }
 
 /* Calls every callback in the fourth draw-callback list. */
-void ExecuteDrawCallbacks2(void) {
+void dispatch_callback_list_4(void) {
     int i;
-    for (i = 0; i < D_0015F568; i++) {
-        D_0018DE40[i](D_0018DF40[i]);
+    for (i = 0; i < draw_callback2_count; i++) {
+        draw_callback2_funcs[i](draw_callback2_args[i]);
     }
 }
 
@@ -2211,7 +2211,7 @@ extern void func_001F7EF8(void *, int, int);
    colours and UVs are filled on the stack but never sent. Both copies
    are qcopy (retail's lq/sq stay inside the loop), and the inner loop
    needs its own counter, not the one the setup loop used. */
-void DrawLightQuads(void) {
+void draw_light_quads(void) {
     FRow m[4];
     int colors[4];
     float uv[4][2];
@@ -2229,7 +2229,7 @@ void DrawLightQuads(void) {
         uv[j][1] = D_0018CBA0[j].v[3];
         colors[j] = 0x40808080;
     }
-    for (i = 0; i < D_0015F574; i++) {
+    for (i = 0; i < effect_quad_count; i++) {
         float s;
         int k;
 
@@ -2280,7 +2280,7 @@ void FadeToBlack(int frames) {
     if (n >= 0) {
         do {
             PutDrawBufferLarge();
-            framebuf_appendLargeSetup();
+            append_gif_transfer_packet();
             emit_rgba_draw_packet(0, 0, 0, 0x80);
             PutDrawBufferSmall();
 
@@ -2290,7 +2290,7 @@ void FadeToBlack(int frames) {
             VU1_addGSregister(1, (long)(0x80 - q) << 24);
 
             D_00161000[0] = 0x30000014;
-            D_00161000[1] = (int)D_0013CED0;
+            D_00161000[1] = (int)second_clear_packet;
             D_00161000[2] = 0;
             D_00161000[3] = 0x50000014;
             D_00161000 += 4;
@@ -2308,7 +2308,7 @@ void FadeToBlack(int frames) {
     D_0015F538 = D_0015F538 + 1;
     VU1_initChain();
     PutDrawBufferLarge();
-    framebuf_appendLargeSetup();
+    append_gif_transfer_packet();
 }
 
 typedef struct {
@@ -2340,7 +2340,7 @@ extern void func_001F62C8(int, int, int, int, int);
    flag (4) cleared. The list is tested and then read again for the
    loop, which gives retail's copy of it; the clamp test is written
    bottom-first, which gives retail's registers. */
-void DrawSubtitles(void) {
+void draw_subtitles(void) {
     Subtitle *p;
     int lang;
     int idx;
@@ -2389,7 +2389,7 @@ extern char D_00160930[];
    0x104) drawing two full-width strips, the height in 16ths reaching in
    from the top and bottom of the D_0013E600 viewport, the same packet
    steps as func_001F5650. */
-void DrawLetterboxBars(void) {
+void draw_letterbox_bars(void) {
     int h;
 
     if (D_0015F544 != 0) {
@@ -2468,7 +2468,7 @@ extern void func_001F5650(int, int, int, int, unsigned long);
    first, then alternating stripes of widths step0/step1 in colours
    color0/color1, each with its own GS register 0x42 blend word when set.
    Adapted from Lombyte (GPL-3.0) for PAL. */
-void DrawScreenEffect(void) {
+void draw_screen_effect(void) {
     int i;
     short w;
     long mask;
@@ -2553,7 +2553,7 @@ extern char D_0013CD90[];
 void emit_rgba_draw_packet(int a, int b, int c, int d) {
     VU1_addGSregister(1, (long)a | ((long)b << 8) | ((long)c << 16) | ((long)d << 24));
     D_00161000[0] = 0x30000014;
-    D_00161000[1] = (int)D_0013CD90;
+    D_00161000[1] = (int)first_clear_packet;
     D_00161000[2] = 0;
     D_00161000[3] = 0x50000014;
     D_00161000 += 4;
@@ -2637,7 +2637,7 @@ void DrawTexturedQuad(int x, int y, int w, int h, int u, int v, int uw, int vh,
     D_00161000[3] = 0x50000007;
     base = D_00161000;
     D_00161000 = base + 4;
-    qcopy(base + 4, D_00160940);
+    qcopy(base + 4, textured_quad_header);
     p = (long *)(base + 8);
     D_00161000 = base + 8;
     p[0] = tex;
@@ -2659,7 +2659,7 @@ extern int func_001FA898_r(float) __asm__("func_001FA898");
 
 /* func_001F5800 with a float screen rectangle: each corner is rounded
    (func_001FA898) from 16ths before the viewport offset. */
-void func_001F5988(float x, float y, float w, float h, int u, int v, int uw, int vh,
+void append_subpixel_textured_screen_quad(float x, float y, float w, float h, int u, int v, int uw, int vh,
                    unsigned long rgba, unsigned long tex) {
     int x0 = func_001FA898_r(x * 16.0f) + D_0013E600[4] - 8;
     int x1 = func_001FA898_r((x + w) * 16.0f) + D_0013E600[4] - 8;
@@ -2677,7 +2677,7 @@ void func_001F5988(float x, float y, float w, float h, int u, int v, int uw, int
     D_00161000[3] = 0x50000007;
     base = D_00161000;
     D_00161000 = base + 4;
-    qcopy(base + 4, D_00160940);
+    qcopy(base + 4, textured_quad_header);
     p = (long *)(base + 8);
     D_00161000 = base + 8;
     p[0] = tex;
@@ -2700,7 +2700,7 @@ extern char D_00160960[];
 /* func_001F5988, skipped when the rectangle lies outside 0x7000..0x9000
    (12.4), with a CLAMP register (REGION_CLAMP to the texel rectangle)
    after the PRIM and a closing (5, 0) pair. */
-void func_001F5BB8(float x, float y, float w, float h, int u, int v, int uw, int vh,
+void emit_textured_rectangle(float x, float y, float w, float h, int u, int v, int uw, int vh,
                    unsigned long rgba, unsigned long tex) {
     int x0 = func_001FA898_r(x * 16.0f) + D_0013E600[4] - 8;
     int x1 = func_001FA898_r((x + w) * 16.0f) + D_0013E600[4] - 8;
@@ -2780,7 +2780,7 @@ extern f32 func_001F9FA8(f32);
 extern s32 func_001FA898(f32);
 
 /* Adapted from Lombyte (GPL-3.0) for PAL by OpenRAC's tools/port.py: src/rendering/append_rotated_sprite_quad.c, append_rotated_sprite_quad. */
-void func_001F5E60(f32 center_x, f32 center_y, f32 quad_width, f32 quad_height,
+void append_rotated_sprite_quad(f32 center_x, f32 center_y, f32 quad_width, f32 quad_height,
                                 f32 angle, s32 texture_width, s32 texture_height,
                                 s64 texture_tex0, s64 z_and_fog, s32 color, u8 flip_u, u8 flip_v,
                                 f32 pivot_u, f32 pivot_v) {
@@ -2895,7 +2895,7 @@ void DrawUIFrame(int x0, int x1, int y0, int y1, int a) {
    (a0, a1, a2, a3), offset by +-1/3/5 along each axis, all sharing the
    colour/flags word a4. The first call passes a4 with only its top byte
    kept and the low nibble forced to 4; the rest pass a4 unchanged. */
-void DrawOutlinedRect(int a0, int a1, int a2, int a3, int a4) {
+void draw_outlined_rect(int a0, int a1, int a2, int a3, int a4) {
     int color;
     int t0, t1, t2;
     int t_a0m5, t4, t5;
@@ -2941,12 +2941,12 @@ extern int D_0015F59C MACRO_ADDR;
 
 /* Sets the word flag at D_0015F59C to 1. */
 void Font_EnableColorCodes(void) {
-    *(int *)&D_0015F59C = 1;
+    *(int *)&GlobalStateFlag = 1;
 }
 
 /* Clears the word flag at D_0015F59C. */
 void Font_DisableColorCodes(void) {
-    *(int *)&D_0015F59C = 0;
+    *(int *)&GlobalStateFlag = 0;
 }
 
 /* String width: sums the signed width byte (+3 of each 4-byte entry of
@@ -2984,18 +2984,18 @@ extern unsigned char D_001DF770[];
 extern unsigned char D_001DFB10[];
 
 /* measure_text_width_regular: width of the first arg1 characters of arg0 in the regular font table. */
-int MeasureTextWidthRegular(unsigned char *arg0, int arg1) {
-    return measure_text_width(arg0, arg1, D_001DF3D0);
+int measure_text_width_regular(unsigned char *arg0, int arg1) {
+    return measure_text_width(arg0, arg1, normal_font_metrics);
 }
 
 /* measure_text_width_small: width of the first arg1 characters of arg0 in the small font table. */
-int MeasureTextWidthSmall(unsigned char *arg0, int arg1) {
-    return measure_text_width(arg0, arg1, D_001DF770);
+int measure_text_width_small(unsigned char *arg0, int arg1) {
+    return measure_text_width(arg0, arg1, small_font_metrics);
 }
 
 /* measure_text_width_large: width of the first arg1 characters of arg0 in the large font table. */
-int MeasureTextWidthLarge(unsigned char *arg0, int arg1) {
-    return measure_text_width(arg0, arg1, D_001DFB10);
+int measure_text_width_large(unsigned char *arg0, int arg1) {
+    return measure_text_width(arg0, arg1, large_font_metrics);
 }
 
 /*
@@ -3099,14 +3099,14 @@ extern void func_001F6668(void *, void *, void *, void *, void *, long,
 void FontPrintLarge(void *a, void *b, void *c, void *d, void *e) {
     long mode = GetEffectTex64(1);
 
-    FontPrint(a, b, c, d, e, mode, D_001DF3D0);
+    FontPrint(a, b, c, d, e, mode, normal_font_metrics);
 }
 
 /* FontPrintSmall */
 void FontPrintSmall(void *a, void *b, void *c, void *d, void *e) {
     long mode = GetEffectTex64(2);
 
-    FontPrint(a, b, c, d, e, mode, D_001DF770);
+    FontPrint(a, b, c, d, e, mode, small_font_metrics);
 }
 
 LINKER_REMNANT("asm/remnants/text", func_001F69E8);
@@ -3124,7 +3124,7 @@ extern void func_001F5BB8_F69F0(f32, f32, f32, f32, s32, s32, s32, s32, u64, s64
 void func_001F69F0(u64 color, u8 *s, f32 x, s32 n, s64 tex, struct Glyph *g, f32 y, f32 scale);
 
 /* Adapted from Lombyte (GPL-3.0) for PAL by OpenRAC's tools/port.py: src/audio/music/process_bgm_display_text_event.c, process_bgm_display_text_event. */
-void Font_DrawString(u64 color, u8 *str, f32 x, s32 n, s64 tex, struct Glyph *g, f32 y, f32 scale) {
+void process_bgm_display_text_event(u64 color, u8 *str, f32 x, s32 n, s64 tex, struct Glyph *g, f32 y, f32 scale) {
     u8 *s;
     s32 i;
     f32 size;
@@ -3135,8 +3135,8 @@ void Font_DrawString(u64 color, u8 *str, f32 x, s32 n, s64 tex, struct Glyph *g,
     s32 avg;
     s32 mk;
 
-    if (D_0015F5A0 == 0) {
-        D_0018CBF8[0] = color;
+    if (font_window_active == 0) {
+        font_palette_colors[0] = color;
     }
     size = scale * 16.0f;
     i = 0;
@@ -3146,9 +3146,9 @@ void Font_DrawString(u64 color, u8 *str, f32 x, s32 n, s64 tex, struct Glyph *g,
     s = str;
     do {
         if ((u8)(*s - 8) < 8) {
-            if ((*(s32 *)&D_0015F59C) != 0) {
+            if ((*(s32 *)&GlobalStateFlag) != 0) {
                 color &= 0xFF000000;
-                color |= D_0018CBF8[*s - 8] & 0xFFFFFF;
+                color |= font_palette_colors[*s - 8] & 0xFFFFFF;
             }
         } else if (g[*s].adv != 0) {
             top = IntToFloat(g[*s].top) * scale;
@@ -3189,26 +3189,26 @@ extern int func_001F6620(unsigned char *, int);
    measuring helper, and the first argument stepped back by whatever that
    helper returns. */
 void font_print_right(char *a, void *b, void *c, unsigned char *d, int e) {
-    char *p = a - MeasureTextWidthRegular(d, e);
+    char *p = a - measure_text_width_regular(d, e);
     long mode = GetEffectTex64(1);
 
-    FontPrint(p, b, c, d, (void *)e, mode, D_001DF3D0);
+    FontPrint(p, b, c, d, (void *)e, mode, normal_font_metrics);
 }
 
 /* Right-aligned FontPrint with the second font. */
 void font_print_right_small(char *a, void *b, void *c, unsigned char *d, int e) {
-    char *p = a - MeasureTextWidthSmall(d, e);
+    char *p = a - measure_text_width_small(d, e);
     long mode = GetEffectTex64(2);
 
-    FontPrint(p, b, c, d, (void *)e, mode, D_001DF770);
+    FontPrint(p, b, c, d, (void *)e, mode, small_font_metrics);
 }
 
 /* Right-aligned FontPrint with the third font. */
 void font_print_right_large(char *a, void *b, void *c, unsigned char *d, int e) {
-    char *p = a - MeasureTextWidthLarge(d, e);
+    char *p = a - measure_text_width_large(d, e);
     long mode = GetEffectTex64(3);
 
-    FontPrint(p, b, c, d, (void *)e, mode, D_001DFB10);
+    FontPrint(p, b, c, d, (void *)e, mode, large_font_metrics);
 }
 
 /* func_001F6EA8/func_001F6F40/func_001F6FD8 are the func_001F6CF8 triple
@@ -3217,31 +3217,31 @@ void font_print_right_large(char *a, void *b, void *c, unsigned char *d, int e) 
    the extern func_001F7288 already declares for func_001F6FD8. */
 /* FontPrintCenter */
 int FontPrintCenter(int a, int b, int c, int d, int e) {
-    int p = a - (MeasureTextWidthRegular((unsigned char *)d, e) >> 1);
+    int p = a - (measure_text_width_regular((unsigned char *)d, e) >> 1);
     long mode = GetEffectTex64(1);
 
     FontPrint((void *)p, (void *)b, (void *)c, (void *)d, (void *)e,
-                  mode, D_001DF3D0);
+                  mode, normal_font_metrics);
     return p;
 }
 
 /* FontPrintCenterSmall */
 int FontPrintCenterSmall(int a, int b, int c, int d, int e) {
-    int p = a - (MeasureTextWidthSmall((unsigned char *)d, e) >> 1);
+    int p = a - (measure_text_width_small((unsigned char *)d, e) >> 1);
     long mode = GetEffectTex64(2);
 
     FontPrint((void *)p, (void *)b, (void *)c, (void *)d, (void *)e,
-                  mode, D_001DF770);
+                  mode, small_font_metrics);
     return p;
 }
 
 /* FontPrintCenterLarge */
 int FontPrintCenterLarge(int a, int b, int c, int d, int e) {
-    int p = a - (MeasureTextWidthLarge((unsigned char *)d, e) >> 1);
+    int p = a - (measure_text_width_large((unsigned char *)d, e) >> 1);
     long mode = GetEffectTex64(3);
 
     FontPrint((void *)p, (void *)b, (void *)c, (void *)d, (void *)e,
-                  mode, D_001DFB10);
+                  mode, large_font_metrics);
     return p;
 }
 
@@ -3254,7 +3254,7 @@ struct FontWindow {
 };
 
 /* FontPrintWindow */
-void func_001F7070(void *win_p, long a1, void *text_p, int len, long a4, unsigned char *glyphs)
+void FontPrintWindow(void *win_p, long a1, void *text_p, int len, long a4, unsigned char *glyphs)
 {
     struct FontWindow *win = (struct FontWindow *)win_p;
     unsigned char *text = (unsigned char *)text_p;
@@ -3264,8 +3264,8 @@ void func_001F7070(void *win_p, long a1, void *text_p, int len, long a4, unsigne
     int W, Wsave, line, i, brk, width, colr, n0, last, balanced;
     int k, y, flags, adv, c;
 
-    func_00234D58(win->x_min, win->x_max - 1, win->y_min, win->y_max - 1);
-    D_0015F5A0 = 1;
+    VU1_setScissor(win->x_min, win->x_max - 1, win->y_min, win->y_max - 1);
+    font_window_active = 1;
     if ((win->flags ^ 1) & 1) {
         W = win->x_max - win->x_anchor;
     } else {
@@ -3295,7 +3295,7 @@ void func_001F7070(void *win_p, long a1, void *text_p, int len, long a4, unsigne
                     while (width < W) {
                         if (text[i] == 0x20 || text[i] < 0x10)
                             brk = i;
-                        if (*(int *)&D_0015F59C != 0 && (unsigned char)(text[i] - 8) < 8)
+                        if (*(int *)&GlobalStateFlag != 0 && (unsigned char)(text[i] - 8) < 8)
                             colr = text[i] - 8;
                         if (text[i] < 2)
                             break;
@@ -3351,31 +3351,31 @@ void func_001F7070(void *win_p, long a1, void *text_p, int len, long a4, unsigne
             if (dw->y_max < y)
                 continue;
             cnt = endi[k] - start[k] + 1;
-            w = func_001F65B0(text + start[k], cnt, glyphs);
+            w = measure_text_width(text + start[k], cnt, glyphs);
             if (dw->out_w < w)
                 dw->out_w = w;
             if (dw->flags & 4)
                 continue;
-            D_0018CBF8[0] = a1;
+            font_palette_colors[0] = a1;
             if (dw->flags & 8) {
                 float fx;
                 if (dw->flags & 1)
                     fx = (dw->x_anchor - (w >> 1)) + dw->x_sub * 0.0625f;
                 else
                     fx = dw->x_anchor + dw->x_sub * 0.0625f;
-                func_001F69F0(D_0018CBF8[colr_arr[k]], text + start[k], fx, cnt, a4, (struct Glyph *)glyphs,
+                process_bgm_display_text_event(font_palette_colors[colr_arr[k]], text + start[k], fx, cnt, a4, (struct Glyph *)glyphs,
                               y + dw->y_sub * 0.0625f, 1.0f);
             } else if (dw->flags & 1) {
-                func_001F6668((void *)(dw->x_anchor - (w >> 1)), (void *)y, (void *)D_0018CBF8[colr_arr[k]],
+                FontPrint((void *)(dw->x_anchor - (w >> 1)), (void *)y, (void *)font_palette_colors[colr_arr[k]],
                               text + start[k], (void *)cnt, a4, glyphs);
             } else {
-                func_001F6668((void *)(int)dw->x_anchor, (void *)y, (void *)D_0018CBF8[colr_arr[k]],
+                FontPrint((void *)(int)dw->x_anchor, (void *)y, (void *)font_palette_colors[colr_arr[k]],
                               text + start[k], (void *)cnt, a4, glyphs);
             }
         }
     }
-    D_0015F5A0 = 0;
-    func_00234D58(0, D_0013E600[0] - 1, 0, D_0013E600[1] - 1);
+    font_window_active = 0;
+    VU1_setScissor(0, D_0013E600[0] - 1, 0, D_0013E600[1] - 1);
 }
 
 extern int func_001F4868(int);
@@ -3384,17 +3384,17 @@ extern int func_001F4868(int);
    mode (1 vs 2) and a different table. Six arguments: EABI passes the
    fifth and sixth in $8/$9, which is why they appear alongside $4-$7
    rather than on the stack. */
-void Font_PrintWindowRegular(void *a, void *b, void *c, void *d) {
+void font_print_window_regular(void *a, void *b, void *c, void *d) {
     int mode = GetEffectTex(1);
 
-    FontPrintWindow(a, b, c, d, mode, D_001DF3D0);
+    FontPrintWindow(a, b, c, d, mode, normal_font_metrics);
 }
 
 /* FontPrintWindow with the second font. */
-void Font_PrintWindowAlt(void *a, void *b, void *c, void *d) {
+void func_001F75D0(void *a, void *b, void *c, void *d) {
     int mode = GetEffectTex(2);
 
-    FontPrintWindow(a, b, c, d, mode, D_001DF770);
+    FontPrintWindow(a, b, c, d, mode, small_font_metrics);
 }
 
 LINKER_REMNANT("asm/remnants/text", func_001F7640);
@@ -3421,8 +3421,8 @@ extern int D_0013E604[];
 #define PK ((unsigned char *)D_00161000)
 
 /* Uploads a block to the GS in DMA packets. */
-void UploadToGs(unsigned int source) {
-    int remaining = D_0013E604[0];
+void queue_framebuffer_upload(unsigned int source) {
+    int remaining = frame_size[0];
     int destination = D_0015EF84 >> 8;
     unsigned long count;
     unsigned long transfer;
@@ -3478,7 +3478,7 @@ extern void func_00234FA8(void);
    (each scaled to 1024 and biased in z by D_0015F448), the screen scale
    and offsets from D_0018CE00, and the GIF register setup; the DMA tag's
    qword count is patched in at the end. */
-void Draw_BuildVu1Setup(void) {
+void font_queue_vu_state(void) {
     float m[16];
     char *cam;
     char *g;
@@ -3486,12 +3486,12 @@ void Draw_BuildVu1Setup(void) {
     int *p;
 
     func_001FA1C0(m, 1024.0f);
-    cam = D_00187180;
+    cam = camera_position;
     FastVecScale(&m[12], cam, -1024.0f);
     m[15] = 1.0f;
-    if (D_0015F704 != 7) {
-        VU1_addDataRef(D_0010E810, D_0010E800);
-        D_0015F704 = 7;
+    if (font_state != 7) {
+        VU1_addDataRef(font_vu_program, font_vu_program_tag);
+        font_state = 7;
     }
     D_00161000[0] = 0x10000000;
     D_00161000[1] = 0;
@@ -3504,11 +3504,11 @@ void Draw_BuildVu1Setup(void) {
     base[7] = 0x6C0C43A4;
     p = base + 8;
     sce_vu0_mul_matrix(p, cam - 0x100, m);
-    *(float *)(p + 14) += *(float *)&D_0015F448;
+    *(float *)(p + 14) += *(float *)&font_depth_bias;
     p = base + 0x18;
     sce_vu0_mul_matrix(p, cam - 0x80, m);
-    *(float *)(p + 14) += *(float *)&D_0015F448;
-    g = (char *)D_0018CE00;
+    *(float *)(p + 14) += *(float *)&font_depth_bias;
+    g = (char *)view_context;
     base[0x28] = 0x8000;
     base[0x29] = 0x303EC000;
     base[0x2A] = 0x412;
@@ -3528,7 +3528,7 @@ void Draw_BuildVu1Setup(void) {
     p = base + 0x3C;
     D_00161000[0] |= ((char *)p - (char *)D_00161000 >> 4) - 1;
     D_00161000 = p;
-    Dma_AppendRefDirect11();
+    vu1_gs_regs_font();
 }
 
 extern void func_001FB608(int, int, int);
@@ -3542,7 +3542,7 @@ extern short D_001519EE NOT_SDA;
    flag, 0x30000 without) and 0x42 are then written. Each arm makes its
    own page-aligned base, so the two trailing `<< 13`s are cross-jumped
    into the one retail has ahead of the argument moves. */
-void Framebuf_SetupRenderTarget(int a, int b, int flag, float f) {
+void configure_graphics_render_target_and_projection(int a, int b, int flag, float f) {
     int base;
 
     if (flag != 0) {
@@ -3556,8 +3556,8 @@ void Framebuf_SetupRenderTarget(int a, int b, int flag, float f) {
         base = D_0015EF8C - (4 << t);
         base = (base >> 13) << 13;
     }
-    Framebuf_SetRenderTarget(a, b, base);
-    SetScreenSize(1 << a, 1 << b, f, 0.0f, 524288.0f, 255.0f, 0.0f);
+    setup_render_target(a, b, base);
+    configure_graphics_projection(1 << a, 1 << b, f, 0.0f, 524288.0f, 255.0f, 0.0f);
     if (flag != 0) {
         VU1_addGSregister(0x47, 0);
     } else {
@@ -3571,7 +3571,7 @@ __asm__(".section .text\n\tnop\n");
 extern void func_001F3008(void);
 
 /* Frame start for the large draw buffer. */
-void BeginDrawFrame(void) {
+void begin_draw_frame(void) {
     PutDrawBufferLarge();
     InitViewContext();
     UpdateViewContext();
@@ -3587,31 +3587,31 @@ extern void func_001F7868(void);
 extern void func_001F8B6C(void);
 
 /* Optional extra draw pass, enabled by D_0015F578. */
-void DrawOptionalExtraPass(void) {
-    if (D_0015F578 != 0) {
+void draw_debug_font(void) {
+    if (font_quad_count != 0) {
         VU1_addGSregister(8, 5);
         VU1_addGSregister(0x14, 0x61);
         VU1_addGSregister(0x47, 0x513F1);
         VU1_addGSregister(0x4A, 1);
         func_001F91B8();
-        *(float *)&D_0015F448 = -0.04f;
-        Draw_BuildVu1Setup();
+        *(float *)&font_depth_bias = -0.04f;
+        font_queue_vu_state();
         func_001F8B6C();
-        *(int *)&D_0015F448 = 0;
+        *(int *)&font_depth_bias = 0;
         VU1_addGSregister(0x4A, 0);
     }
 }
 
 extern int D_0018E840[];
 
-/* buildBitSwapLut: fills the alpha lookup table D_0018E840. */
-void buildBitSwapLut(void) {
+/* initialize_alpha_lookup_table: fills the alpha lookup table D_0018E840. */
+void initialize_alpha_lookup_table(void) {
     int i;
     for (i = 0; i < 0x100; i++) {
         int v = i & 0xE7;
         if (i & 0x8)  v |= 0x10;
         if (i & 0x10) v |= 0x8;
-        D_0018E840[v] = (i >> 1) << 24;
+        bit_swap_lut[v] = (i >> 1) << 24;
     }
 }
 

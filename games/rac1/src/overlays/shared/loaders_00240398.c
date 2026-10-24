@@ -54,7 +54,7 @@ extern int func_00120858_240398(int, unsigned short) __asm__("func_00120858");
 extern void func_00203E78_240398(void *, void *, void *, int) __asm__("func_00203E78");
 
 /* Loads a level's four packed images through the GS loader and registers the image records and their data blocks. */
-char *LoadLevelImages(char *buf, int *tbl) {
+char *load_level_texture_bank(char *buf, int *tbl) {
     int img[24];
     int i = 0;
     int a;
@@ -206,7 +206,7 @@ struct SortEnt {
 };
 
 /* build a table of (key, value) pairs from 0x20-byte records, sort it by value, and emit each */
-void func_L00_00242120(int *p, int n) {
+void print_moby_class_sizes(int *p, int n) {
     struct SortEnt arr[512];
     int i, j, k, sorted;
 
@@ -216,9 +216,9 @@ void func_L00_00242120(int *p, int n) {
             arr[i].val = 0;
         } else {
             if (p[8] != 0) {
-                arr[i].val = func_001FA888(p[8] - p[0]) * 0.0009765625f;
+                arr[i].val = IntToFloat(p[8] - p[0]) * 0.0009765625f;
             } else {
-                arr[i].val = func_001FA888(p[0x10] - p[0]) * 0.0009765625f;
+                arr[i].val = IntToFloat(p[0x10] - p[0]) * 0.0009765625f;
             }
             arr[i + 1].key = -1.0f;
             arr[i + 1].val = 0;
@@ -239,8 +239,8 @@ void func_L00_00242120(int *p, int n) {
         }
     } while (!sorted);
     for (k = 0; k < n; k++) {
-        int a = func_001FA898(arr[k].key);
-        func_001E9730(D_L00_001E89C0, a, func_00120778(arr[k].val));
+        int a = truncate_float_to_s32(arr[k].key);
+        STUB_printf(moby_class_size_format, a, func_00120778(arr[k].val));
     }
 }
 typedef struct {
@@ -586,7 +586,7 @@ extern char *D_L00_0015F418 MACRO_ADDR;
 extern char *D_L00_0015F410 MACRO_ADDR;
 
 /* Loads a level's gameplay file into the level heap: settings, lights, ties, shrubs, mobys, paths and the occlusion tables; returns the heap cursor. */
-char *LoadLevelGameplay(int arg0) {
+char *load_level_gameplay(int arg0) {
     Hdr_422D8 *hdr;
     char *mem;
     float *ship;
@@ -607,7 +607,7 @@ char *LoadLevelGameplay(int arg0) {
     func_0020C468(D_0015EF4C_422D8[1], hdr);
     func_00118D80(0);
     FastMemSet(&D_0013F450, 0, 0x2310);
-    FastMemSet(gCameraLvl, 0, 0x3A0);
+    FastMemSet(player_camera, 0, 0x3A0);
     FastMemSet(D_L00_0018EEC0, 0, 0x180);
     func_001160C8(0x4D2);
     if (D_0015EE80 != 0) {
@@ -790,9 +790,9 @@ char *LoadLevelGameplay(int arg0) {
             mtx->f3C = D_L00_001C5B00[inst->f1A]->f40;
             func_001F9EC0(inst, D_L00_001C5B00[inst->f1A]->f30, mtx);
             scale = FastVecLength(mtx);
-            scale = func_001F9B90(scale, FastVecLength(mtx->m1));
-            inst->fC = D_L00_001C5B00[inst->f1A]->f3C * func_001F9B90(scale, FastVecLength(mtx->m2));
-            func_001F9C48(inst, inst, mtx->f3C);
+            scale = max_float(scale, FastVecLength(mtx->m1));
+            inst->fC = D_L00_001C5B00[inst->f1A]->f3C * max_float(scale, FastVecLength(mtx->m2));
+            scale_vector(inst, inst, mtx->f3C);
             FastVecAdd(inst, inst, mtx->m3);
             D_L00_00161088[i].fC = 1.0f / FastVecLength(&D_L00_00161088[i]);
             D_L00_00161088[i].f1C = 1.0f / FastVecLength(D_L00_00161088[i].m1);
@@ -908,9 +908,9 @@ char *LoadLevelGameplay(int arg0) {
             p += 0x10;
             func_001F9EC0(inst, D_L00_001BC3C0[cls], mtx);
             scale = FastVecLength(mtx);
-            scale = func_001F9B90(scale, FastVecLength(mtx->m1));
-            inst->fC = D_L00_001BC3C0[cls]->fC * func_001F9B90(scale, FastVecLength(mtx->m2));
-            func_001F9C48(inst, inst, mtx->f3C);
+            scale = max_float(scale, FastVecLength(mtx->m1));
+            inst->fC = D_L00_001BC3C0[cls]->fC * max_float(scale, FastVecLength(mtx->m2));
+            scale_vector(inst, inst, mtx->f3C);
             FastVecAdd(inst, inst, mtx->m3);
         }
     }
@@ -952,26 +952,26 @@ char *LoadLevelGameplay(int arg0) {
         int n = *(int *)p;
         int i;
 
-        gCameraDefsLvl = (Cuboid_422D8 *)mem;
+        camera_descriptors = (Cuboid_422D8 *)mem;
         p += 0x10;
         gCameraDefCountLvl = n;
         mem += n << 5;
         if (n != 0) {
-            FastMemSet(gCameraDefsLvl, 0, n << 5);
+            FastMemSet(camera_descriptors, 0, n << 5);
         }
         mem = (char *)(((u32)mem + 0x3F) & 0xFFFFFFC0);
         for (i = 0; i < gCameraDefCountLvl; i++) {
-            gCameraDefsLvl[i].fC = *(int *)p;
+            camera_descriptors[i].fC = *(int *)p;
             p += 4;
-            gCameraDefsLvl[i].f0 = ((float *)p)[0];
-            gCameraDefsLvl[i].f4 = ((float *)p)[1];
-            gCameraDefsLvl[i].f8 = ((float *)p)[2];
+            camera_descriptors[i].f0 = ((float *)p)[0];
+            camera_descriptors[i].f4 = ((float *)p)[1];
+            camera_descriptors[i].f8 = ((float *)p)[2];
             p += 0xC;
-            gCameraDefsLvl[i].f10 = ((float *)p)[0];
-            gCameraDefsLvl[i].f14 = ((float *)p)[1];
-            gCameraDefsLvl[i].f18 = ((float *)p)[2];
+            camera_descriptors[i].f10 = ((float *)p)[0];
+            camera_descriptors[i].f14 = ((float *)p)[1];
+            camera_descriptors[i].f18 = ((float *)p)[2];
             p += 0xC;
-            gCameraDefsLvl[i].f1C = *(int *)p;
+            camera_descriptors[i].f1C = *(int *)p;
             p += 4;
         }
     }
@@ -994,7 +994,7 @@ char *LoadLevelGameplay(int arg0) {
 
                 func_L00_001FF040(e, p, 0x90);
                 p += 0x90;
-                Sound_LookupTableEntry((short *)e);
+                resolve_lookup_record((short *)e);
             }
         } else {
             D_0013E650.fD94 = 0;
@@ -1042,7 +1042,7 @@ char *LoadLevelGameplay(int arg0) {
             if (flags != 0) {
                 tmp = D_0015EE84; /* read before the test: see the group loop */
                 if (flags & 0x10) {
-                    vis = BoltTally_FindSlot(tmp, uid);
+                    vis = find_or_assign_bolt_source_slot(tmp, uid);
                 } else {
                     vis = 0xFF;
                 }
@@ -1062,7 +1062,7 @@ char *LoadLevelGameplay(int arg0) {
                         }
                     } else {
                         if (flags & 1) {
-                            if ((D_0014C290[D_0015EE84][uid >> 5] >> (uid & 0x1F)) & 1) {
+                            if ((level_moby_killed[D_0015EE84][uid >> 5] >> (uid & 0x1F)) & 1) {
                                 b2 = (bolts + 1) / 2;
                             }
                         } else {
@@ -1074,7 +1074,7 @@ char *LoadLevelGameplay(int arg0) {
                         skip = 1;
                     }
                 } else if ((flags & 0xC) == 4) {
-                    if ((D_0014C290[D_0015EE84][uid >> 5] >> (uid & 0x1F)) & 1) {
+                    if ((level_moby_killed[D_0015EE84][uid >> 5] >> (uid & 0x1F)) & 1) {
                         skip = 1;
                     }
                 }
@@ -1155,7 +1155,7 @@ char *LoadLevelGameplay(int arg0) {
                 upd = *(int *)p;
                 p += 4;
                 m->unk80 = (c2 << 16) + (c1 << 8) + c0;
-                func_0020E340(m, m->unk80, 0, 0, 0);
+                pack_render_command_fields(m, m->unk80, 0, 0, 0);
                 (*(int *)&m->spawn_frame) = upd;
                 if (*(int *)p != -1) {
                     SetPlanetTableEntry((int)m, *(int *)p);
@@ -1179,15 +1179,15 @@ char *LoadLevelGameplay(int arg0) {
         Moby *m;
 
         for (i = 0; i < gCameraDefCountLvl; i++) {
-            int k = gCameraDefsLvl[i].f1C;
+            int k = camera_descriptors[i].f1C;
 
             if (k < 0) {
-                gCameraDefsLvl[i].f1C = 0;
+                camera_descriptors[i].f1C = 0;
             } else {
                 int size = tbl[k].f4;
                 char *src = pv + tbl[k].f0;
 
-                gCameraDefsLvl[i].f1C = (int)mem;
+                camera_descriptors[i].f1C = (int)mem;
                 FastMemCopy(mem, src, size);
                 tbl[k].f0 = (int)mem;
                 mem += size;
@@ -1537,8 +1537,8 @@ char *LoadLevelGameplay(int arg0) {
         if (D_0015EE84 == 13 && D_0013E130.f26 == 2) {
             if (D_L00_00160600 != 0) {
                 for (m = D_L00_00160098; m->state != 0xFF; m++) {
-                    if (m->oclass == D_L00_00160608[D_0013E130.f26]) {
-                        Ship_Register((char *)m);
+                    if (m->oclass == first_class_ids[D_0013E130.f26]) {
+                        initialize_moby_state_record((char *)m);
                         MobySetAnimation(m, 1, 0);
                         break;
                     }
@@ -1548,12 +1548,12 @@ char *LoadLevelGameplay(int arg0) {
         if (D_0013E130.f0 == 0) {
             float rot;
 
-            m = CreateMoby(D_L00_00160608[D_0013E130.f26]);
+            m = CreateMoby(first_class_ids[D_0013E130.f26]);
             m->pos.x = ship[0];
             m->pos.y = ship[1];
             m->pos.z = ship[2];
             rot = ship[3];
-            (*(void **)&m->update) = EnvMappedPickupUpdate;
+            (*(void **)&m->update) = update_moby_proximity_interaction;
             m->draw_dist = 0xFF;
             m->rot.z = rot;
             m->update_dist = 0x10;
@@ -1694,7 +1694,7 @@ char *LoadLevelGameplay(int arg0) {
                 q += 2;
             }
         }
-        gDebugFreeCamLvl[7] = 2;
+        g_debug_menu[7] = 2;
     } else {
         Moby *m;
         TieInst_422D8 *t;
@@ -1710,12 +1710,12 @@ char *LoadLevelGameplay(int arg0) {
         for (i = 0; i < D_L00_00161010; i++) {
             D_L00_0016100C[i].f3A = 0x7F80;
         }
-        gDebugFreeCamLvl[7] = 0;
+        g_debug_menu[7] = 0;
     }
     Level_ResetGameplayGlobals();
-    HeroInit();
-    HeroResetTuning();
-    Camera_InitSlots();
+    initialize_hero();
+    reset_hero_to_idle();
+    setup_level_cameras();
     Camera_UpdateFrame();
     pad_resetState();
     Font_EnableColorCodes();
@@ -1917,10 +1917,10 @@ s32 func_L00_00244AE0(s32 full, s32 keep) {
     u64 *t;
 
     if (full)
-        func_002032D0();
+        LoadHudBanks();
     base = ld->f14;
     if (full) {
-        func_001F9A98(h, (char *)(src[4] + (s32)src), src[5]);
+        FastMemCopy(h, (char *)(src[4] + (s32)src), src[5]);
         D_L00_0015F50C = 0;
         func_L00_001FF040(D_L00_0015FD48, D_0014C150 + D_0015EE84 * 16, 0x10);
         func_00203958((char *)(src[6] + (s32)src), h->v[0], (char *)h + h->v[1]);
@@ -1942,22 +1942,22 @@ s32 func_L00_00244AE0(s32 full, s32 keep) {
         t1 = (TexRef244110 *)((char *)h + h->v[0xD]);
         D_L00_00161014 = h->v[0xC];
         for (c1 = 0; c1 < D_L00_00161014; c1++)
-            D_L00_001C4D00[c1] = D_L00_0015F50C + t1[c1].offset + (func_001F9968(t1[c1].kind) << 28);
+            D_L00_001C4D00[c1] = D_L00_0015F50C + t1[c1].offset + (log2dim(t1[c1].kind) << 28);
         tex = (TexRef244110 *)((char *)h + h->v[0xF]);
         D_L00_00160088 = h->v[0xE];
         for (c2 = 0; c2 < D_L00_00160088; c2++)
-            D_L00_00199E00[c2] = D_L00_0015F50C + tex[c2].offset + (func_001F9968(tex[c2].kind) << 28);
-        func_001F9A98(D_L00_001AEF40, tex, D_L00_00160088 * 16);
+            D_L00_00199E00[c2] = D_L00_0015F50C + tex[c2].offset + (log2dim(tex[c2].kind) << 28);
+        FastMemCopy(D_L00_001AEF40, tex, D_L00_00160088 * 16);
         t3 = (TexRef244110 *)((char *)h + h->v[0x11]);
         D_L00_00161094 = h->v[0x10];
         for (c3 = 0; c3 < D_L00_00161094; c3++)
-            D_L00_001C6A00[c3] = D_L00_0015F50C + t3[c3].offset + (func_001F9968(t3[c3].kind) << 28);
+            D_L00_001C6A00[c3] = D_L00_0015F50C + t3[c3].offset + (log2dim(t3[c3].kind) << 28);
         t4 = (TexRef244110 *)((char *)h + h->v[0x13]);
         D_L00_0016056C = h->v[0x12];
         for (c4 = 0; c4 < D_L00_0016056C; c4++)
-            D_L00_001BC940[c4] = D_L00_0015F50C + t4[c4].offset + (func_001F9968(t4[c4].kind) << 28);
+            D_L00_001BC940[c4] = D_L00_0015F50C + t4[c4].offset + (log2dim(t4[c4].kind) << 28);
 
-        func_00204918(base + h->v[2], (char *)h + h->v[0xD]);
+        initialize_tfrag_render_data(base + h->v[2], (char *)h + h->v[0xD]);
         if (h->v[3])
             D_L00_0015F6E0 = (s32)(base + h->v[3]);
         else
@@ -1966,14 +1966,14 @@ s32 func_L00_00244AE0(s32 full, s32 keep) {
             func_00203118(base + h->v[4]);
         else
             D_L00_001605DC = 0;
-        func_L00_002420C0(base + h->v[5]);
+        CollInit(base + h->v[5]);
         for (i = 0, q2 = (char *)h + h->v[7]; i < h->v[6]; i++, q2 += 0x20)
             func_00203E78(*(s32 *)q2 ? base + *(s32 *)q2 : 0, (char *)h + h->v[0xF], q2 + 0x10, *(s32 *)(q2 + 4));
-        func_L00_00242120((int *)((char *)h + h->v[7]), h->v[7]);
+        print_moby_class_sizes((int *)((char *)h + h->v[7]), h->v[7]);
         for (sq = 0, p = (char *)h + h->v[0x1E]; sq < D_L00_00197680[0]->seq_count; sq++, p += 4) {
             if (*(s32 *)p) {
                 D_L00_00197680[0]->seqs[sq] = base + *(s32 *)p;
-                func_00203B18(D_L00_00197680[0], sq);
+                relocateObjectPointers(D_L00_00197680[0], sq);
             }
         }
         D_L00_001600CC = -1;
@@ -1988,21 +1988,21 @@ s32 func_L00_00244AE0(s32 full, s32 keep) {
             qcopy(&D_L00_001B0060[m], (char *)h + h->v[7] + o); }
         }
         for (i = 0, q2 = (char *)h + h->v[9]; i < h->v[8]; i++, q2 += 0x20)
-            func_00203F68(base + *(s32 *)q2, (char *)h + h->v[0x11], q2 + 0x10, *(s32 *)(q2 + 4));
-        func_001E9768((char *)h + h->v[9], h->v[8]);
+            register_object_render_class(base + *(s32 *)q2, (char *)h + h->v[0x11], q2 + 0x10, *(s32 *)(q2 + 4));
+        Profile_Mark((char *)h + h->v[9], h->v[8]);
         for (i = 0, q2 = (char *)h + h->v[0xB]; i < h->v[0xA]; i++, q2 += 0x30)
-            func_00204340(base + *(s32 *)q2, (char *)h + h->v[0x13], q2 + 0x10, q2 + 0x20, *(s32 *)(q2 + 4));
+            register_shrub_render_class(base + *(s32 *)q2, (char *)h + h->v[0x13], q2 + 0x10, q2 + 0x20, *(s32 *)(q2 + 4));
         D_L00_0015F520 = base + h->v[0x1A];
         func_00203038((char *)h + h->v[0x17], h->v[0x16]);
         if (h->v[0x28]) {
-            func_L00_0023FAB8(base + h->v[0x28]);
+            relocate_counted_pointer_table(base + h->v[0x28]);
         } else {
             D_L00_0015F538 = 0;
             D_L00_0015F53C = 0;
             D_L00_0015F540 = 0;
         }
         if (h->v[0x29]) {
-            func_L00_0023FA70(base + h->v[0x29]);
+            LoadLightHeader(base + h->v[0x29]);
         } else {
             D_L00_0015FD58 = 0;
             D_L00_0015FD5C = 0;
@@ -2017,7 +2017,7 @@ s32 func_L00_00244AE0(s32 full, s32 keep) {
         {
             char *x1 = base + h->v[0x19];
             char *x2 = (char *)h + h->v[0x15];
-            func_00202F00((char *)h + h->v[0x1B], x1, x2, h->v[0x14]);
+            ParseParticleTexs((char *)h + h->v[0x1B], x1, x2, h->v[0x14]);
         }
 
         tbl = (char *)h + h->v[0x1C];
@@ -2032,7 +2032,7 @@ s32 func_L00_00244AE0(s32 full, s32 keep) {
         e = tbl + span->off;
         for (a3 = 0; a3 < D_L00_0015F6D0; a3++) {
             if (D_L00_0015F6D4[a3].sound >= span->count) {
-                ((void (*)())func_001E9730)(D_L00_001E8B00);
+                ((void (*)())STUB_printf)(D_L00_001E8B00);
                 D_L00_0015F6D4[a3].sound = -1;
             } else {
                 D_L00_0015F6D4[a3].sound = *(u16 *)(e + D_L00_0015F6D4[a3].sound * 4);
@@ -2048,14 +2048,14 @@ s32 func_L00_00244AE0(s32 full, s32 keep) {
                     if (D_L00_001AFF40[j] == D_L00_00197D80[ci])
                         break;
                 if (j < D_L00_001600C8) {
-                    func_001F99B0(D_L00_001B01E0[j], -1, 0x20);
+                    FastMemSet(D_L00_001B01E0[j], -1, 0x20);
                     e = tbl + span->off;
                     for (k = 0; k < span->count && k < 15; k++, e += 4)
                         D_L00_001B01E0[j][k] = *(u16 *)e;
                 }
             } else {
                 if (span->count != cls->count0D)
-                    ((void (*)())func_001E9730)(D_L00_001E8B20, D_L00_00197D80[ci]);
+                    ((void (*)())STUB_printf)(D_L00_001E8B20, D_L00_00197D80[ci]);
                 e = tbl + span->off;
                 for (k = 0; k < D_L00_00197680[ci]->count0D; k++, e += 4) {
                     D_L00_00197680[ci]->f28[k].sound = *(u16 *)e;
@@ -2063,64 +2063,64 @@ s32 func_L00_00244AE0(s32 full, s32 keep) {
                 }
             }
         }
-        ((Load244110 *)&D_L00_00173F00)->f18 = func_L00_00240398((char *)((u32)end & ~0x3F), (s32 *)h);
+        ((Load244110 *)&D_L00_00173F00)->f18 = load_level_texture_bank((char *)((u32)end & ~0x3F), (s32 *)h);
     }
-    ((Load244110 *)&D_L00_00173F00)->f1C = func_L00_002422D8(full);
+    ((Load244110 *)&D_L00_00173F00)->f1C = load_level_gameplay(full);
     if (full) {
         char *top;
-        ((void (*)())func_001E9730)(D_L00_001E8B50);
-        ((void (*)())func_001E9730)(D_L00_001E8B68, (((*(f64 (*)(f32))func_00120778)(func_001FA888((s32)(0x100000)) * (1.0f / 1024.0f)))));
+        ((void (*)())STUB_printf)(D_L00_001E8B50);
+        ((void (*)())STUB_printf)(D_L00_001E8B68, (((*(f64 (*)(f32))func_00120778)(IntToFloat((s32)(0x100000)) * (1.0f / 1024.0f)))));
         top = D_L00_002F2298;
-        ((void (*)())func_001E9730)(D_L00_001E8B80, (((*(f64 (*)(f32))func_00120778)(func_001FA888((s32)(top - 0x100000)) * (1.0f / 1024.0f)))));
-        ((void (*)())func_001E9730)(D_L00_001E8B98, (((*(f64 (*)(f32))func_00120778)(func_001FA888((s32)(((Load244110 *)&D_L00_00173F00)->f0 - top)) * (1.0f / 1024.0f)))));
-        ((void (*)())func_001E9730)(D_L00_001E8BB0, (((*(f64 (*)(f32))func_00120778)(func_001FA888((s32)(((Load244110 *)&D_L00_00173F00)->fC - ((Load244110 *)&D_L00_00173F00)->f0)) * (1.0f / 1024.0f)))));
-        ((void (*)())func_001E9730)(D_L00_001E8BC8, (((*(f64 (*)(f32))func_00120778)(func_001FA888((s32)(((Load244110 *)&D_L00_00173F00)->f10 - ((Load244110 *)&D_L00_00173F00)->fC)) * (1.0f / 1024.0f)))));
-        ((void (*)())func_001E9730)(D_L00_001E8BE0, (((*(f64 (*)(f32))func_00120778)(func_001FA888((s32)(((Load244110 *)&D_L00_00173F00)->f14 - ((Load244110 *)&D_L00_00173F00)->f10)) * (1.0f / 1024.0f)))));
+        ((void (*)())STUB_printf)(D_L00_001E8B80, (((*(f64 (*)(f32))func_00120778)(IntToFloat((s32)(top - 0x100000)) * (1.0f / 1024.0f)))));
+        ((void (*)())STUB_printf)(D_L00_001E8B98, (((*(f64 (*)(f32))func_00120778)(IntToFloat((s32)(((Load244110 *)&D_L00_00173F00)->f0 - top)) * (1.0f / 1024.0f)))));
+        ((void (*)())STUB_printf)(D_L00_001E8BB0, (((*(f64 (*)(f32))func_00120778)(IntToFloat((s32)(((Load244110 *)&D_L00_00173F00)->fC - ((Load244110 *)&D_L00_00173F00)->f0)) * (1.0f / 1024.0f)))));
+        ((void (*)())STUB_printf)(D_L00_001E8BC8, (((*(f64 (*)(f32))func_00120778)(IntToFloat((s32)(((Load244110 *)&D_L00_00173F00)->f10 - ((Load244110 *)&D_L00_00173F00)->fC)) * (1.0f / 1024.0f)))));
+        ((void (*)())STUB_printf)(D_L00_001E8BE0, (((*(f64 (*)(f32))func_00120778)(IntToFloat((s32)(((Load244110 *)&D_L00_00173F00)->f14 - ((Load244110 *)&D_L00_00173F00)->f10)) * (1.0f / 1024.0f)))));
         if (D_L00_0015F6E0 != 0)
-            ((void (*)())func_001E9730)(D_L00_001E8BF8, (((*(f64 (*)(f32))func_00120778)(func_001FA888((s32)((char *)D_L00_0015F6E0 - ((Load244110 *)&D_L00_00173F00)->f14)) * (1.0f / 1024.0f)))));
+            ((void (*)())STUB_printf)(D_L00_001E8BF8, (((*(f64 (*)(f32))func_00120778)(IntToFloat((s32)((char *)D_L00_0015F6E0 - ((Load244110 *)&D_L00_00173F00)->f14)) * (1.0f / 1024.0f)))));
         else if (D_L00_001605DC != 0)
-            ((void (*)())func_001E9730)(D_L00_001E8BF8, (((*(f64 (*)(f32))func_00120778)(func_001FA888((s32)((char *)D_L00_001605DC - ((Load244110 *)&D_L00_00173F00)->f14)) * (1.0f / 1024.0f)))));
+            ((void (*)())STUB_printf)(D_L00_001E8BF8, (((*(f64 (*)(f32))func_00120778)(IntToFloat((s32)((char *)D_L00_001605DC - ((Load244110 *)&D_L00_00173F00)->f14)) * (1.0f / 1024.0f)))));
         else
-            ((void (*)())func_001E9730)(D_L00_001E8C10);
+            ((void (*)())STUB_printf)(D_L00_001E8C10);
         if (D_L00_0015F6E0 != 0) {
             if (D_L00_001605DC != 0)
-                ((void (*)())func_001E9730)(D_L00_001E8C30, (((*(f64 (*)(f32))func_00120778)(func_001FA888((s32)(D_L00_001605DC - (s32)D_L00_0015F6E0)) * (1.0f / 1024.0f)))));
+                ((void (*)())STUB_printf)(D_L00_001E8C30, (((*(f64 (*)(f32))func_00120778)(IntToFloat((s32)(D_L00_001605DC - (s32)D_L00_0015F6E0)) * (1.0f / 1024.0f)))));
             else
-                ((void (*)())func_001E9730)(D_L00_001E8C30, (((*(f64 (*)(f32))func_00120778)(func_001FA888((s32)(((char *)D_L00_00173F40.f0) - (s32)D_L00_0015F6E0)) * (1.0f / 1024.0f)))));
+                ((void (*)())STUB_printf)(D_L00_001E8C30, (((*(f64 (*)(f32))func_00120778)(IntToFloat((s32)(((char *)D_L00_00173F40.f0) - (s32)D_L00_0015F6E0)) * (1.0f / 1024.0f)))));
         }
         if (h->v[4])
-            ((void (*)())func_001E9730)(D_L00_001E8C48, (((*(f64 (*)(f32))func_00120778)(func_001FA888((s32)(((char *)D_L00_00173F40.f0) - (char *)D_L00_001605DC)) * (1.0f / 1024.0f)))));
-        ((void (*)())func_001E9730)(D_L00_001E8C60, (((*(f64 (*)(f32))func_00120778)(func_001FA888((s32)(D_L00_0015F50C - (s32)((char *)D_L00_00173F40.f0))) * (1.0f / 1024.0f)))));
-        ((void (*)())func_001E9730)(D_L00_001E8C78, (((*(f64 (*)(f32))func_00120778)(func_001FA888((s32)((D_L00_001B1E00[1] >> 4) - D_L00_0015F50C)) * (1.0f / 1024.0f)))));
-        ((void (*)())func_001E9730)(D_L00_001E8C90, (((*(f64 (*)(f32))func_00120778)(func_001FA888((s32)((s32)D_L00_0015F520 - (D_L00_001B1E00[1] >> 4))) * (1.0f / 1024.0f)))));
-        ((void (*)())func_001E9730)(D_L00_001E8CA8, (((*(f64 (*)(f32))func_00120778)(func_001FA888((s32)((char *)D_L00_00197680[0] - D_L00_0015F520)) * (1.0f / 1024.0f)))));
-        ((void (*)())func_001E9730)(D_L00_001E8CC0, (((*(f64 (*)(f32))func_00120778)(func_001FA888((s32)(((char *)D_L00_001C5B00[0]) - (char *)D_L00_00197680[0])) * (1.0f / 1024.0f)))));
+            ((void (*)())STUB_printf)(D_L00_001E8C48, (((*(f64 (*)(f32))func_00120778)(IntToFloat((s32)(((char *)D_L00_00173F40.f0) - (char *)D_L00_001605DC)) * (1.0f / 1024.0f)))));
+        ((void (*)())STUB_printf)(D_L00_001E8C60, (((*(f64 (*)(f32))func_00120778)(IntToFloat((s32)(D_L00_0015F50C - (s32)((char *)D_L00_00173F40.f0))) * (1.0f / 1024.0f)))));
+        ((void (*)())STUB_printf)(D_L00_001E8C78, (((*(f64 (*)(f32))func_00120778)(IntToFloat((s32)((D_L00_001B1E00[1] >> 4) - D_L00_0015F50C)) * (1.0f / 1024.0f)))));
+        ((void (*)())STUB_printf)(D_L00_001E8C90, (((*(f64 (*)(f32))func_00120778)(IntToFloat((s32)((s32)D_L00_0015F520 - (D_L00_001B1E00[1] >> 4))) * (1.0f / 1024.0f)))));
+        ((void (*)())STUB_printf)(D_L00_001E8CA8, (((*(f64 (*)(f32))func_00120778)(IntToFloat((s32)((char *)D_L00_00197680[0] - D_L00_0015F520)) * (1.0f / 1024.0f)))));
+        ((void (*)())STUB_printf)(D_L00_001E8CC0, (((*(f64 (*)(f32))func_00120778)(IntToFloat((s32)(((char *)D_L00_001C5B00[0]) - (char *)D_L00_00197680[0])) * (1.0f / 1024.0f)))));
         if (h->v[0xA])
-            ((void (*)())func_001E9730)(D_L00_001E8CD8, (((*(f64 (*)(f32))func_00120778)(func_001FA888((s32)(((char *)D_L00_001BC3C0[0]) - ((char *)D_L00_001C5B00[0]))) * (1.0f / 1024.0f)))));
+            ((void (*)())STUB_printf)(D_L00_001E8CD8, (((*(f64 (*)(f32))func_00120778)(IntToFloat((s32)(((char *)D_L00_001BC3C0[0]) - ((char *)D_L00_001C5B00[0]))) * (1.0f / 1024.0f)))));
         else
-            ((void (*)())func_001E9730)(D_L00_001E8CD8, (((*(f64 (*)(f32))func_00120778)(func_001FA888((s32)(((char *)D_L00_00161080) - ((char *)D_L00_001C5B00[0]))) * (1.0f / 1024.0f)))));
+            ((void (*)())STUB_printf)(D_L00_001E8CD8, (((*(f64 (*)(f32))func_00120778)(IntToFloat((s32)(((char *)D_L00_00161080) - ((char *)D_L00_001C5B00[0]))) * (1.0f / 1024.0f)))));
         if (h->v[0xA])
-            ((void (*)())func_001E9730)(D_L00_001E8CF0, (((*(f64 (*)(f32))func_00120778)(func_001FA888((s32)(D_L00_00197680[0]->seqs[0] - ((char *)D_L00_001BC3C0[0]))) * (1.0f / 1024.0f)))));
-        ((void (*)())func_001E9730)(D_L00_001E8D08, (((*(f64 (*)(f32))func_00120778)(func_001FA888((s32)(((char *)D_L00_00161080) - D_L00_00197680[0]->seqs[0])) * (1.0f / 1024.0f)))));
-        ((void (*)())func_001E9730)(D_L00_001E8D20, (((*(f64 (*)(f32))func_00120778)(func_001FA888((s32)(((char *)D_L00_00160554) - ((char *)D_L00_00161080))) * (1.0f / 1024.0f)))));
-        ((void (*)())func_001E9730)(D_L00_001E8D38, (((*(f64 (*)(f32))func_00120778)(func_001FA888((s32)(((char *)D_L00_00160098) - ((char *)D_L00_00160554))) * (1.0f / 1024.0f)))));
-        ((void (*)())func_001E9730)(D_L00_001E8D50, (((*(f64 (*)(f32))func_00120778)(func_001FA888((s32)(D_L00_001600A8 - ((char *)D_L00_00160098))) * (1.0f / 1024.0f)))));
-        ((void (*)())func_001E9730)(D_L00_001E8D68, (((*(f64 (*)(f32))func_00120778)(func_001FA888((s32)(D_L00_001601C8 - D_L00_001600A8)) * (1.0f / 1024.0f)))));
-        ((void (*)())func_001E9730)(D_L00_001E8D80, (((*(f64 (*)(f32))func_00120778)(func_001FA888((s32)(D_L00_0016022C - D_L00_001601C8)) * (1.0f / 1024.0f)))));
-        ((void (*)())func_001E9730)(D_L00_001E8D98, 128.0);
-        ((void (*)())func_001E9730)(D_L00_0015FD40);
-        ((void (*)())func_001E9730)(D_L00_001E8DB0, (*(f64 (*)(f32))func_00120778)(func_001FA888((s32)D_L00_0016022C + 0x20000) * (1.0f / 1048576.0f)));
-        ((void (*)())func_001E9730)(D_L00_0015FD40);
+            ((void (*)())STUB_printf)(D_L00_001E8CF0, (((*(f64 (*)(f32))func_00120778)(IntToFloat((s32)(D_L00_00197680[0]->seqs[0] - ((char *)D_L00_001BC3C0[0]))) * (1.0f / 1024.0f)))));
+        ((void (*)())STUB_printf)(D_L00_001E8D08, (((*(f64 (*)(f32))func_00120778)(IntToFloat((s32)(((char *)D_L00_00161080) - D_L00_00197680[0]->seqs[0])) * (1.0f / 1024.0f)))));
+        ((void (*)())STUB_printf)(D_L00_001E8D20, (((*(f64 (*)(f32))func_00120778)(IntToFloat((s32)(((char *)D_L00_00160554) - ((char *)D_L00_00161080))) * (1.0f / 1024.0f)))));
+        ((void (*)())STUB_printf)(D_L00_001E8D38, (((*(f64 (*)(f32))func_00120778)(IntToFloat((s32)(((char *)D_L00_00160098) - ((char *)D_L00_00160554))) * (1.0f / 1024.0f)))));
+        ((void (*)())STUB_printf)(D_L00_001E8D50, (((*(f64 (*)(f32))func_00120778)(IntToFloat((s32)(D_L00_001600A8 - ((char *)D_L00_00160098))) * (1.0f / 1024.0f)))));
+        ((void (*)())STUB_printf)(D_L00_001E8D68, (((*(f64 (*)(f32))func_00120778)(IntToFloat((s32)(D_L00_001601C8 - D_L00_001600A8)) * (1.0f / 1024.0f)))));
+        ((void (*)())STUB_printf)(D_L00_001E8D80, (((*(f64 (*)(f32))func_00120778)(IntToFloat((s32)(D_L00_0016022C - D_L00_001601C8)) * (1.0f / 1024.0f)))));
+        ((void (*)())STUB_printf)(D_L00_001E8D98, 128.0);
+        ((void (*)())STUB_printf)(D_L00_0015FD40);
+        ((void (*)())STUB_printf)(D_L00_001E8DB0, (*(f64 (*)(f32))func_00120778)(IntToFloat((s32)D_L00_0016022C + 0x20000) * (1.0f / 1048576.0f)));
+        ((void (*)())STUB_printf)(D_L00_0015FD40);
         {
             char *lo = ((Load244110 *)&D_L00_00173F00)->f0 - 0x2D0000;
-            ((void (*)())func_001E9730)(D_L00_001E8DC8, (*(f64 (*)(f32))func_00120778)(func_001FA888(((Load244110 *)&D_L00_00173F00)->f1C - lo) * (1.0f / 1048576.0f)));
+            ((void (*)())STUB_printf)(D_L00_001E8DC8, (*(f64 (*)(f32))func_00120778)(IntToFloat(((Load244110 *)&D_L00_00173F00)->f1C - lo) * (1.0f / 1048576.0f)));
         }
-        ((void (*)())func_001E9730)(D_L00_0015FD40);
+        ((void (*)())STUB_printf)(D_L00_0015FD40);
     }
     if (keep) {
-        func_L00_002862E0();
+        restore_or_clear_level_state();
     } else {
-        func_00228268();
+        clear_scene_state_buffers();
         for (z = 15; z >= 0; z--)
             D_0014EF90[z] = 0;
     }
@@ -2167,7 +2167,7 @@ s32 StreamSectorListEntry(s32 i) {
     }
     if (size > 0) {
         func_00217628_45B88(buf, start, size);
-        UpdateAudioStreamUntilIdle(0);
+        update_audio_stream_until_idle(0);
     }
     return 1;
 }
@@ -2193,7 +2193,7 @@ extern void func_00217748(int);
 extern void func_001F4E08(int);
 
 /* Reads a level's packed data from disc and builds its chunk pointer table. */
-void ReadLevelPackedData(int arg) {
+void load_scene_chunks_with_fade(int arg) {
     int *q;
     int i;
     if (D_0015EE80 == 0) {
@@ -2201,9 +2201,9 @@ void ReadLevelPackedData(int arg) {
     } else {
         start_audio_stream_read((int)D_L00_0016C960.base, D_00137C80_g.alt[arg].a, D_00137C80_g.alt[arg].b);
     }
-    UpdateAudioStreamUntilIdle(0);
+    update_audio_stream_until_idle(0);
     FadeToBlack(4);
-    UpdateAudioStreamUntilIdle(1);
+    update_audio_stream_until_idle(1);
     q = (int *)D_L00_0016C960.base;
     i = 0;
     if (q[1] != 0) {
@@ -2229,7 +2229,7 @@ void func_00217748_45FE0b(s32) __asm__("func_00217748");
 void func_001F4E08_45FE0b(s32) __asm__("func_001F4E08");
 
 /* Adapted from Lombyte (GPL-3.0) for PAL by OpenRAC's tools/port.py: src/overlays/shared/world_animation_002454c8.c, FUN_L00_00245610. */
-void LoadAnimTable(s32 i, s32 p) {
+void load_chunks_with_optional_fade(s32 i, s32 p) {
     s32 n;
     s32 *e;
     if (D_0015EE80 == 0) {

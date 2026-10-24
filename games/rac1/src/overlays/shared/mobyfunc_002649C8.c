@@ -16,7 +16,7 @@ extern void func_L00_00254218(void *moby, short joint, int flags);
 
 /* Joint positions in scratchpad, 16 bytes each.
    Adapted from Lombyte (GPL-3.0) for PAL by OpenRAC's tools/port.py: src/overlays/shared/gameplay/state/00263a28.c, FUN_L01_00263a28. */
-int func_L01_002649D8(char *moby, int index, unsigned int *type, float *result,
+int rig_probe_setup(char *moby, int index, unsigned int *type, float *result,
                       float *radius, float *distance)
 {
     char *entry;
@@ -65,8 +65,8 @@ int func_L01_002649D8(char *moby, int index, unsigned int *type, float *result,
             func_L00_00254218(moby, joint, 0);
         }
         joints = (short *)(entry + 4);
-        func_001F9C48(scale, first, (void *)(0x70000000 + joints[0] * 0x10));
-        func_001F9C48(scale, second, (void *)(0x70000000 + joints[1] * 0x10));
+        scale_vector(scale, first, (void *)(0x70000000 + joints[0] * 0x10));
+        scale_vector(scale, second, (void *)(0x70000000 + joints[1] * 0x10));
         if (first[2] < second[2]) {
             qcopy(result, first);
         } else {

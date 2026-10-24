@@ -316,7 +316,7 @@ mod tests {
         let config = Config { root: Some(checkout()), ..Config::default() };
         let library = library(&config).unwrap();
         assert_eq!(library.actions_error, None);
-        assert_eq!(library.games.len(), 5);
+        assert_eq!(library.games.len(), 6);
         assert!(library.repository.iter().any(|a| a.id == "discs"));
         let json = serde_json::to_value(&library).unwrap();
         // The version's own fields sit next to status and actions.

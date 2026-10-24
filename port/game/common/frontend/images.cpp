@@ -137,7 +137,7 @@ bool store_image(
         }
         // OPENRAC_DUMP_SNAPSHOT=FILE.png: the answer, as the game gets it.
         if (const std::optional<std::string> dump = env_string(env::Var::DumpSnapshot)) {
-            viewer::write_png(*dump, kChipWidth, lines, chip);
+            scene::write_png(*dump, kChipWidth, lines, chip);
             log::info("frame read back at window frame {}, written to {}", g->index, *dump);
         }
     }

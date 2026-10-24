@@ -2,6 +2,7 @@
 #include "callees.h"
 #include "records.h"
 #include "structs.h"
+#include "pad.h"
 
 /*
  * stream.cpp in the original source; text 0x217588-0x217F68.
@@ -223,7 +224,7 @@ int start_audio_stream_read(int arg0, int arg1, int arg2) {
     }
     if (func_0012EE98(arg1, arg2, arg0, d + 0x30) == 0) {
         STUB_printf(D_001E8980);
-        func_001F9978();
+        raise_kernel_trap();
         return 0;
     }
     *(int *)(d + 0x14) = arg0;
@@ -294,10 +295,15 @@ int Load(int arg0, int arg1, int arg2) {
    $a0 for the guard), loop.c hoists the loop's copy into $s0 and CSE turns
    it into `daddu $s0,$a0,$0`. A second, separate local for the return keeps
    its base a temp ($v1) sharing the %hi with the guard through $s1. */
-short UpdateAudioStreamUntilIdle(int arg0) {
+struct MusicStreamState {
+    u8 pad_0[0x8];
+    s16 read_state;            /* 0x08: 0 idle, 1 reading, 2 done */
+};
+
+short update_audio_stream_until_idle(int arg0) {
     if (arg0 != 0) {
-        char *d;
-        while (d = (char *)D_001517D0, *(short *)(d + 0x8) != 0) {
+        struct MusicStreamState *d;
+        while (d = (struct MusicStreamState *)D_001517D0, d->read_state != 0) {
             func_00122598(0);
             music_Update();
             func_0012EC40();
@@ -311,25 +317,25 @@ short UpdateAudioStreamUntilIdle(int arg0) {
         func_0012EC30();
     }
     {
-        char *d = (char *)D_001517D0;
-        return *(short *)(d + 0x8);
+        struct MusicStreamState *d = (struct MusicStreamState *)D_001517D0;
+        return d->read_state;
     }
 }
 
 extern int func_0012F030(void);
 
-void FinishAudioStreamRead(int arg0) {
-    char *d;
-    if (arg0 == 1) {
-        d = (char *)D_001517D0;
-        *(short *)(d + 0x8) = 0;
+void finish_audio_stream_read(int callback_value) {
+    struct MusicStreamState *state;
+    if (callback_value == 1) {
+        state = (struct MusicStreamState *)D_001517D0;
+        state->read_state = 0;
         if (func_0012F030() != 0) {
-            *(short *)(d + 0x8) = 2;
+            state->read_state = 2;
         }
     }
 }
 
-void MusicAdvanceStateCallback(int arg0, long arg1) {
+void music_channel_ready_callback(int arg0, long arg1) {
     short *p = (short *)(int)arg1;
     if (p != 0 && arg0 != 0 && p[5] == 2) {
         p[5] = 3;
@@ -338,7 +344,7 @@ void MusicAdvanceStateCallback(int arg0, long arg1) {
 
 extern void func_002167C0(short, short, short);
 
-void MusicStartCallback(int arg0, long arg1) {
+void music_secondary_start_callback(int arg0, long arg1) {
     short *p = (short *)(int)arg1;
     if (p == 0) {
         return;
@@ -356,7 +362,7 @@ void MusicStartCallback(int arg0, long arg1) {
 
 extern void func_002169B8(short, short, short);
 
-void MusicPreseekCallback(int arg0, long arg1) {
+void music_primary_preseek_callback(int arg0, long arg1) {
     short *p = (short *)(int)arg1;
     if (p == 0) {
         return;
@@ -374,7 +380,7 @@ void MusicPreseekCallback(int arg0, long arg1) {
 
 extern short D_001517F0 NOT_SDA;
 
-void MusicTransitionCallback(int arg0, long arg1) {
+void music_transition_start_callback(int arg0, long arg1) {
     short *p = (short *)(int)arg1;
     if (p != 0) {
         *(int *)p = arg0;
@@ -392,7 +398,7 @@ void MusicTransitionCallback(int arg0, long arg1) {
     }
 }
 
-void MusicStartTrackBodyCallback(int arg0, long arg1) {
+void music_primary_replace_callback(int arg0, long arg1) {
     short *p = (short *)(int)arg1;
     if (p != 0) {
         if (arg0 < 0) {
@@ -411,7 +417,7 @@ void MusicStartTrackBodyCallback(int arg0, long arg1) {
     }
 }
 
-void MusicStartTrackCallback(int arg0, long arg1) {
+void music_primary_start_callback(int arg0, long arg1) {
     short *p = (short *)(int)arg1;
     if (p != 0) {
         *(int *)p = arg0;
@@ -429,7 +435,7 @@ extern char D_00160168[];
 
 /* `*p = arg0` happens on the 0xFFFFFFFF path too (the older decode made
    it conditional), and D_001E8C60's message is printed. */
-void MusicReleaseCallback(int arg0, long arg1) {
+void set_sound_handle_id(int arg0, long arg1) {
     short *p = (short *)(int)arg1;
     if (p != 0) {
         if (*(unsigned int *)p != 0xFFFFFFFF) {
@@ -443,7 +449,7 @@ void MusicReleaseCallback(int arg0, long arg1) {
     }
 }
 
-void MusicTimeRemainingCallback(int arg0, long arg1) {
+void music_remaining_time_callback(int arg0, long arg1) {
     char *p = (char *)(int)arg1;
     short *b;
     if (p == 0) {
@@ -529,7 +535,7 @@ extern s32 func_00216098(void);
 
 void func_00217AE8(void *arg0, Menu *menu, s32 arg2);
 
-void DialogNode_Update(void *arg0, Menu *menu, s32 arg2) {
+void process_menu_entry(void *arg0, Menu *menu, s32 arg2) {
     char buf[0x100];
     Suffixes sfx;
     char num[0x20];
@@ -559,11 +565,11 @@ void DialogNode_Update(void *arg0, Menu *menu, s32 arg2) {
                 D_001994C0[2] = (s32)arg0;
                 D_001994C0[3] = (s32)menu;
                 if (e->unk4 & 0x4000) {
-                    func_001E97D8((s16)(e->unk4 ^ 0x4000));
+                    noop_callback_n((s16)(e->unk4 ^ 0x4000));
                 } else {
-                    Hud_RemoveBank(D_00160170);
+                    remove_hud_item(D_00160170);
                     D_00160170 = -1;
-                    func_001E97E0((s16)e->unk4);
+                    noop_callback_o((s16)e->unk4);
                 }
             }
         }
@@ -580,7 +586,7 @@ void DialogNode_Update(void *arg0, Menu *menu, s32 arg2) {
         if (p != 0) {
             p[1] = 's';
         }
-        t = D_001E02B0[e->unkA].unk14;
+        t = vendor_item_prices[e->unkA].unk14;
         func_00116248(num, D_00160190, t / 1000, sfx.s[D_0015EE88 % 6], t % 1000);
         func_00116248(buf, ((char *)0x70000000), num);
     } else {
@@ -589,7 +595,7 @@ void DialogNode_Update(void *arg0, Menu *menu, s32 arg2) {
     if (D_001994C0[5] != 0) {
         copy_text_to_shared_buffer(buf);
     } else if (D_00160170 != -1) {
-        Hud_RemoveBank(D_00160170);
+        remove_hud_item(D_00160170);
         D_00160170 = -1;
     }
     if (e->unk8 == 0) {
@@ -598,7 +604,7 @@ void DialogNode_Update(void *arg0, Menu *menu, s32 arg2) {
     ok = 0;
     switch (e->unk8) {
     case 1:
-        ok = !(gBolts < D_001E02B0[e->unkA].unk0);
+        ok = !(gBolts < vendor_item_prices[e->unkA].unk0);
         break;
     case 2:
         ok = stream_item_flags[e->unkA] != 0;
@@ -606,17 +612,17 @@ void DialogNode_Update(void *arg0, Menu *menu, s32 arg2) {
     case 3:
         ok = 0;
         if (stream_item_flags[e->unkA] != 0) {
-            ok = D_0013D5F0[e->unkA] == 0;
+            ok = items_acquired[e->unkA] == 0;
         }
         break;
     case 4:
         ok = gSpecialItems[e->unkA] != 0;
         break;
     case 5:
-        ok = !(GetUnspentGoldBolts() < e->unkA);
+        ok = !(compute_clamped_count_difference() < e->unkA);
         break;
     case 6:
-        ok = gBolts >= D_001E02B0[e->unkA].unk14 && GetUnspentGoldBolts() >= 4;
+        ok = gBolts >= vendor_item_prices[e->unkA].unk14 && compute_clamped_count_difference() >= 4;
         break;
     default:
         ok = 0;
@@ -632,7 +638,7 @@ void DialogNode_Update(void *arg0, Menu *menu, s32 arg2) {
         menu->unk38 = D_0015F6F0_far;
         e = (MenuItem *)(menu->unk3C + next * 0x1C);
         menu->unk8 = *(u8 *)&e->unk10 & 1;
-        DialogNode_Update(arg0, menu, 0);
+        process_menu_entry(arg0, menu, 0);
     }
 }
 
@@ -651,16 +657,23 @@ extern void func_00124650(void);
 extern void func_00124B88(int);
 extern int func_00124BC8(void *, void *);
 
-void InitPads(void) {
-    int *p = &D_001CDAE0;
+/* Minimal layouts for init_pads: the port/slot socket parameter (NTSC name unknown)
+   and the leading part of PadState from pad.h, up to the fields init_pads writes. */
+typedef struct {
+    s32 port;
+    s32 slot;
+} PadSocketParam;
+
+void init_pads(void) {
+    PadSocketParam *p = (PadSocketParam *)&D_001CDAE0;
 
     func_00124650();
     func_00124B88(0);
     D_001CDAE0 = 2;
-    p[1] = 0;
-    *(int *)(D_0013CA40 + 0x194) = func_00124BC8(p, D_0013CA40);
+    p->slot = 0;
+    ((struct PadState *)D_0013CA40)->socket = func_00124BC8(p, D_0013CA40);
     D_001CDAE0 = 2;
-    p[1] = 1;
-    *(int *)(D_0013CA40 + 0x198) = 0;
-    *(int *)(D_0013CA40 + 0x19C) = 0;
+    p->slot = 1;
+    ((struct PadState *)D_0013CA40)->profile_state = 0;
+    ((struct PadState *)D_0013CA40)->device_state = 0;
 }

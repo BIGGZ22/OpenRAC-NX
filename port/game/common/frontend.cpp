@@ -30,13 +30,12 @@
 #include "debug_menu.h"
 #include "debug_overlay.h"
 #include "enhanced/game/scripted_moby_colour.h"
-#include "enhanced/viewer/hero_shadow.h"
-#include "fps_counter.h"
 #include "frame_pacing.h"
 #include "game/common/frontend/geometry.h"
 #include "game/common/frontend/pacing.h"
 #include "game/common/frontend/state.h"
 #include "game/common/particle_texture_cache.h"
+#include "game/common/profile.h"
 #include "openrac/game_host.h"
 #include "openrac/guest.h"
 #include "options_menu.h"
@@ -52,14 +51,15 @@
 #include "renderer/gl_stats.h"
 #include "renderer/renderer.h"
 #include "renderer/shadows.h"
+#include "renderer/ui/fps_counter.h"
+#include "renderer/ui/touch_overlay.h"
+#include "scene/hero_shadow.h"
+#include "scene/level.h"
+#include "scene/level_renderer.h"
+#include "scene/moby_pose.h"
+#include "scene/moby_shadow.h"
+#include "scene/screenshot.h"
 #include "settings.h"
-#include "touch_overlay.h"
-#include "viewer/game_state.h"
-#include "viewer/level.h"
-#include "viewer/level_renderer.h"
-#include "viewer/moby_pose.h"
-#include "viewer/moby_shadow.h"
-#include "viewer/screenshot.h"
 
 extern "C" int openrac_game_loaded_overlay(void);
 
@@ -306,6 +306,7 @@ static void ensure_linux_desktop_integration(const std::string& game_id) {
 bool open(const std::string& game_id, const std::filesystem::path& levels, std::string& error) {
     g = std::make_unique<State>();
     g->game = game_id;
+    g->profile = &host::game_profile(game_id);
     g->levels = levels;
     // Before SDL starts: on Wayland the app id names the program to the desktop, and a machine
     // with two graphics cards is asked for the fast one.
@@ -389,9 +390,7 @@ void mobys_drawn(std::span<const std::uint8_t> ram, std::uint32_t first, int cou
         return;
     }
     const int level = openrac_game_loaded_overlay();
-    const viewer::GameAddresses& a =
-        viewer::rac1_addresses(g->game, level);
-    const viewer::GameState camera = viewer::read_game_state(ram, a);
+    const host::GameState camera = g->profile->read_state(ram, level);
     for (int i = 0; i < count; ++i) {
         g->moby_cameras.emplace_back(first + static_cast<std::uint32_t>(i) * 0x100u, camera);
     }
@@ -402,9 +401,7 @@ void world_drawn(std::span<const std::uint8_t> ram) {
         return;
     }
     const int level = openrac_game_loaded_overlay();
-    const viewer::GameAddresses& a =
-        viewer::rac1_addresses(g->game, level);
-    g->world_camera = viewer::read_game_state(ram, a);
+    g->world_camera = g->profile->read_state(ram, level);
 }
 
 bool show_picture(const std::uint8_t* rgba, int width, int height, float black) {
@@ -449,7 +446,7 @@ bool show_picture(const std::uint8_t* rgba, int width, int height, float black) 
     const std::uint64_t index = g->index++;
     if (shots().due(index)) {
         const std::string path = shots().prefix + std::to_string(index) + ".png";
-        viewer::write_png(path, width, height, pixels);
+        scene::write_png(path, width, height, pixels);
         log::info("frame {} written to {}", index, path);
     }
     // The picture fills the frame the game's own frames fill; its first row is the top.
@@ -487,8 +484,8 @@ void close() {
     if (g) {
         debug_overlay::release();
         settings::save();  // the window's size, if it was changed
-        fps_counter::release();
-        touch_overlay::release();
+        renderer::ui::fps_counter::release();
+        renderer::ui::touch_overlay::release();
         debug_menu::release();
         g->frame.release();
         g->picture.release();

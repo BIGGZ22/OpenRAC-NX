@@ -20,37 +20,38 @@ extern void func_001F9BD8(void *, void *, void *);
 extern int func_001FA898_r(float) __asm__("func_001FA898");
 
 /* Update a trailing moby: advance its timer, delete it when done or its owner died, else follow the owner. Adapted from Lombyte (GPL-3.0) for PAL: overlays/shared/unclassified_002d7f88.c, FUN_L00_002d7f88. */
-void TrailMobyUpdate(char *self) {
-    D_002d7f88 *d = *(D_002d7f88 **)(self + 0x78);
-    char *o;
-    void *m;
-    float t;
-    d->f4 += (D_L00_001617AC_m + D_L00_001617AC_m) * D_0015EE6C;
-    if (func_001F9908_r(d->v8) != 0 || D_L00_001617AC_m * 1.1f <= d->f4) goto kill;
-    o = d->o;
-    if (o == 0 || *(short *)(o + 0xA6) != 0xB9 || *(unsigned char *)(o + 0x20) == 0xFE || *(unsigned char *)(o + 0x20) == 0xFD) {
-kill:
+void update_linked_moby_transform_and_lifetime(char *self) {
+    D_002d7f88 *moby_data = (D_002d7f88 *)((Moby *)self)->pvars;
+    Moby *o;
+    void *linked_moby_data;
+    f32 scale_coefficient;
+    moby_data->f4 += (D_L00_001617AC_m + D_L00_001617AC_m) * D_0015EE6C;
+    if (func_001F9908_r(moby_data->v8) != 0 || D_L00_001617AC_m * 1.1f <= moby_data->f4)
+        goto kill;
+    o = (Moby *)moby_data->o;
+    if (o == 0 || o->oclass != 0xB9 || o->state == 0xFE || o->state == 0xFD) {
+    kill:
         DeleteMoby(self);
         return;
     }
-    m = *(void **)(o + 0x78);
-    clear_u64_value(self + 0x10);
-    *(float *)(self + 0x14) = -d->f4;
-    func_001F9EC0(self + 0x10, self + 0x10, (char *)d->o + 0xC0);
-    FastVecAdd(self + 0x10, self + 0x10, m);
-    qcopy(self + 0x40, (char *)d->o + 0x40);
-    if (d->f4 > D_L00_001617AC_m) {
-        self[0x23] = func_001FA898_r((1.0f - (d->f4 - D_L00_001617AC_m) * 10.0f) * 127.0f);
+    linked_moby_data = o->pvars;
+    clear_u64_value(&((Moby *)self)->pos);
+    ((Moby *)self)->pos.y = -moby_data->f4;
+    func_001F9EC0(&((Moby *)self)->pos, &((Moby *)self)->pos, &((Moby *)moby_data->o)->rot_row0);
+    FastVecAdd(&((Moby *)self)->pos, &((Moby *)self)->pos, linked_moby_data);
+    qcopy(&((Moby *)self)->rot, &((Moby *)moby_data->o)->rot);
+    if (moby_data->f4 > D_L00_001617AC_m) {
+        ((Moby *)self)->alpha = func_001FA898_r((1.0f - (moby_data->f4 - D_L00_001617AC_m) * 10.0f) * 127.0f);
     }
-    t = d->fC;
-    *(float *)(self + 0x2C) = t * 0.1f + t * d->f4 / D_L00_001617AC_m;
+    scale_coefficient = moby_data->fC;
+    ((Moby *)self)->scale = scale_coefficient * 0.1f + scale_coefficient * moby_data->f4 / D_L00_001617AC_m;
 }
 // True when the moby's state byte is 1.
-int IsMobyState1(unsigned char *m) {
+int is_moby_in_state_one(unsigned char *m) {
     return m[0x20] == 1;
 }
 extern char *func_0020D348(int);
-char *CreateMoby806ForMoby(char *a) {
+char *create_linked_class_0326_moby(char *a) {
     char *m;
     if (a[0x20] < 0) return 0;
     m = CreateMoby(0x326);
@@ -381,7 +382,7 @@ extern float func_001FA888_2D9EA0(int) __asm__("func_001FA888");
 extern float func_L00_00258E58_2D9EA0(float, float, float, float, float) __asm__("func_L00_00258E58");
 
 /* Nanotech ball update: spawns, homes in on its target, hits or fizzles; kills itself when its owner goes. */
-void NanotechBallUpdate(Moby *m) {
+void nanotech_ball_update(Moby *m) {
     V_2D9EA0 v0, v10, v20, v30, v40, v50, v60;
     D_2D9EA0 *d = (D_2D9EA0 *)m->pvars;
 
@@ -663,7 +664,246 @@ void NanotechBallUpdate(Moby *m) {
         break;
     }
 }
-INCLUDE_ASM("asm/overlays", func_L00_002DACC0);
+typedef struct { f32 x, y, z; } Vec3_2DACC0;
+typedef unsigned int u128_2DACC0 __attribute__((mode(TI), aligned(16)));
+typedef struct {
+    u128_2DACC0 points[4];
+    u32 colors[4];
+    float texcoords[8];
+    u64 texture[4];
+} __attribute__((aligned(16))) GeometryQuad_2DACC0;
+typedef struct { float x, y, z, w; } __attribute__((aligned(16))) V_2DACC0;
+
+typedef struct { float x, y, z; } V3_2DACC0;
+
+typedef struct Part_2DACC0 {
+    int f0;
+    int f4;
+    unsigned char b8;
+    char p9[3];
+    float fC;
+    V_2DACC0 pos;
+} Part_2DACC0;
+
+typedef struct Ext_2DACC0 {
+    int f0;
+    union {
+        struct { struct Moby *owner; float scale; float ang; } s;
+        V3_2DACC0 a;
+    } u;
+    V3_2DACC0 b;
+    short h1C;
+    short h1E;
+} Ext_2DACC0;
+
+typedef struct D_2DACC0 {
+    float bob_offset;
+    float bob_phase;
+    short h8;
+    short hA;
+    struct Moby *owner;
+    V_2DACC0 pos;
+    V_2DACC0 v20;
+    Part_2DACC0 *slots[8];
+    int f50;
+    short h54;
+    short h56;
+    short h58[4];
+    float f60[4];
+    char p70[0xC];
+    int f7C;
+} D_2DACC0;
+extern float D_L00_00161AE0_2DACC0 SDATA(D_L00_00161AE0);
+extern int D_L00_00161B90_2DACC0 SDATA(D_L00_00161B90);
+extern int D_L00_00161B94_2DACC0 SDATA(D_L00_00161B94);
+extern int D_L00_00161B98_2DACC0 SDATA(D_L00_00161B98);
+extern int D_L00_00161B9C_2DACC0 SDATA(D_L00_00161B9C);
+extern int D_L00_00161BA0_2DACC0 SDATA(D_L00_00161BA0);
+extern int D_L00_00161BA4_2DACC0 SDATA(D_L00_00161BA4);
+extern u32 D_L00_00161BA8_2DACC0 SDATA(D_L00_00161BA8);
+extern float D_L00_00161BAC_2DACC0 SDATA(D_L00_00161BAC);
+extern u32 D_L00_00161BB0_2DACC0 SDATA(D_L00_00161BB0);
+extern int D_L00_00161BB4_2DACC0 SDATA(D_L00_00161BB4);
+extern float D_L00_00161BB8_2DACC0 SDATA(D_L00_00161BB8);
+extern float D_L00_00161BBC_2DACC0 SDATA(D_L00_00161BBC);
+extern int D_L00_00161BE0_2DACC0 __asm__("D_L00_00161BE0") MACRO_ADDR;
+extern char D_L00_00161BC0_2DACC0[] __asm__("D_L00_00161BC0") MACRO_ADDR;
+extern char D_L00_001E1810_2DACC0[] __asm__("D_L00_001E1810");
+extern char D_L00_001E2A30_2DACC0[] __asm__("D_L00_001E2A30");
+extern char D_L00_001E3340_2DACC0[] __asm__("D_L00_001E3340");
+extern char D_L00_001E37D0_2DACC0[] __asm__("D_L00_001E37D0");
+extern char D_L00_001E3DD0_2DACC0[] __asm__("D_L00_001E3DD0");
+extern char D_L00_001E3ED0_2DACC0[] __asm__("D_L00_001E3ED0");
+extern char D_L00_001E3FD0_2DACC0[] __asm__("D_L00_001E3FD0");
+extern char D_L00_001E40F0_2DACC0[] __asm__("D_L00_001E40F0");
+extern char camera_pos_2DACC0[] __asm__("D_L00_00166EC0") NOT_SDA;
+extern s64 get_effect_texture_2DACC0(s32) __asm__("func_001F4868");
+extern void vu1_add_g_sregister_2DACC0(s32, u64) __asm__("func_00234C98");
+extern void fast_vec_add_2DACC0(void *, void *, void *) __asm__("func_001F9BD8");
+extern void fast_vec_normalize_2DACC0(void *, void *, f32) __asm__("func_L00_001FF4B0");
+extern void font_queue_vu_state_2DACC0(void) __asm__("func_001F7868");
+extern void transform_vector_2DACC0(void *, void *, void *) __asm__("func_001F9EE8");
+extern void func_L00_001FDE48_2DACC0(int, void *, void *, void *, int) __asm__("func_L00_001FDE48");
+extern s32 truncate_float_to_s32_2DACC0(f32) __asm__("func_001FA898");
+extern void draw_geometry_quad_2DACC0(void *, void *, int) __asm__("func_L00_001FD1D8");
+extern void set_vector_length_xy_2DACC0(void *, void *, f32) __asm__("func_L00_001FF500");
+extern float func_L00_00200210_2DACC0(float, float) __asm__("func_L00_00200210");
+extern void fast_vec_cross_2DACC0(void *, void *, void *) __asm__("func_001F9CA0");
+extern void fast_vec_scale_2DACC0(void *, void *, float) __asm__("func_001F9C30");
+extern void fast_vec_sub_2DACC0(void *, void *, void *) __asm__("func_001F9BF0");
+extern int func_L00_002D95D8_2DACC0(unsigned char *) __asm__("func_L00_002D95D8");
+
+/* Nanotech ball draw: builds the glowing sphere from its ring tables (D_L00_001E1810..) around the bobbing
+   position, facing the camera, and queues its quads through the level copy of the geometry-quad drawer.
+   Adapted from Lombyte (GPL-3.0) for PAL: src/overlays/shared/gameplay/entities/nanotech_ball.c, FUN_L00_002d9810,
+   which carries this file's earlier near miss (nonmatching/shared/func_L00_002DACC0.c) to a match. The tuning
+   words D_L00_00161AE0 and D_L00_00161B90..BBC are this level file's $gp data (SDATA). */
+void draw_nanotech_ball(Moby *moby) {
+    GeometryQuad_2DACC0 quad;
+    float basis[4] __attribute__((aligned(16)));
+    float *forward;
+    float side[4] __attribute__((aligned(16)));
+    float up[4] __attribute__((aligned(16)));
+    float center[4] __attribute__((aligned(16)));
+    float view_dir[4] __attribute__((aligned(16)));
+    float to_camera[4] __attribute__((aligned(16)));
+    float vertex[4] __attribute__((aligned(16)));
+    D_2DACC0 *vars = (D_2DACC0 *)moby->pvars;
+    Moby *owner;
+    float pulse = vars->bob_offset / D_L00_00161AE0_2DACC0;
+    int i, j, color;
+    short *indices;
+    short *row;
+    short *rows;
+    char *corner;
+    char *outer, *inner;
+    float *u, *v;
+    float *v_base, *u_base;
+
+    quad.texture[1] = get_effect_texture_2DACC0(D_L00_00161BA4_2DACC0);
+    quad.texture[2] = 0xff9000000260ULL;
+    quad.texture[3] = (u64)D_L00_00161B90_2DACC0 |
+                      ((u64)D_L00_00161B94_2DACC0 << 2) |
+                      ((u64)D_L00_00161B98_2DACC0 << 4) |
+                      ((u64)D_L00_00161B9C_2DACC0 << 6) |
+                      ((u64)D_L00_00161BA0_2DACC0 << 32);
+    quad.texture[0] = 0;
+    vu1_add_g_sregister_2DACC0(0x47, 0x53001);
+    forward = basis;
+    center[0] = moby->pos.x;
+    center[1] = moby->pos.y;
+    center[2] = moby->pos.z + 0.5f;
+    center[2] += vars->bob_offset;
+    center[3] = 1.0f;
+    fast_vec_add_2DACC0(&center, &center, D_L00_00161BC0_2DACC0);
+    fast_vec_sub_2DACC0(&to_camera, camera_pos_2DACC0, &center);
+    fast_vec_normalize_2DACC0(forward, &to_camera, 1.0f);
+    owner = vars->owner;
+    fast_vec_cross_2DACC0(&side, forward, &owner->rot_row2);
+    fast_vec_normalize_2DACC0(&side, &side, 1.0f);
+    fast_vec_cross_2DACC0(&up, &side, forward);
+    quad.colors[3] = D_L00_00161BA8_2DACC0;
+    quad.colors[2] = D_L00_00161BA8_2DACC0;
+    quad.colors[1] = D_L00_00161BA8_2DACC0;
+    quad.colors[0] = D_L00_00161BA8_2DACC0;
+    vu1_add_g_sregister_2DACC0(6, get_effect_texture_2DACC0(D_L00_00161BA4_2DACC0));
+    vu1_add_g_sregister_2DACC0(0x42, 0x8000000044ULL);
+    vu1_add_g_sregister_2DACC0(8, 0);
+    vu1_add_g_sregister_2DACC0(0x14, 0xff9000000260ULL);
+    vu1_add_g_sregister_2DACC0(0x4a, 0);
+    font_queue_vu_state_2DACC0();
+    for (j = 0; j < 0x122; j++) {
+        transform_vector_2DACC0(&vertex, D_L00_001E1810_2DACC0 + j * 16, basis);
+        {
+            float x = vertex[0], y = vertex[1], z = vertex[2];
+            ((Vec3_2DACC0 *)D_L00_001E40F0_2DACC0)[j].x = x;
+            ((Vec3_2DACC0 *)D_L00_001E40F0_2DACC0)[j].y = y;
+            ((Vec3_2DACC0 *)D_L00_001E40F0_2DACC0)[j].z = z;
+        }
+    }
+    func_L00_001FDE48_2DACC0(0x94, D_L00_001E40F0_2DACC0,
+                                D_L00_001E3340_2DACC0, D_L00_001E2A30_2DACC0, 1);
+    func_L00_001FDE48_2DACC0(0x6d, D_L00_001E40F0_2DACC0 + 0x6d8,
+                                D_L00_001E3340_2DACC0 + 0x248,
+                                D_L00_001E2A30_2DACC0 + 0x490, 1);
+    func_L00_001FDE48_2DACC0(0x24, D_L00_001E40F0_2DACC0 + 0xbe8,
+                                D_L00_001E3340_2DACC0 + 0x3f8,
+                                D_L00_001E2A30_2DACC0 + 0x7f0, 1);
+    quad.texture[1] = get_effect_texture_2DACC0(0xb);
+    quad.texture[3] = 0x8000000048ULL;
+    color = truncate_float_to_s32_2DACC0(pulse * 64.0f + 128.0f);
+    color = ((u32)(color + D_L00_00161BE0_2DACC0) << 24) | D_L00_00161BB0_2DACC0;
+    quad.colors[3] = 0;
+    quad.colors[2] = 0;
+    quad.colors[1] = color;
+    quad.colors[0] = color;
+    for (i = 0; i < 32; i++) {
+        indices = (short *)(D_L00_001E3DD0_2DACC0 + i * 8);
+        j = 0;
+        inner = (char *)quad.points;
+        outer = (char *)quad.points;
+        for (; j < 4; j++) {
+            short index = *indices;
+            if (j >= 2)
+                fast_vec_scale_2DACC0(outer, D_L00_001E37D0_2DACC0 + index * 16,
+                             D_L00_00161BAC_2DACC0 * D_L00_00161BBC_2DACC0);
+            else
+                fast_vec_scale_2DACC0(inner, D_L00_001E37D0_2DACC0 + index * 16, D_L00_00161BAC_2DACC0);
+            inner += 16;
+            outer += 16;
+            indices++;
+        }
+        quad.texcoords[0] = 0.5f;
+        quad.texcoords[1] = 0.5f;
+        quad.texcoords[2] = 0.5f;
+        quad.texcoords[3] = 0.5f;
+        quad.texcoords[4] = 0.5f;
+        quad.texcoords[5] = 1.0f;
+        quad.texcoords[6] = 0.5f;
+        quad.texcoords[7] = 1.0f;
+        draw_geometry_quad_2DACC0(&quad, basis, 0);
+    }
+    if (func_L00_002D95D8_2DACC0((u8 *)moby)) {
+        quad.texture[1] = get_effect_texture_2DACC0(D_L00_00161BB4_2DACC0);
+        quad.colors[3] = 0x107f7f7f;
+        quad.colors[2] = 0x107f7f7f;
+        quad.colors[1] = 0x107f7f7f;
+        quad.colors[0] = 0x107f7f7f;
+        quad.texture[3] = 0x8000000044ULL;
+        {
+            Moby *owner = vars->owner;
+            qcopy(basis, &owner->rot_row0);
+            qcopy(&side, &owner->rot_row1);
+            qcopy(&up, &owner->rot_row2);
+        }
+        center[2] = moby->pos.z;
+        v_base = &quad.texcoords[0];
+        u_base = &quad.texcoords[1];
+        rows = (short *)D_L00_001E3FD0_2DACC0;
+        for (i = 0; i < 4; i++) {
+            u = u_base;
+            v = v_base;
+            row = (short *)(i * 8 + (u32)rows);
+            corner = (char *)quad.points;
+            for (j = 3; j >= 0; j--) {
+                transform_vector_2DACC0(corner, D_L00_001E3ED0_2DACC0 + (*row++) * 16,
+                                       basis);
+                fast_vec_sub_2DACC0(view_dir, corner, camera_pos_2DACC0);
+                corner += 16;
+                view_dir[1] = view_dir[2];
+                set_vector_length_xy_2DACC0(view_dir, view_dir, D_L00_00161BB8_2DACC0);
+                *v = view_dir[0] * 0.5f + 0.5f;
+                *v = func_L00_00200210_2DACC0(*v, 8.0f);
+                v += 2;
+                *u = view_dir[1] * 0.5f + 0.5f;
+                *u = func_L00_00200210_2DACC0(*u, 8.0f);
+                u += 2;
+            }
+            draw_geometry_quad_2DACC0(&quad, 0, 0);
+        }
+    }
+    vu1_add_g_sregister_2DACC0(0x47, 0x5360b);
+}
 typedef struct { char pad[0x2084]; int f; int pad2; int mode; } G;
 extern G D_0013F450 NOT_SDA;
 
@@ -707,7 +947,7 @@ extern void func_00213DE0(void *, int, int, int);
 extern float func_001F9D48(void *, void *);
 
 /* Lets moby m take a free hero slot once its handler accepts (returns 2); returns the handler's result. */
-int TryClaimHeroSlot(u8 *p, void *q, void *m_, void *r_, void *buf) {
+int process_suck_cannon_suction_candidate(u8 *p, void *q, void *m_, void *r_, void *buf) {
     char *m = (char *)m_;
     char *r = (char *)r_;
     int ret = 0;
@@ -771,7 +1011,7 @@ void SuckCannon_GetAimOrigin(char *m, float *a, float *b, float *c) {
     Moby_GetJointWorldPos(m, 0, c);
     g = D_0013E633 + 0xE1D;
     if (*(int *)(g + 0x2084) == 1 || *(int *)(g + 0x2084) == 0x1E) {
-        char *s = gCameraLvl;
+        char *s = player_camera;
         v[1] = 0;
         v[0] = 1.2f;
         *a = *(float *)(s + 0x158);
@@ -814,7 +1054,7 @@ extern void func_L00_002DB690_DB810(M_da360 *) __asm__("func_L00_002DB690");
 extern void func_L00_002E0690_DB810(M_da360 *) __asm__("func_L00_002E0690");
 
 /* Adapted from Lombyte (GPL-3.0) for PAL by OpenRAC's tools/port.py: src/overlays/shared/unclassified_002d7f88.c, FUN_L00_002da360. */
-void SuckCannon_ScanTargets(u8 *p, void *q)
+void update_suck_cannon_suction(u8 *p, void *q)
 {
     u8 buf[0x10] __attribute__((aligned(16)));
     Vec4f v;
@@ -826,9 +1066,9 @@ void SuckCannon_ScanTargets(u8 *p, void *q)
 
     func_L00_002DB700_DB810(p, &a, &b, buf);
     func_L00_002DF410(p, buf);
-    for (m = D_L00_001600A4; m != 0; m = m->next) {
+    for (m = suck_moby_list; m != 0; m = m->next) {
         if (m->a6 != 0 && (m->f34 & 0x1000) &&
-            *(void **)*(u8 **)(m->p24 + 0x2c) != (void *)NullMobyUpdate) {
+            *(void **)*(u8 **)(m->p24 + 0x2c) != (void *)noop_callback_l) {
             r = func_L00_002DCD40_DB810(m);
             if (r != 0 && r->h68 < 6) {
                 d = func_001F9D48(p + 0x10, &m->pos);
@@ -851,7 +1091,7 @@ void SuckCannon_ScanTargets(u8 *p, void *q)
                         } else if (r->h68 > 0) func_L00_002DB690_DB810(m);
                     } else if (r->h68 < 4) {
                     hit:
-                        TryClaimHeroSlot(p, q, m, r, buf);
+                        process_suck_cannon_suction_candidate(p, q, m, r, buf);
                     }
                 } else if (r->h68 != 0) func_L00_002DB690_DB810(m);
             }
@@ -868,7 +1108,7 @@ extern char D_L00_001EA368_002da660[] __asm__("D_L00_001EA368") __attribute__((s
 u8 *func_L00_002DCD40_002da660(u8 *) __asm__("func_L00_002DCD40");
 void func_001E9730_002da660(void *, s32, s32) __asm__("func_001E9730");
 /* Update. Adapted from Lombyte (GPL-3.0) for PAL: overlays/shared/unclassified_002d7f88.c, FUN_L00_002da660. */
-void UpdateHeroSlots(void) {
+void refresh_suck_cannon_slots(void) {
     s32 i;
     D_0013F450_002da660.i207C = 0;
     D_0013F450_002da660.i2078 = 0;
@@ -1033,19 +1273,19 @@ extern void func_L00_002DB480(char *,char *,void *);
 
 /* Update the Suck Cannon's suction, aiming and firing state, stored mobys,
    target selection, usage statistics and cancellation input. */
-void SuckCannonUpdate(M40 *self) {
+void suckcannon_update(M40 *self) {
     Work40 work;
     Suck40 *data;
     Stats40 *stats;
     int special, i, sound, next_state;
     M40 *stored;
 
-    queue_animation_update(4, 0x753F, (int)delete_callback40, (int)HudSuckCannon_Update,
+    queue_animation_update(4, 0x753F, (int)delete_callback40, (int)update_hud_counter_cap_and_visibility,
                  (int)Hud_DrawGaugeFrame, (int)&hero40.count, 5);
     data = self->data;
     special = hero40.weapon_mode == 3;
     if ((u8)self->state != 3 && (u8)self->state != 0) SuckBeam_QueueDraw((int)self);
-    UpdateHeroSlots();
+    refresh_suck_cannon_slots();
     switch ((u8)self->state) {
     case 0:
         for (i=0; i<(order40.gold == 0 ? 5 : 10); ++i) {
@@ -1128,7 +1368,7 @@ void SuckCannonUpdate(M40 *self) {
                 if(s[1].owner==self && s[1].active) Sound_StopSlot(sound);
             }
             data->sound=-1;
-            SuckBeam_ApplyPulls((int)self);
+            stop_suck_cannon_suction_effect((int)self);
             hero40.firing=0;
             if(hero40.count>0) {
                 MobyBlendAnimation(self,6,0,scale_ticks(4));
@@ -1144,7 +1384,7 @@ void SuckCannonUpdate(M40 *self) {
             }
         } else {
             if (self->anim_flags&2) MobyBlendAnimation(self,3,0,scale_ticks(2));
-            SuckCannon_ScanTargets((u8 *)self,data);
+            update_suck_cannon_suction((u8 *)self,data);
         }
         break;
     case 4:
@@ -1159,7 +1399,7 @@ void SuckCannonUpdate(M40 *self) {
             (data->target && ((u8)data->target->state&0x80))) data->target=0;
         if (hero40.camera_mode==1) HeroEnterMoveState(30,1);
         if (hero40.camera_mode==30 && (hero40.moby->flags&1) && !hero40.disabled) {
-            char *camera=gCameraLvl;
+            char *camera=player_camera;
             V40 *eye;
             Hit40 *hit;
             work.aim.velocity.q=0;
@@ -1222,7 +1462,7 @@ void SuckCannonUpdate(M40 *self) {
             M40 *best,*m;
             float yaw,pitch,limit;
             work.fire.velocity.q=0;
-            func_001FA480(&work.fire.rotation,gCameraLvl);
+            func_001FA480(&work.fire.rotation,player_camera);
             func_001FA4A0(&work.fire.inverse,&work.fire.rotation);
             if(hero40.camera_mode==30 && (hero40.moby->flags&1)) {
                 work.fire.tmp.q=0;
@@ -1234,7 +1474,7 @@ void SuckCannonUpdate(M40 *self) {
                 work.fire.tmp.f.y=0.3f;
                 work.fire.tmp.f.z=1.0f;
                 func_001F9EE8(&work.fire.launch,&work.fire.tmp,&work.fire.inverse);
-                FastVecAdd(&work.fire.launch,&work.fire.launch,gCameraLvl+0x140);
+                FastVecAdd(&work.fire.launch,&work.fire.launch,player_camera+0x140);
             } else {
                 work.fire.tmp.q=0;
                 work.fire.tmp.f.x=frame_scale40*0.4462f;
@@ -1352,7 +1592,7 @@ void func_00213DE0(void *, s32, s32, s32);
 f32 func_001F9D48(void *, void *);
 
 /* Adapted from Lombyte (GPL-3.0) for PAL by OpenRAC's tools/port.py: src/overlays/shared/gameplay/entities/002d7f88.c, FUN_L00_002db8f8. */
-s32 CarriedMoby_StepGrab(u8 *moby, u8 *position, u8 *target) {
+s32 process_moby_suck_cannon_suction(u8 *moby, u8 *position, u8 *target) {
     u8 *record = func_L00_002DCD40_DCDA8(moby);
     s16 state;
     if (record == 0)
@@ -1430,7 +1670,7 @@ extern int func_001F9850(int);
 extern void func_00213DE0(void *, int, int, int);
 
 /* Place a moby at the given position under its owner, reset its owner's state to 4 and start the matching animation. Adapted from Lombyte (GPL-3.0) for PAL: overlays/shared/unclassified_002d7f88.c, FUN_L00_002dbb20. */
-int PlaceCarriedMoby(unsigned char *m, void *v) {
+int store_moby_in_suck_cannon(unsigned char *m, void *v) {
     unsigned char *o = (unsigned char *)Moby_GetClassRecord((char *)m);
     int g;
     if (o == 0) return 0;
@@ -1461,7 +1701,7 @@ extern float func_001F9D48(void *, void *);
 extern int func_0022ED80(int, int, int);
 
 /* starts a moby's animation from a data moby and sets up its effect state */
-int StartCarriedMobyAnim(char *m, float *pos, char *other, float f) {
+int launch_suck_cannon_projectile(char *m, float *pos, char *other, float f) {
     char *d;
     unsigned char *r;
     char *e;
@@ -1506,7 +1746,7 @@ int StartCarriedMobyAnim(char *m, float *pos, char *other, float f) {
     return 0;
 }
 /* Frees a moby's state slot and returns 1 when it is in state 4. Adapted from Lombyte (GPL-3.0) for PAL: overlays/shared/unclassified_002d7f88.c, FUN_L00_002dbe20. */
-int ReleaseCarriedMobySlot(char *m) {
+int cancel_suck_cannon_suction(char *m) {
     char *s = Moby_GetClassRecord(m);
     int st;
     if (s == 0) return 0;
@@ -1706,7 +1946,7 @@ void SpawnExplosionBurst(char *self, char *q) {
     }
     D_L00_00166D80_DD3D8.f160 = (f23 < 20.0f) ? 0.4f - f23 * 0.0175f : 0.050000012f;
     D_L00_00166D80_DD3D8.i168 = scale_ticks(25);
-    Moby639Spawn((char *)&blk, self + 0x10, 0, 0);
+    mine_camera_blast((char *)&blk, self + 0x10, 0, 0);
     if ((&D_0013E620)->b9) {
         k = func_L00_001F2BE8_DD3D8(3.0f, self + 0x10, 0x10, self, 0);
         *(u128_DD3D8 *)e = *(u128_DD3D8 *)(self + 0x10);
@@ -2205,7 +2445,7 @@ extern short D_L00_001E6358[];
 extern short D_L00_00161C14;
 extern short D_L00_00161C10;
 // sets two flags and clears a short
-void SuckBeam_Reset(void) {
+void suck_reset(void) {
     *(int *)&D_L00_00161C10 = 1;
     *(int *)&D_L00_00161C14 = 1;
     D_L00_001E6358[0] = 0;
@@ -2303,7 +2543,7 @@ extern float func_001F9CB8(void *);
 typedef float VQ[4] __attribute__((aligned(16)));
 
 /* pull each active entry's marker toward its target, then update the rest */
-void SuckBeam_ApplyPulls(int arg0) {
+void stop_suck_cannon_suction_effect(int arg0) {
     VQ a, b, c;
     int i;
     float len;
@@ -2356,7 +2596,7 @@ void ScatterMobyFromHazards(char *m) {
                 base = pos - 0x80;
                 Moby_StartTumble(m, *(int *)(base + 0x2080), 0.0f, 0.0f);
             } else {
-                Pickup_TryCollect(m);
+                try_collect_ammo_pickup(m);
             }
         }
     }
@@ -2417,7 +2657,7 @@ extern short D_L00_00161C60;
 extern short D_L00_00161C64;
 
 /* update for the pulsing colour object */
-void PulsingColorMobyUpdate(char *m) {
+void red_orb_update(char *m) {
     char *p = *(char **)(m + 0x78);
     unsigned char s = m[0x20];
     float a;
@@ -2448,7 +2688,7 @@ void QuadMoby_Update(char *a) {
         *(float *)(a + 0x54) = o;
         *(float *)(a + 0x58) = 0.0f;
     }
-    QuadMoby_UpdateEdgeLengths(a);
+    update_instance_attachment_points_and_lengths(a);
 }
 extern void func_0020D960(char *, int, void *);
 extern float func_001FA748(float, float);
@@ -2457,7 +2697,7 @@ extern float D_0015EE6C MACRO_ADDR;
 extern short D_L00_00161C80;
 
 /* UpdateMoby for class 1143: init then slowly spin/ease its value */
-void Moby1143Update(unsigned char *m) {
+void vendor_orb_update(unsigned char *m) {
     char *p = *(char **)(m + 0x78);
     switch (m[0x20]) {
     case 0:
@@ -2470,7 +2710,7 @@ void Moby1143Update(unsigned char *m) {
         float f = *(float *)&D_L00_00161C80 * 0.017453292f * D_0015EE6C;
         *(float *)(m + 0x48) = FastAddRots(*(float *)(m + 0x48), f);
         *(float *)(p + 0x40) = FastAddRots(*(float *)(p + 0x40), f * -2.0f);
-        func_L00_001FFED8(p + 0x10, 2, *(float *)(p + 0x40));
+        axis_rotation_2d48(p + 0x10, 2, *(float *)(p + 0x40));
         break;
     }
     }
@@ -2561,7 +2801,7 @@ extern int func_001F9908_2E0E50(void *) __asm__("func_001F9908");
 /* Hydrodisplacer pad: while the hero holds the hydrodisplacer it tunes his water physics; the pad waits for the
    hero to stand on it with the gadget, then drains or fills the water level (D_L00_0015F4FC) with a camera move
    between the pad's two path nodes. */
-void HydrodisplacerPadUpdate(Moby *m) {
+void hydrodisplacer_update(Moby *m) {
     Vec_2E0E50 v0, v10;
     Data_2E0E50 *d = (void *)m->pvars;
 

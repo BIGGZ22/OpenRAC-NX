@@ -7,13 +7,16 @@ frame written to a PNG. The viewer program (`viewer/`) and the game programs (`g
 with it. It is not the renderer: the level is drawn as buckets of `renderer/`'s frame, with the
 port's OpenGL calls (`renderer/gl.h`), which the Vulkan backend carries out in a Vulkan build. What
 the renderers read of a running game besides the mobys (the camera, which mobys are live) is the
-game state, which stays in `viewer/` until P2-03 moves it into `game/rac1`.
+game state, which each game keeps in its own folder (rac1's `game/rac1/game_state.h`) and the game
+programs read through the game's profile (`game/common/profile.h`).
 
-Libraries `openrac_scene` (the CPU side: the level's loading, the poses, the shadows, the PNG) and
-`openrac_scene_renderer` (the level renderer, together with the enhanced renderer's passes it calls;
-see Depends on). The files came from `viewer/` (restructure package P2-02) and keep its namespace,
-`openrac::viewer`, until P2-37 renames it `openrac::scene`. Until then `viewer/` keeps a header of
-the same name forwarding to each one, for `game/common`.
+Libraries `openrac_scene` (the CPU side: the level's loading, the poses, the shadow arithmetic,
+the PNG; the probe tools link it without a graphics context) and `openrac_scene_renderer` (the
+level renderer and its embedded shaders, `scene_shaders.h`), in the namespace `openrac::scene`. The
+files came from `viewer/` (restructure packages P2-02 and P2-37); the viewer program's own code
+(`viewer/camera.h`) keeps `openrac::viewer`. The enhanced renderer's probe and early lighting is
+not the scene's: it registers with the scene's lighting hook (`level_lighting.h`, restructure
+package P2-39b).
 
 ## Interface
 
@@ -22,7 +25,12 @@ the same name forwarding to each one, for `game/common`.
 | [`level.h`](level.h) | `LevelData`, one level of the editor's export loaded whole on the CPU (one vertex and one index array, every texture as an RGBA8 image, the placements of each `Layer`); `load_level`, the sky's textures, `kManifestFormat`, the export format this port reads |
 | [`pvs.h`](pvs.h) | `Pvs`, rac1's baked camera visibility (`pvs.json`, `pvs.bin`): the grid's lookup of which instances a camera position can see |
 | [`level_renderer.h`](level_renderer.h) | `LevelScene`, a loaded level on the GPU (shared buffers, instanced draws per class and material, skinned live mobys, culling, the enhanced lighting and shadows when they are on), and `LayerRenderer`, one of its layers as a bucket of `renderer::Renderer` |
+| [`level_lighting.h`](level_lighting.h) | `LevelLighting`, the level renderer's lighting hook: what a `LevelScene` asks of the probe and early lighting registered with `set_level_lighting` (the shaders' lighting GLSL, the bake's load, the uniforms, the early pass); the enhanced renderer's `lighting::SceneLighting` implements it |
+| [`emission.h`](emission.h) | `EmissionMask` and `kAuthoredEmissions`: the reviewed materials that emit, which `load_level` applies to a level's materials and the probe baker reads |
 | [`moby_pose.h`](moby_pose.h) | `moby_palette` and `moby_pose_matrices`: a live moby's joint matrices, evaluated from its animation fields in game memory as the game's VU0 evaluator did |
+| [`sun_shadow.h`](sun_shadow.h) | `sun_cascades` and `SunCascades`: the sun's four cascades over the camera's view, their snapped matrices and caster volumes; `StaticShadowKey`, what the static shadow cache compares |
+| [`hero_shadow.h`](hero_shadow.h) | `hero_shadow_projection`, the view Ratchet's shadow map is drawn from, and `hero_airborne`, read from game memory |
+| [`shadow_atlas.h`](shadow_atlas.h) | the shadow atlas's size and its rectangles: the four cascades and the hero's map |
 | [`moby_shadow.h`](moby_shadow.h) | `moby_shadow_state` and `moby_shadows`: a moby's stencil shadow (direction, ground slab, fade) and its capsules, from game memory |
 | [`screenshot.h`](screenshot.h) | `write_png`: an RGBA frame written to a PNG file |
 
@@ -35,25 +43,28 @@ the same name forwarding to each one, for `game/common`.
 - `common` (the log, the statistics and their switches, the JSON reader).
 - cgltf and stb, compiled once in `openrac_viewer_third_party` (`viewer/third_party.c`): the GLB
   meshes, the PNG textures, the screenshots.
-- `enhanced`, above it, which section 18 of
-  [CODING_CONVENTIONS.md](../docs/CODING_CONVENTIONS.md) does not allow: `level.h` includes the
-  emissive lighting's description, and the level renderer draws the enhanced renderer's probe
-  lighting, early lighting, hero shadow and sun shadows itself (`enhanced/viewer/`). The six
-  includes are known exceptions in [`tools/layering/rules.tsv`](../tools/layering/rules.tsv). The
-  passes in turn read the level and share the level renderer's embedded shaders
-  (`viewer_shaders.h`), so the level renderer and `enhanced/viewer/*.cpp` build as one library,
-  `openrac_scene_renderer`: as two static libraries they would link in a cycle. Restructure package
-  P2-39 removes both exceptions: scene owns the lighting and shadow hooks and enhanced registers
-  with them.
+- Nothing above it: the probe and early lighting reach it through `level_lighting.h`, registered by
+  whoever makes a `LevelScene` (the game programs in `game/common/frontend/world.cpp`, the viewer,
+  the tests, with `lighting::use_scene_lighting` of `enhanced/viewer/scene_lighting.h`). A scene
+  with none registered lights as the game does: the mesh shader without the probe GLSL, as when
+  enhanced rendering is unavailable, and no probe data, so neither the probes, the early lighting
+  nor the shadows that need them are drawn. The shadow arithmetic the level renderer draws with
+  (`sun_shadow.h`, `hero_shadow.h`, `shadow_atlas.h`) is the scene's own since P2-39a, and the
+  emissions table its level data since P2-39b.
 
 ## State and threads
 
 - A `LevelData` belongs to its caller; loading holds no state between calls.
 - A `LevelScene` owns its GPU objects (buffers, textures in the caller's `renderer::TexturePool`,
-  programs, the enhanced passes' resources). It is created, uploaded, drawn and released on the
+  programs, and the lighting registered with it). It is created, uploaded, drawn and released on the
   thread that holds the graphics context, the program's main thread.
 - The pose and shadow functions are pure: they read the game memory they are handed and return
   values. The game programs call them from the thread that draws.
+- Between two calls of `set_instances` for the mobys a `LevelScene` keeps where each moby went
+  (its group and place): a call with the same mobys in the same order writes their poses there
+  instead of regrouping them (`moby-pose-in-place`). It also keeps a static shadow cache when
+  `shadow-static-cache` is on, and the registered static instances of the GPU culling
+  (`gpu-resident-instances`), all let go by `release`.
 
 ## Errors
 
@@ -76,6 +87,11 @@ and `OPENRAC_SUN_TIMING_DETAIL`. [docs/port/DEBUGGING.md](../../docs/port/DEBUGG
 each one. The enhanced lighting and shadows follow the `enhanced_rendering` setting
 ([enhanced/lighting/README.md](../enhanced/lighting/README.md)).
 
+Its render optimisations are entries of the optimisation registry (`renderer/render_opt.h`,
+switched off with `OPENRAC_RENDER_OPT_OFF`): `texture-prepare`, `gpu-resident-instances`,
+`shadow-static-cache` (off by default), `moby-pose-in-place` and `shadow-atlas-discard`
+([docs/port/RENDER_PERF.md](../../docs/port/RENDER_PERF.md)).
+
 ## Tests
 
 | ctest | Proves |
@@ -83,7 +99,8 @@ each one. The enhanced lighting and shadows follow the `enhanced_rendering` sett
 | `viewer`, `viewer_es`, `viewer_vulkan` | a level written by the test loads (meshes, textures, placements, overrides, the baked visibility and its lookup), and draws on OpenGL, OpenGL ES and Vulkan |
 | `renderer_shader`, `renderer_shader_es`, `renderer_shader_es_bare`, `renderer_shader_vulkan` | the level renderer's embedded shaders compile and link on each API, with the ES fallbacks |
 | `probe_scene`, `bake_liquids` | the probe tools turn a `LevelData` into the scene they bake |
-| `hero_shadow_cpu`, `sun_shadow_cpu` and their `_vulkan` forms, `probe_gpu_vulkan`, `early_lighting_vulkan`, `gtao_vulkan`, `enhanced_rendering_compat` | the enhanced passes the level renderer draws, and that a build with them switched off draws as one without |
+| `hero_shadow_cpu`, `sun_shadow_cpu` | the shadow arithmetic: the cascades' split, snapping and caster volumes, the static cache's key, the hero's projection and airborne flag (`tests/sun_shadow_test.cpp`, `tests/hero_shadow_test.cpp`) |
+| `hero_shadow_vulkan`, `sun_shadow_vulkan`, `sun_shadow_filter_reference_vulkan`, `probe_gpu_vulkan`, `early_lighting_vulkan`, `gtao_vulkan`, `enhanced_rendering_compat` | the enhanced passes the level renderer draws, and that a build with them switched off draws as one without |
 | `geometry_moby_animation` | the pose arithmetic `moby_pose.h` runs, against the game's own (in `assets/geometry`) |
 
 `moby_pose.h` and `moby_shadow.h` have no test of their own: what they read of game memory is

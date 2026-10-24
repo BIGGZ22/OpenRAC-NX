@@ -162,7 +162,7 @@ extern long D_0015EE48 MACRO_ADDR;
 extern long D_0015EE50 MACRO_ADDR;
 
 int func_0012F308(void) {
-    D_0015EE48++;
-    D_0015EE50 = D_0015EE40 + (unsigned int)*(volatile int *)0x10000800;
+    frm_vsync_cnt++;
+    frm_vsync_time = frm_clock_time + (unsigned int)*(volatile int *)0x10000800;
     return 0;
 }

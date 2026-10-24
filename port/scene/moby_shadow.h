@@ -7,7 +7,7 @@
 
 #include "renderer/shadow_volume.h"
 
-namespace openrac::viewer {
+namespace openrac::scene {
 struct MobyShadowState {
     bool enabled = false;
     renderer::Vec3 extrusion{};
@@ -32,4 +32,4 @@ std::vector<renderer::ShadowCapsule> moby_shadows(
     const renderer::Mat4& model,
     float scale = 1.0f
 );
-}  // namespace openrac::viewer
+}  // namespace openrac::scene

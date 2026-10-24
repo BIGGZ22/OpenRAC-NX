@@ -4,15 +4,16 @@
  * The game's hand-written assembly routines that only drive the console's
  * hardware, answered by the port (hostgen.json, "host_functions"). Each is
  * written from what the retail routine does, never from its bytes. */
-#include "rac1.h"
-#include "openrac/game_lib.h"
-#include "openrac/sound_engine.h"
-
 #include <math.h>
 #include <stdarg.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+
+#include "openrac/game_lib.h"
+#include "openrac/host_env.h"
+#include "openrac/sound_engine.h"
+#include "rac1.h"
 
 /* InitDma: sets the DMA controller's priority bit, enables it and clears the
  * tag address of the VIF0, VIF1, GIF, IPU and SPR channels. The port has no
@@ -68,7 +69,7 @@ int func_0020C468(int src, int dst) {
     const gaddr to = (gaddr)dst;
     const uint32_t made = openrac_lib_wad_decompress((const uint8_t *)G(src), (uint8_t *)G(to),
                                                      to < end_of_ram ? end_of_ram - to : 0);
-    if (getenv("OPENRAC_TRACE_WAD")) {
+    if (openrac_env_string("OPENRAC_TRACE_WAD")) {
         const uint8_t *in = (const uint8_t *)G(src);
         fprintf(stderr, "[debug] WAD %08x -> %08x: %02x%02x%02x%02x, %u bytes\n", (unsigned)src,
                 (unsigned)to, in[0], in[1], in[2], in[3], (unsigned)made);
@@ -293,7 +294,7 @@ int func_0012DDC0(void) {
          * the reply, on stderr. */
         static int sound_log = -1;
         if (sound_log < 0) {
-            sound_log = getenv("OPENRAC_SOUND_LOG") != NULL;
+            sound_log = openrac_env_string("OPENRAC_SOUND_LOG") != NULL;
         }
         if (sound_log) {
             uint32_t w[4] = {0, 0, 0, 0};

@@ -24,7 +24,7 @@ struct ProbeBatchOptions {
 // Bake and read back all planned grids, rejecting changed inputs before successful completion.
 // Throws on malformed plans, tracing/verification errors, or existing output files.
 void run_probe_batch(
-    const viewer::LevelData& level,
+    const scene::LevelData& level,
     const BakeSceneExport& exported,
     const ProbeGrid& sparse_grid,
     const ProbeBatchOptions& options,

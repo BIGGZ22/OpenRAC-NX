@@ -165,6 +165,21 @@ openrac_embed_shaders(openrac_renderer renderer openrac::renderer
 target_link_libraries(openrac_renderer PUBLIC openrac_common)
 openrac_warnings(openrac_renderer)
 
+# ---- renderer/ui (renderer/README.md, "ui/") ----
+# What the program draws over the game's picture with the renderer's GL: Dear ImGui's draw lists on
+# a window whose GL is the Vulkan renderer's, the on-screen pad, the frame-rate counter and the debug
+# menu's picture. Its own library, so that the renderer itself needs neither ImGui nor the
+# platform's touch pad.
+add_library(openrac_renderer_ui STATIC
+  renderer/ui/fps_counter.cpp
+  renderer/ui/imgui_gl.cpp
+  renderer/ui/picture_blit.cpp
+  renderer/ui/touch_overlay.cpp
+)
+target_link_libraries(openrac_renderer_ui PUBLIC openrac_renderer openrac_platform
+  PRIVATE openrac_imgui)
+openrac_warnings(openrac_renderer_ui)
+
 # Optional upscaled texture colours: the normal renderer only owns the provider interface.
 add_library(openrac_enhanced_textures STATIC enhanced/renderer/texture_upscale.cpp)
 openrac_embed_shaders(openrac_enhanced_textures enhanced_texture openrac::enhanced
@@ -207,10 +222,12 @@ endif()
 # A level from the editor's export, the live mobys' poses and shadows read from game memory, and the
 # frames written to PNG: CPU work only, so the probe tools link it without a graphics context.
 add_library(openrac_scene STATIC
+  scene/hero_shadow.cpp
   scene/level.cpp
   scene/moby_pose.cpp
   scene/moby_shadow.cpp
   scene/screenshot.cpp
+  scene/sun_shadow.cpp
 )
 target_link_libraries(openrac_scene PUBLIC openrac_renderer openrac_viewer_third_party
   openrac_assets_geometry)
@@ -222,52 +239,74 @@ add_library(openrac_probe_scene STATIC enhanced/tools/probes/level_scene.cpp enh
 target_link_libraries(openrac_probe_scene PUBLIC openrac_lighting openrac_scene openrac_assets_disc)
 openrac_warnings(openrac_probe_scene)
 
-# The level renderer and the enhanced renderer's lighting and shadow passes (enhanced/viewer/), one
-# library: the renderer calls the passes, the passes read the level, and both draw with the one set
-# of embedded shaders below. As two static libraries they would link in a cycle, so they stay
-# together until P2-39 gives scene the hooks enhanced registers with: the scene module's one
-# exception to one module, one target (CODING_CONVENTIONS.md, section 9.1).
+# The level renderer: the scene's GPU half, with the scene's embedded shaders (scene_shaders.h). It
+# calls the lighting a program registers through scene/level_lighting.h, so it links nothing of
+# enhanced/; the scene module's two libraries are its CPU half (openrac_scene, which the probe tools
+# link without a graphics context) and this.
 add_library(openrac_scene_renderer STATIC
   scene/level_renderer.cpp
-  enhanced/viewer/probe_lighting.cpp
-  enhanced/viewer/probe_selection.cpp
-  enhanced/viewer/early_lighting.cpp
-  enhanced/viewer/hero_shadow.cpp
-  enhanced/viewer/sun_shadow.cpp
 )
-openrac_embed_shaders(openrac_scene_renderer viewer openrac::viewer
+openrac_embed_shaders(openrac_scene_renderer scene openrac::scene
   "${CMAKE_CURRENT_SOURCE_DIR}/viewer/shaders/mesh.vert"
   "${CMAKE_CURRENT_SOURCE_DIR}/viewer/shaders/mesh.frag"
-  "${CMAKE_CURRENT_SOURCE_DIR}/enhanced/viewer/shaders/early_lighting.comp"
-  "${CMAKE_CURRENT_SOURCE_DIR}/enhanced/viewer/shaders/probe_selection.comp"
-  "${CMAKE_CURRENT_SOURCE_DIR}/enhanced/viewer/shaders/early_lighting.glsl"
   "${CMAKE_CURRENT_SOURCE_DIR}/viewer/shaders/mesh_depth.vert"
   "${CMAKE_CURRENT_SOURCE_DIR}/viewer/shaders/mesh_depth.frag"
-  "${CMAKE_CURRENT_SOURCE_DIR}/enhanced/lighting/probes.glsl"
-  "${CMAKE_CURRENT_SOURCE_DIR}/enhanced/viewer/shaders/probe_spheres.vert"
-  "${CMAKE_CURRENT_SOURCE_DIR}/enhanced/viewer/shaders/probe_spheres.frag"
-  "${CMAKE_CURRENT_SOURCE_DIR}/enhanced/viewer/shaders/hero_shadow.frag"
-  "${CMAKE_CURRENT_SOURCE_DIR}/enhanced/viewer/shaders/shadow_depth.vert"
+  "${CMAKE_CURRENT_SOURCE_DIR}/viewer/shaders/hero_shadow.frag"
+  "${CMAKE_CURRENT_SOURCE_DIR}/viewer/shaders/shadow_depth.vert"
   "${CMAKE_CURRENT_SOURCE_DIR}/viewer/shaders/sky.vert"
   "${CMAKE_CURRENT_SOURCE_DIR}/viewer/shaders/sky.frag"
 )
-target_link_libraries(openrac_scene_renderer PUBLIC openrac_scene openrac_renderer openrac_probe_scene)
+target_link_libraries(openrac_scene_renderer PUBLIC openrac_scene openrac_renderer)
 if(OPENRAC_VULKAN)
   target_link_libraries(openrac_scene_renderer PRIVATE openrac_renderer_vulkan)
   target_compile_definitions(openrac_scene_renderer PRIVATE OPENRAC_VULKAN=1)
 endif()
 openrac_warnings(openrac_scene_renderer)
 
+# The enhanced renderer's lighting of a level (enhanced/viewer/): the probe lighting, the probe
+# selection and the early lighting, registered with the scene's lighting hook (scene_lighting.h),
+# with their embedded shaders (enhanced_viewer_shaders.h). Above the scene: it links the scene
+# renderer, never the other way round.
+add_library(openrac_enhanced_viewer STATIC
+  enhanced/viewer/early_lighting.cpp
+  enhanced/viewer/probe_lighting.cpp
+  enhanced/viewer/probe_selection.cpp
+  enhanced/viewer/scene_lighting.cpp
+)
+openrac_embed_shaders(openrac_enhanced_viewer enhanced_viewer openrac::lighting
+  "${CMAKE_CURRENT_SOURCE_DIR}/enhanced/viewer/shaders/early_lighting.comp"
+  "${CMAKE_CURRENT_SOURCE_DIR}/enhanced/viewer/shaders/probe_selection.comp"
+  "${CMAKE_CURRENT_SOURCE_DIR}/enhanced/viewer/shaders/early_lighting.glsl"
+  "${CMAKE_CURRENT_SOURCE_DIR}/enhanced/lighting/probes.glsl"
+  "${CMAKE_CURRENT_SOURCE_DIR}/enhanced/viewer/shaders/probe_spheres.vert"
+  "${CMAKE_CURRENT_SOURCE_DIR}/enhanced/viewer/shaders/probe_spheres.frag"
+)
+target_link_libraries(openrac_enhanced_viewer PUBLIC openrac_scene_renderer openrac_probe_scene)
+if(OPENRAC_VULKAN)
+  target_link_libraries(openrac_enhanced_viewer PRIVATE openrac_renderer_vulkan)
+  target_compile_definitions(openrac_enhanced_viewer PRIVATE OPENRAC_VULKAN=1)
+endif()
+openrac_warnings(openrac_enhanced_viewer)
+
 # ---- the level viewer ----
-# The viewer program's own code: its free camera, and what the renderers read of a running game from
-# its memory (game_state.h), which the game programs use too until P2-03 moves it into game/rac1.
-# The programs and the tests that draw a level link this, and the scene with it.
+# The viewer program's own code: its free camera. The programs and the tests that draw a level link
+# this, and the scene with it.
 add_library(openrac_viewer_lib STATIC
   viewer/camera.cpp
-  viewer/game_state.cpp
 )
-target_link_libraries(openrac_viewer_lib PUBLIC openrac_scene_renderer openrac_enhanced_textures)
+target_link_libraries(openrac_viewer_lib PUBLIC openrac_scene_renderer openrac_enhanced_viewer
+  openrac_enhanced_textures)
 openrac_warnings(openrac_viewer_lib)
+
+# Ratchet & Clank's profile (game/common/profile.h): what the renderers read of the running game
+# from its memory (game/rac1/game_state.h), for rac1's programs (cmake/Games.cmake links it as
+# openrac_game_<game>_profile), the viewer and its tests.
+add_library(openrac_game_rac1_profile STATIC
+  game/rac1/game_state.cpp
+  game/rac1/profile.cpp
+)
+target_link_libraries(openrac_game_rac1_profile PUBLIC openrac_scene_renderer)
+openrac_warnings(openrac_game_rac1_profile)
 
 # Tests are registered through openrac_add_test (cmake/Tests.cmake), which makes the program
 # <subject>_test and the ctest test <subject>; a program that runs under more names gets them with
@@ -295,7 +334,7 @@ endif()
 
 openrac_add_test(probe_scene SOURCES enhanced/tests/probe_scene_test.cpp LIBS openrac_probe_scene)
 
-add_executable(hero_shadow_test enhanced/tests/hero_shadow_test.cpp)
+add_executable(hero_shadow_test tests/hero_shadow_test.cpp)
 target_link_libraries(hero_shadow_test PRIVATE openrac_viewer_lib openrac_platform)
 openrac_warnings(hero_shadow_test)
 add_test(NAME hero_shadow_cpu COMMAND hero_shadow_test)
@@ -304,7 +343,7 @@ if(OPENRAC_VULKAN AND OPENRAC_ENHANCED_RENDERING)
   set_tests_properties(hero_shadow_vulkan PROPERTIES SKIP_RETURN_CODE 77
     ENVIRONMENT "OPENRAC_ENHANCED=1;OPENRAC_GL_API=vulkan;OPENRAC_VULKAN_VALIDATION=1")
 endif()
-add_executable(sun_shadow_test enhanced/tests/sun_shadow_test.cpp)
+add_executable(sun_shadow_test tests/sun_shadow_test.cpp)
 target_link_libraries(sun_shadow_test PRIVATE openrac_viewer_lib openrac_platform)
 target_include_directories(sun_shadow_test PRIVATE "${CMAKE_CURRENT_BINARY_DIR}/generated")
 openrac_warnings(sun_shadow_test)
@@ -333,7 +372,7 @@ if(OPENRAC_PROBE_BAKER)
 endif()
 
 add_executable(openrac-viewer viewer/main.cpp)
-target_link_libraries(openrac-viewer PRIVATE openrac_viewer_lib openrac_platform)
+target_link_libraries(openrac-viewer PRIVATE openrac_viewer_lib openrac_game_rac1_profile openrac_platform)
 openrac_warnings(openrac-viewer)
 if(APPLE)
   include(MacApp)
@@ -357,12 +396,10 @@ openrac_add_test(frontend_geometry SOURCES tests/frontend_geometry_test.cpp
 openrac_add_test(frontend_pacing SOURCES tests/frontend_pacing_test.cpp
                  game/common/frontend/pacing.cpp INCLUDES .)
 
-openrac_add_test(touch_overlay SOURCES tests/touch_overlay_test.cpp game/common/touch_overlay.cpp
-                 INCLUDES game/common LIBS openrac_renderer openrac_platform)
+openrac_add_test(touch_overlay LIBS openrac_renderer_ui openrac_platform)
 set_tests_properties(touch_overlay PROPERTIES SKIP_RETURN_CODE 77)
 
-openrac_add_test(imgui_gl SOURCES tests/imgui_gl_test.cpp game/common/imgui_gl.cpp
-                 INCLUDES game/common LIBS openrac_renderer openrac_platform openrac_imgui)
+openrac_add_test(imgui_gl LIBS openrac_renderer_ui openrac_platform openrac_imgui)
 set_tests_properties(imgui_gl PROPERTIES SKIP_RETURN_CODE 77)
 
 openrac_add_test(renderer_texture LIBS openrac_renderer)
@@ -397,7 +434,7 @@ if(OPENRAC_VULKAN)
   target_compile_definitions(viewer_test PRIVATE OPENRAC_VULKAN=1)
   target_compile_definitions(sun_shadow_test PRIVATE OPENRAC_VULKAN=1)
 endif()
-target_link_libraries(viewer_test PRIVATE openrac_viewer_lib openrac_platform)
+target_link_libraries(viewer_test PRIVATE openrac_viewer_lib openrac_game_rac1_profile openrac_platform)
 openrac_warnings(viewer_test)
 add_test(NAME viewer COMMAND viewer_test "${CMAKE_CURRENT_BINARY_DIR}/viewer_test_level")
 set_tests_properties(viewer PROPERTIES SKIP_RETURN_CODE 77)
@@ -485,6 +522,7 @@ endif()
 # create nothing of it, so the game draws as a build without it.
 add_executable(enhanced_rendering_test enhanced/tests/enhanced_rendering_test.cpp)
 target_link_libraries(enhanced_rendering_test PRIVATE openrac_viewer_lib openrac_platform)
+target_include_directories(enhanced_rendering_test PRIVATE "${CMAKE_CURRENT_BINARY_DIR}/generated")
 openrac_warnings(enhanced_rendering_test)
 add_test(NAME enhanced_rendering_compat COMMAND enhanced_rendering_test --expect-off)
 set_tests_properties(enhanced_rendering_compat PROPERTIES SKIP_RETURN_CODE 77

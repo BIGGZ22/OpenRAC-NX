@@ -118,3 +118,13 @@ the first table; go to a game's documents when you work on that game.
 | [docs/ROADMAP.md](../games/rac5/ntsc/docs/ROADMAP.md) | The gates still open |
 | [docs/REL-FORMAT.md](../games/rac5/ntsc/docs/REL-FORMAT.md), [docs/BOOT-SYMBOLS.md](../games/rac5/ntsc/docs/BOOT-SYMBOLS.md) | The SNR2 level modules; the boot's named symbols |
 | [docs/BOOT-TRIAL-GATE.md](../games/rac5/ntsc/docs/BOOT-TRIAL-GATE.md), [docs/BOOT-MATCH-SCOPE.md](../games/rac5/ntsc/docs/BOOT-MATCH-SCOPE.md) | How a function is accepted, and what a boot match covers |
+
+## Ratchet & Clank: Secret Agent Clank ([games/rac6/ntsc](../games/rac6/ntsc))
+
+| Document | For |
+|---|---|
+| [README.md](../games/rac6/ntsc/README.md), [CONTRIBUTING.md](../games/rac6/ntsc/CONTRIBUTING.md), [AGENTS.md](../games/rac6/ntsc/AGENTS.md) | The project, what is established, how to contribute and check work |
+| [LEGAL.md](../games/rac6/ntsc/LEGAL.md) | What may be committed, allowed sources |
+| [PROMPT.md](../games/rac6/ntsc/PROMPT.md) | The starter prompt and wave protocol |
+| [docs/STATE.md](../games/rac6/ntsc/docs/STATE.md) | Where the project stands, open gates |
+| [docs/METHOD.md](../games/rac6/ntsc/docs/METHOD.md), [docs/GATES.md](../games/rac6/ntsc/docs/GATES.md) | Wave protocol, body gate, placement gate, complete-program gate |

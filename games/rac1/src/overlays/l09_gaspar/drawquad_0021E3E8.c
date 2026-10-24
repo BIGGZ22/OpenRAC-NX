@@ -102,7 +102,7 @@ extern void func_L09_0021E410_t(int, int, float) __asm__("func_L09_0021E410");
 typedef struct { char pad[0x20]; short idx[16]; } Strip;
 
 /* Draws a list of scrolling-texture strips (water) into the scratchpad. */
-void DrawScrollingStrips(char *list, float t, int count, long tex0, long tex1) {
+void draw_level09_scrolling_textured_strips(char *list, float t, int count, long tex0, long tex1) {
     int i;
     int j;
     int c;
@@ -111,12 +111,12 @@ void DrawScrollingStrips(char *list, float t, int count, long tex0, long tex1) {
     float s0;
     float s1;
     func_L09_0021E410_t(tex0, tex1, t);
-    D_L09_00161240[0] = 0x30000009;
-    D_L09_00161240[1] = (int)D_L09_0016EB20;
-    D_L09_00161240[2] = 0;
-    D_L09_00161240[3] = 0x50000009;
-    D_L09_00161240 += 4;
-    Draw_BuildVu1Setup();
+    l09_packet[0] = 0x30000009;
+    l09_packet[1] = (int)D_L09_0016EB20;
+    l09_packet[2] = 0;
+    l09_packet[3] = 0x50000009;
+    l09_packet += 4;
+    font_queue_vu_state();
     s0 = 1.0f - (float)(D_L09_0015F6B0 & 0x7FF) * 0.00048828125f;
     s1 = s0 + s0 + 0.5f;
     sp = (int *)0x70000000;
@@ -155,9 +155,9 @@ extern int D_0015EF88 MACRO_ADDR;
 void Sky_DrawLevel09(void) {
     SetupSkyGifPaging();
     if (D_0015EE84_m == 9) {
-        DrawSkyShellsExtra();
+        draw_sky_shells_with_modulo_25000_rotation();
     } else {
-        UpdateSkyShellsStatic();
+        update_sky_shells_static();
     }
     DoSkyGifPaging();
     VU1_addGSregister(0x47, 0x5360B);

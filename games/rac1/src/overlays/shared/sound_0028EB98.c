@@ -45,7 +45,7 @@ int Sound_PlayClassSound(int i, int a1, int v, int k) {
     if (i >= *(unsigned char *)(t + 0xD)) {
         return -1;
     }
-    r = func_0022EB08(*(char **)(t + 0x28) + i * 32, a1, v, 0, 0x400);
+    r = allocate_voice_slot(*(char **)(t + 0x28) + i * 32, a1, v, 0, 0x400);
     if (r >= 0) {
         e = D_0013E633 + 0x1D + r * 0x70;
         *(int *)(e + 0x88) = v;
@@ -55,10 +55,10 @@ int Sound_PlayClassSound(int i, int a1, int v, int k) {
 }
 extern int D_L00_0015F6D0 MACRO_ADDR;
 extern char *D_L00_0015F6D4 MACRO_ADDR;
-int Sound_PlayLevelSound(int a, int b, int c, int d) {
+int play_voice(int a, int b, int c, int d) {
     int r;
     if (a >= D_L00_0015F6D0) return -1;
-    r = func_0022EB08(D_L00_0015F6D4 + a * 32, b, 0, c + 0x40, d);
+    r = allocate_voice_slot(D_L00_0015F6D4 + a * 32, b, 0, c + 0x40, d);
     if (r >= 0) {
         char *e = D_0013E633 + 0x1D + r * 0x70;
         *(int *)(e + 0x8C) = c;
@@ -81,7 +81,7 @@ int Sound_PlayLevelTableEntry(int a0, int a1, int a2, int a3, int a4) {
     if (idx >= D_L00_0015F6D0) {
         return -1;
     }
-    h = func_0022EB08(D_L00_0015F6D4 + idx * 32, a3, a4, 0, 0x400);
+    h = allocate_voice_slot(D_L00_0015F6D4 + idx * 32, a3, a4, 0, 0x400);
     if (h >= 0) {
         char *rec = D_0013E650 + h * 0x70;
         *(int *)(rec + 0x88) = a4;
@@ -99,7 +99,7 @@ int Sound_SetPitchBend(int i, int v) {
 typedef struct { int k; int v; } TE;
 extern TE D_L00_001EAD00[];
 
-void Sound_LookupTableEntry(short *a) {
+void resolve_lookup_record(short *a) {
     int i;
     for (i = 0; D_L00_001EAD00[i].k != -1 && D_L00_001EAD00[i].k != a[0]; i++) {
     }
@@ -145,7 +145,7 @@ extern void func_00233AB8(void);
 extern void func_0022F258(void);
 
 /* Per-frame update of a pickup-like moby: pulses its colour, tracks the player's range and collects items. */
-void EnvMappedPickupUpdate(unsigned char *m) {
+void update_moby_proximity_interaction(unsigned char *m) {
     char *d = *(char **)(m + 0x78);
     float *p;
     float tmp[4];
@@ -162,14 +162,14 @@ void EnvMappedPickupUpdate(unsigned char *m) {
             } else {
                 *(int *)(m + 0x90) = v | (v << 8) | (v << 16);
             }
-            AddDrawCallback(DrawEnvMappedObject, m);
+            AddDrawCallback(render_environment_mapped_object, m);
             if (func_001F9D48(m + 0x10, D_L00_00166EC0) < 32.0f) {
-                AddDrawCallback(DrawLightFlare, m);
+                AddDrawCallback(draw_light_flare, m);
             }
         }
         p = (float *)(m + 0x10);
         if (*(short *)(d + 0xC) != 0) {
-            func_001F9EC0(tmp, D_L00_001BDC10 + D_0013E156[0] * 16, m + 0xC0);
+            func_001F9EC0(tmp, D_L00_001BDC10 + ship_index[0] * 16, m + 0xC0);
             FastVecAdd(tmp, tmp, p);
             if (FastVecDist(tmp, D_0013E633 + 0xE9D) > 4.1f) {
                 *(short *)(d + 0xC) = 0;
@@ -177,7 +177,7 @@ void EnvMappedPickupUpdate(unsigned char *m) {
         } else {
             q = (unsigned char *)D_0013E633 + 0xE9D;
             if (func_001F9D48(p, q) < 6.0f) {
-                func_001F9EC0(tmp, D_L00_001BDC10 + D_0013E156[0] * 16, m + 0xC0);
+                func_001F9EC0(tmp, D_L00_001BDC10 + ship_index[0] * 16, m + 0xC0);
                 FastVecAdd(tmp, tmp, p);
                 if (FastVecDist(tmp, q) < 4.0f) {
                     *(short *)(d + 0xC) = 1;
@@ -197,7 +197,7 @@ void EnvMappedPickupUpdate(unsigned char *m) {
                 } else {
                     Hud_ClosePopupIfActive(2);
                     D_L00_0015F710 = 1;
-                    D_0013E156[1] = 0;
+                    ship_index[1] = 0;
                 }
             }
         }
@@ -211,7 +211,7 @@ void EnvMappedPickupUpdate(unsigned char *m) {
                 StartCutscene(5);
                 q[0x49] = 1;
             } else if ((q = D_0013D355 + 0x13B)[0x4A] == 0 && D_0013DE4B[8] != 0) {
-                PlayMovieEntryIfIdle(0xB);
+                start_indexed_disc_stream(0xB);
                 q[0x4A] = 1;
             } else if ((q = D_0013D355 + 0x13B)[0x4B] == 0 && D_0013DE4B[8] != 0) {
                 StartCutscene(6);
@@ -220,7 +220,7 @@ void EnvMappedPickupUpdate(unsigned char *m) {
                 m[0x20] = 0;
                 *(unsigned short *)(m + 0x34) &= 0xFFBE;
                 one = 1;
-                D_0013E156[1] = one;
+                ship_index[1] = one;
                 D_L00_0015F710 = one;
             }
         }

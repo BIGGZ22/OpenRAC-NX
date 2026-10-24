@@ -20,7 +20,7 @@
 // which brings them nearer the edges too) and moves them (set_editing(): a finger drags the group
 // it lands on); where each group was moved to is a line of text for the settings file (layout()).
 // Nothing here touches SDL or GL: input.cpp feeds it events and the frontend draws controls()
-// (game/common/touch_overlay.h).
+// (renderer/ui/touch_overlay.h).
 
 #pragma once
 

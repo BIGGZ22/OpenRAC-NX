@@ -89,7 +89,7 @@ extern void *D_L00_001B2200_2697A0[] __asm__("D_L00_001B2200");
 /* Registers the particle-type callbacks in the 81-entry table D_L00_001B2200. Entries 7, 17 and 63 are the
  * identical copies at 0x26B2B8 (of func_L00_0026AB10), 0x26D268 (an empty function, func_001E9768's code) and
  * 0x274750 (of func_L00_0026FEE8), named by their own addresses as retail stores them. */
-void RegisterPartTypes(void) {
+void register_part_types(void) {
     D_L00_001B2200_2697A0[0] = func_L00_00269BE8_2697A0;
     D_L00_001B2200_2697A0[1] = func_L00_00269E88_2697A0;
     D_L00_001B2200_2697A0[2] = func_L00_0026A130_2697A0;
@@ -193,7 +193,7 @@ extern f32 func_L00_002644E0(Vec4 *);
 extern void func_L00_002688A8_69BE8(FallingParticle *) __asm__("func_L00_002688A8");
 
 /* Adapted from Lombyte (GPL-3.0) for PAL by OpenRAC's tools/port.py: src/overlays/shared/rendering/effects/00268900.c, FUN_L00_00268d48. */
-void PartType00Update(FallingParticle *p)
+void update_falling_effect_particle(FallingParticle *p)
 {
     Vec4 step;
     Vec4 tmp1;
@@ -209,17 +209,17 @@ void PartType00Update(FallingParticle *p)
 
     cell_x = p->probe.f[0];
     cell_y = p->probe.f[1];
-    FastVecAdd(&step, vel, &D_L00_00160310);
+    FastVecAdd(&step, vel, &particle_drift);
     FastVecAdd(&p->probe, &p->probe, &step);
     FastVecAdd(&p->pos, &p->pos, &step);
     if (p->unk0A != 2) {
         if (cell_x != (s32)p->probe.f[0] || cell_y != (s32)p->probe.f[1]) {
             tmp1.q = p->probe.q;
-            if (SampleHeightMap(&tmp1) < D_L00_00160320) {
-                ground = D_L00_00160320;
+            if (ground_height_at(&tmp1) < particle_min_ground) {
+                ground = particle_min_ground;
             } else {
                 tmp2.q = p->probe.q;
-                ground = SampleHeightMap(&tmp2);
+                ground = ground_height_at(&tmp2);
             }
             if (p->probe.f[2] < ground) {
                 /* shared exit; retail has one call site for all kill paths */
@@ -230,7 +230,7 @@ void PartType00Update(FallingParticle *p)
         }
     }
     vel->f[2] -= (*(f32 *)&D_0015EE70) * 9.8f;
-    vel->f[3] = ground + D_L00_00160318.value;
+    vel->f[3] = ground + particle_clearance.value;
 }
 extern void *func_00218928(int);
 extern int func_001FA898_r(float) __asm__("func_001FA898");
@@ -239,7 +239,7 @@ extern unsigned char *D_L00_001B2404;
 
 /* spawns a type-1 particle at a position, fading with alpha a1 */
 void PartType01Spawn(char *pos, int a1) {
-    unsigned char *p = func_00218928(1);
+    unsigned char *p = create_part(1);
     if (p != 0) {
         *(float *)(pos + 8) = *(float *)(pos + 8) + 0.1f;
         qcopy(p + 0x10, pos);
@@ -257,7 +257,7 @@ void PartType01Spawn(char *pos, int a1) {
 extern int func_001F9938(void *);
 extern void func_L00_002688A8(void *);
 
-void PartType01Update(char *m) {
+void update_timed_effect_particle(char *m) {
     int t = *(short *)(m + 0xA) * *(int *)(m + 0x20) / scale_ticks(0x1B);
     int a;
     *(int *)(m + 4) = (*(int *)(m + 4) & 0xFFFFFF) | (t << 24);

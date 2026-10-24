@@ -54,6 +54,12 @@ before and after, and how its frames are shown to be the same.
 | `present-single-copy` | on | none (exact) | The frontend's blit of the picture into the window waits and becomes one blit into the screen, where nothing else touches the window first ([R-07](#r-07-one-copy-to-the-screen)). |
 | `vk-tight-sync` | on | none (exact) | Vulkan barriers name the stages and accesses they order, and only the copy to the screen waits for the swapchain image ([R-08](#r-08-barriers-that-name-their-stages)). |
 | `pipeline-prewarm` | on | none (exact) | The pipelines earlier runs made are made again on a worker thread once their program links, from a manifest beside the pipeline cache ([R-10](#r-10-pipelines-made-ahead-on-a-worker)). |
+| `present-timing` | off | none (exact) | Vulkan presents numbered and waited on, so the backend can say when one reached the screen; the FIFO latest-ready mode for the uncapped mode without tearing ([R-09](#r-09-presentation-timing)). |
+| `vk-extended-dynamic-state` | off | none (exact) | Cull, front face, depth and stencil state recorded by the draw as Vulkan 1.3 dynamic state instead of baked into each pipeline; off because the synthetic scene has no program drawn with more than one such state ([R-11](#r-11-fixed-state-as-dynamic-state-shipped-off)). |
+| `moby-pose-in-place` | on | none (exact) | `set_instances` writes the mobys' poses into their groups when they and their order are unchanged, and `set_palette` sends nothing when the joints are unchanged ([R-16](#r-16-mobys-posed-in-place)). |
+| `shadow-atlas-discard` | on | none (exact) | The shadow atlas pass neither loads nor stores its unsampled colour and its stencil ([R-16](#r-16-mobys-posed-in-place), lane RB's note). |
+| `spirv-disk-cache` | on | none (exact) | What glslang made of each program and stage is kept beside the pipeline cache, so a warm start and a level load run no glslang ([R-12](#r-12-spir-v-kept-between-runs)). |
+| `vk-persistent-descriptors` | on | none (exact) | On the path without bindless materials, a descriptor set binding only textures, samplers and the frame's ring is kept across frames instead of made each frame ([R-14](#r-14-descriptor-sets-kept-across-frames)). |
 
 Its tests are `render_opt` (the table, and the parsing of the variable: a name, a list, `all`, an
 unknown name kept apart; it runs in the headless preset too) and `render_opt_environment` (the
@@ -698,6 +704,174 @@ writes the manifest), or
 `python3 port/tools/perf/render_bench.py --level assets/port/rac1/pal/level_12 --compare-opt pipeline-prewarm`
 (its warm-cache setting).
 
+## R-11: fixed state as dynamic state, shipped off
+
+**What changed** (`renderer/vulkan/vkgl_pipelines.cpp`, `vkgl_draw.cpp`, `vkgl_internal.h`,
+`vkgl_device.cpp`, `pipeline_cache_file.h`), behind `vk-extended-dynamic-state`, which ships
+**off**:
+
+- `PipelineKey` holds the cull mode, front face, depth test, depth write, depth compare, stencil
+  test and stencil ops as one `FixedState`, which `fixed_state()` computes from the GL state for
+  both paths, and says whether that state is dynamic. With the entry on, on a device of Vulkan 1.3
+  (whose core extended dynamic state needs no feature: `vulkaninfo` gives the Mac's MoltenVK device
+  API 1.4.357 with `extendedDynamicState = true`, box1's NVIDIA device 1.4.312 with the same), the
+  key holds none of it, the pipeline declares the seven EDS1 states dynamic, and the draw records
+  them through R-03's tracker, each command left out when the command buffer holds its value. A
+  pipeline that bakes the state, bound after one that does not, makes the tracker forget it. Blend
+  state, the vertex stride, primitive restart and the topology stay baked (MoltenVK's caveats on
+  EDS2 and EDS3). The GPU-driven batches compare the fixed state before they merge two draws.
+- The manifest's format is 2 (the key changed), so an R-10 manifest is dropped once.
+
+**The counter.** `vk_pipelines_created` on a cold cache, per run, entry off to on, the same on both
+machines:
+
+| Setting | Pipelines (load and warm-up) | `vk_cmds_dynamic_state` per frame | `vk_cmds_recorded` per frame |
+|---|---|---|---|
+| base | 7 to 7 | 6 to 18 | 99 to 111 |
+| enhanced | 16 to 16 | 24 to 57 | 198 to 231 |
+| gpu-driven off | 4 to 4 | 6 to 18 | 3,294 to 3,306 |
+| materials off | 6 to 6 | 6 to 18 | 2,983 to 2,995 |
+
+No program of the synthetic scene is drawn with two different cull, depth or stencil states, so
+the key had no such multiplicity to remove; the draws then record the state as commands too. As
+the brief says for that case, the entry ships off. The per-program split of the keys was not
+measured (the benchmark reports totals). A real level, whose shadow and depth-prepass passes may
+draw one program with several depth states, is the maintainers' run:
+`python3 port/tools/perf/render_bench.py --level assets/port/rac1/pal/level_12 --compare-opt vk-extended-dynamic-state`.
+If it lowers the pipelines there, the entry's default can change in one line of `render_opt.cpp`.
+
+**Time, as information.** The first picture after the upload and the picture time are within the
+noise with the entry on and off on both machines (cold base: Mac 19.5 to 20.7 ms, box1 24.0 to
+24.3 ms; picture Mac 0.717 to 0.712 ms, box1 0.981 to 1.004 ms).
+
+**Equivalence.** `render_equivalence_vulkan` compares the entry on and off in every scenario,
+Enhanced off and on: identical on both machines, no validation message (a dynamic state left unset
+is one), and again by hand with `OPENRAC_GPU_DRIVEN_OFF=1` and `OPENRAC_GPU_MATERIALS_OFF=1`.
+`vulkan_uniform` gained a case that draws one triangle a pixel five times in one pass with culling
+and the front face toggled between the draws, with the entry on and off, and requires the same
+pixels and the ones each winding gives.
+
+## R-12: SPIR-V kept between runs
+
+**What changed** (`renderer/vulkan/shader_compiler.cpp`, the new `spirv_cache_file.*`, two calls in
+`vkgl_device.cpp`), behind `spirv-disk-cache`:
+
+- The open backend keeps a `SpirvCache`: each program `compile_program` made (its SPIR-V and the
+  reflection the backend reads, encoded field by field) and each stage `check_stage` found to
+  compile. An entry is found by a 64-bit FNV-1a hash of what was compiled (its kind, its sources
+  after the defines were spliced in, and the compiler: glslang's version and the version of the
+  backend's compile options, `kOptionsVersion`, raised with any change to them), and is taken only
+  when a second hash of the same text, read from the other end, and its length match too: a
+  collision of the key cannot hand one shader another's code. A failed compile is never kept.
+- The cache is read when the backend opens, from `<pipeline cache>.spirv` in `cache_file.h`'s
+  envelope (another format or another compiler drops it whole; another build's file goes with its
+  pipeline cache), and written back at close when anything was added, never in a frame. With the
+  pipeline cache off (`OPENRAC_VULKAN_PIPELINE_CACHE=off`) it keeps none. Only sources the port
+  itself compiles are kept.
+
+**The counter.** `vk_shader_compiles` (glslang runs) in the load, per run, of
+`render_bench.py --synthetic --compare-opt spirv-disk-cache` (entry off, then on), the same on both
+machines:
+
+| Setting | glslang runs | `shader_compile_s`, Mac | `shader_compile_s`, box1 |
+|---|---|---|---|
+| warm cache (the second run in one process) | 38 to 0 | 0.03 to 0 | 0.05 to 0 |
+| base, cold | 41 to 36 | 0.08 to 0.07 | 0.16 to 0.18 |
+| enhanced, cold | 72 to 60 | 0.21 to 0.21 | 0.47 to 0.35 |
+| materials off, cold | 18 to 17 | 0.05 to 0.05 | 0.10 to 0.10 |
+
+A warm start runs no glslang. Even a cold run compiles fewer, because one load links some programs
+more than once. **Time, as information** (median of five runs): the warm load takes 139 to 106 ms
+on the Mac and 194 to 141 ms on box1; the first picture is unchanged (Mac 14.0 to 13.9 ms). On the
+synthetic scene glslang's own time is small (R-02's baseline: 0.07 s on the Mac cold); a real
+level's twenty-odd variants of `mesh.frag`, doubled for early lighting, are the maintainers'
+measurement: two runs of the game on one build, comparing `vk_shader_compiles` and
+`shader_compile_s` in `--debug-dump`.
+
+**Equivalence**, in its strongest form here:
+
+- `spirv_cache` (new, no GPU): a vertex and fragment pair, again with a define spliced in, and a
+  compute stage, compiled by glslang, encoded as the cache keeps them and decoded, are the same
+  program word for word and field for field, and compiling again gives the same words; a damaged
+  encoding is no program; a saved cache reads back; a file cut short, with a byte changed or made
+  by another compiler, and an entry whose key matches without its check, give nothing, so the
+  program is compiled afresh.
+- The Vulkan test set run twice in a row on one cache file (the second run's programs all from the
+  cache, a 5.7 MB `.spirv`): every test passed both times on both machines, but
+  `render_opt_vulkan`, whose check that the counters count a compile met a cache with nothing to
+  compile; it now switches the entry (and R-10's pre-warm, which had the same effect on its
+  pipeline count) off for its own draws.
+- `render_equivalence_vulkan` runs with the pipeline cache off, so it keeps no SPIR-V cache and its
+  on-against-off comparison of this entry is trivially equal; it passed on the Mac, with the
+  validation layer and with `OPENRAC_GPU_DRIVEN_OFF=1` and `OPENRAC_GPU_MATERIALS_OFF=1` by hand.
+
+Measured with:
+
+```sh
+python3 port/tools/perf/render_bench.py --synthetic --compare-opt spirv-disk-cache
+OPENRAC_VULKAN_PIPELINE_CACHE=/tmp/warm/pipelines.bin ctest --preset release -R "_vulkan$|vulkan_" -E render_equivalence -j 1   # twice
+```
+
+## R-14: descriptor sets kept across frames
+
+**What changed** (`renderer/vulkan/vkgl_pipelines.cpp`, `vkgl_internal.h`, `vkgl_resources.cpp`,
+one loop in `vkgl_device.cpp`), behind `vk-persistent-descriptors`. Where the bindless material
+path is off (older GPUs, Intel Macs, some Android devices; here `--materials off`), every texture
+binding of every frame was a `vkAllocateDescriptorSets` and a `vkUpdateDescriptorSets`, because a
+program's sets were dropped at each new frame: their key named the frame's ring. The uniforms are
+a dynamic uniform buffer, so the ring's part of the key is one of its chunks, which live as long as
+the backend.
+
+- A set whose buffers are all ring chunks or the dummy buffer, and whose texel views are the dummy
+  ones, is kept in `PersistentSets`, from pools that free one set at a time, under its per-frame
+  key plus the program's serial (new at each link) and each sampled image's serial.
+- `Image::serial` is new, given by `make_image` and never reused. A texture deleted and replaced,
+  whose views may get the old Vulkan handles, therefore never finds the old set; that set is never
+  bound again and leaves when evicted.
+- At 4,096 sets the one bound longest ago, if no frame in flight may bind it, is freed (a bounded
+  LRU in place of the per-frame cap of 256). A set naming a GL buffer or a texture buffer, whose
+  handle may be given out again, is made each frame as before.
+- Push descriptors (`VK_KHR_push_descriptor`) were the brief's alternative; they still write every
+  descriptor at every draw, so `vk_descriptor_writes` would not fall, and kept sets were chosen.
+
+**The counters**, per measured frame, entry off to on, 1920x1080; the counts are the same on the
+Mac and box1:
+
+| Setting | `vk_descriptor_sets_allocated` | `vk_descriptor_writes` | `vk_descriptor_reuses` (Mac) |
+|---|---|---|---|
+| materials off, Enhanced off | 939 to 1 | 3,756 to 4 | 522 to 1,460 |
+| materials off, Enhanced on | 1,688 to 1,198 | 16,864 to 14,923 | 1,249 to 1,739 |
+| base (materials on) | 5 to 1 | 616 to 604 | 1,456 to 1,460 |
+
+With Enhanced the sets that stay are those of the passes that bind a GL uniform or storage buffer
+(the probes' and the cascades' blocks), which may die with their handles reused, so they are made
+each frame as before. `vk_cmds_bind_descriptors` and `bench_heap_allocs` are unchanged.
+
+**Time, as information** (the picture's CPU time, median of five runs, off to on): materials off,
+Enhanced off, Mac 0.88 to 0.81 ms, box1 1.107 to 1.044 ms; with Enhanced Mac 2.15 to 2.15, box1
+3.111 to 3.089; base unchanged on both.
+
+**Equivalence.** `render_equivalence_vulkan` compares the entry on and off in every scenario,
+Enhanced off and on, byte for byte, in the default configuration and by hand with
+`OPENRAC_GPU_MATERIALS_OFF=1` (the path the entry acts on) and `OPENRAC_GPU_DRIVEN_OFF=1`:
+identical on both machines, no validation message. `vulkan_uniform` gained the case this design
+risks, written before the change: eight rounds of a texture drawn, deleted and destroyed, and a
+texture of another colour made and drawn, each requiring the new colour. `vulkan_uniform` and
+`vulkan_uniform_reference` (`OPENRAC_VK_UNIFORM_REUSE_OFF`) pass; `vulkan_uniform`'s count of
+sets made in a frame now allows a later round to find its sets kept.
+
+Measured with:
+
+```sh
+python3 port/tools/perf/render_bench.py --synthetic --compare-opt vk-persistent-descriptors
+./port/build/release/openrac_render_bench --materials off --opt-off vk-persistent-descriptors
+OPENRAC_GL_API=vulkan OPENRAC_VULKAN_PIPELINE_CACHE=off OPENRAC_VULKAN_VALIDATION=1 \
+  OPENRAC_GPU_MATERIALS_OFF=1 ./port/build/release/render_equivalence_test
+```
+
+On a real level, on a device without bindless or with `OPENRAC_GPU_MATERIALS_OFF=1`:
+`python3 port/tools/perf/render_bench.py --level assets/port/rac1/pal/level_12 --compare-opt vk-persistent-descriptors`.
+
 ## R-13: a level's textures made at its load
 
 **What changed** (`renderer/texture_pool.*`, `scene/level_renderer.cpp`, `tests/render_fixture.h`):
@@ -1236,3 +1410,151 @@ OPENRAC_GL_API=vulkan port/build/release/openrac_render_bench --frames 60 --warm
 On real levels (the maintainers', with the patch applied):
 `port/build/release/openrac_render_bench --level assets/port/rac1/pal/level_12 --enhanced on --frames 300`,
 with and without `--opt-off cull-zero-coverage`, reading the `vk_gpu_completed_*` gauges.
+## R-09: presentation timing
+
+**What changed** (the backend; the frontend's use of it is not done, below):
+
+- The device is given `VK_KHR_present_id` and `VK_KHR_present_wait` where it offers them and the
+  backend has a window, and the FIFO latest-ready present mode (`VK_KHR_` or `VK_EXT_
+  present_mode_fifo_latest_ready`). The log says which it got (`vulkan: present ids yes, present
+  waits yes, latest-ready mode no`). `vkgl::Config` has `present_id`, `present_wait` and
+  `fifo_latest_ready`, all on, so that a test can open the device without each.
+- Under `present-timing` each present carries an id, counted from 1 for each swapchain.
+  `vkgl::present_timing()` (`vkgl.h`) says whether the device and swapchain support it and when
+  the most recent present was seen finished, on the steady clock; it polls the wait with no
+  timeout and never blocks. `vkgl::wait_for_present(timeout)` waits at most that long, for a caller
+  that sleeps anyway (the frame pacer). The time is when the backend saw the present finished, so
+  it is late by at most the time between the poll and the refresh; a pacer that waits on it in its
+  sleep sees it within the wait's own latency.
+- The uncapped mode without tearing (swap interval 0) on a screen without `IMMEDIATE` takes FIFO
+  latest-ready before `MAILBOX`; `IMMEDIATE` stays first, and the other intervals are as before.
+- The wait in `vkAcquireNextImageKHR` is measured each frame. `present()` publishes the gauges
+  `acquire_wait_s`, `present_wait_supported` and `present_time_known` while the debug tools
+  measure.
+
+`present-timing` is off by default: it changes when frames are shown, not what they show, and
+whether that is smoother is for the maintainers to measure. With it off nothing is numbered and
+the present modes are as before; the extensions are still asked of the device, which changes
+nothing a frame does.
+
+**Counters.** None of the draw counters moves; this package is not about them. The gauges exist
+and read 0 on both machines in the tests, whose hidden windows have no surface, so no device there
+is given the extensions. `render_equivalence_vulkan` draws the entry on and off in every scenario:
+identical on the Mac and box1.
+
+**The frontend's use of it is not done.** The pacing (`game/common/frontend/interpolation.cpp`,
+`swapped`) would take the visible time as its display phase where it is known, in place of
+nothing (it keeps no phase on Vulkan today and paces by the shared deadline), with the cost EMA as
+before. `game/common` does not include or link the Vulkan backend: it sees the renderer only
+through `renderer/gl.h` and `platform/window.h`, so the time has to reach it through one of them
+(a `platform::Window` call that asks the backend, say), which is outside this package's paths.
+[PROGRESS.md](../restructure/PROGRESS.md)'s follow-ups record it with the pure function and test
+it needs.
+
+**Tests.** `vulkan_present_timing` (new) opens the backend five times, with the three extensions
+allowed, each switched off in turn and none, presents three frames each time, asks for the timing
+after each (nothing known, and asking never blocks) and closes: passes on the Mac and box1 under
+the validation layer.
+
+**What the maintainers measure.** With a window on a 60, 144 and 240 Hz display, the game run on
+Vulkan with `OPENRAC_PACING=1` logs each frame shown, its time, its alpha, its kind, the refresh
+interval and the draw cost: once as is and once with the entry switched on (a build where
+`present-timing` defaults on, or a test hook; `OPENRAC_RENDER_OPT_OFF` only switches entries
+off), read the spread of the frame-to-frame times and of the alphas at a steady camera, and the F3
+overlay's `present_wait_supported`, `present_time_known` and `acquire_wait_s`. A smaller spread with
+the entry on is the gain; no number is claimed here.
+
+
+## R-16: mobys posed in place
+
+**What changed** (`scene/level_renderer.*`, `tests/render_fixture.h`,
+`tests/render_equivalence_test.cpp`, `port/tools/layering/rules.tsv`):
+
+- `moby-pose-in-place`. Every frame the frontend's `draw_kept` hands the scene the live mobys
+  (`set_instances`), and every frame the moby groups went to the idle list and `build_groups`
+  regrouped them all: a list per key found by a linear search, a copy of each group's instances,
+  bounds for every instance, the buffers sent. Between two ticks, and at a tick that changes no
+  membership, the mobys and their order are the same, so the groups are too. `set_instances` now
+  remembers where `build_groups` put each moby (`remember_mobys`: its key, group, place and the
+  sphere its bounds came from); a call with the same keys in the same order (and the same
+  `OPENRAC_MOBY_SPHERE_CULL_OFF`) writes each moby's attributes into its place (`rewrite_mobys`),
+  recomputes its bounds only when its pose or sphere changed, refreshes its GPU bounds and sends
+  each group's buffer from that storage. Any other call, a membership change among them, regroups
+  as before; the order of groups and of instances inside them is `build_groups`' by construction
+  (the in-place path never reorders). `build_groups` itself finds a key's list through a hash map
+  now (a refactor commit: the same lists). `set_palette` sends nothing when the texture holds the
+  same joints bit for bit. The blend of poses (`blend_matrix`) is untouched, and the frontend's
+  `draw_kept` needed no change: the scene detects the unchanged layout itself, so no per-tick call
+  was added.
+- `moby instances`, `layer instances` and `moby palette` are CPU sections now (R-01's follow-up).
+- `shadow-atlas-discard` (lane RB's note, R-06's follow-up). The 3072 by 3072 shadow atlas pass
+  loaded and stored an RGBA8 colour attachment nothing samples, and loaded its whole depth image
+  because only the depth was cleared. With the entry on the pass lets the colour go before it
+  (`glInvalidateFramebuffer`), clears the stencil with the depth, and lets the colour and the
+  stencil go after it; only the sampled depth is stored. Put here rather than in R-18, which had
+  landed already.
+- A leak found on the way: `renderer::FrameBuffer` frees its GL objects only in `release()`, and
+  `LevelScene` let its shadow atlas, sun maps, hero map and static shadow cache go with a plain
+  reset, so each level release kept them on the GPU (about 650 MB an Enhanced scene in the
+  equivalence test, which ran box1's 8 GB out of device memory). `release_target` releases them
+  first; the test's GPU memory now stays at about 280 MB.
+- The fixture gained the scenario `churn` (three pictures between ticks; a seventh of the mobys left
+  out at each tick, a different seventh each tick, none between), the case the in-place path must
+  hand back to the regrouping; the equivalence test applies it.
+
+**The counters**, `render_bench.py --synthetic --compare-opt moby-pose-in-place` (entry off, then
+on), 1920x1080, five runs a setting, every counter the same in every run:
+
+| Setting | `bench_heap_allocs` per frame, Mac | box1 |
+|---|---|---|
+| base (walk, cold), between x3, warm cache, static camera, half size | 1,304 to 1,235 (-69) | not taken (box1's GPU was held by another lane's run) |
+| enhanced, three pictures between ticks | 2,337 to 2,268 (-69) | 2,383 to 2,314 (-69) |
+| materials off | 102 to 33 (-69) | not taken |
+
+The 69 allocations a frame were the moby layer's (the whole frame's difference: every other
+counter is +0.0 percent); with the entry on the in-place path makes none once its vectors have their
+size. The bytes sent for the mobys are the same (each group's buffer is sent whole, as before:
+`glBufferData` keeps the GL driver's orphaning, which a partial write would lose); what goes is the
+second copy, the regrouping and the bounds of unmoved mobys.
+
+`shadow-atlas-discard`, per Enhanced frame (60 measured frames, five runs):
+
+| Counter | Mac (MoltenVK, 8-byte depth) | box1 (NVIDIA, 4-byte depth) |
+|---|---|---|
+| `vk_attachment_load_bytes` | 163,013,000 to 49,766,400 (-69.5%) | 108,675,000 to 33,177,600 (-69.5%) |
+| `vk_attachment_store_bytes` | 171,307,000 to 133,558,000 (-22.0%) | 116,969,000 to 79,220,700 (-32.3%) |
+
+**Milliseconds, as information** (Enhanced on, three pictures between ticks, median of five runs,
+lowest to highest; entry off to on):
+
+| Timing | Mac | box1 |
+|---|---|---|
+| `moby instances` (CPU) | 0.0144 (0.0125 to 0.0230) to 0.0056 (0.0053 to 0.0062) | 0.0228 (0.0225 to 0.0232) to 0.0120 (0.0118 to 0.0122) |
+| `moby palette` (CPU) | 0.0059 to 0.0060 | 0.0201 to 0.0201 |
+| `shadow atlas` (GPU), `shadow-atlas-discard` | 0.0877 (0.0860 to 0.0881) to 0.0708 (0.0702 to 0.0754) | 0.2662 (0.2657 to 0.2673) to 0.2678 (0.2673 to 0.2683) |
+| the picture (CPU) | 1.57 to 1.61 | 3.07 to 3.07 |
+
+The moby layer's CPU cost on this scene (300 mobys of 46 classes) was already small: 0.014 ms
+(Mac) and 0.023 ms (box1) a between-frame, now 0.006 and 0.012. That is far under G4's 0.1 ms, so
+on the synthetic scene R-17's gate stays closed; the maintainers' machine and a real level decide
+it. On the tiled Apple GPU the atlas pass is a fifth faster without the colour and stencil traffic;
+on the discrete NVIDIA GPU it is the same.
+
+**Equivalence.** `render_equivalence_vulkan` compares both entries on against off in every
+scenario, the new `churn` (membership changing at ticks) and `between` (rewrites between ticks)
+included, translucent mobys (one in ten) among them, Enhanced off and on, byte for byte under the
+validation layer: identical, no validation message, on the Mac and box1. The whole release preset
+passes on the Mac (`gtao_vulkan`, whose test changes `OPENRAC_MOBY_SPHERE_CULL_OFF` between two
+`set_instances` of the same mobys, found that the switch must force a regrouping; it does), the
+headless preset too. The change reaches the GL path through the scene: `viewer` and `viewer_es`
+are the tests to run on a machine with a GL context.
+
+Measured with:
+
+```sh
+python3 port/tools/perf/render_bench.py --synthetic --compare-opt moby-pose-in-place
+OPENRAC_GL_API=vulkan port/build/release/openrac_render_bench --frames 60 --warmup 10 --enhanced on --between 3 [--opt-off moby-pose-in-place|shadow-atlas-discard]
+```
+
+On real levels: `python3 port/tools/perf/render_bench.py --level assets/port/rac1/pal/level_12 --compare-opt moby-pose-in-place`
+(the `moby instances` section with `--sections`), and the same with `shadow-atlas-discard`.

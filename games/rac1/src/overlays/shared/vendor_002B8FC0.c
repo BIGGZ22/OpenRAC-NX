@@ -15,7 +15,7 @@ extern void func_001F9EE8(void *, void *, void *);
 extern void func_001F9C30(void *, void *, float);
 
 /* Adapted from Lombyte (GPL-3.0) for PAL by OpenRAC's tools/port.py: src/overlays/shared/gameplay/entities/002b7d50.c, FUN_L13_002b7d50. */
-void DrawRotatedShape(short *pts, int n, float x0, float y0, unsigned int col, unsigned long prim, float scale, float ang) {
+void emit_transformed_2d_vertex_packet(short *pts, int n, float x0, float y0, unsigned int col, unsigned long prim, float scale, float ang) {
     float mat[4][4];
     float rot[4];
     float w[4];
@@ -71,7 +71,7 @@ extern float func_001FA790(float, float);
 extern float func_001FA748(float, float);
 
 /* Blends from b to c by the eased fraction of x between lo and hi; flag selects the call path. */
-float BlendEased(int flag, int n, float x, float b, float c, float lo, float hi)
+float interpolate_value_with_repeated_squaring(int flag, int n, float x, float b, float c, float lo, float hi)
 {
     float t;
     float u;
@@ -103,7 +103,7 @@ extern unsigned char *func_0020D348(int);
 extern void func_L00_00251E30(void *);
 extern void func_L00_0025E210(void *);
 
-unsigned char *SpawnMobyAt(char *position, int moby_class)
+unsigned char *spawn_ship_pickup(char *position, int moby_class)
 {
     unsigned char *moby = CreateMoby(moby_class);
     if (moby != 0) {
@@ -272,7 +272,7 @@ extern void func_001F9BD8(void *, void *, void *);
 extern char *func_L00_0026E940(char *, int, int, int, float);
 
 // Spawns an effect moby attached to a target and positioned from a source.
-unsigned char *SpawnRocket295(char *src, char *pos, char *target, char *vec, int arg, float scale) {
+unsigned char *spawn_ship_rocket(char *src, char *pos, char *target, char *vec, int arg, float scale) {
     unsigned char *moby = CreateMoby(0x127);
     if (moby != 0) {
         char *data = *(char **)(moby + 0x78);
@@ -352,7 +352,7 @@ extern Tex_2E8040 D_L13_001B2680_2E8040 __asm__("D_L13_001B2680");
 extern Vec4A D_L13_001741E0_2E8040 __asm__("D_L13_001741E0");
 
 /* Update for the rocket (class 295): smoke trail, steering toward its target, collision and expiry. */
-void Rocket295Update(Moby *m) {
+void update_ship_rocket(Moby *m) {
     Rocket_2E8040 *d = *(void **)&m->pvars;
     Vec4A old;
     Vec4A hitpos;
@@ -430,7 +430,7 @@ typedef struct { char pad0[0x86]; short class_id; } Level13VendorCurrentMoby;
 extern Level13VendorCurrentMoby *D_L13_00167180;
 extern Level13VendorRecord *D_L13_0015F050 MACRO_ADDR;
 /* marks a vendor item for the current moby class */
-void SetVendorItemFlag(int index) {
+void flag_vendor_item(int index) {
  Level13VendorCurrentMoby *m=D_L13_00167180;
  Level13VendorRecord *rec=(Level13VendorRecord *)(index*32+(int)D_L13_0015F050);
  Level13VendorItem *item=rec->item;

@@ -3,11 +3,11 @@
 
 #include "common/stats.h"
 #include "enhanced/viewer/probe_lighting.h"
+#include "enhanced_viewer_shaders.h"
 #include "renderer/gl.h"
 #include "renderer/world/gl_world.h"
-#include "viewer_shaders.h"
 
-namespace openrac::viewer {
+namespace openrac::lighting {
 using namespace openrac::gl;
 namespace wgl = renderer::world::gl;
 
@@ -138,4 +138,4 @@ void EarlyLighting::release() {
     m_ready = false;
     m_failed = false;
 }
-}  // namespace openrac::viewer
+}  // namespace openrac::lighting

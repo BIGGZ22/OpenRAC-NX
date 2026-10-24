@@ -77,8 +77,8 @@ std::string function_name(std::uint32_t address) {
                            : std::format("{:#x} (no C)", address);
 }
 
-const viewer::LiveMoby* hero() {
-    for (const viewer::LiveMoby& m : s.state.mobys) {
+const host::LiveMoby* hero() {
+    for (const host::LiveMoby& m : s.state.mobys) {
         if (m.class_id == 0) {
             return &m;
         }
@@ -87,8 +87,8 @@ const viewer::LiveMoby* hero() {
     return nullptr;
 }
 
-const viewer::LiveMoby* selected_moby() {
-    for (const viewer::LiveMoby& m : s.state.mobys) {
+const host::LiveMoby* selected_moby() {
+    for (const host::LiveMoby& m : s.state.mobys) {
         if (m.address == s.selected) {
             return &m;
         }
@@ -97,7 +97,7 @@ const viewer::LiveMoby* selected_moby() {
     return nullptr;
 }
 
-float distance(const viewer::LiveMoby& a, const viewer::LiveMoby& b) {
+float distance(const host::LiveMoby& a, const host::LiveMoby& b) {
     const float dx = a.matrix[12] - b.matrix[12], dy = a.matrix[13] - b.matrix[13],
                 dz = a.matrix[14] - b.matrix[14];
     return std::sqrt(dx * dx + dy * dy + dz * dz);

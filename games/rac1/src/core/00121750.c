@@ -318,7 +318,7 @@ void func_00121B78(short mode, short inter, short out, short ff) {
 extern char D_00132E40[];
 
 void *func_00121D08(void) {
-    return D_00132E40;
+    return CoreDataTable;
 }
 
 INCLUDE_ASM("asm/nonmatchings/core_text", func_00121D14);

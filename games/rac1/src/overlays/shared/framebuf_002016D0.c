@@ -5,6 +5,6 @@
 extern int D_L00_00173154;
 
 // Returns the value of a global data pointer
-int GetDebugOverlayMode(void) {
+int get_global_state_pointer(void) {
     return D_L00_00173154;
 }

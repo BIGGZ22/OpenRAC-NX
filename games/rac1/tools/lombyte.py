@@ -22,7 +22,8 @@ config/overlays/functions.tsv places in level NN (its shared code is
 named after level 00, as ours is). Each pair records how it was found
 ("us_map" or "sizes"). It lives in build-sn/lombyte_ntsc_pal_map.json.
 Lombyte is looked for in $LOMBYTE, else next to this tree inside OpenRAC
-(games/rac1/ntsc), else ~/Projects/Lombyte.
+(games/rac1/ntsc), else ~/Projects/Lombyte, else the pinned checkout
+tools/ntsc_source.py fetches (python3 tools/ntsc_source.py fetch).
 """
 from __future__ import annotations
 import difflib
@@ -34,10 +35,18 @@ import sys
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
+def _default_lombyte() -> Path:
+    if (Path.home() / "Projects/Lombyte").is_dir():
+        return Path.home() / "Projects/Lombyte"
+    import ntsc_source
+    return ntsc_source.cache_root() / ntsc_source.pin()[1]
+
+
 # Inside OpenRAC, Lombyte is this game's other region, games/rac1/ntsc, and
 # OpenRAC keeps a copy of the report its CI publishes (tools/openrac.py progress --fetch).
 OPENRAC = ROOT.parents[2] if (ROOT.parents[2] / "games/rac1/game.json").exists() else None
-LOMBYTE = Path(os.environ.get("LOMBYTE") or (ROOT.parent / "ntsc" if OPENRAC else Path.home() / "Projects/Lombyte"))
+LOMBYTE = (Path(os.environ["LOMBYTE"]) if os.environ.get("LOMBYTE")
+           else ROOT.parent / "ntsc" if OPENRAC else _default_lombyte())
 MAP = ROOT / "build-sn/lombyte_ntsc_pal_map.json"
 US_MAP = ROOT / "config/overlays/us_map.tsv"
 US_EXE_DELTA = 0xFF080      # SCUS-97199: vram - file offset of its one loaded segment

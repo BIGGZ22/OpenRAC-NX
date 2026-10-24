@@ -202,7 +202,7 @@ in ReRAC's `docs/plan/class_census.md` and the planet pages.
 ## 7. When the export changes
 
 A change to what `editor/port.py` writes that the port relies on bumps the
-export format: `FORMAT` there, `kManifestFormat` in `port/viewer/level.h`,
+export format: `FORMAT` there, `kManifestFormat` in `port/scene/level.h`,
 the stamp `verified-<format>.json` in `launcher/actions.json` and
 `tools/bundle_standalone.py`, and the test fixtures. The launcher then
 re-reads every player's levels before Play.

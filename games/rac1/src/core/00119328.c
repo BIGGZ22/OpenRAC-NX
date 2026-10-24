@@ -72,7 +72,7 @@ void func_001194C8(void *arg0) {
     unsigned char type;
 
     for (;;) {
-        func_00118CB0(D_00154600);
+        func_00118CB0(top_thread_semaphore);
         i = ctx->counter & 0x1FF;
         ctx->counter = i + 1;
         type = ctx->entries[i].type;
@@ -151,13 +151,13 @@ int func_001195A0(void) {
     SemaParam_1195A0 sp;
     int tid;
 
-    if (D_0012FCF8 > 0) {
+    if (top_thread_id > 0) {
         return -1;
     }
     sp.maxCount = 0xFF;
     sp.initCount = 0;
-    D_00154600 = func_00118C70(&sp);
-    if (D_00154600 < 0) {
+    top_thread_semaphore = func_00118C70(&sp);
+    if (top_thread_semaphore < 0) {
         return -1;
     }
     tp.entry = func_001194C8;
@@ -166,16 +166,16 @@ int func_001195A0(void) {
     tp.gpReg = D_00166D00;
     tp.initPriority = 0;
     tid = func_00118B50(&tp);
-    D_0012FCF8 = tid;
+    top_thread_id = tid;
     if (tid < 0) {
-        func_00118C80(D_00154600);
+        func_00118C80(top_thread_semaphore);
         return -1;
     }
-    D_00154608[0] = 0;
-    D_00154608[1] = 0;
-    func_00118B70(tid, D_00154608);
+    top_thread_queue[0] = 0;
+    top_thread_queue[1] = 0;
+    func_00118B70(tid, top_thread_queue);
     func_00118BA0(func_00118BE0(), 1);
-    return D_0012FCF8;
+    return top_thread_id;
 }
 
 ASM_FUNC("asm/handwritten/core_text", func_00119678);

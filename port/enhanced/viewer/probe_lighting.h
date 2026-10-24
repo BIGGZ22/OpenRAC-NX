@@ -10,9 +10,11 @@
 #include "renderer/shader.h"
 #include "scene/level.h"
 
-namespace openrac::viewer {
-std::string probe_mesh_fragment();
-std::string probe_early_fragment();
+namespace openrac::lighting {
+// The scene's mesh fragment shader `source` (viewer/shaders/mesh.frag) with the probe lighting's
+// GLSL put in, and its early-lit variant; unchanged where enhanced rendering is unavailable.
+std::string probe_mesh_fragment(std::string source);
+std::string probe_early_fragment(std::string source);
 std::string probe_shader_source(std::string source);
 
 // Where the player's own bakes are (the launcher's `--probes`, bake_all.py's output): one
@@ -51,10 +53,10 @@ public:
 
     // Activation through OPENRAC_PROBE_GI, else the level's bake under probe_root(). Missing or
     // invalid assets report why and leave the original lighting active.
-    void load(const LevelData& level);
+    void load(const scene::LevelData& level);
     void bind(
         const renderer::Shader& shader,
-        Layer layer,
+        scene::Layer layer,
         bool all_static_receivers = false,
         const renderer::Camera* camera = nullptr,
         bool depth_matched = true
@@ -108,4 +110,4 @@ private:
     renderer::Shader m_sphere_shader;
     unsigned m_sphere_vao = 0, m_sphere_buffer = 0, m_sphere_indices = 0;
 };
-}  // namespace openrac::viewer
+}  // namespace openrac::lighting

@@ -11,8 +11,8 @@ extern int func_001F9850(int);
 extern unsigned char *D_L07_001B2464;
 
 /* Spawn a particle moby at pos with a colour, lifetime and size. */
-void SpawnParticle(void *pos, void *pos2) {
-    unsigned char *p = func_00218928(0x41);
+void spawn_white_particle_with_payload(void *pos, void *pos2) {
+    unsigned char *p = create_part(0x41);
     if (p) {
         float *f = (float *)(p + 0x20);
         qcopy(p + 0x10, pos);
@@ -42,7 +42,7 @@ extern float func_001F9B88(float);
 typedef int u128 __attribute__((mode(TI)));
 
 /* Clamped closest-approach point of a moving sphere on level 7; writes the point to dst, returns its distance term. */
-float SphereClosestApproach(char *dst, char *a1, char *a2, char *a3, char *a4, float f) {
+float select_segment_point_near_sphere_surface(char *dst, char *a1, char *a2, char *a3, char *a4, float f) {
     u128 v[5];
     u128 *q4;
     float r1, r2, r3, t20, lo, hi, L, d, f21, t22, thr, ap;

@@ -38,10 +38,10 @@ extern int func_00119008();
 
 int func_001188C8(int *errOut, void *a, void *b, void *c) {
     int r;
-    D_0015ED10 = 0;
+    SbrkErrno = 0;
     r = func_00119008(a, b, c);
-    if (r == -1 && D_0015ED10 != 0) {
-        *errOut = D_0015ED10;
+    if (r == -1 && SbrkErrno != 0) {
+        *errOut = SbrkErrno;
     }
     return r;
 }

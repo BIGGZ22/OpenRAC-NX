@@ -293,13 +293,13 @@ extern TexRemap D_001E0F00[];
  * go idle again. */
 void VU0_loadMicroProgram(long *prog) {
     while (*VIF0_STAT & 0x100) {
-        func_001F9988(0x10);
+        spin_wait(0x10);
     }
     *VIF0_FBRST = 0;
     *VIF0_BASE = (unsigned int)prog & 0x0FFFFFFF;
     *VIF0_STAT = 0x145;
     while (*VIF0_STAT & 0x100) {
-        func_001F9988(0x10);
+        spin_wait(0x10);
     }
 }
 
@@ -311,12 +311,12 @@ extern int D_001DE338[];
    the condition backwards: `slti; movz x,$0,t` is `if (idx >= 0x13)
    idx = 0`. Both globals are MACRO_ADDR, which gives the one-register
    load and the $gp store in the jr slot. */
-void VuChain_SetLevelOffset(void) {
+void calculate_dma_transfer_address(void) {
     int idx = D_0015EE84_m;
     if (idx >= 0x13) {
         idx = 0;
     }
-    D_0016100C_m = D_001DE338[idx];
+    D_0016100C_m = vu_chain_table[idx];
 }
 
 /*
@@ -342,11 +342,11 @@ extern int D_0015F698_m __asm__("D_0015F698") MACRO_ADDR;
    load away), which changes how the stores are scheduled: that, not
    any order of the four stores, gives retail's. */
 void VU1_initChain(void) {
-    int base = D_001941C0[1];
+    int base = level_resource_buffers[1];
     int end;
 
     D_00160FF8[0] = base;
-    D_00160FF8[1] = D_001941C0[2];
+    D_00160FF8[1] = level_resource_buffers[2];
     D_00161010 = 0;
     D_00161000 = (int *)base;
     end = (int)D_00161000 + D_0016100C_m - D_0015F698_m;
@@ -381,7 +381,7 @@ void VU1_sendChain(void) {
     int err;
     int *chan;
 
-    *(volatile int *)&D_00160FE0 |= 0x1F;
+    *(volatile int *)&vif_chain_flags |= 0x1F;
     size = (int)D_00161000 - D_00160FF8[D_00161010];
     err = 0;
     if (D_00161014 < size) {
@@ -401,7 +401,7 @@ void VU1_sendChain(void) {
         func_00118D80(0);
         func_001235C8(chan, D_00160FF8[D_00161010]);
     } else {
-        *(volatile int *)&D_00160FE0 = 0;
+        *(volatile int *)&vif_chain_flags = 0;
     }
 }
 
@@ -412,11 +412,11 @@ extern void func_001F2568(void);
 /* VU1_syncChain(int) */
 void VU1_syncChain(int mask) {
     int i = 0;
-    while ((*(int *)&D_00160FE0 & mask) != 0) {
-        func_001F9988(0x400);
+    while ((*(int *)&vif_chain_flags & mask) != 0) {
+        spin_wait(0x400);
         if (i > 100000) {
             STUB_printf(D_001E8D10);
-            ResetVideoPipeline();
+            reset_graphics();
             break;
         }
         i++;
@@ -451,7 +451,7 @@ void write_vif_unpack_packet(int arg0, void *src, int qwc) {
 
 LINKER_REMNANT("asm/remnants/text", func_00234C48);
 
-void Dma_AppendVifCode(int arg0) {
+void vu1_add_vif_code(int arg0) {
     D_00161000[0] = 0x10000000;
     D_00161000[1] = 0;
     D_00161000[2] = 0;
@@ -492,6 +492,10 @@ extern int D_0013E600[];
    same packet VU1_addGSregister (func_00234C98) builds. Each clamp is a
    `cond ? bound : arg` select assigned back to the argument, and the
    fields are sign-extended to 64 bits, not zero-extended. */
+/* VU1_setScissor(x0, x1, y0, y1): clamps the rectangle to the screen
+   (D_0013E600[0]/[1] are its width and height) and queues it as GS
+   register 0x40 (SCISSOR_1: x0 | x1 << 16 | y0 << 32 | y1 << 48) in the
+   same packet VU1_addGSregister (func_00234C98) builds. */
 void VU1_setScissor(int x0, int x1, int y0, int y1) {
     x0 = x0 < 0 ? 0 : x0;
     x1 = x1 > D_0013E600[0] - 1 ? D_0013E600[0] - 1 : x1;
@@ -505,7 +509,7 @@ void VU1_setScissor(int x0, int x1, int y0, int y1) {
     D_00161000[5] = 0x10000000;
     D_00161000[6] = 0xE;
     D_00161000[7] = 0;
-    *(long *)((char *)D_00161000 + 0x20) =
+    *(long *)(D_00161000 + 8) =
         (long)x0 | ((long)x1 << 16) | ((long)y0 << 32) | ((long)y1 << 48);
     D_00161000[10] = 0x40;
     D_00161000[11] = 0;
@@ -521,7 +525,7 @@ extern char D_001DF180[];
 /* VU1_texFlush(void) */
 void VU1_texFlush(void) {
     D_00161000[0] = 0x30000003;
-    D_00161000[1] = (int)D_001DF180;
+    D_00161000[1] = (int)vu1_gs_regs_tex_flush;
     D_00161000[2] = 0;
     D_00161000[3] = 0x50000003;
     D_00161000 += 4;
@@ -540,7 +544,7 @@ void VU1_gsRegsNormal(void) {
 
 extern char D_001DE770[];
 
-void Dma_AppendRefDirect3(void) {
+void vu1_gs_regs_alt(void) {
     D_00161000[0] = 0x30000003;
     D_00161000[1] = (int)D_001DE770;
     D_00161000[2] = 0;
@@ -552,9 +556,9 @@ LINKER_REMNANT("asm/remnants/text", func_00234FA0);
 
 extern char D_0013D010[];
 
-void Dma_AppendRefDirect11(void) {
+void vu1_gs_regs_font(void) {
     D_00161000[0] = 0x3000000B;
-    D_00161000[1] = (int)D_0013D010;
+    D_00161000[1] = (int)draw_environment;
     D_00161000[2] = 0;
     D_00161000[3] = 0x5000000B;
     D_00161000 += 4;
@@ -582,7 +586,7 @@ void DMAC_VIF1_Enable(void) {
         if ((*(volatile int *)0x1000E010 & 0x20000) == 0) {
             *(int *)0x1000E010 = 0x20000;
         }
-        D_00161018 = func_00118AB0(1, (void *)func_00235118, (void *)0);
+        D_00161018 = func_00118AB0(1, (void *)vif1_dma_interrupt_handler, (void *)0);
         D_0016101C = func_00118AB0(0xF, (void *)print_register_values_and_halt, (void *)0);
         func_00119460(1);
     }
@@ -638,7 +642,7 @@ typedef struct {
 } Qword;
 extern Qword *D_00161000_q __asm__("D_00161000") MACRO_ADDR;
 
-void Vif1ChainCmd(int arg0) {
+void append_dma_tag(int arg0) {
     Qword *p = D_00161000_q++;
     p->w[0] = arg0 + 0x90000000;
     p->w[1] = 0;

@@ -26,8 +26,8 @@ int func_L06_0024A0A0(unsigned char *p) {
     int center_x = *(int *)&D_L06_0015F9BC;
     float alpha, scaled_alpha, fill, step, limit;
 
-    ntsc_y = D_0013E604 - 50;
-    y = D_0013E604 - 42;
+    ntsc_y = frame_size - 50;
+    y = frame_size - 42;
     if (!D_0015EE80) y = ntsc_y;
     level = D_0015EE84;
     if (level == 7 || level == 13) segments = 6;
@@ -38,24 +38,24 @@ int func_L06_0024A0A0(unsigned char *p) {
             y = 18;
             if (D_0015EE80 != 0) y = 10;
         }
-        alpha = func_001FA888(p[0x70]) * 0.125f;
+        alpha = IntToFloat(p[0x70]) * 0.125f;
         if (alpha > 1.0f) alpha = 1.0f;
         else if (alpha < 0.0f) alpha = 0.0f;
         remaining = segments - 1;
         scaled_alpha = alpha * 128.0f;
-        i = func_001FA898(scaled_alpha);
-        inner = func_001FA898(scaled_alpha);
+        i = truncate_float_to_s32(scaled_alpha);
+        inner = truncate_float_to_s32(scaled_alpha);
         start_x = center_x - segments * 16;
         x = start_x;
         for (k = 0; k < segments; k++) {
-            func_00200650(func_00200198(0x7562, 3), x, y + 6, 32, 18, i);
+            draw_hud_sprite_flipped(GetIconFrame(0x7562, 3), x, y + 6, 32, 18, i);
             x += 32;
         }
         x = 0;
         color = 0x800000ff;
         if (*(int *)(p + 0x74) != 0) {
-            fill = (float)*(int *)(p + 0x74) / func_001FA888(*(int *)(p + 8));
-            step = 1.0f / func_001FA888(segments);
+            fill = (float)*(int *)(p + 0x74) / IntToFloat(*(int *)(p + 8));
+            step = 1.0f / IntToFloat(segments);
             limit = remaining * step;
             if (limit < fill) {
                 fill -= limit;
@@ -66,11 +66,11 @@ int func_L06_0024A0A0(unsigned char *p) {
                 fill *= *(float *)&D_L06_0015F9C8;
                 fill += step;
             }
-            x = func_001FA898((float)(segments << 5) * fill);
+            x = truncate_float_to_s32((float)(segments << 5) * fill);
             if (0.5f < fill) {
-                color = func_001FA8A8(0x8000ffff, 0x8000ff00, (fill + fill) - 1.0f);
+                color = FastTweenColor(0x8000ffff, 0x8000ff00, (fill + fill) - 1.0f);
             } else {
-                color = func_001FA8A8(0x800000ff, 0x8000ffff, fill + fill);
+                color = FastTweenColor(0x800000ff, 0x8000ffff, fill + fill);
             }
         }
         func_00201640(start_x, y + 8, start_x + x, y + 26, color, 0);
@@ -79,14 +79,14 @@ int func_L06_0024A0A0(unsigned char *p) {
         if (remaining > 0) {
             tile_count = remaining;
             do {
-                func_00200468(func_00200198(0x7562, 1), x, y, 32, 32, inner);
+                HudSprite(GetIconFrame(0x7562, 1), x, y, 32, 32, inner);
                 x += 32;
                 tile_count--;
             } while (tile_count != 0);
         }
-        func_00200468(func_00200198(0x7562, 2), x, y, 32, 32, inner);
-        func_00200468(func_00200198(0x7562, 4), segments, y - 8, 48, 48, i);
-        func_00200468(func_00200198(0x7562, 0), segments, y - 8, 48, 48, i);
+        HudSprite(GetIconFrame(0x7562, 2), x, y, 32, 32, inner);
+        HudSprite(GetIconFrame(0x7562, 4), segments, y - 8, 48, 48, i);
+        HudSprite(GetIconFrame(0x7562, 0), segments, y - 8, 48, 48, i);
     }
     return *(int *)(p + 0x58);
 }

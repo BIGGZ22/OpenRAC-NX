@@ -44,7 +44,7 @@ float CubicInterpolate(float a, float b, float c, float d, float t) {
 extern float func_001FA790(float, float);
 extern float func_001F9F90(float);
 extern float func_001FA748(float, float);
-float CosineEaseAngle(float x, float y, float z) {
+float interpolate_wrapped_angle_cosine_eased(float x, float y, float z) {
     float t = FastSubRots(y, x);
     float c = FastCos(z * 3.1415927f);
     return FastAddRots(x, t * ((1.0f - c) * 0.5f));
@@ -56,7 +56,7 @@ extern void func_001F9BD8(void *, void *, void *);
 
 /* Vector cosine interpolation: dst = a + (b - a) * ((1 - cos(t * pi)) * 0.5).
    Scalar analogue matched at src/game/mobyutil.c:func_00214220. */
-void LerpVectorCosine(void *dst, void *a, void *b, float t) {
+void interpolate_vector_xyz_cosine_eased(void *dst, void *a, void *b, float t) {
     float tmp[4];
     float ease;
 
@@ -73,7 +73,7 @@ void LerpVectorCosine(void *dst, void *a, void *b, float t) {
     FastVecScale(tmp, tmp, ease);
     FastVecAdd(dst, a, tmp);
 }
-void CosineEaseAngleVec(float *out, float *a, float *b, float ang) {
+void interpolate_wrapped_rotations_cosine_eased(float *out, float *a, float *b, float ang) {
     float s = (1.0f - FastCos(ang * 3.1415927f)) * 0.5f;
     out[0] = FastAddRots(a[0], FastSubRots(b[0], a[0]) * s);
     out[1] = FastAddRots(a[1], FastSubRots(b[1], a[1]) * s);
@@ -260,7 +260,7 @@ int MoveKeepingOverGround(void *ign, Vec4 *to, Vec4 *pos, int flags, float h, fl
 extern float func_001F9CB8(void *);
 
 /* Moves a moby position by a vector with ground collision steps; returns hit flags. */
-int MoveMobyWithCollision(char *m, char *v, int flags, float a, float b, float c) {
+int move_4318(char *m, char *v, int flags, float a, float b, float c) {
     Vs t0;
     Vs t1;
     Vs t2;
@@ -372,7 +372,7 @@ extern s32 func_L00_00259B08_59B88(void *, void *, f32, s32, f32, s32) __asm__("
 extern f32 func_00214358_59B88(void *, s32, f32) __asm__("func_00214358");
 
 /* Adapted from Lombyte (GPL-3.0) for PAL by OpenRAC's tools/port.py: src/overlays/shared/math_interpolation_00257ef0.c, FUN_L00_00258b50. */
-s32 MobySteerToward(Obj *m, Ctl *c, void *v, Vec4 *out, f32 f) {
+s32 move_w(Obj *m, Ctl *c, void *v, Vec4 *out, f32 f) {
     Vec4 save;
     Vec4 d;
     Vec4 p;
@@ -492,7 +492,7 @@ int ClassifyTargetInCone(char *m, char *p, float *pos, char *v) {
         }
     }
     if (*(int *)(p + 0x48) != 0) {
-        flags |= MobySteerToward(m, p, pos, v, (*(float *)(p + 0x28) - b) / *(float *)(p + 0x28));
+        flags |= move_w(m, p, pos, v, (*(float *)(p + 0x28) - b) / *(float *)(p + 0x28));
         if (0.1f < b) {
             flags &= ~2;
         }
@@ -774,12 +774,12 @@ void PostHitMessage(char *m, float t, int a, int b, void *pos, void *vel) {
     int i = D_L00_00173F40[5];
     E *e;
     if (*(unsigned char *)(m + 0xA4) != 0xFF) {
-        E *p = D_L00_00178200 + *(unsigned char *)(m + 0xA4);
+        E *p = moby_hits + *(unsigned char *)(m + 0xA4);
         if (p->owner == m && t < p->t) {
             return;
         }
     }
-    e = &D_L00_00178200[i];
+    e = &moby_hits[i];
     e->a = a;
     e->b = b;
     e->t = t;
@@ -790,8 +790,8 @@ void PostHitMessage(char *m, float t, int a, int b, void *pos, void *vel) {
     } else {
         e->on = 0;
     }
-    qcopy(&D_L00_00178200[i], pos);
-    qcopy(D_L00_00178200[i].vel, vel);
+    qcopy(&moby_hits[i], pos);
+    qcopy(moby_hits[i].vel, vel);
     *(unsigned char *)(m + 0xA4) = i;
     D_L00_00173F40[5] = (i + 1) & 0x3F;
 }
@@ -799,13 +799,13 @@ extern char D_L00_0015F660[] MACRO_ADDR;
 extern void func_L00_0025AC00_5AD38(unsigned char *, int, int, void *, void *, float) __asm__("func_L00_0025AC00");
 
 /* Adapted from Lombyte (GPL-3.0) for PAL by OpenRAC's tools/port.py: src/overlays/shared/gameplay_entities_0024c7f0.c, FUN_L10_0024c7f0. */
-void PostHitMessageAtPoint(unsigned char *m, int x, int y, void *p, float f) {
+void spawn_nearby_effect_without_direction(unsigned char *m, int x, int y, void *p, float f) {
     func_L00_0025AC00_5AD38(m, x, y, p, D_L00_0015F660, f);
 }
 extern void func_001F9BF0(void *, void *, void *);
 
 /* steps two interpolated points from a0/a1 toward a2/a3 and reports whether any step hits */
-int SweepSegmentCheck(void *a, void *b, void *c, void *d, int e, int f, int n) {
+int sweep_hit_segment(void *a, void *b, void *c, void *d, int e, int f, int n) {
     float da[4];
     float db[4];
     float p[4];
@@ -834,9 +834,9 @@ typedef struct { int a[4]; } Vk __attribute__((aligned(16)));
 extern void func_L00_001FFED8(void *, int, float);
 void BuildEulerMatrix(void *a, float *v) {
     Vk t0, t1, t2;
-    func_L00_001FFED8(&t2, 0, v[0]);
-    func_L00_001FFED8(&t1, 1, v[1]);
-    func_L00_001FFED8(&t0, 2, v[2]);
+    axis_rotation_2d48(&t2, 0, v[0]);
+    axis_rotation_2d48(&t1, 1, v[1]);
+    axis_rotation_2d48(&t0, 2, v[2]);
     func_001FA588(a, &t2, &t1);
     func_001FA588(a, a, &t0);
 }
@@ -848,7 +848,7 @@ extern struct Ent D_L00_0016E180[];
 extern float D_L00_00173F80[];
 
 /* Records a shadow-like entry for the moby at its ground height, scaled by arg. Adapted from Lombyte (GPL-3.0) for PAL: overlays/shared/gameplay_entities_00259710.c, FUN_L00_00259fe8. */
-void RecordMobyShadow(unsigned char *m, float s) {
+void jet_animate(unsigned char *m, float s) {
     float h;
     float v;
     int n;
@@ -861,7 +861,7 @@ void RecordMobyShadow(unsigned char *m, float s) {
             n = D_L00_0015F534;
             e = &D_L00_0016E180[n];
             e->a[2] = h + 0.025f;
-            qcopy(D_L00_0016E180[n].b, D_L00_00173F80);
+            qcopy(D_L00_0016E180[n].b, coll_hit_normal);
             v = (8.0f - FastAbsF(*(float *)(m + 0x18) - h)) * 0.125f;
             if (v < 0.25f) {
                 v = 0.25f;
@@ -872,7 +872,7 @@ void RecordMobyShadow(unsigned char *m, float s) {
     }
 }
 LINKER_REMNANT("asm/overlays", func_L00_0025B168);
-void SetGroundHeightBand(char *o) {
+void func_L00_0025B178(char *o) {
     float a[4];
     float b[4];
     void *p = o + 0x10;
@@ -942,6 +942,7 @@ extern short D_L00_00160140;
 extern float D_L00_001B0548[][8];
 extern unsigned char D_L00_001B0500[][4];
 extern Q_25a478 *func_L00_0025D390_q(void *) __asm__("func_L00_0025D390");
+extern Q_25a478 *func_00215078_q(void *) __asm__("func_00215078");
 extern int func_001F9938(void *);
 extern void func_L00_001FF500(float *, float *, float);
 
@@ -1083,10 +1084,10 @@ int ComputeHitResponse(O_25a478 *obj, P_25a478 *p, Q_25a478 *q, unsigned int fla
     q->h16 = kind;
     if (fp) *fp = p->f2C;
     if (r == 4) {
-        o = func_L00_0025D390_q(obj);
+        o = func_00215078_q(obj);
         if (o) o->b2E = 1;
     } else {
-        Q_25a478 *o2 = func_L00_0025D390_q(obj);
+        Q_25a478 *o2 = func_00215078_q(obj);
         if (o2) o2->b2E = 0;
     }
     return res;
@@ -1152,7 +1153,7 @@ typedef struct { float x, y, z, w; } Vc0 __attribute__((aligned(16)));
 extern void func_001F9BF0(void *, void *, void *);
 extern float func_001F9CE8(void *);
 
-float ComputeLaunchVelocityZ(float *a, float *b, float *out, float speed, float g) {
+float jump_speed_4318(float *a, float *b, float *out, float speed, float g) {
     Vc0 d;
     float t;
     FastVecSub(&d, b, a);
@@ -1165,68 +1166,307 @@ float ComputeLaunchVelocityZ(float *a, float *b, float *out, float speed, float 
     }
     return -((a[2] - b[2]) + g * (t * t) * 0.5f) / t;
 }
-INCLUDE_ASM("asm/overlays", func_L00_0025BCF8);
+typedef union {
+    VecQuad q;
+    float f[4];
+} Vec4_BCF8 __attribute__((aligned(16)));
+extern void f_54218_BCF8(void *, int, int) __asm__("func_L00_00254218");
+extern void f_vadd_BCF8(void *, void *, void *) __asm__("func_001F9BD8");
+extern void f_vsub_BCF8(void *, void *, void *) __asm__("func_001F9BF0");
+extern void f_vscale_BCF8(float, void *, void *) __asm__("func_001F9C30");
+extern void f_vscale3_BCF8(float, void *, void *) __asm__("func_001F9C48");
+extern void f_25328_BCF8(float, void *, void *) __asm__("func_00125328");
+extern float f_vlen_BCF8(void *) __asm__("func_001F9CB8");
+extern float f_sqrt_BCF8(float) __asm__("func_001F9B50");
+extern void f_vrot_BCF8(void *, void *, void *) __asm__("func_001F9EC0");
+extern void f_FF328_BCF8(float, void *, void *) __asm__("func_L00_001FF328");
+extern float f_cos_BCF8(float) __asm__("func_001F9F90");
+extern float f_sin_BCF8(float) __asm__("func_001F9FA8");
+extern float f_randf_BCF8(float, float) __asm__("func_002140F8");
+extern float f_randang_BCF8(void) __asm__("func_00214158");
+
+/* Scatters up to MAXIMUM points over the volumes listed in the moby class's
+   shape table (spheres, discs, capsules), picked by volume weight; returns how
+   many it wrote. Adapted from Lombyte (GPL-3.0), FUN_L00_0025aca0; the sphere case
+   transforms its point inside the retry loop, where Lombyte has a do-while (0). */
+int func_L00_0025BCF8_r(float density, unsigned char *entity, int maximum, Vec4_BCF8 *out, int mask) __asm__("func_L00_0025BCF8");
+int func_L00_0025BCF8_r(float density, unsigned char *entity, int maximum, Vec4_BCF8 *out, int mask) {
+    enum {
+        SHAPE_INDEXED_CENTER_SPHERE = 2,
+        SHAPE_ENDPOINT_SEGMENT_WITH_BALL_OFFSET = 4
+    };
+    enum {
+        SHAPE_XY_DISK_WITH_Z_EXTENT = 3
+    };
+    float weights[20];
+    unsigned char *entries[20];
+    Vec4_BCF8 first, second, third, fourth, fifth;
+    unsigned char *list;
+    unsigned char *entry;
+    int count, index, chosen, emitted, limit;
+    unsigned int flags;
+    unsigned int last;
+    float total, weight, radius, extent, random;
+    int type;
+
+    {
+        unsigned char *entry;
+        entry = *(unsigned char **)(*(unsigned char **)(entity + 0x24) + 0x10);
+        if (!entry) return 0;
+        if (*(short *)(entry + 2)) f_54218_BCF8(entity, *(short *)(entry + 2), 0);
+        if (*(int *)(entry + 4) <= 0) return 0;
+        count = 0;
+        index = 0;
+        total = 0.0f;
+        entry += 0x10;
+        {
+            unsigned char *list;
+            list = entry + 4;
+            do {
+                float radius, extent;
+                int type;
+                unsigned int active;
+                flags = *(unsigned int *)(list - 4);
+                last = flags >> 31;
+                type = flags & 0xff;
+                active = flags & 0x20000;
+                if (!(((mask >> index) ^ 1) & 1) && active) {
+                    entries[count] = entry;
+                    switch (type) {
+                    case 0:
+                    case 1:
+                    case SHAPE_INDEXED_CENTER_SPHERE: {
+                        if (type < 2) {
+                            qcopy(&first, (void *)((entry + 0x10)));
+                            f_vscale3_BCF8(*(float *)(entity + 0x2c) * 0.0009765625f, &first, &first);
+                            radius = first.f[3];
+                        } else {
+                            qcopy(&first, (void *)((0x70000000 + (*(int *)list << 4))));
+                            qcopy(&second, (void *)((entry + 0x10)));
+                            f_vadd_BCF8(&first, &first, &second);
+                            f_vscale_BCF8(*(float *)(entity + 0x2c) * 0.0009765625f, &first, &first);
+                            radius = *(float *)(entity + 0x2c);
+                            radius = *(float *)(list + 8) * radius * 0.0009765625f;
+                        }
+                        weights[count] = radius * 4.1887903f * radius * radius;
+                        break;
+                    }
+                    case SHAPE_XY_DISK_WITH_Z_EXTENT: {
+                        float radius, extent;
+                        qcopy(&first, (void *)((entry + 0x10)));
+                        f_vscale_BCF8(*(float *)(entity + 0x2c), &first, &first);
+                        radius = first.f[3] * *(float *)(entity + 0x2c);
+                        radius *= 0.0009765625f;
+                        extent = *(float *)list * (*(float *)(entity + 0x2c) * 0.0009765625f);
+                          weights[count] = radius * 4.187743f * radius * radius + radius * 1.5707964f * radius * extent;
+                        break;
+                    }
+                    case SHAPE_ENDPOINT_SEGMENT_WITH_BALL_OFFSET: {
+                        f_25328_BCF8(*(float *)(entity + 0x2c) * 0.0009765625f, &first, (void *)(0x70000000 + (*(short *)list << 4)));
+                        f_25328_BCF8(*(float *)(entity + 0x2c) * 0.0009765625f, &second, (void *)(0x70000000 + (*(short *)(list + 2) << 4)));
+                        f_vsub_BCF8(&third, &first, &second);
+                        radius = f_vlen_BCF8(&third);
+                        extent = *(float *)(list + 8) * *(float *)(entity + 0x2c) * 0.0009765625f;
+                          weights[count] = extent * 1.5707964f * extent * radius;
+                        break;
+                    }
+                    }
+                    total += weights[count];
+                    count++;
+                }
+                index++;
+                list += 0x20;
+                entry += 0x20;
+            } while (!last);
+        }
+    }
+    limit = (int)(density * total + 0.5f);
+    if (maximum < limit) limit = maximum;
+    for (emitted = 0; emitted < limit; emitted++) {
+        random = f_randf_BCF8(0.0f, total);
+        for (chosen = 0; chosen < count; chosen++) {
+            if (random < weights[chosen]) break;
+            random -= weights[chosen];
+        }
+        entry = entries[chosen];
+        switch (type = *entry) {
+        case 0:
+        case 1:
+        case SHAPE_INDEXED_CENTER_SPHERE: {
+            float radius, extent;
+            if (type < 2) {
+                qcopy(&first, (void *)((entry + 0x10)));
+                f_vscale_BCF8(*(float *)(entity + 0x2c), &first, &first);
+                extent = first.f[3] * *(float *)(entity + 0x2c);
+            } else {
+                qcopy(&first, (void *)((0x70000000 + (*(int *)(entry + 4) << 4))));
+                qcopy(&second, (void *)((entry + 0x10)));
+                f_vadd_BCF8(&first, &first, &second);
+                f_vscale_BCF8(*(float *)(entity + 0x2c), &first, &first);
+                extent = *(float *)(entry + 0xc) * *(float *)(entity + 0x2c);
+            }
+            extent *= 0.0009765625f;
+            f_FF328_BCF8(1024.0f, &first, &first);
+            for (;;) {
+                second.f[0] = f_randf_BCF8(-extent, extent);
+                second.f[1] = f_randf_BCF8(-extent, extent);
+                second.f[2] = f_randf_BCF8(-extent, extent);
+                if (f_vlen_BCF8(&second) <= extent) {
+                    f_vadd_BCF8(&second, &second, &first);
+                    f_vrot_BCF8(&second, &second, entity + 0xc0);
+                    f_vadd_BCF8(&out[emitted], &second, entity + 0x10);
+                    break;
+                }
+            }
+            break;
+        }
+        case SHAPE_XY_DISK_WITH_Z_EXTENT: {
+            float radius, extent, weight, random, angle;
+            qcopy(&first, (void *)((entry + 0x10)));
+            f_vscale_BCF8(*(float *)(entity + 0x2c), &first, &first);
+            radius = first.f[3] * *(float *)(entity + 0x2c);
+            extent = *(float *)(entry + 4) * *(float *)(entity + 0x2c);
+            f_FF328_BCF8(1024.0f, &first, &first);
+            radius *= 0.0009765625f;
+            extent *= 0.0009765625f;
+            weight = f_randf_BCF8(0.0f, radius * radius);
+            weight = f_sqrt_BCF8(weight);
+            random = f_randf_BCF8(0.0f, extent);
+            angle = f_randang_BCF8();
+            second.f[0] = f_cos_BCF8(angle) * weight;
+            second.f[1] = f_sin_BCF8(angle) * weight;
+            second.f[2] = random;
+            f_vadd_BCF8(&second, &second, entity + 0x10);
+            f_vadd_BCF8(&out[emitted], &first, &second);
+            break;
+        }
+        case SHAPE_ENDPOINT_SEGMENT_WITH_BALL_OFFSET: {
+            float extent, weight;
+            list = entry + 4;
+            f_25328_BCF8(*(float *)(entity + 0x2c), &first, (void *)(0x70000000 + (*(short *)list << 4)));
+            f_25328_BCF8(*(float *)(entity + 0x2c), &second, (void *)(0x70000000 + (*(short *)(list + 2) << 4)));
+            f_vsub_BCF8(&third, &second, &first);
+            weight = f_randf_BCF8(0.0f, 1.0f);
+            f_vscale_BCF8(weight, &third, &third);
+            f_vadd_BCF8(&fourth, &third, &first);
+            f_FF328_BCF8(1024.0f, &fourth, &fourth);
+            extent = *(float *)(entry + 0xc) * *(float *)(entity + 0x2c);
+            extent = extent * 0.0009765625f;
+            do {
+                fifth.f[0] = f_randf_BCF8(-extent, extent);
+                fifth.f[1] = f_randf_BCF8(-extent, extent);
+                fifth.f[2] = f_randf_BCF8(-extent, extent);
+            } while (!(f_vlen_BCF8(&fifth) <= extent));
+            f_vadd_BCF8(&fifth, &fifth, &fourth);
+            f_vrot_BCF8(&fifth, &fifth, entity + 0xc0);
+            f_vadd_BCF8(&out[emitted], &fifth, entity + 0x10);
+            break;
+        }
+        }
+    }
+    return limit;
+}
 LINKER_REMNANT("asm/overlays", func_L00_0025C488);
 extern float func_0020D830(char *);
 extern void func_00213DE0(void *, int, int, int);
 extern float func_001F9878(float);
 extern float func_00214358_f(void *, int, float) __asm__("func_00214358");
 
+typedef struct O_25b440 {
+    u8 pad00[0x10];
+    Vec4 pos;                  /* 0x10: pos.f[2] is z at 0x18 */
+    u8 pad20[0x32];
+    u8 b52;                    /* 0x52 */
+    u8 pad53[0x1D];
+    u8 b70;                    /* 0x70 */
+} O_25b440;
+
+typedef struct S_25b440 {
+    u8 pad00[0x8];
+    f32 f8;                    /* 0x08 */
+    u8 pad0C[0x4];
+    f32 f10;                   /* 0x10 */
+    f32 f14;                   /* 0x14 */
+    f32 f18;                   /* 0x18 */
+    f32 f1C;                   /* 0x1C */
+    u8 pad20[0x4];
+    f32 f24;                   /* 0x24 */
+    f32 f28;                   /* 0x28 */
+    u8 b2C;                    /* 0x2C */
+    u8 b2D;                    /* 0x2D */
+    u8 b2E;                    /* 0x2E */
+    u8 state;                  /* 0x2F */
+    f32 f30;                   /* 0x30 */
+    f32 f34;                   /* 0x34 */
+    f32 f38;                   /* 0x38 */
+    f32 f3C;                   /* 0x3C */
+} S_25b440;
+
 /* Steps a thrown object through its motion states (0 wait, 1 rise, 2 fall, 3 settle) and returns the new state. */
-int ThrownObjectStep(char *m, char *p) {
-    float tmp[3];
-    float f0, f1, v;
+int update_arc_motion(char *m, char *p) {
+    enum {
+        CHECK_ARC_ENTRY_GATES = 0,
+        INTEGRATE_ARC_MOTION = 1,
+        DESCEND_TO_GROUND = 2,
+        WAIT_AFTER_GROUND_CLAMP = 3
+    };
+    O_25b440 *moving_object = (O_25b440 *)m;
+    S_25b440 *arc_motion_state = (S_25b440 *)p;
+    float motion_displacement[4];
+    float prediction_time;
+    float ground_height;
+    float v;
     float *vec;
 
-    switch (*(unsigned char *)(p + 0x2F)) {
-    case 0:
-        if (*(unsigned char *)(m + 0x52) != *(unsigned char *)(p + 0x2C)) {
+    switch (arc_motion_state->state) {
+    case CHECK_ARC_ENTRY_GATES:
+        if (moving_object->b52 != arc_motion_state->b2C) {
             break;
         }
-        if (MobyGetFrameValue(m) <= *(float *)(p + 0x24)) {
+        if (MobyGetFrameValue(moving_object) <= arc_motion_state->f24) {
             break;
         }
-        if (*(unsigned char *)(m + 0x70) & 2) {
-            MobyBlendAnimation(m, *(unsigned char *)(p + 0x2D), 0, 10);
-            *(unsigned char *)(p + 0x2F) = 1;
+        if (moving_object->b70 & 2) {
+            MobyBlendAnimation(moving_object, arc_motion_state->b2D, 0, 10);
+            arc_motion_state->state = INTEGRATE_ARC_MOTION;
         }
-    case 1:
-        MobySpringTurn(m, p + 0x30, *(float *)(p + 0x18), *(float *)(p + 0x34), *(float *)(p + 0x38), *(float *)(p + 0x3C));
-        tmp[0] = FastCos(*(float *)(p + 0x18)) * *(float *)(p + 0x14);
-        tmp[1] = FastSin(*(float *)(p + 0x18)) * *(float *)(p + 0x14);
-        tmp[2] = *(float *)(p + 0x10);
-        FastVecAdd(m + 0x10, m + 0x10, tmp);
-        v = *(float *)(p + 0x10) - *(float *)(p + 0x1C);
-        *(float *)(p + 0x10) = v;
+    case INTEGRATE_ARC_MOTION:
+        MobySpringTurn(moving_object, &arc_motion_state->f30, arc_motion_state->f18, arc_motion_state->f34, arc_motion_state->f38, arc_motion_state->f3C);
+        motion_displacement[0] = FastCos(arc_motion_state->f18) * arc_motion_state->f14;
+        motion_displacement[1] = FastSin(arc_motion_state->f18) * arc_motion_state->f14;
+        motion_displacement[2] = arc_motion_state->f10;
+        FastVecAdd(moving_object->pos.f, moving_object->pos.f, motion_displacement);
+        v = arc_motion_state->f10 - arc_motion_state->f1C;
+        arc_motion_state->f10 = v;
         if (v < 0.0f) {
-            f0 = func_001F9878(*(float *)(p + 0x28) + *(float *)(p + 0x28) + 10.0f);
-            if (*(float *)(m + 0x18) <= *(float *)(p + 8) - (*(float *)(p + 0x10) * f0 - *(float *)(p + 0x1C) * 0.5f * f0 * f0)) {
-                MobyBlendAnimation(m, *(unsigned char *)(p + 0x2E), 0, 10);
-                *(unsigned char *)(p + 0x2F) = 2;
+            prediction_time = func_001F9878(arc_motion_state->f28 + arc_motion_state->f28 + 10.0f);
+            if (moving_object->pos.f[2] <= arc_motion_state->f8 - (arc_motion_state->f10 * prediction_time - arc_motion_state->f1C * 0.5f * prediction_time * prediction_time)) {
+                MobyBlendAnimation(moving_object, arc_motion_state->b2E, 0, 10);
+                arc_motion_state->state = DESCEND_TO_GROUND;
             }
         }
         break;
-    case 2:
-        vec = (float *)(m + 0x10);
-        *(float *)(m + 0x18) += *(float *)(p + 0x10);
-        *(float *)(p + 0x10) = *(float *)(p + 0x10) - *(float *)(p + 0x1C);
-        f1 = func_00214358_f(vec, 0, 0.5f);
-        if (*(float *)(m + 0x18) <= f1) {
-            *(float *)(m + 0x18) = f1;
-            *(unsigned char *)(p + 0x2F) = 3;
+    case DESCEND_TO_GROUND:
+        vec = moving_object->pos.f;
+        moving_object->pos.f[2] += arc_motion_state->f10;
+        arc_motion_state->f10 = arc_motion_state->f10 - arc_motion_state->f1C;
+        ground_height = func_00214358_f(vec, 0, 0.5f);
+        if (moving_object->pos.f[2] <= ground_height) {
+            moving_object->pos.f[2] = ground_height;
+            arc_motion_state->state = WAIT_AFTER_GROUND_CLAMP;
         } else {
-            tmp[0] = FastCos(*(float *)(p + 0x18)) * *(float *)(p + 0x14);
-            tmp[1] = FastSin(*(float *)(p + 0x18)) * *(float *)(p + 0x14);
-            tmp[2] = 0.0f;
-            FastVecAdd(vec, vec, tmp);
+            motion_displacement[0] = FastCos(arc_motion_state->f18) * arc_motion_state->f14;
+            motion_displacement[1] = FastSin(arc_motion_state->f18) * arc_motion_state->f14;
+            motion_displacement[2] = 0.0f;
+            FastVecAdd(vec, vec, motion_displacement);
         }
-    case 3:
-        if (*(unsigned char *)(m + 0x70) & 2) {
-            *(unsigned char *)(p + 0x2F) = 4;
+    case WAIT_AFTER_GROUND_CLAMP:
+        if (moving_object->b70 & 2) {
+            arc_motion_state->state = 4;
         }
         break;
     }
-    return *(unsigned char *)(p + 0x2F);
+    return arc_motion_state->state;
 }
 // Linear interpolation from a to b by t.
 float Lerp(float a, float b, float t) {
@@ -1400,7 +1640,7 @@ typedef struct { int a[4]; } Vq __attribute__((aligned(16)));
 extern void func_L00_001FF4B0(void *, void *, float);
 extern float func_001F9C78(void *, void *);
 extern void func_001F9BF0(void *dst, void *a, void *b);
-void ReflectVelocity(void *a, void *b, void *c, float s) {
+void subtract_homogeneous_scaled_vector_xyz(void *a, void *b, void *c, float s) {
     Vq t0, t1;
     func_L00_001FF4B0(&t1, c, 1.0f);
     FastVecScale(&t0, &t1, FastVecDot(&t1, b) * s);
@@ -1417,7 +1657,6 @@ int GetFlaggedPvarWord(char *m) {
     return *(int *)(*(char **)(m + 0x78));
 }
 INCLUDE_ASM("asm/overlays", func_L00_0025D3A0);
-INCLUDE_ASM("asm/overlays", func_L00_0025D3D0);
 extern int func_L00_0025BCF8(void *, int, void *, void *, float);
 extern void func_00215C00(void *, float, float, float);
 extern int func_L00_00258BC8(int, int);
@@ -1480,7 +1719,7 @@ void InitKnockback(float ang, char *o, float *s, int a, int b, int c) {
         *(int *)(o + 0x94) = 0;
     }
     if (*(int *)((char *)s + 0x24) & 2) {
-        MobyBlendAnimationEx(o, a, c, b, 1);
+        blend_moby_animation_ex(o, a, c, b, 1);
     } else {
         MobyBlendAnimation(o, a, c, b);
     }
@@ -1491,7 +1730,7 @@ extern int func_L00_001F2BE8_d6f0(float, void *, int, void *, void *) __asm__("f
 extern char *func_L00_002D9340(void *, float);
 
 /* Steps moby MOBY's motion from state ST and returns the flag bits it set. */
-int StepMobyPhysics(char *moby, char *st) {
+int mine_fall(char *moby, char *st) {
     float v0[4];
     float v10[4];
     float v20[4];
@@ -1730,7 +1969,7 @@ void RerollEffectCounter(void *m, short *p) {
         if (p[0] <= 0) p[0] = 1;
     } else {
         int c0, c1, c2;
-        func_L00_00251358(m, &c0, &c1, &c2);
+        get_moby_color(m, &c0, &c1, &c2);
         *((unsigned char *)p + 4) = (unsigned char)c0;
         *((unsigned char *)p + 5) = (unsigned char)c1;
         *((unsigned char *)p + 6) = (unsigned char)c2;
@@ -1790,7 +2029,7 @@ void StepColorFade(void *a, unsigned char *s) {
     func_L00_00251328(a, cr, cg, cb);
 }
 // Advances an index with wrapping or directional clamping.
-int StepTableIndex(int *limit, int index, int delta, int wrap) {
+int offset_path_index(int *limit, int index, int delta, int wrap) {
  if (wrap) index = (index + delta + *limit) % *limit;
  else {
   index += delta;
@@ -1933,7 +2172,7 @@ extern void func_L00_0025C710(void *, void *, void *, float);
 extern float func_L00_0025EAC8_f(void *, void *, float) __asm__("func_L00_0025EAC8");
 
 /* Nearest point on the segment a-b to p (clamped), returned with the distance result. Adapted from Lombyte (GPL-3.0) for PAL: overlays/shared/math_rotations_0025d238.c, FUN_L00_0025dcd8. */
-float NearestPointOnSegment(u128_ED30 *out, u128_ED30 *p, u128_ED30 *a, u128_ED30 *b, float r) {
+float resolve_level_path_segment_point(u128_ED30 *out, u128_ED30 *p, u128_ED30 *a, u128_ED30 *b, float r) {
     u128_ED30 d[2];
     u128_ED30 c[1];
     u128_ED30 e[1];
@@ -2033,7 +2272,7 @@ s32 func_L00_0025EFC0(s32 *path, OvlQuad *point, OvlQuad *nearest,
     current_fraction = best_fraction;
     end = best_segment;
     func_L00_0025E860_5EFC0(path, &work[0], &end, &current_fraction, step, wrap);
-    end = StepTableIndex(path, end, 1, wrap);
+    end = offset_path_index(path, end, 1, wrap);
     current = start;
     distance = 1000000000.0f;
     do {
@@ -2055,7 +2294,7 @@ s32 func_L00_0025EFC0(s32 *path, OvlQuad *point, OvlQuad *nearest,
         count = *path;
         previous = count - 1;
         previous = (best_segment + previous) % count;
-        distance = NearestPointOnSegment(nearest, point,
+        distance = resolve_level_path_segment_point(nearest, point,
             (OvlQuad *)(path + 4 + previous * 4),
             (OvlQuad *)(path + 4 + best_segment * 4), height_tolerance);
         *segment = previous;
@@ -2067,7 +2306,7 @@ s32 func_L00_0025EFC0(s32 *path, OvlQuad *point, OvlQuad *nearest,
     }
     count = *path;
     if (best_segment < count - 1 || wrap) {
-        next_distance = NearestPointOnSegment(&work[1], point,
+        next_distance = resolve_level_path_segment_point(&work[1], point,
             (OvlQuad *)(path + 4 + best_segment * 4),
             (OvlQuad *)(path + 4 + ((best_segment + 1) % count) * 4),
             height_tolerance);
@@ -2085,7 +2324,7 @@ LINKER_REMNANT("asm/overlays", func_L00_0025F360);
 extern f32 func_L00_002001D8(void *, f32);
 
 /* Adapted from Lombyte (GPL-3.0) for PAL by OpenRAC's tools/port.py: src/overlays/shared/math_rotations_0025d238.c, FUN_L00_0025e310. */
-f32 WrapAngle(f32 a) {
+f32 normalize_angle(f32 a) {
     f32 out;
     f32 x;
     f32 pi = 3.14159274f;
@@ -2093,7 +2332,7 @@ f32 WrapAngle(f32 a) {
 
     x = a + pi;
     x /= tp;
-    x = func_L00_002001D8(&out, x);
+    x = split_float_fraction(&out, x);
     x *= tp;
     return x - pi;
 }
@@ -2428,7 +2667,7 @@ void SpawnExplosionFx(char *a, char *b, int snd, float sc, float fl) {
             D_L00_001B0670[10] = 13.0f;
             D_L00_001B0670[8] = 13.0f;
         }
-        Moby639Spawn(D_L00_001B0670, b, 0, 0);
+        mine_camera_blast(D_L00_001B0670, b, 0, 0);
     }
 }
 typedef struct { float x, y, z, w; } Vy10 __attribute__((aligned(16)));
@@ -2479,7 +2718,7 @@ void SpawnExplosionFxSwapped(char *a, char *b, float sc, float fl) {
             D_L00_001B0670[10] = 13.0f;
             D_L00_001B0670[8] = 13.0f;
         }
-        Moby639Spawn(D_L00_001B0670, b, 0, 0);
+        mine_camera_blast(D_L00_001B0670, b, 0, 0);
     }
 }
 extern float func_001F9CB8(void *);
@@ -2505,7 +2744,7 @@ void MobyList_AddUnique(int a, short *list, short max) {
 extern s32 D_L00_00160098 MACRO_ADDR;
 
 /* Adapted from Lombyte (GPL-3.0) for PAL by OpenRAC's tools/port.py: src/overlays/shared/math/rotations/0025d238.c, FUN_L00_0025f800. */
-void MobyList_Remove(s32 p, s16 *a) {
+void mine_spawn_drops(s32 p, s16 *a) {
     s32 i;
     for (i = 1; i <= a[0]; i++) {
         if (D_L00_00160098 + (a[i] << 8) == p) {
@@ -2787,7 +3026,7 @@ int RotateWithMoby(int unused, char *m, char *a, void *b, char *c, void *d) {
     FastVecAdd(c, c, p);
     func_001FA218(t1, b);
     sce_vu0_mul_matrix(t1, t0, t1);
-    MatrixToEuler(t1, d);
+    matrix_to_euler(t1, d);
     return 1;
 }
 extern void func_001FA460(void *, void *);
@@ -2795,7 +3034,7 @@ extern int func_L00_002616E0(int x, char *o, float *a, float *c, float *b, float
 extern void func_L00_002607A8(void *a, float x);
 
 /* Transform a point into a moby's local frame, handling its collision flag. */
-int TransformToMobyLocal(int x, char *o, float *p, float *q, float *r, float *s) {
+int transform_attachment_pose(int x, char *o, float *p, float *q, float *r, float *s) {
     float m0[16] __attribute__((aligned(16)));
     float m1[16] __attribute__((aligned(16)));
     float v[4] __attribute__((aligned(16)));
@@ -2806,7 +3045,7 @@ int TransformToMobyLocal(int x, char *o, float *p, float *q, float *r, float *s)
     func_001FA218(m1, q);
     func_001FA460(m0, o + 0xC0);
     sce_vu0_mul_matrix(m1, m0, m1);
-    MatrixToEuler(m1, s);
+    matrix_to_euler(m1, s);
     if (*(int *)(e + 0x3C) & 4) {
         FastVecAdd(r, r, e + 0x10);
         RotateIntoMobySpace(x, o, r, s, p, q);
@@ -2834,18 +3073,18 @@ int RotateIntoMobySpace(int x, char *o, float *a, float *c, float *b, float *d) 
     func_001F9EE8(b, v, m);
     func_001FA218(w, c);
     sce_vu0_mul_matrix(w, m, w);
-    MatrixToEuler(w, d);
+    matrix_to_euler(w, d);
     return 1;
 }
 typedef struct { int a[16]; } Mx __attribute__((aligned(16)));
 typedef struct { int a[4]; } Vx __attribute__((aligned(16)));
-void CarryRiders(char *a, Vx *b, void *c, void *d) {
+void update_entity_matrix(char *a, Vx *b, void *c, void *d) {
     Mx t0, t1, t2;
     func_001FA218(&t0, c);
     func_001FA4A0(&t0, &t0);
     func_001FA218(&t1, d);
     sce_vu0_mul_matrix(&t2, &t0, &t1);
-    MatrixToEuler(&t2, a);
+    matrix_to_euler(&t2, a);
     qcopy(a + 0x10, b);
 }
 /* From Lombyte (GPL-3.0), FUN_L00_002607d0 (PR #66), adapted to PAL. */
@@ -2854,7 +3093,7 @@ extern int D_0013D618[];
 extern int D_0015EE84 MACRO_ADDR;
 extern void func_L00_00263DB0(int);
 
-void UnlockPlanet(int id) {
+void unlock_planet(int id) {
     int n = 0;
     int i;
     if (D_0013DE48[id] == 0) {
@@ -2883,7 +3122,7 @@ extern void func_L00_00264DB8(int arg0, int arg1);
 /* Gives item ID to the player: plays its sound, raises its count and records it in the slot lists. */
 void GiveItem(int id, int flag) {
     unsigned char *pa = &D_0013D5C8[id];
-    unsigned char *pb = &D_0013D5F0[id];
+    unsigned char *pb = &items_acquired[id];
     int idx = id + 0x25;
     int *p;
     int i;
@@ -2902,7 +3141,7 @@ void GiveItem(int id, int flag) {
         r = &D_L00_001C43B0[id];
         *pb = 1;
         if (r->a != 0) {
-            int *q = &D_0013D530[id];
+            int *q = &weapon_ammo_counts[id];
             int v = r->b;
             if (v < *q) {
                 v = *q;
@@ -2933,10 +3172,10 @@ void GiveItem(int id, int flag) {
             }
         }
         if (D_L00_00179BC0[id].t == 0) {
-            for (i = 0; i < 8 && D_00141FA0[i] != 0; i++) {
+            for (i = 0; i < 8 && pause_iop_sprite_lists[i] != 0; i++) {
             }
             if (i < 8) {
-                D_00141FA0[i] = id;
+                pause_iop_sprite_lists[i] = id;
             }
         }
     }

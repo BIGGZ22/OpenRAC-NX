@@ -12,7 +12,8 @@ Vulkan's is the comment at the top of [vkgl.h](vkgl.h).
 
 - [vkgl.h](vkgl.h): `openrac::vkgl`, the backend as the window and the frontend see it: `open` and
   `close`, `get_proc` (the GL functions by name, for `renderer/gl.h`'s table), `present`, the swap
-  interval, the GPU-driven instance calls and the counters the debug tools read.
+  interval, the GPU-driven instance calls, the presents' timing (`present_timing`,
+  `wait_for_present`) and the counters the debug tools read.
 - [shader_compiler.h](shader_compiler.h): GLSL made into SPIR-V with glslang, with what an OpenGL
   program would answer about its uniforms and blocks.
 
@@ -32,6 +33,7 @@ The rest is the backend's own, which nothing outside this directory includes:
 | [vkgl_present.cpp](vkgl_present.cpp) | The default framebuffer, the swapchain and its present mode, moving on to the next frame, presenting (the picture's waiting copy composed straight into the screen under `present-single-copy`) |
 | [vkgl_device.cpp](vkgl_device.cpp) | The instance and the validation layer, the physical and logical device, the pipeline cache on disk, the frames' objects, the dummy resources, the surface, and teardown |
 | [cache_file.h](cache_file.h), [.cpp](cache_file.cpp) | The envelope of the backend's cache files: a magic, the data's length and hash, read back only when whole, saved through a temporary file of each save's own and renamed into place |
+| [spirv_cache_file.h](spirv_cache_file.h), [.cpp](spirv_cache_file.cpp) | The SPIR-V cache: what glslang made of each program and stage, in memory and in its file beside the pipeline cache, and the encoding of a compiled program |
 | [pipeline_cache_file.h](pipeline_cache_file.h), [.cpp](pipeline_cache_file.cpp) | The pipeline cache's files in that envelope: the driver's data, and the manifest of the keys made, with each key's program identity and age |
 | [vma.cpp](vma.cpp) | The Vulkan Memory Allocator's implementation, compiled once |
 
@@ -80,6 +82,20 @@ worker has made, waits for one it is making or has queued, and makes the rest it
 release waits for its job and takes the rest back; the backend's close stops and joins the worker
 before anything else.
 
+`Context::spirv_cache` keeps what glslang made (R-12): `compile_program` and `check_stage` take a
+program or stage compiled before from it, by a hash of its kind, sources and compiler checked by a
+second hash and the length, and glslang runs only for the rest. It is read at open and written at
+close, beside the pipeline cache, and off when the pipeline cache is.
+
+`Context::persistent_sets` keeps, from frame to frame, the descriptor sets that bind only
+textures, samplers and the ring (R-14, `vk-persistent-descriptors`), keyed by the program's serial
+and each image's `Image::serial`, which is never reused, so a set of a deleted texture is never
+found again; the least recently bound are freed past 4,096.
+
+With `vk-extended-dynamic-state` on (off by default, R-11), the cull, front face, depth and
+stencil state (`FixedState`) leaves the pipeline's key and the draw records it as Vulkan 1.3
+dynamic state, through the same tracker.
+
 ## Errors
 
 `open()` returns false with a message when Vulkan cannot start (the window then falls back to
@@ -98,7 +114,7 @@ GPU-driven references, which [RAC1_GPU_DRIVEN.md](../../../docs/port/RAC1_GPU_DR
 
 - `OPENRAC_VULKAN_VALIDATION` (`vkgl.cpp`): Khronos' validation layer.
 - `OPENRAC_VULKAN_PIPELINE_CACHE` (`vkgl_device.cpp`): where pipelines are cached between runs,
-  or off. The cache file is named after a key that hashes this directory's sources
+  or off; the pipeline manifest (R-10) and the SPIR-V cache (R-12) sit beside that file. The cache file is named after a key that hashes this directory's sources
   (`OPENRAC_VK_PIPELINE_KEY`, `port/cmake/Window.cmake`), so a build whose pipeline code changed
   starts a fresh cache. Programs that save the same file at once (tests run in parallel) each
   write their own temporary file and rename it into place, and a file that is not one whole save
@@ -119,10 +135,14 @@ CI). Where Vulkan cannot open, the window falls back to OpenGL and they repeat t
   `world_gl_smoke_vulkan`, `viewer_vulkan`: every GL call the renderers make, carried out here.
 - `vulkan_uniform`, `vulkan_uniform_reference`: uniform uploads and descriptor reuse, with the
   reuse on and off (`OPENRAC_VK_UNIFORM_REUSE_OFF`); a state bounce (A, B, A) draws A's pipeline
-  and set again, and deleting one program's pipelines leaves the others' usable.
+  and set again, deleting one program's pipelines leaves the others' usable, and cull and front
+  face toggled in one pass draw alike as dynamic and as baked state, and a texture deleted and
+  replaced never draws through the old one's set.
 - `render_opt_vulkan`: the render counters of `SubmissionCounters` follow a fixed scene's draws
   (every draw a draw command, one submit a frame), printed for the reports of
   [RENDER_PERF.md](../../../docs/port/RENDER_PERF.md).
+- `vulkan_present_timing`: the device opened with each presentation extension switched off
+  (`vkgl::Config`), and presenting.
 - `vulkan_present`: the one copy to the screen against the two it replaces, drawn into stand-ins of
   the screen and compared byte for byte, and a draw after the blit making the copy first.
 - `vulkan_buffer`: a static GL buffer drawn, rewritten in part, filled again, read through 8-bit
@@ -131,6 +151,8 @@ CI). Where Vulkan cannot open, the window falls back to OpenGL and they repeat t
 - `pipeline_cache_file`: the cache's file read back whole, a damaged one dropped, and writer threads
   and writer processes saving one file at once leaving one whole save; the manifest read back, and
   one of another key size, cut short or of another magic dropped. It needs no GPU.
+- `spirv_cache`: a program from the SPIR-V cache is the program glslang makes, word for word; a
+  damaged, stale or colliding entry gives nothing. It needs no GPU.
 - `vulkan_prewarm`: a second run's draws make none of the first run's pipelines (the worker made
   them), and nothing is made ahead for a program no longer built, with the entry off, or from a
   damaged manifest.

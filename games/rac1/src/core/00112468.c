@@ -17,10 +17,10 @@ extern int D_0015ED10;
 
 int func_00112468(int *errOut, int arg1) {
     int r;
-    D_0015ED10 = 0;
+    SbrkErrno = 0;
     r = func_00119100(arg1);
-    if (r == -1 && D_0015ED10 != 0) {
-        *errOut = D_0015ED10;
+    if (r == -1 && SbrkErrno != 0) {
+        *errOut = SbrkErrno;
     }
     return r;
 }

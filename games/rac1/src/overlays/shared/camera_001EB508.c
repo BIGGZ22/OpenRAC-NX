@@ -77,7 +77,7 @@ extern CameraSystem D_L00_00166D80;
 /* Lets any eligible camera take over from the current one: sets the current camera's
    transition_state to 1 and clears its handoff_state. */
 void Camera_ReleaseCurrent(void) {
-    CameraSystem *g = &gCameraLvl;
+    CameraSystem *g = &player_camera;
     g->current->transition_state = 1;
     g->current->handoff_state = 0;
 }
@@ -101,8 +101,8 @@ void SwitchCamera(Camera *next_camera) {
     s32 blend_kind = 0;
     s32 previous_transition_state;
 
-    info = gCameraDefsLvl[next_camera->def_index].info;
-    previous_camera = gCameraLvl.current;
+    info = camera_descriptors[next_camera->def_index].info;
+    previous_camera = player_camera.current;
     previous_transition_state = previous_camera->transition_state;
     if (info != 0) {
         blend_kind = info->blend_kind;
@@ -112,27 +112,27 @@ void SwitchCamera(Camera *next_camera) {
     } else if (previous_transition_state == 2 || blend_kind == 1 || blend_kind == 5) {
         if (blend_kind == 1) {
             mode_one_duration = next_camera->blend_time;
-            gCameraLvl.blend.next_kind =0;
+            player_camera.blend.next_kind =0;
             if (mode_one_duration > 0.0f) {
-                gCameraLvl.blend.lerp.pos_rate_cfg = mode_one_duration;
-                gCameraLvl.blend.lerp.rot_rate_cfg = mode_one_duration;
+                player_camera.blend.lerp.pos_rate_cfg = mode_one_duration;
+                player_camera.blend.lerp.rot_rate_cfg = mode_one_duration;
             } else {
-                gCameraLvl.blend.lerp.pos_rate_cfg = 0.018f;
-                gCameraLvl.blend.lerp.rot_rate_cfg = 0.018f;
+                player_camera.blend.lerp.pos_rate_cfg = 0.018f;
+                player_camera.blend.lerp.rot_rate_cfg = 0.018f;
             }
         } else if (blend_kind == 5) {
             transition_duration = next_camera->blend_time;
-            gCameraLvl.blend.next_kind =2;
+            player_camera.blend.next_kind =2;
             if (transition_duration > 0.0f) {
-                gCameraLvl.blend.orbit.frames = func_001FA898(transition_duration);
+                player_camera.blend.orbit.frames = truncate_float_to_s32(transition_duration);
             } else {
-                gCameraLvl.blend.orbit.frames = 40;
+                player_camera.blend.orbit.frames = 40;
             }
         }
-        if (gCameraLvl.blend.phase == 0) {
-            gCameraLvl.blend.phase = 1;
+        if (player_camera.blend.phase == 0) {
+            player_camera.blend.phase = 1;
         } else {
-            gCameraLvl.blend.phase = 2;
+            player_camera.blend.phase = 2;
         }
     } else if (previous_transition_state == 3 || previous_transition_state == 5 ||
                blend_kind == 3 || blend_kind == 6) {
@@ -143,22 +143,22 @@ void SwitchCamera(Camera *next_camera) {
         next_camera->handoff_state = 2;
         if (previous_camera->transition_state == 5 || blend_kind == 6) {
             handoff_duration = next_camera->blend_time;
-            gCameraLvl.blend.next_kind =0;
+            player_camera.blend.next_kind =0;
             if (handoff_duration > 0.0f) {
-                gCameraLvl.blend.lerp.pos_rate_cfg = handoff_duration;
-                gCameraLvl.blend.lerp.rot_rate_cfg = handoff_duration;
+                player_camera.blend.lerp.pos_rate_cfg = handoff_duration;
+                player_camera.blend.lerp.rot_rate_cfg = handoff_duration;
             } else {
-                gCameraLvl.blend.lerp.pos_rate_cfg = 0.018f;
-                gCameraLvl.blend.lerp.rot_rate_cfg = 0.018f;
+                player_camera.blend.lerp.pos_rate_cfg = 0.018f;
+                player_camera.blend.lerp.rot_rate_cfg = 0.018f;
                 if (D_0015EE84_EB890 == 1) {
-                    gCameraLvl.blend.lerp.pos_rate_cfg = 0.01f;
-                    gCameraLvl.blend.lerp.rot_rate_cfg = 0.01f;
+                    player_camera.blend.lerp.pos_rate_cfg = 0.01f;
+                    player_camera.blend.lerp.rot_rate_cfg = 0.01f;
                 }
             }
-            if (gCameraLvl.blend.phase == 0) {
-                gCameraLvl.blend.phase = 1;
+            if (player_camera.blend.phase == 0) {
+                player_camera.blend.phase = 1;
             } else {
-                gCameraLvl.blend.phase = 2;
+                player_camera.blend.phase = 2;
             }
         }
     } else {
@@ -169,17 +169,17 @@ void SwitchCamera(Camera *next_camera) {
     previous_camera->transition_state = 0;
     previous_camera->handoff_state = 0;
     previous_camera->hard_cut = 0;
-    gCameraLvl.previous = previous_camera;
+    player_camera.previous = previous_camera;
     FastMemCopy(gCamPrevStateLvl, gCamPrevStateLvl - 0x280, 0x280);
-    gCameraLvl.previous->state_buf = gCamPrevStateLvl;
-    gCameraLvl.current = next_camera;
+    player_camera.previous->state_buf = gCamPrevStateLvl;
+    player_camera.current = next_camera;
     next_camera->state_buf = gCamPrevStateLvl - 0x280;
-    gCameraLvl.frames = 0;
+    player_camera.frames = 0;
     Camera_runSetupToNewCam(next_camera);
     BackupCurrentCam();
     /* The callbacks run before this flag is read; previous_position is updated either way. */
-    if (gDebugFreeCamLvl.active == 0) {
-        qcopy(&gCameraLvl.pos, &next_camera->pos);
+    if (g_debug_menu.active == 0) {
+        qcopy(&player_camera.pos, &next_camera->pos);
     }
     previous_position = &next_camera->prev_pos.x;
     previous_position[0] = next_camera->pos.x;
@@ -198,7 +198,7 @@ extern void func_L00_001EB508(void);
    for the best eligible camera (switching to it when one is found), the update hook, prev_pos,
    then the post-update queue. */
 int UpdateAllCamerasLvl(void) {
-    Camera *best = gCameraLvl.current;
+    Camera *best = player_camera.current;
     int i;
     int found = 0;
     void (*fn)(Camera *);
@@ -243,7 +243,7 @@ void Camera_CaptureHeroRelativeView(void) {
     float b[4];
     float c[4];
     char *g = D_0013E633 + 0xE1D;
-    CamBlend *d = &gCameraLvl.blend;
+    CamBlend *d = &player_camera.blend;
 
     func_L00_001FF4B0(a, *(char **)(g + 0x2080) + 0xC0, 1.0f);
     func_L00_001FF4B0(b, *(char **)(g + 0x2080) + 0xD0, 1.0f);
@@ -269,7 +269,7 @@ extern float func_001FA888(int);
    and kind takes next_kind: the lerp resets for kind 0, the orbit frame count advances otherwise.
    Level copy of func_001ECC48. */
 void Camera_CaptureTransform(Camera *from) {
-    CamBlend *r = &gCameraLvl.blend;
+    CamBlend *r = &player_camera.blend;
     char local0[16];
     char local1[16];
     char local2[16];
@@ -279,10 +279,10 @@ void Camera_CaptureTransform(Camera *from) {
         sub = r->next_kind;
         if (sub == 0) {
             qcopy(&r->lerp.pos, &from->pos);
-            Matrix_ToQuatCopyBack(&r->lerp.rot, from);
+            extract_matrix_rotation_quaternion(&r->lerp.rot, from);
         } else if (sub == 2) {
             qcopy(&r->orbit.pos, &from->pos);
-            Matrix_ToQuatCopyBack(&r->orbit.saved_rot, from);
+            extract_matrix_rotation_quaternion(&r->orbit.saved_rot, from);
             Camera_CaptureHeroRelativeView();
         } else {
             char *g = D_0013E633 + 0xE1D;
@@ -291,21 +291,21 @@ void Camera_CaptureTransform(Camera *from) {
             func_L00_001FF4B0(local1, *(char **)(g + 0x2080) + 0xD0, 1.0f);
             func_L00_001FF4B0(local2, *(char **)(g + 0x2080) + 0xE0, 1.0f);
             Camera_Pos2Polar3d(&r->orbit.yaw, &from->pos,
-                          &(*(Camera **)((char *)r - 0xF0))->pos, /* gCameraLvl.current */
+                          &(*(Camera **)((char *)r - 0xF0))->pos, /* player_camera.current */
                           local0, local1, local2);
-            Matrix_ToQuatCopyBack(&r->orbit.rot, from);
+            extract_matrix_rotation_quaternion(&r->orbit.rot, from);
             qcopy(&r->orbit.saved_rot, &r->orbit.rot);
         }
     } else {
         sub = r->next_kind;
         if (sub == 2) {
-            Camera_stagePendingTransform();
+            save_camera_vectors();
             Camera_CaptureHeroRelativeView();
         } else if (sub == 1) {
-            Camera_stagePendingTransform();
+            save_camera_vectors();
             qcopy(&r->orbit.rot, &r->orbit.saved_rot);
         } else if (sub == 0) {
-            Camera_commitPendingTransform();
+            restore_camera_vectors();
         }
     }
     D_L00_00166FF0_h = 3; /* blend.phase */
@@ -338,11 +338,11 @@ extern int D_L00_0015F060 MACRO_ADDR;
 extern int D_L00_0015F05C_w __asm__("D_L00_0015F05C") MACRO_ADDR;
 extern int D_L00_0015F05C_g SDATA(D_L00_0015F05C);
 
-/* Level copy of Camera_PickCollisionMasks: the sphere mask is 0x14 (0x34 in hero states 0x11/0x12
-   or mode 0x73, back to 0x14 below the water height gCameraLvl.pos.f[2]), the line mask is 0xB4 |
+/* Level copy of refresh_camera_control_flags: the sphere mask is 0x14 (0x34 in hero states 0x11/0x12
+   or mode 0x73, back to 0x14 below the water height player_camera.pos.f[2]), the line mask is 0xB4 |
    follow.coll_bits, with the coll_bits set from the hero's ground selectors. */
 void Camera_PickCollisionMasksLvl(void) {
-    CameraFollow *d = &gCameraLvl.follow;
+    CameraFollow *d = &player_camera.follow;
 
     D_L00_0015F05C_g = 0x14;
     {
@@ -354,7 +354,7 @@ void Camera_PickCollisionMasksLvl(void) {
     {
         unsigned char *g = (unsigned char *)(D_0013E633 + 0xE1D);
         if (*(int *)(g + 0x208C) != 0x11) {
-            if (*(float *)(g + 0x2F0) < gCameraLvl.pos.f[2]) {
+            if (*(float *)(g + 0x2F0) < player_camera.pos.f[2]) {
                 D_L00_0015F05C_w = 0x14;
             }
         }
@@ -364,35 +364,35 @@ void Camera_PickCollisionMasksLvl(void) {
         gCamSphereMaskBaseLvl = v;
         D_L00_0015F05C_w = v | 0x80;
     }
-    gCamLineMaskLvl = 0xB4;
+    camera_collision_mask = 0xB4;
     {
         unsigned char *g = (unsigned char *)(D_0013E633 + 0xE1D);
         if (g[0x12E5]) {
             d->coll_bits = 0x100;
-            gCamLineMaskLvl = 0x1B4;
+            camera_collision_mask = 0x1B4;
             return;
         }
         if (g[0x12EB]) {
             d->coll_bits =0xB00;
-            gCamLineMaskLvl = 0xBB4;
+            camera_collision_mask = 0xBB4;
             return;
         }
         if (g[0x12E6]) {
             d->coll_bits =0x300;
-            gCamLineMaskLvl = 0x3B4;
+            camera_collision_mask = 0x3B4;
             return;
         }
         if (g[0x12EC]) {
             d->coll_bits =0xD00;
-            gCamLineMaskLvl = 0xDB4;
+            camera_collision_mask = 0xDB4;
             return;
         }
         if (g[0x12E4] != 0) {
             d->coll_bits =0;
-            gCamLineMaskLvl = 0xB4;
+            camera_collision_mask = 0xB4;
             return;
         }
-        gCamLineMaskLvl = d->coll_bits | 0xB4;
+        camera_collision_mask = d->coll_bits | 0xB4;
     }
 }
 INCLUDE_ASM("asm/overlays", func_L00_001ED380);
@@ -425,25 +425,25 @@ void Camera_UpdateFrame(void) {
             return;
         }
         {
-            CamBlend *b = &gCameraLvl.blend;
+            CamBlend *b = &player_camera.blend;
             b->phase = 0;
             b->kind = 0;
         }
     }
-    c = &gCameraLvl;
+    c = &player_camera;
     c->frames++;
-    Camera_UpdateFade();
+    advance_timed_camera_control();
     Camera_PickCollisionMasksLvl();
-    CameraPreUpdate();
+    update_camera_tracking_state();
     UpdateAllCamerasLvl();
     target = c->current;
     if ((unsigned short)(c->blend.phase - 1) < 2) {
         Camera_CaptureTransform(c->previous);
     }
     if (c->blend.phase == 3) {
-        Camera_UpdateBlend((char *)target);
+        update_camera_blend((char *)target);
     } else {
-        DebugFreeCam *st = &gDebugFreeCamLvl;
+        DebugFreeCam *st = &g_debug_menu;
         if (st->active != 0) {
             goto frozen;
         }
@@ -453,18 +453,18 @@ void Camera_UpdateFrame(void) {
         qcopy(&c->matrix[2], &target->basis[2]);
     }
     {
-        DebugFreeCam *st = &gDebugFreeCamLvl;
+        DebugFreeCam *st = &g_debug_menu;
         if (st->active == 0) {
-            func_001FA460(m, gCameraLvl.matrix);
-            MatrixToEuler(m, &gCameraLvl.rot);
+            func_001FA460(m, player_camera.matrix);
+            matrix_to_euler(m, &player_camera.rot);
         }
     }
 frozen:
-    v = gCameraLvl.shake;
-    Camera_UpdateShake((char *)&v[0], 0);
-    Camera_UpdateShake((char *)&v[1], 1);
-    Camera_UpdateUnderwaterFlag();
-    Camera_UpdateEnvironment((char *)v - 0x20);       /* &gCameraLvl.pos */
+    v = player_camera.shake;
+    apply_camera_shake((char *)&v[0], 0);
+    apply_camera_shake((char *)&v[1], 1);
+    update_camera_underwater_flag();
+    update_camera_environment_from_regions((char *)v - 0x20);       /* &player_camera.pos */
     if (D_0015EEB4_ED428[0] != 0) {
         FastVecCross((char *)v + 0x200, (char *)v + 0x210, (char *)v + 0x1F0); /* matrix[1] = matrix[2] x matrix[0] */
     }
@@ -473,7 +473,7 @@ INCLUDE_ASM("asm/overlays", func_L00_001ED460);
 INCLUDE_ASM("asm/overlays", func_L00_001ED464);
 
 /* Returns the index of the entry with the given key, or of the -1 terminator. */
-int Camera_FindTypeIndex(int key) {
+int find_camera_table_index_by_id(int key) {
     int i = 0;
     while (gCameraTypesLvl[i].id != -1 && gCameraTypesLvl[i].id != key) {
         i++;
@@ -487,8 +487,8 @@ extern char D_L00_00169210[];
 
 /* Camera id 0 becomes the current camera with a hard cut: its state buffer is gCamCurStateLvl,
    its activate hook runs, the backup is taken, and the follow position is reset to the hero. */
-void CameraResetBehindHero(void) {
-    CameraSystem *g = &gCameraLvl;
+void init_camera_system(void) {
+    CameraSystem *g = &player_camera;
     float *s, *d, *t, *u;
     Camera *a;
     if (g->current != 0) {
@@ -500,7 +500,7 @@ void CameraResetBehindHero(void) {
     g->current->hard_cut = 1;
     g->current->state_buf = gCamCurStateLvl;
     g->blend.phase = 0;
-    CameraPreUpdate();
+    update_camera_tracking_state();
     Camera_runSetupToNewCam(g->current);
     BackupCurrentCam();
     a = g->current;
@@ -557,10 +557,10 @@ extern W D_L00_00173F70;
 extern short D_L00_0015F05C;
 
 /* moves the camera position a toward a target in steps, stopping each step on collision. Adapted from Lombyte (GPL-3.0) for PAL: overlays/shared/gameplay_camera_001eb188.c, FUN_L00_001ed6a8. */
-void MoveCameraToward(float *pos, float r) {
+void resolve_camera_movement_collisions(float *pos, float r) {
     W d;
     W v;
-    Camera *o = gCameraLvl.current;
+    Camera *o = player_camera.current;
     float *src = &o->prev_pos.x;
     int n, i, j;
     char *base;
@@ -571,15 +571,15 @@ void MoveCameraToward(float *pos, float r) {
     v[2] = src[2];
     ((int *)v)[3] = 0;
     if (o->snap != 0) {
-        if (gDebugFreeCamLvl.active == 0) {
-            qcopy(&gCameraLvl.pos, pos);
+        if (g_debug_menu.active == 0) {
+            qcopy(&player_camera.pos, pos);
         }
         o->snap = 0;
         return;
     }
     func_001F9BF0_3(d, pos, v);
     n = func_001FA898_r(FastVecLength(d) / (r * 0.9f)) + 1;
-    func_L00_001FF328(d, d, IntToFloat(n));
+    divide_vector_xyz(d, d, IntToFloat(n));
     qcopy(pos, v);
     for (i = 0; i < n; i++) {
         q = D_L00_00173F70;
@@ -588,15 +588,15 @@ void MoveCameraToward(float *pos, float r) {
         for (j = 0; j < 6 && func_L00_001F10E0_f(pos, *(int *)&gCamSphereMaskLvl, *(void **)(base + 0x2080), r); j++) {
             qcopy(pos, q);
             {
-                Camera *t = gCameraLvl.current;
+                Camera *t = player_camera.current;
                 if (t->hit_wall == 0) {
                     t->hit_wall = 1;
                 }
             }
         }
     }
-    if (gDebugFreeCamLvl.active == 0) {
-        qcopy(&gCameraLvl.pos, pos);
+    if (g_debug_menu.active == 0) {
+        qcopy(&player_camera.pos, pos);
     }
 }
 LINKER_REMNANT("asm/overlays", func_L00_001EDBF8);

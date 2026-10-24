@@ -1,0 +1,48 @@
+{
+  "id": "rac6",
+  "title": "Ratchet & Clank: Secret Agent Clank",
+  "year": 2009,
+  "versions": {
+    "ntsc": {
+      "region": "NTSC-U (North America)",
+      "serial": "SCUS_976.23",
+      "bytematch": "OpenRAC/rac-sac-decomp",
+      "disc": {
+        "file": "SCUS_976.23.iso",
+        "version": "1.00",
+        "video": "NTSC",
+        "size": 4268916736,
+        "sha1": "6f4a37c8157e3e1214abed01406cbfce42e22cc6",
+        "sha256": "128abfa2fb8eb4dc253513d3beb9029dfb8698966ecc7b8266230e8739b8e908"
+      },
+      "boot": {
+        "file": "SCUS_976.23",
+        "size": 1104076,
+        "sha256": "1341f13c11e54e57748e963a5d49c28a571c4b87f98998687e1b1741c39f7911"
+      },
+      "target": "The PlayStation 2 port: the boot executable SCUS_976.23 and 31 level modules in the SNR2 .REL format. Functions are proved by wave at placement level; there is no qualified compiler or game-wide percentage yet.",
+      "inputs": [
+        {
+          "from": "disc",
+          "path": "games/rac6/ntsc/baserom/SCUS_976.23.iso"
+        }
+      ],
+      "setup": "in games/rac6/ntsc: python3 -m unittest discover -s tests and python3 tools/check_repository.py (its README)",
+      "source": {
+        "name": "rac-sac-decomp",
+        "repo": "https://github.com/OpenRAC/rac-sac-decomp",
+        "branch": "main",
+        "checkout": "../rac-sac-decomp",
+        "license": "GPL-3.0",
+        "exclude": [],
+        "commit": "4e38d3d88f62f0366274e83643866d232a91f378",
+        "date": "2026-10-21",
+        "imported": "2026-10-24"
+      },
+      "build": {
+        "host": "Python 3.12 for the tools, on any system; no qualified compiler yet",
+        "readme": "games/rac6/ntsc/README.md"
+      }
+    }
+  }
+}

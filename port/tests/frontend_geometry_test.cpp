@@ -2,11 +2,13 @@
 // Copyright (c) 2026 the OpenRAC contributors
 //
 // The frontend's geometry (game/common/frontend/geometry.h): the frame box for windows of each
-// shape, the size the frame is drawn at, and the blends of a moby and the camera between ticks.
+// shape, the size the frame is drawn at, the blends of a moby and the camera between ticks, and the
+// bound of a moby drawn between them.
 // Characterisation tests: they pin what the functions returned when they were moved out of
 // frontend.cpp, so that the frontend's restructure can show it changed none of it. Each expected
 // value is written as the arithmetic that gives it.
 
+#include <array>
 #include <cmath>
 
 #include "check.h"
@@ -22,6 +24,7 @@ using openrac::frontend::CameraPose;
 using openrac::frontend::frame_box;
 using openrac::frontend::frame_size;
 using openrac::frontend::kTvAspect;
+using openrac::frontend::moby_sphere_envelope;
 using openrac::frontend::same_moby;
 using openrac::renderer::Mat4;
 using openrac::renderer::Vec3;
@@ -211,6 +214,41 @@ void test_blend_pose_takes_a_cut_whole() {
     CHECK(near(blend_pose(from, edge, 0.5f).position[0], 4.0f));
 }
 
+// Joint poses and model transforms both interpolate. Endpoint world bounds alone need not contain
+// the intermediate product (rotation plus changing pose); the envelope holds every point of it.
+void test_the_moby_envelope_holds_the_blended_moby() {
+    const Mat4 from{2, .2f, 0, 0, .4f, 1, 0, 0, 0, 0, .5f, 0, 10, 20, 30, 1};
+    const Mat4 to{0, 1, 0, 0, -2, .3f, 0, 0, 0, 0, 2, 0, 12, 21, 31, 1};
+    const std::array<float, 4> sphere0{11, 20, 30, 8}, sphere1{12, 22, 31, 8};
+    for (unsigned step = 0; step <= 10; ++step) {
+        const float alpha = step / 10.f;
+        auto drawn = from;
+        for (unsigned i = 0; i < drawn.size(); ++i) {
+            drawn[i] += (to[i] - from[i]) * alpha;
+        }
+        const auto bound = moby_sphere_envelope(sphere0, from, sphere1, to, drawn);
+        CHECK(bound[3] > 0);
+        for (unsigned corner = 0; corner < 8; ++corner) {
+            Vec3 p0{corner & 1 ? 1.f : -1.f, corner & 2 ? 1.f : -1.f, corner & 4 ? 1.f : -1.f};
+            Vec3 p1{-p0[1], p0[2], -p0[0]}, point;
+            for (unsigned k = 0; k < 3; ++k) {
+                point[k] = p0[k] + (p1[k] - p0[k]) * alpha;
+            }
+            const auto world = openrac::renderer::transform_point(drawn, point);
+            float distance2 = 0;
+            for (unsigned k = 0; k < 3; ++k) {
+                distance2 += (world[k] - bound[k]) * (world[k] - bound[k]);
+            }
+            CHECK(distance2 <= bound[3] * bound[3]);
+        }
+    }
+    CHECK(moby_sphere_envelope({}, from, sphere1, to, to)[3] == 0);
+    CHECK(moby_sphere_envelope(sphere0, openrac::renderer::scale(0), sphere1, to, to)[3] == 0);
+    auto invalid = from;
+    invalid[0] = NAN;
+    CHECK(moby_sphere_envelope(sphere0, invalid, sphere1, to, to)[3] == 0);
+}
+
 }  // namespace
 
 int main() {
@@ -226,5 +264,6 @@ int main() {
     test_blend_matrix_takes_a_jump_or_a_turn_whole();
     test_blend_pose_moves_and_turns_part_way();
     test_blend_pose_takes_a_cut_whole();
+    test_the_moby_envelope_holds_the_blended_moby();
     return openrac::test::result();
 }

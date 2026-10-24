@@ -24,8 +24,8 @@
 #include "game/common/frontend/geometry.h"
 #include "game/common/frontend/state.h"
 #include "openrac/game_host.h"
+#include "renderer/ui/touch_overlay.h"
 #include "settings.h"
-#include "touch_overlay.h"
 
 namespace openrac::frontend {
 
@@ -71,7 +71,7 @@ void draw_touch_pad(int window_width, int window_height) {
         settings::save();
     }
     was_editing = editing;
-    touch_overlay::draw(touch, window_width, window_height);
+    renderer::ui::touch_overlay::draw(touch, window_width, window_height);
 }
 
 // The cursor as the mods ask for it, while nothing else has the mouse: captured only with the

@@ -26,6 +26,7 @@
 #include <optional>
 #include <span>
 #include <string>
+#include <string_view>
 #include <unordered_map>
 #include <utility>
 #include <vector>
@@ -39,6 +40,7 @@
 #include "renderer/gl.h"
 #include "renderer/gpu_draw.h"
 #include "renderer/vulkan/shader_compiler.h"
+#include "renderer/vulkan/spirv_cache_file.h"
 #include "renderer/vulkan/vkgl.h"
 #include "renderer/world/gl_world.h"
 
@@ -194,6 +196,23 @@ struct GpuResident {
     bool dirty = false;                // `words` changed since `buffer` was made.
 };
 
+// The cull, front face, depth and stencil state of a draw, as Vulkan's numbers: what a pipeline
+// bakes in, or what extended dynamic state lets a draw record (fixed_state, vkgl_pipelines.cpp).
+// Plain numbers, so that it is compared and copied as bytes.
+struct FixedState {
+    std::uint32_t cull;          // VkCullModeFlags.
+    std::uint32_t front;         // VkFrontFace.
+    std::uint32_t depth_test;    // 1 when the depth test is on.
+    std::uint32_t depth_write;   // 1 when depth is written (GL writes it only while it tests).
+    std::uint32_t depth_func;    // VkCompareOp while the test is on, else 0.
+    std::uint32_t stencil;       // 1 when the stencil test is on and the target has stencil.
+    std::uint32_t stencil_func;  // VkCompareOp of both faces' stencil test.
+    std::uint32_t front_ops[3];  // VkStencilOp: fail, depth pass, depth fail, front faces.
+    std::uint32_t back_ops[3];   // The same for back faces.
+
+    bool operator==(const FixedState&) const = default;
+};
+
 // The GPU-driven engine (gpu_draw.inc): the culling pipelines, the indirect draws merged while
 // they share their bindings, and the counters.
 struct GpuEngine {
@@ -213,6 +232,7 @@ struct GpuEngine {
         std::array<int, 4> viewport{}, scissor{};
         std::array<float, 4> blend{};
         std::array<std::uint32_t, 3> stencil{};
+        FixedState fixed{};  // The fixed state recorded as dynamic state; zero when it is baked.
         bool operator==(const Bindings&) const = default;
     };
 
@@ -279,6 +299,10 @@ struct Image {
     VkSampleCountFlagBits samples = VK_SAMPLE_COUNT_1_BIT;
     VkImageLayout layout = VK_IMAGE_LAYOUT_UNDEFINED;
     std::uint64_t touched = 0;  // the recording that last used it in `main`
+    // A number of its own, never given to another image of the backend: a descriptor set kept
+    // across frames names the image by it, since a destroyed view's handle may be handed out again
+    // (R-14). 0 for an image destroy_image_now has emptied.
+    std::uint64_t serial = 0;
     // The aspects whose contents glInvalidateFramebuffer let go and nothing wrote since: the next
     // pass on the image does not load them (attachment-discard, docs/port/RENDER_PERF.md "R-06").
     VkImageAspectFlags discarded = 0;
@@ -468,6 +492,45 @@ struct DrawScratch {
     std::vector<VkWriteDescriptorSet> writes;          // descriptors(): a new set's writes.
     std::vector<VkDescriptorBufferInfo> buffer_infos;  // descriptors(): what the writes point at.
     std::vector<VkDescriptorImageInfo> image_infos;    // descriptors(): what the writes point at.
+};
+
+// ---- Descriptor sets kept across frames (R-14) ----
+
+// A hash of a descriptor set's key bytes for PersistentSets, which looks keys up as views.
+struct KeyBytesHash {
+    using is_transparent = void;
+
+    // Returns std::hash of the bytes.
+    std::size_t operator()(std::string_view bytes) const {
+        return std::hash<std::string_view>{}(bytes);
+    }
+};
+
+// A descriptor set kept across frames: the set, the pool it came from, and the frame it was last
+// bound in.
+struct PersistentSet {
+    VkDescriptorSet set = VK_NULL_HANDLE;    // The set, written once.
+    VkDescriptorPool pool = VK_NULL_HANDLE;  // The pool it was allocated from, to free it to.
+    std::uint64_t used_frame = 0;            // The frame (frame_count) that last bound it.
+};
+
+// The descriptor sets that bind only long-lived things, kept from frame to frame on the path
+// without bindless materials (vk-persistent-descriptors, docs/port/RENDER_PERF.md "R-14"): a
+// program's set of the same textures, samplers and ring chunk is written once, not every frame.
+//
+// A key names its program by its serial (new at each link) and each sampled image by its serial
+// (never reused), so a set of a deleted program or texture is never found again; it stays until
+// evicted, least recently bound first, when kCapacity are held. Its pools allow freeing one set.
+// Only the thread that draws uses it; the backend's close destroys the pools.
+struct PersistentSets {
+    // The sets held at most, and the sets one pool of `pools` holds.
+    static constexpr std::size_t kCapacity = 4096;
+    static constexpr std::uint32_t kPoolSets = 1024;
+
+    std::vector<VkDescriptorPool> pools;  // Every pool made, each with FREE_DESCRIPTOR_SET.
+    // The sets, by their key's bytes.
+    std::unordered_map<std::string, PersistentSet, KeyBytesHash, std::equal_to<>> sets;
+    std::vector<std::uint64_t> key;  // The key being looked up, kept for its capacity.
 };
 
 // A GL program: its shaders, the compiled SPIR-V and what it declares (shader_compiler.h), its
@@ -673,13 +736,16 @@ struct Input {
 // bytes. Trivially copyable, with no padding between its 8-byte words.
 struct PipelineKey {
     std::uint64_t program;
-    std::uint32_t topology, restart, polygon, cull, front;
+    std::uint32_t topology, restart, polygon;
+    // The rasteriser's cull and depth and stencil state; all 0 in the key when `dynamic_fixed`,
+    // where a draw records it instead (vk-extended-dynamic-state, R-11).
+    FixedState fixed;
     std::uint32_t blend, src_rgb, dst_rgb, src_a, dst_a, equation, colour_mask;
-    std::uint32_t depth_test, depth_write, depth_func;
-    std::uint32_t stencil, stencil_func, front_ops[3], back_ops[3];
     std::uint32_t colour_format, depth_format, samples;
     std::uint32_t inputs;
     std::uint32_t viewports;
+    std::uint32_t dynamic_fixed;  // 1: `fixed` is dynamic state of the pipeline (R-11).
+    std::uint32_t unused;         // Zero; keeps the key a whole number of 8-byte words.
     Input input[kAttributes];
 };
 
@@ -828,6 +894,11 @@ struct RecordedState {
     std::optional<std::uint32_t> stencil_compare_mask;  // vkCmdSetStencilCompareMask's value.
     std::optional<std::uint32_t> stencil_write_mask;    // vkCmdSetStencilWriteMask's value.
 
+    // Whether the pipeline bound takes the fixed state as dynamic state (R-11); nothing when
+    // unknown. A pipeline that bakes it overrides what was recorded, so a change forgets `fixed`.
+    std::optional<bool> fixed_dynamic;
+    std::optional<FixedState> fixed;  // The fixed state last recorded as dynamic state.
+
     // The layout the descriptor sets and the push constant below were recorded with. Binding a
     // set with another layout may disturb the others, so a change of layout forgets them.
     VkPipelineLayout layout = VK_NULL_HANDLE;
@@ -903,6 +974,17 @@ struct Context {
     VkFormat depth_format = VK_FORMAT_UNDEFINED;
     VkPipelineCache pipeline_cache = VK_NULL_HANDLE;
     StaticMemory static_memory;  // Where a static buffer's own copy goes (vkgl_resources.cpp).
+    // The presentation extensions (R-09): what Config allowed, what the device was given, and
+    // the presents counted and seen finished since the swapchain was made.
+    bool allow_present_id = true;
+    bool allow_present_wait = true;
+    bool allow_latest_ready = true;
+    bool present_id_enabled = false;
+    bool present_wait_enabled = false;
+    bool latest_ready_enabled = false;
+    std::uint64_t present_serial = 0;  // The id of the last present given one; 0 for none yet.
+    PresentTiming present_seen;        // The last present seen finished, if any.
+    double acquire_wait_s = 0.0;       // This frame's wait in vkAcquireNextImageKHR.
 
     std::array<Frame, kFrames> frames;
     int frame = 0;
@@ -935,6 +1017,9 @@ struct Context {
     PipelineTable pipelines;           // Every graphics pipeline, by key (pipeline_for).
     PipelineManifest manifest;         // The keys to make ahead, by program identity (R-10).
     PipelinePrewarm prewarm;           // The worker that makes them (R-10).
+    SpirvCache spirv_cache;            // What glslang made, kept between runs (R-12).
+    PersistentSets persistent_sets;    // Descriptor sets kept across frames (R-14).
+    std::uint64_t image_serial = 0;    // The last Image::serial given out.
     DrawScratch scratch;               // The draw's temporaries, kept for their capacity (R-04).
     bool byte_indices_logged = false;  // The 8-bit index emulation has been reported once.
     std::vector<std::pair<std::uint64_t, VkSampler>> vk_samplers;  // by a packed key
@@ -947,6 +1032,9 @@ struct Context {
     std::string device_name, driver_version, api_version, gl_renderer, gl_version;
     bool software = false;
     bool viewport_index_supported = false;
+    // The device takes cull, front face, depth and stencil state as dynamic state (Vulkan 1.3's
+    // core extended dynamic state), so pipelines need not bake them (R-11).
+    bool extended_dynamic_state = false;
     std::vector<std::array<int, 4>> indexed_viewports;
     GLenum error = GL_NO_ERROR;
 };
@@ -1222,6 +1310,16 @@ void forget_views(Buffer& b);
 // A texel view of buffer `name` as `gl_format` (RGBA32UI, RGBA32F, RGBA8, otherwise R32UI),
 // kept for this frame; `fallback` when the buffer is missing or too small.
 VkBufferView texel_view(GLuint name, GLenum gl_format, VkBufferView fallback);
+
+// ---- Defined in vkgl_pipelines.cpp: the fixed state (R-11) ----
+
+// Returns whether pipelines take the cull, front face, depth and stencil state as dynamic state:
+// the device has extended dynamic state and vk-extended-dynamic-state is on. A draw asks it once.
+bool fixed_state_dynamic();
+
+// Returns the cull, front face, depth and stencil state of a draw into `t` with the GL state now:
+// what pipeline_for bakes into the key, or what the draw records as dynamic state.
+FixedState fixed_state(const Target& t);
 
 // ---- Defined in vkgl_pipelines.cpp: pipelines made ahead (R-10) ----
 

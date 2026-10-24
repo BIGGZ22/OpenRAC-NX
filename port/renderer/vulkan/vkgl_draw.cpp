@@ -280,6 +280,117 @@ void record_index_buffer(VkCommandBuffer cmd, const BufferRef& index, VkIndexTyp
     recorded.index_type = type;
 }
 
+// ---- The fixed state as dynamic state (R-11) ----
+
+// Records into `cmd` the fixed state `f` the bound pipeline takes as dynamic state, each of its
+// seven commands left out when `cmd` holds that value; with `dynamic` false (the pipeline bakes
+// it) nothing, but a pipeline that bakes it overrides what was recorded, so the tracker forgets.
+void record_fixed_state(VkCommandBuffer cmd, bool dynamic, const FixedState& f) {
+    RecordedState& recorded = g->recorded;
+
+    // Another kind of pipeline than the last: what the command buffer holds is not known.
+    if (recorded.fixed_dynamic != dynamic) {
+        recorded.fixed.reset();
+        recorded.fixed_dynamic = dynamic;
+    }
+
+    // Baked into the pipeline.
+    if (!dynamic) {
+        return;
+    }
+
+    const bool all = !skip_repeats() || !recorded.fixed.has_value();
+    const FixedState last = recorded.fixed.value_or(FixedState{});
+
+    // The cull mode.
+    if (all || last.cull != f.cull) {
+        vkCmdSetCullMode(cmd, f.cull);
+        count_command(Command::DynamicState);
+    }
+
+    // The front face.
+    if (all || last.front != f.front) {
+        vkCmdSetFrontFace(cmd, static_cast<VkFrontFace>(f.front));
+        count_command(Command::DynamicState);
+    }
+
+    // The depth test.
+    if (all || last.depth_test != f.depth_test) {
+        vkCmdSetDepthTestEnable(cmd, f.depth_test);
+        count_command(Command::DynamicState);
+    }
+
+    // The depth write.
+    if (all || last.depth_write != f.depth_write) {
+        vkCmdSetDepthWriteEnable(cmd, f.depth_write);
+        count_command(Command::DynamicState);
+    }
+
+    // The depth compare, ALWAYS while the test is off, as create_graphics_pipeline bakes it.
+    const auto compare = [](const FixedState& state) {
+        return state.depth_test != 0 ? static_cast<VkCompareOp>(state.depth_func)
+                                     : VK_COMPARE_OP_ALWAYS;
+    };
+
+    // The compare op.
+    if (all || compare(last) != compare(f)) {
+        vkCmdSetDepthCompareOp(cmd, compare(f));
+        count_command(Command::DynamicState);
+    }
+
+    // The stencil test.
+    if (all || last.stencil != f.stencil) {
+        vkCmdSetStencilTestEnable(cmd, f.stencil);
+        count_command(Command::DynamicState);
+    }
+
+    const bool front = all || last.stencil_func != f.stencil_func
+                       || !std::ranges::equal(last.front_ops, f.front_ops);
+    const bool back = all || last.stencil_func != f.stencil_func
+                      || !std::ranges::equal(last.back_ops, f.back_ops);
+
+    // The stencil ops, both faces in one command where they are the same.
+    if (front && back && std::ranges::equal(f.front_ops, f.back_ops)) {
+        vkCmdSetStencilOp(
+            cmd,
+            VK_STENCIL_FACE_FRONT_AND_BACK,
+            static_cast<VkStencilOp>(f.front_ops[0]),
+            static_cast<VkStencilOp>(f.front_ops[1]),
+            static_cast<VkStencilOp>(f.front_ops[2]),
+            static_cast<VkCompareOp>(f.stencil_func)
+        );
+        count_command(Command::DynamicState);
+    } else {
+        // Each face that changed, on its own.
+        if (front) {
+            vkCmdSetStencilOp(
+                cmd,
+                VK_STENCIL_FACE_FRONT_BIT,
+                static_cast<VkStencilOp>(f.front_ops[0]),
+                static_cast<VkStencilOp>(f.front_ops[1]),
+                static_cast<VkStencilOp>(f.front_ops[2]),
+                static_cast<VkCompareOp>(f.stencil_func)
+            );
+            count_command(Command::DynamicState);
+        }
+
+        // The back faces.
+        if (back) {
+            vkCmdSetStencilOp(
+                cmd,
+                VK_STENCIL_FACE_BACK_BIT,
+                static_cast<VkStencilOp>(f.back_ops[0]),
+                static_cast<VkStencilOp>(f.back_ops[1]),
+                static_cast<VkStencilOp>(f.back_ops[2]),
+                static_cast<VkCompareOp>(f.stencil_func)
+            );
+            count_command(Command::DynamicState);
+        }
+    }
+
+    recorded.fixed = f;
+}
+
 }  // namespace
 
 // ---- Draws ----
@@ -421,6 +532,9 @@ void draw(
         ++n;
     }
 
+    // The cull, front face, depth and stencil state, when the pipeline takes it as dynamic state.
+    const bool dynamic_fixed = fixed_state_dynamic();
+    const FixedState fixed = dynamic_fixed ? fixed_state(t) : FixedState{};
     const VkPipeline pipeline = pipeline_for(*p, mode, t, inputs, n);
     if (pipeline == VK_NULL_HANDLE) {
         return;
@@ -487,6 +601,7 @@ void draw(
         std::copy_n(s.blend_colour, 4, gpu_bindings.blend.begin());
         gpu_bindings.stencil =
             {static_cast<unsigned>(s.stencil_ref), s.stencil_value_mask, s.stencil_write_mask};
+        gpu_bindings.fixed = fixed;
         auto& pending = g->gpu;
         if (stats::enabled() && pending.pending_count) {
             const auto& before = pending.pending_bindings;
@@ -499,7 +614,8 @@ void draw(
                  before.index != after.index || before.index_offset != after.index_offset,
                  before.materials != after.materials,
                  before.viewport != after.viewport || before.scissor != after.scissor,
-                 before.blend != after.blend || before.stencil != after.stencil,
+                 before.blend != after.blend || before.stencil != after.stencil
+                     || before.fixed != after.fixed,
                  pending.pending_arguments != gpu_page->arguments.buffer
                      || argument_offset != pending.pending_offset + pending.pending_count * 20,
                  material.set
@@ -526,6 +642,7 @@ void draw(
         count_command(Command::BindPipeline);
         g->bound_pipeline = pipeline;
     }
+    record_fixed_state(cmd, dynamic_fixed, fixed);
     // Sets bound with another program's layout are not trusted for this one.
     g->recorded.use_layout(p->layout);
 

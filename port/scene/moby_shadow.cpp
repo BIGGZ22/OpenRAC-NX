@@ -9,7 +9,7 @@
 #include "assets/geometry/moby_shadow.h"
 #include "scene/moby_pose.h"
 
-namespace openrac::viewer {
+namespace openrac::scene {
 MobyShadowState moby_shadow_state(
     std::span<const std::uint8_t> ram,
     std::uint32_t moby,
@@ -170,4 +170,4 @@ std::vector<renderer::ShadowCapsule> moby_shadows(
     }
     return out;
 }
-}  // namespace openrac::viewer
+}  // namespace openrac::scene

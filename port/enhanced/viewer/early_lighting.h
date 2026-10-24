@@ -6,7 +6,7 @@
 #include "renderer/renderer.h"
 #include "renderer/shader.h"
 
-namespace openrac::viewer {
+namespace openrac::lighting {
 // One RGBA8 texel per 2x2 screen pixels: log-encoded irradiance RGB and
 // linear cascade visibility A. The 8-byte guide stores surface identity and
 // Ratchet shadow visibility in its remaining bits.
@@ -38,4 +38,4 @@ private:
     bool m_ready = false;
     bool m_failed = false;
 };
-}  // namespace openrac::viewer
+}  // namespace openrac::lighting

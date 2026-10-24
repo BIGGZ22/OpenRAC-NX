@@ -30,7 +30,7 @@ go into `src/overlays/`, and the staged file is removed.
 file and records its share of matching bytes as the function's
 `fuzzy_match_percent` (a size mismatch scores 0: it moves every byte after
 it). Matched code and matched functions still count EXACT functions only;
-a staged one is capped below 100 and is never finished. decomp.dev shows
+a staged one is capped below 100 and is never finished. ByteMatch reports
 the fuzzy figure as partial progress.
 
 ## Working on one

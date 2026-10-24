@@ -19,8 +19,8 @@ extern void func_001F9BC0(void *);
 extern void func_L00_001ED600(void);
 
 /* Initialises the camera slot tables and the camera state from the hero's transform. */
-void Camera_InitSlots(void) {
-    CameraSystem *g = &gCameraLvl;
+void setup_level_cameras(void) {
+    CameraSystem *g = &player_camera;
     CameraSystem *g1;
     CameraFollow *q;
     Vec4 *p1;
@@ -36,7 +36,7 @@ void Camera_InitSlots(void) {
         gCameraSlotsLvl[k].hard_cut = 0;
         gCameraSlotUsedLvl[k] = 0;
     }
-    g1 = &gCameraLvl;
+    g1 = &player_camera;
     base = D_0013E633 + 0xE1D;
     q = &g1->follow;
     p1 = &g1->follow.up;
@@ -68,7 +68,7 @@ void Camera_InitSlots(void) {
     if (gCameraDefCountLvl > 0) {
         do {
             int off = i * 32;
-            CameraDef *e = (CameraDef *)((char *)gCameraDefsLvl + off);
+            CameraDef *e = (CameraDef *)((char *)camera_descriptors + off);
             CameraInfo *r = e->info;
             Camera *el = &gCameraSlotsLvl[i];
             int h;
@@ -87,14 +87,14 @@ void Camera_InitSlots(void) {
             h = e->id;
             gCameraSlotUsedLvl[i] = 1;
             el->id = h;
-            el->type = Camera_FindTypeIndex((short)h);
+            el->type = find_camera_table_index_by_id((short)h);
             i++;
         } while (i < gCameraDefCountLvl);
     }
-    CameraResetBehindHero();
+    init_camera_system();
     {
-        CamBlend *b = &gCameraLvl.blend;
-        s32 *u = gCameraLvl.unk380;
+        CamBlend *b = &player_camera.blend;
+        s32 *u = player_camera.unk380;
         b->phase = 0;
         u[0] = 0;
         u[3] = 0;

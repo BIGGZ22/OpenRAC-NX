@@ -3,14 +3,16 @@
 #include <cmath>
 
 #include "enhanced/lighting/probes.h"
+#include "enhanced/renderer/gtao.h"
 #include "enhanced/tests/gpu_probe_fixture.h"
 #include "enhanced/viewer/probe_lighting.h"
+#include "enhanced/viewer/scene_lighting.h"
+#include "enhanced_viewer_shaders.h"
 #include "renderer/framebuffer.h"
 #include "renderer/gl.h"
 #include "scene/level_renderer.h"
 #include "tests/check.h"
 #include "tests/renderer_gl_context.h"
-#include "viewer_shaders.h"
 using namespace openrac;
 using namespace openrac::gl;
 
@@ -70,7 +72,7 @@ void check(
     bool camera_bias = false,
     bool bias_occluder = false
 ) {
-    viewer::ProbeLighting probes;
+    lighting::ProbeLighting probes;
     std::string error;
     const auto packed_dense =
         dense ? std::optional{openrac::test::gpu_probes(*dense)} : std::nullopt;
@@ -96,7 +98,7 @@ void check(
         glDisable(GL_DEPTH_TEST);
         glDisable(GL_CULL_FACE);
         shader.use();
-        probes.bind(shader, viewer::Layer::Terrain);
+        probes.bind(shader, scene::Layer::Terrain);
         glUniform1i(shader.uniform("camera_biased"), camera_bias ? 1 : 0);
         glUniform3f(shader.uniform("test_camera"), 16, 16, 20);
         glUniform4fv(shader.uniform("positions"), 8, positions[0].data());
@@ -107,7 +109,7 @@ void check(
         if (zero_weight_reference) {
             auto& reference = *zero_weight_reference;
             reference.use();
-            probes.bind(reference, viewer::Layer::Terrain);
+            probes.bind(reference, scene::Layer::Terrain);
             glUniform1i(reference.uniform("camera_biased"), camera_bias ? 1 : 0);
             glUniform3f(reference.uniform("test_camera"), 16, 16, 20);
             glUniform4fv(reference.uniform("positions"), 8, positions[0].data());
@@ -180,14 +182,14 @@ void coverage_seam(
                     usable ? lighting::Float2{1024, 1048576} : lighting::Float2{0.01f, 0.0001f};
             }
         }
-        viewer::ProbeLighting probes;
+        lighting::ProbeLighting probes;
         std::string error;
         const auto packed_dense = openrac::test::gpu_probes(dense);
         CHECK(probes.upload(openrac::test::gpu_probes(coarse), error, &packed_dense));
         glBindFramebuffer(GL_FRAMEBUFFER, frame.id());
         glViewport(0, 0, 8, 1);
         shader.use();
-        probes.bind(shader, viewer::Layer::Terrain);
+        probes.bind(shader, scene::Layer::Terrain);
         glUniform1i(shader.uniform("camera_biased"), 0);
         glUniform4fv(shader.uniform("positions"), 8, points[0].data());
         glUniform4fv(shader.uniform("normals"), 8, directions[0].data());
@@ -225,7 +227,7 @@ void coverage_seam(
 }
 
 void material_path(
-    viewer::Layer layer,
+    scene::Layer layer,
     int blend,
     bool glow,
     bool indirect = false,
@@ -236,15 +238,15 @@ void material_path(
     bool mask_transition = false,
     bool authored_tint = false
 ) {
-    viewer::LevelData level;
+    scene::LevelData level;
     level.light_sets.resize(256);
     const Float3 triangle_positions[] = {{-1, -1, 0}, {1, -1, 0}, {0, 1, 0}};
     for (const auto& p : triangle_positions) {
-        viewer::Vertex vtx{};
+        scene::Vertex vtx{};
         std::copy(p.begin(), p.end(), vtx.position);
         vtx.normal[2] = 1;
         for (unsigned c = 0; c < 3; ++c) {
-            vtx.colour[c] = layer == viewer::Layer::Mobys ? 0.5f : 0.0f;
+            vtx.colour[c] = layer == scene::Layer::Mobys ? 0.5f : 0.0f;
         }
         vtx.colour[3] = 1;
         if (authored_tint) {
@@ -281,13 +283,13 @@ void material_path(
         }
         level.image_paths.push_back("emission-test");
         level.materials.back().emission_image = 0;
-        level.materials.back().emission_mask = lighting::EmissionMask::Green;
+        level.materials.back().emission_mask = scene::EmissionMask::Green;
     }
-    viewer::Model model;
+    scene::Model model;
     model.primitives.push_back({0, 3, 0});
     level.models.push_back(model);
-    viewer::Instance instance;
-    if (layer == viewer::Layer::Mobys) {
+    scene::Instance instance;
+    if (layer == scene::Layer::Mobys) {
         instance.moby_light = {0, 0, 0, 1};
         instance.moby_ambient = {0, 0, 0, glow ? 256.0f : 0.0f};  // glow RGB = red 255
         if (authored_light || authored_material) {
@@ -306,11 +308,13 @@ void material_path(
     }
     level.instances[static_cast<std::size_t>(layer)].push_back(instance);
     renderer::Renderer renderer;
-    viewer::LevelScene scene;
+    renderer.set_ambient_occlusion(std::make_unique<renderer::Gtao>());
+    scene::LevelScene scene;
+    lighting::use_scene_lighting(scene);
     std::string error;
     CHECK(scene.upload(level, renderer.textures(), error));
     scene.set_probe_lighting(true, 1.2f);  // explicit intensity for this fixture
-    CHECK(renderer.add(std::make_unique<viewer::LayerRenderer>(scene, layer), error));
+    CHECK(renderer.add(std::make_unique<scene::LayerRenderer>(scene, layer), error));
     CHECK(renderer.init(error));
     renderer::FrameBuffer frame;
     CHECK(frame.create(32, 32, error));
@@ -334,7 +338,9 @@ void material_path(
     for (auto& e : volume.irradiance) {
         e = {3.14159265f, 3.14159265f, 3.14159265f};
     }
-    CHECK(scene.set_probe_volume(openrac::test::gpu_probes(volume), error));
+    CHECK(
+        lighting::scene_lighting(scene)->set_probe_volume(openrac::test::gpu_probes(volume), error)
+    );
     if (indirect) {
         scene.set_probe_view(2);
     }
@@ -347,7 +353,10 @@ void material_path(
         for (auto& e : volume.irradiance) {
             e = {};
         }
-        CHECK(scene.set_probe_volume(openrac::test::gpu_probes(volume), error));
+        CHECK(
+            lighting::scene_lighting(scene)
+                ->set_probe_volume(openrac::test::gpu_probes(volume), error)
+        );
         for (float multiplier : {0.f, 5.f}) {
             scene.set_probe_lighting(true, multiplier);
             input.gtao = true;
@@ -363,7 +372,10 @@ void material_path(
         for (auto& e : volume.irradiance) {
             e = {};
         }
-        CHECK(scene.set_probe_volume(openrac::test::gpu_probes(volume), error));
+        CHECK(
+            lighting::scene_lighting(scene)
+                ->set_probe_volume(openrac::test::gpu_probes(volume), error)
+        );
         std::vector<std::uint8_t> isolated;
         for (float multiplier : {0.0f, 5.0f}) {
             scene.set_probe_lighting(true, multiplier);
@@ -384,8 +396,8 @@ void material_path(
                     mask_transition
                         ? Float3{linear(128.f / 255), linear(160.f / 255), linear(128.f / 255)}
                         : (masked ? Float3{0, 1, 0} : Float3{1, 1, 1});
-                float coverage = lighting::emission_mask(
-                    masked ? lighting::EmissionMask::Green : lighting::EmissionMask::None, colour
+                float coverage = scene::emission_mask(
+                    masked ? scene::EmissionMask::Green : scene::EmissionMask::None, colour
                 );
                 float e = .125f * colour[1] * coverage;
                 float display =
@@ -415,7 +427,7 @@ void material_path(
         CHECK(after[at] == 0 && after[at + 1] == 0 && after[at + 2] == 0);
     } else if (blend == 1) {
         CHECK(after[at] > 99 && after[at] < 105);
-    } else if (layer != viewer::Layer::Mobys) {
+    } else if (layer != scene::Layer::Mobys) {
         CHECK(after[at] > 250 && after[at + 1] > 250 && after[at + 2] > 250);
     } else {
         CHECK(after[at] > 200 && after[at] < 207);
@@ -442,14 +454,17 @@ void material_path(
         CHECK(dimmed[at] > 0 && dimmed[at] < after[at]);
         scene.set_probe_lighting(true, 1.2f);
     }
-    if (layer == viewer::Layer::Mobys && blend == 0 && !glow) {
+    if (layer == scene::Layer::Mobys && blend == 0 && !glow) {
         // Direct light must use each fragment's position, rather than the
         // original per-moby colour merge. With black GI, a white point light
         // halfway through its radius supplies about 0.5 * authored tint 0.5.
         for (auto& e : volume.irradiance) {
             e = {0, 0, 0};
         }
-        CHECK(scene.set_probe_volume(openrac::test::gpu_probes(volume), error));
+        CHECK(
+            lighting::scene_lighting(scene)
+                ->set_probe_volume(openrac::test::gpu_probes(volume), error)
+        );
         std::array<float, 64> points{};
         points[0] = points[1] = points[2] = 1;
         points[6] = 1;
@@ -463,7 +478,7 @@ void material_path(
         CHECK(frame.read_rgba() == direct);  // GI multiplier never changes direct light
     }
     CHECK(glGetError() == GL_NO_ERROR);
-    if (layer == viewer::Layer::Terrain && !glow && viewer::ProbeSelection::supported()) {
+    if (layer == scene::Layer::Terrain && !glow && lighting::ProbeSelection::supported()) {
         // Exercise the real prepass hook with AO disabled, then enabled. The
         // resolved depth must select green GI before the colour pass shades it.
         auto local_grid = volume.grid;
@@ -479,9 +494,11 @@ void material_path(
         for (auto& m : local.distance_moments) {
             m = {1024, 1024 * 1024};
         }
-        CHECK(scene.set_probe_regions(
-            openrac::test::gpu_probes(volume), {openrac::test::gpu_probes(local)}, error
-        ));
+        CHECK(
+            lighting::scene_lighting(scene)->set_probe_regions(
+                openrac::test::gpu_probes(volume), {openrac::test::gpu_probes(local)}, error
+            )
+        );
         CHECK(scene.compute_probe_selection());
         scene.update_probe_regions(input.camera, 1);
         input.after_world_depth = [&](unsigned depth, int width, int height) {
@@ -500,7 +517,7 @@ void material_path(
 }
 
 void compute_regions(renderer::Shader&, renderer::FrameBuffer&, unsigned vao) {
-    if (!viewer::ProbeSelection::supported()) {
+    if (!lighting::ProbeSelection::supported()) {
         std::printf("Tiled probe fixture unavailable on this context\n");
         return;
     }
@@ -550,7 +567,7 @@ void compute_regions(renderer::Shader&, renderer::FrameBuffer&, unsigned vao) {
         );
         regions.push_back(std::move(region));
     }
-    viewer::ProbeLighting probes;
+    lighting::ProbeLighting probes;
     std::string error;
     CHECK(probes.upload_regions(
         openrac::test::gpu_probes(base), openrac::test::gpu_regions(regions), error
@@ -561,7 +578,7 @@ void compute_regions(renderer::Shader&, renderer::FrameBuffer&, unsigned vao) {
         return;
     }
     std::string fragment = "#version 410 core\n";
-    fragment += viewer::shaders::probes_glsl;
+    fragment += lighting::shaders::probes_glsl;
     fragment += R"glsl(uniform sampler2D receiver_depth;
 uniform mat4 test_clip;
 uniform vec2 test_extent;
@@ -634,7 +651,7 @@ void main() {
             glDisable(GL_BLEND);
             glDisable(GL_CULL_FACE);
             shader.use();
-            probes.bind(shader, viewer::Layer::Terrain, false, &camera, depth_matched);
+            probes.bind(shader, scene::Layer::Terrain, false, &camera, depth_matched);
             if (mode) {
                 glUniform1i(shader.uniform("probe_gpu_selection"), mode);
             }
@@ -764,7 +781,7 @@ void camera_regions(renderer::Shader& shader, renderer::FrameBuffer& frame, unsi
         if (variant == 3) {
             regions.resize(129, regions.back());  // Force two-slot streaming fallback.
         }
-        viewer::ProbeLighting probes;
+        lighting::ProbeLighting probes;
         std::string error;
         CHECK(probes.upload_regions(
             openrac::test::gpu_probes(base), openrac::test::gpu_regions(regions), error
@@ -801,7 +818,7 @@ void camera_regions(renderer::Shader& shader, renderer::FrameBuffer& frame, unsi
             glDisable(GL_DEPTH_TEST);
             glDisable(GL_CULL_FACE);
             shader.use();
-            probes.bind(shader, viewer::Layer::Terrain);
+            probes.bind(shader, scene::Layer::Terrain);
             glUniform4fv(shader.uniform("positions"), 8, points[0].data());
             glUniform4fv(shader.uniform("normals"), 8, directions[0].data());
             glBindVertexArray(vao);
@@ -830,7 +847,7 @@ void camera_facing_normals() {
     // sign and either triangle winding.
     for (bool reversed : {false, true}) {
         for (float sign : {1.0f, -1.0f, 0.0f}) {
-            viewer::LevelData level;
+            scene::LevelData level;
             level.light_sets.resize(256);
             level.light_sets[0] = 1;
             level.light_sets[6] = -1;
@@ -838,7 +855,7 @@ void camera_facing_normals() {
             level.light_sets[14] = 1;
             for (const Float3 p :
                  {Float3{-1, -1, -0.5f}, Float3{1, -1, -0.5f}, Float3{0, 1, -0.5f}}) {
-                viewer::Vertex v{};
+                scene::Vertex v{};
                 std::copy(p.begin(), p.end(), v.position);
                 v.normal[2] = sign;
                 if (sign == 0) {
@@ -851,16 +868,18 @@ void camera_facing_normals() {
             level.indices = reversed ? std::vector<std::uint32_t>{0, 2, 1}
                                      : std::vector<std::uint32_t>{0, 1, 2};
             level.materials.push_back({});
-            viewer::Model model;
+            scene::Model model;
             model.primitives.push_back({0, 3, 0});
             level.models.push_back(model);
-            level.instances[static_cast<std::size_t>(viewer::Layer::Terrain)].push_back({});
+            level.instances[static_cast<std::size_t>(scene::Layer::Terrain)].push_back({});
             renderer::Renderer renderer;
-            viewer::LevelScene scene;
+            renderer.set_ambient_occlusion(std::make_unique<renderer::Gtao>());
+            scene::LevelScene scene;
+            lighting::use_scene_lighting(scene);
             std::string error;
             CHECK(scene.upload(level, renderer.textures(), error));
             CHECK(renderer.add(
-                std::make_unique<viewer::LayerRenderer>(scene, viewer::Layer::Terrain), error
+                std::make_unique<scene::LayerRenderer>(scene, scene::Layer::Terrain), error
             ));
             CHECK(renderer.init(error));
             renderer::FrameBuffer frame;
@@ -888,7 +907,10 @@ void camera_facing_normals() {
                 }
             }
             lighting::update_probe_gutters(volume);
-            CHECK(scene.set_probe_volume(openrac::test::gpu_probes(volume), error));
+            CHECK(
+                lighting::scene_lighting(scene)
+                    ->set_probe_volume(openrac::test::gpu_probes(volume), error)
+            );
             for (bool below : {false, true}) {
                 renderer::FrameInput input;
                 input.camera.view = renderer::identity();
@@ -929,7 +951,7 @@ void dense_sphere_fade() {
     for (auto& p : dense.probes) {
         p.valid = true;
     }
-    viewer::ProbeLighting probes;
+    lighting::ProbeLighting probes;
     std::string error;
     CHECK(probes.upload_regions(
         openrac::test::gpu_probes(base), {openrac::test::gpu_probes(dense)}, error
@@ -1012,7 +1034,7 @@ void sphere_overlay() {
     // The visible sphere must be drawn at this relocated centre (x=0),
     // rather than the nominal x=-0.5 position.
     volume.probes[0].offset = {0.5f, 0, 0};
-    viewer::ProbeLighting probes;
+    lighting::ProbeLighting probes;
     std::string error;
     CHECK(probes.upload(openrac::test::gpu_probes(volume), error));
     probes.show_spheres = true;
@@ -1055,7 +1077,8 @@ void sphere_overlay() {
 void sunlight_rgb_correction() {
     renderer::Shader shader;
     std::string error;
-    const auto source = std::string("#version 410 core\n") + viewer::shaders::probes_glsl + R"glsl(
+    const auto source =
+        std::string("#version 410 core\n") + lighting::shaders::probes_glsl + R"glsl(
 uniform float test_visibility;
 layout(location = 0) out vec4 result;
 void main() {
@@ -1199,7 +1222,7 @@ int main() {
     }
     compact_texture_uploads();
     std::string fragment = "#version 410 core\n";
-    fragment += viewer::shaders::probes_glsl;
+    fragment += lighting::shaders::probes_glsl;
     fragment += R"glsl(uniform vec4 positions[8];
 uniform vec4 normals[8];
 uniform int camera_biased;
@@ -1374,19 +1397,19 @@ void main() {
     reference.release();
     zero_weight_reference = nullptr;
     frame.release();
-    material_path(viewer::Layer::Terrain, 0, false);
-    material_path(viewer::Layer::Mobys, 0, false);
-    material_path(viewer::Layer::Mobys, 0, false, false, true);
-    material_path(viewer::Layer::Mobys, 0, false, false, false, true);
-    material_path(viewer::Layer::Mobys, 0, false, false, false, true, true);
-    material_path(viewer::Layer::Mobys, 0, false, false, false, true, true, true);
-    material_path(viewer::Layer::Mobys, 0, false, false, false, true, true, false, true);
-    material_path(viewer::Layer::Mobys, 0, false, false, false, true, false, false, false, true);
-    material_path(viewer::Layer::Mobys, 1, false);
-    material_path(viewer::Layer::Mobys, 2, false);
-    material_path(viewer::Layer::Mobys, 0, true);
-    material_path(viewer::Layer::Ties, 0, false, true);
-    material_path(viewer::Layer::Shrubs, 0, false, true);
+    material_path(scene::Layer::Terrain, 0, false);
+    material_path(scene::Layer::Mobys, 0, false);
+    material_path(scene::Layer::Mobys, 0, false, false, true);
+    material_path(scene::Layer::Mobys, 0, false, false, false, true);
+    material_path(scene::Layer::Mobys, 0, false, false, false, true, true);
+    material_path(scene::Layer::Mobys, 0, false, false, false, true, true, true);
+    material_path(scene::Layer::Mobys, 0, false, false, false, true, true, false, true);
+    material_path(scene::Layer::Mobys, 0, false, false, false, true, false, false, false, true);
+    material_path(scene::Layer::Mobys, 1, false);
+    material_path(scene::Layer::Mobys, 2, false);
+    material_path(scene::Layer::Mobys, 0, true);
+    material_path(scene::Layer::Ties, 0, false, true);
+    material_path(scene::Layer::Shrubs, 0, false, true);
     sphere_overlay();
     dense_sphere_fade();
     camera_facing_normals();

@@ -136,23 +136,23 @@ extern char D_001A2F90[];
    Returns whether that count is 0. The head is stored and then read back
    (CSE forwards it, leaving retail's copy into $s0 after the null test),
    and each block reads D_001A2F90 through its own `char *` local. */
-int Mission_UpdateObjectives(void) {
+int update_mission_list(void) {
     char *node;
 
     {
         char *p = D_001A2F90;
-        *(char **)(p + 0x10) = D_001A2EF0[D_001A01F0[0x89]];
+        *(char **)(p + 0x10) = D_001A2EF0[level_map_selection[0x89]];
         if (*(char **)(p + 0x10) == 0) {
             return 0;
         }
         node = *(char **)(p + 0x10);
     }
     while (*(short *)node != 0) {
-        if ((*(unsigned short *)(node + 0x10) & 4) && D_0013DE60[D_001A01F0[0x89]] == 0) {
+        if ((*(unsigned short *)(node + 0x10) & 4) && level_visit_state[level_map_selection[0x89]] == 0) {
             *(short *)(node + 0x24) = 0;
-        } else if (!Mission_CheckCondition(*(short *)(node + 2), *(int *)(node + 4))) {
+        } else if (!check_mission_condition(*(short *)(node + 2), *(int *)(node + 4))) {
             *(short *)(node + 0x24) = 0;
-        } else if (!Mission_CheckCondition(*(short *)(node + 8), *(int *)(node + 0xC))) {
+        } else if (!check_mission_condition(*(short *)(node + 8), *(int *)(node + 0xC))) {
             *(short *)(node + 0x24) = 1;
         } else {
             *(short *)(node + 0x24) = 2;
@@ -191,7 +191,7 @@ extern unsigned char D_0013D490[];
 extern unsigned char D_0014BFC0[][4];
 
 /* A 10-case switch; the explicit `case 9: break;` keeps retail's table. */
-int Mission_CheckCondition(short type, int arg) {
+int check_mission_condition(short type, int arg) {
     switch (type) {
     case 0:
         return 1;
@@ -200,7 +200,7 @@ int Mission_CheckCondition(short type, int arg) {
     case 2:
         return D_0013D5C8_b[arg] != 0;
     case 3:
-        return D_0013D5F0[arg] != 0;
+        return items_acquired[arg] != 0;
     case 4:
         if (arg < 0x79) return D_0013D6B8_r[arg].d != 0;
         break;
@@ -238,7 +238,7 @@ extern MissionNode *D_001A2FA0;
    Bit 31 of *mask says every visible node is done. Returns the count.
    out is indexed by count: loop strength reduction then gives retail's
    pointer and its copy for the second store. */
-int Mission_CollectObjectiveIds(int *out, int *mask, int *nums, int arg3) {
+int collect_mission_ids(int *out, int *mask, int *nums, int arg3) {
     MissionNode *p = D_001A2FA0;
     int count = 0;
     int all = 1;
@@ -346,7 +346,7 @@ int MissionCond_Items1FAnd21(void) {
 }
 
 /* Returns whether entry arg0 of the D_0013D5C8 table is set. */
-int HasItem(int arg0) {
+int is_item_available(int arg0) {
     unsigned char *base = (unsigned char *)&D_0013D5C8;
     return base[arg0] != 0;
 }
@@ -490,7 +490,7 @@ extern void func_001F75D0_0CDE0(struct TextRegion_0CDE0 *, long, char *,
    it is the current level, places the fixed icons (-1..-9) and projects the others to map
    coordinates, then sets each icon's active flag and sizes its label box.
    Adapted from Lombyte (GPL-3.0) for PAL: src/ui/map/update_map_icons.c, update_map_icons. */
-void Map_RefreshIcons(s32 level, s32 flag) {
+void update_map_icons(s32 level, s32 flag) {
     char label_text[128];
     f32 map_x;
     f32 map_y;

@@ -19,16 +19,16 @@ int videoCallback(void *unused, char *entry, char *buffer) {
     int remaining;
     if (total < first) first = total;
     remaining = total - first;
-    videoDecBeginPut(D_0016130C + 0xD9048, &spans.p1, &spans.n1, &spans.p2, &spans.n2);
+    videoDecBeginPut(decoder_state + 0xD9048, &spans.p1, &spans.n1, &spans.p2, &spans.n2);
     copied = cpy2area((char *)(((unsigned int)spans.p1 & 0xFFFFFFF) | 0x20000000), spans.n1,
                           (char *)(((unsigned int)spans.p2 & 0xFFFFFFF) | 0x20000000), spans.n2,
                           source, first, buffer, remaining);
     if (copied > 0) {
-        if (!videoDecPutTs(D_0016130C + 0xD9048, *(long *)(entry + 0x10), *(long *)(entry + 0x18), spans.p1, copied)) {
+        if (!videoDecPutTs(decoder_state + 0xD9048, *(long *)(entry + 0x10), *(long *)(entry + 0x18), spans.p1, copied)) {
             ErrMessage(D_001E8E38);
         }
     }
-    videoDecEndPut(D_0016130C + 0xD9048, copied);
+    videoDecEndPut(decoder_state + 0xD9048, copied);
     return copied > 0;
 }
 extern void audioDecBeginPut(void *, char **, int *, char **, int *);
@@ -36,7 +36,7 @@ extern void audioDecEndPut(void *, int);
 
 /* Skips the entry's 4-byte prefix, wraps the source at the ring size (+0x50008),
  * copies into the decoder's two free spans and reports whether anything was copied. */
-int func_0023CAF8(void *unused, char *entry, char *buffer) {
+int pcmCallback(void *unused, char *entry, char *buffer) {
     char *dst0, *dst1;
     int len0, len1;
     char *src;
@@ -52,9 +52,9 @@ int func_0023CAF8(void *unused, char *entry, char *buffer) {
     if (total < first) first = total;
     ring = buffer;
     rest = total - first;
-    audioDecBeginPut(D_0016130C + 0xD9100, &dst0, &len0, &dst1, &len1);
+    audioDecBeginPut(decoder_state + 0xD9100, &dst0, &len0, &dst1, &len1);
     copied = cpy2area(dst0, len0, dst1, len1, src, first, ring, rest);
-    audioDecEndPut(D_0016130C + 0xD9100, copied);
+    audioDecEndPut(decoder_state + 0xD9100, copied);
     return copied > 0;
 }
 extern void *func_00115248(void *dest, const void *src, int n);

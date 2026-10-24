@@ -199,6 +199,15 @@ VkPresentModeKHR present_mode() {
         if (has(VK_PRESENT_MODE_IMMEDIATE_KHR)) {
             return VK_PRESENT_MODE_IMMEDIATE_KHR;
         }
+
+        // Uncapped without tearing: the latest frame at each refresh, as mailbox, where offered.
+        const bool latest = render_opt::enabled(render_opt::Opt::PresentTiming)
+                            && g->latest_ready_enabled
+                            && has(VK_PRESENT_MODE_FIFO_LATEST_READY_KHR);
+        if (latest) {
+            return VK_PRESENT_MODE_FIFO_LATEST_READY_KHR;
+        }
+
         if (has(VK_PRESENT_MODE_MAILBOX_KHR)) {
             return VK_PRESENT_MODE_MAILBOX_KHR;
         }
@@ -295,6 +304,9 @@ bool make_swapchain() {
     g->swapchain = swapchain;
     g->swapchain_format = format.format;
     g->swapchain_extent = extent;
+    // Present ids count per swapchain: the new one's start again.
+    g->present_serial = 0;
+    g->present_seen = PresentTiming{};
     vkGetSwapchainImagesKHR(g->device, swapchain, &n, nullptr);
     g->swapchain_images.resize(n);
     vkGetSwapchainImagesKHR(g->device, swapchain, &n, g->swapchain_images.data());
@@ -337,6 +349,11 @@ void publish_counters() {
 
     stats::gauge("shader_compile_s", now.shader_compile_s);
     stats::gauge("vk_gpu_timestamps", g->timestamp_bits != 0 ? 1.0 : 0.0);
+    // The presentation's timing (R-09): whether presents can be waited on, whether one has been
+    // seen finished, and how long the frame waited for a free swapchain image.
+    stats::gauge("present_wait_supported", g->present_wait_enabled ? 1.0 : 0.0);
+    stats::gauge("present_time_known", g->present_seen.known ? 1.0 : 0.0);
+    stats::gauge("acquire_wait_s", g->acquire_wait_s);
     g->published = now;
 }
 
@@ -371,6 +388,35 @@ void advance() {
 }
 
 namespace {
+
+// True when present-timing is on: present ids given and their waits polled.
+bool timing_on() {
+    return render_opt::enabled(render_opt::Opt::PresentTiming);
+}
+
+// Waits at most `timeout_ns` for the last numbered present to finish, and when it has, keeps the
+// moment it was seen (g->present_seen). False when there is nothing to wait for or it is not done.
+bool note_finished_presents(std::uint64_t timeout_ns) {
+    const std::uint64_t id = g->present_serial;
+
+    // No numbered present waits, or the last one was seen already.
+    if (!timing_on() || !g->present_wait_enabled || g->swapchain == VK_NULL_HANDLE || id == 0
+        || g->present_seen.id == id) {
+        return g->present_seen.known && g->present_seen.id == id && id != 0;
+    }
+
+    const VkResult r = vkWaitForPresentKHR(g->device, g->swapchain, id, timeout_ns);
+
+    // Not yet shown (a timeout), or the swapchain went: nothing more is known.
+    if (r != VK_SUCCESS) {
+        return false;
+    }
+
+    g->present_seen.known = true;
+    g->present_seen.id = id;
+    g->present_seen.visible = Clock::now();
+    return true;
+}
 
 // True when the screen's format holds what the default framebuffer's does, eight unsigned bits a
 // channel without sRGB encoding, so that a blit into either rounds the same.
@@ -464,9 +510,13 @@ bool present_to_screen() {
     }
     Frame& f = frame();
     std::uint32_t index = 0;
+    note_finished_presents(0);
+    // The wait for a free image of the swapchain, measured: the game thread blocks here.
+    const Clock::time_point acquiring = Clock::now();
     VkResult r = vkAcquireNextImageKHR(
         g->device, g->swapchain, UINT64_MAX, f.acquired, VK_NULL_HANDLE, &index
     );
+    g->acquire_wait_s = seconds_since(acquiring);
     if (r == VK_ERROR_OUT_OF_DATE_KHR) {
         if (!make_swapchain()) {
             return false;
@@ -514,6 +564,17 @@ bool present_to_screen() {
     info.swapchainCount = 1;
     info.pSwapchains = &g->swapchain;
     info.pImageIndices = &index;
+    VkPresentIdKHR id{VK_STRUCTURE_TYPE_PRESENT_ID_KHR};
+    const std::uint64_t serial = g->present_serial + 1;
+
+    // Each present numbered, so that its wait can say when it reached the screen.
+    if (timing_on() && g->present_id_enabled) {
+        id.swapchainCount = 1;
+        id.pPresentIds = &serial;
+        info.pNext = &id;
+        g->present_serial = serial;
+    }
+
     r = vkQueuePresentKHR(g->queue, &info);
 #if defined(__ANDROID__)
     // Android says "suboptimal" for every frame of a turned screen that the system turns for us.
@@ -612,6 +673,30 @@ bool test_present_paths(std::vector<std::uint8_t>& single, std::vector<std::uint
     retire(composed);
     retire(copied);
     return read;
+}
+
+}  // namespace openrac::vkgl
+
+namespace openrac::vkgl {
+
+PresentTiming present_timing() {
+    using namespace detail;
+
+    // No context: nothing presented.
+    if (g == nullptr) {
+        return {};
+    }
+
+    note_finished_presents(0);
+    PresentTiming timing = g->present_seen;
+    timing.supported = timing_on() && g->present_wait_enabled && g->swapchain != VK_NULL_HANDLE;
+    return timing;
+}
+
+bool wait_for_present(std::chrono::nanoseconds timeout) {
+    using namespace detail;
+    const auto ns = static_cast<std::uint64_t>(std::max<std::int64_t>(timeout.count(), 0));
+    return g != nullptr && note_finished_presents(ns);
 }
 
 }  // namespace openrac::vkgl

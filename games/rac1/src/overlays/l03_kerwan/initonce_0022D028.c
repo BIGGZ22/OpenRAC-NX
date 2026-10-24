@@ -15,7 +15,7 @@ extern float D_0015EE6C MACRO_ADDR;
 typedef struct { char pad0[0x44]; short n; char pad1[0x132]; char *m[1]; } G_2DC848;
 extern G_2DC848 D_L03_0016C9E0;
 // Emits four randomized particles while the active level event is in its trigger range.
-void Kerwan_SpawnTimedSparks(void) {
+void emit_level3_state5_moby_effects(void) {
  float position[4], direction[4];
  char *g;
  char *moby;

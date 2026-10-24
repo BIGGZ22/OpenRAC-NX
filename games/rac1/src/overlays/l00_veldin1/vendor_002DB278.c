@@ -2,6 +2,7 @@
 #include "common.h"
 #include "include_asm.h"
 #include "vector.h"
+#include "hero.h"
 
 extern int D_L00_0015F6A8 MACRO_ADDR;
 extern char D_0014171B[];
@@ -35,7 +36,7 @@ typedef struct {
     int i60;
 } E;
 
-void Moby834Update(M *m) {
+void clank_cutscene_trigger_update(M *m) {
     unsigned char *g, *h;
     E *e = (E *)m->ext;
     if (D_L00_0015F6A8 == 2) {
@@ -75,7 +76,7 @@ void Moby834Update(M *m) {
             e->f2c = 3.0f;
         }
         if (e->s24 >= 4 && D_L00_0015F6A8 != 6)
-            RequestPlanetLoad(1);
+            initialize_global_state_entry(1);
         break;
     case 2:
         if (D_L00_0015F6A8 == 2)
@@ -90,64 +91,86 @@ extern char *D_L00_00160098 MACRO_ADDR;
 extern int func_L00_00203F20(int a, int b);
 extern int func_00215570(void *, int);
 typedef unsigned short Ent[4];
+typedef struct HelpMoby {
+    u8 pad_00[0x20];
+    u8 state;                      /* 0x20: 0 on the first update, then 1 */
+    u8 pad_21[0xF];
+    u8 alpha;                      /* 0x30: set to 0xFF on the first update */
+    u8 pad_31[0x47];
+    s32 *vars;                     /* 0x78: parameter words, vars[0..8] */
+} HelpMoby;
+
+typedef struct HelpTarget {
+    u8 pad_00[0x20];
+    u8 state;                      /* 0x20: 0xFE / 0xFD mean the moby is gone */
+} HelpTarget;
+
 /* UpdateMoby_1413: first-update init of the moby state, then each trigger entry in the
  * hero-state table (Ent = 4 ushorts, indexed by the func_L00_00203F20 slot) is tested and
  * the matching slot requested when the hero is at the position named by the moby's
  * params; with slots 1 and 2 clear, guard mobys in params[5..8] are checked for being gone. */
-void Moby1413Update(unsigned char *moby) {
-    int *s = *(int **)(moby + 0x78);
-    Ent *t;
-    int *p;
-    int i;
-    unsigned char *g3;
-    if (moby[0x20] == 0) {
-        moby[0x20] = 1;
-        moby[0x30] = 0xFF;
+void update_level_help_controller(unsigned char *moby) {
+    HelpMoby *help;
+    s32 *vars;
+    u16 *trig;
+    s32 *target_index_ptr;
+    s32 i;
+    s32 k;
+    s32 e;
+    s32 d;
+    HelpTarget *target_moby;
+    Hero *hero_ptr;
+
+    help = (HelpMoby *)moby;
+    vars = help->vars;
+    if (help->state == 0) {
+        help->state = 1;
+        help->alpha = 0xFF;
     }
-    t = ((Ent *)(D_0014171B + 0x34D));
-    if (t[3][0] == 0) Help_Request(3, 3);
-    if (t[0x74][0] == 0) {
-        if (is_point_inside_clip_volume(((void *)(D_0013E633 + 0xE9D)), s[4])) Help_Request(0x4E2A, 0x74);
+    trig = (u16 *)(D_0014171B + 0x34D);
+    if (trig[0x18 / 2] == 0) Help_Request(3, 3);
+    if (trig[0x3A0 / 2] == 0) {
+        if (is_point_inside_clip_volume((void *)&((Hero *)(D_0013E633 + 0xE1D))->motion.pos, vars[4])) Help_Request(0x4E2A, 0x74);
     }
     {
-    Ent *t2 = ((Ent *)(D_0014171B + 0x34D));
-    if (t2[9][0] == 0) {
-        if (is_point_inside_clip_volume(((void *)(D_0013E633 + 0xE9D)), s[0])) {
+    u16 *trig2 = (u16 *)(D_0014171B + 0x34D);
+    if (trig2[0x48 / 2] == 0) {
+        if (is_point_inside_clip_volume((void *)&((Hero *)(D_0013E633 + 0xE1D))->motion.pos, vars[0])) {
             if (*(unsigned short *)(D_0014171B_q + 0x235) == 0) Help_Request(5, 9);
         }
     }
     }
     {
-    Ent *t3 = ((Ent *)(D_0014171B + 0x34D));
-    if (t3[8][0] == 0 && *(unsigned short *)(D_0014171B_q + 0x22D) == 0) {
-        if (is_point_inside_clip_volume(((void *)(D_0013E633 + 0xE9D)), s[1])) Help_Request(4, 8);
+    u16 *trig3 = (u16 *)(D_0014171B + 0x34D);
+    if (trig3[0x40 / 2] == 0 && *(unsigned short *)(D_0014171B_q + 0x22D) == 0) {
+        if (is_point_inside_clip_volume((void *)&((Hero *)(D_0013E633 + 0xE1D))->motion.pos, vars[1])) Help_Request(4, 8);
     }
     }
-    if (((Ent *)(D_0014171B + 0x34D))[0][0] == 0) {
-        if (is_point_inside_clip_volume(((void *)(D_0013E633 + 0xE9D)), s[2])) Help_Request(0, 0);
+    if (((u16 *)(D_0014171B + 0x34D))[0] == 0) {
+        if (is_point_inside_clip_volume((void *)&((Hero *)(D_0013E633 + 0xE1D))->motion.pos, vars[2])) Help_Request(0, 0);
     }
     {
-    Ent *t4 = ((Ent *)(D_0014171B + 0x34D));
-    if (t4[1][0] != 0) return;
-    if (t4[2][0] != 0) return;
+    u16 *trig4 = (u16 *)(D_0014171B + 0x34D);
+    if (trig4[0x8 / 2] != 0) return;
+    if (trig4[0x10 / 2] != 0) return;
     }
-    g3 = D_0013E633 + 0xE1D;
-    p = s + 5;
-    {
-    int k = -1, e = 0xFE, d = 0xFD;
+    hero_ptr = (Hero *)(D_0013E633 + 0xE1D);
+    target_index_ptr = vars + 5;
+    k = -1;
+    e = 0xFE;
+    d = 0xFD;
     i = 3;
     do {
-        int id = *p;
+        s32 id = *target_index_ptr;
         if (id != k) {
-            unsigned char *m = (unsigned char *)D_L00_00160098 + (id << 8);
-            if (m == 0 || m[0x20] == e || m[0x20] == d) {
-                if (*(int *)(g3 + 0x22A8) < 4) Help_Request(1, 1);
+            target_moby = (HelpTarget *)((unsigned char *)D_L00_00160098 + (id << 8));
+            if (target_moby == 0 || target_moby->state == e || target_moby->state == d) {
+                if (hero_ptr->health.hp < 4) Help_Request(1, 1);
                 else Help_Request(2, 2);
             }
         }
-        p++;
+        target_index_ptr++;
     } while (--i >= 0);
-    }
 }
 typedef int u128 __attribute__((mode(TI)));
 typedef struct { int count; int pad4[3]; Vec4 pts[1]; } VendPath;
@@ -267,7 +290,20 @@ extern void func_L00_002E2F58(char *);
 
 /* Vendor (level 0) update: walks a path, turns toward the player, attacks and self-destructs.
    Adapted from Lombyte (GPL-3.0) for PAL: overlays/l00/gameplay_vendor_002e0988.c, FUN_L00_002e0b88. */
-void VendorUpdate(VendMoby *moby) {
+extern Hero hero __asm__("D_0013F450");
+
+void veldin_robot_enemy_update(VendMoby *moby) {
+    enum {
+        VELDIN_ROBOT_STATE_INITIALIZE = 0,
+        VELDIN_ROBOT_STATE_WAIT_TO_FOLLOW_PATH = 1,
+        VELDIN_ROBOT_STATE_FOLLOW_PATH = 2,
+        VELDIN_ROBOT_STATE_FACE_TARGET = 3,
+        VELDIN_ROBOT_STATE_WAIT_TO_START_COLLISION_PROBES = 4,
+        VELDIN_ROBOT_STATE_PROCESS_COLLISION_PROBES = 5,
+        VELDIN_ROBOT_STATE_WAIT_TO_RETURN_TO_FACE_TARGET = 6,
+        VELDIN_ROBOT_STATE_DAMAGE_KNOCKBACK = 7,
+        VELDIN_ROBOT_STATE_DEATH_KNOCKBACK = 8
+    };
     VendVars *vars;
     VendTarget *target;
     VendPath *path;
@@ -276,22 +312,22 @@ void VendorUpdate(VendMoby *moby) {
     Vec4 mtx[4];
     VendQuery query;
     Vec4 probe;
-    float vel;
-    int hit;
+    f32 vel;
+    s32 hit;
 
     vars = moby->vars;
-    Troll_UpdateHitsAndTarget(moby);
+    update_veldin_robot_damage_and_targeting(moby);
     target = vars->target;
     Manipulator_SetScale(vars->unk120, 2.5f);
     if (D_0015EEB4_m[3] != 0) {
         EaseManipulatorOffsets((char *)moby, (char *)vars->unk120, 2, *(float *)&D_0015EE64_s * 0.03f, *(float *)&D_0015EE64_s * 0.3f);
     }
     if (moby->unk31 != 0 && FastVecDist(&moby->pos, D_L00_00166EC0) < 27.0f) {
-        SetGroundHeightBand(moby);
+        func_L00_0025B178(moby);
         moby->unk7F = 0x15;
     }
     switch (moby->state) {
-    case 0:
+    case VELDIN_ROBOT_STATE_INITIALIZE:
         qcopy(&vars->spawnPos, &moby->pos);
         vars->unk29 = 0;
         vars->unk20 = 2.0f;
@@ -309,74 +345,74 @@ void VendorUpdate(VendMoby *moby) {
                 return;
             }
             qcopy(&moby->pos, &D_L00_001B0830[vars->pathIdx]->pts[0]);
-            moby->state = 1;
-            if ((moby)->anim != (1)) MobyBlendAnimation((moby), (1), 0, (5));
+            moby->state = VELDIN_ROBOT_STATE_WAIT_TO_FOLLOW_PATH;
+            if (moby->anim != 1) MobyBlendAnimation(moby, 1, 0, 5);
         } else {
-            moby->state = 3;
-            if ((moby)->anim != (1)) MobyBlendAnimation((moby), (1), 0, (5));
+            moby->state = VELDIN_ROBOT_STATE_FACE_TARGET;
+            if (moby->anim != 1) MobyBlendAnimation(moby, 1, 0, 5);
         }
         break;
-    case 1:
+    case VELDIN_ROBOT_STATE_WAIT_TO_FOLLOW_PATH:
         if (moby->unk70 & 2) {
             if (moby->anim == 1 && random_integer_below(4) == 0) {
-                if ((moby)->anim != (2)) MobyBlendAnimation((moby), (2), 0, (scale_ticks(20)));
+                if (moby->anim != 2) MobyBlendAnimation(moby, 2, 0, scale_ticks(20));
             } else {
-                if ((moby)->anim != (1)) MobyBlendAnimation((moby), (1), 0, (scale_ticks(20)));
+                if (moby->anim != 1) MobyBlendAnimation(moby, 1, 0, scale_ticks(20));
             }
         }
         if (vars->unk114 != 2) {
-            moby->state = 2;
-            if ((moby)->anim != (9)) MobyBlendAnimation((moby), (9), 0, (scale_ticks(10)));
+            moby->state = VELDIN_ROBOT_STATE_FOLLOW_PATH;
+            if (moby->anim != 9) MobyBlendAnimation(moby, 9, 0, scale_ticks(10));
         }
         break;
-    case 2:
+    case VELDIN_ROBOT_STATE_FOLLOW_PATH:
         vel = 0.0f;
         path = D_L00_001B0830[vars->pathIdx];
         qcopy(&delta, &path->pts[vars->pathPt]);
-        SteerAngleWithVelocity(&(moby)->unk40.f[2], func_L00_001FF860(delta.f[0] - moby->pos.f[0], delta.f[1] - moby->pos.f[1]), &(vars)->turnVel, D_0015EE70 * (12.566371f), D_0015EE70 * (12.566371f), D_0015EE6C * 12.566371f);
+        SteerAngleWithVelocity(&moby->unk40.f[2], func_L00_001FF860(delta.f[0] - moby->pos.f[0], delta.f[1] - moby->pos.f[1]), &vars->turnVel, D_0015EE70 * (12.566371f), D_0015EE70 * (12.566371f), D_0015EE6C * 12.566371f);
         FastVecSub(&dir, &delta, &moby->pos);
         ApproachWithVelocity(FastVecDist(&moby->pos, &path->pts[path->count - 1]), D_0015EE70 * 8.0f, D_0015EE70 * 16.0f, D_0015EE6C * 12.0f, &vel, &vars->speed);
         if (FastVecLength(&dir) < vars->speed + vars->speed) {
             vars->pathPt++;
             if (vars->pathPt == path->count) {
-                moby->state = 3;
-                if ((moby)->anim != (1)) MobyBlendAnimation((moby), (1), 0, (scale_ticks(10)));
+                moby->state = VELDIN_ROBOT_STATE_FACE_TARGET;
+                if (moby->anim != 1) MobyBlendAnimation(moby, 1, 0, scale_ticks(10));
             }
         }
         func_L00_001FF4B0(&dir, &dir, vars->speed);
         FastVecAdd(&moby->pos, &moby->pos, &dir);
         break;
-    case 3:
-        SteerAngleWithVelocity(&(moby)->unk40.f[2], func_L00_001FF860(target->pos.f[0] - moby->pos.f[0], target->pos.f[1] - moby->pos.f[1]), &(vars)->turnVel, D_0015EE70 * (12.566371f), D_0015EE70 * (12.566371f), D_0015EE6C * 12.566371f);
-        if (func_001F9D48(&moby->pos, D_0013E633 + 0xE9D) < 20.0f) {
-            if ((moby)->anim != (4)) MobyBlendAnimation((moby), (4), 0, (scale_ticks(20)));
+    case VELDIN_ROBOT_STATE_FACE_TARGET:
+        SteerAngleWithVelocity(&moby->unk40.f[2], func_L00_001FF860(target->pos.f[0] - moby->pos.f[0], target->pos.f[1] - moby->pos.f[1]), &vars->turnVel, D_0015EE70 * (12.566371f), D_0015EE70 * (12.566371f), D_0015EE6C * 12.566371f);
+        if (func_001F9D48(&moby->pos, &hero.motion.pos) < 20.0f) {
+            if (moby->anim != 4) MobyBlendAnimation(moby, 4, 0, scale_ticks(20));
         } else if (moby->unk70 & 2) {
-            if ((moby)->anim != (random_integer_below(2) + 1)) MobyBlendAnimation((moby), (random_integer_below(2) + 1), 0, (scale_ticks(20)));
+            if (moby->anim != (random_integer_below(2) + 1)) MobyBlendAnimation(moby, (random_integer_below(2) + 1), 0, scale_ticks(20));
         }
-        if (vars->unk114 != 2 && EffectSlot_Alloc(moby, 0, 0) != 0) {
-            moby->state = 4;
-            if ((moby)->anim != (5)) MobyBlendAnimation((moby), (5), 0, (scale_ticks(10)));
+        if (vars->unk114 != 2 && register_beam_slot(moby, 0, 0) != 0) {
+            moby->state = VELDIN_ROBOT_STATE_WAIT_TO_START_COLLISION_PROBES;
+            if (moby->anim != 5) MobyBlendAnimation(moby, 5, 0, scale_ticks(10));
         }
         break;
-    case 4:
-        SteerAngleWithVelocity(&(moby)->unk40.f[2], func_L00_001FF860(target->pos.f[0] - moby->pos.f[0], target->pos.f[1] - moby->pos.f[1]), &(vars)->turnVel, D_0015EE70 * (12.566371f), D_0015EE70 * (12.566371f), D_0015EE6C * 12.566371f);
+    case VELDIN_ROBOT_STATE_WAIT_TO_START_COLLISION_PROBES:
+        SteerAngleWithVelocity(&moby->unk40.f[2], func_L00_001FF860(target->pos.f[0] - moby->pos.f[0], target->pos.f[1] - moby->pos.f[1]), &vars->turnVel, D_0015EE70 * (12.566371f), D_0015EE70 * (12.566371f), D_0015EE6C * 12.566371f);
         if (moby->unk70 & 2) {
             vars->timer = 0;
-            moby->state = 5;
-            if ((moby)->anim != (6)) MobyBlendAnimation((moby), (6), 0, (scale_ticks(10)));
+            moby->state = VELDIN_ROBOT_STATE_PROCESS_COLLISION_PROBES;
+            if (moby->anim != 6) MobyBlendAnimation(moby, 6, 0, scale_ticks(10));
         }
         break;
-    case 5: {
-        float ang;
-        int lim;
+    case VELDIN_ROBOT_STATE_PROCESS_COLLISION_PROBES: {
+        f32 desired_heading;
+        s32 lim;
 
-        ang = func_L00_001FF860(vars->homeX - moby->pos.f[0], vars->homeY - moby->pos.f[1]);
+        desired_heading = func_L00_001FF860(vars->homeX - moby->pos.f[0], vars->homeY - moby->pos.f[1]);
         if (moby->flags34 & 0x8000) {
-            ang = FastAddRots(ang, *(float *)&D_L00_00161CBC);
+            desired_heading = FastAddRots(desired_heading, *(float *)&D_L00_00161CBC);
         } else {
-            ang = FastSubRots(ang, *(float *)&D_L00_00161CBC);
+            desired_heading = FastSubRots(desired_heading, *(float *)&D_L00_00161CBC);
         }
-        SteerAngleWithVelocity(&(moby)->unk40.f[2], ang, &(vars)->turnVel, D_0015EE70 * (1.5707964f), D_0015EE70 * (1.5707964f), D_0015EE6C * 12.566371f);
+        SteerAngleWithVelocity(&moby->unk40.f[2], desired_heading, &vars->turnVel, D_0015EE70 * (1.5707964f), D_0015EE70 * (1.5707964f), D_0015EE6C * 12.566371f);
         MobyTransformScaledVertex((char *)moby, 0, (char *)mtx);
         qcopy(&delta, &moby->unkC0);
         delta.f[2] = 0.0f;
@@ -401,45 +437,45 @@ void VendorUpdate(VendMoby *moby) {
         qcopy(&probe, &moby->pos);
         probe.f[2] += 0.5f;
         if (func_L00_001EFFF0(&mtx[3], &probe, 0, (int)moby, (int)&query) != 0 && hit != 0 &&
-            D_L00_00173F58.moby == *(int *)(D_0013E633 + 0x2E9D)) {
+            D_L00_00173F58.moby == hero.moby) {
             EffectSlot_Free(moby);
-            moby->state = 6;
-            if ((moby)->anim != (7)) MobyBlendAnimation((moby), (7), 0, (scale_ticks(10)));
+            moby->state = VELDIN_ROBOT_STATE_WAIT_TO_RETURN_TO_FACE_TARGET;
+            if (moby->anim != 7) MobyBlendAnimation(moby, 7, 0, scale_ticks(10));
         }
         if (func_L00_001EFFF0(&mtx[3], &dir, 0, (int)moby, (int)&query) != 0) {
             qcopy(&dir, D_L00_00173F58.pos);
-            if (hit != 0 && D_L00_00173F58.moby == *(int *)(D_0013E633 + 0x2E9D)) {
+            if (hit != 0 && D_L00_00173F58.moby == hero.moby) {
                 EffectSlot_Free(moby);
-                moby->state = 6;
-                if ((moby)->anim != (7)) MobyBlendAnimation((moby), (7), 0, (scale_ticks(10)));
+                moby->state = VELDIN_ROBOT_STATE_WAIT_TO_RETURN_TO_FACE_TARGET;
+                if (moby->anim != 7) MobyBlendAnimation(moby, 7, 0, scale_ticks(10));
             }
         }
-        EffectSlot_Update(moby, mtx, &dir);
+        set_beam_origin_transform_and_endpoint(moby, mtx, &dir);
         if (moby->unk70 & 2) {
             lim = *(int *)&D_L00_00161CB8;
             if (vars->timer++ == lim) {
                 EffectSlot_Free(moby);
-                moby->state = 6;
-                if ((moby)->anim != (12)) MobyBlendAnimation((moby), (12), 0, (scale_ticks(10)));
+                moby->state = VELDIN_ROBOT_STATE_WAIT_TO_RETURN_TO_FACE_TARGET;
+                if (moby->anim != 12) MobyBlendAnimation(moby, 12, 0, scale_ticks(10));
             }
         }
         break;
     }
-    case 6:
-        SteerAngleWithVelocity(&(moby)->unk40.f[2], func_L00_001FF860(target->pos.f[0] - moby->pos.f[0], target->pos.f[1] - moby->pos.f[1]), &(vars)->turnVel, D_0015EE70 * (12.566371f), D_0015EE70 * (12.566371f), D_0015EE6C * 12.566371f);
+    case VELDIN_ROBOT_STATE_WAIT_TO_RETURN_TO_FACE_TARGET:
+        SteerAngleWithVelocity(&moby->unk40.f[2], func_L00_001FF860(target->pos.f[0] - moby->pos.f[0], target->pos.f[1] - moby->pos.f[1]), &vars->turnVel, D_0015EE70 * (12.566371f), D_0015EE70 * (12.566371f), D_0015EE6C * 12.566371f);
         if (moby->unk70 & 2) {
-            moby->state = 3;
-            if ((moby)->anim != (1)) MobyBlendAnimation((moby), (1), 0, (scale_ticks(10)));
+            moby->state = VELDIN_ROBOT_STATE_FACE_TARGET;
+            if (moby->anim != 1) MobyBlendAnimation(moby, 1, 0, scale_ticks(10));
         }
         break;
-    case 7:
-        if (StepMobyPhysics(moby, vars->unk70) & 0x140) {
-            moby->state = 3;
-            if ((moby)->anim != (1)) MobyBlendAnimation((moby), (1), 0, (scale_ticks(10)));
+    case VELDIN_ROBOT_STATE_DAMAGE_KNOCKBACK:
+        if (mine_fall(moby, vars->unk70) & 0x140) {
+            moby->state = VELDIN_ROBOT_STATE_FACE_TARGET;
+            if (moby->anim != 1) MobyBlendAnimation(moby, 1, 0, scale_ticks(10));
         }
         break;
-    case 8:
-        if (StepMobyPhysics(moby, vars->unk70) & 0x140) {
+    case VELDIN_ROBOT_STATE_DEATH_KNOCKBACK:
+        if (mine_fall(moby, vars->unk70) & 0x140) {
             SpawnExplosionFx(moby, &moby->pos, -1, 0.75f, 13.0f);
             SpawnMobyBurstFx(moby, 0x7AB, 1, 0x7AB, 1, 4, 0);
             SpawnBreakFragment((char *)moby, 0x78D, (float *)&moby->pos, &moby->unk40, 0, 0, 0.0f, (float *)D_L00_0015F660, (float *)D_L00_0015F660, (float *)D_L00_0015F660);
@@ -450,7 +486,7 @@ void VendorUpdate(VendMoby *moby) {
         }
         break;
     }
-    Troll_EmitSparks((char *)moby);
+    update_veldin_robot_effects((char *)moby);
 }
 extern int func_L00_00258BC8(int, int);
 extern int func_001F9938(void *);
@@ -529,7 +565,7 @@ typedef struct {
 } TrollColl;
 
 /* Update for the troll moby: takes hits, picks and tracks its target. Adapted from Lombyte (GPL-3.0) for PAL: src/overlays/l00/gameplay_vendor_002e0988.c, FUN_L00_002e1678. */
-void Troll_UpdateHitsAndTarget(void *mv) {
+void update_veldin_robot_damage_and_targeting(void *mv) {
     TrollMoby *m = mv;
     TrollVars *vars;
     void *anim;
@@ -641,7 +677,7 @@ extern float D_L00_0015F660[] MACRO_ADDR;
 
 // spawns a spark: steps the moby's position and emits one fast particle and three slow tails
 // Adapted from Lombyte (GPL-3.0) for PAL: overlays/l00/gameplay_vendor_002e0988.c, FUN_L00_002e1aa8.
-void Troll_EmitSparks(char *m) {
+void update_veldin_robot_effects(char *m) {
     char *vars;
     char *p;
     char *t;
@@ -654,7 +690,7 @@ void Troll_EmitSparks(char *m) {
     pos = (float *)(vars + 0x1C0);
     Moby_GetJointWorldPos(m, 1, pos);
     ((float *)(vars + 0x1C0))[2] -= 0.333f;
-    RandomSphericalOffset(vel, 0.005f, 0.03f);
+    random_spherical_offset(vel, 0.005f, 0.03f);
     p = PartType69Spawn(pos, vel, 0x7F, m);
     if (p != 0) {
         *(float *)(p + 0xC) = random_float_between(6000.0f, 32000.0f);
@@ -693,7 +729,7 @@ typedef struct {
 } T;
 
 /* Builds a four-vertex quad facing the camera from the moby's data point and runs the draw packet. */
-void DrawCameraFacingQuad(char *m) {
+void draw_veldin_robot_effect_quad(char *m) {
     W q[4];
     T t;
     W c, d, e, bb;
@@ -739,7 +775,7 @@ extern void func_L00_002E3700(int, int);
 extern void func_L00_002E3FA0(void);
 
 /* Slot update: state 0 clears the two slot arrays, state 1 services the pending slots. The arrays are MACRO_ADDR (retail loads their addresses unsplit), as the NTSC decomp declares them. */
-void BeamSlotManagerUpdate(unsigned char *m) {
+void update_beam_slot_controller(unsigned char *m) {
     int i;
     int j;
     int n;
@@ -760,15 +796,15 @@ void BeamSlotManagerUpdate(unsigned char *m) {
             st = D_L00_00161CC8[i];
             if (st == 1) {
             } else if (st == 4) {
-                EffectSlot_FreeAt(i);
+                release_beam_slot(i);
             } else if (st != 0) {
                 n++;
-                BeamSlotUpdate(D_L00_00161D58[i], i);
+                update_slot_panes_and_effects(D_L00_00161D58[i], i);
                 D_L00_00161CC8[i] = 4;
             }
         }
         if (n != 0) {
-            AddDrawCallback(EffectSlot_DrawPanes, m);
+            AddDrawCallback(draw_active_beam_slots, m);
         }
         break;
     }
@@ -788,7 +824,7 @@ extern G D_L00_0016C960;
 
 typedef struct { char pad[0x20]; unsigned char state; char pad2[0xF]; unsigned char v; } M2;
 
-void Moby1545Update(M2 *m) {
+void update_phase_effect_controller(M2 *m) {
     char buf[16];
     int idx;
     int i, col, h;
@@ -803,7 +839,7 @@ void Moby1545Update(M2 *m) {
         if (D_L00_0015F6A8 == 2) {
             if ((D_L00_0016C960.a == 2 && D_L00_0016C960.b >= scale_ticks(0x618)) || (D_L00_0015F6A8 == 2 && D_L00_0016C960.a == 3)) {
                 idx = -1; if (D_L00_0016C960.a == 2) idx = 3; else if (D_L00_0016C960.a == 3) idx = 2;
-                SpawnMoby750Sparks(D_L00_0016C960.arr[idx]);
+                cutscene_set_camera_target(D_L00_0016C960.arr[idx]);
             }
             if (D_L00_0015F6A8 == 2) {
                 if (D_L00_0016C960.a == 4) {
@@ -812,7 +848,7 @@ void Moby1545Update(M2 *m) {
                     if (D_L00_0016C960.b < scale_ticks(0x96)) return;
                     if (scale_ticks(0xDC) < D_L00_0016C960.b) return;
                     Moby_GetJointWorldPos(p, 0, buf);
-                    SpawnSparkRings(buf, buf, D_L00_0015F660, 120000.0f, 50000.0f);
+                    draw_trail(buf, buf, D_L00_0015F660, 120000.0f, 50000.0f);
                     for (i = 0; i < 10; i++) {
                         col = (rand_range(0x40, 0x80) << 24) | 0x787878;
                         h = rand_range(0, 4);

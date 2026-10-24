@@ -68,8 +68,8 @@ extern int func_001160D8(void);
 extern void *D_00154A40 NOT_SDA;
 
 void *func_00119868(void *arg0) {
-    char *self = (char *)&D_00154A40;
-    D_00154A40 = arg0;
+    char *self = (char *)&InitBlockData;
+    InitBlockData = arg0;
     *(int *)(self + 0x4) = 0;
     *(void **)(self + 0xC) = self + 0x10;
     *(void **)(self + 0x8) = self + 0x10;

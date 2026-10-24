@@ -7,13 +7,15 @@
  * candidates carried to land without clashing with their files.
  *
  * Adapted from Lombyte (GPL-3.0), the US decompilation:
- * include/rnc/gameplay/entities/moby.h at 88c78925. Its layout and
+ * include/rnc/gameplay/entities/moby.h at 88c78925, refreshed from the
+ * NTSC decomp (the same project, GPL-3.0) at 4e1f255e. Its layout and
  * field names come from the matched code it cites; the PAL code is the
- * same structure. See THIRD_PARTY_NOTICES.md.
+ * same structure. Class IDs: moby_class_id.h. See THIRD_PARTY_NOTICES.md.
  */
 
 #include "common.h"
 #include "vector.h"
+#include "moby_class_id.h"
 
 
 struct Manip;
@@ -35,7 +37,7 @@ struct MobyClass {
     void **callbacks;                 /* function-pointer table, called with the moby */
     u8 pad_30[0x14];
     u16 flags;                        /* initial Moby.flags */
-    s16 type;                         /* class type; 5 is tested by targeting code */
+    s16 type;                         /* class type; 5 (a creature) is tested by targeting code */
     struct AnimSeq *seqs[1];          /* animation sequences, indexed by Moby.seq */
 };
 
@@ -44,7 +46,7 @@ struct Moby {
     Vec4f pos;
     u8 state;                         /* >= 0xFE: dead, waiting to respawn */
     u8 group;                         /* linked group: index into the level moby-list table D_Lxx_001ABCC0 (0xFF: none) */
-    u8 class_slot;                    /* class slot: pclass = D_L00_00197300[class_slot] (FUN_L00_002cf218) */
+    u8 class_slot;                    /* class slot: pclass = D_L00_00197300[class_slot] (crate_update) */
     u8 alpha;                         /* 0x80 by default; 0x40 for the smoke trail FUN_L09_00307ba8 spawns */
     struct MobyClass *pclass;
     struct Moby *next;
@@ -75,14 +77,14 @@ struct Moby {
     u8 unk7C;
     u8 sound_slot;                    /* D_0013E550 slot of its looping sound, 0xFF: none (FUN_L00_00232670) */
     u8 anim_trigger_count;
-    u8 shadow_range;                  /* shadow range in units of 1024; set to 0x17 by FUN_L09_002c5990 near D_L09_00166F40 */
+    u8 shadow_range;                  /* shadow range in units of 1024; set to 0x17 by seeker_update near D_L09_00166F40 */
     s32 unk80;                        /* colour from the level's moby records, c2 << 16 | c1 << 8 | c0 (func_L00_002422D8) */
     u8 pad84[2];
     s16 unk86;                        /* compared with 5 (func_L02_002D9F08) */
     u8 pad88[8];
     s32 glow_color;                   /* glow colour (class header + 0x40) */
     u32 collision;                    /* collision data, from the class header (MobyClass.collision) */
-    s32 collision_disable;            /* per-primitive collision disable bits; 1 while a carrier holds the moby (FUN_L00_002c7a58) */
+    s32 collision_disable;            /* per-primitive collision disable bits; 1 while a carrier holds the moby (glove_of_doom_update) */
     u8 pad9C[8];
     u8 hit_slot;                      /* hit-message slot (0xFF: none) */
     u8 padA5;
@@ -90,7 +92,7 @@ struct Moby {
     u8 padA8[8];
     u8 mission;                       /* 0xB0: index into the level's D_0014C050 row (0xFF: not spawned) */
     u8 unkB1;                         /* set from the level's moby records (func_L00_002422D8) */
-    u16 save_id;                      /* index into the level collected[]/killed[] tables and save bits D_0014C190[level][id >> 5] */
+    u16 save_id;                      /* index into the level collected[]/killed[] tables and save bits level_moby_killed[level][id >> 5] */
     s16 unkB4;
     s16 unkB6;                        /* set from the level's moby records (func_L00_002422D8) */
     void *parent;                     /* 0xB8: spawner (bolt source record); its byte 0xB1 is a per-level id (FUN_L00_002a6b70) */

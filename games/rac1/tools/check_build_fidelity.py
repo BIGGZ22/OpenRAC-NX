@@ -35,8 +35,9 @@ ALLOWED = {
     "fix_volatile_slot": "assembler: delay-slot filling of a volatile store before a call (2.9-ee objects)",
     "check_macro_slots": "assembler: a macro access in a delay slot assembled $gp-relative",
     "fix_orphan_hi": "assembler: %hi relocations resolved at assembly time",
-    "fix_jump_tables": "linker placement: a switch's table at retail's address",
+    "fix_jump_tables": "linker placement: switch tables and verified scalar pools at retail addresses",
     "strip_dead": "linker: dead-stripping of unreferenced libgcc functions",
+    "ps2eeas": "original assembler: extern and label declarations for whole SN objects",
 }
 # Not transforms: they choose flags or generate lists, and change no instruction.
 HELPERS = {"file_cflags", "sn_regnames", "jump_tables", "gas210", "dtls29_as"}

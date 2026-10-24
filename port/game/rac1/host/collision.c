@@ -44,6 +44,7 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include "openrac/host_env.h"
 #include "openrac/ps2float.h"
 #include "rac1.h"
 
@@ -1743,7 +1744,7 @@ static void trace(int kind, int hit) {
     static const char* names[6] =
         {"line", "sphere", "capsule", "sphere-mobys", "hero-groups", "boot line"};
     if (on < 0) {
-        on = getenv("OPENRAC_COLL_TRACE") != NULL;
+        on = openrac_env_string("OPENRAC_COLL_TRACE") != NULL;
     }
     if (!on) {
         return;
@@ -1922,7 +1923,7 @@ int func_L00_001F2BE8(float a0, gaddr a1, int a2, gaddr a3, gaddr a4) {
             /* OPENRAC_HIT_LOG: each sphere with a template and the mobys it listed, on stderr. */
             static int hit_log = -1;
             if (hit_log < 0) {
-                hit_log = getenv("OPENRAC_HIT_LOG") != NULL;
+                hit_log = openrac_env_string("OPENRAC_HIT_LOG") != NULL;
             }
             if (hit_log) {
                 fprintf(

@@ -118,7 +118,7 @@ extern void func_L00_0025B178(struct Moby *);
 
 /* l03 trooper update: patrols its rail path, turns to face the hero once in sight, fires three-shot bursts, falls under gravity and blows up when shot down or when it drops into a pit.
    Adapted from Lombyte (GPL-3.0) for PAL by OpenRAC's tools/port.py: src/overlays/l03/gameplay/entities/002c9eb8.c, FUN_L03_002c9eb8. */
-void TrooperUpdate(struct Moby *m) {
+void mine_layer_update(struct Moby *m) {
     TrooperVars_CB280 *v = (TrooperVars_CB280 *)m->pvars;
     TrooperPatrol_CB280 *pt;
     struct RailPath_CB280 *path;
@@ -228,7 +228,7 @@ void TrooperUpdate(struct Moby *m) {
                 FastVecScale(vel, vel, scale);
                 FastVecAdd(vel, vel, spread);
                 vel[2] = D_L03_00161994_CB280 * D_0015EE6C * random_float_between(0.9f, 1.1f);
-                Moby627Spawn((char *)m, muzzle, vel);
+                spawn_mine_layer_projectile((char *)m, muzzle, vel);
             }
         }
         break;
@@ -276,7 +276,7 @@ void TrooperUpdate(struct Moby *m) {
         }
     }
     if (m->visible != 0 && FastVecDist(&m->pos, D_L03_00166F40) < 32.0f) {
-        SetGroundHeightBand(m);
+        func_L00_0025B178(m);
     }
 }
 typedef u32 u128_CBBD0 __attribute__((mode(TI), aligned(16)));
@@ -370,7 +370,7 @@ extern void func_L00_0025E590(struct Moby *, void *);
 
 /* Trooper hit handler: takes damage, then knocks back away from the attacker by hit strength (dying on lethal hits).
    Adapted from Lombyte (GPL-3.0) for PAL by OpenRAC's tools/port.py: src/overlays/l03/gameplay/entities/002c9eb8.c, FUN_L03_002ca808. */
-void TrooperHitHandler(struct Moby *m) {
+void handle_mine_layer_damage(struct Moby *m) {
     TrooperVars_CBBD0 *v = (TrooperVars_CBBD0 *)m->pvars;
     TrooperHit_CBBD0 *h;
     Vec4 at;
@@ -398,7 +398,7 @@ void TrooperHitHandler(struct Moby *m) {
         case 3:
         case 6:
             v->kb_speed = D_L03_0016197C_CBBD0 * D_0015EE70;
-            SetSpringParams(v->knockback, D_L03_00161980_CBBD0, D_L03_00161984_CBBD0);
+            trooper_set_knockback(v->knockback, D_L03_00161980_CBBD0, D_L03_00161984_CBBD0);
             v->kb_landed = 0;
             v->kb_frames = 9;
             *(u128_CBBD0 *)&at = *(u128_CBBD0 *)&h->pos;
@@ -412,7 +412,7 @@ void TrooperHitHandler(struct Moby *m) {
         case 4:
         case 5:
             v->kb_speed = D_L03_0016197C_CBBD0 * D_0015EE70;
-            SetSpringParams(v->knockback, D_L03_00161980_CBBD0, D_L03_00161984_CBBD0);
+            trooper_set_knockback(v->knockback, D_L03_00161980_CBBD0, D_L03_00161984_CBBD0);
             v->kb_landed = 0;
             v->kb_frames = 9;
             *(u128_CBBD0 *)&at = *(u128_CBBD0 *)&h->pos;
@@ -425,7 +425,7 @@ void TrooperHitHandler(struct Moby *m) {
             break;
         case 1:
             v->kb_speed = D_L03_00161978_CBBD0 * D_0015EE70;
-            SetSpringParams(v->knockback, D_L03_00161988_CBBD0, D_L03_0016198C_CBBD0);
+            trooper_set_knockback(v->knockback, D_L03_00161988_CBBD0, D_L03_0016198C_CBBD0);
             v->kb_landed = 0;
             v->kb_frames = 9;
             *(u128_CBBD0 *)&at = *(u128_CBBD0 *)&h->pos;
@@ -502,7 +502,7 @@ extern void func_L00_00260878(struct Moby *, void *);
 
 /* l03 mine update: falls until it lands, sticks to or homes on its target, arms, and explodes on contact (debris, camera shake, blast) or shrinks away when old.
    Adapted from Lombyte (GPL-3.0) for PAL by OpenRAC's tools/port.py: src/overlays/l03/gameplay/entities/002c9eb8.c, FUN_L03_002cbea8. */
-void KerwanMineUpdate(struct Moby *m) {
+void update_mine(struct Moby *m) {
     MineBlast blast = D_L03_001E35A0;
     MineVec tmp;
     MineVars *v = (MineVars *)m->pvars;
@@ -512,14 +512,14 @@ void KerwanMineUpdate(struct Moby *m) {
     int i;
     int k;
 
-    KerwanMine_CheckHit((unsigned char *)m);
+    handle_mine_hit((unsigned char *)m);
     v->unk60 = 0;
     v->age++;
     switch (m->state) {
     case 0:
         break;
     case 1:
-        if (StepMobyPhysics(m, v) & 1) {
+        if (mine_fall(m, v) & 1) {
             m->state = 3;
             if (m->prev_seq != 1) {
                 MobyBlendAnimation(m, 1, 0, scale_ticks(10));
@@ -598,14 +598,14 @@ void KerwanMineUpdate(struct Moby *m) {
                 dir[2] -= rr * D_0015EE6C * 8.0f;
                 switch (kind) {
                 case 0:
-                    PartType16Spawn(r, dir, 0x1F101820, 0x101010, random_float_between(200000.0f, 300000.0f),
+                    mine_debris(r, dir, 0x1F101820, 0x101010, random_float_between(200000.0f, 300000.0f),
                                 rand_range(scale_ticks(0xB4), scale_ticks(0xF0)), 0);
                     break;
                 case 1:
-                    PartType16Spawn(r, dir, 0x3F081020, 0x0F081020, random_float_between(50000.0f, 100000.0f), scale_ticks(0xB4), 1);
+                    mine_debris(r, dir, 0x3F081020, 0x0F081020, random_float_between(50000.0f, 100000.0f), scale_ticks(0xB4), 1);
                     break;
                 case 2:
-                    PartType16Spawn(r, dir, random_integer_below(100) < 0x28 ? 0x5FF8F8F8 : 0x2F486078, 0x0F000020, 150000.0f,
+                    mine_debris(r, dir, random_integer_below(100) < 0x28 ? 0x5FF8F8F8 : 0x2F486078, 0x0F000020, 150000.0f,
                                 rand_range(scale_ticks(0x1E), scale_ticks(0x2D)), 2);
                     break;
                 case 3: {
@@ -613,7 +613,7 @@ void KerwanMineUpdate(struct Moby *m) {
                     int c2 = func_L00_00237B70_CD270(0, 0x5F5F5F, random_float_between(0.5f, 1.0f));
 
                     BuildSphericalOffset(dir, random_float_between(0.0f, 1.0f) * D_0015EE6C, ang, random_angle_radians());
-                    PartType16Spawn(r, dir, c1, c2, random_float_between(200000.0f, 300000.0f),
+                    mine_debris(r, dir, c1, c2, random_float_between(200000.0f, 300000.0f),
                                 rand_range(scale_ticks(0xF0), scale_ticks(0x12C)), 3);
                     break;
                 }
@@ -623,15 +623,15 @@ void KerwanMineUpdate(struct Moby *m) {
         func_0022ED80_CD270(0, 0, m);
         D_L03_00166E00.shake = dist < 20.0f ? 0.4f - dist * 0.0175f : 0.050000012f;
         D_L03_00166E00.shake_frames = scale_ticks(0x19);
-        Moby639Spawn(&blast, &m->pos, 0, 0);
-        MobyList_Remove(m, D_L03_001B0BB0);
+        mine_camera_blast(&blast, &m->pos, 0, 0);
+        mine_spawn_drops(m, D_L03_001B0BB0);
         func_0020D678_CD270(m);
         return;
     }
     case 5:
         m->scale *= D_0015EE60 * -0.074f + 1.0f;
         if (m->scale < m->pclass->scale * 0.01f) {
-            MobyList_Remove(m, D_L03_001B0BB0);
+            mine_spawn_drops(m, D_L03_001B0BB0);
             func_0020D678_CD270(m);
         }
         break;
@@ -639,7 +639,7 @@ void KerwanMineUpdate(struct Moby *m) {
 }
 extern char *func_L00_0025B478(void *, int, int);
 
-void KerwanMine_CheckHit(unsigned char *arg) {
+void handle_mine_hit(unsigned char *arg) {
     char *item = MobyGetHitMessage(arg, 0x130000, 0);
     if (item != 0) {
         char *other = *(char **)(item + 0x20);
@@ -657,49 +657,50 @@ extern void func_L00_0025D5B0(void *, void *, int, int, int, float);
 
 /* Spawns a projectile moby (class 0x273) at pos, heading along dir, owned by parent p.
    Adapted from Lombyte (GPL-3.0) for PAL by OpenRAC's tools/port.py: src/overlays/l03/gameplay/entities/002c9eb8.c, FUN_L03_002cc888. */
-char *Moby627Spawn(char *p, void *pos, float *dir) {
-    char *m = CreateMoby(0x273);
-    char *v;
-    float s;
+char *spawn_mine_layer_projectile(char *parent_moby, void *pos, float *launch_velocity) {
+    struct Moby *spawned_moby = (struct Moby *)CreateMoby(0x273);
+    char *spawned_moby_vars;
+    float frame_scale_squared;
+    struct Moby *parent = (struct Moby *)parent_moby;
 
-    if (m == 0) {
+    if (spawned_moby == 0) {
         return 0;
     }
-    *(unsigned short *)(m + 0x32) = *(unsigned short *)(p + 0x32);
-    m[0x30] = p[0x32];
-    m[0x31] = 1;
-    *(long *)(m + 0x38) = *(long *)(p + 0x38);
-    qcopy(m + 0x10, pos);
-    v = *(char **)(m + 0x78);
-    s = D_0015EE64;
-    *(float *)(v + 0x10) = s * 0.008f;
-    *(float *)(v + 0x14) = s * 0.0005f;
-    *(float *)(v + 0x18) = func_001F9CE8(dir);
-    *(float *)(v + 0x1C) = dir[2];
-    *(int *)(v + 0x20) = 0x400;
-    *(float *)(v + 0x28) = 1.0f;
-    *(float *)(v + 0x30) = 0.75f;
-    *(float *)(v + 0x34) = 0.5f;
-    *(float *)(v + 0x38) = 0.65f;
-    *(float *)(v + 0x48) = 0.2f;
-    *(float *)(v + 0x4C) = 0.01f;
-    v[0x3D] = 0;
-    *(int *)(v + 0x24) = 1;
-    InitKnockback(m, v, 0, 1, 0, func_L00_001FF860(dir[0], dir[1]));
-    *(char **)(v + 0x68) = p;
-    *(int *)(v + 0x6C) = 0;
-    m[0x20] = 1;
-    return m;
+    *(u16 *)&spawned_moby->draw_dist = *(u16 *)&parent->draw_dist;
+    spawned_moby->update_dist = *(char *)&parent->draw_dist;
+    spawned_moby->visible = 1;
+    spawned_moby->spawn_frame = parent->spawn_frame;
+    qcopy(&spawned_moby->pos, pos);
+    spawned_moby_vars = (char *)spawned_moby->pvars;
+    frame_scale_squared = D_0015EE64;
+    *(float *)(spawned_moby_vars + 0x10) = frame_scale_squared * 0.008f;
+    *(float *)(spawned_moby_vars + 0x14) = frame_scale_squared * 0.0005f;
+    *(float *)(spawned_moby_vars + 0x18) = func_001F9CE8(launch_velocity);
+    *(float *)(spawned_moby_vars + 0x1C) = launch_velocity[2];
+    *(int *)(spawned_moby_vars + 0x20) = 0x400;
+    *(float *)(spawned_moby_vars + 0x28) = 1.0f;
+    *(float *)(spawned_moby_vars + 0x30) = 0.75f;
+    *(float *)(spawned_moby_vars + 0x34) = 0.5f;
+    *(float *)(spawned_moby_vars + 0x38) = 0.65f;
+    *(float *)(spawned_moby_vars + 0x48) = 0.2f;
+    *(float *)(spawned_moby_vars + 0x4C) = 0.01f;
+    spawned_moby_vars[0x3D] = 0;
+    *(int *)(spawned_moby_vars + 0x24) = 1;
+    InitKnockback(spawned_moby, spawned_moby_vars, 0, 1, 0, func_L00_001FF860(launch_velocity[0], launch_velocity[1]));
+    *(char **)(spawned_moby_vars + 0x68) = parent_moby;
+    *(int *)(spawned_moby_vars + 0x6C) = 0;
+    spawned_moby->state = 1;
+    return (char *)spawned_moby;
 }
 /* whether the moby is a taxi (class 0x330) in states 2 to 6 */
-s32 IsTaxiInTransit(u8 *object) {
+s32 is_taxi_in_round_trip_phase(u8 *object) {
     struct Moby *m = (struct Moby *)object;
     if (m->oclass != 0x330) return 0;
     return m->state >= 2 && m->state < 7;
 }
 extern void func_00215F80(int, int);
 
-void ShowPlatformHelpMessage(void *arg, int mode) {
+void request_taxi_return_help_message(void *arg, int mode) {
     if (mode == 1) {
         try_set_help_message(8, 0xBC9);
     } else {
@@ -769,14 +770,14 @@ s32 func_L03_002D4CE0_D4560(struct Moby *m, s32 path, s32 *snd) __asm__("func_L0
 
 /* Rail taxi: waits at its stop until the hero enters a route's trigger volume, flies the outbound path, lets the hero off, flies back (or onward) and returns to waiting. With the debug flag set it draws its first route's paths.
    Adapted from Lombyte (GPL-3.0) for PAL by OpenRAC's tools/port.py: src/overlays/l03/gameplay/entities/002c9eb8.c, FUN_L03_002d3198. */
-void RailTaxiUpdate(struct Moby *m) {
+void update_rail_taxi(struct Moby *m) {
     struct RailTaxiVars_D4560 *v = (struct RailTaxiVars_D4560 *)m->pvars;
     Vec4 oldPos, oldRot, move;
     struct RailPath_D4560 *p;
     s32 i;
     s32 r;
 
-    LevelTable_SetSlotValue(m, IsTaxiInTransit((u8 *)m));
+    LevelTable_SetSlotValue(m, is_taxi_in_round_trip_phase((u8 *)m));
     if (D_L03_00161B84_D4560 != 0) {
         for (i = 0; i < D_L03_001B08B0_D4560[v->out[0]]->count; i++) {
             PartType41Spawn(&D_L03_001B08B0_D4560[v->out[0]]->pts[i], m, 4, 0x800000FF, 0x7F, 2, 0xFF, 0.333f);
@@ -805,7 +806,7 @@ void RailTaxiUpdate(struct Moby *m) {
         m->state = 1;
         m->collision = 0;
         if (D_L03_001BB640.collected[(s16)m->save_id] != 0 ||
-            (D_0014C290[D_0015EE84_D4560][(s16)m->save_id >> 5] >> (m->save_id & 0x1F)) & 1) {
+            (level_moby_killed[D_0015EE84_D4560][(s16)m->save_id >> 5] >> (m->save_id & 0x1F)) & 1) {
             func_0020D678_D4560(m);
             return;
         }
@@ -849,7 +850,7 @@ void RailTaxiUpdate(struct Moby *m) {
         SteerAngleWithVelocity(&m->rot.x, 0.0f, &v->roll_vel, D_L03_00161B98_D4560 * 0.017453292f * D_0015EE70,
                             D_L03_00161B98_D4560 * 0.017453292f * D_0015EE70, D_0015EE6C * 12.566371f);
         if (D_0013F450_CBBD0.ground_moby == m && D_0013F450_CBBD0.air_frames.s == 0) {
-            ShowPlatformHelpMessage(m, v->help[m->command]);
+            request_taxi_return_help_message(m, v->help[m->command]);
             if ((D_0013CBE4 & 0x10) && D_L03_0015F674_D4560 == 8) {
                 HeroSetTargetAndEnterMove(&m->pos, m->rot.z, 0);
                 m->state = 4;
@@ -863,7 +864,7 @@ void RailTaxiUpdate(struct Moby *m) {
         }
         break;
     case 5:
-        if (Hero_IsOnMoby(m)) {
+        if (is_hero_on_moby(m)) {
             D_0013F450_CBBD0.unk1F2 = 4;
             D_0013F450_CBBD0.unk1F4 = 4;
         }
@@ -893,7 +894,7 @@ void RailTaxiUpdate(struct Moby *m) {
     }
     func_L03_002D5008_D4560(m);
     FastVecSub(&move, &m->pos, &oldPos);
-    CarryRiders(v->coll, &move, &oldRot, &m->rot);
+    update_entity_matrix(v->coll, &move, &oldRot, &m->rot);
 }
 extern float D_0015EE6C MACRO_ADDR;
 extern char D_0013E633[];
@@ -922,59 +923,81 @@ typedef struct PathFollower4CE0 {
     float yawVelocity, pitchVelocity, rollVelocity;
 } PathFollower4CE0;
 
+typedef struct RailFlyerVars {
+    u8 pad_00[0x60];
+    f32 speed;                     /* 0x60 */
+    s32 idx;                       /* 0x64 */
+    f32 yaw_vel;                   /* 0x68 */
+    f32 pitch_vel;                 /* 0x6C */
+    f32 roll_vel;                  /* 0x70 */
+} RailFlyerVars;
+
+typedef struct VoiceSlot {
+    u8 pad_00[0x74];
+    u8 active;                     /* 0x74 */
+    u8 pad_75[0x13];
+    struct Moby *owner;            /* 0x88 */
+} VoiceSlot;
+
 /* Moves along a waypoint path and eases the orientation toward its direction. */
-int FollowWaypointPath(char *moby, int pathIndex, int *sound) {
-    char **entry = &D_L03_001B08B0[pathIndex];
-    PathFollower4CE0 *data = *(PathFollower4CE0 **)(moby + 0x78);
-    float target[4];
-    float direction[4];
-    float zero = 0.0f;
-    float step, distance, accel, pitch;
-    int finished = 0;
+int advance_moby_along_rail_path(char *moby, int pathIndex, int *sound) {
+    struct Moby *rail_moby = (struct Moby *)moby;
+    struct RailPath_D4560 **pp = (struct RailPath_D4560 **)&D_L03_001B08B0[pathIndex];
+    RailFlyerVars *rail_flyer_vars = (RailFlyerVars *)rail_moby->pvars;
+    Vec4f target_path_point;
+    Vec4f movement_delta;
+    f32 acc = 0.0f;
+    f32 step, distance, accel, target_pitch;
+    s32 done = 0;
     char *position;
-    qcopy(target, *entry + (data->waypoint * 16 + 0x10));
-    position = moby + 0x10;
-    FastVecSub(direction, target, position);
-    distance = FastVecLength(direction);
+
+    qcopy(&target_path_point, &(*pp)->pts[rail_flyer_vars->idx]);
+    position = (char *)&rail_moby->pos;
+    FastVecSub(&movement_delta, &target_path_point, position);
+    distance = FastVecLength(&movement_delta);
     step = D_L03_00161B88 * D_0015EE6C;
     if (distance < step + step) {
-        data->waypoint++;
-        finished = data->waypoint == *(int *)*entry;
+        rail_flyer_vars->idx++;
+        done = rail_flyer_vars->idx == (*pp)->count;
     }
-    distance = FastVecDist(position, *entry + (*(int *)*entry << 4));
+    distance = FastVecDist(position, (char *)*pp + ((*pp)->count << 4));
     accel = D_L03_00161B8C * D_0015EE70;
-    ApproachWithVelocity(&zero, &data->speed, distance, accel, accel, D_L03_00161B88 * D_0015EE6C);
-    func_L00_001FF4B0(direction, direction, data->speed);
-    FastVecAdd(position, direction, position);
-    pitch = -func_L00_001FF860(func_001F9CE8(direction), direction[2]);
-    if (pitch > 0.261799395f) pitch = 0.261799395f;
-    else if (pitch < -0.261799395f) pitch = -0.261799395f;
-    SteerAngleWithVelocity((float *)(moby + 0x44), pitch, &data->pitchVelocity,
+    ApproachWithVelocity(&acc, &rail_flyer_vars->speed, distance, accel, accel, D_L03_00161B88 * D_0015EE6C);
+    func_L00_001FF4B0(&movement_delta, &movement_delta, rail_flyer_vars->speed);
+    FastVecAdd(position, &movement_delta, position);
+    target_pitch = -func_L00_001FF860(func_001F9CE8(&movement_delta), movement_delta.z);
+    if (target_pitch > 0.261799395f)
+        target_pitch = 0.261799395f;
+    else if (target_pitch < -0.261799395f)
+        target_pitch = -0.261799395f;
+    SteerAngleWithVelocity(&rail_moby->rot.y, target_pitch, &rail_flyer_vars->pitch_vel,
         D_L03_00161B90 * 0.017453292f * D_0015EE70,
         D_L03_00161B90 * 0.017453292f * D_0015EE70,
         D_0015EE6C * 12.566371f);
-    SteerAngleWithVelocity((float *)(moby + 0x48),
-        func_L00_001FF860(target[0] - *(float *)(moby + 0x10), target[1] - *(float *)(moby + 0x14)), &data->yawVelocity,
+    SteerAngleWithVelocity(&rail_moby->rot.z,
+        func_L00_001FF860(target_path_point.x - rail_moby->pos.x, target_path_point.y - rail_moby->pos.y),
+        &rail_flyer_vars->yaw_vel,
         D_L03_00161B94 * 0.017453292f * D_0015EE70,
         D_L03_00161B94 * 0.017453292f * D_0015EE70,
         D_0015EE6C * 12.566371f);
-    SteerAngleWithVelocity((float *)(moby + 0x40),
-        data->yawVelocity * data->speed * D_L03_00161B9C, &data->rollVelocity,
+    SteerAngleWithVelocity(&rail_moby->rot.x,
+        rail_flyer_vars->yaw_vel * rail_flyer_vars->speed * D_L03_00161B9C,
+        &rail_flyer_vars->roll_vel,
         D_L03_00161B98 * 0.017453292f * D_0015EE70,
         D_L03_00161B98 * 0.017453292f * D_0015EE70,
         D_0015EE6C * 12.566371f);
-    if (finished == 0) {
+    if (done == 0) {
         if (Sound_IsPlaying(moby, *sound) == 0)
             *sound = Sound_PlayClassSound(0, 4, (int)moby, 0x330);
     } else {
         if (*sound != -1) {
-            char *e = D_0013E633 + 0x1D + *sound * 0x70;
-            if (*(char **)(e + 0x88) == moby && ((unsigned char *)e)[0x74] != 0)
+            VoiceSlot *voice_slot = (VoiceSlot *)(D_0013E633 + 0x1D + *sound * 0x70);
+            if (voice_slot->owner == rail_moby && voice_slot->active != 0)
                 Sound_StopSlot(*sound);
         }
         *sound = -1;
     }
-    return finished;
+    return done;
 }
 extern void func_L00_00263B78(float, float, char *, float *, float *);
 extern void func_L00_00263BF8(void *, char *, char *, float, float, float);
@@ -986,7 +1009,7 @@ extern short D_L03_00161B7C_g __asm__("D_L03_00161B7C");
 extern short D_L03_00161B80_g __asm__("D_L03_00161B80");
 
 /* Sets two speed pairs on a moby's data from level constants scaled by degrees-to-radians and the frame scale. */
-void UpdateMobyBobSway(char *m) {
+void update_taxi_bobbing_and_rocking(char *m) {
     char *d = *(char **)(m + 0x78);
     MobyBobZ(*(float *)&D_L03_00161B70_g, *(float *)&D_L03_00161B74_g * 0.0174532925f * D_0015EE6C, m, (float *)(d + 0xEC), (float *)(d + 0xE8));
     LissajousOffsetUpdate(m, d + 0xF0, d + 0xF4, *(float *)&D_L03_00161B78_g, *(float *)&D_L03_00161B7C_g * 0.0174532925f * D_0015EE6C, *(float *)&D_L03_00161B80_g * 0.0174532925f * D_0015EE6C);
@@ -1005,7 +1028,7 @@ struct SpinnerVars_D5220 {
 extern float func_001FA748_D5220(float, float) __asm__("func_001FA748");
 
 /* Adapted from Lombyte (GPL-3.0) for PAL by OpenRAC's tools/port.py: src/overlays/l03/gameplay/entities/002c9eb8.c, FUN_L03_002d3e58. */
-void SpinnerUpdate(struct Moby *m) {
+void robo_shack_sign_update(struct Moby *m) {
     Vec4 move;
     Vec4 oldRot;
     struct SpinnerVars_D5220 *v;
@@ -1027,7 +1050,7 @@ extern char D_L03_00173FE0[];
 typedef int u128 __attribute__((mode(TI)));
 
 // Spawns a moby of class 0x341 at a position, initialises its data and registers it.
-char *SpawnHomingRocket(char *a, char *pos, char *parent, int n, float f0, float f1, float f2) {
+char *compute_interpolated_record_value_cf(char *a, char *pos, char *parent, int n, float f0, float f1, float f2) {
     char *m = (char *)func_0020D348_m(0x341);
     char *d;
     if (m != 0) {
@@ -1114,7 +1137,7 @@ extern int func_001F9908_D5790(s32 *) __asm__("func_001F9908");
 
 /* Homing rocket update: flies on, trails smoke, steers up or down toward a target, explodes on impact or timeout.
    Adapted from Lombyte (GPL-3.0) for PAL by OpenRAC's tools/port.py: src/overlays/l03/gameplay/entities/002c9eb8.c, FUN_L03_002d43c8. */
-void KerwanHomingRocketUpdate(struct Moby *m) {
+void update_homing_rocket(struct Moby *m) {
     Vec4 old;
     Vec4 side;
     Vec4 back;
@@ -1204,7 +1227,7 @@ extern void func_0020D960(char *, int, void *);
 extern short D_L03_00161C34;
 
 /* triggers objects matching the moby's class, with per-segment settings */
-void QuestGiver_AttachCheatManipulator(char *moby) {
+void apply_helga_big_head_cutscene_adjustments(char *class_reference_moby) {
     int i;
     if (D_L03_0015F6A8 == 2 && gCheats[0]) {
         if (D_L03_0016C9E0.a == 2 && D_L03_0016C9E0.b >= 0x1EA && D_L03_0016C9E0.b < 0x266) {
@@ -1214,15 +1237,15 @@ void QuestGiver_AttachCheatManipulator(char *moby) {
             D_L03_0015F680 = 0.2f;
         }
         for (i = 0; i < D_L03_0016C9E0.n; i++) {
-            char *o = D_L03_0016C9E0.objs[i];
-            if (*(short *)(o + 0xA6) == *(short *)(moby + 0xA6)) {
-                if (D_L03_0017C5C0[1] == 0) {
+            struct Moby *o = (struct Moby *)D_L03_0016C9E0.objs[i];
+            if (o->oclass == ((struct Moby *)class_reference_moby)->oclass) {
+                if (((struct HeroManipulator *)D_L03_0017C5C0)->attached == 0) {
                     float f;
                     AttachManipulator(o, 0, D_L03_0017C5C0);
                     f = *(float *)&D_L03_00161C34;
-                    *(float *)(D_L03_0017C5C0 + 0x20) = f;
-                    *(float *)(D_L03_0017C5C0 + 0x24) = f;
-                    *(float *)(D_L03_0017C5C0 + 0x28) = f;
+                    ((struct HeroManipulator *)D_L03_0017C5C0)->scale3.f[0] = f;
+                    ((struct HeroManipulator *)D_L03_0017C5C0)->scale3.f[1] = f;
+                    ((struct HeroManipulator *)D_L03_0017C5C0)->scale3.f[2] = f;
                 }
             }
         }
@@ -1293,7 +1316,7 @@ extern f32 func_001FA790(f32, f32);
 extern f32 func_001F9CE8(void *);
 extern void func_L00_00263950(void *, void *, int, f32, f32);
 
-void QuestGiverUpdate(struct Moby *m) {
+void helga_update(struct Moby *m) {
     struct QuestGiverVars_hg *v = (struct QuestGiverVars_hg *)m->pvars;
     struct TalkState_hg *talk = &v->talk;
     struct Moby *t;
@@ -1311,7 +1334,7 @@ void QuestGiverUpdate(struct Moby *m) {
     float pitch;
     int tracking;
 
-    QuestGiver_AttachCheatManipulator(m);
+    apply_helga_big_head_cutscene_adjustments(m);
     switch (m->state) {
     case 0:
         if (gHaveHeliPack[10] != 0) {
@@ -1329,7 +1352,7 @@ void QuestGiverUpdate(struct Moby *m) {
         talk->script = D_L03_00161C38;
         v->talk.unk48 = 5;
         ((void (*)(struct Moby *, struct TalkState_hg *))DialogRequest_Init)(m, talk);
-        SetMobyZBand(m);
+        func_L02_0025D750(m);
         break;
     case 1:
         if (Npc_TryStartDialog(m, talk)) {
@@ -1343,12 +1366,12 @@ void QuestGiverUpdate(struct Moby *m) {
     case 2:
         if (D_L03_0015F6A8 != 2) {
             if (v->talk.mode != 2) {
-                SetLevelTriggerDone(m->mission);
+                jet_clear_persistent(m->mission);
                 if (v->link != -1) {
                     LINK_HELPER(m, v)
                 }
                 if (v->talk.warp != -1) {
-                    PauseMenu_SeedSnapshot((*(char **)&D_L03_0016016C) + v->talk.warp * 128 + 0x30,
+                    jet_reset_camera((*(char **)&D_L03_0016016C) + v->talk.warp * 128 + 0x30,
                                       (*(char **)&D_L03_0016016C) + v->talk.warp * 128 + 0x70);
                 }
             }
@@ -1580,7 +1603,7 @@ extern int func_L00_0028EB98_DC648(struct RailSpawnerMoby *, int) __asm__("func_
 extern int func_L00_0028EF68_DC648(int, int, struct RailSpawnerMoby *, int) __asm__("func_L00_0028EF68");
 
 /* Adapted from Lombyte (GPL-3.0) for PAL by OpenRAC's tools/port.py: src/overlays/l03/gameplay/entities/002c9eb8.c, FUN_L03_002db280. */
-void RailSpawnerUpdate(struct RailSpawnerMoby *moby) {
+void update_path_mover_spawner(struct RailSpawnerMoby *moby) {
     struct RailSpawnerVars *vars = moby->vars;
     struct RailPath *path;
     float d;
@@ -1600,12 +1623,12 @@ void RailSpawnerUpdate(struct RailSpawnerMoby *moby) {
         moby->state = 1;
         vars->voice = -1;
         for (d = 2.9f; d < path->count * path->pts[0].f[3]; d += 2.9f)
-            SpawnRailMoby(path, d);
+            spawn_path_mover(path, d);
         moby->unk30 = 0x60;
     }
     if (func_001F9908_DC648(&vars->timer)) {
         vars->timer = truncate_float_to_s32(2.9f / D_L03_00161C40_DC648);
-        SpawnRailMoby(D_L03_001B08B0_DC648[vars->path], 0.0f);
+        spawn_path_mover(D_L03_001B08B0_DC648[vars->path], 0.0f);
     }
     if (!func_L00_0028EB98_DC648(moby, vars->voice))
         vars->voice = func_L00_0028EF68_DC648(0, 4, moby, 0x382);
@@ -1654,8 +1677,8 @@ typedef struct {
 
 #define stage (D_0014171B + 0xAA35)
 #define BASE_gd ((char *)D_L03_00160058)
-static inline u8 flag2(void) { u8 *p = D_0013D50F + 0xB9; return p[2]; }
-void GuideUpdate(struct Moby *m) {
+static inline u8 flag2(void) { u8 *p = menu_item_enabled_115 + 0xB9; return p[2]; }
+void big_al_update(struct Moby *m) {
     struct GuideVars_gd *v = (struct GuideVars_gd *)m->pvars;
     struct Moby *t;
     struct Moby *o;
@@ -1689,7 +1712,7 @@ void GuideUpdate(struct Moby *m) {
         m->spawn_frame = *(u64 *)(*(char **)&D_0013E633[0x2E9D] + 0x38);
         m->state = 1;
         DialogRequest_Init(m, &v->talk);
-        SetMobyZBand(m);
+        func_L02_0025D750(m);
         if (gHaveHeliPack[0] != 0) {
             v->talk.unk36 = -1;
         }
@@ -1734,7 +1757,7 @@ void GuideUpdate(struct Moby *m) {
         }
         m->anim_speed = 1.0f;
         if (v->talk.mode != 2) {
-            SetLevelTriggerDone(m->mission);
+            jet_clear_persistent(m->mission);
             if (v->link != -1) {
                 t = (struct Moby *)((v->link << 8) + (int)D_L03_00160058);
                 if (t->oclass == 0x3F4) {
@@ -1742,7 +1765,7 @@ void GuideUpdate(struct Moby *m) {
                 }
             }
             if (v->warp != -1) {
-                PauseMenu_SeedSnapshot(WT + v->warp * 128 + 0x30, WT + v->warp * 128 + 0x70);
+                jet_reset_camera(WT + v->warp * 128 + 0x30, WT + v->warp * 128 + 0x70);
             }
         }
         m->state = 1;
@@ -1770,7 +1793,7 @@ void GuideUpdate(struct Moby *m) {
             }
         }
         if (v->warp != -1) {
-            PauseMenu_SeedSnapshot(WT + v->warp * 128 + 0x30, WT + v->warp * 128 + 0x70);
+            jet_reset_camera(WT + v->warp * 128 + 0x30, WT + v->warp * 128 + 0x70);
         }
         ((int (*)(int, int))memcard_Save)(0, -1);
         Hero_ResetToPosition(WT + v->warp * 128 + 0x30, WT + v->warp * 128 + 0x70, 0, 1);
@@ -1866,7 +1889,7 @@ extern int D_L03_0015F6A8;
 typedef struct { int pad0[8]; int source; int pad1; unsigned char type; } Hit_DD158;
 typedef struct { unsigned char pad[4]; short mode; unsigned char pad2[0x30]; short unk36; unsigned char pad3[0x14]; int warp; } Vars_DD158;
 
-void Moby914Update(unsigned char *m) {
+void robot_qwark_update(unsigned char *m) {
     Vars_DD158 *d = *(Vars_DD158 **)(m + 0x78);
     Hit_DD158 *hit;
     unsigned char type;
@@ -1876,11 +1899,11 @@ void Moby914Update(unsigned char *m) {
     float tmp[4] __attribute__((aligned(16)));
 
     if (m[0x31] != 0 && FastVecDist(m + 0x10, D_L03_00166F40) < 26.0f) {
-        SetGroundHeightBand(m);
+        func_L00_0025B178(m);
         m[0x7F] = 21;
     }
     if (SAVEFLAGS->collected[(short)*(unsigned short *)(m + 0xB2)] != 0 ||
-        (D_0014C290[D_0015EE84][(short)*(unsigned short *)(m + 0xB2) >> 5] >> (*(unsigned short *)(m + 0xB2) & 0x1F)) & 1) {
+        (level_moby_killed[D_0015EE84][(short)*(unsigned short *)(m + 0xB2) >> 5] >> (*(unsigned short *)(m + 0xB2) & 0x1F)) & 1) {
         if (m[0x20] != 3) {
             m[0x20] = 3;
             MobySetAnimation(m, 1, 0);
@@ -1889,8 +1912,8 @@ void Moby914Update(unsigned char *m) {
     hit = (Hit_DD158 *)MobyGetHitMessage(m, -1, 0);
     if (hit != 0 && hit->source != 0 && (type = hit->type) == 3 &&
         SAVEFLAGS->collected[(short)*(unsigned short *)(m + 0xB2)] == 0 &&
-        (((D_0014C290[D_0015EE84][(short)*(unsigned short *)(m + 0xB2) >> 5] >> (*(unsigned short *)(m + 0xB2) & 0x1F)) ^ 1) & 1)) {
-        unsigned char *p5 = D_0013D50F + 1;
+        (((level_moby_killed[D_0015EE84][(short)*(unsigned short *)(m + 0xB2) >> 5] >> (*(unsigned short *)(m + 0xB2) & 0x1F)) ^ 1) & 1)) {
+        unsigned char *p5 = menu_item_enabled_115 + 1;
         if (p5[5] == 0) {
             p5[5] = 1;
             PlayBankSound(1, 0, 0);
@@ -1902,7 +1925,7 @@ void Moby914Update(unsigned char *m) {
         func_L00_0025F4A8(m, vel, pos, 0.0f, 0.0f, 10, 3, 16, 4.0f, 2.0f, 9.0f, 1.0f, 0, 15.0f, 1, 1, -1, 0);
         m[0x20] = type;
         MobySetAnimation(m, 1, 0);
-        D_0014C290[D_0015EE84][(short)*(unsigned short *)(m + 0xB2) >> 5] |= 1 << (*(unsigned short *)(m + 0xB2) & 0x1F);
+        level_moby_killed[D_0015EE84][(short)*(unsigned short *)(m + 0xB2) >> 5] |= 1 << (*(unsigned short *)(m + 0xB2) & 0x1F);
         D_L03_001BA8E0[(short)*(unsigned short *)(m + 0xB2) >> 5] |= 1 << (*(unsigned short *)(m + 0xB2) & 0x1F);
     }
     m[0xA4] = 0xFF;
@@ -1914,14 +1937,14 @@ void Moby914Update(unsigned char *m) {
         *(unsigned long *)(m + 0x38) = *(unsigned long *)(D_001414D0[0] + 0x38);
         m[0x20] = 1;
         DialogRequest_Init(m, (unsigned char *)d);
-        if (D_0013D4A5[4] != 0) {
+        if (menu_item_enabled_9[4] != 0) {
             d->mode = 1;
             d->unk36 = 2;
         }
         break;
     case 1:
         if (Npc_TryStartDialog(m, (unsigned char *)d)) {
-            D_0013D4A5[4] = 1;
+            menu_item_enabled_9[4] = 1;
             PlaceMarkerAheadOfMoby(2.7f, m);
             m[0x20] = 2;
         }
@@ -1933,7 +1956,7 @@ void Moby914Update(unsigned char *m) {
         m[0x20] = 1;
         if (d->mode == 2 && d->warp != -1) {
             w = WARPTAB + d->warp * 128;
-            PauseMenu_SeedSnapshot((unsigned char *)(w + 0x30), (unsigned char *)(w + 0x70));
+            jet_reset_camera((unsigned char *)(w + 0x30), (unsigned char *)(w + 0x70));
         }
         break;
     case 3:
@@ -1953,7 +1976,7 @@ void Moby914Update(unsigned char *m) {
 INCLUDE_ASM("asm/overlays", func_L03_002DDE38);
 INCLUDE_ASM("asm/overlays", func_L03_002DDE9C);
 /* whether the moby is a taxi (class 0x3F4), active, with its pvars word at +0x7C equal to 1. Adapted from Lombyte (GPL-3.0) for PAL: src/overlays/l03/gameplay/entities/002c9eb8.c, FUN_L03_002dcb30. */
-int IsLiftMobyActive(struct Moby *moby) {
+int is_rail_lift_started(struct Moby *moby) {
     char *data = (char *)moby->pvars;
     if (moby->oclass != 0x3F4) {
         return 0;
@@ -1976,7 +1999,7 @@ extern void func_L00_00237B70(void);
 extern void func_L00_00237B90(void);
 
 /* Shows a help message for the mode, then keeps a hud queue entry alive. */
-void ShowModeHelpMessage(char *m, int mode) {
+void update_rail_lift_help_and_hud(char *m, int mode) {
     char *d = *(char **)(m + 0x78);
     int h;
     switch (mode) {
@@ -1998,9 +2021,9 @@ void ShowModeHelpMessage(char *m, int mode) {
     }
     h = *(int *)(d + 0xA4);
     if (h == -1) {
-        *(int *)(d + 0xA4) = queue_animation_update(0xC, 0, (int)Hud_InitCounter, (int)DefaultVtbl_DeleteMoby, (int)func_L00_00237B90, 0, 0);
+        *(int *)(d + 0xA4) = queue_animation_update(0xC, 0, (int)initialize_numeric_hud_element, (int)DefaultVtbl_DeleteMoby, (int)draw_hud_text_panel, 0, 0);
     } else {
-        Hud_ExtendBankTime(h, 0xA);
+        hud_keep_visible(h, 0xA);
     }
 }
 typedef u32 u128_DE088 __attribute__((mode(TI), aligned(16)));
@@ -2050,7 +2073,7 @@ struct RailLiftVars_DE088 {
 void func_L03_002DE4B8_DE088(struct Moby *m) __asm__("func_L03_002DE4B8");
 
 /* Adapted from Lombyte (GPL-3.0) for PAL by OpenRAC's tools/port.py: src/overlays/l03/gameplay/entities/002c9eb8.c, FUN_L03_002dccc0. */
-void RailLiftUpdate(struct Moby *m) {
+void update_rail_lift(struct Moby *m) {
     struct RailLiftVars_DE088 *d = (struct RailLiftVars_DE088 *)m->pvars;
     Vec4 oldPos, oldRot, move;
     s32 hero_end, lift_end;
@@ -2136,7 +2159,7 @@ extern short D_L03_00161C64;
 extern short D_L03_00161C68;
 extern void func_L00_00263B78(float x, float y, char *a, float *p, float *q);
 /* sets two aim angles on a moby from level constants scaled by degrees-to-radians */
-void UpdateMobyAimSway(char *moby) {
+void update_moby_oscillation(char *moby) {
     char *data = *(char **)(moby + 0x78);
     MobyBobZ(*(float *)&D_L03_00161C58, *(float *)&D_L03_00161C5C * 0.017453292f * D_0015EE6C, moby, (float *)(data + 0xAC), (float *)(data + 0xA8));
     LissajousOffsetUpdate((float *)moby, (float *)(data + 0xB0), (float *)(data + 0xB4), *(float *)&D_L03_00161C60, *(float *)&D_L03_00161C64 * 0.017453292f * D_0015EE6C, *(float *)&D_L03_00161C68 * 0.017453292f * D_0015EE6C);
@@ -2226,7 +2249,7 @@ extern int D_L03_0015F6A8 MACRO_ADDR;
 extern Entry_2E08E8 D_L03_00179C40[];
 
 /* UpdateMoby_1342: tutorial hint and statistic triggers around the player on Kerwan. */
-void TutorialHintTriggerUpdate(Moby *moby) {
+void update_kerwan_tutorial_hints(Moby *moby) {
     Data_2E08E8 *data = *(Data_2E08E8 **)&moby->pvars;
 
     func_001F9908(&data->f58);
@@ -2335,7 +2358,7 @@ void TutorialHintTriggerUpdate(Moby *moby) {
                 && (((unsigned int)((Hero *)(D_0013E633 + 0xE1D))->state.control_mode) < 2 || ((unsigned int)((Hero *)(D_0013E633 + 0xE1D))->state.control_mode) == 9)
                 && ((Hero *)(D_0013E633 + 0xE1D))->state.current != 0x1E
                 && (gHaveHeliPack + 0xD)[0] != 0
-                && GetAmmo(0xF) >= 0x15
+                && get_ammo(0xF) >= 0x15
                 && D_L03_00179590[0] == 0 && D_L03_00179590[9] == -1
                 && (D_00141A68_2E08E8)[0x4A].count == 0
                 && D_00141948_2E08E8[0x13].count == 0) {
@@ -2383,7 +2406,7 @@ void TutorialHintTriggerUpdate(Moby *moby) {
             }
         }
 
-        if (D_L03_0015F6A8 == 0 && (gHavePersuader + 0x11)[0] != 0
+        if (D_L03_0015F6A8 == 0 && (discount_purchase_pricing + 0x11)[0] != 0
             && D_L03_00179590[0] == 0 && D_L03_00179590[9] == -1) {
             Help_2E08E8 *b = D_00141A68_2E08E8;
             if (b[0x19].count == 0) {
@@ -2458,7 +2481,7 @@ void TutorialHintTriggerUpdate(Moby *moby) {
                 int i;
                 for (i = 0; i < 37; i++) {
                     if (D_L03_00179C40[i].active == 0 && i != 8 && i != 24) {
-                        if ((D_0013D50F + 0xB9)[i] != 0) {
+                        if ((menu_item_enabled_115 + 0xB9)[i] != 0) {
                             count++;
                         }
                     }
@@ -2474,7 +2497,7 @@ void TutorialHintTriggerUpdate(Moby *moby) {
             g[0x18] = 1;
         }
         if (is_point_inside_clip_volume(D_0013E633 + 0xE9D, data->f74) != 0) {
-            unsigned char *q = D_0013D50F + 1;
+            unsigned char *q = menu_item_enabled_115 + 1;
             if (q[3] == 0) {
                 q[3] = 1;
                 PlayBankSound(1, 0, 0);
@@ -2501,7 +2524,7 @@ extern void func_L00_0026DD70(void *, void *, int, int, float, int);
 
 /* Starts the cutscene, then during mode 3 (frames 900-10000) emits two particle beams from the listed moby.
    Adapted from Lombyte (GPL-3.0) for PAL by OpenRAC's tools/port.py: src/overlays/l03/gameplay/vendor/002df520.c, FUN_L03_002e01d0. */
-void CutsceneBeamsUpdate(char *m) {
+void update_kerwan_cutscene_effects(char *m) {
     char *moby;
     float from[4];
     float to[4];
@@ -2523,7 +2546,7 @@ void CutsceneBeamsUpdate(char *m) {
                 i = 2;
             else if (v == 10)
                 i = 0;
-            SpawnMoby750Sparks(D_L03_0016C9E0_2E1598.mobys[i]);
+            cutscene_set_camera_target(D_L03_0016C9E0_2E1598.mobys[i]);
         }
         if (D_L03_0015F6A8 != 2 || D_L03_0016C9E0_2E1598.mode != 3)
             break;
@@ -2549,7 +2572,7 @@ extern void func_L01_00279790(void *);
 extern void func_L00_00264EA8(void *, int, int, int, int, int, int);
 extern void func_L01_00279E10(void *, int);
 extern void func_0020D678(void *);
-void Kerwan_BreakOnHitUpdate(char *m) {
+void lightpost_update(char *m) {
     int hit = 0;
     char *r = MobyGetHitMessage(m, 0x10000, 0);
     switch (*(unsigned char *)(m + 0x20)) {
@@ -2564,7 +2587,7 @@ void Kerwan_BreakOnHitUpdate(char *m) {
         Moby_PlaySound(0, 0, (int)m);
         SpawnBreakFxByDistance(m);
         SpawnMobyBurstFx(m, 0x725, 1, 0x725, 1, 1, 2);
-        SpawnMobyCopyingPlacement(m, 0x724);
+        spawn_moby_from_placement(m, 0x724);
         DeleteMoby(m);
         break;
     }
@@ -2642,7 +2665,7 @@ extern void func_L03_002ECBA8(void *);
 extern int func_001F9850(int);
 
 /* ActivateCamera_14: seed the camera's smoothing state from the current camera table entry */
-void Camera14_Activate(char *m) {
+void initialize_hero_relative_camera(char *m) {
     CameraMobyECD40 *mob = (CameraMobyECD40 *)m;
     char *g = D_0013E633 + 0xE1D;
     CameraConfigECD40 *e = D_L03_0015F050_camera[mob->index].config;
@@ -2692,7 +2715,7 @@ void Camera14_Activate(char *m) {
     *(int *)(buf + 15) = 0;
     func_001FA1F8(buf, buf + 12);
     qcopy(c, buf);
-    PlaceCameraBehindHero(m);
+    rebuild_hero_relative_camera_transform(m);
     mob->resetFlag = 0;
     D_L03_001670F4 = 0x78;
 }
@@ -2769,7 +2792,7 @@ extern void func_L03_002ECEC8(void *);
 extern void func_001E9768(void *);
 extern void func_L03_002ED020(void *);
 
-void Camera14Update(void *arg) {
+void update_camera_position_and_orientation(void *arg) {
     Camera14_SmoothPosition(arg);
     Profile_Mark(arg);
     Camera14_RebuildAxes(arg);
@@ -2777,7 +2800,7 @@ void Camera14Update(void *arg) {
 extern int D_L03_0015F050 MACRO_ADDR;
 extern int func_00215570(void *, int);
 
-void Camera14Exit(char *moby)
+void update_camera_state_outside_clip_volume(char *moby)
 {
     char *entry = (char *)((*(short *)(moby + 0x84) << 5) + D_L03_0015F050);
     char *sub = *(char **)(entry + 0x1C);

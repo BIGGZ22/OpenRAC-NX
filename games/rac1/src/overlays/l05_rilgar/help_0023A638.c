@@ -291,25 +291,25 @@ void HeroL05_GroundProbe(void) {
     if (D_0013F450_40968.xI208c == 2) {
         g = D_0013F450_40968.xF234 * 2.9f;
     }
-    Hero_BuildProbeEndpoints(&v10, &v0, k, g, -48.0f);
+    hero_get_collision_ray_endpoints(&v10, &v0, k, g, -48.0f);
     if (func_L00_001EFFF0(&v10, &v0, 2, D_0013F450_40968.xI2080, 0) == 0) {
         goto tail;
     }
-    r = CollSoundClass();
+    r = coll_sound_class();
     if (r == -1) {
         r = 3;
     }
     D_0013F450_40968.xB12ed = r;
     D_0013F450_40968.xH12e0 = CollType();
     if (D_0013F450_40968.xH12e0 == 0) {
-        D_0013F450_40968.xF2f0 = GetGroundHeight(D_L05_00174360, (u8 *)&D_0013F450_40968 + 0x280);
+        D_0013F450_40968.xF2f0 = resolve_camera_surface_height(D_L05_00174360, (u8 *)&D_0013F450_40968 + 0x280);
         if (D_0013F450_40968.xF88 < D_0013F450_40968.xF2f0 && D_0013F450_40968.xI2f8 <= 0) {
             D_0013F450_40968.xI2f8 = 1;
         }
         if (func_L00_001EFFF0(&v10, &v0, 0x24, D_0013F450_40968.xI2080, 0) == 0) {
             goto d1;
         }
-        r = CollSoundClass();
+        r = coll_sound_class();
         if (D_0015EE84 == 1 || D_0015EE84 == 0x12) {
             r = 3;
         }
@@ -407,7 +407,7 @@ d1:
     if (!(D_0013F450_40968.xF2dc < 0.25f)) {
         return;
     }
-    VecToHeroAngles((u8 *)&D_0013F450_40968 + 0x270, &v20);
+    compute_rotated_vector_angles((u8 *)&D_0013F450_40968 + 0x270, &v20);
     if (-0.78539819f < v20.f[1] && v20.f[1] < 0.78539819f) {
         D_0013F450_40968.u2e4.F = v20.f[1];
     }
@@ -428,7 +428,7 @@ d1:
                 D_0013F450_40968.a2c0.f[i] = 0.0f;
             }
             func_001252C0(&v60, (u8 *)&D_L05_00174340.f40);
-            VecToHeroAngles(&v60, &v50);
+            compute_rotated_vector_angles(&v60, &v50);
             if (-0.78539819f < v50.f[1] && v50.f[1] < 0.78539819f) {
                 D_0013F450_40968.a2c8.f[i] = v50.f[1];
             }
@@ -561,7 +561,7 @@ extern float func_L00_00213A08(void *);
 extern void func_001F9C30(void *, void *, f32);
 
 /* Integrate player motion, resolve contacts, and measure the resulting movement. */
-void Hero_MoveAndCollide(void) {
+void integrate_hero_motion_with_collisions(void) {
     Vec4 previous;
     Vec4 work;
     Vec4 plane;
@@ -582,7 +582,7 @@ void Hero_MoveAndCollide(void) {
 
     qcopy(previous.f, position);
     player = (Hero *)((char *)position - 0x80);
-    HeroRideMovingPlatform(player->unk4F8, (char *)position + 0x70, (char *)position + 0x10);
+    update_hero_attachment(player->unk4F8, (char *)position + 0x70, (char *)position + 0x10);
     if (player->state.current == 34 || player->state.current == 20) {
         float limit;
         float *limited_velocity;
@@ -591,16 +591,16 @@ void Hero_MoveAndCollide(void) {
             float length;
 
             position = (float *)((char *)position + 0x60);
-            length = ViewXyLength(position);
+            length = gravity_length_xy(position);
             limit = player->unk234 - 0.02f;
             if (limit < length) func_L00_001FF4B0(position, position, limit);
         }
         limited_velocity = (float *)(D_0013E633 + 0xEFD);
-        magnitude = HeroGetViewZ(limited_velocity);
+        magnitude = gravity_z(limited_velocity);
         limit = -*(float *)((char *)limited_velocity + 0x1FC);
         if (magnitude < limit) {
             if (limit > 0.0f) limit = 0.0f;
-            HeroPlacePointZ(limited_velocity, limited_velocity, limit);
+            gravity_set_z(limited_velocity, limited_velocity, limit);
         }
     } else if (player->state.control_mode == 22) {
         qcopy(work.f, position);
@@ -644,10 +644,10 @@ void Hero_MoveAndCollide(void) {
     contact_player->wall_hit = 0;
     contact_player->coll_hit_moby = 0;
     if (FastVecLength((char *)position + 0x70) <= 0.0001f) {
-        Hero_ResolveCollision();
+        resolve_hero_collisions_with_history();
         HeroL05_GroundProbe();
         FastVecSub((char *)position + 0x80, position, previous.f);
-        Hero_SnapStepUp();
+        correct_hero_ground_penetration();
     } else {
         HeroL05_GroundProbe();
     }
@@ -664,8 +664,8 @@ void Hero_MoveAndCollide(void) {
     if (magnitude < 0.0f) magnitude = 0.0f;
     func_L00_001FF4B0(delta, velocity, magnitude);
     qcopy(work.f, velocity);
-    HeroRemoveNormalComponent(work.f, work.f);
-    HeroRemoveNormalComponent(horizontal, horizontal);
+    gravity_flatten(work.f, work.f);
+    gravity_flatten(horizontal, horizontal);
     func_L00_001FF4B0(horizontal, horizontal, 1.0f);
     magnitude = FastVecDot(horizontal, work.f);
     if (magnitude < 0.0f) magnitude = 0.0f;
@@ -681,7 +681,7 @@ void Hero_MoveAndCollide(void) {
     motion_player->motion.speed_xy = FastVecLength(delta);
     motion_player->motion.unk164 = func_001F9CE8(delta);
     work.q = *(Q *)delta;
-    motion_player->motion.unk168 = Hero_ProjectOnHeading(work.f);
+    motion_player->motion.unk168 = forward_component(work.f);
     if (motion_player->motion.unk168 < 0.0f) motion_player->motion.unk168 = 0.0f;
     qcopy(work.f, new_position);
     contact = (float *)((char *)delta - 0x20);
@@ -693,10 +693,10 @@ void Hero_MoveAndCollide(void) {
         saved = motion_player->motion.platform_delta.f[3];
         clear_u64_value(contact);
         motion_player->motion.platform_delta.f[3] = saved;
-        Hero_ResolveCollision();
+        resolve_hero_collisions_with_history();
         HeroL05_GroundProbe();
         FastVecSub(external, new_position, previous.f);
-        Hero_SnapStepUp();
+        correct_hero_ground_penetration();
     }
     FastVecSub((char *)delta + 0x30, new_position, work.f);
     motion_player->motion.platform_carry.f[3] = motion_player->motion.platform_delta.f[3];

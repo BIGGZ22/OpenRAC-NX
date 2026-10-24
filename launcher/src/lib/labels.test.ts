@@ -7,6 +7,7 @@ describe("labels", () => {
     expect(shortTitle("Ratchet & Clank: Going Commando")).toBe("Going Commando");
     expect(shortTitle("Ratchet: Deadlocked")).toBe("Deadlocked");
     expect(shortTitle("Ratchet & Clank: Size Matters")).toBe("Size Matters");
+    expect(shortTitle("Ratchet & Clank: Secret Agent Clank")).toBe("Secret Agent Clank");
   });
 
   it("lists each game's levels by their numbers", () => {

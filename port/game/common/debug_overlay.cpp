@@ -33,11 +33,11 @@
 #include "common/stats.h"
 #include "debug/overlay.h"
 #include "frontend.h"
-#include "imgui_gl.h"
 #include "renderer/gl.h"
 #include "renderer/gl_stats.h"
+#include "renderer/ui/imgui_gl.h"
+#include "scene/screenshot.h"
 #include "settings.h"
-#include "viewer/screenshot.h"
 
 namespace openrac::frontend::debug_overlay {
 
@@ -235,10 +235,12 @@ bool initialise(SDL_Window* window) {
     style.ItemSpacing = ImVec2(6.0f, 3.0f);
     initialise_touch(window);
     std::string error;
-    const bool started = s.gl_subset
-                             ? ImGui_ImplSDL3_InitForOther(window) && imgui_gl::init(error)
-                             : ImGui_ImplSDL3_InitForOpenGL(window, SDL_GL_GetCurrentContext())
-                                   && ImGui_ImplOpenGL3_Init(openrac::gl::is_es() ? "#version 300 es" : "#version 410 core");
+    const bool started =
+        s.gl_subset ? ImGui_ImplSDL3_InitForOther(window) && renderer::ui::imgui_gl::init(error)
+                    : ImGui_ImplSDL3_InitForOpenGL(window, SDL_GL_GetCurrentContext())
+                          && ImGui_ImplOpenGL3_Init(
+                              openrac::gl::is_es() ? "#version 300 es" : "#version 410 core"
+                          );
     if (!started) {
         log::warn("debug overlay: Dear ImGui could not start{}", error.empty() ? "" : ": " + error);
         ImGui::DestroyContext();
@@ -398,7 +400,7 @@ bool write_window(const std::string& path, int width, int height) {
     for (std::size_t i = 3; i < flipped.size(); i += 4) {
         flipped[i] = 0xFF;
     }
-    if (viewer::write_png(path, width, height, flipped)) {
+    if (scene::write_png(path, width, height, flipped)) {
         s.message = "window written to " + path;
         log::info("{}", s.message);
         return true;
@@ -571,7 +573,7 @@ void tick(const Tick& t) {
     s.tick = t.tick;
     s.counts = t;
     if (s.follow_hero) {
-        if (const viewer::LiveMoby* h = hero()) {
+        if (const host::LiveMoby* h = hero()) {
             s.selected = h->address;
         }
     }
@@ -664,7 +666,7 @@ void draw(const Shown& shown) {
     status_badge();
     ImGui::Render();
     if (s.gl_subset) {
-        imgui_gl::render(ImGui::GetDrawData());
+        renderer::ui::imgui_gl::render(ImGui::GetDrawData());
     } else {
         ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
     }
@@ -729,7 +731,7 @@ bool take_settings_changed() {
 void release() {
     if (s.initialised) {
         if (s.gl_subset) {
-            imgui_gl::shutdown();
+            renderer::ui::imgui_gl::shutdown();
         } else {
             ImGui_ImplOpenGL3_Shutdown();
         }

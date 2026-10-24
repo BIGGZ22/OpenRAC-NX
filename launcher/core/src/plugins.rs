@@ -954,6 +954,33 @@ pub(crate) fn manifest_root(folder: &Path) -> Result<PathBuf, String> {
     }
 }
 
+/// The mods a folder the player chose holds, each one to install: the folder itself when it is one
+/// mod (its manifest at its top or in its one folder), else every folder at its top that is one.
+/// A checkout of a mods repository (rac1-mods) is taken from its build, `build/package/<id>`,
+/// first: there a native mod has its library, which its source folder does not. A .zip is
+/// returned as it is (install says what it holds).
+pub fn mod_folders(source: &Path) -> Result<Vec<PathBuf>, String> {
+    if !source.is_dir() || manifest_root(source).is_ok() {
+        return Ok(vec![source.to_path_buf()]);
+    }
+    let mods_in = |folder: &Path| -> Vec<PathBuf> {
+        let mut found: Vec<PathBuf> =
+            std::fs::read_dir(folder).map(|d| d.filter_map(Result::ok).map(|e| e.path()).collect()).unwrap_or_default();
+        found.retain(|p| p.is_dir() && p.join(MANIFEST).is_file());
+        found.sort();
+        found
+    };
+    let built = mods_in(&source.join("build").join("package"));
+    if !built.is_empty() {
+        return Ok(built);
+    }
+    let found = mods_in(source);
+    if found.is_empty() {
+        return Err(format!("there is no {MANIFEST} at its top or in a folder at its top: it holds no OpenRAC mod"));
+    }
+    Ok(found)
+}
+
 /// Copies a folder, refusing links (a mod is files and folders only).
 pub(crate) fn copy_tree(from: &Path, to: &Path) -> Result<(), String> {
     std::fs::create_dir_all(to).map_err(|e| format!("{}: {e}", to.display()))?;
@@ -1051,6 +1078,15 @@ pub fn install(dir: &Path, game: &str, version: &str, source: &Path) -> Result<I
     if !m.games.contains_key(game) {
         let games: Vec<&str> = m.games.keys().map(String::as_str).collect();
         return Err(format!("{} is a mod for {}, not this game", m.name, games.join(", ")));
+    }
+    // A native mod's source folder (a checkout not yet built) names no library: the port would
+    // refuse it at every start, so it is refused here, before it replaces a working copy.
+    if !m.is_script() && m.plugin.is_empty() {
+        return Err(format!(
+            "{} has no library built: this is its source folder. Add its release .zip, or build the mods \
+             first (cmake --build build) and add the checkout again, whose build/package is then taken",
+            m.name
+        ));
     }
     for path in m.plugin.values() {
         if !root.join(path).is_file() {
@@ -1700,6 +1736,38 @@ mod tests {
         assert!(source.is_dir());
         assert!(remove(&dir, "rac1", "pal", "../download").is_err());
         assert!(remove(&dir, "rac1", "pal", "lock-strafe").is_err());
+    }
+
+    #[test]
+    fn a_folder_of_mods() {
+        let root = tempfile::tempdir().unwrap();
+        let r = root.path();
+        let one = |dir: &Path| {
+            std::fs::create_dir_all(dir).unwrap();
+            std::fs::write(dir.join(MANIFEST), "{}").unwrap();
+        };
+        // One mod: the folder itself.
+        one(&r.join("solo"));
+        assert_eq!(mod_folders(&r.join("solo")).unwrap(), [r.join("solo")]);
+        // A repository's checkout: its mods' folders, from its build when there is one.
+        one(&r.join("repo/b"));
+        one(&r.join("repo/a"));
+        std::fs::create_dir_all(r.join("repo/tools")).unwrap();
+        assert_eq!(mod_folders(&r.join("repo")).unwrap(), [r.join("repo/a"), r.join("repo/b")]);
+        one(&r.join("repo/build/package/a"));
+        assert_eq!(mod_folders(&r.join("repo")).unwrap(), [r.join("repo/build/package/a")]);
+        // No mod anywhere: said.
+        std::fs::create_dir_all(r.join("empty/x")).unwrap();
+        assert!(mod_folders(&r.join("empty")).unwrap_err().contains("holds no OpenRAC mod"));
+        // A native mod's source folder (no library named) is refused, and nothing is replaced.
+        let src = r.join("src/lock-strafe");
+        std::fs::create_dir_all(&src).unwrap();
+        let mut m = manifest("lock-strafe", json!({}));
+        m.as_object_mut().unwrap().remove("plugin");
+        std::fs::write(src.join(MANIFEST), m.to_string()).unwrap();
+        let err = install(&r.join("plugins"), "rac1", "pal", &src).unwrap_err();
+        assert!(err.contains("has no library built"), "{err}");
+        assert!(!r.join("plugins/lock-strafe").exists());
     }
 
     #[test]

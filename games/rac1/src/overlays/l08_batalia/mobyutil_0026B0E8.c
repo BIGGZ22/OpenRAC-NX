@@ -12,7 +12,7 @@ extern void func_001FA4A0(void *, void *);
 extern void func_001FA480(void *, void *);
 
 /* Builds a matrix that rolls by roll around the direction dir and writes it to out. */
-void BuildRollMatrix(void *out, void *dir, float roll) {
+void build_axis_roll_matrix(void *out, void *dir, float roll) {
     float M[4][4];
     float Rz[4][4];
     float Ry[4][4];

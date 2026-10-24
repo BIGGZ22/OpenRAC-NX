@@ -21,6 +21,8 @@
 
 #include "check.h"
 #include "common/json.h"
+#include "enhanced/viewer/scene_lighting.h"
+#include "game/rac1/game_state.h"
 #include "gpu_draw_reference.h"
 #include "renderer/framebuffer.h"
 #include "renderer/renderer.h"
@@ -28,15 +30,14 @@
 #include "scene/level.h"
 #include "scene/level_renderer.h"
 #include "viewer/camera.h"
-#include "viewer/game_state.h"
 
 namespace {
 
 namespace fs = std::filesystem;
 using namespace openrac;
 
-viewer::Pvs pvs_fixture(unsigned height = 0) {
-    viewer::Pvs pvs;
+scene::Pvs pvs_fixture(unsigned height = 0) {
+    scene::Pvs pvs;
     pvs.grid.resize(32 + 256);
     auto put = [&](unsigned at, unsigned value) {
         pvs.grid[at] = static_cast<std::uint8_t>(value);
@@ -62,23 +63,23 @@ void pvs_lookup() {
     auto pvs = pvs_fixture();
     auto a = pvs.select({0, 0, 0});
     auto b = pvs.select({4, 0, 0});
-    CHECK(viewer::Pvs::visible(a, 1));
-    CHECK(!viewer::Pvs::visible(a, 2));
-    CHECK(!viewer::Pvs::visible(b, 1));
-    CHECK(viewer::Pvs::visible(b, 2));
-    CHECK(viewer::Pvs::visible(a, viewer::Pvs::always));
-    CHECK(viewer::Pvs::visible(a, 0));
-    CHECK(viewer::Pvs::visible(a, 3));
-    CHECK(viewer::Pvs::visible(a, 0xff01));
+    CHECK(scene::Pvs::visible(a, 1));
+    CHECK(!scene::Pvs::visible(a, 2));
+    CHECK(!scene::Pvs::visible(b, 1));
+    CHECK(scene::Pvs::visible(b, 2));
+    CHECK(scene::Pvs::visible(a, scene::Pvs::always));
+    CHECK(scene::Pvs::visible(a, 0));
+    CHECK(scene::Pvs::visible(a, 3));
+    CHECK(scene::Pvs::visible(a, 0xff01));
     CHECK(pvs.select({-3.9f, 0, 0}) == a);  // truncate, never floor
     CHECK(pvs.select({8, 0, 0}) == b);      // neighbouring-cell union
-    CHECK(pvs.select({400, 0, 0}) == viewer::Pvs::all_visible());
-    CHECK(pvs.select({NAN, 0, 0}) == viewer::Pvs::all_visible());
-    CHECK(pvs.select({INFINITY, 0, 0}) == viewer::Pvs::all_visible());
+    CHECK(pvs.select({400, 0, 0}) == scene::Pvs::all_visible());
+    CHECK(pvs.select({NAN, 0, 0}) == scene::Pvs::all_visible());
+    CHECK(pvs.select({INFINITY, 0, 0}) == scene::Pvs::all_visible());
     for (const unsigned size : {0u, 7u, 31u, 33u}) {
         auto broken = pvs;
         broken.grid.resize(size);
-        CHECK(broken.select({0, 0, 0}) == viewer::Pvs::all_visible());
+        CHECK(broken.select({0, 0, 0}) == scene::Pvs::all_visible());
     }
 }
 
@@ -97,13 +98,13 @@ void pvs_loader(const fs::path& dir) {
             << "{\"format\":1,\"game\":\"rac1\",\"version\":\"" << version
             << "\",\"level\":3,\"grid\":\"pvs.bin\",\"terrain\":[1]}";
     };
-    viewer::LevelData loaded;
+    scene::LevelData loaded;
     std::string error;
     metadata("ntsc");
-    CHECK(viewer::load_level(dir, loaded, error));
+    CHECK(scene::load_level(dir, loaded, error));
     CHECK(loaded.pvs.grid.empty());
     metadata("pal");
-    CHECK(viewer::load_level(dir, loaded, error));
+    CHECK(scene::load_level(dir, loaded, error));
     CHECK(loaded.pvs.grid == pvs.grid);
     fs::remove(dir / "pvs.json");
     fs::remove(dir / "pvs.bin");
@@ -223,32 +224,32 @@ void json_reader() {
     CHECK(!json::parse("[1] x", v, error));
 }
 
-void loader(const fs::path& dir, viewer::LevelData& level) {
+void loader(const fs::path& dir, scene::LevelData& level) {
     std::string error;
-    CHECK(viewer::load_level(dir, level, error));
+    CHECK(scene::load_level(dir, level, error));
     if (!error.empty()) {
         std::fprintf(stderr, "%s\n", error.c_str());
     }
     CHECK(level.level == 3);
     CHECK(level.models.size() == 3);  // terrain, the tie class, the moby box
-    CHECK(level.instances[static_cast<std::size_t>(viewer::Layer::Terrain)].size() == 1);
-    CHECK(level.instances[static_cast<std::size_t>(viewer::Layer::Ties)].size() == 1);
+    CHECK(level.instances[static_cast<std::size_t>(scene::Layer::Terrain)].size() == 1);
+    CHECK(level.instances[static_cast<std::size_t>(scene::Layer::Ties)].size() == 1);
     // The placement of an unknown class is left out.
-    CHECK(level.instances[static_cast<std::size_t>(viewer::Layer::Mobys)].size() == 1);
+    CHECK(level.instances[static_cast<std::size_t>(scene::Layer::Mobys)].size() == 1);
     CHECK(level.images.size() == 2);
-    CHECK((level.materials[0].emission == viewer::Vec3{0, .5f, 0}));
+    CHECK((level.materials[0].emission == scene::Vec3{0, .5f, 0}));
     CHECK(level.materials[0].emission_image == level.materials[0].image);
     CHECK(level.sky_panorama.width == 2 && level.sky_panorama.height == 2);
     CHECK(level.sky_panorama.pixels[0] == 80 && level.sky_panorama.pixels[2] == 200);
     CHECK(level.missing_images == 0);
     CHECK(level.vertices.size() == 4 + 4 + 24);
     CHECK(std::fabs(level.background[2] - 30.0f / 255.0f) < 1e-6f);
-    const auto& moby = level.instances[static_cast<std::size_t>(viewer::Layer::Mobys)][0];
+    const auto& moby = level.instances[static_cast<std::size_t>(scene::Layer::Mobys)][0];
     // A class without a mesh is a box, tinted by class; its scale is the
     // placement's alone (the class scale applies to meshes).
     CHECK(moby.tint[0] != 1.0f || moby.tint[1] != 1.0f || moby.tint[2] != 1.0f);
     CHECK(moby.matrix[0] == 2.0f && moby.matrix[12] == 6.0f);
-    const auto& tie = level.instances[static_cast<std::size_t>(viewer::Layer::Ties)][0];
+    const auto& tie = level.instances[static_cast<std::size_t>(scene::Layer::Ties)][0];
     CHECK(tie.matrix[14] == 1.0f);
     CHECK(level.bounds_min[0] == -10.0f && level.bounds_max[0] >= 6.5f);
     {
@@ -261,28 +262,28 @@ void loader(const fs::path& dir, viewer::LevelData& level) {
           "terrain":"terrain.glb.gltf","placements":"placements.json",
           "classes":{"tie":{"5":{"mesh":"ties/tie_5.gltf"}}}
         })");
-        viewer::LevelData ooze;
-        CHECK(viewer::load_level(ooze_dir, ooze, error));
-        CHECK((ooze.materials[0].emission == viewer::Vec3{1, 1, 1}));
+        scene::LevelData ooze;
+        CHECK(scene::load_level(ooze_dir, ooze, error));
+        CHECK((ooze.materials[0].emission == scene::Vec3{1, 1, 1}));
         CHECK(ooze.emission_profile_revision == 2);
         CHECK(ooze.materials[0].emission_vertex_colour);
         CHECK(ooze.materials[0].diffuse_scale == 0);
-        CHECK((ooze.materials[1].emission == viewer::Vec3{0, .5f, 0}));
+        CHECK((ooze.materials[1].emission == scene::Vec3{0, .5f, 0}));
         const auto source_emission = ooze.materials[0].emission;
         write_text(ooze_dir / "probe-emission.json", R"({
           "textures/terrain_0012.png":{"preserve_authored_lighting":false}
         })");
-        CHECK(viewer::load_level(ooze_dir, ooze, error));
-        CHECK(ooze.materials[0].emission_mask == lighting::EmissionMask::None);
+        CHECK(scene::load_level(ooze_dir, ooze, error));
+        CHECK(ooze.materials[0].emission_mask == scene::EmissionMask::None);
         CHECK(ooze.materials[0].emission == source_emission);
         for (const char* window : {"textures/tie_0048.png", "textures/terrain_0059.png"}) {
             write_png(ooze_dir / window, 80, 220, 30);
             write_square(ooze_dir / "terrain.glb.gltf", 20, 0, window);
-            CHECK(viewer::load_level(ooze_dir, ooze, error));
-            CHECK(ooze.materials[0].emission_mask == lighting::EmissionMask::Green);
+            CHECK(scene::load_level(ooze_dir, ooze, error));
+            CHECK(ooze.materials[0].emission_mask == scene::EmissionMask::Green);
             CHECK(!ooze.materials[0].emission_vertex_colour);
             CHECK(ooze.materials[0].diffuse_scale == 1);
-            CHECK(ooze.materials[1].emission_mask == lighting::EmissionMask::None);
+            CHECK(ooze.materials[1].emission_mask == scene::EmissionMask::None);
             CHECK(ooze.materials[0].emission == source_emission);
         }
         write_square(ooze_dir / "lava.gltf", 20, 0, "textures/probe_gaspar_lava.png");
@@ -292,13 +293,13 @@ void loader(const fs::path& dir, viewer::LevelData& level) {
           "terrain":"terrain.glb.gltf","placements":"placements.json"
         })");
         write_text(ooze_dir / "probe-emission.json", R"({"surfaces":[{"mesh":"lava.gltf"}]})");
-        CHECK(viewer::load_level(ooze_dir, ooze, error));
+        CHECK(scene::load_level(ooze_dir, ooze, error));
         CHECK(ooze.bake_surfaces.size() == 1);
-        CHECK(ooze.instances[static_cast<std::size_t>(viewer::Layer::Terrain)].size() == 1);
+        CHECK(ooze.instances[static_cast<std::size_t>(scene::Layer::Terrain)].size() == 1);
         CHECK(ooze.emission_profile_revision == 1);
         const auto lava_model = ooze.bake_surfaces[0].model;
         const auto lava_material = ooze.models[lava_model].primitives[0].material;
-        CHECK((ooze.materials[lava_material].emission == viewer::Vec3{1, 1, 1}));
+        CHECK((ooze.materials[lava_material].emission == scene::Vec3{1, 1, 1}));
         CHECK(ooze.materials[lava_material].emission_vertex_colour);
         CHECK(ooze.materials[lava_material].diffuse_scale == 0);
     }
@@ -322,9 +323,9 @@ void loader(const fs::path& dir, viewer::LevelData& level) {
           {"class":1827,"matrix":[1,0,0,0,0,1,0,0,0,0,1,0,0,0,0,1]},
           {"class":1827,"bake_static":true,"matrix":[1,0,0,0,0,1,0,0,0,0,1,0,0,0,0,1]},
           {"class":500,"matrix":[1,0,0,0,0,1,0,0,0,0,1,0,0,0,0,1]}]})");
-        viewer::LevelData selected;
-        CHECK(viewer::load_level(selection_dir, selected, error));
-        const auto& props = selected.instances[static_cast<std::size_t>(viewer::Layer::Mobys)];
+        scene::LevelData selected;
+        CHECK(scene::load_level(selection_dir, selected, error));
+        const auto& props = selected.instances[static_cast<std::size_t>(scene::Layer::Mobys)];
         CHECK(props.size() == 5);
         CHECK(props[0].bake_static && !props[0].stand_in);
         CHECK(!props[1].bake_static && !props[2].bake_static);
@@ -334,31 +335,31 @@ void loader(const fs::path& dir, viewer::LevelData& level) {
         write_text(selection_dir / "probe-emission.json", R"({
             "textures/terrain_0000.png":{"colour":[0.25,0.5,1],"intensity":4,"use_base_texture":false,"preserve_authored_lighting":true}
         })");
-        CHECK(viewer::load_level(selection_dir, selected, error));
-        CHECK((selected.materials[0].emission == viewer::Vec3{1, 2, 4}));
+        CHECK(scene::load_level(selection_dir, selected, error));
+        CHECK((selected.materials[0].emission == scene::Vec3{1, 2, 4}));
         CHECK(selected.materials[0].emission_image == -1);
-        CHECK(selected.materials[0].emission_mask == lighting::EmissionMask::None);
+        CHECK(selected.materials[0].emission_mask == scene::EmissionMask::None);
         write_text(selection_dir / "probe-emission.json", R"({
             "textures/terrain_0000.png":{"preserve_authored_lighting":true}
         })");
-        CHECK(viewer::load_level(selection_dir, selected, error));
-        CHECK(selected.materials[0].emission_mask == lighting::EmissionMask::None);
+        CHECK(scene::load_level(selection_dir, selected, error));
+        CHECK(selected.materials[0].emission_mask == scene::EmissionMask::None);
         CHECK(selected.materials[0].emission == source_emission);
         write_text(selection_dir / "probe-emission.json", R"({
             "textures/terrain_0000.png":{"colour":[1,2,3],"texture":"textures/tie_0001.png","mask":"green"}
         })");
-        CHECK(viewer::load_level(selection_dir, selected, error));
-        CHECK((selected.materials[0].emission == viewer::Vec3{1, 2, 3}));
-        CHECK(selected.materials[0].emission_mask == lighting::EmissionMask::Green);
+        CHECK(scene::load_level(selection_dir, selected, error));
+        CHECK((selected.materials[0].emission == scene::Vec3{1, 2, 3}));
+        CHECK(selected.materials[0].emission_mask == scene::EmissionMask::Green);
         CHECK(selected.materials[0].emission_image != selected.materials[0].image);
         write_text(selection_dir / "probe-emission.json", R"({
             "textures/terrain_0000.png":{"mask":"bad"}
         })");
-        CHECK(!viewer::load_level(selection_dir, selected, error));
+        CHECK(!scene::load_level(selection_dir, selected, error));
         write_text(selection_dir / "probe-emission.json", R"({
             "textures/terrain_0000.png":{"intensity":-1}
         })");
-        CHECK(!viewer::load_level(selection_dir, selected, error));
+        CHECK(!scene::load_level(selection_dir, selected, error));
         write_square(selection_dir / "unsupported.gltf", 2, 0, "textures/tie_0001.png");
         const auto unsupported = selection_dir / "unsupported.gltf";
         std::ifstream input(unsupported);
@@ -372,13 +373,13 @@ void loader(const fs::path& dir, viewer::LevelData& level) {
             "\"emissiveTexture\":{\"index\":0,\"texCoord\":1}"
         );
         write_text(unsupported, source);
-        viewer::LevelData unsupported_level;
-        CHECK(!viewer::load_model(unsupported, unsupported_level, error).has_value());
+        scene::LevelData unsupported_level;
+        CHECK(!scene::load_model(unsupported, unsupported_level, error).has_value());
         CHECK(error.find("TEXCOORD_0") != std::string::npos);
     }
 }
 
-int draw(viewer::LevelData& level) {
+int draw(scene::LevelData& level) {
     test::GlContext context;
     std::string why;
     if (!context.open(why)) {
@@ -386,12 +387,13 @@ int draw(viewer::LevelData& level) {
         return test::kSkip;
     }
     renderer::Renderer renderer;
-    viewer::LevelScene scene;
+    scene::LevelScene scene;
+    lighting::use_scene_lighting(scene);
     std::string error;
     CHECK(scene.upload(level, renderer.textures(), error));
-    for (std::size_t layer = 0; layer < viewer::kLayerCount; ++layer) {
+    for (std::size_t layer = 0; layer < scene::kLayerCount; ++layer) {
         renderer.add(
-            std::make_unique<viewer::LayerRenderer>(scene, static_cast<viewer::Layer>(layer)), error
+            std::make_unique<scene::LayerRenderer>(scene, static_cast<scene::Layer>(layer)), error
         );
     }
     CHECK(renderer.init(error));
@@ -423,13 +425,13 @@ int draw(viewer::LevelData& level) {
     CHECK(renderer.last_stats().draw_calls == 4);
 
     // Removing the moby layer removes both its solid and glow submissions.
-    renderer.renderers()[static_cast<std::size_t>(viewer::Layer::Mobys)]->enabled = false;
+    renderer.renderers()[static_cast<std::size_t>(scene::Layer::Mobys)]->enabled = false;
     renderer.render(input, {frame.id(), 128, 128});
     CHECK(renderer.last_stats().draw_calls == 2);
 
     // What the camera does not see is not drawn: looking down far beside the level, the terrain,
     // the tie and the moby are all outside the picture.
-    renderer.renderers()[static_cast<std::size_t>(viewer::Layer::Mobys)]->enabled = true;
+    renderer.renderers()[static_cast<std::size_t>(scene::Layer::Mobys)]->enabled = true;
     camera.position = {500.0f, 0.0f, 30.0f};
     input.camera.view = camera.view();
     renderer.render(input, {frame.id(), 128, 128});
@@ -592,7 +594,7 @@ int draw(viewer::LevelData& level) {
         for (unsigned n = 0; n < 4200; ++n) {
             auto instance = second_tie;
             instance.model = static_cast<unsigned>(paged.models.size());
-            instance.occlusion = viewer::Pvs::always;
+            instance.occlusion = scene::Pvs::always;
             instance.matrix = renderer::Mat4{1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1};
             paged.models.push_back(model);
             paged.instances[2].push_back(instance);
@@ -625,11 +627,11 @@ int draw(viewer::LevelData& level) {
         // More unique textures than one descriptor page, interleaved repeated
         // materials and different meshes. Compare actual legacy/bindless shaders,
         // not just two instance-culling paths using the same material shader.
-        viewer::LevelData many;
+        scene::LevelData many;
         for (const auto& position : std::array<renderer::Vec3, 4>{
                  renderer::Vec3{-.7f, -.7f, 0}, {.7f, -.7f, 0}, {.7f, .7f, 0}, {-.7f, .7f, 0}
              }) {
-            viewer::Vertex vertex{};
+            scene::Vertex vertex{};
             std::copy(position.begin(), position.end(), vertex.position);
             vertex.normal[2] = 1;
             vertex.light_slot = -1;
@@ -647,16 +649,16 @@ int draw(viewer::LevelData& level) {
             );
             many.images.push_back(std::move(image));
             many.image_paths.push_back("material_fixture_" + std::to_string(i));
-            viewer::Material material;
+            scene::Material material;
             material.image = static_cast<int>(i);
             material.colour = {.5f + float(i % 5) * .1f, .7f, .9f, 1.f};
             many.materials.push_back(material);
             for (unsigned copy = 0; copy < (i % 32 == 0 ? 2u : 1u); ++copy) {
-                viewer::Model model;
+                scene::Model model;
                 model.min = {-.7f, -.7f, 0};
                 model.max = {.7f, .7f, 0};
                 model.primitives.push_back({0, 6, static_cast<int>(i)});
-                viewer::Instance instance;
+                scene::Instance instance;
                 instance.model = static_cast<std::uint32_t>(many.models.size());
                 const auto n = many.instances[2].size();
                 instance.matrix = renderer::translation(
@@ -740,23 +742,23 @@ void overrides(const fs::path& dir) {
     stbi_write_png((mods / "textures" / "terrain_0000.png").string().c_str(), 8, 8, 4, green.data(), 8 * 4);
     write_square(mods / "ties" / "tie_5.gltf", 6.0f, 0.0f, "../textures/tie_0001.png");
 
-    viewer::LevelData level;
+    scene::LevelData level;
     std::string error;
-    CHECK(viewer::load_level(dir, level, error, mods / "placements.json"));
+    CHECK(scene::load_level(dir, level, error, mods / "placements.json"));
     CHECK(level.overridden_models == 1);
     CHECK(level.overridden_images == 1);
     CHECK(level.missing_images == 0);
     CHECK(level.images.size() == 2);
     // The tie's mesh is the mod's: 6 units across.
-    const auto& tie = level.instances[static_cast<std::size_t>(viewer::Layer::Ties)][0];
+    const auto& tie = level.instances[static_cast<std::size_t>(scene::Layer::Ties)][0];
     CHECK(std::fabs(level.models[tie.model].max[0] - 3.0f) < 1e-6f);
     // The terrain's texture is the mod's 8 x 8 green one; the tie's the level's blue one.
     CHECK(level.images[0].width == 8 && ((level.images[0].texel(0, 0) >> 8) & 0xFF) == 200);
     CHECK(level.images[1].width == 2 && ((level.images[1].texel(1, 1) >> 16) & 0xFF) == 220);
 
     // Without the mod's folder, the level's own.
-    viewer::LevelData plain;
-    CHECK(viewer::load_level(dir, plain, error));
+    scene::LevelData plain;
+    CHECK(scene::load_level(dir, plain, error));
     CHECK(plain.overridden_models == 0 && plain.overridden_images == 0 && plain.images[0].width == 2);
     fs::remove_all(mods.parent_path());
 }
@@ -835,15 +837,15 @@ void denser_terrain(const fs::path& dir) {
     constexpr int kQuads = 300;  // 90601 vertices, more than 16-bit indices hold
     write_grid(mods / "terrain.glb.gltf", kQuads, 20.0f, 0.5f, 1.5f, "textures/terrain_0000.png");
 
-    viewer::LevelData level;
+    scene::LevelData level;
     std::string error;
-    CHECK(viewer::load_level(dir, level, error, mods / "placements.json"));
+    CHECK(scene::load_level(dir, level, error, mods / "placements.json"));
     CHECK(level.overridden_models == 1);
     CHECK(level.overridden_images == 0);  // the texture is the level's
     CHECK(level.missing_images == 0);
-    const auto& terrain = level.instances[static_cast<std::size_t>(viewer::Layer::Terrain)];
+    const auto& terrain = level.instances[static_cast<std::size_t>(scene::Layer::Terrain)];
     CHECK(terrain.size() == 1);
-    const viewer::Model& model = level.models[terrain[0].model];
+    const scene::Model& model = level.models[terrain[0].model];
     CHECK(model.primitives.size() == 1);
     CHECK(model.primitives[0].index_count == 6u * kQuads * kQuads);
     CHECK(std::fabs(model.min[2] - 0.5f) < 1e-6f && std::fabs(model.max[0] - 10.0f) < 1e-4f);
@@ -868,17 +870,17 @@ void translucent_texels(const fs::path& dir) {
     const std::uint8_t pane[] = {30, 30, 220, 255, 30, 30, 220, 62, 30, 30, 220, 62, 30, 30, 220, 62};
     stbi_write_png((glass / "textures" / "tie_0001.png").string().c_str(), 2, 2, 4, pane, 8);
 
-    viewer::LevelData level;
+    scene::LevelData level;
     std::string error;
-    CHECK(viewer::load_level(glass, level, error));
+    CHECK(scene::load_level(glass, level, error));
     CHECK(level.translucent_images.size() == level.images.size());
-    const auto material_of = [&](viewer::Layer layer) {
+    const auto material_of = [&](scene::Layer layer) {
         const auto& instance = level.instances[static_cast<std::size_t>(layer)][0];
         const int m = level.models[instance.model].primitives[0].material;
         return level.materials[static_cast<std::size_t>(m)];
     };
-    CHECK(!material_of(viewer::Layer::Terrain).cutout);
-    CHECK(material_of(viewer::Layer::Ties).cutout);
+    CHECK(!material_of(scene::Layer::Terrain).cutout);
+    CHECK(material_of(scene::Layer::Ties).cutout);
     fs::remove_all(glass);
 }
 
@@ -895,18 +897,20 @@ void moby_draw_distance() {
     const renderer::Vec3 eye{100.0f, 0.0f, 0.0f};
     const renderer::Vec3 forward{1.0f, 0.0f, 0.0f};
     place(150.0f, 30.0f, 0.0f, 1.0f, 64);  // 50 deep, off to the side: drawn
-    CHECK(!viewer::moby_beyond_draw_distance(moby, eye, forward));
+    CHECK(!game::rac1::moby_beyond_draw_distance(moby, eye, forward));
     place(170.0f, 0.0f, 0.0f, 1.0f, 64);  // 70 deep, past 64
-    CHECK(viewer::moby_beyond_draw_distance(moby, eye, forward));
+    CHECK(game::rac1::moby_beyond_draw_distance(moby, eye, forward));
     place(90.0f, 0.0f, 0.0f, 1.0f, 64);  // behind the eye
-    CHECK(viewer::moby_beyond_draw_distance(moby, eye, forward));
+    CHECK(game::rac1::moby_beyond_draw_distance(moby, eye, forward));
     place(99.5f, 0.0f, 0.0f, 1.0f, 64);  // the eye inside its sphere
-    CHECK(!viewer::moby_beyond_draw_distance(moby, eye, forward));
+    CHECK(!game::rac1::moby_beyond_draw_distance(moby, eye, forward));
     // Pokitaru's class 1161 placed with a turn of -5 pi: its sphere thousands of units away.
     place(9286.5f, 5217.6f, 235.1f, 1.08f, 64);
-    CHECK(viewer::moby_beyond_draw_distance(moby, {550.0f, 530.0f, 230.0f}, {0.7f, 0.7f, 0.0f}));
+    CHECK(
+        game::rac1::moby_beyond_draw_distance(moby, {550.0f, 530.0f, 230.0f}, {0.7f, 0.7f, 0.0f})
+    );
     place(0.0f, 0.0f, 0.0f, 0.0f, 64);  // no sphere yet
-    CHECK(!viewer::moby_beyond_draw_distance(moby, eye, forward));
+    CHECK(!game::rac1::moby_beyond_draw_distance(moby, eye, forward));
 }
 
 // The authored sphere is world-space and packed independently of the model's scale.
@@ -917,7 +921,7 @@ void moby_world_sphere() {
     std::memcpy(ram.data() + address + 0x2c, &scale, sizeof(scale));
     const auto set = [&](std::array<float, 4> sphere) {
         std::memcpy(ram.data() + address, sphere.data(), sizeof(sphere));
-        return viewer::read_live_moby(ram, address);
+        return game::rac1::read_live_moby(ram, address);
     };
     auto live = set({10240, -20480, 30720, 4096});
     CHECK(live.has_value());
@@ -933,43 +937,6 @@ void moby_world_sphere() {
         CHECK((live->world_sphere == std::array<float, 4>{}));
     }
 }
-
-// Joint poses and model transforms both interpolate. Endpoint world bounds
-// alone need not contain the intermediate product (rotation plus changing pose).
-void moby_blended_bounds() {
-    const renderer::Mat4 from{2, .2f, 0, 0, .4f, 1, 0, 0, 0, 0, .5f, 0, 10, 20, 30, 1};
-    const renderer::Mat4 to{0, 1, 0, 0, -2, .3f, 0, 0, 0, 0, 2, 0, 12, 21, 31, 1};
-    const std::array<float, 4> sphere0{11, 20, 30, 8}, sphere1{12, 22, 31, 8};
-    for (unsigned step = 0; step <= 10; ++step) {
-        const float alpha = step / 10.f;
-        auto drawn = from;
-        for (unsigned i = 0; i < drawn.size(); ++i) {
-            drawn[i] += (to[i] - from[i]) * alpha;
-        }
-        const auto bound = viewer::moby_sphere_envelope(sphere0, from, sphere1, to, drawn);
-        CHECK(bound[3] > 0);
-        for (unsigned corner = 0; corner < 8; ++corner) {
-            renderer::Vec3 p0{
-                corner & 1 ? 1.f : -1.f, corner & 2 ? 1.f : -1.f, corner & 4 ? 1.f : -1.f
-            };
-            renderer::Vec3 p1{-p0[1], p0[2], -p0[0]}, point;
-            for (unsigned k = 0; k < 3; ++k) {
-                point[k] = p0[k] + (p1[k] - p0[k]) * alpha;
-            }
-            const auto world = renderer::transform_point(drawn, point);
-            float distance2 = 0;
-            for (unsigned k = 0; k < 3; ++k) {
-                distance2 += (world[k] - bound[k]) * (world[k] - bound[k]);
-            }
-            CHECK(distance2 <= bound[3] * bound[3]);
-        }
-    }
-    CHECK(viewer::moby_sphere_envelope({}, from, sphere1, to, to)[3] == 0);
-    CHECK(viewer::moby_sphere_envelope(sphere0, renderer::scale(0), sphere1, to, to)[3] == 0);
-    auto invalid = from;
-    invalid[0] = NAN;
-    CHECK(viewer::moby_sphere_envelope(sphere0, invalid, sphere1, to, to)[3] == 0);
-}
 }  // namespace
 
 int main(int argc, char** argv) {
@@ -980,9 +947,8 @@ int main(int argc, char** argv) {
     pvs_lookup();
     moby_draw_distance();
     moby_world_sphere();
-    moby_blended_bounds();
     write_level(dir);
-    viewer::LevelData level;
+    scene::LevelData level;
     loader(dir, level);
     overrides(dir);
     denser_terrain(dir);

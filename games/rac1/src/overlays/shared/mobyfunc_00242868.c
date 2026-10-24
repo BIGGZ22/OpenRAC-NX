@@ -5,7 +5,7 @@
 extern char *D_L04_00197780[];
 extern float func_001FA888(int);
 
-float Anim_GetStartTime(int a, unsigned int b)
+float animation_start(int a, unsigned int b)
 {
     char *entry;
     char *nested;
@@ -14,7 +14,7 @@ float Anim_GetStartTime(int a, unsigned int b)
     nested = *(char **)(entry + 0x48);
     return IntToFloat(*(short *)(*(char **)(nested + 0x1C) + 4)) * 0.0625f;
 }
-float Anim_GetEndTime(int a, unsigned int b)
+float animation_end(int a, unsigned int b)
 {
     char *entry;
     char *nested;

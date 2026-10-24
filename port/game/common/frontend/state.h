@@ -25,6 +25,7 @@
 #include <vector>
 
 #include "enhanced/game/scripted_moby_colour.h"
+#include "game/common/profile.h"
 #include "openrac/guest.h"
 #include "platform/input.h"
 #include "platform/window.h"
@@ -35,7 +36,6 @@
 #include "scene/level_renderer.h"
 #include "scene/moby_shadow.h"
 #include "settings.h"
-#include "viewer/game_state.h"
 
 union SDL_Event;
 
@@ -50,19 +50,19 @@ namespace openrac::frontend {
 // (between), and the last tick's camera and moby matrices to move them from.
 struct Kept {
     int level = -3;  // the level the mobys belong to: another one starts over
-    viewer::GameState state, prev_state;
+    host::GameState state, prev_state;
     bool has_state = false, has_prev_state = false;
-    std::vector<viewer::Instance> live;
+    std::vector<scene::Instance> live;
     std::vector<std::uint32_t> addresses;  // each live moby's address, for its last matrix
     std::unordered_map<std::uint32_t, renderer::Mat4> prev_matrices;
     std::unordered_map<std::uint32_t, std::array<float, 4>> prev_spheres;
-    std::vector<viewer::LevelScene::JointColumns> palette;
+    std::vector<scene::LevelScene::JointColumns> palette;
     std::vector<renderer::ShadowCapsule> shadows, prev_shadows;
     std::uint32_t shadow_moby = 0, prev_shadow_moby = 0;
-    viewer::MobyShadowState shadow_state, prev_shadow_state;
+    scene::MobyShadowState shadow_state, prev_shadow_state;
     std::optional<bool> hero_airborne;
     // The last tick's poses, by moby: where its joints start in prev_palette and how many.
-    std::vector<viewer::LevelScene::JointColumns> prev_palette;
+    std::vector<scene::LevelScene::JointColumns> prev_palette;
     std::unordered_map<std::uint32_t, std::pair<int, int>> prev_poses;
     std::vector<int> joints;            // each live moby's joints in `palette` (0 without a pose)
     std::vector<std::uint8_t> packets;  // the 2D path
@@ -79,8 +79,8 @@ struct Kept {
     // drawn at its marker in the 2D path (renderer::FrameInput::target_mobys).
     struct TargetMoby {
         std::uint32_t address = 0;
-        viewer::Instance instance;
-        viewer::GameState camera;
+        scene::Instance instance;
+        host::GameState camera;
     };
 
     std::vector<TargetMoby> target_mobys;
@@ -93,6 +93,9 @@ struct Kept {
 // the game drew since the last frame (gathered for frame()), and the window as the settings left it.
 struct State {
     std::string game;
+    // What the game's folder knows of its memory (game/common/profile.h): a constant of the
+    // program's, never null while the window is open.
+    const host::GameProfile* profile = nullptr;
     ScriptedMobyColours scripted_moby_colours;
     std::filesystem::path levels;
     std::unique_ptr<platform::Platform> sdl;
@@ -106,17 +109,17 @@ struct State {
     // The last frame the game drew its world in: what its draw buffer still holds on a frame it
     // draws nothing in (the tick a page menu opens), and so what reading the frame back answers.
     renderer::FrameBuffer last_world;
-    viewer::LevelData level;
-    viewer::LevelScene scene;
+    scene::LevelData level;
+    scene::LevelScene scene;
     int loaded = -2;  // the level whose geometry is uploaded; -2 none
     std::uint64_t index = 0;
     // Every image the game sent outside the display list, oldest first, the latest per
     // rectangle: given again to each renderer made (use_level makes a new one per level).
     std::vector<renderer::ImageUpload> images;
     // The camera the game's world renderers drew with this frame (world_drawn), if they ran.
-    std::optional<viewer::GameState> world_camera;
+    std::optional<host::GameState> world_camera;
     // Mobys drawn this frame with a camera of their own (mobys_drawn): address, that camera.
-    std::vector<std::pair<std::uint32_t, viewer::GameState>> moby_cameras;
+    std::vector<std::pair<std::uint32_t, host::GameState>> moby_cameras;
     // The world effect quads the game drew since the last frame (effect_quad).
     std::vector<renderer::EffectQuad> effects;
     std::vector<renderer::ImageUpload> effect_uploads;  // the quads' textures (EffectQuad::uploads)
@@ -288,13 +291,6 @@ void apply_mouse_capture();
 // 0 for a game without one (frontend/world.cpp).
 gaddr light_bank_address();
 
-// The four shadow directions in each version's executable (relocated when read); 0 for a game
-// without them (frontend/world.cpp).
-gaddr shadow_directions_address();
-
-// The hero's state in each version's executable; 0 for a game without one (frontend/world.cpp).
-gaddr hero_state_address();
-
 // Uploads level `number`'s geometry and makes the renderers that draw it. Below 0 the boot program
 // runs: the title world (level 0 where it was not extracted), or at -2 the flight between planets
 // where it was (frontend/world.cpp).
@@ -302,11 +298,11 @@ void use_level(int number);
 
 // The sky sprites the game drew since the last frame, as effect quads seen from `state`'s camera,
 // put first among the frame's effect quads: drawn behind everything (frontend/world.cpp).
-void sky_sprite_quads(const viewer::GameState& state);
+void sky_sprite_quads(const host::GameState& state);
 
 // The particles the game drew since the last frame, as effect quads back to front, seen from
 // `state`'s camera; their textures read from `ram` (frontend/world.cpp).
-void particle_quads(std::span<const std::uint8_t> ram, const viewer::GameState& state);
+void particle_quads(std::span<const std::uint8_t> ram, const host::GameState& state);
 
 // Whether the frame cap lets a frame start now (frontend/interpolation.cpp).
 bool frame_due(std::chrono::steady_clock::time_point now);

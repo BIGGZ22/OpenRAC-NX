@@ -10,7 +10,10 @@ as more get named for real), generate .equ definitions straight from the
 link error output; run this against build-sn/undefined_syms.txt after any
 link attempt.
 
-Only touches 8-hex-digit D_/func_ names (real addresses); anything else
+Also resolves D_<8-hex-digits>__gp, the explicit SDATA aliases declared
+by include/common.h. Their base symbol and alias have the same address.
+
+Only touches address-named D_/func_ names and these SDATA aliases; anything else
 (stray small-constant "symbols" spimdisasm sometimes emits, e.g. D_1000,
 or local jump-table labels) is left for manual investigation -- printed
 separately so they don't get silently equated to garbage.
@@ -20,6 +23,8 @@ import sys
 from pathlib import Path
 
 ADDR_RE = re.compile(r"^(D|func)_([0-9A-Fa-f]{1,8})$")
+# SDATA aliases name the same address; ps2eeas retains them as externs.
+SDATA_RE = re.compile(r"^(D)_([0-9A-Fa-f]{8})__gp$")
 
 
 def main() -> None:
@@ -30,7 +35,7 @@ def main() -> None:
     equs = []
     unresolved = []
     for name in names:
-        m = ADDR_RE.match(name)
+        m = ADDR_RE.match(name) or SDATA_RE.match(name)
         if m:
             equs.append((name, int(m.group(2), 16)))
         else:
@@ -46,7 +51,7 @@ def main() -> None:
 
     print(f"Wrote {len(equs)} .equ definitions to {out_path}")
     if unresolved:
-        print(f"{len(unresolved)} unresolved (not 8-hex-digit D_/func_) -- needs manual look:")
+        print(f"{len(unresolved)} unresolved (not address-named D_/func_ or SDATA aliases) -- needs manual look:")
         for name in unresolved:
             print(f"  {name}")
 

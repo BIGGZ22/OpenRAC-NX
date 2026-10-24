@@ -19,7 +19,7 @@
 namespace openrac::frontend::debug_overlay {
 
 void mobys_section() {
-    const viewer::LiveMoby* h = hero();
+    const host::LiveMoby* h = hero();
     text("{} live mobys, {} drawn", s.state.mobys.size(), s.counts.mobys_drawn);
     ImGui::Checkbox("near the hero", &s.near_hero);
     ImGui::SameLine();
@@ -30,13 +30,13 @@ void mobys_section() {
     ImGui::Checkbox("click picks", &s.pick);
 
     struct Row {
-        const viewer::LiveMoby* moby;
+        const host::LiveMoby* moby;
         float distance;
     };
 
     std::vector<Row> rows;
 
-    for (const viewer::LiveMoby& m : s.state.mobys) {
+    for (const host::LiveMoby& m : s.state.mobys) {
         const float d = h != nullptr ? distance(m, *h) : 0.0f;
 
         if (!s.near_hero || h == nullptr || d <= s.radius) {
@@ -68,7 +68,7 @@ void mobys_section() {
 
         while (clipper.Step()) {
             for (int i = clipper.DisplayStart; i < clipper.DisplayEnd; ++i) {
-                const viewer::LiveMoby& m = *rows[static_cast<std::size_t>(i)].moby;
+                const host::LiveMoby& m = *rows[static_cast<std::size_t>(i)].moby;
                 const std::uint32_t a = m.address;
                 ImGui::TableNextRow();
                 ImGui::TableNextColumn();
@@ -131,7 +131,7 @@ void inspector_window() {
             ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoMove
                 | ImGuiWindowFlags_NoSavedSettings
         )) {
-        const viewer::LiveMoby* m = selected_moby();
+        const host::LiveMoby* m = selected_moby();
 
         if (m == nullptr) {
             ImGui::TextUnformatted(
@@ -216,7 +216,7 @@ void inspector_window() {
                     std::format("{:#08x}", read<std::uint32_t>(a + 0x90) & 0xFFFFFFu));
                 row("+A6 class", std::format("{}", read<std::int16_t>(a + 0xA6)));
 
-                if (const viewer::LiveMoby* h = hero()) {
+                if (const host::LiveMoby* h = hero()) {
                     row("distance to the hero", std::format("{:.2f}", distance(*m, *h)));
                 }
 

@@ -2,9 +2,10 @@
  * Copyright (c) 2026 the OpenRAC contributors
  *
  * Ratchet & Clank: around the game's own start-up code (libraries.tsv, port = wrap). */
-#include "rac1.h"
-
 #include <stdlib.h>
+
+#include "openrac/host_env.h"
+#include "rac1.h"
 
 /* The level being played, or -1 (docs/port/RAC1_PAL_SURVEY.md). */
 #define CURRENT_LEVEL RAC1_ADDR(0x0015EE84u)
@@ -129,7 +130,7 @@ static void direct_start(unsigned frame) {
     if (done) {
         return;
     }
-    if (openrac_game_start_level < 0 || getenv("OPENRAC_DIRECT") == NULL) {
+    if (openrac_game_start_level < 0 || openrac_env_string("OPENRAC_DIRECT") == NULL) {
         done = 1;
         return;
     }

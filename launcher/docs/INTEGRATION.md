@@ -375,8 +375,8 @@ These are not the launcher's to settle alone ([AGENTS.md](../../AGENTS.md), rule
   `tools/openrac.py progress` writes (AGENTS.md, rule 9): whether the
   launcher should keep its copy elsewhere is for the maintainers.
 - **Which games and versions to put first.** The launcher shows every version
-  in `games/`; the five games are rac1 (PAL and NTSC-U), rac2, rac3, rac4 and
-  rac5 (Size Matters' PlayStation 2 port).
+  in `games/`; the six games are rac1 (PAL and NTSC-U), rac2, rac3, rac4,
+  rac5 (Size Matters' PlayStation 2 port) and rac6 (Secret Agent Clank's PlayStation 2 port).
 
 ## Keeping things in step
 

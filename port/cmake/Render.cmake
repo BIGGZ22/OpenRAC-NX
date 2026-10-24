@@ -21,6 +21,8 @@
 #                           of the screen (skipped, 77, where Vulkan cannot open)
 #   cull_coverage           the zero-coverage cull's CPU reference against a software rasteriser,
 #                           everywhere
+#   vulkan_present_timing   the device opened with each presentation extension switched off, and
+#                           presenting (skipped, 77, where Vulkan cannot open)
 #
 # Included from port/CMakeLists.txt after cmake/Window.cmake, with or without the window.
 
@@ -31,10 +33,11 @@ target_link_libraries(openrac_render_opt PUBLIC openrac_common)
 openrac_warnings(openrac_render_opt)
 
 # The envelope of the Vulkan backend's cache files (renderer/vulkan/cache_file.h), which the
-# pipeline cache and its manifest share (R-10). Added here so that cmake/Window.cmake, which makes
+# pipeline cache and its manifest share (R-10), and the SPIR-V cache in it (R-12). Added here so that cmake/Window.cmake, which makes
 # the target, is left to its own lane.
 if(TARGET openrac_renderer_vulkan)
-  target_sources(openrac_renderer_vulkan PRIVATE renderer/vulkan/cache_file.cpp)
+  target_sources(openrac_renderer_vulkan PRIVATE
+    renderer/vulkan/cache_file.cpp renderer/vulkan/spirv_cache_file.cpp)
 endif()
 
 # The renderers whose draw code asks the registry.
@@ -108,6 +111,7 @@ endif()
 #   cull_coverage   the zero-coverage cull's CPU reference (renderer/gpu_draw.h) against a software
 #                   rasteriser (tests/cull_coverage_test.cpp); no GPU, so every preset runs it
 openrac_add_test(cull_coverage INCLUDES .)
+#   vulkan_present_timing  the presentation extensions switched off one by one
 if(TARGET openrac_renderer_vulkan)
   openrac_add_test(vulkan_buffer
     LIBS openrac_renderer openrac_platform openrac_renderer_vulkan)
@@ -124,4 +128,12 @@ if(TARGET openrac_renderer_vulkan)
     LIBS openrac_renderer openrac_platform openrac_renderer_vulkan)
   set_tests_properties(vulkan_prewarm PROPERTIES SKIP_RETURN_CODE 77 ENVIRONMENT
     "OPENRAC_GL_API=vulkan;OPENRAC_VULKAN_VALIDATION=1")
+  openrac_add_test(vulkan_present_timing
+    LIBS openrac_renderer openrac_platform openrac_renderer_vulkan)
+  set_tests_properties(vulkan_present_timing PROPERTIES SKIP_RETURN_CODE 77 ENVIRONMENT
+    "OPENRAC_GL_API=vulkan;OPENRAC_VULKAN_VALIDATION=1")
+  # spirv_cache  the SPIR-V cache: programs from it the same words as compiled afresh, its file
+  #              read back, and a damaged, stale or colliding entry compiled afresh
+  #              (tests/spirv_cache_test.cpp); it needs no GPU
+  openrac_add_test(spirv_cache LIBS openrac_renderer_vulkan)
 endif()

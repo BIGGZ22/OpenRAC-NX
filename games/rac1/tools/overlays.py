@@ -110,6 +110,15 @@ def identity(b: bytes) -> bytes:
     are the code's own and are compared. Large offsets on other registers
     stay masked: an address half can reach one through a spill."""
     w = words(trim(b))
+    # A complete global address followed by two zero stores is a tiny
+    # field-clear helper, not two more address halves. Keep the member
+    # offsets: +0x190/+0x194 and +0x2278/+0x227C are different functions.
+    if (len(w) == 5 and w[0] & 0xFFFF0000 == 0x3C020000
+            and w[1] & 0xFFFF0000 == 0x24420000
+            and w[2] & 0xFFFF0000 == 0xAC400000
+            and w[3] == 0x03E00008 and w[4] & 0xFFFF0000 == 0xAC400000):
+        return struct.pack("<5I", w[0] & 0xFFFF0000, w[1] & 0xFFFF0000,
+                           w[2], w[3], w[4])
     tainted, grew = set(), True
     while grew:
         grew = False
@@ -237,6 +246,26 @@ def dump() -> None:
     print(f"dumped {len(levels)} levels to {DUMP.relative_to(ROOT)}")
 
 
+def catalogue_variants(rows, exe, levels):
+    """Find variants from final catalogue ranges, after verified split repairs."""
+    exe_shape = {}
+    for name, _, _, body in exe:
+        exe_shape.setdefault(coarse_fingerprint(body), name)
+    shape_parent, variants = {}, []
+    for name, kind, size, _fp, places in rows:
+        level, address = places[0]
+        text = levels[level]["records"][-1]
+        off = address - text["address"]
+        body = text["data"][off:off + size]
+        if len(body) != size:
+            raise ValueError(f"{name}: catalogue range is outside the level text")
+        shape = coarse_fingerprint(body)
+        parent = exe_shape.get(shape) or shape_parent.setdefault(shape, name)
+        if parent != name:
+            variants.append((name, parent, kind, size))
+    return variants
+
+
 def catalogue() -> None:
     levels = read_levels()
     exe = exe_functions()
@@ -275,20 +304,14 @@ def catalogue() -> None:
             kind = "level" if len({p[0] for p in places}) == 1 else "shared"
         rows.append((name, kind, e["size"], fp, places))
     rows.sort(key=lambda r: (r[4][0][0], r[4][0][1]))
-    # Variants: functions with the same instructions as another one except
-    # for a constant or an offset. The parent is the executable's function
-    # of that shape, or else the first of them in the catalogue.
-    exe_shape = {}
-    for name, _, _, b in exe:
-        exe_shape.setdefault(coarse_fingerprint(b), name)
-    shape_parent, variants = {}, []
-    for name, kind, size, fp, places in rows:
-        shape = found[fp]["shape"]
-        parent = exe_shape.get(shape) or shape_parent.setdefault(shape, name)
-        if parent != name:
-            variants.append((name, parent, kind, size))
+    # Repair boundaries before deriving variants: absorbed tails must not survive
+    # as variant names or parents, and variants describe the complete C ranges.
+    from overlay_boundary_fixes import corrected_rows, verify_retail
+    verify_retail()
+    rows = corrected_rows(rows)
+    variants = catalogue_variants(rows, exe, levels)
     VARIANTS.write_text("# name\tvariant of\tkind\tsize\n" +
-                        "".join(f"{n}\t{p}\t{k}\t{s}\n" for n, p, k, s in variants))
+                       "".join(f"{n}\t{p}\t{k}\t{s}\n" for n, p, k, s in variants))
     CATALOGUE.parent.mkdir(parents=True, exist_ok=True)
     lines = ["# name\tkind\tsize\tfingerprint\tlevels\tplaces (level:address)"]
     for name, kind, size, fp, places in rows:

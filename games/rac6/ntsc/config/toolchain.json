@@ -1,0 +1,279 @@
+{
+  "id": "gnu-ee-20261015",
+  "status": "candidate_profile",
+  "scope": "bodies of the SNR2 level modules of the pinned USA disc",
+  "provenance": "The GNU EE chain of the sibling OpenRAC project (a reconstructed EE compiler tree, the 'compiler-no-pad' build of 2026-10-15), used here as a candidate.  The driver reports a patched GCC for the 'ee' target.  External binary: it is pinned by hash, never rebuilt here and never committed.",
+  "toolchain": {
+    "cpp_sha256": "2ac3d8d3ca177e6705ac2cbdd1bd9e9a7181ac3e40f6230dea6875c3218ec155",
+    "cc1_sha256": "9614eceecbcb1f7a64cf3a4ad3c827b3e257ab6b1f934e42fcbc4ded0f0584d6",
+    "as_sha256": "c71a15dba889fc273b0b699986de7316d056b94ae2155ad2c2573eaa62b8d902",
+    "linker_sha256": "80f3724a63ce3c77c8b00d075f5c49448636518700ae251e5d6a6c809bbf5f48"
+  },
+  "flags": {
+    "cpp": [],
+    "cc1": [
+      "-quiet",
+      "-O2",
+      "-G0"
+    ],
+    "as": []
+  },
+  "profiles": [
+    {
+      "id": "gnu-ee-20261015",
+      "scope": "the SNR2 level modules",
+      "provenance": "The reconstructed GNU EE chain of the sibling OpenRAC project, the 'compiler-no-pad' build of 2026-10-15.  It emits 8-byte stack slots (sd/ld), which is what the level modules use.",
+      "toolchain": {
+        "cpp_sha256": "2ac3d8d3ca177e6705ac2cbdd1bd9e9a7181ac3e40f6230dea6875c3218ec155",
+        "cc1_sha256": "9614eceecbcb1f7a64cf3a4ad3c827b3e257ab6b1f934e42fcbc4ded0f0584d6"
+      },
+      "flags": {
+        "cc1": [
+          "-quiet",
+          "-O2",
+          "-G0"
+        ]
+      }
+    },
+    {
+      "id": "prodg2952+gnu-as",
+      "scope": "the boot executable",
+      "provenance": "SN ProDG 'ProDG for PlayStation 2' ee-gcc 2.95.2, from the compiler depot of the sibling workspace (tools/compilers/ee-gcc-2.95.2).  External binary: pinned by hash, never rebuilt here and never committed.",
+      "toolchain": {
+        "cpp_sha256": "f7db993de8745339ec71cf10d5fe9e7772d75e79a037e97809ed5e34ea3150c3",
+        "cc1_sha256": "2aaf3d22ce5c3508ecba15f16b06737713263e6aee289ca1e43d3ff9c17d964f"
+      },
+      "flags": {
+        "cc1": [
+          "-quiet",
+          "-O2",
+          "-G0"
+        ]
+      },
+      "measured_cause": "The boot keeps its frames in 16-byte slots (sq/lq) with $ra on top, where the pinned chain keeps 8-byte slots (sd/ld).  The cause is the register mode of the target: the GNU EE 2.9 tree neutralises the R5900 anchor mips_reg_mode[0] = TImode, and this ee-gcc 2.95.2 keeps it.",
+      "regression_control": "The four frame-less bodies of the lot are exact on the three chains alike, so they do not discriminate; the four that carry a frame are exact only on their own chain.",
+      "verdict": "route accepted for the boot bodies with a sq/lq frame; the two variants below differ only by their assembler."
+    },
+    {
+      "id": "sdk991111",
+      "scope": "the boot executable",
+      "provenance": "Sony EE-GCC 2.9-ee-991111-01, from the compiler depot of the sibling workspace (tools/compilers/ee-gcc2.9-991111-01).  External binary: pinned by hash, never rebuilt here and never committed.",
+      "toolchain": {
+        "cpp_sha256": "e0ea7124f31ef407e73417ce545bec8d1ab961bdae61ae41e9483de5a52585f4",
+        "cc1_sha256": "425aebdd48ba66227672ee8e520b826164ff26b26f10eefbaeeb523f68afa9bc"
+      },
+      "flags": {
+        "cc1": [
+          "-quiet",
+          "-O2",
+          "-G0"
+        ]
+      },
+      "measured_cause": "The same frame shape as the boot, reached through the 16-byte slot mode of the Sony EE compiler.",
+      "regression_control": "The four frame-less bodies of the lot are exact on the three chains alike; the four that carry a frame are exact only on their own chain.",
+      "verdict": "route measured per source."
+    },
+    {
+      "id": "divpad",
+      "scope": "the bodies of the level modules whose divisions carry the hazard nops",
+      "provenance": "The same reconstructed EE tree as the pinned chain, with the division padding of the sibling project (two nops before every single-precision division, and no division left in a branch delay slot).  External binary: pinned by hash, never rebuilt here and never committed.",
+      "toolchain": {
+        "cpp_sha256": "2ac3d8d3ca177e6705ac2cbdd1bd9e9a7181ac3e40f6230dea6875c3218ec155",
+        "cc1_sha256": "9614eceecbcb1f7a64cf3a4ad3c827b3e257ab6b1f934e42fcbc4ded0f0584d6",
+        "as_sha256": "c71a15dba889fc273b0b699986de7316d056b94ae2155ad2c2573eaa62b8d902"
+      },
+      "flags": {
+        "cc1": [
+          "-quiet",
+          "-O2",
+          "-G0"
+        ]
+      },
+      "measured_cause": "The retail pads most of its single-precision divisions with two nops -- 71.2 per cent of the 51 719 divisions of the 31 modules -- and the pinned chain never emits them.  The route reproduces the padding.",
+      "regression_control": "Every one of the 158 sources of the level modules that the pinned chain proves is still exact with the route: 158/158, no break.",
+      "verdict": "route accepted for the bodies that need it: it is a superset of the pinned chain on the level modules.  It is not a global profile: the retail's padding is contextual, and the blanket rule is wrong for the 21 per cent of divisions that carry one nop or none -- the bodies of that family stay parked.",
+      "reproduce": "python3 work/E0/trial_mdebugc.py, and the placement gate with the private profile table"
+    },
+    {
+      "id": "divpad-contextuel",
+      "scope": "the bodies of the level modules whose divisions carry one hazard nop",
+      "provenance": "The pinned chain's own tree, copied, plus a 226-line patch (mips.md, mips.h, mips.c, toplev.c) that gives the division family the retail's two instruction slots and fills them from the context.  The tree is copied in /tmp and rebuilt; the pinned tree is never modified.  External binary: pinned by hash, never rebuilt here and never committed.",
+      "toolchain": {
+        "cpp_sha256": "",
+        "cc1_sha256": "a122ebac4089777d7b1522a7f4f2b045de9318df583e929e59b7f6acfacfd529",
+        "as_sha256": ""
+      },
+      "flags": {
+        "cc1": [
+          "-quiet",
+          "-O2",
+          "-G0"
+        ]
+      },
+      "measured_cause": "The retail reserves two instruction slots before every single-precision division, and the scheduler fills them with useful instructions when it can; the rest stays a nop.  The pinned chain's divsf3 carries no delay attribute, so it reserves nothing.  The route reserves the slots and fills them from the context: three nops when the producer is a branch, one when it is a floating-point operation the division reads, none when it is a conversion, two otherwise.",
+      "regression_control": "Every one of the 191 sources of the level modules that the pinned chain proves is still exact with the route: 191/191, no break.  The route also proves the bodies whose divisions carry a single nop, which the blanket two-nop rule misses.",
+      "verdict": "route accepted: it is a superset of the pinned chain on the level modules, and it opens the class of the single-nop divisions.  Its rule is a model of the retail's behaviour, not a reproduction of it: it agrees with the retail on 78.2 per cent of the 51 719 divisions of the program, 93 per cent of the single-nop class and 99 per cent of the three-nop class.",
+      "reproduce": "the patch and the build script are in the private kit, work/w3/research-div-contextuel"
+    },
+    {
+      "id": "gnu-ee-20261015-gprfirst",
+      "scope": "the bodies of the level modules whose frame saves a callee-saved floating-point register",
+      "provenance": "The pinned chain's own tree, copied, with one line of config/mips/mips.c changed: the condition of the save pass, so that the general purpose registers are saved before the floating-point ones.  The tree is copied outside the shared one, which is never modified.  External binary: pinned by hash, never rebuilt here and never committed.",
+      "toolchain": {
+        "cc1_sha256": "d398bf01bc3dccfa1ebfca7cc82b031173117bdaac1e0b9ab3c9e9fd99e6d885"
+      },
+      "flags": {
+        "cc1": [
+          "-quiet",
+          "-O2",
+          "-G0"
+        ]
+      },
+      "measured_cause": "The retail's prologue saves the general purpose registers before the floating-point ones (measured on LEVEL11.REL 0x07F620: sd $s0, sd $s2, sd $s4, sd $ra, then swc1 $f23, $f22, $f21, $f20).  The pinned chain carries a fix made for another game that inverted that order, and none of the bodies proved so far saved a floating-point register -- so the class had never been measured.",
+      "regression_control": "Every one of the 206 sources of the level modules that the pinned chain proves is still exact with the route: 206/206.  The four that differ are the bodies that need another route (the three that carry a division, and the one of the wide family).",
+      "verdict": "route accepted: it is a superset of the pinned chain on the level modules, and it opens the class of the bodies that save a callee-saved floating-point register -- the HUD and DRAW family, which no proved body had reached before.",
+      "reproduce": "the recipe is in the private kit, work/w6/W35/work/NOTE-chaine.md"
+    },
+    {
+      "id": "sdk991111-sdkas",
+      "scope": "the bodies of the wide family of the level modules",
+      "provenance": "The Sony EE-GCC 2.9 chain, with the assembler of the SDK instead of the recent GNU one.  External binaries: pinned by hash, never rebuilt here and never committed.",
+      "toolchain": {},
+      "flags": {
+        "cc1": [
+          "-quiet",
+          "-O2",
+          "-G0"
+        ]
+      },
+      "measured_cause": "In the 64-bit mode the assembler of the SDK expands `move` into `daddu`, where the recent GNU assembler emits `addu`; the bytes differ from the nineteenth one.  The boot's bodies, proved with the recent GNU assembler, break with the SDK's one: the two routes need two profiles.",
+      "regression_control": "The wide family's bodies are measured with this profile; the boot's bodies keep the recent GNU assembler and are measured with it.",
+      "verdict": "route accepted for the wide family of the level modules.",
+      "reproduce": "the private profile table, work/E0/profiles.json"
+    },
+    {
+      "id": "gprfirst-divctx",
+      "scope": "the bodies of the level modules that save a floating-point register and carry a division",
+      "provenance": "The GPR-first tree, copied, plus the contextual division patch of the divpad-contextuel route.  External binary: pinned by hash, never rebuilt here and never committed.",
+      "toolchain": {
+        "cc1_sha256": "c8fb88092ef30961ad332328d3a9b0d1d0c9f617ae06210ccb9d5ae61f38acfa"
+      },
+      "flags": {
+        "cc1": [
+          "-quiet",
+          "-O2",
+          "-G0"
+        ]
+      },
+      "measured_cause": "The retail saves the general purpose registers before the floating-point ones, and reserves two instruction slots before every single-precision division.  The two rules are independent; the bodies that have both need the two together.",
+      "regression_control": "233 of the 246 sources of the level modules stay exact with the route; the ones that differ are the bodies that need another route.",
+      "verdict": "route accepted for the bodies that have both rules.",
+      "reproduce": "the build script is in the private kit, work/w6c/F01/work/build_combined.sh"
+    },
+    {
+      "id": "astra-divpad",
+      "scope": "the bodies of the level modules that save a floating-point register and carry a division, whose divisions all take the two nops",
+      "provenance": "The same reconstructed tree as the pinned chain, with its R5900 anchor restored (every general purpose register in the 16-byte mode) and the blanket division padding of the sibling project.  External binary: pinned by hash, never rebuilt here and never committed.",
+      "toolchain": {},
+      "flags": {
+        "cc1": [
+          "-quiet",
+          "-O2",
+          "-G0"
+        ]
+      },
+      "measured_cause": "The retail saves the general purpose registers before the floating-point ones, and pads most of its single-precision divisions with two nops.  The astra build has the first rule and the blanket form of the second; the bodies whose divisions all take the two nops are reproduced by it.",
+      "regression_control": "The nine bodies of the class proved with the GPR-first route stay exact with the astra route (9/9).",
+      "verdict": "route accepted for the bodies of that class whose divisions all take the two nops; the contextual route serves the ones whose division takes a single nop.",
+      "reproduce": "the private profile table, work/E0/profiles.json"
+    },
+    {
+      "id": "gprfirst-divctx-sqrt",
+      "scope": "the bodies of the level modules that save a floating-point register and carry a division or a square root",
+      "provenance": "The GPR-first tree, copied, plus the contextual division patch, refined so that a square root always takes the two slots.  External binary: pinned by hash, never rebuilt here and never committed.",
+      "toolchain": {
+        "cc1_sha256": "758d30dfc345965ca33a3849dc7866a22005e5b93e6a1c0fa2d10e5d81c729ae"
+      },
+      "flags": {
+        "cc1": [
+          "-quiet",
+          "-O2",
+          "-G0"
+        ]
+      },
+      "measured_cause": "Three rules of the retail: the frame saves the general purpose registers before the floating-point ones; two instruction slots are reserved before every single-precision division and filled from the context; a square root always takes the two slots (measured over ten bodies of the level modules, whatever the producer).",
+      "regression_control": "257 of the 270 sources of the level modules stay exact with the route.",
+      "verdict": "route accepted for the bodies that have those rules.",
+      "reproduce": "the private kit, work/E0/preuves/divpad-contextuel-sqrt"
+    },
+    {
+      "id": "boot-astragf",
+      "scope": "the bodies of the boot whose frame saves a callee-saved floating-point register",
+      "provenance": "The ASTRA tree, copied, with the three deviations of the RAC2 patch undone.  External binary: pinned by hash, never rebuilt here and never committed.",
+      "toolchain": {
+        "cc1_sha256": "269e63110b56849873dfd2a49f148a5dfb7598e67f5b84770272e08f2744c6f1"
+      },
+      "flags": {
+        "cc1": [
+          "-quiet",
+          "-O2",
+          "-G0"
+        ]
+      },
+      "measured_cause": "The retail's boot saves the general purpose registers before the floating-point ones, reserves its frame in 16-byte slots (sq/lq) and descends the slots of the saved registers ($ra in the low slot, $s0 in the 16-byte slot above).",
+      "regression_control": "Every body of the boot that the recorded profiles prove stays exact with the route (134/134).",
+      "verdict": "route accepted: it proves the boot bodies that save a callee-saved float register, a class no other route reached.",
+      "reproduce": "the private kit, work/w3/research-boot-astragf"
+    },
+    {
+      "id": "prodg2952+ps2eeas",
+      "scope": "the bodies of the boot with a sq/lq frame whose extent is a multiple of 8",
+      "provenance": "SN ProDG ee-gcc 2.95.2 with the assembler of the PS2.  External binaries: pinned by hash, never rebuilt here and never committed.",
+      "toolchain": {},
+      "flags": {
+        "cc1": [
+          "-quiet",
+          "-O2",
+          "-G0"
+        ]
+      },
+      "measured_cause": "The assembler of the PS2 pads the body to 8 bytes like the retail, where the recent GNU assembler inserts a hazard nop after mfc1 that the retail does not have.",
+      "regression_control": "the bodies of the lot that use it are exact; the bodies whose extent is not a multiple of 8 keep the GNU assembler.",
+      "verdict": "route accepted for that band.",
+      "reproduce": "the private profile table, work/E0/profiles.json"
+    }
+  ],
+  "trials": [
+    {
+      "id": "gnu-ee-20261015-debugc",
+      "flags": {
+        "cc1": [
+          "-quiet",
+          "-O2",
+          "-G0",
+          "-mdebugc"
+        ]
+      },
+      "measured_cause": "The retail idiom 'sltiu $v1,$v1,1' (an equality test) comes from TARGET_DEBUG_C_MODE in the pinned compiler; the cause was read in its mips.md and mips.cxx.",
+      "regression_control": "49 of the 49 proved bodies stay byte-exact with the option added.",
+      "verdict": "candidate route, not a profile: the option also changes the frame, so on the two 'sltiu' bodies the first difference moves from body byte 48 to body byte 4.  It unlocks nothing that is parked.",
+      "reproduce": "python3 work/E0/trial_mdebugc.py and work/E0/trial_mdebugc_bodies.sh"
+    },
+    {
+      "id": "gnu-ee-20261015-mips1",
+      "flags": {
+        "cc1": [
+          "-quiet",
+          "-O2",
+          "-G0",
+          "-mips1"
+        ]
+      },
+      "measured_cause": "The retail pads most of its divisions with a nop, the padding MIPS-I floating-point hazard rules would demand; the pinned chain does not pad, because the EE target schedules for a CPU with hardware interlocks.",
+      "regression_control": "not applicable: the route cannot be built.  The EE target refuses it -- 'Only MIPS-III or MIPS-IV CPUs can support 64 bit gp registers' -- because the R5900 has 64-bit general purpose registers.  -mips2 fails the same way, and -mips3 / -mfp32 change nothing in the body.",
+      "verdict": "refuted: the MIPS level is not a lever on this target.  The nop belongs to the scheduler of the retail compiler, and it is context dependent (49 616 padded divisions out of 63 443, 11 590 bare), so a blanket patch is refuted too.",
+      "reproduce": "python3 tools/div_survey.py --modules <private dir>"
+    }
+  ],
+  "retail_compiler_identity": "unknown: the chain reproduces the bodies it was measured on, and the complete-program gate has not run."
+}

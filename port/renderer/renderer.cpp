@@ -4,6 +4,8 @@
 #include "renderer/renderer.h"
 
 #include <algorithm>
+#include <memory>
+#include <utility>
 
 #include "common/stats.h"
 #include "renderer/direct.h"
@@ -127,7 +129,8 @@ void Renderer::render(const FrameInput& input, const RenderTarget& target) {
         std::any_of(m_renderers.begin(), m_renderers.end(), [](const auto& r) {
             return r->enabled && r->enhanced_lighting_available();
         });
-    const bool gtao = input.gtao && enhanced_available;
+    // Drawn when the frame asks, a renderer lights with it and a program registered one.
+    const bool gtao = input.gtao && enhanced_available && m_ambient_occlusion != nullptr;
     bool scoped_ao = false, needs_indirect_ao = false;
     for (const auto& r : m_renderers) {
         if (!r->enabled || r->bucket() < Bucket::Terrain || r->bucket() > Bucket::Mobys) {
@@ -169,17 +172,18 @@ void Renderer::render(const FrameInput& input, const RenderTarget& target) {
         state.reuse_prepass_depth = true;
         glColorMask(GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE);
         unsigned resolved_depth = 0;
-        if (gtao && needs_indirect_ao && m_gtao.render(input, target, false, early_lighting)) {
+        if (gtao && needs_indirect_ao
+            && m_ambient_occlusion->render(input, target, false, early_lighting)) {
             if (early_lighting) {
-                state.gtao_raw = m_gtao.raw_texture();
+                state.gtao_raw = m_ambient_occlusion->raw_texture();
                 state.gtao_scale = input.gtao_settings.half_resolution ? 2 : 1;
                 state.gtao_strength = input.gtao_settings.strength;
             } else {
-                state.gtao_visibility = m_gtao.visibility_texture();
+                state.gtao_visibility = m_ambient_occlusion->visibility_texture();
             }
             state.stats.draw_calls += early_lighting ? 0 : 1;
             state.stats.triangles += early_lighting ? 0 : 1;
-            resolved_depth = m_gtao.depth_texture();
+            resolved_depth = m_ambient_occlusion->depth_texture();
         }
         if (input.after_world_depth || early_lighting) {
             const stats::Scope selection("probe coverage selection", stats::kGpu);
@@ -288,7 +292,7 @@ void Renderer::render(const FrameInput& input, const RenderTarget& target) {
         }
         state.opaque_colour_batched = opaque_prepared[i];
         if (ao_before != 0 && i == ao_before) {
-            if (!scoped_ao && gtao && m_gtao.render(input, target)) {
+            if (!scoped_ao && gtao && m_ambient_occlusion->render(input, target, true, false)) {
                 state.stats.draw_calls += 1;
                 state.stats.triangles += 1;
             }
@@ -306,7 +310,8 @@ void Renderer::render(const FrameInput& input, const RenderTarget& target) {
             r->render(input, state);
         }
     }
-    if (!scoped_ao && !ao_applied && ao_before != 0 && gtao && m_gtao.render(input, target)) {
+    if (!scoped_ao && !ao_applied && ao_before != 0 && gtao
+        && m_ambient_occlusion->render(input, target, true, false)) {
         state.stats.draw_calls += 1;
         state.stats.triangles += 1;
     }
@@ -334,11 +339,18 @@ void Renderer::clear_renderers() {
 
 void Renderer::release() {
     m_selection_depth.release();
-    m_gtao.release();
+    // Only a registered ambient occlusion has GL objects to free.
+    if (m_ambient_occlusion != nullptr) {
+        m_ambient_occlusion->release();
+    }
     for (auto& r : m_renderers) {
         r->release();
     }
     m_textures.release_gl();
+}
+
+void Renderer::set_ambient_occlusion(std::unique_ptr<AmbientOcclusion> ambient_occlusion) {
+    m_ambient_occlusion = std::move(ambient_occlusion);
 }
 
 }  // namespace openrac::renderer

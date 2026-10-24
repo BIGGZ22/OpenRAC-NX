@@ -1242,7 +1242,7 @@ extern int D_00132F70[];
 void func_00128560(char *arg0, unsigned int arg1) {
     volatile int *reg = (volatile int *)0x10002000;
     *reg = arg1;
-    *(int *)(arg0 + 0x818) = D_00132F70[arg1 >> 28];
+    *(int *)(arg0 + 0x818) = IpuCommandTable[arg1 >> 28];
 }
 
 extern void func_0012BCC8(int);
@@ -1324,7 +1324,7 @@ short func_001286E8(int arg0, int tbl) {
     }
     cmd = (tbl << 26) | 0x30000000;
     *(volatile unsigned int *)IPU_CMD = cmd;
-    d->unk818 = D_00132F70[(int)cmd >> 28];
+    d->unk818 = IpuCommandTable[(int)cmd >> 28];
     r = *IPU_CMD;
     while (r < 0) {
         if (i++ > 5000) {
@@ -1415,7 +1415,7 @@ int func_00128860(void *arg, int count) {
         } while ((*(volatile unsigned int *)0x10002010 & 0x80004000) == 0x80000000);
     }
     *(volatile unsigned int *)0x10002000 = 0x40000000;
-    *(int *)(ctx + 0x818) = D_00132F70[4];
+    *(int *)(ctx + 0x818) = IpuCommandTable[4];
     *(int *)(ctx + 0x838) = func_00128638(ctx);
     *(int *)(ctx + 0x83C) = 0x20;
 done:
@@ -1446,7 +1446,7 @@ void func_00128968(void *arg0, int arg1) {
     }
     cmd = arg1 | 0x40000000;
     *(volatile int *)0x10002000 = cmd;
-    *(int *)((char *)arg0 + 0x818) = D_00132F70[cmd >> 28];
+    *(int *)((char *)arg0 + 0x818) = IpuCommandTable[cmd >> 28];
     *(int *)((char *)arg0 + 0x838) = func_00128638(arg0);
     *(int *)((char *)arg0 + 0x83C) = 0x20;
 }
@@ -1473,7 +1473,7 @@ int func_00128A58(void *arg0, int n) {
 
     if (*(int *)(s + 0x818) != 0 || *(int *)(s + 0x83C) < n) {
         *(volatile int *)0x10002000 = 0x40000000;
-        *(int *)(s + 0x818) = D_00132F70[4];
+        *(int *)(s + 0x818) = IpuCommandTable[4];
         *(int *)(s + 0x838) = func_00128638(s);
     }
 
@@ -1483,7 +1483,7 @@ int func_00128A58(void *arg0, int n) {
     idx = cmd >> 28;
     *(volatile unsigned int *)0x10002000 = cmd;
     result = oldBits >> (0x20 - n);
-    *(int *)(s + 0x818) = D_00132F70[idx];
+    *(int *)(s + 0x818) = IpuCommandTable[idx];
     *(int *)(s + 0x838) = func_00128638(s);
     return result;
 }
@@ -2391,7 +2391,7 @@ void func_0012A0F8(void *arg0) {
     int r;
 
     m = s->unk810;
-    p = (long *)(((unsigned int)D_0015E940 & 0x0FFFFFFF) | 0x20000000);
+    p = (long *)(((unsigned int)mpeg_ref_image_chain & 0x0FFFFFFF) | 0x20000000);
     n = s->e[m].n;
     i = 0;
     if (n > 0) do {
@@ -2407,7 +2407,7 @@ void func_0012A0F8(void *arg0) {
     r = func_0011D960();
     __asm__ __volatile__("sync");
     *(volatile int *)0x1000D480 = s->e[s->unk810].unk0;
-    *(volatile int *)0x1000D430 = (int)D_0015E940;
+    *(volatile int *)0x1000D430 = (int)mpeg_ref_image_chain;
     *(volatile int *)0x1000D420 = 0;
     *(volatile int *)0x1000D400 = 0x105;
     if (r != 0) {

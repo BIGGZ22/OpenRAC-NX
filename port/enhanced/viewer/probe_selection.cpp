@@ -4,11 +4,11 @@
 #include <vector>
 
 #include "common/stats.h"
+#include "enhanced_viewer_shaders.h"
 #include "renderer/gl.h"
 #include "renderer/world/gl_world.h"
-#include "viewer_shaders.h"
 
-namespace openrac::viewer {
+namespace openrac::lighting {
 using namespace openrac::gl;
 namespace wgl = renderer::world::gl;
 
@@ -158,4 +158,4 @@ void ProbeSelection::release() {
     m_count = 0;
     m_started = false;
 }
-}  // namespace openrac::viewer
+}  // namespace openrac::lighting

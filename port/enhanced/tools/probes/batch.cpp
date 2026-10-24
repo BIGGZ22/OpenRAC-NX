@@ -149,7 +149,7 @@ ProbeVolume verify_batch_file(const BatchJob& job, const std::vector<std::uint8_
 }  // namespace
 
 void run_probe_batch(
-    const viewer::LevelData& level,
+    const scene::LevelData& level,
     const BakeSceneExport& exported,
     const ProbeGrid& sparse_grid,
     const ProbeBatchOptions& options,

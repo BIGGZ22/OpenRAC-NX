@@ -131,7 +131,7 @@ small new API.
 ### 3.3 The renderer
 
 Most of the world's content is **derived from guest RAM every frame**
-(`frontend.cpp:2227`, `viewer/game_state.cpp`), so a restored RAM gives a
+(`frontend.cpp:2227`, `port/game/rac1/game_state.cpp`), so a restored RAM gives a
 correct world. But four pieces of renderer state are not re-derivable:
 
 - the **texture pool** — the port's model of the GS's memory: uploads by base
@@ -319,7 +319,7 @@ it.
 | The runtime's memory model | `port/runtime/include/openrac/guest.h`, `port/runtime/memory.cpp` |
 | The executable loader | `port/runtime/elf.cpp` — `openrac_guest_restore_executable` (`elf.cpp:133-147`) restores the executable's image, which is a small cousin of this problem |
 | The overlay's pause and step | `port/game/common/debug_overlay.cpp:2076-2097` |
-| The dump and the viewer | `port/game/common/frontend.cpp:2320-2329`, `port/viewer/game_state.cpp` |
+| The dump and the viewer | `port/game/common/frontend.cpp:2320-2329`, `port/game/rac1/game_state.cpp` |
 | How emulators do it | PCSX2's `SaveState.cpp` enumerates what a PS2 snapshot must hold: the CPU registers, the EE RAM, the GS, the VU, the GIF, the IOP, the file handles |
 | What a savestate *is* | higan's write-up: <https://higan.readthedocs.io/en/stable/concepts/save-states> — the best short explanation of the idea |
 | The rules | [RULES.md](RULES.md) |

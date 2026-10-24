@@ -286,14 +286,14 @@ extern StashState_00234018 D_001DD530_alias __asm__("D_001DD530");
 typedef StashBlock Rec10_00234018;
 extern Rec10_00234018 D_001DD568_alias[] __asm__("D_001DD568");
 
-/* Stash_Init: binds the IOP stash RPC server (0x11, no-wait mode; a bind
+/* init_stash: binds the IOP stash RPC server (0x11, no-wait mode; a bind
    error hangs), waits for the bind and retries after a delay loop until
    the server answers, then asks it (RPC 2, sceSifCallRpc's nine
    arguments) for the buffer's base and size and clears the 0x40 slots.
    The server check reads through a pointer set inside the loop: loop.c
    then hoists the struct's full address into a register of its own, as
    retail has it, while the client's address stays a constant. */
-void Stash_Init(void) {
+void init_stash(void) {
     StashState_00234018 *s;
     int reply[4];
     int i;
@@ -338,7 +338,7 @@ extern int func_00118E20(void *, int);
    arg2 quadwords there, and return the slot. `h->block++` read into the
    slot index is what keeps retail's copy of the old count. */
 int Stash_SendData(int arg0, int arg1, int arg2, int arg3) {
-    StashInfo *h = &D_001DD530;
+    StashInfo *h = &stash_state;
     int dma[4];
     int n;
 
@@ -354,9 +354,9 @@ int Stash_SendData(int arg0, int arg1, int arg2, int arg3) {
     dma[3] = 0;
     func_00118E20(dma, IOP_STASH_FETCH);
     n = h->block++;
-    D_001DD568[n].ram = h->free;
-    D_001DD568[n].qwc = arg2;
-    D_001DD568[n].comment = arg3;
+    stash_entries[n].ram = h->free;
+    stash_entries[n].qwc = arg2;
+    stash_entries[n].comment = arg3;
     h->free += arg2 * 16;
     return n;
 }
@@ -365,33 +365,33 @@ extern int func_00234350(unsigned int);
 extern int func_0011B4C8(void *, int, int, void *, int, void *, int, void *, void *); /* sceSifCallRpc */
 extern char D_001DD538[];
 
-/* Stash_ReceiveData(dest, slot, offset, size, mode): size -1 means the
+/* stash_receive_data(dest, slot, offset, size, mode): size -1 means the
    slot's whole length (func_00234350). -3 for a bad or empty slot, -1
    if offset + size runs past the slot. Otherwise the data is fetched
    from the stash (slot base + offset quadwords) to dest by the stash
    client's RPC 1 (IOP_STASH_FETCH), at most 0xFFFF quadwords per call; returns 0. The RPC
    is sceSifCallRpc, with nine arguments: end function and end
    parameter 0, the last on the stack. */
-int Stash_ReceiveData(void *dest, unsigned int slot, int offset, int size, int mode) {
+int stash_receive_data(void *dest, unsigned int slot, int offset, int size, int mode) {
     int src;
     int chunk;
 
     if (size == -1) {
-        size = Stash_GetSlotSize(slot);
+        size = stash_get_reserved_qwords(slot);
     }
     if (slot >= 0x40) {
         return -3;
     }
-    if (D_001DD568[slot].qwc == 0) {
+    if (stash_entries[slot].qwc == 0) {
         return -3;
     }
-    if (D_001DD568[slot].qwc < offset + size) {
+    if (stash_entries[slot].qwc < offset + size) {
         return -1;
     }
-    src = D_001DD568[slot].ram + offset * 16;
+    src = stash_entries[slot].ram + offset * 16;
     while (size != 0) {
         chunk = (size > 0xFFFF) ? 0xFFFF : size;
-        func_0011B4C8(D_001DD538, IOP_STASH_FETCH, mode, &src, 0x10, dest, chunk * 16, 0, 0);
+        func_0011B4C8(stash_rpc_client_address, IOP_STASH_FETCH, mode, &src, 0x10, dest, chunk * 16, 0, 0);
         size -= chunk;
         dest = (char *)dest + chunk * 16;
         src += chunk * 16;
@@ -399,9 +399,9 @@ int Stash_ReceiveData(void *dest, unsigned int slot, int offset, int size, int m
     return 0;
 }
 
-int Stash_GetSlotSize(unsigned int arg0) {
+int stash_get_reserved_qwords(unsigned int arg0) {
     if (arg0 >= 0x40) {
         return -3;
     }
-    return D_001DD568[arg0].qwc;
+    return stash_entries[arg0].qwc;
 }

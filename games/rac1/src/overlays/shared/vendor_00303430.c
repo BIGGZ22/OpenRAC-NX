@@ -45,7 +45,7 @@ typedef struct {
     float seg[4][4][4];
 } D_03430;
 
-void func_L14_00303430(char *m) {
+void draw_vendor_beam(char *m) {
     D_03430 *d = *(D_03430 **)(m + 0x78);
     Pkt_03430 P[3];
     float M1[16] __attribute__((aligned(16)));
@@ -64,9 +64,9 @@ void func_L14_00303430(char *m) {
     func_001FA218(M1, ((Frame_03430 *)D_L14_001601AC)[d->idx].v[7]);
     func_001FA4A0(M2, M1);
     qcopy_nc(&M1[12], ((Frame_03430 *)D_L14_001601AC)[d->idx].v[3]);
-    func_001F9BF0(v230, D_L14_001675C0, ((Frame_03430 *)D_L14_001601AC)[d->idx].v[3]);
+    FastVecSub(v230, D_L14_001675C0, ((Frame_03430 *)D_L14_001601AC)[d->idx].v[3]);
     func_001F9EC0(v230, v230, M2);
-    tex = func_001F4868(*(int *)&D_L14_001621AC);
+    tex = GetEffectTex(*(int *)&D_L14_001621AC);
     flags = (long)*(int *)&D_L14_001621B0 | ((long)*(int *)&D_L14_001621B4 << 2) | ((long)*(int *)&D_L14_001621B8 << 4)
             | ((long)*(int *)&D_L14_001621BC << 6) | (0x8000L << 24);
     P[2].state = 0xFF9000000260L;
@@ -92,61 +92,61 @@ void func_L14_00303430(char *m) {
         P[1].color[t] = col;
         P[0].color[t] = col;
     }
-    func_001F9BC0(v250);
+    clear_u64_value(v250);
     {
         int i;
         for (i = 0; i < 31; i++) {
             qcopy(v240, v250);
             if (i < 30) {
-                func_001F9BF0(v270, d->pts[i], d->pts[i + 2]);
-                func_001F9BF0(v260, d->pts[i + 1], v230);
-                func_001F9CA0(v250, v260, v270);
+                FastVecSub(v270, d->pts[i], d->pts[i + 2]);
+                FastVecSub(v260, d->pts[i + 1], v230);
+                FastVecCross(v250, v260, v270);
                 func_L00_001FF4B0(v250, v250, 0.1f);
             } else {
-                func_001F9BC0(v250);
+                clear_u64_value(v250);
             }
             for (k = 0; k < 4; k++) {
                 if (k < 2) {
                     qcopy(P[0].corner[k], d->pts[i]);
-                    if (k & 1) func_001F9BD8(P[0].corner[k], P[0].corner[k], v240);
-                    else func_001F9BF0(P[0].corner[k], P[0].corner[k], v240);
+                    if (k & 1) FastVecAdd(P[0].corner[k], P[0].corner[k], v240);
+                    else FastVecSub(P[0].corner[k], P[0].corner[k], v240);
                 } else {
                     qcopy(P[0].corner[k], d->pts[i + 1]);
-                    if (k & 1) func_001F9BD8(P[0].corner[k], P[0].corner[k], v250);
-                    else func_001F9BF0(P[0].corner[k], P[0].corner[k], v250);
+                    if (k & 1) FastVecAdd(P[0].corner[k], P[0].corner[k], v250);
+                    else FastVecSub(P[0].corner[k], P[0].corner[k], v250);
                 }
-                P[0].uv[k][0] = D_L14_001E6320[k][0] + func_001FA888(i - i / 4 * 4) * 0.25f;
+                P[0].uv[k][0] = D_L14_001E6320[k][0] + IntToFloat(i - i / 4 * 4) * 0.25f;
             }
             func_L00_001FD1D8(&P[0], M1, 0);
         }
     }
     for (j = 0; j < 4; j++) {
-        func_001F9BC0(v250);
+        clear_u64_value(v250);
         c = d->cnt[j];
         if (c >= 0x1F) continue;
         if (c <= -1) continue;
         for (n = 0; n < 3; n++) {
             qcopy(v240, v250);
             if (n < 2) {
-                func_001F9BF0(v270, d->seg[n][j], d->seg[n + 2][j]);
-                func_001F9BF0(v260, d->seg[n + 1][j], v230);
-                func_001F9CA0(v250, v260, v270);
+                FastVecSub(v270, d->seg[n][j], d->seg[n + 2][j]);
+                FastVecSub(v260, d->seg[n + 1][j], v230);
+                FastVecCross(v250, v260, v270);
                 func_L00_001FF4B0(v250, v250, 0.1f);
             } else {
-                func_001F9BC0(v250);
+                clear_u64_value(v250);
             }
             if (n == 0) qcopy(v240, v250);
             for (k = 0; k < 4; k++) {
                 if (k < 2) {
                     qcopy(P[0].corner[k], d->seg[n][j]);
-                    if (k & 1) func_001F9BD8(P[0].corner[k], P[0].corner[k], v240);
-                    else func_001F9BF0(P[0].corner[k], P[0].corner[k], v240);
+                    if (k & 1) FastVecAdd(P[0].corner[k], P[0].corner[k], v240);
+                    else FastVecSub(P[0].corner[k], P[0].corner[k], v240);
                 } else {
                     qcopy(P[0].corner[k], d->seg[n + 1][j]);
-                    if (k & 1) func_001F9BD8(P[0].corner[k], P[0].corner[k], v250);
-                    else func_001F9BF0(P[0].corner[k], P[0].corner[k], v250);
+                    if (k & 1) FastVecAdd(P[0].corner[k], P[0].corner[k], v250);
+                    else FastVecSub(P[0].corner[k], P[0].corner[k], v250);
                 }
-                P[0].uv[k][0] = D_L14_001E6320[k][0] + func_001FA888(n - n / 4 * 4) * 0.25f;
+                P[0].uv[k][0] = D_L14_001E6320[k][0] + IntToFloat(n - n / 4 * 4) * 0.25f;
             }
             func_L00_001FD1D8(&P[0], M1, 0);
         }

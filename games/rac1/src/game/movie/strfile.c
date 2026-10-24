@@ -15,20 +15,20 @@ typedef struct StrFile {
 
 /* No recovered name. Stores its two arguments in the object (first argument at offset 4)
  * and returns 1. */
-int StrFile_Init(StrFile *f, int first, int second) {
+int set_state_fields(StrFile *f, int first, int second) {
     f->first = first;
     f->second = second;
     return 1;
 }
 /* No recovered name. Nothing to free, returns 1. */
-int strFileDelete(StrFile *f) {
+int get_state_callback_result(StrFile *f) {
     return 1;
 }
 extern void func_00121750(int, int, int, void *);
 extern void func_00120F30(int);
 
 /* Reads movie sectors and advances the cursor after a synchronous read. */
-int Movie_ReadSectors(void *arg0, int arg1, int arg2, int arg3) {
+int read_cd_stream_sectors(void *arg0, int arg1, int arg2, int arg3) {
     struct { unsigned char retries, speed, pattern, padding; } mode;
     int r = 0;
     int n = arg2 >> 11;

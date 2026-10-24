@@ -50,22 +50,22 @@ s32 actuator_CalcPower(s32 *p1)
         s32 res;
         u16 v;
 
-        if (D_00165580[i].f00 == 0) {
+        if (actuator_wave[i].f00 == 0) {
             continue;
         }
-        e = &D_00165580[i];
+        e = &actuator_wave[i];
         count++;
-        v = D_00165580[i].f06;
-        D_00165580[i].f06 = v - 1;
+        v = actuator_wave[i].f06;
+        actuator_wave[i].f06 = v - 1;
         if ((s16)v <= 0) {
             e->f00 = 0;
         }
-        if (D_00165580[i].f04 != 0) {
-            D_00165580[i].f04 = D_00165580[i].f04 - 1;
+        if (actuator_wave[i].f04 != 0) {
+            actuator_wave[i].f04 = actuator_wave[i].f04 - 1;
             continue;
         }
         res = 0;
-        D_00165580[i].f08++;
+        actuator_wave[i].f08++;
         rem = e->f08 % (e->f0a + e->f0c);
         switch (e->f00) {
         case 0:
@@ -138,8 +138,8 @@ extern int D_0015EF8C MACRO_ADDR;
 extern int D_0015F020 MACRO_ADDR;
 extern short D_0015EF74;
 
-void ResetTextureAllocator(void) {
-    D_0015F020 = 0;
+void initialize_streaming_state(void) {
+    texture_alloc_counter = 0;
     *(int *)&D_0015EF74 = D_0015EF8C;
 }
 __asm__(".section .text

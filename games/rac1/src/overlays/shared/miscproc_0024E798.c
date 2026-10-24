@@ -7,5 +7,5 @@ void func_L00_0024E8FC(void) {
     __asm__ volatile ("nop");
     __asm__ volatile ("nop");
 }
-INCLUDE_ASM("asm/overlays", func_L00_0024EBF8);
+ASM_FUNC("asm/overlays", func_L00_0024EBF8);
 ASM_FUNC("asm/overlays", func_L00_0024EC20);

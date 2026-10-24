@@ -32,7 +32,6 @@
 #include "common/stats.h"
 #include "debug_menu.h"
 #include "debug_overlay.h"
-#include "fps_counter.h"
 #include "frame_pacing.h"
 #include "frontend.h"
 #include "game/common/frontend/geometry.h"
@@ -47,6 +46,7 @@
 #include "renderer/gl.h"
 #include "renderer/renderer.h"
 #include "renderer/shadows.h"
+#include "renderer/ui/fps_counter.h"
 #include "scene/level_renderer.h"
 #include "scene/moby_pose.h"
 #include "scene/screenshot.h"
@@ -139,7 +139,7 @@ void swapped(std::chrono::steady_clock::time_point started) {
     const double cost = duration<double>(before - started).count();
     pacing.cost = 0.8 * pacing.cost + 0.2 * cost;
     if (settings::get().show_fps) {
-        fps_counter::frame_drawn(after, cost);
+        renderer::ui::fps_counter::frame_drawn(after, cost);
     }
     if (pacing.interval_stale) {
         const float rate = g->window->refresh_rate();
@@ -185,10 +185,8 @@ void slow_frame() {
 }
 
 // The camera part way from the last tick's to this one's (a cut is not blended).
-viewer::GameState blend_camera(
-    const viewer::GameState& from, const viewer::GameState& to, float t
-) {
-    viewer::GameState c = to;
+host::GameState blend_camera(const host::GameState& from, const host::GameState& to, float t) {
+    host::GameState c = to;
     const CameraPose pose = blend_pose(
         {from.camera_position, from.forward, from.left, from.up},
         {to.camera_position, to.forward, to.left, to.up},
@@ -238,10 +236,10 @@ void draw_kept(bool first) {
         );
     }
     Kept& k = g->kept;
-    const viewer::GameState state =
+    const host::GameState state =
         k.has_prev_state && alpha < 1.0f ? blend_camera(k.prev_state, k.state, alpha) : k.state;
     if (!g->level.models.empty()) {
-        std::vector<viewer::Instance> live = k.live;
+        std::vector<scene::Instance> live = k.live;
         if (alpha < 1.0f) {
             for (std::size_t i = 0; i < live.size() && i < k.addresses.size(); ++i) {
                 auto it = k.prev_matrices.find(k.addresses[i]);
@@ -250,7 +248,7 @@ void draw_kept(bool first) {
                     const auto sphere = k.prev_spheres.find(k.addresses[i]);
                     live[i].world_sphere = sphere == k.prev_spheres.end()
                                                ? std::array<float, 4>{}
-                                               : viewer::moby_sphere_envelope(
+                                               : moby_sphere_envelope(
                                                      sphere->second,
                                                      it->second,
                                                      k.live[i].world_sphere,
@@ -263,7 +261,7 @@ void draw_kept(bool first) {
         if (alpha < 1.0f && !k.prev_poses.empty()) {
             // The poses too: each joint part way from the last tick's to this one's, for a moby
             // that is the same thing moving (its matrix was blended) with the same skeleton.
-            std::vector<viewer::LevelScene::JointColumns> palette = k.palette;
+            std::vector<scene::LevelScene::JointColumns> palette = k.palette;
             for (std::size_t i = 0;
                  i < live.size() && i < k.addresses.size() && i < k.joints.size();
                  ++i) {
@@ -277,10 +275,10 @@ void draw_kept(bool first) {
                     || static_cast<std::size_t>(first + count) > palette.size()) {
                     continue;
                 }
-                const viewer::LevelScene::JointColumns* from =
+                const scene::LevelScene::JointColumns* from =
                     k.prev_palette.data() + pose->second.first;
                 for (int j = 0; j < count; ++j) {
-                    viewer::LevelScene::JointColumns& to =
+                    scene::LevelScene::JointColumns& to =
                         palette[static_cast<std::size_t>(first + j)];
                     for (std::size_t c = 0; c < to.size(); ++c) {
                         to[c] = from[j][c] + (to[c] - from[j][c]) * alpha;
@@ -291,7 +289,7 @@ void draw_kept(bool first) {
         } else {
             g->scene.set_palette(k.palette);
         }
-        g->scene.set_instances(viewer::Layer::Mobys, live);
+        g->scene.set_instances(scene::Layer::Mobys, live);
     }
 
     if (frame_cost.on) {
@@ -466,8 +464,8 @@ void draw_kept(bool first) {
                              bool clear_depth) {
         const std::uint32_t first = static_cast<std::uint32_t>(marker);
         const std::uint32_t count = static_cast<std::uint32_t>(marker >> 32) & 0xFFu;
-        std::vector<viewer::Instance> instances;
-        const viewer::GameState* camera = nullptr;
+        std::vector<scene::Instance> instances;
+        const host::GameState* camera = nullptr;
         for (const Kept::TargetMoby& t : k.target_mobys) {
             if (t.address >= first && t.address < first + count * 0x100u) {
                 instances.push_back(t.instance);
@@ -557,7 +555,7 @@ void draw_kept(bool first) {
     const unsigned shown = g->frame.resolved();
     debug_menu::draw(shown, width, height);
     if (settings::get().show_fps) {
-        fps_counter::draw(shown, width, height);
+        renderer::ui::fps_counter::draw(shown, width, height);
     }
     // OPENRAC_SHOT=FRAME:FILE.png writes that frame (for checking without looking at the screen);
     // OPENRAC_SHOT_BETWEEN also writes the frames drawn between ticks (FILE<frame>_b<n>.png).
@@ -571,7 +569,7 @@ void draw_kept(bool first) {
         const std::string path = shots().prefix + std::to_string(input.frame)
                                  + (first ? std::string() : "_b" + std::to_string(between_index))
                                  + ".png";
-        viewer::write_png(path, width, height, renderer::read_rgba(shown, width, height));
+        scene::write_png(path, width, height, renderer::read_rgba(shown, width, height));
         log::info("frame {} written to {}", input.frame, path);
     }
     slow_frame();

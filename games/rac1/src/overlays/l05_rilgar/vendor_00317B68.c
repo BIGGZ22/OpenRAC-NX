@@ -33,7 +33,7 @@ typedef struct {
 extern int func_0022ED80_i(int, int, void *) __asm__("func_0022ED80");
 extern float ease_rotation_317B68(float *, float, float *, float, float, float) __asm__("func_L00_0025CE58");
 /* Updates a triggered rotor: initialize its angle, wait for the target, then ease its rotation. */
-void TriggeredRotorUpdate(RotorMoby17B68 *moby) {
+void update_triggered_moby_yaw(RotorMoby17B68 *moby) {
     RotorData17B68 *p = moby->data;
     float f;
     switch (moby->state) {

@@ -75,9 +75,8 @@ two to the same list. C++ reads its variables through `env.h`; C, which cannot i
 (section 14.3 of [CODING_CONVENTIONS.md](../docs/CODING_CONVENTIONS.md)), reads them through the
 runtime's C entry point `openrac/host_env.h`, which looks the name up with `env::find` and hands
 back the kept value (`env::value`'s view ends in a NUL for it). The library replacements of
-`game/common/lib` read through it; what still calls `getenv` moves onto the table later
-(docs/restructure/PROGRESS.md): rac1's host C (P2-38), `renderer/vulkan/`, `android/` and
-`mod_scripts.cpp` (P2-20).
+`game/common/lib` and rac1's host C (`game/rac1/host`) read through it; the one `getenv` of an
+`OPENRAC_*` variable left is a test's (`tests/vulkan_uniform_test.cpp`, to know what to expect).
 
 `log.cpp` reads `OPENRAC_LOG`, the log's level, through `env.h` at the first call that asks the
 level rather than at static initialisation, so that the table's one reading of the environment is

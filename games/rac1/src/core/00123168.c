@@ -201,7 +201,7 @@ extern int D_00132E70[];
    `>= 0xA` guard-first form matched 2.95.3 and is 21/40 here). */
 int func_001232E0(unsigned int arg0) {
     if (arg0 < 0xA) {
-        return D_00132E70[arg0];
+        return DmaChannels[arg0];
     }
     return 0;
 }
@@ -236,8 +236,8 @@ int func_00123308(int arg0) {
     flag = *(volatile unsigned int *)0x1000E000 & 1;
 
     for (i = 0; i < 10; i++) {
-        if (D_001534F8[i] != 0) {
-            int *p = (int *)D_00132E70[i];
+        if (DmaChannelsUsed[i] != 0) {
+            int *p = (int *)DmaChannels[i];
             p[0] = 0;
             p[0xC] = 0;
             p[4] = 0;

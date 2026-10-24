@@ -44,7 +44,7 @@ extern int func_00216960(void);
 void OpenVendorScreen(char *m, int lvl) {
     char *g = D_0013E633 + 0xE1D;
     char *s = D_L01_001CABC0;
-    char *c = D_L01_0016CD60;
+    char *c = fx_cutscene;
     char *sc;
     char *c2;
     char *g2;
@@ -76,7 +76,7 @@ void OpenVendorScreen(char *m, int lvl) {
     func_001FA1F8(s + 0x80, s + 0xB0);
     FastMemSet(c, 0, 0x1C0);
     FastMemSet(D_L01_0017C840, 0, 0x40);
-    VuChain_SetLevelOffset();
+    calculate_dma_transfer_address();
     n = D_L01_0016124C + (int)0xFFFC0000;
     *(int *)(c + 0x58) = D_L01_00174300[1] + n;
     r = D_L01_001CA720[lvl];
@@ -84,19 +84,19 @@ void OpenVendorScreen(char *m, int lvl) {
     D_L01_0015F4FC = 1.0f;
     D_L01_0016124C = n;
     *(int *)&D_L01_0015F500 = 0;
-    Hero_DestroySlotMobys(0, 0);
+    clear_hero_item_slot(0, 0);
     *(int *)(g + 0x20B8) = lvl;
-    LoadMobyClassResources(D_L01_00179FC0[lvl].f10, -1);
-    ReadLevelPackedData(r);
+    select_world_object_resource_tables(D_L01_00179FC0[lvl].f10, -1);
+    load_scene_chunks_with_fade(r);
     q = (char *)D_0014171B + 0x100B5;
     *(int *)(q + 0x1C) = 0x2734;
-    ParseSpaceSceneChunk(0);
+    func_00205220(0);
     while (qq = (char *)D_0014171B + 0x100B5, *(short *)(qq + 0x5A) != 3) {
         sound_update();
         func_00122598(0);
     }
-    c2 = D_L01_0016CD60;
+    c2 = fx_cutscene;
     g2 = D_0013E633 + 0xE1D;
-    TintEffectFromMobyColor(*(int *)(c2 + 0x17C), *(int *)(g2 + 0x2080));
+    update_item_tint_from_hero(*(int *)(c2 + 0x17C), *(int *)(g2 + 0x2080));
     Music_ContinueStreamIfReady();
 }

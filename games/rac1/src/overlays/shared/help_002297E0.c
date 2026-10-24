@@ -23,7 +23,7 @@ extern int func_001F9850(int);
 extern float func_001F9878(float);
 
 /* Hero idle-fidget picker; returns 1 and writes the chosen index if one is picked. */
-int PickIdleFidget(int *index) {
+int pick_idle_fidget(int *index) {
     int choices[20];
     Vec4_r end;
     Vec4_r start;
@@ -47,16 +47,16 @@ int PickIdleFidget(int *index) {
     endp = &end;
     next = choices;
     for (; i < 5; i++) {
-        table = D_L00_00179990;
+        table = idle_fidgets;
         entry = &table[i];
         if (entry->duration_frames != 0) continue;
         if (entry->interval == 0.0f) continue;
-        item = Hero_GetSlotModuleId(0);
+        item = hero_slot_item_id(0);
         if (entry->item_id != -1 && entry->item_id != item) continue;
         if (entry->use_state_40 != 0 && D_0013F450.ground_moby != 0) continue;
         if (i == 3) {
             if (D_0015EE84 != 12) continue;
-            if (Hero_GetSlotModuleId(0) == 23) continue;
+            if (hero_slot_item_id(0) == 23) continue;
             qcopy(startp, &D_0013F450.unkD0);
             qcopy(endp, startp);
             end.f[2] += 8.0f;
@@ -74,7 +74,7 @@ int PickIdleFidget(int *index) {
     if (count == 0) return 0;
     total = 0.0f;
     for (i = 0; i < count; i++) {
-        Ent *choice = &D_L00_00179990[choices[i]];
+        Ent *choice = &idle_fidgets[choices[i]];
         total += 1.0f / (float)(int)(func_001F9878(choice->interval) * 60.0f);
     }
     pick = random_float_between(0.0f, 1.0f);
@@ -83,7 +83,7 @@ int PickIdleFidget(int *index) {
             int picked = choices[j];
             Ent *choice;
             *index = picked;
-            choice = &D_L00_00179990[picked];
+            choice = &idle_fidgets[picked];
             total -= 1.0f / (float)(int)(func_001F9878(choice->interval) * 60.0f);
             if (total < pick) break;
         }
@@ -105,7 +105,7 @@ extern float D_0015EE64 MACRO_ADDR;
 extern int D_L00_0015F7BC MACRO_ADDR;
 
 /* Menu/hint update: picks an action for the player from the game block's timers and flags. Adapted from Lombyte (GPL-3.0) for PAL: overlays/shared/ui_help_00229010.c, FUN_L00_002293a8. */
-void HeroChooseAction(void) {
+void update_hero_locomotion_state(void) {
     char *b, *c, *d;
     int n;
     b = D_0013E633 + 0xE1D;
@@ -114,10 +114,10 @@ void HeroChooseAction(void) {
         HeroEnterMoveState(0x2F, 1);
         return;
     }
-    Hero_SetHeadingFromStick(0, 1.0f);
+    stick_target(0, 1.0f);
     if (*(int *)(D_0013A5E0_229B78 + 0x2600) & 0xA) {
         HeroEnterMoveState(4, 0);
-        HeroStartAnim(0xD, 2, -2.0f);
+        set_hero_animation(0xD, 2, -2.0f);
         HeroQueueSequence(3, 0x12);
         return;
     }
@@ -131,7 +131,7 @@ void HeroChooseAction(void) {
             *(int *)(c + 0x2088) = 1;
             n = scale_ticks(8);
             if (scale_ticks(5) < *(int *)(c + 0x418)) n = scale_ticks(14);
-            HeroStartAnim(4, D_L00_0015F7BC, (float)n);
+            set_hero_animation(4, D_L00_0015F7BC, (float)n);
             *(short *)(c + 0x3BC) = 1;
         }
         return;
@@ -139,18 +139,18 @@ void HeroChooseAction(void) {
     d = D_0013E633 + 0xE1D;
     if ((*(float *)&D_0015EE6C_229B78 * 3.0f < *(float *)(d + 0x168) && scale_ticks(3) < *(int *)(d + 0x418)) || *(int *)(d + 0x2084) == 0x10) {
         if (HeroEnterMoveState(3, 0)) {
-            HeroStartAnim(5, 0, -1.0f);
+            set_hero_animation(5, 0, -1.0f);
             ClampVectorLength(D_0013E633 + 0xF6D, *(float *)((char *)&D_0015EE64 + 8) * 5.0f);
         }
         return;
     }
     if (scale_ticks(12) < *(int *)(d + 0x418) || (*(int *)(d + 0xA98) & 2)) {
         if (HeroEnterMoveState(0, 0)) {
-            if (Hero_PickSituationId(0) == 0x54) {
-                n = Hero_PickSituationId(0);
-                HeroStartAnim(n, 0, (float)scale_ticks(15));
+            if (hero_idle_sequence(0) == 0x54) {
+                n = hero_idle_sequence(0);
+                set_hero_animation(n, 0, (float)scale_ticks(15));
             } else if (*(int *)(d + 0xA98) & 2) {
-                HeroStartAnim(Hero_PickSituationId(0), 0, -2.0f);
+                set_hero_animation(hero_idle_sequence(0), 0, -2.0f);
             }
         }
     }
@@ -166,7 +166,7 @@ extern int func_L00_00267BA8(int, int, int);
 extern int func_L00_0020DB30(int);
 
 // Tries the crouch-jump style moves in priority order and starts the first whose conditions hold. Adapted from Lombyte (GPL-3.0) for PAL: overlays/shared/ui_help_00229010.c, FUN_L00_00229660.
-int Hero_TryJumpFromPads(void) {
+int hero_handle_jump_press(void) {
     char *g = (char *)D_0013E633 + 0xE1D;
     int n, t, k;
     int m;
@@ -185,16 +185,16 @@ found:
     k = scale_ticks(9);
     p = (char *)D_0013E633 + 0xE1D;
     if (scale_ticks(6) < *(int *)(p + 0x198)) {
-        if (PadPressedWithin(0x40, k, 0) == 0) {
+        if (pad_pressed_within(0x40, k, 0) == 0) {
             return 0;
         }
-        if (Hero_GetSlotModuleId(3) == 2 && gHaveHeliPack != 0 && *(short *)(p + 0x22D8) == 0 &&
+        if (hero_slot_item_id(3) == 2 && gHaveHeliPack != 0 && *(short *)(p + 0x22D8) == 0 &&
             (2.5f < *(float *)(p + 0x248) || *(float *)(p + 0x250) < 0.785398185f) &&
             0.7f < *(float *)(p + 0x229C) && D_0015EE6C * 0.9f < *(float *)(p + 0x168)) {
             m = 0xA;
             goto found;
         }
-        if (Hero_GetSlotModuleId(3) == 3) {
+        if (hero_slot_item_id(3) == 3) {
             char *q = (char *)D_0013E633 + 0xE1D;
             if (*(short *)(q + 0x22D8) == 0 &&
                 0.7f < *(float *)(q + 0x229C) &&
@@ -207,14 +207,14 @@ found:
                 goto found;
             }
         }
-        if (Hero_GetSlotModuleId(3) == 3) {
+        if (hero_slot_item_id(3) == 3) {
             char *r = (char *)D_0013E633 + 0xE1D;
             if (*(short *)(r + 0x22D8) == 0) {
                 m = 0xD;
                 goto found;
             }
         }
-        if (Hero_GetSlotModuleId(3) == 2) {
+        if (hero_slot_item_id(3) == 2) {
             char *s = (char *)D_0013E633 + 0xE1D;
             if (*(short *)(s + 0x22D8) == 0 && gHaveHeliPack != 0) {
                 m = 0xF;
@@ -263,10 +263,10 @@ extern void func_L00_0020ED30(void);
 extern int func_L00_00222B80(int, int);
 
 /* starts the pending global action if conditions hold; returns 1 on success */
-int HeroStartPendingAction(void) {
+int try_start_hero_item_idle_animation(void) {
     char *p = D_0013E633 + 0xE1D;
     if (*(unsigned char *)(p + 0x20A8) != 0 && *(unsigned char *)(p + 0x20AA) != 0 && *(short *)(p + 0x22C8) == 0) {
-        int i = Hero_GetSlotModuleId(0);
+        int i = hero_slot_item_id(0);
         int v;
         if (i != *(int *)(p + 0x2298)) {
             Hero_ClearPendingModuleAnim();
@@ -274,7 +274,7 @@ int HeroStartPendingAction(void) {
         }
         v = D_L00_00179BC0[i].v;
         if (HeroEnterMoveState(0, 0) == 0) return 0;
-        HeroStartAnim(v, 0, (float)scale_ticks(11));
+        set_hero_animation(v, 0, (float)scale_ticks(11));
         if (*(int *)(p + 0xD08) != 0) *(int *)(p + 0xD14) = 1;
         *(int *)(p + 0x2294) = v;
         return 1;

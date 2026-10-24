@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 // Copyright (c) 2026 the OpenRAC contributors
 //
-// The on-screen pad drawn (game/common/touch_overlay.h) on a real context, desktop GL or ES
+// The on-screen pad drawn (renderer/ui/touch_overlay.h) on a real context, desktop GL or ES
 // (touch_overlay_es): its shader builds, nothing is drawn before the screen is touched, and a held
 // button is drawn brighter than one let go. Skipped (exit 77) where no context can be made.
 
@@ -11,8 +11,8 @@
 
 #include "check.h"
 #include "renderer/gl.h"
+#include "renderer/ui/touch_overlay.h"
 #include "renderer_gl_context.h"
-#include "touch_overlay.h"
 
 namespace {
 
@@ -60,18 +60,18 @@ int main() {
     const float edge_x = cross->x + cross->radius * 0.92f * kHeight / kWidth;
 
     clear();
-    frontend::touch_overlay::draw(touch, kWidth, kHeight);
+    renderer::ui::touch_overlay::draw(touch, kWidth, kHeight);
     CHECK(brightness(edge_x, cross->y) == 0);  // not touched yet: nothing drawn
 
     touch.finger_down(1, 0.5f, 0.5f);  // touched away from every control: shown, nothing held
     clear();
-    frontend::touch_overlay::draw(touch, kWidth, kHeight);
+    renderer::ui::touch_overlay::draw(touch, kWidth, kHeight);
     const int released = brightness(edge_x, cross->y);
     CHECK(released > 0);
 
     touch.finger_down(2, cross->x, cross->y);
     clear();
-    frontend::touch_overlay::draw(touch, kWidth, kHeight);
+    renderer::ui::touch_overlay::draw(touch, kWidth, kHeight);
     const int held = brightness(edge_x, cross->y);
     CHECK(held > released);
     CHECK(glGetError() == GL_NO_ERROR);
@@ -94,7 +94,7 @@ int main() {
         glBindFramebuffer(GL_READ_FRAMEBUFFER, framebuffer);
         glBlitFramebuffer(0, 0, kWidth, kHeight, 0, 0, kWidth, kHeight, GL_COLOR_BUFFER_BIT, GL_LINEAR);
         glBindFramebuffer(GL_READ_FRAMEBUFFER, 0);
-        frontend::touch_overlay::draw(touch, kWidth, kHeight);
+        renderer::ui::touch_overlay::draw(touch, kWidth, kHeight);
         CHECK(brightness(edge_x, cross->y) == held);
         context.window().swap();
     }
@@ -102,6 +102,6 @@ int main() {
     glDeleteTextures(1, &picture);
     CHECK(glGetError() == GL_NO_ERROR);
 
-    frontend::touch_overlay::release();
+    renderer::ui::touch_overlay::release();
     return test::result();
 }

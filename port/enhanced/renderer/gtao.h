@@ -2,6 +2,7 @@
 // Copyright (c) 2026 the OpenRAC contributors
 #pragma once
 
+#include "renderer/ambient_occlusion.h"
 #include "renderer/framebuffer.h"
 #include "renderer/shader.h"
 
@@ -14,24 +15,27 @@ struct RenderTarget;
 // lighting consumes visibility_texture() after render(..., false); the default
 // colour composite is retained only for legacy prelit paths. evaluate_only
 // exposes the raw horizon/guide texture for fused early-lighting denoising.
-class Gtao {
+//
+// The renderer's ambient occlusion hook (renderer/ambient_occlusion.h): a program registers one
+// with Renderer::set_ambient_occlusion, and the tests also run it alone.
+class Gtao final : public AmbientOcclusion {
 public:
     bool render(
         const FrameInput& input,
         const RenderTarget& target,
         bool apply_to_colour = true,
         bool evaluate_only = false
-    );
+    ) override;
 
     // Packed RGBA8 texture-buffer view, one AO/guide record per evaluation cell.
-    unsigned raw_texture() const { return m_ao_texture; }
+    unsigned raw_texture() const override { return m_ao_texture; }
 
-    unsigned visibility_texture() const { return m_visibility.colour_texture(); }
+    unsigned visibility_texture() const override { return m_visibility.colour_texture(); }
 
     // Depth sampled by the last successful render; may be borrowed from its target.
-    unsigned depth_texture() const { return m_sampled_depth; }
+    unsigned depth_texture() const override { return m_sampled_depth; }
 
-    void release();
+    void release() override;
 
 private:
     bool prepare(int width, int height, int scale, bool visibility, bool copy_depth);

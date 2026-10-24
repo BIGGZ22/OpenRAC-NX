@@ -15,7 +15,7 @@ void Particle_SpawnByKind(void *pos, int kind, void *vel, float f) {
     unsigned char *p;
     float *vp = v;
     *(u128 *)v = *(u128 *)vel;
-    p = func_00218928(0x49);
+    p = create_part(0x49);
     if (p != 0) {
         float s = 0.0f;
         int c = 0;

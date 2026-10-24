@@ -13,63 +13,63 @@ void STUB_printf(int arg0, ...) {
 void Profile_Mark(void) {
 }
 
-void func_001E9770(void) {
+void noop_callback_a(void) {
 }
 
-void Camera_DebugPosition(void) {
+void noop_callback_b(void) {
 }
 
-void Camera_DebugRotation(void) {
+void noop_callback_c(void) {
 }
 
-void func_001E9788(void) {
+void noop_callback_d(void) {
 }
 
-void func_001E9790(void) {
+void noop_callback_e(void) {
 }
 
-void func_001E9798(void) {
+void noop_callback_f(void) {
 }
 
-void Profile_Checkpoint(void) {
+void noop_callback_g(void) {
 }
 
-void Profile_FrameEnd(void) {
+void noop_callback_h(void) {
 }
 
-void Profile_FrameBegin(void) {
+void noop_callback_i(void) {
 }
 
-void func_001E97B8(void) {
+void noop_callback_j(void) {
 }
 
-void func_001E97C0(void) {
+void noop_callback_k(void) {
 }
 
 /* Takes an argument (callers pass one, e.g. func_001EC210) and ignores
    it -- the unused parameter costs no codegen, still 0/8. */
-int NullMobyUpdate(void *arg0) {
+int noop_callback_l(void *arg0) {
     return 0;
 }
 
-void func_001E97D0(void) {
+void noop_callback_m(void) {
 }
 
-void func_001E97D8(void) {
+void noop_callback_n(void) {
 }
 
-void func_001E97E0(void) {
+void noop_callback_o(void) {
 }
 
-int func_001E97E8(void) {
+int noop_callback_p(void) {
     return 0;
 }
 
-void func_001E97F0(void) {
+void noop_callback_q(void) {
 }
 
-void func_001E97F8(void) {
+void noop_callback_r(void) {
 }
 
-void func_001E9800(void) {
+void noop_callback_s(void) {
 }

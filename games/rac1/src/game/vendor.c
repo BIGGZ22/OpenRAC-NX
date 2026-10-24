@@ -311,7 +311,7 @@ extern f32 func_001FA888(s32);
 extern u64 func_00200248(s32);
 
 /* Adapted from Lombyte (GPL-3.0) for PAL by OpenRAC's tools/port.py: src/assembly/textbin/fun_00238310.c, render_capture_scrolling_text. */
-void Vendor_DrawScrollText(char *text, s32 start_x, s32 start_y, f32 scale) {
+void render_capture_scrolling_text(char *text, s32 start_x, s32 start_y, f32 scale) {
     s64 texture;
     s32 cursor_x;
     s32 cursor_y;
@@ -356,7 +356,7 @@ void Vendor_DrawScrollText(char *text, s32 start_x, s32 start_y, f32 scale) {
         if (glyph_index < 0x3B) {
             {
                 s32 *glyph_entry;
-                glyph_entry = D_001E6318 + glyph_index;
+                glyph_entry = capture_glyph_coordinates + glyph_index;
                 if (*glyph_entry != -1 || glyph_index == 0) {
                     if (blink_next_glyph != 0) {
                         skip_draw = 0;
@@ -390,7 +390,7 @@ void Vendor_DrawScrollText(char *text, s32 start_x, s32 start_y, f32 scale) {
                     }
 
                     cursor_x += TRUNC(
-                        IntToFloat(D_001E6418[glyph_index]) * scale);
+                        IntToFloat(capture_glyph_advances[glyph_index]) * scale);
                 }
             }
         }
@@ -410,24 +410,24 @@ extern void func_001FBAB8(int, int, int, int, int, int, int);
 void update_scrolling_status_message(void) {
     char *v;
     char *w;
-    Framebuf_DrawAlphaRect(0, 0, 0x200, 0x80, 0x200, 0x80, 0);
-    v = D_001E66C0;
+    draw_framebuffer_rect(0, 0, 0x200, 0x80, 0x200, 0x80, 0);
+    v = vendor_state;
     if (func_00116810_s(*(char **)(v + 0x2C)) - *(int *)(v + 0x44) / 20 > 0) {
         *(int *)(v + 0x44) += 2;
     } else {
         set_scrolling_status_message(func_001FE540_id(D_001E62B8[random_integer_below(0x18)]));
     }
-    w = D_001E66C0;
-    Vendor_DrawScrollText(*(char **)(w + 0x2C), -*(int *)(w + 0x44), 8, 2.0f);
-    Framebuf_DrawAlphaRect(0, 0, 4, 0x40, 0x200, 0x80, 0);
-    Framebuf_DrawAlphaRect(0xE2, 0, 0xE6, 0x40, 0x200, 0x80, 0);
+    w = vendor_state;
+    render_capture_scrolling_text(*(char **)(w + 0x2C), -*(int *)(w + 0x44), 8, 2.0f);
+    draw_framebuffer_rect(0, 0, 4, 0x40, 0x200, 0x80, 0);
+    draw_framebuffer_rect(0xE2, 0, 0xE6, 0x40, 0x200, 0x80, 0);
 }
 
 extern int D_001611A8 MACRO_ADDR;
 extern int D_001E66E4;
 
-void VendorDrawSalesmanVideo(void) {
-    Framebuf_DrawAlphaRect(0, 0, 0x200, 0x80, 0x200, 0x80, 0);
+void render_capture_effect_pass(void) {
+    draw_framebuffer_rect(0, 0, 0x200, 0x80, 0x200, 0x80, 0);
     if (D_001611A8 == 1) {
         DrawMobyList(D_001E66E4, 1);
     }
@@ -438,7 +438,7 @@ extern char D_00161180[];
 /* Unprototyped: the two call sites pass different argument counts. */
 extern void func_00116248();
 
-void FormatThousands(void *arg0, int arg1) {
+void format_scaled_display_value(void *arg0, int arg1) {
     if (arg1 >= 1000) {
         func_00116248(arg0, D_00161178, arg1 / 1000, arg1 % 1000);
     } else {
@@ -470,7 +470,7 @@ extern void func_001FBAB8_u(int, int, int, int, int, int, unsigned int)
 
 /* Vendor item carousel and icon pulse. The solid black draw calls use the
    unsigned color signature, matching retail's argument setup order. */
-void VendorDrawIconStrip(void) {
+void render_vendor_item_icon_strip_pass(void) {
     s32 selectedOffset;
     s32 slotOffset;
     s32 selectedMinusThree;
@@ -485,13 +485,13 @@ void VendorDrawIconStrip(void) {
     s32 *slotKind;
     s32 pulseColor;
 
-    Framebuf_DrawAlphaRect(0, 0, 0x200, 0x80, 0x200, 0x80, 0);
+    draw_framebuffer_rect(0, 0, 0x200, 0x80, 0x200, 0x80, 0);
     if (D_001E66C0_ui.slotCount < 8) {
         itemX = 0xC;
         itemIndex = 0;
         selectedOffset = D_001E66C0_ui.selectedIndex * 0x38;
-        pulseColor = ((func_001F9B70(((D_001E66C0_ui.pulseTick * 4) & 0x3F) - 0x20) + 0x40) * 0x10202) | 0x80000000;
-        Framebuf_DrawAlphaRect(selectedOffset + 8, 2, selectedOffset + 0x40, 0x3A, 0x200, 0x80, pulseColor);
+        pulseColor = ((subtract_integer_with_clamp(((D_001E66C0_ui.pulseTick * 4) & 0x3F) - 0x20) + 0x40) * 0x10202) | 0x80000000;
+        draw_framebuffer_rect(selectedOffset + 8, 2, selectedOffset + 0x40, 0x3A, 0x200, 0x80, pulseColor);
         func_001FBAB8_u(selectedOffset + 0xA, 4, selectedOffset + 0x3E, 0x38, 0x200, 0x80, 0x80000000);
         if (D_001E66C0_ui.slotCount > 0) {
             do {
@@ -513,7 +513,7 @@ void VendorDrawIconStrip(void) {
         } else if (D_001E66C0_ui.scrollOffset > 0) {
             D_001E66C0_ui.scrollOffset = (s32) (D_001E66C0_ui.scrollOffset - 4);
         } else {
-            Framebuf_DrawAlphaRect(0xB0, 2, 0xE8, 0x3A, 0x200, 0x80, ((func_001F9B70(((D_001E66C0_ui.pulseTick * 4) & 0x3F) - 0x20) + 0x40) * 0x10202) - (s32) 0x80000000);
+            draw_framebuffer_rect(0xB0, 2, 0xE8, 0x3A, 0x200, 0x80, ((subtract_integer_with_clamp(((D_001E66C0_ui.pulseTick * 4) & 0x3F) - 0x20) + 0x40) * 0x10202) - (s32) 0x80000000);
             func_001FBAB8_u(0xB2, 4, 0xE6, 0x38, 0x200, 0x80, 0x80000000);
         }
         x = D_001E66C0_ui.scrollOffset - 0x64;
@@ -556,20 +556,20 @@ extern struct P239 D_001E02B0_p[] __asm__("D_001E02B0");
 extern unsigned char D_0013D5C8_b[] __asm__("D_0013D5C8") NOT_SDA;
 
 /* Vendor item panel: draws the selected item's name and description, and for the ammo/alt slots a pulsing price shadow. Adapted from Lombyte (GPL-3.0) for PAL: src/ui/menus/fun_002389e0.c, fun_002389e0. */
-void VendorDrawItemPanel(void) {
+void render_vendor_item_details_pass(void) {
     char buf[0x100];
     int w;
 
-    Framebuf_DrawAlphaRect(0, 0, 0x200, 0x80, 0x200, 0x80, 0);
+    draw_framebuffer_rect(0, 0, 0x200, 0x80, 0x200, 0x80, 0);
     DrawMobyList(D_001E66C0_m.f20 + 0x100, 1);
     DrawMobyList(D_001E66C0_m.f20, 1);
     if (D_001E66C0_m.slots[D_001E66C0_m.idx].kind == 1) {
         func_001F6968_c(6, 8, 0x80F0F0F0L, func_001FE540_id(D_001864D0_t[D_001E66C0_m.slots[D_001E66C0_m.idx].id].text), -1);
         func_001F6968_c(0x18, 0x18, 0x80F0F0F0L, func_001FE540_id(0x4F5D), -1);
-        FormatThousands(buf, D_001E02B0_p[D_001E66C0_m.slots[D_001E66C0_m.idx].id].c);
+        format_scaled_display_value(buf, D_001E02B0_p[D_001E66C0_m.slots[D_001E66C0_m.idx].id].c);
         func_001F6D88_c(0x76, 0x65, 0x80F0F0F0L, buf, -1);
         if (D_001E66C0_m.f40 != 0) {
-            w = MeasureTextWidthRegular((unsigned char *)buf, -1);
+            w = measure_text_width_regular((unsigned char *)buf, -1);
             func_00201640(0x75 - w, 0x6D, 0x7B, 0x70, 0x20959544L, 0);
             func_00201640(0x76 - w, 0x6D, 0x7A, 0x70, 0x30959544L, 0);
             func_00201640(0x77 - w, 0x6D, 0x79, 0x70, 0x40959544L, 0);
@@ -577,16 +577,16 @@ void VendorDrawItemPanel(void) {
             func_00201640(0x79 - w, 0x6D, 0x77, 0x70, 0x60959544L, 0);
             func_00201640(0x7A - w, 0x6D, 0x76, 0x70, 0x70959544L, 0);
             func_00201640(0x7B - w, 0x6D, 0x75, 0x70, 0x80959544L, 0);
-            FormatThousands(buf, D_001E66C0_m.f40 ? D_001E02B0_p[D_001E66C0_m.slots[D_001E66C0_m.idx].id].d
+            format_scaled_display_value(buf, D_001E66C0_m.f40 ? D_001E02B0_p[D_001E66C0_m.slots[D_001E66C0_m.idx].id].d
                                                  : D_001E02B0_p[D_001E66C0_m.slots[D_001E66C0_m.idx].id].c);
             func_001F6D88_c(0x76, 0x55, 0x80F0F0F0L, buf, -1);
         }
     } else {
         func_001F6968_c(6, 8, 0x80F0F0F0L, func_001FE540_id(D_001864D0_t[D_001E66C0_m.slots[D_001E66C0_m.idx].id].text), -1);
-        FormatThousands(buf, D_001E02B0_p[D_001E66C0_m.slots[D_001E66C0_m.idx].id].a);
+        format_scaled_display_value(buf, D_001E02B0_p[D_001E66C0_m.slots[D_001E66C0_m.idx].id].a);
         func_001F6D88_c(0x76, 0x65, D_0013D5C8_b[0x23] ? 0x80808080L : 0x80F0F0F0L, buf, -1);
         if (D_0013D5C8_b[0x23] != 0) {
-            w = MeasureTextWidthRegular((unsigned char *)buf, -1);
+            w = measure_text_width_regular((unsigned char *)buf, -1);
             func_00201640(0x75 - w, 0x6D, 0x7B, 0x70, 0x20959544L, 0);
             func_00201640(0x76 - w, 0x6D, 0x7A, 0x70, 0x30959544L, 0);
             func_00201640(0x77 - w, 0x6D, 0x79, 0x70, 0x40959544L, 0);
@@ -594,7 +594,7 @@ void VendorDrawItemPanel(void) {
             func_00201640(0x79 - w, 0x6D, 0x77, 0x70, 0x60959544L, 0);
             func_00201640(0x7A - w, 0x6D, 0x76, 0x70, 0x70959544L, 0);
             func_00201640(0x7B - w, 0x6D, 0x75, 0x70, 0x80959544L, 0);
-            FormatThousands(buf, D_0013D5C8_b[0x23] ? D_001E02B0_p[D_001E66C0_m.slots[D_001E66C0_m.idx].id].b
+            format_scaled_display_value(buf, D_0013D5C8_b[0x23] ? D_001E02B0_p[D_001E66C0_m.slots[D_001E66C0_m.idx].id].b
                                                  : D_001E02B0_p[D_001E66C0_m.slots[D_001E66C0_m.idx].id].a);
             func_001F6D88_c(0x76, 0x55, 0x80F0F0F0L, buf, -1);
         }
@@ -627,7 +627,7 @@ extern unsigned char D_0013D5EB[];
 extern void func_001153FC(void *, int, int);
 extern void func_001F75D0(void *, long, void *, int);
 
-void func_0023A220(char *unused, int x, int y) {
+void render_vendor_buy_label_pass(char *unused, int x, int y) {
     char sp[0x18];
     VendorA *v;
     int idx;
@@ -635,7 +635,7 @@ void func_0023A220(char *unused, int x, int y) {
     int price;
     int sz = 0x18;
 
-    func_001FBAB8(0, 0, 0x200, 0x80, 0x200, 0x80, 0);
+    draw_framebuffer_rect(0, 0, 0x200, 0x80, 0x200, 0x80, 0);
     ((void *(*)(void *, int, int))func_001153FC)(sp, 0, 0x18);
     *(short *)(sp + 0x2) = y;
     *(short *)(sp + 0x6) = x;
@@ -643,30 +643,30 @@ void func_0023A220(char *unused, int x, int y) {
     *(short *)(sp + 0xA) = (y >> 1) - 7;
     *(short *)(sp + 0x10) = 0x10;
     *(short *)(sp + 0x12) = 1;
-    if (((VendorA *)D_001E66C0)->sel != 0) {
-        if (((VendorA *)D_001E66C0)->slots[((VendorA *)D_001E66C0)->idx].kind == 1 &&
-            D_0013D530[((VendorA *)D_001E66C0)->slots[((VendorA *)D_001E66C0)->idx].type] >=
-                ((WeaponInfoA *)(D_001E02B0 + ((VendorA *)D_001E66C0)->slots[((VendorA *)D_001E66C0)->idx].type * sz))->max) {
+    if (((VendorA *)vendor_state)->sel != 0) {
+        if (((VendorA *)vendor_state)->slots[((VendorA *)vendor_state)->idx].kind == 1 &&
+            weapon_ammo_counts[((VendorA *)vendor_state)->slots[((VendorA *)vendor_state)->idx].type] >=
+                ((WeaponInfoA *)(vendor_item_prices + ((VendorA *)vendor_state)->slots[((VendorA *)vendor_state)->idx].type * sz))->max) {
             m = 0x5238;
         } else {
-            v = (VendorA *)D_001E66C0;
+            v = (VendorA *)vendor_state;
             if (v->slots[v->idx].kind == 1) {
                 if (v->alt) {
-                    price = ((WeaponInfoA *)(D_001E02B0 + v->slots[v->idx].type * 0x18))->priceAlt;
+                    price = ((WeaponInfoA *)(vendor_item_prices + v->slots[v->idx].type * 0x18))->priceAlt;
                 } else {
-                    price = ((WeaponInfoA *)(D_001E02B0 + v->slots[v->idx].type * 0x18))->price;
+                    price = ((WeaponInfoA *)(vendor_item_prices + v->slots[v->idx].type * 0x18))->price;
                 }
                 m = 0x5238;
-                if (D_0015EE98 >= price)
+                if (gBolts >= price)
                     m = 0x5239;
             } else {
                 int cost;
-                if (D_0013D5EB[0] != 0) {
-                    cost = ((struct { WeaponInfoA a[1]; } *)D_001E02B0)->a[v->slots[v->idx].type].second;
+                if (discount_purchase_pricing[0] != 0) {
+                    cost = ((struct { WeaponInfoA a[1]; } *)vendor_item_prices)->a[v->slots[v->idx].type].second;
                 } else {
-                    cost = ((WeaponInfoA *)(D_001E02B0 + v->slots[v->idx].type * 0x18))->first;
+                    cost = ((WeaponInfoA *)(vendor_item_prices + v->slots[v->idx].type * 0x18))->first;
                 }
-                m = D_0015EE98 < cost ? 0x5238 : 0;
+                m = gBolts < cost ? 0x5238 : 0;
             }
         }
     } else {
@@ -726,20 +726,20 @@ void VendorDrawAmmoPrompt(void) {
     int idx;
     int price;
 
-    Framebuf_DrawAlphaRect(0, 0, 0x200, 0x80, 0x200, 0x80, 0);
+    draw_framebuffer_rect(0, 0, 0x200, 0x80, 0x200, 0x80, 0);
     v = &D_001E66C0_v;
     if (v->sel != 0) {
         idx = v->idx;
         if (v->slots[idx].kind == 1 &&
-            D_0013D530[v->slots[idx].type] >=
-                ((WeaponInfo *)(D_001E02B0 + v->slots[idx].type * 0x18))->max) {
+            weapon_ammo_counts[v->slots[idx].type] >=
+                ((WeaponInfo *)(vendor_item_prices + v->slots[idx].type * 0x18))->max) {
             return;
         }
         if (v->slots[idx].kind == 1) {
             if (v->alt) {
-                price = ((WeaponInfo *)(D_001E02B0 + v->slots[idx].type * 0x18))->priceAlt;
+                price = ((WeaponInfo *)(vendor_item_prices + v->slots[idx].type * 0x18))->priceAlt;
             } else {
-                price = ((WeaponInfo *)(D_001E02B0 + v->slots[idx].type * 0x18))->price;
+                price = ((WeaponInfo *)(vendor_item_prices + v->slots[idx].type * 0x18))->price;
             }
             if (gBolts >= price) {
                 func_001F6F40_c(0x28, 0x14, 0x80F0F0F0L, func_001FE540_id(0x4EE0), -1);
@@ -765,7 +765,7 @@ extern f32 func_001FA888(s32);
 extern void func_001F5988(f32, f32, f32, f32, s32, s32, s32, s32, u64, s64);
 
 /* Adapted from Lombyte (GPL-3.0) for PAL by OpenRAC's tools/port.py: src/textbin/render_vendor_capture_texture_overlays_pass.c, render_vendor_capture_texture_overlays_pass. */
-void func_0023A5E0(s32 pass_index, f32 capture_width,
+void render_vendor_capture_texture_overlays_pass(s32 pass_index, f32 capture_width,
                                                  f32 capture_height) {
     s32 flash_timer;
     s32 scroll_opacity;
@@ -778,11 +778,11 @@ void func_0023A5E0(s32 pass_index, f32 capture_width,
     s32 overlay_width;
 
     func_00234C98_3A5E0(0x47, 0x32003);
-    if (D_001E6920[pass_index] != 0 || pass_index == 0) {
-        if (D_001E6920[pass_index] != 0) {
-            D_001E6920[pass_index] += 2;
+    if (vendor_flash_timers[pass_index] != 0 || pass_index == 0) {
+        if (vendor_flash_timers[pass_index] != 0) {
+            vendor_flash_timers[pass_index] += 2;
         }
-        flash_timer = D_001E6920[pass_index];
+        flash_timer = vendor_flash_timers[pass_index];
         if (pass_index == 0) {
             /* The floor changes this frame's opacity, not the stored timer. */
             if (flash_timer < 0x18) {
@@ -792,51 +792,51 @@ void func_0023A5E0(s32 pass_index, f32 capture_width,
         random_u = random_integer_below(200);
         random_v = random_integer_below(200);
         zero_offset = 0.0f;
-        flash_opacity = 0x80 - func_001F9B70(flash_timer - 0x80);
+        flash_opacity = 0x80 - subtract_integer_with_clamp(flash_timer - 0x80);
         func_00234C98_3A5E0(8, 0);
         flash_opacity *= 2;
         if (flash_opacity > 0x80)
             flash_opacity = 0x80;
         func_00234C98_3A5E0(0x42, ((u64)flash_opacity << 32) | 0x68);
-        func_001F5988(0.0f, 0.0f, capture_width, capture_height,
+        append_subpixel_textured_screen_quad(0.0f, 0.0f, capture_width, capture_height,
                                              random_u + zero_offset, random_v + zero_offset,
                                              capture_width + random_u, capture_height + random_v,
                                              0x808080, func_001F4868_3A5E0(0x1A));
-        if (D_001E6920[pass_index] >= 0x100) {
-            D_001E6920[pass_index] = 0;
+        if (vendor_flash_timers[pass_index] >= 0x100) {
+            vendor_flash_timers[pass_index] = 0;
         }
     }
-    if (D_001E6920[pass_index] == 0 && random_integer_below(700) == 0) {
-        D_001E6920[pass_index] = 2;
+    if (vendor_flash_timers[pass_index] == 0 && random_integer_below(700) == 0) {
+        vendor_flash_timers[pass_index] = 2;
     }
     func_00234C98_3A5E0(8, 0);
     func_00234C98_3A5E0(0x42, 0x8000000044ULL);
     if (pass_index > 0) {
-        if (D_001E6940[pass_index] != 0) {
-            D_001E6940[pass_index] += 2;
+        if (vendor_scroll_timers[pass_index] != 0) {
+            vendor_scroll_timers[pass_index] += 2;
             overlay_width = capture_width;
             scroll_opacity =
-                0x100 - func_001F9B70(D_001E6940[pass_index] - 0x100);
+                0x100 - subtract_integer_with_clamp(vendor_scroll_timers[pass_index] - 0x100);
             if (scroll_opacity > 0x50) {
                 scroll_opacity = 0x50;
             }
             scroll_offset =
-                -(IntToFloat(0x200 - D_001E6940[pass_index]) * 0.03125f);
+                -(IntToFloat(0x200 - vendor_scroll_timers[pass_index]) * 0.03125f);
             overlay_height = capture_height + 16.0f;
-            func_001F5988(0.0f, scroll_offset, capture_width, overlay_height,
+            append_subpixel_textured_screen_quad(0.0f, scroll_offset, capture_width, overlay_height,
                                                  0, 0, overlay_width, (s32)(overlay_height * 1.5f),
                                                  (scroll_opacity << 24) | 0x505050,
                                                  func_001F4868_3A5E0(0x1C));
-            if (D_001E6940[pass_index] >= 0x200) {
-                D_001E6940[pass_index] = 0;
+            if (vendor_scroll_timers[pass_index] >= 0x200) {
+                vendor_scroll_timers[pass_index] = 0;
             }
         } else if (random_integer_below(360) == 0) {
-            D_001E6940[pass_index] = 2;
+            vendor_scroll_timers[pass_index] = 2;
         }
     }
     if (pass_index == 6) {
         /* The known capture coordinator supplies only passes zero through five. */
-        func_001F5988(0.0f, 0.0f, capture_width, capture_height, 0, 0, 0x40,
+        append_subpixel_textured_screen_quad(0.0f, 0.0f, capture_width, capture_height, 0, 0, 0x40,
                                              0x40, 0x80808080, func_001F4868_3A5E0(0x19));
     }
 }
@@ -851,14 +851,14 @@ extern void func_00234C98_l(int, long) __asm__("func_00234C98");
    524288, 255, 0); then GS registers 0x47 and 0x42 are written through
    func_00234C98, whose value argument is 64-bit (hence the long alias,
    which builds 0x8000000044 as one dli). */
-void Framebuf_AllocRenderTarget(int a, int b, float f) {
+void configure_capture_target(int a, int b, float f) {
     int t = a + b;
 
     if (t > 16) {
         t = 16;
     }
-    Framebuf_SetRenderTarget(a, b, ((0x3FF000 - (4 << t)) >> 13) << 13);
-    SetScreenSize(1 << a, 1 << b, f, 0.0f, 524288.0f, 255.0f, 0.0f);
+    setup_render_target(a, b, ((0x3FF000 - (4 << t)) >> 13) << 13);
+    configure_graphics_projection(1 << a, 1 << b, f, 0.0f, 524288.0f, 255.0f, 0.0f);
     func_00234C98_l(0x47, 0x30000);
     func_00234C98_l(0x42, 0x8000000044L);
 }
@@ -867,7 +867,7 @@ void Framebuf_AllocRenderTarget(int a, int b, float f) {
 __asm__(".section .text\n\tnop\n");
 
 
-void setupViewContext(void) {
+void setup_view_context(void) {
     PutDrawBufferLarge();
     InitViewContext();
     UpdateViewContext();
@@ -894,7 +894,7 @@ extern void func_0023A478_3AA38(char *) __asm__("func_0023A478");
 extern void func_00239A00_3AA38(char *) __asm__("func_00239A00");
 
 /* Renders the six vendor monitor screens: projects each screen's joint box, renders its view off-screen and draws it back. */
-void VendorDrawScreens(char *m) {
+void render_vendor_capture_pass_sequence(char *m) {
     float len;
     float f;
     float g;
@@ -914,28 +914,28 @@ void VendorDrawScreens(char *m) {
         u128_3AA38 b[1];
         float sx, sy, sw, sh;
         float x, y, w, h;
-        MobyTransformScaledVertexBatch(m, 3, ids, (char *)out);
+        transform_scaled_vertex_batch(m, 3, ids, (char *)out);
         qcopy(base, out);
         FastVecSub(d1, &out[1], out);
         FastVecSub(d2, &out[2], out);
         len = FastVecLength(d1);
-        func_001F9DC0(tmp, d1, D_001E6518[i][0]);
+        func_001F9DC0(tmp, d1, capture_bounds_adjustments[i][0]);
         FastVecAdd(base, base, tmp);
-        func_001F9DC0(d1, d1, len - 2.0f * D_001E6518[i][2]);
+        func_001F9DC0(d1, d1, len - 2.0f * capture_bounds_adjustments[i][2]);
         len = FastVecLength(d2);
-        func_001F9DC0(tmp, d2, D_001E6518[i][1]);
+        func_001F9DC0(tmp, d2, capture_bounds_adjustments[i][1]);
         FastVecAdd(base, base, tmp);
-        func_001F9DC0(d2, d2, len - 2.0f * D_001E6518[i][3]);
+        func_001F9DC0(d2, d2, len - 2.0f * capture_bounds_adjustments[i][3]);
         FastVecAdd(tmp, base, d1);
         FastVecAdd(tmp, tmp, d2);
-        func_00238F98(base, tmp, &sx, &sy, &sw, &sh);
-        if (D_00161398 != 0 || *(int *)&D_001613A0 != 0) {
+        project_graphics_bounds_float(base, tmp, &sx, &sy, &sw, &sh);
+        if (capture_primary_transition != 0 || *(int *)&capture_secondary_transition_active != 0) {
             f = 1.0f;
-            if (*(int *)&D_001613A0 != 0) {
-                f = IntToFloat(8 - *(int *)&D_0016139C) * 0.125f;
+            if (*(int *)&capture_secondary_transition_active != 0) {
+                f = IntToFloat(8 - *(int *)&capture_secondary_transition_step) * 0.125f;
             }
-            if (D_00161398 != 0) {
-                f = IntToFloat(*(int *)&D_00161394) * 0.125f;
+            if (capture_primary_transition != 0) {
+                f = IntToFloat(*(int *)&capture_primary_transition_step) * 0.125f;
             }
             len = FastVecLength(d1);
             g = 1.0f - f;
@@ -953,9 +953,9 @@ void VendorDrawScreens(char *m) {
         FastVecAdd(&c[3], &c[2], d1);
         a[0] = c[0];
         b[0] = c[3];
-        func_00238F98(a, b, &x, &y, &w, &h);
-        Framebuf_AllocRenderTarget(9, 7, 1.0f);
-        Framebuf_ClearScreen(0x200, 0x200);
+        project_graphics_bounds_float(a, b, &x, &y, &w, &h);
+        configure_capture_target(9, 7, 1.0f);
+        draw_centered_capture_background(0x200, 0x200);
         func_00234C98_l(0x42, 0x8000000064L);
         switch (i) {
         case 0:
@@ -968,7 +968,7 @@ void VendorDrawScreens(char *m) {
             func_00239948_3AA38(m);
             break;
         case 3:
-            func_0023A220(m, (int)x, (int)y);
+            render_vendor_buy_label_pass(m, (int)x, (int)y);
             break;
         case 4:
             func_0023A478_3AA38(m);
@@ -977,19 +977,19 @@ void VendorDrawScreens(char *m) {
             func_00239A00_3AA38(m);
             break;
         }
-        func_0023A5E0(i, x, y);
-        setupViewContext();
-        Framebuf_ClearScreen(0x200, 0x200);
+        render_vendor_capture_texture_overlays_pass(i, x, y);
+        setup_view_context();
+        draw_centered_capture_background(0x200, 0x200);
         func_00234C98_l(0x42, 0x8000000064L);
         func_00234C98_l(8, 5);
         VU1_texFlush();
         tex = D_0015EFD0;
         if (D_0015EE80 != 0) {
-            func_001F5988(w, h, x, y, 0, 0, (int)(sx - 1.0f),
+            append_subpixel_textured_screen_quad(w, h, x, y, 0, 0, (int)(sx - 1.0f),
                           func_001FA898_3AA38(sy * 0.92857146f - 1.0f),
                           0x80808080, tex);
         } else {
-            func_001F5988(w, h, x, y, 0, 0, (int)(sx - 1.0f), (int)(sy - 1.0f),
+            append_subpixel_textured_screen_quad(w, h, x, y, 0, 0, (int)(sx - 1.0f), (int)(sy - 1.0f),
                           0x80808080, tex);
         }
         func_00234C98_l(8, 0);
@@ -1018,10 +1018,10 @@ int FindZoneAtPoint(float x, float y, float z) {
     int ix = func_001FA898_i(x * 1024.0f);
     int iy = func_001FA898_i(y * 1024.0f);
     int iz = func_001FA898_i(z * 1024.0f);
-    ZoneBox *b = D_00161294;
+    ZoneBox *b = occl_cell_table;
     int i;
 
-    for (i = 0; i < D_00161298; i++, b++) {
+    for (i = 0; i < occl_cell_count; i++, b++) {
         char *zn;
         int cx;
         int cy;
@@ -1033,9 +1033,9 @@ int FindZoneAtPoint(float x, float y, float z) {
         if (ix >= b->x + b->w || iy >= b->y + b->h || iz >= b->z + 0x800) {
             continue;
         }
-        zn = D_00161290 + i * 0x1190;
-        cx = func_001FA898_i((x - (*(float *)(zn + 0) + D_001E69E0[2])) / D_001E69E0[4]);
-        cy = func_001FA898_i((y - (*(float *)(zn + 4) + D_001E69E0[3])) / D_001E69E0[5]);
+        zn = surface_height_tiles + i * 0x1190;
+        cx = func_001FA898_i((x - (*(float *)(zn + 0) + surface_height_grid[2])) / surface_height_grid[4]);
+        cy = func_001FA898_i((y - (*(float *)(zn + 4) + surface_height_grid[3])) / surface_height_grid[5]);
         bit = 1 << (((cx >> 2) & 3) | (cy & 0xC));
         if (*(unsigned short *)(zn + 0x1E) & bit) {
             return i;
@@ -1081,7 +1081,7 @@ extern void func_001F9CA0(f32 *, f32 *, f32 *);
 extern void func_001F9DC0_3B210(f32 *, f32 *, f32) __asm__("func_001F9DC0");
 
 /* Adapted from Lombyte (GPL-3.0) for PAL by OpenRAC's tools/port.py: src/textbin/fun_00239f58.c, sample_surface_height_map. */
-s32 SampleSurfaceHeight(f32 *height, f32 *normal, f32 x, f32 y, f32 z) {
+s32 sample_surface_height_map(f32 *height, f32 *normal, f32 x, f32 y, f32 z) {
     f32 x_tangent[4] __attribute__((aligned(16)));
     f32 y_tangent[4] __attribute__((aligned(16)));
     SurfaceHeightTile *tile;
@@ -1116,27 +1116,27 @@ s32 SampleSurfaceHeight(f32 *height, f32 *normal, f32 x, f32 y, f32 z) {
     fraction_y -= IntToFloat(row) * D_001E69E0_3B210.cell_height;
     /* Divide the signed remainder after rounding the row, before choosing the sample bank. */
     weight_y = fraction_y / D_001E69E0_3B210.cell_height;
-    h00 = tile->layers[(*(s32 *)&D_001611E0)].samples[row][column];
+    h00 = tile->layers[(*(s32 *)&surface_height_layer)].samples[row][column];
     if (column == 15) {
-        h10 = tile->layers[(*(s32 *)&D_001611E0)].right_edge[row];
+        h10 = tile->layers[(*(s32 *)&surface_height_layer)].right_edge[row];
     } else {
-        h10 = tile->layers[(*(s32 *)&D_001611E0)].samples[row][column + 1];
+        h10 = tile->layers[(*(s32 *)&surface_height_layer)].samples[row][column + 1];
     }
     if (row == 15) {
-        h01 = tile->layers[(*(s32 *)&D_001611E0)].bottom_edge[column];
+        h01 = tile->layers[(*(s32 *)&surface_height_layer)].bottom_edge[column];
     } else {
-        h01 = tile->layers[(*(s32 *)&D_001611E0)].samples[row + 1][column];
+        h01 = tile->layers[(*(s32 *)&surface_height_layer)].samples[row + 1][column];
     }
     if (column == 15) {
         if (row == 15) {
-            h11 = tile->layers[(*(s32 *)&D_001611E0)].corner;
+            h11 = tile->layers[(*(s32 *)&surface_height_layer)].corner;
         } else {
-            h11 = tile->layers[(*(s32 *)&D_001611E0)].right_edge[row + 1];
+            h11 = tile->layers[(*(s32 *)&surface_height_layer)].right_edge[row + 1];
         }
     } else if (row == 15) {
-        h11 = tile->layers[(*(s32 *)&D_001611E0)].bottom_edge[column + 1];
+        h11 = tile->layers[(*(s32 *)&surface_height_layer)].bottom_edge[column + 1];
     } else {
-        h11 = tile->layers[(*(s32 *)&D_001611E0)].samples[row + 1][column + 1];
+        h11 = tile->layers[(*(s32 *)&surface_height_layer)].samples[row + 1][column + 1];
     }
     if (height != 0) {
         first_row_height = h00 + (h10 - h00) * weight_x;
@@ -1177,7 +1177,7 @@ void func_0023B578(char *arg0) {
         *(float *)(arg0 + 0x54) = f2;
         *(float *)(arg0 + 0x58) = f1;
     }
-    QuadMoby_UpdateEdgeLengths(arg0);
+    update_instance_attachment_points_and_lengths(arg0);
 }
 
 typedef struct {
@@ -1194,14 +1194,14 @@ extern void func_001F9BF0_b(void *, void *, void *) __asm__("func_001F9BF0");
    unaligned ldl/ldr + sdl/sdr pairs, which is retail's shape -- same
    idiom as func_001FFE88), then record the two resulting lengths at
    +0x40 and +0x44. */
-void QuadMoby_UpdateEdgeLengths(char *arg0) {
+void update_instance_attachment_points_and_lengths(char *arg0) {
     float a[4];
     float b[4];
     Cfg16 cfg;
     char *p = *(char **)(arg0 + 0x78);
 
     cfg = D_00160FD0;
-    MobyTransformScaledVertexBatch(arg0, 4, &cfg, p);
+    transform_scaled_vertex_batch(arg0, 4, &cfg, p);
     func_001F9BF0_b(a, p + 0x10, p);
     func_001F9BF0_b(b, p + 0x20, p);
     *(float *)(p + 0x40) = FastVecLength(a);

@@ -21,7 +21,7 @@
 #include "renderer/shader.h"
 #include "renderer_gl_context.h"
 #include "renderer_shaders.h"
-#include "viewer_shaders.h"
+#include "scene_shaders.h"
 
 namespace {
 
@@ -109,10 +109,10 @@ int main() {
         return openrac::test::failures() == 0 ? openrac::test::kSkip : openrac::test::result();
     }
     namespace renderer_src = openrac::renderer::shaders;
-    namespace viewer_src = openrac::viewer::shaders;
+    namespace viewer_src = openrac::scene::shaders;
     build("direct", renderer_src::direct_vert, renderer_src::direct_frag);
     build("effect", renderer_src::effect_vert, renderer_src::direct_frag);
-    const std::string mesh_fragment = openrac::viewer::probe_mesh_fragment();
+    const std::string mesh_fragment = openrac::lighting::probe_mesh_fragment(viewer_src::mesh_frag);
     build("mesh", viewer_src::mesh_vert, mesh_fragment.c_str());
     if (openrac::gl::enhanced_rendering_available()) {
         build("shadow depth", viewer_src::shadow_depth_vert, viewer_src::hero_shadow_frag);
@@ -129,7 +129,7 @@ int main() {
         CHECK(shadow_solid.uniform("material_colour") == -1);
         shadow_solid.release();
     }
-    // The static layers' opaque pass (viewer/level_renderer.cpp, m_solid).
+    // The static layers' opaque pass (scene/level_renderer.cpp, m_solid).
     std::string solid(mesh_fragment);
     solid.insert(solid.find('\n') + 1, "#define OPENRAC_SOLID 1\n");
     build("mesh (solid)", viewer_src::mesh_vert, solid.c_str());

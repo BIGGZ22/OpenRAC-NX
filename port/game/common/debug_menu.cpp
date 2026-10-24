@@ -15,13 +15,11 @@
 #include "openrac/game_host.h"
 #include "openrac/guest.h"
 #include "options_menu.h"
-#include "renderer/gl.h"
+#include "renderer/ui/picture_blit.h"
 
 namespace openrac::frontend::debug_menu {
 
 namespace {
-
-using namespace openrac::gl;
 
 constexpr int kMaxLevels = 19;  // the most the menu's picture holds
 
@@ -57,9 +55,7 @@ struct State {
     // or Space) reached the game's menu and left a black screen instead of the level.
     bool launched = false;
     std::uint16_t previous = 0xFFFF;  // pad 0 as last seen (active low)
-    // GL: the menu's picture and a framebuffer to blit it from.
-    unsigned texture = 0;
-    unsigned framebuffer = 0;
+    renderer::ui::PictureBlit blit;   // Draws the menu's picture over the frame.
 };
 State s;
 
@@ -433,40 +429,17 @@ void draw(unsigned framebuffer, int width, int height) {
     }
     // The menu is only open in a game with a front end (available()).
     const Picture p = make_picture(*front_end());
-    if (s.texture == 0) {
-        glGenTextures(1, &s.texture);
-        glGenFramebuffers(1, &s.framebuffer);
-    }
-    glBindTexture(GL_TEXTURE_2D, s.texture);
-    glPixelStorei(GL_UNPACK_ALIGNMENT, 4);
-    glTexImage2D(GL_TEXTURE_2D, 0, static_cast<GLint>(GL_RGBA8), p.width, p.height, 0, GL_RGBA,
-                 GL_UNSIGNED_BYTE, p.rgba.data());
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, static_cast<GLint>(GL_NEAREST));
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, static_cast<GLint>(GL_NEAREST));
-    glBindFramebuffer(GL_READ_FRAMEBUFFER, s.framebuffer);
-    glFramebufferTexture2D(GL_READ_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, s.texture, 0);
-    glBindFramebuffer(GL_DRAW_FRAMEBUFFER, framebuffer);
-    glDisable(GL_SCISSOR_TEST);
     // The picture in the chip's pixels: the frame is the game's 512 x 448 scaled.
     const float sx = static_cast<float>(width) / 512.0f;
     const float sy = static_cast<float>(height) / 448.0f;
     const int w = static_cast<int>(static_cast<float>(p.width) * sx);
     const int h = static_cast<int>(static_cast<float>(p.height) * sy);
-    const int x0 = (width - w) / 2;
-    const int y0 = (height - h) / 2;
-    // The picture's first row is its top; GL's framebuffer counts rows from the bottom.
-    glBlitFramebuffer(0, 0, p.width, p.height, x0, y0 + h, x0 + w, y0, GL_COLOR_BUFFER_BIT, GL_NEAREST);
-    glBindFramebuffer(GL_READ_FRAMEBUFFER, 0);
-    glBindFramebuffer(GL_DRAW_FRAMEBUFFER, 0);
+    const renderer::ui::PictureRect centred{(width - w) / 2, (height - h) / 2, w, h};
+    s.blit.draw(framebuffer, {p.rgba, p.width, p.height}, centred);
 }
 
 void release() {
-    if (s.texture != 0) {
-        glDeleteTextures(1, &s.texture);
-        glDeleteFramebuffers(1, &s.framebuffer);
-        s.texture = 0;
-        s.framebuffer = 0;
-    }
+    s.blit.release();
 }
 
 }  // namespace openrac::frontend::debug_menu

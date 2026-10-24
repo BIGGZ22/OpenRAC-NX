@@ -12,7 +12,7 @@ int Hud_ClosePopupIfActive(int a) {
         if (D_L00_00161F04 != -1) {
             D_L00_0015F670 = 0;
             D_L00_0015F674 = 0;
-            Hud_RemoveBank(D_L00_00161F04);
+            remove_hud_item(D_L00_00161F04);
             D_L00_00161F04 = -1;
             return 1;
         }

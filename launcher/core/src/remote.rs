@@ -983,16 +983,21 @@ pub struct Update {
 
 /// What each source not pinned offers that is newer: a release with a newer version built for
 /// this computer, or, for a script mod or a data pack with no release, a newer commit. A source that cannot be read
-/// now is left out (`errors` says which).
+/// now is left out (`errors` says which, once per address with the mods it holds).
+///
+/// Each address is read once, however many of its mods are installed: a repository of several
+/// mods would otherwise cost GitHub's anonymous allowance (60 requests an hour) a read per mod.
 pub fn check_updates(ctx: &Context) -> (Vec<Update>, Vec<String>) {
     let mut updates = Vec::new();
-    let mut errors = Vec::new();
+    let mut read: BTreeMap<String, Result<Preview, String>> = BTreeMap::new();
+    let mut failed: BTreeMap<String, Vec<String>> = BTreeMap::new();
     for (id, s) in read_sources(ctx.dir).mods {
         if s.pin {
             continue;
         }
-        match preview(ctx, &s.url) {
-            Err(e) => errors.push(format!("{id}: {e}")),
+        let got = read.entry(s.url.clone()).or_insert_with(|| preview(ctx, &s.url));
+        match got {
+            Err(_) => failed.entry(s.url.clone()).or_default().push(id),
             Ok(p) => {
                 let Some(m) = p.mods.iter().find(|m| m.id == id && m.compatible) else { continue };
                 let newer = match (plugins::parse_version(&m.version), plugins::parse_version(&s.version)) {
@@ -1012,6 +1017,13 @@ pub fn check_updates(ctx: &Context) -> (Vec<Update>, Vec<String>) {
             }
         }
     }
+    let errors = failed
+        .into_iter()
+        .map(|(url, ids)| match &read[&url] {
+            Err(e) => format!("{}: {e}", ids.join(", ")),
+            Ok(_) => unreachable!("only unread addresses fail"),
+        })
+        .collect();
     (updates, errors)
 }
 
@@ -1565,10 +1577,20 @@ mod tests {
         let r1 = release(&mut fx, "v1.0.0", "m", "1.0.0", Some(String::new()), false);
         repo(&mut fx, &[("openrac-mod.json", manifest("m", "1.0.0"))], serde_json::json!([r1]), "c1");
         assert!(check_updates(&ctx(dir.path(), &fx)).0.is_empty());
+        // Two mods from one repository: it is read once, and its failure said once for both.
+        let mut sources = read_sources(dir.path());
+        let same = sources.mods["m"].clone();
+        sources.mods.insert("n".into(), same);
+        write_sources(dir.path(), &sources).unwrap();
+        fx.asked.borrow_mut().clear();
+        assert!(check_updates(&ctx(dir.path(), &fx)).0.is_empty());
+        assert_eq!(fx.asked.borrow().iter().filter(|u| u.contains("/releases?")).count(), 1, "one read per address");
         // A source that cannot be read is said, not fatal.
         let empty = Fixture::default();
         let (u, errors) = check_updates(&ctx(dir.path(), &empty));
-        assert!(u.is_empty() && errors.len() == 1);
+        assert!(u.is_empty());
+        assert_eq!(errors.len(), 1, "{errors:?}");
+        assert!(errors[0].starts_with("m, n: "), "{errors:?}");
     }
 
     #[test]

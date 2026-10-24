@@ -113,9 +113,6 @@ restructure package that removes it
 | Edge | Includes | Removed by |
 |---|---|---|
 | platform -> renderer/vulkan | `platform/window.cpp` opens the Vulkan backend | no package yet |
-| renderer -> enhanced | `renderer/renderer.h` includes GTAO's headers | P2-07 (renderer owns the interface, enhanced registers) |
-| enhanced -> viewer | the probe tools and probe lighting include `viewer/level.h` | P2-02 (level) |
-| game/common -> viewer | `frontend.cpp`, `main.cpp` and `debug_overlay.*` include the viewer's world drawing and game state | P2-02 (world drawing), P2-03 (game state) |
 
 The list only shrinks. A new include against the layers fails the check and
 is fixed in the change that adds it: move the code to the right module, or

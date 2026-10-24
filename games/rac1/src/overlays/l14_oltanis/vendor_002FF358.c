@@ -36,7 +36,7 @@ extern int func_001F9850_2FF358(int) __asm__("func_001F9850");
 extern int func_L00_00258BC8_2FF358(int, int) __asm__("func_L00_00258BC8");
 
 /* Spawns the effect pieces for a moby: two sparks, the ring of three and a final coloured one. */
-void SpawnHitSparkPieces(Moby *p) {
+void spawn_moby_offset_puffs(Moby *p) {
     Vec_2FF358 A;
     Vec_2FF358 B;
     Vec_2FF358 C;
@@ -112,7 +112,7 @@ void SpawnHitSparkPieces(Moby *p) {
 extern char *D_L14_00160098 MACRO_ADDR;
 extern void func_0020D678(void *);
 /* deletes the linked moby and then the owner if still active */
-void DeleteLinkedAndSelf(char *moby) {
+void mark_moby_and_linked_moby_for_removal(char *moby) {
  char *data=*(char **)(moby+0x78);
  char *other=D_L14_00160098+(*(int *)(data+4)<<8);
  if(other!=0 && other[0x20]>=0) DeleteMoby(other);
@@ -279,7 +279,7 @@ void BoltThiefUpdate(L14Moby *m) {
                 DeleteMoby(m);
                 return;
             }
-            MobyDualPathInit(m);
+            initialize_moby_path_state(m);
             m->state = 2;
             m->collision = 0x80;
             m->flags |= 0x41;
@@ -293,7 +293,7 @@ void BoltThiefUpdate(L14Moby *m) {
         MobySpringTurn((char *)m,
                           func_L00_001FF860(hero->position[0] - m->position[0], hero->position[1] - m->position[1]),
                           &d->turn, 0.005f, 0.2f, 0.0f);
-        SpawnEngineTrailParticles(m);
+        emit_moby_offset_particles(m);
         break;
     }
     case 2:
@@ -301,8 +301,8 @@ void BoltThiefUpdate(L14Moby *m) {
             if (d->mode == 1) {
                 MobySetAnimation(m, 0, 0);
             } else {
-                d->child = Moby933Spawn(m, m->position);
-                AttachLinkedMobyToTransform(m);
+                d->child = spawn_floating_mine(m, m->position);
+                update_linked_moby_position(m);
                 MobySetAnimation(m, 2, 0);
             }
             m->flags &= 0xFFBE;
@@ -312,12 +312,12 @@ void BoltThiefUpdate(L14Moby *m) {
         break;
     case 4:
         if (d->mode == 0)
-            AttachLinkedMobyToTransform(m);
-        if (FollowPathSmoothed((char *)m)) {
+            update_linked_moby_position(m);
+        if (update_bolt_thief_path_movement((char *)m)) {
             m->state = 3;
             MobyBlendAnimation(m, 3, 0, 5);
         }
-        SpawnEngineTrailParticles(m);
+        emit_moby_offset_particles(m);
         break;
     case 3: {
         L14Data *a = m->data;
@@ -326,7 +326,7 @@ void BoltThiefUpdate(L14Moby *m) {
         float zero;
 
         if (a->mode == 0)
-            AttachLinkedMobyToTransform(m);
+            update_linked_moby_position(m);
         qcopy(target, path + *(int *)path * 16);
         zero = 0.0f;
         Spring(m->position, &a->vx, target[0], *(float *)&D_L14_0016208C, *(float *)&D_L14_00162090, zero);
@@ -348,11 +348,11 @@ void BoltThiefUpdate(L14Moby *m) {
                 a->counter = 0;
             }
         }
-        SpawnEngineTrailParticles(m);
+        emit_moby_offset_particles(m);
         break;
     }
     case 5:
-        if (FollowPathSmoothed((char *)m)) {
+        if (update_bolt_thief_path_movement((char *)m)) {
             char *path;
 
             m->state = 2;
@@ -366,11 +366,11 @@ void BoltThiefUpdate(L14Moby *m) {
             m->rotation[2] = func_L00_001FF860(*(float *)(path + 0x20) - *(float *)(path + 0x10),
                                                *(float *)(path + 0x24) - *(float *)(path + 0x14));
         } else {
-            SpawnEngineTrailParticles(m);
+            emit_moby_offset_particles(m);
         }
         break;
     case 6:
-        if (StepMobyPhysics(m, d->knock) & 3) {
+        if (mine_fall(m, d->knock) & 3) {
             SpawnExplosionFx(m, m->position, -1, 1.0f, 13.0f);
             DeleteMoby(m);
             return;
@@ -394,7 +394,7 @@ extern float func_L00_001FF860(float, float);
 
 /* Samples a path table with func_L00_0025E860 and eases the moby's x, y and z toward the result;
  * returns that call's result. */
-int FollowPathSmoothed(char *moby) {
+int update_bolt_thief_path_movement(char *moby) {
     float pos[4];
     float delta[4];
     char *data = *(char **)(moby + 0x78);
@@ -458,7 +458,7 @@ extern unsigned char D_0014171B[] NOT_SDA;
 /* Update function of moby class 924: a state machine on the byte at +0x20 (state 0 waits until the moby may
  * start, state 1 tracks the hero and fills D_L14_0016D060, state 2 marks the moby done and deletes it, as state
  * 3 does), then the aiming tail on the countdowns at data + 0x160 and 0x164. */
-void Moby924Update(char *m) {
+void sam_update(char *m) {
     char *d = *(char **)(m + 0x78);
     AttachManipulatorsIfCheat(m);
     switch (*(unsigned char *)(m + 0x20)) {
@@ -482,9 +482,9 @@ void Moby924Update(char *m) {
         if (*(unsigned char *)(d + 8) == 1 && is_point_inside_clip_volume(D_0013E633 + 0xE9D, *(int *)(d + 0x40)) != 0) {
             if ((D_0014171B + 0xAA35)[*(unsigned char *)(m + 0xB0) + (D_0015EE84 << 4)] != 0xFF) {
                 char *t;
-                SetLevelTriggerDone((unsigned char)m[0xB0]);
+                jet_clear_persistent((unsigned char)m[0xB0]);
                 t = D_L14_001601AC_300468 + (*(int *)(d + 0x44) << 7);
-                PauseMenu_SeedSnapshot(t + 0x30, t + 0x70);
+                jet_reset_camera(t + 0x30, t + 0x70);
             }
             *(float *)(d + 0xC) = 255.0f;
         } else {
@@ -504,7 +504,7 @@ void Moby924Update(char *m) {
         if (D_L14_0015F6A8 == 2) break;
         m[0x20] = 1;
         if (*(short *)(d + 4) != 4) break;
-        UnlockPlanet(0xF);
+        unlock_planet(0xF);
         ShowPlanetBanner(0xF);
         *(int *)(D_0014171B + 0xAB75 + (((short)*(unsigned short *)(m + 0xB2) >> 5) * 4 + (D_0015EE84 << 8))) |= 1 << (*(unsigned short *)(m + 0xB2) & 0x1F);
         D_L14_001BAF60[(short)*(unsigned short *)(m + 0xB2) >> 5] |= 1 << (*(unsigned short *)(m + 0xB2) & 0x1F);
@@ -620,7 +620,7 @@ extern Rgb_2288 D_L14_00162178;
 extern float D_0015EE60 MACRO_ADDR;
 
 /* Moby update for a bouncing spark projectile. */
-void BouncingSparkUpdate(Moby *m)
+void update_bouncing_spark(Moby *m)
 {
   Spark_2288 *d = (Spark_2288 *) m->pvars;
   Vec4f next;
@@ -840,7 +840,7 @@ extern void func_L02_002A5238(char *, float, int);
 extern void func_001F49B0(void (*)(void), void *);
 
 /* Moby update: init once, then draw each frame. */
-void AmbientStreamL14Update(unsigned char *moby) {
+void update_moby_draw_registration(unsigned char *moby) {
     switch (moby[0x20]) {
     case 0:
         ScaleTableIntoBuffer(D_L14_001E9FA0, 0.6666667f, 0x40);
@@ -868,7 +868,7 @@ extern void func_L14_00306B08_06890(struct Moby *) __asm__("func_L14_00306B08");
 
 /* Moby that unlocks once: skips straight to done if this level already recorded it, otherwise waits for its trigger moby to reach state 2, records the unlock in the level's bit sets and runs a countdown.
    Adapted from Lombyte (GPL-3.0) for PAL by OpenRAC's tools/port.py: src/overlays/l14/gameplay/vendor/00300e00.c, FUN_L14_00305408. */
-void TriggeredUnlockUpdate(unsigned char *moby) {
+void update_unlock_sequence_controller(unsigned char *moby) {
     int *d = *(int **)(moby + 0x78);
     short id;
 
@@ -883,7 +883,7 @@ void TriggeredUnlockUpdate(unsigned char *moby) {
             moby[0x20] = 3;
             return;
         }
-        if (D_0014C290[D_0015EE84][id >> 5] >> (*(unsigned short *)(moby + 0xB2) & 0x1F) & 1) {
+        if (level_moby_killed[D_0015EE84][id >> 5] >> (*(unsigned short *)(moby + 0xB2) & 0x1F) & 1) {
             moby[0x20] = 3;
             return;
         }
@@ -894,7 +894,7 @@ void TriggeredUnlockUpdate(unsigned char *moby) {
         if (((unsigned char *)D_L14_00160098)[d[3] * 0x100 + 0x20] != 2) {
             return;
         }
-        D_0014C290[D_0015EE84][*(short *)(moby + 0xB2) >> 5] |= 1 << (*(unsigned short *)(moby + 0xB2) & 0x1F);
+        level_moby_killed[D_0015EE84][*(short *)(moby + 0xB2) >> 5] |= 1 << (*(unsigned short *)(moby + 0xB2) & 0x1F);
         D_L14_001BAF60[*(short *)(moby + 0xB2) >> 5] |= 1 << (*(unsigned short *)(moby + 0xB2) & 0x1F);
         moby[0x20] = 2;
         d[1] = scale_ticks(0x78);
@@ -914,7 +914,7 @@ extern unsigned short *D_L14_001AC2C0[];
 extern float D_L14_001EE920[];
 
 /* For each entry in a moby-id list, saves the moby's Y and lowers it by 20. */
-void LowerListedParts(char *moby) {
+void save_and_lower_unlock_sequence_mobys(char *moby) {
     unsigned short *p = D_L14_001AC2C0[**(int **)(moby + 0x78)];
     float *out;
     if (p != 0) {
@@ -935,7 +935,7 @@ extern float func_L00_00258E58(float, float, float, float, float);
 
 /* Per-frame update: slides each listed part toward a rest height by a factor from the moby's animation value.
    Adapted from Lombyte (GPL-3.0) for PAL by OpenRAC's tools/port.py: src/overlays/l14/gameplay/vendor/00300e00.c, FUN_L14_00305680. */
-void SlideListedPartsUpdate(char *moby) {
+void raise_unlock_sequence_mobys(char *moby) {
     int *d = *(int **)(moby + 0x78);
     short *p = (short *)D_L14_001AC2C0[d[0]];
     float t;
@@ -1052,7 +1052,7 @@ extern int func_002140B0(int);
 extern int func_001F9850(int);
 
 /* initialises a moby's data block: random floats, constants and sound ids */
-void StreakDataInit(char *moby) {
+void initialize_morphoray_private_state(char *moby) {
     char *d = *(char **)(moby + 0x78);
     int i;
     for (i = 0; i < 4; i++) {
@@ -1090,7 +1090,7 @@ typedef struct {
 } FxData14;
 
 /* Updates and draws four scrolling particle streaks for an Oltanis moby. */
-void StreakParticlesUpdate(char *p) {
+void update_morphoray_particles(char *p) {
     float v[8];
     FxData14 *m = *(FxData14 **)(p + 0x78);
     float *a;
@@ -1170,7 +1170,7 @@ extern char D_0013E633_3071B0[] __asm__("D_0013E633");
 
 /* Update function
  * for moby class 1395 on level 14: fills the six-slot table of helper mobys, then lowers them one by one. */
-void Moby1395Update(Moby *moby) {
+void update_triggered_helper_moby_sequence(Moby *moby) {
     Data_3071B0 *data = (struct Data_3071B0 *)moby->pvars;
     float vec[4];
 
@@ -1336,7 +1336,7 @@ void StepOnSwitchUpdate(struct Moby *moby) {
         moby->pos.z -= 0.35f;
         id = (s16)moby->save_id;
         if (D_L14_001BBCC0_08000.collected[id] != 0 ||
-            (D_0014C290[D_0015EE84][id >> 5] >> (moby->save_id & 31) & 1) != 0 ||
+            (level_moby_killed[D_0015EE84][id >> 5] >> (moby->save_id & 31) & 1) != 0 ||
             (d[2] != 0 && D_0014C150[moby->mission + D_0015EE84 * 16] == 0xFF)) {
             moby->command = 2;
             moby->glow_color = 0x80208020;
@@ -1369,7 +1369,7 @@ void StepOnSwitchUpdate(struct Moby *moby) {
         moby->glow_color = high | shade | color;
         if (D_0013F450_08000.ground_moby == moby && D_0013F450_08000.air_frames.s == 0) {
             id = (s16)moby->save_id;
-            D_0014C290[D_0015EE84][id >> 5] |= 1 << (moby->save_id & 31);
+            level_moby_killed[D_0015EE84][id >> 5] |= 1 << (moby->save_id & 31);
             D_L14_001BAF60[(s16)moby->save_id >> 5] |= 1 << (moby->save_id & 31);
             moby->state = 2;
             moby->command = 1;
@@ -1461,7 +1461,7 @@ extern float D_0015EE6C_308368 __asm__("D_0015EE6C") MACRO_ADDR;
 
 /* Blarg heavy interceptor update (class 1417): hit reaction, then a state machine (0 set up on its path,
  * 1 wait for the trigger volume, 2 chase with its thruster part, 3 respawn), then its engine sound. */
-void BlargInterceptorUpdate(Moby *m) {
+void update_flying_car(Moby *m) {
     Data_308368 *d = (void *)m->pvars;
     Vec4A vec;
     char *hit;
@@ -1783,7 +1783,7 @@ void DrawQueuedEffect(void) {
 extern void func_L14_00308EB0(void);
 
 /* Moby update that queues the draw callback func_L14_00308EB0. */
-void QueueEffectDrawUpdate(unsigned char *moby)
+void enqueue_moby_draw_callback(unsigned char *moby)
 {
     switch (moby[0x20]) {
     case 0:
@@ -1809,12 +1809,12 @@ extern Level14State D_L14_0016D060;
 extern unsigned char D_0013D510[];
 
 /* Play the level sound once on first update, then handle the two-state moby. */
-void SkillPointUpdate(unsigned char *moby) {
+void update_moby_list_clear_notification(unsigned char *moby) {
     int *d = *(int **)(moby + 0x78);
     unsigned v;
     int i;
     if (d[0] != -1) {
-        if (MobyGroup_CountNotInState(d[0], -1) == 0) {
+        if (count_group_e81e0(d[0], -1) == 0) {
             if (gSkillPoints[0x17] == 0) {
                 gSkillPoints[0x17] = 1;
                 PlayBankSound(1, 0, 0);
@@ -1833,7 +1833,7 @@ void SkillPointUpdate(unsigned char *moby) {
             if (v < 3) {
                 i = 0;
                 if (v <= D_L14_0015F6A8) i = moby[0x20];
-                SpawnMoby750Sparks(D_L14_0016D060.v178[i]);
+                cutscene_set_camera_target(D_L14_0016D060.v178[i]);
             }
         }
         break;
@@ -1844,7 +1844,7 @@ extern char *D_L14_00167600;
 /* Sets the camera state block when the global camera record's descriptor is 7. */
 void BlargInterceptor_NotifyGrab(int value)
 {
-    char *moby = D_L14_00167600;
+    char *moby = race_state;
     if (*(short *)(moby + 0x86) == 7) {
         char *data = *(char **)(moby + 0x70) + 0x40;
         char *again;
@@ -2057,7 +2057,7 @@ extern void func_001F9CA0(void *, void *, void *);
 extern s32 func_001F9938(s16 *);
 
 /* Adapted from Lombyte (GPL-3.0) for PAL by OpenRAC's tools/port.py: src/overlays/l14/gameplay/vendor/00300e00.c, FUN_L14_00315290. */
-void CameraPathRunUpdate(struct UpdateCam *cam) {
+void update_path_camera(struct UpdateCam *cam) {
     float dir[4];
     float t[4];
     float u[4];
@@ -2117,7 +2117,7 @@ void CameraPathRunUpdate(struct UpdateCam *cam) {
         cam->transition_state = 4;
         D_L14_0015F504 = 0;
         mb = D_L14_00160098;
-        Moby211_SyncHeroOnRail((struct Moby *)(mb + *(int *)(rec + 0x50) * 256));
+        reset_racer_group_to_hero_path_position((struct Moby *)(mb + *(int *)(rec + 0x50) * 256));
         hp = (char *)D_0013F450.unk560;
         seg = D_0013F450.unk564;
         tt = D_0013F450.unk568;
@@ -2181,19 +2181,48 @@ extern int func_L10_002F6E38(void *);
 extern char *D_L14_0015F050 MACRO_ADDR;
 extern char D_0013E633[];
 
+typedef struct CameraRule {
+    u8 pad00[0x38];
+    u8 disabled;               /* 0x38 nonzero: the camera never activates (-1) */
+    u8 pad39[0xB];
+    s32 required_hero_state;   /* 0x44 -1 for any state */
+    s32 required_control_mode; /* 0x48 -1 for any control mode */
+} CameraRule;
+
+typedef struct CameraDefRow {
+    u8 pad00[0x1C];
+    CameraRule *info;          /* 0x1C */
+} CameraDefRow;
+
+/* The two camera fields this function reads: transition_state at 0x7E, descriptor_index at 0x84. */
+typedef struct CameraRecord {
+    u8 pad00[0x7E];
+    s16 transition_state;      /* 0x7E */
+    u8 pad80[0x4];
+    s16 descriptor_index;      /* 0x84 row of the camera table */
+} CameraRecord;
+
 /* Returns 1 when the record selected by the moby's index matches the current targets, -1 when that record is disabled. */
-int CamRecord_CheckConditions(char *a, char *b) {
-    char *rec = *(char **)(D_L14_0015F050 + *(short *)(a + 0x84) * 32 + 0x1C);
-    int t, u;
-    if (*(unsigned char *)(rec + 0x38) != 0) return -1;
-    if (b != 0 && *(short *)(b + 0x7E) == 0) {
-        if (*(int *)(D_0013E633 + 0x2EA9) != 15) return 0;
+extern Hero hero __asm__("D_0013F450");
+
+int check_camera_hero_requirements(char *camera, char *control_mode_gate_object) {
+    CameraDefRow *defs = (CameraDefRow *)D_L14_0015F050;
+    CameraRule *rec = defs[((CameraRecord *)camera)->descriptor_index].info;
+    int required_control_mode, required_hero_state;
+    if (rec->disabled != 0)
+        return -1;
+    if (control_mode_gate_object != 0 && ((CameraRecord *)control_mode_gate_object)->transition_state == 0) {
+        if (hero.state.control_mode != 15)
+            return 0;
     }
-    if (Trigger_IsHeroInside(a) == 0) return 0;
-    t = *(int *)(rec + 0x48);
-    if (t >= 0 && *(int *)(D_0013E633 + 0x2EA9) != t) return 0;
-    u = *(int *)(rec + 0x44);
-    if (u >= 0 && *(int *)(D_0013E633 + 0x2EA1) != u) return 0;
+    if (Trigger_IsHeroInside(camera) == 0)
+        return 0;
+    required_control_mode = rec->required_control_mode;
+    if (required_control_mode >= 0 && hero.state.control_mode != required_control_mode)
+        return 0;
+    required_hero_state = rec->required_hero_state;
+    if (required_hero_state >= 0 && hero.state.current != required_hero_state)
+        return 0;
     return 1;
 }
 /* Starts the vendor camera: measures the three camera paths of the slot record into the length tables,
@@ -2214,7 +2243,7 @@ extern void add_16E60(void *, void *, void *) __asm__("func_001F9BD8");
 extern void normalize_16E60(void *, void *, float) __asm__("func_L00_001FF4B0");
 extern void cross_16E60(void *, void *, void *) __asm__("func_001F9CA0");
 
-void func_L14_00316E60(struct UpdateCam *cam) {
+void initialize_path_key_camera(struct UpdateCam *cam) {
     float ang[4];
     float pad[4]; /* unused; keeps the frame layout */
     float dir[4];
@@ -2421,7 +2450,7 @@ extern void func_001F9C30(void *, void *, float);
 extern void func_002156E0(void *dst, void *vec, void *axis, float angle);
 
 /* Camera 21 update (level 14): follows keyed angles along the hero's path progress, triggers three mobys, builds the camera matrix. */
-void Camera21Update(char *cam) {
+void update_path_key_camera(char *cam) {
     CamData171D0 *data = ((CamObj171D0 *)cam)->data;
     CamState171D0 *st = &data->st;
     CamRec171D0 *rec = D_L14_0015F050_s[((CamObj171D0 *)cam)->slot].rec;
@@ -2648,13 +2677,13 @@ int Camera21Init(char *moby, char *b)
 {
     char *rec = *(char **)(D_L14_0015F050 + *(short *)(moby + 0x84) * 32 + 0x1C);
 
-    if (*(int *)(rec + 0x20) == 0 && *(short *)(D_L14_00167600 + 0x86) == 0x14) {
+    if (*(int *)(rec + 0x20) == 0 && *(short *)(race_state + 0x86) == 0x14) {
         *(int *)(rec + 0x20) = 1;
         goto done;
     }
     if (*(int *)(rec + 0x20) != 1)
         goto done;
-    if (*(short *)(D_L14_00167600 + 0x86) != 0x14)
+    if (*(short *)(race_state + 0x86) != 0x14)
         return 1;
     if (b == 0 || *(short *)(b + 0x7E) != 0)
         return 1;

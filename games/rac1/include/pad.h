@@ -7,7 +7,8 @@
  * their files.
  *
  * Adapted from Lombyte (GPL-3.0), the US decompilation:
- * include/rnc/input/pad_state.h at 42adb529. Function and data names in
+ * include/rnc/input/pad_state.h at 42adb529, refreshed from the NTSC decomp
+ * (the same project, GPL-3.0) at 4e1f255e. Function and data names in
  * the comments are Lombyte's, from the US build. See THIRD_PARTY_NOTICES.md.
  */
 
@@ -15,14 +16,32 @@
 
 /*
  * Controller state D_0013CA40 (US D_0013C940), polled each frame by poll_pad_device_state
- * (state machine on profile_state) and filled by process_pad_input
- * (FUN_00217328); socket set up by init_pads.
+ * (state machine on profile_state) and filled by process_pad_input;
+ * socket set up by init_pads.
  *
  * Button masks: process_pad_input ORs left-stick directions into `held`
  * (0x8000/0x2000 x, 0x1000/0x4000 y) and swaps 0x8000/0x2000 when the
- * mirror flag D_0015EDB4 is set. The *_unmasked copies are taken before the
+ * mirror flag D_0015EDB4 (US) is set. The *_unmasked copies are taken before the
  * `mode` 1/2 masks and have that swap undone; menus read them.
  */
+/* Button bits of held / pressed (DualShock order). */
+#define PAD_L2       0x0001
+#define PAD_R2       0x0002
+#define PAD_L1       0x0004
+#define PAD_R1       0x0008
+#define PAD_TRIANGLE 0x0010
+#define PAD_CIRCLE   0x0020
+#define PAD_CROSS    0x0040
+#define PAD_SQUARE   0x0080
+#define PAD_SELECT   0x0100
+#define PAD_L3       0x0200
+#define PAD_R3       0x0400
+#define PAD_START    0x0800
+#define PAD_UP       0x1000
+#define PAD_RIGHT    0x2000
+#define PAD_DOWN     0x4000
+#define PAD_LEFT     0x8000
+
 struct PadState {
     u8 pad_0[0x100] __attribute__((aligned(16)));
     f32 analog[16];                     /* 0x100: [0..3] stick axes (-1..1), [4..15] pressure (0..1) */
@@ -30,7 +49,7 @@ struct PadState {
     u8 profile[4];                      /* 0x180: button profile block UpdatePad reads (func_00124DF0) */
     u8 act[4];                          /* 0x184: actuator block UpdatePad reads (func_00125218) */
     u8 unk188;                          /* 0x188 */
-    u8 unk189;                          /* 0x189: copied by FUN_L00_002d2ee8 on spawn */
+    u8 unk189;                          /* 0x189: copied by metal_detector_update on spawn */
     u8 pad_18A[0x2];
     s16 unk18C;                         /* 0x18C: counted down by UpdatePad; on pad 0, nonzero suppresses pressed/released (PAL) */
     s16 hist_idx;                       /* 0x18E: next slot of the 30-poll history; cleared with hist_count by ResetGlobalStateFields */
@@ -69,7 +88,7 @@ typedef struct PadState PadState;
 /*
  * The two button pairs as doublewords: retail reads held/pressed (0x1A0) and
  * held_unmasked/pressed_unmasked (0x1C0) with a single ld in
- * DebugFreeCameraUpdate and func_L02_002D9F08, and the pair comes out as one
+ * update_debug_camera and func_L02_002D9F08, and the pair comes out as one
  * long. Only a union member of a struct the pad is cast to gives GCC 2.95
  * that load with retail's schedule (a cast of the field's address does not),
  * so those two readers cast the pad to this view.

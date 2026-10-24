@@ -12,9 +12,9 @@ extern int D_0015EF88 MACRO_ADDR;
 void DrawSkyUmbris(void) {
     SetupSkyGifPaging();
     if (D_0015EE84_m == 7) {
-        SkyShellsSparkleThree();
+        draw_three_sky_shells_with_particles_and_modulo_50000_rotation();
     } else {
-        UpdateSkyShellsStatic();
+        update_sky_shells_static();
     }
     DoSkyGifPaging();
     VU1_addGSregister(0x47, 0x5360B);

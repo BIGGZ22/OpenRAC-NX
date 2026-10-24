@@ -121,7 +121,7 @@ void load_level_program(int level);
 // --check-levels: every level the window draws from (level_00 to level_18, the flight world 98 and
 // the title's 99) is read as the window reads it, without a window. A level that cannot be read, or
 // that has nothing to draw, is named with the reason; when all are whole, `verified-<format>.json`
-// (the extracted levels' format, viewer::kManifestFormat) is written beside them, which the
+// (the extracted levels' format, scene::kManifestFormat) is written beside them, which the
 // launcher asks for before it offers Play. A game started over levels that are missing or cut short
 // shows its HUD over a black world and says nothing else; levels of an older format fail the check
 // (their manifests are refused), so the launcher reads them from the disc again.

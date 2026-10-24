@@ -1,0 +1,48 @@
+# Local target, never published
+LOCAL.md
+baserom/
+*.iso
+*.zip
+*.bin
+*.elf
+*.exe
+*.img
+*.cue
+*.mdf
+
+# Retail-derived material: modules, symbols, disassembly, listings
+work/E0/modules/
+work/E0/bounds/
+work/E0/preuves/
+work/E0/disc/
+work/*/bodies/
+work/*/abandonnes/
+work/*/work/
+work/*/disasm*
+work/*/logs/
+work/*/resultats*.tsv
+work/lots/*.tsv
+!work/templates/
+!work/lots/.gitkeep
+!work/E0/.gitkeep
+
+# Generated catalogues that are too large to publish: every named symbol of
+# every module (more than 350 000 rows).  Regenerate with
+# "python3 tools/rel.py catalogue <image> --write".
+config/levels/exports.tsv
+
+# Build output and receipts
+build/
+work/gate/
+*.o
+*.elf
+*.map
+*.log
+
+# Scratch and tooling
+.venv/
+venv/
+__pycache__/
+*.pyc
+.DS_Store
+Thumbs.db

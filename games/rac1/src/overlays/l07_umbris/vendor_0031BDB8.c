@@ -111,7 +111,7 @@ extern void func_001F9EC0(void *, void *, void *);
 extern int func_0022ED80(int, int, int);
 
 /* Adapted from Lombyte (GPL-3.0) for PAL by OpenRAC's tools/port.py: src/overlays/l07/gameplay/entities/0030cd20.c, FUN_L07_0031a9e8. */
-void MovingMobyL07_Update(struct Moby *moby) {
+void update_moby_offset_motion(struct Moby *moby) {
     struct L07MovingVars *vars = (struct L07MovingVars *)moby->pvars;
     struct Moby *target;
     Vec4 next;
@@ -249,7 +249,7 @@ extern float D_0015EE6C MACRO_ADDR;
 extern EaseMoby1C7C0 *D_L07_00160058_ease __asm__("D_L07_00160058") MACRO_ADDR;
 
 // UpdateMoby_1133: state machine that eases a value toward targets while the linked moby is alive.
-void Moby1133Update(EaseMoby1C7C0 *moby) {
+void update_swing_gate(EaseMoby1C7C0 *moby) {
     EaseData1C7C0 *d = moby->data;
     EaseMoby1C7C0 *o;
     float v, w;
@@ -378,7 +378,7 @@ extern unsigned char D_0013E633_31E6B0[] __asm__("D_0013E633");
 extern unsigned char D_0013D50F_31E6B0[] __asm__("D_0013D50F");
 
 // Update for moby class 1142 on level 07: measures its path once, then places sparks for the listed counters.
-void Moby1142Update(SparkMoby_31E6B0 *moby)
+void update_equalizer_ammo_spawner(SparkMoby_31E6B0 *moby)
 {
     SparkVars_31E6B0 *d = moby->vars;
     float vec[3];
@@ -495,7 +495,7 @@ extern char D_L07_0016C960_c[] __asm__("D_L07_0016C960");
 extern float D_L07_0015F660[] MACRO_ADDR;
 
 // Runs the effect spawner: waits for the level flag, then emits sparks at four joints of a target moby.
-void SparkBurstSpawnerUpdate(char *m) {
+void update_scene_moby_effect_bursts(char *m) {
     int state = *(unsigned char *)(m + 0x20);
     int a;
     int k;
@@ -517,7 +517,7 @@ void SparkBurstSpawnerUpdate(char *m) {
         t = *(int *)(S + 0x30) - 3;
         if ((unsigned)t < 2) {
             int idx = (unsigned)t > 1 ? 0 : 2;
-            SpawnMoby750Sparks(((L07SparkState *)S)->arr[idx]);
+            cutscene_set_camera_target(((L07SparkState *)S)->arr[idx]);
         }
         if (*(int *)(S + 0x30) != a) return;
         k = 7;
@@ -555,7 +555,7 @@ extern char *func_0020D348(int);
 extern void func_L00_00251E30(void *);
 extern void func_0020D678(void *);
 /* Level moby state machine: wait, detect proximity, then emit effects, spawn a replacement and delete itself. */
-void ProximityBreakReplaceUpdate(char *m) {
+void mushroom_update(char *m) {
     int hit = 0;
     char *r = MobyGetHitMessage(m, 0x10000, 0);
     char *n;
@@ -596,7 +596,7 @@ extern char *mk_a(int) __asm__("func_0020D348");
 extern void upd_a(void *) __asm__("func_L00_00251E30");
 
 /* Stage machine for a three-state effect moby: wait, activate, burst and delete. */
-void ProximityBreakReplaceAltUpdate(char *self) {
+void robot_head_update(char *self) {
     int flag = 0;
     char *o = MobyGetHitMessage(self, 0x10000, 0);
     switch (((unsigned char *)self)[0x20]) {
@@ -634,7 +634,7 @@ void ProximityBreakReplaceAltUpdate(char *self) {
 }
 
 // Waits for a trigger, then spawns three effects at the moby and deletes it.
-void ProximityBreakUpdate(unsigned char *m) {
+void seashell_update(unsigned char *m) {
     int flag = 0;
     float z;
     char *p, *pos, *vel;
@@ -674,7 +674,7 @@ extern short D_L07_00161D6C;
 
 /* Level moby state machine: UpdateMoby_1789: spawn state then position three points.
  * Matched using lever: g - (-(idx * 4)) + 0x178 fixes addu operand order. */
-void Moby1789Update(unsigned char *moby) {
+void update_scene_moby_trails(unsigned char *moby) {
     switch (moby[0x20]) {
     case 0:
         moby[0x30] = 0xFF;
@@ -695,17 +695,17 @@ void Moby1789Update(unsigned char *moby) {
                 Moby_GetJointWorldPos(o, 3, b0);
                 FastVecSub(c0, a0, b0);
                 func_L00_001FF4B0(c0, c0, *(float *)&D_L07_00161D68);
-                SpawnSparkRings(a0, a0, c0, *(float *)&D_L07_00161D6C, *(float *)&D_L07_00161D70);
+                draw_trail(a0, a0, c0, *(float *)&D_L07_00161D6C, *(float *)&D_L07_00161D70);
                 Moby_GetJointWorldPos(o, 1, a1);
                 Moby_GetJointWorldPos(o, 4, b1);
                 FastVecSub(c1, a1, b1);
                 func_L00_001FF4B0(c1, c1, *(float *)&D_L07_00161D68);
-                SpawnSparkRings(a1, a1, c1, *(float *)&D_L07_00161D6C, *(float *)&D_L07_00161D70);
+                draw_trail(a1, a1, c1, *(float *)&D_L07_00161D6C, *(float *)&D_L07_00161D70);
                 Moby_GetJointWorldPos(o, 2, a2);
                 Moby_GetJointWorldPos(o, 5, b2);
                 FastVecSub(c2, a2, b2);
                 func_L00_001FF4B0(c2, c2, *(float *)&D_L07_00161D68);
-                SpawnSparkRings(a2, a2, c2, *(float *)&D_L07_00161D6C, *(float *)&D_L07_00161D70);
+                draw_trail(a2, a2, c2, *(float *)&D_L07_00161D6C, *(float *)&D_L07_00161D70);
             }
         }
         break;

@@ -7,9 +7,8 @@
 // particles (particle, particle_quads), the mobys' scripted colours (moby_colour) and the 2D
 // layer's quads drawn natively (ui_quad); and what the game asks of the picture's shape while it
 // draws (hud_side, picture_wider). frontend.cpp's frame() turns what is gathered here into the
-// frame. The game addresses read for the lights, the shadows and the hero (light_bank_address,
-// shadow_directions_address, hero_state_address) are rac1's for now: a game's GameProfile names
-// them later (P2-36 of the restructure).
+// frame. The light bank's address is the game's C table's (openrac_front_end, light_bank_address);
+// what else the frame reads of the game's memory, the game's profile names (game/common/profile.h).
 
 #include <algorithm>
 #include <array>
@@ -28,7 +27,9 @@
 #include "common/log.h"
 #include "common/stats.h"
 #include "debug_overlay.h"
+#include "enhanced/renderer/gtao.h"
 #include "enhanced/renderer/texture_upscale.h"
+#include "enhanced/viewer/scene_lighting.h"
 #include "frontend.h"
 #include "game/common/frontend/geometry.h"
 #include "game/common/frontend/state.h"
@@ -64,27 +65,6 @@ gaddr light_bank_address() {
     return openrac_game_front_end != nullptr ? openrac_game_front_end->light_bank : 0;
 }
 
-// The four shadow directions in each version's executable (relocated when read).
-gaddr shadow_directions_address() {
-    if (g->game == "rac1-pal") {
-        return 0x001CAE00u;
-    }
-    if (g->game == "rac1-ntsc") {
-        return 0x001CAA80u;
-    }
-    return 0;
-}
-
-gaddr hero_state_address() {
-    if (g->game == "rac1-pal") {
-        return 0x0013F450u;
-    }
-    if (g->game == "rac1-ntsc") {
-        return 0x0013F350u;
-    }
-    return 0;
-}
-
 // Uploads a level's geometry; while the boot program runs (the title and the main menu), the title
 // world's, or level 0's when the title world was not extracted.
 void use_level(int number) {
@@ -107,6 +87,8 @@ void use_level(int number) {
     const bool fresh = !g->renderer;
     if (fresh) {
         g->renderer = std::make_unique<renderer::Renderer>();
+        // The enhanced renderer's ambient occlusion, drawn when the player's settings ask for it.
+        g->renderer->set_ambient_occlusion(std::make_unique<renderer::Gtao>());
         for (const renderer::ImageUpload& image : g->images) {
             g->renderer->textures().upload(image);
         }
@@ -114,8 +96,10 @@ void use_level(int number) {
         g->renderer->clear_renderers();
     }
     g->scene.release();
-    g->scene = viewer::LevelScene();
-    g->level = viewer::LevelData();
+    g->scene = scene::LevelScene();
+    // The enhanced renderer's probe and early lighting, drawn when the player's settings ask.
+    lighting::use_scene_lighting(g->scene);
+    g->level = scene::LevelData();
     std::string error;
     const auto dir = g->levels / std::format("level_{:02d}", wanted);
     // An edited level's scenery (--mods): the editor's pack writes it beside its gameplay file.
@@ -125,11 +109,12 @@ void use_level(int number) {
                  / "placements.json";
     }
     debug_overlay::notice({});
-    // Only Ratchet & Clank's levels are extracted for the port so far. The other games (Going
-    // Commando, Up Your Arsenal, Deadlocked at their menus) have no scenery to read: their whole
-    // picture is the 2D path, both its parts, and nothing is missing to tell the player about.
-    const bool has_levels = g->game == "rac1-pal" || g->game == "rac1-ntsc";
-    if (!has_levels && !viewer::load_level(dir, g->level, error, edited)) {
+    // Only Ratchet & Clank's levels are extracted for the port so far (its profile says so). The
+    // other games (Going Commando, Up Your Arsenal, Deadlocked at their menus) have no scenery to
+    // read: their whole picture is the 2D path, both its parts, and nothing is missing to tell the
+    // player about.
+    const bool has_levels = g->profile->has_levels();
+    if (!has_levels && !scene::load_level(dir, g->level, error, edited)) {
         log::info(
             "level {}: no scenery for this game yet ({}); the 2D path is drawn alone", wanted, error
         );
@@ -146,7 +131,7 @@ void use_level(int number) {
         }
         return;
     }
-    if (has_levels && !viewer::load_level(dir, g->level, error, edited)) {
+    if (has_levels && !scene::load_level(dir, g->level, error, edited)) {
         log::warn("level {}: {} (extract it with editor/extract.py port)", wanted, error);
         // Said in the picture: the game goes on, its HUD over a black world, and a player takes
         // that for the game being broken.
@@ -193,22 +178,22 @@ void use_level(int number) {
         )) {
         log::warn("Ratchet shadow map unavailable: {}", error);
     }
-    for (std::size_t layer = 0; layer < viewer::kLayerCount; ++layer) {
+    for (std::size_t layer = 0; layer < scene::kLayerCount; ++layer) {
         // The caster is drawn after its shadow, so its proxy cannot darken
         // Ratchet himself. Opaque scenery has already filled the depth buffer.
-        if (shadow_directions_address() != 0
-            && layer == static_cast<std::size_t>(viewer::Layer::Mobys)) {
+        if (g->profile->shadow_directions() != 0
+            && layer == static_cast<std::size_t>(scene::Layer::Mobys)) {
             if (g->renderer->add(std::make_unique<renderer::ShadowRenderer>(), error) == nullptr) {
                 log::error("shadow renderer: {}", error);
             }
         }
         g->renderer->add(
-            std::make_unique<viewer::LayerRenderer>(g->scene, static_cast<viewer::Layer>(layer)),
+            std::make_unique<scene::LayerRenderer>(g->scene, static_cast<scene::Layer>(layer)),
             error
         );
         // The liquids (the seas and lava the game draws solid) after the ties, where retail's draw
         // callback list 3 draws them, before the shrubs and mobys (renderer/effects.h).
-        if (static_cast<viewer::Layer>(layer) == viewer::Layer::Ties
+        if (static_cast<scene::Layer>(layer) == scene::Layer::Ties
             && g->renderer->add(
                    std::make_unique<renderer::EffectRenderer>(
                        "liquids", renderer::EffectPart::Liquids, renderer::Bucket::Ties
@@ -229,7 +214,7 @@ void use_level(int number) {
         g->renderer->init(error);
     }
     // The sky's textures at pool keys of their own (kSkyTextureKey + number), for its sprites.
-    const auto sky = viewer::load_sky_textures(dir);
+    const auto sky = scene::load_sky_textures(dir);
     for (std::size_t i = 0; i < sky.size(); ++i) {
         if (sky[i].width > 0) {
             const renderer::TextureHandle h = g->renderer->textures().add(
@@ -342,7 +327,7 @@ void sky_sprite(const std::uint8_t* record, std::uint64_t tex0) {
 // the half-diagonal size * 832 / depth frame-buffer pixels, turned by the rotation, additive, behind
 // everything. Drawn far out along their direction (kSkyDistance, inside the far plane) and scaled to
 // match, so the world's depth hides them where it is in front of the sky.
-void sky_sprite_quads(const viewer::GameState& state) {
+void sky_sprite_quads(const host::GameState& state) {
     constexpr float kSkyDistance = 1900.0f;
     const std::array<float, 3> cam = state.camera_position;
     const std::array<float, 3> fwd = state.forward;
@@ -485,7 +470,7 @@ std::uint32_t particle_texture(
 // front; a sprite faces the camera, its half-diagonal size / 210000 units (y scaled by 1.0625 as the
 // game does on screen), turned by its rotation byte; a flat quad lies in the world's XY plane; a
 // ribbon joins its two ends across the view. Lines are not drawn yet.
-void particle_quads(std::span<const std::uint8_t> ram, const viewer::GameState& state) {
+void particle_quads(std::span<const std::uint8_t> ram, const host::GameState& state) {
     const auto f32 = [](const std::uint8_t* b) {
         float v;
         std::memcpy(&v, b, 4);

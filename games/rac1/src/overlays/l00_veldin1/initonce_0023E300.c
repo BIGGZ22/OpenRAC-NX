@@ -28,71 +28,71 @@ extern void func_L00_0028C358(void);
 extern void func_L00_0028C478(void);
 extern void b8f8_a(void) __asm__("func_L00_0028B8F8");
 extern void b8f8_b(void) __asm__("func_L00_0028B8F8");
-void Sky_RenderByMode(void) {
+void draw_level_sky(void) {
     SetupSkyGifPaging();
     switch (D_0015EE84_m) {
     case 0:
-        DrawVeldinSky();
+        draw_sky_shells_with_particles_and_rotating_shell();
         break;
     case 1:
-        UpdateSkyShellsAnimated();
+        update_sky_shells_animated();
         break;
     case 2:
-        SkyStarFieldUpdate();
+        draw_four_sky_shells_with_animated_particles();
         break;
     case 3:
         SkyShellsRotateTwo();
         break;
     case 4:
-        SkyShellsRotateLooped();
+        draw_sky_shells_with_fast_and_slow_rotation();
         break;
     case 5:
-        SkyShellsSparkleTwo();
+        draw_sky_shells_with_particles_and_modulo_50000_rotation();
         break;
     case 6:
-        SkyParticlesUpdate();
+        draw_three_sky_shells_with_three_particle_types();
         break;
     case 7:
-        SkyShellsSparkleThree();
+        draw_three_sky_shells_with_particles_and_modulo_50000_rotation();
         break;
     case 8:
-        SkyShellsRotateOne();
+        draw_sky_shells_with_modulo_40000_rotation();
         break;
     case 9:
-        DrawSkyShellsExtra();
+        draw_sky_shells_with_modulo_25000_rotation();
         break;
     case 10:
-        SkyShellsRotateByIndex();
+        draw_sky_shells_with_scaled_phase_rotation();
         break;
     case 11:
-        SkyShellsRotateMulti();
+        draw_sky_shells_with_slow_medium_and_fast_rotation();
         break;
     case 12:
         b8f8_a();
         break;
     case 13:
-        SkyShellsSparkleStatic();
+        draw_three_sky_shells_with_particles();
         break;
     case 14:
         SkyShellsRotatePair();
         break;
     case 15:
-        SkyShellsSparkleOne();
+        draw_two_sky_shells_with_particles();
         break;
     case 16:
         b8f8_b();
         break;
     case 17:
-        SkyStarField2Update();
+        render_three_shell_particle_sky();
         break;
     case 18:
-        SkyShellsSevenLayer();
+        draw_seven_sky_shells_with_modulo_40000_and_60000_rotation();
         break;
     case 19:
         SkyShellsEntryUpdate();
         break;
     default:
-        UpdateSkyShellsStatic();
+        update_sky_shells_static();
         break;
     }
     DoSkyGifPaging();
@@ -137,7 +137,7 @@ extern float D_0015EE6C MACRO_ADDR;
 extern VeldinLevelState D_L00_0016C960;
 
 /* per-frame Veldin hook: queues callbacks and spawns particles by game state. Adapted from Lombyte (GPL-3.0) for PAL: overlays/l00/unclassified_0023d968.c, FUN_L00_0023e268. */
-void Veldin_PerFrameHook(void) {
+void apply_level_specific_cutscene_moby_effects(void) {
     VeldinMoby *m;
     VeldinMoby *mb;
     VeldinMoby *src;
@@ -154,7 +154,7 @@ void Veldin_PerFrameHook(void) {
     if (D_0015EE84_m == 0) {
         for (i = 0; i < D_L00_0016C960.count; i++) {
             if (D_L00_0016C960.mobys[i]->oClass == 0x212) {
-                AddDrawCallback((void *)DrawEnvMappedObject, (void *)D_L00_0016C960.mobys[i]);
+                AddDrawCallback((void *)render_environment_mapped_object, (void *)D_L00_0016C960.mobys[i]);
             }
         }
     }
@@ -183,12 +183,12 @@ void Veldin_PerFrameHook(void) {
     }
     if (D_0015EE84_m == 7 && D_L00_0016C960.state == 4 && D_L00_0016C960.unk188 != 0
         && D_L00_0016C960.unk188->oClass == 0x214) {
-        AddDrawCallback((void *)DrawEnvMappedObject, (void *)D_L00_0016C960.unk188);
+        AddDrawCallback((void *)render_environment_mapped_object, (void *)D_L00_0016C960.unk188);
     }
     if (D_0015EE84_m == 14 && D_L00_0016C960.state == 0) {
         m = D_L00_0016C960.unk17C;
         if (m != 0 && (u32)(D_L00_0016C960.timer - 0x1C) < 6) {
-            GlowParticlesSpawn(m);
+            emit_moby_particle_pairs(m);
             AddDrawCallback((void *)GlowQuadsDraw, (void *)m);
         }
     }

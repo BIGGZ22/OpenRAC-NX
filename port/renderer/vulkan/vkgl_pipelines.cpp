@@ -628,8 +628,8 @@ VkPipeline create_graphics_pipeline(
         VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_STATE_CREATE_INFO
     };
     raster.polygonMode = k.polygon != 0 ? VK_POLYGON_MODE_LINE : VK_POLYGON_MODE_FILL;
-    raster.cullMode = k.cull;
-    raster.frontFace = static_cast<VkFrontFace>(k.front);
+    raster.cullMode = k.fixed.cull;
+    raster.frontFace = static_cast<VkFrontFace>(k.fixed.front);
     raster.lineWidth = 1.0f;
     VkPipelineMultisampleStateCreateInfo multisample{
         VK_STRUCTURE_TYPE_PIPELINE_MULTISAMPLE_STATE_CREATE_INFO
@@ -638,24 +638,24 @@ VkPipeline create_graphics_pipeline(
     VkPipelineDepthStencilStateCreateInfo depth{
         VK_STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO
     };
-    depth.depthTestEnable = k.depth_test;
-    depth.depthWriteEnable = k.depth_write;
-    depth.depthCompareOp =
-        k.depth_test != 0 ? static_cast<VkCompareOp>(k.depth_func) : VK_COMPARE_OP_ALWAYS;
-    depth.stencilTestEnable = k.stencil;
+    depth.depthTestEnable = k.fixed.depth_test;
+    depth.depthWriteEnable = k.fixed.depth_write;
+    depth.depthCompareOp = k.fixed.depth_test != 0 ? static_cast<VkCompareOp>(k.fixed.depth_func)
+                                                   : VK_COMPARE_OP_ALWAYS;
+    depth.stencilTestEnable = k.fixed.stencil;
     depth.front =
-        {static_cast<VkStencilOp>(k.front_ops[0]),
-         static_cast<VkStencilOp>(k.front_ops[1]),
-         static_cast<VkStencilOp>(k.front_ops[2]),
-         static_cast<VkCompareOp>(k.stencil_func),
+        {static_cast<VkStencilOp>(k.fixed.front_ops[0]),
+         static_cast<VkStencilOp>(k.fixed.front_ops[1]),
+         static_cast<VkStencilOp>(k.fixed.front_ops[2]),
+         static_cast<VkCompareOp>(k.fixed.stencil_func),
          0,
          0,
          0};
     depth.back =
-        {static_cast<VkStencilOp>(k.back_ops[0]),
-         static_cast<VkStencilOp>(k.back_ops[1]),
-         static_cast<VkStencilOp>(k.back_ops[2]),
-         static_cast<VkCompareOp>(k.stencil_func),
+        {static_cast<VkStencilOp>(k.fixed.back_ops[0]),
+         static_cast<VkStencilOp>(k.fixed.back_ops[1]),
+         static_cast<VkStencilOp>(k.fixed.back_ops[2]),
+         static_cast<VkCompareOp>(k.fixed.stencil_func),
          0,
          0,
          0};
@@ -674,15 +674,27 @@ VkPipeline create_graphics_pipeline(
     };
     blending.attachmentCount = colour ? 1 : 0;
     blending.pAttachments = &blend;
+    // The first six are dynamic in every pipeline; the rest only where the key says the fixed
+    // state is (R-11): Vulkan 1.3's core extended dynamic state, the items MoltenVK takes in full.
     const VkDynamicState dynamic_states[] =
         {VK_DYNAMIC_STATE_VIEWPORT,
          VK_DYNAMIC_STATE_SCISSOR,
          VK_DYNAMIC_STATE_BLEND_CONSTANTS,
          VK_DYNAMIC_STATE_STENCIL_REFERENCE,
          VK_DYNAMIC_STATE_STENCIL_COMPARE_MASK,
-         VK_DYNAMIC_STATE_STENCIL_WRITE_MASK};
+         VK_DYNAMIC_STATE_STENCIL_WRITE_MASK,
+         VK_DYNAMIC_STATE_CULL_MODE,
+         VK_DYNAMIC_STATE_FRONT_FACE,
+         VK_DYNAMIC_STATE_DEPTH_TEST_ENABLE,
+         VK_DYNAMIC_STATE_DEPTH_WRITE_ENABLE,
+         VK_DYNAMIC_STATE_DEPTH_COMPARE_OP,
+         VK_DYNAMIC_STATE_STENCIL_TEST_ENABLE,
+         VK_DYNAMIC_STATE_STENCIL_OP};
+    constexpr std::uint32_t kAlwaysDynamic = 6;
     VkPipelineDynamicStateCreateInfo dynamic{VK_STRUCTURE_TYPE_PIPELINE_DYNAMIC_STATE_CREATE_INFO};
-    dynamic.dynamicStateCount = static_cast<std::uint32_t>(std::size(dynamic_states));
+    dynamic.dynamicStateCount = k.dynamic_fixed != 0
+                                    ? static_cast<std::uint32_t>(std::size(dynamic_states))
+                                    : kAlwaysDynamic;
     dynamic.pDynamicStates = dynamic_states;
     const VkFormat colour_format = static_cast<VkFormat>(k.colour_format);
     VkPipelineRenderingCreateInfo rendering{VK_STRUCTURE_TYPE_PIPELINE_RENDERING_CREATE_INFO};
@@ -1054,6 +1066,47 @@ void save_pipeline_manifest() {
     }
 }
 
+bool fixed_state_dynamic() {
+    return g->extended_dynamic_state
+           && renderer::render_opt::enabled(renderer::render_opt::Opt::VkExtendedDynamicState);
+}
+
+FixedState fixed_state(const Target& t) {
+    const State& s = g->state;
+    FixedState f{};
+    f.cull = !s.cull                            ? VK_CULL_MODE_NONE
+             : s.cull_face == GL_FRONT          ? VK_CULL_MODE_FRONT_BIT
+             : s.cull_face == GL_FRONT_AND_BACK ? VK_CULL_MODE_FRONT_AND_BACK
+                                                : VK_CULL_MODE_BACK_BIT;
+    // The same rows as OpenGL's, counted from the other side: what GL calls counter-clockwise,
+    // Vulkan's sign of the area calls clockwise.
+    f.front = s.front_face == GL_CCW ? VK_FRONT_FACE_CLOCKWISE : VK_FRONT_FACE_COUNTER_CLOCKWISE;
+
+    // No depth attachment: no depth or stencil test.
+    if (t.depth == nullptr) {
+        return f;
+    }
+
+    // GL writes depth only while it tests it.
+    f.depth_test = s.depth_test ? 1 : 0;
+    f.depth_write = s.depth_test && s.depth_mask ? 1 : 0;
+    f.depth_func = s.depth_test ? compare_op(s.depth_func) : 0;
+
+    // The stencil test, where the target has stencil.
+    if (s.stencil_test && has_stencil(t.depth->format)) {
+        f.stencil = 1;
+        f.stencil_func = compare_op(s.stencil_func);
+        f.front_ops[0] = stencil_op(s.stencil_front.sfail);
+        f.front_ops[1] = stencil_op(s.stencil_front.dppass);
+        f.front_ops[2] = stencil_op(s.stencil_front.dpfail);
+        f.back_ops[0] = stencil_op(s.stencil_back.sfail);
+        f.back_ops[1] = stencil_op(s.stencil_back.dppass);
+        f.back_ops[2] = stencil_op(s.stencil_back.dpfail);
+    }
+
+    return f;
+}
+
 VkPipeline pipeline_for(
     Program& p, GLenum mode, const Target& t, const Input* inputs, std::uint32_t count
 ) {
@@ -1066,13 +1119,13 @@ VkPipeline pipeline_for(
         mode == GL_LINE_STRIP || mode == GL_TRIANGLE_STRIP || mode == GL_TRIANGLE_FAN;
     k.restart = s.primitive_restart && strip ? 1 : 0;
     k.polygon = s.polygon_mode == GL_LINE && g->features.fillModeNonSolid ? 1 : 0;
-    k.cull = !s.cull                            ? VK_CULL_MODE_NONE
-             : s.cull_face == GL_FRONT          ? VK_CULL_MODE_FRONT_BIT
-             : s.cull_face == GL_FRONT_AND_BACK ? VK_CULL_MODE_FRONT_AND_BACK
-                                                : VK_CULL_MODE_BACK_BIT;
-    // The same rows as OpenGL's, counted from the other side: what GL calls counter-clockwise,
-    // Vulkan's sign of the area calls clockwise.
-    k.front = s.front_face == GL_CCW ? VK_FRONT_FACE_CLOCKWISE : VK_FRONT_FACE_COUNTER_CLOCKWISE;
+    k.dynamic_fixed = fixed_state_dynamic() ? 1 : 0;
+
+    // Baked into the pipeline, unless the draw records it as dynamic state (R-11).
+    if (k.dynamic_fixed == 0) {
+        k.fixed = fixed_state(t);
+    }
+
     if (t.colour != nullptr) {
         k.blend = s.blend ? 1 : 0;
         if (s.blend) {
@@ -1088,20 +1141,6 @@ VkPipeline pipeline_for(
     }
     if (t.depth != nullptr) {
         k.depth_format = t.depth->format;
-        // GL writes depth only while it tests it.
-        k.depth_test = s.depth_test ? 1 : 0;
-        k.depth_write = s.depth_test && s.depth_mask ? 1 : 0;
-        k.depth_func = s.depth_test ? compare_op(s.depth_func) : 0;
-        if (s.stencil_test && has_stencil(t.depth->format)) {
-            k.stencil = 1;
-            k.stencil_func = compare_op(s.stencil_func);
-            k.front_ops[0] = stencil_op(s.stencil_front.sfail);
-            k.front_ops[1] = stencil_op(s.stencil_front.dppass);
-            k.front_ops[2] = stencil_op(s.stencil_front.dpfail);
-            k.back_ops[0] = stencil_op(s.stencil_back.sfail);
-            k.back_ops[1] = stencil_op(s.stencil_back.dppass);
-            k.back_ops[2] = stencil_op(s.stencil_back.dpfail);
-        }
     }
     k.samples = t.samples;
     k.inputs = count;
@@ -1473,6 +1512,209 @@ VkDescriptorSet descriptors_reference(Program& p, std::span<const Sampled> sampl
     return set;
 }
 
+// ---- Descriptor sets kept across frames (R-14) ----
+
+// Returns whether `buffer` lives as long as the backend: a frame's ring chunk, the dummy buffer,
+// or none. A set naming only such buffers can be kept; a GL buffer's may be deleted and its
+// handle given out again.
+bool long_lived_buffer(VkBuffer buffer) {
+    // None, or the zeros every unbound input reads.
+    if (buffer == VK_NULL_HANDLE || buffer == g->dummy_buffer) {
+        return true;
+    }
+
+    // Each frame's ring chunks, which go only when the backend closes.
+    for (const Frame& f : g->frames) {
+        // A chunk of this frame's ring.
+        for (const Chunk& c : f.chunks) {
+            // This one.
+            if (c.buffer == buffer) {
+                return true;
+            }
+        }
+    }
+
+    return false;
+}
+
+// Returns whether the texel view `view` lives as long as the backend: none, or a dummy view.
+bool long_lived_texels(VkBufferView view) {
+    return view == VK_NULL_HANDLE
+           || std::ranges::find(g->dummy_views, view) != std::end(g->dummy_views);
+}
+
+// Fills `out` with the key a set of program `p` binding `blocks` and `samplers` is kept under:
+// the program's serial, the set's `key`, then each sampled image's serial. False when the set
+// names a resource that may die and give its handle to another (a GL buffer, a texture buffer):
+// such a set is made each frame, as before.
+bool persistent_key(
+    const Program& p,
+    std::span<const BufferRef> blocks,
+    std::span<const Sampled> samplers,
+    std::span<const std::uint64_t> key,
+    std::vector<std::uint64_t>& out
+) {
+    // The default uniforms come from the ring, but a program may bind none.
+    if (!long_lived_buffer(p.uniforms_buffer)) {
+        return false;
+    }
+
+    // Each block's buffer.
+    for (const BufferRef& block : blocks) {
+        // A GL buffer: not kept.
+        if (!long_lived_buffer(block.buffer)) {
+            return false;
+        }
+    }
+
+    // Each sampler's texel view and image.
+    for (const Sampled& s : samplers) {
+        // A texture buffer's view, or an image destroy_image_now emptied.
+        if (!long_lived_texels(s.texels) || (s.image != nullptr && s.image->serial == 0)) {
+            return false;
+        }
+    }
+
+    out.clear();
+    out.push_back(p.serial);
+    out.insert(out.end(), key.begin(), key.end());
+
+    // The images by their serials, which no later image takes.
+    for (const Sampled& s : samplers) {
+        out.push_back(s.image != nullptr ? s.image->serial : 0);
+    }
+
+    return true;
+}
+
+// Makes a pool for kept sets, of PersistentSets::kPoolSets sets that can be freed one by one.
+VkDescriptorPool new_persistent_pool() {
+    constexpr std::uint32_t kSets = PersistentSets::kPoolSets;
+    // Each set binds a few of each kind at most (assumed: the port's programs bind up to a
+    // handful of blocks and samplers), so twice the sets of each.
+    const VkDescriptorPoolSize sizes[] =
+        {{VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 2 * kSets},
+         {VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC, kSets},
+         {VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 4 * kSets},
+         {VK_DESCRIPTOR_TYPE_UNIFORM_TEXEL_BUFFER, kSets},
+         {VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, kSets}};
+    VkDescriptorPoolCreateInfo info{VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO};
+    info.flags = VK_DESCRIPTOR_POOL_CREATE_FREE_DESCRIPTOR_SET_BIT;
+    info.maxSets = kSets;
+    info.poolSizeCount = static_cast<std::uint32_t>(std::size(sizes));
+    info.pPoolSizes = sizes;
+    VkDescriptorPool pool = VK_NULL_HANDLE;
+    check(vkCreateDescriptorPool(g->device, &info, nullptr, &pool), "a descriptor pool");
+    return pool;
+}
+
+// Allocates a set of `layout` from the kept sets' pools, making a pool when all are full; null
+// with `pool` untouched when none can be made. `pool` is set to the pool it came from.
+VkDescriptorSet allocate_persistent(VkDescriptorSetLayout layout, VkDescriptorPool& pool) {
+    PersistentSets& kept = g->persistent_sets;
+    VkDescriptorSetAllocateInfo info{VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO};
+    info.descriptorSetCount = 1;
+    info.pSetLayouts = &layout;
+
+    // The newest pool first, then a new one: older pools have room only where sets were freed.
+    for (int attempt = 0; attempt < 2; ++attempt) {
+        // No pool, or the newest is full: one more.
+        if (attempt == 1 || kept.pools.empty()) {
+            const VkDescriptorPool fresh = new_persistent_pool();
+
+            // The device cannot make another.
+            if (fresh == VK_NULL_HANDLE) {
+                return VK_NULL_HANDLE;
+            }
+
+            kept.pools.push_back(fresh);
+        }
+
+        info.descriptorPool = kept.pools.back();
+        VkDescriptorSet set = VK_NULL_HANDLE;
+
+        // Allocated.
+        if (vkAllocateDescriptorSets(g->device, &info, &set) == VK_SUCCESS) {
+            ++g->submission.descriptor_sets_allocated;
+            pool = info.descriptorPool;
+            return set;
+        }
+    }
+
+    return VK_NULL_HANDLE;
+}
+
+// Frees the kept set bound least recently, if no frame in flight may still use it. False when
+// every set was bound too recently: the new one is then not kept.
+bool evict_persistent_set() {
+    PersistentSets& kept = g->persistent_sets;
+    auto oldest = kept.sets.end();
+
+    // The set bound longest ago.
+    for (auto it = kept.sets.begin(); it != kept.sets.end(); ++it) {
+        // Older than the oldest so far.
+        if (oldest == kept.sets.end() || it->second.used_frame < oldest->second.used_frame) {
+            oldest = it;
+        }
+    }
+
+    // A frame still in flight may bind it: the kFrames before this one.
+    if (oldest == kept.sets.end()
+        || oldest->second.used_frame + static_cast<std::uint64_t>(kFrames) >= g->frame_count) {
+        return false;
+    }
+
+    vkFreeDescriptorSets(g->device, oldest->second.pool, 1, &oldest->second.set);
+    kept.sets.erase(oldest);
+    return true;
+}
+
+// Returns the kept set of program `p` for `blocks` and `samplers`, whose per-frame key is `key`,
+// making and writing it when there is none; null when the set may not be kept (persistent_key)
+// or cannot be made, and the caller makes one for this frame.
+VkDescriptorSet persistent_set(
+    Program& p,
+    std::span<const BufferRef> blocks,
+    std::span<const Sampled> samplers,
+    std::span<const std::uint64_t> key
+) {
+    PersistentSets& kept = g->persistent_sets;
+
+    // A set of resources that may die is not kept.
+    if (!persistent_key(p, blocks, samplers, key, kept.key)) {
+        return VK_NULL_HANDLE;
+    }
+
+    const std::string_view bytes(
+        reinterpret_cast<const char*>(kept.key.data()), kept.key.size() * sizeof(std::uint64_t)
+    );
+
+    // Written in an earlier frame: bound again, unwritten.
+    if (const auto found = kept.sets.find(bytes); found != kept.sets.end()) {
+        found->second.used_frame = g->frame_count;
+        ++g->submission.descriptor_reuses;
+        return found->second.set;
+    }
+
+    // Full: the least recently bound goes, unless every set was bound too lately.
+    if (kept.sets.size() >= PersistentSets::kCapacity && !evict_persistent_set()) {
+        return VK_NULL_HANDLE;
+    }
+
+    VkDescriptorPool pool = VK_NULL_HANDLE;
+    const VkDescriptorSet set = allocate_persistent(p.set_layout, pool);
+
+    // No pool could be made.
+    if (set == VK_NULL_HANDLE) {
+        return VK_NULL_HANDLE;
+    }
+
+    write_set(p, set, blocks, samplers, g->scratch);
+    ++g->submission.descriptor_sets;
+    kept.sets.emplace(std::string(bytes), PersistentSet{set, pool, g->frame_count});
+    return set;
+}
+
 // descriptors() with vk-draw-cache: the reference path's sets, found and made with
 // Context::scratch's arrays and Program::set_cache, so a set found allocates nothing.
 VkDescriptorSet descriptors_cached(Program& p, std::span<const Sampled> samplers) {
@@ -1501,15 +1743,27 @@ VkDescriptorSet descriptors_cached(Program& p, std::span<const Sampled> samplers
         }
     }
 
-    const VkDescriptorSet set = allocate_set(p.set_layout);
+    // A set kept from an earlier frame, or kept from now on (vk-persistent-descriptors).
+    VkDescriptorSet set = VK_NULL_HANDLE;
 
-    // The pools are exhausted and a new one could not be made.
-    if (set == VK_NULL_HANDLE) {
-        return VK_NULL_HANDLE;
+    // Kept sets need the reuse as well: without it every set is made anew, the reference.
+    if (reuse_uniforms()
+        && renderer::render_opt::enabled(renderer::render_opt::Opt::VkPersistentDescriptors)) {
+        set = persistent_set(p, scratch.blocks, samplers, key);
     }
 
-    write_set(p, set, scratch.blocks, samplers, scratch);
-    ++g->submission.descriptor_sets;
+    // Not kept: made for this frame, as before.
+    if (set == VK_NULL_HANDLE) {
+        set = allocate_set(p.set_layout);
+
+        // The pools are exhausted and a new one could not be made.
+        if (set == VK_NULL_HANDLE) {
+            return VK_NULL_HANDLE;
+        }
+
+        write_set(p, set, scratch.blocks, samplers, scratch);
+        ++g->submission.descriptor_sets;
+    }
 
     // Kept for the rest of the frame, unless the reuse is the reference that is switched off.
     if (reuse_uniforms()) {

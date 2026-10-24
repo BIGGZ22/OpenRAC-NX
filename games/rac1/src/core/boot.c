@@ -170,7 +170,7 @@ BinFn func_0012DA38(void) {
     BinFn id;
 
     id = 0;
-    p = (unsigned char *)(D_0015EF4C[0] + (int)D_0015EF4C);
+    p = (unsigned char *)(level_root[0] + (int)level_root);
     while (c = (struct Chunk *)p, p = (unsigned char *)(c + 1), dst = c->dst, src = p,
            (id == 0) ? (id = c->id, 1) : (id == c->id)) {
         if (((c->size & 7) == 0) && (((unsigned int)p & 7) == 0) && (((unsigned int)dst & 7) == 0)) {
@@ -223,7 +223,7 @@ void func_0012DB18(void) { /* main */
     EntryFn entry;
 
     func_0011DFC8();
-    entry = GameBootSequence;
+    entry = startlevel;
     do {
         entry();
         entry = func_0012DA38();

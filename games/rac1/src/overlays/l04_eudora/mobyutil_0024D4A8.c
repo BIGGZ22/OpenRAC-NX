@@ -6,7 +6,7 @@ typedef struct {
     float x, y, z, w;
 } V_24d4a8;
 
-int Poly_FindOutsideEdge(float *p, float *poly, int n) {
+int find_first_positive_polygon_edge_cross_xy(float *p, float *poly, int n) {
     V_24d4a8 *v = (V_24d4a8 *)poly;
     int i;
 
@@ -64,7 +64,7 @@ int ClosestPointOnPolygon(float *out, float *p, float *poly, int n) {
     float diff[4];
     float best;
     int i;
-    int r = Poly_FindOutsideEdge(p, poly, n) != 0;
+    int r = find_first_positive_polygon_edge_cross_xy(p, poly, n) != 0;
     best = 0;
     for (i = 0; i < n; i++) {
         float d;

@@ -87,7 +87,7 @@ a full diagonal runs; a stick that already reports a square is left as it is
 (`platform/pad.h`).
 
 The on-screen pad (`platform/touch_pad.h`, drawn by one shader in
-`game/common/touch_overlay.cpp`):
+`renderer/ui/touch_overlay.cpp`):
 
 - appears when you touch the screen, and hides when you use a controller or
   leave the screen alone for ten seconds;

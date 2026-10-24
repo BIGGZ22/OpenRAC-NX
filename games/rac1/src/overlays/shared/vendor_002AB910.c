@@ -192,7 +192,7 @@ extern char *func_L00_002D4CE8(char *a, char *b, int c, char *d);
 extern void func_L00_0025B040(unsigned char *, float);
 
 /* Mine (moby class 74) update: falls and bounces, sticks to what it hits, homes on a nearby target and explodes. */
-void MineUpdate(M910 *m) {
+void mine_update(M910 *m) {
     B910 a = D_L00_001E9BB0;
     B910 b = D_L00_001E9C00;
     U910 c;
@@ -225,9 +225,9 @@ void MineUpdate(M910 *m) {
     if (v->owner != 0 && v->owner->state != 0xFE && v->owner->state != 0xFD
         && v->owner->cls == 0xBE && v->h36 == 0 && 0.0f < FastVecLength(v)) {
         if (D_G910.p2FC == 0 || GetFlaggedPvarWord(D_G910.p2FC) == 0) {
-            ProjectilePath_Trace(v, m, 1);
-        } else if (ProjectilePath_Trace(v, m, 0) == 0) {
-            ProjectilePath_Trace(v, m, 2);
+            predict_mine_impact(v, m, 1);
+        } else if (predict_mine_impact(v, m, 0) == 0) {
+            predict_mine_impact(v, m, 2);
         }
     }
     st = m->state;
@@ -267,7 +267,7 @@ void MineUpdate(M910 *m) {
                 } else {
                     v->vel.f[2] -= D_0015EE70 * 9.8f / 10.0f;
                     if (random_integer_below(scale_ticks(6) - 1) == 0) {
-                        float wz = GetGroundHeight((float *)&m->pos, &q);
+                        float wz = resolve_camera_surface_height((float *)&m->pos, &q);
 
                         FastVecScale(&q, v, 0.25f);
                         PartType34Spawn(&m->pos, &q, random_float_between(0.05f, 0.1f) * 210000.0f, wz);
@@ -412,8 +412,8 @@ void MineUpdate(M910 *m) {
                                     r[0] = n[0] * FastCos(m->rz) + n[1] * FastSin(m->rz);
                                     r[1] = n[1] * FastCos(m->rz) - n[0] * FastSin(m->rz);
                                     r[2] = n[2];
-                                    m->rx = RotateTowardAngle(m->rx, -func_L00_001FF860(func_001F9B50(r[0] * r[0] + r[2] * r[2]), r[1]), 0.05235988f);
-                                    m->ry = RotateTowardAngle(m->ry, func_L00_001FF860(r[2], r[0]), 0.05235988f);
+                                    m->rx = step_rotation_toward_target(m->rx, -func_L00_001FF860(func_001F9B50(r[0] * r[0] + r[2] * r[2]), r[1]), 0.05235988f);
+                                    m->ry = step_rotation_toward_target(m->ry, func_L00_001FF860(r[2], r[0]), 0.05235988f);
                                 }
                             }
                         }
@@ -609,7 +609,7 @@ void MineUpdate(M910 *m) {
                         range *= 3.0f;
                     }
                     i = 0;
-                    o = (M910 *)D_L00_001ABD80[i];
+                    o = (M910 *)active_mobies[i];
                     while (o != 0) {
                         float rg;
                         unsigned char *p;
@@ -655,7 +655,7 @@ void MineUpdate(M910 *m) {
                         v->i48 = scale_ticks(7);
                     next:
                         i++;
-                        o = (M910 *)D_L00_001ABD80[i];
+                        o = (M910 *)active_mobies[i];
                     }
                     if (best != 0) {
                         v->p54 = best;
@@ -665,7 +665,7 @@ void MineUpdate(M910 *m) {
             v->i78 = 0;
             if (v->i5C < 0 || *(int *)&D_L00_001614A0 != 0) {
                 SpawnExplosionFx(m, &m->pos, -1, 0.33f, 13.0f);
-                MobyList_Remove(m, D_L00_001B0B30);
+                mine_spawn_drops(m, D_L00_001B0B30);
                 DeleteMoby(m);
             }
             {
@@ -808,7 +808,7 @@ void MineUpdate(M910 *m) {
                                 float sz = random_float_between(200000.0f, 300000.0f) * sc;
                                 int life = rand_range(scale_ticks(0xB4), scale_ticks(0xF0));
 
-                                PartType16Spawn((char *)r, (char *)n, c1, 0x101010, sz, life, 0);
+                                mine_debris((char *)r, (char *)n, c1, 0x101010, sz, life, 0);
                                 break;
                             }
                             case 1: {
@@ -816,7 +816,7 @@ void MineUpdate(M910 *m) {
                                 int c2 = PermuteColorChannels(0x0F081020, D_E910.b11);
                                 float sz = random_float_between(50000.0f, 100000.0f) * sc;
 
-                                PartType16Spawn((char *)r, (char *)n, c1, c2, sz, scale_ticks(0xB4), 1);
+                                mine_debris((char *)r, (char *)n, c1, c2, sz, scale_ticks(0xB4), 1);
                                 break;
                             }
                             case 2: {
@@ -828,7 +828,7 @@ void MineUpdate(M910 *m) {
                                 c2 = PermuteColorChannels(0x0F000020, D_E910.b11);
                                 sz = sc * 150000.0f;
                                 life = rand_range(scale_ticks(0x1E), scale_ticks(0x2D));
-                                PartType16Spawn((char *)r, (char *)n, c1, c2, sz, life, 2);
+                                mine_debris((char *)r, (char *)n, c1, c2, sz, life, 2);
                                 break;
                             }
                             case 3: {
@@ -842,7 +842,7 @@ void MineUpdate(M910 *m) {
                                 BuildSphericalOffset(n, random_float_between(0.0f, 1.0f) * D_0015EE6C, ang, random_angle_radians());
                                 sz = random_float_between(200000.0f, 300000.0f) * sc;
                                 life = rand_range(scale_ticks(0xF0), scale_ticks(0x12C));
-                                PartType16Spawn((char *)r, (char *)n, c1, c2, sz, life, 3);
+                                mine_debris((char *)r, (char *)n, c1, c2, sz, life, 3);
                                 break;
                             }
                             }
@@ -855,18 +855,18 @@ void MineUpdate(M910 *m) {
                 } else {
                     Moby_PlaySound(2, 0, (int)m);
                 }
-                gCameraLvl.f160 = dist < 20.0f ? 0.4f - dist * 0.0175f : 0.050000012f;
-                gCameraLvl.i168 = scale_ticks(0x19);
+                player_camera.f160 = dist < 20.0f ? 0.4f - dist * 0.0175f : 0.050000012f;
+                player_camera.i168 = scale_ticks(0x19);
                 FastVecDist(&m->pos, D_G910.pos);
                 if (D_E910.b11 != 0) {
-                    Moby639Spawn((char *)&b, (char *)&m->pos, 0, 0);
+                    mine_camera_blast((char *)&b, (char *)&m->pos, 0, 0);
                 } else {
-                    Moby639Spawn((char *)&a, (char *)&m->pos, 0, 0);
+                    mine_camera_blast((char *)&a, (char *)&m->pos, 0, 0);
                 }
-                MobyList_Remove(m, D_L00_001B0B30);
+                mine_spawn_drops(m, D_L00_001B0B30);
                 DeleteMoby(m);
             } else {
-                RecordMobyShadow((unsigned char *)m, 0.25f);
+                jet_animate((unsigned char *)m, 0.25f);
             }
         }
     }
@@ -934,7 +934,7 @@ typedef struct M_d {
 } M_d;
 
 /* updates a decaying moby: spins down its position fields and fades it out. Adapted from Lombyte (GPL-3.0) for PAL: overlays/shared/unclassified_002aa670.c, FUN_L00_002acad8. */
-void SpinFadeOutUpdate(M_d *m) {
+void update_glow_particle(M_d *m) {
     V_d *v = m->v;
     float a, b;
     int n;
@@ -967,27 +967,45 @@ extern float func_001FA7D8(float x);
 extern int func_001F4868(int);
 extern void func_L00_001FD1D8(void *, void *, int);
 
+typedef struct PV_2acbf0_002acbf0 {
+    u8 pad_00[0x10];
+    Vec4 pos;                  /* 0x10: copied to the marker's transform row 3 */
+    f32 f20;                   /* 0x20 */
+    f32 f24;                   /* 0x24 */
+    f32 f28;                   /* 0x28 */
+} PV_2acbf0_002acbf0;
+
+typedef struct M_2acbf0_002acbf0 {
+    u8 pad_00[0x78];
+    PV_2acbf0_002acbf0 *pv;    /* 0x78 */
+} M_2acbf0_002acbf0;
+
+typedef struct BombE910 {
+    u8 pad_00[0xA];
+    u8 bA;                      /* 0x0A */
+} BombE910;
+
 /* Draws two spinning textured quads around the moby, oriented by its velocity. */
-void DrawSpinningQuadPair(char *moby) {
+void draw_bomb_landing_marker(char *moby) {
     QuadPkt q;
     float M[4][4];
     float E[4][4];
     float rot1[4];
     float rot2[4];
-    char *d = *(char **)(moby + 0x78);
-    int i;
+    PV_2acbf0_002acbf0 *pv = ((M_2acbf0_002acbf0 *)moby)->pv;
+    s32 i;
 
     if (D_L00_0015F6A8 == 2) return;
     for (i = 0; i < 2; i++) {
-        int odd = i & 1;
-        float ang;
-        float den;
-        float r;
-        int kind;
-        float x = *(float *)(d + 0x20);
-        float z = *(float *)(d + 0x28);
-        rot1[0] = FastAddRots(-func_L00_001FF860(func_001F9B50(x * x + z * z), *(float *)(d + 0x24)), 1.5707964f);
-        rot1[1] = func_L00_001FF860(*(float *)(d + 0x28), *(float *)(d + 0x20));
+        s32 odd = i & 1;
+        f32 ang;
+        f32 den;
+        f32 r;
+        s32 kind;
+        f32 x = pv->f20;
+        f32 z = pv->f28;
+        rot1[0] = FastAddRots(-func_L00_001FF860(func_001F9B50(x * x + z * z), pv->f24), 1.5707964f);
+        rot1[1] = func_L00_001FF860(pv->f28, pv->f20);
         rot1[2] = 0;
         rot1[3] = 0;
         rot2[0] = 0;
@@ -1002,7 +1020,7 @@ void DrawSpinningQuadPair(char *moby) {
         func_001FA218(E, rot2);
         func_001FA218(M, rot1);
         sce_vu0_mul_matrix(M, M, E);
-        qcopy(M[3], d + 0x10);
+        qcopy(M[3], &pv->pos);
         kind = 0x11;
         if (odd) kind = 0x12;
         q.rgba[0] = 0x80808080;
@@ -1034,7 +1052,7 @@ typedef union {
 } V2AE110 __attribute__((aligned(16)));
 
 /* Spawns a type-0x79 moby with random spin axes and speeds, owned by the given object, at pos. Adapted from Lombyte (GPL-3.0) for PAL: overlays/shared/unclassified_002aa670.c, FUN_L00_002ace70. */
-char *SpawnHeroBomb(int owner, void *pos) {
+char *spawn_bomb(int owner, void *pos) {
     char *m = spawn_79(0x79);
     if (m) {
         V2AE110 u, t;
@@ -1077,96 +1095,147 @@ extern float func_001F9D48(void *, void *);
 extern float func_001FA850(float, float);
 extern void func_L00_002C3790(float *, float *, float *, float, float, float);
 
-void func_L00_002AE278(float *pos, unsigned char *moby, float *velocity) {
-    float *v = *(float **)(moby + 0x78);
+typedef struct BombVars {
+    Vec4 vel;                   /* 0x00 */
+    u8 pad_10[0x30];
+    Vec4 dir;                   /* 0x40 */
+    u8 pad_50[0x4];
+    s16 unk54;                  /* 0x54 */
+    u8 pad_56[0xA];
+    struct BombMoby *target;    /* 0x60 */
+    s32 unk64;                  /* 0x64 */
+    u8 pad_68[0x2];
+    s16 unk6A;                  /* 0x6A */
+} BombVars;
+
+typedef struct BombMoby {
+    Vec4 bsphere;               /* 0x00 */
+    Vec4 pos;                   /* 0x10 */
+    u8 state;                   /* 0x20 */
+    u8 pad_21[0x57];
+    struct BombVars *pvars;     /* 0x78 */
+    u8 pad_7C[0x2A];
+    s16 oclass;                 /* 0xA6 */
+    u8 pad_A8[0x14];
+    u8 command;                 /* 0xBC */
+} BombMoby;
+
+typedef struct BombHeroMotion {
+    Vec4 pos;                   /* 0x00 (hero 0x80) */
+    u8 pad_10[0x70];
+    Vec4 displacement;          /* 0x80 (hero 0x100) */
+} BombHeroMotion;
+
+typedef struct BombHeroState {
+    s32 current;                /* 0x00 (hero 0x2084) */
+    s32 step;                   /* 0x04 */
+    s32 control_mode;           /* 0x08 (hero 0x208C) */
+} BombHeroState;
+
+typedef struct BombHero {
+    u8 pad_000[0x80];
+    BombHeroMotion motion;      /* 0x080 */
+    u8 pad_110[0x1EC];
+    struct BombMoby *ground_moby; /* 0x2FC */
+    u8 pad_300[0x370];
+    f32 unk670;                 /* 0x670 */
+    f32 unk674;                 /* 0x674 */
+    u8 pad_678[0x1A08];
+    struct BombMoby *moby;      /* 0x2080 */
+    BombHeroState state;        /* 0x2084 */
+} BombHero;
+
+void launch_bomb(float *pos, unsigned char *moby, float *velocity) {
+    BombMoby *m = (BombMoby *)moby;
+    BombVars *vars = m->pvars;
     float difference[4] __attribute__((aligned(16)));
     float direction[4] __attribute__((aligned(16)));
     float result[4] __attribute__((aligned(16)));
     float working[4] __attribute__((aligned(16)));
     float desired[4] __attribute__((aligned(16)));
-    char *g;
-    char *gb;
-    char *gc;
+    BombHero *g;
+    BombHero *gb;
+    BombHero *gc;
     unsigned char *mp;
     char *e;
     char *ge;
     float *rp;
     float dot, length, distance, angle, height, total;
 
-    *(short *)((char *)v + 0x6a) = func_001F9850(30);
-    moby[0x20] = 1;
-    qcopy(v, velocity);
-    g = (char *)&D_G910;
-    if (*(int *)(g + 0x208C) == 15) {
-        func_001F9BD8(v, v, g + 0x100);
-    } else if (*(unsigned char **)(g + 0x2FC) != 0 && func_L00_0025D390(*(unsigned char **)(g + 0x2FC)) != 0) {
-        func_001F9BD8(v, v, g + 0x100);
-    } else if (*(float **)((char *)v + 0x60) != 0) {
-        short cls = *(short *)(*(char **)((char *)v + 0x60) + 0xa6);
+    vars->unk6A = scale_ticks(30);
+    m->state = 1;
+    qcopy(vars, velocity);
+    g = (BombHero *)&D_G910;
+    if (g->state.control_mode == 15) {
+        FastVecAdd(&vars->vel, &vars->vel, &g->motion.displacement);
+    } else if (g->ground_moby != 0 && GetFlaggedPvarWord((unsigned char *)g->ground_moby) != 0) {
+        FastVecAdd(&vars->vel, &vars->vel, &g->motion.displacement);
+    } else if (vars->target != 0) {
+        short cls = vars->target->oclass;
         if (cls == 0x56e || cls == 0x58e) {
-            func_001F9BD8(v, v, v + 0x10);
-        } else if (*(int *)((char *)v + 0x64) != 0) {
+            FastVecAdd(&vars->vel, &vars->vel, &vars->dir);
+        } else if (vars->unk64 != 0) {
             length = func_001F9CE8(velocity);
-            func_001F9BF0(difference, D_G910.pos, *(char **)((char *)v + 0x60) + 0x10);
+            FastVecSub(difference, &((BombHero *)&D_G910)->motion.pos, &vars->target->pos);
             func_L00_001FF4B0(difference, difference, 1.0f);
-            dot = func_001F9C78(difference, v + 0x10);
+            dot = FastVecDot(difference, &vars->dir);
             total = dot + length;
-            distance = func_001F9D48(pos, *(char **)((char *)v + 0x60) + 0x10) / total;
+            distance = func_001F9D48(pos, &vars->target->pos) / total;
             if (dot > 0.0f) {
-                func_001F9C30(direction, difference, distance * dot);
-                func_001F9BD8(working, direction, *(char **)((char *)v + 0x60) + 0x10);
+                FastVecScale(direction, difference, distance * dot);
+                FastVecAdd(working, direction, &vars->target->pos);
                 *(VecQuad *)direction = *(VecQuad *)working;
             } else {
-                func_001F9C30(direction, v + 0x10, distance);
-                func_001F9BD8(working, direction, *(char **)((char *)v + 0x60) + 0x10);
+                FastVecScale(direction, &vars->dir, distance);
+                FastVecAdd(working, direction, &vars->target->pos);
                 *(VecQuad *)direction = *(VecQuad *)working;
             }
-            gb = (char *)&D_G910;
+            gb = (BombHero *)&D_G910;
             {
-                float heading = func_L00_001FF860(*(float *)(gb + 0x670), *(float *)(gb + 0x674));
-                float toward = func_L00_001FF860(direction[0] - *(float *)(gb + 0x80),
-                                             direction[1] - *(float *)(gb + 0x84));
-                angle = func_001FA850(heading, toward);
+                float heading = func_L00_001FF860(gb->unk670, gb->unk674);
+                float toward = func_L00_001FF860(direction[0] - gb->motion.pos.f[0],
+                                                 direction[1] - gb->motion.pos.f[1]);
+                angle = FastDiffRots(heading, toward);
             }
             if (angle > 1.5707964f) {
-                working[0] = func_001F9F90(func_L00_001FF860(*(float *)(gb + 0x670), *(float *)(gb + 0x674))) *
-                            func_001F9D48(gb + 0x80, direction) * 0.5f;
-                angle = func_001F9FA8(func_L00_001FF860(*(float *)(gb + 0x670), *(float *)(gb + 0x674)));
-                working[1] = angle * func_001F9D48(gb + 0x80, direction) * 0.5f;
+                working[0] = FastCos(func_L00_001FF860(gb->unk670, gb->unk674)) *
+                             func_001F9D48(&gb->motion.pos, direction) * 0.5f;
+                angle = FastSin(func_L00_001FF860(gb->unk670, gb->unk674));
+                working[1] = angle * func_001F9D48(&gb->motion.pos, direction) * 0.5f;
                 working[2] = 0.0f;
-                func_001F9BD8(desired, working, gb + 0x80);
+                FastVecAdd(desired, working, &gb->motion.pos);
                 *(VecQuad *)direction = *(VecQuad *)desired;
             }
             total = D_0015EE70 * 11.0f;
             rp = result;
             if (*(int *)(D_0013A5E0 + 0x2600) & 5) {
                 e = (char *)&D_E910;
-                height = func_001FA888(*(unsigned char *)(e + 0xa)) * 2.5f + 8.5f;
+                height = IntToFloat(*(unsigned char *)(e + 0xa)) * 2.5f + 8.5f;
             } else {
                 height = 8.5f;
             }
-            func_L00_002C3790(pos, direction, rp, total, 0.00001f, height);
-            func_001F9C30(result, result, 0.65f);
-            func_001F9C30(v, v, 0.35f);
-            func_001F9BD8(working, v, result);
-            *(VecQuad *)v = *(VecQuad *)working;
+            aim_throw_arc(pos, direction, rp, total, 0.00001f, height);
+            FastVecScale(result, result, 0.65f);
+            FastVecScale(&vars->vel, &vars->vel, 0.35f);
+            FastVecAdd(working, &vars->vel, result);
+            *(VecQuad *)&vars->vel = *(VecQuad *)working;
         }
     }
     mp = moby + 0x10;
-    *(short *)((char *)v + 0x54) = func_001F9850(300);
+    vars->unk54 = scale_ticks(300);
     qcopy(mp, pos);
-    gc = (char *)&D_G910;
-    *(VecQuad *)difference = *(VecQuad *)(*(char **)(gc + 0x2080) + 0x10);
+    gc = (BombHero *)&D_G910;
+    *(VecQuad *)difference = *(VecQuad *)&gc->moby->pos;
     difference[2] = pos[2];
-    if (func_L00_001EFFF0(difference, pos, 0, *(int *)(gc + 0x2080), 0) != 0) {
-        moby[0xbc] = 1;
+    if (func_L00_001EFFF0(difference, pos, 0, (int)gc->moby, 0) != 0) {
+        m->command = 1;
         qcopy(mp, D_L00_00173F60);
     }
     ge = (char *)&D_E910;
-    if (*(unsigned char *)(ge + 0xa) != 0 && *(int *)(gc + 0x2084) == 1) {
-        float z = v[2];
-        func_001F9C30(v, v, 1.5f);
-        v[2] = z / 1.5f;
+    if (*(unsigned char *)(ge + 0xa) != 0 && gc->state.current == 1) {
+        float z = vars->vel.f[2];
+        FastVecScale(&vars->vel, &vars->vel, 1.5f);
+        vars->vel.f[2] = z / 1.5f;
     }
 }
 typedef struct { float f[4]; } __attribute__((aligned(16))) V_AE6B0;
@@ -1315,7 +1384,7 @@ check_surface:
     }
     if (timer && (mode || (D_L00_00173F58 && GetFlaggedPvarWord((unsigned char *)D_L00_00173F58)))) {
         if (mode != 2 || !D_L00_00173F58 || !GetFlaggedPvarWord((unsigned char *)D_L00_00173F58))
-            AddDrawCallback((void *)DrawSpinningQuadPair, m);
+            AddDrawCallback((void *)draw_bomb_landing_marker, m);
         if (!object_hit && v->last_hit) {
             last = v->last_hit;
             if (*(unsigned char *)(last + 0x20) == 0xFE) {
@@ -1420,7 +1489,7 @@ extern float func_L00_0025F368(float);
 extern float func_L00_0025C700(float, float, float);
 
 /* Update of moby class 121, a thrown bomb: it flies and spins, bounces once on the ground, explodes on a hit or when its timer runs out, then its blast ring grows for 15 frames. */
-void HeroBombUpdate(M_2aedd0 *m) {
+void bomb_update(M_2aedd0 *m) {
     B910 rec = D_L00_001E9C50;
     V2AE110 delta;
     V2AE110 old;
@@ -1515,7 +1584,7 @@ void HeroBombUpdate(M_2aedd0 *m) {
             } else {
                 d->v.f[2] -= D_0015EE70 * 11.0f / 10.0f;
                 if (random_integer_below(scale_ticks(6) - 1) == 0) {
-                    float h = GetGroundHeight((float *)&m->pos, &q);
+                    float h = resolve_camera_surface_height((float *)&m->pos, &q);
 
                     FastVecScale(&q, d, 0.25f);
                     PartType34Spawn(&m->pos, &q, random_float_between(0.05f, 0.1f) * 210000.0f, h);
@@ -1721,7 +1790,7 @@ void HeroBombUpdate(M_2aedd0 *m) {
                     float h;
 
                     m->pos.f[2] += 1.0f;
-                    h = GetGroundHeight((float *)&m->pos, &v);
+                    h = resolve_camera_surface_height((float *)&m->pos, &v);
                     m->pos.f[2] -= 1.0f;
                     {
                         int i;
@@ -1809,10 +1878,10 @@ void HeroBombUpdate(M_2aedd0 *m) {
                         }
                     }
                 }
-                gCameraLvl.f160 = dist < 20.0f ? 0.4f - dist * 0.0175f : 0.4f - 20.0f * 0.0175f;
-                gCameraLvl.i168 = scale_ticks(0x19);
+                player_camera.f160 = dist < 20.0f ? 0.4f - dist * 0.0175f : 0.4f - 20.0f * 0.0175f;
+                player_camera.i168 = scale_ticks(0x19);
                 FastVecDist(&m->pos, D_G910.pos);
-                Moby639Spawn((char *)&rec, (char *)&m->pos, 0, 0);
+                mine_camera_blast((char *)&rec, (char *)&m->pos, 0, 0);
                 if (m->state != 2) {
                     DeleteMoby(m);
                     return;
@@ -1823,7 +1892,7 @@ void HeroBombUpdate(M_2aedd0 *m) {
         int v;
 
         d->h6a++;
-        v = truncate_float_to_s32(FastSin(WrapAngle((float)d->h6a * 0.068f)) * 96.0f) + 0x9F;
+        v = truncate_float_to_s32(FastSin(normalize_angle((float)d->h6a * 0.068f)) * 96.0f) + 0x9F;
         m->color = (v << 16) | (0xFF << 24) | (v << 8) | v;
     }
     if (m->state == 2) {
@@ -1879,7 +1948,7 @@ extern C_2af5b8 D_L00_00161508;
 extern void func_L00_0026A7F8(void *, void *, int, int, int, int, int, int);
 
 // Per-frame update of a falling spark moby: emits a burst particle, moves, fades and dies when out of bounds. Adapted from Lombyte (GPL-3.0) for PAL: overlays/shared/unclassified_002aa670.c, FUN_L00_002af5b8.
-void FallingSparkUpdate(unsigned char *m) {
+void debris_update(unsigned char *m) {
     W_2af5b8 *w = *(W_2af5b8 **)(m + 0x78);
     C_2af5b8 c;
     V_2af5b8 v;
@@ -1928,7 +1997,7 @@ typedef struct { unsigned char *o; float f4; float f8; short hc; short he; float
 
 /* Spawns a particle moby of the given type owned by owner, with random spin and size.
    Adapted from Lombyte (GPL-3.0) for PAL: src/overlays/shared/unclassified_002aa670.c, FUN_L00_002af8b0. */
-unsigned char *SpawnSpinningParticleMoby(unsigned char *owner, void *vel, void *pos, void *rot, int type, int n, float lo, float hi) {
+unsigned char *spawn_crate_debris(unsigned char *owner, void *vel, void *pos, void *rot, int type, int n, float lo, float hi) {
     unsigned char *m = (unsigned char *)CreateMoby(type);
     if (m) {
         V *v = *(V **)(m + 0x78);
@@ -1989,7 +2058,7 @@ typedef struct DebrisMoby2B0D30 {
     char pad30[0x10]; float rotation[4];
     char pad50[0x28]; DebrisData2B0D30 *data;
 } DebrisMoby2B0D30;
-void DebrisBounceUpdate(char *moby) {
+void nanotech_crate_fragment_update(char *moby) {
     DebrisMoby2B0D30 *mob = (DebrisMoby2B0D30 *)moby;
     float old[4];
     char *pos = moby + 0x10;
@@ -2008,7 +2077,7 @@ void DebrisBounceUpdate(char *moby) {
             mob->state = 1;
         } else if (FastDecTimer(&data->timer) != 0 && data->bounces != 0) {
             if (coll_sphere(data->radius, pos, 2, 0) != 0) {
-                char *n = D_L00_00173F80;
+                char *n = coll_hit_normal;
                 float zero;
                 if (FastVecDot(vel, n) < (zero = 0.0f)) {
                     qcopy(pos, n - 0x10);
@@ -2166,7 +2235,7 @@ extern s32 func_L00_0025D390_B1290(char *) __asm__("func_L00_0025D390");
 extern s32 func_L00_002608F0(char *);
 
 /* Adapted from Lombyte (GPL-3.0) for PAL by OpenRAC's tools/port.py: src/overlays/shared/unclassified_002aa670.c, FUN_L00_002affa8. */
-void FindMissileTarget(char *self, O *out, char *skip) {
+void select_gold_devastator_missile_target(char *self, O *out, char *skip) {
     Vec4 v;
     Vec4 lv;
     char *o;
@@ -2182,7 +2251,7 @@ void FindMissileTarget(char *self, O *out, char *skip) {
     best = 10000.0f;
     yaw = *(f32 *)(self + 0x48);
     pitch = *(f32 *)(self + 0x44);
-    o = D_L00_001ABD80[i];
+    o = active_mobies[i];
     if (o == 0) return;
     g = &D_0013F450;
     while (o != 0) {
@@ -2249,7 +2318,7 @@ void FindMissileTarget(char *self, O *out, char *skip) {
         }
     next:
         i++;
-        o = D_L00_001ABD80[i];
+        o = active_mobies[i];
     }
 }
 /* Gold Devastator missile: lead its target, advance, and bounce or explode.
@@ -2312,7 +2381,7 @@ extern void transform1688(void *,void *,void *) __asm__("func_001F9EE8");
 extern void rings1688(void *,void *,int,int,float,int,int,int,int,float) __asm__("func_L00_0026B890");
 extern void debris1688(void *,void *,int,int,float,int) __asm__("func_L00_0026B368");
 
-void MissileUpdate(M910 *m) {
+void gold_devastator_missile_update(M910 *m) {
     B910 effect=D_L00_001E9CD0;
     B910 gold_effect=D_L00_001E9D20;
     Vec4 camera_delta;
@@ -2438,7 +2507,7 @@ void MissileUpdate(M910 *m) {
     combine_velocity1688(phase.collision.dir,&motion,&hero_velocity);
     FastVecAdd((&m->pos),(&m->pos),&motion);
     if(m->pos.f[0]<0.0f || m->pos.f[1]<0.0f || m->pos.f[2]<0.0f) {
-        MobyList_Remove(m,D_L00_001B0AF0);
+        mine_spawn_drops(m,D_L00_001B0AF0);
         DeleteMoby(m);
         return;
     }
@@ -2484,7 +2553,7 @@ void MissileUpdate(M910 *m) {
         rotate1688(&surface_motion,&surface_motion,m->mtx);
         rotate1688(&normal,&normal,m->mtx);
         if(!D_0013E620.bB) {
-            MobyList_Remove(m,D_L00_001B0AF0);
+            mine_spawn_drops(m,D_L00_001B0AF0);
             DeleteMoby(m);
             return;
         }
@@ -2619,16 +2688,16 @@ void MissileUpdate(M910 *m) {
         if(!reduced) func_L00_002ADBB0(m,(&m->pos),&blast_velocity,(size+size),scale_ticks(19),255,255,255,32);
         motion.f[0]=0.0f;
         m->bBC=0;
-        gCameraLvl.f160=distance<20.0f ? 0.4f-distance*0.0175f : 0.4f-20.0f*0.0175f;
-        gCameraLvl.i168=scale_ticks(25);
+        player_camera.f160=distance<20.0f ? 0.4f-distance*0.0175f : 0.4f-20.0f*0.0175f;
+        player_camera.i168=scale_ticks(25);
         Moby_PlaySound(0,0,(int)m);
         if(!reduced) {
-            if(D_0013E620.bB) Moby639Spawn((char *)&gold_effect,(char *)(&m->pos),0,0);
-            else Moby639Spawn((char *)&effect,(char *)(&m->pos),0,0);
+            if(D_0013E620.bB) mine_camera_blast((char *)&gold_effect,(char *)(&m->pos),0,0);
+            else mine_camera_blast((char *)&effect,(char *)(&m->pos),0,0);
         }
         d->bounce_count++;
         if(!D_0013E620.bB || d->bounce_count==3) {
-            MobyList_Remove(m,D_L00_001B0AF0);
+            mine_spawn_drops(m,D_L00_001B0AF0);
             DeleteMoby(m);
             return;
         }
@@ -2644,7 +2713,7 @@ void MissileUpdate(M910 *m) {
         FastVecAdd((&m->pos),(&m->pos),&bounce[1]);
         if(impact1688.moby) d->owner=impact1688.moby;
         if(!d->bounce_timer) d->bounce_timer=scale_ticks(90);
-        FindMissileTarget((char *)m,(O *)d,(char *)impact1688.moby);
+        select_gold_devastator_missile_target((char *)m,(O *)d,(char *)impact1688.moby);
         Moby_PlaySound(1,0,(int)m);
             }
     }

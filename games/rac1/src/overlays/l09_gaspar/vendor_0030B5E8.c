@@ -7,7 +7,7 @@
 extern float func_001FA790(float, float);
 extern float func_001FA748(float, float);
 
-void Rot_ApproachAngle(float *dst, float a, float b, float scale) {
+void interpolate_rotation_angle(float *dst, float a, float b, float scale) {
     float v = FastSubRots(b, a) * scale;
     *dst = v;
     *dst = FastAddRots(v, a);
@@ -53,7 +53,7 @@ extern void func_L00_00272488(void *, int, int, float, float);
 
 /* Flies the moby along its path toward the current node, turning and banking toward it, steps the node at each arrival and now and then drops a puff. Returns nonzero once it has run off the end of the path.
    Adapted from Lombyte (GPL-3.0) for PAL by OpenRAC's tools/port.py: src/overlays/l09/gameplay/vendor/003033a0.c, FUN_L09_0030a298. */
-int LinkedRiser_StepAlongPath(struct Moby *moby) {
+int advance_shuttle_along_path(struct Moby *moby) {
     PathFlyerVars *vars = (PathFlyerVars *)moby->pvars;
     PathNodes *path;
     f32 d;
@@ -69,13 +69,13 @@ int LinkedRiser_StepAlongPath(struct Moby *moby) {
     FastVecSub(&step, &target, &moby->pos);
     func_L00_001FF4B0(&step, &step, vars->speed);
     FastVecAdd(&moby->pos, &moby->pos, &step);
-    Rot_ApproachAngle(&moby->rot.z, moby->rot.z,
+    interpolate_rotation_angle(&moby->rot.z, moby->rot.z,
                      FastAddRots(func_L00_001FF860(path->node[vars->node].f[0] - moby->pos.x,
                                          path->node[vars->node].f[1] - moby->pos.y),
                                  vars->yaw_offset),
                      (1.0f - vars->lag) * 0.02f);
-    Rot_ApproachAngle(&moby->rot.x, moby->rot.x, 0.0f, 0.02f);
-    Rot_ApproachAngle(&moby->rot.y, moby->rot.y, 0.0f, 0.02f);
+    interpolate_rotation_angle(&moby->rot.x, moby->rot.x, 0.0f, 0.02f);
+    interpolate_rotation_angle(&moby->rot.y, moby->rot.y, 0.0f, 0.02f);
     if (vars->dir > 0) {
         f32 v;
         if (FastVecDist(&target, &moby->pos) < vars->speed + vars->speed) {
@@ -100,7 +100,7 @@ int LinkedRiser_StepAlongPath(struct Moby *moby) {
     if (path->node[vars->node].f[3] == 42.0f)
         vars->yaw_offset = 0.0f;
     vars->spin = FastAddRots(vars->spin, vars->speed);
-    func_L00_001FFED8(vars->unk70, 0, vars->spin);
+    axis_rotation_2d48(vars->unk70, 0, vars->spin);
     if (func_001F9D48(&moby->pos, &path->node[path->count - 1]) > 8.0f &&
         func_001F9D48(&moby->pos, &path->node[0]) > 8.0f && !random_integer_below(7)) {
         qcopy(&puff, &moby->pos);
@@ -131,7 +131,7 @@ void BreakableL09_Update(char *m) {
         Moby_PlaySound(0, 0, (int)m);
         SpawnBreakFxByDistance(m);
         SpawnMobyBurstFx(m, 0x73B, 1, 0x73B, 1, 7, 2);
-        SpawnMobyCopyingPlacement(m, 0x73A);
+        spawn_moby_from_placement(m, 0x73A);
         DeleteMoby(m);
         break;
     }

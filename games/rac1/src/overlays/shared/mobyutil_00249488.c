@@ -15,7 +15,7 @@ extern float func_001F9F90(float);
 extern void func_00215650(void *arg0, void *arg1, void *arg2);
 
 // Rotates a vector toward another by a fraction of the angle between them using a quaternion.
-void RotateVectorToward(float t, float *dst, float *a, float *b, int flag)
+void rotate_vector_by_scaled_angle_between_vectors(float t, float *dst, float *a, float *b, int flag)
 {
     float q[4];
     float d, l, ang;
@@ -34,11 +34,11 @@ void RotateVectorToward(float t, float *dst, float *a, float *b, int flag)
     ang = (1.5707964f - FastArcSin(d)) * 0.5f * t;
     FastVecScale(q, q, FastSin(ang));
     q[3] = FastCos(ang);
-    RotateVectorByQuaternion(dst, a, q);
+    rotate_vector_by_quaternion(dst, a, q);
 }
 LINKER_REMNANT("asm/overlays", func_L03_0024FA90);
 
-void SetSpringParams(float *p, float a, float b)
+void trooper_set_knockback(float *p, float a, float b)
 {
     float root = func_001F9B50((b + b) * p[4]);
     float x = (root + root) / p[4];
@@ -59,32 +59,32 @@ extern void func_L00_0026DA50(void *, void *, int, int, int, int, float);
 typedef int U128 __attribute__((mode(TI)));
 static inline int game_frames(int n)
 {
-    return func_001F9850(n);
+    return scale_ticks(n);
 }
 static inline int rand_ticks(int lo, int hi)
 {
     int a = game_frames(lo);
     int b = game_frames(hi);
-    return func_L00_00258BC8(a, b);
+    return rand_range(a, b);
 }
 static inline float rand_jitter(float spread)
 {
-    float r = func_L00_00258C80(0.0f, spread);
+    float r = randf_sym(0.0f, spread);
     return r;
 }
 static inline float rand_speed(void)
 {
-    float s = func_002140F8(0.05f, 0.1f);
+    float s = random_float_between(0.05f, 0.1f);
     return s;
 }
 static inline int rand_spin(void)
 {
-    int s = func_L00_00258BC8(0, 3);
+    int s = rand_range(0, 3);
     return s;
 }
 static inline int coin_flip(void)
 {
-    int r = func_002140B0(2);
+    int r = random_integer_below(2);
     return r;
 }
 /* Emits two rings of randomly varied particles around the moby's axis. */
@@ -94,11 +94,11 @@ void func_L03_00251AC8(char *moby, float *position, void *extra)
     float *p = pos;
     int i, j;
     *(U128 *)pos = *(U128 *)position;
-    for (i = 0; i < func_001FA898(24.0f); i++) {
+    for (i = 0; i < truncate_float_to_s32(24.0f); i++) {
         float angle;
         int sign, life;
         angle = rand_jitter(0.1308997f);
-        func_002156E0(vec, moby + 0xE0, moby + 0xC0, (float)i * 0.2617994f + angle);
+        build_look_at_matrix(vec, moby + 0xE0, moby + 0xC0, (float)i * 0.2617994f + angle);
         func_L00_001FF4B0(vec, vec, rand_speed());
         sign = rand_spin();
         if (coin_flip())
@@ -106,16 +106,16 @@ void func_L03_00251AC8(char *moby, float *position, void *extra)
         life = rand_ticks(30, 90);
         if (extra)
             func_L00_001FF240(tmp, vec, extra);
-        func_L00_00272158(p, vec, life, 30, 0xFFFFFF, sign, 60000.0f, 3000.0f, 0.85f, -0.001f, 0.85f);
+        PartType44Spawn(p, vec, life, 30, 0xFFFFFF, sign, 60000.0f, 3000.0f, 0.85f, -0.001f, 0.85f);
     }
-    for (j = 0; j < func_001FA898(6.0f); j++) {
+    for (j = 0; j < truncate_float_to_s32(6.0f); j++) {
         int n;
-        float angle = func_002140F8(0.0f, 0.7853982f);
-        func_002156E0(vec, moby + 0xE0, moby + 0xC0, (float)j * 1.0471976f + angle);
+        float angle = random_float_between(0.0f, 0.7853982f);
+        build_look_at_matrix(vec, moby + 0xE0, moby + 0xC0, (float)j * 1.0471976f + angle);
         func_L00_001FF4B0(vec, vec, rand_speed());
         n = rand_ticks(20, 60);
         if (extra)
             func_L00_001FF240(tmp, vec, extra);
-        func_L00_0026DA50(p, vec, 0x4F007FFF, 0x1FFFFFFF, n, 1, 10000.0f);
+        PartType21Spawn(p, vec, 0x4F007FFF, 0x1FFFFFFF, n, 1, 10000.0f);
     }
 }

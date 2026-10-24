@@ -57,10 +57,10 @@ extern int func_00119088();
 
 int func_00116108(int *errOut, void *a, void *b, void *c) {
     int r;
-    D_0015ED10 = 0;
+    SbrkErrno = 0;
     r = func_00119088(a, b, c);
-    if (r == -1 && D_0015ED10 != 0) {
-        *errOut = D_0015ED10;
+    if (r == -1 && SbrkErrno != 0) {
+        *errOut = SbrkErrno;
     }
     return r;
 }
@@ -123,10 +123,10 @@ s32 func_001161B0(f64 x) {
 
 int func_001161E8(int *errOut, int arg1) {
     unsigned int r;
-    D_0015ED10 = 0;
+    SbrkErrno = 0;
     r = func_00119110(arg1);
-    if (r == 0xFFFFFFFF && D_0015ED10 != 0) {
-        *errOut = D_0015ED10;
+    if (r == 0xFFFFFFFF && SbrkErrno != 0) {
+        *errOut = SbrkErrno;
     }
     return r;
 }

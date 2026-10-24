@@ -10,14 +10,14 @@ extern int func_L00_0025D038(float, float, float, float);
 extern unsigned char *D_L01_001B2800[];
 
 /* Spawns a type 6 particle with position, colour, scale and owner. */
-void PartType06Spawn(int owner, float *pos, int snd, unsigned char arg, unsigned char idx, unsigned char mode, float x, float y, float z, float scale, float f21, float r, float g, float b, float a) {
+void create_spark_particle(int owner, float *pos, int snd, unsigned char arg, unsigned char idx, unsigned char mode, float x, float y, float z, float scale, float f21, float r, float g, float b, float a) {
     float buf[4];
     float *tmp = buf;
     unsigned char *p;
     unsigned char *u;
     *(u128 *)tmp = *(u128 *)pos;
     if (owner != 0) {
-        p = func_00218928(6);
+        p = create_part(6);
         if (p != 0) {
             u = p + 0x20;
             qcopy(p + 0x10, tmp);
@@ -52,8 +52,8 @@ extern char *D_L01_001B28E0;
 extern int func_002140B0(int);
 
 /* Spawns a particle at a, with a random tint, offset b and scale f. */
-unsigned char *PartType56Spawn(void *a, void *b, float f) {
-    unsigned char *r = func_00218928(0x38);
+unsigned char *pool_bubble(void *a, void *b, float f) {
+    unsigned char *r = create_part(0x38);
     int c, m;
     if (r != 0) {
         qcopy(r + 0x10, a);
@@ -74,8 +74,8 @@ extern char *D_L01_001B28E4;
 extern float func_002140F8(float, float);
 
 // Spawns a particle at a with offset b, a random tint and scale f, with extra parameter g at +0x34.
-unsigned char *PartType57Spawn(void *a, void *b, float f, float g) {
-    unsigned char *r = func_00218928(0x39);
+unsigned char *pool_bubbles(void *a, void *b, float f, float g) {
+    unsigned char *r = create_part(0x39);
     char *q;
     int c;
     if (r != 0) {

@@ -350,26 +350,26 @@ extern char D_00153D00[], D_00153D10[], D_00153D28[];
 
 char *func_0012D2A0(void) {
     int fd;
-    if (D_001331D8[0] == 0) {
+    if (RomNameStateData[0] == 0) {
         fd = func_0011BF80(D_00153D00, 1);
         if (fd == -1) {
-            func_0011A6C8(D_00153D10, D_001331D8);
+            func_0011A6C8(D_00153D10, RomNameStateData);
         }
-        if (func_0011C5C0(fd, D_001331D8, 0xE) == -1) {
+        if (func_0011C5C0(fd, RomNameStateData, 0xE) == -1) {
             func_0011A6C8(D_00153D28);
         }
         func_0011C208(fd);
     }
-    return (char *)D_001331D8;
+    return (char *)RomNameStateData;
 }
 
 extern char *func_0012D2A0(void);
 
 int func_0012D340(void) {
-    if (D_001331D8[0] == 0) {
+    if (RomNameStateData[0] == 0) {
         func_0012D2A0();
     }
-    return D_001331D8[4] == 0x54;
+    return RomNameStateData[4] == 0x54;
 }
 
 /*
@@ -398,7 +398,7 @@ int func_0012D380(void) {
 
     func_00118CF0(buf);
     if (func_0012D340() != 0) {
-        r = D_001331D4[0];
+        r = ScfLanguage[0];
     } else {
         func_00118CF0(buf);
         v = buf[0];
@@ -544,7 +544,7 @@ void func_0012D5D0(unsigned char *s) {
     unsigned char m;
     int y = s[7];
 
-    days = D_00153D40;
+    days = MonthLengths;
     s[5] = s[5] + 1;
     if ((y & 3) == 0) {
         days.b[1] = 0x1D;
@@ -581,7 +581,7 @@ void func_0012D688(unsigned char *s) {
     Cfg12 days;
     int y = s[7];
 
-    days = D_00153D40;
+    days = MonthLengths;
     s[5] = s[5] - 1;
     if ((y & 3) == 0) {
         days.b[1] = 0x1D;

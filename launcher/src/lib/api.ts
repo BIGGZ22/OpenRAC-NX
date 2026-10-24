@@ -285,6 +285,8 @@ export const api = {
     call<PluginView[]>("plugins_remove", { game, version, id }),
   pluginsInstall: (game: string, version: string, path: string) =>
     call<PluginInstalled>("plugins_install", { game, version, path }),
+  /** The mods a chosen folder holds: itself, or each mod of a repository's checkout (its build first). */
+  pluginsModFolders: (path: string) => call<string[]>("plugins_mod_folders", { path }),
   pluginsStatus: (game: string) => call<PluginStatus | null>("plugins_status", { game }),
   /** Mods from a repository's address (core/src/remote.rs): what it holds, before anything is installed. */
   pluginsPreview: (game: string, version: string, url: string) =>

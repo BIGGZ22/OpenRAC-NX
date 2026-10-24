@@ -122,11 +122,11 @@ int Npc_TryStartDialog(char *p, char *q) {
         f = FastDiffRots(f, *(float *)(g + 0x98));
         if (1.5700000524520874f < f) return 0;
     }
-    DialogNode_Update(p, q, 0);
+    process_menu_entry(p, q, 0);
     x = D_L00_00179200;
     if (D_L00_0015F6B0 < *(int *)(x + 0x10)) return 0;
     if (*(unsigned char *)(q + 8) != 0 || (*(int *)(D_0013A5E0 + 0x2604) & 0x10) != 0) {
-        i = FindLevelTableIndex(p);
+        i = func_L00_00267618(p);
         tb = D_0013D605 + 0xB3; tb = tb + 0xC;
         ptr = (int *)(tb + (i << 4));
         if (*ptr == 0) *ptr = 1;
@@ -136,24 +136,24 @@ int Npc_TryStartDialog(char *p, char *q) {
             if (*(short *)(e + 8) == 1) gBolts = gBolts - *(int *)(D_L00_001C43B0 + *(short *)(e + 0xA) * 0x18);
             else if (*(short *)(e + 8) == 4) { tb2 = D_0013D355 + 0x13B; tb2[*(short *)(e + 0xA)] = 0; }
         }
-        if (*(short *)(e + 4) == -1) { DialogNode_Update(p, q, 1); return 1; }
+        if (*(short *)(e + 4) == -1) { process_menu_entry(p, q, 1); return 1; }
         y = (char *)&D_L00_00179200;
         *(int *)(y + 8) = (int)p; *(int *)(y + 0xC) = (int)q;
-        if (*(unsigned short *)(e + 4) & 0x4000) { PlayMovieEntryIfIdle((short)(*(unsigned short *)(e + 4) ^ 0x4000)); return 1; }
-        Hud_RemoveBank(*(int *)&D_L00_001601F0);
+        if (*(unsigned short *)(e + 4) & 0x4000) { start_indexed_disc_stream((short)(*(unsigned short *)(e + 4) ^ 0x4000)); return 1; }
+        remove_hud_item(*(int *)&bolt_hud_item);
         h4 = *(short *)(e + 4);
-        *(int *)&D_L00_001601F0 = -1;
+        *(int *)&bolt_hud_item = -1;
         StartCutscene(h4);
         return 1;
     }
-    if (Hud_ExtendBankTime(*(int *)&D_L00_001601F0, 0xA)) {
-        *(int *)&D_L00_001601F0 = queue_animation_update(0xC, 0, (void*)Hud_InitCounter, (void*)DefaultVtbl_DeleteMoby, (void*)func_L00_00237B90, 0, 0);
+    if (hud_keep_visible(*(int *)&bolt_hud_item, 0xA)) {
+        *(int *)&bolt_hud_item = queue_animation_update(0xC, 0, (void*)initialize_numeric_hud_element, (void*)DefaultVtbl_DeleteMoby, (void*)draw_hud_text_panel, 0, 0);
     }
     {
         char *e2 = (char *)*(int *)(q + 0x3C) + *(short *)(q + 0x36) * 0x1C;
         if (*(short *)(e2 + 8) == 1 || *(short *)(e2 + 8) == 6) {
             m = queue_animation_update(2, 0x754E, (void*)HudBoltsInit, (void*)HudBoltsUpdate, (void*)HudBoltsDraw, &gBolts, 0x98967F);
-            Hud_ExtendBankTime(m, scale_ticks(0x3C));
+            hud_keep_visible(m, scale_ticks(0x3C));
         }
     }
     return 0;
@@ -161,7 +161,7 @@ int Npc_TryStartDialog(char *p, char *q) {
 extern s32 D_0015EE84 MACRO_ADDR;
 extern s32 D_L00_001C47B8[];
 extern s32 D_L00_001792B8[];
-s32 FindLevelTableIndex(s32 p, s32 unused) {
+s32 func_L00_00267618(s32 p, s32 unused) {
     s32 n = D_0015EE84;
     s32 lo;
     s32 hi;
@@ -185,7 +185,7 @@ extern int func_L00_00267618(int, int);
 
 /* stores b in the d field of the slot func_L00_00267618 finds, if any. Adapted from Lombyte (GPL-3.0) for PAL: overlays/shared/audio_streaming_00266298.c, FUN_L00_00266858. */
 void LevelTable_SetSlotValue(int a, int b) {
-    int i = FindLevelTableIndex(a, b);
+    int i = func_L00_00267618(a, b);
     if (i != -1) {
         E00266858 *s = (E00266858 *)(D_0013D605 + 0xB3);
         ((E00266858 *)((char *)s - (-(i * 16))))->d = b;
@@ -242,7 +242,7 @@ s32 DialogRequest_Init(void *p, u8 *out_p)
 }
 typedef struct { char pad[0x18E]; s16 head; s32 count; char pad2[0x1E0-0x194]; u32 t[30]; char pad3[0x2D0-0x258]; f32 v[30]; } Hist_266e80;
 extern Hist_266e80 D_0013CA40;
-int PadPressedWithin(int mask, int n, int *out) {
+int pad_pressed_within(int mask, int n, int *out) {
     int lim = D_0013CA40.count;
     int i;
     if (lim >= n)
@@ -263,9 +263,9 @@ extern int func_001F9B70(int);
 int PadComboWithin(int a, int b, int c, int d) {
     int v[2];
     int r = 0;
-    if (PadPressedWithin(a, c, &v[0])) {
-        if (PadPressedWithin(b, c, &v[1])) {
-            r = func_001F9B70(v[0] - v[1]) < d;
+    if (pad_pressed_within(a, c, &v[0])) {
+        if (pad_pressed_within(b, c, &v[1])) {
+            r = subtract_integer_with_clamp(v[0] - v[1]) < d;
         }
     }
     return r;
@@ -284,7 +284,7 @@ extern Hist_266e80_67CC8 D_0013CA40_67CC8 __asm__("D_0013CA40");
 
 /* The value n entries back in the 30-entry history ring (n is capped at the count).
    Adapted from Lombyte (GPL-3.0) for PAL by OpenRAC's tools/port.py: src/overlays/shared/input/pad/pad_pressed_within.c, FUN_L00_00266e80. */
-f32 RingBuffer_GetRecent(s32 n) {
+f32 read_pad_float_history(s32 n) {
     s32 m;
     if (D_0013CA40_67CC8.count < n)
         n = D_0013CA40_67CC8.count;

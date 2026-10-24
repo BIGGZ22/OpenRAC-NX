@@ -63,11 +63,18 @@ struct CompiledProgram {
     std::vector<Attribute> attributes;
 };
 
-// Compiles one stage alone, for glCompileShader's status and log (no SPIR-V is kept).
+// Compiles one stage alone, for glCompileShader's status and log (no SPIR-V is kept). A stage
+// that compiled before is known from the SPIR-V cache and not compiled again (R-12).
 bool check_stage(bool vertex, std::string_view source, std::string& log);
 bool check_compute_stage(std::string_view source, std::string& log);
 
-// Compiles and links the two stages. False, with the compiler's words in `log`, on failure.
+// Returns the compiler's version text the SPIR-V cache is made for: glslang's version and the
+// version of the backend's compile options (R-12). A cache of another is dropped whole.
+std::string spirv_compiler_version();
+
+// Compiles and links the two stages. False, with the compiler's words in `log`, on failure. With
+// spirv-disk-cache a program compiled before (the same sources, the same compiler) comes from the
+// open context's SPIR-V cache, and only a program compiled now counts in shader_compiles.
 bool compile_program(
     std::string_view vertex,
     std::string_view fragment,

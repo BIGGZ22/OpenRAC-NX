@@ -9,6 +9,7 @@
 #include "enhanced/renderer/gtao.h"
 #include "enhanced/tests/gpu_probe_fixture.h"
 #include "enhanced/tests/probe_fixture.h"
+#include "enhanced/viewer/scene_lighting.h"
 #include "renderer/gl.h"
 #if defined(OPENRAC_VULKAN)
 #include "renderer/vulkan/vkgl.h"
@@ -33,13 +34,13 @@ public:
     }
 };
 
-viewer::LevelData corner(bool wall) {
-    viewer::LevelData data;
+scene::LevelData corner(bool wall) {
+    scene::LevelData data;
     const renderer::Vec3 points[] = {
         {-4, -4, 0}, {4, -4, 0}, {4, 4, 0}, {-4, 4, 0}, {0, -3, 0}, {0, 3, 0}, {0, 3, 3}, {0, -3, 3}
     };
     for (std::size_t i = 0; i < std::size(points); ++i) {
-        viewer::Vertex vertex{};
+        scene::Vertex vertex{};
         std::copy(points[i].begin(), points[i].end(), vertex.position);
         vertex.normal[i < 4 ? 2 : 0] = 1;
         std::fill(std::begin(vertex.colour), std::end(vertex.colour), 1.0f);
@@ -47,26 +48,28 @@ viewer::LevelData corner(bool wall) {
         data.vertices.push_back(vertex);
     }
     data.indices = {0, 1, 2, 0, 2, 3, 4, 5, 6, 4, 6, 7};
-    viewer::Model model;
+    scene::Model model;
     model.min = {-4, -4, 0};
     model.max = {4, 4, 3};
     model.primitives.push_back({0, wall ? 12u : 6u, 0});
     data.models.push_back(model);
     data.materials.push_back({});
-    data.instances[static_cast<std::size_t>(viewer::Layer::Terrain)].push_back({});
+    data.instances[static_cast<std::size_t>(scene::Layer::Terrain)].push_back({});
     return data;
 }
 
 void check_scene(bool wall, int samples, renderer::GtaoQuality quality) {
     auto level = corner(wall);
     renderer::Renderer renderer;
-    viewer::LevelScene scene;
+    renderer.set_ambient_occlusion(std::make_unique<renderer::Gtao>());
+    scene::LevelScene scene;
+    lighting::use_scene_lighting(scene);
     std::string error;
     CHECK(scene.upload(level, renderer.textures(), error));
     CHECK(test::shadow_probe_fixture(scene, error));
     CHECK(renderer.add(std::make_unique<BeforeWorld>(), error));
     CHECK(
-        renderer.add(std::make_unique<viewer::LayerRenderer>(scene, viewer::Layer::Terrain), error)
+        renderer.add(std::make_unique<scene::LayerRenderer>(scene, scene::Layer::Terrain), error)
     );
     CHECK(renderer.init(error));
     renderer::FrameBuffer frame;
@@ -203,7 +206,7 @@ void indirect_lighting(int samples, bool glow = false, bool cutout = false, bool
         level.images.push_back(transparent);
         level.image_paths.push_back("gtao-test-cutout.png");
         level.translucent_images.push_back(true);
-        viewer::Material material;
+        scene::Material material;
         material.image = 0;
         material.cutout = true;
         level.materials.push_back(material);
@@ -213,13 +216,15 @@ void indirect_lighting(int samples, bool glow = false, bool cutout = false, bool
         for (auto& vertex : level.vertices) {
             vertex.light_slot = -2;
         }
-        viewer::Instance instance;
+        scene::Instance instance;
         instance.moby_light = {0, 0, 0, 1};
         instance.moby_ambient = {0, 0, 0, 256};  // opaque red glow over the corner
-        level.instances[static_cast<std::size_t>(viewer::Layer::Mobys)].push_back(instance);
+        level.instances[static_cast<std::size_t>(scene::Layer::Mobys)].push_back(instance);
     }
     renderer::Renderer renderer;
-    viewer::LevelScene scene;
+    renderer.set_ambient_occlusion(std::make_unique<renderer::Gtao>());
+    scene::LevelScene scene;
+    lighting::use_scene_lighting(scene);
     std::string error;
     CHECK(scene.upload(level, renderer.textures(), error));
     if (shadows) {
@@ -228,12 +233,12 @@ void indirect_lighting(int samples, bool glow = false, bool cutout = false, bool
     }
     CHECK(renderer.add(std::make_unique<BeforeWorld>(), error));
     CHECK(
-        renderer.add(std::make_unique<viewer::LayerRenderer>(scene, viewer::Layer::Terrain), error)
+        renderer.add(std::make_unique<scene::LayerRenderer>(scene, scene::Layer::Terrain), error)
     );
     if (glow) {
-        CHECK(renderer.add(
-            std::make_unique<viewer::LayerRenderer>(scene, viewer::Layer::Mobys), error
-        ));
+        CHECK(
+            renderer.add(std::make_unique<scene::LayerRenderer>(scene, scene::Layer::Mobys), error)
+        );
     }
     CHECK(renderer.init(error));
     lighting::ProbeGrid grid;
@@ -246,7 +251,9 @@ void indirect_lighting(int samples, bool glow = false, bool cutout = false, bool
     for (auto& e : volume.irradiance) {
         e = {0, std::numbers::pi_v<float> * .25f, 0};
     }
-    CHECK(scene.set_probe_volume(openrac::test::gpu_probes(volume), error));
+    CHECK(
+        lighting::scene_lighting(scene)->set_probe_volume(openrac::test::gpu_probes(volume), error)
+    );
     std::array<float, 64> points{};
     points[2] = .5f;
     points[4] = 2;
@@ -370,12 +377,14 @@ void indirect_lighting(int samples, bool glow = false, bool cutout = false, bool
 void scripted_glow_depth() {
     using namespace gl;
     auto level = corner(true);
-    level.instances[static_cast<std::size_t>(viewer::Layer::Terrain)].clear();
+    level.instances[static_cast<std::size_t>(scene::Layer::Terrain)].clear();
     for (auto& vertex : level.vertices) vertex.light_slot = -2;
-    viewer::Instance instance;
+    scene::Instance instance;
     instance.moby_light[3] = -1;  // Explicit gameplay colour, still a lit moby.
     renderer::Renderer renderer;
-    viewer::LevelScene scene;
+    renderer.set_ambient_occlusion(std::make_unique<renderer::Gtao>());
+    scene::LevelScene scene;
+    lighting::use_scene_lighting(scene);
     std::string error;
     CHECK(scene.upload(level, renderer.textures(), error));
     renderer::FrameBuffer target;
@@ -399,7 +408,7 @@ void main() { result = vec4(0, 1, 0, 1); }
     state.depth_prepass = true;
     for (bool glow : {false, true}) {
         instance.moby_ambient[3] = glow ? 256.0f : 0.0f;
-        scene.set_instances(viewer::Layer::Mobys, {instance});
+        scene.set_instances(scene::Layer::Mobys, {instance});
         glBindFramebuffer(GL_FRAMEBUFFER, target.id());
         glViewport(0, 0, 64, 48);
         glColorMask(GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE);
@@ -408,7 +417,7 @@ void main() { result = vec4(0, 1, 0, 1); }
         glClearColor(1, 0, 0, 1);
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
         glColorMask(GL_FALSE, GL_FALSE, GL_FALSE, GL_FALSE);
-        scene.draw_layer(viewer::Layer::Mobys, input, state);
+        scene.draw_layer(scene::Layer::Mobys, input, state);
         glColorMask(GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE);
         glDepthFunc(GL_GEQUAL);
         sentinel.use();
@@ -440,7 +449,7 @@ void optimized_paths(int samples) {
     level.images[0].set_texel(0, 0, 0xffffffffu);
     level.image_paths.push_back("camera-depth-cutout.png");
     level.translucent_images.push_back(false);
-    viewer::Material cutout;
+    scene::Material cutout;
     cutout.image = 0;
     cutout.cutout = true;
     cutout.colour[3] = .995f;
@@ -448,53 +457,55 @@ void optimized_paths(int samples) {
     level.light_colours.push_back(0x80808080u);  // tie alpha overrides the vertex's alpha
     level.models[0].primitives = {{0, 6, 0}, {6, 6, 1}};
     level.models[0].joints = 2;
-    viewer::Instance prop;
+    scene::Instance prop;
     prop.lights = 0;
     prop.matrix = renderer::scale(-.8f);
     prop.matrix[5] = .7f;
     prop.matrix[10] = 1.2f;
     prop.matrix[4] = .1f;
     prop.matrix[14] = .5f;
-    std::vector<viewer::Instance> props{prop};
+    std::vector<scene::Instance> props{prop};
     for (unsigned i = 0; i < 30; ++i) {
         prop.matrix = renderer::translation({1000.f + i * 40, 2000, 0});
         props.push_back(prop);
     }
-    level.instances[static_cast<std::size_t>(viewer::Layer::Ties)] = props;
-    viewer::Instance skinned;
+    level.instances[static_cast<std::size_t>(scene::Layer::Ties)] = props;
+    scene::Instance skinned;
     skinned.palette = 0;
     skinned.moby_light[3] = 1;
     skinned.matrix = renderer::translation({1, -1, .3f});
-    level.instances[static_cast<std::size_t>(viewer::Layer::Mobys)].push_back(skinned);
+    level.instances[static_cast<std::size_t>(scene::Layer::Mobys)].push_back(skinned);
     // Pose-aware world bounds: one visible animated instance and distant
     // opaque, translucent and additive copies. Their bind boxes are unusable.
     auto bounded = skinned;
     bounded.world_sphere = {1, -1, 1, 8};
-    level.instances[static_cast<std::size_t>(viewer::Layer::Mobys)].push_back(bounded);
+    level.instances[static_cast<std::size_t>(scene::Layer::Mobys)].push_back(bounded);
     for (int blend = 0; blend < 3; ++blend) {
         bounded.matrix = renderer::translation({3000, 4000, 0});
         bounded.world_sphere = {3000, 4000, 0, 8};
         bounded.blend = blend;
-        level.instances[static_cast<std::size_t>(viewer::Layer::Mobys)].push_back(bounded);
+        level.instances[static_cast<std::size_t>(scene::Layer::Mobys)].push_back(bounded);
     }
     // Invalid bounds retain animated geometry conservatively.
     bounded = skinned;
     bounded.world_sphere = {NAN, 0, 0, 1};
-    level.instances[static_cast<std::size_t>(viewer::Layer::Mobys)].push_back(bounded);
+    level.instances[static_cast<std::size_t>(scene::Layer::Mobys)].push_back(bounded);
     bounded.world_sphere = {0, 0, 0, -1};
-    level.instances[static_cast<std::size_t>(viewer::Layer::Mobys)].push_back(bounded);
+    level.instances[static_cast<std::size_t>(scene::Layer::Mobys)].push_back(bounded);
     auto ui = skinned;
     ui.palette = -1;
     ui.moby_light[3] = 2;
     ui.matrix = renderer::translation({-2, 0, 1});
-    level.instances[static_cast<std::size_t>(viewer::Layer::Mobys)].push_back(ui);
+    level.instances[static_cast<std::size_t>(scene::Layer::Mobys)].push_back(ui);
     renderer::Renderer renderer;
-    viewer::LevelScene scene;
+    renderer.set_ambient_occlusion(std::make_unique<renderer::Gtao>());
+    scene::LevelScene scene;
+    lighting::use_scene_lighting(scene);
     std::string error;
     CHECK(scene.upload(level, renderer.textures(), error));
     scene.set_palette({renderer::identity(), renderer::translation({.3f, .1f, .5f})});
-    for (auto layer : {viewer::Layer::Terrain, viewer::Layer::Ties, viewer::Layer::Mobys}) {
-        CHECK(renderer.add(std::make_unique<viewer::LayerRenderer>(scene, layer), error));
+    for (auto layer : {scene::Layer::Terrain, scene::Layer::Ties, scene::Layer::Mobys}) {
+        CHECK(renderer.add(std::make_unique<scene::LayerRenderer>(scene, layer), error));
     }
     CHECK(renderer.init(error));
     auto volume = lighting::ProbeVolume::allocate(lighting::ProbeGrid{});
@@ -504,7 +515,9 @@ void optimized_paths(int samples) {
     for (auto& e : volume.irradiance) {
         e = {1, 1, 1};
     }
-    CHECK(scene.set_probe_volume(openrac::test::gpu_probes(volume), error));
+    CHECK(
+        lighting::scene_lighting(scene)->set_probe_volume(openrac::test::gpu_probes(volume), error)
+    );
     auto switch_reference = [](const char* variable, bool off) {
         for (auto* probe : stats::probes()) {
             if (std::strcmp(probe->variable, variable) == 0) {
@@ -534,21 +547,19 @@ void optimized_paths(int samples) {
         CHECK(frame.read_rgba() == reference);
         CHECK(renderer.last_stats().triangles < reference_triangles);
         const auto culled_triangles = renderer.last_stats().triangles;
-        CHECK(scene.camera_culling()[static_cast<std::size_t>(viewer::Layer::Ties)].rejected >= 30);
-        CHECK(
-            scene.camera_culling()[static_cast<std::size_t>(viewer::Layer::Mobys)].unbounded >= 1
-        );
-        CHECK(scene.camera_culling()[static_cast<std::size_t>(viewer::Layer::Mobys)].rejected >= 3);
+        CHECK(scene.camera_culling()[static_cast<std::size_t>(scene::Layer::Ties)].rejected >= 30);
+        CHECK(scene.camera_culling()[static_cast<std::size_t>(scene::Layer::Mobys)].unbounded >= 1);
+        CHECK(scene.camera_culling()[static_cast<std::size_t>(scene::Layer::Mobys)].rejected >= 3);
         switch_reference("OPENRAC_MOBY_SPHERE_CULL_OFF", true);
         scene.set_instances(
-            viewer::Layer::Mobys, level.instances[static_cast<std::size_t>(viewer::Layer::Mobys)]
+            scene::Layer::Mobys, level.instances[static_cast<std::size_t>(scene::Layer::Mobys)]
         );
         renderer.render(input, rt);
         CHECK(frame.read_rgba() == reference);
         CHECK(renderer.last_stats().triangles > culled_triangles);
         switch_reference("OPENRAC_MOBY_SPHERE_CULL_OFF", false);
         scene.set_instances(
-            viewer::Layer::Mobys, level.instances[static_cast<std::size_t>(viewer::Layer::Mobys)]
+            scene::Layer::Mobys, level.instances[static_cast<std::size_t>(scene::Layer::Mobys)]
         );
         renderer.render(input, rt);
         CHECK(frame.read_rgba() == reference);

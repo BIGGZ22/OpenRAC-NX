@@ -23,7 +23,7 @@ void Moby152Init(char *moby) {
     *(int *)(d + 0x28) = 0;
     *(float *)(d + 8) = *(float *)(moby + 0x18);
     func_L00_0025E210(moby);
-    *(int *)(d + 0x24) = SpawnEffectAtMoby(moby);
+    *(int *)(d + 0x24) = spawn_moby_offset_effect(moby);
 }
 typedef struct Target_2B94B0 {
     char pad0[0xA];
@@ -85,7 +85,7 @@ extern char D_0013F450_2B94B0[] __asm__("D_0013F450");
 extern char D_0013DE6E_2B94B0[] __asm__("D_0013DE6E");
 
 /* Level 8 moby update (class 152): state machine that steers the moby toward the hero and fires its event. */
-void Moby152Update(Moby *m)
+void update_bolt_pickup(Moby *m)
 {
     MobyData_2B94B0 *d = (MobyData_2B94B0 *)m->pvars;
     float A[4], F[4], B[4], C[4], P[4], E[4];
@@ -236,7 +236,7 @@ extern blk16 D_L08_001618F8;
 extern short D_L08_001618F0;
 
 /* Bomb (class 248) update: fuse, bounce and blast state machine on the moby's state byte */
-void BombUpdate(char *moby) {
+void update_bomb(char *moby) {
     union Coll_36F8 c;
     blk16 t70;
     float t80[4];
@@ -380,7 +380,7 @@ void BombUpdate(char *moby) {
         return;
     }
     }
-    RecordMobyShadow(moby, 0.2f);
+    jet_animate(moby, 0.2f);
 }
 extern char D_0013E633[] NOT_SDA;
 extern char D_0013D355[] NOT_SDA;
@@ -411,7 +411,7 @@ extern void func_L08_002D6C58(char *moby, int a1, int count);
 extern char *func_L08_002DDC18(char *src, char *pos, char *vec);
 
 /* Bomber tank (class 253) update: spawns its two parts, then a state machine for driving, firing and the group's debris. */
-void BomberTankUpdate(Moby *moby) {
+void update_bomber_tank(Moby *moby) {
     float old[4];
     float rot[4];
     float vel[4];
@@ -472,7 +472,7 @@ void BomberTankUpdate(Moby *moby) {
             (*(Moby **)(d + 0x164))->collision = 0;
             if (moby->prev_seq != 0) func_00213DE0_55E0(moby, 0, 0, 0);
         } else if (*(int *)(d + 0x144) > 0) {
-            if (D_0013D4B5[9] == 0) {
+            if (menu_item_enabled_25[9] == 0) {
                 moby->state = 14;
                 moby->flags |= 0x41;
                 (*(Moby **)(d + 0x160))->flags |= 0x41;
@@ -535,7 +535,7 @@ void BomberTankUpdate(Moby *moby) {
             vel[1] = FastSin(FastAddRots(*(float *)(d + 0x170), moby->rot.z)) * (FastCos(*(float *)(d + 0x178)) * k);
             vel[2] = 0.0f;
             vel[2] = -FastSin(*(float *)(d + 0x178)) * k;
-            shot = Moby425Spawn((char *)moby, (char *)tmp, (char *)vel);
+            shot = spawn_bomber_tank_projectile((char *)moby, (char *)tmp, (char *)vel);
             if (shot != 0) shot[0x20] = 1;
         }
         break;
@@ -586,15 +586,15 @@ void BomberTankUpdate(Moby *moby) {
         func_L08_002D68D0_55E0(moby, *(int *)(d + 0x150));
         f = func_0020D830_55E0(moby);
         if ((59.0f <= f && f <= 60.0f) || (119.0f <= f && f <= 120.0f)) {
-            BomberTank_SpawnJointDebris((char *)moby, 4, 10);
+            spawn_bomber_tank_joint_particles((char *)moby, 4, 10);
         } else if ((29.0f <= f && f <= 30.0f) || (89.0f <= f && f <= 90.0f)) {
-            BomberTank_SpawnJointDebris((char *)moby, 5, 10);
+            spawn_bomber_tank_joint_particles((char *)moby, 5, 10);
         }
         break;
     }
     }
     FastVecSub(vel, &moby->pos, old);
-    CarryRiders(d + 0x60, vel, &moby->rot, rot);
+    update_entity_matrix(d + 0x60, vel, &moby->rot, rot);
 }
 typedef struct {
     char pad0[0x20];
@@ -667,7 +667,7 @@ extern void matmul_2D5FA8(float *, float *, float *) __asm__("func_001FA588");
 extern void effects_update_2D5FA8(Moby *, short *) __asm__("func_L00_0025E590");
 
 /* Per-frame update of a batalia turret moby: damage, its death state and its two helper parts. */
-void TurretUpdate(Moby *m) {
+void update_bomber_tank_damage_and_aim(Moby *m) {
     Data_2D5FA8 *d = (Data_2D5FA8 *)m->pvars;
     Hit_2D5FA8 *t;
     Hit_2D5FA8 *u;
@@ -849,7 +849,7 @@ typedef struct {
 } PathMoverVars_2d55c8;
 
 /* Adapted from Lombyte (GPL-3.0) for PAL by OpenRAC's tools/port.py: src/overlays/l08/gameplay/entities/002b8228.c, FUN_L08_002d55c8. */
-void PathMover_Step(struct Moby *moby, int path_id) {
+void advance_bomber_tank_along_path(struct Moby *moby, int path_id) {
     PathMoverVars_2d55c8 *vars = (PathMoverVars_2d55c8 *)moby->pvars;
     int *path = (int *)D_L08_001B0FB0[path_id];
     float point[4];
@@ -936,7 +936,7 @@ extern float D_L08_00161988_2D6C58 SDATA(D_L08_00161988);
 extern float D_L08_0016198C_2D6C58 SDATA(D_L08_0016198C);
 
 // Jitters the moby's vector, then spawns the effect groups for each of the count steps.
-void BomberTank_SpawnJointDebris(char *moby, int a1, int count) {
+void spawn_bomber_tank_joint_particles(char *moby, int a1, int count) {
     char *d = *(char **)(moby + 0x78);
     char t10[32];
     float t30[8];
@@ -1004,7 +1004,7 @@ typedef int u128_7010 __attribute__((mode(TI)));
 typedef struct { char pad0[0x21]; unsigned char group; char pad22[0xDE]; } Blk_7010;
 
 /* Spawns debris mobys while the level counter allows, then scatters or bursts the group's other mobys. */
-void SpawnGroupDebris(char *moby) {
+void scatter_bomber_tank_linked_debris(char *moby) {
     float a[4];
     float b[4];
     float c[4];
@@ -1040,7 +1040,7 @@ void SpawnGroupDebris(char *moby) {
             c[1] = FastSin(ang) * (D_0015EE6C * 15.0f);
             c[2] = 0.0f;
             c[2] = random_float_between(D_0015EE6C * 8.0f, D_0015EE6C * 12.0f);
-            InitSpinningPiece(m, (int)moby, c, b, func_001FA898_2D6C58(random_float_between(60.0f, 90.0f)));
+            initialize_moby_launch_motion(m, (int)moby, c, b, func_001FA898_2D6C58(random_float_between(60.0f, 90.0f)));
         }
     }
     while (1) {
@@ -1092,9 +1092,9 @@ void SpawnGroupDebris(char *moby) {
                 if (FastDiffRots(func_L00_001FF860(a[0], a[1]),
                                   func_L00_001FF860(D_L08_00167500_7010[0x50] - *(float *)(moby + 0x10),
                                                     D_L08_00167500_7010[0x51] - *(float *)(moby + 0x14))) < 0.2617994f) {
-                    InitSpinningPiece(other, (int)moby, a, b, func_001FA898_2D6C58(random_float_between(10.0f, 20.0f)));
+                    initialize_moby_launch_motion(other, (int)moby, a, b, func_001FA898_2D6C58(random_float_between(10.0f, 20.0f)));
                 } else {
-                    InitSpinningPiece(other, (int)moby, a, b, func_001FA898_2D6C58(random_float_between(30.0f, 45.0f)));
+                    initialize_moby_launch_motion(other, (int)moby, a, b, func_001FA898_2D6C58(random_float_between(30.0f, 45.0f)));
                 }
             } else if ((short)cls == 0x1D8) {
                 clear_u64_value(a);
@@ -1113,7 +1113,7 @@ extern short * D_L08_001AC340[];
 
 /* Remove active mobys of the selected classes from this moby's linked group.
    Adapted from Lombyte (GPL-3.0) for PAL by OpenRAC's tools/port.py: src/overlays/l08/gameplay/entities/002b8228.c, FUN_L08_002d6450. */
-void DeleteLinkedGroupMobys(struct Moby *moby) {
+void remove_bomber_tank_linked_debris(struct Moby *moby) {
     short *list = D_L08_001AC340[(((struct Moby *)D_L08_00160058) + *(s32 *)(moby->pvars + 0x144))->group];
     struct Moby *other;
     u16 index;
@@ -1137,7 +1137,9 @@ void DeleteLinkedGroupMobys(struct Moby *moby) {
         }
     }
 }
-INCLUDE_ASM("asm/overlays", func_L08_002DB438);
+/* A stripped epilogue word. The empty UpdateMoby_324 at 002DB440 is
+ * a separate placement of func_001E9768, referenced by the moby table. */
+LINKER_REMNANT("asm/overlays", func_L08_002DB438);
 extern struct Hero D_0013F450_DB468 __asm__("D_0013F450");
 extern short D_L08_00161A00_DB468 SDATA(D_L08_00161A00);
 extern float D_L08_001D7320_DB468[4] __asm__("D_L08_001D7320");
@@ -1162,7 +1164,7 @@ extern float func_001F9878_DB468(float) __asm__("func_001F9878");
 extern s32 func_001FA898_DB468(f32) __asm__("func_001FA898");
 
 /* Adapted from Lombyte (GPL-3.0) for PAL by OpenRAC's tools/port.py: src/overlays/l08/gameplay/entities/002b8228.c, FUN_L08_002da0f0. */
-void Moby327Update(struct Moby *moby) {
+void update_hero_water_entry_effects(struct Moby *moby) {
     Vec4 pos;
     Vec4 v;
     char *r;
@@ -1229,7 +1231,7 @@ extern char *func_L00_0026DA50(void *, void *, int, int, int, int, float);
 
 /* Strings count glowing puffs from one point to another, growing from size0 to size1, then bursts a spark shower at each end.
    Adapted from Lombyte (GPL-3.0) for PAL by OpenRAC's tools/port.py: src/overlays/l08/gameplay/entities/002b8228.c, FUN_L08_002da3f0. */
-void SpawnPuffTrailBetween(struct Moby *moby, void *from, void *to, int count, f32 size0, f32 size1) {
+void spawn_particle_line_effect(struct Moby *moby, void *from, void *to, int count, f32 size0, f32 size1) {
     Vec4 step;
     Vec4 pos;
     Vec4 vel;
@@ -1404,7 +1406,7 @@ typedef struct {
 } Data_DBF68;
 
 /* Update function of the blarg bomb thrower: hit reactions, then a state machine that walks to its bomb crate, picks up and throws bombs at the hero. */
-void BlargBombThrowerUpdate(Moby *moby) {
+void blarg_bombthrower_update(Moby *moby) {
     Data_DBF68 *d = (Data_DBF68 *)moby->pvars;
     Look_DBF68 look;
     float v50[4];
@@ -1420,7 +1422,7 @@ void BlargBombThrowerUpdate(Moby *moby) {
     func_L00_00264B40_x(moby, D_L08_00161A3C, 3.0f, d->blk160);
     if (moby->visible != 0) {
         if (FastVecDist(&moby->pos, D_L08_00167640) < 29.0f) {
-            SetGroundHeightBand(moby);
+            func_L00_0025B178(moby);
             moby->shadow_range = 0x17;
         }
     }
@@ -1433,7 +1435,7 @@ void BlargBombThrowerUpdate(Moby *moby) {
         float t = IntToFloat(D_L08_00161A60);
         int c = d->s132;
         moby->alpha = func_001FA898_2D6C58((float)c + (float)-c * ((float)(D_L08_00161A60 - d->s130) / t));
-        SpawnSmokeTrails(moby);
+        spawn_moby_table_puff_pattern(moby);
         return;
     }
     damage_2D5FA8(moby, find_2D5FA8(moby, 0x330000, 0), &d->health, 0, &hit, &damage, 0, 4);
@@ -1643,7 +1645,7 @@ void BlargBombThrowerUpdate(Moby *moby) {
             func_L00_00250800_2D6C58(moby, 9, v50);
             FastVecSub(v60, &target->pos, v50);
             func_L00_001FF500(v60, v60, t);
-            v60[2] = ComputeLaunchVelocityZ(v50, v70, &out, t, -(D_0015EE70 * 15.0f));
+            v60[2] = jump_speed_4318(v50, v70, &out, t, -(D_0015EE70 * 15.0f));
             p = BombSpawn((int)moby, (char *)v50, (char *)v60);
             d->p124 = (Moby *)p;
             if (p != 0) {
@@ -1676,7 +1678,7 @@ void BlargBombThrowerUpdate(Moby *moby) {
     case 0x5A:
     case 0x5C:
     case 0x5D:
-        if (StepMobyPhysics(moby, d->blk70) & 0x40) {
+        if (mine_fall(moby, d->blk70) & 0x40) {
             old = d->p120;
             if ((d->p120 = (Moby *)FindBestGroupTarget((char *)moby)) == 0) {
                 d->p120 = old;
@@ -1696,13 +1698,13 @@ void BlargBombThrowerUpdate(Moby *moby) {
         }
         break;
     case 0x63:
-        if (StepMobyPhysics(moby, d->blk70) & 0x40) {
+        if (mine_fall(moby, d->blk70) & 0x40) {
             moby->anim_speed = 0.0f;
             moby->state = 100;
             moby->collision = 0;
             d->s132 = 0x28;
             d->s130 = D_L08_00161A60;
-            SpawnSmokeTrails(moby);
+            spawn_moby_table_puff_pattern(moby);
             DeleteMoby(moby);
             return;
         }
@@ -1731,80 +1733,103 @@ extern void func_L08_002DD440(char *moby);
 
 /* Platform moby update: toggles visibility, spins, records its start pose, then rides its path while the
  * player stands on it; at the end of the path it can hand over to the cutscene state. */
+typedef struct LiftVars {
+    char pad_00[0x20];
+    char motion[0x40];                 /* 0x20 update_entity_matrix destination */
+    Vec4 home_pos;                     /* 0x60 */
+    Vec4 home_rot;                     /* 0x70 */
+    s32 path;                          /* 0x80 -1 when the platform has no route */
+    char pad_84[0x8];
+    union { s32 i; u16 u; } stop;      /* 0x8C route stop target; .u is read as a halfword */
+    char pad_90[0x10];
+    char manip_unk0;                   /* 0xA0 manipulator record (AttachManipulator) */
+    u8 manip_set;                      /* 0xA1 0 = manipulator not attached yet */
+    char pad_A2[0xE];
+    char spin_state[0x30];             /* 0xB0 rotation matrix built by BuildEulerMatrix */
+    s16 unkE0;                         /* 0xE0 */
+    char pad_E2[0x1E];
+    s32 unk100;                        /* 0x100 */
+    char pad_104[0xC];
+    Vec4 spin;                         /* 0x110 spin angles (spin.f[0] is the yaw) */
+    char pad_120[0x4];
+    s32 ridable;                       /* 0x124 nonzero: the hero may stand on it */
+} LiftVars;
+
 void RoutePlatformUpdate(char *m) {
-    char *d = *(char **)(m + 0x78);
-    float pos[4];
-    float rot[4];
-    float vec[4];
-    float tgt[4];
+    struct Moby *moby = (struct Moby *)m;
+    LiftVars *vars = (LiftVars *)moby->pvars;
+    float old_pos[4];
+    float old_rot[4];
+    float delta[4];
+    float hero_position_probe[4];
     float *rp;
-    qcopy(pos, m + 0x10);
-    qcopy(rot, m + 0x40);
-    if (D_L08_0015F6A8 != 2 && *(int *)(d + 0x124) != 0) {
-        m[0x31] = 1;
-        *(unsigned short *)(m + 0x34) &= 0xFFFE;
+    qcopy(old_pos, &moby->pos);
+    qcopy(old_rot, &moby->rot);
+    if (D_L08_0015F6A8 != 2 && vars->ridable != 0) {
+        moby->visible = 1;
+        moby->flags &= 0xFFFE;
     } else {
-        m[0x31] = 0;
-        *(unsigned short *)(m + 0x34) |= 1;
+        moby->visible = 0;
+        moby->flags |= 1;
     }
-    rp = rot;
-    if (((unsigned char *)d)[0xA1] == 0) {
-        AttachManipulator(m, 0, d + 0xA0);
+    rp = old_rot;
+    if (vars->manip_set == 0) {
+        AttachManipulator(m, 0, &vars->manip_unk0);
     }
-    *(float *)(d + 0x110) = FastAddRots(*(float *)(d + 0x110), D_0015EE6C_2D5FA8 * 1.5707964f);
-    BuildEulerMatrix(d + 0xB0, d + 0x110);
-    switch (((unsigned char *)m)[0x20]) {
+    vars->spin.f[0] = FastAddRots(vars->spin.f[0], D_0015EE6C_2D5FA8 * 1.5707964f);
+    BuildEulerMatrix(vars->spin_state, &vars->spin);
+    switch (moby->state) {
     case 0:
-        clear_u64_value(d + 0x110);
-        if (*(int *)(d + 0x80) == -1) {
-            qcopy(d + 0x60, m + 0x10);
-            qcopy(d + 0x70, m + 0x40);
-            m[0x20] = 4;
-            *(int *)(d + 0x124) = 1;
+        clear_u64_value(&vars->spin);
+        if (vars->path == -1) {
+            qcopy(&vars->home_pos, &moby->pos);
+            qcopy(&vars->home_rot, &moby->rot);
+            moby->state = 4;
+            vars->ridable = 1;
         } else {
-            *(int *)(d + 0x100) = -1;
-            *(short *)(d + 0xE0) = -1;
-            PlatformChooseRoute(m);
-            m[0x20] = 2;
-            ((unsigned char *)m)[0x30] = 0xFF;
+            vars->unk100 = -1;
+            vars->unkE0 = -1;
+            select_shuttle_route_for_hero(m);
+            moby->state = 2;
+            moby->update_dist = 0xFF;
         }
         break;
     case 2: {
-        char *q = D_0013E633 + 0xE1D;
-        if (*(char **)(q + 0x2FC) == m) {
+        Hero *q = (Hero *)(D_0013E633 + 0xE1D);
+        if (q->ground_moby == moby) {
             if (D_L08_00179C90[0] == 0 && D_L08_00179C90[9] == -1) {
-                qcopy(tgt, q + 0x80);
-                func_L00_00262DF0_i(*(int *)(d + 0x8C), tgt, 0.5f, tgt);
-                if (FastVecDist(q + 0x80, tgt) < 0.001f) {
-                    Platform_ShowHelpMessage(m);
-                    if ((D_0013A5E0_d[0x2604 / 4] & 0x10) && *(short *)(q + 0x30E) == 0 && D_L08_0015F674 == 10) {
-                        m[0x20] = 3;
+                qcopy(hero_position_probe, &q->motion.pos);
+                func_L00_00262DF0_i(vars->stop.i, hero_position_probe, 0.5f, hero_position_probe);
+                if (FastVecDist(&q->motion.pos, hero_position_probe) < 0.001f) {
+                    try_set_shuttle_departure_help_message(m);
+                    if ((D_0013A5E0_d[0x2604 / 4] & 0x10) && q->air_frames.s == 0 && D_L08_0015F674 == 10) {
+                        moby->state = 3;
                     }
                 }
             }
         } else {
-            PlatformChooseRoute(m);
+            select_shuttle_route_for_hero(m);
         }
         break;
     }
     case 3: {
-        char *q = D_0013E633 + 0xE1D;
-        *(short *)(q + 0x1F2) = 5;
-        *(short *)(q + 0x1F4) = 5;
-        *(short *)(q + 0x22DA) = *(unsigned short *)(d + 0x8C);
-        if (Platform_MoveToRouteTarget(m)) {
-            PlatformChooseRoute(m);
-            m[0x20] = 2;
+        Hero *q = (Hero *)(D_0013E633 + 0xE1D);
+        q->unk1F2 = 5;
+        q->unk1F4 = 5;
+        q->unk22DA = vars->stop.u;
+        if (advance_shuttle_path_travel(m)) {
+            select_shuttle_route_for_hero(m);
+            moby->state = 2;
         }
         break;
     }
     }
-    Platform_BobAndSway(m);
-    if (*(int *)(d + 0x8C) != -1) {
-        TransformPathPoints(m);
+    update_moby_transform_wobble(m);
+    if (vars->stop.i != -1) {
+        update_shuttle_stop_world_points(m);
     }
-    FastVecSub(vec, m + 0x10, pos);
-    CarryRiders(d + 0x20, vec, rp, m + 0x40);
+    FastVecSub(delta, &moby->pos, old_pos);
+    update_entity_matrix(vars->motion, delta, rp, &moby->rot);
 }
 extern int D_L08_001B0FB0[];
 extern char D_L08_001DB540[];
@@ -1812,7 +1837,7 @@ extern void func_001F9EC0(void *, void *, void *);
 extern void func_001F9BD8(void *, void *, void *);
 
 // Transforms eight vectors of the current table entry by the moby's matrix.
-void TransformPathPoints(char *moby) {
+void update_shuttle_stop_world_points(char *moby) {
     char *data = *(char **)(moby + 0x78);
     int *t = (int *)D_L08_001B0FB0[*(int *)(data + 0x8C)];
     if (*t == 8) {
@@ -1838,107 +1863,141 @@ extern Route_2dd4f8 *D_L08_001B0FB0_r[] __asm__("D_L08_001B0FB0");
 extern char D_0014171B_r[] __asm__("D_0014171B") NOT_SDA;
 extern float func_001F9D48(void *, void *);
 
+typedef struct ShuttleVars {
+    u8 pad_00[0x60];
+    f32 pos[4];                        /* 0x60: route point copied by qcopy; pos[0] x, pos[1] y */
+    u8 pad_70[0x8];
+    f32 angle;                         /* 0x78: heading, set on each route change */
+    u8 pad_7C[0x4];
+    s32 configured_index;              /* 0x80: row of D_L08_001B0FB0_r */
+    s32 alternate_index;               /* 0x84: row of D_L08_001B0FB0_r */
+    s32 route_index;                   /* 0x88: row of D_L08_001B0FB0_r */
+    u8 pad_8C[0x8];
+    s32 configured_visit;              /* 0x94: visited-table index for the configured path */
+    s32 alternate_visit;               /* 0x98: visited-table index for the alternate path */
+    u8 pad_9C[0x48];
+    union { f32 f; s32 i; } unkE4;     /* 0xE4 */
+    u8 pad_E8[0x18];
+    s32 last_sel;                      /* 0x100: selection made last frame */
+    union { f32 f; s32 i; } unk104;    /* 0x104 */
+    u8 pad_108[0x18];
+    Route_2dd4f8 *cur_path;            /* 0x120: route the hero follows */
+    s32 active;                        /* 0x124 */
+} ShuttleVars;
+
 /* Platform route choice: picks whichever of its three routes is nearest the player (end of route a, or
  * the start of b or c), and on a change starts along it; on route a it skips to b/c when the current
  * frame's route flags say so, and hides when far from the player. */
-void PlatformChooseRoute(char *m) {
-    char *d = *(char **)(m + 0x78);
+void select_shuttle_route_for_hero(char *m) {
+    enum {
+        SHUTTLE_SELECT_ROUTE_END = 0,
+        SHUTTLE_SELECT_CONFIGURED_PATH_START = 1,
+        SHUTTLE_SELECT_ROUTE_START = 2,
+        SHUTTLE_SELECT_ALTERNATE_PATH_START = 3
+    };
+    Moby *moby = (Moby *)m;
+    ShuttleVars *data = (ShuttleVars *)moby->pvars;
     char *pl = D_0013E633 + 0xE9D;
-    Route_2dd4f8 *a = D_L08_001B0FB0_r[*(int *)(d + 0x88)];
-    Route_2dd4f8 *b = D_L08_001B0FB0_r[*(int *)(d + 0x80)];
-    Route_2dd4f8 *c = D_L08_001B0FB0_r[*(int *)(d + 0x84)];
-    float d0 = FastVecDist(pl, (char *)a + (a->count << 4));
-    float d1 = FastVecDist(pl, b->e[0]);
-    float d2 = FastVecDist(pl, c->e[0]);
+    Route_2dd4f8 *route = D_L08_001B0FB0_r[data->route_index];
+    Route_2dd4f8 *configured_path = D_L08_001B0FB0_r[data->configured_index];
+    Route_2dd4f8 *alternate_path = D_L08_001B0FB0_r[data->alternate_index];
+    float best_candidate_distance = FastVecDist(pl, (char *)route + (route->count << 4));
+    float configured_path_start_distance = FastVecDist(pl, configured_path->e[0]);
+    float alternate_path_start_distance = FastVecDist(pl, alternate_path->e[0]);
     int sel = 0;
     float y;
-    if (d1 < d0) {
-        d0 = d1;
+    if (configured_path_start_distance < best_candidate_distance) {
+        best_candidate_distance = configured_path_start_distance;
         sel = 1;
     }
-    if (d2 < d0) sel = 3;
-    if (*(int *)(d + 0x100) == sel) return;
-    *(int *)(d + 0x100) = sel;
-    *(int *)(d + 0xE4) = 0;
-    *(float *)(d + 0x104) = 1.0f;
-    m[0x31] = 1;
-    *(unsigned short *)(m + 0x34) &= 0xFFFE;
-    *(int *)(d + 0x124) = 1;
-    *(int *)(m + 0x94) = *(int *)(*(char **)(m + 0x24) + 0x10);
+    if (alternate_path_start_distance < best_candidate_distance) sel = 3;
+    if (data->last_sel == sel) return;
+    data->last_sel = sel;
+    data->unkE4.i = 0;
+    data->unk104.f = 1.0f;
+    moby->visible = 1;
+    moby->flags &= 0xFFFE;
+    data->active = 1;
+    moby->collision = moby->pclass->collision;
     switch (sel) {
-    case 0: {
-        int n = a->count;
-        unsigned char *t;
-        int f94, f98;
+    case SHUTTLE_SELECT_ROUTE_END: {
+        int route_point_count = route->count;
+        unsigned char *visited_table;
+        int configured_path_entry_is_ff, alternate_path_entry_is_ff;
         int fr;
-        qcopy(d + 0x60, (char *)((n << 4) + (int)a));
-        y = func_L00_001FF860(*(float *)((char *)a + ((n - 2) << 4) + 0x10) - *(float *)(d + 0x60),
-                              *(float *)((char *)a + ((n - 2) << 4) + 0x14) - *(float *)(d + 0x64));
+        qcopy(data->pos, (char *)((route_point_count << 4) + (int)route));
+        y = func_L00_001FF860(*(float *)((char *)route + ((route_point_count - 2) << 4) + 0x10) - data->pos[0],
+                              *(float *)((char *)route + ((route_point_count - 2) << 4) + 0x14) - data->pos[1]);
         fr = D_0015EE84_2B94B0 << 4;
-        t = (unsigned char *)(D_0014171B_r + 0xAA35);
-        *(float *)(d + 0x78) = y;
-        *(float *)(d + 0xE4) = 1.0f;
-        *(int *)(d + 0x104) = 0;
-        f94 = t[*(int *)(d + 0x94) + fr] == 0xFF;
-        f98 = t[*(int *)(d + 0x98) + fr] == 0xFF;
-        if (f98) {
-            *(Route_2dd4f8 **)(d + 0x120) = c;
-        } else if (f94) {
-            *(Route_2dd4f8 **)(d + 0x120) = b;
-        } else if (32.0f < func_001F9D48(m + 0x10, pl) || D_L08_0015F6B0_2B94B0 < 5) {
-            m[0x31] = 0;
-            *(unsigned short *)(m + 0x34) |= 1;
-            *(int *)(d + 0x124) = 0;
-            *(int *)(m + 0x94) = 0;
+        visited_table = (unsigned char *)(D_0014171B_r + 0xAA35);
+        data->angle = y;
+        data->unkE4.f = 1.0f;
+        data->unk104.i = 0;
+        configured_path_entry_is_ff = visited_table[data->configured_visit + fr] == 0xFF;
+        alternate_path_entry_is_ff = visited_table[data->alternate_visit + fr] == 0xFF;
+        if (alternate_path_entry_is_ff) {
+            data->cur_path = alternate_path;
+        } else if (configured_path_entry_is_ff) {
+            data->cur_path = configured_path;
+        } else if (32.0f < func_001F9D48(&moby->pos, pl) || D_L08_0015F6B0_2B94B0 < 5) {
+            moby->visible = 0;
+            moby->flags |= 1;
+            data->active = 0;
+            moby->collision = 0;
         }
         return;
     }
-    case 1:
-        qcopy(d + 0x60, b->e[0]);
-        y = func_L00_001FF860(b->e[1][0] - *(float *)(d + 0x60), b->e[1][1] - *(float *)(d + 0x64));
-        *(Route_2dd4f8 **)(d + 0x120) = b;
+    case SHUTTLE_SELECT_CONFIGURED_PATH_START:
+        qcopy(data->pos, configured_path->e[0]);
+        y = func_L00_001FF860(configured_path->e[1][0] - data->pos[0], configured_path->e[1][1] - data->pos[1]);
+        data->cur_path = configured_path;
         break;
-    case 2:
-        qcopy(d + 0x60, a->e[0]);
-        y = func_L00_001FF860(a->e[1][0] - *(float *)(d + 0x60), a->e[1][1] - *(float *)(d + 0x64));
-        *(Route_2dd4f8 **)(d + 0x120) = a;
+    case SHUTTLE_SELECT_ROUTE_START:
+        qcopy(data->pos, route->e[0]);
+        y = func_L00_001FF860(route->e[1][0] - data->pos[0], route->e[1][1] - data->pos[1]);
+        data->cur_path = route;
         break;
-    case 3:
-        qcopy(d + 0x60, c->e[0]);
-        y = func_L00_001FF860(c->e[1][0] - *(float *)(d + 0x60), c->e[1][1] - *(float *)(d + 0x64));
-        *(Route_2dd4f8 **)(d + 0x120) = c;
+    case SHUTTLE_SELECT_ALTERNATE_PATH_START:
+        qcopy(data->pos, alternate_path->e[0]);
+        y = func_L00_001FF860(alternate_path->e[1][0] - data->pos[0], alternate_path->e[1][1] - data->pos[1]);
+        data->cur_path = alternate_path;
         break;
     default:
         return;
     }
-    *(float *)(d + 0x78) = y;
+    data->angle = y;
 }
 extern float func_001FA748(float, float);
 extern float D_0015EE6C MACRO_ADDR;
 extern float func_001F9FA8(float);
 /* Moby update for a drifting object that bobs and sways. */
-void Platform_BobAndSway(char *moby) {
-    char *d = *(char **)(moby + 0x78);
-    float s, t, w;
-    qcopy(moby + 0x10, d + 0x60);
-    qcopy(moby + 0x40, d + 0x70);
-    s = FastAddRots(*(float *)(d + 0xEC), D_0015EE6C * 2.0943951f);
-    *(float *)(d + 0xEC) = s;
-    t = FastSin(s);
-    w = D_0015EE6C * 1.6929693f;
-    *(float *)(moby + 0x18) += t * 0.25f;
-    s = FastAddRots(*(float *)(d + 0xF0), w);
-    *(float *)(d + 0xF0) = s;
-    t = FastAddRots(*(float *)(moby + 0x44), FastSin(s) * 0.08726646f);
-    w = D_0015EE6C * 0.9250245f;
-    *(float *)(moby + 0x44) = t;
-    s = FastAddRots(*(float *)(d + 0xF4), w);
-    *(float *)(d + 0xF4) = s;
-    *(float *)(moby + 0x40) = FastAddRots(*(float *)(moby + 0x40), FastSin(s) * 0.08726646f);
-    if (*(float *)(moby + 0x40) > 0.17453292f) *(float *)(moby + 0x40) = 0.17453292f;
-    else if (*(float *)(moby + 0x40) < -0.17453292f) *(float *)(moby + 0x40) = -0.17453292f;
-    if (*(float *)(moby + 0x44) > 0.17453292f) *(float *)(moby + 0x44) = 0.17453292f;
-    else if (*(float *)(moby + 0x44) < -0.17453292f) *(float *)(moby + 0x44) = -0.17453292f;
+void update_moby_transform_wobble(char *moby) {
+    struct Moby *m = (struct Moby *)moby;
+    u8 *pvars = m->pvars;
+    float wobble_phase, wobble_value, wobble_phase_step;
+    qcopy(&m->pos, pvars + 0x60);
+    qcopy(&m->rot, pvars + 0x70);
+    wobble_phase = FastAddRots(*(float *)(pvars + 0xEC), D_0015EE6C * 2.0943951f);
+    *(float *)(pvars + 0xEC) = wobble_phase;
+    wobble_value = FastSin(wobble_phase);
+    wobble_phase_step = D_0015EE6C * 1.6929693f;
+    m->pos.z += wobble_value * 0.25f;
+    wobble_phase = FastAddRots(*(float *)(pvars + 0xF0), wobble_phase_step);
+    *(float *)(pvars + 0xF0) = wobble_phase;
+    wobble_value = FastAddRots(m->rot.y, FastSin(wobble_phase) * 0.08726646f);
+    wobble_phase_step = D_0015EE6C * 0.9250245f;
+    m->rot.y = wobble_value;
+    wobble_phase = FastAddRots(*(float *)(pvars + 0xF4), wobble_phase_step);
+    *(float *)(pvars + 0xF4) = wobble_phase;
+    m->rot.x = FastAddRots(m->rot.x, FastSin(wobble_phase) * 0.08726646f);
+    if (m->rot.x > 0.17453292f)
+        m->rot.x = 0.17453292f;
+    else if (m->rot.x < -0.17453292f)
+        m->rot.x = -0.17453292f;
+    if (m->rot.y > 0.17453292f)
+        m->rot.y = 0.17453292f;
+    else if (m->rot.y < -0.17453292f)
+        m->rot.y = -0.17453292f;
 }
 extern float func_00214D88(float *, float *, float, float, float, float);
 extern void func_00215CA8(int *, int, void *, float *, int, float);
@@ -1946,7 +2005,7 @@ extern float func_001F9B88(float);
 extern float D_0015EE70 MACRO_ADDR;
 
 /* Per-frame update: ease the angle and position fields toward their targets. */
-int Platform_MoveToRouteTarget(char *m) {
+int advance_shuttle_path_travel(char *m) {
     char *d = *(char **)(m + 0x78);
     int *path;
     float a = D_0015EE70 * 0.1f;
@@ -1971,7 +2030,7 @@ extern void func_00215F80(int, int);
 extern int D_L08_001B0FB0[];
 
 /* Moby update that shows a help message chosen from its data values. */
-void Platform_ShowHelpMessage(char *moby) {
+void try_set_shuttle_departure_help_message(char *moby) {
     char *data = *(char **)(moby + 0x78);
     if (*(float *)(data + 0x104) > 0.9f) {
         try_set_help_message(0xA, 0x1F4D);
@@ -1988,7 +2047,7 @@ extern int func_001F9850(int);
 extern float func_002140F8(float, float);
 extern float func_L00_001FF860(float, float);
 /* Spawns a moby of class 0x1A9 at a position, with a random spin and a heading from a vector. */
-char *Moby425Spawn(char *src, char *pos, char *vec) {
+char *spawn_bomber_tank_projectile(char *src, char *pos, char *vec) {
     char *moby = CreateMoby(0x1A9);
     char *data;
     if (moby) {
@@ -2051,7 +2110,7 @@ typedef struct EffectRecord_2DC9A8 {
 extern CollisionHit D_L08_001746C0;
 
 /* Adapted from Lombyte (GPL-3.0) for PAL by OpenRAC's tools/port.py: src/overlays/l08/gameplay/entities/002b8228.c, FUN_L08_002dc9a8. */
-void Moby425Update(struct Moby *moby) {
+void update_ballistic_projectile(struct Moby *moby) {
     char *m = (char *)moby;
     char *data = *(char **)(m + 0x78);
     float original[4];
@@ -2134,14 +2193,14 @@ void Moby425Update(struct Moby *moby) {
                 color = scale_ticks(60);
                 color2 = scale_ticks(120);
                 alpha = rand_range(color, color2);
-                PartType16Spawn(record.pos, position, 0x1f101820, 0x101010, size, alpha, 0);
+                mine_debris(record.pos, position, 0x1f101820, 0x101010, size, alpha, 0);
             } break;
             case 2: {
                 int color, color2, alpha;
                 color = random_integer_below(100) < 40 ? 0x5ff8f8f8 : 0x2f486078;
                 color2 = scale_ticks(30);
                 alpha = scale_ticks(45);
-                PartType16Spawn(record.pos, position, color, 0x0f000020, 150000.0f,
+                mine_debris(record.pos, position, color, 0x0f000020, 150000.0f,
                                       rand_range(color2, alpha), 2);
             } break;
             case 3: {
@@ -2156,7 +2215,7 @@ void Moby425Update(struct Moby *moby) {
                 radius = random_float_between(150000.0f, 200000.0f);
                 alpha = scale_ticks(60);
                 alpha = rand_range(alpha, scale_ticks(120));
-                PartType16Spawn(record.pos, position, color, color2, radius,
+                mine_debris(record.pos, position, color, color2, radius,
                                       alpha, 3);
             } break;
             case 1: break;
@@ -2226,7 +2285,7 @@ extern void func_00215C00(void*,float,float,float);
 extern int func_L00_001F39B0(void*,int,int,void*,int);
 
 /* Rocket guidance, route traversal, launch effects, and destruction. */
-void GuidedRocketUpdate(M46 *m) {
+void update_rocket(M46 *m) {
     V46 target,delta,accel,effect,aux;
     D46 *d=m->data;
     if (MobyGetHitMessage(m,0x210000,0) && m->state!=4) {
@@ -2258,7 +2317,7 @@ void GuidedRocketUpdate(M46 *m) {
         qcopy(target,d->target->position); target[2]+=5.0f;
         yaw=func_L00_001FF860(m->position[0]-target[0],m->position[1]-target[1]);
         pitch=func_L00_001FF860(func_001F9D48(target,m->position),m->position[2]-target[2]);
-        AddSphericalOffset(target,target,d->roll,d->yaw,d->pitch);
+        fast_add_rotations_cf(target,target,d->roll,d->yaw,d->pitch);
         FastVecSub(delta,target,m->position);
         ClampVectorLength(delta,t->speed*D_0015EE6C);
         FastVecSub(accel,delta,d->velocity);
@@ -2383,7 +2442,7 @@ void GuidedRocketUpdate(M46 *m) {
                             launch_offset=effect;
                             if (angle_delta<0.7853982f) { lo=10.0f; hi=20.0f; }
                             else { lo=60.0f; hi=90.0f; }
-                            InitSpinningPiece(other,(int)m,accel,launch_offset,func_001FA898_r(random_float_between(lo,hi)));
+                            initialize_moby_launch_motion(other,(int)m,accel,launch_offset,func_001FA898_r(random_float_between(lo,hi)));
                         }
                     } else if ((short)cls==0x1A8) {
                         special=1; clear_u64_value(accel);
@@ -2428,7 +2487,7 @@ extern int D_L08_00161ACC SDATA(D_L08_00161ACC);
 extern float D_L08_00161AD0 SDATA(D_L08_00161AD0);
 
 /* Adapted from Lombyte (the US decompilation): FUN_L08_002de3e0. */
-Moby *Moby435Spawn(void *pos, Moby *target, void *velocity, float pitch, float yaw) {
+Moby *spawn_class_1b3_projectile(void *pos, Moby *target, void *velocity, float pitch, float yaw) {
     Moby *moby = func_0020D348_mb(0x1B3);
     char *data;
     float *reference;
@@ -2502,7 +2561,7 @@ void func_L08_002DF8A0_r(char *moby, int a, int n, int flag) {
             FastVecSub(vec3, vec, moby + 0x10);
             func_L00_001FF500(vec3, vec3, random_float_between(D_0015EE6C * 12.0f, D_0015EE6C * 15.0f));
             vec3[2] = random_float_between(D_0015EE6C * 6.0f, D_0015EE6C * 18.0f);
-            InitSpinningPiece(m, (int)moby, vec3, vec2, func_001FA898_r(random_float_between(60.0f, 90.0f)));
+            initialize_moby_launch_motion(m, (int)moby, vec3, vec2, func_001FA898_r(random_float_between(60.0f, 90.0f)));
         }
     }
 }
@@ -2522,7 +2581,7 @@ extern unsigned char D_0013D510[];
 /* Update function: switch on the state byte at +0x20. State 0 reads the table D_L08_001B0FB0[*data] (deleting
  * the moby if the index is -1), 1 steps along it, 2 falls under gravity and deletes the moby below z = 10.0
  * or on a hit. */
-void Moby438Update(char *m) {
+void update_path_following_moby(char *m) {
     float a[4];
     float b[4];
     char *d = *(char **)(m + 0x78);

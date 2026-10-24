@@ -39,7 +39,7 @@ int HelpL15_GetRecordValue(int a) {
         }
     }
     {
-        int i = Hero_GetSlotModuleId(0);
+        int i = hero_slot_item_id(0);
         return D_L15_0017A140[i].v;
     }
 }

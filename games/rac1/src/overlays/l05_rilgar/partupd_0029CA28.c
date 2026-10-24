@@ -10,8 +10,8 @@ extern unsigned char *D_L05_001B2940;
 
 /* Allocates a 0x30-byte record with func_00218928 and fills it from the arguments (pos and vel copied in,
  * a * 210000.0 and a random byte stored, plus the integer arguments); returns it, or 0 if allocation failed. */
-unsigned char *Particle_Spawn(void *pos, void *vel, int a2, int a3, int a4, float a) {
-    unsigned char *p = func_00218928(0x30);
+unsigned char *create_particle_with_velocity_and_lifetime(void *pos, void *vel, int a2, int a3, int a4, float a) {
+    unsigned char *p = create_part(0x30);
     unsigned char *q;
     if (p != 0) {
         int m;
@@ -41,8 +41,8 @@ extern float func_002140F8(float, float);
 extern int func_001F9850(int);
 
 /* spawn a particle at a position with a velocity and random parameters */
-unsigned char *Particle_SpawnRandomized(void *pos, void *vel, int arg2, int arg3, float a, float b, float c) {
-    unsigned char *p = func_00218928(0x32);
+unsigned char *create_particle_with_velocity_and_randomized_parameters(void *pos, void *vel, int arg2, int arg3, float a, float b, float c) {
+    unsigned char *p = create_part(0x32);
     unsigned char *q;
     if (p != 0) {
         q = p + 0x20;

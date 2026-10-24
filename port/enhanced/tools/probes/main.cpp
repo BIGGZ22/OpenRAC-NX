@@ -230,12 +230,12 @@ int main(int argc, char** argv) {
         if (game != "rac1" || (version != "pal" && version != "ntsc")) {
             throw std::runtime_error("expected a RAC1 PAL or NTSC export");
         }
-        viewer::LevelData level;
+        scene::LevelData level;
         if (game_rounding) {
             std::fesetround(FE_TOWARDZERO);
         }
         std::cout << "Loading extracted level " << directory.string() << std::endl;
-        if (!viewer::load_level(directory, level, error)) {
+        if (!scene::load_level(directory, level, error)) {
             throw std::runtime_error(error);
         }
         if (level.level < 0) {
@@ -301,7 +301,7 @@ int main(int argc, char** argv) {
             return 0;
         }
         // Free the loader's copies of meshes/textures before building the BVH.
-        level = viewer::LevelData{};
+        level = scene::LevelData{};
         auto last = start;
         const auto volume = bake_probes(
             grid,

@@ -30,7 +30,7 @@
 
 #include "assets/geometry/moby_animation.h"
 
-namespace openrac::viewer {
+namespace openrac::scene {
 
 /**
  * The joint palette of the moby at `moby` (a game address): one matrix per joint of the class's
@@ -50,4 +50,4 @@ std::vector<assets::rac1::JointMatrix> moby_pose_matrices(
     std::span<const std::uint8_t> ram, std::uint32_t moby
 );
 
-}  // namespace openrac::viewer
+}  // namespace openrac::scene

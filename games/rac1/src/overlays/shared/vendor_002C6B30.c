@@ -93,7 +93,7 @@ extern void func_L09_002C73D0_2C6B30(struct Moby *) __asm__("func_L09_002C73D0")
 /* Update of the oClass 52 moby: follows its target at a hover height above the hero, with a voice while it moves,
  * and bursts or is removed in its last states.
  * Adapted from Lombyte (GPL-3.0) for PAL: overlays/shared/gameplay/entities/002c5990.c, FUN_L09_002c5990. */
-void Moby52Update(struct Moby *moby) {
+void seeker_update(struct Moby *moby) {
     Moby52Vars_2C6B30 *vars = (Moby52Vars_2C6B30 *)moby->pvars;
     struct Moby *target;
     Vec4 vel;
@@ -595,7 +595,7 @@ extern void delete_2E39E0(Moby *) __asm__("func_0020D678");
 extern void effects_update_2E39E0(Moby *, void *) __asm__("func_L00_0025E590");
 
 /* Ground enemy update: damage reaction, leash and wake checks, then its chase / attack / return state machine. */
-void GroundEnemyUpdate(Moby *m) {
+void update_ground_melee_enemy(Moby *m) {
     V_2E39E0 previous;
     Target_2E39E0 query;
     V_2E39E0 step;
@@ -976,7 +976,7 @@ extern u8 *func_L00_0026E940_08F58(f32, struct Moby *, u32, s32, s32) __asm__("f
 extern void func_L00_00251E30_08F58(struct Moby *) __asm__("func_L00_00251E30");
 
 /* Adapted from Lombyte (GPL-3.0) for PAL by OpenRAC's tools/port.py: src/overlays/shared/gameplay/vendor/00307ba8.c, FUN_L09_00307ba8. */
-struct Moby *SpawnEnemyShot(void *owner, Vec4 *pos, Vec4 *vel, s32 life) {
+struct Moby *spawn_class_4ea_projectile(void *owner, Vec4 *pos, Vec4 *vel, s32 life) {
     Vec4 p;
     Vec4 v;
     Vec4 *pp = &p;
@@ -1063,7 +1063,7 @@ extern s32 func_L00_001F2BE8_09118(f32, void *, s32, void *, void *) __asm__("fu
 
 /* Update of the shot FUN_L09_00307ba8 spawns (cf. FUN_L04_002af058): moves along vel, plays its sound once it starts moving away from the hero within 3 units, dies outside the level box, and on a hit (probing along the line from the hero until the timer runs out) bursts into five sparks and a flash, damages around the hit and is removed.
    Adapted from Lombyte (GPL-3.0) for PAL by OpenRAC's tools/port.py: src/overlays/shared/gameplay/vendor/00307ba8.c, FUN_L09_00307d68. */
-void EnemyShotUpdate(struct Moby *m)
+void update_class_4ea_projectile(struct Moby *m)
 {
     Vec4 old;
     CollisionProbe_307d68_09118 pr;
@@ -1148,7 +1148,7 @@ extern char D_L09_00209570_BB28[] __asm__("D_L09_00209570");
 extern s32 D_L09_0015F6B0_BB28 __asm__("D_L09_0015F6B0") MACRO_ADDR;
 
 /* Adapted from Lombyte (GPL-3.0) for PAL: src/overlays/shared/gameplay/vendor/00307ba8.c, FUN_L09_0030a778. */
-struct Moby *Moby_SpawnChildFromOwner(struct Moby *owner, Vec4 *pos)
+struct Moby *respawn_spawner_child(struct Moby *owner, Vec4 *pos)
 {
     struct Moby *m;
     struct Moby *other;
@@ -1259,7 +1259,7 @@ int CountLiveMoby1886Slots(int unused, char *m) {
     int last = -1;
     int i;
     char **slot;
-    m[0x91] = MobyGroup_CountNotInState(*(int *)(m + 0x94), -1);
+    m[0x91] = count_group_e81e0(*(int *)(m + 0x94), -1);
     for (i = 0, slot = (char **)(m + 0xB0); i < 20; i++, slot++) {
         char *o = *slot;
         if (o != 0 && *(short *)(o + 0xA6) == 0x75E &&
@@ -1489,7 +1489,7 @@ char *SpawnMoby1886(int owner, void *pos, void *rot, unsigned char a, unsigned c
 }
 extern void func_0020D678(void *);
 
-void Moby1886_ReleaseOwnerSlot(void *moby, char *data)
+void remove_spawner_egg(void *moby, char *data)
 {
     char *other = *(char **)(data + 0x10);
     if (other != 0 && *(short *)(other + 0xA6) == 0x75D &&
@@ -1578,7 +1578,7 @@ static inline void bubble_bounce(struct Moby *moby, BubbleVars *vars) {
 }
 
 /* Adapted from Lombyte (GPL-3.0) for PAL by OpenRAC's tools/port.py: src/overlays/shared/gameplay/vendor/00307ba8.c, FUN_L09_0030b3b0. */
-void Moby1886Update(struct Moby *moby) {
+void spawner_egg_update(struct Moby *moby) {
     BubbleVars *vars = (BubbleVars *)moby->pvars;
     Vec4 prev;
     Vec4 step;
@@ -1590,7 +1590,7 @@ void Moby1886Update(struct Moby *moby) {
     f32 dist;
     f32 rate;
 
-    func_L00_001FEF78(&vars->sound_delay);
+    fast_subtract_rotations_cf(&vars->sound_delay);
     qcopy(&prev, &moby->pos);
     switch (moby->state) {
     case 0:
@@ -1629,8 +1629,8 @@ void Moby1886Update(struct Moby *moby) {
         if (FastDecTimer(&vars->life) != 0) {
             moby->state = 2;
         }
-        moby->rot.x = WrapAngle(vars->vel.f[0]);
-        moby->rot.y = WrapAngle(vars->vel.f[1]);
+        moby->rot.x = normalize_angle(vars->vel.f[0]);
+        moby->rot.y = normalize_angle(vars->vel.f[1]);
         moby->collision = moby->pclass->collision;
         vars->owner->collision = vars->owner->pclass->collision;
         vars->vel.f[2] -= D_0015EE70 * 9.8f;
@@ -1641,7 +1641,7 @@ void Moby1886Update(struct Moby *moby) {
         moby->pos.z = ProbeGroundHeight(&moby->pos, 0, 0.5f) + 0.2f;
         moby->pos.w = 0.0f;
         step.q = ((Vec4 *)&moby->pos)->q;
-        vars->held = Moby_SpawnChildFromOwner(vars->owner, &step);
+        vars->held = respawn_spawner_child(vars->owner, &step);
         moby->state = 2;
         break;
     case 2:
@@ -1655,14 +1655,14 @@ void Moby1886Update(struct Moby *moby) {
             held = vars->held;
             if (held == 0 || held->state == 0xFE || held->state == 0xFD || vars->unk1A == 0 ||
                 held->pclass->scale - 0.01f <= held->scale) {
-                Moby1886_ReleaseOwnerSlot(moby, (char *)vars);
+                remove_spawner_egg(moby, (char *)vars);
             }
         }
         break;
     }
-    RecordMobyShadow(moby, moby->scale * 0.3f / moby->pclass->scale);
+    jet_animate(moby, moby->scale * 0.3f / moby->pclass->scale);
     if (moby->pos.z < 5.0f || moby->pos.z > 500.0f) {
-        Moby1886_ReleaseOwnerSlot(moby, (char *)vars);
+        remove_spawner_egg(moby, (char *)vars);
         return;
     }
     if (moby->pos.x < 5.0f) {
