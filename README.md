@@ -56,6 +56,10 @@ The launcher sets your games up for you. Nothing else to install, and no game is
 
 The launcher's **Mods** tab opens your levels in [Godot 4](https://godotengine.org/). Move enemies, crates and scenery, then play.
 
+<p align="center">
+  <img src="docs/assets/mods.jpg" alt="The OpenRAC launcher's Mods tab: add mods, switch them on and play" width="860">
+</p>
+
 - [Level editor](editor/README.md)
 - [Mod SDK](docs/port/MODS.md), to change how things behave
 

@@ -20,7 +20,7 @@ OpenRAC/
 ├── tools/                  repository-wide tools: openrac.py, extractor.py, sources.py
 │   └── openrac_common/     the helpers the Python tools share (paths, game.json, tables, discs)
 ├── docs/                   knowledge and rules that span the games
-│   ├── assets/             the logo and the picture README.md shows
+│   ├── assets/             the logo and the pictures README.md shows
 │   ├── policy/             sourcing policy, open questions
 │   ├── port/               the native port: design, studies, order of work
 │   ├── restructure/        the restructure's progress: packages, owners, how to help
