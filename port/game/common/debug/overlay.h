@@ -4,7 +4,9 @@
 // What the debug overlay's files share, and nothing outside the overlay includes: its state, the
 // constants and types the state is made of, and the helpers its panels draw with. debug_overlay.cpp
 // implements debug_overlay.h with them; debug/overlay.cpp defines the state and the helpers, and
-// each panel is defined in the file of debug/ named for its subject.
+// each panel, and each of the parts the entry points draw (the drawer and its touch handling, the
+// menu bar, the settings controls they share, the marks over the picture), is defined in the file
+// of debug/ named for its subject.
 //
 // The state is file-global, as it was inside debug_overlay.cpp; it is to become an object passed
 // to what needs it (CODING_CONVENTIONS.md, sections 11.4 and 24). The window's thread, the one
@@ -325,6 +327,83 @@ std::string shader_root();
 // Draws the shaders section: the GL programs and their state, with a button that reads them all
 // again from shader_root() and one for each. Defined in debug/shaders.cpp.
 void shaders_section();
+
+// ---- The window's entry points' helpers (debug_overlay.cpp) ----
+
+// Shows or hides the panel (s.visible), and has the frame statistics kept while it is shown.
+// Defined in debug_overlay.cpp.
+void set_visible(bool on);
+
+// Returns the file name for a screenshot of the window at `tick`: in the working folder; on
+// Android, whose apps run in "/" (not writable), in the app's own files (HOME, which the launcher
+// sets), the folder made when it is missing. Defined in debug_overlay.cpp.
+std::string shot_name(std::uint64_t tick);
+
+// ---- The touch handling, the drawer, the menus and their controls ----
+
+// Says whether the drawer is offered: always on Android, elsewhere when OPENRAC_DRAWER=1. With it
+// the menus are the drawer's and the panel has no keys to name. Defined in debug/touch.cpp.
+bool drawer_possible();
+
+// Scrolls the window being drawn when a finger drags up or down it, and lets go of what the finger
+// came down on, which is then not pressed. `scrolled` is true once the finger down now has
+// scrolled. Defined in debug/touch.cpp.
+void drag_scroll(bool& scrolled);
+
+// Opens or shuts the drawer. Opening it pauses the game, as an emulator's menu does; shutting it
+// leaves the game as its "Keep paused" row says (paused as before it opened, unless changed there).
+// Defined in debug/touch.cpp.
+void set_drawer(bool open);
+
+// Handles the drawer's events: Back and Guide open and shut it; fingers are ImGui's pointer, and
+// those that land while it is open are its own, not the on-screen pad's. Returns true when `e` was
+// the drawer's, which the game then does not see. Defined in debug/touch.cpp.
+bool drawer_event(const SDL_Event& e);
+
+// Slides the drawer towards s.drawer_open, in under a fifth of a second, and draws it as far out
+// as it is (s.drawer_at): the port's settings, the enhanced graphics, the fixes and, unfolded, the
+// developer tools. A touch beside it or the gamepad's B shuts it; once shut, it asks for the
+// screenshot taken in it (s.shot_when_shut). Defined in debug/drawer.cpp.
+void drawer(const Shown& shown);
+
+// Says whether the menu bar can be shown: on Windows and Linux (macOS has its own menu bar, with
+// the same menus), or with OPENRAC_MENU_BAR=1, and never with the drawer. Defined in
+// debug/menu_bar.cpp.
+bool menu_bar_possible();
+
+// Says whether the menu bar is shown: it can be, and the player has not hidden it (settings.h's
+// menu_bar). Defined in debug/menu_bar.cpp.
+bool menu_bar_shown();
+
+// Presses and releases `key` through SDL's queue, as the macOS menus do: a menu item does what the
+// port's key for it does. Defined in debug/menu_bar.cpp.
+void press(SDL_Keycode key);
+
+// Draws the menu bar: View, Graphics, Enhanced (where the renderer has it), Sound and Developer.
+// Defined in debug/menu_bar.cpp.
+void menu_bar();
+
+// Moves setting `row` (options_menu.h) on by `by`, saves the settings and marks them changed for
+// the window to apply (take_settings_changed). A picture shape of the player's own is the settings
+// file's, so moving the aspect skips it. Defined in debug/controls.cpp.
+void change_setting(int row, int by);
+
+// Draws the enhanced graphics' switches and sliders, GTAO's under a header of their own; disabled
+// where the level has no compatible probe data. A change is saved and marked for the window to
+// apply. Defined in debug/controls.cpp.
+void enhanced_controls();
+
+// ---- What is drawn over the game's picture ----
+
+// Draws the marks over the game's picture (`shown`): a ring round the selected moby and the
+// mobys' labels (s.labels, within s.radius of the hero); with s.pick, a click near a moby selects
+// it and opens the inspector. Defined in debug/picture.cpp.
+void picture_marks(const Shown& shown);
+
+// Draws the status badge at the top of the picture, whether the panel is shown or not: the pause
+// and the speed the keys have set, the toast while it lasts and the notice. Hidden while the
+// drawer is out, which says it. Defined in debug/picture.cpp.
+void status_badge();
 
 // Draws one line of text, formatted as std::format does.
 template <typename... Args>
