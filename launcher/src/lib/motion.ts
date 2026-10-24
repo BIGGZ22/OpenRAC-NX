@@ -17,17 +17,48 @@ export const slides = !reduced && typeof document !== "undefined" && "startViewT
  *  or to a game further down the game list or up it. */
 export type Way = "forward" | "back" | "down" | "up";
 
-/** Makes CHANGE (a page or a game opened) as one slide, going WAY; at once where slides are off. */
+/** The slide under way, if any. */
+let sliding: ViewTransition | null = null;
+
+// While a slide runs, the browser shows pictures of the pages and sends every press to the root
+// element, not to what is under the pointer: a tab pressed then was lost. Such a press ends the
+// slide where it was going and is passed on to what it was meant for.
+if (slides) {
+  document.addEventListener(
+    "click",
+    (e) => {
+      const transition = sliding;
+      if (!transition || e.target !== document.documentElement) return;
+      e.stopPropagation();
+      const { clientX: x, clientY: y } = e;
+      transition.skipTransition();
+      void transition.finished.finally(() => {
+        const target = document.elementFromPoint(x, y)?.closest<HTMLElement>("button, a, [role='button']");
+        target?.click();
+      });
+    },
+    true,
+  );
+}
+
+/** Makes CHANGE (a page or a game opened) as one slide, going WAY; at once where slides are off.
+ *  A change while a slide is still under way goes into that slide's page as it is: a second slide
+ *  would cut the first short and start again from a picture of the page it was leaving, which
+ *  showed as the page jumping back and forth. */
 export function slide(change: () => void, way: Way) {
-  if (!slides) {
+  if (!slides || sliding) {
     change();
     return;
   }
   document.documentElement.dataset.nav = way;
-  document.startViewTransition(async () => {
+  const transition = document.startViewTransition(async () => {
     change();
     await tick();
     await pictures();
+  });
+  sliding = transition;
+  void transition.finished.finally(() => {
+    if (sliding === transition) sliding = null;
   });
 }
 

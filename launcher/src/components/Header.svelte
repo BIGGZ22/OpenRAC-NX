@@ -11,7 +11,9 @@
   import Logo from "./Logo.svelte";
 
   /** The first run: the bar with the name only, nothing to go to yet. */
-  let { setup = false }: { setup?: boolean } = $props();
+  /** `shown`: the page on screen, which follows app.page inside a page's slide (App.svelte), so that
+   *  the tabs change with the page rather than a moment before it. */
+  let { setup = false, shown }: { setup?: boolean; shown?: Page } = $props();
 
   // A player has three places to be: the games, modding and the settings. What the launcher
   // ran (Activity) opens from the running job here and from a game's menu. With
@@ -29,7 +31,10 @@
   const running = $derived(runningJob());
   const pending = $derived(pendingJobs());
   /** The tab that is open: a game's page belongs to the games. */
-  const current = $derived<Page>(app.page === "game" ? "library" : app.page);
+  const current = $derived.by<Page>(() => {
+    const page = shown ?? app.page;
+    return page === "game" ? "library" : page;
+  });
 
   // The bar's tabs share one highlight that slides to the tab opened. Placed without a
   // transition the first time, so that it does not fly in from the left edge.

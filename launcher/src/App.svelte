@@ -148,7 +148,7 @@
 {:else}
   <div class="shell">
     <!-- The first run has the bar with only the name (Android's rail is only its tabs). -->
-    {#if app.config.setupComplete}<Header />{:else if !onAndroid}<Header setup />{/if}
+    {#if app.config.setupComplete}<Header shown={page} />{:else if !onAndroid}<Header setup />{/if}
     <main bind:this={view}>
       {#if !app.config.setupComplete}<Settings setup />
       {:else if page === "game"}<Game />
