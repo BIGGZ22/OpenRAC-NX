@@ -11,7 +11,7 @@ extern int func_0020C468(int, int);
 extern void func_00203B18(char *arg0, int idx);
 
 // load a table of 16 offsets relative to the base pointer and register each entry
-void RelocatePackedObjects(void) {
+void decompress_and_relocate_vendor_moby_assets(void) {
     int i;
     int *p;
     char *base;
@@ -240,13 +240,13 @@ void VendorOpenMenu(VendorMoby_pv *m) {
     VendorSlot_pv *slot;
 
     FastMemSet((Vendor_pv *)D_L00_001CA7C0, 0, 0x220);
-    FastMemSet(D_L00_001CA9E0, 0, 0x40);
+    FastMemSet(vendor_extra, 0, 0x40);
     if (m == 0) {
         m = CreateMoby(0xB);
         *(s16 *)((char *)m + 0x32) = 0x40;
-        *(f32 *)((char *)m + 0x10) = gCameraLvl.x + *(f32 *)&D_L00_00161120;
-        *(f32 *)((char *)m + 0x14) = gCameraLvl.y;
-        *(f32 *)((char *)m + 0x18) = gCameraLvl.z - D_L00_00161128;
+        *(f32 *)((char *)m + 0x10) = player_camera.x + *(f32 *)&D_L00_00161120;
+        *(f32 *)((char *)m + 0x14) = player_camera.y;
+        *(f32 *)((char *)m + 0x18) = player_camera.z - D_L00_00161128;
         clear_u64_value(&m->rot);
         m->rot.f[2] = 3.1415927f;
         func_L00_00251E30(m);
@@ -281,7 +281,7 @@ void VendorOpenMenu(VendorMoby_pv *m) {
 
         VP.item_text = queue_animation_update(0x30, item + 0xEA60, HudTileInit,
                                                   Hud_UpdateCounter, HudWeaponDraw,
-                                                  &D_0013D530[item], D_L00_001C43B0[item].hE);
+                                                  &weapon_ammo_counts[item], D_L00_001C43B0[item].hE);
     }
     D_L00_0015F6BC = 1;
     VP.f0 = 0;
@@ -315,8 +315,8 @@ void VendorOpenMenu(VendorMoby_pv *m) {
         FastVecAdd(&VP.eye, &VP.eye, VP.moby + 0x10);
         VP.look.f[2] = FastAddRots(*(f32 *)(VP.moby + 0x48), 3.1415927f);
         CameraScript(&VP.eye, &VP.look, 1, 0, 0);
-        CameraScript_SetPosition(&VP.eye);
-        CameraScript_SetLookAt(&VP.look);
+        set_camera_position(&VP.eye);
+        set_camera_rotation(&VP.look);
     }
     v = &D_L00_00180350;
     func_001F9EC0(v, &D_L00_00161190, VP.moby + 0xC0);
@@ -366,39 +366,55 @@ extern char D_L00_00161130;
 
 /* Leaves the vendor screen: releases two handles, resets state, repositions the hero and restores the game state.
    Adapted from Lombyte (GPL-3.0) for PAL: src/overlays/shared/unclassified_00295100.c, FUN_L00_0029ab70. */
-void VendorExit(int a) {
-    Vec4A v;
-    Vec4A r;
-    char *g = (char *)D_L00_001CA7C0;
-    if (*(int *)(g + 0x54) != -1) Hud_SetBarValueById(*(int *)(g + 0x54), 0);
-    if (*(int *)(g + 0x50) != -1) Hud_SetBarValueById(*(int *)(g + 0x50), 0);
-    *(int *)(g + 0x54) = -1;
-    *(int *)(g + 0x50) = -1;
-    TickDownCounter();
+/* The mode word at D_0014171B + 0x100B5 + 0x5A. */
+typedef struct MusicModeBlock {
+    u8 pad_00[0x5A];
+    u16 mode;                  /* 0x5A */
+} MusicModeBlock;
+
+typedef struct VendorMenuState {
+    u8 pad_00[0x1C];
+    struct Moby *moby;          /* 0x1C: the vendor's moby, only passed on or cleared here */
+    u8 pad_20[0x20];
+    s32 unk40;                  /* 0x40 */
+    u8 pad_44[0xC];
+    s32 hud_bar_50;             /* 0x50: HUD bar id, -1 when none */
+    s32 hud_bar_54;             /* 0x54: HUD bar id, -1 when none */
+} VendorMenuState;
+
+void close_vendor_menu(int exit_cutscene_completed) {
+    Vec4A world_position;
+    Vec4A euler_rotation;
+    VendorMenuState *vendor_state_base = (VendorMenuState *)D_L00_001CA7C0;
+    if (vendor_state_base->hud_bar_54 != -1) Hud_SetBarValueById(vendor_state_base->hud_bar_54, 0);
+    if (vendor_state_base->hud_bar_50 != -1) Hud_SetBarValueById(vendor_state_base->hud_bar_50, 0);
+    vendor_state_base->hud_bar_54 = -1;
+    vendor_state_base->hud_bar_50 = -1;
+    update_resource_counter();
     D_L00_0015F6BC = 1;
     *(int *)&D_L00_0015F6A8 = 0;
     HeroEnterMoveState(0, 1);
     D_001414F5[0] = 0;
     HeroClearObjectFlags();
-    if (*(int *)(g + 0x40) == 0) {
-        func_001F9EC0(&v, &D_L00_00161130, *(char **)(g + 0x1C) + 0xC0);
-        FastVecAdd(&v, &v, *(char **)(g + 0x1C) + 0x10);
-        r.x = 0.0f;
-        r.y = 0.0f;
-        r.z = FastAddRots(*(float *)(*(char **)(g + 0x1C) + 0x48), 3.1415927f);
-        if (a == 0) {
-            Hero_ResetToPosition(&v, &r, 0, 0);
+    if (vendor_state_base->unk40 == 0) {
+        func_001F9EC0(&world_position, &D_L00_00161130, (char *)vendor_state_base->moby + 0xC0);
+        FastVecAdd(&world_position, &world_position, (char *)vendor_state_base->moby + 0x10);
+        euler_rotation.x = 0.0f;
+        euler_rotation.y = 0.0f;
+        euler_rotation.z = FastAddRots(*(float *)((char *)vendor_state_base->moby + 0x48), 3.1415927f);
+        if (exit_cutscene_completed == 0) {
+            Hero_ResetToPosition(&world_position, &euler_rotation, 0, 0);
             CameraScript2(2);
         } else {
-            Hero_ResetToPosition(&v, &r, 0, 1);
+            Hero_ResetToPosition(&world_position, &euler_rotation, 0, 1);
         }
     }
     {
-        char *h = (char *)D_L00_001CA7C0;
-        char *q = (char *)D_0014171B + 0x100B5;
-        *(*(char **)(h + 0x1C) + 0x20) = 1;
-        if ((unsigned short)(*(unsigned short *)(q + 0x5A) - 6) >= 2) *(short *)(q + 0x5A) = 5;
-        if (*(int *)(h + 0x40)) DeleteMoby(*(void **)(h + 0x1C));
+        VendorMenuState *vendor_state = (VendorMenuState *)D_L00_001CA7C0;
+        MusicModeBlock *music = (MusicModeBlock *)((char *)D_0014171B + 0x100B5);
+        *((char *)vendor_state->moby + 0x20) = 1;
+        if ((unsigned short)(music->mode - 6) >= 2) music->mode = 5;
+        if (vendor_state->unk40) DeleteMoby(vendor_state->moby);
     }
     func_0012E558(0x1D);
     music_Unpause();
@@ -1312,7 +1328,7 @@ extern void func_00216960(void);
 extern void func_00122598(s32);
 
 /* Adapted from Lombyte (GPL-3.0) for PAL by OpenRAC's tools/port.py: src/overlays/shared/gameplay/entities/00295100.c, FUN_L00_0029ad08. */
-void VendorStartWeaponDemo(void) {
+void start_vendor_exit_cutscene(void) {
     Vendor_29a6b0 *g;
     VendorMoby_29a6b0 *moby;
     s32 index, item, offset;
@@ -1341,7 +1357,7 @@ void VendorStartWeaponDemo(void) {
     FastMemSet(&D_L00_0016C960, 0, 0x1C0);
     FastMemSet(D_L00_0017C440, 0, 0x40);
     VU1_syncChain(1);
-    VuChain_SetLevelOffset();
+    calculate_dma_transfer_address();
     selected = (s32 *)((char *)g + 0x48);
     offset = D_L00_0016128C - 0x40000;
     D_L00_0016128C = offset;
@@ -1352,15 +1368,15 @@ void VendorStartWeaponDemo(void) {
     gFadeLvl = 0;
     (*(s32 *)&D_L00_0015F500) = 0;
     if (D_0013F450.items[0].item_id != 0 && index != D_0013F450.items[0].item_id)
-        Hero_DestroySlotMobys(0, 0);
+        clear_hero_item_slot(0, 0);
     D_0013F450.pending_item[0] = D_L00_001CA7C0_9C070.f48;
     if (D_0013F450.pending_item[0] == 0x18)
         D_0013F450.pending_item[0] = 0;
-    LoadMobyClassResources(D_L00_00179BC0_9C070[D_L00_001CA7C0_9C070.f48].id, -1);
-    ReadLevelPackedData(item);
+    select_world_object_resource_tables(D_L00_00179BC0_9C070[D_L00_001CA7C0_9C070.f48].id, -1);
+    load_scene_chunks_with_fade(item);
     state = &D_001517D0;
     *(s32 *)&state->pad[0x1C] = 0x2734;
-    ParseSpaceSceneChunk(0);
+    func_00205220(0);
     mode = D_001517D0.mode;
     while (mode != 3) {
         sound_update();
@@ -1371,26 +1387,42 @@ void VendorStartWeaponDemo(void) {
 }
 extern short D_L00_001611C0;
 
+/* The 0x28-byte record at D_L00_001CA7C0: the actor it follows is at +0x28. */
+typedef struct VendorExitActor {
+    u8 pad_00[0x10];
+    Vec4f pos;                 /* 0x10: position, added to the spawn point */
+    u8 pad_20[0x28];
+    f32 yaw;                   /* 0x48: rot.z */
+    u8 pad_4C[0x74];
+    Vec4f basis[3];            /* 0xC0: rotation rows */
+} VendorExitActor;
+
+typedef struct VendorExitState {
+    u8 pad_00[0x28];
+    VendorExitActor *actor;    /* 0x28 */
+} VendorExitState;
+
 /* resets state and snaps the camera for a new scene */
-void Vendor_ResetScene(void) {
-    float v[8];
-    char *g;
-    char *q;
+void restore_hero_after_vendor_exit_cutscene(void) {
+    Vec4f world_position;
+    Vec4f euler_rotation;
+    VendorExitState *vendor_state_base;
+    MusicModeBlock *mode_block;
     D_L00_0015F6BC = 1;
     *(int *)&D_L00_0015F6A8 = 0;
     HeroEnterMoveState(0, 1);
     D_001414F5[0] = 0;
     HeroClearObjectFlags();
-    g = D_L00_001CA7C0;
-    func_001F9EC0(v, &D_L00_001611C0, *(char **)(g + 0x28) + 0xC0);
-    FastVecAdd(v, v, *(char **)(g + 0x28) + 0x10);
-    *(int *)&v[4] = 0;
-    *(int *)&v[5] = 0;
-    v[6] = FastAddRots(*(float *)(*(char **)(g + 0x28) + 0x48), -1.5707964f);
-    Hero_ResetToPosition(v, &v[4], 0, 1);
-    TickDownCounter();
-    q = (char *)D_0014171B + 0x100B5;
-    if (!(*(unsigned short *)(q + 0x5A) >= 6 && *(unsigned short *)(q + 0x5A) <= 7)) *(short *)(q + 0x5A) = 5;
+    vendor_state_base = (VendorExitState *)D_L00_001CA7C0;
+    func_001F9EC0(&world_position, &D_L00_001611C0, vendor_state_base->actor->basis);
+    FastVecAdd(&world_position, &world_position, &vendor_state_base->actor->pos);
+    *(int *)&euler_rotation.x = 0;
+    *(int *)&euler_rotation.y = 0;
+    euler_rotation.z = FastAddRots(vendor_state_base->actor->yaw, -1.5707964f);
+    Hero_ResetToPosition(&world_position, &euler_rotation, 0, 1);
+    update_resource_counter();
+    mode_block = (MusicModeBlock *)((char *)D_0014171B + 0x100B5);
+    if (!(mode_block->mode >= 6 && mode_block->mode <= 7)) mode_block->mode = 5;
     func_0012E558(0x1D);
     music_Unpause();
     func_0012DDC0();
@@ -1490,7 +1522,7 @@ void Vendor_InitItemDisplay(void) {
     if (k == 0x18) {
         cls = 0x1DF;
     } else {
-        LoadMobyClassResources(cls, -1);
+        select_world_object_resource_tables(cls, -1);
     }
     g1 = (S *)D_L00_001CA7C0;
 #undef GG
@@ -1501,7 +1533,7 @@ void Vendor_InitItemDisplay(void) {
     FastVecAdd(v, &D_L00_00161150, &D_L00_001C8C20[TA]);
     if (TB == 0) {
         v[2] += D_L00_001C8C20[TA].c;
-        if (gHavePersuader[0]) {
+        if (discount_purchase_pricing[0]) {
             v[2] += D_L00_001C8C20[TA].c;
         }
     }
@@ -1522,7 +1554,7 @@ void Vendor_InitItemDisplay(void) {
     *(int *)(P + 0x158) = 0;
     *(char *)(P + 0x151) = 0;
     update_moby_animation_state(P + 0x100);
-    func_0020E340(P + 0x100, 0x202020, 0xE, 0xE, 0);
+    pack_render_command_fields(P + 0x100, 0x202020, 0xE, 0xE, 0);
     r = D_L00_001C92F0;
     if (r[TA].v != 0) {
         InitMobyInstance(P + 0x200, r[TA].v);
@@ -1531,7 +1563,7 @@ void Vendor_InitItemDisplay(void) {
         }
         *(short *)(P + 0x232) = 0x40;
         func_L00_00251E30(P + 0x200);
-        func_0020E340(P + 0x200, 0x202020, 0xE, 0xE, 0);
+        pack_render_command_fields(P + 0x200, 0x202020, 0xE, 0xE, 0);
     }
     g3 = (S *)D_L00_001CA7C0;
 #undef GG
@@ -1551,7 +1583,7 @@ void Vendor_InitItemDisplay(void) {
     *(char *)(P + 0x351) = 0;
     update_moby_animation_state(P + 0x300);
     *(unsigned short *)(P + 0x334) |= 0x100;
-    func_0020E340(P + 0x300, 0x202020, 0xE, 0xE, 0);
+    pack_render_command_fields(P + 0x300, 0x202020, 0xE, 0xE, 0);
     D_L00_00161F34 = 0;
 }
 typedef int u128_9CDE0 __attribute__((mode(TI)));
@@ -1590,7 +1622,7 @@ extern void func_L00_002618D8(int, int);
 extern int func_L00_002346C0(int, int);
 
 /* vendor buy dialog: quantity selection with held-button repeat, confirm and purchase */
-void VendorBuyDialogUpdate(void) {
+void update_vendor_purchase(void) {
     float v[4];
     int n;
     int room;
@@ -1613,10 +1645,10 @@ void VendorBuyDialogUpdate(void) {
             update_moby_animation_state(D_L00_001CA7C0_9CDE0.obj + 0x400);
         }
         func_L00_00251E30(D_L00_001CA7C0_9CDE0.obj + 0x400);
-        func_0020E340(D_L00_001CA7C0_9CDE0.obj + 0x400, 0x101010, 0xE, 0xE, 0);
+        pack_render_command_fields(D_L00_001CA7C0_9CDE0.obj + 0x400, 0x101010, 0xE, 0xE, 0);
         D_L00_00161F10 = 0;
         if (D_L00_001CA7C0_9CDE0.e[D_L00_001CA7C0_9CDE0.idx].sel == 1
-            && D_0013D530[D_L00_001CA7C0_9CDE0.e[D_L00_001CA7C0_9CDE0.idx].item] >= D_L00_001C43B0[D_L00_001CA7C0_9CDE0.e[D_L00_001CA7C0_9CDE0.idx].item].hE) {
+            && weapon_ammo_counts[D_L00_001CA7C0_9CDE0.e[D_L00_001CA7C0_9CDE0.idx].item] >= D_L00_001C43B0[D_L00_001CA7C0_9CDE0.e[D_L00_001CA7C0_9CDE0.idx].item].hE) {
             Moby_PlaySound(2, 0, D_L00_001CA7C0_9CDE0.cam);
         } else if (D_L00_001CA7C0_9CDE0.e[D_L00_001CA7C0_9CDE0.idx].sel == 1) {
             pr1 = D_L00_001CA7C0_9CDE0.f40 ? D_L00_001C43B0[D_L00_001CA7C0_9CDE0.e[D_L00_001CA7C0_9CDE0.idx].item].hA
@@ -1627,7 +1659,7 @@ void VendorBuyDialogUpdate(void) {
                 D_L00_00161F10 = 1;
             }
         } else {
-            pr1 = gHavePersuader[0] ? D_L00_001C43B0[D_L00_001CA7C0_9CDE0.e[D_L00_001CA7C0_9CDE0.idx].item].f4
+            pr1 = discount_purchase_pricing[0] ? D_L00_001C43B0[D_L00_001CA7C0_9CDE0.e[D_L00_001CA7C0_9CDE0.idx].item].f4
                                   : D_L00_001C43B0[D_L00_001CA7C0_9CDE0.e[D_L00_001CA7C0_9CDE0.idx].item].f0;
             if (gBolts < pr1) {
                 Moby_PlaySound(2, 0, D_L00_001CA7C0_9CDE0.cam);
@@ -1657,7 +1689,7 @@ void VendorBuyDialogUpdate(void) {
                     n2 = D_L00_001CA7C0_9CDE0.f40 ? gBolts / D_L00_001C43B0[D_L00_001CA7C0_9CDE0.e[D_L00_001CA7C0_9CDE0.idx].item].hA
                                                  : gBolts / D_L00_001C43B0[D_L00_001CA7C0_9CDE0.e[D_L00_001CA7C0_9CDE0.idx].item].h8;
                     room = D_L00_001C43B0[D_L00_001CA7C0_9CDE0.e[D_L00_001CA7C0_9CDE0.idx].item].hE
-                         - D_0013D530[D_L00_001CA7C0_9CDE0.e[D_L00_001CA7C0_9CDE0.idx].item];
+                         - weapon_ammo_counts[D_L00_001CA7C0_9CDE0.e[D_L00_001CA7C0_9CDE0.idx].item];
                     if (room < n2) n2 = room;
                     if (D_L00_00161F30 < n2) {
                         D_L00_00161F30++;
@@ -1705,22 +1737,22 @@ void VendorBuyDialogUpdate(void) {
                         ? D_L00_001C43B0[D_L00_001CA7C0_9CDE0.e[D_L00_001CA7C0_9CDE0.idx].item].hA * D_L00_00161F30
                         : D_L00_001C43B0[D_L00_001CA7C0_9CDE0.e[D_L00_001CA7C0_9CDE0.idx].item].h8 * D_L00_00161F30;
                 } else {
-                    cost = gHavePersuader[0] ? D_L00_001C43B0[D_L00_001CA7C0_9CDE0.e[D_L00_001CA7C0_9CDE0.idx].item].f4
+                    cost = discount_purchase_pricing[0] ? D_L00_001C43B0[D_L00_001CA7C0_9CDE0.e[D_L00_001CA7C0_9CDE0.idx].item].f4
                                           : D_L00_001C43B0[D_L00_001CA7C0_9CDE0.e[D_L00_001CA7C0_9CDE0.idx].item].f0;
                 }
                 if (gBolts < cost
-                    && D_0013D530[D_L00_001CA7C0_9CDE0.e[D_L00_001CA7C0_9CDE0.idx].item] >= D_L00_001C43B0[D_L00_001CA7C0_9CDE0.e[D_L00_001CA7C0_9CDE0.idx].item].hE) {
+                    && weapon_ammo_counts[D_L00_001CA7C0_9CDE0.e[D_L00_001CA7C0_9CDE0.idx].item] >= D_L00_001C43B0[D_L00_001CA7C0_9CDE0.e[D_L00_001CA7C0_9CDE0.idx].item].hE) {
                     Moby_PlaySound(0, 0, D_L00_001CA7C0_9CDE0.cam);
                 } else if (D_L00_001CA7C0_9CDE0.e[D_L00_001CA7C0_9CDE0.idx].sel == 1) {
-                    if (D_0013D530[D_L00_001CA7C0_9CDE0.e[D_L00_001CA7C0_9CDE0.idx].item] < D_L00_001C43B0[D_L00_001CA7C0_9CDE0.e[D_L00_001CA7C0_9CDE0.idx].item].hE) {
+                    if (weapon_ammo_counts[D_L00_001CA7C0_9CDE0.e[D_L00_001CA7C0_9CDE0.idx].item] < D_L00_001C43B0[D_L00_001CA7C0_9CDE0.e[D_L00_001CA7C0_9CDE0.idx].item].hE) {
                         price = (D_L00_001CA7C0_9CDE0.f40 ? D_L00_001C43B0[D_L00_001CA7C0_9CDE0.e[D_L00_001CA7C0_9CDE0.idx].item].hA
                                                           : D_L00_001C43B0[D_L00_001CA7C0_9CDE0.e[D_L00_001CA7C0_9CDE0.idx].item].h8) * D_L00_00161F30;
                         if (gBolts >= price) {
-                            if (D_0013D530[D_L00_001CA7C0_9CDE0.e[D_L00_001CA7C0_9CDE0.idx].item] > D_L00_001C43B0[D_L00_001CA7C0_9CDE0.e[D_L00_001CA7C0_9CDE0.idx].item].hE) {
-                                D_0013D530[D_L00_001CA7C0_9CDE0.e[D_L00_001CA7C0_9CDE0.idx].item] = D_L00_001C43B0[D_L00_001CA7C0_9CDE0.e[D_L00_001CA7C0_9CDE0.idx].item].hE;
+                            if (weapon_ammo_counts[D_L00_001CA7C0_9CDE0.e[D_L00_001CA7C0_9CDE0.idx].item] > D_L00_001C43B0[D_L00_001CA7C0_9CDE0.e[D_L00_001CA7C0_9CDE0.idx].item].hE) {
+                                weapon_ammo_counts[D_L00_001CA7C0_9CDE0.e[D_L00_001CA7C0_9CDE0.idx].item] = D_L00_001C43B0[D_L00_001CA7C0_9CDE0.e[D_L00_001CA7C0_9CDE0.idx].item].hE;
                             }
                             n = D_L00_00161F30;
-                            n -= AddAmmo(D_L00_001CA7C0_9CDE0.e[D_L00_001CA7C0_9CDE0.idx].item, n);
+                            n -= add_ammo(D_L00_001CA7C0_9CDE0.e[D_L00_001CA7C0_9CDE0.idx].item, n);
                             price = (D_L00_001CA7C0_9CDE0.f40 ? D_L00_001C43B0[D_L00_001CA7C0_9CDE0.e[D_L00_001CA7C0_9CDE0.idx].item].hA
                                                               : D_L00_001C43B0[D_L00_001CA7C0_9CDE0.e[D_L00_001CA7C0_9CDE0.idx].item].h8) * n;
                             ((int *)(D_0013DE6E + 0xA))[D_L00_001CA7C0_9CDE0.e[D_L00_001CA7C0_9CDE0.idx].item] += n;
@@ -1737,7 +1769,7 @@ void VendorBuyDialogUpdate(void) {
                         Moby_PlaySound(0, 0, D_L00_001CA7C0_9CDE0.cam);
                     }
                 } else {
-                    price = gHavePersuader[0] ? D_L00_001C43B0[D_L00_001CA7C0_9CDE0.e[D_L00_001CA7C0_9CDE0.idx].item].f4
+                    price = discount_purchase_pricing[0] ? D_L00_001C43B0[D_L00_001CA7C0_9CDE0.e[D_L00_001CA7C0_9CDE0.idx].item].f4
                                           : D_L00_001C43B0[D_L00_001CA7C0_9CDE0.e[D_L00_001CA7C0_9CDE0.idx].item].f0;
                     if (gBolts >= price) {
                         PickupSpawn_Step(2);
@@ -1753,7 +1785,7 @@ void VendorBuyDialogUpdate(void) {
                         if (D_L00_001CA7C0_9CDE0.e[D_L00_001CA7C0_9CDE0.idx].sel == 1) {
                             D_L00_001CA7C0_9CDE0.f50 = queue_animation_update(0x30, D_L00_001CA7C0_9CDE0.e[D_L00_001CA7C0_9CDE0.idx].item + 0xEA60,
                                                                      HudTileInit, Hud_UpdateCounter, HudWeaponDraw,
-                                                                     &D_0013D530[D_L00_001CA7C0_9CDE0.e[D_L00_001CA7C0_9CDE0.idx].item],
+                                                                     &weapon_ammo_counts[D_L00_001CA7C0_9CDE0.e[D_L00_001CA7C0_9CDE0.idx].item],
                                                                      D_L00_001C43B0[D_L00_001CA7C0_9CDE0.e[D_L00_001CA7C0_9CDE0.idx].item].hE);
                         } else {
                             if (D_L00_001CA7C0_9CDE0.count - 1 < D_L00_001CA7C0_9CDE0.idx) {
@@ -2192,7 +2224,7 @@ void func_L00_0029D988_r(void) {
                         }
                         vendor_menu.f50 = -1;
                         if ((vendor_menu.fD0[vendor_menu.f58]).fD4 == 1) {
-                            vendor_menu.f50 = d_meter(0x30, (vendor_menu.fD0[vendor_menu.f58]).fD0 + 0xEA60, d_cb1, d_cb2, d_cb3, &((*(s32 *)(D_0013D50F + 0x21 + ((vendor_menu.fD0[vendor_menu.f58]).fD0) * 4))), D_L00_001C43B0[(vendor_menu.fD0[vendor_menu.f58]).fD0].hE);
+                            vendor_menu.f50 = d_meter(0x30, (vendor_menu.fD0[vendor_menu.f58]).fD0 + 0xEA60, d_cb1, d_cb2, d_cb3, &((*(s32 *)(menu_item_enabled_115 + 0x21 + ((vendor_menu.fD0[vendor_menu.f58]).fD0) * 4))), D_L00_001C43B0[(vendor_menu.fD0[vendor_menu.f58]).fD0].hE);
                         }
                     }
                 }
@@ -2208,7 +2240,7 @@ void func_L00_0029D988_r(void) {
                         }
                         vendor_menu.f50 = -1;
                         if ((vendor_menu.fD0[vendor_menu.f58]).fD4 == 1) {
-                            vendor_menu.f50 = d_meter(0x30, (vendor_menu.fD0[vendor_menu.f58]).fD0 + 0xEA60, d_cb1, d_cb2, d_cb3, &((*(s32 *)(D_0013D50F + 0x21 + ((vendor_menu.fD0[vendor_menu.f58]).fD0) * 4))), D_L00_001C43B0[(vendor_menu.fD0[vendor_menu.f58]).fD0].hE);
+                            vendor_menu.f50 = d_meter(0x30, (vendor_menu.fD0[vendor_menu.f58]).fD0 + 0xEA60, d_cb1, d_cb2, d_cb3, &((*(s32 *)(menu_item_enabled_115 + 0x21 + ((vendor_menu.fD0[vendor_menu.f58]).fD0) * 4))), D_L00_001C43B0[(vendor_menu.fD0[vendor_menu.f58]).fD0].hE);
                         }
                     }
                 }
@@ -2230,7 +2262,7 @@ void func_L00_0029D988_r(void) {
                         }
                         vendor_menu.f50 = -1;
                         if ((vendor_menu.fD0[vendor_menu.f58]).fD4 == 1) {
-                            vendor_menu.f50 = d_meter(0x30, (vendor_menu.fD0[vendor_menu.f58]).fD0 + 0xEA60, d_cb1, d_cb2, d_cb3, &((*(s32 *)(D_0013D50F + 0x21 + ((vendor_menu.fD0[vendor_menu.f58]).fD0) * 4))), D_L00_001C43B0[(vendor_menu.fD0[vendor_menu.f58]).fD0].hE);
+                            vendor_menu.f50 = d_meter(0x30, (vendor_menu.fD0[vendor_menu.f58]).fD0 + 0xEA60, d_cb1, d_cb2, d_cb3, &((*(s32 *)(menu_item_enabled_115 + 0x21 + ((vendor_menu.fD0[vendor_menu.f58]).fD0) * 4))), D_L00_001C43B0[(vendor_menu.fD0[vendor_menu.f58]).fD0].hE);
                         }
                     }
                 }
@@ -2251,7 +2283,7 @@ void func_L00_0029D988_r(void) {
                         }
                         vendor_menu.f50 = -1;
                         if ((vendor_menu.fD0[vendor_menu.f58]).fD4 == 1) {
-                            vendor_menu.f50 = d_meter(0x30, (vendor_menu.fD0[vendor_menu.f58]).fD0 + 0xEA60, d_cb1, d_cb2, d_cb3, &((*(s32 *)(D_0013D50F + 0x21 + ((vendor_menu.fD0[vendor_menu.f58]).fD0) * 4))), D_L00_001C43B0[(vendor_menu.fD0[vendor_menu.f58]).fD0].hE);
+                            vendor_menu.f50 = d_meter(0x30, (vendor_menu.fD0[vendor_menu.f58]).fD0 + 0xEA60, d_cb1, d_cb2, d_cb3, &((*(s32 *)(menu_item_enabled_115 + 0x21 + ((vendor_menu.fD0[vendor_menu.f58]).fD0) * 4))), D_L00_001C43B0[(vendor_menu.fD0[vendor_menu.f58]).fD0].hE);
                         }
                     }
                 }

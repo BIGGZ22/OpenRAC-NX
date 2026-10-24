@@ -44,7 +44,7 @@ extern void func_00201348(int, int, int, int, int, int);
    table in D_00137C80 (the alternate set while D_0015EE80 is set), stop
    sound and wait for the loader (func_00209E68) to go idle, then load it
    (func_0023B670) and reset the display state. */
-void StartLevel(int level) {
+void start_level(int level) {
     int a;
     int b;
     int t;
@@ -71,14 +71,14 @@ void StartLevel(int level) {
     music_Stop();
     func_0012EF48(0);
     for (;;) {
-        char *ld = D_0013D390;
+        char *ld = memory_card_state;
         if (*(int *)(ld + 0xDC) < 3 && *(int *)(ld + 0xE4) < 0) {
             break;
         }
-        MemCard_UpdateState();
+        memcard_update_state();
     }
     {
-        char *g = D_001941C0;
+        char *g = level_resource_buffers;
         t = *(int *)(g + 0x1C);
     }
     Movie_Play(b, a, t + 0x100000, t + 0x400000, 0);
@@ -191,7 +191,7 @@ extern void func_00233308_E99D8(void) __asm__("func_00233308");
    The slot stores are in this order on purpose: the last store through each table, the last
    one of the bank value and the two globals are what the scheduler moves to the front.
    Adapted from Lombyte (GPL-3.0) for PAL: src/textbin/world/startlevel.c, startlevel. */
-void GameBootSequence(void) {
+void startlevel(void) {
     LevelHeader_E99D8 *hdr;
     LevelChunk_E99D8 *tbl;
     s32 n;

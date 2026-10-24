@@ -153,7 +153,10 @@ ASM_FUNC("asm/handwritten/core_text", func_0012D868); /* _start */
 
 extern void func_0011DDA0(int);
 
-/* func_0012DA28: retail's bare tail jump; SN's 2.95.3 cannot emit it, and the step that rewrote our call into it is gone (docs/BUILD_FIDELITY.md, "Removed"). */
-INCLUDE_ASM("asm/nonmatchings/core_text", func_0012DA28);
+/* The CRT exit entry discards its argument and exits with status zero. */
+void func_0012DA28(int status)
+{
+    func_0011DDA0(0);
+}
 
 ASM_FUNC("asm/handwritten/core_text", func_0012DA30);

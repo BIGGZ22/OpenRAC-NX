@@ -155,7 +155,7 @@ extern int D_0015F6F0 MACRO_ADDR;
 extern float D_0015F53C MACRO_ADDR;
 
 /* Level-load parser: builds the runtime object tables from the level header and returns the end pointer. */
-unsigned char *Level_ParseObjectTables(LevelHeaderE9EC8 *hdr)
+unsigned char *initialize_level_render_state(LevelHeaderE9EC8 *hdr)
 {
     unsigned char *p;
     unsigned char *c;
@@ -215,44 +215,44 @@ unsigned char *Level_ParseObjectTables(LevelHeaderE9EC8 *hdr)
     ((void (*)(void *, int, int))FastMemSet)(D_001AADC0, 0, 0x180);
     if (D_0015EE80 != 0) {
         if (D_0015EE60 == 1.0f) {
-            SetVideoModeTiming(1);
+            set_video_timing(1);
         }
     } else if (D_0015EE60 != 1.0f) {
-        SetVideoModeTiming(0);
+        set_video_timing(0);
     }
-    *(unsigned char *)&D_0016044C = *(unsigned char *)&D_0015EE80;
-    D_00194200.x4 = D_001942C0;
-    D_00194200.x8 = D_00194280;
-    D_00194200.xC = 0;
-    D_00194200.x10 = 0;
-    D_00194200.x14 = 0;
-    FastMemZero16(D_001B7A60, 0x10000);
+    *(unsigned char *)&requested_video_mode = *(unsigned char *)&D_0015EE80;
+    coll_output.x4 = image_clear_buffer;
+    coll_output.x8 = D_00194280;
+    coll_output.xC = 0;
+    coll_output.x10 = 0;
+    coll_output.x14 = 0;
+    FastMemZero16(moby_grids, 0x10000);
     FastMemZero16(D_001C7A60, 0x60);
 
     c = (unsigned char *)hdr + hdr->x0;
-    D_0018CE00.x23C = *(int *)c;
+    view_context.x23C = *(int *)c;
     c += 4;
-    D_0018CE00.x240 = *(int *)c;
+    view_context.x240 = *(int *)c;
     c += 4;
-    D_0018CE00.x244 = *(int *)c;
+    view_context.x244 = *(int *)c;
     c += 4;
-    *(unsigned char *)&D_0015F584 = *c;
+    *(unsigned char *)&fog_color_red = *c;
     c += 4;
-    *(unsigned char *)&D_0015F585 = *c;
+    *(unsigned char *)&fog_color_green = *c;
     c += 4;
-    *(unsigned char *)&D_0015F586 = *c;
+    *(unsigned char *)&fog_color_blue = *c;
     c += 4;
-    D_0015F588 = *(float *)c;
-    D_0015F58C = *(float *)(c + 4);
-    D_0015F590 = *(float *)(c + 8);
-    D_0015F594 = *(float *)(c + 12);
+    fog_near_distance = *(float *)c;
+    fog_far_distance = *(float *)(c + 4);
+    fog_near_intensity = *(float *)(c + 8);
+    fog_far_intensity = *(float *)(c + 12);
     ((void (*)(void))UpdateFog)();
     D_00160FC0 = 512000.0f;
     D_00161070 = 720.0f;
-    D_001604E4 = 500.0f;
+    occl_fog_density_set = 500.0f;
     D_00160030 = 500;
     D_001601BC = 0x1F4000;
-    SetBackgroundColor(D_0018CE00.x23C, D_0018CE00.x240, D_0018CE00.x244);
+    SetBackgroundColor(view_context.x23C, view_context.x240, view_context.x244);
     ((void (*)(void *))VU0_loadMicroProgram)(D_00100AE0);
     FastMemZero16(D_0019C2C0, 0x100);
     FastMemZero16(D_0019C4C0, 0x180);
@@ -266,16 +266,16 @@ unsigned char *Level_ParseObjectTables(LevelHeaderE9EC8 *hdr)
         n = 12;
     }
     if (n != 0) {
-        func_001F9A00(D_0019BEC0, lc, n << 6);
+        copy_memory_aligned(D_0019BEC0, lc, n << 6);
     }
 
-    for (i0 = 0; i0 < D_00160F90; i0++) {
-        D_00160F8C[i0].x36 = 0xFFFF;
+    for (i0 = 0; i0 < tfrag_render_record_count; i0++) {
+        tfrag_render_records[i0].x36 = 0xFFFF;
     }
     i1 = 0;
-    while (i1 < D_00160F90) {
+    while (i1 < tfrag_render_record_count) {
         sp = (unsigned short *)0x70003000;
-        for (j = 0; j < 0x3FF && i1 < D_00160F90; j++, i1++) {
+        for (j = 0; j < 0x3FF && i1 < tfrag_render_record_count; j++, i1++) {
             *sp++ = (unsigned short)i1;
         }
         *sp = 0xFFFF;
@@ -283,33 +283,33 @@ unsigned char *Level_ParseObjectTables(LevelHeaderE9EC8 *hdr)
     }
 
     sc = (unsigned char *)hdr + hdr->x34;
-    D_0016105C = *(int *)sc;
+    tie_count = *(int *)sc;
     sc += 0x10;
-    D_00161050 = (ShrubE9EC8 *)p;
-    size0 = D_0016105C << 5;
+    ties = (ShrubE9EC8 *)p;
+    size0 = tie_count << 5;
     p += size0;
-    if (D_0016105C != 0) {
-        ((void (*)(void *, int, int))FastMemSet)(D_00161050, 0, size0);
+    if (tie_count != 0) {
+        ((void (*)(void *, int, int))FastMemSet)(ties, 0, size0);
     }
-    size1 = D_0016105C * 0x1C0;
+    size1 = tie_count * 0x1C0;
     p = (unsigned char *)(((unsigned int)p + 0x3F) & ~0x3FU);
-    D_00161058 = (ShrubDataE9EC8 *)p;
+    tie_data_table = (ShrubDataE9EC8 *)p;
     p += size1;
-    if (D_0016105C != 0) {
-        ((void (*)(void *, int, int))FastMemSet)(D_00161058, 0, size1);
+    if (tie_count != 0) {
+        ((void (*)(void *, int, int))FastMemSet)(tie_data_table, 0, size1);
     }
     last = -1;
-    D_00161054 = &D_00161050[D_0016105C];
-    for (i2 = 0; i2 < D_0016105C; i2++) {
-        sh = &D_00161050[i2];
-        sd = &D_00161058[i2];
-        sh->cls = D_001E1D00[*(int *)sc];
+    ties_end = &ties[tie_count];
+    for (i2 = 0; i2 < tie_count; i2++) {
+        sh = &ties[i2];
+        sd = &tie_data_table[i2];
+        sh->cls = object_render_class_slot_by_id[*(int *)sc];
         if (sh->cls != last) {
-            D_001E1A00[sh->cls]->first = sh;
-            D_001E1A00[sh->cls]->count = 0;
+            object_render_classes[sh->cls]->first = sh;
+            object_render_classes[sh->cls]->count = 0;
             last = sh->cls;
         }
-        D_001E1A00[sh->cls]->count++;
+        object_render_classes[sh->cls]->count++;
         sh->data = sd;
         sh->x14 = (float)*(int *)(sc + 4);
         sh->x1E = 0xFFFF;
@@ -325,69 +325,69 @@ unsigned char *Level_ParseObjectTables(LevelHeaderE9EC8 *hdr)
         qcopy(r3, sc + 0x40);
         sh->x18 = (short)id;
         sc += 0x50;
-        sd->m[3].w = D_001E1A00[sh->cls]->x40;
-        func_001F9EC0(sh, D_001E1A00[sh->cls]->x30, sd);
+        sd->m[3].w = object_render_classes[sh->cls]->x40;
+        func_001F9EC0(sh, object_render_classes[sh->cls]->x30, sd);
         s = FastVecLength(sd);
         len1 = FastVecLength(r1);
-        s = func_001F9B90(s, len1);
+        s = max_float(s, len1);
         len2 = FastVecLength(r2);
-        s = func_001F9B90(s, len2);
-        sh->scale = D_001E1A00[sh->cls]->scale * s;
-        func_001F9C48(sh, sh, sd->m[3].w);
+        s = max_float(s, len2);
+        sh->scale = object_render_classes[sh->cls]->scale * s;
+        scale_vector(sh, sh, sd->m[3].w);
         FastVecAdd(sh, sh, r3);
-        D_00161058[i2].m[0].w = 1.0f / FastVecLength(&D_00161058[i2].m[0]);
-        D_00161058[i2].m[1].w = 1.0f / FastVecLength(&D_00161058[i2].m[1]);
-        D_00161058[i2].m[2].w = 1.0f / FastVecLength(&D_00161058[i2].m[2]);
-        func_001F9A00(sd->x140, sc, 0x80);
+        tie_data_table[i2].m[0].w = 1.0f / FastVecLength(&tie_data_table[i2].m[0]);
+        tie_data_table[i2].m[1].w = 1.0f / FastVecLength(&tie_data_table[i2].m[1]);
+        tie_data_table[i2].m[2].w = 1.0f / FastVecLength(&tie_data_table[i2].m[2]);
+        copy_memory_aligned(sd->x140, sc, 0x80);
         sc += 0x80;
         sh->x1C = *(unsigned short *)sc;
         sc += 0x10;
     }
     spa = (unsigned short *)0x70000000;
-    for (i3 = 0; i3 < D_0016105C; i3++) {
+    for (i3 = 0; i3 < tie_count; i3++) {
         *spa++ = (unsigned short)i3;
     }
     *spa = 0xFFFF;
     ((void (*)(void *))LightTies)((void *)0x70000000);
 
     tc = (unsigned char *)hdr + hdr->x3C;
-    D_001604D0 = *(int *)tc;
+    shrub_count = *(int *)tc;
     tc += 0x10;
-    D_001604D4 = (TieE9EC8 *)p;
-    size2 = D_001604D0 << 5;
+    shrubs = (TieE9EC8 *)p;
+    size2 = shrub_count << 5;
     p += size2;
-    if (D_001604D0 != 0) {
-        ((void (*)(void *, int, int))FastMemSet)(D_001604D4, 0, size2);
+    if (shrub_count != 0) {
+        ((void (*)(void *, int, int))FastMemSet)(shrubs, 0, size2);
     }
     p = (unsigned char *)(((unsigned int)p + 0x3F) & ~0x3FU);
-    D_001604DC = (TieDataE9EC8 *)p;
-    size3 = D_001604D0 << 6;
+    shrub_data_table = (TieDataE9EC8 *)p;
+    size3 = shrub_count << 6;
     p += size3;
-    if (D_001604D0 != 0) {
-        ((void (*)(void *, int, int))FastMemSet)(D_001604DC, 0, size3);
+    if (shrub_count != 0) {
+        ((void (*)(void *, int, int))FastMemSet)(shrub_data_table, 0, size3);
     }
-    D_001604E0 = p;
-    size4 = D_001604D0 * 0x60;
+    shrub_colors = p;
+    size4 = shrub_count * 0x60;
     p += size4;
     p = (unsigned char *)(((unsigned int)p + 0x3F) & ~0x3FU);
-    if (D_001604D0 != 0) {
-        ((void (*)(void *, int, int))FastMemSet)(D_001604E0, 0, size4);
+    if (shrub_count != 0) {
+        ((void (*)(void *, int, int))FastMemSet)(shrub_colors, 0, size4);
     }
     lastTie = -1;
-    D_00160BB0.x4 = D_001604E0;
-    D_001604D8 = D_001604D4 + D_001604D0;
+    D_00160BB0.x4 = shrub_colors;
+    shrubs_end = shrubs + shrub_count;
 
-    for (i = 0; i < D_001604D0; i++) {
-        tie = &D_001604D4[i];
-        td = &D_001604DC[i];
-        cls = D_001D8440[*(int *)tc];
+    for (i = 0; i < shrub_count; i++) {
+        tie = &shrubs[i];
+        td = &shrub_data_table[i];
+        cls = shrub_render_class_slot_by_id[*(int *)tc];
         tie->cls = (unsigned char)cls;
         if (cls != lastTie) {
             lastTie = cls;
-            D_001D82C0[cls]->first = tie;
-            D_001D82C0[cls]->count = 0;
+            shrub_render_classes[cls]->first = tie;
+            shrub_render_classes[cls]->count = 0;
         }
-        D_001D82C0[cls]->count++;
+        shrub_render_classes[cls]->count++;
         tie->x18 = (short)i;
         tie->radius = *(float *)(tc + 4);
         if (tie->radius < 16.0f) {
@@ -395,8 +395,8 @@ unsigned char *Level_ParseObjectTables(LevelHeaderE9EC8 *hdr)
         }
         tie->x1B = 0;
         tie->x1E = 0xFFFF;
-        if (D_001D82C0[cls]->x1C != 0) {
-            tie->x17 = (unsigned char)truncate_float_to_s32(*D_001D82C0[cls]->x1C);
+        if (shrub_render_classes[cls]->x1C != 0) {
+            tie->x17 = (unsigned char)truncate_float_to_s32(*shrub_render_classes[cls]->x1C);
             rad = IntToFloat(tie->x17) + 24.0f;
             if (tie->radius < rad) {
                 tie->radius = rad;
@@ -410,7 +410,7 @@ unsigned char *Level_ParseObjectTables(LevelHeaderE9EC8 *hdr)
         t3 = &td->m3;
         qcopy(t3, tc + 0x40);
         tc += 0x50;
-        td->m3.w = D_001D82C0[cls]->x20;
+        td->m3.w = shrub_render_classes[cls]->x20;
         len0 = FastVecLength(td);
         len1 = FastVecLength(t1);
         a = (len0 + len1) * 0.5f;
@@ -434,30 +434,30 @@ unsigned char *Level_ParseObjectTables(LevelHeaderE9EC8 *hdr)
         td->m[0].w = (int)(((unsigned int)bl << 16) | (unsigned int)g | (unsigned int)r);
         tie->x1C = *(unsigned short *)tc;
         tc += 0x10;
-        func_001F9EC0(tie, D_001D82C0[cls], td);
+        func_001F9EC0(tie, shrub_render_classes[cls], td);
         s = FastVecLength(td);
         len1 = FastVecLength(t1);
-        s = func_001F9B90(s, len1);
+        s = max_float(s, len1);
         len2 = FastVecLength(t2);
-        s = func_001F9B90(s, len2);
-        tie->scale = D_001D82C0[cls]->scale * s;
-        func_001F9C48(tie, tie, td->m3.w);
+        s = max_float(s, len2);
+        tie->scale = shrub_render_classes[cls]->scale * s;
+        scale_vector(tie, tie, td->m3.w);
         FastVecAdd(tie, tie, t3);
     }
     spb = (unsigned short *)0x70000000;
-    for (i5 = 0; i5 < D_001604D0; i5++) {
+    for (i5 = 0; i5 < shrub_count; i5++) {
         *spb++ = (unsigned short)i5;
     }
     *spb = 0xFFFF;
     ((void (*)(void *))LightShrubs)((void *)0x70000000);
 
-    for (i6 = 0; i6 < D_001604D0; i6++) {
+    for (i6 = 0; i6 < shrub_count; i6++) {
         unsigned char *cp;
         int cr;
         int cg;
         int cb;
 
-        cp = D_001604E0 + i6 * 0x60;
+        cp = shrub_colors + i6 * 0x60;
         cr = 0;
         cg = 0;
         cb = 0;
@@ -470,34 +470,34 @@ unsigned char *Level_ParseObjectTables(LevelHeaderE9EC8 *hdr)
         cr /= 24;
         cg /= 24;
         cb /= 24;
-        *(int *)((unsigned char *)&D_001604DC[i6] + 0x1C) = (cb << 16) | (cg << 8) | cr;
+        *(int *)((unsigned char *)&shrub_data_table[i6] + 0x1C) = (cb << 16) | (cg << 8) | cr;
     }
 
-    D_00160018 = (Ent100E9EC8 *)p;
+    resident_object_pool = (Ent100E9EC8 *)p;
     ((void (*)(void *, int, int))FastMemSet)(p, 0, 0x4000);
     p += 0x4000;
-    D_0016001C = D_00160018;
-    *((unsigned char *)D_00160018 + 0x20) = 0xFF;
+    D_0016001C = resident_object_pool;
+    *((unsigned char *)resident_object_pool + 0x20) = 0xFF;
     D_00160028 = p;
     p += 0x2000;
     D_001601AC = p;
-    D_00160020 = (Ent100E9EC8 *)((unsigned char *)D_00160018 + 0x3F00);
+    D_00160020 = (Ent100E9EC8 *)((unsigned char *)resident_object_pool + 0x3F00);
     p += 0x20000;
     D_001601B4 = -1;
     D_001601B0 = 0;
     D_001601B8 = 0;
     FastMemZero16(D_001CDB00, 0x200);
-    for (e = D_00160018; e != D_00160020; e++) {
+    for (e = resident_object_pool; e != D_00160020; e++) {
         e->x36 = 0x7F80;
     }
-    for (o = D_00161050; o != D_00161054; o++) {
+    for (o = ties; o != ties_end; o++) {
         o->x18 = 0x7F80;
     }
-    for (i0 = 0; i0 < D_00160F90; i0++) {
-        D_00160F8C[i0].x3A = 0x7F80;
+    for (i0 = 0; i0 < tfrag_render_record_count; i0++) {
+        tfrag_render_records[i0].x3A = 0x7F80;
     }
     {
-        char *st = (char *)gDebugFreeCam;
+        char *st = (char *)occl_cam_state;
 
         *(int *)(st + 0x1C) = 0;
     }
@@ -674,7 +674,7 @@ extern s32 func_00122958_EABE8(void *, u8 *) __asm__("func_00122958");
    their tables, the three kinds of moby classes, sound and help text tables, the loading image;
    then resets the sequence state and relocates the eight help text tables.
    Adapted from Lombyte (GPL-3.0) for PAL: src/gameplay/state/transition_load_wad.c, transition_load_wad. */
-void LoadSpaceTransitionWad(void)
+void transition_load_wad(void)
 {
   u8 li[0x60];
   WadHeader_EABE8 *hdr;
@@ -876,14 +876,14 @@ extern short D_0015F780;
    indexes into D_0015F060, past its 8-byte header, and keeps the
    header's first word in D_001997FC. Both table pointers are MACRO_ADDR
    (one register each), and the index goes first in the addition. */
-void Help_LoadMsgs(int arg0) {
-    int *entry = (int *)(arg0 * 4 + D_0015F064);
+void queue_dma_transfer(int arg0) {
+    int *entry = (int *)(arg0 * 4 + help_offset_table);
     int off = *entry;
-    char *p = (char *)(D_0015F060 + off);
+    char *p = (char *)(help_msg_data + off);
 
-    D_001997FC = *(int *)p;
+    help_msg_count = *(int *)p;
     p += 8;
-    *(char **)&D_0015F780 = p;
+    *(char **)&help_msgs = p;
 }
 
 extern char D_0018CC20[];
@@ -903,9 +903,9 @@ unsigned char Transition_UpdateMovieCamera(void) {
     char *cam;
     float m[16];
 
-    D_0018CEB0 = 0.63f;
+    view_tan_half_fov = 0.63f;
     UpdateViewContext();
-    pos = D_00187180;
+    pos = camera_position;
     qcopy(pos, key);
     func_00125358(m);
     func_001254A0(m, m, *(float *)(key + 0x10));
@@ -985,7 +985,7 @@ extern void func_0022DD68_EB458(void) __asm__("func_0022DD68");
    scene chunks, the movie camera, each actor's animation frame and interpolated position,
    then the intro overlay fades and the mode's own update (pause menu, freeze) and sound.
    Adapted from Lombyte (GPL-3.0) for PAL: src/textbin/fun_001eb0a8.c, update_gameplay_frame. */
-void UpdateSpaceFlightSequence(void) {
+void update_gameplay_frame(void) {
     Vec4A first_position;
     Vec4A next_position;
     RenderSequenceActor_EB458 *actor;
@@ -1087,10 +1087,10 @@ extern u8 D_001940C0[];
 extern u8 D_001D9240[];
 extern u8 D_001E1600[];
 extern u8 D_001E3500[];
-extern void func_00235290();
-extern void func_001F99B0(void *, s32, s32);
+extern s32 func_00235290();
+extern s32 func_001F99B0();
 extern s32 func_00118D80();
-extern void func_001E9E70_EB7C0() __asm__("func_001E9E70");
+extern s32 func_001E9E70_EB7C0() __asm__("func_001E9E70");
 extern s32 func_001EB338_EB7C0() __asm__("func_001EB338");
 extern s32 func_001F2608();
 extern s32 func_001F2930();
@@ -1098,16 +1098,16 @@ extern void func_001F3C10();
 extern s32 func_001F4630();
 extern s32 func_001F4748();
 extern u64 func_001F4868();
-extern void func_001F4A00();
+extern s32 func_001F4A00();
 extern s32 func_001F55C0();
 extern void func_001F5800();
 extern s32 func_001FA898(f32);
 extern s32 func_001FB530();
 extern s32 func_001FB848();
 extern s32 func_001FBE80();
-extern void func_0020DAB0();
+extern s32 func_0020DAB0();
 extern s32 func_0020DD48();
-extern void func_0020E2B0();
+extern s32 func_0020E2B0();
 extern void func_00218B10();
 extern void func_0021A610();
 extern s32 func_00229D48();
@@ -1130,56 +1130,56 @@ void Transition_DefaultDraw(s32 *arg0)
 {
     s32 n;
 
-    if (D_0016055C == 0 || D_0016055C->unk4 != 0) {
-        framebuf_appendLargeSetup();
+    if (level_sky_effect_data == 0 || level_sky_effect_data->unk4 != 0) {
+        append_gif_transfer_packet();
     }
-    FastMemSet(D_001940C0, -1, 0x80);
+    FastMemSet(occl_visibility, -1, 0x80);
     func_001EB338_EB7C0();
     BuildViewMatrices();
-    AnimSlot_ReleaseStale();
+    prune_moby_references();
     ResetGsRegisters();
-    D_0015F704 = -1;
-    if (D_0016055C != 0) {
+    font_state = -1;
+    if (level_sky_effect_data != 0) {
         func_001E9E70_EB7C0();
     }
     DrawTfrag();
-    Vif1ChainCmd(0x02010000);
+    append_dma_tag(0x02010000);
     DrawTies_1();
-    Vif1ChainCmd(0x02020000);
+    append_dma_tag(0x02020000);
     DrawShrubs();
-    Vif1ChainCmd(0x02040000);
+    append_dma_tag(0x02040000);
     if (D_0015F6E8 == 3) {
-        Menu_DrawPanels();
+        render_level_effects_and_screen_sprites();
     } else {
         DrawMobys();
     }
-    Vif1ChainCmd(0x02080000);
+    append_dma_tag(0x02080000);
     SetupGifPaging(0);
-    Dma_AppendRefDirect3();
-    if (D_0015F564 != 0) {
-        ExecuteDrawCallbacks();
+    vu1_gs_regs_alt();
+    if (draw_callback_count != 0) {
+        dispatch_callback_list_1();
     }
-    Dma_AppendRefDirect3();
+    vu1_gs_regs_alt();
     if (D_0018A3E8[0] != 0) {
         func_00234C98_EB7C0(8, 5);
-        Dma_AppendRefDirect3();
+        vu1_gs_regs_alt();
         func_00118D80(0);
         PartProc();
-        D_0015F704 = 8;
+        font_state = 8;
     }
     AA_BlurPass();
     ResetGsRegisters();
-    if (D_0015F050 != 0) {
+    if (intro_overlay_alpha != 0) {
         DrawTexturedQuad(0xEC, 0x10, 0x100, 0x80, 0, 0, 0x100, 0x80,
-                      (long)(D_0015F050 << 24 | 0x808080), (*(s64 *)&D_0015F048));
+                      (long)(intro_overlay_alpha << 24 | 0x808080), (*(s64 *)&D_0015F048));
     }
-    if (D_0015F054 != 0) {
+    if (language_intro_overlay_alpha != 0) {
         n = (*(s32 *)&D_0015EE88) - 1;
         if (n < 0) {
             n = 0;
         }
-        DrawTexturedQuad(0xA0, D_0013E604[0] - 0x50, 0xC0, 0x60, 0, 0, 0x100, 0x80,
-                      (long)(D_0015F054 << 24 | 0x808080), GetEffectTex(n + 4));
+        DrawTexturedQuad(0xA0, frame_size[0] - 0x50, 0xC0, 0x60, 0, 0, 0x100, 0x80,
+                      (long)(language_intro_overlay_alpha << 24 | 0x808080), GetEffectTex(n + 4));
     }
     DoGifPaging();
     if (gFade > 0.0f) {
@@ -1197,11 +1197,11 @@ void Transition_DefaultDraw(s32 *arg0)
     LightTfrags(D_001E1600);
     PatchTfragGifs();
     VU1_syncChain(4);
-    LightTies(D_001E3500);
+    LightTies(tie_light_data);
     PatchTieGifs();
     VU1_syncChain(8);
     LightShrubs(D_001D9240);
-    PatchShrubGifs();
+    patch_shrub_gifs();
     VU1_syncChain(0x10);
     PatchMobyGifs();
     UpdateFog();
@@ -1214,7 +1214,7 @@ extern int D_0015F694_m __asm__("D_0015F694") MACRO_ADDR;
 
 /* The older register residual was the split load of D_0015F694; read
    through a MACRO_ADDR alias it is retail's one-register load. */
-int IsStateEntryActive(int arg0, int arg1) {
+int is_active_state_entry(int arg0, int arg1) {
     if (arg0 >= 0) {
         char *p = D_0013E650 + arg0 * 0x70;
         if (*(short *)(p + 0x7E) == arg1 + D_0015F694_m) {
@@ -1320,7 +1320,7 @@ extern void set_pal_mode_BB48(void) __asm__("func_001F3890");
 extern void vu1_sync_chain_BB48(s32) __asm__("func_00234AC8");
 
 /* Adapted from Lombyte (GPL-3.0): src/gameplay/state/transition_do_transition.c, transition_do_transition. */
-void func_001EBB48(void) {
+void transition_do_transition(void) {
     WadHeader_BB48 *hdr;
     u8 *p;
     s32 n;

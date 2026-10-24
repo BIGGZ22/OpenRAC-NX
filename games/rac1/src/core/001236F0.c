@@ -653,9 +653,9 @@ extern char D_0015B108[];
 extern int D_0015B180;
 
 int func_001245F8(void) {
-    func_0011B4C8(D_0015B108, 0x80000963, 0, &D_0015B180, 0x400,
-                  &D_0015B180, 0x400, 0, 0);
-    return D_0015B180;
+    func_0011B4C8(RpcQueueData, 0x80000963, 0, &RpcReceiveData, 0x400,
+                  &RpcReceiveData, 0x400, 0, 0);
+    return RpcReceiveData;
 }
 
 extern char D_0015B130[];
@@ -680,11 +680,11 @@ int func_00124650(void) {
 
     func_0011AE20(0);
     for (;;) {
-        if (func_0011B2F8(D_0015B108, 0x80000900, 0) < 0) {
+        if (func_0011B2F8(RpcQueueData, 0x80000900, 0) < 0) {
             func_00124B60(D_001535D8);
             func_001138B8(-1);
         }
-        if (*(int *)(D_0015B108 + 0x24) != 0) {
+        if (*(int *)(RpcQueueData + 0x24) != 0) {
             break;
         }
         i = 0x10000;
@@ -732,12 +732,12 @@ extern char D_00153658[];
    success path is the branch target, letting the result load sit in the
    bgez delay slot. */
 int func_001247E8(int arg0) {
-    int *buf = &D_0015B180;
+    int *buf = &RpcReceiveData;
 
     buf[1] = arg0;
-    if (func_0011B4C8(D_0015B108, 0x80000904, 0, buf, 0x400,
+    if (func_0011B4C8(RpcQueueData, 0x80000904, 0, buf, 0x400,
                       buf, 0x400, 0, 0) >= 0) {
-        return D_0015B180;
+        return RpcReceiveData;
     } else {
         func_00124B60(D_00153658);
         return 0;
@@ -759,7 +759,7 @@ extern char D_00153678[];
    precomputed so each byte address is one base+index add, and the call
    re-takes &D_0015B180 for its buffer arguments. */
 int func_00124858(void *arg0, int arg1, int arg2) {
-    int *buf = &D_0015B180;
+    int *buf = &RpcReceiveData;
     char *namesrc = (char *)arg0 + 0x14;
     char *namedst = (char *)buf + 0x14;
     int i;
@@ -774,8 +774,8 @@ int func_00124858(void *arg0, int arg1, int arg2) {
     for (i = 0; i < 0x10; i++) {
         namedst[i] = namesrc[i];
     }
-    if (func_0011B4C8(D_0015B108, 0x80000901, 0, &D_0015B180, 0x400,
-                       &D_0015B180, 0x400, 0, 0) < 0) {
+    if (func_0011B4C8(RpcQueueData, 0x80000901, 0, &RpcReceiveData, 0x400,
+                       &RpcReceiveData, 0x400, 0, 0) < 0) {
         func_00124B60(D_00153678);
         return 0;
     }
@@ -812,10 +812,10 @@ int func_00124920(int port) {
     if (D_0015B600[port] != 1) {
         return -0xC;
     }
-    buf = &D_0015B180;
+    buf = &RpcReceiveData;
     buf[0] = port;
-    if (func_0011B4C8(D_0015B108, 0x80000903, 0, &D_0015B180, 0x400,
-                       &D_0015B180, 0x400, 0, 0) < 0) {
+    if (func_0011B4C8(RpcQueueData, 0x80000903, 0, &RpcReceiveData, 0x400,
+                       &RpcReceiveData, 0x400, 0, 0) < 0) {
         func_00124B60(D_001536B8);
         return 0;
     }
@@ -831,7 +831,7 @@ extern char D_001537A0[];
    arms of the copy guard with one return; two returns would be
    cross-jumped into one. */
 int func_00124A70(int arg0, int arg1, int *arg2, char *arg3) {
-    int *buf = &D_0015B180;
+    int *buf = &RpcReceiveData;
     unsigned char *src;
     int i;
     int r;
@@ -839,7 +839,7 @@ int func_00124A70(int arg0, int arg1, int *arg2, char *arg3) {
     buf[0] = arg0;
     buf[1] = arg1;
     buf[2] = *arg2;
-    if (func_0011B4C8(D_0015B108, 0x8000091A, 0, buf, 0x400, buf, 0x400, 0, 0) < 0) {
+    if (func_0011B4C8(RpcQueueData, 0x8000091A, 0, buf, 0x400, buf, 0x400, 0, 0) < 0) {
         func_00124B60(D_001537A0);
         return 0;
     }

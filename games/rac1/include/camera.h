@@ -21,6 +21,7 @@
 
 #include "common.h"
 #include "vector.h"
+#include "camera_modes.h"
 
 struct Moby;
 
@@ -37,10 +38,10 @@ typedef struct {
 } CameraVec3;
 
 /* One camera slot, 0xA0 bytes: gCameraSlots[48] (D_00187510; level code
-   D_L00_00167250). Camera_InitSlots fills one per row of the level's camera
+   D_L00_00167250). setup_level_cameras fills one per row of the level's camera
    table (gCameraDefs). */
 typedef struct Camera {
-    VecQuad basis[3];          /* 0x00 rotation rows; UpdateCamera copies them to gCamera.matrix */
+    VecQuad basis[3];          /* 0x00 rotation rows; update_camera copies them to gCamera.matrix */
     Vec4f pos;                 /* 0x30 position */
     u8 type_data[0x24];        /* 0x40 per-type state (read by the type's hooks) */
     CameraVec3 prev_pos;       /* 0x64 pos as of the last frame or switch */
@@ -50,14 +51,14 @@ typedef struct Camera {
     u8 priority;               /* 0x7C 0 = never activates; higher wins (CameraInfo.priority) */
     u8 handoff_state;          /* 0x7D rules 1 and 2 only activate once it is set */
     s16 transition_state;      /* 0x7E nonzero: any eligible camera may take over; 2..5 pick the blend */
-    s16 unk80;                 /* 0x80 -1 after Camera_InitSlots */
-    s16 unk82;                 /* 0x82 -1 after Camera_InitSlots */
+    s16 unk80;                 /* 0x80 -1 after setup_level_cameras */
+    s16 unk82;                 /* 0x82 -1 after setup_level_cameras */
     s16 def_index;             /* 0x84 row of gCameraDefs */
     s16 id;                    /* 0x86 camera id (CameraDef.id): 0 behind the hero; 6 turns shake off */
     u8 pad88;
-    u8 hit_wall;               /* 0x89 MoveCameraToward hit something */
-    s16 snap;                  /* 0x8A nonzero: MoveCameraToward jumps to the target once */
-    s16 type;                  /* 0x8C index into gCameraTypes (Camera_FindTypeIndex(id)) */
+    u8 hit_wall;               /* 0x89 resolve_camera_movement_collisions hit something */
+    s16 snap;                  /* 0x8A nonzero: resolve_camera_movement_collisions jumps to the target once */
+    s16 type;                  /* 0x8C index into camera_types (find_camera_table_index_by_id(id)) */
     s16 hard_cut;              /* 0x8E 1 when it became current without a blend */
     u8 pad90[0x10];
 } Camera;
@@ -89,7 +90,7 @@ CAMERA_SIZE(CameraType, 0x14);
 /* The level's parameters for one camera, pointed at by CameraDef.info. */
 typedef struct CameraInfo {
     u8 pad00[4];
-    Camera *slot;              /* 0x04 the slot Camera_InitSlots gave it */
+    Camera *slot;              /* 0x04 the slot setup_level_cameras gave it */
     u8 pad08[4];
     s32 clip_volume;           /* 0x0C rule 4: active while the hero is inside it */
     u8 pad10[0xC];
@@ -118,7 +119,7 @@ CAMERA_AT(CameraDef, id, 0x0C);
 CAMERA_AT(CameraDef, info, 0x1C);
 CAMERA_SIZE(CameraDef, 0x20);
 
-/* A shake channel (gCamera.shake[0], [1]; Camera_UpdateShake). */
+/* A shake channel (gCamera.shake[0], [1]; apply_camera_shake). */
 typedef struct CameraShake {
     f32 amplitude;             /* 0x0 */
     f32 offset;                /* 0x4 this frame's sample, added along a view row */
@@ -127,7 +128,7 @@ typedef struct CameraShake {
 } CameraShake;
 CAMERA_SIZE(CameraShake, 0x10);
 
-/* What CameraPreUpdate tracks of the hero each frame: gCamera.follow
+/* What update_camera_tracking_state tracks of the hero each frame: gCamera.follow
    (D_001871D0, level D_L00_00166F10). */
 typedef struct CameraFollow {
     Vec4 pos;                  /* 0x00 hero position, z sprung (w: raw z) */
@@ -145,9 +146,9 @@ typedef struct CameraFollow {
     f32 side_dist;             /* 0xA4 |part across up| */
     f32 up_dist;               /* 0xA8 part along up */
     f32 yaw_hist[5];           /* 0xAC hero yaw (motion.rot.z), oldest first */
-    s32 coll_bits;             /* 0xC0 ground-type bits ORed into gCamLineMask */
+    s32 coll_bits;             /* 0xC0 ground-type bits ORed into cam_coll_mode */
     struct Moby *hero_coll_moby; /* 0xC4 collision moby kept for camera id 0 */
-    f32 fade_rate;             /* 0xC8 Camera_UpdateFade takes it off gFade each frame */
+    f32 fade_rate;             /* 0xC8 advance_timed_camera_control takes it off gFade each frame */
     s32 unkCC;                 /* 0xCC */
     s32 unkD0;                 /* 0xD0 */
     struct Moby *ground_moby;  /* 0xD4 moby the hero stands on (not class 0x4BA/0x336) */
@@ -160,7 +161,7 @@ CAMERA_AT(CameraFollow, coll_bits, 0xC0);
 CAMERA_AT(CameraFollow, ground_moby, 0xD4);
 CAMERA_SIZE(CameraFollow, 0xE0);
 
-/* The eased blend Camera_StepBlend runs (gCamera.blend.lerp). */
+/* The eased blend step_camera_blend runs (gCamera.blend.lerp). */
 typedef struct CamBlendLerp {
     f32 rot_t;                 /* 0x00 rotation progress 0..1 */
     f32 rot_rate;              /* 0x04 per frame, times D_0015EE60 */
@@ -177,7 +178,7 @@ typedef struct CamBlendLerp {
 CAMERA_AT(CamBlendLerp, from_rot, 0x20);
 CAMERA_SIZE(CamBlendLerp, 0x60);
 
-/* The yaw/pitch/distance blend Camera_UpdateTowardTarget runs (gCamera.blend.orbit). */
+/* The yaw/pitch/distance blend advance_alternate_camera_transition runs (gCamera.blend.orbit). */
 typedef struct CamBlendOrbit {
     f32 yaw;                   /* 0x00 */
     f32 pitch;                 /* 0x04 */
@@ -209,7 +210,7 @@ CAMERA_AT(CamBlend, orbit, 0x70);
 CAMERA_SIZE(CamBlend, 0xE0);
 
 /* The camera block, 0x3A0 bytes: gCamera (D_00187040; level 00
-   D_L00_00166D80, gCameraLvl). transition.c clears it on a level load. */
+   D_L00_00166D80, player_camera). transition.c clears it on a level load. */
 typedef struct CameraSystem {
     u8 pad000[0x40];
     f32 view_matrix[4][4];     /* 0x040 the renderer's view matrix (draw.c) */
@@ -223,7 +224,7 @@ typedef struct CameraSystem {
     CameraFollow follow;       /* 0x190 (D_001871D0) */
     CamBlend blend;            /* 0x270 (D_001872B0) */
     Vec4 matrix[3];            /* 0x350 view rotation rows (D_00187390, D_001873A0, D_001873B0) */
-    s32 unk380[5];             /* 0x380 zeroed by Camera_InitSlots */
+    s32 unk380[5];             /* 0x380 zeroed by setup_level_cameras */
     s32 underwater;            /* 0x394 the eye is under water (D_001873D4) */
     s32 frames;                /* 0x398 frames since the last switch */
     u8 pad39C[4];
@@ -239,10 +240,10 @@ CAMERA_AT(CameraSystem, underwater, 0x394);
 CAMERA_AT(CameraSystem, frames, 0x398);
 CAMERA_SIZE(CameraSystem, 0x3A0);
 
-/* The debug free camera (D_0018C418, level D_L00_0016C158; DebugFreeCameraUpdate). */
+/* The debug free camera (D_0018C418, level D_L00_0016C158; update_debug_camera). */
 typedef struct DebugFreeCam {
     u8 pad00[8];
-    s32 flags;                 /* 0x08 bit 3 read by DebugFreeCameraUpdate */
+    s32 flags;                 /* 0x08 bit 3 read by update_debug_camera */
     u8 pad0C[8];
     s32 active;                /* 0x14 nonzero: the camera code stops writing gCamera's view */
     u8 pad18[4];

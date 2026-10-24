@@ -1,5 +1,12 @@
 # decomp-permuter
 
+> **The shared tool.** OpenRAC's [`tools/permuter`](https://github.com/OpenRAC/OpenRAC/tree/master/tools/permuter) runs decomp-permuter natively for this
+> project and the other Ratchet & Clank decomps with one engine. Its `rac1/pal` profile compiles each
+> candidate through `tools/permuter_compile.py` in the build image and confirms every score 0 with
+> `tools/try_func.py` (EXACT). From an OpenRAC checkout:
+> `OPENRAC_SOURCE_RAC1_PAL=<this checkout> python3 tools/permuter run rac1/pal func_X --c draft.c`.
+> The setup below keeps working as before.
+
 [decomp-permuter](https://github.com/simonlindholm/decomp-permuter) randomly
 rewrites one C function -- reorders statements, adds temporaries, retypes
 things, swaps branches -- and keeps whatever compiles closer to retail. It

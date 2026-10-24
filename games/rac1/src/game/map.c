@@ -98,7 +98,7 @@ typedef struct {
    TEX0 value returned as in func_00205660. The allocator update comes
    before the TEX0 value and the buffer width is shifted back into w:
    both decide which of tw and the constant 1 local-alloc serves first. */
-long LoadMapTexture(char *p) {
+long load_texture_file(char *p) {
     TexDesc t;
     int w;
     int cbp;
@@ -125,13 +125,13 @@ long LoadMapTexture(char *p) {
         | ((long)t.tw << 26) | ((long)t.th << 30) | ((long)1 << 34)
         | ((long)cbp << 37) | ((long)4 << 61);
     if (D_0015F558 < 0x40) {
-        D_0018D140[D_0015F558].addr = (int)t.clut;
-        D_0018D140[D_0015F558].cbp = cbp;
-        D_0018D140[D_0015F558].unk4 = 0;
-        D_0018D140[D_0015F558].unk8 = (int)t.pix;
-        D_0018D140[D_0015F558].tw = t.tw;
-        D_0018D140[D_0015F558].th = t.th;
-        D_0018D140[D_0015F558].tbp = tbp;
+        pending_texture_uploads[D_0015F558].addr = (int)t.clut;
+        pending_texture_uploads[D_0015F558].cbp = cbp;
+        pending_texture_uploads[D_0015F558].unk4 = 0;
+        pending_texture_uploads[D_0015F558].unk8 = (int)t.pix;
+        pending_texture_uploads[D_0015F558].tw = t.tw;
+        pending_texture_uploads[D_0015F558].th = t.th;
+        pending_texture_uploads[D_0015F558].tbp = tbp;
         D_0015F558++;
     }
     return reg;
@@ -142,7 +142,7 @@ long LoadMapTexture(char *p) {
    cld 4) and, while there is room (64 entries), records it in the next
    D_0018D140 slot. The buffer width is shifted back into w itself: the
    shift then writes w's register and the constant 1 keeps its own. */
-long RegisterMapTexture(int tw, int th, int a2, int a3, int clut, int tex) {
+long register_8bit_texture(int tw, int th, int a2, int a3, int clut, int tex) {
     int w = tw - 6;
     long reg;
     int tbp = tex >> 8;
@@ -157,13 +157,13 @@ long RegisterMapTexture(int tw, int th, int a2, int a3, int clut, int tex) {
         | ((long)cbp << 37) | ((long)4 << 61);
     if (D_0015F558 < 0x40) {
 
-        D_0018D140[D_0015F558].addr = a2;
-        D_0018D140[D_0015F558].cbp = cbp;
-        D_0018D140[D_0015F558].unk4 = 0;
-        D_0018D140[D_0015F558].unk8 = a3;
-        D_0018D140[D_0015F558].tw = tw;
-        D_0018D140[D_0015F558].th = th;
-        D_0018D140[D_0015F558].tbp = tbp;
+        pending_texture_uploads[D_0015F558].addr = a2;
+        pending_texture_uploads[D_0015F558].cbp = cbp;
+        pending_texture_uploads[D_0015F558].unk4 = 0;
+        pending_texture_uploads[D_0015F558].unk8 = a3;
+        pending_texture_uploads[D_0015F558].tw = tw;
+        pending_texture_uploads[D_0015F558].th = th;
+        pending_texture_uploads[D_0015F558].tbp = tbp;
         D_0015F558++;
     }
     return reg;
@@ -172,7 +172,7 @@ __asm__(".section .text\n\tnop\n");
 
 extern int D_001A0468[];
 
-int Map_FindFreeSlot(int arg0) {
+int find_free_map_slot(int arg0) {
     int *a = D_001A0468;
     int *b = D_001A0468 + 5;
     int i = 0;
@@ -246,10 +246,10 @@ extern PadSlots D_001A01F0_slots __asm__("D_001A01F0");
  * size miss of exactly 4 with an otherwise correct instruction stream
  * means a misaligned block, not a missing instruction.
  */
-int AllocMapSlot(void) {
+int promote_first_available_map_entry(void) {
     int i;
 
-    i = Map_FindFreeSlot(1);
+    i = find_free_map_slot(1);
     if (i != 0) {
         return i;
     }
@@ -280,7 +280,7 @@ extern int D_001A01F0[];
    retail: deriving it up front with the others swaps a*4 and b*4
    between $s1 and $s2. */
 void move_map_entry_slot(int a, int b) {
-    int *base = D_001A01F0;
+    int *base = level_map_selection;
     int *dst = base + 0x9E;
     int *size = base + 0xA9;
     int *flags;
@@ -295,10 +295,10 @@ void move_map_entry_slot(int a, int b) {
 
 extern int D_001A01F0[];
 
-int findMapSlot(int arg0) {
+int find_map_entry_slot(int arg0) {
     int i;
     for (i = 0; i < 5; i++) {
-        if (D_001A01F0[0x9E + i] != 0 && D_001A01F0[0xA3 + i] == arg0) {
+        if (level_map_selection[0x9E + i] != 0 && level_map_selection[0xA3 + i] == arg0) {
             return i;
         }
     }
@@ -316,15 +316,15 @@ extern int *D_001602E0_m __asm__("D_001602E0") MACRO_ADDR;
    -1 if none. The two bounds tests are nested so that fold does not
    merge them into one unsigned compare, and the step update is the
    ternary that gives retail's select (slti/movn). */
-int PickNextMap(void) {
-    char *m = (char *)D_001A01F0;
+int pick_next_map(void) {
+    char *m = (char *)level_map_selection;
     int off = gHaveMapOMatic ? 0x100 : 0;
     int key;
     int i;
     int step;
 
     key = *(int *)(m + 0x224) + off;
-    if (findMapSlot(key) == -1) {
+    if (find_map_entry_slot(key) == -1) {
         return key;
     }
     i = 0;
@@ -339,7 +339,7 @@ int PickNextMap(void) {
         if (j >= 0) {
             if (j < 20 && D_001602E0_m[j] != 0) {
                 key = D_001602E0_m[j] + off;
-                if (findMapSlot(key) == -1) {
+                if (find_map_entry_slot(key) == -1) {
                     return key;
                 }
             }
@@ -377,33 +377,33 @@ extern int func_001F9B70(int); /* abs */
    The slots are indexed off the global itself, as in func_002058D0, so
    that loop.c keeps one pointer per loop; the final store goes through
    the struct view, which adds the base first. */
-int PickMapSlotToEvict(void) {
+int pick_map_slot_to_evict(void) {
     int best = 0;
     int bestIdx = -1;
     int cur;
 
-    if (D_001A01F0[0x89] == 0) {
+    if (level_map_selection[0x89] == 0) {
         int i;
         for (i = 4; i >= 0; i--) {
-            if (D_001A01F0[0x9E + i] != 0 && i != D_001A01F0[0xA8]
-                && D_001A01F0[0xA3 + i] == -1) {
+            if (level_map_selection[0x9E + i] != 0 && i != level_map_selection[0xA8]
+                && level_map_selection[0xA3 + i] == -1) {
                 return i;
             }
         }
     }
     {
         int i;
-        cur = find_id_in_terminated_table(D_001A01F0[0x89]);
+        cur = find_id_in_terminated_table(level_map_selection[0x89]);
         if (cur == -1) {
             return 1;
         }
         for (i = 0; i < 5; i++) {
-            if (D_001A01F0[0x9E + i] != 0 && i != D_001A01F0[0xA8]) {
+            if (level_map_selection[0x9E + i] != 0 && i != level_map_selection[0xA8]) {
                 int d;
-                if (D_001A01F0[0xA3 + i] == -1) {
+                if (level_map_selection[0xA3 + i] == -1) {
                     return i;
                 }
-                d = func_001F9B70(find_id_in_terminated_table(D_001A01F0[0xA3 + i] & 0xFF) - cur);
+                d = subtract_integer_with_clamp(find_id_in_terminated_table(level_map_selection[0xA3 + i] & 0xFF) - cur);
                 if (best < d) {
                     best = d;
                     bestIdx = i;
@@ -414,7 +414,7 @@ int PickMapSlotToEvict(void) {
     if (bestIdx == -1) {
         bestIdx = 0;
     }
-    ((PadSlots *)D_001A01F0)->flags[bestIdx] = -1;
+    ((PadSlots *)level_map_selection)->flags[bestIdx] = -1;
     return bestIdx;
 }
 
@@ -455,7 +455,7 @@ extern char D_0013CA40[];
    x and 1280 for y. The slot is re-read at every use, the three array
    bases are locals set where retail first builds them, and the x bound is
    computed before the y bound (the scheduler emits them in reverse). */
-int UpdateMapZoomAndPan(void) {
+int update_map_zoom_and_pan(void) {
     char *pad;
     char *m;
     float *zoom;
@@ -467,7 +467,7 @@ int UpdateMapZoomAndPan(void) {
     if (*(int *)(pad + 0x1A4) & 0x500) {
         return 1;
     }
-    m = (char *)D_001A01F0;
+    m = (char *)level_map_selection;
     if (*(int *)(m + 0x24) == 0) {
         return 0;
     }
@@ -645,7 +645,7 @@ extern void vu1_add_g_sregister(s32, s64) __asm__("func_00234C98");
 extern void *map_memset_205E70(void *, s32, u32) __asm__("func_001153FC");
 
 /* UNK_NoMapAvailable */
-void DrawMapView(void) {
+void draw_map_overlay(void) {
     union {
         u8 b[0x80];
         f32 f[2];
@@ -1073,7 +1073,7 @@ extern void func_00207090(unsigned char *dst, int row, unsigned char *src,
    The remainder is computed before the quotient (retail's surviving
    copy of the quotient), and the scratchpad is a pointer local (retail
    adds the base first). */
-void DecodeMapMask(int *dst, unsigned char *src, short *offs) {
+void decode_map_mask(int *dst, unsigned char *src, short *offs) {
     int row;
     unsigned char *scr = (unsigned char *)0x70000000;
 
@@ -1081,7 +1081,7 @@ void DecodeMapMask(int *dst, unsigned char *src, short *offs) {
         int *p;
         int j;
 
-        DecodeMapRleRow(scr, row, src, offs);
+        decode_map_rle_row(scr, row, src, offs);
         {
             int r = row % 16;
             int q = row / 16;
@@ -1121,7 +1121,7 @@ void DecodeMapMask(int *dst, unsigned char *src, short *offs) {
    at 0x100 in its own statement so that it stays a plain set in the loop
    (a cmove constant would be hoisted); the two bytes are read low byte
    first and `half` is cleared before the count drops, retail's order. */
-void DecodeMapRleRow(unsigned char *dst, int row, unsigned char *src, short *offs) {
+void decode_map_rle_row(unsigned char *dst, int row, unsigned char *src, short *offs) {
     int half = 0;
     unsigned char *p;
     int n;

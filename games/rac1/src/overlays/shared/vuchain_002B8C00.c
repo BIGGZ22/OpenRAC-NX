@@ -49,9 +49,9 @@ extern int func_001FA898_r(float) __asm__("func_001FA898");
 
 /* Converts a float vector to fixed-point ints, relative to the grid origin, plus two scale shorts. */
 void RipplePatch_ToFixedPoint(float *in, int *out) {
-    out[0] = func_001FA898_r((in[0] + D_L01_001CAF80[2]) * 1024.0f);
-    out[1] = func_001FA898_r((in[1] + D_L01_001CAF80[3]) * 1024.0f);
+    out[0] = func_001FA898_r((in[0] + pool_light[2]) * 1024.0f);
+    out[1] = func_001FA898_r((in[1] + pool_light[3]) * 1024.0f);
     out[2] = func_001FA898_r((in[2] - 1.0f) * 1024.0f);
-    ((short *)out)[6] = func_001FA898_r(D_L01_001CAF80[0] * 1024.0f);
-    ((short *)out)[7] = func_001FA898_r(D_L01_001CAF80[0] * 1024.0f);
+    ((short *)out)[6] = func_001FA898_r(pool_light[0] * 1024.0f);
+    ((short *)out)[7] = func_001FA898_r(pool_light[0] * 1024.0f);
 }

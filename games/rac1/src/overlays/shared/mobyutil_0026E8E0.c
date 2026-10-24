@@ -27,7 +27,7 @@ typedef struct {
     char pad21[0xDF];
 } O_26e008;
 
-int MobyGroup_CountNotInState(int i, int st) {
+int count_group_e81e0(int i, int st) {
     unsigned short *p;
     int n = 0;
     O_26e008 *o;
@@ -82,7 +82,7 @@ extern int func_L00_00200290(char *, float);
 void IsBSphereVisibleScaled(char *vec, float scale)
 {
     char scratch[16];
-    func_001F9C48(scratch, vec, 0.0009765625f);
+    scale_vector(scratch, vec, 0.0009765625f);
     FastBSphereCheck(scratch, scale);
 }
 extern void func_001F9BF0(void *dst, void *a, void *b);
@@ -94,7 +94,7 @@ extern char *D_L01_001B0C30[];
 typedef int u128 __attribute__((mode(TI)));
 
 // Returns a bitmask of the table's spheres that no listed object touches, testing swept offsets.
-int BuildPathNodeVisibilityMask(int *objs, int n, int idx, float f, float *pos)
+int compute_clear_path_point_mask(int *objs, int n, int idx, float f, float *pos)
 {
     char *t = D_L01_001B0C30[idx];
     int mask = 0;
@@ -135,7 +135,7 @@ int BuildPathNodeVisibilityMask(int *objs, int n, int idx, float f, float *pos)
 }
 
 // Expands a bit mask through a table of per-bit masks until it meets another mask.
-int ExpandNodeMask(int idx, int a, int mask)
+int expand_path_mask_to_intersection(int idx, int a, int mask)
 {
     char *p = D_L01_001B0C30[idx];
     int i;
@@ -216,7 +216,7 @@ s32 func_L01_00277FD8(s32 *ids, s32 n, s32 path_index, f32 radius,
         path = D_L01_001B0C30_77FD8[path_index];
         from_mask = func_L01_00277A38_77FD8(ids, n, radius, path_index, pos);
         to_mask = func_L01_00277A38_77FD8(ids, n, radius, path_index, target);
-        mask = ExpandNodeMask(path_index, from_mask, to_mask);
+        mask = expand_path_mask_to_intersection(path_index, from_mask, to_mask);
         if (mask != 0) {
             nearest = 10000.0f;
             best = -1;
@@ -240,7 +240,7 @@ s32 func_L01_00277FD8(s32 *ids, s32 n, s32 path_index, f32 radius,
     return 1;
 }
 extern char D_0013E633[];
-int Hero_IsOnMoby(char *m) {
+int is_hero_on_moby(char *m) {
     char *h = D_0013E633 + 0xE1D;
 
     if (*(int *)(h + 0x208C) == 3 || *(int *)(h + 0x2084) == 0x1C) {
@@ -269,12 +269,12 @@ extern float func_001FA748(float, float);
 
 /* Places the marker at a moby's position offset along its heading by scale. */
 void PlaceMarkerAheadOfMoby(float scale, char *moby) {
-    D_L01_0016CD60.f = 1;
-    qcopy(D_L01_0016CD60.p, moby + 0x10);
-    D_L01_0016CD60.p[0] += FastCos(*(float *)(moby + 0x48)) * scale;
-    D_L01_0016CD60.p[1] += FastSin(*(float *)(moby + 0x48)) * scale;
-    clear_u64_value(D_L01_0016CD60.q);
-    D_L01_0016CD60.a = FastAddRots(*(float *)(moby + 0x48), 3.14159274101257324f);
+    fx_cutscene.f = 1;
+    qcopy(fx_cutscene.p, moby + 0x10);
+    fx_cutscene.p[0] += FastCos(*(float *)(moby + 0x48)) * scale;
+    fx_cutscene.p[1] += FastSin(*(float *)(moby + 0x48)) * scale;
+    clear_u64_value(fx_cutscene.q);
+    fx_cutscene.a = FastAddRots(*(float *)(moby + 0x48), 3.14159274101257324f);
 }
 extern float func_001F9D48(void *, void *);
 extern void func_L00_00261B00(void *, int, int, int, int);
@@ -294,7 +294,7 @@ extern char *func_0020D348(int);
 extern void func_L00_00251E30(void *);
 
 /* spawns a moby of a class copying the source moby's placement, scaled */
-void SpawnMobyCopyingPlacement(char *src, int oClass) {
+void spawn_moby_from_placement(char *src, int oClass) {
     char *m = CreateMoby(oClass);
     if (m != 0) {
         *(short *)(m + 0x32) = 0xFF;

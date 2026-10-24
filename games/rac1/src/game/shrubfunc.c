@@ -264,7 +264,7 @@ void DmaShrubTextures(void) {
     ((int *)D_001604F0)[1] = D_00161000;
     ((int *)D_001604F0)[2] = 0;
     ((int *)D_001604F0)[3] = 0;
-    if (D_0018A3B0[8] != 0 && D_0018A3B0[7] != 0) {
+    if (draw_config[8] != 0 && draw_config[7] != 0) {
         size = BuildShrubTextureDma(D_0015EF74);
         VU1_texFlush();
         if (size > 0x400000) {
@@ -292,10 +292,10 @@ typedef struct { char *ptr; int pad; } ShrubRec_29D48;
 
 /* `items` declared inside the middle loop, and `rec = &items[i];
    rec->ptr` rather than `items[i].ptr`, give retail's base-first addu. */
-void PatchShrubGifs(void) {
+void patch_shrub_gifs(void) {
     int *p;
     for (p = D_001D9140; *p >= 0; p++) {
-        char *obj = D_001D82C0[*p];
+        char *obj = shrub_render_classes[*p];
         int i;
         for (i = 0; i < *(short *)(obj + 0x28); i++) {
             ShrubRec_29D48 *items = (ShrubRec_29D48 *)(obj + 0x40);
@@ -303,7 +303,7 @@ void PatchShrubGifs(void) {
             char *e = (char *)hdr + hdr[1] * 0x10 + 0x10;
             int j;
             for (j = 0; j < hdr[0]; j++) {
-                short *ent = &D_001D8C40[*(unsigned char *)(e + 0x13) * 2];
+                short *ent = &shrub_paging_table[*(unsigned char *)(e + 0x13) * 2];
                 if (ent[0] != 0) *(int *)(e + 0x30) = (*(int *)(e + 0x30) & 0xFFFFC000) | ent[0];
                 if (ent[1] != 0) *(int *)(e + 0x20) = (*(int *)(e + 0x20) & 0xFFFFC000) | ent[1];
                 e += 0x40;

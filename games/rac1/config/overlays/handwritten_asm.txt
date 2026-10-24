@@ -3,7 +3,8 @@
 # finished, as it does the executable's config/handwritten_asm.txt. A joined function
 # (config/overlays/joined.tsv) is listed under its first name; its later pieces are finished with it.
 # Every entry is marked "Handwritten function" by the disassembler (or is the first piece of a joined
-# function whose other pieces are), except func_L00_00251328 and func_L00_00251358, listed by hand.
+# function whose other pieces are), except func_L00_00251328, func_L00_00251358, func_L00_002001D8,
+# func_L00_0024EBF8 and func_L02_002100E8, listed by hand.
 func_L00_001EEBD8
 func_L00_001EF944
 func_L00_001EFF50
@@ -29,9 +30,11 @@ func_L00_001FF718
 func_L00_001FF860
 func_L00_001FFA40
 func_L00_001FFED8
+func_L00_002001D8
 func_L00_00200290
 func_L00_002003C8
 func_L00_0024E798
+func_L00_0024EBF8
 func_L00_0024EC20
 func_L00_00251328
 func_L00_00251358
@@ -64,6 +67,7 @@ func_L01_00262DA8
 func_L01_00262FE8
 func_L01_00263338
 func_L01_002635C8
+func_L02_002100E8
 func_L02_00250720
 func_L02_00250A58
 func_L02_00250C78

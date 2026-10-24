@@ -18,8 +18,13 @@ git clone https://github.com/OpenRAC/rac3-uya-decomp ~/Projects/rac3-decomp
 
 ## Lombyte: the same game, US build
 
-[Lombyte](https://github.com/mateuszklysz/Lombyte) (GPL-3.0) matches the US
-executable, `SCUS_971.99`. Its code is ours, compiled for another
+[Lombyte](https://github.com/mateuszklysz/Lombyte) (GPL-3.0 since its
+a1379f57, MIT before) matches the US executable, `SCUS_971.99`. This repository
+reads it at the commit pinned in `config/versions/us/ntsc_decomp.txt`, from a
+cache outside the checkout (`tools/ntsc_source.py`, docs/VERSIONS.md);
+`tools/lombyte.py` uses that checkout when `~/Projects/Lombyte` is not there.
+
+Its code is ours, compiled for another
 region, so a function it has matched is the best starting point we
 have. It keeps one C file per function under `src/`, with names
 recovered from the NTSC decomp.

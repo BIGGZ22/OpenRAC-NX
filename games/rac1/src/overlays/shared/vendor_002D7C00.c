@@ -123,7 +123,7 @@ extern int func_L00_0020DC00(void);
     if ((i) != -1) {                                                                               \
         unsigned char *e_ = D_0013E650 + (i) * 0x70;                                                 \
         if (*(unsigned char **)(e_ + 0x88) == (own) && e_[0x74] != 0) {                                     \
-            func_L00_0028EBF0(i);                                                           \
+            Sound_StopSlot(i);                                                           \
         }                                                                                          \
     }
 #define RELEASE_2D7C00(pv)                                                                         \
@@ -133,306 +133,341 @@ extern int func_L00_0020DC00(void);
     (pv)->voice1 = -1;
 #define SECS_2D7C00(x) func_001FA898(func_001F9878((x) * 60.0f))
 
-void func_L15_002D7C00(unsigned char *m) {
+typedef struct ElectricWaterVars {
+    s32 switches[4];              /* 0x00 moby indices of the switches, -1 = empty */
+    s16 on_timer;                 /* 0x10 */
+    s16 off_timer;                /* 0x12 */
+    s32 voice0;                   /* 0x14 */
+    f32 off_seconds;              /* 0x18 */
+    s32 shock_count;              /* 0x1C */
+    s32 water_areas[12];          /* 0x20 */
+    f32 saved_fog[4];             /* 0x50 */
+    s32 water_level_areas[4];     /* 0x60 */
+    s32 reset_area_a;             /* 0x70 */
+    s32 lamps[3];                 /* 0x74 */
+    s32 voice1;                   /* 0x80 */
+    struct Moby *owner;           /* 0x84 */
+    u8 saved_fog_color[4];        /* 0x88 */
+    s32 armed;                    /* 0x8C */
+    s32 lines[24];                /* 0x90 spark lines, 8 entries each, -1 ends one */
+    Q_2D7C00 bolt_start;          /* 0xF0 */
+    Q_2D7C00 bolt_end;            /* 0x100 */
+    Q_2D7C00 bolt_aim;            /* 0x110 */
+    s32 light;                    /* 0x120 */
+    s32 active_area;              /* 0x124 */
+    s32 reset_area_b;             /* 0x128 */
+} ElectricWaterVars;
+
+void electric_water_update(unsigned char *m) {
+    enum {
+        ELECTRIC_WATER_INITIALIZE = 0,
+        ELECTRIC_WATER_ON = 1,
+        ELECTRIC_WATER_OFF = 2,
+        ELECTRIC_WATER_SWITCH_DISABLED = 3
+    };
     extern float D_L15_00167440[];
-    float tmp[4];
+    float unused_vector_argument[4];
     Hit_2D7C00 hit;
-    Pv_2D7C00 *pv = *(Pv_2D7C00 **)(m + 0x78);
+    struct Moby *moby = (struct Moby *)m;
+    ElectricWaterVars *vars = (ElectricWaterVars *)moby->pvars;
     int armed = 1;
-    int wet, inside, n, r, t;
-    int k1, k2, k3, k4, k5, k6, k7, k8, k11;
-
+    int wet, inside, length, j, remaining;
+    int reset_sw, area, dim_lamp, lamp, line_offset, near_lamp, sw, i, level_area;
     int *best, *line;
-    unsigned char *near, *o;
-    unsigned short u;
-    float d1, a, b, c;
+    struct Moby *nearest;
+    unsigned short save_id;
+    float distance, theta, phi, radius;
 
-    if (m[0x20] != 0 && func_00215570(D_0013F4D0, pv->area) == 0) {
-        if (pv->owner != 0) {
-            RELEASE_2D7C00(pv);
+    if (moby->state != 0 && is_point_inside_clip_volume(gHeroPos, vars->active_area) == 0) {
+        if (vars->owner != 0) {
+            RELEASE_2D7C00(vars);
         }
-        if (pv->light != -1) {
-            func_L00_0023F1D0(pv->light);
-            pv->light = -1;
+        if (vars->light != -1) {
+            light_off_67e8(vars->light);
+            vars->light = -1;
         }
         return;
     }
 
-    switch (m[0x20]) {
-    case 0:
-        m[0x30] = 0xFF;
-        for (k1 = 0; k1 < 4; k1++) {
-            if (pv->sw[k1] == -1) {
+    switch (moby->state) {
+    case ELECTRIC_WATER_INITIALIZE:
+        moby->update_dist = 0xFF;
+        for (reset_sw = 0; reset_sw < 4; reset_sw++) {
+            if (vars->switches[reset_sw] == -1) {
                 continue;
             }
-            if (*(short *)(MOBY_2D7C00(pv->sw[k1]) + 0xA6) == 0x33E) {
-                D_L15_001BB334[*(short *)(MOBY_2D7C00(pv->sw[k1]) + 0xB2)] = 0;
-                D_L15_001BBF94[*(short *)(MOBY_2D7C00(pv->sw[k1]) + 0xB2)] = 0;
-                u = *(unsigned short *)(MOBY_2D7C00(pv->sw[k1]) + 0xB2);
-                *(int *)((((short)u >> 5) << 2) + (D_0015EE84 << 8) + (int)D_0014C290) &=
-                    ~(1 << (u & 0x1F));
-                u = *(unsigned short *)(MOBY_2D7C00(pv->sw[k1]) + 0xB2);
-                *(int *)((((short)u >> 5) << 2) + (int)D_L15_001BADE0) &= ~(1 << (u & 0x1F));
+            if (((struct Moby *)MOBY_2D7C00(vars->switches[reset_sw]))->oclass == 0x33E) {
+                D_L15_001BB334[*(short *)&((struct Moby *)MOBY_2D7C00(vars->switches[reset_sw]))->save_id] = 0;
+                D_L15_001BBF94[*(short *)&((struct Moby *)MOBY_2D7C00(vars->switches[reset_sw]))->save_id] = 0;
+                save_id = ((struct Moby *)MOBY_2D7C00(vars->switches[reset_sw]))->save_id;
+                *(int *)((((short)save_id >> 5) << 2) + (D_0015EE84 << 8) + (int)level_moby_killed) &= ~(1 << (save_id & 0x1F));
+                save_id = ((struct Moby *)MOBY_2D7C00(vars->switches[reset_sw]))->save_id;
+                *(int *)((((short)save_id >> 5) << 2) + (int)D_L15_001BADE0) &= ~(1 << (save_id & 0x1F));
             } else {
-                func_L15_002DA990(MOBY_2D7C00(pv->sw[k1]));
+                reset_electric_water_switch(MOBY_2D7C00(vars->switches[reset_sw]));
             }
         }
-        pv->onT = SECS_2D7C00((*(float *)&D_L15_00161C48));
-        pv->offT = func_001F9850(200);
-        pv->shocks = 0;
-        pv->light = -1;
-        m[0x20] = 1;
-        pv->voice0 = -1;
-        pv->voice1 = -1;
+        vars->on_timer = SECS_2D7C00((*(float *)&D_L15_00161C48));
+        vars->off_timer = scale_ticks(200);
+        vars->shock_count = 0;
+        vars->light = -1;
+        moby->state = ELECTRIC_WATER_ON;
+        vars->voice0 = -1;
+        vars->voice1 = -1;
         break;
 
-    case 1:
+    case ELECTRIC_WATER_ON:
         inside = 0;
-        wet = func_L15_002D7B60();
-        if (func_001F9938(&pv->onT) != 0) {
-            pv->offT = SECS_2D7C00((*(float *)&D_L15_00161C4C));
-            m[0x20] = 2;
-            if (pv->owner != 0) {
-                STOP_2D7C00(pv->voice1, pv->owner);
-                pv->voice1 = -1;
+        wet = Hero_IsNearGround();
+        if (FastDecTimer(&vars->on_timer) != 0) {
+            vars->off_timer = SECS_2D7C00((*(float *)&D_L15_00161C4C));
+            moby->state = ELECTRIC_WATER_OFF;
+            if (vars->owner != 0) {
+                STOP_2D7C00(vars->voice1, vars->owner);
+                vars->voice1 = -1;
             }
         }
-        for (k2 = 0; k2 < 12; k2++) {
-            if (func_00215570(D_0013F4D0, pv->water[k2]) != 0) {
+        for (area = 0; area < 12; area++) {
+            if (is_point_inside_clip_volume(gHeroPos, vars->water_areas[area]) != 0) {
                 inside = 1;
                 break;
             }
         }
-        if (m[0x20] == 2) {
-            for (k3 = 0; k3 < 3; k3++) {
-                if (pv->lamps[k3] != -1) {
-                    func_L00_00251328(MOBYP_2D7C00(pv->lamps[k3]), 0x40, 0x40, 0x40);
+        if (moby->state == ELECTRIC_WATER_OFF) {
+            for (dim_lamp = 0; dim_lamp < 3; dim_lamp++) {
+                if (vars->lamps[dim_lamp] != -1) {
+                    func_L00_00251328(MOBYP_2D7C00(vars->lamps[dim_lamp]), 0x40, 0x40, 0x40);
                 }
             }
         } else {
-            for (k4 = 0; k4 < 3; k4++) {
-                int v = func_L00_00258BC8(0x40, 0x7F);
-                if (pv->lamps[k4] != -1) {
-                    func_L00_00251328(MOBYP_2D7C00(pv->lamps[k4]), v, v, v);
+            for (lamp = 0; lamp < 3; lamp++) {
+                int v = rand_range(0x40, 0x7F);
+                if (vars->lamps[lamp] != -1) {
+                    func_L00_00251328(MOBYP_2D7C00(vars->lamps[lamp]), v, v, v);
                 }
             }
         }
 
-        if ((!inside || !wet) && func_002140B0(1) == 0 && (*(float *)&D_L15_00161C50) == 0.0f) {
+        if ((!inside || !wet) && random_integer_below(1) == 0 && (*(float *)&D_L15_00161C50) == 0.0f) {
             best = 0;
-            for (k5 = 0; k5 < 24; k5 += 8) {
-                line = &pv->lines[k5];
+            for (line_offset = 0; line_offset < 24; line_offset += 8) {
+                line = &vars->lines[line_offset];
                 if (line[0] == -1) {
                     continue;
                 }
                 if (best != 0) {
-                    d1 = func_001F9D10(CUBP_2D7C00(best[0]) + 0x30, D_0013F4D0);
-                    if (!(func_001F9D10(CUBP_2D7C00(line[0]) + 0x30, D_0013F4D0) < d1)) {
+                    distance = FastVecDist(CUBP_2D7C00(best[0]) + 0x30, gHeroPos);
+                    if (!(FastVecDist(CUBP_2D7C00(line[0]) + 0x30, gHeroPos) < distance)) {
                         continue;
                     }
                 }
                 best = line;
             }
             if (best != 0) {
-                n = 8;
-                for (r = 0; r < 8; r++) {
-                    if (best[r] == -1) {
-                        n = r;
+                length = 8;
+                for (j = 0; j < 8; j++) {
+                    if (best[j] == -1) {
+                        length = j;
                         break;
                     }
                 }
-                if (n >= 2) {
-                    line = (int *)((func_L00_00258BC8(0, n - 2) << 2) + (int)best);
-                    pv->start = *(Q_2D7C00 *)(CUB_2D7C00(line[0]) + 0x30);
-                    pv->aim = pv->end = *(Q_2D7C00 *)(CUB_2D7C00(line[1]) + 0x30);
-                    if (pv->light == -1) {
-                        pv->light = func_L00_0023F0D0(&pv->start, 8.0f, 0.0f, 1.0f, 1.0f, 0.5f);
+                if (length >= 2) {
+                    line = (int *)((rand_range(0, length - 2) << 2) + (int)best);
+                    vars->bolt_start = *(Q_2D7C00 *)(CUB_2D7C00(line[0]) + 0x30);
+                    vars->bolt_aim = vars->bolt_end = *(Q_2D7C00 *)(CUB_2D7C00(line[1]) + 0x30);
+                    if (vars->light == -1) {
+                        vars->light = UpdatePointLight(&vars->bolt_start, 8.0f, 0.0f, 1.0f, 1.0f, 0.5f);
                     } else {
-                        Light_2D7C00 *l = (Light_2D7C00 *)(D_L15_00180940 + (pv->light << 5));
-                        qcopy(&l->pos, &pv->start);
+                        Light_2D7C00 *l = (Light_2D7C00 *)(D_L15_00180940 + (vars->light << 5));
+                        qcopy(&l->pos, &vars->bolt_start);
                         *(float *)((char *)l + 0x1C) = 8.0f;
                         l->f0 = 1.0f;
                         l->f4 = 1.0f;
                         l->f8 = 0.5f;
                         l->iC = 0;
                     }
-                    func_L15_002D8DD8(m);
-                    func_L15_002D8FA0(m);
-                    func_001F49B0(func_L15_002D9B00, m);
+                    initialize_electric_water_bolt_effect((char *)moby);
+                    update_electric_water_bolt_effect(moby);
+                    AddDrawCallback(draw_electric_water_bolt_effect, moby);
                 }
             }
         }
 
         if (inside && wet) {
-            if (pv->owner != 0 && pv->owner != D_0013F450.moby) {
-                RELEASE_2D7C00(pv);
+            if (vars->owner != 0 && vars->owner != (struct Moby *)D_0013F450.moby) {
+                RELEASE_2D7C00(vars);
             }
-            pv->owner = D_0013F450.moby;
-            pv->voice0 = func_L00_0028EF68(0, 4, D_0013F450.moby, 0x28F);
-            pv->voice1 = func_L00_0028EF68(1, 4, D_0013F450.moby, 0x28F);
-            if (pv->shocks == 0) {
-                pv->fog[0] = D_L15_0015F548;
-                pv->fog[1] = D_L15_0015F54C;
-                pv->fog[2] = D_L15_0015F550;
-                pv->fog[3] = D_L15_0015F554;
-                pv->fogRGB[0] = D_L15_0015F544[0];
-                pv->fogRGB[1] = D_L15_0015F545[0];
-                pv->fogRGB[2] = D_L15_0015F546[0];
+            vars->owner = (struct Moby *)D_0013F450.moby;
+            vars->voice0 = Sound_PlayClassSound(0, 4, D_0013F450.moby, 0x28F);
+            vars->voice1 = Sound_PlayClassSound(1, 4, D_0013F450.moby, 0x28F);
+            if (vars->shock_count == 0) {
+                vars->saved_fog[0] = D_L15_0015F548;
+                vars->saved_fog[1] = D_L15_0015F54C;
+                vars->saved_fog[2] = D_L15_0015F550;
+                vars->saved_fog[3] = D_L15_0015F554;
+                vars->saved_fog_color[0] = D_L15_0015F544[0];
+                vars->saved_fog_color[1] = D_L15_0015F545[0];
+                vars->saved_fog_color[2] = D_L15_0015F546[0];
             }
-            pv->shocks = pv->shocks + 1;
+            vars->shock_count = vars->shock_count + 1;
             D_L15_0015F544[0] = 0x7F;
             D_L15_0015F545[0] = 0x7F;
             D_L15_0015F546[0] = 0x7F;
             D_L15_0015F54C = 131072.0f;
             *(int *)&D_L15_0015F548 = 0;
-            D_L15_0015F550 = func_002140F8(128.0f, 255.0f);
+            D_L15_0015F550 = random_float_between(128.0f, 255.0f);
             *(int *)&D_L15_0015F554 = 0;
-            c = func_002140F8(5.0f, 8.0f);
-            a = func_00214158();
-            b = func_00214158();
-            func_00215C00(&pv->aim, c, a, b);
-            func_L00_001FF240(tmp, &pv->aim, &D_0013F450.body);
-            pv->end = pv->aim;
-            pv->start = D_0013F450.body;
-            func_L15_002D8DD8(m);
-            func_L15_002D8FA0(m);
-            func_001F49B0(func_L15_002D9B00, m);
+            radius = random_float_between(5.0f, 8.0f);
+            theta = random_angle_radians();
+            phi = random_angle_radians();
+            BuildSphericalOffset(&vars->bolt_aim, radius, theta, phi);
+            func_L00_001FF240(unused_vector_argument, &vars->bolt_aim, &D_0013F450.body);
+            vars->bolt_end = vars->bolt_aim;
+            vars->bolt_start = D_0013F450.body;
+            initialize_electric_water_bolt_effect((char *)moby);
+            update_electric_water_bolt_effect(moby);
+            AddDrawCallback(draw_electric_water_bolt_effect, moby);
             hit.attacker = m;
             hit.flags = 0x10001;
             hit.damage = 1.0f;
-            hit.v[0] = func_001F9F90(*(float *)(m + 0x48)) * 0.2f;
-            hit.v[1] = func_001F9FA8(*(float *)(m + 0x48)) * 0.2f;
-            *(int *)&hit.v[2] = 0;
+            hit.v[0] = FastCos(moby->rot.z) * 0.2f;
+            hit.v[1] = FastSin(moby->rot.z) * 0.2f;
+            *(s32 *)&hit.v[2] = 0;
             func_L00_001FF500(hit.v, hit.v, 1.0f);
             hit.b29 = 1;
-            hit.oclass = *(unsigned short *)(m + 0xA6);
+            hit.oclass = *(u16 *)&moby->oclass;
             hit.v[2] = 1.0f;
             hit.v[3] = 5627.9248f;
             hit.b28 = 0;
-            func_L00_0025AAC0(D_0013F450.moby, &hit);
-            if (m[0x20] == 2) {
-                D_L15_0015F548 = pv->fog[0];
-                D_L15_0015F54C = pv->fog[1];
-                D_L15_0015F550 = pv->fog[2];
-                D_L15_0015F554 = pv->fog[3];
-                D_L15_0015F544[0] = pv->fogRGB[0];
-                D_L15_0015F545[0] = pv->fogRGB[1];
-                D_L15_0015F546[0] = pv->fogRGB[2];
+            PostHitMessageFromRecord(D_0013F450.moby, &hit);
+            if (moby->state == ELECTRIC_WATER_OFF) {
+                D_L15_0015F548 = vars->saved_fog[0];
+                D_L15_0015F54C = vars->saved_fog[1];
+                D_L15_0015F550 = vars->saved_fog[2];
+                D_L15_0015F554 = vars->saved_fog[3];
+                D_L15_0015F544[0] = vars->saved_fog_color[0];
+                D_L15_0015F545[0] = vars->saved_fog_color[1];
+                D_L15_0015F546[0] = vars->saved_fog_color[2];
             }
         }
         /* fall through: the hum and the switches, as in state 2 */
-    case 2:
-        near = 0;
-        for (k6 = 0; k6 < 3; k6++) {
-            if (pv->lamps[k6] == -1) {
+    case ELECTRIC_WATER_OFF:
+        nearest = 0;
+        for (near_lamp = 0; near_lamp < 3; near_lamp++) {
+            if (vars->lamps[near_lamp] == -1) {
                 continue;
             }
-            if (near != 0) {
-                d1 = func_001F9D48(near + 0x10, D_L15_00167440);
-                if (!(func_001F9D48(MOBYP_2D7C00(pv->lamps[k6]) + 0x10, D_L15_00167440) < d1)) {
+            if (nearest != 0) {
+                distance = func_001F9D48(&nearest->pos, D_L15_00167440);
+                if (!(func_001F9D48(&((struct Moby *)MOBYP_2D7C00(vars->lamps[near_lamp]))->pos, D_L15_00167440) < distance)) {
                     continue;
                 }
             }
-            near = MOBYP_2D7C00(pv->lamps[k6]);
+            nearest = (struct Moby *)MOBYP_2D7C00(vars->lamps[near_lamp]);
         }
-        if (pv->owner == 0
-            || (d1 = func_001F9D48(pv->owner + 0x10, D_L15_00167440), func_001F9D48(near + 0x10, D_L15_00167440) < d1)) {
-            if (pv->owner != 0) {
-                RELEASE_2D7C00(pv);
+        if (vars->owner == 0
+            || (distance = func_001F9D48(&vars->owner->pos, D_L15_00167440),
+                func_001F9D48(&nearest->pos, D_L15_00167440) < distance)) {
+            if (vars->owner != 0) {
+                RELEASE_2D7C00(vars);
             }
-            pv->owner = near;
+            vars->owner = nearest;
         }
-        if (func_L00_0028EB98(pv->owner, pv->voice0) == 0) {
-            pv->voice0 = func_L00_0028EF68(0, 5, pv->owner, 0x28F);
+        if (Sound_IsPlaying(vars->owner, vars->voice0) == 0) {
+            vars->voice0 = Sound_PlayClassSound(0, 5, vars->owner, 0x28F);
         }
-        if (m[0x20] == 1 && func_L00_0028EB98(pv->owner, pv->voice1) == 0) {
-            pv->voice1 = func_L00_0028EF68(1, 5, pv->owner, 0x28F);
+        if (moby->state == ELECTRIC_WATER_ON && Sound_IsPlaying(vars->owner, vars->voice1) == 0) {
+            vars->voice1 = Sound_PlayClassSound(1, 5, vars->owner, 0x28F);
         }
-        if (func_001F9938(&pv->offT) != 0 && m[0x20] == 2) {
-            pv->onT = SECS_2D7C00((*(float *)&D_L15_00161C48));
-            pv->offT = func_001F9850(200);
-            pv->shocks = 0;
-            m[0x20] = 1;
+        if (FastDecTimer(&vars->off_timer) != 0 && moby->state == ELECTRIC_WATER_OFF) {
+            vars->on_timer = SECS_2D7C00((*(float *)&D_L15_00161C48));
+            vars->off_timer = scale_ticks(200);
+            vars->shock_count = 0;
+            moby->state = ELECTRIC_WATER_ON;
         }
-        for (k7 = 0; k7 < 4; k7++) {
-            if (pv->sw[k7] != -1 && *(short *)(MOBY_2D7C00(pv->sw[k7]) + 0xA6) == 0x33E && MOBY_2D7C00(pv->sw[k7])[0x20] == 2) {
-                pv->offT = SECS_2D7C00(pv->offSecs);
-                m[0x20] = 3;
-                func_L00_0028EF68(2, 0, MOBYP_2D7C00(pv->sw[k7]), 0x28F);
-                pv->armed = 0;
-            } else if (pv->sw[k7] != -1 && func_L11_00310738(MOBYP_2D7C00(pv->sw[k7])) != 0) {
-                pv->offT = SECS_2D7C00(pv->offSecs);
-                m[0x20] = 3;
-                func_L00_0028EF68(2, 0, MOBYP_2D7C00(pv->sw[k7]), 0x28F);
-                pv->armed = 0;
+        for (sw = 0; sw < 4; sw++) {
+            if (vars->switches[sw] != -1
+                && ((struct Moby *)MOBY_2D7C00(vars->switches[sw]))->oclass == 0x33E
+                && ((struct Moby *)MOBY_2D7C00(vars->switches[sw]))->state == 2) {
+                vars->off_timer = SECS_2D7C00(vars->off_seconds);
+                moby->state = ELECTRIC_WATER_SWITCH_DISABLED;
+                Sound_PlayClassSound(2, 0, MOBYP_2D7C00(vars->switches[sw]), 0x28F);
+                vars->armed = 0;
+            } else if (vars->switches[sw] != -1 && IsMoby1179Active(MOBYP_2D7C00(vars->switches[sw])) != 0) {
+                vars->off_timer = SECS_2D7C00(vars->off_seconds);
+                moby->state = ELECTRIC_WATER_SWITCH_DISABLED;
+                Sound_PlayClassSound(2, 0, MOBYP_2D7C00(vars->switches[sw]), 0x28F);
+                vars->armed = 0;
             }
         }
         break;
 
-    case 3:
-        for (k8 = 0; k8 < 3; k8++) {
-            if (pv->lamps[k8] != -1) {
-                func_L00_00251328(MOBYP_2D7C00(pv->lamps[k8]), 0x40, 0x40, 0x40);
+    case ELECTRIC_WATER_SWITCH_DISABLED:
+        for (i = 0; i < 3; i++) {
+            if (vars->lamps[i] != -1) {
+                func_L00_00251328(MOBYP_2D7C00(vars->lamps[i]), 0x40, 0x40, 0x40);
             }
         }
-        if (pv->light != -1) {
-            func_L00_0023F1D0(pv->light);
-            pv->light = -1;
+        if (vars->light != -1) {
+            light_off_67e8(vars->light);
+            vars->light = -1;
         }
-        if (pv->offT != 0) {
-            func_001F49B0(func_L15_002D8BB0, m);
+        if (vars->off_timer != 0) {
+            AddDrawCallback(draw_electric_water_countdown, moby);
         }
-        if (pv->owner != 0) {
-            RELEASE_2D7C00(pv);
-            pv->owner = 0;
+        if (vars->owner != 0) {
+            RELEASE_2D7C00(vars);
+            vars->owner = 0;
         }
-        for (k8 = 0; k8 < 4; k8++) {
-            if (pv->sw[k8] == -1) {
+        for (i = 0; i < 4; i++) {
+            if (vars->switches[i] == -1) {
                 continue;
             }
-            if (D_0013F450.standing != MOBYP_2D7C00(pv->sw[k8]) || *(short *)(D_0013F450.standing + 0xA6) != 0x33E || D_0013F450.airTicks != 0) {
+            if (D_0013F450.standing != MOBYP_2D7C00(vars->switches[i])
+                || ((struct Moby *)D_0013F450.standing)->oclass != 0x33E
+                || D_0013F450.airTicks != 0) {
                 continue;
             }
-            if (pv->armed != 0) {
-                t = pv->offT;
-                if (t < SECS_2D7C00(pv->offSecs) - func_001F9850(0x3C)) {
-                    pv->offT = SECS_2D7C00(pv->offSecs);
-                    func_L00_0028EF68(2, 0, MOBYP_2D7C00(pv->sw[k8]), 0x28F);
+            if (vars->armed != 0) {
+                remaining = vars->off_timer;
+                if (remaining < SECS_2D7C00(vars->off_seconds) - scale_ticks(0x3C)) {
+                    vars->off_timer = SECS_2D7C00(vars->off_seconds);
+                    Sound_PlayClassSound(2, 0, MOBYP_2D7C00(vars->switches[i]), 0x28F);
                 }
             }
             armed = 0;
         }
-        pv->armed = armed;
-        if (func_001F9938(&pv->offT) == 0) {
-            if (func_00215570(&D_0013F450.pos, pv->resetA) == 0 || D_0013F450.airTicks != 0) {
-                if (func_00215570(&D_0013F450.pos, pv->resetB) == 0) {
+        vars->armed = armed;
+        if (FastDecTimer(&vars->off_timer) == 0) {
+            if (is_point_inside_clip_volume(&D_0013F450.pos, vars->reset_area_a) == 0 || D_0013F450.airTicks != 0) {
+                if (is_point_inside_clip_volume(&D_0013F450.pos, vars->reset_area_b) == 0) {
                     break;
                 }
             }
         }
-        for (k8 = 0; k8 < 4; k8++) {
-            if (pv->sw[k8] == -1) {
+        for (i = 0; i < 4; i++) {
+            if (vars->switches[i] == -1) {
                 continue;
             }
-            if (*(short *)(MOBY_2D7C00(pv->sw[k8]) + 0xA6) == 0x33E) {
-                MOBY_2D7C00(pv->sw[k8])[0x20] = 1;
+            if (((struct Moby *)MOBY_2D7C00(vars->switches[i]))->oclass == 0x33E) {
+                ((struct Moby *)MOBY_2D7C00(vars->switches[i]))->state = ELECTRIC_WATER_ON;
             } else {
-                func_L15_002DA990(MOBY_2D7C00(pv->sw[k8]));
+                reset_electric_water_switch(MOBY_2D7C00(vars->switches[i]));
             }
         }
-        pv->onT = SECS_2D7C00((*(float *)&D_L15_00161C48));
-        pv->offT = func_001F9850(200);
-        pv->shocks = 0;
-        m[0x20] = 1;
+        vars->on_timer = SECS_2D7C00((*(float *)&D_L15_00161C48));
+        vars->off_timer = scale_ticks(200);
+        vars->shock_count = 0;
+        moby->state = ELECTRIC_WATER_ON;
         break;
     }
 
     {
-        char *pos = D_0013F4D0;
+        char *pos = gHeroPos;
         Hero_2D7C00 *g = (Hero_2D7C00 *)(pos - 0x80);
-        for (k11 = 0; k11 < 4; k11++) {
-            if (func_00215570(pos, pv->levels[k11]) != 0 && func_L00_0020DC00() != 0) {
-                g->waterLevel = *(float *)(CUB_2D7C00(pv->levels[k11]) + 0x38);
+        for (level_area = 0; level_area < 4; level_area++) {
+            if (is_point_inside_clip_volume(pos, vars->water_level_areas[level_area]) != 0 && Hero_IsInSpecialState() != 0) {
+                g->waterLevel = *(float *)(CUB_2D7C00(vars->water_level_areas[level_area]) + 0x38);
             }
         }
     }
@@ -458,7 +493,7 @@ extern short D_L15_00161C74;
 #define W(x) (*(int *)&(x))
 
 /* Draws the level timer as "H:MM:SS.t" text with a pulsing colour. */
-void TimerMoby_Draw(char *moby) {
+void draw_electric_water_countdown(char *moby) {
     char buf[8];
     char *data = *(char **)(moby + 0x78);
     float v;
@@ -512,7 +547,7 @@ extern void func_001F9BD8(void *, void *, void *);
 extern void func_001F9BC0(void *);
 
 /* Adapted from Lombyte (GPL-3.0) for PAL by OpenRAC's tools/port.py: src/overlays/shared/gameplay/entities/002d6810.c, FUN_L15_002d79e8. */
-void ResetBeamPoints(char *m) {
+void initialize_electric_water_bolt_effect(char *m) {
     char *d = *(char **)(m + 0x78);
     float v[4];
     float step[4];
@@ -605,7 +640,7 @@ extern float D_L15_00167440_2d8fa0[] __asm__("D_L15_00167440");
 extern float D_L15_0015F660_2d8fa0[] __asm__("D_L15_0015F660") MACRO_ADDR;
 
 /* Quartu arc emitter: rebuilds the 20-point bolt and its mirror between the data block's end points, regrows or jitters four side arcs, then spawns three particles. */
-void QuartuArcEmitter(Moby *moby) {
+void update_electric_water_bolt_effect(Moby *moby) {
     V_2d8fa0 s[10];
     V_2d8fa0 d[5];
     Data_2d8fa0 *data = (Data_2d8fa0 *)moby->pvars;
@@ -640,7 +675,7 @@ void QuartuArcEmitter(Moby *moby) {
         float b;
         f21 = *(float *)&D_L15_00161C8C
               + (*(float *)&D_L15_00161C90 - *(float *)&D_L15_00161C8C) * (IntToFloat(i) * 0.05f);
-        f21 = f21 * FastSin(WrapAngle(*(float *)&D_L15_00161C94 + (float)i * *(float *)&D_L15_00161C88));
+        f21 = f21 * FastSin(normalize_angle(*(float *)&D_L15_00161C94 + (float)i * *(float *)&D_L15_00161C88));
         f21 = f21 + randf_sym(*(float *)&D_L15_00161CCC, *(float *)&D_L15_00161CD0);
         D_L15_001D3A20_2d8fa0[0][i].f[2] = D_L15_001D3A20_2d8fa0[0][i].f[2] - D_L15_001D3CA0[i];
         D_L15_001D3CA0[i] = f21;
@@ -680,9 +715,9 @@ void QuartuArcEmitter(Moby *moby) {
             float h;
             float ang;
             float m;
-            g = WrapAngle(*(float *)&D_L15_00161C9C + (float)i * *(float *)&D_L15_00161CA4);
+            g = normalize_angle(*(float *)&D_L15_00161C9C + (float)i * *(float *)&D_L15_00161CA4);
             h = *(float *)&D_L15_00161CA8
-                * FastSin(WrapAngle(*(float *)&D_L15_00161CB0 + (float)i * *(float *)&D_L15_00161CB8));
+                * FastSin(normalize_angle(*(float *)&D_L15_00161CB0 + (float)i * *(float *)&D_L15_00161CB8));
             qcopy(&D_L15_001D3A20_2d8fa0[1][i], &D_L15_001D3A20_2d8fa0[0][i]);
             h = h * FastSin(g) + randf_sym(0.0f, 0.1f);
             D_L15_001D3A20_2d8fa0[1][i].f[2] = D_L15_001D3A20_2d8fa0[1][i].f[2] + h;
@@ -800,7 +835,7 @@ extern void func_L15_002DA238(char *);
 #define F(x) (*(float *)&(x))
 
 // Scrolls a wrapping coordinate, refreshes the two path curves and four colour curves, then runs the follow-up.
-void UpdateBeamCurves(char *moby) {
+void draw_electric_water_bolt_effect(char *moby) {
     float v = F(D_L15_00161CD4) - F(D_L15_00161CD8) * D_0015EE60;
     F(D_L15_00161CD4) = v;
     if (v <= -8.0f) {
@@ -891,7 +926,7 @@ void DrawBillboardQuadPair(char *mv) {
 }
 extern int func_L11_00310738(void *);
 
-void Moby_ActivateIfTriggered(char *moby)
+void reset_electric_water_switch(char *moby)
 {
     if (IsMoby1179Active(moby)) {
         moby[0x20] = 1;
@@ -911,7 +946,7 @@ extern void func_0020D678(void *);
 extern void func_L07_0029C6A8(void *, float, int, float);
 
 /* Adapted from Lombyte (GPL-3.0) for PAL by OpenRAC's tools/port.py: src/overlays/shared/gameplay/entities/002d6810.c, FUN_L15_002e4380. */
-void Moby934Update(unsigned char *m) {
+void update_spinning_projectile(unsigned char *m) {
     char *d = *(char **)(m + 0x78);
     float next[4];
     char col[0x30];
@@ -939,7 +974,7 @@ void Moby934Update(unsigned char *m) {
     }
     qcopy(m + 0x10, next);
     if (D_L15_0015F6B0 % 3 == 0)
-        SpawnMobyAttachedParticle(m, 30000.0f, 0, 0.1f);
+        spawn_moby_point_offset_particle(m, 30000.0f, 0, 0.1f);
 }
 extern char *func_0020D348(int);
 extern void func_001F9C30(void *, void *, float);
@@ -948,7 +983,7 @@ extern void func_L00_00251E30(void *);
 extern char *func_L00_0026E940(char *src, int col, int w, int v, float x);
 
 // Spawns a moby of class 0x3A6 aimed along a direction, copying position and flags from the caller.
-char *SpawnMoby934(char *src, float *v, char *pos) {
+char *spawn_class_3a6_moby(char *src, float *v, char *pos) {
     char *m = CreateMoby(0x3A6);
     if (m != 0) {
         char *p;
@@ -1011,7 +1046,7 @@ typedef struct {
 } RingVars_6D48;
 
 /* Underwater ring update: approach check, then the ring's state machine. */
-void UnderwaterRingUpdate(unsigned char *moby) {
+void underwater_ring_update(unsigned char *moby) {
     RingVars_6D48 *vars = *(RingVars_6D48 **)(moby + 0x78);
     unsigned char delta[16];
     unsigned char matrix[64];
@@ -1154,7 +1189,7 @@ void RippleStripsMobyUpdate(char *moby)
         func_L00_00251328(moby, 0x40, 0x40, 0x40);
         moby[0x20] = 1;
     } else {
-        AddDrawCallback((void *)DrawRippleStrips, moby);
+        AddDrawCallback((void *)draw_moby_radial_ripple_mesh_buffers, moby);
         *(short *)(moby + 0x32) = 0;
         *(unsigned short *)(moby + 0x34) |= 1;
     }
@@ -1170,44 +1205,56 @@ extern int D_L15_0015F720 MACRO_ADDR;
 extern short D_L15_00162220;
 extern unsigned char D_0013D355[];
 
+typedef struct {
+    u8 pad_0[0x2084];
+    s32 current;
+} HeroStateWord_2D7C00;
+
 /* Update for moby class 1428: a four-state trigger that spins and then deletes itself. */
-void Moby1428Update(unsigned char *moby) {
-    unsigned char *p;
+void codebot_update(unsigned char *moby) {
+    enum {
+        CODEBOT_INITIALIZE = 0,
+        CODEBOT_CHECK_HERO_PROXIMITY = 1,
+        CODEBOT_RECORD_COLLECTION = 2,
+        CODEBOT_REMOVE = 3
+    };
+    Moby *m = (Moby *)moby;
+    unsigned char *collection_flags;
     if (D_0015EE84 != 0xF) {
-        *(float *)(moby + 0x48) = FastAddRots(*(float *)(moby + 0x48), D_0015EE6C * 1.5707964f);
-        *(float *)(moby + 0x2C) = *(float *)(*(char **)(moby + 0x24) + 0x24) * *(float *)&D_L15_00162220;
-        switch (moby[0x20]) {
-        case 0:
+        m->rot.z = FastAddRots(m->rot.z, D_0015EE6C * 1.5707964f);
+        m->scale = m->pclass->scale * *(float *)&D_L15_00162220;
+        switch (m->state) {
+        case CODEBOT_INITIALIZE:
             InitRandomMobyData(moby);
             if (D_0013D355[0x13D] != 0) {
                 DeleteMoby(moby);
             } else {
-                moby[0x20] = 1;
-                *(float *)(moby + 0x18) += 1.0f;
+                m->state = 1;
+                m->pos.z += 1.0f;
             }
             break;
-        case 1:
+        case CODEBOT_CHECK_HERO_PROXIMITY:
             SparkleSpritesDrawL02(moby);
-            if (FastVecDist(moby + 0x10, D_0013E633 + 0xE9D) < 3.0f) {
-                if (*(int *)(D_0013E633 + 0xE9D + 0x2004) != 0x32) {
-                    *(unsigned short *)(moby + 0x34) |= 0x41;
+            if (FastVecDist(&m->pos, &((Hero_2D7C00 *)&D_0013F450)->pos) < 3.0f) {
+                if (((HeroStateWord_2D7C00 *)&D_0013F450)->current != 0x32) {
+                    m->flags |= 0x41;
                     StartCutscene(1);
-                    moby[0x20] = 2;
+                    m->state = 2;
                 }
             }
             break;
-        case 2:
+        case CODEBOT_RECORD_COLLECTION:
             if (D_L15_0015F6A8 != 2) {
                 ShowBanner(0x426A, -1);
                 D_L15_0015F720 = scale_ticks(0xB4);
-                p = D_0013D355 + 0x13B;
-                p[2] = 1;
-                p[0x78] = 1;
-                moby[0x20] = 3;
+                collection_flags = D_0013D355 + 0x13B;
+                collection_flags[2] = 1;
+                collection_flags[0x78] = 1;
+                m->state = 3;
                 memcard_Save(0, -1);
             }
             break;
-        case 3:
+        case CODEBOT_REMOVE:
             DeleteMoby(moby);
             break;
         }
@@ -1244,7 +1291,7 @@ extern char D_0014171B[] NOT_SDA;
 typedef int u128_2EE458 __attribute__((mode(TI)));
 
 // Update for the giant Clank pad moby: a small state machine that sets up its effect block and its timers.
-void GiantClankPadUpdate(char *m) {
+void giant_clank_pad_update(char *m) {
     char *data = *(char **)(m + 0x78);
     PadMoby_2EE458 *other;
     PadMoby_2EE458 *p0;
@@ -1324,7 +1371,7 @@ void GiantClankPadUpdate(char *m) {
         *(u128_2EE458 *)V = *(u128_2EE458 *)(m + 0x10);
         f = ProbeGroundHeight(V, 0, 0.5f);
         V[2] = f + 0.1f;
-        if (D_0015EE84 == 0xF) PauseMenu_SeedSnapshot(V, m + 0x40);
+        if (D_0015EE84 == 0xF) jet_reset_camera(V, m + 0x40);
         Hero_ResetToPosition(V, m + 0x40, 0, 1);
         o3 = other->unk24;
         other->unk94 = *(int *)(o3 + 0x10);

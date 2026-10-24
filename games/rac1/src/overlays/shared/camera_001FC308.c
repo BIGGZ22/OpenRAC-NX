@@ -8,7 +8,7 @@ extern int D_L02_00169670[];
 
 /* Adapted from Lombyte (GPL-3.0) for PAL by OpenRAC's tools/port.py: src/overlays/shared/gameplay/camera/001fc008.c, FUN_L02_001fc008. */
 /* Adds fn to the post-update queue (D_L02_00169670, count D_L02_0015F04C) unless it is there already; the queue holds 16 at most. */
-void RegisterUniqueCallback(int fn) {
+void register_camera_update_callback(int fn) {
     int i;
 
     if (D_L02_0015F04C < 16) {

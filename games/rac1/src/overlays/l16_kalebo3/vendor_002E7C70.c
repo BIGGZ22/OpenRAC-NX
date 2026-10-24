@@ -79,14 +79,14 @@ typedef struct {
 extern L16ChallengePlayer D_0013E633_challenge __asm__("D_0013E633");
 
 /* Update the challenge NPC's interaction state and gaze. */
-void ChallengeNpcUpdate(L16ChallengeMoby *m) {
+void gadgetron_ceo_update(L16ChallengeMoby *m) {
     L16ChallengeScratch scratch;
     L16ChallengeData *d = m->data;
     L16ChallengeActivation *activation = (L16ChallengeActivation *)d->activation;
     float rate, head_rate;
     int tracking;
     if (m->visible && FastVecDist(m->position, D_L16_00167240) < 28.0f) {
-        SetGroundHeightBand(m);
+        func_L00_0025B178(m);
         m->distance_class = 22;
     }
     AttachManipulatorsIfCheat(m);
@@ -98,7 +98,7 @@ void ChallengeNpcUpdate(L16ChallengeMoby *m) {
         *(float *)((char *)d + 0x2C) = 3.7f;
         d->initial_yaw = m->yaw;
         if (*(int *)(D_0013D605 + 0x71F) == 0) m->yaw = FastAddRots(m->yaw, 3.14159265f);
-        Challenge_SetIdleLayout((char *)m);
+        restore_gadgetron_ceo_non_challenge_environment((char *)m);
         break;
     case 1: {
         if (((L16ChallengePlayer *)((char *)&D_0013E633_challenge + 0xE1D))->mode != 15)
@@ -139,11 +139,11 @@ void ChallengeNpcUpdate(L16ChallengeMoby *m) {
             qcopy(camera + 0x10, pose + 0x30);
             camera[0x3AC] = 1;
             m->state = 3;
-            Challenge_SetActiveLayout((char *)m);
+            activate_gadgetron_ceo_challenge_environment((char *)m);
         }
         if (((L16ChallengePlayer *)((char *)&D_0013E633_challenge + 0xE1D))->mode == 22) {
             m->state = 3;
-            Challenge_SetActiveLayout((char *)m);
+            activate_gadgetron_ceo_challenge_environment((char *)m);
         }
         break;
     }
@@ -153,7 +153,7 @@ void ChallengeNpcUpdate(L16ChallengeMoby *m) {
             m->state = 1;
             previous = activation->previous;
             if (previous == 4) {
-                PlayMovieEntryIfIdle(0);
+                start_indexed_disc_stream(0);
                 m->state = previous;
             }
         }
@@ -170,7 +170,7 @@ void ChallengeNpcUpdate(L16ChallengeMoby *m) {
         L16ChallengePlayer *player = (L16ChallengePlayer *)((char *)&D_0013E633_challenge + 0xE1D);
         unsigned char event;
         if (player->points >= 4500) {
-            unsigned char *flags = (unsigned char *)D_0013D50F + 1;
+            unsigned char *flags = (unsigned char *)menu_item_enabled_115 + 1;
             if (!flags[0x1A]) {
                 flags[0x1A] = 1;
                 PlayBankSound(1, 0, 0);
@@ -180,7 +180,7 @@ void ChallengeNpcUpdate(L16ChallengeMoby *m) {
         }
         if (((L16ChallengePlayer *)((char *)&D_0013E633_challenge + 0xE1D))->mode == 0) {
             m->state = 1;
-            Challenge_SetIdleLayout((char *)m);
+            restore_gadgetron_ceo_non_challenge_environment((char *)m);
         }
         event = m->event;
         if (event == 1) {
@@ -197,13 +197,13 @@ void ChallengeNpcUpdate(L16ChallengeMoby *m) {
                 activation->pending = pending;
                 activation->flag = event;
             }
-            Challenge_SetIdleLayout((char *)m);
+            restore_gadgetron_ceo_non_challenge_environment((char *)m);
         }
         if (m->event == 2) {
             m->state = 1;
             Hero_ResetToPosition(D_L16_001D9B30, D_L16_001D9B30 + 0x10, 0, 1);
             m->event = 0;
-            Challenge_SetIdleLayout((char *)m);
+            restore_gadgetron_ceo_non_challenge_environment((char *)m);
         }
         if (m->event == 3) {
             char *camera;
@@ -274,17 +274,17 @@ extern void func_L00_002664B0(int, int);
 extern float D_L16_0015F718 MACRO_ADDR;
 
 // Sets up the flags of two rows of sub-objects, then a global and a call.
-void Challenge_SetActiveLayout(char *moby) {
+void activate_gadgetron_ceo_challenge_environment(char *moby) {
     char *data = *(char **)(moby + 0x78);
     int *p = (int *)(data + 0x60);
     int i;
     for (i = 15; i >= 0; i--) {
-        SetGroupMobyFlags(*p, 1, 1, 1);
+        jet_group_state(*p, 1, 1, 1);
         p++;
     }
     p = (int *)(data + 0xA0);
     for (i = 7; i >= 0; i--) {
-        SetGroupMobyFlags(*p, 0, 0, 0);
+        jet_group_state(*p, 0, 0, 0);
         p++;
     }
     *(float *)&D_L16_0015F718 = 74.0f;
@@ -294,19 +294,19 @@ void Challenge_SetActiveLayout(char *moby) {
 extern void func_L16_002DF780(float);
 
 // Resets the moby's two arrays of handles, then starts the follow-up effect.
-void Challenge_SetIdleLayout(char *moby)
+void restore_gadgetron_ceo_non_challenge_environment(char *moby)
 {
     char *data = *(char **)(moby + 0x78);
     int *p;
     int i;
     p = (int *)(data + 0x60);
     for (i = 15; i >= 0; i--) {
-        SetGroupMobyFlags(p[0], 0, 0, 0);
+        jet_group_state(p[0], 0, 0, 0);
         p++;
     }
     p = (int *)(data + 0xA0);
     for (i = 7; i >= 0; i--) {
-        SetGroupMobyFlags(p[0], 1, 1, 0);
+        jet_group_state(p[0], 1, 1, 0);
         p++;
     }
     Challenge_SetLayoutParam(100.0f);
@@ -317,7 +317,7 @@ extern char D_0013D50F[];
 extern int func_00215570(void *, int);
 
 /* update: a two-state trigger on the player's state */
-void BannerTriggerUpdate(char *moby) {
+void update_two_region_trigger_latch(char *moby) {
     char *data = *(char **)(moby + 0x78);
     switch (*(int *)(data + 8)) {
     case 0: {
@@ -334,7 +334,7 @@ void BannerTriggerUpdate(char *moby) {
         if (*(int *)(h + 0x2084) == 0x42) {
             *(int *)(data + 8) = 0;
         } else if (is_point_inside_clip_volume(h + 0x80, *(int *)(data + 4)) != 0) {
-            unsigned char *f = (unsigned char *)D_0013D50F + 0x1;
+            unsigned char *f = (unsigned char *)menu_item_enabled_115 + 0x1;
             if (f[0x19] == 0) {
                 f[0x19] = 1;
                 PlayBankSound(1, 0, 0);
@@ -378,7 +378,7 @@ typedef struct {
 } L16WalkerData;
 
 /* Update of a path walker: keeps its sound alive, follows the path behind its owner and jumps ahead while unobserved. */
-void PathWalkerUpdate(unsigned char *m) {
+void update_path_walker(unsigned char *m) {
     float old[4], rotation[4], trial[4];
     char *path;
     L16WalkerData *d;
@@ -401,7 +401,7 @@ void PathWalkerUpdate(unsigned char *m) {
             DeleteMoby(m);
             return;
         }
-        WalkerGroup_Init(m);
+        initialize_path_walker_group(m);
         break;
     case 1: {
         L16WalkerData *other = *(L16WalkerData **)(d->owner + 0x78);
@@ -467,7 +467,7 @@ void PathWalkerUpdate(unsigned char *m) {
     }
     }
     if (*(unsigned short *)(m + 0xA6) & 1) {
-        Moby_EmitProximityParticle(m, old);
+        emit_path_walker_particle(m, old);
     }
 }
 typedef int u128 __attribute__((mode(TI)));
@@ -482,7 +482,7 @@ extern float func_00214158(void);
 extern void func_L00_0026DD70_emit(void *, void *, int, int, float, int) __asm__("func_L00_0026DD70");
 
 /* Emits a particle near an active moby when the target is close. */
-void Moby_EmitProximityParticle(unsigned char *m, void *v) {
+void emit_path_walker_particle(unsigned char *m, void *v) {
     float input[4];
     float offset[4];
     float out[4];
@@ -514,7 +514,7 @@ extern char *D_L16_00160098 MACRO_ADDR;
 extern float D_L16_00161F54 SDATA(D_L16_00161F54);
 
 /* Start of a walker group: lists the group's mobys and spaces them along the path in random order. */
-void WalkerGroup_Init(unsigned char *m) {
+void initialize_path_walker_group(unsigned char *m) {
     unsigned char *objects[16];
     unsigned char *previous;
     L16WalkerData *d = *(L16WalkerData **)(m + 0x78);
@@ -578,7 +578,7 @@ extern void func_L00_00264BE8(void *, void *, void *, float, float);
 typedef float W[4] __attribute__((aligned(16)));
 
 /* Waits one tick, then pushes two pairs of the player's points apart along their difference. */
-void SparkRingEmitterUpdate(char *moby) {
+void update_paired_joint_particle_trails(char *moby) {
     W a, b, c, d, e, f;
     float k1 = 0.075f, k2 = 20000.0f, k3 = 1000.0f;
     float j1 = 0.075f, j2 = 20000.0f, j3 = 1000.0f;
@@ -596,12 +596,12 @@ void SparkRingEmitterUpdate(char *moby) {
             Moby_GetJointWorldPos(p, 4, c);
             FastVecSub(e, a, c);
             func_L00_001FF4B0(e, e, k1);
-            SpawnSparkRings(a, a, e, k2, k3);
+            draw_trail(a, a, e, k2, k3);
             Moby_GetJointWorldPos(p, 7, b);
             Moby_GetJointWorldPos(p, 5, d);
             FastVecSub(f, b, d);
             func_L00_001FF4B0(f, f, j1);
-            SpawnSparkRings(b, b, f, j2, j3);
+            draw_trail(b, b, f, j2, j3);
         }
         }
         break;
@@ -729,7 +729,7 @@ void ElevatorPlatformUpdate(L16PlatformMoby *m) {
             }
             clear_u64_value(motion.v);
             motion.v[2] = speed;
-            CarryRiders((char *)d->basis, motion.v, m->rotation, m->rotation);
+            update_entity_matrix((char *)d->basis, motion.v, m->rotation, m->rotation);
             if (motion.v[2] != 0.0f) {
                 if (!Sound_IsPlaying(m, d->particle)) {
                     d->particle = Moby_PlaySound(0, 4, (int)m);
@@ -750,7 +750,7 @@ void ElevatorPlatformUpdate(L16PlatformMoby *m) {
         }
         }
         FastVecAdd(delta.v, delta.v, m->position);
-        CarryRiders((char *)d->basis, delta.v, old_rotation.v, m->rotation);
+        update_entity_matrix((char *)d->basis, delta.v, old_rotation.v, m->rotation);
     }
 }
 extern int func_001FA8A8(int,int,float);
@@ -832,23 +832,36 @@ void DrawRingStack(char *m) {
     }
 }
 
-void SpinningObjectUpdate(unsigned char *moby)
+typedef struct L16SignMoby {
+    u8 pad_00[0x10];
+    struct { f32 x; f32 y; f32 z; f32 w; } pos; /* 0x10 */
+    u8 state;                                   /* 0x20 */
+    u8 pad_21[0xB];                             /* 0x21 */
+    f32 scale;                                  /* 0x2C */
+    u8 update_dist;                             /* 0x30 */
+    u8 pad_31;                                  /* 0x31 */
+    s16 draw_dist;                              /* 0x32 */
+    u8 pad_34[0xC];                             /* 0x34 */
+    struct { f32 x; f32 y; f32 z; f32 w; } rot; /* 0x40 */
+} L16SignMoby;
+
+void gadgetron_sign_update(unsigned char *moby_bytes)
 {
-    switch (moby[0x20]) {
-    case 0:
-        {
-            float size = *(float *)(moby + 0x2C) * 4.0f;
-            int ff = 0xFF;
-            int twohundred = 0x200;
-            moby[0x20] = 1;
-            moby[0x30] = ff;
-            *(short *)(moby + 0x32) = twohundred;
-            *(float *)(moby + 0x18) = 160.0f;
-            *(float *)(moby + 0x2C) = size;
-        }
-        break;
+    L16SignMoby *moby = (L16SignMoby *)moby_bytes;
+
+    switch (moby->state) {
+    case 0: {
+        float size = moby->scale * 4.0f;
+        int ff = 0xFF;
+        int twohundred = 0x200;
+        moby->state = 1;
+        moby->update_dist = ff;
+        moby->draw_dist = twohundred;
+        moby->pos.z = 160.0f;
+        moby->scale = size;
+    } break;
     case 1:
-        *(float *)(moby + 0x48) = FastAddRots(*(float *)(moby + 0x48), D_0015EE6C * -0.2617993950843811f);
+        moby->rot.z = FastAddRots(moby->rot.z, D_0015EE6C * -0.2617993950843811f);
         break;
     }
 }
@@ -858,7 +871,7 @@ extern int func_L00_00258BC8(int, int);
 extern int func_L16_002E2290(void *);
 extern float func_00214358(void *, int, float);
 extern void func_L16_002C57E8(void *, void *);
-void TargetActivator_Update(char *moby) {
+void update_target_reposition_cycle(char *moby) {
     char *g = D_0013E633 + 0xE9D;
     char *data = *(char **)(moby + 0x78);
     char *target;
@@ -873,7 +886,7 @@ void TargetActivator_Update(char *moby) {
         break;
     case 1:
         if (func_001F9D48(g, target + 0x10) > 3.0f) {
-            if (FindMoby270InGroup(*(int *)data) != 0) {
+            if (find_group_class_010e_moby_in_state_6(*(int *)data) != 0) {
                 if (func_001F9908(data + 0xC)) {
                     moby[0x20] = 2;
                     Moby_ActivateFromState1(target);
@@ -883,7 +896,7 @@ void TargetActivator_Update(char *moby) {
         }
         break;
     case 2:
-        n = TargetMoby_GetPhase(target);
+        n = get_target_reposition_status(target);
         switch (n) {
         case 0:
             moby[0x20] = 1;
@@ -891,12 +904,12 @@ void TargetActivator_Update(char *moby) {
         case 2:
             moby[0x20] = 1;
         {
-            char *other = FindMoby270InGroup(*(int *)data);
+            char *other = find_group_class_010e_moby_in_state_6(*(int *)data);
             if (other != 0) {
                 qcopy(pos, target + 0x10);
                 pos[2] += 1.0f;
                 pos[2] = ProbeGroundHeight(pos, 0, 0.5f);
-                SpawnEffectsAroundMoby(other, pos);
+                reposition_moby_with_collision_check(other, pos);
             }
         }
             break;
@@ -907,7 +920,7 @@ void TargetActivator_Update(char *moby) {
 extern int func_L16_002C5A08(void *);
 
 // Finds the first moby of type 0x10E in a level's id list that passes the check.
-char *FindMoby270InGroup(int idx)
+char *find_group_class_010e_moby_in_state_6(int idx)
 {
     short *p = D_L16_001ABFC0[idx];
     char *moby;
@@ -915,7 +928,7 @@ char *FindMoby270InGroup(int idx)
         return 0;
     for (;;) {
         moby = D_L16_00160098 + ((*(unsigned short *)p & 0x7FFF) << 8);
-        if (*(short *)(moby + 0xA6) == 0x10E && Moby_IsState6(moby))
+        if (*(short *)(moby + 0xA6) == 0x10E && is_moby_in_state_6(moby))
             return moby;
         if (*p++ < 0)
             return 0;
@@ -985,7 +998,7 @@ void EnvMapA_Draw(void) {
     VU1_addGSregister(0x42, 0x4000000064);
     VU1_addGSregister(8, 0);
     VU1_addGSregister(0x14, 0xFF9000000260);
-    Draw_BuildVu1Setup();
+    font_queue_vu_state();
     for (i = 0; i < 3; i++) {
         if (FastBSphereCheck(D_L16_001DC8D0[i], 512.0f) != -1) {
             EnvMap_ComputeUVs(a[i], d[i], b[i], c[i], D_L16_001DC900);
@@ -999,7 +1012,7 @@ extern L16SingleSphere_2e8e80 D_L16_001DC8D0_EA2F8[] __asm__("D_L16_001DC8D0");
 extern void func_L16_002EA1B8_EA2F8(void *) __asm__("func_L16_002EA1B8");
 
 /* Adapted from Lombyte (GPL-3.0) for PAL by OpenRAC's tools/port.py: src/overlays/l16/gameplay_vendor_002e3190.c, FUN_L16_002e8e80. */
-void EnvMapA_Update(unsigned char *m) {
+void update_level16_three_mesh_render_state(unsigned char *m) {
     int i, j;
     float maxx, maxy, maxz, minx, miny, minz;
     float p[4];
@@ -1071,7 +1084,7 @@ void EnvMapSingle_Draw(void) {
     VU1_addGSregister(0x42, 0x4000000064);
     VU1_addGSregister(8, 0);
     VU1_addGSregister(0x14, 0xFF9000000260);
-    Draw_BuildVu1Setup();
+    font_queue_vu_state();
     for (i = 0; i < 1; i++) {
         if (FastBSphereCheck(p[i], 512.0f) != -1) {
             EnvMap_ComputeUVs(a[i], d[i], b[i], c[i], (float *)D_L16_001DDF50);
@@ -1086,7 +1099,7 @@ extern L16SingleSphere D_L16_00162040_bounds[] __asm__("D_L16_00162040") MACRO_A
 extern void func_L16_002EA6E8(void);
 
 /* Compute bounding spheres for one mesh and register their renderer. */
-void RegisterMeshSpheres(unsigned char *m) {
+void update_level16_single_mesh_render_state(unsigned char *m) {
     int i, j;
     float maxx, maxy, maxz, minx, miny, minz;
     float p[4];
@@ -1146,7 +1159,7 @@ extern short D_L16_00162068;
 extern short D_L16_00162070;
 
 // Sets up the draw state, then draws the two entries of the level's table.
-void EnvMapB_Draw(void) {
+void draw_level16_visible_textured_batches(void) {
     int *a = (int *)&D_L16_00162050;
     int *b = (int *)&D_L16_00162058;
     int *c = (int *)&D_L16_00162060;
@@ -1158,7 +1171,7 @@ void EnvMapB_Draw(void) {
     VU1_addGSregister(0x42, 0x4000000064);
     VU1_addGSregister(8, 0);
     VU1_addGSregister(0x14, 0xFF9000000260);
-    Draw_BuildVu1Setup();
+    font_queue_vu_state();
     for (i = 0; i < 2; i++) {
         if (FastBSphereCheck(D_L16_001DF580[i], 512.0f) != -1) {
             EnvMap_ComputeUVs(a[i], d[i], b[i], c[i], D_L16_001DF5A0);
@@ -1172,7 +1185,7 @@ void func_001F49B0_EAD58(int arg0, int arg1) __asm__("func_001F49B0");
 extern L16SingleSphere_2e98e0 D_L16_001DF580_EAD58[] __asm__("D_L16_001DF580");
 
 /* Adapted from Lombyte (GPL-3.0) for PAL by OpenRAC's tools/port.py: src/overlays/l16/gameplay_vendor_002e3190.c, FUN_L16_002e98e0. */
-void EnvMapB_Update(unsigned char *m) {
+void update_level16_two_mesh_render_state(unsigned char *m) {
     int i, j;
     float maxx, maxy, maxz, minx, miny, minz;
     float p[4];
@@ -1219,7 +1232,7 @@ void EnvMapB_Update(unsigned char *m) {
         break;
     }
     case 1:
-        func_001F49B0_EAD58(EnvMapB_Draw, m);
+        func_001F49B0_EAD58(draw_level16_visible_textured_batches, m);
         break;
     }
 }
@@ -1230,13 +1243,13 @@ extern short D_L16_001620A8[1];
 extern short D_L16_001620B8[1];
 extern char D_L16_001E2BA0[];
 /* Sets up the draw state then runs both per-slot calls over three entries. */
-void EnvMapC_Draw(void) {
+void draw_level16_reflection_mesh_batch(void) {
     int i;
     VU1_addGSregister(6, GetEffectTex(0x29));
     VU1_addGSregister(0x42, 0x4000000064L);
     VU1_addGSregister(8, 0);
     VU1_addGSregister(0x14, 0xFF9000000260L);
-    Draw_BuildVu1Setup();
+    font_queue_vu_state();
     for (i = 0; i < 3; i++) {
         EnvMap_ComputeUVs(((int *)D_L16_00162078)[i], ((int *)D_L16_001620A8)[i], ((int *)D_L16_00162088)[i], ((int *)D_L16_00162098)[i], D_L16_001E2BA0);
         func_L00_001FDE48(((int *)D_L16_00162078)[i], ((int *)D_L16_00162088)[i], ((int *)D_L16_001620B8)[i], D_L16_001E2BA0, 1);
@@ -1250,7 +1263,7 @@ extern short D_L16_001620D8;
 extern L16SingleSphere_2ea128 D_L16_001E5660[];
 
 /* Adapted from Lombyte (GPL-3.0) for PAL by OpenRAC's tools/port.py: src/overlays/l16/gameplay_vendor_002e3190.c, FUN_L16_002ea128. */
-void EnvMapC_Update(unsigned char *m) {
+void update_level16_three_mesh_bounds_and_callback(unsigned char *m) {
     int i, j;
     float maxx, maxy, maxz, minx, miny, minz;
     float p[4];

@@ -10,7 +10,7 @@ extern void func_002153E8(void *, void *);
 extern char *D_L12_00160058 MACRO_ADDR;
 
 // Transforms an array of n 0x30-byte entries into the space of a moby, skipping empty slots.
-void TransformChildrenToParentSpace(char *moby, char *arr, int n) {
+void capture_linked_moby_relative_transforms(char *moby, char *arr, int n) {
     float m0[12];
     float m1[16];
     float m2[16];
@@ -26,7 +26,7 @@ void TransformChildrenToParentSpace(char *moby, char *arr, int n) {
             func_001F9EE8(p, p, m1);
             func_001FA218(m2, o + 0x40);
             sce_vu0_mul_matrix(m2, m1, m2);
-            MatrixToEuler(m2, p + 0x10);
+            matrix_to_euler(m2, p + 0x10);
         }
     }
 }
@@ -48,7 +48,7 @@ void Moby_UpdateAttachedChildren(char *parent, char *list, int n) {
             p = D_L12_00160058 + idx * 256;
             func_001FA218(m1, (float *)(list + i * 0x30 + 0x10));
             sce_vu0_mul_matrix(m1, m0, m1);
-            MatrixToEuler(m1, p + 0x40);
+            matrix_to_euler(m1, p + 0x40);
             func_001F9EE8(m2, list + i * 0x30, m0);
             FastVecAdd(p + 0x10, parent + 0x10, m2);
             func_L00_00251E30(p);

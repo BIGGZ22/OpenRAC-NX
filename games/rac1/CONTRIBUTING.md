@@ -59,7 +59,10 @@ as references:
   `THIRD_PARTY_NOTICES.md`;
 - other public decompilations and ports of this game (Lombyte, the NTSC decomp,
   ReRAC: docs/SIBLING_DECOMPS.md), credited, and public hardware
-  documentation.
+  documentation. The NTSC decomp is never vendored: tools read it at the
+  commit pinned in `config/versions/us/ntsc_decomp.txt`, from a cache
+  outside the checkout (`python3 tools/ntsc_source.py path`), and
+  `python3 tools/ntsc_source.py follow` moves the pin (docs/VERSIONS.md).
 
 **Never** use Sony's SDK source, sample code or headers, or any leaked or
 NDA material, even when copies circulate inside leaked source releases

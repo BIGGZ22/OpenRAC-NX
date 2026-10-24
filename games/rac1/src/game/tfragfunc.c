@@ -301,12 +301,12 @@ extern int func_001FA898_i(float) __asm__("func_001FA898");
 void SetTfragDists(void) {
     float a, b, c, ab, bc;
 
-    D_00160FB0[0] = func_001FA898_i(D_00160FA0[0] * 1024.0f);
-    D_00160FB0[1] = func_001FA898_i(D_00160FA0[1] * 1024.0f);
-    D_00160FB0[2] = func_001FA898_i(D_00160FA0[2] * 1024.0f);
-    a = D_00160FA0[0] * D_0018D020;
-    b = D_00160FA0[1] * D_0018D020;
-    c = D_00160FA0[2] * D_0018D020;
+    tfrag_lod_dists_raw[0] = func_001FA898_i(tfrag_render_ranges[0] * 1024.0f);
+    tfrag_lod_dists_raw[1] = func_001FA898_i(tfrag_render_ranges[1] * 1024.0f);
+    tfrag_lod_dists_raw[2] = func_001FA898_i(tfrag_render_ranges[2] * 1024.0f);
+    a = tfrag_render_ranges[0] * fog_params;
+    b = tfrag_render_ranges[1] * fog_params;
+    c = tfrag_render_ranges[2] * fog_params;
     ab = 1.0f / (a - b);
     bc = 1.0f / (b - c);
     FastMemZero16(D_001DEB70, 0x40);
@@ -344,9 +344,9 @@ void DmaTfragTextures(void) {
     ((int *)D_00160FBC)[1] = D_00161000;
     ((int *)D_00160FBC)[2] = 0;
     ((int *)D_00160FBC)[3] = 0;
-    if (D_0018A3B0[4] != 0 && D_0018A3B0[3] != 0) {
+    if (draw_config[4] != 0 && draw_config[3] != 0) {
         ComputeTfragTextureUsage();
-        size = func_00236060(D_0015EF74);
+        size = build_tfrag_texture_dma(D_0015EF74);
         VU1_texFlush();
         if (size > 0x400000) {
             STUB_printf(D_001E8CE0);
@@ -431,18 +431,18 @@ void DrawTfrag(void) {
     D_00161000 = p;
     ProfileMarker_Begin(D_00160F70, 1);
     func_001FA190(m);
-    FastVecScale(m[3], D_00187180, -1024.0f);
+    FastVecScale(m[3], camera_position, -1024.0f);
     m[3][3] = 1.0f;
-    sce_vu0_mul_matrix(m, D_00187180 - 0x100, m);
+    sce_vu0_mul_matrix(m, camera_position - 0x100, m);
     write_vif_unpack_packet(5, m, 4);
     write_vif_unpack_packet(0x14D, m, 4);
-    if (D_0018A3B0[4] != 0) {
+    if (draw_config[4] != 0) {
         func_00118D80(0);
         TfragProc();
     }
     ProfileMarker_Begin(D_00160F80, 2);
     DmaTfragTextures();
-    if (D_0018A3B0[4] != 0) {
+    if (draw_config[4] != 0) {
         write_dma_channel(D_001E1600, 0x3000, 0x40);
     }
     ProfileMarker_End(D_00160F80, 2);

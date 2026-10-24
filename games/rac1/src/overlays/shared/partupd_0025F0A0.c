@@ -15,12 +15,12 @@ extern int func_001F9850(int);
 extern int D_L15_0016027C SDATA(D_L15_0016027C);
 
 // spawns a particle at a position offset from a moby
-void PartType31Spawn(int a0, void *a1, char *a2) {
+void spawn_owner_target_particle(int a0, void *a1, char *a2) {
     struct { u128 pos, s, d; } scratch;
     Particle5F0A0 *p;
     Owner5F0A0 *owner = (Owner5F0A0 *)a2;
     scratch.pos = *(u128 *)a1;
-    p = (Particle5F0A0 *)func_00218928(0x1F);
+    p = (Particle5F0A0 *)create_part(0x1F);
     if (p != 0) {
         u128 *dp = &scratch.d;
         float *q = owner->pos;
@@ -51,7 +51,7 @@ extern void func_00215A10(float *, int *);
 
 // spawns a particle moby (class 0x47) at a position and fills in its two sub-records
 unsigned char *PartType71Spawn(void *pos, float *p, float *c, int d, int e, int f, int g, int h, char *owner) {
-    unsigned char *r = func_00218928(0x47);
+    unsigned char *r = create_part(0x47);
     if (r != 0) {
         int *q, *q2;
         float t0[4], t1[4];
@@ -66,8 +66,8 @@ unsigned char *PartType71Spawn(void *pos, float *p, float *c, int d, int e, int 
         r[8] = random_integer_below(0xFF);
         r[2] = *(unsigned char *)D_L15_001B2A70;
         *(short *)(r + 0xA) = f;
-        PackVectorScaled(p, q);
-        PackVectorScaled(c, q2);
+        pack_vector_xyz_with_shared_scale(p, q);
+        pack_vector_xyz_with_shared_scale(c, q2);
         load_display_text_resource_entry(t0, q);
         load_display_text_resource_entry(t1, q2);
         q[2] = d;

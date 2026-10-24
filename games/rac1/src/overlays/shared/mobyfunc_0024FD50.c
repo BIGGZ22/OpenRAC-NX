@@ -5,22 +5,28 @@
 
 extern int func_001FA898_r(float) __asm__("func_001FA898");
 
+typedef struct O0024ed18Key {
+    u8 pad_00[4];
+    s16 h;                       /* 0x04 */
+} O0024ed18Key;
+
+typedef struct O0024ed18 {
+    u8 pad_00[0x10];
+    u8 n;                        /* 0x10 */
+    u8 pad_11[0xB];
+    O0024ed18Key *k[1];          /* 0x1C */
+} O0024ed18;
+
 /* Finds the index of the keyframe nearest to the given time, or -1. */
-int MobyAnimFindFrame(char *a, float time) {
-    int x = (short)func_001FA898_r(time * 16.0f);
-    int i;
-    for (i = 0; i < *(unsigned char *)(a + 0x10); i++) {
-        int *t = (int *)(a + 0x1C);
-        int o = i * 4;
-        int h = *(short *)(*(int *)((char *)t + o) + 4);
-        if (x < h) {
+int find_nearest_animation_sequence_entry(char *a, float time) {
+    O0024ed18 *animation_sequence = (O0024ed18 *)a;
+    s16 scaled_target_position = func_001FA898_r(time * 16.0f);
+    s32 i;
+    for (i = 0; i < animation_sequence->n; i++) {
+        if (scaled_target_position < animation_sequence->k[i]->h) {
             if (i > 0) {
-                int j = i - 1;
-                int d = h - x;
-                int q = j * 4;
-                if (x - *(short *)(*(int *)((char *)t + q) + 4) < d) {
-                    i = j;
-                }
+                if (scaled_target_position - animation_sequence->k[i - 1]->h < animation_sequence->k[i]->h - scaled_target_position)
+                    i = i - 1;
             }
             return i;
         }
@@ -81,7 +87,7 @@ Slot *AllocAnimSlot(char *o, int id) {
     s->used = 1;
     s->id = id;
     id = (short)id;
-    s->p10 = D_L00_001870C0 + i * 0x1500;
+    s->p10 = slot_buffers + i * 0x1500;
     s->p14 = *(int *)(o + 0x24);
     r = *(unsigned char **)(*(char **)(*(char **)(o + 0x24) + 0x1C) + id * 4 + 4);
     s->s2 = r[2];
@@ -313,7 +319,7 @@ void Moby_GetJointWorldPos(char *arg0, int arg1, void *arg2) {
 extern void func_001FA460(void *, void *);
 
 // Builds a matrix from the object's rotation, then rescales and offsets each entry of an attach list.
-void Moby_GetJointWorldMatrices(char *o, int n, int *arg2, char *out) {
+void compute_selected_world_matrices(char *o, int n, int *arg2, char *out) {
     char buf[0x40];
     float s;
     int i;
@@ -364,7 +370,7 @@ void EnvNearestSamplePoint(char *o) {
     }
     off = idx * 0x30;
     e1 = (char *)(off + (int)D_L00_00160100);
-    func_0020E340(o, *(int *)(o + 0x80) = (*(int *)(e1 + 0x18) << 16) + (*(int *)(e1 + 0x14) << 8) + *(int *)(e1 + 0x10), 0, 0, 0);
+    pack_render_command_fields(o, *(int *)(o + 0x80) = (*(int *)(e1 + 0x18) << 16) + (*(int *)(e1 + 0x14) << 8) + *(int *)(e1 + 0x10), 0, 0, 0);
     *(int *)(o + 0x38) = *(int *)((char *)(off + (int)D_L00_00160100) + 0x1C);
     e2 = (char *)(off + (int)D_L00_00160100);
     if (*(unsigned char *)(e2 + 0x27) != 0) {
@@ -387,7 +393,7 @@ void EnvNearestSamplePoint(char *o) {
 }
 extern int D_0015EE84 MACRO_ADDR;
 extern unsigned char D_0014C150[];
-void SetLevelTriggerDone(int idx) {
+void jet_clear_persistent(int idx) {
     if (idx != 0xFF) {
         D_0014C150[idx + D_0015EE84 * 16] = 0xFF;
     }

@@ -45,17 +45,17 @@ void HeroL15_FrameUpdate(void) {
     float pulse;
 
     func_L00_00232EF0();
-    Hero_UpdateMotionInput();
+    hero_update();
     Hero_UpdateAimFlags();
     HeroL15_UpdateStateTransitions();
     b0 = D_0013E633 + 0xE1D;
     if (b0[0x20A4] == 0)
         return;
-    Hero_TickReleaseTimers();
-    SettleAllHeldObjects();
+    update_hero_delayed_voice_requests();
+    update_hero_easing_records();
     if (b0[0x20A4] == 0)
         return;
-    SyncHelpScreenMoby();
+    update_hero_vehicle_moby();
     UpdateRampUpDown();
     CameraShakeUpdate();
     func_L00_00248EF8(b0 + 0x80);
@@ -63,8 +63,8 @@ void HeroL15_FrameUpdate(void) {
     if (b0[0x20A4] == 2) {
         if (gCheats[3] != 0)
             D_L15_0017C0EC = (*(float *)&D_0015EF18) * 1.4f;
-        UpdateHelperMoby();
-        SyncCompanionMoby();
+        update_hero_glow_and_extra_manipulators();
+        update_hero_bone_attachment();
         {
         unsigned char *m = *(unsigned char **)(b0 + 0x2080);
         if (((*(unsigned short *)(m + 0x34) ^ 1) & 1) != 0) {
@@ -155,7 +155,7 @@ void Help_ShowIndexedPrompt(void) {
     if (index >= 0 && *(D_0013E15A + 0x4C6 + index) != 0) {
         int first = *(int *)(base + 0x1090);
         if (first != 0) {
-            TintEffectFromMobyColor(first, *(int *)(base + 0x2080));
+            update_item_tint_from_hero(first, *(int *)(base + 0x2080));
         }
     }
 }
@@ -170,7 +170,7 @@ extern void clear_u64_value(void *);
 typedef int u128 __attribute__((mode(TI)));
 
 // Per-frame update of the camera-attached moby position.
-void HeroL15_UpdateAttachedMobyBob(void) {
+void update_hero_bobbing_and_target_position(void) {
     unsigned char *base = D_0013E633 + 0xE1D;
     if (*(int *)(base + 0x2084) == 0x6B && *(short *)(base + 0x8BC) == 0) {
         char *m;
@@ -284,7 +284,7 @@ f32 func_00214D28(f32, f32, f32 *);
 void func_L00_0025C918(f32 *, f32 *, f32, f32, f32, f32);
 
 /* Adapted from Lombyte (GPL-3.0) for PAL by OpenRAC's tools/port.py: src/overlays/shared/ui_help_001ff938.c, FUN_L15_00209450. */
-void HeroL15_UpdateMoveBlendTargets(void) {
+void update_hero_smoothing_parameters(void) {
     switch (D_0013F450.b20A4) {
     case 0:
         D_0013F450.f228 = 0.8f;
@@ -335,7 +335,7 @@ extern int func_L00_001EFFF0(void *, void *, int, int, int);
 extern int func_L00_001F3958(void);
 extern float func_L00_001FF860(float, float);
 // Steers the hero's aim vectors toward the current target and snaps momentum to it when close enough.
-void HeroL15_SlideAlongWall(int arg) {
+void adjust_hero_planar_velocity_from_probes(int arg) {
     float a[4] __attribute__((aligned(16)));
     float c[4] __attribute__((aligned(16)));
     float b[4] __attribute__((aligned(16)));
@@ -345,7 +345,7 @@ void HeroL15_SlideAlongWall(int arg) {
     float f2, f21, f20;
     int r18, r;
     if (*(short *)(base + 0x308) != 0) return;
-    if (ViewXyLength((float *)(base + 0xE0)) < D_0015EE6C * 0.1f) return;
+    if (gravity_length_xy((float *)(base + 0xE0)) < D_0015EE6C * 0.1f) return;
     f2 = 0.37f;
     f21 = 0.5f;
     if ((unsigned)(*(int *)(base + 0x208C) - 0x11) < 2) {
@@ -545,25 +545,25 @@ void HeroL15_ResetMotionState(void) {
     if (D_0013F450_0ADD8.xI208c == 2) {
         g = D_0013F450_0ADD8.xF234 * 2.9f;
     }
-    Hero_BuildProbeEndpoints(&v10, &v0, k, g, -48.0f);
+    hero_get_collision_ray_endpoints(&v10, &v0, k, g, -48.0f);
     if (func_L00_001EFFF0(&v10, &v0, 2, D_0013F450_0ADD8.xI2080, 0) == 0) {
         goto tail;
     }
-    r = CollSoundClass();
+    r = coll_sound_class();
     if (r == -1) {
         r = 3;
     }
     D_0013F450_0ADD8.xB12ed = r;
     D_0013F450_0ADD8.xH12e0 = CollType();
     if (D_0013F450_0ADD8.xH12e0 == 0) {
-        D_0013F450_0ADD8.xF2f0 = GetGroundHeight(D_L15_001744E0, (u8 *)&D_0013F450_0ADD8 + 0x280);
+        D_0013F450_0ADD8.xF2f0 = resolve_camera_surface_height(D_L15_001744E0, (u8 *)&D_0013F450_0ADD8 + 0x280);
         if (D_0013F450_0ADD8.xF88 < D_0013F450_0ADD8.xF2f0 && D_0013F450_0ADD8.xI2f8 <= 0) {
             D_0013F450_0ADD8.xI2f8 = 1;
         }
         if (func_L00_001EFFF0(&v10, &v0, 0x24, D_0013F450_0ADD8.xI2080, 0) == 0) {
             goto d1;
         }
-        r = CollSoundClass();
+        r = coll_sound_class();
         if (D_0015EE84 == 1 || D_0015EE84 == 0x12) {
             r = 3;
         }
@@ -649,7 +649,7 @@ d1:
     if (!(D_0013F450_0ADD8.xF2dc < 0.25f)) {
         return;
     }
-    VecToHeroAngles((u8 *)&D_0013F450_0ADD8 + 0x270, &v20);
+    compute_rotated_vector_angles((u8 *)&D_0013F450_0ADD8 + 0x270, &v20);
     if (-0.78539819f < v20.f[1] && v20.f[1] < 0.78539819f) {
         D_0013F450_0ADD8.u2e4.F = v20.f[1];
     }
@@ -670,7 +670,7 @@ d1:
                 D_0013F450_0ADD8.a2c0.f[i] = 0.0f;
             }
             func_001252C0(&v60, (u8 *)&D_L15_001744C0_0ADD8.f40);
-            VecToHeroAngles(&v60, &v50);
+            compute_rotated_vector_angles(&v60, &v50);
             if (-0.78539819f < v50.f[1] && v50.f[1] < 0.78539819f) {
                 D_0013F450_0ADD8.a2c8.f[i] = v50.f[1];
             }
@@ -713,7 +713,7 @@ extern void func_L00_00211908(void);
 
 /* Per-frame hero upkeep: tick the hero timers, spawn the respawn marker, track sinking, and set the camera follow target. Clone of FUN_L00_002215c8 without the case-1 camera tuning.
    Adapted from Lombyte (GPL-3.0) for PAL by OpenRAC's tools/port.py: src/overlays/shared/ui/help/001ff938.c, FUN_L15_00215e58. */
-void HeroFrameUpkeep(void) {
+void update_hero_timers_and_auxiliary_state(void) {
     Vec4 sum;
     Vec4 d;
     struct Moby *m;
@@ -773,7 +773,7 @@ void HeroFrameUpkeep(void) {
         D_0013F450_16568.health.hp != 0 && (*(s32 *)&D_L15_0015F6A8_16568) == 0) {
         if (D_0013F450_16568.vehicle_mode == 3) {
             Help_Reset();
-            if (PadPressedWithin(0x80, scale_ticks(0x12), 0)) {
+            if (pad_pressed_within(0x80, scale_ticks(0x12), 0)) {
                 D_0013F450_16568.unk20A6 = 1;
             }
         } else {
@@ -798,7 +798,7 @@ void HeroFrameUpkeep(void) {
         func_001F9908(&D_L15_00179F70[i].w0);
     }
     D_0013F450_16568.unk22B8 = 9999.0f;
-    if (D_0013F450_16568.air_frames.s != 0 && HeroGetViewZ(&D_0013F450_16568.motion.velocity) < 0.0f) {
+    if (D_0013F450_16568.air_frames.s != 0 && gravity_z(&D_0013F450_16568.motion.velocity) < 0.0f) {
         if (D_0013F450_16568.unk21B4 != 0x20) goto skip;
         clear_u64_value(&sum);
         n8 = 8;
@@ -849,7 +849,7 @@ skip:
 }
 
 /* Select the message associated with the current help mode. */
-void Help_SelectMessage(void) {
+void set_hero_state_for_vehicle_mode(void) {
     switch (D_0013E633[0x2EC1]) {
     case 0: HeroQuartu_TrySetMoveState(0, 1); break;
     case 2: HeroQuartu_TrySetMoveState(0x5A, 1); break;

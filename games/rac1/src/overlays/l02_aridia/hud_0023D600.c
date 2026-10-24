@@ -5,7 +5,7 @@
 extern int func_001F9850(int);
 
 // Ticks two small counters up or down depending on a random roll; copies a value.
-void HudCounter_UpdateRamp(char *m) {
+void update_hud_counter_transition(char *m) {
     unsigned char *p = (unsigned char *)(m + 0x70);
     if (*(int *)(m + 0x7C) >= scale_ticks(5)) {
         if (p[0] < scale_ticks(8)) {
@@ -71,7 +71,7 @@ extern short D_L02_0015FA34;
 
 /* Draws the counter: a stretched bar behind the icon and the count, on whichever side of the screen it sits.
    Adapted from Lombyte (GPL-3.0) for PAL by OpenRAC's tools/port.py: src/overlays/l02/ui/text/0023ccc8.c, FUN_L02_0023cda8. */
-s32 Hud_DrawCounter(HudElem *m) {
+s32 draw_hud_counter(HudElem *m) {
     char text[16];
     int x;
     int y;
@@ -94,14 +94,14 @@ s32 Hud_DrawCounter(HudElem *m) {
     }
     x = m->unk50;
     y = m->unk54;
-    Hud_AlignElement(m, &x, &y);
+    hud_screen_position(m, &x, &y);
     left = x < 0x101;
     if (left) {
         x = (*(s32 *)&D_L02_0015FA1C);
     } else {
         x = (*(s32 *)&D_L02_0015FA20);
     }
-    bottom = D_0013E604[0];
+    bottom = frame_size[0];
     y = D_0015EE80 != 0 ? bottom - 0x2A : bottom - 0x32;
     grow = IntToFloat(fade[0]) / IntToFloat((*(s32 *)&D_L02_0015F9F4));
     if (1.0f < grow) {
@@ -131,10 +131,10 @@ s32 Hud_DrawCounter(HudElem *m) {
         frame = GetIconFrame(0x7580, 0);
         HudSprite(frame, bar, y, width, 0x20, alpha);
         frame = GetIconFrame(0x7580, 1);
-        DrawHudSpriteTurned(frame, bar + width, y, 0x20, 0x20, alpha);
+        draw_hud_sprite_flipped(frame, bar + width, y, 0x20, 0x20, alpha);
     } else {
         frame = GetIconFrame(0x7580, 1);
-        DrawHudSpriteTurned(frame, bar, y, 0x20, 0x20, alpha);
+        draw_hud_sprite_flipped(frame, bar, y, 0x20, 0x20, alpha);
         px = bar - width;
         frame = GetIconFrame(0x7580, 0);
         HudSprite(frame, px, y, width, 0x20, alpha);
@@ -167,9 +167,9 @@ extern int D_0015EF88 MACRO_ADDR;
 void Sky_DrawLevel02(void) {
     SetupSkyGifPaging();
     if (D_0015EE84_m == 2) {
-        SkyStarFieldUpdate();
+        draw_four_sky_shells_with_animated_particles();
     } else {
-        UpdateSkyShellsStatic();
+        update_sky_shells_static();
     }
     DoSkyGifPaging();
     VU1_addGSregister(0x47, 0x5360B);

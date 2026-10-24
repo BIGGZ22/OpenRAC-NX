@@ -130,7 +130,7 @@ void audioDecEndPut(AudioDec *dec, int count) {
     dec->f44 += count;
 }
 /* No recovered name. True once 0x1000 bytes or more are queued. */
-int audioDecIsPageFull(AudioDec *dec) {
+int is_state_field_large(AudioDec *dec) {
     return dec->bytes >= 0x1000;
 }
 extern void func_0023C390(AudioDec *);

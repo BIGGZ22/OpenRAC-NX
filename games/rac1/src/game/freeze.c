@@ -64,7 +64,7 @@ extern char D_00193400[];
    rebuilds the %lo per case); the case bodies are in retail's layout
    order, and the last store of a block is written last in the source
    because the scheduler issues it first. */
-void Freeze_Enter(int arg0, int arg1, int arg2) {
+void mode_freeze_init(int arg0, int arg1, int arg2) {
     char *s = D_00193400;
 
     *(int *)(s + 0x30) = arg2;
@@ -109,7 +109,7 @@ void Freeze_Enter(int arg0, int arg1, int arg2) {
     }
     case 5: {
         char *p = D_00193400;
-        PushHelpHistory(0x4E2B);
+        push_help_history(0x4E2B);
         *(int *)(p + 4) = func_001F98C0(0x1E);
         *(int *)(p + 0x20) = 0;
         *(int *)(p + 0x24) = func_001F98C0(0x1E);
@@ -255,42 +255,42 @@ static __inline__ void draw_box_p(char *text, s32 left, s32 mid, s32 right, stru
     s32 h;
     f32 alpha;
 
-    func_001F7560(&box, 0, text, -1);
+    font_print_window_regular(&box, 0, text, -1);
     h = box.rendered_height + 0x28;
     y = (((ScreenP *)D_0013E600)->height - h) >> 1;
     box.bottom = y + h;
     box.anchor_y = y + 4;
     box.top = y;
     alpha = 1.0f - (f32)((MessageBoxP *)D_00193400)->timer / (f32)func_001F98C0(30);
-    func_001F62C8(box.top, box.bottom, 0x60, 0x1A0, (s32)(alpha * 80.0f));
+    DrawUIFrame(box.top, box.bottom, 0x60, 0x1A0, (s32)(alpha * 80.0f));
     box.flags ^= 4;
-    func_001F7560(&box, func_001FA8A8(*(s32 *)&D_0015F5F0, *(s32 *)&D_0015F5F4, alpha), text, -1);
-    tint = func_001FA8A8(0x20FFFF, 0x8020FFFF, 1.0f - (f32)((MessageBoxP *)D_00193400)->unk24 / (f32)func_001F98C0(30));
+    font_print_window_regular(&box, FastTweenColor(*(s32 *)&D_0015F5F0, *(s32 *)&D_0015F5F4, alpha), text, -1);
+    tint = FastTweenColor(0x20FFFF, 0x8020FFFF, 1.0f - (f32)((MessageBoxP *)D_00193400)->unk24 / (f32)func_001F98C0(30));
     if (left != 0) {
-        func_001F6EA8(0xCA, box.bottom - 0x14, tint, func_001FE540(left), -1);
+        FontPrintCenter(0xCA, box.bottom - 0x14, tint, msg_string(left), -1);
     }
     if (right != 0) {
-        func_001F6EA8(0x135, box.bottom - 0x14, tint, func_001FE540(right), -1);
+        FontPrintCenter(0x135, box.bottom - 0x14, tint, msg_string(right), -1);
     }
     if (mid != 0) {
-        func_001F6EA8(0x100, box.bottom - 0x14, tint, func_001FE540(mid), -1);
+        FontPrintCenter(0x100, box.bottom - 0x14, tint, msg_string(mid), -1);
     }
 }
 
 void func_001FBE80(void) {
     char buf[0x200];
 
-    func_001F55C0(0, 0, 0, 0x30);
+    emit_rgba_draw_packet(0, 0, 0, 0x30);
     if (((MessageBoxP *)D_00193400)->unk2C != 0) {
         return;
     }
-    func_001F4630(0);
+    SetupGifPaging(0);
     switch (((MessageBoxP *)D_00193400)->state) {
     case 5: {
         f32 alpha;
 
         alpha = 1.0f - (f32)((MessageBoxP *)D_00193400)->timer / (f32)func_001F98C0(30);
-        func_001F62C8(0x50, 0x154, 0x60, 0x1A0, (s32)(alpha * 80.0f));
+        DrawUIFrame(0x50, 0x154, 0x60, 0x1A0, (s32)(alpha * 80.0f));
         {
             struct TextRegionP box = D_001E7BF8;
             u8 *p;
@@ -303,8 +303,8 @@ void func_001FBE80(void) {
             f32 angle;
             f32 pivot;
 
-            color = func_001FA8A8(*(s32 *)&D_0015F5F0, *(s32 *)&D_0015F5F4, alpha);
-            func_00116B00((void *)0x70000000, func_001FE540(0x4E2B), 0x400);
+            color = FastTweenColor(*(s32 *)&D_0015F5F0, *(s32 *)&D_0015F5F4, alpha);
+            func_00116B00((void *)0x70000000, msg_string(0x4E2B), 0x400);
             p = (u8 *)0x70000000;
             while (*p >= 2) {
                 p++;
@@ -314,25 +314,25 @@ void func_001FBE80(void) {
                     *p++ = 0;
                 } while (*p == 1);
             }
-            func_001F7560(&box, color, (char *)0x70000000, -1);
+            font_print_window_regular(&box, color, (char *)0x70000000, -1);
             pivot = 272.0f;
             box.flags |= 4;
             y = box.anchor_y;
             y += box.rendered_height;
-            func_001F7560(&box, color, (char *)p, -1);
+            font_print_window_regular(&box, color, (char *)p, -1);
             box.flags ^= 4;
             box.anchor_y = 0x136 - box.rendered_height;
-            func_001F7560(&box, color, (char *)p, -1);
-            tint = func_001FA8A8(0x20FFFF, 0x8020FFFF, 1.0f - (f32)((MessageBoxP *)D_00193400)->unk24 / (f32)func_001F98C0(30));
-            func_001F6EA8(0x100, 0x140, tint, func_001FE540(0x524F), -1);
+            font_print_window_regular(&box, color, (char *)p, -1);
+            tint = FastTweenColor(0x20FFFF, 0x8020FFFF, 1.0f - (f32)((MessageBoxP *)D_00193400)->unk24 / (f32)func_001F98C0(30));
+            FontPrintCenter(0x100, 0x140, tint, msg_string(0x524F), -1);
             mid = (y + box.anchor_y) >> 1;
-            func_00234C98(0x47, 0x3004B);
+            VU1_addGSregister(0x47, 0x3004B);
             top = mid - 0x20;
-            func_00200468(func_00200198(0x755D, 0), 0xE0, top, 0x40, 0x40, 0x80);
+            HudSprite(GetIconFrame(0x755D, 0), 0xE0, top, 0x40, 0x40, 0x80);
             pos = (f32)(mid << 4);
             angle = (f32)(D_0015F538 % 55) * -6.2831855f / 55.0f;
             func_00200E38(4096.0f, pos, pivot, pivot, angle, 0x40, 0x40,
-                         func_00200248(func_00200198(0x755D, 1)));
+                         GetFrameTex(GetIconFrame(0x755D, 1)));
         }
         break;
     }
@@ -343,7 +343,7 @@ void func_001FBE80(void) {
         if (((MessageBoxP *)D_00193400)->unk20 <= 0) {
             break;
         }
-        text = func_00116B00((void *)0x70000000, func_001FE540(0x4FA6), 0x400);
+        text = func_00116B00((void *)0x70000000, msg_string(0x4FA6), 0x400);
         p = (u8 *)0x70000000;
         while (*p >= 2) {
             p++;
@@ -363,7 +363,7 @@ void func_001FBE80(void) {
         if (((MessageBoxP *)D_00193400)->unk20 <= 0) {
             break;
         }
-        text = func_001FE540(((MessageBoxP *)D_00193400)->unk30 != 0 ? 0x4FBD : 0x4FBC);
+        text = msg_string(((MessageBoxP *)D_00193400)->unk30 != 0 ? 0x4FBD : 0x4FBC);
         draw_box_p(text, 0, ((MessageBoxP *)D_00193400)->timer != 0 ? 0 : 0x524F, 0, (struct TextRegionP){0, ((ScreenP *)D_0013E600)->height, 0x60, 0x1A0, 0x100, 0x68, 0, 0, 0x10, 5});
         break;
     }
@@ -388,38 +388,38 @@ void func_001FBE80(void) {
         case 6:
             left = 0x5254;
             right = 0x5250;
-            text = func_001FE540(0x4FAF);
+            text = msg_string(0x4FAF);
             break;
         case 12:
             if (D_001D60C0 != 0) {
                 mid = 0x4FA8;
-                text = func_001FE540(0x4FA7);
+                text = msg_string(0x4FA7);
                 break;
             }
         case 13:
             left = 0x5254;
             right = 0x5250;
-            text = func_001FE540(0x4FAD);
+            text = msg_string(0x4FAD);
             break;
         case 7:
         case 8:
-            text = func_001FE540(0x4FB7);
+            text = msg_string(0x4FB7);
             break;
         case 14:
         case 15:
-            text = func_001FE540(0x4FB8);
+            text = msg_string(0x4FB8);
             break;
         case 17:
             mid = 0x524F;
-            text = func_001FE540(0x4FBA);
+            text = msg_string(0x4FBA);
             break;
         case 18:
             mid = 0x524F;
-            text = func_001FE540(0x4FBC);
+            text = msg_string(0x4FBC);
             break;
         case 2:
             mid = 0x524F;
-            text = func_001FE540(0x4FA6);
+            text = msg_string(0x4FA6);
             if (((MessageBoxP *)D_00193400)->timer != 0) {
                 mid = 0;
             }
@@ -427,57 +427,57 @@ void func_001FBE80(void) {
         case 19:
             if (D_001D60C0 != 0) {
                 mid = 0x4FA8;
-                text = func_001FE540(0x4FA7);
-            } else if (D_0015F6C8 != 0) {
+                text = msg_string(0x4FA7);
+            } else if (boot_level_active != 0) {
                 left = 0x5253;
                 right = 0x5250;
-                func_00116248(buf, D_0015F650, func_001FE540(0x4FA9), 1, 1, func_001FE540(0x4FAA));
+                func_00116248(buf, D_0015F650, msg_string(0x4FA9), 1, 1, msg_string(0x4FAA));
                 text = buf;
             } else {
                 mid = 0x4FA8;
-                text = func_001FE540(0x4FA9);
+                text = msg_string(0x4FA9);
             }
             break;
         case 21:
             mid = 0x524F;
-            text = func_001FE540(0x4FBD);
+            text = msg_string(0x4FBD);
             break;
         case 20:
             mid = 0x524F;
-            text = func_001FE540(0x4FBB);
+            text = msg_string(0x4FBB);
             break;
         case 24:
             left = 0x5253;
             right = 0x5250;
-            func_00116248(buf, D_0015F650, func_001FE540(0x4FAE), 1, 1, func_001FE540(0x4FAA));
+            func_00116248(buf, D_0015F650, msg_string(0x4FAE), 1, 1, msg_string(0x4FAA));
             text = buf;
             break;
         case 23:
             left = 0x5253;
             right = 0x5250;
-            text = func_001FE540(0x4FB1);
+            text = msg_string(0x4FB1);
             break;
         case 3:
         case 4:
-            if (D_0015F6C8 != 0 && D_001D60C0 == 0) {
+            if (boot_level_active != 0 && D_001D60C0 == 0) {
                 left = 0x5253;
                 right = 0x5250;
-                text = func_001FE540(0x4FAB);
+                text = msg_string(0x4FAB);
             } else if (D_0015F6CC != 0) {
                 left = 0x5254;
                 right = 0x5250;
-                text = func_001FE540(0x4FAB);
+                text = msg_string(0x4FAB);
             } else if (D_001D60C0 == 0) {
                 mid = 0x4FA8;
-                text = func_001FE540(0x4FAC);
+                text = msg_string(0x4FAC);
             } else {
                 mid = 0x4FA8;
-                text = func_001FE540(0x4FA7);
+                text = msg_string(0x4FA7);
             }
             break;
         case 5:
             mid = 0x4FA8;
-            text = func_001FE540(0x4FA7);
+            text = msg_string(0x4FA7);
             break;
         case 9:
         case 10:
@@ -500,23 +500,23 @@ void func_001FBE80(void) {
 
         box = D_001E7C10;
         alpha = 1.0f - (f32)((MessageBoxP *)D_00193400)->timer / (f32)func_001F98C0(30);
-        func_001F62C8(0x64, 0x12C, 0x60, 0x1A0, (s32)(alpha * 80.0f));
-        text_color = func_001FA8A8(*(s32 *)&D_0015F5F0, *(s32 *)&D_0015F5F4, alpha);
-        button_color = func_001FA8A8(0x20FFFF, 0x8020FFFF, alpha);
+        DrawUIFrame(0x64, 0x12C, 0x60, 0x1A0, (s32)(alpha * 80.0f));
+        text_color = FastTweenColor(*(s32 *)&D_0015F5F0, *(s32 *)&D_0015F5F4, alpha);
+        button_color = FastTweenColor(0x20FFFF, 0x8020FFFF, alpha);
         switch (((MessageBoxP *)D_00193400)->choice) {
         case 0:
         case 1:
-            func_001F6EA8(0xCA, 0x118, button_color, func_001FE540(0x5253), -1);
-            func_001F6EA8(0x135, 0x118, button_color, func_001FE540(0x5250), -1);
+            FontPrintCenter(0xCA, 0x118, button_color, msg_string(0x5253), -1);
+            FontPrintCenter(0x135, 0x118, button_color, msg_string(0x5250), -1);
             id = 0x522F;
             break;
         case 2:
-            func_001F6EA8(0xCA, 0x118, button_color, func_001FE540(0x5253), -1);
-            func_001F6EA8(0x135, 0x118, button_color, func_001FE540(0x5250), -1);
+            FontPrintCenter(0xCA, 0x118, button_color, msg_string(0x5253), -1);
+            FontPrintCenter(0x135, 0x118, button_color, msg_string(0x5250), -1);
             id = 0x5230;
             break;
         case 3:
-            func_001F6EA8(0x100, 0x118, button_color, func_001FE540(0x524F), -1);
+            FontPrintCenter(0x100, 0x118, button_color, msg_string(0x524F), -1);
             id = 0x5231;
             break;
         default:
@@ -524,7 +524,7 @@ void func_001FBE80(void) {
             break;
         }
         if (id != 0) {
-            ((void (*)(struct TextRegionP *, long, char *, s32, s32, u8 *))func_001F7070)(&box, text_color, func_001FE540(id), -1, func_001F4868(1), D_001DF3D0);
+            ((void (*)(struct TextRegionP *, long, char *, s32, s32, u8 *))FontPrintWindow)(&box, text_color, msg_string(id), -1, GetEffectTex(1), normal_font_metrics);
         }
         break;
     }
@@ -546,8 +546,8 @@ void func_001FBE80(void) {
         f32 scale;
         f32 f;
 
-        pulse = func_001FA8A8(*(s32 *)&D_0015F624, *(s32 *)&D_0015F628,
-                       func_001F9FA8((f32)(D_0015F538 % *(s32 *)&D_0015F620) / func_001FA888(*(s32 *)&D_0015F620) * 6.28318f - 3.14159f) * 0.5f + 0.5f);
+        pulse = FastTweenColor(*(s32 *)&D_0015F624, *(s32 *)&D_0015F628,
+                       FastSin((f32)(D_0015F538 % *(s32 *)&D_0015F620) / IntToFloat(*(s32 *)&D_0015F620) * 6.28318f - 3.14159f) * 0.5f + 0.5f);
         scale = (f32)((MessageBoxP *)D_00193400)->unk20 * 0.125f;
         if (scale > 1.0f) {
             scale = 1.0f;
@@ -564,32 +564,32 @@ void func_001FBE80(void) {
             } else if (f < 0.0f) {
                 f = 0.0f;
             }
-            c1 = func_001FA8A8(*(s32 *)&D_0015F62C, *(s32 *)&D_0015F630, f);
-            c2 = func_001FA8A8(*(s32 *)&D_0015F634, *(s32 *)&D_0015F638, f);
-            c3 = func_001FA8A8(*(s32 *)&D_0015F63C, *(s32 *)&D_0015F640, f);
+            c1 = FastTweenColor(*(s32 *)&D_0015F62C, *(s32 *)&D_0015F630, f);
+            c2 = FastTweenColor(*(s32 *)&D_0015F634, *(s32 *)&D_0015F638, f);
+            c3 = FastTweenColor(*(s32 *)&D_0015F63C, *(s32 *)&D_0015F640, f);
         }
         if (((HeroP *)D_0013F450)->unk89A < 3) {
-            func_001F6410(*(s32 *)&D_0015F5FC - func_001FA898((f32)*(s32 *)&D_0015F604 * scale),
-                            *(s32 *)&D_0015F5FC + func_001FA898((f32)*(s32 *)&D_0015F604 * scale),
-                            *(s32 *)&D_0015F5F8 - func_001FA898((f32)*(s32 *)&D_0015F600 * scale),
-                            *(s32 *)&D_0015F5F8 + func_001FA898((f32)*(s32 *)&D_0015F600 * scale), pulse);
-            func_001F6EA8(0x100, *(s32 *)&D_0015F608, c1, func_001FE540(0x4F6E), -1);
-            func_001F6EA8(0x100, *(s32 *)&D_0015F608 + 0x18, c1, func_001FE540(0x524E), -1);
-            func_001F6EA8(0x100, *(s32 *)&D_0015F608 + 0x30, c1, func_001FE540(0x524D), -1);
+            draw_outlined_rect(*(s32 *)&D_0015F5FC - truncate_float_to_s32((f32)*(s32 *)&D_0015F604 * scale),
+                            *(s32 *)&D_0015F5FC + truncate_float_to_s32((f32)*(s32 *)&D_0015F604 * scale),
+                            *(s32 *)&D_0015F5F8 - truncate_float_to_s32((f32)*(s32 *)&D_0015F600 * scale),
+                            *(s32 *)&D_0015F5F8 + truncate_float_to_s32((f32)*(s32 *)&D_0015F600 * scale), pulse);
+            FontPrintCenter(0x100, *(s32 *)&D_0015F608, c1, msg_string(0x4F6E), -1);
+            FontPrintCenter(0x100, *(s32 *)&D_0015F608 + 0x18, c1, msg_string(0x524E), -1);
+            FontPrintCenter(0x100, *(s32 *)&D_0015F608 + 0x30, c1, msg_string(0x524D), -1);
         } else {
-            func_001F6410(*(s32 *)&D_0015F610 - func_001FA898((f32)*(s32 *)&D_0015F618 * scale),
-                            *(s32 *)&D_0015F610 + func_001FA898((f32)*(s32 *)&D_0015F618 * scale),
-                            *(s32 *)&D_0015F60C - func_001FA898((f32)*(s32 *)&D_0015F614 * scale),
-                            *(s32 *)&D_0015F60C + func_001FA898((f32)*(s32 *)&D_0015F614 * scale), pulse);
+            draw_outlined_rect(*(s32 *)&D_0015F610 - truncate_float_to_s32((f32)*(s32 *)&D_0015F618 * scale),
+                            *(s32 *)&D_0015F610 + truncate_float_to_s32((f32)*(s32 *)&D_0015F618 * scale),
+                            *(s32 *)&D_0015F60C - truncate_float_to_s32((f32)*(s32 *)&D_0015F614 * scale),
+                            *(s32 *)&D_0015F60C + truncate_float_to_s32((f32)*(s32 *)&D_0015F614 * scale), pulse);
             sel = ((HeroP *)D_0013F450)->unk8C0 - 1;
             if (!(sel < 5)) {
                 sel = 4;
             }
-            func_00116248(line, D_0015F660, func_001FE540(sel + 0x5229), func_001FE540(0x5245));
+            func_00116248(line, D_0015F660, msg_string(sel + 0x5229), msg_string(0x5245));
             if (((HeroP *)D_0013F450)->unk8C0 == 1) {
-                func_001F6EA8(0x100, *(s32 *)&D_0015F61C, c2, line, -1);
+                FontPrintCenter(0x100, *(s32 *)&D_0015F61C, c2, line, -1);
             } else {
-                func_001F6EA8(0x100, *(s32 *)&D_0015F61C, c3, line, -1);
+                FontPrintCenter(0x100, *(s32 *)&D_0015F61C, c3, line, -1);
             }
             best = D_0015EF58[(D_0015EE84 ^ 0x10) ? 0 : 1];
             if (best == ((HeroP *)D_0013F450)->unk894) {
@@ -599,54 +599,54 @@ void func_001FBE80(void) {
                 rem = best - min * unit;
                 sec = rem / per;
                 hund = (rem - sec * per) * 100 / per;
-                func_00116248(line, D_0015F668, func_001FE540(0x50A3));
-                func_001F6EA8(0x100, *(s32 *)&D_0015F61C + 0x26, c2, line, -1);
+                func_00116248(line, D_0015F668, msg_string(0x50A3));
+                FontPrintCenter(0x100, *(s32 *)&D_0015F61C + 0x26, c2, line, -1);
                 func_00116248(line, D_0015F670, min, sec, hund);
-                func_001F6EA8(0x100, *(s32 *)&D_0015F61C + 0x3A, c2, line, -1);
+                FontPrintCenter(0x100, *(s32 *)&D_0015F61C + 0x3A, c2, line, -1);
             } else {
-                func_00116248(line, D_0015F668, func_001FE540(0x50A2));
-                func_001F6EA8(0x100, *(s32 *)&D_0015F61C + 0x30, c3, line, -1);
+                func_00116248(line, D_0015F668, msg_string(0x50A2));
+                FontPrintCenter(0x100, *(s32 *)&D_0015F61C + 0x30, c3, line, -1);
             }
             record = D_0015EF68[(D_0015EE84 ^ 0x10) ? 0 : 1];
             if (record != 0 && record == ((HeroP *)D_0013F450)->unk8A8) {
-                func_00116248(line, D_0015F668, func_001FE540(0x50A5));
-                func_001F6EA8(0x100, *(s32 *)&D_0015F61C + 0x56, c2, line, -1);
+                func_00116248(line, D_0015F668, msg_string(0x50A5));
+                FontPrintCenter(0x100, *(s32 *)&D_0015F61C + 0x56, c2, line, -1);
                 func_00116248(line, D_0015F680, ((HeroP *)D_0013F450)->unk8A8);
-                func_001F6EA8(0x100, *(s32 *)&D_0015F61C + 0x6A, c2, line, -1);
+                FontPrintCenter(0x100, *(s32 *)&D_0015F61C + 0x6A, c2, line, -1);
             } else {
-                func_00116248(line, D_0015F668, func_001FE540(0x50A4));
-                func_001F6EA8(0x100, *(s32 *)&D_0015F61C + 0x60, c3, line, -1);
+                func_00116248(line, D_0015F668, msg_string(0x50A4));
+                FontPrintCenter(0x100, *(s32 *)&D_0015F61C + 0x60, c3, line, -1);
             }
-            func_001F6EA8(0x100, *(s32 *)&D_0015F61C + 0x90, c1, func_001FE540(0x524E), -1);
-            func_001F6EA8(0x100, *(s32 *)&D_0015F61C + 0xA8, c1, func_001FE540(0x524D), -1);
+            FontPrintCenter(0x100, *(s32 *)&D_0015F61C + 0x90, c1, msg_string(0x524E), -1);
+            FontPrintCenter(0x100, *(s32 *)&D_0015F61C + 0xA8, c1, msg_string(0x524D), -1);
         }
         break;
     }
     case 2:
-        func_001F6410(0x64, 0xA0, 0xB0, 0x150,
-                        func_001FA8A8(*(s32 *)&D_0015F624, *(s32 *)&D_0015F628,
-                               func_001F9FA8((f32)(D_0015F538 % *(s32 *)&D_0015F620) / func_001FA888(*(s32 *)&D_0015F620) * 6.28318f - 3.14159f) * 0.5f + 0.5f));
-        func_001F6EA8(0x100, 0x7A, 0x8000C0C0, ((MessageBoxP *)D_00193400)->title, -1);
+        draw_outlined_rect(0x64, 0xA0, 0xB0, 0x150,
+                        FastTweenColor(*(s32 *)&D_0015F624, *(s32 *)&D_0015F628,
+                               FastSin((f32)(D_0015F538 % *(s32 *)&D_0015F620) / IntToFloat(*(s32 *)&D_0015F620) * 6.28318f - 3.14159f) * 0.5f + 0.5f));
+        FontPrintCenter(0x100, 0x7A, 0x8000C0C0, ((MessageBoxP *)D_00193400)->title, -1);
         break;
     default: {
         s32 pulse;
 
-        pulse = func_001FA8A8(*(s32 *)&D_0015F624, *(s32 *)&D_0015F628,
-                       func_001F9FA8((f32)(D_0015F538 % *(s32 *)&D_0015F620) / func_001FA888(*(s32 *)&D_0015F620) * 6.28318f - 3.14159f) * 0.5f + 0.5f);
-        func_001F6410(0x50, *(s32 *)&D_0015F5EC + 0x1A, 0xB0, 0x150, pulse);
+        pulse = FastTweenColor(*(s32 *)&D_0015F624, *(s32 *)&D_0015F628,
+                       FastSin((f32)(D_0015F538 % *(s32 *)&D_0015F620) / IntToFloat(*(s32 *)&D_0015F620) * 6.28318f - 3.14159f) * 0.5f + 0.5f);
+        draw_outlined_rect(0x50, *(s32 *)&D_0015F5EC + 0x1A, 0xB0, 0x150, pulse);
         if (((MessageBoxP *)D_00193400)->title != 0) {
-            func_001F6EA8(0x100, 0x5A, 0x8000C0C0, ((MessageBoxP *)D_00193400)->title, -1);
+            FontPrintCenter(0x100, 0x5A, 0x8000C0C0, ((MessageBoxP *)D_00193400)->title, -1);
         }
         if (((MessageBoxP *)D_00193400)->line1 != 0) {
-            func_001F6EA8(0x100, *(s32 *)&D_0015F5E8, 0x80FFA888, ((MessageBoxP *)D_00193400)->line1, -1);
+            FontPrintCenter(0x100, *(s32 *)&D_0015F5E8, 0x80FFA888, ((MessageBoxP *)D_00193400)->line1, -1);
         }
         if (((MessageBoxP *)D_00193400)->line2 != 0) {
-            func_001F6EA8(0x100, *(s32 *)&D_0015F5EC, 0x80FFA888, ((MessageBoxP *)D_00193400)->line2, -1);
+            FontPrintCenter(0x100, *(s32 *)&D_0015F5EC, 0x80FFA888, ((MessageBoxP *)D_00193400)->line2, -1);
         }
         break;
     }
     }
-    func_001F4748();
+    DoGifPaging();
 }
 
 INCLUDE_ASM("asm/nonmatchings/text", func_001FD3E8);

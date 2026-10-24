@@ -145,7 +145,7 @@ python tools/gen_progress_report.py --check
 Commit the regenerated `progress/report.json` **together with** the source
 or original-assembly classification change. CI (`Progress report`) fails a
 push whose report is out of date with `src/` or the tracked classification
-lists, and decomp.dev publishes whatever the report says. The build audit
+lists, and ByteMatch publishes whatever the report says. The build audit
 counts exact C separately from the report's finished original assembly.
 
 - Stage files by name, never with `git add -A`. Stray tool output has

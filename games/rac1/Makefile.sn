@@ -95,6 +95,15 @@ build-sn/core/%.o: src/core/%.c config/file_cflags.txt tools/file_cflags.py tool
 	    cp build-sn/core/$*_again.s build-sn/core/$*_fixed.s && \
 	    $(CC_CORE) $(CFLAGS) -c build-sn/core/$*_fixed.s -o $@; fi; fi
 
+# Whole SN source objects proven against the original assembler, including retail remnants.
+PS2EEAS_REAL_CORE := $(shell awk '!/^\#/ && $$5 == "ps2eeas-real" {print $$1}' config/core_text.objects)
+$(PS2EEAS_REAL_CORE): build-sn/core/%.o: src/core/%.c config/core_text.objects config/file_cflags.txt tools/file_cflags.py tools/check_macro_slots.py tools/ps2eeas.py
+	@mkdir -p build-sn/core
+	$(CC_CORE) $(CFLAGS) $$(python tools/file_cflags.py $<) -S -o build-sn/core/$*.s $<
+	cp build-sn/core/$*.s build-sn/core/$*_fixed.s
+	python tools/check_macro_slots.py build-sn/core/$*_fixed.s
+	python tools/ps2eeas.py build-sn/core/$*_fixed.s $@
+
 # Sony SDK code that was built with the SDK's own 2.9-ee, like libgcc,
 # not with the game's 2.95.3: the objects marked `ee29` in
 # config/core_text.objects (the memory card library, sceMcSync at

@@ -7,8 +7,8 @@ extern int func_001FA898_r(float) __asm__("func_001FA898");
 extern unsigned char *D_L07_001B24CC;
 
 // Spawns a short-lived particle at a position with a given velocity.
-unsigned char *SpawnPuffParticle(char *pos, char *vec) {
-    unsigned char *p = func_00218928(0x33);
+unsigned char *spawn_projectile_expiry_particle(char *pos, char *vec) {
+    unsigned char *p = create_part(0x33);
     if (p != 0) {
         char *b = (char *)p + 0x20;
         char *a = (char *)p + 0x10;
@@ -38,10 +38,10 @@ extern float D_0015EE60 MACRO_ADDR;
 extern float D_L07_00166EC0[];
 
 /* Adapted from Lombyte (GPL-3.0) for PAL by OpenRAC's tools/port.py: src/overlays/shared/rendering/0029a2a0.c, FUN_L07_0029b8d8. */
-unsigned char *SpawnMobyAttachedParticle(void *m, short index, float amount, float factor) {
+unsigned char *spawn_moby_point_offset_particle(void *m, short index, float amount, float factor) {
     float v[4];
     float t[4];
-    unsigned char *p = func_00218928(0x3d);
+    unsigned char *p = create_part(0x3d);
     if (p != 0) {
         unsigned char *q = p + 0x20;
         *(void **)q = m;
@@ -64,7 +64,7 @@ unsigned char *SpawnMobyAttachedParticle(void *m, short index, float amount, flo
         *(short *)(q + 0xe) = index;
         p[8] = truncate_float_to_s32(*(float *)(q + 8) * 255.0f);
         Moby_GetJointWorldPos(*(void **)q, *(short *)(q + 0xe), v);
-        FastVecSub(t, D_L07_00166EC0, v);
+        FastVecSub(t, debris_far_point, v);
         func_L00_001FF4B0(t, t, *(float *)(q + 0x14));
         FastVecAdd(p + 0x10, v, t);
     }

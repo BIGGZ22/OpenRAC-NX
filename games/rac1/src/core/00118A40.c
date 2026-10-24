@@ -185,7 +185,7 @@ ASM_FUNC("asm/handwritten/core_text", func_00118EB0);
 extern int D_0012FCF0 NOT_SDA;
 
 void func_00118EC0(void) {
-    D_0012FCF0 = 0;
+    CoreGlobalWord = 0;
 }
 
 extern int func_0011D960(void); /* DIntr */
@@ -263,11 +263,11 @@ extern int func_00119AA8(int, int);
    the jal slot and swaps $s0/$s1. */
 int func_00119008(int fd, int buf, int len) {
     if (fd == 1 || fd == 2) {
-        if (D_0012FCF0 == 0) {
+        if (CoreGlobalWord == 0) {
             if (func_00119CC8_v() == 0) {
                 return -1;
             }
-            D_0012FCF0 = 1;
+            CoreGlobalWord = 1;
         }
         return func_00119AA8(buf, len);
     }
@@ -282,11 +282,11 @@ extern int func_00119CC8_v(void) __asm__("func_00119CC8");
 /* As func_00119008: func_00119CC8 is called with no argument. */
 int func_00119088(int arg0, int arg1, int arg2) {
     if (arg0 == 0) {
-        if (D_0012FCF0 == 0) {
+        if (CoreGlobalWord == 0) {
             if (func_00119CC8_v() == 0) {
                 return -1;
             }
-            D_0012FCF0 = 1;
+            CoreGlobalWord = 1;
         }
         return func_00119BF8(arg1, arg2);
     }

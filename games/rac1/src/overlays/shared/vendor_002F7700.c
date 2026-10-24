@@ -43,7 +43,7 @@ extern f32 func_L00_0025C918_F7700(f32 *value, f32 target, f32 *speed, f32 accel
 
 /* Grind rail: measures its paths once, then while the hero is in control mode 0x10 snaps it to the nearest path point in range and pulls it along, faster on level 1 the more rail is left.
    Adapted from Lombyte (GPL-3.0) for PAL by OpenRAC's tools/port.py: src/overlays/shared/gameplay/entities/002f6328.c, FUN_L01_002f6328. */
-void GrindRailUpdate(struct Moby *m) {
+void update_rail_hero_motion(struct Moby *m) {
     RailVars_F7700 *d = (RailVars_F7700 *)m->pvars;
     RailPath_F7700 *path;
     RailPath_F7700 *best_path;
@@ -211,7 +211,7 @@ extern void func_L00_0026CA10(void *, void *, int, int, float, int, int, int, in
 extern int func_00215570(void *, int);
 
 /* Update of moby class 686, a flying burst: drifts and trails smoke; on reaching its target it damages around it, sprays particles, arms nearby class 0x2BC targets and deletes itself. */
-void FlyingBurstUpdate(Moby *moby) {
+void update_explosive_projectile(Moby *moby) {
     Vec_2F7E08 old;
     Vec_2F7E08 a;
     Data_2F7E08 *d;
@@ -263,7 +263,7 @@ void FlyingBurstUpdate(Moby *moby) {
     }
     if (moby->state != 0) {
         s = 8.0f;
-        camdist = FastVecDist(D_L01_001672C0, &(*(Vec_2F7E08 *)&moby->pos));
+        camdist = FastVecDist(camera_pos, &(*(Vec_2F7E08 *)&moby->pos));
         if (D_L01_0015F504 != 0) {
             s = 4.0f;
         }
@@ -284,7 +284,7 @@ void FlyingBurstUpdate(Moby *moby) {
                 }
             }
         }
-        dist = FastVecDist(&(*(Vec_2F7E08 *)&moby->pos), D_L01_001672C0);
+        dist = FastVecDist(&(*(Vec_2F7E08 *)&moby->pos), camera_pos);
         k = 5;
         if (D_L01_0015F504 != 0) {
             k = 2;
@@ -316,7 +316,7 @@ void FlyingBurstUpdate(Moby *moby) {
             Vec_2F7E08 vel = { random_float_between(-1.0f, 1.0f), random_float_between(-1.0f, 1.0f), random_float_between(-1.0f, 1.0f) };
             {
                 func_L00_001FF4B0(&vel, &vel, s * (random_float_between(0.0f, 3.0f) * D_0015EE6C));
-                PartType08Spawn(&(*(Vec_2F7E08 *)&moby->pos), &vel, c1.c[random_integer_below(6)], c2.c[random_integer_below(6)],
+                spawn_particle_alt_9768(&(*(Vec_2F7E08 *)&moby->pos), &vel, c1.c[random_integer_below(6)], c2.c[random_integer_below(6)],
                                   rand_range(scale_ticks(0xF), scale_ticks(0x14)) / div, 200000.0f);
             }
         }
@@ -362,7 +362,7 @@ void FlyingBurstUpdate(Moby *moby) {
                 if (((Moby *)D_L01_00160058)[d->ids[r]].oclass == 0x2BC) {
                     Tgt_2F7E08 *e = (*(void **)&((Moby *)D_L01_00160058)[d->ids[r]].pvars);
                     if (e->h4 == 0 && e->timer == 0 && is_point_inside_clip_volume(D_0013E633 + 0xE9D, e->vol) != 0
-                        && is_point_inside_clip_volume(D_L01_001672C0, e->vol) != 0) {
+                        && is_point_inside_clip_volume(camera_pos, e->vol) != 0) {
                         e->timer = scale_ticks(rand_range(0x3C, 0xB4));
                     }
                 }
@@ -479,7 +479,7 @@ extern void func_L00_0026DD70(void *, void *, s32, s32, f32, s32);
 
 /* Debris update: falls and spins, bounces off what it hits with a random kick, bursts into 40 sparks once it comes to rest (or its unk10 timer runs out), or fades out over unk28 frames when unk20 is set.
    Adapted from Lombyte (GPL-3.0) for PAL by OpenRAC's tools/port.py: src/overlays/shared/gameplay/entities/002f6328.c, FUN_L01_002f8718. */
-void DebrisMobyUpdate(struct Moby *m) {
+void rock_update(struct Moby *m) {
     DebrisVars_2f8530 *d = (DebrisVars_2f8530 *)m->pvars;
     Vec4 old;
     Vec4 v;
@@ -571,8 +571,8 @@ extern void func_0020D960(char *, int, void *);
 void AttachCheatManipulatorToClasses(void) {
     if (D_L01_0015F6A8 == 2 && gCheats[0] != 0) {
         int i;
-        for (i = 0; i < D_L01_0016CD60.n; i++) {
-            char *moby = D_L01_0016CD60.m[i];
+        for (i = 0; i < fx_cutscene.n; i++) {
+            char *moby = fx_cutscene.m[i];
             short c = *(short *)(moby + 0xA6);
             if (c == 0x398 || c == 0x1BF) {
                 unsigned char *q = D_L01_0017C940;
@@ -605,12 +605,10 @@ extern void func_L00_002EBF50(void *, void *, int, int, int);
 extern int func_001F9908_c(void *) __asm__("func_001F9908");
 extern void func_L00_002EC0C8(int);
 extern void func_L01_00240CE8(void);
-extern void func_L00_002EBE88(void *);
-extern void func_L00_002EBEE0(void *);
 
 /* Cutscene trigger: unless already seen, starts its camera sequence when the hero enters the volume (or it is
  * triggered), then ends it after its timer and re-arms. */
-void CutsceneTriggerUpdate(char *m) {
+void update_cutscene_trigger(char *m) {
     char *d = *(char **)(m + 0x78);
     float a[4];
     float b[4];
@@ -680,8 +678,8 @@ void CutsceneTriggerUpdate(char *m) {
             m[0x20] = 3;
             m[0xBC] = 0;
         } else {
-            CameraScript_SetPosition(d);
-            CameraScript_SetLookAt(d + 0x10);
+            set_camera_position(d);
+            set_camera_rotation(d + 0x10);
         }
         break;
     case 3:
@@ -694,7 +692,7 @@ extern void func_L01_002BA380(char *, int);
 
 /* Register this level's vendor data set. */
 void Moby751Draw(void) {
-    RippleDraw(D_L01_001E3780, 0x15);
+    render_water_grids(pool_tiles, 0x15);
 }
 extern short D_L01_00161DC0;
 
@@ -702,8 +700,8 @@ extern short D_L01_00161DC0;
 void AttachCheatManipulatorToMatching(char *a) {
     if (D_L01_0015F6A8 == 2 && gCheats[0] != 0) {
         int i;
-        for (i = 0; i < D_L01_0016CD60.n; i++) {
-            char *moby = D_L01_0016CD60.m[i];
+        for (i = 0; i < fx_cutscene.n; i++) {
+            char *moby = fx_cutscene.m[i];
             short c = *(short *)(moby + 0xA6);
             if (c == *(short *)(a + 0xA6) || c == 0x32B) {
                 unsigned char *q = D_L01_0017C940;
@@ -746,12 +744,39 @@ extern unsigned char D_0014C150[];
 extern float D_0015EE64 MACRO_ADDR;
 extern unsigned char D_0013D605[];
 
+typedef struct PlumberVars {
+    u8 pad00[0x4];
+    s16 sub;                    /* 0x04: dialogue step, 4 unlocks the planet */
+    s16 h6;                     /* 0x06: 2 takes the level 8 post-dialogue path */
+    u8 b8;                      /* 0x08 */
+    u8 pad09[0x17];
+    char *p20;                  /* 0x20: dialogue script for the state */
+    u8 pad24[0x20];
+    s32 i44;                    /* 0x44 */
+    u8 pad48[0x4];
+    s32 i4C;                    /* 0x4C: camera record index, -1 none */
+    u8 body[0x64];              /* 0x50: body joint record eased by EaseManipulatorOffsets */
+    f32 pitch;                  /* 0xB4 */
+    f32 yaw;                    /* 0xB8 */
+    u8 padBC[0x4];
+    f32 height;                 /* 0xC0 */
+    u8 padC4[0xC];
+    u8 head[0x68];              /* 0xD0: head joint record */
+    f32 head_yaw;               /* 0x138 */
+    u8 pad13C[0x14];
+    Vec4 target;                /* 0x150: point the head looks at */
+    u8 pad160[0x4];
+    s32 moving_timer;           /* 0x164 */
+    s32 target_timer;           /* 0x168 */
+} PlumberVars;
+
+extern Hero hero_F7700 __asm__("D_0013F450");
+
 /* Talking NPC update: seven conversation states, aims at the player and sets the body and head poses. */
-void TalkingNpcUpdate(char *m)
+void the_plumber_update(char *m)
 {
-    char *d;
-    char *p;
-    char *pl;
+    Moby *plumber_moby = (Moby *)m;
+    PlumberVars *plumber_vars = (PlumberVars *)plumber_moby->pvars;
     float rate;
     float head_rate;
     int tracking;
@@ -759,56 +784,55 @@ void TalkingNpcUpdate(char *m)
     float s_eye[4];
     float s_delta[4];
 
-    d = *(char **)(m + 0x78);
-    if (d == 0) return;
+    if (plumber_vars == 0) return;
     AttachCheatManipulatorToMatching(m);
-    if (*(unsigned char *)(m + 0x31) != 0) {
-        if (FastVecDist(m + 0x10, D_L01_001672C0) < 32.0f) {
-            SetGroundHeightBand(m);
-            *(unsigned char *)(m + 0x7F) = 0x1A;
+    if (plumber_moby->visible != 0) {
+        if (FastVecDist(&plumber_moby->pos, camera_pos) < 32.0f) {
+            func_L00_0025B178(plumber_moby);
+            plumber_moby->shadow_range = 0x1A;
         }
     }
-    switch (*(unsigned char *)(m + 0x20)) {
+    switch (plumber_moby->state) {
     case 0:
-        *(unsigned char *)(m + 0x30) = 0xFF;
-        *(int *)(d + 0x44) = 0;
+        plumber_moby->update_dist = 0xFF;
+        plumber_vars->i44 = 0;
         if (D_0015EE84_c == 1) {
             if (D_0013D605[0x845] != 0) {
                 DeleteMoby(m);
                 return;
             }
-            *(char **)(d + 0x20) = D_L01_0020B8F0;
-            *(unsigned char *)(m + 0x20) = 1;
+            plumber_vars->p20 = D_L01_0020B8F0;
+            plumber_moby->state = 1;
         } else if (D_0015EE84_c == 8) {
-            *(char **)(d + 0x20) = D_L01_00161DC8;
-            *(unsigned char *)(m + 0x20) = 4;
+            plumber_vars->p20 = D_L01_00161DC8;
+            plumber_moby->state = 4;
         } else {
-            *(char **)(d + 0x20) = D_L01_00161DD8;
-            *(unsigned char *)(m + 0x20) = 7;
+            plumber_vars->p20 = D_L01_00161DD8;
+            plumber_moby->state = 7;
         }
-        DialogRequest_Init(m, d);
+        DialogRequest_Init(m, plumber_vars);
         break;
     case 1:
-        if (Npc_TryStartDialog(m, d)) {
+        if (Npc_TryStartDialog(m, plumber_vars)) {
             PlaceMarkerAheadOfMoby(2.2f, m);
-            *(unsigned char *)(m + 0x20) = 2;
+            plumber_moby->state = 2;
         }
         break;
     case 2:
         if (D_L01_0015F6A8 != 2) {
-            if (*(unsigned char *)(*(unsigned char *)(m + 0xB0) + (D_0015EE84_c << 4) + (int)D_0014C150) != 0xFF) {
-                SetLevelTriggerDone(*(unsigned char *)(m + 0xB0));
-                if (*(int *)(d + 0x4C) != -1) {
-                    char *t = D_L01_0016016C_c + (*(int *)(d + 0x4C) << 7);
-                    PauseMenu_SeedSnapshot(t + 0x30, t + 0x70);
+            if (*(unsigned char *)(plumber_moby->mission + (D_0015EE84_c << 4) + (int)D_0014C150) != 0xFF) {
+                jet_clear_persistent(plumber_moby->mission);
+                if (plumber_vars->i4C != -1) {
+                    char *t = D_L01_0016016C_c + (plumber_vars->i4C << 7);
+                    jet_reset_camera(t + 0x30, t + 0x70);
                 }
             }
-            *(unsigned char *)(m + 0x20) = 1;
-            if (*(short *)(d + 4) == 4) {
-                UnlockPlanet(2);
+            plumber_moby->state = 1;
+            if (plumber_vars->sub == 4) {
+                unlock_planet(2);
                 ShowPlanetBanner(2);
-                *(unsigned char *)(m + 0x20) = 3;
-                FindOrAddMobyEntry(m + 0x20, 1, m, 1, D_L01_001BADB0);
+                plumber_moby->state = 3;
+                FindOrAddMobyEntry(&plumber_moby->state, 1, plumber_moby, 1, D_L01_001BADB0);
                 memcard_Save(0, -1);
             }
         }
@@ -817,21 +841,21 @@ void TalkingNpcUpdate(char *m)
         DeleteMoby(m);
         return;
     case 4:
-        if (Npc_TryStartDialog(m, d)) {
-            *(unsigned char *)(m + 0x20) = 5;
-            *(unsigned char *)(d + 8) = 0;
+        if (Npc_TryStartDialog(m, plumber_vars)) {
+            plumber_moby->state = 5;
+            plumber_vars->b8 = 0;
         }
         break;
     case 5:
         if (D_L01_0015F6A8 != 2) {
-            if (*(short *)(d + 6) == 2) {
-                char *h = (char *)&D_0013E633 + 0xE1D;
-                *(float *)(h + 0x80) = 130.5f;
-                *(float *)(h + 0x84) = 299.5f;
-                *(float *)(h + 0x88) = 46.0f;
-                *(unsigned char *)(m + 0x20) = 6;
+            if (plumber_vars->h6 == 2) {
+                Hero *h = &hero_F7700;
+                h->motion.pos.f[0] = 130.5f;
+                h->motion.pos.f[1] = 299.5f;
+                h->motion.pos.f[2] = 46.0f;
+                plumber_moby->state = 6;
             } else {
-                *(unsigned char *)(m + 0x20) = 4;
+                plumber_moby->state = 4;
             }
         }
         break;
@@ -841,55 +865,62 @@ void TalkingNpcUpdate(char *m)
     rate = 0.02f;
     head_rate = 0.3f;
     tracking = 0;
-    if (*(unsigned char *)(m + 0x53) == 0) {
-        p = (char *)&D_0013E633 + 0xE9D;
+    if (plumber_moby->prev_seq == 0) {
+        char *hero_position = (char *)&hero_F7700.motion.pos;
+        Hero *hero_aim_view;
         tracking = 1;
-        if (func_001F9D48(m + 0x10, p) < 8.0f &&
-            FastDiffRots(*(float *)(m + 0x48),
-                func_L00_001FF860(*(float *)((pl = p - 0x80) + 0xD0) - *(float *)(m + 0x10),
-                    *(float *)(pl + 0xD4) - *(float *)(m + 0x14))) < 1.5707964f) {
-            if (FastVecLength(p + 0x80) > 0.01f)
-                *(int *)(d + 0x164) = scale_ticks(120);
+        if (func_001F9D48(&plumber_moby->pos, hero_position) < 8.0f &&
+            (hero_aim_view = (Hero *)(hero_position - 0x80),
+             FastDiffRots(plumber_moby->rot.z,
+                 func_L00_001FF860(hero_aim_view->motion.unkD0.f[0] - plumber_moby->pos.x,
+                                   hero_aim_view->motion.unkD0.f[1] - plumber_moby->pos.y))) < 1.5707964f) {
+            if (FastVecLength(hero_position + 0x80) > 0.01f)
+                plumber_vars->moving_timer = scale_ticks(120);
             else
-                func_001F9908_c((int *)(d + 0x164));
-        } else if (*(int *)(d + 0x164) != 0) {
-            *(int *)(d + 0x164) = 0;
-            qcopy(d + 0x150, (char *)&D_0013E633 + 0xEED);
+                func_001F9908_c(&plumber_vars->moving_timer);
+        } else if (plumber_vars->moving_timer != 0) {
+            plumber_vars->moving_timer = 0;
+            qcopy(&plumber_vars->target, hero_F7700.motion.unkD0.f);
         }
-        if (func_001F9908_c((int *)(d + 0x168))) {
+        if (func_001F9908_c(&plumber_vars->target_timer)) {
             float heading;
-            *(int *)(d + 0x168) = func_001FA898_r(func_001F9878(random_float_between(180.0f, 300.0f)));
-            heading = FastAddRots(*(float *)(m + 0x48), random_float_between(-90.0f, 90.0f) * 0.017453292f);
-            BuildSphericalOffset(d + 0x150, 6.0f, heading, random_float_between(0.0f, 30.0f) * 0.017453292f);
-            FastVecAdd(d + 0x150, d + 0x150, m + 0x10);
+            plumber_vars->target_timer = func_001FA898_r(func_001F9878(random_float_between(180.0f, 300.0f)));
+            heading = FastAddRots(plumber_moby->rot.z, random_float_between(-90.0f, 90.0f) * 0.017453292f);
+            BuildSphericalOffset(&plumber_vars->target, 6.0f, heading,
+                                 random_float_between(0.0f, 30.0f) * 0.017453292f);
+            FastVecAdd(&plumber_vars->target, &plumber_vars->target, &plumber_moby->pos);
         }
-        if (*(int *)(d + 0x164) != 0) {
-            qcopy(s_target, (char *)&D_0013E633 + 0xEED);
+        if (plumber_vars->moving_timer != 0) {
+            qcopy(s_target, hero_F7700.motion.unkD0.f);
             rate = 0.04f;
             head_rate = 0.3f;
         } else {
-            qcopy(s_target, d + 0x150);
+            qcopy(s_target, &plumber_vars->target);
         }
     }
     if (tracking) {
         float yaw;
         float pitch;
-        qcopy(s_eye, m + 0x10);
+        qcopy(s_eye, &plumber_moby->pos);
         s_eye[2] += 1.0f;
         FastVecSub(s_delta, s_target, s_eye);
-        yaw = FastSubRots(func_L00_001FF860(s_delta[0], s_delta[1]), *(float *)(m + 0x48));
+        yaw = FastSubRots(func_L00_001FF860(s_delta[0], s_delta[1]), plumber_moby->rot.z);
         pitch = -func_L00_001FF860(func_001F9CE8(s_delta), s_delta[2]);
-        if (yaw > 1.5707964f) yaw = 1.5707964f;
-        else if (yaw < -1.5707964f) yaw = -1.5707964f;
-        if (pitch > 0.5235988f) pitch = 0.5235988f;
-        else if (pitch < -0.5235988f) pitch = -0.5235988f;
-        *(float *)(d + 0xB8) = yaw * 0.5f;
-        *(float *)(d + 0x138) = yaw * 0.5f;
-        *(float *)(d + 0xB4) = pitch * 1.25f;
+        if (yaw > 1.5707964f)
+            yaw = 1.5707964f;
+        else if (yaw < -1.5707964f)
+            yaw = -1.5707964f;
+        if (pitch > 0.5235988f)
+            pitch = 0.5235988f;
+        else if (pitch < -0.5235988f)
+            pitch = -0.5235988f;
+        plumber_vars->yaw = yaw * 0.5f;
+        plumber_vars->head_yaw = yaw * 0.5f;
+        plumber_vars->pitch = pitch * 1.25f;
     }
-    if (gCheats[0] != 0) *(float *)(d + 0xC0) = 2.75f;
-    EaseManipulatorOffsets(m, d + 0x50, 0, rate * D_0015EE64, head_rate * D_0015EE64);
-    EaseManipulatorOffsets(m, d + 0xD0, 1, rate * D_0015EE64, head_rate * D_0015EE64);
+    if (gCheats[0] != 0) plumber_vars->height = 2.75f;
+    EaseManipulatorOffsets(m, plumber_vars->body, 0, rate * D_0015EE64, head_rate * D_0015EE64);
+    EaseManipulatorOffsets(m, plumber_vars->head, 1, rate * D_0015EE64, head_rate * D_0015EE64);
 }
 extern char D_0013F4D0_015F8[] __asm__("D_0013F4D0");
 extern s32 D_0014C290_015F8[][64] __asm__("D_0014C290");
@@ -919,7 +950,7 @@ extern f32 func_001F9B88_015F8(f32) __asm__("func_001F9B88");
 extern f32 func_00214358_015F8(void *, s32, f32) __asm__("func_00214358");
 
 /* Adapted from Lombyte (GPL-3.0) for PAL by OpenRAC's tools/port.py: src/overlays/shared/gameplay/entities/002f6328.c, FUN_L01_00300220. */
-void CheckpointTriggerUpdate(struct Moby *moby) {
+void spawn_point_update(struct Moby *moby) {
     PickupVars_015F8 *vars = (PickupVars_015F8 *)moby->pvars;
     s32 armed = 0;
     Vec4f pos;
@@ -1038,54 +1069,61 @@ extern void func_L00_002B6E10(void *, void *);
 
 typedef struct { int zone; float lo; float hi; int vol; } Zone_303a20;
 
+typedef struct ZoneVars_302648 {
+    Zone_303a20 zones[20];     /* 0x000: per zone: index into D_L01_001B0C30 (-1 unused), z range, volume */
+    s32 count;                 /* 0x140: frames the target has stood clear of every zone; 0 when it is inside one */
+} ZoneVars_302648;
+
 /* Counts how long the type-0xAC moby has stood clear of the 20 zones; after 90 ticks hands it on. */
-void RcRangeLimiterUpdate(char *m) {
-    Zone_303a20 *d = *(Zone_303a20 **)(m + 0x78);
-    char *t = 0;
+void update_target_outside_zone_timeout(char *m) {
+    struct Moby *moby = (struct Moby *)m;
+    ZoneVars_302648 *zone_vars = (ZoneVars_302648 *)moby->pvars;
+    struct Moby *target_moby = 0;
+    struct Moby *candidate_moby;
     Zone_303a20 *e;
-    char *tp;
-    ((unsigned char *)m)[0x30] = 0xFF;
+    Vec4f *tp;
+
+    moby->update_dist = 0xFF;
     if (*(int *)(D_0013E633 + 0x2EA1) != 0x1D) goto fail;
     {
-        char *o;
-        for (o = D_L01_00160064; o != 0; o = *(char **)(o + 0x28)) {
-            if (*(short *)(o + 0xA6) == 0xAC) {
-                t = o;
+        for (candidate_moby = (struct Moby *)D_L01_00160064; candidate_moby != 0; candidate_moby = candidate_moby->next) {
+            if (candidate_moby->oclass == 0xAC) {
+                target_moby = candidate_moby;
                 break;
             }
         }
     }
-    if (t == 0 || *(short *)(t + 0xA6) != 0xAC) {
+    if (target_moby == 0 || target_moby->oclass != 0xAC) {
     fail:
-        *(int *)((char *)d + 0x140) = 0;
+        zone_vars->count = 0;
         return;
     }
-    *(int *)((char *)d + 0x140) += 1;
-    tp = t + 0x10;
+    zone_vars->count += 1;
+    tp = &target_moby->pos;
     {
         int none = -1;
-        e = d;
+        e = zone_vars->zones;
         do {
-        if (e->zone != none && *(float *)(t + 0x18) > e->lo && *(float *)(t + 0x18) < e->hi) {
-            char *z = D_L01_001B0C30[e->zone];
-            if (IsPointInPolygon(tp, z + 0x10, *(int *)z)) {
-                *(int *)((char *)d + 0x140) = 0;
+            if (e->zone != none && target_moby->pos.z > e->lo && target_moby->pos.z < e->hi) {
+                s32 *path = (s32 *)D_L01_001B0C30[e->zone];
+                if (IsPointInPolygon(tp, path + 4, path[0])) {
+                    zone_vars->count = 0;
+                    break;
+                }
+            }
+            if (is_point_inside_clip_volume(tp, e->vol)) {
+                zone_vars->count = 0;
                 break;
             }
-        }
-        if (is_point_inside_clip_volume(tp, e->vol)) {
-            *(int *)((char *)d + 0x140) = 0;
-            break;
-        }
-        e++;
-        } while ((int)e < (int)(d + 20));
+            e++;
+        } while ((int)e < (int)(zone_vars->zones + 20));
     }
-    if (*(int *)((char *)d + 0x140) > 0) {
+    if (zone_vars->count > 0) {
         if (*(int *)&D_L01_0015F40C != 0) {
             AddDrawCallback(DrawTiledScreenOverlay, m);
         }
-        if (scale_ticks(0x5A) < *(int *)((char *)d + 0x140)) {
-            Moby_EndGadgetControl(t, *(void **)(t + 0x78));
+        if (scale_ticks(0x5A) < zone_vars->count) {
+            Moby_EndGadgetControl(target_moby, target_moby->pvars);
         }
     }
 }
@@ -1153,7 +1191,7 @@ extern void save_00309078(int, int) __asm__("func_0020BFC8");
 
 /* Update of the Novalis collectible that starts a short cutscene: spins and bobs at its spawn point until the hero touches it, then plays the pickup camera, marks its flag collected, saves and removes itself.
    Adapted from Lombyte (GPL-3.0) for PAL: src/overlays/shared/gameplay/entities/002f6328.c, FUN_L01_00307ca0. */
-void GoldBoltUpdate(Moby *moby) {
+void gold_bolt_update(Moby *moby) {
     Vars_00309078 *vars = (Vars_00309078 *)moby->pvars;
     Hero *h;
     Vec4f at;
@@ -1324,30 +1362,42 @@ void GlowRingPickupUpdate(char *moby) {
 extern int func_002140B0(int);
 extern int func_001F9850(int);
 
+typedef struct {
+    u8 pad00[0x20];
+    f32 r[4];                  /* 0x20 random values, one per slot */
+    f32 a[4];                  /* 0x30 */
+    s32 c[4];                  /* 0x40 scale_ticks values, 0x3F + i * 0x40 */
+    f32 x40;                   /* 0x50 */
+    f32 x44;                   /* 0x54 */
+    f32 x48;                   /* 0x58 */
+    f32 x4c;                   /* 0x5C */
+} M_FUN_L01_00308470;
+
 /* fills random floats and sound handles in the moby's data block */
-void InitRandomFloatsAndSounds(char *moby) {
-    char *data = *(char **)(moby + 0x78);
-    float *f = (float *)(data + 0x20);
-    int *p;
+void initialize_gold_bolt_data(char *moby) {
+    Moby *o = (Moby *)moby;
+    M_FUN_L01_00308470 *m = (M_FUN_L01_00308470 *)o->pvars;
+    f32 *f = m->r;
+    s32 *p;
     int i;
     int arg;
     for (i = 3; i >= 0; i--, f++) {
         *f = (float)random_integer_below(0xFF);
     }
-    p = (int *)(data + 0x40);
-    *(float *)(data + 0x30) = -1.0f;
-    *(float *)(data + 0x34) = -2.25f;
-    *(float *)(data + 0x38) = 1.25f;
-    *(float *)(data + 0x3C) = 2.5f;
+    p = m->c;
     arg = 0x3F;
+    m->a[0] = -1.0f;
+    m->a[1] = -2.25f;
+    m->a[2] = 1.25f;
+    m->a[3] = 2.5f;
     for (i = 3; i >= 0; i--, p++) {
         *p = scale_ticks(arg);
         arg += 0x40;
     }
-    *(float *)(data + 0x50) = 2.5f;
-    *(float *)(data + 0x54) = 3.0f;
-    *(float *)(data + 0x5C) = 2.5f;
-    *(float *)(data + 0x58) = 3.0f;
+    m->x40 = 2.5f;
+    m->x44 = 3.0f;
+    m->x4c = 2.5f;
+    m->x48 = 3.0f;
 }
 extern char D_L01_001672C0[];
 extern short D_L01_00161FCC;
@@ -1385,7 +1435,7 @@ void DrawGlowRings(char *m) {
         scale = (160.0f - func_0020D830_m(m)) / 160.0f * 16.0f;
         if (1.0f < scale) scale = 1.0f;
     }
-    FastVecSub(dir, D_L01_001672C0, pos);
+    FastVecSub(dir, camera_pos, pos);
     func_L00_001FF4B0(dir, dir, -0.3f);
     func_L00_001FF4B0(step, dir, 0.1f);
     FastVecAdd(dir, dir, pos);
@@ -1454,17 +1504,17 @@ void func_L01_00309BB8(char *m) {
         v[2] = FastAddRots(ang, 3.14159f);
         v[1] = k * -0.17f;
     } else {
-        func_001F9C08(out, D_L01_0016016C + *(int *)(d + 4) * 128 + 0x30,
-                      D_L01_0016016C + *(int *)(d + 8) * 128 + 0x30, k);
-        t = D_L01_0016016C;
+        func_001F9C08(out, camera_points + *(int *)(d + 4) * 128 + 0x30,
+                      camera_points + *(int *)(d + 8) * 128 + 0x30, k);
+        t = camera_points;
         qcopy(a, t + *(int *)(d + 4) * 128 + 0x70);
         qcopy(b, t + *(int *)(d + 8) * 128 + 0x70);
         v[2] = FastAddRots(FastSubRots(b[2], a[2]) * k, a[2]);
         v[1] = FastAddRots(FastSubRots(b[1], a[1]) * k, a[1]);
         v[0] = FastAddRots(FastSubRots(b[0], a[0]) * k, a[0]);
     }
-    CameraScript_SetPosition(out);
-    CameraScript_SetLookAt(v);
+    set_camera_position(out);
+    set_camera_rotation(v);
 }
 extern short D_L01_00161FE4;
 extern short D_L01_00161FE8;
@@ -1516,7 +1566,7 @@ void MarkMobyCollected(char *moby) {
     int d = D_0015EE84_c << 8;
     unsigned char t;
     *(int *)(D_0014171B + 0xAB75 + (((short)*(unsigned short *)(moby + 0xB2) >> 5) * 4 + d)) |= 1 << (*(unsigned short *)(moby + 0xB2) & 0x1F);
-    D_L01_001BAC60[(short)*(unsigned short *)(moby + 0xB2) >> 5] |= 1 << (*(unsigned short *)(moby + 0xB2) & 0x1F);
+    moby_killed[(short)*(unsigned short *)(moby + 0xB2) >> 5] |= 1 << (*(unsigned short *)(moby + 0xB2) & 0x1F);
     t = *(unsigned char *)(moby + 0x21);
     if (t != 0xFF) MobyGroup_SetState((char *)t, 1);
     else moby[0x20] = 1;
@@ -1907,7 +1957,7 @@ extern int func_L00_0023F0D0(void *, float, float, float, float, float);
 extern void func_L00_0023F1D0(int);
 extern char D_L01_001807C0[];
 
-void WanderingLightUpdate(unsigned char *m) {
+void update_moby_interpolated_point_light(unsigned char *m) {
     int state = m[0x20];
     char *e = *(char **)(m + 0x78);
     int i;
@@ -1949,17 +1999,17 @@ void WanderingLightUpdate(unsigned char *m) {
         return;
     }
 
-    elapsed = func_001F9D48(m + 0x10, D_L01_001672C0);
+    elapsed = func_001F9D48(m + 0x10, camera_pos);
     active = elapsed < *(float *)(e + 0x5c) ? 1.0f : 0.0f;
     if (active != 0.0f && *(int *)(e + 0x80) != -1) {
-        if (!is_point_inside_clip_volume(D_L01_001672C0, *(int *)(e + 0x80)))
+        if (!is_point_inside_clip_volume(camera_pos, *(int *)(e + 0x80)))
             active = 0.0f;
     }
     i = *(int *)(e + 0x84);
     if (i != -1 && *(signed char *)((D_L01_00160058 + 0x20) + i * 0x100) < 0) {
         slot = *(int *)(e + 0x68);
         if (slot != -1)
-            FreePointLight(slot);
+            light_off_67e8(slot);
         DeleteMoby(m);
         return;
     }
@@ -2019,7 +2069,7 @@ void WanderingLightUpdate(unsigned char *m) {
     } else {
         slot = *(int *)(e + 0x68);
         if (slot != -1) {
-            FreePointLight(slot);
+            light_off_67e8(slot);
             *(int *)(e + 0x68) = -1;
         }
     }
@@ -2048,7 +2098,7 @@ extern void func_001F9EE8(void *, void *, void *);
 extern void func_L00_001FD1D8(void *, void *, s32);
 
 /* Adapted from Lombyte (GPL-3.0) for PAL by OpenRAC's tools/port.py: src/overlays/shared/gameplay/vendor/0030b618.c, FUN_L01_0030bfa8. */
-void Moby1510_DrawGlow(char *m) {
+void draw_moby_offset_textured_quad(char *m) {
     struct {
         GlowQuad_bfa8 quad;
         GlowVec_bfa8 src_corner[4];
@@ -2089,7 +2139,7 @@ void Moby1510_DrawGlow(char *m) {
     FastVecAdd(&local.basis.offset, &local.basis.offset, &local.basis.partial);
     src = &local.basis.mat0;
     FastVecAdd(&local.basis.point, &local.basis.offset, m + 0x10);
-    FastVecSub(src, D_L01_001672C0, &local.basis.point);
+    FastVecSub(src, camera_pos, &local.basis.point);
     func_L00_001FF4B0(src, src, one);
     dst = &local.basis.mat1;
     FastVecCross(dst, src, D_0013F6E0);
@@ -2176,7 +2226,7 @@ extern OvlQuad_0DD80 D_L01_00174360;
 extern OvlQuad_0DD80 D_0013F4D0_0DD80 __asm__("D_0013F4D0");
 
 /* Adapted from Lombyte (GPL-3.0) for PAL by OpenRAC's tools/port.py: src/overlays/shared/gameplay/vendor/0030b618.c, FUN_L01_0030c9a8. */
-void func_L01_0030DD80(char *m) {
+void update_sandmouse_projectile(char *m) {
     char *e = *(char **)(m + 0x78);
     f32 *pos;
     OvlVec4 old_pos;
@@ -2255,7 +2305,7 @@ extern void func_L00_001FF4B0(void *, void *, float);
 extern void func_001F9BD8(void *, void *, void *);
 
 /* offset a position by two camera-relative vectors, then raise z by 1 */
-void GetHeroFrontOffsetPoint(void *unused, float *p) {
+void compute_sandmouse_follow_goal(void *unused, float *p) {
     float a[4];
     float b[4];
     char *g = D_0013E633 + 0xE1D;
@@ -2273,50 +2323,52 @@ extern int func_L00_001EFFF0_30E6E0(void *, void *, int, void *, void *) __asm__
 /* Picks the best lock-on target for moby from the target table: a drawn class-5 enemy with health, within range, whose direction from `from`
  * is inside the yaw/pitch cone (or the wider near cone when close), scored by angle error and distance,
  * with a clear line of sight (or the blocker is the same kind of enemy). */
-void *func_L01_0030E6E0(void *moby, void *from, void *ang, float yawMax, float pitchMax, float range, float near,
-                        float nearYaw, float nearPitch) {
+void *select_sandmouse_projectile_target(void *moby, void *from, void *reference_rotation, float yawMax, float pitchMax,
+                        float range, float near, float nearYaw, float nearPitch) {
     float tp[4];
-    char *best = 0;
+    struct Moby *best = 0;
     float bestScore = 1.0e9f;
-    char *t;
-    int i;
-    for (i = 0; (t = D_L01_001AC180_30E6E0[i]) != 0; i++) {
-        char *hs = D_L01_00174340_30E6E0;
-        char *pl = D_0013E633 + 0xE1D;
-        float *hp;
-        int cls;
-        float dist, score, p2;
-        if (*(short *)(t + 0x32) == 0) continue;
-        hp = func_L00_0025D390_30E6E0(t);
-        if (t == 0 || *(char **)(t + 0x24) == 0) continue;
-        cls = *(short *)(*(char **)(t + 0x24) + 0x46);
-        if (cls != 5 || hp == 0 || !(0.0f < *hp)) continue;
-        dist = FastVecDist(from, t + 0x10);
-        if (!(dist < range)) continue;
-        qcopy(tp, t + 0x10);
+    s32 i;
+    struct Moby *candidate_moby;
+
+    for (i = 0; (candidate_moby = (struct Moby *)D_L01_001AC180_30E6E0[i]) != 0; i++) {
+        CollisionHit *collision_hit = (CollisionHit *)D_L01_00174340_30E6E0;
+        Hero *hero_ptr = (Hero *)(D_0013E633 + 0xE1D);
+        f32 *hp;
+        s32 candidate_target_kind;
+        f32 candidate_distance, score, pitch_error_squared;
+
+        if (candidate_moby->draw_dist == 0) continue;
+        hp = func_L00_0025D390_30E6E0(candidate_moby);
+        if (candidate_moby == 0 || candidate_moby->pclass == 0) continue;
+        candidate_target_kind = candidate_moby->pclass->type;
+        if (candidate_target_kind != 5 || hp == 0 || !(0.0f < *hp)) continue;
+        candidate_distance = FastVecDist(from, &candidate_moby->pos);
+        if (!(candidate_distance < range)) continue;
+        qcopy(tp, &candidate_moby->pos);
         tp[2] += 0.4f;
-        score = FastDiffRots(((float *)ang)[2], func_L00_001FF860(tp[0] - ((float *)from)[0], tp[1] - ((float *)from)[1]));
+        score = FastDiffRots(((f32 *)reference_rotation)[2], func_L00_001FF860(tp[0] - ((f32 *)from)[0], tp[1] - ((f32 *)from)[1]));
         score = score * score;
         if (!(score < yawMax * yawMax)) {
-            if (!(dist < near) || !(score < nearYaw * nearYaw)) continue;
+            if (!(candidate_distance < near) || !(score < nearYaw * nearYaw)) continue;
         }
-        p2 = FastDiffRots(((float *)ang)[1], func_L00_001FF860(dist, tp[2] - ((float *)from)[2]));
-        p2 = p2 * p2;
-        if (!(p2 < pitchMax * pitchMax)) {
-            if (!(dist < near) || !(p2 < nearPitch * nearPitch)) continue;
+        pitch_error_squared = FastDiffRots(((f32 *)reference_rotation)[1], func_L00_001FF860(candidate_distance, tp[2] - ((f32 *)from)[2]));
+        pitch_error_squared = pitch_error_squared * pitch_error_squared;
+        if (!(pitch_error_squared < pitchMax * pitchMax)) {
+            if (!(candidate_distance < near) || !(pitch_error_squared < nearPitch * nearPitch)) continue;
         }
-        score *= p2;
+        score *= pitch_error_squared;
         score *= func_001F9B50(FastVecDist(from, tp));
         if (!(score < bestScore)) continue;
         if (func_L00_001EFFF0_30E6E0(from, tp, 0, moby, 0)) {
-            char *hit = *(char **)(hs + 0x18);
-            if (hit == 0 || hit == *(char **)(pl + 0x2080) || hit == 0 || *(char **)(hit + 0x24) == 0
-                || *(short *)(*(char **)(hit + 0x24) + 0x46) != cls) {
+            struct Moby *hit = (struct Moby *)collision_hit->moby;
+            if (hit == 0 || hit == hero_ptr->moby || hit == 0 || hit->pclass == 0
+                || hit->pclass->type != candidate_target_kind) {
                 continue;
             }
         }
         bestScore = score;
-        best = t;
+        best = candidate_moby;
     }
     return best;
 }
@@ -2340,7 +2392,7 @@ extern void func_L00_00250800_0E9C8b(void *, int, void *) __asm__("func_L00_0025
 extern void func_L00_00250800_0E9C8c(void *, int, void *) __asm__("func_L00_00250800");
 
 /* Adapted from Lombyte (GPL-3.0) for PAL by OpenRAC's tools/port.py: src/overlays/shared/gameplay_vendor_0030b618.c, FUN_L01_0030d5f0. */
-void func_L01_0030E9C8(char *moby, char *state) {
+void try_fire_sandmouse_projectile(char *moby, char *state) {
     Vec4 v;
     Vec4 q;
     Vec4 p;
@@ -2350,7 +2402,7 @@ void func_L01_0030E9C8(char *moby, char *state) {
     if (FastDecTimer(state + 0x54) == 0) return;
     func_L00_00250800_0E9C8c(moby, (state[0x56] & 1) + 1, &v);
     state[0x56] = state[0x56] ^ 1;
-    e = func_L01_0030E6E0(moby, &v, moby + 0x40,
+    e = select_sandmouse_projectile_target(moby, &v, moby + 0x40,
                          (*(float *)&D_L01_00162118) * 0.017453292f,
                          (*(float *)&D_L01_0016211C) * 0.017453292f,
                          (*(float *)&D_L01_00162114), 2.0f, 3.1415927f, 3.1415927f);
@@ -2428,7 +2480,7 @@ extern s32 func_L00_00259B08_0EC58(struct Moby *, Vec4 *, f32, f32, s32, s32) __
 extern f32 func_L00_0025F368_0EC58(f32) __asm__("func_L00_0025F368");
 
 /* Adapted from Lombyte (GPL-3.0) for PAL by OpenRAC's tools/port.py: src/overlays/shared/gameplay/vendor/0030b618.c, FUN_L01_0030d880. */
-void MouseCritter_StepCommand(struct Moby *m, struct HoverVars_0EC58 *p) {
+void update_sandmouse_hover_movement(struct Moby *m, struct HoverVars_0EC58 *p) {
     Vec4 v;
     f32 d;
     f32 k;
@@ -2513,7 +2565,7 @@ extern void func_L01_0028B570(void *, void *, void *, void *, int);
 extern char D_L01_00162170, D_L01_00162180, D_L01_00162190;
 
 // If the moby's flag byte is set, builds a vector and runs three manipulator calls.
-void EmitFallingParticles(char *m) {
+void emit_sandmouse_particles(char *m) {
     if (*(unsigned char *)(m + 0x31) != 0) {
         float buf[4];
         float v[4];
@@ -2522,15 +2574,15 @@ void EmitFallingParticles(char *m) {
         z[2] = -(random_float_between(1.0f, 2.0f) * D_0015EE6C);
         *(u128 *)v = *(u128 *)z;
         Moby_GetJointWorldPos(m, 0, buf);
-        PartType74Spawn(m, buf, v, &D_L01_00162170, 1);
-        PartType74Spawn(m, buf, v, &D_L01_00162180, 1);
-        PartType74Spawn(m, buf, v, &D_L01_00162190, 1);
+        spawn_type_74_particle(m, buf, v, &D_L01_00162170, 1);
+        spawn_type_74_particle(m, buf, v, &D_L01_00162180, 1);
+        spawn_type_74_particle(m, buf, v, &D_L01_00162190, 1);
     }
 }
 extern void func_L00_00264690(void *, int, float, float);
 
 /* Initialize both consecutive effect entries. */
-void TwinGlowDraw(char *moby) {
+void draw_sandmouse_billboard_quads(char *moby) {
     char *data = *(char **)(moby + 0x78);
     char *entry = data + 0x70;
     int i;
@@ -2542,7 +2594,7 @@ void TwinGlowDraw(char *moby) {
 extern void func_L00_00250800(void *, int, void *);
 
 /* Attach two effect entries and register their update callback. */
-void TwinGlowInit(char *moby) {
+void update_sandmouse_billboard_quads(char *moby) {
     char *data = *(char **)(moby + 0x78);
     char *entry = data + 0x70;
     int i;
@@ -2550,7 +2602,7 @@ void TwinGlowInit(char *moby) {
         Moby_GetJointWorldPos(moby, i + 3, entry);
         entry += 0x10;
     }
-    AddDrawCallback(TwinGlowDraw, moby);
+    AddDrawCallback(draw_sandmouse_billboard_quads, moby);
 }
 typedef struct {
     s32 f0;
@@ -2614,7 +2666,7 @@ extern char *D_L01_00167300;
 #define LNK(i) (((Moby *)D_L01_00160058) + (i))
 #define VOICE(i) (D_0013E633 + 0x1D + (i) * 0x70)
 
-void MouseCritterUpdate(Moby *m) {
+void sandmouse_update(Moby *m) {
     Pv_30F318 *p;
     f32 ang;
     int dv;
@@ -2644,7 +2696,7 @@ void MouseCritterUpdate(Moby *m) {
         } else if (*((u8 *)p + 0x91) != 0) {
             DetachManipulator(m, (u8 *)p + 0x90);
         }
-        TwinGlowInit(m);
+        update_sandmouse_billboard_quads(m);
     }
     switch (m->state) {
     case 0:
@@ -2730,14 +2782,14 @@ void MouseCritterUpdate(Moby *m) {
                 if (func_L00_001EFFF0(&a, &b, 0, m, 0)) {
                     if (D_L01_00174358 != *(Moby **)(h + 0x2080)) break;
                 }
-                Hero_GetPointAhead(m, p);
+                compute_sand_mouse_approach_target(m, p);
                 if (*(Moby **)(h + 0x1130) != 0 && (*(Moby **)(h + 0x1130))->oclass == 0x1B1
                     && (*(Moby **)(h + 0x1130))->state != 0xFE && (*(Moby **)(h + 0x1130))->state != 0xFD) {
                     (*(Moby **)(h + 0x1130))->state = 1;
                 }
                 D_L01_001DEE58 = m;
                 Hero_SetMoveState(0x1F, 0);
-                HeroStartAnim((float)scale_ticks(6), 0, 0);
+                set_hero_animation((float)scale_ticks(6), 0, 0);
                 if (p->link != -1) {
                     LNK(p->link)->command = 5;
                     m->state = 2;
@@ -2784,12 +2836,12 @@ void MouseCritterUpdate(Moby *m) {
         }
         if (0.6f < func_001F9D48(&m->pos, &p->a30) && p->timer == 0) {
             D_L01_001DEE08.f4 = 0.7f;
-            GetHeroFrontOffsetPoint(m, p);
-            MouseCritter_StepCommand(m, p);
+            compute_sandmouse_follow_goal(m, p);
+            update_sandmouse_hover_movement(m, p);
             r = p->stuck < 0x15;
             r = r ? 0 : 2;
         } else {
-            Hero_GetPointAhead(m, p);
+            compute_sand_mouse_approach_target(m, p);
             ang = func_L00_001FF860(p->goal.f[0] - m->pos.x, p->goal.f[1] - m->pos.y);
             MobySpringTurn(m, ang, &D_L01_001DEE08.f14,
                 D_0015EE70 * 6.2831855f, D_0015EE70 * 3.1415927f, D_0015EE6C * 11.519173f);
@@ -2851,8 +2903,8 @@ void MouseCritterUpdate(Moby *m) {
                 && *(int *)(h + 0x208C) != 0x16 && *(int *)(h + 0x208C) != 0x14
                 && *(u8 *)(h + 0x20A4) == 0 && *(s16 *)(D_L01_00167300 + 0x86) != 0x14
                 && func_001F9908(&p->k58) == 0 && p->k5C < *(int *)&D_L01_0016212C) {
-                GetHeroFrontOffsetPoint(m, p);
-                MouseCritter_StepCommand(m, p);
+                compute_sandmouse_follow_goal(m, p);
+                update_sandmouse_hover_movement(m, p);
             } else {
                 qzero(&p->vel);
                 p->timer = *(int *)&D_L01_00162134;
@@ -2870,7 +2922,7 @@ void MouseCritterUpdate(Moby *m) {
                 }
             }
         }
-        func_L01_0030E9C8(m, p);
+        try_fire_sandmouse_projectile(m, p);
         break;
     case 6:
         if (p->slot != -1) {
@@ -2935,8 +2987,8 @@ void MouseCritterUpdate(Moby *m) {
         break;
     }
     if (m->state >= 2) {
-        RecordMobyShadow(m, 0.3f);
-        ((void (*)(void *, void *))EmitFallingParticles)(m, p);
+        jet_animate(m, 0.3f);
+        ((void (*)(void *, void *))emit_sandmouse_particles)(m, p);
     }
     if (p->link != -1) {
         LNK(p->link)->collision = LNK(p->link)->pclass->collision;
@@ -3043,7 +3095,7 @@ extern s32 func_L00_0025EFC0(void *, void *, void *, s32 *, f32 *, s32, f32, f32
 
 /* Resets the camera's orbit, focus, spring, view and track from fixed values; for a kind 2 preset it also prepares its two paths once, measuring each point against the path it follows.
    Adapted from Lombyte (GPL-3.0) for PAL by OpenRAC's tools/port.py: src/overlays/shared/gameplay/vendor/0030b618.c, FUN_L01_00314e98. */
-void Camera_ResetFromPreset(Camera *cam) {
+void reset_camera_state_and_prepare_preset_paths(Camera *cam) {
     Vec4 at;
     s32 seg;
     f32 t;
@@ -3244,7 +3296,7 @@ extern void func_002156E0(void *dst, void *vec, void *axis, float angle);
 /* Update function of camera 3: follows a path beside the hero's and turns toward a look-at point on it.
    The four `= 0` initialisers in the mode 2 block are dead and leave no code: they make up for the insns
    qcopy()'s parameters add, which decide the size of gcse's hash table and so the order of the spill slots. */
-void Camera3_Update(Cam_316730 *cam) {
+void update_camera_position_and_orientation_from_paths(Cam_316730 *cam) {
     float v0[4];
     float v10[4];
     float v20[4];
@@ -3529,7 +3581,7 @@ extern f32 func_001F9D10(void *, void *);
 extern f32 func_001F9C78(void *, void *);
 
 /* Adapted from Lombyte (GPL-3.0) for PAL by OpenRAC's tools/port.py: src/overlays/shared/gameplay/vendor/0030b618.c, FUN_L01_00315de0. */
-void Camera_CopyAndApplyPreset(Camera_171B8 *cam) {
+void initialize_camera_transform_and_paths(Camera_171B8 *cam) {
     CameraPresetRow_171B8 *rows = D_L01_0015F050_171B8;
     Camera_171B8 *src = D_L01_00167304;
     CameraPreset_171B8 *s = rows[cam->preset].preset;
@@ -3604,7 +3656,7 @@ extern CamTarget_00317408 *D_L01_0015F7EC_00317408 __asm__("D_L01_0015F7EC") MAC
 
 /* Exit function of camera 3: unless the hero is still on this camera's target, sets the camera object's mode to 3, or 5 for kind 3.
    Adapted from Lombyte (GPL-3.0) for PAL: src/overlays/shared/gameplay/vendor/0030b618.c, FUN_L01_00316030. */
-void Camera3_Exit(CamUser_00317408 *o) {
+void update_camera_mode_from_preset(CamUser_00317408 *o) {
     CamData_00317408 *d = D_L01_0015F050_00317408[o->slot].data;
 
     if (hero_00309078.unk2284 == o->unk86) {
@@ -3625,7 +3677,7 @@ extern char *func_L00_001EB578(int);
 extern char *D_L01_00167300;
 
 // Stores two floats into the record at 0xE0 of the data of the moby a global points at, or of moby 5.
-void BoltCrank_SetCameraParams(float a, float b) {
+void set_camera_5_track_acceleration_yz(float a, float b) {
     char *m = D_L01_00167300;
     char *t;
     char *d;

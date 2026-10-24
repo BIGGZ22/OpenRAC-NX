@@ -43,7 +43,7 @@ import time
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-from libgcc_units import SEGMENT_SOURCES, ee29_sources, ee29_01_sources, gas210_sources, gas210_real_sources, dtls29_sources  # noqa: E402
+from libgcc_units import SEGMENT_SOURCES, ee29_sources, ee29_01_sources, gas210_sources, gas210_real_sources, dtls29_sources, ps2eeas_real_sources  # noqa: E402
 from toolchain import sn  # noqa: E402
 import file_cflags  # noqa: E402
 import overlay_check  # noqa: E402
@@ -175,6 +175,13 @@ def build(name, seg, src, first, last, candidate, work):
             return obj
         if not run(sn(CC, *CFLAGS, *extra, "-S", "-o", str(s[0]), str(c)), log):
             return None
+        if src.as_posix() in ps2eeas_real_sources():
+            shutil.copy(s[0], s[2])
+            if not run([sys.executable, "tools/check_macro_slots.py", str(s[2])], log):
+                return None
+            if not run([sys.executable, "tools/ps2eeas.py", str(s[2]), str(obj)], log):
+                return None
+            return obj
         shutil.copy(s[0], s[2])
         if src.name in ("989snd.c", "wad.c"):
             if not run([sys.executable, "tools/fix_macro_load_delay.py", str(s[2]), str(s[2])], log):

@@ -14,7 +14,7 @@ extern float func_001F9F90(float);
 extern float func_001F9FA8(float);
 
 /* Fills the sky particle list: entries from a up are dim specks, the first a are coloured sparks with random direction and speed. Adapted from Lombyte (GPL-3.0) for PAL: overlays/shared/unclassified_00288ec0.c, FUN_L00_00288ec0. */
-void SkyInitParticles(int a, int b) {
+void sky_particles_init(int a, int b) {
     int i;
     E *e;
     float x, y;
@@ -82,7 +82,7 @@ extern float func_001F9B88(float);
 extern int func_001160D8(void);
 
 /* Steps each shrub sparkle entry: type 0 spins and scales a direction, type 1 randomises a colour. Adapted from Lombyte (GPL-3.0) for PAL: overlays/shared/unclassified_00288ec0.c, FUN_L00_00289108. */
-void StepSkySparkles(void) {
+void sky_particles_update(void) {
     int i;
     for (i = 0; i < D_L00_001605DC_g->n; i++) {
         E_289108 *e = &D_L00_001605DC_g->list[i];
@@ -118,7 +118,7 @@ extern void func_001FA190(void *);
 extern void func_0022C9A8(int);
 
 /* Draws each static sky shell in turn. */
-void UpdateSkyShellsStatic(void) {
+void update_sky_shells_static(void) {
     int i;
     func_001FA190(D_L00_001BDB70);
     for (i = 0; i < *(short *)(D_L00_001605DC + 6); i++) {
@@ -128,7 +128,7 @@ void UpdateSkyShellsStatic(void) {
 extern int D_L00_0015F6B0 MACRO_ADDR;
 void func_L00_001FFA40(void *,void *);
 /* rotates animated sky shells and draws each layer */
-void UpdateSkyShellsAnimated(void) {
+void update_sky_shells_animated(void) {
  float v[4] __attribute__((aligned(16))); int i;
  *(short *)(D_L00_001605DC+4)=0;
  qzero(v);
@@ -169,7 +169,7 @@ typedef struct {
 #define SKY ((SkyData *)D_L00_001605DC)
 
 /* Initialises and animates the star field of the sky. Adapted from Lombyte (GPL-3.0) for PAL: src/overlays/shared/unclassified_00288ec0.c, FUN_L00_002895a0. */
-void SkyStarFieldUpdate(void) {
+void draw_four_sky_shells_with_animated_particles(void) {
     int i, j;
     SkyStar *s;
     f32 a, b;
@@ -258,7 +258,7 @@ void SkyShellsRotateTwo(void) {
 }
 extern void func_L00_001FFA40(void *,void *);
 /* draws sky shells with two animated rotation offsets */
-void SkyShellsRotateLooped(void) {
+void draw_sky_shells_with_fast_and_slow_rotation(void) {
  float v[4] __attribute__((aligned(16))); int i;
  *(short *)(D_L00_001605DC+4)=0; qzero(v);
  for(i=0;i<*(short *)(D_L00_001605DC+6);++i) {
@@ -283,12 +283,12 @@ void func_00234C98(int, long);
 void func_L00_001FFA40(void *, void *);
 
 /* Adapted from Lombyte (GPL-3.0) for PAL by OpenRAC's tools/port.py: src/overlays/shared/unclassified_00288ec0.c, FUN_L00_00289bd8. */
-void SkyShellsSparkleTwo(void) {
+void draw_sky_shells_with_particles_and_modulo_50000_rotation(void) {
     float v[4] __attribute__((aligned(16)));
     func_001FA190(D_L00_001BDB70);
     SkyDrawShell(0);
-    if (*(short *)(D_L00_001605DC + 8) == 0) SkyInitParticles(0x78, 8);
-    StepSkySparkles();
+    if (*(short *)(D_L00_001605DC + 8) == 0) sky_particles_init(0x78, 8);
+    sky_particles_update();
     SkySpriteProc();
     VU1_addGSregister(0x42, (0x8000L << 24) | 0x44);
     qzero(v);
@@ -337,7 +337,7 @@ extern f32 func_001F9FA8(f32);
 extern void func_00234C98_8AF90(s32, u64) __asm__("func_00234C98");
 
 /* Initializes and steps three types of sky particles before drawing the sky layer. Adapted from Lombyte (GPL-3.0) for PAL by OpenRAC's tools/port.py: src/overlays/shared/unclassified_00288ec0.c, FUN_L00_00289cb8. */
-void SkyParticlesUpdate(void) {
+void draw_three_sky_shells_with_three_particle_types(void) {
     Part *p;
     Part *p2;
     PU *q2;
@@ -475,12 +475,12 @@ void func_00234C98(int, long);
 void func_L00_001FFA40(void *, void *);
 
 /* Adapted from Lombyte (GPL-3.0) for PAL by OpenRAC's tools/port.py: src/overlays/shared/unclassified_00288ec0.c, FUN_L00_0028a208. */
-void SkyShellsSparkleThree(void) {
+void draw_three_sky_shells_with_particles_and_modulo_50000_rotation(void) {
     float v[4] __attribute__((aligned(16)));
     func_001FA190(D_L00_001BDB70);
     SkyDrawShell(0);
-    if (*(short *)(D_L00_001605DC + 8) == 0) SkyInitParticles(0x78, 8);
-    StepSkySparkles();
+    if (*(short *)(D_L00_001605DC + 8) == 0) sky_particles_init(0x78, 8);
+    sky_particles_update();
     SkySpriteProc();
     VU1_addGSregister(0x42, (0x8000L << 24) | 0x44);
     SkyDrawShell(1);
@@ -497,7 +497,7 @@ void func_0022C9A8(s32);
 void func_L00_001FFA40(void *, void *);
 
 /* Adapted from Lombyte (GPL-3.0) for PAL by OpenRAC's tools/port.py: src/overlays/shared/unclassified_00288ec0.c, FUN_L00_0028a2f0. */
-void SkyShellsRotateOne(void) {
+void draw_sky_shells_with_modulo_40000_rotation(void) {
     Vec4 t;
     *(s16 *)(D_L00_001605DC_8B5C8 + 4) = 0;
     func_001FA190(D_L00_001BDB70_8AF90);
@@ -513,7 +513,7 @@ extern int D_L00_0015F6B0 MACRO_ADDR;
 extern void func_L00_001FFA40(void *, void *);
 
 /* Draws the sky shells with one extra shell placed at a pseudo-random angle. */
-void DrawSkyShellsExtra(void) {
+void draw_sky_shells_with_modulo_25000_rotation(void) {
     float v[3];
     int r;
     *(short *)(D_L00_001605DC + 4) = 0;
@@ -534,7 +534,7 @@ typedef int T28a480_q __attribute__((mode(TI)));
 extern int D_L00_0015F6B0_8B758b __asm__("D_L00_0015F6B0") MACRO_ADDR;
 
 /* Adapted from Lombyte (GPL-3.0) for PAL by OpenRAC's tools/port.py: src/overlays/shared/unclassified_00288ec0.c, FUN_L00_0028a480. */
-void SkyShellsRotateByIndex(void)
+void draw_sky_shells_with_scaled_phase_rotation(void)
 {
     T28a480_q v[1];
     int i;
@@ -567,7 +567,7 @@ void SkyShellsRotateByIndex(void)
 }
 extern short D_L00_0015F6B0_s __asm__("D_L00_0015F6B0");
 // Rotates each sky shell at its assigned angular rate before drawing.
-void SkyShellsRotateMulti(void) {
+void draw_sky_shells_with_slow_medium_and_fast_rotation(void) {
  float v[4] __attribute__((aligned(16)));
  int i;
  *(short *)(D_L00_001605DC + 4) = 0;
@@ -597,12 +597,12 @@ extern void func_0022C9A8(int);
 extern void func_L00_0028A198(int, int);
 extern void func_L00_0028A3E0(void);
 extern void func_00234C98(int, long);
-void SkyShellsSparkleStatic(void) {
+void draw_three_sky_shells_with_particles(void) {
     func_001FA190(D_L00_001BDB70);
     SkyDrawShell(0);
     SkyDrawShell(1);
-    if (*(short *)(D_L00_001605DC + 8) == 0) SkyInitParticles(0x78, 8);
-    StepSkySparkles();
+    if (*(short *)(D_L00_001605DC + 8) == 0) sky_particles_init(0x78, 8);
+    sky_particles_update();
     SkySpriteProc();
     VU1_addGSregister(0x42, 0x8000000044L);
     SkyDrawShell(2);
@@ -625,18 +625,18 @@ void SkyShellsRotatePair(void) {
     SkyDrawShell(2);
 }
 /* Shrub proc init variant: set up, conditional call, finish. */
-void SkyShellsSparkleOne(void) {
+void draw_two_sky_shells_with_particles(void) {
     func_001FA190(D_L00_001BDB70);
     SkyDrawShell(0);
-    if (*(short *)(D_L00_001605DC + 8) == 0) SkyInitParticles(0x78, 8);
-    StepSkySparkles();
+    if (*(short *)(D_L00_001605DC + 8) == 0) sky_particles_init(0x78, 8);
+    sky_particles_update();
     SkySpriteProc();
     VU1_addGSregister(0x42, 0x8000000044L);
     SkyDrawShell(1);
 }
 
 /* Initialises and animates a second star field of the sky (variant of func_L00_0028A878). */
-void SkyStarField2Update(void) {
+void render_three_shell_particle_sky(void) {
     int i, j;
     SkyStar *s;
     f32 a, b;
@@ -716,7 +716,7 @@ void func_0022C9A8();
 void func_L00_001FFA40(void *, void *);
 
 /* Adapted from Lombyte (GPL-3.0) for PAL by OpenRAC's tools/port.py: src/overlays/shared/unclassified_00288ec0.c, FUN_L00_0028b080. */
-void SkyShellsSevenLayer(void) {
+void draw_seven_sky_shells_with_modulo_40000_and_60000_rotation(void) {
     float v[4] __attribute__((aligned(16)));
     *(short *)(D_L00_001605DC + 4) = 0;
     SkyDrawShell(0);

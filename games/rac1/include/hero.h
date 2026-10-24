@@ -8,14 +8,17 @@
  * copies candidates carried to land without clashing with their files.
  *
  * Adapted from Lombyte (GPL-3.0), the US decompilation:
- * include/rnc/gameplay/hero.h at 42adb529. Its layout and field names come
- * from the matched code it cites; the PAL code is the same structure.
+ * include/rnc/gameplay/hero.h at 42adb529, refreshed from the NTSC decomp
+ * (the same project, GPL-3.0) at 4e1f255e; state IDs in hero_state.h. Its
+ * layout and field names come from the matched code it cites; the PAL code
+ * is the same structure.
  * Function and data names in the comments are Lombyte's, from the US build.
  * See THIRD_PARTY_NOTICES.md.
  */
 
 #include "common.h"
 #include "vector.h"
+#include "hero_state.h"
 
 struct Moby;
 
@@ -43,17 +46,17 @@ struct MobyTrail {
  * holds the equipped gadget (load_hand_gadget). FUN_L00_0020fca8(i, v) releases
  * slot i: stores v at +0x14, sets state 3 (calling the moby's +0x74 callback
  * once), clears state and item and removes both mobys (slot 3 keeps moby2).
- * FUN_L00_0020d460 / FUN_L00_0020d498 return a ready slot's moby / item id.
+ * hero_slot_moby / hero_slot_item_id return a ready slot's moby / item id.
  * A slot change clears +0x1A, sets +0x20 to 3 and blends the moby (2, 0, 2).
  */
 /* A 0xB0-byte record FUN_L00_00205168 eases toward its targets; the
-   D_L00_0017A680 table FUN_L00_002054e8 walks has the same layout. */
+   lean_state table FUN_L00_002054e8 walks has the same layout. */
 /* A manipulator record eased by FUN_L00_00205168: it moves rot and pos toward
    their targets, then rebuilds quat, scale3 and translation (the part
    attach_manipulator, FUN_0020cb10, hands to the moby) from them. */
 struct HeroEase {
     u8 unk0;                       /* 0x00 */
-    u8 attached;                   /* 0x01: attached to its moby (FUN_0020cb10 / FUN_0020cb88) */
+    u8 attached;                   /* 0x01: attached to its moby (attach_manipulator / detach_manipulator) */
     u8 pad_2[0xE];
     Vec4 quat;                     /* 0x10: rotation built from rot (FUN_L00_00259f50) */
     Vec4 scale3;                   /* 0x20: x/y/z = scale */
@@ -94,7 +97,7 @@ struct HeroItemSlot {
     s32 unk14;                     /* 0x14: set on release */
     s16 timer;                     /* 0x18: counts down; a slot change waits for 0 */
     u8 unk1A;                      /* 0x1A: cleared on a slot change */
-    u8 unk1B;                      /* 0x1B: counts releases (FUN_L00_00210748, state 3) */
+    u8 unk1B;                      /* 0x1B: counts releases (hero_update_items, state 3) */
     u8 unk1C;                      /* 0x1C: 2 blocks a slot change, 1 reloads timer */
     u8 timer_reload;               /* 0x1D: timer reload value */
     u8 pad_1E[0x2];
@@ -115,7 +118,7 @@ struct HeroItemSlot {
 
 /*
  * One key of the hero's per-state vertical velocity curve (hero.unk3E4[i]),
- * run by FUN_L00_00214108 between state frames unk3D0 and unk3D4. Entering a
+ * run by hero_integrate_velocity between state frames unk3D0 and unk3D4. Entering a
  * key sets hero.unk3F0 to value * D_0015ED70 (-1000000 keeps it); each later
  * frame adds delta * D_0015ED70. A key lasts scale_game_frames(frames).
  */
@@ -189,7 +192,7 @@ struct HeroHealth {
  *   unk458 / unk45C - speeds eased in and scaled into velocity (FUN_L02_00223450)
  *   unk22D2         - set on a pad bit-0x10 press (no C reader yet)
  *   unk22DA         - nonzero makes FUN_L00_002133a8 call FUN_L00_002347c0
- * Item switching (FUN_L00_0020fea0): a nonzero pending_item[i] that differs
+ * Item switching (hero_switch_item): a nonzero pending_item[i] that differs
  * moves into selected_item[i] and changes slot i; saved_item[i] keeps the
  * slot's item while 0x1C, 0x1D, 6 or 4 is forced in (0x26 when it was empty).
  * hero_set_state copies state.current/control_mode/state_timer into the prev
@@ -304,7 +307,7 @@ struct Hero {
     f32 unk3D8;                    /* 0x3D8 */
     f32 unk3DC;                    /* 0x3DC */
     s32 unk3E0;                    /* 0x3E0 */
-    struct HeroVelocityKey *unk3E4; /* 0x3E4: keys run by FUN_L00_00214108 while unk41C is set */
+    struct HeroVelocityKey *unk3E4; /* 0x3E4: keys run by hero_integrate_velocity while unk41C is set */
     s32 unk3E8;                    /* 0x3E8: current key in unk3E4, -1 before the first */
     s32 unk3EC;                    /* 0x3EC: frames spent in the current key */
     f32 unk3F0;                    /* 0x3F0: value added to velocity.z each frame */
@@ -316,7 +319,7 @@ struct Hero {
     f32 unk414;                    /* 0x414 */
     s32 unk418;                    /* 0x418: set when velocity.z clamps to unk500.z, counts up */
     s16 unk41C;                    /* 0x41C */
-    s16 unk41E;                    /* 0x41E: set to 1 when FUN_L00_00233a78(velocity) < 0.001 */
+    s16 unk41E;                    /* 0x41E: set to 1 when gravity_z(velocity) < 0.001 */
     s32 unk420;                    /* 0x420: per-state scale_game_frames(N), compared with state_timer */
     f32 unk424;                    /* 0x424 */
     f32 unk428;                    /* 0x428 */
@@ -445,7 +448,10 @@ struct Hero {
     u8 pad_6D8[0x8];
     s32 unk6E0[6];                 /* 0x6E0: one flag per pose, indexed by unk88F */
     s32 unk6F8;                    /* 0x6F8: counts the flags set in unk6E0 */
-    u8 pad_6FC[0x24];
+    u8 pad_6FC[0x4];
+    s32 unk700[3];                 /* 0x700: cleared with unk6E0 when the HUD combo ends (FUN_L05_00262b58) */
+    s32 unk70C;                    /* 0x70C: combo count the HUD keeps the best of (FUN_L05_00262b58) */
+    u8 pad_710[0x10];
     Vec4 unk720;                   /* 0x720 */
     u8 pad_730[0x10];
     Vec4 unk740;                   /* 0x740 */
@@ -651,7 +657,7 @@ struct Hero {
     u8 unk12ED;                    /* 0x12ED */
     u8 unk12EE;                    /* 0x12EE */
     u8 pad_12EF[0x301];
-    struct Moby *ship_moby;        /* 0x15F0: the ship the hero is flying (l17 FUN_L17_002ed018) */
+    struct Moby *ship_moby;        /* 0x15F0: the ship the hero is flying (l17 fighter_jet_update) */
     s16 ship_oclass;               /* 0x15F4: its oclass, -1 when none */
     u8 ship_ammo;                  /* 0x15F6: shots left in the space levels; firing needs one and takes it (FUN_L11_003126f8) */
     u8 ship_ammo_max;              /* 0x15F7: ammo pips the ship HUD draws, lit while below ship_ammo */
@@ -684,7 +690,7 @@ struct Hero {
     u8 pad_1664[0xC];
     struct MobyTrail trail;        /* 0x1670: trail of moby copies following hero.moby */
     u8 unk17B0[0x140];             /* 0x17B0: buffer handed to FUN_L00_00262500 / FUN_L00_00262528 */
-    struct HeroEase unk18F0[3];    /* 0x18F0: eased records, kind 5 set when an item slot is ready (FUN_L00_00210748) */
+    struct HeroEase unk18F0[3];    /* 0x18F0: eased records, kind 5 set when an item slot is ready (hero_update_items) */
     Vec4 unk1B00[32];              /* 0x1B00: ring of 32 quads indexed by unk21B0 */
     u8 unk1D00[0x20];              /* 0x1D00 */
     f32 stick_x;                    /* 0x1D20: stick vector (d-pad when the stick is idle) */
@@ -721,7 +727,7 @@ struct Hero {
     u8 pad_1FF8[0x28];
     u8 *unk2020[6];                /* 0x2020: six moby slots, filled at the index a moby carries at +0x54 */
     u8 pad_2038[0x8];
-    struct Moby *unk2040;          /* 0x2040: nearest oclass 0x25D moby (FUN_L00_002d2ee8) */
+    struct Moby *unk2040;          /* 0x2040: nearest oclass 0x25D moby (metal_detector_update) */
     f32 unk2044;                   /* 0x2044: distance to unk2040; 100000 when none */
     s32 unk2048;                   /* 0x2048 */
     u8 pad_204C[0x4];
@@ -786,7 +792,7 @@ struct Hero {
     f32 unk22A4;                   /* 0x22A4 */
     struct HeroHealth health;      /* 0x22A8 */
     s32 unk22B4;                   /* 0x22B4 */
-    f32 unk22B8;                   /* 0x22B8: distance to the nearest carrying path this frame (FUN_L01_002f3120 keeps the minimum) */
+    f32 unk22B8;                   /* 0x22B8: distance to the nearest carrying path this frame (water_current_update keeps the minimum) */
     u8 pad_22BC[0x8];
     s32 unk22C4;                   /* 0x22C4 */
     s16 unk22C8;                   /* 0x22C8 */

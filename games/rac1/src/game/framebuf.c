@@ -135,7 +135,7 @@ void SetupFS_AA_buffer(int display_width, int display_height, int storage_width,
                    int display_offset_x, int display_offset_y) {
     unsigned long *q;
 
-    D_0015EFB8 = &D_00151880;
+    active_fs_aa_buffer = &D_00151880;
     D_00151880.display_width = display_width;
     D_00151880.display_height = display_height;
     D_00151880.storage_width = storage_width;
@@ -173,7 +173,7 @@ void SetupFS_AA_buffer(int display_width, int display_height, int storage_width,
     FA->giftag1.NREG = 1;
     FA->giftag1.REGS0 = 0xE;
 
-    q = (unsigned long *)D_00151C60;
+    q = (unsigned long *)fs_aa_transfer_packet;
     q[0] = 0x408B400000000001UL;
     q[1] = 0xEEEE;
     q[2] = 0x30000;
@@ -206,7 +206,7 @@ void SetupFS_AA_buffer(int display_width, int display_height, int storage_width,
     q[80] = 0x6FF8 | ((long)(0x7FF8 - FA->storage_height * 8) << 16);
     q[81] = 0x6FF8 | ((long)(FA->storage_height * 8 + 0x7FF8) << 16);
 
-    q = (unsigned long *)D_00151EF0;
+    q = (unsigned long *)fs_aa_resample_packet;
     q[0] = 0x308B400000000001UL;
     q[1] = 0xEEE;
     q[2] = 0x30000;
@@ -229,7 +229,7 @@ void SetupFS_AA_buffer(int display_width, int display_height, int storage_width,
         }
     }
 
-    q = (unsigned long *)D_00151A00;
+    q = (unsigned long *)fs_aa_draw_packet;
     q[0] = 0x408B400000000001UL;
     q[1] = 0xEEEE;
     q[2] = 0x30000;
@@ -254,7 +254,7 @@ void SetupFS_AA_buffer(int display_width, int display_height, int storage_width,
         }
     }
 
-    q = (unsigned long *)D_00152140;
+    q = (unsigned long *)fs_aa_clear_packet;
     q[0] = 0x1000000000000001UL;
     q[1] = 0xE;
     q[2] = 0x30000;
@@ -274,7 +274,7 @@ void SetupFS_AA_buffer(int display_width, int display_height, int storage_width,
         }
     }
 
-    q = (unsigned long *)D_0013CD90;
+    q = (unsigned long *)first_clear_packet;
     {
         unsigned long *p = q + 8;
         int i;
@@ -284,7 +284,7 @@ void SetupFS_AA_buffer(int display_width, int display_height, int storage_width,
         }
     }
 
-    q = (unsigned long *)D_0013CED0;
+    q = (unsigned long *)second_clear_packet;
     {
         unsigned long *p = q + 8;
         int i;
@@ -306,7 +306,7 @@ extern void func_00122140(void *);
 
 /* PutDispBuffer(void) */
 void PutDispBuffer(void) {
-    func_00122140(D_0015EFB8);
+    func_00122140(active_fs_aa_buffer);
 }
 
 extern int *D_00161000 MACRO_ADDR;
@@ -317,12 +317,12 @@ extern void func_001224B0(void *);
 void PutDrawBufferLarge(void) {
     if (D_00161000 != 0) {
         D_00161000[0] = 0x30000009;
-        D_00161000[1] = ((int)D_0015EFB8 + 0x30) & 0xFFFFFFF;
+        D_00161000[1] = ((int)active_fs_aa_buffer + 0x30) & 0xFFFFFFF;
         D_00161000[2] = 0;
         D_00161000[3] = 0x50000009;
         D_00161000 += 4;
     } else {
-        func_001224B0((char *)D_0015EFB8 + 0x30);
+        func_001224B0((char *)active_fs_aa_buffer + 0x30);
     }
 }
 
@@ -330,10 +330,10 @@ extern char D_00152140[];
 
 /* Appends a DMA tag pair (0x30000015 / &D_00152140 / 0 / 0x50000015) to
    the packet buffer D_00161000 points at, if there is one. */
-void framebuf_appendLargeSetup(void) {
+void append_gif_transfer_packet(void) {
     if (D_00161000 != 0) {
         D_00161000[0] = 0x30000015;
-        D_00161000[1] = (int)D_00152140;
+        D_00161000[1] = (int)fs_aa_clear_packet;
         D_00161000[2] = 0;
         D_00161000[3] = 0x50000015;
         D_00161000 += 4;
@@ -343,7 +343,7 @@ void framebuf_appendLargeSetup(void) {
 /* PutDrawBufferSmall(void) */
 void PutDrawBufferSmall(void) {
     D_00161000[0] = 0x30000009;
-    D_00161000[1] = ((int)D_0015EFB8 + 0xC0) & 0xFFFFFFF;
+    D_00161000[1] = ((int)active_fs_aa_buffer + 0xC0) & 0xFFFFFFF;
     D_00161000[2] = 0;
     D_00161000[3] = 0x50000009;
     D_00161000 += 4;
@@ -382,7 +382,7 @@ typedef struct {
    the configured Z buffer, followed by TEST_1 0x30003 and a black sprite
    over the whole target. FBP is set through the sceGsFrame bitfield, the
    form that sign-extends the halfword before masking as retail does. */
-void Framebuf_SetRenderTarget(int a, int b, int c) {
+void setup_render_target(int a, int b, int c) {
     int x;
     long *q;
     unsigned long *d;
@@ -435,7 +435,7 @@ extern char D_00151A00[];
 /* AA_BlurPass(void) */
 void AA_BlurPass(void) {
     D_00161000[0] = 0x30000026;
-    D_00161000[1] = (int)D_00151A00;
+    D_00161000[1] = (int)fs_aa_draw_packet;
     D_00161000[2] = 0;
     D_00161000[3] = 0x50000026;
     D_00161000 += 4;
@@ -443,9 +443,9 @@ void AA_BlurPass(void) {
 
 extern char D_00151C60[];
 
-void framebuf_appendSmallSetup(void) {
+void append_palette_transfer_packet(void) {
     D_00161000[0] = 0x30000029;
-    D_00161000[1] = (int)D_00151C60;
+    D_00161000[1] = (int)fs_aa_transfer_packet;
     D_00161000[2] = 0;
     D_00161000[3] = 0x50000029;
     D_00161000 += 4;
@@ -454,7 +454,7 @@ void framebuf_appendSmallSetup(void) {
 extern void func_00234C98_l(int, long) __asm__("func_00234C98");
 
 /* Clears the screen through a GIF packet appended to D_00161000: a fixed header then n = w / 32 pairs of sprite corner registers stepping 0x200 per column across a w x h area centred on 0x8000. Adapted from Lombyte (GPL-3.0) for PAL: src/rendering/fun_001fb740.c, FUN_001fb740. */
-void Framebuf_ClearScreen(int w, int h) {
+void draw_centered_capture_background(int w, int h) {
     int *tag;
     long *q;
     long *c;
@@ -518,12 +518,12 @@ extern void func_00234C98(int, long);
    (fold would otherwise share the 0x8000 with the extent), and the four
    64-bit corner values are converted in the order that leaves retail's
    last uses, which the scheduler follows. */
-void Framebuf_DrawAlphaRect(int x0, int y0, int x1, int y1, int w, int h, unsigned int rgba) {
+void draw_framebuffer_rect(int x0, int y0, int x1, int y1, int w, int h, unsigned int rgba) {
     long *q;
     int ax, ay, bx, by;
     int hw, hh;
 
-    Dma_AppendVifCode(0x13000000);
+    vu1_add_vif_code(0x13000000);
     VU1_addGSregister(0x42, 0x64);
     ax = (x0 << 4) + 0x8000;
     ay = (y0 << 4) + 0x8000;
@@ -558,7 +558,7 @@ void Framebuf_DrawAlphaRect(int x0, int y0, int x1, int y1, int w, int h, unsign
     }
     D_00161000 += 0x18;
     VU1_addGSregister(0x42, 0x8000000044L);
-    Dma_AppendVifCode(0x13000000);
+    vu1_add_vif_code(0x13000000);
 }
 
 LINKER_REMNANT("asm/remnants/text", func_001FBC78);

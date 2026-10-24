@@ -73,7 +73,7 @@ extern int func_L04_0024D790_1F3010(void *, void *, void *, int) __asm__("func_L
 
 /* Steering for a moby: pulls it along its path (c->path) and toward its target, pushes it away from the
  * listed mobys (and the hero's), and keeps it off the ground; f holds the gains. */
-void MobySteer(Moby **list, int n, Moby *m, Steer_1F3010 *c, float *f) {
+void steer_child_moby(Moby **list, int n, Moby *m, Steer_1F3010 *c, float *f) {
     Vec4A o;
     Vec4A w;
     Vec4A t;
@@ -292,7 +292,7 @@ extern float func_001FA748(float, float);
 extern char D_L04_00174070[];
 
 /* steps a moby's position out of collision and aims it */
-void StepMobyOutOfCollision(char *a, char *b, char *c, float f) {
+void update_moby_movement_with_sphere_collision(char *a, char *b, char *c, float f) {
     int i;
     float v[4];
     char *p = b + 0x10;
@@ -322,9 +322,9 @@ extern int D_0015EF88 MACRO_ADDR;
 void DrawEudoraSky(void) {
     SetupSkyGifPaging();
     if (D_0015EE84_m == 4) {
-        SkyShellsRotateLooped();
+        draw_sky_shells_with_fast_and_slow_rotation();
     } else {
-        UpdateSkyShellsStatic();
+        update_sky_shells_static();
     }
     DoSkyGifPaging();
     VU1_addGSregister(0x47, 0x5360B);

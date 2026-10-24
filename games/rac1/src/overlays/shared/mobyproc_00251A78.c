@@ -60,7 +60,7 @@ int ChooseDropItem(unsigned char *m, int *item) {
                     if (count->count != 0) {
                         stocked++;
                     }
-                    shortfall += D_0013D530[id] < count->count;
+                    shortfall += weapon_ammo_counts[id] < count->count;
                 }
             }
         }
@@ -74,7 +74,7 @@ int ChooseDropItem(unsigned char *m, int *item) {
                     id = D_0015EED0[i] & 0x3F;
                     if (D_0013D5C8[id]) {
                         ItemCount_258250 *count = &D_L00_001C43B0[id];
-                        scan_index -= D_0013D530[id] < count->count;
+                        scan_index -= weapon_ammo_counts[id] < count->count;
                     }
                     if (scan_index < 0) break;
                 }
@@ -149,7 +149,7 @@ void SetDeathBits(unsigned char *m, int flags, int arg) {
         return;
     }
     lvl = D_0015EE84;
-    D_0014C290[lvl][*(short *)(m + 0xB2) >> 5] |= 1 << (*(unsigned short *)(m + 0xB2) & 0x1F);
+    level_moby_killed[lvl][*(short *)(m + 0xB2) >> 5] |= 1 << (*(unsigned short *)(m + 0xB2) & 0x1F);
     D_L00_001BA860[*(short *)(m + 0xB2) >> 5] |= 1 << (*(unsigned short *)(m + 0xB2) & 0x1F);
     D_L00_001BA960.a[*(short *)(m + 0xB2)] = m[0xB0] + 2;
     k = m[0xB0];
@@ -159,7 +159,7 @@ void SetDeathBits(unsigned char *m, int flags, int arg) {
     }}
     if ((signed char)m[0xB1] >= 0) {
         int n1 = *(short *)(m + 0xB6);
-        d = n1 - D_0014D690[D_0015EE84_584A8b][m[0xB1]][1];
+        d = n1 - bolt_source_stats[D_0015EE84_584A8b][m[0xB1]][1];
         {
             int x = (n1 + 1) / 2 < d ? d : 0;
             if (x) {

@@ -2,4 +2,6 @@
 #include "common.h"
 #include "include_asm.h"
 
-INCLUDE_ASM("asm/overlays", func_L06_00216EE4);
+/* The four catalogued copies of 0xCDCDCDCD were alignment fill after completed
+ * returns, not functions. The overlay dump retains that fill; see
+ * tools/overlay_boundary_fixes.py for the checked locations. */

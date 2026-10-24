@@ -43,7 +43,7 @@ extern char D_0013E650_0031AD00[] __asm__("D_0013E650");
 extern char D_0013E6E0_0031AD00[] __asm__("D_0013E6E0");
 
 /* Sound box update: while the listener is inside the box's outer radius keeps the box's sound playing (restarting it on its timer) at a volume that falls off outside the unit box, placed at the nearest point of the box; outside, stops it. */
-void SndInstBoxVolumeUpdate(Moby_0031AD00 *m) {
+void update_box_positional_voice(Moby_0031AD00 *m) {
     float d[4];
     float r[4];
     float b[4];
@@ -127,7 +127,7 @@ extern void func_L01_002A2C90(int a, int b, int c, int d, int e);
 extern char D_0013E633[];
 
 /* reverb box sound update: starts or stops the sound as the listener enters or leaves the box */
-void SndInstReverbBoxUpdate(char *moby) {
+void update_requested_state_from_box_position(char *moby) {
     float a[4];
     float b[4];
     unsigned char *data = *(unsigned char **)(moby + 8);
@@ -139,13 +139,13 @@ void SndInstReverbBoxUpdate(char *moby) {
         int v = func_001FA898_r(IntToFloat(*(int *)(data + 4)) * t);
         int w = *(int *)(data + 4);
         if (!(w < v)) w = v;
-        Reverb_SetParams((int)moby, data[0], w, data[1], data[2]);
+        set_requested_state_and_mark_changes((int)moby, data[0], w, data[1], data[2]);
         data[3] = 1;
     } else if (data[3] != 0) {
         if (b[0] > 0.0f) {
-            Reverb_SetParams(0, data[0], *(int *)(data + 4), data[1], data[2]);
+            set_requested_state_and_mark_changes(0, data[0], *(int *)(data + 4), data[1], data[2]);
         } else {
-            Reverb_SetParams((int)moby, 0, 0, 0, 0);
+            set_requested_state_and_mark_changes((int)moby, 0, 0, 0, 0);
         }
         data[3] = 0;
     }
@@ -156,17 +156,17 @@ extern int func_L00_0028F0B0(int, int, int, int);
 extern void func_L00_0028EBF0(int);
 
 /* Adapted from Lombyte (GPL-3.0) for PAL by OpenRAC's tools/port.py: src/overlays/shared/gameplay_vendor_0030b618.c, FUN_L01_0031a078. */
-void SndInstConditionalLoopUpdate(int a0) {
+void update_listener_following_voice(int a0) {
     char *p = *(char **)(a0 + 8);
     int n = *(int *)(p + 4);
     char *r;
     int flag;
-    qcopy(D_0013E6E0 + n * 0x70, D_L01_001672C0);
-    r = D_0013E6E0 - 0x90 + n * 0x70;
+    qcopy(voice_positions + n * 0x70, camera_pos);
+    r = voice_positions - 0x90 + n * 0x70;
     flag = *(int *)(r + 0x8C) == a0 && *(unsigned char *)(r + 0x74) != 0;
-    if (*(int *)(D_L01_001672C0 + 0x254) != 0) {
+    if (*(int *)(camera_pos + 0x254) != 0) {
         if (!flag) {
-            *(int *)(p + 4) = Sound_PlayLevelSound(*(int *)p, 0x15, a0, 0x400);
+            *(int *)(p + 4) = play_voice(*(int *)p, 0x15, a0, 0x400);
         }
     } else {
         if (flag) {
@@ -181,7 +181,7 @@ extern float func_001F9B88(float);
 extern void func_L00_002664B0(int, int);
 
 /* sound instance update: fade/stop test against a listener distance */
-void SndInstMusicBoxUpdate(int *moby) {
+void update_music_box_exit_trigger(int *moby) {
     float v[8];
     int *p = (int *)moby[2];
     if (((unsigned *)p)[3] != 0xFFFFFFFF) {

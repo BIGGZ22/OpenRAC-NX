@@ -22,7 +22,7 @@ int Help_GetRecordValue(int a) {
     if (*(unsigned char *)(g + 0x20A8) == 0) return 0;
     if (*(unsigned char *)(g + 0x20AA) == 0) return 0;
     if (*(short *)(g + 0x22C8) != 0) return 0;
-    n = Hero_GetSlotModuleId(0);
+    n = hero_slot_item_id(0);
     r = D_L01_00179FC0 - (-(n * 0x4C));
     return *(int *)(r + 0x24);
 }
@@ -30,7 +30,7 @@ extern unsigned char D_0013E633[];
 extern int func_L00_0028F140(int a0, int a1, int a2, int a3, int a4);
 
 // Plays the hero footstep sound, flagging whether the hero's current moby has type 0xAD.
-void HeroFootstepSound(int a0, int a1, int a2) {
+void request_hero_voice_if_enabled(int a0, int a1, int a2) {
     if (a2 != 0) {
         char *g = (char *)D_0013E633 + 0xE1D;
         char *m = *(char **)(g + 0x10E0);
@@ -97,14 +97,14 @@ void HeroFrameUpdate(void) {
     float f0, f20, ang;
 
     func_L00_00232EF0();
-    Hero_UpdateMotionInput();
+    hero_update();
     HeroProcessContactType();
     HeroL01_UpdateStateTransitions();
     if (GG->b20A4 == 0) return;
-    Hero_TickReleaseTimers();
-    SettleAllHeldObjects();
+    update_hero_delayed_voice_requests();
+    update_hero_easing_records();
     if (GG->b20A4 == 0) return;
-    SyncHelpScreenMoby();
+    update_hero_vehicle_moby();
     UpdateRampUpDown();
     CameraShakeUpdate();
     func_L00_00248EF8(GG->a80);
@@ -214,7 +214,7 @@ extern void func_L01_002293D0(void);
 extern void func_L00_002091D8(void);
 
 /* Per-frame update of the help/menu state: validates the cursor, then runs the update chain. */
-void HeroUpdate(void) {
+void update_hero_frame(void) {
     char *g = (char *)D_0013E633 + 0xE1D;
     if (*(float *)(g + 0x80) < 2.0f || *(float *)(g + 0x84) < 2.0f || *(float *)(g + 0x80) > 1022.0f || *(float *)(g + 0x84) > 1022.0f) {
         char *q;
@@ -230,32 +230,32 @@ void HeroUpdate(void) {
         return;
     }
     func_L00_00232EF0();
-    Hero_UpdateMotionInput();
+    hero_update();
     HeroProcessContactType();
-    HeroLedgeProbeSingle();
+    update_hero_ledge_probe();
     HeroL01_UpdateStateTransitions();
     if (*(unsigned char *)(g + 0x20A4) != 0) {
         return;
     }
-    Hero_TickReleaseTimers();
+    update_hero_delayed_voice_requests();
     Hero_CheckMovementThresholds();
-    Hero_UpdateObstacleLean();
+    update_hero_collision_ease_target();
     Hero_UpdateBodyTilt();
     HeroScanTargets();
     RerollMotionParams();
-    ClampAimLeanAngles();
-    UpdateHelperMoby();
+    update_hero_rotation_targets_and_random_manipulators();
+    update_hero_glow_and_extra_manipulators();
     Hero_SetTiltJoints();
-    SettleAllHeldObjects();
-    HeroSyncMoby();
-    HeroComputeAttachMatrices(0);
-    Hero_UpdateItems();
-    BeginDrawFrame();
+    update_hero_easing_records();
+    update_hero_moby();
+    update_hero_world_matrices(0);
+    update_hero_equipped_items();
+    begin_draw_frame();
     UpdateRampUpDown();
     CameraShakeUpdate();
-    HelpHintsPeriodicCheck();
+    check_hero_item_reward_conditions();
     HudBoltAlertShow();
-    FireGadgetStateHooks();
+    dispatch_hero_animation_timed_events();
     Cheats_PollCodes();
     Profile_Mark(*(void **)(g + 0x2080));
     if (*(int *)(g + 0x208C) != 0x16 && *(int *)(g + 0x2084) != 0x32) {
@@ -265,7 +265,7 @@ void HeroUpdate(void) {
         char *q = (char *)D_0013E633 + 0xE1D;
         func_L00_0025805C(*(void **)(q + 0x2080));
     }
-    HeroUpdateBlink();
+    update_hero_blink_and_gold_weapon_tint();
     Hero_SteerAimAndProbe();
 }
 extern struct Hero D_0013F450_293D0 __asm__("D_0013F450");
@@ -279,7 +279,7 @@ extern void func_L00_00207948_293D0(struct Moby *, struct Moby *) __asm__("func_
 
 /* Blinks the hero's moby colour for the first 30 frames of states 0x80 and 0x82 (and of state 0x76 for 20 frames in levels 15 and 17), then, when the equipped item is a gold weapon, runs FUN_L00_00207330 on its moby.
    Adapted from Lombyte (GPL-3.0) for PAL by OpenRAC's tools/port.py: src/overlays/shared/ui/help/00226f10.c, FUN_L01_00228e38. */
-void HeroUpdateBlink(void)
+void update_hero_blink_and_gold_weapon_tint(void)
 {
     /* three scalars, not an array: an int[3] changes the stack layout */
     int r, g, b;
@@ -426,7 +426,7 @@ extern float func_001FA748_D688(float, float) __asm__("func_001FA748");
 extern float func_001FA850_D688(float, float) __asm__("func_001FA850");
 
 /* the hero's ledge probe (single-size variant): looks for an edge ahead to grab, and where it finds one stores the grab point and direction */
-void HeroLedgeProbeSingle(void) {
+void update_hero_ledge_probe(void) {
     float v0[4], v10[4], v20[4], v30[4], v40[4], v50[4], v60[4], v70[4];
     float down, fwd, up, top, drop, rise, back;
     float speed, ang, d;
@@ -584,7 +584,7 @@ extern f32 func_001FA850_2DE30(f32, f32) __asm__("func_001FA850");
 
 /* Ledge probe, FUN_L00_0020c758 without its hero.unk20A4 == 1 variant: steps forward from `pos` along the hero's yaw looking for a flat top (normal within 20 degrees of up, not material 9 or 12) at least 1.8 above the floor and not above pos + up, then for the wall under it. Returns 1 when the hero (facing `*dir`) faces that wall within 65 degrees and the ledge edge is found within 2.4 units along it. Constants live in locals because retail loads each one once.
    Adapted from Lombyte (GPL-3.0) for PAL by OpenRAC's tools/port.py: src/overlays/shared/ui/help/00226f10.c, FUN_L01_0022d838. */
-int HeroFindLedgeTop(Vec4 *pos, f32 *dir)
+int test_hero_ledge_ahead(Vec4 *pos, f32 *dir)
 {
     Vec4 probe, top, low, wall, edge;
     f32 drop, fwd, up, reach;
@@ -703,7 +703,7 @@ void HeroStartScene(int a, int b, int c) {
     Hero_ClearPendingModuleAnim();
     g = (char *)D_0013E633 + 0xE1D;
     *(char *)(g + 0x20A6) = 1;
-    func_L00_00210E00();
+    hero_update_items();
     *(int *)(g + 0x2080) = *(int *)(g + 0xA88);
     DeleteOwnedMobys(g + 0x1670);
     *(int *)(*(char **)(g + 0x2080) + 0x98) = -1;
@@ -930,14 +930,14 @@ s32 HeroL01_TryTakeHit(s32 arg) {
             a = 0.0f;
             b = e * 1.7f;
         }
-        Vec_ScaleXYSetZ(&v, flag, a, b);
+        hero_knockback(&v, flag, a, b);
         if (flag != 0 && tbl->b28 == 4) {
             v.f[2] += v.f[2];
         }
         break;
     case 3:
         Hero_SetMoveState(0x56, 1);
-        Vec_ScaleXYSetZ(&v, flag, D_0015EE6C * 5.0f, D_0015EE6C * 2.4f);
+        hero_knockback(&v, flag, D_0015EE6C * 5.0f, D_0015EE6C * 2.4f);
         break;
     }
     FastVecAdd(D_0013F530, D_0013F530, &v);
@@ -1030,7 +1030,7 @@ extern void func_L00_00211F80(int, float);
 /* Adapted from Lombyte (GPL-3.0) for PAL by OpenRAC's tools/port.py: src/overlays/shared/ui/help/00226f10.c, FUN_L01_00232290. */
 void HeroSpeedFromTable(void) {
     char *x;
-    Hero_SetHeadingFromStick(0, 1.0f);
+    stick_target(0, 1.0f);
     x = D_0013E633_328A8 + 0xE1D;
     if (0.0f < *(float *)(x + 0x190)) {
         if (*(float *)(x + 0x190) < D_L01_0017C2B8[3]) {
@@ -1065,7 +1065,7 @@ extern int D_L01_0017435C;
 extern char D_L01_00174340[];
 
 /* Checks the hero's movement against walls ahead and slides the direction along the wall. */
-void HeroWallCheck(int flag) {
+void clip_hero_horizontal_velocity(int flag) {
     float s[4];
     float p[4];
     float t[4];
@@ -1079,7 +1079,7 @@ void HeroWallCheck(int flag) {
     if (*(short *)(g + 0x308) != 0) {
         return;
     }
-    if (ViewXyLength((float *)(g + 0xE0)) < D_0015EE6C * 0.1f) {
+    if (gravity_length_xy((float *)(g + 0xE0)) < D_0015EE6C * 0.1f) {
         return;
     }
     f2 = 0.37f;
@@ -1250,25 +1250,25 @@ void HeroGroundProbe(void) {
     if (D_0013F450.xI208c == 2) {
         g = D_0013F450.xF234 * 2.9f;
     }
-    Hero_BuildProbeEndpoints(&v10, &v0, k, g, -48.0f);
+    hero_get_collision_ray_endpoints(&v10, &v0, k, g, -48.0f);
     if (func_L00_001EFFF0(&v10, &v0, 2, D_0013F450.xI2080, 0) == 0) {
         goto tail;
     }
-    r = CollSoundClass();
+    r = coll_sound_class();
     if (r == -1) {
         r = 3;
     }
     D_0013F450.xB12ed = r;
     D_0013F450.xH12e0 = CollType();
     if (D_0013F450.xH12e0 == 0) {
-        D_0013F450.xF2f0 = GetGroundHeight(D_L01_00174360, (u8 *)&D_0013F450 + 0x280);
+        D_0013F450.xF2f0 = resolve_camera_surface_height(D_L01_00174360, (u8 *)&D_0013F450 + 0x280);
         if (D_0013F450.xF88 < D_0013F450.xF2f0 && D_0013F450.xI2f8 <= 0) {
             D_0013F450.xI2f8 = 1;
         }
         if (func_L00_001EFFF0(&v10, &v0, 0x24, D_0013F450.xI2080, 0) == 0) {
             goto d1;
         }
-        r = CollSoundClass();
+        r = coll_sound_class();
         if (D_0015EE84 == 1 || D_0015EE84 == 0x12) {
             r = 3;
         }
@@ -1353,7 +1353,7 @@ d1:
     if (!(D_0013F450.xF2dc < 0.25f)) {
         return;
     }
-    VecToHeroAngles((u8 *)&D_0013F450 + 0x270, &v20);
+    compute_rotated_vector_angles((u8 *)&D_0013F450 + 0x270, &v20);
     if (-0.78539819f < v20.f[1] && v20.f[1] < 0.78539819f) {
         D_0013F450.u2e4.F = v20.f[1];
     }
@@ -1374,7 +1374,7 @@ d1:
                 D_0013F450.a2c0.f[i] = 0.0f;
             }
             func_001252C0(&v60, (u8 *)&D_L01_00174340_333D8.f40);
-            VecToHeroAngles(&v60, &v50);
+            compute_rotated_vector_angles(&v60, &v50);
             if (-0.78539819f < v50.f[1] && v50.f[1] < 0.78539819f) {
                 D_0013F450.a2c8.f[i] = v50.f[1];
             }
@@ -1477,7 +1477,7 @@ extern void func_L00_00234420(float *, float *, float);
 extern void func_L00_00233F88(void *, void *, float);
 
 // Accelerates the hero's air velocity toward the stick direction, clamped to the step.
-void HeroAirAccel(float step) {
+void air_accel(float step) {
     float v[4];
     float w[4];
     float u[4];
@@ -1537,7 +1537,7 @@ void HeroAirAccel(float step) {
         FastVecAdd(h, h, v);
         *(u128_34970 *)w = *(u128_34970 *)(h + 0x840);
         {
-            float t = Hero_ProjectOnHeading(w);
+            float t = forward_component(w);
             char *g5 = (char *)&D_0013F450;
             *(float *)(g5 + 0x194) = *(float *)(g5 + 0x168) - t;
         }
@@ -1546,7 +1546,7 @@ void HeroAirAccel(float step) {
     case 1:
     case 2: {
         char *h = (char *)&D_0013F450 + 0xE0;
-        u[0] = ViewXyLength((float *)h);
+        u[0] = gravity_length_xy((float *)h);
         ApproachValue(*(float *)(h + 0xB0), step, u);
         HeroScalePointXY((float *)h, (float *)h, 0.0f);
         HeroMoveAlongHeading(h, h, u[0]);
@@ -1581,7 +1581,7 @@ extern void func_L00_00233EE0(void *, f32, f32, f32);
 extern void func_L00_00211908(void);
 
 /* Adapted from Lombyte (GPL-3.0) for PAL by OpenRAC's tools/port.py: src/overlays/shared/ui/help/00226f10.c, FUN_L01_0023c710. */
-void HeroTickTimers(void) {
+void update_hero_timers_and_vehicle_transitions(void) {
     Vec4 sum;
     Vec4 d;
     struct Moby *m;
@@ -1641,7 +1641,7 @@ void HeroTickTimers(void) {
         D_0013F450_293D0.health.hp != 0 && (*(s32 *)&D_L01_0015F6A8_3CE00) == 0) {
         if (D_0013F450_293D0.vehicle_mode == 3) {
             HeroEndScene();
-            if (PadPressedWithin(0x80, scale_ticks(0x12), 0)) {
+            if (pad_pressed_within(0x80, scale_ticks(0x12), 0)) {
                 D_0013F450_293D0.unk20A6 = 1;
             }
         } else {
@@ -1663,7 +1663,7 @@ void HeroTickTimers(void) {
         func_001F9908(&D_L01_00179DF0[i].w0);
     }
     D_0013F450_293D0.unk22B8 = 9999.0f;
-    if (D_0013F450_293D0.air_frames.s != 0 && HeroGetViewZ(&D_0013F450_293D0.motion.velocity) < 0.0f) {
+    if (D_0013F450_293D0.air_frames.s != 0 && gravity_z(&D_0013F450_293D0.motion.velocity) < 0.0f) {
         if (D_0013F450_293D0.unk21B4 != 0x20) goto skip;
         func_001F9BC0_3CE00(&sum);
         n8 = 8;
@@ -1726,15 +1726,15 @@ extern int D_L01_0015F7BC MACRO_ADDR;
 extern char D_0013A5E0[];
 
 // Chooses the next hero state when landing, with sounds and effects.
-void HeroLandingNextState(void) {
+void select_hero_locomotion_state(void) {
     char *b, *c, *d;
     int n;
     b = D_0013E633 + 0xE1D;
     *(int *)(b + 0x2284) = 0;
-    Hero_SetHeadingFromStick(0, 1.0f);
+    stick_target(0, 1.0f);
     if (*(int *)(D_0013A5E0 + 0x2600) & 0xA) {
         hl_next(4, 0);
-        HeroStartAnim(0xD, 2, -2.0f);
+        set_hero_animation(0xD, 2, -2.0f);
         HeroQueueSequence(3, 0x12);
         return;
     }
@@ -1748,7 +1748,7 @@ void HeroLandingNextState(void) {
             *(int *)(c + 0x2088) = 1;
             n = scale_ticks(8);
             if (scale_ticks(5) < *(int *)(c + 0x418)) n = scale_ticks(14);
-            HeroStartAnim(4, D_L01_0015F7BC, (float)n);
+            set_hero_animation(4, D_L01_0015F7BC, (float)n);
             *(short *)(c + 0x3BC) = 1;
         }
         return;
@@ -1756,7 +1756,7 @@ void HeroLandingNextState(void) {
     d = D_0013E633 + 0xE1D;
     if ((*(float *)&D_0015EE6C * 3.0f < *(float *)(d + 0x168) && scale_ticks(3) < *(int *)(d + 0x418)) || *(int *)(d + 0x2084) == 0x10) {
         if (hl_next(3, 0)) {
-            HeroStartAnim(5, 0, -1.0f);
+            set_hero_animation(5, 0, -1.0f);
             ClampVectorLength(D_0013E633 + 0xF6D, D_0015EE6C * 5.0f);
         }
         return;
@@ -1765,9 +1765,9 @@ void HeroLandingNextState(void) {
         if (hl_next(0, 0)) {
             if (Help_GetRecordValue(0) == 0x54) {
                 n = Help_GetRecordValue(0);
-                HeroStartAnim(n, 0, (float)scale_ticks(15));
+                set_hero_animation(n, 0, (float)scale_ticks(15));
             } else if (*(int *)(d + 0xA98) & 2) {
-                HeroStartAnim(Help_GetRecordValue(0), 0, -2.0f);
+                set_hero_animation(Help_GetRecordValue(0), 0, -2.0f);
             }
         }
     }

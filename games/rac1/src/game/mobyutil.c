@@ -172,16 +172,26 @@ extern int D_00160000 MACRO_ADDR;
 /* Looks arg0 up in the {key, a, b} table D_001E8F00 (ended by key -1).
    D_00160000 is read at every use, not cached in a local: CSE then
    reproduces retail's load order and its surviving register copy. */
-void SetMobyClassEntry(int arg0) {
-    char *m = D_001B3580[D_00160000];
+struct Obj {
+    u8 pad_00[0x2C];
+    s32 extra;                       /* 0x2C */
+};
+
+/* Looks id up in the {key, a, b} table D_001E8F00 (ended by key -1).
+   D_00160000 is read at every use, not cached in a local: CSE then
+   reproduces retail's load order and its surviving register copy. */
+
+void assign_moby_class_data(int id) {
+    struct Obj *class_resource;
     int i = 0;
 
-    while (D_001E8F00[i].key != -1 && D_001E8F00[i].key != arg0) {
+    class_resource = moby_class_resources[D_00160000];
+    while (D_001E8F00[i].key != -1 && D_001E8F00[i].key != id) {
         i++;
     }
     D_001B3900[D_00160000] = D_001E8F00[i].a;
-    if (m != 0) {
-        *(int *)(D_001B3580[D_00160000] + 0x2C) = D_001E8F00[i].b;
+    if (class_resource != 0) {
+        ((struct Obj *)moby_class_resources[D_00160000])->extra = D_001E8F00[i].b;
     }
 }
 
@@ -259,7 +269,7 @@ void MobyBlendAnimation(MobyAnim *arg0, int arg1, int arg2, int arg3) {
     if (*(float *)((char *)arg0 + 0x54) > 0.025f ||
         *(int *)((char *)arg0 + 0x60) != 0 ||
         *(int *)((char *)arg0 + 0x64) != 0) {
-        slot = AnimSlot_Register((int)arg0);
+        slot = find_or_allocate_id_slot((int)arg0);
         if (slot >= 0) {
             func_0020FC38(arg0, slot | 0x300);
             qcopy(D_001B2F80 + slot * 0x10, (char *)arg0 + 0xF0);
@@ -294,7 +304,7 @@ void MobyBlendAnimation(MobyAnim *arg0, int arg1, int arg2, int arg3) {
    resets unk54, clears unk70 bit 1, stores 1/func_001FA888(arg3) into
    unk5C, and copies a not-yet-named byte (offset 0x11) out of
    pClass->seqs[arg1] into unk7C. */
-void MobyBlendAnimationEx(MobyAnim *arg0, int arg1, int arg2, int arg3, int arg4) {
+void blend_moby_animation_ex(MobyAnim *arg0, int arg1, int arg2, int arg3, int arg4) {
     int slot;
     int flags;
     unsigned char oldSeq;
@@ -303,7 +313,7 @@ void MobyBlendAnimationEx(MobyAnim *arg0, int arg1, int arg2, int arg3, int arg4
     if (*(float *)((char *)arg0 + 0x54) > 0.025f ||
         *(int *)((char *)arg0 + 0x60) != 0 ||
         *(int *)((char *)arg0 + 0x64) != 0 || (arg4 & 4)) {
-        slot = AnimSlot_Register((int)arg0);
+        slot = find_or_allocate_id_slot((int)arg0);
         if (slot >= 0) {
             flags = (arg4 & 1) ? (slot | 0x100) : slot;
             func_0020FC38(arg0, (arg4 & 2) ? (flags | 0x200) : flags);
@@ -358,7 +368,7 @@ extern float func_00214158(void);
 extern float func_002140F8(float, float);
 extern void func_00215C00(void *, float, float, float);
 
-void RandomSphericalOffset(void *arg0, float arg1, float arg2) {
+void random_spherical_offset(void *arg0, float arg1, float arg2) {
     float r1 = random_angle_radians();
     float r2 = random_angle_radians();
 
@@ -419,24 +429,24 @@ extern void func_001F9BC8(void *);
    array: its fields are symbol+offset accesses, which the compiler
    counts as two instructions and so keeps out of delay slots, as retail
    has them. */
-float GetGroundHeight(float *pos, void *out) {
+float resolve_camera_surface_height(float *pos, void *out) {
     float h;
 
-    if (D_00161298 != 0) {
+    if (occl_cell_count != 0) {
         h = pos[2];
-        if (SampleSurfaceHeight(&h, out, pos[0], pos[1], h) != 0) {
+        if (sample_surface_height_map(&h, out, pos[0], pos[1], h) != 0) {
             return h;
         }
     }
     if (D_0016129C != 0 && FastAbsF(pos[2] - D_001612A0[2]) < 0.5f
         && func_001F9D48(pos, D_001612A0) < D_001612A0[3]) {
         if (out != 0) {
-            func_001F9BC8(out);
+            set_vector_unit_z(out);
         }
         return D_001612A0[2];
     }
     if (out != 0) {
-        func_001F9BC8(out);
+        set_vector_unit_z(out);
     }
     return pos[2];
 }
@@ -453,7 +463,7 @@ extern float func_001F9B90(float, float);
    shifted against the light direction D_001CAE00 by its size, then a
    second one along the light from just above; +0x84/+0x88 get the lower
    and upper hit height (at most 4 apart), or 0 when nothing is below. */
-void MobyUpdateShadowRange(char *m) {
+void update_moby_shadow_range(char *m) {
     float dir[4];
     float p[4];
     float a[4];
@@ -473,7 +483,7 @@ void MobyUpdateShadowRange(char *m) {
     b[2] -= 8.0f;
     if (func_001EFE10_a(a, b, 0x22, 0, 0) != 0) {
         qcopy(a, p);
-        hit = D_00194200;
+        hit = coll_output;
         h1 = *(float *)(hit + 0x28);
         a[2] = a[2] + *(float *)(m + 0xC) * 0.00048828125f;
         a[0] = a[0] + dir[0] * *(float *)(m + 0xC) * 0.000732421875f;
@@ -484,8 +494,8 @@ void MobyUpdateShadowRange(char *m) {
         if (func_001EFE10_a(a, b, 0x22, 0, 0) != 0) {
             h2 = *(float *)(hit + 0x28);
         }
-        *(float *)(m + 0x84) = func_001F9B98(h1, h2) - 0.25f;
-        t = func_001F9B90(h1, h2) + 0.25f;
+        *(float *)(m + 0x84) = min_float(h1, h2) - 0.25f;
+        t = max_float(h1, h2) + 0.25f;
         *(float *)(m + 0x88) = t;
         if (*(float *)(m + 0x84) + 4.0f < t) {
             *(float *)(m + 0x88) = *(float *)(m + 0x84) + 4.0f;
@@ -539,7 +549,7 @@ int func_00214778(char *a, char *B, char *an, unsigned int btn, int *outA, float
         return 0;
     }
     if (an == 0) {
-        an = (char *)func_00215048(a);
+        an = (char *)suck_get_aim_height(a);
         if (an == 0) {
             *outA = 0;
             return 0;
@@ -550,7 +560,7 @@ int func_00214778(char *a, char *B, char *an, unsigned int btn, int *outA, float
 
     if (B == 0) {
         if (an != 0) {
-            func_001F9938(an + 0x1C);
+            FastDecTimer(an + 0x1C);
             *(short *)(an + 0x16) = -1;
         }
         *outA = 1;
@@ -560,20 +570,20 @@ int func_00214778(char *a, char *B, char *an, unsigned int btn, int *outA, float
     }
 
     if (*(float *)(B + 0x1C) == 5627.9248f) {
-        func_001F9C30(B + 0x10, B + 0x10, *(float *)(D_001CC448 + (unsigned char)B[0x28] * 4 + k * 32));
+        FastVecScale(B + 0x10, B + 0x10, *(float *)(D_001CC448 + (unsigned char)B[0x28] * 4 + k * 32));
         a22 = *(unsigned short *)(B + 0x2A);
         *(float *)(B + 0x1C) = 5627.9248f;
         if (a22 == 0x47) {
             char *h = D_0013F450;
 
-            v[0] = func_001F9F90(func_001FA058(*(float *)(a + 0x10) - *(float *)(h + 0x80),
+            v[0] = FastCos(func_001FA058(*(float *)(a + 0x10) - *(float *)(h + 0x80),
                                                *(float *)(a + 0x14) - *(float *)(h + 0x84)));
-            v[1] = func_001F9FA8(func_001FA058(*(float *)(a + 0x10) - *(float *)(h + 0x80),
+            v[1] = FastSin(func_001FA058(*(float *)(a + 0x10) - *(float *)(h + 0x80),
                                                *(float *)(a + 0x14) - *(float *)(h + 0x84)));
             v[2] = 1.0f;
-            func_001F9DC0(v, v, func_001F9CB8(B + 0x10) * 0.7f);
-            func_001F9C30(B + 0x10, B + 0x10, 0.3f);
-            func_001F9BD8(w, B + 0x10, v);
+            func_001F9DC0(v, v, FastVecLength(B + 0x10) * 0.7f);
+            FastVecScale(B + 0x10, B + 0x10, 0.3f);
+            FastVecAdd(w, B + 0x10, v);
             *(Q_214778 *)(B + 0x10) = *(Q_214778 *)w;
             func_001F9E10((float *)(B + 0x10), (float *)(B + 0x10), 1.0f);
         }
@@ -668,7 +678,7 @@ int func_00214778(char *a, char *B, char *an, unsigned int btn, int *outA, float
     if (*(short *)(an + 0x14) != a22)
         *(short *)(an + 0x1C) = 0;
 
-    if (func_001F9938(an + 0x1C) != 0) {
+    if (FastDecTimer(an + 0x1C) != 0) {
         switch (s21) {
         case 0:
             *(short *)(an + 0x1C) = func_001F98C0(0x25);
@@ -732,11 +742,11 @@ int func_00214778(char *a, char *B, char *an, unsigned int btn, int *outA, float
         *outF = *(float *)(B + 0x2C);
 
     if (s21 == 4) {
-        char *p = (char *)func_00215078(a);
+        char *p = (char *)read_state_field(a);
         if (p != 0)
             p[0x2E] = 1;
     } else {
-        char *p = (char *)func_00215078(a);
+        char *p = (char *)read_state_field(a);
         if (p != 0)
             p[0x2E] = 0;
     }
@@ -869,7 +879,7 @@ LINKER_REMNANT("asm/remnants/text", func_00215038);
 
 /* A goto into the first `return 0` gives retail's backward beqz; the two
    nops before it are short-loop padding (tools/ps2eeas_nops.py). */
-int Moby_GetPvarFirstWord(char *arg0) {
+int suck_get_aim_height(char *arg0) {
     if (arg0 == 0) {
     ret0:
         return 0;
@@ -881,7 +891,7 @@ int Moby_GetPvarFirstWord(char *arg0) {
 }
 
 /* func_00215048 for the +0x10 field. */
-int Moby_GetPvarWord4(char *arg0) {
+int read_state_field(char *arg0) {
     if (arg0 == 0) {
     ret0:
         return 0;
@@ -957,7 +967,7 @@ extern void func_001FA480(void *, void *);
 
 /* func_001FA460 takes two arguments: arg1 is passed on to it untouched,
    which gives arg1 three references and retail's $s0. */
-void Matrix_ToQuatCopyBack(void *arg0, void *arg1) {
+void extract_matrix_rotation_quaternion(void *arg0, void *arg1) {
     char buf[0x40];
     func_001FA460_2(buf, arg1);
     MatrixToQuaternion(arg0, buf);
@@ -993,7 +1003,7 @@ extern void func_001FA238(float *, float *);
    then read X from row 1; out = (x, y, z). The last undo vector is
    filled but never used. The 16-byte aligned struct copy is retail's
    four interleaved lq/sq. */
-void MatrixToEuler(Mtx44 *src, float *out) {
+void matrix_to_euler(Mtx44 *src, float *out) {
     float rot[16];
     Mtx44 m;
     float v[4];
@@ -1066,7 +1076,7 @@ LINKER_REMNANT("asm/remnants/text", func_00215648);
 /* Conjugate-style sandwich: arg0 = arg2 * (arg1 with w = 0) * a, where
    a is arg2 negated with its w kept (func_001FA588 is the quaternion
    multiply). The 16-byte copy of arg1 is qcopy's lq/sq. */
-void RotateVectorByQuaternion(void *arg0, void *arg1, void *arg2) {
+void rotate_vector_by_quaternion(void *arg0, void *arg1, void *arg2) {
     float a[4];
     float b[4];
     float c[4];
@@ -1095,7 +1105,7 @@ void build_look_at_matrix(void *dst, void *vec, void *axis, float angle) {
     }
     func_001F9DC0(q, axis, 1.0f);
     build_quaternion_from_axis_angle(q, q, angle);
-    RotateVectorByQuaternion(dst, vec, q);
+    rotate_vector_by_quaternion(dst, vec, q);
 }
 
 LINKER_REMNANT("asm/remnants/text", func_00215788);
@@ -1112,7 +1122,7 @@ extern int D_0015EE80 MACRO_ADDR;
 
 /* The EE80 flag is written first in each arm. Its float store lands in
    a delay slot, where check_macro_slots.py makes it $gp-relative. */
-void SetVideoModeTiming(int pal) {
+void set_video_timing(int pal) {
     if (pal == 0) {
         D_0015EE80 = 0;
         D_0015EE60 = 1.0f;
@@ -1122,7 +1132,7 @@ void SetVideoModeTiming(int pal) {
         D_0015EE70 = 0.000277777784503996372222900390625f;
         D_0015EE74 = 0.00000462962952951784245669841766357421875f;
         D_0015EE78 = 5;
-        D_0015EE7C = 0.01666666753590106964111328125f;
+        frame_delta_time = 0.01666666753590106964111328125f;
     } else {
         D_0015EE80 = 1;
         D_0015EE60 = 1.2000000476837158203125f;
@@ -1132,7 +1142,7 @@ void SetVideoModeTiming(int pal) {
         D_0015EE70 = 0.00040000001899898052215576171875f;
         D_0015EE74 = 0.0000079999999798019416630268096923828125f;
         D_0015EE78 = 6;
-        D_0015EE7C = 0.0199999995529651641845703125f;
+        frame_delta_time = 0.0199999995529651641845703125f;
     }
 }
 
@@ -1145,7 +1155,7 @@ extern int func_001FA898_r(float) __asm__("func_001FA898");
    float4 to bytes): its largest absolute component sets a scale n,
    rounded (func_001FA898) from max * 10000 / 63 and clamped to 1..255,
    which goes in w; x, y, z become v / (n / 10000) + 127. */
-void PackVectorScaled(float *v, int *out) {
+void pack_vector_xyz_with_shared_scale(float *v, int *out) {
     float buf[4];
     float a = FastAbsF(v[0]);
     float b = FastAbsF(v[1]);
@@ -1370,7 +1380,7 @@ int force_help_message(int arg0, int arg1) {
     return 3;
 }
 
-int GetUnspentGoldBolts(void) {
+int compute_clamped_count_difference(void) {
     int a = count_nonzero_entries_up_to_40();
     int b = count_nonzero_entries_up_to_10();
     int v = a - b * 4;

@@ -1,4 +1,4 @@
-/* functional: high. fcheck: unchecked (never called in fcheck's capture run of the title, menu and level 0; OpenRAC tools/fcheck_gate.py, 2026-10-18). FastMemOr16: dst[i] = a[i] | b[i] over 16-byte quadwords; the asm is a do-while on the byte count (count -= 16, loop while > 0), so at least one quadword is always written. Source and destination may alias (draw.c ORs into D_00194140 in place). */
+/* functional: high. fcheck: unchecked (never called in fcheck's capture run of the title, menu and level 0; OpenRAC tools/fcheck_gate.py, 2026-10-18). fast_mem_or16: dst[i] = a[i] | b[i] over 16-byte quadwords; the asm is a do-while on the byte count (count -= 16, loop while > 0), so at least one quadword is always written. Source and destination may alias (draw.c ORs into D_00194140 in place). */
 void func_001F9AC0(unsigned int *dst, const unsigned int *a, const unsigned int *b, int bytes) {
     do {
         dst[0] = a[0] | b[0];

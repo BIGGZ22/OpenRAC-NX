@@ -97,7 +97,7 @@ extern HudBank D_00199C60_b[] __asm__("D_00199C60") NOT_SDA;
    0x2800 bytes of it and sets its byte +0x20 to 0xFF. The records are
    indexed through a struct array: each field access is its own giv,
    and loop.c's pick (the +0x24 one) is retail's loop pointer. */
-void Hud_InitBanks(void) {
+void init_hud(void) {
     int *arena = &D_0019A4E8;
     int i;
     unsigned char *buf;
@@ -113,15 +113,15 @@ void Hud_InitBanks(void) {
         D_00199C60_b[i].unk04 = 0;
         D_00199C60_b[i].unk24 = 0;
     }
-    if (D_0015FAB8 == 0) {
-        D_0015FAB8 = (unsigned char *)func_001FFAB8_d(0x2800, 0, D_0015F7B8, 277);
-        D_0015FAC4 = (unsigned char *)func_001FFAB8_d(0x1400, 0, D_0015F7B8, 278);
+    if (hud_bank_main == 0) {
+        hud_bank_main = (unsigned char *)func_001FFAB8_d(0x2800, 0, hud_file_str, 277);
+        hud_bank_aux = (unsigned char *)func_001FFAB8_d(0x1400, 0, hud_file_str, 278);
     }
-    buf = D_0015FAB8;
-    D_0015FAC0 = buf + 0x2800;
+    buf = hud_bank_main;
+    hud_bank_end = buf + 0x2800;
     D_0015FABC = buf;
     FastMemZero16(buf, 0x2800);
-    D_0015FAB8[0x20] = 0xFF;
+    hud_bank_main[0x20] = 0xFF;
 }
 
 /* Retail carries 4 bytes of inter-function padding after this endlabel. */
@@ -303,7 +303,7 @@ extern int D_0019A4E8 NOT_SDA;
 /* Hud_HeapReset(void) */
 void Hud_HeapReset(void) {
     int *p = &D_0019A4E8;
-    int v = D_001941CC;
+    int v = hud_heap_base;
     p[5] = v + 0x64000;
     p[4] = v;
 }
@@ -397,20 +397,40 @@ extern void func_001FFD30(void *, int);
    is one, and clears +0x68. The copies are in retail's store order, and
    the +0x10 copy is unconditional (retail stores it in the beqz's delay
    slot), which also makes the scheduler load +0x30 first. */
-void apply_pending_animation(void *arg0) {
-    char *p = (char *)arg0;
+typedef struct AnimRec {
+    u8 pad_00[0x4];
+    s32 a;                   /* 0x04 */
+    s32 d;                   /* 0x08 */
+    s32 e;                   /* 0x0C */
+    void (*fn)(void *);      /* 0x10: handler, called with the record if nonzero */
+    s32 c;                   /* 0x14 */
+    s32 b;                   /* 0x18 */
+    u8 pad_1C[0x4];
+    s32 next_id;             /* 0x20: definition id for load_animation_definition */
+    s32 next_a;              /* 0x24 */
+    s32 next_d;              /* 0x28 */
+    s32 next_e;              /* 0x2C */
+    void (*next_fn)(void *); /* 0x30 */
+    s32 next_c;              /* 0x34 */
+    s32 next_b;              /* 0x38 */
+    u8 pad_3C[0x2C];
+    s32 pending;             /* 0x68: cleared once the pending values are applied */
+} AnimRec;
 
-    load_animation_definition(arg0, *(int *)(p + 0x20));
-    *(int *)(p + 4) = *(int *)(p + 0x24);
-    *(int *)(p + 0x14) = *(int *)(p + 0x34);
-    *(int *)(p + 0x18) = *(int *)(p + 0x38);
-    *(int *)(p + 0xC) = *(int *)(p + 0x2C);
-    *(int *)(p + 8) = *(int *)(p + 0x28);
-    *(int *)(p + 0x10) = *(int *)(p + 0x30);
-    if (*(int *)(p + 0x10) != 0) {
-        (*(void (**)(void *))(p + 0x10))(arg0);
+void apply_pending_animation(void *arg0) {
+    struct AnimRec *anim = (struct AnimRec *)arg0;
+
+    load_animation_definition(arg0, anim->next_id);
+    anim->a = anim->next_a;
+    anim->c = anim->next_c;
+    anim->b = anim->next_b;
+    anim->e = anim->next_e;
+    anim->d = anim->next_d;
+    anim->fn = anim->next_fn;
+    if (anim->fn != 0) {
+        anim->fn(arg0);
     }
-    *(int *)(p + 0x68) = 0;
+    anim->pending = 0;
 }
 
 /* The 13 0x90-byte records at D_00199C60, looked up by their +0x64. */
@@ -430,10 +450,10 @@ extern void func_001FFB38_v(int, int, int, int, int, int, int) __asm__("func_001
 /* Calls func_001FFB38(i, 0xFFFF, 0, 0, 0, 0, 0) on the record whose
    +0x64 is arg0 and returns 1, or returns 0 when none is. The nop in
    the search loop is ps2eeas's short-loop padding. */
-int Hud_RemoveBank(int arg0) {
+int remove_hud_item(int arg0) {
     int i;
     for (i = 0; i < 13; i++) {
-        if (D_00199C60[i].unk64 == arg0) {
+        if (hud_chan_slots[i].unk64 == arg0) {
             break;
         }
     }
@@ -475,14 +495,14 @@ LINKER_REMNANT("asm/remnants/text", func_001FFD98);
 void Hud_SetBarValueById(int arg0, int arg1) {
     int i;
     for (i = 0; i < 13; i++) {
-        if (D_00199C60[i].unk64 == arg0) {
+        if (hud_chan_slots[i].unk64 == arg0) {
             break;
         }
     }
     if (i < 13) {
-        D_00199C60[i].unk24 = arg1;
-        if (D_00199C60[i].unk68 == 0) {
-            D_00199C60[i].unk04 = arg1;
+        hud_chan_slots[i].unk24 = arg1;
+        if (hud_chan_slots[i].unk68 == 0) {
+            hud_chan_slots[i].unk04 = arg1;
         }
     }
 }
@@ -504,19 +524,19 @@ extern void func_001166FC(Cfg13 *, void *);
 extern int func_00116810_hud(void *) __asm__("func_00116810");
 void copy_text_to_shared_buffer(void *arg0) {
     if ((unsigned int)func_00116810_hud(arg0) < 0x50) {
-        D_0019A540 = D_001E7DD8;
+        message_text_buffer = message_too_long_label;
     }
-    func_001166FC(&D_0019A540, arg0);
+    func_001166FC(&message_text_buffer, arg0);
 }
 
 LINKER_REMNANT("asm/remnants/text", func_001FFF08);
 
 extern short D_0015F9D0;   /* SDA (gp -0x7330) */
 
-void TickDownCounter(void) {
-    int v = *(int *)&D_0015F9D0;
+void update_resource_counter(void) {
+    int v = *(int *)&ResourceCounter;
     if (v != 0) {
-        *(int *)&D_0015F9D0 = v - 1;
+        *(int *)&ResourceCounter = v - 1;
     }
 }
 
@@ -544,7 +564,7 @@ extern void func_00201A38(int, int, int, int);
    bank's +0x18 callback, then fade the D_0015F764 alpha (0..128) in
    while the D_0015F760 timer runs, or out once it stops, and draw
    the overlay text D_001994D8 (plus D_00199528 above 1000) with it. */
-void HudDraw(void) {
+void update_hud(void) {
     char *arena = D_0019A4E8_raw;
     int i;
     HudBankCb *p;
@@ -562,8 +582,8 @@ void HudDraw(void) {
         }
         p++;
     }
-    if ((D_0015F760 != 0 || D_0015F764 != 0) && D_0015F6E8 == 0) {
-        if (D_0015F760 != 0) {
+    if ((hud_msg_count != 0 || D_0015F764 != 0) && D_0015F6E8 == 0) {
+        if (hud_msg_count != 0) {
             D_0015F764 += 128 / func_001F98C0(8);
             if (D_0015F764 > 128) {
                 D_0015F764 = 128;
@@ -575,15 +595,15 @@ void HudDraw(void) {
             }
         }
         col = (D_0015F764 << 24) + 0xF0F0F0;
-        DrawFramedText(0x100, D_0015F768, col, (int)D_001994D8);
-        if (D_00199528[0] != 0 && D_0015F760 > 1000) {
-            DrawFramedText(0x100, D_0015F768, col, (int)D_00199528);
+        draw_framed_text(0x100, D_0015F768, col, (int)hud_msg_text1);
+        if (hud_msg_text2[0] != 0 && hud_msg_count > 1000) {
+            draw_framed_text(0x100, D_0015F768, col, (int)hud_msg_text2);
         }
-        if (D_0015F760 != 0) {
-            D_0015F760--;
+        if (hud_msg_count != 0) {
+            hud_msg_count--;
         }
-        if (D_0015F760 == 1000) {
-            D_0015F760 = 0;
+        if (hud_msg_count == 1000) {
+            hud_msg_count = 0;
         }
     } else {
         D_0015F768 = 100;
@@ -816,7 +836,7 @@ void HudSprite(int tex, int x, int y, int w, int h, int alpha) {
 /* func_00200468 drawn as a four-vertex strip (PRIM 0x154) instead of a
    sprite, the texture turned a quarter: corners (x, y+h), (x, y),
    (x+w, y+h), (x+w, y) take UVs (tw, 0), (tw, th), (0, 0), (0, th). */
-void DrawHudSpriteTurned(int tex, int x, int y, int w, int h, int alpha) {
+void draw_hud_sprite_flipped(int tex, int x, int y, int w, int h, int alpha) {
     char *arena = D_0019A4E8_raw;
     unsigned char *e = (unsigned char *)(*(char **)(arena + 0x24)
         + *(short *)(*(char **)(arena + 0x20) + tex * 4 + 2) * 8);
@@ -863,7 +883,7 @@ void DrawHudSpriteTurned(int tex, int x, int y, int w, int h, int alpha) {
 LINKER_REMNANT("asm/remnants/text", func_002008B0);
 
 /* func_00200468 with the position and size already in 16ths of a pixel. */
-void DrawHudSpriteSubpixel(int tex, int x, int y, int w, int h, int alpha) {
+void func_002008B8(int tex, int x, int y, int w, int h, int alpha) {
     char *arena = D_0019A4E8_raw;
     unsigned char *e = (unsigned char *)(*(char **)(arena + 0x24)
         + *(short *)(*(char **)(arena + 0x20) + tex * 4 + 2) * 8);
@@ -901,17 +921,17 @@ void DrawHudSpriteSubpixel(int tex, int x, int y, int w, int h, int alpha) {
 
 /* func_002008B8 with an explicit texture window: UVs run from (u, v) to
    (u, v) plus the texture's size in 16ths. */
-void DrawHudSpriteUV(int tex, int x, int y, int w, int h, int u, int v, int alpha) {
-    char *arena = D_0019A4E8_raw;
-    unsigned char *e = (unsigned char *)(*(char **)(arena + 0x24)
-        + *(short *)(*(char **)(arena + 0x20) + tex * 4 + 2) * 8);
+void draw_hud_sprite_uv(int tex, int x, int y, int w, int h, int u, int v, int alpha) {
+    struct HudState *hud = &D_0019A4E8_FF958;
+    struct HudTexPage *image_page;
     int th;
     int tw;
     int *base;
     long *p;
 
-    tw = 1 << (e[6] + 4);
-    th = 1 << (e[7] + 4);
+    image_page = &hud->image_pages[hud->frame_refs[tex].image_index];
+    tw = 1 << (image_page->width_log2 + 4);
+    th = 1 << (image_page->height_log2 + 4);
     D_00161000[0] = 0x10000005;
     D_00161000[1] = 0;
     D_00161000[2] = 0;
@@ -928,11 +948,11 @@ void DrawHudSpriteUV(int tex, int x, int y, int w, int h, int u, int v, int alph
     p[5] = u | ((long)v << 16);
     p[6] = (x + D_0013E600[4] - 8)
          | ((long)(y + D_0013E600[5] - 8) << 16)
-         | ((long)*(int *)(arena + 0xC) << 32);
+         | ((long)hud->z << 32);
     p[7] = (u + tw) | ((long)(v + th) << 16);
     p[8] = (x + w + D_0013E600[4] - 8)
          | ((long)(y + h + D_0013E600[5] - 8) << 16)
-         | ((long)*(int *)(arena + 0xC) << 32);
+         | ((long)hud->z << 32);
     p[9] = 0;
     D_00161000 = (int *)((char *)D_00161000 + 0x50);
 }
@@ -948,36 +968,57 @@ extern int *D_00161000 MACRO_ADDR;
    arena's +0xC word. The payload is written through the advanced
    D_00161000 (retail stores relative to it), and the arena is reached
    through a local pointer so its address is built in a register. */
-void func_00200CA0(long arg0, int arg1, int arg2, int arg3, int arg4,
-                    int arg5, int arg6, int arg7, int arg8, int arg9) {
-    int *base;
-    long *p;
-    char *arena = D_0019A4E8_raw;
+struct SpritePacket {
+    u32 dma_word0;
+    u32 dma_addr;
+    u32 dma_word2;
+    u32 dma_word3;
+    u64 gif_tag;
+};
 
-    D_00161000[0] = 0x10000005;
-    D_00161000[1] = 0;
-    D_00161000[2] = 0;
-    D_00161000[3] = 0x50000005;
+typedef struct {
+    struct SpritePacket *p;
+} SpriteCursor;
 
-    base = D_00161000;
-    D_00161000 = base + 4;
-    p = (long *)D_00161000;
-    p[0] = 0x7400000000008001L;
-    p[1] = 0x5353106;
-    p[2] = arg0;
-    p[3] = 0x156;
-    p[4] = ((long)arg9 << 24) | 0x7F7F7F;
-    p[5] = arg7 | ((long)arg8 << 16);
-    p[6] = (arg1 + D_0013E600[4] - 8)
-         | ((long)(arg2 + D_0013E600[5] - 8) << 16)
-         | ((long)*(int *)(arena + 0xC) << 32);
-    p[7] = (arg7 + (1 << (arg3 + 4)))
-         | ((long)(arg8 + (1 << (arg4 + 4))) << 16);
-    p[8] = (arg1 + arg5 + D_0013E600[4] - 8)
-         | ((long)(arg2 + arg6 + D_0013E600[5] - 8) << 16)
-         | ((long)*(int *)(arena + 0xC) << 32);
-    p[9] = 0;
-    D_00161000 = (int *)((char *)D_00161000 + 0x50);
+/* The HUD arena's depth word at +0xC (sprite_depth_state.z_and_fog in the NTSC decomp). */
+struct SpriteDepthState {
+    u8 pad_00[0xC];
+    s32 z_and_fog;                 /* 0x0C */
+};
+
+extern SpriteCursor render_packet_cursor __asm__("D_00161000") MACRO_ADDR;
+
+void append_power_of_two_textured_screen_sprite(long texture_register_value, s32 screen_x, s32 screen_y,
+                                                s32 texture_width_log2, s32 texture_height_log2,
+                                                s32 screen_width, s32 screen_height, s32 texture_u,
+                                                s32 texture_v, s32 alpha) {
+    struct SpritePacket *tag;
+    u64 *packet_words;
+    struct SpriteDepthState *arena = (struct SpriteDepthState *)D_0019A4E8_raw;
+
+    render_packet_cursor.p->dma_word0 = 0x10000005;
+    render_packet_cursor.p->dma_addr = 0;
+    render_packet_cursor.p->dma_word2 = 0;
+    render_packet_cursor.p->dma_word3 = 0x50000005;
+    tag = render_packet_cursor.p;
+    packet_words = (u64 *)((u8 *)tag + 0x10);
+    render_packet_cursor.p = (struct SpritePacket *)packet_words;
+    tag->gif_tag = 0x7400000000008001;
+    packet_words[1] = 0x5353106;
+    packet_words[2] = texture_register_value;
+    packet_words[4] = ((s64)alpha << 24) | 0x7F7F7F;
+    packet_words[3] = 0x156;
+    packet_words[5] = texture_u | ((s64)texture_v << 16);
+    packet_words[6] = (screen_x + D_0013E600[4] - 8)
+                    | ((s64)(screen_y + D_0013E600[5] - 8) << 16)
+                    | ((long)arena->z_and_fog << 32);
+    packet_words[7] = (texture_u + (1 << (texture_width_log2 + 4)))
+                    | ((s64)(texture_v + (1 << (texture_height_log2 + 4))) << 16);
+    packet_words[8] = (screen_x + screen_width + D_0013E600[4] - 8)
+                    | ((s64)(screen_y + screen_height + D_0013E600[5] - 8) << 16)
+                    | ((long)arena->z_and_fog << 32);
+    packet_words[9] = 0;
+    render_packet_cursor.p = (struct SpritePacket *)((u8 *)render_packet_cursor.p + 0x50);
 }
 
 extern int *D_00161000 MACRO_ADDR;
@@ -992,7 +1033,7 @@ extern void func_001F9BF0(float *, float *, float *);
    (func_001F9BD8 adds, func_001F9BF0 subtracts vectors), each packed as
    XYZ2 with D_0013E600[4]/[5] - 8 and the HUD arena's +0xC depth; UVs
    run from (0, 0) to (u * 16, v << 20). */
-void DrawHudSpriteRotated(int u, int v, long tex, float x, float y, float w, float h, float rot) {
+void func_00200E38(int u, int v, long tex, float x, float y, float w, float h, float rot) {
     float a[4];
     float b[4];
     float pos[4];
@@ -1060,7 +1101,7 @@ typedef struct {
 } HudDepthView;
 
 /* HUD sprite packet with explicit UV corners, adapted from Lombyte (GPL-3.0). */
-void func_00201190(int tex, int x0, int y0, int x1, int y1,
+void draw_hud_sprite_rect(int tex, int x0, int y0, int x1, int y1,
                    int u0, int v0, int u1, int v1, int alpha) {
     int *base;
     long *p;
@@ -1162,41 +1203,44 @@ extern int *D_00161000 MACRO_ADDR;
    register-id constant 0x41 (not 0x46) at +0x20, and a FIXED mask
    0x00FFFFF000000000 in the vertices' upper 32 bits instead of a Z
    parameter -- one fewer int argument than func_002017C8. */
-void func_002014B8(int arg0, int arg1, int arg2, int arg3, long arg4,
-                    int arg5) {
-    int *base;
+struct Screen {
+    s32 pad_00[4];
+    s32 left;                       /* 0x10 */
+    s32 top;                        /* 0x14 */
+};
+
+extern struct Screen screen_extent __asm__("D_0013E600") NOT_SDA;
+
+void draw_hud_rect(int x0, int y0, int x1, int y1, long prim, int pixels) {
+    long *packet_words;
 
     D_00161000[0] = 0x10000003;
     D_00161000[1] = 0;
     D_00161000[2] = 0;
     D_00161000[3] = 0x50000003;
 
-    base = D_00161000;
-    D_00161000 = base + 4;
-    *(long *)((char *)base + 0x10) = 0x4400000000000001UL;
-    *(long *)((char *)base + 0x18) = 0x4410;
-    *(long *)((char *)base + 0x20) = 0x41;
-    *(long *)((char *)base + 0x28) = arg4;
-    if (arg5 != 0) {
-        *(long *)((char *)base + 0x30) =
-            (arg0 + D_0013E600[4] - 8)
-            | ((long)(arg1 + D_0013E600[5] - 8) << 16)
+    packet_words = (long *)D_00161000;
+    D_00161000 = (int *)(packet_words + 2);
+    packet_words[2] = 0x4400000000000001UL;
+    packet_words[3] = 0x4410;
+    packet_words[4] = 0x41;
+    packet_words[5] = prim;
+    if (pixels != 0) {
+        packet_words[6] = (x0 + screen_extent.left - 8)
+            | ((long)(y0 + screen_extent.top - 8) << 16)
             | 0x00FFFFF000000000L;
-        *(long *)((char *)base + 0x38) =
-            (arg2 + D_0013E600[4] - 8)
-            | ((long)(arg3 + D_0013E600[5] - 8) << 16)
+        packet_words[7] = (x1 + screen_extent.left - 8)
+            | ((long)(y1 + screen_extent.top - 8) << 16)
             | 0x00FFFFF000000000L;
     } else {
-        *(long *)((char *)base + 0x30) =
-            (arg0 * 16 + D_0013E600[4] - 0x10)
-            | ((long)(arg1 * 16 + D_0013E600[5] - 0x10) << 16)
+        packet_words[6] = (x0 * 16 + screen_extent.left - 0x10)
+            | ((long)(y0 * 16 + screen_extent.top - 0x10) << 16)
             | 0x00FFFFF000000000L;
-        *(long *)((char *)base + 0x38) =
-            (arg2 * 16 + D_0013E600[4] - 0x10)
-            | ((long)(arg3 * 16 + D_0013E600[5] - 0x10) << 16)
+        packet_words[7] = (x1 * 16 + screen_extent.left - 0x10)
+            | ((long)(y1 * 16 + screen_extent.top - 0x10) << 16)
             | 0x00FFFFF000000000L;
     }
-    D_00161000 = (int *)((char *)D_00161000 + 0x30);
+    D_00161000 += 12;
 }
 
 extern int *D_00161000 MACRO_ADDR;
@@ -1252,7 +1296,7 @@ extern int *D_00161000 MACRO_ADDR;
    or the same with argX/argY scaled by 16 and offset -0x10 when arg6==0
    (tile coordinates). D_00161000 is re-read at every use (never cached
    across a store to it), matching this file's other packet builders. */
-void func_002017C8(int arg0, int arg1, int arg2, int arg3, long arg4,
+void draw_hud_rect_depth(int arg0, int arg1, int arg2, int arg3, long arg4,
                     int arg5, int arg6) {
     int *base;
 
@@ -1305,7 +1349,7 @@ void draw_stretchable_ui_frame(int a0, int a1, int a2, int a3, int a4) {
     HudSprite(v1, a0, a1, 0x20, a3, a4);
     HudSprite(v0, a0 + 0x20, a1, a2 - 0x40, a3, a4);
     a0 = a0 + a2;
-    DrawHudSpriteTurned(v1, a0 - 0x20, a1, 0x20, a3, a4);
+    draw_hud_sprite_flipped(v1, a0 - 0x20, a1, 0x20, a3, a4);
 }
 
 extern s32 func_001F6FD8_01A38(s32, s32, u64, s32, s32) __asm__("func_001F6FD8");
@@ -1313,7 +1357,7 @@ extern void func_00201960(s32, s32, s32, s32, s32);
 void func_00201A38(s32 x, s32 y, s32 color, s32 text);
 
 /* Adapted from Lombyte (GPL-3.0) for PAL by OpenRAC's tools/port.py: src/textbin/ui/frames/draw_framed_text.c, draw_framed_text. */
-void DrawFramedText(s32 x, s32 y, s32 color, s32 text) {
+void draw_framed_text(s32 x, s32 y, s32 color, s32 text) {
     s32 alpha = (s32)color >> 24;
     s32 text_left;
     s32 left;
@@ -1344,7 +1388,7 @@ extern s32 D_0015EF84 MACRO_ADDR;
 void func_00201AF0(u32 image_address);
 
 /* Adapted from Lombyte (GPL-3.0) for PAL by OpenRAC's tools/port.py: src/textbin/draw_boot_image.c, draw_boot_image. */
-void draw_bootImage(u32 image_address) {
+void draw_boot_image(u32 image_address) {
     struct DmaTag *tag;
     struct DmaTag *next;
     u64 *register_words;

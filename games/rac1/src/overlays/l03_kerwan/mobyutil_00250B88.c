@@ -49,5 +49,5 @@ void RotatePointAboutAxis(Q_50B88 *axis, Q_50B88 *point, float angle) {
     func_L00_001FFDD0(sin_part, sin_part, cos_part);
     func_001FA190(cos_part);
     func_L00_001FFDD0(rot, sin_part, cos_part);
-    MatrixToEuler(rot, point_p);
+    matrix_to_euler(rot, point_p);
 }

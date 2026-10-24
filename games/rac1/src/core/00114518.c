@@ -26,10 +26,10 @@ extern char D_00152470[];
 
 int func_00114518(int *errOut, void *a, void *b, void *c) {
     int r;
-    D_0015ED10 = 0;
+    SbrkErrno = 0;
     r = func_00119108(a, b, c);
-    if (r == -1 && D_0015ED10 != 0) {
-        *errOut = D_0015ED10;
+    if (r == -1 && SbrkErrno != 0) {
+        *errOut = SbrkErrno;
     }
     return r;
 }
@@ -524,10 +524,10 @@ ASM_FUNC("asm/handwritten/core_text", func_001150D4);
 
 ASM_FUNC("asm/handwritten/core_text", func_001151B4);
 
-INCLUDE_ASM("asm/nonmatchings/core_text", func_00115248);
+ASM_FUNC("asm/handwritten/core_text", func_00115248);
 
-INCLUDE_ASM("asm/nonmatchings/core_text", func_001152F8);
+ASM_FUNC("asm/handwritten/core_text", func_001152F8);
 
-INCLUDE_ASM("asm/nonmatchings/core_text", func_001153FC);
+ASM_FUNC("asm/handwritten/core_text", func_001153FC);
 
 INCLUDE_ASM("asm/nonmatchings/core_text", func_001154BC);

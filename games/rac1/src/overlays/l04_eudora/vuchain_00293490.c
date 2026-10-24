@@ -20,7 +20,7 @@ float ProbeGroundOffset(float *pos) {
     return 0.0f;
 }
 /* Writes the four joint angle limits of a leg-rig block. */
-void SetLegJointLimits(void *unused, char *arg) {
+void initialize_leg_rig_angle_defaults(void *unused, char *arg) {
     *(float *)(arg + 0x10C) = -0.19634955f;
     *(float *)(arg + 0x110) = 1.5707964f;
     *(float *)(arg + 0x1BC) = -1.5707964f;
@@ -106,7 +106,7 @@ extern void func_0020DAF8(struct Moby *m, int joint, float *mtx);
 extern float func_L00_001FF860(float, float);
 extern void func_0020D960(struct Moby *m, int slot, void *manip);
 /* Sets up a two-legged rig on a moby. */
-void InitTwoLeggedRig(struct Moby *moby, LegRig_p *rig) {
+void initialize_leg_rig(struct Moby *moby, LegRig_p *rig) {
     int joints[6];
     float matrix[4][4];
     int i;
@@ -116,11 +116,11 @@ void InitTwoLeggedRig(struct Moby *moby, LegRig_p *rig) {
 
     for (i = 0; i < 13; i++) {
         if (rig->anims[i]->id < 0) {
-            STUB_printf(D_L04_001DB660, i, moby->oclass);
-            func_001F9978();
+            STUB_printf(invalid_animation_message, i, moby->oclass);
+            raise_kernel_trap();
         }
-        rig->anims[i]->start = Anim_GetStartTime(moby->class_slot, rig->anims[i]->id);
-        rig->anims[i]->len = Anim_GetEndTime(moby->class_slot, rig->anims[i]->id) - rig->anims[i]->start;
+        rig->anims[i]->start = animation_start(moby->class_slot, rig->anims[i]->id);
+        rig->anims[i]->len = animation_end(moby->class_slot, rig->anims[i]->id) - rig->anims[i]->start;
         if (rig->anims[i]->len != 0.0f) {
             for (j = 0; j < 2; j++) {
                 rig->anims[i]->phase[1].span[j] = rig->anims[i]->phase[1].from[j] <= rig->anims[i]->phase[1].to[j]
@@ -139,7 +139,7 @@ void InitTwoLeggedRig(struct Moby *moby, LegRig_p *rig) {
     joints[3] = rig->legs[1].joint2;
     joints[4] = rig->jointB4;
     joints[5] = rig->jointB5;
-    MobyTransformScaledVertexBatch(moby, 6, joints, rig);
+    transform_scaled_vertex_batch(moby, 6, joints, rig);
     for (k = 0; k < 2; k++) {
         char *p = (char *)rig + k * 0xB0;
         MobyTransformScaledVertex(moby, ((unsigned char *)p)[0xF0], matrix[0]);
@@ -162,12 +162,12 @@ void InitTwoLeggedRig(struct Moby *moby, LegRig_p *rig) {
     rig->unkE4 = 0;
     rig->unkEC = 0;
     rig->mode = 5;
-    STUB_printf(D_L04_001DB6F0, 0x250);
+    STUB_printf(rig_size_message, 0x250);
 }
 extern int func_L00_002A2680_t(int *a, float v) __asm__("func_L00_002A2680");
 
 // Finds the entry of arg1's 13-pointer table whose first word equals arg0's byte at 0x52, then calls on it or returns a byte.
-int LegRig_GetAnimMode(char *arg0, char *arg1, float t) {
+int rig_pick_mode(char *arg0, char *arg1, float t) {
     int **p = (int **)(arg1 + 0x70);
     int *found = 0;
     int i;
@@ -401,7 +401,7 @@ extern void func_001FA588(float *, float *, float *);
 extern f32 D_0015EE60 MACRO_ADDR;
 
 /* Adapted from Lombyte (GPL-3.0) for PAL by OpenRAC's tools/port.py: src/overlays/l04/runtime/dma/002922d0.c, FUN_L04_00292d48. */
-void LegRig_UpdateLegAngles(struct Moby *moby, LegRig_93F08 *rig, int flags) {
+void rig_animate(struct Moby *moby, LegRig_93F08 *rig, int flags) {
     float joint[16];
     float tilt[4];
     float twist;
@@ -449,11 +449,11 @@ void LegRig_UpdateLegAngles(struct Moby *moby, LegRig_93F08 *rig, int flags) {
         row->legs[0].yaw = FastAddRots(row->legs[0].upper_turn, base_yaw);
         row->legs[0].yaw = FastAddRots(row->legs[0].lower_turn, row->legs[0].yaw);
         if (row->legs[0].manip_b.attached)
-            func_L00_001FFED8(rig->legs[i].manip_b.rot, 2, row->legs[0].upper_turn);
+            axis_rotation_2d48(rig->legs[i].manip_b.rot, 2, row->legs[0].upper_turn);
         if (row->legs[0].manip_a.attached) {
-            func_L00_001FFED8(rig->legs[i].manip_a.rot, 2, row->legs[0].lower_turn);
+            axis_rotation_2d48(rig->legs[i].manip_a.rot, 2, row->legs[0].lower_turn);
             if (flags & mask) {
-                func_L00_001FFED8(tilt, 0, -moby->rot.x);
+                axis_rotation_2d48(tilt, 0, -moby->rot.x);
                 func_001FA588(rig->legs[i].manip_a.rot, rig->legs[i].manip_a.rot, tilt);
             }
         }
@@ -500,7 +500,7 @@ int LegWalkerUpdate(char *m, char *s, float speed, float ang, float accel) {
     if (*(unsigned char *)(m + 0x52) != 0xFF) {
         t = MobyGetFrameValue((struct Moby *)m);
     } else {
-        t = IntToFloat(*(unsigned char *)(m + 0x51)) + Anim_GetStartTime(*(unsigned char *)(m + 0x22), *(unsigned char *)(m + 0x53));
+        t = IntToFloat(*(unsigned char *)(m + 0x51)) + animation_start(*(unsigned char *)(m + 0x22), *(unsigned char *)(m + 0x53));
     }
     flags = func_L04_00293990_96938(m, s, t);
     if (*(unsigned short *)(s + 0xEE) & 4) {
@@ -523,7 +523,7 @@ int LegWalkerUpdate(char *m, char *s, float speed, float ang, float accel) {
     ((int *)buf)[3] = *(unsigned char *)(s + 0x1A1);
     ((int *)buf)[4] = *(unsigned char *)(s + 0xB4);
     ((int *)buf)[5] = *(unsigned char *)(s + 0xB5);
-    MobyTransformScaledVertexBatch((struct Moby *)m, 6, (int *)buf, v20);
+    transform_scaled_vertex_batch((struct Moby *)m, 6, (int *)buf, v20);
 
     if (!(*(unsigned short *)(s + 0xEE) & 4)) {
         mask = flags | (*(unsigned char *)(s + 0xB6) & 0x30);
@@ -539,7 +539,7 @@ int LegWalkerUpdate(char *m, char *s, float speed, float ang, float accel) {
             }
             bit <<= 1;
         }
-        func_L00_001FF328(v80, v80, cnt);
+        divide_vector_xyz(v80, v80, cnt);
     } else {
         v80[0] = func_001F9F90_2939E8(*(float *)(s + 0x6C)) * *(float *)(s + 0xC0);
         v80[1] = func_001F9FA8_2939E8(*(float *)(s + 0x6C)) * *(float *)(s + 0xC0);
@@ -565,7 +565,7 @@ int LegWalkerUpdate(char *m, char *s, float speed, float ang, float accel) {
     func_L00_002A2900_96938(m, s, speed, ang, accel, changed);
 
     if (!(*(unsigned short *)(s + 0xEE) & 4)) {
-        func_L01_002649D8(m, 0, &a90, (float *)buf, &a94, &a98);
+        rig_probe_setup(m, 0, &a90, (float *)buf, &a94, &a98);
         if (*(unsigned char *)(m + 0x53) == **(int **)(s + 0x7C) ||
             *(unsigned char *)(m + 0x53) == **(int **)(s + 0x74) ||
             *(unsigned char *)(m + 0x53) == **(int **)(s + 0x78)) {
@@ -593,7 +593,7 @@ int LegWalkerUpdate(char *m, char *s, float speed, float ang, float accel) {
     ((int *)buf)[3] = *(unsigned char *)(s + 0x1A1);
     ((int *)buf)[4] = *(unsigned char *)(s + 0xB4);
     ((int *)buf)[5] = *(unsigned char *)(s + 0xB5);
-    MobyTransformScaledVertexBatch((struct Moby *)m, 6, (int *)buf, s);
+    transform_scaled_vertex_batch((struct Moby *)m, 6, (int *)buf, s);
 
     if (*(unsigned char *)(s + 0xB7) == 0x12 && *(unsigned char *)(m + 0x52) == **(int **)(s + 0xA0)) {
         return res;
@@ -711,7 +711,7 @@ void LegRig_Init(struct Moby *m, LegRig *rig) {
     joints[3] = rig->legs[1].joint2;
     joints[4] = rig->jointB4;
     joints[5] = rig->jointB5;
-    MobyTransformScaledVertexBatch(m, 6, joints, rig);
+    transform_scaled_vertex_batch(m, 6, joints, rig);
     for (i = 0; i < 2; i++) {
         MobyTransformScaledVertex(m, rig->legs[i].joint, mtx[0]);
         rig->legs[i].unk14 = 0;
@@ -726,7 +726,7 @@ void LegRig_Init(struct Moby *m, LegRig *rig) {
         t = MobyGetFrameValue(m);
     } else {
         t = IntToFloat(m->prev_frame);
-        t += Anim_GetStartTime(m->class_slot, m->prev_seq);
+        t += animation_start(m->class_slot, m->prev_seq);
     }
     rig->mode = 5;
     rig->speed = 0.0f;

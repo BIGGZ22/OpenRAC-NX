@@ -1,0 +1,35 @@
+#ifndef CAMERA_MODES_H
+#define CAMERA_MODES_H
+
+/*
+ * Camera selectors: the activation mode and the attach mode.
+ *
+ * From the NTSC decomp (Lombyte's project, GPL-3.0): include/rnc/gameplay/camera/camera_modes.h
+ * at 4e1f255e. Enumerations only: no layout, no code. See THIRD_PARTY_NOTICES.md.
+ */
+
+/* Distinct camera selectors: activation at record +0x74, and attach mode
+ * at the saved-state record +0x104. Equal values do not join these domains. */
+
+enum CameraActivationMode {
+    CAMERA_ACTIVATION_BY_PRIORITY = 0x0,
+    CAMERA_ACTIVATION_HANDOFF_GATED_PRIORITY = 0x1,
+    CAMERA_ACTIVATION_REQUIRE_HANDOFF_PRIORITY = 0x2,
+    CAMERA_ACTIVATION_IN_CLIP_VOLUME = 0x4,
+    CAMERA_ACTIVATION_MATCH_LISTENER_GROUP = 0x7
+};
+
+enum CameraAttachMode {
+    CAM_ATTACH_HERO_POSITION_BASE = 0x1,
+    CAM_ATTACH_GROUND_AWARE_FOCUS_VELOCITY = 0x2,
+    CAM_ATTACH_BLEND_TO_PROJECT_HERO_FOCUS_VELOCITY = 0x3,
+    CAM_ATTACH_PROJECT_HERO_FOCUS_VELOCITY = 0x4,
+    CAM_ATTACH_BLEND_FOCUS_VELOCITY_WITH_HOLD_TRANSITION = 0x5,
+    CAM_ATTACH_BLEND_OUT_FOCUS_VELOCITY = 0x6,
+    CAM_ATTACH_BLEND_BACK_FOCUS_VELOCITY = 0x7,
+    CAM_ATTACH_HOLD_FOCUS_VELOCITY = 0x8,
+    CAM_ATTACH_BLEND_PROJECTED_HERO_FOCUS_VELOCITY = 0x9,
+    CAM_ATTACH_CONTINUE_BLEND_PROJECTED_HERO_FOCUS_VELOCITY = 0xA
+};
+
+#endif /* CAMERA_MODES_H */

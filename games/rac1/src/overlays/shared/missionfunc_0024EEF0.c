@@ -63,7 +63,7 @@ extern unsigned char D_0013D490[];
 /* Mission condition: D_0013D9B4 set, along with gSpecialItems[0x20] (Zoomerator/raritanium) and [0x21]. Joined with func_0020CC88. */
 int func_L00_0024F048(void) {
     if (D_0013D9B4 != 0) {
-        if (D_0013D490[0x20] != 0 && D_0013D490[0x21] != 0) {
+        if (gSpecialItems[0x20] != 0 && gSpecialItems[0x21] != 0) {
             return 1;
         }
     }

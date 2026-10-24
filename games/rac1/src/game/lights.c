@@ -171,7 +171,7 @@ void CreatePointLight(int i) {
         slot->n0 = 0;
         n = 0;
         for (o = D_00161050_o; o != D_00161054_o; o++, n++) {
-            if (func_001F9D78(&sphere, o)) {
+            if (spheres_intersect(&sphere, o)) {
                 *p++ = n;
                 v = o->lights;
                 if (v == 0xFFFF) {
@@ -193,10 +193,10 @@ void CreatePointLight(int i) {
         slot->c0 = p - slot->buf;
         if (p < end) {
             slot->n1 = slot->c0;
-            func_001F9C48(&sphere, &sphere, 1024.0f);
+            scale_vector(&sphere, &sphere, 1024.0f);
             m = D_00160F8C_o;
-            for (n2 = 0; n2 < D_00160F90; n2++, m++) {
-                if (func_001F9D78(&sphere, m)) {
+            for (n2 = 0; n2 < tfrag_render_record_count; n2++, m++) {
+                if (spheres_intersect(&sphere, m)) {
                     *p++ = n2;
                     v = m->lights;
                     if (v == 0xFFFF) {
@@ -220,7 +220,7 @@ void CreatePointLight(int i) {
                 slot->n2 = p - slot->buf;
                 n3 = 0;
                 for (o = D_001604D4_o; o != D_001604D8_o; o++, n3++) {
-                    if (func_001F9D78(&sphere, o)) {
+                    if (spheres_intersect(&sphere, o)) {
                         *p++ = n3;
                         v = o->lights;
                         if (v == 0xFFFF) {
@@ -332,7 +332,7 @@ void DetachPointLight(s32 arg0) {
     fourthNibble = (arg0 << 0xC) & 0xFFFF;
     if (firstLinks != firstEnd) {
         do {
-            firstRecord = D_00161050 + (*firstLinks << 5);
+            firstRecord = ties + (*firstLinks << 5);
             firstPacked = firstRecord->unk1E;
             firstLowNibble = firstPacked & 0xF;
             if (firstLowNibble == firstNibble) {
@@ -359,7 +359,7 @@ void DetachPointLight(s32 arg0) {
     links->unk2 = 0;
     if (secondLinks != secondEnd) {
         do {
-            secondRecord = D_00160F8C + (*secondLinks << 6);
+            secondRecord = tfrag_render_records + (*secondLinks << 6);
             secondPacked = secondRecord->unk36;
             secondLowNibble = secondPacked & 0xF;
             if (secondLowNibble == firstNibble) {
@@ -386,7 +386,7 @@ void DetachPointLight(s32 arg0) {
     links->unkA = 0;
     if (thirdLinks != thirdEnd) {
         do {
-            thirdRecord = D_001604D4 + (*thirdLinks << 5);
+            thirdRecord = shrubs + (*thirdLinks << 5);
             thirdPacked = thirdRecord->unk1E;
             thirdLowNibble = thirdPacked & 0xF;
             if (thirdLowNibble == firstNibble) {

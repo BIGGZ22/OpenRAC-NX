@@ -4,6 +4,7 @@
 #include "records.h"
 #include "structs.h"
 #include "camera.h"
+#include "hero.h"
 
 /*
  * camera.cpp in the original source; text 0x1EC038-0x1EDFF8.
@@ -26,27 +27,27 @@ extern Camera D_00189310;
 extern char D_001899D0[];
 
 /* BackupCurrentCam: copies the current camera and its 0x280-byte state buffer
-   to gCameraBackup / gCamBackupState. */
+   to backup_cam / gCamBackupState. */
 void BackupCurrentCam(void) {
-    FastMemCopy(&gCameraBackup, gCamera.current, 0xA0);
+    FastMemCopy(&backup_cam, gCamera.current, 0xA0);
     FastMemCopy(gCamBackupState, gCamBackupState - 0x500, 0x280); /* from gCamCurState */
-    gCameraBackup.state_buf = gCamBackupState;
+    backup_cam.state_buf = gCamBackupState;
 }
 
 extern int D_0015F08C MACRO_ADDR;
 extern void (*D_001893B0[])(void);
 
-/* ExecuteCamPostUpdFuncs: runs the gCamPostUpdCount callbacks queued in
+/* ExecuteCamPostUpdFuncs: runs the cam_post_upd_routine_cnt callbacks queued in
    gCamPostUpdFuncs, then empties the queue. */
-/* gCamPostUpdCount as MACRO_ADDR removes the hoisted address register (frame
+/* cam_post_upd_routine_cnt as MACRO_ADDR removes the hoisted address register (frame
    0x30); a plain indexed loop. */
 void ExecuteCamPostUpdFuncs(void) {
     int i;
 
-    for (i = 0; i < gCamPostUpdCount; i++) {
+    for (i = 0; i < cam_post_upd_routine_cnt; i++) {
         gCamPostUpdFuncs[i]();
     }
-    gCamPostUpdCount = 0;
+    cam_post_upd_routine_cnt = 0;
 }
 
 /* Not a standalone function: no `jr $31` -- dead-value computation
@@ -98,7 +99,7 @@ void Camera_handleCollWithHero(Camera *cam) {
 
     if (cam->id == 0) {
         if (f->hero_coll_moby == 0) {
-            f->hero_coll_moby = (struct Moby *)NullMobyUpdate((char *)f - 0x50); /* &gCamera.pos */
+            f->hero_coll_moby = (struct Moby *)noop_callback_l((char *)f - 0x50); /* &gCamera.pos */
         }
     } else {
         if (f->hero_coll_moby != 0) {
@@ -108,7 +109,7 @@ void Camera_handleCollWithHero(Camera *cam) {
     }
 }
 
-/* 0x14-byte camera-type records (gCameraTypes), indexed by Camera.type (+0x8C).
+/* 0x14-byte camera-type records (camera_types), indexed by Camera.type (+0x8C).
    Declared as a real struct array, not `char[]` + byte offset: the two
    forms are not codegen-equivalent here. Retail emits `addu $2,$2,$3`
    (base, index); a char-pointer form emits `addu $2,$3,$2` (index,
@@ -118,10 +119,10 @@ void Camera_handleCollWithHero(Camera *cam) {
 extern CameraType D_001E8F80[];
 
 /* Camera_runSetupToNewCam: calls the camera type's activate hook
-   (gCameraTypes[cam->type]); the typed-array index is what puts the table
+   (camera_types[cam->type]); the typed-array index is what puts the table
    base first in the addu. */
 void Camera_runSetupToNewCam(Camera *cam) {
-    void (*fn)(Camera *) = gCameraTypes[cam->type].activate;
+    void (*fn)(Camera *) = camera_types[cam->type].activate;
     if (fn != 0) {
         fn(cam);
     }
@@ -139,7 +140,7 @@ extern s32 func_001FA898(f32 transition_duration);
    camera's transition_state and the new one's info->blend_kind (1 eased,
    5 orbit, 3 and 6 hand-off); it is installed in gCamera.blend, then the
    state buffers are swapped and the new camera is activated. */
-void Camera_SwitchActive(Camera *next_camera) {
+void switch_active_camera_record(Camera *next_camera) {
 
     Camera *previous_camera;
     CameraInfo *info;
@@ -230,7 +231,7 @@ void Camera_SwitchActive(Camera *next_camera) {
     Camera_runSetupToNewCam(next_camera);
     BackupCurrentCam();
     /* The activate hook runs before the debug free camera flag is read; prev_pos is updated either way. */
-    if (gDebugFreeCam.active == 0) {
+    if (occl_cam_state.active == 0) {
         qcopy(&gCamera.pos, &next_camera->pos);
     }
     previous_position = &next_camera->prev_pos.x;
@@ -253,7 +254,7 @@ extern int func_00215570(void *arg0, int arg1);
 
 /* Camera_ActivationCheckPriority(cur, other): whether camera `cur` should
    take over from `other`. An inactive camera (priority 0) never does; the
-   camera type's check hook (gCameraTypes[cur->type].check) may decide first
+   camera type's check hook (camera_types[cur->type].check) may decide first
    (-1 no, 1 yes); otherwise the activation rule in cur->activation decides:
    0 (and 1/2 once handoff_state is set) by priority, 4 while the hero is
    inside the camera's clip volume, 7 by the hero's mode and the camera id.
@@ -268,7 +269,7 @@ int Camera_ActivationCheckPriority(Camera *cur, Camera *other) {
         return 0;
     }
     {
-        int (*fn)(Camera *, Camera *) = gCameraTypes[cur->type].check;
+        int (*fn)(Camera *, Camera *) = camera_types[cur->type].check;
         if (fn != 0) {
             switch (fn(cur, other)) {
             case -1:
@@ -336,10 +337,10 @@ int Camera_ActivationCheckPriority(Camera *cur, Camera *other) {
 }
 __asm__(".section .text\n\tnop\n");
 
-/* Camera_Exit: calls the camera type's exit hook (gCameraTypes[cam->type].exit);
+/* Camera_Exit: calls the camera type's exit hook (camera_types[cam->type].exit);
    UpdateAllCameras calls it on the current camera first thing each frame. */
 void Camera_Exit(Camera *cam) {
-    void (*fn)(Camera *) = gCameraTypes[cam->type].exit;
+    void (*fn)(Camera *) = camera_types[cam->type].exit;
     if (fn != 0) {
         fn(cam);
     }
@@ -354,7 +355,7 @@ extern void func_001EC2B8(Camera *next_camera);
    (Camera_Exit), scans the 48 camera slots (gCameraSlotUsed[i] != 0 = in
    use, gCameraSlots[i] = the Camera record) and keeps whichever
    Camera_ActivationCheckPriority prefers over the current one. If that
-   changed the camera, Camera_SwitchActive switches to it. Then the new
+   changed the camera, switch_active_camera_record switches to it. Then the new
    camera's update hook (read before Camera_handleCollWithHero, as retail
    does), a copy of its position into prev_pos, and the post-update queue.
    Returns -1, which the one caller ignores.
@@ -384,10 +385,10 @@ int UpdateAllCameras(void) {
     }
 
     if (changed) {
-        Camera_SwitchActive(cur);
+        switch_active_camera_record(cur);
     }
     {
-        void (*update)(Camera *) = gCameraTypes[cur->type].update;
+        void (*update)(Camera *) = camera_types[cur->type].update;
         float *src;
         float *dst;
         float v;
@@ -472,12 +473,12 @@ void Camera_Pos2Polar3d(float *out, void *p0, void *p1, void *dir0, void *dir1,
 extern void func_001EC8D8(float *out, void *p0, void *p1, void *dir0, void *dir1,
                            void *axis);
 
-/* Camera_CaptureOrientation: the hero moby's axes go into blend.orbit.fwd
+/* capture_camera_orientation: the hero moby's axes go into blend.orbit.fwd
    and blend.orbit.up, its yaw/pitch/distance to the hero into blend.orbit
    (yaw, pitch, dist), and blend.orbit.rot is copied from saved_rot. The
    builds three unit vectors from D_0013F450's +0x2080 pointer table
    (+0xC0/+0xD0/+0xE0 offsets, re-read at each call as retail does). */
-void Camera_CaptureOrientation(void) {
+void capture_camera_orientation(void) {
     char *g = D_0013F450;
     CamBlend *r = &gCamera.blend;
     char row0[16];
@@ -499,11 +500,11 @@ void Camera_CaptureOrientation(void) {
 extern void func_001F9BD8(void *, void *, void *);
 extern char D_0013F590[];
 
-/* Camera_stagePendingTransform: with no blend running (kind 0), copies the
+/* save_camera_vectors: with no blend running (kind 0), copies the
    lerp position into orbit.pos and the lerp rotation into orbit.saved_rot;
    for next_kind 2 the hero's platform movement (D_0013F590) is added to
-   orbit.pos first. Mirror of Camera_commitPendingTransform. */
-void Camera_stagePendingTransform(void) {
+   orbit.pos first. Mirror of restore_camera_vectors. */
+void save_camera_vectors(void) {
     CamBlend *b = &gCamera.blend;
     if (b->kind == 0) {
         qcopy(&b->orbit.pos, &b->lerp.pos);
@@ -514,9 +515,9 @@ void Camera_stagePendingTransform(void) {
     }
 }
 
-/* Camera_commitPendingTransform: with a blend running (kind set), copies
+/* restore_camera_vectors: with a blend running (kind set), copies
    orbit.pos and orbit.saved_rot back into lerp.pos and lerp.rot. */
-void Camera_commitPendingTransform(void) {
+void restore_camera_vectors(void) {
     CamBlend *b = &gCamera.blend;
     if (b->kind != 0) {
         qcopy(&b->lerp.pos, &b->orbit.pos);
@@ -532,15 +533,15 @@ extern void func_00215328(void *, void *);
 extern int func_001F98C0(int);
 extern float func_001FA888(int);
 
-/* Camera_StartBlend(from): captures the blend source from the previous
+/* start_camera_blend(from): captures the blend source from the previous
    camera and starts the blend (phase 3). When the phase is 1 or 2, the
    sub-mode (next_kind) picks what is captured from it: 0 the lerp pair
-   (pos, rot), 2 the orbit pair and Camera_CaptureOrientation's angles,
+   (pos, rot), 2 the orbit pair and capture_camera_orientation's angles,
    otherwise the hero's axes and Camera_Pos2Polar3d's yaw/pitch/dist into
-   the orbit. Other phases restore through Camera_stagePendingTransform and
-   Camera_commitPendingTransform. Then the phase becomes 3, kind takes
+   the orbit. Other phases restore through save_camera_vectors and
+   restore_camera_vectors. Then the phase becomes 3, kind takes
    next_kind, and either the lerp resets or the orbit frame count advances. */
-void Camera_StartBlend(Camera *from) {
+void start_camera_blend(Camera *from) {
     CamBlend *r = &gCamera.blend;
     char local0[16];
     char local1[16];
@@ -551,11 +552,11 @@ void Camera_StartBlend(Camera *from) {
         sub = r->next_kind;
         if (sub == 0) {
             qcopy(&r->lerp.pos, &from->pos);
-            Matrix_ToQuatCopyBack(&r->lerp.rot, from);
+            extract_matrix_rotation_quaternion(&r->lerp.rot, from);
         } else if (sub == 2) {
             qcopy(&r->orbit.pos, &from->pos);
-            Matrix_ToQuatCopyBack(&r->orbit.saved_rot, from);
-            Camera_CaptureOrientation();
+            extract_matrix_rotation_quaternion(&r->orbit.saved_rot, from);
+            capture_camera_orientation();
         } else {
             char *g = D_0013F450;
 
@@ -566,19 +567,19 @@ void Camera_StartBlend(Camera *from) {
             Camera_Pos2Polar3d((float *)&r->orbit.yaw, &from->pos,
                           &(*(Camera **)((char *)r - 0xF0))->pos,
                           local0, local1, local2);
-            Matrix_ToQuatCopyBack(&r->orbit.rot, from);
+            extract_matrix_rotation_quaternion(&r->orbit.rot, from);
             qcopy(&r->orbit.saved_rot, &r->orbit.rot);
         }
     } else {
         sub = r->next_kind;
         if (sub == 2) {
-            Camera_stagePendingTransform();
-            Camera_CaptureOrientation();
+            save_camera_vectors();
+            capture_camera_orientation();
         } else if (sub == 1) {
-            Camera_stagePendingTransform();
+            save_camera_vectors();
             qcopy(&r->orbit.rot, &r->orbit.saved_rot);
         } else if (sub == 0) {
-            Camera_commitPendingTransform();
+            restore_camera_vectors();
         }
     }
     D_001872B0_h = 3; /* blend.phase */
@@ -607,14 +608,14 @@ extern float func_00214220(float, float, float);
 extern void func_001FA6C0(void *, void *);
 extern void func_001FA480(void *, void *);
 
-/* Camera_StepBlend(to, lerp): one step of the eased blend toward the target
+/* step_camera_blend(to, lerp): one step of the eased blend toward the target
    camera. While the position (pos_t) or rotation (rot_t) blend has not
    reached 1, it moves lerp.from_pos toward to's position by the eased factor,
    copies that to gCamera.pos unless the debug free camera is active, slerps
    the rotation from lerp.from_rot into lerp.rot and loads it as the view
    matrix, then advances both blends by their rates times D_0015EE60, capped
    at 1. Returns 1 once both are complete. */
-int Camera_StepBlend(Camera *to, CamBlendLerp *lerp) {
+int step_camera_blend(Camera *to, CamBlendLerp *lerp) {
     float m[4];
     float q[16];
     DebugFreeCam *st;
@@ -626,18 +627,18 @@ int Camera_StepBlend(Camera *to, CamBlendLerp *lerp) {
     }
     t = CosineInterpolate(0.0f, 1.0f, lerp->pos_t);
     FastVecAdd(&lerp->from_pos, D_0013F590, &lerp->from_pos);
-    st = &gDebugFreeCam;
+    st = &occl_cam_state;
     lerp->pos.f[0] = lerp->from_pos.f[0] + (to->pos.x - lerp->from_pos.f[0]) * t;
     lerp->pos.f[1] = lerp->from_pos.f[1] + (to->pos.y - lerp->from_pos.f[1]) * t;
     lerp->pos.f[2] = lerp->from_pos.f[2] + (to->pos.z - lerp->from_pos.f[2]) * t;
     if (st->active == 0) {
         qcopy(&gCamera.pos, &lerp->pos);
     }
-    Matrix_ToQuatCopyBack(m, to);
+    extract_matrix_rotation_quaternion(m, to);
     rot = lerp->rot.f;
     t = CosineInterpolate(0.0f, 1.0f, lerp->rot_t);
     func_001FA5C8(rot, &lerp->from_rot, m, t);
-    func_001FA6C0(rot, q);
+    quaternion_to_matrix(rot, q);
     if (st->active == 0) {
         func_001FA480(gCamera.matrix, q);
     }
@@ -672,12 +673,12 @@ typedef struct {
     float v[4];
 } Vec;
 
-/* Camera_UpdateTowardTarget(cam, o): one orbit step of the switch blend.
+/* advance_alternate_camera_transition(cam, o): one orbit step of the switch blend.
    Steps yaw, pitch and distance (o->yaw, o->pitch, o->dist) toward the target
    orientation, rebuilds the orbit position and rotation and the camera basis
    (gCamera.matrix), and returns 1 once the orbit's frames are used up.
    Adapted from Lombyte (GPL-3.0) for PAL: src/gameplay/camera/fun_001eccd8.c, FUN_001eccd8. */
-int Camera_UpdateTowardTarget(Camera *cam, CamBlendOrbit *o) {
+int advance_alternate_camera_transition(Camera *cam, CamBlendOrbit *o) {
     Vec ang;
     Vec fwd;
     Vec side;
@@ -731,7 +732,7 @@ int Camera_UpdateTowardTarget(Camera *cam, CamBlendOrbit *o) {
     func_001F9DC0(&side, &side, 1.0f);
     build_look_at_matrix(&pos, &pos, &side, o->pitch);
     FastVecAdd(&o->pos, &target, &pos);
-    if (gDebugFreeCam.active == 0) {
+    if (occl_cam_state.active == 0) {
         qcopy(&gCamera.pos, &o->pos);
     }
     func_001FA648(&o->rot, m);
@@ -758,14 +759,14 @@ int Camera_UpdateTowardTarget(Camera *cam, CamBlendOrbit *o) {
         qcopy(&r1, &m[1]);
     } else {
         build_quaternion_from_axis_angle(&r2, &m[2], turn);
-        RotateVectorByQuaternion(&r0, &m[0], &r2);
-        RotateVectorByQuaternion(&r1, &m[1], &r2);
+        rotate_vector_by_quaternion(&r0, &m[0], &r2);
+        rotate_vector_by_quaternion(&r1, &m[1], &r2);
     }
     if (FastAbsF(yaw) < 1e-5f) {
         qcopy(&r2, &m[0]);
     } else {
         build_quaternion_from_axis_angle(&q, &m[2], yaw);
-        RotateVectorByQuaternion(&r2, &m[0], &q);
+        rotate_vector_by_quaternion(&r2, &m[0], &q);
     }
     yaw = 1.5707964f - FastArcSin(FastVecDot(&r2, cam));
     d = FastVecDot(&r2, &cam->basis[2]);
@@ -779,8 +780,8 @@ int Camera_UpdateTowardTarget(Camera *cam, CamBlendOrbit *o) {
     FastVecCross(&gCamera.matrix[1], &gCamera.matrix[0], D_0013F6E0);
     func_001F9DC0(&gCamera.matrix[1], &gCamera.matrix[1], -1.0f);
     FastVecCross(&gCamera.matrix[2], &gCamera.matrix[1], &gCamera.matrix[0]);
-    Matrix_ToQuatCopyBack(&o->saved_rot, gCamera.matrix);
-    Matrix_ToQuatCopyBack(&o->rot, gCamera.matrix);
+    extract_matrix_rotation_quaternion(&o->saved_rot, gCamera.matrix);
+    extract_matrix_rotation_quaternion(&o->rot, gCamera.matrix);
     func_001F9908(&o->frames_left);
     return 0;
 }
@@ -788,22 +789,22 @@ int Camera_UpdateTowardTarget(Camera *cam, CamBlendOrbit *o) {
 extern int func_001ECEA0(Camera *, CamBlendLerp *);
 extern int func_001ED080(Camera *, CamBlendOrbit *);
 
-/* Camera_UpdateBlend(cam): steps the running blend. With kind 0 it is
-   Camera_StepBlend into gCamera.blend.lerp, otherwise Camera_UpdateTowardTarget
+/* update_camera_blend(cam): steps the running blend. With kind 0 it is
+   step_camera_blend into gCamera.blend.lerp, otherwise advance_alternate_camera_transition
    into gCamera.blend.orbit. On success, unless the debug free camera is active,
    cam's basis and position are copied into gCamera.matrix and gCamera.pos, then
    the blend's phase and kind are cleared. */
-void Camera_UpdateBlend(Camera *cam) {
+void update_camera_blend(Camera *cam) {
     CamBlend *b = &gCamera.blend;
     int result;
 
     if (b->kind == 0) {
-        result = Camera_StepBlend(cam, &b->lerp);
+        result = step_camera_blend(cam, &b->lerp);
     } else {
-        result = Camera_UpdateTowardTarget(cam, &b->orbit);
+        result = advance_alternate_camera_transition(cam, &b->orbit);
     }
     if (result != 0) {
-        if (gDebugFreeCam.active == 0) {
+        if (occl_cam_state.active == 0) {
             qcopy(&gCamera.matrix[0], &cam->basis[0]);
             qcopy(&gCamera.matrix[1], &cam->basis[1]);
             qcopy(&gCamera.matrix[2], &cam->basis[2]);
@@ -820,7 +821,7 @@ extern float func_001F9F90(float x);
 extern void func_001F9DC0(void *dst, void *src, float len);
 extern void func_001F9BD8(void *dst, void *a, void *b);
 
-/* Camera_UpdateShake(s, along_row0): one shake channel (gCamera.shake[0] or
+/* apply_camera_shake(s, along_row0): one shake channel (gCamera.shake[0] or
    [1]). With the active camera (gCamera.current) in state 6 both counters are
    cleared; with the countdown at 0 only frames_max is. Otherwise the countdown
    is decremented (func_001F9908, saturating) and offset = amplitude *
@@ -831,7 +832,7 @@ extern void func_001F9BD8(void *dst, void *a, void *b);
    arm after the main path (retail's `b L800` over it), and the state-6 stores
    are written frames then frames_max so the scheduler emits frames_max first
    and cross-jumping leaves them alone. */
-void Camera_UpdateShake(CameraShake *s, int along_row0) {
+void apply_camera_shake(CameraShake *s, int along_row0) {
     char buf[16];
 
     if (gCamera.current != 0 && gCamera.current->id == 6) {
@@ -919,12 +920,12 @@ extern f32 func_001F9CB8(void *a);
 extern void func_001F9DC0(void *out, void *a, f32 len);
 
 /* Adapted from Lombyte (GPL-3.0) for PAL by OpenRAC's tools/port.py: src/gameplay/camera/fun_001ed470.c, FUN_001ed470. */
-/* CameraPreUpdate: tracks the hero for gCamera.follow each frame: the
+/* update_camera_tracking_state: tracks the hero for gCamera.follow each frame: the
    smoothed up direction (up, springs up_vel toward the hero's gravity
    inverse), the hero movement split along and across up, the z spring (pos,
    z_vel), the hero's yaw history, and the moby the hero stands on with its
    height change (ground_moby, ground_z, ground_dz). */
-void CameraPreUpdate(void) {
+void update_camera_tracking_state(void) {
     Vec4 dir;
     Vec4 proj;
     CameraFollow *f;
@@ -1007,7 +1008,7 @@ extern float func_00214440(void *, int);
    first hit that is not a water surface, set gCamera.underwater when the
    eye is below the surface height + 0.04. Off for camera id 6 or while
    D_0015F6E8 is set. */
-void Camera_UpdateUnderwaterFlag(void) {
+void update_camera_underwater_flag(void) {
     CameraSystem *cam = &gCamera;
     float a[4];
     float b[4];
@@ -1024,7 +1025,7 @@ void Camera_UpdateUnderwaterFlag(void) {
     i = 0;
     while (i < 6 && func_001EFE10(a, b, 0x12, 0, 0) != 0) {
         if (func_001F0F00() == 0) {
-            float h = GetGroundHeight(D_00194220, 0) + 0.04f;
+            float h = resolve_camera_surface_height(D_00194220, 0) + 0.04f;
             CameraSystem *c2 = &gCamera;
 
             if (c2->pos.f[2] < h) {
@@ -1044,54 +1045,56 @@ extern int D_0015F09C MACRO_ADDR;
 extern int D_0015F0A0 MACRO_ADDR;
 extern int D_0015F098 MACRO_ADDR;
 
-/* Camera_PickCollisionMasks: the probe masks from the hero's state and ground.
-   gCamSphereMask is 0x14, or 0x34 in hero states 0x11/0x12 or mode 0x73 of
+/* refresh_camera_control_flags: the probe masks from the hero's state and ground.
+   cam_coll_flag is 0x14, or 0x34 in hero states 0x11/0x12 or mode 0x73 of
    D_0013F450, back to 0x14 when its +0x2F0 height is below gCamera.pos.z
-   (except in state 0x11); gCamSphereMaskBase keeps the value before bit 0x80
-   is set. gCamLineMask is 0xB4 ORed with follow.coll_bits, which the first set
+   (except in state 0x11); cam_coll_flag_prev keeps the value before bit 0x80
+   is set. cam_coll_mode is 0xB4 ORed with follow.coll_bits, which the first set
    flag of D_0013F450's 0x12E5, 0x12EB, 0x12E6, 0x12EC, 0x12E4 overrides. Each
    arm ORs the new mode in itself (the constants fold per arm, as in retail),
    and each block reads D_0013F450 through its own local (%hi kept, %lo
    rebuilt). */
-void Camera_PickCollisionMasks(void) {
+extern Hero D_0013F450_HERO __asm__("D_0013F450");
+
+void refresh_camera_control_flags(void) {
     CameraFollow *f = &gCamera.follow;
-    char *g = D_0013F450;
+    Hero *g = &D_0013F450_HERO;
     int st;
 
-    gCamSphereMask = 0x14;
-    st = *(int *)(g + 0x208C);
-    if (st == 0x11 || st == 0x12 || *(int *)(g + 0x2084) == 0x73) {
-        gCamSphereMask = 0x34;
+    cam_coll_flag = 0x14;
+    st = g->state.control_mode;
+    if (st == 0x11 || st == 0x12 || g->state.current == 0x73) {
+        cam_coll_flag = 0x34;
     }
     {
-        char *g2 = D_0013F450;
-        if (*(int *)(g2 + 0x208C) != 0x11
-            && *(float *)(g2 + 0x2F0) < gCamera.pos.f[2]) {
-            gCamSphereMask = 0x14;
+        Hero *g2 = &D_0013F450_HERO;
+        if (g2->state.control_mode != 0x11
+            && g2->water_surface_z < gCamera.pos.f[2]) {
+            cam_coll_flag = 0x14;
         }
     }
     {
-        unsigned char *g3 = (unsigned char *)D_0013F450;
-        gCamSphereMaskBase = gCamSphereMask;
-        gCamSphereMask |= 0x80;
-        gCamLineMask = 0xB4;
-        if (g3[0x12E5]) {
+        Hero *g3 = &D_0013F450_HERO;
+        cam_coll_flag_prev = cam_coll_flag;
+        cam_coll_flag |= 0x80;
+        cam_coll_mode = 0xB4;
+        if (g3->selector_1) {
             f->coll_bits = 0x100;
-            gCamLineMask |= f->coll_bits;
-        } else if (g3[0x12EB]) {
+            cam_coll_mode |= f->coll_bits;
+        } else if (g3->selector_11) {
             f->coll_bits = 0xB00;
-            gCamLineMask |= f->coll_bits;
-        } else if (g3[0x12E6]) {
+            cam_coll_mode |= f->coll_bits;
+        } else if (g3->selector_3) {
             f->coll_bits = 0x300;
-            gCamLineMask |= f->coll_bits;
-        } else if (g3[0x12EC]) {
+            cam_coll_mode |= f->coll_bits;
+        } else if (g3->selector_13) {
             f->coll_bits = 0xD00;
-            gCamLineMask |= f->coll_bits;
-        } else if (g3[0x12E4]) {
+            cam_coll_mode |= f->coll_bits;
+        } else if (g3->base_condition) {
             f->coll_bits = 0;
-            gCamLineMask |= f->coll_bits;
+            cam_coll_mode |= f->coll_bits;
         } else {
-            gCamLineMask |= f->coll_bits;
+            cam_coll_mode |= f->coll_bits;
         }
     }
 }
@@ -1101,7 +1104,7 @@ extern float D_0015F53C MACRO_ADDR;
 /* Takes gCamera.follow.fade_rate off gFade each frame; both stop at 0.
    gFade (D_0015F53C) is a MACRO_ADDR float: $gp-relative in the delay
    slots, lui $1 in the body. */
-void Camera_UpdateFade(void) {
+void advance_timed_camera_control(void) {
     CameraSystem *c = &gCamera;
     float a = c->follow.fade_rate;
 
@@ -1128,19 +1131,19 @@ extern void func_001EE858(void *);
 /* Camera update, once per frame: count the frame, run the camera
    steps, then (unless the debug free camera is active) take the view
    from the current camera (blend phase 3 blends it through
-   Camera_UpdateBlend) and refresh its Euler angles; run the two shake
+   update_camera_blend) and refresh its Euler angles; run the two shake
    channels, the underwater test and the environment update, and, with
    D_0015EEB4 (mirrored levels) set, rebuild matrix[1] as a cross
    product. The blend reset and the shake calls go through local
    pointers to their sub-blocks, as retail keeps them in registers. */
-void UpdateCamera(void) {
+void update_camera(void) {
     CameraSystem *c;
     Camera *target;
     CameraShake *v;
     float m[16];
 
     if (D_0015F6E8 == 5) {
-        if (D_001E6700 != 0) {
+        if (text_screen_active != 0) {
             return;
         }
         {
@@ -1151,18 +1154,18 @@ void UpdateCamera(void) {
     }
     c = &gCamera;
     c->frames++;
-    Camera_UpdateFade();
-    Camera_PickCollisionMasks();
-    CameraPreUpdate();
+    advance_timed_camera_control();
+    refresh_camera_control_flags();
+    update_camera_tracking_state();
     UpdateAllCameras();
     target = c->current;
     if ((unsigned short)(c->blend.phase - 1) < 2) {
-        Camera_StartBlend(c->previous);
+        start_camera_blend(c->previous);
     }
     if (c->blend.phase == 3) {
-        Camera_UpdateBlend(target);
+        update_camera_blend(target);
     } else {
-        DebugFreeCam *st = &gDebugFreeCam;
+        DebugFreeCam *st = &occl_cam_state;
         if (st->active != 0) {
             goto frozen;
         }
@@ -1172,18 +1175,18 @@ void UpdateCamera(void) {
         qcopy(&c->matrix[2], &target->basis[2]);
     }
     {
-        DebugFreeCam *st = &gDebugFreeCam;
+        DebugFreeCam *st = &occl_cam_state;
         if (st->active == 0) {
-            func_001FA460(m, D_00187390);
-            MatrixToEuler(m, D_00187390 - 0x200);
+            func_001FA460(m, camera_rows);
+            matrix_to_euler(m, camera_rows - 0x200);
         }
     }
 frozen:
     v = gCamera.shake;
-    Camera_UpdateShake(&v[0], 0);
-    Camera_UpdateShake(&v[1], 1);
-    Camera_UpdateUnderwaterFlag();
-    Camera_UpdateEnvironment((char *)v - 0x20);       /* &gCamera.pos */
+    apply_camera_shake(&v[0], 0);
+    apply_camera_shake(&v[1], 1);
+    update_camera_underwater_flag();
+    update_camera_environment_from_regions((char *)v - 0x20);       /* &gCamera.pos */
     if (D_0015EEB4_m[0] != 0) {
         FastVecCross((char *)v + 0x200, (char *)v + 0x210, (char *)v + 0x1F0); /* matrix[1] = matrix[2] x matrix[0] */
     }

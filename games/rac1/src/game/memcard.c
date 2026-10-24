@@ -125,7 +125,7 @@ extern void func_00116B00(void *, void *, int);
 /* Builds a 13-byte name/version stamp in D_0013D2D0 from the record's
    region byte (arg0[0x12]) and the record's date/version fields, then
    copies that stamp into the six on-disk name buffers. */
-void MemCard_BuildNameStamp(void *arg0) {
+void memcard_get_name(void *arg0) {
     unsigned char *a = (unsigned char *)arg0;
     unsigned char region = a[0x12];
     int i;
@@ -162,7 +162,7 @@ extern int D_0013D390_i[] __asm__("D_0013D390");
 /* The comparison is bound to a local before the shift:
    `(a < b) << 1` folds into `a < b ? 2 : 0` (li/slt/movn), not retail's
    slti/sll. */
-int MemCard_CheckFreeSpace(void) {
+int check_memory_card(void) {
     int type, free, format, cmd, result;
 
     result = func_00124068(D_0013D390_i[0], D_0013D390_i[1], &type, &free, &format);
@@ -203,17 +203,17 @@ void memcard_RestoreGame(int arg0) {
     int b;
     int i;
 
-    a = memcard_GetDataSize(gGameSaveData);
-    b = memcard_GetDataSize(gLevelSaveData);
+    a = memcard_GetDataSize(mc_gamedata);
+    b = memcard_GetDataSize(mc_leveldata);
     if (*(int *)p != a || *(int *)(p + 4) != b) {
         STUB_printf(D_001E8500);
         return;
     }
     p += 8;
-    memcard_RestoreData(p, 0, gGameSaveData);
+    memcard_RestoreData(p, 0, mc_gamedata);
     p += a;
     for (i = 0; i < 0x14; i++) {
-        memcard_RestoreData(p, i, gLevelSaveData);
+        memcard_RestoreData(p, i, mc_leveldata);
         p += b;
     }
 }
@@ -237,23 +237,23 @@ extern int D_0015EE84_m __asm__("D_0015EE84") MACRO_ADDR;
 extern int func_002176C8_i(int, int, int) __asm__("func_002176C8");
 
 /* func_002176C8 returns int and takes three arguments (stream.c). */
-void RestoreGameFromStream(void) {
+void load_and_initialize_level_chunk(void) {
     int a;
     int b;
     int s0;
     int s1;
     int s2;
 
-    GetTailBufferPair(D_00137C80[5] << 11, &a, &b);
-    UpdateAudioStreamUntilIdle(1);
+    calculate_ring_buffer_bounds(D_00137C80[5] << 11, &a, &b);
+    update_audio_stream_until_idle(1);
     func_002176C8_i(a, D_00137C80[4], D_00137C80[5]);
     s2 = D_0015EEF0;
-    s1 = D_0015EEEC;
-    s0 = gStereo;
+    s1 = music_volume;
+    s0 = playback_mode;
     memcard_RestoreGame(a + *(int *)(a + 0x10));
     D_0015EEF0 = s2;
-    D_0015EEEC = s1;
-    gStereo = s0;
+    music_volume = s1;
+    playback_mode = s0;
     D_0015EE84_m = 0;
 }
 
@@ -358,7 +358,7 @@ extern s32 mc_call_00123D48(s32 fd, void *buf, s32 size) __asm__("func_00123D48"
 extern s32 mc_call_00116248(char *str, const char *format, ...) __asm__("func_00116248");
 extern char *mc_call_001166FC(char *, const char *) __asm__("func_001166FC");
 
-void MemCard_UpdateState(void) {
+void memcard_update_state(void) {
     union {
         char name[0x40];
         struct {
@@ -1391,12 +1391,12 @@ extern int func_0020BBC8(void *dst, int i, int *table);
 void memcard_MakeWholeSave(char *out) {
     int i;
 
-    *(int *)out = memcard_GetDataSize(gGameSaveData);
-    *(int *)(out + 4) = memcard_GetDataSize(gLevelSaveData);
+    *(int *)out = memcard_GetDataSize(mc_gamedata);
+    *(int *)(out + 4) = memcard_GetDataSize(mc_leveldata);
     out += 8;
-    out += memcard_PrepData(out, 0, gGameSaveData);
+    out += memcard_PrepData(out, 0, mc_gamedata);
     for (i = 0; i < 0x14; i++) {
-        out += memcard_PrepData(out, i, gLevelSaveData);
+        out += memcard_PrepData(out, i, mc_leveldata);
     }
 }
 
@@ -1413,7 +1413,7 @@ extern char D_001E8690[];
 /* memcard_Init */
 void memcard_Init(void) {
     if (func_001236F0()) {
-        STUB_printf(D_001E8690);
+        STUB_printf(memcard_error_message);
     }
 }
 
@@ -1525,7 +1525,7 @@ int memcard_PrepData(void *dst, int slot, int *table) {
             ((int *)p)[0] = block->id;
             ((int *)p)[1] = block->size;
             p += 8;
-            func_001F9A00(p, src, block->size);
+            copy_memory_aligned(p, src, block->size);
             p += block->size;
             total += block->size;
             p = (unsigned char *)(((int)p + 3) & mask);
@@ -1653,7 +1653,7 @@ int memcard_RestoreData(void *src, int slot, int *table) {
             if (func_001151B4(dst, ((struct RestoreBlock *)buf)->data, n) != 0) {
                 (*(int *)&D_0015FF50)++;
             }
-            func_001F9A00(dst, ((struct RestoreBlock *)buf)->data, n);
+            copy_memory_aligned(dst, ((struct RestoreBlock *)buf)->data, n);
             total += ((n + 3) & ~3) + 8;
         } else {
         missing:
@@ -1707,10 +1707,10 @@ int memcard_Save(int slot, int flags) {
 
     func_00121A80(D_0015EF98);
     func_0012D818(D_0015EF98);
-    Map_CopyObjectPositions();
-    Menu_ReadSector(D_00141FC0 + (D_0015EE84_m << 11));
+    copy_level_object_positions();
+    save_map_coverage(D_00141FC0 + (D_0015EE84_m << 11));
     {
-        char *p = D_0013D390;
+        char *p = memory_card_state;
         int active = *(int *)(p + 0xC8);
         int mask;
 
@@ -1735,14 +1735,14 @@ int memcard_Save(int slot, int flags) {
         saved = 0;
         if (flags >= 0) {
             D_0015EE84_m = flags;
-            saved = D_0013DE60[flags];
+            saved = level_visit_state[flags];
             if (saved == 0) {
-                D_0013DE60[flags] = 1;
+                level_visit_state[flags] = 1;
             }
         }
     }
     {
-        char *q = D_0013D390;
+        char *q = memory_card_state;
         char *names = q + 0x30;
 
         *(int *)(q + *(int *)(q + 0x14) * 0x1C + 0x24) = gBolts;
@@ -1750,10 +1750,10 @@ int memcard_Save(int slot, int flags) {
         *(int *)(q + *(int *)(q + 0x14) * 0x1C + 0x2C) = D_0015EF24;
         memcpy(names + *(int *)(q + 0x14) * 0x1C, D_0015EF98, 8);
         *(int *)(q + *(int *)(q + 0x14) * 0x1C + 0x28) = D_0015EF20;
-        memcard_PrepData(D_0014EFD0, 0, gGameSaveData);
-        memcard_PrepData(D_001507D0, *(int *)(q + 0xD0), gLevelSaveData);
+        memcard_PrepData(D_0014EFD0, 0, mc_gamedata);
+        memcard_PrepData(D_001507D0, *(int *)(q + 0xD0), mc_leveldata);
         if (flags >= 0) {
-            D_0013DE60[D_0015EE84_m] = saved;
+            level_visit_state[D_0015EE84_m] = saved;
             D_0015EE84_m = *(int *)(q + 0xD0);
         }
         if (*(int *)(q + 0xE4) < 0) {
@@ -1763,7 +1763,7 @@ int memcard_Save(int slot, int flags) {
     }
 done:
     {
-        char *r = D_0013D390;
+        char *r = memory_card_state;
         return *(int *)(r + 0xE4) == 0xF;
     }
 }

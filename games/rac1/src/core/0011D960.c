@@ -87,8 +87,8 @@ void func_0011D9C0(void) {
     a[2] = 1;
     b[1] = 1;
     b[2] = 1;
-    D_00130420 = func_00118C70(a);
-    D_00130424 = func_00118C70(b);
+    FirstSemaphore = func_00118C70(a);
+    SecondSemaphore = func_00118C70(b);
 }
 
 /*

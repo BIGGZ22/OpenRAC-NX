@@ -17,14 +17,14 @@ extern void func_L00_0023E4C8(void *);
 extern void func_001F49B0(void (*)(void *), void *);
 
 /* Attach the callback during the six active phases of this level event. */
-void EventMoby_AttachDrawCallback(void) {
+void update_level14_event_moby_effects(void) {
     void *moby;
     if (D_0015EE84 != 14 || D_L14_0016D060.state != 0) {
         return;
     }
     moby = D_L14_0016D060.moby;
     if (moby != 0 && (unsigned)(D_L14_0016D060.phase - 0x1C) < 6) {
-        GlowParticlesSpawn(moby);
+        emit_moby_particle_pairs(moby);
         AddDrawCallback(GlowQuadsDraw, moby);
     }
 }

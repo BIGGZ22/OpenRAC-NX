@@ -55,33 +55,33 @@ void HeroL03_FrameUpdate(void) {
         return;
     }
     func_L00_00232EF0();
-    Hero_UpdateMotionInput();
+    hero_update();
     HeroProcessContactType();
-    HeroLedgeProbeSingle();
-    Hero_LatchUpperProbe();
+    update_hero_ledge_probe();
+    update_hero_offset_rail_candidate();
     HeroL03_UpdateStateTransitions();
     if (*(unsigned char *)(g + 0x20A4) != 0) {
         return;
     }
-    Hero_TickReleaseTimers();
+    update_hero_delayed_voice_requests();
     Hero_CheckMovementThresholds();
-    Hero_UpdateObstacleLean();
+    update_hero_collision_ease_target();
     Hero_UpdateBodyTilt();
     HeroScanTargets();
     RerollMotionParams();
-    ClampAimLeanAngles();
-    UpdateHelperMoby();
+    update_hero_rotation_targets_and_random_manipulators();
+    update_hero_glow_and_extra_manipulators();
     Hero_SetTiltJoints();
-    SettleAllHeldObjects();
-    HeroSyncMoby();
-    HeroComputeAttachMatrices(0);
-    Hero_UpdateItems();
-    BeginDrawFrame();
+    update_hero_easing_records();
+    update_hero_moby();
+    update_hero_world_matrices(0);
+    update_hero_equipped_items();
+    begin_draw_frame();
     UpdateRampUpDown();
     CameraShakeUpdate();
-    HelpHintsPeriodicCheck();
+    check_hero_item_reward_conditions();
     HudBoltAlertShow();
-    FireGadgetStateHooks();
+    dispatch_hero_animation_timed_events();
     Cheats_PollCodes();
     Profile_Mark(*(void **)(g + 0x2080));
     if (*(int *)(g + 0x208C) != 0x16 && *(int *)(g + 0x2084) != 0x32) {
@@ -91,6 +91,6 @@ void HeroL03_FrameUpdate(void) {
         char *q = (char *)D_0013E633 + 0xE1D;
         func_L00_0025805C(*(void **)(q + 0x2080));
     }
-    HeroUpdateBlink();
+    update_hero_blink_and_gold_weapon_tint();
     Hero_SteerAimAndProbe();
 }

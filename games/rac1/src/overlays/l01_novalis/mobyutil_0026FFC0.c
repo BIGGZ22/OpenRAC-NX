@@ -3,7 +3,7 @@
 #include "include_asm.h"
 
 LINKER_REMNANT("asm/overlays", func_L01_0026FFC0);
-void SetRangeAroundValue(char *arg, float value) {
+void set_range_centered_on_value(char *arg, float value) {
     *(float *)(arg + 0x84) = value - 0.2f;
     *(float *)(arg + 0x88) = value + 0.2f;
 }

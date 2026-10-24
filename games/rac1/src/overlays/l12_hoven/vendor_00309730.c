@@ -32,7 +32,7 @@ extern short D_L12_00162050;
 extern short D_L12_00162054;
 extern short D_L12_00162058;
 
-void func_L12_00309730(char *m) {
+void draw_hoven_jittered_quad_layers(char *m) {
     Pkt P[2] __attribute__((aligned(16)));
     float M[16] __attribute__((aligned(16)));
     long tex;
@@ -43,7 +43,7 @@ void func_L12_00309730(char *m) {
     func_001FA460(M, m + 0xC0);
     qcopy(&M[12], m + 0x10);
     M[15] = 1.0f;
-    tex = func_001F4868(0xE);
+    tex = GetEffectTex(0xE);
     P[0].tex = P[1].tex = tex;
     c0 = *(int *)&D_L12_00162010;
     c1 = *(int *)&D_L12_00162014;
@@ -67,7 +67,7 @@ void func_L12_00309730(char *m) {
         P[1].uv[j][1] = v;
     }
     for (a = 0; a < 5; a++) {
-        float f3 = func_002140F8(-0.5f, 0.5f);
+        float f3 = random_float_between(-0.5f, 0.5f);
         for (k = 0; k < 4; k++) {
             float (*r0)[4] = P[0].corner;
             float (*r1)[4] = P[1].corner;
@@ -85,7 +85,7 @@ void func_L12_00309730(char *m) {
             f20 = 0.0f;
             P[0].corner[0][1] = f0;
             P[0].corner[1][1] = f0;
-            if (more) f20 = func_002140F8(-0.2f, 0.2f);
+            if (more) f20 = random_float_between(-0.2f, 0.2f);
             f0 = (float)nb + f20;
             P[0].corner[2][1] = f0;
             P[0].corner[3][1] = f0;

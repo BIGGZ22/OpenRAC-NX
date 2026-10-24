@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 """
-Progress report for decomp.dev, in objdiff's report format (version 2).
+Progress report for ByteMatch (bytematch.dev), in objdiff's report format (version 2).
 
-decomp.dev reads a `report.json` that CI uploads as the artifact
+ByteMatch reads a `report.json` that CI uploads as the artifact
 `SCES_509.16_report`. Our CI cannot build the game: the SN ProDG
 toolchain and the retail executable may not be redistributed. So the
 report is generated HERE, from a real from-scratch build, and committed
@@ -381,9 +381,9 @@ def overlay_units(file_map: dict, fuzzy: dict) -> tuple[list[dict], list, dict, 
     complete_units = 0
     complete_code = 0
 
-    # decomp.dev lays its treemap out in report order and draws no border
-    # around a group, so a level is one unit (one box, its functions inside)
-    # and so is the shared code.
+    # decomp.dev, which published the report first, laid its treemap out in
+    # report order with no border around a group, so a level is one unit
+    # (one box, its functions inside) and so is the shared code.
     for directory, cats in overlay_dirs():
         shared = directory.name == "shared"
         groups = []     # [(unit name, source path, rows)]
@@ -800,6 +800,10 @@ def check() -> None:
     m = report["measures"]
     print(f"report is current: {m['matched_functions']}/{m['total_functions']} functions, "
           f"{m['matched_code_percent']:.2f}% code finished")
+    # The other versions (docs/VERSIONS.md): their maps and reports current with src/, shared C
+    # only, the same code matched in all of them or in none.
+    import version_sync
+    version_sync.check()
 
 
 def main() -> None:

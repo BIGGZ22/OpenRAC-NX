@@ -165,9 +165,9 @@ void Moby819Update(char *m) {
             if (g[0x20A4] == 2)
                 tp[2] = h + 2.0f;
             FastVecSub(diff, tp, p);
-            a = speed * speed - func_L00_001FF3E0(hv);
+            a = speed * speed - lensq_cc2e8(hv);
             b = (hv[0] * diff[0] + hv[1] * diff[1] + hv[2] * diff[2]) * -2.0f;
-            s = func_001F9B50(b * b - a * 4.0f * -func_L00_001FF3E0(diff));
+            s = func_001F9B50(b * b - a * 4.0f * -lensq_cc2e8(diff));
             r1 = (-b + s) / (a + a);
             r2 = (-b - s) / (a + a);
             if (r1 > 0.0f && r2 > 0.0f) {
@@ -215,7 +215,7 @@ void Moby819Update(char *m) {
             d->passed = 1;
         d->dist = dist;
         if (func_L00_001EFFF0(p, pos0, 0x10, d->owner, 0)) {
-            tb = D_L10_00174340;
+            tb = ground_hit;
             if (*(int *)(tb + 0x18) != d->owner) {
                 if (*(int *)(tb + 0x18) != 0) {
                     func_L00_001FF500(diff, d, 1.0f);
@@ -268,7 +268,7 @@ void SpawnPartType52Near(char *moby) {
     v[2] = v[2] + 0.025f;
     g = *(int *)&D_L10_00161ED8;
     h = *(int *)&D_L10_00161EDC;
-    PartType52Spawn(v, c, d, g, h, e);
+    spawn_type_52_particle(v, c, d, g, h, e);
 }
 extern void func_001FA4A0(void *, void *);
 extern void func_001F9EE8(void *, void *, void *);
@@ -281,7 +281,7 @@ extern unsigned char D_0014171B_q[] __asm__("D_0014171B") NOT_SDA;
  * hero+0x50, rotates it with the matrix from func_001FA4A0(moby + 0xC0), and if that point lies
  * in the box -5 < x < 5, 0 < z < 8 sets hero byte 0x224B to (y < 0.5), else (y > 0) clears
  * D_0014171B. Then queues func_L10_002EA578. */
-void Moby1378Update(unsigned char *m) {
+void update_hero_flag_from_moby_local_box(unsigned char *m) {
     float v[4] __attribute__((aligned(16)));
     float mtx[16] __attribute__((aligned(16)));
     char *hero;
@@ -308,7 +308,7 @@ void Moby1378Update(unsigned char *m) {
                 D_0014171B_q[0] = 0;
             }
         }
-        AddDrawCallback(Moby1378Draw, m);
+        AddDrawCallback(draw_moby_animated_quad_layers, m);
         break;
     }
 }
@@ -341,7 +341,7 @@ extern void func_L00_001FD1D8(void *, void *, int);
     ((unsigned long)(a) | ((unsigned long)(b) << 2) | ((unsigned long)(c) << 4) | \
      ((unsigned long)(d) << 6) | ((unsigned long)(fix) << 32))
 
-void Moby1378Draw(unsigned char *m) {
+void draw_moby_animated_quad_layers(unsigned char *m) {
     Quad_2EA578 first, second;
     float transform[12] __attribute__((aligned(16)));
     float position[4] __attribute__((aligned(16)));
@@ -475,115 +475,170 @@ extern char *D_L10_001B0C30[];
 extern char D_L10_0016CF40[];
 extern char D_L10_00167180[];
 
+/* The vendor camera record: the table row at D_L10_0015F050 holds a pointer to it at +0x1C. */
+typedef struct CamPathRec {
+    u8 pad00[0x20];
+    s32 path;                  /* 0x20: path list index, < 0 none */
+    s32 look_path;             /* 0x24: look path list index, < 0 none */
+    u8 pad28[0x10];
+    u8 done;                   /* 0x38: set to 1 */
+    u8 pad39;
+    s16 frames;                /* 0x3A */
+    f32 speed;                 /* 0x3C: path length per second, times 60 */
+    u8 pad40[0xC];
+    s32 unk4C;                 /* 0x4C: 0 lets the switch go on */
+} CamPathRec;
+
+/* The run state kept in the saved state at +0x40. */
+typedef struct VendorCamRun_5f18 {
+    s32 seg;                   /* 0x00 */
+    f32 t;                     /* 0x04 */
+    f32 path_length;           /* 0x08 */
+    f32 look_path_length;      /* 0x0C */
+    f32 dist;                  /* 0x10 */
+    s16 started;               /* 0x14 */
+    s16 timer;                 /* 0x16 */
+} VendorCamRun_5f18;
+
+/* The stop table kept in the saved state at +0x58: eight segment ids, eight stop angles, the end angle. */
+typedef struct VendorCamStops_5f18 {
+    s16 seg[8];                /* 0x00 */
+    f32 fov[8];                /* 0x10 */
+    f32 fov_end;               /* 0x30 */
+} VendorCamStops_5f18;
+
+/* The camera slot (0xA0 bytes). */
+typedef struct PathCam {
+    f32 m0[4];                 /* 0x00 */
+    f32 m1[4];                 /* 0x10 */
+    f32 m2[4];                 /* 0x20 */
+    f32 pos[4];                /* 0x30 */
+    u8 pad40[0x24];            /* 0x40 per-type state */
+    f32 prev_pos[3];           /* 0x64 */
+    void *saved_state;         /* 0x70 */
+    u8 state;                  /* 0x74 */
+    u8 pad75[3];
+    f32 transition_duration;   /* 0x78 */
+    u8 active;                 /* 0x7C */
+    u8 handoff_state;          /* 0x7D */
+    s16 transition_state;      /* 0x7E */
+    u8 pad80[4];
+    s16 descriptor_index;      /* 0x84 */
+    s16 unk86;                 /* 0x86 */
+    u8 pad88[4];
+    s16 type;                  /* 0x8C */
+    s16 activation_blocked;    /* 0x8E */
+    u8 pad90[0x10];
+} PathCam;
+
 // Camera 19 activate: builds the two path length tables and copies the start state.
 void func_L10_002F6F18(char *cam) {
-    char *m;
-    char *q;
-    char *tb;
-    char *fb;
-    char *list;
-    char *p;
+    CamPathRec *rec;
+    VendorCamRun_5f18 *run;
+    VendorCamStops_5f18 *stops;
+    f32 *fov;
+    char *path;
+    char *saved;
     char *base;
-    char *src;
-    char *c10;
-    char *c20;
-    char *c30;
+    char *source;
+    char *m1;
+    char *m2;
+    char *pos;
     char *cf;
     float d, f;
     int i, k, idx, n;
 
-    m = *(char **)(D_L10_0015F050 + *(short *)(cam + 0x84) * 0x20 + 0x1C);
-    m[0x38] = 1;
-    q = *(char **)(cam + 0x70) + 0x40;
-    *(int *)q = 0;
-    *(int *)(q + 0x4) = 0;
-    *(int *)(q + 0x8) = 0;
-    *(int *)(q + 0xC) = 0;
-    *(int *)(q + 0x10) = 0;
-    *(short *)(q + 0x14) = 0;
-    *(short *)(q + 0x16) = func_001F9850(*(short *)(m + 0x3A));
+    rec = *(CamPathRec **)(D_L10_0015F050 + ((PathCam *)cam)->descriptor_index * 0x20 + 0x1C);
+    rec->done = 1;
+    run = (VendorCamRun_5f18 *)((char *)((PathCam *)cam)->saved_state + 0x40);
+    run->seg = 0;
+    run->t = 0.0f;
+    run->path_length = 0.0f;
+    run->look_path_length = 0.0f;
+    run->dist = 0.0f;
+    run->started = 0;
+    run->timer = scale_ticks(rec->frames);
 
-    tb = *(char **)(cam + 0x70) + 0x58;
-    fb = *(char **)(cam + 0x70) + 0x68;
+    stops = (VendorCamStops_5f18 *)((char *)((PathCam *)cam)->saved_state + 0x58);
+    fov = (f32 *)((char *)((PathCam *)cam)->saved_state + 0x68);
     {
-        struct CamK_72D8 *kv = (struct CamK_72D8 *)tb;
         int c;
         for (c = 0; c < 8; c++) {
-            kv->vals[c] = 0.0f;
-            kv->ids[c] = -1;
+            stops->fov[c] = 0.0f;
+            stops->seg[c] = -1;
         }
     }
 
     cf = D_L10_0016CF40;
-    c30 = cam + 0x30;
-    c10 = cam + 0x10;
-    c20 = cam + 0x20;
+    pos = (char *)((PathCam *)cam)->pos;
+    m1 = (char *)((PathCam *)cam)->m1;
+    m2 = (char *)((PathCam *)cam)->m2;
     f = func_L00_001FF860(1.0f, *(float *)(cf + 0xB0));
-    *(float *)(tb + 0x30) = f + f;
+    stops->fov_end = f + f;
 
-    idx = *(int *)(m + 0x20);
+    idx = rec->path;
     if (idx >= 0) {
-        list = D_L10_001B0C30[idx];
+        path = D_L10_001B0C30[idx];
         {
-            for (i = 0, n = 0; i < *(int *)list; i++) {
-                f = *(float *)(list + (i << 4) + 0x1C);
+            for (i = 0, n = 0; i < *(int *)path; i++) {
+                f = *(float *)(path + (i << 4) + 0x1C);
                 if (0.0f < f) {
-                    ((float *)fb)[n] = f;
+                    fov[n] = f;
                     if (180.0f < f) {
-                        ((float *)fb)[n] = *(float *)(tb + 0x30) * 57.295776f;
+                        fov[n] = stops->fov_end * 57.295776f;
                     }
-                    ((short *)tb)[n] = i;
+                    stops->seg[n] = i;
                     n++;
                 }
-                k = (i + 1) % *(int *)list;
-                d = func_001F9D10(list + (i * 16 + 0x10), list + (k * 16 + 0x10));
-                *(float *)(list + (i << 4) + 0x1C) = d;
-                if (i < *(int *)list - 1) {
-                    *(float *)(q + 0x8) = *(float *)(q + 0x8) + d;
+                k = (i + 1) % *(int *)path;
+                d = FastVecDist(path + (i * 16 + 0x10), path + (k * 16 + 0x10));
+                *(float *)(path + (i << 4) + 0x1C) = d;
+                if (i < *(int *)path - 1) {
+                    run->path_length = run->path_length + d;
                 }
             }
         }
     }
 
-    if (*(short *)(m + 0x3A) > 0) {
-        *(float *)(m + 0x3C) = *(float *)(q + 0x8) / func_001FA888(func_001F9850(*(short *)(m + 0x3A))) * 60.0f;
+    if (rec->frames > 0) {
+        rec->speed = run->path_length / IntToFloat(scale_ticks(rec->frames)) * 60.0f;
     }
 
-    idx = *(int *)(m + 0x24);
+    idx = rec->look_path;
     if (idx >= 0) {
-        char *list2 = D_L10_001B0C30[idx];
+        char *path2 = D_L10_001B0C30[idx];
         {
             int i2, off2, k2;
-            for (i2 = 0; i2 < *(int *)list2; i2++) {
+            for (i2 = 0; i2 < *(int *)path2; i2++) {
                 off2 = i2 * 16;
-                k2 = (i2 + 1) % *(int *)list2;
-                d = func_001F9D10(list2 + (off2 + 0x10), list2 + (k2 * 16 + 0x10));
-                *(float *)(list2 + off2 + 0x1C) = d;
-                if (i2 < *(int *)list2 - 1) {
-                    *(float *)(q + 0xC) = *(float *)(q + 0xC) + d;
+                k2 = (i2 + 1) % *(int *)path2;
+                d = FastVecDist(path2 + (off2 + 0x10), path2 + (k2 * 16 + 0x10));
+                *(float *)(path2 + off2 + 0x1C) = d;
+                if (i2 < *(int *)path2 - 1) {
+                    run->look_path_length = run->look_path_length + d;
                 }
             }
         }
     }
 
-    p = *(char **)(cam + 0x70);
-    *(float *)(p + 0x0) = 0.03f;
-    *(float *)(p + 0x4) = 0.2f;
-    func_001F9BC0(p + 0x10);
-    p = *(char **)(cam + 0x70);
-    *(float *)(p + 0x20) = 0.03f;
-    *(float *)(p + 0x24) = 0.2f;
-    func_001F9BC0(p + 0x30);
+    saved = (char *)((PathCam *)cam)->saved_state;
+    *(f32 *)(saved + 0x00) = 0.03f;
+    *(f32 *)(saved + 0x04) = 0.2f;
+    clear_u64_value(saved + 0x10);
+    saved = (char *)((PathCam *)cam)->saved_state;
+    *(f32 *)(saved + 0x20) = 0.03f;
+    *(f32 *)(saved + 0x24) = 0.2f;
+    clear_u64_value(saved + 0x30);
 
     base = D_L10_00167180;
-    src = *(char **)(base + 0x184);
-    qcopy(c30, src + 0x30);
-    qcopy(cam, src);
-    qcopy(c10, src + 0x10);
-    qcopy(c20, src + 0x20);
+    source = *(char **)(base + 0x184);
+    qcopy(pos, source + 0x30);
+    qcopy(cam, source);
+    qcopy(m1, source + 0x10);
+    qcopy(m2, source + 0x20);
 
-    if (*(int *)(m + 0x4C) == 0) {
-        func_L00_00222B80(0x72, 1);
+    if (rec->unk4C == 0) {
+        HeroEnterMoveState(0x72, 1);
     }
 }
 extern char *D_L10_0015F050 MACRO_ADDR;
@@ -787,28 +842,38 @@ void Camera19_Update(char *moby) {
 }
 extern char *D_L10_0015F050 MACRO_ADDR;
 
+typedef struct UpdateCam {
+    u8 pad00[0x7C];
+    u8 active;                 /* 0x7C */
+    u8 pad7D;
+    s16 transition_state;      /* 0x7E */
+    u8 pad80[4];
+    s16 descriptor_index;      /* 0x84 */
+    s16 unk86;                 /* 0x86 */
+} UpdateCam;
+
 // Decides whether a moby's camera target passes the checks; -1 disabled, 0 no, 1 yes.
-int Trigger_Evaluate(char *a, char *b) {
-    unsigned char *d = *(unsigned char **)(D_L10_0015F050 + *(short *)(a + 0x84) * 32 + 0x1C);
+int evaluate_descriptor_eligibility(char *descriptor_owner, char *comparison_object) {
+    unsigned char *descriptor_record = *(unsigned char **)(D_L10_0015F050 + ((UpdateCam *)descriptor_owner)->descriptor_index * 32 + 0x1C);
     int x;
     int y;
-    if (d[0x39] != 0) {
+    if (descriptor_record[0x39] != 0) {
         return -1;
     }
-    if (d[0x38] != 0 && *(short *)(b + 0x86) != 0x13) {
+    if (descriptor_record[0x38] != 0 && ((UpdateCam *)comparison_object)->unk86 != 0x13) {
         return 1;
     }
-    if (b != 0 && *(short *)(b + 0x7E) == 0 && (unsigned char)b[0x7C] >= (unsigned char)a[0x7C]) {
+    if (comparison_object != 0 && ((UpdateCam *)comparison_object)->transition_state == 0 && (unsigned char)((UpdateCam *)comparison_object)->active >= (unsigned char)((UpdateCam *)descriptor_owner)->active) {
         return 0;
     }
-    if (Trigger_IsHeroInside(a, b) == 0) {
+    if (Trigger_IsHeroInside(descriptor_owner, comparison_object) == 0) {
         return 0;
     }
-    x = *(int *)(d + 0x48);
+    x = *(int *)(descriptor_record + 0x48);
     if (x >= 0 && *(int *)(D_0013E633 + 0x2EA9) != x) {
         return 0;
     }
-    y = *(int *)(d + 0x44);
+    y = *(int *)(descriptor_record + 0x44);
     if (y >= 0 && *(int *)(D_0013E633 + 0x2EA1) != y) {
         return 0;
     }

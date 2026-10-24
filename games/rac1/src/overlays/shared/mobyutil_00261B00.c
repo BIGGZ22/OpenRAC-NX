@@ -61,7 +61,7 @@ void func_L00_00261B00(char *a, int b, int c, int flags, int idx)
     c23 = 0;
     c22 = 0;
     c30 = 0;
-    func_001F9BC0(s0);
+    clear_u64_value(s0);
     if (!(flags & 0x20)) {
         if (*(unsigned char *)(a + 0xB0) != 0xFF
             && (unsigned)(*(unsigned short *)(a + 0xA6) - 0x1F4) >= 0x29) {
@@ -81,7 +81,7 @@ void func_L00_00261B00(char *a, int b, int c, int flags, int idx)
         return;
     }
     if (flags & 4) {
-        r = (unsigned char *)func_L00_0025D390((struct Moby *)a);
+        r = (unsigned char *)GetFlaggedPvarWord((struct Moby *)a);
         if (r) {
             qcopy(s0, r + 0x20);
         }
@@ -89,22 +89,22 @@ void func_L00_00261B00(char *a, int b, int c, int flags, int idx)
     if (b <= 0) {
         b = 1;
     }
-    n = func_002140B0(c - b + 1) + b;
+    n = random_integer_below(c - b + 1) + b;
     if (D_0015EFA0 || D_0015EF20) {
         n <<= 1;
     }
     if (n < 0x1F4) {
         if (f84 && D_0015EF28) {
-            m = (int)((float)func_001F9850(0x3C) * 60.0f) * D_0015EF24[2] / D_0015EF24[1];
+            m = (int)((float)scale_ticks(0x3C) * 60.0f) * D_0015EF24[2] / D_0015EF24[1];
             if (D_0015EFA0 || D_0015EF20) {
                 m /= 2;
             }
             if (m < 0x96) {
                 if (m < 0x5B) {
-                    func_001E9730(D_L00_00160160);
+                    STUB_printf(D_L00_00160160);
                     n *= 5;
                 } else {
-                    func_001E9730(D_L00_00160170, (0xBE - m) / 20);
+                    STUB_printf(D_L00_00160170, (0xBE - m) / 20);
                     n *= (0xBE - m) / 20;
                 }
                 if (D_0015EFA0) {
@@ -114,10 +114,10 @@ void func_L00_00261B00(char *a, int b, int c, int flags, int idx)
                 }
             } else if (m >= 0x12D) {
                 if (m >= 0x160) {
-                    func_001E9730(D_L00_00160180, 0x3FB99999A0000000L);
+                    STUB_printf(D_L00_00160180, 0x3FB99999A0000000L);
                     n /= 10;
                 } else {
-                    func_001E9730(D_L00_00160180, func_001FA888(0x168 - m) / 20.0f);
+                    STUB_printf(D_L00_00160180, IntToFloat(0x168 - m) / 20.0f);
                     n *= (0x168 - m) / 80;
                 }
                 if (n <= 0) {
@@ -211,22 +211,22 @@ void func_L00_00261B00(char *a, int b, int c, int flags, int idx)
     while (ones || c23 || c22 || c30) {
         qcopy(s10, a + 0x10);
         s10[2] = s10[2] + 0.5f;
-        f21 = func_00214158();
-        s20[0] = func_001F9F90(f21) * (func_002140F8(0.0f, 3.0f) * D_0015EE6C);
-        s20[1] = func_001F9FA8(f21) * (func_002140F8(0.0f, 3.0f) * D_0015EE6C);
+        f21 = random_angle_radians();
+        s20[0] = FastCos(f21) * (random_float_between(0.0f, 3.0f) * D_0015EE6C);
+        s20[1] = FastSin(f21) * (random_float_between(0.0f, 3.0f) * D_0015EE6C);
         s20[2] = 0.0f;
-        s20[2] = func_002140F8(3.7f, 6.0f) * D_0015EE6C;
+        s20[2] = random_float_between(3.7f, 6.0f) * D_0015EE6C;
         s30[0] = s20[0];
         s30[1] = s20[1];
         s30[2] = 0.0f;
         func_L00_001FF4B0(s30, s30, 0.5f);
-        func_001F9BD8(s10, s10, s30);
+        FastVecAdd(s10, s10, s30);
         if (idx >= 0) {
             f12 = D_0015EE70 * 10.8f * -0.5f;
             f13 = s20[2] - f12;
             f14 = s10[2] - D_L00_001B0830[idx]->points[0].f[2];
             lim = 120.0f;
-            rv = func_L00_0025A5D8(&t70, &t74, f12, f13, f14);
+            rv = SolveQuadratic(&t70, &t74, f12, f13, f14);
             if (1.0f <= (float)rv) {
                 if (0.0f < t70) {
                     if (t70 < lim) {
@@ -234,29 +234,29 @@ void func_L00_00261B00(char *a, int b, int c, int flags, int idx)
                     }
                 }
             }
-            func_001F9C30(s40, s20, lim);
-            func_001F9BD8(s40, s40, a + 0x10);
-            rv = func_L00_00262BC0(idx, a + 0x10, s40, s50);
-            func_001F9BF0(s40, s50, s10);
+            FastVecScale(s40, s20, lim);
+            FastVecAdd(s40, s40, a + 0x10);
+            rv = SegmentCrossPolyline(idx, a + 0x10, s40, s50);
+            FastVecSub(s40, s50, s10);
             s40[2] = 0.0f;
             func_L00_001FF4B0(s60, s40, 0.25f);
-            func_001F9BF0(s40, s40, s60);
-            func_001F9C30(s40, s40, 1.0f / lim);
+            FastVecSub(s40, s40, s60);
+            FastVecScale(s40, s40, 1.0f / lim);
             s20[0] = s40[0];
             s20[1] = s40[1];
         }
-        func_001F9BD8(s20, s20, s0);
+        FastVecAdd(s20, s20, s0);
         if (c30) {
-            func_L00_002A86D8(a, s10, s20, flags, 50, f84);
+            spawn_bolt_by_value(a, s10, s20, flags, 50, f84);
             c30--;
         } else if (c22) {
-            func_L00_002A86D8(a, s10, s20, flags, 20, f84);
+            spawn_bolt_by_value(a, s10, s20, flags, 20, f84);
             c22--;
         } else if (c23) {
-            func_L00_002A86D8(a, s10, s20, flags, 5, f84);
+            spawn_bolt_by_value(a, s10, s20, flags, 5, f84);
             c23--;
         } else {
-            func_L00_002A86D8(a, s10, s20, flags, 1, f84);
+            spawn_bolt_by_value(a, s10, s20, flags, 1, f84);
             ones--;
         }
     }
@@ -273,9 +273,9 @@ extern int D_0015EE80 MACRO_ADDR;
 /* selects timing constants for the active update mode */
 void SetUpdateModeTiming(int mode) {
  if(!mode) {
- D_0015EE80=0; D_0015EE60=1.0f; D_0015EE64=1.0f; D_0015EE68=1.0f; D_0015EE70=0.00027777778450399637f; D_0015EE74=0.0000046296295295178425f; D_0015EE78=5; D_0015EE6C=0.01666666753590107f; D_0015EE7C=0.01666666753590107f;
+ D_0015EE80=0; D_0015EE60=1.0f; D_0015EE64=1.0f; D_0015EE68=1.0f; D_0015EE70=0.00027777778450399637f; D_0015EE74=0.0000046296295295178425f; D_0015EE78=5; D_0015EE6C=0.01666666753590107f; frame_delta_time=0.01666666753590107f;
  } else {
- D_0015EE80=1; D_0015EE60=1.2f; D_0015EE64=1.44f; D_0015EE68=0.8333333134651184f; D_0015EE6C=0.020000001415610313f; D_0015EE70=0.0004000000189989805f; D_0015EE74=0.000007999999979801942f; D_0015EE78=6; D_0015EE7C=0.019999999552965164f;
+ D_0015EE80=1; D_0015EE60=1.2f; D_0015EE64=1.44f; D_0015EE68=0.8333333134651184f; D_0015EE6C=0.020000001415610313f; D_0015EE70=0.0004000000189989805f; D_0015EE74=0.000007999999979801942f; D_0015EE78=6; frame_delta_time=0.019999999552965164f;
  }
 }
 INCLUDE_ASM("asm/overlays", func_L00_00262450);
@@ -527,7 +527,7 @@ extern f32 func_001F9CB8_630A8(Vec4 *) __asm__("func_001F9CB8");
 extern void func_L00_001FF4B0_630A8(f32, Vec4 *, Vec4 *) __asm__("func_L00_001FF4B0");
 
 /* Adapted from Lombyte (GPL-3.0) for PAL by OpenRAC's tools/port.py: src/overlays/shared/gameplay/state/00261968.c, FUN_L00_00262030. */
-s32 PushPointOutsidePathAxis(f32 distance, s32 path_index, Vec4 *point, Vec4 *out) {
+s32 resolve_point_path_segment_clearance(f32 distance, s32 path_index, Vec4 *point, Vec4 *out) {
     Vec4 difference;
     Vec4 scaled_difference;
     Vec4 working;
@@ -644,7 +644,7 @@ void PathSampleAtDistance(PointPath *path, s32 *seg_out, f32 *along, Vec4 *out, 
 extern void func_001FA218(void *, void *);
 extern void func_002153E8(void *, void *);
 /* Rotates the matrix at a+0x40 by the Euler angles (x, y, z). */
-void MobyRotateEuler(char *a, float x, float y, float z) {
+void compose_target_euler_rotation(char *a, float x, float y, float z) {
     float in[3];
     float t[16], u[16];
     in[0] = x;
@@ -653,10 +653,10 @@ void MobyRotateEuler(char *a, float x, float y, float z) {
     func_001FA218(t, in);
     func_001FA218(u, a + 0x40);
     sce_vu0_mul_matrix(u, u, t);
-    MatrixToEuler(u, a + 0x40);
+    matrix_to_euler(u, a + 0x40);
 }
 /* Starts a manipulator state in b if it is idle. */
-void Manipulator_StartIfIdle(int a, char *b) {
+void initialize_moby_transform_history(int a, char *b) {
     if (*(int *)(b + 0x13C) == 0) {
         *(int *)(b + 0x134) = a;
         *(int *)(b + 0x13C) = 1;
@@ -668,7 +668,7 @@ void Manipulator_StartIfIdle(int a, char *b) {
 extern struct Moby *func_0020D348_m(int) __asm__("func_0020D348");
 
 /* adds a spawned copy of an object to the owner's list (up to 4) */
-void AddSpawnedCopyToList(char *o, int a, int b) {
+void create_moby_transform_history_entry(char *o, int a, int b) {
     if (*(int *)(o + 0x138) != 4) {
         if (b < 9) {
             char *m = (char *)func_0020D348_m(*(short *)(*(char **)(o + 0x134) + 0xA6));
@@ -707,7 +707,7 @@ extern void func_L00_00251E30(void *);
 
 /* Pushes the source object's transforms into an 8-entry ring and replays them into the trailing objects, ending them when all faded.
    Adapted from Lombyte (GPL-3.0) for PAL: src/overlays/shared/gameplay_state_00261968.c, FUN_L00_00262608. */
-void TransformTrailUpdate(S_263680 *s, int dec) {
+void update_moby_transform_history(S_263680 *s, int dec) {
     unsigned char *src;
     unsigned char *o;
     int h, i, k, done;
@@ -837,7 +837,7 @@ void LissajousOffsetUpdate(float *o, float *a, float *b, float r, float l1, floa
     *b = FastAddRots(*b, l2);
 }
 extern void func_00215C00_x(void *, float, float, float) __asm__("func_00215C00");
-void AddSphericalOffset(void *a, void *b, float r, float y, float z) {
+void fast_add_rotations_cf(void *a, void *b, float r, float y, float z) {
     typedef float W[4] __attribute__((aligned(16)));
     W v;
     func_00215C00_x(v, r, y, z);
@@ -886,7 +886,7 @@ typedef struct {
 
 /* Picks the best auto-aim target moby (kind 5) for a shot from pos along dir: writes yaw/pitch toward it and its aim height, returns the moby or 0.
    Adapted from Lombyte (GPL-3.0) for PAL by OpenRAC's tools/port.py: src/overlays/shared/gameplay/entities/002630b8.c, FUN_L00_002630c8. */
-struct Moby *func_L00_00264140(void *ignore, Vec4 *pos_in, Vec4 *dir_in, f32 *yaw, f32 *pitch,
+struct Moby *select_auto_aim_target_moby(void *ignore, Vec4 *pos_in, Vec4 *dir_in, f32 *yaw, f32 *pitch,
                               f32 *height, f32 max_angle) {
     Vec4 pos, dir, target, probe;
     Vec4 *pp = &pos, *dp = &dir;
@@ -899,7 +899,7 @@ struct Moby *func_L00_00264140(void *ignore, Vec4 *pos_in, Vec4 *dir_in, f32 *ya
     *yaw = func_L00_001FF860(dp->f[0], dp->f[1]);
     *pitch = -func_L00_001FF860(func_001F9CE8(dp), dp->f[2]);
 
-    for (m = D_L00_001600A4; m != 0; m = m->next) {
+    for (m = suck_moby_list; m != 0; m = m->next) {
         MobyBound *b;
         f32 t_yaw, t_pitch, dist, ang;
         if ((s8)m->state < 0)
@@ -954,7 +954,7 @@ extern int D_L00_0015FD58 MACRO_ADDR;
 extern unsigned char *D_L00_0015FD68 MACRO_ADDR;
 extern float D_L00_0015FD60 MACRO_ADDR, D_L00_0015FD64 MACRO_ADDR;
 /* Samples the height map at the XY of *p and returns the scaled height. */
-float SampleHeightMap(V *p) {
+float ground_height_at(V *p) {
     V v = *p;
     int y = (int)v.f[1];
     int x = (int)v.f[0];
@@ -975,8 +975,8 @@ void SpawnImpactSparks(V *v) {
     S166D *b;
     k = (D_L00_0015FD64 - D_L00_0015FD60) * 0.00390625f;
     t = *v;
-    f = SampleHeightMap(&t) + k;
-    b = &gCameraLvl;
+    f = ground_height_at(&t) + k;
+    b = &player_camera;
     t.f[2] = f;
     if (f < b->pos.f[2] + 5.0f) {
         u = t;
@@ -1060,7 +1060,7 @@ extern Effect_2637f8 *func_L00_0026DEA0(void *, f32, f32, f32, s32, void *, f32,
 extern u8 D_L00_0015F660_64870[] __asm__("D_L00_0015F660") MACRO_ADDR;
 
 /* Adapted from Lombyte (GPL-3.0) for PAL by OpenRAC's tools/port.py: src/overlays/shared/gameplay/entities/002630b8.c, FUN_L00_002637f8. */
-void SpawnMoby750Sparks(u8 *m) {
+void cutscene_set_camera_target(u8 *m) {
     Vec4 vectors[4];
     Vec4 pos;
     Vec4 scaled;
@@ -1175,7 +1175,7 @@ extern int func_001FA898_r(float) __asm__("func_001FA898");
 extern void *func_L00_0026DEA0_c(void *, int, void *, float, float, float, float, int) __asm__("func_L00_0026DEA0");
 
 /* Bursts two rings of sparks (and then three more) from two points with the given velocity. Adapted from Lombyte (GPL-3.0) for PAL: overlays/shared/gameplay_entities_002630b8.c, FUN_L00_00263b70. */
-void SpawnSparkRings(void *p0, void *p1, void *vel, float a, float b) {
+void draw_trail(void *p0, void *p1, void *vel, float a, float b) {
     Part *part;
     PartTail *tail;
     int i, j, m;
@@ -1336,7 +1336,7 @@ extern void func_L00_00237B70(void);
 extern void func_L00_00237B90(void);
 extern void func_L00_002367A8(int, int);
 /* Per-frame update for the countdown D_L00_0015F670. */
-void CountdownDisplayUpdate(void) {
+void update_timed_hud_visibility(void) {
     if (D_L00_0015F670 != 0) {
         D_L00_0015F670 = D_L00_0015F670 - 1;
         if (D_L00_0015F670 == 0) {
@@ -1346,8 +1346,8 @@ void CountdownDisplayUpdate(void) {
     if (D_L00_0015F674 == 0 || (*(int *)&D_L00_00161F08_g) == 0) {
         (*(int *)&D_L00_00161F04_g) = -1;
     } else if ((*(int *)&D_L00_00161F04_g) == -1) {
-        (*(int *)&D_L00_00161F04_g) = queue_animation_update(0xC, 0, (void *)((char *)func_L00_002377E0 + 0x340), DefaultVtbl_DeleteMoby, func_L00_00237B90, 0, 0);
+        (*(int *)&D_L00_00161F04_g) = queue_animation_update(0xC, 0, (void *)((char *)func_L00_002377E0 + 0x340), DefaultVtbl_DeleteMoby, draw_hud_text_panel, 0, 0);
     } else {
-        Hud_ExtendBankTime((*(int *)&D_L00_00161F04_g), 0xA);
+        hud_keep_visible((*(int *)&D_L00_00161F04_g), 0xA);
     }
 }

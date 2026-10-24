@@ -88,3 +88,8 @@ func_L17_002E4BA0
 func_L17_002F4208
 func_L17_002F6AF0
 func_L06_0024A080
+
+# Corrected PAL v2 boundaries; see tools/overlay_boundary_fixes.py.
+func_L00_001EB1A8
+func_L08_002DB438
+func_L00_002EDB58

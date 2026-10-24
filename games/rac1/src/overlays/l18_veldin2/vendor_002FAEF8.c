@@ -23,7 +23,7 @@ extern float D_L18_001624E4_b __asm__("D_L18_001624E4");
 extern float D_L18_001624E0_b __asm__("D_L18_001624E0");
 extern short D_L18_00162590;
 
-void DrawPulsingGlows(void *moby) {
+void draw_moby_color_cycling_bone_glows(void *moby) {
     char a[16];
     char b[32];
     char c[16];

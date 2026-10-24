@@ -3,7 +3,7 @@
 #include "include_asm.h"
 
 // Add and subtract a delta from a moby field, storing results
-void SetMobyZBand(char *moby) {
+void func_L02_0025D750(char *moby) {
     float delta = 0.2f;
     float val = *(float *)(moby + 0x18);
     *(float *)(moby + 0x84) = val - delta;
@@ -13,7 +13,7 @@ LINKER_REMNANT("asm/overlays", func_L02_0025D778);
 LINKER_REMNANT("asm/overlays", func_L02_002612C0);
 LINKER_REMNANT("asm/overlays", func_L02_00264950);
 // Clears seven words at moby+0x00..0x18 (walking down) and a halfword at 0x1C.
-void EffectSlots_Clear(char *moby) {
+void reset_shot_tracking(char *moby) {
     int *p = (int *)(moby + 0x18);
     int i;
     for (i = 6; i >= 0; i--, p--) {
@@ -65,7 +65,7 @@ void EffectSlots_Fire(char *slots, float *position, float *direction, float dist
     unsigned long fl;
 
     {
-        int phase = D_L02_0015F6B0 & 3;
+        int phase = frame_counter_ref & 3;
         save_shot = phase == 0;
     }
     qcopy(origin, position);
@@ -116,7 +116,7 @@ void EffectSlots_Fire(char *slots, float *position, float *direction, float dist
 extern int func_L00_001F2BE8(float, void *, int, int, int);
 
 // Retires up to seven slot entries whose effect finished, spawning a burst for live ones.
-void EffectSlots_Retire(char **slots, int a, int b) {
+void collect_mobies_around_tracked_objects(char **slots, int a, int b) {
     int i;
     for (i = 6; i >= 0; i--, slots++) {
         char *m = *slots;

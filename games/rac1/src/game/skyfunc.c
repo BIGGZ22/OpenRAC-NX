@@ -386,7 +386,7 @@ void SkyLevelGeneric___maybe(void) {
     s16 *angles;
 
     D_0016055C_2C188->relocation_state = 0;
-    func_001FA190(D_001D9A70);
+    func_001FA190(sky_matrix);
     SkyDrawShell(0);
     SkyDrawShell(1);
     if (D_0016055C_2C188->effect_count == 0) {
@@ -504,7 +504,7 @@ extern void func_0022C870(void);
 extern void func_00234C98_2C5A0(s32, s64) __asm__("func_00234C98");
 
 /* Adapted from Lombyte (GPL-3.0) for PAL by OpenRAC's tools/port.py: src/rendering/sky/draw_sky_shells.c, draw_sky_shells. */
-void DrawSkyShells(void) {
+void draw_sky_shells(void) {
     f32 rotation_angles[4];
     f32 shell_scale;
     u8 *transform_row;
@@ -550,9 +550,9 @@ void DrawSkyShells(void) {
             }
             func_001FA238(&D_001D9A70_2C5A0, rotation_angles);
             transform_row = (u8 *)&D_001D9A70_2C5A0;
-            func_001F9C48(transform_row, transform_row, shell_scale);
-            func_001F9C48(transform_row + 0x10, transform_row + 0x10, shell_scale);
-            func_001F9C48(transform_row + 0x20, transform_row + 0x20, shell_scale);
+            scale_vector(transform_row, transform_row, shell_scale);
+            scale_vector(transform_row + 0x10, transform_row + 0x10, shell_scale);
+            scale_vector(transform_row + 0x20, transform_row + 0x20, shell_scale);
             transform_row += 0x30;
             qcopy(transform_row, D_00160560_2C5A0);
             SkyDrawShell(shell_index);
@@ -605,7 +605,7 @@ void SetupSkyGifPaging(void) {
     p += 0x10;
     D_00161000 = p;
     ProfileMarker_Begin(D_00160550, 1);
-    s = D_0016055C;
+    s = level_sky_effect_data;
     D_0015EF74 = D_0015EF78;
     D_0015F558 = 0;
     for (i = 0; i < s->npages; i++) {
@@ -637,7 +637,7 @@ void DoSkyGifPaging(void) {
     D_00160570_p[1] = (int)D_00161000_p;
     D_00160570_p[2] = 0;
     D_00160570_p[3] = 0;
-    if (D_0018A3B0[1] != 0) {
+    if (draw_config[1] != 0) {
         func_0020C2F8();
         VU1_texFlush();
     }
@@ -661,13 +661,19 @@ LINKER_REMNANT("asm/remnants/text", func_0022C9A0);
 extern void func_0022CA00(void *);
 extern void func_0022CC40(void *);
 
-/* SkyDrawShell(int) */
-void SkyDrawShell(int idx) {
-    SkyDef *def = D_0016055C;
+/* Minimal layout for one sky shell: only the flag at +4 is read here. */
+struct SkyShell {
+    u8 pad_0[4];
+    s32 gouraud_enabled;   /* 0x04: nonzero draws the Gouraud path */
+};
 
-    if (idx < def->count) {
-        void *shell = def->shells[idx];
-        if (*(int *)((char *)shell + 4) != 0) {
+/* SkyDrawShell(int) */
+void SkyDrawShell(s32 shell_index) {
+    SkyDef *def = level_sky_effect_data;
+
+    if (shell_index < def->count) {
+        struct SkyShell *shell = def->shells[shell_index];
+        if (shell->gouraud_enabled != 0) {
             SkyDrawShellGouraud(shell);
         } else {
             SkyDrawShellTextured(shell);
@@ -733,7 +739,7 @@ void func_0022CA00_r(struct Shell_2CA00 *shell) {
     func_0022D7E0_2CA00(shell->tiles, shell->count, visibility);
 
     D_00161000_2CA00.words[0] = 0x30000007;
-    *(s32 *)((u32)D_00161000_2CA00.words + 4) = (s32)D_0013D260;
+    *(s32 *)((u32)D_00161000_2CA00.words + 4) = (s32)sky_textured_gs_block;
     *(s32 *)((u32)D_00161000_2CA00.words + 8) = 0;
     *(s32 *)((u32)D_00161000_2CA00.words + 12) = 0x50000007;
     D_00161000_2CA00.words += 4;
@@ -826,7 +832,7 @@ void func_0022CC40_r(struct Shell_2CC40 *shell) {
     func_0022D7E0_2CC40(shell->tiles, shell->count, visibility);
 
     D_00161000_2CC40.words[0] = 0x30000007;
-    *(s32 *)((u32)D_00161000_2CC40.words + 4) = (s32)D_0013D1F0;
+    *(s32 *)((u32)D_00161000_2CC40.words + 4) = (s32)sky_gouraud_gs_block;
     *(s32 *)((u32)D_00161000_2CC40.words + 8) = 0;
     *(s32 *)((u32)D_00161000_2CC40.words + 12) = 0x50000007;
     D_00161000_2CC40.words += 4;

@@ -834,10 +834,40 @@ Three more were adapted by hand on 2026-10-15 in the same way. In parentheses, L
 - `src/overlays/l18_veldin2/vendor_002A8400.c`: `func_L18_002DD8A8` (`FUN_L18_002dc4b8`)
 - `src/overlays/l12_hoven/vendor_002EDAA0.c`: `func_L12_002EE180` (`FUN_L12_002ece00`)
 
+Nine more were adapted by hand on 2026-10-21 from Lombyte's C as of that day (`0d5b2b0c`). Lombyte has
+been licensed under the GNU General Public License v3.0 since `a1379f57` (2026-10-10), the license of this
+repository, so these nine come under it and not under the MIT notice below. The C is Lombyte's with every
+symbol given its PAL name and declared the way this build reaches it; where a form of Lombyte's was
+changed, the function's comment says so. `func_L10_002DE018` started from a draft that does not match
+there. In parentheses, Lombyte's name.
+
+- `src/game/loaders.c`: `func_00204340` (`register_shrub_render_class`)
+- `src/game/sound.c`: `func_0022DD68` (`sound_update`)
+- `src/overlays/l10_orxon/vendor_00296BD8.c`: `func_L10_002DE018` (`FUN_L10_002dcc58`)
+- `src/overlays/shared/mobyutil_00258BC8.c`: `func_L00_0025BCF8` (`FUN_L00_0025aca0`)
+- `src/overlays/shared/vendor_002A5218.c`: `func_L02_002FCE00` (`FUN_L02_002fb9c8`)
+- `src/overlays/shared/vendor_002C96D0.c`: `func_L00_002CF808` (`FUN_L00_002ce358`)
+- `src/overlays/shared/vendor_002CF2C0.c`: `func_L05_0030D678` (`FUN_L05_0030c220`)
+- `src/overlays/shared/vendor_002D9438.c`: `func_L00_002DACC0` (`FUN_L00_002d9810`)
+- `src/overlays/shared/vendor_002EB0D8.c`: `func_L00_002ED320` (`FUN_L00_002ebe70`)
+
 `include/hero.h` (the hero and the records inside it) and `include/vector.h` (the 16-byte vector) are
 adapted from Lombyte's `include/rnc/gameplay/hero.h` and `include/rnc/math/vector.h` at 42adb529, while
 Lombyte was MIT licensed. `include/pad.h` (the controller state) is adapted from its
-`include/rnc/input/pad_state.h` at the same commit.
+`include/rnc/input/pad_state.h` at the same commit. On 2026-10-22 `include/moby.h`, `include/hero.h` and
+`include/pad.h` took the NTSC decomp's later changes at 4e1f255e (GPL-3.0 since its a1379f57): two
+hero fields, the pad button bits and the function names in their comments. `include/hero_state.h`,
+`include/moby_class_id.h` and `include/camera_modes.h` (enumerations only) are its
+`include/rnc/gameplay/hero_state.h`, `include/rnc/gameplay/entities/moby_class_id.h` and
+`include/rnc/gameplay/camera/camera_modes.h` at 4e1f255e.
+
+Names from the NTSC decomp (Lombyte's project, by Mateusz Kłysz, GPL-3.0 since its commit a1379f57):
+`tools/names.py ntsc` reads the function and data names its C binds to US addresses, and its source
+file for each function, from the commit pinned in `config/versions/us/ntsc_decomp.txt` (fetched by
+`tools/ntsc_source.py`, never copied into this repository) at every `tools/ntsc_source.py follow`, and places them on
+this project's PAL symbols. They are listed in `config/names_ntsc.tsv` (first imported at 4e1f255e:
+1,458 names adopted in `config/names.tsv` and `include/names.h`) and `config/modules.tsv`. Only the
+names and paths are taken, no code (docs/NAMES.md).
 
 Data taken from Lombyte:
 
@@ -1073,3 +1103,16 @@ check. In parentheses, Lombyte's name.
 - `src/overlays/shared/vendor_002E1660.c`: `func_L00_002EA4C0` (`FUN_L00_002e9010`)
 - `src/overlays/shared/vendor_002F7700.c`: `func_L01_00303810` (`FUN_L01_00302438`)
 - `src/overlays/shared/vendor_002FF000.c`: `func_L06_00309170` (`FUN_L06_00307d30`)
+
+## PAL v2 matching additions (2026-10-23)
+
+The following reconstructions build on the NTSC decomp (Lombyte), pinned at
+4e1f255e524d922af78aecc2af49df3deb57a709 (GPL-3.0). PAL addresses, compiler
+behaviour and emitted bytes are checked against the PAL v2 retail image:
+
+- src/core/989snd.c: func_0012DB68 (snd_StartSoundSystem), from
+  src/textbin/audio/snd_start_sound_system.c, snd_start_sound_system.
+- src/overlays/shared/help_00232560.c: func_L00_00232EF0, from
+  src/overlays/shared/ui/help/00232670.c, FUN_L00_00232670, continued from
+  the staged OpenRAC candidate. The scalar pool and the animation-reset
+  helper identity are verified separately against PAL.

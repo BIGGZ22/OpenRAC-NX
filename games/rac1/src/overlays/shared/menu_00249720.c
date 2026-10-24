@@ -68,7 +68,7 @@ extern int D_001414DC;
 // Checks a menu flag for small values and mode 15 for larger values.
 int func_L00_0024A110(int unused, int value) {
     if (value >= 257) return D_001414DC == 15;
-    return D_0013D4C5 != 0;
+    return menu_item_enabled_41 != 0;
 }
 INCLUDE_ASM("asm/overlays", func_L00_0024A12C);
 /* a < 224: x >= 47.75f; else x < 29.0f (the joined tail). */
@@ -84,7 +84,7 @@ int func_L00_0024A198(int a, float b, float c, float x) {
 }
 INCLUDE_ASM("asm/overlays", func_L00_0024A1E4);
 /* tests menu coordinate bounds selected by item */
-int func_L00_0024A210(int item, float a, float b, float x) {
+int test_selected_z_range(int item, float a, float b, float x) {
  if (item < 224) return x >= 42.0f && x <= 43.0f;
  return x >= 39.0f;
 }
@@ -92,7 +92,7 @@ INCLUDE_ASM("asm/overlays", func_L00_0024A25C);
 extern unsigned char D_0013D4E0[];
 /* a >= 190: D_0013D4E0 != 0; else x >= 58.5f (the joined tail). */
 int func_L00_0024A320(int a, float b, float c, float x) {
-    if (a >= 190) return D_0013D4E0[0] != 0;
+    if (a >= 190) return menu_item_enabled_68[0] != 0;
     return x >= 58.5f;
 }
 int func_L00_0024A338(float a, float b, float x) { return x >= 58.5f; }
@@ -165,7 +165,7 @@ typedef struct {
 extern void func_00207090(unsigned char *dst, int row, unsigned char *src, short *offs);
 extern Cache D_L00_001842F0;
 extern int D_L00_0015F4F8 MACRO_ADDR;
-int func_L00_0024A798(int key) {
+int ensure_menu_cache_entry(int key) {
     int i;
     int victim;
     int miss;
@@ -193,7 +193,7 @@ int func_L00_0024A798(int key) {
         } while (i < 8 && *entry != key); } while (0);
     }
     if (i == 8) {
-        func_00207090(D_L00_001842F0.e[victim].dst, key, D_L00_001842F0.src, D_L00_001842F0.offs);
+        decode_map_rle_row(D_L00_001842F0.e[victim].dst, key, D_L00_001842F0.src, D_L00_001842F0.offs);
         D_L00_001842F0.e[victim].key = key;
         i = victim;
         miss = 1;
@@ -246,11 +246,11 @@ void func_L00_0024B200(float *p1, float *p2, int k, float t, float u) {
         k = 0;
     }
     if (k == 6 && seven) {
-        *p1 = (D_L00_00182B70[6].ys * u + 1053.0f) * 0.001953125f;
-        *p2 = (740.0f - D_L00_00182B70[6].xs * t) * 0.001953125f;
+        *p1 = (map_coefficients[6].ys * u + 1053.0f) * 0.001953125f;
+        *p2 = (740.0f - map_coefficients[6].xs * t) * 0.001953125f;
     } else {
-        *p1 = (D_L00_00182B70[k].x0 + D_L00_00182B70[k].xs * t) * 0.001953125f;
-        *p2 = (D_L00_00182B70[k].y0 + D_L00_00182B70[k].ys * u) * 0.001953125f;
+        *p1 = (map_coefficients[k].x0 + map_coefficients[k].xs * t) * 0.001953125f;
+        *p2 = (map_coefficients[k].y0 + map_coefficients[k].ys * u) * 0.001953125f;
     }
 }
 INCLUDE_ASM("asm/overlays", func_L00_0024B2A4);
@@ -263,10 +263,10 @@ void AdvanceCardMenu(void) {
  int intermediate=old&~4;
  int flags=intermediate&~2;
  D_0015EFB4=flags;
- if(D_0013D390[0xfc/4]==0) D_0015EFB0=3;
+ if(memory_card_state[0xfc/4]==0) D_0015EFB0=3;
  else if(old&0x80) { D_0015EFB0=21; D_0015EFB4=(flags^0x80)|0x40; }
  else if(old&0x100) { D_0015EFB0=20; D_0015EFB4=(flags^0x100)|0x40; }
- else if(D_0013D390[7]!=0) { D_0013D390[0xfc/4]=0; D_0015EFB4=flags|1; D_0015EFB0=2; }
+ else if(memory_card_state[7]!=0) { memory_card_state[0xfc/4]=0; D_0015EFB4=flags|1; D_0015EFB0=2; }
  else if(old&0x200) { D_0015EFB4=flags^0x200; D_0015EFB0=22; }
 }
 INCLUDE_ASM("asm/overlays", func_L00_0024B788);
@@ -276,10 +276,10 @@ extern int D_0015EFB0 MACRO_ADDR;
 /* clears the menu flag and advances based on card status */
 void CardMenu_AdvanceOnStatus(void) {
  D_0015EFB4 &= ~0x20;
- if (D_0013D390[2] == 2) {
-  int v = D_0013D390[7];
+ if (memory_card_state[2] == 2) {
+  int v = memory_card_state[7];
   if (v == 0) D_0015EFB0 = 9;
-  else if (v == -1) { D_0013D390[7] = 0; D_0015EFB0 = 9; }
+  else if (v == -1) { memory_card_state[7] = 0; D_0015EFB0 = 9; }
   else if (v == -2) D_0015EFB0 = 5;
  }
 }
@@ -343,7 +343,7 @@ void SetMenuStateFromCardStatus(void) {
 INCLUDE_ASM("asm/overlays", func_L00_0024BA60);
 /* sets the menu state to 3 while D_0013D390[7] is set, else to 10 when flag 2 or 4 is up */
 void CardMenu_AdvanceOnSaveByte(void) {
-    if (D_0013D390[7] != 0) {
+    if (memory_card_state[7] != 0) {
         D_0015EFB0 = 3;
         return;
     }
@@ -356,9 +356,9 @@ extern int D_0015EFB0;
 INCLUDE_ASM("asm/overlays", func_L00_0024BA8C);
 /* Marks the selected card slot as 2 if it was 1, then picks the next menu state. */
 void MarkSelectedCardSlot(void) {
- char *p=(char *)D_0013D390; int *item;
+ char *p=(char *)memory_card_state; int *item;
  if (*(int *)(p+0xDC)>=3 || *(int *)(p+0xE4)>=0) { int index=*(int *)(p+0xCC); char *r=p+0xB0; item=(int *)(index*192+r); if (*item==1) *item=2; }
- p=(char *)D_0013D390;
+ p=(char *)memory_card_state;
  if (*(int *)(p+0x1C)<-1 || *(int *)(p+0xEC)) { D_0015EFB0=3; return; }
  if (*(int *)(p+0x14)==-2) { if (*(int *)(p+0xC)+*(int *)(p+0xAC)<350) { D_0015EFB0=19; return; } D_0015EFB0=12; return; }
  if (*(int *)(p+0x14)>=-1) D_0015EFB0=16;
@@ -366,14 +366,13 @@ void MarkSelectedCardSlot(void) {
 INCLUDE_ASM("asm/overlays", func_L00_0024BB5C);
 INCLUDE_ASM("asm/overlays", func_L00_0024BB90);
 INCLUDE_ASM("asm/overlays", func_L00_0024BB98);
-INCLUDE_ASM("asm/overlays", func_L00_0024BBCC);
 extern int D_L00_0015F688 MACRO_ADDR;
 /* while D_0013D390[7] is set the menu state is 3; else flag 0x20 is taken down with state 24
    (D_L00_0015F688 set) or 12, or flag 0x10 with state 14 */
 void CardMenu_AdvanceOnFlags(void) {
     int flags;
 
-    if (D_0013D390[7] != 0) {
+    if (memory_card_state[7] != 0) {
         D_0015EFB0 = 3;
         return;
     }
@@ -402,7 +401,7 @@ typedef struct { int v[60]; } MenuState;
 extern int D_0015EFB4_m __asm__("D_0015EFB4") MACRO_ADDR;
 /* advances the active menu state or requests its alternate action */
 void CardMenu_AdvanceOrAlternate(void) {
- MenuState *p = &D_0013D390;
+ MenuState *p = &memory_card_state;
  if (p->v[55]==2 && p->v[57]<0) {
  if (p->v[59]) { D_0015EFB0=18; D_0015EFB4_m |= 64; }
  else { p->v[50]=0; p->v[57]=7; p->v[5]=0; p->v[58]=0; D_0015EFB0=16; }
@@ -415,17 +414,17 @@ void CardMenu_NextStateFromFlags(void) {
     if (D_0015EFB4 & 2) D_0015EFB4 &= ~2;
     if (D_0015EFB4 & 0x80) { D_0015EFB0 = 21; D_0015EFB4 = (D_0015EFB4 ^ 0x80) | 0x40; }
     else if (D_0015EFB4 & 0x100) { D_0015EFB0 = 20; D_0015EFB4 = (D_0015EFB4 ^ 0x100) | 0x40; }
-    else if (D_0013D390[7] != 0) D_0015EFB0 = 3;
-    else if (D_0013D390[0xfc/4] != 0) D_0015EFB0 = 1;
+    else if (memory_card_state[7] != 0) D_0015EFB0 = 3;
+    else if (memory_card_state[0xfc/4] != 0) D_0015EFB0 = 1;
 }
 INCLUDE_ASM("asm/overlays", func_L00_0024BD84);
 INCLUDE_ASM("asm/overlays", func_L00_0024BDB8);
 /* while D_0013D390[55] < 3 and D_0013D390[57] < 0: with D_0013D390[59] set, D_0013D390[63] is
    cleared, the state becomes 21 and flags 0x40 and 0x400 go up; else the state becomes 1 */
 void CardMenu_NextStateOnCounters(void) {
-    if (D_0013D390[55] < 3 && D_0013D390[57] < 0) {
-        if (D_0013D390[59] != 0) {
-            D_0013D390[63] = 0;
+    if (memory_card_state[55] < 3 && memory_card_state[57] < 0) {
+        if (memory_card_state[59] != 0) {
+            memory_card_state[63] = 0;
             D_0015EFB0 = 21;
             D_0015EFB4 |= 0x440;
         } else {
@@ -433,5 +432,3 @@ void CardMenu_NextStateOnCounters(void) {
         }
     }
 }
-INCLUDE_ASM("asm/overlays", func_L00_0024BFB8);
-INCLUDE_ASM("asm/overlays", func_L00_0024BFFC);

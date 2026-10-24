@@ -290,3 +290,80 @@ zero size/byte mismatches, all functions at retail addresses and zero
 image differences. The portable build models a measured assembler action;
 it does not introduce a compiler flag or insert instructions to conceal
 a source mismatch.
+
+### Original assembler for 989snd (2026-10-23)
+
+The whole 989snd translation unit now uses SN ps2eeas 1.9.6.516 through
+tools/ps2eeas.py. Its SHA-256 is checked before execution. GCC's instructions
+are not rewritten: the wrapper puts its extern-size declarations before
+their first use and expands only the labels and size markers in the
+retail linker-remnant includes. All fifteen remnants remain in the object.
+
+This matters for snd_StartSoundSystem (func_0012DB68, 600 bytes): SN's
+assembler respects the declared object's small-data extent when an access
+has an addend. GNU as selects a gp-relative access for some second elements
+where the original assembler emits a full address. Both SN 1.9.6.516 and
+1.9.25.758 reproduced the candidate exactly. The full 989snd object has
+48 compiled functions and fifteen remnants, 6,048 bytes of text, with
+unchanged function addresses and sizes. The neighbouring func_0012EC60
+names D_0015EDC8 directly rather than reaching beyond D_0015EDBC's object.
+The independent object comparison still leaves one orphan HI16 relocation
+for the final linked-image check; an object verdict alone is insufficient.
+
+The existing check_macro_slots step prepares small-data symbol metadata;
+the GNU short-loop, constant-expansion and macro-load modelling steps are
+not run on this object. The real assembler performs those operations.
+Preparation failures remove any old output object before returning.
+
+### CRT exit reconstruction (2026-10-23)
+
+crt0.o is compiled as a whole with the existing Sony 2.9-ee profile.
+Its two original-assembly entry points remain assembly. The only C
+function, func_0012DA28, calls func_0011DDA0 with status zero; the compiler
+emits the retail eight-byte tail call directly. No tail-call rewriting
+step or per-function compiler option is used. This is an exact C
+reconstruction, not a claim that the original entry was authored in C.
+
+### Compiler-generated scalar pool placement (2026-10-23)
+
+`tools/fix_jump_tables.py` also places explicitly configured 32-bit scalar
+pools in `.rodata.D_LNN_XXXXXXXX` sections. The compiler's local label,
+`.word` value, alignment and every instruction remain unchanged; only the
+section directive names the retail placement. `config/overlays/scalar_literals.tsv`
+records the owning function, retail data symbol and expected 32-bit word.
+Unknown pools, multiple destinations for one pool, unconfigured users,
+unaligned addresses, absent retail references and different retail bytes
+are rejected. `tools/overlay_check.py` independently checks the generated
+section's size, bytes and alignment before resolving its relocations.
+
+Measured dependence: one function, `func_L00_00232EF0`, 1,312 unique code
+bytes. The source's `1.0f / 0.0f` emits the literal `0x7f800000`; the canonical
+retail function loads exactly that word from `D_L00_0015F7E8`. Declaring the
+constant `extern const` instead changes GCC's allocator metadata and swaps
+`$f22` / `$f23` (four differing bytes). Keeping the compiler-generated
+constant restores the retail allocation without changing emitted code.
+The candidate calls the distinct animation reset helper func_L00_00232A00;
+its identity preserves the 0x2278/0x227C member offsets instead of merging
+it with Hero_ClearSpeedTargets (0x190/0x194).
+The strict canonical check resolves all 26 relocations and compares all
+1,312 bytes without masking. The scalar section itself is four bytes,
+aligned to four, and equals the extracted retail pool.
+
+An additional diagnostic checks all 19 catalogued placements (24,928 code
+bytes), using a fixed, reviewed fixture of per-level symbol bindings originally
+measured from retail relocation sites. The standard canonical exact check is a
+precondition; no binding is inferred from comparison bytes during this check. The literal is at `0x15F7F8` in levels 05 and 16 and `0x15F7E8`
+elsewhere; all 19 contain `00 00 80 7F`. Levels 05 and 16 also bind
+the animation-pointer reset `func_L00_00232A00` to the catalogued extended helper
+`func_L05_0025BDA8` (at `0x25BDA8` and `0x22E428`), whereas the other levels
+use the distinct 20-byte `func_L00_00232A00` helper (fields +0x2278/+0x227C).
+The previous catalogue incorrectly grouped it with movement target reset
+`func_L00_00211F68` (fields +0x190/+0x194); separating those identities is a
+prerequisite for the source and these placement proofs. Those explicit symbol bindings
+are linker inputs; no opcode or difference mask is changed. This validates
+the function's copies, not a full rebuild of the 19 level programs.
+
+Validation: scalar placement positive/negative unit tests; canonical
+`try_func` exact comparison; all C functions in `help_00232560.c`; 19-placement
+diagnostic. The complete executable and repository progress checks remain
+required at integration.

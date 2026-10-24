@@ -31,7 +31,7 @@ extern void project_to_screen(f32 *, void *) __asm__("func_001F2418");
 extern s64 get_effect_texture(s32) __asm__("func_001F4868");
 extern void draw_textured_quad(s32, s32, s32, s32, s32, s32, s32, s32, s64, s64) __asm__("func_001F5800");
 /* Lens flare: projects the flare moby to the screen and fills the per-element alpha, texture, colour, distance and scale tables. Adapted from Lombyte (GPL-3.0) for PAL: rendering/effects/fun_001edc50.c, FUN_001edc50. */
-void LensFlareUpdate(void) {
+void draw_lens_flare(void) {
     f32 scr[4];
     f32 ctr[4];
     f32 d[4];
@@ -125,7 +125,7 @@ extern void func_001F5E60(float, float, float, float, float, int, int, int, int,
  * array, not scalars: retail spills them to fixed stack slots (0x0, 0x4,
  * 0x10, 0x14 with an 8-byte gap) instead of extra saved float registers.
  */
-void DrawFlareSprites(void *arg0, float arg1, float arg2)
+void spawn_particle_burst(void *arg0, float arg1, float arg2)
 {
     float forty = 40.0f;
     char *p = (char *)arg0;
@@ -138,7 +138,7 @@ void DrawFlareSprites(void *arg0, float arg1, float arg2)
     switch (mode) {
     case 0:
         for (i = 0; i < *(short *)(p + 0x26); i++) {
-            func_001F5E60(arg1, arg2, forty * *(float *)(p + 0x10),
+            append_rotated_sprite_quad(arg1, arg2, forty * *(float *)(p + 0x10),
                           forty * *(float *)(p + 0x10), angle,
                           0x3F, 0x3F, handle, 0xFFFFF3, *(int *)(p + 0x14), 0, 0,
                           0.0f, 0.0f);
@@ -154,25 +154,25 @@ void DrawFlareSprites(void *arg0, float arg1, float arg2)
         tmp[5] = FastSin(angle) * -forty * *(float *)(p + 0x10);
 
         k = *(float *)(p + 0x10) * forty;
-        func_001F5E60(arg1, arg2, k, k, angle,
+        append_rotated_sprite_quad(arg1, arg2, k, k, angle,
                       0x3F, 0x3F, handle, 0xFFFFF3, *(int *)(p + 0x14), 0, 0,
                       0.0f, 0.0f);
 
         k = *(float *)(p + 0x10);
         k *= forty;
-        func_001F5E60(arg1 + tmp[4], arg2 + tmp[5], k, k, angle,
+        append_rotated_sprite_quad(arg1 + tmp[4], arg2 + tmp[5], k, k, angle,
                       0x3F, 0x3F, handle, 0xFFFFF3, *(int *)(p + 0x14), 1, 0,
                       0.0f, 0.0f);
 
         k = *(float *)(p + 0x10);
         k *= forty;
-        func_001F5E60(arg1 - tmp[0], arg2 - tmp[1], k, k, angle,
+        append_rotated_sprite_quad(arg1 - tmp[0], arg2 - tmp[1], k, k, angle,
                       0x3F, 0x3F, handle, 0xFFFFF3, *(int *)(p + 0x14), 0, 1,
                       0.0f, 0.0f);
 
         k = *(float *)(p + 0x10);
         k *= forty;
-        func_001F5E60(arg1 + tmp[4] - tmp[0], arg2 + tmp[5] - tmp[1], k, k, angle,
+        append_rotated_sprite_quad(arg1 + tmp[4] - tmp[0], arg2 + tmp[5] - tmp[1], k, k, angle,
                       0x3F, 0x3F, handle, 0xFFFFF3, *(int *)(p + 0x14), 1, 1,
                       0.0f, 0.0f);
         break;
@@ -180,7 +180,7 @@ void DrawFlareSprites(void *arg0, float arg1, float arg2)
     case 2:
         k = *(float *)(p + 0x10);
         k *= forty;
-        func_001F5E60(arg1, arg2, k, k, angle,
+        append_rotated_sprite_quad(arg1, arg2, k, k, angle,
                       0x3F, 0x3F, handle, 0xFFFFF3, *(int *)(p + 0x14), 0, 0,
                       0.5f, 0.5f);
         break;
@@ -214,33 +214,33 @@ extern void func_001EE3B0(void *, float, float);
    at its projected screen position (func_001F2418, then relative to the
    D_0013E600 offset in 1/16 units) or, for off-screen ones, at the
    screen centre; then empties the queue. Nothing in level 0x72. */
-void DrawQueuedGlows(void) {
+void render_queued_rotated_sprites(void) {
     float centre[4];
     float pos[4];
     int i;
 
     if (D_001414D4 == 0x72) {
-        D_00189400.count = 0;
+        rotated_sprite_queue.count = 0;
     }
-    if (D_00189400.count != 0) {
+    if (rotated_sprite_queue.count != 0) {
         centre[0] = IntToFloat(D_0013E600[2]);
         centre[1] = IntToFloat(D_0013E600[3]);
-        for (i = 0; i < D_00189400.count; i++) {
-            GlowSlot *s = &D_00189400.slot[i];
+        for (i = 0; i < rotated_sprite_queue.count; i++) {
+            GlowSlot *s = &rotated_sprite_queue.slot[i];
 
             if (s->moby == 0 || s->moby[0x20] == 0xFE || s->moby[0x20] == 0xFD) {
                 continue;
             }
             if (s->onScreen != 0) {
-                projectWorldPoint(pos, s);
+                func_001F2418(pos, s);
                 pos[0] = (pos[0] - IntToFloat(D_0013E600[4])) * 0.0625f;
                 pos[1] = (pos[1] - IntToFloat(D_0013E600[5])) * 0.0625f;
             } else {
                 qcopy(pos, centre);
             }
-            DrawFlareSprites(s, pos[0], pos[1]);
+            spawn_particle_burst(s, pos[0], pos[1]);
         }
-        D_00189400.count = 0;
+        rotated_sprite_queue.count = 0;
     }
 }
 
@@ -273,7 +273,7 @@ extern s32 func_001FA898(f32);
 
 /* Adapted from Lombyte (GPL-3.0) for PAL by OpenRAC's tools/port.py: src/textbin/update_camera_environment_from_regions.c,
  * update_camera_environment_from_regions; the fog preset written as the struct src/game/draw.c reads. */
-void Camera_UpdateEnvironment(void *position) {
+void update_camera_environment_from_regions(void *position) {
     f32 blend;
     s32 region_index;
     struct CameraEnvironmentRegion *region;
@@ -291,10 +291,10 @@ void Camera_UpdateEnvironment(void *position) {
     u32 positive_blue;
     u32 negative_blue;
 
-    if (func_00213A78(position, &blend, &region_index) == 0) {
+    if (find_camera_environment_region(position, &blend, &region_index) == 0) {
         return;
     }
-    region = &D_0019AEC0[region_index];
+    region = &camera_environment_regions[region_index];
     if (!(region->flags & 2)) {
         return;
     }
@@ -311,18 +311,18 @@ void Camera_UpdateEnvironment(void *position) {
     negative_blue = (negative_color >> 16) & 0xFF;
     red = (s32)(positive_red + negative_red) >> 8;
     green = (s32)(positive_green + negative_green) >> 8;
-    D_0015F584.b = (s32)(positive_blue * positive_weight + negative_blue * negative_weight) >> 8;
-    D_0015F584.r = red;
-    D_0015F584.g = green;
-    D_0015F584.f[0] =
+    fog_color_red.b = (s32)(positive_blue * positive_weight + negative_blue * negative_weight) >> 8;
+    fog_color_red.r = red;
+    fog_color_red.g = green;
+    fog_color_red.f[0] =
         (region->positive_depth_start * blend + region->negative_depth_start * inverse_blend) *
         1024.0f;
-    D_0015F584.f[1] =
+    fog_color_red.f[1] =
         (region->positive_depth_end * blend + region->negative_depth_end * inverse_blend) * 1024.0f;
-    D_0015F584.f[2] = 255.0f - (region->positive_value_start * blend +
+    fog_color_red.f[2] = 255.0f - (region->positive_value_start * blend +
                                    region->negative_value_start * inverse_blend) *
                                       255.0f;
-    D_0015F584.f[3] =
+    fog_color_red.f[3] =
         255.0f -
         (region->positive_value_end * blend + region->negative_value_end * inverse_blend) * 255.0f;
 }

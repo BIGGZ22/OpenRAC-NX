@@ -22,10 +22,10 @@ extern void func_00114438(void *, void *);
 
 int func_00114000(int *errOut, void *arg1, void *arg2) {
     int r;
-    D_0015ED10 = 0;
+    SbrkErrno = 0;
     r = func_001191C8(arg1, arg2);
-    if (r == -1 && D_0015ED10 != 0) {
-        *errOut = D_0015ED10;
+    if (r == -1 && SbrkErrno != 0) {
+        *errOut = SbrkErrno;
     }
     return r;
 }

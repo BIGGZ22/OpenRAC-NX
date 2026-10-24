@@ -183,7 +183,7 @@ extern int func_0023CEC8(ViBuf *, unsigned int);
 /* viBufAddDMA(ViBuf *): under the buffer's semaphore, reads the channel-4 DMA position,
  * advances fC/f10 past the consumed slots, turns whole 0x800-byte units of f14 into
  * ref tags (0x80 qwords each) and restarts channel 4. Returns 0 when f44 is clear. */
-int func_0023D340(ViBuf *vb) {
+int viBufAddDMA(ViBuf *vb) {
     int ok = 0;
     unsigned int chcr;
     int idx;
@@ -200,7 +200,7 @@ int func_0023D340(ViBuf *vb) {
     }
     setD4_CHCR(5);
     chcr = *(volatile unsigned int *)0x1000B400;
-    rd = func_0023CEC8(vb, *(volatile unsigned int *)0x1000B410);
+    rd = getFIFOindex(vb, *(volatile unsigned int *)0x1000B410);
     done = (rd + vb->count - vb->fC) % vb->count;
     vb->fC = (vb->fC + done) % vb->count;
     vb->f10 -= done;
@@ -393,7 +393,7 @@ static inline int ring_mod(int a, int b) { return a % b; }
  * 0x50 from the oldest one (index (f5C - f58) mod ntbl) while they lie within ts's
  * byte range (pos/len, modulo the 0x800 * count ring), trims the overlapped bytes off
  * each entry, clears an entry that becomes empty and lowers f58 (not below 0). */
-int func_0023DA88(ViBuf *vb, TimeStamp *ts) {
+int viBufModifyPts(ViBuf *vb, TimeStamp *ts) {
     int i = (vb->f5C - vb->f58 + vb->ntbl) % vb->ntbl;
     int size = vb->count << 11;
     int go = 1;
@@ -456,7 +456,7 @@ static inline int ts_dist(int a, int size) {
 }
 
 /* viBufGetTs(ViBuf *, TimeStamp *) */
-int func_0023DCF0(ViBuf *vb, TimeStamp *ts) {
+int viBufGetTs(ViBuf *vb, TimeStamp *ts) {
     unsigned int madr = *(volatile unsigned int *)0x1000B410;
     unsigned int top = *(volatile unsigned int *)0x10002020;
     int bp = *(unsigned int *)((char *)vb + 0x38) & 0x7F;

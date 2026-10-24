@@ -22,6 +22,11 @@ Decompilation progress is tracked live on **[openrac.dev](https://openrac.dev)**
 | Version | Region | Target ID | Code Matched | Functions Matched |
 |---|---|---|---|---|
 | v2.00 | PAL (En, Fr, De, Es, It) | `SCES_509.16` | [![](https://bytematch.dev/OpenRAC/rac1-decomp.svg?mode=shield&label=Code&measure=matched_code_percent)](https://bytematch.dev/OpenRAC/rac1-decomp) | [![](https://bytematch.dev/OpenRAC/rac1-decomp.svg?mode=shield&label=Functions&measure=matched_functions)](https://bytematch.dev/OpenRAC/rac1-decomp) |
+| v1.00 | PAL (En, Fr, De, Es, It) | `SCES_509.16_v1` | [![](https://bytematch.dev/OpenRAC/rac1-decomp.svg?mode=shield&label=Code&measure=matched_code_percent&version=SCES_509.16_v1)](https://bytematch.dev/OpenRAC/rac1-decomp/SCES_509.16_v1) | [![](https://bytematch.dev/OpenRAC/rac1-decomp.svg?mode=shield&label=Functions&measure=matched_functions&version=SCES_509.16_v1)](https://bytematch.dev/OpenRAC/rac1-decomp/SCES_509.16_v1) |
+| v1.02 | NTSC-J | `SCPS_150.37` | [![](https://bytematch.dev/OpenRAC/rac1-decomp.svg?mode=shield&label=Code&measure=matched_code_percent&version=SCPS_150.37)](https://bytematch.dev/OpenRAC/rac1-decomp/SCPS_150.37) | [![](https://bytematch.dev/OpenRAC/rac1-decomp.svg?mode=shield&label=Functions&measure=matched_functions&version=SCPS_150.37)](https://bytematch.dev/OpenRAC/rac1-decomp/SCPS_150.37) |
+| v1.00 | NTSC-U (the NTSC decomp's own count, Lombyte's) | `SCUS_971.99` | [![](https://bytematch.dev/OpenRAC/rac1-decomp.svg?mode=shield&label=Code&measure=matched_code_percent&version=SCUS_971.99)](https://bytematch.dev/OpenRAC/rac1-decomp/SCUS_971.99) | [![](https://bytematch.dev/OpenRAC/rac1-decomp.svg?mode=shield&label=Functions&measure=matched_functions&version=SCUS_971.99)](https://bytematch.dev/OpenRAC/rac1-decomp/SCUS_971.99) |
+
+PAL v2.00 is the primary version; the other releases share its C, with their own definitions only where their bytes differ, and each builds byte-identical from assembly and has its own report (see [`docs/VERSIONS.md`](docs/VERSIONS.md)). NTSC-U is built and checked here like the others (`config/versions/us/`, `progress/us/report.json`); the `SCUS_971.99` figure ByteMatch shows is the NTSC decomp's own count, Lombyte's (Mateusz Kłysz's) decompilation of NTSC-U, which this repository reads at a pinned commit, outside the checkout, for its names and its report (`tools/ntsc_source.py`; see [`docs/VERSIONS.md`](docs/VERSIONS.md)).
 
 Every function links at its original retail address. Functions not yet decompiled are built from disassembly, ensuring the full binary always links and matches retail byte-for-byte outside in-progress functions. For level overlays and breakdown details, see [ByteMatch](https://bytematch.dev/OpenRAC/rac1-decomp) and [`docs/OVERLAYS.md`](docs/OVERLAYS.md).
 
@@ -102,7 +107,8 @@ This project builds upon years of dedicated reverse-engineering research and too
   - [splat](https://github.com/ethteck/splat) & [spimdisasm](https://github.com/Decompollaborate/spimdisasm) – Binary splitting and MIPS disassembly.
   - [m2c](https://github.com/matt-kempster/m2c) & [asm-differ](https://github.com/simonlindholm/asm-differ) – Assembly-to-C translation and diffing.
   - [objdiff](https://github.com/encounter/objdiff) – Object diffing tool.
-  - [ByteMatch](https://bytematch.dev) & [decomp.wiki](https://decomp.wiki) – Progress tracking and decompilation knowledge base.
+  - [ByteMatch](https://bytematch.dev) – Progress tracking (formerly on decomp.dev).
+  - [decomp.wiki](https://decomp.wiki) – Decompilation knowledge base.
   - [AngheloAlf](https://github.com/AngheloAlf) – PS2 toolchain mirrors.
 
 ---

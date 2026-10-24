@@ -122,6 +122,16 @@ def dtls29_sources() -> set[str]:
     return out
 
 
+def ps2eeas_real_sources() -> set[str]:
+    """Whole SN objects assembled by the original ps2eeas binary."""
+    out = set()
+    for line in (ROOT / "config/core_text.objects").read_text().splitlines():
+        parts = line.split()
+        if len(parts) > 4 and not line.startswith("#") and parts[4] == "ps2eeas-real":
+            out.add(source_of(parts[0]))
+    return out
+
+
 def source_of(obj: str) -> str:
     """The source file an object in the list is built from."""
     name = obj.rsplit("/", 1)[1][:-2]

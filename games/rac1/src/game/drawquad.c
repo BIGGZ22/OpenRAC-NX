@@ -135,7 +135,7 @@ extern s32 func_001FA898(f32);
 extern void func_00234C98(s32, u64);
 
 /* Adapted from Lombyte (GPL-3.0) for PAL by OpenRAC's tools/port.py: src/textbin/append_billboard_batch.c, append_billboard_batch. */
-void DrawBillboardBatch(void) {
+void append_billboard_batch(void) {
     Vec4f projected_position;
     Vec4f clip_position;
     f32 distance;
@@ -154,29 +154,29 @@ void DrawBillboardBatch(void) {
 
     VU1_addGSregister(0x42, 0x8000000048);
     for (record_index = 0; record_index < 16; record_index++) {
-        records = D_0018EE00;
+        records = billboard_records;
         record = records + record_index;
         if (record->active_count <= 0) {
             continue;
         }
-        FastVecSub(&projected_position, record, D_00187180);
+        FastVecSub(&projected_position, record, camera_position);
         projected_position.w = 1.0f;
         distance = FastVecLength(&projected_position);
         FastVecScale(&projected_position, &projected_position, 1024.0f);
-        func_001F9EE8(&projected_position, &projected_position, D_00187180 - 0x100);
-        func_001F9C60(&clip_position, &projected_position,
-                                   (char *)&D_0018CE00 + 0x180);
-        if (func_001F9B20(&clip_position) != 0) {
+        func_001F9EE8(&projected_position, &projected_position, camera_position - 0x100);
+        multiply_vector_components(&clip_position, &projected_position,
+                                   (char *)&view_context + 0x180);
+        if (is_vector_outside_clip(&clip_position) != 0) {
             FastMemSet(record, 0, 0x20);
             continue;
         }
         FastVecScale(&projected_position, &projected_position,
-                       D_0018CE00.projection_scale / projected_position.w);
+                       view_context.projection_scale / projected_position.w);
         color = (record->alpha << 24) | 0x808080;
         x = truncate_float_to_s32(projected_position.x * 16.0f) + 0x8000;
         y = truncate_float_to_s32(projected_position.y * 16.0f) + 0x8000;
         packed_position = ((s64)truncate_float_to_s32(projected_position.z * 0.9997f +
-                                                         D_0018CE00.depth_offset)
+                                                         view_context.depth_offset)
                            << 32) |
                           ((s64)y << 16) | x;
         if (distance > 18.0f) {
@@ -194,7 +194,7 @@ void DrawBillboardBatch(void) {
         D_00161000.p->vif1 = 0x50000009;
         tag = D_00161000.p;
         D_00161000.p = tag + 1;
-        qcopy(tag + 1, D_001609E0);
+        qcopy(tag + 1, billboard_quad_header);
         packet_words = (s64 *)(tag + 2);
         D_00161000.p = tag + 2;
         packet_words[0] = 5;

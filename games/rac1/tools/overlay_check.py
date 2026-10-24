@@ -414,6 +414,16 @@ class Placer:
         relocations touch (base + in-place addend, in the object's own
         .rodata coordinates), and place that table if there is exactly
         one, from the function's own asm/overlays/<name>.s (jtbl_LNN_Z)."""
+        from fix_jump_tables import validate_scalar_section
+        for rel in self.relocations():
+            sym = self.sym_of(rel)
+            secname = section_name(self.elf, sym["st_shndx"])
+            if secname and secname.startswith(".rodata.D_"):
+                try:
+                    validate_scalar_section(self.name, self.elf.get_section(sym["st_shndx"]))
+                except ValueError as error:
+                    self.rodata_error = f"RODATA {error}"
+                    return
         if self.rodata is None:
             return
         touches = []
@@ -475,7 +485,7 @@ class Placer:
                 if self.base_rodata is None:
                     raise Unresolved(".rodata (unplaced)")
                 return self.base_rodata + sym["st_value"]
-            if secname and secname.startswith(".rodata.jtbl_"):
+            if secname and secname.startswith((".rodata.jtbl_", ".rodata.D_")):
                 # tools/fix_jump_tables.py names each compiled table's
                 # section after the retail table it replaces.
                 return resolve_symbol(secname[len(".rodata."):], self.level, near) + sym["st_value"]

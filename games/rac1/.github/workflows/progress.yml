@@ -1,16 +1,17 @@
-# decomp.dev progress report.
+# ByteMatch progress report (https://bytematch.dev/OpenRAC/rac1-decomp).
 #
-# decomp.dev reads objdiff's report.json from an artifact named
-# "<VERSION>_report" on the default branch. This job does NOT build the
-# game: the SN ProDG toolchain and the retail executable cannot be
-# redistributed, so neither is available here. The report is generated
-# locally from a from-scratch build (tools/gen_progress_report.py) and
-# committed as progress/report.json; this job only proves it is current,
-# validates it, and uploads it. It holds names, addresses, sizes and
-# percentages -- no retail bytes.
+# ByteMatch reads objdiff's report.json from an artifact named
+# "<VERSION>_report", from successful push runs on the default branch.
+# This job does NOT build the game: the SN ProDG toolchain and the
+# retail executable cannot be redistributed, so neither is available
+# here. The report is generated locally from a from-scratch build
+# (tools/gen_progress_report.py) and committed as progress/report.json;
+# this job only proves it is current, validates it, and uploads it. It
+# holds names, addresses, sizes and percentages -- no retail bytes.
 #
-# The repository must be registered once by hand at
-# https://decomp.dev/manage/new; this workflow alone does not add it.
+# The repository must be registered once by hand on https://bytematch.dev
+# (sign in with GitHub, Manage, Add project); this workflow alone does not
+# add it.
 name: Progress report
 
 on:
@@ -34,23 +35,54 @@ jobs:
           python-version: "3.12"
 
       # Fails if C was added or removed without regenerating the report,
-      # so the published numbers cannot silently fall behind src/.
+      # so the published numbers cannot silently fall behind src/; it also
+      # runs the versions' sync check (tools/version_sync.py check: the other
+      # versions' maps and reports are current, no copied C, the same code
+      # matched in every version or in none).
       - name: Check the committed report is current
         run: python tools/gen_progress_report.py --check
 
-      - name: Validate the report with objdiff
+      # The NTSC decomp counts itself from its own tree, as its own CI does; its fuzzy scores are
+      # the ones it last published on its `progress` branch. Its tree is the commit pinned in
+      # config/versions/us/ntsc_decomp.txt, fetched shallow by tools/ntsc_source.py.
+      - name: Fetch the NTSC decomp at its pinned commit
+        run: echo "NTSC_DIR=$(python tools/ntsc_source.py path)" >> "$GITHUB_ENV"
+
+      - name: Generate the NTSC-U report (the NTSC decomp)
+        run: |
+          cd "$NTSC_DIR"
+          mkdir -p build/progress
+          if git fetch --depth=1 origin progress && git show FETCH_HEAD:fuzzy_scores.json > build/progress/fuzzy_scores.json; then
+            echo "fuzzy scores from the NTSC decomp's progress branch"
+          else
+            rm -f build/progress/fuzzy_scores.json
+          fi
+          python3 scripts/gen_progress_report.py
+
+      - name: Validate the reports with objdiff
         run: |
           curl --fail --location --retry 3 -o "$RUNNER_TEMP/objdiff-cli" \
             https://github.com/encounter/objdiff/releases/download/v3.8.1/objdiff-cli-linux-x86_64
           echo "c8290281e82114bcc1a06ff73061110d3902a177822e750337de2537188e358f  $RUNNER_TEMP/objdiff-cli" | sha256sum --check
           chmod +x "$RUNNER_TEMP/objdiff-cli"
-          "$RUNNER_TEMP/objdiff-cli" report changes progress/report.json progress/report.json \
-            -o "$RUNNER_TEMP/validation.json"
+          for r in progress/report.json progress/pal_v1/report.json progress/jp/report.json \
+                   progress/us/report.json "$NTSC_DIR/build/progress/report.json"; do
+            "$RUNNER_TEMP/objdiff-cli" report changes "$r" "$r" -o "$RUNNER_TEMP/validation.json"
+          done
 
       - name: Summarise
         run: |
           python3 - <<'PY' >> "$GITHUB_STEP_SUMMARY"
-          import json
+          import json, os
+          for version, path in (("SCES_509.16", "progress/report.json"),
+                                ("SCES_509.16_v1", "progress/pal_v1/report.json"),
+                                ("SCPS_150.37", "progress/jp/report.json"),
+                                ("SCUS_971.99 (ours, not published)", "progress/us/report.json"),
+                                ("SCUS_971.99", os.environ["NTSC_DIR"] + "/build/progress/report.json")):
+              m = json.load(open(path))["measures"]
+              print("%s: %.2f%% code, %s / %s functions  " % (version, m["matched_code_percent"],
+                                                            m["matched_functions"], m["total_functions"]))
+          print()
           r = json.load(open("progress/report.json"))
           m = r["measures"]
           print("| Measure | Value |")
@@ -78,4 +110,25 @@ jobs:
           path: |
             progress/report.json
             progress/functional.json
+          if-no-files-found: error
+
+      - name: Upload the PAL v1.00 report
+        uses: actions/upload-artifact@v4
+        with:
+          name: SCES_509.16_v1_report
+          path: progress/pal_v1/report.json
+          if-no-files-found: error
+
+      - name: Upload the NTSC-J report
+        uses: actions/upload-artifact@v4
+        with:
+          name: SCPS_150.37_report
+          path: progress/jp/report.json
+          if-no-files-found: error
+
+      - name: Upload the NTSC-U report (the NTSC decomp)
+        uses: actions/upload-artifact@v4
+        with:
+          name: SCUS_971.99_report
+          path: ${{ env.NTSC_DIR }}/build/progress/report.json
           if-no-files-found: error

@@ -4,7 +4,7 @@
 
 extern char D_0013E633[];
 
-void Reverb_SetParams(int a, int b, int c, int d, int e)
+void set_requested_state_and_mark_changes(int a, int b, int c, int d, int e)
 {
     char *p = D_0013E633 + 0x1D;
     *(int *)(p + 0x60) = a;

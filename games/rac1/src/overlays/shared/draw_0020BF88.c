@@ -6,19 +6,19 @@ extern int *D_L02_00161240 MACRO_ADDR;
 extern char D_L02_00160A20[];
 
 /* Appends a display-list entry: a DMA tag, a constant quad and a 0x154 record built from three vectors. */
-void AppendDisplayListEntry(long *a, int *b, int *c, long d, int on) {
+void draw_geometry_quad_5188(long *a, int *b, int *c, long d, int on) {
     int *t;
     long *w;
     long a3;
-    D_L02_00161240[0] = 0x10000009;
-    D_L02_00161240[1] = 0;
-    D_L02_00161240[2] = 0;
-    D_L02_00161240[3] = 0x50000009;
-    t = D_L02_00161240;
-    D_L02_00161240 = t + 4;
+    l02_packet[0] = 0x10000009;
+    l02_packet[1] = 0;
+    l02_packet[2] = 0;
+    l02_packet[3] = 0x50000009;
+    t = l02_packet;
+    l02_packet = t + 4;
     qcopy(t + 4, D_L02_00160A20);
     w = (long *)(t + 8);
-    D_L02_00161240 = (int *)w;
+    l02_packet = (int *)w;
     if (on != 0) {
         w[0] = 5;
     } else {
@@ -40,6 +40,6 @@ void AppendDisplayListEntry(long *a, int *b, int *c, long d, int on) {
     a3 = a[3];
     w[15] = 0;
     w[14] = a3;
-    D_L02_00161240 = D_L02_00161240 + 32;
+    l02_packet = l02_packet + 32;
 }
-INCLUDE_ASM("asm/overlays", func_L02_002100E8);
+ASM_FUNC("asm/overlays", func_L02_002100E8);

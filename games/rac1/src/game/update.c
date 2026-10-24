@@ -309,7 +309,7 @@ extern char D_001E66C0[];
 extern char D_001E8DA0[];
 
 void set_scrolling_status_message(int arg0) {
-    char *b = D_001E66C0;
+    char *b = vendor_state;
     func_00116248(*(int *)(b + 0x2C), D_001E8DA0, arg0);
     *(int *)(b + 0x44) = 0;
 }
@@ -350,7 +350,7 @@ extern s32 func_00216960(void);
 /* Per-frame state machine of one boss-like moby: keeps a manipulator node attached while D_0015EEB0 is set,
    then steps the state byte at +0x20 through its animation and timer states.
    Adapted from Lombyte (GPL-3.0) for PAL by OpenRAC's tools/port.py: src/gameplay/vendor/fun_00237ed0.c, FUN_00237ed0. */
-void VendorTalkUpdate(Moby *m) {
+void update_resident_dialogue_animation_state(Moby *m) {
     s32 r;
     s32 a;
 
@@ -369,7 +369,7 @@ void VendorTalkUpdate(Moby *m) {
         if (D_001E66C0_391E8.timer > func_001F98C0(600)) {
             r = random_integer_below(2);
             D_001E66C0_391E8.pick = r;
-            D_001517EC = (r * 3 + 1) * 6 + D_001E66C0_391E8.base + 10000;
+            queued_dialogue_id = (r * 3 + 1) * 6 + D_001E66C0_391E8.base + 10000;
             D_001611B0 = 1;
             D_001611B4 = 0;
             if (m->prev_seq != 2) {
@@ -441,7 +441,7 @@ void VendorTalkUpdate(Moby *m) {
         }
         break;
     case 10:
-        if (D_0015182A == 3 && D_001611B0 != 0) {
+        if (dialogue_playback_phase == 3 && D_001611B0 != 0) {
             D_001611B0 = 0;
             D_001611B4 = 1;
         }
@@ -454,7 +454,7 @@ void VendorTalkUpdate(Moby *m) {
         }
         break;
     case 12:
-        if (D_0015182A == 3 && D_001611B0 != 0) {
+        if (dialogue_playback_phase == 3 && D_001611B0 != 0) {
             D_001611B4 = 1;
             D_001611B0 = 0;
             a = D_001E66FC * 3 + 5;
@@ -465,7 +465,7 @@ void VendorTalkUpdate(Moby *m) {
         }
         break;
     case 11:
-        if (D_0015182A == 3 && D_001611B0 != 0) {
+        if (dialogue_playback_phase == 3 && D_001611B0 != 0) {
             D_001611B4 = 1;
             D_001611B0 = 0;
             a = D_001E66FC * 3 + 6;

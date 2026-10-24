@@ -278,7 +278,7 @@ extern void func_001F9CA0(void *, void *, void *);
    rebuilt from the other two by func_001F9CA0. Returns the flag byte.
    The flag is read through a 4-byte MACRO_ADDR alias: over -G2, so the
    macro expands to lui/lbu through the destination register. */
-unsigned char MovieCamera_StepKeyframe(void) {
+unsigned char build_object_rotation_matrix(void) {
     char *t = D_0018CC20_c;
     char *key = *(char **)(t + 0x54) + *(int *)(t + 0x38) * 32;
     unsigned char flag = key[0xC];
@@ -287,9 +287,9 @@ unsigned char MovieCamera_StepKeyframe(void) {
     char *cam;
     float m[16];
 
-    D_0018CEB0 = ang[3];
+    view_tan_half_fov = ang[3];
     UpdateViewContext();
-    pos = D_00187180;
+    pos = camera_position;
     qcopy(pos, key);
     func_00125358(m);
     func_001254A0(m, m, *(float *)(key + 0x10));
@@ -339,7 +339,7 @@ extern float D_001D9B60[][4][4];
    returns. In D_0015F6E8 mode 6 with flare set 3, the flare fades as
    D_0013E130's level passes func_001F98C0(150), and its depth comes from
    func_00214358. The corners are D_001D9B60[set]. */
-void DrawLightFlare(char *arg0) {
+void draw_light_flare(char *arg0) {
     float a[4];
     Quad_FBE0 q;
     float b[4];
@@ -348,7 +348,7 @@ void DrawLightFlare(char *arg0) {
     int i;
 
     alpha = 0;
-    func_001F9C48(a, arg0, 1.0f / 1024.0f);
+    scale_vector(a, arg0, 1.0f / 1024.0f);
     if (func_001FA9E8(a, &alpha, 32.0f) < 0) {
         return;
     }
@@ -392,9 +392,9 @@ extern int D_0015F6E4 MACRO_ADDR;
 extern int D_0015F6FC_m __asm__("D_0015F6FC") MACRO_ADDR;
 extern short D_0015F690; /* SDA, gp -0x7670 */
 
-void RequestPlanetLoad(int arg0) {
+void initialize_global_state_entry(int arg0) {
     D_0015F6E4 = arg0;
-    *(int *)&D_0015F690 = 1;
+    *(int *)&space_load_pending = 1;
     D_0015F6FC_m = 1;
 }
 
@@ -501,7 +501,7 @@ static __inline__ Vec4 *trail_at_2F738(int t, int n) {
     return &trail_state_2F738.ring[t][n];
 }
 
-void func_0022F738(int unused) {
+void build_resident_indexed_texture_warp_meshes(int unused) {
     GeometryQuad_2F4C8 q;
     struct {
         Vec4 across[4];
@@ -554,21 +554,21 @@ void func_0022F738(int unused) {
                 primary_next = &trail_state_2F738.ring[0][(ring_index + 1) & 31];
                 primary_after_next = &trail_state_2F738.ring[0][(ring_index + 2) & 31];
                 for (engine = 0; engine < 2; engine++) {
-                    func_001F9BF0(&workspace.across[0], secondary_current, primary_current);
-                    func_001F9BF0(&workspace.across[1], primary_current, secondary_current);
-                    func_001F9BF0(&workspace.across[2], secondary_next, primary_next);
-                    func_001F9BF0(&workspace.across[3], primary_next, secondary_next);
-                    func_001F9BF0(&workspace.side[1],
+                    FastVecSub(&workspace.across[0], secondary_current, primary_current);
+                    FastVecSub(&workspace.across[1], primary_current, secondary_current);
+                    FastVecSub(&workspace.across[2], secondary_next, primary_next);
+                    FastVecSub(&workspace.across[3], primary_next, secondary_next);
+                    FastVecSub(&workspace.side[1],
                         (Vec4 *)((engine << 9) + (u32)primary_next),
                         (Vec4 *)((engine << 9) + (u32)primary_current));
-                    func_001F9BF0(&workspace.side[3],
+                    FastVecSub(&workspace.side[3],
                         (Vec4 *)((engine << 9) + (u32)primary_after_next),
                         (Vec4 *)((engine << 9) + (u32)primary_next));
                     if (segment == 0) qcopy(&workspace.side[3], &workspace.side[1]);
-                    func_001F9CA0(&workspace.side[0], &workspace.across[0], &workspace.side[1]);
-                    func_001F9CA0(&workspace.side[1], &workspace.across[1], &workspace.side[1]);
-                    func_001F9CA0(&workspace.side[2], &workspace.across[2], &workspace.side[3]);
-                    func_001F9CA0(&workspace.side[3], &workspace.across[3], &workspace.side[3]);
+                    FastVecCross(&workspace.side[0], &workspace.across[0], &workspace.side[1]);
+                    FastVecCross(&workspace.side[1], &workspace.across[1], &workspace.side[1]);
+                    FastVecCross(&workspace.side[2], &workspace.across[2], &workspace.side[3]);
+                    FastVecCross(&workspace.side[3], &workspace.across[3], &workspace.side[3]);
                     {
                         position_first = &q.positions[0];
                         vertex = 0;
@@ -626,7 +626,7 @@ extern short D_001605F0;
 extern int D_0015EE84_m __asm__("D_0015EE84") MACRO_ADDR;
 
 /* Its 0x8000000044 is built as ps2eeas built it (tools/ps2eeas_dli.py). */
-void DrawTargetPlanetQuad(void) {
+void draw_resident_textured_quad(void) {
     Quad_FBE0 q;
     float s;
     int i;
@@ -656,10 +656,10 @@ extern void func_00234C98_l(int, long) __asm__("func_00234C98");
 extern int D_0013E604;
 extern long D_00160688 MACRO_ADDR;
 
-void DrawFadeOverlayQuad(int arg0) {
+void draw_resident_textured_banner(int arg0) {
     func_00234C98_l(0x47, 0x31801);
     func_00234C98_l(0x42, ((long)0x8000 << 24) | 0x44);
-    DrawTexturedQuad(0x20, D_0013E604 - 0x58, 0x100, 0x20, 0, 0, 0x100, 0x20,
+    DrawTexturedQuad(0x20, frame_size - 0x58, 0x100, 0x20, 0, 0, 0x100, 0x20,
                   (arg0 << 24) | 0x808080, D_00160688);
     func_00234C98_l(0x47, 0x5360B);
 }
@@ -720,7 +720,7 @@ extern void func_00234C98_305A0(s32, s64) __asm__("func_00234C98");
 extern struct LevelDisplayState_305A0 D_0013E600_305A0 __asm__("D_0013E600");
 
 /* Adapted from Lombyte (GPL-3.0) for PAL by OpenRAC's tools/port.py: src/textbin/render_level_frame.c, render_level_frame. */
-void DrawSpaceFlightFrame(void) {
+void render_level_frame(void) {
     f32 rotation_angle;
     f32 screen_y;
     f32 quad_extent;
@@ -728,38 +728,38 @@ void DrawSpaceFlightFrame(void) {
     f32 saved_projection_scale;
     struct LevelDisplayState_305A0 *display_state;
     s64 texture;
-    framebuf_appendLargeSetup();
+    append_gif_transfer_packet();
     BuildViewMatrices();
-    AnimSlot_ReleaseStale();
+    prune_moby_references();
     ResetGsRegisters();
-    saved_projection_scale = D_0018CE00.projection_scale;
+    saved_projection_scale = view_context.projection_scale;
     D_0015F704_305A0 = -1;
     if (saved_projection_scale < 0.63f) {
-        D_0018CE00.projection_scale = 0.63f;
+        view_context.projection_scale = 0.63f;
     }
     UpdateViewContext();
     BuildViewMatrices();
-    DrawSkyShells();
-    D_0018CE00.projection_scale = saved_projection_scale;
+    draw_sky_shells();
+    view_context.projection_scale = saved_projection_scale;
     UpdateViewContext();
     BuildViewMatrices();
     if (D_0013E130_305A0.mode == 4) {
         SetupGifPaging(1);
-        DrawTargetPlanetQuad();
+        draw_resident_textured_quad();
         DoGifPaging();
     }
     DrawMobys();
-    Vif1ChainCmd(0x02080000);
+    append_dma_tag(0x02080000);
     SetupGifPaging(1);
     if ((D_0015EE84_305A0 != 0) && ((D_0015EE84_305A0 != 1) || (D_0013DE4B[0] != 0))) {
-        func_0022F738(D_0018CD98[0]);
+        build_resident_indexed_texture_warp_meshes(D_0018CD98[0]);
     }
     if ((D_0013E130_305A0.mode == 4) && (D_0018CC54[0] >= 0x3D)) {
         overlay_alpha = (D_0018CC54[0] - 0x3C) * 2;
         if (overlay_alpha >= 0x81) {
             overlay_alpha = 0x80;
         }
-        DrawFadeOverlayQuad(overlay_alpha);
+        draw_resident_textured_banner(overlay_alpha);
     }
     if ((D_0015EE84_305A0 != 0) && ((D_0015EE84_305A0 != 1) || (D_0013DE4B[0] != 0))) {
         func_00233AB8_305A0(D_0018CD98[0]);
@@ -775,7 +775,7 @@ void DrawSpaceFlightFrame(void) {
         rotation_angle = ((D_0015F538 % 55) * (-6.2831855f)) / 55.0f;
         /* The frame counter contributes only the sprite angle modulo 55. */
         /* Retail passes the full texture value in a2 and the five floats in f12-f16. */
-        DrawHudSpriteRotated(1216.0f, screen_y, quad_extent, 272.0f, 0x40, 0x40,
+        func_00200E38(1216.0f, screen_y, quad_extent, 272.0f, 0x40, 0x40,
                             func_001F4868_305A0(3), rotation_angle);
     }
     DoGifPaging();
@@ -795,7 +795,7 @@ extern int func_002140B0(int);
 extern char *func_00219780(void *, void *, void *, int, int, int, int, int, int);
 
 /* Spawns six particles around a moby: random velocity and a position taken from the flare corner table, transformed by the moby's matrices. Adapted from Lombyte (GPL-3.0) for PAL: src/rendering/effects/fun_0022f5b0.c, FUN_0022f5b0. */
-void SpawnFlareParticles(char *m, float z) {
+void emit_six_spark_effects(char *m, float z) {
     float vel[4];
     float vel2[4];
     float pos[4];
@@ -1071,7 +1071,7 @@ extern void resident_call_0022F258() __asm__("func_0022F258");
 extern void resident_call_0022F738() __asm__("func_0022F738");
 extern void resident_call_00233AB8() __asm__("func_00233AB8");
 
-void SpaceFlightUpdate(void) {
+void update_resident_gameplay_state(void) {
     Vector4_230A90 scratch_vectors[4];
     s32 keyframe_flags;
     s32 ticks_per_bank;
@@ -1668,10 +1668,10 @@ extern void func_002305A0(void);
    segment at retail's jtbl_001E8C90 (see rac1.ld.sh). */
 void dispatch_game_state_update(void) {
     if (D_0015F6FC_m == 0) {
-        switch (D_0013E150) {
+        switch (ship_substate) {
         case 0:
         case 8:
-            drawNormalFrame();
+            prepare_debug_profiler_render();
             break;
         case 3:
         case 7:
@@ -1679,7 +1679,7 @@ void dispatch_game_state_update(void) {
             DrawDebugProfiler();
             break;
         case 4:
-            DrawSpaceFlightFrame();
+            render_level_frame();
             break;
         }
     }
@@ -1896,7 +1896,7 @@ extern void func_0022F090();
 #define sceGsSyncV ((s32 (*)(s32))func_00122598)
 #define snd_flush_sound_commands ((s32 (*)(void))func_0012DDC0)
 #define snd_resolve_bank_xrefs ((void (*)(void))func_0012E2E8)
-void BeginLevelArchiveLoad(void) {
+void initialize_level_runtime(void) {
     s64 texture_packet[4];
     LevelHeader *header;
     s32 data_base;
@@ -2018,7 +2018,7 @@ void BeginLevelArchiveLoad(void) {
     level_render_state.scene_mode = scene_variant;
     level_render_state.history_index = 0;
     level_render_state.history_count = 0;
-    qcopy(&D_001604F0, &D_001604E0);
+    qcopy(&D_001604F0, &shrub_colors);
     if (current_level_index == 0 || (current_level_index == 1 && level_available[3] == 0)) {
         level_render_state.scene_mode = 4;
         level_render_state.scene_state = 2;
@@ -2074,7 +2074,7 @@ extern void func_001F4E08(int);
 
 /* Plays movie id, taking its {sector, size} from the WAD table of
    contents (from the second table when D_0015EE80 is set). */
-void PlayMovie(int id) {
+void play_level_transition_movie(int id) {
     int sector;
     int size;
     int buf;
@@ -2111,7 +2111,7 @@ typedef union {
 
 /* Append a textured four-corner GIF packet. Screen coordinates use 12.4
    fixed point relative to the viewport origin; UV pairs stay as floats. */
-void func_00232A00(int x, int y, int w, int h, unsigned long rgba,
+void append_scrolling_textured_quad(int x, int y, int w, int h, unsigned long rgba,
                    unsigned long tex, float u0, float u1, float v0, float v1) {
     int x0 = x * 16 + D_0013E600[4] - 8;
     int x1 = (x + w) * 16 + D_0013E600[4] - 8;
@@ -2227,7 +2227,7 @@ extern s32 func_0020C468(s32 source_address, s32 destination_address);
 extern s32 func_002175C8(void *a0, u32 a1, u32 a2);
 
 /* Adapted from Lombyte (GPL-3.0) for PAL by OpenRAC's tools/port.py: src/textbin/fun_00231878.c, prepare_loading_slide_textures. */
-void func_00232B90(s32 language_index, s32 first_slide, s32 second_slide,
+void prepare_loading_slide_textures(s32 language_index, s32 first_slide, s32 second_slide,
                                     u64 *shared_texture, u64 *first_texture, u64 *second_texture) {
     s32 texture_bases[6];
     sceGsLoadImage load_image;
@@ -2242,7 +2242,7 @@ void func_00232B90(s32 language_index, s32 first_slide, s32 second_slide,
 
     first_output = first_texture;
     second_output = second_texture;
-    archive_memory = &D_001941C0;
+    archive_memory = &level_resource_buffers;
     upload_index = 0;
     Stream_SubmitRead((void *)(archive_memory->archive_base + 0x100000),
                            D_00137C80.loading_slides[language_index].sector,
@@ -2372,7 +2372,7 @@ extern void func_00234C98_32EF0(s32, u64) __asm__("func_00234C98");
 extern void func_00122598(s32);
 
 /* Adapted from Lombyte (GPL-3.0) for PAL by OpenRAC's tools/port.py: src/textbin/play_level_loading_slides.c, play_level_loading_slides. */
-void func_00232EF0(s32 language_index, s32 first_slide, s32 second_slide,
+void play_level_loading_slides(s32 language_index, s32 first_slide, s32 second_slide,
                                s32 duration_ticks, s32 preload_level) {
     u64 shared_texture;
     u64 first_texture;
@@ -2384,7 +2384,7 @@ void func_00232EF0(s32 language_index, s32 first_slide, s32 second_slide,
     f32 scroll_start;
     f32 scroll_end;
 
-    func_00232B90(language_index, first_slide, second_slide, &shared_texture,
+    prepare_loading_slide_textures(language_index, first_slide, second_slide, &shared_texture,
                                    &first_texture, &second_texture);
     if (preload_level != 0) {
         func_0012F4A8_32EF0((*(s32 *)&D_0015EE84));
@@ -2405,7 +2405,7 @@ void func_00232EF0(s32 language_index, s32 first_slide, s32 second_slide,
         if (frame <= 0x1F) {
             alpha = fade_in_alpha;
         }
-        D_00161000_32EF0.words[1] = (s32)D_0013CED0;
+        D_00161000_32EF0.words[1] = (s32)second_clear_packet;
         D_00161000_32EF0.words[2] = 0;
         D_00161000_32EF0.words[3] = 0x50000014;
         D_00161000_32EF0.words += 4;
@@ -2438,7 +2438,7 @@ void func_00232EF0(s32 language_index, s32 first_slide, s32 second_slide,
                                    0x80808080, second_texture);
             }
         }
-        MemCard_UpdateState();
+        memcard_update_state();
         Menu_RunStateHandler();
         VU1_syncChain(1);
         func_00122598(0);
@@ -2446,7 +2446,7 @@ void func_00232EF0(s32 language_index, s32 first_slide, s32 second_slide,
         VU1_sendChain();
         VU1_swapChain();
         if (preload_level != 0) {
-            if (LevelArchiveLoadStep() == 0) {
+            if (service_level_archive_load() == 0) {
                 if (duration_ticks < frame + 0x14) {
                     duration_ticks = frame + 0x14;
                 }
@@ -2550,10 +2550,10 @@ void DoSpaceTransition(void) {
     sound_StopAllSounds();
     music_Stop();
     D_001517D0_b.fB = 1;
-    if (D_0015F714 != 0) {
-        func_0012E318(*(int *)(D_0015F714 + 0x1C));
+    if (level_sound_defs != 0) {
+        func_0012E318(*(int *)(level_sound_defs + 0x1C));
         func_0012E2E8();
-        STUB_printf(D_001E8CB8, *(int *)(D_0015F714 + 0x1C));
+        STUB_printf(D_001E8CB8, *(int *)(level_sound_defs + 0x1C));
     }
     D_0015EE5C_m = 0;
     func_0012F068(0);
@@ -2568,61 +2568,61 @@ void DoSpaceTransition(void) {
     SetBackgroundColor(0, 0, 0);
     if (D_0015F6E4 < 0) {
         while (D_0013D390_b.fDC >= 3 || D_0013D390_b.fE4 >= 0) {
-            MemCard_UpdateState();
+            memcard_update_state();
             Menu_RunStateHandler();
         }
         FadeToBlack(func_001F98C0(6));
         D_0015EE84_m = D_0015F6E4;
-        Level_StartDataRead();
+        load_level_chunk_from_disc();
         func_00120F30_i(0);
         D_001517D0_b.fB = 0;
         DMAC_VIF1_Disable();
         return;
     }
-    if (D_0015F6E4 == 0 && D_0013DE60[0] == 0) {
+    if (D_0015F6E4 == 0 && level_visit_state[0] == 0) {
         FadeToBlack(func_001F98C0(6));
-        func_00232EF0(lvl, 0, 1, func_001F98C0(240), 0);
-        PlayMovie(0);
-        func_00232EF0(lvl, 2, 2, func_001F98C0(180), 0);
-        PlayMovie(1);
+        play_level_loading_slides(lvl, 0, 1, func_001F98C0(240), 0);
+        play_level_transition_movie(0);
+        play_level_loading_slides(lvl, 2, 2, func_001F98C0(180), 0);
+        play_level_transition_movie(1);
         D_0015EE84_m = D_0015F6E4;
-        func_00232EF0(lvl, 3, 4, func_001F98C0(240), 1);
-        PlayMovie(2);
-    } else if (D_0015EE84_m == 0 && D_0015F6E4 == 1 && D_0013DE60[1] == 0) {
+        play_level_loading_slides(lvl, 3, 4, func_001F98C0(240), 1);
+        play_level_transition_movie(2);
+    } else if (D_0015EE84_m == 0 && D_0015F6E4 == 1 && level_visit_state[1] == 0) {
         FadeToBlack(func_001F98C0(6));
-        func_00232EF0(lvl, 5, 6, func_001F98C0(240), 0);
-        PlayMovie(3);
-        PlayMovie(4);
-        func_00232EF0(lvl, 7, 7, func_001F98C0(180), 0);
-        PlayMovie(5);
-        D_0013DE60[D_0015EE84_m] = 2;
+        play_level_loading_slides(lvl, 5, 6, func_001F98C0(240), 0);
+        play_level_transition_movie(3);
+        play_level_transition_movie(4);
+        play_level_loading_slides(lvl, 7, 7, func_001F98C0(180), 0);
+        play_level_transition_movie(5);
+        level_visit_state[D_0015EE84_m] = 2;
         D_0015EE84_m = D_0015F6E4;
-        func_00232EF0(lvl, 8, 8, func_001F98C0(240), 1);
+        play_level_loading_slides(lvl, 8, 8, func_001F98C0(240), 1);
     } else {
-        if (D_0015F6E4 == 4 && D_0013DE60[4] == 0) {
+        if (D_0015F6E4 == 4 && level_visit_state[4] == 0) {
             FadeToBlack(func_001F98C0(12));
-            func_00232EF0(lvl, 9, 10, func_001F98C0(240), 0);
-            PlayMovie(6);
+            play_level_loading_slides(lvl, 9, 10, func_001F98C0(240), 0);
+            play_level_transition_movie(6);
         }
-        if (D_0015EE84_m == 7 && D_0013DE60[7] != 2 && D_0013DE48_b.f8 != 0) {
+        if (D_0015EE84_m == 7 && level_visit_state[7] != 2 && D_0013DE48_b.f8 != 0) {
             FadeToBlack(func_001F98C0(12));
-            func_00232EF0(lvl, 11, 11, func_001F98C0(240), 0);
-            PlayMovie(7);
+            play_level_loading_slides(lvl, 11, 11, func_001F98C0(240), 0);
+            play_level_transition_movie(7);
         }
-        if (D_0015F6E4 == 13 && D_0013DE60[13] == 0) {
+        if (D_0015F6E4 == 13 && level_visit_state[13] == 0) {
             FadeToBlack(func_001F98C0(12));
-            func_00232EF0(lvl, 12, 13, func_001F98C0(240), 0);
-            PlayMovie(8);
+            play_level_loading_slides(lvl, 12, 13, func_001F98C0(240), 0);
+            play_level_transition_movie(8);
         }
-        if (D_0015EE84_m == 14 && D_0013DE60[14] != 2 && D_0013DE48_b.fF != 0) {
+        if (D_0015EE84_m == 14 && level_visit_state[14] != 2 && D_0013DE48_b.fF != 0) {
             FadeToBlack(func_001F98C0(12));
-            func_00232EF0(lvl, 14, 14, func_001F98C0(240), 0);
-            PlayMovie(9);
+            play_level_loading_slides(lvl, 14, 14, func_001F98C0(240), 0);
+            play_level_transition_movie(9);
         }
-        if (D_0015F6E4 == 16 && D_0013DE60[16] == 0) {
+        if (D_0015F6E4 == 16 && level_visit_state[16] == 0) {
             FadeToBlack(func_001F98C0(12));
-            func_00232EF0(lvl, 15, 16, func_001F98C0(240), 0);
-            PlayMovie(10);
+            play_level_loading_slides(lvl, 15, 16, func_001F98C0(240), 0);
+            play_level_transition_movie(10);
         }
         if ((unsigned int)D_0015EE84_m < 19) {
             ok = 1;
@@ -2633,47 +2633,47 @@ void DoSpaceTransition(void) {
                 ok = 0;
             }
             if (ok) {
-                D_0013DE60[D_0015EE84_m] = 2;
+                level_visit_state[D_0015EE84_m] = 2;
             }
         }
         *(short *)&D_0015EF4A_i = 1;
         done = 0;
         D_0015EE84_m = D_0015F6E4;
         D_0015EF48_m = 0;
-        BeginLevelArchiveLoad();
+        initialize_level_runtime();
         func_0012F4A8(D_0015EE84_m);
         while (D_0015F6FC_m == 0) {
             VU1_sendChain();
             VU1_swapChain();
             PutDrawBufferSmall();
-            framebuf_appendSmallSetup();
+            append_palette_transfer_packet();
             PutDrawBufferLarge();
             UpdatePad();
-            SpaceFlightUpdate();
+            update_resident_gameplay_state();
             dispatch_game_state_update();
-            MemCard_UpdateState();
+            memcard_update_state();
             Menu_RunStateHandler();
             VU1_syncChain(1);
             func_00122598_i(0);
             D_0015F538++;
             SpaceTransition_Tick();
             if (!done) {
-                done = LevelArchiveLoadStep();
+                done = service_level_archive_load();
             }
         }
         if (!done) {
             do {
                 func_00118D80(0);
                 func_00122598_i(0);
-                MemCard_UpdateState();
+                memcard_update_state();
                 Menu_RunStateHandler();
                 SpaceTransition_Tick();
-            } while (LevelArchiveLoadStep() == 0);
+            } while (service_level_archive_load() == 0);
         }
         while (D_0013D390_b.fDC != 2 || D_0013D390_b.fE4 >= 0) {
             func_00118D80(0);
             func_00122598_i(0);
-            MemCard_UpdateState();
+            memcard_update_state();
             Menu_RunStateHandler();
             SpaceTransition_Tick();
         }
@@ -2728,7 +2728,7 @@ extern float func_001FA888(int);
 extern void func_0020DAF8(EnvironmentMappedObject *, int, void *);
 
 /* Adapted from Lombyte (GPL-3.0) for PAL by OpenRAC's tools/port.py: src/rendering/render_environment_mapped_object.c, render_environment_mapped_object. */
-void DrawEnvMappedObject(EnvironmentMappedObject *object) {
+void render_environment_mapped_object(EnvironmentMappedObject *object) {
     Vec4 quad_positions[4];
     int colors[4];
     float texture_coordinates[4][2];
@@ -2752,18 +2752,18 @@ void DrawEnvMappedObject(EnvironmentMappedObject *object) {
     int corner_index;
 
     class_index = object->class_id - 0x212;
-    positions = (((Vec4 * *)&D_00160660))[class_index];
-    normals = (((Vec4 * *)&D_00160650))[class_index];
-    indexed_quads = (((IndexedQuad * *)&D_00160670))[class_index];
-    quad_count = (((s32 *)&D_00160640))[class_index];
-    vertex_count = (((s32 *)&D_00160630))[class_index];
+    positions = (((Vec4 * *)&environment_mesh_positions))[class_index];
+    normals = (((Vec4 * *)&environment_mesh_normals))[class_index];
+    indexed_quads = (((IndexedQuad * *)&environment_mesh_quads))[class_index];
+    quad_count = (((s32 *)&environment_mesh_quad_counts))[class_index];
+    vertex_count = (((s32 *)&environment_mesh_vertex_counts))[class_index];
     if (D_0015F6E8 == 6 && D_0013E150_33AB8[0] == 4) {
         quad_state[1] = func_001F4868_33AB8(1);
     } else {
         quad_state[1] = func_001F4868_33AB8(0x15);
     }
     mapping_enabled = 0;
-    color = (((s32 *)&D_00160620))[class_index];
+    color = (((s32 *)&environment_mesh_colors))[class_index];
     quad_state[2] = 0xFF9000000260;
     quad_state[3] = 0x8000000044;
     quad_state[0] = 0;

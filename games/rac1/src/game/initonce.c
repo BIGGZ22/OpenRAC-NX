@@ -83,16 +83,16 @@ void InitMemSlots(void) {
     int b = a + size;
     int c = b + 0x64000;
     int d = c + 0x30000;
-    D_001941C0[0] = base;
-    D_001941C0[5] = d;
-    D_001941C0[6] = d;
-    D_001941C0[8] = 0x7000000;
-    D_001941C0[9] = 0x7100000;
-    D_001941C0[1] = base;
-    D_001941C0[2] = a;
-    D_001941C0[3] = b;
-    D_001941C0[4] = c;
-    D_001941C0[10] = 0x7200000;
+    level_resource_buffers[0] = base;
+    level_resource_buffers[5] = d;
+    level_resource_buffers[6] = d;
+    level_resource_buffers[8] = 0x7000000;
+    level_resource_buffers[9] = 0x7100000;
+    level_resource_buffers[1] = base;
+    level_resource_buffers[2] = a;
+    level_resource_buffers[3] = b;
+    level_resource_buffers[4] = c;
+    level_resource_buffers[10] = 0x7200000;
 }
 
 /* Externs this function needs that initonce.c does not already declare. */
@@ -167,10 +167,10 @@ void InitOnce(void) {
     func_001211B0(0);
     func_00121490(0);
     do {
-    } while (func_0011D248(D_001E7E10) == 0);
+    } while (func_0011D248(iop_reboot_image_path) == 0);
     do {
     } while (func_0011D210() == 0);
-    STUB_printf(D_0015FB40);
+    STUB_printf(rebooted_iop_message);
     func_00118D60(3);
     func_0011AE20(0);
     func_0011D960();
@@ -184,13 +184,13 @@ void InitOnce(void) {
     func_00118D80(0);
 
     region = buf[0x33] != 0x4E;
-    D_0015EF90 = D_0015EE80 = region;
-    MemCard_BuildNameStamp(buf);
+    pause_action_list_mode = D_0015EE80 = region;
+    memcard_get_name(buf);
 
     func_00121B78(0, 1, (D_0015EE80 != 0) ? 3 : 2, 0);
     InitDma();
     SetPalMode();
-    VU0_loadMicroProgram(&D_0010E4C0);
+    VU0_loadMicroProgram(&vu0_micro_program);
     func_0012F3F8();
 
     base = (int)D_0024272F & 0xFFFFC000;
@@ -211,9 +211,9 @@ void InitOnce(void) {
     LoadIRXModule((void *)(tbl[0x2C] + (int)tbl), (void *)(int)tbl[0x2D]);
     LoadIRXModule((void *)(tbl[0x28] + (int)tbl), (void *)(int)tbl[0x29]);
 
-    STUB_printf(D_001E7E28);
+    STUB_printf(loaded_irx_modules_message);
     func_00121490(0);
-    InitPads();
+    init_pads();
     func_00123168(func_0012F308);
     D_0016100C = 0x160000;
     InitMemSlots();
@@ -223,17 +223,17 @@ void InitOnce(void) {
     UpdateViewContext();
     VU1_initChain();
     func_00121490(0);
-    Sound_InitState();
-    FastMemSet(D_001942C0, 0x80808080, 0x100);
+    initialize_gameplay_sound_system();
+    FastMemSet(image_clear_buffer, 0x80808080, 0x100);
     func_00122630(buf, 0x3FFB, 1, 0, 0, 0, 8, 8);
     func_00118D80(0);
-    func_00122958(buf, D_001942C0);
+    func_00122958(buf, image_clear_buffer);
     func_00120858(0, 0);
     LoadDebugFont();
     *(volatile int *)0x10000810 = 0x82;
     *(volatile int *)0x10000800 = 0;
     initialize_sif_rpc();
-    buildBitSwapLut();
+    initialize_alpha_lookup_table();
 
     lang = func_0012D380();
     switch (lang) {
@@ -250,7 +250,7 @@ void InitOnce(void) {
         D_0015EE88 = 5;
         return;
     default:
-        STUB_printf(D_001E7E40, lang);
+        STUB_printf(unsupported_lang_message, lang);
         /* fallthrough */
     case 1:
         D_0015EE88 = 0;

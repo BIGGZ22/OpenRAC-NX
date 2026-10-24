@@ -23,7 +23,7 @@ void SpawnKindParticle(float *pos, int kind, float *vec, float scale) {
     float f20;
     int k;
     *(u128 *)v = *(u128 *)vec;
-    p = func_00218928(0);
+    p = create_part(0);
     if (p != 0) {
         c = 0;
         k = k2;

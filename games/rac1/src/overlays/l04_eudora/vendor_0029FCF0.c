@@ -132,7 +132,7 @@ typedef struct SwarmVars {
     s32 child_count;
 } SwarmVars;
 
-void SwarmUpdate(struct PMoby *moby) {
+void update_class_55_swarm_controller(struct PMoby *moby) {
     SwarmVars *data = (SwarmVars *)moby->pvars;
     struct PMoby **children;
     struct PMoby *other;
@@ -231,8 +231,8 @@ void SwarmUpdate(struct PMoby *moby) {
             part = child->pvars;
             D_L04_001661B0[6] = ((data->radius * 7.753f) / 1800.0f) * D_0015EE60 * ((child->anim_speed + 1.0f) * 0.5f) * 0.05f * D_0015EE64 * ((child->anim_speed + 1.0f) * 0.5f);
             D_L04_001661B0[7] = (((data->radius * 7.753f) / 1800.0f) * D_0015EE60) * ((child->anim_speed + 1.0f) * 0.5f);
-            MobySteer(children, data->count, child, part, D_L04_001661B0);
-            StepMobyOutOfCollision(0.0f, child, part, D_L04_001661B0);
+            steer_child_moby(children, data->count, child, part, D_L04_001661B0);
+            update_moby_movement_with_sphere_collision(0.0f, child, part, D_L04_001661B0);
         }
     }
 }
@@ -242,27 +242,27 @@ extern int func_001160D8(void);
 extern void func_0020EEE8(void *);
 
 // Per-frame update: counts down a timer, firing a effect call at start and end.
-void IdleAnimTick(char *m) {
-    int *d;
+void update_moby_random_interval_animation(char *m) {
+    int *animation_countdown;
     if (m != 0) {
-        *(int *)(m + 0x94) = 0;
-        d = *(int **)(m + 0x78);
-        if (*d == 0) {
-            if (*(unsigned char *)(m + 0x53) != 1) {
+        ((struct Moby *)m)->collision = 0;
+        animation_countdown = (int *)((struct Moby *)m)->pvars;
+        if (*animation_countdown == 0) {
+            if (((struct Moby *)m)->prev_seq != 1) {
                 MobyBlendAnimation(m, (void *)1, 0, (void *)scale_ticks(3));
             }
-            *d = scale_ticks((func_001160D8() + 0x1E) & 0xFF);
+            *animation_countdown = scale_ticks((func_001160D8() + 0x1E) & 0xFF);
         }
-        if ((*(unsigned char *)(m + 0x70) & 2) && *(unsigned char *)(m + 0x53) != 0) {
+        if ((((struct Moby *)m)->anim_flags & 2) && ((struct Moby *)m)->prev_seq != 0) {
             MobyBlendAnimation(m, 0, 0, (void *)scale_ticks(3));
         }
-        *d = *d - 1;
+        *animation_countdown = *animation_countdown - 1;
         func_0020EEE8(m);
     }
 }
 extern void func_00213DE0(void *, void *, void *, void *);
 
-void BlendAnimationWithLinked(char *arg, void *a, void *b, void *c) {
+void blend_big_axebot_and_axe_animation(char *arg, void *a, void *b, void *c) {
     char *data = *(char **)(arg + 0x78);
     void *other;
     MobyBlendAnimation(arg, a, b, c);
@@ -488,7 +488,7 @@ extern float D_L04_0015F660[] MACRO_ADDR;
 extern P_B7B0 *D_L04_001B0930_B7B0[] __asm__("D_L04_001B0930");
 
 /* Update of the big axebot: hit reaction, state machine (idle, alert, path, chase, return home, swing, stagger, turn, death), knockback, gravity, and its axe moby. */
-void BigAxebotUpdate(M_B7B0 *moby) {
+void big_axebot_update(M_B7B0 *moby) {
     D_B7B0 *data = moby->data;
     T_B7B0 tg;
     V4_B7B0 prev;
@@ -508,7 +508,7 @@ void BigAxebotUpdate(M_B7B0 *moby) {
     Manipulator_ApplyScale(2.5f, (int)moby, 0, (unsigned char *)&data->m120);
     if (moby->f31 != 0) {
         if (FastVecDist(moby->pos, D_L04_00166FC0) < 27.0f) {
-            SetGroundHeightBand(moby);
+            func_L00_0025B178(moby);
             moby->f7F = 0x15;
         }
     }
@@ -534,7 +534,7 @@ void BigAxebotUpdate(M_B7B0 *moby) {
     qcopy(tpos, tg.pos);
     if (moby->f31 != 0) {
         if (FastVecDist(moby->pos, D_L04_00166FC0) < 32.0f) {
-            SetGroundHeightBand(moby);
+            func_L00_0025B178(moby);
             moby->f7F = 0x1A;
         }
     }
@@ -591,7 +591,7 @@ void BigAxebotUpdate(M_B7B0 *moby) {
                     data->f448 = scale_ticks(0x1E);
                     if ((hit->att->cls == 0 || hit->f2C > 1.0f) && (moby->f52 != 4 || hd < 17.0f || hd > 20.0f)) {
                         moby->fBC |= 5;
-                        BlendAnimationWithLinked((char *)moby, (void *)5, 0, (void *)scale_ticks(6));
+                        blend_big_axebot_and_axe_animation((char *)moby, (void *)5, 0, (void *)scale_ticks(6));
                         SetValueOnSelfAndLinked(moby, 2.0f);
                         moby->state = 8;
                     }
@@ -608,7 +608,7 @@ void BigAxebotUpdate(M_B7B0 *moby) {
                     }
                     data->f448 = scale_ticks(0x1E);
                     moby->fBC |= 5;
-                    BlendAnimationWithLinked((char *)moby, (void *)5, 0, (void *)scale_ticks(6));
+                    blend_big_axebot_and_axe_animation((char *)moby, (void *)5, 0, (void *)scale_ticks(6));
                     SetValueOnSelfAndLinked(moby, 2.0f);
                     moby->state = 8;
                     InitKnockback(ang2, moby, data->fC0, 5, 1, 0);
@@ -623,7 +623,7 @@ void BigAxebotUpdate(M_B7B0 *moby) {
                 case 4:
                 case 5:
                     Moby_PlaySound(0xB, 0, (char *)moby);
-                    BlendAnimationWithLinked((char *)moby, (void *)6, (void *)2, (void *)scale_ticks(4));
+                    blend_big_axebot_and_axe_animation((char *)moby, (void *)6, (void *)2, (void *)scale_ticks(4));
                     data->f402 = scale_ticks(0x28);
                     moby->state = 1;
                     data->f42C = 3.4f / func_001F9878(7.0f);
@@ -635,7 +635,7 @@ void BigAxebotUpdate(M_B7B0 *moby) {
                 case 1:
                     data->fE8 = 1.0f;
                     data->fE0 = 0x400;
-                    SetSpringParams(data->fC0, 5.7f, 4.0f);
+                    trooper_set_knockback(data->fC0, 5.7f, 4.0f);
                     *(u128_B7B0 *)v = *(u128_B7B0 *)hit->pos;
                     HeadingFromVector(v, &ang2, &data->fD8, &data->fDC);
                     InitKnockback(ang2, moby, data->fC0, 7, 1, 0);
@@ -660,7 +660,7 @@ void BigAxebotUpdate(M_B7B0 *moby) {
         data->f406 = scale_ticks(0xF0);
     }
     data->f38 = 0;
-    func_L00_001FEF78(&data->f406);
+    fast_subtract_rotations_cf(&data->f406);
     if (moby->state != 0 && data->f2E != 1) {
         if (data->f424 != 0) {
             DeleteMoby(data->f424);
@@ -691,7 +691,7 @@ void BigAxebotUpdate(M_B7B0 *moby) {
         data->f5A = 0xC;
         if (data->f400 != 0) {
             moby->state = 3;
-            BlendAnimationWithLinked((char *)moby, (void *)0xA, 0, (void *)scale_ticks(0xC));
+            blend_big_axebot_and_axe_animation((char *)moby, (void *)0xA, 0, (void *)scale_ticks(0xC));
         } else {
             moby->state = 1;
         }
@@ -705,10 +705,10 @@ void BigAxebotUpdate(M_B7B0 *moby) {
 
             func_001153FC(arr, 0, 0x18);
             arr[5] = 1;
-            BlendAnimationWithLinked((char *)moby, (void *)arr[random_integer_below(6)], 0, (void *)scale_ticks(0x18));
+            blend_big_axebot_and_axe_animation((char *)moby, (void *)arr[random_integer_below(6)], 0, (void *)scale_ticks(0x18));
         } else if (moby->f53 != 0xD && (moby->f53 != 6 || (moby->f70 & 2))) {
             if (flag ? dist < data->f43C * 2.0f : dist < data->f43C) {
-                BlendAnimationWithLinked((char *)moby, (void *)0xD, 0, (void *)scale_ticks(0x18));
+                blend_big_axebot_and_axe_animation((char *)moby, (void *)0xD, 0, (void *)scale_ticks(0x18));
             }
         }
         if (data->f430 != -1 && data->f434 != -1 && data->f43A == 0
@@ -717,18 +717,18 @@ void BigAxebotUpdate(M_B7B0 *moby) {
             moby->fBC |= 1;
             data->f43A = 1;
         } else {
-            if (moby->f52 == 0xD && func_L00_001FEF78(&data->f407) != 0) {
+            if (moby->f52 == 0xD && fast_subtract_rotations_cf(&data->f407) != 0) {
                 Moby_PlaySound(0xA, 0, (char *)moby);
                 data->f407 = scale_ticks(0xB4);
             }
             if (data->f402 == 0) {
                 if (dist < 4.5f) {
-                    BlendAnimationWithLinked((char *)moby, (void *)4, (void *)4, (void *)scale_ticks(0xC));
+                    blend_big_axebot_and_axe_animation((char *)moby, (void *)4, (void *)4, (void *)scale_ticks(0xC));
                     moby->state = 7;
                 } else if (flag ? dist < data->f43C * 2.0f : dist < data->f43C) {
                     int nf = (moby->fBC & 1) == 0;
                     if (nf) {
-                        BlendAnimationWithLinked((char *)moby, (void *)2, 0, (void *)scale_ticks(0xC));
+                        blend_big_axebot_and_axe_animation((char *)moby, (void *)2, 0, (void *)scale_ticks(0xC));
                         moby->state = 2;
                         moby->fBC |= 1;
                     }
@@ -739,22 +739,22 @@ void BigAxebotUpdate(M_B7B0 *moby) {
     }
     case 2:
         if (moby->f52 == 2 && (moby->f70 & 2)) {
-            BlendAnimationWithLinked((char *)moby, (void *)((flag ? dist < data->f43C * 2.0f : dist < data->f43C) ? 0xD : 0), 0, (void *)scale_ticks(0xC));
+            blend_big_axebot_and_axe_animation((char *)moby, (void *)((flag ? dist < data->f43C * 2.0f : dist < data->f43C) ? 0xD : 0), 0, (void *)scale_ticks(0xC));
             moby->state = 1;
         }
         break;
     case 3:
         if (moby->f52 != 0 && (moby->f70 & 2)) {
-            BlendAnimationWithLinked((char *)moby, (void *)0xB, 0, (void *)scale_ticks(0xC));
+            blend_big_axebot_and_axe_animation((char *)moby, (void *)0xB, 0, (void *)scale_ticks(0xC));
         }
         if (data->f402 == 0) {
             if (dist < 4.5f) {
-                BlendAnimationWithLinked((char *)moby, (void *)4, (void *)4, (void *)scale_ticks(0xC));
+                blend_big_axebot_and_axe_animation((char *)moby, (void *)4, (void *)4, (void *)scale_ticks(0xC));
                 moby->state = 7;
             } else if (flag ? dist < data->f43C * 2.0f : dist < data->f43C) {
                 int nf = (moby->fBC & 1) == 0;
                 if (nf) {
-                    BlendAnimationWithLinked((char *)moby, (void *)2, 0, (void *)scale_ticks(0xC));
+                    blend_big_axebot_and_axe_animation((char *)moby, (void *)2, 0, (void *)scale_ticks(0xC));
                     moby->state = 2;
                     moby->fBC |= 1;
                 }
@@ -766,19 +766,19 @@ void BigAxebotUpdate(M_B7B0 *moby) {
         float a;
 
         if (moby->f53 != 3) {
-            BlendAnimationWithLinked((char *)moby, (void *)3, 0, (void *)scale_ticks(0xC));
+            blend_big_axebot_and_axe_animation((char *)moby, (void *)3, 0, (void *)scale_ticks(0xC));
         }
         if (dist < 4.5f) {
-            BlendAnimationWithLinked((char *)moby, (void *)4, (void *)4, (void *)scale_ticks(0xC));
+            blend_big_axebot_and_axe_animation((char *)moby, (void *)4, (void *)4, (void *)scale_ticks(0xC));
             moby->state = 7;
         }
         if (func_001F9D48(path->pts[data->f438], moby->pos) < 1.0f) {
             data->f438++;
             if (data->f438 == path->count) {
                 if (flag ? data->f43C * 2.0f < dist : data->f43C < dist) {
-                    BlendAnimationWithLinked((char *)moby, 0, 0, (void *)scale_ticks(0x18));
+                    blend_big_axebot_and_axe_animation((char *)moby, 0, 0, (void *)scale_ticks(0x18));
                 } else {
-                    BlendAnimationWithLinked((char *)moby, (void *)0xD, 0, (void *)scale_ticks(0x18));
+                    blend_big_axebot_and_axe_animation((char *)moby, (void *)0xD, 0, (void *)scale_ticks(0x18));
                 }
                 moby->state = 1;
                 break;
@@ -801,7 +801,7 @@ void BigAxebotUpdate(M_B7B0 *moby) {
         data->f414 = SpringTurn(moby->rot[2], ang, &data->f410, D_0015EE70 * 6.2831855f, D_0015EE70 * 125.663704f, D_0015EE6C * 12.566371f);
         LegWalkerUpdate(moby, data->f1A0, D_0015EE6C * 4.0f, data->f414, D_0015EE70 * 20.0f);
         if (dist < 4.5f) {
-            BlendAnimationWithLinked((char *)moby, (void *)4, (void *)4, (void *)scale_ticks(0xC));
+            blend_big_axebot_and_axe_animation((char *)moby, (void *)4, (void *)4, (void *)scale_ticks(0xC));
             moby->state = 7;
         } else if (data->f41C != -1) {
             v[0] = FastCos(moby->rot[2]) * 2.0f;
@@ -810,7 +810,7 @@ void BigAxebotUpdate(M_B7B0 *moby) {
             FastVecAdd(v, v, moby->pos);
             if (IsPointInPolygon(v, D_L04_001B0930_B7B0[data->f41C]->pts, D_L04_001B0930_B7B0[data->f41C]->count) == 0) {
                 data->f410 = 0.0f;
-                BlendAnimationWithLinked((char *)moby, (void *)8, 0, (void *)scale_ticks(0xC));
+                blend_big_axebot_and_axe_animation((char *)moby, (void *)8, 0, (void *)scale_ticks(0xC));
                 moby->state = 9;
             }
             if (IsPointInPolygon(tpos, D_L04_001B0930_B7B0[data->f41C]->pts, D_L04_001B0930_B7B0[data->f41C]->count) == 0) {
@@ -820,7 +820,7 @@ void BigAxebotUpdate(M_B7B0 *moby) {
         break;
     case 6:
         if (dist < 4.5f) {
-            BlendAnimationWithLinked((char *)moby, (void *)4, (void *)4, (void *)scale_ticks(0xC));
+            blend_big_axebot_and_axe_animation((char *)moby, (void *)4, (void *)4, (void *)scale_ticks(0xC));
             moby->state = 7;
         } else {
             float a;
@@ -842,7 +842,7 @@ void BigAxebotUpdate(M_B7B0 *moby) {
                 FastVecAdd(v, v, moby->pos);
                 if (IsPointInPolygon(v, D_L04_001B0930_B7B0[data->f41C]->pts, D_L04_001B0930_B7B0[data->f41C]->count) == 0) {
                     data->f410 = 0.0f;
-                    BlendAnimationWithLinked((char *)moby, (void *)8, 0, (void *)scale_ticks(0xC));
+                    blend_big_axebot_and_axe_animation((char *)moby, (void *)8, 0, (void *)scale_ticks(0xC));
                     moby->state = 9;
                     moby->fBC |= 0x10;
                 }
@@ -878,7 +878,7 @@ void BigAxebotUpdate(M_B7B0 *moby) {
         }
         if (moby->f52 == 4 && (moby->f70 & 2)) {
             data->f402 = scale_ticks(0x5A);
-            BlendAnimationWithLinked((char *)moby, (void *)((flag ? dist < data->f43C * 2.0f : dist < data->f43C) ? 0xD : 0), 0, (void *)scale_ticks(0xC));
+            blend_big_axebot_and_axe_animation((char *)moby, (void *)((flag ? dist < data->f43C * 2.0f : dist < data->f43C) ? 0xD : 0), 0, (void *)scale_ticks(0xC));
             moby->state = 1;
         }
         break;
@@ -886,7 +886,7 @@ void BigAxebotUpdate(M_B7B0 *moby) {
         if (!(moby->f53 == 5 && (moby->f52 != moby->f53 || hd <= 13.0f))) {
             if (moby->fBC & 4) {
                 moby->fBC &= ~4;
-                BlendAnimationWithLinked((char *)moby, (void *)4, (void *)4, (void *)scale_ticks(6));
+                blend_big_axebot_and_axe_animation((char *)moby, (void *)4, (void *)4, (void *)scale_ticks(6));
                 SetValueOnSelfAndLinked(moby, 1.5f);
                 moby->state = 7;
             } else if (moby->f53 == 8 && (hd < 28.0f || moby->f52 != moby->f53)) {
@@ -915,7 +915,7 @@ void BigAxebotUpdate(M_B7B0 *moby) {
         if (moby->f52 == 8 && (moby->f70 & 2)) {
             moby->state = 5;
             moby->fBC = (moby->fBC | 8) & ~0x10;
-            BlendAnimationWithLinked((char *)moby, (void *)9, 0, (void *)scale_ticks(0xC));
+            blend_big_axebot_and_axe_animation((char *)moby, (void *)9, 0, (void *)scale_ticks(0xC));
         } else if (moby->fBC & 0x10) {
             float a = func_L00_001FF860(data->home[0] - moby->pos[0], data->home[1] - moby->pos[1]);
 
@@ -925,7 +925,7 @@ void BigAxebotUpdate(M_B7B0 *moby) {
         }
         break;
     case 10:
-        if ((StepMobyPhysics(moby, data->fC0) & 0x40) || moby->pos[2] < 1.0f) {
+        if ((mine_fall(moby, data->fC0) & 0x40) || moby->pos[2] < 1.0f) {
             SpawnMarkerEffect((char *)moby);
             if (data->f424 != 0) {
                 DeleteMoby(data->f424);
@@ -954,8 +954,8 @@ void BigAxebotUpdate(M_B7B0 *moby) {
     }
     data->f408 *= 0.96f;
     func_001F9908(&data->f448);
-    func_L00_001FFED8(v, 1, data->f408);
-    func_L00_001FFED8(data->m120.q, 2, 0.0f);
+    axis_rotation_2d48(v, 1, data->f408);
+    axis_rotation_2d48(data->m120.q, 2, 0.0f);
     func_001FA588(data->m120.q, data->m120.q, v);
     if (moby->state != 8) {
         data->f401 = moby->state;
@@ -986,8 +986,8 @@ void BigAxebotUpdate(M_B7B0 *moby) {
         {
             data->f428 = FastAddRots(data->f428, FastSubRots(moby->rot[2], rot));
             MobyTransformScaledVertex((char *)moby, 0xC, (char *)m);
-            MatrixToEuler(m, e);
-            func_L00_001FFED8(q, 2, FastSubRots(ang, data->f428));
+            matrix_to_euler(m, e);
+            axis_rotation_2d48(q, 2, FastSubRots(ang, data->f428));
             data->f428 = ang;
             func_001FA588(data->m160.q, data->m160.q, q);
         }
@@ -1011,7 +1011,7 @@ void BigAxebotUpdate(M_B7B0 *moby) {
         float p[4];
 
         Moby_GetJointWorldPos(moby, 0xB, p);
-        data->f424 = SpawnMoby570(moby, p);
+        data->f424 = spawn_class_23a_moby(moby, p);
     }
 }
 struct Manip_2C2F00;
@@ -1137,37 +1137,54 @@ extern void func_L00_0025F4A8_alt(void *, void *, void *, float, float, int, int
     __asm__("func_L00_0025F4A8");
 extern int func_0022ED80(int, int, char *);
 
+typedef struct {
+    u8 pad_000[0x238];
+    s32 engine_voice_index;
+} CircularSawVars;
+
+typedef struct VoiceSlot {
+    u8 pad_00[4];
+    u8 state;
+    u8 pad_05[0x13];
+    struct Moby *owner;
+} VoiceSlot;
+
+typedef struct VoicePoolWindow {
+    u8 header[0x70];
+    VoiceSlot voice;
+} VoicePoolWindow;
+
 // release the moby's claimed slot, then spawn an effect at it
-void SilenceAndBurst(char *moby)
+void spawn_circular_saw_destruction_effects(char *moby)
 {
-    float pos[4];
+    float explosion_position[4];
     float vec[4];
-    char *data = *(char **)(moby + 0x78);
-    int idx;
-    int r;
+    CircularSawVars *data = (CircularSawVars *)((struct Moby *)moby)->pvars;
+    int engine_voice_index;
+    int invalid_voice_index;
 
     clear_u64_value(vec);
-    idx = *(int *)(data + 0x238);
-    if (idx != -1) {
-        char *e = (char *)D_0013E633 + 0x1D + idx * 0x70;
-        if (*(char **)(e + 0x88) == moby) {
-            if (*(unsigned char *)(e + 0x74) != 0)
-                Sound_StopSlot(idx);
+    engine_voice_index = data->engine_voice_index;
+    if (engine_voice_index != -1) {
+        VoicePoolWindow *voice_slot_window = (VoicePoolWindow *)((char *)D_0013E633 + 0x1D + engine_voice_index * 0x70);
+        if (voice_slot_window->voice.owner == (struct Moby *)moby) {
+            if (voice_slot_window->voice.state != 0)
+                Sound_StopSlot(engine_voice_index);
         }
     }
-    r = -1;
-    *(int *)(data + 0x238) = r;
+    invalid_voice_index = -1;
+    data->engine_voice_index = invalid_voice_index;
     SetDeathBits(moby, 0, -1);
-    Moby_GetJointWorldPos(moby, 5, pos);
-    func_L00_0025F4A8_alt(moby, vec, pos, 0.0f, 0.0f, 10, 3, 4,
-                          2.0f, 1.0f, 100000.0f, 1.0f, -1, 15.0f, 1, 1, r, 0);
+    Moby_GetJointWorldPos(moby, 5, explosion_position);
+    func_L00_0025F4A8_alt(moby, vec, explosion_position, 0.0f, 0.0f, 10, 3, 4,
+                          2.0f, 1.0f, 100000.0f, 1.0f, -1, 15.0f, 1, 1, invalid_voice_index, 0);
     Moby_PlaySound(1, 0, moby);
 }
 extern void func_L00_00260D30(char *, float *, float);
 extern char *D_L04_00160064 MACRO_ADDR;
 
 /* Check that a moby's spot is clear of the other mobys of class 0x154. */
-int IsMobySpotClear(char *moby) {
+int check_circular_saw_melee_attack_spacing(char *moby) {
     char *data = *(char **)(moby + 0x78);
     float vec[20];
     float d0;
@@ -1453,7 +1470,7 @@ extern E_35F0 *D_L04_0016016C MACRO_ADDR;
 extern short D_L04_00161908;
 
 /* Update of the circular saw enemy: hit reaction, state machine (idle, chase, patrol, attack), movement and gravity. */
-void CircularSawUpdate(M_35F0 *moby) {
+void circular_saw_enemy_update(M_35F0 *moby) {
     D_35F0 *data = moby->data;
     T_35F0 tg;
     V4_35F0 prev;
@@ -1471,7 +1488,7 @@ void CircularSawUpdate(M_35F0 *moby) {
     Manipulator_ApplyScale(2.9f, (int)moby, 7, data->f270);
     if (moby->f31 != 0) {
         if (FastVecDist(moby->pos, D_L04_00166FC0) < 27.0f) {
-            SetGroundHeightBand(moby);
+            func_L00_0025B178(moby);
             moby->f7F = 0x15;
         }
     }
@@ -1482,7 +1499,7 @@ void CircularSawUpdate(M_35F0 *moby) {
     qcopy(prev, moby->pos);
     qcopy(dest, moby->pos);
     moby->f30 = 0x20;
-    EngineSoundUpdate(moby);
+    update_circular_saw_engine_sound(moby);
     if (moby->state == 1 || moby->state == 3) {
         H_35F0 *h = (H_35F0 *)(D_0013E633 + 0xE1D);
         if (h->f240 == moby || FastVecDist(moby->pos, h->pos) < 1.5f) {
@@ -1491,7 +1508,7 @@ void CircularSawUpdate(M_35F0 *moby) {
             moby->state = 7;
         }
     }
-    func_L00_001FEF78(&data->f14D);
+    fast_subtract_rotations_cf(&data->f14D);
     if (moby->state != 8 && moby->state != 0) {
         int tmp;
         float dmg;
@@ -1533,7 +1550,7 @@ void CircularSawUpdate(M_35F0 *moby) {
                 break;
             case 1:
             case 2:
-                SilenceAndBurst((char *)moby);
+                spawn_circular_saw_destruction_effects((char *)moby);
                 DeleteMoby(moby);
                 return;
             case 3:
@@ -1663,7 +1680,7 @@ void CircularSawUpdate(M_35F0 *moby) {
                     data->f146 = scale_ticks(0x3C);
                 }
                 ta = func_L00_001FF860(tg.pos[0] - moby->pos[0], tg.pos[1] - moby->pos[1]);
-                if (dist < 2.0f && data->f146 == 0 && IsMobySpotClear((char *)moby) != 0) {
+                if (dist < 2.0f && data->f146 == 0 && check_circular_saw_melee_attack_spacing((char *)moby) != 0) {
                     MobyBlendAnimation(moby, (void *)7, 0, (void *)scale_ticks(10));
                     data->f146 = scale_ticks(0x3C);
                     moby->state = 7;
@@ -1692,7 +1709,7 @@ void CircularSawUpdate(M_35F0 *moby) {
         if ((flag ? dist < data->f140 * 2.0f : dist < data->f140)
             && (flag || data->f138 == -1 || IsPointInPolygon(&tg, D_L04_001B0930_2C35F0[data->f138]->pts, D_L04_001B0930_2C35F0[data->f138]->count) != 0)) {
             rot = FlockSteer(moby, dest, flag ? data->f140 * 2.0f : data->f140);
-            if (dist < 2.0f && data->f146 == 0 && IsMobySpotClear((char *)moby) != 0) {
+            if (dist < 2.0f && data->f146 == 0 && check_circular_saw_melee_attack_spacing((char *)moby) != 0) {
                 MobyBlendAnimation(moby, (void *)7, 0, (void *)scale_ticks(10));
                 data->f146 = scale_ticks(0x3C);
                 moby->state = 7;
@@ -1720,7 +1737,7 @@ void CircularSawUpdate(M_35F0 *moby) {
                     data->f146 = scale_ticks(0x3C);
                 }
                 ta = func_L00_001FF860(tg.pos[0] - moby->pos[0], tg.pos[1] - moby->pos[1]);
-                if (dist < 2.0f && data->f146 == 0 && IsMobySpotClear((char *)moby) != 0) {
+                if (dist < 2.0f && data->f146 == 0 && check_circular_saw_melee_attack_spacing((char *)moby) != 0) {
                     MobyBlendAnimation(moby, (void *)7, 0, (void *)scale_ticks(10));
                     data->f146 = scale_ticks(0x3C);
                     moby->state = 7;
@@ -1770,7 +1787,7 @@ void CircularSawUpdate(M_35F0 *moby) {
                     data->f146 = scale_ticks(0x3C);
                 }
                 ta = func_L00_001FF860(tg.pos[0] - moby->pos[0], tg.pos[1] - moby->pos[1]);
-                if (dist < 2.0f && data->f146 == 0 && IsMobySpotClear((char *)moby) != 0) {
+                if (dist < 2.0f && data->f146 == 0 && check_circular_saw_melee_attack_spacing((char *)moby) != 0) {
                     MobyBlendAnimation(moby, (void *)7, 0, (void *)scale_ticks(10));
                     data->f146 = scale_ticks(0x3C);
                     moby->state = 7;
@@ -1842,7 +1859,7 @@ void CircularSawUpdate(M_35F0 *moby) {
         break;
     case 8:
         if (moby->f70 & 2) {
-            SilenceAndBurst((char *)moby);
+            spawn_circular_saw_destruction_effects((char *)moby);
             DeleteMoby(moby);
             return;
         }
@@ -1962,7 +1979,7 @@ void CircularSawUpdate(M_35F0 *moby) {
         }
     }
     if (moby->pos[2] < data->f120[2] - 5.0f) {
-        SilenceAndBurst((char *)moby);
+        spawn_circular_saw_destruction_effects((char *)moby);
         DeleteMoby(moby);
         return;
     }
@@ -1987,9 +2004,9 @@ void CircularSawUpdate(M_35F0 *moby) {
 extern char *func_L00_002DCD40(char *);
 extern int func_L00_002DD0E0(char *, int, int, float);
 extern int func_0022ED80(int, int, char *);
-int MobyL04_UpdateGrabState(char *m, int a, int b, float f) {
+int process_moby_hit_state_and_voice(char *m, int a, int b, float f) {
     char *h = Moby_GetClassRecord(m);
-    int r = StartCarriedMobyAnim(m, a, b, f);
+    int r = launch_suck_cannon_projectile(m, a, b, f);
     if (r != 0) {
         m[0x20] = 9;
     } else if ((unsigned char)m[0x20] == 9) {
@@ -2034,7 +2051,7 @@ extern short D_L04_0016194C;
 
 /* Lays a trail of smoke puffs from FROM to TO with a burst at each end.
    Adapted from Lombyte (GPL-3.0) for PAL by OpenRAC's tools/port.py: src/overlays/l04/gameplay/entities/0029eb20.c, FUN_L04_002c41e0. */
-void SpawnSmokeTrail(void *owner, void *from, void *to, int count, float a, float b) {
+void spawn_smoke_puff_trail_with_endpoint_bursts(void *owner, void *from, void *to, int count, float a, float b) {
     Vec4 step;
     Vec4 at;
     Vec4 vel;
@@ -2101,7 +2118,7 @@ void DeleteMobyAndLinked(char *arg) {
     if (other != 0) {
         DeleteMoby(other);
     }
-    SpawnSmokeTrails(arg);
+    spawn_moby_table_puff_pattern(arg);
     DeleteMoby(arg);
 }
 typedef int u128_5BD0 __attribute__((mode(TI)));
@@ -2193,7 +2210,7 @@ void BlargTrooperUpdate(char *moby) {
     Manipulator_SetScale(data + 0x110, 3.0f);
     if (*(unsigned char *)(moby + 0x31) != 0) {
         if (FastVecDist(pos, D_L04_00166FC0) < 27.0f) {
-            SetGroundHeightBand(moby);
+            func_L00_0025B178(moby);
             *(unsigned char *)(moby + 0x7F) = 0x15;
         }
     }
@@ -2332,7 +2349,7 @@ void BlargTrooperUpdate(char *moby) {
         *(unsigned char *)(data + 0xFE) = scale_ticks(0xF0);
     }
     *(int *)(data + 0x38) = 0;
-    func_L00_001FEF78(data + 0xFE);
+    fast_subtract_rotations_cf(data + 0xFE);
     func_001F9908((int *)(data + 0x108));
     switch (*(unsigned char *)(moby + 0x20)) {
     case 0:
@@ -2457,7 +2474,7 @@ void BlargTrooperUpdate(char *moby) {
             } else {
                 k = 0;
             }
-            if (func_L00_001FEF78(data + 0xFF) != 0 && k != *(unsigned char *)(moby + 0x53)) {
+            if (fast_subtract_rotations_cf(data + 0xFF) != 0 && k != *(unsigned char *)(moby + 0x53)) {
                 MobyBlendAnimation(moby, (void *)k, 0, (void *)scale_ticks(0xA));
                 *(unsigned char *)(data + 0xFF) = scale_ticks(0xF);
             }
@@ -2567,8 +2584,8 @@ void BlargTrooperUpdate(char *moby) {
                 BuildSphericalOffset(st.w.p.v80, D_0015EE6C * 10.0f, a, p);
             }
             Moby_PlaySound(7, 0, moby);
-            SpawnShotMoby(moby, st.w.p.v70, st.w.p.v80, truncate_float_to_s32(14.0f / (D_0015EE6C * 10.0f)));
-            func_L00_001FEF78(data + 0xFD);
+            spawn_class_b8_projectile(moby, st.w.p.v70, st.w.p.v80, truncate_float_to_s32(14.0f / (D_0015EE6C * 10.0f)));
+            fast_subtract_rotations_cf(data + 0xFD);
         } else if ((*(unsigned char *)(moby + 0x70) & 2) && *(short *)(data + 0xF2) == 0 && *(unsigned char *)(data + 0xFD) == 0) {
             *(short *)(data + 0xF2) = scale_ticks(0xB4);
             *(unsigned char *)(moby + 0x20) = 5;
@@ -2628,7 +2645,7 @@ void BlargTrooperUpdate(char *moby) {
         }
         break;
     case 11:
-        if (StepMobyPhysics(moby, data + 0x70) & 0x60) {
+        if (mine_fall(moby, data + 0x70) & 0x60) {
             DeleteMobyAndLinked(moby);
             return;
         }
@@ -2681,7 +2698,7 @@ void BlargTrooperUpdate(char *moby) {
         *(unsigned short *)(*(char **)(data + 0xF8) + 0x34) |= 6;
     } else {
         Moby_GetJointWorldPos(moby, 1, st.w.m);
-        *(char **)(data + 0xF8) = SpawnMoby499(moby, st.w.m);
+        *(char **)(data + 0xF8) = spawn_moby_attachment(moby, st.w.m);
     }
     *(float *)(data + 0xD0) = *(float *)(data + 0xD0) + D_0015EE70 * 9.8f;
     *(float *)(moby + 0x18) = *(float *)(moby + 0x18) - (*(float *)(data + 0xD0) - 2.0f);
@@ -2731,7 +2748,7 @@ struct Moby;
 
 /* Follows a linked switch moby (class 0x118): mirrors its position value, loops a sound while it moves, plays a click at either end and swaps class 0x41C back to 0x1B0 when it reaches 1.0.
    Adapted from Lombyte (GPL-3.0) for PAL by OpenRAC's tools/port.py: src/overlays/l04/gameplay/entities/0029eb20.c, FUN_L04_002c6858. */
-void SwitchFollowerUpdate(struct Moby *m) {
+void eudora_bridge_update(struct Moby *m) {
     SwitchFollowerVars_C7BD8 *v = (SwitchFollowerVars_C7BD8 *)m->pvars;
     f32 last = m->anim_time;
     struct Moby *other;
@@ -2850,7 +2867,7 @@ extern u8 D_0013E650[];
 
 /* Door update: follows its lever's travel, pushes the lever back while opening, and runs the motor sounds.
    Adapted from Lombyte (GPL-3.0) for PAL by OpenRAC's tools/port.py: src/overlays/l04/gameplay/entities/0029eb20.c, FUN_L04_002c6bb8. */
-void LeverDoorUpdate(struct Moby *m) {
+void platform_booster_update(struct Moby *m) {
     DoorVars *v = (DoorVars *)m->pvars;
     f32 prev;
     struct Moby *lever;
