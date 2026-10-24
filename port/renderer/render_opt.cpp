@@ -70,6 +70,9 @@ constexpr std::array<Entry, kOptCount> kEntries = {{
     {Opt::VkExtendedDynamicState, "vk-extended-dynamic-state",
      "cull, front face, depth and stencil state recorded by the draw, not baked into the pipeline",
      false, Tolerance{}},
+    {Opt::MobyPoseInPlace, "moby-pose-in-place",
+     "the mobys regrouped only when they change, their poses written in place between ticks",
+     true, Tolerance{}},
 }};
 // clang-format on
 
