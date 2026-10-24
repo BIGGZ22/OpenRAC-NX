@@ -8,14 +8,14 @@ agent.
 
 The details live in the guides this one links:
 
-| Guide | For |
-|---|---|
-| [RAC1_PAL_TESTING.md](RAC1_PAL_TESTING.md) | Running the game by script: starting a level, teleporting Ratchet, pressing buttons, screenshots, memory watches, the routes to every menu |
-| [DEBUGGING.md](DEBUGGING.md) | The debug overlay and every `OPENRAC_*` switch |
-| [RAC1_PAL_BUGFIX_GUIDE.md](RAC1_PAL_BUGFIX_GUIDE.md) | Build, the pieces of a level's code, measuring a gameplay bug, backfilling C for a function |
-| [RENDERER.md](RENDERER.md) | How the game builds a frame and what each renderer draws |
-| [../LAYOUT.md](../LAYOUT.md) | Where things go, and the direction for the port's per-version files |
-| [../../launcher/docs/RELEASING.md](../../launcher/docs/RELEASING.md) | Cutting a release |
+| Guide                                                                | For                                                                                                                                        |
+| -------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------ |
+| [RAC1_PAL_TESTING.md](RAC1_PAL_TESTING.md)                           | Running the game by script: starting a level, teleporting Ratchet, pressing buttons, screenshots, memory watches, the routes to every menu |
+| [DEBUGGING.md](DEBUGGING.md)                                         | The debug overlay and every `OPENRAC_*` switch                                                                                             |
+| [RAC1_PAL_BUGFIX_GUIDE.md](RAC1_PAL_BUGFIX_GUIDE.md)                 | Build, the pieces of a level's code, measuring a gameplay bug, backfilling C for a function                                                |
+| [RENDERER.md](RENDERER.md)                                           | How the game builds a frame and what each renderer draws                                                                                   |
+| [../LAYOUT.md](../LAYOUT.md)                                         | Where things go, and the direction for the port's per-version files                                                                        |
+| [../../launcher/docs/RELEASING.md](../../launcher/docs/RELEASING.md) | Cutting a release                                                                                                                          |
 
 ## 1. The loop
 
@@ -48,7 +48,8 @@ Players describe what they see, not what broke. Before reproducing, know:
   settles most questions; players can drop one in the repository root or
   send it.
 - **Their save.** A memory card takes other paths through the menus than
-  `--no-card`. Their cards are in `<data home>/OpenRAC/memcard/<serial>`:
+  `--no-card`. Their cards are in `<install folder>/memcard/<serial>` (the
+  launcher's Settings name the folder; Saves, Open folder opens it):
   copy the folder to a scratch place and pass `--cards <copy>/<serial>`.
   Never run against the original.
 - **Whether the game does it too.** Some reports describe how the game
@@ -118,7 +119,7 @@ What has paid off every time:
 - **Fresh levels when the export changed.** After a format bump the port
   reads only the new format and draws a black world from old exports. Export
   to a scratch folder under `build/` (`editor/extract.py port <disc>
-  build/<name> --level N`) and delete it when done.
+build/<name> --level N`) and delete it when done.
 - **The game's state, set directly.** Teleport Ratchet, set bolts
   (`0x15EE98`), own items (`0x13D4C0 + id`, one byte each) with
   `OPENRAC_WRITE`. Some lists are built when a level or menu opens, so a
@@ -134,11 +135,11 @@ answer:
 
 1. **The log's own words.** `X has no C in the port yet; it does nothing`
    (the function's C is missing; the count says how hot it is), `call to code
-   address ..., which no function of the port has` (a pointer into code the
+address ..., which no function of the port has` (a pointer into code the
    port has not bound), `two functions at ...; keeping the first` (two names
    at one address, and the one kept may be the stub).
 2. **hostgen's report**, `port/build/release/games/<id>/gen/report.md`: stubs,
-   functions without C, and *calls short of arguments, filled with 0*. On the
+   functions without C, and _calls short of arguments, filled with 0_. On the
    console a register still held the caller's value; in C the callee gets 0.
    That one bug made the US title menu show the Bomb Glove's tip for every
    entry.
@@ -172,34 +173,34 @@ answer:
 From the week of 2026-10-16, each found by the steps above. The bug-fix
 guide's own list covers gameplay code.
 
-| What the player saw | The cause | How it showed |
-|---|---|---|
-| The vendor's screens black | A draw that reads a render target has texture handle 0, the placeholder's, and the "texture not uploaded yet" guard dropped it | The target read back held the panels; the monitors' draws had their writes masked |
-| Screens under the vendor's monitors | The store's frame has no VU1 program, so all of its 2D was taken as coming before the world | `OPENRAC_FRAME_LOG`: "before world" equal to the whole list |
+| What the player saw                                    | The cause                                                                                                                                                                       | How it showed                                                                         |
+| ------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------- |
+| The vendor's screens black                             | A draw that reads a render target has texture handle 0, the placeholder's, and the "texture not uploaded yet" guard dropped it                                                  | The target read back held the panels; the monitors' draws had their writes masked     |
+| Screens under the vendor's monitors                    | The store's frame has no VU1 program, so all of its 2D was taken as coming before the world                                                                                     | `OPENRAC_FRAME_LOG`: "before world" equal to the whole list                           |
 | No HUD on Kerwan, the HUD and sea flickering on Rilgar | The split at the first VU1 program: in the port that is the world text's sprite pass, absent while there is no world text. The terrain pass now puts a world marker in the list | `OPENRAC_FRAME_LOG`: "before world" equal to the whole list in play, PAL and US alike |
-| The split point never found | The packet scan read a non-GIF word as a huge image and skipped the rest of the frame | Logging each DIRECT the scan saw |
-| A flash on opening the store | The fly-in's first tick draws the world with an empty 2D list, so it showed unfaded between black ticks | Mean brightness per frame |
-| Gaps around 2D panels | The half-pixel shift was half a *game* pixel, 2.5 screen pixels at 2560 across | Cropping the edge at full resolution |
-| 3D items missing from menus | Mobys the game renders into a texture (vendor screens, pause previews) were drawn in the world or not at all | Their camera's zoom: 1.0 for a texture, 0.63 for the frame |
-| The Pyrocitor and Blaster invisible | Their bind pose has a joint with zero scale; the export rejected the whole class | The manifest listed them with no mesh |
-| Clank in front of Ratchet in a preview | Depth was cleared at each moby marker into the same panel | Two markers, one per moby |
-| Ratchet's arms down with a gun | The pose layers on a moby's `+0x60` list were never applied | Reading the list: three nodes at weight 1 |
-| The US menu showing help text | A call short of its argument (section 4, item 2) | The report listed it |
-| The US level black | The animation advance has no C in the US decomp, and the stub won the address | "has no C", 215,018 calls |
+| The split point never found                            | The packet scan read a non-GIF word as a huge image and skipped the rest of the frame                                                                                           | Logging each DIRECT the scan saw                                                      |
+| A flash on opening the store                           | The fly-in's first tick draws the world with an empty 2D list, so it showed unfaded between black ticks                                                                         | Mean brightness per frame                                                             |
+| Gaps around 2D panels                                  | The half-pixel shift was half a _game_ pixel, 2.5 screen pixels at 2560 across                                                                                                  | Cropping the edge at full resolution                                                  |
+| 3D items missing from menus                            | Mobys the game renders into a texture (vendor screens, pause previews) were drawn in the world or not at all                                                                    | Their camera's zoom: 1.0 for a texture, 0.63 for the frame                            |
+| The Pyrocitor and Blaster invisible                    | Their bind pose has a joint with zero scale; the export rejected the whole class                                                                                                | The manifest listed them with no mesh                                                 |
+| Clank in front of Ratchet in a preview                 | Depth was cleared at each moby marker into the same panel                                                                                                                       | Two markers, one per moby                                                             |
+| Ratchet's arms down with a gun                         | The pose layers on a moby's `+0x60` list were never applied                                                                                                                     | Reading the list: three nodes at weight 1                                             |
+| The US menu showing help text                          | A call short of its argument (section 4, item 2)                                                                                                                                | The report listed it                                                                  |
+| The US level black                                     | The animation advance has no C in the US decomp, and the stub won the address                                                                                                   | "has no C", 215,018 calls                                                             |
 
 ## 5. Fixing it where it belongs
 
 Where a change goes matters as much as the change ([LAYOUT.md](../LAYOUT.md)):
 
-| The fault is in | Fix it in |
-|---|---|
-| The game's own C doing something only a PC trips on (an argument passed in a register, a call through an address) | The C in `games/<game>/<version>/src`, keeping the PS2 build byte-identical. In a tree OpenRAC follows from another project (the NTSC decomp), list the change in that tree's `OPENRAC_PATCHES.md` and offer it upstream |
-| A function a decompilation has only as assembly | `port/game/<id>/hand/` (and `hand.tsv`), C carried from the other version where `versionmap` says `same` |
-| Something the console's hardware or libraries did | The engine: `port/runtime`, `port/renderer`, `port/viewer`, `port/game/common`, shared by every game and version; data-driven per game where they differ, never forked |
-| A routine the port must answer itself (drawing, a hook) | A `wrap` or `host` row in `port/game/<id>/libraries.tsv` with its host C in `port/game/<id>/host/` |
-| Two routines the catalogue folded into one | `port/game/<id>/split_places.tsv` |
-| What the level export writes | `editor/` (the port's levels come from `editor/extract.py port`). A change the port relies on bumps the export format: `editor/port.py FORMAT`, `port/scene/level.h kManifestFormat`, the `verified-<format>.json` stamp in `launcher/actions.json` and `tools/bundle_standalone.py`, and the test fixtures, in one commit. Players' levels are then read again once |
-| What the launcher runs | `launcher/actions.json` (`tools/bundle_standalone.py` derives an installer's actions from it) |
+| The fault is in                                                                                                   | Fix it in                                                                                                                                                                                                                                                                                                                                                            |
+| ----------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| The game's own C doing something only a PC trips on (an argument passed in a register, a call through an address) | The C in `games/<game>/<version>/src`, keeping the PS2 build byte-identical. In a tree OpenRAC follows from another project (the NTSC decomp), list the change in that tree's `OPENRAC_PATCHES.md` and offer it upstream                                                                                                                                             |
+| A function a decompilation has only as assembly                                                                   | `port/game/<id>/hand/` (and `hand.tsv`), C carried from the other version where `versionmap` says `same`                                                                                                                                                                                                                                                             |
+| Something the console's hardware or libraries did                                                                 | The engine: `port/runtime`, `port/renderer`, `port/viewer`, `port/game/common`, shared by every game and version; data-driven per game where they differ, never forked                                                                                                                                                                                               |
+| A routine the port must answer itself (drawing, a hook)                                                           | A `wrap` or `host` row in `port/game/<id>/libraries.tsv` with its host C in `port/game/<id>/host/`                                                                                                                                                                                                                                                                   |
+| Two routines the catalogue folded into one                                                                        | `port/game/<id>/split_places.tsv`                                                                                                                                                                                                                                                                                                                                    |
+| What the level export writes                                                                                      | `editor/` (the port's levels come from `editor/extract.py port`). A change the port relies on bumps the export format: `editor/port.py FORMAT`, `port/scene/level.h kManifestFormat`, the `verified-<format>.json` stamp in `launcher/actions.json` and `tools/bundle_standalone.py`, and the test fixtures, in one commit. Players' levels are then read again once |
+| What the launcher runs                                                                                            | `launcher/actions.json` (`tools/bundle_standalone.py` derives an installer's actions from it)                                                                                                                                                                                                                                                                        |
 
 `port/game/<id>/` is meant to shrink: prefer the game's C when the fix is
 to the game's code. Keep the rules that hold everywhere: no emulation, no
@@ -222,7 +223,7 @@ commit.
      translation is kept;
    - Python: `python3 -m unittest discover -s editor` and `-s tools`, also on
      Python 3.12 (`uv run --python 3.12 --no-project python -m unittest
-     discover -s editor`), which CI and the installers use;
+discover -s editor`), which CI and the installers use;
    - the launcher: `yarn verify`, `cargo test -p openrac-launcher-core` in
      `launcher/`.
 5. **Probes removed, scratch exports and processes cleaned up.**

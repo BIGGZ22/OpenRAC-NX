@@ -76,8 +76,8 @@ actions (rebuild, open the folder, the activity log, remove the set-up) are in
 the menu beside it. The list on the left switches games, and the Games tab
 opens on the one you used last.
 
-- **Saves**: the port's memory card (`~/.local/share/openrac/memcard/<serial>/`
-  on Linux) shows each slot's planet, bolts and save time, with backups you
+- **Saves**: the port's memory card (`<install folder>/memcard/<serial>/`, beside
+  the games in `active/` and the settings in `settings/`) shows each slot's planet, bolts and save time, with backups you
   can restore. **Edit** opens a slot in the save editor: planet, bolts, health
   upgrades, weapons, gadgets, ammo, gold weapons, gold bolts, planets and
   skill points. **Advanced save editing** adds every field and the raw bytes.

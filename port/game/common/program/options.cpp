@@ -33,9 +33,21 @@ namespace {
     std::exit(64);
 }
 
-// OpenRAC's folder in the player's data home, as the launcher finds it
-// (launcher/core/src/saves.rs, get_memcard_dir).
+// OpenRAC's folder of the player's memory cards and settings, as the launcher finds it
+// (launcher/core/src/saves.rs, data_home): the one the launcher names (its install folder), else
+// the system's. Windows has no HOME: there it is the OpenRAC folder in the user's profile, the
+// launcher's default install folder, not a folder under wherever the game was started.
 fs::path data_home() {
+    if (const std::optional<std::string_view> chosen = env::value(env::Var::DataHome);
+        chosen && !chosen->empty()) {
+        return fs::path(std::string(*chosen));
+    }
+#if defined(_WIN32)
+    if (const std::optional<std::string> profile = env::system_variable("USERPROFILE");
+        profile && !profile->empty()) {
+        return fs::path(*profile) / "OpenRAC";
+    }
+#endif
 #if defined(__APPLE__)
     const std::optional<std::string> home = env::system_variable("HOME");
     fs::path base = fs::path(home.value_or(".")) / "Library/Application Support/OpenRAC";

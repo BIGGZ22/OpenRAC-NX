@@ -159,6 +159,26 @@ fn get_config(state: State<'_, AppState>) -> Config {
     state.config.lock().unwrap().clone()
 }
 
+/// A desktop's install folder holds the player's saves and settings too (core saves.rs): those
+/// kept where earlier launchers kept them, or in the install folder `before` it (a folder chosen
+/// in Settings), are copied in. Android keeps its own (OpenracSetup.kt).
+fn settle_data_home(before: Option<&Path>, config: &Config) {
+    use openrac_launcher_core::saves;
+    let Some(install) = config.install_dir.as_deref().filter(|_| Platform::current() != Platform::Android) else {
+        return;
+    };
+    let mut copied = before.filter(|before| *before != install).map_or(0, |before| {
+        saves::adopt(before, install).unwrap_or_else(|failed| {
+            launcher_log::line(&format!("saves: {failed} files could not be copied from {}", before.display()));
+            0
+        })
+    });
+    copied += saves::settle_data_home(install);
+    if copied > 0 {
+        launcher_log::line(&format!("saves: {copied} files copied into {}", install.display()));
+    }
+}
+
 #[tauri::command]
 fn save_config(state: State<'_, AppState>, mut config: Config) -> Result<Config, String> {
     let file = state.config_file.as_deref().ok_or("no per-user config folder")?;
@@ -168,7 +188,10 @@ fn save_config(state: State<'_, AppState>, mut config: Config) -> Result<Config,
     // in; they are set again here.
     config.progress_cache = progress_cache(state.config_file.as_deref());
     config::save(file, &config)?;
-    *state.config.lock().unwrap() = config.clone();
+    let before = std::mem::replace(&mut *state.config.lock().unwrap(), config.clone());
+    if before.install_dir != config.install_dir {
+        settle_data_home(before.install_dir.as_deref(), &config);
+    }
 
     let discord = state.discord.clone();
     let target_id = config
@@ -1440,6 +1463,7 @@ fn setup(app: &mut tauri::App) -> Result<(), Box<dyn std::error::Error>> {
     settle_root(&mut config, bundled.as_deref());
     let discord = start_discord(&config);
     start_log(app, config_file.as_deref());
+    settle_data_home(None, &config);
     app.manage(AppState { config: Mutex::new(config), config_file, jobs: Jobs::default(), discord, bundled });
     Ok(())
 }
