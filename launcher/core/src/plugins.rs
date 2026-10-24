@@ -1079,6 +1079,15 @@ pub fn install(dir: &Path, game: &str, version: &str, source: &Path) -> Result<I
         let games: Vec<&str> = m.games.keys().map(String::as_str).collect();
         return Err(format!("{} is a mod for {}, not this game", m.name, games.join(", ")));
     }
+    // A native mod's source folder (a checkout not yet built) names no library: the port would
+    // refuse it at every start, so it is refused here, before it replaces a working copy.
+    if !m.is_script() && m.plugin.is_empty() {
+        return Err(format!(
+            "{} has no library built: this is its source folder. Add its release .zip, or build the mods \
+             first (cmake --build build) and add the checkout again, whose build/package is then taken",
+            m.name
+        ));
+    }
     for path in m.plugin.values() {
         if !root.join(path).is_file() {
             return Err(format!("{} names a library it does not hold ({path})", m.name));
@@ -1750,6 +1759,15 @@ mod tests {
         // No mod anywhere: said.
         std::fs::create_dir_all(r.join("empty/x")).unwrap();
         assert!(mod_folders(&r.join("empty")).unwrap_err().contains("holds no OpenRAC mod"));
+        // A native mod's source folder (no library named) is refused, and nothing is replaced.
+        let src = r.join("src/lock-strafe");
+        std::fs::create_dir_all(&src).unwrap();
+        let mut m = manifest("lock-strafe", json!({}));
+        m.as_object_mut().unwrap().remove("plugin");
+        std::fs::write(src.join(MANIFEST), m.to_string()).unwrap();
+        let err = install(&r.join("plugins"), "rac1", "pal", &src).unwrap_err();
+        assert!(err.contains("has no library built"), "{err}");
+        assert!(!r.join("plugins/lock-strafe").exists());
     }
 
     #[test]
