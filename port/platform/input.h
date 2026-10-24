@@ -89,6 +89,10 @@ private:
 
     std::array<Pad, kPadPorts> m_pads{};
     std::vector<SDL_Gamepad*> m_gamepads;
+    // Each port's sticks, left and right, as their gamepad has shown them (pad.h), and the gamepad
+    // that showed it: another one on the port starts afresh.
+    std::array<std::array<StickGate, 2>, kPadPorts> m_gates{};
+    std::array<SDL_Gamepad*, kPadPorts> m_gates_of{};
     TouchPad m_touch;
     KeyboardMouse m_km;
     bool m_keyboard_table = true;

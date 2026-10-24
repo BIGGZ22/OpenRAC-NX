@@ -253,15 +253,22 @@ void Input::update() {
                 pad.set(Button::R2, true, r2);
             }
             // Squared as the DualShock 2's (pad.h): a round stick pushed to a diagonal runs.
+            auto& gates = m_gates[static_cast<std::size_t>(port)];
+            if (m_gates_of[static_cast<std::size_t>(port)] != g) {
+                m_gates_of[static_cast<std::size_t>(port)] = g;
+                gates = {};
+            }
             stick_bytes(
                 SDL_GetGamepadAxis(g, SDL_GAMEPAD_AXIS_LEFTX),
                 SDL_GetGamepadAxis(g, SDL_GAMEPAD_AXIS_LEFTY),
+                gates[0],
                 pad.left_x,
                 pad.left_y
             );
             stick_bytes(
                 SDL_GetGamepadAxis(g, SDL_GAMEPAD_AXIS_RIGHTX),
                 SDL_GetGamepadAxis(g, SDL_GAMEPAD_AXIS_RIGHTY),
+                gates[1],
                 pad.right_x,
                 pad.right_y
             );
