@@ -484,8 +484,8 @@ void close() {
     if (g) {
         debug_overlay::release();
         settings::save();  // the window's size, if it was changed
-        fps_counter::release();
-        touch_overlay::release();
+        renderer::ui::fps_counter::release();
+        renderer::ui::touch_overlay::release();
         debug_menu::release();
         g->frame.release();
         g->picture.release();

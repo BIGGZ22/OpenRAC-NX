@@ -11,7 +11,7 @@
 
 struct ImDrawData;
 
-namespace openrac::frontend::imgui_gl {
+namespace openrac::renderer::ui::imgui_gl {
 
 // Before the first frame (the context is current): the program, the buffers, the font's texture.
 bool init(std::string& error);
@@ -21,4 +21,4 @@ void render(const ImDrawData* data);
 
 void shutdown();
 
-}  // namespace openrac::frontend::imgui_gl
+}  // namespace openrac::renderer::ui::imgui_gl

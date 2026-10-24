@@ -9,7 +9,7 @@
 
 #include <chrono>
 
-namespace openrac::frontend::fps_counter {
+namespace openrac::renderer::ui::fps_counter {
 
 // A frame was drawn and is about to be shown; `cost`: the seconds drawing it took before its swap.
 void frame_drawn(std::chrono::steady_clock::time_point now, double cost);
@@ -21,4 +21,4 @@ void draw(unsigned framebuffer, int width, int height);
 // Frees its GL objects (the context is still current).
 void release();
 
-}  // namespace openrac::frontend::fps_counter
+}  // namespace openrac::renderer::ui::fps_counter

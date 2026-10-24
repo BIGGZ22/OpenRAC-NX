@@ -8,7 +8,7 @@
 
 #include "platform/touch_pad.h"
 
-namespace openrac::frontend::touch_overlay {
+namespace openrac::renderer::ui::touch_overlay {
 
 // Draws into the window's framebuffer, width x height pixels (the context is current), and tells
 // the pad the window's shape.
@@ -17,4 +17,4 @@ void draw(platform::TouchPad& touch, int width, int height);
 // Frees its GL objects (the context is still current).
 void release();
 
-}  // namespace openrac::frontend::touch_overlay
+}  // namespace openrac::renderer::ui::touch_overlay

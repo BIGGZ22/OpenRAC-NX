@@ -235,10 +235,12 @@ bool initialise(SDL_Window* window) {
     style.ItemSpacing = ImVec2(6.0f, 3.0f);
     initialise_touch(window);
     std::string error;
-    const bool started = s.gl_subset
-                             ? ImGui_ImplSDL3_InitForOther(window) && imgui_gl::init(error)
-                             : ImGui_ImplSDL3_InitForOpenGL(window, SDL_GL_GetCurrentContext())
-                                   && ImGui_ImplOpenGL3_Init(openrac::gl::is_es() ? "#version 300 es" : "#version 410 core");
+    const bool started =
+        s.gl_subset ? ImGui_ImplSDL3_InitForOther(window) && renderer::ui::imgui_gl::init(error)
+                    : ImGui_ImplSDL3_InitForOpenGL(window, SDL_GL_GetCurrentContext())
+                          && ImGui_ImplOpenGL3_Init(
+                              openrac::gl::is_es() ? "#version 300 es" : "#version 410 core"
+                          );
     if (!started) {
         log::warn("debug overlay: Dear ImGui could not start{}", error.empty() ? "" : ": " + error);
         ImGui::DestroyContext();
@@ -646,7 +648,7 @@ void draw(const Shown& shown) {
     status_badge();
     ImGui::Render();
     if (s.gl_subset) {
-        imgui_gl::render(ImGui::GetDrawData());
+        renderer::ui::imgui_gl::render(ImGui::GetDrawData());
     } else {
         ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
     }
@@ -711,7 +713,7 @@ bool take_settings_changed() {
 void release() {
     if (s.initialised) {
         if (s.gl_subset) {
-            imgui_gl::shutdown();
+            renderer::ui::imgui_gl::shutdown();
         } else {
             ImGui_ImplOpenGL3_Shutdown();
         }

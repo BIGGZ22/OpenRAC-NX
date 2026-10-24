@@ -14,7 +14,7 @@
 #include "renderer/gl.h"
 #include "renderer/shader.h"
 
-namespace openrac::frontend::imgui_gl {
+namespace openrac::renderer::ui::imgui_gl {
 namespace {
 
 using namespace openrac::gl;
@@ -185,4 +185,4 @@ void shutdown() {
     s = nullptr;
 }
 
-}  // namespace openrac::frontend::imgui_gl
+}  // namespace openrac::renderer::ui::imgui_gl

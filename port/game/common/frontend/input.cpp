@@ -47,7 +47,7 @@ void draw_touch_pad(int window_width, int window_height) {
     if (touch.take_menu_press()) {
         debug_overlay::toggle_drawer();
     }
-    touch_overlay::draw(touch, window_width, window_height);
+    renderer::ui::touch_overlay::draw(touch, window_width, window_height);
 }
 
 // The cursor as the mods ask for it, while nothing else has the mouse: captured only with the

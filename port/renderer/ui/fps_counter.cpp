@@ -12,7 +12,7 @@
 
 #include "renderer/gl.h"
 
-namespace openrac::frontend::fps_counter {
+namespace openrac::renderer::ui::fps_counter {
 
 namespace {
 
@@ -152,4 +152,4 @@ void release() {
     s = State{};
 }
 
-}  // namespace openrac::frontend::fps_counter
+}  // namespace openrac::renderer::ui::fps_counter

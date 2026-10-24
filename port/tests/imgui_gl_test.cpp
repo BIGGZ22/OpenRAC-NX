@@ -43,7 +43,7 @@ int main() {
     io.IniFilename = nullptr;
     io.DisplaySize = ImVec2(kWidth, kHeight);
     std::string error;
-    CHECK(frontend::imgui_gl::init(error));
+    CHECK(renderer::ui::imgui_gl::init(error));
     if (!error.empty()) {
         std::fprintf(stderr, "%s\n", error.c_str());
     }
@@ -60,7 +60,7 @@ int main() {
     ImGui::End();
     ImGui::PopStyleColor();
     ImGui::Render();
-    frontend::imgui_gl::render(ImGui::GetDrawData());
+    renderer::ui::imgui_gl::render(ImGui::GetDrawData());
 
     unsigned char inside[4] = {};
     unsigned char outside[4] = {};
@@ -70,7 +70,7 @@ int main() {
     CHECK(outside[0] == 0 && outside[1] == 0 && outside[2] == 0);
     CHECK(glGetError() == GL_NO_ERROR);
 
-    frontend::imgui_gl::shutdown();
+    renderer::ui::imgui_gl::shutdown();
     ImGui::DestroyContext();
     return test::result();
 }

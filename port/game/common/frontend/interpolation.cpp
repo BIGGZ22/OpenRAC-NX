@@ -139,7 +139,7 @@ void swapped(std::chrono::steady_clock::time_point started) {
     const double cost = duration<double>(before - started).count();
     pacing.cost = 0.8 * pacing.cost + 0.2 * cost;
     if (settings::get().show_fps) {
-        fps_counter::frame_drawn(after, cost);
+        renderer::ui::fps_counter::frame_drawn(after, cost);
     }
     if (pacing.interval_stale) {
         const float rate = g->window->refresh_rate();
@@ -555,7 +555,7 @@ void draw_kept(bool first) {
     const unsigned shown = g->frame.resolved();
     debug_menu::draw(shown, width, height);
     if (settings::get().show_fps) {
-        fps_counter::draw(shown, width, height);
+        renderer::ui::fps_counter::draw(shown, width, height);
     }
     // OPENRAC_SHOT=FRAME:FILE.png writes that frame (for checking without looking at the screen);
     // OPENRAC_SHOT_BETWEEN also writes the frames drawn between ticks (FILE<frame>_b<n>.png).

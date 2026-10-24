@@ -10,7 +10,7 @@
 #include "renderer/gl.h"
 #include "renderer/shader.h"
 
-namespace openrac::frontend::touch_overlay {
+namespace openrac::renderer::ui::touch_overlay {
 namespace {
 
 using namespace openrac::gl;
@@ -356,4 +356,4 @@ void release() {
     s = State{};
 }
 
-}  // namespace openrac::frontend::touch_overlay
+}  // namespace openrac::renderer::ui::touch_overlay

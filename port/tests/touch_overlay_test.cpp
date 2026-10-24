@@ -60,18 +60,18 @@ int main() {
     const float edge_x = cross->x + cross->radius * 0.92f * kHeight / kWidth;
 
     clear();
-    frontend::touch_overlay::draw(touch, kWidth, kHeight);
+    renderer::ui::touch_overlay::draw(touch, kWidth, kHeight);
     CHECK(brightness(edge_x, cross->y) == 0);  // not touched yet: nothing drawn
 
     touch.finger_down(1, 0.5f, 0.5f);  // touched away from every control: shown, nothing held
     clear();
-    frontend::touch_overlay::draw(touch, kWidth, kHeight);
+    renderer::ui::touch_overlay::draw(touch, kWidth, kHeight);
     const int released = brightness(edge_x, cross->y);
     CHECK(released > 0);
 
     touch.finger_down(2, cross->x, cross->y);
     clear();
-    frontend::touch_overlay::draw(touch, kWidth, kHeight);
+    renderer::ui::touch_overlay::draw(touch, kWidth, kHeight);
     const int held = brightness(edge_x, cross->y);
     CHECK(held > released);
     CHECK(glGetError() == GL_NO_ERROR);
@@ -94,7 +94,7 @@ int main() {
         glBindFramebuffer(GL_READ_FRAMEBUFFER, framebuffer);
         glBlitFramebuffer(0, 0, kWidth, kHeight, 0, 0, kWidth, kHeight, GL_COLOR_BUFFER_BIT, GL_LINEAR);
         glBindFramebuffer(GL_READ_FRAMEBUFFER, 0);
-        frontend::touch_overlay::draw(touch, kWidth, kHeight);
+        renderer::ui::touch_overlay::draw(touch, kWidth, kHeight);
         CHECK(brightness(edge_x, cross->y) == held);
         context.window().swap();
     }
@@ -102,6 +102,6 @@ int main() {
     glDeleteTextures(1, &picture);
     CHECK(glGetError() == GL_NO_ERROR);
 
-    frontend::touch_overlay::release();
+    renderer::ui::touch_overlay::release();
     return test::result();
 }
