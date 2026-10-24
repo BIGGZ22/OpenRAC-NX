@@ -2283,6 +2283,81 @@
         "docs": "port/game/README.md",
         "todo": "There is no qualified compiler or game-wide decompilation yet (games/rac5/README.md); the port comes after."
       }
+    ],
+    "rac6/ntsc": [
+      {
+        "id": "disc-verify",
+        "label": "Check your disc",
+        "description": "Checks your Secret Agent Clank image against the pinned USA disc: its size, SHA-1 and SHA-256.",
+        "kind": "setup",
+        "state": "unverified",
+        "program": "{python}",
+        "args": [
+          "tools/disc.py",
+          "hash",
+          "baserom/SCUS_976.23.iso"
+        ],
+        "requires": [
+          "python",
+          "inputs"
+        ],
+        "docs": "games/rac6/ntsc/README.md",
+        "todo": "Runs from games/rac6/ntsc with the image placed in its baserom/ (python3 tools/openrac.py setup rac6/ntsc)."
+      },
+      {
+        "id": "tests",
+        "label": "Test the project's tools",
+        "description": "The project's unit tests (no disc needed), as its CI runs them.",
+        "kind": "check",
+        "state": "connected",
+        "program": "{python}",
+        "args": [
+          "-m",
+          "unittest",
+          "discover",
+          "-s",
+          "tests"
+        ],
+        "requires": [
+          "python"
+        ],
+        "docs": "games/rac6/ntsc/README.md"
+      },
+      {
+        "id": "repo-check",
+        "label": "Check the repository rules",
+        "description": "Makes sure no game data, build output or toolchain is in Git, as the project's CI does.",
+        "kind": "check",
+        "state": "connected",
+        "program": "{python}",
+        "args": [
+          "tools/check_repository.py"
+        ],
+        "requires": [
+          "python"
+        ],
+        "docs": "games/rac6/ntsc/LEGAL.md"
+      },
+      {
+        "id": "editor-extract",
+        "label": "Extract the levels",
+        "description": "The level editor reads the first game's PAL disc only, for now.",
+        "kind": "edit",
+        "area": "editor",
+        "state": "planned",
+        "docs": "editor/README.md",
+        "todo": "Secret Agent Clank keeps its levels in SNR2 .REL modules; the editor reads none of them yet."
+      },
+      {
+        "id": "play",
+        "label": "Play",
+        "description": "The game as a native PC program: its decompiled C built for this computer, drawn by OpenRAC's own renderer, with the assets from your disc.",
+        "kind": "play",
+        "area": "port",
+        "state": "planned",
+        "docs": "port/game/README.md",
+        "todo": "There is no qualified compiler or game-wide decompilation yet (games/rac6/README.md); the port comes after."
+      }
     ]
   }
 }

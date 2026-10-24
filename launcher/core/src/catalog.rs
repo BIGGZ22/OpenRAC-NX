@@ -441,11 +441,11 @@ mod tests {
     fn reads_every_game_in_the_checkout() {
         let catalog = load(&checkout()).expect("the checkout's game.json files parse");
         let ids: Vec<_> = catalog.games.iter().map(|g| g.id.as_str()).collect();
-        assert_eq!(ids, ["rac1", "rac2", "rac3", "rac4", "rac5"]);
+        assert_eq!(ids, ["rac1", "rac2", "rac3", "rac4", "rac5", "rac6"]);
         // In game.json's order: rac1's PAL first.
         assert_eq!(
             catalog.version_keys(),
-            ["rac1/pal", "rac1/ntsc", "rac2/ntsc", "rac3/ntsc", "rac4/ntsc", "rac5/ntsc"]
+            ["rac1/pal", "rac1/ntsc", "rac2/ntsc", "rac3/ntsc", "rac4/ntsc", "rac5/ntsc", "rac6/ntsc"]
         );
         let pal = catalog.version("rac1/pal").unwrap();
         assert_eq!(pal.serial, "SCES_509.16");

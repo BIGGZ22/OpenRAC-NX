@@ -18,6 +18,7 @@ each project.
 | [`games/rac3/ntsc`](../games/rac3/ntsc) | rac3-uya-decomp | https://github.com/OpenRAC/rac3-uya-decomp | main | `bfd8278e8c73` | 2026-10-07 | GPL-3.0 |
 | [`games/rac4/ntsc`](../games/rac4/ntsc) | rac-deadlocked-decomp | https://github.com/OpenRAC/rac-deadlocked-decomp | main | `dedfcd416a1b` | 2026-10-05 | MIT (GPL libgcc, newlib libm) |
 | [`games/rac5/ntsc`](../games/rac5/ntsc) | rac5-sm-decomp | https://github.com/OpenRAC/rac5-sm-decomp | master | `57b025248ac0` | 2026-10-18 | GPL-3.0 |
+| [`games/rac6/ntsc`](../games/rac6/ntsc) | rac-sac-decomp | https://github.com/OpenRAC/rac-sac-decomp | main | `4e38d3d88f62` | 2026-10-21 | GPL-3.0 |
 <!-- sources:end -->
 
 The full commit hashes are in each `games/<game>/game.json` under `source`,
@@ -70,6 +71,14 @@ Everything else is exactly as it was at that commit.
 **rac5/ntsc**
 - Nothing changed: imported as the project's commit, whole. It already states the sourcing
   rule in its own LEGAL.md, CONTRIBUTING.md and AGENTS.md.
+
+**rac6/ntsc**
+- Imported as the project's commit, whole; it states the sourcing rule in its own LEGAL.md,
+  CONTRIBUTING.md and AGENTS.md.
+- `config/toolchain.json` names the sibling workspace's compiler depot by its relative path
+  (`tools/compilers/...`), without a local drive path.
+- `THIRD_PARTY_NOTICES.md` credits GCC's `fp-bit.c` and `libgcc2.c` (GPL-2.0-or-later with
+  the libgcc exception) for the runtime-library bodies in `src/levels/bodies/`.
 
 **rac4/ntsc**
 - In `src/game/00473A88.c`, the five members of the local struct are named by
