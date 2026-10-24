@@ -416,12 +416,14 @@
     border: 1px solid rgb(0 0 0 / 0.3);
     border-radius: 999px;
     padding: 4px 14px 4px 11px;
-    transition: transform 0.15s ease;
+    transition: color var(--fast);
   }
 
+  /* Under the pointer only its gold brightens: no blue edge (app.css's buttons) and no lift, which
+     moved it by a pixel and left its text redrawn a little differently. */
   @media (hover: hover) {
     .update:hover {
-      transform: translateY(-1px);
+      border-color: rgb(0 0 0 / 0.3);
       color: var(--amber);
     }
   }
