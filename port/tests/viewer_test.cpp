@@ -273,16 +273,16 @@ void loader(const fs::path& dir, scene::LevelData& level) {
           "textures/terrain_0012.png":{"preserve_authored_lighting":false}
         })");
         CHECK(scene::load_level(ooze_dir, ooze, error));
-        CHECK(ooze.materials[0].emission_mask == lighting::EmissionMask::None);
+        CHECK(ooze.materials[0].emission_mask == scene::EmissionMask::None);
         CHECK(ooze.materials[0].emission == source_emission);
         for (const char* window : {"textures/tie_0048.png", "textures/terrain_0059.png"}) {
             write_png(ooze_dir / window, 80, 220, 30);
             write_square(ooze_dir / "terrain.glb.gltf", 20, 0, window);
             CHECK(scene::load_level(ooze_dir, ooze, error));
-            CHECK(ooze.materials[0].emission_mask == lighting::EmissionMask::Green);
+            CHECK(ooze.materials[0].emission_mask == scene::EmissionMask::Green);
             CHECK(!ooze.materials[0].emission_vertex_colour);
             CHECK(ooze.materials[0].diffuse_scale == 1);
-            CHECK(ooze.materials[1].emission_mask == lighting::EmissionMask::None);
+            CHECK(ooze.materials[1].emission_mask == scene::EmissionMask::None);
             CHECK(ooze.materials[0].emission == source_emission);
         }
         write_square(ooze_dir / "lava.gltf", 20, 0, "textures/probe_gaspar_lava.png");
@@ -337,19 +337,19 @@ void loader(const fs::path& dir, scene::LevelData& level) {
         CHECK(scene::load_level(selection_dir, selected, error));
         CHECK((selected.materials[0].emission == scene::Vec3{1, 2, 4}));
         CHECK(selected.materials[0].emission_image == -1);
-        CHECK(selected.materials[0].emission_mask == lighting::EmissionMask::None);
+        CHECK(selected.materials[0].emission_mask == scene::EmissionMask::None);
         write_text(selection_dir / "probe-emission.json", R"({
             "textures/terrain_0000.png":{"preserve_authored_lighting":true}
         })");
         CHECK(scene::load_level(selection_dir, selected, error));
-        CHECK(selected.materials[0].emission_mask == lighting::EmissionMask::None);
+        CHECK(selected.materials[0].emission_mask == scene::EmissionMask::None);
         CHECK(selected.materials[0].emission == source_emission);
         write_text(selection_dir / "probe-emission.json", R"({
             "textures/terrain_0000.png":{"colour":[1,2,3],"texture":"textures/tie_0001.png","mask":"green"}
         })");
         CHECK(scene::load_level(selection_dir, selected, error));
         CHECK((selected.materials[0].emission == scene::Vec3{1, 2, 3}));
-        CHECK(selected.materials[0].emission_mask == lighting::EmissionMask::Green);
+        CHECK(selected.materials[0].emission_mask == scene::EmissionMask::Green);
         CHECK(selected.materials[0].emission_image != selected.materials[0].image);
         write_text(selection_dir / "probe-emission.json", R"({
             "textures/terrain_0000.png":{"mask":"bad"}

@@ -62,11 +62,11 @@ int main() {
     {
         auto emitting = level;
         emitting.materials[0].emission = {1, 2, 3};
-        emitting.materials[0].emission_mask = EmissionMask::Green;
+        emitting.materials[0].emission_mask = scene::EmissionMask::Green;
         auto shared = export_probe_scene(emitting, 0, {.1f, .1f, .1f});
         CHECK(shared.scene.triangles[0].emission == emitting.materials[0].emission);
-        CHECK(shared.scene.triangles[0].emission_mask == EmissionMask::Green);
-        emitting.materials[0].emission_mask = EmissionMask::None;
+        CHECK(shared.scene.triangles[0].emission_mask == scene::EmissionMask::Green);
+        emitting.materials[0].emission_mask = scene::EmissionMask::None;
         CHECK(shared.scene_hash != export_probe_scene(emitting, 0, {.1f, .1f, .1f}).scene_hash);
         emitting.materials[0].emission_vertex_colour = true;
         emitting.materials[0].diffuse_scale = 0;

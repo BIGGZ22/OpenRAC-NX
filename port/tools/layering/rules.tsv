@@ -83,6 +83,5 @@ except	platform/window.cpp:26	renderer/vulkan/vkgl.h	no package yet: the rendere
 # scene -> enhanced: the level renderer draws the enhanced renderer's lighting and shadows itself,
 # and a level carries its emissive lighting. P2-02 moved these files from the viewer program's
 # directory, where the includes were allowed.
-except	scene/level.h:27	enhanced/lighting/emission.h	P2-39: scene owns the lighting and shadow hooks, enhanced registers with them
 except	scene/level_renderer.h:26	enhanced/viewer/early_lighting.h	P2-39: scene owns the lighting and shadow hooks, enhanced registers with them
 except	scene/level_renderer.h:27	enhanced/viewer/probe_lighting.h	P2-39: scene owns the lighting and shadow hooks, enhanced registers with them

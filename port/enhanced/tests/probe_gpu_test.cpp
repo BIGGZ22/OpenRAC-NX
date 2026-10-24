@@ -282,7 +282,7 @@ void material_path(
         }
         level.image_paths.push_back("emission-test");
         level.materials.back().emission_image = 0;
-        level.materials.back().emission_mask = lighting::EmissionMask::Green;
+        level.materials.back().emission_mask = scene::EmissionMask::Green;
     }
     scene::Model model;
     model.primitives.push_back({0, 3, 0});
@@ -386,8 +386,8 @@ void material_path(
                     mask_transition
                         ? Float3{linear(128.f / 255), linear(160.f / 255), linear(128.f / 255)}
                         : (masked ? Float3{0, 1, 0} : Float3{1, 1, 1});
-                float coverage = lighting::emission_mask(
-                    masked ? lighting::EmissionMask::Green : lighting::EmissionMask::None, colour
+                float coverage = scene::emission_mask(
+                    masked ? scene::EmissionMask::Green : scene::EmissionMask::None, colour
                 );
                 float e = .125f * colour[1] * coverage;
                 float display =

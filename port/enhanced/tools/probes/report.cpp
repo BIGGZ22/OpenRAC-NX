@@ -262,7 +262,7 @@ std::string describe_probe_bake(
 
         report << "emission_material " << i << " linear_rgb " << material.emission[0] << ' '
                << material.emission[1] << ' ' << material.emission[2] << " mask "
-               << (material.emission_mask == EmissionMask::Green ? "green" : "none")
+               << (material.emission_mask == scene::EmissionMask::Green ? "green" : "none")
                << " vertex_colour " << material.emission_vertex_colour << " diffuse_scale "
                << material.diffuse_scale << " texture ";
 

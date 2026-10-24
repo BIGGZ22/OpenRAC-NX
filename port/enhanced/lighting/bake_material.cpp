@@ -254,10 +254,11 @@ Float3 bake_emission(const BakeScene& scene, const BakeTriangle& triangle, float
     float coverage = 1;
 
     // Masks isolate luminous parts of an otherwise ordinary texture.
-    if (triangle.emission_mask != EmissionMask::None) {
+    if (triangle.emission_mask != scene::EmissionMask::None) {
         const auto texture =
             triangle.emission_vertex_colour ? bake_material(scene, mask, u, v) : radiance;
-        coverage = emission_mask(triangle.emission_mask, {texture[0], texture[1], texture[2]});
+        coverage =
+            scene::emission_mask(triangle.emission_mask, {texture[0], texture[1], texture[2]});
     }
 
     return {

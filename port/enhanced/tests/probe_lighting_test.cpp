@@ -264,15 +264,20 @@ void emissive_transport() {
         auto window = scene.triangles[0];
         window.emission = {.25f, .125f, .0625f};
         window.emission_texture = 0;
-        window.emission_mask = EmissionMask::Green;
+        window.emission_mask = openrac::scene::EmissionMask::Green;
         scene.textures[0].rgba = {0, 255, 0, 255};
         CHECK((bake_emission(scene, window, 0, 0) == Float3{0, .125f, 0}));
         scene.textures[0].rgba = {128, 128, 128, 255};
         CHECK((bake_emission(scene, window, 0, 0) == Float3{}));
-        CHECK(emission_mask(EmissionMask::Green, {.2f, .4f, .2f}) == 1);
-        CHECK(emission_mask(EmissionMask::Green, {.3f, .4f, .3f}) < .00001f);
+        CHECK(
+            openrac::scene::emission_mask(openrac::scene::EmissionMask::Green, {.2f, .4f, .2f}) == 1
+        );
+        CHECK(
+            openrac::scene::emission_mask(openrac::scene::EmissionMask::Green, {.3f, .4f, .3f})
+            < .00001f
+        );
         window.emission = {1, 1, 1};
-        window.emission_mask = EmissionMask::None;
+        window.emission_mask = openrac::scene::EmissionMask::None;
         window.emission_vertex_colour = true;
         window.emission_colours.fill({.25f, 1, .5f});
         scene.textures[0].rgba = {255, 128, 0, 255};

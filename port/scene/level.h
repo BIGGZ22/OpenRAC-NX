@@ -24,9 +24,9 @@
 #include <string>
 #include <vector>
 
-#include "enhanced/lighting/emission.h"
 #include "renderer/math.h"
 #include "renderer/texture.h"
+#include "scene/emission.h"
 #include "scene/pvs.h"
 
 namespace openrac::scene {
@@ -60,7 +60,7 @@ struct Material {
     std::array<float, 4> colour{1.0f, 1.0f, 1.0f, 1.0f};
     Vec3 emission{};  // shared linear emitted radiance, independent of diffuse lighting
     int emission_image = -1;
-    lighting::EmissionMask emission_mask = lighting::EmissionMask::None;
+    EmissionMask emission_mask = EmissionMask::None;
     bool emission_vertex_colour = false;
     float diffuse_scale = 1;
 };

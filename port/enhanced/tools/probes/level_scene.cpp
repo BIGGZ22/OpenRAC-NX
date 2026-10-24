@@ -471,7 +471,7 @@ BakeSceneExport export_probe_scene(
         hash.f32(triangle.alpha_cutoff);
         hash.floats(triangle.emission);
         hash.u32(static_cast<std::uint32_t>(triangle.emission_texture));
-        if (triangle.emission_mask != EmissionMask::None) {
+        if (triangle.emission_mask != scene::EmissionMask::None) {
             hash.u32(0x4d41534b);
             hash.u32(static_cast<unsigned>(triangle.emission_mask));
         }

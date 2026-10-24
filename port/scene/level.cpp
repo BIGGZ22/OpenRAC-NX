@@ -711,7 +711,7 @@ bool load_level(const fs::path& dir, LevelData& out, std::string& error, const f
         const auto relative = image_path.lexically_relative(root).generic_string();
         const auto& edit = emission_edits[relative];
         if (manifest["game"].string() == "rac1" && manifest["version"].string() == "ntsc") {
-            for (const auto& profile : lighting::kAuthoredEmissions) {
+            for (const auto& profile : kAuthoredEmissions) {
                 if (profile.level == static_cast<unsigned>(out.level)
                     && profile.texture == relative) {
                     material.emission.fill(profile.intensity);
@@ -774,8 +774,7 @@ bool load_level(const fs::path& dir, LevelData& out, std::string& error, const f
                 error = "unknown emission mask in probe-emission.json";
                 return false;
             }
-            material.emission_mask =
-                name == "green" ? lighting::EmissionMask::Green : lighting::EmissionMask::None;
+            material.emission_mask = name == "green" ? EmissionMask::Green : EmissionMask::None;
         }
         material.emission_vertex_colour =
             edit["vertex_colour"].boolean(material.emission_vertex_colour);

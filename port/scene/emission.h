@@ -1,11 +1,19 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (c) 2026 the OpenRAC contributors
+//
+// The level's emitted light: the mask that keeps a texture's glowing parts, and the reviewed
+// materials that emit (kAuthoredEmissions), part of the scene's level data. load_level applies the
+// table to a level's materials (level.cpp); the probe baker reads the same materials, so the
+// runtime and the bake agree (enhanced/lighting/bake.h). Restructure package P2-39b moved it from
+// enhanced/lighting/, where scene/level.h included it against the layering.
+
 #pragma once
 
 #include <algorithm>
 #include <array>
 #include <string_view>
 
-namespace openrac::lighting {
+namespace openrac::scene {
 // Applied to the filtered linear emission texture, in both bake.cpp and mesh.frag.
 enum class EmissionMask : unsigned {
     None,
@@ -40,4 +48,4 @@ inline constexpr AuthoredEmission kAuthoredEmissions[] = {
     {10, "textures/tie_0048.png", 1, EmissionMask::Green},
     {10, "textures/terrain_0059.png", 1, EmissionMask::Green},
 };
-}  // namespace openrac::lighting
+}  // namespace openrac::scene

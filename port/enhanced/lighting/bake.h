@@ -4,8 +4,8 @@
 #include <functional>
 #include <memory>
 
-#include "enhanced/lighting/emission.h"
 #include "enhanced/lighting/probes.h"
+#include "scene/emission.h"
 
 namespace openrac::lighting {
 
@@ -24,7 +24,7 @@ struct BakeTriangle {
     std::array<std::array<float, 4>, 3> multipliers{{{1, 1, 1, 1}, {1, 1, 1, 1}, {1, 1, 1, 1}}};
     Float3 emission{};          // linear radiance; independent of diffuse reflectance
     int emission_texture = -1;  // sRGB RGB mask, alpha comes from the diffuse material
-    EmissionMask emission_mask = EmissionMask::None;
+    scene::EmissionMask emission_mask = scene::EmissionMask::None;
     bool emission_vertex_colour = false;
     std::array<Float3, 3> emission_colours{{{1, 1, 1}, {1, 1, 1}, {1, 1, 1}}};
     bool terrain_prelighting = false;
