@@ -49,6 +49,7 @@ before and after, and how its frames are shown to be the same.
 | `texture-prepare` | on | none (exact) | A level's textures are created, uploaded and mipped at its load (`LevelScene::upload`), not by the first draw that uses them ([R-13](#r-13-a-levels-textures-made-at-its-load)). |
 | `vk-draw-cache` | on | none (exact) | The Vulkan draw finds its pipeline by a hashed fixed key and its descriptor set through arrays kept for their capacity, with no heap allocation ([R-04](#r-04-an-allocation-free-draw)). |
 | `attachment-discard` | on | none (exact) | A Vulkan pass neither stores an attachment `glInvalidateFramebuffer` let go nor has the next pass load it ([R-06](#r-06-attachments-a-pass-does-not-keep)). |
+| `gpu-resident-instances` | on | none (exact) | Static instances are registered in device memory at the level's upload; a view's GPU-driven batch of them sends only its planes, PVS and a group record ([R-15](#r-15-static-instances-resident-on-the-gpu)). |
 
 Its tests are `render_opt` (the table, and the parsing of the variable: a name, a list, `all`, an
 unknown name kept apart; it runs in the headless preset too) and `render_opt_environment` (the
@@ -807,3 +808,80 @@ depth attachment's `Don't Care` against `Store`) and the memory-bandwidth counte
 by the GPU per frame). On Android, AGI's frame profiler shows the same as each render pass's
 store operations and the GPU's external write bandwidth.
 
+## R-15: static instances resident on the GPU
+
+**What changed** (`renderer/vulkan/gpu_draw.inc`, `vkgl.h`, `vkgl.cpp`, `vkgl_internal.h`,
+`scene/level_renderer.cpp`):
+
+- `gpu-resident-instances`. For every group of terrain, ties and shrubs and every view (the camera,
+  its PVS pass, each shadow view), `gpu_make_batch` copied each instance's 120 bytes of data and 32
+  of bounds into the page payload, and `gpu_record` copied the payload again into the mapped input
+  page, every frame, though static instances never change after the upload. `build_groups` now
+  registers each static group once (`vkgl::gpu_register_instances`): its candidates, in the
+  culling's 38-word layout, are appended to one array, which the first batch that needs it copies
+  into a device-local storage buffer through the ring. A batch of a registered, unchanged buffer
+  (its GL version) writes only the view, 58 words, and a group record whose first word carries
+  `kGpuResidentBit`; the cull shader reads such a group's candidates from a fourth storage binding.
+  The moby layer, regrouped each frame, keeps the payload copy.
+- Lifetime: `LevelScene::release` calls `gpu_release_instances`; the device copy is destroyed by the
+  frame slot's deferred list, after the slot that last bound it has retired. One recording binds one
+  resident copy; a batch that would need a newer one (a level uploaded in the middle of a recording)
+  takes the payload path for that recording. Ordered compaction, unknown bounds staying visible, the
+  UI bypass and the shadow views' own planes are unchanged: the shader reads the same words from
+  another buffer.
+- The instance vertex buffers stay (the CPU path and the per-instance shadow paths draw from them),
+  and so does the AMD persistent-buffer workaround of `vkgl_draw.cpp`.
+
+**The counter**, per measured frame of `render_bench.py --synthetic --compare-opt
+gpu-resident-instances` (entry off, then on), 1920x1080, five runs a setting, the same on the Mac
+and box1 and in every run:
+
+| Setting | `vk_gpu_payload_bytes` |
+|---|---|
+| base (walk, cold; also warm, static, between x3, materials off, half size) | 2,839,984 to 407,376 (-85.7%) |
+| enhanced (camera, PVS pass and four sun cascades) | 9,824,306.9 to 1,310,295.5 (-86.7%) |
+| gpu-driven off | 0 to 0 |
+
+What is left is the views' 58 words and the moby layer's copied instances. Draw calls, triangles,
+`vk_gpu_instance_batches`, `vk_gpu_instance_candidates`, `vk_gpu_completed_draws`,
+`vk_gpu_completed_visible_instances` and `vk_gpu_completed_triangles` are the same with the entry on
+and off: the same set is drawn. `vk_ring_bytes` per frame is unchanged (169,984; Enhanced 181,108):
+the payload goes into the mapped input pages, not the ring; the resident copy is staged through the
+ring once, in the first frame that draws (about 0.6 MB on this scene). `vk_descriptor_writes` is one
+more per page with the entry on or off (616 base, before 615): the fourth binding is always written,
+the input page standing in when no resident words are read. The glslang runs counted in the load go
+from 38 to 41 with the entry on (cold cache): registering asks whether GPU-driven drawing is
+active, which builds the three culling programs at the load instead of at the first frame. The
+scene has 4,000 static instances; a scene of 8,000, as the brief named, needs the bench's instance
+count, which `openrac_render_bench` does not offer yet.
+
+**Milliseconds, as information** (the picture's CPU time, median of five runs, entry off to on):
+
+| Setting | Mac (M5 Max, MoltenVK) | box1 (GTX 1070) |
+|---|---|---|
+| base | 0.84 to 0.80 | 1.15 to 1.00 |
+| enhanced | 2.03 to 1.80 | 3.22 to 3.22 |
+| static camera | 0.84 to 0.78 | 1.15 to 0.99 |
+| materials off | 1.12 to 1.07 | 1.30 to 1.17 |
+
+**Equivalence.** `render_equivalence_vulkan` draws the entry on and off in every scenario, Enhanced
+off and on, the `reupload` one included (the level released and uploaded again while two frames are
+in flight, the lifetime this design must get right), byte for byte under the validation layer:
+identical, no validation message, on the Mac and box1. `viewer_vulkan`'s fixtures (stable
+compaction, PVS changes, descriptor rollover, CPU against the GPU reference of
+`tests/gpu_draw_reference.h`) and `hero_shadow_vulkan`, `sun_shadow_vulkan`,
+`early_lighting_vulkan` and `probe_gpu_vulkan`, which consume the same batches, pass with the entry
+on and with `OPENRAC_RENDER_OPT_OFF=all`. The whole release preset passes on both machines (the
+OpenGL tests on box1), the headless preset on the Mac. The change is Vulkan's only: no GL test is
+reached.
+
+Measured with:
+
+```sh
+python3 port/tools/perf/render_bench.py --synthetic --compare-opt gpu-resident-instances
+OPENRAC_GL_API=vulkan OPENRAC_VULKAN_PIPELINE_CACHE=off OPENRAC_VULKAN_VALIDATION=1 ./port/build/release/render_equivalence_test
+```
+
+On real levels the maintainers' command is
+`python3 port/tools/perf/render_bench.py --level assets/port/rac1/pal/level_12 --compare-opt gpu-resident-instances`
+(level_12's 7,468 instances: the research's 1.1 MB a view).
